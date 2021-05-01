@@ -91,7 +91,7 @@
 #endif
 
 int errno;
-extern char _vfs_buf;
+extern char _vfs_buf[];
 static fs_user_mount_t *vfs_fat = (fs_user_mount_t *) &_vfs_buf;
 #if MICROPY_PY_THREAD
 pyb_thread_t pyb_thread_main;

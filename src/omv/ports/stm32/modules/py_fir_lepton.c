@@ -62,7 +62,7 @@ static soft_timer_entry_t flir_lepton_spi_rx_timer = {};
 static int fir_lepton_spi_rx_cb_tail = 0;
 static int fir_lepton_spi_rx_cb_expected_pid = 0;
 static int fir_lepton_spi_rx_cb_expected_seg = 0;
-extern int _fir_lepton_buf;
+extern int _fir_lepton_buf[];
 
 STATIC mp_obj_t fir_lepton_spi_resync_callback(mp_obj_t unused)
 {

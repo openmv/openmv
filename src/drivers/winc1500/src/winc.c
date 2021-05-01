@@ -353,7 +353,8 @@ static void wifi_callback_sta(uint8_t msg_type, void *msg)
             memcpy(netinfo->mac_addr, con_info->au8MACAddress, WINC_MAC_ADDR_LEN);
 
             // Copy SSID.
-            strncpy(netinfo->ssid, con_info->acSSID, WINC_MAX_SSID_LEN-1);
+            con_info->acSSID[WINC_MAX_SSID_LEN-1] = 0;
+            strncpy(netinfo->ssid, con_info->acSSID, WINC_MAX_SSID_LEN);
 
             async_request_done = true;
 			break;
@@ -389,7 +390,8 @@ static void wifi_callback_sta(uint8_t msg_type, void *msg)
 
             // Copy BSSID and SSID.
             memcpy(wscan_result.bssid, scan_result->au8BSSID, WINC_MAC_ADDR_LEN);
-            strncpy((char*) wscan_result.ssid, (const char *) scan_result->au8SSID, WINC_MAX_SSID_LEN-1);
+            scan_result->au8SSID[WINC_MAX_SSID_LEN-1] = 0;
+            strncpy((char*) wscan_result.ssid, (const char *) scan_result->au8SSID, WINC_MAX_SSID_LEN);
 
             // Call scan result callback
             scan_arg->cb(&wscan_result, scan_arg->arg);

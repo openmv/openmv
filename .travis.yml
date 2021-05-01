@@ -22,7 +22,7 @@ script:
   # install ARM GCC
   - pushd .
   - cd ~ && mkdir gcc && cd gcc
-  - GCC_URL="https://armkeil.blob.core.windows.net/developer/Files/downloads/gnu-rm/7-2018q2/gcc-arm-none-eabi-7-2018-q2-update-linux.tar.bz2"
+  - GCC_URL="https://armkeil.blob.core.windows.net/developer/Files/downloads/gnu-rm/10-2020q4/gcc-arm-none-eabi-10-2020-q4-major-x86_64-linux.tar.bz2"
   - wget -O gcc.tar.bz2 ${GCC_URL}
   - tar -jxf gcc.tar.bz2 --strip 1
   - exportline="export PATH=\$HOME/gcc/bin:\$PATH"
