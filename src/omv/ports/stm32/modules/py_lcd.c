@@ -1138,8 +1138,8 @@ mp_obj_t ltdc_dvi_user_cb = NULL;
 
 static mp_obj_t ltdc_dvi_get_display_connected()
 {
-    mp_obj_base_t *bus = ltdc_dvi_bus ? ltdc_dvi_bus : ((mp_obj_base_t *) machine_i2c_type.make_new(&machine_i2c_type, 3, 0, (const mp_obj_t []) {
-        MP_OBJ_NEW_SMALL_INT(-1), (mp_obj_t) OMV_DVI_SCL_PIN, (mp_obj_t) OMV_DVI_SDA_PIN
+    mp_obj_base_t *bus = ltdc_dvi_bus ? ltdc_dvi_bus : ((mp_obj_base_t *) mp_machine_soft_i2c_type.make_new(&mp_machine_soft_i2c_type, 2, 0, (const mp_obj_t []) {
+        (mp_obj_t) OMV_DVI_SCL_PIN, (mp_obj_t) OMV_DVI_SDA_PIN
     }));
 
     if (mp_machine_soft_i2c_transfer(bus, TFP410_I2C_ADDR, 1, &((mp_machine_i2c_buf_t) {
@@ -1179,8 +1179,8 @@ static bool ltdc_dvi_checksum(uint8_t *data, int long_count)
 
 static mp_obj_t ltdc_dvi_get_display_id_data()
 {
-    mp_obj_base_t *bus = ltdc_ddc_bus ? ltdc_ddc_bus : ((mp_obj_base_t *) machine_i2c_type.make_new(&machine_i2c_type, 3, 1, (const mp_obj_t []) {
-        MP_OBJ_NEW_SMALL_INT(-1), (mp_obj_t) OMV_DDC_SCL_PIN, (mp_obj_t) OMV_DDC_SDA_PIN,
+    mp_obj_base_t *bus = ltdc_ddc_bus ? ltdc_ddc_bus : ((mp_obj_base_t *) mp_machine_soft_i2c_type.make_new(&mp_machine_soft_i2c_type, 2, 1, (const mp_obj_t []) {
+        (mp_obj_t) OMV_DDC_SCL_PIN, (mp_obj_t) OMV_DDC_SDA_PIN,
             MP_OBJ_NEW_QSTR(MP_QSTR_freq),
             MP_OBJ_NEW_SMALL_INT(100000)
     }));
@@ -1264,13 +1264,13 @@ static void ltdc_dvi_init()
     HAL_GPIO_WritePin(OMV_DVI_RESET_PIN->gpio, OMV_DVI_RESET_PIN->pin_mask, GPIO_PIN_SET);
     HAL_Delay(1);
 
-    ltdc_dvi_bus = (mp_obj_base_t *) machine_i2c_type.make_new(&machine_i2c_type, 3, 0, (const mp_obj_t []) {
-        MP_OBJ_NEW_SMALL_INT(-1), (mp_obj_t) OMV_DVI_SCL_PIN, (mp_obj_t) OMV_DVI_SDA_PIN
+    ltdc_dvi_bus = (mp_obj_base_t *) mp_machine_soft_i2c_type.make_new(&mp_machine_soft_i2c_type, 2, 0, (const mp_obj_t []) {
+        (mp_obj_t) OMV_DVI_SCL_PIN, (mp_obj_t) OMV_DVI_SDA_PIN
     });
 
     #ifdef OMV_DDC_PRESENT
-    ltdc_ddc_bus = (mp_obj_base_t *) machine_i2c_type.make_new(&machine_i2c_type, 3, 1, (const mp_obj_t []) {
-        MP_OBJ_NEW_SMALL_INT(-1), (mp_obj_t) OMV_DDC_SCL_PIN, (mp_obj_t) OMV_DDC_SDA_PIN,
+    ltdc_ddc_bus = (mp_obj_base_t *) mp_machine_soft_i2c_type.make_new(&mp_machine_soft_i2c_type, 2, 1, (const mp_obj_t []) {
+        (mp_obj_t) OMV_DDC_SCL_PIN, (mp_obj_t) OMV_DDC_SDA_PIN,
             MP_OBJ_NEW_QSTR(MP_QSTR_freq),
             MP_OBJ_NEW_SMALL_INT(100000)
     });
