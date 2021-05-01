@@ -1163,7 +1163,7 @@ static void mdma_memcpy(vbuffer_t *buffer, void *dst, void *src, int bpp, bool t
 // If we are cropping the image by more than 1 word in width we can align the line start to
 // a word address to improve copy performance. Do not crop by more than 1 word as this will
 // result in less time between DMA transfers complete interrupts on 16-byte boundaries.
-uint32_t get_dcmi_hw_crop(uint32_t bytes_per_pixel)
+static uint32_t get_dcmi_hw_crop(uint32_t bytes_per_pixel)
 {
     uint32_t byte_x_offset = (MAIN_FB()->x * bytes_per_pixel) % sizeof(uint32_t);
     uint32_t width_remainder = (resolution[sensor.framesize][0] - (MAIN_FB()->x + MAIN_FB()->u)) * bytes_per_pixel;
