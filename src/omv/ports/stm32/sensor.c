@@ -1356,7 +1356,7 @@ void DCMI_DMAConvCpltUser(uint32_t addr)
 }
 
 #if (OMV_ENABLE_SENSOR_MDMA == 1)
-void mdma_config(MDMA_InitTypeDef *init, sensor_t *sensor, uint32_t bytes_per_pixel)
+static void mdma_config(MDMA_InitTypeDef *init, sensor_t *sensor, uint32_t bytes_per_pixel)
 {
     init->Request                   = MDMA_REQUEST_SW;
     init->TransferTriggerMode       = MDMA_REPEAT_BLOCK_TRANSFER;
