@@ -365,7 +365,7 @@ int ini_handler_callback(void *user, const char *section, const char *name, cons
     #undef MATCH
 }
 
-FRESULT exec_boot_script(const char *path, bool selftest, bool interruptible)
+FRESULT exec_boot_script(const char *path, bool selftest, bool interruptible, bool wifidbg_enabled)
 {
     nlr_buf_t nlr;
     bool interrupted = false;
@@ -377,6 +377,9 @@ FRESULT exec_boot_script(const char *path, bool selftest, bool interruptible)
             if (interruptible) {
                 usbdbg_set_irq_enabled(true);
                 usbdbg_set_script_running(true);
+                #if OMV_ENABLE_WIFIDBG && MICROPY_PY_WINC1500
+                wifidbg_set_irq_enabled(wifidbg_enabled);
+                #endif
             }
 
             // Parse, compile and execute the script.
@@ -390,6 +393,9 @@ FRESULT exec_boot_script(const char *path, bool selftest, bool interruptible)
     // Disable IDE interrupts
     usbdbg_set_irq_enabled(false);
     usbdbg_set_script_running(false);
+    #if OMV_ENABLE_WIFIDBG && MICROPY_PY_WINC1500
+    wifidbg_set_irq_enabled(false);
+    #endif
 
     if (interrupted) {
         if (selftest) {
@@ -654,8 +660,9 @@ soft_reset:
     // Parse OpenMV configuration file.
     openmv_config_t openmv_config;
     memset(&openmv_config, 0, sizeof(openmv_config));
-    // Parse config, and init wifi if enabled.
     ini_parse(&vfs_fat->fatfs, "/openmv.config", ini_handler_callback, &openmv_config);
+
+    // Init wifi debugging if enabled and on first soft-reset only.
     #if OMV_ENABLE_WIFIDBG && MICROPY_PY_WINC1500
     if (openmv_config.wifidbg == true &&
             wifidbg_init(&openmv_config.wifidbg_config) != 0) {
@@ -669,11 +676,11 @@ soft_reset:
     if (first_soft_reset) {
         // Execute the boot.py script before initializing the USB dev to
         // override the USB mode if required, otherwise VCP+MSC is used.
-        exec_boot_script("/boot.py", false, false);
+        exec_boot_script("/boot.py", false, false, false);
         #if (OMV_ENABLE_SELFTEST == 1)
         // Execute the selftests.py script before the filesystem is mounted
         // to avoid corrupting the filesystem when selftests.py is removed.
-        exec_boot_script("/selftest.py", true, false);
+        exec_boot_script("/selftest.py", true, false, false);
         #endif
     }
 
@@ -696,17 +703,19 @@ soft_reset:
     led_state(LED_GREEN, 0);
     led_state(LED_BLUE, 0);
 
-    if (openmv_config.wifidbg == true) {
-        timer_tim5_init(100);
-    }
-
     // Run main script if it exists.
     if (first_soft_reset) {
-        exec_boot_script("/main.py", false, true);
+        exec_boot_script("/main.py", false, true, openmv_config.wifidbg);
     }
 
     do {
         usbdbg_init();
+
+        if (openmv_config.wifidbg == true) {
+            // Need to reinit imlib in WiFi debug mode.
+            imlib_deinit_all();
+            imlib_init_all();
+        }
 
         // If there's no script ready, just re-exec REPL
         while (!usbdbg_script_ready()) {
@@ -715,6 +724,9 @@ soft_reset:
             if (nlr_push(&nlr) == 0) {
                 // enable IDE interrupt
                 usbdbg_set_irq_enabled(true);
+                #if OMV_ENABLE_WIFIDBG && MICROPY_PY_WINC1500
+                wifidbg_set_irq_enabled(openmv_config.wifidbg);
+                #endif
 
                 // run REPL
                 if (pyexec_mode_kind == PYEXEC_MODE_RAW_REPL) {
@@ -736,6 +748,9 @@ soft_reset:
             if (nlr_push(&nlr) == 0) {
                 // Enable IDE interrupt
                 usbdbg_set_irq_enabled(true);
+                #if OMV_ENABLE_WIFIDBG && MICROPY_PY_WINC1500
+                wifidbg_set_irq_enabled(openmv_config.wifidbg);
+                #endif
 
                 // Execute the script.
                 pyexec_str(usbdbg_get_script());

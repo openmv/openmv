@@ -15,15 +15,10 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <errno.h>
-#include "py/nlr.h"
 #include "py/mphal.h"
-#include "py/obj.h"
-#include "py/lexer.h"
-#include "py/parse.h"
-#include "py/compile.h"
-#include "py/runtime.h"
-#include "py/stackctrl.h"
-#include "irq.h"
+#include "pendsv.h"
+#include "systick.h"
+#include "usb.h"
 
 #include "winc.h"
 #include "socket/include/socket.h"
@@ -32,63 +27,181 @@
 #include "cambus.h"
 #include "sensor.h"
 #include "framebuffer.h"
-#include "omv_boardconfig.h"
-#include "lib/utils/pyexec.h"
 #include "wifidbg.h"
-#include "led.h"
 
 #include STM32_HAL_H
 
-#ifndef MIN
-#define MIN(x, y) ((x) < (y) ? (x) : (y))
+#ifndef WIFIDBG_MIN
+#define WIFIDBG_MIN(x, y) ((x) < (y) ? (x) : (y))
 #endif
 
-#define OPENMVCAM_BROADCAST_ADDR ((uint8_t [5]){255, 255, 255, 255})
-#define OPENMVCAM_BROADCAST_PORT (0xABD1)
-#define SERVER_ADDR              ((uint8_t [5]){192, 168, 1, 1})
-#define SERVER_PORT              (9000)
-#define BUFFER_SIZE              (512)
+#define WIFIDBG_BCAST_ADDR          ((uint8_t [4]){255, 255, 255, 255})
+#define WIFIDBG_BCAST_PORT          (0xABD1)
+#define WIFIDBG_SERVER_ADDR         ((uint8_t [4]){192, 168, 1, 1})
+#define WIFIDBG_SERVER_PORT         (9000)
+#define WIFIDBG_BUFFER_SIZE         (SOCKET_BUFFER_MAX_LENGTH)
 
-#define UDPCAST_STRING           "%d.%d.%d.%d:%d:%s"
-#define UDPCAST_STRING_SIZE      4+4+4+4+6+WINC_MAX_BOARD_NAME_LEN+1
+#define WIFIDBG_BCAST_STRING        "%d.%d.%d.%d:%d:%s"
+#define WIFIDBG_BCAST_STRING_SIZE   4+4+4+4+6+WINC_MAX_BOARD_NAME_LEN+1
+#define WIFIDBG_BCAST_INTERVAL_MS   (1000)
+#define WIFIDBG_POLL_INTERVAL_MS    (10)
 
-#define close_all_sockets()             \
-    do {                                \
-        winc_socket_close(client_fd);   \
-        winc_socket_close(server_fd);   \
-        winc_socket_close(udpbcast_fd); \
-        client_fd = -1;                 \
-        server_fd = -1;                 \
-        udpbcast_fd = -1;               \
-    } while (0)
+#define WIFIDBG_SOCKET_TIMEOUT(x) (x == -ETIMEDOUT || x == SOCK_ERR_TIMEOUT)
 
-#define close_server_socket()           \
-    do {                                \
-        winc_socket_close(server_fd);   \
-        server_fd = -1;                 \
-    } while (0)
+typedef struct wifidbg {
+    int client_fd;
+    int server_fd;
+    int bcast_fd;
+    uint32_t last_bcast;
+    uint32_t last_dispatch;
+    uint8_t ipaddr[WINC_IPV4_ADDR_LEN];
+    char bcast_packet[WIFIDBG_BCAST_STRING_SIZE];
+    winc_socket_buf_t sockbuf;
+} wifidbg_t;
 
-#define close_udpbcast_socket()         \
-    do {                                \
-        winc_socket_close(udpbcast_fd); \
-        udpbcast_fd = -1;               \
-    } while (0)
+static wifidbg_t wifidbg;
 
-#define TIMEDOUT(x) (x == -ETIMEDOUT || x == SOCK_ERR_TIMEOUT)
+void wifidbg_close_sockets(wifidbg_t *wifidbg)
+{
+    winc_socket_close(wifidbg->client_fd);
+    winc_socket_close(wifidbg->server_fd);
+    winc_socket_close(wifidbg->bcast_fd);
+    wifidbg->client_fd = -1;
+    wifidbg->server_fd = -1;
+    wifidbg->bcast_fd = -1;
+}
 
-static int client_fd = -1;
-static int server_fd = -1;
-static int udpbcast_fd = -1;
-static int udpbcast_time = 0;
-static uint8_t ip_addr[WINC_IPV4_ADDR_LEN] = {};
-static char udpbcast_string[UDPCAST_STRING_SIZE] = {};
-static winc_socket_buf_t sockbuf;
+int wifidbg_broadcast(wifidbg_t *wifidbg)
+{
+    if ((systick_current_millis() - wifidbg->last_bcast) > WIFIDBG_BCAST_INTERVAL_MS) {
+        MAKE_SOCKADDR(bcast_sockaddr, WIFIDBG_BCAST_ADDR, WIFIDBG_BCAST_PORT);
+        if (winc_socket_sendto(wifidbg->bcast_fd, (uint8_t *) wifidbg->bcast_packet,
+                    strlen(wifidbg->bcast_packet) + 1, &bcast_sockaddr, 10) < 0) {
+            return -1;
+        }
+        wifidbg->last_bcast = systick_current_millis();
+    }
+    return 0;
+}
+
+void wifidbg_pendsv_callback(void)
+{
+    int ret = 0;
+    uint32_t request = 0;
+    uint8_t buf[WIFIDBG_BUFFER_SIZE];
+
+    // Disable systick dispatch
+    wifidbg_set_irq_enabled(false);
+
+    if (wifidbg.bcast_fd < 0) {
+        // Create broadcast socket.
+        MAKE_SOCKADDR(bcast_sockaddr, WIFIDBG_BCAST_ADDR, WIFIDBG_BCAST_PORT);
+
+        if ((wifidbg.bcast_fd = winc_socket_socket(SOCK_DGRAM)) < 0) {
+            goto exit_dispatch_error;
+        }
+
+        if ((ret = winc_socket_bind(wifidbg.bcast_fd, &bcast_sockaddr)) < 0) {
+            goto exit_dispatch_error;
+        }
+    }
+
+    if (wifidbg.server_fd < 0) {
+        // Create server socket
+        MAKE_SOCKADDR(server_sockaddr, wifidbg.ipaddr, WIFIDBG_SERVER_PORT);
+
+        if ((wifidbg.server_fd = winc_socket_socket(SOCK_STREAM)) < 0) {
+            goto exit_dispatch_error;
+        }
+
+        if ((ret = winc_socket_bind(wifidbg.server_fd, &server_sockaddr)) < 0) {
+            goto exit_dispatch_error;
+        }
+
+        if ((ret = winc_socket_listen(wifidbg.server_fd, 1)) < 0) {
+            goto exit_dispatch_error;
+        }
+    }
+
+    if (wifidbg.client_fd < 0) {
+        wifidbg.sockbuf.idx = 0;
+        wifidbg.sockbuf.size = 0;
+        sockaddr client_sockaddr;
+        // Try to connect to a client
+        ret = winc_socket_accept(wifidbg.server_fd, &client_sockaddr, &wifidbg.client_fd, 10);
+        if (WIFIDBG_SOCKET_TIMEOUT(ret)) {
+            // Timeout, broadcast another message to the IDE.
+            wifidbg.client_fd = -1;
+            ret = wifidbg_broadcast(&wifidbg);
+        }
+        if (ret < 0) {
+            // Error on server socket, close sockets and exit.
+            goto exit_dispatch_error;
+        }
+        goto exit_dispatch;
+    }
+
+    uint8_t cmdbuf[6];
+    // We have a connected client
+    ret = winc_socket_recv(wifidbg.client_fd, cmdbuf, 6, &wifidbg.sockbuf, 5);
+    if (WIFIDBG_SOCKET_TIMEOUT(ret)) {
+        goto exit_dispatch;
+    } else if (ret < 0 || ret != 6 || cmdbuf[0] != 0x30) {
+        goto exit_dispatch_error;
+    }
+
+    // Process the request command.
+    request = cmdbuf[1];
+    uint32_t xfer_length = *((uint32_t*)(cmdbuf+2));
+    usbdbg_control(NULL, request, xfer_length);
+
+    while (xfer_length) {
+        if (request & 0x80) {
+            // Device-to-host data phase
+            int bytes = WIFIDBG_MIN(xfer_length, WIFIDBG_BUFFER_SIZE);
+            xfer_length -= bytes;
+            usbdbg_data_in(buf, bytes);
+            if ((ret = winc_socket_send(wifidbg.client_fd, buf, bytes, 500)) < 0) {
+                goto exit_dispatch_error;
+            }
+        } else {
+            // Host-to-device data phase
+            int bytes = WIFIDBG_MIN(xfer_length, WIFIDBG_BUFFER_SIZE);
+            if ((ret = winc_socket_recv(wifidbg.client_fd, buf, bytes, &wifidbg.sockbuf, 500)) < 0) {
+                goto exit_dispatch_error;
+            }
+            xfer_length -= ret;
+            usbdbg_data_out(buf, ret);
+        }
+    }
+
+    goto exit_dispatch;
+exit_dispatch_error:
+    wifidbg_close_sockets(&wifidbg);
+exit_dispatch:
+    if (usbdbg_get_irq_enabled()) {
+        // Re-enable Systick dispatch if IDE interrupts are still enabled.
+        wifidbg_set_irq_enabled(true);
+    }
+    return;
+}
+
+void wifidbg_systick_callback(uint32_t ticks_ms)
+{
+    if (usb_cdc_debug_mode_enabled() == false &&
+            (ticks_ms - wifidbg.last_dispatch) > WIFIDBG_POLL_INTERVAL_MS) {
+        pendsv_schedule_dispatch(PENDSV_DISPATCH_WINC, wifidbg_pendsv_callback);
+        wifidbg.last_dispatch = systick_current_millis();
+    }
+}
 
 int wifidbg_init(wifidbg_config_t *config)
 {
-    client_fd = -1;
-    server_fd = -1;
-    udpbcast_fd = -1;
+    memset(&wifidbg, 0, sizeof(wifidbg_t));
+
+    wifidbg.client_fd = -1;
+    wifidbg.server_fd = -1;
+    wifidbg.bcast_fd = -1;
 
     if(!config->mode) { // STA Mode
 
@@ -111,7 +224,7 @@ int wifidbg_init(wifidbg_config_t *config)
             return -3;
         }
 
-        memcpy(ip_addr, ifconfig.ip_addr, WINC_IPV4_ADDR_LEN);
+        memcpy(wifidbg.ipaddr, ifconfig.ip_addr, WINC_IPV4_ADDR_LEN);
 
     } else { // AP Mode
 
@@ -128,127 +241,26 @@ int wifidbg_init(wifidbg_config_t *config)
             return -2;
         }
 
-        memcpy(ip_addr, SERVER_ADDR, WINC_IPV4_ADDR_LEN);
+        memcpy(wifidbg.ipaddr, WIFIDBG_SERVER_ADDR, WINC_IPV4_ADDR_LEN);
     }
 
-    snprintf(udpbcast_string, UDPCAST_STRING_SIZE, UDPCAST_STRING,
-             ip_addr[0], ip_addr[1], ip_addr[2], ip_addr[3],
-             SERVER_PORT, config->board_name);
+    snprintf(wifidbg.bcast_packet, WIFIDBG_BCAST_STRING_SIZE, WIFIDBG_BCAST_STRING,
+             wifidbg.ipaddr[0], wifidbg.ipaddr[1], wifidbg.ipaddr[2], wifidbg.ipaddr[3],
+             WIFIDBG_SERVER_PORT, config->board_name);
 
     return 0;
 }
 
-void wifidbg_dispatch()
+void wifidbg_set_irq_enabled(bool enable)
 {
-    int ret;
-    uint8_t buf[BUFFER_SIZE];
-    sockaddr client_sockaddr;
-
-    if (client_fd < 0 && udpbcast_fd < 0) {
-        // Create broadcast socket.
-        MAKE_SOCKADDR(udpbcast_sockaddr, OPENMVCAM_BROADCAST_ADDR, OPENMVCAM_BROADCAST_PORT)
-
-        if ((udpbcast_fd = winc_socket_socket(SOCK_DGRAM)) < 0) {
-            return;
-        }
-
-        if ((ret = winc_socket_bind(udpbcast_fd, &udpbcast_sockaddr)) < 0) {
-            close_udpbcast_socket();
-            return;
-        }
-
-        return;
-    }
-
-    if (client_fd < 0 && (udpbcast_fd >= 0) && (!(udpbcast_time++ % 100))) {
-        // Broadcast message to the IDE.
-        MAKE_SOCKADDR(udpbcast_sockaddr, OPENMVCAM_BROADCAST_ADDR, OPENMVCAM_BROADCAST_PORT)
-
-        if ((ret = winc_socket_sendto(udpbcast_fd, (uint8_t *) udpbcast_string,
-                        strlen(udpbcast_string) + 1, &udpbcast_sockaddr, 500)) < 0) {
-            close_udpbcast_socket();
-            return;
-        }
-
-        return;
-    }
-
-    if (server_fd < 0) {
-        // Create server socket
-        MAKE_SOCKADDR(server_sockaddr, ip_addr, SERVER_PORT)
-
-        if ((server_fd = winc_socket_socket(SOCK_STREAM)) < 0) {
-            return;
-        }
-
-        if ((ret = winc_socket_bind(server_fd, &server_sockaddr)) < 0) {
-            close_all_sockets();
-            return;
-        }
-
-        if ((ret = winc_socket_listen(server_fd, 1)) < 0) {
-            close_all_sockets();
-            return;
-        }
-
-        return;
-    }
-
-    if (client_fd < 0) {
-        sockbuf.size = sockbuf.idx = 0;
-        // Call accept.
-        if ((ret = winc_socket_accept(server_fd,
-                        &client_sockaddr, &client_fd, 10)) < 0) {
-            if (TIMEDOUT(ret)) {
-                client_fd = -1;
-            } else {
-                close_all_sockets();
-            }
-            return;
-        }
-
-        return;
-    }
-
-    if ((ret = winc_socket_recv(client_fd, buf, 6, &sockbuf, 10)) < 0) {
-        if (TIMEDOUT(ret)) {
-            return;
-        } else {
-            close_all_sockets();
-            return;
-        }
-    }
-
-    if (ret != 6 || buf[0] != 0x30) {
-        return;
-    }
-
-    uint8_t request = buf[1];
-    uint32_t xfer_length = *((uint32_t*)(buf+2));
-    usbdbg_control(buf+6, request, xfer_length);
-
-    while (xfer_length) {
-        if (request & 0x80) {
-            // Device-to-host data phase
-            int bytes = MIN(xfer_length, BUFFER_SIZE);
-            xfer_length -= bytes;
-            usbdbg_data_in(buf, bytes);
-            if ((ret = winc_socket_send(client_fd, buf, bytes, 500)) < 0) {
-                close_all_sockets();
-                return;
-            }
-        } else {
-            // Host-to-device data phase
-            int bytes = MIN(xfer_length, BUFFER_SIZE);
-            if ((ret = winc_socket_recv(client_fd, buf, bytes, &sockbuf, 500)) < 0) {
-                close_all_sockets();
-                return;
-            }
-            xfer_length -= ret;
-            usbdbg_data_out(buf, ret);
-        }
+    if (enable) {
+        // Re-enable Systick dispatch.
+        systick_enable_dispatch(SYSTICK_DISPATCH_WINC, wifidbg_systick_callback);
+    } else {
+        systick_disable_dispatch(SYSTICK_DISPATCH_WINC);
     }
 }
-#else
-void wifidbg_dispatch(){};
 #endif // OMV_ENABLE_WIFIDBG && MICROPY_PY_WINC1500
+
+// Old timer dispatch, will be removed.
+void wifidbg_dispatch() {}
