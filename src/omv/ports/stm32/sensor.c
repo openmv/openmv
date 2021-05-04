@@ -650,6 +650,9 @@ int sensor_set_pixformat(pixformat_t pixformat)
 
     dcmi_abort();
 
+    // Flush previous frame.
+    framebuffer_update_jpeg_buffer();
+
     if (sensor.set_pixformat == NULL
         || sensor.set_pixformat(&sensor, pixformat) != 0) {
         // Operation not supported
@@ -676,6 +679,9 @@ int sensor_set_framesize(framesize_t framesize)
     }
 
     dcmi_abort();
+
+    // Flush previous frame.
+    framebuffer_update_jpeg_buffer();
 
     // Call the sensor specific function
     if (sensor.set_framesize == NULL
@@ -730,6 +736,9 @@ int sensor_set_windowing(int x, int y, int w, int h)
     }
 
     dcmi_abort();
+
+    // Flush previous frame.
+    framebuffer_update_jpeg_buffer();
 
     // We force everything to be a multiple of 2 so that when you switch between
     // grayscale/rgb565/bayer/jpeg the frame doesn't need to move around for bayer to work.
@@ -963,6 +972,9 @@ bool sensor_get_auto_rotation()
 int sensor_set_framebuffers(int count)
 {
     dcmi_abort();
+
+    // Flush previous frame.
+    framebuffer_update_jpeg_buffer();
 
     return framebuffer_set_buffers(count);
 }
