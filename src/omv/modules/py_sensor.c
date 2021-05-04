@@ -282,42 +282,52 @@ static mp_obj_t py_sensor_get_framerate()
     return mp_obj_new_int(sensor.framerate);
 }
 
-static mp_obj_t py_sensor_set_windowing(mp_obj_t roi_obj)
+static mp_obj_t py_sensor_set_windowing(uint n_args, const mp_obj_t *args)
 {
-    int x, y, w, h;
-    int res_w = resolution[sensor.framesize][0];
-    int res_h = resolution[sensor.framesize][1];
+    if (sensor.framesize == FRAMESIZE_INVALID) {
+        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Frame size not set yet!"));
+    }
 
-    mp_obj_t *array;
-    mp_uint_t array_len;
-    mp_obj_get_array(roi_obj, &array_len, &array);
+    rectangle_t temp;
+    temp.x = 0;
+    temp.y = 0;
+    temp.w = resolution[sensor.framesize][0];
+    temp.h = resolution[sensor.framesize][1];
 
-    if (array_len == 4) {
-        x = mp_obj_get_int(array[0]);
-        y = mp_obj_get_int(array[1]);
-        w = mp_obj_get_int(array[2]);
-        h = mp_obj_get_int(array[3]);
-    } else if (array_len == 2) {
-        w = mp_obj_get_int(array[0]);
-        h = mp_obj_get_int(array[1]);
-        x = (res_w / 2) - (w / 2);
-        y = (res_h / 2) - (h / 2);
+    mp_obj_t *array = (mp_obj_t *) args;
+    mp_uint_t array_len = n_args;
+
+    if (n_args == 1) {
+        mp_obj_get_array(args[0], &array_len, &array);
+    }
+
+    rectangle_t r;
+
+    if (array_len == 2) {
+        r.w = mp_obj_get_int(array[0]);
+        r.h = mp_obj_get_int(array[1]);
+        r.x = (temp.w / 2) - (r.w / 2);
+        r.y = (temp.h / 2) - (r.h / 2);
+    } else if (array_len == 4) {
+        r.x = mp_obj_get_int(array[0]);
+        r.y = mp_obj_get_int(array[1]);
+        r.w = mp_obj_get_int(array[2]);
+        r.h = mp_obj_get_int(array[3]);
     } else {
-        mp_raise_msg(&mp_type_ValueError,
-            MP_ERROR_TEXT("The tuple/list must either be (x, y, w, h) or (w, h)"));
+        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("The tuple/list must either be (x, y, w, h) or (w, h)"));
     }
 
-    if (w < 8 || h < 8) {
-        mp_raise_msg(&mp_type_ValueError,
-            MP_ERROR_TEXT("The selected window is too small"));
+    if ((r.w < 1) || (r.h < 1)) {
+        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Invalid ROI dimensions!"));
     }
 
-    if (x < 0 || (x + w) > res_w || y < 0 || (y + h) > res_h) {
-        mp_raise_msg(&mp_type_ValueError,
-            MP_ERROR_TEXT("The selected window is outside the bounds of the frame"));
+    if (!rectangle_overlap(&r, &temp)) {
+        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("ROI does not overlap on the image!"));
     }
 
-    if (sensor_set_windowing(x, y, w, h) != 0) {
+    rectangle_intersected(&r, &temp);
+
+    if (sensor_set_windowing(r.x, r.y, r.w, r.h) != 0) {
         mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Failed to set windowing!"));
     }
 
@@ -915,8 +925,8 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_set_framesize_obj,       py_sensor_se
 STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_sensor_get_framesize_obj,       py_sensor_get_framesize);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_set_framerate_obj,       py_sensor_set_framerate);
 STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_sensor_get_framerate_obj,       py_sensor_get_framerate);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_set_windowing_obj,       py_sensor_set_windowing);
-STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_sensor_get_windowing_obj,       py_sensor_get_windowing);
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(py_sensor_set_windowing_obj, 1, 4, py_sensor_set_windowing);
+STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_sensor_get_windowing_obj, py_sensor_get_windowing);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_set_gainceiling_obj,     py_sensor_set_gainceiling);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_set_contrast_obj,        py_sensor_set_contrast);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_set_brightness_obj,      py_sensor_set_brightness);
