@@ -232,6 +232,10 @@ static void dcmi_abort()
 // Returns true if a crop is being applied to the frame buffer.
 static bool cropped()
 {
+    if (sensor.framesize == FRAMESIZE_INVALID) {
+        return false;
+    }
+
     return MAIN_FB()->x // needs to be zero if not being cropped.
         || MAIN_FB()->y // needs to be zero if not being cropped.
         || (MAIN_FB()->u != resolution[sensor.framesize][0])  // should be equal to the resolution if not cropped.
