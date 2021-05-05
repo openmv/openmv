@@ -121,7 +121,7 @@ void usbdbg_data_in(void *buffer, int length)
             // Return 0 if FB is locked or not ready.
             ((uint32_t*)buffer)[0] = 0;
             // Try to lock FB. If header size == 0 frame is not ready
-            if (mutex_try_lock(&JPEG_FB()->lock, MUTEX_TID_IDE)) {
+            if (mutex_try_lock_alternate(&JPEG_FB()->lock, MUTEX_TID_IDE)) {
                 // If header size == 0 frame is not ready
                 if (JPEG_FB()->size == 0) {
                     // unlock FB
@@ -375,7 +375,7 @@ void usbdbg_control(void *buffer, uint8_t request, uint32_t length)
             NVIC_SystemReset();
             break;
         }
-        
+
         case USBDBG_FB_ENABLE: {
             xfer_bytes = 0;
             xfer_length = length;

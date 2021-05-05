@@ -20,6 +20,7 @@ void mutex_init(mutex_t *mutex)
     __DMB();
     mutex->tid = 0;
     mutex->lock = 0;
+    mutex->last_tid = 0;
 }
 
 void mutex_lock(mutex_t *mutex, uint32_t tid)
@@ -62,6 +63,18 @@ int mutex_try_lock(mutex_t *mutex, uint32_t tid)
     }
 
     return (locked == 0);
+}
+
+int mutex_try_lock_alternate(mutex_t *mutex, uint32_t tid)
+{
+    if (mutex->last_tid != tid) {
+        if (mutex_try_lock(mutex, tid)) {
+            mutex->last_tid = tid;
+            return 1;
+        }
+    }
+
+    return 0;
 }
 
 int mutex_lock_timeout(mutex_t *mutex, uint32_t tid, uint32_t timeout)
