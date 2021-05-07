@@ -409,6 +409,7 @@ int sensor_reset()
     sensor.auto_rotation = false;
     #endif // MICROPY_PY_IMU
     sensor.vsync_callback= NULL;
+    sensor.frame_callback= NULL;
 
     // Reset default color palette.
     sensor.color_palette = rainbow_table;
@@ -889,6 +890,12 @@ int sensor_set_vsync_callback(vsync_cb_t vsync_cb)
     return 0;
 }
 
+int sensor_set_frame_callback(frame_cb_t vsync_cb)
+{
+    sensor.frame_callback = vsync_cb;
+    return 0;
+}
+
 int sensor_set_color_palette(const uint16_t *color_palette)
 {
     sensor.color_palette = color_palette;
@@ -1061,6 +1068,11 @@ int sensor_snapshot(sensor_t *sensor, image_t *image, uint32_t flags)
     }
 
     interrupts();
+
+    // Not useful for the NRF but must call to keep API the same.
+    if (sensor->frame_callback) {
+        sensor->frame_callback();
+    }
 
     // Fix the BPP.
     switch (sensor->pixformat) {

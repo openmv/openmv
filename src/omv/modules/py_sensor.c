@@ -30,6 +30,7 @@
 
 extern sensor_t sensor;
 static mp_obj_t vsync_callback = mp_const_none;
+static mp_obj_t frame_callback = mp_const_none;
 
 #if MICROPY_PY_IMU
 static void do_auto_rotation(int pitch_deadzone, int roll_activezone)
@@ -586,6 +587,27 @@ static mp_obj_t py_sensor_set_vsync_callback(mp_obj_t vsync_callback_obj)
         vsync_callback = vsync_callback_obj;
         sensor_set_vsync_callback(sensor_vsync_callback);
     }
+
+    return mp_const_none;
+}
+
+static void sensor_frame_callback()
+{
+    if (mp_obj_is_callable(frame_callback)) {
+        mp_call_function_0(frame_callback);
+    }
+}
+
+static mp_obj_t py_sensor_set_frame_callback(mp_obj_t frame_callback_obj)
+{
+    if (!mp_obj_is_callable(frame_callback_obj)) {
+        frame_callback = mp_const_none;
+        sensor_set_frame_callback(NULL);
+    } else {
+        frame_callback = frame_callback_obj;
+        sensor_set_frame_callback(sensor_frame_callback);
+    }
+
     return mp_const_none;
 }
 
@@ -952,6 +974,7 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_sensor_get_framebuffers_obj,    py_sensor_ge
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_set_special_effect_obj,  py_sensor_set_special_effect);
 STATIC MP_DEFINE_CONST_FUN_OBJ_3(py_sensor_set_lens_correction_obj, py_sensor_set_lens_correction);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_set_vsync_callback_obj,  py_sensor_set_vsync_callback);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_set_frame_callback_obj,  py_sensor_set_frame_callback);
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(py_sensor_ioctl_obj, 1, 5, py_sensor_ioctl);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_set_color_palette_obj,   py_sensor_set_color_palette);
 STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_sensor_get_color_palette_obj,   py_sensor_get_color_palette);
@@ -1110,6 +1133,7 @@ STATIC const mp_map_elem_t globals_dict_table[] = {
     { MP_OBJ_NEW_QSTR(MP_QSTR_set_special_effect),  (mp_obj_t)&py_sensor_set_special_effect_obj },
     { MP_OBJ_NEW_QSTR(MP_QSTR_set_lens_correction), (mp_obj_t)&py_sensor_set_lens_correction_obj },
     { MP_OBJ_NEW_QSTR(MP_QSTR_set_vsync_callback),  (mp_obj_t)&py_sensor_set_vsync_callback_obj },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_set_frame_callback),  (mp_obj_t)&py_sensor_set_frame_callback_obj },
     { MP_OBJ_NEW_QSTR(MP_QSTR_ioctl),               (mp_obj_t)&py_sensor_ioctl_obj },
     { MP_OBJ_NEW_QSTR(MP_QSTR_set_color_palette),   (mp_obj_t)&py_sensor_set_color_palette_obj },
     { MP_OBJ_NEW_QSTR(MP_QSTR_get_color_palette),   (mp_obj_t)&py_sensor_get_color_palette_obj },

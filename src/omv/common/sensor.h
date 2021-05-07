@@ -149,6 +149,7 @@ typedef enum {
 #define SENSOR_HW_FLAGS_CLR(s, x)    ((s)->hw_flags &= ~(1<<x))
 
 typedef void (*vsync_cb_t)(uint32_t vsync);
+typedef void (*frame_cb_t)();
 
 typedef struct _sensor sensor_t;
 typedef struct _sensor {
@@ -162,6 +163,7 @@ typedef struct _sensor {
     const uint16_t *color_palette;    // Color palette used for color lookup.
 
     vsync_cb_t vsync_callback;  // VSYNC callback.
+    frame_cb_t frame_callback;  // Frame callback.
     polarity_t pwdn_pol;        // PWDN polarity (TODO move to hw_flags)
     polarity_t reset_pol;       // Reset polarity (TODO move to hw_flags)
 
@@ -324,6 +326,9 @@ int sensor_ioctl(int request, ...);
 
 // Set vsync callback function.
 int sensor_set_vsync_callback(vsync_cb_t vsync_cb);
+
+// Set frame callback function.
+int sensor_set_frame_callback(frame_cb_t vsync_cb);
 
 // Set color palette
 int sensor_set_color_palette(const uint16_t *color_palette);
