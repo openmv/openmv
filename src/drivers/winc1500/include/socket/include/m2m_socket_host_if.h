@@ -4,7 +4,7 @@
  *
  * \brief BSD compatible socket interface internal types.
  *
- * Copyright (c) 2016-2018 Microchip Technology Inc. and its subsidiaries.
+ * Copyright (c) 2016-2021 Microchip Technology Inc. and its subsidiaries.
  *
  * \asf_license_start
  *
@@ -65,7 +65,19 @@ MACROS
 
 #define SSL_MAX_OPT_LEN						HOSTNAME_MAX_SIZE
 
-
+#define ALPN_LIST_MIN_SIZE			4
+#define ALPN_LIST_MAX_SIZE			32
+/*!< 
+	Maximum length of ALPN list that can be specified by the application.
+	The list is in the following format:
+	@verbatim
+	0       1       2       3 ... (bytes)
+	+-------+-------+-------+  ...        +-------+  ...        +-------+  ...
+	| Length L (BE) | len1  | name1...    | len2  | name2...    | len3  | name3...
+	+-------+-------+-------+  ...        +-------+  ...        +-------+  ...
+	Length fields do not include themselves.
+	@endverbatim
+*/
 
 #define SOCKET_CMD_INVALID					0x00
 /*!< 
@@ -195,6 +207,16 @@ MACROS
 */
 
 
+#define SOCKET_CMD_SECURE					0x56
+/*!<
+	Make secure a previously opened socket.
+*/
+
+#define SOCKET_CMD_SSL_CONNECT_ALPN			0x57
+/*!< 
+	SSL-Socket Connect with ALPN command value.
+*/
+
 
 #define PING_ERR_SUCCESS					0
 #define PING_ERR_DEST_UNREACH				1
@@ -318,12 +340,47 @@ typedef struct{
 typedef struct{
 	SOCKET		sock;
 	sint8		s8Error;
-	uint16		u16AppDataOffset;
 	/*!<
-		In further packet send requests the host interface should put the user application
-		data at this offset in the allocated shared data packet.
+		0 for successful connection, in which case u16AppDataOffset is valid.
+		Negative for failed connection, in which case u8ErrorType and u8ErrorDetail may give more info.
 	*/
+	union {
+		uint16		u16AppDataOffset;
+		/*!<
+			In further packet send requests the host interface should put the user application
+			data at this offset in the allocated shared data packet.
+		*/
+		struct {
+			uint8   u8ErrSource;
+			/*!<
+				0: No detail
+				1: TLS Alert received from peer
+				2: TLS Alert generated locally
+			*/
+			uint8   u8ErrCode;
+			/*!<
+				For TLS Alerts, this is the Alert ID.
+			*/
+		};
+	};
 }tstrConnectReply;
+
+
+/*!
+@struct	\
+	tstrConnectAlpnReply
+	
+@brief
+	Connect Reply, contains sock number, error value and index of negotiated application protocol.
+*/
+typedef struct{
+	tstrConnectReply	strConnReply;
+	uint8				u8AppProtocolIdx;
+	/*!<
+		1-based index of application-layer protocol negotiated during TLS handshake.
+	*/
+	uint8		__PAD24__[3];
+}tstrConnectAlpnReply;
 
 
 /*!
@@ -363,11 +420,13 @@ typedef struct{
 	SOCKET		sock;
 	uint8		u8Void;
 	uint16		u16SessionID;
+    uint16      u16BufLen;
 }tstrRecvCmd;
 
 
 /*!
-@struct
+@struct \
+  tstrRecvReply
 @brief
 */
 typedef struct{

@@ -4,7 +4,7 @@
  *
  * \brief WINC WLAN Application Interface.
  *
- * Copyright (c) 2016-2018 Microchip Technology Inc. and its subsidiaries.
+ * Copyright (c) 2016-2021 Microchip Technology Inc. and its subsidiaries.
  *
  * \asf_license_start
  *
@@ -49,7 +49,59 @@
         @defgroup   WLANAPI         Functions
         @brief
             Here are listed all the functions that implement the Wlan APIs.
-@}
+        @{
+            @defgroup   WLANINIT        Initialization
+            @brief
+                Here are listed all the functions that implement the Wlan Initialization APIs.
+            @defgroup   WLANEVTS        Wlan Events
+            @brief
+                Here are listed all the functions that implement the Wlan Events APIs.
+            @defgroup   WLANCONNECT     Connection
+            @brief
+                Here are listed all the functions that implement the Wifi Connection APIs.
+            @defgroup   WLANSCAN        Scanning
+            @brief
+                Here are listed all the functions that implement the Wifi Scanning APIs.
+            @defgroup   WLANAP          Hot-Spot (Access-Point)
+            @brief
+                Here are listed all the functions that implement the Wifi Hot-Spot (Access-Point) APIs.
+            @defgroup   WLANAP          Hot-Spot (Access-Point)
+            @brief
+                Here are listed all the functions that implement the Wifi Hot-Spot (Access-Point) APIs.
+            @defgroup   WLANETH         Bypass Mode
+            @brief
+                Here are listed all the functions that implement the Bypass Mode APIs.
+            @defgroup   WLANROAMING     Roaming
+            @brief
+                Here are listed all the functions that implement the Wifi Roaming APIs.
+            @defgroup   WLANPS          Power Save
+            @brief
+                Here are listed all the functions that implement the Power-Save APIs.
+            @defgroup   WLANCONF        Configuration
+            @brief
+                Here are listed all the functions that implement the Wlan Configuration APIs.
+            @defgroup   WLANTIME        System Time
+            @brief
+                Here are listed all the functions that implement the System Time APIs.
+            @defgroup   WLANPROVISION   Provisioning
+            @brief
+                Here are listed all the functions that implement the Wifi Provisioning APIs.
+            @defgroup   WLANCRYPTO      Crypto
+            @brief
+                Here are listed all the functions that implement the Wifi Crypto APIs.
+
+            @cond P2P_DOC
+            @defgroup   WLANP2P         P2P
+            @brief
+                Here are listed all the functions that implement the Wifi P2P APIs.
+            @endcond
+            @cond MON_DOC
+            @defgroup   WLANMON         Monitoring Mode
+            @brief
+                Here are listed all the functions that implement the Wifi Monitoring Mode APIs.
+            @endcond
+        @}
+    @}
  */
 
 #ifndef __M2M_WIFI_H__
@@ -68,9 +120,8 @@ MACROS
 *=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*/
 
 /**@addtogroup WLANCallbacks
-*/
-/**@{*/
-
+ * @{
+ */
 /*!
 @typedef void (*tpfAppWifiCb)(uint8 u8MsgType, void* pvMsg);
 
@@ -147,6 +198,8 @@ typedef void (*tpfAppWifiCb) (uint8 u8MsgType, void * pvMsg);
 */
 typedef void (*tpfAppEthCb) (uint8 u8MsgType, void * pvMsg,void * pvCtrlBuf);
 
+/**@cond MON_DOC
+ */
 /*!
 @typedef void (*tpfAppMonCb)(tstrM2MWifiRxPacketInfo* pstrWifiRxPacket, uint8* pu8Payload, uint16 u16PayloadSize);
 
@@ -176,11 +229,13 @@ typedef void (*tpfAppEthCb) (uint8 u8MsgType, void * pvMsg,void * pvCtrlBuf);
 @warning
 	u16PayloadSize should not exceed the buffer size given through m2m_wifi_enable_monitoring_mode.
 */
-typedef void (*tpfAppMonCb) (tstrM2MWifiRxPacketInfo *pstrWifiRxPacket, uint8 * pu8Payload, uint16 u16PayloadSize);
+typedef void (*tpfAppMonCb)(tstrM2MWifiRxPacketInfo *pstrWifiRxPacket, uint8 *pu8Payload, uint16 u16PayloadSize);
+/**@endcond*/ //MON_DOC
 /**@}*/     //WLANCallbacks
 
 /**@addtogroup  WlanEnums
- * @{*/
+ * @{
+ */
 /*!
 @enum   \
     tenuWifiState
@@ -216,11 +271,43 @@ typedef enum {
 } tenuCredStoreOption;
 
 /*!
-@struct 	\
-	tstrEthInitParam
-	
-@brief		
-	Structure to hold Ethernet interface parameters. 
+@enum   \
+    tenu1xOption
+@brief
+
+@remarks
+
+*/
+typedef enum {
+    WIFI_1X_BYPASS_SERVER_AUTH,
+    /*!< Server authentication for 802.1x connections. Values are of type @ref int.\n
+        0: Authenticate server; Default, Recommended.\n
+        1: Bypass server authentication.\n
+    */
+    WIFI_1X_SESSION_CACHING,
+    /*!< TLS session caching on/off for 802.1x connections. Values are of type @ref int.\n
+        0: Session caching off.\n
+        1: Session caching on; Default.\n
+        Note that the WINC implementation of PEAPv0 does not support session caching; this setting is ignored for PEAPv0 methods.
+    */
+    WIFI_1X_SPECIFIC_ROOTCERT,
+    /*!< SHA1 digest of subject name of the root certificate to be used during server authentication. Values are:\n
+        20-byte arrays: authentication is limited to this particular root certificate; Recommended\n
+        0-byte array: authentication can succeed with any certificate in the WINC root certificate store; Default.\n
+    */
+    WIFI_1X_TIME_VERIF_MODE,
+    /*!< Mode for checking expiry of server certificate chain.
+        Values are of type @ref tenuSslCertExpSettings.
+        Default is @ref SSL_CERT_EXP_CHECK_EN_IF_SYS_TIME.
+    */
+} tenu1xOption;
+
+/*!
+@struct     \
+    tstrEthInitParam
+
+@brief
+    Structure to hold Ethernet interface parameters.
     Structure is to be defined and have its attributes set, based on the application's functionality
     before a call is made to initialize the wi-fi operations by calling the
     @ref m2m_wifi_init function.
@@ -444,17 +531,15 @@ typedef struct {
 /*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*
 FUNCTION PROTOTYPES
 *=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*/
-/**@addtogroup WLANAPI
- */
-/**@{*/
 
 #ifdef __cplusplus
      extern "C" {
 #endif
 
 /*!
-@fn	\
-	NMI_API void  m2m_wifi_download_mode(void);
+@ingroup WLANINIT
+@fn \
+    NMI_API void  m2m_wifi_download_mode(void);
 
 @brief
     Prepares the WINC board before downloading any data (Firmware, Certificates, etc).
@@ -465,23 +550,29 @@ FUNCTION PROTOTYPES
     interrupt enabling and it halts the chip to allow for the firmware downloads. Firmware
     can be downloaded through a number of interfaces, UART, I2C and SPI.
 
-@return		
-	The function returns @ref M2M_SUCCESS for successful operations  and a negative value otherwise.
+@pre
+    Prior to call m2m_wifi_download_mode, the Application should ensure that the wifi is not
+    initialized. This can be done by calling @ref m2m_wifi_get_state and in case the wifi state
+    differs from @ref WIFI_STATE_DEINIT, a @ref m2m_wifi_deinit needs to be issued.
+
+@return
+    The function returns @ref M2M_SUCCESS for successful operations and a negative value otherwise.
 */
-NMI_API sint8  m2m_wifi_download_mode(void);
+NMI_API sint8 m2m_wifi_download_mode(void);
 
 /*!
-@fn	\
-	NMI_API sint8  m2m_wifi_init(tstrWifiInitParam * pWifiInitParam);
+@ingroup WLANINIT
+@fn \
+    NMI_API sint8 m2m_wifi_init(tstrWifiInitParam * pWifiInitParam);
 
 @brief
     Synchronous API to initialize the WINC driver.
 
 @details
     This function initializes the WINC driver by registering the callback function for the M2M_WIFI layer
-	(also the call back function for bypass mode/monitoring mode if defined), initializing the host 
-	interface layer and the bus interfaces.	Wi-Fi callback registering is essential to allow the 
-	handling of the events received, in response to the asynchronous Wi-Fi operations.
+    (also the callback function for bypass mode/monitoring mode if defined), initializing the host
+    interface layer and the bus interfaces. Wi-Fi callback registering is essential to allow the
+    handling of the events received, in response to the asynchronous Wi-Fi operations.
 
     The possible Wi-Fi events that are expected to be received through the callback
     function (provided by the application) to the M2M_WIFI layer are listed below:
@@ -531,11 +622,12 @@ NMI_API sint8  m2m_wifi_download_mode(void);
 NMI_API sint8  m2m_wifi_init(tstrWifiInitParam * pWifiInitParam);
 
 /*!
-@fn	\
-	NMI_API sint8  m2m_wifi_deinit(void * arg);
-	
-@brief	
-	De-initialize the WINC driver and host interface. 
+@ingroup WLANINIT
+@fn \
+    NMI_API sint8 m2m_wifi_deinit(void * arg);
+
+@brief
+    De-initialize the WINC driver and host interface.
 
 @details
     Synchronous de-initialization function for the WINC driver.
@@ -558,13 +650,16 @@ NMI_API sint8  m2m_wifi_init(tstrWifiInitParam * pWifiInitParam);
     Every function call of @ref m2m_wifi_init should be matched with a call to m2m_wifi_deinit.
 
 @see
-	nm_bsp_deinit
+    nm_bsp_deinit
     m2m_wifi_init
+    m2m_wifi_init_hold
+    m2m_wifi_download_mode
 */
 NMI_API sint8  m2m_wifi_deinit(void * arg);
 
 /*!
-@fn	\
+@ingroup WLANINIT
+@fn \
     NMI_API sint8 m2m_wifi_init_hold(void);
 
 @brief
@@ -577,7 +672,8 @@ NMI_API sint8  m2m_wifi_deinit(void * arg);
 NMI_API sint8 m2m_wifi_init_hold(void);
 
 /*!
-@fn	\
+@ingroup WLANINIT
+@fn \
     NMI_API sint8 m2m_wifi_init_start(tstrWifiInitParam * pWifiInitParam);
 
 @brief
@@ -596,7 +692,8 @@ NMI_API sint8 m2m_wifi_init_hold(void);
 NMI_API sint8 m2m_wifi_init_start(tstrWifiInitParam * pWifiInitParam);
 
 /*!
-@fn	\
+@ingroup WLANINIT
+@fn \
     NMI_API sint8 m2m_wifi_reinit(tstrWifiInitParam * pWifiInitParam);
 
 @brief
@@ -608,6 +705,9 @@ NMI_API sint8 m2m_wifi_init_start(tstrWifiInitParam * pWifiInitParam);
     (see @ref tpfAppEthCb) and @ref tstrEthInitParam structure (which contains initialization
     settings for bypass mode).
 
+@note
+    m2m_wifi_reinit wraps a call to @ref m2m_wifi_deinit and to @ref m2m_wifi_init.
+
 @see
     m2m_wifi_deinit
     m2m_wifi_init
@@ -616,20 +716,26 @@ NMI_API sint8 m2m_wifi_init_start(tstrWifiInitParam * pWifiInitParam);
 NMI_API sint8 m2m_wifi_reinit(tstrWifiInitParam * pWifiInitParam);
 
 /*!
-@fn	\
+@ingroup WLANINIT
+@fn \
     NMI_API sint8 m2m_wifi_reinit_hold(void);
 
 @brief
     First part of @ref m2m_wifi_reinit, up to the point of initializing SPI for flash access.
 
+@note
+    m2m_wifi_reinit_hold wraps a call to @ref m2m_wifi_deinit and to @ref m2m_wifi_init_hold.
+
 @see
+    m2m_wifi_deinit
     m2m_wifi_reinit
     m2m_wifi_init_hold
 */
 NMI_API sint8 m2m_wifi_reinit_hold(void);
 
 /*!
-@fn	\
+@ingroup WLANINIT
+@fn \
     NMI_API sint8 m2m_wifi_reinit_start(tstrWifiInitParam * pWifiInitParam);
 
 @brief
@@ -649,7 +755,8 @@ NMI_API sint8 m2m_wifi_reinit_hold(void);
 NMI_API sint8 m2m_wifi_reinit_start(tstrWifiInitParam * pWifiInitParam);
 
 /*!
-@fn	\
+@ingroup WLANEVTS
+@fn \
     NMI_API void m2m_wifi_yield(void);
 
 @brief
@@ -670,8 +777,9 @@ NMI_API sint8 m2m_wifi_reinit_start(tstrWifiInitParam * pWifiInitParam);
 NMI_API void m2m_wifi_yield(void);
 
 /*!
-@fn	\
-	NMI_API sint8 m2m_wifi_handle_events(void * arg);
+@ingroup WLANEVTS
+@fn \
+    NMI_API sint8 m2m_wifi_handle_events(void * arg);
 
 @brief 	
     Synchronous M2M event handler function.
@@ -712,14 +820,14 @@ NMI_API sint8 m2m_wifi_handle_events(void * arg);
 	Pointer to the structure containing certificate revocation list details.
 
 @return
-	The function returns @ref M2M_SUCCESS if the command has been successfully queued to the WINC, 
-	and a negative value otherwise.
+    The function returns @ref M2M_SUCCESS if the command has been successfully queued to the WINC and a negative value otherwise.
 */
 sint8 m2m_wifi_send_crl(tstrTlsCrlInfo* pCRL);
 
 /*!
-@fn	\
-	sint8 m2m_wifi_delete_sc(char *pcSsid, uint8 u8SsidLen);
+@ingroup WLANCONNECT
+@fn \
+    sint8 m2m_wifi_delete_sc(char *pcSsid, uint8 u8SsidLen);
 
 @brief
 	Asynchronous API that deletes connection credentials (PSK, WEP key, 802.1X password) from WINC
@@ -748,14 +856,14 @@ sint8 m2m_wifi_send_crl(tstrTlsCrlInfo* pCRL);
     deleted regardless of the input parameters.
 
 @return
-	The function returns @ref M2M_SUCCESS if the command has been successfully queued to the WINC, 
-	and a negative value otherwise.
- */
+    The function returns @ref M2M_SUCCESS if the command has been successfully queued to the WINC and a negative value otherwise.
+*/
 sint8 m2m_wifi_delete_sc(char *pcSsid, uint8 u8SsidLen);
 
 /*!
-@fn	\
-	NMI_API sint8 m2m_wifi_default_connect(void);
+@ingroup WLANCONNECT
+@fn \
+    NMI_API sint8 m2m_wifi_default_connect(void);
 
 @brief
 	Asynchronous API that attempts to reconnect to the last-associated access point.
@@ -777,18 +885,21 @@ sint8 m2m_wifi_delete_sc(char *pcSsid, uint8 u8SsidLen);
 
 @warning
  This function must be called in station mode only.
-	It is important to note that successful completion of a call to m2m_wifi_default_connect()
-	  does not guarantee success of the WIFI connection; a negative return value indicates only
-	  locally-detected errors.
-	
-@return		
-    The function returns @ref M2M_SUCCESS if the command has been successfully queued to the WINC, 
-	and a negative value otherwise.
+    It is important to note that successful completion of a call to m2m_wifi_default_connect()
+    does not guarantee success of the WIFI connection; a negative return value indicates only
+    locally-detected errors.
+
+@see
+    m2m_wifi_connect
+
+@return
+    The function returns @ref M2M_SUCCESS if the command has been successfully queued to the WINC and a negative value otherwise.
 */
 NMI_API sint8 m2m_wifi_default_connect(void);
 
 /*!
-@fn	\
+@ingroup WLANCONNECT
+@fn \
     sint8 m2m_wifi_connect_open(tenuCredStoreOption enuCredStoreOption, tstrNetworkId *pstrNetworkId);
 
 @brief
@@ -818,19 +929,19 @@ NMI_API sint8 m2m_wifi_default_connect(void);
 @param[in]  enuCredStoreOption
     Option to specify whether connection details (i.e. the contents
     of pstrNetworkId) are stored in WINC's flash and, if so,
-                                    whether they are encrypted before storing.
+    whether they are encrypted before storing.
 
 @param[in]  pstrNetworkId
     Structure specifying SSID/BSSID and Wi-Fi channel.
 
 @return
-    The function returns @ref M2M_SUCCESS if the connect request has been successfully passed to
-    the firmware, and a negative value otherwise.
- */
+    The function returns @ref M2M_SUCCESS if the connect request has been successfully passed to the firmware and a negative value otherwise.
+*/
 sint8 m2m_wifi_connect_open(tenuCredStoreOption enuCredStoreOption, tstrNetworkId *pstrNetworkId);
 
 /*!
-@fn	\
+@ingroup WLANCONNECT
+@fn \
     sint8 m2m_wifi_connect_wep(tenuCredStoreOption enuCredStoreOption, tstrNetworkId *pstrNetworkId, tstrAuthWep *pstrAuthWep);
 
 @brief
@@ -860,7 +971,7 @@ sint8 m2m_wifi_connect_open(tenuCredStoreOption enuCredStoreOption, tstrNetworkI
 @param[in]  enuCredStoreOption
     Option to specify whether connection details (i.e. the contents
     of pstrNetworkId and pstrAuthWep) are stored in WINC's flash
-                                    and, if so, whether they are encrypted before storing.
+    and, if so, whether they are encrypted before storing.
 
 @param[in]  pstrNetworkId
     Structure specifying SSID/BSSID and Wi-Fi channel.
@@ -869,13 +980,13 @@ sint8 m2m_wifi_connect_open(tenuCredStoreOption enuCredStoreOption, tstrNetworkI
     Structure specifying the WEP key.
 	
 @return
-    The function returns @ref M2M_SUCCESS if the connect request has been successfully passed to
-    the firmware, and a negative value otherwise.
+    The function returns @ref M2M_SUCCESS if the connect request has been successfully passed to the firmware and a negative value otherwise.
 */
 sint8 m2m_wifi_connect_wep(tenuCredStoreOption enuCredStoreOption, tstrNetworkId *pstrNetworkId, tstrAuthWep *pstrAuthWep);
-	
+
 /*!
-@fn	\
+@ingroup WLANCONNECT
+@fn \
     sint8 m2m_wifi_connect_psk(tenuCredStoreOption enuCredStoreOption, tstrNetworkId *pstrNetworkId, tstrAuthPsk *pstrAuthPsk);
 
 @brief
@@ -905,7 +1016,7 @@ sint8 m2m_wifi_connect_wep(tenuCredStoreOption enuCredStoreOption, tstrNetworkId
 @param[in]  enuCredStoreOption
     Option to specify whether connection details (i.e. the contents
     of pstrNetworkId and pstrAuthPsk) are stored in WINC's flash
-                                    and, if so, whether they are encrypted before storing.
+    and, if so, whether they are encrypted before storing.
 
 @param[in]  pstrNetworkId
     Structure specifying SSID/BSSID and Wi-Fi channel.
@@ -914,13 +1025,79 @@ sint8 m2m_wifi_connect_wep(tenuCredStoreOption enuCredStoreOption, tstrNetworkId
     Structure specifying the Passphrase/PSK.
 
 @return
-    The function returns @ref M2M_SUCCESS if the connect request has been successfully passed to
-    the firmware, and a negative value otherwise.
- */
+    The function returns @ref M2M_SUCCESS if the connect request has been successfully passed to the firmware and a negative value otherwise.
+*/
 sint8 m2m_wifi_connect_psk(tenuCredStoreOption enuCredStoreOption, tstrNetworkId *pstrNetworkId, tstrAuthPsk *pstrAuthPsk);
 
 /*!
-@fn	\
+@ingroup WLANCONNECT
+@fn \
+    sint8 m2m_wifi_1x_set_option(tenu1xOption enuOptionName, const void *pOptionValue, size_t OptionLen);
+
+@brief
+    API to set (write) options relating to Wi-Fi connection using WPA(2) Enterprise authentication.
+
+@details
+    The following options can be set:\n
+        @ref WIFI_1X_BYPASS_SERVER_AUTH\n
+        @ref WIFI_1X_SESSION_CACHING\n
+        @ref WIFI_1X_SPECIFIC_ROOTCERT\n
+        @ref WIFI_1X_TIME_VERIF_MODE\n
+    The setting applies to all subsequent connection attempts via @ref m2m_wifi_connect_1x_mschap2
+    or @ref m2m_wifi_connect_1x_tls.\n
+    Connection attempts via @ref m2m_wifi_default_connect use the
+    settings which were in place at the time of the original connection.
+
+@param[in]  enuOptionName
+    The option to set.
+
+@param[in]  pOptionValue
+    Pointer to a buffer containing the value to set. The buffer must be at least as long as OptionLen.
+    If OptionLen is 0, then pOptionValue may be NULL.
+
+@param[in]  OptionLen
+    The length of the option value being set.
+
+@return
+    The function returns @ref M2M_SUCCESS if the parameters are valid and @ref M2M_ERR_INVALID_ARG otherwise.
+*/
+sint8 m2m_wifi_1x_set_option(tenu1xOption enuOptionName, const void *pOptionValue, size_t OptionLen);
+
+/*!
+@ingroup WLANCONNECT
+@fn \
+    sint8 m2m_wifi_1x_get_option(tenu1xOption enuOptionName, void *pOptionValue, size_t *pOptionLen);
+
+@brief
+    API to get (read) options relating to Wi-Fi connection using WPA(2) Enterprise authentication.
+
+@details
+    The following options can be read:\n
+        @ref WIFI_1X_BYPASS_SERVER_AUTH\n
+        @ref WIFI_1X_SESSION_CACHING\n
+        @ref WIFI_1X_SPECIFIC_ROOTCERT\n
+        @ref WIFI_1X_TIME_VERIF_MODE\n
+
+@param[in]      enuOptionName
+    The option to get.
+
+@param[out]     pOptionValue
+    Pointer to a buffer containing the value to set. The buffer must be at least as long as OptionLen.
+    If OptionLen is 0, then pOptionValue may be NULL.
+
+@param[inout]  pOptionLen
+    Pointer to a length.
+    When calling the function, this length must be the length of the buffer available for reading the option value.
+    When the function returns, this length is the length of the data that has been populated by the function.
+
+@return
+    The function returns @ref M2M_SUCCESS if the parameters are valid and @ref M2M_ERR_INVALID_ARG otherwise.
+*/
+sint8 m2m_wifi_1x_get_option(tenu1xOption enuOptionName, void *pOptionValue, size_t *pOptionLen);
+
+/*!
+@ingroup WLANCONNECT
+@fn \
     sint8 m2m_wifi_connect_1x_mschap2(tenuCredStoreOption enuCredStoreOption, tstrNetworkId *pstrNetworkId, tstrAuth1xMschap2 *pstrAuth1xMschap2);
 
 @brief
@@ -951,7 +1128,7 @@ sint8 m2m_wifi_connect_psk(tenuCredStoreOption enuCredStoreOption, tstrNetworkId
 @param[in]  enuCredStoreOption
     Option to specify whether connection details (i.e. the contents
     of pstrNetworkId and pstrAuth1xMschap2) are stored in WINC's
-                                    flash and, if so, whether they are encrypted before storing.
+    flash and, if so, whether they are encrypted before storing.
 
 @param[in]  pstrNetworkId
     Structure specifying SSID/BSSID and Wi-Fi channel.
@@ -960,13 +1137,13 @@ sint8 m2m_wifi_connect_psk(tenuCredStoreOption enuCredStoreOption, tstrNetworkId
     Structure specifying the MS-CHAP-V2 credentials.
 	
 @return
-    The function returns @ref M2M_SUCCESS if the connect request has been successfully passed to
-    the firmware, and a negative value otherwise.
+    The function returns @ref M2M_SUCCESS if the connect request has been successfully passed to the firmware and a negative value otherwise.
 */
 sint8 m2m_wifi_connect_1x_mschap2(tenuCredStoreOption enuCredStoreOption, tstrNetworkId *pstrNetworkId, tstrAuth1xMschap2 *pstrAuth1xMschap2);
 	
 /*!
-@fn	\
+@ingroup WLANCONNECT
+@fn \
     sint8 m2m_wifi_connect_1x_tls(tenuCredStoreOption enuCredStoreOption, tstrNetworkId *pstrNetworkId, tstrAuth1xTls *pstrAuth1xTls);
 
 @brief
@@ -997,7 +1174,7 @@ sint8 m2m_wifi_connect_1x_mschap2(tenuCredStoreOption enuCredStoreOption, tstrNe
 @param[in]  enuCredStoreOption
     Option to specify whether connection details (i.e. the contents
     of pstrNetworkId and pstrAuth1xTls) are stored in WINC's
-                                    flash and, if so, whether they are encrypted before storing.
+    flash and, if so, whether they are encrypted before storing.
 
 @param[in]  pstrNetworkId
     Structure specifying SSID/BSSID and Wi-Fi channel.
@@ -1006,14 +1183,14 @@ sint8 m2m_wifi_connect_1x_mschap2(tenuCredStoreOption enuCredStoreOption, tstrNe
     Structure specifying the EAP-TLS credentials.
 
 @return
-    The function returns @ref M2M_SUCCESS if the connect request has been successfully passed to
-    the firmware, and a negative value otherwise.
- */
+    The function returns @ref M2M_SUCCESS if the connect request has been successfully passed to the firmware and a negative value otherwise.
+*/
 sint8 m2m_wifi_connect_1x_tls(tenuCredStoreOption enuCredStoreOption, tstrNetworkId *pstrNetworkId, tstrAuth1xTls *pstrAuth1xTls);
 
 /*!
-@fn	\
-	NMI_API sint8 m2m_wifi_connect(char *pcSsid, uint8 u8SsidLen, uint8 u8SecType, void *pvAuthInfo, uint16 u16Ch);
+@ingroup WLANCONNECT
+@fn \
+    NMI_API sint8 m2m_wifi_connect(char *pcSsid, uint8 u8SsidLen, uint8 u8SecType, void *pvAuthInfo, uint16 u16Ch);
 
 @brief
     DEPRECATED in v19.6.1 - Kept only for legacy purposes.\n
@@ -1024,29 +1201,29 @@ sint8 m2m_wifi_connect_1x_tls(tenuCredStoreOption enuCredStoreOption, tstrNetwor
     type, the authentication information parameters and the channel number to which the connection
     will be established.
 
-    The connection status is known when a response of @ref M2M_WIFI_RESP_CON_STATE_CHANGED is 
+    The connection status is known when a response of @ref M2M_WIFI_RESP_CON_STATE_CHANGED is
     received based on the states defined in @ref tenuM2mConnState, successful connection is defined
     by @ref M2M_WIFI_CONNECTED
 
     The only difference between this function and @ref m2m_wifi_default_connect, is the set of connection parameters.
     Connection using this function is expected to be made to a specific AP and to a specified channel.
 
-@param [in]	pcSsid
+@param[in]  pcSsid
     A buffer holding the SSID corresponding to the requested AP.
     SSID must not contain '\0'.
-				
-@param [in]	u8SsidLen
+
+@param[in]  u8SsidLen
     Length of the given SSID (not including the NULL termination).
-    A length greater than the maximum defined SSID @ref M2M_MAX_SSID_LEN will result in a negative error 
-				@ref M2M_ERR_FAIL.
-				
-@param [in]	u8SecType
-				Wi-Fi security type security for the network. It can be one of the following types:
-				-@ref M2M_WIFI_SEC_OPEN
-				-@ref M2M_WIFI_SEC_WEP
-				-@ref M2M_WIFI_SEC_WPA_PSK
-				-@ref M2M_WIFI_SEC_802_1X
-				A value outside these possible values will result in a negative return error @ref M2M_ERR_FAIL.
+    A length greater than the maximum defined SSID @ref M2M_MAX_SSID_LEN will result in a negative error
+    @ref M2M_ERR_FAIL.
+
+@param[in]  u8SecType
+    Wi-Fi security type security for the network. It can be one of the following types:
+    -@ref M2M_WIFI_SEC_OPEN
+    -@ref M2M_WIFI_SEC_WEP
+    -@ref M2M_WIFI_SEC_WPA_PSK
+    -@ref M2M_WIFI_SEC_802_1X
+    A value outside these possible values will result in a negative return error @ref M2M_ERR_FAIL.
 
 @param [in]	pvAuthInfo
     Authentication parameters required for completing the connection. Its type is based on the
@@ -1056,9 +1233,9 @@ sint8 m2m_wifi_connect_1x_tls(tenuCredStoreOption enuCredStoreOption, tstrNetwor
 
 @param [in]	u16Ch
     Wi-Fi channel number as defined in @ref tenuM2mScanCh enumeration. Specifying a channel number
-    greater than @ref M2M_WIFI_CH_14 results in a negative error @ref M2M_ERR_FAIL(-12), unless
+    greater than @ref M2M_WIFI_CH_14 returns a negative error @ref M2M_ERR_FAIL(-12), unless
     the value is @ref M2M_WIFI_CH_ALL, since this indicates that the firmware should scan all channels
-    to find the SSID requested to connect to.
+    to find the SSID specified in parameter pcSsid.
 
     Failure to find the connection match will return a negative error
     @ref M2M_DEFAULT_CONN_SCAN_MISMATCH.
@@ -1079,13 +1256,12 @@ sint8 m2m_wifi_connect_1x_tls(tenuCredStoreOption enuCredStoreOption, tstrNetwor
     @ref m2m_wifi_connect_1x_tls
 
     Additionally:
-    -This function must be called in station mode only.
-    -Successful completion of this function does not guarantee success of the WIFI connection, and
-     a negative return value indicates only locally-detected errors.
+    - This function must be called in station mode only.
+    - Successful completion of this function does not guarantee success of the WIFI connection, and
+    a negative return value indicates only locally-detected errors.
 
-@return	
-    The function returns @ref M2M_SUCCESS if the command has been successfully queued to the WINC, 
-    and a negative value otherwise.	
+@return
+    The function returns @ref M2M_SUCCESS if the command has been successfully queued to the WINC and a negative value otherwise.
 
 @see
     tstr1xAuthCredentials
@@ -1094,6 +1270,7 @@ sint8 m2m_wifi_connect_1x_tls(tenuCredStoreOption enuCredStoreOption, tstrNetwor
 NMI_API sint8 m2m_wifi_connect(char *pcSsid, uint8 u8SsidLen, uint8 u8SecType, void *pvAuthInfo, uint16 u16Ch);
 
 /*!
+@ingroup WLANCONNECT
 @fn \
     NMI_API sint8 m2m_wifi_connect_sc(char *pcSsid, uint8 u8SsidLen, uint8 u8SecType, void *pvAuthInfo, uint16 u16Ch, uint8 u8NoSaveCred);
 
@@ -1102,9 +1279,9 @@ NMI_API sint8 m2m_wifi_connect(char *pcSsid, uint8 u8SsidLen, uint8 u8SecType, v
     Legacy asynchronous API to request connection to a specific AP with the option to save credentials in Flash.
 
 @details
-	Prior to a successful connection, the application developers must know the SSID of the AP, the security
-	type, the authentication information parameters and the channel number to which the connection will
-	be established.
+    Prior to a successful connection, the application developers must know the SSID of the AP, the security
+    type, the authentication information parameters and the channel number to which the connection will
+    be established.
 
     The connection status is known when a response of @ref M2M_WIFI_RESP_CON_STATE_CHANGED is received based
     on the states defined in @ref tenuM2mConnState, successful connection is defined by @ref M2M_WIFI_CONNECTED
@@ -1162,36 +1339,35 @@ NMI_API sint8 m2m_wifi_connect(char *pcSsid, uint8 u8SsidLen, uint8 u8SecType, v
     @ref m2m_wifi_connect_1x_tls
 
     Additionally:
-	-This function must be called in station mode only.
-	-Successful completion of this function does not guarantee success of the WIFI connection, and
-	a negative return value indicates only locally-detected errors.
-	
+    - This function must be called in station mode only.
+    - Successful completion of this function does not guarantee success of the WIFI connection, and
+    a negative return value indicates only locally-detected errors.
+
 @see
     tenuM2mSecType
     tstr1xAuthCredentials
     tstrM2mWifiWepParams
 
 @return
-    The function returns @ref M2M_SUCCESS if the command has been successfully queued to the WINC,
-    and a negative value otherwise.
+    The function returns @ref M2M_SUCCESS if the command has been successfully queued to the WINC and a negative value otherwise.
 */
 NMI_API sint8 m2m_wifi_connect_sc(char *pcSsid, uint8 u8SsidLen, uint8 u8SecType, void *pvAuthInfo, uint16 u16Ch, uint8 u8NoSaveCred);
 
 /*!
-@fn	\
-	NMI_API sint8 m2m_wifi_disconnect(void);
-	
+@ingroup WLANCONNECT
+@fn \
+    NMI_API sint8 m2m_wifi_disconnect(void);
+
 @brief
     Synchronous API to request disconnection from a network.
 
 @details
     Request a Wi-Fi disconnect from the currently connected AP.
-    After the Disconnect is complete the driver should receive a response of @ref M2M_WIFI_RESP_CON_STATE_CHANGED based on the states defined
+    After the disconnect is complete the driver should receive a response of @ref M2M_WIFI_RESP_CON_STATE_CHANGED based on the states defined
     in @ref tenuM2mConnState, successful disconnection is defined by @ref M2M_WIFI_DISCONNECTED .
-	
-@return		
-    The function returns @ref M2M_SUCCESS if the command has been successfully queued to the WINC, 
-	and a negative value otherwise.
+
+@return
+    The function returns @ref M2M_SUCCESS if the command has been successfully queued to the WINC and a negative value otherwise.
 
 @pre 
 	Disconnection request must be made to a successfully connected AP. If the WINC is not in the connected state, a call to this function will hold insignificant.
@@ -1210,156 +1386,32 @@ NMI_API sint8 m2m_wifi_connect_sc(char *pcSsid, uint8 u8SsidLen, uint8 u8SecType
 NMI_API sint8 m2m_wifi_disconnect(void);
  
 /*!
-@fn	\
-	NMI_API sint8 m2m_wifi_start_provision_mode(tstrM2MAPConfig *pstrAPConfig, char *pcHttpServerDomainName, uint8 bEnableHttpRedirect);
-	
+@ingroup WLANPROVISION
+@fn \
+    NMI_API sint8 m2m_wifi_start_provision_mode(tstrM2MAPConfig *pstrAPConfig, char *pcHttpServerDomainName, uint8 bEnableHttpRedirect);
+
 @brief
     Asynchronous API for control of Wi-Fi provisioning functionality.
 
-@details	
-	Asynchronous Wi-Fi provisioning function, which starts the WINC HTTP PROVISIONING mode.
-	The function triggers the WINC to activate the Wi-Fi AP (HOTSPOT) mode with the passed 
-	configuration parameters and then starts the HTTP Provision WEB Server. 
+@details
+    Asynchronous Wi-Fi provisioning function, which starts the WINC HTTP PROVISIONING mode.
+    The function triggers the WINC to activate the Wi-Fi AP (HOTSPOT) mode with the passed
+    configuration parameters and then starts the HTTP Provision WEB Server.
 
-	Provisioning status is returned in an event @ref M2M_WIFI_RESP_PROVISION_INFO.
+    Provisioning status is returned in an event @ref M2M_WIFI_RESP_PROVISION_INFO.
 
-@param [in]	pstrAPConfig
-				AP configuration parameters as defined in @ref tstrM2MAPConfig configuration structure.
+@param[in]  pstrAPConfig
+    AP configuration parameters as defined in @ref tstrM2MAPConfig configuration structure.
     If a NULL value is passed in, the call will result in a negative error @ref M2M_ERR_FAIL.
-				
-@param [in]	pcHttpServerDomainName
-				Domain name of the HTTP Provision WEB server which others will use to load the provisioning Home page.
-				The domain name can have one of the following 3 forms:
-    - 1. "wincprov.com"
-    - 2. "http://wincprov.com"
-    - 3. "https://wincprov.com"
 
-    Forms 1 and 2 are equivalent, they will both start a plain http server, while form 3
-				will start a secure HTTP provisioning Session (HTTP over SSL connection).
-
-@param [in]	bEnableHttpRedirect
-				A flag to enable/disable the HTTP redirect feature. If Secure provisioning is enabled (i.e. the server
-				domain name uses "https" prefix) this flag is ignored (no meaning for redirect in HTTPS).
-				Possible values are:
-    - ZERO value, which means DO NOT use HTTP Redirect. In this case, the associated device could open the provisioning
-                  page ONLY when the HTTP Provision URL of the WINC HTTP Server is correctly written on the browser.
-    - Non-Zero value, means use HTTP Redirect. In this case, all http traffic (http://URL) from the associated
-                  device (Phone, PC, etc) will be redirected to the WINC HTTP Provisioning Home page.
-
-@pre	
-	- A Wi-Fi notification callback of type @ref tpfAppWifiCb MUST be implemented and registered at startup. Registering the callback
-	  is done through passing it to the initialization @ref m2m_wifi_init function.
-	- The event @ref M2M_WIFI_RESP_CONN_INFO must be handled in the callback to receive the requested connection info.
-	
-@warning
-    DO NOT use ".local" in the pcHttpServerDomainName.
-
-@return
-    The function returns @ref M2M_SUCCESS if the command has been successfully queued to the WINC, 
-	and a negative value otherwise.
-	
-@see
-	tpfAppWifiCb
-	m2m_wifi_init
-	M2M_WIFI_RESP_PROVISION_INFO
-	m2m_wifi_stop_provision_mode
-	tstrM2MAPConfig
-
-\section WIFIExample1 Example
-  The example demonstrates a code snippet for how provisioning is triggered and the response event 
-  received accordingly. 
-
-@code
-	#include "m2m_wifi.h"
-	#include "m2m_types.h"
-
-	void wifi_event_cb(uint8 u8WiFiEvent, void * pvMsg)
-	{
-		switch(u8WiFiEvent)
-		{
-		case M2M_WIFI_RESP_PROVISION_INFO:
-			{
-				tstrM2MProvisionInfo	*pstrProvInfo = (tstrM2MProvisionInfo*)pvMsg;
-				if(pstrProvInfo->u8Status == M2M_SUCCESS)
-				{
-                    tstrNetworkId   strNetworkId = {NULL, pstrProvInfo->au8SSID, (uint8)strlen((char*)(pstrProvInfo->au8SSID)), M2M_WIFI_CH_ALL};
-                    tstrAuthPsk     strAuthPsk = {NULL, pstrProvInfo->au8Password, (uint8)strlen((char*)(pstrProvInfo->au8Password))};
-                    m2m_wifi_connect_psk(WIFI_CRED_SAVE_ENCRYPTED, &strNetworkId, &strAuthPsk);
-
-					printf("PROV SSID : %s\n",pstrProvInfo->au8SSID);
-					printf("PROV PSK  : %s\n",pstrProvInfo->au8Password);
-				}
-				else
-				{
-					printf("(ERR) Provisioning Failed\n");
-				}
-			}
-			break;
-
-			default:
-			break;
-		}
-	}
-
-	int main()
-	{
-		tstrWifiInitParam 	param;
-		
-		param.pfAppWifiCb	= wifi_event_cb;
-		if(!m2m_wifi_init(&param))
-		{
-			tstrM2MAPConfig		apConfig;
-			uint8				bEnableRedirect = 1;
-			
-			strcpy(apConfig.au8SSID, "WINC_SSID");
-			apConfig.u8ListenChannel 	= 1;
-			apConfig.u8SecType			= M2M_WIFI_SEC_OPEN;
-			apConfig.u8SsidHide			= 0;
-			
-			// IP Address
-			apConfig.au8DHCPServerIP[0]	= 192;
-			apConfig.au8DHCPServerIP[1]	= 168;
-			apConfig.au8DHCPServerIP[2]	= 1;
-            apConfig.au8DHCPServerIP[3]	= 1;
-
-			m2m_wifi_start_provision_mode(&apConfig, "atmelwincconf.com", bEnableRedirect);
-						
-			while(1)
-			{
-				m2m_wifi_handle_events(NULL);
-			}
-		}
-	}
-@endcode
-*/
-NMI_API sint8 m2m_wifi_start_provision_mode(tstrM2MAPConfig *pstrAPConfig, char *pcHttpServerDomainName, uint8 bEnableHttpRedirect);
-
-/*!
-@fn	\
-	NMI_API sint8 m2m_wifi_start_provision_mode_ext(tstrM2MAPModeConfig *pstrAPModeConfig, char *pcHttpServerDomainName, uint8 bEnableHttpRedirect);
-	
-@brief
-    Asynchronous API for control of Wi-Fi provisioning functionality with extended options.
-
-@details	
-	Asynchronous Wi-Fi provisioning function, which starts the WINC HTTP PROVISIONING mode.
-	The function triggers the WINC to activate the Wi-Fi AP (HOTSPOT) mode with the passed 
-	configuration parameters and then starts the HTTP Provision WEB Server. 
-
-	Provisioning status is returned in an event @ref M2M_WIFI_RESP_PROVISION_INFO.
-
-@param [in]	pstrAPModeConfig
-    AP configuration parameters as defined in @ref tstrM2MAPModeConfig configuration structure.
-    A NULL value passed in, will result in a negative error @ref M2M_ERR_FAIL.
-
-@param [in]	pcHttpServerDomainName
+@param[in]  pcHttpServerDomainName
     Domain name of the HTTP Provision WEB server which others will use to load the provisioning Home page.
     The domain name can have one of the following 3 forms:
     - 1. "wincprov.com"
     - 2. "http://wincprov.com"
     - 3. "https://wincprov.com"
 
-    The forms 1 and 2 are equivalent, they both will start a plain http server, while form 3
+    Forms 1 and 2 are equivalent, they will both start a plain http server, while form 3
     will start a secure HTTP provisioning Session (HTTP over SSL connection).
 
 @param [in]	bEnableHttpRedirect
@@ -1377,22 +1429,21 @@ NMI_API sint8 m2m_wifi_start_provision_mode(tstrM2MAPConfig *pstrAPConfig, char 
 	- The event @ref M2M_WIFI_RESP_CONN_INFO must be handled in the callback to receive the requested connection info.
 
 @warning
-    DO Not use ".local" in the pcHttpServerDomainName.
-	
+    DO NOT use ".local" in the pcHttpServerDomainName.
+
+@return
+    The function returns @ref M2M_SUCCESS if the command has been successfully queued to the WINC and a negative value otherwise.
+
 @see
     tpfAppWifiCb
     m2m_wifi_init
     M2M_WIFI_RESP_PROVISION_INFO
     m2m_wifi_stop_provision_mode
-    tstrM2MAPModeConfig
+    tstrM2MAPConfig
 
-@return
-    The function returns @ref M2M_SUCCESS if the command has been successfully queued to the WINC,
-    and a negative value otherwise.
-
-\section WIFIExample1b Example
-  The example demonstrates a code snippet for how provisioning is triggered and the response event 
-  received accordingly. 
+\section WIFIExample1 Example
+  The example demonstrates a code snippet for how provisioning is triggered and the response event
+  received accordingly.
 
 @code
     #include "m2m_wifi.h"
@@ -1404,7 +1455,7 @@ NMI_API sint8 m2m_wifi_start_provision_mode(tstrM2MAPConfig *pstrAPConfig, char 
         {
         case M2M_WIFI_RESP_PROVISION_INFO:
             {
-                tstrM2MProvisionInfo	*pstrProvInfo = (tstrM2MProvisionInfo*)pvMsg;
+                tstrM2MProvisionInfo    *pstrProvInfo = (tstrM2MProvisionInfo*)pvMsg;
                 if(pstrProvInfo->u8Status == M2M_SUCCESS)
                 {
                     tstrNetworkId   strNetworkId = {NULL, pstrProvInfo->au8SSID, (uint8)strlen((char*)(pstrProvInfo->au8SSID)), M2M_WIFI_CH_ALL};
@@ -1428,9 +1479,134 @@ NMI_API sint8 m2m_wifi_start_provision_mode(tstrM2MAPConfig *pstrAPConfig, char 
 
     int main()
     {
-        tstrWifiInitParam 	param;
-        
-        param.pfAppWifiCb	= wifi_event_cb;
+        tstrWifiInitParam   param;
+
+        param.pfAppWifiCb   = wifi_event_cb;
+        if(!m2m_wifi_init(&param))
+        {
+            tstrM2MAPConfig     apConfig;
+            uint8               bEnableRedirect = 1;
+
+            strcpy(apConfig.au8SSID, "WINC_SSID");
+            apConfig.u8ListenChannel    = 1;
+            apConfig.u8SecType          = M2M_WIFI_SEC_OPEN;
+            apConfig.u8SsidHide         = 0;
+
+            // IP Address
+            apConfig.au8DHCPServerIP[0] = 192;
+            apConfig.au8DHCPServerIP[1] = 168;
+            apConfig.au8DHCPServerIP[2] = 1;
+            apConfig.au8DHCPServerIP[3] = 1;
+
+            m2m_wifi_start_provision_mode(&apConfig, "atmelwincconf.com", bEnableRedirect);
+
+            while(1)
+            {
+                m2m_wifi_handle_events(NULL);
+            }
+        }
+    }
+@endcode
+*/
+NMI_API sint8 m2m_wifi_start_provision_mode(tstrM2MAPConfig *pstrAPConfig, char *pcHttpServerDomainName, uint8 bEnableHttpRedirect);
+
+/*!
+@ingroup WLANPROVISION
+@fn \
+    NMI_API sint8 m2m_wifi_start_provision_mode_ext(tstrM2MAPModeConfig *pstrAPModeConfig, char *pcHttpServerDomainName, uint8 bEnableHttpRedirect);
+
+@brief
+    Asynchronous API for control of Wi-Fi provisioning functionality with extended options.
+
+@details
+    Asynchronous Wi-Fi provisioning function, which starts the WINC HTTP PROVISIONING mode.
+    The function triggers the WINC to activate the Wi-Fi AP (HOTSPOT) mode with the passed
+    configuration parameters and then starts the HTTP Provision WEB Server.
+
+    Provisioning status is returned in an event @ref M2M_WIFI_RESP_PROVISION_INFO.
+
+@param[in]  pstrAPModeConfig
+    AP configuration parameters as defined in @ref tstrM2MAPModeConfig configuration structure.
+    A NULL value passed in, will result in a negative error @ref M2M_ERR_FAIL.
+
+@param[in]  pcHttpServerDomainName
+    Domain name of the HTTP Provision WEB server which others will use to load the provisioning Home page.
+    The domain name can have one of the following 3 forms:
+    - 1. "wincprov.com"
+    - 2. "http://wincprov.com"
+    - 3. "https://wincprov.com"
+
+    The forms 1 and 2 are equivalent, they both will start a plain http server, while form 3
+    will start a secure HTTP provisioning Session (HTTP over SSL connection).
+
+@param[in]  bEnableHttpRedirect
+    A flag to enable/disable the HTTP redirect feature. If Secure provisioning is enabled (i.e. the server
+    domain name uses "https" prefix) this flag is ignored (no meaning for redirect in HTTPS).
+    Possible values are:
+    - ZERO value, which means DO NOT use HTTP Redirect. In this case, the associated device could open the provisioning
+                  page ONLY when the HTTP Provision URL of the WINC HTTP Server is correctly written on the browser.
+    - Non-Zero value, means use HTTP Redirect. In this case, all http traffic (http://URL) from the associated
+                  device (Phone, PC, etc) will be redirected to the WINC HTTP Provisioning Home page.
+
+@pre
+    - A Wi-Fi notification callback of type @ref tpfAppWifiCb MUST be implemented and registered at startup. Registering the callback
+      is done through passing it to the initialization @ref m2m_wifi_init function.
+    - The event @ref M2M_WIFI_RESP_CONN_INFO must be handled in the callback to receive the requested connection info.
+
+@warning
+    DO Not use ".local" in the pcHttpServerDomainName.
+
+@see
+    tpfAppWifiCb
+    m2m_wifi_init
+    M2M_WIFI_RESP_PROVISION_INFO
+    m2m_wifi_stop_provision_mode
+    tstrM2MAPModeConfig
+
+@return
+    The function returns @ref M2M_SUCCESS if the command has been successfully queued to the WINC and a negative value otherwise.
+
+\section WIFIExample1b Example
+  The example demonstrates a code snippet for how provisioning is triggered and the response event
+  received accordingly.
+
+@code
+    #include "m2m_wifi.h"
+    #include "m2m_types.h"
+
+    void wifi_event_cb(uint8 u8WiFiEvent, void * pvMsg)
+    {
+        switch(u8WiFiEvent)
+        {
+        case M2M_WIFI_RESP_PROVISION_INFO:
+            {
+                tstrM2MProvisionInfo    *pstrProvInfo = (tstrM2MProvisionInfo*)pvMsg;
+                if(pstrProvInfo->u8Status == M2M_SUCCESS)
+                {
+                    tstrNetworkId   strNetworkId = {NULL, pstrProvInfo->au8SSID, (uint8)strlen((char*)(pstrProvInfo->au8SSID)), M2M_WIFI_CH_ALL};
+                    tstrAuthPsk     strAuthPsk = {NULL, pstrProvInfo->au8Password, (uint8)strlen((char*)(pstrProvInfo->au8Password))};
+                    m2m_wifi_connect_psk(WIFI_CRED_SAVE_ENCRYPTED, &strNetworkId, &strAuthPsk);
+
+                    printf("PROV SSID : %s\n",pstrProvInfo->au8SSID);
+                    printf("PROV PSK  : %s\n",pstrProvInfo->au8Password);
+                }
+                else
+                {
+                    printf("(ERR) Provisioning Failed\n");
+                }
+            }
+            break;
+
+            default:
+            break;
+        }
+    }
+
+    int main()
+    {
+        tstrWifiInitParam   param;
+
+        param.pfAppWifiCb   = wifi_event_cb;
         if(!m2m_wifi_init(&param))
         {
             tstrM2MAPModeConfig	apModeConfig;
@@ -1472,8 +1648,9 @@ NMI_API sint8 m2m_wifi_start_provision_mode(tstrM2MAPConfig *pstrAPConfig, char 
 NMI_API sint8 m2m_wifi_start_provision_mode_ext(tstrM2MAPModeConfig *pstrAPModeConfig, char *pcHttpServerDomainName, uint8 bEnableHttpRedirect);
 
 /*!
-@fn	\
-	sint8 m2m_wifi_stop_provision_mode(void);
+@ingroup WLANPROVISION
+@fn \
+    sint8 m2m_wifi_stop_provision_mode(void);
 
 @brief
     Synchronous API for terminating provisioning mode on the WINC IC.
@@ -1486,7 +1663,7 @@ NMI_API sint8 m2m_wifi_start_provision_mode_ext(tstrM2MAPModeConfig *pstrAPModeC
 	An active provisioning session must be active before it is terminated through this function.
 	
 @return
-	The function returns ZERO for success and a negative value otherwise.
+    The function returns @ref M2M_SUCCESS for success and a negative value otherwise.
 
 @see
     m2m_wifi_start_provision_mode
@@ -1494,8 +1671,9 @@ NMI_API sint8 m2m_wifi_start_provision_mode_ext(tstrM2MAPModeConfig *pstrAPModeC
 NMI_API sint8 m2m_wifi_stop_provision_mode(void);
 
 /*!
-@fn	\
-	sint8 m2m_wifi_get_connection_info(void);
+@ingroup WLANCONNECT
+@fn \
+    sint8 m2m_wifi_get_connection_info(void);
 
 @brief
     Asynchronous API for retrieving the WINC IC's connection status.
@@ -1526,9 +1704,8 @@ NMI_API sint8 m2m_wifi_stop_provision_mode(void);
     - In case the WINC is operating in AP mode, the SSID field will be returned as a NULL string.
 
 @return
-    The function returns @ref M2M_SUCCESS if the command has been successfully queued to the WINC, 
-	and a negative value otherwise.
-	
+    The function returns @ref M2M_SUCCESS if the command has been successfully queued to the WINC and a negative value otherwise.
+
 @see
 	M2M_WIFI_RESP_CONN_INFO,
 	tstrM2MConnInfo
@@ -1587,8 +1764,9 @@ NMI_API sint8 m2m_wifi_stop_provision_mode(void);
 NMI_API sint8 m2m_wifi_get_connection_info(void);
 
 /*!
-@fn	\
-	NMI_API sint8 m2m_wifi_set_mac_address(uint8 au8MacAddress[6]);
+@ingroup WLANCONF
+@fn \
+    NMI_API sint8 m2m_wifi_set_mac_address(uint8 au8MacAddress[6]);
 
 @brief
     Synchronous API for assigning a MAC address to the WINC IC.
@@ -1600,15 +1778,15 @@ NMI_API sint8 m2m_wifi_get_connection_info(void);
 @param [in]	au8MacAddress
     MAC Address to be provisioned to the WINC.
 
-@return		
-    The function returns @ref M2M_SUCCESS if the command has been successfully queued to the WINC, 
-	and a negative value otherwise.
+@return
+    The function returns @ref M2M_SUCCESS if the command has been successfully queued to the WINC and a negative value otherwise.
 */
 NMI_API sint8 m2m_wifi_set_mac_address(uint8 au8MacAddress[6]);
  
 /*!
-@fn	\
-	NMI_API sint8 m2m_wifi_wps(uint8 u8TriggerType,const char * pcPinNumber);
+@ingroup WLANWPS
+@fn \
+    NMI_API sint8 m2m_wifi_wps(uint8 u8TriggerType,const char * pcPinNumber);
 
 @brief
     Asynchronous API to engage the WINC IC's Wi-Fi Protected Setup (enrollee) function.
@@ -1619,12 +1797,12 @@ NMI_API sint8 m2m_wifi_set_mac_address(uint8 au8MacAddress[6]);
 
 @param [in]	u8TriggerType
     WPS Trigger method. This may be:
-				- [WPS_PIN_TRIGGER](@ref WPS_PIN_TRIGGER)   Push button method
-				- [WPS_PBC_TRIGGER](@ref WPS_PBC_TRIGGER)	Pin method
-				
-@param [in]	pcPinNumber
-				PIN number for WPS PIN method. It is not used if the trigger type is WPS_PBC_TRIGGER. It must follow the rules
-				stated by the WPS standard.
+    - @ref WPS_PIN_TRIGGER   Push button method
+    - @ref WPS_PBC_TRIGGER   Pin method
+
+@param[in]  pcPinNumber
+    PIN number for WPS PIN method. It is not used if the trigger type is WPS_PBC_TRIGGER. It must follow the rules
+    stated by the WPS standard.
 
 @pre	
 	- A Wi-Fi notification callback of type (@ref tpfAppWifiCb MUST be implemented and registered at 
@@ -1640,8 +1818,7 @@ NMI_API sint8 m2m_wifi_set_mac_address(uint8 au8MacAddress[6]);
     This function is not allowed in AP mode.
 
 @return
-    The function returns @ref M2M_SUCCESS if the command has been successfully queued to the WINC,
-    and a negative value otherwise.
+    The function returns @ref M2M_SUCCESS if the command has been successfully queued to the WINC and a negative value otherwise.
 
 @see
 	tpfAppWifiCb
@@ -1715,8 +1892,9 @@ NMI_API sint8 m2m_wifi_set_mac_address(uint8 au8MacAddress[6]);
 NMI_API sint8 m2m_wifi_wps(uint8 u8TriggerType,const char  *pcPinNumber);
 
 /*!
-@fn	\
-	NMI_API sint8 m2m_wifi_wps_disable(void);
+@ingroup WLANWPS
+@fn \
+    NMI_API sint8 m2m_wifi_wps_disable(void);
 
 @brief	
     Stops the ongoing WPS session.
@@ -1725,22 +1903,19 @@ NMI_API sint8 m2m_wifi_wps(uint8 u8TriggerType,const char  *pcPinNumber);
     WINC should be already in WPS mode using @ref m2m_wifi_wps.
 
 @return
-    The function returns @ref M2M_SUCCESS if the command has been successfully queued to the WINC, 
-	and a negative value otherwise.
+    The function returns @ref M2M_SUCCESS if the command has been successfully queued to the WINC and a negative value otherwise.
 
 @see 
 	m2m_wifi_wps
 */
 NMI_API sint8 m2m_wifi_wps_disable(void);
-/**@}*/
- 
+
 /**@cond P2P_DOC
- * @addtogroup WLANAPI
  */
-/**@{*/
 /*!
-@fn	\
-	NMI_API sint8 m2m_wifi_p2p(uint8 u8Channel);
+@ingroup WLANP2P
+@fn \
+    NMI_API sint8 m2m_wifi_p2p(uint8 u8Channel);
 
 @warning
     P2P has been deprecated from version 19.5.3!
@@ -1748,22 +1923,20 @@ NMI_API sint8 m2m_wifi_wps_disable(void);
 NMI_API sint8 m2m_wifi_p2p(uint8 u8Channel);
 
 /*!
-@fn	\
-	NMI_API sint8 m2m_wifi_p2p_disconnect(void);
+@ingroup WLANP2P
+@fn \
+    NMI_API sint8 m2m_wifi_p2p_disconnect(void);
 
 @warning
     P2P has been deprecated from version 19.5.3!
 */
 NMI_API sint8 m2m_wifi_p2p_disconnect(void);
-/**@}*/
-/**@endcond*/
+/**@endcond*/ //P2P_DOC
 
-/**@addtogroup WLANAPI
- */
-/**@{*/
 /*!
-@fn	\
-	NMI_API sint8 m2m_wifi_enable_ap(CONST tstrM2MAPConfig* pstrM2MAPConfig);
+@ingroup WLANAP
+@fn \
+    NMI_API sint8 m2m_wifi_enable_ap(CONST tstrM2MAPConfig* pstrM2MAPConfig);
 
 @brief
     Asynchronous API to enable access point (AKA "hot-spot") mode on the WINC IC.
@@ -1771,14 +1944,13 @@ NMI_API sint8 m2m_wifi_p2p_disconnect(void);
 @details
     The WINC IC supports the ability to operate as an access point with the following limitations:
       - Only 1 station may be associated at any given time.
-	  - open system and WEP are the only security suites supported.
+      - Open system and WEP are the only security suites supported.
 
-@param [in]	pstrM2MAPConfig
-				A structure holding the AP configurations.
+@param[in]  pstrM2MAPConfig
+    A structure holding the AP configurations.
 
 @return
-    The function returns @ref M2M_SUCCESS if the command has been successfully queued to the WINC, 
-	and a negative value otherwise.
+    The function returns @ref M2M_SUCCESS if the command has been successfully queued to the WINC and a negative value otherwise.
 
 @pre
 	- A Wi-Fi notification callback of type @ref tpfAppWifiCb MUST be implemented and registered at initialization. Registering the callback
@@ -1856,7 +2028,8 @@ NMI_API sint8 m2m_wifi_p2p_disconnect(void);
 NMI_API sint8 m2m_wifi_enable_ap(CONST tstrM2MAPConfig* pstrM2MAPConfig);
 
 /*!
-@fn	\
+@ingroup WLANAP
+@fn \
     NMI_API sint8 m2m_wifi_enable_ap_ext(CONST tstrM2MAPModeConfig* pstrM2MAPModeConfig);
 
 @brief
@@ -1865,14 +2038,13 @@ NMI_API sint8 m2m_wifi_enable_ap(CONST tstrM2MAPConfig* pstrM2MAPConfig);
 @details
     The WINC IC supports the ability to operate as an access point with the following limitations:
     - Only 1 station may be associated at any given time.
-	  - open system and WEP are the only security suites supported.
+    - Open system and WEP are the only security suites supported.
 
 @param [in]	pstrM2MAPModeConfig
     A structure holding the AP configurations.
 
 @return
-    The function returns @ref M2M_SUCCESS if the command has been successfully queued to the WINC, 
-	and a negative value otherwise.
+    The function returns @ref M2M_SUCCESS if the command has been successfully queued to the WINC and a negative value otherwise.
 
 @pre
     - A Wi-Fi notification callback of type @ref tpfAppWifiCb  MUST be implemented and registered at initialization. Registering the callback
@@ -1962,8 +2134,9 @@ NMI_API sint8 m2m_wifi_enable_ap(CONST tstrM2MAPConfig* pstrM2MAPConfig);
 NMI_API sint8 m2m_wifi_enable_ap_ext(CONST tstrM2MAPModeConfig* pstrM2MAPModeConfig);
 
 /*!
-@fn	\
-	NMI_API sint8 m2m_wifi_disable_ap(void);
+@ingroup WLANAP
+@fn \
+    NMI_API sint8 m2m_wifi_disable_ap(void);
 
 @brief
     Synchronous API to disable access point mode on the WINC IC.
@@ -1973,8 +2146,7 @@ NMI_API sint8 m2m_wifi_enable_ap_ext(CONST tstrM2MAPModeConfig* pstrM2MAPModeCon
     function. Otherwise the call to this function will not be useful.
 
 @return
-    The function returns @ref M2M_SUCCESS if the command has been successfully queued to the WINC, 
-	and a negative value otherwise.
+    The function returns @ref M2M_SUCCESS if the command has been successfully queued to the WINC and a negative value otherwise.
 
 @see
          m2m_wifi_enable_ap
@@ -1982,8 +2154,9 @@ NMI_API sint8 m2m_wifi_enable_ap_ext(CONST tstrM2MAPModeConfig* pstrM2MAPModeCon
 NMI_API sint8 m2m_wifi_disable_ap(void);
 
 /*!
-@fn	\
-	NMI_API sint8 m2m_wifi_set_static_ip(tstrM2MIPConfig * pstrStaticIPConf);
+@ingroup WLANCONNECT
+@fn \
+    NMI_API sint8 m2m_wifi_set_static_ip(tstrM2MIPConfig * pstrStaticIPConf);
 
 @brief
     Synchronous API to manually assign a (static) IP address to the WINC IC.
@@ -2011,18 +2184,18 @@ NMI_API sint8 m2m_wifi_disable_ap(void);
     DNS address).
 
 @return
-    The function returns @ref M2M_SUCCESS if the command has been successfully queued to the WINC, 
-	and a negative value otherwise.
-	
+    The function returns @ref M2M_SUCCESS if the command has been successfully queued to the WINC and a negative value otherwise.
+
 @see
 	tstrM2MIPConfig
 */
 NMI_API sint8 m2m_wifi_set_static_ip(tstrM2MIPConfig * pstrStaticIPConf);
  
 /*!
-@fn	\
-	NMI_API sint8 m2m_wifi_request_dhcp_client(void);
-	
+@ingroup WLANCONNECT
+@fn \
+    NMI_API sint8 m2m_wifi_request_dhcp_client(void);
+
 @brief
     Legacy (deprecated) Asynchronous API for starting a DHCP client on the WINC IC.
 	
@@ -2039,8 +2212,9 @@ NMI_API sint8 m2m_wifi_set_static_ip(tstrM2MIPConfig * pstrStaticIPConf);
 NMI_API sint8 m2m_wifi_request_dhcp_client(void);
 
 /*!
-@fn	\
-	NMI_API sint8 m2m_wifi_request_dhcp_server(uint8* addr);
+@ingroup WLANCONNECT
+@fn \
+    NMI_API sint8 m2m_wifi_request_dhcp_server(uint8* addr);
 
 @brief
     Dhcp requested by the firmware automatically in STA/AP mode).
@@ -2055,9 +2229,10 @@ NMI_API sint8 m2m_wifi_request_dhcp_client(void);
 NMI_API sint8 m2m_wifi_request_dhcp_server(uint8* addr);
 
 /*!
-@fn	\
-	NMI_API  sint8 m2m_wifi_enable_dhcp(uint8  u8DhcpEn );
-	
+@ingroup WLANCONNECT
+@fn \
+    NMI_API  sint8 m2m_wifi_enable_dhcp(uint8 u8DhcpEn);
+
 @brief
 	Enable/Disable the DHCP client after connection.
 
@@ -2082,21 +2257,21 @@ NMI_API sint8 m2m_wifi_request_dhcp_server(uint8* addr);
 NMI_API sint8 m2m_wifi_enable_dhcp(uint8  u8DhcpEn );
 
 /*!
-@fn	\
+@ingroup WLANSCAN
+@fn \
     sint8 m2m_wifi_set_scan_options(tstrM2MScanOption* ptstrM2MScanOption);
 
 @brief
     Synchronous API for configuring the behaviour of the WINC IC's network scanning functions.
 
 @details
-	This function sets the time configuration parameters for the scan operation.
+    This function sets the configuration parameters for the scan operation.
 
 @param [in]	ptstrM2MScanOption;
 	Pointer to the structure holding the Scan Parameters.
 
 @return
-    The function returns @ref M2M_SUCCESS if the command has been successfully queued to the WINC, 
-	and a negative value otherwise.
+    The function returns @ref M2M_SUCCESS if the command has been successfully queued to the WINC and a negative value otherwise.
 
 @see
 	tenuM2mScanCh
@@ -2106,7 +2281,37 @@ NMI_API sint8 m2m_wifi_enable_dhcp(uint8  u8DhcpEn );
 NMI_API sint8 m2m_wifi_set_scan_options(tstrM2MScanOption* ptstrM2MScanOption);
 
 /*!
-@fn	\
+@ingroup WLANSCAN
+@fn \
+    sint8 m2m_wifi_set_stop_scan_on_first(uint8 u8StopScanOption);
+
+@brief
+    Synchronous API for enabling/disabling the stop scan on first result of the WINC IC's network scanning functions.
+
+@details
+    Allows for enabling/disabling of stop scan on first result. When enabled, the WINC will stop the scan as soon as
+    it detects a network and return the results to the host. Setting is persistent and will need to be explicitly
+    reverted back by the application if it no longer wishes for it to be enabled.
+
+@param[in]  u8StopScanOption;
+    Setting for enabling or disabling Stopping Scan on first result.
+    1 = Enabled, 0 = Disabled (Default)
+
+@return
+    The function returns @ref M2M_SUCCESS if the command has been successfully queued to the WINC and a negative value otherwise.
+
+@see
+    tenuM2mScanCh
+    tstrM2MScanOption
+    tstrM2MStopScanOption
+    m2m_wifi_request_scan
+    m2m_wifi_set_scan_options
+*/
+NMI_API sint8 m2m_wifi_set_stop_scan_on_first(uint8 u8StopScanOption);
+
+/*!
+@ingroup WLANSCAN
+@fn \
     sint8 m2m_wifi_set_scan_region(uint16 ScanRegion);
 
 @brief
@@ -2125,8 +2330,7 @@ NMI_API sint8 m2m_wifi_set_scan_options(tstrM2MScanOption* ptstrM2MScanOption);
 		NORTH_AMERICA
 
 @return
-    The function returns @ref M2M_SUCCESS if the command has been successfully queued to the WINC, 
-	and a negative value otherwise.
+    The function returns @ref M2M_SUCCESS if the command has been successfully queued to the WINC and a negative value otherwise.
 
 @see
 	tenuM2mScanCh
@@ -2135,8 +2339,9 @@ NMI_API sint8 m2m_wifi_set_scan_options(tstrM2MScanOption* ptstrM2MScanOption);
 NMI_API sint8 m2m_wifi_set_scan_region(uint16  ScanRegion);
 
 /*!
-@fn	\
-	NMI_API sint8 m2m_wifi_request_scan(uint8 ch);
+@ingroup WLANSCAN
+@fn \
+    NMI_API sint8 m2m_wifi_request_scan(uint8 ch);
 
 @brief
     Asynchronous API to request the WINC IC to scan for networks.
@@ -2154,8 +2359,7 @@ NMI_API sint8 m2m_wifi_set_scan_region(uint16  ScanRegion);
     value of @ref M2M_WIFI_CH_ALL to scan all channels.
 
 @return
-    The function returns @ref M2M_SUCCESS if the command has been successfully queued to the WINC,
-    and a negative value otherwise.
+    The function returns @ref M2M_SUCCESS if the command has been successfully queued to the WINC and a negative value otherwise.
 
 @pre
     - A Wi-Fi notification callback of type @ref tpfAppWifiCb MUST be implemented and registered at
@@ -2265,8 +2469,9 @@ NMI_API sint8 m2m_wifi_set_scan_region(uint16  ScanRegion);
 NMI_API sint8 m2m_wifi_request_scan(uint8 ch);
 
 /*!
-@fn	\
-	NMI_API sint8 m2m_wifi_request_scan_passive(uint8 ch, uint16 scan_time);
+@ingroup WLANSCAN
+@fn \
+    NMI_API sint8 m2m_wifi_request_scan_passive(uint8 ch, uint16 scan_time);
 
 @brief
     Similar to @ref m2m_wifi_request_scan but performs passive scanning instead of active scanning.
@@ -2305,6 +2510,7 @@ NMI_API sint8 m2m_wifi_request_scan(uint8 ch);
 NMI_API sint8 m2m_wifi_request_scan_passive(uint8 ch, uint16 scan_time);
 
 /*!
+@ingroup WLANSCAN
 @fn \
     NMI_API sint8 m2m_wifi_request_scan_ssid_list(uint8 ch,uint8 * u8SsidList);
 
@@ -2464,6 +2670,7 @@ NMI_API sint8 m2m_wifi_request_scan_passive(uint8 ch, uint16 scan_time);
 NMI_API sint8 m2m_wifi_request_scan_ssid_list(uint8 ch,uint8 * u8Ssidlist);
 
 /*!
+@ingroup WLANSCAN
 @fn \
     NMI_API uint8 m2m_wifi_get_num_ap_found(void);
 
@@ -2580,6 +2787,7 @@ NMI_API sint8 m2m_wifi_request_scan_ssid_list(uint8 ch,uint8 * u8Ssidlist);
 NMI_API uint8 m2m_wifi_get_num_ap_found(void);
 
 /*!
+@ingroup WLANSCAN
 @fn \
     NMI_API sint8 m2m_wifi_req_scan_result(uint8 index);
 
@@ -2597,8 +2805,7 @@ NMI_API uint8 m2m_wifi_get_num_ap_found(void);
     Index for the requested result, the index range start from 0 till number of AP's found.
 
 @return
-    The function returns @ref M2M_SUCCESS if the command has been successfully queued to the WINC, 
-	and a negative value otherwise.
+    The function returns @ref M2M_SUCCESS if the command has been successfully queued to the WINC and a negative value otherwise.
 
 @see
 	tstrM2mWifiscanResult
@@ -2707,6 +2914,7 @@ NMI_API uint8 m2m_wifi_get_num_ap_found(void);
 NMI_API sint8 m2m_wifi_req_scan_result(uint8 index);
 
 /*!
+@ingroup WLANCONNECT
 @fn \
     NMI_API sint8 m2m_wifi_req_curr_rssi(void);
 
@@ -2714,17 +2922,17 @@ NMI_API sint8 m2m_wifi_req_scan_result(uint8 index);
     Asynchronous API to request the current Receive Signal Strength (RSSI) of the current connection.
 
 @details
-    The response received in through the @ref M2M_WIFI_RESP_CURRENT_RSSI event.
+    This function will result in the application receiving the RSSI via a
+    @ref M2M_WIFI_RESP_CURRENT_RSSI event.
 
 @pre
-	- A Wi-Fi notification callback of type @ref tpfAppWifiCb MUST be implemented and registered 
-	  before initialization. Registering the callback is done through passing it to the 
-      @ref m2m_wifi_init through the @ref tstrWifiInitParam initialization structure.
-		   - The event @ref M2M_WIFI_RESP_CURRENT_RSSI must be handled in the callback to receive the requested Rssi information.       
+    - A Wi-Fi notification callback of type @ref tpfAppWifiCb MUST be implemented and registered
+      during initialization. Registration of the callback is done through passing it to @ref m2m_wifi_init
+      via the @ref tstrWifiInitParam initialization structure.
+    - The event @ref M2M_WIFI_RESP_CURRENT_RSSI must be handled in the callback to receive the requested Rssi information.
 
 @return
-    The function returns @ref M2M_SUCCESS if the command has been successfully queued to the WINC, 
-	and a negative value otherwise.	
+    The function returns @ref M2M_SUCCESS if the command has been successfully queued to the WINC and a negative value otherwise.
 
 \section WIFIExample9 Example
   The code snippet demonstrates how the RSSI request is called in the application's main function and the handling of the event received in the callback. 
@@ -2770,6 +2978,7 @@ NMI_API sint8 m2m_wifi_req_scan_result(uint8 index);
 NMI_API sint8 m2m_wifi_req_curr_rssi(void);
 
 /*!
+@ingroup WLANCONF
 @fn \
     NMI_API sint8 m2m_wifi_get_otp_mac_address(uint8 *pu8MacAddr, uint8 * pu8IsValid);
 
@@ -2791,8 +3000,8 @@ NMI_API sint8 m2m_wifi_req_curr_rssi(void);
     Output MAC address buffer 6 bytes in size. Valid only if *pu8Valid=1.
 
 @param [out] pu8IsValid
-		     Output boolean value to indicate the validity of pu8MacAddr in OTP. 
-		     Output zero if the OTP memory is not programmed, non-zero otherwise.
+    A boolean value set by the callee to indicate the validity of pu8MacAddr in OTP. If no MAC has
+    been programmed in the OTP the value of this parameter will be zero; otherwise it will be non-zero.
 
 @return
     The function returns @ref M2M_SUCCESS for success and a negative value otherwise.
@@ -2803,6 +3012,7 @@ NMI_API sint8 m2m_wifi_req_curr_rssi(void);
 NMI_API sint8 m2m_wifi_get_otp_mac_address(uint8 *pu8MacAddr, uint8 * pu8IsValid);
 
 /*!
+@ingroup WLANCONF
 @fn \
     NMI_API sint8 m2m_wifi_get_mac_address(uint8 *pu8MacAddr)
 
@@ -2829,6 +3039,7 @@ NMI_API sint8 m2m_wifi_get_otp_mac_address(uint8 *pu8MacAddr, uint8 * pu8IsValid
 NMI_API sint8 m2m_wifi_get_mac_address(uint8 *pu8MacAddr);
 
 /*!
+@ingroup WLANPS
 @fn \
     NMI_API sint8 m2m_wifi_set_sleep_mode(uint8 PsTyp, uint8 BcastEn);
 
@@ -2840,7 +3051,7 @@ NMI_API sint8 m2m_wifi_get_mac_address(uint8 *pu8MacAddr);
     to tweak the system power consumption. Such tweaking can be done through one of two ways:
     - 1) Changing the power save mode, to one of the allowed power save modes (see @ref tenuPowerSaveModes). This is done by setting the first parameter.
     - 2) Configuring DTIM monitoring: Configuring beacon monitoring parameters by enabling or disabling the reception of broadcast/multicast data.
-	this is done by setting the second parameter.
+         This is done by setting the second parameter.
 
 @param [in]	PsTyp
 			Desired power saving mode. Supported types are enumerated in @ref tenuPowerSaveModes.
@@ -2865,6 +3076,7 @@ NMI_API sint8 m2m_wifi_get_mac_address(uint8 *pu8MacAddr);
 NMI_API sint8 m2m_wifi_set_sleep_mode(uint8 PsTyp, uint8 BcastEn);
 
 /*!
+@ingroup WLANPS
 @fn \
     NMI_API sint8 m2m_wifi_request_sleep(uint32 u32SlpReqTime);
 
@@ -2900,6 +3112,7 @@ NMI_API sint8 m2m_wifi_set_sleep_mode(uint8 PsTyp, uint8 BcastEn);
 NMI_API sint8 m2m_wifi_request_sleep(uint32 u32SlpReqTime);
 
 /*!
+@ingroup WLANPS
 @fn \
     NMI_API uint8 m2m_wifi_get_sleep_mode(void);
 
@@ -2971,6 +3184,7 @@ NMI_API sint8 m2m_wifi_req_client_ctrl(uint8 cmd);
 NMI_API sint8 m2m_wifi_req_server_init(uint8 ch);
 
 /*!
+@ingroup WLANCONF
 @fn \
     NMI_API sint8 m2m_wifi_set_device_name(uint8 *pu8DeviceName, uint8 u8DeviceNameLength);
 
@@ -2998,12 +3212,12 @@ NMI_API sint8 m2m_wifi_req_server_init(uint8 ch);
 	length @ref M2M_DEVICE_NAME_MAX (including null character).
 
 @return
-    The function returns @ref M2M_SUCCESS if the command has been successfully queued to the WINC, 
-	and a negative value otherwise.
+    The function returns @ref M2M_SUCCESS if the command has been successfully queued to the WINC and a negative value otherwise.
 */
 NMI_API sint8 m2m_wifi_set_device_name(uint8 *pu8DeviceName, uint8 u8DeviceNameLength);
 
 /*!
+@ingroup WLANTIME
 @fn \
     NMI_API sint8 m2m_wifi_configure_sntp(uint8 *pu8NTPServerName, uint8 u8NTPServerNameLength, tenuSNTPUseDHCP useDHCP);
 
@@ -3011,10 +3225,9 @@ NMI_API sint8 m2m_wifi_set_device_name(uint8 *pu8DeviceName, uint8 u8DeviceNameL
 	Configures what NTP server the SNTP client should use.
 
 @details
-	Configures what NTP server the SNTP client should use. Only 1 server name can be provided, if the configured server name begins with an asterisk then it will be treated as a server pool.
-	The SNTP client can also use the NTP server provided by the DHCP server through option 42.
-	By default the NTP server provided by DHCP will be tried first, then the built-in default NTP server (time.nist.gov) will be used.
-	Configuring a server name will overwrite the built-in default server until next reboot.
+    Configures what NTP server the SNTP client should use. Only 1 server name can be provided, if the configured server name begins with an asterisk then it will be treated as a server pool.
+    The SNTP client can also use the NTP server provided by the DHCP server through option 42.
+    By default the NTP server provided by DHCP will be tried first, then the built-in default NTP server (time.nist.gov) will be used.
 
 @param [in]	pu8NTPServerName
 	Buffer holding the NTP server name. If the first character is an asterisk (*) then it will be treated as a server pool, where the asterisk will
@@ -3023,8 +3236,16 @@ NMI_API sint8 m2m_wifi_set_device_name(uint8 *pu8DeviceName, uint8 u8DeviceNameL
 @param [in]	u8NTPServerNameLength
     Length of the NTP server name. Should not exceed the maximum NTP server name length of @ref M2M_NTP_MAX_SERVER_NAME_LENGTH.
 
-@param [in]	useDHCP
-	Should the NTP server provided by the DHCP server be used.
+@param[in]  useDHCP
+    Explicity tell the WINC if it should use the NTP server provided by the DHCP server or not.
+
+@warning
+    SNTP should be configured before the connection takes place. If SNTP is configured after the device connects to a
+    network, the new configuration can take a minimum of 24h to be applied. However, it can take even longer since it is
+    triggered by DHCP renewal.
+    Currently there is also a known issue in which if the WINC obtains the NTP server from DHCP and then connects to a
+    different network, it will still use the NTP from the previous network.
+    Configuring a server name will overwrite the built-in default server until next reboot.
 
 @return
     The function returns @ref M2M_SUCCESS for success and a negative value otherwise.
@@ -3032,6 +3253,7 @@ NMI_API sint8 m2m_wifi_set_device_name(uint8 *pu8DeviceName, uint8 u8DeviceNameL
 NMI_API sint8 m2m_wifi_configure_sntp(uint8 *pu8NTPServerName, uint8 u8NTPServerNameLength, tenuSNTPUseDHCP useDHCP);
 
 /*!
+@ingroup WLANPS
 @fn \
     NMI_API sint8 m2m_wifi_set_lsn_int(tstrM2mLsnInt * pstrM2mLsnInt);
 
@@ -3062,7 +3284,10 @@ NMI_API sint8 m2m_wifi_configure_sntp(uint8 *pu8NTPServerName, uint8 u8NTPServer
 */
 NMI_API sint8 m2m_wifi_set_lsn_int(tstrM2mLsnInt *pstrM2mLsnInt);
 
+/**@cond MON_DOC
+ */
 /*!
+@ingroup WLANMON
 @fn \
     NMI_API sint8 m2m_wifi_enable_monitoring_mode(tstrM2MWifiMonitorModeCtrl *, uint8 *, uint16 , uint16);
 
@@ -3108,8 +3333,7 @@ NMI_API sint8 m2m_wifi_set_lsn_int(tstrM2mLsnInt *pstrM2mLsnInt);
     When this mode is enabled, you cannot be connected in any mode (Station or Access Point).
 
 @return
-    The function returns @ref M2M_SUCCESS if the command has been successfully queued to the WINC, 
-	and a negative value otherwise.
+    The function returns @ref M2M_SUCCESS if the command has been successfully queued to the WINC and a negative value otherwise.
 
 @see
 	tstrM2MWifiMonitorModeCtrl
@@ -3179,6 +3403,7 @@ NMI_API sint8 m2m_wifi_enable_monitoring_mode(tstrM2MWifiMonitorModeCtrl *pstrMt
 										   uint16 u16BufferSize, uint16 u16DataOffset);
 
 /*!
+@ingroup WLANMON
 @fn \
     NMI_API sint8 m2m_wifi_disable_monitoring_mode(void);
 
@@ -3190,8 +3415,7 @@ NMI_API sint8 m2m_wifi_enable_monitoring_mode(tstrM2MWifiMonitorModeCtrl *pstrMt
 	no negative impact will reside.
 
 @return
-    The function returns @ref M2M_SUCCESS if the command has been successfully queued to the WINC, 
-	and a negative value otherwise.
+    The function returns @ref M2M_SUCCESS if the command has been successfully queued to the WINC and a negative value otherwise.
 
 @see
 	m2m_wifi_enable_monitoring_mode               
@@ -3199,6 +3423,7 @@ NMI_API sint8 m2m_wifi_enable_monitoring_mode(tstrM2MWifiMonitorModeCtrl *pstrMt
 NMI_API sint8 m2m_wifi_disable_monitoring_mode(void);
 
 /*!
+@ingroup WLANMON
 @fn \
     NMI_API sint8 m2m_wifi_send_wlan_pkt(uint8 *, uint16, uint16);
  
@@ -3224,16 +3449,17 @@ NMI_API sint8 m2m_wifi_disable_monitoring_mode(void);
     The size of the whole packet in bytes.
 
 @return
-    The function returns @ref M2M_SUCCESS if the command has been successfully queued to the WINC, 
-	and a negative value otherwise.
+    The function returns @ref M2M_SUCCESS if the command has been successfully queued to the WINC and a negative value otherwise.
 
 @see
 	m2m_wifi_enable_monitoring_mode
  			   m2m_wifi_disable_monitoring_mode
  */
 NMI_API sint8 m2m_wifi_send_wlan_pkt(uint8 *pu8WlanPacket, uint16 u16WlanHeaderLength, uint16 u16WlanPktSize);
+/**@endcond*/ //MON_DOC
 
 /*!
+@ingroup WLANETH
 @fn \
     NMI_API sint8 m2m_wifi_send_ethernet_pkt(uint8* pu8Packet,uint16 u16PacketSize);
 
@@ -3258,8 +3484,7 @@ NMI_API sint8 m2m_wifi_send_wlan_pkt(uint8 *pu8WlanPacket, uint16 u16WlanHeaderL
     The size of the whole packet in bytes.
 
 @return
-    The function returns @ref M2M_SUCCESS if the command has been successfully queued to the WINC, 
-	and a negative value otherwise.
+    The function returns @ref M2M_SUCCESS if the command has been successfully queued to the WINC and a negative value otherwise.
 
 @see
 	m2m_wifi_enable_mac_mcast
@@ -3268,6 +3493,7 @@ NMI_API sint8 m2m_wifi_send_wlan_pkt(uint8 *pu8WlanPacket, uint16 u16WlanHeaderL
 NMI_API sint8 m2m_wifi_send_ethernet_pkt(uint8* pu8Packet,uint16 u16PacketSize);
 
 /*!
+@ingroup WLANTIME
 @fn \
     NMI_API sint8 m2m_wifi_enable_sntp(uint8);
 
@@ -3291,9 +3517,8 @@ NMI_API sint8 m2m_wifi_send_ethernet_pkt(uint8* pu8Packet,uint16 u16PacketSize);
 		'0' :disable SNTP
 		'1' :enable SNTP  
 
-@return        
-    The function returns @ref M2M_SUCCESS if the command has been successfully queued to the WINC, 
-	and a negative value otherwise.
+@return
+    The function returns @ref M2M_SUCCESS if the command has been successfully queued to the WINC and a negative value otherwise.
 
 @see
 	m2m_wifi_set_system_time
@@ -3301,6 +3526,7 @@ NMI_API sint8 m2m_wifi_send_ethernet_pkt(uint8* pu8Packet,uint16 u16PacketSize);
 NMI_API sint8 m2m_wifi_enable_sntp(uint8 bEnable);
 
 /*!
+@ingroup WLANTIME
 @fn \
     NMI_API sint8 m2m_wifi_set_system_time(uint32);
 
@@ -3316,8 +3542,7 @@ NMI_API sint8 m2m_wifi_enable_sntp(uint8 bEnable);
  	Seconds elapsed since January 1, 1900 (NTP Timestamp). 
 
 @return
-    The function returns @ref M2M_SUCCESS if the command has been successfully queued to the WINC, 
-	and a negative value otherwise.
+    The function returns @ref M2M_SUCCESS if the command has been successfully queued to the WINC and a negative value otherwise.
 
 @see
 	m2m_wifi_enable_sntp
@@ -3330,6 +3555,7 @@ NMI_API sint8 m2m_wifi_enable_sntp(uint8 bEnable);
 NMI_API sint8 m2m_wifi_set_system_time(uint32 u32UTCSeconds);
 
 /*!
+@ingroup WLANTIME
 @fn \
     NMI_API sint8 m2m_wifi_get_system_time(void);
 
@@ -3346,8 +3572,7 @@ NMI_API sint8 m2m_wifi_set_system_time(uint32 u32UTCSeconds);
 	Get the system time from the SNTP client using the API @ref m2m_wifi_get_system_time.
 
 @return
-    The function returns @ref M2M_SUCCESS if the command has been successfully queued to the WINC, 
-	and a negative value otherwise.
+    The function returns @ref M2M_SUCCESS if the command has been successfully queued to the WINC and a negative value otherwise.
 
 @see
 	m2m_wifi_enable_sntp
@@ -3356,6 +3581,7 @@ NMI_API sint8 m2m_wifi_set_system_time(uint32 u32UTCSeconds);
 NMI_API sint8 m2m_wifi_get_system_time(void);
 
 /*!
+@ingroup WLANCONF
 @fn \
     NMI_API sint8 m2m_wifi_set_cust_InfoElement(uint8*);
 
@@ -3388,8 +3614,7 @@ NMI_API sint8 m2m_wifi_get_system_time(void);
 @endverbatim
 
 @return
-     The function returns @ref M2M_SUCCESS if the command has been successfully queued to the WINC, 
-	 and a negative value otherwise.
+     The function returns @ref M2M_SUCCESS if the command has been successfully queued to the WINC and a negative value otherwise.
 
 @see
 	m2m_wifi_enable_sntp
@@ -3430,15 +3655,15 @@ NMI_API sint8 m2m_wifi_get_system_time(void);
 NMI_API sint8 m2m_wifi_set_cust_InfoElement(uint8* pau8M2mCustInfoElement);
 
 /*!
+@ingroup WLANPS
 @fn \
     NMI_API sint8 m2m_wifi_set_power_profile(uint8 u8PwrMode);
 
 @brief
     Change the power profile mode
 
-@param [in]	u8PwrMode
-    Change the WINC15x0 power profile to different mode based on the enumeration
-    @ref  tenuM2mPwrMode.
+@param [in] u8PwrMode
+    Change the WINC power profile to different mode based on the enumeration @ref tenuM2mPwrMode.
 
 @warning
     May only be called after initialization, before any connection request, and may not be used to change 
@@ -3454,6 +3679,7 @@ NMI_API sint8 m2m_wifi_set_cust_InfoElement(uint8* pau8M2mCustInfoElement);
 sint8 m2m_wifi_set_power_profile(uint8 u8PwrMode);
 
 /*!
+@ingroup WLANCONF
 @fn \
     NMI_API sint8 m2m_wifi_set_tx_power(uint8 u8TxPwrLevel);
 
@@ -3476,6 +3702,7 @@ sint8 m2m_wifi_set_power_profile(uint8 u8PwrMode);
 sint8 m2m_wifi_set_tx_power(uint8 u8TxPwrLevel);
 
 /*!
+@ingroup WLANCONF
 @fn \
     NMI_API sint8 m2m_wifi_set_gain_table_idx(uint8 u8GainTableIdx);
 
@@ -3498,6 +3725,7 @@ sint8 m2m_wifi_set_tx_power(uint8 u8TxPwrLevel);
 sint8 m2m_wifi_set_gain_table_idx(uint8 u8GainTableIdx);
 
 /*!
+@ingroup WLANLOG
 @fn \
     NMI_API sint8 m2m_wifi_enable_firmware_logs(uint8 u8Enable);
 
@@ -3505,8 +3733,7 @@ sint8 m2m_wifi_set_gain_table_idx(uint8 u8GainTableIdx);
     Enable or Disable logs in run time.
 
 @details
-    Enable or Disable logs in run time (Disable Firmware logs will enhance the firmware start-up time 
-    and performance).
+    Enable or Disable logs in run time (Disable Firmware logs will enhance the firmware start-up time and performance).
 
 @param [in]	u8Enable
     Set 1 to enable the logs, 0 for disable.
@@ -3524,6 +3751,7 @@ sint8 m2m_wifi_set_gain_table_idx(uint8 u8GainTableIdx);
 sint8 m2m_wifi_enable_firmware_logs(uint8 u8Enable);
 
 /*!
+@ingroup WLANCONF
 @fn \
     NMI_API sint8 m2m_wifi_set_battery_voltage(uint8 u8BattVolt);
 
@@ -3545,6 +3773,7 @@ sint8 m2m_wifi_enable_firmware_logs(uint8 u8Enable);
 sint8 m2m_wifi_set_battery_voltage(uint16 u16BattVoltx100);
 
 /*!
+@ingroup WLANCONF
 @fn \
     sint8 m2m_wifi_set_gains(tstrM2mWifiGainsParams* pstrM2mGain);
 
@@ -3558,8 +3787,7 @@ sint8 m2m_wifi_set_battery_voltage(uint16 u16BattVoltx100);
     Must be called after initialization through the following function @ref m2m_wifi_init.
 
 @return
-    The function returns @ref M2M_SUCCESS if the command has been successfully queued to the WINC, 
-	and a negative value otherwise.
+    The function returns @ref M2M_SUCCESS if the command has been successfully queued to the WINC and a negative value otherwise.
 
 @see
 	m2m_wifi_init
@@ -3568,6 +3796,7 @@ sint8 m2m_wifi_set_gains(tstrM2mWifiGainsParams* pstrM2mGain);
 
 #ifdef ETH_MODE
 /*!
+@ingroup WLANETH
 @fn \
     NMI_API sint8 m2m_wifi_enable_mac_mcast(uint8 *, uint8);
 
@@ -3594,8 +3823,7 @@ sint8 m2m_wifi_set_gains(tstrM2mWifiGainsParams* pstrM2mGain);
 	Make sure that the application defines ETH_MODE.
 
 @return
-    The function returns @ref M2M_SUCCESS if the command has been successfully queued to the WINC, 
-	and a negative value otherwise.
+    The function returns @ref M2M_SUCCESS if the command has been successfully queued to the WINC and a negative value otherwise.
 
 @see
 	m2m_wifi_set_receive_buffer
@@ -3604,6 +3832,7 @@ sint8 m2m_wifi_set_gains(tstrM2mWifiGainsParams* pstrM2mGain);
 NMI_API sint8 m2m_wifi_enable_mac_mcast(uint8* pu8MulticastMacAddress, uint8 u8AddRemove);
 
 /*!
+@ingroup WLANETH
 @fn \
     NMI_API sint8 m2m_wifi_set_receive_buffer(void *, uint16);
      
@@ -3629,8 +3858,7 @@ NMI_API sint8 m2m_wifi_enable_mac_mcast(uint8* pu8MulticastMacAddress, uint8 u8A
 	This function is available in the Ethernet/bypass mode ONLY. Make sure that the application defines ETH_MODE.\n 
 
 @return
-    The function returns @ref M2M_SUCCESS if the command has been successfully queued to the WINC, 
-	and a negative value otherwise.
+    The function returns @ref M2M_SUCCESS if the command has been successfully queued to the WINC and a negative value otherwise.
 
 @see
 	m2m_wifi_enable_mac_mcast
@@ -3641,22 +3869,25 @@ NMI_API sint8 m2m_wifi_set_receive_buffer(void* pvBuffer,uint16 u16BufferLen);
 #endif /* ETH_MODE */
 
 /*!
+@ingroup WLANCRYPTO
 @fn \
     sint8 m2m_wifi_prng_get_random_bytes(uint8* pu8PrngBuff,uint16 u16PrngSize);
 
 @brief
-	Asynchronous function for retrieving from the firmware a pseudo-random set of bytes as specified in the size passed in as a parameter.
-	The registered wifi-cb function retrieves the random bytes through the response @ref M2M_WIFI_RESP_GET_PRNG 
+    Asynchronous function for retrieving from the firmware a pseudo-random set of bytes.
 
-@param [in]      pu8PrngBuff
-	Pointer to a buffer to receive data.
+@details
+    Asynchronous function for retrieving from the firmware a pseudo-random set of bytes as specified in the size passed in as a parameter.
+    The registered wifi-cb function retrieves the random bytes through the response @ref M2M_WIFI_RESP_GET_PRNG
 
-@param [in]      u16PrngSize
-	Request size in bytes  
+@param [in] pu8PrngBuff
+    Pointer to a buffer to receive data.
+
+@param [in] u16PrngSize
+    Requested size in bytes. Maximum 1580.
 
 @warning
-	Size greater than the maximum specified (@ref M2M_BUFFER_MAX_SIZE - sizeof(tstrPrng))
-	causes a negative error @ref M2M_ERR_FAIL.
+    Size greater than the maximum specified (1580) causes a negative error @ref M2M_ERR_FAIL.
 
 @return      
 	The function returns @ref M2M_SUCCESS for successful operations and a negative value otherwise.
@@ -3664,7 +3895,8 @@ NMI_API sint8 m2m_wifi_set_receive_buffer(void* pvBuffer,uint16 u16BufferLen);
 sint8 m2m_wifi_prng_get_random_bytes(uint8 * pu8PrngBuff,uint16 u16PrngSize);
 
 /*!
-@fn	\
+@ingroup WLANCONF
+@fn \
      NMI_API sint8 m2m_wifi_conf_auto_rate(tstrConfAutoRate * pstrConfAutoRate);
 
 @brief
@@ -3687,6 +3919,7 @@ sint8 m2m_wifi_prng_get_random_bytes(uint8 * pu8PrngBuff,uint16 u16PrngSize);
 NMI_API sint8 m2m_wifi_conf_auto_rate(tstrConfAutoRate * pstrConfAutoRate);
 
 /*!
+@ingroup WLANROAMING
 @fn \
     sint8 m2m_wifi_enable_roaming(uint8 bEnableDhcp);
 
@@ -3717,6 +3950,7 @@ NMI_API sint8 m2m_wifi_conf_auto_rate(tstrConfAutoRate * pstrConfAutoRate);
 */
 sint8 m2m_wifi_enable_roaming(uint8 bEnableDhcp);
 /*!
+@ingroup WLANROAMING
 @fn \
     sint8 m2m_wifi_disable_roaming(void);
 
@@ -3735,6 +3969,7 @@ sint8 m2m_wifi_enable_roaming(uint8 bEnableDhcp);
 sint8 m2m_wifi_disable_roaming(void);
 
 /*!
+@ingroup WLANINIT
 @fn \
     NMI_API uint8 m2m_wifi_get_state(void);
 
@@ -3755,11 +3990,8 @@ sint8 m2m_wifi_disable_roaming(void);
 */
 NMI_API uint8 m2m_wifi_get_state(void);
 
-/**@}*/     //WLANAPI
-
-
-/** @addtogroup VERSION Version
-@brief
+/** @defgroup VERSION Version
+    @brief
         Describes the APIs for reading the version information of the WINC firmware.
 @{
     @defgroup   VERSIONDEF  Defines
@@ -3784,6 +4016,27 @@ NMI_API uint8 m2m_wifi_get_state(void);
 @return		The function returns @ref M2M_SUCCESS for successful operations and a negative value otherwise.
 */
 NMI_API sint8 m2m_wifi_get_firmware_version(tstrM2mRev* pstrRev);
+
+/*!
+@ingroup WLANPS
+@fn \
+    sint8 m2m_wifi_enable_XO_during_sleep(uint8 bXOSleepEnable);
+
+@brief
+    Specifies whether the crystal oscillator is left on or off during deep sleep (defaults to off).
+
+@details
+    m2m_wifi_enable_XO_during_sleep controls the state of the crystal oscillator during deep sleep.
+    
+@param[in]  bXOSleepEnable
+    0 : The XO will be switched off during deep sleep
+    1 : The XO will be kept on during deep sleep
+
+@return
+    The function returns @ref M2M_SUCCESS for successful operations and a negative value otherwise.
+
+*/
+sint8 m2m_wifi_enable_XO_during_sleep(uint8 bXOSleepEnable);
 
 #ifdef __cplusplus
 }

@@ -4,7 +4,7 @@
  *
  * \brief This module contains common APIs declarations.
  *
- * Copyright (c) 2016-2018 Microchip Technology Inc. and its subsidiaries.
+ * Copyright (c) 2016-2021 Microchip Technology Inc. and its subsidiaries.
  *
  * \asf_license_start
  *
@@ -126,4 +126,38 @@ sint8 m2m_memcmp(uint8 *pu8Buff1,uint8 *pu8Buff2 ,uint32 u32Size)
 		}
 	}
 	return s8Result;
+}
+
+/* Convert hexchar to value 0-15 */
+static uint8 hexchar_2_val(uint8 ch)
+{
+    /* ch -= '0' */
+    ch -= 0x30;
+    if(ch <= 9)
+        return ch;
+    /* OR with 0x20 to convert upper case to lower case. */
+    ch |= 0x20;
+    /* ch -= ('a'-'0') */
+    ch -= 0x31;
+    if(ch <= 5)
+        return ch + 10;
+    return 0xFF;
+}
+
+/* Convert hexstring to bytes */
+sint8 hexstr_2_bytes(uint8 *pu8Out, uint8 *pu8In, uint8 u8SizeOut)
+{
+    while(u8SizeOut--)
+    {
+        uint8   u8Out = hexchar_2_val(*pu8In++);
+        if(u8Out > 0xF)
+            return M2M_ERR_INVALID_ARG;
+        *pu8Out = u8Out * 0x10;
+        u8Out = hexchar_2_val(*pu8In++);
+        if(u8Out > 0xF)
+            return M2M_ERR_INVALID_ARG;
+        *pu8Out += u8Out;
+        pu8Out++;
+    }
+    return M2M_SUCCESS;
 }

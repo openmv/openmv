@@ -4,7 +4,7 @@
  *
  * \brief This module contains NMC1000 bus wrapper APIs declarations.
  *
- * Copyright (c) 2016-2018 Microchip Technology Inc. and its subsidiaries.
+ * Copyright (c) 2016-2021 Microchip Technology Inc. and its subsidiaries.
  *
  * \asf_license_start
  *
@@ -164,6 +164,19 @@ sint8 nm_bus_reinit(void *);
 uint8 nm_bus_get_chip_type(void);
 sint8 nm_bus_break(void);
 #endif
+
+/**
+ *  @fn         spi_rw
+ *  @brief      Process SPI Read/Write operation
+ *  @param      pu8Mosi TX Data buffer
+ *  @param      pu8Miso RX Data buffer
+ *  @param      u16Sz Transfer length
+ *  @return     ZERO in case of success and M2M_ERR_BUS_FAIL in case of failure
+ */
+#ifdef CONF_WINC_USE_SPI
+sint8 nm_spi_rw(uint8* pu8Mosi, uint8* pu8Miso, uint16 u16Sz);
+#endif
+
 #ifdef __cplusplus
 	 }
  #endif

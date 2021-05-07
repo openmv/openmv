@@ -4,7 +4,7 @@
  *
  * \brief NMC1500 IoT OTA Interface.
  *
- * Copyright (c) 2016-2018 Microchip Technology Inc. and its subsidiaries.
+ * Copyright (c) 2016-2021 Microchip Technology Inc. and its subsidiaries.
  *
  * \asf_license_start
  *
@@ -71,14 +71,14 @@ FUNCTION PROTOTYPES
 *=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*/
 
 /**
-*	@fn			m2m_ota_cb(uint8 u8OpCode, uint16 u16DataSize, uint32 u32Addr)
-*	@brief		OTA call back function
-*	@param [in]	u8OpCode
-*					HIF Opcode type.
-*	@param [in]	u16DataSize
-*					HIF data length.
-*	@param [in]	u32Addr
-*					HIF address.
+@fn         m2m_ota_cb(uint8 u8OpCode, uint16 u16DataSize, uint32 u32Addr)
+@brief      Internal OTA call back function.
+@param[in]  u8OpCode
+                HIF Opcode type.
+@param[in]  u16DataSize
+                HIF data length.
+@param[in]  u32Addr
+                HIF address.
 */
 static void m2m_ota_cb(uint8 u8OpCode, uint16 u16DataSize, uint32 u32Addr)
 {
@@ -140,9 +140,9 @@ static void m2m_ota_cb(uint8 u8OpCode, uint16 u16DataSize, uint32 u32Addr)
         s8Ret = hif_receive(u32Addr, (uint8*)&strOtaHostFileReadStatusResp, sizeof(tstrOtaHostFileReadStatusResp), 1);
         if(M2M_SUCCESS == s8Ret)
             if(gpfHFDReadCb)
-                gpfHFDReadCb(strOtaHostFileReadStatusResp.u8OtaFileReadStatus, strOtaHostFileReadStatusResp.pFileBuf, strOtaHostFileReadStatusResp.FileBlockSz); 
-	}
-    else if (u8OpCode == M2M_OTA_RESP_HOST_FILE_ERASE)
+                gpfHFDReadCb(strOtaHostFileReadStatusResp.u8OtaFileReadStatus, strOtaHostFileReadStatusResp.pFileBuf, strOtaHostFileReadStatusResp.u16FileBlockSz);
+    }
+    else if(u8OpCode == M2M_OTA_RESP_HOST_FILE_ERASE)
     {
         tstrOtaHostFileEraseStatusResp strOtaHostFileEraseStatusResp = {0};
         s8Ret = hif_receive(u32Addr, (uint8*)&strOtaHostFileEraseStatusResp, sizeof(tstrOtaHostFileEraseStatusResp), 1);
@@ -161,20 +161,13 @@ static void m2m_ota_cb(uint8 u8OpCode, uint16 u16DataSize, uint32 u32Addr)
 	}
 }
 /*!
-@fn	\
-	NMI_API sint8  m2m_ota_init(tpfOtaUpdateCb pfOtaUpdateCb, tpfOtaNotifCb pfOtaNotifCb);
-
-@brief
-	Initialize the OTA layer.
-
-@param [in]	pfOtaUpdateCb
-				OTA Update callback function
-
-@param [in]	pfOtaNotifCb
-				OTA Notify callback function
-
-@return
-	The function SHALL return 0 for success and a negative value otherwise.
+@fn         NMI_API sint8  m2m_ota_init(tpfOtaUpdateCb pfOtaUpdateCb, tpfOtaNotifCb pfOtaNotifCb)
+@brief      Initialize the OTA layer.
+@param[in]  pfOtaUpdateCb
+                OTA Update callback function.
+@param[in]  pfOtaNotifCb
+                OTA Notify callback function.
+@return     The function returns @ref M2M_SUCCESS for success and a negative value otherwise.
 */
 NMI_API sint8  m2m_ota_init(tpfOtaUpdateCb pfOtaUpdateCb, tpfOtaNotifCb pfOtaNotifCb)
 {
@@ -197,17 +190,11 @@ NMI_API sint8  m2m_ota_init(tpfOtaUpdateCb pfOtaUpdateCb, tpfOtaNotifCb pfOtaNot
 	return ret;
 }
 /*!
-@fn	\
-	NMI_API sint8  m2m_ota_notif_set_url(uint8 * u8Url);
-
-@brief
-	Set the OTA url
-
-@param [in]	u8Url
-			 The url server address
-
-@return
-	The function SHALL return 0 for success and a negative value otherwise.
+@fn         NMI_API sint8  m2m_ota_notif_set_url(uint8 * u8Url)
+@brief      Set the OTA url.
+@param[in]  u8Url
+                The url server address.
+@return     The function returns @ref M2M_SUCCESS for success and a negative value otherwise.
 */
 NMI_API sint8  m2m_ota_notif_set_url(uint8 * u8Url)
 {
@@ -222,14 +209,9 @@ NMI_API sint8  m2m_ota_notif_set_url(uint8 * u8Url)
 }
 
 /*!
-@fn	\
-	NMI_API sint8  m2m_ota_notif_check_for_update(void);
-
-@brief
-	check for ota update
-
-@return
-	The function SHALL return 0 for success and a negative value otherwise.
+@fn         NMI_API sint8  m2m_ota_notif_check_for_update(void)
+@brief      Check for OTA update.
+@return     The function returns @ref M2M_SUCCESS for success and a negative value otherwise.
 */
 NMI_API sint8  m2m_ota_notif_check_for_update(void)
 {
@@ -239,17 +221,11 @@ NMI_API sint8  m2m_ota_notif_check_for_update(void)
 }
 
 /*!
-@fn	\
-	NMI_API sint8 m2m_ota_notif_sched(uint32 u32Period);
-
-@brief
-	Schedule OTA update
-
-@param [in]	u32Period
-	Period in days
-
-@return
-	The function SHALL return 0 for success and a negative value otherwise.
+@fn         NMI_API sint8 m2m_ota_notif_sched(uint32 u32Period)
+@brief      Schedule OTA update.
+@param[in]  u32Period
+                Period in days
+@return     The function returns @ref M2M_SUCCESS for success and a negative value otherwise.
 */
 NMI_API sint8 m2m_ota_notif_sched(uint32 u32Period)
 {
@@ -259,18 +235,11 @@ NMI_API sint8 m2m_ota_notif_sched(uint32 u32Period)
 }
 
 /*!
-@fn	\
-	NMI_API sint8 m2m_ota_start_update(unsigned char * pcDownloadUrl);
-
-@brief
-	Request OTA start update using the downloaded url
-
-@param [in]	pcDownloadUrl
-		The download firmware url, you get it from device info
-
-@return
-	The function SHALL return 0 for success and a negative value otherwise.
-
+@fn         NMI_API sint8 m2m_ota_start_update(unsigned char * pcDownloadUrl)
+@brief      Request OTA start update using the downloaded URL.
+@param[in]  pcDownloadUrl
+                The download firmware URL, you get it from device info.
+@return     The function returns @ref M2M_SUCCESS for success and a negative value otherwise.
 */
 NMI_API sint8 m2m_ota_start_update(unsigned char * pcDownloadUrl)
 {
@@ -284,14 +253,9 @@ NMI_API sint8 m2m_ota_start_update(unsigned char * pcDownloadUrl)
 }
 
 /*!
-@fn	\
-	NMI_API sint8 m2m_ota_rollback(void);
-
-@brief
-	Request OTA Rollback image
-
-@return
-	The function SHALL return 0 for success and a negative value otherwise.
+@fn         NMI_API sint8 m2m_ota_rollback(void)
+@brief      Request OTA Rollback image.
+@return     The function returns @ref M2M_SUCCESS for success and a negative value otherwise.
 */
 NMI_API sint8 m2m_ota_rollback(void)
 {
@@ -301,14 +265,9 @@ NMI_API sint8 m2m_ota_rollback(void)
 }
 
 /*!
-@fn	\
-	NMI_API sint8 m2m_ota_abort(void);
-
-@brief
-	Request OTA Abort
-
-@return
-	The function SHALL return 0 for success and a negative value otherwise.
+@fn         NMI_API sint8 m2m_ota_abort(void)
+@brief      Request OTA Abort.
+@return     The function returns @ref M2M_SUCCESS for success and a negative value otherwise.
 */
 NMI_API sint8 m2m_ota_abort(void)
 {
@@ -317,16 +276,10 @@ NMI_API sint8 m2m_ota_abort(void)
 	return ret;
 }
 
-
 /*!
-@fn	\
-	NMI_API sint8 m2m_ota_switch_firmware(void);
-
-@brief
-	Switch to the upgraded Firmware
-
-@return
-	The function SHALL return 0 for success and a negative value otherwise.
+@fn         NMI_API sint8 m2m_ota_switch_firmware(void)
+@brief      Switch to the upgraded Firmware.
+@return     The function returns @ref M2M_SUCCESS for success and a negative value otherwise.
 */
 NMI_API sint8 m2m_ota_switch_firmware(void)
 {
@@ -336,14 +289,9 @@ NMI_API sint8 m2m_ota_switch_firmware(void)
 }
 
 /*!
-@fn	\
-	NMI_API sint8 m2m_ota_get_firmware_version(tstrM2mRev * pstrRev);
-
-@brief
-	Get the OTA Firmware version.
-
-@return
-	The function SHALL return 0 for success and a negative value otherwise.
+@fn         NMI_API sint8 m2m_ota_get_firmware_version(tstrM2mRev * pstrRev)
+@brief      Get the OTA Firmware version.
+@return     The function returns @ref M2M_SUCCESS for success and a negative value otherwise.
 */
 NMI_API sint8 m2m_ota_get_firmware_version(tstrM2mRev * pstrRev)
 {
@@ -409,23 +357,15 @@ NMI_API sint8 m2m_ota_test(void)
 #endif
 
 /*!
-@fn	\
-            NMI_API m2m_ota_host_file_get(unsigned char *pcDownloadUrl, tpfFileGetCb pfHFDGetCb);
-
-@brief
-            Download a file from a remote location and store it in the WINC's Flash.
-
+@fn         NMI_API m2m_ota_host_file_get(unsigned char *pcDownloadUrl, tpfFileGetCb pfHFDGetCb)
+@brief      Download a file from a remote location and store it in the WINC's Flash.
 @param[in]  pcDownloadUrl
                 Url pointing to the remote file. HTTP/HTTPS only.
 
 @param[in]  pfHFDGetCb
                 Pointer to a callback to be executed when the download finishes.
-
-@return
-            Status of the get operation
-
-@warning    1. Providing a callback is mandatory.
-            2. This functionality is only supported from WINC release 19.6.0 onwards.
+@return     Status of the get operation.
+@warning    Providing a callback is mandatory.
 */
 NMI_API sint8 m2m_ota_host_file_get(unsigned char *pcDownloadUrl, tpfFileGetCb pfHFDGetCb)
 {
@@ -457,11 +397,8 @@ EXIT:
 }
 
 /*!
-@fn	\
-            NMI_API m2m_ota_host_file_read_hif(uint8 u8Handler, uint32 u32Offset, uint32 u32Size, tpfFileReadCb pfHFDReadCb);
-@brief
-            Read a certain amount of bytes from a file in WINC's Flash using HIF transfer.
-
+@fn         NMI_API m2m_ota_host_file_read_hif(uint8 u8Handler, uint32 u32Offset, uint32 u32Size, tpfFileReadCb pfHFDReadCb)
+@brief      Read a certain amount of bytes from a file in WINC's Flash using HIF transfer.
 @param[in]  u8Handler
                 ID of the file we are trying to read from. Must be valid.
 
@@ -473,12 +410,8 @@ EXIT:
 
 @param[in]  pfHFDReadCb
                 Callback to be executed when the read operation completes.
-
-@return
-            Status of the read operation
-
-@warning    1. Providing a callback is mandatory.
-            2. This functionality is only supported from WINC release 19.6.0 onwards.
+@return     Status of the read operation.
+@warning    Providing a callback is mandatory.
 */
 NMI_API sint8 m2m_ota_host_file_read_hif(uint8 u8Handler, uint32 u32Offset, uint32 u32Size, tpfFileReadCb pfHFDReadCb)
 {
@@ -496,11 +429,8 @@ EXIT:
 }
 
 /*!
-@fn	\
-            NMI_API m2m_ota_host_file_read_spi(uint8 u8Handler, uint8 *pu8Buff, uint32 u32Offset, uint32 u32Size);
-@brief
-            Read a certain amount of bytes from a file in WINC's Flash using SPI transfer.
-
+@fn         NMI_API m2m_ota_host_file_read_spi(uint8 u8Handler, uint8 *pu8Buff, uint32 u32Offset, uint32 u32Size)
+@brief      Read a certain amount of bytes from a file in WINC's Flash using SPI transfer.
 @param[in]  u8Handler
                 ID of the file we are trying to read from. Must be valid.
 
@@ -512,22 +442,17 @@ EXIT:
 
 @param[in]  u32Size
                 The amount of data to read (in Bytes).
-
-@return
-            Status of the read operation
-
-@warning    1. Before using m2m_ota_host_file_read_spi, the WINC needs to be put in a special
-               mode to allow for a safe access to the Flash. This can be done by calling
-               @ref m2m_wifi_download_mode or @ref m2m_wifi_reinit_hold before trying to read.
-
-            2. This functionality is only supported from WINC release 19.6.0 onwards.
+@return     Status of the read operation.
+@warning    Before using m2m_ota_host_file_read_spi, the WINC needs to be put in a special
+            mode to allow for a safe access to the Flash. This can be done by calling
+            @ref m2m_wifi_download_mode or @ref m2m_wifi_reinit_hold before trying to read.
 */
 NMI_API sint8 m2m_ota_host_file_read_spi(uint8 u8Handler, uint8 *pu8Buff, uint32 u32Offset, uint32 u32Size)
 {
     static uint32 u32FlashHFDStart = 0;
     static uint32 u32FlashHFDSize  = 0;
     sint8 s8Ret = M2M_ERR_INVALID_ARG;
-    if((u8Handler != gu8CurrFileHandlerID) || (HFD_INVALID_HANDLER == gu8CurrFileHandlerID) || (NULL == pu8Buff)) goto EXIT;
+    if((u8Handler == HFD_INVALID_HANDLER) || (NULL == pu8Buff)) goto EXIT;
 
     if(WIFI_STATE_INIT != m2m_wifi_get_state())
     {
@@ -542,9 +467,13 @@ NMI_API sint8 m2m_ota_host_file_read_spi(uint8 u8Handler, uint8 *pu8Buff, uint32
         if(M2M_SUCCESS != s8Ret) goto EXIT;
     }
 
+    s8Ret = spi_flash_read(pu8Buff, u32FlashHFDStart, 4);
+
+    if((M2M_SUCCESS != s8Ret) || (pu8Buff[0] != u8Handler)) goto EXIT;
+
     if((u32Offset >= u32FlashHFDSize) ||
-       (u32Size   >  u32FlashHFDSize) ||
-       ((u32Offset + u32Size) >= u32FlashHFDSize))
+            (u32Size   >  u32FlashHFDSize) ||
+            ((u32Offset + u32Size) >= u32FlashHFDSize))
     {
         s8Ret = M2M_ERR_FAIL;
         goto EXIT;
@@ -560,20 +489,13 @@ EXIT:
 }
 
 /*!
-@fn	\
-            NMI_API m2m_ota_host_file_erase(uint8 u8Handler, tpfFileEraseCb pfHFDEraseCb);
-@brief
-            Erase any traces of an existing file, this means from host driver and WINC firmware.
-
+@fn         NMI_API m2m_ota_host_file_erase(uint8 u8Handler, tpfFileEraseCb pfHFDEraseCb)
+@brief      Erase any traces of an existing file, this means from host driver and WINC firmware.
 @param[in]  u8Handler
                 ID of the file we are trying to erase. Must be valid.
-
 @param[in]  pfHFDEraseCb
                 Pointer to callback to execute when the file erase in the WINC completes.
-
-@return
-            Status of the erase operation
-
+@return     Status of the erase operation.
 @note       Providing a callback is optional.
             If the current handler is invalid at this point, it means one of the three:
                 1. The file never existed;
@@ -581,8 +503,6 @@ EXIT:
                 3. The request to get the file hasn't fully completed.
             For 1. and 2. there is no need to signal the WINC to erase the file in Flash.
             For 3. the Flash can't be erased while a file download is ongoing.
-
-@warning    This functionality is only supported from WINC release 19.6.0 onwards.
 */
 NMI_API sint8 m2m_ota_host_file_erase(uint8 u8Handler, tpfFileEraseCb pfHFDEraseCb)
 {

@@ -4,7 +4,7 @@
  *
  * \brief WINC1500 SPI Flash.
  *
- * Copyright (c) 2016-2018 Microchip Technology Inc. and its subsidiaries.
+ * Copyright (c) 2016-2021 Microchip Technology Inc. and its subsidiaries.
  *
  * \asf_license_start
  *
@@ -539,17 +539,16 @@ sint8 spi_flash_enable(uint8 enable)
 		}
 		/* GPIO15/16/17/18 */
 		u32Val &= ~((0x7777ul) << 12);
-		u32Val |= ((0x1111ul) << 12);
-		nm_write_reg(0x1410, u32Val);
 		if(enable) {
+			u32Val |= ((0x1111ul) << 12);
+			nm_write_reg(0x1410, u32Val);
 			spi_flash_leave_low_power_mode();
 		} else {
 			spi_flash_enter_low_power_mode();
+			/* Disable pinmux to SPI flash to minimize leakage. */
+			u32Val |= ((0x0010ul) << 12);
+			nm_write_reg(0x1410, u32Val);
 		}
-		/* Disable pinmux to SPI flash to minimize leakage. */
-		u32Val &= ~((0x7777ul) << 12);
-		u32Val |= ((0x0010ul) << 12);
-		nm_write_reg(0x1410, u32Val);
 	}
 ERR1:
 	return s8Ret;

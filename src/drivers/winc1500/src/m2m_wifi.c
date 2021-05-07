@@ -4,7 +4,7 @@
  *
  * \brief This module contains M2M Wi-Fi APIs implementation.
  *
- * Copyright (c) 2016-2018 Microchip Technology Inc. and its subsidiaries.
+ * Copyright (c) 2016-2021 Microchip Technology Inc. and its subsidiaries.
  *
  * \asf_license_start
  *
@@ -44,12 +44,35 @@
  *
  * \{
  */
+ 
+/* Require authentication of server. */
+#define WIFI_1X_TLS_HS_FLAGS_PEER_AUTH          NBIT1
+/* Enable expiry checking of server certificate chain. */
+#define WIFI_1X_TLS_HS_FLAGS_PEER_CERTTIMECHECK NBIT2
+/* Require local system time to be known (i.e. fail expiry checking if time is not known locally). */
+#define WIFI_1X_TLS_HS_FLAGS_REQUIRE_TIME       NBIT3
+/* Enable TLS session caching. */
+#define WIFI_1X_TLS_HS_FLAGS_SESSION_CACHING    NBIT4
+/* Reserved, this bit must be clear. */
+#define WIFI_1X_TLS_HS_FLAGS_RSV5               NBIT5
+/* Require server authentication to be against a specified root certificate. */
+#define WIFI_1X_TLS_HS_FLAGS_SPECIFY_ROOTCERT   NBIT6
+/* Reserved, this bit must be clear. */
+#define WIFI_1X_TLS_HS_FLAGS_RSV7               NBIT7
 
-static volatile uint8 gu8WifiState = WIFI_STATE_DEINIT;
+#define WIFI_1X_TLS_HS_FLAGS_DEFAULT    (           \
+            WIFI_1X_TLS_HS_FLAGS_PEER_AUTH          \
+        |   WIFI_1X_TLS_HS_FLAGS_PEER_CERTTIMECHECK \
+        |   WIFI_1X_TLS_HS_FLAGS_SESSION_CACHING    \
+)
+
 static volatile uint8 gu8ChNum;
+static volatile uint8 gu8WifiState      = WIFI_STATE_DEINIT;
+static tpfAppWifiCb gpfAppWifiCb        = NULL;
 static volatile uint8 gu8scanInProgress = 0;
-static tpfAppWifiCb gpfAppWifiCb = NULL;
 
+static uint32   gu321xTlsHsFlags      = WIFI_1X_TLS_HS_FLAGS_DEFAULT;
+static uint8    gau81xRootSha1[20]    = {0};
 
 #ifdef ETH_MODE
 static tpfAppEthCb  gpfAppEthCb  = NULL;
@@ -58,19 +81,16 @@ static uint16 	        gu16ethRcvBufSize ;
 #endif
 
 /**
-*	@fn			m2m_wifi_cb(uint8 u8OpCode, uint16 u16DataSize, uint32 u32Addr, uint8 grp)
-*	@brief		WiFi call back function
-*	@param [in]	u8OpCode
-*					HIF Opcode type.
-*	@param [in]	u16DataSize
-*					HIF data length.
-*	@param [in]	u32Addr
-*					HIF address.
-*	@param [in]	grp
-*					HIF group type.
-*	@author
-*	@date
-*	@version	1.0
+@fn         void m2m_wifi_cb(uint8 u8OpCode, uint16 u16DataSize, uint32 u32Addr, uint8 grp)
+@brief      Internal WiFi callback function.
+@param[in]  u8OpCode
+                HIF Opcode type.
+@param[in]  u16DataSize
+                HIF data length.
+@param[in]  u32Addr
+                HIF address.
+@param[in]  grp
+                HIF group type.
 */
 static void m2m_wifi_cb(uint8 u8OpCode, uint16 u16DataSize, uint32 u32Addr)
 {
@@ -614,38 +634,8 @@ static sint8 m2m_wifi_connect_prepare_msg(
 	}
 	return ret;
 INVALID_ARG:
-	return M2M_ERR_INVALID_ARG;
+    return M2M_ERR_INVALID_ARG;
 }
-
-/* Convert hexchar to value 0-15 */
-static uint8 hexchar_2_val(uint8 ch)
-{
-	ch -= 0x30;
-	if (ch <= 9)
-		return ch;
-	ch |= 0x20;
-	ch -= 0x31;
-	if (ch <= 5)
-		return ch + 10;
-	return 0xFF;
-	}
-/* Convert hexstring to bytes */
-static sint8 hexstr_2_bytes(uint8 *pu8Out, uint8 *pu8In, uint8 u8SizeOut)
-	{
-	while (u8SizeOut--)
-	{
-		uint8	u8Out = hexchar_2_val(*pu8In++);
-		if (u8Out > 0xF)
-			return M2M_ERR_INVALID_ARG;
-		*pu8Out = u8Out * 0x10;
-		u8Out = hexchar_2_val(*pu8In++);
-		if (u8Out > 0xF)
-			return M2M_ERR_INVALID_ARG;
-		*pu8Out += u8Out;
-		pu8Out++;
-	}
-	return M2M_SUCCESS;
-	}
 
 /*************************************************************************************************/
 /*                                        WIFI CONNECT APIS                                      */
@@ -692,18 +682,24 @@ sint8 m2m_wifi_connect_wep(
 
 		if (ret == M2M_SUCCESS)
 		{
-            tstrM2mWifiWep	pstrWep;
-            pstrWep.u8KeyIndex = pstrAuthWep->u8KeyIndx - 1;
-            pstrWep.u8KeyLen = pstrAuthWep->u8KeySz/2;
-            hexstr_2_bytes(pstrWep.au8WepKey, (pstrAuthWep->pu8WepKey), pstrWep.u8KeyLen);
+			tstrM2mWifiWep	*pstrWep = (tstrM2mWifiWep*)fb_alloc(sizeof(tstrM2mWifiWep), 0);
+			if (pstrWep != NULL)
+		{
+				pstrWep->u8KeyIndex = pstrAuthWep->u8KeyIndx - 1;
+				pstrWep->u8KeyLen = pstrAuthWep->u8KeySz/2;
+				hexstr_2_bytes(pstrWep->au8WepKey, (pstrAuthWep->pu8WepKey), pstrWep->u8KeyLen);
 
-            ret = hif_send(	M2M_REQ_GROUP_WIFI, M2M_WIFI_REQ_CONN | M2M_REQ_DATA_PKT,
-                    (uint8*)&strConnHdr, sizeof(tstrM2mWifiConnHdr),
-                    (uint8*)&pstrWep, sizeof(tstrM2mWifiWep), sizeof(tstrM2mWifiConnHdr));
-		}
-	}
-	return ret;
-	}
+                ret = hif_send(M2M_REQ_GROUP_WIFI, M2M_WIFI_REQ_CONN | M2M_REQ_DATA_PKT,
+                               (uint8 *)&strConnHdr, sizeof(tstrM2mWifiConnHdr),
+                               (uint8 *)pstrWep, sizeof(tstrM2mWifiWep), sizeof(tstrM2mWifiConnHdr));
+                fb_free();
+            }
+            else
+                ret = M2M_ERR_MEM_ALLOC;
+        }
+    }
+    return ret;
+}
 
 sint8 m2m_wifi_connect_psk(
 	tenuCredStoreOption	enuCredStoreOption,
@@ -723,44 +719,173 @@ sint8 m2m_wifi_connect_psk(
 											pstrNetworkId,
 											&strConnHdr);
 
-		if (ret == M2M_SUCCESS)
-		{
-            tstrM2mWifiPsk	pstrPsk;
-            m2m_memset((uint8*)&pstrPsk, 0, sizeof(tstrM2mWifiPsk));
-            if (pstrAuthPsk->pu8Psk != NULL)
+        if(ret == M2M_SUCCESS)
+        {
+            tstrM2mWifiPsk  *pstrPsk = (tstrM2mWifiPsk *)fb_alloc(sizeof(tstrM2mWifiPsk), 0);
+            if(pstrPsk != NULL)
             {
-                if (pstrAuthPsk->pu8Passphrase != NULL)
-                    ret = M2M_ERR_INVALID_ARG;
-                else
+                m2m_memset((uint8 *)pstrPsk, 0, sizeof(tstrM2mWifiPsk));
+                if(pstrAuthPsk->pu8Psk != NULL)
                 {
-                    pstrPsk.u8PassphraseLen = M2M_MAX_PSK_LEN-1;
-                    /* Use hexstr_2_bytes to verify pu8Psk input. */
-                    if (M2M_SUCCESS != hexstr_2_bytes(pstrPsk.au8Passphrase, pstrAuthPsk->pu8Psk, pstrPsk.u8PassphraseLen/2))
+                    if(pstrAuthPsk->pu8Passphrase != NULL)
                         ret = M2M_ERR_INVALID_ARG;
-                    m2m_memcpy(pstrPsk.au8Passphrase, pstrAuthPsk->pu8Psk, pstrPsk.u8PassphraseLen);
+                    else
+                    {
+                        pstrPsk->u8PassphraseLen = M2M_MAX_PSK_LEN-1;
+                        /* Use hexstr_2_bytes to verify pu8Psk input. */
+                        if(M2M_SUCCESS != hexstr_2_bytes(pstrPsk->au8Passphrase, pstrAuthPsk->pu8Psk, pstrPsk->u8PassphraseLen/2))
+                            ret = M2M_ERR_INVALID_ARG;
+                        m2m_memcpy(pstrPsk->au8Passphrase, pstrAuthPsk->pu8Psk, pstrPsk->u8PassphraseLen);
+                    }
                 }
-            }
-            else if (pstrAuthPsk->pu8Passphrase != NULL)
-            {
-                if (pstrAuthPsk->u8PassphraseLen > M2M_MAX_PSK_LEN-1)
-                    ret = M2M_ERR_INVALID_ARG;
-                else
+                else if(pstrAuthPsk->pu8Passphrase != NULL)
                 {
-                    pstrPsk.u8PassphraseLen = pstrAuthPsk->u8PassphraseLen;
-                    m2m_memcpy(pstrPsk.au8Passphrase, pstrAuthPsk->pu8Passphrase, pstrPsk.u8PassphraseLen);
+                    if(pstrAuthPsk->u8PassphraseLen > M2M_MAX_PSK_LEN-1)
+                        ret = M2M_ERR_INVALID_ARG;
+                    else
+                    {
+                        pstrPsk->u8PassphraseLen = pstrAuthPsk->u8PassphraseLen;
+                        m2m_memcpy(pstrPsk->au8Passphrase, pstrAuthPsk->pu8Passphrase, pstrPsk->u8PassphraseLen);
+                    }
                 }
+                else
+                    ret = M2M_ERR_INVALID_ARG;
+                if(ret == M2M_SUCCESS)
+                {
+                    ret = hif_send(M2M_REQ_GROUP_WIFI, M2M_WIFI_REQ_CONN | M2M_REQ_DATA_PKT,
+                                   (uint8 *)&strConnHdr, sizeof(tstrM2mWifiConnHdr),
+                                   (uint8 *)pstrPsk, sizeof(tstrM2mWifiPsk), sizeof(tstrM2mWifiConnHdr));
+                }
+                fb_free();
             }
             else
-                ret = M2M_ERR_INVALID_ARG;
-            if (ret == M2M_SUCCESS)
-            {
-                ret = hif_send(	M2M_REQ_GROUP_WIFI, M2M_WIFI_REQ_CONN | M2M_REQ_DATA_PKT,
-                        (uint8*)&strConnHdr, sizeof(tstrM2mWifiConnHdr),
-                        (uint8*)&pstrPsk, sizeof(tstrM2mWifiPsk), sizeof(tstrM2mWifiConnHdr));
-            }
+                ret = M2M_ERR_MEM_ALLOC;
         }
-	}
-	return ret;
+    }
+    return ret;
+}
+
+sint8 m2m_wifi_1x_set_option(tenu1xOption enuOptionName, const void *pOptionValue, size_t OptionLen)
+{
+    if((pOptionValue == NULL) && (OptionLen > 0))
+        return M2M_ERR_INVALID_ARG;
+    switch(enuOptionName)
+    {
+    case WIFI_1X_BYPASS_SERVER_AUTH:
+        if(OptionLen != sizeof(int))
+            return M2M_ERR_INVALID_ARG;
+        switch(*(int*)pOptionValue)
+        {
+        case 1:
+            gu321xTlsHsFlags &= ~WIFI_1X_TLS_HS_FLAGS_PEER_AUTH;
+            break;
+        case 0:
+            gu321xTlsHsFlags |= WIFI_1X_TLS_HS_FLAGS_PEER_AUTH;
+            break;
+        default:
+            return M2M_ERR_INVALID_ARG;
+        }
+        break;
+    case WIFI_1X_TIME_VERIF_MODE:
+        if(OptionLen != sizeof(tenuSslCertExpSettings))
+            return M2M_ERR_INVALID_ARG;
+        switch(*(tenuSslCertExpSettings*)pOptionValue)
+        {
+        case SSL_CERT_EXP_CHECK_DISABLE:
+            gu321xTlsHsFlags &= ~WIFI_1X_TLS_HS_FLAGS_PEER_CERTTIMECHECK;
+            gu321xTlsHsFlags &= ~WIFI_1X_TLS_HS_FLAGS_REQUIRE_TIME;
+            break;
+        case SSL_CERT_EXP_CHECK_ENABLE:
+            gu321xTlsHsFlags |= WIFI_1X_TLS_HS_FLAGS_PEER_CERTTIMECHECK;
+            gu321xTlsHsFlags |= WIFI_1X_TLS_HS_FLAGS_REQUIRE_TIME;
+            break;
+        case SSL_CERT_EXP_CHECK_EN_IF_SYS_TIME:
+            gu321xTlsHsFlags |= WIFI_1X_TLS_HS_FLAGS_PEER_CERTTIMECHECK;
+            gu321xTlsHsFlags &= ~WIFI_1X_TLS_HS_FLAGS_REQUIRE_TIME;
+            break;
+        default:
+            return M2M_ERR_INVALID_ARG;
+        }
+        break;
+    case WIFI_1X_SESSION_CACHING:
+        if(OptionLen != sizeof(int))
+            return M2M_ERR_INVALID_ARG;
+        switch(*(int*)pOptionValue)
+        {
+        case 1:
+            gu321xTlsHsFlags |= WIFI_1X_TLS_HS_FLAGS_SESSION_CACHING;
+            break;
+        case 0:
+            gu321xTlsHsFlags &= ~WIFI_1X_TLS_HS_FLAGS_SESSION_CACHING;
+            break;
+        default:
+            return M2M_ERR_INVALID_ARG;
+        }
+        break;
+    case WIFI_1X_SPECIFIC_ROOTCERT:
+        switch(OptionLen)
+        {
+        case 20:
+            gu321xTlsHsFlags |= WIFI_1X_TLS_HS_FLAGS_SPECIFY_ROOTCERT;
+            m2m_memcpy(gau81xRootSha1, (uint8*)pOptionValue, sizeof(gau81xRootSha1));
+            break;
+        case 0:
+            gu321xTlsHsFlags &= ~WIFI_1X_TLS_HS_FLAGS_SPECIFY_ROOTCERT;
+            m2m_memset(gau81xRootSha1, 0, sizeof(gau81xRootSha1));
+        default:
+            return M2M_ERR_INVALID_ARG;
+        }
+        break;
+    default:
+        return M2M_ERR_INVALID_ARG;
+    }
+    return M2M_SUCCESS;
+}
+
+sint8 m2m_wifi_1x_get_option(tenu1xOption enuOptionName, void *pOptionValue, size_t *pOptionLen)
+{
+    if(pOptionValue == NULL)
+        return M2M_ERR_INVALID_ARG;
+    switch(enuOptionName)
+    {
+    case WIFI_1X_BYPASS_SERVER_AUTH:
+        if(*pOptionLen < sizeof(int))
+            return M2M_ERR_INVALID_ARG;
+        *pOptionLen = sizeof(int);
+        *(int*)pOptionValue = (gu321xTlsHsFlags & WIFI_1X_TLS_HS_FLAGS_PEER_AUTH) ? 0 : 1;
+        break;
+    case WIFI_1X_TIME_VERIF_MODE:
+        if(*pOptionLen < sizeof(tenuSslCertExpSettings))
+            return M2M_ERR_INVALID_ARG;
+        *pOptionLen = sizeof(tenuSslCertExpSettings);
+        if(!(gu321xTlsHsFlags & WIFI_1X_TLS_HS_FLAGS_PEER_CERTTIMECHECK))
+            *(tenuSslCertExpSettings*)pOptionValue = SSL_CERT_EXP_CHECK_DISABLE;
+        else if(gu321xTlsHsFlags & WIFI_1X_TLS_HS_FLAGS_REQUIRE_TIME)
+            *(tenuSslCertExpSettings*)pOptionValue = SSL_CERT_EXP_CHECK_ENABLE;
+        else
+            *(tenuSslCertExpSettings*)pOptionValue = SSL_CERT_EXP_CHECK_EN_IF_SYS_TIME;
+        break;
+    case WIFI_1X_SESSION_CACHING:
+        if(*pOptionLen < sizeof(int))
+            return M2M_ERR_INVALID_ARG;
+        *pOptionLen = sizeof(int);
+        *(int*)pOptionValue = (gu321xTlsHsFlags & WIFI_1X_TLS_HS_FLAGS_SESSION_CACHING) ? 1 : 0;
+        break;
+    case WIFI_1X_SPECIFIC_ROOTCERT:
+        if(gu321xTlsHsFlags & WIFI_1X_TLS_HS_FLAGS_SPECIFY_ROOTCERT)
+        {
+            if(*pOptionLen < sizeof(gau81xRootSha1))
+                return M2M_ERR_INVALID_ARG;
+            *pOptionLen = sizeof(gau81xRootSha1);
+            m2m_memcpy((uint8*)pOptionValue, gau81xRootSha1, sizeof(gau81xRootSha1));
+        }
+        else
+            *pOptionLen = 0;
+        break;
+    default:
+        return M2M_ERR_INVALID_ARG;
+    }
+    return M2M_SUCCESS;
 }
 
 sint8 m2m_wifi_connect_1x_mschap2(
@@ -807,32 +932,38 @@ sint8 m2m_wifi_connect_1x_mschap2(
 					if (pstrAuth1xMschap2->bPrependDomain == true)
 						pstr1xHdr->u8Flags |= M2M_802_1X_PREPEND_DOMAIN_FLAG;
 
-					pstr1xHdr->u8DomainLength = 0;
-					if (pstrAuth1xMschap2->pu8Domain != NULL)
-					{
-						pstr1xHdr->u8DomainLength = (uint8)(pstrAuth1xMschap2->u16DomainLen);
-						m2m_memcpy(pu8AuthPtr, pstrAuth1xMschap2->pu8Domain, pstr1xHdr->u8DomainLength);
-						pu8AuthPtr += pstr1xHdr->u8DomainLength;
-					}
+                    pstr1xHdr->u8HdrLength = sizeof(tstrM2mWifi1xHdr);
+                    pstr1xHdr->u32TlsHsFlags = gu321xTlsHsFlags;
+                    m2m_memcpy(pstr1xHdr->au8TlsSpecificRootNameSha1, gau81xRootSha1, sizeof(gau81xRootSha1));
 
-					pstr1xHdr->u16UserNameLength = (pstrAuth1xMschap2->u16UserNameLen);
-					m2m_memcpy(pu8AuthPtr, pstrAuth1xMschap2->pu8UserName, pstr1xHdr->u16UserNameLength);
-					pu8AuthPtr += pstr1xHdr->u16UserNameLength;
+                    pstr1xHdr->u8DomainLength = 0;
+                    if(pstrAuth1xMschap2->pu8Domain != NULL)
+                    {
+                        pstr1xHdr->u8DomainLength = (uint8)(pstrAuth1xMschap2->u16DomainLen);
+                        m2m_memcpy(pu8AuthPtr, pstrAuth1xMschap2->pu8Domain, pstr1xHdr->u8DomainLength);
+                        pu8AuthPtr += pstr1xHdr->u8DomainLength;
+                    }
 
-					pstr1xHdr->u16PrivateKeyOffset = pu8AuthPtr - pstr1xHdr->au81xAuthDetails;
-					pstr1xHdr->u16PrivateKeyLength = pstrAuth1xMschap2->u16PasswordLen;
-					m2m_memcpy(pu8AuthPtr, pstrAuth1xMschap2->pu8Password, pstr1xHdr->u16PrivateKeyLength);
+                    pstr1xHdr->u8UserNameLength = (pstrAuth1xMschap2->u16UserNameLen);
+                    m2m_memcpy(pu8AuthPtr, pstrAuth1xMschap2->pu8UserName, pstr1xHdr->u8UserNameLength);
+                    pu8AuthPtr += pstr1xHdr->u8UserNameLength;
 
-					ret = hif_send(	M2M_REQ_GROUP_WIFI, M2M_WIFI_REQ_CONN | M2M_REQ_DATA_PKT,
-									(uint8*)&strConnHdr, sizeof(tstrM2mWifiConnHdr),
-									(uint8*)pstr1xHdr, u16AuthSize,
-									sizeof(tstrM2mWifiConnHdr));
-					fb_free();
-				}
-			}
-		}
-	}
-	return ret;
+                    pstr1xHdr->u16PrivateKeyOffset = pu8AuthPtr - pstr1xHdr->au81xAuthDetails;
+                    pstr1xHdr->u16PrivateKeyLength = pstrAuth1xMschap2->u16PasswordLen;
+                    m2m_memcpy(pu8AuthPtr, pstrAuth1xMschap2->pu8Password, pstr1xHdr->u16PrivateKeyLength);
+
+                    ret = hif_send(M2M_REQ_GROUP_WIFI, M2M_WIFI_REQ_CONN | M2M_REQ_DATA_PKT,
+                                   (uint8 *)&strConnHdr, sizeof(tstrM2mWifiConnHdr),
+                                   (uint8 *)pstr1xHdr, u16AuthSize,
+                                   sizeof(tstrM2mWifiConnHdr));
+                    fb_free();
+                }
+                else
+                    ret = M2M_ERR_MEM_ALLOC;
+            }
+        }
+    }
+    return ret;
 }
 
 sint8 m2m_wifi_connect_1x_tls(
@@ -886,49 +1017,55 @@ tstrAuth1xTls		*pstrAuth1xTls
 					if (pstrAuth1xTls->bPrependDomain == true)
 						pstr1xHdr->u8Flags |= M2M_802_1X_PREPEND_DOMAIN_FLAG;
 
-					pstr1xHdr->u8DomainLength = 0;
-					if (pstrAuth1xTls->pu8Domain != NULL)
-					{
-						pstr1xHdr->u8DomainLength = (uint8)(pstrAuth1xTls->u16DomainLen);
-						m2m_memcpy(pu8AuthPtr, pstrAuth1xTls->pu8Domain, pstr1xHdr->u8DomainLength);
-						pu8AuthPtr += pstr1xHdr->u8DomainLength;
-					}
+                    pstr1xHdr->u8HdrLength = sizeof(tstrM2mWifi1xHdr);
+                    pstr1xHdr->u32TlsHsFlags = gu321xTlsHsFlags;
+                    m2m_memcpy(pstr1xHdr->au8TlsSpecificRootNameSha1, gau81xRootSha1, sizeof(gau81xRootSha1));
 
-					pstr1xHdr->u16UserNameLength = (pstrAuth1xTls->u16UserNameLen);
-					m2m_memcpy(pu8AuthPtr, pstrAuth1xTls->pu8UserName, pstr1xHdr->u16UserNameLength);
-					pu8AuthPtr += pstr1xHdr->u16UserNameLength;
+                    pstr1xHdr->u8DomainLength = 0;
+                    if(pstrAuth1xTls->pu8Domain != NULL)
+                    {
+                        pstr1xHdr->u8DomainLength = (uint8)(pstrAuth1xTls->u16DomainLen);
+                        m2m_memcpy(pu8AuthPtr, pstrAuth1xTls->pu8Domain, pstr1xHdr->u8DomainLength);
+                        pu8AuthPtr += pstr1xHdr->u8DomainLength;
+                    }
 
-					pstr1xHdr->u16PrivateKeyOffset = pu8AuthPtr - pstr1xHdr->au81xAuthDetails;
-					pstr1xHdr->u16PrivateKeyLength = pstrAuth1xTls->u16PrivateKeyLen;
-					m2m_memcpy(pu8AuthPtr, pstrAuth1xTls->pu8PrivateKey_Mod, pstr1xHdr->u16PrivateKeyLength);
-					pu8AuthPtr += pstr1xHdr->u16PrivateKeyLength;
-					m2m_memcpy(pu8AuthPtr, pstrAuth1xTls->pu8PrivateKey_Exp, pstr1xHdr->u16PrivateKeyLength);
-					pu8AuthPtr += pstr1xHdr->u16PrivateKeyLength;
+                    pstr1xHdr->u8UserNameLength = (pstrAuth1xTls->u16UserNameLen);
+                    m2m_memcpy(pu8AuthPtr, pstrAuth1xTls->pu8UserName, pstr1xHdr->u8UserNameLength);
+                    pu8AuthPtr += pstr1xHdr->u8UserNameLength;
 
-					pstr1xHdr->u16CertificateOffset = pu8AuthPtr - pstr1xHdr->au81xAuthDetails;
-					pstr1xHdr->u16CertificateLength = pstrAuth1xTls->u16CertificateLen;
+                    pstr1xHdr->u16PrivateKeyOffset = pu8AuthPtr - pstr1xHdr->au81xAuthDetails;
+                    pstr1xHdr->u16PrivateKeyLength = pstrAuth1xTls->u16PrivateKeyLen;
+                    m2m_memcpy(pu8AuthPtr, pstrAuth1xTls->pu8PrivateKey_Mod, pstr1xHdr->u16PrivateKeyLength);
+                    pu8AuthPtr += pstr1xHdr->u16PrivateKeyLength;
+                    m2m_memcpy(pu8AuthPtr, pstrAuth1xTls->pu8PrivateKey_Exp, pstr1xHdr->u16PrivateKeyLength);
+                    pu8AuthPtr += pstr1xHdr->u16PrivateKeyLength;
 
-					strInfoHdr.u8Type = M2M_802_1X_TLS_CLIENT_CERTIFICATE;
-					strInfoHdr.u16InfoPos = pstr1xHdr->u16CertificateOffset;
-					strInfoHdr.u16InfoLen = pstr1xHdr->u16CertificateLength;
-					ret = hif_send(	M2M_REQ_GROUP_WIFI, M2M_WIFI_IND_CONN_PARAM | M2M_REQ_DATA_PKT,
-									(uint8*)&strInfoHdr, sizeof(tstrM2mWifiAuthInfoHdr),
-									pstrAuth1xTls->pu8Certificate, pstrAuth1xTls->u16CertificateLen,
-									sizeof(tstrM2mWifiAuthInfoHdr));
+                    pstr1xHdr->u16CertificateOffset = pu8AuthPtr - pstr1xHdr->au81xAuthDetails;
+                    pstr1xHdr->u16CertificateLength = pstrAuth1xTls->u16CertificateLen;
 
-					if (ret == M2M_SUCCESS)
-					{
-						ret = hif_send(	M2M_REQ_GROUP_WIFI, M2M_WIFI_REQ_CONN | M2M_REQ_DATA_PKT,
-										(uint8*)&strConnHdr, sizeof(tstrM2mWifiConnHdr),
-										(uint8*)pstr1xHdr, u16Payload1Size,
-										sizeof(tstrM2mWifiConnHdr));
-					}
-					fb_free();
-				}
-			}
-		}
-	}
-	return ret;
+                    strInfoHdr.u8Type = M2M_802_1X_TLS_CLIENT_CERTIFICATE;
+                    strInfoHdr.u16InfoPos = pstr1xHdr->u16CertificateOffset;
+                    strInfoHdr.u16InfoLen = pstr1xHdr->u16CertificateLength;
+                    ret = hif_send(M2M_REQ_GROUP_WIFI, M2M_WIFI_IND_CONN_PARAM | M2M_REQ_DATA_PKT,
+                                   (uint8 *)&strInfoHdr, sizeof(tstrM2mWifiAuthInfoHdr),
+                                   pstrAuth1xTls->pu8Certificate, pstrAuth1xTls->u16CertificateLen,
+                                   sizeof(tstrM2mWifiAuthInfoHdr));
+
+                    if(ret == M2M_SUCCESS)
+                    {
+                        ret = hif_send(M2M_REQ_GROUP_WIFI, M2M_WIFI_REQ_CONN | M2M_REQ_DATA_PKT,
+                                       (uint8 *)&strConnHdr, sizeof(tstrM2mWifiConnHdr),
+                                       (uint8 *)pstr1xHdr, u16Payload1Size,
+                                       sizeof(tstrM2mWifiConnHdr));
+                    }
+                    fb_free();
+                }
+                else
+                    ret = M2M_ERR_MEM_ALLOC;
+            }
+        }
+    }
+    return ret;
 }
 
 sint8 m2m_wifi_connect(char *pcSsid, uint8 u8SsidLen, uint8 u8SecType, void *pvAuthInfo, uint16 u16Ch)
@@ -1091,6 +1228,29 @@ sint8 m2m_wifi_set_scan_options(tstrM2MScanOption* ptstrM2MScanOption)
 	}
 	return s8Ret;
 }
+
+sint8 m2m_wifi_set_stop_scan_on_first(uint8 u8StopScanOption)
+{
+    sint8   s8Ret = M2M_ERR_FAIL;
+
+    tstrM2MStopScanOption StopScanOption = { 0 };
+
+    if(1 >= u8StopScanOption)
+    {
+        StopScanOption.u8StopOnFirstResult = u8StopScanOption;
+
+        s8Ret = hif_send(M2M_REQ_GROUP_WIFI, M2M_WIFI_REQ_SET_STOP_SCAN_OPTION, (uint8 *)&StopScanOption, sizeof(tstrM2MStopScanOption), NULL, 0, 0);
+
+        M2M_INFO("Scan will %s stop on first result.\n", StopScanOption.u8StopOnFirstResult ? "" : "NOT");
+    }
+    else
+    {
+        s8Ret = M2M_ERR_INVALID_ARG;
+    }
+
+    return s8Ret;
+}
+
 sint8 m2m_wifi_set_scan_region(uint16  ScanRegion)
 {
 	sint8	s8Ret = M2M_ERR_FAIL;
@@ -1217,15 +1377,14 @@ sint8 m2m_wifi_wps_disable(void)
 	return ret;
 }
 /*!
-@fn			NMI_API sint8 m2m_wifi_req_client_ctrl(uint8 cmd);
-@brief		Send a command to the PS Client (An WINC1500 board running the ps_firmware), 
-			if the PS client send any commands it will be received in wifi_cb M2M_WIFI_RESP_CLIENT_INFO
-@param [in]	cmd
-			Control command sent from PS Server to PS Client (command values defined by the application)
-@return		The function SHALL return M2M_SUCCESS for success and a negative value otherwise.
-@sa			m2m_wifi_req_server_init, M2M_WIFI_RESP_CLIENT_INFO
-@pre		m2m_wifi_req_server_init should be called first
-@warning	
+@fn         NMI_API sint8 m2m_wifi_req_client_ctrl(uint8 cmd)
+@brief      Send a command to the PS Client (An WINC board running the ps_firmware),
+            if the PS client send any commands it will be received in wifi_cb @ref M2M_WIFI_RESP_CLIENT_INFO.
+@param[in]  cmd
+                Control command sent from PS Server to PS Client (command values defined by the application).
+@return     The function returns @ref M2M_SUCCESS for success and a negative value otherwise.
+@sa         m2m_wifi_req_server_init, M2M_WIFI_RESP_CLIENT_INFO
+@pre        m2m_wifi_req_server_init should be called first
 */
 sint8 m2m_wifi_req_client_ctrl(uint8 u8Cmd)
 {
@@ -1241,14 +1400,14 @@ sint8 m2m_wifi_req_client_ctrl(uint8 u8Cmd)
 	return ret;
 }
 /*!
-@fn			NMI_API sint8 m2m_wifi_req_server_init(uint8 ch);
-@brief		Initialize the PS Server, The WINC1500 support Non secure communication with another WINC1500, 
-			(SERVER/CLIENT) through one byte command (probe request and probe response) without any connection setup
-@param [in]	ch
-			Server listening channel
-@return		The function SHALL return M2M_SUCCESS for success and a negative value otherwise
-@sa			m2m_wifi_req_client_ctrl
-@warning	The server mode can't be used with any other modes (STA/P2P/AP)
+@fn         NMI_API sint8 m2m_wifi_req_server_init(uint8 ch)
+@brief      Initialize the PS Server, The WINC support non secure communication with another WINC,
+            (SERVER/CLIENT) through one byte command (probe request and probe response) without any connection setup.
+@param[in]  ch
+                Server listening channel
+@return     The function returns @ref M2M_SUCCESS for success and a negative value otherwise.
+@sa         m2m_wifi_req_client_ctrl
+@warning    The server mode can't be used with any other modes (STA/AP).
 */
 sint8 m2m_wifi_req_server_init(uint8 ch)
 {
@@ -1479,10 +1638,10 @@ sint8 m2m_wifi_set_sleep_mode(uint8 PsTyp, uint8 BcastEn)
 	return ret;
 }
 /*!
-@fn	        NMI_API sint8 m2m_wifi_request_sleep(void)
-@brief	    Request from WINC1500 device to Sleep for specific time in the M2M_PS_MANUAL Power save mode (only).
-@param [in]	u32SlpReqTime
-			Request Sleep in ms 
+@fn         NMI_API sint8 m2m_wifi_request_sleep(void)
+@brief      Request from WINC device to Sleep for specific time in the M2M_PS_MANUAL Power save mode (only).
+@param [in] u32SlpReqTime
+            Request Sleep in ms
 @return     The function SHALL return M2M_SUCCESS for success and a negative value otherwise.
 @sa         tenuPowerSaveModes , m2m_wifi_set_sleep_mode
 @warning	the Function should be called in M2M_PS_MANUAL power save only 
@@ -1501,14 +1660,14 @@ sint8 m2m_wifi_request_sleep(uint32 u32SlpReqTime)
 	return ret;
 }
 /*!
-@fn			NMI_API sint8 m2m_wifi_set_device_name(uint8 *pu8DeviceName, uint8 u8DeviceNameLength);
-@brief		Set the WINC1500 device name which is used as P2P device name.
-@param [in]	pu8DeviceName
-			Buffer holding the device name.
-@param [in]	u8DeviceNameLength
-			Length of the device name.
-@return		The function SHALL return M2M_SUCCESS for success and a negative value otherwise.
-@warning	The Function called once after initialization. 
+@fn         NMI_API sint8 m2m_wifi_set_device_name(uint8 *pu8DeviceName, uint8 u8DeviceNameLength);
+@brief      Sets the WINC device name. The name string is used as a device name in DHCP hostname (option 12).
+@param [in] pu8DeviceName
+            Buffer holding the device name.
+@param [in] u8DeviceNameLength
+            Length of the device name.
+@return     The function SHALL return M2M_SUCCESS for success and a negative value otherwise.
+@warning    The Function called once after initialization.
 */
 sint8 m2m_wifi_set_device_name(uint8 *pu8DeviceName, uint8 u8DeviceNameLength)
 {
@@ -1754,19 +1913,22 @@ sint8 m2m_wifi_set_battery_voltage(uint16 u16BattVoltx100)
 */
 sint8 m2m_wifi_prng_get_random_bytes(uint8 * pu8PrngBuff,uint16 u16PrngSize)
 {
-	sint8 ret = M2M_ERR_FAIL;
-	tstrPrng   strRng = {0};
-	if((u16PrngSize < (M2M_BUFFER_MAX_SIZE - sizeof(tstrPrng)))&&(pu8PrngBuff != NULL))
-	{
-		strRng.u16PrngSize = u16PrngSize;
-		strRng.pu8RngBuff  = pu8PrngBuff;
-		ret = hif_send(M2M_REQ_GROUP_WIFI, M2M_WIFI_REQ_GET_PRNG|M2M_REQ_DATA_PKT,(uint8 *)&strRng, sizeof(tstrPrng),NULL,0, 0);
-	}
-	else
-	{
-		M2M_ERR("PRNG Buffer exceeded maximum size %d or NULL Buffer\n",u16PrngSize);
-	}
-	return ret;
+    sint8 ret = M2M_ERR_FAIL;
+    tstrPrng   strRng = {0};
+    if(
+            (u16PrngSize <= (M2M_HIF_MAX_PACKET_SIZE - (M2M_HIF_HDR_OFFSET + sizeof(tstrPrng))))
+        &&  (pu8PrngBuff != NULL)
+    )
+    {
+        strRng.u16PrngSize = u16PrngSize;
+        strRng.pu8RngBuff  = pu8PrngBuff;
+        ret = hif_send(M2M_REQ_GROUP_WIFI, M2M_WIFI_REQ_GET_PRNG|M2M_REQ_DATA_PKT, (uint8 *)&strRng, sizeof(tstrPrng), NULL, 0, 0);
+    }
+    else
+    {
+        M2M_ERR("PRNG Buffer exceeded maximum size %d or NULL Buffer\n", u16PrngSize);
+    }
+    return ret;
 }
 
 /*!
@@ -1904,4 +2066,20 @@ sint8 m2m_wifi_disable_roaming(void)
 	tstrM2mWiFiRoaming	strWiFiRoaming;
 	strWiFiRoaming.u8EnableRoaming = 0;
 	return hif_send(M2M_REQ_GROUP_WIFI, M2M_WIFI_REQ_ROAMING, (uint8 *) &strWiFiRoaming, sizeof(tstrM2mWiFiRoaming), NULL, 0,0);
+}
+
+sint8 m2m_wifi_enable_XO_during_sleep(uint8 bXOSleepEnable)
+{
+    tstrM2mWiFiXOSleepEnable  strM2mWiFiXOSleepEnable;
+
+    if(0 == bXOSleepEnable || 1 == bXOSleepEnable)
+    {
+        strM2mWiFiXOSleepEnable.u8EnableXODuringSleep = bXOSleepEnable;
+        return hif_send(M2M_REQ_GROUP_WIFI, M2M_WIFI_REQ_XO_SLEEP_ENABLE, 
+                        (uint8 *) &strM2mWiFiXOSleepEnable, sizeof(strM2mWiFiXOSleepEnable), NULL, 0, 0);	
+    }
+    else
+    {
+        return M2M_ERR_INVALID_ARG;
+    }
 }

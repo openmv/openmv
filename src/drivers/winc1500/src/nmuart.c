@@ -36,7 +36,7 @@
 
 #ifdef CONF_WINC_USE_UART
 
-#include "driver/include/nmuart.h"
+#include "driver/source/nmuart.h"
 #include "bus_wrapper/include/nm_bus_wrapper.h"
 
 #define HDR_SZ  12
