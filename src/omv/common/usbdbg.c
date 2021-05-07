@@ -37,6 +37,7 @@ static enum usbdbg_cmd cmd;
 
 static volatile bool script_ready;
 static volatile bool script_running;
+static volatile bool irq_enabled;
 static vstr_t script_buf;
 static mp_obj_t mp_const_ide_interrupt = MP_OBJ_NULL;
 
@@ -49,6 +50,7 @@ void usbdbg_init()
     cmd = USBDBG_NONE;
     script_ready=false;
     script_running=false;
+    irq_enabled = false;
     vstr_init(&script_buf, 32);
     mp_const_ide_interrupt = mp_obj_new_exception_msg(&mp_type_Exception, "IDE interrupt");
 }
@@ -76,6 +78,12 @@ inline void usbdbg_set_irq_enabled(bool enabled)
         NVIC_DisableIRQ(OMV_USB_IRQN);
     }
     __DSB(); __ISB();
+    irq_enabled = enabled;
+}
+
+bool usbdbg_get_irq_enabled()
+{
+    return irq_enabled;
 }
 
 void usbdbg_data_in(void *buffer, int length)

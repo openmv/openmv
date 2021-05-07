@@ -598,8 +598,11 @@ int sensor_set_framerate(int framerate)
 
 int sensor_set_windowing(int x, int y, int w, int h)
 {
-    // py_sensor_set_windowing ensures this the window is at least 8x8
-    // and that it is fully inside the sensor output framesize window.
+    if ((MAIN_FB()->x == x) && (MAIN_FB()->y == y) && (MAIN_FB()->u == w) && (MAIN_FB()->v == h)) {
+        // No change
+        return 0;
+    }
+
     if (sensor.pixformat == PIXFORMAT_JPEG) {
         return -1;
     }
@@ -607,12 +610,13 @@ int sensor_set_windowing(int x, int y, int w, int h)
     // Flush previous frame.
     framebuffer_update_jpeg_buffer();
 
-    // We force everything to be a multiple of 2 so that when you switch between
-    // grayscale/rgb565/bayer/jpeg the frame doesn't need to move around for bayer to work.
-    MAIN_FB()->x = (x / 2) * 2;
-    MAIN_FB()->y = (y / 2) * 2;
-    MAIN_FB()->w = MAIN_FB()->u = (w / 2) * 2;
-    MAIN_FB()->h = MAIN_FB()->v = (h / 2) * 2;
+    // Skip the first frame.
+    MAIN_FB()->bpp = -1;
+
+    MAIN_FB()->x = x;
+    MAIN_FB()->y = y;
+    MAIN_FB()->w = MAIN_FB()->u = w;
+    MAIN_FB()->h = MAIN_FB()->v = h;
 
     return 0;
 }
