@@ -127,7 +127,7 @@ void framebuffer_update_jpeg_buffer()
         if (src->bpp > 3) {
             bool does_not_fit = false;
 
-            if (mutex_try_lock(&jpeg_framebuffer->lock, MUTEX_TID_OMV)) {
+            if (mutex_try_lock_alternate(&jpeg_framebuffer->lock, MUTEX_TID_OMV)) {
                 if(CONSERVATIVE_JPEG_BUF_SIZE < src->bpp) {
                     initialize_jpeg_buf_from_image(NULL);
                     does_not_fit = true;
@@ -149,7 +149,7 @@ void framebuffer_update_jpeg_buffer()
                 fb_alloc_free_till_mark();
             }
         } else if (src->bpp >= 0) {
-            if (mutex_try_lock(&jpeg_framebuffer->lock, MUTEX_TID_OMV)) {
+            if (mutex_try_lock_alternate(&jpeg_framebuffer->lock, MUTEX_TID_OMV)) {
                 image_t dst = {.w=src->w, .h=src->h, .bpp=CONSERVATIVE_JPEG_BUF_SIZE, .pixels=jpeg_framebuffer->pixels};
                 // Note: lower quality saves USB bandwidth and results in a faster IDE FPS.
                 bool overflow = jpeg_compress(src, &dst, jpeg_framebuffer->quality, false);
