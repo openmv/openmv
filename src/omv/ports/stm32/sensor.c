@@ -526,6 +526,7 @@ int sensor_reset()
     sensor.auto_rotation = false;
     #endif // MICROPY_PY_IMU
     sensor.vsync_callback= NULL;
+    sensor.frame_callback= NULL;
 
     // Reset default color palette.
     sensor.color_palette = rainbow_table;
@@ -1036,6 +1037,12 @@ int sensor_set_vsync_callback(vsync_cb_t vsync_cb)
     return 0;
 }
 
+int sensor_set_frame_callback(frame_cb_t vsync_cb)
+{
+    sensor.frame_callback = vsync_cb;
+    return 0;
+}
+
 int sensor_set_color_palette(const uint16_t *color_palette)
 {
     sensor.color_palette = color_palette;
@@ -1156,6 +1163,10 @@ static void sensor_check_buffsize()
 void HAL_DCMI_FrameEventCallback(DCMI_HandleTypeDef *hdcmi)
 {
     framebuffer_get_tail(FB_NO_FLAGS);
+
+    if (sensor.frame_callback) {
+        sensor.frame_callback();
+    }
 }
 
 #if (OMV_ENABLE_SENSOR_MDMA == 1)
