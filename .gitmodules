@@ -1,4 +1,4 @@
 [submodule "src/micropython"]
 	path = src/micropython
-	url = https://github.com/openmv/micropython.git
+	url = https://github.com/mkchu/micropython.git
 	branch = openmv
