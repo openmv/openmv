@@ -7,15 +7,17 @@
  * This work is licensed under the MIT license, see the file LICENSE for details.
  *
  * Mutex implementation.
+ * This is a standard implementation of mutexs on ARM processors following the ARM guide.
+ * http://infocenter.arm.com/help/index.jsp?topic=/com.arm.doc.dai0321a/BIHEJCHB.html
+ *
+ * Note: The Cortex-M0/M0+ does Not have the Load/Store exclusive instructions, on these
+ * CPUs the locking function is implemented with atomic access using disable/enable IRQs.
  */
 #include "mutex.h"
 #include "cmsis_gcc.h"
 #include "py/mphal.h"
 
-// This is a standard implementation of mutexs on ARM processors following the ARM guide.
-// http://infocenter.arm.com/help/index.jsp?topic=/com.arm.doc.dai0321a/BIHEJCHB.html
-
-void mutex_init(mutex_t *mutex)
+void mutex_init0(mutex_t *mutex)
 {
     __DMB();
     mutex->tid = 0;
@@ -23,46 +25,49 @@ void mutex_init(mutex_t *mutex)
     mutex->last_tid = 0;
 }
 
-void mutex_lock(mutex_t *mutex, uint32_t tid)
+static void _mutex_lock(mutex_t *mutex, uint32_t tid, bool blocking)
 {
-    volatile int locked = 0;
-    // Wait for mutex to be unlocked
+    #if (CPU==cortex-m0)
+    do {
+        __disable_irq();
+        if (mutex->lock == 0) {
+            mutex->lock = 1;
+            mutex->tid = tid;
+        }
+        __enable_irq();
+        __WFI();
+    } while (mutex->tid != tid && blocking);
+    #else
     do {
         // Attempt exclusive read
         while (__LDREXW(&mutex->lock) != 0);
 
         // Attempt to lock mutex
-        locked = __STREXW(1, &mutex->lock);
-
-        // Set TID if mutex is locked
-        if (locked == 0) {
+        if(__STREXW(1, &mutex->lock) == 0) {
+            // Set TID if mutex is locked
             mutex->tid = tid;
         }
-    } while (locked != 0);
-
+    } while (mutex->tid != tid && blocking);
+    #endif
     __DMB();
+}
+
+void mutex_lock(mutex_t *mutex, uint32_t tid)
+{
+    _mutex_lock(mutex, tid, true);
 }
 
 int mutex_try_lock(mutex_t *mutex, uint32_t tid)
 {
-    volatile int locked = 1;
-
-    // If mutex is already locked by the current thread
-    // then release the the mutex, else attempt to lock it.
+    // If the mutex is already locked by the current thread then
+    // release it and return without locking, otherwise try to lock it.
     if (mutex->tid == tid) {
         mutex_unlock(mutex, tid);
-    } else if (__LDREXW(&mutex->lock) == 0) {
-        // Attempt to lock the mutex
-        locked = __STREXW(1, &mutex->lock);
-        __DMB();
-
-        // Set TID if mutex is locked
-        if (locked == 0) {
-            mutex->tid = tid;
-        }
+    } else {
+        _mutex_lock(mutex, tid, false);
     }
 
-    return (locked == 0);
+    return (mutex->tid == tid);
 }
 
 int mutex_try_lock_alternate(mutex_t *mutex, uint32_t tid)

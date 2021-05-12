@@ -20,7 +20,7 @@ typedef volatile struct {
     uint32_t last_tid;
 } mutex_t;
 
-void mutex_init(mutex_t *mutex);
+void mutex_init0(mutex_t *mutex);
 void mutex_lock(mutex_t *mutex, uint32_t tid);
 int mutex_try_lock(mutex_t *mutex, uint32_t tid);
 int mutex_try_lock_alternate(mutex_t *mutex, uint32_t tid);
