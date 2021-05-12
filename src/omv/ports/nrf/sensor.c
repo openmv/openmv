@@ -526,6 +526,9 @@ int sensor_set_pixformat(pixformat_t pixformat)
     //    return -1;
     //}
 
+    // Flush previous frame.
+    framebuffer_update_jpeg_buffer();
+
     if (sensor.set_pixformat == NULL
         || sensor.set_pixformat(&sensor, pixformat) != 0) {
         // Operation not supported
@@ -549,6 +552,9 @@ int sensor_set_framesize(framesize_t framesize)
         // No change
         return 0;
     }
+
+    // Flush previous frame.
+    framebuffer_update_jpeg_buffer();
 
     // Call the sensor specific function
     if (sensor.set_framesize == NULL
@@ -601,6 +607,9 @@ int sensor_set_windowing(int x, int y, int w, int h)
     if (sensor.pixformat == PIXFORMAT_JPEG) {
         return -1;
     }
+
+    // Flush previous frame.
+    framebuffer_update_jpeg_buffer();
 
     // Skip the first frame.
     MAIN_FB()->bpp = -1;
@@ -831,6 +840,9 @@ bool sensor_get_auto_rotation()
 
 int sensor_set_framebuffers(int count)
 {
+    // Flush previous frame.
+    framebuffer_update_jpeg_buffer();
+
     return framebuffer_set_buffers(count);
 }
 
