@@ -10,6 +10,7 @@
  */
 #ifndef __USBDBG_H__
 #define __USBDBG_H__
+
 /**
   * Firmware version (major, minor and patch numbers).
   *
@@ -47,7 +48,9 @@ enum usbdbg_cmd {
     USBDBG_TX_BUF           =0x8F,
     USBDBG_SENSOR_ID        =0x90
 };
+
 void usbdbg_init();
+void usbdbg_wait_for_command(uint32_t timeout);
 bool usbdbg_script_ready();
 vstr_t *usbdbg_get_script();
 bool usbdbg_get_irq_enabled();
@@ -56,4 +59,5 @@ void usbdbg_set_script_running(bool running);
 void usbdbg_data_in(void *buffer, int length);
 void usbdbg_data_out(void *buffer, int length);
 void usbdbg_control(void *buffer, uint8_t brequest, uint32_t wlength);
+
 #endif /* __USBDBG_H__ */

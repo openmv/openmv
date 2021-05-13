@@ -55,6 +55,11 @@ void usbdbg_init()
     mp_const_ide_interrupt = mp_obj_new_exception_msg(&mp_type_Exception, "IDE interrupt");
 }
 
+void usbdbg_wait_for_command(uint32_t timeout)
+{
+    for (mp_uint_t ticks = mp_hal_ticks_ms(); ((mp_hal_ticks_ms() - ticks) < timeout) && (cmd != USBDBG_NONE); );
+}
+
 bool usbdbg_script_ready()
 {
     return script_ready;
