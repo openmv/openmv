@@ -56,7 +56,7 @@
 #define OMV_ENABLE_OV5640_AF    (0)
 
 // Enable WiFi debug
-#define OMV_ENABLE_WIFIDBG      (1)
+#define OMV_ENABLE_WIFIDBG      (0)
 
 // Enable self-tests on first boot
 #define OMV_ENABLE_SELFTEST     (0)
