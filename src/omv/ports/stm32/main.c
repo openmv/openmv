@@ -534,7 +534,9 @@ soft_reset:
     #ifdef IMLIB_ENABLE_IMAGE_FILE_IO
     file_buffer_init0();
     #endif
+    #if MICROPY_HW_ENABLE_SERVO
     servo_init();
+    #endif
     usbdbg_init();
     #if MICROPY_HW_ENABLE_SDCARD
     sdcard_init();
