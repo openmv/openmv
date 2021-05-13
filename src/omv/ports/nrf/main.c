@@ -286,6 +286,8 @@ soft_reset:
         }
     }
 
+    usbdbg_wait_for_command(1000);
+
     usbdbg_set_irq_enabled(false);
 
     mp_deinit();

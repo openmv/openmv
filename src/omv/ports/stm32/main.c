@@ -761,6 +761,8 @@ soft_reset:
         }
     } while (openmv_config.wifidbg == true);
 
+    usbdbg_wait_for_command(1000);
+
     #if MICROPY_PY_LWIP
     // Must call GC sweep here to close open sockets.
     gc_sweep_all();
