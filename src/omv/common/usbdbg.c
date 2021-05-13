@@ -14,9 +14,6 @@
 #include "py/gc.h"
 #include "py/mphal.h"
 #include "py/obj.h"
-#include "py/lexer.h"
-#include "py/parse.h"
-#include "py/compile.h"
 #include "py/runtime.h"
 #include "pendsv.h"
 
@@ -375,12 +372,11 @@ void usbdbg_control(void *buffer, uint8_t request, uint32_t length)
             break;
 
         case USBDBG_SYS_RESET_TO_BL:{
-            #if defined(RTC_BASE)
-            RTC_HandleTypeDef RTCHandle;
-            RTCHandle.Instance = RTC;
-            HAL_RTCEx_BKUPWrite(&RTCHandle, RTC_BKP_DR0, 0xDF59);
-            #endif
+            #if defined(MICROPY_RESET_TO_BOOTLOADER)
+            MICROPY_RESET_TO_BOOTLOADER();
+            #else
             NVIC_SystemReset();
+            #endif
             break;
         }
 
