@@ -15,9 +15,9 @@
   * Firmware version (major, minor and patch numbers).
   *
   */
-#define FIRMWARE_VERSION_MAJOR      (3)
-#define FIRMWARE_VERSION_MINOR      (9)
-#define FIRMWARE_VERSION_PATCH      (5)
+#define FIRMWARE_VERSION_MAJOR      (4)
+#define FIRMWARE_VERSION_MINOR      (0)
+#define FIRMWARE_VERSION_PATCH      (0)
 
 /**
   * To add a new debugging command, increment the last command value used.
