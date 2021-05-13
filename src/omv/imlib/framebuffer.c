@@ -81,6 +81,8 @@ void framebuffer_init0()
     memset(MAIN_FB(), 0, sizeof(*MAIN_FB()));
     memset(JPEG_FB(), 0, sizeof(*JPEG_FB()));
 
+    mutex_init0(&JPEG_FB()->lock);
+
     // Enable streaming.
     MAIN_FB()->streaming_enabled = true; // controlled by the OpenMV Cam.
 
