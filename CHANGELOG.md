@@ -1,4 +1,22 @@
 # Change Log
+## [4.0.0](https://github.com/openmv/openmv/releases/tag/v4.0.0) (2021-05-13)
+* Update to MicroPython 1.15
+* Update to GNU ARM Toolchain 10-2020-q4-major.
+* Update all examples and unit-tests.
+* Improved and more stable WiFi debugging.
+* Add support for double, triple and n buffers capture.
+* Add support for using MDMA to offload line processing.
+* Add support for non-blocking image capture in sensor.snapshot.
+* Add support for copying JPEG images.
+* Add support for CYW Bluetooth for Portenta board.
+* Add initial MT9M114 driver.
+* Add debayering support to draw_image.
+* Fix HM01B0 transposed image bug.
+* Fix HM01B0 vflip/hmirror settings.
+* Fix NANO33 PID/VID.
+* Fix UART clock source for H7 MCUs.
+* Fix FLIR Lepton init reliably on Pure Thermal board.
+
 ## [3.9.4](https://github.com/openmv/openmv/releases/tag/v3.9.4) (2021-03-26)
 * Add new buzzer Python module.
 * Add Ethernet low-power mode functions.
