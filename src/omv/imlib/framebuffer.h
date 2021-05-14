@@ -60,7 +60,7 @@ typedef struct jpegbuffer {
     int32_t size;
     int32_t enabled;
     int32_t quality;
-    mutex_t lock;
+    omv_mutex_t lock;
     OMV_ATTR_ALIGNED(uint8_t pixels[], FRAMEBUFFER_ALIGNMENT);
 } jpegbuffer_t;
 
