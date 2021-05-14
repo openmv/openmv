@@ -11,7 +11,6 @@
 #include <stdarg.h>
 #include "py/mphal.h"
 #include "py/runtime.h"
-#include "pin.h"
 
 #if MICROPY_PY_SENSOR
 
