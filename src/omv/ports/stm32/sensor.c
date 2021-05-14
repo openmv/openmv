@@ -25,6 +25,7 @@
 #include "mt9m114.h"
 #include "lepton.h"
 #include "hm01b0.h"
+#include "gc2145.h"
 #include "systick.h"
 #include "framebuffer.h"
 #include "omv_boardconfig.h"
@@ -360,27 +361,54 @@ int sensor_init()
     sensor.snapshot = sensor_snapshot;
 
     switch (sensor.slv_addr) {
+        #if (OMV_ENABLE_OV2640 == 1)
         case OV2640_SLV_ADDR: // Or OV9650.
             cambus_readb(&sensor.bus, sensor.slv_addr, OV_CHIP_ID, &sensor.chip_id);
             break;
+        #endif // (OMV_ENABLE_OV2640 == 1)
+
+        #if (OMV_ENABLE_OV5640 == 1)
         case OV5640_SLV_ADDR:
             cambus_readb2(&sensor.bus, sensor.slv_addr, OV5640_CHIP_ID, &sensor.chip_id);
             break;
+        #endif // (OMV_ENABLE_OV5640 == 1)
+
+        #if (OMV_ENABLE_OV7725 == 1) || (OMV_ENABLE_OV7670 == 1) || (OMV_ENABLE_OV7690 == 1)
         case OV7725_SLV_ADDR: // Or OV7690 or OV7670.
             cambus_readb(&sensor.bus, sensor.slv_addr, OV_CHIP_ID, &sensor.chip_id);
             break;
+        #endif //(OMV_ENABLE_OV7725 == 1) || (OMV_ENABLE_OV7670 == 1) || (OMV_ENABLE_OV7690 == 1)
+
+        #if (OMV_ENABLE_MT9V034 == 1)
         case MT9V034_SLV_ADDR:
             cambus_readb(&sensor.bus, sensor.slv_addr, ON_CHIP_ID, &sensor.chip_id);
             break;
+        #endif //(OMV_ENABLE_MT9V034 == 1)
+
+        #if (OMV_ENABLE_MT9M114 == 1)
         case MT9M114_SLV_ADDR:
             cambus_readw2(&sensor.bus, sensor.slv_addr, ON_CHIP_ID, &sensor.chip_id_w);
             break;
+        #endif // (OMV_ENABLE_MT9M114 == 1)
+
+        #if (OMV_ENABLE_LEPTON == 1)
         case LEPTON_SLV_ADDR:
             sensor.chip_id = LEPTON_ID;
             break;
+        #endif // (OMV_ENABLE_LEPTON == 1)
+
+        #if (OMV_ENABLE_HM01B0 == 1)
         case HM01B0_SLV_ADDR:
             cambus_readb2(&sensor.bus, sensor.slv_addr, HIMAX_CHIP_ID, &sensor.chip_id);
             break;
+        #endif //(OMV_ENABLE_HM01B0 == 1)
+
+        #if (OMV_ENABLE_GC2145 == 1)
+        case GC2145_SLV_ADDR:
+            cambus_readb(&sensor.bus, sensor.slv_addr, GC_CHIP_ID, &sensor.chip_id);
+            break;
+        #endif //(OMV_ENABLE_GC2145 == 1)
+
         default:
             return -3;
             break;
@@ -467,6 +495,12 @@ int sensor_init()
             init_ret = hm01b0_init(&sensor);
             break;
         #endif //(OMV_ENABLE_HM01B0 == 1)
+
+        #if (OMV_ENABLE_GC2145 == 1)
+        case GC2145_ID:
+            init_ret = gc2145_init(&sensor);
+            break;
+        #endif //(OMV_ENABLE_GC2145 == 1)
 
         default:
             return -3;
