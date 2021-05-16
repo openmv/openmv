@@ -22,6 +22,33 @@ const float __atanf_lut[4] = {
     +0.9997878412794807f     //p1
 };
 
+#if (__ARM_ARCH < 7)
+#include <math.h>
+float OMV_ATTR_ALWAYS_INLINE fast_sqrtf(float x)
+{
+    return sqrtf(x);
+}
+
+int OMV_ATTR_ALWAYS_INLINE fast_floorf(float x)
+{
+    return floorf(x);
+}
+
+int OMV_ATTR_ALWAYS_INLINE fast_ceilf(float x)
+{
+    return ceilf(x);
+}
+
+int OMV_ATTR_ALWAYS_INLINE fast_roundf(float x)
+{
+    return roundf(x);
+}
+
+float OMV_ATTR_ALWAYS_INLINE fast_fabsf(float x)
+{
+    return fabsf(x);
+}
+#else
 float OMV_ATTR_ALWAYS_INLINE fast_sqrtf(float x)
 {
     asm volatile (
@@ -62,6 +89,17 @@ int OMV_ATTR_ALWAYS_INLINE fast_roundf(float x)
     return i;
 }
 
+float OMV_ATTR_ALWAYS_INLINE fast_fabsf(float x)
+{
+    asm volatile (
+            "vabs.f32  %[r], %[x]\n"
+            : [r] "=t" (x)
+            : [x] "t"  (x));
+    return x;
+}
+
+#endif
+
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wstrict-aliasing"
 typedef union{
@@ -101,15 +139,6 @@ float fast_cbrtf(float x)
    v.ix = v.ix + v.ix/256;
    v.ix = 0x2a511cd0 + v.ix;  // Initial guess.
    return v.x;
-}
-
-float OMV_ATTR_ALWAYS_INLINE fast_fabsf(float x)
-{
-    asm volatile (
-            "vabs.f32  %[r], %[x]\n"
-            : [r] "=t" (x)
-            : [x] "t"  (x));
-    return x;
 }
 
 inline float fast_atanf(float xx)

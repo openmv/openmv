@@ -27,7 +27,7 @@ void mutex_init0(omv_mutex_t *mutex)
 
 static void _mutex_lock(omv_mutex_t *mutex, uint32_t tid, bool blocking)
 {
-    #if (CPU==cortex-m0)
+    #if (__ARM_ARCH < 7)
     do {
         __disable_irq();
         if (mutex->lock == 0) {
@@ -35,7 +35,6 @@ static void _mutex_lock(omv_mutex_t *mutex, uint32_t tid, bool blocking)
             mutex->tid = tid;
         }
         __enable_irq();
-        __WFI();
     } while (mutex->tid != tid && blocking);
     #else
     do {
