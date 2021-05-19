@@ -498,6 +498,9 @@ int sensor_init()
 
         #if (OMV_ENABLE_GC2145 == 1)
         case GC2145_ID:
+            if (extclk_config(GC2145_XCLK_FREQ) != 0) {
+                return -3;
+            }
             init_ret = gc2145_init(&sensor);
             break;
         #endif //(OMV_ENABLE_GC2145 == 1)

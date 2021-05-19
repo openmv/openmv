@@ -785,8 +785,8 @@ static int set_framesize(sensor_t *sensor, framesize_t framesize)
             return -1;
     }
 
-    // Write pixel format registers
-    for (int i=0; regs[i][0] != 0xFF; i++) {
+    // Write frame size registers
+    for (int i=0; regs[i][0]; i++) {
         ret |= cambus_writeb(&sensor->bus, sensor->slv_addr, regs[i][0], regs[i][1]);
     }
     return ret;

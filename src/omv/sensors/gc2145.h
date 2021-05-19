@@ -10,5 +10,6 @@
  */
 #ifndef __GC2145_H__
 #define __GC2145_H__
+#define GC2145_XCLK_FREQ (6000000)
 int gc2145_init(sensor_t *sensor);
 #endif // __GC2145_H__
