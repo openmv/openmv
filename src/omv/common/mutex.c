@@ -38,13 +38,12 @@ static void _mutex_lock(omv_mutex_t *mutex, uint32_t tid, bool blocking)
     } while (mutex->tid != tid && blocking);
     #else
     do {
-        // Attempt exclusive read
-        while (__LDREXW(&mutex->lock) != 0);
-
-        // Attempt to lock mutex
-        if(__STREXW(1, &mutex->lock) == 0) {
-            // Set TID if mutex is locked
-            mutex->tid = tid;
+        // Attempt to lock the mutex
+        if (__LDREXW(&mutex->lock) == 0) {
+            if (__STREXW(1, &mutex->lock) == 0) {
+                // Set TID if mutex is locked
+                mutex->tid = tid;
+            }
         }
     } while (mutex->tid != tid && blocking);
     #endif
