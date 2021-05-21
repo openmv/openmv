@@ -734,18 +734,14 @@ static const uint8_t qvga_regs[][2] = {
 
 static int reset(sensor_t *sensor)
 {
-    // Reset all registers
-    int ret = cambus_writeb(&sensor->bus, sensor->slv_addr, 0xFE, 0xF0);
-
-    // Delay 10 ms
-    mp_hal_delay_ms(10);
+    int ret = 0;
 
     // Write default regsiters
     for (int i = 0; default_regs[i][0]; i++) {
         ret |= cambus_writeb(&sensor->bus, sensor->slv_addr, default_regs[i][0], default_regs[i][1]);
     }
 
-    // Delay 100 ms
+    // Delay 10 ms
     mp_hal_delay_ms(10);
 
     return ret;
