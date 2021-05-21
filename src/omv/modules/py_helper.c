@@ -429,7 +429,9 @@ const uint16_t *py_helper_keyword_color_palette(uint n_args, const mp_obj_t *arg
         default_color_palette = NULL;
     } else if (py_helper_keyword_int_maybe(n_args, args, arg_index, kw_args,
             MP_OBJ_NEW_QSTR(MP_QSTR_color_palette), &palette)) {
-        if (palette == COLOR_PALETTE_RAINBOW) {
+        if (palette < 0) {
+            default_color_palette = NULL;
+        } else if (palette == COLOR_PALETTE_RAINBOW) {
             default_color_palette = rainbow_table;
         } else if (palette == COLOR_PALETTE_IRONBOW) {
             default_color_palette = ironbow_table;
