@@ -18,6 +18,10 @@ $(BUILD)/%.o : %.c
 	$(ECHO) "CC $<"
 	$(CC) $(CFLAGS) -c -o $@ $<
 
+$(BUILD)/src/string0.o : src/string0.c
+	$(ECHO) "CC $<"
+	$(CC) $(CFLAGS) -ffreestanding -fno-builtin -fno-lto -c -o $@ $<
+
 $(BUILD)/%.o : %.s
 	$(ECHO) "AS $<"
 	$(AS) $(AFLAGS) $< -o $@
