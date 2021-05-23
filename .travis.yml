@@ -6,6 +6,7 @@ stage: build
 
 git:
   depth: 5
+  submodules: false
 
 notifications:
   email:
