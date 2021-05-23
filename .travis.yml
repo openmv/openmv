@@ -4,6 +4,9 @@ sudo: required
 language: c
 stage: build
 
+git:
+  depth: 5
+
 notifications:
   email:
     on_success: never
@@ -18,7 +21,8 @@ cache:
 
 script:
   # update submodules 
-  - git submodule update --init --recursive
+  - git submodule update --init --depth=5
+  - git -C src/micropython/ submodule update --init --depth=5
   # install ARM GCC
   - pushd .
   - cd ~ && mkdir gcc && cd gcc
