@@ -771,12 +771,12 @@ soft_reset:
     systick_disable_dispatch(SYSTICK_DISPATCH_LWIP);
     #endif
 
-    // Disable all other IRQs except Systick and Flash IRQs
-    // Note: FS IRQ is disable, since we're going for a soft-reset.
-    irq_set_base_priority(IRQ_PRI_FLASH+1);
-
     // soft reset
     storage_flush();
+
+    // Disable all other IRQs except Systick
+    irq_set_base_priority(IRQ_PRI_SYSTICK+1);
+
     #if MICROPY_PY_BLUETOOTH
     mp_bluetooth_deinit();
     #endif
