@@ -1081,7 +1081,7 @@ STATIC const mp_map_elem_t globals_dict_table[] = {
     // Framebuffer Sizes
     { MP_OBJ_NEW_QSTR(MP_QSTR_SINGLE_BUFFER),                       MP_OBJ_NEW_SMALL_INT(1)},
     { MP_OBJ_NEW_QSTR(MP_QSTR_DOUBLE_BUFFER),                       MP_OBJ_NEW_SMALL_INT(2)},
-    { MP_OBJ_NEW_QSTR(MP_QSTR_TRIPPLE_BUFFER),                      MP_OBJ_NEW_SMALL_INT(3)},
+    { MP_OBJ_NEW_QSTR(MP_QSTR_TRIPLE_BUFFER),                       MP_OBJ_NEW_SMALL_INT(3)},
     { MP_OBJ_NEW_QSTR(MP_QSTR_VIDEO_FIFO),                          MP_OBJ_NEW_SMALL_INT(4)},
 
     // Sensor functions
