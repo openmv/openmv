@@ -49,6 +49,9 @@
 // Set which OV767x sensor is used
 #define OMV_OV7670_VERSION      (75)
 
+// OV7670 clock divider
+#define OMV_OV7670_CLKRC        (0x01)
+
 // Enable sensor features
 #define OMV_ENABLE_OV5640_AF    (0)
 
