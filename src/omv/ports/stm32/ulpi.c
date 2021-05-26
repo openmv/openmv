@@ -159,6 +159,7 @@ void ulpi_leave_low_power(void)
 
     /* Enable GPIO clock for OTG USB STP pin */
     __HAL_RCC_GPIOC_CLK_ENABLE();
+    __HAL_RCC_GPIOI_CLK_ENABLE();
 
     /* Set OTG STP pin as GP Output  */
     GPIO_InitStruct.Pin = GPIO_PIN_0;
@@ -167,15 +168,31 @@ void ulpi_leave_low_power(void)
     GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
     HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
-    /* Set OTG STP pin to High state during 4 milliseconds */
+    GPIO_InitStruct.Pin = GPIO_PIN_11;
+    GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+    GPIO_InitStruct.Pull = GPIO_NOPULL;
+    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
+    HAL_GPIO_Init(GPIOI, &GPIO_InitStruct);
+
+    /* Set OTG STP pin to High */
     HAL_GPIO_WritePin(GPIOC, GPIO_PIN_0, GPIO_PIN_SET);
 
-    /* Delay 4 ms */
-    HAL_Delay(10);
+    /* Wait for DIR to go low */
+    for (uint32_t ticks = HAL_GetTick();
+            ((HAL_GetTick() - ticks) < 500)
+            && HAL_GPIO_ReadPin(GPIOI, GPIO_PIN_11);) {
+        __WFI();
+    }
 
     GPIO_InitStruct.Pin = GPIO_PIN_0;
     GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
     GPIO_InitStruct.Alternate = GPIO_AF10_OTG_HS;
     HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
+
+    GPIO_InitStruct.Pin = GPIO_PIN_11;
+    GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
+    GPIO_InitStruct.Alternate = GPIO_AF10_OTG_HS;
+    HAL_GPIO_Init(GPIOI, &GPIO_InitStruct);
+
 }
 #endif // defined(STM32F7) || defined(STM32H7)
