@@ -514,9 +514,8 @@ mp_obj_t py_fir_init(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
             FIR_AMG8833_RETRY:
             cambus_init(&fir_bus, FIR_I2C_ID, CAMBUS_SPEED_STANDARD);
 
-            int error = 0;
-            error |= cambus_write_bytes(&fir_bus, AMG8833_ADDR, (uint8_t [1]){AMG8833_RESET_REGISTER}, 1, CAMBUS_XFER_SUSPEND);
-            error |= cambus_write_bytes(&fir_bus, AMG8833_ADDR, (uint8_t [1]){AMG8833_INITIAL_RESET_VALUE}, 1, CAMBUS_XFER_NO_FLAGS);
+            int error = cambus_write_bytes(&fir_bus, AMG8833_ADDR,
+                    (uint8_t [2]){AMG8833_RESET_REGISTER, AMG8833_INITIAL_RESET_VALUE}, 2, 0);
             if (error != 0) {
                 if (first_init) {
                     first_init = false;
