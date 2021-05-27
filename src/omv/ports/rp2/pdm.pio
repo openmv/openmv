@@ -1,0 +1,56 @@
+; Copyright (c) 2019 Arduino LLC.  All right reserved.
+;
+; This library is free software; you can redistribute it and/or
+; modify it under the terms of the GNU Lesser General Public
+; License as published by the Free Software Foundation; either
+; version 2.1 of the License, or (at your option) any later version.
+;
+; This library is distributed in the hope that it will be useful,
+; but WITHOUT ANY WARRANTY; without even the implied warranty of
+; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+; See the GNU Lesser General Public License for more details.
+;
+; You should have received a copy of the GNU Lesser General Public
+; License along with this library; if not, write to the Free Software
+; Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+
+.program pdm_pio
+.side_set 1
+.wrap_target
+
+  ; prova a cambiare edge
+
+  ;sample on falling edge
+  push iffull noblock  side 1 
+  ;nop  side 1 
+  ;nop  side 0 
+  in pins, 1  side 0 
+  ;nop side 0
+  
+.wrap
+
+% c-sdk {
+#include "hardware/gpio.h"
+
+static inline void pdm_pio_program_init(PIO pio, uint sm, uint offset, uint clkPin, uint dataPin, float clkDiv) {
+  pio_sm_config c = pdm_pio_program_get_default_config(offset);
+  sm_config_set_sideset(&c, 1, false, false);
+  //sm_config_set_in_shift(&c, false, true, 8);
+  sm_config_set_in_shift(&c, false, false, 8);
+
+  sm_config_set_in_pins(&c, dataPin);
+  sm_config_set_sideset_pins(&c, clkPin);
+  sm_config_set_clkdiv(&c, clkDiv);
+
+  pio_sm_set_consecutive_pindirs(pio, sm, dataPin, 1, false);
+  pio_sm_set_consecutive_pindirs(pio, sm, clkPin, 1, true);
+  pio_sm_set_pins_with_mask(pio, sm, 0, (1u << clkPin) );
+  //pio_gpio_init(pio, dataPin);
+  pio_gpio_init(pio, clkPin);
+
+  pio_sm_init(pio, sm, offset, &c);
+  pio_sm_set_enabled(pio, sm, true);
+}
+
+
+%}

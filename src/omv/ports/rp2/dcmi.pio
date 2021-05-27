@@ -1,0 +1,57 @@
+; This file is part of the OpenMV project.
+;
+; Copyright (c) 2013-2021 Ibrahim Abdelkader <iabdalkader@openmv.io>
+; Copyright (c) 2013-2021 Kwabena W. Agyeman <kwagyeman@openmv.io>
+;
+; This work is licensed under the MIT license, see the file LICENSE for details.
+; Image Sensor PIO program.
+
+.define public PXCLK 11
+.define public HSYNC 12
+.define public VSYNC 13
+
+.program dcmi_default
+.wrap_target
+    pull block              ; Read number of lines in OSR
+    mov y, osr              ; Copy OSR to Y
+    pull block              ; Read line width in bytes in OSR
+
+    wait 1 gpio VSYNC       ; Wait for VSYNC to go low
+    wait 0 gpio VSYNC
+
+line_loop:
+    mov x, osr              ; Copy line width from OSR to X
+    wait 0 gpio HSYNC       ; Wait for HSYNC to go high
+    wait 1 gpio HSYNC
+
+pixels_loop:
+    wait 0 gpio PXCLK
+    wait 1 gpio PXCLK
+    in pins 8
+    jmp x-- pixels_loop     ; Keep reading pixels while x != 0
+    jmp y-- line_loop       ; Keep reading lines while  y != 0
+.wrap
+
+.program dcmi_odd_byte
+.wrap_target
+    pull block              ; Read number of lines in OSR
+    mov y, osr              ; Copy OSR to Y
+    pull block              ; Read line width in bytes in OSR
+
+    wait 1 gpio VSYNC       ; Wait for VSYNC to go low
+    wait 0 gpio VSYNC
+
+line_loop:
+    mov x, osr              ; Copy line width from OSR to X
+    wait 0 gpio HSYNC       ; Wait for HSYNC to go high
+    wait 1 gpio HSYNC
+
+pixels_loop:
+    wait 0 gpio PXCLK
+    wait 1 gpio PXCLK
+    in pins 8
+    wait 0 gpio PXCLK
+    wait 1 gpio PXCLK
+    jmp x-- pixels_loop     ; Keep reading pixels while x != 0
+    jmp y-- line_loop       ; Keep reading lines while  y != 0
+.wrap
