@@ -1,4 +1,16 @@
 # Change Log
+## [4.0.1](https://github.com/openmv/openmv/releases/tag/v4.0.1) (2021-05-27)
+* Fix framebuffer corruption bug.
+* Fix servo timer.
+* Fix Eth low power mode bug.
+* Fix bootloader memset bug in newer gcc.
+* Fix mutex locking disabling IRQs.
+* Fix LWIP DHCP issue.
+* Update GC2145 driver.
+* Portenta: Enable SPI2.
+* Portenta: ULPI low power mode fix.
+* Portenta: Add PWM example with pinout.
+
 ## [4.0.0](https://github.com/openmv/openmv/releases/tag/v4.0.0) (2021-05-13)
 * Update to MicroPython 1.15
 * Update to GNU ARM Toolchain 10-2020-q4-major.
