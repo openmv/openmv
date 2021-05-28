@@ -5,7 +5,7 @@ language: c
 stage: build
 
 git:
-  depth: 5
+  depth: 1
   submodules: false
 
 notifications:
@@ -22,8 +22,8 @@ cache:
 
 script:
   # update submodules 
-  - git submodule update --init --depth=5
-  - git -C src/micropython/ submodule update --init --depth=5
+  - git submodule update --init --depth=1 --no-single-branch
+  - git -C src/micropython/ submodule update --init --depth=1
   # install ARM GCC
   - pushd .
   - cd ~ && mkdir gcc && cd gcc
