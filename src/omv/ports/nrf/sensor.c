@@ -1078,7 +1078,7 @@ int sensor_snapshot(sensor_t *sensor, image_t *image, uint32_t flags)
     uint32_t ulPin = 32; // P1.xx set of GPIO is in 'pin' 32 and above
     NRF_GPIO_Type *port = nrf_gpio_pin_port_decode(&ulPin);
 
-    for (int i = 0; i < sensor.framedrop_count; i++) {
+    for (int i = 0; i < sensor->framedrop_count; i++) {
         while ((*_vsyncPort & _vsyncMask) == 0); // wait for HIGH
         while ((*_vsyncPort & _vsyncMask) != 0); // wait for LOW
     }

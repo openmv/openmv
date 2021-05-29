@@ -1300,7 +1300,9 @@ void DCMI_DMAConvCpltUser(uint32_t addr)
         HAL_MDMA_DeInit(&DCMI_MDMA_Handle1);
         #endif
         // Reset the queue of frames when we start dropping frames.
-        framebuffer_flush_buffers();
+        if (!MAIN_FB()->disable_full_flush) {
+            framebuffer_flush_buffers();
+        }
         return;
     }
 
@@ -1616,7 +1618,7 @@ int sensor_snapshot(sensor_t *sensor, image_t *image, uint32_t flags)
         // Get the destination buffer address.
         vbuffer_t *buffer = framebuffer_get_tail(FB_PEEK);
 
-        if (!buffer) {
+        if ((!buffer) && ((sensor->pixformat == PIXFORMAT_JPEG) && (sensor->chip_id == OV2640_ID))) {
             return -3;
         }
 

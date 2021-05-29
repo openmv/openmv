@@ -34,6 +34,8 @@ typedef struct framebuffer {
     volatile int32_t tail;
     bool check_head;
     int32_t sampled_head;
+    // Disable autoflush policy on full to prevent stale frames.
+    bool disable_full_flush;
     OMV_ATTR_ALIGNED(uint8_t data[], FRAMEBUFFER_ALIGNMENT);
 } framebuffer_t;
 
