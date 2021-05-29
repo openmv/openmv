@@ -564,6 +564,8 @@ int sensor_reset()
     #endif // MICROPY_PY_IMU
     sensor.vsync_callback= NULL;
     sensor.frame_callback= NULL;
+    sensor.framedrop_count = 0;
+    sensor.framedrop_counter = 0;
 
     // Reset default color palette.
     sensor.color_palette = rainbow_table;
@@ -1024,6 +1026,18 @@ int sensor_set_framebuffers(int count)
     return framebuffer_set_buffers(count);
 }
 
+int sensor_set_framedrop(int count)
+{
+    dcmi_abort();
+
+    // Flush previous frame.
+    framebuffer_update_jpeg_buffer();
+
+    sensor.framedrop_count = count;
+    sensor.framedrop_counter = 0;
+    return 0;
+}
+
 int sensor_set_special_effect(sde_t sde)
 {
     if (sensor.sde == sde) {
@@ -1210,6 +1224,16 @@ static void sensor_check_buffsize()
 // moving the tail to the next buffer.
 void HAL_DCMI_FrameEventCallback(DCMI_HandleTypeDef *hdcmi)
 {
+    // Drop framedrop_count frames before accepting a frame.
+    if (sensor.framedrop_count) {
+        if (sensor.framedrop_counter < sensor.framedrop_count) {
+            sensor.framedrop_counter += 1;
+            return;
+        } else {
+            sensor.framedrop_counter = 0;
+        }
+    }
+
     framebuffer_get_tail(FB_NO_FLAGS);
 
     if (sensor.frame_callback) {
@@ -1258,6 +1282,11 @@ static uint32_t get_dcmi_hw_crop(uint32_t bytes_per_pixel)
 // DMA transfers the next line to the other half of the line buffer.
 void DCMI_DMAConvCpltUser(uint32_t addr)
 {
+    // Drop framedrop_count frames before accepting a frame.
+    if (sensor.framedrop_count && (sensor.framedrop_counter < sensor.framedrop_count)) {
+        return;
+    }
+
     vbuffer_t *buffer = framebuffer_get_tail(FB_PEEK);
 
     // If snapshot was not already waiting to receive data then we have missed this frame and have

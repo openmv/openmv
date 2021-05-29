@@ -425,6 +425,8 @@ int sensor_reset()
     #endif // MICROPY_PY_IMU
     sensor.vsync_callback= NULL;
     sensor.frame_callback= NULL;
+    sensor.framedrop_count = 0;
+    sensor.framedrop_counter = 0;
 
     // Reset default color palette.
     sensor.color_palette = rainbow_table;
@@ -861,6 +863,16 @@ int sensor_set_framebuffers(int count)
     return framebuffer_set_buffers(count);
 }
 
+int sensor_set_framedrop(int count)
+{
+    // Flush previous frame.
+    framebuffer_update_jpeg_buffer();
+
+    sensor.framedrop_count = count;
+    sensor.framedrop_counter = 0;
+    return 0;
+}
+
 int sensor_set_special_effect(sde_t sde)
 {
     if (sensor.sde == sde) {
@@ -1065,6 +1077,11 @@ int sensor_snapshot(sensor_t *sensor, image_t *image, uint32_t flags)
 
     uint32_t ulPin = 32; // P1.xx set of GPIO is in 'pin' 32 and above
     NRF_GPIO_Type *port = nrf_gpio_pin_port_decode(&ulPin);
+
+    for (int i = 0; i < sensor.framedrop_count; i++) {
+        while ((*_vsyncPort & _vsyncMask) == 0); // wait for HIGH
+        while ((*_vsyncPort & _vsyncMask) != 0); // wait for LOW
+    }
 
     noInterrupts();
 

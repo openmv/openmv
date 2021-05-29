@@ -181,6 +181,8 @@ typedef struct _sensor {
     bool transpose;             // Transpose Image
     bool auto_rotation;         // Rotate Image Automatically
     bool detected;              // Set to true when the sensor is initialized.
+    int framedrop_count;        // Number of frames to drop between accepting a frame.
+    int framedrop_counter;      // Current count of dropped frames.
 
     cambus_t bus;               // SCCB/I2C bus.
 
@@ -317,6 +319,9 @@ bool sensor_get_auto_rotation();
 
 // Set the number of virtual frame buffers.
 int sensor_set_framebuffers(int count);
+
+// Set the number of frames to drop between valid frames.
+int sensor_set_framedrop(int count);
 
 // Set special digital effects (SDE).
 int sensor_set_special_effect(sde_t sde);
