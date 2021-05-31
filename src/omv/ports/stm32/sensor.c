@@ -257,7 +257,7 @@ void sensor_init0()
 
 int sensor_init()
 {
-    int init_ret = 0;
+    int init_ret = 0, freq;
 
     /* Do a power cycle */
     DCMI_PWDN_HIGH();
@@ -426,7 +426,13 @@ int sensor_init()
 
         #if (OMV_ENABLE_OV5640 == 1)
         case OV5640_ID:
-            if (extclk_config(OV5640_XCLK_FREQ) != 0) {
+            freq = OMV_OV5640_XCLK_FREQ;
+            #if (OMV_OV5640_REV_Y_CHECK == 1)
+            if (HAL_GetREVID() < 0x2003) { // Is this REV Y?
+                freq = OMV_OV5640_REV_Y_FREQ;
+            }
+            #endif
+            if (extclk_config(freq) != 0) {
                 return -3;
             }
             init_ret = ov5640_init(&sensor);

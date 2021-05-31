@@ -37,6 +37,15 @@
 // Sensor Banding Filter Value
 #define OMV_OV7725_BANDING      (0x7F)
 
+// OV5640 Sensor Settings
+#define OMV_OV5640_XCLK_FREQ    (25000000)
+#define OMV_OV5640_PLL_CTRL2    (0x54)
+#define OMV_OV5640_PLL_CTRL3    (0x13)
+#define OMV_OV5640_REV_Y_CHECK  (0)
+#define OMV_OV5640_REV_Y_FREQ   (25000000)
+#define OMV_OV5640_REV_Y_CTRL2  (0x13)
+#define OMV_OV5640_REV_Y_CTRL3  (0x13)
+
 // Bootloader LED GPIO port/pin
 #define OMV_BOOTLDR_LED_PIN     (GPIO_PIN_6)
 #define OMV_BOOTLDR_LED_PORT    (GPIOK)
@@ -52,17 +61,17 @@
 
 // Enable sensor drivers
 #define OMV_ENABLE_OV2640       (0)
-#define OMV_ENABLE_OV5640       (0)
+#define OMV_ENABLE_OV5640       (1)
 #define OMV_ENABLE_OV7690       (0)
 #define OMV_ENABLE_OV7725       (0)
 #define OMV_ENABLE_OV9650       (0)
 #define OMV_ENABLE_MT9V034      (0)
 #define OMV_ENABLE_LEPTON       (0)
 #define OMV_ENABLE_HM01B0       (1)
-#define OMV_ENABLE_GC2145       (1)
+#define OMV_ENABLE_GC2145       (0)
 
 // Enable sensor features
-#define OMV_ENABLE_OV5640_AF    (0)
+#define OMV_ENABLE_OV5640_AF    (1)
 
 // Enable WiFi debug
 #define OMV_ENABLE_WIFIDBG      (0)
@@ -236,6 +245,9 @@
 #define FIR_I2C_SPEED           (CAMBUS_SPEED_STANDARD)
 #define FIR_I2C_FORCE_RESET()   __HAL_RCC_I2C3_FORCE_RESET()
 #define FIR_I2C_RELEASE_RESET() __HAL_RCC_I2C3_RELEASE_RESET()
+
+#define DCMI_RESET_PIN          (GPIO_PIN_3)
+#define DCMI_RESET_PORT         (GPIOG)
 
 #define DCMI_PWDN_PIN           (GPIO_PIN_13)
 #define DCMI_PWDN_PORT          (GPIOC)

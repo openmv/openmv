@@ -115,8 +115,8 @@ static const uint8_t default_regs[][3] = {
     { 0x38, 0x15, 0x31 },
     { 0x30, 0x34, 0x1a },
     { 0x30, 0x35, 0x11 }, // { 0x30, 0x35, 0x21 },
-    { 0x30, 0x36, 0x64 }, // { 0x30, 0x36, 0x46 },
-    { 0x30, 0x37, 0x13 },
+    { 0x30, 0x36, OMV_OV5640_PLL_CTRL2 }, // { 0x30, 0x36, 0x46 },
+    { 0x30, 0x37, OMV_OV5640_PLL_CTRL3 },
     { 0x30, 0x38, 0x00 },
     { 0x30, 0x39, 0x00 },
     { 0x38, 0x0c, 0x07 },
@@ -642,6 +642,8 @@ static const uint8_t saturation_regs[NUM_SATURATION_LEVELS][6] = {
     {0x2b, 0xab, 0xd6, 0xda, 0xd6, 0x04}, /* +3 */
 };
 
+#include "stdio.h"
+
 static int reset(sensor_t *sensor)
 {
     int ret = 0;
@@ -653,9 +655,13 @@ static int reset(sensor_t *sensor)
 
     hts_target = 0;
 
+    printf("1ret %d\n", ret);
+
     // Reset all registers
     ret |= cambus_writeb2(&sensor->bus, sensor->slv_addr, SCCB_SYSTEM_CTRL_1, 0x11);
     ret |= cambus_writeb2(&sensor->bus, sensor->slv_addr, SYSTEM_CTROL0, 0x82);
+
+    printf("2ret %d\n", ret);
 
     // Delay 5 ms
     mp_hal_delay_ms(5);
@@ -665,25 +671,36 @@ static int reset(sensor_t *sensor)
         ret |= cambus_writeb2(&sensor->bus, sensor->slv_addr, (default_regs[i][0] << 8) | (default_regs[i][1] << 0), default_regs[i][2]);
     }
 
-    #if defined(MCU_SERIES_H7)
+    printf("3ret %d\n", ret);
+
+    #if (OMV_OV5640_REV_Y_CHECK == 1)
     // Rev V (480 MHz / 20) -> 24 MHz PCLK / 3 * 100 = 800 MHz / 10 = 80 MHz PCLK.
     // Rev Y (400 MHz / 16) -> 25 MHz PCLK / 3 * 84 = 700 MHz / 10 = 70 MHz PCLK.
     if (HAL_GetREVID() < 0x2003) { // Is this REV Y?
-        ret |= cambus_writeb2(&sensor->bus, sensor->slv_addr, SC_PLL_CONTRL2, 0x54);
+        ret |= cambus_writeb2(&sensor->bus, sensor->slv_addr, SC_PLL_CONTRL2, OMV_OV5640_REV_Y_CTRL2);
+        ret |= cambus_writeb2(&sensor->bus, sensor->slv_addr, SC_PLL_CONTRL3, OMV_OV5640_REV_Y_CTRL3);
     }
     #endif
 
+    printf("4ret %d\n", ret);
+
     #if (OMV_ENABLE_OV5640_AF == 1)
     ret |= cambus_writeb2(&sensor->bus, sensor->slv_addr, SYSTEM_RESET_00, 0x20); // force mcu reset
+
+    printf("5ret %d\n", ret);
 
     // Write firmware
     uint16_t fw_addr = __REV16(MCU_FIRMWARE_BASE);
     ret |= cambus_write_bytes(&sensor->bus, sensor->slv_addr, (uint8_t *) &fw_addr, 2, CAMBUS_XFER_SUSPEND);
     ret |= cambus_write_bytes(&sensor->bus, sensor->slv_addr, (uint8_t *) af_firmware_regs, sizeof(af_firmware_regs), CAMBUS_XFER_NO_FLAGS);
 
+    printf("6ret %d\n", ret);
+
     for (int i = 0; af_firmware_command_regs[i][0]; i++) {
         ret |= cambus_writeb2(&sensor->bus, sensor->slv_addr, (af_firmware_command_regs[i][0] << 8) | (af_firmware_command_regs[i][1] << 0), af_firmware_command_regs[i][2]);
     }
+
+    printf("7ret %d\n", ret);
 
     ret |= cambus_writeb2(&sensor->bus, sensor->slv_addr, SYSTEM_RESET_00, 0x00); // release mcu reset
     #endif
@@ -1087,7 +1104,12 @@ static int get_gain_db(sensor_t *sensor, float *gain_db)
 
 static int calc_pclk_freq(uint8_t sc_pll_ctrl_0, uint8_t sc_pll_ctrl_1, uint8_t sc_pll_ctrl_2, uint8_t sc_pll_ctrl_3, uint8_t sys_root_div)
 {
-    uint32_t pclk_freq = OV5640_XCLK_FREQ;
+    uint32_t pclk_freq = OMV_OV5640_XCLK_FREQ;
+    #if (OMV_OV5640_REV_Y_CHECK == 1)
+    if (HAL_GetREVID() < 0x2003) { // Is this REV Y?
+        pclk_freq = OMV_OV5640_REV_Y_FREQ;
+    }
+    #endif
     pclk_freq /= ((sc_pll_ctrl_3 & 0x10) != 0x00) ? 2 : 1;
     pclk_freq /= ((sc_pll_ctrl_0 & 0x0F) == 0x0A) ? 10 : 8;
     switch (sc_pll_ctrl_3 & 0x0F)
