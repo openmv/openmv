@@ -122,7 +122,7 @@ static mp_obj_t py_sensor_snapshot(uint n_args, const mp_obj_t *args, mp_map_t *
                      MP_ERROR_TEXT("PIXFORMAT not set!"));
     } else if (ret == -2) {
         mp_raise_msg(&mp_type_RuntimeError,
-                     MP_ERROR_TEXT("FRAMESIZE not set, unsupported FRAMESIZE, or unsupported WINDOW!"));
+                     MP_ERROR_TEXT("Invalid Frame Size or Window!"));
     } else if (ret == -3) {
         mp_raise_msg(&mp_type_RuntimeError, MP_ERROR_TEXT("Framebuffer Error!"));
     } else if (ret == -4) {
