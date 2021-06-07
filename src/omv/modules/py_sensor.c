@@ -115,10 +115,21 @@ static mp_obj_t py_sensor_snapshot(uint n_args, const mp_obj_t *args, mp_map_t *
 #endif // MICROPY_PY_IMU
 
     mp_obj_t image = py_image(0, 0, 0, 0);
-    // Note: OV2640 JPEG mode can __fatal_error().
     int ret = sensor.snapshot(&sensor, (image_t *) py_image_cobj(image), 0);
 
-    if (ret < 0) {
+    if (ret == -1) {
+        mp_raise_msg(&mp_type_RuntimeError,
+                     MP_ERROR_TEXT("PIXFORMAT not set!"));
+    } else if (ret == -2) {
+        mp_raise_msg(&mp_type_RuntimeError,
+                     MP_ERROR_TEXT("Invalid Frame Size or Window!"));
+    } else if (ret == -3) {
+        mp_raise_msg(&mp_type_RuntimeError, MP_ERROR_TEXT("Framebuffer Error!"));
+    } else if (ret == -4) {
+        mp_raise_msg(&mp_type_RuntimeError, MP_ERROR_TEXT("Sensor Timeout!"));
+    } else if (ret == -5) {
+        mp_raise_msg(&mp_type_RuntimeError, MP_ERROR_TEXT("JPEG Overflow!"));
+    } else if (ret < 0) {
         mp_raise_msg_varg(&mp_type_RuntimeError, MP_ERROR_TEXT("Capture Failed: %d"), ret);
     }
 
