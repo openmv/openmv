@@ -55,14 +55,14 @@
 #define REG_SYSMGR_NEXT_STATE                   (0xDC00)
 #define REG_SYSMGR_CURRENT_STATE                (0xDC01)
 #define REG_SYSMGR_CMD_STATUS                   (0xDC02)
-#define SS_ENTER_CONFIG_CHANGE                  (  0x28) 
-#define SS_STREAMING                            (  0x31) 
-#define SS_START_STREAMING                      (  0x34) 
-#define SS_ENTER_SUSPEND                        (  0x40) 
-#define SS_SUSPENDED                            (  0x41) 
-#define SS_ENTER_STANDBY                        (  0x50) 
-#define SS_STANDBY                              (  0x52) 
-#define SS_LEAVE_STANDBY                        (  0x54) 
+#define SS_ENTER_CONFIG_CHANGE                  (  0x28)
+#define SS_STREAMING                            (  0x31)
+#define SS_START_STREAMING                      (  0x34)
+#define SS_ENTER_SUSPEND                        (  0x40)
+#define SS_SUSPENDED                            (  0x41)
+#define SS_ENTER_STANDBY                        (  0x50)
+#define SS_STANDBY                              (  0x52)
+#define SS_LEAVE_STANDBY                        (  0x54)
 
 #define REG_CAM_OUTPUT_FORMAT                   (0xC86C)
 #define OUTPUT_FORMAT_RGB565                    (0 << 12)
@@ -171,8 +171,8 @@ static int reset(sensor_t *sensor)
     const uint32_t (*regs)[3] = qvga_24mhz_regs;
     for (int i=0, ret=0; regs[i][0]; i++) {
         uint16_t addr = __REV16(regs[i][0]);
-        uint32_t size = regs[i][1]; 
-        uint32_t data; 
+        uint32_t size = regs[i][1];
+        uint32_t data;
         // TODO: could use indirect/logical addressing, please test it.
         switch (size) {
             case 4:
@@ -234,7 +234,7 @@ int mt9m114_init(sensor_t *sensor)
     SENSOR_HW_FLAGS_SET(sensor, SENSOR_HW_FLAGS_PIXCK, 0);
     SENSOR_HW_FLAGS_SET(sensor, SENSOR_HW_FLAGS_FSYNC, 0);
     SENSOR_HW_FLAGS_SET(sensor, SENSOR_HW_FLAGS_JPEGE, 0);
-    SENSOR_HW_FLAGS_SET(sensor, SWNSOR_HW_FLAGS_RGB565_REV, 1);
+    SENSOR_HW_FLAGS_SET(sensor, SENSOR_HW_FLAGS_RGB565_REV, 1);
     return 0;
 }
 
