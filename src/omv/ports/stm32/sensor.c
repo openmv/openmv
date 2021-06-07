@@ -1462,7 +1462,7 @@ void DCMI_DMAConvCpltUser(uint32_t addr)
             #if (OMV_ENABLE_SENSOR_MDMA == 1)
             mdma_memcpy(buffer, dst16, src16, sizeof(uint16_t), sensor.transpose);
             #else
-            if (SENSOR_HW_FLAGS_GET(&sensor, SWNSOR_HW_FLAGS_RGB565_REV)) {
+            if (SENSOR_HW_FLAGS_GET(&sensor, SENSOR_HW_FLAGS_RGB565_REV)) {
                 if (!sensor.transpose) {
                     unaligned_memcpy_rev16(dst16, src16, MAIN_FB()->u);
                 } else {
@@ -1503,7 +1503,7 @@ static void mdma_config(MDMA_InitTypeDef *init, sensor_t *sensor, uint32_t bytes
     init->SourceBlockAddressOffset  = 0;
     init->DestBlockAddressOffset    = 0;
 
-    if ((sensor->pixformat == PIXFORMAT_RGB565) && SENSOR_HW_FLAGS_GET(sensor, SWNSOR_HW_FLAGS_RGB565_REV)) {
+    if ((sensor->pixformat == PIXFORMAT_RGB565) && SENSOR_HW_FLAGS_GET(sensor, SENSOR_HW_FLAGS_RGB565_REV)) {
         init->Endianness = MDMA_LITTLE_BYTE_ENDIANNESS_EXCHANGE;
     } else {
         init->Endianness = MDMA_LITTLE_ENDIANNESS_PRESERVE;
