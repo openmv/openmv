@@ -58,14 +58,18 @@ typedef enum {
     FRAMESIZE_QQVGA,    // 160x120
     FRAMESIZE_QVGA,     // 320x240
     FRAMESIZE_VGA,      // 640x480
+    FRAMESIZE_HQQQQVGA, // 30x20
     FRAMESIZE_HQQQVGA,  // 60x40
     FRAMESIZE_HQQVGA,   // 120x80
     FRAMESIZE_HQVGA,    // 240x160
+    FRAMESIZE_HVGA,     // 480x320
     // FFT Resolutions
     FRAMESIZE_64X32,    // 64x32
     FRAMESIZE_64X64,    // 64x64
     FRAMESIZE_128X64,   // 128x64
     FRAMESIZE_128X128,  // 128x128
+    // Himax Resolutions
+    FRAMESIZE_160X160,  // 160x160
     FRAMESIZE_320X320,  // 320x320
     // Other
     FRAMESIZE_LCD,      // 128x160
