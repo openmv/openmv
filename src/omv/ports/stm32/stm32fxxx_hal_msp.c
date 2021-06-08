@@ -11,7 +11,7 @@
 #include STM32_HAL_H
 #include "axiqos.h"
 #include "omv_boardconfig.h"
-
+#include "imlib.h"
 #include "irq.h"
 
 /* GPIO struct */
@@ -653,17 +653,11 @@ void HAL_MspDeInit(void)
 
 }
 
-#if (OMV_HARDWARE_JPEG == 1)
-extern MDMA_HandleTypeDef JPEG_MDMA_Handle_In;
-extern MDMA_HandleTypeDef JPEG_MDMA_Handle_Out;
-#endif
-
 void MDMA_IRQHandler()
 {
     IRQ_ENTER(MDMA_IRQn);
     #if (OMV_HARDWARE_JPEG == 1)
-    HAL_MDMA_IRQHandler(&JPEG_MDMA_Handle_In);
-    HAL_MDMA_IRQHandler(&JPEG_MDMA_Handle_Out);
+    jpeg_mdma_irq_handler();
     #endif
     IRQ_EXIT(MDMA_IRQn);
 }

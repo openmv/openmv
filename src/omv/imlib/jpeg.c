@@ -546,8 +546,8 @@ static void jpeg_get_mcu(image_t *src, int x_offset, int y_offset, int dx, int d
 
 static JPEG_HandleTypeDef JPEG_Handle = {};
 static JPEG_ConfTypeDef JPEG_Config = {};
-MDMA_HandleTypeDef JPEG_MDMA_Handle_In = {};
-MDMA_HandleTypeDef JPEG_MDMA_Handle_Out = {};
+static MDMA_HandleTypeDef JPEG_MDMA_Handle_In = {};
+static MDMA_HandleTypeDef JPEG_MDMA_Handle_Out = {};
 
 static int JPEG_out_data_length_max = 0;
 static volatile int JPEG_out_data_length = 0;
@@ -574,6 +574,12 @@ void JPEG_IRQHandler()
     IRQ_ENTER(JPEG_IRQn);
     HAL_JPEG_IRQHandler(&JPEG_Handle);
     IRQ_EXIT(JPEG_IRQn);
+}
+
+void jpeg_mdma_irq_handler()
+{
+    HAL_MDMA_IRQHandler(&JPEG_MDMA_Handle_In);
+    HAL_MDMA_IRQHandler(&JPEG_MDMA_Handle_Out);
 }
 
 void HAL_JPEG_GetDataCallback(JPEG_HandleTypeDef *hjpeg, uint32_t NbDecodedData)

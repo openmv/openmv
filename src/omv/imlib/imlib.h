@@ -981,6 +981,7 @@ void bmp_write_subimg(image_t *img, const char *path, rectangle_t *r);
 #if (OMV_HARDWARE_JPEG == 1)
 void imlib_jpeg_compress_init();
 void imlib_jpeg_compress_deinit();
+void jpeg_mdma_irq_handler();
 #endif
 bool jpeg_compress(image_t *src, image_t *dst, int quality, bool realloc);
 int jpeg_clean_trailing_bytes(int bpp, uint8_t *data);
