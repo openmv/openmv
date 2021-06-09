@@ -582,6 +582,8 @@ int sensor_reset()
     // Reset default color palette.
     sensor.color_palette = rainbow_table;
 
+    sensor.disable_full_flush = false;
+
     // Restore shutdown state on reset.
     sensor_shutdown(false);
 
@@ -1314,7 +1316,9 @@ void DCMI_DMAConvCpltUser(uint32_t addr)
         __HAL_DCMI_DISABLE_IT(&DCMIHandle, DCMI_IT_FRAME);
         __HAL_DCMI_CLEAR_FLAG(&DCMIHandle, DCMI_FLAG_FRAMERI);
         // Reset the queue of frames when we start dropping frames.
-        framebuffer_flush_buffers();
+        if (!sensor.disable_full_flush) {
+            framebuffer_flush_buffers();
+        }
         return;
     }
 
@@ -1634,7 +1638,7 @@ int sensor_snapshot(sensor_t *sensor, image_t *image, uint32_t flags)
         // Get the destination buffer address.
         vbuffer_t *buffer = framebuffer_get_tail(FB_PEEK);
 
-        if (!buffer) {
+        if ((sensor->pixformat == PIXFORMAT_JPEG) && (sensor->chip_id == OV2640_ID) && (!buffer)) {
             return -3;
         }
 

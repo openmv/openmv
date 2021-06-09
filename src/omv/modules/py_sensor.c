@@ -568,6 +568,16 @@ static mp_obj_t py_sensor_get_framebuffers()
     return mp_obj_new_int(framebuffer->n_buffers);
 }
 
+static mp_obj_t py_sensor_disable_full_flush(uint n_args, const mp_obj_t *args)
+{
+    if (!n_args) {
+        return mp_obj_new_bool(sensor.disable_full_flush);
+    }
+
+    sensor.disable_full_flush = mp_obj_get_int(args[0]);
+    return mp_const_none;
+}
+
 static mp_obj_t py_sensor_set_special_effect(mp_obj_t sde)
 {
     if (sensor_set_special_effect(mp_obj_get_int(sde)) != 0) {
@@ -985,6 +995,7 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_set_auto_rotation_obj,   py_sensor_se
 STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_sensor_get_auto_rotation_obj,   py_sensor_get_auto_rotation);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_set_framebuffers_obj,    py_sensor_set_framebuffers);
 STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_sensor_get_framebuffers_obj,    py_sensor_get_framebuffers);
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(py_sensor_disable_full_flush_obj, 0, 1, py_sensor_disable_full_flush);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_set_special_effect_obj,  py_sensor_set_special_effect);
 STATIC MP_DEFINE_CONST_FUN_OBJ_3(py_sensor_set_lens_correction_obj, py_sensor_set_lens_correction);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_set_vsync_callback_obj,  py_sensor_set_vsync_callback);
@@ -1148,6 +1159,7 @@ STATIC const mp_map_elem_t globals_dict_table[] = {
     { MP_OBJ_NEW_QSTR(MP_QSTR_get_auto_rotation),   (mp_obj_t)&py_sensor_get_auto_rotation_obj },
     { MP_OBJ_NEW_QSTR(MP_QSTR_set_framebuffers),    (mp_obj_t)&py_sensor_set_framebuffers_obj },
     { MP_OBJ_NEW_QSTR(MP_QSTR_get_framebuffers),    (mp_obj_t)&py_sensor_get_framebuffers_obj },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_disable_full_flush),  (mp_obj_t)&py_sensor_disable_full_flush_obj },
     { MP_OBJ_NEW_QSTR(MP_QSTR_set_special_effect),  (mp_obj_t)&py_sensor_set_special_effect_obj },
     { MP_OBJ_NEW_QSTR(MP_QSTR_set_lens_correction), (mp_obj_t)&py_sensor_set_lens_correction_obj },
     { MP_OBJ_NEW_QSTR(MP_QSTR_set_vsync_callback),  (mp_obj_t)&py_sensor_set_vsync_callback_obj },

@@ -168,6 +168,7 @@ typedef struct _sensor {
     uint16_t gs_bpp;            // Grayscale bytes per pixel.
     uint32_t hw_flags;          // Hardware flags (clock polarities/hw capabilities)
     const uint16_t *color_palette;    // Color palette used for color lookup.
+    bool disable_full_flush;    // Turn off default frame buffer flush policy when full.
 
     vsync_cb_t vsync_callback;  // VSYNC callback.
     frame_cb_t frame_callback;  // Frame callback.
