@@ -429,6 +429,8 @@ int sensor_reset()
     // Reset default color palette.
     sensor.color_palette = rainbow_table;
 
+    sensor.disable_full_flush = false;
+
     // Restore shutdown state on reset.
     sensor_shutdown(false);
 
