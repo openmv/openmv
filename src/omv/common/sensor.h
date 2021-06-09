@@ -180,6 +180,8 @@ typedef struct _sensor {
     pixformat_t pixformat;      // Pixel format
     framesize_t framesize;      // Frame size
     int framerate;              // Frame rate
+    uint32_t last_frame_ms;     // Last sampled frame timestamp in milliseconds.
+    bool last_frame_ms_valid;   // Last sampled frame timestamp in milliseconds valid.
     gainceiling_t gainceiling;  // AGC gainceiling
     bool hmirror;               // Horizontal Mirror
     bool vflip;                 // Vertical Flip

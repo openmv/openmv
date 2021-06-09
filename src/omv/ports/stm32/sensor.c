@@ -50,6 +50,8 @@ static DCMI_HandleTypeDef DCMIHandle = {.Instance = DCMI};
 static MDMA_HandleTypeDef DCMI_MDMA_Handle0 = {.Instance = MDMA_Channel0};
 static MDMA_HandleTypeDef DCMI_MDMA_Handle1 = {.Instance = MDMA_Channel1};
 #endif
+static bool first_line = false;
+static bool drop_frame = false;
 
 extern uint8_t _line_buf;
 
@@ -236,6 +238,10 @@ static void dcmi_abort()
         #endif
         __HAL_DCMI_DISABLE_IT(&DCMIHandle, DCMI_IT_FRAME);
         __HAL_DCMI_CLEAR_FLAG(&DCMIHandle, DCMI_FLAG_FRAMERI);
+        first_line = false;
+        drop_frame = false;
+        sensor.last_frame_ms = 0;
+        sensor.last_frame_ms_valid = false;
     }
 
     framebuffer_reset_buffers();
@@ -563,24 +569,26 @@ int sensor_reset()
     dcmi_abort();
 
     // Reset the sensor state
-    sensor.sde           = 0;
-    sensor.pixformat     = 0;
-    sensor.framesize     = 0;
-    sensor.framerate     = 0;
-    sensor.gainceiling   = 0;
-    sensor.hmirror       = false;
-    sensor.vflip         = false;
-    sensor.transpose     = false;
+    sensor.sde                  = 0;
+    sensor.pixformat            = 0;
+    sensor.framesize            = 0;
+    sensor.framerate            = 0;
+    sensor.last_frame_ms        = 0;
+    sensor.last_frame_ms_valid  = false;
+    sensor.gainceiling          = 0;
+    sensor.hmirror              = false;
+    sensor.vflip                = false;
+    sensor.transpose            = false;
     #if MICROPY_PY_IMU
-    sensor.auto_rotation = sensor.chip_id == OV7690_ID;
+    sensor.auto_rotation        = sensor.chip_id == OV7690_ID;
     #else
-    sensor.auto_rotation = false;
+    sensor.auto_rotation        = false;
     #endif // MICROPY_PY_IMU
-    sensor.vsync_callback= NULL;
-    sensor.frame_callback= NULL;
+    sensor.vsync_callback       = NULL;
+    sensor.frame_callback       = NULL;
 
     // Reset default color palette.
-    sensor.color_palette = rainbow_table;
+    sensor.color_palette        = rainbow_table;
 
     sensor.disable_full_flush = false;
 
@@ -725,6 +733,9 @@ int sensor_set_pixformat(pixformat_t pixformat)
     // Skip the first frame.
     MAIN_FB()->bpp = -1;
 
+    // Pickout a good buffer count for the user.
+    framebuffer_auto_adjust_buffers();
+
     // Change the JPEG mode.
     return dcmi_config((pixformat == PIXFORMAT_JPEG) ? DCMI_JPEG_ENABLE : DCMI_JPEG_DISABLE);
 }
@@ -775,13 +786,20 @@ int sensor_set_framerate(int framerate)
         return 0;
     }
 
-    // Call the sensor specific function
-    if (sensor.set_framerate == NULL
-        || sensor.set_framerate(&sensor, framerate) != 0) {
-        // Operation not supported
+    if (framerate < 0) {
         return -1;
     }
 
+    // Call the sensor specific function (does not fail if function is not set)
+    if (sensor.set_framerate != NULL) {
+        if (sensor.set_framerate(&sensor, framerate) != 0) {
+            // Operation not supported
+            return -1;
+        }
+    }
+
+    // Set framerate
+    sensor.framerate = framerate;
     return 0;
 }
 
@@ -798,6 +816,7 @@ int sensor_set_windowing(int x, int y, int w, int h)
 
     dcmi_abort();
 
+    // Flush previous frame.
     framebuffer_update_jpeg_buffer();
 
     // Skip the first frame.
@@ -951,6 +970,8 @@ int sensor_set_hmirror(int enable)
         return 0;
     }
 
+    dcmi_abort();
+
     /* call the sensor specific function */
     if (sensor.set_hmirror == NULL
         || sensor.set_hmirror(&sensor, enable) != 0) {
@@ -973,6 +994,8 @@ int sensor_set_vflip(int enable)
         /* no change */
         return 0;
     }
+
+    dcmi_abort();
 
     /* call the sensor specific function */
     if (sensor.set_vflip == NULL
@@ -1001,6 +1024,8 @@ int sensor_set_transpose(bool enable)
         return -1;
     }
 
+    dcmi_abort();
+
     sensor.transpose = enable;
     return 0;
 }
@@ -1020,6 +1045,8 @@ int sensor_set_auto_rotation(bool enable)
     if (sensor.pixformat == PIXFORMAT_JPEG) {
         return -1;
     }
+
+    dcmi_abort();
 
     sensor.auto_rotation = enable;
     return 0;
@@ -1263,18 +1290,26 @@ static void sensor_check_buffsize()
 // moving the tail to the next buffer.
 void HAL_DCMI_FrameEventCallback(DCMI_HandleTypeDef *hdcmi)
 {
-    framebuffer_get_tail(FB_NO_FLAGS);
-
-    if (sensor.frame_callback) {
-        sensor.frame_callback();
-    }
-
+    // This can be executed at any time since this interrupt has a higher priority than DMA2_Stream1_IRQn.
     #if (OMV_ENABLE_SENSOR_MDMA_TOTAL_OFFLOAD == 1)
     // Clear out any stale flags.
     DMA2->LIFCR = DMA_FLAG_TCIF1_5 | DMA_FLAG_HTIF1_5;
     // Re-enable the DMA IRQ to catch the next start line.
     HAL_NVIC_EnableIRQ(DMA2_Stream1_IRQn);
     #endif
+
+    // Reset DCMI_DMAConvCpltUser frame drop state.
+    first_line = false;
+    if (drop_frame) {
+        drop_frame = false;
+        return;
+    }
+
+    framebuffer_get_tail(FB_NO_FLAGS);
+
+    if (sensor.frame_callback) {
+        sensor.frame_callback();
+    }
 }
 
 #if (OMV_ENABLE_SENSOR_MDMA == 1)
@@ -1302,6 +1337,35 @@ static void mdma_memcpy(vbuffer_t *buffer, void *dst, void *src, int bpp, bool t
 // DMA transfers the next line to the other half of the line buffer.
 void DCMI_DMAConvCpltUser(uint32_t addr)
 {
+    if (!first_line) {
+        first_line = true;
+        uint32_t tick = HAL_GetTick();
+        uint32_t framerate_ms = IM_DIV(1000, sensor.framerate);
+
+        // Drops frames to match the frame rate requested by the user. The frame is NOT copied to
+        // SRAM/SDRAM when dropping to save CPU cycles/energy that would be wasted.
+        // If framerate is zero then this does nothing...
+        if (sensor.last_frame_ms_valid && ((tick - sensor.last_frame_ms) < framerate_ms)) {
+            drop_frame = true;
+        } else if (sensor.last_frame_ms_valid) {
+            sensor.last_frame_ms += framerate_ms;
+        } else {
+            sensor.last_frame_ms = tick;
+            sensor.last_frame_ms_valid = true;
+        }
+    }
+
+    if (drop_frame) {
+        // If we're dropping a frame in full offload mode it's safe to disable this interrupt saving
+        // ourselves from having to service the DMA complete callback.
+        #if (OMV_ENABLE_SENSOR_MDMA_TOTAL_OFFLOAD == 1)
+        if (!sensor.transpose) {
+            HAL_NVIC_DisableIRQ(DMA2_Stream1_IRQn);
+        }
+        #endif
+        return;
+    }
+
     vbuffer_t *buffer = framebuffer_get_tail(FB_PEEK);
 
     // If snapshot was not already waiting to receive data then we have missed this frame and have
@@ -1315,6 +1379,10 @@ void DCMI_DMAConvCpltUser(uint32_t addr)
         #endif
         __HAL_DCMI_DISABLE_IT(&DCMIHandle, DCMI_IT_FRAME);
         __HAL_DCMI_CLEAR_FLAG(&DCMIHandle, DCMI_FLAG_FRAMERI);
+        first_line = false;
+        drop_frame = false;
+        sensor.last_frame_ms = 0;
+        sensor.last_frame_ms_valid = false;
         // Reset the queue of frames when we start dropping frames.
         if (!sensor.disable_full_flush) {
             framebuffer_flush_buffers();

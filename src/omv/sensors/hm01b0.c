@@ -49,15 +49,15 @@ static const uint16_t default_regs[][2] = {
     {0x3064,               0x00},
     {0x3065,               0x04},          //  pad pull 0
     {ANA_Register_17,      0x00},          //  Disable internal oscillator
-   
+
     {BLC_CFG,              0x43},          //  BLC_on, IIR
-   
+
     {0x1001,               0x43},          //  BLC dithering en
     {0x1002,               0x43},          //  blc_darkpixel_thd
     {0x0350,               0x7F},          //  Dgain Control
     {BLI_EN,               0x01},          //  BLI enable
     {0x1003,               0x00},          //  BLI Target [Def: 0x20]
-   
+
     {DPC_CTRL,             0x01},          //  DPC option 0: DPC off   1 : mono   3 : bayer1   5 : bayer2
     {0x1009,               0xA0},          //  cluster hot pixel th
     {0x100A,               0x60},          //  cluster cold pixel th
@@ -77,7 +77,7 @@ static const uint16_t default_regs[][2] = {
     {0x2014,               0x58},
     {0x2017,               0x00},
     {0x2018,               0x9B},
-   
+
     {AE_CTRL,              0x01},          //Automatic Exposure
     {AE_TARGET_MEAN,       0x64},          //AE target mean          [Def: 0x3C]
     {AE_MIN_MEAN,          0x0A},          //AE min target mean      [Def: 0x0A]
@@ -88,16 +88,16 @@ static const uint16_t default_regs[][2] = {
     {MAX_AGAIN_FULL,       0x04},          //Maximum Analog gain in full frame mode [Def: 0x03]
     {MAX_AGAIN_BIN2,       0x04},          //Maximum Analog gain in bin2 mode       [Def: 0x04]
     {MAX_DGAIN,            0xC0},
-   
+
     {INTEGRATION_H,        0x01},          //Integration H           [Def: 0x01]
     {INTEGRATION_L,        0x08},          //Integration L           [Def: 0x08]
     {ANALOG_GAIN,          0x00},          //Analog Global Gain      [Def: 0x00]
     {DAMPING_FACTOR,       0x20},          //Damping Factor          [Def: 0x20]
     {DIGITAL_GAIN_H,       0x01},          //Digital Gain High       [Def: 0x01]
     {DIGITAL_GAIN_L,       0x00},          //Digital Gain Low        [Def: 0x00]
-   
+
     {FS_CTRL,              0x00},          //Flicker Control
-   
+
     {FS_60HZ_H,            0x00},
     {FS_60HZ_L,            0x3C},
     {FS_50HZ_H,            0x00},
@@ -148,7 +148,7 @@ static int reset(sensor_t *sensor)
 
     // Set PCLK polarity.
     ret |= cambus_writeb2(&sensor->bus, sensor->slv_addr, PCLK_POLARITY, (0x20 | PCLK_FALLING_EDGE));
-    
+
     // Set mode to streaming
     ret |= cambus_writeb2(&sensor->bus, sensor->slv_addr, MODE_SELECT, HIMAX_MODE_STREAMING);
 
@@ -258,7 +258,7 @@ static int set_framesize(sensor_t *sensor, framesize_t framesize)
         default:
             if (w>320 || h>320)
                 ret = -1;
-            
+
     }
 
     return ret;
@@ -275,22 +275,14 @@ static int set_framerate(sensor_t *sensor, int framerate)
         highres = true;
     }
 
-    switch (framerate) {
-        case 15:
-            osc_div = (highres == true) ? 0x01 : 0x00;
-            break;
-        case 30:
-            osc_div = (highres == true) ? 0x02 : 0x01;
-            break;
-        case 60:
-            osc_div = (highres == true) ? 0x03 : 0x02;
-            break;
-        case 120:
-            // Set to the max possible FPS at this resolution.
-            osc_div = 0x03;
-            break;
-        default:
-            return -1;
+    if (framerate <= 15) {
+        osc_div = (highres == true) ? 0x01 : 0x00;
+    } else if (framerate <= 30) {
+        osc_div = (highres == true) ? 0x02 : 0x01;
+    } else if (framerate <= 60) {
+        osc_div = (highres == true) ? 0x03 : 0x02;
+    } else {
+        osc_div = 0x03; // Set to the max possible FPS at this resolution.
     }
     return cambus_writeb2(&sensor->bus, sensor->slv_addr, OSC_CLK_DIV, 0x08 | osc_div);
 }
