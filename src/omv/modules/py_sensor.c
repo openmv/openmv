@@ -347,6 +347,10 @@ static mp_obj_t py_sensor_set_windowing(uint n_args, const mp_obj_t *args)
 
 static mp_obj_t py_sensor_get_windowing()
 {
+    if (sensor.framesize == FRAMESIZE_INVALID) {
+        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Frame size not set yet!"));
+    }
+
     return mp_obj_new_tuple(4, (mp_obj_t []) {mp_obj_new_int(framebuffer_get_x()),
                                               mp_obj_new_int(framebuffer_get_y()),
                                               mp_obj_new_int(framebuffer_get_u()),
