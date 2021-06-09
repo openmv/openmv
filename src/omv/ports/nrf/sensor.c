@@ -410,24 +410,26 @@ int sensor_reset()
     framebuffer_reset_buffers();
 
     // Reset the sensor state
-    sensor.sde           = 0;
-    sensor.pixformat     = 0;
-    sensor.framesize     = 0;
-    sensor.framerate     = 0;
-    sensor.gainceiling   = 0;
-    sensor.hmirror       = false;
-    sensor.vflip         = false;
-    sensor.transpose     = false;
+    sensor.sde                  = 0;
+    sensor.pixformat            = 0;
+    sensor.framesize            = 0;
+    sensor.framerate            = 0;
+    sensor.last_frame_ms        = 0;
+    sensor.last_frame_ms_valid  = false;
+    sensor.gainceiling          = 0;
+    sensor.hmirror              = false;
+    sensor.vflip                = false;
+    sensor.transpose            = false;
     #if MICROPY_PY_IMU
-    sensor.auto_rotation = sensor.chip_id == OV7690_ID;
+    sensor.auto_rotation        = sensor.chip_id == OV7690_ID;
     #else
-    sensor.auto_rotation = false;
+    sensor.auto_rotation        = false;
     #endif // MICROPY_PY_IMU
-    sensor.vsync_callback= NULL;
-    sensor.frame_callback= NULL;
+    sensor.vsync_callback       = NULL;
+    sensor.frame_callback       = NULL;
 
     // Reset default color palette.
-    sensor.color_palette = rainbow_table;
+    sensor.color_palette        = rainbow_table;
 
     // Restore shutdown state on reset.
     sensor_shutdown(false);
@@ -602,13 +604,20 @@ int sensor_set_framerate(int framerate)
         return 0;
     }
 
-    // Call the sensor specific function
-    if (sensor.set_framerate == NULL
-        || sensor.set_framerate(&sensor, framerate) != 0) {
-        // Operation not supported
+    if (framerate < 0) {
         return -1;
     }
 
+    // Call the sensor specific function (does not fail if function is not set)
+    if (sensor.set_framerate != NULL) {
+        if (sensor.set_framerate(&sensor, framerate) != 0) {
+            // Operation not supported
+            return -1;
+        }
+    }
+
+    // Set framerate
+    sensor.framerate = framerate;
     return 0;
 }
 
