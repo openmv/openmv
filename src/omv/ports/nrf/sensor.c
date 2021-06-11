@@ -68,14 +68,19 @@ const int resolution[][2] = {
     {160,  120 },    /* QQVGA     */
     {320,  240 },    /* QVGA      */
     {640,  480 },    /* VGA       */
+    {30,   20  },    /* HQQQQVGA  */
     {60,   40  },    /* HQQQVGA   */
     {120,  80  },    /* HQQVGA    */
     {240,  160 },    /* HQVGA     */
+    {480,  320 },    /* HVGA      */
     // FFT Resolutions
     {64,   32  },    /* 64x32     */
     {64,   64  },    /* 64x64     */
     {128,  64  },    /* 128x64    */
     {128,  128 },    /* 128x128   */
+    // Himax Resolutions
+    {160,  160 },    /* 160x160   */
+    {320,  320 },    /* 320x320   */
     // Other
     {128,  160 },    /* LCD       */
     {128,  160 },    /* QQVGA2    */
@@ -410,24 +415,28 @@ int sensor_reset()
     framebuffer_reset_buffers();
 
     // Reset the sensor state
-    sensor.sde           = 0;
-    sensor.pixformat     = 0;
-    sensor.framesize     = 0;
-    sensor.framerate     = 0;
-    sensor.gainceiling   = 0;
-    sensor.hmirror       = false;
-    sensor.vflip         = false;
-    sensor.transpose     = false;
+    sensor.sde                  = 0;
+    sensor.pixformat            = 0;
+    sensor.framesize            = 0;
+    sensor.framerate            = 0;
+    sensor.last_frame_ms        = 0;
+    sensor.last_frame_ms_valid  = false;
+    sensor.gainceiling          = 0;
+    sensor.hmirror              = false;
+    sensor.vflip                = false;
+    sensor.transpose            = false;
     #if MICROPY_PY_IMU
-    sensor.auto_rotation = sensor.chip_id == OV7690_ID;
+    sensor.auto_rotation        = sensor.chip_id == OV7690_ID;
     #else
-    sensor.auto_rotation = false;
+    sensor.auto_rotation        = false;
     #endif // MICROPY_PY_IMU
-    sensor.vsync_callback= NULL;
-    sensor.frame_callback= NULL;
+    sensor.vsync_callback       = NULL;
+    sensor.frame_callback       = NULL;
 
     // Reset default color palette.
-    sensor.color_palette = rainbow_table;
+    sensor.color_palette        = rainbow_table;
+
+    sensor.disable_full_flush = false;
 
     // Restore shutdown state on reset.
     sensor_shutdown(false);
@@ -602,13 +611,20 @@ int sensor_set_framerate(int framerate)
         return 0;
     }
 
-    // Call the sensor specific function
-    if (sensor.set_framerate == NULL
-        || sensor.set_framerate(&sensor, framerate) != 0) {
-        // Operation not supported
+    if (framerate < 0) {
         return -1;
     }
 
+    // Call the sensor specific function (does not fail if function is not set)
+    if (sensor.set_framerate != NULL) {
+        if (sensor.set_framerate(&sensor, framerate) != 0) {
+            // Operation not supported
+            return -1;
+        }
+    }
+
+    // Set framerate
+    sensor.framerate = framerate;
     return 0;
 }
 
@@ -1109,7 +1125,7 @@ int sensor_snapshot(sensor_t *sensor, image_t *image, uint32_t flags)
         case PIXFORMAT_YUV422:
         case PIXFORMAT_RGB565: {
             MAIN_FB()->bpp = 2;
-            if (SENSOR_HW_FLAGS_GET(sensor, SWNSOR_HW_FLAGS_RGB565_REV)) {
+            if (SENSOR_HW_FLAGS_GET(sensor, SENSOR_HW_FLAGS_RGB565_REV)) {
                 unaligned_memcpy_rev16(buffer->data, buffer->data, _width*_height);
             }
             break;

@@ -115,10 +115,21 @@ static mp_obj_t py_sensor_snapshot(uint n_args, const mp_obj_t *args, mp_map_t *
 #endif // MICROPY_PY_IMU
 
     mp_obj_t image = py_image(0, 0, 0, 0);
-    // Note: OV2640 JPEG mode can __fatal_error().
     int ret = sensor.snapshot(&sensor, (image_t *) py_image_cobj(image), 0);
 
-    if (ret < 0) {
+    if (ret == -1) {
+        mp_raise_msg(&mp_type_RuntimeError,
+                     MP_ERROR_TEXT("PIXFORMAT not set!"));
+    } else if (ret == -2) {
+        mp_raise_msg(&mp_type_RuntimeError,
+                     MP_ERROR_TEXT("Invalid Frame Size or Window!"));
+    } else if (ret == -3) {
+        mp_raise_msg(&mp_type_RuntimeError, MP_ERROR_TEXT("Framebuffer Error!"));
+    } else if (ret == -4) {
+        mp_raise_msg(&mp_type_RuntimeError, MP_ERROR_TEXT("Sensor Timeout!"));
+    } else if (ret == -5) {
+        mp_raise_msg(&mp_type_RuntimeError, MP_ERROR_TEXT("JPEG Overflow!"));
+    } else if (ret < 0) {
         mp_raise_msg_varg(&mp_type_RuntimeError, MP_ERROR_TEXT("Capture Failed: %d"), ret);
     }
 
@@ -336,6 +347,10 @@ static mp_obj_t py_sensor_set_windowing(uint n_args, const mp_obj_t *args)
 
 static mp_obj_t py_sensor_get_windowing()
 {
+    if (sensor.framesize == FRAMESIZE_INVALID) {
+        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Frame size not set yet!"));
+    }
+
     return mp_obj_new_tuple(4, (mp_obj_t []) {mp_obj_new_int(framebuffer_get_x()),
                                               mp_obj_new_int(framebuffer_get_y()),
                                               mp_obj_new_int(framebuffer_get_u()),
@@ -551,6 +566,16 @@ static mp_obj_t py_sensor_set_framebuffers(mp_obj_t count)
 static mp_obj_t py_sensor_get_framebuffers()
 {
     return mp_obj_new_int(framebuffer->n_buffers);
+}
+
+static mp_obj_t py_sensor_disable_full_flush(uint n_args, const mp_obj_t *args)
+{
+    if (!n_args) {
+        return mp_obj_new_bool(sensor.disable_full_flush);
+    }
+
+    sensor.disable_full_flush = mp_obj_get_int(args[0]);
+    return mp_const_none;
 }
 
 static mp_obj_t py_sensor_set_special_effect(mp_obj_t sde)
@@ -970,6 +995,7 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_set_auto_rotation_obj,   py_sensor_se
 STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_sensor_get_auto_rotation_obj,   py_sensor_get_auto_rotation);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_set_framebuffers_obj,    py_sensor_set_framebuffers);
 STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_sensor_get_framebuffers_obj,    py_sensor_get_framebuffers);
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(py_sensor_disable_full_flush_obj, 0, 1, py_sensor_disable_full_flush);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_set_special_effect_obj,  py_sensor_set_special_effect);
 STATIC MP_DEFINE_CONST_FUN_OBJ_3(py_sensor_set_lens_correction_obj, py_sensor_set_lens_correction);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_set_vsync_callback_obj,  py_sensor_set_vsync_callback);
@@ -1016,14 +1042,18 @@ STATIC const mp_map_elem_t globals_dict_table[] = {
     { MP_OBJ_NEW_QSTR(MP_QSTR_QQVGA),               MP_OBJ_NEW_SMALL_INT(FRAMESIZE_QQVGA)},    /* 160x120   */
     { MP_OBJ_NEW_QSTR(MP_QSTR_QVGA),                MP_OBJ_NEW_SMALL_INT(FRAMESIZE_QVGA)},     /* 320x240   */
     { MP_OBJ_NEW_QSTR(MP_QSTR_VGA),                 MP_OBJ_NEW_SMALL_INT(FRAMESIZE_VGA)},      /* 640x480   */
+    { MP_OBJ_NEW_QSTR(MP_QSTR_HQQQQVGA),            MP_OBJ_NEW_SMALL_INT(FRAMESIZE_HQQQQVGA)}, /* 40x20     */
     { MP_OBJ_NEW_QSTR(MP_QSTR_HQQQVGA),             MP_OBJ_NEW_SMALL_INT(FRAMESIZE_HQQQVGA)},  /* 80x40     */
     { MP_OBJ_NEW_QSTR(MP_QSTR_HQQVGA),              MP_OBJ_NEW_SMALL_INT(FRAMESIZE_HQQVGA)},   /* 160x80    */
     { MP_OBJ_NEW_QSTR(MP_QSTR_HQVGA),               MP_OBJ_NEW_SMALL_INT(FRAMESIZE_HQVGA)},    /* 240x160   */
+    { MP_OBJ_NEW_QSTR(MP_QSTR_HVGA),                MP_OBJ_NEW_SMALL_INT(FRAMESIZE_HVGA)},     /* 480x320   */
     // FFT Resolutions
     { MP_OBJ_NEW_QSTR(MP_QSTR_B64X32),              MP_OBJ_NEW_SMALL_INT(FRAMESIZE_64X32)},    /* 64x32     */
     { MP_OBJ_NEW_QSTR(MP_QSTR_B64X64),              MP_OBJ_NEW_SMALL_INT(FRAMESIZE_64X64)},    /* 64x64     */
     { MP_OBJ_NEW_QSTR(MP_QSTR_B128X64),             MP_OBJ_NEW_SMALL_INT(FRAMESIZE_128X64)},   /* 128x64    */
     { MP_OBJ_NEW_QSTR(MP_QSTR_B128X128),            MP_OBJ_NEW_SMALL_INT(FRAMESIZE_128X128)},  /* 128x128   */
+    // Himax Resolutions
+    { MP_OBJ_NEW_QSTR(MP_QSTR_B160X160),            MP_OBJ_NEW_SMALL_INT(FRAMESIZE_160X160)},  /* 160x160   */
     { MP_OBJ_NEW_QSTR(MP_QSTR_B320X320),            MP_OBJ_NEW_SMALL_INT(FRAMESIZE_320X320)},  /* 320x320   */
     // Other
     { MP_OBJ_NEW_QSTR(MP_QSTR_LCD),                 MP_OBJ_NEW_SMALL_INT(FRAMESIZE_LCD)},      /* 128x160   */
@@ -1129,6 +1159,7 @@ STATIC const mp_map_elem_t globals_dict_table[] = {
     { MP_OBJ_NEW_QSTR(MP_QSTR_get_auto_rotation),   (mp_obj_t)&py_sensor_get_auto_rotation_obj },
     { MP_OBJ_NEW_QSTR(MP_QSTR_set_framebuffers),    (mp_obj_t)&py_sensor_set_framebuffers_obj },
     { MP_OBJ_NEW_QSTR(MP_QSTR_get_framebuffers),    (mp_obj_t)&py_sensor_get_framebuffers_obj },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_disable_full_flush),  (mp_obj_t)&py_sensor_disable_full_flush_obj },
     { MP_OBJ_NEW_QSTR(MP_QSTR_set_special_effect),  (mp_obj_t)&py_sensor_set_special_effect_obj },
     { MP_OBJ_NEW_QSTR(MP_QSTR_set_lens_correction), (mp_obj_t)&py_sensor_set_lens_correction_obj },
     { MP_OBJ_NEW_QSTR(MP_QSTR_set_vsync_callback),  (mp_obj_t)&py_sensor_set_vsync_callback_obj },

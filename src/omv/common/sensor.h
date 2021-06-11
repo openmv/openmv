@@ -58,14 +58,18 @@ typedef enum {
     FRAMESIZE_QQVGA,    // 160x120
     FRAMESIZE_QVGA,     // 320x240
     FRAMESIZE_VGA,      // 640x480
+    FRAMESIZE_HQQQQVGA, // 30x20
     FRAMESIZE_HQQQVGA,  // 60x40
     FRAMESIZE_HQQVGA,   // 120x80
     FRAMESIZE_HQVGA,    // 240x160
+    FRAMESIZE_HVGA,     // 480x320
     // FFT Resolutions
     FRAMESIZE_64X32,    // 64x32
     FRAMESIZE_64X64,    // 64x64
     FRAMESIZE_128X64,   // 128x64
     FRAMESIZE_128X128,  // 128x128
+    // Himax Resolutions
+    FRAMESIZE_160X160,  // 160x160
     FRAMESIZE_320X320,  // 320x320
     // Other
     FRAMESIZE_LCD,      // 128x160
@@ -146,7 +150,7 @@ typedef enum {
 #define SENSOR_HW_FLAGS_PIXCK        (2) // pixel clock edge.
 #define SENSOR_HW_FLAGS_FSYNC        (3) // hardware frame sync.
 #define SENSOR_HW_FLAGS_JPEGE        (4) // hardware JPEG encoder.
-#define SWNSOR_HW_FLAGS_RGB565_REV   (5) // byte reverse rgb565.
+#define SENSOR_HW_FLAGS_RGB565_REV   (5) // byte reverse rgb565.
 #define SENSOR_HW_FLAGS_GET(s, x)    ((s)->hw_flags &  (1<<x))
 #define SENSOR_HW_FLAGS_SET(s, x, v) ((s)->hw_flags |= (v<<x))
 #define SENSOR_HW_FLAGS_CLR(s, x)    ((s)->hw_flags &= ~(1<<x))
@@ -164,6 +168,7 @@ typedef struct _sensor {
     uint16_t gs_bpp;            // Grayscale bytes per pixel.
     uint32_t hw_flags;          // Hardware flags (clock polarities/hw capabilities)
     const uint16_t *color_palette;    // Color palette used for color lookup.
+    bool disable_full_flush;    // Turn off default frame buffer flush policy when full.
 
     vsync_cb_t vsync_callback;  // VSYNC callback.
     frame_cb_t frame_callback;  // Frame callback.
@@ -175,6 +180,8 @@ typedef struct _sensor {
     pixformat_t pixformat;      // Pixel format
     framesize_t framesize;      // Frame size
     int framerate;              // Frame rate
+    uint32_t last_frame_ms;     // Last sampled frame timestamp in milliseconds.
+    bool last_frame_ms_valid;   // Last sampled frame timestamp in milliseconds valid.
     gainceiling_t gainceiling;  // AGC gainceiling
     bool hmirror;               // Horizontal Mirror
     bool vflip;                 // Vertical Flip
