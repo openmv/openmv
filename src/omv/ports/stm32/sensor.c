@@ -51,11 +51,9 @@ static MDMA_HandleTypeDef DCMI_MDMA_Handle0 = {.Instance = MDMA_Channel0};
 static MDMA_HandleTypeDef DCMI_MDMA_Handle1 = {.Instance = MDMA_Channel1};
 #endif
 // SPI on image sensor connector.
-SPI_HandleTypeDef ISC_SPIHandle = {
-    #ifdef ISC_SPI
-    .Instance = ISC_SPI
-    #endif // ISC_SPI
-};
+#ifdef ISC_SPI
+SPI_HandleTypeDef ISC_SPIHandle = {.Instance = ISC_SPI};
+#endif // ISC_SPI
 
 static bool first_line = false;
 static bool drop_frame = false;
