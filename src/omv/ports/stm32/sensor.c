@@ -50,6 +50,11 @@ static DCMI_HandleTypeDef DCMIHandle = {.Instance = DCMI};
 static MDMA_HandleTypeDef DCMI_MDMA_Handle0 = {.Instance = MDMA_Channel0};
 static MDMA_HandleTypeDef DCMI_MDMA_Handle1 = {.Instance = MDMA_Channel1};
 #endif
+// SPI on image sensor connector.
+#ifdef ISC_SPI
+SPI_HandleTypeDef ISC_SPIHandle = {.Instance = ISC_SPI};
+#endif // ISC_SPI
+
 static bool first_line = false;
 static bool drop_frame = false;
 
@@ -107,6 +112,18 @@ void DCMI_IRQHandler(void) {
 void DMA2_Stream1_IRQHandler(void) {
     HAL_DMA_IRQHandler(DCMIHandle.DMA_Handle);
 }
+
+#ifdef ISC_SPI
+void ISC_SPI_IRQHandler(void)
+{
+    HAL_SPI_IRQHandler(&ISC_SPIHandle);
+}
+
+void ISC_SPI_DMA_IRQHandler(void)
+{
+    HAL_DMA_IRQHandler(ISC_SPIHandle.hdmarx);
+}
+#endif // ISC_SPI
 
 static int extclk_config(int frequency)
 {

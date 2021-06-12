@@ -322,39 +322,39 @@
 
 #define SOFT_I2C_SPIN_DELAY          64
 
-#define LEPTON_SPI                  (SPI3)
+#define ISC_SPI                     (SPI3)
 // SPI1/2/3 clock source is PLL3 (160MHz/8 == 20MHz) - Minimum (164*240*8*27 = 8,501,760Hz)
-#define LEPTON_SPI_PRESCALER        (SPI_BAUDRATEPRESCALER_8)
+#define ISC_SPI_PRESCALER           (SPI_BAUDRATEPRESCALER_8)
 
-#define LEPTON_SPI_IRQn             (SPI3_IRQn)
-#define LEPTON_SPI_IRQHandler       (SPI3_IRQHandler)
+#define ISC_SPI_IRQn                (SPI3_IRQn)
+#define ISC_SPI_IRQHandler          (SPI3_IRQHandler)
 
-#define LEPTON_SPI_DMA_IRQn         (DMA1_Stream0_IRQn)
-#define LEPTON_SPI_DMA_STREAM       (DMA1_Stream0)
+#define ISC_SPI_DMA_IRQn            (DMA1_Stream0_IRQn)
+#define ISC_SPI_DMA_STREAM          (DMA1_Stream0)
 
-#define LEPTON_SPI_DMA_REQUEST      (DMA_REQUEST_SPI3_RX)
-#define LEPTON_SPI_DMA_IRQHandler   (DMA1_Stream0_IRQHandler)
+#define ISC_SPI_DMA_REQUEST         (DMA_REQUEST_SPI3_RX)
+#define ISC_SPI_DMA_IRQHandler      (DMA1_Stream0_IRQHandler)
 
-#define LEPTON_SPI_RESET()          __HAL_RCC_SPI3_FORCE_RESET()
-#define LEPTON_SPI_RELEASE()        __HAL_RCC_SPI3_RELEASE_RESET()
+#define ISC_SPI_RESET()             __HAL_RCC_SPI3_FORCE_RESET()
+#define ISC_SPI_RELEASE()           __HAL_RCC_SPI3_RELEASE_RESET()
 
-#define LEPTON_SPI_CLK_ENABLE()     __HAL_RCC_SPI3_CLK_ENABLE()
-#define LEPTON_SPI_CLK_DISABLE()    __HAL_RCC_SPI3_CLK_DISABLE()
+#define ISC_SPI_CLK_ENABLE()        __HAL_RCC_SPI3_CLK_ENABLE()
+#define ISC_SPI_CLK_DISABLE()       __HAL_RCC_SPI3_CLK_DISABLE()
 
-#define LEPTON_SPI_SCLK_AF          (GPIO_AF6_SPI3)
-#define LEPTON_SPI_MISO_AF          (GPIO_AF6_SPI3)
-#define LEPTON_SPI_MOSI_AF          (GPIO_AF7_SPI3)
-#define LEPTON_SPI_SSEL_AF          (GPIO_AF6_SPI3)
+#define ISC_SPI_SCLK_AF             (GPIO_AF6_SPI3)
+#define ISC_SPI_MISO_AF             (GPIO_AF6_SPI3)
+#define ISC_SPI_MOSI_AF             (GPIO_AF7_SPI3)
+#define ISC_SPI_SSEL_AF             (GPIO_AF6_SPI3)
 
-#define LEPTON_SPI_SCLK_PIN         (GPIO_PIN_3)
-#define LEPTON_SPI_MISO_PIN         (GPIO_PIN_4)
-#define LEPTON_SPI_MOSI_PIN         (GPIO_PIN_5)
-#define LEPTON_SPI_SSEL_PIN         (GPIO_PIN_15)
+#define ISC_SPI_SCLK_PIN            (GPIO_PIN_3)
+#define ISC_SPI_MISO_PIN            (GPIO_PIN_4)
+#define ISC_SPI_MOSI_PIN            (GPIO_PIN_5)
+#define ISC_SPI_SSEL_PIN            (GPIO_PIN_15)
 
-#define LEPTON_SPI_SCLK_PORT        (GPIOB)
-#define LEPTON_SPI_MISO_PORT        (GPIOB)
-#define LEPTON_SPI_MOSI_PORT        (GPIOB)
-#define LEPTON_SPI_SSEL_PORT        (GPIOA)
+#define ISC_SPI_SCLK_PORT           (GPIOB)
+#define ISC_SPI_MISO_PORT           (GPIOB)
+#define ISC_SPI_MOSI_PORT           (GPIOB)
+#define ISC_SPI_SSEL_PORT           (GPIOA)
 
 // The IMU sensor is on the same SPI bus pins as the camera module interface
 // SPI bus. While the buses overlap both devices will never be in-use at once.
