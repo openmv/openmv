@@ -53,17 +53,17 @@ class LSM6DSOX:
             raise OSError("No LSM6DS device was found at address 0x%x"%(self.address))
 
         # Set the gyroscope control register to work at 104 Hz, 2000 dps and in bypass mode
-        self.__write_reg(CTRL2_G, 0x4C);
+        self.__write_reg(CTRL2_G, b'\x4C');
 
         # Set the Accelerometer control register to work at 104 Hz, 4g, and in bypass mode and enable ODR/4
         # low pass filter (check figure9 of LSM6DSOX's datasheet)
-        self.__write_reg(CTRL1_XL, 0x4A);
+        self.__write_reg(CTRL1_XL, b'\x4A');
 
         # set gyroscope power mode to high performance and bandwidth to 16 MHz
-        self.__write_reg(CTRL7_G, 0x00);
+        self.__write_reg(CTRL7_G, b'\x00');
 
         # Set the ODR config register to ODR/4
-        self.__write_reg(CTRL8_XL, 0x09);
+        self.__write_reg(CTRL8_XL, b'\x09');
 
         self.scale_gyro  = 32768 / 2000
         self.scale_accel = 32768 / 4
@@ -72,8 +72,8 @@ class LSM6DSOX:
     def __read_reg(self, reg, size):
         return self.i2c.readfrom_mem(self.address, reg, size)
 
-    def __write_reg(self, reg):
-        self.i2c.writeto_mem(self.address, reg)
+    def __write_reg(self, reg, val):
+        self.i2c.writeto_mem(self.address, reg, val)
 
     def read_gyro(self):
         """Returns gyroscope vector in degrees/sec."""
