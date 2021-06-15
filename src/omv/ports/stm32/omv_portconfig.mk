@@ -44,6 +44,7 @@ OMV_CFLAGS += -I$(TOP_DIR)/$(WINC1500_DIR)/include/
 OMV_CFLAGS += -I$(TOP_DIR)/$(MLX90621_DIR)/include/
 OMV_CFLAGS += -I$(TOP_DIR)/$(MLX90640_DIR)/include/
 OMV_CFLAGS += -I$(TOP_DIR)/$(MLX90641_DIR)/include/
+OMV_CFLAGS += -I$(TOP_DIR)/$(PIXART_DIR)/include/
 OMV_CFLAGS += -I$(TOP_DIR)/$(TENSORFLOW_DIR)/$(CPU)/
 OMV_CFLAGS += -I$(TOP_DIR)/$(LIBPDM_DIR)/
 
@@ -113,6 +114,7 @@ endif
 FIRM_OBJ += $(wildcard $(BUILD)/$(MLX90621_DIR)/src/*.o)
 FIRM_OBJ += $(wildcard $(BUILD)/$(MLX90640_DIR)/src/*.o)
 FIRM_OBJ += $(wildcard $(BUILD)/$(MLX90641_DIR)/src/*.o)
+FIRM_OBJ += $(wildcard $(BUILD)/$(PIXART_DIR)/src/*.o)
 
 #------------- OpenMV Objects ----------------#
 FIRM_OBJ += $(addprefix $(BUILD)/$(CMSIS_DIR)/src/, \
@@ -150,6 +152,7 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/sensors/,   \
 	lepton.o                    \
 	hm01b0.o                    \
 	gc2145.o                    \
+	paj6100.o                   \
    )
 
 FIRM_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/modules/,   \
@@ -514,6 +517,7 @@ UVC_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/sensors/, \
 	lepton.o                                \
 	hm01b0.o                                \
 	gc2145.o                                \
+	paj6100.o                               \
 	)
 
 UVC_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/imlib/,\
@@ -542,6 +546,7 @@ UVC_OBJ += $(wildcard $(BUILD)/$(MLX90621_DIR)/src/*.o)
 UVC_OBJ += $(wildcard $(BUILD)/$(MLX90640_DIR)/src/*.o)
 UVC_OBJ += $(wildcard $(BUILD)/$(MLX90641_DIR)/src/*.o)
 endif
+UVC_OBJ += $(wildcard $(BUILD)/$(PIXART_DIR)/src/*.o)
 
 ifeq ($(OMV_ENABLE_CM4), 1)
 CM4 = cm4
@@ -600,6 +605,7 @@ endif
 	$(MAKE)  -C $(MLX90621_DIR)              BUILD=$(BUILD)/$(MLX90621_DIR) CFLAGS="$(CFLAGS) -MMD"
 	$(MAKE)  -C $(MLX90640_DIR)              BUILD=$(BUILD)/$(MLX90640_DIR) CFLAGS="$(CFLAGS) -MMD"
 	$(MAKE)  -C $(MLX90641_DIR)              BUILD=$(BUILD)/$(MLX90641_DIR) CFLAGS="$(CFLAGS) -MMD"
+	$(MAKE)  -C $(PIXART_DIR)                BUILD=$(BUILD)/$(PIXART_DIR)   CFLAGS="$(CFLAGS) -MMD"
 	$(MAKE)  -C $(OMV_DIR)                   BUILD=$(BUILD)/$(OMV_DIR)      CFLAGS="$(CFLAGS) -MMD"
 ifeq ($(CUBEAI), 1)
 	$(MAKE)  -C $(CUBEAI_DIR)                BUILD=$(BUILD)/$(CUBEAI_DIR)   CFLAGS="$(CFLAGS) -fno-strict-aliasing -MMD"
