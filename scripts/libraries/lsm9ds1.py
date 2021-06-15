@@ -30,8 +30,9 @@ Source repo: https://github.com/hoihu/projects/tree/master/raspi-hat
 
 Example usage:
 import time
-import lsm9ds1
+from lsm9ds1 import LSM9DS1
 from machine import Pin, I2C
+
 lsm = LSM9DS1(I2C(1, scl=Pin(15), sda=Pin(14)))
 
 while (True):

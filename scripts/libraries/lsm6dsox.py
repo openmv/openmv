@@ -4,7 +4,7 @@ Base on: LSM9DS1 driver and https://github.com/arduino-libraries/Arduino_LSM6DSO
 
 Example usage:
 import time
-import lsm6dsox
+from lsm6dsox import LSM6DSOX
 
 from machine import Pin, I2C
 lsm = LSM6DSOX(I2C(0, scl=Pin(13), sda=Pin(12)))
