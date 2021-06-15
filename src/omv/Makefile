@@ -37,6 +37,7 @@ SRCS += $(addprefix sensors/,   \
 	lepton.c                    \
 	hm01b0.c                    \
 	gc2145.c                    \
+	paj6100.c                   \
    )
 
 SRCS += $(addprefix modules/,   \

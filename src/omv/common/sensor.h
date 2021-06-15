@@ -42,6 +42,8 @@
 #define LEPTON_ID           (0x54)
 #define HM01B0_ID           (0xB0)
 #define GC2145_ID           (0x21)
+// Wide ID
+#define PAJ6100_ID          (0x6100)
 
 typedef enum {
     FRAMESIZE_INVALID = 0,

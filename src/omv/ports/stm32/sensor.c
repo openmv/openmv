@@ -25,6 +25,7 @@
 #include "mt9m114.h"
 #include "lepton.h"
 #include "hm01b0.h"
+#include "paj6100.h"
 #include "gc2145.h"
 #include "systick.h"
 #include "framebuffer.h"
@@ -40,6 +41,10 @@
 // Higher performance complete MDMA offload.
 #if (OMV_ENABLE_SENSOR_MDMA == 1)
 #define OMV_ENABLE_SENSOR_MDMA_TOTAL_OFFLOAD 1
+#endif
+
+#if (OMV_ENABLE_PAJ6100 == 1)
+#define OMV_ENABLE_NONI2CIS
 #endif
 
 sensor_t sensor = {};
@@ -386,20 +391,36 @@ int sensor_init()
                 systick_sleep(10);
 
                 sensor.slv_addr = cambus_scan(&sensor.bus);
+                #ifndef OMV_ENABLE_NONI2CIS
                 if (sensor.slv_addr == 0) {
                     return -2;
                 }
+                #endif
             }
         }
     }
 
     // Clear sensor chip ID.
-    sensor.chip_id = 0;
+    sensor.chip_id_w = 0;
 
     // Set default snapshot function.
     sensor.snapshot = sensor_snapshot;
 
     switch (sensor.slv_addr) {
+        #ifdef OMV_ENABLE_NONI2CIS
+        case 0:
+            if (findPaj6100(&sensor))
+            {
+                // Found PixArt PAJ6100
+                sensor.chip_id_w = PAJ6100_ID;
+                sensor.pwdn_pol = ACTIVE_LOW;
+                sensor.reset_pol = ACTIVE_LOW;
+                break;
+            }
+            // Okay, there is not any sensor be detected.
+            return -2;
+        #endif
+
         #if (OMV_ENABLE_OV2640 == 1)
         case OV2640_SLV_ADDR: // Or OV9650.
             cambus_readb(&sensor.bus, sensor.slv_addr, OV_CHIP_ID, &sensor.chip_id);
@@ -452,8 +473,16 @@ int sensor_init()
             return -3;
             break;
     }
+    switch (sensor.chip_id_w) {
+        #if (OMV_ENABLE_PAJ6100 == 1)
+        case PAJ6100_ID:
+            if (extclk_config(PAJ6100_XCLK_FREQ) != 0) {
+                return -3;
+            }
+            init_ret = paj6100_init(&sensor);
+            break;
+        #endif // (OMV_ENABLE_PAJ6100 == 1)
 
-    switch (sensor.chip_id) {
         #if (OMV_ENABLE_OV2640 == 1)
         case OV2640_ID:
             if (extclk_config(OV2640_XCLK_FREQ) != 0) {
@@ -639,7 +668,7 @@ int sensor_reset()
 
 int sensor_get_id()
 {
-    return sensor.chip_id;
+    return sensor.chip_id_w;
 }
 
 bool sensor_is_detected()
