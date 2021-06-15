@@ -26,6 +26,8 @@ LSM9DS1 - 9DOF inertial sensor of STMicro driver for MicroPython.
 The sensor contains an accelerometer / gyroscope / magnetometer
 Uses the internal FIFO to store up to 16 gyro/accel data, use the iter_accel_gyro generator to access it.
 
+Source repo: https://github.com/hoihu/projects/tree/master/raspi-hat
+
 Example usage:
 import time
 import lsm9ds1
