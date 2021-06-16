@@ -34,6 +34,8 @@
  */
 #include "omv_boardconfig.h"
 #if (OMV_ENABLE_PAJ6100 == 1)
+#include <stdio.h>
+#include <stdbool.h>
 #include "paj6100.h"
 #include "paj6100_reg.h"
 #include "pixspi.h"
