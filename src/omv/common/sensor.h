@@ -226,6 +226,9 @@ typedef struct _sensor {
 // Resolution table
 extern const int resolution[][2];
 
+// Returns the xclk freq in hz.
+int sensor_xclk_freq();
+
 // Initialize the sensor hardware and probe the image sensor.
 int sensor_init();
 
