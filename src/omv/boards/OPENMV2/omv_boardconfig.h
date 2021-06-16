@@ -56,6 +56,7 @@
 #define OMV_ENABLE_MT9V034      (0)
 #define OMV_ENABLE_LEPTON       (0)
 #define OMV_ENABLE_HM01B0       (0)
+#define OMV_ENABLE_PAJ6100      (0)
 
 // Enable sensor features
 #define OMV_ENABLE_OV5640_AF    (0)
