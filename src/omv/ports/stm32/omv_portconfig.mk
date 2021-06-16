@@ -545,8 +545,8 @@ endif
 UVC_OBJ += $(wildcard $(BUILD)/$(MLX90621_DIR)/src/*.o)
 UVC_OBJ += $(wildcard $(BUILD)/$(MLX90640_DIR)/src/*.o)
 UVC_OBJ += $(wildcard $(BUILD)/$(MLX90641_DIR)/src/*.o)
-endif
 UVC_OBJ += $(wildcard $(BUILD)/$(PIXART_DIR)/src/*.o)
+endif
 
 ifeq ($(OMV_ENABLE_CM4), 1)
 CM4 = cm4
