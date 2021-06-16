@@ -782,7 +782,4 @@ bool paj6100_detect(sensor_t *sensor)
     pixspi_release();
     return false;
 }
-#else
-bool paj6100_detect(sensor_t *sensor) { return false; }
-int paj6100_init(sensor_t *sensor) { return 0; }
 #endif //(OMV_ENABLE_PAJ6100 == 1)
