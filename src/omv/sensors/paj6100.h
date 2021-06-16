@@ -12,6 +12,6 @@
 #include "sensor.h"
 #define PAJ6100_XCLK_FREQ 6000000
 
-bool findPaj6100(sensor_t *sensor);
+bool paj6100_detect(sensor_t *sensor);
 int paj6100_init(sensor_t *sensor);
 #endif
