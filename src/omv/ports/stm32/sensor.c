@@ -473,14 +473,6 @@ int sensor_init()
             break;
     }
     switch (sensor.chip_id_w) {
-        #if (OMV_ENABLE_PAJ6100 == 1)
-        case PAJ6100_ID:
-            if (extclk_config(PAJ6100_XCLK_FREQ) != 0) {
-                return -3;
-            }
-            init_ret = paj6100_init(&sensor);
-            break;
-        #endif // (OMV_ENABLE_PAJ6100 == 1)
 
         #if (OMV_ENABLE_OV2640 == 1)
         case OV2640_ID:
