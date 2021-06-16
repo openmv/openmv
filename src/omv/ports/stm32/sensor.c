@@ -127,6 +127,11 @@ void ISC_SPI_DMA_IRQHandler(void)
 }
 #endif // ISC_SPI
 
+int sensor_xclk_freq()
+{
+    return (DCMI_TIM_PCLK_FREQ() * 2) / (TIMHandle.Init.Period + 1);
+}
+
 static int extclk_config(int frequency)
 {
     #if (OMV_XCLK_SOURCE == OMV_XCLK_TIM)
@@ -135,28 +140,32 @@ static int extclk_config(int frequency)
 
     /* Period should be even */
     int period = (tclk / frequency) - 1;
+    int pulse = period / 2;
 
     if (TIMHandle.Init.Period && (TIMHandle.Init.Period != period)) {
         // __HAL_TIM_SET_AUTORELOAD sets TIMHandle.Init.Period...
         __HAL_TIM_SET_AUTORELOAD(&TIMHandle, period);
-        __HAL_TIM_SET_COMPARE(&TIMHandle, DCMI_TIM_CHANNEL, period / 2);
+        __HAL_TIM_SET_COMPARE(&TIMHandle, DCMI_TIM_CHANNEL, pulse);
         return 0;
     }
 
     /* Timer base configuration */
-    TIMHandle.Init.Period        = period;
-    TIMHandle.Init.Prescaler     = TIM_ETRPRESCALER_DIV1;
-    TIMHandle.Init.CounterMode   = TIM_COUNTERMODE_UP;
-    TIMHandle.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+    TIMHandle.Init.Period            = period;
+    TIMHandle.Init.Prescaler         = 0;
+    TIMHandle.Init.CounterMode       = TIM_COUNTERMODE_UP;
+    TIMHandle.Init.ClockDivision     = TIM_CLOCKDIVISION_DIV1;
+    TIMHandle.Init.RepetitionCounter = 0;
+    TIMHandle.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
 
     /* Timer channel configuration */
     TIM_OC_InitTypeDef TIMOCHandle;
-    TIMOCHandle.Pulse       = period / 2;
-    TIMOCHandle.OCMode      = TIM_OCMODE_PWM1;
-    TIMOCHandle.OCPolarity  = TIM_OCPOLARITY_HIGH;
-    TIMOCHandle.OCFastMode  = TIM_OCFAST_DISABLE;
-    TIMOCHandle.OCIdleState = TIM_OCIDLESTATE_RESET;
-    TIMOCHandle.OCNIdleState= TIM_OCIDLESTATE_RESET;
+    TIMOCHandle.Pulse           = pulse;
+    TIMOCHandle.OCMode          = TIM_OCMODE_PWM1;
+    TIMOCHandle.OCPolarity      = TIM_OCPOLARITY_HIGH;
+    TIMOCHandle.OCNPolarity     = TIM_OCNPOLARITY_HIGH;
+    TIMOCHandle.OCFastMode      = TIM_OCFAST_DISABLE;
+    TIMOCHandle.OCIdleState     = TIM_OCIDLESTATE_RESET;
+    TIMOCHandle.OCNIdleState    = TIM_OCNIDLESTATE_RESET;
 
     if ((HAL_TIM_PWM_Init(&TIMHandle) != HAL_OK)
     || (HAL_TIM_PWM_ConfigChannel(&TIMHandle, &TIMOCHandle, DCMI_TIM_CHANNEL) != HAL_OK)
