@@ -39,6 +39,7 @@
 #include "pixspi.h"
 
 #include "systick.h"
+#include "sensor.h"
 #include "framebuffer.h"
 
 #define CACHE_BANK
