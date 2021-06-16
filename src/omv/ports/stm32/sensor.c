@@ -407,7 +407,7 @@ int sensor_init()
     sensor.snapshot = sensor_snapshot;
 
     switch (sensor.slv_addr) {
-        #ifdef OMV_ENABLE_PAJ6100
+        #if (OMV_ENABLE_PAJ6100 == 1)
         case 0:
             if (paj6100_detect(&sensor)) {
                 // Found PixArt PAJ6100
