@@ -14,3 +14,4 @@
 bool paj6100_detect(sensor_t *sensor);
 int paj6100_init(sensor_t *sensor);
 #endif
+#endif
