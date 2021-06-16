@@ -407,10 +407,9 @@ int sensor_init()
     sensor.snapshot = sensor_snapshot;
 
     switch (sensor.slv_addr) {
-        #ifdef OMV_ENABLE_NONI2CIS
+        #ifdef OMV_ENABLE_PAJ6100
         case 0:
-            if (findPaj6100(&sensor))
-            {
+            if (findPaj6100(&sensor)) {
                 // Found PixArt PAJ6100
                 sensor.chip_id_w = PAJ6100_ID;
                 sensor.pwdn_pol = ACTIVE_LOW;
