@@ -8,10 +8,12 @@
  */
 #ifndef __PAJ6100_H__
 #define __PAJ6100_H__
+#if (OMV_ENABLE_PAJ6100 == 1)
 #include <stdbool.h>
 #include "sensor.h"
 #define PAJ6100_XCLK_FREQ 6000000
 
 bool paj6100_detect(sensor_t *sensor);
 int paj6100_init(sensor_t *sensor);
+#endif
 #endif
