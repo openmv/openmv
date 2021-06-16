@@ -756,7 +756,7 @@ int paj6100_init(sensor_t *sensor)
     return 0;
 }
 
-bool findPaj6100(sensor_t *sensor)
+bool paj6100_detect(sensor_t *sensor)
 {
     int ret = 0;
     uint8_t part_id_l, part_id_h;
