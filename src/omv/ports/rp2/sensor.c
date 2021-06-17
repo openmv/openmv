@@ -8,6 +8,7 @@
  *
  * Sensor abstraction layer for nRF port.
  */
+#if MICROPY_PY_SENSOR
 #include <stdio.h>
 #include <string.h>
 #include <stdint.h>
@@ -1075,3 +1076,4 @@ int sensor_snapshot(sensor_t *sensor, image_t *image, uint32_t flags)
 
     return 0;
 }
+#endif
