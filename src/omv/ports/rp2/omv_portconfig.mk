@@ -11,16 +11,15 @@
 export PORT
 export TARGET
 export TOP_DIR
+export CC=
+export CXX=
 
-MICROPY_ARGS += BOARD=$(TARGET) BUILD=$(FW_DIR) OMV_CMAKE=$(TOP_DIR)/$(OMV_DIR)/ports/$(PORT)/omv_portconfig.cmake
+MICROPY_ARGS += BOARD=$(TARGET) BUILD=$(BUILD)/rp2 OMV_CMAKE=$(TOP_DIR)/$(OMV_DIR)/ports/$(PORT)/omv_portconfig.cmake
 
 ###################################################
 all: $(OPENMV)
 
-$(BUILD):
-	$(MKDIR) -p $@
-
-$(FIRMWARE): | $(BUILD)
+$(FIRMWARE):
 	$(MAKE)  -C $(MICROPY_DIR)/ports/$(PORT) $(MICROPY_ARGS)
 
 # This target generates the firmware image.

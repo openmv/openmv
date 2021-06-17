@@ -2,8 +2,8 @@
 set(TOP_DIR                 $ENV{TOP_DIR})
 set(TARGET                  $ENV{TARGET})
 set(PORT                    rp2)
-set(BUILD                   ${TOP_DIR}/build)
-set(FW_DIR                  ${BUILD}/bin)
+set(BUILD                   ${TOP_DIR}/build/rp2)
+set(BIN_DIR                 ${TOP_DIR}/build/bin)
 set(OMV_DIR                 omv)
 set(UVC_DIR                 uvc)
 set(CM4_DIR                 cm4)
@@ -34,28 +34,20 @@ target_compile_definitions(${MICROPY_TARGET} PRIVATE
     ${OMV_BOARD_MODULES_DEFINITIONS}
 )
 
-#target_compile_options(${MICROPY_TARGET} PRIVATE
-#)
-
-# Generate DCMI PIO header
-pico_generate_pio_header(${MICROPY_TARGET}
-    ${TOP_DIR}/${OMV_DIR}/ports/${PORT}/dcmi.pio
-)
-
 # Linker script
 add_custom_command(
-    OUTPUT ${FW_DIR}/rp2.ld
+    OUTPUT ${BUILD}/rp2.ld
     COMMENT "Preprocessing linker script"
-    COMMAND "${CMAKE_C_COMPILER}" -P -E -I ${OMV_BOARD_CONFIG_DIR} -DLINKER_SCRIPT ${PORT_DIR}/rp2.ld.S > ${FW_DIR}/rp2.ld
+    COMMAND "${CMAKE_C_COMPILER}" -P -E -I ${OMV_BOARD_CONFIG_DIR} -DLINKER_SCRIPT ${PORT_DIR}/rp2.ld.S > ${BUILD}/rp2.ld
     DEPENDS ${OMV_BOARD_CONFIG_DIR}/omv_boardconfig.h ${PORT_DIR}/rp2.ld.S
     VERBATIM
 )
 add_custom_target(
     LinkerScript
-    ALL DEPENDS ${FW_DIR}/rp2.ld
+    ALL DEPENDS ${BUILD}/rp2.ld
     VERBATIM
 )
-pico_set_linker_script(${MICROPY_TARGET} ${FW_DIR}/rp2.ld)
+pico_set_linker_script(${MICROPY_TARGET} ${BUILD}/rp2.ld)
 
 # Add OMV qstr sources
 file(GLOB OMV_SRC_QSTR1 ${TOP_DIR}/${OMV_DIR}/modules/*.c)
@@ -188,6 +180,11 @@ if(MICROPY_PY_SENSOR)
     target_compile_definitions(${MICROPY_TARGET} PRIVATE
         MICROPY_PY_SENSOR=1
     )
+
+    # Generate DCMI PIO header
+    pico_generate_pio_header(${MICROPY_TARGET}
+        ${TOP_DIR}/${OMV_DIR}/ports/${PORT}/dcmi.pio
+    )
 endif()
 
 if(MICROPY_PY_AUDIO)
@@ -251,3 +248,10 @@ if(MICROPY_PY_ULAB)
         ULAB_CONFIG_FILE="${OMV_BOARD_CONFIG_DIR}/ulab_config.h"
     )
 endif()
+
+add_custom_command(TARGET ${MICROPY_TARGET}
+    POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E make_directory ${BIN_DIR}
+    COMMAND ${CMAKE_COMMAND} -E copy firmware.elf firmware.bin firmware.uf2 ${BIN_DIR}
+    VERBATIM
+)

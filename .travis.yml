@@ -1,5 +1,5 @@
 os: linux
-dist: xenial
+dist: bionic
 sudo: required
 language: c
 stage: build
@@ -21,21 +21,25 @@ cache:
     - "${HOME}/persist"
 
 script:
-  # update submodules 
+  # Update submodules.
   - git submodule update --init --depth=1 --no-single-branch
   - git -C src/micropython/ submodule update --init --depth=1
-  # install ARM GCC
-  - pushd .
-  - cd ~ && mkdir gcc && cd gcc
-  - GCC_URL="https://armkeil.blob.core.windows.net/developer/Files/downloads/gnu-rm/10-2020q4/gcc-arm-none-eabi-10-2020-q4-major-x86_64-linux.tar.bz2"
-  - wget -O gcc.tar.bz2 ${GCC_URL}
-  - tar -jxf gcc.tar.bz2 --strip 1
-  - exportline="export PATH=\$HOME/gcc/bin:\$PATH"
-  - if grep -Fxq "$exportline" ~/.profile; then echo nothing to do ; else echo $exportline >> ~/.profile; fi
-  - . ~/.profile
-  - popd
+  # Install ARM GCC.
+  - |
+    mkdir ${HOME}/gcc
+    GCC_URL="https://armkeil.blob.core.windows.net/developer/Files/downloads/gnu-rm/10-2020q4/gcc-arm-none-eabi-10-2020-q4-major-x86_64-linux.tar.bz2"
+    wget --no-check-certificate -O - ${GCC_URL} | tar --strip-components=1 -jx -C ${HOME}/gcc
+    export PATH=${HOME}/gcc/bin:${PATH}
   - arm-none-eabi-gcc --version
-  # build firmware
+  # Install recent cmake if needed.
+  - |
+    if [[ ${TARGET} == ARDUINO_NANO_RP2040_CONNECT ]]; then
+      mkdir ${HOME}/cmake 
+      CMAKE_URL="https://cmake.org/files/v3.20/cmake-3.20.0-linux-x86_64.tar.gz"
+      wget --no-check-certificate -O - ${CMAKE_URL} | tar --strip-components=1 -xz -C ${HOME}/cmake
+      export PATH=${HOME}/cmake/bin:${PATH}
+    fi
+  # Build the firmware.
   - make -j$(nproc) -C src/micropython/mpy-cross
   - make -j$(nproc) TARGET=$TARGET -C src
   - mkdir ~/build/$TARGET
@@ -93,6 +97,13 @@ jobs:
           paths: ~/build/$TARGET
 
     - stage: build
+      env: TARGET=ARDUINO_NANO_RP2040_CONNECT
+      workspaces:
+        create:
+          name: ARDUINO_NANO_RP2040_CONNECT_WORKSPACE # workspace names are escaped.
+          paths: ~/build/$TARGET
+
+    - stage: build
       env: TARGET=WINC1500
       workspaces:
         create:
@@ -122,10 +133,11 @@ jobs:
           - PORTENTA_WORKSPACE
           - OPENMVPT_WORKSPACE
           - NANO33_WORKSPACE
+          - ARDUINO_NANO_RP2040_CONNECT_WORKSPACE
           - WINC1500_WORKSPACE
           - CYW4343_WORKSPACE
       script:
-        - zip -r firmware_${TRAVIS_TAG}.zip OPENMV2 OPENMV3 OPENMV4 OPENMV4P PORTENTA OPENMVPT NANO33 WINC1500 CYW4343
+        - zip -r firmware_${TRAVIS_TAG}.zip OPENMV2 OPENMV3 OPENMV4 OPENMV4P PORTENTA OPENMVPT NANO33 ARDUINO_NANO_RP2040_CONNECT WINC1500 CYW4343
       deploy:
         provider: releases
         api_key:
