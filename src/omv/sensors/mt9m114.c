@@ -40,13 +40,7 @@ static uint16_t readout_w = ACTIVE_SENSOR_WIDTH;
 static uint16_t readout_h = ACTIVE_SENSOR_HEIGHT;
 
 static const uint16_t default_regs[][2] = {
-    // XMDA
-    {0x098E, 0x0000},
-
-    // PLL Settings
-    {0xC980, 0x0120},
-
-    // Sesnor Optimization
+    // Sensor Optimization
     {0x316A, 0x8270},
     {0x316C, 0x8270},
     {0x3ED0, 0x2305},
@@ -305,8 +299,8 @@ static int load_and_apply_patch(sensor_t *sensor, uint16_t patch_address, const 
 
     ret |= cambus_writew2(&sensor->bus, sensor->slv_addr, MT9M114_REG_XMDA_ACCESS_CTL_STAT, patch_address >> 15);
     ret |= cambus_writew2(&sensor->bus, sensor->slv_addr, MT9M114_REG_XMDA_PHYSICAL_ADDRESS_ACCESS, patch_address & 0x7FFF);
-
     ret |= load_array(sensor, patch_address, patch, patch_len);
+
     ret |= cambus_writew2(&sensor->bus, sensor->slv_addr, MT9M114_REG_XMDA_LOGIC_ADDRESS_ACCESS, 0x0000);
     ret |= cambus_writew2(&sensor->bus, sensor->slv_addr, MT9M114_REG_PATCHLDR_LOADER_ADDRESS, patch_loader_address);
     ret |= cambus_writew2(&sensor->bus, sensor->slv_addr, MT9M114_REG_PATCHLDR_PATCH_ID, patch_id);
@@ -471,6 +465,11 @@ static int reset(sensor_t *sensor)
     uint16_t reg;
     ret |= cambus_readw2(&sensor->bus, sensor->slv_addr, 0x301A, &reg);
     ret |= cambus_writew2(&sensor->bus, sensor->slv_addr, 0x301A, reg | (1 << 9));
+
+    ret |= cambus_writew2(&sensor->bus, sensor->slv_addr, MT9M114_REG_CAM_SYSCTL_PLL_DIVIDER_M_N,
+            (sensor_xclk_freq() == MT9M114_XCLK_FREQ)
+            ? 0x120 // xclk=24MHz, m=32, n=1, sensor=48MHz, bus=76.8MHz
+            : 0x448); // xclk=25MHz, m=72, n=4, sensor=45MHz, bus=72MHz
 
     for (int i = 0; i < (sizeof(default_regs) / sizeof(default_regs[0])); i++) {
         ret |= cambus_writew2(&sensor->bus, sensor->slv_addr, default_regs[i][0], default_regs[i][1]);
@@ -667,6 +666,11 @@ static int set_framesize(sensor_t *sensor, framesize_t framesize)
     ret |= cambus_writew2(&sensor->bus, sensor->slv_addr, MT9M114_REG_SENSOR_CFG_Y_ADDR_END, sensor_he);
     ret |= cambus_writew2(&sensor->bus, sensor->slv_addr, MT9M114_REG_SENSOR_CFG_X_ADDR_END, sensor_we);
 
+    int pixclk = (sensor_xclk_freq() == MT9M114_XCLK_FREQ) ? 48000000 : 45000000;
+
+    ret |= cambus_writew2(&sensor->bus, sensor->slv_addr, MT9M114_REG_SENSOR_CFG_PIXCLK, pixclk >> 16);
+    ret |= cambus_writew2(&sensor->bus, sensor->slv_addr, MT9M114_REG_SENSOR_CFG_PIXCLK + 2, pixclk);
+
     ret |= cambus_writew2(&sensor->bus, sensor->slv_addr, MT9M114_REG_SENSOR_CFG_FINE_INTEG_TIME_MIN,
             (read_mode_div == 2) ? 451 : 219); // figured this out by checking register wizard against datasheet
     ret |= cambus_writew2(&sensor->bus, sensor->slv_addr, MT9M114_REG_SENSOR_CFG_FINE_INTEG_TIME_MAX,
@@ -690,7 +694,7 @@ static int set_framesize(sensor_t *sensor, framesize_t framesize)
     ret |= cambus_writew2(&sensor->bus, sensor->slv_addr, MT9M114_REG_CAM_OUTPUT_WIDTH, w);
     ret |= cambus_writew2(&sensor->bus, sensor->slv_addr, MT9M114_REG_CAM_OUTPUT_HEIGHT, h);
 
-    float rate = (48000000.f / (frame_length_lines * line_length_pck)) * 256;
+    float rate = (((float) pixclk) / (frame_length_lines * line_length_pck)) * 256;
 
     ret |= cambus_writew2(&sensor->bus, sensor->slv_addr, MT9M114_REG_CAM_AET_MAX_FRAME_RATE, fast_ceilf(rate));
     ret |= cambus_writew2(&sensor->bus, sensor->slv_addr, MT9M114_REG_CAM_AET_MIN_FRAME_RATE, fast_floorf(rate / 2.f));
@@ -711,17 +715,67 @@ static int set_framesize(sensor_t *sensor, framesize_t framesize)
     return change_config(sensor);
 }
 
-static int set_contrast(sensor_t *sensor, int level)
+static int set_framerate(sensor_t *sensor, int framerate)
 {
-    return 0;
+    if (cambus_writew2(&sensor->bus, sensor->slv_addr, MT9M114_REG_CAM_AET_MAX_FRAME_RATE, framerate * 256) != 0) {
+        return -1;
+    }
+
+    if (cambus_writew2(&sensor->bus, sensor->slv_addr, MT9M114_REG_CAM_AET_MIN_FRAME_RATE, framerate * 128) != 0) {
+        return -1;
+    }
+
+    return change_config(sensor);
 }
 
-static int set_brightness(sensor_t *sensor, int level)
+static int set_contrast(sensor_t *sensor, int level) // -16 to +16
 {
-    return 0;
+    int new_level = (level > 0) ? (level * 2) : level;
+
+    if ((new_level < -16) || (32 < new_level)) {
+        return -1;
+    }
+
+    if (cambus_writew2(&sensor->bus, sensor->slv_addr, MT9M114_REG_UVC_CONTRAST_CONTROL, new_level + 32) != 0) {
+        return -1;
+    }
+
+    return refresh(sensor);
 }
 
-static int set_saturation(sensor_t *sensor, int level)
+static int set_brightness(sensor_t *sensor, int level) // -16 to +16
+{
+    int new_level = level * 2;
+
+    if ((new_level < -32) || (32 < new_level)) {
+        return -1;
+    }
+
+    if (cambus_writew2(&sensor->bus, sensor->slv_addr, MT9M114_REG_UVC_BRIGHTNESS_CONTROL, new_level + 55) != 0) {
+        return -1;
+    }
+
+    return refresh(sensor);
+}
+
+static int set_saturation(sensor_t *sensor, int level) // -16 to +16
+{
+    int new_level = level * 8;
+
+    if ((new_level < -128) || (128 < new_level)) {
+        return -1;
+    }
+
+    new_level = IM_MIN(new_level, 127);
+
+    if (cambus_writew2(&sensor->bus, sensor->slv_addr, MT9M114_REG_UVC_SATURATION_CONTROL, new_level + 128) != 0) {
+        return -1;
+    }
+
+    return refresh(sensor);
+}
+
+static int set_gainceiling(sensor_t *sensor, gainceiling_t gainceiling)
 {
     return 0;
 }
@@ -737,31 +791,93 @@ static int set_colorbar(sensor_t *sensor, int enable)
 
 static int set_auto_gain(sensor_t *sensor, int enable, float gain_db, float gain_db_ceiling)
 {
-    return 0;
+    if (cambus_writeb2(&sensor->bus, sensor->slv_addr, MT9M114_REG_UVC_AE_MODE_CONTROL, enable ? 0x2 : 0x1) != 0) {
+        return -1;
+    }
+
+    if ((enable == 0) && (!isnanf(gain_db)) && (!isinff(gain_db))) {
+        int gain = IM_MAX(IM_MIN(fast_expf((gain_db / 20.f) * fast_log(10.f)) * 32.f, 0xffff), 0x0000);
+
+        if (cambus_writew2(&sensor->bus, sensor->slv_addr, MT9M114_REG_UVC_GAIN_CONTROL, gain) != 0) {
+            return -1;
+        }
+    }
+
+    return refresh(sensor);
 }
 
 static int get_gain_db(sensor_t *sensor, float *gain_db)
 {
+    uint16_t gain;
+
+    if (cambus_readw2(&sensor->bus, sensor->slv_addr, MT9M114_REG_UVC_GAIN_CONTROL, &gain) != 0) {
+        return -1;
+    }
+
+    *gain_db = 20.f * (fast_log(gain / 32.f) / fast_log(10.f));
+
     return 0;
 }
 
 static int set_auto_exposure(sensor_t *sensor, int enable, int exposure_us)
 {
-    return 0;
+    if (cambus_writeb2(&sensor->bus, sensor->slv_addr, MT9M114_REG_UVC_AE_MODE_CONTROL, enable ? 0x2 : 0x1) != 0) {
+        return -1;
+    }
+
+    if ((enable == 0) && (exposure_us >= 0)) {
+        if (cambus_writeb2(&sensor->bus, sensor->slv_addr, MT9M114_REG_UVC_MANUAL_EXPOSURE_CONFIG, 0x1) != 0) {
+            return -1;
+        }
+
+        int exposure_100_us = exposure_us / 100;
+
+        if (cambus_writew2(&sensor->bus, sensor->slv_addr, MT9M114_REG_UVC_EXPOSURE_TIME_ABSOLUTE_CTRL,
+                exposure_100_us >> 16) != 0) {
+            return -1;
+        }
+
+        if (cambus_writew2(&sensor->bus, sensor->slv_addr, MT9M114_REG_UVC_EXPOSURE_TIME_ABSOLUTE_CTRL + 2,
+                exposure_100_us) != 0) {
+            return -1;
+        }
+    }
+
+    return refresh(sensor);
 }
 
 static int get_exposure_us(sensor_t *sensor, int *exposure_us)
 {
+    uint16_t reg_h, reg_l;
+
+    if (cambus_readw2(&sensor->bus, sensor->slv_addr, MT9M114_REG_UVC_EXPOSURE_TIME_ABSOLUTE_CTRL, &reg_h) != 0) {
+        return -1;
+    }
+
+    if (cambus_readw2(&sensor->bus, sensor->slv_addr, MT9M114_REG_UVC_EXPOSURE_TIME_ABSOLUTE_CTRL + 2, &reg_l) != 0) {
+        return -1;
+    }
+
+    *exposure_us = ((reg_h << 16) | reg_l) * 100;
+
     return 0;
 }
 
 static int set_auto_whitebal(sensor_t *sensor, int enable, float r_gain_db, float g_gain_db, float b_gain_db)
 {
+    if (cambus_writeb2(&sensor->bus, sensor->slv_addr, MT9M114_REG_UVC_WHITE_BALANCE_AUTO_CONTROL, enable ? 0x1 : 0x0) != 0) {
+        return -1;
+    }
+
     return 0;
 }
 
 static int get_rgb_gain_db(sensor_t *sensor, float *r_gain_db, float *g_gain_db, float *b_gain_db)
 {
+    *r_gain_db = 0;
+    *g_gain_db = 0;
+    *b_gain_db = 0;
+
     return 0;
 }
 
@@ -872,9 +988,11 @@ int mt9m114_init(sensor_t *sensor)
     sensor->write_reg           = write_reg;
     sensor->set_pixformat       = set_pixformat;
     sensor->set_framesize       = set_framesize;
+    sensor->set_framerate       = set_framerate;
     sensor->set_contrast        = set_contrast;
     sensor->set_brightness      = set_brightness;
     sensor->set_saturation      = set_saturation;
+    sensor->set_gainceiling     = set_gainceiling;
     sensor->set_colorbar        = set_colorbar;
     sensor->set_auto_gain       = set_auto_gain;
     sensor->get_gain_db         = get_gain_db;

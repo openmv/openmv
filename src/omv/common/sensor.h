@@ -38,7 +38,7 @@
 #define OV7725_ID           (0x77)
 #define OV9650_ID           (0x96)
 #define MT9V034_ID          (0x13)
-#define MT9M114_ID          (0x81)
+#define MT9M114_ID          (0x2481)
 #define LEPTON_ID           (0x54)
 #define HM01B0_ID           (0xB0)
 #define GC2145_ID           (0x21)
