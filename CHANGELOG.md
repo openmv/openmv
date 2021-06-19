@@ -1,4 +1,18 @@
 # Change Log
+## [4.0.2](https://github.com/openmv/openmv/releases/tag/v4.0.2) (2021-06-19)
+* Update TinyUSB to 0.10.1
+* Update pico-sdk to 1.2.0
+* Update MT9M114 driver.
+* Update Python scripts and libraries.
+* Add support for PixArt image sensor PAJ6100.
+* Add soft frame rate control to STM32 sensor driver.
+* Add new RP2040 port (Pico and Nano RP2040 boards supported).
+* Improve snapshot error messages.
+* Use MDMA to offload line buffer processing on STM32.
+* Fix Portenta-H7 audio bug.
+* Fix Ethernet link status.
+* Fix servo bug (not re-initializing on reset).
+
 ## [4.0.1](https://github.com/openmv/openmv/releases/tag/v4.0.1) (2021-05-27)
 * Fix framebuffer corruption bug.
 * Fix servo timer.
