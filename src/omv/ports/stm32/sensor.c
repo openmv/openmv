@@ -579,8 +579,8 @@ int sensor_init()
             }
             init_ret = paj6100_init(&sensor);
             break;
-        #endif // (OMV_ENABLE_PAJ6100 == 1)      
-            
+        #endif // (OMV_ENABLE_PAJ6100 == 1)
+
         default:
             return -3;
             break;
