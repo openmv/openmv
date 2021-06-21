@@ -1,0 +1,110 @@
+; This file is part of the OpenMV project.
+;
+; Copyright (c) 2013-2021 Ibrahim Abdelkader <iabdalkader@openmv.io>
+; Copyright (c) 2013-2021 Kwabena W. Agyeman <kwagyeman@openmv.io>
+;
+; This work is licensed under the MIT license, see the file LICENSE for details.
+; Image Sensor PIO program.
+
+.define public PXCLK 29
+.define public HSYNC 12
+.define public VSYNC 13
+
+.program dcmi_default
+.wrap_target
+    pull block              ; Read number of lines in OSR
+    mov y, osr              ; Copy OSR to Y
+    pull block              ; Read line width in bytes in OSR
+
+    wait 1 gpio VSYNC       ; Wait for VSYNC to go low
+    wait 0 gpio VSYNC
+
+HSYNC_LOOP:
+    mov x, osr              ; Copy line width from OSR to X
+    wait 0 gpio HSYNC       ; Wait for HSYNC to go high
+    wait 1 gpio HSYNC
+
+PIXEL_LOOP:
+    wait 0 gpio PXCLK
+    wait 1 gpio PXCLK
+
+    in pins 7               ; Workaround for NANO noncontiguous data bus.
+    jmp pin SET_MSB
+    in null, 1
+    jmp DONE
+    SET_MSB:
+        in osr, 1           ; OSR always has an odd value (width - 1)
+    DONE:
+
+    jmp x-- PIXEL_LOOP      ; Keep reading pixels while x != 0
+    jmp y-- HSYNC_LOOP      ; Keep reading lines while  y != 0
+.wrap
+
+.program dcmi_odd_byte
+.wrap_target
+    pull block              ; Read number of lines in OSR
+    mov y, osr              ; Copy OSR to Y
+    pull block              ; Read line width in bytes in OSR
+
+    wait 1 gpio VSYNC       ; Wait for VSYNC to go low
+    wait 0 gpio VSYNC
+
+HSYNC_LOOP:
+    mov x, osr              ; Copy line width from OSR to X
+    wait 0 gpio HSYNC       ; Wait for HSYNC to go high
+    wait 1 gpio HSYNC
+
+PIXEL_LOOP:
+    wait 0 gpio PXCLK
+    wait 1 gpio PXCLK
+
+    in pins 7               ; Workaround for NANO noncontiguous data bus.
+    jmp pin SET_MSB
+    in null, 1
+    jmp DONE
+    SET_MSB:
+        in osr, 1           ; OSR always has an odd value (width - 1)
+    DONE:
+
+    wait 0 gpio PXCLK
+    wait 1 gpio PXCLK
+    jmp x-- PIXEL_LOOP     ; Keep reading pixels while x != 0
+    jmp y-- HSYNC_LOOP     ; Keep reading lines while  y != 0
+.wrap
+
+% c-sdk {
+static inline int dcmi_config(uint32_t pixformat)
+{
+    uint offset;
+    pio_sm_config config;
+
+    pio_sm_set_enabled(DCMI_PIO, DCMI_SM, false);
+    pio_sm_clear_fifos(DCMI_PIO, DCMI_SM);
+
+    for(uint i=DCMI_D0_PIN; i<DCMI_D0_PIN+7; i++) {
+        pio_gpio_init(DCMI_PIO, i);
+    }
+    pio_sm_set_consecutive_pindirs(DCMI_PIO, DCMI_SM, DCMI_D0_PIN, 7, false);
+
+    if (pixformat == PIXFORMAT_GRAYSCALE) {
+        offset = pio_add_program(DCMI_PIO, &dcmi_odd_byte_program);
+        config = dcmi_odd_byte_program_get_default_config(offset);
+    } else {
+        offset = pio_add_program(DCMI_PIO, &dcmi_default_program);
+        config = dcmi_default_program_get_default_config(offset);
+    }
+
+    sm_config_set_clkdiv(&config, 1);
+    sm_config_set_in_pins(&config, DCMI_D0_PIN);
+
+    gpio_init(DCMI_D7_PIN);
+    gpio_set_dir(DCMI_D7_PIN, GPIO_IN);
+    sm_config_set_jmp_pin(&config, DCMI_D7_PIN);
+
+    sm_config_set_in_shift(&config, true, true, 32);
+
+    pio_sm_init(DCMI_PIO, DCMI_SM, offset, &config);
+    pio_sm_set_enabled(DCMI_PIO, DCMI_SM, true);
+    return 0;
+}
+%}

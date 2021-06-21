@@ -183,7 +183,7 @@ if(MICROPY_PY_SENSOR)
 
     # Generate DCMI PIO header
     pico_generate_pio_header(${MICROPY_TARGET}
-        ${TOP_DIR}/${OMV_DIR}/ports/${PORT}/dcmi.pio
+        ${OMV_BOARD_CONFIG_DIR}/dcmi.pio
     )
 endif()
 
