@@ -131,7 +131,7 @@ extern unsigned char *OMV_UNIQUE_ID_ADDR;
 #define LCD_RST_PIN             (4)
 #define LCD_RST_PIN_WRITE(bit)  gpio_put(LCD_RST_PIN, bit);
 
-#define LCD_RS_PIN              (25)
+#define LCD_RS_PIN              (0)
 #define LCD_RS_PIN_WRITE(bit)   gpio_put(LCD_RS_PIN, bit);
 
 #define LCD_CS_PIN              (5)
@@ -164,7 +164,7 @@ extern unsigned char *OMV_UNIQUE_ID_ADDR;
 #define DCMI_D4_PIN             (19)
 #define DCMI_D5_PIN             (20)
 #define DCMI_D6_PIN             (21)
-#define DCMI_D7_PIN             (22) // This pin is missing
+#define DCMI_D7_PIN             (25) // MSB is read separately.
 
 #define DCMI_XCLK_PIN           (28)
 
