@@ -137,35 +137,6 @@ static void dma_config(int w, int h, int bpp, uint32_t *capture_buf, bool rev_by
     dma_irqn_set_channel_enabled(DCMI_DMA, DCMI_DMA_CHANNEL, true);
 }
 
-static int dcmi_config(uint32_t pixformat)
-{
-    uint offset;
-    pio_sm_config config;
-
-    pio_sm_set_enabled(DCMI_PIO, DCMI_SM, false);
-    pio_sm_clear_fifos(DCMI_PIO, DCMI_SM);
-
-    for(uint i=DCMI_D0_PIN; i<DCMI_D0_PIN+8; i++) {
-        pio_gpio_init(DCMI_PIO, i);
-    }
-    pio_sm_set_consecutive_pindirs(DCMI_PIO, DCMI_SM, DCMI_D0_PIN, 8, false);
-
-    if (pixformat == PIXFORMAT_GRAYSCALE) {
-        offset = pio_add_program(DCMI_PIO, &dcmi_odd_byte_program);
-        config = dcmi_odd_byte_program_get_default_config(offset);
-    } else {
-        offset = pio_add_program(DCMI_PIO, &dcmi_default_program);
-        config = dcmi_default_program_get_default_config(offset);
-    }
-
-    sm_config_set_clkdiv(&config, 1);
-    sm_config_set_in_pins(&config, DCMI_D0_PIN);
-    sm_config_set_in_shift(&config, true, true, 32);
-    pio_sm_init(DCMI_PIO, DCMI_SM, offset, &config);
-    pio_sm_set_enabled(DCMI_PIO, DCMI_SM, true);
-    return 0;
-}
-
 void dcmi_abort()
 {
     // Disable DMA channel
