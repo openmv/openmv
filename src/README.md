@@ -112,6 +112,23 @@ After doing this OpenMV IDE will then be able to read the newly compiled binarie
 
 To update your OpenMV Cam's firmware you want to load the `firmware.bin` file onto your OpenMV Cam using the `Tools->Run Bootloader` command in OpenMV IDE. Please make sure to only load firmware meant for your model of the OpenMV Cam onto it. The IDE does not check this. If you accidentally load the wrong firmware your OpenMV Cam will just crash without being damaged when trying to execute the main firmware image and you can then just use the bootloader onboard again to load the correct `firmware.bin`.
 
+### Docker Build
+
+To build the firmware using docker, follow the following steps:
+
+```
+git clone https://github.com/openmv/openmv.git
+cd openmv
+make TARGET=<TARGET NAME>
+```
+
+After building you should see the target build output under `build/<TARGET_NAME>`, for example
+
+```
+ls build/OPENMV4 
+bootloader.bin  bootloader.dfu  bootloader.elf  firmware.bin  firmware.dfu  firmware.elf  openmv.bin  uvc.bin  uvc.dfu  uvc.elf
+```
+
 ### About Building
 
 To build the firmware faster we recommend passing `-j4` or higher depending on how many cores your computer has with make. E.g. `make -j4 TARGET=...`. Additionally, if you have issues with files not being recompiled correctly when building do `make clean` before building the firmware. We recommend using `make clean` regularly whenever you pull new changes or edit MicroPython QSTR files.

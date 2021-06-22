@@ -16,23 +16,6 @@ The OpenMV project was successfully funded via Kickstarter back in 2015 and has 
 
 For information on how to build the firmware for the OpenMV Cam please see our [Firmware Guide](src/README.md).
 
-### Docker Build
-
-To build the firmware using docker, follow the following steps:
-
-```
-git clone https://github.com/openmv/openmv.git
-cd openmv
-make TARGET=<TARGET NAME>
-```
-
-After building you should see the target build output under `build/<TARGET_NAME>`, for example
-
-```
-ls build/OPENMV4 
-bootloader.bin  bootloader.dfu  bootloader.elf  firmware.bin  firmware.dfu  firmware.elf  openmv.bin  uvc.bin  uvc.dfu  uvc.elf
-```
-
 ## Interface Library
 
 The OpenMV Cam comes built-in with an RPC (Remote Python/Procedure Call) library which makes it easy to connect the OpenMV Cam to your computer, a SBC (single board computer) like the RaspberryPi or Beaglebone, or a microcontroller like the Arduino or ESP8266/32. The RPC Interface Library works over:
