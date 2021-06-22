@@ -21,6 +21,7 @@
 # Build dir #
 ######################
 src/build
+build/
 
 # Old releases
 releases
