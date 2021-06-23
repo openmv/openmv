@@ -64,6 +64,18 @@ This will setup the `openmv` and `micropython` repos so `origin` points to your 
 
 Finally, after pushing your changes you can then use Github to automatically generate a Pull Request to the official OpenMV Github repo to get your changes upstreamed into the official OpenMV Cam Firmware.
 
+### Docker Build
+
+To build the firmware using docker, follow the following steps:
+
+```
+git clone https://github.com/openmv/openmv.git --depth=50
+cd openmv/docker
+make TARGET=<TARGET NAME>
+```
+
+After building you should see the target build output under `docker/build/<TARGET_NAME>`.
+
 ### Committing Etiquette
 
 If you would like to send a Pull Request to get your changes integrated into the official source tree please try to keep one commit to one Pull Request. Additionally, please create example scripts (in `../scripts/examples`) for any new features you are committing.
