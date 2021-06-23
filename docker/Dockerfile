@@ -16,4 +16,4 @@ RUN mkdir ./cmake && \
 
 RUN mkdir -p /source/gcc && mkdir -p /source/cmake && cp -r ./gcc /source/gcc && cp -r ./cmake /source/cmake
 WORKDIR /source
-ENTRYPOINT ["./docker/scripts/build-docker"]
+ENTRYPOINT ["./docker/build.sh"]
