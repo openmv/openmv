@@ -22,7 +22,8 @@
 ######################
 src/build
 docker/build/
-.dapper
+*.dapper
+
 
 # Old releases
 releases
