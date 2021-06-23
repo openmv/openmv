@@ -21,7 +21,7 @@
 # Build dir #
 ######################
 src/build
-build/
+docker/build/
 
 # Old releases
 releases

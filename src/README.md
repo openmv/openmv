@@ -64,6 +64,18 @@ This will setup the `openmv` and `micropython` repos so `origin` points to your 
 
 Finally, after pushing your changes you can then use Github to automatically generate a Pull Request to the official OpenMV Github repo to get your changes upstreamed into the official OpenMV Cam Firmware.
 
+### Docker Build
+
+To build the firmware using docker, follow the following steps:
+
+```
+git clone https://github.com/openmv/openmv.git --depth=50
+cd openmv/docker
+make TARGET=<TARGET NAME>
+```
+
+After building you should see the target build output under `docker/build/<TARGET_NAME>`.
+
 ### Committing Etiquette
 
 If you would like to send a Pull Request to get your changes integrated into the official source tree please try to keep one commit to one Pull Request. Additionally, please create example scripts (in `../scripts/examples`) for any new features you are committing.
@@ -111,23 +123,6 @@ Next, if you have Linux running inside of a Virtual Machine you will want to use
 After doing this OpenMV IDE will then be able to read the newly compiled binaries under the shared folder path you created.
 
 To update your OpenMV Cam's firmware you want to load the `firmware.bin` file onto your OpenMV Cam using the `Tools->Run Bootloader` command in OpenMV IDE. Please make sure to only load firmware meant for your model of the OpenMV Cam onto it. The IDE does not check this. If you accidentally load the wrong firmware your OpenMV Cam will just crash without being damaged when trying to execute the main firmware image and you can then just use the bootloader onboard again to load the correct `firmware.bin`.
-
-### Docker Build
-
-To build the firmware using docker, follow the following steps:
-
-```
-git clone https://github.com/openmv/openmv.git
-cd openmv
-make TARGET=<TARGET NAME>
-```
-
-After building you should see the target build output under `build/<TARGET_NAME>`, for example
-
-```
-ls build/OPENMV4 
-bootloader.bin  bootloader.dfu  bootloader.elf  firmware.bin  firmware.dfu  firmware.elf  openmv.bin  uvc.bin  uvc.dfu  uvc.elf
-```
 
 ### About Building
 
