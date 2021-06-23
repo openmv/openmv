@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e -x
 
-cd $(dirname $0)/../..
+cd $(dirname $0)/..
 
 
 export PATH=/source/gcc/gcc/bin:/source/cmake/cmake/bin:$PATH
