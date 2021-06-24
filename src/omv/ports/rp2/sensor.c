@@ -137,20 +137,6 @@ static void dma_config(int w, int h, int bpp, uint32_t *capture_buf, bool rev_by
     dma_irqn_set_channel_enabled(DCMI_DMA, DCMI_DMA_CHANNEL, true);
 }
 
-void dcmi_abort()
-{
-    // Disable DMA channel
-    dma_channel_abort(DCMI_DMA_CHANNEL);
-    dma_irqn_set_channel_enabled(DCMI_DMA, DCMI_DMA_CHANNEL, false);
-
-    // Disable state machine.
-    pio_sm_set_enabled(DCMI_PIO, DCMI_SM, false);
-    pio_sm_clear_fifos(DCMI_PIO, DCMI_SM);
-
-    // Clear bpp flag.
-    MAIN_FB()->bpp = -1;
-}
-
 int sensor_init()
 {
     int init_ret = 0;
@@ -431,9 +417,25 @@ int sensor_init()
     return 0;
 }
 
+int sensor_abort()
+{
+    // Disable DMA channel
+    dma_channel_abort(DCMI_DMA_CHANNEL);
+    dma_irqn_set_channel_enabled(DCMI_DMA, DCMI_DMA_CHANNEL, false);
+
+    // Disable state machine.
+    pio_sm_set_enabled(DCMI_PIO, DCMI_SM, false);
+    pio_sm_clear_fifos(DCMI_PIO, DCMI_SM);
+
+    // Clear bpp flag.
+    MAIN_FB()->bpp = -1;
+
+    return 0;
+}
+
 int sensor_reset()
 {
-    dcmi_abort();
+    sensor_abort();
 
     // Reset the sensor state
     sensor.sde           = 0;
@@ -1029,7 +1031,7 @@ int sensor_snapshot(sensor_t *sensor, image_t *image, uint32_t flags)
     for (mp_uint_t ticks = mp_hal_ticks_ms(); buffer == NULL;) {
         buffer = framebuffer_get_head(FB_NO_FLAGS);
         if ((mp_hal_ticks_ms() - ticks) > 3000) {
-            dcmi_abort();
+            sensor_abort();
             return -1;
         }
     }
