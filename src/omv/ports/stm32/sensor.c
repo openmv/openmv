@@ -254,32 +254,6 @@ static int dcmi_config(uint32_t jpeg_mode)
     return 0;
 }
 
-static void dcmi_abort()
-{
-    // This stops the DCMI hardware from generating DMA requests immediately and then stops the DMA
-    // hardware. Note that HAL_DMA_Abort is a blocking operation. Do not use this in an interrupt.
-
-    if (DCMI->CR & DCMI_CR_ENABLE) {
-        DCMI->CR &= ~DCMI_CR_ENABLE;
-        HAL_DMA_Abort(&DMAHandle);
-        HAL_NVIC_EnableIRQ(DMA2_Stream1_IRQn);
-        #if (OMV_ENABLE_SENSOR_MDMA == 1)
-        HAL_MDMA_Abort(&DCMI_MDMA_Handle0);
-        HAL_MDMA_Abort(&DCMI_MDMA_Handle1);
-        HAL_MDMA_DeInit(&DCMI_MDMA_Handle0);
-        HAL_MDMA_DeInit(&DCMI_MDMA_Handle1);
-        #endif
-        __HAL_DCMI_DISABLE_IT(&DCMIHandle, DCMI_IT_FRAME);
-        __HAL_DCMI_CLEAR_FLAG(&DCMIHandle, DCMI_FLAG_FRAMERI);
-        first_line = false;
-        drop_frame = false;
-        sensor.last_frame_ms = 0;
-        sensor.last_frame_ms_valid = false;
-    }
-
-    framebuffer_reset_buffers();
-}
-
 // Returns true if a crop is being applied to the frame buffer.
 static bool cropped()
 {
@@ -295,7 +269,7 @@ static bool cropped()
 
 void sensor_init0()
 {
-    dcmi_abort();
+    sensor_abort();
 
     // Always reinit cambus after soft reset which could have terminated the cambus in the middle
     // of an I2C read/write.
@@ -620,9 +594,36 @@ int sensor_init()
     return 0;
 }
 
+int sensor_abort()
+{
+    // This stops the DCMI hardware from generating DMA requests immediately and then stops the DMA
+    // hardware. Note that HAL_DMA_Abort is a blocking operation. Do not use this in an interrupt.
+    if (DCMI->CR & DCMI_CR_ENABLE) {
+        DCMI->CR &= ~DCMI_CR_ENABLE;
+        HAL_DMA_Abort(&DMAHandle);
+        HAL_NVIC_EnableIRQ(DMA2_Stream1_IRQn);
+        #if (OMV_ENABLE_SENSOR_MDMA == 1)
+        HAL_MDMA_Abort(&DCMI_MDMA_Handle0);
+        HAL_MDMA_Abort(&DCMI_MDMA_Handle1);
+        HAL_MDMA_DeInit(&DCMI_MDMA_Handle0);
+        HAL_MDMA_DeInit(&DCMI_MDMA_Handle1);
+        #endif
+        __HAL_DCMI_DISABLE_IT(&DCMIHandle, DCMI_IT_FRAME);
+        __HAL_DCMI_CLEAR_FLAG(&DCMIHandle, DCMI_FLAG_FRAMERI);
+        first_line = false;
+        drop_frame = false;
+        sensor.last_frame_ms = 0;
+        sensor.last_frame_ms_valid = false;
+    }
+
+    framebuffer_reset_buffers();
+
+    return 0;
+}
+
 int sensor_reset()
 {
-    dcmi_abort();
+    sensor_abort();
 
     // Reset the sensor state
     sensor.sde                  = 0;
@@ -686,7 +687,7 @@ bool sensor_is_detected()
 
 int sensor_sleep(int enable)
 {
-    dcmi_abort();
+    sensor_abort();
 
     if (sensor.sleep == NULL
         || sensor.sleep(&sensor, enable) != 0) {
@@ -699,7 +700,7 @@ int sensor_sleep(int enable)
 int sensor_shutdown(int enable)
 {
     int ret = 0;
-    dcmi_abort();
+    sensor_abort();
 
     if (enable) {
         if (sensor.pwdn_pol == ACTIVE_HIGH) {
@@ -770,7 +771,7 @@ int sensor_set_pixformat(pixformat_t pixformat)
         return -1;
     }
 
-    dcmi_abort();
+    sensor_abort();
 
     // Flush previous frame.
     framebuffer_update_jpeg_buffer();
@@ -803,7 +804,7 @@ int sensor_set_framesize(framesize_t framesize)
         return 0;
     }
 
-    dcmi_abort();
+    sensor_abort();
 
     // Flush previous frame.
     framebuffer_update_jpeg_buffer();
@@ -870,7 +871,7 @@ int sensor_set_windowing(int x, int y, int w, int h)
         return -1;
     }
 
-    dcmi_abort();
+    sensor_abort();
 
     // Flush previous frame.
     framebuffer_update_jpeg_buffer();
@@ -1026,7 +1027,7 @@ int sensor_set_hmirror(int enable)
         return 0;
     }
 
-    dcmi_abort();
+    sensor_abort();
 
     /* call the sensor specific function */
     if (sensor.set_hmirror == NULL
@@ -1051,7 +1052,7 @@ int sensor_set_vflip(int enable)
         return 0;
     }
 
-    dcmi_abort();
+    sensor_abort();
 
     /* call the sensor specific function */
     if (sensor.set_vflip == NULL
@@ -1080,7 +1081,7 @@ int sensor_set_transpose(bool enable)
         return -1;
     }
 
-    dcmi_abort();
+    sensor_abort();
 
     sensor.transpose = enable;
     return 0;
@@ -1102,7 +1103,7 @@ int sensor_set_auto_rotation(bool enable)
         return -1;
     }
 
-    dcmi_abort();
+    sensor_abort();
 
     sensor.auto_rotation = enable;
     return 0;
@@ -1115,7 +1116,7 @@ bool sensor_get_auto_rotation()
 
 int sensor_set_framebuffers(int count)
 {
-    dcmi_abort();
+    sensor_abort();
 
     // Flush previous frame.
     framebuffer_update_jpeg_buffer();
@@ -1155,7 +1156,7 @@ int sensor_set_lens_correction(int enable, int radi, int coef)
 
 int sensor_ioctl(int request, ... /* arg */)
 {
-    dcmi_abort();
+    sensor_abort();
 
     int ret = -1;
 
@@ -1879,7 +1880,7 @@ int sensor_snapshot(sensor_t *sensor, image_t *image, uint32_t flags)
 
         // If we haven't exited this loop before the timeout then we need to abort the transfer.
         if ((HAL_GetTick() - tick_start) > SENSOR_TIMEOUT_MS) {
-            dcmi_abort();
+            sensor_abort();
 
             #if defined(DCMI_FSYNC_PIN)
             if (SENSOR_HW_FLAGS_GET(sensor, SENSOR_HW_FLAGS_FSYNC)) {
@@ -1895,7 +1896,7 @@ int sensor_snapshot(sensor_t *sensor, image_t *image, uint32_t flags)
     // line will contain how many transfers we completed.
     // The DMA counter must be used to get the number of remaining words to be transferred.
     if ((sensor->pixformat == PIXFORMAT_JPEG) && (sensor->chip_id == OV2640_ID)) {
-        dcmi_abort();
+        sensor_abort();
     }
 
     // We're done receiving data.

@@ -226,20 +226,23 @@ typedef struct _sensor {
 // Resolution table
 extern const int resolution[][2];
 
-// Returns the xclk freq in hz.
-int sensor_xclk_freq();
+// Initialize the sensor state.
+void sensor_init0();
 
 // Initialize the sensor hardware and probe the image sensor.
 int sensor_init();
 
-// Initialize the sensor state.
-void sensor_init0();
+// Abort frame capture and disable IRQs, DMA etc..
+int sensor_abort();
 
 // Reset the sensor to its default state.
 int sensor_reset();
 
 // Return sensor PID.
 int sensor_get_id();
+
+// Returns the xclk freq in hz.
+int sensor_xclk_freq();
 
 // Return true if the sensor was detected and initialized.
 bool sensor_is_detected();
