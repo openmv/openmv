@@ -21,6 +21,10 @@
 # THE SOFTWARE.
 
 # Source: improved version of https://github.com/micropython/micropython-lib/blob/master/python-ecosys/urequests/urequests.py
+# Some useful links for future updates:
+# https://www.w3.org/TR/html401/interact/forms.html#h-17.13.4
+# https://docs.python-requests.org/en/master/
+
 import usocket
 import ubinascii
 
