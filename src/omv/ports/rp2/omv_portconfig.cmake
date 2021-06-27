@@ -89,7 +89,7 @@ target_sources(${MICROPY_TARGET} PRIVATE
     ${TOP_DIR}/${OMV_DIR}/alloc/umm_malloc.c
     ${TOP_DIR}/${OMV_DIR}/alloc/dma_alloc.c
     ${TOP_DIR}/${OMV_DIR}/alloc/unaligned_memcpy.c
-    
+
     ${TOP_DIR}/${OMV_DIR}/common/array.c
     ${TOP_DIR}/${OMV_DIR}/common/ff_wrapper.c
     ${TOP_DIR}/${OMV_DIR}/common/ini.c
@@ -97,7 +97,7 @@ target_sources(${MICROPY_TARGET} PRIVATE
     ${TOP_DIR}/${OMV_DIR}/common/trace.c
     ${TOP_DIR}/${OMV_DIR}/common/mutex.c
     ${TOP_DIR}/${OMV_DIR}/common/usbdbg.c
-    
+
     ${TOP_DIR}/${OMV_DIR}/sensors/ov2640.c
     ${TOP_DIR}/${OMV_DIR}/sensors/ov5640.c
     ${TOP_DIR}/${OMV_DIR}/sensors/ov7670.c
@@ -109,7 +109,7 @@ target_sources(${MICROPY_TARGET} PRIVATE
     ${TOP_DIR}/${OMV_DIR}/sensors/lepton.c
     ${TOP_DIR}/${OMV_DIR}/sensors/hm01b0.c
     ${TOP_DIR}/${OMV_DIR}/sensors/gc2145.c
-    
+
     ${TOP_DIR}/${OMV_DIR}/modules/py_clock.c
     ${TOP_DIR}/${OMV_DIR}/modules/py_gif.c
     ${TOP_DIR}/${OMV_DIR}/modules/py_helper.c
@@ -120,7 +120,7 @@ target_sources(${MICROPY_TARGET} PRIVATE
     ${TOP_DIR}/${OMV_DIR}/modules/py_sensor.c
     ${TOP_DIR}/${OMV_DIR}/modules/py_tf.c
     ${TOP_DIR}/${OMV_DIR}/modules/py_fir.c
-    
+
     ${TOP_DIR}/${OMV_DIR}/imlib/agast.c
     ${TOP_DIR}/${OMV_DIR}/imlib/apriltag.c
     ${TOP_DIR}/${OMV_DIR}/imlib/bayer.c
@@ -147,6 +147,7 @@ target_sources(${MICROPY_TARGET} PRIVATE
     ${TOP_DIR}/${OMV_DIR}/imlib/imlib.c
     ${TOP_DIR}/${OMV_DIR}/imlib/integral.c
     ${TOP_DIR}/${OMV_DIR}/imlib/integral_mw.c
+    ${TOP_DIR}/${OMV_DIR}/imlib/jpegd.c
     ${TOP_DIR}/${OMV_DIR}/imlib/jpeg.c
     ${TOP_DIR}/${OMV_DIR}/imlib/kmeans.c
     ${TOP_DIR}/${OMV_DIR}/imlib/lab_tab.c
@@ -220,12 +221,12 @@ if(MICROPY_PY_ULAB)
 	    ${MICROPY_ULAB_DIR}/code/scipy/optimize/optimize.c
 	    ${MICROPY_ULAB_DIR}/code/scipy/signal/signal.c
 	    ${MICROPY_ULAB_DIR}/code/scipy/special/special.c
-	    ${MICROPY_ULAB_DIR}/code/ndarray_operators.c  
-	    ${MICROPY_ULAB_DIR}/code/ulab_tools.c     
-	    ${MICROPY_ULAB_DIR}/code/ndarray.c    
+	    ${MICROPY_ULAB_DIR}/code/ndarray_operators.c
+	    ${MICROPY_ULAB_DIR}/code/ulab_tools.c
+	    ${MICROPY_ULAB_DIR}/code/ndarray.c
 	    ${MICROPY_ULAB_DIR}/code/numpy/approx/approx.c
 	    ${MICROPY_ULAB_DIR}/code/numpy/compare/compare.c
-	    ${MICROPY_ULAB_DIR}/code/ulab_create.c  
+	    ${MICROPY_ULAB_DIR}/code/ulab_create.c
 	    ${MICROPY_ULAB_DIR}/code/numpy/fft/fft.c
 	    ${MICROPY_ULAB_DIR}/code/numpy/fft/fft_tools.c
 	    ${MICROPY_ULAB_DIR}/code/numpy/filter/filter.c
@@ -237,7 +238,7 @@ if(MICROPY_PY_ULAB)
 	    ${MICROPY_ULAB_DIR}/code/user/user.c
 	    ${MICROPY_ULAB_DIR}/code/numpy/numpy.c
 	    ${MICROPY_ULAB_DIR}/code/scipy/scipy.c
-	    ${MICROPY_ULAB_DIR}/code/ulab.c              
+	    ${MICROPY_ULAB_DIR}/code/ulab.c
     )
 
     target_sources(${MICROPY_TARGET} PRIVATE ${ULAB_SOURCES})

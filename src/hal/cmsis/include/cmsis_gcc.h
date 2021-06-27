@@ -1382,6 +1382,42 @@ __STATIC_FORCEINLINE int32_t __SSAT_ASR(int32_t val, uint32_t sat, uint32_t shif
 }
 
 /**
+  \brief   Signed Saturate
+  \details Saturates two signed values.
+  \param [in]  value  Values to be saturated
+  \param [in]    sat  Bit position to saturate to (1..16)
+  \return             Saturated value
+ */
+__STATIC_FORCEINLINE int32_t __SSAT16(int32_t val, uint32_t sat)
+{
+  if ((sat >= 1U) && (sat <= 32U))
+  {
+    const int32_t max = (int32_t)((1U << (sat - 1U)) - 1U);
+    const int32_t min = -1 - max ;
+    int32_t valHi = val >> 16;
+    if (valHi > max)
+    {
+      valHi = max;
+    }
+    else if (valHi < min)
+    {
+      valHi = min;
+    }
+    int32_t valLo = (val << 16) >> 16;
+    if (valLo > max)
+    {
+      valLo = max;
+    }
+    else if (valLo < min)
+    {
+      valLo = min;
+    }
+    return (valHi << 16) | (valLo & 0xFFFF);
+  }
+  return val;
+}
+
+/**
   \brief   Unsigned Saturate
   \details Saturates an unsigned value.
   \param [in]  value  Value to be saturated
@@ -1428,6 +1464,41 @@ __STATIC_FORCEINLINE uint32_t __USAT_ASR(int32_t val, uint32_t sat, uint32_t shi
     {
       return 0U;
     }
+  }
+  return (uint32_t)val;
+}
+
+/**
+  \brief   Unsigned Saturate
+  \details Saturates two unsigned values.
+  \param [in]  value  Values to be saturated
+  \param [in]    sat  Bit position to saturate to (0..15)
+  \return             Saturated value
+ */
+__STATIC_FORCEINLINE uint32_t __USAT16(int32_t val, uint32_t sat)
+{
+  if (sat <= 15U)
+  {
+    const uint32_t max = ((1U << sat) - 1U);
+    int32_t valHi = val >> 16;
+    if (valHi > (int32_t)max)
+    {
+      valHi = max;
+    }
+    else if (valHi < 0)
+    {
+      valHi = 0U;
+    }
+    int32_t valLo = (val << 16) >> 16;
+    if (valLo > (int32_t)max)
+    {
+      valLo = max;
+    }
+    else if (valLo < 0)
+    {
+      valLo = 0U;
+    }
+    return (valHi << 16) | valLo;
   }
   return (uint32_t)val;
 }
