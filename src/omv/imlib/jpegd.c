@@ -12,15 +12,6 @@
 #include "imlib.h"
 #include "omv_boardconfig.h"
 
-//
-// JPEG Decoder
-// Written by Larry Bank
-// Copyright (c) 2020 BitBank Software, Inc.
-//
-// Designed to decode baseline JPEG images (8 or 24-bpp)
-// using less than 22K of RAM
-//
-
 /* Defines and variables */
 #define FILE_HIGHWATER      1536
 #define JPEG_FILE_BUF_SIZE  2048
