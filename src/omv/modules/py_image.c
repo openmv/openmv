@@ -5183,7 +5183,7 @@ static const mp_obj_type_t py_apriltag_type = {
 
 static mp_obj_t py_image_find_apriltags(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
-    image_t *arg_img = py_helper_arg_to_image_mutable_bayer(args[0]);
+    image_t *arg_img = py_helper_arg_to_image_mutable_bayer_jpeg(args[0]);
 
     rectangle_t roi;
     py_helper_keyword_rectangle_roi(arg_img, n_args, args, 1, kw_args, &roi);
