@@ -14,6 +14,7 @@ set(CMSIS_DIR               hal/cmsis)
 set(LEPTON_DIR              drivers/lepton)
 set(LSM6DS3_DIR             drivers/lsm6ds3)
 set(WINC1500_DIR            drivers/winc1500)
+set(NINAW10_DIR             drivers/ninaw10)
 set(MLX90621_DIR            drivers/mlx90621)
 set(MLX90640_DIR            drivers/mlx90640)
 set(MLX90641_DIR            drivers/mlx90641)
@@ -77,6 +78,7 @@ target_include_directories(${MICROPY_TARGET} PRIVATE
     ${TOP_DIR}/${LEPTON_DIR}/include/
     ${TOP_DIR}/${LSM6DS3_DIR}/include/
     ${TOP_DIR}/${WINC1500_DIR}/include/
+    ${TOP_DIR}/${NINAW10}/include/
     ${TOP_DIR}/${MLX90621_DIR}/include/
     ${TOP_DIR}/${MLX90640_DIR}/include/
     ${TOP_DIR}/${MLX90641_DIR}/include/
@@ -248,6 +250,26 @@ if(MICROPY_PY_ULAB)
     target_compile_definitions(${MICROPY_TARGET} PRIVATE
         MICROPY_PY_ULAB=1
         ULAB_CONFIG_FILE="${OMV_BOARD_CONFIG_DIR}/ulab_config.h"
+    )
+endif()
+
+if(MICROPY_PY_NINAW10)
+    target_include_directories(${MICROPY_TARGET} PRIVATE
+        ${TOP_DIR}/${NINAW10_DIR}/include/
+    )
+
+    set(NINA_SOURCES
+        ${TOP_DIR}/${NINAW10_DIR}/src/nina.c
+        ${TOP_DIR}/${OMV_DIR}/ports/${PORT}/nina_bsp.c
+        ${TOP_DIR}/${OMV_DIR}/ports/${PORT}/modules/py_nina.c
+    )
+
+    target_sources(${MICROPY_TARGET} PRIVATE ${NINA_SOURCES})
+
+    target_compile_definitions(${MICROPY_TARGET} PRIVATE
+        MICROPY_PY_USOCKET=1
+        MICROPY_PY_NETWORK=1
+        MICROPY_PY_NINAW10=1
     )
 endif()
 

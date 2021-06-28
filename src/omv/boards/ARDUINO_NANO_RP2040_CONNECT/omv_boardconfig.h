@@ -124,24 +124,29 @@ extern unsigned char *OMV_UNIQUE_ID_ADDR;
 #define I2C1_SDA_PIN            (6)
 #define I2C1_SPEED              (CAMBUS_SPEED_FULL)
 
+// LCD config.
 #define LCD_SPI                 (spi0)
+#define LCD_CS_PIN              (5)
 #define LCD_MOSI_PIN            (7)
 #define LCD_SCLK_PIN            (6)
-
 #define LCD_RST_PIN             (4)
-#define LCD_RST_PIN_WRITE(bit)  gpio_put(LCD_RST_PIN, bit);
-
 #define LCD_RS_PIN              (0)
-#define LCD_RS_PIN_WRITE(bit)   gpio_put(LCD_RS_PIN, bit);
 
-#define LCD_CS_PIN              (5)
-#define LCD_CS_PIN_WRITE(bit)   gpio_put(LCD_CS_PIN, bit);
+// WiFi/NINA config.
+#define WIFI_SPI                (spi1)
+#define WIFI_CS_PIN             (9)
+#define WIFI_MOSI_PIN           (11)
+#define WIFI_MISO_PIN           (8)
+#define WIFI_SCLK_PIN           (14)
+#define WIFI_RST_PIN            (3)
+#define WIFI_GPIO0_PIN          (2)
+#define WIFI_ACK_PIN            (10)
 
 // AUDIO config.
 #define PDM_PIO                 (pio1)
 #define PDM_SM                  (0)
 #define PDM_DMA                 (1)
-#define PDM_DMA_IRQ             (DMA_IRQ_1) 
+#define PDM_DMA_IRQ             (DMA_IRQ_1)
 #define PDM_DMA_CHANNEL         (0)
 
 #define PDM_CLK_PIN             (23)
