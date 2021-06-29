@@ -232,6 +232,9 @@ void sensor_init0();
 // Initialize the sensor hardware and probe the image sensor.
 int sensor_init();
 
+// Configure DCMI hardware interface.
+int sensor_config(uint32_t pixformat);
+
 // Abort frame capture and disable IRQs, DMA etc..
 int sensor_abort();
 
@@ -242,7 +245,10 @@ int sensor_reset();
 int sensor_get_id();
 
 // Returns the xclk freq in hz.
-int sensor_xclk_freq();
+uint32_t sensor_get_xclk_frequency();
+
+// Returns the xclk freq in hz.
+int sensor_set_xclk_frequency(uint32_t frequency);
 
 // Return true if the sensor was detected and initialized.
 bool sensor_is_detected();

@@ -132,56 +132,6 @@ void ISC_SPI_DMA_IRQHandler(void)
 }
 #endif // ISC_SPI
 
-int sensor_xclk_freq()
-{
-    return (DCMI_TIM_PCLK_FREQ() * 2) / (TIMHandle.Init.Period + 1);
-}
-
-static int extclk_config(int frequency)
-{
-    #if (OMV_XCLK_SOURCE == OMV_XCLK_TIM)
-    /* TCLK (PCLK * 2) */
-    int tclk = DCMI_TIM_PCLK_FREQ() * 2;
-
-    /* Period should be even */
-    int period = (tclk / frequency) - 1;
-    int pulse = period / 2;
-
-    if (TIMHandle.Init.Period && (TIMHandle.Init.Period != period)) {
-        // __HAL_TIM_SET_AUTORELOAD sets TIMHandle.Init.Period...
-        __HAL_TIM_SET_AUTORELOAD(&TIMHandle, period);
-        __HAL_TIM_SET_COMPARE(&TIMHandle, DCMI_TIM_CHANNEL, pulse);
-        return 0;
-    }
-
-    /* Timer base configuration */
-    TIMHandle.Init.Period            = period;
-    TIMHandle.Init.Prescaler         = 0;
-    TIMHandle.Init.CounterMode       = TIM_COUNTERMODE_UP;
-    TIMHandle.Init.ClockDivision     = TIM_CLOCKDIVISION_DIV1;
-    TIMHandle.Init.RepetitionCounter = 0;
-    TIMHandle.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
-
-    /* Timer channel configuration */
-    TIM_OC_InitTypeDef TIMOCHandle;
-    TIMOCHandle.Pulse           = pulse;
-    TIMOCHandle.OCMode          = TIM_OCMODE_PWM1;
-    TIMOCHandle.OCPolarity      = TIM_OCPOLARITY_HIGH;
-    TIMOCHandle.OCNPolarity     = TIM_OCNPOLARITY_HIGH;
-    TIMOCHandle.OCFastMode      = TIM_OCFAST_DISABLE;
-    TIMOCHandle.OCIdleState     = TIM_OCIDLESTATE_RESET;
-    TIMOCHandle.OCNIdleState    = TIM_OCNIDLESTATE_RESET;
-
-    if ((HAL_TIM_PWM_Init(&TIMHandle) != HAL_OK)
-    || (HAL_TIM_PWM_ConfigChannel(&TIMHandle, &TIMOCHandle, DCMI_TIM_CHANNEL) != HAL_OK)
-    || (HAL_TIM_PWM_Start(&TIMHandle, DCMI_TIM_CHANNEL) != HAL_OK)) {
-        return -1;
-    }
-    #endif // (OMV_XCLK_SOURCE == OMV_XCLK_TIM)
-
-    return 0;
-}
-
 static int dma_config()
 {
     // DMA Stream configuration
@@ -212,45 +162,6 @@ static int dma_config()
     // Configure and enable DMA IRQ Channel
     NVIC_SetPriority(DMA2_Stream1_IRQn, IRQ_PRI_DMA21);
     HAL_NVIC_EnableIRQ(DMA2_Stream1_IRQn);
-    return 0;
-}
-
-static int dcmi_config(uint32_t jpeg_mode)
-{
-    // VSYNC clock polarity
-    DCMIHandle.Init.VSPolarity  = SENSOR_HW_FLAGS_GET(&sensor, SENSOR_HW_FLAGS_VSYNC) ?
-                                    DCMI_VSPOLARITY_HIGH : DCMI_VSPOLARITY_LOW;
-    // HSYNC clock polarity
-    DCMIHandle.Init.HSPolarity  = SENSOR_HW_FLAGS_GET(&sensor, SENSOR_HW_FLAGS_HSYNC) ?
-                                    DCMI_HSPOLARITY_HIGH : DCMI_HSPOLARITY_LOW;
-    // PXCLK clock polarity
-    DCMIHandle.Init.PCKPolarity = SENSOR_HW_FLAGS_GET(&sensor, SENSOR_HW_FLAGS_PIXCK) ?
-                                    DCMI_PCKPOLARITY_RISING : DCMI_PCKPOLARITY_FALLING;
-    // Setup capture parameters.
-    DCMIHandle.Init.SynchroMode = DCMI_SYNCHRO_HARDWARE;    // Enable Hardware synchronization
-    DCMIHandle.Init.CaptureRate = DCMI_CR_ALL_FRAME;        // Capture rate all frames
-    DCMIHandle.Init.ExtendedDataMode = DCMI_EXTEND_DATA_8B; // Capture 8 bits on every pixel clock
-    DCMIHandle.Init.JPEGMode = jpeg_mode;                   // Set JPEG Mode
-    #if defined(MCU_SERIES_F7) || defined(MCU_SERIES_H7)
-    DCMIHandle.Init.ByteSelectMode  = DCMI_BSM_ALL;         // Capture all received bytes
-    DCMIHandle.Init.ByteSelectStart = DCMI_OEBS_ODD;        // Ignored
-    DCMIHandle.Init.LineSelectMode  = DCMI_LSM_ALL;         // Capture all received lines
-    DCMIHandle.Init.LineSelectStart = DCMI_OELS_ODD;        // Ignored
-    #endif
-
-    // Associate the DMA handle to the DCMI handle
-    __HAL_LINKDMA(&DCMIHandle, DMA_Handle, DMAHandle);
-
-    // Initialize the DCMI
-    HAL_DCMI_DeInit(&DCMIHandle);
-    if (HAL_DCMI_Init(&DCMIHandle) != HAL_OK) {
-        // Initialization Error
-        return -1;
-    }
-
-    // Configure and enable DCMI IRQ Channel
-    NVIC_SetPriority(DCMI_IRQn, IRQ_PRI_DCMI);
-    HAL_NVIC_EnableIRQ(DCMI_IRQn);
     return 0;
 }
 
@@ -311,7 +222,7 @@ int sensor_init()
     //
     #if (OMV_XCLK_SOURCE == OMV_XCLK_TIM)
     // Configure external clock timer.
-    if (extclk_config(OMV_XCLK_FREQUENCY) != 0) {
+    if (sensor_set_xclk_frequency(OMV_XCLK_FREQUENCY) != 0) {
         // Timer problem
         return -1;
     }
@@ -458,7 +369,7 @@ int sensor_init()
     switch (sensor.chip_id_w) {
         #if (OMV_ENABLE_OV2640 == 1)
         case OV2640_ID:
-            if (extclk_config(OV2640_XCLK_FREQ) != 0) {
+            if (sensor_set_xclk_frequency(OV2640_XCLK_FREQ) != 0) {
                 return -3;
             }
             init_ret = ov2640_init(&sensor);
@@ -467,7 +378,7 @@ int sensor_init()
 
         #if (OMV_ENABLE_OV5640 == 1)
         case OV5640_ID:
-            if (extclk_config(OV5640_XCLK_FREQ) != 0) {
+            if (sensor_set_xclk_frequency(OV5640_XCLK_FREQ) != 0) {
                 return -3;
             }
             init_ret = ov5640_init(&sensor);
@@ -476,7 +387,7 @@ int sensor_init()
 
         #if (OMV_ENABLE_OV7670 == 1)
         case OV7670_ID:
-            if (extclk_config(OV7670_XCLK_FREQ) != 0) {
+            if (sensor_set_xclk_frequency(OV7670_XCLK_FREQ) != 0) {
                 return -3;
             }
             init_ret = ov7670_init(&sensor);
@@ -485,7 +396,7 @@ int sensor_init()
 
         #if (OMV_ENABLE_OV7690 == 1)
         case OV7690_ID:
-            if (extclk_config(OV7690_XCLK_FREQ) != 0) {
+            if (sensor_set_xclk_frequency(OV7690_XCLK_FREQ) != 0) {
                 return -3;
             }
             init_ret = ov7690_init(&sensor);
@@ -506,7 +417,7 @@ int sensor_init()
 
         #if (OMV_ENABLE_MT9V034 == 1)
         case MT9V034_ID:
-            if (extclk_config(MT9V034_XCLK_FREQ) != 0) {
+            if (sensor_set_xclk_frequency(MT9V034_XCLK_FREQ) != 0) {
                 return -3;
             }
             init_ret = mt9v034_init(&sensor);
@@ -515,7 +426,7 @@ int sensor_init()
 
         #if (OMV_ENABLE_MT9M114 == 1)
         case MT9M114_ID:
-            if (extclk_config(MT9M114_XCLK_FREQ) != 0) {
+            if (sensor_set_xclk_frequency(MT9M114_XCLK_FREQ) != 0) {
                 return -3;
             }
             init_ret = mt9m114_init(&sensor);
@@ -524,7 +435,7 @@ int sensor_init()
 
         #if (OMV_ENABLE_LEPTON == 1)
         case LEPTON_ID:
-            if (extclk_config(LEPTON_XCLK_FREQ) != 0) {
+            if (sensor_set_xclk_frequency(LEPTON_XCLK_FREQ) != 0) {
                 return -3;
             }
             init_ret = lepton_init(&sensor);
@@ -539,7 +450,7 @@ int sensor_init()
 
         #if (OMV_ENABLE_GC2145 == 1)
         case GC2145_ID:
-            if (extclk_config(GC2145_XCLK_FREQ) != 0) {
+            if (sensor_set_xclk_frequency(GC2145_XCLK_FREQ) != 0) {
                 return -3;
             }
             init_ret = gc2145_init(&sensor);
@@ -548,7 +459,7 @@ int sensor_init()
 
         #if (OMV_ENABLE_PAJ6100 == 1)
         case PAJ6100_ID:
-            if (extclk_config(PAJ6100_XCLK_FREQ) != 0) {
+            if (sensor_set_xclk_frequency(PAJ6100_XCLK_FREQ) != 0) {
                 return -3;
             }
             init_ret = paj6100_init(&sensor);
@@ -571,9 +482,8 @@ int sensor_init()
         return -5;
     }
 
-    /* Configure the DCMI interface. This should be called
-       after ovxxx_init to set VSYNC/HSYNC/PCLK polarities */
-    if (dcmi_config(DCMI_JPEG_DISABLE) != 0){
+    // Configure the DCMI interface.
+    if (sensor_config(PIXFORMAT_INVALID) != 0){
         // DCMI config failed
         return -6;
     }
@@ -591,6 +501,47 @@ int sensor_init()
     sensor.detected = true;
 
     /* All good! */
+    return 0;
+}
+
+int sensor_config(uint32_t pixformat)
+{
+    // VSYNC clock polarity
+    DCMIHandle.Init.VSPolarity  = SENSOR_HW_FLAGS_GET(&sensor, SENSOR_HW_FLAGS_VSYNC) ?
+                                    DCMI_VSPOLARITY_HIGH : DCMI_VSPOLARITY_LOW;
+    // HSYNC clock polarity
+    DCMIHandle.Init.HSPolarity  = SENSOR_HW_FLAGS_GET(&sensor, SENSOR_HW_FLAGS_HSYNC) ?
+                                    DCMI_HSPOLARITY_HIGH : DCMI_HSPOLARITY_LOW;
+    // PXCLK clock polarity
+    DCMIHandle.Init.PCKPolarity = SENSOR_HW_FLAGS_GET(&sensor, SENSOR_HW_FLAGS_PIXCK) ?
+                                    DCMI_PCKPOLARITY_RISING : DCMI_PCKPOLARITY_FALLING;
+    // Setup capture parameters.
+    DCMIHandle.Init.SynchroMode = DCMI_SYNCHRO_HARDWARE;    // Enable Hardware synchronization
+    DCMIHandle.Init.CaptureRate = DCMI_CR_ALL_FRAME;        // Capture rate all frames
+    DCMIHandle.Init.ExtendedDataMode = DCMI_EXTEND_DATA_8B; // Capture 8 bits on every pixel clock
+    // Set JPEG Mode
+    DCMIHandle.Init.JPEGMode = (pixformat == PIXFORMAT_JPEG) ?
+                                    DCMI_JPEG_ENABLE : DCMI_JPEG_DISABLE;
+    #if defined(MCU_SERIES_F7) || defined(MCU_SERIES_H7)
+    DCMIHandle.Init.ByteSelectMode  = DCMI_BSM_ALL;         // Capture all received bytes
+    DCMIHandle.Init.ByteSelectStart = DCMI_OEBS_ODD;        // Ignored
+    DCMIHandle.Init.LineSelectMode  = DCMI_LSM_ALL;         // Capture all received lines
+    DCMIHandle.Init.LineSelectStart = DCMI_OELS_ODD;        // Ignored
+    #endif
+
+    // Associate the DMA handle to the DCMI handle
+    __HAL_LINKDMA(&DCMIHandle, DMA_Handle, DMAHandle);
+
+    // Initialize the DCMI
+    HAL_DCMI_DeInit(&DCMIHandle);
+    if (HAL_DCMI_Init(&DCMIHandle) != HAL_OK) {
+        // Initialization Error
+        return -1;
+    }
+
+    // Configure and enable DCMI IRQ Channel
+    NVIC_SetPriority(DCMI_IRQn, IRQ_PRI_DCMI);
+    HAL_NVIC_EnableIRQ(DCMI_IRQn);
     return 0;
 }
 
@@ -680,6 +631,56 @@ int sensor_get_id()
     return sensor.chip_id_w;
 }
 
+uint32_t sensor_get_xclk_frequency()
+{
+    return (DCMI_TIM_PCLK_FREQ() * 2) / (TIMHandle.Init.Period + 1);
+}
+
+int sensor_set_xclk_frequency(uint32_t frequency)
+{
+    #if (OMV_XCLK_SOURCE == OMV_XCLK_TIM)
+    /* TCLK (PCLK * 2) */
+    int tclk = DCMI_TIM_PCLK_FREQ() * 2;
+
+    /* Period should be even */
+    int period = (tclk / frequency) - 1;
+    int pulse = period / 2;
+
+    if (TIMHandle.Init.Period && (TIMHandle.Init.Period != period)) {
+        // __HAL_TIM_SET_AUTORELOAD sets TIMHandle.Init.Period...
+        __HAL_TIM_SET_AUTORELOAD(&TIMHandle, period);
+        __HAL_TIM_SET_COMPARE(&TIMHandle, DCMI_TIM_CHANNEL, pulse);
+        return 0;
+    }
+
+    /* Timer base configuration */
+    TIMHandle.Init.Period            = period;
+    TIMHandle.Init.Prescaler         = 0;
+    TIMHandle.Init.CounterMode       = TIM_COUNTERMODE_UP;
+    TIMHandle.Init.ClockDivision     = TIM_CLOCKDIVISION_DIV1;
+    TIMHandle.Init.RepetitionCounter = 0;
+    TIMHandle.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
+
+    /* Timer channel configuration */
+    TIM_OC_InitTypeDef TIMOCHandle;
+    TIMOCHandle.Pulse           = pulse;
+    TIMOCHandle.OCMode          = TIM_OCMODE_PWM1;
+    TIMOCHandle.OCPolarity      = TIM_OCPOLARITY_HIGH;
+    TIMOCHandle.OCNPolarity     = TIM_OCNPOLARITY_HIGH;
+    TIMOCHandle.OCFastMode      = TIM_OCFAST_DISABLE;
+    TIMOCHandle.OCIdleState     = TIM_OCIDLESTATE_RESET;
+    TIMOCHandle.OCNIdleState    = TIM_OCNIDLESTATE_RESET;
+
+    if ((HAL_TIM_PWM_Init(&TIMHandle) != HAL_OK)
+    || (HAL_TIM_PWM_ConfigChannel(&TIMHandle, &TIMOCHandle, DCMI_TIM_CHANNEL) != HAL_OK)
+    || (HAL_TIM_PWM_Start(&TIMHandle, DCMI_TIM_CHANNEL) != HAL_OK)) {
+        return -1;
+    }
+    #endif // (OMV_XCLK_SOURCE == OMV_XCLK_TIM)
+
+    return 0;
+}
+
 bool sensor_is_detected()
 {
     return sensor.detected;
@@ -716,7 +717,7 @@ int sensor_shutdown(int enable)
         } else {
             DCMI_PWDN_HIGH();
         }
-        ret = dcmi_config(DCMI_JPEG_DISABLE);
+        ret = sensor_config(sensor.pixformat);
     }
 
     systick_sleep(10);
@@ -793,8 +794,8 @@ int sensor_set_pixformat(pixformat_t pixformat)
     // Pickout a good buffer count for the user.
     framebuffer_auto_adjust_buffers();
 
-    // Change the JPEG mode.
-    return dcmi_config((pixformat == PIXFORMAT_JPEG) ? DCMI_JPEG_ENABLE : DCMI_JPEG_DISABLE);
+    // Re-configure DCMI.
+    return sensor_config(pixformat);
 }
 
 int sensor_set_framesize(framesize_t framesize)
