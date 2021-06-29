@@ -336,7 +336,7 @@ int sensor_init()
     }
 
     // Configure the DCMI interface.
-    if (sensor_config(PIXFORMAT_INVALID) != 0){
+    if (sensor_dcmi_config(PIXFORMAT_INVALID) != 0){
         // DCMI config failed
         return -6;
     }
@@ -358,7 +358,7 @@ int sensor_init()
     return 0;
 }
 
-int sensor_config(uint32_t pixformat)
+int sensor_dcmi_config(uint32_t pixformat)
 {
     uint32_t dcmi_pins[] = {
         DCMI_D0_PIN,

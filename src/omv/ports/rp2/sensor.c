@@ -89,7 +89,7 @@ const int resolution[][2] = {
     {2592, 1944},    /* WQXGA2    */
 };
 
-static void dma_config(int w, int h, int bpp, uint32_t *capture_buf, bool rev_bytes)
+static void sensor_dma_config(int w, int h, int bpp, uint32_t *capture_buf, bool rev_bytes)
 {
     dma_channel_abort(DCMI_DMA_CHANNEL);
     dma_irqn_set_channel_enabled(DCMI_DMA, DCMI_DMA_CHANNEL, false);
@@ -567,7 +567,7 @@ int sensor_set_pixformat(pixformat_t pixformat)
     MAIN_FB()->bpp = -1;
 
     // Reconfigure PIO DCMI program.
-    return sensor_config(pixformat);
+    return sensor_dcmi_config(pixformat);
 }
 
 int sensor_set_framesize(framesize_t framesize)
@@ -1017,7 +1017,7 @@ int sensor_snapshot(sensor_t *sensor, image_t *image, uint32_t flags)
         }
 
         // Configure the DMA on the first frame, for later frames only the write is changed.
-        dma_config(MAIN_FB()->u, MAIN_FB()->v, MAIN_FB()->bpp, (void *) buffer->data,
+        sensor_dma_config(MAIN_FB()->u, MAIN_FB()->v, MAIN_FB()->bpp, (void *) buffer->data,
                 (SENSOR_HW_FLAGS_GET(sensor, SENSOR_HW_FLAGS_RGB565_REV) && MAIN_FB()->bpp == 2));
 
         // Unblock the state machine

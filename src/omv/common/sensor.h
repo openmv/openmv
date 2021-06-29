@@ -233,7 +233,7 @@ void sensor_init0();
 int sensor_init();
 
 // Configure DCMI hardware interface.
-int sensor_config(uint32_t pixformat);
+int sensor_dcmi_config(uint32_t pixformat);
 
 // Abort frame capture and disable IRQs, DMA etc..
 int sensor_abort();
