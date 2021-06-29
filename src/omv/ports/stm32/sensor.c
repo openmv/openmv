@@ -27,7 +27,6 @@
 #include "hm01b0.h"
 #include "paj6100.h"
 #include "gc2145.h"
-#include "systick.h"
 #include "framebuffer.h"
 #include "omv_boardconfig.h"
 #include "unaligned_memcpy.h"
@@ -199,10 +198,10 @@ int sensor_init()
 
     /* Do a power cycle */
     DCMI_PWDN_HIGH();
-    systick_sleep(10);
+    mp_hal_delay_ms(10);
 
     DCMI_PWDN_LOW();
-    systick_sleep(10);
+    mp_hal_delay_ms(10);
 
     // Configure the sensor external clock (XCLK) to XCLK_FREQ.
     //
@@ -249,14 +248,14 @@ int sensor_init()
 
     /* Reset the sensor */
     DCMI_RESET_HIGH();
-    systick_sleep(10);
+    mp_hal_delay_ms(10);
 
     DCMI_RESET_LOW();
-    systick_sleep(10);
+    mp_hal_delay_ms(10);
 
     // Initialize the camera bus.
     cambus_init(&sensor.bus, ISC_I2C_ID, ISC_I2C_SPEED);
-    systick_sleep(10);
+    mp_hal_delay_ms(10);
 
     /* Probe the sensor */
     sensor.slv_addr = cambus_scan(&sensor.bus);
@@ -267,7 +266,7 @@ int sensor_init()
 
         /* Pull the sensor out of the reset state */
         DCMI_RESET_HIGH();
-        systick_sleep(10);
+        mp_hal_delay_ms(10);
 
         /* Probe again to set the slave addr */
         sensor.slv_addr = cambus_scan(&sensor.bus);
@@ -275,14 +274,14 @@ int sensor_init()
             sensor.pwdn_pol = ACTIVE_LOW;
 
             DCMI_PWDN_HIGH();
-            systick_sleep(10);
+            mp_hal_delay_ms(10);
 
             sensor.slv_addr = cambus_scan(&sensor.bus);
             if (sensor.slv_addr == 0) {
                 sensor.reset_pol = ACTIVE_HIGH;
 
                 DCMI_RESET_LOW();
-                systick_sleep(10);
+                mp_hal_delay_ms(10);
 
                 sensor.slv_addr = cambus_scan(&sensor.bus);
                 #ifndef OMV_ENABLE_NONI2CIS
@@ -606,14 +605,14 @@ int sensor_reset()
     // Hard-reset the sensor
     if (sensor.reset_pol == ACTIVE_HIGH) {
         DCMI_RESET_HIGH();
-        systick_sleep(10);
+        mp_hal_delay_ms(10);
         DCMI_RESET_LOW();
     } else {
         DCMI_RESET_LOW();
-        systick_sleep(10);
+        mp_hal_delay_ms(10);
         DCMI_RESET_HIGH();
     }
-    systick_sleep(20);
+    mp_hal_delay_ms(20);
 
     // Call sensor-specific reset function
     if (sensor.reset(&sensor) != 0) {
@@ -720,7 +719,7 @@ int sensor_shutdown(int enable)
         ret = sensor_dcmi_config(sensor.pixformat);
     }
 
-    systick_sleep(10);
+    mp_hal_delay_ms(10);
     return ret;
 }
 
@@ -783,7 +782,7 @@ int sensor_set_pixformat(pixformat_t pixformat)
         return -1;
     }
 
-    systick_sleep(100); // wait for the camera to settle
+    mp_hal_delay_ms(100); // wait for the camera to settle
 
     // Set pixel format
     sensor.pixformat = pixformat;
@@ -817,7 +816,7 @@ int sensor_set_framesize(framesize_t framesize)
         return -1;
     }
 
-    systick_sleep(100); // wait for the camera to settle
+    mp_hal_delay_ms(100); // wait for the camera to settle
 
     // Set framebuffer size
     sensor.framesize = framesize;
@@ -1037,7 +1036,7 @@ int sensor_set_hmirror(int enable)
         return -1;
     }
     sensor.hmirror = enable;
-    systick_sleep(100); // wait for the camera to settle
+    mp_hal_delay_ms(100); // wait for the camera to settle
     return 0;
 }
 
@@ -1062,7 +1061,7 @@ int sensor_set_vflip(int enable)
         return -1;
     }
     sensor.vflip = enable;
-    systick_sleep(100); // wait for the camera to settle
+    mp_hal_delay_ms(100); // wait for the camera to settle
     return 0;
 }
 
