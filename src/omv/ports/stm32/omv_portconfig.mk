@@ -138,6 +138,7 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/common/, \
 	trace.o                     \
 	mutex.o                     \
 	usbdbg.o                    \
+	sensor_utils.o              \
    )
 
 FIRM_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/sensors/,   \
@@ -505,6 +506,7 @@ UVC_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/common/, \
 	array.o                                 \
 	trace.o                                 \
 	mutex.o                                 \
+	sensor_utils.o                          \
 	)
 
 UVC_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/sensors/, \

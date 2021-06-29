@@ -223,6 +223,8 @@ typedef struct _sensor {
     int  (*snapshot)            (sensor_t *sensor, image_t *image, uint32_t flags);
 } sensor_t;
 
+extern sensor_t sensor;
+
 // Resolution table
 extern const int resolution[][2];
 
@@ -231,6 +233,9 @@ void sensor_init0();
 
 // Initialize the sensor hardware and probe the image sensor.
 int sensor_init();
+
+// Detect and initialize the image sensor.
+int sensor_probe_init();
 
 // Configure DCMI hardware interface.
 int sensor_dcmi_config(uint32_t pixformat);
@@ -273,6 +278,15 @@ int sensor_set_framesize(framesize_t framesize);
 
 // Set the sensor frame rate.
 int sensor_set_framerate(int framerate);
+
+// Return the number of bytes per pixel to read from the image sensor.
+uint32_t sensor_get_src_bpp();
+
+// Return the number of bytes per pixel to write to memory.
+uint32_t sensor_get_dst_bpp();
+
+// Returns true if a crop is being applied to the frame buffer.
+bool sensor_get_cropped();
 
 // Set window size.
 int sensor_set_windowing(int x, int y, int w, int h);
@@ -361,6 +375,12 @@ int sensor_set_color_palette(const uint16_t *color_palette);
 
 // Get color palette
 const uint16_t *sensor_get_color_palette();
+
+// Return true if the current frame size/format fits in RAM.
+int sensor_check_framebuffer_size();
+
+// Auto-crop frame buffer until it fits in RAM (may switch pixel format to BAYER).
+int sensor_auto_crop_framebuffer();
 
 // Default snapshot function.
 int sensor_snapshot(sensor_t *sensor, image_t *image, uint32_t flags);
