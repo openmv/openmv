@@ -467,7 +467,7 @@ static int reset(sensor_t *sensor)
     ret |= cambus_writew2(&sensor->bus, sensor->slv_addr, 0x301A, reg | (1 << 9));
 
     ret |= cambus_writew2(&sensor->bus, sensor->slv_addr, MT9M114_REG_CAM_SYSCTL_PLL_DIVIDER_M_N,
-            (sensor_xclk_freq() == MT9M114_XCLK_FREQ)
+            (sensor_get_xclk_frequency() == MT9M114_XCLK_FREQ)
             ? 0x120 // xclk=24MHz, m=32, n=1, sensor=48MHz, bus=76.8MHz
             : 0x448); // xclk=25MHz, m=72, n=4, sensor=45MHz, bus=72MHz
 
@@ -666,7 +666,7 @@ static int set_framesize(sensor_t *sensor, framesize_t framesize)
     ret |= cambus_writew2(&sensor->bus, sensor->slv_addr, MT9M114_REG_SENSOR_CFG_Y_ADDR_END, sensor_he);
     ret |= cambus_writew2(&sensor->bus, sensor->slv_addr, MT9M114_REG_SENSOR_CFG_X_ADDR_END, sensor_we);
 
-    int pixclk = (sensor_xclk_freq() == MT9M114_XCLK_FREQ) ? 48000000 : 45000000;
+    int pixclk = (sensor_get_xclk_frequency() == MT9M114_XCLK_FREQ) ? 48000000 : 45000000;
 
     ret |= cambus_writew2(&sensor->bus, sensor->slv_addr, MT9M114_REG_SENSOR_CFG_PIXCLK, pixclk >> 16);
     ret |= cambus_writew2(&sensor->bus, sensor->slv_addr, MT9M114_REG_SENSOR_CFG_PIXCLK + 2, pixclk);

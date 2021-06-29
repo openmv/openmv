@@ -100,60 +100,6 @@ const int resolution[][2] = {
     {2592, 1944},    /* WQXGA2    */
 };
 
-static int extclk_config(int frequency)
-{
-    #ifndef I2S_CONFIG_MCKFREQ_MCKFREQ_32MDIV2
-    // Note this define is out of spec and has been removed from hal.
-    #define I2S_CONFIG_MCKFREQ_MCKFREQ_32MDIV2 (0x80000000UL) /*!< 32 MHz / 2 = 16.0 MHz */
-    #endif
-
-    nrf_gpio_cfg_output(DCMI_XCLK_PIN);
-
-    // Generates 16 MHz signal using I2S peripheral
-    NRF_I2S->CONFIG.MCKEN = (I2S_CONFIG_MCKEN_MCKEN_ENABLE << I2S_CONFIG_MCKEN_MCKEN_Pos);
-    NRF_I2S->CONFIG.MCKFREQ = I2S_CONFIG_MCKFREQ_MCKFREQ_32MDIV2  << I2S_CONFIG_MCKFREQ_MCKFREQ_Pos;
-    NRF_I2S->CONFIG.MODE = I2S_CONFIG_MODE_MODE_MASTER << I2S_CONFIG_MODE_MODE_Pos;
-
-    NRF_I2S->PSEL.MCK = (DCMI_XCLK_PIN << I2S_PSEL_MCK_PIN_Pos);
-
-    NRF_I2S->ENABLE = 1;
-    NRF_I2S->TASKS_START = 1;
-
-    return 0;
-}
-
-static int dcmi_config()
-{
-    uint32_t dcmi_pins[] = {
-        DCMI_D0_PIN,
-        DCMI_D1_PIN,
-        DCMI_D2_PIN,
-        DCMI_D3_PIN,
-        DCMI_D4_PIN,
-        DCMI_D5_PIN,
-        DCMI_D6_PIN,
-        DCMI_D7_PIN,
-        DCMI_VSYNC_PIN,
-        DCMI_HSYNC_PIN,
-        DCMI_PXCLK_PIN,
-    };
-
-    // Configure DCMI input pins
-    for (int i=0; i<sizeof(dcmi_pins)/sizeof(dcmi_pins[0]); i++) {
-        nrf_gpio_cfg_input(dcmi_pins[i], NRF_GPIO_PIN_PULLUP);
-    }
-
-    _vsyncMask = digitalPinToBitMask(DCMI_VSYNC_PIN);
-    _hrefMask = digitalPinToBitMask(DCMI_HSYNC_PIN);
-    _pclkMask = digitalPinToBitMask(DCMI_PXCLK_PIN);
-
-    _vsyncPort = portInputRegister(digitalPinToPort(DCMI_VSYNC_PIN));
-    _hrefPort = portInputRegister(digitalPinToPort(DCMI_HSYNC_PIN));
-    _pclkPort = portInputRegister(digitalPinToPort(DCMI_PXCLK_PIN));
-
-    return 0;
-}
-
 int sensor_init()
 {
     int init_ret = 0;
@@ -178,7 +124,7 @@ int sensor_init()
     // Configure the sensor external clock (XCLK) to XCLK_FREQ.
     #if (OMV_XCLK_SOURCE == OMV_XCLK_TIM)
     // Configure external clock timer.
-    if (extclk_config(OMV_XCLK_FREQUENCY) != 0) {
+    if (sensor_set_xclk_frequency(OMV_XCLK_FREQUENCY) != 0) {
         // Timer problem
         return -1;
     }
@@ -300,7 +246,7 @@ int sensor_init()
     switch (sensor.chip_id) {
         #if (OMV_ENABLE_OV2640 == 1)
         case OV2640_ID:
-            if (extclk_config(OV2640_XCLK_FREQ) != 0) {
+            if (sensor_set_xclk_frequency(OV2640_XCLK_FREQ) != 0) {
                 return -3;
             }
             init_ret = ov2640_init(&sensor);
@@ -309,7 +255,7 @@ int sensor_init()
 
         #if (OMV_ENABLE_OV5640 == 1)
         case OV5640_ID:
-            if (extclk_config(OV5640_XCLK_FREQ) != 0) {
+            if (sensor_set_xclk_frequency(OV5640_XCLK_FREQ) != 0) {
                 return -3;
             }
             init_ret = ov5640_init(&sensor);
@@ -318,7 +264,7 @@ int sensor_init()
 
         #if (OMV_ENABLE_OV7670 == 1)
         case OV7670_ID:
-            if (extclk_config(OV7670_XCLK_FREQ) != 0) {
+            if (sensor_set_xclk_frequency(OV7670_XCLK_FREQ) != 0) {
                 return -3;
             }
             init_ret = ov7670_init(&sensor);
@@ -327,7 +273,7 @@ int sensor_init()
 
         #if (OMV_ENABLE_OV7690 == 1)
         case OV7690_ID:
-            if (extclk_config(OV7690_XCLK_FREQ) != 0) {
+            if (sensor_set_xclk_frequency(OV7690_XCLK_FREQ) != 0) {
                 return -3;
             }
             init_ret = ov7690_init(&sensor);
@@ -348,7 +294,7 @@ int sensor_init()
 
         #if (OMV_ENABLE_MT9V034 == 1)
         case MT9V034_ID:
-            if (extclk_config(MT9V034_XCLK_FREQ) != 0) {
+            if (sensor_set_xclk_frequency(MT9V034_XCLK_FREQ) != 0) {
                 return -3;
             }
             init_ret = mt9v034_init(&sensor);
@@ -357,7 +303,7 @@ int sensor_init()
 
         #if (OMV_ENABLE_MT9M114 == 1)
         case MT9M114_ID:
-            if (extclk_config(MT9M114_XCLK_FREQ) != 0) {
+            if (sensor_set_xclk_frequency(MT9M114_XCLK_FREQ) != 0) {
                 return -3;
             }
             init_ret = mt9m114_init(&sensor);
@@ -366,7 +312,7 @@ int sensor_init()
 
         #if (OMV_ENABLE_LEPTON == 1)
         case LEPTON_ID:
-            if (extclk_config(LEPTON_XCLK_FREQ) != 0) {
+            if (sensor_set_xclk_frequency(LEPTON_XCLK_FREQ) != 0) {
                 return -3;
             }
             init_ret = lepton_init(&sensor);
@@ -389,8 +335,8 @@ int sensor_init()
         return -4;
     }
 
-    /* Configure the DCMI interface. */
-    if (dcmi_config() != 0){
+    // Configure the DCMI interface.
+    if (sensor_config(PIXFORMAT_INVALID) != 0){
         // DCMI config failed
         return -6;
     }
@@ -409,6 +355,38 @@ int sensor_init()
     sensor_set_vsync_callback(NULL);
 
     /* All good! */
+    return 0;
+}
+
+int sensor_config(uint32_t pixformat)
+{
+    uint32_t dcmi_pins[] = {
+        DCMI_D0_PIN,
+        DCMI_D1_PIN,
+        DCMI_D2_PIN,
+        DCMI_D3_PIN,
+        DCMI_D4_PIN,
+        DCMI_D5_PIN,
+        DCMI_D6_PIN,
+        DCMI_D7_PIN,
+        DCMI_VSYNC_PIN,
+        DCMI_HSYNC_PIN,
+        DCMI_PXCLK_PIN,
+    };
+
+    // Configure DCMI input pins
+    for (int i=0; i<sizeof(dcmi_pins)/sizeof(dcmi_pins[0]); i++) {
+        nrf_gpio_cfg_input(dcmi_pins[i], NRF_GPIO_PIN_PULLUP);
+    }
+
+    _vsyncMask = digitalPinToBitMask(DCMI_VSYNC_PIN);
+    _hrefMask = digitalPinToBitMask(DCMI_HSYNC_PIN);
+    _pclkMask = digitalPinToBitMask(DCMI_PXCLK_PIN);
+
+    _vsyncPort = portInputRegister(digitalPinToPort(DCMI_VSYNC_PIN));
+    _hrefPort = portInputRegister(digitalPinToPort(DCMI_HSYNC_PIN));
+    _pclkPort = portInputRegister(digitalPinToPort(DCMI_PXCLK_PIN));
+
     return 0;
 }
 
@@ -468,6 +446,32 @@ int sensor_get_id()
     return sensor.chip_id;
 }
 
+uint32_t sensor_get_xclk_frequency()
+{
+    return OMV_XCLK_FREQUENCY;
+}
+
+int sensor_set_xclk_frequency(uint32_t frequency)
+{
+    #ifndef I2S_CONFIG_MCKFREQ_MCKFREQ_32MDIV2
+    // Note this define is out of spec and has been removed from hal.
+    #define I2S_CONFIG_MCKFREQ_MCKFREQ_32MDIV2 (0x80000000UL) /*!< 32 MHz / 2 = 16.0 MHz */
+    #endif
+
+    nrf_gpio_cfg_output(DCMI_XCLK_PIN);
+
+    // Generates 16 MHz signal using I2S peripheral
+    NRF_I2S->CONFIG.MCKEN = (I2S_CONFIG_MCKEN_MCKEN_ENABLE << I2S_CONFIG_MCKEN_MCKEN_Pos);
+    NRF_I2S->CONFIG.MCKFREQ = I2S_CONFIG_MCKFREQ_MCKFREQ_32MDIV2  << I2S_CONFIG_MCKFREQ_MCKFREQ_Pos;
+    NRF_I2S->CONFIG.MODE = I2S_CONFIG_MODE_MODE_MASTER << I2S_CONFIG_MODE_MODE_Pos;
+
+    NRF_I2S->PSEL.MCK = (DCMI_XCLK_PIN << I2S_PSEL_MCK_PIN_Pos);
+
+    NRF_I2S->ENABLE = 1;
+    NRF_I2S->TASKS_START = 1;
+
+    return 0;
+}
 bool sensor_is_detected()
 {
     return sensor.detected;

@@ -57,7 +57,7 @@ PIXEL_LOOP:
 .wrap
 
 % c-sdk {
-static inline int dcmi_config(uint32_t pixformat)
+int sensor_config(uint32_t pixformat)
 {
     uint offset;
     pio_sm_config config;

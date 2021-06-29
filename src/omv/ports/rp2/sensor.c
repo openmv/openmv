@@ -89,32 +89,6 @@ const int resolution[][2] = {
     {2592, 1944},    /* WQXGA2    */
 };
 
-static int extclk_config(int frequency)
-{
-    uint32_t p = 4;
-
-    // Allocate pin to the PWM
-    gpio_set_function(DCMI_XCLK_PIN, GPIO_FUNC_PWM);
-
-    // Find out which PWM slice is connected to the GPIO
-    uint slice_num = pwm_gpio_to_slice_num(DCMI_XCLK_PIN);
-
-    // Set period to p cycles
-    pwm_set_wrap(slice_num, p-1);
-
-    // Set channel A 50% duty cycle.
-    pwm_set_chan_level(slice_num, PWM_CHAN_A, p/2);
-
-    // Set sysclk divider
-    // f = 125000000 / (p * (1 + (p/16)))
-    pwm_set_clkdiv_int_frac(slice_num, 1, p);
-
-    // Set the PWM running
-    pwm_set_enabled(slice_num, true);
-
-    return 0;
-}
-
 static void dma_config(int w, int h, int bpp, uint32_t *capture_buf, bool rev_bytes)
 {
     dma_channel_abort(DCMI_DMA_CHANNEL);
@@ -177,7 +151,7 @@ int sensor_init()
     // Configure the sensor external clock (XCLK) to XCLK_FREQ.
     #if (OMV_XCLK_SOURCE == OMV_XCLK_TIM)
     // Configure external clock timer.
-    if (extclk_config(OMV_XCLK_FREQUENCY) != 0) {
+    if (sensor_set_xclk_frequency(OMV_XCLK_FREQUENCY) != 0) {
         // Timer problem
         return -1;
     }
@@ -299,7 +273,7 @@ int sensor_init()
     switch (sensor.chip_id) {
         #if (OMV_ENABLE_OV2640 == 1)
         case OV2640_ID:
-            if (extclk_config(OV2640_XCLK_FREQ) != 0) {
+            if (sensor_set_xclk_frequency(OV2640_XCLK_FREQ) != 0) {
                 return -3;
             }
             init_ret = ov2640_init(&sensor);
@@ -308,7 +282,7 @@ int sensor_init()
 
         #if (OMV_ENABLE_OV5640 == 1)
         case OV5640_ID:
-            if (extclk_config(OV5640_XCLK_FREQ) != 0) {
+            if (sensor_set_xclk_frequency(OV5640_XCLK_FREQ) != 0) {
                 return -3;
             }
             init_ret = ov5640_init(&sensor);
@@ -323,7 +297,7 @@ int sensor_init()
 
         #if (OMV_ENABLE_OV7690 == 1)
         case OV7690_ID:
-            if (extclk_config(OV7690_XCLK_FREQ) != 0) {
+            if (sensor_set_xclk_frequency(OV7690_XCLK_FREQ) != 0) {
                 return -3;
             }
             init_ret = ov7690_init(&sensor);
@@ -344,7 +318,7 @@ int sensor_init()
 
         #if (OMV_ENABLE_MT9V034 == 1)
         case MT9V034_ID:
-            if (extclk_config(MT9V034_XCLK_FREQ) != 0) {
+            if (sensor_set_xclk_frequency(MT9V034_XCLK_FREQ) != 0) {
                 return -3;
             }
             init_ret = mt9v034_init(&sensor);
@@ -353,7 +327,7 @@ int sensor_init()
 
         #if (OMV_ENABLE_MT9M114 == 1)
         case MT9M114_ID:
-            if (extclk_config(MT9M114_XCLK_FREQ) != 0) {
+            if (sensor_set_xclk_frequency(MT9M114_XCLK_FREQ) != 0) {
                 return -3;
             }
             init_ret = mt9m114_init(&sensor);
@@ -362,7 +336,7 @@ int sensor_init()
 
         #if (OMV_ENABLE_LEPTON == 1)
         case LEPTON_ID:
-            if (extclk_config(LEPTON_XCLK_FREQ) != 0) {
+            if (sensor_set_xclk_frequency(LEPTON_XCLK_FREQ) != 0) {
                 return -3;
             }
             init_ret = lepton_init(&sensor);
@@ -487,6 +461,32 @@ int sensor_get_id()
     return sensor.chip_id;
 }
 
+int sensor_set_xclk_frequency(uint32_t frequency)
+{
+    uint32_t p = 4;
+
+    // Allocate pin to the PWM
+    gpio_set_function(DCMI_XCLK_PIN, GPIO_FUNC_PWM);
+
+    // Find out which PWM slice is connected to the GPIO
+    uint slice_num = pwm_gpio_to_slice_num(DCMI_XCLK_PIN);
+
+    // Set period to p cycles
+    pwm_set_wrap(slice_num, p-1);
+
+    // Set channel A 50% duty cycle.
+    pwm_set_chan_level(slice_num, PWM_CHAN_A, p/2);
+
+    // Set sysclk divider
+    // f = 125000000 / (p * (1 + (p/16)))
+    pwm_set_clkdiv_int_frac(slice_num, 1, p);
+
+    // Set the PWM running
+    pwm_set_enabled(slice_num, true);
+
+    return 0;
+}
+
 bool sensor_is_detected()
 {
     return sensor.detected;
@@ -567,9 +567,7 @@ int sensor_set_pixformat(pixformat_t pixformat)
     MAIN_FB()->bpp = -1;
 
     // Reconfigure PIO DCMI program.
-    dcmi_config(pixformat);
-
-    return 0;
+    return sensor_config(pixformat);
 }
 
 int sensor_set_framesize(framesize_t framesize)
