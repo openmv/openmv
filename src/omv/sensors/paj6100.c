@@ -37,13 +37,13 @@
 #include <stdio.h>
 #include <stdbool.h>
 
-#include "systick.h"
 #include "sensor.h"
 #include "framebuffer.h"
 
 #include "paj6100.h"
 #include "paj6100_reg.h"
 #include "pixspi.h"
+#include "py/mphal.h"
 
 #define CACHE_BANK
 
@@ -358,7 +358,7 @@ static int sleep(sensor_t *sensor, int enable)
             return -1;
         }
         // Sleep 30ms
-        systick_sleep(30);
+        mp_hal_delay_ms(30);
         ret = read_regs_w_bank(BANK_1, REG_CMD_LPM_ENH, &val, 1);
         if (ret) {
             printf("Failed to read REG_CMD_SENSOR_MODE.\n");
@@ -765,7 +765,7 @@ bool paj6100_detect(sensor_t *sensor)
     uint8_t part_id_l, part_id_h;
 
     DCMI_RESET_HIGH();
-    systick_sleep(10);
+    mp_hal_delay_ms(10);
 
     if (!pixspi_init())
     {

@@ -11,11 +11,11 @@
 #include "py/nlr.h"
 #include "py/runtime.h"
 #include "py/obj.h"
+#include "py/mphal.h"
 
 #include "extint.h"
 #include "spi.h"
 #include "softtimer.h"
-#include "systick.h"
 
 #include "py_helper.h"
 #include "omv_boardconfig.h"
@@ -346,29 +346,29 @@ int fir_lepton_init(cambus_t *bus, int *w, int *h, int *refresh, int *resolution
 
     #if defined(OMV_FIR_LEPTON_PWDN_PIN_PRESENT)
     OMV_FIR_LEPTON_PWDN_LOW();
-    systick_sleep(10);
+    mp_hal_delay_ms(10);
 
     OMV_FIR_LEPTON_PWDN_HIGH();
-    systick_sleep(10);
+    mp_hal_delay_ms(10);
     #endif
 
     #if defined(OMV_FIR_LEPTON_RST_PIN_PRESENT)
     OMV_FIR_LEPTON_RST_LOW();
-    systick_sleep(10);
+    mp_hal_delay_ms(10);
 
     OMV_FIR_LEPTON_RST_HIGH();
-    systick_sleep(1000);
+    mp_hal_delay_ms(1000);
     #endif
 
     LEP_RAD_ENABLE_E rad;
     LEP_AGC_ROI_T roi;
 
-    for (uint32_t start = systick_current_millis();; systick_sleep(1)) {
+    for (uint32_t start = mp_hal_ticks_ms();; mp_hal_delay_ms(1)) {
         if (LEP_OpenPort(bus, LEP_CCI_TWI, 0, &fir_lepton_handle) == LEP_OK) {
             break;
         }
 
-        if ((systick_current_millis() - start) >= 1000) {
+        if ((mp_hal_ticks_ms() - start) >= 1000) {
             return -1;
         }
     }
@@ -378,10 +378,10 @@ int fir_lepton_init(cambus_t *bus, int *w, int *h, int *refresh, int *resolution
         return -2;
     }
 
-    systick_sleep(1000);
+    mp_hal_delay_ms(1000);
     #endif
 
-    for (uint32_t start = systick_current_millis();; systick_sleep(1)) {
+    for (uint32_t start = mp_hal_ticks_ms();; mp_hal_delay_ms(1)) {
         LEP_SDK_BOOT_STATUS_E status;
 
         if (LEP_GetCameraBootStatus(&fir_lepton_handle, &status) != LEP_OK) {
@@ -392,12 +392,12 @@ int fir_lepton_init(cambus_t *bus, int *w, int *h, int *refresh, int *resolution
             break;
         }
 
-        if ((systick_current_millis() - start) >= 1000) {
+        if ((mp_hal_ticks_ms() - start) >= 1000) {
             return -4;
         }
     }
 
-    for (uint32_t start = systick_current_millis();; systick_sleep(1)) {
+    for (uint32_t start = mp_hal_ticks_ms();; mp_hal_delay_ms(1)) {
         LEP_UINT16 status;
 
         if (LEP_DirectReadRegister(&fir_lepton_handle, LEP_I2C_STATUS_REG, &status) != LEP_OK) {
@@ -408,7 +408,7 @@ int fir_lepton_init(cambus_t *bus, int *w, int *h, int *refresh, int *resolution
             break;
         }
 
-        if ((systick_current_millis() - start) >= 1000) {
+        if ((mp_hal_ticks_ms() - start) >= 1000) {
             return -6;
         }
     }
@@ -543,14 +543,14 @@ static const uint16_t *fir_lepton_get_frame(int timeout)
     int sampled_framebuffer_tail = framebuffer_tail;
 
     if (timeout >= 0) {
-        for (uint32_t start = systick_current_millis();;) {
+        for (uint32_t start = mp_hal_ticks_ms();;) {
             sampled_framebuffer_tail = framebuffer_tail;
 
             if (framebuffer_head != sampled_framebuffer_tail) {
                 break;
             }
 
-            if ((systick_current_millis() - start) >= timeout) {
+            if ((mp_hal_ticks_ms() - start) >= timeout) {
                 mp_raise_msg(&mp_type_OSError, MP_ERROR_TEXT("Timeout!"));
             }
 
@@ -712,7 +712,7 @@ void fir_lepton_trigger_ffc(uint n_args, const mp_obj_t *args, mp_map_t *kw_args
     int timeout = py_helper_keyword_int(n_args, args, 0, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_timeout), -1);
 
     if (timeout >= 0) {
-        for (uint32_t start = systick_current_millis();;) {
+        for (uint32_t start = mp_hal_ticks_ms();;) {
             LEP_SYS_STATUS_E status;
 
             if (LEP_GetSysFFCStatus(&fir_lepton_handle, &status) != LEP_OK) {
@@ -723,11 +723,11 @@ void fir_lepton_trigger_ffc(uint n_args, const mp_obj_t *args, mp_map_t *kw_args
                 break;
             }
 
-            if ((systick_current_millis() - start) >= timeout) {
+            if ((mp_hal_ticks_ms() - start) >= timeout) {
                 mp_raise_msg(&mp_type_OSError, MP_ERROR_TEXT("Timeout!"));
             }
 
-            systick_sleep(1);
+            mp_hal_delay_ms(1);
         }
     }
 }
