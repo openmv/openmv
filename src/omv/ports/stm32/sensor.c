@@ -132,7 +132,7 @@ void ISC_SPI_DMA_IRQHandler(void)
 }
 #endif // ISC_SPI
 
-static int dma_config()
+static int sesnsor_dma_config()
 {
     // DMA Stream configuration
     #if defined(MCU_SERIES_H7)
@@ -477,13 +477,13 @@ int sensor_init()
     }
 
     /* Configure the DCMI DMA Stream */
-    if (dma_config() != 0) {
+    if (sesnsor_dma_config() != 0) {
         // DMA problem
         return -5;
     }
 
     // Configure the DCMI interface.
-    if (sensor_config(PIXFORMAT_INVALID) != 0){
+    if (sensor_dcmi_config(PIXFORMAT_INVALID) != 0) {
         // DCMI config failed
         return -6;
     }
@@ -504,7 +504,7 @@ int sensor_init()
     return 0;
 }
 
-int sensor_config(uint32_t pixformat)
+int sensor_dcmi_config(uint32_t pixformat)
 {
     // VSYNC clock polarity
     DCMIHandle.Init.VSPolarity  = SENSOR_HW_FLAGS_GET(&sensor, SENSOR_HW_FLAGS_VSYNC) ?
@@ -717,7 +717,7 @@ int sensor_shutdown(int enable)
         } else {
             DCMI_PWDN_HIGH();
         }
-        ret = sensor_config(sensor.pixformat);
+        ret = sensor_dcmi_config(sensor.pixformat);
     }
 
     systick_sleep(10);
@@ -795,7 +795,7 @@ int sensor_set_pixformat(pixformat_t pixformat)
     framebuffer_auto_adjust_buffers();
 
     // Re-configure DCMI.
-    return sensor_config(pixformat);
+    return sensor_dcmi_config(pixformat);
 }
 
 int sensor_set_framesize(framesize_t framesize)
