@@ -149,15 +149,39 @@ typedef enum {
     IOCTL_HIMAX_OSC_ENABLE,
 } ioctl_t;
 
-#define SENSOR_HW_FLAGS_VSYNC        (0) // vertical sync polarity.
-#define SENSOR_HW_FLAGS_HSYNC        (1) // horizontal sync polarity.
-#define SENSOR_HW_FLAGS_PIXCK        (2) // pixel clock edge.
-#define SENSOR_HW_FLAGS_FSYNC        (3) // hardware frame sync.
-#define SENSOR_HW_FLAGS_JPEGE        (4) // hardware JPEG encoder.
-#define SENSOR_HW_FLAGS_RGB565_REV   (5) // byte reverse rgb565.
-#define SENSOR_HW_FLAGS_GET(s, x)    ((s)->hw_flags &  (1<<x))
-#define SENSOR_HW_FLAGS_SET(s, x, v) ((s)->hw_flags |= (v<<x))
-#define SENSOR_HW_FLAGS_CLR(s, x)    ((s)->hw_flags &= ~(1<<x))
+typedef enum {
+    SENSOR_ERROR_NO_ERROR               =  0,
+    SENSOR_ERROR_CTL_FAILED             = -1,
+    SENSOR_ERROR_CTL_UNSUPPORTED        = -2,
+    SENSOR_ERROR_ISC_UNDETECTED         = -3,
+    SENSOR_ERROR_ISC_UNSUPPORTED        = -4,
+    SENSOR_ERROR_ISC_INIT_FAILED        = -5,
+    SENSOR_ERROR_TIM_INIT_FAILED        = -6,
+    SENSOR_ERROR_DMA_INIT_FAILED        = -7,
+    SENSOR_ERROR_DCMI_INIT_FAILED       = -8,
+    SENSOR_ERROR_IO_ERROR               = -9,
+    SENSOR_ERROR_CAPTURE_FAILED         = -10,
+    SENSOR_ERROR_CAPTURE_TIMEOUT        = -11,
+    SENSOR_ERROR_INVALID_FRAMESIZE      = -12,
+    SENSOR_ERROR_INVALID_PIXFORMAT      = -13,
+    SENSOR_ERROR_INVALID_WINDOW         = -14,
+    SENSOR_ERROR_INVALID_FRAMERATE      = -15,
+    SENSOR_ERROR_INVALID_ARGUMENT       = -16,
+    SENSOR_ERROR_PIXFORMAT_UNSUPPORTED  = -17,
+    SENSOR_ERROR_FRAMEBUFFER_ERROR      = -18,
+    SENSOR_ERROR_FRAMEBUFFER_OVERFLOW   = -19,
+    SENSOR_ERROR_JPEG_OVERFLOW          = -20,
+} sensor_error_t;
+
+#define SENSOR_HW_FLAGS_VSYNC           (0) // vertical sync polarity.
+#define SENSOR_HW_FLAGS_HSYNC           (1) // horizontal sync polarity.
+#define SENSOR_HW_FLAGS_PIXCK           (2) // pixel clock edge.
+#define SENSOR_HW_FLAGS_FSYNC           (3) // hardware frame sync.
+#define SENSOR_HW_FLAGS_JPEGE           (4) // hardware JPEG encoder.
+#define SENSOR_HW_FLAGS_RGB565_REV      (5) // byte reverse rgb565.
+#define SENSOR_HW_FLAGS_GET(s, x)       ((s)->hw_flags &  (1<<x))
+#define SENSOR_HW_FLAGS_SET(s, x, v)    ((s)->hw_flags |= (v<<x))
+#define SENSOR_HW_FLAGS_CLR(s, x)       ((s)->hw_flags &= ~(1<<x))
 
 typedef void (*vsync_cb_t)(uint32_t vsync);
 typedef void (*frame_cb_t)();
@@ -385,4 +409,6 @@ int sensor_auto_crop_framebuffer();
 // Default snapshot function.
 int sensor_snapshot(sensor_t *sensor, image_t *image, uint32_t flags);
 
+// Convert sensor error codes to strings.
+const char *sensor_strerror(int error);
 #endif /* __SENSOR_H__ */
