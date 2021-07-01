@@ -67,8 +67,7 @@ static mp_obj_t py_sensor__init__()
     // it gets called when the module is imported. This is good
     // place to check if the sensor was detected or not.
     if (sensor_is_detected() == false) {
-        mp_raise_msg(&mp_type_RuntimeError,
-                     MP_ERROR_TEXT("The image sensor is detached or failed to initialize!"));
+        mp_raise_msg(&mp_type_RuntimeError, sensor_strerror(SENSOR_ERROR_ISC_UNDETECTED));
     }
     return mp_const_none;
 }
@@ -116,23 +115,9 @@ static mp_obj_t py_sensor_snapshot(uint n_args, const mp_obj_t *args, mp_map_t *
 
     mp_obj_t image = py_image(0, 0, 0, 0);
     int ret = sensor.snapshot(&sensor, (image_t *) py_image_cobj(image), 0);
-
-    if (ret == -1) {
-        mp_raise_msg(&mp_type_RuntimeError,
-                     MP_ERROR_TEXT("PIXFORMAT not set!"));
-    } else if (ret == -2) {
-        mp_raise_msg(&mp_type_RuntimeError,
-                     MP_ERROR_TEXT("Invalid Frame Size or Window!"));
-    } else if (ret == -3) {
-        mp_raise_msg(&mp_type_RuntimeError, MP_ERROR_TEXT("Framebuffer Error!"));
-    } else if (ret == -4) {
-        mp_raise_msg(&mp_type_RuntimeError, MP_ERROR_TEXT("Sensor Timeout!"));
-    } else if (ret == -5) {
-        mp_raise_msg(&mp_type_RuntimeError, MP_ERROR_TEXT("JPEG Overflow!"));
-    } else if (ret < 0) {
-        mp_raise_msg_varg(&mp_type_RuntimeError, MP_ERROR_TEXT("Capture Failed: %d"), ret);
+    if (ret != 0) {
+        mp_raise_msg(&mp_type_RuntimeError, sensor_strerror(ret));
     }
-
     return image;
 }
 
@@ -248,7 +233,7 @@ static mp_obj_t py_sensor_dealloc_extra_fb()
 static mp_obj_t py_sensor_set_pixformat(mp_obj_t pixformat)
 {
     if (sensor_set_pixformat(mp_obj_get_int(pixformat)) != 0) {
-        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Pixel format is not supported!"));
+        mp_raise_msg(&mp_type_RuntimeError, sensor_strerror(SENSOR_ERROR_INVALID_PIXFORMAT));
     }
     return mp_const_none;
 }
@@ -256,7 +241,7 @@ static mp_obj_t py_sensor_set_pixformat(mp_obj_t pixformat)
 static mp_obj_t py_sensor_get_pixformat()
 {
     if (sensor.pixformat == PIXFORMAT_INVALID) {
-        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Pixel format not set yet!"));
+        mp_raise_msg(&mp_type_ValueError, sensor_strerror(SENSOR_ERROR_INVALID_PIXFORMAT));
     }
     return mp_obj_new_int(sensor.pixformat);
 }
@@ -264,7 +249,7 @@ static mp_obj_t py_sensor_get_pixformat()
 static mp_obj_t py_sensor_set_framesize(mp_obj_t framesize)
 {
     if (sensor_set_framesize(mp_obj_get_int(framesize)) != 0) {
-        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Failed to set framesize!"));
+        mp_raise_msg(&mp_type_RuntimeError, sensor_strerror(SENSOR_ERROR_INVALID_FRAMESIZE));
     }
     return mp_const_none;
 }
@@ -272,7 +257,7 @@ static mp_obj_t py_sensor_set_framesize(mp_obj_t framesize)
 static mp_obj_t py_sensor_get_framesize()
 {
     if (sensor.framesize == FRAMESIZE_INVALID) {
-        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Frame size not set yet!"));
+        mp_raise_msg(&mp_type_ValueError, sensor_strerror(SENSOR_ERROR_INVALID_FRAMESIZE));
     }
     return mp_obj_new_int(sensor.framesize);
 }
@@ -280,7 +265,7 @@ static mp_obj_t py_sensor_get_framesize()
 static mp_obj_t py_sensor_set_framerate(mp_obj_t framerate)
 {
     if (sensor_set_framerate(mp_obj_get_int(framerate)) != 0) {
-        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Failed to set framerate!"));
+        mp_raise_msg(&mp_type_RuntimeError, sensor_strerror(SENSOR_ERROR_INVALID_FRAMERATE));
     }
     return mp_const_none;
 }
@@ -288,7 +273,7 @@ static mp_obj_t py_sensor_set_framerate(mp_obj_t framerate)
 static mp_obj_t py_sensor_get_framerate()
 {
     if (sensor.framerate == 0) {
-        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Frame rate not set yet!"));
+        mp_raise_msg(&mp_type_ValueError, sensor_strerror(SENSOR_ERROR_INVALID_FRAMERATE));
     }
     return mp_obj_new_int(sensor.framerate);
 }
@@ -296,7 +281,7 @@ static mp_obj_t py_sensor_get_framerate()
 static mp_obj_t py_sensor_set_windowing(uint n_args, const mp_obj_t *args)
 {
     if (sensor.framesize == FRAMESIZE_INVALID) {
-        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Frame size not set yet!"));
+        mp_raise_msg(&mp_type_ValueError, sensor_strerror(SENSOR_ERROR_INVALID_FRAMESIZE));
     }
 
     rectangle_t temp;
@@ -339,7 +324,7 @@ static mp_obj_t py_sensor_set_windowing(uint n_args, const mp_obj_t *args)
     rectangle_intersected(&r, &temp);
 
     if (sensor_set_windowing(r.x, r.y, r.w, r.h) != 0) {
-        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Failed to set windowing!"));
+        mp_raise_msg(&mp_type_RuntimeError, sensor_strerror(SENSOR_ERROR_INVALID_WINDOW));
     }
 
     return mp_const_none;
@@ -348,7 +333,7 @@ static mp_obj_t py_sensor_set_windowing(uint n_args, const mp_obj_t *args)
 static mp_obj_t py_sensor_get_windowing()
 {
     if (sensor.framesize == FRAMESIZE_INVALID) {
-        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Frame size not set yet!"));
+        mp_raise_msg(&mp_type_ValueError, sensor_strerror(SENSOR_ERROR_INVALID_FRAMESIZE));
     }
 
     return mp_obj_new_tuple(4, (mp_obj_t []) {mp_obj_new_int(framebuffer_get_x()),
@@ -383,7 +368,7 @@ static mp_obj_t py_sensor_set_gainceiling(mp_obj_t gainceiling)
             gain = GAINCEILING_128X;
             break;
         default:
-            mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Invalid gainceiling"));
+            mp_raise_msg(&mp_type_ValueError, sensor_strerror(SENSOR_ERROR_INVALID_ARGUMENT));
             break;
     }
 
@@ -443,8 +428,10 @@ static mp_obj_t py_sensor_set_auto_gain(uint n_args, const mp_obj_t *args, mp_ma
     int enable = mp_obj_get_int(args[0]);
     float gain_db = py_helper_keyword_float(n_args, args, 1, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_gain_db), NAN);
     float gain_db_ceiling = py_helper_keyword_float(n_args, args, 2, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_gain_db_ceiling), NAN);
-    if (sensor_set_auto_gain(enable, gain_db, gain_db_ceiling) != 0) {
-        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Sensor control failed!"));
+
+    int ret = sensor_set_auto_gain(enable, gain_db, gain_db_ceiling);
+    if (ret != 0) {
+        mp_raise_msg(&mp_type_RuntimeError, sensor_strerror(ret));
     }
     return mp_const_none;
 }
@@ -452,8 +439,9 @@ static mp_obj_t py_sensor_set_auto_gain(uint n_args, const mp_obj_t *args, mp_ma
 static mp_obj_t py_sensor_get_gain_db()
 {
     float gain_db;
-    if (sensor_get_gain_db(&gain_db) != 0) {
-        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Sensor control failed!"));
+    int ret = sensor_get_gain_db(&gain_db);
+    if (ret != 0) {
+        mp_raise_msg(&mp_type_RuntimeError, sensor_strerror(ret));
     }
     return mp_obj_new_float(gain_db);
 }
@@ -461,8 +449,9 @@ static mp_obj_t py_sensor_get_gain_db()
 static mp_obj_t py_sensor_set_auto_exposure(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
     int exposure_us = py_helper_keyword_int(n_args, args, 1, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_exposure_us), -1);
-    if (sensor_set_auto_exposure(mp_obj_get_int(args[0]), exposure_us) != 0) {
-        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Sensor control failed!"));
+    int ret = sensor_set_auto_exposure(mp_obj_get_int(args[0]), exposure_us);
+    if (ret != 0) {
+        mp_raise_msg(&mp_type_RuntimeError, sensor_strerror(ret));
     }
     return mp_const_none;
 }
@@ -470,8 +459,9 @@ static mp_obj_t py_sensor_set_auto_exposure(uint n_args, const mp_obj_t *args, m
 static mp_obj_t py_sensor_get_exposure_us()
 {
     int exposure_us;
-    if (sensor_get_exposure_us(&exposure_us) != 0) {
-        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Sensor control failed!"));
+    int ret = sensor_get_exposure_us(&exposure_us);
+    if (ret != 0) {
+        mp_raise_msg(&mp_type_RuntimeError, sensor_strerror(ret));
     }
     return mp_obj_new_int(exposure_us);
 }
@@ -481,8 +471,10 @@ static mp_obj_t py_sensor_set_auto_whitebal(uint n_args, const mp_obj_t *args, m
     int enable = mp_obj_get_int(args[0]);
     float rgb_gain_db[3] = {NAN, NAN, NAN};
     py_helper_keyword_float_array(n_args, args, 1, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_rgb_gain_db), rgb_gain_db, 3);
-    if (sensor_set_auto_whitebal(enable, rgb_gain_db[0], rgb_gain_db[1], rgb_gain_db[2]) != 0) {
-        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Sensor control failed!"));
+
+    int ret = sensor_set_auto_whitebal(enable, rgb_gain_db[0], rgb_gain_db[1], rgb_gain_db[2]);
+    if (ret != 0) {
+        mp_raise_msg(&mp_type_RuntimeError, sensor_strerror(ret));
     }
     return mp_const_none;
 }
@@ -490,16 +482,21 @@ static mp_obj_t py_sensor_set_auto_whitebal(uint n_args, const mp_obj_t *args, m
 static mp_obj_t py_sensor_get_rgb_gain_db()
 {
     float r_gain_db = 0.0, g_gain_db = 0.0, b_gain_db = 0.0;
-    if (sensor_get_rgb_gain_db(&r_gain_db, &g_gain_db, &b_gain_db) != 0) {
-        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Sensor control failed!"));
+    int ret = sensor_get_rgb_gain_db(&r_gain_db, &g_gain_db, &b_gain_db);
+    if (ret != 0) {
+        mp_raise_msg(&mp_type_RuntimeError, sensor_strerror(ret));
     }
-    return mp_obj_new_tuple(3, (mp_obj_t []) {mp_obj_new_float(r_gain_db), mp_obj_new_float(g_gain_db), mp_obj_new_float(b_gain_db)});
+    return mp_obj_new_tuple(3, (mp_obj_t []) {
+            mp_obj_new_float(r_gain_db),
+            mp_obj_new_float(g_gain_db),
+            mp_obj_new_float(b_gain_db)});
 }
 
 static mp_obj_t py_sensor_set_hmirror(mp_obj_t enable)
 {
-    if (sensor_set_hmirror(mp_obj_is_true(enable)) != 0) {
-        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Sensor control failed!"));
+    int ret = sensor_set_hmirror(mp_obj_is_true(enable));
+    if (ret != 0) {
+        mp_raise_msg(&mp_type_RuntimeError, sensor_strerror(ret));
     }
     return mp_const_none;
 }
@@ -511,8 +508,9 @@ static mp_obj_t py_sensor_get_hmirror()
 
 static mp_obj_t py_sensor_set_vflip(mp_obj_t enable)
 {
-    if (sensor_set_vflip(mp_obj_is_true(enable)) != 0) {
-        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Sensor control failed!"));
+    int ret = sensor_set_vflip(mp_obj_is_true(enable));
+    if (ret != 0) {
+        mp_raise_msg(&mp_type_RuntimeError, sensor_strerror(ret));
     }
     return mp_const_none;
 }
@@ -524,8 +522,9 @@ static mp_obj_t py_sensor_get_vflip()
 
 static mp_obj_t py_sensor_set_transpose(mp_obj_t enable)
 {
-    if (sensor_set_transpose(mp_obj_is_true(enable)) != 0) {
-        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Cannot transpose in JPEG mode!"));
+    int ret = sensor_set_transpose(mp_obj_is_true(enable));
+    if (ret != 0) {
+        mp_raise_msg(&mp_type_RuntimeError, sensor_strerror(ret));
     }
     return mp_const_none;
 }
@@ -537,8 +536,9 @@ static mp_obj_t py_sensor_get_transpose()
 
 static mp_obj_t py_sensor_set_auto_rotation(mp_obj_t enable)
 {
-    if (sensor_set_auto_rotation(mp_obj_is_true(enable)) != 0) {
-        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Cannot auto rotate in JPEG mode!"));
+    int ret = sensor_set_auto_rotation(mp_obj_is_true(enable));
+    if (ret != 0) {
+        mp_raise_msg(&mp_type_RuntimeError, sensor_strerror(ret));
     }
     return mp_const_none;
 }
@@ -556,8 +556,13 @@ static mp_obj_t py_sensor_set_framebuffers(mp_obj_t count)
         return mp_const_none;
     }
 
-    if ((c < 1) || (sensor_set_framebuffers(c) != 0)) {
-        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Invalid framebuffer count!"));
+    if (c < 1) {
+        mp_raise_msg(&mp_type_ValueError, sensor_strerror(SENSOR_ERROR_INVALID_ARGUMENT));
+    }
+
+    int ret = sensor_set_framebuffers(c);
+    if (ret != 0) {
+        mp_raise_msg(&mp_type_RuntimeError, sensor_strerror(ret));
     }
 
     return mp_const_none;
@@ -639,134 +644,125 @@ static mp_obj_t py_sensor_ioctl(uint n_args, const mp_obj_t *args)
 {
     mp_obj_t ret_obj = mp_const_none;
     int request = mp_obj_get_int(args[0]);
+    int ret = SENSOR_ERROR_INVALID_ARGUMENT;
 
     switch (request) {
         case IOCTL_SET_READOUT_WINDOW: {
-            if (n_args < 2) {
-                mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Sensor control failed!"));
+            if (n_args > 2) {
+                int x, y, w, h;
+                mp_obj_t *array;
+                mp_uint_t array_len;
+                mp_obj_get_array(args[1], &array_len, &array);
+
+                if (array_len == 4) {
+                    x = mp_obj_get_int(array[0]);
+                    y = mp_obj_get_int(array[1]);
+                    w = mp_obj_get_int(array[2]);
+                    h = mp_obj_get_int(array[3]);
+                } else if (array_len == 2) {
+                    w = mp_obj_get_int(array[0]);
+                    h = mp_obj_get_int(array[1]);
+                    x = 0;
+                    y = 0;
+                } else {
+                    mp_raise_msg(&mp_type_ValueError,
+                            MP_ERROR_TEXT("The tuple/list must either be (x, y, w, h) or (w, h)"));
+                }
+
+                ret = sensor_ioctl(request, x, y, w, h);
             }
-
-            int x, y, w, h;
-
-            mp_obj_t *array;
-            mp_uint_t array_len;
-            mp_obj_get_array(args[1], &array_len, &array);
-
-            if (array_len == 4) {
-                x = mp_obj_get_int(array[0]);
-                y = mp_obj_get_int(array[1]);
-                w = mp_obj_get_int(array[2]);
-                h = mp_obj_get_int(array[3]);
-            } else if (array_len == 2) {
-                w = mp_obj_get_int(array[0]);
-                h = mp_obj_get_int(array[1]);
-                x = 0;
-                y = 0;
-            } else {
-                mp_raise_msg(&mp_type_ValueError,
-                    MP_ERROR_TEXT("The tuple/list must either be (x, y, w, h) or (w, h)"));
-            }
-
-            if (sensor_ioctl(request, x, y, w, h) != 0) {
-                mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Sensor control failed!"));
-            }
-
             break;
         }
 
         case IOCTL_GET_READOUT_WINDOW: {
             int x, y, w, h;
-            if (sensor_ioctl(request, &x, &y, &w, &h) != 0) {
-                mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Sensor control failed!"));
+            ret = sensor_ioctl(request, &x, &y, &w, &h);
+            if (ret == 0) {
+                ret_obj = mp_obj_new_tuple(4, (mp_obj_t []) {mp_obj_new_int(x),
+                                                             mp_obj_new_int(y),
+                                                             mp_obj_new_int(w),
+                                                             mp_obj_new_int(h)});
             }
-            ret_obj = mp_obj_new_tuple(4, (mp_obj_t []) {mp_obj_new_int(x),
-                                                         mp_obj_new_int(y),
-                                                         mp_obj_new_int(w),
-                                                         mp_obj_new_int(h)});
             break;
         }
 
         case IOCTL_SET_TRIGGERED_MODE: {
-            if (n_args < 2 || sensor_ioctl(request, mp_obj_get_int(args[1])) != 0) {
-                mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Sensor control failed!"));
+            if (n_args > 2) {
+                ret = sensor_ioctl(request, mp_obj_get_int(args[1]));
             }
             break;
         }
 
         case IOCTL_GET_TRIGGERED_MODE: {
             int enabled;
-            if (sensor_ioctl(request, &enabled) != 0) {
-                mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Sensor control failed!"));
+            ret = sensor_ioctl(request, &enabled);
+            if (ret == 0) {
+                ret_obj = mp_obj_new_bool(enabled);
             }
-            ret_obj = mp_obj_new_bool(enabled);
             break;
         }
 
-    #if (OMV_ENABLE_OV5640_AF == 1)
+        #if (OMV_ENABLE_OV5640_AF == 1)
         case IOCTL_TRIGGER_AUTO_FOCUS:
         case IOCTL_PAUSE_AUTO_FOCUS:
         case IOCTL_RESET_AUTO_FOCUS: {
-            if (sensor_ioctl(request) != 0) {
-                mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Sensor control failed!"));
-            }
+            ret = sensor_ioctl(request);
             break;
         }
         case IOCTL_WAIT_ON_AUTO_FOCUS: {
-            if (sensor_ioctl(request, (n_args < 2) ? 5000 : mp_obj_get_int(args[1])) != 0) {
-                mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Sensor control failed!"));
-            }
+            ret = sensor_ioctl(request, (n_args < 2) ? 5000 : mp_obj_get_int(args[1]));
             break;
         }
-    #endif
+        #endif
 
         case IOCTL_LEPTON_GET_WIDTH: {
             int width;
-            if (sensor_ioctl(request, &width) != 0) {
-                mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Sensor control failed!"));
+            ret = sensor_ioctl(request, &width);
+            if (ret == 0) {
+                ret_obj = mp_obj_new_int(width);
             }
-            ret_obj = mp_obj_new_int(width);
             break;
         }
 
         case IOCTL_LEPTON_GET_HEIGHT: {
             int height;
-            if (sensor_ioctl(request, &height) != 0) {
-                mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Sensor control failed!"));
+            ret = sensor_ioctl(request, &height);
+            if (ret == 0) {
+                ret_obj = mp_obj_new_int(height);
             }
-            ret_obj = mp_obj_new_int(height);
             break;
         }
 
         case IOCTL_LEPTON_GET_RADIOMETRY: {
             int radiometry;
-            if (sensor_ioctl(request, &radiometry) != 0) {
-                mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Sensor control failed!"));
+            ret = sensor_ioctl(request, &radiometry);
+            if (ret == 0) {
+                ret_obj = mp_obj_new_int(radiometry);
             }
-            ret_obj = mp_obj_new_int(radiometry);
             break;
         }
 
         case IOCTL_LEPTON_GET_REFRESH: {
             int refresh;
-            if (sensor_ioctl(request, &refresh) != 0) {
-                mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Sensor control failed!"));
+            ret = sensor_ioctl(request, &refresh);
+            if (ret == 0) {
+                ret_obj = mp_obj_new_int(refresh);
             }
-            ret_obj = mp_obj_new_int(refresh);
             break;
         }
 
         case IOCTL_LEPTON_GET_RESOLUTION: {
             int resolution;
-            if (sensor_ioctl(request, &resolution) != 0) {
-                mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Sensor control failed!"));
+            ret = sensor_ioctl(request, &resolution);
+            if (ret == 0) {
+                ret_obj = mp_obj_new_int(resolution);
             }
-            ret_obj = mp_obj_new_int(resolution);
             break;
         }
 
         case IOCTL_LEPTON_RUN_COMMAND: {
-            if (n_args < 2 || sensor_ioctl(request, mp_obj_get_int(args[1])) != 0) {
-                mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Sensor control failed!"));
+            if (n_args > 2) {
+                ret = sensor_ioctl(request, mp_obj_get_int(args[1]));
             }
             break;
         }
@@ -776,9 +772,7 @@ static mp_obj_t py_sensor_ioctl(uint n_args, const mp_obj_t *args)
             int command = mp_obj_get_int(args[1]);
             uint16_t *data = (uint16_t *) mp_obj_str_get_data(args[2], &data_len);
             PY_ASSERT_TRUE_MSG(data_len > 0, "0 bytes transferred!");
-            if (sensor_ioctl(request, command, data, data_len / sizeof(uint16_t)) != 0) {
-                mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Sensor control failed!"));
-            }
+            ret = sensor_ioctl(request, command, data, data_len / sizeof(uint16_t));
             break;
         }
 
@@ -787,117 +781,106 @@ static mp_obj_t py_sensor_ioctl(uint n_args, const mp_obj_t *args)
             size_t data_len = mp_obj_get_int(args[2]);
             PY_ASSERT_TRUE_MSG(data_len > 0, "0 bytes transferred!");
             uint16_t *data = xalloc(data_len * sizeof(uint16_t));
-            if (sensor_ioctl(request, command, data, data_len) != 0) {
-                mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Sensor control failed!"));
+            ret = sensor_ioctl(request, command, data, data_len);
+            if (ret == 0) {
+                ret_obj = mp_obj_new_bytearray_by_ref(data_len * sizeof(uint16_t), data);
             }
-            ret_obj = mp_obj_new_bytearray_by_ref(data_len * sizeof(uint16_t), data);
             break;
         }
 
         case IOCTL_LEPTON_GET_FPA_TEMPERATURE:
         case IOCTL_LEPTON_GET_AUX_TEMPERATURE: {
             int temp;
-            if (sensor_ioctl(request, &temp) != 0) {
-                mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Sensor control failed!"));
+            ret = sensor_ioctl(request, &temp);
+            if (ret == 0) {
+                ret_obj = mp_obj_new_float((((float) temp) / 100) - 273.15f);
             }
-            ret_obj = mp_obj_new_float((((float) temp) / 100) - 273.15f);
             break;
         }
 
         case IOCTL_LEPTON_SET_MEASUREMENT_MODE:
-            if (n_args < 2 || sensor_ioctl(request, mp_obj_get_int(args[1])) != 0) {
-                mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Sensor control failed!"));
+            if (n_args > 2) {
+                ret = sensor_ioctl(request, mp_obj_get_int(args[1]));
             }
             break;
 
         case IOCTL_LEPTON_GET_MEASUREMENT_MODE: {
             int enabled;
-            if (sensor_ioctl(request, &enabled) != 0) {
-                mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Sensor control failed!"));
+            ret = sensor_ioctl(request, &enabled);
+            if (ret == 0) {
+                ret_obj = mp_obj_new_bool(enabled);
             }
-            ret_obj = mp_obj_new_bool(enabled);
             break;
         }
 
         case IOCTL_LEPTON_SET_MEASUREMENT_RANGE:
-            if (n_args < 3) {
-                mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Sensor control failed!"));
-            }
-            // GCC will not less us pass floats to ... so we have to pass float pointers instead.
-            float min = mp_obj_get_float(args[1]);
-            float max = mp_obj_get_float(args[2]);
-            if (sensor_ioctl(request, &min, &max) != 0) {
-                mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Sensor control failed!"));
+            if (n_args > 3) {
+                // GCC will not let us pass floats to ... so we have to pass float pointers instead.
+                float min = mp_obj_get_float(args[1]);
+                float max = mp_obj_get_float(args[2]);
+                ret = sensor_ioctl(request, &min, &max);
             }
             break;
 
         case IOCTL_LEPTON_GET_MEASUREMENT_RANGE: {
             float min, max;
-            if (sensor_ioctl(request, &min, &max) != 0) {
-                mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Sensor control failed!"));
+            ret = sensor_ioctl(request, &min, &max);
+            if (ret == 0) {
+                ret_obj = mp_obj_new_tuple(2, (mp_obj_t []) {mp_obj_new_float(min), mp_obj_new_float(max)});
             }
-            ret_obj = mp_obj_new_tuple(2, (mp_obj_t []) {mp_obj_new_float(min), mp_obj_new_float(max)});
             break;
         }
 
         #if (OMV_ENABLE_HM01B0 == 1)
         case IOCTL_HIMAX_MD_ENABLE: {
-            if (n_args < 2 || sensor_ioctl(request, mp_obj_get_int(args[1])) != 0) {
-                mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Sensor control failed!"));
+            if (n_args > 2) {
+                ret = sensor_ioctl(request, mp_obj_get_int(args[1]));
             }
             break;
         }
 
         case IOCTL_HIMAX_MD_WINDOW: {
-            if (n_args < 2) {
-                mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Sensor control failed!"));
+            if (n_args > 2) {
+                int x, y, w, h;
+                mp_obj_t *array;
+                mp_uint_t array_len;
+                mp_obj_get_array(args[1], &array_len, &array);
+
+                if (array_len == 4) {
+                    x = mp_obj_get_int(array[0]);
+                    y = mp_obj_get_int(array[1]);
+                    w = mp_obj_get_int(array[2]);
+                    h = mp_obj_get_int(array[3]);
+                } else if (array_len == 2) {
+                    w = mp_obj_get_int(array[0]);
+                    h = mp_obj_get_int(array[1]);
+                    x = 0;
+                    y = 0;
+                } else {
+                    mp_raise_msg(&mp_type_ValueError,
+                            MP_ERROR_TEXT("The tuple/list must either be (x, y, w, h) or (w, h)"));
+                }
+
+                ret = sensor_ioctl(request, x, y, w, h);
             }
-
-            int x, y, w, h;
-
-            mp_obj_t *array;
-            mp_uint_t array_len;
-            mp_obj_get_array(args[1], &array_len, &array);
-
-            if (array_len == 4) {
-                x = mp_obj_get_int(array[0]);
-                y = mp_obj_get_int(array[1]);
-                w = mp_obj_get_int(array[2]);
-                h = mp_obj_get_int(array[3]);
-            } else if (array_len == 2) {
-                w = mp_obj_get_int(array[0]);
-                h = mp_obj_get_int(array[1]);
-                x = 0;
-                y = 0;
-            } else {
-                mp_raise_msg(&mp_type_ValueError,
-                    MP_ERROR_TEXT("The tuple/list must either be (x, y, w, h) or (w, h)"));
-            }
-
-            if (sensor_ioctl(request, x, y, w, h) != 0) {
-                mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Sensor control failed!"));
-            }
-
             break;
         }
 
         case IOCTL_HIMAX_MD_THRESHOLD: {
-            if (n_args < 2 || sensor_ioctl(request, mp_obj_get_int(args[1])) != 0) {
-                mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Sensor control failed!"));
+            if (n_args > 2) {
+                ret = sensor_ioctl(request, mp_obj_get_int(args[1]));
             }
             break;
         }
 
         case IOCTL_HIMAX_MD_CLEAR: {
-            if (sensor_ioctl(request) != 0) {
-                mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Sensor control failed!"));
-            }
+            ret = sensor_ioctl(request);
             break;
         }
 
         case IOCTL_HIMAX_OSC_ENABLE: {
-            if (n_args < 2 || sensor_ioctl(request, mp_obj_get_int(args[1])) != 0) {
-                mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Sensor control failed!"));
+            if (n_args > 2) {
+                ret = sensor_ioctl(request, mp_obj_get_int(args[1]));
             }
             break;
         }
@@ -905,10 +888,15 @@ static mp_obj_t py_sensor_ioctl(uint n_args, const mp_obj_t *args)
         #endif // (OMV_ENABLE_HM01B0 == 1)
 
         default: {
-            mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Operation not supported!"));
+            mp_raise_msg(&mp_type_ValueError, sensor_strerror(SENSOR_ERROR_CTL_UNSUPPORTED));
             break;
         }
     }
+
+    if (ret != 0) {
+        mp_raise_msg(&mp_type_RuntimeError, sensor_strerror(ret));
+    }
+
     return ret_obj;
 }
 
@@ -923,7 +911,7 @@ static mp_obj_t py_sensor_set_color_palette(mp_obj_t palette_obj)
             sensor_set_color_palette(ironbow_table);
             break;
         default:
-            mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Invalid color palette!"));
+            mp_raise_msg(&mp_type_ValueError, sensor_strerror(SENSOR_ERROR_INVALID_ARGUMENT));
             break;
     }
     return mp_const_none;
