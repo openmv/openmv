@@ -97,16 +97,17 @@ __weak int sensor_init()
 {
     // Reset the sesnor state
     memset(&sensor, 0, sizeof(sensor_t));
-    return -1;
+    return SENSOR_ERROR_CTL_UNSUPPORTED;
 }
 
 __weak int sensor_abort()
 {
-    return -1;
+    return SENSOR_ERROR_CTL_UNSUPPORTED;
 }
 
 __weak int sensor_reset()
 {
+    // Disable any ongoing frame capture.
     sensor_abort();
 
     // Reset the sensor state
@@ -146,15 +147,22 @@ __weak int sensor_reset()
         mp_hal_delay_ms(10);
         DCMI_RESET_HIGH();
     }
+
     mp_hal_delay_ms(20);
+
+    // Check if the control is supported.
+    if (sensor.reset == NULL) {
+        return SENSOR_ERROR_CTL_UNSUPPORTED;
+    }
 
     // Call sensor-specific reset function
     if (sensor.reset(&sensor) != 0) {
-        return -1;
+        return SENSOR_ERROR_CTL_FAILED;
     }
 
     // Reset framebuffers
     framebuffer_reset_buffers();
+
     return 0;
 }
 
@@ -216,7 +224,7 @@ int sensor_probe_init()
                 sensor.slv_addr = cambus_scan(&sensor.bus);
                 #ifndef OMV_ENABLE_NONI2CIS
                 if (sensor.slv_addr == 0) {
-                    return -2;
+                    return SENSOR_ERROR_ISC_UNDETECTED;
                 }
                 #endif
             }
@@ -281,12 +289,11 @@ int sensor_probe_init()
                 sensor.reset_pol = ACTIVE_LOW;
                 break;
             }
-            // No sensors detected.
-            return -2;
+            return SENSOR_ERROR_ISC_UNDETECTED;
         #endif
 
         default:
-            return -3;
+            return SENSOR_ERROR_ISC_UNSUPPORTED;
             break;
     }
 
@@ -294,7 +301,7 @@ int sensor_probe_init()
         #if (OMV_ENABLE_OV2640 == 1)
         case OV2640_ID:
             if (sensor_set_xclk_frequency(OV2640_XCLK_FREQ) != 0) {
-                return -3;
+                return SENSOR_ERROR_TIM_INIT_FAILED;
             }
             init_ret = ov2640_init(&sensor);
             break;
@@ -303,7 +310,7 @@ int sensor_probe_init()
         #if (OMV_ENABLE_OV5640 == 1)
         case OV5640_ID:
             if (sensor_set_xclk_frequency(OV5640_XCLK_FREQ) != 0) {
-                return -3;
+                return SENSOR_ERROR_TIM_INIT_FAILED;
             }
             init_ret = ov5640_init(&sensor);
             break;
@@ -312,7 +319,7 @@ int sensor_probe_init()
         #if (OMV_ENABLE_OV7670 == 1)
         case OV7670_ID:
             if (sensor_set_xclk_frequency(OV7670_XCLK_FREQ) != 0) {
-                return -3;
+                return SENSOR_ERROR_TIM_INIT_FAILED;
             }
             init_ret = ov7670_init(&sensor);
             break;
@@ -321,7 +328,7 @@ int sensor_probe_init()
         #if (OMV_ENABLE_OV7690 == 1)
         case OV7690_ID:
             if (sensor_set_xclk_frequency(OV7690_XCLK_FREQ) != 0) {
-                return -3;
+                return SENSOR_ERROR_TIM_INIT_FAILED;
             }
             init_ret = ov7690_init(&sensor);
             break;
@@ -342,7 +349,7 @@ int sensor_probe_init()
         #if (OMV_ENABLE_MT9V034 == 1)
         case MT9V034_ID:
             if (sensor_set_xclk_frequency(MT9V034_XCLK_FREQ) != 0) {
-                return -3;
+                return SENSOR_ERROR_TIM_INIT_FAILED;
             }
             init_ret = mt9v034_init(&sensor);
             break;
@@ -351,7 +358,7 @@ int sensor_probe_init()
         #if (OMV_ENABLE_MT9M114 == 1)
         case MT9M114_ID:
             if (sensor_set_xclk_frequency(MT9M114_XCLK_FREQ) != 0) {
-                return -3;
+                return SENSOR_ERROR_TIM_INIT_FAILED;
             }
             init_ret = mt9m114_init(&sensor);
             break;
@@ -360,7 +367,7 @@ int sensor_probe_init()
         #if (OMV_ENABLE_LEPTON == 1)
         case LEPTON_ID:
             if (sensor_set_xclk_frequency(LEPTON_XCLK_FREQ) != 0) {
-                return -3;
+                return SENSOR_ERROR_TIM_INIT_FAILED;
             }
             init_ret = lepton_init(&sensor);
             break;
@@ -375,7 +382,7 @@ int sensor_probe_init()
         #if (OMV_ENABLE_GC2145 == 1)
         case GC2145_ID:
             if (sensor_set_xclk_frequency(GC2145_XCLK_FREQ) != 0) {
-                return -3;
+                return SENSOR_ERROR_TIM_INIT_FAILED;
             }
             init_ret = gc2145_init(&sensor);
             break;
@@ -384,20 +391,20 @@ int sensor_probe_init()
         #if (OMV_ENABLE_PAJ6100 == 1)
         case PAJ6100_ID:
             if (sensor_set_xclk_frequency(PAJ6100_XCLK_FREQ) != 0) {
-                return -3;
+                return SENSOR_ERROR_TIM_INIT_FAILED;
             }
             init_ret = paj6100_init(&sensor);
             break;
         #endif // (OMV_ENABLE_PAJ6100 == 1)
 
         default:
-            return -3;
+            return SENSOR_ERROR_ISC_UNSUPPORTED;
             break;
     }
 
     if (init_ret != 0 ) {
         // Sensor init failed.
-        return -4;
+        return SENSOR_ERROR_ISC_INIT_FAILED;
     }
 
     return 0;
@@ -410,12 +417,12 @@ __weak int sensor_get_id()
 
 __weak uint32_t sensor_get_xclk_frequency()
 {
-    return 0;
+    return SENSOR_ERROR_CTL_UNSUPPORTED;
 }
 
 __weak int sensor_set_xclk_frequency(uint32_t frequency)
 {
-    return -1;
+    return SENSOR_ERROR_CTL_UNSUPPORTED;
 }
 
 __weak bool sensor_is_detected()
@@ -425,19 +432,27 @@ __weak bool sensor_is_detected()
 
 __weak int sensor_sleep(int enable)
 {
+    // Disable any ongoing frame capture.
     sensor_abort();
 
-    if (sensor.sleep == NULL
-        || sensor.sleep(&sensor, enable) != 0) {
-        // Operation not supported
-        return -1;
+    // Check if the control is supported.
+    if (sensor.sleep == NULL) {
+        return SENSOR_ERROR_CTL_UNSUPPORTED;
     }
+
+    // Call the sensor specific function.
+    if (sensor.sleep(&sensor, enable) != 0) {
+        return SENSOR_ERROR_CTL_FAILED;
+    }
+
     return 0;
 }
 
 __weak int sensor_shutdown(int enable)
 {
     int ret = 0;
+
+    // Disable any ongoing frame capture.
     sensor_abort();
 
     if (enable) {
@@ -455,31 +470,44 @@ __weak int sensor_shutdown(int enable)
     }
 
     mp_hal_delay_ms(10);
+
     return ret;
 }
 
 __weak int sensor_read_reg(uint16_t reg_addr)
 {
+    // Check if the control is supported.
     if (sensor.read_reg == NULL) {
-        // Operation not supported
-        return -1;
+        return SENSOR_ERROR_CTL_UNSUPPORTED;
     }
-    return sensor.read_reg(&sensor, reg_addr);
+
+    // Call the sensor specific function.
+    if (sensor.read_reg(&sensor, reg_addr) == -1) {
+        return SENSOR_ERROR_IO_ERROR;
+    }
+
+    return 0;
 }
 
 __weak int sensor_write_reg(uint16_t reg_addr, uint16_t reg_data)
 {
+    // Check if the control is supported.
     if (sensor.write_reg == NULL) {
-        // Operation not supported
-        return -1;
+        return SENSOR_ERROR_CTL_UNSUPPORTED;
     }
-    return sensor.write_reg(&sensor, reg_addr, reg_data);
+
+    // Call the sensor specific function.
+    if (sensor.write_reg(&sensor, reg_addr, reg_data) == -1) {
+        return SENSOR_ERROR_IO_ERROR;
+    }
+
+    return 0;
 }
 
 __weak int sensor_set_pixformat(pixformat_t pixformat)
 {
+    // Check if the value has changed.
     if (sensor.pixformat == pixformat) {
-        // No change
         return 0;
     }
 
@@ -491,25 +519,29 @@ __weak int sensor_set_pixformat(pixformat_t pixformat)
             && (pixformat == PIXFORMAT_RGB565)
             && (MAIN_FB()->u * MAIN_FB()->v * 2 > size)
             && (MAIN_FB()->u * MAIN_FB()->v * 1 <= size)) {
-        // No change
         return 0;
     }
 
     // Cropping and transposing (and thus auto rotation) don't work in JPEG mode.
     if ((pixformat == PIXFORMAT_JPEG)
             && (sensor_get_cropped() || sensor.transpose || sensor.auto_rotation)) {
-        return -1;
+        return SENSOR_ERROR_PIXFORMAT_UNSUPPORTED;
     }
 
+    // Disable any ongoing frame capture.
     sensor_abort();
 
     // Flush previous frame.
     framebuffer_update_jpeg_buffer();
 
-    if (sensor.set_pixformat == NULL
-        || sensor.set_pixformat(&sensor, pixformat) != 0) {
-        // Operation not supported
-        return -1;
+    // Check if the control is supported.
+    if (sensor.set_pixformat == NULL) {
+        return SENSOR_ERROR_CTL_UNSUPPORTED;
+    }
+
+    // Call the sensor specific function.
+    if (sensor.set_pixformat(&sensor, pixformat) != 0) {
+        return SENSOR_ERROR_CTL_FAILED;
     }
 
     mp_hal_delay_ms(100); // wait for the camera to settle
@@ -534,16 +566,19 @@ __weak int sensor_set_framesize(framesize_t framesize)
         return 0;
     }
 
+    // Disable any ongoing frame capture.
     sensor_abort();
 
     // Flush previous frame.
     framebuffer_update_jpeg_buffer();
 
     // Call the sensor specific function
-    if (sensor.set_framesize == NULL
-        || sensor.set_framesize(&sensor, framesize) != 0) {
-        // Operation not supported
-        return -1;
+    if (sensor.set_framesize == NULL) {
+        return SENSOR_ERROR_CTL_UNSUPPORTED;
+    }
+
+    if (sensor.set_framesize(&sensor, framesize) != 0) {
+        return SENSOR_ERROR_CTL_FAILED;
     }
 
     mp_hal_delay_ms(100); // wait for the camera to settle
@@ -574,15 +609,16 @@ __weak int sensor_set_framerate(int framerate)
     }
 
     if (framerate < 0) {
-        return -1;
+        return SENSOR_ERROR_INVALID_ARGUMENT;
     }
 
     // Call the sensor specific function (does not fail if function is not set)
     if (sensor.set_framerate != NULL) {
-        if (sensor.set_framerate(&sensor, framerate) != 0) {
-            // Operation not supported
-            return -1;
-        }
+        return SENSOR_ERROR_CTL_UNSUPPORTED;
+    }
+
+    if (sensor.set_framerate(&sensor, framerate) != 0) {
+        return SENSOR_ERROR_CTL_FAILED;
     }
 
     // Set framerate
@@ -634,16 +670,17 @@ __weak uint32_t sensor_get_dst_bpp()
 
 __weak int sensor_set_windowing(int x, int y, int w, int h)
 {
+    // Check if the value has changed.
     if ((MAIN_FB()->x == x) && (MAIN_FB()->y == y) &&
             (MAIN_FB()->u == w) && (MAIN_FB()->v == h)) {
-        // No change
         return 0;
     }
 
     if (sensor.pixformat == PIXFORMAT_JPEG) {
-        return -1;
+        return SENSOR_ERROR_PIXFORMAT_UNSUPPORTED;
     }
 
+    // Disable any ongoing frame capture.
     sensor_abort();
 
     // Flush previous frame.
@@ -665,151 +702,218 @@ __weak int sensor_set_windowing(int x, int y, int w, int h)
 
 __weak int sensor_set_contrast(int level)
 {
-    if (sensor.set_contrast != NULL) {
-        return sensor.set_contrast(&sensor, level);
+    // Check if the control is supported.
+    if (sensor.set_contrast == NULL) {
+        return SENSOR_ERROR_CTL_UNSUPPORTED;
     }
-    return -1;
+
+    // Call the sensor specific function.
+    if (sensor.set_contrast(&sensor, level) != 0) {
+        return SENSOR_ERROR_CTL_FAILED;
+    }
+
+    return 0;
 }
 
 __weak int sensor_set_brightness(int level)
 {
-    if (sensor.set_brightness != NULL) {
-        return sensor.set_brightness(&sensor, level);
+    // Check if the control is supported.
+    if (sensor.set_brightness == NULL) {
+        return SENSOR_ERROR_CTL_UNSUPPORTED;
     }
-    return -1;
+
+    // Call the sensor specific function.
+    if (sensor.set_brightness(&sensor, level) != 0) {
+        return SENSOR_ERROR_CTL_FAILED;
+    }
+
+    return 0;
 }
 
 __weak int sensor_set_saturation(int level)
 {
-    if (sensor.set_saturation != NULL) {
-        return sensor.set_saturation(&sensor, level);
+    // Check if the control is supported.
+    if (sensor.set_saturation == NULL) {
+        return SENSOR_ERROR_CTL_UNSUPPORTED;
     }
-    return -1;
+
+    // Call the sensor specific function.
+    if (sensor.set_saturation(&sensor, level) != 0) {
+        return SENSOR_ERROR_CTL_FAILED;
+    }
+
+    return 0;
 }
 
 __weak int sensor_set_gainceiling(gainceiling_t gainceiling)
 {
+    // Check if the value has changed.
     if (sensor.gainceiling == gainceiling) {
-        /* no change */
         return 0;
     }
 
-    /* call the sensor specific function */
-    if (sensor.set_gainceiling == NULL
-        || sensor.set_gainceiling(&sensor, gainceiling) != 0) {
-        /* operation not supported */
-        return -1;
+    // Check if the control is supported.
+    if (sensor.set_gainceiling == NULL) {
+        return SENSOR_ERROR_CTL_UNSUPPORTED;
     }
 
+    // Call the sensor specific function.
+    if (sensor.set_gainceiling(&sensor, gainceiling) != 0) {
+        return SENSOR_ERROR_CTL_FAILED;
+    }
+
+    // Set the new control value.
     sensor.gainceiling = gainceiling;
+
     return 0;
 }
 
 __weak int sensor_set_quality(int qs)
 {
-    /* call the sensor specific function */
-    if (sensor.set_quality == NULL
-        || sensor.set_quality(&sensor, qs) != 0) {
-        /* operation not supported */
-        return -1;
+    // Check if the control is supported.
+    if (sensor.set_quality == NULL) {
+        return SENSOR_ERROR_CTL_UNSUPPORTED;
     }
+
+    // Call the sensor specific function.
+    if (sensor.set_quality(&sensor, qs) != 0) {
+        return SENSOR_ERROR_CTL_FAILED;
+    }
+
     return 0;
 }
 
 __weak int sensor_set_colorbar(int enable)
 {
-    /* call the sensor specific function */
-    if (sensor.set_colorbar == NULL
-        || sensor.set_colorbar(&sensor, enable) != 0) {
-        /* operation not supported */
-        return -1;
+    // Check if the control is supported.
+    if (sensor.set_colorbar == NULL) {
+        return SENSOR_ERROR_CTL_UNSUPPORTED;
     }
+
+    // Call the sensor specific function.
+    if (sensor.set_colorbar(&sensor, enable) != 0) {
+        return SENSOR_ERROR_CTL_FAILED;
+    }
+
     return 0;
 }
 
 __weak int sensor_set_auto_gain(int enable, float gain_db, float gain_db_ceiling)
 {
-    /* call the sensor specific function */
-    if (sensor.set_auto_gain == NULL
-        || sensor.set_auto_gain(&sensor, enable, gain_db, gain_db_ceiling) != 0) {
-        /* operation not supported */
-        return -1;
+    // Check if the control is supported.
+    if (sensor.set_auto_gain == NULL) {
+        return SENSOR_ERROR_CTL_UNSUPPORTED;
     }
+
+    // Call the sensor specific function.
+    if (sensor.set_auto_gain(&sensor, enable, gain_db, gain_db_ceiling) != 0) {
+        return SENSOR_ERROR_CTL_FAILED;
+    }
+
     return 0;
 }
 
 __weak int sensor_get_gain_db(float *gain_db)
 {
-    /* call the sensor specific function */
-    if (sensor.get_gain_db == NULL
-        || sensor.get_gain_db(&sensor, gain_db) != 0) {
-        /* operation not supported */
-        return -1;
+    // Check if the control is supported.
+    if (sensor.get_gain_db == NULL) {
+        return SENSOR_ERROR_CTL_UNSUPPORTED;
     }
+
+    // Call the sensor specific function.
+    if (sensor.get_gain_db(&sensor, gain_db) != 0) {
+        return SENSOR_ERROR_CTL_FAILED;
+    }
+
     return 0;
 }
 
 __weak int sensor_set_auto_exposure(int enable, int exposure_us)
 {
-    /* call the sensor specific function */
-    if (sensor.set_auto_exposure == NULL
-        || sensor.set_auto_exposure(&sensor, enable, exposure_us) != 0) {
-        /* operation not supported */
-        return -1;
+    // Check if the control is supported.
+    if (sensor.set_auto_exposure == NULL) {
+        return SENSOR_ERROR_CTL_UNSUPPORTED;
     }
+
+    // Call the sensor specific function.
+    if (sensor.set_auto_exposure(&sensor, enable, exposure_us) != 0) {
+        return SENSOR_ERROR_CTL_FAILED;
+    }
+
     return 0;
 }
 
 __weak int sensor_get_exposure_us(int *exposure_us)
 {
-    /* call the sensor specific function */
-    if (sensor.get_exposure_us == NULL
-        || sensor.get_exposure_us(&sensor, exposure_us) != 0) {
-        /* operation not supported */
-        return -1;
+    // Check if the control is supported.
+    if (sensor.get_exposure_us == NULL) {
+        return SENSOR_ERROR_CTL_UNSUPPORTED;
     }
+
+    // Call the sensor specific function.
+    if (sensor.get_exposure_us(&sensor, exposure_us) != 0) {
+        return SENSOR_ERROR_CTL_FAILED;
+    }
+
     return 0;
 }
 
 __weak int sensor_set_auto_whitebal(int enable, float r_gain_db, float g_gain_db, float b_gain_db)
 {
-    /* call the sensor specific function */
-    if (sensor.set_auto_whitebal == NULL
-        || sensor.set_auto_whitebal(&sensor, enable, r_gain_db, g_gain_db, b_gain_db) != 0) {
-        /* operation not supported */
-        return -1;
+    // Check if the control is supported.
+    if (sensor.set_auto_whitebal == NULL) {
+        return SENSOR_ERROR_CTL_UNSUPPORTED;
     }
+
+    // Call the sensor specific function.
+    if (sensor.set_auto_whitebal(&sensor, enable, r_gain_db, g_gain_db, b_gain_db) != 0) {
+        return SENSOR_ERROR_CTL_FAILED;
+    }
+
     return 0;
 }
 
 __weak int sensor_get_rgb_gain_db(float *r_gain_db, float *g_gain_db, float *b_gain_db)
 {
-    /* call the sensor specific function */
-    if (sensor.get_rgb_gain_db == NULL
-        || sensor.get_rgb_gain_db(&sensor, r_gain_db, g_gain_db, b_gain_db) != 0) {
-        /* operation not supported */
-        return -1;
+    // Check if the control is supported.
+    if (sensor.get_rgb_gain_db == NULL) {
+        return SENSOR_ERROR_CTL_UNSUPPORTED;
     }
+
+    // Call the sensor specific function.
+    if (sensor.get_rgb_gain_db(&sensor, r_gain_db, g_gain_db, b_gain_db) != 0) {
+        return SENSOR_ERROR_CTL_FAILED;
+    }
+
     return 0;
 }
 
 __weak int sensor_set_hmirror(int enable)
 {
+    // Check if the value has changed.
     if (sensor.hmirror == ((bool) enable)) {
-        /* no change */
         return 0;
     }
 
+    // Disable any ongoing frame capture.
     sensor_abort();
 
-    /* call the sensor specific function */
-    if (sensor.set_hmirror == NULL
-        || sensor.set_hmirror(&sensor, enable) != 0) {
-        /* operation not supported */
-        return -1;
+    // Check if the control is supported.
+    if (sensor.set_hmirror == NULL) {
+        return SENSOR_ERROR_CTL_UNSUPPORTED;
     }
+
+    // Call the sensor specific function.
+    if (sensor.set_hmirror(&sensor, enable) != 0) {
+        return SENSOR_ERROR_CTL_FAILED;
+    }
+
+    // Set the new control value.
     sensor.hmirror = enable;
-    mp_hal_delay_ms(100); // wait for the camera to settle
+
+    // Wait for the camera to settle
+    mp_hal_delay_ms(100);
+
     return 0;
 }
 
@@ -820,21 +924,30 @@ __weak bool sensor_get_hmirror()
 
 __weak int sensor_set_vflip(int enable)
 {
+    // Check if the value has changed.
     if (sensor.vflip == ((bool) enable)) {
-        /* no change */
         return 0;
     }
 
+    // Disable any ongoing frame capture.
     sensor_abort();
 
-    /* call the sensor specific function */
-    if (sensor.set_vflip == NULL
-        || sensor.set_vflip(&sensor, enable) != 0) {
-        /* operation not supported */
-        return -1;
+    // Check if the control is supported.
+    if (sensor.set_vflip == NULL) {
+        return SENSOR_ERROR_CTL_UNSUPPORTED;
     }
+
+    // Call the sensor specific function.
+    if (sensor.set_vflip(&sensor, enable) != 0) {
+        return SENSOR_ERROR_CTL_FAILED;
+    }
+
+    // Set the new control value.
     sensor.vflip = enable;
-    mp_hal_delay_ms(100); // wait for the camera to settle
+
+    // Wait for the camera to settle
+    mp_hal_delay_ms(100);
+
     return 0;
 }
 
@@ -845,18 +958,21 @@ __weak bool sensor_get_vflip()
 
 __weak int sensor_set_transpose(bool enable)
 {
+    // Check if the value has changed.
     if (sensor.transpose == enable) {
-        /* no change */
         return 0;
     }
 
-    if (sensor.pixformat == PIXFORMAT_JPEG) {
-        return -1;
-    }
-
+    // Disable any ongoing frame capture.
     sensor_abort();
 
+    if (sensor.pixformat == PIXFORMAT_JPEG) {
+        return SENSOR_ERROR_PIXFORMAT_UNSUPPORTED;
+    }
+
+    // Set the new control value.
     sensor.transpose = enable;
+
     return 0;
 }
 
@@ -867,17 +983,20 @@ __weak bool sensor_get_transpose()
 
 __weak int sensor_set_auto_rotation(bool enable)
 {
+    // Check if the value has changed.
     if (sensor.auto_rotation == enable) {
-        /* no change */
         return 0;
     }
 
-    if (sensor.pixformat == PIXFORMAT_JPEG) {
-        return -1;
-    }
-
+    // Disable any ongoing frame capture.
     sensor_abort();
 
+    // Operation not supported on JPEG images.
+    if (sensor.pixformat == PIXFORMAT_JPEG) {
+        return SENSOR_ERROR_PIXFORMAT_UNSUPPORTED;
+    }
+
+    // Set the new control value.
     sensor.auto_rotation = enable;
     return 0;
 }
@@ -889,6 +1008,7 @@ __weak bool sensor_get_auto_rotation()
 
 __weak int sensor_set_framebuffers(int count)
 {
+    // Disable any ongoing frame capture.
     sensor_abort();
 
     // Flush previous frame.
@@ -899,29 +1019,37 @@ __weak int sensor_set_framebuffers(int count)
 
 __weak int sensor_set_special_effect(sde_t sde)
 {
+    // Check if the value has changed.
     if (sensor.sde == sde) {
-        /* no change */
         return 0;
     }
 
-    /* call the sensor specific function */
-    if (sensor.set_special_effect == NULL
-        || sensor.set_special_effect(&sensor, sde) != 0) {
-        /* operation not supported */
-        return -1;
+    // Check if the control is supported.
+    if (sensor.set_special_effect == NULL) {
+        return SENSOR_ERROR_CTL_UNSUPPORTED;
+    }
+    
+    // Call the sensor specific function.
+    if (sensor.set_special_effect(&sensor, sde) != 0) {
+        return SENSOR_ERROR_CTL_FAILED;
     }
 
+    // Set the new control value.
     sensor.sde = sde;
+
     return 0;
 }
 
 __weak int sensor_set_lens_correction(int enable, int radi, int coef)
 {
-    /* call the sensor specific function */
-    if (sensor.set_lens_correction == NULL
-        || sensor.set_lens_correction(&sensor, enable, radi, coef) != 0) {
-        /* operation not supported */
-        return -1;
+    // Check if the control is supported.
+    if (sensor.set_lens_correction == NULL) {
+        return SENSOR_ERROR_CTL_UNSUPPORTED;
+    }
+
+    // Call the sensor specific function.
+    if (sensor.set_lens_correction(&sensor, enable, radi, coef) != 0) {
+        return SENSOR_ERROR_CTL_FAILED;
     }
 
     return 0;
@@ -929,19 +1057,21 @@ __weak int sensor_set_lens_correction(int enable, int radi, int coef)
 
 __weak int sensor_ioctl(int request, ... /* arg */)
 {
-    int ret = -1;
-
+    // Disable any ongoing frame capture.
     sensor_abort();
 
-    if (sensor.ioctl != NULL) {
-        va_list ap;
-        va_start(ap, request);
-        /* call the sensor specific function */
-        ret = sensor.ioctl(&sensor, request, ap);
-        va_end(ap);
+    // Check if the control is supported.
+    if (sensor.ioctl == NULL) {
+        return SENSOR_ERROR_CTL_UNSUPPORTED;
     }
 
-    return ret;
+    va_list ap;
+    va_start(ap, request);
+    // Call the sensor specific function.
+    int ret = sensor.ioctl(&sensor, request, ap);
+    va_end(ap);
+
+    return ((ret != 0) ? SENSOR_ERROR_CTL_FAILED : 0);
 }
 
 __weak int sensor_set_vsync_callback(vsync_cb_t vsync_cb)
@@ -1061,6 +1191,41 @@ __weak int sensor_auto_crop_framebuffer()
     // Pickout a good buffer count for the user.
     framebuffer_auto_adjust_buffers();
     return 0;
+}
+
+mp_rom_error_text_t sensor_strerror(int error)
+{
+    static mp_rom_error_text_t sensor_errors[] = {
+        MP_ERROR_TEXT("No error."),
+        MP_ERROR_TEXT("Sensor control failed."),
+        MP_ERROR_TEXT("The requested operation is not supported by the image sensor."),
+        MP_ERROR_TEXT("Failed to detect the image sensor or image sensor is detached."),
+        MP_ERROR_TEXT("The detected image sensor is not supported."),
+        MP_ERROR_TEXT("Failed to initialize the image sensor."),
+        MP_ERROR_TEXT("Failed to initialize the image sensor clock."),
+        MP_ERROR_TEXT("Failed to initialize the image sensor DMA."),
+        MP_ERROR_TEXT("Failed to initialize the image sensor DCMI."),
+        MP_ERROR_TEXT("An low level I/O error has occurred."),
+        MP_ERROR_TEXT("Frame capture has failed."),
+        MP_ERROR_TEXT("Frame capture has timed out."),
+        MP_ERROR_TEXT("Frame size is not supported or is not set."),
+        MP_ERROR_TEXT("Pixel format is not supported or is not set."),
+        MP_ERROR_TEXT("Window is not supported or is not set."),
+        MP_ERROR_TEXT("An invalid argument is used."),
+        MP_ERROR_TEXT("The requested operation is not supported on the current pixel format."),
+        MP_ERROR_TEXT("Frame buffer error."),
+        MP_ERROR_TEXT("Frame buffer overflow, try reducing the frame size."),
+        MP_ERROR_TEXT("JPEG frame buffer overflow."),
+    };
+
+    // Sensor errors are negative.
+    error = ((error < 0) ? (error * -1) : error);
+
+    if (error > (sizeof(sensor_errors) / sizeof(sensor_errors[0]))) {
+        return "Unknown error.";
+    } else {
+        return sensor_errors[error];
+    }
 }
 
 __weak int sensor_snapshot(sensor_t *sensor, image_t *image, uint32_t flags)

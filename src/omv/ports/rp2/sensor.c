@@ -95,7 +95,7 @@ int sensor_init()
     // Configure the sensor external clock (XCLK).
     if (sensor_set_xclk_frequency(OMV_XCLK_FREQUENCY) != 0) {
         // Failed to initialize the sensor clock.
-        return -1;
+        return SENSOR_ERROR_TIM_INIT_FAILED;
     }
 
     // Detect and initialize the image sensor.
@@ -183,7 +183,7 @@ int sensor_set_xclk_frequency(uint32_t frequency)
 
 int sensor_set_windowing(int x, int y, int w, int h)
 {
-    return -1;
+    return SENSOR_ERROR_CTL_UNSUPPORTED;
 }
 
 static void dma_irq_handler()
@@ -214,7 +214,7 @@ int sensor_snapshot(sensor_t *sensor, image_t *image, uint32_t flags)
     framebuffer_update_jpeg_buffer();
 
     if (sensor_check_framebuffer_size() != 0) {
-        return -1;
+        return SENSOR_ERROR_FRAMEBUFFER_OVERFLOW;
     }
 
     // Free the current FB head.
@@ -230,7 +230,7 @@ int sensor_snapshot(sensor_t *sensor, image_t *image, uint32_t flags)
             MAIN_FB()->bpp = 2;
             break;
         default:
-            return -1;
+            return SENSOR_ERROR_INVALID_PIXFORMAT;
     }
 
     vbuffer_t *buffer = framebuffer_get_head(FB_NO_FLAGS);
@@ -240,7 +240,7 @@ int sensor_snapshot(sensor_t *sensor, image_t *image, uint32_t flags)
     if (buffer == NULL && !dma_channel_is_busy(DCMI_DMA_CHANNEL)) {
         buffer = framebuffer_get_tail(FB_PEEK);
         if (buffer == NULL) {
-            return -1;
+            return SENSOR_ERROR_FRAMEBUFFER_ERROR;
         }
 
         // Configure the DMA on the first frame, for later frames only the write is changed.
@@ -262,7 +262,7 @@ int sensor_snapshot(sensor_t *sensor, image_t *image, uint32_t flags)
         buffer = framebuffer_get_head(FB_NO_FLAGS);
         if ((mp_hal_ticks_ms() - ticks) > 3000) {
             sensor_abort();
-            return -1;
+            return SENSOR_ERROR_CAPTURE_TIMEOUT;
         }
     }
 

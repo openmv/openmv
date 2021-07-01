@@ -69,7 +69,7 @@ int sensor_init()
     // Configure the sensor external clock (XCLK).
     if (sensor_set_xclk_frequency(OMV_XCLK_FREQUENCY) != 0) {
         // Failed to initialize the sensor clock.
-        return -1;
+        return SENSOR_ERROR_TIM_INIT_FAILED;
     }
 
     // Detect and initialize the image sensor.
@@ -82,7 +82,7 @@ int sensor_init()
     // Configure the DCMI interface.
     if (sensor_dcmi_config(PIXFORMAT_INVALID) != 0){
         // DCMI config failed
-        return -6;
+        return SENSOR_ERROR_DCMI_INIT_FAILED;
     }
 
     // Clear fb_enabled flag
@@ -162,7 +162,7 @@ int sensor_set_xclk_frequency(uint32_t frequency)
 
 int sensor_set_windowing(int x, int y, int w, int h)
 {
-    return -1;
+    return SENSOR_ERROR_CTL_UNSUPPORTED;
 }
 
 // This is the default snapshot function, which can be replaced in sensor_init functions.
@@ -179,14 +179,14 @@ int sensor_snapshot(sensor_t *sensor, image_t *image, uint32_t flags)
     }
 
     if (sensor_check_framebuffer_size() != 0) {
-        return -1;
+        return SENSOR_ERROR_FRAMEBUFFER_OVERFLOW;
     }
 
     framebuffer_free_current_buffer();
     vbuffer_t *buffer = framebuffer_get_tail(FB_NO_FLAGS);
 
     if (!buffer) {
-        return -1;
+        return SENSOR_ERROR_FRAMEBUFFER_ERROR;
     }
 
     uint8_t *b = buffer->data;

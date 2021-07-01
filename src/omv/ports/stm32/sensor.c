@@ -130,7 +130,7 @@ int sensor_init()
     // Configure the sensor external clock (XCLK).
     if (sensor_set_xclk_frequency(OMV_XCLK_FREQUENCY) != 0) {
         // Failed to initialize the sensor clock.
-        return -1;
+        return SENSOR_ERROR_TIM_INIT_FAILED;
     }
 
     // Detect and initialize the image sensor.
@@ -142,13 +142,13 @@ int sensor_init()
     // Configure the DCMI DMA Stream
     if (sensor_dma_config() != 0) {
         // DMA problem
-        return -5;
+        return SENSOR_ERROR_DMA_INIT_FAILED;
     }
 
     // Configure the DCMI interface.
     if (sensor_dcmi_config(PIXFORMAT_INVALID) != 0){
         // DCMI config failed
-        return -6;
+        return SENSOR_ERROR_DCMI_INIT_FAILED;
     }
 
     // Clear fb_enabled flag
@@ -751,7 +751,7 @@ int sensor_snapshot(sensor_t *sensor, image_t *image, uint32_t flags)
 
         // Error out if the pixformat is not set.
         if (!bytes_per_pixel) {
-            return -1;
+            return SENSOR_ERROR_INVALID_PIXFORMAT;
         }
 
         uint32_t x_crop = get_dcmi_hw_crop(bytes_per_pixel);
@@ -770,14 +770,14 @@ int sensor_snapshot(sensor_t *sensor, image_t *image, uint32_t flags)
         || (dma_line_width_bytes > (OMV_LINE_BUF_SIZE / 2))
         || (!length)
         || (length % DMA_LENGTH_ALIGNMENT)) {
-            return -2;
+            return SENSOR_ERROR_INVALID_FRAMESIZE;
         }
 
         // Get the destination buffer address.
         vbuffer_t *buffer = framebuffer_get_tail(FB_PEEK);
 
         if ((sensor->pixformat == PIXFORMAT_JPEG) && (sensor->chip_id == OV2640_ID) && (!buffer)) {
-            return -3;
+            return SENSOR_ERROR_FRAMEBUFFER_ERROR;
         }
 
         #if (OMV_ENABLE_SENSOR_MDMA == 1)
@@ -901,7 +901,7 @@ int sensor_snapshot(sensor_t *sensor, image_t *image, uint32_t flags)
             }
             #endif
 
-            return -4;
+            return SENSOR_ERROR_CAPTURE_TIMEOUT;
         }
     }
 
@@ -921,7 +921,7 @@ int sensor_snapshot(sensor_t *sensor, image_t *image, uint32_t flags)
 
     // The JPEG in the frame buffer is actually invalid.
     if (buffer->jpeg_buffer_overflow) {
-        return -5;
+        return SENSOR_ERROR_JPEG_OVERFLOW;
     }
 
     // Prepare the frame buffer w/h/bpp values given the image type.
