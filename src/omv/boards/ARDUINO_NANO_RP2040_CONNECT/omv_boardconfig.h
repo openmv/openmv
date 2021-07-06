@@ -86,6 +86,12 @@ extern unsigned char *OMV_UNIQUE_ID_ADDR;
 // USB IRQn.
 #define OMV_USB_IRQN            (USBCTRL_IRQ_IRQn)
 
+// Jump to bootloader function.
+#ifndef LINKER_SCRIPT
+void pico_reset_to_bootloader(void);
+#endif
+#define MICROPY_RESET_TO_BOOTLOADER pico_reset_to_bootloader
+
 // Linker script constants (see the linker script template port/x.ld.S).
 #define OMV_FB_MEMORY           RAM    // Framebuffer, fb_alloc
 #define OMV_MAIN_MEMORY         RAM    // data, bss and heap memory
