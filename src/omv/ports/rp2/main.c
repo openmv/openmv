@@ -47,6 +47,7 @@
 #include "hardware/rtc.h"
 #include "hardware/structs/rosc.h"
 #include "pico/unique_id.h"
+#include "pico/bootrom.h"
 
 #include "omv_boardconfig.h"
 #include "framebuffer.h"
@@ -84,6 +85,11 @@ void __fatal_error()
         gpio_put(LED_PIN, 0);
         sleep_ms(100);
     }
+}
+
+void pico_reset_to_bootloader(void)
+{
+    reset_usb_boot(0, 1);
 }
 
 void exec_boot_script(const char *path, bool interruptible)
