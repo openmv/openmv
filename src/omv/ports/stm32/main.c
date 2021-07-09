@@ -458,7 +458,7 @@ int main(void)
     #endif
 
     #if MICROPY_HW_SDRAM_STARTUP_TEST
-    sdram_test(MICROPY_HW_SDRAM_TEST_EXHAUSTIVE);
+    sdram_test(false);
     #endif
 
     // Basic sub-system init
