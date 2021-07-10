@@ -31,7 +31,7 @@ extern unsigned char *OMV_UNIQUE_ID_ADDR;
 #define OMV_XCLK_FREQUENCY      (12500000)
 
 // RAW buffer size
-#define OMV_RAW_BUF_SIZE        (151*1024)
+#define OMV_RAW_BUF_SIZE        (136*1024)
 
 // Enable hardware JPEG
 #define OMV_HARDWARE_JPEG       (0)
@@ -97,7 +97,7 @@ void pico_reset_to_bootloader(void);
 #define OMV_MAIN_MEMORY         RAM    // data, bss and heap memory
 #define OMV_STACK_MEMORY        RAM    // stack memory
 
-#define OMV_FB_SIZE             (151K)      // FB memory: header + QVGA/GS image
+#define OMV_FB_SIZE             (136K)      // FB memory: header + QVGA/GS image
 #define OMV_FB_ALLOC_SIZE       (12K)       // minimum fb alloc size
 #define OMV_STACK_SIZE          (8K)
 #define OMV_HEAP_SIZE           (32 * 1024) // MicroPython's heap
