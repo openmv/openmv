@@ -42,6 +42,11 @@
 #include "genhdr/mpversion.h"
 #include "pendsv.h"
 
+#if MICROPY_PY_BLUETOOTH
+#include "extmod/modbluetooth.h"
+#include "mpbthciport.h"
+#endif
+
 #include "pico/stdlib.h"
 #include "pico/binary_info.h"
 #include "hardware/rtc.h"
@@ -174,6 +179,10 @@ soft_reset:
     machine_pin_init();
     rp2_pio_init();
 
+    #if MICROPY_PY_BLUETOOTH
+    mp_bluetooth_hci_init();
+    #endif
+
     pendsv_init();
     usbdbg_init();
 
@@ -244,6 +253,9 @@ soft_reset:
 
     #if MICROPY_PY_AUDIO
     py_audio_deinit();
+    #endif
+    #if MICROPY_PY_BLUETOOTH
+    mp_bluetooth_deinit();
     #endif
     rp2_pio_deinit();
     machine_pin_deinit();
