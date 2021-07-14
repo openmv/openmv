@@ -399,7 +399,7 @@
 #define OMV_SPI_LCD_RS_OFF()                HAL_GPIO_WritePin(OMV_SPI_LCD_RS_PORT, OMV_SPI_LCD_RS_PIN, GPIO_PIN_SET)
 #define OMV_SPI_LCD_RS_ON()                 HAL_GPIO_WritePin(OMV_SPI_LCD_RS_PORT, OMV_SPI_LCD_RS_PIN, GPIO_PIN_RESET)
 
-#define OMV_SPI_LCD_CS_PIN                  (GPIO_PIN_8)
+#define OMV_SPI_LCD_CS_PIN                  (GPIO_PIN_0)
 #define OMV_SPI_LCD_CS_PORT                 (GPIOI)
 #define OMV_SPI_LCD_CS_HIGH()               HAL_GPIO_WritePin(OMV_SPI_LCD_CS_PORT, OMV_SPI_LCD_CS_PIN, GPIO_PIN_SET)
 #define OMV_SPI_LCD_CS_LOW()                HAL_GPIO_WritePin(OMV_SPI_LCD_CS_PORT, OMV_SPI_LCD_CS_PIN, GPIO_PIN_RESET)
@@ -441,7 +441,7 @@
 #define OMV_FIR_LEPTON_SCLK_PORT            (GPIOI)
 #define OMV_FIR_LEPTON_SCLK_ALT             (GPIO_AF5_SPI2)
 
-#define OMV_FIR_LEPTON_CS_PIN               (GPIO_PIN_8)
+#define OMV_FIR_LEPTON_CS_PIN               (GPIO_PIN_0)
 #define OMV_FIR_LEPTON_CS_PORT              (GPIOI)
 #define OMV_FIR_LEPTON_CS_HIGH()            HAL_GPIO_WritePin(OMV_FIR_LEPTON_CS_PORT, OMV_FIR_LEPTON_CS_PIN, GPIO_PIN_SET)
 #define OMV_FIR_LEPTON_CS_LOW()             HAL_GPIO_WritePin(OMV_FIR_LEPTON_CS_PORT, OMV_FIR_LEPTON_CS_PIN, GPIO_PIN_RESET)
