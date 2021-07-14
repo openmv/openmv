@@ -264,7 +264,13 @@ int cambus_scan(cambus_t *bus)
             return (addr << 1);
         }
     }
-
+    #if defined(STM32H7)
+    // After a failed scan the bus can get stuck. Re-initializing the bus fixes
+    // it, but it seems disabling and re-enabling the bus is all that's needed.
+    __HAL_I2C_DISABLE(bus->i2c);
+    mp_hal_delay_ms(10);
+    __HAL_I2C_ENABLE(bus->i2c);
+    #endif
     return 0;
 }
 
