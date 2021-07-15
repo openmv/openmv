@@ -99,7 +99,7 @@ int sensor_init()
     }
 
     // Detect and initialize the image sensor.
-    if ((init_ret = sensor_probe_init()) != 0) {
+    if ((init_ret = sensor_probe_init(ISC_I2C_ID, ISC_I2C_SPEED)) != 0) {
         // Sensor probe/init failed.
         return init_ret;
     }

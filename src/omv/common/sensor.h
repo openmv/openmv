@@ -259,7 +259,7 @@ void sensor_init0();
 int sensor_init();
 
 // Detect and initialize the image sensor.
-int sensor_probe_init();
+int sensor_probe_init(uint32_t bus_id, uint32_t bus_speed);
 
 // Configure DCMI hardware interface.
 int sensor_dcmi_config(uint32_t pixformat);
