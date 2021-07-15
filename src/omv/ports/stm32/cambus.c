@@ -76,6 +76,7 @@ static const uint32_t cambus_timing[CAMBUS_SPEED_MAX] = {
 int cambus_init(cambus_t *bus, uint32_t bus_id, uint32_t speed)
 {
     bus->id = bus_id;
+    bus->speed = speed;
     bus->i2c = NULL;
     bus->initialized = false;
     bus->scl_pin = (omv_gpio_t) {0, 0};
@@ -116,8 +117,6 @@ int cambus_init(cambus_t *bus, uint32_t bus_id, uint32_t speed)
 
     if (speed < 0 || speed >= CAMBUS_SPEED_MAX) {
         return -1;
-    } else {
-        bus->speed = cambus_timing[speed];
     }
 
     // Our code only knows about these two I2Cs instances.
@@ -127,14 +126,19 @@ int cambus_init(cambus_t *bus, uint32_t bus_id, uint32_t speed)
     } else if (bus->i2c->Instance == ISC_I2C) {
         bus->scl_pin = (omv_gpio_t) {ISC_I2C_SCL_PIN, ISC_I2C_PORT};
         bus->sda_pin = (omv_gpio_t) {ISC_I2C_SDA_PIN, ISC_I2C_PORT};
+    #if defined(ISC_I2C_ALT)
+    } else if (bus->i2c->Instance == ISC_I2C_ALT) {
+        bus->scl_pin = (omv_gpio_t) {ISC_I2C_ALT_SCL_PIN, ISC_I2C_ALT_PORT};
+        bus->sda_pin = (omv_gpio_t) {ISC_I2C_ALT_SDA_PIN, ISC_I2C_ALT_PORT};
+    #endif
     }
 
     // Configure the I2C handle
     bus->i2c->Init.AddressingMode  = I2C_ADDRESSINGMODE_7BIT;
     #if !defined(STM32F4)
-    bus->i2c->Init.Timing          = bus->speed;
+    bus->i2c->Init.Timing          = cambus_timing[speed];
     #else
-    bus->i2c->Init.ClockSpeed      = bus->speed;
+    bus->i2c->Init.ClockSpeed      = cambus_timing[speed];
     bus->i2c->Init.DutyCycle       = I2C_DUTYCYCLE_2;
     #endif
     bus->i2c->Init.DualAddressMode = I2C_DUALADDRESS_DISABLED;
