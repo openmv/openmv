@@ -238,8 +238,24 @@
 #define FIR_I2C_FORCE_RESET()   __HAL_RCC_I2C3_FORCE_RESET()
 #define FIR_I2C_RELEASE_RESET() __HAL_RCC_I2C3_RELEASE_RESET()
 
-#define DCMI_PWDN_PIN           (GPIO_PIN_13)
-#define DCMI_PWDN_PORT          (GPIOC)
+// GPIO.0 is connected to the sensor module reset pin on the Portenta
+// breakout board and to the LDO's LDO_ENABLE pin on the Himax shield.
+// The sensor probing process will detect the right reset or powerdown
+// polarity, so it should be fine to enable it for both boards.
+#define DCMI_RESET_PIN          (GPIO_PIN_13)
+#define DCMI_RESET_PORT         (GPIOC)
+
+// GPIO.1 is connected to the sensor module frame sync pin (OUTPUT) on
+// the Portenta breakout board and to the INT pin (OUTPUT) on the Himax
+// shield, so it can't be enabled for the two boards at the same time.
+//#define DCMI_FSYNC_PIN          (GPIO_PIN_15)
+//#define DCMI_FSYNC_PORT         (GPIOC)
+
+// GPIO.3 is connected to the powerdown pin on the Portenta breakout board,
+// and to the STROBE pin on the Himax shield, however it's not actually
+// used on the Himax shield and can be safely enable for the two boards.
+#define DCMI_PWDN_PIN           (GPIO_PIN_5)
+#define DCMI_PWDN_PORT          (GPIOD)
 
 /* DCMI */
 #define DCMI_TIM                (TIM1)
@@ -286,11 +302,19 @@
 #endif
 
 #if defined(DCMI_PWDN_PIN)
-#define DCMI_PWDN_LOW()         HAL_GPIO_WritePin(DCMI_PWDN_PORT, DCMI_PWDN_PIN, GPIO_PIN_SET)
-#define DCMI_PWDN_HIGH()        HAL_GPIO_WritePin(DCMI_PWDN_PORT, DCMI_PWDN_PIN, GPIO_PIN_RESET)
+#define DCMI_PWDN_LOW()         HAL_GPIO_WritePin(DCMI_PWDN_PORT, DCMI_PWDN_PIN, GPIO_PIN_RESET)
+#define DCMI_PWDN_HIGH()        HAL_GPIO_WritePin(DCMI_PWDN_PORT, DCMI_PWDN_PIN, GPIO_PIN_SET)
 #else
 #define DCMI_PWDN_LOW()
 #define DCMI_PWDN_HIGH()
+#endif
+
+#if defined(DCMI_FSYNC_PIN)
+#define DCMI_FSYNC_LOW()        HAL_GPIO_WritePin(DCMI_FSYNC_PORT, DCMI_FSYNC_PIN, GPIO_PIN_RESET)
+#define DCMI_FSYNC_HIGH()       HAL_GPIO_WritePin(DCMI_FSYNC_PORT, DCMI_FSYNC_PIN, GPIO_PIN_SET)
+#else
+#define DCMI_FSYNC_LOW()
+#define DCMI_FSYNC_HIGH()
 #endif
 
 #define DCMI_VSYNC_IRQN         EXTI9_5_IRQn
