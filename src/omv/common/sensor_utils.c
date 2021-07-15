@@ -166,7 +166,7 @@ __weak int sensor_reset()
     return 0;
 }
 
-int sensor_probe_init()
+int sensor_probe_init(uint32_t bus_id, uint32_t bus_speed)
 {
     int init_ret = 0;
 
@@ -192,7 +192,7 @@ int sensor_probe_init()
     mp_hal_delay_ms(10);
 
     // Initialize the camera bus.
-    cambus_init(&sensor.bus, ISC_I2C_ID, ISC_I2C_SPEED);
+    cambus_init(&sensor.bus, bus_id, bus_speed);
     mp_hal_delay_ms(10);
 
     // Probe the sensor
