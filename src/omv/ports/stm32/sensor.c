@@ -24,6 +24,7 @@
 #define DMA_MAX_XFER_SIZE_DBL   ((DMA_MAX_XFER_SIZE)*2)
 #define DMA_LENGTH_ALIGNMENT    (16)
 #define SENSOR_TIMEOUT_MS       (3000)
+#define ARRAY_SIZE(a)           (sizeof(a) / sizeof((a)[0]))
 
 // Higher performance complete MDMA offload.
 #if (OMV_ENABLE_SENSOR_MDMA == 1)
@@ -105,9 +106,12 @@ void sensor_init0()
 {
     sensor_abort();
 
-    // Always reinit cambus after soft reset which could have terminated the cambus in the middle
-    // of an I2C read/write.
-    cambus_init(&sensor.bus, ISC_I2C_ID, ISC_I2C_SPEED);
+    // Re-init cambus to reset the bus state after soft reset, which
+    // could have interrupted the bus in the middle of a transfer.
+    if (sensor.bus.initialized) {
+        // Reinitialize the bus using the last used id and speed.
+        cambus_init(&sensor.bus, sensor.bus.id, sensor.bus.speed);
+    }
 
     // Disable VSYNC IRQ and callback
     sensor_set_vsync_callback(NULL);
@@ -119,6 +123,14 @@ void sensor_init0()
 int sensor_init()
 {
     int init_ret = 0;
+
+    // List of cambus I2C buses to scan.
+    uint32_t buses[][2] = {
+        {ISC_I2C_ID, ISC_I2C_SPEED},
+        #if defined(ISC_I2C_ALT)
+        {ISC_I2C_ALT_ID, ISC_I2C_ALT_SPEED},
+        #endif
+    };
 
     // Reset the sesnor state
     memset(&sensor, 0, sizeof(sensor_t));
@@ -134,9 +146,18 @@ int sensor_init()
     }
 
     // Detect and initialize the image sensor.
-    if ((init_ret = sensor_probe_init(ISC_I2C_ID, ISC_I2C_SPEED)) != 0) {
-        // Sensor probe/init failed.
-        return init_ret;
+    for (uint32_t i=0, n_buses = ARRAY_SIZE(buses); i < n_buses; i++) {
+        uint32_t id = buses[i][0], speed = buses[i][1];
+        if ((init_ret = sensor_probe_init(id, speed)) == 0) {
+            // Sensor was detected on the current bus.
+            break;
+        }
+        cambus_deinit(&sensor.bus);
+        // Scan the next bus or fail if this is the last one.
+        if ((i+1) == n_buses) {
+            // Sensor probe/init failed.
+            return init_ret;
+        }
     }
 
     // Configure the DCMI DMA Stream
