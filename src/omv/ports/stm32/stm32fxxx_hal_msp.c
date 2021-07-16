@@ -339,12 +339,18 @@ void HAL_TIM_PWM_MspInit(TIM_HandleTypeDef *htim)
 
         /* Timer GPIO configuration */
         GPIO_InitTypeDef  GPIO_InitStructure;
-        GPIO_InitStructure.Pin       = DCMI_TIM_PIN;
         GPIO_InitStructure.Pull      = GPIO_PULLUP;
         GPIO_InitStructure.Speed     = GPIO_SPEED_HIGH;
         GPIO_InitStructure.Mode      = GPIO_MODE_AF_PP;
         GPIO_InitStructure.Alternate = DCMI_TIM_AF;
+
+        GPIO_InitStructure.Pin       = DCMI_TIM_PIN;
         HAL_GPIO_Init(DCMI_TIM_PORT, &GPIO_InitStructure);
+
+        #if defined(DCMI_TIM_EXT_PIN)
+        GPIO_InitStructure.Pin       = DCMI_TIM_EXT_PIN;
+        HAL_GPIO_Init(DCMI_TIM_EXT_PORT, &GPIO_InitStructure);
+        #endif
     }
     #endif // (OMV_XCLK_SOURCE == OMV_XCLK_TIM)
 
