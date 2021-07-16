@@ -54,10 +54,10 @@
 #define OMV_ENABLE_OV2640       (0)
 #define OMV_ENABLE_OV5640       (0)
 #define OMV_ENABLE_OV7690       (0)
-#define OMV_ENABLE_OV7725       (0)
+#define OMV_ENABLE_OV7725       (1)
 #define OMV_ENABLE_OV9650       (0)
 #define OMV_ENABLE_MT9M114      (0)
-#define OMV_ENABLE_MT9V034      (0)
+#define OMV_ENABLE_MT9V034      (1)
 #define OMV_ENABLE_LEPTON       (0)
 #define OMV_ENABLE_HM01B0       (1)
 #define OMV_ENABLE_GC2145       (1)
@@ -225,6 +225,19 @@
 #define ISC_I2C_FORCE_RESET()   __HAL_RCC_I2C3_FORCE_RESET()
 #define ISC_I2C_RELEASE_RESET() __HAL_RCC_I2C3_RELEASE_RESET()
 
+// Alternate I2C bus for the Portenta breakout
+#define ISC_I2C_ALT                 (I2C4)
+#define ISC_I2C_ALT_ID              (4)
+#define ISC_I2C_ALT_AF              (GPIO_AF4_I2C4)
+#define ISC_I2C_ALT_CLK_ENABLE()    __HAL_RCC_I2C4_CLK_ENABLE()
+#define ISC_I2C_ALT_CLK_DISABLE()   __HAL_RCC_I2C4_CLK_DISABLE()
+#define ISC_I2C_ALT_PORT            (GPIOH)
+#define ISC_I2C_ALT_SCL_PIN         (GPIO_PIN_11)
+#define ISC_I2C_ALT_SDA_PIN         (GPIO_PIN_12)
+#define ISC_I2C_ALT_SPEED           (CAMBUS_SPEED_STANDARD)
+#define ISC_I2C_ALT_FORCE_RESET()   __HAL_RCC_I2C4_FORCE_RESET()
+#define ISC_I2C_ALT_RELEASE_RESET() __HAL_RCC_I2C4_RELEASE_RESET()
+
 // FIR I2C
 #define FIR_I2C                 (I2C3)
 #define FIR_I2C_ID              (3)
@@ -261,6 +274,9 @@
 #define DCMI_TIM                (TIM1)
 #define DCMI_TIM_PIN            (GPIO_PIN_1)
 #define DCMI_TIM_PORT           (GPIOK)
+// Enable TIM1-CH1 on PA8 too for Portenta breakout.
+#define DCMI_TIM_EXT_PIN        (GPIO_PIN_8)
+#define DCMI_TIM_EXT_PORT       (GPIOA)
 #define DCMI_TIM_AF             (GPIO_AF1_TIM1)
 #define DCMI_TIM_CHANNEL        (TIM_CHANNEL_1)
 #define DCMI_TIM_CLK_ENABLE()   __TIM1_CLK_ENABLE()
