@@ -9,7 +9,7 @@
 #include "cambus.h"
 
 #define I2C_TIMEOUT             (100*1000)
-#define I2C_SCAN_TIMEOUT        (10*1000)
+#define I2C_SCAN_TIMEOUT        (1*1000)
 
 int cambus_init(cambus_t *bus, uint32_t bus_id, uint32_t speed)
 {
@@ -66,7 +66,7 @@ int cambus_deinit(cambus_t *bus)
 
 int cambus_scan(cambus_t *bus)
 {
-    for (uint8_t addr=0x09, rxdata; addr<=0x77; addr++) {
+    for (uint8_t addr=0x20, rxdata; addr<=0x48; addr++) {
         if (i2c_read_timeout_us(bus->i2c, addr, &rxdata, 1, false, I2C_SCAN_TIMEOUT) >= 0) {
             return (addr << 1);
         }
