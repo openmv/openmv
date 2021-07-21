@@ -55,6 +55,8 @@
 // Enable sensor drivers
 #define OMV_ENABLE_OV2640       (1)
 #define OMV_ENABLE_OV5640       (1)
+// OV7670 or OV7690 could just enable one  
+#define OMV_ENABLE_OV7670       (0)
 #define OMV_ENABLE_OV7690       (1)
 #define OMV_ENABLE_OV7725       (1)
 #define OMV_ENABLE_OV9650       (1)

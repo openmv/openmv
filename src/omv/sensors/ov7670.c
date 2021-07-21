@@ -21,6 +21,10 @@
 #include "ov7670_regs.h"
 #include "py/mphal.h"
 
+#define OMV_OV7670_CLKRC 0x00
+#define OMV_OV7670_VERSION 70
+
+
 static const uint8_t default_regs[][2] = {
     // OV7670 reference registers
     { CLKRC,            OMV_OV7670_CLKRC },
