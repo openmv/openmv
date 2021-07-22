@@ -34,21 +34,30 @@ int nina_bsp_init()
     gpio_init(WIFI_GPIO0_PIN);
     gpio_set_dir(WIFI_GPIO0_PIN, GPIO_OUT);
 
-    gpio_put(WIFI_GPIO0_PIN, 1);
+    gpio_init(WIFI_SCLK_PIN);
+    gpio_set_function(WIFI_SCLK_PIN, GPIO_FUNC_SPI);
+
+    gpio_init(WIFI_MOSI_PIN);
+    gpio_set_function(WIFI_MOSI_PIN, GPIO_FUNC_SPI);
+
+    gpio_init(WIFI_MISO_PIN);
+    gpio_set_function(WIFI_MISO_PIN, GPIO_FUNC_SPI);
+
+    // Reset module in WiFi mode
     gpio_put(WIFI_CS_PIN, 1);
+    gpio_put(WIFI_GPIO0_PIN, 1);
 
     gpio_put(WIFI_RST_PIN, 0);
-    mp_hal_delay_ms(10);
+    mp_hal_delay_ms(100);
+
     gpio_put(WIFI_RST_PIN, 1);
     mp_hal_delay_ms(750);
 
-    gpio_put(WIFI_GPIO0_PIN, 0);
+    gpio_put(WIFI_GPIO0_PIN, 1);
 
+    // Initialize SPI.
     spi_init(WIFI_SPI, 8 * 1000 * 1000);
-
-    gpio_set_function(WIFI_SCLK_PIN, GPIO_FUNC_SPI);
-    gpio_set_function(WIFI_MOSI_PIN, GPIO_FUNC_SPI);
-    
+    spi_set_format(WIFI_SPI, 8, SPI_CPOL_0, SPI_CPHA_0, SPI_MSB_FIRST);
     return 0;
 }
 
@@ -60,7 +69,7 @@ int nina_bsp_reset()
 int nina_bsp_spi_slave_select(uint32_t timeout)
 {
     // Wait for ACK to go low.
-    for (mp_uint_t start = mp_hal_ticks_ms(); gpio_get(WIFI_ACK_PIN) != 0; mp_hal_delay_ms(1)) {
+    for (mp_uint_t start = mp_hal_ticks_ms(); gpio_get(WIFI_ACK_PIN) == 1; mp_hal_delay_ms(1)) {
         if ((mp_hal_ticks_ms() - start) >= timeout) {
             return -1;
         }
@@ -88,15 +97,17 @@ int nina_bsp_spi_slave_deselect()
 
 int nina_bsp_spi_transfer(const uint8_t *tx_buf, uint8_t *rx_buf, uint32_t size)
 {
+    int rsize = 0;
+
     gpio_put(WIFI_CS_PIN, 0);
     if (tx_buf && rx_buf) {
-        spi_write_read_blocking(WIFI_SPI, tx_buf, rx_buf, size);
+        rsize = spi_write_read_blocking(WIFI_SPI, tx_buf, rx_buf, size);
     } else if (tx_buf) {
-        spi_write_blocking(WIFI_SPI, tx_buf, size);
+        rsize = spi_write_blocking(WIFI_SPI, tx_buf, size);
     } else if (rx_buf) {
-        spi_read_blocking(WIFI_SPI, 0x00, rx_buf, size);
+        rsize = spi_read_blocking(WIFI_SPI, 0xFF, rx_buf, size);
     }
     gpio_put(WIFI_CS_PIN, 1);
-    return 0;
+    return ((rsize == size) ? 0 : -1);
 }
 #endif //MICROPY_PY_NINAW10
