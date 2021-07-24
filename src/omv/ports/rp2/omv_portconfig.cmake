@@ -267,6 +267,7 @@ if(MICROPY_PY_NINAW10)
     target_sources(${MICROPY_TARGET} PRIVATE ${NINA_SOURCES})
 
     target_compile_definitions(${MICROPY_TARGET} PRIVATE
+        NINA_DEBUG=0
         MICROPY_PY_USOCKET=1
         MICROPY_PY_NETWORK=1
         MICROPY_PY_NINAW10=1
