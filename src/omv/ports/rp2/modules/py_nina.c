@@ -27,9 +27,30 @@
 
 #include "nina.h"
 
+#define NINA_MIN(a,b)           \
+({                              \
+    __typeof__ (a) _a = (a);    \
+    __typeof__ (b) _b = (b);    \
+    _a < _b ? _a : _b;          \
+})
+
+
+#define NINA_MAX(a,b)           \
+({                              \
+    __typeof__ (a) _a = (a);    \
+    __typeof__ (b) _b = (b);    \
+    _a > _b ? _a : _b;          \
+})
+
+
 typedef struct _nina_obj_t {
     mp_obj_base_t base;
 } nina_obj_t;
+
+// For auto-binding UDP sockets
+#define BIND_PORT_RANGE_MIN (65000)
+#define BIND_PORT_RANGE_MAX (65535)
+static uint16_t bind_port = BIND_PORT_RANGE_MIN;
 
 static const nina_obj_t nina_obj = {{(mp_obj_type_t*) &mod_network_nic_type_nina}};
 
@@ -41,6 +62,12 @@ static mp_obj_t py_nina_make_new(const mp_obj_type_t *type, mp_uint_t n_args, mp
     if (error != 0) {
         mp_raise_msg_varg(&mp_type_OSError, MP_ERROR_TEXT("Failed to initialize Nina-W10 module: %d\n"), error);
     }
+
+    // Register with network module
+    mod_network_register_nic((mp_obj_t)&nina_obj);
+
+    bind_port = BIND_PORT_RANGE_MIN;
+
     return (mp_obj_t)&nina_obj;
 }
 
@@ -250,7 +277,7 @@ static mp_obj_t py_nina_scan(mp_obj_t self_in)
 
 static mp_obj_t py_nina_get_rssi(mp_obj_t self_in)
 {
-    return mp_obj_new_int(nina_get_rssi()); 
+    return mp_obj_new_int(nina_get_rssi());
 }
 
 static mp_obj_t py_nina_fw_version(mp_obj_t self_in)
@@ -258,10 +285,10 @@ static mp_obj_t py_nina_fw_version(mp_obj_t self_in)
     uint8_t fwver[NINA_FW_VER_LEN];
     nina_fw_version(fwver);
 
-    // We don't know how the fw version looks like, assume ints.
-    mp_obj_tuple_t *t_fwver = mp_obj_new_tuple(NINA_FW_VER_LEN, NULL);
-    for (int i=0; i<NINA_FW_VER_LEN; i++) {
-    	t_fwver->items[i] = mp_obj_new_int(fwver[i]);
+    // Firmware version is a string like "1.4.7"
+    mp_obj_tuple_t *t_fwver = mp_obj_new_tuple(3, NULL);
+    for (int i=0; i<3; i++) {
+        t_fwver->items[i] = mp_obj_new_int(fwver[i*2] - 48);
     }
     return t_fwver;
 }
@@ -275,12 +302,12 @@ static int py_nina_socket_socket(mod_network_socket_obj_t *socket, int *_errno)
 {
     uint8_t type;
 
-    if (socket->u_param.domain != MOD_NETWORK_AF_INET) {
+    if (socket->domain != MOD_NETWORK_AF_INET) {
         *_errno = MP_EAFNOSUPPORT;
         return -1;
     }
 
-    switch (socket->u_param.type) {
+    switch (socket->type) {
         case MOD_NETWORK_SOCK_STREAM:
             type = NINA_SOCKET_TYPE_TCP;
             break;
@@ -304,6 +331,8 @@ static int py_nina_socket_socket(mod_network_socket_obj_t *socket, int *_errno)
     // store state of this socket
     socket->fd = fd;
     socket->timeout = 0; // blocking
+    socket->port  = 0;
+    socket->bound = false;
     return 0;
 }
 
@@ -318,7 +347,7 @@ static void py_nina_socket_close(mod_network_socket_obj_t *socket)
 static int py_nina_socket_bind(mod_network_socket_obj_t *socket, byte *ip, mp_uint_t port, int *_errno)
 {
     uint8_t type;
-    switch (socket->u_param.type) {
+    switch (socket->type) {
         case MOD_NETWORK_SOCK_STREAM:
             type = NINA_SOCKET_TYPE_TCP;
             break;
@@ -338,6 +367,10 @@ static int py_nina_socket_bind(mod_network_socket_obj_t *socket, byte *ip, mp_ui
         py_nina_socket_close(socket);
         return -1;
     }
+
+    // Set bound port and mark socket as bound to avoid auto-binding.
+    socket->port  = port;
+    socket->bound = true;
     return 0;
 }
 
@@ -413,9 +446,27 @@ static mp_uint_t py_nina_socket_recv(mod_network_socket_obj_t *socket, byte *buf
     return ret;
 }
 
+static mp_uint_t py_nina_socket_auto_bind(mod_network_socket_obj_t *socket, int *_errno)
+{
+    if (socket->bound == false) {
+        if (py_nina_socket_bind(socket, NULL, bind_port, _errno) != 0) {
+            return -1;
+        }
+        socket->bound = true;
+        socket->port  = bind_port++;
+        bind_port = NINA_MIN(NINA_MAX(bind_port, BIND_PORT_RANGE_MIN), BIND_PORT_RANGE_MAX);
+    }
+    return 0;
+}
+
 static mp_uint_t py_nina_socket_sendto(mod_network_socket_obj_t *socket,
         const byte *buf, mp_uint_t len, byte *ip, mp_uint_t port, int *_errno)
 {
+    // Auto-bind the socket first if the socket is unbound.
+    if (py_nina_socket_auto_bind(socket, _errno) != 0) {
+        return -1;
+    }
+
     int ret = nina_socket_sendto(socket->fd, buf, len, ip, port, socket->timeout);
     if (ret == NINA_ERROR_TIMEOUT) {
         // The socket is Not closed on timeout when calling functions that accept a timeout.
@@ -432,6 +483,11 @@ static mp_uint_t py_nina_socket_sendto(mod_network_socket_obj_t *socket,
 static mp_uint_t py_nina_socket_recvfrom(mod_network_socket_obj_t *socket,
         byte *buf, mp_uint_t len, byte *ip, mp_uint_t *port, int *_errno)
 {
+    // Auto-bind the socket first if the socket is unbound.
+    if (py_nina_socket_auto_bind(socket, _errno) != 0) {
+        return -1;
+    }
+
     int ret = nina_socket_recvfrom(socket->fd, buf, len, ip, (uint16_t *) port, socket->timeout);
     if (ret == NINA_ERROR_TIMEOUT) {
         // The socket is Not closed on timeout when calling functions that accept a timeout.

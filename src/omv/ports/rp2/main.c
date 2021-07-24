@@ -47,6 +47,10 @@
 #include "mpbthciport.h"
 #endif
 
+#if MICROPY_PY_NETWORK
+#include "modnetwork.h"
+#endif
+
 #include "pico/stdlib.h"
 #include "pico/binary_info.h"
 #include "hardware/rtc.h"
@@ -182,6 +186,9 @@ soft_reset:
     #if MICROPY_PY_BLUETOOTH
     mp_bluetooth_hci_init();
     #endif
+    #if MICROPY_PY_NETWORK
+    mod_network_init();
+    #endif
 
     pendsv_init();
     usbdbg_init();
@@ -256,6 +263,9 @@ soft_reset:
     #endif
     #if MICROPY_PY_BLUETOOTH
     mp_bluetooth_deinit();
+    #endif
+    #if MICROPY_PY_NETWORK
+    mod_network_deinit();
     #endif
     rp2_pio_deinit();
     machine_pin_deinit();
