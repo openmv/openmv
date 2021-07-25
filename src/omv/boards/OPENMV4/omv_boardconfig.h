@@ -55,7 +55,6 @@
 // Enable sensor drivers
 #define OMV_ENABLE_OV2640       (1)
 #define OMV_ENABLE_OV5640       (1)
-// OV7670 or OV7690 could just enable one  
 #define OMV_ENABLE_OV7670       (0)
 #define OMV_ENABLE_OV7690       (1)
 #define OMV_ENABLE_OV7725       (1)
@@ -65,6 +64,12 @@
 #define OMV_ENABLE_LEPTON       (1)
 #define OMV_ENABLE_HM01B0       (0)
 #define OMV_ENABLE_PAJ6100      (1)
+
+// Set which OV767x sensor is used
+#define OMV_OV7670_VERSION      (70)
+
+// OV7670 clock divider
+#define OMV_OV7670_CLKRC        (0)
 
 // Enable sensor features
 #define OMV_ENABLE_OV5640_AF    (0)
