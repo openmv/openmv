@@ -42,7 +42,18 @@ Finally, you need to install the OpenMV GitHub Repo. In Linux, `cd` in a termina
 
     git clone --recursive https://github.com/openmv/openmv.git
 
-However, if you are interested in submitting code fixes back to us you will need to fork our repo first and clone your fork so that you can send pull requests. You need to fork these two repos:
+Note the above command will clone this repository and every submodule recursively, which may take a very long to complete. Alternatively, you can do the following for a much faster clone:
+
+```
+git clone --depth=1 https://github.com/openmv/openmv.git
+cd openmv
+git submodule update --init --depth=1 --no-single-branch
+git -C src/micropython/ submodule update --init --depth=1
+```
+
+### Setting up your own fork
+
+If you are interested in submitting code fixes back to us you will need to fork our repo first and clone your fork so that you can send pull requests. You need to fork these two repos:
 
     https://github.com/openmv/openmv.git
     https://github.com/openmv/micropython.git
