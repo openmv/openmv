@@ -518,11 +518,7 @@ static int py_nina_socket_settimeout(mod_network_socket_obj_t *socket, mp_uint_t
     if (timeout_ms == UINT32_MAX) {
         // no timeout is given, set the socket to blocking mode.
         timeout_ms = 0;
-    } else if (timeout_ms == 0) {
-        // non-blocking mode, set the timeout to a small number other than zero.
-        timeout_ms = 10;
-    } // otherwise, timeout is provided.
-
+    }
     socket->timeout = timeout_ms;
     return 0;
 }

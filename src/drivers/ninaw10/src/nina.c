@@ -702,7 +702,7 @@ int nina_socket_accept(int fd, uint8_t *ip, uint16_t *port, int *fd_out, uint32_
         return -1;
     }
 
-    for (mp_uint_t start = mp_hal_ticks_ms(); sock == 0 || sock == NO_SOCKET_AVAIL; mp_hal_delay_ms(100)) {
+    for (mp_uint_t start = mp_hal_ticks_ms(); sock == 0 || sock == NO_SOCKET_AVAIL; mp_hal_delay_ms(10)) {
         if (nina_send_command_read_vals(AVAIL_DATA_TCP_CMD,
                     1, ARG_8BITS, NINA_ARGS(ARG_BYTE(fd)),
                     1, ARG_8BITS, NINA_VALS({&size, &sock})) != 0) {
