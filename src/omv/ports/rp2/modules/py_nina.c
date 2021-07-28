@@ -400,6 +400,7 @@ static int py_nina_socket_accept(mod_network_socket_obj_t *socket,
     // Set default socket timeout.
     socket2->fd = fd;
     socket2->timeout = 0;
+    socket2->bound = false;
     return 0;
 }
 
@@ -449,11 +450,9 @@ static mp_uint_t py_nina_socket_recv(mod_network_socket_obj_t *socket, byte *buf
 static mp_uint_t py_nina_socket_auto_bind(mod_network_socket_obj_t *socket, int *_errno)
 {
     if (socket->bound == false) {
-        if (py_nina_socket_bind(socket, NULL, bind_port, _errno) != 0) {
+        if (py_nina_socket_bind(socket, NULL, bind_port++, _errno) != 0) {
             return -1;
         }
-        socket->bound = true;
-        socket->port  = bind_port++;
         bind_port = NINA_MIN(NINA_MAX(bind_port, BIND_PORT_RANGE_MIN), BIND_PORT_RANGE_MAX);
     }
     return 0;

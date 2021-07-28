@@ -12,6 +12,7 @@
 #define __NINA_BSP_H__
 int nina_bsp_init();
 int nina_bsp_reset();
+int nina_bsp_read_irq();
 int nina_bsp_spi_slave_select(uint32_t timeout);
 int nina_bsp_spi_slave_deselect();
 int nina_bsp_spi_transfer(const uint8_t *tx_buf, uint8_t *rx_buf, uint32_t size);

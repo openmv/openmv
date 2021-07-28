@@ -72,6 +72,11 @@ int nina_bsp_reset()
     return 0;
 }
 
+int nina_bsp_read_irq()
+{
+    return gpio_get(WIFI_GPIO0_PIN);
+}
+
 int nina_bsp_spi_slave_select(uint32_t timeout)
 {
     // Wait for ACK to go low.
