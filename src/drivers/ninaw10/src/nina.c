@@ -330,6 +330,11 @@ int nina_init()
     return 0; 
 }
 
+int nina_deinit()
+{
+    return nina_bsp_deinit();
+}
+
 static int nina_connection_status()
 {
     return nina_send_command_read_ack(GET_CONN_STATUS_CMD, 0, ARG_8BITS, NULL);

@@ -67,8 +67,20 @@ int nina_bsp_init()
     return 0;
 }
 
-int nina_bsp_reset()
+int nina_bsp_deinit()
 {
+    gpio_init(WIFI_CS_PIN);
+    gpio_set_dir(WIFI_CS_PIN, GPIO_OUT);
+    gpio_put(WIFI_CS_PIN, 1);
+
+    gpio_init(WIFI_RST_PIN);
+    gpio_set_dir(WIFI_RST_PIN, GPIO_OUT);
+    gpio_put(WIFI_RST_PIN, 0);
+    mp_hal_delay_ms(100);
+
+    gpio_init(WIFI_GPIO0_PIN);
+    gpio_set_dir(WIFI_GPIO0_PIN, GPIO_OUT);
+    gpio_put(WIFI_GPIO0_PIN, 1);
     return 0;
 }
 
