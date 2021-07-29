@@ -42,45 +42,91 @@
     _a > _b ? _a : _b;          \
 })
 
-
 typedef struct _nina_obj_t {
     mp_obj_base_t base;
+    bool active;
+    uint32_t itf;
 } nina_obj_t;
 
 // For auto-binding UDP sockets
 #define BIND_PORT_RANGE_MIN (65000)
 #define BIND_PORT_RANGE_MAX (65535)
-static uint16_t bind_port = BIND_PORT_RANGE_MIN;
 
-static const nina_obj_t nina_obj = {{(mp_obj_type_t*) &mod_network_nic_type_nina}};
+static uint16_t bind_port = BIND_PORT_RANGE_MIN;
+static nina_obj_t nina_obj = {{(mp_obj_type_t*) &mod_network_nic_type_nina}, false, NINA_WIFI_MODE_STA};
 
 // Initialise the module using the given SPI bus and pins and return a nina object.
-static mp_obj_t py_nina_make_new(const mp_obj_type_t *type, mp_uint_t n_args, mp_uint_t n_kw, const mp_obj_t *all_args)
+static mp_obj_t py_nina_make_new(const mp_obj_type_t *type, size_t n_args, size_t n_kw, const mp_obj_t *args)
 {
-    // Init Nina module
-    int error = nina_init();
-    if (error != 0) {
-        mp_raise_msg_varg(&mp_type_OSError, MP_ERROR_TEXT("Failed to initialize Nina-W10 module: %d\n"), error);
+    mp_arg_check_num(n_args, n_kw, 0, 1, false);
+
+    nina_obj.active = false;
+    if (n_args == 0) {
+        nina_obj.itf = NINA_WIFI_MODE_STA;
+    } else {
+        nina_obj.itf = mp_obj_get_int(args[0]);
     }
 
-    // Register with network module
-    mod_network_register_nic((mp_obj_t)&nina_obj);
-
+    // Reset autobind port.
     bind_port = BIND_PORT_RANGE_MIN;
 
-    return (mp_obj_t)&nina_obj;
+    // Register with network module
+    mod_network_register_nic(MP_OBJ_FROM_PTR(&nina_obj));
+
+    return MP_OBJ_FROM_PTR(&nina_obj);
+}
+
+static mp_obj_t py_nina_active(size_t n_args, const mp_obj_t *args)
+{
+    nina_obj_t *self = MP_OBJ_TO_PTR(args[0]);
+    if (n_args == 2) {
+        bool active = mp_obj_is_true(args[1]);
+        if (active) {
+            int error = 0;
+            if ((error = nina_init()) != 0) {
+                mp_raise_msg_varg(&mp_type_OSError,
+                        MP_ERROR_TEXT("Failed to initialize Nina-W10 module, error: %d\n"), error);
+            }
+            // check firmware version
+            uint8_t fw_ver[NINA_FW_VER_LEN];
+            if (nina_fw_version(fw_ver) != 0) {
+                nina_deinit();
+                mp_raise_msg_varg(&mp_type_OSError,
+                        MP_ERROR_TEXT("Failed to read firmware version, error: %d\n"), error);
+            }
+
+            // Check fw version matches the driver.
+            if ((fw_ver[NINA_FW_VER_MAJOR_OFFS] - 48) != NINA_FW_VER_MAJOR ||
+                (fw_ver[NINA_FW_VER_MINOR_OFFS] - 48) != NINA_FW_VER_MINOR ||
+                (fw_ver[NINA_FW_VER_PATCH_OFFS] - 48) != NINA_FW_VER_PATCH) {
+                nina_deinit();
+                mp_raise_msg_varg(&mp_type_OSError,
+                        MP_ERROR_TEXT("Firmware version mismatch. Expected %d.%d.%d found: %d.%d.%d\n"),
+                        NINA_FW_VER_MAJOR, NINA_FW_VER_MINOR, NINA_FW_VER_PATCH,
+                        fw_ver[NINA_FW_VER_MAJOR_OFFS] - 48,
+                        fw_ver[NINA_FW_VER_MINOR_OFFS] - 48,
+                        fw_ver[NINA_FW_VER_PATCH_OFFS] - 48);
+            }
+        } else {
+            nina_deinit();
+        }
+        self->active = active;
+    }
+    return mp_obj_new_bool(self->active);
 }
 
 // method connect(ssid, key=None, *, security=WPA2, bssid=None)
 static mp_obj_t py_nina_connect(mp_uint_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_args)
 {
     static const mp_arg_t allowed_args[] = {
-        { MP_QSTR_ssid, MP_ARG_REQUIRED | MP_ARG_OBJ, {.u_obj = MP_OBJ_NULL} },
+        { MP_QSTR_essid, MP_ARG_REQUIRED | MP_ARG_OBJ, {.u_obj = MP_OBJ_NULL} },
         { MP_QSTR_key, MP_ARG_OBJ, {.u_obj = mp_const_none} },
         { MP_QSTR_security, MP_ARG_KW_ONLY | MP_ARG_INT, {.u_int = NINA_SEC_WPA_PSK} },
+        { MP_QSTR_channel,  MP_ARG_KW_ONLY | MP_ARG_INT, {.u_int = 1} },
     };
 
     // parse args
+    nina_obj_t *self = MP_OBJ_TO_PTR(pos_args[0]);
     mp_arg_val_t args[MP_ARRAY_SIZE(allowed_args)];
     mp_arg_parse_all(n_args - 1, pos_args + 1, kw_args, MP_ARRAY_SIZE(allowed_args), allowed_args, args);
 
@@ -104,57 +150,24 @@ static mp_obj_t py_nina_connect(mp_uint_t n_args, const mp_obj_t *pos_args, mp_m
         mp_raise_msg(&mp_type_OSError, MP_ERROR_TEXT("Key can't be empty!"));
     }
 
-    // connect to AP
-    if (nina_connect(ssid, security, key, 0) != 0) {
-        mp_raise_msg_varg(&mp_type_OSError,
-                MP_ERROR_TEXT("could not connect to ssid=%s, sec=%d, key=%s\n"), ssid, security, key);
+    if (self->itf == NINA_WIFI_MODE_STA) {
+        // Initialize WiFi in Station mode.
+        if (nina_connect(ssid, security, key, 0) != 0) {
+            mp_raise_msg_varg(&mp_type_OSError,
+                    MP_ERROR_TEXT("could not connect to ssid=%s, sec=%d, key=%s\n"), ssid, security, key);
+        }
+    } else {
+        mp_uint_t channel = args[3].u_int;
+
+        if (security != NINA_SEC_OPEN && security != NINA_SEC_WEP) {
+            nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, "AP mode supports WEP security only."));
+        }
+
+        // Initialize WiFi in AP mode.
+        if (nina_start_ap(ssid, security, key, channel) != 0) {
+            nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, "failed to start in AP mode"));
+        }
     }
-
-    return mp_const_none;
-}
-
-// method start_ap(ssid, key=None, security=OPEN)
-static mp_obj_t py_nina_start_ap(mp_uint_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_args)
-{
-    static const mp_arg_t allowed_args[] = {
-        { MP_QSTR_ssid,     MP_ARG_REQUIRED| MP_ARG_OBJ, {.u_obj = MP_OBJ_NULL} },
-        { MP_QSTR_key,      MP_ARG_KW_ONLY | MP_ARG_OBJ, {.u_obj = MP_OBJ_NULL} },
-        { MP_QSTR_security, MP_ARG_KW_ONLY | MP_ARG_INT, {.u_int = NINA_SEC_OPEN } },
-        { MP_QSTR_channel,  MP_ARG_KW_ONLY | MP_ARG_INT, {.u_int = 1} },
-    };
-
-    // parse args
-    mp_arg_val_t args[MP_ARRAY_SIZE(allowed_args)];
-    mp_arg_parse_all(n_args - 1, pos_args + 1, kw_args, MP_ARRAY_SIZE(allowed_args), allowed_args, args);
-
-    // get ssid
-    const char *ssid = mp_obj_str_get_str(args[0].u_obj);
-
-    // get key and security
-    const char *key = NULL;
-    mp_uint_t security = args[2].u_int;
-
-    if (security != NINA_SEC_OPEN && security != NINA_SEC_WEP) {
-        nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, "AP mode supports WEP security only."));
-    }
-
-    if (security == NINA_SEC_WEP && args[1].u_obj == MP_OBJ_NULL) {
-        nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, "Missing WEP key!"));
-    }
-
-    if (security != NINA_SEC_OPEN) {
-        key = mp_obj_str_get_str(args[1].u_obj);
-    }
-
-    // get channel
-    mp_uint_t channel = args[3].u_int;
-
-    // Initialize WiFi in AP mode.
-    if (nina_start_ap(ssid, security, key, channel) != 0) {
-        nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, "failed to start in AP mode"));
-    }
-
-    printf("AP mode started. You can connect to %s.\r\n", ssid);
     return mp_const_none;
 }
 
@@ -450,9 +463,10 @@ static mp_uint_t py_nina_socket_recv(mod_network_socket_obj_t *socket, byte *buf
 static mp_uint_t py_nina_socket_auto_bind(mod_network_socket_obj_t *socket, int *_errno)
 {
     if (socket->bound == false) {
-        if (py_nina_socket_bind(socket, NULL, bind_port++, _errno) != 0) {
+        if (py_nina_socket_bind(socket, NULL, bind_port, _errno) != 0) {
             return -1;
         }
+        bind_port++;
         bind_port = NINA_MIN(NINA_MAX(bind_port, BIND_PORT_RANGE_MIN), BIND_PORT_RANGE_MAX);
     }
     return 0;
@@ -529,8 +543,8 @@ static int py_nina_socket_ioctl(mod_network_socket_obj_t *socket, mp_uint_t requ
     return -1;
 }
 
+static MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(py_nina_active_obj, 1, 2, py_nina_active);
 static MP_DEFINE_CONST_FUN_OBJ_KW(py_nina_connect_obj, 1,   py_nina_connect);
-static MP_DEFINE_CONST_FUN_OBJ_KW(py_nina_start_ap_obj,1,   py_nina_start_ap);
 static MP_DEFINE_CONST_FUN_OBJ_1(py_nina_disconnect_obj,    py_nina_disconnect);
 static MP_DEFINE_CONST_FUN_OBJ_1(py_nina_isconnected_obj,   py_nina_isconnected);
 static MP_DEFINE_CONST_FUN_OBJ_1(py_nina_connected_sta_obj, py_nina_connected_sta);
@@ -541,24 +555,26 @@ static MP_DEFINE_CONST_FUN_OBJ_1(py_nina_scan_obj,          py_nina_scan);
 static MP_DEFINE_CONST_FUN_OBJ_1(py_nina_get_rssi_obj,      py_nina_get_rssi);
 static MP_DEFINE_CONST_FUN_OBJ_1(py_nina_fw_version_obj,    py_nina_fw_version);
 
-static const mp_map_elem_t nina_locals_dict_table[] = {
-    { MP_OBJ_NEW_QSTR(MP_QSTR_connect),       (mp_obj_t)&py_nina_connect_obj },
-    { MP_OBJ_NEW_QSTR(MP_QSTR_start_ap),      (mp_obj_t)&py_nina_start_ap_obj },
-    { MP_OBJ_NEW_QSTR(MP_QSTR_disconnect),    (mp_obj_t)&py_nina_disconnect_obj },
-    { MP_OBJ_NEW_QSTR(MP_QSTR_isconnected),   (mp_obj_t)&py_nina_isconnected_obj },
-    { MP_OBJ_NEW_QSTR(MP_QSTR_connected_sta), (mp_obj_t)&py_nina_connected_sta_obj },
-    { MP_OBJ_NEW_QSTR(MP_QSTR_wait_for_sta),  (mp_obj_t)&py_nina_wait_for_sta_obj },
-    { MP_OBJ_NEW_QSTR(MP_QSTR_ifconfig),      (mp_obj_t)&py_nina_ifconfig_obj },
-    { MP_OBJ_NEW_QSTR(MP_QSTR_netinfo),       (mp_obj_t)&py_nina_netinfo_obj },
-    { MP_OBJ_NEW_QSTR(MP_QSTR_scan),          (mp_obj_t)&py_nina_scan_obj },
-    { MP_OBJ_NEW_QSTR(MP_QSTR_rssi),          (mp_obj_t)&py_nina_get_rssi_obj },
-    { MP_OBJ_NEW_QSTR(MP_QSTR_fw_version),    (mp_obj_t)&py_nina_fw_version_obj },
+static const mp_rom_map_elem_t nina_locals_dict_table[] = {
+    { MP_ROM_QSTR(MP_QSTR_active),              MP_ROM_PTR(&py_nina_active_obj) },
+    { MP_ROM_QSTR(MP_QSTR_connect),             MP_ROM_PTR(&py_nina_connect_obj) },
+    { MP_ROM_QSTR(MP_QSTR_config),              MP_ROM_PTR(&py_nina_connect_obj) },
+    { MP_ROM_QSTR(MP_QSTR_start_ap),            MP_ROM_PTR(&py_nina_connect_obj) },
+    { MP_ROM_QSTR(MP_QSTR_disconnect),          MP_ROM_PTR(&py_nina_disconnect_obj) },
+    { MP_ROM_QSTR(MP_QSTR_isconnected),         MP_ROM_PTR(&py_nina_isconnected_obj) },
+    { MP_ROM_QSTR(MP_QSTR_connected_sta),       MP_ROM_PTR(&py_nina_connected_sta_obj) },
+    { MP_ROM_QSTR(MP_QSTR_wait_for_sta),        MP_ROM_PTR(&py_nina_wait_for_sta_obj) },
+    { MP_ROM_QSTR(MP_QSTR_ifconfig),            MP_ROM_PTR(&py_nina_ifconfig_obj) },
+    { MP_ROM_QSTR(MP_QSTR_netinfo),             MP_ROM_PTR(&py_nina_netinfo_obj) },
+    { MP_ROM_QSTR(MP_QSTR_scan),                MP_ROM_PTR(&py_nina_scan_obj) },
+    { MP_ROM_QSTR(MP_QSTR_rssi),                MP_ROM_PTR(&py_nina_get_rssi_obj) },
+    { MP_ROM_QSTR(MP_QSTR_fw_version),          MP_ROM_PTR(&py_nina_fw_version_obj) },
     // Network is not secured.
-    { MP_OBJ_NEW_QSTR(MP_QSTR_OPEN),          MP_OBJ_NEW_SMALL_INT(NINA_SEC_OPEN) },
+    { MP_ROM_QSTR(MP_QSTR_OPEN),                MP_ROM_INT(NINA_SEC_OPEN) },
     // Security type WEP (40 or 104).
-    { MP_OBJ_NEW_QSTR(MP_QSTR_WEP),           MP_OBJ_NEW_SMALL_INT(NINA_SEC_WEP) },
+    { MP_ROM_QSTR(MP_QSTR_WEP),                 MP_ROM_INT(NINA_SEC_WEP) },
     // Network secured with WPA/WPA2 personal(PSK).
-    { MP_OBJ_NEW_QSTR(MP_QSTR_WPA_PSK),       MP_OBJ_NEW_SMALL_INT(NINA_SEC_WPA_PSK) },
+    { MP_ROM_QSTR(MP_QSTR_WPA_PSK),             MP_ROM_INT(NINA_SEC_WPA_PSK) },
 };
 
 static MP_DEFINE_CONST_DICT(nina_locals_dict, nina_locals_dict_table);
