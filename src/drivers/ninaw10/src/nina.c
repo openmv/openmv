@@ -687,7 +687,9 @@ int nina_socket_bind(int fd, uint8_t *ip, uint16_t port, int type)
         return -1;
     }
 
-    if (nina_server_socket_status(fd) != SOCKET_STATE_LISTEN) {
+    // Only TCP sockets' states should be checked.
+    if (type == NINA_SOCKET_TYPE_TCP &&
+            nina_server_socket_status(fd) != SOCKET_STATE_LISTEN) {
         return -1;
     }
     return 0;
