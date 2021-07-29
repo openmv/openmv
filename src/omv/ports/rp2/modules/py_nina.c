@@ -85,7 +85,27 @@ static mp_obj_t py_nina_active(size_t n_args, const mp_obj_t *args)
             int error = 0;
             if ((error = nina_init()) != 0) {
                 mp_raise_msg_varg(&mp_type_OSError,
-                        MP_ERROR_TEXT("Failed to initialize Nina-W10 module: %d\n"), error);
+                        MP_ERROR_TEXT("Failed to initialize Nina-W10 module, error: %d\n"), error);
+            }
+            // check firmware version
+            uint8_t fw_ver[NINA_FW_VER_LEN];
+            if (nina_fw_version(fw_ver) != 0) {
+                nina_deinit();
+                mp_raise_msg_varg(&mp_type_OSError,
+                        MP_ERROR_TEXT("Failed to read firmware version, error: %d\n"), error);
+            }
+
+            // Check fw version matches the driver.
+            if ((fw_ver[NINA_FW_VER_MAJOR_OFFS] - 48) != NINA_FW_VER_MAJOR ||
+                (fw_ver[NINA_FW_VER_MINOR_OFFS] - 48) != NINA_FW_VER_MINOR ||
+                (fw_ver[NINA_FW_VER_PATCH_OFFS] - 48) != NINA_FW_VER_PATCH) {
+                nina_deinit();
+                mp_raise_msg_varg(&mp_type_OSError,
+                        MP_ERROR_TEXT("Firmware version mismatch. Expected %d.%d.%d found: %d.%d.%d\n"),
+                        NINA_FW_VER_MAJOR, NINA_FW_VER_MINOR, NINA_FW_VER_PATCH,
+                        fw_ver[NINA_FW_VER_MAJOR_OFFS] - 48,
+                        fw_ver[NINA_FW_VER_MINOR_OFFS] - 48,
+                        fw_ver[NINA_FW_VER_PATCH_OFFS] - 48);
             }
         } else {
             nina_deinit();

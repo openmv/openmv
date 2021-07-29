@@ -19,6 +19,14 @@
 #define NINA_MAX_NETWORK_LIST   (10)
 #define	NINA_MAX_SOCKET         (10)
 
+#define NINA_FW_VER_MAJOR       (1)
+#define NINA_FW_VER_MINOR       (4)
+#define NINA_FW_VER_PATCH       (7)
+
+#define NINA_FW_VER_MAJOR_OFFS  (0)
+#define NINA_FW_VER_MINOR_OFFS  (2)
+#define NINA_FW_VER_PATCH_OFFS  (4)
+
 typedef enum {
     NINA_SEC_INVALID = 0,
     NINA_SEC_OPEN,

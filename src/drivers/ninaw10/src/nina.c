@@ -320,13 +320,6 @@ int nina_init()
 {
     // Initialize the BSP.
     nina_bsp_init();
-
-    // check firmware version
-    uint8_t fw_ver[NINA_FW_VER_LEN];
-    if (nina_fw_version(fw_ver) != 0) {
-        return -1;
-    }
-    // TODO check fw version matches the driver.
     return 0; 
 }
 
