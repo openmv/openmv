@@ -11,9 +11,10 @@
 import time
 import select
 import socket
+from datetime import timedelta
 
-UPLOAD_LEN   =  5*1024
-DOWNLOAD_LEN = 10*1024
+UPLOAD_LEN   = 1*1024
+DOWNLOAD_LEN = 1*1024
 ADDR=('192.168.1.103', 8080)
 
 def recvall(sock, n):
@@ -31,10 +32,13 @@ s.connect(ADDR)
 
 upload = 0
 download = 0
+start_time = time.monotonic()
 while (True):
     s.sendall(b'0' * UPLOAD_LEN)
     buf = recvall(s, DOWNLOAD_LEN)
     upload += UPLOAD_LEN
     download += DOWNLOAD_LEN
-    print("Upload: %.3f MBytes Download: %.3f MBytes" %(upload/(1024*1024), download/(1024*1024)))
+    secs = time.monotonic() - start_time
+    print("%s Upload: %.3f MBytes Download: %.3f MBytes %.3f MBytes/s"
+            %(str(timedelta(seconds=secs)), upload/(1024*1024), download/(1024*1024), (upload+download)/(1024*1024)/secs))
 s.close()
