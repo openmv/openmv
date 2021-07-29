@@ -39,6 +39,12 @@ typedef enum {
     NINA_ERROR_TIMEOUT  = -2,
 } nina_error_t;
 
+
+typedef enum {
+    NINA_WIFI_MODE_STA = 0,
+    NINA_WIFI_MODE_AP,
+} nina_wifi_mode_t;
+
 typedef struct {
     uint8_t ip_addr[NINA_IPV4_ADDR_LEN];
     uint8_t subnet_addr[NINA_IPV4_ADDR_LEN];

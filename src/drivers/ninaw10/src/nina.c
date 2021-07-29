@@ -359,7 +359,7 @@ int nina_connect(const char *ssid, uint8_t security, const char *key, uint16_t c
     if (key == NULL && security != NINA_SEC_OPEN) {
         return -1;
     }
-    
+
     switch (security) {
         case NINA_SEC_OPEN:
             if (nina_send_command_read_ack(SET_NET_CMD,
@@ -381,17 +381,17 @@ int nina_connect(const char *ssid, uint8_t security, const char *key, uint16_t c
             break;
         default:
             return -1;
-    }        
+    }
 
-    for (mp_uint_t start = mp_hal_ticks_ms(); ; mp_hal_delay_ms(100)) {
-        status = nina_connection_status(); 
+    for (mp_uint_t start = mp_hal_ticks_ms(); ; mp_hal_delay_ms(10)) {
+        status = nina_connection_status();
         if ((status != WL_IDLE_STATUS) && (status != WL_NO_SSID_AVAIL) && (status != WL_SCAN_COMPLETED)) {
             break;
         }
 
         if ((mp_hal_ticks_ms() - start) >= NINA_CONNECT_TIMEOUT) {
             break;
-        } 
+        }
     }
 
     return (status == WL_CONNECTED) ? 0 : -1;
@@ -399,7 +399,42 @@ int nina_connect(const char *ssid, uint8_t security, const char *key, uint16_t c
 
 int nina_start_ap(const char *ssid, uint8_t security, const char *key, uint16_t channel)
 {
-    return -1;
+    uint8_t status = WL_AP_FAILED;
+
+    if ((key == NULL && security != NINA_SEC_OPEN) ||
+            (security != NINA_SEC_OPEN && security != NINA_SEC_WEP)) {
+        return -1;
+    }
+
+    switch (security) {
+        case NINA_SEC_OPEN:
+            if (nina_send_command_read_ack(SET_AP_NET_CMD,
+                        2, ARG_8BITS, NINA_ARGS(ARG_STR(ssid), ARG_BYTE(channel))) != SPI_ACK) {
+                return -1;
+            }
+            break;
+        case NINA_SEC_WEP:
+            if (nina_send_command_read_ack(SET_AP_PASSPHRASE_CMD,
+                        3, ARG_8BITS, NINA_ARGS(ARG_STR(ssid), ARG_STR(key), ARG_BYTE(channel))) != SPI_ACK) {
+                return -1;
+            }
+            break;
+        default:
+            return -1;
+    }
+
+    for (mp_uint_t start = mp_hal_ticks_ms(); ; mp_hal_delay_ms(10)) {
+        status = nina_connection_status();
+        if ((status != WL_IDLE_STATUS) && (status != WL_NO_SSID_AVAIL) && (status != WL_SCAN_COMPLETED)) {
+            break;
+        }
+
+        if ((mp_hal_ticks_ms() - start) >= NINA_CONNECT_TIMEOUT) {
+            break;
+        }
+    }
+
+    return (status == WL_AP_LISTENING) ? 0 : -1;
 }
 
 int nina_disconnect()
