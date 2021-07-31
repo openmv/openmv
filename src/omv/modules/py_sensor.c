@@ -74,7 +74,10 @@ static mp_obj_t py_sensor__init__()
 
 static mp_obj_t py_sensor_reset()
 {
-    PY_ASSERT_FALSE_MSG(sensor_reset() != 0, "Reset Failed");
+    int ret = sensor_reset();
+    if (ret != 0) {
+        mp_raise_msg(&mp_type_RuntimeError, sensor_strerror(ret));
+    }
 #if MICROPY_PY_IMU
     // +-10 degree dead-zone around pitch 90/270.
     // +-45 degree active-zone around roll 0/90/180/270/360.
