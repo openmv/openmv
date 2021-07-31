@@ -97,6 +97,18 @@ int cambus_scan(cambus_t *bus)
     return 0;
 }
 
+int cambus_enable(cambus_t *bus, bool enable)
+{
+    if (bus->initialized) {
+        if (enable) {
+            nrfx_twi_enable(&bus->i2c);
+        } else {
+            nrfx_twi_disable(&bus->i2c);
+        }
+    }
+    return 0;
+}
+
 int cambus_gencall(cambus_t *bus, uint8_t cmd)
 {
     uint32_t xfer_flags = 0;

@@ -74,6 +74,11 @@ int cambus_scan(cambus_t *bus)
     return 0;
 }
 
+int cambus_enable(cambus_t *bus, bool enable)
+{
+    return 0;
+}
+
 int cambus_readb(cambus_t *bus, uint8_t slv_addr, uint8_t reg_addr,  uint8_t *reg_data)
 {
     int bytes = 0;

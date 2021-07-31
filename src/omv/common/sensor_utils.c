@@ -137,6 +137,9 @@ __weak int sensor_reset()
     // Restore shutdown state on reset.
     sensor_shutdown(false);
 
+    // Disable the bus before reset.
+    cambus_enable(&sensor.bus, false);
+
     // Hard-reset the sensor
     if (sensor.reset_pol == ACTIVE_HIGH) {
         DCMI_RESET_HIGH();
@@ -149,6 +152,9 @@ __weak int sensor_reset()
     }
 
     mp_hal_delay_ms(20);
+
+    // Re-enable the bus.
+    cambus_enable(&sensor.bus, true);
 
     // Check if the control is supported.
     if (sensor.reset == NULL) {

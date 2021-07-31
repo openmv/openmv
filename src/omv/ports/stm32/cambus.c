@@ -278,6 +278,18 @@ int cambus_scan(cambus_t *bus)
     return 0;
 }
 
+int cambus_enable(cambus_t *bus, bool enable)
+{
+    if (bus->initialized) {
+        if (enable) {
+            __HAL_I2C_ENABLE(bus->i2c);
+        } else {
+            __HAL_I2C_DISABLE(bus->i2c);
+        }
+    }
+    return 0;
+}
+
 int cambus_gencall(cambus_t *bus, uint8_t cmd)
 {
     if (HAL_I2C_Master_Transmit(bus->i2c, 0x00, &cmd, 1, I2C_TIMEOUT) != HAL_OK) {
