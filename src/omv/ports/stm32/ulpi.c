@@ -131,8 +131,10 @@ void ulpi_enter_low_power(void)
 
     /* read FunctionControl reg */
     regval = USB_ULPI_Read(0x04);
-    if (regval != 0x40) {
-        __fatal_error("ULPI Error 0x04 != 0x40");
+
+    // Reg 0x40 has a different value if USB is disconnected.
+    if (regval != 0x40 && regval != 0x45) {
+        __fatal_error("ULPI Error 0x04 != 0x40 || 0x45");
     }
 
     /* write FunctionControl reg,to put PHY into LowPower mode */
