@@ -47,6 +47,7 @@ typedef struct _cambus {
 int cambus_init(cambus_t *bus, uint32_t bus_id, uint32_t speed);
 int cambus_deinit(cambus_t *bus);
 int cambus_scan(cambus_t *bus);
+int cambus_enable(cambus_t *bus, bool enable);
 int cambus_gencall(cambus_t *bus, uint8_t cmd);
 int cambus_pulse_scl(cambus_t *bus);
 int cambus_readb(cambus_t *bus, uint8_t slv_addr, uint8_t reg_addr,  uint8_t *reg_data);
