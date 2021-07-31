@@ -99,9 +99,8 @@ static mp_obj_t py_nina_active(size_t n_args, const mp_obj_t *args)
             if ((fw_ver[NINA_FW_VER_MAJOR_OFFS] - 48) != NINA_FW_VER_MAJOR ||
                 (fw_ver[NINA_FW_VER_MINOR_OFFS] - 48) != NINA_FW_VER_MINOR ||
                 (fw_ver[NINA_FW_VER_PATCH_OFFS] - 48) != NINA_FW_VER_PATCH) {
-                nina_deinit();
-                mp_raise_msg_varg(&mp_type_OSError,
-                        MP_ERROR_TEXT("Firmware version mismatch. Expected %d.%d.%d found: %d.%d.%d\n"),
+                mp_printf(&mp_plat_print,
+                        "Warning: firmware version mismatch, expected %d.%d.%d found: %d.%d.%d\n",
                         NINA_FW_VER_MAJOR, NINA_FW_VER_MINOR, NINA_FW_VER_PATCH,
                         fw_ver[NINA_FW_VER_MAJOR_OFFS] - 48,
                         fw_ver[NINA_FW_VER_MINOR_OFFS] - 48,
