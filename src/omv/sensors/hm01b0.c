@@ -126,18 +126,24 @@ static int reset(sensor_t *sensor)
 {
     // Reset sensor.
     uint8_t reg=0xff;
-    for (int retry=HIMAX_BOOT_RETRY; reg != HIMAX_MODE_STANDBY; retry--) {
-        if (retry == 0) {
-            return -1;
-        }
+    for (int retry=HIMAX_BOOT_RETRY; retry >= 0 && reg != HIMAX_MODE_STANDBY; retry--) {
         if (cambus_writeb2(&sensor->bus, sensor->slv_addr, SW_RESET, HIMAX_RESET) != 0) {
             return -1;
         }
-        // Delay for 1ms.
+
         mp_hal_delay_ms(1);
+
         if (cambus_readb2(&sensor->bus, sensor->slv_addr, MODE_SELECT, &reg) != 0) {
             return -1;
         }
+
+        if (reg == HIMAX_MODE_STANDBY) {
+            break;
+        } else if (retry == 0) {
+            return -1;
+        }
+
+        mp_hal_delay_ms(10);
     }
 
     // Write default regsiters
