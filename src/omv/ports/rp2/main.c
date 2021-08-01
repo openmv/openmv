@@ -98,7 +98,7 @@ void __fatal_error()
 
 void pico_reset_to_bootloader(void)
 {
-    reset_usb_boot(0, 1);
+    reset_usb_boot(0, 0);
 }
 
 void exec_boot_script(const char *path, bool interruptible)
