@@ -21,7 +21,7 @@
 
 #define NINA_FW_VER_MAJOR       (1)
 #define NINA_FW_VER_MINOR       (4)
-#define NINA_FW_VER_PATCH       (7)
+#define NINA_FW_VER_PATCH       (8)
 
 #define NINA_FW_VER_MAJOR_OFFS  (0)
 #define NINA_FW_VER_MINOR_OFFS  (2)
