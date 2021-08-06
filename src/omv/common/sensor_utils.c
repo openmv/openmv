@@ -482,17 +482,19 @@ __weak int sensor_shutdown(int enable)
 
 __weak int sensor_read_reg(uint16_t reg_addr)
 {
+    int ret;
+
     // Check if the control is supported.
     if (sensor.read_reg == NULL) {
         return SENSOR_ERROR_CTL_UNSUPPORTED;
     }
 
     // Call the sensor specific function.
-    if (sensor.read_reg(&sensor, reg_addr) == -1) {
+    if ((ret = sensor.read_reg(&sensor, reg_addr)) == -1) {
         return SENSOR_ERROR_IO_ERROR;
     }
 
-    return 0;
+    return ret;
 }
 
 __weak int sensor_write_reg(uint16_t reg_addr, uint16_t reg_data)
