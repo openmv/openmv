@@ -14,12 +14,16 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdio.h>
 
 #include "cambus.h"
 #include "sensor.h"
 #include "gc2145.h"
 #include "gc2145_regs.h"
 #include "py/mphal.h"
+
+#define GC_MAX_WIN_W    (1600)
+#define GC_MAX_WIN_H    (1200)
 
 // SLAVE ADDR 0x78
 static const uint8_t default_regs[][2] = {
@@ -39,17 +43,25 @@ static const uint8_t default_regs[][2] = {
     {0xfe, 0x00},
     {0x03, 0x04},
     {0x04, 0xe2},
-    {0x09, 0x00},
+
+    {0x09, 0x00},   // row start
     {0x0a, 0x00},
-    {0x0b, 0x00},
+
+    {0x0b, 0x00},   // col start
     {0x0c, 0x00},
-    {0x0d, 0x04},
+
+    {0x0d, 0x04},   // Window height
     {0x0e, 0xc0},
-    {0x0f, 0x06},
+
+    {0x0f, 0x06},   // Window width
     {0x10, 0x52},
-    {0x12, 0x2e},
-    {0x17, 0x14}, //mirror
-    {0x18, 0x22},
+
+    {0x99, 0x11},   // Subsample
+    {0x9a, 0x0E},   // Subsample mode
+
+    {0x12, 0x2e},   //
+    {0x17, 0x14},   // Analog Mode 1 (vflip/mirror[1:0])
+    {0x18, 0x22},   // Analog Mode 2
     {0x19, 0x0e},
     {0x1a, 0x01},
     {0x1b, 0x4b},
@@ -68,16 +80,12 @@ static const uint8_t default_regs[][2] = {
     {0x31, 0x90},
     {0x33, 0x06},
     {0x34, 0x01},
-    /////////////////////////////////////////////////
-    //////////////////ISP reg////////////////////
-    /////////////////////////////////////////////////
-    {0xfe, 0x00},
     {0x80, 0x7f},
     {0x81, 0x26},
     {0x82, 0xfa},
     {0x83, 0x00},
-    {0x84, 0x06}, //RGB565
-    {0x86, 0x03},
+    {0x84, 0x06},   //RGB565
+    {0x86, 0x23},
     {0x88, 0x03},
     {0x89, 0x03},
     {0x85, 0x08},
@@ -94,16 +102,27 @@ static const uint8_t default_regs[][2] = {
     {0xee, 0x60},
     {0xef, 0x90},
     {0xb6, 0x01},
-    {0x90, 0x01},
-    {0x91, 0x00},
+
+    {0x90, 0x01},   // Enable crop
+    {0x91, 0x00},   // Y offset
     {0x92, 0x00},
-    {0x93, 0x00},
+    {0x93, 0x00},   // X offset
     {0x94, 0x00},
-    // VGA 640*480
-    {0x95, 0x01},
-    {0x96, 0xE0},
-    {0x97, 0x02},
-    {0x98, 0x80},
+    {0x95, 0x02},   // Window height
+    {0x96, 0x58},
+    {0x97, 0x03},   // Window width
+    {0x98, 0x20},
+    {0x99, 0x22},   // Subsample
+    {0x9a, 0x0E},   // Subsample mode
+
+    {0x9b, 0x00},
+    {0x9c, 0x00},
+    {0x9d, 0x00},
+    {0x9e, 0x00},
+    {0x9f, 0x00},
+    {0xa0, 0x00},
+    {0xa1, 0x00},
+    {0xa2, 0x00},
     /////////////////////////////////////////
     /////////// BLK ////////////////////////
     /////////////////////////////////////////
@@ -522,9 +541,6 @@ static const uint8_t default_regs[][2] = {
     {0x4c, 0x02},
     {0x4d, 0x4a},
     {0x4e, 0x05},
-    //{0x4c , 0x02}, //A
-    //{0x4d , 0x6a},
-    //{0x4e , 0x06},
     {0x4c, 0x02},
     {0x4d, 0x8a},
     {0x4e, 0x06},
@@ -648,85 +664,33 @@ static const uint8_t default_regs[][2] = {
     {0xfe, 0x01},
     {0x9f, 0x40},
     {0xfe, 0x00},
+
     //////////////////////////////////////
     ///////////  OUTPUT   ////////////////
     //////////////////////////////////////
     {0xfe, 0x00},
     {0xf2, 0x0f},
+
     ///////////////dark sun////////////////////
     {0xfe, 0x02},
     {0x40, 0xbf},
     {0x46, 0xcf},
     {0xfe, 0x00},
-    //////////////frame rate 50Hz/////////
+
+    //////////////frame rate control/////////
     {0xfe, 0x00},
-    {0x05, 0x01}, //156
-    {0x06, 0x56},
-    {0x07, 0x00}, //32
+    {0x05, 0x01},   // HBLANK
+    {0x06, 0x1C},
+    {0x07, 0x00},   // VBLANK
     {0x08, 0x32},
-    {0xfe, 0x01},
-    {0x25, 0x00}, //fa
-    {0x26, 0xfa},
-    {0x27, 0x04},
-    {0x28, 0xe2}, //20fps     4e2
-    {0x29, 0x06},
-    {0x2a, 0xd6}, //14fps  6d6
-    {0x2b, 0x07},
-    {0x2c, 0xd0}, //12fps    7d0
-    {0x2d, 0x0b},
-    {0x2e, 0xb8}, //8fps    bb8
-    {0xfe, 0x00},
+    {0x11, 0x00},   // SH Delay
+    {0x12, 0x1D},
+    {0x13, 0x00},   // St
+    {0x14, 0x00},   // Et
 
-    {0x00, 0x00},
-};
-
-static const uint8_t qvga_regs[][2] = {
-    {0xfe, 0x00},
-    {0x05, 0x02}, //0x02
-    {0x06, 0x20}, //0x20
-    {0x07, 0x03},
-    {0x08, 0x80},
-    {0xb6, 0x01},
-    {0xfd, 0x03},
-    {0xfa, 0x00},
-    {0x18, 0x42},
-    /*crop window*/
-    {0xfe, 0x00},
-    {0x90, 0x01},
-    {0x91, 0x00},
-    {0x92, 0x00},
-    {0x93, 0x00},
-    {0x94, 0x00},
-    {0x95, 0x02}, //0x02 00 0x01 height
-    {0x96, 0x58}, //0x58 f0 0x2c
-    {0x97, 0x03}, //0x03 01 0x01 width
-    {0x98, 0x20}, //0x20 40 0x90
-    {0x99, 0x11},
-    {0x9a, 0x06},
-    /*AWB*/
-    {0xfe, 0x00},
-    {0xec, 0x02},
-    {0xed, 0x02},
-    {0xee, 0x30},
-    {0xef, 0x48},
-    {0xfe, 0x02},
-    {0x9d, 0x08},
     {0xfe, 0x01},
-    {0x74, 0x00},
-    /*AEC*/
-    {0xfe, 0x01},
-    {0x01, 0x04},
-    {0x02, 0x60},
-    {0x03, 0x02},
-    {0x04, 0x48},
-    {0x05, 0x18},
-    {0x06, 0x50},
-    {0x07, 0x10},
-    {0x08, 0x38},
-    {0x0a, 0x80},
-    {0x21, 0x04},
-    {0xfe, 0x00},
-    {0x20, 0x03},
+    {0x3c, 0x00},
+    {0x3d, 0x04},
     {0xfe, 0x00},
 
     {0x00, 0x00},
@@ -763,30 +727,139 @@ static int write_reg(sensor_t *sensor, uint16_t reg_addr, uint16_t reg_data)
 
 static int set_pixformat(sensor_t *sensor, pixformat_t pixformat)
 {
-    return 0;
-}
-
-static int set_framesize(sensor_t *sensor, framesize_t framesize)
-{
     int ret = 0;
-    const uint8_t (*regs)[2];
+    uint8_t reg;
 
-    switch (framesize) {
-        case FRAMESIZE_VGA:
-        case FRAMESIZE_QVGA:
-        case FRAMESIZE_QQVGA:
-            regs = qvga_regs;
+    // P0 regs
+    ret |= cambus_writeb(&sensor->bus, sensor->slv_addr, 0xFE, 0x00);
+
+    // Read current output format reg
+    ret |= cambus_readb(&sensor->bus, sensor->slv_addr, REG_OUTPUT_FMT, &reg);
+
+    switch (pixformat) {
+        case PIXFORMAT_RGB565:
+            ret |= cambus_writeb(&sensor->bus, sensor->slv_addr,
+                    REG_OUTPUT_FMT, REG_OUTPUT_SET_FMT(reg, REG_OUTPUT_FMT_RGB565));
+            break;
+        case PIXFORMAT_YUV422:
+        case PIXFORMAT_GRAYSCALE:
+            ret |= cambus_writeb(&sensor->bus, sensor->slv_addr,
+                    REG_OUTPUT_FMT, REG_OUTPUT_SET_FMT(reg, REG_OUTPUT_FMT_YCBYCR));
+            break;
+        case PIXFORMAT_BAYER:
+            // Make sure odd/even row are switched to work with our bayer conversion.
+            ret |= cambus_writeb(&sensor->bus, sensor->slv_addr, 
+                    REG_SYNC_MODE, REG_SYNC_MODE_DEF | REG_SYNC_MODE_ROW_SWITCH);
+            ret |= cambus_writeb(&sensor->bus, sensor->slv_addr,
+                    REG_OUTPUT_FMT, REG_OUTPUT_SET_FMT(reg, REG_OUTPUT_FMT_BAYER));
             break;
         default:
             return -1;
     }
 
-    // Write frame size registers
-    for (int i=0; regs[i][0]; i++) {
-        ret |= cambus_writeb(&sensor->bus, sensor->slv_addr, regs[i][0], regs[i][1]);
-    }
     return ret;
+}
 
+static int set_window(sensor_t *sensor, uint16_t reg, uint16_t x, uint16_t y, uint16_t w, uint16_t h)
+{
+    int ret = 0;
+
+    // P0 regs
+    ret |= cambus_writeb(&sensor->bus, sensor->slv_addr, 0xFE, 0x00);
+
+    // Y/row offset
+    ret |= cambus_writeb(&sensor->bus, sensor->slv_addr, reg++, y >> 8);
+    ret |= cambus_writeb(&sensor->bus, sensor->slv_addr, reg++, y & 0xff);
+
+    // X/col offset
+    ret |= cambus_writeb(&sensor->bus, sensor->slv_addr, reg++, x >> 8);
+    ret |= cambus_writeb(&sensor->bus, sensor->slv_addr, reg++, x & 0xff);
+
+    // Window height
+    ret |= cambus_writeb(&sensor->bus, sensor->slv_addr, reg++, h >> 8);
+    ret |= cambus_writeb(&sensor->bus, sensor->slv_addr, reg++, h & 0xff);
+
+    // Window width
+    ret |= cambus_writeb(&sensor->bus, sensor->slv_addr, reg++, w >> 8);
+    ret |= cambus_writeb(&sensor->bus, sensor->slv_addr, reg++, w & 0xff);
+
+    return ret;
+}
+
+static int set_framesize(sensor_t *sensor, framesize_t framesize)
+{
+    int ret = 0;
+
+    uint16_t win_w;
+    uint16_t win_h;
+
+    uint16_t w = resolution[framesize][0];
+    uint16_t h = resolution[framesize][1];
+
+    if (w < resolution[FRAMESIZE_QVGA][0] && h < resolution[FRAMESIZE_QVGA][1]) {
+        win_w = w * 4;
+        win_h = h * 4;
+    } else if (w < resolution[FRAMESIZE_VGA][0] && h < resolution[FRAMESIZE_VGA][1]) {
+        win_w = w * 3;
+        win_h = h * 3;
+    } else if (w < resolution[FRAMESIZE_SVGA][0] && h < resolution[FRAMESIZE_SVGA][1]) {
+        win_w = w * 2;
+        win_h = h * 2;
+    } else if (w <= resolution[FRAMESIZE_UXGA][0] && h <= resolution[FRAMESIZE_UXGA][1]) {
+        // For frames bigger than subsample using full UXGA window.
+        win_w = resolution[FRAMESIZE_UXGA][0];
+        win_h = resolution[FRAMESIZE_UXGA][1];
+    } else {
+        return -1;
+    }
+
+    uint16_t c_ratio = win_w / w;
+    uint16_t r_ratio = win_h / h;
+
+    uint16_t x = (((win_w / c_ratio) - w) / 2);
+    uint16_t y = (((win_h / r_ratio) - h) / 2);
+
+    uint16_t win_x = ((GC_MAX_WIN_W - win_w) / 2);
+    uint16_t win_y = ((GC_MAX_WIN_H - win_h) / 2);
+
+    // Set readout window first.
+    ret |= set_window(sensor, 0x09, win_x, win_y, win_w + 16, win_h + 8);
+
+    // Set cropping window next.
+    ret |= set_window(sensor, 0x91, x, y, w, h);
+
+    // Enable crop
+    ret |= cambus_writeb(&sensor->bus, sensor->slv_addr, 0x90, 0x01);
+
+    // Set Sub-sampling ratio and mode
+    ret |= cambus_writeb(&sensor->bus, sensor->slv_addr, 0x99, ((r_ratio << 4) | c_ratio));
+    ret |= cambus_writeb(&sensor->bus, sensor->slv_addr, 0x9A, 0x0E);
+
+    return ret;
+}
+
+static int set_hmirror(sensor_t *sensor, int enable)
+{
+    int ret = 0;
+    uint8_t reg;
+
+    // P0 regs
+    ret |= cambus_writeb(&sensor->bus, sensor->slv_addr, 0xFE, 0x00);
+    ret |= cambus_readb(&sensor->bus, sensor->slv_addr, REG_AMODE1, &reg);
+    ret |= cambus_writeb(&sensor->bus, sensor->slv_addr, REG_AMODE1, REG_AMODE1_SET_HMIRROR(reg, enable)) ;
+    return ret;
+}
+
+static int set_vflip(sensor_t *sensor, int enable)
+{
+    int ret = 0;
+    uint8_t reg;
+
+    // P0 regs
+    ret |= cambus_writeb(&sensor->bus, sensor->slv_addr, 0xFE, 0x00);
+    ret |= cambus_readb(&sensor->bus, sensor->slv_addr, REG_AMODE1, &reg);
+    ret |= cambus_writeb(&sensor->bus, sensor->slv_addr, REG_AMODE1, REG_AMODE1_SET_VMIRROR(reg, enable)) ;
+    return ret;
 }
 
 int gc2145_init(sensor_t *sensor)
@@ -798,6 +871,8 @@ int gc2145_init(sensor_t *sensor)
     sensor->write_reg           = write_reg;
     sensor->set_pixformat       = set_pixformat;
     sensor->set_framesize       = set_framesize;
+    sensor->set_hmirror         = set_hmirror;
+    sensor->set_vflip           = set_vflip;
 
     // Set sensor flags
     SENSOR_HW_FLAGS_SET(sensor, SENSOR_HW_FLAGS_VSYNC, 0);
