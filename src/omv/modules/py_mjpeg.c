@@ -136,3 +136,5 @@ const mp_obj_module_t mjpeg_module = {
     .base = { &mp_type_module },
     .globals = (mp_obj_t)&globals_dict,
 };
+
+MP_REGISTER_MODULE(MP_QSTR_mjpeg, mjpeg_module, 1);

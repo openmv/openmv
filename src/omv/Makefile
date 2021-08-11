@@ -41,19 +41,6 @@ SRCS += $(addprefix sensors/,   \
 	paj6100.c                   \
    )
 
-SRCS += $(addprefix modules/,   \
-	py_clock.c                  \
-	py_gif.c                    \
-	py_helper.c                 \
-	py_image.c                  \
-	py_imageio.c                \
-	py_mjpeg.c                  \
-	py_omv.c                    \
-	py_sensor.c                 \
-	py_tf.c                     \
-	py_fir.c                    \
-   )
-
 SRCS += $(addprefix imlib/,     \
 	agast.c                     \
 	apriltag.c                  \
@@ -108,7 +95,6 @@ SRCS += $(addprefix imlib/,     \
    )
 
 SRCS += $(wildcard ports/$(PORT)/*.c)
-SRCS += $(wildcard ports/$(PORT)/modules/*.c)
 
 OBJS = $(addprefix $(BUILD)/, $(SRCS:.c=.o))
 OBJ_DIRS = $(sort $(dir $(OBJS)))

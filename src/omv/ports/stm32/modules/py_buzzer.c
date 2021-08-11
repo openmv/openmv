@@ -109,4 +109,5 @@ void py_buzzer_init0()
     buzzer_setup(OMV_BUZZER_FREQ, 0);
 }
 
+MP_REGISTER_MODULE(MP_QSTR_buzzer, buzzer_module, MICROPY_PY_BUZZER);
 #endif // MICROPY_PY_BUZZER
