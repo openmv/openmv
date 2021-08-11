@@ -103,7 +103,7 @@ OMV_SRC_QSTR := $(wildcard $(TOP_DIR)/$(OMV_DIR)/modules/*.c)
 OMV_SRC_QSTR += $(wildcard $(TOP_DIR)/$(OMV_DIR)/ports/$(PORT)/modules/*.c)
 
 # The following command line args are passed to MicroPython's top Makefile.
-MICROPY_ARGS = PORT=$(PORT) BOARD=$(TARGET) DEBUG=$(DEBUG) OMV_SRC_QSTR="$(OMV_SRC_QSTR)" MPY_LIB_DIR=$(MPY_LIB_DIR) MICROPY_ROM_TEXT_COMPRESSION=$(ROM_TEXT_COMPRESSION)
+MICROPY_ARGS = PORT=$(PORT) BOARD=$(TARGET) DEBUG=$(DEBUG) MPY_LIB_DIR=$(MPY_LIB_DIR) MICROPY_ROM_TEXT_COMPRESSION=$(ROM_TEXT_COMPRESSION) USER_C_MODULES=$(TOP_DIR)/$(OMV_DIR) #OMV_SRC_QSTR="$(OMV_SRC_QSTR)"
 
 # Configure additional built-in modules. Note must define both the CFLAGS and the Make command line args.
 ifeq ($(MICROPY_PY_SENSOR), 1)
@@ -171,6 +171,11 @@ endif
 ifeq ($(MICROPY_PY_BUZZER), 1)
 MPY_CFLAGS += -DMICROPY_PY_BUZZER=1
 MICROPY_ARGS += MICROPY_PY_BUZZER=1
+endif
+
+ifeq ($(CUBEAI), 1)
+MPY_CFLAGS += -DMICROPY_PY_CUBEAI=1
+MICROPY_ARGS += MICROPY_PY_CUBEAI=1
 endif
 
 # Include the port Makefile.
