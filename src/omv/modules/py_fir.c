@@ -1265,3 +1265,5 @@ void py_fir_init0()
 {
     py_fir_deinit();
 }
+
+MP_REGISTER_MODULE(MP_QSTR_fir, fir_module, 1);

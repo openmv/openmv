@@ -92,3 +92,5 @@ STATIC MP_DEFINE_CONST_DICT(globals_dict, globals_dict_table);
 /* Create nn_st_module module + add ref to it in mpconfigport.h file */
 const mp_obj_module_t nn_st_module = {.base = {&mp_type_module},
                                       .globals = (mp_obj_t)&globals_dict};
+
+MP_REGISTER_MODULE(MP_QSTR_nn_st, nn_st_module, MICROPY_PY_CUBEAI);

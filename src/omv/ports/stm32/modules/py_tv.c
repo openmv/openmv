@@ -1108,4 +1108,5 @@ void py_tv_init0()
     py_tv_deinit();
 }
 
+MP_REGISTER_MODULE(MP_QSTR_tv, tv_module, MICROPY_PY_TV);
 #endif // MICROPY_PY_TV

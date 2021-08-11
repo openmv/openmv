@@ -373,4 +373,5 @@ const mp_obj_module_t audio_module = {
     .globals = (mp_obj_t)&globals_dict,
 };
 
+MP_REGISTER_MODULE(MP_QSTR_audio, audio_module, MICROPY_PY_AUDIO);
 #endif //MICROPY_PY_AUDIO
