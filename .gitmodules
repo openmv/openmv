@@ -2,3 +2,6 @@
 	path = src/micropython
 	url = https://github.com/openmv/micropython.git
 	branch = openmv
+[submodule "src/omv/modules/ulab"]
+	path = src/omv/modules/ulab
+	url = https://github.com/v923z/micropython-ulab.git
