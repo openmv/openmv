@@ -173,14 +173,16 @@ STATIC mp_obj_t py_micro_speech_listen(uint n_args, const mp_obj_t *args, mp_map
         __enable_irq();
 
         // Run model on updated spectrogram
-        PY_ASSERT_FALSE_MSG(libtf_invoke(arg_model->model_data,
-                                 tensor_arena,
-                                 tensor_arena_size,
-                                 py_tf_input_callback,
-                                 spectrogram,
-                                 py_tf_output_callback,
-                                 previous_scores[results_count]),
-                                 py_tf_putchar_buffer - (PY_TF_PUTCHAR_BUFFER_LEN - py_tf_putchar_buffer_len));
+        if (libtf_invoke(arg_model->model_data,
+                tensor_arena,
+                tensor_arena_size,
+                py_tf_input_callback,
+                spectrogram,
+                py_tf_output_callback,
+                previous_scores[results_count]) != 0) {
+            mp_raise_msg(&mp_type_OSError, (mp_rom_error_text_t)
+                    py_tf_putchar_buffer - (PY_TF_PUTCHAR_BUFFER_LEN - py_tf_putchar_buffer_len));
+        }
 
         // If we have enough samples calculate average scores.
         if ((HAL_GetTick() - start) > (kAverageWindowSamples * kFeatureSliceDurationMs)) {

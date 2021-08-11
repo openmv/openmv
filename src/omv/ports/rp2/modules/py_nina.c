@@ -159,12 +159,12 @@ static mp_obj_t py_nina_connect(mp_uint_t n_args, const mp_obj_t *pos_args, mp_m
         mp_uint_t channel = args[3].u_int;
 
         if (security != NINA_SEC_OPEN && security != NINA_SEC_WEP) {
-            nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, "AP mode supports WEP security only."));
+            mp_raise_msg(&mp_type_OSError, MP_ERROR_TEXT("AP mode supports WEP security only."));
         }
 
         // Initialize WiFi in AP mode.
         if (nina_start_ap(ssid, security, key, channel) != 0) {
-            nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, "failed to start in AP mode"));
+            mp_raise_msg(&mp_type_OSError, MP_ERROR_TEXT("failed to start in AP mode"));
         }
     }
     return mp_const_none;

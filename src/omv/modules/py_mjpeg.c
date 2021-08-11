@@ -42,7 +42,7 @@ static mp_obj_t py_mjpeg_open(uint n_args, const mp_obj_t *args, mp_map_t *kw_ar
     file_write_open(&mjpeg->fp, mp_obj_str_get_str(args[0]));
     mjpeg_open(&mjpeg->fp, mjpeg->width, mjpeg->height);
     #else
-    nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, "Image I/O is not supported"));
+    mp_raise_msg(&mp_type_OSError, MP_ERROR_TEXT("Image I/O is not supported"));
     #endif
     return mjpeg;
 }
@@ -82,7 +82,7 @@ static mp_obj_t py_mjpeg_add_frame(uint n_args, const mp_obj_t *args, mp_map_t *
     arg_q = IM_MIN(IM_MAX(arg_q, 1), 100);
     mjpeg_add_frame(&arg_mjpeg->fp, &arg_mjpeg->frames, &arg_mjpeg->bytes, arg_img, arg_q);
     #else
-    nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, "Image I/O is not supported"));
+    mp_raise_msg(&mp_type_OSError, MP_ERROR_TEXT("Image I/O is not supported"));
     #endif
     return mp_const_none;
 }

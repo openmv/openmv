@@ -68,10 +68,13 @@ OMV_COMMON_DIR=$(TOP_DIR)/$(OMV_DIR)/common
 
 # Debugging/Optimization
 ifeq ($(DEBUG), 1)
+ROM_TEXT_COMPRESSION = 0
 CFLAGS += -Og -ggdb3 -Wno-maybe-uninitialized
 else
 DEBUG=0
+ROM_TEXT_COMPRESSION = 1
 CFLAGS += -O2 -DNDEBUG
+MPY_CFLAGS += -DMICROPY_ROM_TEXT_COMPRESSION=1
 endif
 
 # Enable debug printf
@@ -100,7 +103,7 @@ OMV_SRC_QSTR := $(wildcard $(TOP_DIR)/$(OMV_DIR)/modules/*.c)
 OMV_SRC_QSTR += $(wildcard $(TOP_DIR)/$(OMV_DIR)/ports/$(PORT)/modules/*.c)
 
 # The following command line args are passed to MicroPython's top Makefile.
-MICROPY_ARGS = BOARD=$(TARGET) DEBUG=$(DEBUG) OMV_SRC_QSTR="$(OMV_SRC_QSTR)" MPY_LIB_DIR=$(MPY_LIB_DIR)
+MICROPY_ARGS = PORT=$(PORT) BOARD=$(TARGET) DEBUG=$(DEBUG) OMV_SRC_QSTR="$(OMV_SRC_QSTR)" MPY_LIB_DIR=$(MPY_LIB_DIR) MICROPY_ROM_TEXT_COMPRESSION=$(ROM_TEXT_COMPRESSION)
 
 # Configure additional built-in modules. Note must define both the CFLAGS and the Make command line args.
 ifeq ($(MICROPY_PY_SENSOR), 1)

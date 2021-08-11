@@ -49,7 +49,7 @@ void usbdbg_init()
     script_running=false;
     irq_enabled = false;
     vstr_init(&script_buf, 32);
-    mp_const_ide_interrupt = mp_obj_new_exception_msg(&mp_type_Exception, "IDE interrupt");
+    mp_const_ide_interrupt = mp_obj_new_exception_msg(&mp_type_Exception, MP_ERROR_TEXT("IDE interrupt"));
 }
 
 void usbdbg_wait_for_command(uint32_t timeout)

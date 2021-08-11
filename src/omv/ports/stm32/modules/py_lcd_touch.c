@@ -47,28 +47,36 @@ mp_obj_t lcd_touch_get_points()
 mp_obj_t lcd_touch_get_point_flag(mp_obj_t index)
 {
     int i = mp_obj_get_int(index);
-    if ((i < 0) || (NUM_TOUCH_POINTS <= i)) nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Index out of bounds!"));
+    if ((i < 0) || (NUM_TOUCH_POINTS <= i)) {
+        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Index out of bounds!"));
+    }
     return mp_obj_new_int(lcd_touch_flag[i]);
 }
 
 mp_obj_t lcd_touch_get_point_id(mp_obj_t index)
 {
     int i = mp_obj_get_int(index);
-    if ((i < 0) || (NUM_TOUCH_POINTS <= i)) nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Index out of bounds!"));
+    if ((i < 0) || (NUM_TOUCH_POINTS <= i)) {
+        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Index out of bounds!"));
+    }
     return mp_obj_new_int(lcd_touch_id[i]);
 }
 
 mp_obj_t lcd_touch_get_point_x_position(mp_obj_t index)
 {
     int i = mp_obj_get_int(index);
-    if ((i < 0) || (NUM_TOUCH_POINTS <= i)) nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Index out of bounds!"));
+    if ((i < 0) || (NUM_TOUCH_POINTS <= i)) {
+        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Index out of bounds!"));
+    }
     return mp_obj_new_int(lcd_touch_x_position[i]);
 }
 
 mp_obj_t lcd_touch_get_point_y_position(mp_obj_t index)
 {
     int i = mp_obj_get_int(index);
-    if ((i < 0) || (NUM_TOUCH_POINTS <= i)) nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Index out of bounds!"));
+    if ((i < 0) || (NUM_TOUCH_POINTS <= i)) {
+        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Index out of bounds!"));
+    }
     return mp_obj_new_int(lcd_touch_y_position[i]);
 }
 
@@ -119,7 +127,7 @@ mp_obj_t lcd_touch_update_touch_points()
         }
     }
 
-    nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, "Failed to update the number of touch points!"));
+    mp_raise_msg(&mp_type_OSError, MP_ERROR_TEXT("Failed to update the number of touch points!"));
 }
 
 STATIC mp_obj_t lcd_touch_extint_callback(mp_obj_t line)
@@ -178,7 +186,7 @@ void lcd_touch_init()
     }), MP_MACHINE_I2C_FLAG_STOP) == 2) {
         extint_register((mp_obj_t) OMV_TOUCH_INT_PIN, GPIO_MODE_IT_FALLING, GPIO_PULLUP, (mp_obj_t) &lcd_touch_extint_callback_obj, true);
     } else {
-        nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, "Touch init failed!"));
+        mp_raise_msg(&mp_type_OSError, MP_ERROR_TEXT("Touch init failed!"));
     }
 }
 

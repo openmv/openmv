@@ -22,7 +22,7 @@
 NORETURN static void ff_fail(FIL *fp, FRESULT res)
 {
     if (fp) f_close(fp);
-    mp_raise_msg(&mp_type_OSError, MP_ERROR_TEXT(ffs_strerror(res)));
+    mp_raise_msg(&mp_type_OSError, (mp_rom_error_text_t) ffs_strerror(res));
 }
 
 NORETURN static void ff_read_fail(FIL *fp)

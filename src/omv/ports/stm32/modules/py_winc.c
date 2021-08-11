@@ -54,8 +54,8 @@ static mp_obj_t py_winc_make_new(const mp_obj_type_t *type, mp_uint_t n_args, mp
     winc_mode_t winc_mode = args[0].u_int;
     int error = winc_init(winc_mode);
     if (error != 0) {
-        nlr_raise(mp_obj_new_exception_msg_varg(&mp_type_OSError,
-                    "Failed to initialize WINC1500 module: %s\n", winc_strerror(error)));
+       mp_raise_msg_varg(&mp_type_OSError,
+               MP_ERROR_TEXT("Failed to initialize WINC1500 module: %s\n"), winc_strerror(error));
     }
 
     switch (winc_mode) {
@@ -76,7 +76,7 @@ static mp_obj_t py_winc_make_new(const mp_obj_type_t *type, mp_uint_t n_args, mp
             }
             break;
         default:
-            nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, "WiFi mode is not supported!"));
+            mp_raise_msg(&mp_type_OSError, MP_ERROR_TEXT("WiFi mode is not supported!"));
     }
 
     return (mp_obj_t)&winc_obj;
@@ -99,7 +99,7 @@ static mp_obj_t py_winc_connect(mp_uint_t n_args, const mp_obj_t *pos_args, mp_m
     const char *ssid = mp_obj_str_get_str(args[0].u_obj);
 
     if (strlen(ssid) == 0) {
-        nlr_raise(mp_obj_new_exception_msg_varg(&mp_type_OSError, "SSID can't be empty!"));
+        mp_raise_msg(&mp_type_OSError, MP_ERROR_TEXT("SSID can't be empty!"));
     }
 
     // get key and sec
@@ -112,13 +112,13 @@ static mp_obj_t py_winc_connect(mp_uint_t n_args, const mp_obj_t *pos_args, mp_m
     }
 
     if (security != M2M_WIFI_SEC_OPEN && strlen(key) == 0) {
-        nlr_raise(mp_obj_new_exception_msg_varg(&mp_type_OSError, "Key can't be empty!"));
+        mp_raise_msg(&mp_type_OSError, MP_ERROR_TEXT("Key can't be empty!"));
     }
 
     // connect to AP
     if (winc_connect(ssid, security, key, M2M_WIFI_CH_ALL) != 0) {
-        nlr_raise(mp_obj_new_exception_msg_varg(&mp_type_OSError,
-                    "could not connect to ssid=%s, sec=%d, key=%s\n", ssid, security, key));
+        mp_raise_msg_varg(&mp_type_OSError,
+                    MP_ERROR_TEXT("could not connect to ssid=%s, sec=%d, key=%s\n"), ssid, security, key);
     }
 
     return mp_const_none;
@@ -146,11 +146,11 @@ static mp_obj_t py_winc_start_ap(mp_uint_t n_args, const mp_obj_t *pos_args, mp_
     mp_uint_t security = args[2].u_int;
 
     if (security != M2M_WIFI_SEC_OPEN && security != M2M_WIFI_SEC_WEP) {
-        nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, "AP mode supports WEP security only."));
+        mp_raise_msg(&mp_type_OSError, MP_ERROR_TEXT("AP mode supports WEP security only."));
     }
 
     if (security == M2M_WIFI_SEC_WEP && args[1].u_obj == MP_OBJ_NULL) {
-        nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, "Missing WEP key!"));
+        mp_raise_msg(&mp_type_OSError, MP_ERROR_TEXT("Missing WEP key!"));
     }
 
     if (security != M2M_WIFI_SEC_OPEN) {
@@ -162,7 +162,7 @@ static mp_obj_t py_winc_start_ap(mp_uint_t n_args, const mp_obj_t *pos_args, mp_
 
     // Initialize WiFi in AP mode.
     if (winc_start_ap(ssid, security, key, channel) != 0) {
-        nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, "failed to start in AP mode"));
+        mp_raise_msg(&mp_type_OSError, MP_ERROR_TEXT("failed to start in AP mode"));
     }
 
     printf("AP mode started. You can connect to %s.\r\n", ssid);
@@ -321,7 +321,7 @@ static mp_obj_t py_winc_fw_dump(mp_obj_t self_in, mp_obj_t path_in)
     printf("Dumping flash...\n");
     const char *path = mp_obj_str_get_str(path_in);
     if (winc_flash_dump(path) != 0) {
-        nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, "Failed to dump flash!"));
+        mp_raise_msg(&mp_type_OSError, MP_ERROR_TEXT("Failed to dump flash!"));
     }
 
     return mp_const_none;
@@ -334,25 +334,25 @@ static mp_obj_t py_winc_fw_update(mp_obj_t self_in, mp_obj_t path_in)
     const char *path = mp_obj_str_get_str(path_in);
 
     if ((res = f_stat_helper(path, &fno)) != FR_OK) {
-        nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, ffs_strerror(res)));
+        mp_raise_msg(&mp_type_OSError, (mp_rom_error_text_t) ffs_strerror(res));
     }
 
     // Erase the WINC1500 flash.
     printf("Erasing flash...\n");
     if (winc_flash_erase() != 0) {
-        nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, "Failed to erase the flash!"));
+        mp_raise_msg(&mp_type_OSError, MP_ERROR_TEXT("Failed to erase the flash!"));
     }
 
     // Program the firmware on the WINC1500 flash.
     printf("Programming firmware image...\n");
     if (winc_flash_write(path) != 0) {
-        nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, "Failed to write the firmware!"));
+        mp_raise_msg(&mp_type_OSError, MP_ERROR_TEXT("Failed to write the firmware!"));
     }
 
     // Verify the firmware on the WINC1500 flash.
     printf("Verifying firmware image...\n");
     if (winc_flash_verify(path) != 0) {
-        nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, "Failed to verify the firmware!"));
+        mp_raise_msg(&mp_type_OSError, MP_ERROR_TEXT("Failed to verify the firmware!"));
     }
 
     printf("All task completed successfully.\n");
