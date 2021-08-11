@@ -6591,7 +6591,7 @@ mp_obj_t py_image_load_cascade(uint n_args, const mp_obj_t *args, mp_map_t *kw_a
     if (res != FR_OK) {
         #if defined(IMLIB_ENABLE_IMAGE_FILE_IO)
         // cascade is not built-in and failed to load it from file.
-        mp_raise_msg(&mp_type_OSError, ffs_strerror(res));
+        mp_raise_msg(&mp_type_OSError, (mp_rom_error_text_t) ffs_strerror(res));
         #else
         // cascade is not built-in.
         mp_raise_msg(&mp_type_OSError, MP_ERROR_TEXT("Image I/O is not supported"));
@@ -6672,7 +6672,7 @@ mp_obj_t py_image_load_descriptor(uint n_args, const mp_obj_t *args, mp_map_t *k
 error:
     // File open or write error
     if (res != FR_OK) {
-        mp_raise_msg(&mp_type_OSError, ffs_strerror(res));
+        mp_raise_msg(&mp_type_OSError, (mp_rom_error_text_t) ffs_strerror(res));
     }
 
     // If no file error and descriptor is still none, then it's not supported.
@@ -6739,7 +6739,7 @@ mp_obj_t py_image_save_descriptor(uint n_args, const mp_obj_t *args, mp_map_t *k
 error:
     // File open or read error
     if (res != FR_OK) {
-        mp_raise_msg(&mp_type_OSError, ffs_strerror(res));
+        mp_raise_msg(&mp_type_OSError, (mp_rom_error_text_t) ffs_strerror(res));
     }
     return mp_const_true;
 }
@@ -6848,7 +6848,7 @@ int py_image_descriptor_from_roi(image_t *img, const char *path, rectangle_t *ro
         }
         // File open/write error
         if (res != FR_OK) {
-            mp_raise_msg(&mp_type_OSError, ffs_strerror(res));
+            mp_raise_msg(&mp_type_OSError, (mp_rom_error_text_t) ffs_strerror(res));
         }
     }
     return 0;

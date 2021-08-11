@@ -1201,29 +1201,30 @@ __weak int sensor_auto_crop_framebuffer()
     return 0;
 }
 
-mp_rom_error_text_t sensor_strerror(int error)
+const char *sensor_strerror(int error)
 {
-    static mp_rom_error_text_t sensor_errors[] = {
-        MP_ERROR_TEXT("No error."),
-        MP_ERROR_TEXT("Sensor control failed."),
-        MP_ERROR_TEXT("The requested operation is not supported by the image sensor."),
-        MP_ERROR_TEXT("Failed to detect the image sensor or image sensor is detached."),
-        MP_ERROR_TEXT("The detected image sensor is not supported."),
-        MP_ERROR_TEXT("Failed to initialize the image sensor."),
-        MP_ERROR_TEXT("Failed to initialize the image sensor clock."),
-        MP_ERROR_TEXT("Failed to initialize the image sensor DMA."),
-        MP_ERROR_TEXT("Failed to initialize the image sensor DCMI."),
-        MP_ERROR_TEXT("An low level I/O error has occurred."),
-        MP_ERROR_TEXT("Frame capture has failed."),
-        MP_ERROR_TEXT("Frame capture has timed out."),
-        MP_ERROR_TEXT("Frame size is not supported or is not set."),
-        MP_ERROR_TEXT("Pixel format is not supported or is not set."),
-        MP_ERROR_TEXT("Window is not supported or is not set."),
-        MP_ERROR_TEXT("An invalid argument is used."),
-        MP_ERROR_TEXT("The requested operation is not supported on the current pixel format."),
-        MP_ERROR_TEXT("Frame buffer error."),
-        MP_ERROR_TEXT("Frame buffer overflow, try reducing the frame size."),
-        MP_ERROR_TEXT("JPEG frame buffer overflow."),
+    static const char *sensor_errors[] = {
+        "No error.",
+        "Sensor control failed.",
+        "The requested operation is not supported by the image sensor.",
+        "Failed to detect the image sensor or image sensor is detached.",
+        "The detected image sensor is not supported.",
+        "Failed to initialize the image sensor.",
+        "Failed to initialize the image sensor clock.",
+        "Failed to initialize the image sensor DMA.",
+        "Failed to initialize the image sensor DCMI.",
+        "An low level I/O error has occurred.",
+        "Frame capture has failed.",
+        "Frame capture has timed out.",
+        "Frame size is not supported or is not set.",
+        "Pixel format is not supported or is not set.",
+        "Window is not supported or is not set.",
+        "Frame rate is not supported or is not set.",
+        "An invalid argument is used.",
+        "The requested operation is not supported on the current pixel format.",
+        "Frame buffer error.",
+        "Frame buffer overflow, try reducing the frame size.",
+        "JPEG frame buffer overflow.",
     };
 
     // Sensor errors are negative.

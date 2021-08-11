@@ -67,7 +67,7 @@ STATIC mp_obj_t py_tf_classification_subscr(mp_obj_t self_in, mp_obj_t index, mp
         if (MP_OBJ_IS_TYPE(index, &mp_type_slice)) {
             mp_bound_slice_t slice;
             if (!mp_seq_get_fast_slice_indexes(py_tf_classification_obj_size, index, &slice)) {
-                nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, "only slices with step=1 (aka None) are supported"));
+                mp_raise_msg(&mp_type_OSError, MP_ERROR_TEXT("only slices with step=1 (aka None) are supported"));
             }
             mp_obj_tuple_t *result = mp_obj_new_tuple(slice.stop - slice.start, NULL);
             mp_seq_copy(result->items, &(self->x) + slice.start, result->len, mp_obj_t);
@@ -150,7 +150,7 @@ STATIC mp_obj_t int_py_tf_load(mp_obj_t path_obj, bool alloc_mode, bool helper_m
         read_data(&fp, tf_model->model_data, tf_model->model_data_len);
         file_close(&fp);
         #else
-        nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, "Image I/O is not supported"));
+        mp_raise_msg(&mp_type_OSError, MP_ERROR_TEXT("Image I/O is not supported"));
         #endif
     }
 
@@ -161,15 +161,18 @@ STATIC mp_obj_t int_py_tf_load(mp_obj_t path_obj, bool alloc_mode, bool helper_m
     uint32_t tensor_arena_size;
     uint8_t *tensor_arena = fb_alloc_all(&tensor_arena_size, FB_ALLOC_PREFER_SIZE);
 
-    PY_ASSERT_FALSE_MSG(libtf_get_input_data_hwc(tf_model->model_data,
-                                                 tensor_arena,
-                                                 tensor_arena_size,
-                                                 &tf_model->height,
-                                                 &tf_model->width,
-                                                 &tf_model->channels,
-                                                 &tf_model->signed_or_unsigned,
-                                                 &tf_model->is_float),
-                        py_tf_putchar_buffer - (PY_TF_PUTCHAR_BUFFER_LEN - py_tf_putchar_buffer_len));
+    if (libtf_get_input_data_hwc(tf_model->model_data,
+        tensor_arena,
+        tensor_arena_size,
+        &tf_model->height,
+        &tf_model->width,
+        &tf_model->channels,
+        &tf_model->signed_or_unsigned,
+        &tf_model->is_float) != 0) {
+        // Note can't use MP_ERROR_TEXT here.
+        mp_raise_msg(&mp_type_OSError, (mp_rom_error_text_t)
+                py_tf_putchar_buffer - (PY_TF_PUTCHAR_BUFFER_LEN - py_tf_putchar_buffer_len));
+    }
 
     fb_free(); // free fb_alloc_all()
 
@@ -437,14 +440,17 @@ STATIC mp_obj_t py_tf_classify(uint n_args, const mp_obj_t *args, mp_map_t *kw_a
 
                     py_tf_classify_output_data_callback_data_t py_tf_classify_output_data_callback_data;
 
-                    PY_ASSERT_FALSE_MSG(libtf_invoke(arg_model->model_data,
-                                                     tensor_arena,
-                                                     tensor_arena_size,
-                                                     py_tf_input_data_callback,
-                                                     &py_tf_input_data_callback_data,
-                                                     py_tf_classify_output_data_callback,
-                                                     &py_tf_classify_output_data_callback_data),
-                                        py_tf_putchar_buffer - (PY_TF_PUTCHAR_BUFFER_LEN - py_tf_putchar_buffer_len));
+                    if (libtf_invoke(arg_model->model_data,
+                        tensor_arena,
+                        tensor_arena_size,
+                        py_tf_input_data_callback,
+                        &py_tf_input_data_callback_data,
+                        py_tf_classify_output_data_callback,
+                        &py_tf_classify_output_data_callback_data) != 0) {
+                        // Note can't use MP_ERROR_TEXT here.
+                        mp_raise_msg(&mp_type_OSError, (mp_rom_error_text_t)
+                                py_tf_putchar_buffer - (PY_TF_PUTCHAR_BUFFER_LEN - py_tf_putchar_buffer_len));
+                    }
 
                     py_tf_classification_obj_t *o = m_new_obj(py_tf_classification_obj_t);
                     o->base.type = &py_tf_classification_type;
@@ -524,14 +530,17 @@ STATIC mp_obj_t py_tf_segment(uint n_args, const mp_obj_t *args, mp_map_t *kw_ar
 
     py_tf_segment_output_data_callback_data_t py_tf_segment_output_data_callback_data;
 
-    PY_ASSERT_FALSE_MSG(libtf_invoke(arg_model->model_data,
-                                     tensor_arena,
-                                     tensor_arena_size,
-                                     py_tf_input_data_callback,
-                                     &py_tf_input_data_callback_data,
-                                     py_tf_segment_output_data_callback,
-                                     &py_tf_segment_output_data_callback_data),
-                        py_tf_putchar_buffer - (PY_TF_PUTCHAR_BUFFER_LEN - py_tf_putchar_buffer_len));
+    if (libtf_invoke(arg_model->model_data,
+        tensor_arena,
+        tensor_arena_size,
+        py_tf_input_data_callback,
+        &py_tf_input_data_callback_data,
+        py_tf_segment_output_data_callback,
+        &py_tf_segment_output_data_callback_data) != 0) {
+        // Note can't use MP_ERROR_TEXT here.
+        mp_raise_msg(&mp_type_OSError, (mp_rom_error_text_t)
+                py_tf_putchar_buffer - (PY_TF_PUTCHAR_BUFFER_LEN - py_tf_putchar_buffer_len));
+    }
 
     fb_alloc_free_till_mark();
 
