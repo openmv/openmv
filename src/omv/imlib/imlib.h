@@ -29,6 +29,12 @@
 #include "imlib_config.h"
 #include "omv_boardconfig.h"
 
+#ifndef M_PI
+#define M_PI    3.14159265f
+#define M_PI_2  1.57079632f
+#define M_PI_4  0.78539816f
+#endif
+
 #define IM_LOG2_2(x)    (((x) &                0x2ULL) ? ( 2                        ) :             1) // NO ({ ... }) !
 #define IM_LOG2_4(x)    (((x) &                0xCULL) ? ( 2 +  IM_LOG2_2((x) >>  2)) :  IM_LOG2_2(x)) // NO ({ ... }) !
 #define IM_LOG2_8(x)    (((x) &               0xF0ULL) ? ( 4 +  IM_LOG2_4((x) >>  4)) :  IM_LOG2_4(x)) // NO ({ ... }) !
