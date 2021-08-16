@@ -1010,6 +1010,51 @@ static const uint16_t UVAC_HT[256][2] = {
     {0xFFFC, 0x0010},{0xFFFD, 0x0010},{0xFFFE, 0x0010},{0x0000, 0x0000},{0x0000, 0x0000},{0x0000, 0x0000},{0x0000, 0x0000},{0x0000, 0x0000},
 };
 
+// Macro to write variable length codes to the output stream more efficiently
+#define STORECODE(pOut, iLen, ulCode, ulAcc, iNewLen) \
+        if (iLen+iNewLen > 32) { while (iLen >= 8) \
+                        {unsigned char c = (unsigned char)(ulAcc >> 24); *pOut++ = c; \
+        if (c == 0xff) { *pOut++ = 0;} ulAcc <<= 8; iLen -= 8; }} \
+        iLen += iNewLen; ulAcc |= (ulCode << (32-iLen));
+
+//
+// See if we're close to filling up the output buffer
+// If so, allocate more space now so that we don't have
+// to check on every byte written
+//
+static void jpeg_check_highwater(jpeg_buf_t *jpeg_buf)
+{   
+    if ((jpeg_buf->idx+1) >= jpeg_buf->length - 256) {
+        if (jpeg_buf->realloc == false) {
+            // Can't realloc buffer
+            jpeg_buf->overflow = true;
+            return;
+        }
+        jpeg_buf->length += 1024;
+        jpeg_buf->buf = xrealloc(jpeg_buf->buf, jpeg_buf->length);
+    }
+} /* jpeg_check_highwater() */
+
+//
+// Restore buffer pointer variables from local copies
+//
+void jpeg_restore_buf(jpeg_buf_t *jpeg_buf, uint8_t *pOut, int iBitCount, uint32_t ulBits)
+{
+    uint8_t c;
+    while (iBitCount >= 8) {
+        c = (uint8_t)(ulBits >> 24);
+        *pOut++ = c;
+        if (c == 0xff) {
+            *pOut++ = 0;
+        }
+        ulBits <<= 8; iBitCount -= 8;
+    }
+    jpeg_buf->idx = (int)(pOut - jpeg_buf->buf);
+    jpeg_buf->bitb = ulBits >> 8;
+    jpeg_buf->bitc = iBitCount;
+
+} /* jpeg_restore_buf() */
+
 static void jpeg_put_char(jpeg_buf_t *jpeg_buf, char c)
 {
     if ((jpeg_buf->idx+1) >= jpeg_buf->length) {
@@ -1173,20 +1218,30 @@ static int jpeg_processDU(jpeg_buf_t *jpeg_buf, int8_t *CDU, float *fdtbl, int D
         }
     }
 
+    jpeg_check_highwater(jpeg_buf); // check if we're getting close to the end of the buffer
+    // Use local vars to speed up buffer access
+    // and a macro (STORECODE) to manipulate the local vars
+    uint8_t *pOut, iBitCount; // output pointer and bit count
+    uint32_t ulBits; // accumulated bits
+    pOut = &jpeg_buf->buf[jpeg_buf->idx];
+    iBitCount = jpeg_buf->bitc; // current stored bits
+    ulBits = (jpeg_buf->bitb << 8); // bit pattern shifted up to bit 31
+
     // Encode DC
     int diff = DUQ[0] - DC;
     if (diff == 0) {
-        jpeg_writeBits(jpeg_buf, HTDC[0]);
+        STORECODE(pOut, iBitCount, HTDC[0][0], ulBits, HTDC[0][1])
     } else {
         uint16_t bits[2];
         jpeg_calcBits(diff, bits);
-        jpeg_writeBits(jpeg_buf, HTDC[bits[1]]);
-        jpeg_writeBits(jpeg_buf, bits);
+        STORECODE(pOut, iBitCount, HTDC[bits[1]][0], ulBits, HTDC[bits[1]][1])
+        STORECODE(pOut, iBitCount, bits[0], ulBits, bits[1])
     }
 
     // Encode ACs
     if(end0pos == 0) {
-        jpeg_writeBits(jpeg_buf, EOB);
+        STORECODE(pOut, iBitCount, EOB[0], ulBits, EOB[1])
+        jpeg_restore_buf(jpeg_buf, pOut, iBitCount, ulBits);
         return DUQ[0];
     }
 
@@ -1197,18 +1252,20 @@ static int jpeg_processDU(jpeg_buf_t *jpeg_buf, int8_t *CDU, float *fdtbl, int D
         int nrzeroes = i-startpos;
         if ( nrzeroes >= 16 ) {
             int lng = nrzeroes>>4;
-            for (int nrmarker=1; nrmarker <= lng; ++nrmarker)
-                jpeg_writeBits(jpeg_buf, M16zeroes);
+            for (int nrmarker=1; nrmarker <= lng; ++nrmarker) {
+                STORECODE(pOut, iBitCount, M16zeroes[0], ulBits, M16zeroes[1])
+            } // for
             nrzeroes &= 15;
         }
         uint16_t bits[2];
         jpeg_calcBits(DUQ[i], bits);
-        jpeg_writeBits(jpeg_buf, HTAC[(nrzeroes<<4)+bits[1]]);
-        jpeg_writeBits(jpeg_buf, bits);
+        STORECODE(pOut, iBitCount, HTAC[(nrzeroes<<4)+bits[1]][0], ulBits, HTAC[(nrzeroes<<4)+bits[1]][1])
+        STORECODE(pOut, iBitCount, bits[0], ulBits, bits[1])
     }
     if(end0pos != 63) {
-        jpeg_writeBits(jpeg_buf, EOB);
+        STORECODE(pOut, iBitCount, EOB[0], ulBits, EOB[1])
     }
+    jpeg_restore_buf(jpeg_buf, pOut, iBitCount, ulBits);
     return DUQ[0];
 }
 
