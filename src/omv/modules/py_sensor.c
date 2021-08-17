@@ -657,7 +657,7 @@ static mp_obj_t py_sensor_ioctl(uint n_args, const mp_obj_t *args)
 
     switch (request) {
         case IOCTL_SET_READOUT_WINDOW: {
-            if (n_args > 2) {
+            if (n_args >= 2) {
                 int x, y, w, h;
                 mp_obj_t *array;
                 mp_uint_t array_len;
@@ -696,7 +696,7 @@ static mp_obj_t py_sensor_ioctl(uint n_args, const mp_obj_t *args)
         }
 
         case IOCTL_SET_TRIGGERED_MODE: {
-            if (n_args > 2) {
+            if (n_args >= 2) {
                 error = sensor_ioctl(request, mp_obj_get_int(args[1]));
             }
             break;
@@ -770,29 +770,33 @@ static mp_obj_t py_sensor_ioctl(uint n_args, const mp_obj_t *args)
         }
 
         case IOCTL_LEPTON_RUN_COMMAND: {
-            if (n_args > 2) {
+            if (n_args >= 2) {
                 error = sensor_ioctl(request, mp_obj_get_int(args[1]));
             }
             break;
         }
 
         case IOCTL_LEPTON_SET_ATTRIBUTE: {
-            size_t data_len;
-            int command = mp_obj_get_int(args[1]);
-            uint16_t *data = (uint16_t *) mp_obj_str_get_data(args[2], &data_len);
-            PY_ASSERT_TRUE_MSG(data_len > 0, "0 bytes transferred!");
-            error = sensor_ioctl(request, command, data, data_len / sizeof(uint16_t));
+            if (n_args >= 3) {
+                size_t data_len;
+                int command = mp_obj_get_int(args[1]);
+                uint16_t *data = (uint16_t *) mp_obj_str_get_data(args[2], &data_len);
+                PY_ASSERT_TRUE_MSG(data_len > 0, "0 bytes transferred!");
+                error = sensor_ioctl(request, command, data, data_len / sizeof(uint16_t));
+            }
             break;
         }
 
         case IOCTL_LEPTON_GET_ATTRIBUTE: {
-            int command = mp_obj_get_int(args[1]);
-            size_t data_len = mp_obj_get_int(args[2]);
-            PY_ASSERT_TRUE_MSG(data_len > 0, "0 bytes transferred!");
-            uint16_t *data = xalloc(data_len * sizeof(uint16_t));
-            error = sensor_ioctl(request, command, data, data_len);
-            if (error == 0) {
-                ret_obj = mp_obj_new_bytearray_by_ref(data_len * sizeof(uint16_t), data);
+            if (n_args >= 3) {
+                int command = mp_obj_get_int(args[1]);
+                size_t data_len = mp_obj_get_int(args[2]);
+                PY_ASSERT_TRUE_MSG(data_len > 0, "0 bytes transferred!");
+                uint16_t *data = xalloc(data_len * sizeof(uint16_t));
+                error = sensor_ioctl(request, command, data, data_len);
+                if (error == 0) {
+                    ret_obj = mp_obj_new_bytearray_by_ref(data_len * sizeof(uint16_t), data);
+                }
             }
             break;
         }
@@ -808,7 +812,7 @@ static mp_obj_t py_sensor_ioctl(uint n_args, const mp_obj_t *args)
         }
 
         case IOCTL_LEPTON_SET_MEASUREMENT_MODE:
-            if (n_args > 2) {
+            if (n_args >= 2) {
                 error = sensor_ioctl(request, mp_obj_get_int(args[1]));
             }
             break;
@@ -823,7 +827,7 @@ static mp_obj_t py_sensor_ioctl(uint n_args, const mp_obj_t *args)
         }
 
         case IOCTL_LEPTON_SET_MEASUREMENT_RANGE:
-            if (n_args > 3) {
+            if (n_args >= 3) {
                 // GCC will not let us pass floats to ... so we have to pass float pointers instead.
                 float min = mp_obj_get_float(args[1]);
                 float max = mp_obj_get_float(args[2]);
@@ -842,14 +846,14 @@ static mp_obj_t py_sensor_ioctl(uint n_args, const mp_obj_t *args)
 
         #if (OMV_ENABLE_HM01B0 == 1)
         case IOCTL_HIMAX_MD_ENABLE: {
-            if (n_args > 2) {
+            if (n_args >= 2) {
                 error = sensor_ioctl(request, mp_obj_get_int(args[1]));
             }
             break;
         }
 
         case IOCTL_HIMAX_MD_WINDOW: {
-            if (n_args > 2) {
+            if (n_args >= 2) {
                 int x, y, w, h;
                 mp_obj_t *array;
                 mp_uint_t array_len;
@@ -876,7 +880,7 @@ static mp_obj_t py_sensor_ioctl(uint n_args, const mp_obj_t *args)
         }
 
         case IOCTL_HIMAX_MD_THRESHOLD: {
-            if (n_args > 2) {
+            if (n_args >= 2) {
                 error = sensor_ioctl(request, mp_obj_get_int(args[1]));
             }
             break;
@@ -888,7 +892,7 @@ static mp_obj_t py_sensor_ioctl(uint n_args, const mp_obj_t *args)
         }
 
         case IOCTL_HIMAX_OSC_ENABLE: {
-            if (n_args > 2) {
+            if (n_args >= 2) {
                 error = sensor_ioctl(request, mp_obj_get_int(args[1]));
             }
             break;
