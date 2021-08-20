@@ -41,7 +41,7 @@ uint32_t sinc1[DECIMATION_MAX];
 uint32_t sinc2[DECIMATION_MAX * 2];
 uint32_t coef[SINCN][DECIMATION_MAX];
 #ifdef USE_LUT
-int32_t lut[256][DECIMATION_MAX / 8][SINCN];
+#include "pdm_lut.c"
 #endif
 
 
@@ -51,66 +51,66 @@ int32_t lut[256][DECIMATION_MAX / 8][SINCN];
 int32_t filter_table_mono_64(uint8_t *data, uint8_t sincn)
 {
   return (int32_t)
-    lut[data[0]][0][sincn] +
-    lut[data[1]][1][sincn] +
-    lut[data[2]][2][sincn] +
-    lut[data[3]][3][sincn] +
-    lut[data[4]][4][sincn] +
-    lut[data[5]][5][sincn] +
-    lut[data[6]][6][sincn] +
-    lut[data[7]][7][sincn];
+    pdm_lut64[data[0]][0][sincn] +
+    pdm_lut64[data[1]][1][sincn] +
+    pdm_lut64[data[2]][2][sincn] +
+    pdm_lut64[data[3]][3][sincn] +
+    pdm_lut64[data[4]][4][sincn] +
+    pdm_lut64[data[5]][5][sincn] +
+    pdm_lut64[data[6]][6][sincn] +
+    pdm_lut64[data[7]][7][sincn];
 }
 int32_t filter_table_stereo_64(uint8_t *data, uint8_t sincn)
 {
   return (int32_t)
-    lut[data[0]][0][sincn] +
-    lut[data[2]][1][sincn] +
-    lut[data[4]][2][sincn] +
-    lut[data[6]][3][sincn] +
-    lut[data[8]][4][sincn] +
-    lut[data[10]][5][sincn] +
-    lut[data[12]][6][sincn] +
-    lut[data[14]][7][sincn];
+    pdm_lut64[data[0]][0][sincn] +
+    pdm_lut64[data[2]][1][sincn] +
+    pdm_lut64[data[4]][2][sincn] +
+    pdm_lut64[data[6]][3][sincn] +
+    pdm_lut64[data[8]][4][sincn] +
+    pdm_lut64[data[10]][5][sincn] +
+    pdm_lut64[data[12]][6][sincn] +
+    pdm_lut64[data[14]][7][sincn];
 }
 int32_t filter_table_mono_128(uint8_t *data, uint8_t sincn)
 {
   return (int32_t)
-    lut[data[0]][0][sincn] +
-    lut[data[1]][1][sincn] +
-    lut[data[2]][2][sincn] +
-    lut[data[3]][3][sincn] +
-    lut[data[4]][4][sincn] +
-    lut[data[5]][5][sincn] +
-    lut[data[6]][6][sincn] +
-    lut[data[7]][7][sincn] +
-    lut[data[8]][8][sincn] +
-    lut[data[9]][9][sincn] +
-    lut[data[10]][10][sincn] +
-    lut[data[11]][11][sincn] +
-    lut[data[12]][12][sincn] +
-    lut[data[13]][13][sincn] +
-    lut[data[14]][14][sincn] +
-    lut[data[15]][15][sincn];
+    pdm_lut128[data[0]][0][sincn] +
+    pdm_lut128[data[1]][1][sincn] +
+    pdm_lut128[data[2]][2][sincn] +
+    pdm_lut128[data[3]][3][sincn] +
+    pdm_lut128[data[4]][4][sincn] +
+    pdm_lut128[data[5]][5][sincn] +
+    pdm_lut128[data[6]][6][sincn] +
+    pdm_lut128[data[7]][7][sincn] +
+    pdm_lut128[data[8]][8][sincn] +
+    pdm_lut128[data[9]][9][sincn] +
+    pdm_lut128[data[10]][10][sincn] +
+    pdm_lut128[data[11]][11][sincn] +
+    pdm_lut128[data[12]][12][sincn] +
+    pdm_lut128[data[13]][13][sincn] +
+    pdm_lut128[data[14]][14][sincn] +
+    pdm_lut128[data[15]][15][sincn];
 }
 int32_t filter_table_stereo_128(uint8_t *data, uint8_t sincn)
 {
   return (int32_t)
-    lut[data[0]][0][sincn] +
-    lut[data[2]][1][sincn] +
-    lut[data[4]][2][sincn] +
-    lut[data[6]][3][sincn] +
-    lut[data[8]][4][sincn] +
-    lut[data[10]][5][sincn] +
-    lut[data[12]][6][sincn] +
-    lut[data[14]][7][sincn] +
-    lut[data[16]][8][sincn] +
-    lut[data[18]][9][sincn] +
-    lut[data[20]][10][sincn] +
-    lut[data[22]][11][sincn] +
-    lut[data[24]][12][sincn] +
-    lut[data[26]][13][sincn] +
-    lut[data[28]][14][sincn] +
-    lut[data[30]][15][sincn];
+    pdm_lut128[data[0]][0][sincn] +
+    pdm_lut128[data[2]][1][sincn] +
+    pdm_lut128[data[4]][2][sincn] +
+    pdm_lut128[data[6]][3][sincn] +
+    pdm_lut128[data[8]][4][sincn] +
+    pdm_lut128[data[10]][5][sincn] +
+    pdm_lut128[data[12]][6][sincn] +
+    pdm_lut128[data[14]][7][sincn] +
+    pdm_lut128[data[16]][8][sincn] +
+    pdm_lut128[data[18]][9][sincn] +
+    pdm_lut128[data[20]][10][sincn] +
+    pdm_lut128[data[22]][11][sincn] +
+    pdm_lut128[data[24]][12][sincn] +
+    pdm_lut128[data[26]][13][sincn] +
+    pdm_lut128[data[28]][14][sincn] +
+    pdm_lut128[data[30]][15][sincn];
 }
 int32_t (* filter_tables_64[2]) (uint8_t *data, uint8_t sincn) = {filter_table_mono_64, filter_table_stereo_64};
 int32_t (* filter_tables_128[2]) (uint8_t *data, uint8_t sincn) = {filter_table_mono_128, filter_table_stereo_128};
@@ -196,7 +196,7 @@ void Open_PDM_Filter_Init(TPDMFilter_InitStruct *Param)
   div_const = sub_const * Param->MaxVolume / 32768 / Param->filterGain;
   div_const = (div_const == 0 ? 1 : div_const);
 
-#ifdef USE_LUT
+#if 0 //USE_LUT
   /* Look-Up Table. */
   uint16_t c, d, s;
   for (s = 0; s < SINCN; s++)

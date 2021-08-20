@@ -202,7 +202,7 @@ if(MICROPY_PY_AUDIO)
 
     target_compile_definitions(${MICROPY_TARGET} PRIVATE
         MICROPY_PY_AUDIO=1
-        #USE_LUT
+        USE_LUT
     )
 
     pico_generate_pio_header(${MICROPY_TARGET}
