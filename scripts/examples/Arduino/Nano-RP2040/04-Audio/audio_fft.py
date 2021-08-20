@@ -5,12 +5,12 @@ from ulab import scipy as sp
 CHANNELS = 1
 FREQUENCY = 32000
 N_SAMPLES = 32 if FREQUENCY == 16000 else 64
-SCALE = 2
+SCALE = 1
 SIZE = (N_SAMPLES * SCALE) // CHANNELS
 
 raw_buf = None
 fb = image.Image(SIZE+(50*SCALE), SIZE, image.RGB565, copy_to_fb=True)
-audio.init(channels=CHANNELS, frequency=FREQUENCY, gain_db=16)
+audio.init(channels=CHANNELS, frequency=FREQUENCY, gain_db=16, overflow=False)
 
 def audio_callback(buf):
     # NOTE: do Not call any function that allocates memory.
