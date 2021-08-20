@@ -35,6 +35,10 @@ target_compile_definitions(${MICROPY_TARGET} PRIVATE
     ${OMV_BOARD_MODULES_DEFINITIONS}
 )
 
+target_link_libraries(${MICROPY_TARGET}
+    pico_bootsel_via_double_reset
+)
+
 # Linker script
 add_custom_command(
     OUTPUT ${BUILD}/rp2.ld
