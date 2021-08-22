@@ -65,6 +65,7 @@ typedef struct _audio_data_t {
     void (*pdm_filter_func) (uint8_t*, int16_t*, uint16_t, TPDMFilter_InitStruct*);
 } audio_data_t;
 
+static bool audio_initialized = false;
 #define audio_data MP_STATE_PORT(audio_data)
 #define NEXT_BUFFER(x) (((x) + 1) % (audio_data->n_buffers))
 
@@ -298,6 +299,7 @@ static mp_obj_t py_audio_init(uint n_args, const mp_obj_t *pos_args, mp_map_t *k
     irq_set_enabled(PDM_DMA_IRQ, true);
     dma_irqn_set_channel_enabled(PDM_DMA, audio_data->dma_channel, true);
 
+    audio_initialized = true;
     return mp_const_none;
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_audio_init_obj, 0, py_audio_init);
@@ -344,25 +346,28 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_audio_start_streaming_obj, py_audio_start_st
 
 static mp_obj_t py_audio_stop_streaming()
 {
-    // Disable PDM and IRQ
-    dma_channel_abort(audio_data->dma_channel);
-    dma_irqn_set_channel_enabled(PDM_DMA, audio_data->dma_channel, false);
+    if (audio_data->streaming) {
+        // Disable PDM and IRQ
+        dma_channel_abort(audio_data->dma_channel);
+        dma_irqn_set_channel_enabled(PDM_DMA, audio_data->dma_channel, false);
 
-    // Disable state machine.
-    pio_sm_set_enabled(PDM_PIO, PDM_SM, false);
-    pio_sm_clear_fifos(PDM_PIO, PDM_SM);
+        // Disable state machine.
+        pio_sm_set_enabled(PDM_PIO, PDM_SM, false);
+        pio_sm_clear_fifos(PDM_PIO, PDM_SM);
 
-    audio_data->streaming = false;
-    #if MICROPY_PY_AUDIO_USE_SYNC_EVENTS
-    for (mp_uint_t start = mp_hal_ticks_ms();
-            audio_task_scheduled && (mp_hal_ticks_ms() - start) >= 1000;
-            mp_hal_delay_ms(10));
-    #endif
+        audio_data->streaming = false;
+        #if MICROPY_PY_AUDIO_USE_SYNC_EVENTS
+        for (mp_uint_t start = mp_hal_ticks_ms();
+                audio_task_scheduled && (mp_hal_ticks_ms() - start) >= 1000;
+                mp_hal_delay_ms(10));
+        #endif
 
-    #if PDM_TIME_CONV
-    mp_printf(&mp_plat_print, "Average conversion time:%ld us\n",
-            (audio_data->conv_total / audio_data->conv_times));
-    #endif
+        #if PDM_TIME_CONV
+        mp_printf(&mp_plat_print, "Average conversion time:%ld us\n",
+                (audio_data->conv_total / audio_data->conv_times));
+        #endif
+    }
+
     return mp_const_none;
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_audio_stop_streaming_obj, py_audio_stop_streaming);
@@ -409,21 +414,27 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_audio_get_buffer_obj, 0, py_audio_get_buffe
 
 void py_audio_deinit()
 {
-    py_audio_stop_streaming();
-    audio_data->head = 0;
-    audio_data->tail = 0;
-    audio_data->t_samples = 0;
-    audio_data->n_samples = 0;
-    audio_data->n_buffers = 0;
-    audio_data->pdm_buffer = NULL;
-    audio_data->pcm_buffer = NULL;
-    audio_data->streaming = false;
-    audio_data->overflow = false;
-    audio_data->abort_on_overflow = false;
-    audio_data->user_callback = mp_const_none;
-    if (audio_data->dma_channel >= 0) {
-        dma_channel_unclaim(audio_data->dma_channel);
+    if (audio_initialized) {
+        py_audio_stop_streaming();
+        audio_data->head = 0;
+        audio_data->tail = 0;
+        audio_data->t_samples = 0;
+        audio_data->n_samples = 0;
+        audio_data->n_buffers = 0;
+        audio_data->pdm_buffer = NULL;
+        audio_data->pcm_buffer = NULL;
+        audio_data->streaming = false;
+        audio_data->overflow = false;
+        audio_data->abort_on_overflow = false;
+        audio_data->user_callback = mp_const_none;
+
+        if (audio_data->dma_channel >= 0) {
+            dma_channel_unclaim(audio_data->dma_channel);
+        }
     }
+
+    audio_data = MP_OBJ_NULL;
+    audio_initialized = false;
 }
 
 static const mp_rom_map_elem_t globals_dict_table[] = {
