@@ -620,17 +620,14 @@ __weak int sensor_set_framerate(int framerate)
         return SENSOR_ERROR_INVALID_ARGUMENT;
     }
 
-    // Call the sensor specific function (does not fail if function is not set)
-    if (sensor.set_framerate != NULL) {
-        return SENSOR_ERROR_CTL_UNSUPPORTED;
-    }
-
-    if (sensor.set_framerate(&sensor, framerate) != 0) {
+    // If the sensor implements framerate control use it.
+    if (sensor.set_framerate != NULL
+            && sensor.set_framerate(&sensor, framerate) != 0) {
         return SENSOR_ERROR_CTL_FAILED;
+    } else {
+        // Otherwise use software framerate control.
+        sensor.framerate = framerate;
     }
-
-    // Set framerate
-    sensor.framerate = framerate;
     return 0;
 }
 
