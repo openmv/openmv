@@ -34,10 +34,13 @@ script:
   # Install recent cmake if needed.
   - |
     if [[ ${TARGET} == ARDUINO_NANO_RP2040_CONNECT ]]; then
-      mkdir ${HOME}/cmake 
+      mkdir ${HOME}/cmake
       CMAKE_URL="https://cmake.org/files/v3.20/cmake-3.20.0-linux-x86_64.tar.gz"
       wget --no-check-certificate -O - ${CMAKE_URL} | tar --strip-components=1 -xz -C ${HOME}/cmake
       export PATH=${HOME}/cmake/bin:${PATH}
+      # Patch Nano RP2040 header to fix the flash issue.
+      patch -p1 -s -f -r- src/micropython/lib/pico-sdk/src/boards/include/boards/arduino_nano_rp2040_connect.h\
+          src/patches/0001-Use-W25Q080-second-stage-loader-for-Nano-RP2040-Conn.patch
     fi
   # Build the firmware.
   - make -j$(nproc) -C src/micropython/mpy-cross
