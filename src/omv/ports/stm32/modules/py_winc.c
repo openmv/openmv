@@ -43,7 +43,7 @@ static winc_obj_t winc_obj = {{(mp_obj_type_t*) &mod_network_nic_type_winc}, fal
 static mp_obj_t py_winc_make_new(const mp_obj_type_t *type, mp_uint_t n_args, mp_uint_t n_kw, const mp_obj_t *all_args)
 {
     static const mp_arg_t allowed_args[] = {
-        { MP_QSTR_mode,  MP_ARG_KW_ONLY | MP_ARG_INT, {.u_int = WINC_MODE_STA } },
+        { MP_QSTR_mode,  MP_ARG_INT, {.u_int = WINC_MODE_STA } },
     };
 
     // parse args
