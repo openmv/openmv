@@ -33,15 +33,17 @@
 
 typedef struct _winc_obj_t {
     mp_obj_base_t base;
+    uint8_t active;
+    uint8_t itf;
 } winc_obj_t;
 
-static const winc_obj_t winc_obj = {{(mp_obj_type_t*)&mod_network_nic_type_winc}};
+static winc_obj_t winc_obj = {{(mp_obj_type_t*) &mod_network_nic_type_winc}, false, WINC_MODE_STA};
 
 // Initialise the module using the given SPI bus and pins and return a winc object.
 static mp_obj_t py_winc_make_new(const mp_obj_type_t *type, mp_uint_t n_args, mp_uint_t n_kw, const mp_obj_t *all_args)
 {
     static const mp_arg_t allowed_args[] = {
-        { MP_QSTR_mode,     MP_ARG_KW_ONLY | MP_ARG_INT, {.u_int = WINC_MODE_STA } },
+        { MP_QSTR_mode,  MP_ARG_KW_ONLY | MP_ARG_INT, {.u_int = WINC_MODE_STA } },
     };
 
     // parse args
@@ -51,14 +53,16 @@ static mp_obj_t py_winc_make_new(const mp_obj_type_t *type, mp_uint_t n_args, mp
     mp_arg_parse_all(n_args, all_args, &kw_args, MP_ARRAY_SIZE(args), allowed_args, args);
 
     // Init WINC
-    winc_mode_t winc_mode = args[0].u_int;
-    int error = winc_init(winc_mode);
+    winc_obj.active = false;
+    winc_obj.itf = args[0].u_int;
+    int error = winc_init(winc_obj.itf);
     if (error != 0) {
        mp_raise_msg_varg(&mp_type_OSError,
                MP_ERROR_TEXT("Failed to initialize WINC1500 module: %s\n"), winc_strerror(error));
     }
+    winc_obj.active = true;
 
-    switch (winc_mode) {
+    switch (winc_obj.itf) {
         case WINC_MODE_BSP:
             printf("Running in BSP mode...\n");
             break;
@@ -69,36 +73,55 @@ static mp_obj_t py_winc_make_new(const mp_obj_type_t *type, mp_uint_t n_args, mp
         case WINC_MODE_STA:
             // Register with network module
             mod_network_register_nic((mp_obj_t)&winc_obj);
-            if (winc_mode == WINC_MODE_AP) {
-                printf("Running in Access Point mode...\n");
-            } else {
-                printf("Running in Station mode...\n");
-            }
             break;
         default:
             mp_raise_msg(&mp_type_OSError, MP_ERROR_TEXT("WiFi mode is not supported!"));
     }
-
     return (mp_obj_t)&winc_obj;
+}
+
+static mp_obj_t py_winc_active(size_t n_args, const mp_obj_t *args)
+{
+    winc_obj_t *self = MP_OBJ_TO_PTR(args[0]);
+    if (n_args == 2) {
+        bool active = mp_obj_is_true(args[1]);
+        if (active) {
+            if (self->active) {
+                // Nothing to do
+            } else {
+                int error = winc_init(winc_obj.itf);
+                if (error != 0) {
+                    mp_raise_msg_varg(&mp_type_OSError,
+                            MP_ERROR_TEXT("Failed to initialize WINC1500 module: %s\n"), winc_strerror(error));
+                }
+            }
+        } else {
+            winc_init(WINC_MODE_BSP);
+        }
+        self->active = mp_obj_is_true(args[1]);
+    }
+    return mp_obj_new_bool(self->active);
 }
 
 // method connect(ssid, key=None, *, security=WPA2, bssid=None)
 static mp_obj_t py_winc_connect(mp_uint_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_args)
 {
     static const mp_arg_t allowed_args[] = {
-        { MP_QSTR_ssid, MP_ARG_REQUIRED | MP_ARG_OBJ, {.u_obj = MP_OBJ_NULL} },
-        { MP_QSTR_key, MP_ARG_OBJ, {.u_obj = mp_const_none} },
+        { MP_QSTR_essid,    MP_ARG_REQUIRED | MP_ARG_OBJ, {.u_obj = MP_OBJ_NULL} },
+        { MP_QSTR_key,      MP_ARG_OBJ, {.u_obj = mp_const_none} },
         { MP_QSTR_security, MP_ARG_KW_ONLY | MP_ARG_INT, {.u_int = M2M_WIFI_SEC_WPA_PSK} },
+        { MP_QSTR_channel,  MP_ARG_KW_ONLY | MP_ARG_INT, {.u_int = 1} },
     };
 
     // parse args
+    winc_obj_t *self = MP_OBJ_TO_PTR(pos_args[0]);
     mp_arg_val_t args[MP_ARRAY_SIZE(allowed_args)];
     mp_arg_parse_all(n_args - 1, pos_args + 1, kw_args, MP_ARRAY_SIZE(allowed_args), allowed_args, args);
 
     // get ssid
-    const char *ssid = mp_obj_str_get_str(args[0].u_obj);
+    const char *essid = mp_obj_str_get_str(args[0].u_obj);
 
-    if (strlen(ssid) == 0) {
+    if (strlen(essid) == 0) {
         mp_raise_msg(&mp_type_OSError, MP_ERROR_TEXT("SSID can't be empty!"));
     }
 
@@ -115,57 +138,24 @@ static mp_obj_t py_winc_connect(mp_uint_t n_args, const mp_obj_t *pos_args, mp_m
         mp_raise_msg(&mp_type_OSError, MP_ERROR_TEXT("Key can't be empty!"));
     }
 
-    // connect to AP
-    if (winc_connect(ssid, security, key, M2M_WIFI_CH_ALL) != 0) {
-        mp_raise_msg_varg(&mp_type_OSError,
-                    MP_ERROR_TEXT("could not connect to ssid=%s, sec=%d, key=%s\n"), ssid, security, key);
+    if (self->itf == WINC_MODE_STA) {
+        // Connect to AP
+        if (winc_connect(essid, security, key, M2M_WIFI_CH_ALL) != 0) {
+            mp_raise_msg_varg(&mp_type_OSError,
+                        MP_ERROR_TEXT("could not connect to ssid=%s, sec=%d, key=%s\n"), essid, security, key);
+        }
+    } else {
+        mp_uint_t channel = args[3].u_int;
+
+        if (security != M2M_WIFI_SEC_OPEN && security != M2M_WIFI_SEC_WEP) {
+            mp_raise_msg(&mp_type_OSError, MP_ERROR_TEXT("AP mode supports WEP security only."));
+        }
+
+        // Initialize WiFi in AP mode.
+        if (winc_start_ap(essid, security, key, channel) != 0) {
+            mp_raise_msg(&mp_type_OSError, MP_ERROR_TEXT("failed to start in AP mode"));
+        }
     }
-
-    return mp_const_none;
-}
-
-// method start_ap(ssid, key=None, security=OPEN)
-static mp_obj_t py_winc_start_ap(mp_uint_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_args)
-{
-    static const mp_arg_t allowed_args[] = {
-        { MP_QSTR_ssid,     MP_ARG_REQUIRED| MP_ARG_OBJ, {.u_obj = MP_OBJ_NULL} },
-        { MP_QSTR_key,      MP_ARG_KW_ONLY | MP_ARG_OBJ, {.u_obj = MP_OBJ_NULL} },
-        { MP_QSTR_security, MP_ARG_KW_ONLY | MP_ARG_INT, {.u_int = M2M_WIFI_SEC_OPEN } }, //M2M_WIFI_SEC_WPA_PSK
-        { MP_QSTR_channel,  MP_ARG_KW_ONLY | MP_ARG_INT, {.u_int = 1} },
-    };
-
-    // parse args
-    mp_arg_val_t args[MP_ARRAY_SIZE(allowed_args)];
-    mp_arg_parse_all(n_args - 1, pos_args + 1, kw_args, MP_ARRAY_SIZE(allowed_args), allowed_args, args);
-
-    // get ssid
-    const char *ssid = mp_obj_str_get_str(args[0].u_obj);
-
-    // get key and security
-    const char *key = NULL;
-    mp_uint_t security = args[2].u_int;
-
-    if (security != M2M_WIFI_SEC_OPEN && security != M2M_WIFI_SEC_WEP) {
-        mp_raise_msg(&mp_type_OSError, MP_ERROR_TEXT("AP mode supports WEP security only."));
-    }
-
-    if (security == M2M_WIFI_SEC_WEP && args[1].u_obj == MP_OBJ_NULL) {
-        mp_raise_msg(&mp_type_OSError, MP_ERROR_TEXT("Missing WEP key!"));
-    }
-
-    if (security != M2M_WIFI_SEC_OPEN) {
-        key = mp_obj_str_get_str(args[1].u_obj);
-    }
-
-    // get channel
-    mp_uint_t channel = args[3].u_int;
-
-    // Initialize WiFi in AP mode.
-    if (winc_start_ap(ssid, security, key, channel) != 0) {
-        mp_raise_msg(&mp_type_OSError, MP_ERROR_TEXT("failed to start in AP mode"));
-    }
-
-    printf("AP mode started. You can connect to %s.\r\n", ssid);
     return mp_const_none;
 }
 
@@ -569,8 +559,8 @@ static int py_winc_socket_ioctl(mod_network_socket_obj_t *socket, mp_uint_t requ
     return -1;
 }
 
+static MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(py_winc_active_obj, 1, 2, py_winc_active);
 static MP_DEFINE_CONST_FUN_OBJ_KW(py_winc_connect_obj, 1,   py_winc_connect);
-static MP_DEFINE_CONST_FUN_OBJ_KW(py_winc_start_ap_obj,1,   py_winc_start_ap);
 static MP_DEFINE_CONST_FUN_OBJ_1(py_winc_disconnect_obj,    py_winc_disconnect);
 static MP_DEFINE_CONST_FUN_OBJ_1(py_winc_isconnected_obj,   py_winc_isconnected);
 static MP_DEFINE_CONST_FUN_OBJ_1(py_winc_connected_sta_obj, py_winc_connected_sta);
@@ -583,30 +573,32 @@ static MP_DEFINE_CONST_FUN_OBJ_1(py_winc_fw_version_obj,    py_winc_fw_version);
 static MP_DEFINE_CONST_FUN_OBJ_2(py_winc_fw_dump_obj,       py_winc_fw_dump);
 static MP_DEFINE_CONST_FUN_OBJ_2(py_winc_fw_update_obj,     py_winc_fw_update);
 
-static const mp_map_elem_t winc_locals_dict_table[] = {
-    { MP_OBJ_NEW_QSTR(MP_QSTR_connect),       (mp_obj_t)&py_winc_connect_obj },
-    { MP_OBJ_NEW_QSTR(MP_QSTR_start_ap),      (mp_obj_t)&py_winc_start_ap_obj },
-    { MP_OBJ_NEW_QSTR(MP_QSTR_disconnect),    (mp_obj_t)&py_winc_disconnect_obj },
-    { MP_OBJ_NEW_QSTR(MP_QSTR_isconnected),   (mp_obj_t)&py_winc_isconnected_obj },
-    { MP_OBJ_NEW_QSTR(MP_QSTR_connected_sta), (mp_obj_t)&py_winc_connected_sta_obj },
-    { MP_OBJ_NEW_QSTR(MP_QSTR_wait_for_sta),  (mp_obj_t)&py_winc_wait_for_sta_obj },
-    { MP_OBJ_NEW_QSTR(MP_QSTR_ifconfig),      (mp_obj_t)&py_winc_ifconfig_obj },
-    { MP_OBJ_NEW_QSTR(MP_QSTR_netinfo),       (mp_obj_t)&py_winc_netinfo_obj },
-    { MP_OBJ_NEW_QSTR(MP_QSTR_scan),          (mp_obj_t)&py_winc_scan_obj },
-    { MP_OBJ_NEW_QSTR(MP_QSTR_rssi),          (mp_obj_t)&py_winc_get_rssi_obj },
-    { MP_OBJ_NEW_QSTR(MP_QSTR_fw_version),    (mp_obj_t)&py_winc_fw_version_obj },
-    { MP_OBJ_NEW_QSTR(MP_QSTR_fw_dump),       (mp_obj_t)&py_winc_fw_dump_obj },
-    { MP_OBJ_NEW_QSTR(MP_QSTR_fw_update),     (mp_obj_t)&py_winc_fw_update_obj },
+static const mp_rom_map_elem_t winc_locals_dict_table[] = {
+    { MP_ROM_QSTR(MP_QSTR_active),        MP_ROM_PTR(&py_winc_active_obj) },
+    { MP_ROM_QSTR(MP_QSTR_connect),       MP_ROM_PTR(&py_winc_connect_obj) },
+    { MP_ROM_QSTR(MP_QSTR_config),        MP_ROM_PTR(&py_winc_connect_obj) },
+    { MP_ROM_QSTR(MP_QSTR_start_ap),      MP_ROM_PTR(&py_winc_connect_obj) },
+    { MP_ROM_QSTR(MP_QSTR_disconnect),    MP_ROM_PTR(&py_winc_disconnect_obj) },
+    { MP_ROM_QSTR(MP_QSTR_isconnected),   MP_ROM_PTR(&py_winc_isconnected_obj) },
+    { MP_ROM_QSTR(MP_QSTR_connected_sta), MP_ROM_PTR(&py_winc_connected_sta_obj) },
+    { MP_ROM_QSTR(MP_QSTR_wait_for_sta),  MP_ROM_PTR(&py_winc_wait_for_sta_obj) },
+    { MP_ROM_QSTR(MP_QSTR_ifconfig),      MP_ROM_PTR(&py_winc_ifconfig_obj) },
+    { MP_ROM_QSTR(MP_QSTR_netinfo),       MP_ROM_PTR(&py_winc_netinfo_obj) },
+    { MP_ROM_QSTR(MP_QSTR_scan),          MP_ROM_PTR(&py_winc_scan_obj) },
+    { MP_ROM_QSTR(MP_QSTR_rssi),          MP_ROM_PTR(&py_winc_get_rssi_obj) },
+    { MP_ROM_QSTR(MP_QSTR_fw_version),    MP_ROM_PTR(&py_winc_fw_version_obj) },
+    { MP_ROM_QSTR(MP_QSTR_fw_dump),       MP_ROM_PTR(&py_winc_fw_dump_obj) },
+    { MP_ROM_QSTR(MP_QSTR_fw_update),     MP_ROM_PTR(&py_winc_fw_update_obj) },
 
-    { MP_OBJ_NEW_QSTR(MP_QSTR_OPEN),          MP_OBJ_NEW_SMALL_INT(M2M_WIFI_SEC_OPEN) },   // Network is not secured.
-    { MP_OBJ_NEW_QSTR(MP_QSTR_WEP),           MP_OBJ_NEW_SMALL_INT(M2M_WIFI_SEC_WEP) },    // Security type WEP (40 or 104) OPEN OR SHARED.
-    { MP_OBJ_NEW_QSTR(MP_QSTR_WPA_PSK),       MP_OBJ_NEW_SMALL_INT(M2M_WIFI_SEC_WPA_PSK) },// Network secured with WPA/WPA2 personal(PSK).
-    { MP_OBJ_NEW_QSTR(MP_QSTR_802_1X),        MP_OBJ_NEW_SMALL_INT(M2M_WIFI_SEC_802_1X) }, // Network is secured with WPA/WPA2 Enterprise.
-    { MP_OBJ_NEW_QSTR(MP_QSTR_MODE_STA),      MP_OBJ_NEW_SMALL_INT(WINC_MODE_STA) },       // Start in Staion mode.
-    { MP_OBJ_NEW_QSTR(MP_QSTR_MODE_AP),       MP_OBJ_NEW_SMALL_INT(WINC_MODE_AP) },        // Start in Access Point mode.
-    { MP_OBJ_NEW_QSTR(MP_QSTR_MODE_P2P),      MP_OBJ_NEW_SMALL_INT(WINC_MODE_P2P) },       // Start in P2P (WiFi Direct) mode.
-    { MP_OBJ_NEW_QSTR(MP_QSTR_MODE_BSP),      MP_OBJ_NEW_SMALL_INT(WINC_MODE_BSP) },       // Init BSP.
-    { MP_OBJ_NEW_QSTR(MP_QSTR_MODE_FIRMWARE), MP_OBJ_NEW_SMALL_INT(WINC_MODE_FIRMWARE) },  // Start in Firmware Upgrade mode.
+    { MP_ROM_QSTR(MP_QSTR_OPEN),          MP_OBJ_NEW_SMALL_INT(M2M_WIFI_SEC_OPEN) },   // Network is not secured.
+    { MP_ROM_QSTR(MP_QSTR_WEP),           MP_OBJ_NEW_SMALL_INT(M2M_WIFI_SEC_WEP) },    // Security type WEP.
+    { MP_ROM_QSTR(MP_QSTR_WPA_PSK),       MP_OBJ_NEW_SMALL_INT(M2M_WIFI_SEC_WPA_PSK) },// Network secured with WPA/WPA2 personal(PSK).
+    { MP_ROM_QSTR(MP_QSTR_802_1X),        MP_OBJ_NEW_SMALL_INT(M2M_WIFI_SEC_802_1X) }, // Network is secured with WPA/WPA2 Enterprise.
+    { MP_ROM_QSTR(MP_QSTR_MODE_STA),      MP_OBJ_NEW_SMALL_INT(WINC_MODE_STA) },       // Start in Staion mode.
+    { MP_ROM_QSTR(MP_QSTR_MODE_AP),       MP_OBJ_NEW_SMALL_INT(WINC_MODE_AP) },        // Start in Access Point mode.
+    { MP_ROM_QSTR(MP_QSTR_MODE_P2P),      MP_OBJ_NEW_SMALL_INT(WINC_MODE_P2P) },       // Start in P2P (WiFi Direct) mode.
+    { MP_ROM_QSTR(MP_QSTR_MODE_BSP),      MP_OBJ_NEW_SMALL_INT(WINC_MODE_BSP) },       // Init BSP.
+    { MP_ROM_QSTR(MP_QSTR_MODE_FIRMWARE), MP_OBJ_NEW_SMALL_INT(WINC_MODE_FIRMWARE) },  // Start in Firmware Upgrade mode.
 };
 
 static MP_DEFINE_CONST_DICT(winc_locals_dict, winc_locals_dict_table);

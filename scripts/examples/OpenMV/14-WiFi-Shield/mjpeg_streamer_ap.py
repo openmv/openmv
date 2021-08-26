@@ -24,6 +24,7 @@ sensor.set_pixformat(sensor.GRAYSCALE)
 # Init wlan module in AP mode.
 wlan = network.WINC(mode=network.WINC.MODE_AP)
 wlan.start_ap(SSID, key=KEY, security=wlan.WEP, channel=2)
+print("AP mode started. SSID: {} IP: {}".format(SSID, wlan.ifconfig()[0]))
 
 # You can block waiting for client to connect
 #print(wlan.wait_for_sta(10000))

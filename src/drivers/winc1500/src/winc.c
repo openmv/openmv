@@ -589,10 +589,16 @@ int winc_start_ap(const char *ssid, uint8_t security, const char *key, uint16_t 
     strcpy((char *)&apconfig.au8SSID, ssid);
     apconfig.u8ListenChannel      = channel;
     apconfig.u8SecType            = security;
+
     apconfig.au8DHCPServerIP[0]   = 192;
     apconfig.au8DHCPServerIP[1]   = 168;
     apconfig.au8DHCPServerIP[2]   = 1;
     apconfig.au8DHCPServerIP[3]   = 1;
+
+    memcpy(ifconfig.ip_addr, apconfig.au8DHCPServerIP, WINC_IPV4_ADDR_LEN);
+    memcpy(ifconfig.subnet_addr, "\xff\xff\xff\x00", WINC_IPV4_ADDR_LEN);
+    memcpy(ifconfig.gateway_addr, apconfig.au8DHCPServerIP, WINC_IPV4_ADDR_LEN);
+    memcpy(ifconfig.dns_addr, apconfig.au8DHCPServerIP, WINC_IPV4_ADDR_LEN);
 
     if (security != M2M_WIFI_SEC_OPEN) {
         strcpy((char *)&apconfig.au8WepKey, key);
