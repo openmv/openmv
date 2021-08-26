@@ -491,8 +491,8 @@ int nina_ifconfig(nina_ifconfig_t *ifconfig, bool set)
                     3, ARG_8BITS,
                     NINA_VALS(
                         {&ip_len,  ifconfig->ip_addr},
-                        {&gw_len,  ifconfig->gateway_addr},
-                        {&sub_len, ifconfig->subnet_addr})) != 0) {
+                        {&sub_len, ifconfig->subnet_addr},
+                        {&gw_len,  ifconfig->gateway_addr})) != 0) {
             return -1;
         }
         // No command to get DNS ?
