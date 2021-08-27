@@ -1,4 +1,18 @@
 # Change Log
+## [4.1.1](https://github.com/openmv/openmv/releases/tag/v4.1.1) (2021-08-27)
+* Fix Nina-W10 ifconfig args order.
+* Make WINC1500 API compatibe with common WiFi modules.
+* Fix set_framerate bug.
+* Fix sensor ioctl bug.
+* Switch to USER_C_MODULES for adding OpenMV modules.
+* Enable text compression and fix all exceptions issues.
+* GC2145 driver updates, support all reses and formats.
+* Nano RP2040: Update audio module, fix bugs.
+* Nano RP2040: Enable double tap to bootrom.
+* Nano RP2040: Add pico-sdk patch to fix the flash issue.
+* Nano RP2040: Add examples.
+* Nano RP2040: Fix unused I2C pinout.
+
 ## [4.1.0](https://github.com/openmv/openmv/releases/tag/v4.1.0) (2021-08-02)
 * Major updates and critical fixes to RP2 port.
 * Add networking and bluetooth support to the RP2 port.
