@@ -1028,6 +1028,11 @@ static void jpeg_check_highwater(jpeg_buf_t *jpeg_buf)
         if (jpeg_buf->realloc == false) {
             // Can't realloc buffer
             jpeg_buf->overflow = true;
+            // Reset length so that the next data writes won't go past
+            // the end of the existing buffer. This will allow the encode
+            // to finish and the overflow flag will show the caller that
+            // there was a failure due to too small an output buffer.
+            jpeg_buf->length = 0;
             return;
         }
         jpeg_buf->length += 1024;
