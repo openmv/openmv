@@ -178,7 +178,9 @@ typedef enum {
 #define SENSOR_HW_FLAGS_PIXCK           (2) // pixel clock edge.
 #define SENSOR_HW_FLAGS_FSYNC           (3) // hardware frame sync.
 #define SENSOR_HW_FLAGS_JPEGE           (4) // hardware JPEG encoder.
-#define SENSOR_HW_FLAGS_RGB565_REV      (5) // byte reverse rgb565.
+#define SENSOR_HW_FLAGS_JPEG3           (5) // JPEG mode 3.
+#define SENSOR_HW_FLAGS_JPEG4           (6) // JPEG mode 4.
+#define SENSOR_HW_FLAGS_RGB565_REV      (7) // byte reverse rgb565.
 #define SENSOR_HW_FLAGS_GET(s, x)       ((s)->hw_flags &  (1<<x))
 #define SENSOR_HW_FLAGS_SET(s, x, v)    ((s)->hw_flags |= (v<<x))
 #define SENSOR_HW_FLAGS_CLR(s, x)       ((s)->hw_flags &= ~(1<<x))

@@ -490,7 +490,7 @@ void DCMI_DMAConvCpltUser(uint32_t addr)
     // depth on the DCMI hardware and DMA hardware is not enough to prevent data loss.
 
     if (sensor.pixformat == PIXFORMAT_JPEG) {
-        if (sensor.chip_id == OV5640_ID) {
+        if (SENSOR_HW_FLAGS_GET(&sensor, SENSOR_HW_FLAGS_JPEG4)) {
             // JPEG MODE 4:
             //
             // The width and height are fixed in each frame. The first two bytes are valid data
@@ -511,7 +511,7 @@ void DCMI_DMAConvCpltUser(uint32_t addr)
             }
             unaligned_memcpy(buffer->data + buffer->offset, ((uint16_t *) addr) + 1, size);
             buffer->offset += size;
-        } else if (sensor.chip_id == OV2640_ID) {
+        } else if (SENSOR_HW_FLAGS_GET(&sensor, SENSOR_HW_FLAGS_JPEG3)) {
             // JPEG MODE 3:
             //
             // Compression data is transmitted with programmable width. The last line width maybe
