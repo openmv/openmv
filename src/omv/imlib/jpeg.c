@@ -1022,22 +1022,21 @@ static const uint16_t UVAC_HT[256][2] = {
 // If so, allocate more space now so that we don't have
 // to check on every byte written
 //
-static void jpeg_check_highwater(jpeg_buf_t *jpeg_buf)
+// If we're out of space and the realloc option is not available
+// return true to indicate that encoding has to halt
+//
+static int jpeg_check_highwater(jpeg_buf_t *jpeg_buf)
 {   
     if ((jpeg_buf->idx+1) >= jpeg_buf->length - 256) {
         if (jpeg_buf->realloc == false) {
             // Can't realloc buffer
             jpeg_buf->overflow = true;
-            // Reset length so that the next data writes won't go past
-            // the end of the existing buffer. This will allow the encode
-            // to finish and the overflow flag will show the caller that
-            // there was a failure due to too small an output buffer.
-            jpeg_buf->length = 0;
-            return;
+            return 1; // failure
         }
         jpeg_buf->length += 1024;
         jpeg_buf->buf = xrealloc(jpeg_buf->buf, jpeg_buf->length);
     }
+    return 0; // ok
 } /* jpeg_check_highwater() */
 
 //
@@ -1223,7 +1222,8 @@ static int jpeg_processDU(jpeg_buf_t *jpeg_buf, int8_t *CDU, float *fdtbl, int D
         }
     }
 
-    jpeg_check_highwater(jpeg_buf); // check if we're getting close to the end of the buffer
+    if (jpeg_check_highwater(jpeg_buf)) // check if we're getting close to the end of the buffer
+       return 0; // stop encoding, we've run out of space
     // Use local vars to speed up buffer access
     // and a macro (STORECODE) to manipulate the local vars
     uint8_t *pOut, iBitCount; // output pointer and bit count
