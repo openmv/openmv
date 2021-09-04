@@ -632,7 +632,6 @@ static int snapshot(sensor_t *sensor, image_t *image, uint32_t flags)
 
 int lepton_init(sensor_t *sensor)
 {
-    sensor->gs_bpp              = sizeof(uint8_t);
     sensor->reset               = reset;
     sensor->sleep               = sleep;
     sensor->snapshot            = snapshot;
@@ -658,11 +657,12 @@ int lepton_init(sensor_t *sensor)
     sensor->set_lens_correction = set_lens_correction;
     sensor->ioctl               = ioctl;
 
-    SENSOR_HW_FLAGS_SET(sensor, SENSOR_HW_FLAGS_VSYNC, 1);
-    SENSOR_HW_FLAGS_SET(sensor, SENSOR_HW_FLAGS_HSYNC, 0);
-    SENSOR_HW_FLAGS_SET(sensor, SENSOR_HW_FLAGS_PIXCK, 0);
-    SENSOR_HW_FLAGS_SET(sensor, SENSOR_HW_FLAGS_FSYNC, 0);
-    SENSOR_HW_FLAGS_SET(sensor, SENSOR_HW_FLAGS_JPEGE, 0);
+    sensor->hw_flags.vsync      = 1;
+    sensor->hw_flags.hsync      = 0;
+    sensor->hw_flags.pixck      = 0;
+    sensor->hw_flags.fsync      = 0;
+    sensor->hw_flags.jpege      = 0;
+    sensor->hw_flags.gs_bpp     = 1;
 
     // Configure the DMA handler for Transmission process
     DMAHandle.Instance                 = ISC_SPI_DMA_STREAM;

@@ -244,8 +244,8 @@ int sensor_snapshot(sensor_t *sensor, image_t *image, uint32_t flags)
         }
 
         // Configure the DMA on the first frame, for later frames only the write is changed.
-        sensor_dma_config(MAIN_FB()->u, MAIN_FB()->v, MAIN_FB()->bpp, (void *) buffer->data,
-                (SENSOR_HW_FLAGS_GET(sensor, SENSOR_HW_FLAGS_RGB565_REV) && MAIN_FB()->bpp == 2));
+        sensor_dma_config(MAIN_FB()->u, MAIN_FB()->v, MAIN_FB()->bpp,
+                (void *) buffer->data, (sensor->hw_flags.rgb_swap && MAIN_FB()->bpp == 2));
 
 
         // Re-enable the state machine.

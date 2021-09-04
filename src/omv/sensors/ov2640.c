@@ -826,7 +826,6 @@ static int set_special_effect(sensor_t *sensor, sde_t sde)
 int ov2640_init(sensor_t *sensor)
 {
     // Initialize sensor structure.
-    sensor->gs_bpp              = 2;
     sensor->reset               = reset;
     sensor->sleep               = sleep;
     sensor->read_reg            = read_reg;
@@ -850,12 +849,14 @@ int ov2640_init(sensor_t *sensor)
     sensor->set_special_effect  = set_special_effect;
 
     // Set sensor flags
-    SENSOR_HW_FLAGS_SET(sensor, SENSOR_HW_FLAGS_VSYNC, 0);
-    SENSOR_HW_FLAGS_SET(sensor, SENSOR_HW_FLAGS_HSYNC, 0);
-    SENSOR_HW_FLAGS_SET(sensor, SENSOR_HW_FLAGS_PIXCK, 1);
-    SENSOR_HW_FLAGS_SET(sensor, SENSOR_HW_FLAGS_FSYNC, 0);
-    SENSOR_HW_FLAGS_SET(sensor, SENSOR_HW_FLAGS_JPEGE, 1);
-    SENSOR_HW_FLAGS_SET(sensor, SENSOR_HW_FLAGS_RGB565_REV, 0);
+    sensor->hw_flags.vsync      = 0;
+    sensor->hw_flags.hsync      = 0;
+    sensor->hw_flags.pixck      = 1;
+    sensor->hw_flags.fsync      = 0;
+    sensor->hw_flags.jpege      = 1;
+    sensor->hw_flags.jpeg_mode  = 3;
+    sensor->hw_flags.gs_bpp     = 2;
+    sensor->hw_flags.rgb_swap   = 0;
 
     return 0;
 }

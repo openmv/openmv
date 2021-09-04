@@ -1350,7 +1350,6 @@ static int ioctl(sensor_t *sensor, int request, va_list ap)
 int ov5640_init(sensor_t *sensor)
 {
     // Initialize sensor structure.
-    sensor->gs_bpp              = 1;
     sensor->reset               = reset;
     sensor->sleep               = sleep;
     sensor->read_reg            = read_reg;
@@ -1376,12 +1375,14 @@ int ov5640_init(sensor_t *sensor)
     sensor->ioctl               = ioctl;
 
     // Set sensor flags
-    SENSOR_HW_FLAGS_SET(sensor, SENSOR_HW_FLAGS_VSYNC, 1);
-    SENSOR_HW_FLAGS_SET(sensor, SENSOR_HW_FLAGS_HSYNC, 0);
-    SENSOR_HW_FLAGS_SET(sensor, SENSOR_HW_FLAGS_PIXCK, 1);
-    SENSOR_HW_FLAGS_SET(sensor, SENSOR_HW_FLAGS_FSYNC, 0);
-    SENSOR_HW_FLAGS_SET(sensor, SENSOR_HW_FLAGS_JPEGE, 1);
-    SENSOR_HW_FLAGS_SET(sensor, SENSOR_HW_FLAGS_RGB565_REV, 0);
+    sensor->hw_flags.vsync      = 1;
+    sensor->hw_flags.hsync      = 0;
+    sensor->hw_flags.pixck      = 1;
+    sensor->hw_flags.fsync      = 0;
+    sensor->hw_flags.jpege      = 1;
+    sensor->hw_flags.jpeg_mode  = 4;
+    sensor->hw_flags.gs_bpp     = 1;
+    sensor->hw_flags.rgb_swap   = 0;
 
     return 0;
 }

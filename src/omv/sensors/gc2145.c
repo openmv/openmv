@@ -865,7 +865,6 @@ static int set_vflip(sensor_t *sensor, int enable)
 int gc2145_init(sensor_t *sensor)
 {
     // Initialize sensor structure.
-    sensor->gs_bpp              = 2;
     sensor->reset               = reset;
     sensor->read_reg            = read_reg;
     sensor->write_reg           = write_reg;
@@ -875,12 +874,13 @@ int gc2145_init(sensor_t *sensor)
     sensor->set_vflip           = set_vflip;
 
     // Set sensor flags
-    SENSOR_HW_FLAGS_SET(sensor, SENSOR_HW_FLAGS_VSYNC, 0);
-    SENSOR_HW_FLAGS_SET(sensor, SENSOR_HW_FLAGS_HSYNC, 0);
-    SENSOR_HW_FLAGS_SET(sensor, SENSOR_HW_FLAGS_PIXCK, 1);
-    SENSOR_HW_FLAGS_SET(sensor, SENSOR_HW_FLAGS_FSYNC, 0);
-    SENSOR_HW_FLAGS_SET(sensor, SENSOR_HW_FLAGS_JPEGE, 0);
-    SENSOR_HW_FLAGS_SET(sensor, SENSOR_HW_FLAGS_RGB565_REV, 1);
+    sensor->hw_flags.vsync      = 0;
+    sensor->hw_flags.hsync      = 0;
+    sensor->hw_flags.pixck      = 1;
+    sensor->hw_flags.fsync      = 0;
+    sensor->hw_flags.jpege      = 0;
+    sensor->hw_flags.gs_bpp     = 2;
+    sensor->hw_flags.rgb_swap   = 1;
 
     return 0;
 }

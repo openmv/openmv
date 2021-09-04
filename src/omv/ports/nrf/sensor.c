@@ -241,8 +241,8 @@ int sensor_snapshot(sensor_t *sensor, image_t *image, uint32_t flags)
         case PIXFORMAT_YUV422:
         case PIXFORMAT_RGB565: {
             MAIN_FB()->bpp = 2;
-            if (SENSOR_HW_FLAGS_GET(sensor, SENSOR_HW_FLAGS_RGB565_REV)) {
-                unaligned_memcpy_rev16(buffer->data, buffer->data, _width*_height);
+            if (sensor->hw_flags.rgb_swap || sensor->hw_flags.yuv_swap) {
+                unaligned_memcpy_rev16(buffer->data, buffer->data, _width * _height);
             }
             break;
         }

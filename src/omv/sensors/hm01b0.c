@@ -532,7 +532,6 @@ static int ioctl(sensor_t *sensor, int request, va_list ap)
 int hm01b0_init(sensor_t *sensor)
 {
     // Initialize sensor structure.
-    sensor->gs_bpp              = 1;
     sensor->reset               = reset;
     sensor->read_reg            = read_reg;
     sensor->write_reg           = write_reg;
@@ -551,11 +550,12 @@ int hm01b0_init(sensor_t *sensor)
     sensor->ioctl               = ioctl;
 
     // Set sensor flags
-    SENSOR_HW_FLAGS_SET(sensor, SENSOR_HW_FLAGS_VSYNC, 0);
-    SENSOR_HW_FLAGS_SET(sensor, SENSOR_HW_FLAGS_HSYNC, 0);
-    SENSOR_HW_FLAGS_SET(sensor, SENSOR_HW_FLAGS_PIXCK, 0);
-    SENSOR_HW_FLAGS_SET(sensor, SENSOR_HW_FLAGS_FSYNC, 0);
-    SENSOR_HW_FLAGS_SET(sensor, SENSOR_HW_FLAGS_JPEGE, 0);
+    sensor->hw_flags.vsync      = 0;
+    sensor->hw_flags.hsync      = 0;
+    sensor->hw_flags.pixck      = 0;
+    sensor->hw_flags.fsync      = 0;
+    sensor->hw_flags.jpege      = 0;
+    sensor->hw_flags.gs_bpp     = 1;
 
     return 0;
 }

@@ -981,7 +981,6 @@ static int ioctl(sensor_t *sensor, int request, va_list ap)
 int mt9m114_init(sensor_t *sensor)
 {
     // Initialize sensor structure.
-    sensor->gs_bpp              = 2;
     sensor->reset               = reset;
     sensor->sleep               = sleep;
     sensor->read_reg            = read_reg;
@@ -1006,12 +1005,14 @@ int mt9m114_init(sensor_t *sensor)
     sensor->ioctl               = ioctl;
 
     // Set sensor flags
-    SENSOR_HW_FLAGS_SET(sensor, SENSOR_HW_FLAGS_VSYNC, 0);
-    SENSOR_HW_FLAGS_SET(sensor, SENSOR_HW_FLAGS_HSYNC, 0);
-    SENSOR_HW_FLAGS_SET(sensor, SENSOR_HW_FLAGS_PIXCK, 0);
-    SENSOR_HW_FLAGS_SET(sensor, SENSOR_HW_FLAGS_FSYNC, 0);
-    SENSOR_HW_FLAGS_SET(sensor, SENSOR_HW_FLAGS_JPEGE, 0);
-    SENSOR_HW_FLAGS_SET(sensor, SENSOR_HW_FLAGS_RGB565_REV, 0);
+    sensor->hw_flags.vsync      = 0;
+    sensor->hw_flags.hsync      = 0;
+    sensor->hw_flags.pixck      = 0;
+    sensor->hw_flags.fsync      = 0;
+    sensor->hw_flags.jpege      = 0;
+    sensor->hw_flags.gs_bpp     = 2;
+    sensor->hw_flags.rgb_swap   = 0;
+    sensor->hw_flags.bayer      = SENSOR_HW_FLAGS_BAYER_GBRG;
 
     return 0;
 }
