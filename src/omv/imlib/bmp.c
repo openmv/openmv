@@ -51,8 +51,10 @@ bool bmp_read_geometry(FIL *fp, image_t *img, const char *path, bmp_read_setting
 
     read_word_expect(fp, 1);
     read_word(fp, &rs->bmp_bpp);
-    if ((rs->bmp_bpp != 8) && (rs->bmp_bpp != 16) && (rs->bmp_bpp != 24)) ff_unsupported_format(fp);
-    img->bpp = (rs->bmp_bpp == 8) ? 1 : 2;
+    if ((rs->bmp_bpp != 8) && (rs->bmp_bpp != 16) && (rs->bmp_bpp != 24)) {
+        ff_unsupported_format(fp);
+    }
+    img->pixfmt = (rs->bmp_bpp == 8) ? PIXFORMAT_GRAYSCALE : PIXFORMAT_RGB565;
 
     read_long(fp, &rs->bmp_fmt);
     if ((rs->bmp_fmt != 0) && (rs->bmp_fmt != 3)) ff_unsupported_format(fp);

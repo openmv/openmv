@@ -14,8 +14,8 @@
 void imlib_gamma_corr(image_t *img, float gamma, float contrast, float brightness)
 {
     gamma = IM_DIV(1.0, gamma);
-    switch(img->bpp) {
-        case IMAGE_BPP_BINARY: {
+    switch (img->pixfmt) {
+        case PIXFORMAT_BINARY: {
             float pScale = COLOR_BINARY_MAX - COLOR_BINARY_MIN;
             float pDiv = 1 / pScale;
             int *p_lut = fb_alloc((COLOR_BINARY_MAX - COLOR_BINARY_MIN + 1) * sizeof(int), FB_ALLOC_NO_HINT);
@@ -37,7 +37,7 @@ void imlib_gamma_corr(image_t *img, float gamma, float contrast, float brightnes
             fb_free();
             break;
         }
-        case IMAGE_BPP_GRAYSCALE: {
+        case PIXFORMAT_GRAYSCALE: {
             float pScale = COLOR_GRAYSCALE_MAX - COLOR_GRAYSCALE_MIN;
             float pDiv = 1 / pScale;
             int *p_lut = fb_alloc((COLOR_GRAYSCALE_MAX - COLOR_GRAYSCALE_MIN + 1) * sizeof(int), FB_ALLOC_NO_HINT);
@@ -59,7 +59,7 @@ void imlib_gamma_corr(image_t *img, float gamma, float contrast, float brightnes
             fb_free();
             break;
         }
-        case IMAGE_BPP_RGB565: {
+        case PIXFORMAT_RGB565: {
             float rScale = COLOR_R5_MAX - COLOR_R5_MIN;
             float gScale = COLOR_G6_MAX - COLOR_G6_MIN;
             float bScale = COLOR_B5_MAX - COLOR_B5_MIN;
@@ -109,8 +109,8 @@ void imlib_gamma_corr(image_t *img, float gamma, float contrast, float brightnes
 
 void imlib_negate(image_t *img)
 {
-    switch(img->bpp) {
-        case IMAGE_BPP_BINARY: {
+    switch (img->pixfmt) {
+        case PIXFORMAT_BINARY: {
             for (int y = 0, yy = img->h; y < yy; y++) {
                 uint32_t *data = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(img, y);
                 int x = 0, xx = img->w;
@@ -127,7 +127,7 @@ void imlib_negate(image_t *img)
             }
             break;
         }
-        case IMAGE_BPP_GRAYSCALE: {
+        case PIXFORMAT_GRAYSCALE: {
             for (int y = 0, yy = img->h; y < yy; y++) {
                 uint8_t *data = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(img, y);
                 int x = 0, xx = img->w;
@@ -145,7 +145,7 @@ void imlib_negate(image_t *img)
             }
             break;
         }
-        case IMAGE_BPP_RGB565: {
+        case PIXFORMAT_RGB565: {
             for (int y = 0, yy = img->h; y < yy; y++) {
                 uint16_t *data = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(img, y);
                 for (int x = 0, xx = img->w; x < xx; x++) {
@@ -183,8 +183,8 @@ static void imlib_replace_line_op(image_t *img, int line, void *other, void *dat
         target.h = w;
     }
 
-    switch(img->bpp) {
-        case IMAGE_BPP_BINARY: {
+    switch (img->pixfmt) {
+        case PIXFORMAT_BINARY: {
             int v_line = vflip ? (img->h - line - 1) : line;
             for (int i = 0, j = img->w; i < j; i++) {
                 int h_i = hmirror ? (img->w - i - 1) : i;
@@ -196,7 +196,7 @@ static void imlib_replace_line_op(image_t *img, int line, void *other, void *dat
             }
             break;
         }
-        case IMAGE_BPP_GRAYSCALE: {
+        case PIXFORMAT_GRAYSCALE: {
             int v_line = vflip ? (img->h - line - 1) : line;
             for (int i = 0, j = img->w; i < j; i++) {
                 int h_i = hmirror ? (img->w - i - 1) : i;
@@ -208,7 +208,7 @@ static void imlib_replace_line_op(image_t *img, int line, void *other, void *dat
             }
             break;
         }
-        case IMAGE_BPP_RGB565: {
+        case PIXFORMAT_RGB565: {
             int v_line = vflip ? (img->h - line - 1) : line;
             for (int i = 0, j = img->w; i < j; i++) {
                 int h_i = hmirror ? (img->w - i - 1) : i;
@@ -261,8 +261,8 @@ static void imlib_add_line_op(image_t *img, int line, void *other, void *data, b
 {
     image_t *mask = (image_t *) data;
 
-    switch(img->bpp) {
-        case IMAGE_BPP_BINARY: {
+    switch (img->pixfmt) {
+        case PIXFORMAT_BINARY: {
             uint32_t *data = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(img, line);
             for (int i = 0, j = img->w; i < j; i++) {
                 if ((!mask) || image_get_mask_pixel(mask, i, line)) {
@@ -275,7 +275,7 @@ static void imlib_add_line_op(image_t *img, int line, void *other, void *data, b
             }
             break;
         }
-        case IMAGE_BPP_GRAYSCALE: {
+        case PIXFORMAT_GRAYSCALE: {
             uint8_t *data = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(img, line);
             for (int i = 0, j = img->w; i < j; i++) {
                 if ((!mask) || image_get_mask_pixel(mask, i, line)) {
@@ -288,7 +288,7 @@ static void imlib_add_line_op(image_t *img, int line, void *other, void *data, b
             }
             break;
         }
-        case IMAGE_BPP_RGB565: {
+        case PIXFORMAT_RGB565: {
             uint16_t *data = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(img, line);
             for (int i = 0, j = img->w; i < j; i++) {
                 if ((!mask) || image_get_mask_pixel(mask, i, line)) {
@@ -326,8 +326,8 @@ static void imlib_sub_line_op(image_t *img, int line, void *other, void *data, b
     bool reverse = ((imlib_sub_line_op_state_t *) data)->reverse;
     image_t *mask = ((imlib_sub_line_op_state_t *) data)->mask;
 
-    switch(img->bpp) {
-        case IMAGE_BPP_BINARY: {
+    switch (img->pixfmt) {
+        case PIXFORMAT_BINARY: {
             uint32_t *data = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(img, line);
             for (int i = 0, j = img->w; i < j; i++) {
                 if ((!mask) || image_get_mask_pixel(mask, i, line)) {
@@ -340,7 +340,7 @@ static void imlib_sub_line_op(image_t *img, int line, void *other, void *data, b
             }
             break;
         }
-        case IMAGE_BPP_GRAYSCALE: {
+        case PIXFORMAT_GRAYSCALE: {
             uint8_t *data = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(img, line);
             for (int i = 0, j = img->w; i < j; i++) {
                 if ((!mask) || image_get_mask_pixel(mask, i, line)) {
@@ -353,7 +353,7 @@ static void imlib_sub_line_op(image_t *img, int line, void *other, void *data, b
             }
             break;
         }
-        case IMAGE_BPP_RGB565: {
+        case PIXFORMAT_RGB565: {
             uint16_t *data = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(img, line);
             for (int i = 0, j = img->w; i < j; i++) {
                 if ((!mask) || image_get_mask_pixel(mask, i, line)) {
@@ -400,8 +400,8 @@ static void imlib_mul_line_op(image_t *img, int line, void *other, void *data, b
     bool invert = ((imlib_mul_line_op_state_t *) data)->invert;
     image_t *mask = ((imlib_mul_line_op_state_t *) data)->mask;
 
-    switch(img->bpp) {
-        case IMAGE_BPP_BINARY: {
+    switch (img->pixfmt) {
+        case PIXFORMAT_BINARY: {
             uint32_t *data = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(img, line);
             float pScale = COLOR_BINARY_MAX - COLOR_BINARY_MIN;
             float pDiv = 1 / pScale;
@@ -416,7 +416,7 @@ static void imlib_mul_line_op(image_t *img, int line, void *other, void *data, b
             }
             break;
         }
-        case IMAGE_BPP_GRAYSCALE: {
+        case PIXFORMAT_GRAYSCALE: {
             uint8_t *data = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(img, line);
             float pScale = COLOR_GRAYSCALE_MAX - COLOR_GRAYSCALE_MIN;
             float pDiv = 1 / pScale;
@@ -431,7 +431,7 @@ static void imlib_mul_line_op(image_t *img, int line, void *other, void *data, b
             }
             break;
         }
-        case IMAGE_BPP_RGB565: {
+        case PIXFORMAT_RGB565: {
             uint16_t *data = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(img, line);
             float rScale = COLOR_R5_MAX - COLOR_R5_MIN;
             float gScale = COLOR_G6_MAX - COLOR_G6_MIN;
@@ -485,8 +485,8 @@ static void imlib_div_line_op(image_t *img, int line, void *other, void *data, b
     bool mod = ((imlib_div_line_op_state_t *) data)->mod;
     image_t *mask = ((imlib_div_line_op_state_t *) data)->mask;
 
-    switch(img->bpp) {
-        case IMAGE_BPP_BINARY: {
+    switch (img->pixfmt) {
+        case PIXFORMAT_BINARY: {
             uint32_t *data = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(img, line);
             int pScale = COLOR_BINARY_MAX - COLOR_BINARY_MIN;
             for (int i = 0, j = img->w; i < j; i++) {
@@ -502,7 +502,7 @@ static void imlib_div_line_op(image_t *img, int line, void *other, void *data, b
             }
             break;
         }
-        case IMAGE_BPP_GRAYSCALE: {
+        case PIXFORMAT_GRAYSCALE: {
             uint8_t *data = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(img, line);
             int pScale = COLOR_GRAYSCALE_MAX - COLOR_GRAYSCALE_MIN;
             for (int i = 0, j = img->w; i < j; i++) {
@@ -518,7 +518,7 @@ static void imlib_div_line_op(image_t *img, int line, void *other, void *data, b
             }
             break;
         }
-        case IMAGE_BPP_RGB565: {
+        case PIXFORMAT_RGB565: {
             uint16_t *data = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(img, line);
             int rScale = COLOR_R5_MAX - COLOR_R5_MIN;
             int gScale = COLOR_G6_MAX - COLOR_G6_MIN;
@@ -569,8 +569,8 @@ static void imlib_min_line_op(image_t *img, int line, void *other, void *data, b
 {
     image_t *mask = (image_t *) data;
 
-    switch(img->bpp) {
-        case IMAGE_BPP_BINARY: {
+    switch (img->pixfmt) {
+        case PIXFORMAT_BINARY: {
             uint32_t *data = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(img, line);
             for (int i = 0, j = img->w; i < j; i++) {
                 if ((!mask) || image_get_mask_pixel(mask, i, line)) {
@@ -582,7 +582,7 @@ static void imlib_min_line_op(image_t *img, int line, void *other, void *data, b
             }
             break;
         }
-        case IMAGE_BPP_GRAYSCALE: {
+        case PIXFORMAT_GRAYSCALE: {
             uint8_t *data = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(img, line);
             for (int i = 0, j = img->w; i < j; i++) {
                 if ((!mask) || image_get_mask_pixel(mask, i, line)) {
@@ -594,7 +594,7 @@ static void imlib_min_line_op(image_t *img, int line, void *other, void *data, b
             }
             break;
         }
-        case IMAGE_BPP_RGB565: {
+        case PIXFORMAT_RGB565: {
             uint16_t *data = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(img, line);
             for (int i = 0, j = img->w; i < j; i++) {
                 if ((!mask) || image_get_mask_pixel(mask, i, line)) {
@@ -623,8 +623,8 @@ static void imlib_max_line_op(image_t *img, int line, void *other, void *data, b
 {
     image_t *mask = (image_t *) data;
 
-    switch(img->bpp) {
-        case IMAGE_BPP_BINARY: {
+    switch (img->pixfmt) {
+        case PIXFORMAT_BINARY: {
             uint32_t *data = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(img, line);
             for (int i = 0, j = img->w; i < j; i++) {
                 if ((!mask) || image_get_mask_pixel(mask, i, line)) {
@@ -636,7 +636,7 @@ static void imlib_max_line_op(image_t *img, int line, void *other, void *data, b
             }
             break;
         }
-        case IMAGE_BPP_GRAYSCALE: {
+        case PIXFORMAT_GRAYSCALE: {
             uint8_t *data = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(img, line);
             for (int i = 0, j = img->w; i < j; i++) {
                 if ((!mask) || image_get_mask_pixel(mask, i, line)) {
@@ -648,7 +648,7 @@ static void imlib_max_line_op(image_t *img, int line, void *other, void *data, b
             }
             break;
         }
-        case IMAGE_BPP_RGB565: {
+        case PIXFORMAT_RGB565: {
             uint16_t *data = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(img, line);
             for (int i = 0, j = img->w; i < j; i++) {
                 if ((!mask) || image_get_mask_pixel(mask, i, line)) {
@@ -677,8 +677,8 @@ static void imlib_difference_line_op(image_t *img, int line, void *other, void *
 {
     image_t *mask = (image_t *) data;
 
-    switch(img->bpp) {
-        case IMAGE_BPP_BINARY: {
+    switch (img->pixfmt) {
+        case PIXFORMAT_BINARY: {
             uint32_t *data = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(img, line);
             for (int i = 0, j = img->w; i < j; i++) {
                 if ((!mask) || image_get_mask_pixel(mask, i, line)) {
@@ -690,7 +690,7 @@ static void imlib_difference_line_op(image_t *img, int line, void *other, void *
             }
             break;
         }
-        case IMAGE_BPP_GRAYSCALE: {
+        case PIXFORMAT_GRAYSCALE: {
             uint8_t *data = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(img, line);
             for (int i = 0, j = img->w; i < j; i++) {
                 if ((!mask) || image_get_mask_pixel(mask, i, line)) {
@@ -702,7 +702,7 @@ static void imlib_difference_line_op(image_t *img, int line, void *other, void *
             }
             break;
         }
-        case IMAGE_BPP_RGB565: {
+        case PIXFORMAT_RGB565: {
             uint16_t *data = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(img, line);
             for (int i = 0, j = img->w; i < j; i++) {
                 if ((!mask) || image_get_mask_pixel(mask, i, line)) {
@@ -737,8 +737,8 @@ static void imlib_blend_line_op(image_t *img, int line, void *other, void *data,
     float alpha = ((imlib_blend_line_op_t *) data)->alpha, beta = 1 - alpha;
     image_t *mask = ((imlib_blend_line_op_t *) data)->mask;
 
-    switch(img->bpp) {
-        case IMAGE_BPP_BINARY: {
+    switch (img->pixfmt) {
+        case PIXFORMAT_BINARY: {
             uint32_t *data = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(img, line);
             for (int i = 0, j = img->w; i < j; i++) {
                 if ((!mask) || image_get_mask_pixel(mask, i, line)) {
@@ -750,7 +750,7 @@ static void imlib_blend_line_op(image_t *img, int line, void *other, void *data,
             }
             break;
         }
-        case IMAGE_BPP_GRAYSCALE: {
+        case PIXFORMAT_GRAYSCALE: {
             uint8_t *data = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(img, line);
             for (int i = 0, j = img->w; i < j; i++) {
                 if ((!mask) || image_get_mask_pixel(mask, i, line)) {
@@ -762,7 +762,7 @@ static void imlib_blend_line_op(image_t *img, int line, void *other, void *data,
             }
             break;
         }
-        case IMAGE_BPP_RGB565: {
+        case PIXFORMAT_RGB565: {
             uint16_t *data = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(img, line);
             for (int i = 0, j = img->w; i < j; i++) {
                 if ((!mask) || image_get_mask_pixel(mask, i, line)) {

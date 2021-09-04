@@ -8713,27 +8713,27 @@ void zbar_scanner_get_state (const zbar_scanner_t *scn,
 
 void imlib_find_barcodes(list_t *out, image_t *ptr, rectangle_t *roi)
 {
-    uint8_t *grayscale_image = (ptr->bpp == IMAGE_BPP_GRAYSCALE) ? ptr->data : fb_alloc(roi->w * roi->h, FB_ALLOC_NO_HINT);
+    uint8_t *grayscale_image = (ptr->pixfmt == PIXFORMAT_GRAYSCALE) ? ptr->data : fb_alloc(roi->w * roi->h, FB_ALLOC_NO_HINT);
     umm_init_x(fb_avail());
     zbar_image_scanner_t *scanner = zbar_image_scanner_create();
     zbar_image_scanner_set_config(scanner, 0, ZBAR_CFG_ENABLE, 1);
 
     zbar_image_t image;
     image.format = *((int *) "Y800");
-    image.width = (ptr->bpp == IMAGE_BPP_GRAYSCALE) ? ptr->w : roi->w;
-    image.height = (ptr->bpp == IMAGE_BPP_GRAYSCALE) ? ptr->h : roi->h;
+    image.width = (ptr->pixfmt == PIXFORMAT_GRAYSCALE) ? ptr->w : roi->w;
+    image.height = (ptr->pixfmt == PIXFORMAT_GRAYSCALE) ? ptr->h : roi->h;
     image.data = grayscale_image;
-    image.datalen = ((ptr->bpp == IMAGE_BPP_GRAYSCALE) ? ptr->w : roi->w) * ((ptr->bpp == IMAGE_BPP_GRAYSCALE) ? ptr->h : roi->h);
-    image.crop_x = (ptr->bpp == IMAGE_BPP_GRAYSCALE) ? roi->x : 0;
-    image.crop_y = (ptr->bpp == IMAGE_BPP_GRAYSCALE) ? roi->y : 0;
+    image.datalen = ((ptr->pixfmt == PIXFORMAT_GRAYSCALE) ? ptr->w : roi->w) * ((ptr->pixfmt == PIXFORMAT_GRAYSCALE) ? ptr->h : roi->h);
+    image.crop_x = (ptr->pixfmt == PIXFORMAT_GRAYSCALE) ? roi->x : 0;
+    image.crop_y = (ptr->pixfmt == PIXFORMAT_GRAYSCALE) ? roi->y : 0;
     image.crop_w = roi->w;
     image.crop_h = roi->h;
     image.userdata = 0;
     image.seq = 0;
     image.syms = 0;
 
-    switch (ptr->bpp) {
-        case IMAGE_BPP_BINARY: {
+    switch (ptr->pixfmt) {
+        case PIXFORMAT_BINARY: {
             for (int y = roi->y, yy = roi->y + roi->h; y < yy; y++) {
                 uint32_t *row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(ptr, y);
                 for (int x = roi->x, xx = roi->x + roi->w; x < xx; x++) {
@@ -8742,10 +8742,10 @@ void imlib_find_barcodes(list_t *out, image_t *ptr, rectangle_t *roi)
             }
             break;
         }
-        case IMAGE_BPP_GRAYSCALE: {
+        case PIXFORMAT_GRAYSCALE: {
             break;
         }
-        case IMAGE_BPP_RGB565: {
+        case PIXFORMAT_RGB565: {
             for (int y = roi->y, yy = roi->y + roi->h; y < yy; y++) {
                 uint16_t *row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(ptr, y);
                 for (int x = roi->x, xx = roi->x + roi->w; x < xx; x++) {
@@ -8768,18 +8768,15 @@ void imlib_find_barcodes(list_t *out, image_t *ptr, rectangle_t *roi)
                 find_barcodes_list_lnk_data_t lnk_data;
 
                 rectangle_init(&(lnk_data.rect),
-                               zbar_symbol_get_loc_x(symbol, 0) + ((ptr->bpp == IMAGE_BPP_GRAYSCALE) ? 0 : roi->x),
-                               zbar_symbol_get_loc_y(symbol, 0) + ((ptr->bpp == IMAGE_BPP_GRAYSCALE) ? 0 : roi->y),
+                               zbar_symbol_get_loc_x(symbol, 0) + ((ptr->pixfmt == PIXFORMAT_GRAYSCALE) ? 0 : roi->x),
+                               zbar_symbol_get_loc_y(symbol, 0) + ((ptr->pixfmt == PIXFORMAT_GRAYSCALE) ? 0 : roi->y),
                                (zbar_symbol_get_loc_size(symbol) == 1) ? 1 : 0,
                                (zbar_symbol_get_loc_size(symbol) == 1) ? 1 : 0);
 
                 for (size_t k = 1, l = zbar_symbol_get_loc_size(symbol); k < l; k++) {
                     rectangle_t temp;
-                    rectangle_init(&temp,
-                                   zbar_symbol_get_loc_x(symbol, k) + ((ptr->bpp == IMAGE_BPP_GRAYSCALE) ? 0 : roi->x),
-                                   zbar_symbol_get_loc_y(symbol, k) + ((ptr->bpp == IMAGE_BPP_GRAYSCALE) ? 0 : roi->y),
-                                   0,
-                                   0);
+                    rectangle_init(&temp, zbar_symbol_get_loc_x(symbol, k) + ((ptr->pixfmt == PIXFORMAT_GRAYSCALE) ? 0 : roi->x),
+                            zbar_symbol_get_loc_y(symbol, k) + ((ptr->pixfmt == PIXFORMAT_GRAYSCALE) ? 0 : roi->y), 0, 0);
                     rectangle_united(&(lnk_data.rect), &temp);
                 }
 
@@ -8878,7 +8875,9 @@ void imlib_find_barcodes(list_t *out, image_t *ptr, rectangle_t *roi)
 
     zbar_image_scanner_destroy(scanner);
     fb_free(); // umm_init_x();
-    if (ptr->bpp != IMAGE_BPP_GRAYSCALE) fb_free(); // grayscale_image;
+    if (ptr->pixfmt != PIXFORMAT_GRAYSCALE) {
+        fb_free(); // grayscale_image;
+    }
 }
 
 #pragma GCC diagnostic pop

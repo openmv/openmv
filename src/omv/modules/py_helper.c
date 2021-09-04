@@ -48,14 +48,14 @@ image_t *py_helper_arg_to_image_mutable_bayer_jpeg(const mp_obj_t arg)
 image_t *py_helper_arg_to_image_grayscale(const mp_obj_t arg)
 {
     image_t *arg_img = py_image_cobj(arg);
-    PY_ASSERT_TRUE_MSG(arg_img->bpp == IMAGE_BPP_GRAYSCALE, "Image is not grayscale!");
+    PY_ASSERT_TRUE_MSG(arg_img->pixfmt == PIXFORMAT_GRAYSCALE, "Image is not grayscale!");
     return arg_img;
 }
 
 image_t *py_helper_arg_to_image_color(const mp_obj_t arg)
 {
     image_t *arg_img = py_image_cobj(arg);
-    PY_ASSERT_TRUE_MSG(arg_img->bpp == IMAGE_BPP_RGB565, "Image is not RGB565!");
+    PY_ASSERT_TRUE_MSG(arg_img->pixfmt == PIXFORMAT_RGB565, "Image is not RGB565!");
     return arg_img;
 }
 
@@ -300,12 +300,12 @@ int py_helper_keyword_color(image_t *img, uint n_args, const mp_obj_t *args, uin
             default_val = COLOR_R8_G8_B8_TO_RGB565(IM_MAX(IM_MIN(mp_obj_get_int(arg_color[0]), COLOR_R8_MAX), COLOR_R8_MIN),
                                                    IM_MAX(IM_MIN(mp_obj_get_int(arg_color[1]), COLOR_G8_MAX), COLOR_G8_MIN),
                                                    IM_MAX(IM_MIN(mp_obj_get_int(arg_color[2]), COLOR_B8_MAX), COLOR_B8_MIN));
-            switch(img->bpp) {
-                case IMAGE_BPP_BINARY: {
+            switch (img->pixfmt) {
+                case PIXFORMAT_BINARY: {
                     default_val = COLOR_RGB565_TO_BINARY(default_val);
                     break;
                 }
-                case IMAGE_BPP_GRAYSCALE: {
+                case PIXFORMAT_GRAYSCALE: {
                     default_val = COLOR_RGB565_TO_GRAYSCALE(default_val);
                     break;
                 }
@@ -323,12 +323,12 @@ int py_helper_keyword_color(image_t *img, uint n_args, const mp_obj_t *args, uin
             default_val = COLOR_R8_G8_B8_TO_RGB565(IM_MAX(IM_MIN(mp_obj_get_int(arg_color[0]), COLOR_R8_MAX), COLOR_R8_MIN),
                                                    IM_MAX(IM_MIN(mp_obj_get_int(arg_color[1]), COLOR_G8_MAX), COLOR_G8_MIN),
                                                    IM_MAX(IM_MIN(mp_obj_get_int(arg_color[2]), COLOR_B8_MAX), COLOR_B8_MIN));
-            switch(img->bpp) {
-                case IMAGE_BPP_BINARY: {
+            switch (img->pixfmt) {
+                case PIXFORMAT_BINARY: {
                     default_val = COLOR_RGB565_TO_BINARY(default_val);
                     break;
                 }
-                case IMAGE_BPP_GRAYSCALE: {
+                case PIXFORMAT_GRAYSCALE: {
                     default_val = COLOR_RGB565_TO_GRAYSCALE(default_val);
                     break;
                 }
@@ -442,7 +442,7 @@ const uint16_t *py_helper_keyword_color_palette(uint n_args, const mp_obj_t *arg
             py_helper_keyword_to_image_mutable_color_palette(n_args, args, arg_index, kw_args);
 
         if (arg_color_palette) {
-            if (arg_color_palette->bpp != IMAGE_BPP_RGB565) {
+            if (arg_color_palette->pixfmt != PIXFORMAT_RGB565) {
                 mp_raise_msg(&mp_type_ValueError,
                         MP_ERROR_TEXT("Color palette must be RGB565!"));
             }
@@ -466,7 +466,7 @@ const uint8_t *py_helper_keyword_alpha_palette(uint n_args, const mp_obj_t *args
         py_helper_keyword_to_image_mutable_alpha_palette(n_args, args, 9, kw_args);
 
     if (arg_alpha_palette) {
-        if (arg_alpha_palette->bpp != IMAGE_BPP_GRAYSCALE) {
+        if (arg_alpha_palette->pixfmt != PIXFORMAT_GRAYSCALE) {
             mp_raise_msg(&mp_type_ValueError,
                     MP_ERROR_TEXT("Alpha palette must be GRAYSCALE!"));
         }
@@ -490,7 +490,7 @@ bool py_helper_is_equal_to_framebuffer(image_t *img)
 void py_helper_update_framebuffer(image_t *img)
 {
     if (py_helper_is_equal_to_framebuffer(img)) {
-        framebuffer_set(img->w, img->h, img->bpp);
+        framebuffer_init_from_image(img);
     }
 }
 
@@ -504,6 +504,6 @@ void py_helper_set_to_framebuffer(image_t *img)
 
     PY_ASSERT_TRUE_MSG((image_size(img) <= framebuffer_get_buffer_size()),
             "The image doesn't fit in the frame buffer!");
-    framebuffer_set(img->w, img->h, img->bpp);
+    framebuffer_init_from_image(img);
     img->data = framebuffer_get_buffer(framebuffer->head)->data;
 }

@@ -102,7 +102,7 @@ static int fir_ir_fresh_rate = 0;
 static int fir_adc_resolution = 0;
 static bool fir_transposed = false;
 
-// img->w == data_w && img->h == data_h && img->bpp == IMAGE_BPP_GRAYSCALE
+// img->w == data_w && img->h == data_h && img->pixfmt == PIXFORMAT_GRAYSCALE
 static void fir_fill_image_float_obj(image_t *img, mp_obj_t *data, float min, float max)
 {
     float tmp = min;
@@ -843,7 +843,7 @@ mp_obj_t py_fir_draw_ir(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
     image_t *dst_img = py_helper_arg_to_image_mutable(args[0]);
 
     image_t src_img;
-    src_img.bpp = IMAGE_BPP_GRAYSCALE;
+    src_img.pixfmt = PIXFORMAT_GRAYSCALE;
 
     size_t len;
     mp_obj_t *items, *arg_to;
@@ -1001,9 +1001,9 @@ mp_obj_t py_fir_snapshot(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
     bool arg_transpose = py_helper_keyword_int(n_args, args, 2, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_transpose), false);
 
     image_t src_img;
-    src_img.bpp = IMAGE_BPP_GRAYSCALE;
     src_img.w = arg_transpose ? fir_height : fir_width;
     src_img.h = arg_transpose ? fir_width : fir_height;
+    src_img.pixfmt = PIXFORMAT_GRAYSCALE;
 
     float arg_x_scale = 1.f;
     bool got_x_scale = py_helper_keyword_float_maybe(n_args, args, 3, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_x_scale), &arg_x_scale);
@@ -1093,7 +1093,7 @@ mp_obj_t py_fir_snapshot(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
     image_t dst_img;
     dst_img.w = fast_floorf(arg_roi.w * arg_x_scale);
     dst_img.h = fast_floorf(arg_roi.h * arg_y_scale);
-    dst_img.bpp = (arg_pixformat == PIXFORMAT_RGB565) ? IMAGE_BPP_RGB565 : IMAGE_BPP_GRAYSCALE;
+    dst_img.pixfmt = (arg_pixformat == PIXFORMAT_RGB565) ? PIXFORMAT_RGB565 : PIXFORMAT_GRAYSCALE;
 
     if (copy_to_fb) {
         py_helper_set_to_framebuffer(&dst_img);
@@ -1102,10 +1102,10 @@ mp_obj_t py_fir_snapshot(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
         size_t size = fb ? framebuffer_get_buffer_size() : image_size(arg_other);
         PY_ASSERT_TRUE_MSG((image_size(&dst_img) <= size),
                 "The new image won't fit in the target frame buffer!");
-        arg_other->w = dst_img.w;
-        arg_other->h = dst_img.h;
-        arg_other->bpp = dst_img.bpp;
-        dst_img.data = arg_other->data;
+        arg_other->w        = dst_img.w;
+        arg_other->h        = dst_img.h;
+        arg_other->pixfmt   = dst_img.pixfmt;
+        dst_img.pixels      = arg_other->pixels;
         py_helper_update_framebuffer(&dst_img);
     } else {
         dst_img.data = xalloc(image_size(&dst_img));

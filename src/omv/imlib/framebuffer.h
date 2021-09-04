@@ -26,7 +26,7 @@ typedef struct framebuffer {
     int32_t x,y;
     int32_t w,h;
     int32_t u,v;
-    int32_t bpp;
+    PIXFORMAT_STRUCT;
     int32_t streaming_enabled;
     uint32_t raw_buffer_size;
     int32_t n_buffers;
@@ -91,15 +91,15 @@ uint32_t framebuffer_get_buffer_size();
 // Return the state of a buffer.
 vbuffer_t *framebuffer_get_buffer(int32_t index);
 
-// Initializes an image_t struct with the frame buffer.
-void framebuffer_initialize_image(image_t *img);
+// Initializes an image from the frame buffer.
+void framebuffer_init_image(image_t *img);
+
+// Sets the frame buffer from an image.
+void framebuffer_init_from_image(image_t *img);
 
 // Compress src image to the JPEG buffer if src is mutable, otherwise copy src to the JPEG buffer
 // if the src is JPEG and fits in the JPEG buffer, or encode and stream src image to the IDE if not.
 void framebuffer_update_jpeg_buffer();
-
-// Set the framebuffer w, h and bpp.
-void framebuffer_set(int32_t w, int32_t h, int32_t bpp);
 
 // Clears out all old captures frames in the framebuffer.
 void framebuffer_flush_buffers();

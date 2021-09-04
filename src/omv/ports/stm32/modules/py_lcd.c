@@ -361,7 +361,7 @@ static void spi_lcd_display(image_t *src_img, int dst_x_start, int dst_y_start, 
     image_t dst_img;
     dst_img.w = lcd_width;
     dst_img.h = lcd_height;
-    dst_img.bpp = IMAGE_BPP_RGB565;
+    dst_img.pixfmt = PIXFORMAT_RGB565;
 
     int x0, x1, y0, y1;
     bool black = !imlib_draw_image_rectangle(&dst_img, src_img, dst_x_start, dst_y_start, x_scale, y_scale, roi, alpha, alpha_palette, hint, &x0, &x1, &y0, &y1);
@@ -1002,7 +1002,7 @@ static void ltdc_display(image_t *src_img, int dst_x_start, int dst_y_start, flo
     image_t dst_img;
     dst_img.w = lcd_width;
     dst_img.h = lcd_height;
-    dst_img.bpp = IMAGE_BPP_RGB565;
+    dst_img.pixfmt = PIXFORMAT_RGB565;
 
     int x0, x1, y0, y1;
     bool black = !imlib_draw_image_rectangle(&dst_img, src_img, dst_x_start, dst_y_start, x_scale, y_scale, roi, alpha, alpha_palette, hint, &x0, &x1, &y0, &y1);

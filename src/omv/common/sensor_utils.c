@@ -558,7 +558,7 @@ __weak int sensor_set_pixformat(pixformat_t pixformat)
     sensor.pixformat = pixformat;
 
     // Skip the first frame.
-    MAIN_FB()->bpp = -1;
+    MAIN_FB()->pixfmt = PIXFORMAT_INVALID;
 
     // Pickout a good buffer count for the user.
     framebuffer_auto_adjust_buffers();
@@ -595,7 +595,7 @@ __weak int sensor_set_framesize(framesize_t framesize)
     sensor.framesize = framesize;
 
     // Skip the first frame.
-    MAIN_FB()->bpp = -1;
+    MAIN_FB()->pixfmt = PIXFORMAT_INVALID;
 
     // Set MAIN FB x offset, y offset, width, height, backup width, and backup height.
     MAIN_FB()->x = 0;
@@ -692,7 +692,7 @@ __weak int sensor_set_windowing(int x, int y, int w, int h)
     framebuffer_update_jpeg_buffer();
 
     // Skip the first frame.
-    MAIN_FB()->bpp = -1;
+    MAIN_FB()->pixfmt = PIXFORMAT_INVALID;
 
     MAIN_FB()->x = x;
     MAIN_FB()->y = y;

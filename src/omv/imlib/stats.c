@@ -22,8 +22,8 @@ void imlib_similarity_line_op(image_t *img, int line, void *other, void *data, b
     imlib_similatiry_line_op_state_t *state = (imlib_similatiry_line_op_state_t *) data; vflipped = vflipped;
     float c1 = 0, c2 = 0;
 
-    switch(img->bpp) {
-        case IMAGE_BPP_BINARY: {
+    switch (img->pixfmt) {
+        case PIXFORMAT_BINARY: {
             uint32_t *row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(img, line);
             uint32_t *other_row_ptr = (uint32_t *) other;
             for (int x = 0, xx = (img->w + 7) / 8; x < xx; x++) {
@@ -41,7 +41,7 @@ void imlib_similarity_line_op(image_t *img, int line, void *other, void *data, b
             c2 = COLOR_BINARY_MAX * 0.03f;
             break;
         }
-        case IMAGE_BPP_GRAYSCALE: {
+        case PIXFORMAT_GRAYSCALE: {
             uint8_t *row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(img, line);
             uint8_t *other_row_ptr = (uint8_t *) other;
             for (int x = 0, xx = (img->w + 7) / 8; x < xx; x++) {
@@ -59,7 +59,7 @@ void imlib_similarity_line_op(image_t *img, int line, void *other, void *data, b
             c2 = COLOR_GRAYSCALE_MAX * 0.03f;
             break;
         }
-        case IMAGE_BPP_RGB565: {
+        case PIXFORMAT_RGB565: {
             uint16_t *row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(img, line);
             uint16_t *other_row_ptr = (uint16_t *) other;
             for (int x = 0, xx = (img->w + 7) / 8; x < xx; x++) {
@@ -148,8 +148,8 @@ void imlib_get_similarity(image_t *img, const char *path, image_t *other, int sc
 
 void imlib_get_histogram(histogram_t *out, image_t *ptr, rectangle_t *roi, list_t *thresholds, bool invert, image_t *other)
 {
-    switch(ptr->bpp) {
-        case IMAGE_BPP_BINARY: {
+    switch (ptr->pixfmt) {
+        case PIXFORMAT_BINARY: {
             memset(out->LBins, 0, out->LBinCount * sizeof(uint32_t));
 
             int pixel_count = roi->w * roi->h;
@@ -220,7 +220,7 @@ void imlib_get_histogram(histogram_t *out, image_t *ptr, rectangle_t *roi, list_
 
             break;
         }
-        case IMAGE_BPP_GRAYSCALE: {
+        case PIXFORMAT_GRAYSCALE: {
             memset(out->LBins, 0, out->LBinCount * sizeof(uint32_t));
 
             int pixel_count = roi->w * roi->h;
@@ -291,7 +291,7 @@ void imlib_get_histogram(histogram_t *out, image_t *ptr, rectangle_t *roi, list_
 
             break;
         }
-        case IMAGE_BPP_RGB565: {
+        case PIXFORMAT_RGB565: {
             memset(out->LBins, 0, out->LBinCount * sizeof(uint32_t));
             memset(out->ABins, 0, out->ABinCount * sizeof(uint32_t));
             memset(out->BBins, 0, out->BBinCount * sizeof(uint32_t));
@@ -396,11 +396,11 @@ void imlib_get_histogram(histogram_t *out, image_t *ptr, rectangle_t *roi, list_
     }
 }
 
-void imlib_get_percentile(percentile_t *out, image_bpp_t bpp, histogram_t *ptr, float percentile)
+void imlib_get_percentile(percentile_t *out, pixformat_t pixfmt, histogram_t *ptr, float percentile)
 {
     memset(out, 0, sizeof(percentile_t));
-    switch(bpp) {
-        case IMAGE_BPP_BINARY: {
+    switch (pixfmt) {
+        case PIXFORMAT_BINARY: {
             float mult = (COLOR_BINARY_MAX - COLOR_BINARY_MIN) / ((float) (ptr->LBinCount - 1));
             float median_count = 0;
 
@@ -414,7 +414,7 @@ void imlib_get_percentile(percentile_t *out, image_bpp_t bpp, histogram_t *ptr, 
             }
             break;
         }
-        case IMAGE_BPP_GRAYSCALE: {
+        case PIXFORMAT_GRAYSCALE: {
             float mult = (COLOR_GRAYSCALE_MAX - COLOR_GRAYSCALE_MIN) / ((float) (ptr->LBinCount - 1));
             float median_count = 0;
 
@@ -428,7 +428,7 @@ void imlib_get_percentile(percentile_t *out, image_bpp_t bpp, histogram_t *ptr, 
             }
             break;
         }
-        case IMAGE_BPP_RGB565: {
+        case PIXFORMAT_RGB565: {
             {
                 float mult = (COLOR_L_MAX - COLOR_L_MIN) / ((float) (ptr->LBinCount - 1));
                 float median_count = 0;
@@ -510,19 +510,19 @@ static int ostu(int bincount, float *bins)
     return threshold;
 }
 
-void imlib_get_threshold(threshold_t *out, image_bpp_t bpp, histogram_t *ptr)
+void imlib_get_threshold(threshold_t *out, pixformat_t pixfmt, histogram_t *ptr)
 {
     memset(out, 0, sizeof(threshold_t));
-    switch(bpp) {
-        case IMAGE_BPP_BINARY: {
+    switch (pixfmt) {
+        case PIXFORMAT_BINARY: {
             out->LValue = (ostu(ptr->LBinCount, ptr->LBins) * (COLOR_BINARY_MAX - COLOR_BINARY_MIN)) / (ptr->LBinCount - 1);
             break;
         }
-        case IMAGE_BPP_GRAYSCALE: {
+        case PIXFORMAT_GRAYSCALE: {
             out->LValue = (ostu(ptr->LBinCount, ptr->LBins) * (COLOR_GRAYSCALE_MAX - COLOR_GRAYSCALE_MIN)) / (ptr->LBinCount - 1);
             break;
         }
-        case IMAGE_BPP_RGB565: {
+        case PIXFORMAT_RGB565: {
             out->LValue = (ostu(ptr->LBinCount, ptr->LBins) * (COLOR_L_MAX - COLOR_L_MIN)) / (ptr->LBinCount - 1);
             out->AValue = (ostu(ptr->ABinCount, ptr->ABins) * (COLOR_A_MAX - COLOR_A_MIN)) / (ptr->ABinCount - 1);
             out->BValue = (ostu(ptr->BBinCount, ptr->BBins) * (COLOR_B_MAX - COLOR_B_MIN)) / (ptr->BBinCount - 1);
@@ -534,11 +534,11 @@ void imlib_get_threshold(threshold_t *out, image_bpp_t bpp, histogram_t *ptr)
     }
 }
 
-void imlib_get_statistics(statistics_t *out, image_bpp_t bpp, histogram_t *ptr)
+void imlib_get_statistics(statistics_t *out, pixformat_t pixfmt, histogram_t *ptr)
 {
     memset(out, 0, sizeof(statistics_t));
-    switch(bpp) {
-        case IMAGE_BPP_BINARY: {
+    switch (pixfmt) {
+        case PIXFORMAT_BINARY: {
             float mult = (COLOR_BINARY_MAX - COLOR_BINARY_MIN) / ((float) (ptr->LBinCount - 1));
 
             float avg = 0;
@@ -587,7 +587,7 @@ void imlib_get_statistics(statistics_t *out, image_bpp_t bpp, histogram_t *ptr)
             out->LSTDev = fast_floorf(fast_sqrtf(stdev - (avg * avg)));
             break;
         }
-        case IMAGE_BPP_GRAYSCALE: {
+        case PIXFORMAT_GRAYSCALE: {
             float mult = (COLOR_GRAYSCALE_MAX - COLOR_GRAYSCALE_MIN) / ((float) (ptr->LBinCount - 1));
 
             float avg = 0;
@@ -636,7 +636,7 @@ void imlib_get_statistics(statistics_t *out, image_bpp_t bpp, histogram_t *ptr)
             out->LSTDev = fast_floorf(fast_sqrtf(stdev - (avg * avg)));
             break;
         }
-        case IMAGE_BPP_RGB565: {
+        case PIXFORMAT_RGB565: {
             {
                 float mult = (COLOR_L_MAX - COLOR_L_MIN) / ((float) (ptr->LBinCount - 1));
 
@@ -837,8 +837,8 @@ bool imlib_get_regression(find_lines_list_lnk_data_t *out, image_t *ptr, rectang
             color_thresholds_list_lnk_data_t lnk_data;
             iterator_get(thresholds, it, &lnk_data);
 
-            switch (ptr->bpp) {
-                case IMAGE_BPP_BINARY: {
+            switch (ptr->pixfmt) {
+                case PIXFORMAT_BINARY: {
                     for (int y = roi->y, yy = roi->y + roi->h; y < yy; y += y_stride) {
                         uint32_t *row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(ptr, y);
                         for (int x = roi->x + (y % x_stride), xx = roi->x + roi->w; x < xx; x += x_stride) {
@@ -858,7 +858,7 @@ bool imlib_get_regression(find_lines_list_lnk_data_t *out, image_t *ptr, rectang
                     }
                     break;
                 }
-                case IMAGE_BPP_GRAYSCALE: {
+                case PIXFORMAT_GRAYSCALE: {
                     for (int y = roi->y, yy = roi->y + roi->h; y < yy; y += y_stride) {
                         uint8_t *row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(ptr, y);
                         for (int x = roi->x + (y % x_stride), xx = roi->x + roi->w; x < xx; x += x_stride) {
@@ -878,7 +878,7 @@ bool imlib_get_regression(find_lines_list_lnk_data_t *out, image_t *ptr, rectang
                     }
                     break;
                 }
-                case IMAGE_BPP_RGB565: {
+                case PIXFORMAT_RGB565: {
                     for (int y = roi->y, yy = roi->y + roi->h; y < yy; y += y_stride) {
                         uint16_t *row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(ptr, y);
                         for (int x = roi->x + (y % x_stride), xx = roi->x + roi->w; x < xx; x += x_stride) {
@@ -992,8 +992,8 @@ bool imlib_get_regression(find_lines_list_lnk_data_t *out, image_t *ptr, rectang
                 color_thresholds_list_lnk_data_t lnk_data;
                 iterator_get(thresholds, it, &lnk_data);
 
-                switch (ptr->bpp) {
-                    case IMAGE_BPP_BINARY: {
+                switch (ptr->pixfmt) {
+                    case PIXFORMAT_BINARY: {
                         for (int y = roi->y, yy = roi->y + roi->h; y < yy; y += y_stride) {
                             uint32_t *row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(ptr, y);
                             for (int x = roi->x + (y % x_stride), xx = roi->x + roi->w; x < xx; x += x_stride) {
@@ -1015,7 +1015,7 @@ bool imlib_get_regression(find_lines_list_lnk_data_t *out, image_t *ptr, rectang
                         }
                         break;
                     }
-                    case IMAGE_BPP_GRAYSCALE: {
+                    case PIXFORMAT_GRAYSCALE: {
                         for (int y = roi->y, yy = roi->y + roi->h; y < yy; y += y_stride) {
                             uint8_t *row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(ptr, y);
                             for (int x = roi->x + (y % x_stride), xx = roi->x + roi->w; x < xx; x += x_stride) {
@@ -1037,7 +1037,7 @@ bool imlib_get_regression(find_lines_list_lnk_data_t *out, image_t *ptr, rectang
                         }
                         break;
                     }
-                    case IMAGE_BPP_RGB565: {
+                    case PIXFORMAT_RGB565: {
                         for (int y = roi->y, yy = roi->y + roi->h; y < yy; y += y_stride) {
                             uint16_t *row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(ptr, y);
                             for (int x = roi->x + (y % x_stride), xx = roi->x + roi->w; x < xx; x += x_stride) {

@@ -13,10 +13,8 @@ void imlib_midpoint_pool(image_t *img_i, image_t *img_o, int x_div, int y_div, c
 {
     int min_bias = (256-bias);
     int max_bias = bias;
-    switch(img_i->bpp)
-    {
-        case IMAGE_BPP_BINARY:
-        {
+    switch (img_i->pixfmt) {
+        case PIXFORMAT_BINARY: {
             for (int y = 0, yy = img_i->h / y_div, yyy = (img_i->h % y_div) / 2; y < yy; y++) {
                 uint32_t *row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(img_o, y);
                 for (int x = 0, xx = img_i->w / x_div, xxx = (img_i->w % x_div) / 2; x < xx; x++) {
@@ -34,8 +32,7 @@ void imlib_midpoint_pool(image_t *img_i, image_t *img_o, int x_div, int y_div, c
             }
             break;
         }
-        case IMAGE_BPP_GRAYSCALE:
-        {
+        case PIXFORMAT_GRAYSCALE: {
             for (int y = 0, yy = img_i->h, yyy = (img_i->h % y_div) / 2 / y_div; y < yy; y++) {
                 uint8_t *row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(img_o, y);
                 for (int x = 0, xx = img_i->w / x_div, xxx = (img_i->w % x_div) / 2; x < xx; x++) {
@@ -53,8 +50,7 @@ void imlib_midpoint_pool(image_t *img_i, image_t *img_o, int x_div, int y_div, c
             }
             break;
         }
-        case IMAGE_BPP_RGB565:
-        {
+        case PIXFORMAT_RGB565: {
             for (int y = 0, yy = img_i->h / y_div, yyy = (img_i->h % y_div) / 2; y < yy; y++) {
                 uint16_t *row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(img_o, y);
                 for (int x = 0, xx = img_i->w / x_div, xxx = (img_i->w % x_div) / 2; x < xx; x++) {
@@ -83,8 +79,7 @@ void imlib_midpoint_pool(image_t *img_i, image_t *img_o, int x_div, int y_div, c
             }
             break;
         }
-        default:
-        {
+        default: {
             break;
         }
     }
@@ -95,10 +90,8 @@ void imlib_midpoint_pool(image_t *img_i, image_t *img_o, int x_div, int y_div, c
 void imlib_mean_pool(image_t *img_i, image_t *img_o, int x_div, int y_div)
 {
     int n = x_div * y_div;
-    switch(img_i->bpp)
-    {
-        case IMAGE_BPP_BINARY:
-        {
+    switch (img_i->pixfmt) {
+        case PIXFORMAT_BINARY: {
             for (int y = 0, yy = img_i->h / y_div, yyy = (img_i->h % y_div) / 2; y < yy; y++) {
                 uint32_t *row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(img_o, y);
                 for (int x = 0, xx = img_i->w / x_div, xxx = (img_i->w % x_div) / 2; x < xx; x++) {
@@ -114,8 +107,7 @@ void imlib_mean_pool(image_t *img_i, image_t *img_o, int x_div, int y_div)
             }
             break;
         }
-        case IMAGE_BPP_GRAYSCALE:
-        {
+        case PIXFORMAT_GRAYSCALE: {
             for (int y = 0, yy = img_i->h / y_div, yyy = (img_i->h % y_div) / 2; y < yy; y++) {
                 uint8_t *row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(img_o, y);
                 for (int x = 0, xx = img_i->w / x_div, xxx = (img_i->w % x_div) / 2; x < xx; x++) {
@@ -131,8 +123,7 @@ void imlib_mean_pool(image_t *img_i, image_t *img_o, int x_div, int y_div)
             }
             break;
         }
-        case IMAGE_BPP_RGB565:
-        {
+        case PIXFORMAT_RGB565: {
             for (int y = 0, yy = img_i->h / y_div, yyy = (img_i->h % y_div) / 2; y < yy; y++) {
                 uint16_t *row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(img_o, y);
                 for (int x = 0, xx = img_i->w / x_div, xxx = (img_i->w % x_div) / 2; x < xx; x++) {
@@ -152,8 +143,7 @@ void imlib_mean_pool(image_t *img_i, image_t *img_o, int x_div, int y_div)
             }
             break;
         }
-        default:
-        {
+        default: {
             break;
         }
     }

@@ -51,7 +51,7 @@ typedef struct _py_imageio_obj {
         struct {
             uint32_t w;
             uint32_t h;
-            uint32_t bpp;
+            uint32_t pixfmt;
             uint32_t f_size;
             uint32_t f_count;
             uint32_t offset;
@@ -186,7 +186,10 @@ mp_obj_t py_imageio_read(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
         stream->ms = ms;
         read_long(fp, (uint32_t *) &image.w);
         read_long(fp, (uint32_t *) &image.h);
-        read_long(fp, (uint32_t *) &image.bpp);
+        uint32_t bpp;
+        read_long(fp, (uint32_t *) &bpp);
+        // TODO: workaround for backwards compatibility until the stream version is updated.
+        image.pixfmt = (bpp == 1) ? PIXFORMAT_GRAYSCALE : PIXFORMAT_RGB565;
         uint32_t size = image_size(&image);
 
         if (copy_to_fb) {
@@ -202,7 +205,7 @@ mp_obj_t py_imageio_read(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
         read_data(fp, image.data, size);
 
         // Check if original byte reversed data.
-        if ((image.bpp == IMAGE_BPP_RGB565) && (stream->version == 10)) {
+        if ((image.pixfmt == PIXFORMAT_RGB565) && (stream->version == 10)) {
             uint32_t *data_ptr = (uint32_t *) image.data;
             size_t data_len = image.w * image.h;
 
@@ -225,7 +228,7 @@ mp_obj_t py_imageio_read(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
         if (arg_other) {
             arg_other->w = image.w;
             arg_other->h = image.h;
-            arg_other->bpp = image.bpp;
+            arg_other->pixfmt = image.pixfmt;
        }
     #endif
     } else if (stream->type == IMAGE_IO_MEMORY_STREAM) {
@@ -234,7 +237,7 @@ mp_obj_t py_imageio_read(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
         }
         image.w = stream->w;
         image.h = stream->h;
-        image.bpp = stream->bpp;
+        image.pixfmt = stream->pixfmt;
         uint32_t size = stream->f_size;
 
         if (copy_to_fb) {
@@ -351,8 +354,9 @@ mp_obj_t py_imageio_make_new(const mp_obj_type_t *type, size_t n_args, size_t n_
         stream->f_count = mp_obj_get_int(args[1]);
         stream->w       = mp_obj_get_int(image_info[0]);
         stream->h       = mp_obj_get_int(image_info[1]);
-        stream->bpp     = mp_obj_get_int(image_info[2]);
-        image_t image = {.w = stream->w, .h = stream->h, .bpp = stream->bpp, .pixels = NULL};
+        // TODO: workaround for backwards compatibility until the stream version is updated.
+        stream->pixfmt  = (mp_obj_get_int(image_info[2]) == 1) ? PIXFORMAT_GRAYSCALE : PIXFORMAT_RGB565;
+        image_t image = {.w = stream->w, .h = stream->h, .pixfmt = stream->pixfmt, .pixels = NULL};
         stream->f_size  = image_size(&image);
         stream->offset  = 0;
 

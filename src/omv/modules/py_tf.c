@@ -239,8 +239,8 @@ STATIC void py_tf_input_data_callback(void *callback_data,
     float x_offset = ((arg->roi->w * scale) - input_width) / 2;
     float y_offset = ((arg->roi->h * scale) - input_height) / 2;
 
-    switch (arg->img->bpp) {
-        case IMAGE_BPP_BINARY: {
+    switch (arg->img->pixfmt) {
+        case PIXFORMAT_BINARY: {
             for (int y = 0, yy = input_height; y < yy; y++) {
                 uint32_t *row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(arg->img, fast_floorf((y + y_offset) * scale_inv) + arg->roi->y);
                 int row = input_width * y;
@@ -278,7 +278,7 @@ STATIC void py_tf_input_data_callback(void *callback_data,
             }
             break;
         }
-        case IMAGE_BPP_GRAYSCALE: {
+        case PIXFORMAT_GRAYSCALE: {
             for (int y = 0, yy = input_height; y < yy; y++) {
                 uint8_t *row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(arg->img, fast_floorf((y + y_offset) * scale_inv) + arg->roi->y);
                 int row = input_width * y;
@@ -316,7 +316,7 @@ STATIC void py_tf_input_data_callback(void *callback_data,
             }
             break;
         }
-        case IMAGE_BPP_RGB565: {
+        case PIXFORMAT_RGB565: {
             for (int y = 0, yy = input_height; y < yy; y++) {
                 uint16_t *row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(arg->img, fast_floorf((y + y_offset) * scale_inv) + arg->roi->y);
                 int row = input_width * y;
@@ -491,7 +491,7 @@ STATIC void py_tf_segment_output_data_callback(void *callback_data,
         image_t img = {
             .w = output_width,
             .h = output_height,
-            .bpp = IMAGE_BPP_GRAYSCALE,
+            .pixfmt = PIXFORMAT_GRAYSCALE,
             .pixels = xalloc(output_width * output_height * sizeof(uint8_t))
         };
         ((mp_obj_list_t *) arg->out)->items[i] = py_image_from_struct(&img);

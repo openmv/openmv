@@ -17,9 +17,6 @@
 #define OMV_UNIQUE_ID_ADDR      0x10000060
 #define OMV_UNIQUE_ID_SIZE      2 // 2 words
 
-// Needed by the SWD JTAG testrig - located at the bottom of the frame buffer stack.
-#define OMV_SELF_TEST_SWD_ADDR  MAIN_FB()->bpp
-
 #define OMV_XCLK_MCO            (0U)
 #define OMV_XCLK_TIM            (1U)
 

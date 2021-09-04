@@ -11985,8 +11985,8 @@ void imlib_find_apriltags(list_t *out, image_t *ptr, rectangle_t *roi, apriltag_
     im.stride = roi->w;
     im.buf = grayscale_image;
 
-    switch(ptr->bpp) {
-        case IMAGE_BPP_BINARY: {
+    switch (ptr->pixfmt) {
+        case PIXFORMAT_BINARY: {
             for (int y = roi->y, yy = roi->y + roi->h; y < yy; y++) {
                 uint32_t *row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(ptr, y);
                 for (int x = roi->x, xx = roi->x + roi->w; x < xx; x++) {
@@ -11995,7 +11995,7 @@ void imlib_find_apriltags(list_t *out, image_t *ptr, rectangle_t *roi, apriltag_
             }
             break;
         }
-        case IMAGE_BPP_GRAYSCALE: {
+        case PIXFORMAT_GRAYSCALE: {
             for (int y = roi->y, yy = roi->y + roi->h; y < yy; y++) {
                 uint8_t *row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(ptr, y);
                 for (int x = roi->x, xx = roi->x + roi->w; x < xx; x++) {
@@ -12004,7 +12004,7 @@ void imlib_find_apriltags(list_t *out, image_t *ptr, rectangle_t *roi, apriltag_
             }
             break;
         }
-        case IMAGE_BPP_RGB565: {
+        case PIXFORMAT_RGB565: {
             for (int y = roi->y, yy = roi->y + roi->h; y < yy; y++) {
                 uint16_t *row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(ptr, y);
                 for (int x = roi->x, xx = roi->x + roi->w; x < xx; x++) {
@@ -12113,7 +12113,7 @@ void imlib_find_rects(list_t *out, image_t *ptr, rectangle_t *roi, uint32_t thre
     image_t img;
     img.w = roi->w;
     img.h = roi->h;
-    img.bpp = IMAGE_BPP_GRAYSCALE;
+    img.pixfmt = PIXFORMAT_GRAYSCALE;
     img.data = fb_alloc(image_size(&img), FB_ALLOC_NO_HINT);
     imlib_draw_image(&img, ptr, 0, 0, 1.f, 1.f, roi, -1, 256, NULL, NULL, 0, NULL, NULL);
 
@@ -12411,8 +12411,8 @@ void imlib_rotation_corr(image_t *img, float x_rotation, float y_rotation, float
             T4_10 /= T4_22;
             T4_11 /= T4_22;
             T4_12 /= T4_22;
-            switch(img->bpp) {
-                case IMAGE_BPP_BINARY: {
+            switch (img->pixfmt) {
+                case PIXFORMAT_BINARY: {
                     uint32_t *tmp = (uint32_t *) data;
 
                     for (int y = 0, yy = h; y < yy; y++) {
@@ -12430,7 +12430,7 @@ void imlib_rotation_corr(image_t *img, float x_rotation, float y_rotation, float
                     }
                     break;
                 }
-                case IMAGE_BPP_GRAYSCALE: {
+                case PIXFORMAT_GRAYSCALE: {
                     uint8_t *tmp = (uint8_t *) data;
 
                     for (int y = 0, yy = h; y < yy; y++) {
@@ -12448,7 +12448,7 @@ void imlib_rotation_corr(image_t *img, float x_rotation, float y_rotation, float
                     }
                     break;
                 }
-                case IMAGE_BPP_RGB565: {
+                case PIXFORMAT_RGB565: {
                     uint16_t *tmp = (uint16_t *) data;
 
                     for (int y = 0, yy = h; y < yy; y++) {
@@ -12471,8 +12471,8 @@ void imlib_rotation_corr(image_t *img, float x_rotation, float y_rotation, float
                 }
             }
         } else { // warp persepective
-            switch(img->bpp) {
-                case IMAGE_BPP_BINARY: {
+            switch (img->pixfmt) {
+                case PIXFORMAT_BINARY: {
                     uint32_t *tmp = (uint32_t *) data;
 
                     for (int y = 0, yy = h; y < yy; y++) {
@@ -12493,7 +12493,7 @@ void imlib_rotation_corr(image_t *img, float x_rotation, float y_rotation, float
                     }
                     break;
                 }
-                case IMAGE_BPP_GRAYSCALE: {
+                case PIXFORMAT_GRAYSCALE: {
                     uint8_t *tmp = (uint8_t *) data;
 
                     for (int y = 0, yy = h; y < yy; y++) {
@@ -12514,7 +12514,7 @@ void imlib_rotation_corr(image_t *img, float x_rotation, float y_rotation, float
                     }
                     break;
                 }
-                case IMAGE_BPP_RGB565: {
+                case PIXFORMAT_RGB565: {
                     uint16_t *tmp = (uint16_t *) data;
 
                     for (int y = 0, yy = h; y < yy; y++) {

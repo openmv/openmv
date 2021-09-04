@@ -233,34 +233,16 @@ int sensor_snapshot(sensor_t *sensor, image_t *image, uint32_t flags)
         sensor->frame_callback();
     }
 
-    // Fix the BPP.
-    switch (sensor->pixformat) {
-        case PIXFORMAT_GRAYSCALE:
-            MAIN_FB()->bpp = 1;
-            break;
-        case PIXFORMAT_YUV422:
-        case PIXFORMAT_RGB565: {
-            MAIN_FB()->bpp = 2;
-            if (sensor->hw_flags.rgb_swap || sensor->hw_flags.yuv_swap) {
-                unaligned_memcpy_rev16(buffer->data, buffer->data, _width * _height);
-            }
-            break;
-        }
-        case PIXFORMAT_BAYER:
-            MAIN_FB()->bpp = 3;
-            break;
-        default:
-            MAIN_FB()->bpp = -1;
-            break;
+    // Set framebuffer pixel format.
+    MAIN_FB()->pixfmt = sensor->pixformat;
+
+    // Swap bytes if set.
+    if ((MAIN_FB()->pixfmt == PIXFORMAT_RGB565 && sensor->hw_flags.rgb_swap) ||
+        (MAIN_FB()->pixfmt == PIXFORMAT_YUV422 && sensor->hw_flags.yuv_swap)) {
+        unaligned_memcpy_rev16(buffer->data, buffer->data, _width * _height);
     }
 
     // Set the user image.
-    if (image != NULL) {
-        image->w = MAIN_FB()->w;
-        image->h = MAIN_FB()->h;
-        image->bpp = MAIN_FB()->bpp;
-        image->pixels = buffer->data;
-    }
-
+    framebuffer_init_image(image);
     return 0;
 }

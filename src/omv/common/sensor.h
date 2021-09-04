@@ -174,10 +174,11 @@ typedef enum {
 } sensor_error_t;
 
 // Bayer patterns.
-#define SENSOR_HW_FLAGS_BAYER_BGGR      (1) // Default Bayer pattern.
-#define SENSOR_HW_FLAGS_BAYER_GBRG      (2)
-#define SENSOR_HW_FLAGS_BAYER_GRBG      (3)
-#define SENSOR_HW_FLAGS_BAYER_RGGB      (4)
+// NOTE: These must match the Bayer subformats in imlib.h
+#define SENSOR_HW_FLAGS_BAYER_BGGR      (PIXFORMAT_ID_BAYER_BGGR)
+#define SENSOR_HW_FLAGS_BAYER_GBRG      (PIXFORMAT_ID_BAYER_GBRG)
+#define SENSOR_HW_FLAGS_BAYER_GRBG      (PIXFORMAT_ID_BAYER_GRBG)
+#define SENSOR_HW_FLAGS_BAYER_RGGB      (PIXFORMAT_ID_BAYER_RGGB)
 
 typedef void (*vsync_cb_t)(uint32_t vsync);
 typedef void (*frame_cb_t)();

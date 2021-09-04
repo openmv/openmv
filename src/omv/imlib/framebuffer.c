@@ -35,14 +35,14 @@ bool fb_get_streaming_enabled()
 
 int fb_encode_for_ide_new_size(image_t *img)
 {
-    return (((img->bpp * 8) + 5) / 6) + 2;
+    return (((img->size * 8) + 5) / 6) + 2;
 }
 
 void fb_encode_for_ide(uint8_t *ptr, image_t *img)
 {
     *ptr++ = 0xFE;
 
-    for(int i = 0, j = (img->bpp / 3) * 3; i < j; i += 3) {
+    for(int i = 0, j = (img->size / 3) * 3; i < j; i += 3) {
         int x = 0;
         x |= img->data[i + 0] << 0;
         x |= img->data[i + 1] << 8;
@@ -53,18 +53,18 @@ void fb_encode_for_ide(uint8_t *ptr, image_t *img)
         *ptr++ = 0x80 | ((x >> 18) & 0x3F);
     }
 
-    if((img->bpp % 3) == 2) { // 2 bytes -> 16-bits -> 24-bits sent
+    if((img->size % 3) == 2) { // 2 bytes -> 16-bits -> 24-bits sent
         int x = 0;
-        x |= img->data[img->bpp - 2] << 0;
-        x |= img->data[img->bpp - 1] << 8;
+        x |= img->data[img->size - 2] << 0;
+        x |= img->data[img->size - 1] << 8;
         *ptr++ = 0x80 | ((x >> 0) & 0x3F);
         *ptr++ = 0x80 | ((x >> 6) & 0x3F);
         *ptr++ = 0x80 | ((x >> 12) & 0x3F);
     }
 
-    if((img->bpp % 3) == 1) { // 1 byte -> 8-bits -> 16-bits sent
+    if((img->size % 3) == 1) { // 1 byte -> 8-bits -> 16-bits sent
         int x = 0;
-        x |= img->data[img->bpp - 1] << 0;
+        x |= img->data[img->size - 1] << 0;
         *ptr++ = 0x80 | ((x >> 0) & 0x3F);
         *ptr++ = 0x80 | ((x >> 6) & 0x3F);
     }
@@ -96,24 +96,35 @@ void framebuffer_init0()
     framebuffer_set_buffers(1);
 }
 
-void framebuffer_initialize_image(image_t *img)
+void framebuffer_init_image(image_t *img)
 {
-    img->w = framebuffer->w;
-    img->h = framebuffer->h;
-    img->bpp = framebuffer->bpp;
-    img->data = framebuffer_get_buffer(framebuffer->head)->data;
+    if (img != NULL) {
+        img->w          = framebuffer->w;
+        img->h          = framebuffer->h;
+        img->size       = framebuffer->size;
+        img->pixfmt     = framebuffer->pixfmt;
+        img->pixels     = framebuffer_get_buffer(framebuffer->head)->data;
+    }
 }
 
-static void initialize_jpeg_buf_from_image(image_t *img)
+void framebuffer_init_from_image(image_t *img)
 {
-    if (!img) {
-        jpeg_framebuffer->w = 0;
-        jpeg_framebuffer->h = 0;
-        jpeg_framebuffer->size = 0;
+    framebuffer->w      = img->w;
+    framebuffer->h      = img->h;
+    framebuffer->size   = img->size;
+    framebuffer->pixfmt = img->pixfmt;
+}
+
+static void jpegbuffer_init_from_image(image_t *img)
+{
+    if (img == NULL) {
+        jpeg_framebuffer->w     = 0;
+        jpeg_framebuffer->h     = 0;
+        jpeg_framebuffer->size  = 0;
     } else {
-        jpeg_framebuffer->w = img->w;
-        jpeg_framebuffer->h = img->h;
-        jpeg_framebuffer->size = img->bpp;
+        jpeg_framebuffer->w     = img->w;
+        jpeg_framebuffer->h     = img->h;
+        jpeg_framebuffer->size  = img->size;
     }
 }
 
@@ -122,20 +133,21 @@ void framebuffer_update_jpeg_buffer()
     static int overflow_count = 0;
 
     image_t main_fb_src;
-    framebuffer_initialize_image(&main_fb_src);
+    framebuffer_init_image(&main_fb_src);
     image_t *src = &main_fb_src;
 
-    if (framebuffer->streaming_enabled && jpeg_framebuffer->enabled) {
-        if (src->bpp > 3) {
+    if (src->pixfmt != PIXFORMAT_INVALID &&
+            framebuffer->streaming_enabled && jpeg_framebuffer->enabled) {
+        if (src->pixfmt == PIXFORMAT_JPEG) {
             bool does_not_fit = false;
 
             if (mutex_try_lock_alternate(&jpeg_framebuffer->lock, MUTEX_TID_OMV)) {
-                if(CONSERVATIVE_JPEG_BUF_SIZE < src->bpp) {
-                    initialize_jpeg_buf_from_image(NULL);
+                if(CONSERVATIVE_JPEG_BUF_SIZE < src->size) {
+                    jpegbuffer_init_from_image(NULL);
                     does_not_fit = true;
                 } else {
-                    initialize_jpeg_buf_from_image(src);
-                    memcpy(jpeg_framebuffer->pixels, src->pixels, src->bpp);
+                    jpegbuffer_init_from_image(src);
+                    memcpy(jpeg_framebuffer->pixels, src->pixels, src->size);
                 }
 
                 mutex_unlock(&jpeg_framebuffer->lock, MUTEX_TID_OMV);
@@ -150,9 +162,15 @@ void framebuffer_update_jpeg_buffer()
                 (MP_PYTHON_PRINTER)->print_strn((MP_PYTHON_PRINTER)->data, (const char *) temp, new_size);
                 fb_alloc_free_till_mark();
             }
-        } else if (src->bpp >= 0) {
+        } else if (src->pixfmt != PIXFORMAT_INVALID) {
             if (mutex_try_lock_alternate(&jpeg_framebuffer->lock, MUTEX_TID_OMV)) {
-                image_t dst = {.w=src->w, .h=src->h, .bpp=CONSERVATIVE_JPEG_BUF_SIZE, .pixels=jpeg_framebuffer->pixels};
+                image_t dst = {
+                    .w      = src->w,
+                    .h      = src->h,
+                    .pixfmt = PIXFORMAT_JPEG,
+                    .size   = CONSERVATIVE_JPEG_BUF_SIZE,
+                    .pixels = jpeg_framebuffer->pixels
+                };
                 // Note: lower quality saves USB bandwidth and results in a faster IDE FPS.
                 bool overflow = jpeg_compress(src, &dst, jpeg_framebuffer->quality, false);
 
@@ -165,7 +183,7 @@ void framebuffer_update_jpeg_buffer()
                         jpeg_framebuffer->quality = IM_MAX(1, (jpeg_framebuffer->quality/2));
                     }
 
-                    initialize_jpeg_buf_from_image(NULL);
+                    jpegbuffer_init_from_image(NULL);
                 } else {
                     if (overflow_count) {
                         overflow_count--;
@@ -180,7 +198,7 @@ void framebuffer_update_jpeg_buffer()
                         jpeg_framebuffer->quality++;
                     }
 
-                    initialize_jpeg_buf_from_image(&dst);
+                    jpegbuffer_init_from_image(&dst);
                 }
 
                 mutex_unlock(&jpeg_framebuffer->lock, MUTEX_TID_OMV);
@@ -271,13 +289,6 @@ vbuffer_t *framebuffer_get_buffer(int32_t index)
     return (vbuffer_t *) (framebuffer->data + offset);
 }
 
-void framebuffer_set(int32_t w, int32_t h, int32_t bpp)
-{
-    framebuffer->w = w;
-    framebuffer->h = h;
-    framebuffer->bpp = bpp;
-}
-
 void framebuffer_flush_buffers()
 {
     // Move the tail pointer to the head which empties the virtual fifo while keeping the same
@@ -307,7 +318,7 @@ int framebuffer_set_buffers(int32_t n_buffers)
     }
 
     // Invalidate frame.
-    framebuffer->bpp = -1;
+    framebuffer->pixfmt = PIXFORMAT_INVALID;
 
     // Cache the maximum size we can allocate for the frame buffer when vbuffers are greater than 1.
     framebuffer->raw_buffer_size = size;
@@ -325,7 +336,7 @@ static uint32_t framebuffer_total_buffer_size()
     if (framebuffer->n_buffers == 1) {
         // Allow fb_alloc to use frame buffer space up until the image size.
         image_t img;
-        framebuffer_initialize_image(&img);
+        framebuffer_init_image(&img);
         return sizeof(vbuffer_t) + FB_ALIGN_SIZE_ROUND_UP(image_size(&img));
     } else {
         // fb_alloc may only use up to the size of all the virtual buffers...
@@ -354,7 +365,7 @@ void framebuffer_auto_adjust_buffers()
 void framebuffer_free_current_buffer()
 {
     // Invalidate frame.
-    framebuffer->bpp = -1;
+    framebuffer->pixfmt = PIXFORMAT_INVALID;
 
     // Allow frame to be updated in single buffer mode...
     if (framebuffer->n_buffers == 1) {
