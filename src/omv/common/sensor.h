@@ -173,15 +173,11 @@ typedef enum {
     SENSOR_ERROR_JPEG_OVERFLOW          = -20,
 } sensor_error_t;
 
-#define SENSOR_HW_FLAGS_VSYNC           (0) // vertical sync polarity.
-#define SENSOR_HW_FLAGS_HSYNC           (1) // horizontal sync polarity.
-#define SENSOR_HW_FLAGS_PIXCK           (2) // pixel clock edge.
-#define SENSOR_HW_FLAGS_FSYNC           (3) // hardware frame sync.
-#define SENSOR_HW_FLAGS_JPEGE           (4) // hardware JPEG encoder.
-#define SENSOR_HW_FLAGS_RGB565_REV      (5) // byte reverse rgb565.
-#define SENSOR_HW_FLAGS_GET(s, x)       ((s)->hw_flags &  (1<<x))
-#define SENSOR_HW_FLAGS_SET(s, x, v)    ((s)->hw_flags |= (v<<x))
-#define SENSOR_HW_FLAGS_CLR(s, x)       ((s)->hw_flags &= ~(1<<x))
+// Bayer patterns.
+#define SENSOR_HW_FLAGS_BAYER_BGGR      (1) // Default Bayer pattern.
+#define SENSOR_HW_FLAGS_BAYER_GBRG      (2)
+#define SENSOR_HW_FLAGS_BAYER_GRBG      (3)
+#define SENSOR_HW_FLAGS_BAYER_RGGB      (4)
 
 typedef void (*vsync_cb_t)(uint32_t vsync);
 typedef void (*frame_cb_t)();
@@ -193,8 +189,21 @@ typedef struct _sensor {
     uint16_t chip_id_w;         // Sensor ID 16 bits.
     };
     uint8_t  slv_addr;          // Sensor I2C slave address.
-    uint16_t gs_bpp;            // Grayscale bytes per pixel.
-    uint32_t hw_flags;          // Hardware flags (clock polarities/hw capabilities)
+
+    // Hardware flags (clock polarities, hw capabilities etc..)
+    struct {
+        uint32_t vsync:1;       // Vertical sync polarity.
+        uint32_t hsync:1;       // Horizontal sync polarity.
+        uint32_t pixck:1;       // Pixel clock edge.
+        uint32_t fsync:1;       // Hardware frame sync.
+        uint32_t jpege:1;       // Hardware jpeg encoder.
+        uint32_t jpeg_mode:3;   // JPEG mode.
+        uint32_t gs_bpp:2;      // Grayscale bytes per pixel output.
+        uint32_t rgb_swap:1;    // Byte-swap 2BPP RGB formats after capture.
+        uint32_t yuv_swap:1;    // Byte-swap 2BPP YUV formats after capture.
+        uint32_t bayer:2;       // Bayer/CFA pattern.
+    } hw_flags;
+
     const uint16_t *color_palette;    // Color palette used for color lookup.
     bool disable_full_flush;    // Turn off default frame buffer flush policy when full.
 

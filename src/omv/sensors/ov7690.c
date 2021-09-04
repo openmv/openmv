@@ -594,7 +594,6 @@ static int set_lens_correction(sensor_t *sensor, int enable, int radi, int coef)
 int ov7690_init(sensor_t *sensor)
 {
     // Initialize sensor structure.
-    sensor->gs_bpp              = 2;
     sensor->reset               = reset;
     sensor->sleep               = sleep;
     sensor->read_reg            = read_reg;
@@ -619,12 +618,13 @@ int ov7690_init(sensor_t *sensor)
     sensor->set_lens_correction = set_lens_correction;
 
     // Set sensor flags
-    SENSOR_HW_FLAGS_SET(sensor, SENSOR_HW_FLAGS_VSYNC, 1);
-    SENSOR_HW_FLAGS_SET(sensor, SENSOR_HW_FLAGS_HSYNC, 0);
-    SENSOR_HW_FLAGS_SET(sensor, SENSOR_HW_FLAGS_PIXCK, 1);
-    SENSOR_HW_FLAGS_SET(sensor, SENSOR_HW_FLAGS_FSYNC, 0);
-    SENSOR_HW_FLAGS_SET(sensor, SENSOR_HW_FLAGS_JPEGE, 0);
-    SENSOR_HW_FLAGS_SET(sensor, SENSOR_HW_FLAGS_RGB565_REV, 1);
+    sensor->hw_flags.vsync      = 1;
+    sensor->hw_flags.hsync      = 0;
+    sensor->hw_flags.pixck      = 1;
+    sensor->hw_flags.fsync      = 0;
+    sensor->hw_flags.jpege      = 0;
+    sensor->hw_flags.gs_bpp     = 2;
+    sensor->hw_flags.rgb_swap   = 1;
 
     return 0;
 }

@@ -722,7 +722,6 @@ static int paj6100_snapshot(sensor_t *sensor, image_t *image, uint32_t flags)
 int paj6100_init(sensor_t *sensor)
 {
     // Initialize sensor structure.
-    sensor->gs_bpp              = 1;
     sensor->reset               = reset;
     sensor->sleep               = sleep;
     sensor->read_reg            = read_reg;
@@ -748,11 +747,12 @@ int paj6100_init(sensor_t *sensor)
     sensor->snapshot            = paj6100_snapshot;
 
     // Set sensor flags
-    SENSOR_HW_FLAGS_SET(sensor, SENSOR_HW_FLAGS_VSYNC, 1);
-    SENSOR_HW_FLAGS_SET(sensor, SENSOR_HW_FLAGS_HSYNC, 1);
-    SENSOR_HW_FLAGS_SET(sensor, SENSOR_HW_FLAGS_PIXCK, 1);
-    SENSOR_HW_FLAGS_SET(sensor, SENSOR_HW_FLAGS_FSYNC, 0);
-    SENSOR_HW_FLAGS_SET(sensor, SENSOR_HW_FLAGS_JPEGE, 0);
+    sensor->hw_flags.vsync      = 1;
+    sensor->hw_flags.hsync      = 1;
+    sensor->hw_flags.pixck      = 1;
+    sensor->hw_flags.fsync      = 0;
+    sensor->hw_flags.jpege      = 0;
+    sensor->hw_flags.gs_bpp     = 1;
 
     init_sensor(sensor);
 

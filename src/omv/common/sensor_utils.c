@@ -647,7 +647,7 @@ __weak uint32_t sensor_get_src_bpp()
 {
     switch (sensor.pixformat) {
         case PIXFORMAT_GRAYSCALE:
-            return sensor.gs_bpp;
+            return sensor.hw_flags.gs_bpp;
         case PIXFORMAT_RGB565:
         case PIXFORMAT_YUV422:
             return 2;
