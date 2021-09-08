@@ -336,27 +336,38 @@ extern const uint16_t ironbow_table[256];
 // Image Stuff //
 /////////////////
 
+// Pixel format IDs.
+typedef enum {
+    PIXFORMAT_ID_BINARY     = 1,
+    PIXFORMAT_ID_GRAY       = 2,
+    PIXFORMAT_ID_RGB565     = 3,
+    PIXFORMAT_ID_YUV422     = 4,
+    PIXFORMAT_ID_BAYER      = 5,
+    PIXFORMAT_ID_JPEG       = 6,
+    /* Note: Update PIXFORMAT_IS_VALID when adding new formats */
+} pixformat_id_t;
+
+// Pixel sub-format IDs.
+typedef enum {
+    SUBFORMAT_ID_BGGR       = 0, // !!! Note: Make sure bayer sub-formats don't  !!!
+    SUBFORMAT_ID_GBRG       = 1, // !!! overflow the sensor.hw_flags.bayer field !!!
+    SUBFORMAT_ID_GRBG       = 2,
+    SUBFORMAT_ID_RGGB       = 3,
+    SUBFORMAT_ID_GRAY8      = 0,
+    SUBFORMAT_ID_GRAY16     = 1,
+    /* Note: Update PIXFORMAT_IS_VALID when adding new formats */
+} subformat_id_t;
+
 // Pixel format Byte Per Pixel.
 typedef enum {
     PIXFORMAT_BPP_BINARY    = 0,
-    PIXFORMAT_BPP_GRAYSCALE = 1,
+    PIXFORMAT_BPP_GRAY8     = 1,
+    PIXFORMAT_BPP_GRAY16    = 2,
     PIXFORMAT_BPP_RGB565    = 2,
     PIXFORMAT_BPP_YUV422    = 2,
     PIXFORMAT_BPP_BAYER     = 1,
+    /* Note: Update PIXFORMAT_IS_VALID when adding new formats */
 } pixformat_bpp_t;
-
-// Pixel format IDs.
-typedef enum {
-  PIXFORMAT_ID_BAYER_BGGR   = 0, // < Note: about bayer sub-formats >
-  PIXFORMAT_ID_BAYER_GBRG   = 1, //  Bayer sub-formats must be 2-bits
-  PIXFORMAT_ID_BAYER_GRBG   = 2, //  to fit into sensor.hw_flags.bayer.
-  PIXFORMAT_ID_BAYER_RGGB   = 3, 
-  PIXFORMAT_ID_BINARY       = 4,
-  PIXFORMAT_ID_GRAYSCALE    = 5,
-  PIXFORMAT_ID_RGB565       = 6,
-  PIXFORMAT_ID_YUV422       = 7,
-  PIXFORMAT_ID_JPEG         = 8,
-} pixformat_id_t;
 
 // Pixel format flags.
 #define PIXFORMAT_FLAGS_M       (1 << 27) // Mutable format.
@@ -365,25 +376,24 @@ typedef enum {
 #define PIXFORMAT_FLAGS_R       (1 << 24) // RAW/Bayer format.
 #define PIXFORMAT_FLAGS_CM      (PIXFORMAT_FLAGS_C | PIXFORMAT_FLAGS_M)
 #define PIXFORMAT_FLAGS_CR      (PIXFORMAT_FLAGS_C | PIXFORMAT_FLAGS_R)
-#define PIXFORMAT_BPP_BITS      (8)
 #define IMLIB_IMAGE_MAX_SIZE(x) ((x) & 0xFFFFFFFF)
 
 // Each pixel format encodes flags, pixel format id and bpp as follows:
-// 31......28  27  26  25  24  23......16  15...........8  7.............0
-// <RESERVED>  MF  CF  JF  RF  <RESERVED>  <PIXFORMAT_ID>  <BYTES_PER_PIX>
+// 31......28  27  26  25  24  23..........16  15...........8  7.............0
+// <RESERVED>  MF  CF  JF  RF  <PIXFORMAT_ID>  <SUBFORMAT_ID>  <BYTES_PER_PIX>
 // NOTE: Bit 31-30 must Not be used for pixformat_t to be used as mp_int_t.
 typedef enum {
     PIXFORMAT_INVALID    = (0),
-    PIXFORMAT_BINARY     = (PIXFORMAT_FLAGS_M   | (PIXFORMAT_ID_BINARY     << PIXFORMAT_BPP_BITS) | PIXFORMAT_BPP_BINARY   ),
-    PIXFORMAT_GRAYSCALE  = (PIXFORMAT_FLAGS_M   | (PIXFORMAT_ID_GRAYSCALE  << PIXFORMAT_BPP_BITS) | PIXFORMAT_BPP_GRAYSCALE),
-    PIXFORMAT_RGB565     = (PIXFORMAT_FLAGS_CM  | (PIXFORMAT_ID_RGB565     << PIXFORMAT_BPP_BITS) | PIXFORMAT_BPP_RGB565   ),
-    PIXFORMAT_YUV422     = (PIXFORMAT_FLAGS_CM  | (PIXFORMAT_ID_YUV422     << PIXFORMAT_BPP_BITS) | PIXFORMAT_BPP_YUV422   ),
-    PIXFORMAT_BAYER      = (PIXFORMAT_FLAGS_CR  | (PIXFORMAT_ID_BAYER_BGGR << PIXFORMAT_BPP_BITS) | PIXFORMAT_BPP_BAYER    ),
-    PIXFORMAT_BAYER_BGGR = (PIXFORMAT_FLAGS_CR  | (PIXFORMAT_ID_BAYER_BGGR << PIXFORMAT_BPP_BITS) | PIXFORMAT_BPP_BAYER    ),
-    PIXFORMAT_BAYER_GBRG = (PIXFORMAT_FLAGS_CR  | (PIXFORMAT_ID_BAYER_GBRG << PIXFORMAT_BPP_BITS) | PIXFORMAT_BPP_BAYER    ),
-    PIXFORMAT_BAYER_GRBG = (PIXFORMAT_FLAGS_CR  | (PIXFORMAT_ID_BAYER_GRBG << PIXFORMAT_BPP_BITS) | PIXFORMAT_BPP_BAYER    ),
-    PIXFORMAT_BAYER_RGGB = (PIXFORMAT_FLAGS_CR  | (PIXFORMAT_ID_BAYER_RGGB << PIXFORMAT_BPP_BITS) | PIXFORMAT_BPP_BAYER    ),
-    PIXFORMAT_JPEG       = (PIXFORMAT_FLAGS_J   | (PIXFORMAT_ID_JPEG       << PIXFORMAT_BPP_BITS) | 0                      ),
+    PIXFORMAT_BINARY     = (PIXFORMAT_FLAGS_M  | (PIXFORMAT_ID_BINARY << 16) | (0                  << 8) | PIXFORMAT_BPP_BINARY ),
+    PIXFORMAT_GRAYSCALE  = (PIXFORMAT_FLAGS_M  | (PIXFORMAT_ID_GRAY   << 16) | (SUBFORMAT_ID_GRAY8 << 8) | PIXFORMAT_BPP_GRAY8  ),
+    PIXFORMAT_RGB565     = (PIXFORMAT_FLAGS_CM | (PIXFORMAT_ID_RGB565 << 16) | (0                  << 8) | PIXFORMAT_BPP_RGB565 ),
+    PIXFORMAT_YUV422     = (PIXFORMAT_FLAGS_CM | (PIXFORMAT_ID_YUV422 << 16) | (0                  << 8) | PIXFORMAT_BPP_YUV422 ),
+    PIXFORMAT_BAYER      = (PIXFORMAT_FLAGS_CR | (PIXFORMAT_ID_BAYER  << 16) | (SUBFORMAT_ID_BGGR  << 8) | PIXFORMAT_BPP_BAYER  ),
+    PIXFORMAT_BAYER_BGGR = (PIXFORMAT_FLAGS_CR | (PIXFORMAT_ID_BAYER  << 16) | (SUBFORMAT_ID_BGGR  << 8) | PIXFORMAT_BPP_BAYER  ),
+    PIXFORMAT_BAYER_GBRG = (PIXFORMAT_FLAGS_CR | (PIXFORMAT_ID_BAYER  << 16) | (SUBFORMAT_ID_GBRG  << 8) | PIXFORMAT_BPP_BAYER  ),
+    PIXFORMAT_BAYER_GRBG = (PIXFORMAT_FLAGS_CR | (PIXFORMAT_ID_BAYER  << 16) | (SUBFORMAT_ID_GRBG  << 8) | PIXFORMAT_BPP_BAYER  ),
+    PIXFORMAT_BAYER_RGGB = (PIXFORMAT_FLAGS_CR | (PIXFORMAT_ID_BAYER  << 16) | (SUBFORMAT_ID_RGGB  << 8) | PIXFORMAT_BPP_BAYER  ),
+    PIXFORMAT_JPEG       = (PIXFORMAT_FLAGS_J  | (PIXFORMAT_ID_JPEG   << 16) | (0                  << 8) | 0                    ),
     PIXFORMAT_LAST       = 0xFFFFFFFFU,
 } pixformat_t;
 
@@ -393,11 +403,10 @@ typedef enum {
         case PIXFORMAT_BAYER_GRBG:      \
         case PIXFORMAT_BAYER_RGGB       \
 
-#define PIXFORMAT_IS_VALID(x)           \
+#define IMLIB_PIXFORMAT_IS_VALID(x)     \
     ((x == PIXFORMAT_BINARY)            \
      || (x == PIXFORMAT_GRAYSCALE)      \
      || (x == PIXFORMAT_RGB565)         \
-     || (x == PIXFORMAT_BAYER)          \
      || (x == PIXFORMAT_BAYER_BGGR)     \
      || (x == PIXFORMAT_BAYER_GBRG)     \
      || (x == PIXFORMAT_BAYER_GRBG)     \
@@ -410,8 +419,8 @@ struct {                            \
   union {                           \
     struct {                        \
         uint32_t bpp            :8; \
+        uint32_t subfmt_id      :8; \
         uint32_t pixfmt_id      :8; \
-        uint32_t /*reserved*/   :8; \
         uint32_t is_bayer       :1; \
         uint32_t is_compressed  :1; \
         uint32_t is_color       :1; \
@@ -432,8 +441,8 @@ struct {                            \
         uint32_t is_color       :1; \
         uint32_t is_compressed  :1; \
         uint32_t is_bayer       :1; \
-        uint32_t /*reserved*/   :8; \
         uint32_t pixfmt_id      :8; \
+        uint32_t subfmt_id      :8; \
         uint32_t bpp            :8; \
     };                              \
     uint32_t pixfmt;                \
@@ -462,8 +471,6 @@ bool image_get_mask_pixel(image_t *ptr, int x, int y);
 #define IMAGE_IS_MUTABLE(image)             (image->is_mutable)
 #define IMAGE_IS_COLOR(image)               (image->is_color)
 #define IMAGE_IS_MUTABLE_BAYER(image)       (image->is_mutable || image->is_bayer)
-// TODO: What's this needed for ? This is true for any image.
-#define IMAGE_IS_MUTABLE_BAYER_JPEG(image)  (image->is_mutable || image->is_bayer || image->is_compressed)
 
 #define IMAGE_BINARY_LINE_LEN(image) (((image)->w + UINT32_T_MASK) >> UINT32_T_SHIFT)
 #define IMAGE_BINARY_LINE_LEN_BYTES(image) (IMAGE_BINARY_LINE_LEN(image) * sizeof(uint32_t))

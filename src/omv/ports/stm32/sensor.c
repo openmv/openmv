@@ -971,8 +971,8 @@ int sensor_snapshot(sensor_t *sensor, image_t *image, uint32_t flags)
             #endif
             break;
         case PIXFORMAT_BAYER:
-            MAIN_FB()->pixfmt = PIXFORMAT_BAYER;
-            MAIN_FB()->pixfmt_id = sensor->hw_flags.bayer;
+            MAIN_FB()->pixfmt    = PIXFORMAT_BAYER;
+            MAIN_FB()->subfmt_id = sensor->hw_flags.bayer;
             #if (OMV_ENABLE_SENSOR_MDMA == 1)
             // Flush data for MDMA
             SCB_InvalidateDCache_by_Addr(buffer->data, w * h);

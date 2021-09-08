@@ -367,15 +367,15 @@ static void py_image_print(const mp_print_t *print, mp_obj_t self, mp_print_kind
         // print for ide.
         print->print_strn(print->data, (const char *) image->pixels, image->bpp);
     } else {
-        mp_printf(print,
-                "width: %u height: %u size:%u pixfmt=\"%s\" is_color: %u is_mutable: %u is_bayer %u is_compressed: %u",
-                image->w, image->h, image_size(image),
-                image->is_color, image->is_mutable, image->is_bayer, image->is_compressed,
+        mp_printf(print, "{\"w\":%d, \"h\":%d, \"type\"=\"binary\", \"size\":%d}",
+                image->w,
+                image->h,
                 (image->pixfmt == PIXFORMAT_BINARY)     ? "Binary" :
                 (image->pixfmt == PIXFORMAT_GRAYSCALE)  ? "Grayscale" :
                 (image->pixfmt == PIXFORMAT_RGB565)     ? "RGB565" :
                 (image->pixfmt == PIXFORMAT_YUV422)     ? "YUV422" :
-                (image->pixfmt == PIXFORMAT_JPEG)       ? "JPEG" : "Bayer");
+                (image->pixfmt == PIXFORMAT_JPEG)       ? "JPEG" : "Bayer",
+                image_size(image));
     }
 }
 

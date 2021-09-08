@@ -194,7 +194,7 @@ static mp_obj_t py_sensor_alloc_extra_fb(mp_obj_t w_obj, mp_obj_t h_obj, mp_obj_
     PY_ASSERT_TRUE_MSG(h > 0, "Height must be > 0");
 
     pixformat_t pixfmt = mp_obj_get_int(pixfmt_obj);
-    PY_ASSERT_TRUE_MSG(PIXFORMAT_IS_VALID(pixfmt), "Invalid Pixel Format");
+    PY_ASSERT_TRUE_MSG(IMLIB_PIXFORMAT_IS_VALID(pixfmt), "Invalid Pixel Format");
 
     image_t img = {.w = w, .h = h, .pixfmt = pixfmt, .size = 0, .pixels = 0};
 
