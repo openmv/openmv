@@ -365,16 +365,16 @@ static void py_image_print(const mp_print_t *print, mp_obj_t self, mp_print_kind
             && image->pixels[0] == 0xFE
             && image->pixels[image->size-1] == 0xFE) {
         // print for ide.
-        print->print_strn(print->data, (const char *) image->pixels, image->bpp);
+        print->print_strn(print->data, (const char *) image->pixels, image->size);
     } else {
-        mp_printf(print, "{\"w\":%d, \"h\":%d, \"type\"=\"binary\", \"size\":%d}",
+        mp_printf(print, "{\"w\":%d, \"h\":%d, \"type\":\"%s\", \"size\":%d}",
                 image->w,
                 image->h,
-                (image->pixfmt == PIXFORMAT_BINARY)     ? "Binary" :
-                (image->pixfmt == PIXFORMAT_GRAYSCALE)  ? "Grayscale" :
-                (image->pixfmt == PIXFORMAT_RGB565)     ? "RGB565" :
-                (image->pixfmt == PIXFORMAT_YUV422)     ? "YUV422" :
-                (image->pixfmt == PIXFORMAT_JPEG)       ? "JPEG" : "Bayer",
+                (image->pixfmt == PIXFORMAT_BINARY)     ? "binary" :
+                (image->pixfmt == PIXFORMAT_GRAYSCALE)  ? "grayscale" :
+                (image->pixfmt == PIXFORMAT_RGB565)     ? "rgb565" :
+                (image->pixfmt == PIXFORMAT_YUV422)     ? "yuv422" :
+                (image->pixfmt == PIXFORMAT_JPEG)       ? "jpeg" : "bayer",
                 image_size(image));
     }
 }
@@ -443,7 +443,7 @@ static mp_obj_t py_image_subscr(mp_obj_t self_in, mp_obj_t index, mp_obj_t value
             case PIXFORMAT_JPEG: {
                 if (MP_OBJ_IS_TYPE(index, &mp_type_slice)) {
                     mp_bound_slice_t slice;
-                    if (!mp_seq_get_fast_slice_indexes(image->bpp, index, &slice)) {
+                    if (!mp_seq_get_fast_slice_indexes(image->size, index, &slice)) {
                         mp_raise_msg(&mp_type_OSError, MP_ERROR_TEXT("only slices with step=1 (aka None) are supported"));
                     }
                     mp_obj_tuple_t *result = mp_obj_new_tuple(slice.stop - slice.start, NULL);
@@ -452,7 +452,7 @@ static mp_obj_t py_image_subscr(mp_obj_t self_in, mp_obj_t index, mp_obj_t value
                     }
                     return result;
                 }
-                mp_uint_t i = mp_get_index(self->base.type, image->bpp, index, false);
+                mp_uint_t i = mp_get_index(self->base.type, image->size, index, false);
                 return mp_obj_new_int(image->data[i]);
             }
             default:
@@ -552,7 +552,7 @@ static mp_obj_t py_image_subscr(mp_obj_t self_in, mp_obj_t index, mp_obj_t value
             case PIXFORMAT_JPEG: {
                 if (MP_OBJ_IS_TYPE(index, &mp_type_slice)) {
                     mp_bound_slice_t slice;
-                    if (!mp_seq_get_fast_slice_indexes(image->bpp, index, &slice)) {
+                    if (!mp_seq_get_fast_slice_indexes(image->size, index, &slice)) {
                         mp_raise_msg(&mp_type_OSError, MP_ERROR_TEXT("only slices with step=1 (aka None) are supported"));
                     }
                     if (MP_OBJ_IS_TYPE(value, &mp_type_list)) {
@@ -571,7 +571,7 @@ static mp_obj_t py_image_subscr(mp_obj_t self_in, mp_obj_t index, mp_obj_t value
                     }
                     return mp_const_none;
                 }
-                mp_uint_t i = mp_get_index(self->base.type, image->bpp, index, false);
+                mp_uint_t i = mp_get_index(self->base.type, image->size, index, false);
                 image->data[i] = mp_obj_get_int(value);
                 return mp_const_none;
             }
@@ -700,7 +700,7 @@ STATIC mp_obj_t py_image_get_pixel(uint n_args, const mp_obj_t *args, mp_map_t *
         }
         case PIXFORMAT_BAYER_ANY:
             if (arg_rgbtuple) {
-                uint16_t pixel; imlib_debayer_line_to_rgb565(arg_x, arg_x + 1, arg_y, &pixel, arg_img);
+                uint16_t pixel; imlib_debayer_line(arg_x, arg_x + 1, arg_y, &pixel, PIXFORMAT_RGB565, arg_img);
                 mp_obj_t pixel_tuple[3];
                 pixel_tuple[0] = mp_obj_new_int(COLOR_RGB565_TO_R8(pixel));
                 pixel_tuple[1] = mp_obj_new_int(COLOR_RGB565_TO_G8(pixel));
@@ -951,6 +951,53 @@ static mp_obj_t py_image_to(pixformat_t pixfmt, const uint16_t *default_color_pa
             (alpha_palette != NULL)) {
             mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Only bayer copying/cropping is supported!"));
         } else {
+            bool shift_right = arg_roi.x % 2;
+            bool shift_down = arg_roi.y % 2;
+            switch (dst_img.pixfmt) {
+                case PIXFORMAT_BAYER_BGGR: {
+                    if (shift_right && shift_down) {
+                        dst_img.pixfmt = PIXFORMAT_BAYER_RGGB;
+                    } else if (shift_right) {
+                        dst_img.pixfmt = PIXFORMAT_BAYER_GBRG;
+                    } else if (shift_down) {
+                        dst_img.pixfmt = PIXFORMAT_BAYER_GRBG;
+                    }
+                    break;
+                }
+                case PIXFORMAT_BAYER_GBRG: {
+                    if (shift_right && shift_down) {
+                        dst_img.pixfmt = PIXFORMAT_BAYER_GRBG;
+                    } else if (shift_right) {
+                        dst_img.pixfmt = PIXFORMAT_BAYER_BGGR;
+                    } else if (shift_down) {
+                        dst_img.pixfmt = PIXFORMAT_BAYER_RGGB;
+                    }
+                    break;
+                }
+                case PIXFORMAT_BAYER_GRBG: {
+                    if (shift_right && shift_down) {
+                        dst_img.pixfmt = PIXFORMAT_BAYER_GBRG;
+                    } else if (shift_right) {
+                        dst_img.pixfmt = PIXFORMAT_BAYER_RGGB;
+                    } else if (shift_down) {
+                        dst_img.pixfmt = PIXFORMAT_BAYER_BGGR;
+                    }
+                    break;
+                }
+                case PIXFORMAT_BAYER_RGGB: {
+                    if (shift_right && shift_down) {
+                        dst_img.pixfmt = PIXFORMAT_BAYER_BGGR;
+                    } else if (shift_right) {
+                        dst_img.pixfmt = PIXFORMAT_BAYER_GRBG;
+                    } else if (shift_down) {
+                        dst_img.pixfmt = PIXFORMAT_BAYER_GBRG;
+                    }
+                    break;
+                }
+                default: {
+                    break;
+                }
+            }
             hint &= ~(IMAGE_HINT_AREA |
                       IMAGE_HINT_BICUBIC |
                       IMAGE_HINT_BILINEAR |
@@ -1098,7 +1145,7 @@ static mp_obj_t py_image_compress(uint n_args, const mp_obj_t *args, mp_map_t *k
     fb_alloc_mark();
     image_t out = { .w=arg_img->w, .h=arg_img->h, .pixfmt=PIXFORMAT_JPEG, .size=0, .data=NULL }; // alloc in jpeg compress
     PY_ASSERT_FALSE_MSG(jpeg_compress(arg_img, &out, arg_q, false), "Out of Memory!");
-    PY_ASSERT_TRUE_MSG(out.bpp <= image_size(arg_img), "Can't compress in place!");
+    PY_ASSERT_TRUE_MSG(out.size <= image_size(arg_img), "Can't compress in place!");
     memcpy(arg_img->data, out.data, out.size);
     arg_img->size = out.size;
     fb_alloc_free_till_mark();

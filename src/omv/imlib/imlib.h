@@ -1013,12 +1013,8 @@ void imlib_fill_image_from_float(image_t *img, int w, int h, float *data, float 
                                  bool mirror, bool flip, bool dst_transpose, bool src_transpose);
 
 // Bayer Image Processing
-void imlib_debayer_line_to_binary(int x_start, int x_end, int y_row, uint32_t *dst_row_ptr, image_t *src);
-void imlib_debayer_image_to_binary(image_t *dst, image_t *src);
-void imlib_debayer_line_to_grayscale(int x_start, int x_end, int y_row, uint8_t *dst_row_ptr, image_t *src);
-void imlib_debayer_image_to_grayscale(image_t *dst, image_t *src);
-void imlib_debayer_line_to_rgb565(int x_start, int x_end, int y_row, uint16_t *dst_row_ptr, image_t *src);
-void imlib_debayer_image_to_rgb565(image_t *dst, image_t *src);
+void imlib_debayer_line(int x_start, int x_end, int y_row, void *dst_row_ptr, pixformat_t pixfmt, image_t *src);
+void imlib_debayer_image(image_t *dst, image_t *src);
 
 /* Color space functions */
 int8_t imlib_rgb565_to_l(uint16_t pixel);
