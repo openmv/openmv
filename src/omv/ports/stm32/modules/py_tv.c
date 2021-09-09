@@ -685,7 +685,7 @@ static void spi_tv_display(image_t *src_img, int dst_x_start, int dst_y_start, f
     image_t dst_img;
     dst_img.w = TV_WIDTH;
     dst_img.h = TV_HEIGHT;
-    dst_img.bpp = rgb565 ? IMAGE_BPP_RGB565 : IMAGE_BPP_GRAYSCALE;
+    dst_img.pixfmt = rgb565 ? PIXFORMAT_RGB565 : PIXFORMAT_GRAYSCALE;
 
     int x0, x1, y0, y1;
     bool black = !imlib_draw_image_rectangle(&dst_img, src_img, dst_x_start, dst_y_start, x_scale, y_scale,

@@ -18,14 +18,14 @@
 #endif
 
 void* imlib_compute_row_ptr(const image_t *img, int y) {
-    switch(img->bpp) {
-        case IMAGE_BPP_BINARY: {
+    switch (img->pixfmt) {
+        case PIXFORMAT_BINARY: {
             return IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(img, y);
         }
-        case IMAGE_BPP_GRAYSCALE: {
+        case PIXFORMAT_GRAYSCALE: {
             return IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(img, y);
         }
-        case IMAGE_BPP_RGB565: {
+        case PIXFORMAT_RGB565: {
             return IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(img, y);
         }
         default: {
@@ -35,16 +35,16 @@ void* imlib_compute_row_ptr(const image_t *img, int y) {
     }
 }
 
-inline int imlib_get_pixel_fast(int img_bpp, const void *row_ptr, int x)
+inline int imlib_get_pixel_fast(image_t *img, const void *row_ptr, int x)
 {
-    switch(img_bpp) {
-        case IMAGE_BPP_BINARY: {
+    switch (img->pixfmt) {
+        case PIXFORMAT_BINARY: {
             return IMAGE_GET_BINARY_PIXEL_FAST((uint32_t*)row_ptr, x);
         }
-        case IMAGE_BPP_GRAYSCALE: {
+        case PIXFORMAT_GRAYSCALE: {
             return IMAGE_GET_GRAYSCALE_PIXEL_FAST((uint8_t*)row_ptr, x);
         }
-        case IMAGE_BPP_RGB565: {
+        case PIXFORMAT_RGB565: {
             return IMAGE_GET_RGB565_PIXEL_FAST((uint16_t*)row_ptr, x);
         }
         default: {
@@ -58,16 +58,16 @@ inline int imlib_get_pixel_fast(int img_bpp, const void *row_ptr, int x)
 void imlib_set_pixel(image_t *img, int x, int y, int p)
 {
     if ((0 <= x) && (x < img->w) && (0 <= y) && (y < img->h)) {
-        switch(img->bpp) {
-            case IMAGE_BPP_BINARY: {
+        switch (img->pixfmt) {
+            case PIXFORMAT_BINARY: {
                 IMAGE_PUT_BINARY_PIXEL(img, x, y, p);
                 break;
             }
-            case IMAGE_BPP_GRAYSCALE: {
+            case PIXFORMAT_GRAYSCALE: {
                 IMAGE_PUT_GRAYSCALE_PIXEL(img, x, y, p);
                 break;
             }
-            case IMAGE_BPP_RGB565: {
+            case PIXFORMAT_RGB565: {
                 IMAGE_PUT_RGB565_PIXEL(img, x, y, p);
                 break;
             }
@@ -442,7 +442,7 @@ void imlib_draw_row_setup(imlib_draw_row_data_t *data)
     image_t temp;
     temp.w = data->dst_img->w;
     temp.h = data->dst_img->h;
-    temp.bpp = data->src_img_bpp;
+    temp.pixfmt = data->src_img_pixfmt;
 
     // Image Row Size should be the width of the destination image
     // but with the bpp of the source image.
@@ -457,9 +457,10 @@ void imlib_draw_row_setup(imlib_draw_row_data_t *data)
 
     void *dst_buff = data->dst_row_override ? data->dst_row_override : data->dst_img->data;
 
-    if (data->dma2d_request && (data->dst_img->bpp == IMAGE_BPP_RGB565) && DMA_BUFFER(dst_buff) &&
-        ((data->src_img_bpp == IMAGE_BPP_GRAYSCALE) ||
-        ((data->src_img_bpp == IMAGE_BPP_RGB565) && (data->rgb_channel < 0) && (data->alpha != 256) && (!data->color_palette) && (!data->alpha_palette)))) {
+    if (data->dma2d_request && (data->dst_img->pixfmt == PIXFORMAT_RGB565) && DMA_BUFFER(dst_buff) &&
+        ((data->src_img_pixfmt == PIXFORMAT_GRAYSCALE) ||
+        ((data->src_img_pixfmt == PIXFORMAT_RGB565) && (data->rgb_channel < 0)
+         && (data->alpha != 256) && (!data->color_palette) && (!data->alpha_palette)))) {
         data->row_buffer[1] = fb_alloc(image_row_size, FB_ALLOC_NO_HINT);
         data->dma2d_enabled = true;
         data->dma2d_initialized = true;
@@ -468,8 +469,12 @@ void imlib_draw_row_setup(imlib_draw_row_data_t *data)
 
         data->dma2d.Instance = DMA2D;
         data->dma2d.Init.Mode = DMA2D_M2M;
-        if (data->dst_img->bpp != data->src_img_bpp) data->dma2d.Init.Mode = DMA2D_M2M_PFC;
-        if ((data->alpha != 256) || data->alpha_palette) data->dma2d.Init.Mode = DMA2D_M2M_BLEND;
+        if (data->dst_img->pixfmt != data->src_img_pixfmt) {
+            data->dma2d.Init.Mode = DMA2D_M2M_PFC;
+        }
+        if ((data->alpha != 256) || data->alpha_palette) {
+            data->dma2d.Init.Mode = DMA2D_M2M_BLEND;
+        }
         data->dma2d.Init.ColorMode = DMA2D_OUTPUT_RGB565;
         data->dma2d.Init.OutputOffset = 0;
         #if defined(MCU_SERIES_F7) || defined(MCU_SERIES_H7)
@@ -491,8 +496,8 @@ void imlib_draw_row_setup(imlib_draw_row_data_t *data)
         #endif
         HAL_DMA2D_ConfigLayer(&data->dma2d, 0);
 
-        switch (data->src_img_bpp) {
-            case IMAGE_BPP_GRAYSCALE: {
+        switch (data->src_img_pixfmt) {
+            case PIXFORMAT_GRAYSCALE: {
                 data->dma2d.LayerCfg[1].InputColorMode = DMA2D_INPUT_L8;
                 data->dma2d.LayerCfg[1].AlphaMode = DMA2D_COMBINE_ALPHA;
                 uint32_t *clut = fb_alloc(256 * sizeof(uint32_t), FB_ALLOC_NO_HINT);
@@ -532,7 +537,7 @@ void imlib_draw_row_setup(imlib_draw_row_data_t *data)
                 HAL_DMA2D_PollForTransfer(&data->dma2d, 1000);
                 break;
             }
-            case IMAGE_BPP_RGB565: {
+            case PIXFORMAT_RGB565: {
                 data->dma2d.LayerCfg[1].InputColorMode = DMA2D_INPUT_RGB565;
                 data->dma2d.LayerCfg[1].AlphaMode = DMA2D_REPLACE_ALPHA;
                 break;
@@ -561,7 +566,7 @@ void imlib_draw_row_setup(imlib_draw_row_data_t *data)
 
     int alpha = data->alpha, max = 256;
 
-    if (data->dst_img->bpp == IMAGE_BPP_RGB565) {
+    if (data->dst_img->pixfmt == PIXFORMAT_RGB565) {
         alpha >>= 3; // 5-bit alpha for RGB565
         max = 32;
     }
@@ -589,7 +594,7 @@ void imlib_draw_row_teardown(imlib_draw_row_data_t *data)
     if (data->dma2d_initialized) {
         if (!data->callback) HAL_DMA2D_PollForTransfer(&data->dma2d, 1000);
         HAL_DMA2D_DeInit(&data->dma2d);
-        if (data->src_img_bpp == IMAGE_BPP_GRAYSCALE) fb_free(); // clut...
+        if (data->src_img_pixfmt == PIXFORMAT_GRAYSCALE) fb_free(); // clut...
         fb_free(); // data->row_buffer[1]
     }
 #endif
@@ -653,11 +658,12 @@ void imlib_draw_row(int x_start, int x_end, int y_row, imlib_draw_row_data_t *da
     #define COLOR_GRAYSCALE_BINARY_MIN_LSL16 (COLOR_GRAYSCALE_BINARY_MIN << 16)
     #define COLOR_GRAYSCALE_BINARY_MAX_LSL16 (COLOR_GRAYSCALE_BINARY_MAX << 16)
 
-    switch (data->dst_img->bpp) {
-        case IMAGE_BPP_BINARY: {
-            uint32_t *dst32 = data->dst_row_override ? ((uint32_t *) data->dst_row_override) : IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(data->dst_img, y_row);
-            switch (data->src_img_bpp) {
-                case IMAGE_BPP_BINARY: {
+    switch (data->dst_img->pixfmt) {
+        case PIXFORMAT_BINARY: {
+            uint32_t *dst32 = data->dst_row_override ?
+                ((uint32_t *) data->dst_row_override) : IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(data->dst_img, y_row);
+            switch (data->src_img_pixfmt) {
+                case PIXFORMAT_BINARY: {
                     uint32_t *src32 = (uint32_t *) data->row_buffer[!data->toggle];
                     if (data->smuad_alpha_palette) {
                         const uint32_t *smuad_alpha_palette = data->smuad_alpha_palette;
@@ -822,7 +828,7 @@ void imlib_draw_row(int x_start, int x_end, int y_row, imlib_draw_row_data_t *da
                     }
                     break;
                 }
-                case IMAGE_BPP_GRAYSCALE: {
+                case PIXFORMAT_GRAYSCALE: {
                     uint8_t *src8 = ((uint8_t *) data->row_buffer[!data->toggle]) + x_start;
                     if (data->smuad_alpha_palette) {
                         const uint32_t *smuad_alpha_palette = data->smuad_alpha_palette;
@@ -917,7 +923,7 @@ void imlib_draw_row(int x_start, int x_end, int y_row, imlib_draw_row_data_t *da
                     }
                     break;
                 }
-                case IMAGE_BPP_RGB565: {
+                case PIXFORMAT_RGB565: {
                     uint16_t *src16 = ((uint16_t *) data->row_buffer[!data->toggle]) + x_start;
                     if (data->rgb_channel < 0) {
                         if (data->smuad_alpha_palette) {
@@ -1320,10 +1326,10 @@ void imlib_draw_row(int x_start, int x_end, int y_row, imlib_draw_row_data_t *da
             }
             break;
         }
-        case IMAGE_BPP_GRAYSCALE: {
+        case PIXFORMAT_GRAYSCALE: {
             uint8_t *dst8 = (data->dst_row_override ? ((uint8_t *) data->dst_row_override) : IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(data->dst_img, y_row)) + x_start;
-            switch (data->src_img_bpp) {
-                case IMAGE_BPP_BINARY: {
+            switch (data->src_img_pixfmt) {
+                case PIXFORMAT_BINARY: {
                     uint32_t *src32 = (uint32_t *) data->row_buffer[!data->toggle];
                     if (data->smuad_alpha_palette) {
                         const uint32_t *smuad_alpha_palette = data->smuad_alpha_palette;
@@ -1414,7 +1420,7 @@ void imlib_draw_row(int x_start, int x_end, int y_row, imlib_draw_row_data_t *da
                     }
                     break;
                 }
-                case IMAGE_BPP_GRAYSCALE: {
+                case PIXFORMAT_GRAYSCALE: {
                     uint8_t *src8 = ((uint8_t *) data->row_buffer[!data->toggle]) + x_start;
                     if (data->smuad_alpha_palette) {
                         const uint32_t *smuad_alpha_palette = data->smuad_alpha_palette;
@@ -1493,7 +1499,7 @@ void imlib_draw_row(int x_start, int x_end, int y_row, imlib_draw_row_data_t *da
                     }
                     break;
                 }
-                case IMAGE_BPP_RGB565: {
+                case PIXFORMAT_RGB565: {
                     uint16_t *src16 = ((uint16_t *) data->row_buffer[!data->toggle]) + x_start;
                     if (data->rgb_channel < 0) {
                         if (data->smuad_alpha_palette) {
@@ -1856,10 +1862,10 @@ void imlib_draw_row(int x_start, int x_end, int y_row, imlib_draw_row_data_t *da
             }
             break;
         }
-        case IMAGE_BPP_RGB565: {
+        case PIXFORMAT_RGB565: {
             uint16_t *dst16 = (data->dst_row_override ? ((uint16_t *) data->dst_row_override) : IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(data->dst_img, y_row)) + x_start;
-            switch (data->src_img_bpp) {
-                case IMAGE_BPP_BINARY: {
+            switch (data->src_img_pixfmt) {
+                case PIXFORMAT_BINARY: {
                     uint32_t *src32 = (uint32_t *) data->row_buffer[!data->toggle];
                     if (data->smuad_alpha_palette) {
                         const uint32_t *smuad_alpha_palette = data->smuad_alpha_palette;
@@ -1948,7 +1954,7 @@ void imlib_draw_row(int x_start, int x_end, int y_row, imlib_draw_row_data_t *da
                     }
                     break;
                 }
-                case IMAGE_BPP_GRAYSCALE: {
+                case PIXFORMAT_GRAYSCALE: {
                     uint8_t *src8 = ((uint8_t *) data->row_buffer[!data->toggle]) + x_start;
 #ifdef IMLIB_ENABLE_DMA2D
                     if (data->dma2d_enabled) {
@@ -2047,7 +2053,7 @@ void imlib_draw_row(int x_start, int x_end, int y_row, imlib_draw_row_data_t *da
                     }
                     break;
                 }
-                case IMAGE_BPP_RGB565: {
+                case PIXFORMAT_RGB565: {
                     uint16_t *src16 = ((uint16_t *) data->row_buffer[!data->toggle]) + x_start;
                     if (data->rgb_channel < 0) {
                         if (data->smuad_alpha_palette) {
@@ -2435,7 +2441,7 @@ void imlib_draw_row(int x_start, int x_end, int y_row, imlib_draw_row_data_t *da
             break;
         }
         // Only bayer copying/cropping is supported.
-        case IMAGE_BPP_BAYER: {
+        case PIXFORMAT_BAYER_ANY: {
             uint8_t *dst8 = (data->dst_row_override
                 ? ((uint8_t *) data->dst_row_override)
                 : IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(data->dst_img, y_row)) + x_start;
@@ -2534,9 +2540,9 @@ bool imlib_draw_image_rectangle(image_t *dst_img, image_t *src_img, int dst_x_st
     return true;
 }
 
-void imlib_draw_image(image_t *dst_img, image_t *src_img, int dst_x_start, int dst_y_start, float x_scale, float y_scale, rectangle_t *roi,
-                      int rgb_channel, int alpha, const uint16_t *color_palette, const uint8_t *alpha_palette, image_hint_t hint,
-                      imlib_draw_row_callback_t callback, void *dst_row_override)
+void imlib_draw_image(image_t *dst_img, image_t *src_img, int dst_x_start, int dst_y_start,
+        float x_scale, float y_scale, rectangle_t *roi,int rgb_channel, int alpha, const uint16_t *color_palette,
+        const uint8_t *alpha_palette, image_hint_t hint, imlib_draw_row_callback_t callback, void *dst_row_override)
 {
     int dst_delta_x = 1; // positive direction
     if (x_scale < 0.f) { // flip X
@@ -2671,7 +2677,7 @@ void imlib_draw_image(image_t *dst_img, image_t *src_img, int dst_x_start, int d
     || ((hint & IMAGE_HINT_APPLY_COLOR_PALETTE_FIRST) && color_palette)) {
         new_src_img.w = src_img_w; // same width as source image
         new_src_img.h = src_img_h; // same height as source image
-        new_src_img.bpp = color_palette ? IMAGE_BPP_RGB565 : IMAGE_BPP_GRAYSCALE;
+        new_src_img.pixfmt = color_palette ? PIXFORMAT_RGB565 : PIXFORMAT_GRAYSCALE;
         new_src_img.data = fb_alloc(image_size(&new_src_img), FB_ALLOC_NO_HINT);
         imlib_draw_image(&new_src_img, src_img, 0, 0, 1.f, 1.f, NULL, rgb_channel, 256, color_palette, NULL, 0, NULL, NULL);
         src_img = &new_src_img;
@@ -2680,13 +2686,12 @@ void imlib_draw_image(image_t *dst_img, image_t *src_img, int dst_x_start, int d
     }
 
     // Special destination?
-    bool is_bayer = src_img->bpp == IMAGE_BPP_BAYER;
-    bool is_jpeg = src_img->bpp >= IMAGE_BPP_JPEG;
-    bool is_bayer_or_jpeg = is_bayer || is_jpeg;
-    // Best bpp to convert bayer/jpeg image to.
-    int is_bayer_or_jpeg_bpp = (rgb_channel != -1) ? IMAGE_BPP_RGB565 :
-                               (color_palette ? IMAGE_BPP_GRAYSCALE :
-                               dst_img->bpp);
+    bool is_jpeg = (src_img->pixfmt == PIXFORMAT_JPEG);
+    bool is_bayer_or_jpeg = src_img->is_bayer || is_jpeg;
+    // Best format to convert bayer/jpeg image to.
+    int is_bayer_or_jpeg_pixfmt = (rgb_channel != -1) ? PIXFORMAT_RGB565 :
+                                  (color_palette ? PIXFORMAT_GRAYSCALE :
+                                  dst_img->pixfmt);
 
     bool no_scaling_nearest_neighbor = (dst_delta_x == 1)
             && (dst_x_start == 0) && (src_x_start == 0)
@@ -2701,7 +2706,7 @@ void imlib_draw_image(image_t *dst_img, image_t *src_img, int dst_x_start, int d
     size_t dst_img_row_bytes = image_size(dst_img) / dst_img->h;
 
     // Do we need to convert the image?
-    bool is_bayer_color_conversion = is_bayer && (dst_img->bpp != IMAGE_BPP_BAYER);
+    bool is_bayer_color_conversion = src_img->is_bayer && !dst_img->is_bayer;
 
     // Force a deep copy if we cannot use the image in-place.
     bool need_deep_copy = (dst_img->data == src_img->data)
@@ -2716,36 +2721,36 @@ void imlib_draw_image(image_t *dst_img, image_t *src_img, int dst_x_start, int d
         new_src_img.h = src_img->h; // same height as source image
 
         if (is_bayer_or_jpeg) {
-            new_src_img.bpp = is_bayer_or_jpeg_bpp;
+            new_src_img.pixfmt = is_bayer_or_jpeg_pixfmt;
             size_t size = image_size(&new_src_img);
             new_src_img.data = fb_alloc(size, FB_ALLOC_NO_HINT);
 
-            switch (new_src_img.bpp) {
-                case IMAGE_BPP_BINARY: {
-                    if (src_img->bpp == IMAGE_BPP_BAYER) {
+            switch (new_src_img.pixfmt) {
+                case PIXFORMAT_BINARY: {
+                    if (src_img->is_bayer) {
                         imlib_debayer_image_to_binary(&new_src_img, src_img);
-                    } else if (src_img->bpp >= IMAGE_BPP_JPEG) {
+                    } else if (src_img->pixfmt == PIXFORMAT_JPEG) {
                         jpeg_decompress_image_to_binary(&new_src_img, src_img);
                     }
                     break;
                 }
-                case IMAGE_BPP_GRAYSCALE: {
-                    if (src_img->bpp == IMAGE_BPP_BAYER) {
+                case PIXFORMAT_GRAYSCALE: {
+                    if (src_img->is_bayer) {
                         imlib_debayer_image_to_grayscale(&new_src_img, src_img);
-                    } else if (src_img->bpp >= IMAGE_BPP_JPEG) {
+                    } else if (src_img->pixfmt == PIXFORMAT_JPEG) {
                         jpeg_decompress_image_to_grayscale(&new_src_img, src_img);
                     }
                     break;
                 }
-                case IMAGE_BPP_RGB565: {
-                    if (src_img->bpp == IMAGE_BPP_BAYER) {
+                case PIXFORMAT_RGB565: {
+                    if (src_img->is_bayer) {
                         imlib_debayer_image_to_rgb565(&new_src_img, src_img);
-                    } else if (src_img->bpp >= IMAGE_BPP_JPEG) {
+                    } else if (src_img->pixfmt == PIXFORMAT_JPEG) {
                         jpeg_decompress_image_to_rgb565(&new_src_img, src_img);
                     }
                     break;
                 }
-                case IMAGE_BPP_BAYER: {
+                case PIXFORMAT_BAYER_ANY: {
                     memcpy(new_src_img.data, src_img->data, size);
                     break;
                 }
@@ -2754,7 +2759,7 @@ void imlib_draw_image(image_t *dst_img, image_t *src_img, int dst_x_start, int d
                 }
             }
         } else {
-            new_src_img.bpp = src_img->bpp;
+            new_src_img.pixfmt = src_img->pixfmt;
             size_t size = image_size(&new_src_img);
             new_src_img.data = fb_alloc(size, FB_ALLOC_NO_HINT);
             memcpy(new_src_img.data, src_img->data, size);
@@ -2765,7 +2770,7 @@ void imlib_draw_image(image_t *dst_img, image_t *src_img, int dst_x_start, int d
 
     imlib_draw_row_data_t imlib_draw_row_data;
     imlib_draw_row_data.dst_img = dst_img;
-    imlib_draw_row_data.src_img_bpp = is_bayer_or_jpeg ? is_bayer_or_jpeg_bpp : src_img->bpp;
+    imlib_draw_row_data.src_img_pixfmt = is_bayer_or_jpeg ? is_bayer_or_jpeg_pixfmt : src_img->pixfmt;
     imlib_draw_row_data.rgb_channel = rgb_channel;
     imlib_draw_row_data.alpha = alpha;
     imlib_draw_row_data.color_palette = color_palette;
@@ -2798,8 +2803,8 @@ void imlib_draw_image(image_t *dst_img, image_t *src_img, int dst_x_start, int d
         // This prevents making the inner loop of the algorithm tight.
         //
         if ((!(src_x_frac & 0xFFFF)) && (!(src_y_frac & 0xFFFF))) { // fast
-            switch (src_img->bpp) {
-                case IMAGE_BPP_BINARY: {
+            switch (src_img->pixfmt) {
+                case PIXFORMAT_BINARY: {
                     while (y_not_done) {
                         int src_y_index = next_src_y_index;
                         int src_y_index_end = src_y_index + src_y_frac_size;
@@ -2853,7 +2858,7 @@ void imlib_draw_image(image_t *dst_img, image_t *src_img, int dst_x_start, int d
                     } // while y
                     break;
                 }
-                case IMAGE_BPP_GRAYSCALE: {
+                case PIXFORMAT_GRAYSCALE: {
                     while (y_not_done) {
                         int src_y_index = next_src_y_index;
                         int src_y_index_end = src_y_index + src_y_frac_size;
@@ -2938,7 +2943,7 @@ void imlib_draw_image(image_t *dst_img, image_t *src_img, int dst_x_start, int d
                     } // while y
                     break;
                 }
-                case IMAGE_BPP_RGB565: {
+                case PIXFORMAT_RGB565: {
                     while (y_not_done) {
                         int src_y_index = next_src_y_index;
                         int src_y_index_end = src_y_index + src_y_frac_size;
@@ -3023,8 +3028,8 @@ void imlib_draw_image(image_t *dst_img, image_t *src_img, int dst_x_start, int d
                 }
             }
         } else { // slow
-            switch (src_img->bpp) {
-                case IMAGE_BPP_BINARY: {
+            switch (src_img->pixfmt) {
+                case PIXFORMAT_BINARY: {
                     while (y_not_done) {
                         int src_y_index = next_src_y_index, src_y_index_p_1 = src_y_index + 1;
                         int src_y_index_end = src_y_index + src_y_frac_size - 1; // inclusive end
@@ -3145,7 +3150,7 @@ void imlib_draw_image(image_t *dst_img, image_t *src_img, int dst_x_start, int d
                     } // while y
                     break;
                 }
-                case IMAGE_BPP_GRAYSCALE: {
+                case PIXFORMAT_GRAYSCALE: {
                     while (y_not_done) {
                         int src_y_index = next_src_y_index, src_y_index_p_1 = src_y_index + 1;
                         int src_y_index_end = src_y_index + src_y_frac_size - 1; // inclusive end
@@ -3299,7 +3304,7 @@ void imlib_draw_image(image_t *dst_img, image_t *src_img, int dst_x_start, int d
                     } // while y
                     break;
                 }
-                case IMAGE_BPP_RGB565: {
+                case PIXFORMAT_RGB565: {
                     while (y_not_done) {
                         int src_y_index = next_src_y_index, src_y_index_p_1 = src_y_index + 1;
                         int src_y_index_end = src_y_index + src_y_frac_size - 1; // inclusive end
@@ -3518,8 +3523,8 @@ void imlib_draw_image(image_t *dst_img, image_t *src_img, int dst_x_start, int d
         // | x | x | x | x |
         // +---+---+---+---+
         //
-        switch (src_img->bpp) {
-            case IMAGE_BPP_BINARY: {
+        switch (src_img->pixfmt) {
+            case PIXFORMAT_BINARY: {
                 while (y_not_done) {
                     int src_y_index = next_src_y_index;
                     uint32_t *src_row_ptr_0, *src_row_ptr_1, *src_row_ptr_2, *src_row_ptr_3;
@@ -3656,7 +3661,7 @@ void imlib_draw_image(image_t *dst_img, image_t *src_img, int dst_x_start, int d
                 } // while y
                 break;
             }
-            case IMAGE_BPP_GRAYSCALE: {
+            case PIXFORMAT_GRAYSCALE: {
                 while (y_not_done) {
                     int src_y_index = next_src_y_index;
                     uint8_t *src_row_ptr_0, *src_row_ptr_1, *src_row_ptr_2, *src_row_ptr_3;
@@ -3886,7 +3891,7 @@ void imlib_draw_image(image_t *dst_img, image_t *src_img, int dst_x_start, int d
                 } // while y
                 break;
             }
-            case IMAGE_BPP_RGB565: {
+            case PIXFORMAT_RGB565: {
                 while (y_not_done) {
                     int src_y_index = next_src_y_index;
                     uint16_t *src_row_ptr_0, *src_row_ptr_1, *src_row_ptr_2, *src_row_ptr_3;
@@ -4207,8 +4212,8 @@ void imlib_draw_image(image_t *dst_img, image_t *src_img, int dst_x_start, int d
         // | x | x |
         // +---+---+
         //
-        switch (src_img->bpp) {
-            case IMAGE_BPP_BINARY: {
+        switch (src_img->pixfmt) {
+            case PIXFORMAT_BINARY: {
                 while (y_not_done) {
                     int src_y_index = next_src_y_index;
                     uint32_t *src_row_ptr_0, *src_row_ptr_1;
@@ -4276,7 +4281,7 @@ void imlib_draw_image(image_t *dst_img, image_t *src_img, int dst_x_start, int d
                 } // while y
                 break;
             }
-            case IMAGE_BPP_GRAYSCALE: {
+            case PIXFORMAT_GRAYSCALE: {
                 while (y_not_done) {
                     int src_y_index = next_src_y_index;
                     uint8_t *src_row_ptr_0, *src_row_ptr_1;
@@ -4360,7 +4365,7 @@ void imlib_draw_image(image_t *dst_img, image_t *src_img, int dst_x_start, int d
                 } // while y
                 break;
             }
-            case IMAGE_BPP_RGB565: {
+            case PIXFORMAT_RGB565: {
                 while (y_not_done) {
                     int src_y_index = next_src_y_index;
                     uint16_t *src_row_ptr_0, *src_row_ptr_1;
@@ -4462,8 +4467,8 @@ void imlib_draw_image(image_t *dst_img, image_t *src_img, int dst_x_start, int d
         }
     } else if (no_scaling_nearest_neighbor) { // copy
         if (dst_img->data == src_img->data) { // In-Place
-            switch (src_img->bpp) {
-                case IMAGE_BPP_BINARY: {
+            switch (src_img->pixfmt) {
+                case PIXFORMAT_BINARY: {
                     while (y_not_done) {
                         uint32_t *src_row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(src_img, next_src_y_index);
                         // Must be called per loop to get the address of the temp buffer to blend with
@@ -4497,9 +4502,9 @@ void imlib_draw_image(image_t *dst_img, image_t *src_img, int dst_x_start, int d
                     } // while y
                     break;
                 }
-                case IMAGE_BPP_GRAYSCALE:
+                case PIXFORMAT_GRAYSCALE:
                 // Re-use grayscale for bayer.
-                case IMAGE_BPP_BAYER: {
+                case PIXFORMAT_BAYER_ANY: {
                     while (y_not_done) {
                         uint8_t *src_row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(src_img, next_src_y_index);
                         // Must be called per loop to get the address of the temp buffer to blend with
@@ -4533,7 +4538,7 @@ void imlib_draw_image(image_t *dst_img, image_t *src_img, int dst_x_start, int d
                     } // while y
                     break;
                 }
-                case IMAGE_BPP_RGB565: {
+                case PIXFORMAT_RGB565: {
                     while (y_not_done) {
                         uint16_t *src_row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(src_img, next_src_y_index);
                         // Must be called per loop to get the address of the temp buffer to blend with
@@ -4572,8 +4577,8 @@ void imlib_draw_image(image_t *dst_img, image_t *src_img, int dst_x_start, int d
                 }
             }
         } else { // Out-of-Place
-            switch (src_img->bpp) {
-                case IMAGE_BPP_BINARY: {
+            switch (src_img->pixfmt) {
+                case PIXFORMAT_BINARY: {
                     while (y_not_done) {
                         uint32_t *src_row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(src_img, next_src_y_index);
                         imlib_draw_row_put_row_buffer(&imlib_draw_row_data, src_row_ptr);
@@ -4587,7 +4592,7 @@ void imlib_draw_image(image_t *dst_img, image_t *src_img, int dst_x_start, int d
                     } // while y
                     break;
                 }
-                case IMAGE_BPP_GRAYSCALE: {
+                case PIXFORMAT_GRAYSCALE: {
                     while (y_not_done) {
                         uint8_t *src_row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(src_img, next_src_y_index);
                         imlib_draw_row_put_row_buffer(&imlib_draw_row_data, src_row_ptr);
@@ -4601,7 +4606,7 @@ void imlib_draw_image(image_t *dst_img, image_t *src_img, int dst_x_start, int d
                     } // while y
                     break;
                 }
-                case IMAGE_BPP_RGB565: {
+                case PIXFORMAT_RGB565: {
                     while (y_not_done) {
                         uint16_t *src_row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(src_img, next_src_y_index);
                         imlib_draw_row_put_row_buffer(&imlib_draw_row_data, src_row_ptr);
@@ -4615,28 +4620,28 @@ void imlib_draw_image(image_t *dst_img, image_t *src_img, int dst_x_start, int d
                     } // while y
                     break;
                 }
-                case IMAGE_BPP_BAYER: {
+                case PIXFORMAT_BAYER_ANY: {
                     while (y_not_done) {
-                        switch (is_bayer_or_jpeg_bpp) {
-                            case IMAGE_BPP_BINARY: {
+                        switch (is_bayer_or_jpeg_pixfmt) {
+                            case PIXFORMAT_BINARY: {
                                 uint32_t *dst_row_ptr = imlib_draw_row_get_row_buffer(&imlib_draw_row_data);
                                 imlib_debayer_line_to_binary(dst_x_start, dst_x_end, next_src_y_index,
                                                              dst_row_ptr, src_img);
                                 break;
                             }
-                            case IMAGE_BPP_GRAYSCALE: {
+                            case PIXFORMAT_GRAYSCALE: {
                                 uint8_t *dst_row_ptr = imlib_draw_row_get_row_buffer(&imlib_draw_row_data);
                                 imlib_debayer_line_to_grayscale(dst_x_start, dst_x_end, next_src_y_index,
                                                                 dst_row_ptr, src_img);
                                 break;
                             }
-                            case IMAGE_BPP_RGB565: {
+                            case PIXFORMAT_RGB565: {
                                 uint16_t *dst_row_ptr = imlib_draw_row_get_row_buffer(&imlib_draw_row_data);
                                 imlib_debayer_line_to_rgb565(dst_x_start, dst_x_end, next_src_y_index,
                                                              dst_row_ptr, src_img);
                                 break;
                             }
-                            case IMAGE_BPP_BAYER: { // Bayer images have the same shape as grayscale.
+                            case PIXFORMAT_BAYER_ANY: { // Bayer images have the same shape as grayscale.
                                 uint8_t *src_row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(src_img, next_src_y_index);
                                 imlib_draw_row_put_row_buffer(&imlib_draw_row_data, src_row_ptr);
                                 break;
@@ -4662,8 +4667,8 @@ void imlib_draw_image(image_t *dst_img, image_t *src_img, int dst_x_start, int d
             }
         }
     } else { // nearest neighbor
-        switch (src_img->bpp) {
-            case IMAGE_BPP_BINARY: {
+        switch (src_img->pixfmt) {
+            case PIXFORMAT_BINARY: {
                 while (y_not_done) {
                     int src_y_index = next_src_y_index;
                     uint32_t *src_row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(src_img, src_y_index);
@@ -4705,9 +4710,9 @@ void imlib_draw_image(image_t *dst_img, image_t *src_img, int dst_x_start, int d
                 } // while y
                 break;
             }
-            case IMAGE_BPP_GRAYSCALE:
+            case PIXFORMAT_GRAYSCALE:
             // Re-use grayscale for bayer.
-            case IMAGE_BPP_BAYER: {
+            case PIXFORMAT_BAYER_ANY: {
                 while (y_not_done) {
                     int src_y_index = next_src_y_index;
                     uint8_t *src_row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(src_img, src_y_index);
@@ -4749,7 +4754,7 @@ void imlib_draw_image(image_t *dst_img, image_t *src_img, int dst_x_start, int d
                 } // while y
                 break;
             }
-            case IMAGE_BPP_RGB565: {
+            case PIXFORMAT_RGB565: {
                 while (y_not_done) {
                     int src_y_index = next_src_y_index;
                     uint16_t *src_row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(src_img, src_y_index);
@@ -4810,7 +4815,7 @@ void imlib_flood_fill(image_t *img, int x, int y,
         image_t out;
         out.w = img->w;
         out.h = img->h;
-        out.bpp = IMAGE_BPP_BINARY;
+        out.pixfmt = PIXFORMAT_BINARY;
         out.data = fb_alloc0(image_size(&out), FB_ALLOC_NO_HINT);
 
         if (mask) {
@@ -4825,18 +4830,18 @@ void imlib_flood_fill(image_t *img, int x, int y,
         int color_seed_threshold = 0;
         int color_floating_threshold = 0;
 
-        switch(img->bpp) {
-            case IMAGE_BPP_BINARY: {
+        switch (img->pixfmt) {
+            case PIXFORMAT_BINARY: {
                 color_seed_threshold = fast_floorf(seed_threshold * COLOR_BINARY_MAX);
                 color_floating_threshold = fast_floorf(floating_threshold * COLOR_BINARY_MAX);
                 break;
             }
-            case IMAGE_BPP_GRAYSCALE: {
+            case PIXFORMAT_GRAYSCALE: {
                 color_seed_threshold = fast_floorf(seed_threshold * COLOR_GRAYSCALE_MAX);
                 color_floating_threshold = fast_floorf(floating_threshold * COLOR_GRAYSCALE_MAX);
                 break;
             }
-            case IMAGE_BPP_RGB565: {
+            case PIXFORMAT_RGB565: {
                 color_seed_threshold = COLOR_R5_G6_B5_TO_RGB565(fast_floorf(seed_threshold * COLOR_R5_MAX),
                                                                 fast_floorf(seed_threshold * COLOR_G6_MAX),
                                                                 fast_floorf(seed_threshold * COLOR_B5_MAX));
@@ -4852,8 +4857,8 @@ void imlib_flood_fill(image_t *img, int x, int y,
 
         imlib_flood_fill_int(&out, img, x, y, color_seed_threshold, color_floating_threshold, NULL, NULL);
 
-        switch(img->bpp) {
-            case IMAGE_BPP_BINARY: {
+        switch (img->pixfmt) {
+            case PIXFORMAT_BINARY: {
                 for (int y = 0, yy = out.h; y < yy; y++) {
                     uint32_t *row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(img, y);
                     uint32_t *out_row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(&out, y);
@@ -4867,7 +4872,7 @@ void imlib_flood_fill(image_t *img, int x, int y,
                 }
                 break;
             }
-            case IMAGE_BPP_GRAYSCALE: {
+            case PIXFORMAT_GRAYSCALE: {
                 for (int y = 0, yy = out.h; y < yy; y++) {
                     uint8_t *row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(img, y);
                     uint32_t *out_row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(&out, y);
@@ -4881,7 +4886,7 @@ void imlib_flood_fill(image_t *img, int x, int y,
                 }
                 break;
             }
-            case IMAGE_BPP_RGB565: {
+            case PIXFORMAT_RGB565: {
                 for (int y = 0, yy = out.h; y < yy; y++) {
                     uint16_t *row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(img, y);
                     uint32_t *out_row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(&out, y);

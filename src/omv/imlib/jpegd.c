@@ -3098,7 +3098,7 @@ void jpeg_decompress_image_to_binary(image_t *dst, image_t *src)
     mp_uint_t start = mp_hal_ticks_ms();
     #endif
 
-    rc = JPEG_openRAM(&jpg, src->data, src->bpp, dst->data);
+    rc = JPEG_openRAM(&jpg, src->data, src->size, dst->data);
     memset(dst->data, 0, image_size(dst)); // fill it with with 0's so we only need to write "set" bits
     if (rc) {
         // success
@@ -3134,7 +3134,7 @@ void jpeg_decompress_image_to_grayscale(image_t *dst, image_t *src)
     mp_uint_t start = mp_hal_ticks_ms();
     #endif
 
-    rc = JPEG_openRAM(&jpg, src->data, src->bpp, dst->data);
+    rc = JPEG_openRAM(&jpg, src->data, src->size, dst->data);
     if (rc) {
         // success
         // set up dest image params
@@ -3169,7 +3169,7 @@ void jpeg_decompress_image_to_rgb565(image_t *dst, image_t *src)
     mp_uint_t start = mp_hal_ticks_ms();
     #endif
 
-    rc = JPEG_openRAM(&jpg, src->data, src->bpp, dst->data);
+    rc = JPEG_openRAM(&jpg, src->data, src->size, dst->data);
     if (rc) {
         // success
         // set up dest image params

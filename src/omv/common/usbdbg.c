@@ -234,7 +234,7 @@ void usbdbg_data_out(void *buffer, int length)
         case USBDBG_TEMPLATE_SAVE: {
             #if defined(IMLIB_ENABLE_IMAGE_FILE_IO)
             image_t image;
-            framebuffer_initialize_image(&image);
+            framebuffer_init_image(&image);
 
             // null terminate the path
             length = (length == 64) ? 63:length;
@@ -255,7 +255,7 @@ void usbdbg_data_out(void *buffer, int length)
             #if defined(IMLIB_ENABLE_IMAGE_FILE_IO)\
                 && defined(IMLIB_ENABLE_KEYPOINTS)
             image_t image;
-            framebuffer_initialize_image(&image);
+            framebuffer_init_image(&image);
 
             // null terminate the path
             length = (length == 64) ? 63:length;

@@ -391,9 +391,9 @@ array_t *orb_find_keypoints(image_t *img, bool normalized, int threshold,
 
     for(float scale=1.0f; ; scale*=scale_factor, octave++) {
         image_t img_scaled = {
-            .bpp = 1,
             .w = (int) roundf(img->w/scale),
             .h = (int) roundf(img->h/scale),
+            .pixfmt = PIXFORMAT_GRAYSCALE,
             .pixels = NULL 
         };
  

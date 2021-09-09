@@ -18,7 +18,7 @@
 #define OMV_UNIQUE_ID_SIZE      3 // 3 words
 
 // Needed by the SWD JTAG testrig - located at the bottom of the frame buffer stack.
-#define OMV_SELF_TEST_SWD_ADDR  MAIN_FB()->bpp
+#define OMV_SELF_TEST_SWD_ADDR  MAIN_FB()->pixfmt
 
 // Flash sectors for the bootloader.
 // Flash FS sector, main FW sector, max sector.

@@ -13,8 +13,8 @@
 
 void imlib_histeq(image_t *img, image_t *mask)
 {
-    switch(img->bpp) {
-        case IMAGE_BPP_BINARY: {
+    switch (img->pixfmt) {
+        case PIXFORMAT_BINARY: {
             int a = img->w * img->h;
             float s = (COLOR_BINARY_MAX - COLOR_BINARY_MIN) / ((float) a);
             uint32_t *hist = fb_alloc0((COLOR_BINARY_MAX - COLOR_BINARY_MIN + 1) * sizeof(uint32_t), FB_ALLOC_NO_HINT);
@@ -44,7 +44,7 @@ void imlib_histeq(image_t *img, image_t *mask)
             fb_free();
             break;
         }
-        case IMAGE_BPP_GRAYSCALE: {
+        case PIXFORMAT_GRAYSCALE: {
             int a = img->w * img->h;
             float s = (COLOR_GRAYSCALE_MAX - COLOR_GRAYSCALE_MIN) / ((float) a);
             uint32_t *hist = fb_alloc0((COLOR_GRAYSCALE_MAX - COLOR_GRAYSCALE_MIN + 1) * sizeof(uint32_t), FB_ALLOC_NO_HINT);
@@ -74,7 +74,7 @@ void imlib_histeq(image_t *img, image_t *mask)
             fb_free();
             break;
         }
-        case IMAGE_BPP_RGB565: {
+        case PIXFORMAT_RGB565: {
             int a = img->w * img->h;
             float s = (COLOR_Y_MAX - COLOR_Y_MIN) / ((float) a);
             uint32_t *hist = fb_alloc0((COLOR_Y_MAX - COLOR_Y_MIN + 1) * sizeof(uint32_t), FB_ALLOC_NO_HINT);
@@ -137,12 +137,12 @@ void imlib_mean_filter(image_t *img, const int ksize, bool threshold, int offset
     image_t buf;
     buf.w = img->w;
     buf.h = brows;
-    buf.bpp = img->bpp;
+    buf.pixfmt = img->pixfmt;
 
     int32_t over32_n = 65536 / (((ksize*2)+1)*((ksize*2)+1));
 
-    switch(img->bpp) {
-        case IMAGE_BPP_BINARY: {
+    switch (img->pixfmt) {
+        case PIXFORMAT_BINARY: {
             buf.data = fb_alloc(IMAGE_BINARY_LINE_LEN_BYTES(img) * brows, FB_ALLOC_NO_HINT);
 
             for (int y = 0, yy = img->h; y < yy; y++) {
@@ -206,7 +206,7 @@ void imlib_mean_filter(image_t *img, const int ksize, bool threshold, int offset
             fb_free();
             break;
         }
-        case IMAGE_BPP_GRAYSCALE: {
+        case PIXFORMAT_GRAYSCALE: {
             buf.data = fb_alloc(IMAGE_GRAYSCALE_LINE_LEN_BYTES(img) * brows, FB_ALLOC_NO_HINT);
 
             for (int y = 0, yy = img->h; y < yy; y++) {
@@ -268,7 +268,7 @@ void imlib_mean_filter(image_t *img, const int ksize, bool threshold, int offset
             fb_free();
             break;
         }
-        case IMAGE_BPP_RGB565: {
+        case PIXFORMAT_RGB565: {
             int pixel, r, g, b, r_acc, g_acc, b_acc;
             buf.data = fb_alloc(IMAGE_RGB565_LINE_LEN_BYTES(img) * brows, FB_ALLOC_NO_HINT);
 
@@ -383,13 +383,13 @@ void imlib_median_filter(image_t *img, const int ksize, float percentile, bool t
     image_t buf;
     buf.w = img->w;
     buf.h = brows;
-    buf.bpp = img->bpp;
+    buf.pixfmt = img->pixfmt;
 
     const int n = ((ksize*2)+1)*((ksize*2)+1);
     const int median_cutoff = fast_floorf(percentile * (float)n);
 
-    switch(img->bpp) {
-        case IMAGE_BPP_BINARY: {
+    switch (img->pixfmt) {
+        case PIXFORMAT_BINARY: {
             buf.data = fb_alloc(IMAGE_BINARY_LINE_LEN_BYTES(img) * brows, FB_ALLOC_NO_HINT);
             int sum = 0;
 
@@ -450,7 +450,7 @@ void imlib_median_filter(image_t *img, const int ksize, float percentile, bool t
             fb_free();
             break;
         }
-        case IMAGE_BPP_GRAYSCALE: {
+        case PIXFORMAT_GRAYSCALE: {
             buf.data = fb_alloc(IMAGE_GRAYSCALE_LINE_LEN_BYTES(img) * brows, FB_ALLOC_NO_HINT);
             uint8_t *data = fb_alloc(64, FB_ALLOC_NO_HINT);
             uint8_t pixel;
@@ -518,7 +518,7 @@ void imlib_median_filter(image_t *img, const int ksize, float percentile, bool t
             fb_free();
             break;
         }
-        case IMAGE_BPP_RGB565: {
+        case PIXFORMAT_RGB565: {
             buf.data = fb_alloc(IMAGE_RGB565_LINE_LEN_BYTES(img) * brows, FB_ALLOC_NO_HINT);
             uint8_t *r_data = fb_alloc(32, FB_ALLOC_NO_HINT);
             uint8_t *g_data = fb_alloc(64, FB_ALLOC_NO_HINT);
@@ -631,10 +631,10 @@ void imlib_mode_filter(image_t *img, const int ksize, bool threshold, int offset
     image_t buf;
     buf.w = img->w;
     buf.h = brows;
-    buf.bpp = img->bpp;
+    buf.pixfmt = img->pixfmt;
     const uint8_t n2 = (((ksize*2)+1)*((ksize*2)+1))/2;
-    switch(img->bpp) {
-        case IMAGE_BPP_BINARY: {
+    switch (img->pixfmt) {
+        case PIXFORMAT_BINARY: {
             buf.data = fb_alloc(IMAGE_BINARY_LINE_LEN_BYTES(img) * brows, FB_ALLOC_NO_HINT);
             int bins = 0;
 
@@ -696,7 +696,7 @@ void imlib_mode_filter(image_t *img, const int ksize, bool threshold, int offset
             fb_free();
             break;
         }
-        case IMAGE_BPP_GRAYSCALE: {
+        case PIXFORMAT_GRAYSCALE: {
             buf.data = fb_alloc(IMAGE_GRAYSCALE_LINE_LEN_BYTES(img) * brows, FB_ALLOC_NO_HINT);
             uint8_t *bins = fb_alloc((COLOR_GRAYSCALE_MAX-COLOR_GRAYSCALE_MIN+1), FB_ALLOC_NO_HINT);
 
@@ -782,7 +782,7 @@ void imlib_mode_filter(image_t *img, const int ksize, bool threshold, int offset
             fb_free();
             break;
         }
-        case IMAGE_BPP_RGB565: {
+        case PIXFORMAT_RGB565: {
             buf.data = fb_alloc(IMAGE_RGB565_LINE_LEN_BYTES(img) * brows, FB_ALLOC_NO_HINT);
             uint8_t *r_bins = fb_alloc((COLOR_R5_MAX-COLOR_R5_MIN+1), FB_ALLOC_NO_HINT);
             uint8_t *g_bins = fb_alloc((COLOR_G6_MAX-COLOR_G6_MIN+1), FB_ALLOC_NO_HINT);
@@ -938,7 +938,7 @@ void imlib_midpoint_filter(image_t *img, const int ksize, float bias, bool thres
     image_t buf;
     buf.w = img->w;
     buf.h = brows;
-    buf.bpp = img->bpp;
+    buf.pixfmt = img->pixfmt;
     uint8_t *u8BiasTable;
     float max_bias = bias, min_bias = 1.0f - bias;
 
@@ -947,8 +947,8 @@ void imlib_midpoint_filter(image_t *img, const int ksize, float bias, bool thres
         u8BiasTable[i] = (uint8_t)fast_floorf((float)i * bias);
     }
 
-    switch(img->bpp) {
-        case IMAGE_BPP_BINARY: {
+    switch (img->pixfmt) {
+        case PIXFORMAT_BINARY: {
             buf.data = fb_alloc(IMAGE_BINARY_LINE_LEN_BYTES(img) * brows, FB_ALLOC_NO_HINT);
 
             for (int y = 0, yy = img->h; y < yy; y++) {
@@ -1016,7 +1016,7 @@ void imlib_midpoint_filter(image_t *img, const int ksize, float bias, bool thres
             fb_free();
             break;
         }
-        case IMAGE_BPP_GRAYSCALE: {
+        case PIXFORMAT_GRAYSCALE: {
             buf.data = fb_alloc(IMAGE_GRAYSCALE_LINE_LEN_BYTES(img) * brows, FB_ALLOC_NO_HINT);
 
             for (int y = 0, yy = img->h; y < yy; y++) {
@@ -1083,7 +1083,7 @@ void imlib_midpoint_filter(image_t *img, const int ksize, float bias, bool thres
             fb_free();
             break;
         }
-        case IMAGE_BPP_RGB565: {
+        case PIXFORMAT_RGB565: {
             buf.data = fb_alloc(IMAGE_RGB565_LINE_LEN_BYTES(img) * brows, FB_ALLOC_NO_HINT);
 
             for (int y = 0, yy = img->h; y < yy; y++) {
@@ -1185,11 +1185,11 @@ void imlib_morph(image_t *img, const int ksize, const int *krn, const float m, c
     image_t buf;
     buf.w = img->w;
     buf.h = brows;
-    buf.bpp = img->bpp;
+    buf.pixfmt = img->pixfmt;
     const int32_t m_int = (int32_t)(65536.0 * m); // m is 1/kernel_weight
 
-    switch(img->bpp) {
-        case IMAGE_BPP_BINARY: {
+    switch (img->pixfmt) {
+        case PIXFORMAT_BINARY: {
             buf.data = fb_alloc(IMAGE_BINARY_LINE_LEN_BYTES(img) * brows, FB_ALLOC_NO_HINT);
 
             for (int y = 0, yy = img->h; y < yy; y++) {
@@ -1255,7 +1255,7 @@ void imlib_morph(image_t *img, const int ksize, const int *krn, const float m, c
             fb_free();
             break;
         }
-        case IMAGE_BPP_GRAYSCALE: {
+        case PIXFORMAT_GRAYSCALE: {
             buf.data = fb_alloc(IMAGE_GRAYSCALE_LINE_LEN_BYTES(img) * brows, FB_ALLOC_NO_HINT);
 
             for (int y = 0, yy = img->h; y < yy; y++) {
@@ -1321,7 +1321,7 @@ void imlib_morph(image_t *img, const int ksize, const int *krn, const float m, c
             fb_free();
             break;
         }
-        case IMAGE_BPP_RGB565: {
+        case PIXFORMAT_RGB565: {
             buf.data = fb_alloc(IMAGE_RGB565_LINE_LEN_BYTES(img) * brows, FB_ALLOC_NO_HINT);
 
             for (int y = 0, yy = img->h; y < yy; y++) {
@@ -1425,10 +1425,10 @@ void imlib_bilateral_filter(image_t *img, const int ksize, float color_sigma, fl
     image_t buf;
     buf.w = img->w;
     buf.h = brows;
-    buf.bpp = img->bpp;
+    buf.pixfmt = img->pixfmt;
 
-    switch(img->bpp) {
-        case IMAGE_BPP_BINARY: {
+    switch (img->pixfmt) {
+        case PIXFORMAT_BINARY: {
             buf.data = fb_alloc(IMAGE_BINARY_LINE_LEN_BYTES(img) * brows, FB_ALLOC_NO_HINT);
             float *gi_lut_ptr = fb_alloc((COLOR_BINARY_MAX - COLOR_BINARY_MIN + 1) * sizeof(float) *2, FB_ALLOC_NO_HINT);
             float *gi_lut = &gi_lut_ptr[1];
@@ -1505,7 +1505,7 @@ void imlib_bilateral_filter(image_t *img, const int ksize, float color_sigma, fl
             fb_free();
             break;
         }
-        case IMAGE_BPP_GRAYSCALE: {
+        case PIXFORMAT_GRAYSCALE: {
             buf.data = fb_alloc(IMAGE_GRAYSCALE_LINE_LEN_BYTES(img) * brows, FB_ALLOC_NO_HINT);
             float *gi_lut_ptr = fb_alloc((COLOR_GRAYSCALE_MAX - COLOR_GRAYSCALE_MIN + 1) * sizeof(float) * 2, FB_ALLOC_NO_HINT);
             float *gi_lut = &gi_lut_ptr[256]; // point to the middle
@@ -1594,7 +1594,7 @@ void imlib_bilateral_filter(image_t *img, const int ksize, float color_sigma, fl
             fb_free();
             break;
         }
-        case IMAGE_BPP_RGB565: {
+        case PIXFORMAT_RGB565: {
             buf.data = fb_alloc(IMAGE_RGB565_LINE_LEN_BYTES(img) * brows, FB_ALLOC_NO_HINT);
             float *rb_gi_ptr = fb_alloc((COLOR_R5_MAX - COLOR_R5_MIN + 1) * sizeof(float) *2, FB_ALLOC_NO_HINT);
             float *g_gi_ptr = fb_alloc((COLOR_G6_MAX - COLOR_G6_MIN + 1) * sizeof(float) *2, FB_ALLOC_NO_HINT);
@@ -1735,8 +1735,8 @@ static void imlib_cartoon_filter_mean(image_t *img, int line, int l, int r, void
 {
     imlib_cartoon_filter_mean_state_t *state = (imlib_cartoon_filter_mean_state_t *) data;
 
-    switch(img->bpp) {
-        case IMAGE_BPP_BINARY: {
+    switch (img->pixfmt) {
+        case PIXFORMAT_BINARY: {
             uint32_t *row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(img, line);
             for (int i = l; i <= r; i++) {
                 state->g_acc += IMAGE_GET_BINARY_PIXEL_FAST(row_ptr, i);
@@ -1744,7 +1744,7 @@ static void imlib_cartoon_filter_mean(image_t *img, int line, int l, int r, void
             }
             break;
         }
-        case IMAGE_BPP_GRAYSCALE: {
+        case PIXFORMAT_GRAYSCALE: {
             uint8_t *row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(img, line);
             for (int i = l; i <= r; i++) {
                 state->g_acc += IMAGE_GET_GRAYSCALE_PIXEL_FAST(row_ptr, i);
@@ -1752,7 +1752,7 @@ static void imlib_cartoon_filter_mean(image_t *img, int line, int l, int r, void
             }
             break;
         }
-        case IMAGE_BPP_RGB565: {
+        case PIXFORMAT_RGB565: {
             uint16_t *row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(img, line);
             for (int i = l; i <= r; i++) {
                 int pixel = IMAGE_GET_RGB565_PIXEL_FAST(row_ptr, i);
@@ -1777,22 +1777,22 @@ static void imlib_cartoon_filter_fill(image_t *img, int line, int l, int r, void
 {
     imlib_cartoon_filter_fill_state_t *state = (imlib_cartoon_filter_fill_state_t *) data;
 
-    switch(img->bpp) {
-        case IMAGE_BPP_BINARY: {
+    switch (img->pixfmt) {
+        case PIXFORMAT_BINARY: {
             uint32_t *row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(img, line);
             for (int i = l; i <= r; i++) {
                 IMAGE_PUT_BINARY_PIXEL_FAST(row_ptr, i, state->mean);
             }
             break;
         }
-        case IMAGE_BPP_GRAYSCALE: {
+        case PIXFORMAT_GRAYSCALE: {
             uint8_t *row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(img, line);
             for (int i = l; i <= r; i++) {
                 IMAGE_PUT_GRAYSCALE_PIXEL_FAST(row_ptr, i, state->mean);
             }
             break;
         }
-        case IMAGE_BPP_RGB565: {
+        case PIXFORMAT_RGB565: {
             uint16_t *row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(img, line);
             for (int i = l; i <= r; i++) {
                 IMAGE_PUT_RGB565_PIXEL_FAST(row_ptr, i, state->mean);
@@ -1811,13 +1811,13 @@ void imlib_cartoon_filter(image_t *img, float seed_threshold, float floating_thr
 
     mean_image.w = img->w;
     mean_image.h = img->h;
-    mean_image.bpp = IMAGE_BPP_BINARY;
-    mean_image.data = fb_alloc0(image_size(&mean_image), FB_ALLOC_NO_HINT);
+    mean_image.pixfmt = PIXFORMAT_BINARY;
+    mean_image.pixels = fb_alloc0(image_size(&mean_image), FB_ALLOC_NO_HINT);
 
     fill_image.w = img->w;
     fill_image.h = img->h;
-    fill_image.bpp = IMAGE_BPP_BINARY;
-    fill_image.data = fb_alloc0(image_size(&fill_image), FB_ALLOC_NO_HINT);
+    fill_image.pixfmt = PIXFORMAT_BINARY;
+    fill_image.pixels = fb_alloc0(image_size(&fill_image), FB_ALLOC_NO_HINT);
 
     if (mask) {
         for (int y = 0, yy = fill_image.h; y < yy; y++) {
@@ -1831,18 +1831,18 @@ void imlib_cartoon_filter(image_t *img, float seed_threshold, float floating_thr
     int color_seed_threshold = 0;
     int color_floating_threshold = 0;
 
-    switch(img->bpp) {
-        case IMAGE_BPP_BINARY: {
+    switch (img->pixfmt) {
+        case PIXFORMAT_BINARY: {
             color_seed_threshold = fast_floorf(seed_threshold * COLOR_BINARY_MAX);
             color_floating_threshold = fast_floorf(floating_threshold * COLOR_BINARY_MAX);
             break;
         }
-        case IMAGE_BPP_GRAYSCALE: {
+        case PIXFORMAT_GRAYSCALE: {
             color_seed_threshold = fast_floorf(seed_threshold * COLOR_GRAYSCALE_MAX);
             color_floating_threshold = fast_floorf(floating_threshold * COLOR_GRAYSCALE_MAX);
             break;
         }
-        case IMAGE_BPP_RGB565: {
+        case PIXFORMAT_RGB565: {
             color_seed_threshold = COLOR_R5_G6_B5_TO_RGB565(fast_floorf(seed_threshold * COLOR_R5_MAX),
                                                             fast_floorf(seed_threshold * COLOR_G6_MAX),
                                                             fast_floorf(seed_threshold * COLOR_B5_MAX));
@@ -1869,16 +1869,16 @@ void imlib_cartoon_filter(image_t *img, float seed_threshold, float floating_thr
                 imlib_cartoon_filter_fill_state_t fill_state;
                 memset(&fill_state, 0, sizeof(imlib_cartoon_filter_fill_state_t));
 
-                switch(img->bpp) {
-                    case IMAGE_BPP_BINARY: {
+                switch (img->pixfmt) {
+                    case PIXFORMAT_BINARY: {
                         fill_state.mean = mean_state.g_acc / mean_state.pixels;
                         break;
                     }
-                    case IMAGE_BPP_GRAYSCALE: {
+                    case PIXFORMAT_GRAYSCALE: {
                         fill_state.mean = mean_state.g_acc / mean_state.pixels;
                         break;
                     }
-                    case IMAGE_BPP_RGB565: {
+                    case PIXFORMAT_RGB565: {
                         fill_state.mean = COLOR_R5_G6_B5_TO_RGB565(mean_state.r_acc / mean_state.pixels,
                                                                    mean_state.g_acc / mean_state.pixels,
                                                                    mean_state.b_acc / mean_state.pixels);

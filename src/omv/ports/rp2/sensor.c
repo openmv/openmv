@@ -150,7 +150,7 @@ int sensor_abort()
     pio_sm_clear_fifos(DCMI_PIO, DCMI_SM);
 
     // Clear bpp flag.
-    MAIN_FB()->bpp = -1;
+    MAIN_FB()->pixfmt = PIXFORMAT_INVALID;
 
     return 0;
 }
@@ -220,18 +220,11 @@ int sensor_snapshot(sensor_t *sensor, image_t *image, uint32_t flags)
     // Free the current FB head.
     framebuffer_free_current_buffer();
 
-    switch (sensor->pixformat) {
-        case PIXFORMAT_BAYER:
-        case PIXFORMAT_GRAYSCALE:
-            MAIN_FB()->bpp = 1;
-            break;
-        case PIXFORMAT_YUV422:
-        case PIXFORMAT_RGB565:
-            MAIN_FB()->bpp = 2;
-            break;
-        default:
-            return SENSOR_ERROR_INVALID_PIXFORMAT;
+    // Set framebuffer pixel format.
+    if (sensor->pixformat == PIXFORMAT_INVALID) {
+        return SENSOR_ERROR_INVALID_PIXFORMAT;
     }
+    MAIN_FB()->pixfmt = sensor->pixformat;
 
     vbuffer_t *buffer = framebuffer_get_head(FB_NO_FLAGS);
 
@@ -270,13 +263,7 @@ int sensor_snapshot(sensor_t *sensor, image_t *image, uint32_t flags)
     MAIN_FB()->h = MAIN_FB()->v;
 
     // Set the user image.
-    if (image != NULL) {
-        image->w      = MAIN_FB()->w;
-        image->h      = MAIN_FB()->h;
-        image->bpp    = MAIN_FB()->bpp;
-        image->pixels = buffer->data;
-    }
-
+    framebuffer_init_image(image);
     return 0;
 }
 #endif

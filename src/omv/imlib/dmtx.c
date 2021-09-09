@@ -6309,21 +6309,21 @@ dmtxMatrix3Print(DmtxMatrix3 m)
 
 void imlib_find_datamatrices(list_t *out, image_t *ptr, rectangle_t *roi, int effort)
 {
-    uint8_t *grayscale_image = (ptr->bpp == IMAGE_BPP_GRAYSCALE) ? ptr->data : fb_alloc(roi->w * roi->h, FB_ALLOC_NO_HINT);
+    uint8_t *grayscale_image = (ptr->pixfmt == PIXFORMAT_GRAYSCALE) ? ptr->data : fb_alloc(roi->w * roi->h, FB_ALLOC_NO_HINT);
     umm_init_x(fb_avail());
 
     DmtxImage *image = dmtxImageCreate(grayscale_image,
-                                       (ptr->bpp == IMAGE_BPP_GRAYSCALE) ? ptr->w : roi->w,
-                                       (ptr->bpp == IMAGE_BPP_GRAYSCALE) ? ptr->h : roi->h,
+                                       (ptr->pixfmt == PIXFORMAT_GRAYSCALE) ? ptr->w : roi->w,
+                                       (ptr->pixfmt == PIXFORMAT_GRAYSCALE) ? ptr->h : roi->h,
                                        DmtxPack8bppK);
     DmtxDecode *decode = dmtxDecodeCreate(image, 1);
-    dmtxDecodeSetProp(decode, DmtxPropXmin, (ptr->bpp == IMAGE_BPP_GRAYSCALE) ? roi->x : 0);
-    dmtxDecodeSetProp(decode, DmtxPropYmin, (ptr->bpp == IMAGE_BPP_GRAYSCALE) ? roi->y : 0);
-    dmtxDecodeSetProp(decode, DmtxPropXmax, ((ptr->bpp == IMAGE_BPP_GRAYSCALE) ? roi->x : 0) + (roi->w - 1));
-    dmtxDecodeSetProp(decode, DmtxPropYmax, ((ptr->bpp == IMAGE_BPP_GRAYSCALE) ? roi->y : 0) + (roi->h - 1));
+    dmtxDecodeSetProp(decode, DmtxPropXmin, (ptr->pixfmt == PIXFORMAT_GRAYSCALE) ? roi->x : 0);
+    dmtxDecodeSetProp(decode, DmtxPropYmin, (ptr->pixfmt == PIXFORMAT_GRAYSCALE) ? roi->y : 0);
+    dmtxDecodeSetProp(decode, DmtxPropXmax, ((ptr->pixfmt == PIXFORMAT_GRAYSCALE) ? roi->x : 0) + (roi->w - 1));
+    dmtxDecodeSetProp(decode, DmtxPropYmax, ((ptr->pixfmt == PIXFORMAT_GRAYSCALE) ? roi->y : 0) + (roi->h - 1));
 
-    switch (ptr->bpp) {
-        case IMAGE_BPP_BINARY: {
+    switch (ptr->pixfmt) {
+        case PIXFORMAT_BINARY: {
             for (int y = roi->y, yy = roi->y + roi->h; y < yy; y++) {
                 uint32_t *row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(ptr, y);
                 for (int x = roi->x, xx = roi->x + roi->w; x < xx; x++) {
@@ -6332,10 +6332,10 @@ void imlib_find_datamatrices(list_t *out, image_t *ptr, rectangle_t *roi, int ef
             }
             break;
         }
-        case IMAGE_BPP_GRAYSCALE: {
+        case PIXFORMAT_GRAYSCALE: {
             break;
         }
-        case IMAGE_BPP_RGB565: {
+        case PIXFORMAT_RGB565: {
             for (int y = roi->y, yy = roi->y + roi->h; y < yy; y++) {
                 uint16_t *row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(ptr, y);
                 for (int x = roi->x, xx = roi->x + roi->w; x < xx; x++) {
@@ -6373,30 +6373,25 @@ void imlib_find_datamatrices(list_t *out, image_t *ptr, rectangle_t *roi, int ef
             int height = dmtxDecodeGetProp(decode, DmtxPropHeight);
 
             rectangle_init(&(lnk_data.rect),
-                           fast_roundf(p[0].X) + ((ptr->bpp == IMAGE_BPP_GRAYSCALE) ? 0 : roi->x),
-                           height - 1 - fast_roundf(p[0].Y) + ((ptr->bpp == IMAGE_BPP_GRAYSCALE) ? 0 : roi->y),
-                           0,
-                           0);
+                           fast_roundf(p[0].X) + ((ptr->pixfmt == PIXFORMAT_GRAYSCALE) ? 0 : roi->x),
+                           height - 1 - fast_roundf(p[0].Y) + ((ptr->pixfmt == PIXFORMAT_GRAYSCALE) ? 0 : roi->y), 0, 0);
 
             for (size_t k = 1, l = (sizeof(p) / sizeof(p[0])); k < l; k++) {
                 rectangle_t temp;
-                rectangle_init(&temp,
-                               fast_roundf(p[k].X) + ((ptr->bpp == IMAGE_BPP_GRAYSCALE) ? 0 : roi->x),
-                               height - 1 - fast_roundf(p[k].Y) + ((ptr->bpp == IMAGE_BPP_GRAYSCALE) ? 0 : roi->y),
-                               0,
-                               0);
+                rectangle_init(&temp, fast_roundf(p[k].X) + ((ptr->pixfmt == PIXFORMAT_GRAYSCALE) ? 0 : roi->x),
+                        height - 1 - fast_roundf(p[k].Y) + ((ptr->pixfmt == PIXFORMAT_GRAYSCALE) ? 0 : roi->y), 0, 0);
                 rectangle_united(&(lnk_data.rect), &temp);
             }
 
             // Add corners...
-            lnk_data.corners[0].x =              fast_roundf(p[3].X) + ((ptr->bpp == IMAGE_BPP_GRAYSCALE) ? 0 : roi->x); // top-left
-            lnk_data.corners[0].y = height - 1 - fast_roundf(p[3].Y) + ((ptr->bpp == IMAGE_BPP_GRAYSCALE) ? 0 : roi->y); // top-left
-            lnk_data.corners[1].x =              fast_roundf(p[2].X) + ((ptr->bpp == IMAGE_BPP_GRAYSCALE) ? 0 : roi->x); // top-right
-            lnk_data.corners[1].y = height - 1 - fast_roundf(p[2].Y) + ((ptr->bpp == IMAGE_BPP_GRAYSCALE) ? 0 : roi->y); // top-right
-            lnk_data.corners[2].x =              fast_roundf(p[1].X) + ((ptr->bpp == IMAGE_BPP_GRAYSCALE) ? 0 : roi->x); // bottom-right
-            lnk_data.corners[2].y = height - 1 - fast_roundf(p[1].Y) + ((ptr->bpp == IMAGE_BPP_GRAYSCALE) ? 0 : roi->y); // bottom-right
-            lnk_data.corners[3].x =              fast_roundf(p[0].X) + ((ptr->bpp == IMAGE_BPP_GRAYSCALE) ? 0 : roi->x); // bottom-left
-            lnk_data.corners[3].y = height - 1 - fast_roundf(p[0].Y) + ((ptr->bpp == IMAGE_BPP_GRAYSCALE) ? 0 : roi->y); // bottom-left
+            lnk_data.corners[0].x =              fast_roundf(p[3].X) + ((ptr->pixfmt == PIXFORMAT_GRAYSCALE) ? 0 : roi->x); // top-left
+            lnk_data.corners[0].y = height - 1 - fast_roundf(p[3].Y) + ((ptr->pixfmt == PIXFORMAT_GRAYSCALE) ? 0 : roi->y); // top-left
+            lnk_data.corners[1].x =              fast_roundf(p[2].X) + ((ptr->pixfmt == PIXFORMAT_GRAYSCALE) ? 0 : roi->x); // top-right
+            lnk_data.corners[1].y = height - 1 - fast_roundf(p[2].Y) + ((ptr->pixfmt == PIXFORMAT_GRAYSCALE) ? 0 : roi->y); // top-right
+            lnk_data.corners[2].x =              fast_roundf(p[1].X) + ((ptr->pixfmt == PIXFORMAT_GRAYSCALE) ? 0 : roi->x); // bottom-right
+            lnk_data.corners[2].y = height - 1 - fast_roundf(p[1].Y) + ((ptr->pixfmt == PIXFORMAT_GRAYSCALE) ? 0 : roi->y); // bottom-right
+            lnk_data.corners[3].x =              fast_roundf(p[0].X) + ((ptr->pixfmt == PIXFORMAT_GRAYSCALE) ? 0 : roi->x); // bottom-left
+            lnk_data.corners[3].y = height - 1 - fast_roundf(p[0].Y) + ((ptr->pixfmt == PIXFORMAT_GRAYSCALE) ? 0 : roi->y); // bottom-left
 
             // Payload is NOT already null terminated.
             lnk_data.payload_len = message->outputIdx;
@@ -6424,7 +6419,9 @@ void imlib_find_datamatrices(list_t *out, image_t *ptr, rectangle_t *roi, int ef
     dmtxImageDestroy(&image);
 
     fb_free(); // umm_init_x();
-    if (ptr->bpp != IMAGE_BPP_GRAYSCALE) fb_free(); // grayscale_image;
+    if (ptr->pixfmt != PIXFORMAT_GRAYSCALE) {
+        fb_free(); // grayscale_image;
+    }
 }
 
 #pragma GCC diagnostic pop

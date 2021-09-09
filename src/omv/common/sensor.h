@@ -174,10 +174,11 @@ typedef enum {
 } sensor_error_t;
 
 // Bayer patterns.
-#define SENSOR_HW_FLAGS_BAYER_BGGR      (1) // Default Bayer pattern.
-#define SENSOR_HW_FLAGS_BAYER_GBRG      (2)
-#define SENSOR_HW_FLAGS_BAYER_GRBG      (3)
-#define SENSOR_HW_FLAGS_BAYER_RGGB      (4)
+// NOTE: These must match the Bayer subformats in imlib.h
+#define SENSOR_HW_FLAGS_BAYER_BGGR      (SUBFORMAT_ID_BGGR)
+#define SENSOR_HW_FLAGS_BAYER_GBRG      (SUBFORMAT_ID_GBRG)
+#define SENSOR_HW_FLAGS_BAYER_GRBG      (SUBFORMAT_ID_GRBG)
+#define SENSOR_HW_FLAGS_BAYER_RGGB      (SUBFORMAT_ID_RGGB)
 
 typedef void (*vsync_cb_t)(uint32_t vsync);
 typedef void (*frame_cb_t)();
@@ -201,7 +202,7 @@ typedef struct _sensor {
         uint32_t gs_bpp:2;      // Grayscale bytes per pixel output.
         uint32_t rgb_swap:1;    // Byte-swap 2BPP RGB formats after capture.
         uint32_t yuv_swap:1;    // Byte-swap 2BPP YUV formats after capture.
-        uint32_t bayer:2;       // Bayer/CFA pattern.
+        uint32_t bayer:3;       // Bayer/CFA pattern.
     } hw_flags;
 
     const uint16_t *color_palette;    // Color palette used for color lookup.

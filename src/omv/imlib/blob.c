@@ -140,7 +140,7 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
     image_t bmp;
     bmp.w = ptr->w;
     bmp.h = ptr->h;
-    bmp.bpp = IMAGE_BPP_BINARY;
+    bmp.pixfmt = PIXFORMAT_BINARY;
     bmp.data = fb_alloc0(image_size(&bmp), FB_ALLOC_NO_HINT);
 
     uint16_t *x_hist_bins = NULL;
@@ -160,8 +160,8 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
         color_thresholds_list_lnk_data_t lnk_data;
         iterator_get(thresholds, it, &lnk_data);
 
-        switch(ptr->bpp) {
-            case IMAGE_BPP_BINARY: {
+        switch (ptr->pixfmt) {
+            case PIXFORMAT_BINARY: {
                 for (int y = roi->y, yy = roi->y + roi->h, y_max = yy - 1; y < yy; y += y_stride) {
                     uint32_t *row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(ptr, y);
                     uint32_t *bmp_row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(&bmp, y);
@@ -431,7 +431,7 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                 }
                 break;
             }
-            case IMAGE_BPP_GRAYSCALE: {
+            case PIXFORMAT_GRAYSCALE: {
                 for (int y = roi->y, yy = roi->y + roi->h, y_max = yy - 1; y < yy; y += y_stride) {
                     uint8_t *row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(ptr, y);
                     uint32_t *bmp_row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(&bmp, y);
@@ -701,7 +701,7 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                 }
                 break;
             }
-            case IMAGE_BPP_RGB565: {
+            case PIXFORMAT_RGB565: {
                 for (int y = roi->y, yy = roi->y + roi->h, y_max = yy - 1; y < yy; y += y_stride) {
                     uint16_t *row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(ptr, y);
                     uint32_t *bmp_row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(&bmp, y);
@@ -1070,8 +1070,8 @@ void imlib_flood_fill_int(image_t *out, image_t *img, int x, int y,
     size_t lifo_len;
     lifo_alloc_all(&lifo, &lifo_len, sizeof(xylr_t));
 
-    switch(img->bpp) {
-        case IMAGE_BPP_BINARY: {
+    switch (img->pixfmt) {
+        case PIXFORMAT_BINARY: {
             for(int seed_pixel = IMAGE_GET_BINARY_PIXEL(img, x, y);;) {
                 int left = x, right = x;
                 uint32_t *row = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(img, y);
@@ -1186,7 +1186,7 @@ void imlib_flood_fill_int(image_t *out, image_t *img, int x, int y,
             }
             break;
         }
-        case IMAGE_BPP_GRAYSCALE: {
+        case PIXFORMAT_GRAYSCALE: {
             for(int seed_pixel = IMAGE_GET_GRAYSCALE_PIXEL(img, x, y);;) {
                 int left = x, right = x;
                 uint8_t *row = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(img, y);
@@ -1301,7 +1301,7 @@ void imlib_flood_fill_int(image_t *out, image_t *img, int x, int y,
             }
             break;
         }
-        case IMAGE_BPP_RGB565: {
+        case PIXFORMAT_RGB565: {
             for(int seed_pixel = IMAGE_GET_RGB565_PIXEL(img, x, y);;) {
                 int left = x, right = x;
                 uint16_t *row = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(img, y);

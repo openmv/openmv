@@ -98,20 +98,20 @@ void mjpeg_add_frame(FIL *fp, uint32_t *frames, uint32_t *bytes, image_t *img, i
     write_data(fp, "00dc", 4); // FOURCC fcc;
     *frames += 1;
     if (IM_IS_JPEG(img)) {
-        int pad = (((img->bpp + 3) / 4) * 4) - img->bpp;
-        write_long(fp, img->bpp + pad); // DWORD cb;
-        write_data(fp, img->pixels, img->bpp + pad); // reading past okay
-        *bytes += img->bpp + pad;
+        uint32_t size_padded = (((img->size + 3) / 4) * 4);
+        write_long(fp, size_padded); // DWORD cb;
+        write_data(fp, img->pixels, size_padded); // reading past okay
+        *bytes += size_padded;
     } else {
-        image_t out = { .w=img->w, .h=img->h, .bpp=0, .pixels=NULL }; // alloc in jpeg compress
+        image_t out = { .w=img->w, .h=img->h, .pixfmt=PIXFORMAT_JPEG, .size=0, .pixels=NULL };
         // When jpeg_compress needs more memory than in currently allocated it
         // will try to realloc. MP will detect that the pointer is outside of
         // the heap and return NULL which will cause an out of memory error.
         jpeg_compress(img, &out, quality, true);
-        int pad = (((out.bpp + 3) / 4) * 4) - out.bpp;
-        write_long(fp, out.bpp + pad); // DWORD cb;
-        write_data(fp, out.pixels, out.bpp + pad); // reading past okay
-        *bytes += out.bpp + pad;
+        uint32_t size_padded = (((out.size + 3) / 4) * 4);
+        write_long(fp, size_padded); // DWORD cb;
+        write_data(fp, out.pixels, size_padded); // reading past okay
+        *bytes += size_padded;
         fb_free(); // frees alloc in jpeg_compress()
     }
 }

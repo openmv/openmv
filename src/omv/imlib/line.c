@@ -12,8 +12,8 @@
 
 static void pixel_magnitude(image_t *ptr, int x, int y, int *theta, uint32_t *mag)
 {
-    switch (ptr->bpp) {
-        case IMAGE_BPP_BINARY: {
+    switch (ptr->pixfmt) {
+        case PIXFORMAT_BINARY: {
             uint32_t *row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(ptr, y);
             int pixel; // Sobel Algorithm Below
             int x_acc = 0;
@@ -68,7 +68,7 @@ static void pixel_magnitude(image_t *ptr, int x, int y, int *theta, uint32_t *ma
             *mag = fast_roundf(fast_sqrtf((x_acc * x_acc) + (y_acc * y_acc)));
             break;
         }
-        case IMAGE_BPP_GRAYSCALE: {
+        case PIXFORMAT_GRAYSCALE: {
             uint8_t *row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(ptr, y);
             int pixel; // Sobel Algorithm Below... w/ Scharr...
             int x_acc = 0;
@@ -123,7 +123,7 @@ static void pixel_magnitude(image_t *ptr, int x, int y, int *theta, uint32_t *ma
             *mag = fast_roundf(fast_sqrtf((x_acc * x_acc) + (y_acc * y_acc)));
             break;
         }
-        case IMAGE_BPP_RGB565: {
+        case PIXFORMAT_RGB565: {
             uint16_t *row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(ptr, y);
             int pixel; // Sobel Algorithm Below... w/ Scharr...
             int x_acc = 0;

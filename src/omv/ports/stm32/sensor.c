@@ -956,7 +956,7 @@ int sensor_snapshot(sensor_t *sensor, image_t *image, uint32_t flags)
     // Fix the BPP.
     switch (sensor->pixformat) {
         case PIXFORMAT_GRAYSCALE:
-            MAIN_FB()->bpp = IMAGE_BPP_GRAYSCALE;
+            MAIN_FB()->pixfmt = PIXFORMAT_GRAYSCALE;
             #if (OMV_ENABLE_SENSOR_MDMA == 1)
             // Flush data for MDMA
             SCB_InvalidateDCache_by_Addr(buffer->data, w * h);
@@ -964,28 +964,30 @@ int sensor_snapshot(sensor_t *sensor, image_t *image, uint32_t flags)
             break;
         case PIXFORMAT_RGB565:
         case PIXFORMAT_YUV422:
-            MAIN_FB()->bpp = IMAGE_BPP_RGB565;
+            MAIN_FB()->pixfmt = PIXFORMAT_RGB565;
             #if (OMV_ENABLE_SENSOR_MDMA == 1)
             // Flush data for MDMA
             SCB_InvalidateDCache_by_Addr(buffer->data, w * h * sizeof(uint16_t));
             #endif
             break;
         case PIXFORMAT_BAYER:
-            MAIN_FB()->bpp = IMAGE_BPP_BAYER;
+            MAIN_FB()->pixfmt    = PIXFORMAT_BAYER;
+            MAIN_FB()->subfmt_id = sensor->hw_flags.bayer;
             #if (OMV_ENABLE_SENSOR_MDMA == 1)
             // Flush data for MDMA
             SCB_InvalidateDCache_by_Addr(buffer->data, w * h);
             #endif
             break;
-        case PIXFORMAT_JPEG:
+        case PIXFORMAT_JPEG: {
+            int32_t size = 0;
             if (sensor->chip_id == OV5640_ID) {
                 // Offset contains the sum of all the bytes transferred from the offset buffers
                 // while in DCMI_DMAConvCpltUser().
-                MAIN_FB()->bpp = buffer->offset;
+                size = buffer->offset;
             } else {
                 // Offset contains the number of length transfers completed. To get the number of bytes transferred
                 // within a transfer we have to look at the DMA counter and see how much data was moved.
-                int32_t size = buffer->offset * length;
+                size = buffer->offset * length;
 
                 if (__HAL_DMA_GET_COUNTER(&DMAHandle)) { // Add in the uncompleted transfer length.
                     size += ((length / sizeof(uint32_t)) - __HAL_DMA_GET_COUNTER(&DMAHandle)) * sizeof(uint32_t);
@@ -995,26 +997,18 @@ int sensor_snapshot(sensor_t *sensor, image_t *image, uint32_t flags)
                 // Flush data for DMA
                 SCB_InvalidateDCache_by_Addr(buffer->data, size);
                 #endif
-
-                MAIN_FB()->bpp = size;
             }
 
             // Clean trailing data after 0xFFD9 at the end of the jpeg byte stream.
-            MAIN_FB()->bpp = jpeg_clean_trailing_bytes(MAIN_FB()->bpp, buffer->data);
+            MAIN_FB()->pixfmt = PIXFORMAT_JPEG;
+            MAIN_FB()->size = jpeg_clean_trailing_bytes(size, buffer->data);
             break;
+        }
         default:
             break;
     }
 
-    // Finally, return an image object.
-
     // Set the user image.
-    if (image != NULL) {
-        image->w = MAIN_FB()->w;
-        image->h = MAIN_FB()->h;
-        image->bpp = MAIN_FB()->bpp;
-        image->data = buffer->data;
-    }
-
+    framebuffer_init_image(image);
     return 0;
 }

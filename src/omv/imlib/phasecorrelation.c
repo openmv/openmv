@@ -30,8 +30,8 @@ void imlib_logpolar_int(image_t *dst, image_t *src, rectangle_t *roi, bool linea
     if (!reverse) {
         rho_scale /= h;
 
-        switch (src->bpp) {
-            case IMAGE_BPP_BINARY: {
+        switch (src->pixfmt) {
+            case PIXFORMAT_BINARY: {
                 uint32_t *tmp = (uint32_t *) src->data;
                 int tmp_w = src->w, tmp_h = src->h, tmp_x = roi->x + w_2 - 1, tmp_y = roi->y + h_2;
 
@@ -58,7 +58,7 @@ void imlib_logpolar_int(image_t *dst, image_t *src, rectangle_t *roi, bool linea
                 }
                 break;
             }
-            case IMAGE_BPP_GRAYSCALE: {
+            case PIXFORMAT_GRAYSCALE: {
                 uint8_t *tmp = (uint8_t *) src->data;
                 int tmp_w = src->w, tmp_h = src->h, tmp_x = roi->x + w_2 - 1, tmp_y = roi->y + h_2;
 
@@ -85,7 +85,7 @@ void imlib_logpolar_int(image_t *dst, image_t *src, rectangle_t *roi, bool linea
                 }
                 break;
             }
-            case IMAGE_BPP_RGB565: {
+            case PIXFORMAT_RGB565: {
                 uint16_t *tmp = (uint16_t *) src->data;
                 int tmp_w = src->w, tmp_h = src->h, tmp_x = roi->x + w_2 - 1, tmp_y = roi->y + h_2;
 
@@ -118,8 +118,8 @@ void imlib_logpolar_int(image_t *dst, image_t *src, rectangle_t *roi, bool linea
         }
     } else {
         float rho_scale_inv = (h - 1) / rho_scale;
-        switch (src->bpp) {
-            case IMAGE_BPP_BINARY: {
+        switch (src->pixfmt) {
+            case PIXFORMAT_BINARY: {
                 uint32_t *tmp = (uint32_t *) src->data;
                 int tmp_w = src->w, tmp_x = roi->x, tmp_y = roi->y;
 
@@ -149,7 +149,7 @@ void imlib_logpolar_int(image_t *dst, image_t *src, rectangle_t *roi, bool linea
                 }
                 break;
             }
-            case IMAGE_BPP_GRAYSCALE: {
+            case PIXFORMAT_GRAYSCALE: {
                 uint8_t *tmp = (uint8_t *) src->data;
                 int tmp_w = src->w, tmp_x = roi->x, tmp_y = roi->y;
 
@@ -179,7 +179,7 @@ void imlib_logpolar_int(image_t *dst, image_t *src, rectangle_t *roi, bool linea
                 }
                 break;
             }
-            case IMAGE_BPP_RGB565: {
+            case PIXFORMAT_RGB565: {
                 uint16_t *tmp = (uint16_t *) src->data;
                 int tmp_w = src->w, tmp_x = roi->x, tmp_y = roi->y;
 
@@ -222,7 +222,7 @@ void imlib_logpolar(image_t *img, bool linear, bool reverse)
     image_t img_2;
     img_2.w = img->w;
     img_2.h = img->h;
-    img_2.bpp = img->bpp;
+    img_2.pixfmt = img->pixfmt;
 
     rectangle_t rect;
     rect.x = 0;
@@ -387,16 +387,16 @@ void imlib_phasecorrelate(image_t *img0, image_t *img1, rectangle_t *roi0, recta
 
         img0_fixed.w = roi0->w;
         img0_fixed.h = roi0->h;
-        img0_fixed.bpp = img0->bpp;
-        img0_fixed.data = fb_alloc(image_size(&img0_fixed), FB_ALLOC_NO_HINT);
+        img0_fixed.pixfmt = img0->pixfmt;
+        img0_fixed.pixels = fb_alloc(image_size(&img0_fixed), FB_ALLOC_NO_HINT);
 
         roi0_fixed.x = 0;
         roi0_fixed.y = 0;
         roi0_fixed.w = roi0->w;
         roi0_fixed.h = roi0->h;
 
-        switch(img0->bpp) {
-            case IMAGE_BPP_BINARY: {
+        switch (img0->pixfmt) {
+            case PIXFORMAT_BINARY: {
                 for (int y = roi0->y, yy = roi0->y + roi0->h; y < yy; y++) {
                     uint32_t *row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(img0, y);
                     for (int x = roi0->x, xx = roi0->x + roi0->w; x < xx; x++) {
@@ -405,7 +405,7 @@ void imlib_phasecorrelate(image_t *img0, image_t *img1, rectangle_t *roi0, recta
                 }
                 break;
             }
-            case IMAGE_BPP_GRAYSCALE: {
+            case PIXFORMAT_GRAYSCALE: {
                 for (int y = roi0->y, yy = roi0->y + roi0->h; y < yy; y++) {
                     uint8_t *row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(img0, y);
                     for (int x = roi0->x, xx = roi0->x + roi0->w; x < xx; x++) {
@@ -414,7 +414,7 @@ void imlib_phasecorrelate(image_t *img0, image_t *img1, rectangle_t *roi0, recta
                 }
                 break;
             }
-            case IMAGE_BPP_RGB565: {
+            case PIXFORMAT_RGB565: {
                 for (int y = roi0->y, yy = roi0->y + roi0->h; y < yy; y++) {
                     uint16_t *row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(img0, y);
                     for (int x = roi0->x, xx = roi0->x + roi0->w; x < xx; x++) {
@@ -443,7 +443,7 @@ void imlib_phasecorrelate(image_t *img0, image_t *img1, rectangle_t *roi0, recta
         if (logpolar) {
             img0alt.w = roi0_fixed.w;
             img0alt.h = roi0_fixed.h;
-            img0alt.bpp = img0_fixed.bpp;
+            img0alt.pixfmt = img0_fixed.pixfmt;
             img0alt.data = fb_alloc0(image_size(&img0alt), FB_ALLOC_NO_HINT);
             imlib_logpolar_int(&img0alt, &img0_fixed, &roi0_fixed, false, false);
             roi0alt.x = 0;
@@ -453,7 +453,7 @@ void imlib_phasecorrelate(image_t *img0, image_t *img1, rectangle_t *roi0, recta
 
             img1alt.w = roi1->w;
             img1alt.h = roi1->h;
-            img1alt.bpp = img1->bpp;
+            img1alt.pixfmt = img1->pixfmt;
             img1alt.data = fb_alloc0(image_size(&img1alt), FB_ALLOC_NO_HINT);
             imlib_logpolar_int(&img1alt, img1, roi1, false, false);
             roi1alt.x = 0;

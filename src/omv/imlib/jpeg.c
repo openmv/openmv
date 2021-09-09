@@ -43,8 +43,8 @@ static const uint32_t jpeg_expand[16] = {0x80808080, 0x8080807f, 0x80807f80, 0x8
 
 static void jpeg_get_mcu(image_t *src, int x_offset, int y_offset, int dx, int dy, int8_t *Y0, int8_t *CB, int8_t *CR)
 {
-    switch (src->bpp) {
-        case IMAGE_BPP_BINARY: {
+    switch (src->pixfmt) {
+        case PIXFORMAT_BINARY: {
             if ((dx != MCU_W) || (dy != MCU_H)) { // partial MCU, fill with 0's to start
                 memset(Y0, 0, JPEG_444_GS_MCU_SIZE);
             }
@@ -82,7 +82,7 @@ static void jpeg_get_mcu(image_t *src, int x_offset, int y_offset, int dx, int d
             }
             break;
         }
-        case IMAGE_BPP_GRAYSCALE: {
+        case PIXFORMAT_GRAYSCALE: {
             if ((dx != MCU_W) || (dy != MCU_H)) { // partial MCU, fill with 0's to start
                 memset(Y0, 0, JPEG_444_GS_MCU_SIZE);
             }
@@ -146,7 +146,7 @@ static void jpeg_get_mcu(image_t *src, int x_offset, int y_offset, int dx, int d
             }
             break;
         }
-        case IMAGE_BPP_RGB565: {
+        case PIXFORMAT_RGB565: {
             if ((dx != MCU_W) || (dy != MCU_H)) { // partial MCU, fill with 0's to start
                 memset(Y0, 0, JPEG_444_YCBCR_MCU_SIZE);
             }
@@ -220,7 +220,7 @@ static void jpeg_get_mcu(image_t *src, int x_offset, int y_offset, int dx, int d
             }
             break;
         }
-        case IMAGE_BPP_BAYER: {
+        case PIXFORMAT_BAYER_ANY: {
             if ((dx != MCU_W) || (dy != MCU_H)) { // partial MCU, fill with 0's to start
                 memset(Y0, 0, JPEG_444_YCBCR_MCU_SIZE);
             }
@@ -626,15 +626,15 @@ bool jpeg_compress(image_t *src, image_t *dst, int quality, bool realloc)
     JPEG_Info.ImageHeight   = src->h;
     JPEG_Info.ImageQuality  = quality;
 
-    switch (src->bpp) {
-        case IMAGE_BPP_BINARY:
-        case IMAGE_BPP_GRAYSCALE:
+    switch (src->pixfmt) {
+        case PIXFORMAT_BINARY:
+        case PIXFORMAT_GRAYSCALE:
             mcu_size                    = JPEG_444_GS_MCU_SIZE;
             JPEG_Info.ColorSpace        = JPEG_GRAYSCALE_COLORSPACE;
             JPEG_Info.ChromaSubsampling = JPEG_444_SUBSAMPLING;
             break;
-        case IMAGE_BPP_RGB565:
-        case IMAGE_BPP_BAYER:
+        case PIXFORMAT_RGB565:
+        case PIXFORMAT_BAYER_ANY:
             mcu_size                    = JPEG_444_YCBCR_MCU_SIZE;
             JPEG_Info.ColorSpace        = JPEG_YCBCR_COLORSPACE;
             JPEG_Info.ChromaSubsampling = JPEG_444_SUBSAMPLING;
@@ -660,8 +660,8 @@ bool jpeg_compress(image_t *src, image_t *dst, int quality, bool realloc)
             fb_alloc_fail();
         }
 
-        dst->bpp = avail - space;
-        dst->data = fb_alloc(dst->bpp, FB_ALLOC_PREFER_SIZE | FB_ALLOC_CACHE_ALIGN);
+        dst->size = IMLIB_IMAGE_MAX_SIZE(avail - space);
+        dst->data = fb_alloc(dst->size, FB_ALLOC_PREFER_SIZE | FB_ALLOC_CACHE_ALIGN);
     }
 
     // Compute size of the APP0 header with cache alignment padding.
@@ -670,20 +670,20 @@ bool jpeg_compress(image_t *src, image_t *dst, int quality, bool realloc)
     int app0_padding_size = app0_unalign_size ? (__SCB_DCACHE_LINE_SIZE - app0_unalign_size) : 0;
     int app0_total_size = app0_size + app0_padding_size;
 
-    if (dst->bpp < app0_total_size) {
+    if (dst->size < app0_total_size) {
         return true; // overflow
     }
 
     // Adjust JPEG size and address by app0 header size.
-    dst->bpp -= app0_total_size;
+    dst->size -= app0_total_size;
     uint8_t *dma_buffer = dst->data + app0_total_size;
 
     // Destination is too small.
-    if (dst->bpp < (OUTPUT_CHUNK_SIZE * 2)) {
+    if (dst->size < (OUTPUT_CHUNK_SIZE * 2)) {
         return true; // overflow
     }
 
-    JPEG_out_data_length_max = dst->bpp;
+    JPEG_out_data_length_max = dst->size;
     JPEG_out_data_length = 0;
     JPEG_input_paused = false;
     JPEG_output_paused = false;
@@ -760,7 +760,7 @@ bool jpeg_compress(image_t *src, image_t *dst, int quality, bool realloc)
     fb_free(); // mcu_row_buffer
 
     // Set output size.
-    dst->bpp = JPEG_out_data_length;
+    dst->size = JPEG_out_data_length;
 
     // STM32H7 BUG FIX! The JPEG Encoder will ocassionally trigger the EOCF interrupt before writing
     // a final 0x000000D9 long into the output fifo as the end of the JPEG image. When this occurs
@@ -768,13 +768,12 @@ bool jpeg_compress(image_t *src, image_t *dst, int quality, bool realloc)
     if (__HAL_JPEG_GET_FLAG(&JPEG_Handle, JPEG_FLAG_OFNEF) && (!JPEG_Handle.Instance->DOR)) {
         // The encoding output process always aborts before writing OUTPUT_CHUNK_SIZE bytes
         // to the end of the dma_buffer. So, it is always safe to add one extra byte.
-        dma_buffer[dst->bpp] = 0xD9;
-        dst->bpp += sizeof(uint8_t);
+        dma_buffer[dst->size++] = 0xD9;
     }
 
     // Update the JPEG image size by the new APP0 header and it's padding. However, we have to move
     // the SOI header to the front of the image first...
-    dst->bpp += app0_total_size;
+    dst->size += app0_total_size;
     memcpy(dst->data, dma_buffer, sizeof(uint16_t)); // move SOI
     memcpy(dst->data + sizeof(uint16_t), JPEG_APP0, sizeof(JPEG_APP0)); // inject APP0
 
@@ -783,7 +782,7 @@ bool jpeg_compress(image_t *src, image_t *dst, int quality, bool realloc)
     memset(dst->data + sizeof(uint32_t) + sizeof(JPEG_APP0), 0, app0_padding_size - sizeof(uint16_t)); // data
 
     // Clean trailing data after 0xFFD9 at the end of the jpeg byte stream.
-    dst->bpp = jpeg_clean_trailing_bytes(dst->bpp, dst->data);
+    dst->size = jpeg_clean_trailing_bytes(dst->size, dst->data);
 
 #if (TIME_JPEG==1)
     printf("time: %u ms\n", mp_hal_ticks_ms() - start);
@@ -1411,14 +1410,16 @@ bool jpeg_compress(image_t *src, image_t *dst, int quality, bool realloc)
     #endif
 
     if (!dst->data) {
-        dst->data = fb_alloc_all((uint32_t *) &dst->bpp, FB_ALLOC_PREFER_SIZE | FB_ALLOC_CACHE_ALIGN);
+        uint32_t size=0;
+        dst->data = fb_alloc_all(&size, FB_ALLOC_PREFER_SIZE | FB_ALLOC_CACHE_ALIGN);
+        dst->size = IMLIB_IMAGE_MAX_SIZE(size);
     }
 
     // JPEG buffer
     jpeg_buf_t jpeg_buf = {
         .idx = 0,
         .buf = dst->pixels,
-        .length = dst->bpp,
+        .length = dst->size,
         .bitc = 0,
         .bitb = 0,
         .realloc = realloc,
@@ -1428,10 +1429,9 @@ bool jpeg_compress(image_t *src, image_t *dst, int quality, bool realloc)
     // Initialize quantization tables
     jpeg_init(quality);
 
-    bool is_color = (src->bpp == IMAGE_BPP_RGB565) || (src->bpp == IMAGE_BPP_BAYER);
     jpeg_subsample_t jpeg_subsample = JPEG_SUBSAMPLE_1x1;
 
-    if (is_color) {
+    if (src->is_color) {
         if (quality <= 35) {
             jpeg_subsample = JPEG_SUBSAMPLE_2x2;
         } else if (quality < 60) {
@@ -1439,7 +1439,7 @@ bool jpeg_compress(image_t *src, image_t *dst, int quality, bool realloc)
         }
     }
 
-    jpeg_write_headers(&jpeg_buf, src->w, src->h, is_color ? 2 : 1, jpeg_subsample);
+    jpeg_write_headers(&jpeg_buf, src->w, src->h, src->is_color ? 2 : 1, jpeg_subsample);
 
     int DCY = 0, DCU = 0, DCV = 0;
 
@@ -1464,7 +1464,7 @@ bool jpeg_compress(image_t *src, image_t *dst, int quality, bool realloc)
                     jpeg_get_mcu(src, x_offset, y_offset, dx, dy, YDU, UDU, VDU);
                     DCY = jpeg_processDU(&jpeg_buf, YDU, fdtbl_Y, DCY, YDC_HT, YAC_HT);
 
-                    if (is_color) {
+                    if (src->is_color) {
                         DCU = jpeg_processDU(&jpeg_buf, UDU, fdtbl_UV, DCU, UVDC_HT, UVAC_HT);
                         DCV = jpeg_processDU(&jpeg_buf, VDU, fdtbl_UV, DCV, UVDC_HT, UVAC_HT);
                     }
@@ -1630,7 +1630,7 @@ bool jpeg_compress(image_t *src, image_t *dst, int quality, bool realloc)
     jpeg_put_char(&jpeg_buf, 0xFF);
     jpeg_put_char(&jpeg_buf, 0xD9);
 
-    dst->bpp = jpeg_buf.idx;
+    dst->size = jpeg_buf.idx;
     dst->data = jpeg_buf.buf;
 
     #if (TIME_JPEG==1)
@@ -1642,13 +1642,13 @@ bool jpeg_compress(image_t *src, image_t *dst, int quality, bool realloc)
 
 #endif // (OMV_HARDWARE_JPEG == 1)
 
-int jpeg_clean_trailing_bytes(int bpp, uint8_t *data)
+int jpeg_clean_trailing_bytes(int size, uint8_t *data)
 {
-    while ((bpp > 1) && ((data[bpp-2] != 0xFF) || (data[bpp-1] != 0xD9))) {
-        bpp -= 1;
+    while ((size > 1) && ((data[size-2] != 0xFF) || (data[size-1] != 0xD9))) {
+        size -= 1;
     }
 
-    return bpp;
+    return size;
 }
 
 #if defined(IMLIB_ENABLE_IMAGE_FILE_IO)
@@ -1678,12 +1678,19 @@ void jpeg_read_geometry(FIL *fp, image_t *img, const char *path, jpg_read_settin
                 uint16_t width;
                 read_word(fp, &width);
                 width = __REV16(width);
+
                 uint16_t height;
                 read_word(fp, &height);
                 height = __REV16(height);
-                rs->jpg_w = img->w = width;
-                rs->jpg_h = img->h = height;
-                rs->jpg_size = img->bpp = f_size(fp);
+
+                rs->jpg_w   = width;
+                rs->jpg_h   = height;
+                rs->jpg_size = IMLIB_IMAGE_MAX_SIZE(f_size(fp));
+
+                img->w      = rs->jpg_w;
+                img->h      = rs->jpg_h;
+                img->size   = rs->jpg_size;
+                img->pixfmt = PIXFORMAT_JPEG;
                 return;
             } else {
                 file_seek(fp, f_tell(fp) + size - 2);
@@ -1698,7 +1705,7 @@ void jpeg_read_geometry(FIL *fp, image_t *img, const char *path, jpg_read_settin
 void jpeg_read_pixels(FIL *fp, image_t *img)
 {
     file_seek(fp, 0);
-    read_data(fp, img->pixels, img->bpp);
+    read_data(fp, img->pixels, img->size);
 }
 
 void jpeg_read(image_t *img, const char *path)
@@ -1712,7 +1719,7 @@ void jpeg_read(image_t *img, const char *path)
     jpeg_read_geometry(&fp, img, path, &rs);
 
     if (!img->pixels) {
-        img->pixels = xalloc(img->bpp);
+        img->pixels = xalloc(img->size);
     }
 
     jpeg_read_pixels(&fp, img);
@@ -1724,14 +1731,14 @@ void jpeg_write(image_t *img, const char *path, int quality)
     FIL fp;
     file_write_open(&fp, path);
     if (IM_IS_JPEG(img)) {
-        write_data(&fp, img->pixels, img->bpp);
+        write_data(&fp, img->pixels, img->size);
     } else {
-        image_t out = { .w=img->w, .h=img->h, .bpp=0, .pixels=NULL }; // alloc in jpeg compress
+        image_t out = { .w=img->w, .h=img->h, .pixfmt=PIXFORMAT_JPEG, .size=0, .pixels=NULL }; // alloc in jpeg compress
         // When jpeg_compress needs more memory than in currently allocated it
         // will try to realloc. MP will detect that the pointer is outside of
         // the heap and return NULL which will cause an out of memory error.
         jpeg_compress(img, &out, quality, false);
-        write_data(&fp, out.pixels, out.bpp);
+        write_data(&fp, out.pixels, out.size);
         fb_free(); // frees alloc in jpeg_compress()
     }
     file_close(&fp);

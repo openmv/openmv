@@ -336,75 +336,141 @@ extern const uint16_t ironbow_table[256];
 // Image Stuff //
 /////////////////
 
+// Pixel format IDs.
 typedef enum {
-    PIXFORMAT_INVALID = 0,
-    PIXFORMAT_BINARY,    // 1BPP/BINARY
-    PIXFORMAT_GRAYSCALE, // 1BPP/GRAYSCALE
-    PIXFORMAT_RGB565,    // 2BPP/RGB565
-    PIXFORMAT_YUV422,    // 2BPP/YUV422
-    PIXFORMAT_BAYER,     // 1BPP/RAW
-    PIXFORMAT_JPEG,      // JPEG/COMPRESSED
+    PIXFORMAT_ID_BINARY     = 1,
+    PIXFORMAT_ID_GRAY       = 2,
+    PIXFORMAT_ID_RGB565     = 3,
+    PIXFORMAT_ID_YUV422     = 4,
+    PIXFORMAT_ID_BAYER      = 5,
+    PIXFORMAT_ID_JPEG       = 6,
+    /* Note: Update PIXFORMAT_IS_VALID when adding new formats */
+} pixformat_id_t;
+
+// Pixel sub-format IDs.
+typedef enum {
+    SUBFORMAT_ID_BGGR       = 0, // !!! Note: Make sure bayer sub-formats don't  !!!
+    SUBFORMAT_ID_GBRG       = 1, // !!! overflow the sensor.hw_flags.bayer field !!!
+    SUBFORMAT_ID_GRBG       = 2,
+    SUBFORMAT_ID_RGGB       = 3,
+    SUBFORMAT_ID_GRAY8      = 0,
+    SUBFORMAT_ID_GRAY16     = 1,
+    /* Note: Update PIXFORMAT_IS_VALID when adding new formats */
+} subformat_id_t;
+
+// Pixel format Byte Per Pixel.
+typedef enum {
+    PIXFORMAT_BPP_BINARY    = 0,
+    PIXFORMAT_BPP_GRAY8     = 1,
+    PIXFORMAT_BPP_GRAY16    = 2,
+    PIXFORMAT_BPP_RGB565    = 2,
+    PIXFORMAT_BPP_YUV422    = 2,
+    PIXFORMAT_BPP_BAYER     = 1,
+    /* Note: Update PIXFORMAT_IS_VALID when adding new formats */
+} pixformat_bpp_t;
+
+// Pixel format flags.
+#define PIXFORMAT_FLAGS_M       (1 << 27) // Mutable format.
+#define PIXFORMAT_FLAGS_C       (1 << 26) // Colored format.
+#define PIXFORMAT_FLAGS_J       (1 << 25) // Compressed format (JPEG/PNG).
+#define PIXFORMAT_FLAGS_R       (1 << 24) // RAW/Bayer format.
+#define PIXFORMAT_FLAGS_CM      (PIXFORMAT_FLAGS_C | PIXFORMAT_FLAGS_M)
+#define PIXFORMAT_FLAGS_CR      (PIXFORMAT_FLAGS_C | PIXFORMAT_FLAGS_R)
+#define IMLIB_IMAGE_MAX_SIZE(x) ((x) & 0xFFFFFFFF)
+
+// Each pixel format encodes flags, pixel format id and bpp as follows:
+// 31......28  27  26  25  24  23..........16  15...........8  7.............0
+// <RESERVED>  MF  CF  JF  RF  <PIXFORMAT_ID>  <SUBFORMAT_ID>  <BYTES_PER_PIX>
+// NOTE: Bit 31-30 must Not be used for pixformat_t to be used as mp_int_t.
+typedef enum {
+    PIXFORMAT_INVALID    = (0),
+    PIXFORMAT_BINARY     = (PIXFORMAT_FLAGS_M  | (PIXFORMAT_ID_BINARY << 16) | (0                  << 8) | PIXFORMAT_BPP_BINARY ),
+    PIXFORMAT_GRAYSCALE  = (PIXFORMAT_FLAGS_M  | (PIXFORMAT_ID_GRAY   << 16) | (SUBFORMAT_ID_GRAY8 << 8) | PIXFORMAT_BPP_GRAY8  ),
+    PIXFORMAT_RGB565     = (PIXFORMAT_FLAGS_CM | (PIXFORMAT_ID_RGB565 << 16) | (0                  << 8) | PIXFORMAT_BPP_RGB565 ),
+    PIXFORMAT_YUV422     = (PIXFORMAT_FLAGS_CM | (PIXFORMAT_ID_YUV422 << 16) | (0                  << 8) | PIXFORMAT_BPP_YUV422 ),
+    PIXFORMAT_BAYER      = (PIXFORMAT_FLAGS_CR | (PIXFORMAT_ID_BAYER  << 16) | (SUBFORMAT_ID_BGGR  << 8) | PIXFORMAT_BPP_BAYER  ),
+    PIXFORMAT_BAYER_BGGR = (PIXFORMAT_FLAGS_CR | (PIXFORMAT_ID_BAYER  << 16) | (SUBFORMAT_ID_BGGR  << 8) | PIXFORMAT_BPP_BAYER  ),
+    PIXFORMAT_BAYER_GBRG = (PIXFORMAT_FLAGS_CR | (PIXFORMAT_ID_BAYER  << 16) | (SUBFORMAT_ID_GBRG  << 8) | PIXFORMAT_BPP_BAYER  ),
+    PIXFORMAT_BAYER_GRBG = (PIXFORMAT_FLAGS_CR | (PIXFORMAT_ID_BAYER  << 16) | (SUBFORMAT_ID_GRBG  << 8) | PIXFORMAT_BPP_BAYER  ),
+    PIXFORMAT_BAYER_RGGB = (PIXFORMAT_FLAGS_CR | (PIXFORMAT_ID_BAYER  << 16) | (SUBFORMAT_ID_RGGB  << 8) | PIXFORMAT_BPP_BAYER  ),
+    PIXFORMAT_JPEG       = (PIXFORMAT_FLAGS_J  | (PIXFORMAT_ID_JPEG   << 16) | (0                  << 8) | 0                    ),
+    PIXFORMAT_LAST       = 0xFFFFFFFFU,
 } pixformat_t;
 
-typedef enum image_bpp
-{
-    IMAGE_BPP_BINARY,       // BPP = 0
-    IMAGE_BPP_GRAYSCALE,    // BPP = 1
-    IMAGE_BPP_RGB565,       // BPP = 2
-    IMAGE_BPP_BAYER,        // BPP = 3
-    IMAGE_BPP_JPEG          // BPP > 3
+#define PIXFORMAT_BAYER_ANY             \
+        PIXFORMAT_BAYER_BGGR:           \
+        case PIXFORMAT_BAYER_GBRG:      \
+        case PIXFORMAT_BAYER_GRBG:      \
+        case PIXFORMAT_BAYER_RGGB       \
+
+#define IMLIB_PIXFORMAT_IS_VALID(x)     \
+    ((x == PIXFORMAT_BINARY)            \
+     || (x == PIXFORMAT_GRAYSCALE)      \
+     || (x == PIXFORMAT_RGB565)         \
+     || (x == PIXFORMAT_BAYER_BGGR)     \
+     || (x == PIXFORMAT_BAYER_GBRG)     \
+     || (x == PIXFORMAT_BAYER_GRBG)     \
+     || (x == PIXFORMAT_BAYER_RGGB)     \
+     || (x == PIXFORMAT_JPEG))          \
+
+#if defined(__BYTE_ORDER__) && (__BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__)
+#define PIXFORMAT_STRUCT            \
+struct {                            \
+  union {                           \
+    struct {                        \
+        uint32_t bpp            :8; \
+        uint32_t subfmt_id      :8; \
+        uint32_t pixfmt_id      :8; \
+        uint32_t is_bayer       :1; \
+        uint32_t is_compressed  :1; \
+        uint32_t is_color       :1; \
+        uint32_t is_mutable     :1; \
+        uint32_t /*reserved*/   :4; \
+    };                              \
+    uint32_t pixfmt;                \
+  };                                \
+  uint32_t size; /* for compressed images */ \
 }
-image_bpp_t;
+#elif defined(__BYTE_ORDER__) && (__BYTE_ORDER__ == __ORDER_BIG_ENDIAN__)
+#define PIXFORMAT_STRUCT            \
+struct {                            \
+  union {                           \
+    struct {                        \
+        uint32_t /*reserved*/   :4; \
+        uint32_t is_mutable     :1; \
+        uint32_t is_color       :1; \
+        uint32_t is_compressed  :1; \
+        uint32_t is_bayer       :1; \
+        uint32_t pixfmt_id      :8; \
+        uint32_t subfmt_id      :8; \
+        uint32_t bpp            :8; \
+    };                              \
+    uint32_t pixfmt;                \
+  };                                \
+  uint32_t size; /* for compressed images */ \
+}
+#else
+#error "Byte order is not defined."
+#endif
 
 typedef struct image {
-    int w;
-    int h;
-    int bpp;
+    uint32_t w;
+    uint32_t h;
+    PIXFORMAT_STRUCT;
     union {
         uint8_t *pixels;
         uint8_t *data;
     };
 } image_t;
 
-void image_init(image_t *ptr, int w, int h, int bpp, void *data);
+void image_init(image_t *ptr, int w, int h, pixformat_t pixfmt, uint32_t size, void *pixels);
 void image_copy(image_t *dst, image_t *src);
 size_t image_size(image_t *ptr);
 bool image_get_mask_pixel(image_t *ptr, int x, int y);
 
-#define IMAGE_IS_MUTABLE(image) \
-({ \
-    __typeof__ (image) _image = (image); \
-    (_image->bpp == IMAGE_BPP_BINARY) || \
-    (_image->bpp == IMAGE_BPP_GRAYSCALE) || \
-    (_image->bpp == IMAGE_BPP_RGB565); \
-})
-
-#define IMAGE_IS_MUTABLE_BAYER(image) \
-({ \
-    __typeof__ (image) _image = (image); \
-    (_image->bpp == IMAGE_BPP_BINARY) || \
-    (_image->bpp == IMAGE_BPP_GRAYSCALE) || \
-    (_image->bpp == IMAGE_BPP_RGB565) || \
-    (_image->bpp == IMAGE_BPP_BAYER); \
-})
-
-#define IMAGE_IS_MUTABLE_BAYER_JPEG(image) \
-({ \
-    __typeof__ (image) _image = (image); \
-    (_image->bpp == IMAGE_BPP_BINARY) || \
-    (_image->bpp == IMAGE_BPP_GRAYSCALE) || \
-    (_image->bpp == IMAGE_BPP_RGB565) || \
-    (_image->bpp == IMAGE_BPP_BAYER) || \
-    (_image->bpp >= IMAGE_BPP_JPEG); \
-})
-
-#define IMAGE_IS_COLOR(image) \
-({ \
-    __typeof__ (image) _image = (image); \
-    (_image->bpp == IMAGE_BPP_RGB565) || \
-    (_image->bpp == IMAGE_BPP_BAYER) || \
-    (_image->bpp >= IMAGE_BPP_JPEG); \
-})
+#define IMAGE_IS_MUTABLE(image)             (image->is_mutable)
+#define IMAGE_IS_COLOR(image)               (image->is_color)
+#define IMAGE_IS_MUTABLE_BAYER(image)       (image->is_mutable || image->is_bayer)
 
 #define IMAGE_BINARY_LINE_LEN(image) (((image)->w + UINT32_T_MASK) >> UINT32_T_SHIFT)
 #define IMAGE_BINARY_LINE_LEN_BYTES(image) (IMAGE_BINARY_LINE_LEN(image) * sizeof(uint32_t))
@@ -579,25 +645,11 @@ extern const int kernel_high_pass_3[9];
 // Grayscale maxes
 #define IM_MAX_GS (255)
 
-#define IM_IS_BINARY(img) \
-    ({ __typeof__ (img) _img = (img); \
-       _img->bpp == 0; })
-
-#define IM_IS_GS(img) \
-    ({ __typeof__ (img) _img = (img); \
-       _img->bpp == 1; })
-
-#define IM_IS_RGB565(img) \
-    ({ __typeof__ (img) _img = (img); \
-       _img->bpp == 2; })
-
-#define IM_IS_BAYER(img) \
-    ({ __typeof__ (img) _img = (img); \
-       _img->bpp == 3; })
-
-#define IM_IS_JPEG(img) \
-    ({ __typeof__ (img) _img = (img); \
-       _img->bpp >= 4; })
+#define IM_IS_BINARY(img)   ((img)->pixfmt == PIXFORMAT_BINARY)
+#define IM_IS_GS(img)       ((img)->pixfmt == PIXFORMAT_GRAYSCALE)
+#define IM_IS_RGB565(img)   ((img)->pixfmt == PIXFORMAT_RGB565)
+#define IM_IS_BAYER(img)    ((img)->is_bayer)
+#define IM_IS_JPEG(img)     ((img)->pixfmt == PIXFORMAT_ID_JPEG)
 
 #define IM_X_INSIDE(img, x) \
     ({ __typeof__ (img) _img = (img); \
@@ -638,7 +690,7 @@ extern const int kernel_high_pass_3[9];
 #define IM_EQUAL(img0, img1) \
     ({ __typeof__ (img0) _img0 = (img0); \
        __typeof__ (img1) _img1 = (img1); \
-       (_img0->w==_img1->w)&&(_img0->h==_img1->h)&&(_img0->bpp==_img1->bpp); })
+       (_img0->w==_img1->w)&&(_img0->h==_img1->h)&&(_img0->pixfmt=_img1->pixfmt); })
 
 #define IM_TO_GS_PIXEL(img, x, y)    \
     (img->bpp == 1 ? img->pixels[((y)*img->w)+(x)] : COLOR_RGB565_TO_Y(((uint16_t*)img->pixels)[((y)*img->w)+(x)]) )
@@ -930,7 +982,7 @@ typedef enum image_hint {
 
 typedef struct imlib_draw_row_data {
     image_t *dst_img; // user
-    int src_img_bpp; // user
+    pixformat_t src_img_pixfmt; // user
     int rgb_channel; // user
     int alpha; // user
     const uint16_t *color_palette; // user
@@ -1117,7 +1169,7 @@ void imlib_flood_fill_int(image_t *out, image_t *img, int x, int y,
                           flood_fill_call_back_t cb, void *data);
 // Drawing Functions
 int imlib_get_pixel(image_t *img, int x, int y);
-int imlib_get_pixel_fast(int img_bpp, const void *row_ptr, int x);
+int imlib_get_pixel_fast(image_t *img, const void *row_ptr, int x);
 void imlib_set_pixel(image_t *img, int x, int y, int p);
 void imlib_draw_line(image_t *img, int x0, int y0, int x1, int y1, int c, int thickness);
 void imlib_draw_rectangle(image_t *img, int rx, int ry, int rw, int rh, int c, int thickness, bool fill);
@@ -1179,9 +1231,9 @@ void imlib_rotation_corr(image_t *img, float x_rotation, float y_rotation,
 // Statistics
 void imlib_get_similarity(image_t *img, const char *path, image_t *other, int scalar, float *avg, float *std, float *min, float *max);
 void imlib_get_histogram(histogram_t *out, image_t *ptr, rectangle_t *roi, list_t *thresholds, bool invert, image_t *other);
-void imlib_get_percentile(percentile_t *out, image_bpp_t bpp, histogram_t *ptr, float percentile);
-void imlib_get_threshold(threshold_t *out, image_bpp_t bpp, histogram_t *ptr);
-void imlib_get_statistics(statistics_t *out, image_bpp_t bpp, histogram_t *ptr);
+void imlib_get_percentile(percentile_t *out, pixformat_t pixfmt, histogram_t *ptr, float percentile);
+void imlib_get_threshold(threshold_t *out, pixformat_t pixfmt, histogram_t *ptr);
+void imlib_get_statistics(statistics_t *out, pixformat_t pixfmt, histogram_t *ptr);
 bool imlib_get_regression(find_lines_list_lnk_data_t *out, image_t *ptr, rectangle_t *roi, unsigned int x_stride, unsigned int y_stride,
                           list_t *thresholds, bool invert, unsigned int area_threshold, unsigned int pixels_threshold, bool robust);
 // Color Tracking

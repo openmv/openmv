@@ -62,16 +62,25 @@ void ppm_read_geometry(FIL *fp, image_t *img, const char *path, ppm_read_setting
     read_int_reset(rs);
     read_byte_expect(fp, 'P');
     read_byte(fp, &rs->ppm_fmt);
-    if ((rs->ppm_fmt!='2') && (rs->ppm_fmt!='3') && (rs->ppm_fmt!='5') && (rs->ppm_fmt!='6')) ff_unsupported_format(fp);
-    img->bpp = ((rs->ppm_fmt == '2') || (rs->ppm_fmt == '5')) ? 1 : 2;
+
+    if ((rs->ppm_fmt!='2') && (rs->ppm_fmt!='3') && (rs->ppm_fmt!='5') && (rs->ppm_fmt!='6')) {
+        ff_unsupported_format(fp);
+    }
+
+    img->pixfmt = ((rs->ppm_fmt == '2') || (rs->ppm_fmt == '5')) ? PIXFORMAT_GRAYSCALE : PIXFORMAT_RGB565;
 
     read_int(fp, (uint32_t *) &img->w, rs);
     read_int(fp, (uint32_t *) &img->h, rs);
-    if ((img->w == 0) || (img->h == 0)) ff_file_corrupted(fp);
+
+    if ((img->w == 0) || (img->h == 0)) {
+        ff_file_corrupted(fp);
+    }
 
     uint32_t max;
     read_int(fp, &max, rs);
-    if (max != 255) ff_unsupported_format(fp);
+    if (max != 255) {
+        ff_unsupported_format(fp);
+    }
 }
 
 // This function reads the pixel values of an image.
@@ -114,11 +123,16 @@ void ppm_read(image_t *img, const char *path)
 {
     FIL fp;
     ppm_read_settings_t rs;
+
     file_read_open(&fp, path);
     file_buffer_on(&fp);
     ppm_read_geometry(&fp, img, path, &rs);
-    if (!img->pixels) img->pixels = xalloc(img->w * img->h * img->bpp);
+
+    if (!img->pixels) {
+        img->pixels = xalloc(img->w * img->h * img->bpp);
+    }
     ppm_read_pixels(&fp, img, img->h, &rs);
+
     file_buffer_off(&fp);
     file_close(&fp);
 }

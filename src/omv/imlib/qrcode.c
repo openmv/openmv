@@ -2971,8 +2971,8 @@ void imlib_find_qrcodes(list_t *out, image_t *ptr, rectangle_t *roi)
     quirc_resize(controller, roi->w, roi->h);
     uint8_t *grayscale_image = quirc_begin(controller, NULL, NULL);
 
-    switch(ptr->bpp) {
-        case IMAGE_BPP_BINARY: {
+    switch (ptr->pixfmt) {
+        case PIXFORMAT_BINARY: {
             for (int y = roi->y, yy = roi->y + roi->h; y < yy; y++) {
                 uint32_t *row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(ptr, y);
                 for (int x = roi->x, xx = roi->x + roi->w; x < xx; x++) {
@@ -2981,7 +2981,7 @@ void imlib_find_qrcodes(list_t *out, image_t *ptr, rectangle_t *roi)
             }
             break;
         }
-        case IMAGE_BPP_GRAYSCALE: {
+        case PIXFORMAT_GRAYSCALE: {
             for (int y = roi->y, yy = roi->y + roi->h; y < yy; y++) {
                 uint8_t *row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(ptr, y);
                 memcpy(grayscale_image, &row_ptr[roi->x], roi->w);
@@ -2992,7 +2992,7 @@ void imlib_find_qrcodes(list_t *out, image_t *ptr, rectangle_t *roi)
             }
             break;
         }
-        case IMAGE_BPP_RGB565: {
+        case PIXFORMAT_RGB565: {
             for (int y = roi->y, yy = roi->y + roi->h; y < yy; y++) {
                 uint16_t *row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(ptr, y);
                 for (int x = roi->x, xx = roi->x + roi->w; x < xx; x++) {

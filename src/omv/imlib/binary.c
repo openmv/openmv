@@ -16,14 +16,14 @@ void imlib_binary(image_t *out, image_t *img, list_t *thresholds, bool invert, b
     image_t bmp;
     bmp.w = img->w;
     bmp.h = img->h;
-    bmp.bpp = IMAGE_BPP_BINARY;
+    bmp.pixfmt = PIXFORMAT_BINARY;
     bmp.data = fb_alloc0(image_size(&bmp), FB_ALLOC_NO_HINT);
 
     for (list_lnk_t *it = iterator_start_from_head(thresholds); it; it = iterator_next(it)) {
         color_thresholds_list_lnk_data_t lnk_data;
         iterator_get(thresholds, it, &lnk_data);
-        switch(img->bpp) {
-            case IMAGE_BPP_BINARY: {
+        switch (img->pixfmt) {
+            case PIXFORMAT_BINARY: {
                 for (int y = 0, yy = img->h; y < yy; y++) {
                     uint32_t *old_row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(img, y);
                     uint32_t *bmp_row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(&bmp, y);
@@ -35,7 +35,7 @@ void imlib_binary(image_t *out, image_t *img, list_t *thresholds, bool invert, b
                 }
                 break;
             }
-            case IMAGE_BPP_GRAYSCALE: {
+            case PIXFORMAT_GRAYSCALE: {
                 for (int y = 0, yy = img->h; y < yy; y++) {
                     uint8_t *old_row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(img, y);
                     uint32_t *bmp_row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(&bmp, y);
@@ -47,7 +47,7 @@ void imlib_binary(image_t *out, image_t *img, list_t *thresholds, bool invert, b
                 }
                 break;
             }
-            case IMAGE_BPP_RGB565: {
+            case PIXFORMAT_RGB565: {
                 for (int y = 0, yy = img->h; y < yy; y++) {
                     uint16_t *old_row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(img, y);
                     uint32_t *bmp_row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(&bmp, y);
@@ -65,8 +65,8 @@ void imlib_binary(image_t *out, image_t *img, list_t *thresholds, bool invert, b
         }
     }
 
-    switch(img->bpp) {
-        case IMAGE_BPP_BINARY: {
+    switch (img->pixfmt) {
+        case PIXFORMAT_BINARY: {
             if (!zero) {
                 for (int y = 0, yy = img->h; y < yy; y++) {
                     uint32_t *old_row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(img, y);
@@ -94,8 +94,8 @@ void imlib_binary(image_t *out, image_t *img, list_t *thresholds, bool invert, b
             }
             break;
         }
-        case IMAGE_BPP_GRAYSCALE: {
-            if (out->bpp == IMAGE_BPP_BINARY) {
+        case PIXFORMAT_GRAYSCALE: {
+            if (out->pixfmt == PIXFORMAT_BINARY) {
                 if (!zero) {
                     for (int y = 0, yy = img->h; y < yy; y++) {
                         uint8_t *old_row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(img, y);
@@ -150,8 +150,8 @@ void imlib_binary(image_t *out, image_t *img, list_t *thresholds, bool invert, b
             }
             break;
         }
-        case IMAGE_BPP_RGB565: {
-            if (out->bpp == IMAGE_BPP_BINARY) {
+        case PIXFORMAT_RGB565: {
+            if (out->pixfmt == PIXFORMAT_BINARY) {
                 if (!zero) {
                     for (int y = 0, yy = img->h; y < yy; y++) {
                         uint16_t *old_row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(img, y);
@@ -216,8 +216,8 @@ void imlib_binary(image_t *out, image_t *img, list_t *thresholds, bool invert, b
 
 void imlib_invert(image_t *img)
 {
-    switch(img->bpp) {
-        case IMAGE_BPP_BINARY: {
+    switch (img->pixfmt) {
+        case PIXFORMAT_BINARY: {
             for (uint32_t *start = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(img, 0),
                  *end = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(img, img->h);
                  start < end; start++) {
@@ -225,7 +225,7 @@ void imlib_invert(image_t *img)
             }
             break;
         }
-        case IMAGE_BPP_GRAYSCALE: {
+        case PIXFORMAT_GRAYSCALE: {
             for (uint8_t *start = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(img, 0),
                  *end = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(img, img->h);
                  start < end; start++) {
@@ -233,7 +233,7 @@ void imlib_invert(image_t *img)
             }
             break;
         }
-        case IMAGE_BPP_RGB565: {
+        case PIXFORMAT_RGB565: {
             for (uint16_t *start = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(img, 0),
                  *end = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(img, img->h);
                  start < end; start++) {
@@ -251,8 +251,8 @@ static void imlib_b_and_line_op(image_t *img, int line, void *other, void *data,
 {
     image_t *mask = (image_t *) data;
 
-    switch(img->bpp) {
-        case IMAGE_BPP_BINARY: {
+    switch (img->pixfmt) {
+        case PIXFORMAT_BINARY: {
             uint32_t *data = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(img, line);
 
             if(!mask) {
@@ -270,7 +270,7 @@ static void imlib_b_and_line_op(image_t *img, int line, void *other, void *data,
             }
             break;
         }
-        case IMAGE_BPP_GRAYSCALE: {
+        case PIXFORMAT_GRAYSCALE: {
             uint8_t *data = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(img, line);
 
             if(!mask) {
@@ -288,7 +288,7 @@ static void imlib_b_and_line_op(image_t *img, int line, void *other, void *data,
             }
             break;
         }
-        case IMAGE_BPP_RGB565: {
+        case PIXFORMAT_RGB565: {
             uint16_t *data = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(img, line);
 
             if(!mask) {
@@ -321,8 +321,8 @@ static void imlib_b_nand_line_op(image_t *img, int line, void *other, void *data
 {
     image_t *mask = (image_t *) data;
 
-    switch(img->bpp) {
-        case IMAGE_BPP_BINARY: {
+    switch (img->pixfmt) {
+        case PIXFORMAT_BINARY: {
             uint32_t *data = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(img, line);
 
             if(!mask) {
@@ -340,7 +340,7 @@ static void imlib_b_nand_line_op(image_t *img, int line, void *other, void *data
             }
             break;
         }
-        case IMAGE_BPP_GRAYSCALE: {
+        case PIXFORMAT_GRAYSCALE: {
             uint8_t *data = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(img, line);
 
             if(!mask) {
@@ -358,7 +358,7 @@ static void imlib_b_nand_line_op(image_t *img, int line, void *other, void *data
             }
             break;
         }
-        case IMAGE_BPP_RGB565: {
+        case PIXFORMAT_RGB565: {
             uint16_t *data = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(img, line);
 
             if(!mask) {
@@ -391,8 +391,8 @@ static void imlib_b_or_line_op(image_t *img, int line, void *other, void *data, 
 {
     image_t *mask = (image_t *) data;
 
-    switch(img->bpp) {
-        case IMAGE_BPP_BINARY: {
+    switch (img->pixfmt) {
+        case PIXFORMAT_BINARY: {
             uint32_t *data = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(img, line);
 
             if(!mask) {
@@ -410,7 +410,7 @@ static void imlib_b_or_line_op(image_t *img, int line, void *other, void *data, 
             }
             break;
         }
-        case IMAGE_BPP_GRAYSCALE: {
+        case PIXFORMAT_GRAYSCALE: {
             uint8_t *data = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(img, line);
 
             if(!mask) {
@@ -428,7 +428,7 @@ static void imlib_b_or_line_op(image_t *img, int line, void *other, void *data, 
             }
             break;
         }
-        case IMAGE_BPP_RGB565: {
+        case PIXFORMAT_RGB565: {
             uint16_t *data = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(img, line);
 
             if(!mask) {
@@ -461,8 +461,8 @@ static void imlib_b_nor_line_op(image_t *img, int line, void *other, void *data,
 {
     image_t *mask = (image_t *) data;
 
-    switch(img->bpp) {
-        case IMAGE_BPP_BINARY: {
+    switch (img->pixfmt) {
+        case PIXFORMAT_BINARY: {
             uint32_t *data = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(img, line);
 
             if(!mask) {
@@ -480,7 +480,7 @@ static void imlib_b_nor_line_op(image_t *img, int line, void *other, void *data,
             }
             break;
         }
-        case IMAGE_BPP_GRAYSCALE: {
+        case PIXFORMAT_GRAYSCALE: {
             uint8_t *data = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(img, line);
 
             if(!mask) {
@@ -498,7 +498,7 @@ static void imlib_b_nor_line_op(image_t *img, int line, void *other, void *data,
             }
             break;
         }
-        case IMAGE_BPP_RGB565: {
+        case PIXFORMAT_RGB565: {
             uint16_t *data = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(img, line);
 
             if(!mask) {
@@ -531,8 +531,8 @@ static void imlib_b_xor_line_op(image_t *img, int line, void *other, void *data,
 {
     image_t *mask = (image_t *) data;
 
-    switch(img->bpp) {
-        case IMAGE_BPP_BINARY: {
+    switch (img->pixfmt) {
+        case PIXFORMAT_BINARY: {
             uint32_t *data = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(img, line);
 
             if(!mask) {
@@ -550,7 +550,7 @@ static void imlib_b_xor_line_op(image_t *img, int line, void *other, void *data,
             }
             break;
         }
-        case IMAGE_BPP_GRAYSCALE: {
+        case PIXFORMAT_GRAYSCALE: {
             uint8_t *data = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(img, line);
 
             if(!mask) {
@@ -568,7 +568,7 @@ static void imlib_b_xor_line_op(image_t *img, int line, void *other, void *data,
             }
             break;
         }
-        case IMAGE_BPP_RGB565: {
+        case PIXFORMAT_RGB565: {
             uint16_t *data = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(img, line);
 
             if(!mask) {
@@ -601,8 +601,8 @@ static void imlib_b_xnor_line_op(image_t *img, int line, void *other, void *data
 {
     image_t *mask = (image_t *) data;
 
-    switch(img->bpp) {
-        case IMAGE_BPP_BINARY: {
+    switch (img->pixfmt) {
+        case PIXFORMAT_BINARY: {
             uint32_t *data = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(img, line);
 
             if(!mask) {
@@ -620,7 +620,7 @@ static void imlib_b_xnor_line_op(image_t *img, int line, void *other, void *data
             }
             break;
         }
-        case IMAGE_BPP_GRAYSCALE: {
+        case PIXFORMAT_GRAYSCALE: {
             uint8_t *data = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(img, line);
 
             if(!mask) {
@@ -638,7 +638,7 @@ static void imlib_b_xnor_line_op(image_t *img, int line, void *other, void *data
             }
             break;
         }
-        case IMAGE_BPP_RGB565: {
+        case PIXFORMAT_RGB565: {
             uint16_t *data = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(img, line);
 
             if(!mask) {
@@ -673,10 +673,10 @@ static void imlib_erode_dilate(image_t *img, int ksize, int threshold, int e_or_
     image_t buf;
     buf.w = img->w;
     buf.h = brows;
-    buf.bpp = img->bpp;
+    buf.pixfmt = img->pixfmt;
 
-    switch(img->bpp) {
-        case IMAGE_BPP_BINARY: {
+    switch (img->pixfmt) {
+        case PIXFORMAT_BINARY: {
             buf.data = fb_alloc(IMAGE_BINARY_LINE_LEN_BYTES(img) * brows, FB_ALLOC_NO_HINT);
 
             for (int y = 0, yy = img->h; y < yy; y++) {
@@ -737,7 +737,7 @@ static void imlib_erode_dilate(image_t *img, int ksize, int threshold, int e_or_
             fb_free();
             break;
         }
-        case IMAGE_BPP_GRAYSCALE: {
+        case PIXFORMAT_GRAYSCALE: {
             buf.data = fb_alloc(IMAGE_GRAYSCALE_LINE_LEN_BYTES(img) * brows, FB_ALLOC_NO_HINT);
 
             for (int y = 0, yy = img->h; y < yy; y++) {
@@ -801,7 +801,7 @@ static void imlib_erode_dilate(image_t *img, int ksize, int threshold, int e_or_
             fb_free();
             break;
         }
-        case IMAGE_BPP_RGB565: {
+        case PIXFORMAT_RGB565: {
             buf.data = fb_alloc(IMAGE_RGB565_LINE_LEN_BYTES(img) * brows, FB_ALLOC_NO_HINT);
 
             for (int y = 0, yy = img->h; y < yy; y++) {
@@ -908,7 +908,7 @@ void imlib_top_hat(image_t *img, int ksize, int threshold, image_t *mask)
     image_t temp;
     temp.w = img->w;
     temp.h = img->h;
-    temp.bpp = img->bpp;
+    temp.pixfmt = img->pixfmt;
     temp.data = fb_alloc(image_size(img), FB_ALLOC_NO_HINT);
     memcpy(temp.data, img->data, image_size(img));
     imlib_open(&temp, ksize, threshold, mask);
@@ -921,7 +921,7 @@ void imlib_black_hat(image_t *img, int ksize, int threshold, image_t *mask)
     image_t temp;
     temp.w = img->w;
     temp.h = img->h;
-    temp.bpp = img->bpp;
+    temp.pixfmt = img->pixfmt;
     temp.data = fb_alloc(image_size(img), FB_ALLOC_NO_HINT);
     memcpy(temp.data, img->data, image_size(img));
     imlib_close(&temp, ksize, threshold, mask);

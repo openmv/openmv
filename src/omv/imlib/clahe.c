@@ -326,11 +326,11 @@ void imlib_clahe_histeq(image_t *img, float clip_limit, image_t *mask)
     image_t temp;
     temp.w = img->w;
     temp.h = img->h;
-    temp.bpp = img->bpp;
+    temp.pixfmt = img->pixfmt;
     temp.data = fb_alloc0(pImageW * pImageH * sizeof(kz_pixel_t), FB_ALLOC_NO_HINT);
 
-    switch(img->bpp) {
-        case IMAGE_BPP_BINARY: {
+    switch (img->pixfmt) {
+        case PIXFORMAT_BINARY: {
             for (int y = 0, yy = img->h; y < yy; y++) {
                 uint8_t *clahe_row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(&temp, y + yOffset);
                 uint32_t *row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(img, y);
@@ -341,7 +341,7 @@ void imlib_clahe_histeq(image_t *img, float clip_limit, image_t *mask)
             }
             break;
         }
-        case IMAGE_BPP_GRAYSCALE: {
+        case PIXFORMAT_GRAYSCALE: {
             for (int y = 0, yy = img->h; y < yy; y++) {
                 uint8_t *clahe_row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(&temp, y + yOffset);
                 uint8_t *row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(img, y);
@@ -352,7 +352,7 @@ void imlib_clahe_histeq(image_t *img, float clip_limit, image_t *mask)
             }
             break;
         }
-        case IMAGE_BPP_RGB565: {
+        case PIXFORMAT_RGB565: {
             for (int y = 0, yy = img->h; y < yy; y++) {
                 uint8_t *clahe_row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(&temp, y + yOffset);
                 uint16_t *row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(img, y);
@@ -375,8 +375,8 @@ void imlib_clahe_histeq(image_t *img, float clip_limit, image_t *mask)
           COLOR_GRAYSCALE_MAX - COLOR_GRAYSCALE_MIN + 1,
           clip_limit);
 
-    switch(img->bpp) {
-        case IMAGE_BPP_BINARY: {
+    switch (img->pixfmt) {
+        case PIXFORMAT_BINARY: {
             for (int y = 0, yy = img->h; y < yy; y++) {
                 uint8_t *clahe_row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(&temp, y + yOffset);
                 uint32_t *row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(img, y);
@@ -388,7 +388,7 @@ void imlib_clahe_histeq(image_t *img, float clip_limit, image_t *mask)
             }
             break;
         }
-        case IMAGE_BPP_GRAYSCALE: {
+        case PIXFORMAT_GRAYSCALE: {
             for (int y = 0, yy = img->h; y < yy; y++) {
                 uint8_t *clahe_row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(&temp, y + yOffset);
                 uint8_t *row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(img, y);
@@ -400,7 +400,7 @@ void imlib_clahe_histeq(image_t *img, float clip_limit, image_t *mask)
             }
             break;
         }
-        case IMAGE_BPP_RGB565: {
+        case PIXFORMAT_RGB565: {
             for (int y = 0, yy = img->h; y < yy; y++) {
                 uint8_t *clahe_row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(&temp, y + yOffset);
                 uint16_t *row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(img, y);
