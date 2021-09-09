@@ -2728,7 +2728,7 @@ void imlib_draw_image(image_t *dst_img, image_t *src_img, int dst_x_start, int d
             switch (new_src_img.pixfmt) {
                 case PIXFORMAT_BINARY: {
                     if (src_img->is_bayer) {
-                        imlib_debayer_image_to_binary(&new_src_img, src_img);
+                        imlib_debayer_image(&new_src_img, src_img);
                     } else if (src_img->pixfmt == PIXFORMAT_JPEG) {
                         jpeg_decompress_image_to_binary(&new_src_img, src_img);
                     }
@@ -2736,7 +2736,7 @@ void imlib_draw_image(image_t *dst_img, image_t *src_img, int dst_x_start, int d
                 }
                 case PIXFORMAT_GRAYSCALE: {
                     if (src_img->is_bayer) {
-                        imlib_debayer_image_to_grayscale(&new_src_img, src_img);
+                        imlib_debayer_image(&new_src_img, src_img);
                     } else if (src_img->pixfmt == PIXFORMAT_JPEG) {
                         jpeg_decompress_image_to_grayscale(&new_src_img, src_img);
                     }
@@ -2744,7 +2744,7 @@ void imlib_draw_image(image_t *dst_img, image_t *src_img, int dst_x_start, int d
                 }
                 case PIXFORMAT_RGB565: {
                     if (src_img->is_bayer) {
-                        imlib_debayer_image_to_rgb565(&new_src_img, src_img);
+                        imlib_debayer_image(&new_src_img, src_img);
                     } else if (src_img->pixfmt == PIXFORMAT_JPEG) {
                         jpeg_decompress_image_to_rgb565(&new_src_img, src_img);
                     }
@@ -2888,7 +2888,7 @@ void imlib_draw_image(image_t *dst_img, image_t *src_img, int dst_x_start, int d
                                 for (int i = src_y_index; i < src_y_index_end; i++) {
                                     uint8_t *src_row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(src_img, i) + src_x_index;
                                     int n = width;
-#if defined(MCU_SERIES_F4) || defined(MCU_SERIES_F7) || defined(MCU_SERIES_H7)
+#if defined(ARM_MATH_DSP)
                                     uint16_t *src_row_ptr16 = (uint16_t *) src_row_ptr;
 
                                     for (; n > 1; n -= 2) {
@@ -2906,7 +2906,7 @@ void imlib_draw_image(image_t *dst_img, image_t *src_img, int dst_x_start, int d
                                 for (int i = src_y_index; i < src_y_index_end; i++) {
                                     uint8_t *src_row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(src_img, i) + src_x_index;
                                     int n = width;
-#if defined(MCU_SERIES_F4) || defined(MCU_SERIES_F7) || defined(MCU_SERIES_H7)
+#if defined(ARM_MATH_DSP)
                                     uint32_t *src_row_ptr32 = (uint32_t *) src_row_ptr;
 
                                     for (; n > 3; n -= 4) {
@@ -2972,7 +2972,7 @@ void imlib_draw_image(image_t *dst_img, image_t *src_img, int dst_x_start, int d
                             for (int i = src_y_index; i < src_y_index_end; i++) {
                                 uint16_t *src_row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(src_img, i) + src_x_index;
                                 int n = width;
-#if defined(MCU_SERIES_F4) || defined(MCU_SERIES_F7) || defined(MCU_SERIES_H7)
+#if defined(ARM_MATH_DSP)
                                 uint32_t *src_row_ptr32 = (uint32_t *) src_row_ptr;
 
                                 for (; n > 1; n -= 2) {
@@ -3248,7 +3248,7 @@ void imlib_draw_image(image_t *dst_img, image_t *src_img, int dst_x_start, int d
                                     for (int i = src_y_index_p_1; i < src_y_index_end; i++) {
                                         uint8_t *src_row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(src_img, i) + src_x_index_p_1;
                                         int n = x_width_m_2;
-#if defined(MCU_SERIES_F4) || defined(MCU_SERIES_F7) || defined(MCU_SERIES_H7)
+#if defined(ARM_MATH_DSP)
                                         uint16_t *src_row_ptr16 = (uint16_t *) src_row_ptr;
 
                                         for (; n > 1; n -= 2) {
@@ -3266,7 +3266,7 @@ void imlib_draw_image(image_t *dst_img, image_t *src_img, int dst_x_start, int d
                                     for (int i = src_y_index_p_1; i < src_y_index_end; i++) {
                                         uint8_t *src_row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(src_img, i) + src_x_index_p_1;
                                         int n = x_width_m_2;
-#if defined(MCU_SERIES_F4) || defined(MCU_SERIES_F7) || defined(MCU_SERIES_H7)
+#if defined(ARM_MATH_DSP)
                                         uint32_t *src_row_ptr32 = (uint32_t *) src_row_ptr;
 
                                         for (; n > 4; n -= 4) {
@@ -3447,7 +3447,7 @@ void imlib_draw_image(image_t *dst_img, image_t *src_img, int dst_x_start, int d
                                 for (int i = src_y_index_p_1; i < src_y_index_end; i++) {
                                     uint16_t *src_row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(src_img, i) + src_x_index_p_1;
                                     int n = x_width_m_2;
-#if defined(MCU_SERIES_F4) || defined(MCU_SERIES_F7) || defined(MCU_SERIES_H7)
+#if defined(ARM_MATH_DSP)
                                     uint32_t *src_row_ptr32 = (uint32_t *) src_row_ptr;
 
                                     for (; n > 1; n -= 2) {
@@ -3945,7 +3945,7 @@ void imlib_draw_image(image_t *dst_img, image_t *src_img, int dst_x_start, int d
                             int src_x_index = next_src_x_index;
                             int src_x_index_m_1 = src_x_index - 1;
                             int src_x_index_p_1 = src_x_index + 1;
-#if defined(MCU_SERIES_F4) || defined(MCU_SERIES_F7) || defined(MCU_SERIES_H7)
+#if defined(ARM_MATH_DSP)
                             uint32_t pixel_row_0[2], pixel_row_1[2], pixel_row_2[2], pixel_row_3[2];
                             // Column 0 = Bits[15:0]
                             // Column 1 = Bits[31:16]
@@ -4623,22 +4623,11 @@ void imlib_draw_image(image_t *dst_img, image_t *src_img, int dst_x_start, int d
                 case PIXFORMAT_BAYER_ANY: {
                     while (y_not_done) {
                         switch (is_bayer_or_jpeg_pixfmt) {
-                            case PIXFORMAT_BINARY: {
-                                uint32_t *dst_row_ptr = imlib_draw_row_get_row_buffer(&imlib_draw_row_data);
-                                imlib_debayer_line_to_binary(dst_x_start, dst_x_end, next_src_y_index,
-                                                             dst_row_ptr, src_img);
-                                break;
-                            }
-                            case PIXFORMAT_GRAYSCALE: {
-                                uint8_t *dst_row_ptr = imlib_draw_row_get_row_buffer(&imlib_draw_row_data);
-                                imlib_debayer_line_to_grayscale(dst_x_start, dst_x_end, next_src_y_index,
-                                                                dst_row_ptr, src_img);
-                                break;
-                            }
+                            case PIXFORMAT_BINARY:
+                            case PIXFORMAT_GRAYSCALE:
                             case PIXFORMAT_RGB565: {
-                                uint16_t *dst_row_ptr = imlib_draw_row_get_row_buffer(&imlib_draw_row_data);
-                                imlib_debayer_line_to_rgb565(dst_x_start, dst_x_end, next_src_y_index,
-                                                             dst_row_ptr, src_img);
+                                imlib_debayer_line(dst_x_start, dst_x_end, next_src_y_index,
+                                                   imlib_draw_row_get_row_buffer(&imlib_draw_row_data), is_bayer_or_jpeg_pixfmt, src_img);
                                 break;
                             }
                             case PIXFORMAT_BAYER_ANY: { // Bayer images have the same shape as grayscale.

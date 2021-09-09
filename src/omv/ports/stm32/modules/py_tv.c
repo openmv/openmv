@@ -615,7 +615,7 @@ static void spi_tv_draw_image_cb_convert_grayscale(uint8_t *row_pointer_i, uint8
 static void spi_tv_draw_image_cb_convert_rgb565(uint16_t *row_pointer_i, uint8_t *row_pointer_o)
 {
     for (int i = 0, j = 0; i < TV_WIDTH; i += 2, j += 3) {
-        #if defined(MCU_SERIES_F4) || defined(MCU_SERIES_F7) || defined(MCU_SERIES_H7)
+        #if defined(ARM_MATH_DSP)
 
         int pixels = *((uint32_t *) (row_pointer_i + i));
         int r_pixels = ((pixels >> 8) & 0xf800f8) | ((pixels >> 13) & 0x70007);
