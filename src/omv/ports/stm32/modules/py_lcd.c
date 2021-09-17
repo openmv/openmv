@@ -18,6 +18,7 @@
 #include "py_lcd_cec.h"
 #include "py_lcd_touch.h"
 #include "py_helper.h"
+#include "py_image.h"
 #include "extmod/machine_i2c.h"
 #include "omv_boardconfig.h"
 #include STM32_HAL_H
@@ -1606,7 +1607,7 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_lcd_get_point_y_position_obj, py_lcd_get_poi
 
 STATIC mp_obj_t py_lcd_display(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
-    image_t *arg_img = py_helper_arg_to_image_mutable_bayer_jpeg(args[0]);
+    image_t *arg_img = py_image_cobj(args[0]);
 
     int arg_x_off = 0;
     int arg_y_off = 0;

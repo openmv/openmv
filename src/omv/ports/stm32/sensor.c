@@ -627,7 +627,8 @@ void DCMI_DMAConvCpltUser(uint32_t addr)
             #if (OMV_ENABLE_SENSOR_MDMA == 1)
             mdma_memcpy(buffer, dst16, src16, sizeof(uint16_t), sensor.transpose);
             #else
-            if (sensor.hw_flags.rgb_swap) {
+            if ((sensor.pixformat == PIXFORMAT_RGB565 && sensor.hw_flags.rgb_swap)
+            ||  (sensor.pixformat == PIXFORMAT_YUV422 && sensor.hw_flags.yuv_swap)) {
                 if (!sensor.transpose) {
                     unaligned_memcpy_rev16(dst16, src16, MAIN_FB()->u);
                 } else {
@@ -668,7 +669,8 @@ static void mdma_config(MDMA_InitTypeDef *init, sensor_t *sensor, uint32_t bytes
     init->SourceBlockAddressOffset  = 0;
     init->DestBlockAddressOffset    = 0;
 
-    if ((sensor->pixformat == PIXFORMAT_RGB565) && sensor->hw_flags.rgb_swap) {
+    if ((sensor->pixformat == PIXFORMAT_RGB565 && sensor->hw_flags.rgb_swap)
+    ||  (sensor->pixformat == PIXFORMAT_YUV422 && sensor->hw_flags.yuv_swap)) {
         init->Endianness = MDMA_LITTLE_BYTE_ENDIANNESS_EXCHANGE;
     } else {
         init->Endianness = MDMA_LITTLE_ENDIANNESS_PRESERVE;
@@ -963,7 +965,6 @@ int sensor_snapshot(sensor_t *sensor, image_t *image, uint32_t flags)
             #endif
             break;
         case PIXFORMAT_RGB565:
-        case PIXFORMAT_YUV422:
             MAIN_FB()->pixfmt = PIXFORMAT_RGB565;
             #if (OMV_ENABLE_SENSOR_MDMA == 1)
             // Flush data for MDMA
@@ -978,6 +979,17 @@ int sensor_snapshot(sensor_t *sensor, image_t *image, uint32_t flags)
             SCB_InvalidateDCache_by_Addr(buffer->data, w * h);
             #endif
             break;
+        case PIXFORMAT_YUV422: {
+            bool yuv_order = sensor->hw_flags.yuv_order == SENSOR_HW_FLAGS_YUV422;
+            int even = yuv_order ? PIXFORMAT_YUV422 : PIXFORMAT_YVU422;
+            int odd = yuv_order ? PIXFORMAT_YVU422 : PIXFORMAT_YUV422;
+            MAIN_FB()->pixfmt = (MAIN_FB()->x % 2) ? odd : even;
+            #if (OMV_ENABLE_SENSOR_MDMA == 1)
+            // Flush data for MDMA
+            SCB_InvalidateDCache_by_Addr(buffer->data, w * h * sizeof(uint16_t));
+            #endif
+            break;
+        }
         case PIXFORMAT_JPEG: {
             int32_t size = 0;
             if (sensor->chip_id == OV5640_ID) {
@@ -998,7 +1010,6 @@ int sensor_snapshot(sensor_t *sensor, image_t *image, uint32_t flags)
                 SCB_InvalidateDCache_by_Addr(buffer->data, size);
                 #endif
             }
-
             // Clean trailing data after 0xFFD9 at the end of the jpeg byte stream.
             MAIN_FB()->pixfmt = PIXFORMAT_JPEG;
             MAIN_FB()->size = jpeg_clean_trailing_bytes(size, buffer->data);

@@ -748,7 +748,7 @@ static int set_pixformat(sensor_t *sensor, pixformat_t pixformat)
             break;
         case PIXFORMAT_BAYER:
             // Make sure odd/even row are switched to work with our bayer conversion.
-            ret |= cambus_writeb(&sensor->bus, sensor->slv_addr, 
+            ret |= cambus_writeb(&sensor->bus, sensor->slv_addr,
                     REG_SYNC_MODE, REG_SYNC_MODE_DEF | REG_SYNC_MODE_ROW_SWITCH);
             ret |= cambus_writeb(&sensor->bus, sensor->slv_addr,
                     REG_OUTPUT_FMT, REG_OUTPUT_SET_FMT(reg, REG_OUTPUT_FMT_BAYER));
@@ -881,6 +881,7 @@ int gc2145_init(sensor_t *sensor)
     sensor->hw_flags.jpege      = 0;
     sensor->hw_flags.gs_bpp     = 2;
     sensor->hw_flags.rgb_swap   = 1;
+    sensor->hw_flags.yuv_order  = SENSOR_HW_FLAGS_YVU422;
 
     return 0;
 }

@@ -2444,9 +2444,18 @@ void imlib_draw_row(int x_start, int x_end, int y_row, imlib_draw_row_data_t *da
         case PIXFORMAT_BAYER_ANY: {
             uint8_t *dst8 = (data->dst_row_override
                 ? ((uint8_t *) data->dst_row_override)
-                : IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(data->dst_img, y_row)) + x_start;
+                : IMAGE_COMPUTE_BAYER_PIXEL_ROW_PTR(data->dst_img, y_row)) + x_start;
             uint8_t *src8 = ((uint8_t *) data->row_buffer[!data->toggle]) + x_start;
             unaligned_memcpy(dst8, src8, (x_end - x_start) * sizeof(uint8_t));
+            break;
+        }
+        // Only yuv422 copying/cropping is supported.
+        case PIXFORMAT_YUV_ANY: {
+            uint16_t *dst16 = (data->dst_row_override
+                ? ((uint16_t *) data->dst_row_override)
+                : IMAGE_COMPUTE_YUV_PIXEL_ROW_PTR(data->dst_img, y_row)) + x_start;
+            uint16_t *src16 = ((uint16_t *) data->row_buffer[!data->toggle]) + x_start;
+            unaligned_memcpy(dst16, src16, (x_end - x_start) * sizeof(uint16_t));
             break;
         }
         default: {
@@ -2673,7 +2682,7 @@ void imlib_draw_image(image_t *dst_img, image_t *src_img, int dst_x_start, int d
     // rgb_channel extracted / color_palette applied image
     image_t new_src_img;
 
-    if (((hint & IMAGE_HINT_EXTRACT_RGB_CHANNEL_FIRST) && (rgb_channel != -1) && IMAGE_IS_COLOR(src_img))
+    if (((hint & IMAGE_HINT_EXTRACT_RGB_CHANNEL_FIRST) && (rgb_channel != -1) && src_img->is_color)
     || ((hint & IMAGE_HINT_APPLY_COLOR_PALETTE_FIRST) && color_palette)) {
         new_src_img.w = src_img_w; // same width as source image
         new_src_img.h = src_img_h; // same height as source image
@@ -2687,11 +2696,10 @@ void imlib_draw_image(image_t *dst_img, image_t *src_img, int dst_x_start, int d
 
     // Special destination?
     bool is_jpeg = (src_img->pixfmt == PIXFORMAT_JPEG);
-    bool is_bayer_or_jpeg = src_img->is_bayer || is_jpeg;
-    // Best format to convert bayer/jpeg image to.
-    int is_bayer_or_jpeg_pixfmt = (rgb_channel != -1) ? PIXFORMAT_RGB565 :
-                                  (color_palette ? PIXFORMAT_GRAYSCALE :
-                                  dst_img->pixfmt);
+    // Best format to convert yuv/bayer/jpeg image to.
+    int new_not_mutable_pixfmt = (rgb_channel != -1) ? PIXFORMAT_RGB565 :
+            (color_palette ? PIXFORMAT_GRAYSCALE :
+            dst_img->pixfmt);
 
     bool no_scaling_nearest_neighbor = (dst_delta_x == 1)
             && (dst_x_start == 0) && (src_x_start == 0)
@@ -2707,21 +2715,23 @@ void imlib_draw_image(image_t *dst_img, image_t *src_img, int dst_x_start, int d
 
     // Do we need to convert the image?
     bool is_bayer_color_conversion = src_img->is_bayer && !dst_img->is_bayer;
+    bool is_yuv_color_conversion = src_img->is_yuv && !dst_img->is_yuv;
+    bool is_color_conversion = is_bayer_color_conversion || is_yuv_color_conversion;
 
     // Force a deep copy if we cannot use the image in-place.
     bool need_deep_copy = (dst_img->data == src_img->data)
-            && (is_scaling || (src_img_row_bytes < dst_img_row_bytes) || is_bayer_color_conversion);
+            && (is_scaling || (src_img_row_bytes < dst_img_row_bytes) || is_color_conversion);
 
     // Force a deep copy if we are scaling.
-    bool is_bayer_scaling = is_bayer_color_conversion && is_scaling;
+    bool is_color_conversion_scaling = is_color_conversion && is_scaling;
 
     // Make a deep copy of the source image.
-    if (need_deep_copy || is_bayer_scaling || is_jpeg) {
+    if (need_deep_copy || is_color_conversion_scaling || is_jpeg) {
         new_src_img.w = src_img->w; // same width as source image
         new_src_img.h = src_img->h; // same height as source image
 
-        if (is_bayer_or_jpeg) {
-            new_src_img.pixfmt = is_bayer_or_jpeg_pixfmt;
+        if (!src_img->is_mutable) {
+            new_src_img.pixfmt = new_not_mutable_pixfmt;
             size_t size = image_size(&new_src_img);
             new_src_img.data = fb_alloc(size, FB_ALLOC_NO_HINT);
 
@@ -2729,7 +2739,9 @@ void imlib_draw_image(image_t *dst_img, image_t *src_img, int dst_x_start, int d
                 case PIXFORMAT_BINARY: {
                     if (src_img->is_bayer) {
                         imlib_debayer_image(&new_src_img, src_img);
-                    } else if (src_img->pixfmt == PIXFORMAT_JPEG) {
+                    } else if (src_img->is_yuv) {
+                        imlib_deyuv_image(&new_src_img, src_img);
+                    } else if (is_jpeg) {
                         jpeg_decompress_image_to_binary(&new_src_img, src_img);
                     }
                     break;
@@ -2737,7 +2749,9 @@ void imlib_draw_image(image_t *dst_img, image_t *src_img, int dst_x_start, int d
                 case PIXFORMAT_GRAYSCALE: {
                     if (src_img->is_bayer) {
                         imlib_debayer_image(&new_src_img, src_img);
-                    } else if (src_img->pixfmt == PIXFORMAT_JPEG) {
+                    } else if (src_img->is_yuv) {
+                        imlib_deyuv_image(&new_src_img, src_img);
+                    } else if (is_jpeg) {
                         jpeg_decompress_image_to_grayscale(&new_src_img, src_img);
                     }
                     break;
@@ -2745,12 +2759,15 @@ void imlib_draw_image(image_t *dst_img, image_t *src_img, int dst_x_start, int d
                 case PIXFORMAT_RGB565: {
                     if (src_img->is_bayer) {
                         imlib_debayer_image(&new_src_img, src_img);
-                    } else if (src_img->pixfmt == PIXFORMAT_JPEG) {
+                    } else if (src_img->is_yuv) {
+                        imlib_deyuv_image(&new_src_img, src_img);
+                    } else if (is_jpeg) {
                         jpeg_decompress_image_to_rgb565(&new_src_img, src_img);
                     }
                     break;
                 }
-                case PIXFORMAT_BAYER_ANY: {
+                case PIXFORMAT_BAYER_ANY:
+                case PIXFORMAT_YUV_ANY: {
                     memcpy(new_src_img.data, src_img->data, size);
                     break;
                 }
@@ -2770,7 +2787,7 @@ void imlib_draw_image(image_t *dst_img, image_t *src_img, int dst_x_start, int d
 
     imlib_draw_row_data_t imlib_draw_row_data;
     imlib_draw_row_data.dst_img = dst_img;
-    imlib_draw_row_data.src_img_pixfmt = is_bayer_or_jpeg ? is_bayer_or_jpeg_pixfmt : src_img->pixfmt;
+    imlib_draw_row_data.src_img_pixfmt = (!src_img->is_mutable) ? new_not_mutable_pixfmt : src_img->pixfmt;
     imlib_draw_row_data.rgb_channel = rgb_channel;
     imlib_draw_row_data.alpha = alpha;
     imlib_draw_row_data.color_palette = color_palette;
@@ -4538,7 +4555,9 @@ void imlib_draw_image(image_t *dst_img, image_t *src_img, int dst_x_start, int d
                     } // while y
                     break;
                 }
-                case PIXFORMAT_RGB565: {
+                case PIXFORMAT_RGB565:
+                // Re-use RGB565 for yuv.
+                case PIXFORMAT_YUV_ANY: {
                     while (y_not_done) {
                         uint16_t *src_row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(src_img, next_src_y_index);
                         // Must be called per loop to get the address of the temp buffer to blend with
@@ -4622,16 +4641,44 @@ void imlib_draw_image(image_t *dst_img, image_t *src_img, int dst_x_start, int d
                 }
                 case PIXFORMAT_BAYER_ANY: {
                     while (y_not_done) {
-                        switch (is_bayer_or_jpeg_pixfmt) {
-                            case PIXFORMAT_BINARY:
-                            case PIXFORMAT_GRAYSCALE:
-                            case PIXFORMAT_RGB565: {
+                        switch (new_not_mutable_pixfmt) {
+                            case PIXFORMAT_MUTABLE_ANY: {
                                 imlib_debayer_line(dst_x_start, dst_x_end, next_src_y_index,
-                                                   imlib_draw_row_get_row_buffer(&imlib_draw_row_data), is_bayer_or_jpeg_pixfmt, src_img);
+                                                   imlib_draw_row_get_row_buffer(&imlib_draw_row_data),
+                                                   new_not_mutable_pixfmt, src_img);
                                 break;
                             }
-                            case PIXFORMAT_BAYER_ANY: { // Bayer images have the same shape as grayscale.
-                                uint8_t *src_row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(src_img, next_src_y_index);
+                            case PIXFORMAT_BAYER_ANY: { // Bayer images have the same shape as GRAYSCALE.
+                                uint8_t *src_row_ptr = IMAGE_COMPUTE_BAYER_PIXEL_ROW_PTR(src_img, next_src_y_index);
+                                imlib_draw_row_put_row_buffer(&imlib_draw_row_data, src_row_ptr);
+                                break;
+                            }
+                            default : {
+                                break;
+                            }
+                        }
+
+                        imlib_draw_row(dst_x_start, dst_x_end, dst_y, &imlib_draw_row_data);
+
+                        // Increment offsets
+                        dst_y += dst_delta_y;
+                        src_y_accum += src_y_frac;
+                        next_src_y_index = src_y_accum >> 16;
+                        y_not_done = ++y < dst_y_end;
+                    } // while y
+                    break;
+                }
+                case PIXFORMAT_YUV_ANY: {
+                    while (y_not_done) {
+                        switch (new_not_mutable_pixfmt) {
+                            case PIXFORMAT_MUTABLE_ANY: {
+                                imlib_deyuv_line(dst_x_start, dst_x_end, next_src_y_index,
+                                                 imlib_draw_row_get_row_buffer(&imlib_draw_row_data),
+                                                 new_not_mutable_pixfmt, src_img);
+                                break;
+                            }
+                            case PIXFORMAT_YUV_ANY: { // YUV images have the same shape as RGB565.
+                                uint16_t *src_row_ptr = IMAGE_COMPUTE_YUV_PIXEL_ROW_PTR(src_img, next_src_y_index);
                                 imlib_draw_row_put_row_buffer(&imlib_draw_row_data, src_row_ptr);
                                 break;
                             }
@@ -4743,7 +4790,9 @@ void imlib_draw_image(image_t *dst_img, image_t *src_img, int dst_x_start, int d
                 } // while y
                 break;
             }
-            case PIXFORMAT_RGB565: {
+            case PIXFORMAT_RGB565:
+            // Re-use RGB565 for yuv.
+            case PIXFORMAT_YUV_ANY: {
                 while (y_not_done) {
                     int src_y_index = next_src_y_index;
                     uint16_t *src_row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(src_img, src_y_index);

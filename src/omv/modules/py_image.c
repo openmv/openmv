@@ -312,8 +312,8 @@ STATIC mp_obj_t py_image_it_iternext(mp_obj_t self_in)
                 return row;
             }
         }
-        case PIXFORMAT_BAYER_ANY:
-        case PIXFORMAT_GRAYSCALE: {
+        case PIXFORMAT_GRAYSCALE:
+        case PIXFORMAT_BAYER_ANY: {
             if (self->cur >= img->h) {
                 return MP_OBJ_STOP_ITERATION;
             } else {
@@ -325,7 +325,8 @@ STATIC mp_obj_t py_image_it_iternext(mp_obj_t self_in)
                 return row;
             }
         }
-        case PIXFORMAT_RGB565: {
+        case PIXFORMAT_RGB565:
+        case PIXFORMAT_YUV_ANY: {
             if (self->cur >= img->h) {
                 return MP_OBJ_STOP_ITERATION;
             } else {
@@ -373,8 +374,13 @@ static void py_image_print(const mp_print_t *print, mp_obj_t self, mp_print_kind
                 (image->pixfmt == PIXFORMAT_BINARY)     ? "binary" :
                 (image->pixfmt == PIXFORMAT_GRAYSCALE)  ? "grayscale" :
                 (image->pixfmt == PIXFORMAT_RGB565)     ? "rgb565" :
+                (image->pixfmt == PIXFORMAT_BAYER_BGGR) ? "bayer_bggr" :
+                (image->pixfmt == PIXFORMAT_BAYER_GBRG) ? "bayer_gbrg" :
+                (image->pixfmt == PIXFORMAT_BAYER_GRBG) ? "bayer_grbg" :
+                (image->pixfmt == PIXFORMAT_BAYER_RGGB) ? "bayer_rggb" :
                 (image->pixfmt == PIXFORMAT_YUV422)     ? "yuv422" :
-                (image->pixfmt == PIXFORMAT_JPEG)       ? "jpeg" : "bayer",
+                (image->pixfmt == PIXFORMAT_YVU422)     ? "yvu422" :
+                (image->pixfmt == PIXFORMAT_JPEG)       ? "jpeg" : "unknown",
                 image_size(image));
     }
 }
@@ -401,8 +407,8 @@ static mp_obj_t py_image_subscr(mp_obj_t self_in, mp_obj_t index, mp_obj_t value
                 mp_uint_t i = mp_get_index(self->base.type, image->w * image->h, index, false);
                 return mp_obj_new_int(IMAGE_GET_BINARY_PIXEL(image, i % image->w, i / image->w));
             }
-            case PIXFORMAT_BAYER_ANY:
-            case PIXFORMAT_GRAYSCALE: {
+            case PIXFORMAT_GRAYSCALE:
+            case PIXFORMAT_BAYER_ANY: {
                 if (MP_OBJ_IS_TYPE(index, &mp_type_slice)) {
                     mp_bound_slice_t slice;
                     if (!mp_seq_get_fast_slice_indexes(image->w * image->h, index, &slice)) {
@@ -419,7 +425,8 @@ static mp_obj_t py_image_subscr(mp_obj_t self_in, mp_obj_t index, mp_obj_t value
                 uint8_t p = IMAGE_GET_GRAYSCALE_PIXEL(image, i % image->w, i / image->w);
                 return mp_obj_new_int(p);
             }
-            case PIXFORMAT_RGB565: {
+            case PIXFORMAT_RGB565:
+            case PIXFORMAT_YUV_ANY: {
                 if (MP_OBJ_IS_TYPE(index, &mp_type_slice)) {
                     mp_bound_slice_t slice;
                     if (!mp_seq_get_fast_slice_indexes(image->w * image->h, index, &slice)) {
@@ -428,17 +435,27 @@ static mp_obj_t py_image_subscr(mp_obj_t self_in, mp_obj_t index, mp_obj_t value
                     mp_obj_tuple_t *result = mp_obj_new_tuple(slice.stop - slice.start, NULL);
                     for (mp_uint_t i = 0; i < result->len; i++) {
                         uint16_t p = IMAGE_GET_RGB565_PIXEL(image, (slice.start + i) % image->w, (slice.start + i) / image->w);
-                        result->items[i] = mp_obj_new_tuple(3, (mp_obj_t []) {mp_obj_new_int(COLOR_RGB565_TO_R8(p)),
-                                                                              mp_obj_new_int(COLOR_RGB565_TO_G8(p)),
-                                                                              mp_obj_new_int(COLOR_RGB565_TO_B8(p))});
+                        if (image->is_yuv) {
+                            result->items[i] = mp_obj_new_tuple(2, (mp_obj_t []) {mp_obj_new_int(p & 0xff),
+                                                                                  mp_obj_new_int((p >> 8) & 0xff)});
+                        } else {
+                            result->items[i] = mp_obj_new_tuple(3, (mp_obj_t []) {mp_obj_new_int(COLOR_RGB565_TO_R8(p)),
+                                                                                  mp_obj_new_int(COLOR_RGB565_TO_G8(p)),
+                                                                                  mp_obj_new_int(COLOR_RGB565_TO_B8(p))});
+                        }
                     }
                     return result;
                 }
                 mp_uint_t i = mp_get_index(self->base.type, image->w * image->h, index, false);
                 uint16_t p = IMAGE_GET_RGB565_PIXEL(image, i % image->w, i / image->w);
-                return mp_obj_new_tuple(3, (mp_obj_t []) {mp_obj_new_int(COLOR_RGB565_TO_R8(p)),
-                                                          mp_obj_new_int(COLOR_RGB565_TO_G8(p)),
-                                                          mp_obj_new_int(COLOR_RGB565_TO_B8(p))});
+                if (image->is_yuv) {
+                    return mp_obj_new_tuple(2, (mp_obj_t []) {mp_obj_new_int(p & 0xff),
+                                                              mp_obj_new_int((p >> 8) & 0xff)});
+                } else {
+                    return mp_obj_new_tuple(3, (mp_obj_t []) {mp_obj_new_int(COLOR_RGB565_TO_R8(p)),
+                                                              mp_obj_new_int(COLOR_RGB565_TO_G8(p)),
+                                                              mp_obj_new_int(COLOR_RGB565_TO_B8(p))});
+                }
             }
             case PIXFORMAT_JPEG: {
                 if (MP_OBJ_IS_TYPE(index, &mp_type_slice)) {
@@ -486,8 +503,8 @@ static mp_obj_t py_image_subscr(mp_obj_t self_in, mp_obj_t index, mp_obj_t value
                 IMAGE_PUT_BINARY_PIXEL(image, i % image->w, i / image->w, mp_obj_get_int(value));
                 return mp_const_none;
             }
-            case PIXFORMAT_BAYER_ANY:
-            case PIXFORMAT_GRAYSCALE: {
+            case PIXFORMAT_GRAYSCALE:
+            case PIXFORMAT_BAYER_ANY: {
                 if (MP_OBJ_IS_TYPE(index, &mp_type_slice)) {
                     mp_bound_slice_t slice;
                     if (!mp_seq_get_fast_slice_indexes(image->w * image->h, index, &slice)) {
@@ -515,7 +532,8 @@ static mp_obj_t py_image_subscr(mp_obj_t self_in, mp_obj_t index, mp_obj_t value
                 IMAGE_PUT_GRAYSCALE_PIXEL(image, i % image->w, i / image->w, p);
                 return mp_const_none;
             }
-            case PIXFORMAT_RGB565: {
+            case PIXFORMAT_RGB565:
+            case PIXFORMAT_YUV_ANY: {
                 if (MP_OBJ_IS_TYPE(index, &mp_type_slice)) {
                     mp_bound_slice_t slice;
                     if (!mp_seq_get_fast_slice_indexes(image->w * image->h, index, &slice)) {
@@ -528,16 +546,36 @@ static mp_obj_t py_image_subscr(mp_obj_t self_in, mp_obj_t index, mp_obj_t value
                         PY_ASSERT_TRUE_MSG(value_l_len == (slice.stop - slice.start), "cannot grow or shrink image");
                         for (mp_uint_t i = 0; i < (slice.stop - slice.start); i++) {
                             mp_obj_t *value_2;
-                            mp_obj_get_array_fixed_n(value_l[i], 3, &value_2);
-                            uint16_t p = COLOR_R8_G8_B8_TO_RGB565(mp_obj_get_int(value_2[0]), mp_obj_get_int(value_2[1]), mp_obj_get_int(value_2[2]));
-                            IMAGE_PUT_RGB565_PIXEL(image, (slice.start + i) % image->w, (slice.start + i) / image->w, p);
+                            uint16_t p;
+                            if (image->is_yuv) {
+                                mp_obj_get_array_fixed_n(value_l[i], 2, &value_2);
+                                p = (mp_obj_get_int(value_2[0]) & 0xff) |
+                                    (mp_obj_get_int(value_2[1]) & 0xff) << 8;
+                            } else {
+                                mp_obj_get_array_fixed_n(value_l[i], 3, &value_2);
+                                p = COLOR_R8_G8_B8_TO_RGB565(mp_obj_get_int(value_2[0]),
+                                                             mp_obj_get_int(value_2[1]),
+                                                             mp_obj_get_int(value_2[2]));
+                            }
+                            IMAGE_PUT_RGB565_PIXEL(image, (slice.start + i) % image->w,
+                                                          (slice.start + i) / image->w, p);
                         }
                     } else {
                         mp_obj_t *value_2;
-                        mp_obj_get_array_fixed_n(value, 3, &value_2);
-                        uint16_t p = COLOR_R8_G8_B8_TO_RGB565(mp_obj_get_int(value_2[0]), mp_obj_get_int(value_2[1]), mp_obj_get_int(value_2[2]));
+                        uint16_t p;
+                        if (image->is_yuv) {
+                            mp_obj_get_array_fixed_n(value, 2, &value_2);
+                            p = (mp_obj_get_int(value_2[0]) & 0xff) |
+                                (mp_obj_get_int(value_2[1]) & 0xff) << 8;
+                        } else {
+                            mp_obj_get_array_fixed_n(value, 3, &value_2);
+                            p = COLOR_R8_G8_B8_TO_RGB565(mp_obj_get_int(value_2[0]),
+                                                         mp_obj_get_int(value_2[1]),
+                                                         mp_obj_get_int(value_2[2]));
+                        }
                         for (mp_uint_t i = 0; i < (slice.stop - slice.start); i++) {
-                            IMAGE_PUT_RGB565_PIXEL(image, (slice.start + i) % image->w, (slice.start + i) / image->w, p);
+                            IMAGE_PUT_RGB565_PIXEL(image, (slice.start + i) % image->w,
+                                                          (slice.start + i) / image->w, p);
                         }
                     }
                     return mp_const_none;
@@ -626,6 +664,8 @@ static mp_obj_t py_image_format(mp_obj_t img_obj)
             return mp_obj_new_int(PIXFORMAT_RGB565);
         case PIXFORMAT_BAYER_ANY:
             return mp_obj_new_int(PIXFORMAT_BAYER);
+        case PIXFORMAT_YUV_ANY:
+            return mp_obj_new_int(PIXFORMAT_YUV422);
         default:
             return mp_obj_new_int(PIXFORMAT_JPEG);
     }
@@ -647,7 +687,7 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_image_bytearray_obj, py_image_bytearray);
 
 STATIC mp_obj_t py_image_get_pixel(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
-    image_t *arg_img = py_helper_arg_to_image_mutable_bayer(args[0]);
+    image_t *arg_img = py_helper_arg_to_image_not_compressed(args[0]);
 
     const mp_obj_t *arg_vec;
     uint offset = py_helper_consume_array(n_args, args, 1, 2, &arg_vec);
@@ -707,7 +747,18 @@ STATIC mp_obj_t py_image_get_pixel(uint n_args, const mp_obj_t *args, mp_map_t *
                 pixel_tuple[2] = mp_obj_new_int(COLOR_RGB565_TO_B8(pixel));
                 return mp_obj_new_tuple(3, pixel_tuple);
             } else {
-                return mp_obj_new_int(IMAGE_GET_GRAYSCALE_PIXEL(arg_img, arg_x, arg_y)); // Correct!
+                return mp_obj_new_int(IMAGE_GET_BAYER_PIXEL(arg_img, arg_x, arg_y));
+            }
+        case PIXFORMAT_YUV_ANY:
+            if (arg_rgbtuple) {
+                uint16_t pixel; imlib_deyuv_line(arg_x, arg_x + 1, arg_y, &pixel, PIXFORMAT_RGB565, arg_img);
+                mp_obj_t pixel_tuple[3];
+                pixel_tuple[0] = mp_obj_new_int(COLOR_RGB565_TO_R8(pixel));
+                pixel_tuple[1] = mp_obj_new_int(COLOR_RGB565_TO_G8(pixel));
+                pixel_tuple[2] = mp_obj_new_int(COLOR_RGB565_TO_B8(pixel));
+                return mp_obj_new_tuple(3, pixel_tuple);
+            } else {
+                return mp_obj_new_int(IMAGE_GET_YUV_PIXEL(arg_img, arg_x, arg_y));
             }
         default: return mp_const_none;
     }
@@ -716,7 +767,7 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_get_pixel_obj, 2, py_image_get_pixel)
 
 STATIC mp_obj_t py_image_set_pixel(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
-    image_t *arg_img = py_helper_arg_to_image_mutable_bayer(args[0]);
+    image_t *arg_img = py_helper_arg_to_image_not_compressed(args[0]);
 
     const mp_obj_t *arg_vec;
     uint offset = py_helper_consume_array(n_args, args, 1, 2, &arg_vec);
@@ -735,16 +786,14 @@ STATIC mp_obj_t py_image_set_pixel(uint n_args, const mp_obj_t *args, mp_map_t *
             IMAGE_PUT_BINARY_PIXEL(arg_img, arg_x, arg_y, arg_c);
             return args[0];
         }
-        case PIXFORMAT_GRAYSCALE: {
+        case PIXFORMAT_GRAYSCALE:
+        case PIXFORMAT_BAYER_ANY: { // re-use
             IMAGE_PUT_GRAYSCALE_PIXEL(arg_img, arg_x, arg_y, arg_c);
             return args[0];
         }
-        case PIXFORMAT_RGB565: {
+        case PIXFORMAT_RGB565:
+        case PIXFORMAT_YUV_ANY: { // re-use
             IMAGE_PUT_RGB565_PIXEL(arg_img, arg_x, arg_y, arg_c);
-            return args[0];
-        }
-        case PIXFORMAT_BAYER_ANY: {
-            IMAGE_PUT_GRAYSCALE_PIXEL(arg_img, arg_x, arg_y, arg_c); // Correct!
             return args[0];
         }
         default: return args[0];
@@ -861,7 +910,7 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_midpoint_pooled_obj, 3, py_image_midp
 static mp_obj_t py_image_to(pixformat_t pixfmt, const uint16_t *default_color_palette, bool copy_to_fb,
                             uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
-    image_t *src_img = py_helper_arg_to_image_mutable_bayer_jpeg(args[0]);
+    image_t *src_img = py_image_cobj(args[0]);
 
     float arg_x_scale = 1.f;
     bool got_x_scale = py_helper_keyword_float_maybe(n_args, args, 1, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_x_scale), &arg_x_scale);
@@ -926,7 +975,7 @@ static mp_obj_t py_image_to(pixformat_t pixfmt, const uint16_t *default_color_pa
         if (mp_obj_is_integer(copy_obj)) {
             copy = mp_obj_get_int(copy_obj);
         } else {
-            arg_other = py_helper_arg_to_image_mutable_bayer(copy_obj);
+            arg_other = py_helper_arg_to_image_not_compressed(copy_obj);
         }
     }
 
@@ -997,6 +1046,24 @@ static mp_obj_t py_image_to(pixformat_t pixfmt, const uint16_t *default_color_pa
                 default: {
                     break;
                 }
+            }
+            hint &= ~(IMAGE_HINT_AREA |
+                      IMAGE_HINT_BICUBIC |
+                      IMAGE_HINT_BILINEAR |
+                      IMAGE_HINT_EXTRACT_RGB_CHANNEL_FIRST |
+                      IMAGE_HINT_APPLY_COLOR_PALETTE_FIRST);
+        }
+    } else if (dst_img.is_yuv) {
+        if (((arg_x_scale != 1) && (arg_x_scale != -1)) ||
+            ((arg_y_scale != 1) && (arg_y_scale != -1)) ||
+            (arg_rgb_channel != -1) ||
+            (arg_alpha != 256) ||
+            (color_palette != NULL) ||
+            (alpha_palette != NULL)) {
+            mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Only YUV422 copying/cropping is supported!"));
+        } else {
+            if (arg_roi.x % 2) {
+                dst_img.pixfmt = (dst_img.pixfmt == PIXFORMAT_YUV422) ? PIXFORMAT_YVU422 : PIXFORMAT_YUV422;
             }
             hint &= ~(IMAGE_HINT_AREA |
                       IMAGE_HINT_BICUBIC |
@@ -1138,7 +1205,7 @@ static mp_obj_t py_image_compress(uint n_args, const mp_obj_t *args, mp_map_t *k
 {
     if (IM_IS_JPEG((image_t *) py_image_cobj(args[0]))) return args[0];
 
-    image_t *arg_img = py_helper_arg_to_image_mutable_bayer(args[0]);
+    image_t *arg_img = py_helper_arg_to_image_not_compressed(args[0]);
     int arg_q = py_helper_keyword_int(n_args, args, 1, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_quality), 50);
     PY_ASSERT_TRUE_MSG((1 <= arg_q) && (arg_q <= 100), "Error: 1 <= quality <= 100!");
 
@@ -1158,7 +1225,7 @@ static mp_obj_t py_image_compress_for_ide(uint n_args, const mp_obj_t *args, mp_
 {
     if (IM_IS_JPEG((image_t *) py_image_cobj(args[0]))) return py_image_jpeg_encode_for_ide(args[0]);
 
-    image_t *arg_img = py_helper_arg_to_image_mutable_bayer(args[0]);
+    image_t *arg_img = py_helper_arg_to_image_not_compressed(args[0]);
     int arg_q = py_helper_keyword_int(n_args, args, 1, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_quality), 50);
     PY_ASSERT_TRUE_MSG((1 <= arg_q) && (arg_q <= 100), "Error: 1 <= quality <= 100!");
 
@@ -1186,7 +1253,7 @@ static mp_obj_t py_image_compressed(uint n_args, const mp_obj_t *args, mp_map_t 
         return py_image_from_struct(&out);
     }
 
-    arg_img = py_helper_arg_to_image_mutable_bayer(args[0]);
+    arg_img = py_helper_arg_to_image_not_compressed(args[0]);
     int arg_q = py_helper_keyword_int(n_args, args, 1, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_quality), 50);
     PY_ASSERT_TRUE_MSG((1 <= arg_q) && (arg_q <= 100), "Error: 1 <= quality <= 100!");
 
@@ -1206,7 +1273,7 @@ static mp_obj_t py_image_compressed_for_ide(uint n_args, const mp_obj_t *args, m
 {
     if (IM_IS_JPEG((image_t *) py_image_cobj(args[0]))) return py_image_jpeg_encoded_for_ide(args[0]);
 
-    image_t *arg_img = py_helper_arg_to_image_mutable_bayer(args[0]);
+    image_t *arg_img = py_helper_arg_to_image_not_compressed(args[0]);
     int arg_q = py_helper_keyword_int(n_args, args, 1, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_quality), 50);
     PY_ASSERT_TRUE_MSG((1 <= arg_q) && (arg_q <= 100), "Error: 1 <= quality <= 100!");
 
@@ -1258,7 +1325,7 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_image_flush_obj, py_image_flush);
 
 STATIC mp_obj_t py_image_clear(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
-    image_t *arg_img = py_helper_arg_to_image_mutable_bayer(args[0]);
+    image_t *arg_img = py_helper_arg_to_image_not_compressed(args[0]);
 
     image_t *arg_msk =
             py_helper_keyword_to_image_mutable_mask(n_args, args, 1, kw_args);
@@ -1515,7 +1582,7 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_draw_edges_obj, 2, py_image_draw_edge
 STATIC mp_obj_t py_image_draw_image(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
     image_t *arg_img = py_helper_arg_to_image_mutable(args[0]);
-    image_t *arg_other = py_helper_arg_to_image_mutable_bayer(args[1]);
+    image_t *arg_other = py_helper_arg_to_image_not_compressed(args[1]);
 
     const mp_obj_t *arg_vec;
     uint offset = py_helper_consume_array(n_args, args, 2, 2, &arg_vec);
@@ -5226,7 +5293,7 @@ static const mp_obj_type_t py_apriltag_type = {
 
 static mp_obj_t py_image_find_apriltags(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
-    image_t *arg_img = py_helper_arg_to_image_mutable_bayer_jpeg(args[0]);
+    image_t *arg_img = py_image_cobj(args[0]);
 
     rectangle_t roi;
     py_helper_keyword_rectangle_roi(arg_img, n_args, args, 1, kw_args, &roi);
@@ -6905,8 +6972,8 @@ static const mp_rom_map_elem_t globals_dict_table[] = {
     {MP_ROM_QSTR(MP_QSTR_BINARY),              MP_ROM_INT(PIXFORMAT_BINARY)},   /* 1BPP/BINARY*/
     {MP_ROM_QSTR(MP_QSTR_GRAYSCALE),           MP_ROM_INT(PIXFORMAT_GRAYSCALE)},/* 1BPP/GRAYSCALE*/
     {MP_ROM_QSTR(MP_QSTR_RGB565),              MP_ROM_INT(PIXFORMAT_RGB565)},   /* 2BPP/RGB565*/
-    {MP_ROM_QSTR(MP_QSTR_YUV422),              MP_ROM_INT(PIXFORMAT_YUV422)},   /* 2BPP/YUV422*/
     {MP_ROM_QSTR(MP_QSTR_BAYER),               MP_ROM_INT(PIXFORMAT_BAYER)},    /* 1BPP/RAW*/
+    {MP_ROM_QSTR(MP_QSTR_YUV422),              MP_ROM_INT(PIXFORMAT_YUV422)},   /* 2BPP/YUV422*/
     {MP_ROM_QSTR(MP_QSTR_JPEG),                MP_ROM_INT(PIXFORMAT_JPEG)},     /* JPEG/COMPRESSED*/
     {MP_ROM_QSTR(MP_QSTR_AREA),                MP_ROM_INT(IMAGE_HINT_AREA)},
     {MP_ROM_QSTR(MP_QSTR_BILINEAR),            MP_ROM_INT(IMAGE_HINT_BILINEAR)},

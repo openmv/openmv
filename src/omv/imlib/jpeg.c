@@ -148,7 +148,9 @@ static void jpeg_get_mcu(image_t *src, int x_offset, int y_offset, int dx, int d
         }
         case PIXFORMAT_RGB565: {
             if ((dx != MCU_W) || (dy != MCU_H)) { // partial MCU, fill with 0's to start
-                memset(Y0, 0, JPEG_444_YCBCR_MCU_SIZE);
+                memset(Y0, 0, JPEG_444_GS_MCU_SIZE);
+                memset(CB, 0, JPEG_444_GS_MCU_SIZE);
+                memset(CR, 0, JPEG_444_GS_MCU_SIZE);
             }
 
             for (int y = y_offset, yy = y + dy, index = 0; y < yy; y++) {
@@ -220,9 +222,79 @@ static void jpeg_get_mcu(image_t *src, int x_offset, int y_offset, int dx, int d
             }
             break;
         }
+        case PIXFORMAT_YUV_ANY: {
+            if ((dx != MCU_W) || (dy != MCU_H)) { // partial MCU, fill with 0's to start
+                memset(Y0, 0, JPEG_444_GS_MCU_SIZE);
+                memset(CB, 0, JPEG_444_GS_MCU_SIZE);
+                memset(CR, 0, JPEG_444_GS_MCU_SIZE);
+            }
+
+            int shift = (src->pixfmt == PIXFORMAT_YUV422) ? 24 : 8;
+
+            for (int y = y_offset, yy = y + dy, index = 0; y < yy; y++) {
+                uint32_t *rp = (uint32_t *) (IMAGE_COMPUTE_YUV_PIXEL_ROW_PTR(src, y) + x_offset);
+
+                for (int x = 0, xx = dx - 1; x < xx; x += 2, index += 2) {
+                    int pixels = *rp++;
+
+                    #if (OMV_HARDWARE_JPEG == 0)
+                    pixels ^= 0x80808080;
+                    #endif
+
+                    Y0[index] = pixels, Y0[index + 1] = pixels >> 16;
+
+                    int cb = pixels >> shift;
+                    CB[index] = cb, CB[index + 1] = cb;
+
+                    int cr = pixels >> (32 - shift);
+                    CR[index] = cr, CR[index + 1] = cr;
+                }
+
+                if (dx & 1) {
+                    int pixel = *((uint16_t *) rp);
+
+                    #if (OMV_HARDWARE_JPEG == 0)
+                    pixel ^= 0x8080;
+                    #endif
+
+                    Y0[index] = pixel;
+
+                    if (index % MCU_W) {
+                        if (shift == 8) {
+                            CR[index] = CR[index - 1];
+                            CB[index++] = pixel >> 8;
+                        } else {
+                            CB[index] = CB[index - 1];
+                            CR[index++] = pixel >> 8;
+                        }
+                    } else {
+                        if (shift == 8) {
+                            CB[index] = pixel >> 8;
+                            #if (OMV_HARDWARE_JPEG == 0)
+                            CR[index++] = 0;
+                            #else
+                            CR[index++] = 0x80;
+                            #endif
+                        } else {
+                            #if (OMV_HARDWARE_JPEG == 0)
+                            CB[index] = 0;
+                            #else
+                            CB[index] = 0x80;
+                            #endif
+                            CR[index++] = pixel >> 8;
+                        }
+                    }
+                }
+
+                index += MCU_W - dx;
+            }
+            break;
+        }
         case PIXFORMAT_BAYER_ANY: {
             if ((dx != MCU_W) || (dy != MCU_H)) { // partial MCU, fill with 0's to start
-                memset(Y0, 0, JPEG_444_YCBCR_MCU_SIZE);
+                memset(Y0, 0, JPEG_444_GS_MCU_SIZE);
+                memset(CB, 0, JPEG_444_GS_MCU_SIZE);
+                memset(CR, 0, JPEG_444_GS_MCU_SIZE);
             }
 
             int src_w = src->w, w_limit = src_w - 1, w_limit_m_1 = w_limit - 1;
@@ -987,6 +1059,7 @@ bool jpeg_compress(image_t *src, image_t *dst, int quality, bool realloc)
             break;
         case PIXFORMAT_RGB565:
         case PIXFORMAT_BAYER_ANY:
+        case PIXFORMAT_YUV_ANY:
             mcu_size                    = JPEG_444_YCBCR_MCU_SIZE;
             JPEG_Info.ColorSpace        = JPEG_YCBCR_COLORSPACE;
             JPEG_Info.ChromaSubsampling = JPEG_444_SUBSAMPLING;

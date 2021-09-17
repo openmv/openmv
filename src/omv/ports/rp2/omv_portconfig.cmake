@@ -168,6 +168,7 @@ target_sources(${MICROPY_TARGET} PRIVATE
     ${TOP_DIR}/${OMV_DIR}/imlib/stats.c
     ${TOP_DIR}/${OMV_DIR}/imlib/template.c
     ${TOP_DIR}/${OMV_DIR}/imlib/xyz_tab.c
+    ${TOP_DIR}/${OMV_DIR}/imlib/yuv.c
     ${TOP_DIR}/${OMV_DIR}/imlib/zbar.c
 
     ${TOP_DIR}/${OMV_DIR}/ports/${PORT}/main.c

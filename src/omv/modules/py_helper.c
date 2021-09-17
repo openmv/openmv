@@ -27,21 +27,14 @@ MP_DEFINE_CONST_FUN_OBJ_KW(py_func_unavailable_obj, 0, py_func_unavailable);
 image_t *py_helper_arg_to_image_mutable(const mp_obj_t arg)
 {
     image_t *arg_img = py_image_cobj(arg);
-    PY_ASSERT_TRUE_MSG(IMAGE_IS_MUTABLE(arg_img), "Image is not mutable!");
+    PY_ASSERT_TRUE_MSG(arg_img->is_mutable, "Image is not mutable!");
     return arg_img;
 }
 
-image_t *py_helper_arg_to_image_mutable_bayer(const mp_obj_t arg)
+image_t *py_helper_arg_to_image_not_compressed(const mp_obj_t arg)
 {
     image_t *arg_img = py_image_cobj(arg);
-    PY_ASSERT_TRUE_MSG(IMAGE_IS_MUTABLE_BAYER(arg_img), "Image is not mutable!");
-    return arg_img;
-}
-
-image_t *py_helper_arg_to_image_mutable_bayer_jpeg(const mp_obj_t arg)
-{
-    image_t *arg_img = py_image_cobj(arg);
-    PY_ASSERT_TRUE_MSG(IMLIB_PIXFORMAT_IS_VALID(arg_img->pixfmt), "Image is not mutable!");
+    PY_ASSERT_FALSE_MSG(arg_img->is_compressed, "Image is compressed!");
     return arg_img;
 }
 
@@ -49,13 +42,6 @@ image_t *py_helper_arg_to_image_grayscale(const mp_obj_t arg)
 {
     image_t *arg_img = py_image_cobj(arg);
     PY_ASSERT_TRUE_MSG(arg_img->pixfmt == PIXFORMAT_GRAYSCALE, "Image is not grayscale!");
-    return arg_img;
-}
-
-image_t *py_helper_arg_to_image_color(const mp_obj_t arg)
-{
-    image_t *arg_img = py_image_cobj(arg);
-    PY_ASSERT_TRUE_MSG(arg_img->pixfmt == PIXFORMAT_RGB565, "Image is not RGB565!");
     return arg_img;
 }
 

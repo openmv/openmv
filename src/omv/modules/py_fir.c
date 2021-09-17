@@ -1082,7 +1082,7 @@ mp_obj_t py_fir_snapshot(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
         if (mp_obj_is_integer(copy_to_fb_obj)) {
             copy_to_fb = mp_obj_get_int(copy_to_fb_obj);
         } else {
-            arg_other = py_helper_arg_to_image_mutable_bayer(copy_to_fb_obj);
+            arg_other = py_helper_arg_to_image_not_compressed(copy_to_fb_obj);
         }
     }
 
