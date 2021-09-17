@@ -269,10 +269,10 @@ void HAL_I2C_MspInit(I2C_HandleTypeDef *hi2c)
         GPIO_InitStructure.Alternate = ISC_I2C_AF;
 
         GPIO_InitStructure.Pin = ISC_I2C_SCL_PIN;
-        HAL_GPIO_Init(ISC_I2C_PORT, &GPIO_InitStructure);
+        HAL_GPIO_Init(ISC_I2C_SCL_PORT, &GPIO_InitStructure);
 
         GPIO_InitStructure.Pin = ISC_I2C_SDA_PIN;
-        HAL_GPIO_Init(ISC_I2C_PORT, &GPIO_InitStructure);
+        HAL_GPIO_Init(ISC_I2C_SDA_PORT, &GPIO_InitStructure);
     #if defined(ISC_I2C_ALT)
     } else if (hi2c->Instance == ISC_I2C_ALT) {
         /* Enable I2C clock */
@@ -286,10 +286,10 @@ void HAL_I2C_MspInit(I2C_HandleTypeDef *hi2c)
         GPIO_InitStructure.Alternate = ISC_I2C_ALT_AF;
 
         GPIO_InitStructure.Pin = ISC_I2C_ALT_SCL_PIN;
-        HAL_GPIO_Init(ISC_I2C_ALT_PORT, &GPIO_InitStructure);
+        HAL_GPIO_Init(ISC_I2C_ALT_SCL_PORT, &GPIO_InitStructure);
 
         GPIO_InitStructure.Pin = ISC_I2C_ALT_SDA_PIN;
-        HAL_GPIO_Init(ISC_I2C_ALT_PORT, &GPIO_InitStructure);
+        HAL_GPIO_Init(ISC_I2C_ALT_SDA_PORT, &GPIO_InitStructure);
     #endif
     } else if (hi2c->Instance == FIR_I2C) {
         /* Enable I2C clock */
@@ -303,10 +303,10 @@ void HAL_I2C_MspInit(I2C_HandleTypeDef *hi2c)
         GPIO_InitStructure.Alternate = FIR_I2C_AF;
 
         GPIO_InitStructure.Pin = FIR_I2C_SCL_PIN;
-        HAL_GPIO_Init(FIR_I2C_PORT, &GPIO_InitStructure);
+        HAL_GPIO_Init(FIR_I2C_SCL_PORT, &GPIO_InitStructure);
 
         GPIO_InitStructure.Pin = FIR_I2C_SDA_PIN;
-        HAL_GPIO_Init(FIR_I2C_PORT, &GPIO_InitStructure);
+        HAL_GPIO_Init(FIR_I2C_SDA_PORT, &GPIO_InitStructure);
     }
 
 }
