@@ -260,14 +260,13 @@ size_t image_size(image_t *ptr)
         case PIXFORMAT_BINARY: {
             return IMAGE_BINARY_LINE_LEN_BYTES(ptr) * ptr->h;
         }
-        case PIXFORMAT_GRAYSCALE: {
+        case PIXFORMAT_GRAYSCALE:
+        case PIXFORMAT_BAYER_ANY: { // re-use
             return IMAGE_GRAYSCALE_LINE_LEN_BYTES(ptr) * ptr->h;
         }
-        case PIXFORMAT_RGB565: {
+        case PIXFORMAT_RGB565:
+        case PIXFORMAT_YUV_ANY: { // re-use
             return IMAGE_RGB565_LINE_LEN_BYTES(ptr) * ptr->h;
-        }
-        case PIXFORMAT_BAYER_ANY: {
-            return ptr->w * ptr->h;
         }
         case PIXFORMAT_JPEG: {
             return ptr->size;

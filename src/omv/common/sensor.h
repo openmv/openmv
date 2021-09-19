@@ -179,6 +179,8 @@ typedef enum {
 #define SENSOR_HW_FLAGS_BAYER_GBRG      (SUBFORMAT_ID_GBRG)
 #define SENSOR_HW_FLAGS_BAYER_GRBG      (SUBFORMAT_ID_GRBG)
 #define SENSOR_HW_FLAGS_BAYER_RGGB      (SUBFORMAT_ID_RGGB)
+#define SENSOR_HW_FLAGS_YUV422          (SUBFORMAT_ID_YUV422)
+#define SENSOR_HW_FLAGS_YVU422          (SUBFORMAT_ID_YVU422)
 
 typedef void (*vsync_cb_t)(uint32_t vsync);
 typedef void (*frame_cb_t)();
@@ -203,6 +205,7 @@ typedef struct _sensor {
         uint32_t rgb_swap:1;    // Byte-swap 2BPP RGB formats after capture.
         uint32_t yuv_swap:1;    // Byte-swap 2BPP YUV formats after capture.
         uint32_t bayer:3;       // Bayer/CFA pattern.
+        uint32_t yuv_order:1;   // YUV/YVU order.
     } hw_flags;
 
     const uint16_t *color_palette;    // Color palette used for color lookup.

@@ -341,20 +341,22 @@ typedef enum {
     PIXFORMAT_ID_BINARY     = 1,
     PIXFORMAT_ID_GRAY       = 2,
     PIXFORMAT_ID_RGB565     = 3,
-    PIXFORMAT_ID_YUV422     = 4,
-    PIXFORMAT_ID_BAYER      = 5,
+    PIXFORMAT_ID_BAYER      = 4,
+    PIXFORMAT_ID_YUV422     = 5,
     PIXFORMAT_ID_JPEG       = 6,
     /* Note: Update PIXFORMAT_IS_VALID when adding new formats */
 } pixformat_id_t;
 
 // Pixel sub-format IDs.
 typedef enum {
+    SUBFORMAT_ID_GRAY8      = 0,
+    SUBFORMAT_ID_GRAY16     = 1,
     SUBFORMAT_ID_BGGR       = 0, // !!! Note: Make sure bayer sub-formats don't  !!!
     SUBFORMAT_ID_GBRG       = 1, // !!! overflow the sensor.hw_flags.bayer field !!!
     SUBFORMAT_ID_GRBG       = 2,
     SUBFORMAT_ID_RGGB       = 3,
-    SUBFORMAT_ID_GRAY8      = 0,
-    SUBFORMAT_ID_GRAY16     = 1,
+    SUBFORMAT_ID_YUV422     = 0,
+    SUBFORMAT_ID_YVU422     = 1,
     /* Note: Update PIXFORMAT_IS_VALID when adding new formats */
 } subformat_id_t;
 
@@ -364,44 +366,57 @@ typedef enum {
     PIXFORMAT_BPP_GRAY8     = 1,
     PIXFORMAT_BPP_GRAY16    = 2,
     PIXFORMAT_BPP_RGB565    = 2,
-    PIXFORMAT_BPP_YUV422    = 2,
     PIXFORMAT_BPP_BAYER     = 1,
+    PIXFORMAT_BPP_YUV422    = 2,
     /* Note: Update PIXFORMAT_IS_VALID when adding new formats */
 } pixformat_bpp_t;
 
 // Pixel format flags.
+#define PIXFORMAT_FLAGS_Y       (1 << 28) // YUV format.
 #define PIXFORMAT_FLAGS_M       (1 << 27) // Mutable format.
 #define PIXFORMAT_FLAGS_C       (1 << 26) // Colored format.
 #define PIXFORMAT_FLAGS_J       (1 << 25) // Compressed format (JPEG/PNG).
 #define PIXFORMAT_FLAGS_R       (1 << 24) // RAW/Bayer format.
+#define PIXFORMAT_FLAGS_CY      (PIXFORMAT_FLAGS_C | PIXFORMAT_FLAGS_Y)
 #define PIXFORMAT_FLAGS_CM      (PIXFORMAT_FLAGS_C | PIXFORMAT_FLAGS_M)
 #define PIXFORMAT_FLAGS_CR      (PIXFORMAT_FLAGS_C | PIXFORMAT_FLAGS_R)
+#define PIXFORMAT_FLAGS_CJ      (PIXFORMAT_FLAGS_C | PIXFORMAT_FLAGS_J)
 #define IMLIB_IMAGE_MAX_SIZE(x) ((x) & 0xFFFFFFFF)
 
 // Each pixel format encodes flags, pixel format id and bpp as follows:
-// 31......28  27  26  25  24  23..........16  15...........8  7.............0
-// <RESERVED>  MF  CF  JF  RF  <PIXFORMAT_ID>  <SUBFORMAT_ID>  <BYTES_PER_PIX>
+// 31......29  28  27  26  25  24  23..........16  15...........8  7.............0
+// <RESERVED>  YF  MF  CF  JF  RF  <PIXFORMAT_ID>  <SUBFORMAT_ID>  <BYTES_PER_PIX>
 // NOTE: Bit 31-30 must Not be used for pixformat_t to be used as mp_int_t.
 typedef enum {
     PIXFORMAT_INVALID    = (0),
-    PIXFORMAT_BINARY     = (PIXFORMAT_FLAGS_M  | (PIXFORMAT_ID_BINARY << 16) | (0                  << 8) | PIXFORMAT_BPP_BINARY ),
-    PIXFORMAT_GRAYSCALE  = (PIXFORMAT_FLAGS_M  | (PIXFORMAT_ID_GRAY   << 16) | (SUBFORMAT_ID_GRAY8 << 8) | PIXFORMAT_BPP_GRAY8  ),
-    PIXFORMAT_RGB565     = (PIXFORMAT_FLAGS_CM | (PIXFORMAT_ID_RGB565 << 16) | (0                  << 8) | PIXFORMAT_BPP_RGB565 ),
-    PIXFORMAT_YUV422     = (PIXFORMAT_FLAGS_CM | (PIXFORMAT_ID_YUV422 << 16) | (0                  << 8) | PIXFORMAT_BPP_YUV422 ),
-    PIXFORMAT_BAYER      = (PIXFORMAT_FLAGS_CR | (PIXFORMAT_ID_BAYER  << 16) | (SUBFORMAT_ID_BGGR  << 8) | PIXFORMAT_BPP_BAYER  ),
-    PIXFORMAT_BAYER_BGGR = (PIXFORMAT_FLAGS_CR | (PIXFORMAT_ID_BAYER  << 16) | (SUBFORMAT_ID_BGGR  << 8) | PIXFORMAT_BPP_BAYER  ),
-    PIXFORMAT_BAYER_GBRG = (PIXFORMAT_FLAGS_CR | (PIXFORMAT_ID_BAYER  << 16) | (SUBFORMAT_ID_GBRG  << 8) | PIXFORMAT_BPP_BAYER  ),
-    PIXFORMAT_BAYER_GRBG = (PIXFORMAT_FLAGS_CR | (PIXFORMAT_ID_BAYER  << 16) | (SUBFORMAT_ID_GRBG  << 8) | PIXFORMAT_BPP_BAYER  ),
-    PIXFORMAT_BAYER_RGGB = (PIXFORMAT_FLAGS_CR | (PIXFORMAT_ID_BAYER  << 16) | (SUBFORMAT_ID_RGGB  << 8) | PIXFORMAT_BPP_BAYER  ),
-    PIXFORMAT_JPEG       = (PIXFORMAT_FLAGS_J  | (PIXFORMAT_ID_JPEG   << 16) | (0                  << 8) | 0                    ),
+    PIXFORMAT_BINARY     = (PIXFORMAT_FLAGS_M  | (PIXFORMAT_ID_BINARY << 16) | (0                   << 8) | PIXFORMAT_BPP_BINARY ),
+    PIXFORMAT_GRAYSCALE  = (PIXFORMAT_FLAGS_M  | (PIXFORMAT_ID_GRAY   << 16) | (SUBFORMAT_ID_GRAY8  << 8) | PIXFORMAT_BPP_GRAY8  ),
+    PIXFORMAT_RGB565     = (PIXFORMAT_FLAGS_CM | (PIXFORMAT_ID_RGB565 << 16) | (0                   << 8) | PIXFORMAT_BPP_RGB565 ),
+    PIXFORMAT_BAYER      = (PIXFORMAT_FLAGS_CR | (PIXFORMAT_ID_BAYER  << 16) | (SUBFORMAT_ID_BGGR   << 8) | PIXFORMAT_BPP_BAYER  ),
+    PIXFORMAT_BAYER_BGGR = (PIXFORMAT_FLAGS_CR | (PIXFORMAT_ID_BAYER  << 16) | (SUBFORMAT_ID_BGGR   << 8) | PIXFORMAT_BPP_BAYER  ),
+    PIXFORMAT_BAYER_GBRG = (PIXFORMAT_FLAGS_CR | (PIXFORMAT_ID_BAYER  << 16) | (SUBFORMAT_ID_GBRG   << 8) | PIXFORMAT_BPP_BAYER  ),
+    PIXFORMAT_BAYER_GRBG = (PIXFORMAT_FLAGS_CR | (PIXFORMAT_ID_BAYER  << 16) | (SUBFORMAT_ID_GRBG   << 8) | PIXFORMAT_BPP_BAYER  ),
+    PIXFORMAT_BAYER_RGGB = (PIXFORMAT_FLAGS_CR | (PIXFORMAT_ID_BAYER  << 16) | (SUBFORMAT_ID_RGGB   << 8) | PIXFORMAT_BPP_BAYER  ),
+    PIXFORMAT_YUV422     = (PIXFORMAT_FLAGS_CY | (PIXFORMAT_ID_YUV422 << 16) | (SUBFORMAT_ID_YUV422 << 8) | PIXFORMAT_BPP_YUV422 ),
+    PIXFORMAT_YVU422     = (PIXFORMAT_FLAGS_CY | (PIXFORMAT_ID_YUV422 << 16) | (SUBFORMAT_ID_YVU422 << 8) | PIXFORMAT_BPP_YUV422 ),
+    PIXFORMAT_JPEG       = (PIXFORMAT_FLAGS_CJ | (PIXFORMAT_ID_JPEG   << 16) | (0                   << 8) | 0                    ),
     PIXFORMAT_LAST       = 0xFFFFFFFFU,
 } pixformat_t;
+
+#define PIXFORMAT_MUTABLE_ANY           \
+        PIXFORMAT_BINARY:               \
+        case PIXFORMAT_GRAYSCALE:       \
+        case PIXFORMAT_RGB565           \
 
 #define PIXFORMAT_BAYER_ANY             \
         PIXFORMAT_BAYER_BGGR:           \
         case PIXFORMAT_BAYER_GBRG:      \
         case PIXFORMAT_BAYER_GRBG:      \
         case PIXFORMAT_BAYER_RGGB       \
+
+#define PIXFORMAT_YUV_ANY               \
+        PIXFORMAT_YUV422:               \
+        case PIXFORMAT_YVU422           \
 
 #define IMLIB_PIXFORMAT_IS_VALID(x)     \
     ((x == PIXFORMAT_BINARY)            \
@@ -411,6 +426,8 @@ typedef enum {
      || (x == PIXFORMAT_BAYER_GBRG)     \
      || (x == PIXFORMAT_BAYER_GRBG)     \
      || (x == PIXFORMAT_BAYER_RGGB)     \
+     || (x == PIXFORMAT_YUV422)         \
+     || (x == PIXFORMAT_YVU422)         \
      || (x == PIXFORMAT_JPEG))          \
 
 #if defined(__BYTE_ORDER__) && (__BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__)
@@ -425,7 +442,8 @@ struct {                            \
         uint32_t is_compressed  :1; \
         uint32_t is_color       :1; \
         uint32_t is_mutable     :1; \
-        uint32_t /*reserved*/   :4; \
+        uint32_t is_yuv         :1; \
+        uint32_t /*reserved*/   :3; \
     };                              \
     uint32_t pixfmt;                \
   };                                \
@@ -436,7 +454,8 @@ struct {                            \
 struct {                            \
   union {                           \
     struct {                        \
-        uint32_t /*reserved*/   :4; \
+        uint32_t /*reserved*/   :3; \
+        uint32_t is_yuv         :1; \
         uint32_t is_mutable     :1; \
         uint32_t is_color       :1; \
         uint32_t is_compressed  :1; \
@@ -467,10 +486,6 @@ void image_init(image_t *ptr, int w, int h, pixformat_t pixfmt, uint32_t size, v
 void image_copy(image_t *dst, image_t *src);
 size_t image_size(image_t *ptr);
 bool image_get_mask_pixel(image_t *ptr, int x, int y);
-
-#define IMAGE_IS_MUTABLE(image)             (image->is_mutable)
-#define IMAGE_IS_COLOR(image)               (image->is_color)
-#define IMAGE_IS_MUTABLE_BAYER(image)       (image->is_mutable || image->is_bayer)
 
 #define IMAGE_BINARY_LINE_LEN(image) (((image)->w + UINT32_T_MASK) >> UINT32_T_SHIFT)
 #define IMAGE_BINARY_LINE_LEN_BYTES(image) (IMAGE_BINARY_LINE_LEN(image) * sizeof(uint32_t))
@@ -548,6 +563,40 @@ bool image_get_mask_pixel(image_t *ptr, int x, int y);
     __typeof__ (y) _y = (y); \
     __typeof__ (v) _v = (v); \
     ((uint16_t *) _image->data)[(_image->w * _y) + _x] = _v; \
+})
+
+#define IMAGE_GET_YUV_PIXEL(image, x, y) \
+({ \
+    __typeof__ (image) _image = (image); \
+    __typeof__ (x) _x = (x); \
+    __typeof__ (y) _y = (y); \
+    ((uint16_t *) _image->data)[(_image->w * _y) + _x]; \
+})
+
+#define IMAGE_PUT_YUV_PIXEL(image, x, y, v) \
+({ \
+    __typeof__ (image) _image = (image); \
+    __typeof__ (x) _x = (x); \
+    __typeof__ (y) _y = (y); \
+    __typeof__ (v) _v = (v); \
+    ((uint16_t *) _image->data)[(_image->w * _y) + _x] = _v; \
+})
+
+#define IMAGE_GET_BAYER_PIXEL(image, x, y) \
+({ \
+    __typeof__ (image) _image = (image); \
+    __typeof__ (x) _x = (x); \
+    __typeof__ (y) _y = (y); \
+    ((uint8_t *) _image->data)[(_image->w * _y) + _x]; \
+})
+
+#define IMAGE_PUT_BAYER_PIXEL(image, x, y, v) \
+({ \
+    __typeof__ (image) _image = (image); \
+    __typeof__ (x) _x = (x); \
+    __typeof__ (y) _y = (y); \
+    __typeof__ (v) _v = (v); \
+    ((uint8_t *) _image->data)[(_image->w * _y) + _x] = _v; \
 })
 
 // Fast Stuff //
@@ -632,6 +681,20 @@ bool image_get_mask_pixel(image_t *ptr, int x, int y);
     __typeof__ (x) _x = (x); \
     __typeof__ (v) _v = (v); \
     _row_ptr[_x] = _v; \
+})
+
+#define IMAGE_COMPUTE_BAYER_PIXEL_ROW_PTR(image, y) \
+({ \
+    __typeof__ (image) _image = (image); \
+    __typeof__ (y) _y = (y); \
+    ((uint8_t *) _image->data) + (_image->w * _y); \
+})
+
+#define IMAGE_COMPUTE_YUV_PIXEL_ROW_PTR(image, y) \
+({ \
+    __typeof__ (image) _image = (image); \
+    __typeof__ (y) _y = (y); \
+    ((uint16_t *) _image->data) + (_image->w * _y); \
 })
 
 // Old Image Macros - Will be refactor and removed. But, only after making sure through testing new macros work.
@@ -1015,6 +1078,10 @@ void imlib_fill_image_from_float(image_t *img, int w, int h, float *data, float 
 // Bayer Image Processing
 void imlib_debayer_line(int x_start, int x_end, int y_row, void *dst_row_ptr, pixformat_t pixfmt, image_t *src);
 void imlib_debayer_image(image_t *dst, image_t *src);
+
+// YUV Image Processing
+void imlib_deyuv_line(int x_start, int x_end, int y_row, void *dst_row_ptr, pixformat_t pixfmt, image_t *src);
+void imlib_deyuv_image(image_t *dst, image_t *src);
 
 /* Color space functions */
 int8_t imlib_rgb565_to_l(uint16_t pixel);

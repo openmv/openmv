@@ -13,10 +13,8 @@
 #include "imlib.h"
 extern const mp_obj_fun_builtin_var_t py_func_unavailable_obj;
 image_t *py_helper_arg_to_image_mutable(const mp_obj_t arg);
-image_t *py_helper_arg_to_image_mutable_bayer(const mp_obj_t arg);
-image_t *py_helper_arg_to_image_mutable_bayer_jpeg(const mp_obj_t arg);
+image_t *py_helper_arg_to_image_not_compressed(const mp_obj_t arg);
 image_t *py_helper_arg_to_image_grayscale(const mp_obj_t arg);
-image_t *py_helper_arg_to_image_color(const mp_obj_t arg);
 image_t *py_helper_keyword_to_image_mutable(uint n_args, const mp_obj_t *args, uint arg_index,
                                             mp_map_t *kw_args, mp_obj_t kw, image_t *default_val);
 image_t *py_helper_keyword_to_image_mutable_mask(uint n_args, const mp_obj_t *args, uint arg_index,

@@ -1383,6 +1383,7 @@ int ov5640_init(sensor_t *sensor)
     sensor->hw_flags.jpeg_mode  = 4;
     sensor->hw_flags.gs_bpp     = 1;
     sensor->hw_flags.rgb_swap   = 0;
+    sensor->hw_flags.yuv_order  = SENSOR_HW_FLAGS_YVU422;
 
     return 0;
 }

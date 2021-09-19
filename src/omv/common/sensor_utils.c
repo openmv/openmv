@@ -520,11 +520,11 @@ __weak int sensor_set_pixformat(pixformat_t pixformat)
     }
 
     // Some sensor drivers automatically switch to BAYER to reduce the frame size if it does not fit in RAM.
-    // If the current format is BAYER (1BPP), and the target format is RGB-565 (2BPP) and the frame does not
+    // If the current format is BAYER (1BPP), and the target format is color and (2BPP), and the frame does not
     // fit in RAM it will just be switched back again to BAYER, so we keep the current format unchanged.
     uint32_t size = framebuffer_get_buffer_size();
     if ((sensor.pixformat == PIXFORMAT_BAYER)
-            && (pixformat == PIXFORMAT_RGB565)
+            && ((pixformat == PIXFORMAT_RGB565) || (pixformat == PIXFORMAT_YUV422))
             && (MAIN_FB()->u * MAIN_FB()->v * 2 > size)
             && (MAIN_FB()->u * MAIN_FB()->v * 1 <= size)) {
         return 0;
@@ -1033,7 +1033,7 @@ __weak int sensor_set_special_effect(sde_t sde)
     if (sensor.set_special_effect == NULL) {
         return SENSOR_ERROR_CTL_UNSUPPORTED;
     }
-    
+
     // Call the sensor specific function.
     if (sensor.set_special_effect(&sensor, sde) != 0) {
         return SENSOR_ERROR_CTL_FAILED;
@@ -1124,7 +1124,7 @@ __weak int sensor_auto_crop_framebuffer()
         return 0;
     }
 
-    if (sensor.pixformat == PIXFORMAT_RGB565) {
+    if ((sensor.pixformat == PIXFORMAT_RGB565) || (sensor.pixformat == PIXFORMAT_YUV422)) {
         // Switch to bayer for the quick 2x savings.
         sensor_set_pixformat(PIXFORMAT_BAYER);
         bpp = 1;
