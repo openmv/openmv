@@ -11,9 +11,10 @@
 #include <stdint.h>
 #include "ulpi.h"
 #include "omv_boardconfig.h"
+
+#if (OMV_USB_ULPI == 1)
 #include STM32_HAL_H
 
-#if defined(STM32F7) || defined(STM32H7)
 #define USBULPI_PHYCR       ((uint32_t)(0x40040000 + 0x034))
 #define USBULPI_D07         ((uint32_t)0x000000FF)
 #define USBULPI_New         ((uint32_t)0x02000000)
@@ -161,7 +162,7 @@ void ulpi_leave_low_power(void)
 
     /* Enable GPIO clock for OTG USB STP pin */
     __HAL_RCC_GPIOC_CLK_ENABLE();
-    __HAL_RCC_GPIOI_CLK_ENABLE();
+    OMV_USB_ULPI_DIR_CLK_ENABLE();
 
     /* Set OTG STP pin as GP Output  */
     GPIO_InitStruct.Pin = GPIO_PIN_0;
@@ -170,11 +171,11 @@ void ulpi_leave_low_power(void)
     GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
     HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
-    GPIO_InitStruct.Pin = GPIO_PIN_11;
+    GPIO_InitStruct.Pin = OMV_USB_ULPI_DIR_PIN;
     GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
     GPIO_InitStruct.Pull = GPIO_NOPULL;
     GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
-    HAL_GPIO_Init(GPIOI, &GPIO_InitStruct);
+    HAL_GPIO_Init(OMV_USB_ULPI_DIR_PORT, &GPIO_InitStruct);
 
     /* Set OTG STP pin to High */
     HAL_GPIO_WritePin(GPIOC, GPIO_PIN_0, GPIO_PIN_SET);
@@ -182,7 +183,7 @@ void ulpi_leave_low_power(void)
     /* Wait for DIR to go low */
     for (uint32_t ticks = HAL_GetTick();
             ((HAL_GetTick() - ticks) < 500)
-            && HAL_GPIO_ReadPin(GPIOI, GPIO_PIN_11);) {
+            && HAL_GPIO_ReadPin(OMV_USB_ULPI_DIR_PORT, OMV_USB_ULPI_DIR_PIN);) {
         __WFI();
     }
 
@@ -191,10 +192,10 @@ void ulpi_leave_low_power(void)
     GPIO_InitStruct.Alternate = GPIO_AF10_OTG_HS;
     HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
-    GPIO_InitStruct.Pin = GPIO_PIN_11;
+    GPIO_InitStruct.Pin = OMV_USB_ULPI_DIR_PIN;
     GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
     GPIO_InitStruct.Alternate = GPIO_AF10_OTG_HS;
-    HAL_GPIO_Init(GPIOI, &GPIO_InitStruct);
+    HAL_GPIO_Init(OMV_USB_ULPI_DIR_PORT, &GPIO_InitStruct);
 
 }
-#endif // defined(STM32F7) || defined(STM32H7)
+#endif // (OMV_USB_ULPI == 1)

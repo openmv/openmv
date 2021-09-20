@@ -81,6 +81,10 @@
 
 // USB IRQn.
 #define OMV_USB_IRQN            (OTG_HS_IRQn)
+#define OMV_USB_ULPI            (1)
+#define OMV_USB_ULPI_DIR_PORT   (GPIOC)
+#define OMV_USB_ULPI_DIR_PIN    (2)
+#define OMV_USB_ULPI_DIR_CLK_ENABLE()   __HAL_RCC_GPIOC_CLK_ENABLE()
 
 // Defined for cpu frequency scaling to override the revid.
 #define OMV_MAX_CPU_FREQ        (400)
