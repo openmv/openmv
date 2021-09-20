@@ -87,6 +87,10 @@
 
 // USB IRQn.
 #define OMV_USB_IRQN            (OTG_HS_IRQn)
+#define OMV_USB_ULPI            (1)
+#define OMV_USB_ULPI_DIR_PORT   (GPIOI)
+#define OMV_USB_ULPI_DIR_PIN    (11)
+#define OMV_USB_ULPI_DIR_CLK_ENABLE()   __HAL_RCC_GPIOI_CLK_ENABLE()
 
 // Defined for cpu frequency scaling to override the revid.
 #define OMV_MAX_CPU_FREQ        (400)
@@ -218,8 +222,9 @@
 #define ISC_I2C_AF              (GPIO_AF4_I2C3)
 #define ISC_I2C_CLK_ENABLE()    __I2C3_CLK_ENABLE()
 #define ISC_I2C_CLK_DISABLE()   __I2C3_CLK_DISABLE()
-#define ISC_I2C_PORT            (GPIOH)
+#define ISC_I2C_SCL_PORT        (GPIOH)
 #define ISC_I2C_SCL_PIN         (GPIO_PIN_7)
+#define ISC_I2C_SDA_PORT        (GPIOH)
 #define ISC_I2C_SDA_PIN         (GPIO_PIN_8)
 #define ISC_I2C_SPEED           (CAMBUS_SPEED_STANDARD)
 #define ISC_I2C_FORCE_RESET()   __HAL_RCC_I2C3_FORCE_RESET()
@@ -231,8 +236,9 @@
 #define ISC_I2C_ALT_AF              (GPIO_AF4_I2C4)
 #define ISC_I2C_ALT_CLK_ENABLE()    __HAL_RCC_I2C4_CLK_ENABLE()
 #define ISC_I2C_ALT_CLK_DISABLE()   __HAL_RCC_I2C4_CLK_DISABLE()
-#define ISC_I2C_ALT_PORT            (GPIOH)
+#define ISC_I2C_ALT_SCL_PORT        (GPIOH)
 #define ISC_I2C_ALT_SCL_PIN         (GPIO_PIN_11)
+#define ISC_I2C_ALT_SDA_PORT        (GPIOH)
 #define ISC_I2C_ALT_SDA_PIN         (GPIO_PIN_12)
 #define ISC_I2C_ALT_SPEED           (CAMBUS_SPEED_STANDARD)
 #define ISC_I2C_ALT_FORCE_RESET()   __HAL_RCC_I2C4_FORCE_RESET()
@@ -244,8 +250,9 @@
 #define FIR_I2C_AF              (GPIO_AF4_I2C3)
 #define FIR_I2C_CLK_ENABLE()    __I2C3_CLK_ENABLE()
 #define FIR_I2C_CLK_DISABLE()   __I2C3_CLK_DISABLE()
-#define FIR_I2C_PORT            (GPIOH)
+#define FIR_I2C_SCL_PORT        (GPIOH)
 #define FIR_I2C_SCL_PIN         (GPIO_PIN_7)
+#define FIR_I2C_SDA_PORT        (GPIOH)
 #define FIR_I2C_SDA_PIN         (GPIO_PIN_8)
 #define FIR_I2C_SPEED           (CAMBUS_SPEED_STANDARD)
 #define FIR_I2C_FORCE_RESET()   __HAL_RCC_I2C3_FORCE_RESET()

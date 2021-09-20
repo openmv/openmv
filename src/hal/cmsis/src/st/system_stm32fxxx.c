@@ -317,6 +317,9 @@ void SystemClock_Config(void)
     PeriphClkInitStruct.QspiClockSelection = RCC_QSPICLKSOURCE_PLL2;
     PeriphClkInitStruct.AdcClockSelection = OMV_OSC_ADC_CLKSOURCE;
     PeriphClkInitStruct.Spi123ClockSelection = OMV_OSC_SPI123_CLKSOURCE;
+    #if defined(OMV_OSC_SPI45_CLKSOURCE)
+    PeriphClkInitStruct.Spi45ClockSelection = OMV_OSC_SPI45_CLKSOURCE;
+    #endif
     PeriphClkInitStruct.RTCClockSelection = RCC_RTCCLKSOURCE_LSI;
     PeriphClkInitStruct.I2c123ClockSelection = RCC_I2C123CLKSOURCE_D2PCLK1;
     PeriphClkInitStruct.Spi45ClockSelection = RCC_SPI45CLKSOURCE_PLL2;
