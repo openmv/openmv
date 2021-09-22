@@ -8732,32 +8732,13 @@ void imlib_find_barcodes(list_t *out, image_t *ptr, rectangle_t *roi)
     image.seq = 0;
     image.syms = 0;
 
-    switch (ptr->pixfmt) {
-        case PIXFORMAT_BINARY: {
-            for (int y = roi->y, yy = roi->y + roi->h; y < yy; y++) {
-                uint32_t *row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(ptr, y);
-                for (int x = roi->x, xx = roi->x + roi->w; x < xx; x++) {
-                    *(grayscale_image++) = COLOR_BINARY_TO_GRAYSCALE(IMAGE_GET_BINARY_PIXEL_FAST(row_ptr, x));
-                }
-            }
-            break;
-        }
-        case PIXFORMAT_GRAYSCALE: {
-            break;
-        }
-        case PIXFORMAT_RGB565: {
-            for (int y = roi->y, yy = roi->y + roi->h; y < yy; y++) {
-                uint16_t *row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(ptr, y);
-                for (int x = roi->x, xx = roi->x + roi->w; x < xx; x++) {
-                    *(grayscale_image++) = COLOR_RGB565_TO_GRAYSCALE(IMAGE_GET_RGB565_PIXEL_FAST(row_ptr, x));
-                }
-            }
-            break;
-        }
-        default: {
-            memset(grayscale_image, 0, roi->w * roi->h);
-            break;
-        }
+    if (ptr->pixfmt != PIXFORMAT_GRAYSCALE) {
+        image_t img;
+        img.w = roi->w;
+        img.h = roi->h;
+        img.pixfmt = PIXFORMAT_GRAYSCALE;
+        img.data = grayscale_image;
+        imlib_draw_image(&img, ptr, 0, 0, 1.f, 1.f, roi, -1, 256, NULL, NULL, 0, NULL, NULL);
     }
 
     list_init(out, sizeof(find_barcodes_list_lnk_data_t));

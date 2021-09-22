@@ -4925,7 +4925,7 @@ static const mp_obj_type_t py_rect_type = {
 
 static mp_obj_t py_image_find_rects(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
-    image_t *arg_img = py_helper_arg_to_image_mutable(args[0]);
+    image_t *arg_img = py_image_cobj(args[0]);
 
     rectangle_t roi;
     py_helper_keyword_rectangle_roi(arg_img, n_args, args, 1, kw_args, &roi);
@@ -5091,7 +5091,7 @@ static const mp_obj_type_t py_qrcode_type = {
 
 static mp_obj_t py_image_find_qrcodes(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
-    image_t *arg_img = py_helper_arg_to_image_mutable(args[0]);
+    image_t *arg_img = py_image_cobj(args[0]);
 
     rectangle_t roi;
     py_helper_keyword_rectangle_roi(arg_img, n_args, args, 1, kw_args, &roi);
@@ -5474,7 +5474,7 @@ static const mp_obj_type_t py_datamatrix_type = {
 
 static mp_obj_t py_image_find_datamatrices(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
-    image_t *arg_img = py_helper_arg_to_image_mutable(args[0]);
+    image_t *arg_img = py_image_cobj(args[0]);
 
     rectangle_t roi;
     py_helper_keyword_rectangle_roi(arg_img, n_args, args, 1, kw_args, &roi);
@@ -5624,7 +5624,7 @@ static const mp_obj_type_t py_barcode_type = {
 
 static mp_obj_t py_image_find_barcodes(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
-    image_t *arg_img = py_helper_arg_to_image_mutable(args[0]);
+    image_t *arg_img = py_image_cobj(args[0]);
 
     rectangle_t roi;
     py_helper_keyword_rectangle_roi(arg_img, n_args, args, 1, kw_args, &roi);
