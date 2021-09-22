@@ -6310,17 +6310,6 @@ dmtxMatrix3Print(DmtxMatrix3 m)
 void imlib_find_datamatrices(list_t *out, image_t *ptr, rectangle_t *roi, int effort)
 {
     uint8_t *grayscale_image = (ptr->pixfmt == PIXFORMAT_GRAYSCALE) ? ptr->data : fb_alloc(roi->w * roi->h, FB_ALLOC_NO_HINT);
-    umm_init_x(fb_avail());
-
-    DmtxImage *image = dmtxImageCreate(grayscale_image,
-                                       (ptr->pixfmt == PIXFORMAT_GRAYSCALE) ? ptr->w : roi->w,
-                                       (ptr->pixfmt == PIXFORMAT_GRAYSCALE) ? ptr->h : roi->h,
-                                       DmtxPack8bppK);
-    DmtxDecode *decode = dmtxDecodeCreate(image, 1);
-    dmtxDecodeSetProp(decode, DmtxPropXmin, (ptr->pixfmt == PIXFORMAT_GRAYSCALE) ? roi->x : 0);
-    dmtxDecodeSetProp(decode, DmtxPropYmin, (ptr->pixfmt == PIXFORMAT_GRAYSCALE) ? roi->y : 0);
-    dmtxDecodeSetProp(decode, DmtxPropXmax, ((ptr->pixfmt == PIXFORMAT_GRAYSCALE) ? roi->x : 0) + (roi->w - 1));
-    dmtxDecodeSetProp(decode, DmtxPropYmax, ((ptr->pixfmt == PIXFORMAT_GRAYSCALE) ? roi->y : 0) + (roi->h - 1));
 
     if (ptr->pixfmt != PIXFORMAT_GRAYSCALE) {
         image_t img;
@@ -6330,6 +6319,19 @@ void imlib_find_datamatrices(list_t *out, image_t *ptr, rectangle_t *roi, int ef
         img.data = grayscale_image;
         imlib_draw_image(&img, ptr, 0, 0, 1.f, 1.f, roi, -1, 256, NULL, NULL, 0, NULL, NULL);
     }
+
+    umm_init_x(fb_avail());
+
+    DmtxImage *image = dmtxImageCreate(grayscale_image,
+                                       (ptr->pixfmt == PIXFORMAT_GRAYSCALE) ? ptr->w : roi->w,
+                                       (ptr->pixfmt == PIXFORMAT_GRAYSCALE) ? ptr->h : roi->h,
+                                       DmtxPack8bppK);
+
+    DmtxDecode *decode = dmtxDecodeCreate(image, 1);
+    dmtxDecodeSetProp(decode, DmtxPropXmin, (ptr->pixfmt == PIXFORMAT_GRAYSCALE) ? roi->x : 0);
+    dmtxDecodeSetProp(decode, DmtxPropYmin, (ptr->pixfmt == PIXFORMAT_GRAYSCALE) ? roi->y : 0);
+    dmtxDecodeSetProp(decode, DmtxPropXmax, ((ptr->pixfmt == PIXFORMAT_GRAYSCALE) ? roi->x : 0) + (roi->w - 1));
+    dmtxDecodeSetProp(decode, DmtxPropYmax, ((ptr->pixfmt == PIXFORMAT_GRAYSCALE) ? roi->y : 0) + (roi->h - 1));
 
     list_init(out, sizeof(find_datamatrices_list_lnk_data_t));
 
