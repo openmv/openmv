@@ -1214,6 +1214,8 @@ static mp_obj_t py_image_compress(uint n_args, const mp_obj_t *args, mp_map_t *k
     PY_ASSERT_FALSE_MSG(jpeg_compress(arg_img, &out, arg_q, false), "Out of Memory!");
     PY_ASSERT_TRUE_MSG(out.size <= image_size(arg_img), "Can't compress in place!");
     memcpy(arg_img->data, out.data, out.size);
+
+    arg_img->pixfmt = PIXFORMAT_JPEG;
     arg_img->size = out.size;
     fb_alloc_free_till_mark();
     py_helper_update_framebuffer(arg_img);
@@ -1236,6 +1238,7 @@ static mp_obj_t py_image_compress_for_ide(uint n_args, const mp_obj_t *args, mp_
     PY_ASSERT_TRUE_MSG(new_size <= image_size(arg_img), "Can't compress in place!");
     fb_encode_for_ide(arg_img->data, &out);
 
+    arg_img->pixfmt = PIXFORMAT_JPEG;
     arg_img->size = new_size;
     fb_alloc_free_till_mark();
     py_helper_update_framebuffer(arg_img);
