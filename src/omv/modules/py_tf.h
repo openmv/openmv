@@ -10,6 +10,7 @@
  */
 #ifndef __PY_TF_H__
 #define __PY_TF_H__
+
 // PyTF model object handle
 typedef struct py_tf_model_obj {
     mp_obj_base_t base;
@@ -19,9 +20,10 @@ typedef struct py_tf_model_obj {
     bool is_float;
 } py_tf_model_obj_t;
 
-// Log buffer stuff
+// Log buffer
 #define PY_TF_PUTCHAR_BUFFER_LEN 1023
 extern char *py_tf_putchar_buffer;
 extern size_t py_tf_putchar_buffer_len;
 void py_tf_alloc_putchar_buffer();
+
 #endif // __PY_TF_H__
