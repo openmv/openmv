@@ -11977,47 +11977,18 @@ void imlib_find_apriltags(list_t *out, image_t *ptr, rectangle_t *roi, apriltag_
         apriltag_detector_add_family(td, (apriltag_family_t *) &artoolkit);
     }
 
-    uint8_t *grayscale_image = fb_alloc(roi->w * roi->h, FB_ALLOC_NO_HINT);
+    image_t img;
+    img.w = roi->w;
+    img.h = roi->h;
+    img.pixfmt = PIXFORMAT_GRAYSCALE;
+    img.data = fb_alloc(image_size(&img), FB_ALLOC_NO_HINT);
+    imlib_draw_image(&img, ptr, 0, 0, 1.f, 1.f, roi, -1, 256, NULL, NULL, 0, NULL, NULL);
 
     image_u8_t im;
     im.width = roi->w;
     im.height = roi->h;
     im.stride = roi->w;
-    im.buf = grayscale_image;
-
-    switch (ptr->pixfmt) {
-        case PIXFORMAT_BINARY: {
-            for (int y = roi->y, yy = roi->y + roi->h; y < yy; y++) {
-                uint32_t *row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(ptr, y);
-                for (int x = roi->x, xx = roi->x + roi->w; x < xx; x++) {
-                    *(grayscale_image++) = COLOR_BINARY_TO_GRAYSCALE(IMAGE_GET_BINARY_PIXEL_FAST(row_ptr, x));
-                }
-            }
-            break;
-        }
-        case PIXFORMAT_GRAYSCALE: {
-            for (int y = roi->y, yy = roi->y + roi->h; y < yy; y++) {
-                uint8_t *row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(ptr, y);
-                for (int x = roi->x, xx = roi->x + roi->w; x < xx; x++) {
-                    *(grayscale_image++) = IMAGE_GET_GRAYSCALE_PIXEL_FAST(row_ptr, x);
-                }
-            }
-            break;
-        }
-        case PIXFORMAT_RGB565: {
-            for (int y = roi->y, yy = roi->y + roi->h; y < yy; y++) {
-                uint16_t *row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(ptr, y);
-                for (int x = roi->x, xx = roi->x + roi->w; x < xx; x++) {
-                    *(grayscale_image++) = COLOR_RGB565_TO_GRAYSCALE(IMAGE_GET_RGB565_PIXEL_FAST(row_ptr, x));
-                }
-            }
-            break;
-        }
-        default: {
-            memset(grayscale_image, 0, roi->w * roi->h);
-            break;
-        }
-    }
+    im.buf = img.data;
 
     zarray_t *detections = apriltag_detector_detect(td, &im);
     list_init(out, sizeof(find_apriltags_list_lnk_data_t));
@@ -12104,9 +12075,9 @@ void imlib_find_rects(list_t *out, image_t *ptr, rectangle_t *roi, uint32_t thre
     // Frame Buffer Memory Usage...
     // -> GRAYSCALE Input Image = w*h*1
     // -> GRAYSCALE Threhsolded Image = w*h*1
-    // -> UnionFind = w*h*4 (+w*h*2 for hash table)
+    // -> UnionFind = w*h*2 (+w*h*1 for hash table)
     size_t resolution = roi->w * roi->h;
-    size_t fb_alloc_need = resolution * (1 + 1 + 4 + 2); // read above...
+    size_t fb_alloc_need = resolution * (1 + 1 + 2 + 2); // read above...
     umm_init_x(((fb_avail() - fb_alloc_need) / resolution) * resolution);
     apriltag_detector_t *td = apriltag_detector_create();
 

@@ -1214,6 +1214,8 @@ static mp_obj_t py_image_compress(uint n_args, const mp_obj_t *args, mp_map_t *k
     PY_ASSERT_FALSE_MSG(jpeg_compress(arg_img, &out, arg_q, false), "Out of Memory!");
     PY_ASSERT_TRUE_MSG(out.size <= image_size(arg_img), "Can't compress in place!");
     memcpy(arg_img->data, out.data, out.size);
+
+    arg_img->pixfmt = PIXFORMAT_JPEG;
     arg_img->size = out.size;
     fb_alloc_free_till_mark();
     py_helper_update_framebuffer(arg_img);
@@ -1236,6 +1238,7 @@ static mp_obj_t py_image_compress_for_ide(uint n_args, const mp_obj_t *args, mp_
     PY_ASSERT_TRUE_MSG(new_size <= image_size(arg_img), "Can't compress in place!");
     fb_encode_for_ide(arg_img->data, &out);
 
+    arg_img->pixfmt = PIXFORMAT_JPEG;
     arg_img->size = new_size;
     fb_alloc_free_till_mark();
     py_helper_update_framebuffer(arg_img);
@@ -4925,7 +4928,7 @@ static const mp_obj_type_t py_rect_type = {
 
 static mp_obj_t py_image_find_rects(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
-    image_t *arg_img = py_helper_arg_to_image_mutable(args[0]);
+    image_t *arg_img = py_image_cobj(args[0]);
 
     rectangle_t roi;
     py_helper_keyword_rectangle_roi(arg_img, n_args, args, 1, kw_args, &roi);
@@ -5091,7 +5094,7 @@ static const mp_obj_type_t py_qrcode_type = {
 
 static mp_obj_t py_image_find_qrcodes(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
-    image_t *arg_img = py_helper_arg_to_image_mutable(args[0]);
+    image_t *arg_img = py_image_cobj(args[0]);
 
     rectangle_t roi;
     py_helper_keyword_rectangle_roi(arg_img, n_args, args, 1, kw_args, &roi);
@@ -5474,7 +5477,7 @@ static const mp_obj_type_t py_datamatrix_type = {
 
 static mp_obj_t py_image_find_datamatrices(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
-    image_t *arg_img = py_helper_arg_to_image_mutable(args[0]);
+    image_t *arg_img = py_image_cobj(args[0]);
 
     rectangle_t roi;
     py_helper_keyword_rectangle_roi(arg_img, n_args, args, 1, kw_args, &roi);
@@ -5624,7 +5627,7 @@ static const mp_obj_type_t py_barcode_type = {
 
 static mp_obj_t py_image_find_barcodes(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
-    image_t *arg_img = py_helper_arg_to_image_mutable(args[0]);
+    image_t *arg_img = py_image_cobj(args[0]);
 
     rectangle_t roi;
     py_helper_keyword_rectangle_roi(arg_img, n_args, args, 1, kw_args, &roi);
