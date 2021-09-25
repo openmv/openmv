@@ -513,7 +513,7 @@ static int double_equal(float a, float b)
 
   abs_diff = fabs(a-b);
   // For the numbers we work with, this is valid test that avoids some calculations.
-  // The error threshold tested below is 1/1000 of the diff/max_val 
+  // The error threshold tested below is 1/1000 of the diff/max_val
   if (abs_diff > 0.1f) return FALSE;
   aa = fabs(a);
   bb = fabs(b);
@@ -1936,7 +1936,7 @@ void ri_ini_fast(rect_iter *i, struct rect * r)
 
   /* advance to the first pixel */
   ri_inc(i);
-    
+
 } /* ri_ini_fast() */
 
 /*----------------------------------------------------------------------------*/
@@ -2742,45 +2742,18 @@ float * lsd(int * n_out, unsigned char * img, int X, int Y)
 void imlib_lsd_find_line_segments(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int merge_distance, unsigned int max_theta_diff)
 {
     uint8_t *grayscale_image = fb_alloc(roi->w * roi->h, FB_ALLOC_NO_HINT);
-    uint8_t *grayscale_image_tmp = grayscale_image;
+
+    image_t img;
+    img.w = roi->w;
+    img.h = roi->h;
+    img.pixfmt = PIXFORMAT_GRAYSCALE;
+    img.data = grayscale_image;
+    imlib_draw_image(&img, ptr, 0, 0, 1.f, 1.f, roi, -1, 256, NULL, NULL, 0, NULL, NULL);
+
     umm_init_x(fb_avail());
 
-    switch (ptr->pixfmt) {
-        case PIXFORMAT_BINARY: {
-            for (int y = roi->y, yy = roi->y + roi->h; y < yy; y++) {
-                uint32_t *row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(ptr, y);
-                for (int x = roi->x, xx = roi->x + roi->w; x < xx; x++) {
-                    *(grayscale_image++) = COLOR_BINARY_TO_GRAYSCALE(IMAGE_GET_BINARY_PIXEL_FAST(row_ptr, x));
-                }
-            }
-            break;
-        }
-        case PIXFORMAT_GRAYSCALE: {
-            for (int y = roi->y, yy = roi->y + roi->h; y < yy; y++) {
-                uint8_t *row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(ptr, y);
-                for (int x = roi->x, xx = roi->x + roi->w; x < xx; x++) {
-                    *(grayscale_image++) = IMAGE_GET_GRAYSCALE_PIXEL_FAST(row_ptr, x);
-                }
-            }
-            break;
-        }
-        case PIXFORMAT_RGB565: {
-            for (int y = roi->y, yy = roi->y + roi->h; y < yy; y++) {
-                uint16_t *row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(ptr, y);
-                for (int x = roi->x, xx = roi->x + roi->w; x < xx; x++) {
-                    *(grayscale_image++) = COLOR_RGB565_TO_GRAYSCALE(IMAGE_GET_RGB565_PIXEL_FAST(row_ptr, x));
-                }
-            }
-            break;
-        }
-        default: {
-            memset(grayscale_image, 0, roi->w * roi->h);
-            break;
-        }
-    }
-
     int n_ls;
-    float *ls = LineSegmentDetection(&n_ls, grayscale_image_tmp, roi->w, roi->h, 0.8, 0.6, 2.0, 22.5, 0.0, 0.7, 1024, NULL, NULL, NULL);
+    float *ls = LineSegmentDetection(&n_ls, grayscale_image, roi->w, roi->h, 0.8, 0.6, 2.0, 22.5, 0.0, 0.7, 1024, NULL, NULL, NULL);
     list_init(out, sizeof(find_lines_list_lnk_data_t));
 
     for (int i = 0, j = n_ls; i < j; i++) {
