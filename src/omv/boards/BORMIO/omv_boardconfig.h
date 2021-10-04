@@ -317,6 +317,7 @@
 
 #define SOFT_I2C_SPIN_DELAY          64
 
+#define IMU_CHIP_LSM6DSOX           (1)
 #define IMU_SPI                     (SPI5)
 #define IMU_SPI_AF                  (GPIO_AF5_SPI5)
 // SPI4/5 clock source is PLL3 (160MHz/16 == 10MHz).

@@ -370,6 +370,7 @@
 // The IMU sensor is on the same SPI bus pins as the camera module interface
 // SPI bus. While the buses overlap both devices will never be in-use at once.
 
+#define IMU_CHIP_LSM6DS3            (1)
 #define IMU_SPI                     (SPI1)
 #define IMU_SPI_AF                  (GPIO_AF5_SPI1)
 // SPI1/2/3 clock source is PLL2 (160MHz/16 == 10MHz).
