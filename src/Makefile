@@ -53,6 +53,7 @@ CMSIS_DIR=hal/cmsis
 MICROPY_DIR=micropython
 LEPTON_DIR=drivers/lepton
 LSM6DS3_DIR=drivers/lsm6ds3
+LSM6DSOX_DIR=drivers/lsm6dsox
 WINC1500_DIR=drivers/winc1500
 MLX90621_DIR=drivers/mlx90621
 MLX90640_DIR=drivers/mlx90640
