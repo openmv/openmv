@@ -578,9 +578,7 @@ soft_reset:
     if (first_soft_reset) {
         sensor_init();
         #if MICROPY_PY_IMU
-        if (sensor_is_detected() && sensor_get_id() == OV7690_ID) {
-            py_imu_init();
-        }
+        py_imu_init();
         #endif // MICROPY_PY_IMU
     }
 
