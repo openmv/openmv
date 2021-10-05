@@ -14,11 +14,13 @@
 #include "py/obj.h"
 #include "py/mphal.h"
 #include "py/runtime.h"
-
-#include "lsm6ds3tr_c_reg.h"
 #include "py_helper.h"
 #include "py_imu.h"
+
 #include STM32_HAL_H
+
+#if defined(IMU_CHIP_LSM6DS3)
+#include "lsm6ds3tr_c_reg.h"
 
 typedef union {
   int16_t i16bit[3];
@@ -29,6 +31,39 @@ typedef union {
   int16_t i16bit;
   uint8_t u8bit[2];
 } axis1bit16_t;
+
+
+#define LSM_FUNC(f)     lsm6ds3tr_c_##f
+#define LSM_CONST(c)    LSM6DS3TR_C_##c
+
+#define lsm_from_fs8_to_mg          lsm6ds3tr_c_from_fs8g_to_mg
+#define lsm_from_fs8_to_mg          lsm6ds3tr_c_from_fs8g_to_mg
+#define lsm_from_fs2000_to_mdps     lsm6ds3tr_c_from_fs2000dps_to_mdps
+#define lsm_from_lsb_to_celsius     lsm6ds3tr_c_from_lsb_to_celsius
+
+#elif defined(IMU_CHIP_LSM6DSOX)
+#include "lsm6dsox_reg.h"
+
+typedef union {
+  int16_t i16bit[3];
+  int16_t u8bit[3];
+} axis3bit16_t;
+
+typedef union {
+  int16_t i16bit;
+  int16_t u8bit[1];
+} axis1bit16_t;
+
+#define LSM_FUNC(f)                 lsm6dsox_##f
+#define LSM_CONST(c)                LSM6DSOX_##c
+
+#define lsm_from_fs8_to_mg          lsm6dsox_from_fs8_to_mg
+#define lsm_from_fs8_to_mg          lsm6dsox_from_fs8_to_mg
+#define lsm_from_fs2000_to_mdps     lsm6dsox_from_fs2000_to_mdps
+#define lsm_from_lsb_to_celsius     lsm6dsox_from_lsb_to_celsius
+#else
+#error "imu chip variant is not defined."
+#endif
 
 STATIC int32_t platform_write(void *handle, uint8_t Reg, uint8_t *Bufp,
                               uint16_t len)
@@ -113,18 +148,18 @@ STATIC mp_obj_t py_imu_tuple(float x, float y, float z)
 STATIC float py_imu_get_roll()
 {
     axis3bit16_t data_raw_acceleration = {};
-    lsm6ds3tr_c_acceleration_raw_get(&dev_ctx, data_raw_acceleration.u8bit);
-    float x = lsm6ds3tr_c_from_fs8g_to_mg(data_raw_acceleration.i16bit[0]);
-    float y = lsm6ds3tr_c_from_fs8g_to_mg(data_raw_acceleration.i16bit[1]);
+    LSM_FUNC(acceleration_raw_get)(&dev_ctx, data_raw_acceleration.u8bit);
+    float x = lsm_from_fs8_to_mg(data_raw_acceleration.i16bit[0]);
+    float y = lsm_from_fs8_to_mg(data_raw_acceleration.i16bit[1]);
     return fmodf((IM_RAD2DEG(fast_atan2f(-x, y)) + 180), 360); // rotate 180
 }
 
 STATIC float py_imu_get_pitch()
 {
     axis3bit16_t data_raw_acceleration = {};
-    lsm6ds3tr_c_acceleration_raw_get(&dev_ctx, data_raw_acceleration.u8bit);
-    float y = lsm6ds3tr_c_from_fs8g_to_mg(data_raw_acceleration.i16bit[1]);
-    float z = lsm6ds3tr_c_from_fs8g_to_mg(data_raw_acceleration.i16bit[2]);
+    LSM_FUNC(acceleration_raw_get)(&dev_ctx, data_raw_acceleration.u8bit);
+    float y = lsm_from_fs8_to_mg(data_raw_acceleration.i16bit[1]);
+    float z = lsm_from_fs8_to_mg(data_raw_acceleration.i16bit[2]);
     return IM_RAD2DEG(fast_atan2f(z, -y));
 }
 
@@ -133,10 +168,10 @@ STATIC mp_obj_t py_imu_acceleration_mg()
     error_on_not_ready();
 
     axis3bit16_t data_raw_acceleration = {};
-    lsm6ds3tr_c_acceleration_raw_get(&dev_ctx, data_raw_acceleration.u8bit);
-    return py_imu_tuple(lsm6ds3tr_c_from_fs8g_to_mg(data_raw_acceleration.i16bit[0]),
-                        lsm6ds3tr_c_from_fs8g_to_mg(data_raw_acceleration.i16bit[1]),
-                        lsm6ds3tr_c_from_fs8g_to_mg(data_raw_acceleration.i16bit[2]));
+    LSM_FUNC(acceleration_raw_get)(&dev_ctx, data_raw_acceleration.u8bit);
+    return py_imu_tuple(lsm_from_fs8_to_mg(data_raw_acceleration.i16bit[0]),
+                        lsm_from_fs8_to_mg(data_raw_acceleration.i16bit[1]),
+                        lsm_from_fs8_to_mg(data_raw_acceleration.i16bit[2]));
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_imu_acceleration_mg_obj, py_imu_acceleration_mg);
 
@@ -145,10 +180,10 @@ STATIC mp_obj_t py_imu_angular_rate_mdps()
     error_on_not_ready();
 
     axis3bit16_t data_raw_angular_rate = {};
-    lsm6ds3tr_c_angular_rate_raw_get(&dev_ctx, data_raw_angular_rate.u8bit);
-    return py_imu_tuple(lsm6ds3tr_c_from_fs2000dps_to_mdps(data_raw_angular_rate.i16bit[0]),
-                        lsm6ds3tr_c_from_fs2000dps_to_mdps(data_raw_angular_rate.i16bit[1]),
-                        lsm6ds3tr_c_from_fs2000dps_to_mdps(data_raw_angular_rate.i16bit[2]));
+    LSM_FUNC(angular_rate_raw_get)(&dev_ctx, data_raw_angular_rate.u8bit);
+    return py_imu_tuple(lsm_from_fs2000_to_mdps(data_raw_angular_rate.i16bit[0]),
+                        lsm_from_fs2000_to_mdps(data_raw_angular_rate.i16bit[1]),
+                        lsm_from_fs2000_to_mdps(data_raw_angular_rate.i16bit[2]));
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_imu_angular_rate_mdps_obj, py_imu_angular_rate_mdps);
 
@@ -157,8 +192,8 @@ STATIC mp_obj_t py_imu_temperature_c()
     error_on_not_ready();
 
     axis1bit16_t data_raw_temperature = {};
-    lsm6ds3tr_c_temperature_raw_get(&dev_ctx, data_raw_temperature.u8bit);
-    return mp_obj_new_float(lsm6ds3tr_c_from_lsb_to_celsius(data_raw_temperature.i16bit));
+    LSM_FUNC(temperature_raw_get)(&dev_ctx, data_raw_temperature.u8bit);
+    return mp_obj_new_float(LSM_FUNC(from_lsb_to_celsius)(data_raw_temperature.i16bit));
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_imu_temperature_c_obj, py_imu_temperature_c);
 
@@ -183,8 +218,8 @@ STATIC mp_obj_t py_imu_sleep(mp_obj_t enable)
     error_on_not_ready();
 
     bool en = mp_obj_get_int(enable);
-    lsm6ds3tr_c_xl_data_rate_set(&dev_ctx, en ? LSM6DS3TR_C_XL_ODR_OFF : LSM6DS3TR_C_XL_ODR_52Hz);
-    lsm6ds3tr_c_gy_data_rate_set(&dev_ctx, en ? LSM6DS3TR_C_GY_ODR_OFF : LSM6DS3TR_C_GY_ODR_52Hz);
+    LSM_FUNC(xl_data_rate_set)(&dev_ctx, en ? LSM_CONST(XL_ODR_OFF) : LSM_CONST(XL_ODR_52Hz));
+    LSM_FUNC(gy_data_rate_set)(&dev_ctx, en ? LSM_CONST(GY_ODR_OFF) : LSM_CONST(GY_ODR_52Hz));
     return mp_const_none;
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_imu_sleep_obj, py_imu_sleep);
@@ -194,7 +229,7 @@ STATIC mp_obj_t py_imu_write_reg(mp_obj_t addr, mp_obj_t val)
     error_on_not_ready();
 
     uint8_t v = mp_obj_get_int(val);
-    lsm6ds3tr_c_write_reg(&dev_ctx, mp_obj_get_int(addr), &v, sizeof(v));
+    LSM_FUNC(write_reg)(&dev_ctx, mp_obj_get_int(addr), &v, sizeof(v));
     return mp_const_none;
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_imu_write_reg_obj, py_imu_write_reg);
@@ -204,7 +239,7 @@ STATIC mp_obj_t py_imu_read_reg(mp_obj_t addr)
     error_on_not_ready();
 
     uint8_t v;
-    lsm6ds3tr_c_read_reg(&dev_ctx, mp_obj_get_int(addr), &v, sizeof(v));
+    LSM_FUNC(read_reg)(&dev_ctx, mp_obj_get_int(addr), &v, sizeof(v));
     return mp_obj_new_int(v);
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_imu_read_reg_obj, py_imu_read_reg);
@@ -235,19 +270,19 @@ void py_imu_init()
     uint8_t whoamI = 0, rst = 1;
 
     // Try to read device id...
-    for (int i = 0; (i < 10) && (whoamI != LSM6DS3TR_C_ID); i++) {
-        lsm6ds3tr_c_device_id_get(&dev_ctx, &whoamI);
+    for (int i = 0; (i < 10) && (whoamI != LSM_CONST(ID)); i++) {
+        LSM_FUNC(device_id_get)(&dev_ctx, &whoamI);
     }
 
-    if (whoamI != LSM6DS3TR_C_ID) {
+    if (whoamI != LSM_CONST(ID)) {
         HAL_SPI_DeInit(&SPIHandle);
         return;
     }
 
-    lsm6ds3tr_c_reset_set(&dev_ctx, PROPERTY_ENABLE);
+    LSM_FUNC(reset_set)(&dev_ctx, PROPERTY_ENABLE);
 
     for (int i = 0; (i < 10000) && rst; i++) {
-        lsm6ds3tr_c_reset_get(&dev_ctx, &rst);
+        LSM_FUNC(reset_get)(&dev_ctx, &rst);
     }
 
     if (rst) {
@@ -255,13 +290,13 @@ void py_imu_init()
         return;
     }
 
-    lsm6ds3tr_c_block_data_update_set(&dev_ctx, PROPERTY_ENABLE);
+    LSM_FUNC(block_data_update_set)(&dev_ctx, PROPERTY_ENABLE);
 
-    lsm6ds3tr_c_xl_data_rate_set(&dev_ctx, LSM6DS3TR_C_XL_ODR_52Hz);
-    lsm6ds3tr_c_gy_data_rate_set(&dev_ctx, LSM6DS3TR_C_GY_ODR_52Hz);
+    LSM_FUNC(xl_data_rate_set)(&dev_ctx, LSM_CONST(XL_ODR_52Hz));
+    LSM_FUNC(gy_data_rate_set)(&dev_ctx, LSM_CONST(GY_ODR_52Hz));
 
-    lsm6ds3tr_c_xl_full_scale_set(&dev_ctx, LSM6DS3TR_C_8g);
-    lsm6ds3tr_c_gy_full_scale_set(&dev_ctx, LSM6DS3TR_C_2000dps);
+    LSM_FUNC(xl_full_scale_set)(&dev_ctx, LSM_CONST(8g));
+    LSM_FUNC(gy_full_scale_set)(&dev_ctx, LSM_CONST(2000dps));
 }
 
 float py_imu_roll_rotation()
