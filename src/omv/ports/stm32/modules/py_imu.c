@@ -145,22 +145,64 @@ STATIC mp_obj_t py_imu_tuple(float x, float y, float z)
 // Roll = atan2(-X, sqrt(Z^2, + Y^2)) -> assume Z=0 -> atan2(-X, Y)
 // Pitch = atan2(Z, -Y)
 
+#if (OMV_IMU_ROTATION_DEGREES != 0) && \
+    (OMV_IMU_ROTATION_DEGREES != 90) && \
+    (OMV_IMU_ROTATION_DEGREES != 180) && \
+    (OMV_IMU_ROTATION_DEGREES != 270)
+#error "OMV_IMU_ROTATION_DEGREES must be 0, 90, 180, or 270!"
+#endif
+
+#if (OMV_IMU_MOUNTING_Z_DIRECTION != -1) && \
+    (OMV_IMU_MOUNTING_Z_DIRECTION != 1)
+#error "OMV_IMU_MOUNTING_Z_DIRECTION must be -1 or 1!"
+#endif
+
 STATIC float py_imu_get_roll()
 {
     axis3bit16_t data_raw_acceleration = {};
     LSM_FUNC(acceleration_raw_get)(&dev_ctx, data_raw_acceleration.u8bit);
-    float x = lsm_from_fs8_to_mg(data_raw_acceleration.i16bit[0]);
-    float y = lsm_from_fs8_to_mg(data_raw_acceleration.i16bit[1]);
-    return fmodf((IM_RAD2DEG(fast_atan2f(-x, y)) + 180), 360); // rotate 180
+    #if OMV_IMU_ROTATION_DEGREES == 0
+    float xr = lsm_from_fs8_to_mg(data_raw_acceleration.i16bit[0]); // x
+    float yr = lsm_from_fs8_to_mg(data_raw_acceleration.i16bit[1]); // y
+    #elif OMV_IMU_X_Y_ROTATION_DEGREES == 90
+    float xr = -lsm_from_fs8_to_mg(data_raw_acceleration.i16bit[1]); // y
+    float yr = lsm_from_fs8_to_mg(data_raw_acceleration.i16bit[0]); // x
+    #elif OMV_IMU_X_Y_ROTATION_DEGREES == 180
+    float xr = -lsm_from_fs8_to_mg(data_raw_acceleration.i16bit[0]); // x
+    float yr = -lsm_from_fs8_to_mg(data_raw_acceleration.i16bit[1]); // y
+    #elif OMV_IMU_X_Y_ROTATION_DEGREES == 270
+    float xr = lsm_from_fs8_to_mg(data_raw_acceleration.i16bit[1]); // y
+    float yr = -lsm_from_fs8_to_mg(data_raw_acceleration.i16bit[0]); // x
+    #endif
+    #if OMV_IMU_MOUNTING_Z_DIRECTION == 1 // default is -1 (IMU pointing reverse of camera)
+    xr = -xr;
+    yr = -yr;
+    #endif
+    return fmodf((IM_RAD2DEG(fast_atan2f(-xr, yr)) + 180), 360); // rotate 180
 }
 
 STATIC float py_imu_get_pitch()
 {
     axis3bit16_t data_raw_acceleration = {};
     LSM_FUNC(acceleration_raw_get)(&dev_ctx, data_raw_acceleration.u8bit);
-    float y = lsm_from_fs8_to_mg(data_raw_acceleration.i16bit[1]);
-    float z = lsm_from_fs8_to_mg(data_raw_acceleration.i16bit[2]);
-    return IM_RAD2DEG(fast_atan2f(z, -y));
+    #if OMV_IMU_ROTATION_DEGREES == 0
+    float yr = lsm_from_fs8_to_mg(data_raw_acceleration.i16bit[1]); // y
+    float zr = lsm_from_fs8_to_mg(data_raw_acceleration.i16bit[2]); // z
+    #elif OMV_IMU_X_Y_ROTATION_DEGREES == 90
+    float yr = lsm_from_fs8_to_mg(data_raw_acceleration.i16bit[0]); // x
+    float zr = lsm_from_fs8_to_mg(data_raw_acceleration.i16bit[2]); // z
+    #elif OMV_IMU_X_Y_ROTATION_DEGREES == 180
+    float yr = -lsm_from_fs8_to_mg(data_raw_acceleration.i16bit[1]); // y
+    float zr = lsm_from_fs8_to_mg(data_raw_acceleration.i16bit[2]); // z
+    #elif OMV_IMU_X_Y_ROTATION_DEGREES == 270
+    float yr = -lsm_from_fs8_to_mg(data_raw_acceleration.i16bit[0]); // x
+    float zr = lsm_from_fs8_to_mg(data_raw_acceleration.i16bit[2]); // z
+    #endif
+    #if OMV_IMU_MOUNTING_Z_DIRECTION == 1 // default is -1 (IMU pointing reverse of camera)
+    yr = -yr;
+    zr = -zr;
+    #endif
+    return IM_RAD2DEG(fast_atan2f(zr, -yr));
 }
 
 STATIC mp_obj_t py_imu_acceleration_mg()
