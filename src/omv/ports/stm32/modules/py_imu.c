@@ -145,10 +145,10 @@ STATIC mp_obj_t py_imu_tuple(float x, float y, float z)
 // Roll = atan2(-X, sqrt(Z^2, + Y^2)) -> assume Z=0 -> atan2(-X, Y)
 // Pitch = atan2(Z, -Y)
 
-#if (OMV_IMU_ROTATION_DEGREES != 0) && \
-    (OMV_IMU_ROTATION_DEGREES != 90) && \
-    (OMV_IMU_ROTATION_DEGREES != 180) && \
-    (OMV_IMU_ROTATION_DEGREES != 270)
+#if (OMV_IMU_X_Y_ROTATION_DEGREES != 0) && \
+    (OMV_IMU_X_Y_ROTATION_DEGREES != 90) && \
+    (OMV_IMU_X_Y_ROTATION_DEGREES != 180) && \
+    (OMV_IMU_X_Y_ROTATION_DEGREES != 270)
 #error "OMV_IMU_ROTATION_DEGREES must be 0, 90, 180, or 270!"
 #endif
 
