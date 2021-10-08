@@ -4674,7 +4674,7 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_find_lines_obj, 1, py_image_find_line
 #ifdef IMLIB_ENABLE_FIND_LINE_SEGMENTS
 static mp_obj_t py_image_find_line_segments(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
-    image_t *arg_img = py_helper_arg_to_image_mutable(args[0]);
+    image_t *arg_img = py_image_cobj(args[0]);
 
     rectangle_t roi;
     py_helper_keyword_rectangle_roi(arg_img, n_args, args, 1, kw_args, &roi);
