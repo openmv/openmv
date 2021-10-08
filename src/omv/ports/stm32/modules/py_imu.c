@@ -161,7 +161,7 @@ STATIC float py_imu_get_roll()
 {
     axis3bit16_t data_raw_acceleration = {};
     LSM_FUNC(acceleration_raw_get)(&dev_ctx, data_raw_acceleration.u8bit);
-    #if OMV_IMU_ROTATION_DEGREES == 0
+    #if OMV_IMU_X_Y_ROTATION_DEGREES == 0
     float xr = lsm_from_fs8_to_mg(data_raw_acceleration.i16bit[0]); // x
     float yr = lsm_from_fs8_to_mg(data_raw_acceleration.i16bit[1]); // y
     #elif OMV_IMU_X_Y_ROTATION_DEGREES == 90
