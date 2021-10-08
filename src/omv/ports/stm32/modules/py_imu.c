@@ -149,7 +149,7 @@ STATIC mp_obj_t py_imu_tuple(float x, float y, float z)
     (OMV_IMU_X_Y_ROTATION_DEGREES != 90) && \
     (OMV_IMU_X_Y_ROTATION_DEGREES != 180) && \
     (OMV_IMU_X_Y_ROTATION_DEGREES != 270)
-#error "OMV_IMU_ROTATION_DEGREES must be 0, 90, 180, or 270!"
+#error "OMV_IMU_X_Y_ROTATION_DEGREES must be 0, 90, 180, or 270!"
 #endif
 
 #if (OMV_IMU_MOUNTING_Z_DIRECTION != -1) && \
