@@ -512,6 +512,38 @@ void HAL_SAI_MspDeInit(SAI_HandleTypeDef* hsai)
         HAL_GPIO_DeInit(AUDIO_SAI_D1_PORT, AUDIO_SAI_D1_PIN);
     }
 }
+#elif defined(AUDIO_DFSDM)
+void HAL_DFSDM_ChannelMspInit(DFSDM_Channel_HandleTypeDef *hdfsdm)
+{
+    GPIO_InitTypeDef GPIO_InitStruct;
+    if (hdfsdm->Instance == AUDIO_DFSDM) {
+        AUDIO_DFSDM_CLK_ENABLE();
+
+        GPIO_InitStruct.Pin = AUDIO_DFSDM_CK_PIN;
+        GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
+        GPIO_InitStruct.Pull = GPIO_NOPULL;
+        GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+        GPIO_InitStruct.Alternate = AUDIO_DFSDM_CK_AF;
+        HAL_GPIO_Init(AUDIO_DFSDM_CK_PORT, &GPIO_InitStruct);
+
+        GPIO_InitStruct.Pin = AUDIO_DFSDM_D1_PIN;
+        GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
+        GPIO_InitStruct.Pull = GPIO_NOPULL;
+        GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
+        GPIO_InitStruct.Alternate = AUDIO_DFSDM_D1_AF;
+        HAL_GPIO_Init(AUDIO_DFSDM_D1_PORT, &GPIO_InitStruct);
+    }
+}
+
+void HAL_DFSDM_ChannelMspDeInit(DFSDM_Channel_HandleTypeDef *hdfsdm)
+{
+    if (hdfsdm->Instance == AUDIO_DFSDM) {
+        AUDIO_DFSDM_CLK_DISABLE();
+
+        HAL_GPIO_DeInit(AUDIO_DFSDM_CK_PORT, AUDIO_DFSDM_CK_PIN);
+        HAL_GPIO_DeInit(AUDIO_DFSDM_D1_PORT, AUDIO_DFSDM_D1_PIN);
+    }
+}
 #endif
 
 void HAL_CRC_MspInit(CRC_HandleTypeDef* hcrc)

@@ -304,33 +304,56 @@ void SystemClock_Config(void)
     #endif
 
     #if defined(MCU_SERIES_H7)
-    PeriphClkInitStruct.PeriphClockSelection = RCC_PERIPHCLK_RTC|RCC_PERIPHCLK_FDCAN
-                                              |RCC_PERIPHCLK_SPI3|RCC_PERIPHCLK_SPI2
-                                              |RCC_PERIPHCLK_SDMMC|RCC_PERIPHCLK_I2C2
-                                              |RCC_PERIPHCLK_ADC|RCC_PERIPHCLK_USB
-                                              |RCC_PERIPHCLK_QSPI|RCC_PERIPHCLK_FMC
-                                              |RCC_PERIPHCLK_RNG|RCC_PERIPHCLK_SAI4A;
-    PeriphClkInitStruct.UsbClockSelection = OMV_OSC_USB_CLKSOURCE;
-    PeriphClkInitStruct.SdmmcClockSelection = RCC_SDMMCCLKSOURCE_PLL;
-    PeriphClkInitStruct.FdcanClockSelection = RCC_FDCANCLKSOURCE_PLL;
-    PeriphClkInitStruct.FmcClockSelection = RCC_FMCCLKSOURCE_PLL2;
-    PeriphClkInitStruct.QspiClockSelection = RCC_QSPICLKSOURCE_PLL2;
-    PeriphClkInitStruct.AdcClockSelection = OMV_OSC_ADC_CLKSOURCE;
-    PeriphClkInitStruct.Spi123ClockSelection = OMV_OSC_SPI123_CLKSOURCE;
-    #if defined(OMV_OSC_SPI45_CLKSOURCE)
-    PeriphClkInitStruct.Spi45ClockSelection = OMV_OSC_SPI45_CLKSOURCE;
+    PeriphClkInitStruct.PeriphClockSelection |= RCC_PERIPHCLK_RTC;
+    PeriphClkInitStruct.RTCClockSelection     = RCC_RTCCLKSOURCE_LSI;
+
+    PeriphClkInitStruct.PeriphClockSelection |= RCC_PERIPHCLK_RNG;
+    PeriphClkInitStruct.RngClockSelection     = OMV_OSC_RNG_CLKSOURCE;
+
+    PeriphClkInitStruct.PeriphClockSelection |= RCC_PERIPHCLK_USB;
+    PeriphClkInitStruct.UsbClockSelection     = OMV_OSC_USB_CLKSOURCE;
+
+    PeriphClkInitStruct.PeriphClockSelection |= RCC_PERIPHCLK_FMC;
+    PeriphClkInitStruct.FmcClockSelection     = RCC_FMCCLKSOURCE_PLL2;
+
+    PeriphClkInitStruct.PeriphClockSelection |= RCC_PERIPHCLK_ADC;
+    PeriphClkInitStruct.AdcClockSelection     = OMV_OSC_ADC_CLKSOURCE;
+
+    PeriphClkInitStruct.PeriphClockSelection |= RCC_PERIPHCLK_SDMMC;
+    PeriphClkInitStruct.SdmmcClockSelection   = RCC_SDMMCCLKSOURCE_PLL;
+
+    PeriphClkInitStruct.PeriphClockSelection |= RCC_PERIPHCLK_FDCAN;
+    PeriphClkInitStruct.FdcanClockSelection   = RCC_FDCANCLKSOURCE_PLL;
+
+    PeriphClkInitStruct.PeriphClockSelection |= RCC_PERIPHCLK_QSPI;
+    PeriphClkInitStruct.QspiClockSelection    = RCC_QSPICLKSOURCE_PLL2;
+
+    PeriphClkInitStruct.PeriphClockSelection |= RCC_PERIPHCLK_SPI123;
+    PeriphClkInitStruct.Spi123ClockSelection  = OMV_OSC_SPI123_CLKSOURCE;
+
+    PeriphClkInitStruct.PeriphClockSelection |= RCC_PERIPHCLK_I2C123;
+    PeriphClkInitStruct.I2c123ClockSelection  = RCC_I2C123CLKSOURCE_D2PCLK1;
+
+    PeriphClkInitStruct.PeriphClockSelection |= RCC_PERIPHCLK_SAI4A;
+    PeriphClkInitStruct.Sai4AClockSelection   = RCC_SAI4ACLKSOURCE_PLL;
+
+    #if defined(OMV_OSC_DFSDM1_CLKSOURCE)
+    PeriphClkInitStruct.PeriphClockSelection |= RCC_PERIPHCLK_DFSDM1;
+    PeriphClkInitStruct.Dfsdm1ClockSelection  = OMV_OSC_DFSDM1_CLKSOURCE;
     #endif
-    PeriphClkInitStruct.RTCClockSelection = RCC_RTCCLKSOURCE_LSI;
-    PeriphClkInitStruct.I2c123ClockSelection = RCC_I2C123CLKSOURCE_D2PCLK1;
-    PeriphClkInitStruct.Spi45ClockSelection = RCC_SPI45CLKSOURCE_PLL2;
-    PeriphClkInitStruct.RngClockSelection = OMV_OSC_RNG_CLKSOURCE;
-    PeriphClkInitStruct.Sai4AClockSelection = RCC_SAI4ACLKSOURCE_PLL;
+
+    PeriphClkInitStruct.PeriphClockSelection |= RCC_PERIPHCLK_SPI45;
+    #if defined(OMV_OSC_SPI45_CLKSOURCE)
+    PeriphClkInitStruct.Spi45ClockSelection   = OMV_OSC_SPI45_CLKSOURCE;
+    #else
+    PeriphClkInitStruct.Spi45ClockSelection   = RCC_SPI45CLKSOURCE_PLL2;
+    #endif
 
     if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInitStruct) != HAL_OK) {
         // Initialization Error
         __fatal_error("HAL_RCCEx_PeriphCLKConfig");
     }
-    #endif
+    #endif // defined(MCU_SERIES_H7)
 
     #if defined(MCU_SERIES_F4) || defined(MCU_SERIES_F7)
     if (HAL_PWREx_EnableOverDrive() != HAL_OK) {
