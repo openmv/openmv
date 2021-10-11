@@ -253,7 +253,7 @@ static mp_obj_t py_audio_init(uint n_args, const mp_obj_t *args, mp_map_t *kw_ar
     hdfsdm.Instance                      = AUDIO_DFSDM;
     hdfsdm.Init.OutputClock.Activation   = ENABLE;
     hdfsdm.Init.OutputClock.Selection    = DFSDM_CHANNEL_OUTPUT_CLOCK_AUDIO;
-    hdfsdm.Init.OutputClock.Divider      = AUDIO_DFSDM_FREQMHZ / 2;  /* 100MHz / 2MHz = 50*/
+    hdfsdm.Init.OutputClock.Divider      = AUDIO_DFSDM_FREQMHZ / 2;  /* Divider = Aclk / 2MHz*/
     hdfsdm.Init.Input.Multiplexer        = DFSDM_CHANNEL_EXTERNAL_INPUTS;
     hdfsdm.Init.Input.DataPacking        = DFSDM_CHANNEL_STANDARD_MODE;
     hdfsdm.Init.Input.Pins               = DFSDM_CHANNEL_SAME_CHANNEL_PINS;

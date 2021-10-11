@@ -321,8 +321,9 @@
 // DFSDM1
 #define AUDIO_DFSDM                     (DFSDM1_Channel2)
 #define AUDIO_DFSDM_CHANNEL             (DFSDM_CHANNEL_2)
-// DFSDM input clock = 100MHz
-#define AUDIO_DFSDM_FREQMHZ             (100)
+// DFSDM output clock is derived from the Aclk (set in SAI1SEL[2:0])
+// for SAI1 and DFSDM1, which is clocked from PLL1Q by default (50MHz).
+#define AUDIO_DFSDM_FREQMHZ             (50)
 #define AUDIO_MAX_CHANNELS              (1) // Maximum number of channels.
 
 #define AUDIO_DFSDM_CK_PORT             (GPIOD)
