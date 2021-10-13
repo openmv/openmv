@@ -100,8 +100,7 @@ void HAL_DFSDM_FilterRegConvCpltCallback(DFSDM_Filter_HandleTypeDef *hdfsdm_filt
 #endif
 {
     xfer_status |= DMA_XFER_FULL;
-    SCB_InvalidateDCache_by_Addr(
-            (uint32_t *)(&PDM_BUFFER[sizeof(PDM_BUFFER) / sizeof(PDM_BUFFER[0]) / 2]), sizeof(PDM_BUFFER) / 2);
+    SCB_InvalidateDCache_by_Addr((uint32_t *)(&PDM_BUFFER[PDM_BUFFER_SIZE / 2]), sizeof(PDM_BUFFER) / 2);
     if (g_audio_callback != mp_const_none) {
         pendsv_schedule_dispatch(PENDSV_DISPATCH_AUDIO, audio_pendsv_callback);
     }
