@@ -126,7 +126,8 @@
 #define OMV_OSC_RNG_CLKSOURCE       RCC_RNGCLKSOURCE_HSI48
 #define OMV_OSC_ADC_CLKSOURCE       RCC_ADCCLKSOURCE_PLL3
 #define OMV_OSC_SPI45_CLKSOURCE     RCC_SPI45CLKSOURCE_PLL3
-#define OMV_OSC_SPI123_CLKSOURCE    RCC_SPI123CLKSOURCE_PLL3
+#define OMV_OSC_SPI123_CLKSOURCE    RCC_SPI123CLKSOURCE_PLL2
+#define OMV_OSC_DFSDM1_CLKSOURCE    RCC_DFSDM1CLKSOURCE_D2PCLK1
 
 // HSE/HSI/CSI State
 #define OMV_OSC_HSE_STATE       (RCC_HSE_BYPASS)
@@ -153,7 +154,7 @@
 #define OMV_FB_SIZE             (400K)      // FB memory: header + VGA/GS image
 #define OMV_FB_ALLOC_SIZE       (100K)      // minimum fb alloc size
 #define OMV_STACK_SIZE          (64K)
-#define OMV_HEAP_SIZE           (200K)
+#define OMV_HEAP_SIZE           (192K)
 
 #define OMV_LINE_BUF_SIZE       (3 * 1024)  // Image line buffer round(640 * 2BPP * 2 buffers).
 #define OMV_MSC_BUF_SIZE        (2K)        // USB MSC bot data
@@ -170,9 +171,9 @@
 #define OMV_ITCM_ORIGIN         0x00000000
 #define OMV_ITCM_LENGTH         64K
 #define OMV_SRAM1_ORIGIN        0x30000000
-#define OMV_SRAM1_LENGTH        248K
-#define OMV_SRAM2_ORIGIN        0x3003E000  // 8KB of SRAM1
-#define OMV_SRAM2_LENGTH        8K
+#define OMV_SRAM1_LENGTH        240K
+#define OMV_SRAM2_ORIGIN        0x3003C000  // 16KB of SRAM1
+#define OMV_SRAM2_LENGTH        16K
 #define OMV_SRAM3_ORIGIN        0x30040000
 #define OMV_SRAM3_LENGTH        32K
 #define OMV_SRAM4_ORIGIN        0x38000000
@@ -190,9 +191,9 @@
 
 // Domain 2 DMA buffers region.
 #define OMV_DMA_MEMORY_D2       SRAM2
-#define OMV_DMA_MEMORY_D2_SIZE  (1*1024) // Reserved memory for DMA buffers
+#define OMV_DMA_MEMORY_D2_SIZE  (6*1024) // Reserved memory for DMA buffers
 #define OMV_DMA_REGION_D2_BASE  (OMV_SRAM2_ORIGIN+(0*1024))
-#define OMV_DMA_REGION_D2_SIZE  MPU_REGION_SIZE_8KB
+#define OMV_DMA_REGION_D2_SIZE  MPU_REGION_SIZE_16KB
 
 // Domain 3 DMA buffers region.
 //#define OMV_DMA_MEMORY_D3       SRAM4
@@ -316,6 +317,34 @@
 #define SOFT_I2C_SIOD_WRITE(bit)     HAL_GPIO_WritePin(SOFT_I2C_PORT, SOFT_I2C_SIOD_PIN, bit);
 
 #define SOFT_I2C_SPIN_DELAY          64
+
+// DFSDM1
+#define AUDIO_DFSDM                     (DFSDM1_Channel2)
+#define AUDIO_DFSDM_CHANNEL             (DFSDM_CHANNEL_2)
+// DFSDM output clock is derived from the Aclk (set in SAI1SEL[2:0])
+// for SAI1 and DFSDM1, which is clocked from PLL1Q by default (50MHz).
+#define AUDIO_DFSDM_FREQMHZ             (50)
+#define AUDIO_MAX_CHANNELS              (1) // Maximum number of channels.
+
+#define AUDIO_DFSDM_CK_PORT             (GPIOD)
+#define AUDIO_DFSDM_CK_PIN              (GPIO_PIN_10)
+#define AUDIO_DFSDM_CK_AF               (GPIO_AF3_DFSDM1)
+
+#define AUDIO_DFSDM_D1_PORT             (GPIOE)
+#define AUDIO_DFSDM_D1_PIN              (GPIO_PIN_7)
+#define AUDIO_DFSDM_D1_AF               (GPIO_AF3_DFSDM1)
+
+#define AUDIO_DFSDM_FLT0                DFSDM1_Filter0
+#define AUDIO_DFSDM_FLT0_IRQ            DFSDM1_FLT0_IRQn
+#define AUDIO_DFSDM_FLT0_IRQHandler     DFSDM1_FLT0_IRQHandler
+#define AUDIO_DFSDM_FLT0_DMA_STREAM     DMA1_Stream1
+#define AUDIO_DFSDM_FLT0_DMA_REQUEST    DMA_REQUEST_DFSDM1_FLT0
+#define AUDIO_DFSDM_FLT0_DMA_IRQ        DMA1_Stream1_IRQn
+#define AUDIO_DFSDM_FLT0_DMA_IRQHandler DMA1_Stream1_IRQHandler
+
+#define AUDIO_DFSDM_CLK_ENABLE()        __HAL_RCC_DFSDM1_CLK_ENABLE()
+#define AUDIO_DFSDM_CLK_DISABLE()       __HAL_RCC_DFSDM1_CLK_DISABLE()
+#define AUDIO_DFSDM_DMA_CLK_ENABLE()    __HAL_RCC_DMA1_CLK_ENABLE()
 
 #define IMU_CHIP_LSM6DSOX           (1)
 #define IMU_SPI                     (SPI5)
