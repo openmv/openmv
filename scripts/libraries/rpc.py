@@ -557,7 +557,7 @@ class rpc_usb_vcp_slave(rpc_slave):
     def put_bytes(self, data, timeout_ms): # protected
         self.__usb_vcp.send(data, timeout=timeout_ms)
 
-class rpc_wifi_master(rpc_master):
+class rpc_network_master(rpc_master):
 
     def __valid_tcp_socket(self): # private
         if self.__tcp__socket is None:
@@ -587,17 +587,11 @@ class rpc_wifi_master(rpc_master):
         self.__udp__socket.close()
         self.__udp__socket = None
 
-    def __init__(self, ssid, ssid_key, ssid_security, ip, port=0x1DBA, mode=network.WINC.MODE_STA, static_ip=None): # private
+    def __init__(self, network_if, port=0x1DBA): # private
         self._udp_limit = 1400
         self._timeout_scale = 10
-        self.__winc = network.WINC(mode=mode)
-        if mode == network.WINC.MODE_STA:
-            if static_ip is not None: self.__winc.ifconfig(static_ip)
-            self.__winc.connect(ssid, key=ssid_key, security=ssid_security)
-            if not self.__winc.isconnected(): raise OSError("Failed to connect to network!")
-        elif mode == network.WINC.MODE_AP: self.__winc.start_ap(ssid, key=ssid_key, security=ssid_security)
-        else: raise ValueError("Invalid mode")
-        self.__myip = self.__winc.ifconfig()[0]
+        self.__network = network_if
+        self.__myip = self.__network.ifconfig()[0]
         self.__myaddr = (self.__myip, port)
         self.__slave_addr = (ip, port)
         self.__tcp__socket = None
@@ -708,7 +702,7 @@ class rpc_wifi_master(rpc_master):
             except OSError: self.__close_tcp_socket()
         if l: raise OSError # Stop Stream.
 
-class rpc_wifi_slave(rpc_slave):
+class rpc_network_slave(rpc_slave):
 
     def __valid_tcp_socket(self): # private
         if self.__tcp__socket is None:
@@ -734,17 +728,11 @@ class rpc_wifi_slave(rpc_slave):
         self.__udp__socket.close()
         self.__udp__socket = None
 
-    def __init__(self, ssid, ssid_key, ssid_security, port=0x1DBA, mode=network.WINC.MODE_STA, static_ip=None): # private
+    def __init__(self, network_if, port=0x1DBA): # private
         self._udp_limit = 1400
         self._timeout_scale = 10
-        self.__winc = network.WINC(mode=mode)
-        if mode == network.WINC.MODE_STA:
-            if static_ip is not None: self.__winc.ifconfig(static_ip)
-            self.__winc.connect(ssid, key=ssid_key, security=ssid_security)
-            if not self.__winc.isconnected(): raise OSError("Failed to connect to network!")
-        elif mode == network.WINC.MODE_AP: self.__winc.start_ap(ssid, key=ssid_key, security=ssid_security)
-        else: raise ValueError("Invalid mode")
-        self.__myip = self.__winc.ifconfig()[0]
+        self.__network = network_if
+        self.__myip = self.__network.ifconfig()[0]
         self.__myaddr = (self.__myip, port)
         self.__master_addr = None
         self.__tcp__socket = None
