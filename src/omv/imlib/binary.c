@@ -757,8 +757,8 @@ static void imlib_erode_dilate(image_t *img, int ksize, int threshold, int e_or_
                         for (int j = -ksize; j <= ksize; j++) {
                             uint8_t *k_row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(img,y+j);
                             // subtract old left edge and add new right edge to sum
-                            acc -= (IMAGE_GET_GRAYSCALE_PIXEL_FAST(k_row_ptr,x-ksize-1) & 1); // values have already been thresholded to 0x00 or 0xFF
-                            acc += (IMAGE_GET_GRAYSCALE_PIXEL_FAST(k_row_ptr,x+ksize) & 1);
+                            acc -= (IMAGE_GET_GRAYSCALE_PIXEL_FAST(k_row_ptr,x-ksize-1) > 0);
+                            acc += (IMAGE_GET_GRAYSCALE_PIXEL_FAST(k_row_ptr,x+ksize) > 0);
                         } // for j
                     } else { // slower way which checks boundaries per pixel
                         acc = e_or_d ? 0 : -1; // Don't count center pixel...
@@ -767,8 +767,8 @@ static void imlib_erode_dilate(image_t *img, int ksize, int threshold, int e_or_
                                 IM_MIN(IM_MAX(y + j, 0), (img->h - 1)));
 
                             for (int k = -ksize; k <= ksize; k++) {
-                                acc += ((IMAGE_GET_GRAYSCALE_PIXEL_FAST(k_row_ptr,
-                                    IM_MIN(IM_MAX(x + k, 0), (img->w - 1)))) >> 7);
+                                acc += (IMAGE_GET_GRAYSCALE_PIXEL_FAST(k_row_ptr,
+                                    IM_MIN(IM_MAX(x + k, 0), (img->w - 1)))) > 0;
                             }  // for k
                         } // for j
                     }
@@ -821,8 +821,8 @@ static void imlib_erode_dilate(image_t *img, int ksize, int threshold, int e_or_
                         for (int j = -ksize; j <= ksize; j++) {
                             uint16_t *k_row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(img,y+j);
                             // subtract old left column and add new right column
-                            acc -= IMAGE_GET_RGB565_PIXEL_FAST(k_row_ptr,x-ksize-1) & 1; // already 0 or FFFF
-                            acc += IMAGE_GET_RGB565_PIXEL_FAST(k_row_ptr,x+ksize) & 1; // (pre-thresholded)
+                            acc -= IMAGE_GET_RGB565_PIXEL_FAST(k_row_ptr,x-ksize-1) > 0;
+                            acc += IMAGE_GET_RGB565_PIXEL_FAST(k_row_ptr,x+ksize) > 0;
                         }
                     } else { // need to check boundary conditions for each pixel
                         acc = e_or_d ? 0 : -1; // Don't count center pixel...
@@ -832,7 +832,7 @@ static void imlib_erode_dilate(image_t *img, int ksize, int threshold, int e_or_
 
                             for (int k = -ksize; k <= ksize; k++) {
                                 acc += (IMAGE_GET_RGB565_PIXEL_FAST(k_row_ptr,
-                                    IM_MIN(IM_MAX(x + k, 0), (img->w - 1)))) & 1; // already 0 or FFFF
+                                    IM_MIN(IM_MAX(x + k, 0), (img->w - 1)))) > 0;
                             }
                         }
                     }
