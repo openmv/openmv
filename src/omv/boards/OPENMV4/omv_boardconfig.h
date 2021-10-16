@@ -64,6 +64,7 @@
 #define OMV_ENABLE_LEPTON       (1)
 #define OMV_ENABLE_HM01B0       (0)
 #define OMV_ENABLE_PAJ6100      (1)
+#define OMV_ENABLE_FROGEYE2020  (1)
 
 // Set which OV767x sensor is used
 #define OMV_OV7670_VERSION      (70)

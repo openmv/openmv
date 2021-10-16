@@ -64,6 +64,7 @@
 #define OMV_ENABLE_LEPTON               (0)
 #define OMV_ENABLE_HM01B0               (0)
 #define OMV_ENABLE_PAJ6100              (0)
+#define OMV_ENABLE_FROGEYE2020          (0)
 
 // Enable sensor features
 #define OMV_ENABLE_OV5640_AF            (1)
