@@ -27,6 +27,7 @@
 #include "lepton.h"
 #include "hm01b0.h"
 #include "paj6100.h"
+#include "frogeye2020.h"
 #include "gc2145.h"
 #include "framebuffer.h"
 #include "omv_boardconfig.h"
@@ -156,13 +157,9 @@ __weak int sensor_reset()
     // Re-enable the bus.
     cambus_enable(&sensor.bus, true);
 
-    // Check if the control is supported.
-    if (sensor.reset == NULL) {
-        return SENSOR_ERROR_CTL_UNSUPPORTED;
-    }
-
     // Call sensor-specific reset function
-    if (sensor.reset(&sensor) != 0) {
+    if (sensor.reset != NULL
+            && sensor.reset(&sensor) != 0) {
         return SENSOR_ERROR_CTL_FAILED;
     }
 
@@ -286,6 +283,14 @@ int sensor_probe_init(uint32_t bus_id, uint32_t bus_speed)
             break;
         #endif //(OMV_ENABLE_GC2145 == 1)
 
+        #if (OMV_ENABLE_FROGEYE2020 == 1)
+        case FROGEYE2020_SLV_ADDR:
+            sensor.chip_id_w = FROGEYE2020_ID;
+            sensor.pwdn_pol = ACTIVE_HIGH;
+            sensor.reset_pol = ACTIVE_HIGH;
+            break;
+        #endif // (OMV_ENABLE_FROGEYE2020 == 1)
+
         #if (OMV_ENABLE_PAJ6100 == 1)
         case 0:
             if (paj6100_detect(&sensor)) {
@@ -402,6 +407,15 @@ int sensor_probe_init(uint32_t bus_id, uint32_t bus_speed)
             init_ret = paj6100_init(&sensor);
             break;
         #endif // (OMV_ENABLE_PAJ6100 == 1)
+
+        #if (OMV_ENABLE_FROGEYE2020 == 1)
+        case FROGEYE2020_ID:
+            if (sensor_set_xclk_frequency(FROGEYE2020_XCLK_FREQ) != 0) {
+                return SENSOR_ERROR_TIM_INIT_FAILED;
+            }
+            init_ret = frogeye2020_init(&sensor);
+            break;
+        #endif // (OMV_ENABLE_FROGEYE2020 == 1)
 
         default:
             return SENSOR_ERROR_ISC_UNSUPPORTED;
