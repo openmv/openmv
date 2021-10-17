@@ -36,7 +36,7 @@ sys.stdout.flush()
 # * my_ip - IP address to bind to ("" to bind to all interfaces...)
 # * port - Port to route traffic to.
 #
-# interface = rpc.rpc_wifi_or_ethernet_master(slave_ip="xxx.xxx.xxx.xxx", my_ip="", port=0x1DBA)
+# interface = rpc.rpc_network_master(slave_ip="xxx.xxx.xxx.xxx", my_ip="", port=0x1DBA)
 
 ##############################################################
 # Call Back Handlers
