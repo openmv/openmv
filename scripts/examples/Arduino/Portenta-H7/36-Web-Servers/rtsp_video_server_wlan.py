@@ -11,10 +11,12 @@ import network, omv, rtsp, sensor, time
 # Not all programs (e.g. VLC) implement the full JPEG standard for decoding any JPEG image
 # in RTP packets. Images JPEG compressed by the OpenMV Cam internally may not display.
 
+# FFPLAY will correctly handle JPEGs produced by OpenMV software.
+
 sensor.reset()
 
-sensor.set_pixformat(sensor.JPEG) # Only supported by the OV2640/OV5640.
-sensor.set_framesize(sensor.UXGA)
+sensor.set_pixformat(sensor.GRAYSCALE)
+sensor.set_framesize(sensor.QVGA)
 
 # Turn off the frame buffer connection to the IDE from the OpenMV Cam side.
 #
@@ -24,19 +26,15 @@ sensor.set_framesize(sensor.UXGA)
 
 omv.disable_fb(True)
 
-# * ssid - WiFi network to connect to.
-# * ssid_key - WiFi network password.
-# * ssid_security - WiFi security.
-# * port - Port to listen to (554).
-# * mode - Regular or access-point mode.
-# * static_ip - If not None then a tuple of the (IP Address, Subnet Mask, Gateway, DNS Address)
+# Setup Network Interface
 
-server = rtsp.rtsp_server(ssid="",
-                          ssid_key="",
-                          ssid_security=network.WINC.WPA_PSK,
-                          port=554,
-                          mode=network.WINC.MODE_STA,
-                          static_ip=None)
+network_if = network.WLAN(network.STA_IF)
+network_if.active(True)
+network_if.connect('your-ssid', 'your-password')
+
+# Setup RTSP Server
+
+server = rtsp.rtsp_server(network_if)
 
 # For the call back functions below:
 #

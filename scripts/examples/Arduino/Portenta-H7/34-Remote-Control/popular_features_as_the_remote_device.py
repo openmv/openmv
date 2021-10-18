@@ -14,7 +14,7 @@ sensor.set_framesize(sensor.QVGA)
 sensor.skip_frames(time = 2000)
 
 # The RPC library above is installed on your OpenMV Cam and provides mutliple classes for
-# allowing your OpenMV Cam to be controlled over CAN, I2C, SPI, UART, USB VCP, or WiFi.
+# allowing your OpenMV Cam to be controlled over CAN, I2C, SPI, UART, USB VCP, or LAN/WLAN.
 
 ################################################################
 # Choose the interface you wish to control your OpenMV Cam over.
@@ -64,21 +64,21 @@ interface = rpc.rpc_uart_slave(baudrate=115200)
 #
 # interface = rpc.rpc_usb_vcp_slave()
 
-# Uncomment the below line to setup your OpenMV Cam for control over WiFi.
+# Uncomment the below line to setup your OpenMV Cam for control over the lan.
 #
-# * ssid - WiFi network to connect to.
-# * ssid_key - WiFi network password.
-# * ssid_security - WiFi security.
-# * port - Port to route traffic to.
-# * mode - Regular or access-point mode.
-# * static_ip - If not None then a tuple of the (IP Address, Subnet Mask, Gateway, DNS Address)
+# network_if = network.LAN()
+# network_if.active(True)
+# network_if.ifconfig('dhcp')
 #
-# interface = rpc.rpc_wifi_slave(ssid="",
-#                                ssid_key="",
-#                                ssid_security=network.WINC.WPA_PSK,
-#                                port=0x1DBA,
-#                                mode=network.WINC.MODE_STA,
-#                                static_ip=None)
+# interface = rpc.rpc_network_slave(network_if)
+
+# Uncomment the below line to setup your OpenMV Cam for control over the wlan.
+#
+# network_if = network.WLAN(network.STA_IF)
+# network_if.active(True)
+# network_if.connect('your-ssid', 'your-password')
+#
+# interface = rpc.rpc_network_slave(network_if)
 
 ################################################################
 # Call Backs
@@ -127,7 +127,7 @@ def person_detection(data):
 # data is unused
 def qrcode_detection(data):
     sensor.set_pixformat(sensor.GRAYSCALE)
-    sensor.set_framesize(sensor.VGA)
+    sensor.set_framesize(sensor.QVGA)
     sensor.set_windowing((320, 240))
     codes = sensor.snapshot().find_qrcodes()
     if not codes: return bytes() # No detections.
@@ -139,7 +139,7 @@ def qrcode_detection(data):
 # data is unused
 def all_qrcode_detection(data):
     sensor.set_pixformat(sensor.GRAYSCALE)
-    sensor.set_framesize(sensor.VGA)
+    sensor.set_framesize(sensor.QVGA)
     sensor.set_windowing((320, 240))
     codes = sensor.snapshot().find_qrcodes()
     if not codes: return bytes() # No detections.
@@ -177,7 +177,7 @@ def all_apriltag_detection(data):
 # data is unused
 def datamatrix_detection(data):
     sensor.set_pixformat(sensor.GRAYSCALE)
-    sensor.set_framesize(sensor.VGA)
+    sensor.set_framesize(sensor.QVGA)
     sensor.set_windowing((320, 240))
     codes = sensor.snapshot().find_datamatrices()
     if not codes: return bytes() # No detections.
@@ -189,7 +189,7 @@ def datamatrix_detection(data):
 # data is unused
 def all_datamatrix_detection(data):
     sensor.set_pixformat(sensor.GRAYSCALE)
-    sensor.set_framesize(sensor.VGA)
+    sensor.set_framesize(sensor.QVGA)
     sensor.set_windowing((320, 240))
     codes = sensor.snapshot().find_datamatrices()
     if not codes: return bytes() # No detections.
@@ -202,7 +202,7 @@ def all_datamatrix_detection(data):
 # data is unused
 def barcode_detection(data):
     sensor.set_pixformat(sensor.GRAYSCALE)
-    sensor.set_framesize(sensor.VGA)
+    sensor.set_framesize(sensor.QVGA)
     sensor.set_windowing((sensor.width(), sensor.height()//8))
     codes = sensor.snapshot().find_barcodes()
     if not codes: return bytes() # No detections.
@@ -213,7 +213,7 @@ def barcode_detection(data):
 # data is unused
 def all_barcode_detection(data):
     sensor.set_pixformat(sensor.GRAYSCALE)
-    sensor.set_framesize(sensor.VGA)
+    sensor.set_framesize(sensor.QVGA)
     sensor.set_windowing((sensor.width(), sensor.height()//8))
     codes = sensor.snapshot().find_barcodes()
     if not codes: return bytes() # No detections.
@@ -244,7 +244,7 @@ def color_detection(data):
 #
 # data is unused
 def jpeg_snapshot(data):
-    sensor.set_pixformat(sensor.GRAYSCALE)
+    sensor.set_pixformat(sensor.RGB565)
     sensor.set_framesize(sensor.QVGA)
     return sensor.snapshot().compress(quality=90).bytearray()
 

@@ -20,7 +20,7 @@ sensor.skip_frames(time = 2000)
 omv.disable_fb(True)
 
 # The RPC library above is installed on your OpenMV Cam and provides mutliple classes for
-# allowing your OpenMV Cam to be controlled over USB or WIFI.
+# allowing your OpenMV Cam to be controlled over USB or LAN/WLAN.
 
 ################################################################
 # Choose the interface you wish to control your OpenMV Cam over.
@@ -30,21 +30,21 @@ omv.disable_fb(True)
 #
 interface = rpc.rpc_usb_vcp_slave()
 
-# Uncomment the below line to setup your OpenMV Cam for control over WiFi.
+# Uncomment the below line to setup your OpenMV Cam for control over the lan.
 #
-# * ssid - WiFi network to connect to.
-# * ssid_key - WiFi network password.
-# * ssid_security - WiFi security.
-# * port - Port to route traffic to.
-# * mode - Regular or access-point mode.
-# * static_ip - If not None then a tuple of the (IP Address, Subnet Mask, Gateway, DNS Address)
+# network_if = network.LAN()
+# network_if.active(True)
+# network_if.ifconfig('dhcp')
 #
-# interface = rpc.rpc_wifi_slave(ssid="",
-#                                ssid_key="",
-#                                ssid_security=network.WINC.WPA_PSK,
-#                                port=0x1DBA,
-#                                mode=network.WINC.MODE_STA,
-#                                static_ip=None)
+# interface = rpc.rpc_network_slave(network_if)
+
+# Uncomment the below line to setup your OpenMV Cam for control over the wlan.
+#
+# network_if = network.WLAN(network.STA_IF)
+# network_if.active(True)
+# network_if.connect('your-ssid', 'your-password')
+#
+# interface = rpc.rpc_network_slave(network_if)
 
 ################################################################
 # Call Backs

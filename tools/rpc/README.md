@@ -173,7 +173,7 @@ Creates a master implementation of the `rpc` library to communicate over a hardw
 
 Please use the `rpc_usb_vcp_master` to talk to the OpenMV Cam over its USB interface. This class is for talking to the OpenMV Cam over its hardware UART.
 
-If you are using this class with USB to serial converters you will likely experience intermittent synchronization issues. The RPC library uart interface on the OpenMV Cam is designed to work with real-time UARTs like hardware RS232/RS422/RS485  COM ports on PCs and TTL UARTS on single board computers like the RaspberryPi and Beaglebone. That said, the interface library can handle this and will continue to work.  
+If you are using this class with USB to serial converters you will likely experience intermittent synchronization issues. The RPC library uart interface on the OpenMV Cam is designed to work with real-time UARTs like hardware RS232/RS422/RS485  COM ports on PCs and TTL UARTS on single board computers like the RaspberryPi and Beaglebone. That said, the interface library can handle this and will continue to work.
 
 ## rpc_uart_slave(port, baudrate=9600)
 
@@ -181,7 +181,7 @@ Creates a slave implementation of the `rpc` library to communicate over a hardwa
 
 Please use the `rpc_usb_vcp_slave` to talk to the OpenMV Cam over its USB interface. This class is for talking to the OpenMV Cam over its hardware UART.
 
-If you are using this class with USB to serial converters you will likely experience intermittent synchronization issues. The RPC library uart interface on the OpenMV Cam is designed to work with real-time UARTs like hardware RS232/RS422/RS485  COM ports on PCs and TTL UARTS on single board computers like the RaspberryPi and Beaglebone. That said, the interface library can handle this and will continue to work. 
+If you are using this class with USB to serial converters you will likely experience intermittent synchronization issues. The RPC library uart interface on the OpenMV Cam is designed to work with real-time UARTs like hardware RS232/RS422/RS485  COM ports on PCs and TTL UARTS on single board computers like the RaspberryPi and Beaglebone. That said, the interface library can handle this and will continue to work.
 
 ## rpc_usb_vcp_master(port):
 
@@ -195,11 +195,11 @@ Creates a slave implementation of the `rpc` library to communicate over a USB VC
 
 Communication over USB is the most reliable and high speed way to connect an OpenMV Cam to a computer. However, as the OpenMV Cam has only one VCP port we recommend that you fully debug your script using the `rpc_usb_vcp_master` on your OpenMV using another `rpc` interface if possible as you will not be able to get error messages off the OpenMV Cam easily. For example, connecting the `rpc_usb_vcp_slave` to the `rpc_uart_master` on your OpenMV Cam at 115200 BPS over a USB-to-Serial adapter when debugging will make your life far easier. Alternatively, use the Ethernet or WiFi interface when debugging.
 
-## rpc_wifi_or_ethernet_master(slave_ip, my_ip="", port=0x1DBA):
+## rpc_network_master(slave_ip, my_ip="", port=0x1DBA):
 
 Creates a master implementation of the `rpc` library to communicate over WiFi or Ethernet. `slave_ip` is the IPV4 address of the `rpc` slave device. `my_ip` can be `""` which binds the master to any interface adapter to communicate to the slave. If `my_ip` is not `""` then it should be an IP address on the same subnet as `slave_ip`. `port` is a free port to use for UDP and TCP traffic.
 
-## rpc_wifi_or_ethernet_slave(my_ip="", port=0x1DBA):
+## rpc_network_slave(my_ip="", port=0x1DBA):
 
 Creates a slave implementation of the `rpc` library to communicate over WiFi or Ethernet. `my_ip` can be `""` which binds the slave to any interface adapter to communicate to the master. If `my_ip` is not `""` then it should be an IP address on the same subnet as the master. `port` is a free port to use for UDP and TCP traffic.
 

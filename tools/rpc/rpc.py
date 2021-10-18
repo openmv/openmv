@@ -437,7 +437,7 @@ class rpc_usb_vcp_slave(rpc_slave):
         if int(self.__ser.timeout) != 1: self.__ser.timeout = 1 # Changing this causes control transfers.
         return self.__get_bytes(buff)
 
-class rpc_wifi_or_ethernet_master(rpc_master):
+class rpc_network_master(rpc_master):
 
     def __valid_tcp_socket(self): # private
         if self.__tcp__socket is None:
@@ -584,7 +584,7 @@ class rpc_wifi_or_ethernet_master(rpc_master):
             except (socket.timeout, socket.error): self.__close_tcp_socket()
         if l: raise OSError # Stop Stream.
 
-class rpc_wifi_or_ethernet_slave(rpc_slave):
+class rpc_network_slave(rpc_slave):
 
     def __valid_tcp_socket(self): # private
         if self.__tcp__socket is None:

@@ -7,7 +7,7 @@
 import image, network, omv, rpc, sensor, struct, time
 
 # The RPC library above is installed on your OpenMV Cam and provides mutliple classes for
-# allowing your OpenMV Cam to control over CAN, I2C, SPI, UART, or WIFI.
+# allowing your OpenMV Cam to control over CAN, I2C, SPI, UART, or LAN/WLAN.
 
 ##############################################################
 # Choose the interface you wish to control an OpenMV Cam over.
