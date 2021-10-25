@@ -20,27 +20,43 @@
 #include "py_assert.h"
 #include "py_image.h"
 #include "ff_wrapper.h"
-#include "libtf.h"
 #include "libtf_person_detect_model_data.h"
 #include "py_tf.h"
 
 void py_tf_alloc_putchar_buffer()
 {
     py_tf_putchar_buffer = (char *) fb_alloc0(PY_TF_PUTCHAR_BUFFER_LEN + 1, FB_ALLOC_NO_HINT);
+    py_tf_putchar_buffer_index = 0;
     py_tf_putchar_buffer_len = PY_TF_PUTCHAR_BUFFER_LEN;
+}
+
+STATIC const char *py_tf_map_datatype(libtf_datatype_t datatype)
+{
+    if (datatype == LIBTF_DATATYPE_UINT8) {
+        return "uint8";
+    } else if (datatype == LIBTF_DATATYPE_INT8) {
+        return "int8";
+    } else {
+        return "float";
+    }
 }
 
 STATIC void py_tf_model_print(const mp_print_t *print, mp_obj_t self_in, mp_print_kind_t kind)
 {
     py_tf_model_obj_t *self = self_in;
     mp_printf(print,
-              "{\"len\":%d, \"height\":%d, \"width\":%d, \"channels\":%d, \"signed\":%d, \"is_float\":%d}",
-              self->model_data_len,
-              self->height,
-              self->width,
-              self->channels,
-              self->signed_or_unsigned,
-              self->is_float);
+              "{\"len\":%d, \"ram\":%d, "
+              "\"input_height\":%d, \"input_width\":%d, \"input_channels\":%d, \"input_datatype\":\"%s\", "
+              "\"input_scale\":%f, \"input_zero_point\":%f "
+              "\"output_height\":%d, \"output_width\":%d, \"output_channels\":%d, \"output_datatype\":\"%s\", "
+              "\"output_scale\":%f, \"output_zero_point\":%f}",
+              self->model_data_len, self->params.tensor_arena_size,
+              self->params.input_height, self->params.input_width, self->params.input_channels,
+              py_tf_map_datatype(self->params.input_datatype),
+              (double) self->params.input_scale, (double) self->params.input_zero_point,
+              self->params.output_height, self->params.output_width, self->params.output_channels,
+              py_tf_map_datatype(self->params.output_datatype),
+              (double) self->params.output_scale, (double) self->params.output_zero_point);
 }
 
 // TF Classification Object
@@ -141,7 +157,7 @@ STATIC mp_obj_t int_py_tf_load(mp_obj_t path_obj, bool alloc_mode, bool helper_m
 
     if (!strcmp(path, "person_detection")) {
         tf_model->model_data = (unsigned char *) g_person_detect_model_data;
-        tf_model->model_data_len = g_person_detect_model_data_len;
+        tf_model->model_data_len = g_person_detect_model_data_size;
     } else {
         #if defined(IMLIB_ENABLE_IMAGE_FILE_IO)
         FIL fp;
@@ -164,17 +180,9 @@ STATIC mp_obj_t int_py_tf_load(mp_obj_t path_obj, bool alloc_mode, bool helper_m
     uint32_t tensor_arena_size;
     uint8_t *tensor_arena = fb_alloc_all(&tensor_arena_size, FB_ALLOC_PREFER_SIZE);
 
-    if (libtf_get_input_data_hwc(tf_model->model_data,
-            tensor_arena,
-            tensor_arena_size,
-            &tf_model->height,
-            &tf_model->width,
-            &tf_model->channels,
-            &tf_model->signed_or_unsigned,
-            &tf_model->is_float) != 0) {
+    if (libtf_get_parameters(tf_model->model_data, tensor_arena, tensor_arena_size, &tf_model->params) != 0) {
         // Note can't use MP_ERROR_TEXT here...
-        mp_raise_msg(&mp_type_OSError, (mp_rom_error_text_t)
-                py_tf_putchar_buffer - (PY_TF_PUTCHAR_BUFFER_LEN - py_tf_putchar_buffer_len));
+        mp_raise_msg(&mp_type_OSError, (mp_rom_error_text_t) py_tf_putchar_buffer);
     }
 
     fb_free(); // free fb_alloc_all()
@@ -227,29 +235,46 @@ typedef struct py_tf_input_data_callback_data {
 
 STATIC void py_tf_input_data_callback(void *callback_data,
                                       void *model_input,
-                                      const unsigned int input_height,
-                                      const unsigned int input_width,
-                                      const unsigned int input_channels,
-                                      const bool signed_or_unsigned,
-                                      const bool is_float)
+                                      libtf_parameters_t *params)
 {
     py_tf_input_data_callback_data_t *arg = (py_tf_input_data_callback_data_t *) callback_data;
-    int shift = signed_or_unsigned ? 128 : 0;
+
+    if (params->input_datatype == LIBTF_DATATYPE_UINT8) {
+        if (fast_floorf(params->input_scale * 255) != 1) {
+            mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Expected model input scale to be 1/255!"));
+        }
+
+        if (fast_floorf(params->input_zero_point) != 0) {
+            mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Expected model input zero point to be 0!"));
+        }
+    }
+
+    if (params->input_datatype == LIBTF_DATATYPE_INT8) {
+        if (fast_floorf(params->input_scale * 255) != 1) {
+            mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Expected model input scale to be 1/255!"));
+        }
+
+        if (fast_floorf(params->input_zero_point) != -128) {
+            mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Expected model input zero point to be 0!"));
+        }
+    }
+
+    int shift = (params->input_datatype == LIBTF_DATATYPE_INT8) ? 128 : 0;
     float fscale = 1.0f / 255.0f;
 
-    float xscale = input_width / ((float) arg->roi->w);
-    float yscale = input_height / ((float) arg->roi->h);
+    float xscale = params->input_width / ((float) arg->roi->w);
+    float yscale = params->input_height / ((float) arg->roi->h);
     // MAX == KeepAspectRationByExpanding - MIN == KeepAspectRatio
     float scale = IM_MAX(xscale, yscale);
 
     image_t dst_img;
-    dst_img.w = input_width;
-    dst_img.h = input_height;
+    dst_img.w = params->input_width;
+    dst_img.h = params->input_height;
     dst_img.data = (uint8_t *) model_input;
 
-    if (input_channels == 1) {
+    if (params->input_channels == 1) {
         dst_img.pixfmt = PIXFORMAT_GRAYSCALE;
-    } else if (input_channels == 3) {
+    } else if (params->input_channels == 3) {
         dst_img.pixfmt = PIXFORMAT_RGB565;
     } else {
         mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Expected model input channels to be 1 or 3!"));
@@ -259,10 +284,17 @@ STATIC void py_tf_input_data_callback(void *callback_data,
                      -1, 256, NULL, NULL, IMAGE_HINT_BILINEAR | IMAGE_HINT_BLACK_BACKGROUND,
                      NULL, NULL);
 
-    int size = (input_width * input_height) - 1;
+    size_t size = (params->input_width * params->input_height) - 1;
 
-    if (input_channels == 1) { // GRAYSCALE
-        if (!is_float) {
+    if (params->input_channels == 1) { // GRAYSCALE
+        if (params->input_datatype == LIBTF_DATATYPE_FLOAT) { // convert u8 -> f32
+            uint8_t *model_input_u8 = (uint8_t *) model_input;
+            float *model_input_f32 = (float *) model_input;
+
+            for (; size >= 0; size -= 1) {
+                model_input_f32[size] = model_input_u8[size] * fscale;
+            }
+        } else {
             if (shift) { // convert u8 -> s8
                 uint8_t *model_input_8 = (uint8_t *) model_input;
 
@@ -276,28 +308,11 @@ STATIC void py_tf_input_data_callback(void *callback_data,
                     model_input_8[size] ^= 0x80;
                 }
             }
-        } else { // convert u8 -> f32
-            uint8_t *model_input_u8 = (uint8_t *) model_input;
-            float *model_input_f32 = (float *) model_input;
-
-            for (; size >= 0; size -= 1) {
-                model_input_f32[size] = model_input_u8[size] * fscale;
-            }
         }
-    } else if (input_channels == 3) { // RGB888
-        int rgb_size = size * 3;
+    } else if (params->input_channels == 3) { // RGB888
+        size_t rgb_size = size * 3;
 
-        if (!is_float) {
-            uint16_t *model_input_u16 = (uint16_t *) model_input;
-            uint8_t *model_input_8 = (uint8_t *) model_input;
-
-            for (; size >= 0; size -= 1, rgb_size -= 3) {
-                int pixel = model_input_u16[size];
-                model_input_8[rgb_size] = COLOR_RGB565_TO_R8(pixel) ^ shift;
-                model_input_8[rgb_size + 1] = COLOR_RGB565_TO_G8(pixel) ^ shift;
-                model_input_8[rgb_size + 2] = COLOR_RGB565_TO_B8(pixel) ^ shift;
-            }
-        } else {
+        if (params->input_datatype == LIBTF_DATATYPE_FLOAT) {
             uint16_t *model_input_u16 = (uint16_t *) model_input;
             float *model_input_f32 = (float *) model_input;
 
@@ -306,6 +321,16 @@ STATIC void py_tf_input_data_callback(void *callback_data,
                 model_input_f32[rgb_size] = COLOR_RGB565_TO_R8(pixel) * fscale;
                 model_input_f32[rgb_size + 1] = COLOR_RGB565_TO_G8(pixel) * fscale;
                 model_input_f32[rgb_size + 2] = COLOR_RGB565_TO_B8(pixel) * fscale;
+            }
+        } else {
+            uint16_t *model_input_u16 = (uint16_t *) model_input;
+            uint8_t *model_input_8 = (uint8_t *) model_input;
+
+            for (; size >= 0; size -= 1, rgb_size -= 3) {
+                int pixel = model_input_u16[size];
+                model_input_8[rgb_size] = COLOR_RGB565_TO_R8(pixel) ^ shift;
+                model_input_8[rgb_size + 1] = COLOR_RGB565_TO_G8(pixel) ^ shift;
+                model_input_8[rgb_size + 2] = COLOR_RGB565_TO_B8(pixel) ^ shift;
             }
         }
     }
@@ -317,24 +342,28 @@ typedef struct py_tf_classify_output_data_callback_data {
 
 STATIC void py_tf_classify_output_data_callback(void *callback_data,
                                                 void *model_output,
-                                                const unsigned int output_height,
-                                                const unsigned int output_width,
-                                                const unsigned int output_channels,
-                                                const bool signed_or_unsigned,
-                                                const bool is_float)
+                                                libtf_parameters_t *params)
 {
     py_tf_classify_output_data_callback_data_t *arg = (py_tf_classify_output_data_callback_data_t *) callback_data;
-    int shift = signed_or_unsigned ? 128 : 0;
 
-    PY_ASSERT_TRUE_MSG(output_height == 1, "Expected model output height to be 1!");
-    PY_ASSERT_TRUE_MSG(output_width == 1, "Expected model output width to be 1!");
+    if (params->output_height != 1) {
+        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Expected model output height to be 1!"));
+    }
 
-    arg->out = mp_obj_new_list(output_channels, NULL);
-    for (unsigned int i = 0; i < output_channels; i++) {
-        if (!is_float) {
-            ((mp_obj_list_t *) arg->out)->items[i] = mp_obj_new_float((((uint8_t *) model_output)[i] ^ shift) / 255.0f);
-        } else {
+    if (params->output_width == 1) {
+        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Expected model output width to be 1!"));
+    }
+
+    arg->out = mp_obj_new_list(params->output_channels, NULL);
+
+    if (params->output_datatype == LIBTF_DATATYPE_FLOAT) {
+        for (size_t i = 0, ii = params->output_channels; i < ii; i++) {
             ((mp_obj_list_t *) arg->out)->items[i] = mp_obj_new_float(((float *) model_output)[i]);
+        }
+    } else {
+        for (size_t i = 0, ii = params->output_channels; i < ii; i++) {
+            ((mp_obj_list_t *) arg->out)->items[i] =
+                mp_obj_new_float((((uint8_t *) model_output)[i] * params->output_scale) + params->output_zero_point);
         }
     }
 }
@@ -351,21 +380,30 @@ STATIC mp_obj_t py_tf_classify(uint n_args, const mp_obj_t *args, mp_map_t *kw_a
     py_helper_keyword_rectangle_roi(arg_img, n_args, args, 2, kw_args, &roi);
 
     float arg_min_scale = py_helper_keyword_float(n_args, args, 3, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_min_scale), 1.0f);
-    PY_ASSERT_TRUE_MSG((0.0f < arg_min_scale) && (arg_min_scale <= 1.0f), "0 < min_scale <= 1");
+
+    if ((arg_min_scale <= 0.0f) || (1.0f < arg_min_scale)) {
+        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("0 < min_scale <= 1"));
+    }
 
     float arg_scale_mul = py_helper_keyword_float(n_args, args, 4, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_scale_mul), 0.5f);
-    PY_ASSERT_TRUE_MSG((0.0f <= arg_scale_mul) && (arg_scale_mul < 1.0f), "0 <= scale_mul < 1");
+
+    if ((arg_scale_mul < 0.0f) || (1.0f <= arg_scale_mul)) {
+        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("0 <= scale_mul < 1"));
+    }
 
     float arg_x_overlap = py_helper_keyword_float(n_args, args, 5, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_x_overlap), 0.0f);
-    PY_ASSERT_TRUE_MSG(((0.0f <= arg_x_overlap) && (arg_x_overlap < 1.0f))
-            || (arg_x_overlap == -1.0f), "0 <= x_overlap < 1");
+
+    if ((arg_x_overlap != -1.0f) && ((arg_x_overlap < 0.0f) || (1.0f <= arg_x_overlap))) {
+        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("0 <= x_overlap < 1"));
+    }
 
     float arg_y_overlap = py_helper_keyword_float(n_args, args, 6, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_y_overlap), 0.0f);
-    PY_ASSERT_TRUE_MSG(((0.0f <= arg_y_overlap) && (arg_y_overlap < 1.0f))
-            || (arg_y_overlap == -1.0f), "0 <= y_overlap < 1");
 
-    uint32_t tensor_arena_size = fb_avail() - (arg_model->width * arg_model->channels * 3);
-    uint8_t *tensor_arena = fb_alloc(tensor_arena_size, FB_ALLOC_PREFER_SPEED);
+    if ((arg_y_overlap != -1.0f) && ((arg_y_overlap < 0.0f) || (1.0f <= arg_y_overlap))) {
+        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("0 <= y_overlap < 1"));
+    }
+
+    uint8_t *tensor_arena = fb_alloc(arg_model->params.tensor_arena_size, FB_ALLOC_PREFER_SPEED | FB_ALLOC_CACHE_ALIGN);
 
     mp_obj_t objects_list = mp_obj_new_list(0, NULL);
 
@@ -400,14 +438,13 @@ STATIC mp_obj_t py_tf_classify(uint n_args, const mp_obj_t *args, mp_map_t *kw_a
 
                     if (libtf_invoke(arg_model->model_data,
                             tensor_arena,
-                            tensor_arena_size,
+                            &arg_model->params,
                             py_tf_input_data_callback,
                             &py_tf_input_data_callback_data,
                             py_tf_classify_output_data_callback,
                             &py_tf_classify_output_data_callback_data) != 0) {
                         // Note can't use MP_ERROR_TEXT here.
-                        mp_raise_msg(&mp_type_OSError, (mp_rom_error_text_t)
-                                py_tf_putchar_buffer - (PY_TF_PUTCHAR_BUFFER_LEN - py_tf_putchar_buffer_len));
+                        mp_raise_msg(&mp_type_OSError, (mp_rom_error_text_t) py_tf_putchar_buffer);
                     }
 
                     py_tf_classification_obj_t *o = m_new_obj(py_tf_classification_obj_t);
@@ -435,33 +472,56 @@ typedef struct py_tf_segment_output_data_callback_data {
 
 STATIC void py_tf_segment_output_data_callback(void *callback_data,
                                                void *model_output,
-                                               const unsigned int output_height,
-                                               const unsigned int output_width,
-                                               const unsigned int output_channels,
-                                               const bool signed_or_unsigned,
-                                               const bool is_float)
+                                               libtf_parameters_t *params)
 {
     py_tf_segment_output_data_callback_data_t *arg = (py_tf_segment_output_data_callback_data_t *) callback_data;
-    int shift = signed_or_unsigned ? 128 : 0;
 
-    arg->out = mp_obj_new_list(output_channels, NULL);
-    for (unsigned int i = 0; i < output_channels; i++) {
+    if (params->output_datatype == LIBTF_DATATYPE_UINT8) {
+        if (fast_floorf(params->output_scale * 255) != 1) {
+            mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Expected model output scale to be 1/255!"));
+        }
+
+        if (fast_floorf(params->output_zero_point) != 0) {
+            mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Expected model output zero point to be 0!"));
+        }
+    }
+
+    if (params->output_datatype == LIBTF_DATATYPE_INT8) {
+        if (fast_floorf(params->output_scale * 255) != 1) {
+            mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Expected model output scale to be 1/255!"));
+        }
+
+        if (fast_floorf(params->output_zero_point) != -128) {
+            mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Expected model output zero point to be 0!"));
+        }
+    }
+
+    int shift = (params->output_datatype == LIBTF_DATATYPE_INT8) ? 128 : 0;
+
+    arg->out = mp_obj_new_list(params->output_channels, NULL);
+
+    for (size_t i = 0, ii = params->output_channels; i < ii; i++) {
+
         image_t img = {
-            .w = output_width,
-            .h = output_height,
+            .w = params->output_width,
+            .h = params->output_height,
             .pixfmt = PIXFORMAT_GRAYSCALE,
-            .pixels = xalloc(output_width * output_height * sizeof(uint8_t))
+            .pixels = xalloc(params->output_width * params->output_height * sizeof(uint8_t))
         };
+
         ((mp_obj_list_t *) arg->out)->items[i] = py_image_from_struct(&img);
-        for (unsigned int y = 0; i < output_height; y++) {
-            unsigned int row = y * output_width * output_channels;
+
+        for (size_t y = 0, yy = params->output_height, xx = params->output_width; y < yy; y++) {
+            size_t row = y * xx * ii;
             uint8_t *row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(&img, y);
-            for (unsigned int x = 0; i < output_width; x++) {
-                unsigned int col = x * output_channels;
-                if (!is_float) {
-                    IMAGE_PUT_GRAYSCALE_PIXEL_FAST(row_ptr, x, ((uint8_t *) model_output)[row + col + i] ^ shift);
-                } else {
+
+            for (size_t x = 0; x < xx; x++) {
+                size_t col = x * ii;
+
+                if (params->output_datatype == LIBTF_DATATYPE_FLOAT) {
                     IMAGE_PUT_GRAYSCALE_PIXEL_FAST(row_ptr, x, ((float *) model_output)[row + col + i] * 255);
+                } else {
+                    IMAGE_PUT_GRAYSCALE_PIXEL_FAST(row_ptr, x, ((uint8_t *) model_output)[row + col + i] ^ shift);
                 }
             }
         }
@@ -479,8 +539,7 @@ STATIC mp_obj_t py_tf_segment(uint n_args, const mp_obj_t *args, mp_map_t *kw_ar
     rectangle_t roi;
     py_helper_keyword_rectangle_roi(arg_img, n_args, args, 2, kw_args, &roi);
 
-    uint32_t tensor_arena_size = fb_avail() - (arg_model->width * arg_model->channels * 3);
-    uint8_t *tensor_arena = fb_alloc(tensor_arena_size, FB_ALLOC_PREFER_SPEED);
+    uint8_t *tensor_arena = fb_alloc(arg_model->params.tensor_arena_size, FB_ALLOC_PREFER_SPEED | FB_ALLOC_CACHE_ALIGN);
 
     py_tf_input_data_callback_data_t py_tf_input_data_callback_data;
     py_tf_input_data_callback_data.img = arg_img;
@@ -490,14 +549,13 @@ STATIC mp_obj_t py_tf_segment(uint n_args, const mp_obj_t *args, mp_map_t *kw_ar
 
     if (libtf_invoke(arg_model->model_data,
             tensor_arena,
-            tensor_arena_size,
+            &arg_model->params,
             py_tf_input_data_callback,
             &py_tf_input_data_callback_data,
             py_tf_segment_output_data_callback,
             &py_tf_segment_output_data_callback_data) != 0) {
         // Note can't use MP_ERROR_TEXT here.
-        mp_raise_msg(&mp_type_OSError, (mp_rom_error_text_t)
-                py_tf_putchar_buffer - (PY_TF_PUTCHAR_BUFFER_LEN - py_tf_putchar_buffer_len));
+        mp_raise_msg(&mp_type_OSError, (mp_rom_error_text_t) py_tf_putchar_buffer);
     }
 
     fb_alloc_free_till_mark();
@@ -507,26 +565,56 @@ STATIC mp_obj_t py_tf_segment(uint n_args, const mp_obj_t *args, mp_map_t *kw_ar
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_tf_segment_obj, 2, py_tf_segment);
 
 mp_obj_t py_tf_len(mp_obj_t self_in) { return mp_obj_new_int(((py_tf_model_obj_t *) self_in)->model_data_len); }
-mp_obj_t py_tf_height(mp_obj_t self_in) { return mp_obj_new_int(((py_tf_model_obj_t *) self_in)->height); }
-mp_obj_t py_tf_width(mp_obj_t self_in) { return mp_obj_new_int(((py_tf_model_obj_t *) self_in)->width); }
-mp_obj_t py_tf_channels(mp_obj_t self_in) { return mp_obj_new_int(((py_tf_model_obj_t *) self_in)->channels); }
-mp_obj_t py_tf_signed(mp_obj_t self_in) { return mp_obj_new_int(((py_tf_model_obj_t *) self_in)->signed_or_unsigned); }
-mp_obj_t py_tf_is_float(mp_obj_t self_in) { return mp_obj_new_int(((py_tf_model_obj_t *) self_in)->is_float); }
+mp_obj_t py_tf_ram(mp_obj_t self_in) { return mp_obj_new_int(((py_tf_model_obj_t *) self_in)->params.tensor_arena_size); }
+mp_obj_t py_tf_input_height(mp_obj_t self_in) { return mp_obj_new_int(((py_tf_model_obj_t *) self_in)->params.input_height); }
+mp_obj_t py_tf_input_width(mp_obj_t self_in) { return mp_obj_new_int(((py_tf_model_obj_t *) self_in)->params.input_width); }
+mp_obj_t py_tf_input_channels(mp_obj_t self_in) { return mp_obj_new_int(((py_tf_model_obj_t *) self_in)->params.input_channels); }
+mp_obj_t py_tf_input_datatype(mp_obj_t self_in) {
+    const char *str = py_tf_map_datatype(((py_tf_model_obj_t *) self_in)->params.input_datatype);
+    return mp_obj_new_str(str, strlen(str));
+}
+mp_obj_t py_tf_input_scale(mp_obj_t self_in) { return mp_obj_new_float(((py_tf_model_obj_t *) self_in)->params.input_scale); }
+mp_obj_t py_tf_input_zero_point(mp_obj_t self_in) { return mp_obj_new_float(((py_tf_model_obj_t *) self_in)->params.input_zero_point); }
+mp_obj_t py_tf_output_height(mp_obj_t self_in) { return mp_obj_new_int(((py_tf_model_obj_t *) self_in)->params.output_height); }
+mp_obj_t py_tf_output_width(mp_obj_t self_in) { return mp_obj_new_int(((py_tf_model_obj_t *) self_in)->params.output_width); }
+mp_obj_t py_tf_output_channels(mp_obj_t self_in) { return mp_obj_new_int(((py_tf_model_obj_t *) self_in)->params.output_channels); }
+mp_obj_t py_tf_output_datatype(mp_obj_t self_in) {
+    const char *str = py_tf_map_datatype(((py_tf_model_obj_t *) self_in)->params.output_datatype);
+    return mp_obj_new_str(str, strlen(str));
+}
+mp_obj_t py_tf_output_scale(mp_obj_t self_in) { return mp_obj_new_float(((py_tf_model_obj_t *) self_in)->params.output_scale); }
+mp_obj_t py_tf_output_zero_point(mp_obj_t self_in) { return mp_obj_new_float(((py_tf_model_obj_t *) self_in)->params.output_zero_point); }
 
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_tf_len_obj, py_tf_len);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_tf_height_obj, py_tf_height);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_tf_width_obj, py_tf_width);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_tf_channels_obj, py_tf_channels);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_tf_signed_obj, py_tf_signed);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_tf_is_float_obj, py_tf_is_float);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_tf_ram_obj, py_tf_ram);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_tf_input_height_obj, py_tf_input_height);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_tf_input_width_obj, py_tf_input_width);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_tf_input_channels_obj, py_tf_input_channels);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_tf_input_datatype_obj, py_tf_input_datatype);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_tf_input_scale_obj, py_tf_input_scale);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_tf_input_zero_point_obj, py_tf_input_zero_point);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_tf_output_height_obj, py_tf_output_height);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_tf_output_width_obj, py_tf_output_width);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_tf_output_channels_obj, py_tf_output_channels);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_tf_output_datatype_obj, py_tf_output_datatype);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_tf_output_scale_obj, py_tf_output_scale);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_tf_output_zero_point_obj, py_tf_output_zero_point);
 
 STATIC const mp_rom_map_elem_t locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_len), MP_ROM_PTR(&py_tf_len_obj) },
-    { MP_ROM_QSTR(MP_QSTR_height), MP_ROM_PTR(&py_tf_height_obj) },
-    { MP_ROM_QSTR(MP_QSTR_width), MP_ROM_PTR(&py_tf_width_obj) },
-    { MP_ROM_QSTR(MP_QSTR_channels), MP_ROM_PTR(&py_tf_channels_obj) },
-    { MP_ROM_QSTR(MP_QSTR_signed), MP_ROM_PTR(&py_tf_signed_obj) },
-    { MP_ROM_QSTR(MP_QSTR_is_float), MP_ROM_PTR(&py_tf_is_float_obj) },
+    { MP_ROM_QSTR(MP_QSTR_ram), MP_ROM_PTR(&py_tf_ram_obj) },
+    { MP_ROM_QSTR(MP_QSTR_input_height), MP_ROM_PTR(&py_tf_input_height_obj) },
+    { MP_ROM_QSTR(MP_QSTR_input_width), MP_ROM_PTR(&py_tf_input_width_obj) },
+    { MP_ROM_QSTR(MP_QSTR_input_channels), MP_ROM_PTR(&py_tf_input_channels_obj) },
+    { MP_ROM_QSTR(MP_QSTR_input_datatype), MP_ROM_PTR(&py_tf_input_datatype_obj) },
+    { MP_ROM_QSTR(MP_QSTR_input_scale), MP_ROM_PTR(&py_tf_input_scale_obj) },
+    { MP_ROM_QSTR(MP_QSTR_input_zero_point), MP_ROM_PTR(&py_tf_input_zero_point_obj) },
+    { MP_ROM_QSTR(MP_QSTR_output_height), MP_ROM_PTR(&py_tf_output_height_obj) },
+    { MP_ROM_QSTR(MP_QSTR_output_width), MP_ROM_PTR(&py_tf_output_width_obj) },
+    { MP_ROM_QSTR(MP_QSTR_output_channels), MP_ROM_PTR(&py_tf_output_channels_obj) },
+    { MP_ROM_QSTR(MP_QSTR_output_datatype), MP_ROM_PTR(&py_tf_output_datatype_obj) },
+    { MP_ROM_QSTR(MP_QSTR_output_scale), MP_ROM_PTR(&py_tf_output_scale_obj) },
+    { MP_ROM_QSTR(MP_QSTR_output_zero_point), MP_ROM_PTR(&py_tf_output_zero_point_obj) },
     { MP_ROM_QSTR(MP_QSTR_classify), MP_ROM_PTR(&py_tf_classify_obj) },
     { MP_ROM_QSTR(MP_QSTR_segment), MP_ROM_PTR(&py_tf_segment_obj) }
 };

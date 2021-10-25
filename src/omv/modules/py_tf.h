@@ -10,19 +10,19 @@
  */
 #ifndef __PY_TF_H__
 #define __PY_TF_H__
+#include "libtf.h"
 
-// PyTF model object handle
 typedef struct py_tf_model_obj {
     mp_obj_base_t base;
     unsigned char *model_data;
-    unsigned int model_data_len, height, width, channels;
-    bool signed_or_unsigned;
-    bool is_float;
+    size_t model_data_len;
+    libtf_parameters_t params;
 } py_tf_model_obj_t;
 
 // Log buffer
 #define PY_TF_PUTCHAR_BUFFER_LEN 1023
 extern char *py_tf_putchar_buffer;
+extern size_t py_tf_putchar_buffer_index;
 extern size_t py_tf_putchar_buffer_len;
 void py_tf_alloc_putchar_buffer();
 
