@@ -363,7 +363,7 @@ STATIC void py_tf_classify_output_data_callback(void *callback_data,
     } else {
         for (size_t i = 0, ii = params->output_channels; i < ii; i++) {
             ((mp_obj_list_t *) arg->out)->items[i] =
-                mp_obj_new_float((((uint8_t *) model_output)[i] * params->output_scale) + params->output_zero_point);
+                mp_obj_new_float((((uint8_t *) model_output)[i] - params->output_zero_point) * params->output_scale);
         }
     }
 }
