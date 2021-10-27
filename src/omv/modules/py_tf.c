@@ -17,11 +17,12 @@
 #include "imlib_config.h"
 
 #ifdef IMLIB_ENABLE_TF
-#include "py_assert.h"
 #include "py_image.h"
 #include "ff_wrapper.h"
 #include "libtf_person_detect_model_data.h"
 #include "py_tf.h"
+
+#define GRAYSCALE_RANGE ((COLOR_GRAYSCALE_MAX) - (COLOR_GRAYSCALE_MIN))
 
 void py_tf_alloc_putchar_buffer()
 {
@@ -239,28 +240,24 @@ STATIC void py_tf_input_data_callback(void *callback_data,
 {
     py_tf_input_data_callback_data_t *arg = (py_tf_input_data_callback_data_t *) callback_data;
 
-    if (params->input_datatype == LIBTF_DATATYPE_UINT8) {
-        if (fast_floorf(params->input_scale * 255) != 1) {
-            mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Expected model input scale to be 1/255!"));
-        }
-
-        if (fast_floorf(params->input_zero_point) != 0) {
-            mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Expected model input zero point to be 0!"));
-        }
+    if (((params->input_datatype == LIBTF_DATATYPE_UINT8)
+    || (params->input_datatype == LIBTF_DATATYPE_INT8))
+    && (fast_floorf(params->input_scale * GRAYSCALE_RANGE) != 1)) {
+        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Expected model input scale to be 1/255!"));
     }
 
-    if (params->input_datatype == LIBTF_DATATYPE_INT8) {
-        if (fast_floorf(params->input_scale * 255) != 1) {
-            mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Expected model input scale to be 1/255!"));
-        }
+    if ((params->input_datatype == LIBTF_DATATYPE_UINT8)
+    && (fast_floorf(params->input_zero_point) != 0)) {
+        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Expected model input zero point to be 0!"));
+    }
 
-        if (fast_floorf(params->input_zero_point) != -128) {
-            mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Expected model input zero point to be 0!"));
-        }
+    if ((params->input_datatype == LIBTF_DATATYPE_INT8)
+    && (fast_floorf(params->input_zero_point) != -128)) {
+        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Expected model input zero point to be -128!"));
     }
 
     int shift = (params->input_datatype == LIBTF_DATATYPE_INT8) ? 128 : 0;
-    float fscale = 1.0f / 255.0f;
+    float fscale = 1.0f / GRAYSCALE_RANGE;
 
     float xscale = params->input_width / ((float) arg->roi->w);
     float yscale = params->input_height / ((float) arg->roi->h);
@@ -350,7 +347,7 @@ STATIC void py_tf_classify_output_data_callback(void *callback_data,
         mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Expected model output height to be 1!"));
     }
 
-    if (params->output_width == 1) {
+    if (params->output_width != 1) {
         mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Expected model output width to be 1!"));
     }
 
@@ -358,7 +355,8 @@ STATIC void py_tf_classify_output_data_callback(void *callback_data,
 
     if (params->output_datatype == LIBTF_DATATYPE_FLOAT) {
         for (size_t i = 0, ii = params->output_channels; i < ii; i++) {
-            ((mp_obj_list_t *) arg->out)->items[i] = mp_obj_new_float(((float *) model_output)[i]);
+            ((mp_obj_list_t *) arg->out)->items[i] =
+                mp_obj_new_float(((float *) model_output)[i]);
         }
     } else {
         for (size_t i = 0, ii = params->output_channels; i < ii; i++) {
@@ -393,7 +391,7 @@ STATIC mp_obj_t py_tf_classify(uint n_args, const mp_obj_t *args, mp_map_t *kw_a
 
     float arg_x_overlap = py_helper_keyword_float(n_args, args, 5, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_x_overlap), 0.0f);
 
-    if ((arg_x_overlap != -1.0f) && ((arg_x_overlap < 0.0f) || (1.0f <= arg_x_overlap))) {
+    if ((arg_x_overlap != -1.f) && ((arg_x_overlap < 0.0f) || (1.0f <= arg_x_overlap))) {
         mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("0 <= x_overlap < 1"));
     }
 
@@ -476,24 +474,20 @@ STATIC void py_tf_segment_output_data_callback(void *callback_data,
 {
     py_tf_segment_output_data_callback_data_t *arg = (py_tf_segment_output_data_callback_data_t *) callback_data;
 
-    if (params->output_datatype == LIBTF_DATATYPE_UINT8) {
-        if (fast_floorf(params->output_scale * 255) != 1) {
-            mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Expected model output scale to be 1/255!"));
-        }
-
-        if (fast_floorf(params->output_zero_point) != 0) {
-            mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Expected model output zero point to be 0!"));
-        }
+    if (((params->output_datatype == LIBTF_DATATYPE_UINT8)
+    || (params->output_datatype == LIBTF_DATATYPE_INT8))
+    && (fast_floorf(params->output_scale * GRAYSCALE_RANGE) != 1)) {
+        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Expected model output scale to be 1/255!"));
     }
 
-    if (params->output_datatype == LIBTF_DATATYPE_INT8) {
-        if (fast_floorf(params->output_scale * 255) != 1) {
-            mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Expected model output scale to be 1/255!"));
-        }
+    if ((params->output_datatype == LIBTF_DATATYPE_UINT8)
+    && (fast_floorf(params->output_zero_point) != 0)) {
+        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Expected model output zero point to be 0!"));
+    }
 
-        if (fast_floorf(params->output_zero_point) != -128) {
-            mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Expected model output zero point to be 0!"));
-        }
+    if ((params->output_datatype == LIBTF_DATATYPE_INT8)
+    && (fast_floorf(params->output_zero_point) != -128)) {
+        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Expected model output zero point to be -128!"));
     }
 
     int shift = (params->output_datatype == LIBTF_DATATYPE_INT8) ? 128 : 0;
@@ -519,16 +513,18 @@ STATIC void py_tf_segment_output_data_callback(void *callback_data,
                 size_t col = x * ii;
 
                 if (params->output_datatype == LIBTF_DATATYPE_FLOAT) {
-                    IMAGE_PUT_GRAYSCALE_PIXEL_FAST(row_ptr, x, ((float *) model_output)[row + col + i] * 255);
+                    IMAGE_PUT_GRAYSCALE_PIXEL_FAST(row_ptr, x,
+                        ((float *) model_output)[row + col + i] * GRAYSCALE_RANGE);
                 } else {
-                    IMAGE_PUT_GRAYSCALE_PIXEL_FAST(row_ptr, x, ((uint8_t *) model_output)[row + col + i] ^ shift);
+                    IMAGE_PUT_GRAYSCALE_PIXEL_FAST(row_ptr, x,
+                        ((uint8_t *) model_output)[row + col + i] ^ shift);
                 }
             }
         }
     }
 }
 
-STATIC mp_obj_t py_tf_segment(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
+STATIC mp_obj_t int_py_tf_segment(bool detecting_mode, uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
     fb_alloc_mark();
     py_tf_alloc_putchar_buffer();
@@ -560,63 +556,193 @@ STATIC mp_obj_t py_tf_segment(uint n_args, const mp_obj_t *args, mp_map_t *kw_ar
 
     fb_alloc_free_till_mark();
 
-    return py_tf_segment_output_data_callback_data.out;
+    if (!detecting_mode) {
+        return py_tf_segment_output_data_callback_data.out;
+    }
+
+    list_t thresholds;
+    list_init(&thresholds, sizeof(color_thresholds_list_lnk_data_t));
+    py_helper_arg_to_thresholds(args[3], &thresholds);
+
+    if (!list_size(&thresholds)) {
+        color_thresholds_list_lnk_data_t lnk_data;
+        lnk_data.LMin = (GRAYSCALE_RANGE + 1) / 2;
+        lnk_data.LMax = GRAYSCALE_RANGE;
+        lnk_data.AMin = COLOR_A_MIN;
+        lnk_data.AMax = COLOR_A_MAX;
+        lnk_data.BMin = COLOR_B_MIN;
+        lnk_data.BMax = COLOR_B_MAX;
+        list_push_back(&thresholds, &lnk_data);
+    }
+
+    bool invert = py_helper_keyword_int(n_args, args, 4, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_invert), false);
+
+    mp_obj_list_t *img_list = (mp_obj_list_t *) py_tf_segment_output_data_callback_data.out;
+    mp_obj_list_t *out_list = mp_obj_new_list(img_list->len, NULL);
+
+    fb_alloc_mark();
+
+    float fscale = 1.f / GRAYSCALE_RANGE;
+    for (size_t i = 0, ii = img_list->len; i < ii; i++) {
+        image_t *img = py_image_cobj(img_list->items[i]);
+        float x_scale = roi.w / ((float) img->w);
+        float y_scale = roi.h / ((float) img->h);
+
+        list_t out;
+        imlib_find_blobs(&out, img, NULL, 1, 1, &thresholds, invert, 1, 1, false, 0, NULL, NULL, NULL, NULL, 0, 0);
+
+        mp_obj_list_t *objects_list = mp_obj_new_list(list_size(&out), NULL);
+        for (size_t j = 0, jj = list_size(&out); j < jj; j++) {
+            find_blobs_list_lnk_data_t lnk_data;
+            list_pop_front(&out, &lnk_data);
+
+            histogram_t hist;
+            hist.LBinCount = GRAYSCALE_RANGE + 1;
+            hist.ABinCount = 0;
+            hist.BBinCount = 0;
+            hist.LBins = fb_alloc(hist.LBinCount * sizeof(float), FB_ALLOC_NO_HINT);
+            hist.ABins = NULL;
+            hist.BBins = NULL;
+            imlib_get_histogram(&hist, img, &lnk_data.rect, &thresholds, invert, NULL);
+
+            statistics_t stats;
+            imlib_get_statistics(&stats, img->pixfmt, &hist);
+            fb_free(); // fb_alloc(hist.LBinCount * sizeof(float), FB_ALLOC_NO_HINT);
+
+            py_tf_classification_obj_t *o = m_new_obj(py_tf_classification_obj_t);
+            o->base.type = &py_tf_classification_type;
+            o->x = mp_obj_new_int(fast_floorf(lnk_data.rect.x * x_scale) + roi.x);
+            o->y = mp_obj_new_int(fast_floorf(lnk_data.rect.y * y_scale) + roi.y);
+            o->w = mp_obj_new_int(fast_floorf(lnk_data.rect.w * x_scale));
+            o->h = mp_obj_new_int(fast_floorf(lnk_data.rect.h * y_scale));
+            o->output = mp_obj_new_float(stats.LMean * fscale);
+            mp_obj_list_append(objects_list, o);
+        }
+
+        mp_obj_list_append(out_list, objects_list);
+    }
+
+    fb_alloc_free_till_mark();
+
+    return out_list;
+}
+
+STATIC mp_obj_t py_tf_segment(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
+{
+    return int_py_tf_segment(false, n_args, args, kw_args);
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_tf_segment_obj, 2, py_tf_segment);
 
-mp_obj_t py_tf_len(mp_obj_t self_in) { return mp_obj_new_int(((py_tf_model_obj_t *) self_in)->model_data_len); }
-mp_obj_t py_tf_ram(mp_obj_t self_in) { return mp_obj_new_int(((py_tf_model_obj_t *) self_in)->params.tensor_arena_size); }
-mp_obj_t py_tf_input_height(mp_obj_t self_in) { return mp_obj_new_int(((py_tf_model_obj_t *) self_in)->params.input_height); }
-mp_obj_t py_tf_input_width(mp_obj_t self_in) { return mp_obj_new_int(((py_tf_model_obj_t *) self_in)->params.input_width); }
-mp_obj_t py_tf_input_channels(mp_obj_t self_in) { return mp_obj_new_int(((py_tf_model_obj_t *) self_in)->params.input_channels); }
-mp_obj_t py_tf_input_datatype(mp_obj_t self_in) {
+STATIC mp_obj_t py_tf_detect(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
+{
+    return int_py_tf_segment(true, n_args, args, kw_args);
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_tf_detect_obj, 2, py_tf_detect);
+
+mp_obj_t py_tf_len(mp_obj_t self_in)
+{
+    return mp_obj_new_int(((py_tf_model_obj_t *) self_in)->model_data_len);
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_tf_len_obj, py_tf_len);
+
+mp_obj_t py_tf_ram(mp_obj_t self_in)
+{
+    return mp_obj_new_int(((py_tf_model_obj_t *) self_in)->params.tensor_arena_size);
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_tf_ram_obj, py_tf_ram);
+
+mp_obj_t py_tf_input_height(mp_obj_t self_in)
+{
+    return mp_obj_new_int(((py_tf_model_obj_t *) self_in)->params.input_height);
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_tf_input_height_obj, py_tf_input_height);
+
+mp_obj_t py_tf_input_width(mp_obj_t self_in)
+{
+    return mp_obj_new_int(((py_tf_model_obj_t *) self_in)->params.input_width);
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_tf_input_width_obj, py_tf_input_width);
+
+mp_obj_t py_tf_input_channels(mp_obj_t self_in)
+{
+    return mp_obj_new_int(((py_tf_model_obj_t *) self_in)->params.input_channels);
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_tf_input_channels_obj, py_tf_input_channels);
+
+mp_obj_t py_tf_input_datatype(mp_obj_t self_in)
+{
     const char *str = py_tf_map_datatype(((py_tf_model_obj_t *) self_in)->params.input_datatype);
     return mp_obj_new_str(str, strlen(str));
 }
-mp_obj_t py_tf_input_scale(mp_obj_t self_in) { return mp_obj_new_float(((py_tf_model_obj_t *) self_in)->params.input_scale); }
-mp_obj_t py_tf_input_zero_point(mp_obj_t self_in) { return mp_obj_new_float(((py_tf_model_obj_t *) self_in)->params.input_zero_point); }
-mp_obj_t py_tf_output_height(mp_obj_t self_in) { return mp_obj_new_int(((py_tf_model_obj_t *) self_in)->params.output_height); }
-mp_obj_t py_tf_output_width(mp_obj_t self_in) { return mp_obj_new_int(((py_tf_model_obj_t *) self_in)->params.output_width); }
-mp_obj_t py_tf_output_channels(mp_obj_t self_in) { return mp_obj_new_int(((py_tf_model_obj_t *) self_in)->params.output_channels); }
-mp_obj_t py_tf_output_datatype(mp_obj_t self_in) {
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_tf_input_datatype_obj, py_tf_input_datatype);
+
+mp_obj_t py_tf_input_scale(mp_obj_t self_in)
+{
+    return mp_obj_new_float(((py_tf_model_obj_t *) self_in)->params.input_scale);
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_tf_input_scale_obj, py_tf_input_scale);
+
+mp_obj_t py_tf_input_zero_point(mp_obj_t self_in)
+{
+    return mp_obj_new_float(((py_tf_model_obj_t *) self_in)->params.input_zero_point);
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_tf_input_zero_point_obj, py_tf_input_zero_point);
+
+mp_obj_t py_tf_output_height(mp_obj_t self_in)
+{
+    return mp_obj_new_int(((py_tf_model_obj_t *) self_in)->params.output_height);
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_tf_output_height_obj, py_tf_output_height);
+
+mp_obj_t py_tf_output_width(mp_obj_t self_in)
+{
+    return mp_obj_new_int(((py_tf_model_obj_t *) self_in)->params.output_width);
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_tf_output_width_obj, py_tf_output_width);
+
+mp_obj_t py_tf_output_channels(mp_obj_t self_in)
+{
+    return mp_obj_new_int(((py_tf_model_obj_t *) self_in)->params.output_channels);
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_tf_output_channels_obj, py_tf_output_channels);
+
+mp_obj_t py_tf_output_datatype(mp_obj_t self_in)
+{
     const char *str = py_tf_map_datatype(((py_tf_model_obj_t *) self_in)->params.output_datatype);
     return mp_obj_new_str(str, strlen(str));
 }
-mp_obj_t py_tf_output_scale(mp_obj_t self_in) { return mp_obj_new_float(((py_tf_model_obj_t *) self_in)->params.output_scale); }
-mp_obj_t py_tf_output_zero_point(mp_obj_t self_in) { return mp_obj_new_float(((py_tf_model_obj_t *) self_in)->params.output_zero_point); }
-
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_tf_len_obj, py_tf_len);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_tf_ram_obj, py_tf_ram);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_tf_input_height_obj, py_tf_input_height);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_tf_input_width_obj, py_tf_input_width);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_tf_input_channels_obj, py_tf_input_channels);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_tf_input_datatype_obj, py_tf_input_datatype);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_tf_input_scale_obj, py_tf_input_scale);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_tf_input_zero_point_obj, py_tf_input_zero_point);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_tf_output_height_obj, py_tf_output_height);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_tf_output_width_obj, py_tf_output_width);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_tf_output_channels_obj, py_tf_output_channels);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_tf_output_datatype_obj, py_tf_output_datatype);
+
+mp_obj_t py_tf_output_scale(mp_obj_t self_in)
+{
+    return mp_obj_new_float(((py_tf_model_obj_t *) self_in)->params.output_scale);
+}
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_tf_output_scale_obj, py_tf_output_scale);
+
+mp_obj_t py_tf_output_zero_point(mp_obj_t self_in)
+{
+    return mp_obj_new_float(((py_tf_model_obj_t *) self_in)->params.output_zero_point);
+}
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_tf_output_zero_point_obj, py_tf_output_zero_point);
 
 STATIC const mp_rom_map_elem_t locals_dict_table[] = {
-    { MP_ROM_QSTR(MP_QSTR_len), MP_ROM_PTR(&py_tf_len_obj) },
-    { MP_ROM_QSTR(MP_QSTR_ram), MP_ROM_PTR(&py_tf_ram_obj) },
-    { MP_ROM_QSTR(MP_QSTR_input_height), MP_ROM_PTR(&py_tf_input_height_obj) },
-    { MP_ROM_QSTR(MP_QSTR_input_width), MP_ROM_PTR(&py_tf_input_width_obj) },
-    { MP_ROM_QSTR(MP_QSTR_input_channels), MP_ROM_PTR(&py_tf_input_channels_obj) },
-    { MP_ROM_QSTR(MP_QSTR_input_datatype), MP_ROM_PTR(&py_tf_input_datatype_obj) },
-    { MP_ROM_QSTR(MP_QSTR_input_scale), MP_ROM_PTR(&py_tf_input_scale_obj) },
-    { MP_ROM_QSTR(MP_QSTR_input_zero_point), MP_ROM_PTR(&py_tf_input_zero_point_obj) },
-    { MP_ROM_QSTR(MP_QSTR_output_height), MP_ROM_PTR(&py_tf_output_height_obj) },
-    { MP_ROM_QSTR(MP_QSTR_output_width), MP_ROM_PTR(&py_tf_output_width_obj) },
-    { MP_ROM_QSTR(MP_QSTR_output_channels), MP_ROM_PTR(&py_tf_output_channels_obj) },
-    { MP_ROM_QSTR(MP_QSTR_output_datatype), MP_ROM_PTR(&py_tf_output_datatype_obj) },
-    { MP_ROM_QSTR(MP_QSTR_output_scale), MP_ROM_PTR(&py_tf_output_scale_obj) },
-    { MP_ROM_QSTR(MP_QSTR_output_zero_point), MP_ROM_PTR(&py_tf_output_zero_point_obj) },
-    { MP_ROM_QSTR(MP_QSTR_classify), MP_ROM_PTR(&py_tf_classify_obj) },
-    { MP_ROM_QSTR(MP_QSTR_segment), MP_ROM_PTR(&py_tf_segment_obj) }
+    { MP_ROM_QSTR(MP_QSTR_len),                 MP_ROM_PTR(&py_tf_len_obj) },
+    { MP_ROM_QSTR(MP_QSTR_ram),                 MP_ROM_PTR(&py_tf_ram_obj) },
+    { MP_ROM_QSTR(MP_QSTR_input_height),        MP_ROM_PTR(&py_tf_input_height_obj) },
+    { MP_ROM_QSTR(MP_QSTR_input_width),         MP_ROM_PTR(&py_tf_input_width_obj) },
+    { MP_ROM_QSTR(MP_QSTR_input_channels),      MP_ROM_PTR(&py_tf_input_channels_obj) },
+    { MP_ROM_QSTR(MP_QSTR_input_datatype),      MP_ROM_PTR(&py_tf_input_datatype_obj) },
+    { MP_ROM_QSTR(MP_QSTR_input_scale),         MP_ROM_PTR(&py_tf_input_scale_obj) },
+    { MP_ROM_QSTR(MP_QSTR_input_zero_point),    MP_ROM_PTR(&py_tf_input_zero_point_obj) },
+    { MP_ROM_QSTR(MP_QSTR_output_height),       MP_ROM_PTR(&py_tf_output_height_obj) },
+    { MP_ROM_QSTR(MP_QSTR_output_width),        MP_ROM_PTR(&py_tf_output_width_obj) },
+    { MP_ROM_QSTR(MP_QSTR_output_channels),     MP_ROM_PTR(&py_tf_output_channels_obj) },
+    { MP_ROM_QSTR(MP_QSTR_output_datatype),     MP_ROM_PTR(&py_tf_output_datatype_obj) },
+    { MP_ROM_QSTR(MP_QSTR_output_scale),        MP_ROM_PTR(&py_tf_output_scale_obj) },
+    { MP_ROM_QSTR(MP_QSTR_output_zero_point),   MP_ROM_PTR(&py_tf_output_zero_point_obj) },
+    { MP_ROM_QSTR(MP_QSTR_classify),            MP_ROM_PTR(&py_tf_classify_obj) },
+    { MP_ROM_QSTR(MP_QSTR_segment),             MP_ROM_PTR(&py_tf_segment_obj) },
+    { MP_ROM_QSTR(MP_QSTR_detect),              MP_ROM_PTR(&py_tf_detect_obj) }
 };
 
 STATIC MP_DEFINE_CONST_DICT(locals_dict, locals_dict_table);
@@ -637,11 +763,13 @@ STATIC const mp_rom_map_elem_t globals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_free_from_fb),    MP_ROM_PTR(&py_tf_free_from_fb_obj) },
     { MP_ROM_QSTR(MP_QSTR_classify),        MP_ROM_PTR(&py_tf_classify_obj) },
     { MP_ROM_QSTR(MP_QSTR_segment),         MP_ROM_PTR(&py_tf_segment_obj) },
+    { MP_ROM_QSTR(MP_QSTR_detect),          MP_ROM_PTR(&py_tf_detect_obj) },
 #else
     { MP_ROM_QSTR(MP_QSTR_load),            MP_ROM_PTR(&py_func_unavailable_obj) },
     { MP_ROM_QSTR(MP_QSTR_free_from_fb),    MP_ROM_PTR(&py_func_unavailable_obj) },
     { MP_ROM_QSTR(MP_QSTR_classify),        MP_ROM_PTR(&py_func_unavailable_obj) },
     { MP_ROM_QSTR(MP_QSTR_segment),         MP_ROM_PTR(&py_func_unavailable_obj) }
+    { MP_ROM_QSTR(MP_QSTR_detect),          MP_ROM_PTR(&py_func_unavailable_obj) }
 #endif // IMLIB_ENABLE_TF
 };
 
