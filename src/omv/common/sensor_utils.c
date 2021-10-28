@@ -386,6 +386,9 @@ int sensor_probe_init(uint32_t bus_id, uint32_t bus_speed)
 
         #if (OMV_ENABLE_HM01B0 == 1)
         case HM01B0_ID:
+            if (sensor_set_xclk_frequency(HM01B0_XCLK_FREQ) != 0) {
+                return SENSOR_ERROR_TIM_INIT_FAILED;
+            }
             init_ret = hm01b0_init(&sensor);
             break;
         #endif //(OMV_ENABLE_HM01B0 == 1)
