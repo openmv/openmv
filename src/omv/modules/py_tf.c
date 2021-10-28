@@ -240,21 +240,25 @@ STATIC void py_tf_input_data_callback(void *callback_data,
 {
     py_tf_input_data_callback_data_t *arg = (py_tf_input_data_callback_data_t *) callback_data;
 
-    if (((params->input_datatype == LIBTF_DATATYPE_UINT8)
-    || (params->input_datatype == LIBTF_DATATYPE_INT8))
-    && (fast_floorf(params->input_scale * GRAYSCALE_RANGE) != 1)) {
-        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Expected model input scale to be 1/255!"));
-    }
+    // if (params->input_datatype == LIBTF_DATATYPE_UINT8) {
+    //     if (fast_ceilf(params->input_scale * GRAYSCALE_RANGE) != 1) {
+    //         mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Expected model input scale to be 1/255!"));
+    //     }
 
-    if ((params->input_datatype == LIBTF_DATATYPE_UINT8)
-    && (fast_floorf(params->input_zero_point) != 0)) {
-        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Expected model input zero point to be 0!"));
-    }
+    //     if (fast_floorf(params->input_zero_point) != 0) {
+    //         mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Expected model input zero point to be 0!"));
+    //     }
+    // }
 
-    if ((params->input_datatype == LIBTF_DATATYPE_INT8)
-    && (fast_floorf(params->input_zero_point) != -128)) {
-        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Expected model input zero point to be -128!"));
-    }
+    // if (params->input_datatype == LIBTF_DATATYPE_INT8) {
+    //     if (fast_ceilf(params->input_scale * GRAYSCALE_RANGE) != 2) {
+    //         mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Expected model input scale to be 1/127.5!"));
+    //     }
+
+    //     if (fast_floorf(params->input_zero_point) != -1) {
+    //         mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Expected model input zero point to be -1!"));
+    //     }
+    // }
 
     int shift = (params->input_datatype == LIBTF_DATATYPE_INT8) ? 128 : 0;
     float fscale = 1.0f / GRAYSCALE_RANGE;
@@ -281,7 +285,7 @@ STATIC void py_tf_input_data_callback(void *callback_data,
                      -1, 256, NULL, NULL, IMAGE_HINT_BILINEAR | IMAGE_HINT_BLACK_BACKGROUND,
                      NULL, NULL);
 
-    size_t size = (params->input_width * params->input_height) - 1;
+    int size = (params->input_width * params->input_height) - 1; // must be int per countdown loop
 
     if (params->input_channels == 1) { // GRAYSCALE
         if (params->input_datatype == LIBTF_DATATYPE_FLOAT) { // convert u8 -> f32
@@ -307,7 +311,7 @@ STATIC void py_tf_input_data_callback(void *callback_data,
             }
         }
     } else if (params->input_channels == 3) { // RGB888
-        size_t rgb_size = size * 3;
+        int rgb_size = size * 3; // must be int per countdown loop
 
         if (params->input_datatype == LIBTF_DATATYPE_FLOAT) {
             uint16_t *model_input_u16 = (uint16_t *) model_input;
@@ -354,12 +358,12 @@ STATIC void py_tf_classify_output_data_callback(void *callback_data,
     arg->out = mp_obj_new_list(params->output_channels, NULL);
 
     if (params->output_datatype == LIBTF_DATATYPE_FLOAT) {
-        for (size_t i = 0, ii = params->output_channels; i < ii; i++) {
+        for (int i = 0, ii = params->output_channels; i < ii; i++) {
             ((mp_obj_list_t *) arg->out)->items[i] =
                 mp_obj_new_float(((float *) model_output)[i]);
         }
     } else {
-        for (size_t i = 0, ii = params->output_channels; i < ii; i++) {
+        for (int i = 0, ii = params->output_channels; i < ii; i++) {
             ((mp_obj_list_t *) arg->out)->items[i] =
                 mp_obj_new_float((((uint8_t *) model_output)[i] - params->output_zero_point) * params->output_scale);
         }
@@ -474,27 +478,31 @@ STATIC void py_tf_segment_output_data_callback(void *callback_data,
 {
     py_tf_segment_output_data_callback_data_t *arg = (py_tf_segment_output_data_callback_data_t *) callback_data;
 
-    if (((params->output_datatype == LIBTF_DATATYPE_UINT8)
-    || (params->output_datatype == LIBTF_DATATYPE_INT8))
-    && (fast_floorf(params->output_scale * GRAYSCALE_RANGE) != 1)) {
-        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Expected model output scale to be 1/255!"));
-    }
+    // if (params->output_datatype == LIBTF_DATATYPE_UINT8) {
+    //     if (fast_ceilf(params->output_scale * GRAYSCALE_RANGE) != 1) {
+    //         mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Expected model output scale to be 1/255!"));
+    //     }
 
-    if ((params->output_datatype == LIBTF_DATATYPE_UINT8)
-    && (fast_floorf(params->output_zero_point) != 0)) {
-        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Expected model output zero point to be 0!"));
-    }
+    //     if (fast_floorf(params->output_zero_point) != 0) {
+    //         mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Expected model output zero point to be 0!"));
+    //     }
+    // }
 
-    if ((params->output_datatype == LIBTF_DATATYPE_INT8)
-    && (fast_floorf(params->output_zero_point) != -128)) {
-        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Expected model output zero point to be -128!"));
-    }
+    // if (params->output_datatype == LIBTF_DATATYPE_INT8) {
+    //     if (fast_ceilf(params->output_scale * GRAYSCALE_RANGE) != 1) {
+    //         mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Expected model output scale to be 1/255!"));
+    //     }
+
+    //     if (fast_floorf(params->output_zero_point) != -128) {
+    //         mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Expected model output zero point to be -1!"));
+    //     }
+    // }
 
     int shift = (params->output_datatype == LIBTF_DATATYPE_INT8) ? 128 : 0;
 
     arg->out = mp_obj_new_list(params->output_channels, NULL);
 
-    for (size_t i = 0, ii = params->output_channels; i < ii; i++) {
+    for (int i = 0, ii = params->output_channels; i < ii; i++) {
 
         image_t img = {
             .w = params->output_width,
@@ -505,12 +513,12 @@ STATIC void py_tf_segment_output_data_callback(void *callback_data,
 
         ((mp_obj_list_t *) arg->out)->items[i] = py_image_from_struct(&img);
 
-        for (size_t y = 0, yy = params->output_height, xx = params->output_width; y < yy; y++) {
-            size_t row = y * xx * ii;
+        for (int y = 0, yy = params->output_height, xx = params->output_width; y < yy; y++) {
+            int row = y * xx * ii;
             uint8_t *row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(&img, y);
 
-            for (size_t x = 0; x < xx; x++) {
-                size_t col = x * ii;
+            for (int x = 0; x < xx; x++) {
+                int col = x * ii;
 
                 if (params->output_datatype == LIBTF_DATATYPE_FLOAT) {
                     IMAGE_PUT_GRAYSCALE_PIXEL_FAST(row_ptr, x,
@@ -583,7 +591,7 @@ STATIC mp_obj_t int_py_tf_segment(bool detecting_mode, uint n_args, const mp_obj
     fb_alloc_mark();
 
     float fscale = 1.f / GRAYSCALE_RANGE;
-    for (size_t i = 0, ii = img_list->len; i < ii; i++) {
+    for (int i = 0, ii = img_list->len; i < ii; i++) {
         image_t *img = py_image_cobj(img_list->items[i]);
         float x_scale = roi.w / ((float) img->w);
         float y_scale = roi.h / ((float) img->h);
@@ -592,7 +600,7 @@ STATIC mp_obj_t int_py_tf_segment(bool detecting_mode, uint n_args, const mp_obj
         imlib_find_blobs(&out, img, NULL, 1, 1, &thresholds, invert, 1, 1, false, 0, NULL, NULL, NULL, NULL, 0, 0);
 
         mp_obj_list_t *objects_list = mp_obj_new_list(list_size(&out), NULL);
-        for (size_t j = 0, jj = list_size(&out); j < jj; j++) {
+        for (int j = 0, jj = list_size(&out); j < jj; j++) {
             find_blobs_list_lnk_data_t lnk_data;
             list_pop_front(&out, &lnk_data);
 
@@ -768,7 +776,7 @@ STATIC const mp_rom_map_elem_t globals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_load),            MP_ROM_PTR(&py_func_unavailable_obj) },
     { MP_ROM_QSTR(MP_QSTR_free_from_fb),    MP_ROM_PTR(&py_func_unavailable_obj) },
     { MP_ROM_QSTR(MP_QSTR_classify),        MP_ROM_PTR(&py_func_unavailable_obj) },
-    { MP_ROM_QSTR(MP_QSTR_segment),         MP_ROM_PTR(&py_func_unavailable_obj) }
+    { MP_ROM_QSTR(MP_QSTR_segment),         MP_ROM_PTR(&py_func_unavailable_obj) },
     { MP_ROM_QSTR(MP_QSTR_detect),          MP_ROM_PTR(&py_func_unavailable_obj) }
 #endif // IMLIB_ENABLE_TF
 };

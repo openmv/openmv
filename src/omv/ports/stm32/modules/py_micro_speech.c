@@ -127,16 +127,16 @@ STATIC void py_tf_output_callback(void *callback_data, void *model_output, libtf
         mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Expected model output height to be 1!"));
     }
 
-    if (params->output_width == 1) {
+    if (params->output_width != 1) {
         mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Expected model output width to be 1!"));
     }
 
-    if (params->output_channels == 4) {
+    if (params->output_channels != 4) {
         mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Expected model output channels to be 4!"));
     }
 
-    for (size_t i = 0, ii = params->output_channels; i < ii; i++) {
-        scores[i] = ((uint8_t *) model_output)[i] + params->output_zero_point;
+    for (int i = 0, ii = params->output_channels; i < ii; i++) {
+        scores[i] = ((uint8_t *) model_output)[i] - params->output_zero_point;
         debug_printf("%.2f ", (double) ((((uint8_t *) model_output)[i] - params->output_zero_point) * params->output_scale));
     }
 }
@@ -154,7 +154,17 @@ STATIC mp_obj_t py_micro_speech_listen(uint n_args, const mp_obj_t *args, mp_map
     fb_alloc_mark();
     py_tf_alloc_putchar_buffer();
 
-    uint8_t *tensor_arena = fb_alloc(arg_model->params.tensor_arena_size, FB_ALLOC_PREFER_SPEED | FB_ALLOC_CACHE_ALIGN);
+    uint32_t tensor_arena_size;
+    uint8_t *tensor_arena = fb_alloc_all(&tensor_arena_size, FB_ALLOC_PREFER_SIZE);
+    libtf_parameters_t params;
+
+    if (libtf_get_parameters(arg_model->model_data, tensor_arena, tensor_arena_size, &params) != 0) {
+        mp_raise_msg(&mp_type_OSError, (mp_rom_error_text_t) py_tf_putchar_buffer);
+    }
+
+    fb_free(); // free fb_alloc_all()
+
+    tensor_arena = fb_alloc(params.tensor_arena_size, FB_ALLOC_PREFER_SPEED | FB_ALLOC_CACHE_ALIGN);
     int8_t spectrogram[kFeatureElementCount];
 
     uint32_t return_label = 0;
@@ -181,7 +191,7 @@ STATIC mp_obj_t py_micro_speech_listen(uint n_args, const mp_obj_t *args, mp_map
         // Run model on updated spectrogram
         if (libtf_invoke(arg_model->model_data,
                 tensor_arena,
-                &arg_model->params,
+                &params,
                 py_tf_input_callback,
                 spectrogram,
                 py_tf_output_callback,

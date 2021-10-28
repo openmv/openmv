@@ -15,7 +15,7 @@
 typedef struct py_tf_model_obj {
     mp_obj_base_t base;
     unsigned char *model_data;
-    size_t model_data_len;
+    unsigned int model_data_len;
     libtf_parameters_t params;
 } py_tf_model_obj_t;
 
