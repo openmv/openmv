@@ -1,4 +1,19 @@
 # Change Log
+## [4.1.2](https://github.com/openmv/openmv/releases/tag/v4.1.2) (2021-11-09)
+* Add lsm6dsox driver with MLC support.
+* Fix network usage in scripts.
+* Update RSTP/RPC scripts to use standard network libraries
+* Add basic frogeye2020 driver.
+* Fix errode/dilate to work on non-white pixels.
+* Add DFSDM support to audio module.
+* Make IMU orientation configurable.
+* Enable HW I2C for H7.
+* Add yuv image processing support.
+* Improve Bormio board support.
+* Add full debayering support.
+* Add new pixel format that encodes flags, id and bpp.
+* Optimized software JPEG encoding by about 10%.
+
 ## [4.1.1](https://github.com/openmv/openmv/releases/tag/v4.1.1) (2021-08-27)
 * Fix Nina-W10 ifconfig args order.
 * Make WINC1500 API compatibe with common WiFi modules.
