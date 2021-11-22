@@ -32,8 +32,6 @@ def start_streaming(server):
     client.settimeout(5.0)
     print ('Connected to ' + addr[0] + ':' + str(addr[1]))
 
-    # FPS clock
-    clock = time.clock()
     while (True):
         try:
             # Read data from client
