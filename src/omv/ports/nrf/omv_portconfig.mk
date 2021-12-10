@@ -178,6 +178,7 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/imlib/, \
 
 FIRM_OBJ += $(wildcard $(BUILD)/$(OMV_DIR)/ports/$(PORT)/*.o)
 FIRM_OBJ += $(wildcard $(BUILD)/$(MICROPY_DIR)/modules/*.o)
+FIRM_OBJ += $(wildcard $(BUILD)/$(MICROPY_DIR)/modules/nrf/*.o)
 FIRM_OBJ += $(wildcard $(BUILD)/$(MICROPY_DIR)/ports/$(PORT)/modules/*.o)
 
 #------------- MicroPy Objects -------------------#
@@ -209,22 +210,34 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/extmod/,\
 	modutimeq.o         \
 	machine_i2c.o       \
 	utime_mphal.o       \
+	vfs.o               \
+	vfs_fat.o           \
+	vfs_lfs.o           \
+	vfs_fat_file.o      \
+	vfs_fat_diskio.o    \
+	vfs_reader.o        \
+	vfs_blockdev.o      \
+	machine_mem.o       \
 	)
 
 FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/lib/,\
-	utils/pyexec.o                                  \
-	utils/printf.o                                  \
-	utils/sys_stdio_mphal.o                         \
-	utils/interrupt_char.o                          \
-	libc/string0.o                                  \
-	timeutils/timeutils.o                           \
-	mp-readline/readline.o                          \
+	littlefs/*.o                                    \
 	tinyusb/src/common/tusb_fifo.o                  \
 	tinyusb/src/device/usbd.o                       \
 	tinyusb/src/device/usbd_control.o               \
 	tinyusb/src/class/cdc/cdc_device.o              \
 	tinyusb/src/tusb.o                              \
 	tinyusb/src/portable/nordic/nrf5x/dcd_nrf5x.o   \
+	)
+
+FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/shared/,\
+	libc/printf.o               \
+	libc/string0.o              \
+	runtime/pyexec.o            \
+	runtime/interrupt_char.o    \
+	runtime/sys_stdio_mphal.o   \
+	timeutils/timeutils.o       \
+	readline/readline.o         \
 	)
 
 FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/lib/libm/,\

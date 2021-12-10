@@ -458,6 +458,7 @@
 
 #ifdef HAL_UART_MODULE_ENABLED
  #include "stm32h7xx_hal_uart.h"
+ #include "stm32h7xx_ll_lpuart.h"
 #endif /* HAL_UART_MODULE_ENABLED */
 
 #ifdef HAL_USART_MODULE_ENABLED

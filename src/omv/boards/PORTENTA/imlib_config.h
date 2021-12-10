@@ -60,7 +60,7 @@
 #define IMLIB_ENABLE_LAPLACIAN
 
 // Enable bilateral()
-#define IMLIB_ENABLE_BILATERAL
+//#define IMLIB_ENABLE_BILATERAL
 
 // Enable cartoon()
 // #define IMLIB_ENABLE_CARTOON
