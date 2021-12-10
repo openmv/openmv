@@ -18,7 +18,7 @@
 #include "py/objlist.h"
 #include "py/stream.h"
 #include "py/runtime.h"
-#include "lib/netutils/netutils.h"
+#include "shared/netutils/netutils.h"
 #include "modnetwork.h"
 #include "pin.h"
 #include "genhdr/pins.h"

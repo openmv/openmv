@@ -87,8 +87,8 @@ static void fir_lepton_spi_resync()
     flir_lepton_spi_rx_timer.mode = SOFT_TIMER_MODE_ONE_SHOT;
     flir_lepton_spi_rx_timer.expiry_ms = VOSPI_SYNC_MS + mp_hal_ticks_ms();
     flir_lepton_spi_rx_timer.delta_ms = VOSPI_SYNC_MS;
-    flir_lepton_spi_rx_timer.callback = (mp_obj_t) &fir_lepton_spi_resync_callback_obj;
-    soft_timer_insert(&flir_lepton_spi_rx_timer);
+    flir_lepton_spi_rx_timer.py_callback = (mp_obj_t) &fir_lepton_spi_resync_callback_obj;
+    soft_timer_insert(&flir_lepton_spi_rx_timer, VOSPI_SYNC_MS);
 }
 
 #if defined(OMV_FIR_LEPTON_CHECK_CRC)

@@ -27,7 +27,6 @@
 #include "gc.h"
 #include "stackctrl.h"
 #include "gccollect.h"
-#include "readline.h"
 #include "timer.h"
 #include "pin.h"
 #include "usb.h"
@@ -40,7 +39,8 @@
 
 #include "extmod/vfs.h"
 #include "extmod/vfs_fat.h"
-#include "lib/utils/pyexec.h"
+#include "shared/runtime/pyexec.h"
+#include "shared/readline/readline.h"
 
 #include "irq.h"
 #include "rng.h"
@@ -88,6 +88,7 @@
 
 #if MICROPY_PY_BLUETOOTH
 #include "extmod/modbluetooth.h"
+#include "mpbthciport.h"
 #endif
 
 int errno;
@@ -234,7 +235,8 @@ void NORETURN __fatal_error(const char *msg) {
             storage_flush();
             // Initialize the USB device if it's not already initialize to allow
             // the host to mount the filesystem and access the error log.
-            pyb_usb_dev_init(pyb_usb_dev_detect(), USBD_VID, USBD_PID_CDC_MSC, USBD_MODE_CDC_MSC, 0, NULL, NULL);
+            pyb_usb_dev_init(pyb_usb_dev_detect(), MICROPY_HW_USB_VID,
+                    MICROPY_HW_USB_PID_CDC_MSC, USBD_MODE_CDC_MSC, 0, NULL, NULL);
         }
     }
     for (uint i = 0;;) {
@@ -555,8 +557,7 @@ soft_reset:
     systick_enable_dispatch(SYSTICK_DISPATCH_LWIP, mod_network_lwip_poll_wrapper);
     #endif
     #if MICROPY_PY_BLUETOOTH
-    extern void mp_bluetooth_hci_systick(uint32_t ticks_ms);
-    systick_enable_dispatch(SYSTICK_DISPATCH_BLUETOOTH_HCI, mp_bluetooth_hci_systick);
+    mp_bluetooth_hci_init();
     #endif
 
     #if MICROPY_PY_NETWORK_CYW43
@@ -686,7 +687,8 @@ soft_reset:
 
     // Init USB device to default setting if it was not already configured
     if (!(pyb_usb_flags & PYB_USB_FLAG_USB_MODE_CALLED)) {
-        pyb_usb_dev_init(pyb_usb_dev_detect(), USBD_VID, USBD_PID_CDC_MSC, USBD_MODE_CDC_MSC, 0, NULL, NULL);
+        pyb_usb_dev_init(pyb_usb_dev_detect(), MICROPY_HW_USB_VID,
+                MICROPY_HW_USB_PID_CDC_MSC, USBD_MODE_CDC_MSC, 0, NULL, NULL);
     }
 
     // report if SDRAM failed

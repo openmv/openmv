@@ -76,23 +76,27 @@
 #define OMV_CORE_VBAT           "3.3"
 
 // USB IRQn.
-#define OMV_USB_IRQN        (USBD_IRQn)
+#define OMV_USB_IRQN            (USBD_IRQn)
 
 // Linker script constants (see the linker script template port/x.ld.S).
-#define OMV_FB_MEMORY       SRAM    // Framebuffer, fb_alloc
-#define OMV_MAIN_MEMORY     SRAM    // data, bss and heap memory
-#define OMV_STACK_MEMORY    SRAM    // stack memory
+#define OMV_FB_MEMORY           SRAM    // Framebuffer, fb_alloc
+#define OMV_MAIN_MEMORY         SRAM    // data, bss and heap memory
+#define OMV_STACK_MEMORY        SRAM    // stack memory
 
-#define OMV_FB_SIZE         (128K)  // FB memory: header + QVGA/GS image
-#define OMV_FB_ALLOC_SIZE   (16K)   // minimum fb alloc size
-#define OMV_STACK_SIZE      (8K)
-#define OMV_HEAP_SIZE       (64K)
-#define OMV_JPEG_BUF_SIZE   (16 * 1024) // IDE JPEG buffer (header + data).
+#define OMV_FB_SIZE             (128K)  // FB memory: header + QVGA/GS image
+#define OMV_FB_ALLOC_SIZE       (16K)   // minimum fb alloc size
+#define OMV_STACK_SIZE          (8K)
+#define OMV_HEAP_SIZE           (64K)
+#define OMV_JPEG_BUF_SIZE       (16 * 1024) // IDE JPEG buffer (header + data).
 
-#define OMV_TEXT_ORIGIN     0x00026000
-#define OMV_TEXT_LENGTH     744K        // Arduino bootloader starts at (0xE0000) - SD_SIZE (152K)
-#define OMV_SRAM_ORIGIN     0x20004000  // Reserve 16K for SD memory.
-#define OMV_SRAM_LENGTH     240K        // RAM_SIZE - SD_RAM_SIZE
+#define OMV_TEXT_ORIGIN         0x00026000
+#define OMV_FFS_LENGTH          64K
+#define OMV_TEXT_LENGTH         680K        // 0x00000 -> 0x26000  Soft device (152K)
+                                            // 0x26000 -> 0xD0000  OpenMV firmware (680K).
+                                            // 0xD0000 -> 0xE0000  Flash filesystem (64K).
+                                            // 0xE0000 -> 0x100000 Arduino bootloader
+#define OMV_SRAM_ORIGIN         0x20004000  // Reserve 16K for SD memory.
+#define OMV_SRAM_LENGTH         240K        // RAM_SIZE - SD_RAM_SIZE
 
 // FIR I2C
 #define FIR_I2C_ID              (0)

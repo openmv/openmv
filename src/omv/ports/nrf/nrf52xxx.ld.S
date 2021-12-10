@@ -24,7 +24,7 @@ MEMORY
 _heap_size  = OMV_HEAP_SIZE;    /* required amount of heap */
 _stack_size = OMV_STACK_SIZE;   /* minimum amount of stack */
 _fs_start   = OMV_TEXT_ORIGIN + OMV_TEXT_LENGTH;
-_fs_end     = OMV_TEXT_ORIGIN + OMV_TEXT_LENGTH + 64K;
+_fs_end     = OMV_TEXT_ORIGIN + OMV_TEXT_LENGTH + OMV_FFS_LENGTH;
 
 /* define output sections */
 SECTIONS
@@ -40,6 +40,7 @@ SECTIONS
         *(.rodata*)          /* .rodata* sections (constants, strings, etc.) */
         . = ALIGN(4);
         _etext = .;          /* define a global symbol at end of code */
+        _unused_flash_start = .;
     } >FLASH_TEXT
 
     /* used by the startup to initialize data */
@@ -118,3 +119,5 @@ SECTIONS
 
     .ARM.attributes 0 : { *(.ARM.attributes) }
 }
+
+_unused_flash_len = (ORIGIN(FLASH_TEXT) + LENGTH(FLASH_TEXT)) - _unused_flash_start;

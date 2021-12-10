@@ -20,7 +20,6 @@ MPY_CFLAGS += -I$(MP_BOARD_CONFIG_DIR)
 MPY_CFLAGS += -I$(BUILD)/$(MICROPY_DIR)/
 MPY_CFLAGS += -I$(TOP_DIR)/$(MICROPY_DIR)/
 MPY_CFLAGS += -I$(TOP_DIR)/$(MICROPY_DIR)/py/
-MPY_CFLAGS += -I$(TOP_DIR)/$(MICROPY_DIR)/lib/mp-readline
 MPY_CFLAGS += -I$(TOP_DIR)/$(MICROPY_DIR)/lib/oofatfs
 MPY_CFLAGS += -I$(TOP_DIR)/$(MICROPY_DIR)/lib/lwip/src/include/
 MPY_CFLAGS += -I$(TOP_DIR)/$(MICROPY_DIR)/ports/stm32/
@@ -281,6 +280,7 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/,\
 	machine_uart.o          \
 	machine_adc.o           \
 	machine_timer.o         \
+	machine_bitstream.o     \
 	pybthread.o             \
 	mpthreadport.o          \
 	posix_helpers.o         \
@@ -290,21 +290,25 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/,\
 	)
 
 #------------- MicroPy Objects ----------------#
-FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/lib/,\
-	utils/mpirq.o               \
-	utils/pyexec.o              \
-	utils/printf.o              \
-	utils/interrupt_char.o      \
-	utils/sys_stdio_mphal.o     \
-	utils/gchelper_m3.o         \
-	utils/gchelper_native.o     \
+FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/shared/,\
+	libc/printf.o               \
 	libc/string0.o              \
+	libc/abort_.o               \
+	runtime/mpirq.o             \
+	runtime/pyexec.o            \
+	runtime/interrupt_char.o    \
+	runtime/sys_stdio_mphal.o   \
+	runtime/gchelper_m3.o       \
+	runtime/gchelper_native.o   \
+	runtime/stdout_helpers.o    \
 	netutils/*.o                \
 	timeutils/timeutils.o       \
+	readline/readline.o         \
+	)
+
+FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/lib/,\
 	berkeley-db-1.xx/btree/*.o  \
 	berkeley-db-1.xx/mpool/*.o  \
-	embed/abort_.o              \
-	mp-readline/readline.o      \
 	)
 
 FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/lib/libm/,\
@@ -374,6 +378,7 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/extmod/,\
 	machine_pulse.o     \
 	machine_signal.o    \
 	machine_pinbase.o   \
+	machine_bitstream.o \
 	utime_mphal.o       \
 	modonewire.o        \
 	uos_dupterm.o       \
