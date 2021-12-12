@@ -265,16 +265,15 @@ STATIC void py_tf_input_data_callback(void *callback_data,
         if (!is_float) {
             if (shift) { // convert u8 -> s8
                 uint8_t *model_input_8 = (uint8_t *) model_input;
-
                 #if (__ARM_ARCH > 6)
                 for (; size >= 3; size -= 4) {
                     *((uint32_t *) (model_input_8 + size - 3)) ^= 0x80808080;
                 }
-                #endif
-
+                #else
                 for (; size >= 0; size -= 1) {
                     model_input_8[size] ^= 0x80;
                 }
+                #endif
             }
         } else { // convert u8 -> f32
             uint8_t *model_input_u8 = (uint8_t *) model_input;
