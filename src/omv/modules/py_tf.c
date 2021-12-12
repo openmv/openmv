@@ -259,7 +259,7 @@ STATIC void py_tf_input_data_callback(void *callback_data,
                      -1, 256, NULL, NULL, IMAGE_HINT_BILINEAR | IMAGE_HINT_BLACK_BACKGROUND,
                      NULL, NULL);
 
-    unsigned int size = (input_width * input_height) - 1;
+    int size = (input_width * input_height) - 1;
 
     if (input_channels == 1) { // GRAYSCALE
         if (!is_float) {
@@ -285,7 +285,7 @@ STATIC void py_tf_input_data_callback(void *callback_data,
             }
         }
     } else if (input_channels == 3) { // RGB888
-        unsigned int rgb_size = size * 3;
+        int rgb_size = size * 3;
 
         if (!is_float) {
             uint16_t *model_input_u16 = (uint16_t *) model_input;
