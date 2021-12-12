@@ -293,10 +293,10 @@ def __get_can_settings(bit_rate, sampling_point):
 
 class rpc_can_master(rpc_master):
 
-    def __init__(self, message_id=0x7FF, bit_rate=250000, sampling_point=75):
+    def __init__(self, message_id=0x7FF, bit_rate=250000, sampling_point=75, can_bus=2):
         self.__message_id = message_id
         can_prescaler, can_bs1, can_bs2 = __get_can_settings(bit_rate, sampling_point)
-        self.__can = pyb.CAN(2, pyb.CAN.NORMAL, prescaler=can_prescaler, bs1=can_bs1, bs2=can_bs2, auto_restart=True)
+        self.__can = pyb.CAN(can_bus, pyb.CAN.NORMAL, prescaler=can_prescaler, bs1=can_bs1, bs2=can_bs2, auto_restart=True)
         self.__can.setfilter(0, pyb.CAN.DUAL if omv.board_type() == "H7" else pyb.CAN.LIST32, 0, [message_id, message_id])
         rpc_master.__init__(self)
 
@@ -328,10 +328,10 @@ class rpc_can_master(rpc_master):
 
 class rpc_can_slave(rpc_slave):
 
-    def __init__(self, message_id=0x7FF, bit_rate=250000, sampling_point=75):
+    def __init__(self, message_id=0x7FF, bit_rate=250000, sampling_point=75, can_bus=2):
         self.__message_id = message_id
         can_prescaler, can_bs1, can_bs2 = __get_can_settings(bit_rate, sampling_point)
-        self.__can = pyb.CAN(2, pyb.CAN.NORMAL, prescaler=can_prescaler, bs1=can_bs1, bs2=can_bs2, auto_restart=True)
+        self.__can = pyb.CAN(can_bus, pyb.CAN.NORMAL, prescaler=can_prescaler, bs1=can_bs1, bs2=can_bs2, auto_restart=True)
         self.__can.setfilter(0, pyb.CAN.DUAL if omv.board_type() == "H7" else pyb.CAN.LIST32, 0, [message_id, message_id])
         rpc_slave.__init__(self)
 
@@ -359,10 +359,10 @@ class rpc_can_slave(rpc_slave):
 
 class rpc_i2c_master(rpc_master):
 
-    def __init__(self, slave_addr=0x12, rate=100000): # private
+    def __init__(self, slave_addr=0x12, rate=100000, i2c_bus=2): # private
         self.__addr = slave_addr
         self.__freq = rate
-        self.__i2c = pyb.I2C(2)
+        self.__i2c = pyb.I2C(i2c_bus)
         rpc_master.__init__(self)
         self._stream_writer_queue_depth_max = 1
 
@@ -390,9 +390,9 @@ class rpc_i2c_master(rpc_master):
 
 class rpc_i2c_slave(rpc_slave):
 
-    def __init__(self, slave_addr=0x12): # private
+    def __init__(self, slave_addr=0x12, i2c_bus=2): # private
         self.__addr = slave_addr
-        self.__i2c = pyb.I2C(2)
+        self.__i2c = pyb.I2C(i2c_bus)
         rpc_slave.__init__(self)
         self._stream_writer_queue_depth_max = 1
 
@@ -417,12 +417,12 @@ class rpc_i2c_slave(rpc_slave):
 
 class rpc_spi_master(rpc_master):
 
-    def __init__(self, cs_pin="P3", freq=1000000, clk_polarity=1, clk_phase=0): # private
+    def __init__(self, cs_pin="P3", freq=1000000, clk_polarity=1, clk_phase=0, spi_bus=2): # private
         self.__pin = pyb.Pin(cs_pin, pyb.Pin.OUT_PP)
         self.__freq = freq
         self.__polarity = clk_polarity
         self.__clk_phase = clk_phase
-        self.__spi = pyb.SPI(2)
+        self.__spi = pyb.SPI(spi_bus)
         rpc_master.__init__(self)
         self._stream_writer_queue_depth_max = 1
 
@@ -448,11 +448,11 @@ class rpc_spi_master(rpc_master):
 
 class rpc_spi_slave(rpc_slave):
 
-    def __init__(self, cs_pin="P3", clk_polarity=1, clk_phase=0): # private
+    def __init__(self, cs_pin="P3", clk_polarity=1, clk_phase=0, spi_bus=2): # private
         self.__pin = pyb.Pin(cs_pin, pyb.Pin.IN)
         self.__polarity = clk_polarity
         self.__clk_phase = clk_phase
-        self.__spi = pyb.SPI(2)
+        self.__spi = pyb.SPI(spi_bus)
         rpc_slave.__init__(self)
         self._stream_writer_queue_depth_max = 1
 
@@ -477,8 +477,8 @@ class rpc_spi_slave(rpc_slave):
 
 class rpc_uart_master(rpc_master):
 
-    def __init__(self, baudrate=9600): # private
-        self.__uart = pyb.UART(3, baudrate, timeout=2, timeout_char=2)
+    def __init__(self, baudrate=9600, uart_port=3): # private
+        self.__uart = pyb.UART(uart_port, baudrate, timeout=2, timeout_char=2)
         rpc_master.__init__(self)
 
     def _flush(self): # protected
@@ -501,8 +501,8 @@ class rpc_uart_master(rpc_master):
 
 class rpc_uart_slave(rpc_slave):
 
-    def __init__(self, baudrate=9600): # private
-        self.__uart = pyb.UART(3, baudrate, timeout=2, timeout_char=2)
+    def __init__(self, baudrate=9600, uart_port=3): # private
+        self.__uart = pyb.UART(uart_port, baudrate, timeout=2, timeout_char=2)
         rpc_slave.__init__(self)
 
     def _flush(self): # protected
