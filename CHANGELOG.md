@@ -1,4 +1,14 @@
 # Change Log
+## [4.1.3](https://github.com/openmv/openmv/releases/tag/v4.1.3) (2021-12-13)
+* Update to MicroPython 1.17
+* Update pico-sdk to 1.3.0 and tinyusb 0.12.0
+* Allow RPC bus ports arguments.
+* Fix TF bug (unsigned var in count down loop).
+* Add missing MT9M114 ID.
+* Nina driver updates, bug fixes.
+* Update Nano-RP2040 WiFi AP scripts.
+* Update LSM6DSOX driver.
+
 ## [4.1.2](https://github.com/openmv/openmv/releases/tag/v4.1.2) (2021-11-09)
 * Add lsm6dsox driver with MLC support.
 * Fix network usage in scripts.
