@@ -1,4 +1,7 @@
 # Change Log
+## [4.1.4](https://github.com/openmv/openmv/releases/tag/v4.1.4) (2021-12-18)
+* This release fixes the ADC/QSPI flash bug introduced in 4.1.3.
+
 ## [4.1.3](https://github.com/openmv/openmv/releases/tag/v4.1.3) (2021-12-13)
 * Update to MicroPython 1.17
 * Update pico-sdk to 1.3.0 and tinyusb 0.12.0
