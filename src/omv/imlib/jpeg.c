@@ -2100,13 +2100,13 @@ void jpeg_read_geometry(FIL *fp, image_t *img, const char *path, jpg_read_settin
              || ((0xFFCD <= header) && (header <= 0xFFCF)))
             {
                 read_byte_ignore(fp);
-                uint16_t width;
-                read_word(fp, &width);
-                width = __REV16(width);
-
                 uint16_t height;
                 read_word(fp, &height);
                 height = __REV16(height);
+
+                uint16_t width;
+                read_word(fp, &width);
+                width = __REV16(width);
 
                 rs->jpg_w   = width;
                 rs->jpg_h   = height;
