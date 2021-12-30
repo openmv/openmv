@@ -19,10 +19,10 @@
 #ifdef IMLIB_ENABLE_TF
 #include "py_image.h"
 #include "ff_wrapper.h"
-#include "libtf_person_detect_model_data.h"
 #include "py_tf.h"
 
 #define GRAYSCALE_RANGE ((COLOR_GRAYSCALE_MAX) - (COLOR_GRAYSCALE_MIN))
+#define GRAYSCALE_MID   (((GRAYSCALE_RANGE) + 1) / 2)
 
 void py_tf_alloc_putchar_buffer()
 {
@@ -48,16 +48,16 @@ STATIC void py_tf_model_print(const mp_print_t *print, mp_obj_t self_in, mp_prin
     mp_printf(print,
               "{\"len\":%d, \"ram\":%d, "
               "\"input_height\":%d, \"input_width\":%d, \"input_channels\":%d, \"input_datatype\":\"%s\", "
-              "\"input_scale\":%f, \"input_zero_point\":%f "
+              "\"input_scale\":%f, \"input_zero_point\":%d, "
               "\"output_height\":%d, \"output_width\":%d, \"output_channels\":%d, \"output_datatype\":\"%s\", "
-              "\"output_scale\":%f, \"output_zero_point\":%f}",
+              "\"output_scale\":%f, \"output_zero_point\":%d}",
               self->model_data_len, self->params.tensor_arena_size,
               self->params.input_height, self->params.input_width, self->params.input_channels,
               py_tf_map_datatype(self->params.input_datatype),
-              (double) self->params.input_scale, (double) self->params.input_zero_point,
+              (double) self->params.input_scale, self->params.input_zero_point,
               self->params.output_height, self->params.output_width, self->params.output_channels,
               py_tf_map_datatype(self->params.output_datatype),
-              (double) self->params.output_scale, (double) self->params.output_zero_point);
+              (double) self->params.output_scale, self->params.output_zero_point);
 }
 
 // TF Classification Object
@@ -158,7 +158,7 @@ STATIC mp_obj_t int_py_tf_load(mp_obj_t path_obj, bool alloc_mode, bool helper_m
 
     if (!strcmp(path, "person_detection")) {
         tf_model->model_data = (unsigned char *) g_person_detect_model_data;
-        tf_model->model_data_len = g_person_detect_model_data_size;
+        tf_model->model_data_len = g_person_detect_model_data_len;
     } else {
         #if defined(IMLIB_ENABLE_IMAGE_FILE_IO)
         FIL fp;
@@ -240,27 +240,30 @@ STATIC void py_tf_input_data_callback(void *callback_data,
 {
     py_tf_input_data_callback_data_t *arg = (py_tf_input_data_callback_data_t *) callback_data;
 
+    // Disable checking input scaling and zero-point. Nets can be all over the place on the input
+    // scaling and zero-point but still work with the code below.
+
     // if (params->input_datatype == LIBTF_DATATYPE_UINT8) {
-    //     if (fast_ceilf(params->input_scale * GRAYSCALE_RANGE) != 1) {
+    //     if (fast_roundf(params->input_scale * GRAYSCALE_RANGE) != 1) {
     //         mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Expected model input scale to be 1/255!"));
     //     }
 
-    //     if (fast_floorf(params->input_zero_point) != 0) {
+    //     if (params->input_zero_point != 0) {
     //         mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Expected model input zero point to be 0!"));
     //     }
     // }
 
     // if (params->input_datatype == LIBTF_DATATYPE_INT8) {
-    //     if (fast_ceilf(params->input_scale * GRAYSCALE_RANGE) != 2) {
-    //         mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Expected model input scale to be 1/127.5!"));
+    //     if (fast_roundf(params->input_scale * GRAYSCALE_RANGE) != 1) {
+    //         mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Expected model input scale to be 1/255!"));
     //     }
 
-    //     if (fast_floorf(params->input_zero_point) != -1) {
-    //         mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Expected model input zero point to be -1!"));
+    //     if (params->input_zero_point != -GRAYSCALE_MID) {
+    //         mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Expected model input zero point to be -128!"));
     //     }
     // }
 
-    int shift = (params->input_datatype == LIBTF_DATATYPE_INT8) ? 128 : 0;
+    int shift = (params->input_datatype == LIBTF_DATATYPE_INT8) ? GRAYSCALE_MID : 0;
     float fscale = 1.0f / GRAYSCALE_RANGE;
 
     float xscale = params->input_width / ((float) arg->roi->w);
@@ -306,7 +309,7 @@ STATIC void py_tf_input_data_callback(void *callback_data,
                 #endif
 
                 for (; size >= 0; size -= 1) {
-                    model_input_8[size] ^= 0x80;
+                    model_input_8[size] ^= GRAYSCALE_MID;
                 }
             }
         }
@@ -478,27 +481,30 @@ STATIC void py_tf_segment_output_data_callback(void *callback_data,
 {
     py_tf_segment_output_data_callback_data_t *arg = (py_tf_segment_output_data_callback_data_t *) callback_data;
 
+    // Disable checking output scaling and zero-point. Nets can be all over the place on the output
+    // scaling and zero-point but still work with the code below.
+
     // if (params->output_datatype == LIBTF_DATATYPE_UINT8) {
-    //     if (fast_ceilf(params->output_scale * GRAYSCALE_RANGE) != 1) {
+    //     if (fast_roundf(params->output_scale * GRAYSCALE_RANGE) != 1) {
     //         mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Expected model output scale to be 1/255!"));
     //     }
 
-    //     if (fast_floorf(params->output_zero_point) != 0) {
+    //     if (params->output_zero_point != 0) {
     //         mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Expected model output zero point to be 0!"));
     //     }
     // }
 
     // if (params->output_datatype == LIBTF_DATATYPE_INT8) {
-    //     if (fast_ceilf(params->output_scale * GRAYSCALE_RANGE) != 1) {
+    //     if (fast_roundf(params->output_scale * GRAYSCALE_RANGE) != 1) {
     //         mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Expected model output scale to be 1/255!"));
     //     }
 
-    //     if (fast_floorf(params->output_zero_point) != -128) {
-    //         mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Expected model output zero point to be -1!"));
+    //     if (params->output_zero_point != -GRAYSCALE_MID) {
+    //         mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Expected model output zero point to be -128!"));
     //     }
     // }
 
-    int shift = (params->output_datatype == LIBTF_DATATYPE_INT8) ? 128 : 0;
+    int shift = (params->output_datatype == LIBTF_DATATYPE_INT8) ? GRAYSCALE_MID : 0;
 
     arg->out = mp_obj_new_list(params->output_channels, NULL);
 
@@ -570,11 +576,11 @@ STATIC mp_obj_t int_py_tf_segment(bool detecting_mode, uint n_args, const mp_obj
 
     list_t thresholds;
     list_init(&thresholds, sizeof(color_thresholds_list_lnk_data_t));
-    py_helper_arg_to_thresholds(args[3], &thresholds);
+    py_helper_keyword_thresholds(n_args, args, 3, kw_args, &thresholds);
 
     if (!list_size(&thresholds)) {
         color_thresholds_list_lnk_data_t lnk_data;
-        lnk_data.LMin = (GRAYSCALE_RANGE + 1) / 2;
+        lnk_data.LMin = GRAYSCALE_MID;
         lnk_data.LMax = GRAYSCALE_RANGE;
         lnk_data.AMin = COLOR_A_MIN;
         lnk_data.AMax = COLOR_A_MAX;
@@ -597,7 +603,9 @@ STATIC mp_obj_t int_py_tf_segment(bool detecting_mode, uint n_args, const mp_obj
         float y_scale = roi.h / ((float) img->h);
 
         list_t out;
-        imlib_find_blobs(&out, img, NULL, 1, 1, &thresholds, invert, 1, 1, false, 0, NULL, NULL, NULL, NULL, 0, 0);
+        imlib_find_blobs(&out, img, &((rectangle_t) {0, 0, img->w, img->h}), 1, 1,
+                         &thresholds, invert, 1, 1, false, 0,
+                         NULL, NULL, NULL, NULL, 0, 0);
 
         mp_obj_list_t *objects_list = mp_obj_new_list(list_size(&out), NULL);
         for (int j = 0, jj = list_size(&out); j < jj; j++) {
@@ -624,10 +632,10 @@ STATIC mp_obj_t int_py_tf_segment(bool detecting_mode, uint n_args, const mp_obj
             o->w = mp_obj_new_int(fast_floorf(lnk_data.rect.w * x_scale));
             o->h = mp_obj_new_int(fast_floorf(lnk_data.rect.h * y_scale));
             o->output = mp_obj_new_float(stats.LMean * fscale);
-            mp_obj_list_append(objects_list, o);
+            objects_list->items[j] = o;
         }
 
-        mp_obj_list_append(out_list, objects_list);
+        out_list->items[i] = objects_list;
     }
 
     fb_alloc_free_till_mark();
@@ -692,7 +700,7 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_tf_input_scale_obj, py_tf_input_scale);
 
 mp_obj_t py_tf_input_zero_point(mp_obj_t self_in)
 {
-    return mp_obj_new_float(((py_tf_model_obj_t *) self_in)->params.input_zero_point);
+    return mp_obj_new_int(((py_tf_model_obj_t *) self_in)->params.input_zero_point);
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_tf_input_zero_point_obj, py_tf_input_zero_point);
 
@@ -729,7 +737,7 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_tf_output_scale_obj, py_tf_output_scale);
 
 mp_obj_t py_tf_output_zero_point(mp_obj_t self_in)
 {
-    return mp_obj_new_float(((py_tf_model_obj_t *) self_in)->params.output_zero_point);
+    return mp_obj_new_int(((py_tf_model_obj_t *) self_in)->params.output_zero_point);
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_tf_output_zero_point_obj, py_tf_output_zero_point);
 

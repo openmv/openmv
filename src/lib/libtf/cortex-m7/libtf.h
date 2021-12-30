@@ -12,6 +12,10 @@
 extern "C" {
 #endif
 
+// Built-in person deteciton model.
+extern const unsigned char g_person_detect_model_data[];
+extern const int g_person_detect_model_data_len;
+
 typedef enum libtf_datatype {
     LIBTF_DATATYPE_UINT8,
     LIBTF_DATATYPE_INT8,
@@ -22,10 +26,12 @@ typedef struct libtf_parameters {
     size_t tensor_arena_size;
     size_t input_height, input_width, input_channels;
     libtf_datatype_t input_datatype;
-    float input_scale, input_zero_point;
+    float input_scale;
+    int input_zero_point;
     size_t output_height, output_width, output_channels;
     libtf_datatype_t output_datatype;
-    float output_scale, output_zero_point;
+    float output_scale;
+    int output_zero_point;
 } libtf_parameters_t;
 
 // Call this first to get the model parameters.
