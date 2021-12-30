@@ -111,8 +111,7 @@ mp_obj_t py_micro_speech_audio_callback(mp_obj_t self_in, mp_obj_t buf_in)
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_micro_speech_audio_callback_obj, py_micro_speech_audio_callback);
 
-STATIC void py_tf_input_callback(void *callback_data, void *model_input, const unsigned int input_height,
-        const unsigned int input_width, const unsigned int input_channels, const bool is_signed, const bool is_float)
+STATIC void py_tf_input_callback(void *callback_data, void *model_input, libtf_parameters_t *params)
 {
     // Copy feature buffer to input tensor
     for (int i = 0; i < kFeatureElementCount; i++) {
@@ -120,17 +119,25 @@ STATIC void py_tf_input_callback(void *callback_data, void *model_input, const u
     }
 }
 
-STATIC void py_tf_output_callback(void *callback_data, void *model_output, const unsigned int output_height,
-        const unsigned int output_width, const unsigned int output_channels, const bool is_signed, const bool is_float)
+STATIC void py_tf_output_callback(void *callback_data, void *model_output, libtf_parameters_t *params)
 {
     uint8_t *scores = (uint8_t *) callback_data;
-    PY_ASSERT_TRUE_MSG(output_height   == 1, "Expected model output height to be 1!");
-    PY_ASSERT_TRUE_MSG(output_width    == 1, "Expected model output width to be 1!");
-    PY_ASSERT_TRUE_MSG(output_channels == 4, "Expected model output channels to be 4!");
 
-    for (int i=0; i<output_channels; i++) {
-        scores[i] = (((uint8_t *) model_output)[i] ^ (is_signed ? 128 : 0));
-        debug_printf("%.2f ", (double)((((uint8_t *) model_output)[i] ^ (is_signed ? 128 : 0)) / 255.0f));
+    if (params->output_height != 1) {
+        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Expected model output height to be 1!"));
+    }
+
+    if (params->output_width != 1) {
+        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Expected model output width to be 1!"));
+    }
+
+    if (params->output_channels != 4) {
+        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Expected model output channels to be 4!"));
+    }
+
+    for (int i = 0, ii = params->output_channels; i < ii; i++) {
+        scores[i] = ((uint8_t *) model_output)[i] - params->output_zero_point;
+        debug_printf("%.2f ", (double) ((((uint8_t *) model_output)[i] - params->output_zero_point) * params->output_scale));
     }
 }
 
@@ -149,6 +156,15 @@ STATIC mp_obj_t py_micro_speech_listen(uint n_args, const mp_obj_t *args, mp_map
 
     uint32_t tensor_arena_size;
     uint8_t *tensor_arena = fb_alloc_all(&tensor_arena_size, FB_ALLOC_PREFER_SIZE);
+    libtf_parameters_t params;
+
+    if (libtf_get_parameters(arg_model->model_data, tensor_arena, tensor_arena_size, &params) != 0) {
+        mp_raise_msg(&mp_type_OSError, (mp_rom_error_text_t) py_tf_putchar_buffer);
+    }
+
+    fb_free(); // free fb_alloc_all()
+
+    tensor_arena = fb_alloc(params.tensor_arena_size, FB_ALLOC_PREFER_SPEED | FB_ALLOC_CACHE_ALIGN);
     int8_t spectrogram[kFeatureElementCount];
 
     uint32_t return_label = 0;
@@ -175,13 +191,12 @@ STATIC mp_obj_t py_micro_speech_listen(uint n_args, const mp_obj_t *args, mp_map
         // Run model on updated spectrogram
         if (libtf_invoke(arg_model->model_data,
                 tensor_arena,
-                tensor_arena_size,
+                &params,
                 py_tf_input_callback,
                 spectrogram,
                 py_tf_output_callback,
                 previous_scores[results_count]) != 0) {
-            mp_raise_msg(&mp_type_OSError, (mp_rom_error_text_t)
-                    py_tf_putchar_buffer - (PY_TF_PUTCHAR_BUFFER_LEN - py_tf_putchar_buffer_len));
+            mp_raise_msg(&mp_type_OSError, (mp_rom_error_text_t) py_tf_putchar_buffer);
         }
 
         // If we have enough samples calculate average scores.
@@ -272,4 +287,5 @@ const mp_obj_module_t micro_speech_module = {
 };
 
 MP_REGISTER_MODULE(MP_QSTR_micro_speech, micro_speech_module, MICROPY_PY_MICRO_SPEECH);
-#endif //MICROPY_PY_MICRO_SPEECH
+
+#endif // MICROPY_PY_MICRO_SPEECH
