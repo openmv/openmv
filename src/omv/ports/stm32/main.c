@@ -371,25 +371,30 @@ FRESULT exec_boot_script(const char *path, bool selftest, bool interruptible, bo
 {
     nlr_buf_t nlr;
     bool interrupted = false;
-    FRESULT f_res = f_stat(&vfs_fat->fatfs, path, NULL);
+    FRESULT f_res = FR_NO_FILE;
 
-    if (f_res == FR_OK) {
-        if (nlr_push(&nlr) == 0) {
-            // Enable IDE interrupts if allowed.
-            if (interruptible) {
-                usbdbg_set_irq_enabled(true);
-                usbdbg_set_script_running(true);
-                #if OMV_ENABLE_WIFIDBG && MICROPY_PY_WINC1500
-                wifidbg_set_irq_enabled(wifidbg_enabled);
-                #endif
-            }
-
-            // Parse, compile and execute the script.
-            pyexec_file(path);
-            nlr_pop();
-        } else {
-            interrupted = true;
+    if (nlr_push(&nlr) == 0) {
+        // Enable IDE interrupts if allowed.
+        if (interruptible) {
+            usbdbg_set_irq_enabled(true);
+            usbdbg_set_script_running(true);
+            #if OMV_ENABLE_WIFIDBG && MICROPY_PY_WINC1500
+            wifidbg_set_irq_enabled(wifidbg_enabled);
+            #endif
         }
+
+        // Try to run the frozen module first.
+        if (pyexec_frozen_module(path, true) == false) {
+            // No frozen module, try the filesystem.
+            f_res = f_stat(&vfs_fat->fatfs, path, NULL);
+            if (f_res == FR_OK) {
+                // Parse, compile and execute the script.
+                pyexec_file(path, true);
+            }
+        }
+        nlr_pop();
+    } else {
+        interrupted = true;
     }
 
     // Disable IDE interrupts
@@ -673,15 +678,18 @@ soft_reset:
         openmv_config.wifidbg = false;
     #endif
 
+    // Execute frozen _boot.py (if any) for early system setup.
+    pyexec_frozen_module("_boot.py", false);
+
     // Run boot script(s)
     if (first_soft_reset) {
         // Execute the boot.py script before initializing the USB dev to
         // override the USB mode if required, otherwise VCP+MSC is used.
-        exec_boot_script("/boot.py", false, false, false);
+        exec_boot_script("boot.py", false, false, false);
         #if (OMV_ENABLE_SELFTEST == 1)
         // Execute the selftests.py script before the filesystem is mounted
         // to avoid corrupting the filesystem when selftests.py is removed.
-        exec_boot_script("/selftest.py", true, false, false);
+        exec_boot_script("selftest.py", true, false, false);
         #endif
     }
 
@@ -707,7 +715,7 @@ soft_reset:
 
     // Run main script if it exists.
     if (first_soft_reset) {
-        exec_boot_script("/main.py", false, true, openmv_config.wifidbg);
+        exec_boot_script("main.py", false, true, openmv_config.wifidbg);
     }
 
     do {
@@ -755,7 +763,7 @@ soft_reset:
                 #endif
 
                 // Execute the script.
-                pyexec_str(usbdbg_get_script());
+                pyexec_str(usbdbg_get_script(), true);
                 nlr_pop();
             } else {
                 mp_obj_print_exception(&mp_plat_print, (mp_obj_t)nlr.ret_val);

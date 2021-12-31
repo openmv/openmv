@@ -211,7 +211,7 @@ soft_reset:
     int ret = vfs_mount_and_chdir((mp_obj_t)&nrf_flash_obj, mount_point);
 
     if ((ret == -MP_ENODEV) || (ret == -MP_EIO)) {
-        pyexec_frozen_module("_mkfs.py"); // Frozen script for formatting flash filesystem.
+        pyexec_frozen_module("_mkfs.py", false); // Frozen script for formatting flash filesystem.
         ret = vfs_mount_and_chdir((mp_obj_t)&nrf_flash_obj, mount_point);
     }
 
@@ -284,8 +284,8 @@ soft_reset:
 
     #if MICROPY_VFS || MICROPY_MBFS || MICROPY_MODULE_FROZEN
     // run boot.py and main.py if they exist.
-    pyexec_file_if_exists("boot.py");
-    pyexec_file_if_exists("main.py");
+    pyexec_file_if_exists("boot.py", false);
+    pyexec_file_if_exists("main.py", false);
     #endif
 
     #if MICROPY_HW_USB_CDC
@@ -326,7 +326,7 @@ soft_reset:
             usbdbg_set_irq_enabled(true);
 
             // Execute the script.
-            pyexec_str(usbdbg_get_script());
+            pyexec_str(usbdbg_get_script(), true);
             nlr_pop();
         } else {
             mp_obj_print_exception(&mp_plat_print, (mp_obj_t)nlr.ret_val);
