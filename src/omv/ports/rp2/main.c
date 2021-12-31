@@ -113,7 +113,7 @@ void exec_boot_script(const char *path, bool interruptible)
         }
 
         // Parse, compile and execute the script.
-        pyexec_file_if_exists(path);
+        pyexec_file_if_exists(path, true);
         nlr_pop();
     } else {
         interrupted = true;
@@ -206,9 +206,9 @@ soft_reset:
 
     // Execute _boot.py to set up the filesystem.
     #if MICROPY_VFS_FAT && MICROPY_HW_USB_MSC
-    pyexec_frozen_module("_boot_fat.py");
+    pyexec_frozen_module("_boot_fat.py", false);
     #else
-    pyexec_frozen_module("_boot.py");
+    pyexec_frozen_module("_boot.py", false);
     #endif
 
     // Execute user scripts.
@@ -247,7 +247,7 @@ soft_reset:
             // Enable IDE interrupt
             usbdbg_set_irq_enabled(true);
             // Execute the script.
-            pyexec_str(usbdbg_get_script());
+            pyexec_str(usbdbg_get_script(), true);
             nlr_pop();
         } else {
             mp_obj_print_exception(&mp_plat_print, (mp_obj_t)nlr.ret_val);
