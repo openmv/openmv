@@ -15,6 +15,12 @@ SRCS += $(addprefix alloc/,     \
 	unaligned_memcpy.c          \
    )
 
+SRCS += $(addprefix boards/$(TARGET)/,  \
+	main.py                             \
+	readme.txt                          \
+	selftest.py                         \
+   )
+
 SRCS += $(addprefix common/,    \
 	array.c                     \
 	ff_wrapper.c                \
@@ -98,7 +104,7 @@ SRCS += $(addprefix imlib/,     \
 
 SRCS += $(wildcard ports/$(PORT)/*.c)
 
-OBJS = $(addprefix $(BUILD)/, $(SRCS:.c=.o))
+OBJS = $(addprefix $(BUILD)/, $(patsubst %.py,%_py.o, $(patsubst %.txt,%_txt.o, $(SRCS:.c=.o))))
 OBJ_DIRS = $(sort $(dir $(OBJS)))
 
 all: | $(OBJ_DIRS) $(OBJS)
@@ -112,5 +118,18 @@ $(BUILD)/%.o : %.c
 $(BUILD)/%.o : %.s
 	$(ECHO) "AS $<"
 	$(AS) $(AFLAGS) $< -o $@
+
+define BUILD_RESOURCE =
+$(ECHO) "XXD $<"
+cd $(<D) && xxd -i $(<F) $(@:.o=.c) && sed -i "s/unsigned/const unsigned/g" $(<F) $(@:.o=.c)
+$(ECHO) "CC $(@:.o=.c)"
+$(CC) $(CFLAGS) -c -o $@ $(@:.o=.c) && sed -i "s@$(@:.o=.c)@$(addprefix $(CURDIR)/, $<)@g" $(@:.o=.d)
+endef
+
+$(BUILD)/%_py.o : %.py
+	$(BUILD_RESOURCE)
+
+$(BUILD)/%_txt.o : %.txt
+	$(BUILD_RESOURCE)
 
 -include $(OBJS:%.o=%.d)

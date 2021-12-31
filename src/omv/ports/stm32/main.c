@@ -93,118 +93,15 @@
 
 int errno;
 extern char _vfs_buf[];
+extern const unsigned char main_py[];
+extern const unsigned int main_py_len;
+extern const unsigned char readme_txt[];
+extern const unsigned int readme_txt_len;
+extern const unsigned char selftest_py[];
+extern const unsigned int selftest_py_len;
 static fs_user_mount_t *vfs_fat = (fs_user_mount_t *) &_vfs_buf;
 #if MICROPY_PY_THREAD
 pyb_thread_t pyb_thread_main;
-#endif
-
-static const char fresh_main_py[] =
-"# main.py -- put your code here!\n"
-"import pyb, time\n"
-"led = pyb.LED(3)\n"
-"usb = pyb.USB_VCP()\n"
-"while (usb.isconnected()==False):\n"
-"   led.on()\n"
-"   time.sleep_ms(150)\n"
-"   led.off()\n"
-"   time.sleep_ms(100)\n"
-"   led.on()\n"
-"   time.sleep_ms(150)\n"
-"   led.off()\n"
-"   time.sleep_ms(600)\n"
-;
-
-static const char fresh_readme_txt[] =
-"Thank you for supporting the OpenMV project!\r\n"
-"\r\n"
-"To download the IDE, please visit:\r\n"
-"https://openmv.io/pages/download\r\n"
-"\r\n"
-"For tutorials and documentation, please visit:\r\n"
-"http://docs.openmv.io/\r\n"
-"\r\n"
-"For technical support and projects, please visit the forums:\r\n"
-"http://forums.openmv.io/\r\n"
-"\r\n"
-"Please use github to report bugs and issues:\r\n"
-"https://github.com/openmv/openmv\r\n"
-;
-
-#if (OMV_ENABLE_SELFTEST == 1)
-static const char fresh_selftest_py[] =
-"import sensor, time, pyb\n"
-"\n"
-"def test_int_adc():\n"
-"    adc  = pyb.ADCAll(12)\n"
-"    # Test VBAT\n"
-"    vbat = adc.read_core_vbat()\n"
-"    vbat_diff = abs(vbat-"OMV_CORE_VBAT")\n"
-"    if (vbat_diff > 0.15):\n"
-"        raise Exception('INTERNAL ADC TEST FAILED VBAT=%fv'%vbat)\n"
-"\n"
-"    # Test VREF\n"
-"    vref = adc.read_core_vref()\n"
-"    vref_diff = abs(vref-1.2)\n"
-"    if (vref_diff > 0.1):\n"
-"        raise Exception('INTERNAL ADC TEST FAILED VREF=%fv'%vref)\n"
-"    adc = None\n"
-"    print('INTERNAL ADC TEST PASSED...')\n"
-"\n"
-"def test_color_bars():\n"
-"    sensor.reset()\n"
-"    # Set sensor settings\n"
-"    sensor.set_brightness(0)\n"
-"    sensor.set_saturation(3)\n"
-"    sensor.set_gainceiling(8)\n"
-"    sensor.set_contrast(2)\n"
-"\n"
-"    # Set sensor pixel format\n"
-"    sensor.set_framesize(sensor.QVGA)\n"
-"    sensor.set_pixformat(sensor.RGB565)\n"
-"\n"
-"    # Enable colorbar test mode\n"
-"    sensor.set_colorbar(True)\n"
-"\n"
-"    # Skip a few frames to allow the sensor settle down\n"
-"    for i in range(0, 100):\n"
-"        image = sensor.snapshot()\n"
-"\n"
-"    #color bars thresholds\n"
-"    t = [lambda r, g, b: r < 70  and g < 70  and b < 70,   # Black\n"
-"         lambda r, g, b: r < 70  and g < 70  and b > 200,  # Blue\n"
-"         lambda r, g, b: r > 200 and g < 70  and b < 70,   # Red\n"
-"         lambda r, g, b: r > 200 and g < 70  and b > 200,  # Purple\n"
-"         lambda r, g, b: r < 70  and g > 200 and b < 70,   # Green\n"
-"         lambda r, g, b: r < 70  and g > 200 and b > 200,  # Aqua\n"
-"         lambda r, g, b: r > 200 and g > 200 and b < 70,   # Yellow\n"
-"         lambda r, g, b: r > 200 and g > 200 and b > 200]  # White\n"
-"\n"
-"    # color bars are inverted for OV7725\n"
-"    if (sensor.get_id() == sensor.OV7725):\n"
-"        t = t[::-1]\n"
-"\n"
-"    #320x240 image with 8 color bars each one is approx 40 pixels.\n"
-"    #we start from the center of the frame buffer, and average the\n"
-"    #values of 10 sample pixels from the center of each color bar.\n"
-"    for i in range(0, 8):\n"
-"        avg = (0, 0, 0)\n"
-"        idx = 40*i+20 #center of colorbars\n"
-"        for off in range(0, 10): #avg 10 pixels\n"
-"            rgb = image.get_pixel(idx+off, 120)\n"
-"            avg = tuple(map(sum, zip(avg, rgb)))\n"
-"\n"
-"        if not t[i](avg[0]/10, avg[1]/10, avg[2]/10):\n"
-"            raise Exception('COLOR BARS TEST FAILED.'\n"
-"            'BAR#(%d): RGB(%d,%d,%d)'%(i+1, avg[0]/10, avg[1]/10, avg[2]/10))\n"
-"\n"
-"    print('COLOR BARS TEST PASSED...')\n"
-"\n"
-"if __name__ == '__main__':\n"
-"    print('')\n"
-"    test_int_adc()\n"
-"    if sensor.get_id() == sensor.OV7725: test_color_bars()\n"
-"\n"
-;
 #endif
 
 void flash_error(int n) {
@@ -286,18 +183,18 @@ void make_flash_fs()
 
     // Create default main.py
     f_open(&vfs_fat->fatfs, &fp, "/main.py", FA_WRITE | FA_CREATE_ALWAYS);
-    f_write(&fp, fresh_main_py, sizeof(fresh_main_py) - 1 /* don't count null terminator */, &n);
+    f_write(&fp, main_py, main_py_len, &n);
     f_close(&fp);
 
     // Create readme file
     f_open(&vfs_fat->fatfs, &fp, "/README.txt", FA_WRITE | FA_CREATE_ALWAYS);
-    f_write(&fp, fresh_readme_txt, sizeof(fresh_readme_txt) - 1 /* don't count null terminator */, &n);
+    f_write(&fp, readme_txt, readme_txt_len, &n);
     f_close(&fp);
 
     #if (OMV_ENABLE_SELFTEST == 1)
     // Create default selftest.py
     f_open(&vfs_fat->fatfs, &fp, "/selftest.py", FA_WRITE | FA_CREATE_ALWAYS);
-    f_write(&fp, fresh_selftest_py, sizeof(fresh_selftest_py) - 1 /* don't count null terminator */, &n);
+    f_write(&fp, selftest_py, selftest_py_len, &n);
     f_close(&fp);
     #endif
 

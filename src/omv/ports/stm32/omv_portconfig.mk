@@ -131,6 +131,12 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/alloc/, \
 	unaligned_memcpy.o          \
    )
 
+FIRM_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/boards/$(TARGET)/, \
+	main_py.o                   \
+	readme_txt.o                \
+	selftest_py.o               \
+   )
+
 FIRM_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/common/, \
 	array.o                     \
 	ff_wrapper.o                \
