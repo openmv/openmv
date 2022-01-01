@@ -119,7 +119,7 @@ def person_detection(data):
     sensor.set_pixformat(sensor.RGB565)
     sensor.set_framesize(sensor.QVGA)
     scores = tf.classify("person_detection", sensor.snapshot())[0].output()
-    return ['unsure', 'person', 'no_person'][scores.index(max(scores))].encode()
+    return ['person', 'no_person'][scores.index(max(scores))].encode()
 
 # When called returns the payload string for the largest qrcode
 # within the OpenMV Cam's field-of-view.
