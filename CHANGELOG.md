@@ -1,4 +1,12 @@
 # Change Log
+## [4.2.0](https://github.com/openmv/openmv/releases/tag/v4.2.0) (2022-01-01)
+* Support custom filesystem contents with templates.
+* Rework boot scripts and pyexec.
+* Add support for TF objection detection.
+* Nano RP2040 fix default I2C pins.
+* Fix ULPI DIR pin definition.
+* Fix jpeg loading bug.
+
 ## [4.1.4](https://github.com/openmv/openmv/releases/tag/v4.1.4) (2021-12-18)
 * This release fixes the ADC/QSPI flash bug introduced in 4.1.3.
 
