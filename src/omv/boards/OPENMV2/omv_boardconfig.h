@@ -53,7 +53,7 @@
 #define OMV_ENABLE_OV7725       (1)
 #define OMV_ENABLE_OV9650       (0)
 #define OMV_ENABLE_MT9M114      (0)
-#define OMV_ENABLE_MT9V034      (0)
+#define OMV_ENABLE_MT9V0XX      (0)
 #define OMV_ENABLE_LEPTON       (0)
 #define OMV_ENABLE_HM01B0       (0)
 #define OMV_ENABLE_PAJ6100      (0)

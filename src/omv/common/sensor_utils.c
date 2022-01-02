@@ -22,7 +22,7 @@
 #include "ov7670.h"
 #include "ov7690.h"
 #include "ov9650.h"
-#include "mt9v034.h"
+#include "mt9v0xx.h"
 #include "mt9m114.h"
 #include "lepton.h"
 #include "hm01b0.h"
@@ -253,11 +253,11 @@ int sensor_probe_init(uint32_t bus_id, uint32_t bus_speed)
             break;
         #endif //(OMV_ENABLE_OV7725 == 1) || (OMV_ENABLE_OV7670 == 1) || (OMV_ENABLE_OV7690 == 1)
 
-        #if (OMV_ENABLE_MT9V034 == 1)
-        case MT9V034_SLV_ADDR:
-            cambus_readb(&sensor.bus, sensor.slv_addr, ON_CHIP_ID, &sensor.chip_id);
+        #if (OMV_ENABLE_MT9V0XX == 1)
+        case MT9V0XX_SLV_ADDR:
+            cambus_readw2(&sensor.bus, sensor.slv_addr, ON_CHIP_ID, &sensor.chip_id_w);
             break;
-        #endif //(OMV_ENABLE_MT9V034 == 1)
+        #endif //(OMV_ENABLE_MT9V0XX == 1)
 
         #if (OMV_ENABLE_MT9M114 == 1)
         case MT9M114_SLV_ADDR:
@@ -357,14 +357,19 @@ int sensor_probe_init(uint32_t bus_id, uint32_t bus_speed)
             break;
         #endif // (OMV_ENABLE_OV9650 == 1)
 
-        #if (OMV_ENABLE_MT9V034 == 1)
-        case MT9V034_ID:
-            if (sensor_set_xclk_frequency(MT9V034_XCLK_FREQ) != 0) {
+        #if (OMV_ENABLE_MT9V0XX == 1)
+        case MT9V0X2_ID_V_1:
+        case MT9V0X2_ID_V_2:
+            // Force old versions to the newest.
+            sensor.chip_id_w = MT9V0X2_ID;
+        case MT9V0X2_ID:
+        case MT9V0X4_ID:
+            if (sensor_set_xclk_frequency(MT9V0XX_XCLK_FREQ) != 0) {
                 return SENSOR_ERROR_TIM_INIT_FAILED;
             }
-            init_ret = mt9v034_init(&sensor);
+            init_ret = mt9v0xx_init(&sensor);
             break;
-        #endif //(OMV_ENABLE_MT9V034 == 1)
+        #endif //(OMV_ENABLE_MT9V0XX == 1)
 
         #if (OMV_ENABLE_MT9M114 == 1)
         case MT9M114_ID:

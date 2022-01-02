@@ -150,7 +150,7 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/sensors/,   \
 	ov7690.o                    \
 	ov7725.o                    \
 	ov9650.o                    \
-	mt9v034.o                   \
+	mt9v0xx.o                   \
 	mt9m114.o                   \
 	lepton.o                    \
 	hm01b0.o                    \
@@ -514,7 +514,7 @@ UVC_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/sensors/, \
 	ov7670.o                                \
 	ov7725.o                                \
 	ov9650.o                                \
-	mt9v034.o                               \
+	mt9v0xx.o                               \
 	mt9m114.o                               \
 	lepton.o                                \
 	hm01b0.o                                \
