@@ -91,19 +91,15 @@
 #include "mpbthciport.h"
 #endif
 
+#include "extmod/vfs.h"
+#include "extmod/vfs_fat.h"
+#include "common/factoryreset.h"
+
 int errno;
 extern char _vfs_buf[];
 static fs_user_mount_t *vfs_fat = (fs_user_mount_t *) &_vfs_buf;
 #if MICROPY_PY_THREAD
 pyb_thread_t pyb_thread_main;
-#endif
-
-// Fresh filesystem templates.
-// NOTE: use the same template name in board dir to override.
-#include "main_py.h"
-#include "readme_txt.h"
-#if (OMV_ENABLE_SELFTEST == 1)
-#include "selftest_py.h"
 #endif
 
 void flash_error(int n) {
@@ -158,50 +154,6 @@ void __attribute__((weak))
     __fatal_error("");
 }
 #endif
-
-void f_touch(const char *path)
-{
-    FIL fp;
-    if (f_stat(&vfs_fat->fatfs, path, NULL) != FR_OK) {
-        f_open(&vfs_fat->fatfs, &fp, path, FA_WRITE | FA_CREATE_ALWAYS);
-        f_close(&fp);
-    }
-}
-
-void make_flash_fs()
-{
-    FIL fp;
-    UINT n;
-
-    led_state(LED_RED, 1);
-
-    uint8_t working_buf[_MAX_SS];
-    if (f_mkfs(&vfs_fat->fatfs, FM_FAT, 0, working_buf, sizeof(working_buf)) != FR_OK) {
-        __fatal_error("Could not create LFS");
-    }
-
-    // Mark FS as OpenMV disk.
-    f_touch("/.openmv_disk");
-
-    // Create default main.py
-    f_open(&vfs_fat->fatfs, &fp, "/main.py", FA_WRITE | FA_CREATE_ALWAYS);
-    f_write(&fp, fresh_main_py, sizeof(fresh_main_py) - 1 /* don't count null terminator */, &n);
-    f_close(&fp);
-
-    // Create readme file
-    f_open(&vfs_fat->fatfs, &fp, "/README.txt", FA_WRITE | FA_CREATE_ALWAYS);
-    f_write(&fp, fresh_readme_txt, sizeof(fresh_readme_txt) - 1 /* don't count null terminator */, &n);
-    f_close(&fp);
-
-    #if (OMV_ENABLE_SELFTEST == 1)
-    // Create default selftest.py
-    f_open(&vfs_fat->fatfs, &fp, "/selftest.py", FA_WRITE | FA_CREATE_ALWAYS);
-    f_write(&fp, fresh_selftest_py, sizeof(fresh_selftest_py) - 1 /* don't count null terminator */, &n);
-    f_close(&fp);
-    #endif
-
-    led_state(LED_RED, 0);
-}
 
 #ifdef STACK_PROTECTOR
 uint32_t __stack_chk_guard=0xDEADBEEF;
@@ -524,8 +476,10 @@ soft_reset:
         FRESULT res = f_mount(&vfs_fat->fatfs);
 
         if (res == FR_NO_FILESYSTEM) {
-            // Create a fresh fs
-            make_flash_fs();
+            // Create a fresh filesystem.
+            led_state(LED_RED, 1);
+            factoryreset_create_filesystem(vfs_fat);
+            led_state(LED_RED, 0);
             // Flush storage
             storage_flush();
         } else if (res != FR_OK) {
@@ -546,7 +500,7 @@ soft_reset:
     #endif
 
     // Mark FS as OpenMV disk.
-    f_touch("/.openmv_disk");
+    f_touch_helper("/.openmv_disk");
 
     // Mount the storage device (there should be no other devices mounted at this point)
     // we allocate this structure on the heap because vfs->next is a root pointer.

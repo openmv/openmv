@@ -24,6 +24,7 @@ SRCS += $(addprefix common/,    \
 	mutex.c                     \
 	usbdbg.c                    \
 	sensor_utils.c              \
+	factoryreset.c              \
    )
 
 SRCS += $(addprefix sensors/,   \

@@ -141,6 +141,7 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/common/, \
 	mutex.o                     \
 	usbdbg.o                    \
 	sensor_utils.o              \
+	factoryreset.o              \
    )
 
 FIRM_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/sensors/,   \
