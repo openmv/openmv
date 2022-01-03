@@ -767,7 +767,9 @@ static uint8_t  USBD_UVC_EP0_RxReady (USBD_HandleTypeDef *pdev)
   */
 static uint8_t  *USBD_UVC_GetFSCfgDesc (uint16_t *length)
 {
-  if (sensor_get_id(&sensor) != MT9V034_ID) {
+  int id = sensor_get_id(&sensor);
+
+  if ((id != MT9V0X2_ID) && (id != MT9V0X4_ID) && (id != HM01B0_ID) && (id != PAJ6100_ID)) {
       USBD_UVC_CfgFSDesc.uvc_vs_frames_formats_desc = uvc_vs_frames_formats_desc;
   } else {
       USBD_UVC_CfgFSDesc.uvc_vs_frames_formats_desc = uvc_vs_frames_formats_desc_gs;

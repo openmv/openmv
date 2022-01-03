@@ -115,7 +115,7 @@ target_sources(${MICROPY_TARGET} PRIVATE
     ${TOP_DIR}/${OMV_DIR}/sensors/ov7690.c
     ${TOP_DIR}/${OMV_DIR}/sensors/ov7725.c
     ${TOP_DIR}/${OMV_DIR}/sensors/ov9650.c
-    ${TOP_DIR}/${OMV_DIR}/sensors/mt9v034.c
+    ${TOP_DIR}/${OMV_DIR}/sensors/mt9v0xx.c
     ${TOP_DIR}/${OMV_DIR}/sensors/mt9m114.c
     ${TOP_DIR}/${OMV_DIR}/sensors/lepton.c
     ${TOP_DIR}/${OMV_DIR}/sensors/hm01b0.c

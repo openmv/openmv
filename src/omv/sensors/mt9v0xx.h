@@ -6,10 +6,10 @@
  *
  * This work is licensed under the MIT license, see the file LICENSE for details.
  *
- * MT9V034 driver.
+ * MT9V0XX driver.
  */
-#ifndef __MT9V034_H__
-#define __MT9V034_H__
-#define MT9V034_XCLK_FREQ 26666666
-int mt9v034_init(sensor_t *sensor);
-#endif // __MT9V034_H__
+#ifndef __MT9V0XX_H__
+#define __MT9V0XX_H__
+#define MT9V0XX_XCLK_FREQ 26666666
+int mt9v0xx_init(sensor_t *sensor);
+#endif // __MT9V0XX_H__

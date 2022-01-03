@@ -43,7 +43,7 @@ extern unsigned char *OMV_UNIQUE_ID_ADDR;
 #define OMV_ENABLE_OV7690       (0)
 #define OMV_ENABLE_OV7725       (0)
 #define OMV_ENABLE_OV9650       (0)
-#define OMV_ENABLE_MT9V034      (0)
+#define OMV_ENABLE_MT9V0XX      (0)
 #define OMV_ENABLE_LEPTON       (0)
 #define OMV_ENABLE_HM01B0       (0)
 
