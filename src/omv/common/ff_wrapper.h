@@ -19,6 +19,7 @@ FRESULT f_stat_helper(const TCHAR *path, FILINFO *fno);
 FRESULT f_mkdir_helper(const TCHAR *path);
 FRESULT f_unlink_helper(const TCHAR *path);
 FRESULT f_rename_helper(const TCHAR *path_old, const TCHAR *path_new);
+FRESULT f_touch_helper(const TCHAR *path);
 
 void ff_unsupported_format(FIL *fp);
 void ff_file_corrupted(FIL *fp);
