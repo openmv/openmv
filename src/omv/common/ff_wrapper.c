@@ -169,6 +169,21 @@ FRESULT f_rename_helper(const TCHAR *path_old, const TCHAR *path_new) {
     }
     return f_rename(fs_new, path_old, path_new);
 }
+
+FRESULT f_touch_helper(const TCHAR *path) {
+    FIL fp;
+    FATFS *fs = lookup_path(&path);
+    if (fs == NULL) {
+        return FR_NO_PATH;
+    }
+
+    if (f_stat(fs, path, NULL) != FR_OK) {
+        f_open(fs, &fp, path, FA_WRITE | FA_CREATE_ALWAYS);
+        f_close(&fp);
+    }
+
+    return FR_OK;
+}
 // When a sector boundary is encountered while writing a file and there are
 // more than 512 bytes left to write FatFs will detect that it can bypass
 // its internal write buffer and pass the data buffer passed to it directly
