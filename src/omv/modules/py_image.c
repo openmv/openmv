@@ -1086,22 +1086,24 @@ static mp_obj_t py_image_to(pixformat_t pixfmt, const uint16_t *default_color_pa
         }
     }
 
+    uint32_t size = image_size(&dst_img);
+
     if (copy) {
         if (copy_to_fb) {
             py_helper_set_to_framebuffer(&dst_img);
         } else {
-            dst_img.data = xalloc(image_size(&dst_img));
+            dst_img.data = xalloc(size);
         }
     } else if (arg_other) {
         bool fb = py_helper_is_equal_to_framebuffer(arg_other);
-        size_t size = fb ? framebuffer_get_buffer_size() : image_size(arg_other);
-        PY_ASSERT_TRUE_MSG((image_size(&dst_img) <= size),
+        size_t buf_size = fb ? framebuffer_get_buffer_size() : image_size(arg_other);
+        PY_ASSERT_TRUE_MSG((size <= buf_size),
                 "The new image won't fit in the target frame buffer!");
         // DO NOT MODIFY arg_other YET (as it could point to src_img)!
         dst_img.data = arg_other->data;
         py_helper_update_framebuffer(&dst_img);
     } else {
-        dst_img.data = xalloc(image_size(&dst_img));
+        dst_img.data = xalloc(size);
     }
 
     if (dst_img.pixfmt == PIXFORMAT_JPEG) {
@@ -1117,10 +1119,7 @@ static mp_obj_t py_image_to(pixformat_t pixfmt, const uint16_t *default_color_pa
     }
 
     if (arg_other) {
-        arg_other->w        = dst_img.w;
-        arg_other->h        = dst_img.h;
-        arg_other->size     = dst_img.size;
-        arg_other->pixfmt   = dst_img.pixfmt;
+        memcpy(arg_other, &dst_img, sizeof(image_t));
     }
 
     return py_image_from_struct(&dst_img);
@@ -6661,17 +6660,20 @@ mp_obj_t py_image_load_image(uint n_args, const mp_obj_t *args, mp_map_t *kw_arg
         #endif //IMLIB_ENABLE_IMAGE_FILE_IO
     }
 
+    size_t size = image_size(&image);
+
     if (copy_to_fb) {
         py_helper_set_to_framebuffer(&image);
     } else if (arg_other) {
-        PY_ASSERT_TRUE_MSG((image_size(&image) <= image_size(arg_other)), "The new image won't fit in the target frame buffer!");
+        PY_ASSERT_TRUE_MSG((size <= image_size(arg_other)),
+            "The new image won't fit in the target frame buffer!");
         image.data = arg_other->data;
     } else if (mode) {
-        image.data = xalloc(image_size(&image));
+        image.data = xalloc(size);
     }
 
     if (mode) {
-        memset(image.data, 0, image_size(&image));
+        memset(image.data, 0, size);
     } else {
         #if defined(IMLIB_ENABLE_IMAGE_FILE_IO)
         imlib_load_image(&image, path);
@@ -6682,9 +6684,7 @@ mp_obj_t py_image_load_image(uint n_args, const mp_obj_t *args, mp_map_t *kw_arg
     py_helper_update_framebuffer(&image);
 
     if (arg_other) {
-        arg_other->w = image.w;
-        arg_other->h = image.h;
-        arg_other->pixfmt = image.pixfmt;
+        memcpy(arg_other, &image, sizeof(image_t));
     }
 
     if (copy_to_fb) {
