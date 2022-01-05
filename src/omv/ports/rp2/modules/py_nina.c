@@ -149,6 +149,11 @@ static mp_obj_t py_nina_connect(mp_uint_t n_args, const mp_obj_t *pos_args, mp_m
         mp_raise_msg(&mp_type_OSError, MP_ERROR_TEXT("Key can't be empty!"));
     }
 
+    // Disconnect active connections first.
+    if (nina_isconnected()) {
+        nina_disconnect();
+    }
+
     if (self->itf == NINA_WIFI_MODE_STA) {
         // Initialize WiFi in Station mode.
         if (nina_connect(ssid, security, key, 0) != 0) {
@@ -425,7 +430,7 @@ static mp_uint_t py_nina_socket_send(mod_network_socket_obj_t *socket, const byt
     if (ret == NINA_ERROR_TIMEOUT) {
         // The socket is Not closed on timeout when calling functions that accept a timeout.
         *_errno = MP_ETIMEDOUT;
-        return 0;
+        return -1;
     } else if (ret < 0) {
         // Close the socket on any other errors.
         *_errno = ret;
@@ -441,7 +446,7 @@ static mp_uint_t py_nina_socket_recv(mod_network_socket_obj_t *socket, byte *buf
     if (ret == NINA_ERROR_TIMEOUT) {
         // The socket is Not closed on timeout when calling functions that accept a timeout.
         *_errno = MP_ETIMEDOUT;
-        return 0;
+        return -1;
     } else if (ret < 0) {
         // Close the socket on any other errors.
         *_errno = ret;
@@ -475,7 +480,7 @@ static mp_uint_t py_nina_socket_sendto(mod_network_socket_obj_t *socket,
     if (ret == NINA_ERROR_TIMEOUT) {
         // The socket is Not closed on timeout when calling functions that accept a timeout.
         *_errno = MP_ETIMEDOUT;
-        return 0;
+        return -1;
     } else if (ret < 0) {
         *_errno = ret;
         py_nina_socket_close(socket);
@@ -496,7 +501,7 @@ static mp_uint_t py_nina_socket_recvfrom(mod_network_socket_obj_t *socket,
     if (ret == NINA_ERROR_TIMEOUT) {
         // The socket is Not closed on timeout when calling functions that accept a timeout.
         *_errno = MP_ETIMEDOUT;
-        return 0;
+        return -1;
     } else if (ret < 0) {
         // Close the socket on any other errors.
         *_errno = ret;
