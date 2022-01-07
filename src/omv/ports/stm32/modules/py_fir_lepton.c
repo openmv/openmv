@@ -84,8 +84,8 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_1(fir_lepton_spi_resync_callback_obj, fir_lepton_
 
 static void fir_lepton_spi_resync()
 {
+    flir_lepton_spi_rx_timer.flags = SOFT_TIMER_FLAG_PY_CALLBACK;
     flir_lepton_spi_rx_timer.mode = SOFT_TIMER_MODE_ONE_SHOT;
-    flir_lepton_spi_rx_timer.expiry_ms = VOSPI_SYNC_MS + mp_hal_ticks_ms();
     flir_lepton_spi_rx_timer.delta_ms = VOSPI_SYNC_MS;
     flir_lepton_spi_rx_timer.py_callback = (mp_obj_t) &fir_lepton_spi_resync_callback_obj;
     soft_timer_insert(&flir_lepton_spi_rx_timer, VOSPI_SYNC_MS);
