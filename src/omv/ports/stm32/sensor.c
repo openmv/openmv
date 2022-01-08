@@ -28,7 +28,7 @@
 
 // Higher performance complete MDMA offload.
 #if (OMV_ENABLE_SENSOR_MDMA == 1)
-#define OMV_ENABLE_SENSOR_MDMA_TOTAL_OFFLOAD 1
+#define OMV_ENABLE_SENSOR_MDMA_TOTAL_OFFLOAD 0
 #endif
 
 sensor_t sensor = {};
