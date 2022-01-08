@@ -38,6 +38,9 @@ static DCMI_HandleTypeDef DCMIHandle = {.Instance = DCMI};
 #if (OMV_ENABLE_SENSOR_MDMA == 1)
 static MDMA_HandleTypeDef DCMI_MDMA_Handle0 = {.Instance = MDMA_Channel0};
 static MDMA_HandleTypeDef DCMI_MDMA_Handle1 = {.Instance = MDMA_Channel1};
+// MDMA LinkedList nodes must be aligned to 64-bits and located in D1 AXI_SRAM.
+static MDMA_LinkNodeTypeDef OMV_ATTR_SECTION(OMV_ATTR_ALIGNED(MDMA_LL_NODES[120], 8), ".d1_dma_buffer");
+static void mdma_config_ll_nodes(MDMA_HandleTypeDef *hmdma, uint32_t src, uint32_t dst, uint32_t block_size, uint32_t block_count);
 #endif
 // SPI on image sensor connector.
 #ifdef ISC_SPI
@@ -554,16 +557,21 @@ void DCMI_DMAConvCpltUser(uint32_t addr)
         // you will have to drop the frame earlier than necessary if there's no space resulting
         // in the apparent unloaded FPS being lower than this method gives you.
         uint32_t line_width_bytes = MAIN_FB()->u * bytes_per_pixel;
-        // DMA0 will copy this line of the image to the final destination.
         __HAL_UNLOCK(&DCMI_MDMA_Handle0);
         DCMI_MDMA_Handle0.State = HAL_MDMA_STATE_READY;
-        HAL_MDMA_Start(&DCMI_MDMA_Handle0, (uint32_t) src, (uint32_t) dst,
-                       line_width_bytes, 1);
-        // DMA1 will copy all remaining lines of the image to the final destination.
+        HAL_MDMA_Start(&DCMI_MDMA_Handle0, (uint32_t) src, (uint32_t) dst, line_width_bytes, 1);
+
+        // Node0 (initial MDMA config) will transfer the first line when triggered by software.
         __HAL_UNLOCK(&DCMI_MDMA_Handle1);
         DCMI_MDMA_Handle1.State = HAL_MDMA_STATE_READY;
-        HAL_MDMA_Start(&DCMI_MDMA_Handle1, (uint32_t) src, (uint32_t) (dst + line_width_bytes),
-                       line_width_bytes, MAIN_FB()->v - 1);
+
+        // Nodes 1 --> n-1 will transfer the remaining lines on hardware triggers.
+        mdma_config_ll_nodes(&DCMI_MDMA_Handle1, (uint32_t) src, (uint32_t)
+                (dst + line_width_bytes * 2), line_width_bytes, MAIN_FB()->v - 2);
+
+        // The MDMA will stop when the last ll node is NULL.
+        HAL_MDMA_LinkedList_DisableCircularMode(&DCMI_MDMA_Handle1);
+        HAL_MDMA_Start(&DCMI_MDMA_Handle1, (uint32_t) src, (uint32_t) (dst + line_width_bytes), line_width_bytes, 1);
         HAL_NVIC_DisableIRQ(DMA2_Stream1_IRQn);
         return;
     }
@@ -659,7 +667,7 @@ void DCMI_DMAConvCpltUser(uint32_t addr)
 static void mdma_config(MDMA_InitTypeDef *init, sensor_t *sensor, uint32_t bytes_per_pixel)
 {
     init->Request                   = MDMA_REQUEST_SW;
-    init->TransferTriggerMode       = MDMA_REPEAT_BLOCK_TRANSFER;
+    init->TransferTriggerMode       = MDMA_BLOCK_TRANSFER;
     init->Priority                  = MDMA_PRIORITY_VERY_HIGH;
     init->DataAlignment             = MDMA_DATAALIGN_PACKENABLE;
     init->BufferTransferLength      = MDMA_BUFFER_SIZE;
@@ -725,6 +733,46 @@ static void mdma_config(MDMA_InitTypeDef *init, sensor_t *sensor, uint32_t bytes
     if ((sensor->pixformat == PIXFORMAT_GRAYSCALE) && (sensor->hw_flags.gs_bpp == 2)) {
         init->SourceInc         = MDMA_SRC_INC_HALFWORD;
         init->SourceDataSize    = MDMA_SRC_DATASIZE_BYTE;
+    }
+}
+
+static void mdma_config_ll_nodes(MDMA_HandleTypeDef *hmdma, uint32_t src, uint32_t dst, uint32_t block_size, uint32_t block_count)
+{
+    MDMA_LinkNodeConfTypeDef NodeConfig;
+
+    // This is the same config for all nodes.
+    NodeConfig.BlockDataLength                  = block_size;
+    NodeConfig.BlockCount                       = 1;
+    NodeConfig.PostRequestMaskData              = (uint32_t) DMA_FLAG_TCIF1_5;
+    NodeConfig.PostRequestMaskAddress           = (uint32_t) &DMA2->LIFCR;
+
+    NodeConfig.Init.Request                     = MDMA_REQUEST_DMA2_Stream1_TC;
+    NodeConfig.Init.TransferTriggerMode         = MDMA_BLOCK_TRANSFER;
+    NodeConfig.Init.Priority                    = hmdma->Init.Priority;
+    NodeConfig.Init.Endianness                  = hmdma->Init.Endianness;
+    NodeConfig.Init.SourceInc                   = hmdma->Init.SourceInc;
+    NodeConfig.Init.DestinationInc              = hmdma->Init.DestinationInc;
+    NodeConfig.Init.SourceDataSize              = hmdma->Init.SourceDataSize;
+    NodeConfig.Init.DestDataSize                = hmdma->Init.DestDataSize;
+    NodeConfig.Init.DataAlignment               = hmdma->Init.DataAlignment;
+    NodeConfig.Init.SourceBurst                 = hmdma->Init.SourceBurst;
+    NodeConfig.Init.DestBurst                   = hmdma->Init.DestBurst;
+    NodeConfig.Init.BufferTransferLength        = hmdma->Init.BufferTransferLength;
+    NodeConfig.Init.SourceBlockAddressOffset    = 0;
+    NodeConfig.Init.DestBlockAddressOffset      = 0;
+
+    // Reset the MDMA first/last linkedlist node addresses and node counter.
+    hmdma->LinkedListNodeCounter       = 0;
+    hmdma->FirstLinkedListNodeAddress  = 0;
+    hmdma->LastLinkedListNodeAddress   = 0;
+
+    for (int i = 0; i<block_count; i++) {
+        // Set alternate src addresses with DCMI double line/buffer mode.
+        NodeConfig.SrcAddress  = src;
+        NodeConfig.DstAddress  = dst + (i * block_size);
+
+        HAL_MDMA_LinkedList_CreateNode(&MDMA_LL_NODES[i], &NodeConfig);
+        HAL_MDMA_LinkedList_AddNode(hmdma, &MDMA_LL_NODES[i], 0);
     }
 }
 #endif
@@ -813,10 +861,6 @@ int sensor_snapshot(sensor_t *sensor, image_t *image, uint32_t flags)
             if (!sensor->transpose) {
                 // MDMA will trigger on each TC from DMA and transfer one line to the frame buffer.
                 DCMI_MDMA_Handle1.Init.Request = MDMA_REQUEST_DMA2_Stream1_TC;
-                DCMI_MDMA_Handle1.Init.TransferTriggerMode = MDMA_BLOCK_TRANSFER;
-                // We setup MDMA to repeatedly reset itself to transfer the same line buffer.
-                DCMI_MDMA_Handle1.Init.SourceBlockAddressOffset = -(MAIN_FB()->u * bytes_per_pixel);
-
                 HAL_MDMA_Init(&DCMI_MDMA_Handle1);
                 HAL_MDMA_ConfigPostRequestMask(&DCMI_MDMA_Handle1, (uint32_t) &DMA2->LIFCR, DMA_FLAG_TCIF1_5);
             } else {
