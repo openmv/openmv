@@ -79,6 +79,18 @@ void file_write_open(FIL *fp, const char *path)
     if (res != FR_OK) ff_fail(fp, res);
 }
 
+void file_read_write_open_existing(FIL *fp, const char *path)
+{
+    FRESULT res = f_open_helper(fp, path, FA_READ|FA_WRITE|FA_OPEN_EXISTING);
+    if (res != FR_OK) ff_fail(fp, res);
+}
+
+void file_read_write_open_always(FIL *fp, const char *path)
+{
+    FRESULT res = f_open_helper(fp, path, FA_READ|FA_WRITE|FA_OPEN_ALWAYS);
+    if (res != FR_OK) ff_fail(fp, res);
+}
+
 void file_close(FIL *fp)
 {
     FRESULT res = f_close(fp);
