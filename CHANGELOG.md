@@ -1,4 +1,18 @@
 # Change Log
+## [4.2.1](https://github.com/openmv/openmv/releases/tag/v4.2.1) (2022-01-09)
+* Make MDMA fully offload image transfer by default.
+* Fix framebuffer cache bug (invalidate framebuffer cache before using).
+* Fix all issues with ImageIO to support all modes and older files.
+* Fix copy_to_fb when targetting an image.
+* Fix FIR softtimer init.
+* Nina WiFi driver fixes and updates.
+* Fix rx_wanted_cb bug in debug mode.
+* Create fresh filesystem contents for Nano RP2040.
+* Portenta: Add custom readme file.
+* Update MT driver to support the 22/24/32/34
+* Add RP2 support for DHT11 and DHT22 sensors.
+* Fix person detector model labels.
+
 ## [4.2.0](https://github.com/openmv/openmv/releases/tag/v4.2.0) (2022-01-01)
 * Support custom filesystem contents with templates.
 * Rework boot scripts and pyexec.
