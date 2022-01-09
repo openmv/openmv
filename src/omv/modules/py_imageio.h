@@ -6,7 +6,7 @@
  *
  * This work is licensed under the MIT license, see the file LICENSE for details.
  *
- * ImageIO module.
+ * Image I/O Python module.
  */
 #ifndef __PY_IMAGE_IO_H__
 #define __PY_IMAGE_IO_H__

@@ -27,6 +27,8 @@ void ff_not_equal(FIL *fp);
 void ff_no_intersection(FIL *fp);
 void file_read_open(FIL *fp, const char *path);
 void file_write_open(FIL *fp, const char *path);
+void file_read_write_open_existing(FIL *fp, const char *path);
+void file_read_write_open_always(FIL *fp, const char *path);
 void file_close(FIL *fp);
 void file_seek(FIL *fp, UINT offset);
 void file_truncate(FIL *fp);

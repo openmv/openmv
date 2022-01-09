@@ -18,7 +18,7 @@ sensor.skip_frames(time = 2000)
 clock = time.clock()
 
 # Write to memory stream
-stream = image.ImageIO((120, 120, 2), N_FRAMES)
+stream = image.ImageIO((120, 120, sensor.RGB565), N_FRAMES)
 
 for i in range(0, N_FRAMES):
     clock.tick()
@@ -26,9 +26,8 @@ for i in range(0, N_FRAMES):
     print(clock.fps())
 
 while (True):
-    # Rewind stream and play back at 100FPS
+    # Rewind stream and play back
     stream.seek(0)
     for i in range(0, N_FRAMES):
-        img = stream.read(copy_to_fb=True)
+        img = stream.read(copy_to_fb=True, pause=True)
         # Do machine vision algorithms on the image here.
-        time.sleep_ms(10)
