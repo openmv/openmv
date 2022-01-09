@@ -185,7 +185,7 @@
 
 // Domain 1 DMA buffers region.
 #define OMV_DMA_MEMORY_D1               AXI_SRAM
-#define OMV_DMA_MEMORY_D1_SIZE          (16*1024) // Reserved memory for DMA buffers
+#define OMV_DMA_MEMORY_D1_SIZE          (10*1024) // Reserved memory for DMA buffers
 #define OMV_DMA_REGION_D1_BASE          (OMV_AXI_SRAM_ORIGIN+OMV_FB_OVERLAY_MEMORY_OFFSET)
 #define OMV_DMA_REGION_D1_SIZE          MPU_REGION_SIZE_16KB
 

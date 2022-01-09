@@ -29,6 +29,7 @@
 // Higher performance complete MDMA offload.
 #if (OMV_ENABLE_SENSOR_MDMA == 1)
 #define OMV_ENABLE_SENSOR_MDMA_TOTAL_OFFLOAD 1
+#define OMV_MDMA_LL_LINES 144
 #endif
 
 sensor_t sensor = {};
@@ -38,6 +39,10 @@ static DCMI_HandleTypeDef DCMIHandle = {.Instance = DCMI};
 #if (OMV_ENABLE_SENSOR_MDMA == 1)
 static MDMA_HandleTypeDef DCMI_MDMA_Handle0 = {.Instance = MDMA_Channel0};
 static MDMA_HandleTypeDef DCMI_MDMA_Handle1 = {.Instance = MDMA_Channel1};
+#endif
+#if (OMV_ENABLE_SENSOR_MDMA_TOTAL_OFFLOAD == 1)
+// MDMA LinkedList nodes must be aligned to 64-bits and located in D1 AXI_SRAM.
+static MDMA_LinkNodeTypeDef OMV_ATTR_SECTION(OMV_ATTR_ALIGNED(MDMA_LL_NODES[OMV_MDMA_LL_LINES-2], 8), ".d1_dma_buffer");
 #endif
 // SPI on image sensor connector.
 #ifdef ISC_SPI
@@ -421,6 +426,18 @@ static void mdma_memcpy(vbuffer_t *buffer, void *dst, void *src, int bpp, bool t
 }
 #endif
 
+#if (OMV_ENABLE_SENSOR_MDMA_TOTAL_OFFLOAD == 1)
+static void mdma_ll_setup(MDMA_HandleTypeDef *hmdma, uint8_t *s0, uint8_t *s1, uint8_t *dst, uint32_t line_width_bytes)
+{
+    uint8_t *nxt_dst = dst + (line_width_bytes * 2);
+    for (int i = 0, ii = MAIN_FB()->v - 2; i < ii; i++) {
+        MDMA_LL_NODES[i].CDAR = (uint32_t) nxt_dst;
+        MDMA_LL_NODES[i].CSAR = (uint32_t) ((i % 2) ? s1 : s0);
+        nxt_dst += line_width_bytes;
+    }
+}
+#endif
+
 // This function is called back after each line transfer is complete,
 // with a pointer to the line buffer that was used. At this point the
 // DMA transfers the next line to the other half of the line buffer.
@@ -532,7 +549,7 @@ void DCMI_DMAConvCpltUser(uint32_t addr)
     // DCMI_DMAXferCplt in the HAL DCMI driver always calls DCMI_DMAConvCpltUser with the other
     // MAR register. So, we have to fix the address in full MDMA offload mode...
     #if (OMV_ENABLE_SENSOR_MDMA_TOTAL_OFFLOAD == 1)
-    if (!sensor.transpose) {
+    if ((!sensor.transpose) && (MAIN_FB()->v > OMV_MDMA_LL_LINES)) {
         addr = (uint32_t) &_line_buf;
     }
     #endif
@@ -554,16 +571,39 @@ void DCMI_DMAConvCpltUser(uint32_t addr)
         // you will have to drop the frame earlier than necessary if there's no space resulting
         // in the apparent unloaded FPS being lower than this method gives you.
         uint32_t line_width_bytes = MAIN_FB()->u * bytes_per_pixel;
+
         // DMA0 will copy this line of the image to the final destination.
         __HAL_UNLOCK(&DCMI_MDMA_Handle0);
         DCMI_MDMA_Handle0.State = HAL_MDMA_STATE_READY;
         HAL_MDMA_Start(&DCMI_MDMA_Handle0, (uint32_t) src, (uint32_t) dst,
                        line_width_bytes, 1);
+
         // DMA1 will copy all remaining lines of the image to the final destination.
         __HAL_UNLOCK(&DCMI_MDMA_Handle1);
         DCMI_MDMA_Handle1.State = HAL_MDMA_STATE_READY;
-        HAL_MDMA_Start(&DCMI_MDMA_Handle1, (uint32_t) src, (uint32_t) (dst + line_width_bytes),
-                       line_width_bytes, MAIN_FB()->v - 1);
+
+        if (MAIN_FB()->v <= OMV_MDMA_LL_LINES) {
+            DMA_Stream_TypeDef *stream = (DMA_Stream_TypeDef *) DMAHandle.Instance;
+            // Taken from how DCMI_DMAXferCplt determines the address.
+            uint8_t *nxt_src = src + ((stream->CR & DMA_SxCR_CT)
+                ? (stream->M1AR - stream->M0AR)
+                : (stream->M0AR - stream->M1AR));
+
+            if (MAIN_FB()->v > 2) {
+                mdma_ll_setup(&DCMI_MDMA_Handle1, src, nxt_src, dst, line_width_bytes);
+            }
+
+            if (MAIN_FB()->v > 1) {
+                HAL_MDMA_Start(&DCMI_MDMA_Handle1, (uint32_t) nxt_src, (uint32_t) (dst + line_width_bytes),
+                               line_width_bytes, 1);
+                // Never gets turned on by DCMI_DMAXferCplt since hdcmi->XferCount > 1...
+                __HAL_DCMI_ENABLE_IT(&DCMIHandle, DCMI_IT_FRAME);
+            }
+        } else {
+            HAL_MDMA_Start(&DCMI_MDMA_Handle1, (uint32_t) src, (uint32_t) (dst + line_width_bytes),
+                           line_width_bytes, MAIN_FB()->v - 1);
+        }
+
         HAL_NVIC_DisableIRQ(DMA2_Stream1_IRQn);
         return;
     }
@@ -729,6 +769,28 @@ static void mdma_config(MDMA_InitTypeDef *init, sensor_t *sensor, uint32_t bytes
 }
 #endif
 
+#if (OMV_ENABLE_SENSOR_MDMA_TOTAL_OFFLOAD == 1)
+static void mdma_init_ll_nodes(MDMA_HandleTypeDef *hmdma, uint32_t bytes_per_pixel)
+{
+    MDMA_LinkNodeConfTypeDef config;
+    memcpy(&config.Init, &hmdma->Init, sizeof(MDMA_InitTypeDef));
+
+    config.SrcAddress               = 0xFFFFFFFF; // updated later (must not be 0)
+    config.DstAddress               = 0xFFFFFFFF; // updated later (must not be 0)
+    config.BlockDataLength          = MAIN_FB()->u * bytes_per_pixel;
+    config.BlockCount               = 1;
+    config.PostRequestMaskAddress   = (uint32_t) &DMA2->LIFCR;
+    config.PostRequestMaskData      = (uint32_t) DMA_FLAG_TCIF1_5;
+
+    // The first line of the image will be transferred via a software trigger
+    // The second line of the image is transferred via the initial config
+    for (int i = 0, ii = MAIN_FB()->v - 2; i < ii; i++) {
+        HAL_MDMA_LinkedList_CreateNode(&MDMA_LL_NODES[i], &config);
+        HAL_MDMA_LinkedList_AddNode(hmdma, &MDMA_LL_NODES[i], 0);
+    }
+}
+#endif
+
 // This is the default snapshot function, which can be replaced in sensor_init functions. This function
 // uses the DCMI and DMA to capture frames and each line is processed in the DCMI_DMAConvCpltUser function.
 int sensor_snapshot(sensor_t *sensor, image_t *image, uint32_t flags)
@@ -815,10 +877,18 @@ int sensor_snapshot(sensor_t *sensor, image_t *image, uint32_t flags)
                 DCMI_MDMA_Handle1.Init.Request = MDMA_REQUEST_DMA2_Stream1_TC;
                 DCMI_MDMA_Handle1.Init.TransferTriggerMode = MDMA_BLOCK_TRANSFER;
                 // We setup MDMA to repeatedly reset itself to transfer the same line buffer.
-                DCMI_MDMA_Handle1.Init.SourceBlockAddressOffset = -(MAIN_FB()->u * bytes_per_pixel);
+                DCMI_MDMA_Handle1.Init.SourceBlockAddressOffset = -(w * bytes_per_pixel);
 
                 HAL_MDMA_Init(&DCMI_MDMA_Handle1);
                 HAL_MDMA_ConfigPostRequestMask(&DCMI_MDMA_Handle1, (uint32_t) &DMA2->LIFCR, DMA_FLAG_TCIF1_5);
+
+                // MDMA has trouble keeping up at low vertical resolutions with short horizontal line widths when
+                // not in DMA MB mode. So, we switch to DMA MB mode and use linked list to handle switching back
+                // and forth between the different source addresses. Above the vertical resolution limit we can
+                // just use one buffer and have MDMA read from that one buffer.
+                if ((2 < h) && (h <= OMV_MDMA_LL_LINES)) {
+                    mdma_init_ll_nodes(&DCMI_MDMA_Handle1, bytes_per_pixel);
+                }
             } else {
                 HAL_MDMA_Init(&DCMI_MDMA_Handle1);
             }
@@ -872,7 +942,7 @@ int sensor_snapshot(sensor_t *sensor, image_t *image, uint32_t flags)
             }
         #if (OMV_ENABLE_SENSOR_MDMA_TOTAL_OFFLOAD == 1)
         // Special transfer mode with MDMA that completely offloads the line capture load.
-        } else if ((sensor->pixformat != PIXFORMAT_JPEG) && (!sensor->transpose)) {
+        } else if ((sensor->pixformat != PIXFORMAT_JPEG) && (!sensor->transpose) && (h > OMV_MDMA_LL_LINES)) {
             // DMA to circular mode writing the same line over and over again.
             ((DMA_Stream_TypeDef *) DMAHandle.Instance)->CR |= DMA_SxCR_CIRC;
             // DCMI will transfer to same line and MDMA will move to final location.
