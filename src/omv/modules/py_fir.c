@@ -1095,20 +1095,20 @@ mp_obj_t py_fir_snapshot(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
     dst_img.h = fast_floorf(arg_roi.h * arg_y_scale);
     dst_img.pixfmt = (arg_pixformat == PIXFORMAT_RGB565) ? PIXFORMAT_RGB565 : PIXFORMAT_GRAYSCALE;
 
+    size_t size = image_size(&dst_img);
+
     if (copy_to_fb) {
         py_helper_set_to_framebuffer(&dst_img);
     } else if (arg_other) {
         bool fb = py_helper_is_equal_to_framebuffer(arg_other);
-        size_t size = fb ? framebuffer_get_buffer_size() : image_size(arg_other);
-        PY_ASSERT_TRUE_MSG((image_size(&dst_img) <= size),
+        size_t buf_size = fb ? framebuffer_get_buffer_size() : image_size(arg_other);
+        PY_ASSERT_TRUE_MSG((size <= buf_size),
                 "The new image won't fit in the target frame buffer!");
-        arg_other->w        = dst_img.w;
-        arg_other->h        = dst_img.h;
-        arg_other->pixfmt   = dst_img.pixfmt;
-        dst_img.pixels      = arg_other->pixels;
+        dst_img.data = arg_other->data;
+        memcpy(arg_other, &dst_img, sizeof(image_t));
         py_helper_update_framebuffer(&dst_img);
     } else {
-        dst_img.data = xalloc(image_size(&dst_img));
+        dst_img.data = xalloc(size);
     }
 
     #if (OMV_ENABLE_FIR_LEPTON == 1)
