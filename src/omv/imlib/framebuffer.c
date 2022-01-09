@@ -364,12 +364,18 @@ void framebuffer_auto_adjust_buffers()
 
 void framebuffer_free_current_buffer()
 {
+    vbuffer_t *buffer = framebuffer_get_buffer(framebuffer->head);
+    #ifdef __DCACHE_PRESENT
+    // Make sure all cached CPU writes are flushed before returning the buffer.
+    SCB_InvalidateDCache_by_Addr(buffer->data, framebuffer_get_buffer_size());
+    #endif
+
     // Invalidate frame.
     framebuffer->pixfmt = PIXFORMAT_INVALID;
 
     // Allow frame to be updated in single buffer mode...
     if (framebuffer->n_buffers == 1) {
-        framebuffer_get_buffer(framebuffer->head)->waiting_for_data = true;
+        buffer->waiting_for_data = true;
     }
 }
 
@@ -472,7 +478,6 @@ vbuffer_t *framebuffer_get_tail(framebuffer_flags_t flags)
         // Setup to check head again.
         framebuffer->check_head = true;
     }
-
     return buffer;
 }
 

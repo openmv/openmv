@@ -959,35 +959,19 @@ int sensor_snapshot(sensor_t *sensor, image_t *image, uint32_t flags)
     switch (sensor->pixformat) {
         case PIXFORMAT_GRAYSCALE:
             MAIN_FB()->pixfmt = PIXFORMAT_GRAYSCALE;
-            #if (OMV_ENABLE_SENSOR_MDMA == 1)
-            // Flush data for MDMA
-            SCB_InvalidateDCache_by_Addr(buffer->data, w * h);
-            #endif
             break;
         case PIXFORMAT_RGB565:
             MAIN_FB()->pixfmt = PIXFORMAT_RGB565;
-            #if (OMV_ENABLE_SENSOR_MDMA == 1)
-            // Flush data for MDMA
-            SCB_InvalidateDCache_by_Addr(buffer->data, w * h * sizeof(uint16_t));
-            #endif
             break;
         case PIXFORMAT_BAYER:
             MAIN_FB()->pixfmt    = PIXFORMAT_BAYER;
             MAIN_FB()->subfmt_id = sensor->hw_flags.bayer;
-            #if (OMV_ENABLE_SENSOR_MDMA == 1)
-            // Flush data for MDMA
-            SCB_InvalidateDCache_by_Addr(buffer->data, w * h);
-            #endif
             break;
         case PIXFORMAT_YUV422: {
             bool yuv_order = sensor->hw_flags.yuv_order == SENSOR_HW_FLAGS_YUV422;
             int even = yuv_order ? PIXFORMAT_YUV422 : PIXFORMAT_YVU422;
             int odd = yuv_order ? PIXFORMAT_YVU422 : PIXFORMAT_YUV422;
             MAIN_FB()->pixfmt = (MAIN_FB()->x % 2) ? odd : even;
-            #if (OMV_ENABLE_SENSOR_MDMA == 1)
-            // Flush data for MDMA
-            SCB_InvalidateDCache_by_Addr(buffer->data, w * h * sizeof(uint16_t));
-            #endif
             break;
         }
         case PIXFORMAT_JPEG: {
@@ -1004,11 +988,6 @@ int sensor_snapshot(sensor_t *sensor, image_t *image, uint32_t flags)
                 if (__HAL_DMA_GET_COUNTER(&DMAHandle)) { // Add in the uncompleted transfer length.
                     size += ((length / sizeof(uint32_t)) - __HAL_DMA_GET_COUNTER(&DMAHandle)) * sizeof(uint32_t);
                 }
-
-                #if defined(MCU_SERIES_F7) || defined(MCU_SERIES_H7)
-                // Flush data for DMA
-                SCB_InvalidateDCache_by_Addr(buffer->data, size);
-                #endif
             }
             // Clean trailing data after 0xFFD9 at the end of the jpeg byte stream.
             MAIN_FB()->pixfmt = PIXFORMAT_JPEG;
