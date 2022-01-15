@@ -9,7 +9,7 @@ from pyb import CAN
 # NOTE: Set to False on receiving node.
 TRANSMITTER = True
 
-can = CAN(2, CAN.NORMAL, baudrate=125_000, sampling_point=75)
+can = CAN(2, CAN.NORMAL, baudrate=125_000, sample_point=75)
 # NOTE: uncomment to set bit timing manually, for example:
 #can.init(CAN.NORMAL, prescaler=32, sjw=1, bs1=8, bs2=3)
 can.restart()
