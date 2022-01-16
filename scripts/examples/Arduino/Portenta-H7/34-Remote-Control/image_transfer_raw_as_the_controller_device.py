@@ -17,12 +17,12 @@ import image, network, omv, rpc, sensor, struct, time
 #
 # * message_id - CAN message to use for data transport on the can bus (11-bit).
 # * bit_rate - CAN bit rate.
-# * sampling_point - Tseg1/Tseg2 ratio. Typically 75%. (50.0, 62.5, 75.0, 87.5, etc.)
+# * sample_point - Tseg1/Tseg2 ratio. Typically 75%. (50.0, 62.5, 75.0, 87.5, etc.)
 #
 # NOTE: Master and slave message ids and can bit rates must match. Connect master can high to slave
 #       can high and master can low to slave can lo. The can bus must be terminated with 120 ohms.
 #
-# interface = rpc.rpc_can_master(message_id=0x7FF, bit_rate=1000000, sampling_point=75.0)
+# interface = rpc.rpc_can_master(message_id=0x7FF, bit_rate=1000000, sample_point=75.0)
 
 # Uncomment the below line to setup your OpenMV Cam for controlling over I2C.
 #
