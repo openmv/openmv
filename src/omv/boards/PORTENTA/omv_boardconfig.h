@@ -37,6 +37,15 @@
 // Sensor Banding Filter Value
 #define OMV_OV7725_BANDING      (0x7F)
 
+// OV5640 Sensor Settings
+#define OMV_OV5640_XCLK_FREQ    (12500000)
+#define OMV_OV5640_PLL_CTRL2    (0x7E)
+#define OMV_OV5640_PLL_CTRL3    (0x13)
+#define OMV_OV5640_REV_Y_CHECK  (0)
+#define OMV_OV5640_REV_Y_FREQ   (12500000)
+#define OMV_OV5640_REV_Y_CTRL2  (0x7E)
+#define OMV_OV5640_REV_Y_CTRL3  (0x13)
+
 // Bootloader LED GPIO port/pin
 #define OMV_BOOTLDR_LED_PIN     (GPIO_PIN_6)
 #define OMV_BOOTLDR_LED_PORT    (GPIOK)
@@ -52,7 +61,7 @@
 
 // Enable sensor drivers
 #define OMV_ENABLE_OV2640       (0)
-#define OMV_ENABLE_OV5640       (0)
+#define OMV_ENABLE_OV5640       (1)
 #define OMV_ENABLE_OV7690       (0)
 #define OMV_ENABLE_OV7725       (1)
 #define OMV_ENABLE_OV9650       (0)
@@ -60,10 +69,10 @@
 #define OMV_ENABLE_MT9V0XX      (1)
 #define OMV_ENABLE_LEPTON       (0)
 #define OMV_ENABLE_HM01B0       (1)
-#define OMV_ENABLE_GC2145       (1)
+#define OMV_ENABLE_GC2145       (0)
 
 // Enable sensor features
-#define OMV_ENABLE_OV5640_AF    (0)
+#define OMV_ENABLE_OV5640_AF    (1)
 
 // Enable WiFi debug
 #define OMV_ENABLE_WIFIDBG      (0)
