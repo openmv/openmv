@@ -97,10 +97,10 @@ void pico_reset_to_bootloader(void);
 #define OMV_MAIN_MEMORY         RAM    // data, bss and heap memory
 #define OMV_STACK_MEMORY        RAM    // stack memory
 
-#define OMV_FB_SIZE             (136K)      // FB memory: header + QVGA/GS image
-#define OMV_FB_ALLOC_SIZE       (12K)       // minimum fb alloc size
-#define OMV_STACK_SIZE          (8K)
-#define OMV_HEAP_SIZE           (32 * 1024) // MicroPython's heap
+#define OMV_FB_SIZE             (100K) // FB memory
+#define OMV_FB_ALLOC_SIZE       (16K)  // minimum fb alloc size
+#define OMV_STACK_SIZE          (16K)
+#define OMV_HEAP_SIZE           (64 * 1024) // MicroPython's heap
 #define OMV_JPEG_BUF_SIZE       (20 * 1024) // IDE JPEG buffer (header + data).
 
 // GP LED
