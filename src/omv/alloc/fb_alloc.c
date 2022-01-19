@@ -58,7 +58,7 @@ void fb_alloc_init0()
 
 uint32_t fb_avail()
 {
-    uint32_t temp = pointer - framebuffer_get_buffers_end() - sizeof(uint32_t);
+    int temp = pointer - framebuffer_get_buffers_end() - sizeof(uint32_t);
     return (temp < sizeof(uint32_t)) ? 0 : temp;
 }
 
@@ -190,7 +190,7 @@ void *fb_alloc0(uint32_t size, int hints)
 
 void *fb_alloc_all(uint32_t *size, int hints)
 {
-    uint32_t temp = pointer - framebuffer_get_buffers_end() - sizeof(uint32_t);
+    int temp = pointer - framebuffer_get_buffers_end() - sizeof(uint32_t);
 
     if (temp < sizeof(uint32_t)) {
         *size = 0;
