@@ -40,6 +40,15 @@
 // Sensor Banding Filter Value
 #define OMV_OV7725_BANDING              (0x7F)
 
+// OV5640 Sensor Settings
+#define OMV_OV5640_XCLK_FREQ            (24000000)
+#define OMV_OV5640_PLL_CTRL2            (0x64)
+#define OMV_OV5640_PLL_CTRL3            (0x13)
+#define OMV_OV5640_REV_Y_CHECK          (1)
+#define OMV_OV5640_REV_Y_FREQ           (25000000)
+#define OMV_OV5640_REV_Y_CTRL2          (0x54)
+#define OMV_OV5640_REV_Y_CTRL3          (0x13)
+
 // Bootloader LED GPIO port/pin
 #define OMV_BOOTLDR_LED_PIN             (GPIO_PIN_1)
 #define OMV_BOOTLDR_LED_PORT            (GPIOC)

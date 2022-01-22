@@ -172,6 +172,8 @@ __weak int sensor_reset()
 int sensor_probe_init(uint32_t bus_id, uint32_t bus_speed)
 {
     int init_ret = 0;
+    int freq;
+    (void) freq;
 
     // Do a power cycle
     DCMI_PWDN_HIGH();
@@ -320,7 +322,13 @@ int sensor_probe_init(uint32_t bus_id, uint32_t bus_speed)
 
         #if (OMV_ENABLE_OV5640 == 1)
         case OV5640_ID:
-            if (sensor_set_xclk_frequency(OV5640_XCLK_FREQ) != 0) {
+            freq = OMV_OV5640_XCLK_FREQ;
+            #if (OMV_OV5640_REV_Y_CHECK == 1)
+            if (HAL_GetREVID() < 0x2003) { // Is this REV Y?
+                freq = OMV_OV5640_REV_Y_FREQ;
+            }
+            #endif
+            if (sensor_set_xclk_frequency(freq) != 0) {
                 return SENSOR_ERROR_TIM_INIT_FAILED;
             }
             init_ret = ov5640_init(&sensor);
