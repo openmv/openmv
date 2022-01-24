@@ -61,6 +61,7 @@ MLX90641_DIR=drivers/mlx90641
 PIXART_DIR=drivers/pixart
 LIBPDM_DIR=lib/libpdm
 TENSORFLOW_DIR=lib/libtf
+ZLIB_DIR=lib/zlib
 OMV_BOARD_CONFIG_DIR=$(TOP_DIR)/$(OMV_DIR)/boards/$(TARGET)/
 MP_BOARD_CONFIG_DIR=$(TOP_DIR)/$(MICROPY_DIR)/ports/$(PORT)/boards/$(TARGET)/
 MPY_LIB_DIR=$(TOP_DIR)/../scripts/libraries

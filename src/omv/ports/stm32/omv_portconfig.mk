@@ -48,6 +48,7 @@ OMV_CFLAGS += -I$(TOP_DIR)/$(MLX90641_DIR)/include/
 OMV_CFLAGS += -I$(TOP_DIR)/$(PIXART_DIR)/include/
 OMV_CFLAGS += -I$(TOP_DIR)/$(TENSORFLOW_DIR)/$(CPU)/
 OMV_CFLAGS += -I$(TOP_DIR)/$(LIBPDM_DIR)/
+OMV_CFLAGS += -I$(TOP_DIR)/$(ZLIB_DIR)/include/
 
 ifeq ($(OMV_ENABLE_BL), 1)
 BL_CFLAGS  := $(CFLAGS) $(HAL_CFLAGS)
@@ -117,6 +118,7 @@ FIRM_OBJ += $(wildcard $(BUILD)/$(MLX90621_DIR)/src/*.o)
 FIRM_OBJ += $(wildcard $(BUILD)/$(MLX90640_DIR)/src/*.o)
 FIRM_OBJ += $(wildcard $(BUILD)/$(MLX90641_DIR)/src/*.o)
 FIRM_OBJ += $(wildcard $(BUILD)/$(PIXART_DIR)/src/*.o)
+FIRM_OBJ += $(wildcard $(BUILD)/$(ZLIB_DIR)/src/*.o)
 
 #------------- OpenMV Objects ----------------#
 FIRM_OBJ += $(addprefix $(BUILD)/$(CMSIS_DIR)/src/, \
@@ -198,6 +200,7 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/imlib/, \
 	mjpeg.o                     \
 	orb.o                       \
 	phasecorrelation.o          \
+	png.o                       \
 	point.o                     \
 	pool.o                      \
 	ppm.o                       \
@@ -551,6 +554,7 @@ UVC_OBJ += $(wildcard $(BUILD)/$(MLX90621_DIR)/src/*.o)
 UVC_OBJ += $(wildcard $(BUILD)/$(MLX90640_DIR)/src/*.o)
 UVC_OBJ += $(wildcard $(BUILD)/$(MLX90641_DIR)/src/*.o)
 UVC_OBJ += $(wildcard $(BUILD)/$(PIXART_DIR)/src/*.o)
+UVC_OBJ += $(wildcard $(BUILD)/$(ZLIB_DIR)/src/*.o)
 endif
 
 ifeq ($(OMV_ENABLE_CM4), 1)
@@ -612,6 +616,7 @@ endif
 	$(MAKE)  -C $(MLX90640_DIR)              BUILD=$(BUILD)/$(MLX90640_DIR) CFLAGS="$(CFLAGS) -MMD"
 	$(MAKE)  -C $(MLX90641_DIR)              BUILD=$(BUILD)/$(MLX90641_DIR) CFLAGS="$(CFLAGS) -MMD"
 	$(MAKE)  -C $(PIXART_DIR)                BUILD=$(BUILD)/$(PIXART_DIR)   CFLAGS="$(CFLAGS) -MMD"
+	$(MAKE)  -C $(ZLIB_DIR)                  BUILD=$(BUILD)/$(ZLIB_DIR)     CFLAGS="$(CFLAGS) -MMD"
 	$(MAKE)  -C $(OMV_DIR)                   BUILD=$(BUILD)/$(OMV_DIR)      CFLAGS="$(CFLAGS) -MMD"
 ifeq ($(CUBEAI), 1)
 	$(MAKE)  -C $(CUBEAI_DIR)                BUILD=$(BUILD)/$(CUBEAI_DIR)   CFLAGS="$(CFLAGS) -fno-strict-aliasing -MMD"

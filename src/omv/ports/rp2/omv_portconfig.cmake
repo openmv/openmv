@@ -20,6 +20,7 @@ set(MLX90640_DIR            drivers/mlx90640)
 set(MLX90641_DIR            drivers/mlx90641)
 set(OPENPDM_DIR             ${TOP_DIR}/lib/openpdm)
 set(TENSORFLOW_DIR          ${TOP_DIR}/lib/libtf)
+set(ZLIB_DIR                ${TOP_DIR}/lib/zlib)
 set(OMV_BOARD_CONFIG_DIR    ${TOP_DIR}/${OMV_DIR}/boards/${TARGET}/)
 #set(MP_BOARD_CONFIG_DIR    ${TOP_DIR}/${MICROPY_DIR}/ports/${PORT}/boards/${TARGET}/
 set(MPY_LIB_DIR             ${TOP_DIR}/../scripts/libraries)
@@ -158,6 +159,7 @@ target_sources(${MICROPY_TARGET} PRIVATE
     ${TOP_DIR}/${OMV_DIR}/imlib/mjpeg.c
     ${TOP_DIR}/${OMV_DIR}/imlib/orb.c
     ${TOP_DIR}/${OMV_DIR}/imlib/phasecorrelation.c
+    ${TOP_DIR}/${OMV_DIR}/imlib/png.c
     ${TOP_DIR}/${OMV_DIR}/imlib/point.c
     ${TOP_DIR}/${OMV_DIR}/imlib/pool.c
     ${TOP_DIR}/${OMV_DIR}/imlib/ppm.c

@@ -160,6 +160,7 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/imlib/, \
 	mjpeg.o                     \
 	orb.o                       \
 	phasecorrelation.o          \
+	png.o                       \
 	point.o                     \
 	pool.o                      \
 	ppm.o                       \

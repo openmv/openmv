@@ -81,6 +81,7 @@ SRCS += $(addprefix imlib/,     \
 	mjpeg.c                     \
 	orb.c                       \
 	phasecorrelation.c          \
+	png.c                       \
 	point.c                     \
 	pool.c                      \
 	ppm.c                       \
