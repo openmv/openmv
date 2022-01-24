@@ -1064,6 +1064,8 @@ bool jpeg_compress(image_t *src, image_t *dst, int quality, bool realloc)
             JPEG_Info.ColorSpace        = JPEG_YCBCR_COLORSPACE;
             JPEG_Info.ChromaSubsampling = JPEG_444_SUBSAMPLING;
             break;
+        default:
+            break;
     }
 
     if (memcmp(&JPEG_Config, &JPEG_Info, sizeof(JPEG_ConfTypeDef))) {
@@ -1087,6 +1089,10 @@ bool jpeg_compress(image_t *src, image_t *dst, int quality, bool realloc)
 
         dst->size = IMLIB_IMAGE_MAX_SIZE(avail - space);
         dst->data = fb_alloc(dst->size, FB_ALLOC_PREFER_SIZE | FB_ALLOC_CACHE_ALIGN);
+    }
+
+    if (src->is_compressed) {
+        return true;
     }
 
     // Compute size of the APP0 header with cache alignment padding.
@@ -1838,6 +1844,10 @@ bool jpeg_compress(image_t *src, image_t *dst, int quality, bool realloc)
         uint32_t size=0;
         dst->data = fb_alloc_all(&size, FB_ALLOC_PREFER_SIZE | FB_ALLOC_CACHE_ALIGN);
         dst->size = IMLIB_IMAGE_MAX_SIZE(size);
+    }
+
+    if (src->is_compressed) {
+        return true;
     }
 
     // JPEG buffer

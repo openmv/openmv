@@ -149,4 +149,8 @@
 // Enable STM32 DMA2D
 #define IMLIB_ENABLE_DMA2D
 
+// Enable PNG encoder/decoder
+#define IMLIB_ENABLE_PNG_ENCODER
+#define IMLIB_ENABLE_PNG_DECODER
+
 #endif //__IMLIB_CONFIG_H__

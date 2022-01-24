@@ -152,6 +152,7 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/imlib/, \
 	jpegd.o                     \
 	jpeg.o                      \
 	lodepng.o                   \
+	png.o                       \
 	kmeans.o                    \
 	lab_tab.o                   \
 	lbp.o                       \

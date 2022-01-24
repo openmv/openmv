@@ -268,7 +268,7 @@ size_t image_size(image_t *ptr)
         case PIXFORMAT_YUV_ANY: { // re-use
             return IMAGE_RGB565_LINE_LEN_BYTES(ptr) * ptr->h;
         }
-        case PIXFORMAT_JPEG: {
+        case PIXFORMAT_COMPRESSED_ANY: {
             return ptr->size;
         }
         default: {
@@ -506,6 +506,12 @@ static save_image_format_t imblib_parse_extension(image_t *img, const char *path
                &&  ((p[-4] == '.') || (p[-4] == '.'))) {
                     // Will convert to JPG if not.
                     return FORMAT_JPG;
+        } else if (((p[-1] == 'g') || (p[-1] == 'G'))
+               &&  ((p[-2] == 'n') || (p[-2] == 'N'))
+               &&  ((p[-3] == 'p') || (p[-3] == 'P'))
+               &&  ((p[-4] == '.') || (p[-4] == '.'))) {
+                    // Will convert to PNG if not.
+                    return FORMAT_PNG;
         } else if (((p[-1] == 'p') || (p[-1] == 'P'))
                &&  ((p[-2] == 'm') || (p[-2] == 'M'))
                &&  ((p[-3] == 'b') || (p[-3] == 'B'))
@@ -547,8 +553,8 @@ static save_image_format_t imblib_parse_extension(image_t *img, const char *path
 bool imlib_read_geometry(FIL *fp, image_t *img, const char *path, img_read_settings_t *rs)
 {
     file_read_open(fp, path);
-    char magic[2];
-    read_data(fp, &magic, 2);
+    char magic[4];
+    read_data(fp, &magic, 4);
     file_close(fp);
 
     bool vflipped = false;
@@ -569,6 +575,12 @@ bool imlib_read_geometry(FIL *fp, image_t *img, const char *path, img_read_setti
         file_read_open(fp, path);
         // Do not use file_buffer_on() here.
         jpeg_read_geometry(fp, img, path, &rs->jpg_rs);
+        file_buffer_on(fp); // REMEMBER TO TURN THIS OFF LATER!
+    } else if ((magic[0]==0x89) && (magic[1]==0x50) && (magic[2]==0x4E) && (magic[3]==0x47)) { // PNG
+        rs->format = FORMAT_PNG;
+        file_read_open(fp, path);
+        // Do not use file_buffer_on() here.
+        png_read_geometry(fp, img, path, &rs->png_rs);
         file_buffer_on(fp); // REMEMBER TO TURN THIS OFF LATER!
     } else {
         ff_unsupported_format(NULL);
@@ -721,8 +733,8 @@ void imlib_load_image(image_t *img, const char *path)
 {
     FIL fp;
     file_read_open(&fp, path);
-    char magic[2];
-    read_data(&fp, &magic, 2);
+    char magic[4];
+    read_data(&fp, &magic, 4);
     file_close(&fp);
 
     if ((magic[0]=='P')
@@ -733,6 +745,8 @@ void imlib_load_image(image_t *img, const char *path)
         bmp_read(img, path);
     } else if ((magic[0]==0xFF) && (magic[1]==0xD8)) { // JPEG
         jpeg_read(img, path);
+    } else if ((magic[0]==0x89) && (magic[1]==0x50) && (magic[2]==0x4E) && (magic[3]==0x47)) { // PNG
+        png_read(img, path);
     } else {
         ff_unsupported_format(NULL);
     }
@@ -758,13 +772,20 @@ void imlib_save_image(image_t *img, const char *path, rectangle_t *roi, int qual
         case FORMAT_JPG:
             jpeg_write(img, path, quality);
             break;
+        case FORMAT_PNG:
+            png_write(img, path);
+            break;
         case FORMAT_DONT_CARE:
             // Path doesn't have an extension.
             if (IM_IS_JPEG(img)) {
                 char *new_path = strcat(strcpy(fb_alloc(strlen(path)+5, FB_ALLOC_NO_HINT), path), ".jpg");
                 jpeg_write(img, new_path, quality);
                 fb_free();
-            } else if (IM_IS_BAYER(img)) {
+            } else if (img->pixfmt == PIXFORMAT_PNG) {
+                char *new_path = strcat(strcpy(fb_alloc(strlen(path)+5, FB_ALLOC_NO_HINT), path), ".png");
+                png_write(img, new_path);
+                fb_free();
+            }else if (IM_IS_BAYER(img)) {
                 FIL fp;
                 char *new_path = strcat(strcpy(fb_alloc(strlen(path)+5, FB_ALLOC_NO_HINT), path), ".raw");
                 file_write_open(&fp, new_path);
