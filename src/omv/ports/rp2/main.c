@@ -271,6 +271,7 @@ soft_reset:
 
     usbdbg_set_irq_enabled(false);
 
+    mp_printf(MP_PYTHON_PRINTER, "MPY: soft reboot\n");
     #if MICROPY_PY_AUDIO
     py_audio_deinit();
     #endif
