@@ -27,6 +27,7 @@ freely, subject to the following restrictions:
 #define LODEPNG_H
 
 #include <string.h> /*for size_t*/
+#include "imlib.h"
 
 extern const char* LODEPNG_VERSION_STRING;
 
@@ -51,18 +52,18 @@ the custom_zlib field of the compress and decompress settings*/
 #endif
 
 /*deflate&zlib decoder and png decoder*/
-#ifndef LODEPNG_NO_COMPILE_DECODER
+#ifdef IMLIB_ENABLE_PNG_DECODER
 #define LODEPNG_COMPILE_DECODER
 #endif
 
 /*deflate&zlib encoder and png encoder*/
-#ifndef LODEPNG_NO_COMPILE_ENCODER
+#ifdef IMLIB_ENABLE_PNG_ENCODER
 #define LODEPNG_COMPILE_ENCODER
 #endif
 
 /*the optional built in harddisk file loading and saving functions*/
 #ifndef LODEPNG_NO_COMPILE_DISK
-#define LODEPNG_COMPILE_DISK
+//#define LODEPNG_COMPILE_DISK
 #endif
 
 /*support for chunks other than IHDR, IDAT, PLTE, tRNS, IEND: ancillary and unknown chunks*/
@@ -79,7 +80,7 @@ the custom_zlib field of the compress and decompress settings*/
 you can define the functions lodepng_free, lodepng_malloc and lodepng_realloc in your
 source files with custom allocators.*/
 #ifndef LODEPNG_NO_COMPILE_ALLOCATORS
-#define LODEPNG_COMPILE_ALLOCATORS
+//#define LODEPNG_COMPILE_ALLOCATORS
 #endif
 
 /*compile the C++ version (you can disable the C++ wrapper here even when compiling for C++)*/
@@ -102,6 +103,7 @@ typedef enum LodePNGColorType {
   LCT_PALETTE = 3, /*palette: 1,2,4,8 bit*/
   LCT_GREY_ALPHA = 4, /*grayscale with alpha: 8,16 bit*/
   LCT_RGBA = 6, /*RGB with alpha: 8,16 bit*/
+  LCT_CUSTOM = 7,
   /*LCT_MAX_OCTET_VALUE lets the compiler allow this enum to represent any invalid
   byte value from 0 to 255 that could be present in an invalid PNG file header. Do
   not use, compare with or set the name LCT_MAX_OCTET_VALUE, instead either use
@@ -362,6 +364,7 @@ format, and is used both for PNG and raw image data in LodePNG.
 typedef struct LodePNGColorMode {
   /*header (IHDR)*/
   LodePNGColorType colortype; /*color type, see PNG standard or documentation further in this header file*/
+  unsigned customfmt;
   unsigned bitdepth;  /*bits per sample, see PNG standard or documentation further in this header file*/
 
   /*
@@ -795,7 +798,10 @@ typedef struct LodePNGState {
 #endif /*LODEPNG_COMPILE_ENCODER*/
   LodePNGColorMode info_raw; /*specifies the format in which you would like to get the raw pixel buffer*/
   LodePNGInfo info_png; /*info of the PNG image obtained after decoding*/
-  unsigned error;
+  unsigned error;  
+  /* Callback for custom color format conversion */
+  unsigned (*lodepng_convert) (unsigned char* out, const unsigned char* in,
+          const LodePNGColorMode* mode_out, const LodePNGColorMode* mode_in, unsigned w, unsigned h);
 } LodePNGState;
 
 /*init, cleanup and copy functions to use with this struct*/

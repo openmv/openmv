@@ -28,6 +28,9 @@ The manual and changelog are in the header file "lodepng.h"
 Rename this file to lodepng.cpp to use it for C++, or to lodepng.c to use it for C.
 */
 
+#include "imlib.h"
+#if defined(IMLIB_ENABLE_PNG_ENCODER) || defined(IMLIB_ENABLE_PNG_DECODER)
+#undef CRC
 #include "lodepng.h"
 
 #ifdef LODEPNG_COMPILE_DISK
@@ -2427,7 +2430,7 @@ unsigned lodepng_crc32(const unsigned char* data, size_t length);
 so LodePNGBitWriter and LodePNGBitReader can't be used for those. */
 
 static unsigned char readBitFromReversedStream(size_t* bitpointer, const unsigned char* bitstream) {
-  unsigned char result = (unsigned char)((bitstream[(*bitpointer) >> 3] >> (7 - ((*bitpointer) & 0x7))) & 1);
+  unsigned char result = (unsigned char)((bitstream[(*bitpointer) >> 3] >> ((*bitpointer) & 0x7)) & 1);
   ++(*bitpointer);
   return result;
 }
@@ -2445,7 +2448,7 @@ static unsigned readBitsFromReversedStream(size_t* bitpointer, const unsigned ch
 
 static void setBitOfReversedStream(size_t* bitpointer, unsigned char* bitstream, unsigned char bit) {
   /*the current bit in bitstream may be 0 or 1 for this to work*/
-  if(bit == 0) bitstream[(*bitpointer) >> 3u] &=  (unsigned char)(~(1u << (7u - ((*bitpointer) & 7u))));
+  if(bit == 0) bitstream[(*bitpointer) >> 3u] &=  (unsigned char)(~(1u << ((*bitpointer) & 7u)));
   else         bitstream[(*bitpointer) >> 3u] |=  (1u << (7u - ((*bitpointer) & 7u)));
   ++(*bitpointer);
 }
@@ -2630,6 +2633,7 @@ static unsigned checkColorValidity(LodePNGColorType colortype, unsigned bd) {
     case LCT_PALETTE:    if(!(bd == 1 || bd == 2 || bd == 4 || bd == 8            )) return 37; break;
     case LCT_GREY_ALPHA: if(!(                                 bd == 8 || bd == 16)) return 37; break;
     case LCT_RGBA:       if(!(                                 bd == 8 || bd == 16)) return 37; break;
+    case LCT_CUSTOM:     if(!(                                 bd == 8 || bd == 16)) return 37; break;
     case LCT_MAX_OCTET_VALUE: return 31; /* invalid color type */
     default: return 31; /* invalid color type */
   }
@@ -2643,6 +2647,7 @@ static unsigned getNumColorChannels(LodePNGColorType colortype) {
     case LCT_PALETTE: return 1;
     case LCT_GREY_ALPHA: return 2;
     case LCT_RGBA: return 4;
+    case LCT_CUSTOM: return 1;
     case LCT_MAX_OCTET_VALUE: return 0; /* invalid color type */
     default: return 0; /*invalid color type*/
   }
@@ -3213,7 +3218,7 @@ static void rgba16ToPixel(unsigned char* out, size_t i,
                          const LodePNGColorMode* mode,
                          unsigned short r, unsigned short g, unsigned short b, unsigned short a) {
   if(mode->colortype == LCT_GREY) {
-    unsigned short gray = r; /*((unsigned)r + g + b) / 3u;*/
+    unsigned short gray = ((unsigned)r + g + b) / 3u;
     out[i * 2 + 0] = (gray >> 8) & 255;
     out[i * 2 + 1] = gray & 255;
   } else if(mode->colortype == LCT_RGB) {
@@ -3224,7 +3229,7 @@ static void rgba16ToPixel(unsigned char* out, size_t i,
     out[i * 6 + 4] = (b >> 8) & 255;
     out[i * 6 + 5] = b & 255;
   } else if(mode->colortype == LCT_GREY_ALPHA) {
-    unsigned short gray = r; /*((unsigned)r + g + b) / 3u;*/
+    unsigned short gray = ((unsigned)r + g + b) / 3u;
     out[i * 4 + 0] = (gray >> 8) & 255;
     out[i * 4 + 1] = gray & 255;
     out[i * 4 + 2] = (a >> 8) & 255;
@@ -4992,8 +4997,8 @@ unsigned lodepng_decode(unsigned char** out, unsigned* w, unsigned* h,
 
     /*TODO: check if this works according to the statement in the documentation: "The converter can convert
     from grayscale input color type, to 8-bit grayscale or grayscale with alpha"*/
-    if(!(state->info_raw.colortype == LCT_RGB || state->info_raw.colortype == LCT_RGBA)
-       && !(state->info_raw.bitdepth == 8)) {
+    if(!(state->info_raw.colortype == LCT_RGB || state->info_raw.colortype == LCT_RGBA
+                || state->info_raw.colortype == LCT_CUSTOM) && !(state->info_raw.bitdepth == 8)) {
       return 56; /*unsupported color mode conversion*/
     }
 
@@ -5001,9 +5006,13 @@ unsigned lodepng_decode(unsigned char** out, unsigned* w, unsigned* h,
     *out = (unsigned char*)lodepng_malloc(outsize);
     if(!(*out)) {
       state->error = 83; /*alloc fail*/
-    }
-    else state->error = lodepng_convert(*out, data, &state->info_raw,
+    } else if (state->lodepng_convert && state->info_raw.colortype == LCT_CUSTOM) {
+        state->error = state->lodepng_convert(*out, data, &state->info_raw,
                                         &state->info_png.color, *w, *h);
+    } else {
+        state->error = lodepng_convert(*out, data, &state->info_raw,
+                                        &state->info_png.color, *w, *h);
+    }
     lodepng_free(data);
   }
   return state->error;
@@ -5086,6 +5095,7 @@ void lodepng_state_init(LodePNGState* state) {
   lodepng_color_mode_init(&state->info_raw);
   lodepng_info_init(&state->info_png);
   state->error = 1;
+  state->lodepng_convert = NULL;
 }
 
 void lodepng_state_cleanup(LodePNGState* state) {
@@ -5937,7 +5947,11 @@ unsigned lodepng_encode(unsigned char** out, size_t* outsize,
     converted = (unsigned char*)lodepng_malloc(size);
     if(!converted && size) state->error = 83; /*alloc fail*/
     if(!state->error) {
-      state->error = lodepng_convert(converted, image, &info.color, &state->info_raw, w, h);
+      if (state->lodepng_convert && state->info_raw.colortype == LCT_CUSTOM) {
+        state->error = state->lodepng_convert(converted, image, &info.color, &state->info_raw, w, h);
+      } else {
+        state->error = lodepng_convert(converted, image, &info.color, &state->info_raw, w, h);
+      }
     }
     if(!state->error) {
       state->error = preProcessScanlines(&data, &datasize, converted, w, h, &info, &state->encoder);
@@ -6486,3 +6500,4 @@ unsigned encode(const std::string& filename,
 #endif /* LODEPNG_COMPILE_PNG */
 } /* namespace lodepng */
 #endif /*LODEPNG_COMPILE_CPP*/
+#endif // IMLIB_ENABLE_PNG_ENCODER || IMLIB_ENABLE_PNG_DECODER
