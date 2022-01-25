@@ -72,6 +72,7 @@ SRCS += $(addprefix imlib/,     \
 	integral_mw.c               \
 	jpegd.c                     \
 	jpeg.c                      \
+	lodepng.c                   \
 	kmeans.c                    \
 	lab_tab.c                   \
 	lbp.c                       \
