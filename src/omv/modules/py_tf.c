@@ -156,9 +156,9 @@ STATIC mp_obj_t int_py_tf_load(mp_obj_t path_obj, bool alloc_mode, bool helper_m
     py_tf_model_obj_t *tf_model = m_new_obj(py_tf_model_obj_t);
     tf_model->base.type = &py_tf_model_type;
 
-    if (!strcmp(path, "person_detection")) {
-        tf_model->model_data = (unsigned char *) g_person_detect_model_data;
-        tf_model->model_data_len = g_person_detect_model_data_len;
+    if (!strcmp(path, IMLIB_TF_BUILT_IN_NETWORK_NAME)) {
+        tf_model->model_data = (unsigned char *) IMLIB_TF_BUILT_IN_NETWORK_DATA;
+        tf_model->model_data_len = IMLIB_TF_BUILT_IN_NETWORK_DATA_LEN;
     } else {
         #if defined(IMLIB_ENABLE_IMAGE_FILE_IO)
         FIL fp;

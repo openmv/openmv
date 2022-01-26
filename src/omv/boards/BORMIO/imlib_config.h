@@ -125,6 +125,18 @@
 #define IMLIB_ENABLE_TF
 #endif
 
+#ifndef IMLIB_TF_BUILT_IN_NETWORK_NAME
+#define IMLIB_TF_BUILT_IN_NETWORK_NAME "person_detection"
+#endif
+
+#ifndef IMLIB_TF_BUILT_IN_NETWORK_DATA
+#define IMLIB_TF_BUILT_IN_NETWORK_DATA g_person_detect_model_data
+#endif
+
+#ifndef IMLIB_TF_BUILT_IN_NETWORK_DATA_LEN
+#define IMLIB_TF_BUILT_IN_NETWORK_DATA_LEN g_person_detect_model_data_len
+#endif
+
 // Enable FAST (20+ KBs).
 #define IMLIB_ENABLE_FAST
 
