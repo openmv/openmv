@@ -344,6 +344,8 @@ typedef enum {
     PIXFORMAT_ID_BAYER      = 4,
     PIXFORMAT_ID_YUV422     = 5,
     PIXFORMAT_ID_JPEG       = 6,
+    PIXFORMAT_ID_PNG        = 7,
+    PIXFORMAT_ID_ARGB8      = 8,
     /* Note: Update PIXFORMAT_IS_VALID when adding new formats */
 } pixformat_id_t;
 
@@ -368,6 +370,7 @@ typedef enum {
     PIXFORMAT_BPP_RGB565    = 2,
     PIXFORMAT_BPP_BAYER     = 1,
     PIXFORMAT_BPP_YUV422    = 2,
+    PIXFORMAT_BPP_ARGB8     = 4,
     /* Note: Update PIXFORMAT_IS_VALID when adding new formats */
 } pixformat_bpp_t;
 
@@ -388,25 +391,29 @@ typedef enum {
 // <RESERVED>  YF  MF  CF  JF  RF  <PIXFORMAT_ID>  <SUBFORMAT_ID>  <BYTES_PER_PIX>
 // NOTE: Bit 31-30 must Not be used for pixformat_t to be used as mp_int_t.
 typedef enum {
-    PIXFORMAT_INVALID    = (0),
+    PIXFORMAT_INVALID    = (0x00000000U),
     PIXFORMAT_BINARY     = (PIXFORMAT_FLAGS_M  | (PIXFORMAT_ID_BINARY << 16) | (0                   << 8) | PIXFORMAT_BPP_BINARY ),
     PIXFORMAT_GRAYSCALE  = (PIXFORMAT_FLAGS_M  | (PIXFORMAT_ID_GRAY   << 16) | (SUBFORMAT_ID_GRAY8  << 8) | PIXFORMAT_BPP_GRAY8  ),
     PIXFORMAT_RGB565     = (PIXFORMAT_FLAGS_CM | (PIXFORMAT_ID_RGB565 << 16) | (0                   << 8) | PIXFORMAT_BPP_RGB565 ),
+    PIXFORMAT_ARGB8      = (PIXFORMAT_FLAGS_CM | (PIXFORMAT_ID_ARGB8  << 16) | (0                   << 8) | PIXFORMAT_BPP_ARGB8  ),
     PIXFORMAT_BAYER      = (PIXFORMAT_FLAGS_CR | (PIXFORMAT_ID_BAYER  << 16) | (SUBFORMAT_ID_BGGR   << 8) | PIXFORMAT_BPP_BAYER  ),
     PIXFORMAT_BAYER_BGGR = (PIXFORMAT_FLAGS_CR | (PIXFORMAT_ID_BAYER  << 16) | (SUBFORMAT_ID_BGGR   << 8) | PIXFORMAT_BPP_BAYER  ),
     PIXFORMAT_BAYER_GBRG = (PIXFORMAT_FLAGS_CR | (PIXFORMAT_ID_BAYER  << 16) | (SUBFORMAT_ID_GBRG   << 8) | PIXFORMAT_BPP_BAYER  ),
     PIXFORMAT_BAYER_GRBG = (PIXFORMAT_FLAGS_CR | (PIXFORMAT_ID_BAYER  << 16) | (SUBFORMAT_ID_GRBG   << 8) | PIXFORMAT_BPP_BAYER  ),
     PIXFORMAT_BAYER_RGGB = (PIXFORMAT_FLAGS_CR | (PIXFORMAT_ID_BAYER  << 16) | (SUBFORMAT_ID_RGGB   << 8) | PIXFORMAT_BPP_BAYER  ),
+    PIXFORMAT_YUV        = (PIXFORMAT_FLAGS_CY | (PIXFORMAT_ID_YUV422 << 16) | (SUBFORMAT_ID_YUV422 << 8) | PIXFORMAT_BPP_YUV422 ),
     PIXFORMAT_YUV422     = (PIXFORMAT_FLAGS_CY | (PIXFORMAT_ID_YUV422 << 16) | (SUBFORMAT_ID_YUV422 << 8) | PIXFORMAT_BPP_YUV422 ),
     PIXFORMAT_YVU422     = (PIXFORMAT_FLAGS_CY | (PIXFORMAT_ID_YUV422 << 16) | (SUBFORMAT_ID_YVU422 << 8) | PIXFORMAT_BPP_YUV422 ),
     PIXFORMAT_JPEG       = (PIXFORMAT_FLAGS_CJ | (PIXFORMAT_ID_JPEG   << 16) | (0                   << 8) | 0                    ),
-    PIXFORMAT_LAST       = 0xFFFFFFFFU,
+    PIXFORMAT_PNG        = (PIXFORMAT_FLAGS_CJ | (PIXFORMAT_ID_PNG    << 16) | (0                   << 8) | 0                    ),
+    PIXFORMAT_LAST       = (0xFFFFFFFFU),
 } pixformat_t;
 
 #define PIXFORMAT_MUTABLE_ANY           \
         PIXFORMAT_BINARY:               \
         case PIXFORMAT_GRAYSCALE:       \
-        case PIXFORMAT_RGB565           \
+        case PIXFORMAT_RGB565:          \
+        case PIXFORMAT_ARGB8            \
 
 #define PIXFORMAT_BAYER_ANY             \
         PIXFORMAT_BAYER_BGGR:           \
@@ -418,17 +425,23 @@ typedef enum {
         PIXFORMAT_YUV422:               \
         case PIXFORMAT_YVU422           \
 
+#define PIXFORMAT_COMPRESSED_ANY        \
+        PIXFORMAT_JPEG:                 \
+        case PIXFORMAT_PNG              \
+
 #define IMLIB_PIXFORMAT_IS_VALID(x)     \
     ((x == PIXFORMAT_BINARY)            \
      || (x == PIXFORMAT_GRAYSCALE)      \
      || (x == PIXFORMAT_RGB565)         \
+     || (x == PIXFORMAT_ARGB8)          \
      || (x == PIXFORMAT_BAYER_BGGR)     \
      || (x == PIXFORMAT_BAYER_GBRG)     \
      || (x == PIXFORMAT_BAYER_GRBG)     \
      || (x == PIXFORMAT_BAYER_RGGB)     \
      || (x == PIXFORMAT_YUV422)         \
      || (x == PIXFORMAT_YVU422)         \
-     || (x == PIXFORMAT_JPEG))          \
+     || (x == PIXFORMAT_JPEG)           \
+     || (x == PIXFORMAT_PNG))           \
 
 #if defined(__BYTE_ORDER__) && (__BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__)
 #define PIXFORMAT_STRUCT            \
@@ -864,11 +877,18 @@ typedef struct jpg_read_settings {
     int32_t jpg_size;
 } jpg_read_settings_t;
 
+typedef struct png_read_settings {
+    int32_t png_w;
+    int32_t png_h;
+    int32_t png_size;
+} png_read_settings_t;
+
 typedef enum save_image_format {
     FORMAT_DONT_CARE,
     FORMAT_BMP,
     FORMAT_PNM,
     FORMAT_JPG,
+    FORMAT_PNG,
     FORMAT_RAW,
 } save_image_format_t;
 
@@ -877,6 +897,7 @@ typedef struct img_read_settings {
         bmp_read_settings_t bmp_rs;
         ppm_read_settings_t ppm_rs;
         jpg_read_settings_t jpg_rs;
+        png_read_settings_t png_rs;
     };
     save_image_format_t format;
 } img_read_settings_t;
@@ -1113,6 +1134,12 @@ void jpeg_read_geometry(FIL *fp, image_t *img, const char *path, jpg_read_settin
 void jpeg_read_pixels(FIL *fp, image_t *img);
 void jpeg_read(image_t *img, const char *path);
 void jpeg_write(image_t *img, const char *path, int quality);
+void png_decompress(image_t *dst, image_t *src);
+bool png_compress(image_t *src, image_t *dst);
+void png_read_geometry(FIL *fp, image_t *img, const char *path, png_read_settings_t *rs);
+void png_read_pixels(FIL *fp, image_t *img);
+void png_read(image_t *img, const char *path);
+void png_write(image_t *img, const char *path);
 bool imlib_read_geometry(FIL *fp, image_t *img, const char *path, img_read_settings_t *rs);
 void imlib_image_operation(image_t *img, const char *path, image_t *other, int scalar, line_op_t op, void *data);
 void imlib_load_image(image_t *img, const char *path);

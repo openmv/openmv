@@ -138,7 +138,7 @@ void framebuffer_update_jpeg_buffer()
 
     if (src->pixfmt != PIXFORMAT_INVALID &&
             framebuffer->streaming_enabled && jpeg_framebuffer->enabled) {
-        if (src->pixfmt == PIXFORMAT_JPEG) {
+        if (src->is_compressed) {
             bool does_not_fit = false;
 
             if (mutex_try_lock_alternate(&jpeg_framebuffer->lock, MUTEX_TID_OMV)) {
@@ -154,7 +154,7 @@ void framebuffer_update_jpeg_buffer()
             }
 
             if (does_not_fit) {
-                printf("Warning: JPEG too big! Trying framebuffer transfer using fallback method!\n");
+                printf("Warning: JPEG/PNG too big! Trying framebuffer transfer using fallback method!\n");
                 int new_size = fb_encode_for_ide_new_size(src);
                 fb_alloc_mark();
                 uint8_t *temp = fb_alloc(new_size, FB_ALLOC_NO_HINT);
