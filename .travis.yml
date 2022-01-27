@@ -90,6 +90,13 @@ jobs:
           paths: ~/build/$TARGET
 
     - stage: build
+      env: TARGET=NICLAV
+      workspaces:
+        create:
+          name: NICLAV_WORKSPACE # workspace names are escaped.
+          paths: ~/build/$TARGET
+
+    - stage: build
       env: TARGET=NANO33
       workspaces:
         create:
@@ -132,12 +139,13 @@ jobs:
           - OPENMV4P_WORKSPACE
           - PORTENTA_WORKSPACE
           - OPENMVPT_WORKSPACE
+          - NICLAV_WORKSPACE
           - NANO33_WORKSPACE
           - ARDUINO_NANO_RP2040_CONNECT_WORKSPACE
           - WINC1500_WORKSPACE
           - CYW4343_WORKSPACE
       script:
-        - zip -r firmware_${TRAVIS_TAG}.zip OPENMV2 OPENMV3 OPENMV4 OPENMV4P PORTENTA OPENMVPT NANO33 ARDUINO_NANO_RP2040_CONNECT WINC1500 CYW4343
+        - zip -r firmware_${TRAVIS_TAG}.zip OPENMV2 OPENMV3 OPENMV4 OPENMV4P PORTENTA OPENMVPT NICLAV NANO33 ARDUINO_NANO_RP2040_CONNECT WINC1500 CYW4343
       deploy:
         provider: releases
         api_key:
