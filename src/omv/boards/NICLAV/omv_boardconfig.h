@@ -12,8 +12,8 @@
 #define __OMV_BOARDCONFIG_H__
 
 // Architecture info
-#define OMV_ARCH_STR            "BORMIO H7 1024" // 33 chars max
-#define OMV_BOARD_TYPE          "BORMIO"
+#define OMV_ARCH_STR            "NICLAV H7 1024" // 33 chars max
+#define OMV_BOARD_TYPE          "NICLAV"
 #define OMV_UNIQUE_ID_ADDR      0x1FF1E800
 #define OMV_UNIQUE_ID_SIZE      3 // 3 words
 
