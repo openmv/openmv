@@ -282,21 +282,11 @@ class rpc_slave(rpc):
                 self.__schedule_cb = None
             if self.__loop_cb is not None: self.__loop_cb()
 
-def __get_can_settings(bit_rate, sample_point):
-    clk = 48000000 if omv.board_type() == "H7" else pyb.freq()[2]
-    for prescaler in range(8):
-        for bs1 in range(16):
-            for bs2 in range(8):
-                if bit_rate == ((clk >> prescaler) // (1 + bs1 + bs2)) and (sample_point * 10) == (((1 + bs1) * 1000) // (1 + bs1 + bs2)):
-                    return (1 << prescaler, bs1, bs2)
-    raise ValueError("Invalid bit_rate and/or sample_point!")
-
 class rpc_can_master(rpc_master):
 
     def __init__(self, message_id=0x7FF, bit_rate=250000, sample_point=75, can_bus=2):
         self.__message_id = message_id
-        can_prescaler, can_bs1, can_bs2 = __get_can_settings(bit_rate, sample_point)
-        self.__can = pyb.CAN(can_bus, pyb.CAN.NORMAL, prescaler=can_prescaler, bs1=can_bs1, bs2=can_bs2, auto_restart=True)
+        self.__can = pyb.CAN(can_bus, pyb.CAN.NORMAL, baudrate=bit_rate, sample_point=sample_point, auto_restart=True)
         self.__can.setfilter(0, pyb.CAN.DUAL if omv.board_type() == "H7" else pyb.CAN.LIST32, 0, [message_id, message_id])
         rpc_master.__init__(self)
 
@@ -330,8 +320,7 @@ class rpc_can_slave(rpc_slave):
 
     def __init__(self, message_id=0x7FF, bit_rate=250000, sample_point=75, can_bus=2):
         self.__message_id = message_id
-        can_prescaler, can_bs1, can_bs2 = __get_can_settings(bit_rate, sample_point)
-        self.__can = pyb.CAN(can_bus, pyb.CAN.NORMAL, prescaler=can_prescaler, bs1=can_bs1, bs2=can_bs2, auto_restart=True)
+        self.__can = pyb.CAN(can_bus, pyb.CAN.NORMAL, baudrate=bit_rate, sample_point=sample_point, auto_restart=True)
         self.__can.setfilter(0, pyb.CAN.DUAL if omv.board_type() == "H7" else pyb.CAN.LIST32, 0, [message_id, message_id])
         rpc_slave.__init__(self)
 
