@@ -1,0 +1,120 @@
+name: '🔥 Build Firmware 🔥'
+
+on:
+  create:
+    tags:
+      - 'v*.*.*'
+
+  push:
+    branches:    
+      - 'master'
+    paths:
+      - 'src/**'
+      - '.github/workflows/*.yml'
+      - '!**/README.md'
+
+  pull_request:
+    branches:    
+      - 'master'
+    paths:
+      - 'src/**'
+      - '.github/workflows/*.yml'
+      - '!**/README.md'
+
+jobs:
+  build:
+    runs-on: ubuntu-20.04
+    strategy:
+      matrix:
+        target: [OPENMV2, OPENMV3, OPENMV4, OPENMV4P, PORTENTA, OPENMVPT, NICLAV, NANO33, ARDUINO_NANO_RP2040_CONNECT]
+    steps:
+    - name: 'Checkout Repository ⏳'
+      uses: actions/checkout@v2
+      with:
+        submodules: false
+
+    - name: 'Update Submodules 🧱'
+      run: source tools/ci.sh && ci_update_submodules
+
+    - name: 'Install Toolchain 🛠'
+      run: source tools/ci.sh && ci_install_arm_gcc
+
+    - name: 'Build Firmware 🏗'
+      run: source tools/ci.sh && ci_build_target ${{ matrix.target }}
+
+    - name: 'Upload Artifacts ⬆'
+      if: github.event_name != 'pull_request'
+      uses: actions/upload-artifact@v2
+      with:
+        name: firmware
+        path: firmware
+        if-no-files-found: error
+
+  release:
+    needs: build
+    runs-on: ubuntu-20.04
+    if: github.event_name == 'create' && startsWith(github.ref, 'refs/tags/v')
+    steps:
+    - name: 'Checkout Repository ⏳'
+      uses: actions/checkout@v2
+      with:
+        submodules: false
+
+    - name: 'Download Artifacts 🤌'
+      uses: actions/download-artifact@v2
+      with:
+        name: firmware
+        path: firmware
+
+    - name: 'Package Firmware 📦'
+      run: source tools/ci.sh && ci_package_firmware_release ${{github.ref_name}}
+
+    - name: '🔥🔥 Create Release 🔥🔥'
+      uses: softprops/action-gh-release@v1
+      with:
+        draft: true
+        files: firmware_*.zip
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: 'Remove Artifacts 🧹🪣'
+      uses: geekyeggo/delete-artifact@v1
+      with:
+        name: firmware
+        failOnError: false
+
+  development:
+    needs: build
+    runs-on: ubuntu-20.04
+    if: github.event_name == 'push'
+    steps:
+    - name: 'Checkout Repository ⏳'
+      uses: actions/checkout@v2
+      with:
+        submodules: false
+
+    - name: 'Download Artifacts 🤌'
+      uses: actions/download-artifact@v2
+      with:
+        name: firmware
+        path: firmware
+
+    - name: 'Package Firmware 📦'
+      run: source tools/ci.sh && ci_package_firmware_development
+
+    - name: '🔥🔥 Create Release 🔥🔥'
+      uses: softprops/action-gh-release@v1
+      with:
+        draft: false
+        name: Development Release
+        tag_name: development
+        body: 'Warning: This a development release and it may contain bugs.'
+        files: firmware/firmware_*.zip
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: 'Remove Artifacts 🧹🪣'
+      uses: geekyeggo/delete-artifact@v1
+      with:
+        name: firmware
+        failOnError: false
