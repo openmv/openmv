@@ -1,4 +1,4 @@
-name: '🔥 Build Firmware 🔥'
+name: 'Building Firmware 🔥'
 
 on:
   create:
@@ -30,21 +30,21 @@ jobs:
       matrix:
         target: [OPENMV2, OPENMV3, OPENMV4, OPENMV4P, PORTENTA, OPENMVPT, NICLAV, NANO33, ARDUINO_NANO_RP2040_CONNECT]
     steps:
-    - name: 'Checkout Repository ⏳'
+    - name: '⏳ Checkout repository'
       uses: actions/checkout@v2
       with:
         submodules: false
 
-    - name: 'Update Submodules 🧱'
+    - name: '🧱 Update submodules'
       run: source tools/ci.sh && ci_update_submodules
 
-    - name: 'Install Toolchain 🛠'
+    - name: '🛠 Install toolchain '
       run: source tools/ci.sh && ci_install_arm_gcc
 
-    - name: 'Build Firmware 🏗'
+    - name: '🏗 Build firmware'
       run: source tools/ci.sh && ci_build_target ${{ matrix.target }}
 
-    - name: 'Upload Artifacts ⬆'
+    - name: '⬆ Upload artifacts'
       if: github.event_name != 'pull_request'
       uses: actions/upload-artifact@v2
       with:
@@ -57,21 +57,21 @@ jobs:
     runs-on: ubuntu-20.04
     if: github.event_name == 'create'
     steps:
-    - name: 'Checkout Repository ⏳'
+    - name: '⏳ Checkout repository'
       uses: actions/checkout@v2
       with:
         submodules: false
 
-    - name: 'Download Artifacts 🤌'
+    - name: '🤌 Download artifacts'
       uses: actions/download-artifact@v2
       with:
         name: firmware
         path: firmware
 
-    - name: 'Package Firmware 📦'
+    - name: '📦 Package firmware'
       run: source tools/ci.sh && ci_package_firmware_release ${{github.ref_name}}
 
-    - name: '🔥🔥 Create Release 🔥🔥'
+    - name: '🔥 Create production release'
       uses: softprops/action-gh-release@v1
       with:
         draft: true
@@ -79,7 +79,7 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-    - name: 'Remove Artifacts 🧹🪣'
+    - name: '🧹 Remove artifacts'
       uses: geekyeggo/delete-artifact@v1
       with:
         name: firmware
@@ -90,32 +90,37 @@ jobs:
     runs-on: ubuntu-20.04
     if: github.event_name == 'push'
     steps:
-    - name: 'Checkout Repository ⏳'
+    - name: '⏳ Checkout repository'
       uses: actions/checkout@v2
       with:
         submodules: false
 
-    - name: 'Download Artifacts 🤌'
+    - name: '🤌 Download artifacts'
       uses: actions/download-artifact@v2
       with:
         name: firmware
         path: firmware
 
-    - name: 'Package Firmware 📦'
+    - name: '📦 Package firmware'
       run: source tools/ci.sh && ci_package_firmware_development
 
-    - name: '🔥🔥 Create Release 🔥🔥'
+    - name: '🏷 Update development tag'
+      uses: EndBug/latest-tag@latest
+      with:
+        tag-name: development
+
+    - name: '🔥 Create development release'
       uses: softprops/action-gh-release@v1
       with:
         draft: false
         name: Development Release
         tag_name: development
-        body: 'Warning: This a development release and it may contain bugs.'
+        body: 'WARNING: This a development release and it may be unstable.'
         files: firmware/firmware_*.zip
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-    - name: 'Remove Artifacts 🧹🪣'
+    - name: '🧹 Remove artifacts'
       uses: geekyeggo/delete-artifact@v1
       with:
         name: firmware
