@@ -20,6 +20,7 @@
 #include "py_image.h"
 #include "ff_wrapper.h"
 #include "py_tf.h"
+#include "libtf_builtin_models.h"
 
 #define GRAYSCALE_RANGE ((COLOR_GRAYSCALE_MAX) - (COLOR_GRAYSCALE_MIN))
 #define GRAYSCALE_MID   (((GRAYSCALE_RANGE) + 1) / 2)
@@ -155,11 +156,17 @@ STATIC mp_obj_t int_py_tf_load(mp_obj_t path_obj, bool alloc_mode, bool helper_m
     const char *path = mp_obj_str_get_str(path_obj);
     py_tf_model_obj_t *tf_model = m_new_obj(py_tf_model_obj_t);
     tf_model->base.type = &py_tf_model_type;
+    tf_model->model_data = NULL;
 
-    if (!strcmp(path, "person_detection")) {
-        tf_model->model_data = (unsigned char *) g_person_detect_model_data;
-        tf_model->model_data_len = g_person_detect_model_data_len;
-    } else {
+    for (int i=0; i<MP_ARRAY_SIZE(libtf_builtin_models); i++) {
+        const libtf_builtin_model_t *model = &libtf_builtin_models[i];
+        if (!strcmp(path, model->name)) {
+            tf_model->model_data = (unsigned char *) model->data;
+            tf_model->model_data_len = model->size;
+        }
+    }
+
+    if (tf_model->model_data == NULL) {
         #if defined(IMLIB_ENABLE_IMAGE_FILE_IO)
         FIL fp;
         file_read_open(&fp, path);
@@ -207,11 +214,30 @@ STATIC mp_obj_t int_py_tf_load(mp_obj_t path_obj, bool alloc_mode, bool helper_m
 
 STATIC mp_obj_t py_tf_load(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
-    return int_py_tf_load(args[0],
-                          py_helper_keyword_int(n_args, args, 1, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_load_to_fb), false),
-                          false);
+    bool alloc_mode = py_helper_keyword_int(n_args, args, 1, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_load_to_fb), false);
+    return int_py_tf_load(args[0], alloc_mode, false);
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_tf_load_obj, 1, py_tf_load);
+
+STATIC mp_obj_t py_tf_load_builtin_model(mp_obj_t path_obj)
+{
+    mp_obj_t net = int_py_tf_load(path_obj, false, false);
+    const char *path = mp_obj_str_get_str(path_obj);
+    mp_obj_t labels = mp_obj_new_list(0, NULL);
+
+    for (int i=0; i<MP_ARRAY_SIZE(libtf_builtin_models); i++) {
+        const libtf_builtin_model_t *model = &libtf_builtin_models[i];
+        if (!strcmp(path, model->name)) {
+            for (int l=0; l < model->n_labels; l++) {
+                const char *label = model->labels[l];
+                mp_obj_list_append(labels, mp_obj_new_str(label, strlen(label)));
+            }
+            break;
+        }
+    }
+    return mp_obj_new_tuple(2, (mp_obj_t []) {labels, net});
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_tf_load_builtin_model_obj, py_tf_load_builtin_model);
 
 STATIC mp_obj_t py_tf_free_from_fb()
 {
@@ -775,17 +801,19 @@ STATIC const mp_obj_type_t py_tf_model_type = {
 STATIC const mp_rom_map_elem_t globals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR___name__),        MP_OBJ_NEW_QSTR(MP_QSTR_tf) },
 #ifdef IMLIB_ENABLE_TF
-    { MP_ROM_QSTR(MP_QSTR_load),            MP_ROM_PTR(&py_tf_load_obj) },
-    { MP_ROM_QSTR(MP_QSTR_free_from_fb),    MP_ROM_PTR(&py_tf_free_from_fb_obj) },
-    { MP_ROM_QSTR(MP_QSTR_classify),        MP_ROM_PTR(&py_tf_classify_obj) },
-    { MP_ROM_QSTR(MP_QSTR_segment),         MP_ROM_PTR(&py_tf_segment_obj) },
-    { MP_ROM_QSTR(MP_QSTR_detect),          MP_ROM_PTR(&py_tf_detect_obj) },
+    { MP_ROM_QSTR(MP_QSTR_load),                MP_ROM_PTR(&py_tf_load_obj) },
+    { MP_ROM_QSTR(MP_QSTR_load_builtin_model),  MP_ROM_PTR(&py_tf_load_builtin_model_obj) },
+    { MP_ROM_QSTR(MP_QSTR_free_from_fb),        MP_ROM_PTR(&py_tf_free_from_fb_obj) },
+    { MP_ROM_QSTR(MP_QSTR_classify),            MP_ROM_PTR(&py_tf_classify_obj) },
+    { MP_ROM_QSTR(MP_QSTR_segment),             MP_ROM_PTR(&py_tf_segment_obj) },
+    { MP_ROM_QSTR(MP_QSTR_detect),              MP_ROM_PTR(&py_tf_detect_obj) },
 #else
-    { MP_ROM_QSTR(MP_QSTR_load),            MP_ROM_PTR(&py_func_unavailable_obj) },
-    { MP_ROM_QSTR(MP_QSTR_free_from_fb),    MP_ROM_PTR(&py_func_unavailable_obj) },
-    { MP_ROM_QSTR(MP_QSTR_classify),        MP_ROM_PTR(&py_func_unavailable_obj) },
-    { MP_ROM_QSTR(MP_QSTR_segment),         MP_ROM_PTR(&py_func_unavailable_obj) },
-    { MP_ROM_QSTR(MP_QSTR_detect),          MP_ROM_PTR(&py_func_unavailable_obj) }
+    { MP_ROM_QSTR(MP_QSTR_load),                MP_ROM_PTR(&py_func_unavailable_obj) },
+    { MP_ROM_QSTR(MP_QSTR_load_builtin_model),  MP_ROM_PTR(&py_func_unavailable_obj) },
+    { MP_ROM_QSTR(MP_QSTR_free_from_fb),        MP_ROM_PTR(&py_func_unavailable_obj) },
+    { MP_ROM_QSTR(MP_QSTR_classify),            MP_ROM_PTR(&py_func_unavailable_obj) },
+    { MP_ROM_QSTR(MP_QSTR_segment),             MP_ROM_PTR(&py_func_unavailable_obj) },
+    { MP_ROM_QSTR(MP_QSTR_detect),              MP_ROM_PTR(&py_func_unavailable_obj) }
 #endif // IMLIB_ENABLE_TF
 };
 
