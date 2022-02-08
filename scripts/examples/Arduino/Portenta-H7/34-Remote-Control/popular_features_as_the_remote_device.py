@@ -115,11 +115,13 @@ def face_detection(data):
 # When called returns if there's a "person" or "no_person" within view.
 #
 # data is unused
+labels, net = tf.load_builtin_model('person_detection')
 def person_detection(data):
+    global net
     sensor.set_pixformat(sensor.GRAYSCALE)
     sensor.set_framesize(sensor.QVGA)
-    scores = tf.classify("person_detection", sensor.snapshot())[0].output()
-    return ['person', 'no_person'][scores.index(max(scores))].encode()
+    scores = net.classify(sensor.snapshot())[0].output()
+    return labels[scores.index(max(scores))].encode()
 
 # When called returns the payload string for the largest qrcode
 # within the OpenMV Cam's field-of-view.
