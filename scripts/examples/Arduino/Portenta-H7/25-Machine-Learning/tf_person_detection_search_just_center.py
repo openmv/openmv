@@ -15,8 +15,7 @@ sensor.set_windowing((240, 240))       # Set 240x240 window.
 sensor.skip_frames(time=2000)          # Let the camera adjust.
 
 # Load the built-in person detection network (the network is in your OpenMV Cam's firmware).
-net = tf.load('person_detection')
-labels = ['person', 'no_person']
+labels, net = tf.load_builtin_model('person_detection')
 
 clock = time.clock()
 while(True):
