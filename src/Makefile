@@ -34,6 +34,7 @@ MKDIR   = $(Q)mkdir
 ECHO    = $(Q)@echo
 MAKE    = $(Q)make
 CAT     = $(Q)cat
+TFLITE2C = tflite2c.py
 
 # Targets
 TARGET ?= OPENMV4
@@ -43,6 +44,7 @@ FIRMWARE = firmware
 # Directories
 TOP_DIR=$(shell pwd)
 BUILD=$(TOP_DIR)/build
+TOOLS=$(TOP_DIR)/../tools
 FW_DIR=$(BUILD)/bin
 OMV_DIR=omv
 UVC_DIR=uvc

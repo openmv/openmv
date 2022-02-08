@@ -141,7 +141,7 @@
 #define IMLIB_ENABLE_DESCRIPTOR
 
 // Enable find_hog()
-#define IMLIB_ENABLE_HOG
+// #define IMLIB_ENABLE_HOG
 
 // Enable selective_search()
 // #define IMLIB_ENABLE_SELECTIVE_SEARCH

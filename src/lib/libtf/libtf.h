@@ -12,10 +12,6 @@
 extern "C" {
 #endif
 
-// Built-in person deteciton model.
-extern const unsigned char g_person_detect_model_data[];
-extern const int g_person_detect_model_data_len;
-
 typedef enum libtf_datatype {
     LIBTF_DATATYPE_UINT8,
     LIBTF_DATATYPE_INT8,
