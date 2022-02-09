@@ -13,12 +13,6 @@ PORT = 8000 # Arbitrary non-privileged port
 
 # Reset sensor
 sensor.reset()
-
-# Set sensor settings
-sensor.set_contrast(1)
-sensor.set_brightness(1)
-sensor.set_saturation(1)
-sensor.set_gainceiling(16)
 sensor.set_framesize(sensor.QQVGA)
 sensor.set_pixformat(sensor.RGB565)
 
