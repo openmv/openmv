@@ -727,13 +727,13 @@ int winc_fw_version(winc_fwver_t *wfwver)
     // Read FW, Driver and HW versions.
     m2m_wifi_get_firmware_version(&fwver);
 
-	wfwver->fw_major  = fwver.u8FirmwareMajor;     // Firmware version major number.
-	wfwver->fw_minor  = fwver.u8FirmwareMinor;     // Firmware version minor number.
-	wfwver->fw_patch  = fwver.u8FirmwarePatch;     // Firmware version patch number.
-	wfwver->drv_major = fwver.u8DriverMajor;       // Driver version major number.
-	wfwver->drv_minor = fwver.u8DriverMinor;       // Driver version minor number.
-	wfwver->drv_patch = fwver.u8DriverPatch;       // Driver version patch number.
-	wfwver->chip_id   = fwver.u32Chipid;           // HW revision number (chip ID).
+	wfwver->fw_major  = fwver.u8FirmwareMajor;          // Firmware version major number.
+	wfwver->fw_minor  = fwver.u8FirmwareMinor;          // Firmware version minor number.
+	wfwver->fw_patch  = fwver.u8FirmwarePatch;          // Firmware version patch number.
+	wfwver->drv_major = M2M_RELEASE_VERSION_MAJOR_NO;   // Driver version major number.
+	wfwver->drv_minor = M2M_RELEASE_VERSION_MINOR_NO;   // Driver version minor number.
+	wfwver->drv_patch = M2M_RELEASE_VERSION_PATCH_NO;   // Driver version patch number.
+	wfwver->chip_id   = fwver.u32Chipid;                // HW revision number (chip ID).
     return 0;
 }
 
