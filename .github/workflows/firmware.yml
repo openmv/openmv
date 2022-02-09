@@ -1,13 +1,9 @@
 name: 'Building Firmware 🔥'
 
 on:
-  create:
-    branches:
-      - "!**"
+  push:
     tags:
       - 'v*.*.*'
-
-  push:
     branches:    
       - 'master'
     paths:
@@ -55,7 +51,7 @@ jobs:
   release:
     needs: build
     runs-on: ubuntu-20.04
-    if: github.event_name == 'create' && startsWith(github.ref, 'refs/tags/v')
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
     steps:
     - name: '⏳ Checkout repository'
       uses: actions/checkout@v2
@@ -88,7 +84,7 @@ jobs:
   development:
     needs: build
     runs-on: ubuntu-20.04
-    if: github.event_name == 'push'
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') == false
     steps:
     - name: '⏳ Checkout repository'
       uses: actions/checkout@v2
