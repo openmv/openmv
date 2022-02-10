@@ -1,4 +1,4 @@
-name: 'Building Firmware 🔥'
+name: 'Firmware Build 🔥'
 
 on:
   push:

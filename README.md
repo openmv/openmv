@@ -1,3 +1,5 @@
+[![Firmware Build 🔥](https://github.com/openmv/openmv/actions/workflows/firmware.yml/badge.svg)](https://github.com/openmv/openmv/actions/workflows/firmware.yml)
+
 ## OpenMV (Open-Source Machine Vision)
 
 <p align="center">
