@@ -408,27 +408,35 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/drivers/,\
 
 ifeq ($(MICROPY_PY_ULAB), 1)
 FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/modules/ulab/,\
-	code/scipy/optimize/optimize.o      \
-	code/scipy/signal/signal.o          \
-	code/scipy/special/special.o        \
-	code/ndarray_operators.o            \
-	code/ulab_tools.o                   \
 	code/ndarray.o                      \
-	code/numpy/approx/approx.o          \
-	code/numpy/compare/compare.o        \
-	code/ulab_create.o                  \
+	code/ndarray_operators.o            \
+	code/ndarray_properties.o           \
+	code/numpy/approx.o                 \
+	code/numpy/carray/carray.o          \
+	code/numpy/carray/carray_tools.o    \
+	code/numpy/compare.o                \
+	code/numpy/create.o                 \
 	code/numpy/fft/fft.o                \
 	code/numpy/fft/fft_tools.o          \
-	code/numpy/filter/filter.o          \
+	code/numpy/filter.o                 \
 	code/numpy/linalg/linalg.o          \
 	code/numpy/linalg/linalg_tools.o    \
-	code/numpy/numerical/numerical.o    \
-	code/numpy/poly/poly.o              \
-	code/numpy/vector/vector.o          \
-	code/user/user.o                    \
+	code/numpy/ndarray/ndarray_iter.o   \
+	code/numpy/numerical.o              \
 	code/numpy/numpy.o                  \
+	code/numpy/poly.o                   \
+	code/numpy/stats.o                  \
+	code/numpy/transform.o              \
+	code/numpy/vector.o                 \
+	code/scipy/linalg/linalg.o          \
+	code/scipy/optimize/optimize.o      \
 	code/scipy/scipy.o                  \
+	code/scipy/signal/signal.o          \
+	code/scipy/special/special.o        \
 	code/ulab.o                         \
+	code/ulab_tools.o                   \
+	code/user/user.o                    \
+	code/utils/utils.o                  \
 	)
 endif
 
