@@ -223,27 +223,35 @@ if(MICROPY_PY_ULAB)
     )
 
     set(ULAB_SOURCES
-	    ${MICROPY_ULAB_DIR}/code/scipy/optimize/optimize.c
-	    ${MICROPY_ULAB_DIR}/code/scipy/signal/signal.c
-	    ${MICROPY_ULAB_DIR}/code/scipy/special/special.c
-	    ${MICROPY_ULAB_DIR}/code/ndarray_operators.c
-	    ${MICROPY_ULAB_DIR}/code/ulab_tools.c
-	    ${MICROPY_ULAB_DIR}/code/ndarray.c
-	    ${MICROPY_ULAB_DIR}/code/numpy/approx/approx.c
-	    ${MICROPY_ULAB_DIR}/code/numpy/compare/compare.c
-	    ${MICROPY_ULAB_DIR}/code/ulab_create.c
-	    ${MICROPY_ULAB_DIR}/code/numpy/fft/fft.c
-	    ${MICROPY_ULAB_DIR}/code/numpy/fft/fft_tools.c
-	    ${MICROPY_ULAB_DIR}/code/numpy/filter/filter.c
-	    ${MICROPY_ULAB_DIR}/code/numpy/linalg/linalg.c
-	    ${MICROPY_ULAB_DIR}/code/numpy/linalg/linalg_tools.c
-	    ${MICROPY_ULAB_DIR}/code/numpy/numerical/numerical.c
-	    ${MICROPY_ULAB_DIR}/code/numpy/poly/poly.c
-	    ${MICROPY_ULAB_DIR}/code/numpy/vector/vector.c
-	    ${MICROPY_ULAB_DIR}/code/user/user.c
-	    ${MICROPY_ULAB_DIR}/code/numpy/numpy.c
-	    ${MICROPY_ULAB_DIR}/code/scipy/scipy.c
-	    ${MICROPY_ULAB_DIR}/code/ulab.c
+        ${MICROPY_ULAB_DIR}/code/ndarray.c
+        ${MICROPY_ULAB_DIR}/code/ndarray_operators.c
+        ${MICROPY_ULAB_DIR}/code/ndarray_properties.c
+        ${MICROPY_ULAB_DIR}/code/numpy/approx.c
+        ${MICROPY_ULAB_DIR}/code/numpy/carray/carray.c
+        ${MICROPY_ULAB_DIR}/code/numpy/carray/carray_tools.c
+        ${MICROPY_ULAB_DIR}/code/numpy/compare.c
+        ${MICROPY_ULAB_DIR}/code/numpy/create.c
+        ${MICROPY_ULAB_DIR}/code/numpy/fft/fft.c
+        ${MICROPY_ULAB_DIR}/code/numpy/fft/fft_tools.c
+        ${MICROPY_ULAB_DIR}/code/numpy/filter.c
+        ${MICROPY_ULAB_DIR}/code/numpy/linalg/linalg.c
+        ${MICROPY_ULAB_DIR}/code/numpy/linalg/linalg_tools.c
+        ${MICROPY_ULAB_DIR}/code/numpy/ndarray/ndarray_iter.c
+        ${MICROPY_ULAB_DIR}/code/numpy/numerical.c
+        ${MICROPY_ULAB_DIR}/code/numpy/numpy.c
+        ${MICROPY_ULAB_DIR}/code/numpy/poly.c
+        ${MICROPY_ULAB_DIR}/code/numpy/stats.c
+        ${MICROPY_ULAB_DIR}/code/numpy/transform.c
+        ${MICROPY_ULAB_DIR}/code/numpy/vector.c
+        ${MICROPY_ULAB_DIR}/code/scipy/linalg/linalg.c
+        ${MICROPY_ULAB_DIR}/code/scipy/optimize/optimize.c
+        ${MICROPY_ULAB_DIR}/code/scipy/scipy.c
+        ${MICROPY_ULAB_DIR}/code/scipy/signal/signal.c
+        ${MICROPY_ULAB_DIR}/code/scipy/special/special.c
+        ${MICROPY_ULAB_DIR}/code/ulab.c
+        ${MICROPY_ULAB_DIR}/code/ulab_tools.c
+        ${MICROPY_ULAB_DIR}/code/user/user.c
+        ${MICROPY_ULAB_DIR}/code/utils/utils.c
     )
 
     target_sources(${MICROPY_TARGET} PRIVATE ${ULAB_SOURCES})
