@@ -25,6 +25,7 @@ jobs:
     strategy:
       matrix:
         target: [OPENMV2, OPENMV3, OPENMV4, OPENMV4P, PORTENTA, OPENMVPT, NICLAV, NANO33, ARDUINO_NANO_RP2040_CONNECT]
+      fail-fast: false
     steps:
     - name: '⏳ Checkout repository'
       uses: actions/checkout@v2
