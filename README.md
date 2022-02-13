@@ -1,14 +1,13 @@
 [![Firmware Build 🔥](https://github.com/openmv/openmv/actions/workflows/firmware.yml/badge.svg)](https://github.com/openmv/openmv/actions/workflows/firmware.yml)
-
 ## OpenMV (Open-Source Machine Vision)
 
 <p align="center">
 <img style="border: 10px solid white;" src="https://raw.githubusercontent.com/openmv/openmv-media/master/boards/openmv-cam/v3/web-new-cam-v3-angle.jpg" width="320" height="320">
 </p>
 
-The OpenMV project aims at making machine vision more accessible to beginners by developing a user-friendly, open-source, low-cost machine vision platform.
+The OpenMV project aims at making machine vision more accessible to beginners by developing a user-friendly, open-source, low-cost machine vision platform. OpenMV cameras are programmable in Python3 and come with an extensive set of image processing functions such as face detection, keypoints descriptors, color tracking, QR and Bar code decoding, AprilTags, GIF and MJPEG recording, and more.
 
-OpenMV cameras are programmable in Python3 and come with an extensive set of image processing functions such as face detection, keypoints descriptors, color tracking, QR and Bar code decoding, AprilTags, GIF and MJPEG recording, and more. Additionally, the OpenMV Cam comes with a cross-platform IDE (based on Qt Creator) designed specifically to support programmable cameras. The IDE allows viewing the camera's frame buffer, accessing sensor controls, uploading scripts to the camera via serial over USB (or WiFi/BLE if available) and includes a set of image processing tools to generate tags, thresholds, keypoints, and etc...
+The OpenMV Cam comes with a cross-platform IDE (based on Qt Creator) designed specifically to support programmable cameras. The IDE allows viewing the camera's frame buffer, accessing sensor controls, uploading scripts to the camera via serial over USB (or WiFi/BLE if available) and includes a set of image processing tools to generate tags, thresholds, keypoints, and etc...
 
 The first generation of OpenMV cameras is based on STM32 ARM Cortex-M Digital Signal Processors (DSPs) and OmniVision sensors. The boards have built-in RGB and IR LEDs, USB FS support for programming and video streaming, a uSD socket, and I/O headers breaking out PWM, UARTs, SPI, I2C, CAN, and more. Additionally, the OpenMV Cam supports extension modules (shields) using the I/O headers for adding a WiFi adapter, a LCD Display, a Thermal Vision Sensor, a Motor Driver, and more.
 
@@ -50,12 +49,11 @@ You can find examples that run on the OpenMV Cam under `File->Examples->Remote C
 
 If you only need to read `print()` output from a script running on the OpenMV Cam over USB then you only need to open the OpenMV Cam's Virtual COM Port and read lines of text from the serial port. For example (using [pyserial](https://pythonhosted.org/pyserial/index.html)):
 
-    import serial
-
-    ser = serial.Serial("COM3", timeout=1, dsrdtr=False)
-
-    while True:
-        line = ser.readline().strip()
-        if line: print(line)
-
+```Python
+import serial
+ser = serial.Serial("COM3", timeout=1, dsrdtr=False)
+while True:
+    line = ser.readline().strip()
+    if line: print(line)
+```
 The above code works for Windows, Mac, or Linux. You just need to change the above port name to the same name of the USB VCP port the OpenMV Cam shows up as (it will be under `/dev/` on Mac or Linux). Note that if you are opening the USB VCP port using another serial library and/or language make sure to set the DTR line to false - otherwise the OpenMV Cam will suppress printed output.
