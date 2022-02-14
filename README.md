@@ -1,16 +1,20 @@
 [![Firmware Build 🔥](https://github.com/openmv/openmv/actions/workflows/firmware.yml/badge.svg)](https://github.com/openmv/openmv/actions/workflows/firmware.yml)
-## OpenMV (Open-Source Machine Vision)
+[![GitHub license](https://img.shields.io/github/license/openmv/openmv?label=license%20%E2%9A%96)](https://github.com/openmv/openmv/blob/master/LICENSE)
+![GitHub release (latest SemVer)](https://img.shields.io/github/v/release/openmv/openmv?sort=semver)
+[![GitHub forks](https://img.shields.io/github/forks/openmv/openmv?color=green)](https://github.com/openmv/openmv/network)
+[![GitHub stars](https://img.shields.io/github/stars/openmv/openmv?color=yellow)](https://github.com/openmv/openmv/stargazers)
+[![GitHub issues](https://img.shields.io/github/issues/openmv/openmv?color=orange)](https://github.com/openmv/openmv/issues)
 
-<p align="center">
-<img style="border: 10px solid white;" src="https://raw.githubusercontent.com/openmv/openmv-media/master/boards/openmv-cam/v3/web-new-cam-v3-angle.jpg" width="320" height="320">
-</p>
+<img  width="480" src="https://raw.githubusercontent.com/openmv/openmv-media/master/logos/openmv-logo/logo.png">
 
-The OpenMV project aims at making machine vision more accessible to beginners by developing a user-friendly, open-source, low-cost machine vision platform. OpenMV cameras are programmable in Python3 and come with an extensive set of image processing functions such as face detection, keypoints descriptors, color tracking, QR and Bar code decoding, AprilTags, GIF and MJPEG recording, and more.
+## Open-source Machine Vision
+
+The OpenMV project aims at making machine vision more accessible to beginners by developing a user-friendly, open-source, low-cost machine vision platform. OpenMV cameras are programmable in Python3 and come with an extensive set of machine learning and image processing functions such as face detection, keypoints descriptors, color tracking, QR and Bar code decoding, AprilTags, GIF and MJPEG recording, and more.
 
 The OpenMV Cam comes with a cross-platform IDE (based on Qt Creator) designed specifically to support programmable cameras. The IDE allows viewing the camera's frame buffer, accessing sensor controls, uploading scripts to the camera via serial over USB (or WiFi/BLE if available) and includes a set of image processing tools to generate tags, thresholds, keypoints, and etc...
+<p align="center"><img width="320" src="https://raw.githubusercontent.com/openmv/openmv-media/master/boards/openmv-cam/v3/web-new-cam-v3-angle.jpg"></p>
 
 The first generation of OpenMV cameras is based on STM32 ARM Cortex-M Digital Signal Processors (DSPs) and OmniVision sensors. The boards have built-in RGB and IR LEDs, USB FS support for programming and video streaming, a uSD socket, and I/O headers breaking out PWM, UARTs, SPI, I2C, CAN, and more. Additionally, the OpenMV Cam supports extension modules (shields) using the I/O headers for adding a WiFi adapter, a LCD Display, a Thermal Vision Sensor, a Motor Driver, and more.
-
 The OpenMV project was successfully funded via Kickstarter back in 2015 and has come a long way since then. For more information, please visit [https://openmv.io](https://openmv.io)
 
 ## Building Firmware
