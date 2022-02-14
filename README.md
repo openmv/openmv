@@ -7,7 +7,14 @@
 
 <img  width="480" src="https://raw.githubusercontent.com/openmv/openmv-media/master/logos/openmv-logo/logo.png">
 
-## Open-source Machine Vision
+# The Open-source Machine Vision Project
+  - [Overview](#overview)
+  - [ Building the firmware from source](#building-the-firmware-from-source)
+  - [Tensorflow support](#tensorflow-support)
+  - [Interface library](#interface-library)
+    + [Note on serial port](#note-on-serial-port)
+
+## Overview
 
 The OpenMV project aims at making machine vision more accessible to beginners by developing a user-friendly, open-source, low-cost machine vision platform. OpenMV cameras are programmable in Python3 and come with an extensive set of machine learning and image processing functions such as face detection, keypoints descriptors, color tracking, QR and Bar code decoding, AprilTags, GIF and MJPEG recording, and more.
 
@@ -17,11 +24,14 @@ The OpenMV Cam comes with a cross-platform IDE (based on Qt Creator) designed sp
 The first generation of OpenMV cameras is based on STM32 ARM Cortex-M Digital Signal Processors (DSPs) and OmniVision sensors. The boards have built-in RGB and IR LEDs, USB FS support for programming and video streaming, a uSD socket, and I/O headers breaking out PWM, UARTs, SPI, I2C, CAN, and more. Additionally, the OpenMV Cam supports extension modules (shields) using the I/O headers for adding a WiFi adapter, a LCD Display, a Thermal Vision Sensor, a Motor Driver, and more.
 The OpenMV project was successfully funded via Kickstarter back in 2015 and has come a long way since then. For more information, please visit [https://openmv.io](https://openmv.io)
 
-## Building Firmware
+## Building the firmware from source
 
-For information on how to build the firmware for the OpenMV Cam please see our [Firmware Guide](src/README.md).
+For more information on how to build the OpenMV firmware from source, see [Building the Firmware From Source](https://github.com/openmv/openmv/blob/master/src/README.md)
 
-## Interface Library
+## Tensorflow support
+The OpenMV firmware supports loading quantized Tensorflow Lite models. The firmware supports loading external models that reside on the filesystem to memory (on boards with SDRAM), and internal models (embedded into the firmware) in place. To load an external Tensorflow model from the filesystem from Python use [`tf`](https://docs.openmv.io/library/omv.tf.html) Python module. For information on embedding Tensorflow models into the firmware, and loading them, please see [Tensorflow Support](https://github.com/openmv/openmv/edit/master/src/lib/libtf/README.md).
+
+## Interface library
 
 The OpenMV Cam comes built-in with an RPC (Remote Python/Procedure Call) library which makes it easy to connect the OpenMV Cam to your computer, a SBC (single board computer) like the RaspberryPi or Beaglebone, or a microcontroller like the Arduino or ESP8266/32. The RPC Interface Library works over:
 
@@ -49,9 +59,9 @@ You can find examples that run on the OpenMV Cam under `File->Examples->Remote C
   * Works on all Arduino variants.
   * CAN support via the MCP2515 over SPI or via the CAN peripheral on the ESP32.
 
-#### Note 
+#### Note on serial port
 
-If you only need to read `print()` output from a script running on the OpenMV Cam over USB then you only need to open the OpenMV Cam's Virtual COM Port and read lines of text from the serial port. For example (using [pyserial](https://pythonhosted.org/pyserial/index.html)):
+If you only need to read `print()` output from a script running on an OpenMV camera over USB, then you only need to open the OpenMV camera Virtual COM Port and read lines of text from the serial port. For example (using [pyserial](https://pythonhosted.org/pyserial/index.html)):
 
 ```Python
 import serial
