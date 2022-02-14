@@ -1,4 +1,11 @@
 # Change Log
+## [4.2.2](https://github.com/openmv/openmv/releases/tag/v4.2.2) (2022-02-14)
+* ulab: Update submodule to v4.0.0.
+* WINC1500: Update firmware to v19.7.6.
+* libtf: Update EdgeImpulse to v2.5.0.
+* libtf: Add support for replacing/adding built-in models.
+* github: Add Workflows.
+
 ## [4.2.1](https://github.com/openmv/openmv/releases/tag/v4.2.1) (2022-01-09)
 * Make MDMA fully offload image transfer by default.
 * Fix framebuffer cache bug (invalidate framebuffer cache before using).
