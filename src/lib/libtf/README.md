@@ -24,7 +24,7 @@ no_mask
 
 After replacing/adding a Tensorflow model, rebuild the firmware to use the new model. The build system will automatically detect the models and convert them to C structs that get embedded into the firmware image. For more information on how to build the OpenMV firmware from source, see [Building the Firmware From Source](https://github.com/openmv/openmv/blob/master/src/README.md)
 
-## Loading Embedded Tensorflow Models
+## Loading embedded Tensorflow models
 
 Built-in models can be loaded with `tf.load_builtin_model()` function, for example the following loads the built-in person detection model:
 ```Python
