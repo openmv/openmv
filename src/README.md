@@ -1,10 +1,103 @@
-# Firmware Guide
+# Building the Firmware From Source
 
-This guide covers how to install the OpenMV Cam firmware development environment on Windows, Mac, and Linux.
+This guide covers installing a development environment and building the OpenMV firmware from source on Linux.
+For information on OpenMV Camera general usage, please see the [forums](http://openmv.io/forums) or [docs](http://openmv.io/docs).
+- [Docker Build](#docker-build)
+- [Linux Build](#linux-build)
+  * [Install build dependencies](#install-build-dependencies)
+  * [Install GNU ARM toolchain](#install-gnu-arm-toolchain)
+  * [Clone the repository](#clone-the-repository)
+    + [Shallow clone](#shallow-clone)
+  * [Build the firmware](#build-the-firmware)
+    + [Build artifacts](#build-artifacts)
+    + [Notes on building the firmware in a Virtual Machine](#notes-on-building-the-firmware-in-a-virtual-machine)
+- [Windows Build](#windows-build)
+- [Mac Build](#mac-build)
+- [Flashing the Firmware](#flashing-the-firmware)
+- [The OpenMV bootloader](#the-openmv-bootloader)
+    + [Note about STM32 DFU bootloader](#note-about-stm32-dfu-bootloader)
+- [Contributing to the project](#contributing-to-the-project)
+    + [Contribution guidelines](#contribution-guidelines)
 
-**If you are looking for information on how to use the OpenMV Cam from the python level interface please see our [forums](http://openmv.io/forums) or [docs](http://openmv.io/docs). This README details how to setup the development environment to compile your OpenMV Cam's firmware.**
+## Docker Build
 
-# Windows Installation
+The easiest way to build the firmware from source is to use the docker image. To build the firmware using docker, follow these steps:
+
+```bash
+git clone https://github.com/openmv/openmv.git --depth=50
+cd openmv/docker
+make TARGET=<TARGET_NAME>
+```
+
+When the firmware build is done, the build artifacts should be located in `docker/build/<TARGET_NAME>`.
+> Note: `TARGET_NAME` is one of the [supported boards](https://github.com/openmv/openmv/tree/master/src/omv/boards). 
+
+## Linux Build
+
+### Install build dependencies
+Install the following packages or their equivalents based on your distro:
+```bash
+sudo apt-get update
+sudo apt-get install git build-essential
+```
+
+### Install GNU ARM toolchain
+This step can be skipped if your distro package manager provides an ARM toolchain, however this is the gcc toolchain currently in use by the developers. Note the following commands install the toolchain to `/usr/local/arm-none-eabi` and then add it to the PATH variable, for the current terminal session. The toolchain will need to be added to the PATH again if a new terminal session is started. Note the toolchain can be installed in any other location as long as it's added to the PATH.
+```
+TOOLCHAIN_PATH=/usr/local/arm-none-eabi
+TOOLCHAIN_URL="https://armkeil.blob.core.windows.net/developer/Files/downloads/gnu-rm/10-2020q4/gcc-arm-none-eabi-10-2020-q4-major-x86_64-linux.tar.bz2"
+sudo mkdir ${TOOLCHAIN_PATH}
+wget --no-check-certificate -O - ${TOOLCHAIN_URL} | sudo tar --strip-components=1 -jx -C ${TOOLCHAIN_PATH}
+export PATH=${TOOLCHAIN_PATH}/bin:${PATH}
+```
+
+### Clone the repository
+To clone the OpenMV GitHub repository, run the following command:
+```bash
+git clone --recursive https://github.com/openmv/openmv.git
+```
+
+#### Shallow clone
+The above command will clone this repository along with all of its submodules recursively, which may take a very long time to finish. Alternatively, you can make a shallow clone of the repository with the following commands:
+```bash
+git clone --depth=1 https://github.com/openmv/openmv.git
+cd openmv
+git submodule update --init --depth=1 --no-single-branch
+git -C src/micropython/ submodule update --init --depth=1
+```
+
+### Build the firmware
+To build the firmware, run the following commands inside the openmv repository:
+```bash
+cd openmv
+make -j$(nproc) -C src/micropython/mpy-cross   # Builds Micropython mpy cross-compiler
+make -j$(nproc) TARGET=<TRAGET_NAME> -C src    # Builds the OpenMV firmware
+```
+
+> Note: `TARGET_NAME` is one of the [supported boards](https://github.com/openmv/openmv/tree/master/src/omv/boards).
+
+### Build artifacts
+When the firmware build is done, the build artifacts should be located in `src/build/bin`. Note the build artifacts depend on the target board, for example whether a bootloader or UVC binaries are generated or not depends on the target board's configuration. However, generally speaking the following files are generated:
+```
+* bootloader.bin  # Bootloader Binary Image (not directly used)
+* bootloader.dfu  # Bootloader DFU Image (not directly used)
+* bootloader.elf  # Bootloader ELF Image (used to generate the BIN/DFU Files)
+* firmware.bin    # Firmware Binary Image (Used by `Tools->Run Bootloader` in OpenMV IDE)
+* firmware.dfu    # Firmware DFU Image (not directly used)
+* firmware.elf    # Firmware ELF Image (used to generate the BIN/DFU Files)
+* openmv.bin      # Combined Bootloader+Firmware Binary Image (not directly used)
+* openmv.dfu      # Combined Bootloader+Firmware DFU Image (Used by `Tools->Run Bootloader` in OpenMV IDE)
+* uvc.bin         # Alternative UVC Binary Image (not directly used)
+* uvc.dfu         # Alternative UVC DFU Image (not directly used)
+* uvc.elf         # Alternative UVC ELF Image (used to generate the BIN/DFU Files)
+```
+
+### Notes on building the firmware in a Virtual Machine
+* When building the firmware inside of a Linux Virtual Machine, shared folders should be used to make the `src/build/bin` folder inside the VM available to the host OS. If using VMware, this can be done by going to `Player->Manage -> Virtual Machine Settings -> Options -> Shared Folders` and adding a shared folder named `shared` on the host OS. The shared folder will appear in Linux (for Ubuntu) under `/mnt/hgfs/shared/`. Any files copied to that path appear in the host OS inside of the shared folder. To copy firmware after the build into that folder run `mv build/bin/* /mnt/hgfs/shared/`.
+
+* OpenMV IDE's bootloader will have trouble connecting to your OpenMV Cam from inside of a virtual machine. You can download OpenMV IDE [here](https://openmv.io/pages/download). *To be clear, OpenMV IDE can connect to an OpenMV Cam from inside of a virtual machine, however OpenMV IDE's bootloader needs to connect to the OpenMV Cam using a timing critical handshake that generally fails when you introduce moving USB devices around between the Host OS and a Virtual Machine*.
+
+## Windows Build
 
 There is no Windows development environment. It is very difficult to install the toolchain on Windows. Instead you can install Ubuntu on a virtual machine running on your windows machine:
 
@@ -12,7 +105,7 @@ There is no Windows development environment. It is very difficult to install the
 2. Download Ubuntu [here](http://www.ubuntu.com/desktop). Then use whatever virtual machine software you installed to install the operating system. VMware Player makes this easy with a automated install option where it will install everything for you without you having to do anything other than enter your name and password initially.
 3. Install any updates, etc. for your operating system. Also, if you're using VMware Player make sure to install VMware Tools so you can drag and drop files between your Windows desktop and Ubuntu desktop along with being able to setup shared folders.
 
-# Mac Installation
+## Mac Build
 
 There is no Mac development environment. It is very difficult to install the toolchain on Mac. Instead you can install Ubuntu on a virtual machine running on your Mac machine:
 
@@ -20,133 +113,50 @@ There is no Mac development environment. It is very difficult to install the too
 2. Download Ubuntu [here](http://www.ubuntu.com/desktop). Then use whatever virtual machine software you installed to install the operating system. VMware Fusion makes this easy with a automated install option where it will install everything for you without you having to do anything other than enter your name and password initially.
 3. Install any updates, etc. for your operating system. Also, if you're using VMware Fusion make sure to install VMware Tools so you can drag and drop files between your Mac desktop and Ubuntu desktop along with being able to setup shared folders.
 
-# Linux Installation
+## Flashing the firmware
+To update the OpenMV camera with the newly built firmware, install the [OpenMV IDE](https://openmv.io/pages/download) and upload the `firmware.bin` file to the OpenMV camera using the builtin bootloader from `Tools->Run Bootloader` in OpenMV IDE. Please make sure to only load firmware meant for your model of the OpenMV camera onto it. The IDE does not check this if the firmware matches the camera model. If the wrong firmware is uploaded accidentally the camera will like just crash without being damaged. The OpenMV camera can be recovered by using the bootloader again to load the correct `firmware.bin`.
 
-Open a terminal and run the following commands:
+Note: If you are installing OpenMV IDE on Linux please make sure to follow the `README.txt` file in the IDE install dir to complete any post-installation steps like setting up `udev` and `dialout` permissions.
 
-    sudo apt-get remove gcc-arm-none-eabi
-    sudo apt-get autoremove
-    sudo add-apt-repository ppa:team-gcc-arm-embedded/ppa
-    sudo apt-get update
-    sudo apt-get install gcc-arm-embedded
-    sudo apt-get install libc6-i386
-    sudo apt-get install git
+## The OpenMV bootloader
 
-This should install all the required libraries on your computer.
+OpenMV cameras come preloaded with a bootloader from the factory. The OpenMV IDE communicates with the bootloader to load new firmware images over USB. There shouldn't be a need to upload a `bootloader.*` firmware onto an OpenMV camera unless modifying the bootloader itself. Note that the bootloader can't overwrite itself, if the bootloader is overwritten somehow, DFU can be used to recover the OpenMV camera by load `bootloader.dfu` image. The `bootloader.dfu` DFU image can be loaded using OpenMV IDE using `Tools->Run Bootloader`. When passed a DFU file OpenMV IDE automatically invokes `dfu-util` to program your OpenMV Cam versus using our custom bootloader.
 
-Next, you need to install OpenMV IDE on your computer to flash firmware and run python scripts. Please install OpenMV IDE on your host system. OpenMV IDE's bootloader will have trouble connecting to your OpenMV Cam from inside of a virtual machine. You can download OpenMV IDE [here](https://openmv.io/pages/download). *To be clear, OpenMV IDE can connect to an OpenMV Cam from inside of a virtual machine, however OpenMV IDE's bootloader needs to connect to the OpenMV Cam using a timing critical handshake that generally fails when you introduce moving USB devices around between the Host OS and a Virtual Machine*.
+### Note about STM32 DFU bootloader
 
-* If you are installing OpenMV IDE on Linux please make sure to follow the `README.txt` file in the IDE install dir to complete any post-installation steps like setting up `udev` and `dialout` permissions.
+The latest STM32 devices (e.g. the OpenMV Cam H7 Plus) do not support loading large binary images over DFU currently. However, you are able to still load the `bootloader.dfu` file on these devices which can then be used to load the `firmware.bin` file using OpenMV IDE.
 
-Finally, you need to install the OpenMV GitHub Repo. In Linux, `cd` in a terminal to a place where you want to put the repo (we recommend making a folder called `repositories` in your home directory and storing repositories in that) and then:
+## Contributing to the project
 
-    git clone --recursive https://github.com/openmv/openmv.git
+If you are interested in contributing to the project, start by creating a fork of each of the following repositories:
 
-Note the above command will clone this repository and every submodule recursively, which may take a very long to complete. Alternatively, you can do the following for a much faster clone:
+* https://github.com/openmv/openmv.git
+* https://github.com/openmv/micropython.git
 
-```
-git clone --depth=1 https://github.com/openmv/openmv.git
-cd openmv
-git submodule update --init --depth=1 --no-single-branch
-git -C src/micropython/ submodule update --init --depth=1
+Clone the forked openmv repository, and add a remote to the main openmv repository:
+```bash
+git clone --recursive https://github.com/<username>/openmv.git
+git -C openmv remote add upstream https://github.com/openmv/openmv.git
 ```
 
-### Setting up your own fork
-
-If you are interested in submitting code fixes back to us you will need to fork our repo first and clone your fork so that you can send pull requests. You need to fork these two repos:
-
-    https://github.com/openmv/openmv.git
-    https://github.com/openmv/micropython.git
-
-Then:
-
-    git clone --recursive https://github.com/<username>/openmv.git
-    cd openmv
-    git remote add remote https://github.com/openmv/openmv.git
-    cd src/micropython
-    git remote set-url origin https://github.com/<username>/micropython.git
-    git remote add remote https://github.com/openmv/micropython.git
-
-This will setup the `openmv` and `micropython` repos so `origin` points to your forks and so you can pull updates from the official repos with `remote`. Now when you want to create a new feature branch to send a Pull Request to OpenMV you just need to do:
-
-    git checkout -b <your_name>/<some_branch_name>
-    <commit changes>
-    git push origin -u <your_name>/<some_branch_name>
-
-Finally, after pushing your changes you can then use Github to automatically generate a Pull Request to the official OpenMV Github repo to get your changes upstreamed into the official OpenMV Cam Firmware.
-
-### Docker Build
-
-To build the firmware using docker, follow the following steps:
-
-```
-git clone https://github.com/openmv/openmv.git --depth=50
-cd openmv/docker
-make TARGET=<TARGET NAME>
+Set the `origin` remote of the micropython submodule to the forked micropython repo:
+```bash
+git -C openmv/src/micropython remote set-url origin https://github.com/<username>/micropython.git
 ```
 
-After building you should see the target build output under `docker/build/<TARGET_NAME>`.
+Finally add a remote to openmv's micropython fork:
+```bash
+git -C openmv/src/micropython remote add upstream https://github.com/openmv/micropython.git
+```
 
-### Committing Etiquette
+Now the repositories are ready for pull requests. To send a pull request, create a new feature branch and push it to origin, and use Github to create the pull request from the forked repository to the upstream openmv/micropython repository. For example:
+```bash
+git checkout -b <some_branch_name>
+<commit changes>
+git push origin -u <some_branch_name>
+```
 
-If you would like to send a Pull Request to get your changes integrated into the official source tree please try to keep one commit to one Pull Request. Additionally, please create example scripts (in `../scripts/examples`) for any new features you are committing.
-
-# Work Flow
-
-We recommend you use [VS Code](https://code.visualstudio.com/) to edit the firmware. VS Code includes a code explorer, excellent code editor, and a built-in terminal. You should install VS Code on your Linux system.
-
-Once you've installed VS Code please launch it and then go to `File->Open Folder...` and select your cloned `openmv` repository. Next, to compile firmware open a terminal inside VS Code and do:
-
-    cd src/micropython/mpy-cross
-    make
-
-This will build the MicroPython Cross Compilier which we use to include frozen bytecode modules into the OpenMV Cam firmware. This only needs to be done once (or if mpy-cross changes). Next:
-
-    cd ../../
-    make
-
-To build the latest OpenMV Cam firmware. You make target building the firmware for particular OpenMV Cam models by passing `TARGET=OPENMV...` to make:
-
-    make TARGET=OPENMV2 # To build the OpenMV Cam M4 Firmware
-    make TARGET=OPENMV3 # To build the OpenMV Cam M7 Firmware
-    make TARGET=OPENMV4 # To build the OpenMV Cam H7 Firmware (default)
-    make TARGET=OPENMV4P # To build the OpenMV Cam H7 Plus Firmware
-    make TARGET=OPENMVPT # To build the OpenMV Pure Thermal Firmware
-    make TARGET=PORTENTA # To build the Arduino H7 Portenta Firmware
-    make TARGET=NANO33 # To build the Arduino Nano 33 BLE Firmware
-
-After building the firmware the output will appear under `src/build/bin` where you will find the following files:
-
-* bootloader.bin - Bootloader Binary Image (not directly used)
-* bootloader.dfu - Bootloader DFU Image (not directly used)
-* bootloader.elf - Bootloader ELF Image (used to generate the BIN/DFU Files)
-* firmware.bin - Firmware Binary Image (Used by `Tools->Run Bootloader` in OpenMV IDE)
-* firmware.dfu - Firmware DFU Image (not directly used)
-* firmware.elf - Firmware ELF Image (used to generate the BIN/DFU Files)
-* openmv.bin - Combined Bootloader+Firmware Binary Image (not directly used)
-* openmv.dfu - Combined Bootloader+Firmware DFU Image (Used by `Tools->Run Bootloader` in OpenMV IDE)
-* uvc.bin - Alternative UVC Binary Image (not directly used)
-* uvc.dfu - Alternative UVC DFU Image (not directly used)
-* uvc.elf - Alternative UVC ELF Image (used to generate the BIN/DFU Files)
-
-Next, if you have Linux running inside of a Virtual Machine you will want to use shared folders to make the `src/build/bin` folder inside of your Virtual Machine visible to your host OS. With VMware you can do this by going to `Player->Manage->Virtual Machine Settings->Options->Shared Folders` and adding a shared folder named `shared` on the host OS. The shared folder will appear in Linux (using Ubuntu) under `/mnt/hgfs/shared/`. Any files you copy to that path will appear in the host OS inside of the shared folder you created. To copy firmware after you compile into that folder just add `&& mv build/bin/* /mnt/hgfs/shared/` to your `make` command to compile firmware.
-
-After doing this OpenMV IDE will then be able to read the newly compiled binaries under the shared folder path you created.
-
-To update your OpenMV Cam's firmware you want to load the `firmware.bin` file onto your OpenMV Cam using the `Tools->Run Bootloader` command in OpenMV IDE. Please make sure to only load firmware meant for your model of the OpenMV Cam onto it. The IDE does not check this. If you accidentally load the wrong firmware your OpenMV Cam will just crash without being damaged when trying to execute the main firmware image and you can then just use the bootloader onboard again to load the correct `firmware.bin`.
-
-### About Building
-
-To build the firmware faster we recommend passing `-j4` or higher depending on how many cores your computer has with make. E.g. `make -j4 TARGET=...`. Additionally, if you have issues with files not being recompiled correctly when building do `make clean` before building the firmware. We recommend using `make clean` regularly whenever you pull new changes or edit MicroPython QSTR files.
-
-### About The Binaries
-
-Your OpenMV Cam has a bootloader that comes installed on it from the factory. OpenMV IDE communicates to this bootloader to load the `firmware.bin` file onto your OpenMV Cam. You should never directly need to ever load any `bootloader.*` file onto your OpenMV Cam unless you are trying to modify the bootloader. Note that you cannot use the bootloader to program itself. If however, you manage to break the default bootloader you can use DFU to reset your OpenMV Cam by loading the `openmv.dfu` file onto your OpenMV Cam.
-
-If you want to modify your OpenMV Cam's bootloader you can do so by loading the `bootloader.dfu` file using OpenMV IDE onto your OpenMV Cam using `Tools->Run Bootloader`. When passed a DFU file OpenMV IDE automatically invokes `dfu-util` to program your OpenMV Cam versus using our custom bootloader.
-
-The `uvc.bin` file is an alternative to the normal `firmware.bin` file which you can load onto your OpenMV Cam to turn it into a UVC camera. That said, OpenMV does not currently maintain the UVC firwmare.
-
-#### Note about STM32 DFU Support
-
-The latest STM32 devices (e.g. the OpenMV Cam H7 Plus, Arduino H7 Portenta and later) do not support loading large binary images over DFU currently. However, you are able to still load the `bootloader.dfu` file on these devices which can then be used to load the `firmware.bin` file using OpenMV IDE.
+### Contribution guidelines
+Note: please follow the [best practices](https://developers.google.com/blockly/guides/modify/contribute/write_a_good_pr) when sending pull requests upstream. In general, the pull request should:
+* Fix one problem. Don't try to tackle multiple issues at once.
+* Use commits. Split the changes into logical groups using git commits.
