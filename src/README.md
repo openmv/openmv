@@ -157,6 +157,6 @@ git push origin -u <some_branch_name>
 ```
 
 ### Contribution guidelines
-Note: please follow the [best practices](https://developers.google.com/blockly/guides/modify/contribute/write_a_good_pr) when sending pull requests upstream. In general, the pull request should:
+Please follow the [best practices](https://developers.google.com/blockly/guides/modify/contribute/write_a_good_pr) when sending pull requests upstream. In general, the pull request should:
 * Fix one problem. Don't try to tackle multiple issues at once.
 * Use commits. Split the changes into logical groups using git commits.
