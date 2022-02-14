@@ -5,7 +5,7 @@ The OpenMV firmware supports loading quantized Tensorflow Lite models. The firmw
   - [Loading embedded Tensorflow models](#loading-embedded-tensorflow-models)
 
 ## Training Tensorflow models
-You can use Tensorflow or any high-level API, such as Keras or pytorch, to train and quantize models. However, the officially supported way to train models for OpenMV cameras is using EdgeImpulse. For more information on using EdgeImpulse with OpenMV cameras, please see the (EdgeImpulse tutorial for OpenMV)[ttps://docs.edgeimpulse.com/docs/openmv-cam-h7-plus].
+You can use Tensorflow or any high-level API, such as Keras or pytorch, to train and quantize models. However, the officially supported way to train models for OpenMV cameras is using EdgeImpulse. For more information on using EdgeImpulse with OpenMV cameras, please see the [EdgeImpulse tutorial for OpenMV](https://docs.edgeimpulse.com/docs/openmv-cam-h7-plus).
 
 ## Embedding Tensorflow models in the firmware
 Tensorflow models can be embedded into the firmware for boards that don't have an SDRAM. The firmware ships with a default embedded model, that can be replaced by any other Tensorflow model. Additionally, more models can be embedded in the firmware, as many as the free flash size allows. Once you have a tflite model to replace the default model, or to add to the firmware, it can be embedded in the firmware by placing the model `.tflite` file and its `.txt` labels file in `src/libtf/models`. The model file and labels file must have the same basename, for example:
