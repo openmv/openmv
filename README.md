@@ -7,7 +7,7 @@
 
 <img  width="480" src="https://raw.githubusercontent.com/openmv/openmv-media/master/logos/openmv-logo/logo.png">
 
-# The Open-source Machine Vision Project
+# The Open-Source Machine Vision Project
   - [Overview](#overview)
   - [Tensorflow support](#tensorflow-support)
   - [Interface library](#interface-library)
