@@ -791,15 +791,16 @@ static mp_obj_t py_sensor_ioctl(uint n_args, const mp_obj_t *args)
 
         case IOCTL_LEPTON_SET_MEASUREMENT_MODE:
             if (n_args >= 2) {
-                error = sensor_ioctl(request, mp_obj_get_int(args[1]));
+                int high_temp = (n_args == 2) ? false : mp_obj_get_int(args[2]);
+                error = sensor_ioctl(request, mp_obj_get_int(args[1]), high_temp);
             }
             break;
 
         case IOCTL_LEPTON_GET_MEASUREMENT_MODE: {
-            int enabled;
-            error = sensor_ioctl(request, &enabled);
+            int enabled, high_temp;
+            error = sensor_ioctl(request, &enabled, &high_temp);
             if (error == 0) {
-                ret_obj = mp_obj_new_bool(enabled);
+                ret_obj = mp_obj_new_tuple(2, (mp_obj_t []) {mp_obj_new_bool(enabled), mp_obj_new_bool(high_temp)});
             }
             break;
         }
