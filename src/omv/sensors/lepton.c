@@ -284,37 +284,27 @@ static int ioctl(sensor_t *sensor, int request, va_list ap)
             *temp = taux;
             break;
         }
-        case IOCTL_LEPTON_SET_MEASUREMENT_MODE: {
-            int enabled = va_arg(ap, int);
-            if (measurement_mode != enabled) {
-                measurement_mode = enabled;
-                ret = lepton_reset(sensor, measurement_mode, high_temp_mode);
+        case IOCTL_LEPTON_SET_MEASUREMENT_MODE:
+            if (n_args >= 2) {
+                bool high_temp = (n_args == 2) ? false : mp_obj_get_int(args[2]);
+                error = sensor_ioctl(request, mp_obj_get_int(args[1]), &high_temp);
             }
             break;
-        }
         case IOCTL_LEPTON_GET_MEASUREMENT_MODE: {
-            bool *enabled = va_arg(ap, bool *);
-            *enabled = measurement_mode;
-            break;
-        }
-        case IOCTL_LEPTON_SET_HIGH_TEMP_MODE: {
-            int enabled = va_arg(ap, int);
-            if (high_temp_mode != enabled) {
-                high_temp_mode = enabled;
-                ret = lepton_reset(sensor, measurement_mode, high_temp_mode);
+            int enabled, high_temp;
+            error = sensor_ioctl(request, &enabled, &high_temp);
+            if (error == 0) {
+                ret_obj = mp_obj_new_tuple(2, (mp_obj_t []) {mp_obj_new_bool(enabled), mp_obj_new_bool(high_temp)});
             }
-            break;
-        }
-        case IOCTL_LEPTON_GET_HIGH_TEMP_MODE: {
-            bool *enabled = va_arg(ap, bool *);
-            *enabled = high_temp_mode;
             break;
         }
         case IOCTL_LEPTON_SET_MEASUREMENT_RANGE: {
             float *arg_min_temp = va_arg(ap, float *);
             float *arg_max_temp = va_arg(ap, float *);
-            min_temp = IM_MAX(IM_MIN(*arg_min_temp, *arg_max_temp), LEPTON_MIN_TEMP);
-            max_temp = IM_MIN(IM_MAX(*arg_max_temp, *arg_min_temp), LEPTON_MAX_TEMP);
+            float min_temp_range = (high_temp_mode) ? LEPTON_MIN_HIGH_TEMP : LEPTON_MIN_TEMP;
+            float max_temp_range = (high_temp_mode) ? LEPTON_MAX_HIGH_TEMP : LEPTON_MAX_TEMP;
+            min_temp = IM_MAX(IM_MIN(*arg_min_temp, *arg_max_temp), min_temp_range);
+            max_temp = IM_MIN(IM_MAX(*arg_max_temp, *arg_min_temp), max_temp_range);
             break;
         }
         case IOCTL_LEPTON_GET_MEASUREMENT_RANGE: {
