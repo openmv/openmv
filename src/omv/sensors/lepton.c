@@ -40,8 +40,12 @@
 #define VOSPI_FIRST_PACKET      (0)
 #define VOSPI_FIRST_SEGMENT     (1)
 #define LEPTON_TIMEOUT          (1000)
+// Temperatures in Celsius
 #define DEFAULT_MIN_TEMP        (-17.7778f)
 #define DEFAULT_MAX_TEMP        (37.7778f)
+#define LEPTON_MIN_TEMP            (-10.0f)
+#define LEPTON_MAX_TEMP            (600.0f)
+
 
 static bool radiometry = false;
 static int h_res = 0;
@@ -49,6 +53,7 @@ static int v_res = 0;
 static bool v_flip = false;
 static bool h_mirror = false;
 static bool measurement_mode = false;
+static bool high_temp_mode = false;
 static float min_temp = DEFAULT_MIN_TEMP;
 static float max_temp = DEFAULT_MAX_TEMP;
 
@@ -64,7 +69,7 @@ static uint8_t *vospi_buffer = _vospi_buf;
 static volatile uint32_t vospi_pid = 0;
 static volatile uint32_t vospi_seg = 1;
 static uint32_t vospi_packets = 60;
-static int lepton_reset(sensor_t *sensor, bool measurement_mode);
+static int lepton_reset(sensor_t *sensor, bool measurement_mode, bool high_temp_mode);
 
 static void lepton_sync()
 {
@@ -283,7 +288,7 @@ static int ioctl(sensor_t *sensor, int request, va_list ap)
             int enabled = va_arg(ap, int);
             if (measurement_mode != enabled) {
                 measurement_mode = enabled;
-                ret = lepton_reset(sensor, measurement_mode);
+                ret = lepton_reset(sensor, measurement_mode, high_temp_mode);
             }
             break;
         }
@@ -292,11 +297,24 @@ static int ioctl(sensor_t *sensor, int request, va_list ap)
             *enabled = measurement_mode;
             break;
         }
+        case IOCTL_LEPTON_SET_HIGH_TEMP_MODE: {
+            int enabled = va_arg(ap, int);
+            if (high_temp_mode != enabled) {
+                high_temp_mode = enabled;
+                ret = lepton_reset(sensor, measurement_mode, high_temp_mode);
+            }
+            break;
+        }
+        case IOCTL_LEPTON_GET_HIGH_TEMP_MODE: {
+            bool *enabled = va_arg(ap, bool *);
+            *enabled = high_temp_mode;
+            break;
+        }
         case IOCTL_LEPTON_SET_MEASUREMENT_RANGE: {
             float *arg_min_temp = va_arg(ap, float *);
             float *arg_max_temp = va_arg(ap, float *);
-            min_temp = IM_MAX(IM_MIN(*arg_min_temp, *arg_max_temp), -10.0f);
-            max_temp = IM_MIN(IM_MAX(*arg_max_temp, *arg_min_temp), 140.0f);
+            min_temp = IM_MAX(IM_MIN(*arg_min_temp, *arg_max_temp), LEPTON_MIN_TEMP);
+            max_temp = IM_MIN(IM_MAX(*arg_max_temp, *arg_min_temp), LEPTON_MAX_TEMP);
             break;
         }
         case IOCTL_LEPTON_GET_MEASUREMENT_RANGE: {
@@ -316,7 +334,7 @@ static int ioctl(sensor_t *sensor, int request, va_list ap)
 }
 
 
-static int lepton_reset(sensor_t *sensor, bool measurement_mode)
+static int lepton_reset(sensor_t *sensor, bool measurement_mode, bool high_temp_mode)
 {
     DCMI_PWDN_LOW();
     mp_hal_delay_ms(10);
@@ -374,6 +392,12 @@ static int lepton_reset(sensor_t *sensor, bool measurement_mode)
         return -1;
     }
 
+    // Use the low gain mode to enable high temperature readings (~450C) on Lepton 3.5
+    LEP_SYS_GAIN_MODE_E gain_mode = high_temp_mode ? LEP_SYS_GAIN_MODE_LOW : LEP_SYS_GAIN_MODE_HIGH;
+    if (LEP_SetSysGainMode(&LEPHandle, gain_mode) != LEP_OK) {
+        return -1;
+    }
+
     if (!measurement_mode) {
         if (LEP_SetRadEnableState(&LEPHandle, LEP_RAD_DISABLE) != LEP_OK
             || LEP_SetAgcEnableState(&LEPHandle, LEP_AGC_ENABLE) != LEP_OK
@@ -405,9 +429,10 @@ static int reset(sensor_t *sensor)
     h_mirror = false;
     radiometry = false;
     measurement_mode = false;
+    high_temp_mode = false;
     min_temp = DEFAULT_MIN_TEMP;
     max_temp = DEFAULT_MAX_TEMP;
-    return lepton_reset(sensor, false);
+    return lepton_reset(sensor, false, false);
 }
 
 void HAL_SPI_RxCpltCallback(SPI_HandleTypeDef *hspi)
@@ -504,7 +529,7 @@ static int snapshot(sensor_t *sensor, image_t *image, uint32_t flags)
             // The FLIR lepton might have crashed so reset it (it does this).
             bool temp_h_mirror = h_mirror;
             bool temp_v_flip = v_flip;
-            int ret = lepton_reset(sensor, measurement_mode);
+            int ret = lepton_reset(sensor, measurement_mode, high_temp_mode);
             h_mirror = temp_h_mirror;
             v_flip = temp_v_flip;
 
