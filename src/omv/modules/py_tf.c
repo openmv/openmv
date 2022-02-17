@@ -21,7 +21,6 @@
 #include "ff_wrapper.h"
 #include "py_tf.h"
 #include "libtf_builtin_models.h"
-
 #define GRAYSCALE_RANGE ((COLOR_GRAYSCALE_MAX) - (COLOR_GRAYSCALE_MIN))
 #define GRAYSCALE_MID   (((GRAYSCALE_RANGE) + 1) / 2)
 
@@ -391,10 +390,15 @@ STATIC void py_tf_classify_output_data_callback(void *callback_data,
             ((mp_obj_list_t *) arg->out)->items[i] =
                 mp_obj_new_float(((float *) model_output)[i]);
         }
+    } else if (params->output_datatype == LIBTF_DATATYPE_INT8) {
+        for (int i = 0, ii = params->output_channels; i < ii; i++) {
+            ((mp_obj_list_t *) arg->out)->items[i] =
+                mp_obj_new_float( ((float) (((int8_t *) model_output)[i] - params->output_zero_point)) * params->output_scale);
+        }
     } else {
         for (int i = 0, ii = params->output_channels; i < ii; i++) {
             ((mp_obj_list_t *) arg->out)->items[i] =
-                mp_obj_new_float((((uint8_t *) model_output)[i] - params->output_zero_point) * params->output_scale);
+                mp_obj_new_float( ((float) (((uint8_t *) model_output)[i] - params->output_zero_point)) * params->output_scale);
         }
     }
 }
