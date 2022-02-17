@@ -44,8 +44,9 @@
 #define DEFAULT_MIN_TEMP        (-17.7778f)
 #define DEFAULT_MAX_TEMP        (37.7778f)
 #define LEPTON_MIN_TEMP            (-10.0f)
-#define LEPTON_MAX_TEMP            (600.0f)
-
+#define LEPTON_MAX_TEMP            (140.0f)
+#define LEPTON_MIN_HIGH_TEMP       (-10.0f)
+#define LEPTON_MAX_HIGH_TEMP       (600.0f)
 
 static bool radiometry = false;
 static int h_res = 0;
@@ -285,9 +286,12 @@ static int ioctl(sensor_t *sensor, int request, va_list ap)
             break;
         }
         case IOCTL_LEPTON_SET_MEASUREMENT_MODE:
-            if (n_args >= 2) {
-                bool high_temp = (n_args == 2) ? false : mp_obj_get_int(args[2]);
-                error = sensor_ioctl(request, mp_obj_get_int(args[1]), &high_temp);
+            int enabled = va_arg(ap, int);
+            int high_temp = va_arg(ap, int);
+            if (measurement_mode != enabled) {
+                measurement_mode = enabled;
+                high_temp_mode = high_temp;
+                ret = lepton_reset(sensor, measurement_mode, high_temp_mode);
             }
             break;
         case IOCTL_LEPTON_GET_MEASUREMENT_MODE: {

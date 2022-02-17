@@ -790,16 +790,16 @@ static mp_obj_t py_sensor_ioctl(uint n_args, const mp_obj_t *args)
         }
 
         case IOCTL_LEPTON_SET_MEASUREMENT_MODE:
-        case IOCTL_LEPTON_SET_HIGH_TEMP_MODE:
-            if (n_args >= 2) {
-                error = sensor_ioctl(request, mp_obj_get_int(args[1]));
-            }
-            break;
+    case IOCTL_LEPTON_SET_MEASUREMENT_MODE:
+        if (n_args >= 2) {
+            bool high_temp = (n_args == 2) ? false : mp_obj_get_int(args[2]);
+            error = sensor_ioctl(request, mp_obj_get_int(args[1]), &high_temp);
+        }
+        break;
 
-        case IOCTL_LEPTON_GET_MEASUREMENT_MODE:
-        case IOCTL_LEPTON_GET_HIGH_TEMP_MODE: {
-            int enabled;
-            error = sensor_ioctl(request, &enabled);
+    case IOCTL_LEPTON_GET_MEASUREMENT_MODE: {
+        int enabled, high_temp;
+        error = sensor_ioctl(request, &enabled, &high_temp);
             if (error == 0) {
                 ret_obj = mp_obj_new_bool(enabled);
             }
@@ -1091,8 +1091,6 @@ STATIC const mp_map_elem_t globals_dict_table[] = {
     { MP_OBJ_NEW_QSTR(MP_QSTR_IOCTL_LEPTON_GET_AUX_TEMPERATURE),    MP_OBJ_NEW_SMALL_INT(IOCTL_LEPTON_GET_AUX_TEMPERATURE)},
     { MP_OBJ_NEW_QSTR(MP_QSTR_IOCTL_LEPTON_SET_MEASUREMENT_MODE),   MP_OBJ_NEW_SMALL_INT(IOCTL_LEPTON_SET_MEASUREMENT_MODE)},
     { MP_OBJ_NEW_QSTR(MP_QSTR_IOCTL_LEPTON_GET_MEASUREMENT_MODE),   MP_OBJ_NEW_SMALL_INT(IOCTL_LEPTON_GET_MEASUREMENT_MODE)},
-    { MP_OBJ_NEW_QSTR(MP_QSTR_IOCTL_LEPTON_SET_HIGH_TEMP_MODE),     MP_OBJ_NEW_SMALL_INT(IOCTL_LEPTON_SET_HIGH_TEMP_MODE)},
-    { MP_OBJ_NEW_QSTR(MP_QSTR_IOCTL_LEPTON_GET_HIGH_TEMP_MODE),     MP_OBJ_NEW_SMALL_INT(IOCTL_LEPTON_GET_HIGH_TEMP_MODE)},
     { MP_OBJ_NEW_QSTR(MP_QSTR_IOCTL_LEPTON_SET_MEASUREMENT_RANGE),  MP_OBJ_NEW_SMALL_INT(IOCTL_LEPTON_SET_MEASUREMENT_RANGE)},
     { MP_OBJ_NEW_QSTR(MP_QSTR_IOCTL_LEPTON_GET_MEASUREMENT_RANGE),  MP_OBJ_NEW_SMALL_INT(IOCTL_LEPTON_GET_MEASUREMENT_RANGE)},
     #if (OMV_ENABLE_HM01B0 == 1)
