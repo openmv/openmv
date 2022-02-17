@@ -1,4 +1,8 @@
 # Change Log
+## [4.2.3](https://github.com/openmv/openmv/releases/tag/v4.2.3) (2022-02-17)
+* Fix pytf output scaling.
+* Fix person detection labels.
+
 ## [4.2.2](https://github.com/openmv/openmv/releases/tag/v4.2.2) (2022-02-14)
 * ulab: Update submodule to v4.0.0.
 * WINC1500: Update firmware to v19.7.6.
