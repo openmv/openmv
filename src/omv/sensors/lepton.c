@@ -285,7 +285,7 @@ static int ioctl(sensor_t *sensor, int request, va_list ap)
             *temp = taux;
             break;
         }
-        case IOCTL_LEPTON_SET_MEASUREMENT_MODE:
+        case IOCTL_LEPTON_SET_MEASUREMENT_MODE: {
             int enabled = va_arg(ap, int);
             int high_temp = va_arg(ap, int);
             if (measurement_mode != enabled) {
@@ -294,12 +294,12 @@ static int ioctl(sensor_t *sensor, int request, va_list ap)
                 ret = lepton_reset(sensor, measurement_mode, high_temp_mode);
             }
             break;
+        }
         case IOCTL_LEPTON_GET_MEASUREMENT_MODE: {
-            int enabled, high_temp;
-            error = sensor_ioctl(request, &enabled, &high_temp);
-            if (error == 0) {
-                ret_obj = mp_obj_new_tuple(2, (mp_obj_t []) {mp_obj_new_bool(enabled), mp_obj_new_bool(high_temp)});
-            }
+            int *ptr_enabled = va_arg(ap, int *);
+            int *ptr_high_temp = va_arg(ap, int *);
+            *ptr_enabled = measurement_mode;
+            *ptr_high_temp = high_temp_mode;
             break;
         }
         case IOCTL_LEPTON_SET_MEASUREMENT_RANGE: {
