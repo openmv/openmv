@@ -17,7 +17,7 @@ models/mask_detection.tflite
 
 The labels `.txt` file contains model output labels arranged 1 label per line, for example:
 ```
-cat mask_detection.txt 
+>>cat mask_detection.txt 
 mask
 no_mask
 ```
@@ -31,4 +31,4 @@ Built-in models can be loaded with `tf.load_builtin_model()` function, for examp
 labels, net = tf.load_builtin_model('person_detection')
 ```
 
-For mroe information on how to OpenMV Tensorflow Python module, see the [documentation](https://docs.openmv.io/library/omv.tf.html)
+For more information on how to OpenMV Tensorflow Python module, see the [documentation](https://docs.openmv.io/library/omv.tf.html)
