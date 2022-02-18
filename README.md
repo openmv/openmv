@@ -13,7 +13,9 @@
   - [Interface library](#interface-library)
     + [Note on serial port](#note-on-serial-port)
   - [ Building the firmware from source](#building-the-firmware-from-source)
-  
+  - [Contributing to the project](#contributing-to-the-project)
+    + [Contribution guidelines](#contribution-guidelines)
+    
 ## Overview
 
 The OpenMV project aims at making machine vision more accessible to beginners by developing a user-friendly, open-source, low-cost machine vision platform. OpenMV cameras are programmable in Python3 and come with an extensive set of machine learning and image processing functions such as face detection, keypoints descriptors, color tracking, QR and Bar code decoding, AprilTags, GIF and MJPEG recording, and more.
@@ -71,3 +73,49 @@ The above code works for Windows, Mac, or Linux. You just need to change the abo
 ## Building the firmware from source
 
 For more information on how to build the OpenMV firmware from source, see [Building the Firmware From Source](https://github.com/openmv/openmv/blob/master/src/README.md)
+
+## Contributing to the project
+
+Contributions are most welcome. If you are interested in contributing to the project, start by creating a fork of each of the following repositories:
+
+* https://github.com/openmv/openmv.git
+* https://github.com/openmv/micropython.git
+
+Clone the forked openmv repository, and add a remote to the main openmv repository:
+```bash
+git clone --recursive https://github.com/<username>/openmv.git
+git -C openmv remote add upstream https://github.com/openmv/openmv.git
+```
+
+Set the `origin` remote of the micropython submodule to the forked micropython repo:
+```bash
+git -C openmv/src/micropython remote set-url origin https://github.com/<username>/micropython.git
+```
+
+Finally add a remote to openmv's micropython fork:
+```bash
+git -C openmv/src/micropython remote add upstream https://github.com/openmv/micropython.git
+```
+
+Now the repositories are ready for pull requests. To send a pull request, create a new feature branch and push it to origin, and use Github to create the pull request from the forked repository to the upstream openmv/micropython repository. For example:
+```bash
+git checkout -b <some_branch_name>
+<commit changes>
+git push origin -u <some_branch_name>
+```
+
+### Contribution guidelines
+Please follow the [best practices](https://developers.google.com/blockly/guides/modify/contribute/write_a_good_pr) when sending pull requests upstream. In general, the pull request should:
+* Fix one problem. Don't try to tackle multiple issues at once.
+* Use commits. Split the changes into logical groups using git commits.
+* Please make sure your commit messages are compliant with the following pattern:
+```
+<scope>: description.
+```
+For example:
+```
+github: Update workflows.
+Libtf: Add support for built-in models.
+RPC: Remove CAN bit timing function.
+OPENMV4: Add readme txt file.
+```
