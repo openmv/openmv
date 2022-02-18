@@ -1,4 +1,4 @@
-name: 'Firmware Build 🔥'
+name: '🔥 Firmware Build'
 
 on:
   push:
@@ -22,7 +22,7 @@ on:
       - '!**.rst'
 
 jobs:
-  build:
+  build-firmware:
     runs-on: ubuntu-20.04
     strategy:
       matrix:
@@ -51,8 +51,8 @@ jobs:
         path: firmware
         if-no-files-found: error
 
-  release:
-    needs: build
+  stable-release:
+    needs: build-firmware
     runs-on: ubuntu-20.04
     if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
     steps:
@@ -70,7 +70,7 @@ jobs:
     - name: '📦 Package firmware'
       run: source tools/ci.sh && ci_package_firmware_release ${{github.ref_name}}
 
-    - name: '🔥 Create production release'
+    - name: '🔥 Create stable release'
       uses: softprops/action-gh-release@v1
       with:
         draft: true
@@ -84,8 +84,8 @@ jobs:
         name: firmware
         failOnError: false
 
-  development:
-    needs: build
+  development-release:
+    needs: build-firmware
     runs-on: ubuntu-20.04
     if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') == false
     steps:
