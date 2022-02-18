@@ -41,8 +41,8 @@
 #define VOSPI_FIRST_SEGMENT     (1)
 #define LEPTON_TIMEOUT          (1000)
 // Temperatures in Celsius
-#define DEFAULT_MIN_TEMP        (-17.7778f)
-#define DEFAULT_MAX_TEMP        (37.7778f)
+#define DEFAULT_MIN_TEMP        (-10.0f)
+#define DEFAULT_MAX_TEMP        (40.0f)
 #define LEPTON_MIN_TEMP_NORM    (-10.0f)
 #define LEPTON_MAX_TEMP_NORM    (140.0f)
 #define LEPTON_MIN_TEMP_HIGH    (-10.0f)
