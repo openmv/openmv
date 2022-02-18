@@ -381,19 +381,22 @@ static int lepton_reset(sensor_t *sensor, bool measurement_mode, bool high_temp_
         }
     }
 
-    if (LEP_GetRadEnableState(&LEPHandle, &rad) != LEP_OK
-        || LEP_GetAgcROI(&LEPHandle, &roi) != LEP_OK) {
-        return -1;
-    }
-
-    if (!measurement_mode) {
+    if (measurement_mode) {
+        // try to enable radiometry mode for more stable measuremts
+        // we assume failure means radiometry isn't available
+        if (LEP_SetRadEnableState(&LEPHandle, LEP_RAD_ENABLE)) {
+            LEP_SetAgcEnableState(&LEPHandle, LEP_AGC_DISABLE);
+        }
+    } else {
         if (LEP_SetRadEnableState(&LEPHandle, LEP_RAD_DISABLE) != LEP_OK
             || LEP_SetAgcEnableState(&LEPHandle, LEP_AGC_ENABLE) != LEP_OK
             || LEP_SetAgcCalcEnableState(&LEPHandle, LEP_AGC_ENABLE) != LEP_OK) {
             return -1;
         }
-    } else if (LEP_SetRadEnableState(&LEPHandle, LEP_RAD_ENABLE) != LEP_OK
-            || LEP_SetAgcEnableState(&LEPHandle, LEP_AGC_DISABLE) != LEP_OK) {
+    }
+
+    if (LEP_GetRadEnableState(&LEPHandle, &rad) != LEP_OK
+        || LEP_GetAgcROI(&LEPHandle, &roi) != LEP_OK) {
         return -1;
     }
 
