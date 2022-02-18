@@ -16,8 +16,6 @@ For information on OpenMV Camera general usage, please see the [forums](http://o
 - [Flashing the Firmware](#flashing-the-firmware)
 - [The OpenMV bootloader](#the-openmv-bootloader)
     + [Note about STM32 DFU bootloader](#note-about-stm32-dfu-bootloader)
-- [Contributing to the project](#contributing-to-the-project)
-    + [Contribution guidelines](#contribution-guidelines)
 
 ## Docker Build
 
@@ -125,38 +123,3 @@ OpenMV cameras come preloaded with a bootloader from the factory. The OpenMV IDE
 ### Note about STM32 DFU bootloader
 
 The latest STM32 devices (e.g. the OpenMV Cam H7 Plus) do not support loading large binary images over DFU currently. However, you are able to still load the `bootloader.dfu` file on these devices which can then be used to load the `firmware.bin` file using OpenMV IDE.
-
-## Contributing to the project
-
-If you are interested in contributing to the project, start by creating a fork of each of the following repositories:
-
-* https://github.com/openmv/openmv.git
-* https://github.com/openmv/micropython.git
-
-Clone the forked openmv repository, and add a remote to the main openmv repository:
-```bash
-git clone --recursive https://github.com/<username>/openmv.git
-git -C openmv remote add upstream https://github.com/openmv/openmv.git
-```
-
-Set the `origin` remote of the micropython submodule to the forked micropython repo:
-```bash
-git -C openmv/src/micropython remote set-url origin https://github.com/<username>/micropython.git
-```
-
-Finally add a remote to openmv's micropython fork:
-```bash
-git -C openmv/src/micropython remote add upstream https://github.com/openmv/micropython.git
-```
-
-Now the repositories are ready for pull requests. To send a pull request, create a new feature branch and push it to origin, and use Github to create the pull request from the forked repository to the upstream openmv/micropython repository. For example:
-```bash
-git checkout -b <some_branch_name>
-<commit changes>
-git push origin -u <some_branch_name>
-```
-
-### Contribution guidelines
-Please follow the [best practices](https://developers.google.com/blockly/guides/modify/contribute/write_a_good_pr) when sending pull requests upstream. In general, the pull request should:
-* Fix one problem. Don't try to tackle multiple issues at once.
-* Use commits. Split the changes into logical groups using git commits.
