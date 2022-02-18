@@ -386,18 +386,21 @@ static int lepton_reset(sensor_t *sensor, bool measurement_mode, bool high_temp_
         return -1;
     }
 
-    // Use the low gain mode to enable high temperature readings (~450C) on Lepton 3.5
-    LEP_SYS_GAIN_MODE_E gain_mode = high_temp_mode ? LEP_SYS_GAIN_MODE_LOW : LEP_SYS_GAIN_MODE_HIGH;
-    if (LEP_SetSysGainMode(&LEPHandle, gain_mode) != LEP_OK) {
-        return -1;
-    }
-
     if (!measurement_mode) {
         if (LEP_SetRadEnableState(&LEPHandle, LEP_RAD_DISABLE) != LEP_OK
             || LEP_SetAgcEnableState(&LEPHandle, LEP_AGC_ENABLE) != LEP_OK
             || LEP_SetAgcCalcEnableState(&LEPHandle, LEP_AGC_ENABLE) != LEP_OK) {
             return -1;
         }
+    } else if (LEP_SetRadEnableState(&LEPHandle, LEP_RAD_ENABLE) != LEP_OK
+            || LEP_SetAgcEnableState(&LEPHandle, LEP_AGC_DISABLE) != LEP_OK) {
+        return -1;
+    }
+
+    // Use the low gain mode to enable high temperature readings (~450C) on Lepton 3.5
+    LEP_SYS_GAIN_MODE_E gain_mode = high_temp_mode ? LEP_SYS_GAIN_MODE_LOW : LEP_SYS_GAIN_MODE_HIGH;
+    if (LEP_SetSysGainMode(&LEPHandle, gain_mode) != LEP_OK) {
+        return -1;
     }
 
     h_res = roi.endCol + 1;
