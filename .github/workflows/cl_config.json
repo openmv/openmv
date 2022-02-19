@@ -1,0 +1,11 @@
+{
+    "categories": [
+    ],
+    "sort": "DESC",
+    "template": "${{CHANGELOG}}\n${{UNCATEGORIZED}}\n",
+    "pr_template": "- ${{TITLE}}",
+    "empty_template": "- no changes",
+    "max_tags_to_fetch": 100,
+    "max_pull_requests": 100,
+    "max_back_track_time_days": 100
+}
