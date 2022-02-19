@@ -70,11 +70,21 @@ jobs:
     - name: '📦 Package firmware'
       run: source tools/ci.sh && ci_package_firmware_release ${{github.ref_name}}
 
+    - name: "✏️ Generate release changelog"
+      id: changelog
+      uses: mikepenz/release-changelog-builder-action@v2
+      with:
+        toTag: ${{ github.sha }}
+        configuration: '.github/workflows/cl_config.json'
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
     - name: '🔥 Create stable release'
       uses: softprops/action-gh-release@v1
       with:
         draft: true
         files: firmware_*.zip
+        body: ${{steps.changelog.outputs.changelog}}
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -109,13 +119,24 @@ jobs:
         tag-name: development
         description: Development Release.
 
+    - name: "✏️ Generate release changelog"
+      id: changelog
+      uses: mikepenz/release-changelog-builder-action@v2
+      with:
+        toTag: ${{ github.sha }}
+        configuration: '.github/workflows/cl_config.json'
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
     - name: '🔥 Create development release'
       uses: softprops/action-gh-release@v1
       with:
         draft: false
         name: Development Release
         tag_name: development
-        body: '> **⚠️ WARNING: This a development release and it may be unstable⚠️**'
+        body: |
+            > **⚠️ WARNING: This a development release and it may be unstable⚠️**
+            ${{steps.changelog.outputs.changelog}}
         files: firmware/firmware_*.zip
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
