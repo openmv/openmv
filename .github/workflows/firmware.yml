@@ -26,7 +26,7 @@ jobs:
     runs-on: ubuntu-20.04
     strategy:
       matrix:
-        target: [OPENMV2, OPENMV3, OPENMV4, OPENMV4P, PORTENTA, OPENMVPT, NICLAV, NANO33, ARDUINO_NANO_RP2040_CONNECT]
+        target: [OPENMV2]
       fail-fast: false
     steps:
     - name: '⏳ Checkout repository'
@@ -109,13 +109,22 @@ jobs:
         tag-name: development
         description: Development Release.
 
+    - name: "✏️ Create release changelog"
+      id: changelog
+      uses: loopwerk/tag-changelog@v1
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        exclude_types: other,doc,chore
+
     - name: '🔥 Create development release'
       uses: softprops/action-gh-release@v1
       with:
         draft: false
         name: Development Release
         tag_name: development
-        body: '> **⚠️ WARNING: This a development release and it may be unstable⚠️**'
+        body: |
+            '> **⚠️ WARNING: This a development release and it may be unstable⚠️**'
+            ${{ steps.changelog.outputs.changes }}
         files: firmware/firmware_*.zip
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
