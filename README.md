@@ -108,8 +108,11 @@ git push origin -u <some_branch_name>
 Please follow the [best practices](https://developers.google.com/blockly/guides/modify/contribute/write_a_good_pr) when sending pull requests upstream. In general, the pull request should:
 * Fix one problem. Don't try to tackle multiple issues at once.
 * Split the changes into logical groups using git commits.
-* Pull request title should be less than 78 characters, and match this pattern: `<scope>:<1 space><description><.>`
-* Commit subject line should be less than 78 characters, and match this pattern: `<scope>:<1 space><description><.>`
+* Pull request title should be less than 78 characters, and match this pattern:
+  * `<scope>:<1 space><description><.>`
+* Commit subject line should be less than 78 characters, and match this pattern:
+  * `<scope>:<1 space><description><.>`
+
 Example PR titles or commit subject lines:
 ```
 github: Update workflows.
