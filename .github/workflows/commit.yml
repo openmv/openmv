@@ -2,6 +2,11 @@ name: '📜 Check Commit Messages'
 
 on:
   pull_request:
+    types:
+      - opened
+      - edited
+      - reopened
+      - synchronize
     branches:    
       - 'master'
 
@@ -15,7 +20,7 @@ jobs:
           pattern: '^[^!]+: [A-Za-z]+.+ .+\.$'
           flags: 'gm'
           error: 'Commit subject line must match the following pattern: <scope>: <description>.'
-          excludeTitle: 'true'
+          excludeTitle: 'false'
           excludeDescription: 'true'
           checkAllCommitMessages: 'true'
           accessToken: ${{ secrets.GITHUB_TOKEN }}
@@ -24,7 +29,7 @@ jobs:
         with:
           pattern: '^[^#].{10,78}$'
           error: 'Commit subject line maximum line length of 78 characters is exceeded.'
-          excludeTitle: 'true'
+          excludeTitle: 'false'
           excludeDescription: 'true'
           checkAllCommitMessages: 'true'
           accessToken: ${{ secrets.GITHUB_TOKEN }}
