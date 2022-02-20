@@ -72,7 +72,7 @@ The above code works for Windows, Mac, or Linux. You just need to change the abo
 
 ## Building the firmware from source
 
-For more information on how to build the OpenMV firmware from source, see [Building the Firmware From Source](https://github.com/openmv/openmv/blob/master/src/README.md)
+The easiest way to patch the firmware and rebuild it, is to fork this repository, enable Actions (from the Actions tab) in the forked repository, and pushing the changes. Our github workflow rebuilds the firmware on pushes to the master branch and/or merging pull requests, and generates a development release with attached separate firmware packages per supported board. For more complex changes, and building the OpenMV firmware from source locally, see [Building the Firmware From Source](https://github.com/openmv/openmv/blob/master/src/README.md).
 
 ## Contributing to the project
 
