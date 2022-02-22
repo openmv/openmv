@@ -228,6 +228,10 @@ void SystemClock_Config(void)
     __HAL_RCC_PLL_PLLSOURCE_CONFIG(OMV_OSC_PLL_CLKSOURCE);
 
     /* Enable HSE Oscillator and activate PLL with HSE as source */
+    #if defined(OMV_OSC_LSE_STATE)
+    RCC_OscInitStruct.LSEState = OMV_OSC_LSE_STATE;
+    RCC_OscInitStruct.OscillatorType |= RCC_OSCILLATORTYPE_LSE;
+    #endif
     #if defined(OMV_OSC_HSE_STATE)
     RCC_OscInitStruct.HSEState = OMV_OSC_HSE_STATE;
     RCC_OscInitStruct.OscillatorType |= RCC_OSCILLATORTYPE_HSE;
@@ -305,8 +309,11 @@ void SystemClock_Config(void)
 
     #if defined(MCU_SERIES_H7)
     PeriphClkInitStruct.PeriphClockSelection |= RCC_PERIPHCLK_RTC;
+    #if defined(OMV_OSC_RTC_CLKSOURCE)
+    PeriphClkInitStruct.RTCClockSelection     = OMV_OSC_RTC_CLKSOURCE;
+    #else
     PeriphClkInitStruct.RTCClockSelection     = RCC_RTCCLKSOURCE_LSI;
-
+    #endif
     PeriphClkInitStruct.PeriphClockSelection |= RCC_PERIPHCLK_RNG;
     PeriphClkInitStruct.RngClockSelection     = OMV_OSC_RNG_CLKSOURCE;
 
