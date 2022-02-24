@@ -412,7 +412,7 @@ int8_t imlib_rgb565_to_l(uint16_t pixel)
 
     y = (y>0.008856f) ? fast_cbrtf(y) : ((y * 7.787037f) + 0.137931f);
 
-    return fast_floorf(116 * y) - 16;
+    return IM_MAX(IM_MIN(fast_floorf(116 * y) - 16, COLOR_L_MAX), COLOR_L_MIN);
 }
 
 int8_t imlib_rgb565_to_a(uint16_t pixel)
@@ -427,7 +427,7 @@ int8_t imlib_rgb565_to_a(uint16_t pixel)
     x = (x>0.008856f) ? fast_cbrtf(x) : ((x * 7.787037f) + 0.137931f);
     y = (y>0.008856f) ? fast_cbrtf(y) : ((y * 7.787037f) + 0.137931f);
 
-    return fast_floorf(500 * (x-y));
+    return IM_MAX(IM_MIN(fast_floorf(500 * (x-y)), COLOR_A_MAX), COLOR_A_MIN);
 }
 
 int8_t imlib_rgb565_to_b(uint16_t pixel)
@@ -442,7 +442,7 @@ int8_t imlib_rgb565_to_b(uint16_t pixel)
     y = (y>0.008856f) ? fast_cbrtf(y) : ((y * 7.787037f) + 0.137931f);
     z = (z>0.008856f) ? fast_cbrtf(z) : ((z * 7.787037f) + 0.137931f);
 
-    return fast_floorf(200 * (y-z));
+    return IM_MAX(IM_MIN(fast_floorf(200 * (y-z)), COLOR_B_MAX), COLOR_B_MIN);
 }
 
 // https://en.wikipedia.org/wiki/Lab_color_space -> CIELAB-CIEXYZ conversions
