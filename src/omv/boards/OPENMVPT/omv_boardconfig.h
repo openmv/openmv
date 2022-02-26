@@ -140,7 +140,7 @@
 #define OMV_OSC_SPI123_CLKSOURCE        RCC_SPI123CLKSOURCE_PLL2
 
 // HSE/HSI/CSI State
-#define OMV_OSC_LSE_STATE               (RCC_LSE_BYPASS)
+#define OMV_OSC_LSE_STATE               (RCC_LSE_ON)
 #define OMV_OSC_HSE_STATE               (RCC_HSE_ON)
 #define OMV_OSC_HSI48_STATE             (RCC_HSI48_ON)
 
