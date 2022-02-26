@@ -1006,13 +1006,13 @@ void jpeg_mdma_irq_handler()
     HAL_MDMA_IRQHandler(&JPEG_MDMA_Handle_Out);
 }
 
-void HAL_JPEG_GetDataCallback(JPEG_HandleTypeDef *hjpeg, uint32_t NbDecodedData)
+static void jpeg_get_data_callback(JPEG_HandleTypeDef *hjpeg, uint32_t NbDecodedData)
 {
     HAL_JPEG_Pause(hjpeg, JPEG_PAUSE_RESUME_INPUT);
     JPEG_input_paused = true;
 }
 
-void HAL_JPEG_DataReadyCallback(JPEG_HandleTypeDef *hjpeg, uint8_t *pDataOut, uint32_t OutDataLength)
+static void jpeg_data_ready_callback(JPEG_HandleTypeDef *hjpeg, uint8_t *pDataOut, uint32_t OutDataLength)
 {
     // We have received this much data.
     JPEG_out_data_length += OutDataLength;
@@ -1226,6 +1226,10 @@ void imlib_jpeg_compress_init()
 {
     JPEG_Handle.Instance = JPEG;
     HAL_JPEG_Init(&JPEG_Handle);
+    // Register JPEG callbacks.
+    HAL_JPEG_RegisterGetDataCallback(&JPEG_Handle, jpeg_get_data_callback);
+    HAL_JPEG_RegisterDataReadyCallback(&JPEG_Handle, jpeg_data_ready_callback);
+
     NVIC_SetPriority(JPEG_IRQn, IRQ_PRI_JPEG);
     HAL_NVIC_EnableIRQ(JPEG_IRQn);
 
