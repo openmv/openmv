@@ -1125,9 +1125,7 @@ void imlib_jpeg_compress_init();
 void imlib_jpeg_compress_deinit();
 void jpeg_mdma_irq_handler();
 #endif
-void jpeg_decompress_image_to_binary(image_t *dst, image_t *src);
-void jpeg_decompress_image_to_grayscale(image_t *dst, image_t *src);
-void jpeg_decompress_image_to_rgb565(image_t *dst, image_t *src);
+void jpeg_decompress(image_t *dst, image_t *src);
 bool jpeg_compress(image_t *src, image_t *dst, int quality, bool realloc);
 int jpeg_clean_trailing_bytes(int bpp, uint8_t *data);
 void jpeg_read_geometry(FIL *fp, image_t *img, const char *path, jpg_read_settings_t *rs);
