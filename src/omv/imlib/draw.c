@@ -2734,7 +2734,7 @@ void imlib_draw_image(image_t *dst_img, image_t *src_img, int dst_x_start, int d
         if (!src_img->is_mutable) {
             new_src_img.pixfmt = new_not_mutable_pixfmt;
             size_t size = image_size(&new_src_img);
-            new_src_img.data = fb_alloc(size, FB_ALLOC_NO_HINT);
+            new_src_img.data = fb_alloc(size, FB_ALLOC_CACHE_ALIGN);
 
             switch (new_src_img.pixfmt) {
                 case PIXFORMAT_BINARY: {
