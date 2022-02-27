@@ -2743,7 +2743,7 @@ void imlib_draw_image(image_t *dst_img, image_t *src_img, int dst_x_start, int d
                     } else if (src_img->is_yuv) {
                         imlib_deyuv_image(&new_src_img, src_img);
                     } else if (is_jpeg) {
-                        jpeg_decompress_image_to_binary(&new_src_img, src_img);
+                        jpeg_decompress(&new_src_img, src_img);
                     } else if (is_png) {
                         png_decompress(&new_src_img, src_img);
                     }
@@ -2755,7 +2755,7 @@ void imlib_draw_image(image_t *dst_img, image_t *src_img, int dst_x_start, int d
                     } else if (src_img->is_yuv) {
                         imlib_deyuv_image(&new_src_img, src_img);
                     } else if (is_jpeg) {
-                        jpeg_decompress_image_to_grayscale(&new_src_img, src_img);
+                        jpeg_decompress(&new_src_img, src_img);
                     } else if (is_png) {
                         png_decompress(&new_src_img, src_img);
                     }
@@ -2767,7 +2767,7 @@ void imlib_draw_image(image_t *dst_img, image_t *src_img, int dst_x_start, int d
                     } else if (src_img->is_yuv) {
                         imlib_deyuv_image(&new_src_img, src_img);
                     } else if (is_jpeg) {
-                        jpeg_decompress_image_to_rgb565(&new_src_img, src_img);
+                        jpeg_decompress(&new_src_img, src_img);
                     } else if (is_png) {
                         png_decompress(&new_src_img, src_img);
                     }
