@@ -121,11 +121,13 @@ jobs:
     - name: '📦 Package firmware'
       run: source tools/ci.sh && ci_package_firmware_development
 
-    - name: '🏷 Update development tag'
-      uses: EndBug/latest-tag@latest
+    - name: '🧹 Delete old release'
+      uses: dev-drprasad/delete-tag-and-release@v0.2.0
       with:
-        tag-name: development
-        description: Development Release.
+        delete_release: true
+        tag_name: development
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     - name: "✏️ Generate release changelog"
       id: changelog
@@ -143,7 +145,7 @@ jobs:
         name: Development Release
         tag_name: development
         body: |
-            > **⚠️ WARNING: This a development release and it may be unstable⚠️**
+            > **⚠️ WARNING: This a development release and it may be unstable.**
             ${{steps.changelog.outputs.changelog}}
         files: firmware/firmware_*.zip
       env:
