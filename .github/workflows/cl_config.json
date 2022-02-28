@@ -1,6 +1,9 @@
 {
     "categories": [
     ],
+    "ignore_labels": [
+      "github"
+    ],
     "sort": "DESC",
     "template": "${{CHANGELOG}}\n${{UNCATEGORIZED}}\n",
     "pr_template": "- ${{TITLE}}",
