@@ -243,6 +243,10 @@ void SystemClock_Config(void)
     RCC_OscInitStruct.HSEState = OMV_OSC_HSE_STATE;
     RCC_OscInitStruct.OscillatorType |= RCC_OSCILLATORTYPE_HSE;
     #endif
+    #if defined(OMV_OSC_LSI_STATE)
+    RCC_OscInitStruct.LSIState = OMV_OSC_LSI_STATE;
+    RCC_OscInitStruct.OscillatorType |= RCC_OSCILLATORTYPE_LSI;
+    #endif
     #if defined(OMV_OSC_HSI_STATE)
     RCC_OscInitStruct.HSIState = OMV_OSC_HSI_STATE;
     RCC_OscInitStruct.OscillatorType |= RCC_OSCILLATORTYPE_HSI;
