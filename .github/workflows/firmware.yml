@@ -145,7 +145,7 @@ jobs:
         name: Development Release
         tag_name: development
         body: |
-            > **⚠️ WARNING: This a development release and it may be unstable.**
+            **⚠️ WARNING: This a development release and it may be unstable.**
             ${{steps.changelog.outputs.changelog}}
         files: firmware/firmware_*.zip
       env:
