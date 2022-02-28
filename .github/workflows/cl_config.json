@@ -1,5 +1,16 @@
 {
     "categories": [
+     {
+       "title": "github",
+       "labels": ["github"]
+     }
+    ],
+    "label_extractor": [
+      {
+        "pattern": "^github",
+        "on_property": "title",
+        "method": "match"
+      }
     ],
     "ignore_labels": [
       "github"
