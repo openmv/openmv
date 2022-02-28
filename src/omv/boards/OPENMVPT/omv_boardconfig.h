@@ -141,6 +141,7 @@
 
 // HSE/HSI/CSI State
 #define OMV_OSC_LSE_STATE               (RCC_LSE_ON)
+#define OMV_OSC_LSE_DRIVE               (RCC_LSEDRIVE_HIGH)
 #define OMV_OSC_HSE_STATE               (RCC_HSE_ON)
 #define OMV_OSC_HSI48_STATE             (RCC_HSI48_ON)
 

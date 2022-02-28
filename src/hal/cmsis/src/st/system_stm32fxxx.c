@@ -224,6 +224,13 @@ void SystemClock_Config(void)
     }
     #endif
 
+    #if defined(OMV_OSC_LSE_DRIVE)
+    // Configure LSE drive strength.
+    HAL_PWR_EnableBkUpAccess();
+    __HAL_RCC_LSEDRIVE_CONFIG(OMV_OSC_LSE_DRIVE);
+    HAL_PWR_DisableBkUpAccess();
+    #endif
+
     /* Macro to configure the PLL clock source */
     __HAL_RCC_PLL_PLLSOURCE_CONFIG(OMV_OSC_PLL_CLKSOURCE);
 
