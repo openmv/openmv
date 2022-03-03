@@ -26,9 +26,6 @@
 // Sensor external clock timer frequency.
 #define OMV_XCLK_FREQUENCY      (12000000)
 
-// RAW buffer size
-#define OMV_RAW_BUF_SIZE        (131072)
-
 // Enable hardware JPEG
 #define OMV_HARDWARE_JPEG       (0)
 

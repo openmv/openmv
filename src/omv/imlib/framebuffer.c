@@ -18,6 +18,7 @@
 #define CONSERVATIVE_JPEG_BUF_SIZE  (OMV_JPEG_BUF_SIZE-64)
 
 extern char _fb_base;
+extern char _fb_end;
 framebuffer_t *framebuffer = (framebuffer_t *) &_fb_base;
 
 extern char _jpeg_buf;
@@ -248,7 +249,8 @@ static uint32_t framebuffer_raw_buffer_size()
     uint32_t size = (uint32_t) (fb_alloc_stack_pointer() - ((char *) framebuffer->data));
     // We don't want to give all of the frame buffer RAM to the frame buffer. So, we will limit
     // the maximum amount of RAM we return.
-    return IM_MIN(size, OMV_RAW_BUF_SIZE);
+    uint32_t raw_buf_size = (&_fb_end - &_fb_base);
+    return IM_MIN(size, raw_buf_size);
 }
 
 uint32_t framebuffer_get_buffer_size()

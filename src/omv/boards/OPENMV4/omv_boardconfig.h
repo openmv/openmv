@@ -52,9 +52,6 @@
 #define OMV_BOOTLDR_LED_PIN     (GPIO_PIN_1)
 #define OMV_BOOTLDR_LED_PORT    (GPIOC)
 
-// RAW buffer size
-#define OMV_RAW_BUF_SIZE        (409600)
-
 // Enable hardware JPEG
 #define OMV_HARDWARE_JPEG       (1)
 

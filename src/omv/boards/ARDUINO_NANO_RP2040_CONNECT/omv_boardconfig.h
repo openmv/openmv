@@ -30,9 +30,6 @@ extern unsigned char *OMV_UNIQUE_ID_ADDR;
 // TODO Not actually used right now, frequency is hardcoded.
 #define OMV_XCLK_FREQUENCY      (12500000)
 
-// RAW buffer size
-#define OMV_RAW_BUF_SIZE        (100*1024)
-
 // Enable hardware JPEG
 #define OMV_HARDWARE_JPEG       (0)
 
