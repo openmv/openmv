@@ -30,7 +30,7 @@ jobs:
       fail-fast: false
     steps:
     - name: '⏳ Checkout repository'
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
       with:
         submodules: false
 
@@ -65,7 +65,7 @@ jobs:
     if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
     steps:
     - name: '⏳ Checkout repository'
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
       with:
         submodules: false
 
@@ -108,7 +108,7 @@ jobs:
     if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') == false
     steps:
     - name: '⏳ Checkout repository'
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
       with:
         submodules: false
 
