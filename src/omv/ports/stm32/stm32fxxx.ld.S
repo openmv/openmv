@@ -113,7 +113,10 @@ SECTIONS
   {
     . = ALIGN(4);
     _fb_base = .;
-    . = . + OMV_FB_SIZE + OMV_FB_ALLOC_SIZE;
+    . += OMV_FB_SIZE;
+
+    _fb_end = .;
+    . += OMV_FB_ALLOC_SIZE;
 
     . = ALIGN(4);
     _fballoc = .;

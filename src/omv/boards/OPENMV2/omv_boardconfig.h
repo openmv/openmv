@@ -43,9 +43,6 @@
 #define OMV_BOOTLDR_LED_PIN     (GPIO_PIN_2)
 #define OMV_BOOTLDR_LED_PORT    (GPIOC)
 
-// RAW buffer size
-#define OMV_RAW_BUF_SIZE        (155648)
-
 // Enable sensor drivers
 #define OMV_ENABLE_OV2640       (1)
 #define OMV_ENABLE_OV5640       (0)
