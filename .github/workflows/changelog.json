@@ -1,22 +1,91 @@
 {
     "categories": [
      {
-       "title": "github",
+       "title": "ignore",
        "labels": ["github"]
+     },
+     {
+       "title": "## 🪄 Image",
+       "labels": ["imlib"]
+     },
+     {
+       "title": "## 📷 Sensors",
+       "labels": ["sensors"]
+     },
+     {
+       "title": "## 🧪 Ports",
+       "labels": ["ports", "stm32", "rp2", "nrf"]
+     },
+     {
+       "title": "## ⚙️ Boards",
+       "labels": ["boards", "OPENMV2", "OPENMV3", "OPENMV4", "OPENMV4P", "PORTENTA", "OPENMVPT", "NICLAV", "NANO33", "ARDUINO_NANO_RP2040_CONNECT"]
+     },
+     {
+       "title": "## 📄 Scripts",
+       "labels": ["scripts"]
+     },
+     {
+       "title": "## 🐍 Micropython",
+       "labels": ["micropython"]
      }
+    ],
+    "ignore_labels": [
+       "github"
     ],
     "label_extractor": [
       {
         "pattern": "^github",
-        "on_property": "title",
-        "method": "match"
+        "method": "match",
+        "on_property": "title"
+      },
+      {
+        "pattern": "^imlib",
+        "method": "match",
+        "on_property": "title"
+      },
+      {
+        "pattern": "(^sensors)(\/)*(.+)",
+        "method": "replace",
+        "target": "$1",
+        "on_property": "title"
+      },
+      {
+        "pattern": "(^ports)(\/)*(.+)",
+        "method": "replace",
+        "target": "$1",
+        "on_property": "title"
+      },
+      {
+        "pattern": "(^boards)(\/)*(.+)",
+        "method": "replace",
+        "target": "$1",
+        "on_property": "title"
+      },
+      {
+        "pattern": "(^scripts)(\/)*(.+)",
+        "method": "replace",
+        "target": "$1",
+        "on_property": "title"
+      },
+      {
+        "pattern": "(^micropython)(\/)*(.+)",
+        "method": "replace",
+        "target": "$1",
+        "on_property": "title"
+      },
+      {
+        "pattern": "^(stm32|rp2|nrf)",
+        "method": "match",
+        "on_property": "title"
+      },
+      {
+        "pattern": "^(OPENMV2|OPENMV3|OPENMV4|OPENMV4P|PORTENTA|OPENMVPT|NICLAV|NANO33|ARDUINO_NANO_RP2040_CONNECT)",
+        "method": "match",
+        "on_property": "title"
       }
     ],
-    "ignore_labels": [
-      "github"
-    ],
     "sort": "DESC",
-    "template": "${{CHANGELOG}}\n${{UNCATEGORIZED}}\n",
+    "template": "${{CHANGELOG}}\n\n## 🚀 Misc Fixes:\n\n${{UNCATEGORIZED}}\n",
     "pr_template": "- ${{TITLE}}",
     "empty_template": "- no changes",
     "max_tags_to_fetch": 100,

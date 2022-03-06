@@ -9,6 +9,7 @@ on:
     paths:
       - 'src/**'
       - '.github/workflows/*.yml'
+      - '.github/workflows/*.json'
       - '!**/README.md'
       - '!**.rst'
 
@@ -18,6 +19,7 @@ on:
     paths:
       - 'src/**'
       - '.github/workflows/*.yml'
+      - '.github/workflows/*.json'
       - '!**/README.md'
       - '!**.rst'
 
