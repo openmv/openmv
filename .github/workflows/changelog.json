@@ -14,7 +14,7 @@
      },
      {
        "title": "## 🧪 Ports",
-       "labels": ["ports", "stm32", "rp2", "nrf"]
+       "labels": ["ports", "stm32", "nrf", "rp2"]
      },
      {
        "title": "## ⚙️ Boards",
@@ -44,31 +44,31 @@
         "on_property": "title"
       },
       {
-        "pattern": "(^sensors)(\/)*(.+)",
+        "pattern": "(^sensors)(.+)",
         "method": "replace",
         "target": "$1",
         "on_property": "title"
       },
       {
-        "pattern": "(^ports)(\/)*(.+)",
+        "pattern": "(^ports)\/(.+):",
         "method": "replace",
         "target": "$1",
         "on_property": "title"
       },
       {
-        "pattern": "(^boards)(\/)*(.+)",
+        "pattern": "(^boards)(.+)",
         "method": "replace",
         "target": "$1",
         "on_property": "title"
       },
       {
-        "pattern": "(^scripts)(\/)*(.+)",
+        "pattern": "(^scripts)(.+)",
         "method": "replace",
         "target": "$1",
         "on_property": "title"
       },
       {
-        "pattern": "(^micropython)(\/)*(.+)",
+        "pattern": "(^micropython)(.+)",
         "method": "replace",
         "target": "$1",
         "on_property": "title"
@@ -82,6 +82,12 @@
         "pattern": "^(OPENMV2|OPENMV3|OPENMV4|OPENMV4P|PORTENTA|OPENMVPT|NICLAV|NANO33|ARDUINO_NANO_RP2040_CONNECT)",
         "method": "match",
         "on_property": "title"
+      }
+    ],
+    "transformers": [
+      {
+        "pattern": "^(.*)\/(.+)",
+        "target": "- $2\n"
       }
     ],
     "sort": "DESC",
