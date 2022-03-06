@@ -747,9 +747,6 @@ static int set_pixformat(sensor_t *sensor, pixformat_t pixformat)
                     REG_OUTPUT_FMT, REG_OUTPUT_SET_FMT(reg, REG_OUTPUT_FMT_YCBYCR));
             break;
         case PIXFORMAT_BAYER:
-            // Make sure odd/even row are switched to work with our bayer conversion.
-            ret |= cambus_writeb(&sensor->bus, sensor->slv_addr,
-                    REG_SYNC_MODE, REG_SYNC_MODE_DEF | REG_SYNC_MODE_ROW_SWITCH);
             ret |= cambus_writeb(&sensor->bus, sensor->slv_addr,
                     REG_OUTPUT_FMT, REG_OUTPUT_SET_FMT(reg, REG_OUTPUT_FMT_BAYER));
             break;
@@ -797,8 +794,8 @@ static int set_framesize(sensor_t *sensor, framesize_t framesize)
     uint16_t h = resolution[framesize][1];
 
     if (w < resolution[FRAMESIZE_QVGA][0] && h < resolution[FRAMESIZE_QVGA][1]) {
-        win_w = w * 4;
-        win_h = h * 4;
+        win_w = w * 5;
+        win_h = h * 5;
     } else if (w < resolution[FRAMESIZE_VGA][0] && h < resolution[FRAMESIZE_VGA][1]) {
         win_w = w * 3;
         win_h = h * 3;
@@ -806,7 +803,7 @@ static int set_framesize(sensor_t *sensor, framesize_t framesize)
         win_w = w * 2;
         win_h = h * 2;
     } else if (w <= resolution[FRAMESIZE_UXGA][0] && h <= resolution[FRAMESIZE_UXGA][1]) {
-        // For frames bigger than subsample using full UXGA window.
+        // For bigger frames use full UXGA window.
         win_w = resolution[FRAMESIZE_UXGA][0];
         win_h = resolution[FRAMESIZE_UXGA][1];
     } else {
@@ -815,6 +812,13 @@ static int set_framesize(sensor_t *sensor, framesize_t framesize)
 
     uint16_t c_ratio = win_w / w;
     uint16_t r_ratio = win_h / h;
+
+    if (c_ratio % 2 == 0) {
+        c_ratio --;
+    }
+    if (r_ratio % 2 == 0) {
+        r_ratio --;
+    }
 
     uint16_t x = (((win_w / c_ratio) - w) / 2);
     uint16_t y = (((win_h / r_ratio) - h) / 2);
@@ -882,6 +886,7 @@ int gc2145_init(sensor_t *sensor)
     sensor->hw_flags.gs_bpp     = 2;
     sensor->hw_flags.rgb_swap   = 1;
     sensor->hw_flags.yuv_order  = SENSOR_HW_FLAGS_YVU422;
+    sensor->hw_flags.bayer      = SENSOR_HW_FLAGS_BAYER_GBRG;
 
     return 0;
 }
