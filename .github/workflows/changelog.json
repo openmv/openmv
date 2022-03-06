@@ -86,7 +86,7 @@
     ],
     "transformers": [
       {
-        "pattern": "^(.*)\/(.+)",
+        "pattern": "^(.*)\/(.+:.*)",
         "target": "- $2\n"
       }
     ],
