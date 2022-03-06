@@ -134,7 +134,7 @@ jobs:
       uses: mikepenz/release-changelog-builder-action@v2
       with:
         toTag: ${{ github.sha }}
-        configuration: '.github/workflows/cl_config.json'
+        configuration: '.github/workflows/changelog.json'
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
