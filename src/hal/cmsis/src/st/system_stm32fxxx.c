@@ -291,10 +291,24 @@ void SystemClock_Config(void)
     RCC_OscInitStruct.PLL.PLLFRACN = OMV_OSC_PLL1FRAC;
     #endif
 
-    if(HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK) {
+    #if defined(OMV_OMVPT_ERRATA_RTC)
+    // Systick needed for timeout.
+    HAL_InitTick(0); __enable_irq();
+    if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK) {
+        // LSE failed to start, switch OFF LSE, and reinit.
+        RCC_OscInitStruct.LSEState = RCC_LSE_OFF;
+        if(HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK) {
+            // Initialization Error
+            __fatal_error("HAL_RCC_OscConfig");
+        }
+    }
+    __disable_irq(); // Re-enabled in main.
+    #else
+    if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK) {
         // Initialization Error
         __fatal_error("HAL_RCC_OscConfig");
     }
+    #endif
 
     #if defined(OMV_OSC_PLL2M)
     PeriphClkInitStruct.PLL2.PLL2M = OMV_OSC_PLL2M;
@@ -325,6 +339,7 @@ void SystemClock_Config(void)
     #else
     PeriphClkInitStruct.RTCClockSelection     = RCC_RTCCLKSOURCE_LSI;
     #endif
+
     PeriphClkInitStruct.PeriphClockSelection |= RCC_PERIPHCLK_RNG;
     PeriphClkInitStruct.RngClockSelection     = OMV_OSC_RNG_CLKSOURCE;
 
@@ -365,6 +380,13 @@ void SystemClock_Config(void)
     PeriphClkInitStruct.Spi45ClockSelection   = OMV_OSC_SPI45_CLKSOURCE;
     #else
     PeriphClkInitStruct.Spi45ClockSelection   = RCC_SPI45CLKSOURCE_PLL2;
+    #endif
+
+    #if defined(OMV_OMVPT_ERRATA_RTC)
+    if (__HAL_RCC_GET_FLAG(RCC_FLAG_LSERDY) == 0) {
+        // LSE failed to start, force LSI clock source.
+        PeriphClkInitStruct.RTCClockSelection = RCC_RTCCLKSOURCE_LSI;
+    }
     #endif
 
     if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInitStruct) != HAL_OK) {

@@ -137,11 +137,14 @@
 #define OMV_OSC_SPI123_CLKSOURCE        RCC_SPI123CLKSOURCE_PLL2
 
 // HSE/HSI/CSI State
-// The LSE is not configured due to an issue with the LSE crystal oscillator.
-// #define OMV_OSC_LSE_STATE               (RCC_LSE_ON)
-// #define OMV_OSC_LSE_DRIVE               (RCC_LSEDRIVE_HIGH)
+#define OMV_OSC_LSI_STATE               (RCC_LSI_ON)
+#define OMV_OSC_LSE_STATE               (RCC_LSE_ON)
+//#define OMV_OSC_LSE_DRIVE             (RCC_LSEDRIVE_HIGH)
 #define OMV_OSC_HSE_STATE               (RCC_HSE_ON)
 #define OMV_OSC_HSI48_STATE             (RCC_HSI48_ON)
+
+// Errata
+#define OMV_OMVPT_ERRATA_RTC            (1)
 
 // Flash Latency
 #define OMV_FLASH_LATENCY               (FLASH_LATENCY_2)
