@@ -14,11 +14,11 @@
      },
      {
        "title": "## 🧪 Ports",
-       "labels": ["ports", "stm32", "nrf", "rp2"]
+       "labels": ["ports"]
      },
      {
        "title": "## ⚙️ Boards",
-       "labels": ["boards", "OPENMV2", "OPENMV3", "OPENMV4", "OPENMV4P", "PORTENTA", "OPENMVPT", "NICLAV", "NANO33", "ARDUINO_NANO_RP2040_CONNECT"]
+       "labels": ["boards"]
      },
      {
        "title": "## 📄 Scripts",
@@ -74,13 +74,15 @@
         "on_property": "title"
       },
       {
-        "pattern": "^(stm32|rp2|nrf)",
-        "method": "match",
+        "pattern": "^(stm32|rp2|nrf)(.*)",
+        "method": "replace",
+        "target": "ports",
         "on_property": "title"
       },
       {
-        "pattern": "^(OPENMV2|OPENMV3|OPENMV4|OPENMV4P|PORTENTA|OPENMVPT|NICLAV|NANO33|ARDUINO_NANO_RP2040_CONNECT)",
-        "method": "match",
+        "pattern": "^(OPENMV2|OPENMV3|OPENMV4|OPENMV4P|PORTENTA|OPENMVPT|NICLAV|NANO33|ARDUINO_NANO_RP2040_CONNECT)(.*)",
+        "method": "replace",
+        "target": "boards",
         "on_property": "title"
       }
     ],
