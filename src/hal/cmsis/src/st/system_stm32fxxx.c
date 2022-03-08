@@ -319,12 +319,16 @@ void SystemClock_Config(void)
     #endif
 
     #if defined(MCU_SERIES_H7)
+
+    #if !defined(OMV_OMVPT_ERRATA_RTC)
     PeriphClkInitStruct.PeriphClockSelection |= RCC_PERIPHCLK_RTC;
     #if defined(OMV_OSC_RTC_CLKSOURCE)
     PeriphClkInitStruct.RTCClockSelection     = OMV_OSC_RTC_CLKSOURCE;
     #else
     PeriphClkInitStruct.RTCClockSelection     = RCC_RTCCLKSOURCE_LSI;
     #endif
+    #endif
+
     PeriphClkInitStruct.PeriphClockSelection |= RCC_PERIPHCLK_RNG;
     PeriphClkInitStruct.RngClockSelection     = OMV_OSC_RNG_CLKSOURCE;
 
