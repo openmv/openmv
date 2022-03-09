@@ -9,8 +9,20 @@
        "labels": ["imlib"]
      },
      {
-       "title": "## 📷 Sensors",
+       "title": "## 🧬 HAL",
+       "labels": ["hal"]
+     },
+     {
+       "title": "## 📚 Lib",
+       "labels": ["lib"]
+     },
+     {
+       "title": "## 🤖 Sensors",
        "labels": ["sensors"]
+     },
+     {
+       "title": "## 💾 Drivers",
+       "labels": ["drivers"]
      },
      {
        "title": "## 🧪 Ports",
@@ -21,7 +33,7 @@
        "labels": ["boards"]
      },
      {
-       "title": "## 📄 Scripts",
+       "title": "## 📜 Scripts",
        "labels": ["scripts"]
      },
      {
@@ -44,7 +56,25 @@
         "on_property": "title"
       },
       {
+        "pattern": "(^hal)(.+)",
+        "method": "replace",
+        "target": "$1",
+        "on_property": "title"
+      },
+      {
+        "pattern": "(^lib)(.+)",
+        "method": "replace",
+        "target": "$1",
+        "on_property": "title"
+      },
+      {
         "pattern": "(^sensors)(.+)",
+        "method": "replace",
+        "target": "$1",
+        "on_property": "title"
+      },
+      {
+        "pattern": "(^drivers)(.+)",
         "method": "replace",
         "target": "$1",
         "on_property": "title"
@@ -93,7 +123,7 @@
       }
     ],
     "sort": "DESC",
-    "template": "${{CHANGELOG}}\n\n## 🚀 Misc Fixes:\n\n${{UNCATEGORIZED}}\n",
+    "template": "${{CHANGELOG}}\n\n## 🪛 Misc Fixes:\n\n${{UNCATEGORIZED}}\n",
     "pr_template": "- ${{TITLE}}",
     "empty_template": "- no changes",
     "max_tags_to_fetch": 100,
