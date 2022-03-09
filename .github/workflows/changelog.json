@@ -74,6 +74,12 @@
         "on_property": "title"
       },
       {
+        "pattern": "(^Lepton)(.+)",
+        "method": "replace",
+        "target": "sensors",
+        "on_property": "title"
+      },
+      {
         "pattern": "(^drivers)(.+)",
         "method": "replace",
         "target": "$1",
