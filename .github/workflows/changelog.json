@@ -13,7 +13,7 @@
        "labels": ["hal"]
      },
      {
-       "title": "## 📚 Lib",
+       "title": "## 📚 Libraries",
        "labels": ["lib"]
      },
      {
@@ -23,6 +23,10 @@
      {
        "title": "## 💾 Drivers",
        "labels": ["drivers"]
+     },
+     {
+       "title": "## 🐍 Micropython",
+       "labels": ["micropython"]
      },
      {
        "title": "## 🧪 Ports",
@@ -35,10 +39,6 @@
      {
        "title": "## 📜 Scripts",
        "labels": ["scripts"]
-     },
-     {
-       "title": "## 🐍 Micropython",
-       "labels": ["micropython"]
      }
     ],
     "ignore_labels": [
@@ -86,6 +86,12 @@
         "on_property": "title"
       },
       {
+        "pattern": "(^micropython)(.+)",
+        "method": "replace",
+        "target": "$1",
+        "on_property": "title"
+      },
+      {
         "pattern": "(^ports)\/(.+):",
         "method": "replace",
         "target": "$1",
@@ -99,12 +105,6 @@
       },
       {
         "pattern": "(^scripts)(.+)",
-        "method": "replace",
-        "target": "$1",
-        "on_property": "title"
-      },
-      {
-        "pattern": "(^micropython)(.+)",
         "method": "replace",
         "target": "$1",
         "on_property": "title"
