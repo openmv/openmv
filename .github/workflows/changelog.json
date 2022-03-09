@@ -125,7 +125,7 @@
     "transformers": [
       {
         "pattern": "^(.*)\/(.+:.*)",
-        "target": "- $2\n"
+        "target": "- $2"
       }
     ],
     "sort": "DESC",
