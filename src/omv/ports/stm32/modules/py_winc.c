@@ -19,7 +19,7 @@
 #include "py/stream.h"
 #include "py/runtime.h"
 #include "shared/netutils/netutils.h"
-#include "modnetwork.h"
+#include "extmod/modnetwork.h"
 #include "pin.h"
 #include "genhdr/pins.h"
 #include "spi.h"
@@ -358,12 +358,12 @@ static int py_winc_socket_socket(mod_network_socket_obj_t *socket, int *_errno)
 {
     uint8_t type;
 
-    if (socket->u_param.domain != MOD_NETWORK_AF_INET) {
+    if (socket->domain != MOD_NETWORK_AF_INET) {
         *_errno = MP_EAFNOSUPPORT;
         return -1;
     }
 
-    switch (socket->u_param.type) {
+    switch (socket->type) {
         case MOD_NETWORK_SOCK_STREAM:
             type = SOCK_STREAM;
             break;
@@ -385,23 +385,26 @@ static int py_winc_socket_socket(mod_network_socket_obj_t *socket, int *_errno)
     }
 
     // store state of this socket
-    socket->fd = fd;
+    socket->fileno = fd;
     socket->timeout = 0; // blocking
+    socket->state = m_new0(winc_socket_buf_t, 1);
     return 0;
 }
 
 static void py_winc_socket_close(mod_network_socket_obj_t *socket)
 {
-    if (socket->fd >= 0) {
-        winc_socket_close(socket->fd);
-        socket->fd = -1; // Mark socket FD as invalid
+    if (socket->fileno >= 0) {
+        winc_socket_close(socket->fileno);
+        socket->fileno = -1; // Mark socket FD as invalid
+        m_del(winc_socket_buf_t, socket->state, 1);
+        socket->state = NULL;
     }
 }
 
 static int py_winc_socket_bind(mod_network_socket_obj_t *socket, byte *ip, mp_uint_t port, int *_errno)
 {
     MAKE_SOCKADDR(addr, ip, port)
-    int ret = winc_socket_bind(socket->fd, &addr);
+    int ret = winc_socket_bind(socket->fileno, &addr);
     if (ret < 0) {
         *_errno = ret;
         py_winc_socket_close(socket);
@@ -412,7 +415,7 @@ static int py_winc_socket_bind(mod_network_socket_obj_t *socket, byte *ip, mp_ui
 
 static int py_winc_socket_listen(mod_network_socket_obj_t *socket, mp_int_t backlog, int *_errno)
 {
-    int ret = winc_socket_listen(socket->fd, backlog);
+    int ret = winc_socket_listen(socket->fileno, backlog);
     if (ret < 0) {
         *_errno = ret;
         py_winc_socket_close(socket);
@@ -428,7 +431,7 @@ static int py_winc_socket_accept(mod_network_socket_obj_t *socket,
     sockaddr addr;
 
     // Call accept.
-    int ret = winc_socket_accept(socket->fd, &addr, &fd, socket->timeout);
+    int ret = winc_socket_accept(socket->fileno, &addr, &fd, socket->timeout);
     if (ret < 0) {
         *_errno = ret;
         py_winc_socket_close(socket);
@@ -436,8 +439,9 @@ static int py_winc_socket_accept(mod_network_socket_obj_t *socket,
     }
 
     // Set default socket timeout.
-    socket2->fd = fd;
+    socket2->fileno = fd;
     socket2->timeout = 0;
+    socket2->state = m_new0(winc_socket_buf_t, 1);
     UNPACK_SOCKADDR((&addr), ip, *port);
 
     return 0;
@@ -446,7 +450,7 @@ static int py_winc_socket_accept(mod_network_socket_obj_t *socket,
 static int py_winc_socket_connect(mod_network_socket_obj_t *socket, byte *ip, mp_uint_t port, int *_errno)
 {
     MAKE_SOCKADDR(addr, ip, port)
-    int ret = winc_socket_connect(socket->fd, &addr, socket->timeout);
+    int ret = winc_socket_connect(socket->fileno, &addr, socket->timeout);
     if (ret < 0) {
         *_errno = ret;
         py_winc_socket_close(socket);
@@ -457,7 +461,7 @@ static int py_winc_socket_connect(mod_network_socket_obj_t *socket, byte *ip, mp
 
 static mp_uint_t py_winc_socket_send(mod_network_socket_obj_t *socket, const byte *buf, mp_uint_t len, int *_errno)
 {
-    int ret = winc_socket_send(socket->fd, buf, len, socket->timeout);
+    int ret = winc_socket_send(socket->fileno, buf, len, socket->timeout);
     if (ret == SOCK_ERR_TIMEOUT) {
         // The socket is Not closed on timeout when calling
         // WINC1500 functions that actually accept a timeout.
@@ -474,7 +478,7 @@ static mp_uint_t py_winc_socket_send(mod_network_socket_obj_t *socket, const byt
 
 static mp_uint_t py_winc_socket_recv(mod_network_socket_obj_t *socket, byte *buf, mp_uint_t len, int *_errno)
 {
-    int ret = winc_socket_recv(socket->fd, buf, len, &socket->sockbuf, socket->timeout);
+    int ret = winc_socket_recv(socket->fileno, buf, len, socket->state, socket->timeout);
     if (ret == SOCK_ERR_TIMEOUT) {
         // The socket is Not closed on timeout when calling
         // WINC1500 functions that actually accept a timeout.
@@ -493,7 +497,7 @@ static mp_uint_t py_winc_socket_sendto(mod_network_socket_obj_t *socket,
         const byte *buf, mp_uint_t len, byte *ip, mp_uint_t port, int *_errno)
 {
     MAKE_SOCKADDR(addr, ip, port)
-    int ret = winc_socket_sendto(socket->fd, buf, len, &addr, socket->timeout);
+    int ret = winc_socket_sendto(socket->fileno, buf, len, &addr, socket->timeout);
     if (ret == SOCK_ERR_TIMEOUT) {
         // The socket is Not closed on timeout when calling
         // WINC1500 functions that actually accept a timeout.
@@ -511,7 +515,7 @@ static mp_uint_t py_winc_socket_recvfrom(mod_network_socket_obj_t *socket,
         byte *buf, mp_uint_t len, byte *ip, mp_uint_t *port, int *_errno)
 {
     sockaddr addr;
-    int ret = winc_socket_recvfrom(socket->fd, buf, len, &addr, socket->timeout);
+    int ret = winc_socket_recvfrom(socket->fileno, buf, len, &addr, socket->timeout);
     UNPACK_SOCKADDR((&addr), ip, *port);
     if (ret == SOCK_ERR_TIMEOUT) {
         // The socket is Not closed on timeout when calling
@@ -530,7 +534,7 @@ static mp_uint_t py_winc_socket_recvfrom(mod_network_socket_obj_t *socket,
 static int py_winc_socket_setsockopt(mod_network_socket_obj_t *socket, mp_uint_t
         level, mp_uint_t opt, const void *optval, mp_uint_t optlen, int *_errno)
 {
-    int ret = winc_socket_setsockopt(socket->fd, level, opt, optval, optlen);
+    int ret = winc_socket_setsockopt(socket->fileno, level, opt, optval, optlen);
     if (ret < 0) {
         *_errno = ret;
         py_winc_socket_close(socket);

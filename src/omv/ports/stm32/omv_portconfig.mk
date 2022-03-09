@@ -26,6 +26,8 @@ MPY_CFLAGS += -I$(TOP_DIR)/$(MICROPY_DIR)/ports/stm32/
 MPY_CFLAGS += -I$(TOP_DIR)/$(MICROPY_DIR)/ports/stm32/usbdev/core/inc/
 MPY_CFLAGS += -I$(TOP_DIR)/$(MICROPY_DIR)/ports/stm32/usbdev/class/inc/
 MPY_CFLAGS += -I$(TOP_DIR)/$(MICROPY_DIR)/ports/stm32/lwip_inc/
+MPY_CFLAGS += -DMICROPY_PY_USSL=1 -DMICROPY_SSL_MBEDTLS=1
+MICROPY_ARGS += MICROPY_PY_USSL=1 MICROPY_SSL_MBEDTLS=1 MICROPY_PY_BTREE=1
 
 OMV_CFLAGS += -I$(OMV_BOARD_CONFIG_DIR)
 OMV_CFLAGS += -I$(TOP_DIR)/$(OMV_DIR)/
@@ -277,9 +279,7 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/,\
 	modstm.o                \
 	moduos.o                \
 	modutime.o              \
-	modusocket.o            \
 	network_lan.o           \
-	modnetwork.o            \
 	modmachine.o            \
 	machine_i2c.o           \
 	machine_spi.o           \
@@ -393,6 +393,9 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/extmod/,\
 	moducryptolib.o     \
 	modussl_mbedtls.o   \
 	moduasyncio.o       \
+	modusocket.o        \
+	modnetwork.o        \
+	moduplatform.o      \
 	)
 
 FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/lib/oofatfs/,\
@@ -450,6 +453,7 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/,\
 	extmod/modlwip.o           \
 	extmod/moduwebsocket.o     \
 	extmod/modwebrepl.o        \
+	mpnetworkport.o            \
 	)
 endif
 
