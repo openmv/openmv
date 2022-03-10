@@ -327,7 +327,6 @@ static int ioctl(sensor_t *sensor, int request, va_list ap)
     return ret;
 }
 
-
 static int lepton_reset(sensor_t *sensor, bool measurement_mode, bool high_temp_mode)
 {
     DCMI_PWDN_LOW();
@@ -703,6 +702,27 @@ int lepton_init(sensor_t *sensor)
     // NVIC configuration for SPI transfer complete interrupt
     NVIC_SetPriority(ISC_SPI_IRQn, IRQ_PRI_DCMI);
     HAL_NVIC_EnableIRQ(ISC_SPI_IRQn);
+
+    LEP_OEM_PART_NUMBER_T part;
+    if ((!reset(sensor))
+    && (LEP_GetOemFlirPartNumber(&LEPHandle, &part) == LEP_OK)) {
+        // 500 == Lepton
+        // xxxx == Version
+        // 01/00 == Shutter/NoShutter
+        if (!strncmp(part.value, "500-0771", 8)) {
+            sensor->chip_id_w = LEPTON_3_5;
+        } else if (!strncmp(part.value, "500-0726", 8)) {
+            sensor->chip_id_w = LEPTON_3_0;
+        } else if (!strncmp(part.value, "500-0763", 8)) {
+            sensor->chip_id_w = LEPTON_2_5;
+        } else if (!strncmp(part.value, "500-0659", 8)) {
+            sensor->chip_id_w = LEPTON_2_0;
+        } else if (!strncmp(part.value, "500-0690", 8)) {
+            sensor->chip_id_w = LEPTON_1_6;
+        } else if (!strncmp(part.value, "500-0643", 8)) {
+            sensor->chip_id_w = LEPTON_1_5;
+        }
+    }
 
     return 0;
 }
