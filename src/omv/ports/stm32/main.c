@@ -34,7 +34,7 @@
 #include "storage.h"
 #include "sdcard.h"
 #include "ff.h"
-#include "modnetwork.h"
+#include "extmod/modnetwork.h"
 #include "modmachine.h"
 
 #include "extmod/vfs.h"
@@ -359,8 +359,6 @@ soft_reset:
 
     // Micro Python init
     mp_init();
-    mp_obj_list_init(mp_sys_path, 0);
-    mp_obj_list_init(mp_sys_argv, 0);
 
     // Initialise low-level sub-systems. Here we need to do the very basic
     // things like zeroing out memory and resetting any of the sub-systems.

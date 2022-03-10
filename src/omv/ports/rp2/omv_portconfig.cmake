@@ -23,7 +23,6 @@ set(TENSORFLOW_DIR          ${TOP_DIR}/lib/libtf)
 set(OMV_BOARD_CONFIG_DIR    ${TOP_DIR}/${OMV_DIR}/boards/${TARGET}/)
 #set(MP_BOARD_CONFIG_DIR    ${TOP_DIR}/${MICROPY_DIR}/ports/${PORT}/boards/${TARGET}/
 set(MPY_LIB_DIR             ${TOP_DIR}/../scripts/libraries)
-set(FROZEN_MANIFEST         ${OMV_BOARD_CONFIG_DIR}/manifest.py)
 set(OMV_COMMON_DIR          ${TOP_DIR}/${OMV_DIR}/common)
 set(PORT_DIR                ${TOP_DIR}/${OMV_DIR}/ports/${PORT})
 
@@ -58,9 +57,6 @@ pico_set_linker_script(${MICROPY_TARGET} ${BUILD}/rp2.ld)
 file(GLOB OMV_SRC_QSTR1 ${TOP_DIR}/${OMV_DIR}/modules/*.c)
 file(GLOB OMV_SRC_QSTR2 ${TOP_DIR}/${OMV_DIR}/ports/${PORT}/modules/*.c)
 list(APPEND MICROPY_SOURCE_QSTR ${OMV_SRC_QSTR1} ${OMV_SRC_QSTR2})
-
-# Override manifest file
-set(MICROPY_FROZEN_MANIFEST ${FROZEN_MANIFEST})
 
 target_include_directories(${MICROPY_TARGET} PRIVATE
     ${TOP_DIR}/${CMSIS_DIR}/include/
@@ -261,27 +257,6 @@ if(MICROPY_PY_ULAB)
         MICROPY_PY_ULAB=1
         MODULE_ULAB_ENABLED=1
         ULAB_CONFIG_FILE="${OMV_BOARD_CONFIG_DIR}/ulab_config.h"
-    )
-endif()
-
-if(MICROPY_PY_NINAW10)
-    target_include_directories(${MICROPY_TARGET} PRIVATE
-        ${TOP_DIR}/${NINAW10_DIR}/include/
-    )
-
-    set(NINA_SOURCES
-        ${TOP_DIR}/${NINAW10_DIR}/src/nina.c
-        ${TOP_DIR}/${OMV_DIR}/ports/${PORT}/nina_bsp.c
-        ${TOP_DIR}/${OMV_DIR}/ports/${PORT}/modules/py_nina.c
-    )
-
-    target_sources(${MICROPY_TARGET} PRIVATE ${NINA_SOURCES})
-
-    target_compile_definitions(${MICROPY_TARGET} PRIVATE
-        NINA_DEBUG=0
-        MICROPY_PY_USOCKET=1
-        MICROPY_PY_NETWORK=1
-        MICROPY_PY_NINAW10=1
     )
 endif()
 

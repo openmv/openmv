@@ -48,7 +48,7 @@
 #endif
 
 #if MICROPY_PY_NETWORK
-#include "modnetwork.h"
+#include "extmod/modnetwork.h"
 #endif
 
 #include "pico/stdlib.h"
@@ -157,7 +157,7 @@ int main(int argc, char **argv) {
         .year = 2021,
         .month = 1,
         .day = 1,
-        .dotw = 5, // 0 is Sunday, so 5 is Friday
+        .dotw = 4, // 0 is Monday, so 4 is Friday
         .hour = 0,
         .min = 0,
         .sec = 0,
@@ -177,10 +177,7 @@ soft_reset:
 
     // Initialise MicroPython runtime.
     mp_init();
-    mp_obj_list_init(MP_OBJ_TO_PTR(mp_sys_path), 0);
-    mp_obj_list_append(mp_sys_path, MP_OBJ_NEW_QSTR(MP_QSTR_));
     mp_obj_list_append(mp_sys_path, MP_OBJ_NEW_QSTR(MP_QSTR__slash_lib));
-    mp_obj_list_init(MP_OBJ_TO_PTR(mp_sys_argv), 0);
 
     // Initialise sub-systems.
     mp_hal_init();
