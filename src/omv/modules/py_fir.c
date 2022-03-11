@@ -317,49 +317,54 @@ mp_obj_t py_fir_init(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
     if (type == -1) {
         FIR_SCAN_RETRY:
         cambus_init(&fir_bus, FIR_I2C_ID, CAMBUS_SPEED_STANDARD);
-        switch (cambus_scan(&fir_bus, NULL, 0)) {
-            #if (OMV_ENABLE_FIR_MLX90621 == 1)
+        // Scan and detect any supported sensor.
+        uint8_t dev_list[10];
+        int dev_size = cambus_scan(&fir_bus, dev_list, sizeof(dev_list));
+        for (int i=0; i<dev_size && type==-1; i++) {
+            switch (dev_list[i]) {
+                #if (OMV_ENABLE_FIR_MLX90621 == 1)
                 case (MLX90621_ADDR << 1): {
                     type = FIR_MLX90621;
                     break;
                 }
-            #endif
-            #if (OMV_ENABLE_FIR_MLX90640 == 1)
+                #endif
+                #if (OMV_ENABLE_FIR_MLX90640 == 1)
                 case (MLX90640_ADDR << 1): {
                     type = FIR_MLX90640;
                     break;
                 }
-            #endif
-            #if (OMV_ENABLE_FIR_MLX90640 == 0) && (OMV_ENABLE_FIR_MLX90641 == 1)
+                #endif
+                #if (OMV_ENABLE_FIR_MLX90640 == 0)\
+                 && (OMV_ENABLE_FIR_MLX90641 == 1)
                 case (MLX90641_ADDR << 1): {
                     type = FIR_MLX90641;
                     break;
                 }
-            #endif
-            #if (OMV_ENABLE_FIR_AMG8833 == 1)
+                #endif
+                #if (OMV_ENABLE_FIR_AMG8833 == 1)
                 case AMG8833_ADDR: {
                     type = FIR_AMG8833;
                     break;
                 }
-            #endif
-            #if (OMV_ENABLE_FIR_LEPTON == 1)
+                #endif
+                #if (OMV_ENABLE_FIR_LEPTON == 1)
                 case LEPTON_ADDR: {
                     type = FIR_LEPTON;
                     break;
                 }
-            #endif
-            default: {
-                if (first_init) {
-                    first_init = false;
-                    // Try to recover the bus once as it may be stuck from an interrupted run.
-                    // This is mostly needed for the AMG8833
-                    cambus_pulse_scl(&fir_bus);
-                    goto FIR_SCAN_RETRY;
-                } else {
-                    mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Failed to detect any FIR sensor"));
-                }
+                #endif
+                default:
+                    continue;
             }
         }
+
+        if (type == -1 && first_init) {
+            first_init = false;
+            // Recover bus and scan one more time.
+            cambus_pulse_scl(&fir_bus);
+            goto FIR_SCAN_RETRY;
+        }
+
         cambus_deinit(&fir_bus);
     }
 
@@ -557,7 +562,7 @@ mp_obj_t py_fir_init(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
         }
         #endif
         default: {
-            mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Invalid sensor type!"));
+            mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Failed to detect a supported FIR sensor."));
         }
     }
 
