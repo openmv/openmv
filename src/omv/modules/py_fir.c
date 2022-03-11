@@ -317,7 +317,7 @@ mp_obj_t py_fir_init(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
     if (type == -1) {
         FIR_SCAN_RETRY:
         cambus_init(&fir_bus, FIR_I2C_ID, CAMBUS_SPEED_STANDARD);
-        switch (cambus_scan(&fir_bus)) {
+        switch (cambus_scan(&fir_bus, NULL, 0)) {
             #if (OMV_ENABLE_FIR_MLX90621 == 1)
                 case (MLX90621_ADDR << 1): {
                     type = FIR_MLX90621;
