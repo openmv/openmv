@@ -201,7 +201,7 @@ int sensor_probe_init(uint32_t bus_id, uint32_t bus_speed)
     mp_hal_delay_ms(10);
 
     // Probe the sensor
-    sensor.slv_addr = cambus_scan(&sensor.bus);
+    sensor.slv_addr = cambus_scan(&sensor.bus, NULL, 0);
     if (sensor.slv_addr == 0) {
         /* Sensor has been held in reset,
            so the reset line is active low */
@@ -212,21 +212,21 @@ int sensor_probe_init(uint32_t bus_id, uint32_t bus_speed)
         mp_hal_delay_ms(10);
 
         // Probe again to set the slave addr.
-        sensor.slv_addr = cambus_scan(&sensor.bus);
+        sensor.slv_addr = cambus_scan(&sensor.bus, NULL, 0);
         if (sensor.slv_addr == 0) {
             sensor.pwdn_pol = ACTIVE_LOW;
 
             DCMI_PWDN_HIGH();
             mp_hal_delay_ms(10);
 
-            sensor.slv_addr = cambus_scan(&sensor.bus);
+            sensor.slv_addr = cambus_scan(&sensor.bus, NULL, 0);
             if (sensor.slv_addr == 0) {
                 sensor.reset_pol = ACTIVE_HIGH;
 
                 DCMI_RESET_LOW();
                 mp_hal_delay_ms(10);
 
-                sensor.slv_addr = cambus_scan(&sensor.bus);
+                sensor.slv_addr = cambus_scan(&sensor.bus, NULL, 0);
                 #ifndef OMV_ENABLE_NONI2CIS
                 if (sensor.slv_addr == 0) {
                     return SENSOR_ERROR_ISC_UNDETECTED;

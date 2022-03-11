@@ -64,14 +64,21 @@ int cambus_deinit(cambus_t *bus)
     return 0;
 }
 
-int cambus_scan(cambus_t *bus)
+int cambus_scan(cambus_t *bus, uint8_t *list, uint8_t size)
 {
-    for (uint8_t addr=0x20, rxdata; addr<=0x48; addr++) {
+    int idx = 0;
+    for (uint8_t addr=0x20, rxdata; addr<=0x77; addr++) {
         if (i2c_read_timeout_us(bus->i2c, addr, &rxdata, 1, false, I2C_SCAN_TIMEOUT) >= 0) {
-            return (addr << 1);
+            if (list == NULL || size == 0) {
+                return (addr << 1);
+            } else if (idx < size) {
+                list[idx++] = (addr << 1);
+            } else {
+                break;
+            }
         }
     }
-    return 0;
+    return idx;
 }
 
 int cambus_enable(cambus_t *bus, bool enable)

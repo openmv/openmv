@@ -84,17 +84,24 @@ int cambus_deinit(cambus_t *bus)
     return 0;
 }
 
-int cambus_scan(cambus_t *bus)
+int cambus_scan(cambus_t *bus, uint8_t *list, uint8_t size)
 {
+    int idx = 0;
     uint8_t data;
     uint32_t xfer_flags = 0;
     for (uint8_t addr=0x09; addr<=0x77; addr++) {
         nrfx_twi_xfer_desc_t desc = NRFX_TWI_XFER_DESC_RX(addr, &data, 1);
         if (nrfx_twi_xfer(&bus->i2c, &desc, xfer_flags) == NRFX_SUCCESS) {
-            return (addr << 1);
+            if (list == NULL || size == 0) {
+                return (addr << 1);
+            } else if (idx < size) {
+                list[idx++] = (addr << 1);
+            } else {
+                break;
+            }
         }
     }
-    return 0;
+    return idx;
 }
 
 int cambus_enable(cambus_t *bus, bool enable)

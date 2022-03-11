@@ -261,21 +261,30 @@ int cambus_deinit(cambus_t *bus)
     return 0;
 }
 
-int cambus_scan(cambus_t *bus)
+int cambus_scan(cambus_t *bus, uint8_t *list, uint8_t size)
 {
+    int idx = 0;
     for (uint8_t addr=0x09; addr<=0x77; addr++) {
         if (HAL_I2C_IsDeviceReady(bus->i2c, addr << 1, 10, I2C_SCAN_TIMEOUT) == HAL_OK) {
-            return (addr << 1);
+            if (list == NULL || size == 0) {
+                return (addr << 1);
+            } else if (idx < size) {
+                list[idx++] = (addr << 1);
+            } else {
+                break;
+            }
         }
     }
     #if defined(STM32H7)
     // After a failed scan the bus can get stuck. Re-initializing the bus fixes
     // it, but it seems disabling and re-enabling the bus is all that's needed.
-    __HAL_I2C_DISABLE(bus->i2c);
-    mp_hal_delay_ms(10);
-    __HAL_I2C_ENABLE(bus->i2c);
+    if (idx == 0) {
+        __HAL_I2C_DISABLE(bus->i2c);
+        mp_hal_delay_ms(10);
+        __HAL_I2C_ENABLE(bus->i2c);
+    }
     #endif
-    return 0;
+    return idx;
 }
 
 int cambus_enable(cambus_t *bus, bool enable)
