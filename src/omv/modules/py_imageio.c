@@ -508,7 +508,7 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_imageio_close_obj, py_imageio_close);
 STATIC mp_obj_t py_imageio_make_new(const mp_obj_type_t *type, size_t n_args, size_t n_kw, const mp_obj_t *args)
 {
     mp_arg_check_num(n_args, n_kw, 2, 2, false);
-    py_imageio_obj_t *stream = m_new_obj(py_imageio_obj_t);
+    py_imageio_obj_t *stream = m_new_obj_with_finaliser(py_imageio_obj_t);
     stream->base.type = &py_imageio_type;
     stream->closed = false;
 
@@ -614,6 +614,7 @@ STATIC mp_obj_t py_imageio_make_new(const mp_obj_type_t *type, size_t n_args, si
 
 STATIC const mp_rom_map_elem_t py_imageio_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR___name__),        MP_ROM_QSTR(MP_QSTR_imageio)            },
+    { MP_ROM_QSTR(MP_QSTR___del__),         MP_ROM_PTR(&py_imageio_close_obj)       },
     { MP_ROM_QSTR(MP_QSTR_FILE_STREAM),     MP_ROM_INT(IMAGE_IO_FILE_STREAM)        },
     { MP_ROM_QSTR(MP_QSTR_MEMORY_STREAM),   MP_ROM_INT(IMAGE_IO_MEMORY_STREAM)      },
     { MP_ROM_QSTR(MP_QSTR_type),            MP_ROM_PTR(&py_imageio_get_type_obj)    },
