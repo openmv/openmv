@@ -18,13 +18,13 @@ int cambus_init(cambus_t *bus, uint32_t bus_id, uint32_t speed)
 
     switch (speed) {
         case CAMBUS_SPEED_STANDARD:
-            bus->speed = 100 * 1000; ///< 100 kbps
+            bus->speed = 100 * 1000;    ///< 100 kbps
             break;
         case CAMBUS_SPEED_FULL:
-            bus->speed = 250 * 1000; ///< 250 kbps
+            bus->speed = 250 * 1000;    ///< 250 kbps
             break;
         case CAMBUS_SPEED_FAST:
-            bus->speed = 400 * 1000;  ///< 400 kbps
+            bus->speed = 1000 * 1000;   ///< 1000 kbps
             break;
         default:
             return -1;
