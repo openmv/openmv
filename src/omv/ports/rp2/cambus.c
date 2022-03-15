@@ -86,6 +86,13 @@ int cambus_enable(cambus_t *bus, bool enable)
     return 0;
 }
 
+int cambus_gencall(cambus_t *bus, uint8_t cmd)
+{
+    int bytes = 0;
+    bytes += i2c_write_timeout_us(bus->i2c, 0x00, &cmd, 1, false, I2C_TIMEOUT);
+    return (bytes == 1) ? 0 : -1;
+}
+
 int cambus_readb(cambus_t *bus, uint8_t slv_addr, uint8_t reg_addr,  uint8_t *reg_data)
 {
     int bytes = 0;
