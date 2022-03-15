@@ -152,6 +152,9 @@ static void fir_MLX90640_get_frame(float *Ta, float *To)
 {
     uint16_t *data = fb_alloc(MLX90640_FRAME_DATA_SIZE * sizeof(uint16_t), FB_ALLOC_NO_HINT);
 
+    // Wait for a new data to be available before calling GetFrameData.
+    MLX90640_SynchFrame(MLX90640_ADDR);
+
     // Calculate 1st sub-frame...
     PY_ASSERT_TRUE_MSG(MLX90640_GetFrameData(MLX90640_ADDR, data) >= 0,
                        "Failed to read the MLX90640 sensor data!");
@@ -172,6 +175,9 @@ static void fir_MLX90640_get_frame(float *Ta, float *To)
 static void fir_MLX90641_get_frame(float *Ta, float *To)
 {
     uint16_t *data = fb_alloc(MLX90641_FRAME_DATA_SIZE * sizeof(uint16_t), FB_ALLOC_NO_HINT);
+
+    // Wait for a new data to be available before calling GetFrameData.
+    MLX90641_SynchFrame(MLX90641_ADDR);
 
     PY_ASSERT_TRUE_MSG(MLX90641_GetFrameData(MLX90641_ADDR, data) >= 0,
                        "Failed to read the MLX90641 sensor data!");
