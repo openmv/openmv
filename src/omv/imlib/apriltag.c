@@ -9628,8 +9628,12 @@ int quad_segment_maxima(apriltag_detector_t *td, zarray_t *cluster, struct line_
     }
 
     // if we didn't get at least 4 maxima, we can't fit a quad.
-    if (nmaxima < 4)
-        return 0;
+    if (nmaxima < 4){
+       fb_free(); // maxima_errs
+       fb_free(); // maxima
+       fb_free(); // errs
+       return 0;
+    }
 
     // select only the best maxima if we have too many
     int max_nmaxima = td->qtp.max_nmaxima;
