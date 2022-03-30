@@ -40,7 +40,7 @@ jobs:
       run: source tools/ci.sh && ci_update_submodules
 
     - name: '♻ Caching dependencies'
-      uses: actions/cache@v2
+      uses: actions/cache@v3.0.1
       id: cache
       with:
         path: ~/cache/gcc
