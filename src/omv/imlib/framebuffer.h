@@ -116,6 +116,9 @@ void framebuffer_auto_adjust_buffers();
 // Call when done with the current vbuffer to mark it as free.
 void framebuffer_free_current_buffer();
 
+// Call to do any heavy setup before frame capture.
+void framebuffer_setup_buffers();
+
 // Sets the current frame buffer to the latest virtual frame buffer.
 // Returns the buffer if it is ready or NULL if not...
 // Pass FB_PEEK to get the next buffer but not take it.

@@ -762,6 +762,8 @@ int sensor_snapshot(sensor_t *sensor, image_t *image, uint32_t flags)
     // wait for the start of the next frame when it's re-enabled again below. So, we do not
     // need to wait till there's no frame happening before enabling.
     if (!(DCMI->CR & DCMI_CR_ENABLE)) {
+        framebuffer_setup_buffers();
+
         // Setup the size and address of the transfer
         uint32_t bytes_per_pixel = sensor_get_src_bpp();
 
