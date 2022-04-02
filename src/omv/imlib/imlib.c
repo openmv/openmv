@@ -21,7 +21,7 @@
 
 void imlib_init_all() {
     #if (OMV_HARDWARE_JPEG == 1)
-    imlib_jpeg_compress_init();
+    imlib_hardware_jpeg_init();
     #endif
 }
 
@@ -30,7 +30,7 @@ void imlib_deinit_all() {
     imlib_draw_row_deinit_all();
     #endif
     #if (OMV_HARDWARE_JPEG == 1)
-    imlib_jpeg_compress_deinit();
+    imlib_hardware_jpeg_deinit();
     #endif
 }
 

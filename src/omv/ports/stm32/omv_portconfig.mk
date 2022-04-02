@@ -582,6 +582,7 @@ UVC_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/imlib/,\
 	)
 
 UVC_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/ports/stm32/,\
+	jpeg.o                                  \
 	sensor.o                                \
 	stm32fxxx_hal_msp.o                     \
 	soft_i2c.o                              \
