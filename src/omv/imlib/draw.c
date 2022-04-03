@@ -449,7 +449,7 @@ void imlib_draw_row_setup(imlib_draw_row_data_t *data)
     size_t image_row_size = image_size(&temp) / data->dst_img->h;
 
     data->toggle = 0;
-    data->row_buffer[0] = fb_alloc(image_row_size, FB_ALLOC_NO_HINT);
+    data->row_buffer[0] = fb_alloc(image_row_size, FB_ALLOC_CACHE_ALIGN);
 
 #ifdef IMLIB_ENABLE_DMA2D
     data->dma2d_enabled = false;
@@ -461,7 +461,7 @@ void imlib_draw_row_setup(imlib_draw_row_data_t *data)
         ((data->src_img_pixfmt == PIXFORMAT_GRAYSCALE) ||
         ((data->src_img_pixfmt == PIXFORMAT_RGB565) && (data->rgb_channel < 0)
          && (data->alpha != 256) && (!data->color_palette) && (!data->alpha_palette)))) {
-        data->row_buffer[1] = fb_alloc(image_row_size, FB_ALLOC_NO_HINT);
+        data->row_buffer[1] = fb_alloc(image_row_size, FB_ALLOC_CACHE_ALIGN);
         data->dma2d_enabled = true;
         data->dma2d_initialized = true;
 
