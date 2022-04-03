@@ -451,7 +451,7 @@ static void spi_lcd_display(image_t *src_img, int dst_x_start, int dst_y_start, 
 
         #ifdef __DCACHE_PRESENT
         // Flush data for DMA
-        SCB_CleanDCache();
+        SCB_CleanDCache_by_Addr((uint32_t *) dst_img.data, image_size(&dst_img));
         #endif
 
         // Update tail which means a new image is ready.
@@ -1030,7 +1030,7 @@ static void ltdc_display(image_t *src_img, int dst_x_start, int dst_y_start, flo
 
     #ifdef __DCACHE_PRESENT
     // Flush data for DMA
-    if (!black) SCB_CleanDCache();
+    if (!black) SCB_CleanDCache_by_Addr((uint32_t *) dst_img.data, image_size(&dst_img));
     #endif
 
     // Update tail which means a new image is ready.
