@@ -60,6 +60,7 @@ WINC1500_DIR=drivers/winc1500
 MLX90621_DIR=drivers/mlx90621
 MLX90640_DIR=drivers/mlx90640
 MLX90641_DIR=drivers/mlx90641
+VL53L5CX_DIR=drivers/vl53l5cx
 PIXART_DIR=drivers/pixart
 LIBPDM_DIR=lib/libpdm
 TENSORFLOW_DIR=lib/libtf
