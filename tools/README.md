@@ -26,7 +26,7 @@ Source: https://github.com/arduino/arduino-fwuploader
 This tool can be used to upload firmware to DFU bootloaders. Example usage:
 
 ```
-dfu-util -w -d <vid>:<pid> -a 0 -s 0x80000000:leave -D <path_to_bin>
+dfu-util -w -d <vid>:<pid> -a 0 -s 0x08000000:leave -D <path_to_bin>
 ```
 
 Source: http://dfu-util.sourceforge.net/
