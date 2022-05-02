@@ -165,9 +165,9 @@
 #define OMV_FB_SIZE             (400K)      // FB memory: header + VGA/GS image
 #define OMV_FB_ALLOC_SIZE       (100K)      // minimum fb alloc size
 #define OMV_STACK_SIZE          (64K)
-#define OMV_HEAP_SIZE           (236K)
+#define OMV_HEAP_SIZE           (229K)
 
-#define OMV_LINE_BUF_SIZE       (3 * 1024)  // Image line buffer round(640 * 2BPP * 2 buffers).
+#define OMV_LINE_BUF_SIZE       (5 * 1024)  // Image line buffer.
 #define OMV_MSC_BUF_SIZE        (2K)        // USB MSC bot data
 #define OMV_VFS_BUF_SIZE        (1K)        // VFS sturct + FATFS file buffer (624 bytes)
 #define OMV_FIR_LEPTON_BUF_SIZE (1K)        // FIR Lepton Packet Double Buffer (328 bytes)
@@ -182,9 +182,9 @@
 #define OMV_ITCM_ORIGIN         0x00000000
 #define OMV_ITCM_LENGTH         64K
 #define OMV_SRAM1_ORIGIN        0x30000000
-#define OMV_SRAM1_LENGTH        248K
-#define OMV_SRAM2_ORIGIN        0x3003E000  // 8KB of SRAM1
-#define OMV_SRAM2_LENGTH        8K
+#define OMV_SRAM1_LENGTH        240K
+#define OMV_SRAM2_ORIGIN        0x3003C000  // 16KB of SRAM1
+#define OMV_SRAM2_LENGTH        16K
 #define OMV_SRAM3_ORIGIN        0x30040000
 #define OMV_SRAM3_LENGTH        32K
 #define OMV_SRAM4_ORIGIN        0x38000000
@@ -200,9 +200,9 @@
 
 // Domain 2 DMA buffers region.
 #define OMV_DMA_MEMORY_D2       SRAM2
-#define OMV_DMA_MEMORY_D2_SIZE  (1*1024) // Reserved memory for DMA buffers
+#define OMV_DMA_MEMORY_D2_SIZE  (6*1024) // Reserved memory for DMA buffers
 #define OMV_DMA_REGION_D2_BASE  (OMV_SRAM2_ORIGIN+(0*1024))
-#define OMV_DMA_REGION_D2_SIZE  MPU_REGION_SIZE_8KB
+#define OMV_DMA_REGION_D2_SIZE  MPU_REGION_SIZE_16KB
 
 // Domain 3 DMA buffers region.
 //#define OMV_DMA_MEMORY_D3       SRAM4
