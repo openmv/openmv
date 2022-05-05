@@ -346,9 +346,11 @@ int sensor_set_vsync_callback(vsync_cb_t vsync_cb)
 
 void DCMI_VsyncExtiCallback()
 {
-    __HAL_GPIO_EXTI_CLEAR_FLAG(1 << DCMI_VSYNC_IRQ_LINE);
-    if (sensor.vsync_callback != NULL) {
-        sensor.vsync_callback(HAL_GPIO_ReadPin(DCMI_VSYNC_PORT, DCMI_VSYNC_PIN));
+    if (__HAL_GPIO_EXTI_GET_FLAG(1 << DCMI_VSYNC_IRQ_LINE)) {
+        __HAL_GPIO_EXTI_CLEAR_FLAG(1 << DCMI_VSYNC_IRQ_LINE);
+        if (sensor.vsync_callback != NULL) {
+            sensor.vsync_callback(HAL_GPIO_ReadPin(DCMI_VSYNC_PORT, DCMI_VSYNC_PIN));
+        }
     }
 }
 
