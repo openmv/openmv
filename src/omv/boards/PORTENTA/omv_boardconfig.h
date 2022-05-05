@@ -347,7 +347,7 @@
 #endif
 
 #define DCMI_VSYNC_IRQN         EXTI9_5_IRQn
-#define DCMI_VSYNC_IRQ_LINE     (7)
+#define DCMI_VSYNC_IRQ_LINE     (5)
 
 #define SOFT_I2C_PORT                GPIOB
 #define SOFT_I2C_SIOC_PIN            GPIO_PIN_10
