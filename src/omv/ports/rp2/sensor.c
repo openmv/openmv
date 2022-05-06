@@ -231,6 +231,8 @@ int sensor_snapshot(sensor_t *sensor, image_t *image, uint32_t flags)
     // If there's no ready buffer in the fifo, and the DMA is Not currently
     // transferring a new buffer, reconfigure and restart the DMA transfer.
     if (buffer == NULL && !dma_channel_is_busy(DCMI_DMA_CHANNEL)) {
+        framebuffer_setup_buffers();
+
         buffer = framebuffer_get_tail(FB_PEEK);
         if (buffer == NULL) {
             return SENSOR_ERROR_FRAMEBUFFER_ERROR;

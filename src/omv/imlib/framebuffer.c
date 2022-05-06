@@ -368,7 +368,7 @@ void framebuffer_free_current_buffer()
 {
     vbuffer_t *buffer = framebuffer_get_buffer(framebuffer->head);
     #ifdef __DCACHE_PRESENT
-    // Make sure all cached CPU writes are flushed before returning the buffer.
+    // Make sure all cached CPU writes are discarded before returning the buffer.
     SCB_InvalidateDCache_by_Addr(buffer->data, framebuffer_get_buffer_size());
     #endif
 
@@ -379,6 +379,19 @@ void framebuffer_free_current_buffer()
     if (framebuffer->n_buffers == 1) {
         buffer->waiting_for_data = true;
     }
+}
+
+void framebuffer_setup_buffers()
+{
+    #ifdef __DCACHE_PRESENT
+    for (int32_t i = 0; i < framebuffer->n_buffers; i++) {
+        if (i != framebuffer->head) {
+            vbuffer_t *buffer = framebuffer_get_buffer(i);
+            // Make sure all cached CPU writes are discarded before returning the buffer.
+            SCB_InvalidateDCache_by_Addr(buffer->data, framebuffer_get_buffer_size());
+        }
+    }
+    #endif
 }
 
 vbuffer_t *framebuffer_get_head(framebuffer_flags_t flags)

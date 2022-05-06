@@ -183,6 +183,7 @@ int sensor_snapshot(sensor_t *sensor, image_t *image, uint32_t flags)
     }
 
     framebuffer_free_current_buffer();
+    framebuffer_setup_buffers();
     vbuffer_t *buffer = framebuffer_get_tail(FB_NO_FLAGS);
 
     if (!buffer) {
