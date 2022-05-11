@@ -108,6 +108,8 @@ jobs:
     needs: build-firmware
     runs-on: ubuntu-20.04
     if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') == false
+    permissions:
+      contents: write
     steps:
     - name: '⏳ Checkout repository'
       uses: actions/checkout@v3
