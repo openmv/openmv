@@ -46,7 +46,9 @@ enum usbdbg_cmd {
     USBDBG_FB_ENABLE        =0x0D,
     USBDBG_TX_BUF_LEN       =0x8E,
     USBDBG_TX_BUF           =0x8F,
-    USBDBG_SENSOR_ID        =0x90
+    USBDBG_SENSOR_ID        =0x90,
+    USBDBG_TX_INPUT         =0x11,
+    USBDBG_SET_TIME         =0x12,
 };
 
 void usbdbg_init();
