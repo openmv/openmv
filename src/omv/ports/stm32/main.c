@@ -624,12 +624,6 @@ soft_reset:
         usbdbg_wait_for_command(1000);
     }
 
-    #if MICROPY_PY_LWIP
-    // Must call GC sweep here to close open sockets.
-    gc_sweep_all();
-    systick_disable_dispatch(SYSTICK_DISPATCH_LWIP);
-    #endif
-
     // soft reset
     storage_flush();
 
@@ -638,6 +632,9 @@ soft_reset:
 
     #if MICROPY_PY_BLUETOOTH
     mp_bluetooth_deinit();
+    #endif
+    #if MICROPY_PY_LWIP
+    systick_disable_dispatch(SYSTICK_DISPATCH_LWIP);
     #endif
     mod_network_deinit();
     timer_deinit();
@@ -654,6 +651,10 @@ soft_reset:
     py_audio_deinit();
     #endif
     imlib_deinit_all();
+
+    gc_sweep_all();
+    mp_deinit();
+
     first_soft_reset = false;
     goto soft_reset;
 }
