@@ -300,6 +300,32 @@ void usbdbg_data_out(void *buffer, int length)
             break;
         }
 
+        case USBDBG_SET_TIME: {
+            // TODO implement
+            #if 0
+            uint32_t *timebuf = (uint32_t*)buffer;
+            timebuf[0];   // Year
+            timebuf[1];   // Month
+            timebuf[2];   // Day
+            timebuf[3];   // Day of the week
+            timebuf[4];   // Hour
+            timebuf[5];   // Minute
+            timebuf[6];   // Second
+            timebuf[7];   // Milliseconds
+            #endif
+            cmd = USBDBG_NONE;
+            break;
+        }
+
+        case USBDBG_TX_INPUT: {
+            // TODO implement
+            #if 0
+            uint32_t key= *((uint32_t*)buffer);
+            #endif
+            cmd = USBDBG_NONE;
+            break;
+        }
+
         default: /* error */
             break;
     }
@@ -407,6 +433,16 @@ void usbdbg_control(void *buffer, uint8_t request, uint32_t length)
         case USBDBG_SENSOR_ID:
             xfer_bytes = 0;
             xfer_length = length;
+            break;
+
+        case USBDBG_SET_TIME:
+            xfer_bytes = 0;
+            xfer_length =length;
+            break;
+
+        case USBDBG_TX_INPUT:
+            xfer_bytes = 0;
+            xfer_length =length;
             break;
 
         default: /* error */
