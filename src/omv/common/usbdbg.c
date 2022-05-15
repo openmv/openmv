@@ -41,6 +41,10 @@ static mp_obj_t mp_const_ide_interrupt = MP_OBJ_NULL;
 // These functions must be implemented in MicroPython CDC driver.
 extern uint32_t usb_cdc_buf_len();
 extern uint32_t usb_cdc_get_buf(uint8_t *buf, uint32_t len);
+void __attribute__((weak)) usb_cdc_reset_buffers()
+{
+
+}
 
 void usbdbg_init()
 {
@@ -338,6 +342,9 @@ void usbdbg_control(void *buffer, uint8_t request, uint32_t length)
 
                 // Disable IDE IRQ (re-enabled by pyexec or main).
                 usbdbg_set_irq_enabled(false);
+
+                // Reset CDC buffers after disabling IRQs.
+                usb_cdc_reset_buffers();
 
                 // interrupt running code by raising an exception
                 mp_obj_exception_clear_traceback(mp_const_ide_interrupt);
