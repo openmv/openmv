@@ -66,6 +66,7 @@
 #define OMV_ENABLE_MT9V0XX      (1)
 #define OMV_ENABLE_LEPTON       (0)
 #define OMV_ENABLE_HM01B0       (1)
+#define OMV_ENABLE_HM0360       (1)
 #define OMV_ENABLE_GC2145       (0)
 
 // Enable sensor features

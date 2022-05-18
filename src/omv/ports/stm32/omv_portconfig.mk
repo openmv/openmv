@@ -160,6 +160,7 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/sensors/,   \
 	mt9m114.o                   \
 	lepton.o                    \
 	hm01b0.o                    \
+	hm0360.o                    \
 	gc2145.o                    \
 	paj6100.o                   \
 	frogeye2020.o               \
@@ -537,6 +538,7 @@ UVC_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/sensors/, \
 	mt9m114.o                               \
 	lepton.o                                \
 	hm01b0.o                                \
+	hm0360.o                                \
 	gc2145.o                                \
 	paj6100.o                               \
 	frogeye2020.o                           \
