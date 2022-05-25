@@ -58,7 +58,7 @@ void usbdbg_init()
 
 void usbdbg_wait_for_command(uint32_t timeout)
 {
-    for (mp_uint_t ticks = mp_hal_ticks_ms(); ((mp_hal_ticks_ms() - ticks) < timeout) && (cmd != USBDBG_NONE); );
+    for (mp_uint_t ticks = mp_hal_ticks_ms(); irq_enabled && ((mp_hal_ticks_ms() - ticks) < timeout) && (cmd != USBDBG_NONE); );
 }
 
 bool usbdbg_script_ready()
