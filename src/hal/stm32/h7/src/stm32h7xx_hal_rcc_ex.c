@@ -2300,6 +2300,52 @@ uint32_t HAL_RCCEx_GetPeriphCLKFreq(uint32_t PeriphClk)
         }
       }
     }
+  else if (PeriphClk == RCC_PERIPHCLK_SPI45)
+    {
+      /* Get SPI45 clock source */
+      srcclk= __HAL_RCC_GET_SPI45_SOURCE();
+
+      switch (srcclk)
+      {
+      case RCC_SPI45CLKSOURCE_PCLK1: /* D2PCLK2 is the clock source for SPI45 */
+        {
+          frequency = HAL_RCC_GetPCLK2Freq();
+          break;
+        }
+      case RCC_SPI45CLKSOURCE_PLL2: /* PLL2 is the clock source for SPI45 */
+        {
+          HAL_RCCEx_GetPLL2ClockFreq(&pll2_clocks);
+          frequency = pll2_clocks.PLL2_Q_Frequency;
+          break;
+        }
+      case RCC_SPI45CLKSOURCE_PLL3: /* PLL3 is the clock source for SPI45 */
+        {
+          HAL_RCCEx_GetPLL3ClockFreq(&pll3_clocks);
+          frequency = pll3_clocks.PLL3_Q_Frequency;
+          break;
+        }
+      case RCC_SPI45CLKSOURCE_HSI: /* HSI is the clock source for SPI45 */
+        {
+          frequency = HSI_VALUE;
+          break;
+        }
+      case RCC_SPI45CLKSOURCE_CSI: /* CSI is the clock source for SPI45 */
+        {
+          frequency = CSI_VALUE;
+          break;
+        }
+      case RCC_SPI45CLKSOURCE_HSE: /* HSE is the clock source for SPI45 */
+        {
+          frequency = HSE_VALUE;
+          break;
+        }
+      default :
+        {
+          frequency = 0;
+          break;
+        }
+      }
+    }
   else if (PeriphClk == RCC_PERIPHCLK_ADC)
     {
       /* Get ADC clock source */
