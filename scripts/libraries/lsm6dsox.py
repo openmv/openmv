@@ -80,7 +80,7 @@ class LSM6DSOX:
 
     def __init__(
         self,
-        dev,
+        bus,
         cs_pin=None,
         address=_DEFAULT_ADDR,
         gyro_odr=104,
@@ -96,11 +96,11 @@ class LSM6DSOX:
         accel_scale: (+/-2g, +/-4g, +/-8g, +-16g)
         ucf: MLC program to load.
         """
-        self.dev = dev
+        self.bus = bus
         self.cs_pin = cs_pin
         self.address = address
 
-        if cs_pin is None and isinstance(self.dev, SPI):
+        if cs_pin is None and isinstance(self.bus, SPI):
             raise ValueError("Must provide CS pin in SPI mode.")
 
         # check the id of the Accelerometer/Gyro
@@ -162,39 +162,39 @@ class LSM6DSOX:
         self.accel_scale = 32768 / accel_scale
 
     def __read_reg(self, reg, size=1):
-        if isinstance(self.dev, SPI):
+        if isinstance(self.bus, SPI):
             try:
                 self.cs_pin(0)
-                self.dev.write(bytes([reg | 0x80]))
-                buf = self.dev.read(size)
+                self.bus.write(bytes([reg | 0x80]))
+                buf = self.bus.read(size)
             finally:
                 self.cs_pin(1)
         else:
-            buf = self.dev.readfrom_mem(self.address, reg, size)
+            buf = self.bus.readfrom_mem(self.address, reg, size)
         if size == 1:
             return int(buf[0])
         return [int(x) for x in buf]
 
     def __write_reg(self, reg, val):
-        if isinstance(self.dev, SPI):
+        if isinstance(self.bus, SPI):
             try:
                 self.cs_pin(0)
-                self.dev.write(bytes([reg, val]))
+                self.bus.write(bytes([reg, val]))
             finally:
                 self.cs_pin(1)
         else:
-            self.dev.writeto_mem(self.address, reg, bytes([val]))
+            self.bus.writeto_mem(self.address, reg, bytes([val]))
 
     def __read_reg_into(self, reg, buf):
-        if isinstance(self.dev, SPI):
+        if isinstance(self.bus, SPI):
             try:
                 self.cs_pin(0)
-                self.dev.write(bytes([reg | 0x80]))
-                self.dev.readinto(buf)
+                self.bus.write(bytes([reg | 0x80]))
+                self.bus.readinto(buf)
             finally:
                 self.cs_pin(1)
         else:
-            self.dev.readfrom_mem_into(self.address, reg, buf)
+            self.bus.readfrom_mem_into(self.address, reg, buf)
 
     def reset(self):
         self.__write_reg(_CTRL3_C, self.__read_reg(_CTRL3_C) | 0x1)
