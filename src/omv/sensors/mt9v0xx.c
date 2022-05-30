@@ -24,8 +24,24 @@
 #define ACTIVE_SENSOR_WIDTH     (752)
 #define ACTIVE_SENSOR_HEIGHT    (480)
 
+#define MONO_CFA_ID             (0)
+#define RCCC_CFA_ID             (5)
+#define BAYER_CFA_ID            (6)
+
 static int16_t readout_x = 0;
 static int16_t readout_y = 0;
+
+static enum {MONO_CFA, RCCC_CFA, BAYER_CFA} cfa_type = MONO_CFA;
+
+static bool is_mt9v0x2(sensor_t *sensor)
+{
+    return (sensor->chip_id_w == MT9V0X2_ID) || (sensor->chip_id_w == MT9V0X2_C_ID);
+}
+
+static bool is_mt9v0x4(sensor_t *sensor)
+{
+    return (sensor->chip_id_w == MT9V0X4_ID) || (sensor->chip_id_w == MT9V0X4_C_ID);
+}
 
 static int reset(sensor_t *sensor)
 {
@@ -35,7 +51,7 @@ static int reset(sensor_t *sensor)
 
     ret |= cambus_writew(&sensor->bus, sensor->slv_addr, MT9V0XX_RESET, MT9V0XX_RESET_SOFT_RESET);
 
-    if (sensor->chip_id_w == MT9V0X4_ID) {
+    if (is_mt9v0x4(sensor)) {
         uint16_t chip_control;
         ret |= cambus_readw(&sensor->bus, sensor->slv_addr, MT9V0XX_CHIP_CONTROL, &chip_control);
         ret |= cambus_writew(&sensor->bus, sensor->slv_addr, MT9V0XX_CHIP_CONTROL,
@@ -47,7 +63,7 @@ static int reset(sensor_t *sensor)
     ret |= cambus_writew(&sensor->bus, sensor->slv_addr, MT9V0XX_READ_MODE,
             read_mode | MT9V0XX_READ_MODE_ROW_FLIP | MT9V0XX_READ_MODE_COL_FLIP);
 
-    if (sensor->chip_id_w == MT9V0X4_ID) {
+    if (is_mt9v0x4(sensor)) {
         // We have to copy the differences from context A into context B registers so that we can
         // ping-pong between them seamlessly...
 
@@ -97,7 +113,7 @@ static int reset(sensor_t *sensor)
                 MT9V0XX_AEC_ENABLE | MT9V0X4_AEC_ENABLE_B | MT9V0XX_AGC_ENABLE | MT9V0X4_AGC_ENABLE_B);
     }
 
-    if (sensor->chip_id_w == MT9V0X2_ID) {
+    if (is_mt9v0x2(sensor)) {
         ret |= cambus_writew(&sensor->bus, sensor->slv_addr, MT9V0X2_PIXEL_CLOCK, MT9V0XX_PIXEL_CLOCK_INV_PXL_CLK);
     }
 
@@ -120,11 +136,20 @@ static int write_reg(sensor_t *sensor, uint16_t reg_addr, uint16_t reg_data)
 
 static int set_pixformat(sensor_t *sensor, pixformat_t pixformat)
 {
-    if (pixformat != PIXFORMAT_GRAYSCALE) {
-        return -1;
+    switch (cfa_type) {
+        case BAYER_CFA: {
+            if (pixformat != PIXFORMAT_BAYER) {
+                return -1;
+            }
+            return 0;
+        }
+        default: {
+            if (pixformat != PIXFORMAT_GRAYSCALE) {
+                return -1;
+            }
+            return 0;
+        }
     }
-
-    return 0;
 }
 
 static int set_framesize(sensor_t *sensor, framesize_t framesize)
@@ -135,6 +160,10 @@ static int set_framesize(sensor_t *sensor, framesize_t framesize)
     uint16_t h = resolution[framesize][1];
 
     if ((w > ACTIVE_SENSOR_WIDTH) || (h > ACTIVE_SENSOR_HEIGHT)) {
+        return -1;
+    }
+
+    if ((cfa_type == BAYER_CFA) && (w % 16)) { // Must be a multiple of 16 in bayer mode.
         return -1;
     }
 
@@ -160,12 +189,14 @@ static int set_framesize(sensor_t *sensor, framesize_t framesize)
     int read_mode_mul = 1;
     read_mode &= 0xFFF0;
 
-    if ((w <= (ACTIVE_SENSOR_WIDTH / 4)) && (h <= (ACTIVE_SENSOR_HEIGHT / 4))) {
-        read_mode_mul = 4;
-        read_mode |= MT9V0XX_READ_MODE_COL_BIN_4 | MT9V0XX_READ_MODE_ROW_BIN_4;
-    } else if ((w <= (ACTIVE_SENSOR_WIDTH / 2)) && (h <= (ACTIVE_SENSOR_HEIGHT / 2))) {
-        read_mode_mul = 2;
-        read_mode |= MT9V0XX_READ_MODE_COL_BIN_2 | MT9V0XX_READ_MODE_ROW_BIN_2;
+    if (cfa_type != BAYER_CFA) {
+        if ((w <= (ACTIVE_SENSOR_WIDTH / 4)) && (h <= (ACTIVE_SENSOR_HEIGHT / 4))) {
+            read_mode_mul = 4;
+            read_mode |= MT9V0XX_READ_MODE_COL_BIN_4 | MT9V0XX_READ_MODE_ROW_BIN_4;
+        } else if ((w <= (ACTIVE_SENSOR_WIDTH / 2)) && (h <= (ACTIVE_SENSOR_HEIGHT / 2))) {
+            read_mode_mul = 2;
+            read_mode |= MT9V0XX_READ_MODE_COL_BIN_2 | MT9V0XX_READ_MODE_ROW_BIN_2;
+        }
     }
 
     int readout_x_max = (ACTIVE_SENSOR_WIDTH - (w * read_mode_mul)) / 2;
@@ -192,7 +223,7 @@ static int set_framesize(sensor_t *sensor, framesize_t framesize)
     ret |= cambus_writew(&sensor->bus, sensor->slv_addr, read_mode_addr, read_mode);
     ret |= cambus_writew(&sensor->bus, sensor->slv_addr, MT9V0XX_PIXEL_COUNT, (w * h) / 8);
 
-    if (sensor->chip_id_w == MT9V0X4_ID) {
+    if (is_mt9v0x4(sensor)) {
         // We need more setup time for the pixel_clk at the full data rate...
         ret |= cambus_writew(&sensor->bus, sensor->slv_addr, MT9V0X4_PIXEL_CLOCK,
                 (read_mode_mul == 1) ? MT9V0XX_PIXEL_CLOCK_INV_PXL_CLK : 0);
@@ -209,7 +240,7 @@ static int set_framesize(sensor_t *sensor, framesize_t framesize)
 
 static int set_colorbar(sensor_t *sensor, int enable)
 {
-    int mask = (sensor->chip_id_w == MT9V0X4_ID)
+    int mask = (is_mt9v0x4(sensor))
         ? (MT9V0X4_ROW_NOISE_CORR_ENABLE | MT9V0X4_ROW_NOISE_CORR_ENABLE_B)
         : MT9V0X2_ROW_NOISE_CORR_ENABLE;
     uint16_t reg;
@@ -226,7 +257,7 @@ static int set_colorbar(sensor_t *sensor, int enable)
 
 static int set_auto_gain(sensor_t *sensor, int enable, float gain_db, float gain_db_ceiling)
 {
-    int agc_mask = (sensor->chip_id_w == MT9V0X4_ID)
+    int agc_mask = (is_mt9v0x4(sensor))
         ? (MT9V0XX_AGC_ENABLE | MT9V0X4_AGC_ENABLE_B)
         : MT9V0XX_AGC_ENABLE;
     uint16_t reg;
@@ -241,13 +272,13 @@ static int set_auto_gain(sensor_t *sensor, int enable, float gain_db, float gain
         ret |= cambus_readw(&sensor->bus, sensor->slv_addr, MT9V0XX_ANALOG_GAIN, &reg);
         ret |= cambus_writew(&sensor->bus, sensor->slv_addr, MT9V0XX_ANALOG_GAIN, (reg & 0xFF80) | gain);
 
-        if (sensor->chip_id_w == MT9V0X4_ID) {
+        if (is_mt9v0x4(sensor)) {
             ret |= cambus_readw(&sensor->bus, sensor->slv_addr, MT9V0X4_ANALOG_GAIN_B, &reg);
             ret |= cambus_writew(&sensor->bus, sensor->slv_addr, MT9V0X4_ANALOG_GAIN_B, (reg & 0xFF80) | gain);
         }
     } else if ((enable != 0) && (!isnanf(gain_db_ceiling)) && (!isinff(gain_db_ceiling))) {
         int gain_ceiling = IM_MAX(IM_MIN(fast_roundf(fast_expf((gain_db_ceiling / 20.0f) * fast_log(10.0f)) * 16.0f), 64), 16);
-        int max_gain = (sensor->chip_id_w == MT9V0X4_ID) ? MT9V0X4_MAX_GAIN : MT9V0X2_MAX_GAIN;
+        int max_gain = (is_mt9v0x4(sensor)) ? MT9V0X4_MAX_GAIN : MT9V0X2_MAX_GAIN;
 
         ret |= cambus_readw(&sensor->bus, sensor->slv_addr, max_gain, &reg);
         ret |= cambus_writew(&sensor->bus, sensor->slv_addr, max_gain, (reg & 0xFF80) | gain_ceiling);
@@ -276,7 +307,7 @@ static int get_gain_db(sensor_t *sensor, float *gain_db)
 
 static int set_auto_exposure(sensor_t *sensor, int enable, int exposure_us)
 {
-    int aec_mask = (sensor->chip_id_w == MT9V0X4_ID)
+    int aec_mask = (is_mt9v0x4(sensor))
         ? (MT9V0XX_AEC_ENABLE | MT9V0X4_AEC_ENABLE_B)
         : MT9V0XX_AEC_ENABLE;
     uint16_t chip_control, reg, read_mode_reg, row_time_0, row_time_1;
@@ -307,16 +338,16 @@ static int set_auto_exposure(sensor_t *sensor, int enable, int exposure_us)
     if ((enable == 0) && (exposure_us >= 0)) {
         ret |= cambus_writew(&sensor->bus, sensor->slv_addr, MT9V0XX_TOTAL_SHUTTER_WIDTH, coarse_time);
 
-        if (sensor->chip_id_w == MT9V0X4_ID) {
+        if (is_mt9v0x4(sensor)) {
             ret |= cambus_writew(&sensor->bus, sensor->slv_addr, MT9V0X4_FINE_SHUTTER_WIDTH_TOTAL, fine_time);
             ret |= cambus_writew(&sensor->bus, sensor->slv_addr, MT9V0X4_TOTAL_SHUTTER_WIDTH_B, coarse_time);
             ret |= cambus_writew(&sensor->bus, sensor->slv_addr, MT9V0X4_FINE_SHUTTER_WIDTH_TOTAL_B, fine_time);
         }
     } else if ((enable != 0) && (exposure_us >= 0)) {
-        int max_expose = (sensor->chip_id_w == MT9V0X4_ID) ? MT9V0X4_MAX_EXPOSE : MT9V0X2_MAX_EXPOSE;
+        int max_expose = (is_mt9v0x4(sensor)) ? MT9V0X4_MAX_EXPOSE : MT9V0X2_MAX_EXPOSE;
         ret |= cambus_writew(&sensor->bus, sensor->slv_addr, max_expose, coarse_time);
 
-        if (sensor->chip_id_w == MT9V0X4_ID) {
+        if (is_mt9v0x4(sensor)) {
             ret |= cambus_writew(&sensor->bus, sensor->slv_addr, MT9V0X4_FINE_SHUTTER_WIDTH_TOTAL, fine_time);
             ret |= cambus_writew(&sensor->bus, sensor->slv_addr, MT9V0X4_FINE_SHUTTER_WIDTH_TOTAL_B, fine_time);
         }
@@ -339,7 +370,7 @@ static int get_exposure_us(sensor_t *sensor, int *exposure_us)
     ret |= cambus_readw(&sensor->bus, sensor->slv_addr, read_mode, &read_mode_reg);
     ret |= cambus_readw(&sensor->bus, sensor->slv_addr, window_width, &row_time_0);
     ret |= cambus_readw(&sensor->bus, sensor->slv_addr, horizontal_blanking, &row_time_1);
-    if (sensor->chip_id_w == MT9V0X4_ID) {
+    if (is_mt9v0x4(sensor)) {
         ret |= cambus_readw(&sensor->bus, sensor->slv_addr, fine_shutter_width_total, &int_pixels);
     }
 
@@ -365,7 +396,7 @@ static int set_hmirror(sensor_t *sensor, int enable)
     ret |= cambus_writew(&sensor->bus, sensor->slv_addr, MT9V0XX_READ_MODE, // inverted behavior
             (read_mode & (~MT9V0XX_READ_MODE_COL_FLIP)) | ((enable == 0) ? MT9V0XX_READ_MODE_COL_FLIP : 0));
 
-    if (sensor->chip_id_w == MT9V0X4_ID) {
+    if (is_mt9v0x4(sensor)) {
         ret |= cambus_readw(&sensor->bus, sensor->slv_addr, MT9V0X4_READ_MODE_B, &read_mode);
         ret |= cambus_writew(&sensor->bus, sensor->slv_addr, MT9V0X4_READ_MODE_B, // inverted behavior
                 (read_mode & (~MT9V0XX_READ_MODE_COL_FLIP)) | ((enable == 0) ? MT9V0XX_READ_MODE_COL_FLIP : 0));
@@ -382,7 +413,7 @@ static int set_vflip(sensor_t *sensor, int enable)
     ret |= cambus_writew(&sensor->bus, sensor->slv_addr, MT9V0XX_READ_MODE, // inverted behavior
             (read_mode & (~MT9V0XX_READ_MODE_ROW_FLIP)) | ((enable == 0) ? MT9V0XX_READ_MODE_ROW_FLIP : 0));
 
-    if (sensor->chip_id_w == MT9V0X4_ID) {
+    if (is_mt9v0x4(sensor)) {
         ret |= cambus_readw(&sensor->bus, sensor->slv_addr, MT9V0X4_READ_MODE_B, &read_mode);
         ret |= cambus_writew(&sensor->bus, sensor->slv_addr, MT9V0X4_READ_MODE_B, // inverted behavior
                 (read_mode & (~MT9V0XX_READ_MODE_ROW_FLIP)) | ((enable == 0) ? MT9V0XX_READ_MODE_ROW_FLIP : 0));
@@ -406,12 +437,14 @@ static int ioctl(sensor_t *sensor, int request, va_list ap)
         tmp_readout_h = ACTIVE_SENSOR_HEIGHT;
     }
 
-    if ((tmp_readout_w <= (ACTIVE_SENSOR_WIDTH / 4)) && (tmp_readout_h <= (ACTIVE_SENSOR_HEIGHT / 4))) {
-        tmp_readout_w *= 4;
-        tmp_readout_h *= 4;
-    } else if ((tmp_readout_w <= (ACTIVE_SENSOR_WIDTH / 2)) && (tmp_readout_h <= (ACTIVE_SENSOR_HEIGHT / 2))) {
-        tmp_readout_w *= 2;
-        tmp_readout_h *= 2;
+    if (cfa_type != BAYER_CFA) {
+        if ((tmp_readout_w <= (ACTIVE_SENSOR_WIDTH / 4)) && (tmp_readout_h <= (ACTIVE_SENSOR_HEIGHT / 4))) {
+            tmp_readout_w *= 4;
+            tmp_readout_h *= 4;
+        } else if ((tmp_readout_w <= (ACTIVE_SENSOR_WIDTH / 2)) && (tmp_readout_h <= (ACTIVE_SENSOR_HEIGHT / 2))) {
+            tmp_readout_w *= 2;
+            tmp_readout_h *= 2;
+        }
     }
 
     switch (request) {
@@ -488,8 +521,35 @@ int mt9v0xx_init(sensor_t *sensor)
     sensor->hw_flags.fsync      = 1;
     sensor->hw_flags.jpege      = 0;
     sensor->hw_flags.gs_bpp     = 1;
+    sensor->hw_flags.bayer      = SENSOR_HW_FLAGS_BAYER_BGGR;
 
-    return 0;
+    uint16_t cfa_type_reg;
+    int ret = cambus_readw(&sensor->bus, sensor->slv_addr, MT9V0XX_CFA_ID_REG, &cfa_type_reg);
+    switch ((cfa_type_reg >> 9) & 0x7) {
+        case BAYER_CFA_ID: {
+            cfa_type = BAYER_CFA;
+            switch (sensor->chip_id_w) {
+                case MT9V0X2_ID: {
+                    sensor->chip_id_w = MT9V0X2_C_ID;
+                    break;
+                }
+                case MT9V0X4_ID: {
+                    sensor->chip_id_w = MT9V0X4_C_ID;
+                    break;
+                }
+                default: {
+                    break;
+                }
+            }
+            break;
+        }
+        default: {
+            cfa_type = MONO_CFA;
+            break;
+        }
+    }
+
+    return ret;
 }
 
 #endif // (OMV_ENABLE_MT9V0XX == 1)
