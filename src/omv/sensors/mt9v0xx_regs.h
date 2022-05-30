@@ -153,7 +153,7 @@
 
 #define MT9V0XX_THERMAL_INFO                    (0xC1)
 
-#define MT9V0XX_ID_REG                          (0x6B)
+#define MT9V0XX_CFA_ID_REG                      (0x6B)
 
 #define MT9V0X2_MAX_GAIN                        (0x36)
 #define MT9V0X4_MAX_GAIN                        (0xAB)
