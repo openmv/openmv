@@ -346,8 +346,10 @@
 #define DCMI_FSYNC_HIGH()
 #endif
 
-#define DCMI_VSYNC_IRQN         EXTI9_5_IRQn
-#define DCMI_VSYNC_IRQ_LINE     (5)
+#define DCMI_VSYNC_EXTI_IRQN    (EXTI9_5_IRQn)
+#define DCMI_VSYNC_EXTI_LINE    (5)
+#define DCMI_VSYNC_EXTI_GPIO    (EXTI_GPIOI)
+#define DCMI_VSYNC_EXTI_SHARED  (1)
 
 #define SOFT_I2C_PORT                GPIOB
 #define SOFT_I2C_SIOC_PIN            GPIO_PIN_10
