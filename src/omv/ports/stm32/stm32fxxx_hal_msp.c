@@ -37,7 +37,11 @@ static const gpio_t dcmi_pins[] = {
 
 #define NUM_DCMI_PINS   (sizeof(dcmi_pins)/sizeof(dcmi_pins[0]))
 
-void SystemClock_Config(void);
+extern void SystemClock_Config(void);
+
+uint32_t hal_get_exti_gpio(uint32_t line) {
+    return (SYSCFG->EXTICR[line >> 2] >> (4 * (line & 3))) & 0x0F;
+}
 
 void HAL_MspInit(void)
 {
@@ -397,10 +401,16 @@ void HAL_DCMI_MspInit(DCMI_HandleTypeDef* hdcmi)
     GPIO_InitStructure.Speed     = GPIO_SPEED_HIGH;
     GPIO_InitStructure.Alternate = GPIO_AF13_DCMI;
 
+    #if (DCMI_VSYNC_EXTI_SHARED == 1)
+    uint32_t exti_gpio = hal_get_exti_gpio(DCMI_VSYNC_EXTI_LINE);
+    if (exti_gpio == 0 || exti_gpio == DCMI_VSYNC_EXTI_GPIO)
+    #endif
+    {
     /* Enable VSYNC EXTI */
     GPIO_InitStructure.Mode = GPIO_MODE_IT_RISING_FALLING;
     GPIO_InitStructure.Pin  = DCMI_VSYNC_PIN;
     HAL_GPIO_Init(DCMI_VSYNC_PORT, &GPIO_InitStructure);
+    }
 
     /* Configure DCMI pins */
     GPIO_InitStructure.Mode      = GPIO_MODE_AF_PP;
@@ -412,7 +422,7 @@ void HAL_DCMI_MspInit(DCMI_HandleTypeDef* hdcmi)
 
 void HAL_DCMI_MspDeInit(DCMI_HandleTypeDef* hdcmi)
 {
-    /* DCMI clock enable */
+    /* DCMI clock disable */
     __DCMI_CLK_DISABLE();
     for (int i=0; i<NUM_DCMI_PINS; i++) {
         HAL_GPIO_DeInit(dcmi_pins[i].port, dcmi_pins[i].pin);

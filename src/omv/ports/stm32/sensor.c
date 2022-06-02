@@ -43,6 +43,7 @@ static bool first_line = false;
 static bool drop_frame = false;
 
 extern uint8_t _line_buf;
+extern uint32_t hal_get_exti_gpio(uint32_t line);
 
 void DCMI_IRQHandler(void) {
     HAL_DCMI_IRQHandler(&DCMIHandle);
@@ -349,9 +350,11 @@ int sensor_set_vsync_callback(vsync_cb_t vsync_cb)
 void DCMI_VsyncExtiCallback()
 {
     if (__HAL_GPIO_EXTI_GET_FLAG(1 << DCMI_VSYNC_EXTI_LINE)) {
-        __HAL_GPIO_EXTI_CLEAR_FLAG(1 << DCMI_VSYNC_EXTI_LINE);
-        if (sensor.vsync_callback != NULL) {
-            sensor.vsync_callback(HAL_GPIO_ReadPin(DCMI_VSYNC_PORT, DCMI_VSYNC_PIN));
+        if (hal_get_exti_gpio(DCMI_VSYNC_EXTI_LINE) == DCMI_VSYNC_EXTI_GPIO) {
+            __HAL_GPIO_EXTI_CLEAR_FLAG(1 << DCMI_VSYNC_EXTI_LINE);
+            if (sensor.vsync_callback != NULL) {
+                sensor.vsync_callback(HAL_GPIO_ReadPin(DCMI_VSYNC_PORT, DCMI_VSYNC_PIN));
+            }
         }
     }
 }
