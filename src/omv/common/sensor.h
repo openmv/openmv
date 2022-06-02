@@ -20,7 +20,7 @@
 #define MT9V0XX_SLV_ADDR        (0xB8)
 #define MT9M114_SLV_ADDR        (0x90)
 #define LEPTON_SLV_ADDR         (0x54)
-#define HM01B0_SLV_ADDR         (0x48)
+#define HM0XX0_SLV_ADDR         (0x48)
 #define GC2145_SLV_ADDR         (0x78)
 #define FROGEYE2020_SLV_ADDR    (0x6E)
 
@@ -53,6 +53,7 @@
 #define LEPTON_3_0              (0x5430)
 #define LEPTON_3_5              (0x5435)
 #define HM01B0_ID               (0xB0)
+#define HM0360_ID               (0x60)
 #define GC2145_ID               (0x21)
 #define PAJ6100_ID              (0x6100)
 #define FROGEYE2020_ID          (0x2020)

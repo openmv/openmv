@@ -26,6 +26,7 @@
 #include "mt9m114.h"
 #include "lepton.h"
 #include "hm01b0.h"
+#include "hm0360.h"
 #include "paj6100.h"
 #include "frogeye2020.h"
 #include "gc2145.h"
@@ -273,11 +274,11 @@ int sensor_probe_init(uint32_t bus_id, uint32_t bus_speed)
             break;
         #endif // (OMV_ENABLE_LEPTON == 1)
 
-        #if (OMV_ENABLE_HM01B0 == 1)
-        case HM01B0_SLV_ADDR:
+        #if (OMV_ENABLE_HM01B0 == 1) || (OMV_ENABLE_HM0360 == 1)
+        case HM0XX0_SLV_ADDR:
             cambus_readb2(&sensor.bus, sensor.slv_addr, HIMAX_CHIP_ID, &sensor.chip_id);
             break;
-        #endif //(OMV_ENABLE_HM01B0 == 1)
+        #endif // (OMV_ENABLE_HM01B0 == 1) || (OMV_ENABLE_HM0360 == 1)
 
         #if (OMV_ENABLE_GC2145 == 1)
         case GC2145_SLV_ADDR:
@@ -405,6 +406,15 @@ int sensor_probe_init(uint32_t bus_id, uint32_t bus_speed)
             init_ret = hm01b0_init(&sensor);
             break;
         #endif //(OMV_ENABLE_HM01B0 == 1)
+
+        #if (OMV_ENABLE_HM0360 == 1)
+        case HM0360_ID:
+            if (sensor_set_xclk_frequency(HM0360_XCLK_FREQ) != 0) {
+                return SENSOR_ERROR_TIM_INIT_FAILED;
+            }
+            init_ret = hm0360_init(&sensor);
+            break;
+        #endif //(OMV_ENABLE_HM0360 == 1)
 
         #if (OMV_ENABLE_GC2145 == 1)
         case GC2145_ID:
