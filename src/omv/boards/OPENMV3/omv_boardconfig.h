@@ -202,8 +202,10 @@
 #define DCMI_PWDN_LOW()         HAL_GPIO_WritePin(DCMI_PWDN_PORT, DCMI_PWDN_PIN, GPIO_PIN_RESET)
 #define DCMI_PWDN_HIGH()        HAL_GPIO_WritePin(DCMI_PWDN_PORT, DCMI_PWDN_PIN, GPIO_PIN_SET)
 
-#define DCMI_VSYNC_IRQN         EXTI9_5_IRQn
-#define DCMI_VSYNC_IRQ_LINE     (7)
+#define DCMI_VSYNC_EXTI_IRQN    (EXTI9_5_IRQn)
+#define DCMI_VSYNC_EXTI_LINE    (7)
+#define DCMI_VSYNC_EXTI_GPIO    (EXTI_GPIOB)
+#define DCMI_VSYNC_EXTI_SHARED  (0)
 
 #define WINC_SPI                (SPI2)
 #define WINC_SPI_AF             (GPIO_AF5_SPI2)

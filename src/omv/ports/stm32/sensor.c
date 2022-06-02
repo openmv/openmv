@@ -334,20 +334,22 @@ int sensor_set_vsync_callback(vsync_cb_t vsync_cb)
 {
     sensor.vsync_callback = vsync_cb;
     if (sensor.vsync_callback == NULL) {
+        #if (DCMI_VSYNC_EXTI_SHARED == 0)
         // Disable VSYNC EXTI IRQ
-        HAL_NVIC_DisableIRQ(DCMI_VSYNC_IRQN);
+        HAL_NVIC_DisableIRQ(DCMI_VSYNC_EXTI_IRQN);
+        #endif
     } else {
         // Enable VSYNC EXTI IRQ
-        NVIC_SetPriority(DCMI_VSYNC_IRQN, IRQ_PRI_EXTINT);
-        HAL_NVIC_EnableIRQ(DCMI_VSYNC_IRQN);
+        NVIC_SetPriority(DCMI_VSYNC_EXTI_IRQN, IRQ_PRI_EXTINT);
+        HAL_NVIC_EnableIRQ(DCMI_VSYNC_EXTI_IRQN);
     }
     return 0;
 }
 
 void DCMI_VsyncExtiCallback()
 {
-    if (__HAL_GPIO_EXTI_GET_FLAG(1 << DCMI_VSYNC_IRQ_LINE)) {
-        __HAL_GPIO_EXTI_CLEAR_FLAG(1 << DCMI_VSYNC_IRQ_LINE);
+    if (__HAL_GPIO_EXTI_GET_FLAG(1 << DCMI_VSYNC_EXTI_LINE)) {
+        __HAL_GPIO_EXTI_CLEAR_FLAG(1 << DCMI_VSYNC_EXTI_LINE);
         if (sensor.vsync_callback != NULL) {
             sensor.vsync_callback(HAL_GPIO_ReadPin(DCMI_VSYNC_PORT, DCMI_VSYNC_PIN));
         }
