@@ -621,7 +621,10 @@ soft_reset:
             }
         } while (openmv_config.wifidbg == true);
 
-        usbdbg_wait_for_command(1000);
+        nlr_buf_t nlr;
+        if (nlr_push(&nlr) == 0) {
+            usbdbg_wait_for_command(1000);
+        }
     }
 
     // soft reset
