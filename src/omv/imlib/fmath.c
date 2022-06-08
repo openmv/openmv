@@ -62,7 +62,7 @@ int OMV_ATTR_ALWAYS_INLINE fast_floorf(float x)
 {
     int i;
     asm volatile (
-            "vcvt.S32.f32  %[r], %[x]\n"
+            "vcvtm.S32.f32  %[r], %[x]\n"
             : [r] "=t" (i)
             : [x] "t"  (x));
     return i;
@@ -71,9 +71,8 @@ int OMV_ATTR_ALWAYS_INLINE fast_floorf(float x)
 int OMV_ATTR_ALWAYS_INLINE fast_ceilf(float x)
 {
     int i;
-    x += 0.9999f;
     asm volatile (
-            "vcvt.S32.f32  %[r], %[x]\n"
+            "vcvtp.S32.f32  %[r], %[x]\n"
             : [r] "=t" (i)
             : [x] "t"  (x));
     return i;
@@ -83,7 +82,7 @@ int OMV_ATTR_ALWAYS_INLINE fast_roundf(float x)
 {
     int i;
     asm volatile (
-            "vcvtr.s32.f32  %[r], %[x]\n"
+            "vcvtr.S32.F32  %[r], %[x]\n"
             : [r] "=t" (i)
             : [x] "t"  (x));
     return i;
