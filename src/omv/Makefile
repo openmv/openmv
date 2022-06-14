@@ -94,6 +94,7 @@ SRCS += $(addprefix imlib/,     \
 	selective_search.c          \
 	sincos_tab.c                \
 	stats.c                     \
+	stereo.c                    \
 	template.c                  \
 	xyz_tab.c                   \
 	yuv.c                       \
