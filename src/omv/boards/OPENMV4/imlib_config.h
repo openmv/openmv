@@ -153,4 +153,7 @@
 #define IMLIB_ENABLE_PNG_ENCODER
 #define IMLIB_ENABLE_PNG_DECODER
 
+// Stereo Imaging
+// #define IMLIB_ENABLE_STEREO_DISPARITY
+
 #endif //__IMLIB_CONFIG_H__

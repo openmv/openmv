@@ -172,6 +172,7 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/imlib/, \
 	selective_search.o          \
 	sincos_tab.o                \
 	stats.o                     \
+	stereo.o                    \
 	template.o                  \
 	xyz_tab.o                   \
 	yuv.o                       \

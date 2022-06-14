@@ -166,6 +166,7 @@ target_sources(${MICROPY_TARGET} PRIVATE
     ${TOP_DIR}/${OMV_DIR}/imlib/selective_search.c
     ${TOP_DIR}/${OMV_DIR}/imlib/sincos_tab.c
     ${TOP_DIR}/${OMV_DIR}/imlib/stats.c
+    ${TOP_DIR}/${OMV_DIR}/imlib/stereo.c
     ${TOP_DIR}/${OMV_DIR}/imlib/template.c
     ${TOP_DIR}/${OMV_DIR}/imlib/xyz_tab.c
     ${TOP_DIR}/${OMV_DIR}/imlib/yuv.c

@@ -5976,6 +5976,36 @@ static mp_obj_t py_image_selective_search(uint n_args, const mp_obj_t *args, mp_
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_selective_search_obj, 1, py_image_selective_search);
 #endif // IMLIB_ENABLE_SELECTIVE_SEARCH
 
+#ifdef IMLIB_ENABLE_STEREO_DISPARITY
+static mp_obj_t py_image_stereo_disparity(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
+{
+    image_t *img = py_helper_arg_to_image_grayscale(args[0]);
+
+    if (img->w % 2) {
+        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Image width must be even!"));
+    }
+
+    int reversed = py_helper_keyword_int(n_args, args, 1, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_reversed), false);
+    int max_disparity = py_helper_keyword_int(n_args, args, 2, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_max_disparity), 64);
+    int threshold = py_helper_keyword_int(n_args, args, 3, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_threshold), 64);
+
+    if ((max_disparity < 1) || (255 < max_disparity)) {
+        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("1 <= max_disparity <= 255!"));
+    }
+
+    if (threshold < 0) {
+        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("0 <= threshold!"));
+    }
+
+    fb_alloc_mark();
+    imlib_stereo_disparity(img, reversed, max_disparity, threshold);
+    fb_alloc_free_till_mark();
+
+    return args[0];
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_stereo_disparity_obj, 1, py_image_stereo_disparity);
+#endif // IMLIB_ENABLE_STEREO_DISPARITY
+
 static const mp_rom_map_elem_t locals_dict_table[] = {
     /* Basic Methods */
     {MP_ROM_QSTR(MP_QSTR_width),               MP_ROM_PTR(&py_image_width_obj)},
@@ -6280,6 +6310,11 @@ static const mp_rom_map_elem_t locals_dict_table[] = {
     {MP_ROM_QSTR(MP_QSTR_selective_search),    MP_ROM_PTR(&py_image_selective_search_obj)},
 #else
     {MP_ROM_QSTR(MP_QSTR_selective_search),    MP_ROM_PTR(&py_func_unavailable_obj)},
+#endif
+#ifdef IMLIB_ENABLE_STEREO_DISPARITY
+    {MP_ROM_QSTR(MP_QSTR_stereo_disparity),    MP_ROM_PTR(&py_image_stereo_disparity_obj)},
+#else
+    {MP_ROM_QSTR(MP_QSTR_stereo_disparity),    MP_ROM_PTR(&py_func_unavailable_obj)},
 #endif
 };
 

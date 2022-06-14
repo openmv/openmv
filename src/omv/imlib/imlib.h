@@ -1354,6 +1354,8 @@ void imlib_find_barcodes(list_t *out, image_t *ptr, rectangle_t *roi);
 // Template Matching
 void imlib_phasecorrelate(image_t *img0, image_t *img1, rectangle_t *roi0, rectangle_t *roi1, bool logpolar, bool fix_rotation_scale,
                           float *x_translation, float *y_translation, float *rotation, float *scale, float *response);
+// Stereo Imaging
+void imlib_stereo_disparity(image_t *img, bool reversed, int max_disparity, int threshold);
 
 array_t *imlib_selective_search(image_t *src, float t, int min_size, float a1, float a2, float a3);
 #endif //__IMLIB_H__
