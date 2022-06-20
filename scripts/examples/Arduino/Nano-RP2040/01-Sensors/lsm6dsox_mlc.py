@@ -16,7 +16,7 @@ def imu_int_handler(pin):
     INT_FLAG = True
 
 if (INT_MODE == True):
-    int_pin = Pin(24)
+    int_pin = Pin(24, mode=Pin.IN, pull=Pin.PULL_UP)
     int_pin.irq(handler=imu_int_handler, trigger=Pin.IRQ_RISING)
 
 i2c = I2C(0, scl=Pin(13), sda=Pin(12))
