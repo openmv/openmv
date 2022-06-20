@@ -4,8 +4,8 @@ Source repo: https://github.com/hoihu/projects/tree/master/raspi-hat
 
 The MIT License (MIT)
 
-Copyright (c) 2022 Damien P. George
-Copyright (c) 2022 Ibrahim Abdelkader <iabdalkader@openmv.io>
+Copyright (c) 2021 Damien P. George
+Copyright (c) 2021-2022 Ibrahim Abdelkader <iabdalkader@openmv.io>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -45,10 +45,8 @@ while (True):
 """
 
 import array
-from machine import I2C
-from machine import SPI
-from machine import Pin
 from micropython import const
+
 
 class LSM6DSOX:
     _CTRL3_C = const(0x12)
@@ -99,12 +97,12 @@ class LSM6DSOX:
         self.bus = bus
         self.cs_pin = cs_pin
         self.address = address
+        self._use_i2c = hasattr(self.bus, "readfrom_mem")
 
-        if cs_pin is None and isinstance(self.bus, SPI):
-            raise ValueError("Must provide CS pin in SPI mode.")
+        if not self._use_i2c and cs_pin is None:
+            raise ValueError("A CS pin must be provided in SPI mode")
 
         # check the id of the Accelerometer/Gyro
-        print("0x%x" %(self.__read_reg(_WHO_AM_I_REG)))
         if self.__read_reg(_WHO_AM_I_REG) != 108:
             raise OSError("No LSM6DS device was found at address 0x%x" % (self.address))
 
@@ -162,39 +160,39 @@ class LSM6DSOX:
         self.accel_scale = 32768 / accel_scale
 
     def __read_reg(self, reg, size=1):
-        if isinstance(self.bus, SPI):
+        if self._use_i2c:
+            buf = self.bus.readfrom_mem(self.address, reg, size)
+        else:
             try:
                 self.cs_pin(0)
                 self.bus.write(bytes([reg | 0x80]))
                 buf = self.bus.read(size)
             finally:
                 self.cs_pin(1)
-        else:
-            buf = self.bus.readfrom_mem(self.address, reg, size)
         if size == 1:
             return int(buf[0])
         return [int(x) for x in buf]
 
     def __write_reg(self, reg, val):
-        if isinstance(self.bus, SPI):
+        if self._use_i2c:
+            self.bus.writeto_mem(self.address, reg, bytes([val]))
+        else:
             try:
                 self.cs_pin(0)
                 self.bus.write(bytes([reg, val]))
             finally:
                 self.cs_pin(1)
-        else:
-            self.bus.writeto_mem(self.address, reg, bytes([val]))
 
     def __read_reg_into(self, reg, buf):
-        if isinstance(self.bus, SPI):
+        if self._use_i2c:
+            self.bus.readfrom_mem_into(self.address, reg, buf)
+        else:
             try:
                 self.cs_pin(0)
                 self.bus.write(bytes([reg | 0x80]))
                 self.bus.readinto(buf)
             finally:
                 self.cs_pin(1)
-        else:
-            self.bus.readfrom_mem_into(self.address, reg, buf)
 
     def reset(self):
         self.__write_reg(_CTRL3_C, self.__read_reg(_CTRL3_C) | 0x1)
