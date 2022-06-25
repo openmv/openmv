@@ -711,6 +711,23 @@ static int reset(sensor_t *sensor)
     return ret;
 }
 
+static int sleep(sensor_t *sensor, int enable)
+{
+    int ret = 0;
+
+    if (enable) {
+        ret |= cambus_writeb(&sensor->bus, sensor->slv_addr, 0xF2, 0x0);
+        ret |= cambus_writeb(&sensor->bus, sensor->slv_addr, 0xF7, 0x10);
+        ret |= cambus_writeb(&sensor->bus, sensor->slv_addr, 0xFC, 0x01);
+    } else {
+        ret |= cambus_writeb(&sensor->bus, sensor->slv_addr, 0xF2, 0x0F);
+        ret |= cambus_writeb(&sensor->bus, sensor->slv_addr, 0xF7, 0x1d);
+        ret |= cambus_writeb(&sensor->bus, sensor->slv_addr, 0xFC, 0x06);
+    }
+
+    return ret;
+}
+
 static int read_reg(sensor_t *sensor, uint16_t reg_addr)
 {
     uint8_t reg_data;
@@ -870,6 +887,7 @@ int gc2145_init(sensor_t *sensor)
 {
     // Initialize sensor structure.
     sensor->reset               = reset;
+    sensor->sleep               = sleep;
     sensor->read_reg            = read_reg;
     sensor->write_reg           = write_reg;
     sensor->set_pixformat       = set_pixformat;
