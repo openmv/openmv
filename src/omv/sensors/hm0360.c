@@ -685,7 +685,6 @@ static int ioctl(sensor_t *sensor, int request, va_list ap)
 
     switch (request) {
         case IOCTL_HIMAX_OSC_ENABLE: {
-            ret = -1;
             break;
         }
 
