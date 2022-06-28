@@ -84,7 +84,7 @@ static const uint16_t default_regs[][2] = {
 
     {0x3112,            0x00},  // PCLKO_polarity falling
 
-    {PLL1_CONFIG,       0x04},  // Core = MCLK/1 PCLKO = MCLK/2 REG = MCLK/1
+    {PLL1_CONFIG,       0x08},  // Core = 24MHz PCLKO = 24MHz I2C = 12MHz
     {PLL2_CONFIG,       0x0A},  // MIPI pre-dev (default)
     {PLL3_CONFIG,       0x77},  // PMU/MIPI pre-dev (default)
 
@@ -385,7 +385,7 @@ static int set_pixformat(sensor_t *sensor, pixformat_t pixformat)
 }
 
 static const uint16_t VGA_regs[][2] = {
-    {PLL1_CONFIG,           0x04},  // Core = MCLK/1 PCLKO = MCLK/2 REG = MCLK/1
+    {PLL1_CONFIG,           0x08},  // Core = 24MHz PCLKO = 24MHz I2C = 12MHz
     {H_SUBSAMPLE,           0x00},
     {V_SUBSAMPLE,           0x00},
     {BINNING_MODE,          0x00},
@@ -403,7 +403,7 @@ static const uint16_t VGA_regs[][2] = {
 };
 
 static const uint16_t QVGA_regs[][2] = {
-    {PLL1_CONFIG,           0x05},  // Core = MCLK/1 PCLKO = MCLK/2 REG = MCLK/2
+    {PLL1_CONFIG,           0x09},  // Core = 12MHz PCLKO = 24MHz I2C = 12MHz
     {H_SUBSAMPLE,           0x01},
     {V_SUBSAMPLE,           0x01},
     {BINNING_MODE,          0x00},
@@ -421,7 +421,7 @@ static const uint16_t QVGA_regs[][2] = {
 };
 
 static const uint16_t QQVGA_regs[][2] = {
-    {PLL1_CONFIG,           0x05},  // Core = MCLK/1 PCLKO = MCLK/2 REG = MCLK/2
+    {PLL1_CONFIG,           0x09},  // Core = 12MHz PCLKO = 24MHz I2C = 12MHz
     {H_SUBSAMPLE,           0x02},
     {V_SUBSAMPLE,           0x02},
     {BINNING_MODE,          0x00},

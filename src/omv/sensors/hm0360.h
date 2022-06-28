@@ -10,6 +10,7 @@
  */
 #ifndef __HM0360_H__
 #define __HM0360_H__
-#define HM0360_XCLK_FREQ (24000000)
+// This sensor uses an internal oscillator.
+#define HM0360_XCLK_FREQ (0)
 int hm0360_init(sensor_t *sensor);
 #endif // __HM0360_H__
