@@ -255,10 +255,18 @@ uint32_t sensor_get_xclk_frequency()
 int sensor_set_xclk_frequency(uint32_t frequency)
 {
     #if (OMV_XCLK_SOURCE == OMV_XCLK_TIM)
-    /* TCLK (PCLK * 2) */
+    if (frequency == 0 && TIMHandle.Init.Period) {
+        HAL_TIM_PWM_Stop(&TIMHandle, DCMI_TIM_CHANNEL);
+        HAL_TIM_PWM_DeInit(&TIMHandle);
+        memset(&TIMHandle, 0, sizeof(TIMHandle));
+        TIMHandle.Instance = DCMI_TIM;
+        return 0;
+    }
+
+    // TCLK (PCLK * 2)
     int tclk = DCMI_TIM_PCLK_FREQ() * 2;
 
-    /* Period should be even */
+    // Period should be even
     int period = (tclk / frequency) - 1;
     int pulse = period / 2;
 
