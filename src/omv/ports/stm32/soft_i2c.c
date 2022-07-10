@@ -16,6 +16,7 @@
 #include "soft_i2c.h"
 #include "omv_boardconfig.h"
 
+#if defined(SOFT_I2C_PORT)
 #define ACK 0
 #define NACK 1
 
@@ -176,3 +177,4 @@ void soft_i2c_deinit()
     HAL_GPIO_DeInit(SOFT_I2C_PORT, SOFT_I2C_SIOC_PIN);
     HAL_GPIO_DeInit(SOFT_I2C_PORT, SOFT_I2C_SIOD_PIN);
 }
+#endif // defined(SOFT_I2C_PORT)
