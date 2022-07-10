@@ -48,14 +48,13 @@ while(True):
     # down to min_scale (0-1). For example, if scale_mul is 0.5 the detection window will shrink by 50%.
     # Note that at a lower scale there's even more area to search if x_overlap and y_overlap are small...
 
+    # default settings just do one detection... change them to search the image...
     # Setting x_overlap=-1 forces the window to stay centered in the ROI in the x direction always. If
     # y_overlap is not -1 the method will search in all vertical positions.
-
     # Setting y_overlap=-1 forces the window to stay centered in the ROI in the y direction always. If
     # x_overlap is not -1 the method will serach in all horizontal positions.
 
-    # default settings just do one detection... change them to search the image...
-    for obj in tf.classify(mobilenet, img, min_scale=1.0, scale_mul=0.5, x_overlap=-1, y_overlap=-1):
+    for obj in tf.classify(mobilenet, img, min_scale=1.0, scale_mul=0.5, x_overlap=0.0, y_overlap=0.0):
         print("**********\nTop 5 Detections at [x=%d,y=%d,w=%d,h=%d]" % obj.rect())
         img.draw_rectangle(obj.rect())
         # This combines the labels and confidence values into a list of tuples
