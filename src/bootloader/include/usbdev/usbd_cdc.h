@@ -58,6 +58,14 @@
 #define CDC_DATA_FS_MAX_PACKET_SIZE                 64  /* Endpoint IN & OUT Packet size */
 #define CDC_CMD_PACKET_SIZE                         8  /* Control Endpoint Packet size */ 
 
+#if defined(USE_USB_FS)
+#define CDC_DATA_MAX_PACKET_SIZE                    CDC_DATA_FS_MAX_PACKET_SIZE
+#elif defined(USE_USB_HS)
+#define CDC_DATA_MAX_PACKET_SIZE                    CDC_DATA_HS_MAX_PACKET_SIZE
+#else
+#error "USB speed is not defined"
+#endif
+
 #define USB_CDC_CONFIG_DESC_SIZ                     75
 #define CDC_DATA_HS_IN_PACKET_SIZE                  CDC_DATA_HS_MAX_PACKET_SIZE
 #define CDC_DATA_HS_OUT_PACKET_SIZE                 CDC_DATA_HS_MAX_PACKET_SIZE
