@@ -43,6 +43,10 @@
      {
        "title": "## 🛠 Tools",
        "labels": ["tools"]
+     },
+     {
+       "title": "## 🥾 Bootloader",
+       "labels": ["bootloader"]
      }
     ],
     "ignore_labels": [
@@ -115,6 +119,12 @@
       },
       {
         "pattern": "(^tools)(.+)",
+        "method": "replace",
+        "target": "$1",
+        "on_property": "title"
+      },
+      {
+        "pattern": "(^bootloader)(.+)",
         "method": "replace",
         "target": "$1",
         "on_property": "title"
