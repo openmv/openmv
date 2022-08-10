@@ -15,6 +15,18 @@ extern void SystemClock_Config();
 
 void HAL_MspInit()
 {
+    GPIO_InitTypeDef  GPIO_InitStructure;
+    GPIO_InitStructure.Pull  = GPIO_PULLUP;
+    GPIO_InitStructure.Speed = GPIO_SPEED_LOW;
+    GPIO_InitStructure.Mode  = GPIO_MODE_OUTPUT_PP;
+
+    #if defined(OMV_BOOTLDR_OSCEN_PIN)
+    OMV_BOOTLDR_OSCEN_CLK_ENABLE();
+    GPIO_InitStructure.Pin   = OMV_BOOTLDR_OSCEN_PIN;
+    HAL_GPIO_Init(OMV_BOOTLDR_OSCEN_PORT, &GPIO_InitStructure);
+    HAL_GPIO_WritePin(OMV_BOOTLDR_OSCEN_PORT, OMV_BOOTLDR_OSCEN_PIN, GPIO_PIN_SET);
+    #endif
+
     // Set the system clock
     SystemClock_Config();
 
@@ -27,24 +39,35 @@ void HAL_MspInit()
     __GPIOC_CLK_ENABLE();
     __GPIOD_CLK_ENABLE();
     __GPIOE_CLK_ENABLE();
-
-#if defined (STM32F769xx)
+    #ifdef OMV_ENABLE_GPIO_BANK_F
     __GPIOF_CLK_ENABLE();
+    #endif
+    #ifdef OMV_ENABLE_GPIO_BANK_G
     __GPIOG_CLK_ENABLE();
+    #endif
+    #ifdef OMV_ENABLE_GPIO_BANK_H
     __GPIOH_CLK_ENABLE();
+    #endif
+    #ifdef OMV_ENABLE_GPIO_BANK_I
     __GPIOI_CLK_ENABLE();
+    #endif
+    #ifdef OMV_ENABLE_GPIO_BANK_J
     __GPIOJ_CLK_ENABLE();
+    #endif
+    #ifdef OMV_ENABLE_GPIO_BANK_K
     __GPIOK_CLK_ENABLE();
-#endif
-
-    GPIO_InitTypeDef  GPIO_InitStructure;
-    GPIO_InitStructure.Pull  = GPIO_PULLUP;
-    GPIO_InitStructure.Speed = GPIO_SPEED_LOW;
-    GPIO_InitStructure.Mode  = GPIO_MODE_OUTPUT_PP;
+    #endif
 
     GPIO_InitStructure.Pin = OMV_BOOTLDR_LED_PIN;
     HAL_GPIO_Init(OMV_BOOTLDR_LED_PORT, &GPIO_InitStructure);
     HAL_GPIO_WritePin(OMV_BOOTLDR_LED_PORT, OMV_BOOTLDR_LED_PIN, GPIO_PIN_SET);
+
+    #if defined(OMV_BOOTLDR_USBEN_PIN)
+    OMV_BOOTLDR_USBEN_CLK_ENABLE();
+    GPIO_InitStructure.Pin   = OMV_BOOTLDR_USBEN_PIN;
+    HAL_GPIO_Init(OMV_BOOTLDR_USBEN_PORT, &GPIO_InitStructure);
+    HAL_GPIO_WritePin(OMV_BOOTLDR_USBEN_PORT, OMV_BOOTLDR_USBEN_PIN, GPIO_PIN_SET);
+    #endif
 }
 
 #if defined(OMV_QSPIF_LAYOUT)
