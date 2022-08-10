@@ -26,7 +26,7 @@ uint8_t UserTxBuffer[APP_TX_DATA_SIZE];/* Received Data over UART (CDC interface
 static volatile uint8_t ide_connected = 0;
 static volatile uint8_t vcp_connected = 0;
 
-#define FLASH_BUF_SIZE  (64)
+#define FLASH_BUF_SIZE  (CDC_DATA_MAX_PACKET_SIZE)
 static volatile uint32_t flash_buf_idx=0;
 static volatile uint8_t  flash_buf[FLASH_BUF_SIZE];
 static const    uint32_t flash_layout[3] = OMV_FLASH_LAYOUT;
@@ -103,7 +103,7 @@ static int8_t CDC_Itf_DeInit(void)
  * @param  Len: Number of data to be sent (in bytes)
  * @retval Result of the operation: USBD_OK if all operations are OK else USBD_FAIL
  */
-static int8_t CDC_Itf_Control (uint8_t cmd, uint8_t* pbuf, uint16_t length)
+static int8_t CDC_Itf_Control(uint8_t cmd, uint8_t* pbuf, uint16_t length)
 { 
     switch (cmd) {
         case CDC_SEND_ENCAPSULATED_COMMAND:
@@ -327,5 +327,3 @@ uint8_t USBD_IDE_Connected(void)
 {
     return ide_connected;
 }
-
-
