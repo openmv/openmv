@@ -47,12 +47,7 @@
      {
        "title": "## 🥾 Bootloader",
        "labels": ["bootloader"]
-     },
-     {
-       "title": "## 🥾 Bootloader",
-       "labels": ["Bootloader"]
      }
-
     ],
     "ignore_labels": [
        "github"
@@ -129,15 +124,9 @@
         "on_property": "title"
       },
       {
-        "pattern": "(^bootloader)(.+)",
+        "pattern": "^(bootloader|Bootloader)(.+)",
         "method": "replace",
-        "target": "$1",
-        "on_property": "title"
-      },
-      {
-        "pattern": "(^Bootloader)(.+)",
-        "method": "replace",
-        "target": "$1",
+        "target": "bootloader",
         "on_property": "title"
       }
     ],
