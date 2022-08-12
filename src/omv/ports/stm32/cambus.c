@@ -119,13 +119,19 @@ int cambus_init(cambus_t *bus, uint32_t bus_id, uint32_t speed)
         return -1;
     }
 
-    // Our code only knows about these two I2Cs instances.
-    if (bus->i2c->Instance == FIR_I2C) {
-        bus->scl_pin = (omv_gpio_t) {FIR_I2C_SCL_PIN, FIR_I2C_SCL_PORT};
-        bus->sda_pin = (omv_gpio_t) {FIR_I2C_SDA_PIN, FIR_I2C_SDA_PORT};
-    } else if (bus->i2c->Instance == ISC_I2C) {
+    if (bus->i2c->Instance == ISC_I2C) {
         bus->scl_pin = (omv_gpio_t) {ISC_I2C_SCL_PIN, ISC_I2C_SCL_PORT};
         bus->sda_pin = (omv_gpio_t) {ISC_I2C_SDA_PIN, ISC_I2C_SDA_PORT};
+    #if defined(TOF_I2C)
+    } else if (bus->i2c->Instance == TOF_I2C) {
+        bus->scl_pin = (omv_gpio_t) {TOF_I2C_SCL_PIN, TOF_I2C_SCL_PORT};
+        bus->sda_pin = (omv_gpio_t) {TOF_I2C_SDA_PIN, TOF_I2C_SDA_PORT};
+    #endif
+    #if defined(FIR_I2C)
+    } else if (bus->i2c->Instance == FIR_I2C) {
+        bus->scl_pin = (omv_gpio_t) {FIR_I2C_SCL_PIN, FIR_I2C_SCL_PORT};
+        bus->sda_pin = (omv_gpio_t) {FIR_I2C_SDA_PIN, FIR_I2C_SDA_PORT};
+    #endif
     #if defined(ISC_I2C_ALT)
     } else if (bus->i2c->Instance == ISC_I2C_ALT) {
         bus->scl_pin = (omv_gpio_t) {ISC_I2C_ALT_SCL_PIN, ISC_I2C_ALT_SCL_PORT};
