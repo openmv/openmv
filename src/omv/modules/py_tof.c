@@ -14,17 +14,16 @@
 
 #include "omv_boardconfig.h"
 #include "cambus.h"
-#if (OMV_ENABLE_TOF_VL53L5CX == 1)
-// Only have 1 ToF sensor.
-#define OMV_PY_TOF  (1)
-#include "vl53l5cx_api.h"
-#endif
-#include "framebuffer.h"
 
-#if (OMV_PY_TOF == 1)
+#if (MICROPY_PY_TOF == 1)
 #include "py_assert.h"
 #include "py_helper.h"
 #include "py_image.h"
+#include "framebuffer.h"
+
+#if (OMV_ENABLE_TOF_VL53L5CX == 1)
+#include "vl53l5cx_api.h"
+#endif
 
 #define VL53L5CX_ADDR                   0x52
 #define VL53L5CX_WIDTH                  8
@@ -699,5 +698,5 @@ const mp_obj_module_t tof_module = {
     .globals = (mp_obj_t) &globals_dict,
 };
 
-MP_REGISTER_MODULE(MP_QSTR_tof, tof_module, OMV_PY_TOF);
+MP_REGISTER_MODULE(MP_QSTR_tof, tof_module, MICROPY_PY_TOF);
 #endif
