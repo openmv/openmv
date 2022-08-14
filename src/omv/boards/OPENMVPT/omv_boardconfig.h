@@ -17,14 +17,6 @@
 #define OMV_UNIQUE_ID_ADDR              0x1FF1E800
 #define OMV_UNIQUE_ID_SIZE              3 // 3 words
 
-// Flash sectors for the bootloader.
-// Flash FS sector, main FW sector, max sector.
-#define OMV_FLASH_LAYOUT                {1, 2, 15}
-
-// QSPI Flash layout for the bootloader.
-// First block, maximum block, block size in bytes.
-#define OMV_QSPIF_LAYOUT                {0, 511, 64*1024}
-
 #define OMV_XCLK_MCO                    (0U)
 #define OMV_XCLK_TIM                    (1U)
 
@@ -48,10 +40,6 @@
 #define OMV_OV5640_REV_Y_FREQ           (25000000)
 #define OMV_OV5640_REV_Y_CTRL2          (0x54)
 #define OMV_OV5640_REV_Y_CTRL3          (0x13)
-
-// Bootloader LED GPIO port/pin
-#define OMV_BOOTLDR_LED_PIN             (GPIO_PIN_1)
-#define OMV_BOOTLDR_LED_PORT            (GPIOC)
 
 // Enable hardware JPEG
 #define OMV_HARDWARE_JPEG               (1)
@@ -176,8 +164,6 @@
 #define OMV_FIR_LEPTON_BUF_SIZE         (1K)        // FIR Lepton Packet Double Buffer (328 bytes)
 #define OMV_JPEG_BUF_SIZE               (1024*1024) // IDE JPEG buffer (header + data).
 
-#define OMV_BOOT_ORIGIN                 0x08000000
-#define OMV_BOOT_LENGTH                 128K
 #define OMV_TEXT_ORIGIN                 0x08040000
 #define OMV_TEXT_LENGTH                 1792K
 #define OMV_DTCM_ORIGIN                 0x20000000  // Note accessible by CPU and MDMA only.
@@ -344,57 +330,6 @@
 #define SOFT_I2C_SIOD_WRITE(bit)        HAL_GPIO_WritePin(SOFT_I2C_PORT, SOFT_I2C_SIOD_PIN, bit)
 
 #define SOFT_I2C_SPIN_DELAY             64
-
-// QSPI flash configuration for the bootloader.
-#define QSPIF_SIZE_BITS                 (25)        // 2**25 == 32MBytes.
-#define QSPIF_SR_WIP_MASK               (1 << 0)
-#define QSPIF_SR_WEL_MASK               (1 << 1)
-#define QSPIF_READ_QUADIO_DCYC          (6)
-
-#define QSPIF_PAGE_SIZE                 (0x100)     // 256 bytes pages.
-#define QSPIF_NUM_PAGES                 (0x20000)   // 131072 pages of 256 bytes
-
-#define QSPIF_SECTOR_SIZE               (0x1000)    // 4K bytes sectors.
-#define QSPIF_NUM_SECTORS               (0x2000)    // 8192 sectors of 4K bytes
-
-#define QSPIF_BLOCK_SIZE                (0x10000)   // 64K bytes blocks.
-#define QSPIF_NUM_BLOCKS                (0x200)     // 512 blocks of 64K bytes
-
-#define QSPIF_CLK_PIN                   (GPIO_PIN_10)
-#define QSPIF_CLK_PORT                  (GPIOF)
-#define QSPIF_CLK_ALT                   (GPIO_AF9_QUADSPI)
-
-#define QSPIF_CS_PIN                    (GPIO_PIN_6)
-#define QSPIF_CS_PORT                   (GPIOG)
-#define QSPIF_CS_ALT                    (GPIO_AF10_QUADSPI)
-
-#define QSPIF_D0_PIN                    (GPIO_PIN_8)
-#define QSPIF_D0_PORT                   (GPIOF)
-#define QSPIF_D0_ALT                    (GPIO_AF10_QUADSPI)
-
-#define QSPIF_D1_PIN                    (GPIO_PIN_9)
-#define QSPIF_D1_PORT                   (GPIOF)
-#define QSPIF_D1_ALT                    (GPIO_AF10_QUADSPI)
-
-#define QSPIF_D2_PIN                    (GPIO_PIN_7)
-#define QSPIF_D2_PORT                   (GPIOF)
-#define QSPIF_D2_ALT                    (GPIO_AF9_QUADSPI)
-
-#define QSPIF_D3_PIN                    (GPIO_PIN_6)
-#define QSPIF_D3_PORT                   (GPIOF)
-#define QSPIF_D3_ALT                    (GPIO_AF9_QUADSPI)
-
-#define QSPIF_CLK_ENABLE()              __HAL_RCC_QSPI_CLK_ENABLE()
-#define QSPIF_CLK_DISABLE()             __HAL_RCC_QSPI_CLK_DISABLE()
-#define QSPIF_FORCE_RESET()             __HAL_RCC_QSPI_FORCE_RESET()
-#define QSPIF_RELEASE_RESET()           __HAL_RCC_QSPI_RELEASE_RESET()
-
-#define QSPIF_CLK_GPIO_CLK_ENABLE()     __HAL_RCC_GPIOF_CLK_ENABLE()
-#define QSPIF_CS_GPIO_CLK_ENABLE()      __HAL_RCC_GPIOG_CLK_ENABLE()
-#define QSPIF_D0_GPIO_CLK_ENABLE()      __HAL_RCC_GPIOF_CLK_ENABLE()
-#define QSPIF_D1_GPIO_CLK_ENABLE()      __HAL_RCC_GPIOF_CLK_ENABLE()
-#define QSPIF_D2_GPIO_CLK_ENABLE()      __HAL_RCC_GPIOF_CLK_ENABLE()
-#define QSPIF_D3_GPIO_CLK_ENABLE()      __HAL_RCC_GPIOF_CLK_ENABLE()
 
 // LCD Interface
 #define OMV_LCD_CONTROLLER                  (LTDC)
@@ -658,13 +593,11 @@
 #define OMV_BUZZER_TIM_RELEASE_RESET()          __HAL_RCC_TIM2_RELEASE_RESET()
 #define OMV_BUZZER_TIM_PCLK_FREQ()              HAL_RCC_GetPCLK1Freq()
 
-// Enable additional GPIO banks for DRAM...
+// Enable additional GPIO banks
 #define OMV_ENABLE_GPIO_BANK_F
 #define OMV_ENABLE_GPIO_BANK_G
 #define OMV_ENABLE_GPIO_BANK_H
 #define OMV_ENABLE_GPIO_BANK_I
-
-// Enable additional GPIO banks for LCD...
 #define OMV_ENABLE_GPIO_BANK_J
 #define OMV_ENABLE_GPIO_BANK_K
 
