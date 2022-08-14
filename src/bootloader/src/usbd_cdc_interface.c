@@ -2,6 +2,7 @@
 #include "flash.h"
 #include "usbdev/usbd_cdc.h"
 #include "omv_boardconfig.h"
+#include "omv_bootconfig.h"
 #include "qspif.h"
 
 #define APP_RX_DATA_SIZE    (2048)
@@ -29,16 +30,16 @@ static volatile uint8_t vcp_connected = 0;
 #define FLASH_BUF_SIZE  (CDC_DATA_MAX_PACKET_SIZE)
 static volatile uint32_t flash_buf_idx=0;
 static volatile uint8_t  flash_buf[FLASH_BUF_SIZE];
-static const    uint32_t flash_layout[3] = OMV_FLASH_LAYOUT;
-#if defined(OMV_QSPIF_LAYOUT)
-#define QSPIF_BUF_SIZE  QSPIF_PAGE_SIZE
+static const    uint32_t flash_layout[3] = OMV_BOOT_FLASH_LAYOUT;
+#if defined(OMV_BOOT_QSPIF_LAYOUT)
+#define QSPIF_BUF_SIZE  OMV_BOOT_QSPIF_PAGE_SIZE
 static volatile uint32_t qspif_buf_idx=0;
 static volatile uint8_t  qspif_buf[QSPIF_BUF_SIZE];
-static const    uint32_t qspif_layout[3] = OMV_QSPIF_LAYOUT;
+static const    uint32_t qspif_layout[3] = OMV_BOOT_QSPIF_LAYOUT;
 #else
 static const    uint32_t qspif_layout[3] = {0, 0, 0};
 #endif
-static const    uint32_t bootloader_version = 0xABCD0003;
+static const    uint32_t bootloader_version = OMV_BOOT_VERSION;
 
 /* USB handler declaration */
 extern USBD_HandleTypeDef  USBD_Device;
@@ -209,7 +210,7 @@ void CDC_Tx(uint8_t *buf, uint32_t len)
 static int8_t CDC_Itf_Receive(uint8_t *Buf, uint32_t *Len)
 {
     static volatile uint32_t flash_offset;
-    #if defined(OMV_QSPIF_LAYOUT)
+    #if defined(OMV_BOOT_QSPIF_LAYOUT)
     static volatile uint32_t qspif_offset=0;
     #endif
 
@@ -219,7 +220,7 @@ static int8_t CDC_Itf_Receive(uint8_t *Buf, uint32_t *Len)
     switch (cmd) {
         case BOOTLDR_START:
             flash_buf_idx = 0;
-            #if defined(OMV_QSPIF_LAYOUT)
+            #if defined(OMV_BOOT_QSPIF_LAYOUT)
             qspif_buf_idx = 0;
             #endif
             ide_connected = 1;
@@ -258,15 +259,15 @@ static int8_t CDC_Itf_Receive(uint8_t *Buf, uint32_t *Len)
             break;
 
         case BOOTLDR_QSPIF_ERASE: {
-            #if defined(OMV_QSPIF_LAYOUT)
+            #if defined(OMV_BOOT_QSPIF_LAYOUT)
             uint32_t block = *cmd_buf;
-            qspif_erase_block(block * QSPIF_BLOCK_SIZE);
+            qspif_erase_block(block * OMV_BOOT_QSPIF_BLOCK_SIZE);
             #endif
             break;
         }
 
         case BOOTLDR_QSPIF_WRITE: {
-            #if defined(OMV_QSPIF_LAYOUT)
+            #if defined(OMV_BOOT_QSPIF_LAYOUT)
             uint8_t *buf =  Buf + 4;
             uint32_t len = *Len - 4;
             for (int i=0; i<len; i++) {
@@ -283,7 +284,7 @@ static int8_t CDC_Itf_Receive(uint8_t *Buf, uint32_t *Len)
 
         case BOOTLDR_QSPIF_MEMTEST: {
             uint32_t qspif_test = 0;
-            #if defined(OMV_QSPIF_LAYOUT)
+            #if defined(OMV_BOOT_QSPIF_LAYOUT)
             qspif_test = (qspif_memory_test() == 0);
             #endif
             CDC_Tx((uint8_t*) &qspif_test, 4);
@@ -299,7 +300,7 @@ static int8_t CDC_Itf_Receive(uint8_t *Buf, uint32_t *Len)
                 }
                 flash_write((uint32_t*)flash_buf, flash_offset, FLASH_BUF_SIZE);
             }
-            #if defined(OMV_QSPIF_LAYOUT)
+            #if defined(OMV_BOOT_QSPIF_LAYOUT)
             if (qspif_buf_idx) {
                 // Pad and flush the last packet
                 for (int i=qspif_buf_idx; i<QSPIF_BUF_SIZE; i++) {

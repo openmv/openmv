@@ -23,10 +23,6 @@
 #define OMV_MAX_BLOB_FRAME      FRAMESIZE_QCIF
 #define OMV_MAX_BLOB_FRAME_STR  "QCIF"
 
-// Bootloader LED GPIO port/pin
-#define OMV_BOOTLDR_LED_PIN     (GPIO_PIN_2)
-#define OMV_BOOTLDR_LED_PORT    (GPIOC)
-
 // Core VBAT for selftests
 #define OMV_CORE_VBAT           "3.3"
 
@@ -49,8 +45,6 @@
 #define OMV_FLASH_LATENCY       (FLASH_LATENCY_5)
 
 // Linker script constants (see the linker script template stm32fxxx.ld.S).
-#define OMV_BOOT_ORIGIN     0x08000000
-#define OMV_BOOT_LENGTH     16K
 #define OMV_TEXT_ORIGIN     0x08010000
 #define OMV_TEXT_LENGTH     448K
 #define OMV_SRAM1_ORIGIN    0x20000000

@@ -13,13 +13,14 @@
 ENTRY(Reset_Handler)
 
 #include "omv_boardconfig.h"
+#include "omv_bootconfig.h"
 
 /* Specify the memory areas */
 MEMORY
 {
-  DTCM (xrw)      : ORIGIN = OMV_DTCM_ORIGIN,   LENGTH = OMV_DTCM_LENGTH
-  RAM (xrw)       : ORIGIN = OMV_SRAM1_ORIGIN,  LENGTH = OMV_SRAM1_LENGTH
-  FLASH_TEXT (rx) : ORIGIN = OMV_BOOT_ORIGIN,   LENGTH = OMV_BOOT_LENGTH
+  DTCM (xrw)      : ORIGIN = OMV_DTCM_ORIGIN,       LENGTH = OMV_DTCM_LENGTH
+  RAM (xrw)       : ORIGIN = OMV_SRAM1_ORIGIN,      LENGTH = OMV_SRAM1_LENGTH
+  FLASH_TEXT (rx) : ORIGIN = OMV_BOOT_FLASH_ORIGIN, LENGTH = OMV_BOOT_FLASH_LENGTH
 }
 
 _estack     = ORIGIN(DTCM) + LENGTH(DTCM);

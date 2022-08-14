@@ -19,6 +19,9 @@
 #include "sensor.h"
 #include "framebuffer.h"
 #include "omv_boardconfig.h"
+#if OMV_ENABLE_BOOTLOADER
+#include "omv_bootconfig.h"
+#endif
 
 #if defined(I2C1)
 I2C_HandleTypeDef I2CHandle1;
@@ -161,14 +164,16 @@ int main()
 {
     HAL_Init();
 
+    #if OMV_ENABLE_BOOTLOADER
     GPIO_InitTypeDef  GPIO_InitStructure;
     GPIO_InitStructure.Pull  = GPIO_PULLUP;
     GPIO_InitStructure.Speed = GPIO_SPEED_LOW;
     GPIO_InitStructure.Mode  = GPIO_MODE_OUTPUT_PP;
 
-    GPIO_InitStructure.Pin = OMV_BOOTLDR_LED_PIN;
-    HAL_GPIO_Init(OMV_BOOTLDR_LED_PORT, &GPIO_InitStructure);
-    HAL_GPIO_WritePin(OMV_BOOTLDR_LED_PORT, OMV_BOOTLDR_LED_PIN, GPIO_PIN_SET);
+    GPIO_InitStructure.Pin = OMV_BOOT_LED_PIN;
+    HAL_GPIO_Init(OMV_BOOT_LED_PORT, &GPIO_InitStructure);
+    HAL_GPIO_WritePin(OMV_BOOT_LED_PORT, OMV_BOOT_LED_PIN, GPIO_PIN_SET);
+    #endif
 
     // Re-enable IRQs (disabled by bootloader)
     __enable_irq();

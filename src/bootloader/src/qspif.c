@@ -12,8 +12,9 @@
 #include <string.h>
 #include "qspif.h"
 #include "omv_boardconfig.h"
+#include "omv_bootconfig.h"
 
-#if defined(OMV_QSPIF_LAYOUT)
+#if defined(OMV_BOOT_QSPIF_LAYOUT)
 
 #define HAL_QSPI_TIMEOUT                (5000)
 #define SECTOR_ERASE_TIMEOUT            (400)
@@ -49,7 +50,7 @@ int qspif_init()
     QSPIHandle.Init.ClockPrescaler     = 1; // clock = 200MHz / (1+1) = 100MHz
     QSPIHandle.Init.FifoThreshold      = 3;
     QSPIHandle.Init.SampleShifting     = QSPI_SAMPLE_SHIFTING_HALFCYCLE;
-    QSPIHandle.Init.FlashSize          = QSPIF_SIZE_BITS - 1;
+    QSPIHandle.Init.FlashSize          = OMV_BOOT_QSPIF_SIZE_BITS - 1;
     QSPIHandle.Init.ChipSelectHighTime = QSPI_CS_HIGH_TIME_2_CYCLE;
     QSPIHandle.Init.ClockMode          = QSPI_CLOCK_MODE_0;
     QSPIHandle.Init.FlashID            = QSPI_FLASH_ID_1;
@@ -112,7 +113,7 @@ int qspif_reset()
         return -1;
     }
 
-    if (qspif_poll_status_flag(QSPIF_SR_WIP_MASK, 0, HAL_QSPI_TIMEOUT) != 0) {
+    if (qspif_poll_status_flag(OMV_BOOT_QSPIF_SR_WIP_MASK, 0, HAL_QSPI_TIMEOUT) != 0) {
         return -1;
     }
 
@@ -130,7 +131,7 @@ int qspif_read(uint8_t *buf, uint32_t addr, uint32_t size)
         .Address           = addr,
         .AlternateByteMode = QSPI_ALTERNATE_BYTES_NONE,
         .DataMode          = QSPI_DATA_4_LINES,
-        .DummyCycles       = QSPIF_READ_QUADIO_DCYC,
+        .DummyCycles       = OMV_BOOT_QSPIF_READ_QUADIO_DCYC,
         .NbData            = size,
         .DdrMode           = QSPI_DDR_MODE_DISABLE,
         .DdrHoldHalfCycle  = QSPI_DDR_HHC_HALF_CLK_DELAY,
@@ -173,8 +174,8 @@ int qspif_write(uint8_t *buf, uint32_t addr, uint32_t size)
         return -1;
     }
 
-    // Address must be page-aligned and size between 0->QSPIF_PAGE_SIZE bytes.
-    if ((addr % QSPIF_PAGE_SIZE) != 0 || size <= 0 || size > QSPIF_PAGE_SIZE) {
+    // Address must be page-aligned and size between 0->OMV_BOOT_QSPIF_PAGE_SIZE bytes.
+    if ((addr % OMV_BOOT_QSPIF_PAGE_SIZE) != 0 || size <= 0 || size > OMV_BOOT_QSPIF_PAGE_SIZE) {
         return -1;
     }
 
@@ -194,7 +195,7 @@ int qspif_write(uint8_t *buf, uint32_t addr, uint32_t size)
     }
 
     // Poll the status register.
-    if (qspif_poll_status_flag(QSPIF_SR_WIP_MASK, 0, HAL_QSPI_TIMEOUT) != 0) {
+    if (qspif_poll_status_flag(OMV_BOOT_QSPIF_SR_WIP_MASK, 0, HAL_QSPI_TIMEOUT) != 0) {
         return -1;
     }
 
@@ -229,7 +230,7 @@ int qspif_erase_block(uint32_t addr)
         return -1;
     }
 
-    if (qspif_poll_status_flag(QSPIF_SR_WIP_MASK, 0, BLOCK_ERASE_TIMEOUT) != 0) {
+    if (qspif_poll_status_flag(OMV_BOOT_QSPIF_SR_WIP_MASK, 0, BLOCK_ERASE_TIMEOUT) != 0) {
         return -1;
     }
 
@@ -262,7 +263,7 @@ int qspif_erase_chip()
         return -1;
     }
 
-    if (qspif_poll_status_flag(QSPIF_SR_WIP_MASK, 0, CHIP_ERASE_TIMEOUT) != 0) {
+    if (qspif_poll_status_flag(OMV_BOOT_QSPIF_SR_WIP_MASK, 0, CHIP_ERASE_TIMEOUT) != 0) {
         return -1;
     }
 
@@ -287,7 +288,7 @@ static int qspif_write_enable()
         return -1;
     }
 
-    if (qspif_poll_status_flag(QSPIF_SR_WEL_MASK, QSPIF_SR_WEL_MASK, HAL_QSPI_TIMEOUT) != 0) {
+    if (qspif_poll_status_flag(OMV_BOOT_QSPIF_SR_WEL_MASK, OMV_BOOT_QSPIF_SR_WEL_MASK, HAL_QSPI_TIMEOUT) != 0) {
         return -1;
     }
 
@@ -316,7 +317,7 @@ static int qspif_4byte_addr_mode_enable()
         return -1;
     }
 
-    if (qspif_poll_status_flag(QSPIF_SR_WIP_MASK, 0, HAL_QSPI_TIMEOUT) != 0) {
+    if (qspif_poll_status_flag(OMV_BOOT_QSPIF_SR_WIP_MASK, 0, HAL_QSPI_TIMEOUT) != 0) {
         return -1;
     }
 
@@ -354,35 +355,35 @@ static int qspif_poll_status_flag(uint32_t mask, uint32_t match, uint32_t timeou
 }
 
 int __attribute__((optimize("O0"))) qspif_memory_test() {
-    uint8_t buf[QSPIF_PAGE_SIZE];
-    uint8_t pat[QSPIF_PAGE_SIZE];
+    uint8_t buf[OMV_BOOT_QSPIF_PAGE_SIZE];
+    uint8_t pat[OMV_BOOT_QSPIF_PAGE_SIZE];
 
     if (qspif_init() != 0) {
         return -1;
     }
 
-    for (int i=0; i<QSPIF_PAGE_SIZE; i++) {
+    for (int i=0; i<OMV_BOOT_QSPIF_PAGE_SIZE; i++) {
         pat[i] = ((i%2) == 0 ) ? 0xaa : 0x55;
     }
 
-    for (uint32_t i=0, addr=0; i<QSPIF_NUM_BLOCKS; i++, addr+=QSPIF_BLOCK_SIZE) {
+    for (uint32_t i=0, addr=0; i<OMV_BOOT_QSPIF_NUM_BLOCKS; i++, addr+=OMV_BOOT_QSPIF_BLOCK_SIZE) {
         if (qspif_erase_block(addr) != 0) {
             return -2;
         }
     }
 
-    for (uint32_t i=0, addr=0; i<QSPIF_NUM_PAGES; i++, addr+=QSPIF_PAGE_SIZE) {
-        if (qspif_write(pat, addr, QSPIF_PAGE_SIZE) != 0) {
+    for (uint32_t i=0, addr=0; i<OMV_BOOT_QSPIF_NUM_PAGES; i++, addr+=OMV_BOOT_QSPIF_PAGE_SIZE) {
+        if (qspif_write(pat, addr, OMV_BOOT_QSPIF_PAGE_SIZE) != 0) {
             return -3;
         }
     }
 
-    for (uint32_t i=0, addr=0; i<QSPIF_NUM_PAGES; i++, addr+=QSPIF_PAGE_SIZE) {
-        memset(buf, 0, QSPIF_PAGE_SIZE);
-        if (qspif_read(buf, addr, QSPIF_PAGE_SIZE) != 0) {
+    for (uint32_t i=0, addr=0; i<OMV_BOOT_QSPIF_NUM_PAGES; i++, addr+=OMV_BOOT_QSPIF_PAGE_SIZE) {
+        memset(buf, 0, OMV_BOOT_QSPIF_PAGE_SIZE);
+        if (qspif_read(buf, addr, OMV_BOOT_QSPIF_PAGE_SIZE) != 0) {
             return -4;
         }
-        if (memcmp(buf, pat, QSPIF_PAGE_SIZE) != 0) {
+        if (memcmp(buf, pat, OMV_BOOT_QSPIF_PAGE_SIZE) != 0) {
             return -5;
         }
     }
@@ -393,4 +394,4 @@ int __attribute__((optimize("O0"))) qspif_memory_test() {
 
     return 0;
 }
-#endif //defined(OMV_QSPIF_LAYOUT)
+#endif //defined(OMV_BOOT_QSPIF_LAYOUT)

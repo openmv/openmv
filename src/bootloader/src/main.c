@@ -12,6 +12,7 @@
 #include "usbdev/usbd_cdc.h"
 #include "usbdev/usbd_desc.h"
 #include "omv_boardconfig.h"
+#include "omv_bootconfig.h"
 #include "qspif.h"
 
 #define IDE_TIMEOUT     (1000)
@@ -21,9 +22,9 @@ extern USBD_CDC_ItfTypeDef  USBD_CDC_fops;
 
 void __flash_led()
 {
-    HAL_GPIO_TogglePin(OMV_BOOTLDR_LED_PORT, OMV_BOOTLDR_LED_PIN);
+    HAL_GPIO_TogglePin(OMV_BOOT_LED_PORT, OMV_BOOT_LED_PIN);
     HAL_Delay(100);
-    HAL_GPIO_TogglePin(OMV_BOOTLDR_LED_PORT, OMV_BOOTLDR_LED_PIN);
+    HAL_GPIO_TogglePin(OMV_BOOT_LED_PORT, OMV_BOOT_LED_PIN);
     HAL_Delay(100);
 }
 
@@ -53,7 +54,7 @@ int main()
 
     HAL_Init();
 
-    #if defined(OMV_QSPIF_LAYOUT)
+    #if defined(OMV_BOOT_QSPIF_LAYOUT)
     if (qspif_init() != 0) {
         __fatal_error();
     }
@@ -102,7 +103,7 @@ int main()
     // Deinit USB
     USBD_DeInit(&USBD_Device);
 
-    #if defined(OMV_QSPIF_LAYOUT)
+    #if defined(OMV_BOOT_QSPIF_LAYOUT)
     qspif_reset();
     qspif_deinit();
     #endif
