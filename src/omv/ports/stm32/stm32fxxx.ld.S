@@ -85,6 +85,10 @@ SECTIONS
     *(.rodata)          // .rodata sections (constants, strings, etc.)
     . = ALIGN(4);
     *(.rodata*)         // .rodata* sections (constants, strings, etc.)
+    #if !defined(OMV_CYW43_MEMORY)
+    . = ALIGN(512);
+    *(.big_const*)
+    #endif
     . = ALIGN(4);
     _etext = .;         // define a global symbols at end of code
   } >FLASH_TEXT
