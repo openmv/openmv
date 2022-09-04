@@ -353,6 +353,11 @@ void SystemClock_Config(void)
     PeriphClkInitStruct.PeriphClockSelection |= RCC_PERIPHCLK_SPI123;
     PeriphClkInitStruct.Spi123ClockSelection  = OMV_OSC_SPI123_CLKSOURCE;
 
+    #if defined(OMV_OSC_SPI6_CLKSOURCE)
+    PeriphClkInitStruct.PeriphClockSelection |= RCC_PERIPHCLK_SPI6;
+    PeriphClkInitStruct.Spi6ClockSelection    = OMV_OSC_SPI6_CLKSOURCE;
+    #endif
+
     PeriphClkInitStruct.PeriphClockSelection |= RCC_PERIPHCLK_I2C123;
     PeriphClkInitStruct.I2c123ClockSelection  = RCC_I2C123CLKSOURCE_D2PCLK1;
 
