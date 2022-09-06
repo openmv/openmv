@@ -16,8 +16,8 @@ MAV_component_id = 0x54
 
 lens_mm = 2.8 # Standard Lens.
 lens_to_camera_mm = 22 # Standard Lens.
-sensor_w_mm = 3.984 # For OV7725 sensor - see datasheet.
-sensor_h_mm = 2.952 # For OV7725 sensor - see datasheet.
+sensor_w_mm = 4.592 # For OV5650 sensor
+sensor_h_mm = 3.423 # For OV5650 sensor
 
 # Only tags with a tag ID in the dictionary below will be accepted by this
 # code. You may add as many tag IDs to the below dictionary as you want...
