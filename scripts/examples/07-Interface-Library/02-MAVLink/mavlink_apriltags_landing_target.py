@@ -104,6 +104,25 @@ def send_landing_target_packet(tag, dist_cm, w, h):
     packet_sequence += 1
     uart.write(temp)
 
+# LED control
+led_success = pyb.LED(2) # Red LED = 1, Green LED = 2, Blue LED = 3, IR LEDs = 4.
+led_fail = pyb.LED(1)
+led_counter = 0
+
+def update_led(target_found):
+    global led_counter
+
+    if (target_found) :
+        led = led_success
+        led_fail.off()
+    else :
+        led = led_fail
+        led_success.off()
+
+    if led_counter % 4 == 0:
+        led.toggle()
+
+    led_counter += 1
 # Main Loop
 
 clock = time.clock()
@@ -111,8 +130,9 @@ while(True):
     clock.tick()
     img = sensor.snapshot()
     tags = sorted(img.find_apriltags(fx=f_x, fy=f_y, cx=c_x, cy=c_y), key = lambda x: x.w() * x.h(), reverse = True)
-
+    target_found = False
     if tags and (tags[0].id() in valid_tag_ids):
+        target_found = True
         tag_size = valid_tag_ids[tags[0].id()]
         dist_mm = math.sqrt(translation_to_mm(tags[0].x_translation(), tag_size) ** 2 + translation_to_mm(tags[0].y_translation(), tag_size) ** 2 + translation_to_mm(tags[0].z_translation(), tag_size) ** 2)
         send_landing_target_packet(tags[0], dist_mm, img.width(), img.height())
@@ -121,3 +141,5 @@ while(True):
         print("Distance %f mm - FPS %f" % (dist_mm, clock.fps()))
     else:
         print("FPS %f" % clock.fps())
+
+    update_led(target_found)
