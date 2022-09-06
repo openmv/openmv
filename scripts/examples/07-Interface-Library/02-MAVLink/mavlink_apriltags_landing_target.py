@@ -50,7 +50,7 @@ h_fov = 2 * math.atan((sensor_w_mm / 2) / lens_mm)
 v_fov = 2 * math.atan((sensor_h_mm / 2) / lens_mm)
 
 def translation_to_mm(translation, tag_size): # translation is in decimeters...
-    return (((translation * 100) * tag_size) / 165)
+    return (((translation * 100) * tag_size) / 210)
 
 # Link Setup
 
