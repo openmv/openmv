@@ -79,7 +79,7 @@ MAV_LANDING_TARGET_extra_crc = 200
 
 # http://mavlink.org/messages/common#LANDING_TARGET
 # https://github.com/mavlink/c_library_v1/blob/master/common/mavlink_msg_landing_target.h
-def send_landing_target_packet(tag, dist_cm, w, h):
+def send_landing_target_packet(tag, dist_mm, w, h):
     global packet_sequence
     temp = struct.pack("<qfffffbb",
                        0,
