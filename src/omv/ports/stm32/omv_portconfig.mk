@@ -519,6 +519,7 @@ UVC_OBJ += $(addprefix $(BUILD)/$(CMSIS_DIR)/src/,\
 
 UVC_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/alloc/, \
 	fb_alloc.o                              \
+	dma_alloc.o                             \
 	unaligned_memcpy.o                      \
 	)
 

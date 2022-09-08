@@ -57,6 +57,12 @@ void __attribute__((noreturn)) __fatal_error()
     }
 }
 
+void __attribute__((noreturn)) mp_raise_msg_varg(const void *err, ...)
+{
+    while (1) {
+    }
+}
+
 #ifdef STACK_PROTECTOR
 uint32_t __stack_chk_guard=0xDEADBEEF;
 
