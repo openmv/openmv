@@ -18,6 +18,7 @@
 #include "py/mphal.h"
 #include "framebuffer.h"
 #include "common.h"
+#include "dma_alloc.h"
 
 #include "crc16.h"
 #include "LEPTON_SDK.h"
@@ -61,11 +62,10 @@ static float max_temp = DEFAULT_MAX_TEMP;
 extern SPI_HandleTypeDef ISC_SPIHandle;
 static DMA_HandleTypeDef DMAHandle;
 LEP_CAMERA_PORT_DESC_T   LEPHandle;
-extern uint8_t _line_buf[];
 extern uint8_t _vospi_buf[];
 
 static bool vospi_resync = true;
-static uint8_t *vospi_packet = _line_buf;
+static uint8_t *vospi_packet = NULL;
 static uint8_t *vospi_buffer = _vospi_buf;
 static volatile uint32_t vospi_pid = 0;
 static volatile uint32_t vospi_seg = 1;
@@ -643,6 +643,12 @@ int lepton_init(sensor_t *sensor)
     sensor->hw_flags.jpege      = 0;
     sensor->hw_flags.gs_bpp     = 1;
 
+    // Allocate packet buffer in the same domain as the DMA instance.
+    vospi_packet = dma_alloc(VOSPI_PACKET_SIZE, ISC_SPI_DMA_STREAM);
+    if (vospi_packet == NULL) {
+        return -1;
+    }
+
     // Configure the DMA handler for Transmission process
     DMAHandle.Instance                 = ISC_SPI_DMA_STREAM;
     DMAHandle.Init.Request             = ISC_SPI_DMA_REQUEST;
@@ -665,6 +671,10 @@ int lepton_init(sensor_t *sensor)
     // NVIC configuration for DMA transfer complete interrupt
     NVIC_SetPriority(ISC_SPI_DMA_IRQn, IRQ_PRI_DMA21);
     HAL_NVIC_DisableIRQ(ISC_SPI_DMA_IRQn);
+
+    #if defined(ISC_SPI_DMA_CLK_ENABLE)
+    ISC_SPI_DMA_CLK_ENABLE();
+    #endif
 
     HAL_DMA_DeInit(&DMAHandle);
     if (HAL_DMA_Init(&DMAHandle) != HAL_OK) {
