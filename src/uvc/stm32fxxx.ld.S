@@ -37,9 +37,11 @@ MEMORY
   #if defined(OMV_DRAM_ORIGIN)
   DRAM (xrw)        : ORIGIN = OMV_DRAM_ORIGIN,     LENGTH = OMV_DRAM_LENGTH
   #endif
-  FLASH_TEXT (rx)   : ORIGIN = OMV_TEXT_ORIGIN,     LENGTH = OMV_TEXT_LENGTH
+  FLASH_TEXT (rx)   : ORIGIN = OMV_FLASH_TXT_ORIGIN, LENGTH = OMV_FLASH_TXT_LENGTH
 }
 
+_heap_size  = OMV_HEAP_SIZE;    /* required amount of heap */
+_stack_size = OMV_STACK_SIZE;   /* minimum amount of stack */
 _ram_end    = ORIGIN(OMV_MAIN_MEMORY) + LENGTH(OMV_MAIN_MEMORY);
 
 #if defined(OMV_FFS_MEMORY)
@@ -62,9 +64,6 @@ _jpeg_buf           = ORIGIN(OMV_JPEG_MEMORY) + OMV_JPEG_MEMORY_OFFSET;
 #endif
 _vospi_buf          = ORIGIN(OMV_VOSPI_MEMORY) + OMV_VOSPI_MEMORY_OFFSET;
 #endif
-
-_heap_size  = OMV_HEAP_SIZE;    /* required amount of heap */
-_stack_size = OMV_STACK_SIZE;   /* minimum amount of stack */
 
 /* Define output sections */
 SECTIONS
@@ -133,7 +132,7 @@ SECTIONS
     _fir_lepton_buf = .; // FIR Lepton Packet Double Buffer (328 bytes)
     . = . + OMV_FIR_LEPTON_BUF_SIZE;
 
-    #if !defined(OMV_FFS_MEMORY) && defined(OMV_FFS_BUF_SIZE)
+    #if defined(OMV_FFS_BUF_SIZE)
     . = ALIGN(16);
     _ffs_cache = .;     // Flash filesystem cache
     . = . + OMV_FFS_BUF_SIZE;

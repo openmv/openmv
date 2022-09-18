@@ -44,13 +44,19 @@
 // Flash Latency
 #define OMV_FLASH_LATENCY       (FLASH_LATENCY_5)
 
-// Linker script constants (see the linker script template stm32fxxx.ld.S).
-#define OMV_TEXT_ORIGIN     0x08010000
-#define OMV_TEXT_LENGTH     448K
-#define OMV_SRAM1_ORIGIN    0x20000000
-#define OMV_SRAM1_LENGTH    128K
-#define OMV_DTCM_ORIGIN      0x10000000
-#define OMV_DTCM_LENGTH      64K
+// Memory map.
+#define OMV_FLASH_ORIGIN        0x08000000
+#define OMV_FLASH_LENGTH        512K
+#define OMV_SRAM1_ORIGIN        0x20000000
+#define OMV_SRAM1_LENGTH        128K
+#define OMV_DTCM_ORIGIN         0x10000000
+#define OMV_DTCM_LENGTH         64K
+
+// Flash configuration.
+#define OMV_FLASH_FFS_ORIGIN    0x08004000
+#define OMV_FLASH_FFS_LENGTH    48K
+#define OMV_FLASH_TXT_ORIGIN    0x08010000
+#define OMV_FLASH_TXT_LENGTH    448K
 
 /* SCCB/I2C */
 #define SCCB_I2C                (I2C1)

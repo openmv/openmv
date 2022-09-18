@@ -151,8 +151,9 @@
 #define OMV_FIR_LEPTON_BUF_SIZE (1K)        // FIR Lepton Packet Double Buffer (328 bytes)
 #define OMV_JPEG_BUF_SIZE       (32 * 1024) // IDE JPEG buffer (header + data).
 
-#define OMV_TEXT_ORIGIN         0x08040000
-#define OMV_TEXT_LENGTH         1792K
+// Memory map.
+#define OMV_FLASH_ORIGIN        0x08000000
+#define OMV_FLASH_LENGTH        2048K
 #define OMV_DTCM_ORIGIN         0x20000000  // Note accessible by CPU and MDMA only.
 #define OMV_DTCM_LENGTH         128K
 #define OMV_ITCM_ORIGIN         0x00000000
@@ -167,6 +168,12 @@
 #define OMV_SRAM4_LENGTH        64K
 #define OMV_AXI_SRAM_ORIGIN     0x24000000
 #define OMV_AXI_SRAM_LENGTH     512K
+
+// Flash configuration.
+#define OMV_FLASH_FFS_ORIGIN    0x08020000
+#define OMV_FLASH_FFS_LENGTH    128K
+#define OMV_FLASH_TXT_ORIGIN    0x08040000
+#define OMV_FLASH_TXT_LENGTH    1792K
 #define OMV_FLASH_EXT_ORIGIN    0x90000000
 #define OMV_FLASH_EXT_LENGTH    16M
 
