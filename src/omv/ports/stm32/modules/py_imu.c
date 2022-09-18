@@ -403,5 +403,5 @@ float py_imu_pitch_rotation()
     return 0.0f;
 }
 
-MP_REGISTER_MODULE(MP_QSTR_imu, imu_module, MICROPY_PY_IMU);
+MP_REGISTER_MODULE(MP_QSTR_imu, imu_module);
 #endif // MICROPY_PY_IMU

@@ -286,6 +286,6 @@ const mp_obj_module_t micro_speech_module = {
     .globals = (mp_obj_dict_t*)&module_globals,
 };
 
-MP_REGISTER_MODULE(MP_QSTR_micro_speech, micro_speech_module, MICROPY_PY_MICRO_SPEECH);
+MP_REGISTER_MODULE(MP_QSTR_micro_speech, micro_speech_module);
 
 #endif // MICROPY_PY_MICRO_SPEECH

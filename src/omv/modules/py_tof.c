@@ -698,5 +698,5 @@ const mp_obj_module_t tof_module = {
     .globals = (mp_obj_t) &globals_dict,
 };
 
-MP_REGISTER_MODULE(MP_QSTR_tof, tof_module, MICROPY_PY_TOF);
+MP_REGISTER_MODULE(MP_QSTR_tof, tof_module);
 #endif

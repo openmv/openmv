@@ -81,4 +81,4 @@ const mp_obj_module_t omv_module = {
     .globals = (mp_obj_t) &globals_dict,
 };
 
-MP_REGISTER_MODULE(MP_QSTR_omv, omv_module, 1);
+MP_REGISTER_MODULE(MP_QSTR_omv, omv_module);
