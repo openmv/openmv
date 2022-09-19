@@ -231,6 +231,7 @@ if(MICROPY_PY_ULAB)
         ${MICROPY_ULAB_DIR}/code/numpy/fft/fft.c
         ${MICROPY_ULAB_DIR}/code/numpy/fft/fft_tools.c
         ${MICROPY_ULAB_DIR}/code/numpy/filter.c
+        ${MICROPY_ULAB_DIR}/code/numpy/io/io.c
         ${MICROPY_ULAB_DIR}/code/numpy/linalg/linalg.c
         ${MICROPY_ULAB_DIR}/code/numpy/linalg/linalg_tools.c
         ${MICROPY_ULAB_DIR}/code/numpy/ndarray/ndarray_iter.c
