@@ -883,6 +883,26 @@ static int set_vflip(sensor_t *sensor, int enable)
     return ret;
 }
 
+static int set_auto_exposure(sensor_t *sensor, int enable, int exposure_us)
+{
+    int ret = 0;
+    uint8_t reg;
+    ret |= cambus_writeb(&sensor->bus, sensor->slv_addr, 0xFE, 0x00);
+    ret |= cambus_readb(&sensor->bus, sensor->slv_addr, 0xb6, &reg);
+    ret |= cambus_writeb(&sensor->bus, sensor->slv_addr, 0xb6, (reg & 0xFE) | (enable & 0x01)) ;
+    return ret;
+}
+
+static int set_auto_whitebal(sensor_t *sensor, int enable, float r_gain_db, float g_gain_db, float b_gain_db)
+{
+    int ret = 0;
+    uint8_t reg;
+    ret |= cambus_writeb(&sensor->bus, sensor->slv_addr, 0xFE, 0x00);
+    ret |= cambus_readb(&sensor->bus, sensor->slv_addr, 0x82, &reg);
+    ret |= cambus_writeb(&sensor->bus, sensor->slv_addr, 0x82, (reg & 0xFD) | ((enable & 0x01) << 1));
+    return ret;
+}
+
 int gc2145_init(sensor_t *sensor)
 {
     // Initialize sensor structure.
@@ -894,6 +914,8 @@ int gc2145_init(sensor_t *sensor)
     sensor->set_framesize       = set_framesize;
     sensor->set_hmirror         = set_hmirror;
     sensor->set_vflip           = set_vflip;
+    sensor->set_auto_exposure   = set_auto_exposure;
+    sensor->set_auto_whitebal   = set_auto_whitebal;
 
     // Set sensor flags
     sensor->hw_flags.vsync      = 0;
