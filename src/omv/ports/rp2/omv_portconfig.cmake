@@ -102,6 +102,7 @@ target_sources(${MICROPY_TARGET} PRIVATE
     ${TOP_DIR}/${OMV_DIR}/common/trace.c
     ${TOP_DIR}/${OMV_DIR}/common/mutex.c
     ${TOP_DIR}/${OMV_DIR}/common/usbdbg.c
+    ${TOP_DIR}/${OMV_DIR}/common/tinyusb_debug.c
     ${TOP_DIR}/${OMV_DIR}/common/sensor_utils.c
     ${TOP_DIR}/${OMV_DIR}/common/factoryreset.c
 

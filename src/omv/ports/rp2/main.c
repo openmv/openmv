@@ -54,6 +54,8 @@
 #include "pico/stdlib.h"
 #include "pico/binary_info.h"
 #include "hardware/rtc.h"
+#include "hardware/irq.h"
+#include "hardware/regs/intctrl.h"
 #include "hardware/structs/rosc.h"
 #include "pico/unique_id.h"
 #include "pico/bootrom.h"
@@ -63,6 +65,7 @@
 #include "cambus.h"
 #include "sensor.h"
 #include "usbdbg.h"
+#include "tinyusb_debug.h"
 #include "py_fir.h"
 #if MICROPY_PY_AUDIO
 #include "py_audio.h"
@@ -145,6 +148,7 @@ int main(int argc, char **argv) {
 
     #if MICROPY_HW_ENABLE_USBDEV
     bi_decl(bi_program_feature("USB REPL"))
+    tusb_init();
     #endif
 
     #if MICROPY_PY_THREAD
@@ -169,6 +173,12 @@ int main(int argc, char **argv) {
     OMV_UNIQUE_ID_ADDR = pico_unique_id.id;
     pico_get_unique_board_id(&pico_unique_id);
 
+    // Install Tinyusb CDC debugger IRQ handler.
+    irq_set_enabled(USBCTRL_IRQ, false);
+    irq_remove_handler(USBCTRL_IRQ, irq_get_exclusive_handler(USBCTRL_IRQ));
+    irq_set_exclusive_handler(USBCTRL_IRQ, USBD_IRQHandler);
+    irq_set_enabled(USBCTRL_IRQ, true);
+
 soft_reset:
     // Initialise stack extents and GC heap.
     mp_stack_set_top(&__StackTop);
@@ -180,7 +190,6 @@ soft_reset:
     mp_obj_list_append(mp_sys_path, MP_OBJ_NEW_QSTR(MP_QSTR__slash_lib));
 
     // Initialise sub-systems.
-    mp_hal_init();
     readline_init0();
     machine_pin_init();
     rp2_pio_init();
@@ -366,4 +375,3 @@ const char rp2_help_text[] =
     "For further help on a specific object, type help(obj)\n"
     "For a list of available modules, type help('modules')\n"
 ;
-
