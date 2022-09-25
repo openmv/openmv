@@ -278,14 +278,14 @@ soft_reset:
 
     led_state(1, 0);
 
+    #if MICROPY_HW_USB_CDC
+    usb_cdc_init();
+    #endif
+
     #if MICROPY_VFS || MICROPY_MBFS || MICROPY_MODULE_FROZEN
     // run boot.py and main.py if they exist.
     pyexec_file_if_exists("boot.py", false);
     pyexec_file_if_exists("main.py", false);
-    #endif
-
-    #if MICROPY_HW_USB_CDC
-    usb_cdc_init();
     #endif
 
     usbdbg_init();
