@@ -317,6 +317,7 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/modules/ulab/,\
 	code/numpy/fft/fft.o                \
 	code/numpy/fft/fft_tools.o          \
 	code/numpy/filter.o                 \
+	code/numpy/io/io.o                  \
 	code/numpy/linalg/linalg.o          \
 	code/numpy/linalg/linalg_tools.o    \
 	code/numpy/ndarray/ndarray_iter.o   \
