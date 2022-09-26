@@ -7059,4 +7059,4 @@ const mp_obj_module_t image_module = {
     .globals = (mp_obj_t) &globals_dict
 };
 
-MP_REGISTER_MODULE(MP_QSTR_image, image_module, 1);
+MP_REGISTER_MODULE(MP_QSTR_image, image_module);

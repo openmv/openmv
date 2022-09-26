@@ -107,14 +107,21 @@
 #define OMV_FFS_BUF_SIZE    (16K)   // Flash filesystem cache
 #define OMV_JPEG_BUF_SIZE   (8 * 1024)  // IDE JPEG buffer size (header + data).
 
-#define OMV_TEXT_ORIGIN     0x08010000
-#define OMV_TEXT_LENGTH     960K
+// Memory map.
+#define OMV_FLASH_ORIGIN    0x08000000
+#define OMV_FLASH_LENGTH    1024K
 #define OMV_DTCM_ORIGIN     0x10000000
 #define OMV_DTCM_LENGTH     64K
 #define OMV_SRAM1_ORIGIN    0x20000000
 #define OMV_SRAM1_LENGTH    162K
 #define OMV_SRAM2_ORIGIN    0x20028800
 #define OMV_SRAM2_LENGTH    30K
+
+// Flash configuration.
+#define OMV_FLASH_FFS_ORIGIN    0x08004000
+#define OMV_FLASH_FFS_LENGTH    48K
+#define OMV_FLASH_TXT_ORIGIN    0x08010000
+#define OMV_FLASH_TXT_LENGTH    960K
 
 // Image sensor I2C
 #define ISC_I2C                 (I2C1)

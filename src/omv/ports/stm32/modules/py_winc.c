@@ -418,7 +418,7 @@ static int py_winc_socket_socket(mod_network_socket_obj_t *socket, int *_errno)
 
     // store state of this socket
     socket->fileno = fd;
-    socket->state = m_new0(winc_socket_buf_t, 1);
+    socket->_private = m_new0(winc_socket_buf_t, 1);
     return 0;
 }
 
@@ -427,8 +427,8 @@ static void py_winc_socket_close(mod_network_socket_obj_t *socket)
     if (socket->fileno >= 0) {
         winc_socket_close(socket->fileno);
         socket->fileno = -1; // Mark socket FD as invalid
-        m_del(winc_socket_buf_t, socket->state, 1);
-        socket->state = NULL;
+        m_del(winc_socket_buf_t, socket->_private, 1);
+        socket->_private = NULL;
     }
 }
 
@@ -471,7 +471,7 @@ static int py_winc_socket_accept(mod_network_socket_obj_t *socket,
 
     // Set default socket timeout.
     socket2->fileno = fd;
-    socket2->state = m_new0(winc_socket_buf_t, 1);
+    socket2->_private = m_new0(winc_socket_buf_t, 1);
     UNPACK_SOCKADDR((&addr), ip, *port);
 
     return 0;
@@ -505,7 +505,7 @@ static mp_uint_t py_winc_socket_send(mod_network_socket_obj_t *socket, const byt
 
 static mp_uint_t py_winc_socket_recv(mod_network_socket_obj_t *socket, byte *buf, mp_uint_t len, int *_errno)
 {
-    int ret = winc_socket_recv(socket->fileno, buf, len, socket->state, socket->timeout);
+    int ret = winc_socket_recv(socket->fileno, buf, len, socket->_private, socket->timeout);
     if (ret <= 0) { // NOTE: 0 return from recv() means connection closed.
         *_errno = py_winc_mperrno(ret);
         // The socket is Not closed on timeout.

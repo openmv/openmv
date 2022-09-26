@@ -31,6 +31,4 @@ const mp_obj_module_t example_user_cmodule = {
 };
 
 // Register the module to make it available in Python.
-// Note: This module is disabled, set the thrid argument to 1 to enable it, or
-// use a macro like MODULE_CEXAMPLE_ENABLED to conditionally enable this module.
-MP_REGISTER_MODULE(MP_QSTR_cexample, example_user_cmodule, 0);
+//MP_REGISTER_MODULE(MP_QSTR_cexample, example_user_cmodule);

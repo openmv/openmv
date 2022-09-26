@@ -17,40 +17,38 @@ ENTRY(Reset_Handler)
 /* Specify the memory areas */
 MEMORY
 {
-  DTCM (xrw)        : ORIGIN = OMV_DTCM_ORIGIN,     LENGTH = OMV_DTCM_LENGTH
+  DTCM (xrw)        : ORIGIN = OMV_DTCM_ORIGIN,      LENGTH = OMV_DTCM_LENGTH
   #if defined(OMV_ITCM_ORIGIN)
-  ITCM (xrw)        : ORIGIN = OMV_ITCM_ORIGIN,     LENGTH = OMV_ITCM_LENGTH
+  ITCM (xrw)        : ORIGIN = OMV_ITCM_ORIGIN,      LENGTH = OMV_ITCM_LENGTH
   #endif
-  SRAM1 (xrw)       : ORIGIN = OMV_SRAM1_ORIGIN,    LENGTH = OMV_SRAM1_LENGTH
+  SRAM1 (xrw)       : ORIGIN = OMV_SRAM1_ORIGIN,     LENGTH = OMV_SRAM1_LENGTH
   #if defined(OMV_SRAM2_ORIGIN)
-  SRAM2 (xrw)       : ORIGIN = OMV_SRAM2_ORIGIN,    LENGTH = OMV_SRAM2_LENGTH
+  SRAM2 (xrw)       : ORIGIN = OMV_SRAM2_ORIGIN,     LENGTH = OMV_SRAM2_LENGTH
   #endif
   #if defined(OMV_SRAM3_ORIGIN)
-  SRAM3 (xrw)       : ORIGIN = OMV_SRAM3_ORIGIN,    LENGTH = OMV_SRAM3_LENGTH
+  SRAM3 (xrw)       : ORIGIN = OMV_SRAM3_ORIGIN,     LENGTH = OMV_SRAM3_LENGTH
   #endif
   #if defined(OMV_SRAM4_ORIGIN)
-  SRAM4 (xrw)       : ORIGIN = OMV_SRAM4_ORIGIN,    LENGTH = OMV_SRAM4_LENGTH
+  SRAM4 (xrw)       : ORIGIN = OMV_SRAM4_ORIGIN,     LENGTH = OMV_SRAM4_LENGTH
   #endif
   #if defined(OMV_AXI_SRAM_ORIGIN)
-  AXI_SRAM (xrw)    : ORIGIN = OMV_AXI_SRAM_ORIGIN, LENGTH = OMV_AXI_SRAM_LENGTH
+  AXI_SRAM (xrw)    : ORIGIN = OMV_AXI_SRAM_ORIGIN,  LENGTH = OMV_AXI_SRAM_LENGTH
   #endif
   #if defined(OMV_DRAM_ORIGIN)
-  DRAM (xrw)        : ORIGIN = OMV_DRAM_ORIGIN,     LENGTH = OMV_DRAM_LENGTH
+  DRAM (xrw)        : ORIGIN = OMV_DRAM_ORIGIN,      LENGTH = OMV_DRAM_LENGTH
   #endif
-  FLASH_TEXT (rx)   : ORIGIN = OMV_TEXT_ORIGIN,     LENGTH = OMV_TEXT_LENGTH
+  #if defined(OMV_FLASH_FFS_ORIGIN)
+  FLASH_FFS (rx)    : ORIGIN = OMV_FLASH_FFS_ORIGIN, LENGTH = OMV_FLASH_FFS_LENGTH
+  #endif
+  FLASH_TEXT (rx)   : ORIGIN = OMV_FLASH_TXT_ORIGIN, LENGTH = OMV_FLASH_TXT_LENGTH
   #if defined(OMV_FLASH_EXT_ORIGIN)
   FLASH_EXT (rx)    : ORIGIN = OMV_FLASH_EXT_ORIGIN, LENGTH = OMV_FLASH_EXT_LENGTH
   #endif
 }
 
+_heap_size  = OMV_HEAP_SIZE;    /* required amount of heap */
+_stack_size = OMV_STACK_SIZE;   /* minimum amount of stack */
 _ram_end    = ORIGIN(OMV_MAIN_MEMORY) + LENGTH(OMV_MAIN_MEMORY);
-
-#if defined(OMV_FFS_MEMORY)
-#if !defined(OMV_FFS_MEMORY_OFFSET)
-#define OMV_FFS_MEMORY_OFFSET           (0)
-#endif
-_ffs_cache          = ORIGIN(OMV_FFS_MEMORY) + OMV_FFS_MEMORY_OFFSET;
-#endif
 
 #if defined(OMV_JPEG_MEMORY)
 #if !defined(OMV_JPEG_MEMORY_OFFSET)
@@ -66,8 +64,18 @@ _jpeg_buf           = ORIGIN(OMV_JPEG_MEMORY) + OMV_JPEG_MEMORY_OFFSET;
 _vospi_buf          = ORIGIN(OMV_VOSPI_MEMORY) + OMV_VOSPI_MEMORY_OFFSET;
 #endif
 
-_heap_size  = OMV_HEAP_SIZE;    /* required amount of heap */
-_stack_size = OMV_STACK_SIZE;   /* minimum amount of stack */
+// Location of filesystem flash storage
+_micropy_hw_internal_flash_storage_start = ORIGIN(FLASH_FFS);
+_micropy_hw_internal_flash_storage_end = ORIGIN(FLASH_FFS) + LENGTH(FLASH_FFS);
+
+#if defined(OMV_FFS_MEMORY)
+#if !defined(OMV_FFS_MEMORY_OFFSET)
+#define OMV_FFS_MEMORY_OFFSET           (0)
+#endif
+// Location of filesystem RAM cache
+_micropy_hw_internal_flash_storage_ram_cache_start = ORIGIN(OMV_FFS_MEMORY) + OMV_FFS_MEMORY_OFFSET;
+_micropy_hw_internal_flash_storage_ram_cache_end = LENGTH(OMV_FFS_MEMORY);
+#endif
 
 /* Define output sections */
 SECTIONS
@@ -156,10 +164,11 @@ SECTIONS
     _fir_lepton_buf = .; // FIR Lepton Packet Double Buffer (328 bytes)
     . = . + OMV_FIR_LEPTON_BUF_SIZE;
 
-    #if !defined(OMV_FFS_MEMORY) && defined(OMV_FFS_BUF_SIZE)
+    #if defined(OMV_FFS_BUF_SIZE)
     . = ALIGN(16);
-    _ffs_cache = .;     // Flash filesystem cache
+    _micropy_hw_internal_flash_storage_ram_cache_start = .;
     . = . + OMV_FFS_BUF_SIZE;
+    _micropy_hw_internal_flash_storage_ram_cache_end = .;
     #endif
 
     #if !defined(OMV_JPEG_MEMORY)

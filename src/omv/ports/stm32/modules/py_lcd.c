@@ -1844,5 +1844,5 @@ void py_lcd_init0()
     py_lcd_deinit();
 }
 
-MP_REGISTER_MODULE(MP_QSTR_lcd, lcd_module, MICROPY_PY_LCD);
+MP_REGISTER_MODULE(MP_QSTR_lcd, lcd_module);
 #endif // MICROPY_PY_LCD

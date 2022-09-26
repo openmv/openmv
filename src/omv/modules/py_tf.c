@@ -828,4 +828,4 @@ const mp_obj_module_t tf_module = {
     .globals = (mp_obj_t) &globals_dict
 };
 
-MP_REGISTER_MODULE(MP_QSTR_tf, tf_module, 1);
+MP_REGISTER_MODULE(MP_QSTR_tf, tf_module);

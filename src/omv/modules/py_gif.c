@@ -156,4 +156,4 @@ const mp_obj_module_t gif_module = {
     .globals = (mp_obj_t)&globals_dict,
 };
 
-MP_REGISTER_MODULE(MP_QSTR_gif, gif_module, 1);
+MP_REGISTER_MODULE(MP_QSTR_gif, gif_module);
