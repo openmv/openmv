@@ -11,6 +11,7 @@
 #include "omv_boardconfig.h"
 #if (OMV_ENABLE_LEPTON == 1)
 
+#include <stdio.h>
 #include STM32_HAL_H
 #include "irq.h"
 #include "cambus.h"
