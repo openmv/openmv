@@ -81,11 +81,11 @@ while(True):
 
     apply_mask = CYCLE_MASK and ((value_mixer >> 9) & 1)
     if apply_mask:
-        img.draw_image(small_img, int(x), int(y), mask=small_img.to_bitmap(copy=True), x_scale=rescale, y_scale=rescale, alpha=240, hint=image.IMAGE_HINT_BILINEAR | image.IMAGE_HINT_CENTER)
+        img.draw_image(small_img, int(x), int(y), mask=small_img.to_bitmap(copy=True), x_scale=rescale, y_scale=rescale, alpha=240, hint=image.BILINEAR | image.CENTER)
         status += 'alpha:240 '
         status += '+mask '
     else:
-        img.draw_image(small_img, int(x), int(y), x_scale=rescale, y_scale=rescale, alpha=128, hint=image.IMAGE_HINT_BILINEAR | image.IMAGE_HINT_CENTER)
+        img.draw_image(small_img, int(x), int(y), x_scale=rescale, y_scale=rescale, alpha=128, hint=image.BILINEAR | image.CENTER)
         status += 'alpha:128 '
 
     img.draw_string(8, 0, status, mono_space = False)
