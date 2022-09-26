@@ -208,6 +208,15 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/,\
 	)
 
 FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/extmod/,\
+	modujson.o          \
+	moduselect.o        \
+	modure.o            \
+	modframebuf.o       \
+	moduasyncio.o       \
+	moductypes.o        \
+	moduzlib.o          \
+	moduhashlib.o       \
+	moduheapq.o         \
 	modubinascii.o      \
 	modurandom.o        \
 	modutimeq.o         \
