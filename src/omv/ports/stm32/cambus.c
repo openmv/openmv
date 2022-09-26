@@ -10,6 +10,7 @@
  */
 #include <stdbool.h>
 #include <stddef.h>
+#include <stdio.h>
 #include "py/mphal.h"
 
 #include "omv_boardconfig.h"
