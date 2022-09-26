@@ -1663,6 +1663,10 @@ STATIC mp_obj_t py_lcd_display(uint n_args, const mp_obj_t *args, mp_map_t *kw_a
     if ((!got_x_scale) && (!got_x_size) && got_y_size) arg_x_scale = arg_y_scale;
     if ((!got_y_scale) && (!got_y_size) && got_x_size) arg_y_scale = arg_x_scale;
 
+    if ((!lcd_triple_buffer) && (arg_y_scale < 0)) {
+        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Vertical flip requires triple buffering!"));
+    }
+
     switch (lcd_type) {
         #ifdef OMV_SPI_LCD_CONTROLLER
         case LCD_SHIELD: {
