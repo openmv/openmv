@@ -3064,21 +3064,34 @@ void imlib_draw_image(image_t *dst_img, image_t *src_img, int dst_x_start, int d
         } else { // slow
             switch (src_img->pixfmt) {
                 case PIXFORMAT_BINARY: {
+                    int t_b_weight_sum = 256 + ((src_y_frac >> 8) & 0xFF);
+                    int l_r_weight_sum = 256 + ((src_x_frac >> 8) & 0xFF);
                     while (y_not_done) {
                         int src_y_index = next_src_y_index, src_y_index_p_1 = src_y_index + 1;
                         int src_y_index_end = src_y_index + src_y_frac_size - 1; // inclusive end
 
-                        int t_y_weight = 256 - ((src_y_accum >> 8) & 0xFF);
-                        int b_y_weight = ((src_y_accum + src_y_frac) >> 8) & 0xFF;
+                        int t_y_weight = 256 - (((src_y_accum + 255) >> 8) & 0xFF);
+                        int b_y_weight = ((src_y_accum + src_y_frac + 255) >> 8) & 0xFF;
                         // Since src_y_index_end is inclusive this should be 256 when there's perfect overlap.
-                        if (!b_y_weight) b_y_weight = 256;
+                        if ((!b_y_weight) && (t_y_weight < t_b_weight_sum)) b_y_weight = 256;
 
                         // Handle end being off the edge.
                         if (src_y_index_end > h_limit) {
                             src_y_index_end = h_limit;
-                            // Either we don't need end of we chopped off the last part.
+                            // Either we don't need end this or we chopped off the last part.
                             if (src_y_index_end == src_y_index) b_y_weight = 0;
                             else b_y_weight = 256; // max out if we chopped off
+                        }
+
+                        // Handle discontinuities.
+                        if ((t_y_weight + b_y_weight) < 256) {
+                            t_y_weight += 128;
+                            b_y_weight += 128;
+                        }
+
+                        // Weights must be balanced.
+                        if ((t_y_weight + b_y_weight) > t_b_weight_sum) {
+                            b_y_weight -= 1; // It's only ever over by 1.
                         }
 
                         int y_height_m_2 = src_y_index_end - src_y_index - 1;
@@ -3100,17 +3113,28 @@ void imlib_draw_image(image_t *dst_img, image_t *src_img, int dst_x_start, int d
                             int src_x_index = next_src_x_index, src_x_index_p_1 = src_x_index + 1;
                             int src_x_index_end = src_x_index + src_x_frac_size - 1; // inclusive end
 
-                            int l_x_weight = 256 - ((src_x_accum >> 8) & 0xFF);
-                            int r_x_weight = ((src_x_accum + src_x_frac) >> 8) & 0xFF;
+                            int l_x_weight = 256 - (((src_x_accum + 255) >> 8) & 0xFF);
+                            int r_x_weight = ((src_x_accum + src_x_frac + 255) >> 8) & 0xFF;
                             // Since src_x_index_end is inclusive this should be 256 when there's perfect overlap.
-                            if (!r_x_weight) r_x_weight = 256;
+                            if ((!r_x_weight) && (l_x_weight < l_r_weight_sum)) r_x_weight = 256;
 
                             // Handle end being off the edge.
                             if (src_x_index_end > w_limit) {
                                 src_x_index_end = w_limit;
-                                // Either we don't need end of we chopped off the last part.
+                                // Either we don't need end this or we chopped off the last part.
                                 if (src_x_index_end == src_x_index) r_x_weight = 0;
                                 else r_x_weight = 256; // max out if we chopped off
+                            }
+
+                            // Handle discontinuities.
+                            if ((l_x_weight + r_x_weight) < 256) {
+                                l_x_weight += 128;
+                                r_x_weight += 128;
+                            }
+
+                            // Weights must be balanced.
+                            if ((l_x_weight + r_x_weight) > l_r_weight_sum) {
+                                r_x_weight -= 1; // It's only ever over by 1.
                             }
 
                             int x_width_m_2 = src_x_index_end - src_x_index - 1;
@@ -3185,21 +3209,34 @@ void imlib_draw_image(image_t *dst_img, image_t *src_img, int dst_x_start, int d
                     break;
                 }
                 case PIXFORMAT_GRAYSCALE: {
+                    int t_b_weight_sum = 256 + ((src_y_frac >> 8) & 0xFF);
+                    int l_r_weight_sum = 256 + ((src_x_frac >> 8) & 0xFF);
                     while (y_not_done) {
                         int src_y_index = next_src_y_index, src_y_index_p_1 = src_y_index + 1;
                         int src_y_index_end = src_y_index + src_y_frac_size - 1; // inclusive end
 
-                        int t_y_weight = 256 - ((src_y_accum >> 8) & 0xFF);
-                        int b_y_weight = ((src_y_accum + src_y_frac) >> 8) & 0xFF;
+                        int t_y_weight = 256 - (((src_y_accum + 255) >> 8) & 0xFF);
+                        int b_y_weight = ((src_y_accum + src_y_frac + 255) >> 8) & 0xFF;
                         // Since src_y_index_end is inclusive this should be 256 when there's perfect overlap.
-                        if (!b_y_weight) b_y_weight = 256;
+                        if ((!b_y_weight) && (t_y_weight < t_b_weight_sum)) b_y_weight = 256;
 
                         // Handle end being off the edge.
                         if (src_y_index_end > h_limit) {
                             src_y_index_end = h_limit;
-                            // Either we don't need end of we chopped off the last part.
+                            // Either we don't need end this or we chopped off the last part.
                             if (src_y_index_end == src_y_index) b_y_weight = 0;
                             else b_y_weight = 256; // max out if we chopped off
+                        }
+
+                        // Handle discontinuities.
+                        if ((t_y_weight + b_y_weight) < t_b_weight_sum) {
+                            t_y_weight += 128;
+                            b_y_weight += 128;
+                        }
+
+                        // Weights must be balanced.
+                        if ((t_y_weight + b_y_weight) > t_b_weight_sum) {
+                            b_y_weight -= 1; // It's only ever over by 1.
                         }
 
                         int y_height_m_2 = src_y_index_end - src_y_index - 1;
@@ -3221,17 +3258,28 @@ void imlib_draw_image(image_t *dst_img, image_t *src_img, int dst_x_start, int d
                             int src_x_index = next_src_x_index, src_x_index_p_1 = src_x_index + 1;
                             int src_x_index_end = src_x_index + src_x_frac_size - 1; // inclusive end
 
-                            int l_x_weight = 256 - ((src_x_accum >> 8) & 0xFF);
-                            int r_x_weight = ((src_x_accum + src_x_frac) >> 8) & 0xFF;
+                            int l_x_weight = 256 - (((src_x_accum + 255) >> 8) & 0xFF);
+                            int r_x_weight = ((src_x_accum + src_x_frac + 255) >> 8) & 0xFF;
                             // Since src_x_index_end is inclusive this should be 256 when there's perfect overlap.
-                            if (!r_x_weight) r_x_weight = 256;
+                            if ((!r_x_weight) && (l_x_weight < l_r_weight_sum)) r_x_weight = 256;
 
                             // Handle end being off the edge.
                             if (src_x_index_end > w_limit) {
                                 src_x_index_end = w_limit;
-                                // Either we don't need end of we chopped off the last part.
+                                // Either we don't need end this or we chopped off the last part.
                                 if (src_x_index_end == src_x_index) r_x_weight = 0;
                                 else r_x_weight = 256; // max out if we chopped off
+                            }
+
+                            // Handle discontinuities.
+                            if ((l_x_weight + r_x_weight) < l_r_weight_sum) {
+                                l_x_weight += 128;
+                                r_x_weight += 128;
+                            }
+
+                            // Weights must be balanced.
+                            if ((l_x_weight + r_x_weight) > l_r_weight_sum) {
+                                r_x_weight -= 1; // It's only ever over by 1.
                             }
 
                             int x_width_m_2 = src_x_index_end - src_x_index - 1;
@@ -3339,21 +3387,34 @@ void imlib_draw_image(image_t *dst_img, image_t *src_img, int dst_x_start, int d
                     break;
                 }
                 case PIXFORMAT_RGB565: {
+                    int t_b_weight_sum = 64 + ((src_y_frac >> 10) & 0x3F);
+                    int l_r_weight_sum = 64 + ((src_x_frac >> 10) & 0x3F);
                     while (y_not_done) {
                         int src_y_index = next_src_y_index, src_y_index_p_1 = src_y_index + 1;
                         int src_y_index_end = src_y_index + src_y_frac_size - 1; // inclusive end
 
-                        int t_y_weight = 128 - ((src_y_accum >> 9) & 0x7F);
-                        int b_y_weight = ((src_y_accum + src_y_frac) >> 9) & 0x7F;
+                        int t_y_weight = 64 - (((src_y_accum + 63) >> 10) & 0x3F);
+                        int b_y_weight = ((src_y_accum + src_y_frac + 63) >> 10) & 0x3F;
                         // Since src_y_index_end is inclusive this should be 128 when there's perfect overlap.
-                        if (!b_y_weight) b_y_weight = 128;
+                        if ((!b_y_weight) && (t_y_weight < t_b_weight_sum)) b_y_weight = 64;
 
                         // Handle end being off the edge.
                         if (src_y_index_end > h_limit) {
                             src_y_index_end = h_limit;
-                            // Either we don't need end of we chopped off the last part.
+                            // Either we don't need end this or we chopped off the last part.
                             if (src_y_index_end == src_y_index) b_y_weight = 0;
-                            else b_y_weight = 128; // max out if we chopped off
+                            else b_y_weight = 64; // max out if we chopped off
+                        }
+
+                        // Handle discontinuities.
+                        if ((t_y_weight + b_y_weight) < t_b_weight_sum) {
+                            t_y_weight += 32;
+                            b_y_weight += 32;
+                        }
+
+                        // Weights must be balanced.
+                        if ((t_y_weight + b_y_weight) > t_b_weight_sum) {
+                            b_y_weight -= 1; // It's only ever over by 1.
                         }
 
                         int y_height_m_2 = src_y_index_end - src_y_index - 1;
@@ -3376,17 +3437,28 @@ void imlib_draw_image(image_t *dst_img, image_t *src_img, int dst_x_start, int d
                             int src_x_index = next_src_x_index, src_x_index_p_1 = src_x_index + 1;
                             int src_x_index_end = src_x_index + src_x_frac_size - 1; // inclusive end
 
-                            int l_x_weight = 128 - ((src_x_accum >> 9) & 0x7F);
-                            int r_x_weight = ((src_x_accum + src_x_frac) >> 9) & 0x7F;
+                            int l_x_weight = 64 - (((src_x_accum + 63) >> 10) & 0x3F);
+                            int r_x_weight = ((src_x_accum + src_x_frac + 63) >> 10) & 0x3F;
                             // Since src_x_index_end is inclusive this should be 128 when there's perfect overlap.
-                            if (!r_x_weight) r_x_weight = 128;
+                            if ((!r_x_weight) && (l_x_weight < l_r_weight_sum)) r_x_weight = 64;
 
                             // Handle end being off the edge.
                             if (src_x_index_end > w_limit) {
                                 src_x_index_end = w_limit;
-                                // Either we don't need end of we chopped off the last part.
+                                // Either we don't need end this or we chopped off the last part.
                                 if (src_x_index_end == src_x_index) r_x_weight = 0;
-                                else r_x_weight = 128; // max out if we chopped off
+                                else r_x_weight = 64; // max out if we chopped off
+                            }
+
+                            // Handle discontinuities.
+                            if ((l_x_weight + r_x_weight) < l_r_weight_sum) {
+                                l_x_weight += 32;
+                                r_x_weight += 32;
+                            }
+
+                            // Weights must be balanced.
+                            if ((l_x_weight + r_x_weight) > l_r_weight_sum) {
+                                r_x_weight -= 1; // It's only ever over by 1.
                             }
 
                             int x_width_m_2 = src_x_index_end - src_x_index - 1;
@@ -3427,10 +3499,10 @@ void imlib_draw_image(image_t *dst_img, image_t *src_img, int dst_x_start, int d
                             long b_b = b_pixels & 0x1F001F;
                             b_acc = __SMLAD(b_b, b_smlad_x_weight, b_acc);
 
-                            area = (area + 127) >> 7;
-                            r_acc = (r_acc + 64) >> 7;
-                            g_acc = (g_acc + 64) >> 7;
-                            b_acc = (b_acc + 64) >> 7;
+                            area = (area + 63) >> 6;
+                            r_acc = (r_acc + 63) >> 6;
+                            g_acc = (g_acc + 63) >> 6;
+                            b_acc = (b_acc + 63) >> 6;
 
                             if (x_width_m_2 > 0) { // sum top/bot
                                 area += x_width_m_2 * (t_y_weight + b_y_weight);
@@ -3471,10 +3543,10 @@ void imlib_draw_image(image_t *dst_img, image_t *src_img, int dst_x_start, int d
                                 }
                             }
 
-                            area = (area + 127) >> 7;
-                            r_acc = (r_acc + 64) >> 7;
-                            g_acc = (g_acc + 64) >> 7;
-                            b_acc = (b_acc + 64) >> 7;
+                            area = (area + 63) >> 6;
+                            r_acc = (r_acc + 63) >> 6;
+                            g_acc = (g_acc + 63) >> 6;
+                            b_acc = (b_acc + 63) >> 6;
 
                             if ((x_width_m_2 > 0) && (y_height_m_2 > 0)) { // sum middle
                                 area += x_width_m_2 * y_height_m_2;
