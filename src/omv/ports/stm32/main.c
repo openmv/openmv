@@ -432,10 +432,11 @@ soft_reset:
     // mounting the file-system to log errors (if any).
     if (first_soft_reset) {
         sensor_init();
-        #if MICROPY_PY_IMU
-        py_imu_init();
-        #endif // MICROPY_PY_IMU
     }
+
+    #if MICROPY_PY_IMU
+    py_imu_init();
+    #endif // MICROPY_PY_IMU
 
     mod_network_init();
 
