@@ -42,8 +42,21 @@
 #define IM_LOG2_32(x)   (((x) &         0xFFFF0000ULL) ? (16 + IM_LOG2_16((x) >> 16)) : IM_LOG2_16(x)) // NO ({ ... }) !
 #define IM_LOG2(x)      (((x) & 0xFFFFFFFF00000000ULL) ? (32 + IM_LOG2_32((x) >> 32)) : IM_LOG2_32(x)) // NO ({ ... }) !
 
-#define IM_MAX(a,b)     ({ __typeof__ (a) _a = (a); __typeof__ (b) _b = (b); _a > _b ? _a : _b; })
-#define IM_MIN(a,b)     ({ __typeof__ (a) _a = (a); __typeof__ (b) _b = (b); _a < _b ? _a : _b; })
+#define IM_IS_SIGNED(a)         (__builtin_types_compatible_p(__typeof__(a), signed) ||     \
+                                 __builtin_types_compatible_p(__typeof__(a), signed long))
+#define IM_IS_UNSIGNED(a)       (__builtin_types_compatible_p(__typeof__(a), unsigned) ||   \
+                                 __builtin_types_compatible_p(__typeof__(a), unsigned long))
+#define IM_SIGN_COMPARE(a, b)   ((IM_IS_SIGNED(a) && IM_IS_UNSIGNED(b)) || \
+                                 (IM_IS_SIGNED(b) && IM_IS_UNSIGNED(a)))
+
+#define IM_MAX(a, b)\
+    ({__typeof__ (a) _a = (a); __typeof__ (b) _b = (b);\
+    __builtin_choose_expr(IM_SIGN_COMPARE(_a, _b), (void) 0, (_a > _b ? _a : _b)); })
+
+#define IM_MIN(a, b)\
+    ({__typeof__ (a) _a = (a); __typeof__ (b) _b = (b);\
+    __builtin_choose_expr(IM_SIGN_COMPARE(_a, _b), (void) 0, (_a < _b ? _a : _b)); })
+
 #define IM_DIV(a,b)     ({ __typeof__ (a) _a = (a); __typeof__ (b) _b = (b); _b ? (_a / _b) : 0; })
 #define IM_MOD(a,b)     ({ __typeof__ (a) _a = (a); __typeof__ (b) _b = (b); _b ? (_a % _b) : 0; })
 
