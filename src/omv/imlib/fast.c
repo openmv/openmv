@@ -37,8 +37,8 @@
 
 #ifdef IMLIB_ENABLE_FAST
 
-#define MAX_ROW         (480)
-#define MAX_CORNERS     (2000)
+#define MAX_ROW         (480U)
+#define MAX_CORNERS     (2000U)
 #define Compare(X, Y) ((X)>=(Y))
 
 typedef struct {

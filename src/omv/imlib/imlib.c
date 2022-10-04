@@ -628,7 +628,7 @@ void imlib_image_operation(image_t *img, const char *path, image_t *other, int s
         // case we shrink the window size to how many lines we're buffering.
         temp.pixels = alloc;
         // Set the max buffer height to image height.
-        temp.h = IM_MIN(img->h, (size / (temp.w * temp.bpp)));
+        temp.h = IM_MIN((uint32_t) img->h, (size / (temp.w * temp.bpp)));
         // This should never happen unless someone forgot to free.
         if ((!temp.pixels) || (!temp.h)) {
             mp_raise_msg(&mp_type_MemoryError, MP_ERROR_TEXT("Not enough memory available!"));

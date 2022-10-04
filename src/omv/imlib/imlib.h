@@ -499,8 +499,8 @@ struct {                            \
 #endif
 
 typedef struct image {
-    uint32_t w;
-    uint32_t h;
+    int32_t w;
+    int32_t h;
     PIXFORMAT_STRUCT;
     union {
         uint8_t *pixels;

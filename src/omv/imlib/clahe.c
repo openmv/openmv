@@ -316,8 +316,8 @@ void Interpolate (kz_pixel_t * pImage, int uiXRes, unsigned long * pulMapLU,
 
 void imlib_clahe_histeq(image_t *img, float clip_limit, image_t *mask)
 {
-    int xTileSize = IM_MAX(uiMAX_REG_X >> (10 - IM_MIN(IM_LOG2_32(img->w), 10)), 2);
-    int yTileSize = IM_MAX(uiMAX_REG_Y >> (10 - IM_MIN(IM_LOG2_32(img->h), 10)), 2);
+    int xTileSize = IM_MAX(uiMAX_REG_X >> (10 - IM_MIN(IM_LOG2_32(img->w), 10)), 2u);
+    int yTileSize = IM_MAX(uiMAX_REG_Y >> (10 - IM_MIN(IM_LOG2_32(img->h), 10)), 2u);
     int pImageW = img->w + ((img->w % xTileSize) ? (xTileSize - (img->w % xTileSize)) : 0);
     int pImageH = img->h + ((img->h % yTileSize) ? (yTileSize - (img->h % yTileSize)) : 0);
     int xOffset = (pImageW - img->w) / 2;
