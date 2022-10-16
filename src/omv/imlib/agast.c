@@ -18,8 +18,8 @@
 #include "fb_alloc.h"
 #include "gc.h"
 
-#define MAX_ROW         (480)
-#define MAX_CORNERS     (2000)
+#define MAX_ROW         (480u)
+#define MAX_CORNERS     (2000u)
 #define Compare(X, Y) ((X)>=(Y))
 
 typedef struct {

@@ -56,7 +56,7 @@ static void bin_up(uint16_t *hist, uint16_t size, unsigned int max_size, uint16_
             end = i;
         }
 
-        int bin_count = end - start + 1; // >= 1
+        uint16_t bin_count = end - start + 1; // >= 1
         *new_size = IM_MIN(max_size, bin_count);
         *new_hist = xalloc0((*new_size) * sizeof(uint16_t));
         float div_value = (*new_size) / ((float) bin_count); // Reversed so we can multiply below.
@@ -74,7 +74,7 @@ static void merge_bins(int b_dst_start, int b_dst_end, uint16_t **b_dst_hist, ui
     int start = IM_MIN(b_dst_start, b_src_start);
     int end = IM_MAX(b_dst_end, b_src_end);
 
-    int bin_count = end - start + 1; // >= 1
+    uint16_t bin_count = end - start + 1; // >= 1
     uint16_t new_size = IM_MIN(max_size, bin_count);
     uint16_t *new_hist = xalloc0(new_size * sizeof(uint16_t));
     float div_value = new_size / ((float) bin_count); // Reversed so we can multiply below.
