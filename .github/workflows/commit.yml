@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: '📜 Check commit messages format'
-        uses: gsactions/commit-message-checker@v1
+        uses: gsactions/commit-message-checker@v2
         with:
           pattern: '^[^!]+: [A-Za-z]+.+ .+\.$'
           flags: 'gm'
@@ -25,7 +25,7 @@ jobs:
           checkAllCommitMessages: 'true'
           accessToken: ${{ secrets.GITHUB_TOKEN }}
       - name: '📜 Check commit messages length'
-        uses: gsactions/commit-message-checker@v1
+        uses: gsactions/commit-message-checker@v2
         with:
           pattern: '^[^#].{10,78}$'
           error: 'Commit subject line maximum line length of 78 characters is exceeded.'
