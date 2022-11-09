@@ -21,7 +21,7 @@ def main():
     parser.add_argument("-p", "--port",   action = "store", help = "OpenMV serial port")
     parser.add_argument("-t", "--time",   action = "store", default = 100, help = "Max time before stopping the script")
     parser.add_argument("-s", "--script", action = "store",\
-            default="../scripts/examples/01-Basics/helloworld.py", help = "OpenMV script file")
+            default="../scripts/examples/00-HelloWorld/helloworld.py", help = "OpenMV script file")
 
     # Parse CMD args
     args = parser.parse_args()
@@ -68,7 +68,7 @@ def main():
     # Interrupt running script.
     pyopenmv.stop_script()
     max_timeout = int(args.time)
-    for i in xrange(1000):
+    for i in range(1000):
         pyopenmv.exec_script(script)
         sleep(randint(0, max_timeout)/1000)
         pyopenmv.stop_script()
