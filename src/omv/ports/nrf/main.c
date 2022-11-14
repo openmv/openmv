@@ -335,6 +335,8 @@ soft_reset:
 
     mp_deinit();
 
+    printf("MPY: soft reboot\n");
+
     #if MICROPY_PY_AUDIO
     py_audio_deinit();
     #endif
