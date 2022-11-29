@@ -108,7 +108,7 @@ extern "C" {
 #define GPIO_AF3_LPTIM3        ((uint8_t)0x03)  /* LPTIM3 Alternate Function mapping */
 #define GPIO_AF3_LPTIM4        ((uint8_t)0x03)  /* LPTIM4 Alternate Function mapping */
 #define GPIO_AF3_LPTIM5        ((uint8_t)0x03)  /* LPTIM5 Alternate Function mapping */
-#define GPIO_AF3_LPUART        ((uint8_t)0x03)  /* LPUART Alternate Function mapping */
+#define GPIO_AF3_LPUART1       ((uint8_t)0x03)  /* LPUART Alternate Function mapping */
 #if defined(OCTOSPIM)
 #define GPIO_AF3_OCTOSPIM_P1   ((uint8_t)0x03)  /* OCTOSPI Manager Port 1 Alternate Function mapping */
 #define GPIO_AF3_OCTOSPIM_P2   ((uint8_t)0x03)  /* OCTOSPI Manager Port 2 Alternate Function mapping */
@@ -207,7 +207,7 @@ extern "C" {
 #define GPIO_AF8_UART5         ((uint8_t)0x08)  /* UART5 Alternate Function mapping  */
 #define GPIO_AF8_UART8         ((uint8_t)0x08)  /* UART8 Alternate Function mapping  */
 #define GPIO_AF8_SPDIF         ((uint8_t)0x08)  /* SPDIF Alternate Function mapping  */
-#define GPIO_AF8_LPUART        ((uint8_t)0x08)  /* LPUART Alternate Function mapping */
+#define GPIO_AF8_LPUART1       ((uint8_t)0x08)  /* LPUART Alternate Function mapping */
 #define GPIO_AF8_SDMMC1        ((uint8_t)0x08)  /* SDMMC1 Alternate Function mapping */
 #if defined(SAI4)
 #define GPIO_AF8_SAI4          ((uint8_t)0x08)  /* SAI4 Alternate Function mapping   */
