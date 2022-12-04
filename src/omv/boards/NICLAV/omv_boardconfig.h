@@ -185,7 +185,7 @@
 
 // Domain 2 DMA buffers region.
 #define OMV_DMA_MEMORY_D2       SRAM2
-#define OMV_DMA_MEMORY_D2_SIZE  (6*1024) // Reserved memory for DMA buffers
+#define OMV_DMA_MEMORY_D2_SIZE  (4*1024) // Reserved memory for DMA buffers
 #define OMV_DMA_REGION_D2_BASE  (OMV_SRAM2_ORIGIN+(0*1024))
 #define OMV_DMA_REGION_D2_SIZE  MPU_REGION_SIZE_16KB
 
