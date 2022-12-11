@@ -136,7 +136,8 @@
 #define OMV_DMA_MEMORY          SRAM2       // DMA buffers memory.
 #define OMV_FB_MEMORY           AXI_SRAM    // Framebuffer, fb_alloc
 #define OMV_JPEG_MEMORY         SRAM3       // JPEG buffer memory buffer.
-#define OMV_VOSPI_MEMORY        SRAM4       // VoSPI buffer memory.
+#define OMV_VOSPI_MEMORY        SRAM4       // VoSPI frame buffer memory.
+#define OMV_VOSPI_MEMORY_OFFSET (20K)       // SRAM4 reserves 16K for CM4 + 4K D3 DMA buffers.
 #define OMV_CYW43_MEMORY        FLASH_EXT   // CYW43 firmware in external flash mmap'd flash.
 #define OMV_CYW43_MEMORY_OFFSET (0x90F00000)// Last Mbyte.
 
@@ -168,6 +169,8 @@
 #define OMV_SRAM4_LENGTH        64K
 #define OMV_AXI_SRAM_ORIGIN     0x24000000
 #define OMV_AXI_SRAM_LENGTH     512K
+#define OMV_CM4_RAM_ORIGIN      0x38000000  // Cortex-M4 memory @SRAM4.
+#define OMV_CM4_RAM_LENGTH      16K
 
 // Flash configuration.
 #define OMV_FLASH_FFS_ORIGIN    0x08020000
@@ -176,6 +179,8 @@
 #define OMV_FLASH_TXT_LENGTH    1792K
 #define OMV_FLASH_EXT_ORIGIN    0x90000000
 #define OMV_FLASH_EXT_LENGTH    16M
+#define OMV_CM4_FLASH_ORIGIN    0x08020000
+#define OMV_CM4_FLASH_LENGTH    128K
 
 // Domain 1 DMA buffers region.
 #define OMV_DMA_MEMORY_D1       AXI_SRAM
@@ -190,9 +195,10 @@
 #define OMV_DMA_REGION_D2_SIZE  MPU_REGION_SIZE_16KB
 
 // Domain 3 DMA buffers region.
-//#define OMV_DMA_MEMORY_D3       SRAM4
-//#define OMV_DMA_REGION_D3_BASE  (OMV_SRAM4_ORIGIN+(0*1024))
-//#define OMV_DMA_REGION_D3_SIZE  MPU_REGION_SIZE_64KB
+#define OMV_DMA_MEMORY_D3       SRAM4
+#define OMV_DMA_MEMORY_D3_SIZE  (4*1024) // Reserved memory for DMA buffers
+#define OMV_DMA_REGION_D3_BASE  (OMV_SRAM4_ORIGIN+(16*1024))
+#define OMV_DMA_REGION_D3_SIZE  MPU_REGION_SIZE_4KB
 
 // AXI QoS - Low-High (0:15) - default 0
 #define OMV_AXI_QOS_MDMA_R_PRI  15 // Max pri to move data.
