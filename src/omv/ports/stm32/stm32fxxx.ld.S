@@ -44,11 +44,17 @@ MEMORY
   #if defined(OMV_FLASH_EXT_ORIGIN)
   FLASH_EXT (rx)    : ORIGIN = OMV_FLASH_EXT_ORIGIN, LENGTH = OMV_FLASH_EXT_LENGTH
   #endif
+  #if defined(OMV_CM4_RAM_ORIGIN)
+  CM4_SRAM (xrw)    : ORIGIN = OMV_CM4_RAM_ORIGIN,     LENGTH = OMV_CM4_RAM_LENGTH
+  #endif
 }
 
 _heap_size  = OMV_HEAP_SIZE;    /* required amount of heap */
 _stack_size = OMV_STACK_SIZE;   /* minimum amount of stack */
 _ram_end    = ORIGIN(OMV_MAIN_MEMORY) + LENGTH(OMV_MAIN_MEMORY);
+#if defined(OMV_CM4_RAM_ORIGIN)
+_cm4_ram_start = ORIGIN(CM4_SRAM);
+#endif
 
 #if defined(OMV_JPEG_MEMORY)
 #if !defined(OMV_JPEG_MEMORY_OFFSET)
