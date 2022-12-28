@@ -8,10 +8,13 @@
  *
  * Python Tensorflow library wrapper.
  */
+#include <stdio.h>
 #include "py/runtime.h"
 #include "py/obj.h"
 #include "py/objlist.h"
 #include "py/objtuple.h"
+#include "py/objarray.h"
+#include "py/binary.h"
 
 #include "py_helper.h"
 #include "imlib_config.h"
@@ -253,6 +256,55 @@ STATIC py_tf_model_obj_t *py_tf_load_alloc(mp_obj_t path_obj)
         return (py_tf_model_obj_t *) int_py_tf_load(path_obj, true, true);
     }
 }
+
+// regression begin
+STATIC mp_obj_t py_tf_regression(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
+{
+    fb_alloc_mark();
+    py_tf_alloc_putchar_buffer();
+
+    // read model
+    py_tf_model_obj_t *arg_model = py_tf_load_alloc(args[0]);
+
+    size_t input_size = (&arg_model->params)->input_width;
+    size_t output_size = (&arg_model->params)->output_channels;
+
+    // read input
+    mp_obj_array_t *arg_input_array = args[1];
+
+    // check for the input size 
+    if (input_size != arg_input_array->len) {
+        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Input array size is not same as model input size!"));
+    }
+
+    float input_array[input_size];
+    for(size_t i =0; i < input_size; i++){
+        input_array[i] = (float) mp_obj_float_get(mp_binary_get_val_array(arg_input_array->typecode, arg_input_array->items, i));
+    }
+    
+    uint8_t *tensor_arena = fb_alloc(arg_model->params.tensor_arena_size, FB_ALLOC_PREFER_SPEED | FB_ALLOC_CACHE_ALIGN);
+
+    float output_data[output_size];
+
+    // predict the output using tflite model
+    if (libtf_regression_1Dinput_1Doutput(arg_model->model_data, tensor_arena, &arg_model->params, input_array, output_data) != 0){
+        mp_raise_msg(&mp_type_OSError, MP_ERROR_TEXT("Coundnt execute the model to predict the output"));
+    }
+
+    // read output
+    mp_obj_list_t * out = (mp_obj_list_t *) mp_obj_new_list(output_size, NULL);
+    for(size_t j=0; j<(output_size); j++) {
+        out->items[j] = mp_obj_new_float(output_data[j]);
+    }
+
+    fb_alloc_free_till_mark();
+    return out;
+
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_tf_regression_obj, 2, py_tf_regression);
+
+// end regression
+
 
 typedef struct py_tf_input_data_callback_data {
     image_t *img;
@@ -772,23 +824,24 @@ mp_obj_t py_tf_output_zero_point(mp_obj_t self_in)
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_tf_output_zero_point_obj, py_tf_output_zero_point);
 
 STATIC const mp_rom_map_elem_t locals_dict_table[] = {
-    { MP_ROM_QSTR(MP_QSTR_len),                 MP_ROM_PTR(&py_tf_len_obj) },
-    { MP_ROM_QSTR(MP_QSTR_ram),                 MP_ROM_PTR(&py_tf_ram_obj) },
-    { MP_ROM_QSTR(MP_QSTR_input_height),        MP_ROM_PTR(&py_tf_input_height_obj) },
-    { MP_ROM_QSTR(MP_QSTR_input_width),         MP_ROM_PTR(&py_tf_input_width_obj) },
-    { MP_ROM_QSTR(MP_QSTR_input_channels),      MP_ROM_PTR(&py_tf_input_channels_obj) },
-    { MP_ROM_QSTR(MP_QSTR_input_datatype),      MP_ROM_PTR(&py_tf_input_datatype_obj) },
-    { MP_ROM_QSTR(MP_QSTR_input_scale),         MP_ROM_PTR(&py_tf_input_scale_obj) },
-    { MP_ROM_QSTR(MP_QSTR_input_zero_point),    MP_ROM_PTR(&py_tf_input_zero_point_obj) },
-    { MP_ROM_QSTR(MP_QSTR_output_height),       MP_ROM_PTR(&py_tf_output_height_obj) },
-    { MP_ROM_QSTR(MP_QSTR_output_width),        MP_ROM_PTR(&py_tf_output_width_obj) },
-    { MP_ROM_QSTR(MP_QSTR_output_channels),     MP_ROM_PTR(&py_tf_output_channels_obj) },
-    { MP_ROM_QSTR(MP_QSTR_output_datatype),     MP_ROM_PTR(&py_tf_output_datatype_obj) },
-    { MP_ROM_QSTR(MP_QSTR_output_scale),        MP_ROM_PTR(&py_tf_output_scale_obj) },
-    { MP_ROM_QSTR(MP_QSTR_output_zero_point),   MP_ROM_PTR(&py_tf_output_zero_point_obj) },
-    { MP_ROM_QSTR(MP_QSTR_classify),            MP_ROM_PTR(&py_tf_classify_obj) },
-    { MP_ROM_QSTR(MP_QSTR_segment),             MP_ROM_PTR(&py_tf_segment_obj) },
-    { MP_ROM_QSTR(MP_QSTR_detect),              MP_ROM_PTR(&py_tf_detect_obj) }
+    { MP_ROM_QSTR(MP_QSTR_len),                     MP_ROM_PTR(&py_tf_len_obj) },
+    { MP_ROM_QSTR(MP_QSTR_ram),                     MP_ROM_PTR(&py_tf_ram_obj) },
+    { MP_ROM_QSTR(MP_QSTR_input_height),            MP_ROM_PTR(&py_tf_input_height_obj) },
+    { MP_ROM_QSTR(MP_QSTR_input_width),             MP_ROM_PTR(&py_tf_input_width_obj) },
+    { MP_ROM_QSTR(MP_QSTR_input_channels),          MP_ROM_PTR(&py_tf_input_channels_obj) },
+    { MP_ROM_QSTR(MP_QSTR_input_datatype),          MP_ROM_PTR(&py_tf_input_datatype_obj) },
+    { MP_ROM_QSTR(MP_QSTR_input_scale),             MP_ROM_PTR(&py_tf_input_scale_obj) },
+    { MP_ROM_QSTR(MP_QSTR_input_zero_point),        MP_ROM_PTR(&py_tf_input_zero_point_obj) },
+    { MP_ROM_QSTR(MP_QSTR_output_height),           MP_ROM_PTR(&py_tf_output_height_obj) },
+    { MP_ROM_QSTR(MP_QSTR_output_width),            MP_ROM_PTR(&py_tf_output_width_obj) },
+    { MP_ROM_QSTR(MP_QSTR_output_channels),         MP_ROM_PTR(&py_tf_output_channels_obj) },
+    { MP_ROM_QSTR(MP_QSTR_output_datatype),         MP_ROM_PTR(&py_tf_output_datatype_obj) },
+    { MP_ROM_QSTR(MP_QSTR_output_scale),            MP_ROM_PTR(&py_tf_output_scale_obj) },
+    { MP_ROM_QSTR(MP_QSTR_output_zero_point),       MP_ROM_PTR(&py_tf_output_zero_point_obj) },
+    { MP_ROM_QSTR(MP_QSTR_classify),                MP_ROM_PTR(&py_tf_classify_obj) },
+    { MP_ROM_QSTR(MP_QSTR_segment),                 MP_ROM_PTR(&py_tf_segment_obj) },
+    { MP_ROM_QSTR(MP_QSTR_detect),                  MP_ROM_PTR(&py_tf_detect_obj) },
+    { MP_ROM_QSTR(MP_QSTR_regression),              MP_ROM_PTR(&py_tf_regression_obj) }
 };
 
 STATIC MP_DEFINE_CONST_DICT(locals_dict, locals_dict_table);
@@ -805,19 +858,21 @@ STATIC const mp_obj_type_t py_tf_model_type = {
 STATIC const mp_rom_map_elem_t globals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR___name__),        MP_OBJ_NEW_QSTR(MP_QSTR_tf) },
 #ifdef IMLIB_ENABLE_TF
-    { MP_ROM_QSTR(MP_QSTR_load),                MP_ROM_PTR(&py_tf_load_obj) },
-    { MP_ROM_QSTR(MP_QSTR_load_builtin_model),  MP_ROM_PTR(&py_tf_load_builtin_model_obj) },
-    { MP_ROM_QSTR(MP_QSTR_free_from_fb),        MP_ROM_PTR(&py_tf_free_from_fb_obj) },
-    { MP_ROM_QSTR(MP_QSTR_classify),            MP_ROM_PTR(&py_tf_classify_obj) },
-    { MP_ROM_QSTR(MP_QSTR_segment),             MP_ROM_PTR(&py_tf_segment_obj) },
-    { MP_ROM_QSTR(MP_QSTR_detect),              MP_ROM_PTR(&py_tf_detect_obj) },
+    { MP_ROM_QSTR(MP_QSTR_load),                    MP_ROM_PTR(&py_tf_load_obj) },
+    { MP_ROM_QSTR(MP_QSTR_load_builtin_model),      MP_ROM_PTR(&py_tf_load_builtin_model_obj) },
+    { MP_ROM_QSTR(MP_QSTR_free_from_fb),            MP_ROM_PTR(&py_tf_free_from_fb_obj) },
+    { MP_ROM_QSTR(MP_QSTR_classify),                MP_ROM_PTR(&py_tf_classify_obj) },
+    { MP_ROM_QSTR(MP_QSTR_segment),                 MP_ROM_PTR(&py_tf_segment_obj) },
+    { MP_ROM_QSTR(MP_QSTR_detect),                  MP_ROM_PTR(&py_tf_detect_obj) },
+    { MP_ROM_QSTR(MP_QSTR_regression),              MP_ROM_PTR(&py_tf_regression_obj) }
 #else
-    { MP_ROM_QSTR(MP_QSTR_load),                MP_ROM_PTR(&py_func_unavailable_obj) },
-    { MP_ROM_QSTR(MP_QSTR_load_builtin_model),  MP_ROM_PTR(&py_func_unavailable_obj) },
-    { MP_ROM_QSTR(MP_QSTR_free_from_fb),        MP_ROM_PTR(&py_func_unavailable_obj) },
-    { MP_ROM_QSTR(MP_QSTR_classify),            MP_ROM_PTR(&py_func_unavailable_obj) },
-    { MP_ROM_QSTR(MP_QSTR_segment),             MP_ROM_PTR(&py_func_unavailable_obj) },
-    { MP_ROM_QSTR(MP_QSTR_detect),              MP_ROM_PTR(&py_func_unavailable_obj) }
+    { MP_ROM_QSTR(MP_QSTR_load),                    MP_ROM_PTR(&py_func_unavailable_obj) },
+    { MP_ROM_QSTR(MP_QSTR_load_builtin_model),      MP_ROM_PTR(&py_func_unavailable_obj) },
+    { MP_ROM_QSTR(MP_QSTR_free_from_fb),            MP_ROM_PTR(&py_func_unavailable_obj) },
+    { MP_ROM_QSTR(MP_QSTR_classify),                MP_ROM_PTR(&py_func_unavailable_obj) },
+    { MP_ROM_QSTR(MP_QSTR_segment),                 MP_ROM_PTR(&py_func_unavailable_obj) },
+    { MP_ROM_QSTR(MP_QSTR_detect),                  MP_ROM_PTR(&py_func_unavailable_obj) },
+    { MP_ROM_QSTR(MP_QSTR_regression),              MP_ROM_PTR(&py_func_unavailable_obj) }
 #endif // IMLIB_ENABLE_TF
 };
 
