@@ -72,6 +72,8 @@ int libtf_generate_micro_features(const int16_t *input, // Audio samples
                                   int8_t *output, // Slice data
                                   size_t *num_samples_read); // Number of samples used
 
+int libtf_regression_1Dinput_1Doutput(const unsigned char *model_data, uint8_t* tensor_arena, libtf_parameters_t* params, float* input_data, float* output_data);
+
 #ifdef __cplusplus
 }
 #endif
