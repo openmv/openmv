@@ -51,7 +51,7 @@ static int py_winc_mperrno(int32_t err)
         case SOCK_ERR_CONN_ABORTED:
             return MP_ECONNABORTED;
         case SOCK_ERR_TIMEOUT:
-            return MP_ETIMEDOUT;
+            return MP_EWOULDBLOCK;
         case SOCK_ERR_BUFFER_FULL:
             return MP_ENOBUFS;
         case SOCK_ERR_ADDR_ALREADY_IN_USE:
