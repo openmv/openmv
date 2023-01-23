@@ -38,7 +38,7 @@
 
 // QSPI Flash layout for the bootloader.
 // First block, maximum block, block size in bytes.
-//#define OMV_BOOT_QSPIF_LAYOUT           {0, 511, 64*1024}
+#define OMV_BOOT_QSPIF_LAYOUT           {0, 511, 64*1024}
 
 // QSPI flash configuration for the bootloader.
 #define OMV_BOOT_QSPIF_SIZE_BITS        (25)        // 2**25 == 32MBytes.
