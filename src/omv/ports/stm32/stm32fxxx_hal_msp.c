@@ -462,16 +462,6 @@ void HAL_DCMI_MspDeInit(DCMI_HandleTypeDef* hdcmi)
     for (int i=0; i<NUM_DCMI_PINS; i++) {
         HAL_GPIO_DeInit(dcmi_pins[i].port, dcmi_pins[i].pin);
     }
-
-    #if defined(DCMI_RESET_PIN)
-    HAL_GPIO_DeInit(DCMI_RESET_PORT, DCMI_RESET_PIN);
-    #endif
-    #if defined(DCMI_FSYNC_PIN)
-    HAL_GPIO_DeInit(DCMI_FSYNC_PORT, DCMI_FSYNC_PIN);
-    #endif
-    #if defined(DCMI_PWDN_PIN)
-    HAL_GPIO_DeInit(DCMI_PWDN_PORT, DCMI_PWDN_PIN);
-    #endif
 }
 
 
