@@ -63,6 +63,7 @@
 
 // Enable sensor features
 #define OMV_ENABLE_OV5640_AF    (1)
+#define MT9V0XX_XCLK_FREQ       (25000000)
 
 // Enable WiFi debug
 #define OMV_ENABLE_WIFIDBG      (0)
