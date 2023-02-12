@@ -266,8 +266,8 @@ int sensor_set_xclk_frequency(uint32_t frequency)
     // TCLK (PCLK * 2)
     int tclk = DCMI_TIM_PCLK_FREQ() * 2;
 
-    // Period should be even
-    int period = (tclk / frequency) - 1;
+    // Find highest possible frequency under requested.
+    int period = fast_ceilf(tclk / ((float) frequency)) - 1;
     int pulse = period / 2;
 
     if (TIMHandle.Init.Period && (TIMHandle.Init.Period != period)) {
