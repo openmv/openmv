@@ -27,6 +27,9 @@
 // Sensor external clock timer frequency.
 #define OMV_XCLK_FREQUENCY      (12000000)
 
+// GC4145 Sensor Settings
+#define OMV_GC2145_ROTATE       (1)
+
 // Enable hardware JPEG
 #define OMV_HARDWARE_JPEG       (1)
 
