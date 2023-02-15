@@ -43,6 +43,7 @@ static enum {
 
 static bool lcd_triple_buffer = false;
 static bool lcd_bgr = false;
+static bool lcd_byte_reverse = false;
 
 static enum {
     LCD_DISPLAY_QVGA,
@@ -282,19 +283,21 @@ static void spi_lcd_callback(SPI_HandleTypeDef *hspi)
                     OMV_SPI_LCD_CS_HIGH();
                     OMV_SPI_LCD_RS_OFF();
                     spi_tx_cb_state_memory_write_first = false;
-                    OMV_SPI_LCD_CONTROLLER->spi->Init.DataSize = SPI_DATASIZE_16BIT;
+                    if (!lcd_byte_reverse) {
+                        OMV_SPI_LCD_CONTROLLER->spi->Init.DataSize = SPI_DATASIZE_16BIT;
 #if defined(MCU_SERIES_H7)
-                    OMV_SPI_LCD_CONTROLLER->spi->Instance->CFG1 =
-                        (OMV_SPI_LCD_CONTROLLER->spi->Instance->CFG1 & ~SPI_CFG1_DSIZE_Msk) | SPI_DATASIZE_16BIT;
-                    OMV_SPI_LCD_CONTROLLER->spi->Instance->CFG1 =
-                        (OMV_SPI_LCD_CONTROLLER->spi->Instance->CFG1 & ~SPI_CFG1_FTHLV_Msk) | SPI_FIFO_THRESHOLD_08DATA;
+                        OMV_SPI_LCD_CONTROLLER->spi->Instance->CFG1 =
+                            (OMV_SPI_LCD_CONTROLLER->spi->Instance->CFG1 & ~SPI_CFG1_DSIZE_Msk) | SPI_DATASIZE_16BIT;
+                        OMV_SPI_LCD_CONTROLLER->spi->Instance->CFG1 =
+                            (OMV_SPI_LCD_CONTROLLER->spi->Instance->CFG1 & ~SPI_CFG1_FTHLV_Msk) | SPI_FIFO_THRESHOLD_08DATA;
 #elif defined(MCU_SERIES_F7)
-                    OMV_SPI_LCD_CONTROLLER->spi->Instance->CR2 =
-                        (OMV_SPI_LCD_CONTROLLER->spi->Instance->CR2 & ~SPI_CR2_DS_Msk) | SPI_DATASIZE_16BIT;
+                        OMV_SPI_LCD_CONTROLLER->spi->Instance->CR2 =
+                            (OMV_SPI_LCD_CONTROLLER->spi->Instance->CR2 & ~SPI_CR2_DS_Msk) | SPI_DATASIZE_16BIT;
 #elif defined(MCU_SERIES_F4)
-                    OMV_SPI_LCD_CONTROLLER->spi->Instance->CR1 =
-                        (OMV_SPI_LCD_CONTROLLER->spi->Instance->CR1 & ~SPI_CR1_DFF_Msk) | SPI_DATASIZE_16BIT;
+                        OMV_SPI_LCD_CONTROLLER->spi->Instance->CR1 =
+                            (OMV_SPI_LCD_CONTROLLER->spi->Instance->CR1 & ~SPI_CR1_DFF_Msk) | SPI_DATASIZE_16BIT;
 #endif
+                    }
                     OMV_SPI_LCD_CS_LOW();
                 }
                 HAL_SPI_Transmit_DMA(OMV_SPI_LCD_CONTROLLER->spi, (uint8_t *) addr, count);
@@ -1360,6 +1363,7 @@ STATIC mp_obj_t py_lcd_init(uint n_args, const mp_obj_t *args, mp_map_t *kw_args
             if ((refresh_rate < 30) || (120 < refresh_rate)) mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Invalid Refresh Rate!"));
             bool triple_buffer = py_helper_keyword_int(n_args, args, 4, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_triple_buffer), false);
             bool bgr = py_helper_keyword_int(n_args, args, 5, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_bgr), false);
+            bool byte_reverse = py_helper_keyword_int(n_args, args, 6, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_byte_reverse), false);
             spi_config_init(w, h, refresh_rate, triple_buffer, bgr);
             #ifdef OMV_SPI_LCD_BL_PIN
             spi_lcd_set_backlight(255); // to on state
@@ -1369,6 +1373,7 @@ STATIC mp_obj_t py_lcd_init(uint n_args, const mp_obj_t *args, mp_map_t *kw_args
             lcd_type = LCD_SHIELD;
             lcd_triple_buffer = triple_buffer;
             lcd_bgr = bgr;
+            lcd_byte_reverse = byte_reverse;
             lcd_resolution = 0;
             lcd_refresh = refresh_rate;
             break;
@@ -1448,6 +1453,13 @@ STATIC mp_obj_t py_lcd_bgr()
     return mp_obj_new_int(lcd_bgr);
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_lcd_bgr_obj, py_lcd_bgr);
+
+STATIC mp_obj_t py_lcd_byte_reverse()
+{
+    if (lcd_type == LCD_NONE) return mp_const_none;
+    return mp_obj_new_int(lcd_byte_reverse);
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_lcd_byte_reverse_obj, py_lcd_byte_reverse);
 
 STATIC mp_obj_t py_lcd_framesize()
 {
@@ -1780,6 +1792,7 @@ STATIC const mp_rom_map_elem_t globals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_type),                    MP_ROM_PTR(&py_lcd_type_obj)                    },
     { MP_ROM_QSTR(MP_QSTR_triple_buffer),           MP_ROM_PTR(&py_lcd_triple_buffer_obj)           },
     { MP_ROM_QSTR(MP_QSTR_bgr),                     MP_ROM_PTR(&py_lcd_bgr_obj)                     },
+    { MP_ROM_QSTR(MP_QSTR_byte_reverse),            MP_ROM_PTR(&py_lcd_byte_reverse_obj)            },
     { MP_ROM_QSTR(MP_QSTR_framesize),               MP_ROM_PTR(&py_lcd_framesize_obj)               },
     { MP_ROM_QSTR(MP_QSTR_refresh),                 MP_ROM_PTR(&py_lcd_refresh_obj)                 },
     { MP_ROM_QSTR(MP_QSTR_get_backlight),           MP_ROM_PTR(&py_lcd_get_backlight_obj)           },
