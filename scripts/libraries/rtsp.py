@@ -5,7 +5,10 @@
 #
 # This work is licensed under the MIT license, see the file LICENSE for details.
 
-import network, pyb, re, socket, struct
+import pyb
+import re
+import socket
+import struct
 
 
 class rtsp_server:

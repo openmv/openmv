@@ -4,13 +4,14 @@
 # Copyright (c) 2013-2021 Kwabena W. Agyeman <kwagyeman@openmv.io>
 #
 # This work is licensed under the MIT license, see the file LICENSE for details.
-# 
+#
 # HTS221 driver based on public domain driver.
 
 import time
 import struct
 
-class HTS221():
+
+class HTS221:
     def __init__(self, i2c, data_rate=1, dev_addr=0x5F):
         self.bus = i2c
         self.odr = data_rate
@@ -18,7 +19,7 @@ class HTS221():
 
         # Set configuration register
         # Humidity and temperature average configuration
-        self.bus.writeto_mem(self.slv_addr, 0x10, b'\x1B')
+        self.bus.writeto_mem(self.slv_addr, 0x10, b"\x1B")
 
         # Set control register
         # PD | BDU | ODR
@@ -38,13 +39,13 @@ class HTS221():
         # Temperature Calibration values
         raw = self.read_reg(0x35, 1)
         self.T0 = ((raw & 0x03) * 256) + self.read_reg(0x32, 1)
-        self.T1 = ((raw & 0x0C) * 64)  + self.read_reg(0x33, 1)
+        self.T1 = ((raw & 0x0C) * 64) + self.read_reg(0x33, 1)
         self.T2 = self.read_reg(0x3C, 2)
         self.T3 = self.read_reg(0x3E, 2)
 
     def read_reg(self, reg_addr, size):
-        fmt  = 'B'  if size == 1 else 'H'
-        reg_addr = reg_addr if size == 1 else reg_addr|0x80
+        fmt = "B" if size == 1 else "H"
+        reg_addr = reg_addr if size == 1 else reg_addr | 0x80
         return struct.unpack(fmt, self.bus.readfrom_mem(self.slv_addr, reg_addr, size))[0]
 
     def humidity(self):
@@ -55,4 +56,6 @@ class HTS221():
         temp = self.read_reg(0x2A, 2)
         if temp > 32767:
             temp -= 65536
-        return ((self.T1 - self.T0) / 8.0) * (temp - self.T2) / (self.T3 - self.T2) + (self.T0 / 8.0)
+        return ((self.T1 - self.T0) / 8.0) * (temp - self.T2) / (self.T3 - self.T2) + (
+            self.T0 / 8.0
+        )

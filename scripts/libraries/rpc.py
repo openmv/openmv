@@ -5,7 +5,13 @@
 #
 # This work is licensed under the MIT license, see the file LICENSE for details.
 
-import gc, network, omv, pyb, select, socket, stm, struct
+import gc
+import omv
+import pyb
+import select
+import socket
+import stm
+import struct
 
 
 class rpc:

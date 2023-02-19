@@ -4,7 +4,7 @@
 # Copyright (c) 2013-2021 Kwabena W. Agyeman <kwagyeman@openmv.io>
 # Copyright (c) 2021 Arduino SA
 #
-# Authors: 
+# Authors:
 # Ibrahim Abdelkader <iabdalkader@openmv.io>
 # Sebastian Romero <s.romero@arduino.cc>
 #
@@ -15,46 +15,72 @@
 from utime import sleep_ms, ticks_ms
 from pyb import UART, Pin
 
-MODE_ABP            = 0
-MODE_OTAA           = 1
+MODE_ABP = 0
+MODE_OTAA = 1
 
-RF_MODE_RFO         = 0
-RF_MODE_PABOOST     = 1
+RF_MODE_RFO = 0
+RF_MODE_PABOOST = 1
 
-BAND_AS923          = 0
-BAND_AU915          = 1
-BAND_EU868          = 5
-BAND_KR920          = 6
-BAND_IN865          = 7
-BAND_US915          = 8
-BAND_US915_HYBRID   = 9
+BAND_AS923 = 0
+BAND_AU915 = 1
+BAND_EU868 = 5
+BAND_KR920 = 6
+BAND_IN865 = 7
+BAND_US915 = 8
+BAND_US915_HYBRID = 9
 
-CLASS_A             = 'A'
-CLASS_B             = 'B'
-CLASS_C             = 'C'
+CLASS_A = "A"
+CLASS_B = "B"
+CLASS_C = "C"
 
-class LoraError(Exception): pass
-class LoraErrorTimeout(LoraError): pass
-class LoraErrorParam(LoraError): pass
-class LoraErrorBusy(LoraError): pass
-class LoraErrorOverflow(LoraError): pass
-class LoraErrorNoNetwork(LoraError): pass
-class LoraErrorRX(LoraError): pass
-class LoraErrorUnknown(LoraError): pass
 
-class Lora():
+class LoraError(Exception):
+    pass
+
+
+class LoraErrorTimeout(LoraError):
+    pass
+
+
+class LoraErrorParam(LoraError):
+    pass
+
+
+class LoraErrorBusy(LoraError):
+    pass
+
+
+class LoraErrorOverflow(LoraError):
+    pass
+
+
+class LoraErrorNoNetwork(LoraError):
+    pass
+
+
+class LoraErrorRX(LoraError):
+    pass
+
+
+class LoraErrorUnknown(LoraError):
+    pass
+
+
+class Lora:
     LoraErrors = {
-        "":                     LoraErrorTimeout, # empty buffer
-        "+ERR":                 LoraError,
-        "+ERR_PARAM":           LoraErrorParam,
-        "+ERR_BUSY":            LoraErrorBusy,
-        "+ERR_PARAM_OVERFLOW":  LoraErrorOverflow,
-        "+ERR_NO_NETWORK":      LoraErrorNoNetwork,
-        "+ERR_RX":              LoraErrorRX,
-        "+ERR_UNKNOWN":         LoraErrorUnknown
+        "": LoraErrorTimeout,  # empty buffer
+        "+ERR": LoraError,
+        "+ERR_PARAM": LoraErrorParam,
+        "+ERR_BUSY": LoraErrorBusy,
+        "+ERR_PARAM_OVERFLOW": LoraErrorOverflow,
+        "+ERR_NO_NETWORK": LoraErrorNoNetwork,
+        "+ERR_RX": LoraErrorRX,
+        "+ERR_UNKNOWN": LoraErrorUnknown,
     }
 
-    def __init__(self, uart=None, rst_pin=None, boot_pin=None, band=BAND_EU868, poll_ms=300000, debug=False):
+    def __init__(
+        self, uart=None, rst_pin=None, boot_pin=None, band=BAND_EU868, poll_ms=300000, debug=False
+    ):
         self.debug = debug
         self.uart = uart
         self.rst_pin = rst_pin
@@ -75,44 +101,43 @@ class Lora():
 
         # Restart module
         self.restart()
-    
+
     def init_modem(self):
         # Portenta vision shield configuration
         if not self.rst_pin:
-            self.rst_pin = Pin('PC6', Pin.OUT_PP, Pin.PULL_UP, value=1)
+            self.rst_pin = Pin("PC6", Pin.OUT_PP, Pin.PULL_UP, value=1)
         if not self.boot_pin:
-            self.boot_pin = Pin('PG7', Pin.OUT_PP, Pin.PULL_DOWN, value=0)
+            self.boot_pin = Pin("PG7", Pin.OUT_PP, Pin.PULL_DOWN, value=0)
         if not self.uart:
             self.uart = UART(8, 19200)
-            #self.uart = UART(1, 19200) # Use external module
+            # self.uart = UART(1, 19200) # Use external module
             self.uart.init(19200, bits=8, parity=None, stop=2, timeout=250, timeout_char=100)
-
 
     def debug_print(self, data):
         if self.debug:
             print(data)
 
     def is_arduino_firmware(self):
-        return 'ARD-078' in self.fw_version
+        return "ARD-078" in self.fw_version
 
     def configure_class(self, _class):
-      self.send_command("+CLASS=", _class)
+        self.send_command("+CLASS=", _class)
 
     def configure_band(self, band):
         self.send_command("+BAND=", band)
-        if (band == BAND_EU868 and self.is_arduino_firmware()):
+        if band == BAND_EU868 and self.is_arduino_firmware():
             self.send_command("+DUTYCYCLE=", 1)
         return True
 
     def set_baudrate(self, baudrate):
-          self.send_command("+UART=", baudrate)
+        self.send_command("+UART=", baudrate)
 
     def set_autobaud(self, timeout=10000):
         start = ticks_ms()
-        while ((ticks_ms() - start) < timeout):
-            if (self.send_command('', timeout=200, raise_error=False) == '+OK'):
+        while (ticks_ms() - start) < timeout:
+            if self.send_command("", timeout=200, raise_error=False) == "+OK":
                 sleep_ms(200)
-                while (self.uart.any()):
+                while self.uart.any():
                     self.uart.readchar()
                 return True
         return False
@@ -123,18 +148,18 @@ class Lora():
         return dev + " " + fw_ver
 
     def get_device_eui(self):
-          return self.send_command("+DEVEUI?")
+        return self.send_command("+DEVEUI?")
 
     def factory_default(self):
         self.send_command("+FACNEW")
 
     def restart(self):
-        if (self.set_autobaud() == False):
-            raise(LoraError("Failed to set autobaud"))
+        if self.set_autobaud() is False:
+            raise (LoraError("Failed to set autobaud"))
 
         # Different delimiter as REBOOT response EVENT doesn't end with '\r'.
-        if (self.send_command("+REBOOT", delimiter="+EVENT=0,0", timeout=10000) != "+EVENT=0,0"):
-            raise(LoraError("Failed to reboot module"))
+        if self.send_command("+REBOOT", delimiter="+EVENT=0,0", timeout=10000) != "+EVENT=0,0":
+            raise (LoraError("Failed to reboot module"))
         sleep_ms(1000)
         self.fw_version = self.get_fw_version()
         self.configure_band(self.band)
@@ -205,72 +230,74 @@ class Lora():
     def join(self, timeout_ms):
         if self.send_command("+JOIN", timeout=timeout_ms) != "+ACK":
             return False
-        response = self.receive('\r', timeout=timeout_ms)
+        response = self.receive("\r", timeout=timeout_ms)
         return response == "+EVENT=1,1"
 
     def get_join_status(self):
         return int(self.send_command("+NJS?")) == 1
 
     def get_max_size(self):
-        if (self.is_arduino_firmware()):
+        if self.is_arduino_firmware():
             return 64
         return int(self.send_command("+MSIZE?", timeout=2000))
 
     def poll(self):
-        if ((ticks_ms() - self.last_poll_ms) > self.poll_ms):
+        if (ticks_ms() - self.last_poll_ms) > self.poll_ms:
             self.last_poll_ms = ticks_ms()
             # Triggers a fake write
-            self.send_data('\0', True)
+            self.send_data("\0", True)
 
     def send_data(self, buff, confirmed=True):
         max_len = self.get_max_size()
-        if (len(buff) > max_len):
-            raise(LoraError("Packet exceeds max length"))
+        if len(buff) > max_len:
+            raise (LoraError("Packet exceeds max length"))
         if self.send_command("+CTX " if confirmed else "+UTX ", len(buff), data=buff) != "+OK":
             return False
         if confirmed:
-            response = self.receive('\r', timeout=10000)
+            response = self.receive("\r", timeout=10000)
             return response == "+ACK"
         return True
 
     def receive_data(self, timeout=1000):
-        response = self.receive('\r', timeout=timeout)
+        response = self.receive("\r", timeout=timeout)
         if response.startswith("+RECV"):
             params = response.split("=")[1].split(",")
             port = params[0]
             length = int(params[1])
-            dummy_data_length = 2 # Data starts with \n\n sequence
-            data = self.receive(max_bytes=length+dummy_data_length, timeout=timeout)[dummy_data_length:]
-            return {'port' : port, 'data' : data}
+            dummy_data_length = 2  # Data starts with \n\n sequence
+            data = self.receive(max_bytes=length + dummy_data_length, timeout=timeout)[
+                dummy_data_length:
+            ]
+            return {"port": port, "data": data}
 
     def receive(self, delimiter=None, max_bytes=None, timeout=1000):
         buf = []
         start = ticks_ms()
-        while ((ticks_ms() - start) < timeout):
-            while (self.uart.any()):
+        while (ticks_ms() - start) < timeout:
+            while self.uart.any():
                 buf += chr(self.uart.readchar())
 
                 if max_bytes and len(buf) == max_bytes:
-                    data = ''.join(buf)
+                    data = "".join(buf)
                     self.debug_print(data)
                     return data
-                if (len(buf) and delimiter != None):
-                    data = ''.join(buf)
-                    trimmed = data[0:-1] if data[-1] == '\r' else data
+                if len(buf) and delimiter is not None:
+                    data = "".join(buf)
+                    trimmed = data[0:-1] if data[-1] == "\r" else data
 
-                    if (isinstance(delimiter, str) and len(delimiter) == 1 and buf[-1] == delimiter):
+                    if isinstance(delimiter, str) and len(delimiter) == 1 and buf[-1] == delimiter:
                         self.debug_print(trimmed)
                         return trimmed
-                    if (isinstance(delimiter, str) and trimmed == delimiter):
+                    if isinstance(delimiter, str) and trimmed == delimiter:
                         self.debug_print(trimmed)
                         return trimmed
-                    if (isinstance(delimiter, list) and trimmed in delimiter):
+                    if isinstance(delimiter, list) and trimmed in delimiter:
                         self.debug_print(trimmed)
                         return trimmed
 
-        data = ''.join(buf)
+        data = "".join(buf)
         self.debug_print(data)
-        return  data[0:-1] if len(data) != 0 and data[-1] == '\r' else data
+        return data[0:-1] if len(data) != 0 and data[-1] == "\r" else data
 
     def available(self):
         return self.uart.any()
@@ -279,17 +306,17 @@ class Lora():
         self.change_mode(MODE_OTAA)
         self.send_command("+APPEUI=", appEui)
         self.send_command("+APPKEY=", appKey)
-        if (devEui):
+        if devEui:
             self.send_command("+DEVEUI=", devEui)
         network_joined = self.join(timeout)
         # This delay was in MKRWAN.h
-        #delay(1000);
+        # delay(1000);
         return network_joined
 
     def join_ABP(self, nwkId, devAddr, nwkSKey, appSKey, timeout=60000):
         self.change_mode(MODE_ABP)
         # Commented in MKRWAN.h
-        #self.send_command("+IDNWK=", nwkId)
+        # self.send_command("+IDNWK=", nwkId)
         self.send_command("+DEVADDR=", devAddr)
         self.send_command("+NWKSKEY=", nwkSKey)
         self.send_command("+APPSKEY=", appSKey)
@@ -299,13 +326,13 @@ class Lora():
     def handle_error(self, command, data):
         if not data.startswith("+ERR") and data != "":
             return
-        if (data in self.LoraErrors):
-            raise(self.LoraErrors[data]('Command "%s" has failed!'%command))
-        raise(LoraError('Command: "%s" failed with unknown status: "%s"'%(command, data)))
+        if data in self.LoraErrors:
+            raise (self.LoraErrors[data]('Command "%s" has failed!' % command))
+        raise (LoraError('Command: "%s" failed with unknown status: "%s"' % (command, data)))
 
-    def send_command(self, cmd, *args, delimiter='\r', data=None, timeout=1000, raise_error=True):
+    def send_command(self, cmd, *args, delimiter="\r", data=None, timeout=1000, raise_error=True):
         # Write command and args
-        uart_cmd = 'AT'+cmd+''.join([str(x) for x in args])+'\r'
+        uart_cmd = "AT" + cmd + "".join([str(x) for x in args]) + "\r"
         self.debug_print(uart_cmd)
         self.uart.write(uart_cmd)
 
@@ -321,6 +348,6 @@ class Lora():
         if raise_error:
             self.handle_error(cmd, response)
 
-        if cmd.endswith('?'):
-            return response.split('=')[1]
+        if cmd.endswith("?"):
+            return response.split("=")[1]
         return response
