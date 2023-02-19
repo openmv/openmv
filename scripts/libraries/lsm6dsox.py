@@ -143,7 +143,7 @@ class LSM6DSOX:
         self.reset()
 
         # Load and configure MLC if UCF file is provided
-        if ucf != None:
+        if ucf is not None:
             self.load_mlc(ucf)
 
         # Set Gyroscope datarate and scale.
