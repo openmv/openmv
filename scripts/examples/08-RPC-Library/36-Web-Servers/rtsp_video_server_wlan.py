@@ -15,8 +15,8 @@ import network, omv, rtsp, sensor, time
 
 sensor.reset()
 
-sensor.set_pixformat(sensor.JPEG) # Only supported by the OV2640/OV5640.
-sensor.set_framesize(sensor.UXGA)
+sensor.set_pixformat(sensor.RGB565)
+sensor.set_framesize(sensor.VGA)
 
 # Turn off the frame buffer connection to the IDE from the OpenMV Cam side.
 #
@@ -31,6 +31,9 @@ omv.disable_fb(True)
 network_if = network.WLAN(network.STA_IF)
 network_if.active(True)
 network_if.connect('your-ssid', 'your-password')
+while not network_if.isconnected():
+    print("Trying to connect. Note this may take a while...")
+    time.sleep_ms(1000)
 
 # Setup RTSP Server
 
@@ -45,10 +48,15 @@ server = rtsp.rtsp_server(network_if)
 # `session` is random number that will change when a new connection is established. You can use
 # session with a dictionary to differentiate different accesses to the same file name.
 
+# Track the current FPS.
+clock = time.clock()
+
 def setup_callback(pathname, session):
     print("Opening \"%s\" in session %d" % (pathname, session))
 
 def play_callback(pathname, session):
+    clock.reset()
+    clock.tick()
     print("Playing \"%s\" in session %d" % (pathname, session))
 
 def pause_callback(pathname, session): # VLC only pauses locally. This is never called.
@@ -62,18 +70,15 @@ server.register_play_cb(play_callback)
 server.register_pause_cb(pause_callback)
 server.register_teardown_cb(teardown_callback)
 
-# Track the current FPS.
-clock = time.clock()
-
 # Called each time a new frame is needed.
 def image_callback(pathname, session):
-    clock.tick()
     img = sensor.snapshot()
     # Markup image and/or do various things.
     print(clock.fps())
+    clock.tick()
     return img
 
 # Stream does not return. It will call `image_callback` when it needs to get an image object to send
 # to the remote rtsp client connecting to the server.
 
-server.stream(image_callback)
+server.stream(image_callback, quality=70)
