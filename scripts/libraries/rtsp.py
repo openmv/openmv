@@ -1,10 +1,11 @@
 # This file is part of the OpenMV project.
 #
-# Copyright (c) 2013-2020 Ibrahim Abdelkader <iabdalkader@openmv.io>
-# Copyright (c) 2013-2020 Kwabena W. Agyeman <kwagyeman@openmv.io>
+# Copyright (c) 2013-2023 Ibrahim Abdelkader <iabdalkader@openmv.io>
+# Copyright (c) 2013-2023 Kwabena W. Agyeman <kwagyeman@openmv.io>
 #
 # This work is licensed under the MIT license, see the file LICENSE for details.
 
+import errno
 import pyb
 import re
 import socket
@@ -16,38 +17,71 @@ class rtsp_server:
         if self.__tcp__socket is None:
             try:
                 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                s.bind(self.__myaddr)
-                s.listen(0)
-                s.settimeout(5)
-                self.__tcp__socket, self.__client_addr = s.accept()
+                try:
+                    if hasattr(socket, "SO_REUSEADDR"):
+                        s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+                    s.bind(self.__myaddr)
+                    s.listen(0)
+                    s.settimeout(5)
+                    self.__tcp__socket, self.__client_addr = s.accept()
+                except OSError:
+                    pass
                 s.close()
             except OSError:
                 self.__tcp__socket = None
         return self.__tcp__socket is not None
 
     def __close_tcp_socket(self):  # private
-        self.__tcp__socket.close()
-        self.__tcp__socket = None
+        if self.__tcp__socket is not None:
+            self.__tcp__socket.close()
+            self.__tcp__socket = None
+        if self.__playing:
+            self.__playing = False
+            if self.__teardown_cb:
+                self.__teardown_cb(self.__pathname, self.__playing_session)
 
     def __valid_udp_socket(self):  # private
-        if self.__udp__socket is None:
+        if self.__udp_rtp__socket is None:
             try:
-                self.__udp__socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-                self.__udp__socket.bind((self.__myip, self.__client_rtp_port))
+                self.__udp_rtp__socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+                try:
+                    if hasattr(socket, "SO_REUSEADDR"):
+                        self.__udp_rtp__socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+                    self.__udp_rtp__socket.bind((self.__myip, self.__client_rtp_port))
+                except OSError:
+                    self.__udp_rtp__socket.close()
+                    self.__udp_rtp__socket = None
             except OSError:
-                self.__udp__socket = None
-        return self.__udp__socket is not None
+                self.__udp_rtp__socket = None
+        if self.__udp_rtcp__socket is None:
+            try:
+                self.__udp_rtcp__socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+                try:
+                    if hasattr(socket, "SO_REUSEADDR"):
+                        self.__udp_rtcp__socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+                    self.__udp_rtcp__socket.bind((self.__myip, self.__client_rtcp_port))
+                except OSError:
+                    self.__udp_rtcp__socket.close()
+                    self.__udp_rtcp__socket = None
+            except OSError:
+                self.__udp_rtcp__socket = None
+        return self.__udp_rtp__socket is not None and self.__udp_rtcp__socket is not None
 
     def __close_udp_socket(self):  # private
-        self.__udp__socket.close()
-        self.__udp__socket = None
+        if self.__udp_rtp__socket is not None:
+            self.__udp_rtp__socket.close()
+            self.__udp_rtp__socket = None
+        if self.__udp_rtcp__socket is not None:
+            self.__udp_rtcp__socket.close()
+            self.__udp_rtcp__socket = None
 
     def __init__(self, network_if, port=554):  # private
         self.__network = network_if
         self.__myip = self.__network.ifconfig()[0]
         self.__myaddr = (self.__myip, port)
         self.__tcp__socket = None
-        self.__udp__socket = None
+        self.__udp_rtp__socket = None
+        self.__udp_rtcp__socket = None
         self.__setup_cb = None
         self.__play_cb = None
         self.__pause_cb = None
@@ -57,6 +91,7 @@ class rtsp_server:
         self.__transport_is_tcp = False
         self.__client_rtp_addr = None
         self.__playing = False
+        self.__playing_session = 0
         self.__sequence_number = pyb.rng() & 0xFFFF
         self.__ssrc = pyb.rng()
         print("IP Address:Port %s:%d\nRunning..." % self.__myaddr)
@@ -152,6 +187,7 @@ class rtsp_server:
                                 )
                                 self.__session = pyb.rng()
                                 self.__ssrc = pyb.rng()
+                                self.__valid_udp_socket()
                                 self.__send_rtsp_response_ok(
                                     seq,
                                     "%s;server_port=%d-%d;ssrc=%d\r\nSession: %d\r\n"
@@ -187,13 +223,14 @@ class rtsp_server:
                             m = re.match("Session: (\d+)", s[2])
                             if m:
                                 self.__playing = True
+                                self.__playing_session = int(m.group(1))
                                 self.__send_rtsp_response_ok(
                                     seq,
                                     "RTP-Info: url=%s;seq=%d\r\n"
                                     % (line0[1], self.__sequence_number),
                                 )
                                 if self.__play_cb:
-                                    self.__play_cb(self.__pathname, int(m.group(1)))
+                                    self.__play_cb(self.__pathname, self.__playing_session)
                                 return
                     elif request == "PAUSE":
                         if len(s) >= 3:
@@ -218,6 +255,9 @@ class rtsp_server:
                         return
         self.__send_rtsp_response(400, "Bad Request")
 
+    def __parse_rtcp_packet(self, data):  # private
+        pass
+
     def __valid_socket(self):  # private
         if self.__transport_is_tcp:
             return self.__client_rtp_channel is not None
@@ -228,24 +268,32 @@ class rtsp_server:
         if self.__transport_is_tcp:
             self.__tcp__socket.settimeout(timeout)
         else:
-            self.__udp__socket.settimeout(timeout)
+            self.__udp_rtp__socket.settimeout(timeout)
+            self.__udp_rtcp__socket.settimeout(timeout)
 
     def __send(self, data):  # private
         if self.__transport_is_tcp:
-            return self.__tcp__socket.send(
+            self.__tcp__socket.sendall(
                 struct.pack(">BBH", 0x24, self.__client_rtp_channel, len(data)) + data
             )
+            return True
         else:
-            return self.__udp__socket.sendto(data, self.__client_rtp_addr)
+            return self.__udp_rtp__socket.sendto(data, self.__client_rtp_addr)
+
+    def __recv(self):  # private
+        if self.__transport_is_tcp:
+            return self.__tcp__socket.recv(1400)
+        else:
+            return self.__udp_rtcp__socket.recv(1400)
 
     def __close_socket(self):  # private
         if self.__transport_is_tcp:
-            pass
+            self.__close_tcp_socket()
         else:
             self.__close_udp_socket()
 
     def __send_rtp(self, image_callback, quality):  # private
-        img = image_callback(self.__pathname, self.__session).compress(quality)
+        img = image_callback(self.__pathname, self.__session).to_jpeg(quality=quality)
         if img.width() >= 2040:
             raise ValueError("Maximum width is 2040")
         if img.height() >= 2040:
@@ -259,8 +307,9 @@ class rtsp_server:
             max_packet_size -= 4
         if self.__valid_socket():
             try:
-                self.__settimeout(0.1)
+                self.__settimeout(5)
                 timestamp = (pyb.millis() * 90) & 0xFFFFFFFF
+                mv = memoryview(img)
                 while l:
                     rtp_header = struct.pack(
                         ">BBHII",
@@ -274,10 +323,9 @@ class rtsp_server:
                     jpeg_header = struct.pack(
                         ">IBBBB", i, 0, quality, int(img.width() // 8), int(img.height() // 8)
                     )
-                    img_data = img.bytearray()[i : i + min(l, max_packet_size)]
+                    img_data = mv[i : i + min(l, max_packet_size)]
                     img_data_len = len(img_data)
-                    data_len = self.__send(rtp_header + jpeg_header + img_data)
-                    if not data_len:
+                    if not self.__send(rtp_header + jpeg_header + img_data):
                         break
                     i += img_data_len
                     l -= img_data_len
@@ -285,17 +333,35 @@ class rtsp_server:
                     self.__close_socket()
             except OSError:
                 self.__close_socket()
+        if not self.__transport_is_tcp and self.__valid_socket():
+            try:
+                self.__settimeout(0.001)
+                try:
+                    data = self.__recv()
+                    if data and len(data):
+                        self.__parse_rtcp_packet(data)
+                except OSError as e:
+                    if e.errno != errno.EAGAIN and e.errno != errno.ETIMEDOUT:
+                        raise e
+            except OSError:
+                self.__close_socket()
 
     def stream(self, image_callback, quality=90):  # public
         while True:
             if self.__valid_tcp_socket():
                 try:
-                    self.__tcp__socket.settimeout(0.1)
-                    while True:
+                    self.__tcp__socket.settimeout(0.001)
+                    try:
                         data = self.__tcp__socket.recv(1400)
                         if data and len(data):
                             self.__parse_rtsp_request(data)
-                        if self.__playing:
-                            self.__send_rtp(image_callback, quality)
+                        else:
+                            raise OSError
+                    except OSError as e:
+                        if e.errno != errno.EAGAIN and e.errno != errno.ETIMEDOUT:
+                            raise e
+                    if self.__playing:
+                        self.__send_rtp(image_callback, quality)
                 except OSError:
                     self.__close_tcp_socket()
+                    self.__close_udp_socket()
