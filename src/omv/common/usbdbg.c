@@ -58,7 +58,8 @@ void usbdbg_init()
 
 void usbdbg_wait_for_command(uint32_t timeout)
 {
-    for (mp_uint_t ticks = mp_hal_ticks_ms(); irq_enabled && ((mp_hal_ticks_ms() - ticks) < timeout) && (cmd != USBDBG_NONE); );
+    for (mp_uint_t ticks = mp_hal_ticks_ms();
+            irq_enabled && ((mp_hal_ticks_ms() - ticks) < timeout) && (cmd != USBDBG_NONE); );
 }
 
 bool usbdbg_script_ready()
@@ -167,10 +168,10 @@ void usbdbg_data_in(void *buffer, int length)
             #if (OMV_UNIQUE_ID_SIZE == 2)
                 0U,
             #else
-                *((unsigned int *) (OMV_UNIQUE_ID_ADDR + 8)),
+                *((unsigned int *) (OMV_UNIQUE_ID_ADDR + OMV_UNIQUE_ID_OFFSET * 2)),
             #endif
-                *((unsigned int *) (OMV_UNIQUE_ID_ADDR + 4)),
-                *((unsigned int *) (OMV_UNIQUE_ID_ADDR + 0)),
+                *((unsigned int *) (OMV_UNIQUE_ID_ADDR + OMV_UNIQUE_ID_OFFSET * 1)),
+                *((unsigned int *) (OMV_UNIQUE_ID_ADDR + OMV_UNIQUE_ID_OFFSET * 0)),
             };
             snprintf((char *) buffer, 64, "%s [%s:%08X%08X%08X]",
                     OMV_ARCH_STR, OMV_BOARD_TYPE, uid[0], uid[1], uid[2]);

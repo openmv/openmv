@@ -14,8 +14,9 @@
 // Architecture info
 #define OMV_ARCH_STR            "OMV4 H7 1024" // 33 chars max
 #define OMV_BOARD_TYPE          "H7"
-#define OMV_UNIQUE_ID_ADDR      0x1FF1E800
-#define OMV_UNIQUE_ID_SIZE      3 // 3 words
+#define OMV_UNIQUE_ID_ADDR      0x1FF1E800  // Unique ID address.
+#define OMV_UNIQUE_ID_SIZE      3           // Unique ID size in words.
+#define OMV_UNIQUE_ID_OFFSET    4           // Bytes offset for multi-word UIDs.
 
 // Needed by the SWD JTAG testrig - located at the bottom of the frame buffer stack.
 #define OMV_SELF_TEST_SWD_ADDR  MAIN_FB()->pixfmt

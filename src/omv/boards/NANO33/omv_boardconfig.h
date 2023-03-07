@@ -14,8 +14,9 @@
 // Architecture info
 #define OMV_ARCH_STR            "NANO33 M4" // 33 chars max
 #define OMV_BOARD_TYPE          "NANO33"
-#define OMV_UNIQUE_ID_ADDR      0x10000060
-#define OMV_UNIQUE_ID_SIZE      2 // 2 words
+#define OMV_UNIQUE_ID_ADDR      0x10000060  // Unique ID address.
+#define OMV_UNIQUE_ID_SIZE      2           // Unique ID size in words.
+#define OMV_UNIQUE_ID_OFFSET    4           // Bytes offset for multi-word UIDs.
 
 #define OMV_XCLK_MCO            (0U)
 #define OMV_XCLK_TIM            (1U)
