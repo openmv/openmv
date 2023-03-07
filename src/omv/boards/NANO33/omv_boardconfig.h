@@ -76,6 +76,7 @@
 
 // USB IRQn.
 #define OMV_USB_IRQN            (USBD_IRQn)
+#define OMV_USB1_IRQ_HANDLER    (USBD_IRQHandler)
 
 // Linker script constants (see the linker script template port/x.ld.S).
 #define OMV_FB_MEMORY           SRAM    // Framebuffer, fb_alloc

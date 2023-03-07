@@ -85,6 +85,7 @@ extern unsigned char *OMV_UNIQUE_ID_ADDR;   // Unique address.
 
 // USB IRQn.
 #define OMV_USB_IRQN            (USBCTRL_IRQ_IRQn)
+#define OMV_USB1_IRQ_HANDLER    (USBD_IRQHandler)
 
 // Jump to bootloader function.
 #ifndef LINKER_SCRIPT
