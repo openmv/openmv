@@ -1,6 +1,7 @@
 import image, audio, time
 from ulab import numpy as np
 from ulab import scipy as sp
+from ulab import utils
 
 CHANNELS = 1
 FREQUENCY = 32000
@@ -41,10 +42,10 @@ while (True):
         raw_buf = None
 
         if CHANNELS == 1:
-            fft_buf = sp.signal.spectrogram(pcm_buf)
+            fft_buf = utils.spectrogram(pcm_buf)
             l_lvl = int((np.mean(abs(pcm_buf[1::2])) / 32768)*100)
         else:
-            fft_buf = sp.signal.spectrogram(pcm_buf[0::2])
+            fft_buf = utils.spectrogram(pcm_buf[0::2])
             l_lvl = int((np.mean(abs(pcm_buf[1::2])) / 32768)*100)
             r_lvl = int((np.mean(abs(pcm_buf[0::2])) / 32768)*100)
 
