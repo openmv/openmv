@@ -148,10 +148,10 @@
 #define OMV_JPEG_MEMORY_OFFSET  (31M)       // JPEG buffer is placed after FB/fballoc memory.
 #define OMV_VOSPI_MEMORY        SRAM4       // VoSPI buffer memory.
 #define OMV_FB_OVERLAY_MEMORY   AXI_SRAM    // Fast fb_alloc memory.
-#define OMV_FB_OVERLAY_MEMORY_OFFSET    (496*1024) // Fast fb_alloc memory size.
 
 #define OMV_FB_SIZE             (20M)       // FB memory: header + VGA/GS image
 #define OMV_FB_ALLOC_SIZE       (11M)       // minimum fb alloc size
+#define OMV_FB_OVERLAY_SIZE     (496*1024)  // Fast fb_alloc memory size.
 #define OMV_STACK_SIZE          (64K)
 #define OMV_HEAP_SIZE           (240K)
 #define OMV_SDRAM_SIZE          (32 * 1024 * 1024) // This needs to be here for UVC firmware.
@@ -189,7 +189,7 @@
 // Domain 1 DMA buffers region.
 #define OMV_DMA_MEMORY_D1       AXI_SRAM
 #define OMV_DMA_MEMORY_D1_SIZE  (16*1024) // Reserved memory for DMA buffers
-#define OMV_DMA_REGION_D1_BASE  (OMV_AXI_SRAM_ORIGIN+OMV_FB_OVERLAY_MEMORY_OFFSET)
+#define OMV_DMA_REGION_D1_BASE  (OMV_AXI_SRAM_ORIGIN+OMV_FB_OVERLAY_SIZE)
 #define OMV_DMA_REGION_D1_SIZE  MPU_REGION_SIZE_16KB
 
 // Domain 2 DMA buffers region.
