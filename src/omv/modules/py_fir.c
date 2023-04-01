@@ -10,8 +10,13 @@
  */
 #include "py/runtime.h"
 #include "py/objlist.h"
-
 #include "omv_boardconfig.h"
+
+#if OMV_ENABLE_FIR_MLX90621 || \
+    OMV_ENABLE_FIR_MLX90640 || \
+    OMV_ENABLE_FIR_MLX90641 || \
+    OMV_ENABLE_FIR_AMG8833  || \
+    OMV_ENABLE_FIR_LEPTON
 #include "cambus.h"
 #if (OMV_ENABLE_FIR_MLX90621 == 1)
 #include "MLX90621_API.h"
@@ -1278,3 +1283,4 @@ void py_fir_init0()
 }
 
 MP_REGISTER_MODULE(MP_QSTR_fir, fir_module);
+#endif
