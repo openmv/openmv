@@ -1001,6 +1001,9 @@ static mp_obj_t py_image_to(pixformat_t pixfmt, const uint16_t *default_color_pa
     if (copy_obj) {
         if (mp_obj_is_integer(copy_obj)) {
             copy = mp_obj_get_int(copy_obj);
+            if (copy) {
+                arg_other = NULL;
+            }
         } else {
             arg_other = py_image_cobj(copy_obj);
         }
