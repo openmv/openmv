@@ -267,15 +267,23 @@ soft_reset:
             usbdbg_set_irq_enabled(true);
             // Execute the script.
             pyexec_str(usbdbg_get_script(), true);
+            // Disable IDE interrupts
+            usbdbg_set_irq_enabled(false);
             nlr_pop();
         } else {
             mp_obj_print_exception(&mp_plat_print, (mp_obj_t)nlr.ret_val);
         }
+
+        if (usbdbg_is_busy() && nlr_push(&nlr) == 0) {
+            // Enable IDE interrupt
+            usbdbg_set_irq_enabled(true);
+            // Wait for the current command to finish.
+            usbdbg_wait_for_command(1000);
+            // Disable IDE interrupts
+            usbdbg_set_irq_enabled(false);
+            nlr_pop();
+        }
     }
-
-    usbdbg_wait_for_command(1000);
-
-    usbdbg_set_irq_enabled(false);
 
     mp_printf(MP_PYTHON_PRINTER, "MPY: soft reboot\n");
     #if MICROPY_PY_AUDIO
