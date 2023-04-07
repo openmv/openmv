@@ -86,6 +86,11 @@ vstr_t *usbdbg_get_script()
     return &script_buf;
 }
 
+bool usbdbg_is_busy()
+{
+    return cmd != USBDBG_NONE;
+}
+
 void usbdbg_set_script_running(bool running)
 {
     script_running = running;

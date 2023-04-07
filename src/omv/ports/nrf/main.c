@@ -296,10 +296,9 @@ soft_reset:
         nlr_buf_t nlr;
 
         if (nlr_push(&nlr) == 0) {
-            // enable IDE interrupt
+            // Enable IDE interrupt
             usbdbg_set_irq_enabled(true);
 
-            //__WFI();
             // run REPL
             if (pyexec_mode_kind == PYEXEC_MODE_RAW_REPL) {
                 if (pyexec_raw_repl() != 0) {
@@ -320,35 +319,37 @@ soft_reset:
         if (nlr_push(&nlr) == 0) {
             // Enable IDE interrupt
             usbdbg_set_irq_enabled(true);
-
             // Execute the script.
             pyexec_str(usbdbg_get_script(), true);
+            // Disable IDE interrupts
+            usbdbg_set_irq_enabled(false);
             nlr_pop();
         } else {
             mp_obj_print_exception(&mp_plat_print, (mp_obj_t)nlr.ret_val);
         }
+
+        if (usbdbg_is_busy() && nlr_push(&nlr) == 0) {
+            // Enable IDE interrupt
+            usbdbg_set_irq_enabled(true);
+            // Wait for the current command to finish.
+            usbdbg_wait_for_command(1000);
+            // Disable IDE interrupts
+            usbdbg_set_irq_enabled(false);
+            nlr_pop();
+        }
     }
 
-    usbdbg_wait_for_command(1000);
-
-    usbdbg_set_irq_enabled(false);
-
-    mp_deinit();
-
     printf("MPY: soft reboot\n");
-
     #if MICROPY_PY_AUDIO
     py_audio_deinit();
     #endif
-
     #if BLUETOOTH_SD
     sd_softdevice_disable();
     #endif
-
     #if defined(MICROPY_BOARD_DEINIT)
     MICROPY_BOARD_DEINIT();
     #endif
-
+    mp_deinit();
     goto soft_reset;
 
     return 0;

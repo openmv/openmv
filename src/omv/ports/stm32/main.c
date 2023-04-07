@@ -607,25 +607,35 @@ soft_reset:
             if (usbdbg_script_ready()) {
                 nlr_buf_t nlr;
                 if (nlr_push(&nlr) == 0) {
+                    // Enable IDE interrupts
+                    usbdbg_set_irq_enabled(true);
+                    #if OMV_ENABLE_WIFIDBG && MICROPY_PY_WINC1500
+                    wifidbg_set_irq_enabled(openmv_config.wifidbg);
+                    #endif
+                    // Execute the script.
+                    pyexec_str(usbdbg_get_script(), true);
+                    // Disable IDE interrupts
+                    usbdbg_set_irq_enabled(false);
+                    nlr_pop();
+                } else {
+                    mp_obj_print_exception(&mp_plat_print, (mp_obj_t)nlr.ret_val);
+                }
+
+                if (usbdbg_is_busy() && nlr_push(&nlr) == 0) {
                     // Enable IDE interrupt
                     usbdbg_set_irq_enabled(true);
                     #if OMV_ENABLE_WIFIDBG && MICROPY_PY_WINC1500
                     wifidbg_set_irq_enabled(openmv_config.wifidbg);
                     #endif
-
-                    // Execute the script.
-                    pyexec_str(usbdbg_get_script(), true);
+                    // Wait for the current command to finish.
+                    usbdbg_wait_for_command(1000);
+                    // Disable IDE interrupts
+                    usbdbg_set_irq_enabled(false);
                     nlr_pop();
-                } else {
-                    mp_obj_print_exception(&mp_plat_print, (mp_obj_t)nlr.ret_val);
                 }
             }
-        } while (openmv_config.wifidbg == true);
 
-        nlr_buf_t nlr;
-        if (nlr_push(&nlr) == 0) {
-            usbdbg_wait_for_command(1000);
-        }
+        } while (openmv_config.wifidbg == true);
     }
 
     // soft reset
