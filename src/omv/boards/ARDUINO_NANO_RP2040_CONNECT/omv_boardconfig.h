@@ -65,6 +65,7 @@ extern unsigned char *OMV_UNIQUE_ID_ADDR;   // Unique address.
 // Enable WiFi debug
 #define OMV_ENABLE_WIFIDBG      (0)
 #define OMV_ENABLE_TUSBDBG      (1)
+#define OMV_TUSBDBG_PACKET      (64)
 
 // Enable self-tests on first boot
 #define OMV_ENABLE_SELFTEST     (0)
