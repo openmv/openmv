@@ -15,7 +15,6 @@
 #include "py/mphal.h"
 #include "py/binary.h"
 #include "systick.h"
-#include "pendsv.h"
 #include "runtime.h"
 
 #include "py_audio.h"
@@ -54,14 +53,15 @@ static volatile uint32_t xfer_status = 0;
 static mp_obj_array_t *g_pcmbuf = NULL;
 static mp_obj_t g_audio_callback = mp_const_none;
 static int g_channels = AUDIO_MAX_CHANNELS;
+static mp_sched_node_t audio_task_sched_node;
 
 #define DMA_XFER_NONE           (0x00U)
 #define DMA_XFER_HALF           (0x01U)
 #define DMA_XFER_FULL           (0x04U)
 #define RAISE_OS_EXCEPTION(msg) mp_raise_msg(&mp_type_OSError, MP_ERROR_TEXT(msg))
 
-// Pendsv dispatch callback.
-static void audio_pendsv_callback(void);
+// Scheduler callback.
+static void audio_task_callback(mp_sched_node_t *node);
 
 #if defined(AUDIO_SAI)
 void AUDIO_SAI_DMA_IRQHandler(void)
@@ -89,7 +89,7 @@ void HAL_DFSDM_FilterRegConvHalfCpltCallback(DFSDM_Filter_HandleTypeDef *hdfsdm_
     xfer_status |= DMA_XFER_HALF;
     SCB_InvalidateDCache_by_Addr((uint32_t *)(&PDM_BUFFER[0]), sizeof(PDM_BUFFER) / 2);
     if (g_audio_callback != mp_const_none) {
-        pendsv_schedule_dispatch(PENDSV_DISPATCH_AUDIO, audio_pendsv_callback);
+        mp_sched_schedule_node(&audio_task_sched_node, audio_task_callback);
     }
 }
 
@@ -102,7 +102,7 @@ void HAL_DFSDM_FilterRegConvCpltCallback(DFSDM_Filter_HandleTypeDef *hdfsdm_filt
     xfer_status |= DMA_XFER_FULL;
     SCB_InvalidateDCache_by_Addr((uint32_t *)(&PDM_BUFFER[PDM_BUFFER_SIZE / 2]), sizeof(PDM_BUFFER) / 2);
     if (g_audio_callback != mp_const_none) {
-        pendsv_schedule_dispatch(PENDSV_DISPATCH_AUDIO, audio_pendsv_callback);
+        mp_sched_schedule_node(&audio_task_sched_node, audio_task_callback);
     }
 }
 
@@ -376,7 +376,7 @@ void py_audio_deinit()
     g_audio_callback = mp_const_none;
 }
 
-static void audio_pendsv_callback(void)
+static void audio_task_callback(mp_sched_node_t *node)
 {
     // Check for half transfer complete.
     if ((xfer_status & DMA_XFER_HALF)) {
