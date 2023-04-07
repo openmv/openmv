@@ -110,6 +110,9 @@ MICROPY_ARGS = PORT=$(PORT) BOARD=$(TARGET) DEBUG=$(DEBUG) MPY_LIB_DIR=$(MPY_LIB
                FROZEN_MANIFEST=$(FROZEN_MANIFEST) OMV_SRC_QSTR="$(OMV_SRC_QSTR)"\
                MICROPY_ROM_TEXT_COMPRESSION=$(ROM_TEXT_COMPRESSION) USER_C_MODULES=$(TOP_DIR)/$(OMV_DIR)
 
+# TinyUSB CDC debugger PendSV dispatch entry
+MPY_PENDSV_ENTRIES += PENDSV_DISPATCH_CDC,
+
 # Configure additional built-in modules. Note must define both the CFLAGS and the Make command line args.
 ifeq ($(MICROPY_PY_SENSOR), 1)
 MPY_CFLAGS += -DMICROPY_PY_SENSOR=1
@@ -119,6 +122,7 @@ endif
 ifeq ($(MICROPY_PY_WINC1500), 1)
 MPY_CFLAGS += -DMICROPY_PY_WINC1500=1
 MICROPY_ARGS += MICROPY_PY_WINC1500=1
+MPY_PENDSV_ENTRIES += PENDSV_DISPATCH_WINC,
 endif
 
 ifeq ($(MICROPY_PY_IMU), 1)
@@ -187,6 +191,9 @@ ifeq ($(CUBEAI), 1)
 MPY_CFLAGS += -DMICROPY_PY_CUBEAI=1
 MICROPY_ARGS += MICROPY_PY_CUBEAI=1
 endif
+
+MPY_PENDSV_ENTRIES := $(shell echo $(MPY_PENDSV_ENTRIES) | tr -d '[:space:]')
+MPY_CFLAGS += -DMICROPY_BOARD_PENDSV_ENTRIES="$(MPY_PENDSV_ENTRIES)"
 
 # Include the port Makefile.
 include $(OMV_DIR)/ports/$(PORT)/omv_portconfig.mk
