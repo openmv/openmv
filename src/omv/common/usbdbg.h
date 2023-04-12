@@ -17,7 +17,7 @@
   */
 #define FIRMWARE_VERSION_MAJOR      (4)
 #define FIRMWARE_VERSION_MINOR      (4)
-#define FIRMWARE_VERSION_PATCH      (2)
+#define FIRMWARE_VERSION_PATCH      (3)
 
 /**
   * To add a new debugging command, increment the last command value used.
@@ -55,6 +55,7 @@ void usbdbg_init();
 void usbdbg_wait_for_command(uint32_t timeout);
 bool usbdbg_script_ready();
 vstr_t *usbdbg_get_script();
+bool usbdbg_is_busy();
 bool usbdbg_get_irq_enabled();
 void usbdbg_set_irq_enabled(bool enabled);
 void usbdbg_set_script_running(bool running);

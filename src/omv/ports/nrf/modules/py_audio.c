@@ -14,7 +14,6 @@
 #include "py/nlr.h"
 #include "py/mphal.h"
 #include "py/binary.h"
-#include "pendsv.h"
 #include "runtime.h"
 
 #include "py_audio.h"
@@ -27,25 +26,24 @@
 #include "hal/nrf_gpio.h"
 
 #if MICROPY_PY_AUDIO
-#define PDM_DEFAULT_GAIN     20
-#define PDM_IRQ_PRIORITY     7
-#define PDM_BUFFER_SIZE     (256)
+#define PDM_DEFAULT_GAIN        (20)
+#define PDM_IRQ_PRIORITY        (7)
+#define PDM_BUFFER_SIZE         (256)
 
-#define NRF_PDM_FREQ_1280K  (nrf_pdm_freq_t)(0x0A000000UL)               ///< PDM_CLK= 1.280 MHz (32 MHz / 25) => Fs= 20000 Hz
-#define NRF_PDM_FREQ_2000K  (nrf_pdm_freq_t)(0x10000000UL)               ///< PDM_CLK= 2.000 MHz (32 MHz / 16) => Fs= 31250 Hz
-#define NRF_PDM_FREQ_2667K  (nrf_pdm_freq_t)(0x15000000UL)               ///< PDM_CLK= 2.667 MHz (32 MHz / 12) => Fs= 41667 Hz
-#define NRF_PDM_FREQ_3200K  (nrf_pdm_freq_t)(0x19000000UL)               ///< PDM_CLK= 3.200 MHz (32 MHz / 10) => Fs= 50000 Hz
-#define NRF_PDM_FREQ_4000K  (nrf_pdm_freq_t)(0x20000000UL)               ///< PDM_CLK= 4.000 MHz (32 MHz /  8) => Fs= 62500 Hz
-#define RAISE_OS_EXCEPTION(msg)     mp_raise_msg(&mp_type_OSError, MP_ERROR_TEXT(msg))
+#define NRF_PDM_FREQ_1280K      (nrf_pdm_freq_t)(0x0A000000UL)  // PDM_CLK= 1.280 MHz (32 MHz / 25) => Fs= 20000 Hz
+#define NRF_PDM_FREQ_2000K      (nrf_pdm_freq_t)(0x10000000UL)  // PDM_CLK= 2.000 MHz (32 MHz / 16) => Fs= 31250 Hz
+#define NRF_PDM_FREQ_2667K      (nrf_pdm_freq_t)(0x15000000UL)  // PDM_CLK= 2.667 MHz (32 MHz / 12) => Fs= 41667 Hz
+#define NRF_PDM_FREQ_3200K      (nrf_pdm_freq_t)(0x19000000UL)  // PDM_CLK= 3.200 MHz (32 MHz / 10) => Fs= 50000 Hz
+#define NRF_PDM_FREQ_4000K      (nrf_pdm_freq_t)(0x20000000UL)  // PDM_CLK= 4.000 MHz (32 MHz /  8) => Fs= 62500 Hz
+#define RAISE_OS_EXCEPTION(msg) mp_raise_msg(&mp_type_OSError, MP_ERROR_TEXT(msg))
 
 static mp_obj_array_t *g_pcmbuf = NULL;
 static mp_obj_t g_audio_callback = mp_const_none;
 static uint32_t g_channels = 1;
 static uint32_t g_buf_index = 0;
 static int16_t PDM_BUFFERS[2][PDM_BUFFER_SIZE];
-
-// Pendsv dispatch callback.
-static void audio_pendsv_callback(void);
+static mp_sched_node_t audio_task_sched_node;
+static void audio_task_callback(mp_sched_node_t *node);
 
 static void nrfx_pdm_event_handler(nrfx_pdm_evt_t const *evt)
 {
@@ -59,7 +57,7 @@ static void nrfx_pdm_event_handler(nrfx_pdm_evt_t const *evt)
         }
         if (evt->buffer_released && g_audio_callback != mp_const_none) {
             g_buf_index = (evt->buffer_released == PDM_BUFFERS[0]) ?  0 : 1;
-            pendsv_schedule_dispatch(PENDSV_DISPATCH_AUDIO, audio_pendsv_callback);
+            mp_sched_schedule_node(&audio_task_sched_node, audio_task_callback);
         }
     } else {
         // TODO
@@ -143,7 +141,7 @@ void py_audio_deinit()
     g_audio_callback = mp_const_none;
 }
 
-static void audio_pendsv_callback(void)
+static void audio_task_callback(mp_sched_node_t *node)
 {
     memcpy(g_pcmbuf->items, PDM_BUFFERS[g_buf_index], PDM_BUFFER_SIZE * sizeof(int16_t));
     // Call user callback

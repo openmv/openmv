@@ -1163,7 +1163,10 @@ void gif_close(FIL *fp);
 
 /* MJPEG functions */
 void mjpeg_open(FIL *fp, int width, int height);
-void mjpeg_add_frame(FIL *fp, uint32_t *frames, uint32_t *bytes, image_t *img, int quality);
+void mjpeg_write(FIL *fp, int width, int height, uint32_t *frames, uint32_t *bytes,
+                 image_t *img, int quality, rectangle_t *roi, int rgb_channel, int alpha,
+                 const uint16_t *color_palette, const uint8_t *alpha_palette, image_hint_t hint);
+void mjpeg_sync(FIL *fp, uint32_t *frames, uint32_t *bytes, float fps);
 void mjpeg_close(FIL *fp, uint32_t *frames, uint32_t *bytes, float fps);
 
 /* Point functions */
