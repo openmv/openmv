@@ -1023,7 +1023,7 @@ typedef struct find_apriltags_list_lnk_data {
     rectangle_t rect;
     uint16_t id;
     uint8_t family, hamming;
-    point_t centroid;
+    float centroid_x, centroid_y;
     float goodness, decision_margin;
     float x_translation, y_translation, z_translation;
     float x_rotation, y_rotation, z_rotation;

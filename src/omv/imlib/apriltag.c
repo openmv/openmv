@@ -12048,8 +12048,8 @@ void imlib_find_apriltags(list_t *out, image_t *ptr, rectangle_t *roi, apriltag_
         }
 
         lnk_data.hamming = det->hamming;
-        lnk_data.centroid.x = fast_roundf(det->c[0]) + roi->x;
-        lnk_data.centroid.y = fast_roundf(det->c[1]) + roi->y;
+        lnk_data.centroid_x = det->c[0] + roi->x;
+        lnk_data.centroid_y = det->c[1] + roi->y;
         lnk_data.goodness = det->goodness / 255.0; // scale to [0:1]
         lnk_data.decision_margin = det->decision_margin / 255.0; // scale to [0:1]
 
