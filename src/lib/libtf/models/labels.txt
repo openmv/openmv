@@ -1,4 +1,3 @@
-background
 Grey_Squirrel
 Red_Squirrel
-unknown
+Unknown
