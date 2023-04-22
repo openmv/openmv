@@ -56,6 +56,7 @@ pico_set_linker_script(${MICROPY_TARGET} ${BUILD}/rp2.ld)
 file(GLOB OMV_SRC_QSTR1 ${TOP_DIR}/${OMV_DIR}/modules/*.c)
 file(GLOB OMV_SRC_QSTR2 ${TOP_DIR}/${OMV_DIR}/ports/${PORT}/modules/*.c)
 list(APPEND MICROPY_SOURCE_QSTR ${OMV_SRC_QSTR1} ${OMV_SRC_QSTR2})
+set(MPY_PENDSV_ENTRIES PENDSV_DISPATCH_CDC,)
 
 target_include_directories(${MICROPY_TARGET} PRIVATE
     ${TOP_DIR}/${CMSIS_DIR}/include/
@@ -260,6 +261,10 @@ if(MICROPY_PY_ULAB)
         ULAB_CONFIG_FILE="${OMV_BOARD_CONFIG_DIR}/ulab_config.h"
     )
 endif()
+
+target_compile_definitions(${MICROPY_TARGET} PRIVATE
+    MICROPY_BOARD_PENDSV_ENTRIES=${MPY_PENDSV_ENTRIES}
+)
 
 add_custom_command(TARGET ${MICROPY_TARGET}
     POST_BUILD

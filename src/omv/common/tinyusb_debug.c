@@ -21,7 +21,7 @@
 #include "usbdbg.h"
 #include "tinyusb_debug.h"
 
-#define DEBUG_MAX_PACKET        (64)
+#define DEBUG_MAX_PACKET        (OMV_TUSBDBG_PACKET)
 #define DEBUG_BAUDRATE_SLOW     (921600)
 #define DEBUG_BAUDRATE_FAST     (12000000)
 
@@ -33,8 +33,8 @@ typedef struct __attribute__((packed)) {
     uint32_t xfer_length;
 } usbdbg_cmd_t;
 
-STATIC uint8_t debug_ringbuf_array[512];
-static volatile uint8_t  tinyusb_debug_mode = false;
+static uint8_t debug_ringbuf_array[512];
+static volatile bool  tinyusb_debug_mode = false;
 ringbuf_t debug_ringbuf = { debug_ringbuf_array, sizeof(debug_ringbuf_array) };
 
 uint32_t usb_cdc_buf_len()
@@ -93,9 +93,10 @@ static void tinyusb_debug_task(void)
     if (tud_cdc_connected() && tud_cdc_available() >= 6) {
         uint32_t count = tud_cdc_read(dbg_buf, 6);
         if (count < 6 || dbg_buf[0] != 0x30) {
-            //This shouldn't happen
+            // Maybe we should try to recover from this state
+            // but for now, call __fatal_error which doesn't
+            // return.
             __fatal_error();
-            usbdbg_control(NULL, USBDBG_NONE, 0);
             return;
         }
         usbdbg_cmd_t *cmd = (usbdbg_cmd_t *) dbg_buf;
@@ -129,14 +130,26 @@ static void tinyusb_debug_task(void)
     }
 }
 
-// For the nRF port, this replaces the default weak USB IRQ handler.
-// And for the RP2 port, this handler is installed in main.c
-void USBD_IRQHandler(void)
+// For the mimxrt, and nrf ports this replaces the weak USB IRQ handlers.
+// For the RP2 port, this handler is installed in main.c
+void OMV_USB1_IRQ_HANDLER(void)
 {
     dcd_int_handler(0);
     // If there are any event to process, schedule a call to cdc loop.
-    if (tinyusb_debug_enabled()) { //    if (cdc_tx_any() || tud_task_event_ready())
+    if (tinyusb_debug_enabled()) {
         pendsv_schedule_dispatch(PENDSV_DISPATCH_CDC, tinyusb_debug_task);
     }
 }
+
+#if defined(OMV_USB2_IRQ_HANDLER)
+void OMV_USB2_IRQ_HANDLER(void)
+{
+    dcd_int_handler(1);
+    // If there are any event to process, schedule a call to cdc loop.
+    if (tinyusb_debug_enabled()) {
+        pendsv_schedule_dispatch(PENDSV_DISPATCH_CDC, tinyusb_debug_task);
+    }
+}
+#endif
+
 #endif //OMV_TINYUSB_DEBUG

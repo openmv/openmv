@@ -15,7 +15,6 @@
 #include "py/nlr.h"
 #include "py/mphal.h"
 #include "py/binary.h"
-#include "pendsv.h"
 #include "runtime.h"
 
 #include "omv_boardconfig.h"
@@ -35,11 +34,6 @@
 #define PDM_DEFAULT_BUFFERS (128)   // Number of PCM samples buffers.
 #define PDM_BUFFER_SIZE     (512)
 #define PDM_TIME_CONV       (0)     // Enable to print average conversion time.
-
-#ifndef MICROPY_PY_AUDIO_USE_SYNC_EVENTS
-#define MICROPY_PY_AUDIO_USE_SYNC_EVENTS    (1)
-#endif
-
 #define RAISE_OS_EXCEPTION(msg) mp_raise_msg(&mp_type_OSError, MP_ERROR_TEXT(msg))
 
 typedef struct _audio_data_t {
@@ -65,20 +59,19 @@ typedef struct _audio_data_t {
     void (*pdm_filter_func) (uint8_t*, int16_t*, uint16_t, TPDMFilter_InitStruct*);
 } audio_data_t;
 
-static bool audio_initialized = false;
 #define audio_data MP_STATE_PORT(audio_data)
 #define NEXT_BUFFER(x) (((x) + 1) % (audio_data->n_buffers))
 
-#if MICROPY_PY_AUDIO_USE_SYNC_EVENTS
-volatile bool audio_task_scheduled = false;
-static const mp_obj_fun_builtin_fixed_t audio_task_obj;
-static mp_obj_t audio_task(mp_obj_t none_in)
-#else
-static void audio_pendsv_callback(void)
-#endif
+static bool audio_initialized = false;
+static mp_sched_node_t audio_task_sched_node;
+static volatile bool audio_task_scheduled = false;
+static bool irq_handler_installed = false;
+
+static void audio_task_callback(mp_sched_node_t *node)
 {
     if (audio_data->streaming == false) {
-        return mp_const_none;
+        audio_task_scheduled = false;
+        return;
     }
 
     if (audio_data->head != audio_data->tail) {
@@ -91,25 +84,17 @@ static void audio_pendsv_callback(void)
         // Call user callback.
         mp_call_function_1(audio_data->user_callback, MP_OBJ_FROM_PTR(audio_data->pcm_buffer_user));
     } else if (audio_data->overflow == true && audio_data->abort_on_overflow) {
-        #if MICROPY_PY_AUDIO_USE_SYNC_EVENTS
         RAISE_OS_EXCEPTION("Audio buffer overflow.");
-        #endif
-        return mp_const_none;
     }
 
-    #if MICROPY_PY_AUDIO_USE_SYNC_EVENTS
     if (audio_data->head != audio_data->tail) {
         // Re-schedule function
-        audio_task_scheduled = mp_sched_schedule(MP_OBJ_FROM_PTR(&audio_task_obj), mp_const_none);
+        audio_task_scheduled = true;
+        mp_sched_schedule_node(&audio_task_sched_node, audio_task_callback);
     } else {
         audio_task_scheduled = false;
     }
-    return mp_const_none;
-    #endif
 }
-#if MICROPY_PY_AUDIO_USE_SYNC_EVENTS
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(audio_task_obj, audio_task);
-#endif
 
 static void dma_irq_handler()
 {
@@ -150,13 +135,10 @@ static void dma_irq_handler()
 
         if (mp_obj_is_callable(audio_data->user_callback)) {
             // Schedule audio callback.
-            #if MICROPY_PY_AUDIO_USE_SYNC_EVENTS
             if (audio_task_scheduled == false) {
-                audio_task_scheduled = mp_sched_schedule(MP_OBJ_FROM_PTR(&audio_task_obj), mp_const_none);
+                audio_task_scheduled = true;
+                mp_sched_schedule_node(&audio_task_sched_node, audio_task_callback);
             }
-            #else
-            pendsv_schedule_dispatch(PENDSV_DISPATCH_AUDIO, audio_pendsv_callback);
-            #endif
         }
     }
 }
@@ -188,9 +170,7 @@ static mp_obj_t py_audio_init(uint n_args, const mp_obj_t *pos_args, mp_map_t *k
         RAISE_OS_EXCEPTION("Invalid frequency. Expected 16KHz, 32KHz or 48KHz.");
     }
 
-    #if MICROPY_PY_AUDIO_USE_SYNC_EVENTS
     audio_task_scheduled = false;
-    #endif
 
     // The decimation factor is set to keep the PDM datarate within min/max specs for the mic:
     // 16 KHz * 128 -> 2048 KHz
@@ -288,7 +268,6 @@ static mp_obj_t py_audio_init(uint n_args, const mp_obj_t *pos_args, mp_map_t *k
     // Clear DMA interrupts.
     dma_irqn_acknowledge_channel(PDM_DMA, audio_data->dma_channel);
 
-    static bool irq_handler_installed = false;
     if (!irq_handler_installed) {
         irq_handler_installed = true;
         // Install shared DMA IRQ handler.
@@ -349,18 +328,22 @@ static mp_obj_t py_audio_stop_streaming()
     if (audio_data->streaming) {
         // Disable PDM and IRQ
         dma_channel_abort(audio_data->dma_channel);
+        //irq_set_enabled(PDM_DMA_IRQ, false);
         dma_irqn_set_channel_enabled(PDM_DMA, audio_data->dma_channel, false);
 
         // Disable state machine.
         pio_sm_set_enabled(PDM_PIO, PDM_SM, false);
         pio_sm_clear_fifos(PDM_PIO, PDM_SM);
 
+        if (irq_handler_installed) {
+            irq_handler_installed = false;
+            irq_remove_handler(PDM_DMA_IRQ, dma_irq_handler);
+        }
+
         audio_data->streaming = false;
-        #if MICROPY_PY_AUDIO_USE_SYNC_EVENTS
         for (mp_uint_t start = mp_hal_ticks_ms();
-                audio_task_scheduled && (mp_hal_ticks_ms() - start) >= 1000;
+                audio_task_scheduled && (mp_hal_ticks_ms() - start) < 1500;
                 mp_hal_delay_ms(10));
-        #endif
 
         #if PDM_TIME_CONV
         mp_printf(&mp_plat_print, "Average conversion time:%ld us\n",
@@ -427,6 +410,7 @@ void py_audio_deinit()
         audio_data->overflow = false;
         audio_data->abort_on_overflow = false;
         audio_data->user_callback = mp_const_none;
+        audio_data->pcm_buffer_user = NULL;
 
         if (audio_data->dma_channel >= 0) {
             dma_channel_unclaim(audio_data->dma_channel);

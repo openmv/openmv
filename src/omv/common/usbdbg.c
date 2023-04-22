@@ -14,6 +14,7 @@
 #include "py/gc.h"
 #include "py/mphal.h"
 #include "py/obj.h"
+#include "py/objstr.h"
 #include "py/runtime.h"
 #include "pendsv.h"
 
@@ -36,7 +37,13 @@ static volatile bool script_ready;
 static volatile bool script_running;
 static volatile bool irq_enabled;
 static vstr_t script_buf;
-static mp_obj_t mp_const_ide_interrupt = MP_OBJ_NULL;
+
+static mp_obj_exception_t ide_exception;
+static const MP_DEFINE_STR_OBJ(ide_exception_msg, "IDE interrupt");
+static const mp_rom_obj_tuple_t ide_exception_args_obj = {
+    {&mp_type_tuple}, 1, {MP_ROM_PTR(&ide_exception_msg)}
+};
+
 
 // These functions must be implemented in MicroPython CDC driver.
 extern uint32_t usb_cdc_buf_len();
@@ -52,13 +59,21 @@ void usbdbg_init()
     script_ready=false;
     script_running=false;
     irq_enabled = false;
+
     vstr_init(&script_buf, 32);
-    mp_const_ide_interrupt = mp_obj_new_exception_msg(&mp_type_Exception, MP_ERROR_TEXT("IDE interrupt"));
+
+    // Initialize the IDE exception object.
+    ide_exception.base.type = &mp_type_Exception;
+    ide_exception.traceback_alloc = 0;
+    ide_exception.traceback_len = 0;
+    ide_exception.traceback_data = NULL;
+    ide_exception.args = (mp_obj_tuple_t *) &ide_exception_args_obj;
 }
 
 void usbdbg_wait_for_command(uint32_t timeout)
 {
-    for (mp_uint_t ticks = mp_hal_ticks_ms(); irq_enabled && ((mp_hal_ticks_ms() - ticks) < timeout) && (cmd != USBDBG_NONE); );
+    for (mp_uint_t ticks = mp_hal_ticks_ms();
+            irq_enabled && ((mp_hal_ticks_ms() - ticks) < timeout) && (cmd != USBDBG_NONE); );
 }
 
 bool usbdbg_script_ready()
@@ -69,6 +84,11 @@ bool usbdbg_script_ready()
 vstr_t *usbdbg_get_script()
 {
     return &script_buf;
+}
+
+bool usbdbg_is_busy()
+{
+    return cmd != USBDBG_NONE;
 }
 
 void usbdbg_set_script_running(bool running)
@@ -85,6 +105,29 @@ inline void usbdbg_set_irq_enabled(bool enabled)
     }
     __DSB(); __ISB();
     irq_enabled = enabled;
+}
+
+static void usbdbg_interrupt_vm(bool ready)
+{
+    // Set script ready flag
+    script_ready = ready;
+
+    // Set script running flag
+    script_running = ready;
+
+    // Disable IDE IRQ (re-enabled by pyexec or main).
+    usbdbg_set_irq_enabled(false);
+
+    // Clear interrupt traceback
+    mp_obj_exception_clear_traceback(&ide_exception);
+
+    // Remove the BASEPRI masking (if any)
+    __set_BASEPRI(0);
+
+    // Interrupt running REPL
+    // Note: setting pendsv explicitly here because the VM is probably
+    // waiting in REPL and the soft interrupt flag will not be checked.
+    pendsv_nlr_jump(&ide_exception);
 }
 
 bool usbdbg_get_irq_enabled()
@@ -167,10 +210,10 @@ void usbdbg_data_in(void *buffer, int length)
             #if (OMV_UNIQUE_ID_SIZE == 2)
                 0U,
             #else
-                *((unsigned int *) (OMV_UNIQUE_ID_ADDR + 8)),
+                *((unsigned int *) (OMV_UNIQUE_ID_ADDR + OMV_UNIQUE_ID_OFFSET * 2)),
             #endif
-                *((unsigned int *) (OMV_UNIQUE_ID_ADDR + 4)),
-                *((unsigned int *) (OMV_UNIQUE_ID_ADDR + 0)),
+                *((unsigned int *) (OMV_UNIQUE_ID_ADDR + OMV_UNIQUE_ID_OFFSET * 1)),
+                *((unsigned int *) (OMV_UNIQUE_ID_ADDR + OMV_UNIQUE_ID_OFFSET * 0)),
             };
             snprintf((char *) buffer, 64, "%s [%s:%08X%08X%08X]",
                     OMV_ARCH_STR, OMV_BOARD_TYPE, uid[0], uid[1], uid[2]);
@@ -208,29 +251,17 @@ void usbdbg_data_out(void *buffer, int length)
             // check if GC is locked before allocating memory for vstr. If GC was locked
             // at least once before the script is fully uploaded xfer_bytes will be less
             // than the total length (xfer_length) and the script will Not be executed.
-            if (!script_running && !gc_is_locked()) {
-                vstr_add_strn(&script_buf, buffer, length);
+            if (!script_running) {
+                nlr_buf_t nlr;
+                if (!gc_is_locked() && nlr_push(&nlr) == 0) {
+                    vstr_add_strn(&script_buf, buffer, length);
+                    nlr_pop();
+                }
                 xfer_bytes += length;
                 if (xfer_bytes == xfer_length) {
-                    // Set script ready flag
-                    script_ready = true;
-
-                    // Set script running flag
-                    script_running = true;
-
-                    // Disable IDE IRQ (re-enabled by pyexec or main).
-                    usbdbg_set_irq_enabled(false);
-
-                    // Clear interrupt traceback
-                    mp_obj_exception_clear_traceback(mp_const_ide_interrupt);
-
-                    // Remove the BASEPRI masking (if any)
-                    __set_BASEPRI(0);
-
-                    // Interrupt running REPL
-                    // Note: setting pendsv explicitly here because the VM is probably
-                    // waiting in REPL and the soft interrupt flag will not be checked.
-                    pendsv_nlr_jump(mp_const_ide_interrupt);
+                    cmd = USBDBG_NONE;
+                    // Schedule the IDE exception to interrupt the VM.
+                    usbdbg_interrupt_vm(true);
                 }
             }
             break;
@@ -363,22 +394,11 @@ void usbdbg_control(void *buffer, uint8_t request, uint32_t length)
 
         case USBDBG_SCRIPT_STOP:
             if (script_running) {
-                // Set script running flag
-                script_running = false;
-
-                // Disable IDE IRQ (re-enabled by pyexec or main).
-                usbdbg_set_irq_enabled(false);
-
-                // Reset CDC buffers after disabling IRQs.
+                // Reset CDC buffers.
                 usb_cdc_reset_buffers();
 
-                // interrupt running code by raising an exception
-                mp_obj_exception_clear_traceback(mp_const_ide_interrupt);
-
-                // Remove the BASEPRI masking (if any)
-                __set_BASEPRI(0);
-
-                pendsv_nlr_jump(mp_const_ide_interrupt);
+                // Schedule the IDE exception to interrupt the VM.
+                usbdbg_interrupt_vm(false);
             }
             cmd = USBDBG_NONE;
             break;

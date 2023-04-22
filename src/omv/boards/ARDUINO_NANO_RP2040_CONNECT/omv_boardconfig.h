@@ -16,9 +16,11 @@
 #define OMV_BOARD_TYPE          "PICO"
 
 #ifndef LINKER_SCRIPT
-extern unsigned char *OMV_UNIQUE_ID_ADDR;
+extern unsigned char *OMV_UNIQUE_ID_ADDR;   // Unique address.
 #endif
-#define OMV_UNIQUE_ID_SIZE      2 // 2 words
+#define OMV_UNIQUE_ID_SIZE      2           // Unique ID size in words.
+#define OMV_UNIQUE_ID_OFFSET    4           // Bytes offset for multi-word UIDs.
+
 
 #define OMV_XCLK_MCO            (0U)
 #define OMV_XCLK_TIM            (1U)
@@ -63,6 +65,7 @@ extern unsigned char *OMV_UNIQUE_ID_ADDR;
 // Enable WiFi debug
 #define OMV_ENABLE_WIFIDBG      (0)
 #define OMV_ENABLE_TUSBDBG      (1)
+#define OMV_TUSBDBG_PACKET      (64)
 
 // Enable self-tests on first boot
 #define OMV_ENABLE_SELFTEST     (0)
@@ -83,6 +86,7 @@ extern unsigned char *OMV_UNIQUE_ID_ADDR;
 
 // USB IRQn.
 #define OMV_USB_IRQN            (USBCTRL_IRQ_IRQn)
+#define OMV_USB1_IRQ_HANDLER    (USBD_IRQHandler)
 
 // Jump to bootloader function.
 #ifndef LINKER_SCRIPT

@@ -1001,6 +1001,9 @@ static mp_obj_t py_image_to(pixformat_t pixfmt, const uint16_t *default_color_pa
     if (copy_obj) {
         if (mp_obj_is_integer(copy_obj)) {
             copy = mp_obj_get_int(copy_obj);
+            if (copy) {
+                arg_other = NULL;
+            }
         } else {
             arg_other = py_image_cobj(copy_obj);
         }
@@ -5199,8 +5202,10 @@ mp_obj_t py_apriltag_w(mp_obj_t self_in) { return ((py_apriltag_obj_t *) self_in
 mp_obj_t py_apriltag_h(mp_obj_t self_in) { return ((py_apriltag_obj_t *) self_in)->h; }
 mp_obj_t py_apriltag_id(mp_obj_t self_in) { return ((py_apriltag_obj_t *) self_in)->id; }
 mp_obj_t py_apriltag_family(mp_obj_t self_in) { return ((py_apriltag_obj_t *) self_in)->family; }
-mp_obj_t py_apriltag_cx(mp_obj_t self_in) { return ((py_apriltag_obj_t *) self_in)->cx; }
-mp_obj_t py_apriltag_cy(mp_obj_t self_in) { return ((py_apriltag_obj_t *) self_in)->cy; }
+mp_obj_t py_apriltag_cx(mp_obj_t self_in) { return mp_obj_new_int(fast_roundf(mp_obj_get_float(((py_apriltag_obj_t *) self_in)->cx))); }
+mp_obj_t py_apriltag_cxf(mp_obj_t self_in) { return ((py_apriltag_obj_t *) self_in)->cx; }
+mp_obj_t py_apriltag_cy(mp_obj_t self_in) { return mp_obj_new_int(fast_roundf(mp_obj_get_float(((py_apriltag_obj_t *) self_in)->cy))); }
+mp_obj_t py_apriltag_cyf(mp_obj_t self_in) { return ((py_apriltag_obj_t *) self_in)->cy; }
 mp_obj_t py_apriltag_rotation(mp_obj_t self_in) { return ((py_apriltag_obj_t *) self_in)->rotation; }
 mp_obj_t py_apriltag_decision_margin(mp_obj_t self_in) { return ((py_apriltag_obj_t *) self_in)->decision_margin; }
 mp_obj_t py_apriltag_hamming(mp_obj_t self_in) { return ((py_apriltag_obj_t *) self_in)->hamming; }
@@ -5221,7 +5226,9 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_apriltag_h_obj, py_apriltag_h);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_apriltag_id_obj, py_apriltag_id);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_apriltag_family_obj, py_apriltag_family);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_apriltag_cx_obj, py_apriltag_cx);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_apriltag_cxf_obj, py_apriltag_cxf);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_apriltag_cy_obj, py_apriltag_cy);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_apriltag_cyf_obj, py_apriltag_cyf);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_apriltag_rotation_obj, py_apriltag_rotation);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_apriltag_decision_margin_obj, py_apriltag_decision_margin);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_apriltag_hamming_obj, py_apriltag_hamming);
@@ -5243,7 +5250,9 @@ STATIC const mp_rom_map_elem_t py_apriltag_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_id), MP_ROM_PTR(&py_apriltag_id_obj) },
     { MP_ROM_QSTR(MP_QSTR_family), MP_ROM_PTR(&py_apriltag_family_obj) },
     { MP_ROM_QSTR(MP_QSTR_cx), MP_ROM_PTR(&py_apriltag_cx_obj) },
+    { MP_ROM_QSTR(MP_QSTR_cxf), MP_ROM_PTR(&py_apriltag_cxf_obj) },
     { MP_ROM_QSTR(MP_QSTR_cy), MP_ROM_PTR(&py_apriltag_cy_obj) },
+    { MP_ROM_QSTR(MP_QSTR_cyf), MP_ROM_PTR(&py_apriltag_cyf_obj) },
     { MP_ROM_QSTR(MP_QSTR_rotation), MP_ROM_PTR(&py_apriltag_rotation_obj) },
     { MP_ROM_QSTR(MP_QSTR_decision_margin), MP_ROM_PTR(&py_apriltag_decision_margin_obj) },
     { MP_ROM_QSTR(MP_QSTR_hamming), MP_ROM_PTR(&py_apriltag_hamming_obj) },
@@ -5312,8 +5321,8 @@ static mp_obj_t py_image_find_apriltags(uint n_args, const mp_obj_t *args, mp_ma
         o->h = mp_obj_new_int(lnk_data.rect.h);
         o->id = mp_obj_new_int(lnk_data.id);
         o->family = mp_obj_new_int(lnk_data.family);
-        o->cx = mp_obj_new_int(lnk_data.centroid.x);
-        o->cy = mp_obj_new_int(lnk_data.centroid.y);
+        o->cx = mp_obj_new_int(lnk_data.centroid_x);
+        o->cy = mp_obj_new_int(lnk_data.centroid_y);
         o->rotation = mp_obj_new_float(lnk_data.z_rotation);
         o->decision_margin = mp_obj_new_float(lnk_data.decision_margin);
         o->hamming = mp_obj_new_int(lnk_data.hamming);

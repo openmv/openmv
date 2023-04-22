@@ -14,8 +14,9 @@
 // Architecture info
 #define OMV_ARCH_STR            "PORTENTA H7 8192 SDRAM" // 33 chars max
 #define OMV_BOARD_TYPE          "H7"
-#define OMV_UNIQUE_ID_ADDR      0x1FF1E800
-#define OMV_UNIQUE_ID_SIZE      3 // 3 words
+#define OMV_UNIQUE_ID_ADDR      0x1FF1E800  // Unique ID address.
+#define OMV_UNIQUE_ID_SIZE      3           // Unique ID size in words.
+#define OMV_UNIQUE_ID_OFFSET    4           // Bytes offset for multi-word UIDs.
 
 #define OMV_XCLK_MCO            (0U)
 #define OMV_XCLK_TIM            (1U)
@@ -154,12 +155,12 @@
 #define OMV_JPEG_MEMORY_OFFSET  (7M)        // JPEG buffer is placed after FB/fballoc memory.
 #define OMV_VOSPI_MEMORY        SRAM4       // VoSPI buffer memory.
 #define OMV_FB_OVERLAY_MEMORY   AXI_SRAM    // Fast fb_alloc memory.
-#define OMV_FB_OVERLAY_MEMORY_OFFSET    (480*1024)  // Fast fb_alloc memory size.
 #define OMV_CYW43_MEMORY        FLASH_EXT   // CYW43 firmware in external flash mmap'd flash.
 #define OMV_CYW43_MEMORY_OFFSET (0x90F00000)// Last Mbyte.
 
-#define OMV_FB_SIZE             (4M)       // FB memory: header + VGA/GS image
-#define OMV_FB_ALLOC_SIZE       (3M)       // minimum fb alloc size
+#define OMV_FB_SIZE             (4M)        // FB memory: header + VGA/GS image
+#define OMV_FB_ALLOC_SIZE       (3M)        // minimum fb alloc size
+#define OMV_FB_OVERLAY_SIZE     (480*1024)  // Fast fb_alloc memory size.
 #define OMV_STACK_SIZE          (64K)
 #define OMV_HEAP_SIZE           (160K)
 #define OMV_SDRAM_SIZE          (8 * 1024 * 1024) // This needs to be here for UVC firmware.
@@ -201,7 +202,7 @@
 // Domain 1 DMA buffers region.
 #define OMV_DMA_MEMORY_D1       AXI_SRAM
 #define OMV_DMA_MEMORY_D1_SIZE  (16*1024) // Reserved memory for DMA buffers
-#define OMV_DMA_REGION_D1_BASE  (OMV_AXI_SRAM_ORIGIN+OMV_FB_OVERLAY_MEMORY_OFFSET)
+#define OMV_DMA_REGION_D1_BASE  (OMV_AXI_SRAM_ORIGIN+OMV_FB_OVERLAY_SIZE)
 #define OMV_DMA_REGION_D1_SIZE  MPU_REGION_SIZE_32KB
 
 // Domain 2 DMA buffers region.
