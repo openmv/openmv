@@ -1287,6 +1287,10 @@ void imlib_draw_image(image_t *dst_img, image_t *src_img, int dst_x_start, int d
 void imlib_flood_fill(image_t *img, int x, int y,
                       float seed_threshold, float floating_threshold,
                       int c, bool invert, bool clear_background, image_t *mask);
+// ISP Functions            
+void imlib_awb(image_t *img, bool max);
+void imlib_ccm(image_t *img, float *ccm, bool offset);
+void imlib_gamma(image_t *img, float gamma, float scale, float offset);
 // Binary Functions
 void imlib_binary(image_t *out, image_t *img, list_t *thresholds, bool invert, bool zero, image_t *mask);
 void imlib_invert(image_t *img);
@@ -1303,7 +1307,6 @@ void imlib_close(image_t *img, int ksize, int threshold, image_t *mask);
 void imlib_top_hat(image_t *img, int ksize, int threshold, image_t *mask);
 void imlib_black_hat(image_t *img, int ksize, int threshold, image_t *mask);
 // Math Functions
-void imlib_gamma_corr(image_t *img, float gamma, float scale, float offset);
 void imlib_negate(image_t *img);
 void imlib_replace(image_t *img, const char *path, image_t *other, int scalar, bool hmirror, bool vflip, bool transpose, image_t *mask);
 void imlib_add(image_t *img, const char *path, image_t *other, int scalar, image_t *mask);

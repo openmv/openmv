@@ -1808,6 +1808,67 @@ STATIC mp_obj_t py_image_flood_fill(uint n_args, const mp_obj_t *args, mp_map_t 
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_flood_fill_obj, 2, py_image_flood_fill);
 #endif // IMLIB_ENABLE_FLOOD_FILL
 
+
+#ifdef IMLIB_ENABLE_ISP_OPS
+//////////////
+// ISP Methods
+//////////////
+
+STATIC mp_obj_t py_awb(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
+{
+    image_t *arg_img =
+        py_helper_arg_to_image_not_compressed(args[0]);
+    bool arg_max =
+        py_helper_keyword_float(n_args, args, 1, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_max), false);
+
+    imlib_awb(arg_img, arg_max);
+    return args[0];
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_awb_obj, 1, py_awb);
+
+STATIC mp_obj_t py_ccm(mp_obj_t img_obj, mp_obj_t ccm_obj)
+{
+    image_t *arg_img =
+        py_helper_arg_to_image_mutable(img_obj);
+
+    size_t len;
+    mp_obj_t *items;
+    mp_obj_get_array(ccm_obj, &len, &items);
+
+    if ((len != 9) && (len != 12)) {
+        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Expected a 3x3 or 4x3 matrix!"));
+    }
+
+    float ccm[12] = {};
+    for (size_t i = 0; i < len; i++) {
+        ccm[i] = mp_obj_get_float(items[i]);
+    }
+
+    imlib_ccm(arg_img, ccm, len == 12);
+    return img_obj;
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_ccm_obj, py_ccm);
+
+STATIC mp_obj_t py_image_gamma(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
+{
+    image_t *arg_img =
+        py_helper_arg_to_image_mutable(args[0]);
+    float arg_gamma =
+        py_helper_keyword_float(n_args, args, 1, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_gamma), 1.0f);
+    float arg_contrast =
+        py_helper_keyword_float(n_args, args, 2, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_contrast), 1.0f);
+    float arg_brightness =
+        py_helper_keyword_float(n_args, args, 3, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_brightness), 0.0f);
+
+    fb_alloc_mark();
+    imlib_gamma(arg_img, arg_gamma, arg_contrast, arg_brightness);
+    fb_alloc_free_till_mark();
+    return args[0];
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_gamma_obj, 1, py_image_gamma);
+
+#endif // IMLIB_ENABLE_ISP_OPS
+
 #ifdef IMLIB_ENABLE_BINARY_OPS
 /////////////////
 // Binary Methods
@@ -2099,24 +2160,6 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_close_obj, 2, py_image_close);
 ///////////////
 // Math Methods
 ///////////////
-
-STATIC mp_obj_t py_image_gamma_corr(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
-{
-    image_t *arg_img =
-        py_helper_arg_to_image_mutable(args[0]);
-    float arg_gamma =
-        py_helper_keyword_float(n_args, args, 1, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_gamma), 1.0f);
-    float arg_contrast =
-        py_helper_keyword_float(n_args, args, 2, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_contrast), 1.0f);
-    float arg_brightness =
-        py_helper_keyword_float(n_args, args, 3, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_brightness), 0.0f);
-
-    fb_alloc_mark();
-    imlib_gamma_corr(arg_img, arg_gamma, arg_contrast, arg_brightness);
-    fb_alloc_free_till_mark();
-    return args[0];
-}
-STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_gamma_corr_obj, 1, py_image_gamma_corr);
 
 STATIC mp_obj_t py_image_negate(mp_obj_t img_obj)
 {
@@ -6093,6 +6136,18 @@ static const mp_rom_map_elem_t locals_dict_table[] = {
     {MP_ROM_QSTR(MP_QSTR_mask_rectangle),      MP_ROM_PTR(&py_image_mask_rectangle_obj)},
     {MP_ROM_QSTR(MP_QSTR_mask_circle),         MP_ROM_PTR(&py_image_mask_circle_obj)},
     {MP_ROM_QSTR(MP_QSTR_mask_ellipse),        MP_ROM_PTR(&py_image_mask_ellipse_obj)},
+    /* ISP Methods */
+#ifdef IMLIB_ENABLE_ISP_OPS
+    {MP_ROM_QSTR(MP_QSTR_awb),                 MP_ROM_PTR(&py_awb_obj)},
+    {MP_ROM_QSTR(MP_QSTR_ccm),                 MP_ROM_PTR(&py_ccm_obj)},
+    {MP_ROM_QSTR(MP_QSTR_gamma),               MP_ROM_PTR(&py_image_gamma_obj)},
+    {MP_ROM_QSTR(MP_QSTR_gamma_corr),          MP_ROM_PTR(&py_image_gamma_obj)},
+#else
+    {MP_ROM_QSTR(MP_QSTR_awb),                 MP_ROM_PTR(&py_func_unavailable_obj)},
+    {MP_ROM_QSTR(MP_QSTR_ccm),                 MP_ROM_PTR(&py_func_unavailable_obj)},
+    {MP_ROM_QSTR(MP_QSTR_gamma),               MP_ROM_PTR(&py_func_unavailable_obj)},
+    {MP_ROM_QSTR(MP_QSTR_gamma_corr),          MP_ROM_PTR(&py_func_unavailable_obj)},
+#endif // IMLIB_ENABLE_ISP_OPS
     /* Binary Methods */
 #ifdef IMLIB_ENABLE_BINARY_OPS
     {MP_ROM_QSTR(MP_QSTR_binary),              MP_ROM_PTR(&py_image_binary_obj)},
@@ -6135,7 +6190,6 @@ static const mp_rom_map_elem_t locals_dict_table[] = {
 #endif
 #ifdef IMLIB_ENABLE_MATH_OPS
     /* Math Methods */
-    {MP_ROM_QSTR(MP_QSTR_gamma_corr),          MP_ROM_PTR(&py_image_gamma_corr_obj)},
     {MP_ROM_QSTR(MP_QSTR_negate),              MP_ROM_PTR(&py_image_negate_obj)},
     {MP_ROM_QSTR(MP_QSTR_assign),              MP_ROM_PTR(&py_image_replace_obj)},
     {MP_ROM_QSTR(MP_QSTR_replace),             MP_ROM_PTR(&py_image_replace_obj)},
