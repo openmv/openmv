@@ -1852,7 +1852,7 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_ccm_obj, py_ccm);
 STATIC mp_obj_t py_image_gamma(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
     image_t *arg_img =
-        py_helper_arg_to_image_mutable(args[0]);
+        py_helper_arg_to_image_not_compressed(args[0]);
     float arg_gamma =
         py_helper_keyword_float(n_args, args, 1, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_gamma), 1.0f);
     float arg_contrast =

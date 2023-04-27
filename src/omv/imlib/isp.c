@@ -1078,7 +1078,9 @@ void imlib_gamma(image_t *img, float gamma, float contrast, float brightness)
             fb_free();
             break;
         }
-        case PIXFORMAT_GRAYSCALE: {
+        case PIXFORMAT_GRAYSCALE:
+        case PIXFORMAT_BAYER_ANY:
+        case PIXFORMAT_YUV_ANY: {
             float pScale = COLOR_GRAYSCALE_MAX - COLOR_GRAYSCALE_MIN;
             float pDiv = 1 / pScale;
             int *p_lut = fb_alloc((COLOR_GRAYSCALE_MAX - COLOR_GRAYSCALE_MIN + 1) * sizeof(int), FB_ALLOC_NO_HINT);
@@ -1088,12 +1090,16 @@ void imlib_gamma(image_t *img, float gamma, float contrast, float brightness)
                 p_lut[i] = IM_MIN(IM_MAX(p , COLOR_GRAYSCALE_MIN), COLOR_GRAYSCALE_MAX);
             }
 
-            for (int y = 0, yy = img->h; y < yy; y++) {
-                uint8_t *data = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(img, y);
-                for (int x = 0, xx = img->w; x < xx; x++) {
-                    int dataPixel = IMAGE_GET_GRAYSCALE_PIXEL_FAST(data, x);
-                    int p = p_lut[dataPixel];
-                    IMAGE_PUT_GRAYSCALE_PIXEL_FAST(data, x, p);
+            uint8_t *ptr = (uint8_t *) img->data;
+            int n = img->w * img->h;
+
+            if (img->bpp == 2) {
+                for (; n > 0; n--, ptr += 2) {
+                    *ptr = p_lut[*ptr];
+                }
+            } else {
+                for (; n > 0; n--, ptr += 1) {
+                    *ptr = p_lut[*ptr];
                 }
             }
 
@@ -1126,15 +1132,15 @@ void imlib_gamma(image_t *img, float gamma, float contrast, float brightness)
                 b_lut[i] = IM_MIN(IM_MAX(b , COLOR_B5_MIN), COLOR_B5_MAX);
             }
 
-            for (int y = 0, yy = img->h; y < yy; y++) {
-                uint16_t *data = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(img, y);
-                for (int x = 0, xx = img->w; x < xx; x++) {
-                    int dataPixel = IMAGE_GET_RGB565_PIXEL_FAST(data, x);
-                    int r = r_lut[COLOR_RGB565_TO_R5(dataPixel)];
-                    int g = g_lut[COLOR_RGB565_TO_G6(dataPixel)];
-                    int b = b_lut[COLOR_RGB565_TO_B5(dataPixel)];
-                    IMAGE_PUT_RGB565_PIXEL_FAST(data, x, COLOR_R5_G6_B5_TO_RGB565(r, g, b));
-                }
+            uint16_t *ptr = (uint16_t *) img->data;
+            int n = img->w * img->h;
+
+            for (; n > 0; n--) {
+                int dataPixel = *ptr;
+                int r = r_lut[COLOR_RGB565_TO_R5(dataPixel)];
+                int g = g_lut[COLOR_RGB565_TO_G6(dataPixel)];
+                int b = b_lut[COLOR_RGB565_TO_B5(dataPixel)];
+                *ptr++ = COLOR_R5_G6_B5_TO_RGB565(r, g, b);
             }
 
             fb_free();
