@@ -266,13 +266,14 @@ STATIC const mp_rom_map_elem_t py_micro_speech_locals_dict_table[] = {
 };
 STATIC MP_DEFINE_CONST_DICT(py_micro_speech_locals_dict, py_micro_speech_locals_dict_table);
 
-static const mp_obj_type_t py_micro_speech_type = {
-    { &mp_type_type },
-    .name = MP_QSTR_MicroSpeech,
-    .print = py_micro_speech_print,
-    .make_new = py_micro_speech_make_new,
-    .locals_dict = (mp_obj_dict_t*)&py_micro_speech_locals_dict,
-};
+STATIC MP_DEFINE_CONST_OBJ_TYPE(
+    py_micro_speech_type,
+    MP_QSTR_MicroSpeech,
+    MP_TYPE_FLAG_NONE,
+    print, py_micro_speech_print,
+    make_new, py_micro_speech_make_new,
+    locals_dict, &py_micro_speech_locals_dict
+);
 
 STATIC const mp_rom_map_elem_t module_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR___name__),        MP_ROM_QSTR(MP_QSTR_micro_speech) },

@@ -139,13 +139,14 @@ STATIC const mp_rom_map_elem_t py_tf_classification_locals_dict_table[] = {
 
 STATIC MP_DEFINE_CONST_DICT(py_tf_classification_locals_dict, py_tf_classification_locals_dict_table);
 
-static const mp_obj_type_t py_tf_classification_type = {
-    { &mp_type_type },
-    .name  = MP_QSTR_tf_classification,
-    .print = py_tf_classification_print,
-    .subscr = py_tf_classification_subscr,
-    .locals_dict = (mp_obj_t) &py_tf_classification_locals_dict
-};
+MP_DEFINE_CONST_OBJ_TYPE(
+    py_tf_classification_type,
+    MP_QSTR_tf_classification,
+    MP_TYPE_FLAG_NONE,
+    print, py_tf_classification_print,
+    subscr, py_tf_classification_subscr,
+    locals_dict, &py_tf_classification_locals_dict
+);
 
 static const mp_obj_type_t py_tf_model_type;
 
@@ -842,14 +843,15 @@ STATIC const mp_rom_map_elem_t locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_regression),          MP_ROM_PTR(&py_tf_regression_obj) }
 };
 
-STATIC MP_DEFINE_CONST_DICT(locals_dict, locals_dict_table);
+STATIC MP_DEFINE_CONST_DICT(py_tf_locals_dict, locals_dict_table);
 
-STATIC const mp_obj_type_t py_tf_model_type = {
-    { &mp_type_type },
-    .name  = MP_QSTR_tf_model,
-    .print = py_tf_model_print,
-    .locals_dict = (mp_obj_t) &locals_dict
-};
+STATIC MP_DEFINE_CONST_OBJ_TYPE(
+    py_tf_model_type,
+    MP_QSTR_tf_model,
+    MP_TYPE_FLAG_NONE,
+    print, py_tf_model_print,
+    locals_dict, &py_tf_locals_dict
+);
 
 #endif // IMLIB_ENABLE_TF
 

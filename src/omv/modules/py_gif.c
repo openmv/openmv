@@ -134,14 +134,15 @@ static const mp_map_elem_t locals_dict_table[] = {
     { MP_OBJ_NEW_QSTR(MP_QSTR_close),       (mp_obj_t)&py_gif_close_obj     },
     { NULL, NULL },
 };
-STATIC MP_DEFINE_CONST_DICT(locals_dict, locals_dict_table);
+STATIC MP_DEFINE_CONST_DICT(py_gif_locals_dict, locals_dict_table);
 
-static const mp_obj_type_t py_gif_type = {
-    { &mp_type_type },
-    .name  = MP_QSTR_Gif,
-    .print = py_gif_print,
-    .locals_dict = (mp_obj_t)&locals_dict,
-};
+STATIC MP_DEFINE_CONST_OBJ_TYPE(
+    py_gif_type,
+    MP_QSTR_Gif,
+    MP_TYPE_FLAG_NONE,
+    print, py_gif_print,
+    locals_dict, &py_gif_locals_dict
+);
 
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_gif_open_obj, 1, py_gif_open);
 static const mp_map_elem_t globals_dict_table[] = {

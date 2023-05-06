@@ -24,7 +24,7 @@
 #include "framebuffer.h"
 #include "omv_boardconfig.h"
 
-STATIC const mp_obj_type_t py_mjpeg_type;
+static const mp_obj_type_t py_mjpeg_type;
 
 typedef struct py_mjpeg_obj {
     mp_obj_base_t base;
@@ -177,12 +177,13 @@ STATIC const mp_rom_map_elem_t py_mjpeg_locals_dict_table[] = {
 
 STATIC MP_DEFINE_CONST_DICT(py_mjpeg_locals_dict, py_mjpeg_locals_dict_table);
 
-STATIC const mp_obj_type_t py_mjpeg_type = {
-    { &mp_type_type },
-    .name  = MP_QSTR_Mjpeg,
-    .print = py_mjpeg_print,
-    .locals_dict = (mp_obj_dict_t *) &py_mjpeg_locals_dict,
-};
+STATIC MP_DEFINE_CONST_OBJ_TYPE(
+    py_mjpeg_type,
+    MP_QSTR_Mjpeg,
+    MP_TYPE_FLAG_NONE,
+    print, py_mjpeg_print,
+    locals_dict, &py_mjpeg_locals_dict
+);
 
 STATIC const mp_rom_map_elem_t globals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR___name__),    MP_ROM_QSTR(MP_QSTR_mjpeg)      },

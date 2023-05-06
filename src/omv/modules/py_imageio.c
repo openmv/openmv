@@ -637,12 +637,12 @@ STATIC const mp_rom_map_elem_t py_imageio_locals_dict_table[] = {
 
 STATIC MP_DEFINE_CONST_DICT(py_imageio_locals_dict, py_imageio_locals_dict_table);
 
-const mp_obj_type_t py_imageio_type = {
-    { &mp_type_type },
-    .name = MP_QSTR_ImageIO,
-    .print = py_imageio_print,
-    .make_new = py_imageio_make_new,
-    .locals_dict = (mp_obj_dict_t *) &py_imageio_locals_dict,
-};
-
+MP_DEFINE_CONST_OBJ_TYPE(
+    py_imageio_type,
+    MP_QSTR_ImageIO,
+    MP_TYPE_FLAG_NONE,
+    print, py_imageio_print,
+    make_new, py_imageio_make_new,
+    locals_dict, &py_imageio_locals_dict
+);
 #endif // IMLIB_ENABLE_IMAGE_IO
