@@ -223,6 +223,7 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/extmod/,\
 	modurandom.o        \
 	modutimeq.o         \
 	machine_i2c.o       \
+	machine_pwm.o       \
 	utime_mphal.o       \
 	vfs.o               \
 	vfs_fat.o           \
@@ -294,7 +295,6 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/modules/,\
 	machine/pin.o                       \
 	machine/timer.o                     \
 	machine/rtcounter.o                 \
-	machine/pwm.o                       \
 	machine/temp.o                      \
 	uos/moduos.o                        \
 	uos/microbitfs.o                    \

@@ -340,6 +340,9 @@ soft_reset:
     }
 
     printf("MPY: soft reboot\n");
+    #if MICROPY_PY_MACHINE_HW_PWM
+    pwm_deinit_all();
+    #endif
     #if MICROPY_PY_AUDIO
     py_audio_deinit();
     #endif

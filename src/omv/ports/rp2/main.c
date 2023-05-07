@@ -105,7 +105,7 @@ void __fatal_error()
     }
 }
 
-void pico_reset_to_bootloader(void)
+void pico_reset_to_bootloader(size_t n_args, const void *args_in)
 {
     reset_usb_boot(0, 0);
 }
@@ -175,8 +175,8 @@ int main(int argc, char **argv) {
 
     // Install Tinyusb CDC debugger IRQ handler.
     irq_set_enabled(USBCTRL_IRQ, false);
-    irq_remove_handler(USBCTRL_IRQ, irq_get_exclusive_handler(USBCTRL_IRQ));
-    irq_set_exclusive_handler(USBCTRL_IRQ, USBD_IRQHandler);
+    irq_remove_handler(USBCTRL_IRQ, irq_get_vtable_handler(USBCTRL_IRQ));
+    irq_set_exclusive_handler(USBCTRL_IRQ, OMV_USB1_IRQ_HANDLER);
     irq_set_enabled(USBCTRL_IRQ, true);
 
 soft_reset:
@@ -218,10 +218,10 @@ soft_reset:
     #if MICROPY_VFS_FAT && MICROPY_HW_USB_MSC
     // Mount or create a fresh filesystem.
     mp_obj_t mount_point = MP_OBJ_NEW_QSTR(MP_QSTR__slash_);
-    mp_obj_t bdev = rp2_flash_type.make_new(&rp2_flash_type, 0, 0, NULL);
+    mp_obj_t bdev = MP_OBJ_TYPE_GET_SLOT(&rp2_flash_type, make_new)(&rp2_flash_type, 0, 0, NULL);
     if (mp_vfs_mount_and_chdir_protected(bdev, mount_point) == -MP_ENODEV) {
         // Create a fresh filesystem.
-        fs_user_mount_t *vfs  = mp_fat_vfs_type.make_new(&mp_fat_vfs_type, 1, 0, &bdev);
+        fs_user_mount_t *vfs  = MP_OBJ_TYPE_GET_SLOT(&mp_fat_vfs_type, make_new)(&mp_fat_vfs_type, 1, 0, &bdev);
         if (factoryreset_create_filesystem(vfs) == 0) {
             mp_vfs_mount_and_chdir_protected(bdev, mount_point);
         }

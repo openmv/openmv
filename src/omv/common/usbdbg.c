@@ -430,8 +430,8 @@ void usbdbg_control(void *buffer, uint8_t request, uint32_t length)
             break;
 
         case USBDBG_SYS_RESET_TO_BL:{
-            #if defined(MICROPY_RESET_TO_BOOTLOADER)
-            MICROPY_RESET_TO_BOOTLOADER();
+            #if defined(MICROPY_BOARD_ENTER_BOOTLOADER)
+            MICROPY_BOARD_ENTER_BOOTLOADER(0, 0);
             #else
             NVIC_SystemReset();
             #endif

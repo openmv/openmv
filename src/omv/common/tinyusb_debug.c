@@ -56,9 +56,9 @@ void tud_cdc_line_coding_cb(uint8_t itf, cdc_line_coding_t const *coding)
     debug_ringbuf.iput = 0;
 
     if (0) {
-    #if defined(MICROPY_RESET_TO_BOOTLOADER)
+    #if defined(MICROPY_BOARD_ENTER_BOOTLOADER)
     } else if (coding->bit_rate == 1200) {
-        MICROPY_RESET_TO_BOOTLOADER();
+        MICROPY_BOARD_ENTER_BOOTLOADER(0, 0);
     #endif
     } else if (coding->bit_rate == DEBUG_BAUDRATE_SLOW
             || coding->bit_rate == DEBUG_BAUDRATE_FAST) {
