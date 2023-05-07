@@ -61,13 +61,15 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_net_predict_obj, 2, py_net_predict);
 STATIC const mp_rom_map_elem_t locals_dict_table[] = {
     {MP_ROM_QSTR(MP_QSTR_predict), MP_ROM_PTR(&py_net_predict_obj)}};
 
-STATIC MP_DEFINE_CONST_DICT(locals_dict, locals_dict_table);
+STATIC MP_DEFINE_CONST_DICT(py_net_locals_dict, locals_dict_table);
 
-static const mp_obj_type_t py_st_net_type = {{&mp_type_type},
-                                             .name = MP_QSTR_Net,
-                                             .print = py_net_print,
-                                             .locals_dict =
-                                                 (mp_obj_t)&locals_dict};
+STATIC MP_DEFINE_CONST_OBJ_TYPE(
+    py_st_net_type,
+    MP_QSTR_Net,
+    MP_TYPE_FLAG_NONE,
+    print, py_net_print,
+    locals_dict, &py_net_locals_dict
+);
 
 /* Function in charge of creating an instance of "ST NN" class and initializing
  * the NN named nn_name */

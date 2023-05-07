@@ -26,7 +26,9 @@
 #include "hardware/clocks.h"
 #include "OpenPDMFilter.h"
 
+#ifndef NO_QSTR
 #include "pdm.pio.h"
+#endif
 #include "py_audio.h"
 
 #define PDM_DEFAULT_GAIN    (8)
@@ -58,6 +60,8 @@ typedef struct _audio_data_t {
     TPDMFilter_InitStruct pdm_filter; // OpenPDM filter used to convert PDM into PCM
     void (*pdm_filter_func) (uint8_t*, int16_t*, uint16_t, TPDMFilter_InitStruct*);
 } audio_data_t;
+
+MP_REGISTER_ROOT_POINTER(struct _audio_data_t *audio_data);
 
 #define audio_data MP_STATE_PORT(audio_data)
 #define NEXT_BUFFER(x) (((x) + 1) % (audio_data->n_buffers))

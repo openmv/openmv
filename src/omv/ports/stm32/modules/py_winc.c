@@ -621,13 +621,7 @@ static const mp_rom_map_elem_t winc_locals_dict_table[] = {
 
 static MP_DEFINE_CONST_DICT(winc_locals_dict, winc_locals_dict_table);
 
-const mod_network_nic_type_t mod_network_nic_type_winc = {
-    .base = {
-        { &mp_type_type },
-        .name = MP_QSTR_WINC,
-        .make_new = py_winc_make_new,
-        .locals_dict = (mp_obj_t)&winc_locals_dict,
-    },
+STATIC const mod_network_nic_protocol_t mod_network_nic_protocol_winc = {
     .gethostbyname = py_winc_gethostbyname,
     .socket     = py_winc_socket_socket,
     .close      = py_winc_socket_close,
@@ -643,4 +637,13 @@ const mod_network_nic_type_t mod_network_nic_type_winc = {
     .settimeout = py_winc_socket_settimeout,
     .ioctl      = py_winc_socket_ioctl,
 };
+
+MP_DEFINE_CONST_OBJ_TYPE(
+    mod_network_nic_type_winc,
+    MP_QSTR_WINC,
+    MP_TYPE_FLAG_NONE,
+    make_new, py_winc_make_new,
+    locals_dict, &winc_locals_dict,
+    protocol, &mod_network_nic_protocol_winc
+);
 #endif // MICROPY_PY_WINC1500

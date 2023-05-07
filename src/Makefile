@@ -66,7 +66,7 @@ LIBPDM_DIR=lib/libpdm
 TENSORFLOW_DIR=lib/libtf
 OMV_BOARD_CONFIG_DIR=$(TOP_DIR)/$(OMV_DIR)/boards/$(TARGET)/
 MP_BOARD_CONFIG_DIR=$(TOP_DIR)/$(MICROPY_DIR)/ports/$(PORT)/boards/$(TARGET)/
-MPY_LIB_DIR=$(TOP_DIR)/../scripts/libraries
+OMV_LIB_DIR=$(TOP_DIR)/../scripts/libraries
 FROZEN_MANIFEST=$(OMV_BOARD_CONFIG_DIR)/manifest.py
 OMV_COMMON_DIR=$(TOP_DIR)/$(OMV_DIR)/common
 
@@ -106,7 +106,7 @@ include $(OMV_BOARD_CONFIG_DIR)/omv_boardconfig.mk
 #OMV_SRC_QSTR := $(wildcard $(TOP_DIR)/$(OMV_DIR)/modules/*.c)
 
 # The following command line args are passed to MicroPython's top Makefile.
-MICROPY_ARGS = PORT=$(PORT) BOARD=$(TARGET) DEBUG=$(DEBUG) MPY_LIB_DIR=$(MPY_LIB_DIR)\
+MICROPY_ARGS = PORT=$(PORT) BOARD=$(TARGET) DEBUG=$(DEBUG) OMV_LIB_DIR=$(OMV_LIB_DIR)\
                FROZEN_MANIFEST=$(FROZEN_MANIFEST) OMV_SRC_QSTR="$(OMV_SRC_QSTR)"\
                MICROPY_ROM_TEXT_COMPRESSION=$(ROM_TEXT_COMPRESSION) USER_C_MODULES=$(TOP_DIR)/$(OMV_DIR)
 

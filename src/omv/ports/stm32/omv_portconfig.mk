@@ -26,6 +26,7 @@ MPY_CFLAGS += -I$(TOP_DIR)/$(MICROPY_DIR)/ports/stm32/
 MPY_CFLAGS += -I$(TOP_DIR)/$(MICROPY_DIR)/ports/stm32/usbdev/core/inc/
 MPY_CFLAGS += -I$(TOP_DIR)/$(MICROPY_DIR)/ports/stm32/usbdev/class/inc/
 MPY_CFLAGS += -I$(TOP_DIR)/$(MICROPY_DIR)/ports/stm32/lwip_inc/
+MPY_CFLAGS += -I$(TOP_DIR)/$(MICROPY_DIR)/shared/runtime/
 MPY_CFLAGS += -DMICROPY_PY_USSL=1 -DMICROPY_SSL_MBEDTLS=1
 MICROPY_ARGS += MICROPY_PY_USSL=1 MICROPY_SSL_MBEDTLS=1 MICROPY_PY_BTREE=1\
                 STM32LIB_CMSIS_DIR=$(TOP_DIR)/$(CMSIS_DIR) STM32LIB_HAL_DIR=$(TOP_DIR)/$(HAL_DIR)
@@ -291,12 +292,10 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/,\
 	machine_spi.o           \
 	machine_uart.o          \
 	machine_adc.o           \
-	machine_timer.o         \
 	machine_bitstream.o     \
 	pybthread.o             \
 	mpthreadport.o          \
 	posix_helpers.o         \
-	softtimer.o             \
 	mbedtls/mbedtls_port.o  \
 	frozen_content.o        \
 	)
@@ -310,9 +309,10 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/shared/,\
 	runtime/pyexec.o            \
 	runtime/interrupt_char.o    \
 	runtime/sys_stdio_mphal.o   \
-	runtime/gchelper_m3.o       \
+	runtime/gchelper_thumb2.o   \
 	runtime/gchelper_native.o   \
 	runtime/stdout_helpers.o    \
+	runtime/softtimer.o         \
 	netutils/*.o                \
 	timeutils/timeutils.o       \
 	readline/readline.o         \
@@ -392,6 +392,7 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/extmod/,\
 	machine_signal.o    \
 	machine_pinbase.o   \
 	machine_bitstream.o \
+	machine_timer.o     \
 	utime_mphal.o       \
 	modonewire.o        \
 	uos_dupterm.o       \
