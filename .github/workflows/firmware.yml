@@ -28,7 +28,7 @@ jobs:
     runs-on: ubuntu-20.04
     strategy:
       matrix:
-        target: [OPENMV2, OPENMV3, OPENMV4, OPENMV4P, OPENMV4_PRO, ARDUINO_PORTENTA_H7, OPENMVPT, ARDUINO_NICLA_VISION, arduino_nano_33_ble_sense, ARDUINO_NANO_RP2040_CONNECT]
+        target: [OPENMV2, OPENMV3, OPENMV4, OPENMV4P, ARDUINO_PORTENTA_H7, OPENMVPT, ARDUINO_NICLA_VISION, arduino_nano_33_ble_sense, ARDUINO_NANO_RP2040_CONNECT]
       fail-fast: false
     steps:
     - name: '⏳ Checkout repository'
