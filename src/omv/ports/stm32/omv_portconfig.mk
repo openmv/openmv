@@ -467,10 +467,10 @@ endif
 
 ifeq ($(MICROPY_PY_NETWORK_CYW43), 1)
 FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/,\
-	drivers/cyw43/*.o          \
-	extmod/network_cyw43.o     \
+	lib/cyw43-driver/src/*.o    \
+	extmod/network_cyw43.o      \
+	extmod/network_lwip.o       \
 	)
-LIBS += $(MICROPY_DIR)/drivers/cyw43/libcyw43.a
 endif
 
 ifeq ($(MICROPY_BLUETOOTH_NIMBLE),1)
@@ -665,7 +665,7 @@ endif
 $(FIRMWARE): FIRMWARE_OBJS
 	$(CPP) -P -E -I$(OMV_BOARD_CONFIG_DIR) $(OMV_DIR)/ports/$(PORT)/$(LDSCRIPT).ld.S > $(BUILD)/$(LDSCRIPT).lds
 	$(CC) $(LDFLAGS) $(FIRM_OBJ) -o $(FW_DIR)/$(FIRMWARE).elf $(LIBS) -lgcc
-	$(OBJCOPY) -Obinary -R .big_const* $(FW_DIR)/$(FIRMWARE).elf $(FW_DIR)/$(FIRMWARE).bin
+	$(OBJCOPY) -Obinary $(FW_DIR)/$(FIRMWARE).elf $(FW_DIR)/$(FIRMWARE).bin
 	$(PYTHON) $(MKDFU) -D $(DFU_DEVICE) -b $(MAIN_APP_ADDR):$(FW_DIR)/$(FIRMWARE).bin $(FW_DIR)/$(FIRMWARE).dfu
 
 ifeq ($(OMV_ENABLE_BL), 1)
