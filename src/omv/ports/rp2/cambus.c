@@ -1,3 +1,14 @@
+/*
+ * This file is part of the OpenMV project.
+ *
+ * Copyright (c) 2023 Ibrahim Abdelkader <iabdalkader@openmv.io>
+ * Copyright (c) 2023 Kwabena W. Agyeman <kwagyeman@openmv.io>
+ *
+ * This work is licensed under the MIT license, see the file LICENSE for details.
+ *
+ * Camera bus port for rp2.
+ */
+
 #include <stdio.h>
 #include <stdbool.h>
 #include "py/mphal.h"
