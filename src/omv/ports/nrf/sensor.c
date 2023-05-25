@@ -210,17 +210,11 @@ int sensor_snapshot(sensor_t *sensor, image_t *image, uint32_t flags)
         while ((*_hrefPort & _hrefMask) == 0); // wait for HIGH
 
         for (int j = 0; j < bytesPerRow; j++) {
-            // rising edges clock each data byte
             while ((*_pclkPort & _pclkMask) != 0); // wait for LOW
-
             uint32_t in = port->IN; // read all bits in parallel
-            //in = (in >> 8) | ((in>>2) & 3);
-            in >>= 2; // place bits 0 and 1 at the "bottom" of the register
-            in &= 0x3f03; // isolate the 8 bits we care about
-            in |= (in >> 6); // combine the upper 6 and lower 2 bits
-
-            if (!(j & 1) || !_grayscale) {
-                *b++ = in;
+            if (!_grayscale || !(j & 1)) {
+                // Note D0 & D1 are swapped on the ML kit.
+                *b++ = ((in >> 8) | ((in >> 3) & 1) | ((in >> 1) & 2));
             }
             while ((*_pclkPort & _pclkMask) == 0); // wait for HIGH
         }
