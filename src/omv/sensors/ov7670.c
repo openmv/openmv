@@ -23,7 +23,11 @@
 
 static const uint8_t default_regs[][2] = {
     // OV7670 reference registers
-    { CLKRC,            CLKRC_PRESCALER_BYPASS | OMV_OV7670_CLKRC },
+    #if (OMV_OV7670_CLKRC == 0)
+    { CLKRC,            CLKRC_PRESCALER_BYPASS },
+    #else
+    { CLKRC,            OMV_OV7670_CLKRC },
+    #endif
     { TSLB,             0x04 },
     { COM7,             0x00 },
     { HSTART,           0x13 },
