@@ -82,7 +82,7 @@ jobs:
 
     - name: "✏️ Generate release changelog"
       id: changelog
-      uses: mikepenz/release-changelog-builder-action@v3
+      uses: mikepenz/release-changelog-builder-action@v4
       with:
         toTag: ${{ github.sha }}
         configuration: '.github/workflows/changelog.json'
@@ -135,7 +135,7 @@ jobs:
 
     - name: "✏️ Generate release changelog"
       id: changelog
-      uses: mikepenz/release-changelog-builder-action@v3
+      uses: mikepenz/release-changelog-builder-action@v4
       with:
         toTag: ${{ github.sha }}
         configuration: '.github/workflows/changelog.json'
