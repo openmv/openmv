@@ -79,6 +79,7 @@
 
 #include "ini.h"
 #include "omv_boardconfig.h"
+#include "omv_gpio.h"
 
 #if MICROPY_PY_LWIP
 #include "lwip/init.h"
@@ -385,6 +386,7 @@ soft_reset:
     spi_init0();
     uart_init0();
     fb_alloc_init0();
+    omv_gpio_init0();
     framebuffer_init0();
     sensor_init0();
     dma_alloc_init0();
