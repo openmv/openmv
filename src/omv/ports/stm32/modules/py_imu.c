@@ -9,15 +9,17 @@
  * IMU Python module.
  */
 #include "omv_boardconfig.h"
+
 #if MICROPY_PY_IMU
+#include STM32_HAL_H
 
 #include "py/obj.h"
 #include "py/mphal.h"
 #include "py/runtime.h"
+
 #include "py_helper.h"
 #include "py_imu.h"
-
-#include STM32_HAL_H
+#include "omv_gpio.h"
 
 #if defined(IMU_CHIP_LSM6DS3)
 #include "lsm6ds3tr_c_reg.h"
@@ -92,20 +94,20 @@ static void platform_deinit(void *imubus) {
 
 static int32_t platform_write(void *imubus, uint8_t Reg, uint8_t *Bufp, uint16_t len)
 {
-    HAL_GPIO_WritePin(IMU_SPI_SSEL_PORT, IMU_SPI_SSEL_PIN, GPIO_PIN_RESET);
+    omv_gpio_write(IMU_SPI_SSEL_PIN, 0);
     HAL_SPI_Transmit(imubus, &Reg, 1, HAL_MAX_DELAY);
     HAL_SPI_Transmit(imubus, Bufp, len, HAL_MAX_DELAY);
-    HAL_GPIO_WritePin(IMU_SPI_SSEL_PORT, IMU_SPI_SSEL_PIN, GPIO_PIN_SET);
+    omv_gpio_write(IMU_SPI_SSEL_PIN, 1);
     return 0;
 }
 
 static int32_t platform_read(void *imubus, uint8_t Reg, uint8_t *Bufp, uint16_t len)
 {
     Reg |= 0x80;
-    HAL_GPIO_WritePin(IMU_SPI_SSEL_PORT, IMU_SPI_SSEL_PIN, GPIO_PIN_RESET);
+    omv_gpio_write(IMU_SPI_SSEL_PIN, 0);
     HAL_SPI_Transmit(imubus, &Reg, 1, HAL_MAX_DELAY);
     HAL_SPI_Receive(imubus, Bufp, len, HAL_MAX_DELAY);
-    HAL_GPIO_WritePin(IMU_SPI_SSEL_PORT, IMU_SPI_SSEL_PIN, GPIO_PIN_SET);
+    omv_gpio_write(IMU_SPI_SSEL_PIN, 1);
     return 0;
 }
 #elif defined(IMU_I2C)

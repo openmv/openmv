@@ -18,6 +18,7 @@
 #include "framebuffer.h"
 #include "omv_boardconfig.h"
 #include "unaligned_memcpy.h"
+#include "omv_gpio.h"
 
 #define MDMA_BUFFER_SIZE        (64)
 #define DMA_MAX_XFER_SIZE       (0xFFFF*4)
@@ -319,24 +320,35 @@ int sensor_shutdown(int enable)
     sensor_abort();
 
     if (enable) {
+        #if defined(DCMI_POWER_PIN)
         if (sensor.pwdn_pol == ACTIVE_HIGH) {
-            DCMI_PWDN_HIGH();
+            omv_gpio_write(DCMI_POWER_PIN, 1);
         } else {
-            DCMI_PWDN_LOW();
+            omv_gpio_write(DCMI_POWER_PIN, 0);
         }
+        #endif
         HAL_NVIC_DisableIRQ(DCMI_IRQn);
         HAL_DCMI_DeInit(&DCMIHandle);
     } else {
+        #if defined(DCMI_POWER_PIN)
         if (sensor.pwdn_pol == ACTIVE_HIGH) {
-            DCMI_PWDN_LOW();
+            omv_gpio_write(DCMI_POWER_PIN, 0);
         } else {
-            DCMI_PWDN_HIGH();
+            omv_gpio_write(DCMI_POWER_PIN, 1);
         }
+        #endif
         ret = sensor_dcmi_config(sensor.pixformat);
     }
 
     mp_hal_delay_ms(10);
     return ret;
+}
+
+static void sensor_vsync_callback(omv_gpio_t pin, void *data)
+{
+    if (sensor.vsync_callback != NULL) {
+        sensor.vsync_callback(omv_gpio_read(DCMI_VSYNC_PIN));
+    }
 }
 
 int sensor_set_vsync_callback(vsync_cb_t vsync_cb)
@@ -345,26 +357,14 @@ int sensor_set_vsync_callback(vsync_cb_t vsync_cb)
     if (sensor.vsync_callback == NULL) {
         #if (DCMI_VSYNC_EXTI_SHARED == 0)
         // Disable VSYNC EXTI IRQ
-        HAL_NVIC_DisableIRQ(DCMI_VSYNC_EXTI_IRQN);
+        omv_gpio_irq_enable(DCMI_VSYNC_PIN, false);
         #endif
     } else {
         // Enable VSYNC EXTI IRQ
-        NVIC_SetPriority(DCMI_VSYNC_EXTI_IRQN, IRQ_PRI_EXTINT);
-        HAL_NVIC_EnableIRQ(DCMI_VSYNC_EXTI_IRQN);
+        omv_gpio_irq_register(DCMI_VSYNC_PIN, sensor_vsync_callback, NULL);
+        omv_gpio_irq_enable(DCMI_VSYNC_PIN, true);
     }
     return 0;
-}
-
-void DCMI_VsyncExtiCallback()
-{
-    if (__HAL_GPIO_EXTI_GET_FLAG(1 << DCMI_VSYNC_EXTI_LINE)) {
-        if (hal_get_exti_gpio(DCMI_VSYNC_EXTI_LINE) == DCMI_VSYNC_EXTI_GPIO) {
-            __HAL_GPIO_EXTI_CLEAR_FLAG(1 << DCMI_VSYNC_EXTI_LINE);
-            if (sensor.vsync_callback != NULL) {
-                sensor.vsync_callback(HAL_GPIO_ReadPin(DCMI_VSYNC_PORT, DCMI_VSYNC_PIN));
-            }
-        }
-    }
 }
 
 // If we are cropping the image by more than 1 word in width we can align the line start to
@@ -900,7 +900,7 @@ int sensor_snapshot(sensor_t *sensor, image_t *image, uint32_t flags)
     // Let the camera know we want to trigger it now.
     #if defined(DCMI_FSYNC_PIN)
     if (sensor->hw_flags.fsync) {
-        DCMI_FSYNC_HIGH();
+        omv_gpio_write(DCMI_FSYNC_PIN, 1);
     }
     #endif
 
@@ -926,7 +926,7 @@ int sensor_snapshot(sensor_t *sensor, image_t *image, uint32_t flags)
 
             #if defined(DCMI_FSYNC_PIN)
             if (sensor->hw_flags.fsync) {
-                DCMI_FSYNC_LOW();
+                omv_gpio_write(DCMI_FSYNC_PIN, 0);
             }
             #endif
 
@@ -944,7 +944,7 @@ int sensor_snapshot(sensor_t *sensor, image_t *image, uint32_t flags)
     // We're done receiving data.
     #if defined(DCMI_FSYNC_PIN)
     if (sensor->hw_flags.fsync) {
-        DCMI_FSYNC_LOW();
+        omv_gpio_write(DCMI_FSYNC_PIN, 0);
     }
     #endif
 

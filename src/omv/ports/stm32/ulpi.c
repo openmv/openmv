@@ -8,12 +8,13 @@
  *
  * USB3320 ULPI functions ported from stm32f7xx_lp_modes.c 
  */
-#include <stdint.h>
-#include "ulpi.h"
 #include "omv_boardconfig.h"
 
 #if (OMV_USB_ULPI == 1)
 #include STM32_HAL_H
+#include <stdint.h>
+#include "ulpi.h"
+#include "omv_gpio.h"
 
 #define USBULPI_PHYCR       ((uint32_t)(0x40040000 + 0x034))
 #define USBULPI_D07         ((uint32_t)0x000000FF)
@@ -158,44 +159,26 @@ void ulpi_enter_low_power(void)
  */
 void ulpi_leave_low_power(void)
 {
-    GPIO_InitTypeDef  GPIO_InitStruct;
-
     /* Enable GPIO clock for OTG USB STP pin */
-    __HAL_RCC_GPIOC_CLK_ENABLE();
-    OMV_USB_ULPI_DIR_CLK_ENABLE();
+    omv_gpio_clock_enable(OMV_USB_ULPI_STP_PIN, true);
+    omv_gpio_clock_enable(OMV_USB_ULPI_DIR_PIN, true);
 
-    /* Set OTG STP pin as GP Output  */
-    GPIO_InitStruct.Pin = GPIO_PIN_0;
-    GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-    GPIO_InitStruct.Pull = GPIO_NOPULL;
-    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
-    HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
-
-    GPIO_InitStruct.Pin = OMV_USB_ULPI_DIR_PIN;
-    GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
-    GPIO_InitStruct.Pull = GPIO_NOPULL;
-    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
-    HAL_GPIO_Init(OMV_USB_ULPI_DIR_PORT, &GPIO_InitStruct);
+    /* Configure OTG STP and DIR pin as GP Output  */
+    omv_gpio_config(OMV_USB_ULPI_STP_PIN, OMV_GPIO_MODE_OUTPUT, OMV_GPIO_PULL_NONE, OMV_GPIO_SPEED_LOW, -1);
+    omv_gpio_config(OMV_USB_ULPI_DIR_PIN, OMV_GPIO_MODE_INPUT, OMV_GPIO_PULL_NONE, OMV_GPIO_SPEED_LOW, -1);
 
     /* Set OTG STP pin to High */
-    HAL_GPIO_WritePin(GPIOC, GPIO_PIN_0, GPIO_PIN_SET);
+    omv_gpio_write(OMV_USB_ULPI_STP_PIN, 1);
 
     /* Wait for DIR to go low */
     for (uint32_t ticks = HAL_GetTick();
             ((HAL_GetTick() - ticks) < 500)
-            && HAL_GPIO_ReadPin(OMV_USB_ULPI_DIR_PORT, OMV_USB_ULPI_DIR_PIN);) {
+            && omv_gpio_read(OMV_USB_ULPI_DIR_PIN);) {
         __WFI();
     }
 
-    GPIO_InitStruct.Pin = GPIO_PIN_0;
-    GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
-    GPIO_InitStruct.Alternate = GPIO_AF10_OTG_HS;
-    HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
-
-    GPIO_InitStruct.Pin = OMV_USB_ULPI_DIR_PIN;
-    GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
-    GPIO_InitStruct.Alternate = GPIO_AF10_OTG_HS;
-    HAL_GPIO_Init(OMV_USB_ULPI_DIR_PORT, &GPIO_InitStruct);
-
+    /* Configure OTG STP and DIR pin as USB AF */
+    omv_gpio_config(OMV_USB_ULPI_STP_PIN, OMV_GPIO_MODE_ALT, OMV_GPIO_PULL_NONE, OMV_GPIO_SPEED_MAX, -1);
+    omv_gpio_config(OMV_USB_ULPI_DIR_PIN, OMV_GPIO_MODE_ALT, OMV_GPIO_PULL_NONE, OMV_GPIO_SPEED_MAX, -1);
 }
 #endif // (OMV_USB_ULPI == 1)
