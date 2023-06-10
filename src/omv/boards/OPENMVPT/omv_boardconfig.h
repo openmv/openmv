@@ -385,7 +385,7 @@
 
 // HDMI CEC I/O
 #define OMV_CEC_PRESENT
-#define OMV_CEC_PIN                         (pin_H2)
+#define OMV_CEC_PIN                         (&omv_pin_H2_GPIO)
 
 // FIR Lepton
 #define OMV_FIR_LEPTON_I2C_BUS                  (ISC_I2C_ID)
