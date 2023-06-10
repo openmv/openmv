@@ -1,8 +1,8 @@
 /*
  * This file is part of the OpenMV project.
  *
- * Copyright (c) 2013-2021 Ibrahim Abdelkader <iabdalkader@openmv.io>
- * Copyright (c) 2013-2021 Kwabena W. Agyeman <kwagyeman@openmv.io>
+ * Copyright (c) 2013-2023 Ibrahim Abdelkader <iabdalkader@openmv.io>
+ * Copyright (c) 2013-2023 Kwabena W. Agyeman <kwagyeman@openmv.io>
  *
  * This work is licensed under the MIT license, see the file LICENSE for details.
  *
@@ -45,16 +45,10 @@ typedef struct {
 
 typedef const stm32_gpio_t *omv_gpio_t;
 
-// cambus/i2c definition
-// This pointer will be set to its respective I2C handle which is defined in MicroPython along with
-// IRQ handlers, if this I2C is enabled in Micropython, or defined and handled in stm32fxxx_hal_msp.c.
-typedef I2C_HandleTypeDef *omv_cambus_t;
-
-// For board config files.
-
 // Dummy AF for pins defined as I/O
 #define GPIO_NONE_GPIO    (0)
 
+// For board config files.
 #if OMV_GPIO_DEFINE_PINS
 #define OMV_GPIO_DEFINE(port, pin, af, inst) \
     const stm32_gpio_t omv_pin_##port##pin##_##inst = {GPIO##port, GPIO_PIN_##pin, GPIO_##af##_##inst};
@@ -62,7 +56,10 @@ typedef I2C_HandleTypeDef *omv_cambus_t;
 #define OMV_GPIO_DEFINE(port, pin, af, inst) \
     extern stm32_gpio_t omv_pin_##port##pin##_##inst;
 #endif
-
 #include "omv_pins.h"
+
+// This pointer will be set to its respective I2C handle which is defined in MicroPython along with
+// IRQ handlers, if this I2C is enabled in Micropython, or defined and handled in stm32fxxx_hal_msp.c.
+typedef I2C_HandleTypeDef *omv_i2c_dev_t;
 
 #endif // __OMV_PORTCONFIG_H__

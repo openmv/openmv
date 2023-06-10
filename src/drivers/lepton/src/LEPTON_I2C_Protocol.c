@@ -104,7 +104,7 @@ LEP_RESULT LEP_I2C_SelectDevice(LEP_CAMERA_PORT_DESC_T_PTR portDescPtr,
     return(result);
 }
 
-LEP_RESULT LEP_I2C_OpenPort(cambus_t *bus,
+LEP_RESULT LEP_I2C_OpenPort(omv_i2c_t *bus,
                             LEP_UINT16 *baudRateInkHz,
                             LEP_UINT8* deviceAddress)
 {

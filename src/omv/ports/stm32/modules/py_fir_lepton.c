@@ -240,7 +240,7 @@ void fir_lepton_deinit()
     #endif
 }
 
-int fir_lepton_init(cambus_t *bus, int *w, int *h, int *refresh, int *resolution)
+int fir_lepton_init(omv_i2c_t *bus, int *w, int *h, int *refresh, int *resolution)
 {
     SPI_HandleTypeDef *hspi = OMV_FIR_LEPTON_CONTROLLER->spi;
 

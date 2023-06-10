@@ -14,7 +14,6 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include "py/mphal.h"
-#include "cambus.h"
 #include "sensor.h"
 #include "ov2640.h"
 #include "ov5640.h"
@@ -33,6 +32,7 @@
 #include "framebuffer.h"
 #include "omv_boardconfig.h"
 #include "omv_gpio.h"
+#include "omv_i2c.h"
 
 #if (OMV_ENABLE_PAJ6100 == 1)
 #define OMV_ENABLE_NONI2CIS
@@ -141,7 +141,7 @@ __weak int sensor_reset()
     sensor_shutdown(false);
 
     // Disable the bus before reset.
-    cambus_enable(&sensor.bus, false);
+    omv_i2c_enable(&sensor.i2c_bus, false);
 
     #if defined(DCMI_RESET_PIN)
     // Hard-reset the sensor
@@ -159,7 +159,7 @@ __weak int sensor_reset()
     mp_hal_delay_ms(20);
 
     // Re-enable the bus.
-    cambus_enable(&sensor.bus, true);
+    omv_i2c_enable(&sensor.i2c_bus, true);
 
     // Call sensor-specific reset function
     if (sensor.reset != NULL
@@ -189,7 +189,7 @@ int sensor_probe_init(uint32_t bus_id, uint32_t bus_speed)
     #endif
 
     /* Some sensors have different reset polarities, and we can't know which sensor
-       is connected before initializing cambus and probing the sensor, which in turn
+       is connected before initializing i2c and probing the sensor, which in turn
        requires pulling the sensor out of the reset state. So we try to probe the
        sensor with both polarities to determine line state. */
     sensor.pwdn_pol = ACTIVE_HIGH;
@@ -205,11 +205,11 @@ int sensor_probe_init(uint32_t bus_id, uint32_t bus_speed)
     #endif
 
     // Initialize the camera bus.
-    cambus_init(&sensor.bus, bus_id, bus_speed);
+    omv_i2c_init(&sensor.i2c_bus, bus_id, bus_speed);
     mp_hal_delay_ms(10);
 
     // Probe the sensor
-    sensor.slv_addr = cambus_scan(&sensor.bus, NULL, 0);
+    sensor.slv_addr = omv_i2c_scan(&sensor.i2c_bus, NULL, 0);
     if (sensor.slv_addr == 0) {
         /* Sensor has been held in reset,
            so the reset line is active low */
@@ -222,7 +222,7 @@ int sensor_probe_init(uint32_t bus_id, uint32_t bus_speed)
         #endif
 
         // Probe again to set the slave addr.
-        sensor.slv_addr = cambus_scan(&sensor.bus, NULL, 0);
+        sensor.slv_addr = omv_i2c_scan(&sensor.i2c_bus, NULL, 0);
         if (sensor.slv_addr == 0) {
             sensor.pwdn_pol = ACTIVE_LOW;
 
@@ -231,7 +231,7 @@ int sensor_probe_init(uint32_t bus_id, uint32_t bus_speed)
             mp_hal_delay_ms(10);
             #endif
 
-            sensor.slv_addr = cambus_scan(&sensor.bus, NULL, 0);
+            sensor.slv_addr = omv_i2c_scan(&sensor.i2c_bus, NULL, 0);
             if (sensor.slv_addr == 0) {
                 sensor.reset_pol = ACTIVE_HIGH;
 
@@ -240,7 +240,7 @@ int sensor_probe_init(uint32_t bus_id, uint32_t bus_speed)
                 mp_hal_delay_ms(10);
                 #endif
 
-                sensor.slv_addr = cambus_scan(&sensor.bus, NULL, 0);
+                sensor.slv_addr = omv_i2c_scan(&sensor.i2c_bus, NULL, 0);
                 #ifndef OMV_ENABLE_NONI2CIS
                 if (sensor.slv_addr == 0) {
                     return SENSOR_ERROR_ISC_UNDETECTED;
@@ -253,31 +253,31 @@ int sensor_probe_init(uint32_t bus_id, uint32_t bus_speed)
     switch (sensor.slv_addr) {
         #if (OMV_ENABLE_OV2640 == 1)
         case OV2640_SLV_ADDR: // Or OV9650.
-            cambus_readb(&sensor.bus, sensor.slv_addr, OV_CHIP_ID, &sensor.chip_id);
+            omv_i2c_readb(&sensor.i2c_bus, sensor.slv_addr, OV_CHIP_ID, &sensor.chip_id);
             break;
         #endif // (OMV_ENABLE_OV2640 == 1)
 
         #if (OMV_ENABLE_OV5640 == 1)
         case OV5640_SLV_ADDR:
-            cambus_readb2(&sensor.bus, sensor.slv_addr, OV5640_CHIP_ID, &sensor.chip_id);
+            omv_i2c_readb2(&sensor.i2c_bus, sensor.slv_addr, OV5640_CHIP_ID, &sensor.chip_id);
             break;
         #endif // (OMV_ENABLE_OV5640 == 1)
 
         #if (OMV_ENABLE_OV7725 == 1) || (OMV_ENABLE_OV7670 == 1) || (OMV_ENABLE_OV7690 == 1)
         case OV7725_SLV_ADDR: // Or OV7690 or OV7670.
-            cambus_readb(&sensor.bus, sensor.slv_addr, OV_CHIP_ID, &sensor.chip_id);
+            omv_i2c_readb(&sensor.i2c_bus, sensor.slv_addr, OV_CHIP_ID, &sensor.chip_id);
             break;
         #endif //(OMV_ENABLE_OV7725 == 1) || (OMV_ENABLE_OV7670 == 1) || (OMV_ENABLE_OV7690 == 1)
 
         #if (OMV_ENABLE_MT9V0XX == 1)
         case MT9V0XX_SLV_ADDR:
-            cambus_readw(&sensor.bus, sensor.slv_addr, ON_CHIP_ID, &sensor.chip_id_w);
+            omv_i2c_readw(&sensor.i2c_bus, sensor.slv_addr, ON_CHIP_ID, &sensor.chip_id_w);
             break;
         #endif //(OMV_ENABLE_MT9V0XX == 1)
 
         #if (OMV_ENABLE_MT9M114 == 1)
         case MT9M114_SLV_ADDR:
-            cambus_readw2(&sensor.bus, sensor.slv_addr, ON_CHIP_ID, &sensor.chip_id_w);
+            omv_i2c_readw2(&sensor.i2c_bus, sensor.slv_addr, ON_CHIP_ID, &sensor.chip_id_w);
             break;
         #endif // (OMV_ENABLE_MT9M114 == 1)
 
@@ -289,13 +289,13 @@ int sensor_probe_init(uint32_t bus_id, uint32_t bus_speed)
 
         #if (OMV_ENABLE_HM01B0 == 1) || (OMV_ENABLE_HM0360 == 1)
         case HM0XX0_SLV_ADDR:
-            cambus_readb2(&sensor.bus, sensor.slv_addr, HIMAX_CHIP_ID, &sensor.chip_id);
+            omv_i2c_readb2(&sensor.i2c_bus, sensor.slv_addr, HIMAX_CHIP_ID, &sensor.chip_id);
             break;
         #endif // (OMV_ENABLE_HM01B0 == 1) || (OMV_ENABLE_HM0360 == 1)
 
         #if (OMV_ENABLE_GC2145 == 1)
         case GC2145_SLV_ADDR:
-            cambus_readb(&sensor.bus, sensor.slv_addr, GC_CHIP_ID, &sensor.chip_id);
+            omv_i2c_readb(&sensor.i2c_bus, sensor.slv_addr, GC_CHIP_ID, &sensor.chip_id);
             break;
         #endif //(OMV_ENABLE_GC2145 == 1)
 

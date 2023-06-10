@@ -15,7 +15,7 @@
 #include "usbd_desc.h"
 #include "usbd_uvc.h"
 #include "usbd_uvc_if.h"
-#include "cambus.h"
+#include "omv_i2c.h"
 #include "sensor.h"
 #include "framebuffer.h"
 #include "omv_boardconfig.h"

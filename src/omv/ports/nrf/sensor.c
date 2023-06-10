@@ -12,7 +12,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include "py/mphal.h"
-#include "cambus.h"
+#include "omv_i2c.h"
 #include "sensor.h"
 #include "framebuffer.h"
 #include "omv_boardconfig.h"

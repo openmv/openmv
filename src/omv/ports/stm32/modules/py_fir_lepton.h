@@ -11,7 +11,7 @@
 #ifndef __PY_FIR_LEPTON_H__
 #define __PY_FIR_LEPTON_H__
 void fir_lepton_deinit();
-int fir_lepton_init(cambus_t *bus, int *w, int *h, int *refresh, int *resolution);
+int fir_lepton_init(omv_i2c_t *bus, int *w, int *h, int *refresh, int *resolution);
 void fir_lepton_register_vsync_cb(mp_obj_t cb);
 mp_obj_t fir_lepton_get_radiometry();
 void fir_lepton_register_frame_cb(mp_obj_t cb);

@@ -84,7 +84,7 @@ extern "C"
        #include <stdbool.h>
     #endif
 
-    #include "cambus.h"
+    #include "omv_i2c.h"
 
 /******************************************************************************/
 /** EXPORTED DEFINES                                                         **/
@@ -262,7 +262,7 @@ extern "C"
     */
     typedef struct  LEP_CAMERA_PORT_DESC_T_TAG
     {
-        cambus_t *bus;
+        omv_i2c_t *bus;
         LEP_CAMERA_PORT_E   portType;
         LEP_UINT16  portBaudRate;
         LEP_UINT8 deviceAddress;

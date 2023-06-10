@@ -14,7 +14,6 @@
 
 #if MICROPY_PY_SENSOR
 
-#include "cambus.h"
 #include "sensor.h"
 #include "imlib.h"
 #include "xalloc.h"
@@ -24,6 +23,7 @@
 #include "py_imu.h"
 #endif
 #include "omv_boardconfig.h"
+#include "omv_i2c.h"
 #include "py_helper.h"
 #include "framebuffer.h"
 

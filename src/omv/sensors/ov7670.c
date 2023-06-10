@@ -15,7 +15,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "cambus.h"
+#include "omv_i2c.h"
 #include "sensor.h"
 #include "ov7670.h"
 #include "ov7670_regs.h"
@@ -328,14 +328,14 @@ static const uint8_t qqvga_regs[][2] = {
 static int reset(sensor_t *sensor)
 {
     // Reset all registers
-    int ret = cambus_writeb(&sensor->bus, sensor->slv_addr, COM7, COM7_RESET);
+    int ret = omv_i2c_writeb(&sensor->i2c_bus, sensor->slv_addr, COM7, COM7_RESET);
 
     // Delay 2 ms
     mp_hal_delay_ms(2);
 
     // Write default regsiters
     for (int i = 0; default_regs[i][0] != 0xff; i++) {
-        ret |= cambus_writeb(&sensor->bus, sensor->slv_addr, default_regs[i][0], default_regs[i][1]);
+        ret |= omv_i2c_writeb(&sensor->i2c_bus, sensor->slv_addr, default_regs[i][0], default_regs[i][1]);
     }
 
     // Delay 300 ms
@@ -347,7 +347,7 @@ static int reset(sensor_t *sensor)
 static int sleep(sensor_t *sensor, int enable)
 {
     uint8_t reg;
-    int ret = cambus_readb(&sensor->bus, sensor->slv_addr, COM2, &reg);
+    int ret = omv_i2c_readb(&sensor->i2c_bus, sensor->slv_addr, COM2, &reg);
 
     if (enable) {
         reg |= COM2_SOFT_SLEEP;
@@ -356,13 +356,13 @@ static int sleep(sensor_t *sensor, int enable)
     }
 
     // Write back register
-    return cambus_writeb(&sensor->bus, sensor->slv_addr, COM2, reg) | ret;
+    return omv_i2c_writeb(&sensor->i2c_bus, sensor->slv_addr, COM2, reg) | ret;
 }
 
 static int read_reg(sensor_t *sensor, uint16_t reg_addr)
 {
     uint8_t reg_data;
-    if (cambus_readb(&sensor->bus, sensor->slv_addr, reg_addr, &reg_data) != 0) {
+    if (omv_i2c_readb(&sensor->i2c_bus, sensor->slv_addr, reg_addr, &reg_data) != 0) {
         return -1;
     }
     return reg_data;
@@ -370,7 +370,7 @@ static int read_reg(sensor_t *sensor, uint16_t reg_addr)
 
 static int write_reg(sensor_t *sensor, uint16_t reg_addr, uint16_t reg_data)
 {
-    return cambus_writeb(&sensor->bus, sensor->slv_addr, reg_addr, reg_data);
+    return omv_i2c_writeb(&sensor->i2c_bus, sensor->slv_addr, reg_addr, reg_data);
 }
 
 static int set_pixformat(sensor_t *sensor, pixformat_t pixformat)
@@ -392,7 +392,7 @@ static int set_pixformat(sensor_t *sensor, pixformat_t pixformat)
 
     // Write pixel format registers
     for (int i=0; regs[i][0] != 0xff; i++) {
-        ret |= cambus_writeb(&sensor->bus, sensor->slv_addr, regs[i][0], regs[i][1]);
+        ret |= omv_i2c_writeb(&sensor->i2c_bus, sensor->slv_addr, regs[i][0], regs[i][1]);
     }
 
     return ret;
@@ -419,7 +419,7 @@ static int set_framesize(sensor_t *sensor, framesize_t framesize)
 
     // Write pixel format registers
     for (int i=0; regs[i][0] != 0xFF; i++) {
-        ret |= cambus_writeb(&sensor->bus, sensor->slv_addr, regs[i][0], regs[i][1]);
+        ret |= omv_i2c_writeb(&sensor->i2c_bus, sensor->slv_addr, regs[i][0], regs[i][1]);
     }
     return ret;
 }

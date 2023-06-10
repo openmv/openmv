@@ -53,7 +53,6 @@
 #include "extint.h"
 #include "servo.h"
 
-#include "cambus.h"
 #include "sensor.h"
 #include "usbdbg.h"
 #include "wifidbg.h"
@@ -80,6 +79,7 @@
 #include "ini.h"
 #include "omv_boardconfig.h"
 #include "omv_gpio.h"
+#include "omv_i2c.h"
 
 #if MICROPY_PY_LWIP
 #include "lwip/init.h"

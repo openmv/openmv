@@ -14,7 +14,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
-#include "cambus.h"
+#include "omv_i2c.h"
 #include "sensor.h"
 #include "hm01b0.h"
 #include "hm01b0_regs.h"
@@ -127,13 +127,13 @@ static int reset(sensor_t *sensor)
     // Reset sensor.
     uint8_t reg=0xff;
     for (int retry=HIMAX_BOOT_RETRY; retry >= 0 && reg != HIMAX_MODE_STANDBY; retry--) {
-        if (cambus_writeb2(&sensor->bus, sensor->slv_addr, SW_RESET, HIMAX_RESET) != 0) {
+        if (omv_i2c_writeb2(&sensor->i2c_bus, sensor->slv_addr, SW_RESET, HIMAX_RESET) != 0) {
             return -1;
         }
 
         mp_hal_delay_ms(1);
 
-        if (cambus_readb2(&sensor->bus, sensor->slv_addr, MODE_SELECT, &reg) != 0) {
+        if (omv_i2c_readb2(&sensor->i2c_bus, sensor->slv_addr, MODE_SELECT, &reg) != 0) {
             return -1;
         }
 
@@ -149,14 +149,14 @@ static int reset(sensor_t *sensor)
     // Write default regsiters
     int ret = 0;
     for (int i=0; default_regs[i][0] && ret == 0; i++) {
-        ret |= cambus_writeb2(&sensor->bus, sensor->slv_addr, default_regs[i][0], default_regs[i][1]);
+        ret |= omv_i2c_writeb2(&sensor->i2c_bus, sensor->slv_addr, default_regs[i][0], default_regs[i][1]);
     }
 
     // Set PCLK polarity.
-    ret |= cambus_writeb2(&sensor->bus, sensor->slv_addr, PCLK_POLARITY, (0x20 | PCLK_FALLING_EDGE));
+    ret |= omv_i2c_writeb2(&sensor->i2c_bus, sensor->slv_addr, PCLK_POLARITY, (0x20 | PCLK_FALLING_EDGE));
 
     // Set mode to streaming
-    ret |= cambus_writeb2(&sensor->bus, sensor->slv_addr, MODE_SELECT, HIMAX_MODE_STREAMING);
+    ret |= omv_i2c_writeb2(&sensor->i2c_bus, sensor->slv_addr, MODE_SELECT, HIMAX_MODE_STREAMING);
 
     return ret;
 }
@@ -164,7 +164,7 @@ static int reset(sensor_t *sensor)
 static int read_reg(sensor_t *sensor, uint16_t reg_addr)
 {
     uint8_t reg_data;
-    if (cambus_readb2(&sensor->bus, sensor->slv_addr, reg_addr, &reg_data) != 0) {
+    if (omv_i2c_readb2(&sensor->i2c_bus, sensor->slv_addr, reg_addr, &reg_data) != 0) {
         return -1;
     }
     return reg_data;
@@ -172,7 +172,7 @@ static int read_reg(sensor_t *sensor, uint16_t reg_addr)
 
 static int write_reg(sensor_t *sensor, uint16_t reg_addr, uint16_t reg_data)
 {
-    return cambus_writeb2(&sensor->bus, sensor->slv_addr, reg_addr, reg_data);
+    return omv_i2c_writeb2(&sensor->i2c_bus, sensor->slv_addr, reg_addr, reg_data);
 }
 
 static int set_pixformat(sensor_t *sensor, pixformat_t pixformat)
@@ -248,17 +248,17 @@ static int set_framesize(sensor_t *sensor, framesize_t framesize)
     switch (framesize) {
         case FRAMESIZE_320X320:
             for (int i=0; FULL_regs[i][0] && ret == 0; i++) {
-                ret |= cambus_writeb2(&sensor->bus, sensor->slv_addr, FULL_regs[i][0], FULL_regs[i][1]);
+                ret |= omv_i2c_writeb2(&sensor->i2c_bus, sensor->slv_addr, FULL_regs[i][0], FULL_regs[i][1]);
             }
             break;
         case FRAMESIZE_QVGA:
             for (int i=0; QVGA_regs[i][0] && ret == 0; i++) {
-                ret |= cambus_writeb2(&sensor->bus, sensor->slv_addr, QVGA_regs[i][0], QVGA_regs[i][1]);
+                ret |= omv_i2c_writeb2(&sensor->i2c_bus, sensor->slv_addr, QVGA_regs[i][0], QVGA_regs[i][1]);
             }
             break;
         case FRAMESIZE_QQVGA:
             for (int i=0; QQVGA_regs[i][0] && ret == 0; i++) {
-                ret |= cambus_writeb2(&sensor->bus, sensor->slv_addr, QQVGA_regs[i][0], QQVGA_regs[i][1]);
+                ret |= omv_i2c_writeb2(&sensor->i2c_bus, sensor->slv_addr, QQVGA_regs[i][0], QQVGA_regs[i][1]);
             }
             break;
         default:
@@ -290,7 +290,7 @@ static int set_framerate(sensor_t *sensor, int framerate)
     } else {
         osc_div = 0x03; // Set to the max possible FPS at this resolution.
     }
-    return cambus_writeb2(&sensor->bus, sensor->slv_addr, OSC_CLK_DIV, 0x08 | osc_div);
+    return omv_i2c_writeb2(&sensor->i2c_bus, sensor->slv_addr, OSC_CLK_DIV, 0x08 | osc_div);
 }
 
 static int set_brightness(sensor_t *sensor, int level)
@@ -313,7 +313,7 @@ static int set_brightness(sensor_t *sensor, int level)
         default:
             ae_mean = 60;
     }
-    return cambus_writeb2(&sensor->bus, sensor->slv_addr, AE_TARGET_MEAN, ae_mean);
+    return omv_i2c_writeb2(&sensor->i2c_bus, sensor->slv_addr, AE_TARGET_MEAN, ae_mean);
 }
 
 static int set_gainceiling(sensor_t *sensor, gainceiling_t gainceiling)
@@ -336,14 +336,14 @@ static int set_gainceiling(sensor_t *sensor, gainceiling_t gainceiling)
         default:
             return -1;
     }
-    ret |= cambus_writeb2(&sensor->bus, sensor->slv_addr, MAX_AGAIN_FULL, gain);
-    ret |= cambus_writeb2(&sensor->bus, sensor->slv_addr, MAX_AGAIN_BIN2, gain);
+    ret |= omv_i2c_writeb2(&sensor->i2c_bus, sensor->slv_addr, MAX_AGAIN_FULL, gain);
+    ret |= omv_i2c_writeb2(&sensor->i2c_bus, sensor->slv_addr, MAX_AGAIN_BIN2, gain);
     return ret;
 }
 
 static int set_colorbar(sensor_t *sensor, int enable)
 {
-    return cambus_writeb2(&sensor->bus, sensor->slv_addr, TEST_PATTERN_MODE, enable & 0x1);
+    return omv_i2c_writeb2(&sensor->i2c_bus, sensor->slv_addr, TEST_PATTERN_MODE, enable & 0x1);
 }
 
 static int set_auto_gain(sensor_t *sensor, int enable, float gain_db, float gain_db_ceiling)
@@ -352,15 +352,15 @@ static int set_auto_gain(sensor_t *sensor, int enable, float gain_db, float gain
     if ((enable == 0) && (!isnanf(gain_db)) && (!isinff(gain_db))) {
         gain_db = IM_MAX(IM_MIN(gain_db, 24.0f), 0.0f);
         int gain = fast_ceilf(fast_log2(fast_expf((gain_db / 20.0f) * fast_log(10.0f))));
-        ret |= cambus_writeb2(&sensor->bus, sensor->slv_addr, AE_CTRL, 0); // Must disable AE
-        ret |= cambus_writeb2(&sensor->bus, sensor->slv_addr, ANALOG_GAIN, ((gain&0x7)<<4));
-        ret |= cambus_writeb2(&sensor->bus, sensor->slv_addr, GRP_PARAM_HOLD, 0x01);
+        ret |= omv_i2c_writeb2(&sensor->i2c_bus, sensor->slv_addr, AE_CTRL, 0); // Must disable AE
+        ret |= omv_i2c_writeb2(&sensor->i2c_bus, sensor->slv_addr, ANALOG_GAIN, ((gain&0x7)<<4));
+        ret |= omv_i2c_writeb2(&sensor->i2c_bus, sensor->slv_addr, GRP_PARAM_HOLD, 0x01);
     } else if ((enable != 0) && (!isnanf(gain_db_ceiling)) && (!isinff(gain_db_ceiling))) {
         gain_db_ceiling = IM_MAX(IM_MIN(gain_db_ceiling, 24.0f), 0.0f);
         int gain = fast_ceilf(fast_log2(fast_expf((gain_db_ceiling / 20.0f) * fast_log(10.0f))));
-        ret |= cambus_writeb2(&sensor->bus, sensor->slv_addr, MAX_AGAIN_FULL, (gain&0x7));
-        ret |= cambus_writeb2(&sensor->bus, sensor->slv_addr, MAX_AGAIN_BIN2, (gain&0x7));
-        ret |= cambus_writeb2(&sensor->bus, sensor->slv_addr, AE_CTRL, 1);
+        ret |= omv_i2c_writeb2(&sensor->i2c_bus, sensor->slv_addr, MAX_AGAIN_FULL, (gain&0x7));
+        ret |= omv_i2c_writeb2(&sensor->i2c_bus, sensor->slv_addr, MAX_AGAIN_BIN2, (gain&0x7));
+        ret |= omv_i2c_writeb2(&sensor->i2c_bus, sensor->slv_addr, AE_CTRL, 1);
     }
     return ret;
 }
@@ -368,7 +368,7 @@ static int set_auto_gain(sensor_t *sensor, int enable, float gain_db, float gain
 static int get_gain_db(sensor_t *sensor, float *gain_db)
 {
     uint8_t gain;
-    if (cambus_readb2(&sensor->bus, sensor->slv_addr, ANALOG_GAIN, &gain) != 0) {
+    if (omv_i2c_readb2(&sensor->i2c_bus, sensor->slv_addr, ANALOG_GAIN, &gain) != 0) {
         return -1;
     }
     *gain_db = fast_floorf(fast_log(1 << (gain>>4)) / fast_log(10.0f) * 20.0f);
@@ -378,7 +378,7 @@ static int get_gain_db(sensor_t *sensor, float *gain_db)
 static int get_vt_pix_clk(sensor_t *sensor, uint32_t *vt_pix_clk)
 {
     uint8_t reg;
-    if (cambus_readb2(&sensor->bus, sensor->slv_addr, OSC_CLK_DIV, &reg) != 0) {
+    if (omv_i2c_readb2(&sensor->i2c_bus, sensor->slv_addr, OSC_CLK_DIV, &reg) != 0) {
         return -1;
     }
     // 00 -> MCLK / 8
@@ -397,7 +397,7 @@ static int set_auto_exposure(sensor_t *sensor, int enable, int exposure_us)
     int ret=0;
 
     if (enable) {
-        ret |= cambus_writeb2(&sensor->bus, sensor->slv_addr, AE_CTRL, 1);
+        ret |= omv_i2c_writeb2(&sensor->i2c_bus, sensor->slv_addr, AE_CTRL, 1);
     } else {
         uint32_t line_len;
         uint32_t frame_len;
@@ -430,10 +430,10 @@ static int set_auto_exposure(sensor_t *sensor, int enable, int exposure_us)
             coarse_int = frame_len-2;
         }
 
-        ret |= cambus_writeb2(&sensor->bus, sensor->slv_addr, AE_CTRL, 0);
-        ret |= cambus_writeb2(&sensor->bus, sensor->slv_addr, INTEGRATION_H, coarse_int>>8);
-        ret |= cambus_writeb2(&sensor->bus, sensor->slv_addr, INTEGRATION_L, coarse_int&0xff);
-        ret |= cambus_writeb2(&sensor->bus, sensor->slv_addr, GRP_PARAM_HOLD, 0x01);
+        ret |= omv_i2c_writeb2(&sensor->i2c_bus, sensor->slv_addr, AE_CTRL, 0);
+        ret |= omv_i2c_writeb2(&sensor->i2c_bus, sensor->slv_addr, INTEGRATION_H, coarse_int>>8);
+        ret |= omv_i2c_writeb2(&sensor->i2c_bus, sensor->slv_addr, INTEGRATION_L, coarse_int&0xff);
+        ret |= omv_i2c_writeb2(&sensor->i2c_bus, sensor->slv_addr, GRP_PARAM_HOLD, 0x01);
     }
 
     return ret;
@@ -451,8 +451,8 @@ static int get_exposure_us(sensor_t *sensor, int *exposure_us)
         line_len = HIMAX_LINE_LEN_PCK_QQVGA;
     }
     ret |= get_vt_pix_clk(sensor, &vt_pix_clk);
-    ret |= cambus_readb2(&sensor->bus, sensor->slv_addr, INTEGRATION_H, &((uint8_t*)&coarse_int)[1]);
-    ret |= cambus_readb2(&sensor->bus, sensor->slv_addr, INTEGRATION_L, &((uint8_t*)&coarse_int)[0]);
+    ret |= omv_i2c_readb2(&sensor->i2c_bus, sensor->slv_addr, INTEGRATION_H, &((uint8_t*)&coarse_int)[1]);
+    ret |= omv_i2c_readb2(&sensor->i2c_bus, sensor->slv_addr, INTEGRATION_L, &((uint8_t*)&coarse_int)[0]);
     *exposure_us = fast_roundf(coarse_int * line_len / (vt_pix_clk / 1000000.0f));
     return ret;
 }
@@ -460,18 +460,18 @@ static int get_exposure_us(sensor_t *sensor, int *exposure_us)
 static int set_hmirror(sensor_t *sensor, int enable)
 {
     uint8_t reg;
-    int ret = cambus_readb2(&sensor->bus, sensor->slv_addr, IMG_ORIENTATION, &reg);
-    ret |= cambus_writeb2(&sensor->bus, sensor->slv_addr, IMG_ORIENTATION, HIMAX_SET_HMIRROR(reg, enable)) ;
-    ret |= cambus_writeb2(&sensor->bus, sensor->slv_addr, GRP_PARAM_HOLD, 0x01);
+    int ret = omv_i2c_readb2(&sensor->i2c_bus, sensor->slv_addr, IMG_ORIENTATION, &reg);
+    ret |= omv_i2c_writeb2(&sensor->i2c_bus, sensor->slv_addr, IMG_ORIENTATION, HIMAX_SET_HMIRROR(reg, enable)) ;
+    ret |= omv_i2c_writeb2(&sensor->i2c_bus, sensor->slv_addr, GRP_PARAM_HOLD, 0x01);
     return ret;
 }
 
 static int set_vflip(sensor_t *sensor, int enable)
 {
     uint8_t reg;
-    int ret = cambus_readb2(&sensor->bus, sensor->slv_addr, IMG_ORIENTATION, &reg);
-    ret |= cambus_writeb2(&sensor->bus, sensor->slv_addr, IMG_ORIENTATION, HIMAX_SET_VMIRROR(reg, enable)) ;
-    ret |= cambus_writeb2(&sensor->bus, sensor->slv_addr, GRP_PARAM_HOLD, 0x01);
+    int ret = omv_i2c_readb2(&sensor->i2c_bus, sensor->slv_addr, IMG_ORIENTATION, &reg);
+    ret |= omv_i2c_writeb2(&sensor->i2c_bus, sensor->slv_addr, IMG_ORIENTATION, HIMAX_SET_VMIRROR(reg, enable)) ;
+    ret |= omv_i2c_writeb2(&sensor->i2c_bus, sensor->slv_addr, GRP_PARAM_HOLD, 0x01);
     return ret;
 }
 
@@ -482,14 +482,14 @@ static int ioctl(sensor_t *sensor, int request, va_list ap)
     switch (request) {
         case IOCTL_HIMAX_OSC_ENABLE: {
             uint32_t enable = va_arg(ap, uint32_t);
-            ret = cambus_writeb2(&sensor->bus, sensor->slv_addr, ANA_Register_17, enable ? 1:0);
+            ret = omv_i2c_writeb2(&sensor->i2c_bus, sensor->slv_addr, ANA_Register_17, enable ? 1:0);
             mp_hal_delay_ms(100);
             break;
         }
 
         case IOCTL_HIMAX_MD_ENABLE: {
             uint32_t enable = va_arg(ap, uint32_t);
-            ret = cambus_writeb2(&sensor->bus, sensor->slv_addr, MD_CTRL, enable ? 1:0);
+            ret = omv_i2c_writeb2(&sensor->i2c_bus, sensor->slv_addr, MD_CTRL, enable ? 1:0);
             break;
         }
 
@@ -498,25 +498,25 @@ static int ioctl(sensor_t *sensor, int request, va_list ap)
             uint32_t y1 = va_arg(ap, uint32_t);
             uint32_t x2 = va_arg(ap, uint32_t) + x1;
             uint32_t y2 = va_arg(ap, uint32_t) + y1;
-            ret |= cambus_writeb2(&sensor->bus, sensor->slv_addr, MD_LROI_X_START_H, (x1>>8));
-            ret |= cambus_writeb2(&sensor->bus, sensor->slv_addr, MD_LROI_X_START_L, (x1&0xff));
-            ret |= cambus_writeb2(&sensor->bus, sensor->slv_addr, MD_LROI_Y_START_H, (y1>>8));
-            ret |= cambus_writeb2(&sensor->bus, sensor->slv_addr, MD_LROI_Y_START_L, (y1&0xff));
-            ret |= cambus_writeb2(&sensor->bus, sensor->slv_addr, MD_LROI_X_END_H,   (x2>>8));
-            ret |= cambus_writeb2(&sensor->bus, sensor->slv_addr, MD_LROI_X_END_L,   (x2&0xff));
-            ret |= cambus_writeb2(&sensor->bus, sensor->slv_addr, MD_LROI_Y_END_H,   (y2>>8));
-            ret |= cambus_writeb2(&sensor->bus, sensor->slv_addr, MD_LROI_Y_END_L,   (y2&0xff));
+            ret |= omv_i2c_writeb2(&sensor->i2c_bus, sensor->slv_addr, MD_LROI_X_START_H, (x1>>8));
+            ret |= omv_i2c_writeb2(&sensor->i2c_bus, sensor->slv_addr, MD_LROI_X_START_L, (x1&0xff));
+            ret |= omv_i2c_writeb2(&sensor->i2c_bus, sensor->slv_addr, MD_LROI_Y_START_H, (y1>>8));
+            ret |= omv_i2c_writeb2(&sensor->i2c_bus, sensor->slv_addr, MD_LROI_Y_START_L, (y1&0xff));
+            ret |= omv_i2c_writeb2(&sensor->i2c_bus, sensor->slv_addr, MD_LROI_X_END_H,   (x2>>8));
+            ret |= omv_i2c_writeb2(&sensor->i2c_bus, sensor->slv_addr, MD_LROI_X_END_L,   (x2&0xff));
+            ret |= omv_i2c_writeb2(&sensor->i2c_bus, sensor->slv_addr, MD_LROI_Y_END_H,   (y2>>8));
+            ret |= omv_i2c_writeb2(&sensor->i2c_bus, sensor->slv_addr, MD_LROI_Y_END_L,   (y2&0xff));
             break;
         }
 
         case IOCTL_HIMAX_MD_THRESHOLD: {
             uint32_t threshold = va_arg(ap, uint32_t);
-            ret = cambus_writeb2(&sensor->bus, sensor->slv_addr, MD_THL, threshold);
+            ret = omv_i2c_writeb2(&sensor->i2c_bus, sensor->slv_addr, MD_THL, threshold);
             break;
         }
 
         case IOCTL_HIMAX_MD_CLEAR: {
-            ret = cambus_writeb2(&sensor->bus, sensor->slv_addr, I2C_CLEAR, 1);
+            ret = omv_i2c_writeb2(&sensor->i2c_bus, sensor->slv_addr, I2C_CLEAR, 1);
             break;
         }
 

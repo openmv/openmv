@@ -221,7 +221,7 @@
 // Image sensor I2C
 #define ISC_I2C                 (I2C3)
 #define ISC_I2C_ID              (3)
-#define ISC_I2C_SPEED           (CAMBUS_SPEED_STANDARD)
+#define ISC_I2C_SPEED           (OMV_I2C_SPEED_STANDARD)
 #define ISC_I2C_SCL_PIN        (&omv_pin_A8_I2C3)
 #define ISC_I2C_SDA_PIN        (&omv_pin_C9_I2C3)
 #define ISC_I2C_CLK_ENABLE()    __I2C3_CLK_ENABLE()
@@ -232,7 +232,7 @@
 // FIR I2C
 #define FIR_I2C                 (I2C1)
 #define FIR_I2C_ID              (1)
-#define FIR_I2C_SPEED           (CAMBUS_SPEED_FULL)
+#define FIR_I2C_SPEED           (OMV_I2C_SPEED_FULL)
 #define FIR_I2C_SCL_PIN        (&omv_pin_B8_I2C1)
 #define FIR_I2C_SDA_PIN        (&omv_pin_B9_I2C1)
 #define FIR_I2C_CLK_ENABLE()    __I2C1_CLK_ENABLE()

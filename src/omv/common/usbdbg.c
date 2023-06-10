@@ -20,7 +20,7 @@
 
 #include "imlib.h"
 #if MICROPY_PY_SENSOR
-#include "cambus.h"
+#include "omv_i2c.h"
 #include "sensor.h"
 #endif
 #include "framebuffer.h"

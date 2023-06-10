@@ -17,7 +17,7 @@
     OMV_ENABLE_FIR_MLX90641 || \
     OMV_ENABLE_FIR_AMG8833  || \
     OMV_ENABLE_FIR_LEPTON
-#include "cambus.h"
+#include "omv_i2c.h"
 #if (OMV_ENABLE_FIR_MLX90621 == 1)
 #include "MLX90621_API.h"
 #include "MLX90621_I2C_Driver.h"
@@ -77,7 +77,7 @@
     __value & 0x87FF; \
 })
 
-static cambus_t fir_bus = {};
+static omv_i2c_t fir_bus = {};
 #if ((OMV_ENABLE_FIR_MLX90621 == 1) || (OMV_ENABLE_FIR_MLX90640 == 1) || (OMV_ENABLE_FIR_MLX90641 == 1))
 static void *fir_mlx_data = NULL;
 #endif
@@ -198,15 +198,15 @@ static void fir_AMG8833_get_frame(float *Ta, float *To)
 {
     int16_t temp;
     int error = 0;
-    error |= cambus_write_bytes(&fir_bus, AMG8833_ADDR, (uint8_t [1]){AMG8833_THERMISTOR_REGISTER}, 1, CAMBUS_XFER_NO_STOP);
-    error |= cambus_read_bytes(&fir_bus, AMG8833_ADDR, (uint8_t *) &temp, sizeof(temp), CAMBUS_XFER_NO_FLAGS);
+    error |= omv_i2c_write_bytes(&fir_bus, AMG8833_ADDR, (uint8_t [1]){AMG8833_THERMISTOR_REGISTER}, 1, OMV_I2C_XFER_NO_STOP);
+    error |= omv_i2c_read_bytes(&fir_bus, AMG8833_ADDR, (uint8_t *) &temp, sizeof(temp), OMV_I2C_XFER_NO_FLAGS);
     PY_ASSERT_TRUE_MSG((error == 0), "Failed to read the AMG8833 sensor data!");
 
     *Ta = AMG8833_12_TO_16(temp) * 0.0625f;
 
     int16_t *data = fb_alloc(AMG8833_WIDTH * AMG8833_HEIGHT * sizeof(int16_t), FB_ALLOC_NO_HINT);
-    error |= cambus_write_bytes(&fir_bus, AMG8833_ADDR, (uint8_t [1]){AMG8833_TEMPERATURE_REGISTER}, 1, CAMBUS_XFER_NO_STOP);
-    error |= cambus_read_bytes(&fir_bus, AMG8833_ADDR, (uint8_t *) data, AMG8833_WIDTH * AMG8833_HEIGHT * 2, CAMBUS_XFER_NO_FLAGS);
+    error |= omv_i2c_write_bytes(&fir_bus, AMG8833_ADDR, (uint8_t [1]){AMG8833_TEMPERATURE_REGISTER}, 1, OMV_I2C_XFER_NO_STOP);
+    error |= omv_i2c_read_bytes(&fir_bus, AMG8833_ADDR, (uint8_t *) data, AMG8833_WIDTH * AMG8833_HEIGHT * 2, OMV_I2C_XFER_NO_FLAGS);
     PY_ASSERT_TRUE_MSG((error == 0), "Failed to read the AMG8833 sensor data!");
 
     for (int i = 0, ii = AMG8833_WIDTH * AMG8833_HEIGHT; i < ii; i++) {
@@ -300,7 +300,7 @@ static mp_obj_t py_fir_deinit()
     #endif
 
     if (fir_sensor != FIR_NONE) {
-        cambus_deinit(&fir_bus);
+        omv_i2c_deinit(&fir_bus);
         fir_sensor = FIR_NONE;
     }
 
@@ -327,10 +327,10 @@ mp_obj_t py_fir_init(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
     int type = py_helper_keyword_int(n_args, args, 0, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_type), -1);
     if (type == -1) {
         FIR_SCAN_RETRY:
-        cambus_init(&fir_bus, FIR_I2C_ID, CAMBUS_SPEED_STANDARD);
+        omv_i2c_init(&fir_bus, FIR_I2C_ID, OMV_I2C_SPEED_STANDARD);
         // Scan and detect any supported sensor.
         uint8_t dev_list[10];
-        int dev_size = cambus_scan(&fir_bus, dev_list, sizeof(dev_list));
+        int dev_size = omv_i2c_scan(&fir_bus, dev_list, sizeof(dev_list));
         for (int i=0; i<dev_size && type==-1; i++) {
             switch (dev_list[i]) {
                 #if (OMV_ENABLE_FIR_MLX90621 == 1)
@@ -372,11 +372,11 @@ mp_obj_t py_fir_init(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
         if (type == -1 && first_init) {
             first_init = false;
             // Recover bus and scan one more time.
-            cambus_pulse_scl(&fir_bus);
+            omv_i2c_pulse_scl(&fir_bus);
             goto FIR_SCAN_RETRY;
         }
 
-        cambus_deinit(&fir_bus);
+        omv_i2c_deinit(&fir_bus);
     }
 
     // Initialize the detected sensor.
@@ -399,7 +399,7 @@ mp_obj_t py_fir_init(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 
             fir_sensor = FIR_MLX90621;
             FIR_MLX90621_RETRY:
-            cambus_init(&fir_bus, FIR_I2C_ID, CAMBUS_SPEED_FULL); // The EEPROM must be read at <= 400KHz.
+            omv_i2c_init(&fir_bus, FIR_I2C_ID, OMV_I2C_SPEED_FULL); // The EEPROM must be read at <= 400KHz.
             MLX90621_I2CInit(&fir_bus);
 
             fb_alloc_mark();
@@ -414,7 +414,7 @@ mp_obj_t py_fir_init(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
             if (error != 0) {
                 if (first_init) {
                     first_init = false;
-                    cambus_pulse_scl(&fir_bus);
+                    omv_i2c_pulse_scl(&fir_bus);
                     goto FIR_MLX90621_RETRY;
                 } else {
                     py_fir_deinit();
@@ -423,8 +423,8 @@ mp_obj_t py_fir_init(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
             }
 
             // Switch to FAST speed
-            cambus_deinit(&fir_bus);
-            cambus_init(&fir_bus, FIR_I2C_ID, CAMBUS_SPEED_FAST);
+            omv_i2c_deinit(&fir_bus);
+            omv_i2c_init(&fir_bus, FIR_I2C_ID, OMV_I2C_SPEED_FAST);
             fir_width = MLX90621_WIDTH;
             fir_height = MLX90621_HEIGHT;
             fir_ir_fresh_rate = ir_fresh_rate;
@@ -446,7 +446,7 @@ mp_obj_t py_fir_init(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 
             fir_sensor = FIR_MLX90640;
             FIR_MLX90640_RETRY:
-            cambus_init(&fir_bus, FIR_I2C_ID, CAMBUS_SPEED_FULL); // The EEPROM must be read at <= 400KHz.
+            omv_i2c_init(&fir_bus, FIR_I2C_ID, OMV_I2C_SPEED_FULL); // The EEPROM must be read at <= 400KHz.
             MLX90640_I2CInit(&fir_bus);
 
             fb_alloc_mark();
@@ -460,7 +460,7 @@ mp_obj_t py_fir_init(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
             if (error != 0) {
                 if (first_init) {
                     first_init = false;
-                    cambus_pulse_scl(&fir_bus);
+                    omv_i2c_pulse_scl(&fir_bus);
                     goto FIR_MLX90640_RETRY;
                 } else {
                     py_fir_deinit();
@@ -469,8 +469,8 @@ mp_obj_t py_fir_init(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
             }
 
             // Switch to FAST speed
-            cambus_deinit(&fir_bus);
-            cambus_init(&fir_bus, FIR_I2C_ID, CAMBUS_SPEED_FAST);
+            omv_i2c_deinit(&fir_bus);
+            omv_i2c_init(&fir_bus, FIR_I2C_ID, OMV_I2C_SPEED_FAST);
             fir_width = MLX90640_WIDTH;
             fir_height = MLX90640_HEIGHT;
             fir_ir_fresh_rate = ir_fresh_rate;
@@ -492,7 +492,7 @@ mp_obj_t py_fir_init(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 
             fir_sensor = FIR_MLX90641;
             FIR_MLX90641_RETRY:
-            cambus_init(&fir_bus, FIR_I2C_ID, CAMBUS_SPEED_FULL); // The EEPROM must be read at <= 400KHz.
+            omv_i2c_init(&fir_bus, FIR_I2C_ID, OMV_I2C_SPEED_FULL); // The EEPROM must be read at <= 400KHz.
             MLX90641_I2CInit(&fir_bus);
 
             fb_alloc_mark();
@@ -506,7 +506,7 @@ mp_obj_t py_fir_init(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
             if (error != 0) {
                 if (first_init) {
                     first_init = false;
-                    cambus_pulse_scl(&fir_bus);
+                    omv_i2c_pulse_scl(&fir_bus);
                     goto FIR_MLX90641_RETRY;
                 } else {
                     py_fir_deinit();
@@ -515,8 +515,8 @@ mp_obj_t py_fir_init(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
             }
 
             // Switch to FAST speed
-            cambus_deinit(&fir_bus);
-            cambus_init(&fir_bus, FIR_I2C_ID, CAMBUS_SPEED_FAST);
+            omv_i2c_deinit(&fir_bus);
+            omv_i2c_init(&fir_bus, FIR_I2C_ID, OMV_I2C_SPEED_FAST);
             fir_width = MLX90641_WIDTH;
             fir_height = MLX90641_HEIGHT;
             fir_ir_fresh_rate = ir_fresh_rate;
@@ -528,14 +528,14 @@ mp_obj_t py_fir_init(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
         case FIR_AMG8833: {
             fir_sensor = FIR_AMG8833;
             FIR_AMG8833_RETRY:
-            cambus_init(&fir_bus, FIR_I2C_ID, CAMBUS_SPEED_STANDARD);
+            omv_i2c_init(&fir_bus, FIR_I2C_ID, OMV_I2C_SPEED_STANDARD);
 
-            int error = cambus_write_bytes(&fir_bus, AMG8833_ADDR,
+            int error = omv_i2c_write_bytes(&fir_bus, AMG8833_ADDR,
                     (uint8_t [2]){AMG8833_RESET_REGISTER, AMG8833_INITIAL_RESET_VALUE}, 2, 0);
             if (error != 0) {
                 if (first_init) {
                     first_init = false;
-                    cambus_pulse_scl(&fir_bus);
+                    omv_i2c_pulse_scl(&fir_bus);
                     goto FIR_AMG8833_RETRY;
                 } else {
                     py_fir_deinit();
@@ -554,14 +554,14 @@ mp_obj_t py_fir_init(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
         case FIR_LEPTON: {
             fir_sensor = FIR_LEPTON;
             FIR_LEPTON_RETRY:
-            cambus_init(&fir_bus, OMV_FIR_LEPTON_I2C_BUS, OMV_FIR_LEPTON_I2C_BUS_SPEED);
+            omv_i2c_init(&fir_bus, OMV_FIR_LEPTON_I2C_BUS, OMV_FIR_LEPTON_I2C_BUS_SPEED);
 
             int error = fir_lepton_init(&fir_bus, &fir_width, &fir_height, &fir_ir_fresh_rate, &fir_adc_resolution);
 
             if (error != 0) {
                 if (first_init) {
                     first_init = false;
-                    cambus_pulse_scl(&fir_bus);
+                    omv_i2c_pulse_scl(&fir_bus);
                     goto FIR_LEPTON_RETRY;
                 } else {
                     py_fir_deinit();
@@ -769,8 +769,8 @@ mp_obj_t py_fir_read_ta()
         case FIR_AMG8833: {
             int16_t temp;
             int error = 0;
-            error |= cambus_write_bytes(&fir_bus, AMG8833_ADDR, (uint8_t [1]){AMG8833_THERMISTOR_REGISTER}, 1, CAMBUS_XFER_NO_STOP);
-            error |= cambus_read_bytes(&fir_bus, AMG8833_ADDR, (uint8_t *) &temp, sizeof(temp), CAMBUS_XFER_NO_FLAGS);
+            error |= omv_i2c_write_bytes(&fir_bus, AMG8833_ADDR, (uint8_t [1]){AMG8833_THERMISTOR_REGISTER}, 1, OMV_I2C_XFER_NO_STOP);
+            error |= omv_i2c_read_bytes(&fir_bus, AMG8833_ADDR, (uint8_t *) &temp, sizeof(temp), OMV_I2C_XFER_NO_FLAGS);
             PY_ASSERT_TRUE_MSG((error == 0), "Failed to read the AMG8833 sensor data!");
             return mp_obj_new_float(AMG8833_12_TO_16(temp) * 0.0625f);
         }

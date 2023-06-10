@@ -13,12 +13,12 @@
 #include <stdbool.h>
 #include "py/mphal.h"
 #include "irq.h"
-#include "cambus.h"
 #include "sensor.h"
 #include "framebuffer.h"
 #include "omv_boardconfig.h"
 #include "unaligned_memcpy.h"
 #include "omv_gpio.h"
+#include "omv_i2c.h"
 
 #define MDMA_BUFFER_SIZE        (64)
 #define DMA_MAX_XFER_SIZE       (0xFFFF*4)
@@ -103,11 +103,11 @@ void sensor_init0()
 {
     sensor_abort();
 
-    // Re-init cambus to reset the bus state after soft reset, which
+    // Re-init i2c bus to reset the bus state after soft reset, which
     // could have interrupted the bus in the middle of a transfer.
-    if (sensor.bus.initialized) {
+    if (sensor.i2c_bus.initialized) {
         // Reinitialize the bus using the last used id and speed.
-        cambus_init(&sensor.bus, sensor.bus.id, sensor.bus.speed);
+        omv_i2c_init(&sensor.i2c_bus, sensor.i2c_bus.id, sensor.i2c_bus.speed);
     }
 
     // Disable VSYNC IRQ and callback
@@ -121,7 +121,7 @@ int sensor_init()
 {
     int init_ret = 0;
 
-    // List of cambus I2C buses to scan.
+    // List of I2C buses to scan.
     uint32_t buses[][2] = {
         {ISC_I2C_ID, ISC_I2C_SPEED},
         #if defined(ISC_I2C_ALT)
@@ -149,7 +149,7 @@ int sensor_init()
             // Sensor was detected on the current bus.
             break;
         }
-        cambus_deinit(&sensor.bus);
+        omv_i2c_deinit(&sensor.i2c_bus);
         // Scan the next bus or fail if this is the last one.
         if ((i+1) == n_buses) {
             // Sensor probe/init failed.
