@@ -88,7 +88,7 @@
 #include "py_audio.h"
 #include "framebuffer.h"
 #include "omv_boardconfig.h"
-#include "cambus.h"
+#include "omv_i2c.h"
 #include "sensor.h"
 
 uint32_t HAL_GetHalVersion()

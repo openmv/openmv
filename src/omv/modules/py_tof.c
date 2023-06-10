@@ -13,7 +13,7 @@
 #include "py/mphal.h"
 
 #include "omv_boardconfig.h"
-#include "cambus.h"
+#include "omv_i2c.h"
 
 #if (MICROPY_PY_TOF == 1)
 #include "py_assert.h"
@@ -30,7 +30,7 @@
 #define VL53L5CX_HEIGHT                 8
 #define VL53L5CX_FRAME_DATA_SIZE        64
 
-static cambus_t tof_bus = {};
+static omv_i2c_t tof_bus = {};
 
 static enum {
     TOF_NONE,
@@ -196,7 +196,7 @@ static mp_obj_t py_tof_deinit()
             vl53l5cx_stop_ranging(&vl53l5cx_dev);
         }
         #endif
-        cambus_deinit(&tof_bus);
+        omv_i2c_deinit(&tof_bus);
         tof_sensor = TOF_NONE;
     }
 
@@ -212,10 +212,10 @@ mp_obj_t py_tof_init(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 
     if (type == -1) {
         TOF_SCAN_RETRY:
-        cambus_init(&tof_bus, TOF_I2C_ID, CAMBUS_SPEED_STANDARD);
+        omv_i2c_init(&tof_bus, TOF_I2C_ID, OMV_I2C_SPEED_STANDARD);
         // Scan and detect any supported sensor.
         uint8_t dev_list[10];
-        int dev_size = cambus_scan(&tof_bus, dev_list, sizeof(dev_list));
+        int dev_size = omv_i2c_scan(&tof_bus, dev_list, sizeof(dev_list));
         for (int i=0; i<dev_size && type==-1; i++) {
             switch (dev_list[i]) {
                 #if (OMV_ENABLE_TOF_VL53L5CX == 1)
@@ -232,11 +232,11 @@ mp_obj_t py_tof_init(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
         if (type == -1 && first_init) {
             first_init = false;
             // Recover bus and scan one more time.
-            cambus_pulse_scl(&tof_bus);
+            omv_i2c_pulse_scl(&tof_bus);
             goto TOF_SCAN_RETRY;
         }
 
-        cambus_deinit(&tof_bus);
+        omv_i2c_deinit(&tof_bus);
     }
 
     // Initialize the detected sensor.
@@ -252,7 +252,7 @@ mp_obj_t py_tof_init(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
             TOF_VL53L5CX_RETRY:
             //vl53l5cx_dev.platform.bus     = tof_bus;
             //vl53l5cx_dev.platform.address = VL53L5CX_ADDRESS;
-            cambus_init(&tof_bus, TOF_I2C_ID, CAMBUS_SPEED_FAST);
+            omv_i2c_init(&tof_bus, TOF_I2C_ID, OMV_I2C_SPEED_FAST);
 
             // Check sensor and initialize.
 	        error |= vl53l5cx_is_alive(&vl53l5cx_dev, &isAlive);
@@ -280,7 +280,7 @@ mp_obj_t py_tof_init(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 
             if (error != 0 && first_init) {
                 first_init = false;
-                cambus_pulse_scl(&tof_bus);
+                omv_i2c_pulse_scl(&tof_bus);
                 goto TOF_VL53L5CX_RETRY;
             } else if (error != 0) {
                 py_tof_deinit();

@@ -106,25 +106,25 @@ extern unsigned char *OMV_UNIQUE_ID_ADDR;   // Unique address.
 #define FIR_I2C_ID              (0)
 #define FIR_I2C_SCL_PIN         (13)
 #define FIR_I2C_SDA_PIN         (12)
-#define FIR_I2C_SPEED           (CAMBUS_SPEED_FULL)
+#define FIR_I2C_SPEED           (OMV_I2C_SPEED_FULL)
 
 // ISC I2C
 #define ISC_I2C_ID              (0)
 #define ISC_I2C_SCL_PIN         (13)
 #define ISC_I2C_SDA_PIN         (12)
-#define ISC_I2C_SPEED           (CAMBUS_SPEED_STANDARD)
+#define ISC_I2C_SPEED           (OMV_I2C_SPEED_STANDARD)
 
 // I2C0
 #define I2C0_ID                 (0)
 #define I2C0_SCL_PIN            (13)
 #define I2C0_SDA_PIN            (12)
-#define I2C0_SPEED              (CAMBUS_SPEED_FULL)
+#define I2C0_SPEED              (OMV_I2C_SPEED_FULL)
 
 // I2C1
 #define I2C1_ID                 (1)
 #define I2C1_SCL_PIN            (27)
 #define I2C1_SDA_PIN            (26)
-#define I2C1_SPEED              (CAMBUS_SPEED_FULL)
+#define I2C1_SPEED              (OMV_I2C_SPEED_FULL)
 
 // LCD config.
 #define LCD_SPI                 (spi0)

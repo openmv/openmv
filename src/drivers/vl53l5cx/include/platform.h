@@ -66,7 +66,7 @@
 
 #include <stdint.h>
 #include <string.h>
-#include "cambus.h"
+#include "omv_i2c.h"
 
 /**
  * @brief Structure VL53L5CX_Platform needs to be filled by the customer,
@@ -81,7 +81,7 @@ typedef struct
 	/* To be filled with customer's platform. At least an I2C address/descriptor
 	 * needs to be added */
 	/* Example for most standard platform : I2C address of sensor */
-    cambus_t *bus;
+    omv_i2c_t *bus;
     uint16_t address;
 } VL53L5CX_Platform;
 

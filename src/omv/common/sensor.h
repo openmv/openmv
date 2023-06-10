@@ -11,7 +11,7 @@
 #ifndef __SENSOR_H__
 #define __SENSOR_H__
 #include <stdarg.h>
-#include "cambus.h"
+#include "omv_i2c.h"
 #include "imlib.h"
 
 #define OV2640_SLV_ADDR         (0x60)
@@ -243,7 +243,7 @@ typedef struct _sensor {
     bool auto_rotation;         // Rotate Image Automatically
     bool detected;              // Set to true when the sensor is initialized.
 
-    cambus_t bus;               // SCCB/I2C bus.
+    omv_i2c_t i2c_bus;          // SCCB/I2C bus.
 
     // Sensor function pointers
     int  (*reset)               (sensor_t *sensor);

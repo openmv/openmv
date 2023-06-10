@@ -64,7 +64,7 @@
 #include "usbd_ctlreq.h"
 #include "usbd_types.h"
 #include "uvc_desc.h"
-#include "cambus.h"
+#include "omv_i2c.h"
 #include "sensor.h"
 extern sensor_t sensor;
 

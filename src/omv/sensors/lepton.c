@@ -15,13 +15,12 @@
 #include "py/mphal.h"
 #include "irq.h"
 
-#include "cambus.h"
-#include "sensor.h"
-
 #include "framebuffer.h"
 #include "common.h"
 #include "dma_alloc.h"
+#include "omv_i2c.h"
 #include "omv_gpio.h"
+#include "sensor.h"
 
 #include "crc16.h"
 #include "LEPTON_SDK.h"
@@ -118,7 +117,7 @@ static int sleep(sensor_t *sensor, int enable)
 static int read_reg(sensor_t *sensor, uint16_t reg_addr)
 {
     uint16_t reg_data;
-    if (cambus_readw2(&sensor->bus, sensor->slv_addr, reg_addr, &reg_data)) {
+    if (omv_i2c_readw2(&sensor->i2c_bus, sensor->slv_addr, reg_addr, &reg_data)) {
         return -1;
     }
     return reg_data;
@@ -126,7 +125,7 @@ static int read_reg(sensor_t *sensor, uint16_t reg_addr)
 
 static int write_reg(sensor_t *sensor, uint16_t reg_addr, uint16_t reg_data)
 {
-    return cambus_writew2(&sensor->bus, sensor->slv_addr, reg_addr, reg_data);
+    return omv_i2c_writew2(&sensor->i2c_bus, sensor->slv_addr, reg_addr, reg_data);
 }
 
 static int set_pixformat(sensor_t *sensor, pixformat_t pixformat)
@@ -349,7 +348,7 @@ static int lepton_reset(sensor_t *sensor, bool measurement_mode, bool high_temp_
     memset(&LEPHandle, 0, sizeof(LEP_CAMERA_PORT_DESC_T));
 
     for (mp_uint_t start = mp_hal_ticks_ms(); ;mp_hal_delay_ms(1)) {
-        if (LEP_OpenPort(&sensor->bus, LEP_CCI_TWI, 0, &LEPHandle) == LEP_OK) {
+        if (LEP_OpenPort(&sensor->i2c_bus, LEP_CCI_TWI, 0, &LEPHandle) == LEP_OK) {
             break;
         }
         if ((mp_hal_ticks_ms() - start) >= LEPTON_TIMEOUT) {

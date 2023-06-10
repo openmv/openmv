@@ -235,7 +235,7 @@
 // Image sensor I2C
 #define ISC_I2C                 (I2C3)
 #define ISC_I2C_ID              (3)
-#define ISC_I2C_SPEED           (CAMBUS_SPEED_STANDARD)
+#define ISC_I2C_SPEED           (OMV_I2C_SPEED_STANDARD)
 #define ISC_I2C_SCL_PIN         (&omv_pin_H7_I2C3)
 #define ISC_I2C_SDA_PIN         (&omv_pin_H8_I2C3)
 #define ISC_I2C_CLK_ENABLE()    __I2C3_CLK_ENABLE()
@@ -246,7 +246,7 @@
 // Alternate I2C bus for the Portenta breakout
 #define ISC_I2C_ALT                 (I2C4)
 #define ISC_I2C_ALT_ID              (4)
-#define ISC_I2C_ALT_SPEED           (CAMBUS_SPEED_STANDARD)
+#define ISC_I2C_ALT_SPEED           (OMV_I2C_SPEED_STANDARD)
 #define ISC_I2C_ALT_SCL_PIN         (&omv_pin_H11_I2C4)
 #define ISC_I2C_ALT_SDA_PIN         (&omv_pin_H12_I2C4)
 #define ISC_I2C_ALT_CLK_ENABLE()    __HAL_RCC_I2C4_CLK_ENABLE()
@@ -257,7 +257,7 @@
 // FIR I2C
 #define FIR_I2C                 (I2C3)
 #define FIR_I2C_ID              (3)
-#define FIR_I2C_SPEED           (CAMBUS_SPEED_STANDARD)
+#define FIR_I2C_SPEED           (OMV_I2C_SPEED_STANDARD)
 #define FIR_I2C_SCL_PIN         (&omv_pin_H7_I2C3)
 #define FIR_I2C_SDA_PIN         (&omv_pin_H8_I2C3)
 #define FIR_I2C_CLK_ENABLE()    __I2C3_CLK_ENABLE()

@@ -15,18 +15,18 @@
  *
  */
 #include <stdio.h>
-#include "cambus.h"
+#include "omv_i2c.h"
 #include "MLX90641_I2C_Driver.h"
-static cambus_t *bus;
+static omv_i2c_t *bus;
 
-void MLX90641_I2CInit(cambus_t *hbus)
+void MLX90641_I2CInit(omv_i2c_t *hbus)
 {   
     bus = hbus;
 }
 
 int MLX90641_I2CGeneralReset(void)
 {    
-   if (cambus_gencall(bus, 0x06) != 0) {
+   if (omv_i2c_gencall(bus, 0x06) != 0) {
         return -1;
 	}
 
@@ -37,12 +37,12 @@ int MLX90641_I2CRead(uint8_t slaveAddr, uint16_t startAddress, uint16_t nMemAddr
 {
     startAddress = __REVSH(startAddress);
 
-    if (cambus_write_bytes(bus, (slaveAddr<<1), (uint8_t *) &startAddress, 2, CAMBUS_XFER_NO_STOP) != 0) {
+    if (omv_i2c_write_bytes(bus, (slaveAddr<<1), (uint8_t *) &startAddress, 2, OMV_I2C_XFER_NO_STOP) != 0) {
         return -1;
 	}
 
 
-    if (cambus_read_bytes(bus, (slaveAddr<<1), (uint8_t *) data, nMemAddressRead*2, CAMBUS_XFER_NO_FLAGS) != 0) {
+    if (omv_i2c_read_bytes(bus, (slaveAddr<<1), (uint8_t *) data, nMemAddressRead*2, OMV_I2C_XFER_NO_FLAGS) != 0) {
         return -1;
 	}
 
@@ -58,11 +58,11 @@ int MLX90641_I2CWrite(uint8_t slaveAddr, uint16_t writeAddress, uint16_t data)
     data = __REVSH(data);
     writeAddress = __REVSH(writeAddress);
 
-	if (cambus_write_bytes(bus, (slaveAddr << 1), (uint8_t*) &writeAddress, 2, CAMBUS_XFER_SUSPEND) != 0) {
+	if (omv_i2c_write_bytes(bus, (slaveAddr << 1), (uint8_t*) &writeAddress, 2, OMV_I2C_XFER_SUSPEND) != 0) {
         return -1;
 	}         
 
-	if (cambus_write_bytes(bus, (slaveAddr << 1), (uint8_t *) &data, 2, CAMBUS_XFER_NO_FLAGS) != 0) {
+	if (omv_i2c_write_bytes(bus, (slaveAddr << 1), (uint8_t *) &data, 2, OMV_I2C_XFER_NO_FLAGS) != 0) {
         return -1;
 	}         
 	return 0;

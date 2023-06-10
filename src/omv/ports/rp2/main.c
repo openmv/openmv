@@ -62,7 +62,7 @@
 
 #include "omv_boardconfig.h"
 #include "framebuffer.h"
-#include "cambus.h"
+#include "omv_i2c.h"
 #include "sensor.h"
 #include "usbdbg.h"
 #include "tinyusb_debug.h"

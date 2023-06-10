@@ -172,9 +172,9 @@ target_sources(${MICROPY_TARGET} PRIVATE
     ${TOP_DIR}/${OMV_DIR}/imlib/zbar.c
 
     ${TOP_DIR}/${OMV_DIR}/ports/${PORT}/main.c
-    ${TOP_DIR}/${OMV_DIR}/ports/${PORT}/cambus.c
     ${TOP_DIR}/${OMV_DIR}/ports/${PORT}/sensor.c
     ${TOP_DIR}/${OMV_DIR}/ports/${PORT}/omv_gpio.c
+    ${TOP_DIR}/${OMV_DIR}/ports/${PORT}/omv_i2c.c
 
     ${OMV_USER_MODULES}
 )
