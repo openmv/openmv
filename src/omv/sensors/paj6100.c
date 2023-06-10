@@ -36,14 +36,15 @@
 #if (OMV_ENABLE_PAJ6100 == 1)
 #include <stdio.h>
 #include <stdbool.h>
+#include "py/mphal.h"
 
 #include "sensor.h"
 #include "framebuffer.h"
+#include "omv_gpio.h"
 
 #include "paj6100.h"
 #include "paj6100_reg.h"
 #include "pixspi.h"
-#include "py/mphal.h"
 
 #define CACHE_BANK
 
@@ -90,13 +91,13 @@ static int get_gain_db(sensor_t *sensor, float *gain_db);
 
 static int bank_switch(uint8_t bank)
 {
-#ifdef CACHE_BANK
-    if (bank_cache == bank)
+    #ifdef CACHE_BANK
+    if (bank_cache == bank) {
         return 0;
-#endif
+    }
+    #endif
 
-    if (pixspi_regs_write(REG_BANK_SWITCH, &bank, 1))
-    {
+    if (pixspi_regs_write(REG_BANK_SWITCH, &bank, 1)) {
         printf("Bank switch failed.\n");
         return -1;
     }
@@ -121,14 +122,12 @@ static int init_sensor(sensor_t * sensor)
     #define ta_seq low_active_R_ABC_Avg_UBx50_T_BLACINV_EnHx1_T_SIG_REFx1
 
     int arr_size = sizeof(ta_seq)/sizeof(ta_seq[0]);
-    for (int i=0; i<arr_size; i+=2)
-    {
+    for (int i=0; i<arr_size; i+=2) {
         #ifndef DEBUG
         int
         #endif
         init_res = pixspi_regs_write(ta_seq[i], &ta_seq[i+1], 1);
-        if (init_res)
-        {
+        if (init_res) {
             return init_res;
         }
     }
@@ -146,43 +145,40 @@ static int set_exposure(sensor_t *sensor, int exp_us, bool protected)
     uint32_t cmd_expo /* 24-bit available */;
     uint16_t exp_offset;
 
-#ifdef DEBUG_AE
+    #ifdef DEBUG_AE
     printf("set_exposure() = %d\n", exp_us);
-#endif
-    if (exp_us == 0)
+    #endif
+    if (exp_us == 0) {
         return 0;
+    }
 
-    if (exp_us >= EXPOSURE_BASE)
-    {
+    if (exp_us >= EXPOSURE_BASE) {
         int param;
-        if (sensor->framesize == FRAMESIZE_QVGA)
+        if (sensor->framesize == FRAMESIZE_QVGA) {
             param = 88803;
-        else if (sensor->framesize == FRAMESIZE_QQVGA)
+        } else if (sensor->framesize == FRAMESIZE_QQVGA) {
             param = 29139; // QQVGA
-        else
+        } else {
             param = 88803;
+        }
 
         int max_cmd_expo = R_FrameTime - param;
         cmd_expo = (exp_us - EXPOSURE_BASE) * ((float)PAJ6100_XCLK_FREQ/1000000) + 0.5f;
-        if (protected)
-        {
-            if (cmd_expo > max_cmd_expo)
-            {
+        if (protected) {
+            if (cmd_expo > max_cmd_expo) {
                 cmd_expo = max_cmd_expo;
                 exp_us = (cmd_expo + 3642) / ((float)PAJ6100_XCLK_FREQ/1000000) + 0.5f;
                 printf("Exposure time overflow, reset to %dus.\n", exp_us);
             }
         }
         exp_offset = 0;
-    }
-    else
-    {
+    } else {
         cmd_expo = 0;
         exp_offset = (EXPOSURE_BASE - exp_us) * ((float)PAJ6100_XCLK_FREQ/1000000) + 0.5;
     }
-#ifdef DEBUG_AE
+    #ifdef DEBUG_AE
     printf("target - cmd_exp: %ld, exp_offset: %d\n", cmd_expo, exp_offset);
-#endif
+    #endif
     uint8_t buff[3] = {
         (uint8_t)(cmd_expo & 0xff),
         (uint8_t)((cmd_expo >> 8) & 0xff),
@@ -196,8 +192,7 @@ static int set_exposure(sensor_t *sensor, int exp_us, bool protected)
     buff[0] = 1;
     ret |= write_regs_w_bank(BANK_1, REG_ISP_UPDATE, buff, 1);
 
-    if (ret)
-    {
+    if (ret) {
         printf("Failed to write cmd_expo or exp_offset.\n");
         return -1;
     }
@@ -212,35 +207,31 @@ static int get_exposure(sensor_t *sensor)
     uint32_t cmd_expo /* 24-bit available */;
     uint16_t exp_offset;
 
-    if (exp_us_cache >= 0)
+    if (exp_us_cache >= 0) {
         return exp_us_cache;
+    }
 
     ret = read_regs_w_bank(BANK_0, REG_CMD_EXPO_L, buff, 3);
-    if (ret)
-    {
+    if (ret) {
         printf("Read cmd_expo failed.\n");
         return -1;
     }
     cmd_expo = buff[0] + (((uint32_t)buff[1]) << 8) + (((uint32_t)buff[2]) << 16);
 
     ret = read_regs_w_bank(BANK_0, REG_EXP_OFFSET_L, buff, 2);
-    if (ret)
-    {
+    if (ret) {
         printf("Read exp_offset failed.\n");
         return -1;
     }
     exp_offset = buff[0] + (((uint16_t)buff[1]) << 8);
 
-#ifdef DEBUG_AE
+    #ifdef DEBUG_AE
     printf("cmd_exp: %ld, exp_offset: %d\n", cmd_expo, exp_offset);
-#endif
+    #endif
 
-    if (exp_offset == 0)
-    {
+    if (exp_offset == 0) {
         exp_us_cache = (cmd_expo + 3642) / (PAJ6100_XCLK_FREQ/1000000);
-    }
-    else
-    {
+    } else {
         exp_us_cache = (3642 - exp_offset) / (PAJ6100_XCLK_FREQ/1000000);
     }
 
@@ -258,30 +249,25 @@ static void blc_freeze(bool enable)
 
 static void auto_exposure(sensor_t *sensor)
 {
-    if (!is_ae_enabled)
+    if (!is_ae_enabled) {
         return;
+    }
 
-    if (skip_frame)
-    {
+    if (skip_frame) {
         --skip_frame;
         return;
     }
 
-    if ((lt_lockrange_in_lbound <= l_total) && (l_total <= lt_lockrange_in_ubound))
-    {
+    if ((lt_lockrange_in_lbound <= l_total) && (l_total <= lt_lockrange_in_ubound)) {
         ae_converged_flag = true;
-    }
-    else if ((l_total > lt_lockrange_out_ubound) || (l_total < lt_lockrange_out_lbound))
-    {
+    } else if ((l_total > lt_lockrange_out_ubound) || (l_total < lt_lockrange_out_lbound)) {
         ae_converged_flag = false;
     }
     blc_freeze(ae_converged_flag);
 
-    if (ae_converged_flag == false)
-    {
+    if (ae_converged_flag == false) {
         float gain_db = 0;
-        if (get_gain_db(sensor, &gain_db))
-        {
+        if (get_gain_db(sensor, &gain_db)) {
             printf("Get Gain DB failed.\n");
             return;
         }
@@ -301,26 +287,25 @@ static void auto_exposure(sensor_t *sensor)
         }
 
         int expo = get_exposure(sensor);
-        if (expo < 0)
-        {
+        if (expo < 0) {
             printf("Get exposure failed.\n");
             return;
         }
-#ifdef DEBUG_AE
+        #ifdef DEBUG_AE
         printf("Current Gain: %ldx, Expo: %d\n", gain, expo);
-#endif
+        #endif
 
         uint32_t GEP = gain * expo;
         float l_ratio = ((float)l_target_total) / l_total;
         float GEP_target = GEP * l_ratio;
         uint32_t expo_target = IM_MIN(IM_MAX(fast_roundf(GEP_target / R_AE_MinGain), R_AE_MinExpoTime), R_AE_MaxExpoTime);
 
-#ifdef DEBUG_AE
+        #ifdef DEBUG_AE
         printf("GEP: %ld ", GEP);
         printf("GEP_target: %d (x1000), L_Ratio: %d (x1000)\n",
                     (int)(GEP_target*1000), (int)(l_ratio*1000));
         printf("1st Expo Target: %ld (max: %ld) ", expo_target, R_AE_MaxExpoTime);
-#endif
+        #endif
         uint32_t gain_target;
         float tmp_gain = GEP_target/expo_target;
         if (tmp_gain <= 1) gain_target = 1;
@@ -330,10 +315,10 @@ static void auto_exposure(sensor_t *sensor)
         //gain_target = IM_MIN(IM_MAX(fast_ceilf(GEP_target/expo_target), R_AE_MinGain), R_AE_MaxGain);
         gain_db = 20 * (fast_log((float)gain_target)/fast_log(10.0));
         expo_target = IM_MIN(IM_MAX(fast_roundf(GEP_target / gain_target), R_AE_MinExpoTime), R_AE_MaxExpoTime);
-#ifdef DEBUG_AE
+        #ifdef DEBUG_AE
         printf("Gain Target: %ld (%d DB (x1000))\n", gain_target, (int)(gain_db*1000));
         printf("Final Expo Target: %ld (max: %ld) \n", expo_target, R_AE_MaxExpoTime);
-#endif
+        #endif
         set_exposure(sensor, expo_target, false);
         set_auto_gain(sensor, false, gain_db, 0);
         skip_frame = 0;
@@ -395,8 +380,9 @@ static int read_reg(sensor_t *sensor, uint16_t reg_addr)
 {
     uint8_t data;
 
-    if (pixspi_regs_read((uint8_t)reg_addr, &data, 1))
+    if (pixspi_regs_read((uint8_t)reg_addr, &data, 1)) {
         return -1;
+    }
     return data;
 }
 
@@ -412,8 +398,9 @@ static int write_reg(sensor_t *sensor, uint16_t reg_addr, uint16_t reg_data)
 
 static int set_pixformat(sensor_t *sensor, pixformat_t pixformat)
 {
-    if (pixformat != PIXFORMAT_GRAYSCALE)
+    if (pixformat != PIXFORMAT_GRAYSCALE) {
         return -1;
+    }
     return 0;
 }
 
@@ -429,14 +416,12 @@ static int set_framesize(sensor_t *sensor, framesize_t framesize)
     ret |= read_regs_w_bank(BANK_0, REG_ABC_START_LINE, &abc_start_line, 1);
     ret |= read_regs_w_bank(BANK_1, REG_ABC_SAMPLE_SIZE, &abc_sample_size, 1);
 
-    if (ret)
-    {
+    if (ret) {
         printf("Failed to read Average mode registers.\n");
         return -1;
     }
 
-    switch (framesize)
-    {
+    switch (framesize) {
         case FRAMESIZE_QVGA:
             aavg_VnH &= ~((1 << 3) | (1 << 2));
             abc_start_line = (abc_start_line & ~(0x07 << 1)) | (2 << 1);
@@ -463,8 +448,7 @@ static int set_framesize(sensor_t *sensor, framesize_t framesize)
     ret |= write_regs_w_bank(BANK_1, REG_CP_WOI_VOFFSET, &voffset, 1);
     ret |= write_regs_w_bank(BANK_1, REG_ABC_SAMPLE_SIZE, &abc_sample_size, 1);
 
-    if (ret)
-    {
+    if (ret) {
         printf("Failed to write Average mode registers.\n");
         return -1;
     }
@@ -506,8 +490,9 @@ static int set_special_effect(sensor_t *sensor, sde_t sde)
 static int set_auto_gain(sensor_t *sensor, int enable,
                          float gain_db, float gain_db_ceiling)
 {
-    if (enable)
+    if (enable) {
         return 0;
+    }
     int ret = 0;
     uint8_t val, fgh, ggh;
 
@@ -564,8 +549,7 @@ static int get_gain_db(sensor_t *sensor, float *gain_db)
     if (ggh == 0 && fgh == 0) {
         *gain_db = 0;
     } else if (ggh == 1) {
-        switch (fgh)
-        {
+        switch (fgh) {
             case 0:
                 *gain_db = 6;
                 break;
@@ -575,8 +559,7 @@ static int get_gain_db(sensor_t *sensor, float *gain_db)
             case 3:
                 *gain_db = 18;
                 break;
-            default:
-            {
+            default: {
                 printf("Read a undefined FGH value (%d).\n", fgh);
                 return -1;
             }
@@ -599,8 +582,7 @@ static int set_auto_exposure(sensor_t *sensor, int enable, int exposure_us)
 
 static int get_exposure_us(sensor_t *sensor, int *exposure_us) {
     int ret = get_exposure(sensor);
-    if (ret >= 0)
-    {
+    if (ret >= 0) {
         *exposure_us = ret;
         return 0;
     }
@@ -665,13 +647,13 @@ static int reset(sensor_t *sensor)
     bank_cache = -1;
     exp_us_cache = -1;
 
-#ifdef DEBUG
+    #ifdef DEBUG
     uint8_t part_id_l = 0, part_id_h = 0;
     read_regs_w_bank(0, 0x00, &part_id_l, 1);
     read_regs_w_bank(0, 0x01, &part_id_h, 1);
     printf("Part ID 0x%x 0x%x\n", part_id_l, part_id_h);
     printf("init_res: %d\n", init_res);
-#endif
+    #endif
 
     // Re-init sensor every time.
     init_sensor(sensor);
@@ -705,12 +687,12 @@ static int reset(sensor_t *sensor)
 static int paj6100_snapshot(sensor_t *sensor, image_t *image, uint32_t flags)
 {
     int res = sensor_snapshot(sensor, image, flags);
-    if (res == 0)
-    {
+    if (res == 0) {
         l_total = 0;
         int iml = image->h * image->w;
-        for (int i=0; i<iml; ++i)
+        for (int i=0; i<iml; ++i) {
             l_total += image->data[i];
+        }
         // PAJ6100 doesn't support HW auto-exposure,
         // we provide a software implementation.
         auto_exposure(sensor);
@@ -764,23 +746,22 @@ bool paj6100_detect(sensor_t *sensor)
     int ret = 0;
     uint8_t part_id_l, part_id_h;
 
-    DCMI_RESET_HIGH();
+    omv_gpio_write(DCMI_RESET_PIN, 1);
     mp_hal_delay_ms(10);
 
-    if (!pixspi_init())
-    {
+    if (!pixspi_init()) {
         printf("Initial pixspi failed.\n");
         return false;
     }
 
     ret |= pixspi_regs_read(0x00, &part_id_l, 1);
     ret |= pixspi_regs_read(0x01, &part_id_h, 1);
-#ifdef DEBUG
+    #ifdef DEBUG
     printf("Part ID 0x%x 0x%x\n", part_id_l, part_id_h);
-#endif
-    if (ret == 0 &&
-        (part_id_l == 0x00 && part_id_h == 0x61))
+    #endif
+    if (ret == 0 && (part_id_l == 0x00 && part_id_h == 0x61)) {
         return true; // Got you.
+    }
 
     pixspi_release();
     return false;

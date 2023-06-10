@@ -8,18 +8,15 @@
  *
  * FIR Python module.
  */
+#include "omv_boardconfig.h"
+#if (OMV_ENABLE_FIR_LEPTON == 1)
+#include STM32_HAL_H
 #include "py/nlr.h"
 #include "py/runtime.h"
 #include "py/obj.h"
 #include "py/mphal.h"
-
-#include "extint.h"
 #include "spi.h"
 #include "softtimer.h"
-
-#include "py_helper.h"
-#include "omv_boardconfig.h"
-#include STM32_HAL_H
 
 #include "crc16.h"
 #include "LEPTON_SDK.h"
@@ -30,7 +27,8 @@
 #include "LEPTON_RAD.h"
 #include "LEPTON_I2C_Reg.h"
 
-#if (OMV_ENABLE_FIR_LEPTON == 1)
+#include "py_helper.h"
+#include "omv_gpio.h"
 
 #define FRAMEBUFFER_COUNT 3
 static volatile int framebuffer_tail = 0;
@@ -73,10 +71,8 @@ STATIC mp_obj_t fir_lepton_spi_resync_callback(mp_obj_t unused)
         fir_lepton_spi_rx_cb_tail = (fir_lepton_spi_rx_cb_tail + 1) % FRAMEBUFFER_COUNT;
     }
 
-    OMV_FIR_LEPTON_CS_LOW();
-    HAL_SPI_Receive_DMA(OMV_FIR_LEPTON_CONTROLLER->spi,
-            (uint8_t *) &_fir_lepton_buf,
-            VOSPI_BUFFER_SIZE);
+    omv_gpio_write(OMV_FIR_LEPTON_SSEL_PIN, 0);
+    HAL_SPI_Receive_DMA(OMV_FIR_LEPTON_CONTROLLER->spi, (uint8_t *) &_fir_lepton_buf, VOSPI_BUFFER_SIZE);
 
     return mp_const_none;
 }
@@ -145,7 +141,7 @@ void fir_lepton_spi_callback(const uint16_t *base)
         fir_lepton_spi_rx_cb_expected_pid = 0;
         fir_lepton_spi_rx_cb_expected_seg = 0;
         HAL_SPI_Abort_IT(OMV_FIR_LEPTON_CONTROLLER->spi);
-        OMV_FIR_LEPTON_CS_HIGH();
+        omv_gpio_write(OMV_FIR_LEPTON_SSEL_PIN, 1);
         fir_lepton_spi_resync();
         return;
     }
@@ -202,18 +198,15 @@ static void fir_lepton_spi_callback_full(SPI_HandleTypeDef *hspi)
     fir_lepton_spi_callback(((uint16_t *) &_fir_lepton_buf) + VOSPI_PACKET_SIZE);
 }
 
-#if defined(OMV_FIR_LEPTON_VSYNC_PRESENT)
+#if defined(OMV_FIR_LEPTON_VSYNC_PIN)
 static mp_obj_t fir_lepton_vsync_cb = NULL;
 
-STATIC mp_obj_t fir_lepton_extint_callback(mp_obj_t line)
+static void fir_lepton_extint_callback(omv_gpio_t pin, void *data)
 {
     if (fir_lepton_vsync_cb) {
         mp_call_function_0(fir_lepton_vsync_cb);
     }
-
-    return mp_const_none;
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(fir_lepton_extint_callback_obj, fir_lepton_extint_callback);
 #endif
 
 void fir_lepton_deinit()
@@ -223,101 +216,68 @@ void fir_lepton_deinit()
     fir_lepton_spi_rx_cb_expected_seg = 0;
     fb_alloc_free_till_mark_past_mark_permanent();
 
-    ///////////////////////////////////////////////////////////////////////
-
     #if defined(OMV_FIR_LEPTON_MCLK)
     HAL_TIM_PWM_Stop(&fir_lepton_mclk_tim_handle, OMV_FIR_LEPTON_MCLK_TIM_CHANNEL);
     HAL_TIM_PWM_DeInit(&fir_lepton_mclk_tim_handle);
     OMV_FIR_LEPTON_MCLK_TIM_FORCE_RESET();
     OMV_FIR_LEPTON_MCLK_TIM_RELEASE_RESET();
     OMV_FIR_LEPTON_MCLK_TIM_CLK_DISABLE();
-    HAL_GPIO_DeInit(OMV_FIR_LEPTON_MCLK_PORT, OMV_FIR_LEPTON_MCLK_PIN);
+    omv_gpio_deinit(OMV_FIR_LEPTON_MCLK_PIN);
     #endif
 
     spi_deinit(OMV_FIR_LEPTON_CONTROLLER);
 
     // Do not put in HAL_SPI_MspDeinit as other modules may share the SPI bus.
-
-    HAL_GPIO_DeInit(OMV_FIR_LEPTON_MOSI_PORT, OMV_FIR_LEPTON_MOSI_PIN);
-    HAL_GPIO_DeInit(OMV_FIR_LEPTON_MISO_PORT, OMV_FIR_LEPTON_MISO_PIN);
-    HAL_GPIO_DeInit(OMV_FIR_LEPTON_SCLK_PORT, OMV_FIR_LEPTON_SCLK_PIN);
-
-    HAL_GPIO_DeInit(OMV_FIR_LEPTON_CS_PORT, OMV_FIR_LEPTON_CS_PIN);
-#if defined(OMV_FIR_LEPTON_RST_PIN_PRESENT)
-    HAL_GPIO_DeInit(OMV_FIR_LEPTON_RST_PORT, OMV_FIR_LEPTON_RST_PIN);
-#endif
-#if defined(OMV_FIR_LEPTON_PWDN_PIN_PRESENT)
-    HAL_GPIO_DeInit(OMV_FIR_LEPTON_PWDN_PORT, OMV_FIR_LEPTON_PWDN_PIN);
-#endif
+    omv_gpio_deinit(OMV_FIR_LEPTON_MOSI_PIN);
+    omv_gpio_deinit(OMV_FIR_LEPTON_MISO_PIN);
+    omv_gpio_deinit(OMV_FIR_LEPTON_SCLK_PIN);
+    omv_gpio_deinit(OMV_FIR_LEPTON_SSEL_PIN);
+    #if defined(OMV_FIR_LEPTON_RESET_PIN)
+    omv_gpio_deinit(OMV_FIR_LEPTON_RESET_PIN);
+    #endif
+    #if defined(OMV_FIR_LEPTON_POWER_PIN)
+    omv_gpio_deinit(OMV_FIR_LEPTON_POWER_PIN);
+    #endif
 }
 
 int fir_lepton_init(cambus_t *bus, int *w, int *h, int *refresh, int *resolution)
 {
-    OMV_FIR_LEPTON_CONTROLLER->spi->Init.Mode = SPI_MODE_MASTER;
-    OMV_FIR_LEPTON_CONTROLLER->spi->Init.Direction = SPI_DIRECTION_2LINES_RXONLY;
-    OMV_FIR_LEPTON_CONTROLLER->spi->Init.NSS = SPI_NSS_SOFT;
-    OMV_FIR_LEPTON_CONTROLLER->spi->Init.TIMode = SPI_TIMODE_DISABLE;
-    OMV_FIR_LEPTON_CONTROLLER->spi->Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;
+    SPI_HandleTypeDef *hspi = OMV_FIR_LEPTON_CONTROLLER->spi;
+
+    hspi->Init.Mode = SPI_MODE_MASTER;
+    hspi->Init.Direction = SPI_DIRECTION_2LINES_RXONLY;
+    hspi->Init.NSS = SPI_NSS_SOFT;
+    hspi->Init.TIMode = SPI_TIMODE_DISABLE;
+    hspi->Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;
     #if defined(MCU_SERIES_H7)
-    OMV_FIR_LEPTON_CONTROLLER->spi->Init.FifoThreshold = SPI_FIFO_THRESHOLD_02DATA;
-    OMV_FIR_LEPTON_CONTROLLER->spi->Init.MasterKeepIOState = SPI_MASTER_KEEP_IO_STATE_ENABLE;
+    hspi->Init.FifoThreshold = SPI_FIFO_THRESHOLD_02DATA;
+    hspi->Init.MasterKeepIOState = SPI_MASTER_KEEP_IO_STATE_ENABLE;
     #endif
     spi_set_params(OMV_FIR_LEPTON_CONTROLLER, 0xffffffff, VOSPI_CLOCK_SPEED, 1, 1, 16, 0);
     spi_init(OMV_FIR_LEPTON_CONTROLLER, true);
-    HAL_SPI_RegisterCallback(OMV_FIR_LEPTON_CONTROLLER->spi, HAL_SPI_RX_HALF_COMPLETE_CB_ID,
-                             fir_lepton_spi_callback_half);
-    HAL_SPI_RegisterCallback(OMV_FIR_LEPTON_CONTROLLER->spi, HAL_SPI_RX_COMPLETE_CB_ID,
-                             fir_lepton_spi_callback_full);
+    HAL_SPI_RegisterCallback(hspi, HAL_SPI_RX_COMPLETE_CB_ID, fir_lepton_spi_callback_full);
+    HAL_SPI_RegisterCallback(hspi, HAL_SPI_RX_HALF_COMPLETE_CB_ID, fir_lepton_spi_callback_half);
 
     // Do not put in HAL_SPI_MspInit as other modules share the SPI2/3 bus.
-
-    GPIO_InitTypeDef GPIO_InitStructure;
-    GPIO_InitStructure.Pull      = GPIO_PULLUP;
-    GPIO_InitStructure.Mode      = GPIO_MODE_AF_PP;
-    GPIO_InitStructure.Speed     = GPIO_SPEED_FREQ_MEDIUM;
-
-    GPIO_InitStructure.Alternate = OMV_FIR_LEPTON_MOSI_ALT;
-    GPIO_InitStructure.Pin       = OMV_FIR_LEPTON_MOSI_PIN;
-    HAL_GPIO_Init(OMV_FIR_LEPTON_MOSI_PORT, &GPIO_InitStructure);
-
-    GPIO_InitStructure.Alternate = OMV_FIR_LEPTON_MISO_ALT;
-    GPIO_InitStructure.Pin       = OMV_FIR_LEPTON_MISO_PIN;
-    HAL_GPIO_Init(OMV_FIR_LEPTON_MISO_PORT, &GPIO_InitStructure);
-
-    GPIO_InitStructure.Alternate = OMV_FIR_LEPTON_SCLK_ALT;
-    GPIO_InitStructure.Pin       = OMV_FIR_LEPTON_SCLK_PIN;
-    HAL_GPIO_Init(OMV_FIR_LEPTON_SCLK_PORT, &GPIO_InitStructure);
-
-    GPIO_InitStructure.Mode      = GPIO_MODE_OUTPUT_PP;
-    GPIO_InitStructure.Speed     = GPIO_SPEED_FREQ_LOW;
-
-    GPIO_InitStructure.Pin       = OMV_FIR_LEPTON_CS_PIN;
-    HAL_GPIO_Init(OMV_FIR_LEPTON_CS_PORT, &GPIO_InitStructure);
-    OMV_FIR_LEPTON_CS_HIGH();
-
-    #if defined(OMV_FIR_LEPTON_RST_PIN_PRESENT)
-    GPIO_InitStructure.Pin       = OMV_FIR_LEPTON_RST_PIN;
-    HAL_GPIO_Init(OMV_FIR_LEPTON_RST_PORT, &GPIO_InitStructure);
-    OMV_FIR_LEPTON_RST_HIGH();
+    omv_gpio_config(OMV_FIR_LEPTON_MOSI_PIN, OMV_GPIO_MODE_ALT, OMV_GPIO_PULL_UP, OMV_GPIO_SPEED_MED, -1);
+    omv_gpio_config(OMV_FIR_LEPTON_MISO_PIN, OMV_GPIO_MODE_ALT, OMV_GPIO_PULL_UP, OMV_GPIO_SPEED_MED, -1);
+    omv_gpio_config(OMV_FIR_LEPTON_SCLK_PIN, OMV_GPIO_MODE_ALT, OMV_GPIO_PULL_UP, OMV_GPIO_SPEED_MED, -1);
+    omv_gpio_config(OMV_FIR_LEPTON_SSEL_PIN, OMV_GPIO_MODE_OUTPUT, OMV_GPIO_PULL_UP, OMV_GPIO_SPEED_LOW, -1);
+    omv_gpio_write(OMV_FIR_LEPTON_SSEL_PIN, 1);
+    #if defined(OMV_FIR_LEPTON_RESET_PIN)
+    omv_gpio_config(OMV_FIR_LEPTON_RESET_PIN, OMV_GPIO_MODE_OUTPUT, OMV_GPIO_PULL_UP, OMV_GPIO_SPEED_LOW, -1);
+    omv_gpio_write(OMV_FIR_LEPTON_RESET_PIN, 1);
     #endif
-
-    #if defined(OMV_FIR_LEPTON_PWDN_PIN_PRESENT)
-    GPIO_InitStructure.Pin       = OMV_FIR_LEPTON_PWDN_PIN;
-    HAL_GPIO_Init(OMV_FIR_LEPTON_PWDN_PORT, &GPIO_InitStructure);
-    OMV_FIR_LEPTON_PWDN_HIGH();
+    #if defined(OMV_FIR_LEPTON_POWER_PIN)
+    omv_gpio_config(OMV_FIR_LEPTON_POWER_PIN, OMV_GPIO_MODE_OUTPUT, OMV_GPIO_PULL_UP, OMV_GPIO_SPEED_LOW, -1);
+    omv_gpio_write(OMV_FIR_LEPTON_POWER_PIN, 1);
     #endif
 
     #if defined(OMV_FIR_LEPTON_MCLK_TIM)
     int tclk = OMV_FIR_LEPTON_MCLK_TIM_PCLK_FREQ() * 2;
     int period = (tclk / OMV_FIR_LEPTON_MCLK_FREQ) - 1;
 
-    // GPIO_InitTypeDef GPIO_InitStructure;
-    GPIO_InitStructure.Pull = GPIO_PULLUP;
-    GPIO_InitStructure.Mode = GPIO_MODE_AF_PP;
-    GPIO_InitStructure.Speed = GPIO_SPEED_FREQ_MEDIUM;
-    GPIO_InitStructure.Alternate = OMV_FIR_LEPTON_MCLK_ALT;
-    GPIO_InitStructure.Pin = OMV_FIR_LEPTON_MCLK_PIN;
-    HAL_GPIO_Init(OMV_FIR_LEPTON_MCLK_PORT, &GPIO_InitStructure);
+    omv_gpio_config(OMV_FIR_LEPTON_MCLK_PIN, OMV_GPIO_MODE_ALT, GPIO_PULLUP, OMV_GPIO_SPEED_MED, -1);
 
     fir_lepton_mclk_tim_handle.Instance = OMV_FIR_LEPTON_MCLK_TIM;
     fir_lepton_mclk_tim_handle.Init.Prescaler = 0;
@@ -344,19 +304,19 @@ int fir_lepton_init(cambus_t *bus, int *w, int *h, int *refresh, int *resolution
     HAL_TIM_PWM_Start(&fir_lepton_mclk_tim_handle, OMV_FIR_LEPTON_MCLK_TIM_CHANNEL);
     #endif
 
-    #if defined(OMV_FIR_LEPTON_PWDN_PIN_PRESENT)
-    OMV_FIR_LEPTON_PWDN_LOW();
+    #if defined(OMV_FIR_LEPTON_POWER_PIN)
+    omv_gpio_write(OMV_FIR_LEPTON_POWER_PIN, 0);
     mp_hal_delay_ms(10);
 
-    OMV_FIR_LEPTON_PWDN_HIGH();
+    omv_gpio_write(OMV_FIR_LEPTON_POWER_PIN, 1);
     mp_hal_delay_ms(10);
     #endif
 
-    #if defined(OMV_FIR_LEPTON_RST_PIN_PRESENT)
-    OMV_FIR_LEPTON_RST_LOW();
+    #if defined(OMV_FIR_LEPTON_RESET_PIN)
+    omv_gpio_write(OMV_FIR_LEPTON_RESET_PIN, 0);
     mp_hal_delay_ms(10);
 
-    OMV_FIR_LEPTON_RST_HIGH();
+    omv_gpio_write(OMV_FIR_LEPTON_RESET_PIN, 1);
     mp_hal_delay_ms(1000);
     #endif
 
@@ -373,7 +333,7 @@ int fir_lepton_init(cambus_t *bus, int *w, int *h, int *refresh, int *resolution
         }
     }
 
-    #if (!defined(OMV_FIR_LEPTON_PWDN_PIN_PRESENT)) && (!defined(OMV_FIR_LEPTON_RST_PIN_PRESENT))
+    #if (!defined(OMV_FIR_LEPTON_POWER_PIN)) && (!defined(OMV_FIR_LEPTON_RESET_PIN))
     if (LEP_RunOemReboot(&fir_lepton_handle) != LEP_OK) {
         return -2;
     }
@@ -430,13 +390,12 @@ int fir_lepton_init(cambus_t *bus, int *w, int *h, int *refresh, int *resolution
     *refresh = fir_lepton_3 ? 27 : 9;
     *resolution = fir_lepton_rad_en ? 16 : 14;
 
-    #if defined(OMV_FIR_LEPTON_VSYNC_PRESENT)
+    #if defined(OMV_FIR_LEPTON_VSYNC_PIN)
     if (LEP_SetOemGpioMode(&fir_lepton_handle, LEP_OEM_GPIO_MODE_VSYNC) != LEP_OK) {
         return -9;
     }
-
-    extint_register((mp_obj_t) OMV_FIR_LEPTON_VSYNC_PIN, GPIO_MODE_IT_FALLING, GPIO_PULLUP,
-                    (mp_obj_t) &fir_lepton_extint_callback_obj, true);
+    omv_gpio_config(OMV_FIR_LEPTON_VSYNC_PIN, OMV_GPIO_MODE_IT_FALL, OMV_GPIO_PULL_UP, OMV_GPIO_SPEED_LOW, -1);
+    omv_gpio_irq_register(OMV_FIR_LEPTON_VSYNC_PIN, fir_lepton_extint_callback, NULL);
     #endif
 
     ///////////////////////////////////////////////////////////////////////
@@ -447,78 +406,55 @@ int fir_lepton_init(cambus_t *bus, int *w, int *h, int *refresh, int *resolution
     framebuffer_head = 0;
 
     for (int i = 0; i < FRAMEBUFFER_COUNT; i++) {
-        framebuffers[i] = (uint16_t *) fb_alloc0(flir_w * flir_h * sizeof(uint16_t),
-                                                 FB_ALLOC_NO_HINT);
+        framebuffers[i] = (uint16_t *) fb_alloc0(flir_w * flir_h * sizeof(uint16_t), FB_ALLOC_NO_HINT);
     }
 
-    dma_init(&fir_lepton_spi_rx_dma,
-             OMV_FIR_LEPTON_CONTROLLER->rx_dma_descr,
-             DMA_PERIPH_TO_MEMORY,
-             OMV_FIR_LEPTON_CONTROLLER->spi);
+    dma_init(&fir_lepton_spi_rx_dma, OMV_FIR_LEPTON_CONTROLLER->rx_dma_descr, DMA_PERIPH_TO_MEMORY, hspi);
 
-    OMV_FIR_LEPTON_CONTROLLER->spi->hdmatx = NULL;
-    OMV_FIR_LEPTON_CONTROLLER->spi->hdmarx = &fir_lepton_spi_rx_dma;
+    hspi->hdmatx = NULL;
+    hspi->hdmarx = &fir_lepton_spi_rx_dma;
 
     #if defined(MCU_SERIES_H7)
     fir_lepton_spi_rx_dma.Init.PeriphDataAlignment = DMA_PDATAALIGN_WORD;
     #else
     fir_lepton_spi_rx_dma.Init.PeriphDataAlignment = DMA_PDATAALIGN_HALFWORD;
     #endif
-
     fir_lepton_spi_rx_dma.Init.MemDataAlignment = DMA_MDATAALIGN_WORD;
-
     fir_lepton_spi_rx_dma.Init.Mode = DMA_CIRCULAR;
     fir_lepton_spi_rx_dma.Init.FIFOMode = DMA_FIFOMODE_ENABLE;
     fir_lepton_spi_rx_dma.Init.FIFOThreshold = DMA_FIFO_THRESHOLD_1QUARTERFULL;
     fir_lepton_spi_rx_dma.Init.MemBurst = DMA_MBURST_SINGLE;
     fir_lepton_spi_rx_dma.Init.PeriphBurst = DMA_PBURST_SINGLE;
 
-    ((DMA_Stream_TypeDef *) fir_lepton_spi_rx_dma.Instance)->CR =
-        (((DMA_Stream_TypeDef *) fir_lepton_spi_rx_dma.Instance)->CR & ~DMA_SxCR_PSIZE_Msk) |
+    DMA_Stream_TypeDef *dma_chan = (DMA_Stream_TypeDef *) fir_lepton_spi_rx_dma.Instance;
+    dma_chan->CR =
+        (dma_chan->CR & ~DMA_SxCR_PSIZE_Msk) |
         #if defined(MCU_SERIES_H7)
         DMA_PDATAALIGN_WORD;
         #else
         DMA_PDATAALIGN_HALFWORD;
         #endif
-
-    ((DMA_Stream_TypeDef *) fir_lepton_spi_rx_dma.Instance)->CR =
-        (((DMA_Stream_TypeDef *) fir_lepton_spi_rx_dma.Instance)->CR & ~DMA_SxCR_MSIZE_Msk) |
-        DMA_MDATAALIGN_WORD;
-
-    ((DMA_Stream_TypeDef *) fir_lepton_spi_rx_dma.Instance)->CR =
-        (((DMA_Stream_TypeDef *) fir_lepton_spi_rx_dma.Instance)->CR & ~DMA_SxCR_CIRC_Msk) |
-        DMA_CIRCULAR;
-
-    ((DMA_Stream_TypeDef *) fir_lepton_spi_rx_dma.Instance)->FCR =
-        (((DMA_Stream_TypeDef *) fir_lepton_spi_rx_dma.Instance)->FCR & ~DMA_SxFCR_DMDIS_Msk) |
-        DMA_FIFOMODE_ENABLE;
-
-    ((DMA_Stream_TypeDef *) fir_lepton_spi_rx_dma.Instance)->FCR =
-        (((DMA_Stream_TypeDef *) fir_lepton_spi_rx_dma.Instance)->FCR & ~DMA_SxFCR_FTH_Msk) |
-        DMA_FIFO_THRESHOLD_1QUARTERFULL;
-
-    ((DMA_Stream_TypeDef *) fir_lepton_spi_rx_dma.Instance)->CR =
-        (((DMA_Stream_TypeDef *) fir_lepton_spi_rx_dma.Instance)->CR & ~DMA_SxCR_MBURST_Msk) |
-        DMA_MBURST_SINGLE;
-
-    ((DMA_Stream_TypeDef *) fir_lepton_spi_rx_dma.Instance)->CR =
-        (((DMA_Stream_TypeDef *) fir_lepton_spi_rx_dma.Instance)->CR & ~DMA_SxCR_PBURST_Msk) |
-        DMA_PBURST_SINGLE;
+    dma_chan->CR = (dma_chan->CR & ~DMA_SxCR_MSIZE_Msk) | DMA_MDATAALIGN_WORD;
+    dma_chan->CR = (dma_chan->CR & ~DMA_SxCR_CIRC_Msk) | DMA_CIRCULAR;
+    dma_chan->FCR = (dma_chan->FCR & ~DMA_SxFCR_DMDIS_Msk) | DMA_FIFOMODE_ENABLE;
+    dma_chan->FCR = (dma_chan->FCR & ~DMA_SxFCR_FTH_Msk) | DMA_FIFO_THRESHOLD_1QUARTERFULL;
+    dma_chan->CR = (dma_chan->CR & ~DMA_SxCR_MBURST_Msk) | DMA_MBURST_SINGLE;
+    dma_chan->CR = (dma_chan->CR & ~DMA_SxCR_PBURST_Msk) | DMA_PBURST_SINGLE;
 
     fb_alloc_mark_permanent();
     fir_lepton_spi_resync();
     return 0;
 }
 
-#if defined(OMV_FIR_LEPTON_VSYNC_PRESENT)
+#if defined(OMV_FIR_LEPTON_VSYNC_PIN)
 void fir_lepton_register_vsync_cb(mp_obj_t cb)
 {
-    extint_disable(OMV_FIR_LEPTON_VSYNC_PIN->pin);
+    omv_gpio_irq_enable(OMV_FIR_LEPTON_VSYNC_PIN, false);
 
     fir_lepton_vsync_cb = cb;
 
     if (cb != mp_const_none) {
-        extint_enable(OMV_FIR_LEPTON_VSYNC_PIN->pin);
+        omv_gpio_irq_enable(OMV_FIR_LEPTON_VSYNC_PIN, true);
     }
 }
 #endif
@@ -732,4 +668,4 @@ void fir_lepton_trigger_ffc(uint n_args, const mp_obj_t *args, mp_map_t *kw_args
     }
 }
 
-#endif // OMV_FIR_LEPTON_PRESENT
+#endif // OMV_ENABLE_FIR_LEPTON

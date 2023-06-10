@@ -10,16 +10,18 @@
  */
 #include "omv_boardconfig.h"
 #if (OMV_ENABLE_LEPTON == 1)
-
-#include <stdio.h>
 #include STM32_HAL_H
+#include <stdio.h>
+#include "py/mphal.h"
 #include "irq.h"
+
 #include "cambus.h"
 #include "sensor.h"
-#include "py/mphal.h"
+
 #include "framebuffer.h"
 #include "common.h"
 #include "dma_alloc.h"
+#include "omv_gpio.h"
 
 #include "crc16.h"
 #include "LEPTON_SDK.h"
@@ -103,10 +105,10 @@ static uint16_t lepton_calc_crc(uint8_t *buf)
 static int sleep(sensor_t *sensor, int enable)
 {
     if (enable) {
-        DCMI_PWDN_LOW();
+        omv_gpio_write(DCMI_POWER_PIN, 0);
         mp_hal_delay_ms(100);
     } else {
-        DCMI_PWDN_HIGH();
+        omv_gpio_write(DCMI_POWER_PIN, 1);
         mp_hal_delay_ms(100);
     }
 
@@ -330,16 +332,16 @@ static int ioctl(sensor_t *sensor, int request, va_list ap)
 
 static int lepton_reset(sensor_t *sensor, bool measurement_mode, bool high_temp_mode)
 {
-    DCMI_PWDN_LOW();
+    omv_gpio_write(DCMI_POWER_PIN, 0);
     mp_hal_delay_ms(10);
 
-    DCMI_PWDN_HIGH();
+    omv_gpio_write(DCMI_POWER_PIN, 1);
     mp_hal_delay_ms(10);
 
-    DCMI_RESET_LOW();
+    omv_gpio_write(DCMI_RESET_PIN, 0);
     mp_hal_delay_ms(10);
 
-    DCMI_RESET_HIGH();
+    omv_gpio_write(DCMI_RESET_PIN, 1);
     mp_hal_delay_ms(1000);
 
     LEP_RAD_ENABLE_E rad;

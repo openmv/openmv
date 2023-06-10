@@ -174,6 +174,7 @@ target_sources(${MICROPY_TARGET} PRIVATE
     ${TOP_DIR}/${OMV_DIR}/ports/${PORT}/main.c
     ${TOP_DIR}/${OMV_DIR}/ports/${PORT}/cambus.c
     ${TOP_DIR}/${OMV_DIR}/ports/${PORT}/sensor.c
+    ${TOP_DIR}/${OMV_DIR}/ports/${PORT}/omv_gpio.c
 
     ${OMV_USER_MODULES}
 )

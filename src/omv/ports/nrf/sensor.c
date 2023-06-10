@@ -49,14 +49,14 @@ int sensor_init()
 {
     int init_ret = 0;
 
-    #if defined(DCMI_PWDN_PIN)
-    nrf_gpio_cfg_output(DCMI_PWDN_PIN);
-    DCMI_PWDN_HIGH();
+    #if defined(DCMI_POWER_PIN)
+    nrf_gpio_cfg_output(DCMI_POWER_PIN);
+    nrf_gpio_pin_write(DCMI_POWER_PIN, 1);
     #endif
 
     #if defined(DCMI_RESET_PIN)
     nrf_gpio_cfg_output(DCMI_RESET_PIN);
-    DCMI_RESET_HIGH();
+    nrf_gpio_pin_write(DCMI_RESET_PIN, 1);
     #endif
 
     // Reset the sesnor state

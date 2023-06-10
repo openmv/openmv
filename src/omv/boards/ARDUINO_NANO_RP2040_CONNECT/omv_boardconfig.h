@@ -134,16 +134,6 @@ extern unsigned char *OMV_UNIQUE_ID_ADDR;   // Unique address.
 #define LCD_RST_PIN             (4)
 #define LCD_RS_PIN              (0)
 
-// WiFi/NINA config.
-#define WIFI_SPI                (spi1)
-#define WIFI_CS_PIN             (9)
-#define WIFI_MOSI_PIN           (11)
-#define WIFI_MISO_PIN           (8)
-#define WIFI_SCLK_PIN           (14)
-#define WIFI_RST_PIN            (3)
-#define WIFI_GPIO0_PIN          (2)
-#define WIFI_ACK_PIN            (10)
-
 // AUDIO config.
 #define PDM_PIO                 (pio1)
 #define PDM_SM                  (0)
@@ -161,7 +151,7 @@ extern unsigned char *OMV_UNIQUE_ID_ADDR;   // Unique address.
 #define DCMI_DMA_IRQ            (DMA_IRQ_0)
 #define DCMI_DMA_CHANNEL        (0)
 
-#define DCMI_PWDN_PIN           (0)
+#define DCMI_POWER_PIN          (0)
 #define DCMI_RESET_PIN          (1)
 
 #define DCMI_D0_PIN             (15)
@@ -175,24 +165,9 @@ extern unsigned char *OMV_UNIQUE_ID_ADDR;   // Unique address.
 
 #define DCMI_XCLK_PIN           (28)
 
+// Must match the pins defined in dcmi.pio.
 #define DCMI_PXCLK_PIN          (29)
 #define DCMI_HSYNC_PIN          (27)
 #define DCMI_VSYNC_PIN          (26)
-
-#if defined(DCMI_RESET_PIN)
-#define DCMI_RESET_LOW()        gpio_put(DCMI_RESET_PIN, 0)
-#define DCMI_RESET_HIGH()       gpio_put(DCMI_RESET_PIN, 1)
-#else
-#define DCMI_RESET_LOW()
-#define DCMI_RESET_HIGH()
-#endif
-
-#if defined(DCMI_PWDN_PIN)
-#define DCMI_PWDN_LOW()        gpio_put(DCMI_PWDN_PIN, 0)
-#define DCMI_PWDN_HIGH()       gpio_put(DCMI_PWDN_PIN, 1)
-#else
-#define DCMI_PWDN_LOW()
-#define DCMI_PWDN_HIGH()
-#endif
 
 #endif //__OMV_BOARDCONFIG_H__

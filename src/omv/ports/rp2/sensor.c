@@ -71,18 +71,18 @@ int sensor_init()
     gpio_init(DCMI_VSYNC_PIN);
     gpio_set_dir(DCMI_VSYNC_PIN, GPIO_IN);
 
-    #if defined(DCMI_PWDN_PIN)
-    gpio_init(DCMI_PWDN_PIN);
-    gpio_set_dir(DCMI_PWDN_PIN, GPIO_OUT);
-    gpio_pull_down(DCMI_PWDN_PIN);
-    DCMI_PWDN_HIGH();
+    #if defined(DCMI_POWER_PIN)
+    gpio_init(DCMI_POWER_PIN);
+    gpio_set_dir(DCMI_POWER_PIN, GPIO_OUT);
+    gpio_pull_down(DCMI_POWER_PIN);
+    gpio_put(DCMI_POWER_PIN, 1);
     #endif
 
     #if defined(DCMI_RESET_PIN)
     gpio_init(DCMI_RESET_PIN);
     gpio_set_dir(DCMI_RESET_PIN, GPIO_OUT);
     gpio_pull_up(DCMI_RESET_PIN);
-    DCMI_RESET_HIGH();
+    gpio_put(DCMI_RESET_PIN, 1);
     #endif
 
     // Reset the sesnor state

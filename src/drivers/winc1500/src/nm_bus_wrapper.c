@@ -52,6 +52,7 @@
 #include "genhdr/pins.h"
 #include "extint.h"
 #include "omv_boardconfig.h"
+#include "omv_gpio.h"
 
 static SPI_HandleTypeDef SPI_HANDLE;
 
@@ -93,7 +94,7 @@ static sint8 nm_i2c_write_special(uint8 *wb1, uint16 sz1, uint8 *wb2, uint16 sz2
 static sint8 spi_rw(uint8 *tx_buf, uint8 *rx_buf, uint16 u16Sz)
 {
     sint8 result = M2M_SUCCESS;
-    WINC_CS_LOW();
+    omv_gpio_write(WINC_SPI_SSEL_PIN, 0);
     if (tx_buf != 0) {
         if (HAL_SPI_Transmit(&SPI_HANDLE, tx_buf, u16Sz, WINC_SPI_TIMEOUT) != HAL_OK) {
             result = M2M_ERR_BUS_FAIL;
@@ -104,7 +105,7 @@ static sint8 spi_rw(uint8 *tx_buf, uint8 *rx_buf, uint16 u16Sz)
             result = M2M_ERR_BUS_FAIL;
         }
     }
-    WINC_CS_HIGH();
+    omv_gpio_write(WINC_SPI_SSEL_PIN, 1);
     return result;
 }
 #endif
@@ -118,7 +119,7 @@ sint8 nm_bus_init(void *pvinit)
 {
 	sint8 result = M2M_SUCCESS;
 
-	WINC_CS_HIGH();
+    omv_gpio_write(WINC_SPI_SSEL_PIN, 1);
 
     // SPI configuration
     SPI_HANDLE.Instance               = WINC_SPI;
@@ -134,6 +135,9 @@ sint8 nm_bus_init(void *pvinit)
     SPI_HANDLE.Init.CRCCalculation    = SPI_CRCCALCULATION_DISABLED;
     SPI_HANDLE.Init.CRCPolynomial     = 7;
 
+    // Enable SPI clock
+    WINC_SPI_CLK_ENABLE();
+
     // Init SPI
     HAL_SPI_DeInit(&SPI_HANDLE);
     if (HAL_SPI_Init(&SPI_HANDLE) != HAL_OK) {
@@ -141,7 +145,7 @@ sint8 nm_bus_init(void *pvinit)
     }
 
     nm_bsp_reset();
-	WINC_CS_HIGH();
+    omv_gpio_write(WINC_SPI_SSEL_PIN, 1);
 
 	return result;
 }

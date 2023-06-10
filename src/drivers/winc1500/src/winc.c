@@ -8,13 +8,13 @@
  *
  * WINC1500 driver.
  */
-#include "winc.h"
-#include "common.h"
+#include STM32_HAL_H
 #include <string.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <errno.h>
-#include STM32_HAL_H
+#include "winc.h"
+#include "common.h"
 
 // WINC's includes
 #include "driver/include/nmasic.h"

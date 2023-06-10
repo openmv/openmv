@@ -28,26 +28,19 @@
 // Sensor external clock timer frequency.
 #define OMV_XCLK_FREQUENCY      (12000000)
 
-// Sensor PLL register value.
-#define OMV_OV7725_PLL_CONFIG   (0x41)  // x4
-
-// Sensor Banding Filter Value
-#define OMV_OV7725_BANDING      (0x7F)
-
-// OV5640 Sensor Settings
-#define OMV_OV5640_XCLK_FREQ    (12500000)
-#define OMV_OV5640_PLL_CTRL2    (0x7E)
-#define OMV_OV5640_PLL_CTRL3    (0x13)
-#define OMV_OV5640_REV_Y_CHECK  (0)
-#define OMV_OV5640_REV_Y_FREQ   (12500000)
-#define OMV_OV5640_REV_Y_CTRL2  (0x7E)
-#define OMV_OV5640_REV_Y_CTRL3  (0x13)
-
 // Enable hardware JPEG
 #define OMV_HARDWARE_JPEG       (1)
 
 // Enable MDMA sensor offload.
 #define OMV_ENABLE_SENSOR_MDMA  (1)
+
+// Enable additional GPIO banks.
+#define OMV_ENABLE_GPIO_BANK_F  (1)
+#define OMV_ENABLE_GPIO_BANK_G  (1)
+#define OMV_ENABLE_GPIO_BANK_H  (1)
+#define OMV_ENABLE_GPIO_BANK_I  (1)
+#define OMV_ENABLE_GPIO_BANK_J  (1)
+#define OMV_ENABLE_GPIO_BANK_K  (1)
 
 // Enable sensor drivers
 #define OMV_ENABLE_OV2640       (0)
@@ -62,9 +55,29 @@
 #define OMV_ENABLE_HM0360       (1)
 #define OMV_ENABLE_GC2145       (0)
 
-// Enable sensor features
-#define OMV_ENABLE_OV5640_AF    (1)
+// OV7725 sensor settings
+#define OMV_OV7725_PLL_CONFIG   (0x41)  // x4
+#define OMV_OV7725_BANDING      (0x7F)
+
+// MT9V0XX sensor settings
 #define MT9V0XX_XCLK_FREQ       (25000000)
+
+// OV5640 sensor settings
+#define OMV_ENABLE_OV5640_AF    (1)
+#define OMV_OV5640_XCLK_FREQ    (12500000)
+#define OMV_OV5640_PLL_CTRL2    (0x7E)
+#define OMV_OV5640_PLL_CTRL3    (0x13)
+#define OMV_OV5640_REV_Y_CHECK  (0)
+#define OMV_OV5640_REV_Y_FREQ   (12500000)
+#define OMV_OV5640_REV_Y_CTRL2  (0x7E)
+#define OMV_OV5640_REV_Y_CTRL3  (0x13)
+
+// FIR Module
+#define OMV_ENABLE_FIR_MLX90621 (1)
+#define OMV_ENABLE_FIR_MLX90640 (1)
+#define OMV_ENABLE_FIR_MLX90641 (1)
+#define OMV_ENABLE_FIR_AMG8833  (1)
+#define OMV_ENABLE_FIR_LEPTON   (1)
 
 // Enable WiFi debug
 #define OMV_ENABLE_WIFIDBG      (0)
@@ -89,9 +102,8 @@
 // USB IRQn.
 #define OMV_USB_IRQN            (OTG_HS_IRQn)
 #define OMV_USB_ULPI            (1)
-#define OMV_USB_ULPI_DIR_PORT   (GPIOI)
-#define OMV_USB_ULPI_DIR_PIN    (GPIO_PIN_11)
-#define OMV_USB_ULPI_DIR_CLK_ENABLE()   __HAL_RCC_GPIOI_CLK_ENABLE()
+#define OMV_USB_ULPI_STP_PIN    (&omv_pin_C0_OTG_HS)
+#define OMV_USB_ULPI_DIR_PIN    (&omv_pin_I11_OTG_HS)
 
 // Defined for cpu frequency scaling to override the revid.
 #define OMV_MAX_CPU_FREQ        (400)
@@ -223,146 +235,78 @@
 // Image sensor I2C
 #define ISC_I2C                 (I2C3)
 #define ISC_I2C_ID              (3)
-#define ISC_I2C_AF              (GPIO_AF4_I2C3)
+#define ISC_I2C_SPEED           (CAMBUS_SPEED_STANDARD)
+#define ISC_I2C_SCL_PIN         (&omv_pin_H7_I2C3)
+#define ISC_I2C_SDA_PIN         (&omv_pin_H8_I2C3)
 #define ISC_I2C_CLK_ENABLE()    __I2C3_CLK_ENABLE()
 #define ISC_I2C_CLK_DISABLE()   __I2C3_CLK_DISABLE()
-#define ISC_I2C_SCL_PORT        (GPIOH)
-#define ISC_I2C_SCL_PIN         (GPIO_PIN_7)
-#define ISC_I2C_SDA_PORT        (GPIOH)
-#define ISC_I2C_SDA_PIN         (GPIO_PIN_8)
-#define ISC_I2C_SPEED           (CAMBUS_SPEED_STANDARD)
 #define ISC_I2C_FORCE_RESET()   __HAL_RCC_I2C3_FORCE_RESET()
 #define ISC_I2C_RELEASE_RESET() __HAL_RCC_I2C3_RELEASE_RESET()
 
 // Alternate I2C bus for the Portenta breakout
 #define ISC_I2C_ALT                 (I2C4)
 #define ISC_I2C_ALT_ID              (4)
-#define ISC_I2C_ALT_AF              (GPIO_AF4_I2C4)
+#define ISC_I2C_ALT_SPEED           (CAMBUS_SPEED_STANDARD)
+#define ISC_I2C_ALT_SCL_PIN         (&omv_pin_H11_I2C4)
+#define ISC_I2C_ALT_SDA_PIN         (&omv_pin_H12_I2C4)
 #define ISC_I2C_ALT_CLK_ENABLE()    __HAL_RCC_I2C4_CLK_ENABLE()
 #define ISC_I2C_ALT_CLK_DISABLE()   __HAL_RCC_I2C4_CLK_DISABLE()
-#define ISC_I2C_ALT_SCL_PORT        (GPIOH)
-#define ISC_I2C_ALT_SCL_PIN         (GPIO_PIN_11)
-#define ISC_I2C_ALT_SDA_PORT        (GPIOH)
-#define ISC_I2C_ALT_SDA_PIN         (GPIO_PIN_12)
-#define ISC_I2C_ALT_SPEED           (CAMBUS_SPEED_STANDARD)
 #define ISC_I2C_ALT_FORCE_RESET()   __HAL_RCC_I2C4_FORCE_RESET()
 #define ISC_I2C_ALT_RELEASE_RESET() __HAL_RCC_I2C4_RELEASE_RESET()
 
 // FIR I2C
 #define FIR_I2C                 (I2C3)
 #define FIR_I2C_ID              (3)
-#define FIR_I2C_AF              (GPIO_AF4_I2C3)
+#define FIR_I2C_SPEED           (CAMBUS_SPEED_STANDARD)
+#define FIR_I2C_SCL_PIN         (&omv_pin_H7_I2C3)
+#define FIR_I2C_SDA_PIN         (&omv_pin_H8_I2C3)
 #define FIR_I2C_CLK_ENABLE()    __I2C3_CLK_ENABLE()
 #define FIR_I2C_CLK_DISABLE()   __I2C3_CLK_DISABLE()
-#define FIR_I2C_SCL_PORT        (GPIOH)
-#define FIR_I2C_SCL_PIN         (GPIO_PIN_7)
-#define FIR_I2C_SDA_PORT        (GPIOH)
-#define FIR_I2C_SDA_PIN         (GPIO_PIN_8)
-#define FIR_I2C_SPEED           (CAMBUS_SPEED_STANDARD)
 #define FIR_I2C_FORCE_RESET()   __HAL_RCC_I2C3_FORCE_RESET()
 #define FIR_I2C_RELEASE_RESET() __HAL_RCC_I2C3_RELEASE_RESET()
+
+//#define SOFT_I2C_SIOC_PIN            (&omv_pin_B10_GPIO)
+//#define SOFT_I2C_SIOD_PIN            (&omv_pin_B11_GPIO)
+//#define SOFT_I2C_SPIN_DELAY          64
 
 // GPIO.0 is connected to the sensor module reset pin on the Portenta
 // breakout board and to the LDO's LDO_ENABLE pin on the Himax shield.
 // The sensor probing process will detect the right reset or powerdown
 // polarity, so it should be fine to enable it for both boards.
-#define DCMI_RESET_PIN          (GPIO_PIN_13)
-#define DCMI_RESET_PORT         (GPIOC)
+#define DCMI_RESET_PIN         (&omv_pin_C13_GPIO)
 
 // GPIO.1 is connected to the sensor module frame sync pin (OUTPUT) on
 // the Portenta breakout board and to the INT pin (OUTPUT) on the Himax
 // shield, so it can't be enabled for the two boards at the same time.
-//#define DCMI_FSYNC_PIN          (GPIO_PIN_15)
-//#define DCMI_FSYNC_PORT         (GPIOC)
+//#define DCMI_FSYNC_PIN         (&omv_pin_C15_GPIO)
 
 // GPIO.3 is connected to the powerdown pin on the Portenta breakout board,
 // and to the STROBE pin on the Himax shield, however it's not actually
 // used on the Himax shield and can be safely enable for the two boards.
-#define DCMI_PWDN_PIN           (GPIO_PIN_5)
-#define DCMI_PWDN_PORT          (GPIOD)
+#define DCMI_POWER_PIN          (&omv_pin_D5_GPIO)
 
 /* DCMI */
 #define DCMI_TIM                (TIM1)
-#define DCMI_TIM_PIN            (GPIO_PIN_1)
-#define DCMI_TIM_PORT           (GPIOK)
+#define DCMI_TIM_PIN            (&omv_pin_K1_TIM1)
 // Enable TIM1-CH1 on PA8 too for Portenta breakout.
-#define DCMI_TIM_EXT_PIN        (GPIO_PIN_8)
-#define DCMI_TIM_EXT_PORT       (GPIOA)
-#define DCMI_TIM_AF             (GPIO_AF1_TIM1)
+#define DCMI_TIM_EXT_PIN        (&omv_pin_A8_TIM1)
 #define DCMI_TIM_CHANNEL        (TIM_CHANNEL_1)
 #define DCMI_TIM_CLK_ENABLE()   __TIM1_CLK_ENABLE()
 #define DCMI_TIM_CLK_DISABLE()  __TIM1_CLK_DISABLE()
 #define DCMI_TIM_PCLK_FREQ()    HAL_RCC_GetPCLK2Freq()
 
-#define DCMI_D0_PIN             (GPIO_PIN_9)
-#define DCMI_D1_PIN             (GPIO_PIN_10)
-#define DCMI_D2_PIN             (GPIO_PIN_11)
-#define DCMI_D3_PIN             (GPIO_PIN_12)
-#define DCMI_D4_PIN             (GPIO_PIN_14)
-#define DCMI_D5_PIN             (GPIO_PIN_4)
-#define DCMI_D6_PIN             (GPIO_PIN_6)
-#define DCMI_D7_PIN             (GPIO_PIN_7)
+#define DCMI_D0_PIN             (&omv_pin_H9_DCMI)
+#define DCMI_D1_PIN             (&omv_pin_H10_DCMI)
+#define DCMI_D2_PIN             (&omv_pin_H11_DCMI)
+#define DCMI_D3_PIN             (&omv_pin_H12_DCMI)
+#define DCMI_D4_PIN             (&omv_pin_H14_DCMI)
+#define DCMI_D5_PIN             (&omv_pin_I4_DCMI)
+#define DCMI_D6_PIN             (&omv_pin_I6_DCMI)
+#define DCMI_D7_PIN             (&omv_pin_I7_DCMI)
 
-#define DCMI_D0_PORT            (GPIOH)
-#define DCMI_D1_PORT            (GPIOH)
-#define DCMI_D2_PORT            (GPIOH)
-#define DCMI_D3_PORT            (GPIOH)
-#define DCMI_D4_PORT            (GPIOH)
-#define DCMI_D5_PORT            (GPIOI)
-#define DCMI_D6_PORT            (GPIOI)
-#define DCMI_D7_PORT            (GPIOI)
-
-#define DCMI_HSYNC_PIN          (GPIO_PIN_4)
-#define DCMI_VSYNC_PIN          (GPIO_PIN_5)
-#define DCMI_PXCLK_PIN          (GPIO_PIN_6)
-
-#define DCMI_HSYNC_PORT         (GPIOA)
-#define DCMI_VSYNC_PORT         (GPIOI)
-#define DCMI_PXCLK_PORT         (GPIOA)
-
-#if defined(DCMI_RESET_PIN)
-#define DCMI_RESET_LOW()        HAL_GPIO_WritePin(DCMI_RESET_PORT, DCMI_RESET_PIN, GPIO_PIN_RESET)
-#define DCMI_RESET_HIGH()       HAL_GPIO_WritePin(DCMI_RESET_PORT, DCMI_RESET_PIN, GPIO_PIN_SET)
-#else
-#define DCMI_RESET_LOW()
-#define DCMI_RESET_HIGH()
-#endif
-
-#if defined(DCMI_PWDN_PIN)
-#define DCMI_PWDN_LOW()         HAL_GPIO_WritePin(DCMI_PWDN_PORT, DCMI_PWDN_PIN, GPIO_PIN_RESET)
-#define DCMI_PWDN_HIGH()        HAL_GPIO_WritePin(DCMI_PWDN_PORT, DCMI_PWDN_PIN, GPIO_PIN_SET)
-#else
-#define DCMI_PWDN_LOW()
-#define DCMI_PWDN_HIGH()
-#endif
-
-#if defined(DCMI_FSYNC_PIN)
-#define DCMI_FSYNC_LOW()        HAL_GPIO_WritePin(DCMI_FSYNC_PORT, DCMI_FSYNC_PIN, GPIO_PIN_RESET)
-#define DCMI_FSYNC_HIGH()       HAL_GPIO_WritePin(DCMI_FSYNC_PORT, DCMI_FSYNC_PIN, GPIO_PIN_SET)
-#else
-#define DCMI_FSYNC_LOW()
-#define DCMI_FSYNC_HIGH()
-#endif
-
-#define DCMI_VSYNC_EXTI_IRQN    (EXTI9_5_IRQn)
-#define DCMI_VSYNC_EXTI_LINE    (5)
-#define DCMI_VSYNC_EXTI_GPIO    (EXTI_GPIOI)
-#define DCMI_VSYNC_EXTI_SHARED  (1)
-
-#define SOFT_I2C_PORT                GPIOB
-#define SOFT_I2C_SIOC_PIN            GPIO_PIN_10
-#define SOFT_I2C_SIOD_PIN            GPIO_PIN_11
-
-#define SOFT_I2C_SIOC_H()            HAL_GPIO_WritePin(SOFT_I2C_PORT, SOFT_I2C_SIOC_PIN, GPIO_PIN_SET)
-#define SOFT_I2C_SIOC_L()            HAL_GPIO_WritePin(SOFT_I2C_PORT, SOFT_I2C_SIOC_PIN, GPIO_PIN_RESET)
-
-#define SOFT_I2C_SIOD_H()            HAL_GPIO_WritePin(SOFT_I2C_PORT, SOFT_I2C_SIOD_PIN, GPIO_PIN_SET)
-#define SOFT_I2C_SIOD_L()            HAL_GPIO_WritePin(SOFT_I2C_PORT, SOFT_I2C_SIOD_PIN, GPIO_PIN_RESET)
-
-#define SOFT_I2C_SIOD_READ()         HAL_GPIO_ReadPin (SOFT_I2C_PORT, SOFT_I2C_SIOD_PIN)
-#define SOFT_I2C_SIOD_WRITE(bit)     HAL_GPIO_WritePin(SOFT_I2C_PORT, SOFT_I2C_SIOD_PIN, bit);
-
-#define SOFT_I2C_SPIN_DELAY          64
+#define DCMI_HSYNC_PIN          (&omv_pin_A4_DCMI)
+#define DCMI_VSYNC_PIN          (&omv_pin_I5_DCMI)
+#define DCMI_PXCLK_PIN          (&omv_pin_A6_DCMI)
 
 // SAI4
 #define AUDIO_SAI                   (SAI4_Block_A)
@@ -371,13 +315,8 @@
 #define AUDIO_SAI_FREQKHZ           (2048U) // 2048KHz
 #define AUDIO_MAX_CHANNELS          (2) // Maximum number of channels.
 
-#define AUDIO_SAI_CK_PORT           (GPIOE)
-#define AUDIO_SAI_CK_PIN            (GPIO_PIN_2)
-#define AUDIO_SAI_CK_AF             (GPIO_AF10_SAI4)
-
-#define AUDIO_SAI_D1_PORT           (GPIOB)
-#define AUDIO_SAI_D1_PIN            (GPIO_PIN_2)
-#define AUDIO_SAI_D1_AF             (GPIO_AF10_SAI4)
+#define AUDIO_SAI_CK_PIN           (&omv_pin_E2_SAI4)
+#define AUDIO_SAI_D1_PIN           (&omv_pin_B2_SAI4)
 
 #define AUDIO_SAI_DMA_STREAM        BDMA_Channel1
 #define AUDIO_SAI_DMA_REQUEST       BDMA_REQUEST_SAI4_A
@@ -395,13 +334,8 @@
 // #define AUDIO_SAI_FREQKHZ           (2048U) // 2048KHz
 // #define AUDIO_MAX_CHANNELS          (2) // Maximum number of channels.
 //
-// #define AUDIO_SAI_CK_PORT           (GPIOE)
-// #define AUDIO_SAI_CK_PIN            (GPIO_PIN_2)
-// #define AUDIO_SAI_CK_AF             (GPIO_AF2_SAI1)
-//
-// #define AUDIO_SAI_D1_PORT           (GPIOB)
-// #define AUDIO_SAI_D1_PIN            (GPIO_PIN_2)
-// #define AUDIO_SAI_D1_AF             (GPIO_AF2_SAI1)
+// #define AUDIO_SAI_CK_PIN            (&omv_pin_E2_SAI1)
+// #define AUDIO_SAI_D1_PIN            (&omv_pin_B2_SAI1)
 //
 // #define AUDIO_SAI_DMA_STREAM        DMA2_Stream6
 // #define AUDIO_SAI_DMA_REQUEST       DMA_REQUEST_SAI1_A
@@ -430,37 +364,14 @@
 #define OMV_SPI_LCD_CONTROLLER              (&spi_obj[1])
 #define OMV_SPI_LCD_CONTROLLER_INSTANCE     (SPI2)
 
-#define OMV_SPI_LCD_MOSI_PIN                (GPIO_PIN_3)
-#define OMV_SPI_LCD_MOSI_PORT               (GPIOC)
-#define OMV_SPI_LCD_MOSI_ALT                (GPIO_AF5_SPI2)
+#define OMV_SPI_LCD_MOSI_PIN               (&omv_pin_C3_SPI2)
+#define OMV_SPI_LCD_MISO_PIN               (&omv_pin_C2_SPI2)
+#define OMV_SPI_LCD_SCLK_PIN               (&omv_pin_I1_SPI2)
+#define OMV_SPI_LCD_SSEL_PIN               (&omv_pin_I0_GPIO)
 
-#define OMV_SPI_LCD_MISO_PIN                (GPIO_PIN_2)
-#define OMV_SPI_LCD_MISO_PORT               (GPIOC)
-#define OMV_SPI_LCD_MISO_ALT                (GPIO_AF5_SPI2)
-
-#define OMV_SPI_LCD_SCLK_PIN                (GPIO_PIN_1)
-#define OMV_SPI_LCD_SCLK_PORT               (GPIOI)
-#define OMV_SPI_LCD_SCLK_ALT                (GPIO_AF5_SPI2)
-
-#define OMV_SPI_LCD_RST_PIN                 (GPIO_PIN_15)
-#define OMV_SPI_LCD_RST_PORT                (GPIOH)
-#define OMV_SPI_LCD_RST_OFF()               HAL_GPIO_WritePin(OMV_SPI_LCD_RST_PORT, OMV_SPI_LCD_RST_PIN, GPIO_PIN_SET)
-#define OMV_SPI_LCD_RST_ON()                HAL_GPIO_WritePin(OMV_SPI_LCD_RST_PORT, OMV_SPI_LCD_RST_PIN, GPIO_PIN_RESET)
-
-#define OMV_SPI_LCD_RS_PIN                  (GPIO_PIN_1)
-#define OMV_SPI_LCD_RS_PORT                 (GPIOK)
-#define OMV_SPI_LCD_RS_OFF()                HAL_GPIO_WritePin(OMV_SPI_LCD_RS_PORT, OMV_SPI_LCD_RS_PIN, GPIO_PIN_SET)
-#define OMV_SPI_LCD_RS_ON()                 HAL_GPIO_WritePin(OMV_SPI_LCD_RS_PORT, OMV_SPI_LCD_RS_PIN, GPIO_PIN_RESET)
-
-#define OMV_SPI_LCD_CS_PIN                  (GPIO_PIN_0)
-#define OMV_SPI_LCD_CS_PORT                 (GPIOI)
-#define OMV_SPI_LCD_CS_HIGH()               HAL_GPIO_WritePin(OMV_SPI_LCD_CS_PORT, OMV_SPI_LCD_CS_PIN, GPIO_PIN_SET)
-#define OMV_SPI_LCD_CS_LOW()                HAL_GPIO_WritePin(OMV_SPI_LCD_CS_PORT, OMV_SPI_LCD_CS_PIN, GPIO_PIN_RESET)
-
-#define OMV_SPI_LCD_BL_PIN                  (GPIO_PIN_4)
-#define OMV_SPI_LCD_BL_PORT                 (GPIOA)
-#define OMV_SPI_LCD_BL_ON()                 HAL_GPIO_WritePin(OMV_SPI_LCD_BL_PORT, OMV_SPI_LCD_BL_PIN, GPIO_PIN_SET)
-#define OMV_SPI_LCD_BL_OFF()                HAL_GPIO_WritePin(OMV_SPI_LCD_BL_PORT, OMV_SPI_LCD_BL_PIN, GPIO_PIN_RESET)
+#define OMV_SPI_LCD_RS_PIN                 (&omv_pin_K1_GPIO)
+#define OMV_SPI_LCD_BL_PIN                 (&omv_pin_A4_GPIO)
+#define OMV_SPI_LCD_RST_PIN                (&omv_pin_H15_GPIO)
 
 #define OMV_SPI_LCD_BL_DAC                  (DAC1)
 #define OMV_SPI_LCD_BL_DAC_CHANNEL          (DAC_CHANNEL_1)
@@ -469,42 +380,15 @@
 #define OMV_SPI_LCD_BL_DAC_FORCE_RESET()    __HAL_RCC_DAC12_FORCE_RESET()
 #define OMV_SPI_LCD_BL_DAC_RELEASE_RESET()  __HAL_RCC_DAC12_RELEASE_RESET()
 
-// FIR Module
-#define OMV_ENABLE_FIR_MLX90621             (1)
-#define OMV_ENABLE_FIR_MLX90640             (1)
-#define OMV_ENABLE_FIR_MLX90641             (1)
-#define OMV_ENABLE_FIR_AMG8833              (1)
-#define OMV_ENABLE_FIR_LEPTON               (1)
-
 // FIR Lepton
 #define OMV_FIR_LEPTON_I2C_BUS              (FIR_I2C_ID)
 #define OMV_FIR_LEPTON_I2C_BUS_SPEED        (FIR_I2C_SPEED)
 #define OMV_FIR_LEPTON_CONTROLLER           (&spi_obj[1])
 #define OMV_FIR_LEPTON_CONTROLLER_INSTANCE  (SPI2)
 
-#define OMV_FIR_LEPTON_MOSI_PIN             (GPIO_PIN_3)
-#define OMV_FIR_LEPTON_MOSI_PORT            (GPIOC)
-#define OMV_FIR_LEPTON_MOSI_ALT             (GPIO_AF5_SPI2)
-
-#define OMV_FIR_LEPTON_MISO_PIN             (GPIO_PIN_2)
-#define OMV_FIR_LEPTON_MISO_PORT            (GPIOC)
-#define OMV_FIR_LEPTON_MISO_ALT             (GPIO_AF5_SPI2)
-
-#define OMV_FIR_LEPTON_SCLK_PIN             (GPIO_PIN_1)
-#define OMV_FIR_LEPTON_SCLK_PORT            (GPIOI)
-#define OMV_FIR_LEPTON_SCLK_ALT             (GPIO_AF5_SPI2)
-
-#define OMV_FIR_LEPTON_CS_PIN               (GPIO_PIN_0)
-#define OMV_FIR_LEPTON_CS_PORT              (GPIOI)
-#define OMV_FIR_LEPTON_CS_HIGH()            HAL_GPIO_WritePin(OMV_FIR_LEPTON_CS_PORT, OMV_FIR_LEPTON_CS_PIN, GPIO_PIN_SET)
-#define OMV_FIR_LEPTON_CS_LOW()             HAL_GPIO_WritePin(OMV_FIR_LEPTON_CS_PORT, OMV_FIR_LEPTON_CS_PIN, GPIO_PIN_RESET)
-
-// Enable additional GPIO banks for DRAM...
-#define OMV_ENABLE_GPIO_BANK_F
-#define OMV_ENABLE_GPIO_BANK_G
-#define OMV_ENABLE_GPIO_BANK_H
-#define OMV_ENABLE_GPIO_BANK_I
-#define OMV_ENABLE_GPIO_BANK_J
-#define OMV_ENABLE_GPIO_BANK_K
+#define OMV_FIR_LEPTON_MOSI_PIN            (&omv_pin_C3_SPI2)
+#define OMV_FIR_LEPTON_MISO_PIN            (&omv_pin_C2_SPI2)
+#define OMV_FIR_LEPTON_SCLK_PIN            (&omv_pin_I1_SPI2)
+#define OMV_FIR_LEPTON_SSEL_PIN            (&omv_pin_I0_GPIO)
 
 #endif //__OMV_BOARDCONFIG_H__

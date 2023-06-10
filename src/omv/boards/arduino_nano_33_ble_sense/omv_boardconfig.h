@@ -44,6 +44,13 @@
 #define OMV_ENABLE_PAJ6100      (0)
 #define OMV_ENABLE_FROGEYE2020  (0)
 
+// FIR Module
+#define OMV_ENABLE_FIR_MLX90621 (1)
+#define OMV_ENABLE_FIR_MLX90640 (1)
+#define OMV_ENABLE_FIR_MLX90641 (1)
+#define OMV_ENABLE_FIR_AMG8833  (1)
+#define OMV_ENABLE_FIR_LEPTON   (0)
+
 // Set which OV767x sensor is used
 #define OMV_OV7670_VERSION      (75)
 
@@ -129,7 +136,7 @@
 #define PDM_PWR_PIN             (17)
 
 // DCMI
-#define DCMI_PWDN_PIN           (29)
+#define DCMI_POWER_PIN          (29)
 #define DCMI_RESET_PIN          (30)
 
 #define DCMI_D0_PIN             (32+2)
@@ -145,28 +152,5 @@
 #define DCMI_HSYNC_PIN          (5)
 #define DCMI_PXCLK_PIN          (4)
 #define DCMI_XCLK_PIN           (27)
-
-#if defined(DCMI_RESET_PIN)
-#define DCMI_RESET_LOW()        nrf_gpio_pin_clear(DCMI_RESET_PIN)
-#define DCMI_RESET_HIGH()       nrf_gpio_pin_set(DCMI_RESET_PIN)
-#else
-#define DCMI_RESET_LOW()
-#define DCMI_RESET_HIGH()
-#endif
-
-#if defined(DCMI_PWDN_PIN)
-#define DCMI_PWDN_LOW()        nrf_gpio_pin_clear(DCMI_PWDN_PIN)
-#define DCMI_PWDN_HIGH()       nrf_gpio_pin_set(DCMI_PWDN_PIN)
-#else
-#define DCMI_PWDN_LOW()
-#define DCMI_PWDN_HIGH()
-#endif
-
-// FIR Module
-#define OMV_ENABLE_FIR_MLX90621 (1)
-#define OMV_ENABLE_FIR_MLX90640 (1)
-#define OMV_ENABLE_FIR_MLX90641 (1)
-#define OMV_ENABLE_FIR_AMG8833  (1)
-#define OMV_ENABLE_FIR_LEPTON   (0)
 
 #endif //__OMV_BOARDCONFIG_H__

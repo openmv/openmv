@@ -32,6 +32,7 @@
 #include "gc2145.h"
 #include "framebuffer.h"
 #include "omv_boardconfig.h"
+#include "omv_gpio.h"
 
 #if (OMV_ENABLE_PAJ6100 == 1)
 #define OMV_ENABLE_NONI2CIS
@@ -142,16 +143,18 @@ __weak int sensor_reset()
     // Disable the bus before reset.
     cambus_enable(&sensor.bus, false);
 
+    #if defined(DCMI_RESET_PIN)
     // Hard-reset the sensor
     if (sensor.reset_pol == ACTIVE_HIGH) {
-        DCMI_RESET_HIGH();
+        omv_gpio_write(DCMI_RESET_PIN, 1);
         mp_hal_delay_ms(10);
-        DCMI_RESET_LOW();
+        omv_gpio_write(DCMI_RESET_PIN, 0);
     } else {
-        DCMI_RESET_LOW();
+        omv_gpio_write(DCMI_RESET_PIN, 0);
         mp_hal_delay_ms(10);
-        DCMI_RESET_HIGH();
+        omv_gpio_write(DCMI_RESET_PIN, 1);
     }
+    #endif
 
     mp_hal_delay_ms(20);
 
@@ -176,12 +179,14 @@ int sensor_probe_init(uint32_t bus_id, uint32_t bus_speed)
     int freq;
     (void) freq;
 
+    #if defined(DCMI_POWER_PIN)
     // Do a power cycle
-    DCMI_PWDN_HIGH();
+    omv_gpio_write(DCMI_POWER_PIN, 1);
     mp_hal_delay_ms(10);
 
-    DCMI_PWDN_LOW();
+    omv_gpio_write(DCMI_POWER_PIN, 0);
     mp_hal_delay_ms(10);
+    #endif
 
     /* Some sensors have different reset polarities, and we can't know which sensor
        is connected before initializing cambus and probing the sensor, which in turn
@@ -190,12 +195,14 @@ int sensor_probe_init(uint32_t bus_id, uint32_t bus_speed)
     sensor.pwdn_pol = ACTIVE_HIGH;
     sensor.reset_pol = ACTIVE_HIGH;
 
+    #if defined(DCMI_RESET_PIN)
     // Reset the sensor
-    DCMI_RESET_HIGH();
+    omv_gpio_write(DCMI_RESET_PIN, 1);
     mp_hal_delay_ms(10);
 
-    DCMI_RESET_LOW();
+    omv_gpio_write(DCMI_RESET_PIN, 0);
     mp_hal_delay_ms(10);
+    #endif
 
     // Initialize the camera bus.
     cambus_init(&sensor.bus, bus_id, bus_speed);
@@ -208,24 +215,30 @@ int sensor_probe_init(uint32_t bus_id, uint32_t bus_speed)
            so the reset line is active low */
         sensor.reset_pol = ACTIVE_LOW;
 
+        #if defined(DCMI_RESET_PIN)
         // Pull the sensor out of the reset state.
-        DCMI_RESET_HIGH();
+        omv_gpio_write(DCMI_RESET_PIN, 1);
         mp_hal_delay_ms(10);
+        #endif
 
         // Probe again to set the slave addr.
         sensor.slv_addr = cambus_scan(&sensor.bus, NULL, 0);
         if (sensor.slv_addr == 0) {
             sensor.pwdn_pol = ACTIVE_LOW;
 
-            DCMI_PWDN_HIGH();
+            #if defined(DCMI_POWER_PIN)
+            omv_gpio_write(DCMI_POWER_PIN, 1);
             mp_hal_delay_ms(10);
+            #endif
 
             sensor.slv_addr = cambus_scan(&sensor.bus, NULL, 0);
             if (sensor.slv_addr == 0) {
                 sensor.reset_pol = ACTIVE_HIGH;
 
-                DCMI_RESET_LOW();
+                #if defined(DCMI_RESET_PIN)
+                omv_gpio_write(DCMI_RESET_PIN, 0);
                 mp_hal_delay_ms(10);
+                #endif
 
                 sensor.slv_addr = cambus_scan(&sensor.bus, NULL, 0);
                 #ifndef OMV_ENABLE_NONI2CIS
@@ -501,19 +514,21 @@ __weak int sensor_shutdown(int enable)
     // Disable any ongoing frame capture.
     sensor_abort();
 
+    #if defined(DCMI_POWER_PIN)
     if (enable) {
         if (sensor.pwdn_pol == ACTIVE_HIGH) {
-            DCMI_PWDN_HIGH();
+            omv_gpio_write(DCMI_POWER_PIN, 1);
         } else {
-            DCMI_PWDN_LOW();
+            omv_gpio_write(DCMI_POWER_PIN, 0);
         }
     } else {
         if (sensor.pwdn_pol == ACTIVE_HIGH) {
-            DCMI_PWDN_LOW();
+            omv_gpio_write(DCMI_POWER_PIN, 0);
         } else {
-            DCMI_PWDN_HIGH();
+            omv_gpio_write(DCMI_POWER_PIN, 1);
         }
     }
+    #endif
 
     mp_hal_delay_ms(10);
 
