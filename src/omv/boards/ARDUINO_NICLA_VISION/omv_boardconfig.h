@@ -53,7 +53,7 @@
 #define OMV_ENABLE_OV7725       (0)
 #define OMV_ENABLE_OV9650       (0)
 #define OMV_ENABLE_MT9V0XX      (0)
-#define OMV_ENABLE_MT9M114      (1)
+#define OMV_ENABLE_MT9M114      (0)
 #define OMV_ENABLE_LEPTON       (0)
 #define OMV_ENABLE_HM01B0       (0)
 #define OMV_ENABLE_GC2145       (1)
@@ -218,7 +218,7 @@
 #define OMV_AXI_QOS_MDMA_R_PRI  15 // Max pri to move data.
 #define OMV_AXI_QOS_MDMA_W_PRI  15 // Max pri to move data.
 
-// Image sensor I2C
+// Main image sensor I2C bus
 #define ISC_I2C                 (I2C3)
 #define ISC_I2C_ID              (3)
 #define ISC_I2C_SPEED           (OMV_I2C_SPEED_STANDARD)
@@ -229,7 +229,7 @@
 #define ISC_I2C_FORCE_RESET()   __HAL_RCC_I2C3_FORCE_RESET()
 #define ISC_I2C_RELEASE_RESET() __HAL_RCC_I2C3_RELEASE_RESET()
 
-// FIR I2C
+// Thermal image sensor I2C bus
 #define FIR_I2C                 (I2C1)
 #define FIR_I2C_ID              (1)
 #define FIR_I2C_SPEED           (OMV_I2C_SPEED_FULL)
@@ -240,11 +240,19 @@
 #define FIR_I2C_FORCE_RESET()   __HAL_RCC_I2C1_FORCE_RESET()
 #define FIR_I2C_RELEASE_RESET() __HAL_RCC_I2C1_RELEASE_RESET()
 
+// Soft I2C bus
 #define SOFT_I2C_SIOC_PIN       (&omv_pin_C10_GPIO)
 #define SOFT_I2C_SIOD_PIN       (&omv_pin_C11_GPIO)
 #define SOFT_I2C_SPIN_DELAY     64
 
-/* DCMI */
+// IMU SPI bus
+#define IMU_SPI_ID                      (5)
+#define IMU_SPI_BAUDRATE                (500000)
+#define IMU_CHIP_LSM6DSOX               (1)
+#define OMV_IMU_X_Y_ROTATION_DEGREES    90
+#define OMV_IMU_MOUNTING_Z_DIRECTION    -1
+
+// DCMI timer
 #define DCMI_TIM                (TIM3)
 #define DCMI_TIM_PIN           (&omv_pin_A7_TIM3)
 #define DCMI_TIM_CHANNEL        (TIM_CHANNEL_2)
@@ -252,6 +260,7 @@
 #define DCMI_TIM_CLK_DISABLE()  __TIM3_CLK_DISABLE()
 #define DCMI_TIM_PCLK_FREQ()    HAL_RCC_GetPCLK1Freq()
 
+// DCMI pins
 //#define DCMI_RESET_PIN         (&omv_pin_A10_GPIO)
 //#define DCMI_POWER_PIN         (&omv_pin_G3_GPIO)
 //#define DCMI_FSYNC_PIN         (&omv_pin_B4_GPIO)
@@ -292,25 +301,14 @@
 #define AUDIO_DFSDM_CLK_DISABLE()       __HAL_RCC_DFSDM1_CLK_DISABLE()
 #define AUDIO_DFSDM_DMA_CLK_ENABLE()    __HAL_RCC_DMA1_CLK_ENABLE()
 
-#define IMU_SPI                     (SPI5)
-// SPI4/5 clock source is PLL3 (160MHz/16 == 10MHz).
-#define IMU_SPI_PRESCALER           (SPI_BAUDRATEPRESCALER_16)
-
-#define IMU_SPI_RESET()             __HAL_RCC_SPI5_FORCE_RESET()
-#define IMU_SPI_RELEASE()           __HAL_RCC_SPI5_RELEASE_RESET()
-
-#define IMU_SPI_CLK_ENABLE()        __HAL_RCC_SPI5_CLK_ENABLE()
-#define IMU_SPI_CLK_DISABLE()       __HAL_RCC_SPI5_CLK_DISABLE()
-
-#define IMU_SPI_SCLK_PIN           (&omv_pin_F7_SPI5)
-#define IMU_SPI_MISO_PIN           (&omv_pin_F8_SPI5)
-#define IMU_SPI_MOSI_PIN           (&omv_pin_F11_SPI5)
-#define IMU_SPI_SSEL_PIN           (&omv_pin_F6_SPI5)
-
-// IMU configuration
-#define OMV_IMU_X_Y_ROTATION_DEGREES    90
-#define OMV_IMU_MOUNTING_Z_DIRECTION    -1
-#define IMU_CHIP_LSM6DSOX               (1)
+// Physical SPI buses.
+#define SPI5_ID                         (5)
+#define SPI5_SCLK_PIN                   (&omv_pin_F7_SPI5)
+#define SPI5_MISO_PIN                   (&omv_pin_F8_SPI5)
+#define SPI5_MOSI_PIN                   (&omv_pin_F11_SPI5)
+#define SPI5_SSEL_PIN                   (&omv_pin_F6_SPI5)
+#define SPI5_DMA_TX_CHANNEL             (DMA2_Stream4)
+#define SPI5_DMA_RX_CHANNEL             (DMA2_Stream3)
 
 // SPI LCD Interface
 #define OMV_SPI_LCD_CONTROLLER              (&spi_obj[3])
