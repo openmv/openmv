@@ -62,7 +62,7 @@
 #define OMV_ENABLE_MT9V0XX      (1)
 #define OMV_ENABLE_LEPTON       (1)
 #define OMV_ENABLE_HM01B0       (0)
-#define OMV_ENABLE_PAJ6100      (0)
+#define OMV_ENABLE_PAJ6100      (1)
 #define OMV_ENABLE_FROGEYE2020  (1)
 #define OMV_ENABLE_FIR_MLX90621 (1)
 #define OMV_ENABLE_FIR_MLX90640 (1)
@@ -163,7 +163,7 @@
 #define OMV_FB_SIZE             (400K)      // FB memory: header + VGA/GS image
 #define OMV_FB_ALLOC_SIZE       (100K)      // minimum fb alloc size
 #define OMV_STACK_SIZE          (64K)
-#define OMV_HEAP_SIZE           (229K)
+#define OMV_HEAP_SIZE           (228K)
 
 #define OMV_LINE_BUF_SIZE       (5 * 1024)  // Image line buffer.
 #define OMV_MSC_BUF_SIZE        (2K)        // USB MSC bot data
