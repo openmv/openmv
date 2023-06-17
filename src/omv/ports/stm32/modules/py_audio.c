@@ -24,6 +24,7 @@
 #include "fb_alloc.h"
 #include "omv_boardconfig.h"
 #include "common.h"
+#include "dma_utils.h"
 
 #if MICROPY_PY_AUDIO
 
@@ -72,11 +73,6 @@ void AUDIO_SAI_DMA_IRQHandler(void)
 void AUDIO_DFSDM_FLT0_IRQHandler()
 {
     HAL_DFSDM_IRQHandler(&hdfsdm_filter[0]);
-}
-
-void AUDIO_DFSDM_FLT0_DMA_IRQHandler()
-{
-    HAL_DMA_IRQHandler(&hdma_filter[0]);
 }
 #endif  // defined(AUDIO_SAI)
 
@@ -305,6 +301,9 @@ static mp_obj_t py_audio_init(uint n_args, const mp_obj_t *args, mp_map_t *kw_ar
 
     __HAL_LINKDMA(&hdfsdm_filter[0], hdmaInj, hdma_filter[0]);
     __HAL_LINKDMA(&hdfsdm_filter[0], hdmaReg, hdma_filter[0]);
+
+    // Set DMA IRQ handle
+    dma_utils_set_irq_descr(AUDIO_DFSDM_FLT0_DMA_STREAM, &hdma_filter[0]);
 
     // Initialize the DMA stream
     HAL_DMA_DeInit(&hdma_filter[0]);

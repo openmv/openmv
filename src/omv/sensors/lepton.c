@@ -20,6 +20,7 @@
 #include "dma_alloc.h"
 #include "omv_i2c.h"
 #include "omv_gpio.h"
+#include "dma_utils.h"
 #include "sensor.h"
 
 #include "crc16.h"
@@ -710,6 +711,9 @@ int lepton_init(sensor_t *sensor)
 
     // Associate the initialized DMA handle to the the SPI handle
     __HAL_LINKDMA(&ISC_SPIHandle, hdmarx, DMAHandle);
+
+    // Set DMA IRQ handle
+    dma_utils_set_irq_descr(ISC_SPI_DMA_STREAM, &DMAHandle);
 
     // NVIC configuration for SPI transfer complete interrupt
     NVIC_SetPriority(ISC_SPI_IRQn, IRQ_PRI_DCMI);
