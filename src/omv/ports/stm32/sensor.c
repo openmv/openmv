@@ -19,6 +19,7 @@
 #include "unaligned_memcpy.h"
 #include "omv_gpio.h"
 #include "omv_i2c.h"
+#include "dma_utils.h"
 
 #define MDMA_BUFFER_SIZE        (64)
 #define DMA_MAX_XFER_SIZE       (0xFFFF*4)
@@ -50,19 +51,10 @@ void DCMI_IRQHandler(void) {
     HAL_DCMI_IRQHandler(&DCMIHandle);
 }
 
-void DMA2_Stream1_IRQHandler(void) {
-    HAL_DMA_IRQHandler(DCMIHandle.DMA_Handle);
-}
-
 #ifdef ISC_SPI
 void ISC_SPI_IRQHandler(void)
 {
     HAL_SPI_IRQHandler(&ISC_SPIHandle);
-}
-
-void ISC_SPI_DMA_IRQHandler(void)
-{
-    HAL_DMA_IRQHandler(ISC_SPIHandle.hdmarx);
 }
 #endif // ISC_SPI
 
@@ -92,6 +84,9 @@ static int sensor_dma_config()
         // Initialization Error
         return -1;
     }
+
+    // Set DMA IRQ handle
+    dma_utils_set_irq_descr(DMA2_Stream1, &DMAHandle);
 
     // Configure and enable DMA IRQ Channel
     NVIC_SetPriority(DMA2_Stream1_IRQn, IRQ_PRI_DMA21);

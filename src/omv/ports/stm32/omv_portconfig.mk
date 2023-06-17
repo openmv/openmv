@@ -566,6 +566,7 @@ UVC_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/ports/stm32/,\
 	stm32fxxx_hal_msp.o                     \
 	soft_i2c.o                              \
 	ulpi.o                                  \
+	dma_utils.o                             \
 	omv_gpio.o                              \
 	omv_i2c.o                               \
 	)

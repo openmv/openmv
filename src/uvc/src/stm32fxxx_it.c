@@ -44,6 +44,7 @@
 extern PCD_HandleTypeDef hpcd;
 extern void DCMI_VsyncExtiCallback();
 extern TIM_HandleTypeDef TIM5_Handle;
+extern DMA_HandleTypeDef *dma_handle[16];
 
 /**
   * @brief  This function handles NMI exception.
@@ -155,4 +156,118 @@ void OTG_HS_IRQHandler(void)
 #endif
 {
   HAL_PCD_IRQHandler(&hpcd);
+}
+
+void DMA1_Stream0_IRQHandler(void)
+{
+    if (dma_handle[0] != NULL) {
+        HAL_DMA_IRQHandler(dma_handle[0]);
+    }
+}
+
+void DMA1_Stream1_IRQHandler(void)
+{
+    if (dma_handle[1] != NULL) {
+        HAL_DMA_IRQHandler(dma_handle[1]);
+    }
+}
+
+void DMA1_Stream2_IRQHandler(void)
+{
+    if (dma_handle[2] != NULL) {
+        HAL_DMA_IRQHandler(dma_handle[2]);
+    }
+}
+
+void DMA1_Stream3_IRQHandler(void)
+{
+    if (dma_handle[3] != NULL) {
+        HAL_DMA_IRQHandler(dma_handle[3]);
+    }
+}
+
+void DMA1_Stream4_IRQHandler(void)
+{
+    if (dma_handle[4] != NULL) {
+        HAL_DMA_IRQHandler(dma_handle[4]);
+    }
+}
+
+void DMA1_Stream5_IRQHandler(void)
+{
+    if (dma_handle[5] != NULL) {
+        HAL_DMA_IRQHandler(dma_handle[5]);
+    }
+}
+
+void DMA1_Stream6_IRQHandler(void)
+{
+    if (dma_handle[6] != NULL) {
+        HAL_DMA_IRQHandler(dma_handle[6]);
+    }
+}
+
+void DMA1_Stream7_IRQHandler(void)
+{
+    if (dma_handle[7] != NULL) {
+        HAL_DMA_IRQHandler(dma_handle[7]);
+    }
+}
+
+void DMA2_Stream0_IRQHandler(void)
+{
+    if (dma_handle[8] != NULL) {
+        HAL_DMA_IRQHandler(dma_handle[8]);
+    }
+}
+
+#if 0
+void DMA2_Stream1_IRQHandler(void)
+{
+    if (dma_handle[9] != NULL) {
+        HAL_DMA_IRQHandler(dma_handle[9]);
+    }
+}
+#endif
+
+void DMA2_Stream2_IRQHandler(void)
+{
+    if (dma_handle[10] != NULL) {
+        HAL_DMA_IRQHandler(dma_handle[10]);
+    }
+}
+
+void DMA2_Stream3_IRQHandler(void)
+{
+    if (dma_handle[11] != NULL) {
+        HAL_DMA_IRQHandler(dma_handle[11]);
+    }
+}
+
+void DMA2_Stream4_IRQHandler(void)
+{
+    if (dma_handle[12] != NULL) {
+        HAL_DMA_IRQHandler(dma_handle[12]);
+    }
+}
+
+void DMA2_Stream5_IRQHandler(void)
+{
+    if (dma_handle[13] != NULL) {
+        HAL_DMA_IRQHandler(dma_handle[13]);
+    }
+}
+
+void DMA2_Stream6_IRQHandler(void)
+{
+    if (dma_handle[14] != NULL) {
+        HAL_DMA_IRQHandler(dma_handle[14]);
+    }
+}
+
+void DMA2_Stream7_IRQHandler(void)
+{
+    if (dma_handle[15] != NULL) {
+        HAL_DMA_IRQHandler(dma_handle[15]);
+    }
 }
