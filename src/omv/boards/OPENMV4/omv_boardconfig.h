@@ -247,6 +247,13 @@
 #define ISC_SPI_ID              (3)
 #define ISC_SPI_BAUDRATE        (20000000)
 
+// WINC1500 WiFi module SPI bus
+#define WINC_SPI_ID             (2)
+#define WINC_SPI_BAUDRATE       (40000000)
+#define WINC_EN_PIN             (&omv_pin_A5_GPIO)
+#define WINC_RST_PIN            (&omv_pin_D12_GPIO)
+#define WINC_IRQ_PIN            (&omv_pin_D13_GPIO)
+
 // DCMI timer.
 #define DCMI_TIM                (TIM1)
 #define DCMI_TIM_PIN            (&omv_pin_A8_TIM1)
@@ -274,6 +281,14 @@
 #define DCMI_PXCLK_PIN          (&omv_pin_A6_DCMI)
 
 // Physical SPI buses.
+#define SPI2_ID                 (2)
+#define SPI2_SCLK_PIN           (&omv_pin_B13_SPI2)
+#define SPI2_MISO_PIN           (&omv_pin_B14_SPI2)
+#define SPI2_MOSI_PIN           (&omv_pin_B15_SPI2)
+#define SPI2_SSEL_PIN           (&omv_pin_B12_SPI2)
+#define SPI2_DMA_TX_CHANNEL     (DMA1_Stream4)
+#define SPI2_DMA_RX_CHANNEL     (DMA1_Stream3)
+
 #define SPI3_ID                 (3)
 #define SPI3_SCLK_PIN           (&omv_pin_B3_SPI3)
 #define SPI3_MISO_PIN           (&omv_pin_B4_SPI3)
@@ -281,21 +296,6 @@
 #define SPI3_SSEL_PIN           (&omv_pin_A15_SPI3)
 #define SPI3_DMA_TX_CHANNEL     (DMA1_Stream7)
 #define SPI3_DMA_RX_CHANNEL     (DMA1_Stream2)
-
-#define WINC_SPI                (SPI2)
-#define WINC_SPI_TIMEOUT        (1000)
-// SPI1/2/3 clock source is PLL2 (160MHz/4 == 40MHz).
-#define WINC_SPI_PRESCALER      (SPI_BAUDRATEPRESCALER_4)
-#define WINC_SPI_CLK_ENABLE()   __HAL_RCC_SPI2_CLK_ENABLE()
-
-#define WINC_SPI_SCLK_PIN       (&omv_pin_B13_SPI2)
-#define WINC_SPI_MISO_PIN       (&omv_pin_B14_SPI2)
-#define WINC_SPI_MOSI_PIN       (&omv_pin_B15_SPI2)
-#define WINC_SPI_SSEL_PIN       (&omv_pin_B12_GPIO)
-
-#define WINC_EN_PIN             (&omv_pin_A5_GPIO)
-#define WINC_RST_PIN            (&omv_pin_D12_GPIO)
-#define WINC_IRQ_PIN            (&omv_pin_D13_GPIO)
 
 // SPI LCD Interface
 #define OMV_SPI_LCD_CONTROLLER              (&spi_obj[1])

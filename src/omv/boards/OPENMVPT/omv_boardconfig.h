@@ -225,7 +225,7 @@
 #define OMV_AXI_QOS_MDMA_W_PRI  15 // Max pri to move data.
 #define OMV_AXI_QOS_LTDC_R_PRI  15 // Max pri to read out the frame buffer.
 
-// Image sensor I2C
+// Main image sensor I2C bus
 #define ISC_I2C                        (I2C1)
 #define ISC_I2C_ID                     (1)
 #define ISC_I2C_SPEED                  (OMV_I2C_SPEED_STANDARD)
@@ -236,7 +236,7 @@
 #define ISC_I2C_FORCE_RESET()          __HAL_RCC_I2C1_FORCE_RESET()
 #define ISC_I2C_RELEASE_RESET()        __HAL_RCC_I2C1_RELEASE_RESET()
 
-// FIR I2C configuration.
+// Thermal image sensor I2C bus
 #define FIR_I2C                         (I2C2)
 #define FIR_I2C_ID                      (2)
 #define FIR_I2C_SPEED                   (OMV_I2C_SPEED_FULL)
@@ -252,6 +252,14 @@
 #define SOFT_I2C_SIOD_PIN               (&omv_pin_B11_GPIO)
 #define SOFT_I2C_SPIN_DELAY             64
 
+// WINC1500 WiFi module SPI bus
+#define WINC_SPI_ID                     (5)
+#define WINC_SPI_BAUDRATE               (50000000)
+#define WINC_EN_PIN                     (&omv_pin_A0_GPIO)
+#define WINC_RST_PIN                    (&omv_pin_C3_GPIO)
+#define WINC_WAKE_PIN                   (&omv_pin_A1_GPIO)
+#define WINC_CFG_PIN                    (&omv_pin_I15_GPIO)
+#define WINC_IRQ_PIN                    (&omv_pin_H5_GPIO)
 
 /* DCMI */
 #define DCMI_TIM                        (TIM1)
@@ -277,22 +285,13 @@
 #define DCMI_VSYNC_PIN                 (&omv_pin_B7_DCMI)
 #define DCMI_PXCLK_PIN                 (&omv_pin_A6_DCMI)
 
-#define WINC_SPI                        (SPI5)
-#define WINC_SPI_TIMEOUT                (1000)
-// SPI5 clock source is PLL2 (200MHz/4 == 50MHz) - Slightly over the maximum of 48 MHz.
-#define WINC_SPI_PRESCALER              (SPI_BAUDRATEPRESCALER_4)
-#define WINC_SPI_CLK_ENABLE()           __HAL_RCC_SPI5_CLK_ENABLE()
+// Physical SPI buses.
 
-#define WINC_SPI_SCLK_PIN               (&omv_pin_H6_SPI5)
-#define WINC_SPI_MISO_PIN               (&omv_pin_H7_SPI5)
-#define WINC_SPI_MOSI_PIN               (&omv_pin_J10_SPI5)
-#define WINC_SPI_SSEL_PIN               (&omv_pin_K1_GPIO)
-
-#define WINC_EN_PIN                     (&omv_pin_A0_GPIO)
-#define WINC_RST_PIN                    (&omv_pin_C3_GPIO)
-#define WINC_WAKE_PIN                   (&omv_pin_A1_GPIO)
-#define WINC_CFG_PIN                    (&omv_pin_I15_GPIO)
-#define WINC_IRQ_PIN                    (&omv_pin_H5_GPIO)
+#define SPI_ID                         (5)
+#define SPI5_SCLK_PIN                  (&omv_pin_H6_SPI5)
+#define SPI5_MISO_PIN                  (&omv_pin_H7_SPI5)
+#define SPI5_MOSI_PIN                  (&omv_pin_J10_SPI5)
+#define SPI5_SSEL_PIN                  (&omv_pin_K1_GPIO)
 
 // LCD Interface
 #define OMV_LCD_CONTROLLER                  (LTDC)
