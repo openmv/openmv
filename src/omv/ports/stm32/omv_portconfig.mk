@@ -569,6 +569,7 @@ UVC_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/ports/stm32/,\
 	dma_utils.o                             \
 	omv_gpio.o                              \
 	omv_i2c.o                               \
+	omv_spi.o                               \
 	)
 
 UVC_OBJ += $(wildcard $(BUILD)/$(LEPTON_DIR)/src/*.o)
