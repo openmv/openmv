@@ -129,7 +129,7 @@
 #define OMV_FLASH_TXT_ORIGIN    0x08010000
 #define OMV_FLASH_TXT_LENGTH    960K
 
-// Image sensor I2C
+// Main image sensor I2C bus
 #define ISC_I2C                 (I2C1)
 #define ISC_I2C_ID              (1)
 #define ISC_I2C_SPEED           (OMV_I2C_SPEED_STANDARD)
@@ -140,7 +140,7 @@
 #define ISC_I2C_FORCE_RESET()   __HAL_RCC_I2C1_FORCE_RESET()
 #define ISC_I2C_RELEASE_RESET() __HAL_RCC_I2C1_RELEASE_RESET()
 
-// FIR I2C configuration.
+// Thermal image sensor I2C bus
 #define FIR_I2C                 (I2C2)
 #define FIR_I2C_ID              (2)
 #define FIR_I2C_SPEED           (OMV_I2C_SPEED_FULL)
@@ -151,10 +151,17 @@
 #define FIR_I2C_FORCE_RESET()   __HAL_RCC_I2C2_FORCE_RESET()
 #define FIR_I2C_RELEASE_RESET() __HAL_RCC_I2C2_RELEASE_RESET()
 
-// Soft I2C bus.
+// Soft I2C bus
 #define SOFT_I2C_SIOC_PIN       (&omv_pin_B10_GPIO)
 #define SOFT_I2C_SIOD_PIN       (&omv_pin_B11_GPIO)
 #define SOFT_I2C_SPIN_DELAY     16
+
+// WINC SPI bus
+#define WINC_SPI_ID             (2)
+#define WINC_SPI_BAUDRATE       (27000000)
+#define WINC_EN_PIN             (&omv_pin_A5_GPIO)
+#define WINC_RST_PIN            (&omv_pin_D12_GPIO)
+#define WINC_IRQ_PIN            (&omv_pin_D13_GPIO)
 
 // DCMI pins.
 #define DCMI_TIM                (TIM1)
@@ -181,18 +188,16 @@
 #define DCMI_VSYNC_PIN          (&omv_pin_B7_DCMI)
 #define DCMI_PXCLK_PIN          (&omv_pin_A6_DCMI)
 
-#define WINC_SPI                (SPI2)
-#define WINC_SPI_TIMEOUT        (1000)
-#define WINC_SPI_PRESCALER      (SPI_BAUDRATEPRESCALER_2)
-#define WINC_SPI_CLK_ENABLE()   __HAL_RCC_SPI2_CLK_ENABLE()
-#define WINC_SPI_SCLK_PIN       (&omv_pin_B13_SPI2)
-#define WINC_SPI_MISO_PIN       (&omv_pin_B14_SPI2)
-#define WINC_SPI_MOSI_PIN       (&omv_pin_B15_SPI2)
-#define WINC_SPI_SSEL_PIN       (&omv_pin_B12_GPIO)
-
-#define WINC_EN_PIN             (&omv_pin_A5_GPIO)
-#define WINC_RST_PIN            (&omv_pin_D12_GPIO)
-#define WINC_IRQ_PIN            (&omv_pin_D13_GPIO)
+// Physical SPI buses
+#define SPI2_ID                 (2)
+#define SPI2_SCLK_PIN           (&omv_pin_B13_SPI2)
+#define SPI2_MISO_PIN           (&omv_pin_B14_SPI2)
+#define SPI2_MOSI_PIN           (&omv_pin_B15_SPI2)
+#define SPI2_SSEL_PIN           (&omv_pin_B12_SPI2)
+#define SPI2_DMA_TX_CHANNEL     (DMA1_Stream4)
+#define SPI2_DMA_RX_CHANNEL     (DMA1_Stream3)
+#define DMA_REQUEST_SPI2_TX     (DMA_CHANNEL_0)
+#define DMA_REQUEST_SPI2_RX     (DMA_CHANNEL_0)
 
 // SPI LCD Interface
 #define OMV_SPI_LCD_CONTROLLER              (&spi_obj[1])
