@@ -26,6 +26,7 @@ SRCS += $(addprefix common/,    \
 	tinyusb_debug.c             \
 	sensor_utils.c              \
 	factoryreset.c              \
+	vospi.c                     \
    )
 
 SRCS += $(addprefix sensors/,   \

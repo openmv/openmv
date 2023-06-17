@@ -62,7 +62,7 @@
 #define OMV_ENABLE_MT9V0XX      (1)
 #define OMV_ENABLE_LEPTON       (1)
 #define OMV_ENABLE_HM01B0       (0)
-#define OMV_ENABLE_PAJ6100      (1)
+#define OMV_ENABLE_PAJ6100      (0)
 #define OMV_ENABLE_FROGEYE2020  (1)
 #define OMV_ENABLE_FIR_MLX90621 (1)
 #define OMV_ENABLE_FIR_MLX90640 (1)
@@ -216,7 +216,7 @@
 #define OMV_AXI_QOS_MDMA_R_PRI  15 // Max pri to move data.
 #define OMV_AXI_QOS_MDMA_W_PRI  15 // Max pri to move data.
 
-// Image sensor I2C
+// Main image sensor I2C bus
 #define ISC_I2C                 (I2C1)
 #define ISC_I2C_ID              (1)
 #define ISC_I2C_SPEED           (OMV_I2C_SPEED_STANDARD)
@@ -227,7 +227,7 @@
 #define ISC_I2C_FORCE_RESET()   __HAL_RCC_I2C1_FORCE_RESET()
 #define ISC_I2C_RELEASE_RESET() __HAL_RCC_I2C1_RELEASE_RESET()
 
-// FIR I2C configuration.
+// Thermal image sensor I2C bus
 #define FIR_I2C                 (I2C2)
 #define FIR_I2C_ID              (2)
 #define FIR_I2C_SPEED           (OMV_I2C_SPEED_FULL)
@@ -238,10 +238,14 @@
 #define FIR_I2C_FORCE_RESET()   __HAL_RCC_I2C2_FORCE_RESET()
 #define FIR_I2C_RELEASE_RESET() __HAL_RCC_I2C2_RELEASE_RESET()
 
-// Soft I2C bus.
+// Soft I2C bus
 #define SOFT_I2C_SIOC_PIN       (&omv_pin_B10_GPIO)
 #define SOFT_I2C_SIOD_PIN       (&omv_pin_B11_GPIO)
 #define SOFT_I2C_SPIN_DELAY     64
+
+// Main image sensor SPI bus
+#define ISC_SPI_ID              (3)
+#define ISC_SPI_BAUDRATE        (20000000)
 
 // DCMI timer.
 #define DCMI_TIM                (TIM1)
@@ -269,6 +273,15 @@
 #define DCMI_VSYNC_PIN          (&omv_pin_B7_DCMI)
 #define DCMI_PXCLK_PIN          (&omv_pin_A6_DCMI)
 
+// Physical SPI buses.
+#define SPI3_ID                 (3)
+#define SPI3_SCLK_PIN           (&omv_pin_B3_SPI3)
+#define SPI3_MISO_PIN           (&omv_pin_B4_SPI3)
+#define SPI3_MOSI_PIN           (&omv_pin_B5_SPI3)
+#define SPI3_SSEL_PIN           (&omv_pin_A15_SPI3)
+#define SPI3_DMA_TX_CHANNEL     (DMA1_Stream7)
+#define SPI3_DMA_RX_CHANNEL     (DMA1_Stream2)
+
 #define WINC_SPI                (SPI2)
 #define WINC_SPI_TIMEOUT        (1000)
 // SPI1/2/3 clock source is PLL2 (160MHz/4 == 40MHz).
@@ -283,30 +296,6 @@
 #define WINC_EN_PIN             (&omv_pin_A5_GPIO)
 #define WINC_RST_PIN            (&omv_pin_D12_GPIO)
 #define WINC_IRQ_PIN            (&omv_pin_D13_GPIO)
-
-#define ISC_SPI                     (SPI3)
-// SPI1/2/3 clock source is PLL3 (160MHz/8 == 20MHz) - Minimum (164*240*8*27 = 8,501,760Hz)
-#define ISC_SPI_PRESCALER           (SPI_BAUDRATEPRESCALER_8)
-
-#define ISC_SPI_IRQn                (SPI3_IRQn)
-#define ISC_SPI_IRQHandler          (SPI3_IRQHandler)
-
-#define ISC_SPI_DMA_IRQn            (DMA1_Stream0_IRQn)
-#define ISC_SPI_DMA_STREAM          (DMA1_Stream0)
-
-#define ISC_SPI_DMA_REQUEST         (DMA_REQUEST_SPI3_RX)
-#define ISC_SPI_DMA_IRQHandler      (DMA1_Stream0_IRQHandler)
-
-#define ISC_SPI_RESET()             __HAL_RCC_SPI3_FORCE_RESET()
-#define ISC_SPI_RELEASE()           __HAL_RCC_SPI3_RELEASE_RESET()
-
-#define ISC_SPI_CLK_ENABLE()        __HAL_RCC_SPI3_CLK_ENABLE()
-#define ISC_SPI_CLK_DISABLE()       __HAL_RCC_SPI3_CLK_DISABLE()
-
-#define ISC_SPI_SCLK_PIN            (&omv_pin_B3_SPI3)
-#define ISC_SPI_MISO_PIN            (&omv_pin_B4_SPI3)
-#define ISC_SPI_MOSI_PIN            (&omv_pin_B5_SPI3)
-#define ISC_SPI_SSEL_PIN            (&omv_pin_A15_SPI3)
 
 // SPI LCD Interface
 #define OMV_SPI_LCD_CONTROLLER              (&spi_obj[1])
