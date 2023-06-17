@@ -20,6 +20,7 @@
 #include "py_helper.h"
 #include "py_imu.h"
 #include "omv_gpio.h"
+#include "omv_spi.h"
 
 #if defined(IMU_CHIP_LSM6DS3)
 #include "lsm6ds3tr_c_reg.h"
@@ -69,45 +70,84 @@ typedef union {
 
 static bool imu_initialized = false;
 
-#if defined(IMU_SPI)
-static SPI_HandleTypeDef imubus = {
-    .Instance               = IMU_SPI,
-    .Init.Mode              = SPI_MODE_MASTER,
-    .Init.Direction         = SPI_DIRECTION_2LINES,
-    .Init.DataSize          = SPI_DATASIZE_8BIT,
-    .Init.CLKPolarity       = SPI_POLARITY_HIGH,
-    .Init.CLKPhase          = SPI_PHASE_2EDGE,
-    .Init.NSS               = SPI_NSS_SOFT,
-    .Init.BaudRatePrescaler = IMU_SPI_PRESCALER,
-    .Init.FirstBit          = SPI_FIRSTBIT_MSB,
-};
+#if defined(IMU_SPI_ID)
 
-static void platform_init(void *imubus) {
-    HAL_SPI_DeInit(imubus);
-    HAL_SPI_Init(imubus);
+#if !defined(IMU_SPI_BUS_TIMEOUT)
+#define IMU_SPI_BUS_TIMEOUT (5000)
+#endif
+
+static omv_spi_t imubus;
+
+static void platform_init(void *imubus)
+{
+    omv_spi_config_t spi_config;
+    omv_spi_default_config(&spi_config, IMU_SPI_ID);
+
+    spi_config.baudrate = IMU_SPI_BAUDRATE;
+    spi_config.clk_pol = OMV_SPI_CPOL_HIGH;
+    spi_config.clk_pha = OMV_SPI_CPHA_2EDGE;
+    spi_config.nss_enable = false; // Soft NSS
+
+    omv_spi_init(imubus, &spi_config);
 }
 
-static void platform_deinit(void *imubus) {
-    HAL_SPI_DeInit(imubus);
+static void platform_deinit(void *imubus)
+{
+    omv_spi_deinit(imubus);
     imu_initialized = false;
 }
 
 static int32_t platform_write(void *imubus, uint8_t Reg, uint8_t *Bufp, uint16_t len)
 {
-    omv_gpio_write(IMU_SPI_SSEL_PIN, 0);
-    HAL_SPI_Transmit(imubus, &Reg, 1, HAL_MAX_DELAY);
-    HAL_SPI_Transmit(imubus, Bufp, len, HAL_MAX_DELAY);
-    omv_gpio_write(IMU_SPI_SSEL_PIN, 1);
+    omv_spi_t *spi_bus = imubus;
+
+    omv_spi_transfer_t spi_xfer = {
+        .timeout = IMU_SPI_BUS_TIMEOUT,
+        .flags = OMV_SPI_XFER_BLOCKING,
+        .callback = NULL,
+        .userdata = NULL,
+    };
+
+    omv_gpio_write(spi_bus->cs, 0);
+
+    spi_xfer.size = 1;
+    spi_xfer.txbuf = &Reg;
+    spi_xfer.rxbuf = NULL;
+    omv_spi_transfer_start(spi_bus, &spi_xfer);
+
+    spi_xfer.size = len;
+    spi_xfer.txbuf = Bufp;
+    spi_xfer.rxbuf = NULL;
+    omv_spi_transfer_start(spi_bus, &spi_xfer);
+
+    omv_gpio_write(spi_bus->cs, 1);
     return 0;
 }
 
 static int32_t platform_read(void *imubus, uint8_t Reg, uint8_t *Bufp, uint16_t len)
 {
+    omv_spi_t *spi_bus = imubus;
+
     Reg |= 0x80;
-    omv_gpio_write(IMU_SPI_SSEL_PIN, 0);
-    HAL_SPI_Transmit(imubus, &Reg, 1, HAL_MAX_DELAY);
-    HAL_SPI_Receive(imubus, Bufp, len, HAL_MAX_DELAY);
-    omv_gpio_write(IMU_SPI_SSEL_PIN, 1);
+    omv_spi_transfer_t spi_xfer = {
+        .timeout = IMU_SPI_BUS_TIMEOUT,
+        .flags = OMV_SPI_XFER_BLOCKING,
+        .callback = NULL,
+        .userdata = NULL,
+    };
+
+    omv_gpio_write(spi_bus->cs, 0);
+    spi_xfer.size = 1;
+    spi_xfer.txbuf = &Reg;
+    spi_xfer.rxbuf = NULL;
+    omv_spi_transfer_start(spi_bus, &spi_xfer);
+
+    spi_xfer.size = len;
+    spi_xfer.txbuf = NULL;
+    spi_xfer.rxbuf = Bufp;
+    omv_spi_transfer_start(spi_bus, &spi_xfer);
+
+    omv_gpio_write(spi_bus->cs, 1);
     return 0;
 }
 #elif defined(IMU_I2C)
