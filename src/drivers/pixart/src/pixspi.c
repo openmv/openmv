@@ -31,7 +31,7 @@
 
 static omv_spi_t spi_bus;
 
-static bool spi_send(uint8_t *txbuf, uint16_t len)
+static int spi_send(uint8_t *txbuf, uint16_t len)
 {
     int ret = 0;
 
@@ -52,7 +52,7 @@ static bool spi_send(uint8_t *txbuf, uint16_t len)
     return ret;
 }
 
-static bool spi_send_recv(uint8_t *txbuf, uint8_t *rxbuf, uint16_t len)
+static int spi_send_recv(uint8_t *txbuf, uint8_t *rxbuf, uint16_t len)
 {
     int ret = 0;
 
@@ -104,12 +104,12 @@ void pixspi_release()
 
 int pixspi_regs_read(uint8_t addr, uint8_t * data, uint16_t length)
 {
-    if ((addr & 0x80)) {
+    if (addr & 0x80) {
         debug_printf("pixspi_regs_read() address (0x%x) overflow.\n", addr);
         return -1;
     }
     addr |= 0x80;
-    if (!spi_send_recv(&addr, data, length)) {
+    if (spi_send_recv(&addr, data, length) == -1) {
         debug_printf("spi_send_recv() failed.\n");
         return -1;
     }
@@ -119,19 +119,19 @@ int pixspi_regs_read(uint8_t addr, uint8_t * data, uint16_t length)
 int pixspi_regs_write(uint8_t addr, const uint8_t * data, uint16_t length)
 {
     uint8_t buff[64] = {};
-    if ((addr & 0x80) == 0x80) {
+    if (addr & 0x80) {
         debug_printf("pixspi_regs_read() address (0x%x) overflow.\n", addr);
         return -1;
     }
-    int32_t remaining = length;
 
+    int32_t remaining = length;
     const static uint16_t MAX_LENGTH = 255;
+
     do {
-        uint16_t len = remaining>MAX_LENGTH?MAX_LENGTH:remaining;
+        uint16_t len = remaining > MAX_LENGTH ? MAX_LENGTH : remaining;
         buff[0] = addr;
         memcpy(buff+1, data, len);
-        bool res = spi_send(buff, len + 1);
-        if (!res) {
+        if (spi_send(buff, len + 1) == -1) {
             debug_printf("spi_send() failed.\n");
             return -1;
         }
