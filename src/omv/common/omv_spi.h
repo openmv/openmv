@@ -22,6 +22,7 @@ typedef enum {
     OMV_SPI_XFER_NONBLOCK   = (1 << 2),
     OMV_SPI_XFER_CIRCULAR   = (1 << 3),
     OMV_SPI_XFER_FAILED     = (1 << 4),
+    OMV_SPI_XFER_COMPLETE   = (1 << 5),
 } omv_spi_xfer_flags_t;
 
 typedef struct _omv_spi_config {
@@ -61,7 +62,7 @@ typedef struct _omv_spi {
     void *userdata;
     omv_spi_callback_t callback;
     uint32_t xfer_error;
-    omv_spi_xfer_flags_t xfer_flags;
+    volatile omv_spi_xfer_flags_t xfer_flags;
     #ifdef OMV_SPI_PORT_BITS
     // Additional port-specific fields like device base pointer,
     // dma handles, more I/Os etc... are included directly here,

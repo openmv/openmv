@@ -178,24 +178,34 @@ int omv_spi_transfer_start(omv_spi_t *spi, omv_spi_transfer_t *xfer)
 
     if (spi->xfer_flags & OMV_SPI_XFER_BLOCKING) {
         if (xfer->txbuf && xfer->rxbuf) {
-            if (HAL_SPI_TransmitReceive(spi->descr,
-                        xfer->rxbuf, xfer->rxbuf, xfer->size, xfer->timeout) != HAL_OK) {
+            if (HAL_SPI_TransmitReceive(spi->descr, xfer->txbuf,
+                        xfer->rxbuf, xfer->size, xfer->timeout) != HAL_OK) {
                 return -1;
             }
         } else if (xfer->txbuf) {
-            if (HAL_SPI_Transmit(spi->descr,
-                        xfer->txbuf, xfer->size, xfer->timeout) != HAL_OK) {
+            if (HAL_SPI_Transmit(spi->descr, xfer->txbuf, xfer->size, xfer->timeout) != HAL_OK) {
                 return -1;
             }
         } else if (xfer->rxbuf) {
-            if (HAL_SPI_Receive(spi->descr,
-                        xfer->rxbuf, xfer->size, xfer->timeout) != HAL_OK) {
+            if (HAL_SPI_Receive(spi->descr, xfer->rxbuf, xfer->size, xfer->timeout) != HAL_OK) {
                 return -1;
             }
         }
     } else if (spi->xfer_flags & OMV_SPI_XFER_DMA) {
-        //HAL_NVIC_EnableIRQ(ISC_SPI_DMA_IRQn);
-        HAL_SPI_Receive_DMA(spi->descr, xfer->rxbuf, xfer->size);
+        if (xfer->txbuf && xfer->rxbuf) {
+            if (HAL_SPI_TransmitReceive_DMA(spi->descr, xfer->txbuf,
+                        xfer->rxbuf, xfer->size) != HAL_OK) {
+                return -1;
+            }
+        } else if (xfer->txbuf) {
+            if (HAL_SPI_Transmit_DMA(spi->descr, xfer->txbuf, xfer->size) != HAL_OK) {
+                return -1;
+            }
+        } else if (xfer->rxbuf) {
+            if (HAL_SPI_Receive_DMA(spi->descr, xfer->rxbuf, xfer->size) != HAL_OK) {
+                return -1;
+            }
+        }
     } else {
         return -1;
     }
