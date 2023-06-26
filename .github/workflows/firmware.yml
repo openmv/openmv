@@ -99,7 +99,7 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     - name: '🧹 Remove artifacts'
-      uses: geekyeggo/delete-artifact@v1
+      uses: geekyeggo/delete-artifact@v2
       with:
         name: firmware
         failOnError: false
@@ -156,7 +156,7 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     - name: '🧹 Remove artifacts'
-      uses: geekyeggo/delete-artifact@v1
+      uses: geekyeggo/delete-artifact@v2
       with:
         name: firmware
         failOnError: false
