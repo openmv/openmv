@@ -1220,7 +1220,7 @@ static mp_obj_t ltdc_dvi_get_display_id_data()
 }
 #endif // OMV_DDC_PRESENT
 
-static void ltdc_dvi_extint_callback(omv_gpio_t pin, void *data)
+static void ltdc_dvi_extint_callback(void *data)
 {
     if (ltdc_dvi_user_cb) {
         mp_call_function_1(ltdc_dvi_user_cb, ltdc_dvi_get_display_connected());

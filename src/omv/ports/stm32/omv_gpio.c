@@ -19,34 +19,25 @@
 #include "omv_boardconfig.h"
 #include "omv_gpio.h"
 
-typedef struct _omv_exti_descr {
-    bool enabled;
-    uint32_t gpio;
-    uint32_t irqn;
-    omv_gpio_t pin;
-    void *data;
-    omv_gpio_callback_t callback;
-} omv_exti_descr_t;
-
-static omv_exti_descr_t exti_descr_table[16] = {{0}};
+static omv_gpio_irq_descr_t gpio_irq_descr_table[16] = {{0}};
 
 // Returns the port number configured in EXTI_CR for this line.
-static uint32_t omv_exti_get_gpio(uint32_t line)
+static uint32_t omv_gpio_irq_get_gpio(uint32_t line)
 {
     return (SYSCFG->EXTICR[line >> 2] >> (4 * (line & 3))) & 0x0F;
 }
 
 // Returns pin number.
-static uint32_t omv_exti_get_line(omv_gpio_t pin)
+static uint32_t omv_gpio_irq_get_line(omv_gpio_t pin)
 {
     return 31 - __CLZ(pin->pin);
 }
 
 // Returns the IRQ number of a an EXTI line.
-static uint32_t omv_exti_get_irqn(omv_gpio_t pin)
+static uint32_t omv_gpio_irq_get_irqn(omv_gpio_t pin)
 {
     uint32_t exti_irqn = 0;
-    uint32_t exti_line = omv_exti_get_line(pin);
+    uint32_t exti_line = omv_gpio_irq_get_line(pin);
 
     switch (exti_line) {
         case 0:
@@ -76,32 +67,32 @@ static uint32_t omv_exti_get_irqn(omv_gpio_t pin)
     return exti_irqn;
 }
 
-static inline bool omv_exti_enabled(omv_exti_descr_t *exti_descr, uint32_t line)
+static inline bool omv_gpio_irq_enabled(omv_gpio_irq_descr_t *gpio_irq_descr, uint32_t line)
 {
-    return (exti_descr->enabled &&
-            exti_descr->callback &&
-            exti_descr->gpio == omv_exti_get_gpio(line));
+    return (gpio_irq_descr->enabled &&
+            gpio_irq_descr->callback &&
+            gpio_irq_descr->gpio == omv_gpio_irq_get_gpio(line));
 
 }
 
-void omv_exti_handler(uint32_t line)
+void omv_gpio_irq_handler(uint32_t line)
 {
     if (line < 5) {
         // EXTI lines 0 to 4 have single IRQs.
-        omv_exti_descr_t *exti_descr = &exti_descr_table[line];
-        if (omv_exti_enabled(exti_descr, line)) {
+        omv_gpio_irq_descr_t *gpio_irq_descr = &gpio_irq_descr_table[line];
+        if (omv_gpio_irq_enabled(gpio_irq_descr, line)) {
             __HAL_GPIO_EXTI_CLEAR_FLAG(1 << line);
-            exti_descr->callback(exti_descr->pin, exti_descr->data);
+            gpio_irq_descr->callback(gpio_irq_descr->data);
         }
     } else {
         size_t line_max = (line == 5) ? 10 : 16;
         // EXTI lines 5 to 9 and 10 to 15 are multiplexed.
         for (size_t i = line; i < line_max; i++) {
-            omv_exti_descr_t *exti_descr = &exti_descr_table[i];
+            omv_gpio_irq_descr_t *gpio_irq_descr = &gpio_irq_descr_table[i];
             if (__HAL_GPIO_EXTI_GET_FLAG(1 << i)
-                    && omv_exti_enabled(exti_descr, i)) {
+                    && omv_gpio_irq_enabled(gpio_irq_descr, i)) {
                 __HAL_GPIO_EXTI_CLEAR_FLAG(1 << i);
-                exti_descr->callback(exti_descr->pin, exti_descr->data);
+                gpio_irq_descr->callback(gpio_irq_descr->data);
             }
         }
     }
@@ -109,7 +100,7 @@ void omv_exti_handler(uint32_t line)
 
 void omv_gpio_init0(void)
 {
-    memset(exti_descr_table, 0, sizeof(exti_descr_table));
+    memset(gpio_irq_descr_table, 0, sizeof(gpio_irq_descr_table));
 }
 
 void omv_gpio_config(omv_gpio_t pin, uint32_t mode, uint32_t pull, uint32_t speed, uint32_t af)
@@ -141,23 +132,22 @@ void omv_gpio_write(omv_gpio_t pin, bool value)
 
 void omv_gpio_irq_register(omv_gpio_t pin, omv_gpio_callback_t callback, void *data)
 {
-    omv_exti_descr_t *exti_descr = NULL;
-    uint32_t exti_line = omv_exti_get_line(pin);
+    omv_gpio_irq_descr_t *gpio_irq_descr = NULL;
+    uint32_t exti_line = omv_gpio_irq_get_line(pin);
     if (exti_line != 0) {
-        exti_descr = &exti_descr_table[exti_line];
-        exti_descr->enabled = true;
-        exti_descr->data = data;
-        exti_descr->gpio = omv_exti_get_gpio(exti_line);
-        exti_descr->pin = pin;
-        exti_descr->callback = callback;
+        gpio_irq_descr = &gpio_irq_descr_table[exti_line];
+        gpio_irq_descr->enabled = true;
+        gpio_irq_descr->data = data;
+        gpio_irq_descr->gpio = omv_gpio_irq_get_gpio(exti_line);
+        gpio_irq_descr->callback = callback;
     }
 }
 
 void omv_gpio_irq_enable(omv_gpio_t pin, bool enable)
 {
-    uint32_t exti_line = omv_exti_get_line(pin);
-    uint32_t exti_irqn = omv_exti_get_irqn(pin);
-    exti_descr_table[exti_line].enabled = enable;
+    uint32_t exti_line = omv_gpio_irq_get_line(pin);
+    uint32_t exti_irqn = omv_gpio_irq_get_irqn(pin);
+    gpio_irq_descr_table[exti_line].enabled = enable;
     if (!enable) {
         HAL_NVIC_DisableIRQ(exti_irqn);
     } else {

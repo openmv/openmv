@@ -201,7 +201,7 @@ static void fir_lepton_spi_callback_full(SPI_HandleTypeDef *hspi)
 #if defined(OMV_FIR_LEPTON_VSYNC_PIN)
 static mp_obj_t fir_lepton_vsync_cb = NULL;
 
-static void fir_lepton_extint_callback(omv_gpio_t pin, void *data)
+static void fir_lepton_extint_callback(void *data)
 {
     if (fir_lepton_vsync_cb) {
         mp_call_function_0(fir_lepton_vsync_cb);

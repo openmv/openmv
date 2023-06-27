@@ -132,7 +132,7 @@ mp_obj_t lcd_touch_update_touch_points()
     mp_raise_msg(&mp_type_OSError, MP_ERROR_TEXT("Failed to update the number of touch points!"));
 }
 
-static void lcd_touch_extint_callback(omv_gpio_t pin, void *data)
+static void lcd_touch_extint_callback(void *data)
 {
     if (lcd_touch_user_cb) {
         mp_call_function_1(lcd_touch_user_cb, lcd_touch_update_touch_points());

@@ -339,7 +339,7 @@ int sensor_shutdown(int enable)
     return ret;
 }
 
-static void sensor_vsync_callback(omv_gpio_t pin, void *data)
+static void sensor_vsync_callback(void *data)
 {
     if (sensor.vsync_callback != NULL) {
         sensor.vsync_callback(omv_gpio_read(DCMI_VSYNC_PIN));
