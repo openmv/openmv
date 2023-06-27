@@ -53,7 +53,7 @@ void nm_bsp_sleep(uint32 u32TimeMsec) {
     mp_hal_delay_ms(u32TimeMsec);
 }
 
-static void nm_bsp_extint_callback(omv_gpio_t pin, void *data) {
+static void nm_bsp_extint_callback(void *data) {
     if (gpfIsr) {
         gpfIsr();
     }

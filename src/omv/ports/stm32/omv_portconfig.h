@@ -45,6 +45,11 @@ typedef struct {
 
 typedef const stm32_gpio_t *omv_gpio_t;
 
+#define OMV_GPIO_IRQ_DESCR_PORT_BITS \
+struct {                             \
+    uint32_t gpio;                   \
+};
+
 // Dummy AF for pins defined as I/O
 #define GPIO_NONE_GPIO    (0)
 

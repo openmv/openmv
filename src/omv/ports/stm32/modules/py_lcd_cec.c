@@ -524,7 +524,7 @@ mp_obj_t lcd_cec_receive_frame(uint n_args, const mp_obj_t *args, mp_map_t *kw_a
     mp_raise_msg(&mp_type_OSError, MP_ERROR_TEXT("Expected destination address!"));
 }
 
-static void lcd_cec_extint_callback(omv_gpio_t pin, void *data)
+static void lcd_cec_extint_callback(void *data)
 {
     if (lcd_cec_user_cb && lcd_cec_receive_frame_int(lcd_cec_dst_addr, false)) {
         mp_call_function_0(lcd_cec_user_cb);
