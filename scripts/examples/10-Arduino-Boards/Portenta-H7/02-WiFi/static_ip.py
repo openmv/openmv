@@ -10,13 +10,16 @@ KEY=''  # Network key
 TIMESTAMP = 2208988800+946684800
 
 # Init wlan module and connect to network
-print("Trying to connect... (This may take a while)...")
 wlan = network.WLAN(network.STA_IF)
-wlan.deinit()
 wlan.active(True)
+
 # ifconfig must be called before connect()
 wlan.ifconfig(('192.168.1.200', '255.255.255.0', '192.168.1.1', '192.168.1.1'))
-wlan.connect(SSID, KEY, timeout=30000)
+wlan.connect(SSID, KEY)
+
+while not wlan.isconnected():
+    print("Trying to connect to \"{:s}\"...".format(SSID))
+    time.sleep_ms(1000)
 
 # Create new socket
 client = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)

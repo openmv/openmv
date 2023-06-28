@@ -5,7 +5,6 @@
 import time, network
 
 wlan = network.WLAN(network.STA_IF)
-wlan.deinit()
 wlan.active(True)
 
 print("Scanning...")
