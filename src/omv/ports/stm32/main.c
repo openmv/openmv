@@ -644,6 +644,11 @@ soft_reset:
     // soft reset
     storage_flush();
 
+    // Call GC sweep first, before deinitializing networking drivers
+    // such as WINC/CYW43 which need to be active to close sockets
+    // when their finalizers are called by GC.
+    gc_sweep_all();
+
     // Disable all other IRQs except Systick
     irq_set_base_priority(IRQ_PRI_SYSTICK+1);
 
@@ -658,6 +663,7 @@ soft_reset:
     #endif
     timer_deinit();
     i2c_deinit_all();
+    spi_deinit_all();
     uart_deinit_all();
     #if MICROPY_HW_ENABLE_CAN
     can_deinit_all();
@@ -669,12 +675,6 @@ soft_reset:
     py_audio_deinit();
     #endif
     imlib_deinit_all();
-
-    // Call GC sweep first, before deinitializing the SPI peripheral.
-    // For the WINC1500, we still need the SPI active to close sockets
-    // when their finalizers are called by GC.
-    gc_sweep_all();
-    spi_deinit_all();
 
     mp_deinit();
 
