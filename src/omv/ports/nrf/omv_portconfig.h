@@ -14,17 +14,17 @@
 #include "nrfx_twi.h"
 
 // GPIO speeds.
-#define OMV_GPIO_SPEED_LOW          0
-#define OMV_GPIO_SPEED_HIGH         0
+#define OMV_GPIO_SPEED_LOW      0
+#define OMV_GPIO_SPEED_HIGH     0
 
 // GPIO pull.
-#define OMV_GPIO_PULL_NONE          NRF_GPIO_PIN_NOPULL
-#define OMV_GPIO_PULL_UP            NRF_GPIO_PIN_PULLUP
-#define OMV_GPIO_PULL_DOWN          NRF_GPIO_PIN_PULLDOWN
+#define OMV_GPIO_PULL_NONE      NRF_GPIO_PIN_NOPULL
+#define OMV_GPIO_PULL_UP        NRF_GPIO_PIN_PULLUP
+#define OMV_GPIO_PULL_DOWN      NRF_GPIO_PIN_PULLDOWN
 
 // GPIO modes.
-#define OMV_GPIO_MODE_INPUT         NRF_GPIO_PIN_DIR_INPUT
-#define OMV_GPIO_MODE_OUTPUT        NRF_GPIO_PIN_DIR_OUTPUT
+#define OMV_GPIO_MODE_INPUT     NRF_GPIO_PIN_DIR_INPUT
+#define OMV_GPIO_MODE_OUTPUT    NRF_GPIO_PIN_DIR_OUTPUT
 
 // omv_gpio_t definition
 typedef uint32_t omv_gpio_t;

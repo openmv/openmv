@@ -91,10 +91,9 @@
 #include "omv_i2c.h"
 #include "sensor.h"
 
-uint32_t HAL_GetHalVersion()
-{
+uint32_t HAL_GetHalVersion() {
     // Hard-coded becasue it's not defined in SDK
-    return ((2<<24) | (0<<16) | (0<<8) | (0<<0));
+    return ((2 << 24) | (0 << 16) | (0 << 8) | (0 << 0));
 }
 
 extern uint32_t _heap_start;
@@ -106,7 +105,7 @@ STATIC int vfs_mount_and_chdir(mp_obj_t bdev, mp_obj_t mount_point) {
     mp_int_t ret = -MP_EIO;
     if (nlr_push(&nlr) == 0) {
         mp_obj_t args[] = { bdev, mount_point };
-        mp_vfs_mount(2, args, (mp_map_t *)&mp_const_empty_map);
+        mp_vfs_mount(2, args, (mp_map_t *) &mp_const_empty_map);
         mp_vfs_chdir(mount_point);
         ret = 0; // success
         nlr_pop();
@@ -122,8 +121,7 @@ STATIC int vfs_mount_and_chdir(mp_obj_t bdev, mp_obj_t mount_point) {
 }
 #endif
 
-int main(int argc, char **argv)
-{
+int main(int argc, char **argv) {
 soft_reset:
     #if defined(MICROPY_BOARD_EARLY_INIT)
     MICROPY_BOARD_EARLY_INIT();
@@ -141,7 +139,7 @@ soft_reset:
 
     // Stack limit should be less than real stack size, so we have a chance
     // to recover from limit hit.  (Limit is measured in bytes.)
-    mp_stack_set_limit((char *)&_ram_end - (char *)&_heap_end - 400);
+    mp_stack_set_limit((char *) &_ram_end - (char *) &_heap_end - 400);
 
     machine_init();
 
@@ -193,7 +191,7 @@ soft_reset:
             MP_OBJ_NEW_SMALL_INT(115200),
         };
         MP_STATE_PORT(board_stdio_uart) = machine_hard_uart_type.make_new(
-                (mp_obj_t)&machine_hard_uart_type, MP_ARRAY_SIZE(args), 0, args);
+            (mp_obj_t) &machine_hard_uart_type, MP_ARRAY_SIZE(args), 0, args);
     }
     #endif
 
@@ -204,11 +202,11 @@ soft_reset:
 
     // Try to mount the flash on "/flash" and chdir to it for the boot-up directory.
     mp_obj_t mount_point = MP_OBJ_NEW_QSTR(MP_QSTR__slash_flash);
-    int ret = vfs_mount_and_chdir((mp_obj_t)&nrf_flash_obj, mount_point);
+    int ret = vfs_mount_and_chdir((mp_obj_t) &nrf_flash_obj, mount_point);
 
     if ((ret == -MP_ENODEV) || (ret == -MP_EIO)) {
         pyexec_frozen_module("_mkfs.py", false); // Frozen script for formatting flash filesystem.
-        ret = vfs_mount_and_chdir((mp_obj_t)&nrf_flash_obj, mount_point);
+        ret = vfs_mount_and_chdir((mp_obj_t) &nrf_flash_obj, mount_point);
     }
 
     if (ret != 0) {
@@ -325,7 +323,7 @@ soft_reset:
             usbdbg_set_irq_enabled(false);
             nlr_pop();
         } else {
-            mp_obj_print_exception(&mp_plat_print, (mp_obj_t)nlr.ret_val);
+            mp_obj_print_exception(&mp_plat_print, (mp_obj_t) nlr.ret_val);
         }
 
         if (usbdbg_is_busy() && nlr_push(&nlr) == 0) {
@@ -401,9 +399,9 @@ void HardFault_Handler(void) {
     reg2 = SCB->CFSR;
     bfar = SCB->BFAR;
     for (int i = 0; i < 0; i++) {
-        (void)reg;
-        (void)reg2;
-        (void)bfar;
+        (void) reg;
+        (void) reg2;
+        (void) bfar;
     }
     #endif
 }
@@ -416,7 +414,7 @@ void NORETURN __fatal_error(const char *msg) {
 
 void nlr_jump_fail(void *val) {
     printf("FATAL: uncaught exception %p\n", val);
-    mp_obj_print_exception(&mp_plat_print, (mp_obj_t)val);
+    mp_obj_print_exception(&mp_plat_print, (mp_obj_t) val);
     __fatal_error("");
 }
 

@@ -6,7 +6,7 @@
  * License. You may obtain a copy of the License at:
  *                        opensource.org/licenses/BSD-3-Clause
  *
- * USB3320 ULPI functions ported from stm32f7xx_lp_modes.c 
+ * USB3320 ULPI functions ported from stm32f7xx_lp_modes.c
  */
 #ifndef __ULPI_H__
 #define __ULPI_H__

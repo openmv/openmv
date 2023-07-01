@@ -10,8 +10,8 @@
  */
 #ifndef __ARRAY_H__
 #define __ARRAY_H__
-typedef void (*array_dtor_t)(void*);
-typedef int  (*array_comp_t)(const void*, const void*);
+typedef void (*array_dtor_t) (void *);
+typedef int (*array_comp_t) (const void *, const void *);
 // (left < right) == negative
 // (left == right) == zero
 // (left > right) == positive

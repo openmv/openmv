@@ -28,8 +28,7 @@
 
 extern void __fatal_error();
 
-int factoryreset_create_filesystem(fs_user_mount_t *vfs)
-{
+int factoryreset_create_filesystem(fs_user_mount_t *vfs) {
     FIL fp; UINT n;
     uint8_t working_buf[FF_MAX_SS];
     if (f_mkfs(&vfs->fatfs, FM_FAT, 0, working_buf, sizeof(working_buf)) != FR_OK) {

@@ -618,9 +618,9 @@ static const uint8_t af_firmware_command_regs[][3] = {
 };
 #endif
 
-#define NUM_BRIGHTNESS_LEVELS (9)
+#define NUM_BRIGHTNESS_LEVELS    (9)
 
-#define NUM_CONTRAST_LEVELS (7)
+#define NUM_CONTRAST_LEVELS      (7)
 static const uint8_t contrast_regs[NUM_CONTRAST_LEVELS][1] = {
     {0x14}, /* -3 */
     {0x18}, /* -2 */
@@ -631,7 +631,7 @@ static const uint8_t contrast_regs[NUM_CONTRAST_LEVELS][1] = {
     {0x1C}, /* +3 */
 };
 
-#define NUM_SATURATION_LEVELS (7)
+#define NUM_SATURATION_LEVELS    (7)
 static const uint8_t saturation_regs[NUM_SATURATION_LEVELS][6] = {
     {0x0c, 0x30, 0x3d, 0x3e, 0x3d, 0x01}, /* -3 */
     {0x10, 0x3d, 0x4d, 0x4e, 0x4d, 0x01}, /* -2 */
@@ -642,8 +642,7 @@ static const uint8_t saturation_regs[NUM_SATURATION_LEVELS][6] = {
     {0x2b, 0xab, 0xd6, 0xda, 0xd6, 0x04}, /* +3 */
 };
 
-static int reset(sensor_t *sensor)
-{
+static int reset(sensor_t *sensor) {
     int ret = 0;
     readout_x = 0;
     readout_y = 0;
@@ -668,7 +667,8 @@ static int reset(sensor_t *sensor)
         #if (OMV_OV5640_REV_Y_CHECK == 1)
         // Rev V (480 MHz / 20) -> 24 MHz PCLK / 3 * 100 = 800 MHz / 10 = 80 MHz PCLK.
         // Rev Y (400 MHz / 16) -> 25 MHz PCLK / 3 * 84 = 700 MHz / 10 = 70 MHz PCLK.
-        if (HAL_GetREVID() < 0x2003) { // Is this REV Y?
+        if (HAL_GetREVID() < 0x2003) {
+            // Is this REV Y?
             if (addr == SC_PLL_CONTRL2) {
                 data = OMV_OV5640_REV_Y_CTRL2;
             }
@@ -687,10 +687,18 @@ static int reset(sensor_t *sensor)
     // Write firmware
     uint16_t fw_addr = __REV16(MCU_FIRMWARE_BASE);
     ret |= omv_i2c_write_bytes(&sensor->i2c_bus, sensor->slv_addr, (uint8_t *) &fw_addr, 2, OMV_I2C_XFER_SUSPEND);
-    ret |= omv_i2c_write_bytes(&sensor->i2c_bus, sensor->slv_addr, (uint8_t *) af_firmware_regs, sizeof(af_firmware_regs), OMV_I2C_XFER_NO_FLAGS);
+    ret |= omv_i2c_write_bytes(&sensor->i2c_bus,
+                               sensor->slv_addr,
+                               (uint8_t *) af_firmware_regs,
+                               sizeof(af_firmware_regs),
+                               OMV_I2C_XFER_NO_FLAGS);
 
     for (int i = 0; af_firmware_command_regs[i][0]; i++) {
-        ret |= omv_i2c_writeb2(&sensor->i2c_bus, sensor->slv_addr, (af_firmware_command_regs[i][0] << 8) | (af_firmware_command_regs[i][1] << 0), af_firmware_command_regs[i][2]);
+        ret |=
+            omv_i2c_writeb2(&sensor->i2c_bus,
+                            sensor->slv_addr,
+                            (af_firmware_command_regs[i][0] << 8) | (af_firmware_command_regs[i][1] << 0),
+                            af_firmware_command_regs[i][2]);
     }
 
     ret |= omv_i2c_writeb2(&sensor->i2c_bus, sensor->slv_addr, SYSTEM_RESET_00, 0x00); // release mcu reset
@@ -702,8 +710,7 @@ static int reset(sensor_t *sensor)
     return ret;
 }
 
-static int sleep(sensor_t *sensor, int enable)
-{
+static int sleep(sensor_t *sensor, int enable) {
     uint8_t reg;
     if (enable) {
         reg = 0x42;
@@ -714,8 +721,7 @@ static int sleep(sensor_t *sensor, int enable)
     return omv_i2c_writeb2(&sensor->i2c_bus, sensor->slv_addr, SYSTEM_CTROL0, reg);
 }
 
-static int read_reg(sensor_t *sensor, uint16_t reg_addr)
-{
+static int read_reg(sensor_t *sensor, uint16_t reg_addr) {
     uint8_t reg_data;
     if (omv_i2c_readb2(&sensor->i2c_bus, sensor->slv_addr, reg_addr, &reg_data) != 0) {
         return -1;
@@ -723,8 +729,7 @@ static int read_reg(sensor_t *sensor, uint16_t reg_addr)
     return reg_data;
 }
 
-static int write_reg(sensor_t *sensor, uint16_t reg_addr, uint16_t reg_data)
-{
+static int write_reg(sensor_t *sensor, uint16_t reg_addr, uint16_t reg_data) {
     return omv_i2c_writeb2(&sensor->i2c_bus, sensor->slv_addr, reg_addr, reg_data);
 }
 
@@ -734,18 +739,24 @@ static int write_reg(sensor_t *sensor, uint16_t reg_addr, uint16_t reg_data)
 // increasing HTS so that DCMI_DMAConvCpltUser() can keep up with the data rate.
 //
 // WARNING! IF YOU CHANGE ANYTHING HERE RETEST WITH **ALL** RESOLUTIONS FOR THE AFFECTED MODE!
-static int calculate_hts(sensor_t *sensor, uint16_t width)
-{
+static int calculate_hts(sensor_t *sensor, uint16_t width) {
     uint16_t hts = hts_target;
 
-    if ((sensor->pixformat == PIXFORMAT_GRAYSCALE) || (sensor->pixformat == PIXFORMAT_BAYER) || (sensor->pixformat == PIXFORMAT_JPEG)) {
-        if (width <= 1280) hts = IM_MAX((width * 2) + 8, hts_target);
+    if ((sensor->pixformat == PIXFORMAT_GRAYSCALE) || (sensor->pixformat == PIXFORMAT_BAYER) ||
+        (sensor->pixformat == PIXFORMAT_JPEG)) {
+        if (width <= 1280) {
+            hts = IM_MAX((width * 2) + 8, hts_target);
+        }
     } else {
-        if (width > 640) hts = IM_MAX((width * 2) + 8, hts_target);
+        if (width > 640) {
+            hts = IM_MAX((width * 2) + 8, hts_target);
+        }
     }
 
-    if (width <= 640) hts += 160; // Fix image quality at low resolutions.
+    if (width <= 640) {
+        hts += 160;               // Fix image quality at low resolutions.
 
+    }
     return IM_MAX(hts + HSYNC_TIME, (SENSOR_WIDTH + HSYNC_TIME) / 2); // Fix to prevent crashing.
 }
 
@@ -753,13 +764,11 @@ static int calculate_hts(sensor_t *sensor, uint16_t width)
 // too low the OV5640 will crash. The minimum was determined empirically with testing...
 //
 // WARNING! IF YOU CHANGE ANYTHING HERE RETEST WITH **ALL** RESOLUTIONS FOR THE AFFECTED MODE!
-static int calculate_vts(sensor_t *sensor, uint16_t readout_height)
-{
+static int calculate_vts(sensor_t *sensor, uint16_t readout_height) {
     return IM_MAX(readout_height + VYSNC_TIME, (SENSOR_HEIGHT + VYSNC_TIME) / 8); // Fix to prevent crashing.
 }
 
-static int set_pixformat(sensor_t *sensor, pixformat_t pixformat)
-{
+static int set_pixformat(sensor_t *sensor, pixformat_t pixformat) {
     uint8_t reg;
     int ret = 0;
 
@@ -775,10 +784,10 @@ static int set_pixformat(sensor_t *sensor, pixformat_t pixformat)
     // to even have time to start the line transfer. If it were possible to slow the line readout speed of the OV5640
     // this would enable these resolutions below. However, there's nothing in the datasheet that when modified does this.
     if (((pixformat == PIXFORMAT_GRAYSCALE) || (pixformat == PIXFORMAT_BAYER) || (pixformat == PIXFORMAT_JPEG))
-    && ((sensor->framesize == FRAMESIZE_QQCIF)
-    || (sensor->framesize == FRAMESIZE_QQSIF)
-    || (sensor->framesize == FRAMESIZE_HQQQVGA)
-    || (sensor->framesize == FRAMESIZE_HQQVGA))) {
+        && ((sensor->framesize == FRAMESIZE_QQCIF)
+            || (sensor->framesize == FRAMESIZE_QQSIF)
+            || (sensor->framesize == FRAMESIZE_HQQQVGA)
+            || (sensor->framesize == FRAMESIZE_HQQVGA))) {
         return -1;
     }
 
@@ -808,13 +817,19 @@ static int set_pixformat(sensor_t *sensor, pixformat_t pixformat)
     }
 
     ret |= omv_i2c_readb2(&sensor->i2c_bus, sensor->slv_addr, TIMING_TC_REG_21, &reg);
-    ret |= omv_i2c_writeb2(&sensor->i2c_bus, sensor->slv_addr, TIMING_TC_REG_21, (reg & 0xDF) | ((pixformat == PIXFORMAT_JPEG) ? 0x20 : 0x00));
+    ret |=
+        omv_i2c_writeb2(&sensor->i2c_bus, sensor->slv_addr, TIMING_TC_REG_21,
+                        (reg & 0xDF) | ((pixformat == PIXFORMAT_JPEG) ? 0x20 : 0x00));
 
     ret |= omv_i2c_readb2(&sensor->i2c_bus, sensor->slv_addr, SYSTEM_RESET_02, &reg);
-    ret |= omv_i2c_writeb2(&sensor->i2c_bus, sensor->slv_addr, SYSTEM_RESET_02, (reg & 0xE3) | ((pixformat == PIXFORMAT_JPEG) ? 0x00 : 0x1C));
+    ret |=
+        omv_i2c_writeb2(&sensor->i2c_bus, sensor->slv_addr, SYSTEM_RESET_02,
+                        (reg & 0xE3) | ((pixformat == PIXFORMAT_JPEG) ? 0x00 : 0x1C));
 
     ret |= omv_i2c_readb2(&sensor->i2c_bus, sensor->slv_addr, CLOCK_ENABLE_02, &reg);
-    ret |= omv_i2c_writeb2(&sensor->i2c_bus, sensor->slv_addr, CLOCK_ENABLE_02, (reg & 0xD7) | ((pixformat == PIXFORMAT_JPEG) ? 0x28 : 0x00));
+    ret |=
+        omv_i2c_writeb2(&sensor->i2c_bus, sensor->slv_addr, CLOCK_ENABLE_02,
+                        (reg & 0xD7) | ((pixformat == PIXFORMAT_JPEG) ? 0x28 : 0x00));
 
     if (hts_target) {
         uint16_t sensor_hts = calculate_hts(sensor, resolution[sensor->framesize][0]);
@@ -826,8 +841,7 @@ static int set_pixformat(sensor_t *sensor, pixformat_t pixformat)
     return ret;
 }
 
-static int set_framesize(sensor_t *sensor, framesize_t framesize)
-{
+static int set_framesize(sensor_t *sensor, framesize_t framesize) {
     uint8_t reg;
     int ret = 0;
     uint16_t w = resolution[framesize][0];
@@ -844,11 +858,12 @@ static int set_framesize(sensor_t *sensor, framesize_t framesize)
     // memory copy operation that's too slow. It's that there's too much overhead in the DCMI_DMAConvCpltUser() method
     // to even have time to start the line transfer. If it were possible to slow the line readout speed of the OV5640
     // this would enable these resolutions below. However, there's nothing in the datasheet that when modified does this.
-    if (((sensor->pixformat == PIXFORMAT_GRAYSCALE) || (sensor->pixformat == PIXFORMAT_BAYER) || (sensor->pixformat == PIXFORMAT_JPEG))
-    && ((framesize == FRAMESIZE_QQCIF)
-    || (framesize == FRAMESIZE_QQSIF)
-    || (framesize == FRAMESIZE_HQQQVGA)
-    || (framesize == FRAMESIZE_HQQVGA))) {
+    if (((sensor->pixformat == PIXFORMAT_GRAYSCALE) || (sensor->pixformat == PIXFORMAT_BAYER) ||
+         (sensor->pixformat == PIXFORMAT_JPEG))
+        && ((framesize == FRAMESIZE_QQCIF)
+            || (framesize == FRAMESIZE_QQSIF)
+            || (framesize == FRAMESIZE_HQQQVGA)
+            || (framesize == FRAMESIZE_HQQVGA))) {
         return -1;
     }
 
@@ -887,10 +902,14 @@ static int set_framesize(sensor_t *sensor, framesize_t framesize)
     uint16_t sensor_w = readout_w + DUMMY_WIDTH_BUFFER; // camera hardware needs dummy pixels to sync
     uint16_t sensor_h = readout_h + DUMMY_HEIGHT_BUFFER; // camera hardware needs dummy lines to sync
 
-    uint16_t sensor_ws = IM_MAX(IM_MIN((((ACTIVE_SENSOR_WIDTH - sensor_w) / 4) + (readout_x / 2)) * 2, ACTIVE_SENSOR_WIDTH - sensor_w), -(DUMMY_WIDTH_BUFFER / 2)) + DUMMY_COLUMNS; // must be multiple of 2
+    uint16_t sensor_ws =
+        IM_MAX(IM_MIN((((ACTIVE_SENSOR_WIDTH - sensor_w) / 4) + (readout_x / 2)) * 2, ACTIVE_SENSOR_WIDTH - sensor_w),
+               -(DUMMY_WIDTH_BUFFER / 2)) + DUMMY_COLUMNS;                                                                                                                          // must be multiple of 2
     uint16_t sensor_we = sensor_ws + sensor_w - 1;
 
-    uint16_t sensor_hs = IM_MAX(IM_MIN((((ACTIVE_SENSOR_HEIGHT - sensor_h) / 4) - (readout_y / 2)) * 2, ACTIVE_SENSOR_HEIGHT - sensor_h), -(DUMMY_HEIGHT_BUFFER / 2)) + DUMMY_LINES; // must be multiple of 2
+    uint16_t sensor_hs =
+        IM_MAX(IM_MIN((((ACTIVE_SENSOR_HEIGHT - sensor_h) / 4) - (readout_y / 2)) * 2, ACTIVE_SENSOR_HEIGHT - sensor_h),
+               -(DUMMY_HEIGHT_BUFFER / 2)) + DUMMY_LINES;                                                                                                                            // must be multiple of 2
     uint16_t sensor_he = sensor_hs + sensor_h - 1;
 
     // Step 3: Determine scaling window offset.
@@ -962,8 +981,7 @@ static int set_framesize(sensor_t *sensor, framesize_t framesize)
     return ret;
 }
 
-static int set_contrast(sensor_t *sensor, int level)
-{
+static int set_contrast(sensor_t *sensor, int level) {
     int ret = 0;
 
     int new_level = level + (NUM_CONTRAST_LEVELS / 2);
@@ -980,8 +998,7 @@ static int set_contrast(sensor_t *sensor, int level)
     return ret;
 }
 
-static int set_brightness(sensor_t *sensor, int level)
-{
+static int set_brightness(sensor_t *sensor, int level) {
     int ret = 0;
 
     int new_level = level + (NUM_BRIGHTNESS_LEVELS / 2);
@@ -998,8 +1015,7 @@ static int set_brightness(sensor_t *sensor, int level)
     return ret;
 }
 
-static int set_saturation(sensor_t *sensor, int level)
-{
+static int set_saturation(sensor_t *sensor, int level) {
     int ret = 0;
 
     int new_level = level + (NUM_SATURATION_LEVELS / 2);
@@ -1025,8 +1041,7 @@ static int set_saturation(sensor_t *sensor, int level)
     return ret;
 }
 
-static int set_gainceiling(sensor_t *sensor, gainceiling_t gainceiling)
-{
+static int set_gainceiling(sensor_t *sensor, gainceiling_t gainceiling) {
     uint8_t reg;
     int ret = 0;
 
@@ -1042,8 +1057,7 @@ static int set_gainceiling(sensor_t *sensor, gainceiling_t gainceiling)
     return ret;
 }
 
-static int set_quality(sensor_t *sensor, int qs)
-{
+static int set_quality(sensor_t *sensor, int qs) {
     uint8_t reg;
     int ret = omv_i2c_readb2(&sensor->i2c_bus, sensor->slv_addr, JPEG_CTRL07, &reg);
     ret |= omv_i2c_writeb2(&sensor->i2c_bus, sensor->slv_addr, JPEG_CTRL07, (reg & 0xC0) | (qs >> 2));
@@ -1051,15 +1065,13 @@ static int set_quality(sensor_t *sensor, int qs)
     return ret;
 }
 
-static int set_colorbar(sensor_t *sensor, int enable)
-{
+static int set_colorbar(sensor_t *sensor, int enable) {
     uint8_t reg;
     int ret = omv_i2c_readb2(&sensor->i2c_bus, sensor->slv_addr, PRE_ISP_TEST, &reg);
     return omv_i2c_writeb2(&sensor->i2c_bus, sensor->slv_addr, PRE_ISP_TEST, (reg & 0x7F) | (enable ? 0x80 : 0x00)) | ret;
 }
 
-static int set_auto_gain(sensor_t *sensor, int enable, float gain_db, float gain_db_ceiling)
-{
+static int set_auto_gain(sensor_t *sensor, int enable, float gain_db, float gain_db_ceiling) {
     uint8_t reg;
     int ret = omv_i2c_readb2(&sensor->i2c_bus, sensor->slv_addr, AEC_PK_MANUAL, &reg);
     ret |= omv_i2c_writeb2(&sensor->i2c_bus, sensor->slv_addr, AEC_PK_MANUAL, (reg & 0xFD) | ((enable == 0) << 1));
@@ -1081,8 +1093,7 @@ static int set_auto_gain(sensor_t *sensor, int enable, float gain_db, float gain
     return ret;
 }
 
-static int get_gain_db(sensor_t *sensor, float *gain_db)
-{
+static int get_gain_db(sensor_t *sensor, float *gain_db) {
     uint8_t gainh, gainl;
 
     int ret = omv_i2c_readb2(&sensor->i2c_bus, sensor->slv_addr, AEC_PK_REAL_GAIN_H, &gainh);
@@ -1093,13 +1104,15 @@ static int get_gain_db(sensor_t *sensor, float *gain_db)
     return ret;
 }
 
-static int calc_pclk_freq(uint8_t sc_pll_ctrl_0, uint8_t sc_pll_ctrl_1, uint8_t sc_pll_ctrl_2, uint8_t sc_pll_ctrl_3, uint8_t sys_root_div)
-{
+static int calc_pclk_freq(uint8_t sc_pll_ctrl_0,
+                          uint8_t sc_pll_ctrl_1,
+                          uint8_t sc_pll_ctrl_2,
+                          uint8_t sc_pll_ctrl_3,
+                          uint8_t sys_root_div) {
     uint32_t pclk_freq = sensor_get_xclk_frequency();
     pclk_freq /= ((sc_pll_ctrl_3 & 0x10) != 0x00) ? 2 : 1;
     pclk_freq /= ((sc_pll_ctrl_0 & 0x0F) == 0x0A) ? 10 : 8;
-    switch (sc_pll_ctrl_3 & 0x0F)
-    {
+    switch (sc_pll_ctrl_3 & 0x0F) {
         case  0: pclk_freq /= 1; break;
         case  1: pclk_freq /= 2; break;
         case  2: pclk_freq /= 3; break;
@@ -1111,8 +1124,7 @@ static int calc_pclk_freq(uint8_t sc_pll_ctrl_0, uint8_t sc_pll_ctrl_1, uint8_t 
     pclk_freq *= sc_pll_ctrl_2;
     sc_pll_ctrl_1 >>= 4;
     pclk_freq /= sc_pll_ctrl_1;
-    switch (sys_root_div & 0x30)
-    {
+    switch (sys_root_div & 0x30) {
         case 0x00: pclk_freq /= 1; break;
         case 0x10: pclk_freq /= 2; break;
         case 0x20: pclk_freq /= 4; break;
@@ -1122,8 +1134,7 @@ static int calc_pclk_freq(uint8_t sc_pll_ctrl_0, uint8_t sc_pll_ctrl_1, uint8_t 
     return (int) pclk_freq;
 }
 
-static int set_auto_exposure(sensor_t *sensor, int enable, int exposure_us)
-{
+static int set_auto_exposure(sensor_t *sensor, int enable, int exposure_us) {
     uint8_t reg, spc0, spc1, spc2, spc3, sysrootdiv, hts_h, hts_l, vts_h, vts_l;
     int ret = omv_i2c_readb2(&sensor->i2c_bus, sensor->slv_addr, AEC_PK_MANUAL, &reg);
     ret |= omv_i2c_writeb2(&sensor->i2c_bus, sensor->slv_addr, AEC_PK_MANUAL, (reg & 0xFE) | ((enable == 0) << 0));
@@ -1161,8 +1172,7 @@ static int set_auto_exposure(sensor_t *sensor, int enable, int exposure_us)
     return ret;
 }
 
-static int get_exposure_us(sensor_t *sensor, int *exposure_us)
-{
+static int get_exposure_us(sensor_t *sensor, int *exposure_us) {
     uint8_t spc0, spc1, spc2, spc3, sysrootdiv, aec_0, aec_1, aec_2, hts_h, hts_l;
     int ret = 0;
 
@@ -1189,14 +1199,13 @@ static int get_exposure_us(sensor_t *sensor, int *exposure_us)
     return ret;
 }
 
-static int set_auto_whitebal(sensor_t *sensor, int enable, float r_gain_db, float g_gain_db, float b_gain_db)
-{
+static int set_auto_whitebal(sensor_t *sensor, int enable, float r_gain_db, float g_gain_db, float b_gain_db) {
     uint8_t reg;
     int ret = omv_i2c_readb2(&sensor->i2c_bus, sensor->slv_addr, AWB_MANUAL_CONTROL, &reg);
     ret |= omv_i2c_writeb2(&sensor->i2c_bus, sensor->slv_addr, AWB_MANUAL_CONTROL, (reg & 0xFE) | (enable == 0));
 
     if ((enable == 0) && (!isnanf(r_gain_db)) && (!isnanf(g_gain_db)) && (!isnanf(b_gain_db))
-                      && (!isinff(r_gain_db)) && (!isinff(g_gain_db)) && (!isinff(b_gain_db))) {
+        && (!isinff(r_gain_db)) && (!isinff(g_gain_db)) && (!isinff(b_gain_db))) {
 
         int r_gain = IM_MAX(IM_MIN(fast_roundf(fast_expf((r_gain_db / 20.0) * fast_log(10.0))), 4095), 0);
         int g_gain = IM_MAX(IM_MIN(fast_roundf(fast_expf((g_gain_db / 20.0) * fast_log(10.0))), 4095), 0);
@@ -1213,8 +1222,7 @@ static int set_auto_whitebal(sensor_t *sensor, int enable, float r_gain_db, floa
     return ret;
 }
 
-static int get_rgb_gain_db(sensor_t *sensor, float *r_gain_db, float *g_gain_db, float *b_gain_db)
-{
+static int get_rgb_gain_db(sensor_t *sensor, float *r_gain_db, float *g_gain_db, float *b_gain_db) {
     uint8_t redh, redl, greenh, greenl, blueh, bluel;
 
     int ret = omv_i2c_readb2(&sensor->i2c_bus, sensor->slv_addr, AWB_R_GAIN_H, &redh);
@@ -1231,32 +1239,29 @@ static int get_rgb_gain_db(sensor_t *sensor, float *r_gain_db, float *g_gain_db,
     return ret;
 }
 
-static int set_hmirror(sensor_t *sensor, int enable)
-{
+static int set_hmirror(sensor_t *sensor, int enable) {
     uint8_t reg;
     int ret = omv_i2c_readb2(&sensor->i2c_bus, sensor->slv_addr, TIMING_TC_REG_21, &reg);
-    if (enable){
-        ret |= omv_i2c_writeb2(&sensor->i2c_bus, sensor->slv_addr, TIMING_TC_REG_21, reg|0x06);
+    if (enable) {
+        ret |= omv_i2c_writeb2(&sensor->i2c_bus, sensor->slv_addr, TIMING_TC_REG_21, reg | 0x06);
     } else {
-        ret |= omv_i2c_writeb2(&sensor->i2c_bus, sensor->slv_addr, TIMING_TC_REG_21, reg&0xF9);
+        ret |= omv_i2c_writeb2(&sensor->i2c_bus, sensor->slv_addr, TIMING_TC_REG_21, reg & 0xF9);
     }
     return ret;
 }
 
-static int set_vflip(sensor_t *sensor, int enable)
-{
+static int set_vflip(sensor_t *sensor, int enable) {
     uint8_t reg;
     int ret = omv_i2c_readb2(&sensor->i2c_bus, sensor->slv_addr, TIMING_TC_REG_20, &reg);
-    if (!enable){
-        ret |= omv_i2c_writeb2(&sensor->i2c_bus, sensor->slv_addr, TIMING_TC_REG_20, reg|0x06);
+    if (!enable) {
+        ret |= omv_i2c_writeb2(&sensor->i2c_bus, sensor->slv_addr, TIMING_TC_REG_20, reg | 0x06);
     } else {
-        ret |= omv_i2c_writeb2(&sensor->i2c_bus, sensor->slv_addr, TIMING_TC_REG_20, reg&0xF9);
+        ret |= omv_i2c_writeb2(&sensor->i2c_bus, sensor->slv_addr, TIMING_TC_REG_20, reg & 0xF9);
     }
     return ret;
 }
 
-static int set_special_effect(sensor_t *sensor, sde_t sde)
-{
+static int set_special_effect(sensor_t *sensor, sde_t sde) {
     int ret = 0;
 
     switch (sde) {
@@ -1285,15 +1290,13 @@ static int set_special_effect(sensor_t *sensor, sde_t sde)
     return ret;
 }
 
-static int set_lens_correction(sensor_t *sensor, int enable, int radi, int coef)
-{
+static int set_lens_correction(sensor_t *sensor, int enable, int radi, int coef) {
     uint8_t reg;
     int ret = omv_i2c_readb2(&sensor->i2c_bus, sensor->slv_addr, ISP_CONTROL_00, &reg);
     return omv_i2c_writeb2(&sensor->i2c_bus, sensor->slv_addr, ISP_CONTROL_00, (reg & 0x7F) | (enable ? 0x80 : 0x00)) | ret;
 }
 
-static int ioctl(sensor_t *sensor, int request, va_list ap)
-{
+static int ioctl(sensor_t *sensor, int request, va_list ap) {
     int ret = 0;
 
     switch (request) {
@@ -1306,12 +1309,15 @@ static int ioctl(sensor_t *sensor, int request, va_list ap)
             int readout_y_max = (ACTIVE_SENSOR_HEIGHT - tmp_readout_h) / 2;
             tmp_readout_x = IM_MAX(IM_MIN(tmp_readout_x, readout_x_max), -readout_x_max);
             tmp_readout_y = IM_MAX(IM_MIN(tmp_readout_y, readout_y_max), -readout_y_max);
-            bool changed = (tmp_readout_x != readout_x) || (tmp_readout_y != readout_y) || (tmp_readout_w != readout_w) || (tmp_readout_h != readout_h);
+            bool changed = (tmp_readout_x != readout_x) || (tmp_readout_y != readout_y) || (tmp_readout_w != readout_w) ||
+                           (tmp_readout_h != readout_h);
             readout_x = tmp_readout_x;
             readout_y = tmp_readout_y;
             readout_w = tmp_readout_w;
             readout_h = tmp_readout_h;
-            if (changed && (sensor->framesize != FRAMESIZE_INVALID)) set_framesize(sensor, sensor->framesize);
+            if (changed && (sensor->framesize != FRAMESIZE_INVALID)) {
+                set_framesize(sensor, sensor->framesize);
+            }
             break;
         }
         case IOCTL_GET_READOUT_WINDOW: {
@@ -1339,8 +1345,12 @@ static int ioctl(sensor_t *sensor, int request, va_list ap)
             for (;;) {
                 uint8_t reg;
                 ret = omv_i2c_readb2(&sensor->i2c_bus, sensor->slv_addr, AF_CMD_ACK, &reg);
-                if ((ret < 0) || (!reg)) break;
-                if ((mp_hal_ticks_ms() - start_tick) >= delay_ms) return -1;
+                if ((ret < 0) || (!reg)) {
+                    break;
+                }
+                if ((mp_hal_ticks_ms() - start_tick) >= delay_ms) {
+                    return -1;
+                }
                 mp_hal_delay_ms(1);
             }
             break;
@@ -1355,43 +1365,42 @@ static int ioctl(sensor_t *sensor, int request, va_list ap)
     return ret;
 }
 
-int ov5640_init(sensor_t *sensor)
-{
+int ov5640_init(sensor_t *sensor) {
     // Initialize sensor structure.
-    sensor->reset               = reset;
-    sensor->sleep               = sleep;
-    sensor->read_reg            = read_reg;
-    sensor->write_reg           = write_reg;
-    sensor->set_pixformat       = set_pixformat;
-    sensor->set_framesize       = set_framesize;
-    sensor->set_contrast        = set_contrast;
-    sensor->set_brightness      = set_brightness;
-    sensor->set_saturation      = set_saturation;
-    sensor->set_gainceiling     = set_gainceiling;
-    sensor->set_quality         = set_quality;
-    sensor->set_colorbar        = set_colorbar;
-    sensor->set_auto_gain       = set_auto_gain;
-    sensor->get_gain_db         = get_gain_db;
-    sensor->set_auto_exposure   = set_auto_exposure;
-    sensor->get_exposure_us     = get_exposure_us;
-    sensor->set_auto_whitebal   = set_auto_whitebal;
-    sensor->get_rgb_gain_db     = get_rgb_gain_db;
-    sensor->set_hmirror         = set_hmirror;
-    sensor->set_vflip           = set_vflip;
-    sensor->set_special_effect  = set_special_effect;
+    sensor->reset = reset;
+    sensor->sleep = sleep;
+    sensor->read_reg = read_reg;
+    sensor->write_reg = write_reg;
+    sensor->set_pixformat = set_pixformat;
+    sensor->set_framesize = set_framesize;
+    sensor->set_contrast = set_contrast;
+    sensor->set_brightness = set_brightness;
+    sensor->set_saturation = set_saturation;
+    sensor->set_gainceiling = set_gainceiling;
+    sensor->set_quality = set_quality;
+    sensor->set_colorbar = set_colorbar;
+    sensor->set_auto_gain = set_auto_gain;
+    sensor->get_gain_db = get_gain_db;
+    sensor->set_auto_exposure = set_auto_exposure;
+    sensor->get_exposure_us = get_exposure_us;
+    sensor->set_auto_whitebal = set_auto_whitebal;
+    sensor->get_rgb_gain_db = get_rgb_gain_db;
+    sensor->set_hmirror = set_hmirror;
+    sensor->set_vflip = set_vflip;
+    sensor->set_special_effect = set_special_effect;
     sensor->set_lens_correction = set_lens_correction;
-    sensor->ioctl               = ioctl;
+    sensor->ioctl = ioctl;
 
     // Set sensor flags
-    sensor->hw_flags.vsync      = 1;
-    sensor->hw_flags.hsync      = 0;
-    sensor->hw_flags.pixck      = 1;
-    sensor->hw_flags.fsync      = 0;
-    sensor->hw_flags.jpege      = 1;
-    sensor->hw_flags.jpeg_mode  = 4;
-    sensor->hw_flags.gs_bpp     = 1;
-    sensor->hw_flags.rgb_swap   = 0;
-    sensor->hw_flags.yuv_order  = SENSOR_HW_FLAGS_YVU422;
+    sensor->hw_flags.vsync = 1;
+    sensor->hw_flags.hsync = 0;
+    sensor->hw_flags.pixck = 1;
+    sensor->hw_flags.fsync = 0;
+    sensor->hw_flags.jpege = 1;
+    sensor->hw_flags.jpeg_mode = 4;
+    sensor->hw_flags.gs_bpp = 1;
+    sensor->hw_flags.rgb_swap = 0;
+    sensor->hw_flags.yuv_order = SENSOR_HW_FLAGS_YVU422;
 
     return 0;
 }

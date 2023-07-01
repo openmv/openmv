@@ -17,7 +17,7 @@
 // Config options are defined in ports so they can be used
 // directly to initialize peripherals without remapping them.
 
-typedef void (*omv_gpio_callback_t)(void *data);
+typedef void (*omv_gpio_callback_t) (void *data);
 
 typedef struct _omv_gpio_irq_descr {
     bool enabled;

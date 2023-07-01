@@ -27,32 +27,32 @@
 #include "framebuffer.h"
 #include "omv_boardconfig.h"
 
-#define OLD_BINARY_BPP      0
-#define OLD_GRAYSCALE_BPP   1
-#define OLD_RGB565_BPP      2
-#define OLD_BAYER_BPP       3
-#define OLD_JPG_BPP         4
+#define OLD_BINARY_BPP          0
+#define OLD_GRAYSCALE_BPP       1
+#define OLD_RGB565_BPP          2
+#define OLD_BAYER_BPP           3
+#define OLD_JPG_BPP             4
 
-#define MAGIC_SIZE          16
-#define ALIGN_SIZE          16
-#define AFTER_SIZE_PADDING  12
+#define MAGIC_SIZE              16
+#define ALIGN_SIZE              16
+#define AFTER_SIZE_PADDING      12
 
-#define ORIGINAL_VER        10
-#define RGB565_FIXED_VER    11
-#define NEW_PIXFORMAT_VER   20
+#define ORIGINAL_VER            10
+#define RGB565_FIXED_VER        11
+#define NEW_PIXFORMAT_VER       20
 
 #ifndef __DCACHE_PRESENT
-#define IMAGE_ALIGNMENT 32 // Use 32-byte alignment on MCUs with no cache for DMA buffer alignment.
+#define IMAGE_ALIGNMENT         32 // Use 32-byte alignment on MCUs with no cache for DMA buffer alignment.
 #else
-#define IMAGE_ALIGNMENT __SCB_DCACHE_LINE_SIZE
+#define IMAGE_ALIGNMENT         __SCB_DCACHE_LINE_SIZE
 #endif
 
-#define IMAGE_T_SIZE_ALIGNED (((sizeof(uint32_t) + sizeof(image_t) + (IMAGE_ALIGNMENT) - 1) \
-                             / (IMAGE_ALIGNMENT)) \
-                             * (IMAGE_ALIGNMENT))
+#define IMAGE_T_SIZE_ALIGNED    (((sizeof(uint32_t) + sizeof(image_t) + (IMAGE_ALIGNMENT) -1) \
+                                  / (IMAGE_ALIGNMENT))                                        \
+                                 * (IMAGE_ALIGNMENT))
 
 STATIC size_t image_size_aligned(image_t *image) {
-    return ((image_size(image) + (IMAGE_ALIGNMENT) - 1) / (IMAGE_ALIGNMENT)) * (IMAGE_ALIGNMENT);
+    return ((image_size(image) + (IMAGE_ALIGNMENT) -1) / (IMAGE_ALIGNMENT)) * (IMAGE_ALIGNMENT);
 }
 
 typedef enum image_io_stream_type {
@@ -81,8 +81,7 @@ typedef struct py_imageio_obj {
     };
 } py_imageio_obj_t;
 
-STATIC py_imageio_obj_t *py_imageio_obj(mp_obj_t self)
-{
+STATIC py_imageio_obj_t *py_imageio_obj(mp_obj_t self) {
     py_imageio_obj_t *stream = MP_OBJ_TO_PTR(self);
 
     if (stream->closed) {
@@ -92,67 +91,60 @@ STATIC py_imageio_obj_t *py_imageio_obj(mp_obj_t self)
     return stream;
 }
 
-STATIC void py_imageio_print(const mp_print_t *print, mp_obj_t self, mp_print_kind_t kind)
-{
+STATIC void py_imageio_print(const mp_print_t *print, mp_obj_t self, mp_print_kind_t kind) {
     py_imageio_obj_t *stream = MP_OBJ_TO_PTR(self);
     mp_printf(print, "{\"type\":%s, \"closed\":%s, \"count\":%u, \"offset\":%u, "
-                      "\"version\":%u, \"buffer_size\":%u, \"size\":%u}",
-        (stream->type == IMAGE_IO_FILE_STREAM) ? "\"file stream\"" : "\"memory stream\"",
-        stream->closed ? "\"true\"" : "\"false\"",
-        stream->count,
-        stream->offset,
+              "\"version\":%u, \"buffer_size\":%u, \"size\":%u}",
+              (stream->type == IMAGE_IO_FILE_STREAM) ? "\"file stream\"" : "\"memory stream\"",
+              stream->closed ? "\"true\"" : "\"false\"",
+              stream->count,
+              stream->offset,
 #if defined(IMLIB_ENABLE_IMAGE_FILE_IO)
-        (stream->type == IMAGE_IO_FILE_STREAM)  ? stream->version : 0,
+              (stream->type == IMAGE_IO_FILE_STREAM)  ? stream->version : 0,
 #else
-        0,
+              0,
 #endif
-        (stream->type == IMAGE_IO_FILE_STREAM) ? 0 : stream->size,
+              (stream->type == IMAGE_IO_FILE_STREAM) ? 0 : stream->size,
 #if defined(IMLIB_ENABLE_IMAGE_FILE_IO)
-        (stream->type == IMAGE_IO_FILE_STREAM) ? f_size(&stream->fp) : (stream->count * stream->size));
+              (stream->type == IMAGE_IO_FILE_STREAM) ? f_size(&stream->fp) : (stream->count * stream->size));
 #else
-        stream->count * stream->size);
+              stream->count * stream->size);
 #endif
 }
 
-STATIC mp_obj_t py_imageio_get_type(mp_obj_t self)
-{
+STATIC mp_obj_t py_imageio_get_type(mp_obj_t self) {
     py_imageio_obj_t *stream = MP_OBJ_TO_PTR(self);
     return mp_obj_new_int(stream->type);
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_imageio_get_type_obj, py_imageio_get_type);
 
-STATIC mp_obj_t py_imageio_is_closed(mp_obj_t self)
-{
+STATIC mp_obj_t py_imageio_is_closed(mp_obj_t self) {
     py_imageio_obj_t *stream = MP_OBJ_TO_PTR(self);
     return mp_obj_new_int(stream->closed);
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_imageio_is_closed_obj, py_imageio_is_closed);
 
-STATIC mp_obj_t py_imageio_count(mp_obj_t self)
-{
+STATIC mp_obj_t py_imageio_count(mp_obj_t self) {
     py_imageio_obj_t *stream = MP_OBJ_TO_PTR(self);
     return mp_obj_new_int(stream->count);
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_imageio_count_obj, py_imageio_count);
 
-STATIC mp_obj_t py_imageio_offset(mp_obj_t self)
-{
+STATIC mp_obj_t py_imageio_offset(mp_obj_t self) {
     py_imageio_obj_t *stream = MP_OBJ_TO_PTR(self);
     return mp_obj_new_int(stream->offset);
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_imageio_offset_obj, py_imageio_offset);
 
 #if defined(IMLIB_ENABLE_IMAGE_FILE_IO)
-STATIC mp_obj_t py_imageio_version(mp_obj_t self)
-{
+STATIC mp_obj_t py_imageio_version(mp_obj_t self) {
     py_imageio_obj_t *stream = MP_OBJ_TO_PTR(self);
     return (stream->type == IMAGE_IO_FILE_STREAM) ?  mp_obj_new_int(stream->version) : mp_const_none;
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_imageio_version_obj, py_imageio_version);
 #endif
 
-STATIC mp_obj_t py_imageio_buffer_size(mp_obj_t self)
-{
+STATIC mp_obj_t py_imageio_buffer_size(mp_obj_t self) {
     py_imageio_obj_t *stream = MP_OBJ_TO_PTR(self);
 
     #if defined(IMLIB_ENABLE_IMAGE_FILE_IO)
@@ -165,8 +157,7 @@ STATIC mp_obj_t py_imageio_buffer_size(mp_obj_t self)
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_imageio_buffer_size_obj, py_imageio_buffer_size);
 
-STATIC mp_obj_t py_imageio_size(mp_obj_t self)
-{
+STATIC mp_obj_t py_imageio_size(mp_obj_t self) {
     py_imageio_obj_t *stream = MP_OBJ_TO_PTR(self);
 
     #if defined(IMLIB_ENABLE_IMAGE_FILE_IO)
@@ -179,8 +170,7 @@ STATIC mp_obj_t py_imageio_size(mp_obj_t self)
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_imageio_size_obj, py_imageio_size);
 
-STATIC mp_obj_t py_imageio_write(mp_obj_t self, mp_obj_t img_obj)
-{
+STATIC mp_obj_t py_imageio_write(mp_obj_t self, mp_obj_t img_obj) {
     py_imageio_obj_t *stream = py_imageio_obj(self);
     image_t *image = py_image_cobj(img_obj);
 
@@ -255,8 +245,7 @@ STATIC mp_obj_t py_imageio_write(mp_obj_t self, mp_obj_t img_obj)
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_imageio_write_obj, py_imageio_write);
 
-STATIC void int_py_imageio_pause(py_imageio_obj_t *stream, bool pause)
-{
+STATIC void int_py_imageio_pause(py_imageio_obj_t *stream, bool pause) {
     uint32_t elapsed_ms;
 
     if (0) {
@@ -276,8 +265,7 @@ STATIC void int_py_imageio_pause(py_imageio_obj_t *stream, bool pause)
 }
 
 #if defined(IMLIB_ENABLE_IMAGE_FILE_IO)
-STATIC void int_py_imageio_read_chunk(py_imageio_obj_t *stream, image_t *image, bool pause)
-{
+STATIC void int_py_imageio_read_chunk(py_imageio_obj_t *stream, image_t *image, bool pause) {
     FIL *fp = &stream->fp;
 
     if (f_eof(fp)) {
@@ -320,13 +308,12 @@ STATIC void int_py_imageio_read_chunk(py_imageio_obj_t *stream, image_t *image, 
 }
 #endif
 
-STATIC mp_obj_t py_imageio_read(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
-{
+STATIC mp_obj_t py_imageio_read(uint n_args, const mp_obj_t *args, mp_map_t *kw_args) {
 
     py_imageio_obj_t *stream = py_imageio_obj(args[0]);
 
     mp_obj_t copy_to_fb_obj = py_helper_keyword_object(n_args, args, 1, kw_args,
-            MP_OBJ_NEW_QSTR(MP_QSTR_copy_to_fb), NULL);
+                                                       MP_OBJ_NEW_QSTR(MP_QSTR_copy_to_fb), NULL);
     bool copy_to_fb = true;
     image_t *arg_other = NULL;
 
@@ -356,7 +343,8 @@ STATIC mp_obj_t py_imageio_read(uint n_args, const mp_obj_t *args, mp_map_t *kw_
 
             stream->offset = 0;
 
-            if (f_eof(fp)) { // empty file
+            if (f_eof(fp)) {
+                // empty file
                 return mp_const_none;
             }
         }
@@ -379,7 +367,7 @@ STATIC mp_obj_t py_imageio_read(uint n_args, const mp_obj_t *args, mp_map_t *kw_
         py_helper_set_to_framebuffer(&image);
     } else if (arg_other) {
         PY_ASSERT_TRUE_MSG((size <= image_size(arg_other)),
-            "The new image won't fit in the target frame buffer!");
+                           "The new image won't fit in the target frame buffer!");
         image.data = arg_other->data;
     } else {
         image.data = xalloc(size);
@@ -434,8 +422,7 @@ STATIC mp_obj_t py_imageio_read(uint n_args, const mp_obj_t *args, mp_map_t *kw_
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_imageio_read_obj, 1, py_imageio_read);
 
-STATIC mp_obj_t py_imageio_seek(mp_obj_t self, mp_obj_t offs)
-{
+STATIC mp_obj_t py_imageio_seek(mp_obj_t self, mp_obj_t offs) {
     py_imageio_obj_t *stream = py_imageio_obj(self);
     int offset = mp_obj_get_int(offs);
 
@@ -472,8 +459,7 @@ STATIC mp_obj_t py_imageio_seek(mp_obj_t self, mp_obj_t offs)
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_imageio_seek_obj, py_imageio_seek);
 
-STATIC mp_obj_t py_imageio_sync(mp_obj_t self)
-{
+STATIC mp_obj_t py_imageio_sync(mp_obj_t self) {
     #if defined(IMLIB_ENABLE_IMAGE_FILE_IO)
     py_imageio_obj_t *stream = py_imageio_obj(self);
 
@@ -486,8 +472,7 @@ STATIC mp_obj_t py_imageio_sync(mp_obj_t self)
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_imageio_sync_obj, py_imageio_sync);
 
-STATIC mp_obj_t py_imageio_close(mp_obj_t self)
-{
+STATIC mp_obj_t py_imageio_close(mp_obj_t self) {
     py_imageio_obj_t *stream = py_imageio_obj(self);
 
     if (0) {
@@ -505,8 +490,7 @@ STATIC mp_obj_t py_imageio_close(mp_obj_t self)
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_imageio_close_obj, py_imageio_close);
 
-STATIC mp_obj_t py_imageio_make_new(const mp_obj_type_t *type, size_t n_args, size_t n_kw, const mp_obj_t *args)
-{
+STATIC mp_obj_t py_imageio_make_new(const mp_obj_type_t *type, size_t n_args, size_t n_kw, const mp_obj_t *args) {
     mp_arg_check_num(n_args, n_kw, 2, 2, false);
     py_imageio_obj_t *stream = m_new_obj_with_finaliser(py_imageio_obj_t);
     stream->base.type = &py_imageio_type;
@@ -514,7 +498,8 @@ STATIC mp_obj_t py_imageio_make_new(const mp_obj_type_t *type, size_t n_args, si
 
     if (0) {
     #if defined(IMLIB_ENABLE_IMAGE_FILE_IO)
-    } else if (mp_obj_is_str(args[0])) { // File Stream I/O
+    } else if (mp_obj_is_str(args[0])) {
+        // File Stream I/O
         FIL *fp = &stream->fp;
         stream->type = IMAGE_IO_FILE_STREAM;
         stream->count = 0;
@@ -540,10 +525,10 @@ STATIC mp_obj_t py_imageio_make_new(const mp_obj_type_t *type, size_t n_args, si
 
                 // Overwrite if file magic does not match.
                 if (strcmp(string, temp)
-                || (period != ((uint8_t) '.'))
-                || (version != ORIGINAL_VER)
-                || (version != RGB565_FIXED_VER)
-                || (version != NEW_PIXFORMAT_VER)) {
+                    || (period != ((uint8_t) '.'))
+                    || (version != ORIGINAL_VER)
+                    || (version != RGB565_FIXED_VER)
+                    || (version != NEW_PIXFORMAT_VER)) {
                     file_seek(fp, 0);
                     write_data(fp, string, sizeof(string) - 1); // exclude null terminator
                 } else {
@@ -567,15 +552,16 @@ STATIC mp_obj_t py_imageio_make_new(const mp_obj_type_t *type, size_t n_args, si
             stream->version = ((version_hi - '0') * 10) + (version_lo - '0');
 
             if ((stream->version != ORIGINAL_VER)
-            && (stream->version != RGB565_FIXED_VER)
-            && (stream->version != NEW_PIXFORMAT_VER)) {
+                && (stream->version != RGB565_FIXED_VER)
+                && (stream->version != NEW_PIXFORMAT_VER)) {
                 mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Expected version V1.0, V1.1, or V2.0"));
             }
         } else if ((mode != 'W') && (mode != 'w')) {
             mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Invalid stream mode, expected 'R/r' or 'W/w'"));
         }
     #endif
-    } else if (mp_obj_is_type(args[0], &mp_type_tuple)) { // Memory Stream I/O
+    } else if (mp_obj_is_type(args[0], &mp_type_tuple)) {
+        // Memory Stream I/O
         stream->type = IMAGE_IO_MEMORY_STREAM;
 
         mp_obj_t *image_info;
@@ -644,5 +630,5 @@ MP_DEFINE_CONST_OBJ_TYPE(
     print, py_imageio_print,
     make_new, py_imageio_make_new,
     locals_dict, &py_imageio_locals_dict
-);
+    );
 #endif // IMLIB_ENABLE_IMAGE_IO

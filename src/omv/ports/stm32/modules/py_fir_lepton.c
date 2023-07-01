@@ -30,7 +30,7 @@
 #include "py_helper.h"
 #include "omv_gpio.h"
 
-#define FRAMEBUFFER_COUNT 3
+#define FRAMEBUFFER_COUNT    3
 static volatile int framebuffer_tail = 0;
 static int framebuffer_head = 0;
 static uint16_t *framebuffers[FRAMEBUFFER_COUNT] = {};
@@ -45,16 +45,16 @@ static TIM_HandleTypeDef fir_lepton_mclk_tim_handle = {};
 static LEP_CAMERA_PORT_DESC_T fir_lepton_handle = {};
 static DMA_HandleTypeDef fir_lepton_spi_rx_dma = {};
 
-#define VOSPI_HEADER_WORDS      (2) // 16-bits
-#define VOSPI_PID_SIZE_PIXELS   (80) // w, 16-bits per pixel
-#define VOSPI_PIDS_PER_SEG      (60) // h
-#define VOSPI_SEGS_PER_FRAME    (4)
-#define VOSPI_PACKET_SIZE       (VOSPI_HEADER_WORDS + VOSPI_PID_SIZE_PIXELS) // 16-bits
-#define VOSPI_SEG_SIZE_PIXELS   (VOSPI_PIDS_PER_SEG * VOSPI_PID_SIZE_PIXELS) // 16-bits
+#define VOSPI_HEADER_WORDS       (2) // 16-bits
+#define VOSPI_PID_SIZE_PIXELS    (80) // w, 16-bits per pixel
+#define VOSPI_PIDS_PER_SEG       (60) // h
+#define VOSPI_SEGS_PER_FRAME     (4)
+#define VOSPI_PACKET_SIZE        (VOSPI_HEADER_WORDS + VOSPI_PID_SIZE_PIXELS) // 16-bits
+#define VOSPI_SEG_SIZE_PIXELS    (VOSPI_PIDS_PER_SEG * VOSPI_PID_SIZE_PIXELS) // 16-bits
 
-#define VOSPI_BUFFER_SIZE       (VOSPI_PACKET_SIZE * 2) // 16-bits
-#define VOSPI_CLOCK_SPEED       20000000 // hz
-#define VOSPI_SYNC_MS           200 // ms
+#define VOSPI_BUFFER_SIZE        (VOSPI_PACKET_SIZE * 2) // 16-bits
+#define VOSPI_CLOCK_SPEED        20000000 // hz
+#define VOSPI_SYNC_MS            200 // ms
 
 static soft_timer_entry_t flir_lepton_spi_rx_timer = {};
 static int fir_lepton_spi_rx_cb_tail = 0;
@@ -62,8 +62,7 @@ static int fir_lepton_spi_rx_cb_expected_pid = 0;
 static int fir_lepton_spi_rx_cb_expected_seg = 0;
 extern int _fir_lepton_buf[];
 
-STATIC mp_obj_t fir_lepton_spi_resync_callback(mp_obj_t unused)
-{
+STATIC mp_obj_t fir_lepton_spi_resync_callback(mp_obj_t unused) {
     // For triple buffering we are never drawing where tail or head
     // (which may instantly update to be equal to tail) is.
     fir_lepton_spi_rx_cb_tail = (framebuffer_tail + 1) % FRAMEBUFFER_COUNT;
@@ -78,8 +77,7 @@ STATIC mp_obj_t fir_lepton_spi_resync_callback(mp_obj_t unused)
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(fir_lepton_spi_resync_callback_obj, fir_lepton_spi_resync_callback);
 
-static void fir_lepton_spi_resync()
-{
+static void fir_lepton_spi_resync() {
     flir_lepton_spi_rx_timer.flags = SOFT_TIMER_FLAG_PY_CALLBACK;
     flir_lepton_spi_rx_timer.mode = SOFT_TIMER_MODE_ONE_SHOT;
     flir_lepton_spi_rx_timer.delta_ms = VOSPI_SYNC_MS;
@@ -88,8 +86,7 @@ static void fir_lepton_spi_resync()
 }
 
 #if defined(OMV_FIR_LEPTON_CHECK_CRC)
-static bool fir_lepton_spi_check_crc(const uint16_t *base)
-{
+static bool fir_lepton_spi_check_crc(const uint16_t *base) {
     int id = base[0];
     int packet_crc = base[1];
     int crc = ByteCRC16((id >> 8) & 0x0F, 0);
@@ -109,8 +106,7 @@ static bool fir_lepton_spi_check_crc(const uint16_t *base)
 
 static mp_obj_t fir_lepton_frame_cb = mp_const_none;
 
-void fir_lepton_spi_callback(const uint16_t *base)
-{
+void fir_lepton_spi_callback(const uint16_t *base) {
     int id = base[0];
 
     // Ignore don't care packets.
@@ -135,9 +131,9 @@ void fir_lepton_spi_callback(const uint16_t *base)
     // Are we in sync with the flir lepton?
     if ((pid != fir_lepton_spi_rx_cb_expected_pid)
     #if defined(OMV_FIR_LEPTON_CHECK_CRC)
-    || (!fir_lepton_spi_check_crc(base))
+        || (!fir_lepton_spi_check_crc(base))
     #endif
-    || (fir_lepton_3 && (pid == 20) && (seg != fir_lepton_spi_rx_cb_expected_seg))) {
+        || (fir_lepton_3 && (pid == 20) && (seg != fir_lepton_spi_rx_cb_expected_seg))) {
         fir_lepton_spi_rx_cb_expected_pid = 0;
         fir_lepton_spi_rx_cb_expected_seg = 0;
         HAL_SPI_Abort_IT(OMV_FIR_LEPTON_CONTROLLER->spi);
@@ -147,9 +143,9 @@ void fir_lepton_spi_callback(const uint16_t *base)
     }
 
     memcpy(framebuffers[fir_lepton_spi_rx_cb_tail]
-        + (fir_lepton_spi_rx_cb_expected_pid * VOSPI_PID_SIZE_PIXELS)
-        + (fir_lepton_spi_rx_cb_expected_seg * VOSPI_SEG_SIZE_PIXELS),
-        base + VOSPI_HEADER_WORDS, VOSPI_PID_SIZE_PIXELS * sizeof(uint16_t));
+           + (fir_lepton_spi_rx_cb_expected_pid * VOSPI_PID_SIZE_PIXELS)
+           + (fir_lepton_spi_rx_cb_expected_seg * VOSPI_SEG_SIZE_PIXELS),
+           base + VOSPI_HEADER_WORDS, VOSPI_PID_SIZE_PIXELS * sizeof(uint16_t));
 
     fir_lepton_spi_rx_cb_expected_pid += 1;
     if (fir_lepton_spi_rx_cb_expected_pid == VOSPI_PIDS_PER_SEG) {
@@ -164,7 +160,7 @@ void fir_lepton_spi_callback(const uint16_t *base)
                 fir_lepton_spi_rx_cb_expected_seg = 0;
                 frame_ready = true;
             }
-        // For the FLIR Lepton 1/2 we just have to receive all the pids.
+            // For the FLIR Lepton 1/2 we just have to receive all the pids.
         } else {
             frame_ready = true;
         }
@@ -188,29 +184,25 @@ void fir_lepton_spi_callback(const uint16_t *base)
     }
 }
 
-static void fir_lepton_spi_callback_half(SPI_HandleTypeDef *hspi)
-{
+static void fir_lepton_spi_callback_half(SPI_HandleTypeDef *hspi) {
     fir_lepton_spi_callback((uint16_t *) &_fir_lepton_buf);
 }
 
-static void fir_lepton_spi_callback_full(SPI_HandleTypeDef *hspi)
-{
+static void fir_lepton_spi_callback_full(SPI_HandleTypeDef *hspi) {
     fir_lepton_spi_callback(((uint16_t *) &_fir_lepton_buf) + VOSPI_PACKET_SIZE);
 }
 
 #if defined(OMV_FIR_LEPTON_VSYNC_PIN)
 static mp_obj_t fir_lepton_vsync_cb = NULL;
 
-static void fir_lepton_extint_callback(void *data)
-{
+static void fir_lepton_extint_callback(void *data) {
     if (fir_lepton_vsync_cb) {
         mp_call_function_0(fir_lepton_vsync_cb);
     }
 }
 #endif
 
-void fir_lepton_deinit()
-{
+void fir_lepton_deinit() {
     HAL_SPI_Abort(OMV_FIR_LEPTON_CONTROLLER->spi);
     fir_lepton_spi_rx_cb_expected_pid = 0;
     fir_lepton_spi_rx_cb_expected_seg = 0;
@@ -240,8 +232,7 @@ void fir_lepton_deinit()
     #endif
 }
 
-int fir_lepton_init(omv_i2c_t *bus, int *w, int *h, int *refresh, int *resolution)
-{
+int fir_lepton_init(omv_i2c_t *bus, int *w, int *h, int *refresh, int *resolution) {
     SPI_HandleTypeDef *hspi = OMV_FIR_LEPTON_CONTROLLER->spi;
 
     hspi->Init.Mode = SPI_MODE_MASTER;
@@ -447,8 +438,7 @@ int fir_lepton_init(omv_i2c_t *bus, int *w, int *h, int *refresh, int *resolutio
 }
 
 #if defined(OMV_FIR_LEPTON_VSYNC_PIN)
-void fir_lepton_register_vsync_cb(mp_obj_t cb)
-{
+void fir_lepton_register_vsync_cb(mp_obj_t cb) {
     omv_gpio_irq_enable(OMV_FIR_LEPTON_VSYNC_PIN, false);
 
     fir_lepton_vsync_cb = cb;
@@ -459,23 +449,19 @@ void fir_lepton_register_vsync_cb(mp_obj_t cb)
 }
 #endif
 
-mp_obj_t fir_lepton_get_radiometry()
-{
+mp_obj_t fir_lepton_get_radiometry() {
     return mp_obj_new_bool(fir_lepton_rad_en);
 }
 
-void fir_lepton_register_frame_cb(mp_obj_t cb)
-{
+void fir_lepton_register_frame_cb(mp_obj_t cb) {
     fir_lepton_frame_cb = cb;
 }
 
-mp_obj_t fir_lepton_get_frame_available()
-{
+mp_obj_t fir_lepton_get_frame_available() {
     return mp_obj_new_bool(framebuffer_tail != framebuffer_head);
 }
 
-static const uint16_t *fir_lepton_get_frame(int timeout)
-{
+static const uint16_t *fir_lepton_get_frame(int timeout) {
     int sampled_framebuffer_tail = framebuffer_tail;
 
     if (timeout >= 0) {
@@ -498,8 +484,7 @@ static const uint16_t *fir_lepton_get_frame(int timeout)
     return framebuffers[sampled_framebuffer_tail];
 }
 
-static int fir_lepton_get_temperature()
-{
+static int fir_lepton_get_temperature() {
     LEP_SYS_FPA_TEMPERATURE_KELVIN_T kelvin;
 
     if (LEP_GetSysFpaTemperatureKelvin(&fir_lepton_handle, &kelvin) != LEP_OK) {
@@ -509,13 +494,11 @@ static int fir_lepton_get_temperature()
     return kelvin;
 }
 
-mp_obj_t fir_lepton_read_ta()
-{
+mp_obj_t fir_lepton_read_ta() {
     return mp_obj_new_float((fir_lepton_get_temperature() * 0.01f) - 273.15f);
 }
 
-mp_obj_t fir_lepton_read_ir(int w, int h, bool mirror, bool flip, bool transpose, int timeout)
-{
+mp_obj_t fir_lepton_read_ir(int w, int h, bool mirror, bool flip, bool transpose, int timeout) {
     int kelvin = fir_lepton_get_temperature();
     mp_obj_list_t *list = (mp_obj_list_t *) mp_obj_new_list(w * h, NULL);
     const uint16_t *data = fir_lepton_get_frame(timeout);
@@ -567,8 +550,7 @@ mp_obj_t fir_lepton_read_ir(int w, int h, bool mirror, bool flip, bool transpose
 }
 
 void fir_lepton_fill_image(image_t *img, int w, int h, bool auto_range, float min, float max,
-                           bool mirror, bool flip, bool transpose, int timeout)
-{
+                           bool mirror, bool flip, bool transpose, int timeout) {
     int kelvin = fir_lepton_get_temperature();
     const uint16_t *data = fir_lepton_get_frame(timeout);
     int new_min;
@@ -639,8 +621,7 @@ void fir_lepton_fill_image(image_t *img, int w, int h, bool auto_range, float mi
     }
 }
 
-void fir_lepton_trigger_ffc(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
-{
+void fir_lepton_trigger_ffc(uint n_args, const mp_obj_t *args, mp_map_t *kw_args) {
     if (LEP_RunSysFFCNormalization(&fir_lepton_handle) != LEP_OK) {
         mp_raise_msg(&mp_type_OSError, MP_ERROR_TEXT("FFC Error!"));
     }

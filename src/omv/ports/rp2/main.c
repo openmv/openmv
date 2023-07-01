@@ -89,11 +89,10 @@ bi_decl(bi_program_version_string(MICROPY_GIT_TAG));
 // Add a section to the picotool output similar to program features, but for frozen modules
 // (it will aggregate BINARY_INFO_ID_MP_FROZEN binary info)
 bi_decl(bi_program_feature_group_with_flags(BINARY_INFO_TAG_MICROPYTHON,
-    BINARY_INFO_ID_MP_FROZEN, "frozen modules",
-    BI_NAMED_GROUP_SEPARATE_COMMAS | BI_NAMED_GROUP_SORT_ALPHA));
+                                            BINARY_INFO_ID_MP_FROZEN, "frozen modules",
+                                            BI_NAMED_GROUP_SEPARATE_COMMAS | BI_NAMED_GROUP_SORT_ALPHA));
 
-void __fatal_error()
-{
+void __fatal_error() {
     gpio_init(LED_PIN);
     gpio_set_dir(LED_PIN, GPIO_OUT);
 
@@ -105,13 +104,11 @@ void __fatal_error()
     }
 }
 
-void pico_reset_to_bootloader(size_t n_args, const void *args_in)
-{
+void pico_reset_to_bootloader(size_t n_args, const void *args_in) {
     reset_usb_boot(0, 0);
 }
 
-void exec_boot_script(const char *path, bool interruptible)
-{
+void exec_boot_script(const char *path, bool interruptible) {
     nlr_buf_t nlr;
     bool interrupted = false;
     if (nlr_push(&nlr) == 0) {
@@ -133,7 +130,7 @@ void exec_boot_script(const char *path, bool interruptible)
     usbdbg_set_script_running(false);
 
     if (interrupted) {
-        mp_obj_print_exception(&mp_plat_print, (mp_obj_t)nlr.ret_val);
+        mp_obj_print_exception(&mp_plat_print, (mp_obj_t) nlr.ret_val);
     }
 }
 
@@ -218,10 +215,10 @@ soft_reset:
     #if MICROPY_VFS_FAT && MICROPY_HW_USB_MSC
     // Mount or create a fresh filesystem.
     mp_obj_t mount_point = MP_OBJ_NEW_QSTR(MP_QSTR__slash_);
-    mp_obj_t bdev = MP_OBJ_TYPE_GET_SLOT(&rp2_flash_type, make_new)(&rp2_flash_type, 0, 0, NULL);
+    mp_obj_t bdev = MP_OBJ_TYPE_GET_SLOT(&rp2_flash_type, make_new) (&rp2_flash_type, 0, 0, NULL);
     if (mp_vfs_mount_and_chdir_protected(bdev, mount_point) == -MP_ENODEV) {
         // Create a fresh filesystem.
-        fs_user_mount_t *vfs  = MP_OBJ_TYPE_GET_SLOT(&mp_fat_vfs_type, make_new)(&mp_fat_vfs_type, 1, 0, &bdev);
+        fs_user_mount_t *vfs = MP_OBJ_TYPE_GET_SLOT(&mp_fat_vfs_type, make_new) (&mp_fat_vfs_type, 1, 0, &bdev);
         if (factoryreset_create_filesystem(vfs) == 0) {
             mp_vfs_mount_and_chdir_protected(bdev, mount_point);
         }
@@ -271,7 +268,7 @@ soft_reset:
             usbdbg_set_irq_enabled(false);
             nlr_pop();
         } else {
-            mp_obj_print_exception(&mp_plat_print, (mp_obj_t)nlr.ret_val);
+            mp_obj_print_exception(&mp_plat_print, (mp_obj_t) nlr.ret_val);
         }
 
         if (usbdbg_is_busy() && nlr_push(&nlr) == 0) {
@@ -328,7 +325,7 @@ void MP_WEAK __assert_func(const char *file, int line, const char *func, const c
 }
 #endif
 
-#define POLY (0xD5)
+#define POLY    (0xD5)
 
 uint8_t rosc_random_u8(size_t cycles) {
     static uint8_t r;

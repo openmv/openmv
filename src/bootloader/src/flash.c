@@ -27,14 +27,13 @@
 #include STM32_HAL_H
 #include "flash.h"
 
-#if defined (MCU_SERIES_F7)
-#define FLASH_FLAG_PGSERR   (FLASH_FLAG_ERSERR)
+#if defined(MCU_SERIES_F7)
+#define FLASH_FLAG_PGSERR    (FLASH_FLAG_ERSERR)
 #endif
 
 extern void __fatal_error();
 
-void flash_erase(uint32_t sector)
-{
+void flash_erase(uint32_t sector) {
     // unlock
     HAL_FLASH_Unlock();
 
@@ -47,7 +46,7 @@ void flash_erase(uint32_t sector)
 
     // erase the sector(s)
     FLASH_EraseInitTypeDef EraseInitStruct;
-    EraseInitStruct.TypeErase    = TYPEERASE_SECTORS;
+    EraseInitStruct.TypeErase = TYPEERASE_SECTORS;
     EraseInitStruct.VoltageRange = VOLTAGE_RANGE_3; // voltage range needs to be 2.7V to 3.6V
     #if defined(MCU_SERIES_H7)
     EraseInitStruct.Sector = (sector % 8);
@@ -71,15 +70,14 @@ void flash_erase(uint32_t sector)
     HAL_FLASH_Lock(); // lock the flash
 }
 
-void flash_write(const uint32_t *src, uint32_t dst, uint32_t size)
-{
+void flash_write(const uint32_t *src, uint32_t dst, uint32_t size) {
     // Unlock flash
     HAL_FLASH_Unlock();
 
     #if defined(MCU_SERIES_H7)
     // Program the flash 32 bytes at a time.
-    for (int i=0; i<size/32; i++) {
-        if (HAL_FLASH_Program(TYPEPROGRAM_WORD, dst, (uint64_t)(uint32_t) src) != HAL_OK) {
+    for (int i = 0; i < size / 32; i++) {
+        if (HAL_FLASH_Program(TYPEPROGRAM_WORD, dst, (uint64_t) (uint32_t) src) != HAL_OK) {
             // error occurred during flash write
             HAL_FLASH_Lock(); // lock the flash
             __fatal_error();
@@ -89,7 +87,7 @@ void flash_write(const uint32_t *src, uint32_t dst, uint32_t size)
     }
     #else
     // Program the flash 4 bytes at a time.
-    for (int i=0; i<size/4; i++) {
+    for (int i = 0; i < size / 4; i++) {
         if (HAL_FLASH_Program(TYPEPROGRAM_WORD, dst, *src) != HAL_OK) {
             // error occurred during flash write
             HAL_FLASH_Lock(); // lock the flash

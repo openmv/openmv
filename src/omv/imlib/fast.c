@@ -3,20 +3,20 @@
  * See https://www.edwardrosten.com/work/fast.html
  *
  * Copyright (c) 2006, 2008, 2009, 2010 Edward Rosten All rights reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
  * are met:
- * 
- * 	*Redistributions of source code must retain the above copyright
- * 	 notice, this list of conditions and the following disclaimer.
- * 	*Redistributions in binary form must reproduce the above copyright
- * 	 notice, this list of conditions and the following disclaimer in the
- * 	 documentation and/or other materials provided with the distribution.
- * 	*Neither the name of the University of Cambridge nor the names of 
- * 	 its contributors may be used to endorse or promote products derived 
- * 	 from this software without specific prior written permission.
- * 
+ *
+ *      *Redistributions of source code must retain the above copyright
+ *       notice, this list of conditions and the following disclaimer.
+ *      *Redistributions in binary form must reproduce the above copyright
+ *       notice, this list of conditions and the following disclaimer in the
+ *       documentation and/or other materials provided with the distribution.
+ *      *Neither the name of the University of Cambridge nor the names of
+ *       its contributors may be used to endorse or promote products derived
+ *       from this software without specific prior written permission.
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
  * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -37,9 +37,9 @@
 
 #ifdef IMLIB_ENABLE_FAST
 
-#define MAX_ROW         (480U)
-#define MAX_CORNERS     (2000U)
-#define Compare(X, Y) ((X)>=(Y))
+#define MAX_ROW          (480U)
+#define MAX_CORNERS      (2000U)
+#define Compare(X, Y)    ((X) >= (Y))
 
 typedef struct {
     uint16_t x;
@@ -52,39 +52,36 @@ static corner_t *fast9_detect(image_t *image, rectangle_t *roi, int *n_corners, 
 static void fast9_score(image_t *image, corner_t *corners, int num_corners, int b);
 static void nonmax_suppression(corner_t *corners, int num_corners, array_t *keypoints);
 
-static kp_t *alloc_keypoint(uint16_t x, uint16_t y, uint16_t score)
-{
+static kp_t *alloc_keypoint(uint16_t x, uint16_t y, uint16_t score) {
     // Note must set keypoint descriptor to zeros
-    kp_t *kpt = xalloc0(sizeof*kpt);
+    kp_t *kpt = xalloc0(sizeof *kpt);
     kpt->x = x;
     kpt->y = y;
     kpt->score = score;
     return kpt;
 }
 
-static void make_offsets(int pixel[], int row_stride)
-{
-        pixel[0] = 0 + row_stride * 3;
-        pixel[1] = 1 + row_stride * 3;
-        pixel[2] = 2 + row_stride * 2;
-        pixel[3] = 3 + row_stride * 1;
-        pixel[4] = 3 + row_stride * 0;
-        pixel[5] = 3 + row_stride * -1;
-        pixel[6] = 2 + row_stride * -2;
-        pixel[7] = 1 + row_stride * -3;
-        pixel[8] = 0 + row_stride * -3;
-        pixel[9] = -1 + row_stride * -3;
-        pixel[10] = -2 + row_stride * -2;
-        pixel[11] = -3 + row_stride * -1;
-        pixel[12] = -3 + row_stride * 0;
-        pixel[13] = -3 + row_stride * 1;
-        pixel[14] = -2 + row_stride * 2;
-        pixel[15] = -1 + row_stride * 3;
+static void make_offsets(int pixel[], int row_stride) {
+    pixel[0] = 0 + row_stride * 3;
+    pixel[1] = 1 + row_stride * 3;
+    pixel[2] = 2 + row_stride * 2;
+    pixel[3] = 3 + row_stride * 1;
+    pixel[4] = 3 + row_stride * 0;
+    pixel[5] = 3 + row_stride * -1;
+    pixel[6] = 2 + row_stride * -2;
+    pixel[7] = 1 + row_stride * -3;
+    pixel[8] = 0 + row_stride * -3;
+    pixel[9] = -1 + row_stride * -3;
+    pixel[10] = -2 + row_stride * -2;
+    pixel[11] = -3 + row_stride * -1;
+    pixel[12] = -3 + row_stride * 0;
+    pixel[13] = -3 + row_stride * 1;
+    pixel[14] = -2 + row_stride * 2;
+    pixel[15] = -1 + row_stride * 3;
 }
 
-void fast_detect(image_t *image, array_t *keypoints, int threshold, rectangle_t *roi)
-{
-    int num_corners=0;
+void fast_detect(image_t *image, array_t *keypoints, int threshold, rectangle_t *roi) {
+    int num_corners = 0;
     make_offsets(pixel, image->w);
 
     // Find corners
@@ -100,28 +97,27 @@ void fast_detect(image_t *image, array_t *keypoints, int threshold, rectangle_t 
     fb_free();
 }
 
-static void nonmax_suppression(corner_t *corners, int num_corners, array_t *keypoints)
-{
+static void nonmax_suppression(corner_t *corners, int num_corners, array_t *keypoints) {
     gc_info_t info;
 
-	int last_row;
-	int16_t row_start[MAX_ROW+1];
-	const int sz = num_corners;
+    int last_row;
+    int16_t row_start[MAX_ROW + 1];
+    const int sz = num_corners;
 
-	/* Point above points (roughly) to the pixel above
+    /* Point above points (roughly) to the pixel above
        the one of interest, if there is a feature there.*/
-	int point_above = 0;
-	int point_below = 0;
+    int point_above = 0;
+    int point_below = 0;
 
-	/* Find where each row begins (the corners are output in raster scan order).
+    /* Find where each row begins (the corners are output in raster scan order).
        A beginning of -1 signifies that there are no corners on that row. */
-	last_row  = corners[sz-1].y;
+    last_row = corners[sz - 1].y;
 
-	for(int i=0; i<last_row+1; i++) {
-		row_start[i] = -1;
+    for (int i = 0; i < last_row + 1; i++) {
+        row_start[i] = -1;
     }
 
-    for (int i=0, prev_row=-1; i<sz; i++) {
+    for (int i = 0, prev_row = -1; i < sz; i++) {
         corner_t *c = &corners[i];
         if (c->y != prev_row) {
             row_start[c->y] = i;
@@ -129,60 +125,66 @@ static void nonmax_suppression(corner_t *corners, int num_corners, array_t *keyp
         }
     }
 
-    for(int i=0; i<sz; i++) {
+    for (int i = 0; i < sz; i++) {
         corner_t pos = corners[i];
         uint16_t score = pos.score;
 
         /*Check left */
         if (i > 0) {
-            if (corners[i-1].x == pos.x-1 && corners[i-1].y == pos.y && Compare(corners[i-1].score, score)) {
+            if (corners[i - 1].x == pos.x - 1 && corners[i - 1].y == pos.y && Compare(corners[i - 1].score, score)) {
                 goto nonmax;
             }
         }
 
         /*Check right*/
         if (i < (sz - 1)) {
-            if (corners[i+1].x == pos.x+1 && corners[i+1].y == pos.y && Compare(corners[i+1].score, score)) {
+            if (corners[i + 1].x == pos.x + 1 && corners[i + 1].y == pos.y && Compare(corners[i + 1].score, score)) {
                 goto nonmax;
             }
         }
 
         /*Check above (if there is a valid row above)*/
-        if (pos.y != 0 && row_start[pos.y - 1] != -1)  {
+        if (pos.y != 0 && row_start[pos.y - 1] != -1) {
             /*Make sure that current point_above is one row above.*/
-            if(corners[point_above].y < pos.y - 1)
-                point_above = row_start[pos.y-1];
+            if (corners[point_above].y < pos.y - 1) {
+                point_above = row_start[pos.y - 1];
+            }
 
             /*Make point_above point to the first of the pixels above the current point, if it exists.*/
             for (; corners[point_above].y < pos.y && corners[point_above].x < pos.x - 1; point_above++) {
 
             }
 
-            for (int j=point_above; corners[j].y < pos.y && corners[j].x <= pos.x + 1; j++) {
+            for (int j = point_above; corners[j].y < pos.y && corners[j].x <= pos.x + 1; j++) {
                 int x = corners[j].x;
-                if( (x == pos.x - 1 || x ==pos.x || x == pos.x+1) && Compare(corners[j].score, score))
+                if ( (x == pos.x - 1 || x == pos.x || x == pos.x + 1) && Compare(corners[j].score, score)) {
                     goto nonmax;
+                }
             }
         }
 
         /*Check below (if there is anything below)*/
-        if (pos.y != last_row && row_start[pos.y + 1] != -1 && point_below < sz) /*Nothing below*/ {
-            if (corners[point_below].y < pos.y + 1)
-                point_below = row_start[pos.y+1];
-
-            /* Make point below point to one of the pixels belowthe current point, if it exists.*/
-            for (; point_below < sz && corners[point_below].y == pos.y+1 && corners[point_below].x < pos.x - 1; point_below++) {
+        if (pos.y != last_row && row_start[pos.y + 1] != -1 && point_below < sz) {
+            /*Nothing below*/
+            if (corners[point_below].y < pos.y + 1) {
+                point_below = row_start[pos.y + 1];
             }
 
-            for (int j=point_below; j < sz && corners[j].y == pos.y+1 && corners[j].x <= pos.x + 1; j++) {
+            /* Make point below point to one of the pixels belowthe current point, if it exists.*/
+            for (; point_below < sz && corners[point_below].y == pos.y + 1 && corners[point_below].x < pos.x - 1;
+                 point_below++) {
+            }
+
+            for (int j = point_below; j < sz && corners[j].y == pos.y + 1 && corners[j].x <= pos.x + 1; j++) {
                 int x = corners[j].x;
-                if( (x == pos.x - 1 || x ==pos.x || x == pos.x+1) && Compare(corners[j].score, score))
+                if ( (x == pos.x - 1 || x == pos.x || x == pos.x + 1) && Compare(corners[j].score, score)) {
                     goto nonmax;
+                }
             }
         }
 
         gc_info(&info);
-        #define MIN_MEM (10*1024)
+#define MIN_MEM    (10 * 1024)
         // Allocate keypoints until we're almost out of memory
         if (info.free < MIN_MEM) {
             // Try collecting memory
@@ -207,7 +209,7 @@ static int fast9_corner_score(const uint8_t *p, int bstart)
     int bmin = bstart;
     int bmax = 255;
     int b = (bmax + bmin)/2;
-    
+
     /*Compute the score using binary search*/
 	for(;;)
     {
@@ -3134,11 +3136,10 @@ static int fast9_corner_score(const uint8_t *p, int bstart)
 }
 // *INDENT-ON*
 
-static void fast9_score(image_t *image, corner_t *corners, int num_corners, int b)
-{
-    for (int i=0; i<num_corners; i++) {
+static void fast9_score(image_t *image, corner_t *corners, int num_corners, int b) {
+    for (int i = 0; i < num_corners; i++) {
         corner_t *c = &corners[i];
-        c->score = fast9_corner_score(image->pixels + c->y*image->w + c->x, b);
+        c->score = fast9_corner_score(image->pixels + c->y * image->w + c->x, b);
     }
 }
 

@@ -11,12 +11,12 @@
 #ifndef __RING_BUFFER_H__
 #define __RING_BUFFER_H__
 #include <stdint.h>
-#define BUFFER_SIZE (1024)
+#define BUFFER_SIZE    (1024)
 
 typedef struct ring_buffer {
-   volatile uint32_t head;
-   volatile uint32_t tail;
-   uint8_t data[BUFFER_SIZE];
+    volatile uint32_t head;
+    volatile uint32_t tail;
+    uint8_t data[BUFFER_SIZE];
 } ring_buf_t;
 
 void ring_buf_init(ring_buf_t *buf);

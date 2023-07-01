@@ -9,9 +9,8 @@
 #include "imlib.h"
 
 #ifdef IMLIB_ENABLE_MIDPOINT_POOLING
-void imlib_midpoint_pool(image_t *img_i, image_t *img_o, int x_div, int y_div, const int bias)
-{
-    int min_bias = (256-bias);
+void imlib_midpoint_pool(image_t *img_i, image_t *img_o, int x_div, int y_div, const int bias) {
+    int min_bias = (256 - bias);
     int max_bias = bias;
     switch (img_i->pixfmt) {
         case PIXFORMAT_BINARY: {
@@ -27,7 +26,7 @@ void imlib_midpoint_pool(image_t *img_i, image_t *img_o, int x_div, int y_div, c
                         }
                     }
                     IMAGE_PUT_BINARY_PIXEL_FAST(row_ptr, x,
-                        ((min*min_bias)+(max*max_bias))>>8);
+                                                ((min * min_bias) + (max * max_bias)) >> 8);
                 }
             }
             break;
@@ -45,7 +44,7 @@ void imlib_midpoint_pool(image_t *img_i, image_t *img_o, int x_div, int y_div, c
                         }
                     }
                     IMAGE_PUT_GRAYSCALE_PIXEL_FAST(row_ptr, x,
-                        ((min*min_bias)+(max*max_bias))>>8);
+                                                   ((min * min_bias) + (max * max_bias)) >> 8);
                 }
             }
             break;
@@ -72,9 +71,9 @@ void imlib_midpoint_pool(image_t *img_i, image_t *img_o, int x_div, int y_div, c
                         }
                     }
                     IMAGE_PUT_RGB565_PIXEL_FAST(row_ptr, x,
-                        COLOR_R5_G6_B5_TO_RGB565(((r_min*min_bias)+(r_max*max_bias))>>8,
-                                                 ((g_min*min_bias)+(g_max*max_bias))>>8,
-                                                 ((b_min*min_bias)+(b_max*max_bias))>>8));
+                                                COLOR_R5_G6_B5_TO_RGB565(((r_min * min_bias) + (r_max * max_bias)) >> 8,
+                                                                         ((g_min * min_bias) + (g_max * max_bias)) >> 8,
+                                                                         ((b_min * min_bias) + (b_max * max_bias)) >> 8));
                 }
             }
             break;
@@ -87,8 +86,7 @@ void imlib_midpoint_pool(image_t *img_i, image_t *img_o, int x_div, int y_div, c
 #endif // IMLIB_ENABLE_MIDPOINT_POOLING
 
 #ifdef IMLIB_ENABLE_MEAN_POOLING
-void imlib_mean_pool(image_t *img_i, image_t *img_o, int x_div, int y_div)
-{
+void imlib_mean_pool(image_t *img_i, image_t *img_o, int x_div, int y_div) {
     int n = x_div * y_div;
     switch (img_i->pixfmt) {
         case PIXFORMAT_BINARY: {

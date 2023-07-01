@@ -19,24 +19,24 @@
 #include "common.h"
 #include "omv_spi.h"
 
-#define VOSPI_LINE_PIXELS       (80)
-#define VOSPI_NUMBER_PACKETS    (60)
-#define VOSPI_SPECIAL_PACKET    (20)
-#define VOSPI_LINE_SIZE         (80 * 2)
-#define VOSPI_HEADER_SIZE       (4)
-#define VOSPI_PACKET_SIZE       (VOSPI_HEADER_SIZE + VOSPI_LINE_SIZE)
-#define VOSPI_FIRST_PACKET      (0)
-#define VOSPI_FIRST_SEGMENT     (1)
+#define VOSPI_LINE_PIXELS         (80)
+#define VOSPI_NUMBER_PACKETS      (60)
+#define VOSPI_SPECIAL_PACKET      (20)
+#define VOSPI_LINE_SIZE           (80 * 2)
+#define VOSPI_HEADER_SIZE         (4)
+#define VOSPI_PACKET_SIZE         (VOSPI_HEADER_SIZE + VOSPI_LINE_SIZE)
+#define VOSPI_FIRST_PACKET        (0)
+#define VOSPI_FIRST_SEGMENT       (1)
 #ifndef VOSPI_PACKET_ALIGNMENT
-#define VOSPI_PACKET_ALIGNMENT  (4) 
+#define VOSPI_PACKET_ALIGNMENT    (4)
 #endif
-#define VOSPI_HEADER_SEG(buf)   (((buf[0] >> 4) & 0x7))
-#define VOSPI_HEADER_PID(buf)   (((buf[0] << 8) | (buf[1] << 0)) & 0x0FFF)
-#define VOSPI_HEADER_CRC(buf)   (((buf[2] << 8) | (buf[3] << 0)))
+#define VOSPI_HEADER_SEG(buf)     (((buf[0] >> 4) & 0x7))
+#define VOSPI_HEADER_PID(buf)     (((buf[0] << 8) | (buf[1] << 0)) & 0x0FFF)
+#define VOSPI_HEADER_CRC(buf)     (((buf[2] << 8) | (buf[3] << 0)))
 
 typedef enum {
-    VOSPI_FLAGS_RESET   = (1 << 0),
-    VOSPI_FLAGS_RESYNC  = (1 << 1),
+    VOSPI_FLAGS_RESET  = (1 << 0),
+    VOSPI_FLAGS_RESYNC = (1 << 1),
 } vospi_flags_t;
 
 typedef struct _vospi_state {
@@ -51,12 +51,11 @@ typedef struct _vospi_state {
 static vospi_state_t vospi;
 static uint8_t OMV_ATTR_SECTION(
     OMV_ATTR_ALIGNED(vospi_packet[VOSPI_PACKET_SIZE], VOSPI_PACKET_ALIGNMENT), ".dma_buffer"
-);
+    );
 
 static void vospi_callback(omv_spi_t *spi, void *data);
 #if (OMV_ENABLE_VOSPI_CRC)
-static uint16_t vospi_calc_crc(uint8_t *buf)
-{
+static uint16_t vospi_calc_crc(uint8_t *buf) {
     buf[0] &= 0x0F;
     buf[1] &= 0xFF;
     buf[2] = 0;
@@ -65,8 +64,7 @@ static uint16_t vospi_calc_crc(uint8_t *buf)
 }
 #endif
 
-static void vospi_do_resync()
-{
+static void vospi_do_resync() {
     omv_spi_transfer_t spi_xfer = {
         .txbuf = NULL,
         .rxbuf = vospi_packet,
@@ -84,8 +82,7 @@ static void vospi_do_resync()
     debug_printf("vospi resync...\n");
 }
 
-static void vospi_callback(omv_spi_t *spi, void *data)
-{
+static void vospi_callback(omv_spi_t *spi, void *data) {
     if (vospi.flags & VOSPI_FLAGS_RESYNC) {
         // Captured a packet before an resync is complete.
         return;
@@ -106,14 +103,14 @@ static void vospi_callback(omv_spi_t *spi, void *data)
                 debug_printf("lost sync, packet id:%lu expected id:%lu \n", pid, vospi.pid);
             }
         } else if (vospi.n_packets > VOSPI_NUMBER_PACKETS
-                && pid == VOSPI_SPECIAL_PACKET && sid != vospi.sid ) {
+                   && pid == VOSPI_SPECIAL_PACKET && sid != vospi.sid) {
             if (vospi.sid != VOSPI_FIRST_SEGMENT) {
                 vospi.flags |= VOSPI_FLAGS_RESYNC; // lost sync
                 debug_printf("lost sync, segment id:%lu expected id:%lu\n", sid, vospi.sid);
             }
         } else {
             memcpy(vospi.buffer + vospi.pid * VOSPI_LINE_SIZE,
-                    vospi_packet + VOSPI_HEADER_SIZE, VOSPI_LINE_SIZE);
+                   vospi_packet + VOSPI_HEADER_SIZE, VOSPI_LINE_SIZE);
             if ((++vospi.pid % VOSPI_NUMBER_PACKETS) == 0) {
                 vospi.sid++;
             }
@@ -121,8 +118,7 @@ static void vospi_callback(omv_spi_t *spi, void *data)
     }
 }
 
-int vospi_init(uint32_t n_packets, void *buffer)
-{
+int vospi_init(uint32_t n_packets, void *buffer) {
     memset(&vospi, 0, sizeof(vospi_state_t));
     vospi.buffer = buffer;
     vospi.n_packets = n_packets;
@@ -142,8 +138,7 @@ int vospi_init(uint32_t n_packets, void *buffer)
     return 0;
 }
 
-int vospi_snapshot(uint32_t timeout_ms)
-{
+int vospi_snapshot(uint32_t timeout_ms) {
     // Restart counters to capture a new frame.
     vospi.flags |= VOSPI_FLAGS_RESET;
 

@@ -61,8 +61,7 @@
 
 extern uint8_t _sstack, _estack, _heap_start, _heap_end;
 
-void exec_boot_script(const char *path, bool interruptible)
-{
+void exec_boot_script(const char *path, bool interruptible) {
     nlr_buf_t nlr;
     bool interrupted = false;
     if (nlr_push(&nlr) == 0) {
@@ -84,7 +83,7 @@ void exec_boot_script(const char *path, bool interruptible)
     usbdbg_set_script_running(false);
 
     if (interrupted) {
-        mp_obj_print_exception(&mp_plat_print, (mp_obj_t)nlr.ret_val);
+        mp_obj_print_exception(&mp_plat_print, (mp_obj_t) nlr.ret_val);
     }
 }
 
@@ -168,9 +167,9 @@ soft_reset:
         cyw43_init(&cyw43_state);
         uint8_t buf[8];
         memcpy(&buf[0], "PYBD", 4);
-        mp_hal_get_mac_ascii(MP_HAL_MAC_WLAN0, 8, 4, (char *)&buf[4]);
+        mp_hal_get_mac_ascii(MP_HAL_MAC_WLAN0, 8, 4, (char *) &buf[4]);
         cyw43_wifi_ap_set_ssid(&cyw43_state, 8, buf);
-        cyw43_wifi_ap_set_password(&cyw43_state, 8, (const uint8_t *)"pybd0123");
+        cyw43_wifi_ap_set_password(&cyw43_state, 8, (const uint8_t *) "pybd0123");
     }
     #endif
 
@@ -180,7 +179,7 @@ soft_reset:
 
     #if MICROPY_PY_SENSOR
     if (first_soft_reset
-            && sensor_init() != 0) {
+        && sensor_init() != 0) {
         printf("sensor init failed!\n");
     }
     #endif
@@ -190,7 +189,7 @@ soft_reset:
     #if MICROPY_PY_MACHINE_SDCARD
     if (sdcard_detect(&mimxrt_sdcard_objs[MICROPY_HW_SDCARD_SDMMC - 1])) {
         mp_obj_t args[] = { MP_OBJ_NEW_SMALL_INT(MICROPY_HW_SDCARD_SDMMC) };
-        mp_obj_t bdev = MP_OBJ_TYPE_GET_SLOT(&machine_sdcard_type, make_new)(&machine_sdcard_type, 1, 0, args);
+        mp_obj_t bdev = MP_OBJ_TYPE_GET_SLOT(&machine_sdcard_type, make_new) (&machine_sdcard_type, 1, 0, args);
         if (mp_vfs_mount_and_chdir_protected(bdev, mount_point) == 0) {
             mimxrt_msc_medium = &machine_sdcard_type;
             sdcard_mounted = true;
@@ -199,12 +198,12 @@ soft_reset:
     #endif
 
     if (sdcard_mounted == false) {
-        mp_obj_t bdev = MP_OBJ_TYPE_GET_SLOT(&mimxrt_flash_type, make_new)(&mimxrt_flash_type, 0, 0, NULL);
+        mp_obj_t bdev = MP_OBJ_TYPE_GET_SLOT(&mimxrt_flash_type, make_new) (&mimxrt_flash_type, 0, 0, NULL);
         if (mp_vfs_mount_and_chdir_protected(bdev, mount_point) == 0) {
             mimxrt_msc_medium = &mimxrt_flash_type;
         } else {
             // Create a fresh filesystem.
-            fs_user_mount_t *vfs  = MP_OBJ_TYPE_GET_SLOT(&mp_fat_vfs_type, make_new)(&mp_fat_vfs_type, 1, 0, &bdev);
+            fs_user_mount_t *vfs = MP_OBJ_TYPE_GET_SLOT(&mp_fat_vfs_type, make_new) (&mp_fat_vfs_type, 1, 0, &bdev);
             if (factoryreset_create_filesystem(vfs) == 0) {
                 if (mp_vfs_mount_and_chdir_protected(bdev, mount_point) == 0) {
                     mimxrt_msc_medium = &mimxrt_flash_type;
@@ -256,7 +255,7 @@ soft_reset:
             usbdbg_set_irq_enabled(false);
             nlr_pop();
         } else {
-            mp_obj_print_exception(&mp_plat_print, (mp_obj_t)nlr.ret_val);
+            mp_obj_print_exception(&mp_plat_print, (mp_obj_t) nlr.ret_val);
         }
 
         if (usbdbg_is_busy() && nlr_push(&nlr) == 0) {
@@ -304,8 +303,7 @@ void nlr_jump_fail(void *val) {
     }
 }
 
-void __fatal_error()
-{
+void __fatal_error() {
     nlr_jump_fail(NULL);
 }
 

@@ -27,7 +27,7 @@ STATIC MP_DEFINE_CONST_DICT(example_module_globals, example_module_globals_table
 // Define module object.
 const mp_obj_module_t example_user_cmodule = {
     .base = { &mp_type_module },
-    .globals = (mp_obj_dict_t *)&example_module_globals,
+    .globals = (mp_obj_dict_t *) &example_module_globals,
 };
 
 // Register the module to make it available in Python.

@@ -15,31 +15,28 @@
 #include "omv_bootconfig.h"
 #include "qspif.h"
 
-#define IDE_TIMEOUT     (1000)
-#define CONFIG_TIMEOUT  (2000)
-USBD_HandleTypeDef  USBD_Device;
-extern USBD_CDC_ItfTypeDef  USBD_CDC_fops;
+#define IDE_TIMEOUT       (1000)
+#define CONFIG_TIMEOUT    (2000)
+USBD_HandleTypeDef USBD_Device;
+extern USBD_CDC_ItfTypeDef USBD_CDC_fops;
 
-void __flash_led()
-{
+void __flash_led() {
     HAL_GPIO_TogglePin(OMV_BOOT_LED_PORT, OMV_BOOT_LED_PIN);
     HAL_Delay(100);
     HAL_GPIO_TogglePin(OMV_BOOT_LED_PORT, OMV_BOOT_LED_PIN);
     HAL_Delay(100);
 }
 
-void __attribute__((noreturn)) __fatal_error()
-{
+void __attribute__((noreturn)) __fatal_error() {
     while (1) {
         __flash_led();
     }
 }
 
 #ifdef STACK_PROTECTOR
-uint32_t __stack_chk_guard=0xDEADBEEF;
+uint32_t __stack_chk_guard = 0xDEADBEEF;
 
-void __attribute__((noreturn)) __stack_chk_fail(void)
-{
+void __attribute__((noreturn)) __stack_chk_fail(void) {
     __asm__ volatile ("BKPT");
     while (1) {
         __flash_led();
@@ -47,8 +44,7 @@ void __attribute__((noreturn)) __stack_chk_fail(void)
 }
 #endif
 
-int main()
-{
+int main() {
     // Override main app interrupt vector offset (set in system_stm32fxxx.c)
     SCB->VTOR = FLASH_BASE | 0x0;
 
@@ -79,9 +75,9 @@ int main()
         uint32_t start = HAL_GetTick();
         // Wait for device to be configured
         while (USBD_Device.dev_state != USBD_STATE_CONFIGURED
-                // We still have to timeout because the camera
-                // might be connected to a power bank or charger
-                && (HAL_GetTick() - start) < CONFIG_TIMEOUT) {
+               // We still have to timeout because the camera
+               // might be connected to a power bank or charger
+               && (HAL_GetTick() - start) < CONFIG_TIMEOUT) {
             __flash_led();
         }
 
@@ -89,7 +85,7 @@ int main()
         if (USBD_Device.dev_state == USBD_STATE_CONFIGURED) {
             uint32_t start = HAL_GetTick();
             while (!USBD_IDE_Connected()
-                    && (HAL_GetTick() - start) < IDE_TIMEOUT) {
+                   && (HAL_GetTick() - start) < IDE_TIMEOUT) {
                 __flash_led();
             }
 
@@ -112,5 +108,5 @@ int main()
     __disable_irq(); __DSB(); __ISB();
 
     // Jump to main app
-    ((void (*)(void))(*((uint32_t*) (MAIN_APP_ADDR+4))))();
+    ((void (*) (void)) (*((uint32_t *) (MAIN_APP_ADDR + 4)))) ();
 }

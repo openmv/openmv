@@ -31,20 +31,20 @@
 static int16_t readout_x = 0;
 static int16_t readout_y = 0;
 
-static enum {MONO_CFA, RCCC_CFA, BAYER_CFA} cfa_type = MONO_CFA;
+static enum {
+    MONO_CFA, RCCC_CFA, BAYER_CFA
+}
+cfa_type = MONO_CFA;
 
-static bool is_mt9v0x2(sensor_t *sensor)
-{
+static bool is_mt9v0x2(sensor_t *sensor) {
     return (sensor->chip_id_w == MT9V0X2_ID) || (sensor->chip_id_w == MT9V0X2_C_ID);
 }
 
-static bool is_mt9v0x4(sensor_t *sensor)
-{
+static bool is_mt9v0x4(sensor_t *sensor) {
     return (sensor->chip_id_w == MT9V0X4_ID) || (sensor->chip_id_w == MT9V0X4_C_ID);
 }
 
-static int reset(sensor_t *sensor)
-{
+static int reset(sensor_t *sensor) {
     int ret = 0;
     readout_x = 0;
     readout_y = 0;
@@ -55,13 +55,13 @@ static int reset(sensor_t *sensor)
         uint16_t chip_control;
         ret |= omv_i2c_readw(&sensor->i2c_bus, sensor->slv_addr, MT9V0XX_CHIP_CONTROL, &chip_control);
         ret |= omv_i2c_writew(&sensor->i2c_bus, sensor->slv_addr, MT9V0XX_CHIP_CONTROL,
-                (chip_control & (~MT9V0X4_CHIP_CONTROL_RESERVED)));
+                              (chip_control & (~MT9V0X4_CHIP_CONTROL_RESERVED)));
     }
 
     uint16_t read_mode;
     ret |= omv_i2c_readw(&sensor->i2c_bus, sensor->slv_addr, MT9V0XX_READ_MODE, &read_mode);
     ret |= omv_i2c_writew(&sensor->i2c_bus, sensor->slv_addr, MT9V0XX_READ_MODE,
-            read_mode | MT9V0XX_READ_MODE_ROW_FLIP | MT9V0XX_READ_MODE_COL_FLIP);
+                          read_mode | MT9V0XX_READ_MODE_ROW_FLIP | MT9V0XX_READ_MODE_COL_FLIP);
 
     if (is_mt9v0x4(sensor)) {
         // We have to copy the differences from context A into context B registers so that we can
@@ -69,7 +69,7 @@ static int reset(sensor_t *sensor)
 
         ret |= omv_i2c_readw(&sensor->i2c_bus, sensor->slv_addr, MT9V0X4_READ_MODE_B, &read_mode);
         ret |= omv_i2c_writew(&sensor->i2c_bus, sensor->slv_addr, MT9V0X4_READ_MODE_B,
-                read_mode | MT9V0XX_READ_MODE_ROW_FLIP | MT9V0XX_READ_MODE_COL_FLIP);
+                              read_mode | MT9V0XX_READ_MODE_ROW_FLIP | MT9V0XX_READ_MODE_COL_FLIP);
 
         uint16_t shutter_width1;
         ret |= omv_i2c_readw(&sensor->i2c_bus, sensor->slv_addr, MT9V0XX_SHUTTER_WIDTH1, &shutter_width1);
@@ -104,13 +104,13 @@ static int reset(sensor_t *sensor)
         ret |= omv_i2c_writew(&sensor->i2c_bus, sensor->slv_addr, MT9V0X4_ANALOG_GAIN_B, analog_gain);
 
         ret |= omv_i2c_writew(&sensor->i2c_bus, sensor->slv_addr, MT9V0XX_PIXEL_OPERATION_MODE,
-                0);
+                              0);
 
         ret |= omv_i2c_writew(&sensor->i2c_bus, sensor->slv_addr, MT9V0XX_ADC_COMPANDING_MODE,
-                MT9V0XX_ADC_COMPANDING_MODE_LINEAR | MT9V0X4_ADC_COMPANDING_MODE_LINEAR_B);
+                              MT9V0XX_ADC_COMPANDING_MODE_LINEAR | MT9V0X4_ADC_COMPANDING_MODE_LINEAR_B);
 
         ret |= omv_i2c_writew(&sensor->i2c_bus, sensor->slv_addr, MT9V0XX_AEC_AGC_ENABLE,
-                MT9V0XX_AEC_ENABLE | MT9V0X4_AEC_ENABLE_B | MT9V0XX_AGC_ENABLE | MT9V0X4_AGC_ENABLE_B);
+                              MT9V0XX_AEC_ENABLE | MT9V0X4_AEC_ENABLE_B | MT9V0XX_AGC_ENABLE | MT9V0X4_AGC_ENABLE_B);
     }
 
     if (is_mt9v0x2(sensor)) {
@@ -120,8 +120,7 @@ static int reset(sensor_t *sensor)
     return ret;
 }
 
-static int read_reg(sensor_t *sensor, uint16_t reg_addr)
-{
+static int read_reg(sensor_t *sensor, uint16_t reg_addr) {
     uint16_t reg_data;
     if (omv_i2c_readw(&sensor->i2c_bus, sensor->slv_addr, reg_addr, &reg_data) != 0) {
         return -1;
@@ -129,13 +128,11 @@ static int read_reg(sensor_t *sensor, uint16_t reg_addr)
     return reg_data;
 }
 
-static int write_reg(sensor_t *sensor, uint16_t reg_addr, uint16_t reg_data)
-{
+static int write_reg(sensor_t *sensor, uint16_t reg_addr, uint16_t reg_data) {
     return omv_i2c_writew(&sensor->i2c_bus, sensor->slv_addr, reg_addr, reg_data);
 }
 
-static int set_pixformat(sensor_t *sensor, pixformat_t pixformat)
-{
+static int set_pixformat(sensor_t *sensor, pixformat_t pixformat) {
     switch (cfa_type) {
         case BAYER_CFA: {
             if (pixformat != PIXFORMAT_BAYER) {
@@ -152,8 +149,7 @@ static int set_pixformat(sensor_t *sensor, pixformat_t pixformat)
     }
 }
 
-static int set_framesize(sensor_t *sensor, framesize_t framesize)
-{
+static int set_framesize(sensor_t *sensor, framesize_t framesize) {
     uint16_t chip_control, read_mode;
     int ret = 0;
     uint16_t w = resolution[framesize][0];
@@ -163,7 +159,8 @@ static int set_framesize(sensor_t *sensor, framesize_t framesize)
         return -1;
     }
 
-    if ((cfa_type == BAYER_CFA) && (w % 16)) { // Must be a multiple of 16 in bayer mode.
+    if ((cfa_type == BAYER_CFA) && (w % 16)) {
+        // Must be a multiple of 16 in bayer mode.
         return -1;
     }
 
@@ -205,9 +202,9 @@ static int set_framesize(sensor_t *sensor, framesize_t framesize)
     readout_y = IM_MAX(IM_MIN(readout_y, readout_y_max), -readout_y_max);
 
     ret |= omv_i2c_writew(&sensor->i2c_bus, sensor->slv_addr, col_start_addr,
-            readout_x_max - readout_x + MT9V0XX_COL_START_MIN); // sensor is mirrored by default
+                          readout_x_max - readout_x + MT9V0XX_COL_START_MIN); // sensor is mirrored by default
     ret |= omv_i2c_writew(&sensor->i2c_bus, sensor->slv_addr, row_start_addr,
-            readout_y_max - readout_y + MT9V0XX_ROW_START_MIN); // sensor is mirrored by default
+                          readout_y_max - readout_y + MT9V0XX_ROW_START_MIN); // sensor is mirrored by default
     ret |= omv_i2c_writew(&sensor->i2c_bus, sensor->slv_addr, window_width_addr, w * read_mode_mul);
     ret |= omv_i2c_writew(&sensor->i2c_bus, sensor->slv_addr, window_height_addr, h * read_mode_mul);
 
@@ -218,7 +215,7 @@ static int set_framesize(sensor_t *sensor, framesize_t framesize)
     //
     // The STM32H7 needs more than 94+(752-640) clocks between rows otherwise it can't keep up with the pixel rate.
     ret |= omv_i2c_writew(&sensor->i2c_bus, sensor->slv_addr, horizontal_blanking_addr,
-            MT9V0XX_HORIZONTAL_BLANKING_DEF + (ACTIVE_SENSOR_WIDTH - IM_MIN(w * read_mode_mul, 640)));
+                          MT9V0XX_HORIZONTAL_BLANKING_DEF + (ACTIVE_SENSOR_WIDTH - IM_MIN(w * read_mode_mul, 640)));
 
     ret |= omv_i2c_writew(&sensor->i2c_bus, sensor->slv_addr, read_mode_addr, read_mode);
     ret |= omv_i2c_writew(&sensor->i2c_bus, sensor->slv_addr, MT9V0XX_PIXEL_COUNT, (w * h) / 8);
@@ -226,7 +223,7 @@ static int set_framesize(sensor_t *sensor, framesize_t framesize)
     if (is_mt9v0x4(sensor)) {
         // We need more setup time for the pixel_clk at the full data rate...
         ret |= omv_i2c_writew(&sensor->i2c_bus, sensor->slv_addr, MT9V0X4_PIXEL_CLOCK,
-                (read_mode_mul == 1) ? MT9V0XX_PIXEL_CLOCK_INV_PXL_CLK : 0);
+                              (read_mode_mul == 1) ? MT9V0XX_PIXEL_CLOCK_INV_PXL_CLK : 0);
     }
 
     // EDIT: WORKS BETTER TO STAY IN CONTEXT A
@@ -238,32 +235,30 @@ static int set_framesize(sensor_t *sensor, framesize_t framesize)
     return ret;
 }
 
-static int set_colorbar(sensor_t *sensor, int enable)
-{
+static int set_colorbar(sensor_t *sensor, int enable) {
     int mask = (is_mt9v0x4(sensor))
         ? (MT9V0X4_ROW_NOISE_CORR_ENABLE | MT9V0X4_ROW_NOISE_CORR_ENABLE_B)
         : MT9V0X2_ROW_NOISE_CORR_ENABLE;
     uint16_t reg;
     int ret = omv_i2c_readw(&sensor->i2c_bus, sensor->slv_addr, MT9V0XX_TEST_PATTERN, &reg);
     ret |= omv_i2c_writew(&sensor->i2c_bus, sensor->slv_addr, MT9V0XX_TEST_PATTERN,
-            (reg & (~(MT9V0XX_TEST_PATTERN_ENABLE | MT9V0XX_TEST_PATTERN_GRAY_MASK)))
-          | ((enable != 0) ? (MT9V0XX_TEST_PATTERN_ENABLE | MT9V0XX_TEST_PATTERN_GRAY_VERTICAL) : 0));
+                          (reg & (~(MT9V0XX_TEST_PATTERN_ENABLE | MT9V0XX_TEST_PATTERN_GRAY_MASK)))
+                          | ((enable != 0) ? (MT9V0XX_TEST_PATTERN_ENABLE | MT9V0XX_TEST_PATTERN_GRAY_VERTICAL) : 0));
     ret = omv_i2c_readw(&sensor->i2c_bus, sensor->slv_addr, MT9V0XX_ROW_NOISE_CORR_CONTROL, &reg);
     ret |= omv_i2c_writew(&sensor->i2c_bus, sensor->slv_addr, MT9V0XX_ROW_NOISE_CORR_CONTROL,
-            (reg & (~mask)) | ((enable == 0) ? mask : 0));
+                          (reg & (~mask)) | ((enable == 0) ? mask : 0));
     ret |= sensor->snapshot(sensor, NULL, 0); // Force shadow mode register to update...
     return ret;
 }
 
-static int set_auto_gain(sensor_t *sensor, int enable, float gain_db, float gain_db_ceiling)
-{
+static int set_auto_gain(sensor_t *sensor, int enable, float gain_db, float gain_db_ceiling) {
     int agc_mask = (is_mt9v0x4(sensor))
         ? (MT9V0XX_AGC_ENABLE | MT9V0X4_AGC_ENABLE_B)
         : MT9V0XX_AGC_ENABLE;
     uint16_t reg;
     int ret = omv_i2c_readw(&sensor->i2c_bus, sensor->slv_addr, MT9V0XX_AEC_AGC_ENABLE, &reg);
     ret |= omv_i2c_writew(&sensor->i2c_bus, sensor->slv_addr, MT9V0XX_AEC_AGC_ENABLE,
-            (reg & (~agc_mask)) | ((enable != 0) ? agc_mask : 0));
+                          (reg & (~agc_mask)) | ((enable != 0) ? agc_mask : 0));
     ret |= sensor->snapshot(sensor, NULL, 0); // Force shadow mode register to update...
 
     if ((enable == 0) && (!isnanf(gain_db)) && (!isinff(gain_db))) {
@@ -287,8 +282,7 @@ static int set_auto_gain(sensor_t *sensor, int enable, float gain_db, float gain
     return ret;
 }
 
-static int get_gain_db(sensor_t *sensor, float *gain_db)
-{
+static int get_gain_db(sensor_t *sensor, float *gain_db) {
     uint16_t chip_control, reg, gain;
     int ret = omv_i2c_readw(&sensor->i2c_bus, sensor->slv_addr, MT9V0XX_CHIP_CONTROL, &chip_control);
     int context = chip_control & MT9V0X4_CHIP_CONTROL_CONTEXT;
@@ -305,8 +299,7 @@ static int get_gain_db(sensor_t *sensor, float *gain_db)
     return ret;
 }
 
-static int set_auto_exposure(sensor_t *sensor, int enable, int exposure_us)
-{
+static int set_auto_exposure(sensor_t *sensor, int enable, int exposure_us) {
     int aec_mask = (is_mt9v0x4(sensor))
         ? (MT9V0XX_AEC_ENABLE | MT9V0X4_AEC_ENABLE_B)
         : MT9V0XX_AEC_ENABLE;
@@ -315,7 +308,7 @@ static int set_auto_exposure(sensor_t *sensor, int enable, int exposure_us)
     int context = chip_control & MT9V0X4_CHIP_CONTROL_CONTEXT;
     ret |= omv_i2c_readw(&sensor->i2c_bus, sensor->slv_addr, MT9V0XX_AEC_AGC_ENABLE, &reg);
     ret |= omv_i2c_writew(&sensor->i2c_bus, sensor->slv_addr, MT9V0XX_AEC_AGC_ENABLE,
-            (reg & (~aec_mask)) | ((enable != 0) ? aec_mask : 0));
+                          (reg & (~aec_mask)) | ((enable != 0) ? aec_mask : 0));
     ret |= sensor->snapshot(sensor, NULL, 0); // Force shadow mode register to update...
 
     int read_mode = context ? MT9V0X4_READ_MODE_B : MT9V0XX_READ_MODE;
@@ -326,8 +319,12 @@ static int set_auto_exposure(sensor_t *sensor, int enable, int exposure_us)
     ret |= omv_i2c_readw(&sensor->i2c_bus, sensor->slv_addr, horizontal_blanking, &row_time_1);
 
     int clock = sensor_get_xclk_frequency();
-    if (read_mode_reg & MT9V0XX_READ_MODE_COL_BIN_2) clock /= 2;
-    if (read_mode_reg & MT9V0XX_READ_MODE_COL_BIN_4) clock /= 4;
+    if (read_mode_reg & MT9V0XX_READ_MODE_COL_BIN_2) {
+        clock /= 2;
+    }
+    if (read_mode_reg & MT9V0XX_READ_MODE_COL_BIN_4) {
+        clock /= 4;
+    }
 
     int exposure = IM_MIN(exposure_us, MICROSECOND_CLKS / 2) * (clock / MICROSECOND_CLKS);
     int row_time = row_time_0 + row_time_1;
@@ -356,8 +353,7 @@ static int set_auto_exposure(sensor_t *sensor, int enable, int exposure_us)
     return ret;
 }
 
-static int get_exposure_us(sensor_t *sensor, int *exposure_us)
-{
+static int get_exposure_us(sensor_t *sensor, int *exposure_us) {
     uint16_t chip_control, reg, read_mode_reg, row_time_0, row_time_1, int_pixels = 0, int_rows = 0;
     int ret = omv_i2c_readw(&sensor->i2c_bus, sensor->slv_addr, MT9V0XX_CHIP_CONTROL, &chip_control);
     int context = chip_control & MT9V0X4_CHIP_CONTROL_CONTEXT;
@@ -375,8 +371,12 @@ static int get_exposure_us(sensor_t *sensor, int *exposure_us)
     }
 
     int clock = sensor_get_xclk_frequency();
-    if (read_mode_reg & MT9V0XX_READ_MODE_COL_BIN_2) clock /= 2;
-    if (read_mode_reg & MT9V0XX_READ_MODE_COL_BIN_4) clock /= 4;
+    if (read_mode_reg & MT9V0XX_READ_MODE_COL_BIN_2) {
+        clock /= 2;
+    }
+    if (read_mode_reg & MT9V0XX_READ_MODE_COL_BIN_4) {
+        clock /= 4;
+    }
 
     if (reg & (context ? MT9V0X4_AEC_ENABLE_B : MT9V0XX_AEC_ENABLE)) {
         ret |= omv_i2c_readw(&sensor->i2c_bus, sensor->slv_addr, MT9V0XX_AEC_EXPOSURE_OUTPUT, &int_rows);
@@ -389,42 +389,39 @@ static int get_exposure_us(sensor_t *sensor, int *exposure_us)
     return ret;
 }
 
-static int set_hmirror(sensor_t *sensor, int enable)
-{
+static int set_hmirror(sensor_t *sensor, int enable) {
     uint16_t read_mode;
     int ret = omv_i2c_readw(&sensor->i2c_bus, sensor->slv_addr, MT9V0XX_READ_MODE, &read_mode);
     ret |= omv_i2c_writew(&sensor->i2c_bus, sensor->slv_addr, MT9V0XX_READ_MODE, // inverted behavior
-            (read_mode & (~MT9V0XX_READ_MODE_COL_FLIP)) | ((enable == 0) ? MT9V0XX_READ_MODE_COL_FLIP : 0));
+                          (read_mode & (~MT9V0XX_READ_MODE_COL_FLIP)) | ((enable == 0) ? MT9V0XX_READ_MODE_COL_FLIP : 0));
 
     if (is_mt9v0x4(sensor)) {
         ret |= omv_i2c_readw(&sensor->i2c_bus, sensor->slv_addr, MT9V0X4_READ_MODE_B, &read_mode);
         ret |= omv_i2c_writew(&sensor->i2c_bus, sensor->slv_addr, MT9V0X4_READ_MODE_B, // inverted behavior
-                (read_mode & (~MT9V0XX_READ_MODE_COL_FLIP)) | ((enable == 0) ? MT9V0XX_READ_MODE_COL_FLIP : 0));
+                              (read_mode & (~MT9V0XX_READ_MODE_COL_FLIP)) | ((enable == 0) ? MT9V0XX_READ_MODE_COL_FLIP : 0));
     }
 
     ret |= sensor->snapshot(sensor, NULL, 0); // Force shadow mode register to update...
     return ret;
 }
 
-static int set_vflip(sensor_t *sensor, int enable)
-{
+static int set_vflip(sensor_t *sensor, int enable) {
     uint16_t read_mode;
     int ret = omv_i2c_readw(&sensor->i2c_bus, sensor->slv_addr, MT9V0XX_READ_MODE, &read_mode);
     ret |= omv_i2c_writew(&sensor->i2c_bus, sensor->slv_addr, MT9V0XX_READ_MODE, // inverted behavior
-            (read_mode & (~MT9V0XX_READ_MODE_ROW_FLIP)) | ((enable == 0) ? MT9V0XX_READ_MODE_ROW_FLIP : 0));
+                          (read_mode & (~MT9V0XX_READ_MODE_ROW_FLIP)) | ((enable == 0) ? MT9V0XX_READ_MODE_ROW_FLIP : 0));
 
     if (is_mt9v0x4(sensor)) {
         ret |= omv_i2c_readw(&sensor->i2c_bus, sensor->slv_addr, MT9V0X4_READ_MODE_B, &read_mode);
         ret |= omv_i2c_writew(&sensor->i2c_bus, sensor->slv_addr, MT9V0X4_READ_MODE_B, // inverted behavior
-                (read_mode & (~MT9V0XX_READ_MODE_ROW_FLIP)) | ((enable == 0) ? MT9V0XX_READ_MODE_ROW_FLIP : 0));
+                              (read_mode & (~MT9V0XX_READ_MODE_ROW_FLIP)) | ((enable == 0) ? MT9V0XX_READ_MODE_ROW_FLIP : 0));
     }
 
     ret |= sensor->snapshot(sensor, NULL, 0); // Force shadow mode register to update...
     return ret;
 }
 
-static int ioctl(sensor_t *sensor, int request, va_list ap)
-{
+static int ioctl(sensor_t *sensor, int request, va_list ap) {
     int ret = 0;
     uint16_t chip_control;
 
@@ -473,10 +470,10 @@ static int ioctl(sensor_t *sensor, int request, va_list ap)
         }
         case IOCTL_SET_TRIGGERED_MODE: {
             int enable = va_arg(ap, int);
-            ret  = omv_i2c_readw(&sensor->i2c_bus, sensor->slv_addr, MT9V0XX_CHIP_CONTROL, &chip_control);
+            ret = omv_i2c_readw(&sensor->i2c_bus, sensor->slv_addr, MT9V0XX_CHIP_CONTROL, &chip_control);
             ret |= omv_i2c_writew(&sensor->i2c_bus, sensor->slv_addr, MT9V0XX_CHIP_CONTROL,
-                    (chip_control & (~MT9V0XX_CHIP_CONTROL_MODE_MASK))
-                    | ((enable != 0) ? MT9V0XX_CHIP_CONTROL_SNAP_MODE : MT9V0XX_CHIP_CONTROL_MASTER_MODE));
+                                  (chip_control & (~MT9V0XX_CHIP_CONTROL_MODE_MASK))
+                                  | ((enable != 0) ? MT9V0XX_CHIP_CONTROL_SNAP_MODE : MT9V0XX_CHIP_CONTROL_MASTER_MODE));
             ret |= sensor->snapshot(sensor, NULL, 0); // Force shadow mode register to update...
             break;
         }
@@ -497,31 +494,30 @@ static int ioctl(sensor_t *sensor, int request, va_list ap)
     return ret;
 }
 
-int mt9v0xx_init(sensor_t *sensor)
-{
+int mt9v0xx_init(sensor_t *sensor) {
     // Initialize sensor structure.
-    sensor->reset               = reset;
-    sensor->read_reg            = read_reg;
-    sensor->write_reg           = write_reg;
-    sensor->set_pixformat       = set_pixformat;
-    sensor->set_framesize       = set_framesize;
-    sensor->set_colorbar        = set_colorbar;
-    sensor->set_auto_gain       = set_auto_gain;
-    sensor->get_gain_db         = get_gain_db;
-    sensor->set_auto_exposure   = set_auto_exposure;
-    sensor->get_exposure_us     = get_exposure_us;
-    sensor->set_hmirror         = set_hmirror;
-    sensor->set_vflip           = set_vflip;
-    sensor->ioctl               = ioctl;
+    sensor->reset = reset;
+    sensor->read_reg = read_reg;
+    sensor->write_reg = write_reg;
+    sensor->set_pixformat = set_pixformat;
+    sensor->set_framesize = set_framesize;
+    sensor->set_colorbar = set_colorbar;
+    sensor->set_auto_gain = set_auto_gain;
+    sensor->get_gain_db = get_gain_db;
+    sensor->set_auto_exposure = set_auto_exposure;
+    sensor->get_exposure_us = get_exposure_us;
+    sensor->set_hmirror = set_hmirror;
+    sensor->set_vflip = set_vflip;
+    sensor->ioctl = ioctl;
 
     // Set sensor flags
-    sensor->hw_flags.vsync      = 0;
-    sensor->hw_flags.hsync      = 0;
-    sensor->hw_flags.pixck      = 0;
-    sensor->hw_flags.fsync      = 1;
-    sensor->hw_flags.jpege      = 0;
-    sensor->hw_flags.gs_bpp     = 1;
-    sensor->hw_flags.bayer      = SENSOR_HW_FLAGS_BAYER_BGGR;
+    sensor->hw_flags.vsync = 0;
+    sensor->hw_flags.hsync = 0;
+    sensor->hw_flags.pixck = 0;
+    sensor->hw_flags.fsync = 1;
+    sensor->hw_flags.jpege = 0;
+    sensor->hw_flags.gs_bpp = 1;
+    sensor->hw_flags.bayer = SENSOR_HW_FLAGS_BAYER_BGGR;
 
     uint16_t cfa_type_reg;
     int ret = omv_i2c_readw(&sensor->i2c_bus, sensor->slv_addr, MT9V0XX_CFA_ID_REG, &cfa_type_reg);

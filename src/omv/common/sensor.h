@@ -163,62 +163,62 @@ typedef enum {
 } ioctl_t;
 
 typedef enum {
-    SENSOR_ERROR_NO_ERROR               =  0,
-    SENSOR_ERROR_CTL_FAILED             = -1,
-    SENSOR_ERROR_CTL_UNSUPPORTED        = -2,
-    SENSOR_ERROR_ISC_UNDETECTED         = -3,
-    SENSOR_ERROR_ISC_UNSUPPORTED        = -4,
-    SENSOR_ERROR_ISC_INIT_FAILED        = -5,
-    SENSOR_ERROR_TIM_INIT_FAILED        = -6,
-    SENSOR_ERROR_DMA_INIT_FAILED        = -7,
-    SENSOR_ERROR_DCMI_INIT_FAILED       = -8,
-    SENSOR_ERROR_IO_ERROR               = -9,
-    SENSOR_ERROR_CAPTURE_FAILED         = -10,
-    SENSOR_ERROR_CAPTURE_TIMEOUT        = -11,
-    SENSOR_ERROR_INVALID_FRAMESIZE      = -12,
-    SENSOR_ERROR_INVALID_PIXFORMAT      = -13,
-    SENSOR_ERROR_INVALID_WINDOW         = -14,
-    SENSOR_ERROR_INVALID_FRAMERATE      = -15,
-    SENSOR_ERROR_INVALID_ARGUMENT       = -16,
-    SENSOR_ERROR_PIXFORMAT_UNSUPPORTED  = -17,
-    SENSOR_ERROR_FRAMEBUFFER_ERROR      = -18,
-    SENSOR_ERROR_FRAMEBUFFER_OVERFLOW   = -19,
-    SENSOR_ERROR_JPEG_OVERFLOW          = -20,
+    SENSOR_ERROR_NO_ERROR              =  0,
+    SENSOR_ERROR_CTL_FAILED            = -1,
+    SENSOR_ERROR_CTL_UNSUPPORTED       = -2,
+    SENSOR_ERROR_ISC_UNDETECTED        = -3,
+    SENSOR_ERROR_ISC_UNSUPPORTED       = -4,
+    SENSOR_ERROR_ISC_INIT_FAILED       = -5,
+    SENSOR_ERROR_TIM_INIT_FAILED       = -6,
+    SENSOR_ERROR_DMA_INIT_FAILED       = -7,
+    SENSOR_ERROR_DCMI_INIT_FAILED      = -8,
+    SENSOR_ERROR_IO_ERROR              = -9,
+    SENSOR_ERROR_CAPTURE_FAILED        = -10,
+    SENSOR_ERROR_CAPTURE_TIMEOUT       = -11,
+    SENSOR_ERROR_INVALID_FRAMESIZE     = -12,
+    SENSOR_ERROR_INVALID_PIXFORMAT     = -13,
+    SENSOR_ERROR_INVALID_WINDOW        = -14,
+    SENSOR_ERROR_INVALID_FRAMERATE     = -15,
+    SENSOR_ERROR_INVALID_ARGUMENT      = -16,
+    SENSOR_ERROR_PIXFORMAT_UNSUPPORTED = -17,
+    SENSOR_ERROR_FRAMEBUFFER_ERROR     = -18,
+    SENSOR_ERROR_FRAMEBUFFER_OVERFLOW  = -19,
+    SENSOR_ERROR_JPEG_OVERFLOW         = -20,
 } sensor_error_t;
 
 // Bayer patterns.
 // NOTE: These must match the Bayer subformats in imlib.h
-#define SENSOR_HW_FLAGS_BAYER_BGGR      (SUBFORMAT_ID_BGGR)
-#define SENSOR_HW_FLAGS_BAYER_GBRG      (SUBFORMAT_ID_GBRG)
-#define SENSOR_HW_FLAGS_BAYER_GRBG      (SUBFORMAT_ID_GRBG)
-#define SENSOR_HW_FLAGS_BAYER_RGGB      (SUBFORMAT_ID_RGGB)
-#define SENSOR_HW_FLAGS_YUV422          (SUBFORMAT_ID_YUV422)
-#define SENSOR_HW_FLAGS_YVU422          (SUBFORMAT_ID_YVU422)
+#define SENSOR_HW_FLAGS_BAYER_BGGR    (SUBFORMAT_ID_BGGR)
+#define SENSOR_HW_FLAGS_BAYER_GBRG    (SUBFORMAT_ID_GBRG)
+#define SENSOR_HW_FLAGS_BAYER_GRBG    (SUBFORMAT_ID_GRBG)
+#define SENSOR_HW_FLAGS_BAYER_RGGB    (SUBFORMAT_ID_RGGB)
+#define SENSOR_HW_FLAGS_YUV422        (SUBFORMAT_ID_YUV422)
+#define SENSOR_HW_FLAGS_YVU422        (SUBFORMAT_ID_YVU422)
 
-typedef void (*vsync_cb_t)(uint32_t vsync);
-typedef void (*frame_cb_t)();
+typedef void (*vsync_cb_t) (uint32_t vsync);
+typedef void (*frame_cb_t) ();
 
 typedef struct _sensor sensor_t;
 typedef struct _sensor {
     union {
-    uint8_t  chip_id;           // Sensor ID.
-    uint16_t chip_id_w;         // Sensor ID 16 bits.
+        uint8_t chip_id;        // Sensor ID.
+        uint16_t chip_id_w;     // Sensor ID 16 bits.
     };
-    uint8_t  slv_addr;          // Sensor I2C slave address.
+    uint8_t slv_addr;           // Sensor I2C slave address.
 
     // Hardware flags (clock polarities, hw capabilities etc..)
     struct {
-        uint32_t vsync:1;       // Vertical sync polarity.
-        uint32_t hsync:1;       // Horizontal sync polarity.
-        uint32_t pixck:1;       // Pixel clock edge.
-        uint32_t fsync:1;       // Hardware frame sync.
-        uint32_t jpege:1;       // Hardware jpeg encoder.
-        uint32_t jpeg_mode:3;   // JPEG mode.
-        uint32_t gs_bpp:2;      // Grayscale bytes per pixel output.
-        uint32_t rgb_swap:1;    // Byte-swap 2BPP RGB formats after capture.
-        uint32_t yuv_swap:1;    // Byte-swap 2BPP YUV formats after capture.
-        uint32_t bayer:3;       // Bayer/CFA pattern.
-        uint32_t yuv_order:1;   // YUV/YVU order.
+        uint32_t vsync : 1;       // Vertical sync polarity.
+        uint32_t hsync : 1;       // Horizontal sync polarity.
+        uint32_t pixck : 1;       // Pixel clock edge.
+        uint32_t fsync : 1;       // Hardware frame sync.
+        uint32_t jpege : 1;       // Hardware jpeg encoder.
+        uint32_t jpeg_mode : 3;   // JPEG mode.
+        uint32_t gs_bpp : 2;      // Grayscale bytes per pixel output.
+        uint32_t rgb_swap : 1;    // Byte-swap 2BPP RGB formats after capture.
+        uint32_t yuv_swap : 1;    // Byte-swap 2BPP YUV formats after capture.
+        uint32_t bayer : 3;       // Bayer/CFA pattern.
+        uint32_t yuv_order : 1;   // YUV/YVU order.
     } hw_flags;
 
     const uint16_t *color_palette;    // Color palette used for color lookup.
@@ -246,31 +246,31 @@ typedef struct _sensor {
     omv_i2c_t i2c_bus;          // SCCB/I2C bus.
 
     // Sensor function pointers
-    int  (*reset)               (sensor_t *sensor);
-    int  (*sleep)               (sensor_t *sensor, int enable);
-    int  (*read_reg)            (sensor_t *sensor, uint16_t reg_addr);
-    int  (*write_reg)           (sensor_t *sensor, uint16_t reg_addr, uint16_t reg_data);
-    int  (*set_pixformat)       (sensor_t *sensor, pixformat_t pixformat);
-    int  (*set_framesize)       (sensor_t *sensor, framesize_t framesize);
-    int  (*set_framerate)       (sensor_t *sensor, int framerate);
-    int  (*set_contrast)        (sensor_t *sensor, int level);
-    int  (*set_brightness)      (sensor_t *sensor, int level);
-    int  (*set_saturation)      (sensor_t *sensor, int level);
-    int  (*set_gainceiling)     (sensor_t *sensor, gainceiling_t gainceiling);
-    int  (*set_quality)         (sensor_t *sensor, int quality);
-    int  (*set_colorbar)        (sensor_t *sensor, int enable);
-    int  (*set_auto_gain)       (sensor_t *sensor, int enable, float gain_db, float gain_db_ceiling);
-    int  (*get_gain_db)         (sensor_t *sensor, float *gain_db);
-    int  (*set_auto_exposure)   (sensor_t *sensor, int enable, int exposure_us);
-    int  (*get_exposure_us)     (sensor_t *sensor, int *exposure_us);
-    int  (*set_auto_whitebal)   (sensor_t *sensor, int enable, float r_gain_db, float g_gain_db, float b_gain_db);
-    int  (*get_rgb_gain_db)     (sensor_t *sensor, float *r_gain_db, float *g_gain_db, float *b_gain_db);
-    int  (*set_hmirror)         (sensor_t *sensor, int enable);
-    int  (*set_vflip)           (sensor_t *sensor, int enable);
-    int  (*set_special_effect)  (sensor_t *sensor, sde_t sde);
-    int  (*set_lens_correction) (sensor_t *sensor, int enable, int radi, int coef);
-    int  (*ioctl)               (sensor_t *sensor, int request, va_list ap);
-    int  (*snapshot)            (sensor_t *sensor, image_t *image, uint32_t flags);
+    int (*reset) (sensor_t *sensor);
+    int (*sleep) (sensor_t *sensor, int enable);
+    int (*read_reg) (sensor_t *sensor, uint16_t reg_addr);
+    int (*write_reg) (sensor_t *sensor, uint16_t reg_addr, uint16_t reg_data);
+    int (*set_pixformat) (sensor_t *sensor, pixformat_t pixformat);
+    int (*set_framesize) (sensor_t *sensor, framesize_t framesize);
+    int (*set_framerate) (sensor_t *sensor, int framerate);
+    int (*set_contrast) (sensor_t *sensor, int level);
+    int (*set_brightness) (sensor_t *sensor, int level);
+    int (*set_saturation) (sensor_t *sensor, int level);
+    int (*set_gainceiling) (sensor_t *sensor, gainceiling_t gainceiling);
+    int (*set_quality) (sensor_t *sensor, int quality);
+    int (*set_colorbar) (sensor_t *sensor, int enable);
+    int (*set_auto_gain) (sensor_t *sensor, int enable, float gain_db, float gain_db_ceiling);
+    int (*get_gain_db) (sensor_t *sensor, float *gain_db);
+    int (*set_auto_exposure) (sensor_t *sensor, int enable, int exposure_us);
+    int (*get_exposure_us) (sensor_t *sensor, int *exposure_us);
+    int (*set_auto_whitebal) (sensor_t *sensor, int enable, float r_gain_db, float g_gain_db, float b_gain_db);
+    int (*get_rgb_gain_db) (sensor_t *sensor, float *r_gain_db, float *g_gain_db, float *b_gain_db);
+    int (*set_hmirror) (sensor_t *sensor, int enable);
+    int (*set_vflip) (sensor_t *sensor, int enable);
+    int (*set_special_effect) (sensor_t *sensor, sde_t sde);
+    int (*set_lens_correction) (sensor_t *sensor, int enable, int radi, int coef);
+    int (*ioctl) (sensor_t *sensor, int request, va_list ap);
+    int (*snapshot) (sensor_t *sensor, image_t *image, uint32_t flags);
 } sensor_t;
 
 extern sensor_t sensor;

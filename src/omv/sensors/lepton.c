@@ -28,22 +28,22 @@
 #include "LEPTON_RAD.h"
 #include "LEPTON_I2C_Reg.h"
 
-#define LEPTON_BOOT_TIMEOUT     (1000)
-#define LEPTON_SNAPSHOT_RETRY   (3)
-#define LEPTON_SNAPSHOT_TIMEOUT (10000)
+#define LEPTON_BOOT_TIMEOUT        (1000)
+#define LEPTON_SNAPSHOT_RETRY      (3)
+#define LEPTON_SNAPSHOT_TIMEOUT    (10000)
 
 // Min/Max temperatures in Celsius.
-#define LEPTON_MIN_TEMP_NORM    (-10.0f)
-#define LEPTON_MIN_TEMP_HIGH    (-10.0f)
-#define LEPTON_MIN_TEMP_DEFAULT (-10.0f)
+#define LEPTON_MIN_TEMP_NORM       (-10.0f)
+#define LEPTON_MIN_TEMP_HIGH       (-10.0f)
+#define LEPTON_MIN_TEMP_DEFAULT    (-10.0f)
 
-#define LEPTON_MAX_TEMP_NORM    (140.0f)
-#define LEPTON_MAX_TEMP_HIGH    (600.0f)
-#define LEPTON_MAX_TEMP_DEFAULT (40.0f)
+#define LEPTON_MAX_TEMP_NORM       (140.0f)
+#define LEPTON_MAX_TEMP_HIGH       (600.0f)
+#define LEPTON_MAX_TEMP_DEFAULT    (40.0f)
 
 typedef struct lepton_state {
-    int  h_res;
-    int  v_res;
+    int h_res;
+    int v_res;
     bool vflip;
     bool hmirror;
     float min_temp;
@@ -59,8 +59,7 @@ static lepton_state_t lepton;
 
 static int lepton_reset(sensor_t *sensor, bool measurement_mode, bool high_temp_mode);
 
-static int sleep(sensor_t *sensor, int enable)
-{
+static int sleep(sensor_t *sensor, int enable) {
     if (enable) {
         omv_gpio_write(DCMI_POWER_PIN, 0);
         mp_hal_delay_ms(100);
@@ -72,8 +71,7 @@ static int sleep(sensor_t *sensor, int enable)
     return 0;
 }
 
-static int read_reg(sensor_t *sensor, uint16_t reg_addr)
-{
+static int read_reg(sensor_t *sensor, uint16_t reg_addr) {
     uint16_t reg_data;
     if (omv_i2c_readw2(&sensor->i2c_bus, sensor->slv_addr, reg_addr, &reg_data)) {
         return -1;
@@ -81,105 +79,85 @@ static int read_reg(sensor_t *sensor, uint16_t reg_addr)
     return reg_data;
 }
 
-static int write_reg(sensor_t *sensor, uint16_t reg_addr, uint16_t reg_data)
-{
+static int write_reg(sensor_t *sensor, uint16_t reg_addr, uint16_t reg_data) {
     return omv_i2c_writew2(&sensor->i2c_bus, sensor->slv_addr, reg_addr, reg_data);
 }
 
-static int set_pixformat(sensor_t *sensor, pixformat_t pixformat)
-{
-    return ((pixformat != PIXFORMAT_GRAYSCALE) && (pixformat != PIXFORMAT_RGB565)) ? - 1 : 0;
+static int set_pixformat(sensor_t *sensor, pixformat_t pixformat) {
+    return ((pixformat != PIXFORMAT_GRAYSCALE) && (pixformat != PIXFORMAT_RGB565)) ? -1 : 0;
 }
 
-static int set_framesize(sensor_t *sensor, framesize_t framesize)
-{
+static int set_framesize(sensor_t *sensor, framesize_t framesize) {
     return 0;
 }
 
-static int set_contrast(sensor_t *sensor, int level)
-{
+static int set_contrast(sensor_t *sensor, int level) {
     return 0;
 }
 
-static int set_brightness(sensor_t *sensor, int level)
-{
+static int set_brightness(sensor_t *sensor, int level) {
     return 0;
 }
 
-static int set_saturation(sensor_t *sensor, int level)
-{
+static int set_saturation(sensor_t *sensor, int level) {
     return 0;
 }
 
-static int set_gainceiling(sensor_t *sensor, gainceiling_t gainceiling)
-{
+static int set_gainceiling(sensor_t *sensor, gainceiling_t gainceiling) {
     return 0;
 }
 
-static int set_quality(sensor_t *sensor, int quality)
-{
+static int set_quality(sensor_t *sensor, int quality) {
     return 0;
 }
 
-static int set_colorbar(sensor_t *sensor, int enable)
-{
+static int set_colorbar(sensor_t *sensor, int enable) {
     return 0;
 }
 
-static int set_special_effect(sensor_t *sensor, sde_t sde)
-{
+static int set_special_effect(sensor_t *sensor, sde_t sde) {
     return 0;
 }
 
-static int set_auto_gain(sensor_t *sensor, int enable, float gain_db, float gain_db_ceiling)
-{
+static int set_auto_gain(sensor_t *sensor, int enable, float gain_db, float gain_db_ceiling) {
     return 0;
 }
 
-static int get_gain_db(sensor_t *sensor, float *gain_db)
-{
+static int get_gain_db(sensor_t *sensor, float *gain_db) {
     return 0;
 }
 
-static int set_auto_exposure(sensor_t *sensor, int enable, int exposure_us)
-{
+static int set_auto_exposure(sensor_t *sensor, int enable, int exposure_us) {
     return 0;
 }
 
-static int get_exposure_us(sensor_t *sensor, int *exposure_us)
-{
+static int get_exposure_us(sensor_t *sensor, int *exposure_us) {
     return 0;
 }
 
-static int set_auto_whitebal(sensor_t *sensor, int enable, float r_gain_db, float g_gain_db, float b_gain_db)
-{
+static int set_auto_whitebal(sensor_t *sensor, int enable, float r_gain_db, float g_gain_db, float b_gain_db) {
     return 0;
 }
 
-static int get_rgb_gain_db(sensor_t *sensor, float *r_gain_db, float *g_gain_db, float *b_gain_db)
-{
+static int get_rgb_gain_db(sensor_t *sensor, float *r_gain_db, float *g_gain_db, float *b_gain_db) {
     return 0;
 }
 
-static int set_hmirror(sensor_t *sensor, int enable)
-{
+static int set_hmirror(sensor_t *sensor, int enable) {
     lepton.hmirror = enable;
     return 0;
 }
 
-static int set_vflip(sensor_t *sensor, int enable)
-{
+static int set_vflip(sensor_t *sensor, int enable) {
     lepton.vflip = enable;
     return 0;
 }
 
-static int set_lens_correction(sensor_t *sensor, int enable, int radi, int coef)
-{
+static int set_lens_correction(sensor_t *sensor, int enable, int radi, int coef) {
     return 0;
 }
 
-static int ioctl(sensor_t *sensor, int request, va_list ap)
-{
+static int ioctl(sensor_t *sensor, int request, va_list ap) {
     int ret = 0;
 
     if ((!lepton.h_res) || (!lepton.v_res)) {
@@ -287,8 +265,7 @@ static int ioctl(sensor_t *sensor, int request, va_list ap)
     return ret;
 }
 
-static int lepton_reset(sensor_t *sensor, bool measurement_mode, bool high_temp_mode)
-{
+static int lepton_reset(sensor_t *sensor, bool measurement_mode, bool high_temp_mode) {
     omv_gpio_write(DCMI_POWER_PIN, 0);
     mp_hal_delay_ms(10);
 
@@ -305,7 +282,7 @@ static int lepton_reset(sensor_t *sensor, bool measurement_mode, bool high_temp_
     LEP_AGC_ROI_T roi;
     memset(&lepton.port, 0, sizeof(LEP_CAMERA_PORT_DESC_T));
 
-    for (mp_uint_t start = mp_hal_ticks_ms(); ;mp_hal_delay_ms(1)) {
+    for (mp_uint_t start = mp_hal_ticks_ms(); ; mp_hal_delay_ms(1)) {
         if (LEP_OpenPort(&sensor->i2c_bus, LEP_CCI_TWI, 0, &lepton.port) == LEP_OK) {
             break;
         }
@@ -314,7 +291,7 @@ static int lepton_reset(sensor_t *sensor, bool measurement_mode, bool high_temp_
         }
     }
 
-    for (mp_uint_t start = mp_hal_ticks_ms(); ;mp_hal_delay_ms(1)) {
+    for (mp_uint_t start = mp_hal_ticks_ms(); ; mp_hal_delay_ms(1)) {
         LEP_SDK_BOOT_STATUS_E status;
         if (LEP_GetCameraBootStatus(&lepton.port, &status) != LEP_OK) {
             return -1;
@@ -327,7 +304,7 @@ static int lepton_reset(sensor_t *sensor, bool measurement_mode, bool high_temp_
         }
     }
 
-    for (mp_uint_t start = mp_hal_ticks_ms(); ;mp_hal_delay_ms(1)) {
+    for (mp_uint_t start = mp_hal_ticks_ms(); ; mp_hal_delay_ms(1)) {
         LEP_UINT16 status;
         if (LEP_DirectReadRegister(&lepton.port, LEP_I2C_STATUS_REG, &status) != LEP_OK) {
             return -1;
@@ -365,8 +342,7 @@ static int lepton_reset(sensor_t *sensor, bool measurement_mode, bool high_temp_
     return 0;
 }
 
-static int reset(sensor_t *sensor)
-{
+static int reset(sensor_t *sensor) {
     static bool vospi_initialized = false;
 
     memset(&lepton, 0, sizeof(lepton_state_t));
@@ -387,8 +363,7 @@ static int reset(sensor_t *sensor)
     return 0;
 }
 
-static int snapshot(sensor_t *sensor, image_t *image, uint32_t flags)
-{
+static int snapshot(sensor_t *sensor, image_t *image, uint32_t flags) {
     framebuffer_update_jpeg_buffer();
 
     if (MAIN_FB()->n_buffers != 1) {
@@ -410,11 +385,11 @@ static int snapshot(sensor_t *sensor, image_t *image, uint32_t flags)
         return -1;
     }
 
-    for (int i=0; i<LEPTON_SNAPSHOT_RETRY; i++) {
+    for (int i = 0; i < LEPTON_SNAPSHOT_RETRY; i++) {
         if (vospi_snapshot(LEPTON_SNAPSHOT_TIMEOUT) == 0) {
             break;
         }
-        if (i+1 == LEPTON_SNAPSHOT_RETRY) {
+        if (i + 1 == LEPTON_SNAPSHOT_RETRY) {
             return -1;
         }
         // The FLIR lepton might have crashed so reset it (it does this).
@@ -423,9 +398,9 @@ static int snapshot(sensor_t *sensor, image_t *image, uint32_t flags)
         }
     }
 
-    MAIN_FB()->w        = MAIN_FB()->u;
-    MAIN_FB()->h        = MAIN_FB()->v;
-    MAIN_FB()->pixfmt   = sensor->pixformat;
+    MAIN_FB()->w = MAIN_FB()->u;
+    MAIN_FB()->h = MAIN_FB()->v;
+    MAIN_FB()->pixfmt = sensor->pixformat;
 
     framebuffer_init_image(image);
 
@@ -446,12 +421,14 @@ static int snapshot(sensor_t *sensor, image_t *image, uint32_t flags)
     }
 
     for (int y = y_offset, yy = fast_ceilf(lepton.v_res * scale) + y_offset; y < yy; y++) {
-        if ((MAIN_FB()->y <= y) && (y < (MAIN_FB()->y + MAIN_FB()->v))) { // user window cropping
+        if ((MAIN_FB()->y <= y) && (y < (MAIN_FB()->y + MAIN_FB()->v))) {
+            // user window cropping
 
             uint16_t *row_ptr = _vospi_buf + (fast_floorf(y * scale_inv) * lepton.h_res);
 
             for (int x = x_offset, xx = fast_ceilf(lepton.h_res * scale) + x_offset; x < xx; x++) {
-                if ((MAIN_FB()->x <= x) && (x < (MAIN_FB()->x + MAIN_FB()->u))) { // user window cropping
+                if ((MAIN_FB()->x <= x) && (x < (MAIN_FB()->x + MAIN_FB()->u))) {
+                    // user window cropping
 
                     // Value is the 14/16-bit value from the FLIR IR camera.
                     // However, with AGC enabled only the bottom 8-bits are non-zero.
@@ -465,7 +442,7 @@ static int snapshot(sensor_t *sensor, image_t *image, uint32_t flags)
                         float celsius = (value * 0.01f) - 273.15f;
                         celsius = IM_MAX(IM_MIN(celsius, lepton.max_temp), lepton.min_temp);
                         value = IM_MAX(IM_MIN(IM_DIV(((celsius - lepton.min_temp) * 255),
-                                        (lepton.max_temp - lepton.min_temp)), 255), 0);
+                                                     (lepton.max_temp - lepton.min_temp)), 255), 0);
                     }
 
                     int t_x = x - MAIN_FB()->x;
@@ -499,39 +476,38 @@ static int snapshot(sensor_t *sensor, image_t *image, uint32_t flags)
     return 0;
 }
 
-int lepton_init(sensor_t *sensor)
-{
-    sensor->reset               = reset;
-    sensor->sleep               = sleep;
-    sensor->snapshot            = snapshot;
-    sensor->read_reg            = read_reg;
-    sensor->write_reg           = write_reg;
-    sensor->set_pixformat       = set_pixformat;
-    sensor->set_framesize       = set_framesize;
-    sensor->set_contrast        = set_contrast;
-    sensor->set_brightness      = set_brightness;
-    sensor->set_saturation      = set_saturation;
-    sensor->set_gainceiling     = set_gainceiling;
-    sensor->set_quality         = set_quality;
-    sensor->set_colorbar        = set_colorbar;
-    sensor->set_special_effect  = set_special_effect;
-    sensor->set_auto_gain       = set_auto_gain;
-    sensor->get_gain_db         = get_gain_db;
-    sensor->set_auto_exposure   = set_auto_exposure;
-    sensor->get_exposure_us     = get_exposure_us;
-    sensor->set_auto_whitebal   = set_auto_whitebal;
-    sensor->get_rgb_gain_db     = get_rgb_gain_db;
-    sensor->set_hmirror         = set_hmirror;
-    sensor->set_vflip           = set_vflip;
+int lepton_init(sensor_t *sensor) {
+    sensor->reset = reset;
+    sensor->sleep = sleep;
+    sensor->snapshot = snapshot;
+    sensor->read_reg = read_reg;
+    sensor->write_reg = write_reg;
+    sensor->set_pixformat = set_pixformat;
+    sensor->set_framesize = set_framesize;
+    sensor->set_contrast = set_contrast;
+    sensor->set_brightness = set_brightness;
+    sensor->set_saturation = set_saturation;
+    sensor->set_gainceiling = set_gainceiling;
+    sensor->set_quality = set_quality;
+    sensor->set_colorbar = set_colorbar;
+    sensor->set_special_effect = set_special_effect;
+    sensor->set_auto_gain = set_auto_gain;
+    sensor->get_gain_db = get_gain_db;
+    sensor->set_auto_exposure = set_auto_exposure;
+    sensor->get_exposure_us = get_exposure_us;
+    sensor->set_auto_whitebal = set_auto_whitebal;
+    sensor->get_rgb_gain_db = get_rgb_gain_db;
+    sensor->set_hmirror = set_hmirror;
+    sensor->set_vflip = set_vflip;
     sensor->set_lens_correction = set_lens_correction;
-    sensor->ioctl               = ioctl;
+    sensor->ioctl = ioctl;
 
-    sensor->hw_flags.vsync      = 1;
-    sensor->hw_flags.hsync      = 0;
-    sensor->hw_flags.pixck      = 0;
-    sensor->hw_flags.fsync      = 0;
-    sensor->hw_flags.jpege      = 0;
-    sensor->hw_flags.gs_bpp     = 1;
+    sensor->hw_flags.vsync = 1;
+    sensor->hw_flags.hsync = 0;
+    sensor->hw_flags.pixck = 0;
+    sensor->hw_flags.fsync = 0;
+    sensor->hw_flags.jpege = 0;
+    sensor->hw_flags.gs_bpp = 1;
 
     if (reset(sensor) != 0) {
         return -1;

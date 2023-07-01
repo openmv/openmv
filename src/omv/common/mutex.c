@@ -17,16 +17,14 @@
 #include "cmsis_gcc.h"
 #include "py/mphal.h"
 
-void mutex_init0(omv_mutex_t *mutex)
-{
+void mutex_init0(omv_mutex_t *mutex) {
     __DMB();
     mutex->tid = 0;
     mutex->lock = 0;
     mutex->last_tid = 0;
 }
 
-static void _mutex_lock(omv_mutex_t *mutex, uint32_t tid, bool blocking)
-{
+static void _mutex_lock(omv_mutex_t *mutex, uint32_t tid, bool blocking) {
     #if (__ARM_ARCH < 7)
     do {
         __disable_irq();
@@ -50,13 +48,11 @@ static void _mutex_lock(omv_mutex_t *mutex, uint32_t tid, bool blocking)
     __DMB();
 }
 
-void mutex_lock(omv_mutex_t *mutex, uint32_t tid)
-{
+void mutex_lock(omv_mutex_t *mutex, uint32_t tid) {
     _mutex_lock(mutex, tid, true);
 }
 
-int mutex_try_lock(omv_mutex_t *mutex, uint32_t tid)
-{
+int mutex_try_lock(omv_mutex_t *mutex, uint32_t tid) {
     // If the mutex is already locked by the current thread then
     // release it and return without locking, otherwise try to lock it.
     if (mutex->tid == tid) {
@@ -68,8 +64,7 @@ int mutex_try_lock(omv_mutex_t *mutex, uint32_t tid)
     return (mutex->tid == tid);
 }
 
-int mutex_try_lock_alternate(omv_mutex_t *mutex, uint32_t tid)
-{
+int mutex_try_lock_alternate(omv_mutex_t *mutex, uint32_t tid) {
     if (mutex->last_tid != tid) {
         if (mutex_try_lock(mutex, tid)) {
             mutex->last_tid = tid;
@@ -80,8 +75,7 @@ int mutex_try_lock_alternate(omv_mutex_t *mutex, uint32_t tid)
     return 0;
 }
 
-int mutex_lock_timeout(omv_mutex_t *mutex, uint32_t tid, uint32_t timeout)
-{
+int mutex_lock_timeout(omv_mutex_t *mutex, uint32_t tid, uint32_t timeout) {
     mp_uint_t tick_start = mp_hal_ticks_ms();
     while ((mp_hal_ticks_ms() - tick_start) >= timeout) {
         if (mutex_try_lock(mutex, tid)) {
@@ -92,8 +86,7 @@ int mutex_lock_timeout(omv_mutex_t *mutex, uint32_t tid, uint32_t timeout)
     return 0;
 }
 
-void mutex_unlock(omv_mutex_t *mutex, uint32_t tid)
-{
+void mutex_unlock(omv_mutex_t *mutex, uint32_t tid) {
     if (mutex->tid == tid) {
         __DMB();
         mutex->tid = 0;

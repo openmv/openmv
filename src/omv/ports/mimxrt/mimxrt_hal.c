@@ -30,8 +30,7 @@
 
 const uint8_t dcd_data[] = {0};
 
-void mimxrt_hal_init()
-{
+void mimxrt_hal_init() {
     // Configure and enable clocks.
     BOARD_BootClockRUN();
     SystemCoreClockUpdate();
@@ -77,15 +76,15 @@ void mimxrt_hal_init()
     // Configure shared IO multiplexers.
     #if defined(OMV_IOMUXC_GPR26_CONFIG)
     IOMUXC_GPR->GPR26 = ((IOMUXC_GPR->GPR26 &
-      (~(OMV_IOMUXC_GPR26_CONFIG)))
-        | IOMUXC_GPR_GPR26_GPIO_MUX1_GPIO_SEL(0x00U)
-      );
+                          (~(OMV_IOMUXC_GPR26_CONFIG)))
+                         | IOMUXC_GPR_GPR26_GPIO_MUX1_GPIO_SEL(0x00U)
+                         );
     #endif
     #if defined(OMV_IOMUXC_GPR27_CONFIG)
     IOMUXC_GPR->GPR27 = ((IOMUXC_GPR->GPR27 &
-      (~(OMV_IOMUXC_GPR27_CONFIG)))
-        | IOMUXC_GPR_GPR27_GPIO_MUX2_GPIO_SEL(0x00U)
-      );
+                          (~(OMV_IOMUXC_GPR27_CONFIG)))
+                         | IOMUXC_GPR_GPR27_GPIO_MUX2_GPIO_SEL(0x00U)
+                         );
     #endif
 
     // Confgure and enable EDMA
@@ -94,8 +93,7 @@ void mimxrt_hal_init()
     EDMA_Init(DMA0, &edma_config);
 }
 
-void mimxrt_hal_bootloader()
-{
+void mimxrt_hal_bootloader() {
     #if FSL_ROM_HAS_RUNBOOTLOADER_API
     // Enter ROM bootloader, with primary image active.
     uint32_t arg = 0xEB000000;
@@ -103,9 +101,8 @@ void mimxrt_hal_bootloader()
     #endif
 }
 
-int mimxrt_hal_csi_init(CSI_Type *inst)
-{
-	CLOCK_EnableClock(kCLOCK_Csi);
+int mimxrt_hal_csi_init(CSI_Type *inst) {
+    CLOCK_EnableClock(kCLOCK_Csi);
 
     // Configure DCMI pins.
     omv_gpio_config(DCMI_D0_PIN, OMV_GPIO_MODE_ALT, OMV_GPIO_PULL_NONE, OMV_GPIO_SPEED_MED, -1);
@@ -139,8 +136,7 @@ int mimxrt_hal_csi_init(CSI_Type *inst)
     return 0;
 }
 
-int mimxrt_hal_i2c_init(uint32_t bus_id)
-{
+int mimxrt_hal_i2c_init(uint32_t bus_id) {
     omv_gpio_t scl_pin = NULL;
     omv_gpio_t sda_pin = NULL;
 
@@ -183,8 +179,7 @@ int mimxrt_hal_i2c_init(uint32_t bus_id)
     return 0;
 }
 
-int mimxrt_hal_spi_init(uint32_t bus_id, bool nss_enable, uint32_t nss_pol)
-{
+int mimxrt_hal_spi_init(uint32_t bus_id, bool nss_enable, uint32_t nss_pol) {
     typedef struct {
         omv_gpio_t sclk_pin;
         omv_gpio_t miso_pin;
@@ -197,13 +192,17 @@ int mimxrt_hal_spi_init(uint32_t bus_id, bool nss_enable, uint32_t nss_pol)
     switch (bus_id) {
         #if defined(LPSPI1_ID)
         case LPSPI1_ID: {
-            spi_pins = (spi_pins_t) { LPSPI1_SCLK_PIN, LPSPI1_MISO_PIN, LPSPI1_MOSI_PIN, LPSPI1_SSEL_PIN };
+            spi_pins = (spi_pins_t) {
+                LPSPI1_SCLK_PIN, LPSPI1_MISO_PIN, LPSPI1_MOSI_PIN, LPSPI1_SSEL_PIN
+            };
             break;
         }
         #endif
         #if defined(LPSPI4_ID)
         case LPSPI4_ID: {
-            spi_pins = (spi_pins_t) { LPSPI4_SCLK_PIN, LPSPI4_MISO_PIN, LPSPI4_MOSI_PIN, LPSPI4_SSEL_PIN };
+            spi_pins = (spi_pins_t) {
+                LPSPI4_SCLK_PIN, LPSPI4_MISO_PIN, LPSPI4_MOSI_PIN, LPSPI4_SSEL_PIN
+            };
             break;
         }
         #endif
@@ -227,8 +226,7 @@ int mimxrt_hal_spi_init(uint32_t bus_id, bool nss_enable, uint32_t nss_pol)
     return 0;
 }
 
-void CSI_IRQHandler(void)
-{
+void CSI_IRQHandler(void) {
     uint32_t csisr = CSI_REG_SR(CSI);
     extern void sensor_sof_callback();
     extern void sensor_line_callback(uint32_t);
@@ -249,6 +247,6 @@ void CSI_IRQHandler(void)
     // Add for ARM errata 838869, affects Cortex-M4, Cortex-M4F Store immediate
     // overlapping exception return operation might vector to incorrect interrupt
     #if defined __CORTEX_M && (__CORTEX_M >= 4U)
-	__DSB();
+    __DSB();
     #endif
 }

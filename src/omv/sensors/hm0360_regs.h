@@ -143,8 +143,8 @@
 #define         HIMAX_MODE_STREAMING            0x01     // I2C triggered streaming enable
 #define         HIMAX_MODE_STREAMING_NFRAMES    0x03     // Output N frames
 #define         HIMAX_MODE_STREAMING_TRIG       0x05     // Hardware Trigger
-#define         HIMAX_SET_HMIRROR(r, x)         ((r&0xFE)|((x&1)<<0))
-#define         HIMAX_SET_VMIRROR(r, x)         ((r&0xFD)|((x&1)<<1))
+#define         HIMAX_SET_HMIRROR(r, x)         ((r & 0xFE) | ((x & 1) << 0))
+#define         HIMAX_SET_VMIRROR(r, x)         ((r & 0xFD) | ((x & 1) << 1))
 
 #define         PCLK_RISING_EDGE                0x00
 #define         PCLK_FALLING_EDGE               0x01

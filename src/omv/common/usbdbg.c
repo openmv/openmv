@@ -48,16 +48,14 @@ static const mp_rom_obj_tuple_t ide_exception_args_obj = {
 // These functions must be implemented in MicroPython CDC driver.
 extern uint32_t usb_cdc_buf_len();
 extern uint32_t usb_cdc_get_buf(uint8_t *buf, uint32_t len);
-void __attribute__((weak)) usb_cdc_reset_buffers()
-{
+void __attribute__((weak)) usb_cdc_reset_buffers() {
 
 }
 
-void usbdbg_init()
-{
+void usbdbg_init() {
     cmd = USBDBG_NONE;
-    script_ready=false;
-    script_running=false;
+    script_ready = false;
+    script_running = false;
     irq_enabled = false;
 
     vstr_init(&script_buf, 32);
@@ -70,34 +68,30 @@ void usbdbg_init()
     ide_exception.args = (mp_obj_tuple_t *) &ide_exception_args_obj;
 }
 
-void usbdbg_wait_for_command(uint32_t timeout)
-{
+void usbdbg_wait_for_command(uint32_t timeout) {
     for (mp_uint_t ticks = mp_hal_ticks_ms();
-            irq_enabled && ((mp_hal_ticks_ms() - ticks) < timeout) && (cmd != USBDBG_NONE); );
+         irq_enabled && ((mp_hal_ticks_ms() - ticks) < timeout) && (cmd != USBDBG_NONE); ) {
+        ;
+    }
 }
 
-bool usbdbg_script_ready()
-{
+bool usbdbg_script_ready() {
     return script_ready;
 }
 
-vstr_t *usbdbg_get_script()
-{
+vstr_t *usbdbg_get_script() {
     return &script_buf;
 }
 
-bool usbdbg_is_busy()
-{
+bool usbdbg_is_busy() {
     return cmd != USBDBG_NONE;
 }
 
-void usbdbg_set_script_running(bool running)
-{
+void usbdbg_set_script_running(bool running) {
     script_running = running;
 }
 
-inline void usbdbg_set_irq_enabled(bool enabled)
-{
+inline void usbdbg_set_irq_enabled(bool enabled) {
     if (enabled) {
         NVIC_EnableIRQ(OMV_USB_IRQN);
     } else {
@@ -107,8 +101,7 @@ inline void usbdbg_set_irq_enabled(bool enabled)
     irq_enabled = enabled;
 }
 
-static void usbdbg_interrupt_vm(bool ready)
-{
+static void usbdbg_interrupt_vm(bool ready) {
     // Set script ready flag
     script_ready = ready;
 
@@ -130,13 +123,11 @@ static void usbdbg_interrupt_vm(bool ready)
     pendsv_nlr_jump(&ide_exception);
 }
 
-bool usbdbg_get_irq_enabled()
-{
+bool usbdbg_get_irq_enabled() {
     return irq_enabled;
 }
 
-void usbdbg_data_in(void *buffer, int length)
-{
+void usbdbg_data_in(void *buffer, int length) {
     switch (cmd) {
         case USBDBG_FW_VERSION: {
             uint32_t *ver_buf = buffer;
@@ -176,7 +167,7 @@ void usbdbg_data_in(void *buffer, int length)
 
         case USBDBG_FRAME_SIZE:
             // Return 0 if FB is locked or not ready.
-            ((uint32_t*)buffer)[0] = 0;
+            ((uint32_t *) buffer)[0] = 0;
             // Try to lock FB. If header size == 0 frame is not ready
             if (mutex_try_lock_alternate(&JPEG_FB()->lock, MUTEX_TID_IDE)) {
                 // If header size == 0 frame is not ready
@@ -185,9 +176,9 @@ void usbdbg_data_in(void *buffer, int length)
                     mutex_unlock(&JPEG_FB()->lock, MUTEX_TID_IDE);
                 } else {
                     // Return header w, h and size/bpp
-                    ((uint32_t*)buffer)[0] = JPEG_FB()->w;
-                    ((uint32_t*)buffer)[1] = JPEG_FB()->h;
-                    ((uint32_t*)buffer)[2] = JPEG_FB()->size;
+                    ((uint32_t *) buffer)[0] = JPEG_FB()->w;
+                    ((uint32_t *) buffer)[1] = JPEG_FB()->h;
+                    ((uint32_t *) buffer)[2] = JPEG_FB()->size;
                 }
             }
             cmd = USBDBG_NONE;
@@ -195,7 +186,7 @@ void usbdbg_data_in(void *buffer, int length)
 
         case USBDBG_FRAME_DUMP:
             if (xfer_bytes < xfer_length) {
-                memcpy(buffer, JPEG_FB()->pixels+xfer_bytes, length);
+                memcpy(buffer, JPEG_FB()->pixels + xfer_bytes, length);
                 xfer_bytes += length;
                 if (xfer_bytes == xfer_length) {
                     cmd = USBDBG_NONE;
@@ -207,16 +198,16 @@ void usbdbg_data_in(void *buffer, int length)
 
         case USBDBG_ARCH_STR: {
             unsigned int uid[3] = {
-            #if (OMV_UNIQUE_ID_SIZE == 2)
+                #if (OMV_UNIQUE_ID_SIZE == 2)
                 0U,
-            #else
+                #else
                 *((unsigned int *) (OMV_UNIQUE_ID_ADDR + OMV_UNIQUE_ID_OFFSET * 2)),
-            #endif
+                #endif
                 *((unsigned int *) (OMV_UNIQUE_ID_ADDR + OMV_UNIQUE_ID_OFFSET * 1)),
                 *((unsigned int *) (OMV_UNIQUE_ID_ADDR + OMV_UNIQUE_ID_OFFSET * 0)),
             };
             snprintf((char *) buffer, 64, "%s [%s:%08X%08X%08X]",
-                    OMV_ARCH_STR, OMV_BOARD_TYPE, uid[0], uid[1], uid[2]);
+                     OMV_ARCH_STR, OMV_BOARD_TYPE, uid[0], uid[1], uid[2]);
             cmd = USBDBG_NONE;
             break;
         }
@@ -232,11 +223,10 @@ void usbdbg_data_in(void *buffer, int length)
     }
 }
 
-void usbdbg_data_out(void *buffer, int length)
-{
+void usbdbg_data_out(void *buffer, int length) {
     switch (cmd) {
         case USBDBG_FB_ENABLE: {
-            uint32_t enable = *((int32_t*)buffer);
+            uint32_t enable = *((int32_t *) buffer);
             JPEG_FB()->enabled = enable;
             if (enable == 0) {
                 // When disabling framebuffer, the IDE might still be holding FB lock.
@@ -273,10 +263,10 @@ void usbdbg_data_out(void *buffer, int length)
 
             // null terminate the path
             length = (length == 64) ? 63:length;
-            ((char*)buffer)[length] = 0;
+            ((char *) buffer)[length] = 0;
 
-            rectangle_t *roi = (rectangle_t*)buffer;
-            char *path = (char*)buffer+sizeof(rectangle_t);
+            rectangle_t *roi = (rectangle_t *) buffer;
+            char *path = (char *) buffer + sizeof(rectangle_t);
 
             imlib_save_image(&image, path, roi, 50);
 
@@ -287,17 +277,17 @@ void usbdbg_data_out(void *buffer, int length)
         }
 
         case USBDBG_DESCRIPTOR_SAVE: {
-            #if defined(IMLIB_ENABLE_IMAGE_FILE_IO)\
-                && defined(IMLIB_ENABLE_KEYPOINTS)
+            #if defined(IMLIB_ENABLE_IMAGE_FILE_IO) \
+            && defined(IMLIB_ENABLE_KEYPOINTS)
             image_t image;
             framebuffer_init_image(&image);
 
             // null terminate the path
             length = (length == 64) ? 63:length;
-            ((char*)buffer)[length] = 0;
+            ((char *) buffer)[length] = 0;
 
-            rectangle_t *roi = (rectangle_t*)buffer;
-            char *path = (char*)buffer+sizeof(rectangle_t);
+            rectangle_t *roi = (rectangle_t *) buffer;
+            char *path = (char *) buffer + sizeof(rectangle_t);
 
             py_image_descriptor_from_roi(&image, path, roi);
             #endif  //IMLIB_ENABLE_IMAGE_FILE_IO && IMLIB_ENABLE_KEYPOINTS
@@ -308,8 +298,8 @@ void usbdbg_data_out(void *buffer, int length)
         case USBDBG_ATTR_WRITE: {
             #if MICROPY_PY_SENSOR
             /* write sensor attribute */
-            int32_t attr= *((int32_t*)buffer);
-            int32_t val = *((int32_t*)buffer+1);
+            int32_t attr = *((int32_t *) buffer);
+            int32_t val = *((int32_t *) buffer + 1);
             switch (attr) {
                 case ATTR_CONTRAST:
                     sensor_set_contrast(val);
@@ -334,7 +324,7 @@ void usbdbg_data_out(void *buffer, int length)
         case USBDBG_SET_TIME: {
             // TODO implement
             #if 0
-            uint32_t *timebuf = (uint32_t*)buffer;
+            uint32_t *timebuf = (uint32_t *) buffer;
             timebuf[0];   // Year
             timebuf[1];   // Month
             timebuf[2];   // Day
@@ -351,7 +341,7 @@ void usbdbg_data_out(void *buffer, int length)
         case USBDBG_TX_INPUT: {
             // TODO implement
             #if 0
-            uint32_t key= *((uint32_t*)buffer);
+            uint32_t key = *((uint32_t *) buffer);
             #endif
             cmd = USBDBG_NONE;
             break;
@@ -362,8 +352,7 @@ void usbdbg_data_out(void *buffer, int length)
     }
 }
 
-void usbdbg_control(void *buffer, uint8_t request, uint32_t length)
-{
+void usbdbg_control(void *buffer, uint8_t request, uint32_t length) {
     cmd = (enum usbdbg_cmd) request;
     switch (cmd) {
         case USBDBG_FW_VERSION:
@@ -410,26 +399,26 @@ void usbdbg_control(void *buffer, uint8_t request, uint32_t length)
 
         case USBDBG_SCRIPT_RUNNING:
             xfer_bytes = 0;
-            xfer_length =length;
+            xfer_length = length;
             break;
 
         case USBDBG_TEMPLATE_SAVE:
         case USBDBG_DESCRIPTOR_SAVE:
             /* save template */
             xfer_bytes = 0;
-            xfer_length =length;
+            xfer_length = length;
             break;
 
         case USBDBG_ATTR_WRITE:
             xfer_bytes = 0;
-            xfer_length =length;
+            xfer_length = length;
             break;
 
         case USBDBG_SYS_RESET:
             NVIC_SystemReset();
             break;
 
-        case USBDBG_SYS_RESET_TO_BL:{
+        case USBDBG_SYS_RESET_TO_BL: {
             #if defined(MICROPY_BOARD_ENTER_BOOTLOADER)
             MICROPY_BOARD_ENTER_BOOTLOADER(0, 0);
             #else
@@ -457,12 +446,12 @@ void usbdbg_control(void *buffer, uint8_t request, uint32_t length)
 
         case USBDBG_SET_TIME:
             xfer_bytes = 0;
-            xfer_length =length;
+            xfer_length = length;
             break;
 
         case USBDBG_TX_INPUT:
             xfer_bytes = 0;
-            xfer_length =length;
+            xfer_length = length;
             break;
 
         default: /* error */

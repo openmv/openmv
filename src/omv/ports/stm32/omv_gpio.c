@@ -22,20 +22,17 @@
 static omv_gpio_irq_descr_t gpio_irq_descr_table[16] = {{0}};
 
 // Returns the port number configured in EXTI_CR for this line.
-static uint32_t omv_gpio_irq_get_gpio(uint32_t line)
-{
+static uint32_t omv_gpio_irq_get_gpio(uint32_t line) {
     return (SYSCFG->EXTICR[line >> 2] >> (4 * (line & 3))) & 0x0F;
 }
 
 // Returns pin number.
-static uint32_t omv_gpio_irq_get_line(omv_gpio_t pin)
-{
+static uint32_t omv_gpio_irq_get_line(omv_gpio_t pin) {
     return 31 - __CLZ(pin->pin);
 }
 
 // Returns the IRQ number of a an EXTI line.
-static uint32_t omv_gpio_irq_get_irqn(omv_gpio_t pin)
-{
+static uint32_t omv_gpio_irq_get_irqn(omv_gpio_t pin) {
     uint32_t exti_irqn = 0;
     uint32_t exti_line = omv_gpio_irq_get_line(pin);
 
@@ -67,16 +64,14 @@ static uint32_t omv_gpio_irq_get_irqn(omv_gpio_t pin)
     return exti_irqn;
 }
 
-static inline bool omv_gpio_irq_enabled(omv_gpio_irq_descr_t *gpio_irq_descr, uint32_t line)
-{
+static inline bool omv_gpio_irq_enabled(omv_gpio_irq_descr_t *gpio_irq_descr, uint32_t line) {
     return (gpio_irq_descr->enabled &&
             gpio_irq_descr->callback &&
             gpio_irq_descr->gpio == omv_gpio_irq_get_gpio(line));
 
 }
 
-void omv_gpio_irq_handler(uint32_t line)
-{
+void omv_gpio_irq_handler(uint32_t line) {
     if (line < 5) {
         // EXTI lines 0 to 4 have single IRQs.
         omv_gpio_irq_descr_t *gpio_irq_descr = &gpio_irq_descr_table[line];
@@ -90,7 +85,7 @@ void omv_gpio_irq_handler(uint32_t line)
         for (size_t i = line; i < line_max; i++) {
             omv_gpio_irq_descr_t *gpio_irq_descr = &gpio_irq_descr_table[i];
             if (__HAL_GPIO_EXTI_GET_FLAG(1 << i)
-                    && omv_gpio_irq_enabled(gpio_irq_descr, i)) {
+                && omv_gpio_irq_enabled(gpio_irq_descr, i)) {
                 __HAL_GPIO_EXTI_CLEAR_FLAG(1 << i);
                 gpio_irq_descr->callback(gpio_irq_descr->data);
             }
@@ -98,40 +93,34 @@ void omv_gpio_irq_handler(uint32_t line)
     }
 }
 
-void omv_gpio_init0(void)
-{
+void omv_gpio_init0(void) {
     memset(gpio_irq_descr_table, 0, sizeof(gpio_irq_descr_table));
 }
 
-void omv_gpio_config(omv_gpio_t pin, uint32_t mode, uint32_t pull, uint32_t speed, uint32_t af)
-{
-    GPIO_InitTypeDef  gpio_config = {
+void omv_gpio_config(omv_gpio_t pin, uint32_t mode, uint32_t pull, uint32_t speed, uint32_t af) {
+    GPIO_InitTypeDef gpio_config = {
         .Pin = pin->pin,
-        .Mode  = mode,
-        .Pull  = pull,
+        .Mode = mode,
+        .Pull = pull,
         .Speed = speed,
         .Alternate = ((af == -1) ? pin->af : af),
     };
     HAL_GPIO_Init(pin->port, &gpio_config);
 }
 
-void omv_gpio_deinit(omv_gpio_t pin)
-{
+void omv_gpio_deinit(omv_gpio_t pin) {
     HAL_GPIO_DeInit(pin->port, pin->pin);
 }
 
-bool omv_gpio_read(omv_gpio_t pin)
-{
+bool omv_gpio_read(omv_gpio_t pin) {
     return HAL_GPIO_ReadPin(pin->port, pin->pin);
 }
 
-void omv_gpio_write(omv_gpio_t pin, bool value)
-{
+void omv_gpio_write(omv_gpio_t pin, bool value) {
     HAL_GPIO_WritePin(pin->port, pin->pin, value);
 }
 
-void omv_gpio_irq_register(omv_gpio_t pin, omv_gpio_callback_t callback, void *data)
-{
+void omv_gpio_irq_register(omv_gpio_t pin, omv_gpio_callback_t callback, void *data) {
     omv_gpio_irq_descr_t *gpio_irq_descr = NULL;
     uint32_t exti_line = omv_gpio_irq_get_line(pin);
     if (exti_line != 0) {
@@ -143,8 +132,7 @@ void omv_gpio_irq_register(omv_gpio_t pin, omv_gpio_callback_t callback, void *d
     }
 }
 
-void omv_gpio_irq_enable(omv_gpio_t pin, bool enable)
-{
+void omv_gpio_irq_enable(omv_gpio_t pin, bool enable) {
     uint32_t exti_line = omv_gpio_irq_get_line(pin);
     uint32_t exti_irqn = omv_gpio_irq_get_irqn(pin);
     gpio_irq_descr_table[exti_line].enabled = enable;
@@ -156,8 +144,7 @@ void omv_gpio_irq_enable(omv_gpio_t pin, bool enable)
     }
 }
 
-void omv_gpio_clock_enable(omv_gpio_t pin, bool enable)
-{
+void omv_gpio_clock_enable(omv_gpio_t pin, bool enable) {
     if (pin->port == GPIOA) {
         if (enable) {
             __HAL_RCC_GPIOA_CLK_ENABLE();

@@ -19,8 +19,7 @@
 // or in uvc/src/main.c
 extern DMA_HandleTypeDef *dma_handle[16];
 
-uint8_t dma_utils_channel_to_irqn(DMA_Stream_TypeDef *dma_channel)
-{
+uint8_t dma_utils_channel_to_irqn(DMA_Stream_TypeDef *dma_channel) {
     if (0) {
     #if defined(DMA1_Stream0)
     } else if (dma_channel == DMA1_Stream0) {
@@ -93,8 +92,7 @@ uint8_t dma_utils_channel_to_irqn(DMA_Stream_TypeDef *dma_channel)
 // This returns a DMA ID that can be used to index into the dma_handle
 // array defined in micropython. Setting a DMA handle in that array allows
 // DMA IRQ handlers (which are all defined in micropython) to use it.
-uint8_t dma_utils_channel_to_id(DMA_Stream_TypeDef *dma_channel)
-{
+uint8_t dma_utils_channel_to_id(DMA_Stream_TypeDef *dma_channel) {
     uint8_t dma_id = -1;
 
     if (0) {
@@ -167,8 +165,7 @@ uint8_t dma_utils_channel_to_id(DMA_Stream_TypeDef *dma_channel)
     return dma_id;
 }
 
-int dma_utils_set_irq_descr(DMA_Stream_TypeDef *dma_channel, DMA_HandleTypeDef *dma_descr)
-{
+int dma_utils_set_irq_descr(DMA_Stream_TypeDef *dma_channel, DMA_HandleTypeDef *dma_descr) {
     uint8_t dma_id = dma_utils_channel_to_id(dma_channel);
     if (dma_id != -1) {
         dma_handle[dma_id] = dma_descr;

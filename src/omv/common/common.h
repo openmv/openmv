@@ -10,30 +10,30 @@
  */
 #ifndef __OMV_COMMON_H__
 
-#define OMV_ATTR_ALIGNED(x, a)   x __attribute__((aligned(a)))
-#define OMV_ATTR_SECTION(x, s)   x __attribute__((section(s)))
-#define OMV_ATTR_ALWAYS_INLINE  inline __attribute__((always_inline))
-#define OMV_ATTR_OPTIMIZE(o)    __attribute__((optimize(o)))
-#define OMV_BREAK()             __asm__ volatile ("BKPT")
+#define OMV_ATTR_ALIGNED(x, a)    x __attribute__((aligned(a)))
+#define OMV_ATTR_SECTION(x, s)    x __attribute__((section(s)))
+#define OMV_ATTR_ALWAYS_INLINE    inline __attribute__((always_inline))
+#define OMV_ATTR_OPTIMIZE(o)      __attribute__((optimize(o)))
+#define OMV_BREAK()               __asm__ volatile ("BKPT")
 
 #ifdef OMV_DEBUG_PRINTF
 #define debug_printf(fmt, ...) \
-            do { printf("%s(): " fmt, __func__, ##__VA_ARGS__);} while (0)
+    do { printf("%s(): " fmt, __func__, ##__VA_ARGS__);} while (0)
 #else
 #define debug_printf(...)
 #endif
 
-#define OMV_MAX(a,b) ({                 \
-    __typeof__ (a) _a = (a);            \
-    __typeof__ (b) _b = (b);            \
-    _a > _b ? _a : _b;                  \
-})
+#define OMV_MAX(a, b)             ({ \
+        __typeof__ (a) _a = (a);     \
+        __typeof__ (b) _b = (b);     \
+        _a > _b ? _a : _b;           \
+    })
 
-#define OMV_MIN(a,b) ({                 \
-    __typeof__ (a) _a = (a);            \
-    __typeof__ (b) _b = (b);            \
-    _a < _b ? _a : _b;                  \
-})
+#define OMV_MIN(a, b)             ({ \
+        __typeof__ (a) _a = (a);     \
+        __typeof__ (b) _b = (b);     \
+        _a < _b ? _a : _b;           \
+    })
 
-#define OMV_ARRAY_SIZE(a)       (sizeof(a) / sizeof(a[0]))
+#define OMV_ARRAY_SIZE(a)         (sizeof(a) / sizeof(a[0]))
 #endif //__OMV_COMMON_H__
