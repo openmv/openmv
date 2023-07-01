@@ -1,0 +1,58 @@
+name: '🔎 Check Code Formatting'
+
+on:
+  pull_request:
+    types:
+      - opened
+      - edited
+      - reopened
+      - synchronize
+    branches:    
+      - 'master'
+
+jobs:
+  formatting-check:
+    runs-on: ubuntu-20.04
+    steps:
+    - name: '⏳ Checkout repository'
+      uses: actions/checkout@v3
+      with:
+        submodules: false
+        persist-credentials: false
+        repository: ${{ github.event.pull_request.head.repo.full_name }}
+
+    - name: '♻ Caching dependencies'
+      uses: actions/cache@v3.3.1
+      id: cache
+      with:
+        path: ~/cache/deps/bin
+        key: 'uncrustify'
+
+    - name: '🛠 Install dependencies'
+      if: steps.cache.outputs.cache-hit != 'true'
+      run: source tools/ci.sh && ci_install_code_format_deps
+
+    - name: '📜 Get list of changed files'
+      id: changed-files
+      uses: tj-actions/changed-files@v37
+      with:
+        files: |
+            src/**/*.c
+            src/**/*.h
+            !src/hal/**
+            !src/uvc/**
+            !src/lib/**
+            !src/drivers/**
+            !src/micropython/**
+            !src/stm32cubeai/**
+
+    - name: '📜 Show list of changed files'
+      run: |
+        echo "${{ toJSON(steps.changed-files.outputs) }}"
+      shell:
+        bash
+
+    - name: '🔎 Check code formatting'
+      if: steps.changed-files.outputs.any_changed == 'true'
+      run: |
+        source tools/ci.sh && ci_run_code_format_check ${{ steps.changed-files.outputs.all_changed_files }}
