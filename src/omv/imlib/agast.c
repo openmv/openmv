@@ -190,6 +190,7 @@ static void nonmax_suppression(corner_t *corners, int num_corners, array_t *keyp
     }
 }
 
+// *INDENT-OFF*
 static corner_t *agast58_detect(image_t *img, int b, int* num_corners, rectangle_t *roi)
 {
 	int total=0;
@@ -1284,3 +1285,4 @@ static int agast58_score(const unsigned char* p, int bstart)
 		b = (bmin + bmax) / 2;
 	}
 }
+// *INDENT-ON*

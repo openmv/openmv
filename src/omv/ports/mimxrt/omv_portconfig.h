@@ -21,6 +21,7 @@
 #define IOMUXC_PAD_CTL(opt, val)    (IOMUXC_SW_PAD_CTL_PAD_##opt(val))
 #define IOMUXC_MUX_CTL(opt, val)    (IOMUXC_SW_MUX_CTL_PAD_##opt(val))
 
+// *INDENT-OFF*
 // omv_gpio_t definitions
 
 // GPIO speeds.
@@ -45,6 +46,7 @@
 #define OMV_GPIO_MODE_IT_FALL   ((6 << 17) | IOMUXC_PAD_CTL(DSE, 0U) | IOMUXC_PAD_CTL(HYS, 1U))
 #define OMV_GPIO_MODE_IT_RISE   ((7 << 17) | IOMUXC_PAD_CTL(DSE, 0U) | IOMUXC_PAD_CTL(HYS, 1U))
 #define OMV_GPIO_MODE_IT_BOTH   ((8 << 17) | IOMUXC_PAD_CTL(DSE, 0U) | IOMUXC_PAD_CTL(HYS, 1U))
+// *INDENT-OFF*
 
 typedef struct {
     uint8_t idx;

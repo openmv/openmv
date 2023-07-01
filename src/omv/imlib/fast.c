@@ -201,6 +201,7 @@ static void nonmax_suppression(corner_t *corners, int num_corners, array_t *keyp
     }
 }
 
+// *INDENT-OFF*
 static int fast9_corner_score(const uint8_t *p, int bstart)
 {    
     int bmin = bstart;
@@ -3131,6 +3132,7 @@ static int fast9_corner_score(const uint8_t *p, int bstart)
 		b = (bmin + bmax) / 2;
     }
 }
+// *INDENT-ON*
 
 static void fast9_score(image_t *image, corner_t *corners, int num_corners, int b)
 {
@@ -3140,6 +3142,7 @@ static void fast9_score(image_t *image, corner_t *corners, int num_corners, int 
     }
 }
 
+// *INDENT-OFF*
 static corner_t *fast9_detect(image_t *image, rectangle_t *roi, int *n_corners, int b)
 {
     int num_corners = 0;
@@ -6068,4 +6071,6 @@ done:
     *n_corners = num_corners;
     return corners;
 }
+// *INDENT-ON*
+
 #endif //IMLIB_ENABLE_FAST
