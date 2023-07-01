@@ -1,1 +1,0 @@
-#define BOARD_FLASH_SIZE    0x400000
