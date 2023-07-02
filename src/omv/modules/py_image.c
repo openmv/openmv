@@ -4419,40 +4419,51 @@ STATIC MP_DEFINE_CONST_OBJ_TYPE(
     locals_dict, &py_blob_locals_dict
 );
 
-static bool py_image_find_blobs_threshold_cb(void *fun_obj, find_blobs_list_lnk_data_t *blob)
+#define NEW_CORNER_TUPLE(corners, index) \
+    mp_obj_new_tuple(2, (mp_obj_t []) {mp_obj_new_int(corners[(index)].x), mp_obj_new_int(corners[(index)].y)})
+
+static py_blob_obj_t *py_blob_new(find_blobs_list_lnk_data_t *blob)
 {
+    point_t min_corners[4];
+
     py_blob_obj_t *o = m_new_obj(py_blob_obj_t);
     o->base.type = &py_blob_type;
-    o->corners = mp_obj_new_tuple(4, (mp_obj_t [])
-        {mp_obj_new_tuple(2, (mp_obj_t []) {mp_obj_new_int(blob->corners[(FIND_BLOBS_CORNERS_RESOLUTION*0)/4].x),
-                                            mp_obj_new_int(blob->corners[(FIND_BLOBS_CORNERS_RESOLUTION*0)/4].y)}),
-         mp_obj_new_tuple(2, (mp_obj_t []) {mp_obj_new_int(blob->corners[(FIND_BLOBS_CORNERS_RESOLUTION*1)/4].x),
-                                            mp_obj_new_int(blob->corners[(FIND_BLOBS_CORNERS_RESOLUTION*1)/4].y)}),
-         mp_obj_new_tuple(2, (mp_obj_t []) {mp_obj_new_int(blob->corners[(FIND_BLOBS_CORNERS_RESOLUTION*2)/4].x),
-                                            mp_obj_new_int(blob->corners[(FIND_BLOBS_CORNERS_RESOLUTION*2)/4].y)}),
-         mp_obj_new_tuple(2, (mp_obj_t []) {mp_obj_new_int(blob->corners[(FIND_BLOBS_CORNERS_RESOLUTION*3)/4].x),
-                                            mp_obj_new_int(blob->corners[(FIND_BLOBS_CORNERS_RESOLUTION*3)/4].y)})});
-    point_t min_corners[4];
-    point_min_area_rectangle(blob->corners, min_corners, FIND_BLOBS_CORNERS_RESOLUTION);
-    o->min_corners = mp_obj_new_tuple(4, (mp_obj_t [])
-        {mp_obj_new_tuple(2, (mp_obj_t []) {mp_obj_new_int(min_corners[0].x), mp_obj_new_int(min_corners[0].y)}),
-         mp_obj_new_tuple(2, (mp_obj_t []) {mp_obj_new_int(min_corners[1].x), mp_obj_new_int(min_corners[1].y)}),
-         mp_obj_new_tuple(2, (mp_obj_t []) {mp_obj_new_int(min_corners[2].x), mp_obj_new_int(min_corners[2].y)}),
-         mp_obj_new_tuple(2, (mp_obj_t []) {mp_obj_new_int(min_corners[3].x), mp_obj_new_int(min_corners[3].y)})});
+
     o->x = mp_obj_new_int(blob->rect.x);
     o->y = mp_obj_new_int(blob->rect.y);
     o->w = mp_obj_new_int(blob->rect.w);
     o->h = mp_obj_new_int(blob->rect.h);
-    o->pixels = mp_obj_new_int(blob->pixels);
+
     o->cx = mp_obj_new_float(blob->centroid_x);
     o->cy = mp_obj_new_float(blob->centroid_y);
+
+    o->pixels = mp_obj_new_int(blob->pixels);
     o->rotation = mp_obj_new_float(blob->rotation);
+
     o->code = mp_obj_new_int(blob->code);
     o->count = mp_obj_new_int(blob->count);
+
     o->perimeter = mp_obj_new_int(blob->perimeter);
     o->roundness = mp_obj_new_float(blob->roundness);
+
     o->x_hist_bins = mp_obj_new_list(blob->x_hist_bins_count, NULL);
     o->y_hist_bins = mp_obj_new_list(blob->y_hist_bins_count, NULL);
+
+    o->corners = mp_obj_new_tuple(4, (mp_obj_t []) {
+            NEW_CORNER_TUPLE(blob->corners, ((FIND_BLOBS_CORNERS_RESOLUTION*0)/4)),
+            NEW_CORNER_TUPLE(blob->corners, ((FIND_BLOBS_CORNERS_RESOLUTION*1)/4)),
+            NEW_CORNER_TUPLE(blob->corners, ((FIND_BLOBS_CORNERS_RESOLUTION*2)/4)),
+            NEW_CORNER_TUPLE(blob->corners, ((FIND_BLOBS_CORNERS_RESOLUTION*3)/4))
+            });
+
+    point_min_area_rectangle(blob->corners, min_corners, FIND_BLOBS_CORNERS_RESOLUTION);
+
+    o->min_corners = mp_obj_new_tuple(4, (mp_obj_t []) {
+            NEW_CORNER_TUPLE(min_corners, 0),
+            NEW_CORNER_TUPLE(min_corners, 1),
+            NEW_CORNER_TUPLE(min_corners, 2),
+            NEW_CORNER_TUPLE(min_corners, 3)
+            });
 
     for (int i = 0; i < blob->x_hist_bins_count; i++) {
         ((mp_obj_list_t *) o->x_hist_bins)->items[i] = mp_obj_new_int(blob->x_hist_bins[i]);
@@ -4462,94 +4473,16 @@ static bool py_image_find_blobs_threshold_cb(void *fun_obj, find_blobs_list_lnk_
         ((mp_obj_list_t *) o->y_hist_bins)->items[i] = mp_obj_new_int(blob->y_hist_bins[i]);
     }
 
-    return mp_obj_is_true(mp_call_function_1(fun_obj, o));
+    return o;
+}
+static bool py_image_find_blobs_threshold_cb(void *fun_obj, find_blobs_list_lnk_data_t *blob)
+{
+    return mp_obj_is_true(mp_call_function_1(fun_obj, py_blob_new(blob)));
 }
 
 static bool py_image_find_blobs_merge_cb(void *fun_obj, find_blobs_list_lnk_data_t *blob0, find_blobs_list_lnk_data_t *blob1)
 {
-    py_blob_obj_t *o0 = m_new_obj(py_blob_obj_t);
-    o0->base.type = &py_blob_type;
-    o0->corners = mp_obj_new_tuple(4, (mp_obj_t [])
-        {mp_obj_new_tuple(2, (mp_obj_t []) {mp_obj_new_int(blob0->corners[(FIND_BLOBS_CORNERS_RESOLUTION*0)/4].x),
-                                            mp_obj_new_int(blob0->corners[(FIND_BLOBS_CORNERS_RESOLUTION*0)/4].y)}),
-         mp_obj_new_tuple(2, (mp_obj_t []) {mp_obj_new_int(blob0->corners[(FIND_BLOBS_CORNERS_RESOLUTION*1)/4].x),
-                                            mp_obj_new_int(blob0->corners[(FIND_BLOBS_CORNERS_RESOLUTION*1)/4].y)}),
-         mp_obj_new_tuple(2, (mp_obj_t []) {mp_obj_new_int(blob0->corners[(FIND_BLOBS_CORNERS_RESOLUTION*2)/4].x),
-                                            mp_obj_new_int(blob0->corners[(FIND_BLOBS_CORNERS_RESOLUTION*2)/4].y)}),
-         mp_obj_new_tuple(2, (mp_obj_t []) {mp_obj_new_int(blob0->corners[(FIND_BLOBS_CORNERS_RESOLUTION*3)/4].x),
-                                            mp_obj_new_int(blob0->corners[(FIND_BLOBS_CORNERS_RESOLUTION*3)/4].y)})});
-    point_t min_area_rect_corners0[4];
-    point_min_area_rectangle(blob0->corners, min_area_rect_corners0, FIND_BLOBS_CORNERS_RESOLUTION);
-    o0->min_corners = mp_obj_new_tuple(4, (mp_obj_t [])
-        {mp_obj_new_tuple(2, (mp_obj_t []) {mp_obj_new_int(min_area_rect_corners0[0].x), mp_obj_new_int(min_area_rect_corners0[0].y)}),
-         mp_obj_new_tuple(2, (mp_obj_t []) {mp_obj_new_int(min_area_rect_corners0[1].x), mp_obj_new_int(min_area_rect_corners0[1].y)}),
-         mp_obj_new_tuple(2, (mp_obj_t []) {mp_obj_new_int(min_area_rect_corners0[2].x), mp_obj_new_int(min_area_rect_corners0[2].y)}),
-         mp_obj_new_tuple(2, (mp_obj_t []) {mp_obj_new_int(min_area_rect_corners0[3].x), mp_obj_new_int(min_area_rect_corners0[3].y)})});
-    o0->x = mp_obj_new_int(blob0->rect.x);
-    o0->y = mp_obj_new_int(blob0->rect.y);
-    o0->w = mp_obj_new_int(blob0->rect.w);
-    o0->h = mp_obj_new_int(blob0->rect.h);
-    o0->pixels = mp_obj_new_int(blob0->pixels);
-    o0->cx = mp_obj_new_float(blob0->centroid_x);
-    o0->cy = mp_obj_new_float(blob0->centroid_y);
-    o0->rotation = mp_obj_new_float(blob0->rotation);
-    o0->code = mp_obj_new_int(blob0->code);
-    o0->count = mp_obj_new_int(blob0->count);
-    o0->perimeter = mp_obj_new_int(blob0->perimeter);
-    o0->roundness = mp_obj_new_float(blob0->roundness);
-    o0->x_hist_bins = mp_obj_new_list(blob0->x_hist_bins_count, NULL);
-    o0->y_hist_bins = mp_obj_new_list(blob0->y_hist_bins_count, NULL);
-
-    for (int i = 0; i < blob0->x_hist_bins_count; i++) {
-        ((mp_obj_list_t *) o0->x_hist_bins)->items[i] = mp_obj_new_int(blob0->x_hist_bins[i]);
-    }
-
-    for (int i = 0; i < blob0->y_hist_bins_count; i++) {
-        ((mp_obj_list_t *) o0->y_hist_bins)->items[i] = mp_obj_new_int(blob0->y_hist_bins[i]);
-    }
-
-    py_blob_obj_t *o1 = m_new_obj(py_blob_obj_t);
-    o1->base.type = &py_blob_type;
-    o1->corners = mp_obj_new_tuple(4, (mp_obj_t [])
-        {mp_obj_new_tuple(2, (mp_obj_t []) {mp_obj_new_int(blob1->corners[(FIND_BLOBS_CORNERS_RESOLUTION*0)/4].x),
-                                            mp_obj_new_int(blob1->corners[(FIND_BLOBS_CORNERS_RESOLUTION*0)/4].y)}),
-         mp_obj_new_tuple(2, (mp_obj_t []) {mp_obj_new_int(blob1->corners[(FIND_BLOBS_CORNERS_RESOLUTION*1)/4].x),
-                                            mp_obj_new_int(blob1->corners[(FIND_BLOBS_CORNERS_RESOLUTION*1)/4].y)}),
-         mp_obj_new_tuple(2, (mp_obj_t []) {mp_obj_new_int(blob1->corners[(FIND_BLOBS_CORNERS_RESOLUTION*2)/4].x),
-                                            mp_obj_new_int(blob1->corners[(FIND_BLOBS_CORNERS_RESOLUTION*2)/4].y)}),
-         mp_obj_new_tuple(2, (mp_obj_t []) {mp_obj_new_int(blob1->corners[(FIND_BLOBS_CORNERS_RESOLUTION*3)/4].x),
-                                            mp_obj_new_int(blob1->corners[(FIND_BLOBS_CORNERS_RESOLUTION*3)/4].y)})});
-    point_t min_area_rect_corners1[4];
-    point_min_area_rectangle(blob1->corners, min_area_rect_corners1, FIND_BLOBS_CORNERS_RESOLUTION);
-    o1->min_corners = mp_obj_new_tuple(4, (mp_obj_t [])
-        {mp_obj_new_tuple(2, (mp_obj_t []) {mp_obj_new_int(min_area_rect_corners1[0].x), mp_obj_new_int(min_area_rect_corners1[0].y)}),
-         mp_obj_new_tuple(2, (mp_obj_t []) {mp_obj_new_int(min_area_rect_corners1[1].x), mp_obj_new_int(min_area_rect_corners1[1].y)}),
-         mp_obj_new_tuple(2, (mp_obj_t []) {mp_obj_new_int(min_area_rect_corners1[2].x), mp_obj_new_int(min_area_rect_corners1[2].y)}),
-         mp_obj_new_tuple(2, (mp_obj_t []) {mp_obj_new_int(min_area_rect_corners1[3].x), mp_obj_new_int(min_area_rect_corners1[3].y)})});
-    o1->x = mp_obj_new_int(blob1->rect.x);
-    o1->y = mp_obj_new_int(blob1->rect.y);
-    o1->w = mp_obj_new_int(blob1->rect.w);
-    o1->h = mp_obj_new_int(blob1->rect.h);
-    o1->pixels = mp_obj_new_int(blob1->pixels);
-    o1->cx = mp_obj_new_float(blob1->centroid_x);
-    o1->cy = mp_obj_new_float(blob1->centroid_y);
-    o1->rotation = mp_obj_new_float(blob1->rotation);
-    o1->code = mp_obj_new_int(blob1->code);
-    o1->count = mp_obj_new_int(blob1->count);
-    o1->perimeter = mp_obj_new_int(blob1->perimeter);
-    o1->roundness = mp_obj_new_float(blob1->roundness);
-    o1->x_hist_bins = mp_obj_new_list(blob1->x_hist_bins_count, NULL);
-    o1->y_hist_bins = mp_obj_new_list(blob1->y_hist_bins_count, NULL);
-
-    for (int i = 0; i < blob1->x_hist_bins_count; i++) {
-        ((mp_obj_list_t *) o1->x_hist_bins)->items[i] = mp_obj_new_int(blob1->x_hist_bins[i]);
-    }
-
-    for (int i = 0; i < blob1->y_hist_bins_count; i++) {
-        ((mp_obj_list_t *) o1->y_hist_bins)->items[i] = mp_obj_new_int(blob1->y_hist_bins[i]);
-    }
-
-    return mp_obj_is_true(mp_call_function_2(fun_obj, o0, o1));
+    return mp_obj_is_true(mp_call_function_2(fun_obj, py_blob_new(blob0), py_blob_new(blob1)));
 }
 
 static mp_obj_t py_image_find_blobs(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
@@ -4600,49 +4533,7 @@ static mp_obj_t py_image_find_blobs(uint n_args, const mp_obj_t *args, mp_map_t 
     for (size_t i = 0; list_size(&out); i++) {
         find_blobs_list_lnk_data_t lnk_data;
         list_pop_front(&out, &lnk_data);
-
-        py_blob_obj_t *o = m_new_obj(py_blob_obj_t);
-        o->base.type = &py_blob_type;
-        o->corners = mp_obj_new_tuple(4, (mp_obj_t [])
-            {mp_obj_new_tuple(2, (mp_obj_t []) {mp_obj_new_int(lnk_data.corners[(FIND_BLOBS_CORNERS_RESOLUTION*0)/4].x),
-                                                mp_obj_new_int(lnk_data.corners[(FIND_BLOBS_CORNERS_RESOLUTION*0)/4].y)}),
-             mp_obj_new_tuple(2, (mp_obj_t []) {mp_obj_new_int(lnk_data.corners[(FIND_BLOBS_CORNERS_RESOLUTION*1)/4].x),
-                                                mp_obj_new_int(lnk_data.corners[(FIND_BLOBS_CORNERS_RESOLUTION*1)/4].y)}),
-             mp_obj_new_tuple(2, (mp_obj_t []) {mp_obj_new_int(lnk_data.corners[(FIND_BLOBS_CORNERS_RESOLUTION*2)/4].x),
-                                                mp_obj_new_int(lnk_data.corners[(FIND_BLOBS_CORNERS_RESOLUTION*2)/4].y)}),
-             mp_obj_new_tuple(2, (mp_obj_t []) {mp_obj_new_int(lnk_data.corners[(FIND_BLOBS_CORNERS_RESOLUTION*3)/4].x),
-                                                mp_obj_new_int(lnk_data.corners[(FIND_BLOBS_CORNERS_RESOLUTION*3)/4].y)})});
-        point_t min_corners[4];
-        point_min_area_rectangle(lnk_data.corners, min_corners, FIND_BLOBS_CORNERS_RESOLUTION);
-        o->min_corners = mp_obj_new_tuple(4, (mp_obj_t [])
-            {mp_obj_new_tuple(2, (mp_obj_t []) {mp_obj_new_int(min_corners[0].x), mp_obj_new_int(min_corners[0].y)}),
-             mp_obj_new_tuple(2, (mp_obj_t []) {mp_obj_new_int(min_corners[1].x), mp_obj_new_int(min_corners[1].y)}),
-             mp_obj_new_tuple(2, (mp_obj_t []) {mp_obj_new_int(min_corners[2].x), mp_obj_new_int(min_corners[2].y)}),
-             mp_obj_new_tuple(2, (mp_obj_t []) {mp_obj_new_int(min_corners[3].x), mp_obj_new_int(min_corners[3].y)})});
-        o->x = mp_obj_new_int(lnk_data.rect.x);
-        o->y = mp_obj_new_int(lnk_data.rect.y);
-        o->w = mp_obj_new_int(lnk_data.rect.w);
-        o->h = mp_obj_new_int(lnk_data.rect.h);
-        o->pixels = mp_obj_new_int(lnk_data.pixels);
-        o->cx = mp_obj_new_float(lnk_data.centroid_x);
-        o->cy = mp_obj_new_float(lnk_data.centroid_y);
-        o->rotation = mp_obj_new_float(lnk_data.rotation);
-        o->code = mp_obj_new_int(lnk_data.code);
-        o->count = mp_obj_new_int(lnk_data.count);
-        o->perimeter = mp_obj_new_int(lnk_data.perimeter);
-        o->roundness = mp_obj_new_float(lnk_data.roundness);
-        o->x_hist_bins = mp_obj_new_list(lnk_data.x_hist_bins_count, NULL);
-        o->y_hist_bins = mp_obj_new_list(lnk_data.y_hist_bins_count, NULL);
-
-        for (int i = 0; i < lnk_data.x_hist_bins_count; i++) {
-            ((mp_obj_list_t *) o->x_hist_bins)->items[i] = mp_obj_new_int(lnk_data.x_hist_bins[i]);
-        }
-
-        for (int i = 0; i < lnk_data.y_hist_bins_count; i++) {
-            ((mp_obj_list_t *) o->y_hist_bins)->items[i] = mp_obj_new_int(lnk_data.y_hist_bins[i]);
-        }
-
-        objects_list->items[i] = o;
+        objects_list->items[i] = py_blob_new(&lnk_data);
         if (lnk_data.x_hist_bins) xfree(lnk_data.x_hist_bins);
         if (lnk_data.y_hist_bins) xfree(lnk_data.y_hist_bins);
     }
