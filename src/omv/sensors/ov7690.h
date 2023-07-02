@@ -10,6 +10,6 @@
  */
 #ifndef __OV7690_H__
 #define __OV7690_H__
-#define OV7690_XCLK_FREQ 24000000
+#define OV7690_XCLK_FREQ    24000000
 int ov7690_init(sensor_t *sensor);
 #endif // __OV7690_H__

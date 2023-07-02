@@ -33,37 +33,37 @@ static volatile mp_obj_t lcd_cec_bytes = NULL;
 ////////////////////////////////////////////////////////////////////////////////
 
 /* Start bit timings */
-#define Sbit_Nom_LD    37 /* Start Bit Nominal Low duration: 37 x 100µs = 3.7ms */
-#define Sbit_Nom_HD    8  /* Start Bit Nominal High Duration: 8 x 100µs = 0.8ms */
-#define Sbit_Min_LD    35 /* Start Bit Minimum Low duration: 35 x 100µs = 3.5ms */
-#define Sbit_Max_LD    39 /* Start Bit Maximum Low duration: 39 x 100µs = 3.9ms */
-#define Sbit_Min_TD    43 /* Start Bit Minimum Total duration: 43 x 100µs = 4.3ms */
-#define Sbit_Max_TD    47 /* Start Bit Maximum Total duration: 47 x 100µs = 4.7ms */
+#define Sbit_Nom_LD               37 /* Start Bit Nominal Low duration: 37 x 100µs = 3.7ms */
+#define Sbit_Nom_HD               8 /* Start Bit Nominal High Duration: 8 x 100µs = 0.8ms */
+#define Sbit_Min_LD               35 /* Start Bit Minimum Low duration: 35 x 100µs = 3.5ms */
+#define Sbit_Max_LD               39 /* Start Bit Maximum Low duration: 39 x 100µs = 3.9ms */
+#define Sbit_Min_TD               43 /* Start Bit Minimum Total duration: 43 x 100µs = 4.3ms */
+#define Sbit_Max_TD               47 /* Start Bit Maximum Total duration: 47 x 100µs = 4.7ms */
 
 /* Data bit logical "0" timings */
-#define Dbit0_Nom_LD   15 /* Data Bit "0" Nominal Low duration: 15 x 100µs = 1.5ms */
-#define Dbit0_Nom_HD   9  /* Data Bit "0" Nominal High Duration: 9 x 100µs = 0.9ms */
-#define Dbit0_Min_LD   13 /* Data Bit "0" Minimum Low duration: 13 x 100µs = 1.3ms */
-#define Dbit0_Max_LD   17 /* Data Bit "0" Maximum Low duration: 17 x 100µs = 1.7ms */
+#define Dbit0_Nom_LD              15 /* Data Bit "0" Nominal Low duration: 15 x 100µs = 1.5ms */
+#define Dbit0_Nom_HD              9 /* Data Bit "0" Nominal High Duration: 9 x 100µs = 0.9ms */
+#define Dbit0_Min_LD              13 /* Data Bit "0" Minimum Low duration: 13 x 100µs = 1.3ms */
+#define Dbit0_Max_LD              17 /* Data Bit "0" Maximum Low duration: 17 x 100µs = 1.7ms */
 
 /* Data bit logical "1" timings */
-#define Dbit1_Nom_LD   6  /* Data Bit (logical "1") Nominal Low duration: 0.6ms  */
-#define Dbit1_Nom_HD   18 /* Data Bit (logical "1") Nominal High Duration: 1.8ms */
-#define Dbit1_Min_LD   4  /* Data Bit "1" Minimum Low duration: 0.4ms */
-#define Dbit1_Max_LD   8  /* Data Bit "1" Maximum Low duration: 0.8ms */
+#define Dbit1_Nom_LD              6 /* Data Bit (logical "1") Nominal Low duration: 0.6ms  */
+#define Dbit1_Nom_HD              18 /* Data Bit (logical "1") Nominal High Duration: 1.8ms */
+#define Dbit1_Min_LD              4 /* Data Bit "1" Minimum Low duration: 0.4ms */
+#define Dbit1_Max_LD              8 /* Data Bit "1" Maximum Low duration: 0.8ms */
 
 /* Data bit duration */
-#define DbitX_Min_TD   20 /* Data Bit Minimum Total duration: 2ms   */
-#define DbitX_Max_TD   27 /* Data Bit Maximum Total duration: 2.7ms */
+#define DbitX_Min_TD              20 /* Data Bit Minimum Total duration: 2ms   */
+#define DbitX_Max_TD              27 /* Data Bit Maximum Total duration: 2.7ms */
 
 /* Header or Data block definition */
-#define DataBlock      0
-#define HeaderBlock    1
+#define DataBlock                 0
+#define HeaderBlock               1
 
 /* Masks */
-#define ReceiveFrameStatusMask  0x00010000
-#define FrameSendToMeMask       0x00020000
-#define InitiatorAddressMask    0x000000FF
+#define ReceiveFrameStatusMask    0x00010000
+#define FrameSendToMeMask         0x00020000
+#define InitiatorAddressMask      0x000000FF
 
 static uint8_t cec_byte;
 static uint8_t cec_bit;
@@ -71,13 +71,11 @@ static uint8_t cec_eom;
 static uint32_t cec_counter;
 static uint8_t cec_last_byte;
 
-static void CEC_Wait100us(uint32_t nTime)
-{
+static void CEC_Wait100us(uint32_t nTime) {
     mp_hal_delay_us(nTime * 100);
 }
 
-static void CEC_SendStartBit()
-{
+static void CEC_SendStartBit() {
     /* Start Low Period */
     omv_gpio_write(OMV_CEC_PIN, 0);
 
@@ -91,8 +89,7 @@ static void CEC_SendStartBit()
     CEC_Wait100us(Sbit_Nom_HD);
 }
 
-static uint8_t CEC_ReceiveStartBit()
-{
+static uint8_t CEC_ReceiveStartBit() {
     /* Initialize cec_counter */
     cec_counter = 0;
 
@@ -145,8 +142,7 @@ static uint8_t CEC_ReceiveStartBit()
     return 1;
 }
 
-static void CEC_SendDataBit(uint8_t bit)
-{
+static void CEC_SendDataBit(uint8_t bit) {
     /* Start Low Period: the duration depends on the Logical Level "0" or "1" */
     omv_gpio_write(OMV_CEC_PIN, 0);
 
@@ -160,8 +156,7 @@ static void CEC_SendDataBit(uint8_t bit)
     CEC_Wait100us(bit ? Dbit1_Nom_HD : Dbit0_Nom_HD);
 }
 
-static uint8_t CEC_ReceiveDataBit()
-{
+static uint8_t CEC_ReceiveDataBit() {
     uint8_t bit = 0xFF;
 
     /* Initialize cec_counter */
@@ -182,20 +177,20 @@ static uint8_t CEC_ReceiveDataBit()
     }
 
     /* If the measured duration of the low level is greater than the minimum low duration
-    of "logical 0" i.e > 1.3 ms */
+       of "logical 0" i.e > 1.3 ms */
     if (cec_counter > Dbit0_Min_LD) {
         /* The received bit is "logical 0" */
         bit = 0;
     } else {
         /* If the measured duration of the low level is greater than the maximum low duration
-        of "logical 1" i.e > 0.8 ms */
+           of "logical 1" i.e > 0.8 ms */
         if (cec_counter > Dbit1_Max_LD) {
             /* Exit: it's an error: 0xFF */
             return 0xFF;
         }
 
         /* If the measured duration of the low level is greater than the minimum low duration
-        of "logical 1" i.e > 0.4 ms */
+           of "logical 1" i.e > 0.4 ms */
         if (cec_counter > Dbit1_Min_LD) {
             /* The received bit is "logical 1" */
             bit = 1;
@@ -230,8 +225,7 @@ static uint8_t CEC_ReceiveDataBit()
     return bit;
 }
 
-static void CEC_SendAckBit()
-{
+static void CEC_SendAckBit() {
     mp_uint_t start = mp_hal_ticks_ms();
     /* Wait for falling edge: end of EOM bit sent by the initiator */
     while (omv_gpio_read(OMV_CEC_PIN)) {
@@ -253,8 +247,7 @@ static void CEC_SendAckBit()
     omv_gpio_write(OMV_CEC_PIN, 1);
 }
 
-static uint8_t CEC_ReceiveAckBit()
-{
+static uint8_t CEC_ReceiveAckBit() {
     uint8_t AckValue = 0xFF;
 
     /* Get the ACK bit */
@@ -274,8 +267,7 @@ static uint8_t CEC_ReceiveAckBit()
     return AckValue;
 }
 
-static bool CEC_SendByte(uint8_t byte)
-{
+static bool CEC_SendByte(uint8_t byte) {
     /* Send the data byte: bit by bit (MSB first) */
     for (cec_bit = 0; cec_bit <= 7; cec_bit++) {
         CEC_SendDataBit(byte & 0x80);
@@ -298,14 +290,14 @@ static bool CEC_SendByte(uint8_t byte)
     if (CEC_ReceiveAckBit() == 0) {
         /* Exit: the data byte has been received by the follower */
         return true;
-    } else { /* The data byte is not acknowledged by the follower */
+    } else {
+        /* The data byte is not acknowledged by the follower */
         /* Exit: the data byte has not been received by the follower */
         return false;
     }
 }
 
-static uint8_t CEC_ReceiveByte(uint8_t HeaderDataIndicator)
-{
+static uint8_t CEC_ReceiveByte(uint8_t HeaderDataIndicator) {
     uint8_t TempReceiveBit = 0;
     bool ReceiveByteStatus = true;
 
@@ -320,7 +312,8 @@ static uint8_t CEC_ReceiveByte(uint8_t HeaderDataIndicator)
         TempReceiveBit = CEC_ReceiveDataBit();
 
         /* If the received bit was received incorrectly */
-        if (TempReceiveBit == 0xFF) { /* If the received bit is wrong */
+        if (TempReceiveBit == 0xFF) {
+            /* If the received bit is wrong */
             /* Store the error status */
             ReceiveByteStatus = false;
         }
@@ -333,7 +326,8 @@ static uint8_t CEC_ReceiveByte(uint8_t HeaderDataIndicator)
     cec_eom = CEC_ReceiveDataBit();
 
     /* If the EOM bit was received incorrectly */
-    if (cec_eom == 0xFF) {/* If the received bit is wrong */
+    if (cec_eom == 0xFF) {
+        /* If the received bit is wrong */
         /* Store the error status */
         ReceiveByteStatus = false;
     }
@@ -347,25 +341,26 @@ static uint8_t CEC_ReceiveByte(uint8_t HeaderDataIndicator)
 
             /* Byte received correctly: return 1 */
             return 1;
-        } else { /* Otherwise do not acknowledge the received byte */
+        } else {
+            /* Otherwise do not acknowledge the received byte */
             /* Byte received incorrectly: return 0 */
             return 0;
         }
-    } else { /* If the byte is a "Header" block */
+    } else {
+        /* If the byte is a "Header" block */
         /* If the bits has been received correctly and do not acknowledge the byte */
-        if (ReceiveByteStatus != false)
-        {
+        if (ReceiveByteStatus != false) {
             /* Byte received correctly: return 1 */
             return 1;
-        } else { /* If the bits has been received incorrectly and do not acknowledge the byte */
+        } else {
+            /* If the bits has been received incorrectly and do not acknowledge the byte */
             /* Byte received incorrectly: return 0 */
             return 0;
         }
     }
 }
 
-static bool CEC_SendFrame(uint8_t InitiatorAddress, uint8_t FollowerAddress, uint8_t MessageLength, uint8_t *Message)
-{
+static bool CEC_SendFrame(uint8_t InitiatorAddress, uint8_t FollowerAddress, uint8_t MessageLength, uint8_t *Message) {
     uint8_t i = 0;
     uint8_t HeaderBlockValueToSend = 0;
 
@@ -375,7 +370,7 @@ static bool CEC_SendFrame(uint8_t InitiatorAddress, uint8_t FollowerAddress, uin
     HeaderBlockValueToSend = (((InitiatorAddress & 0xF) << 4) | (FollowerAddress & 0xF));
 
     /* Disable EXTI global interrupt to avoid the EXTI to enter EXTI interrupt
-    while transmitting a frame */
+       while transmitting a frame */
 
     if (lcd_cec_user_cb) {
         omv_gpio_irq_enable(OMV_CEC_PIN, false);
@@ -385,7 +380,7 @@ static bool CEC_SendFrame(uint8_t InitiatorAddress, uint8_t FollowerAddress, uin
     CEC_SendStartBit();
 
     /* Send initiator and follower addresses. If the Header block is not
-    transmitted successfully then exit and return error */
+       transmitted successfully then exit and return error */
     if (CEC_SendByte(HeaderBlockValueToSend) == false) {
         if (lcd_cec_user_cb) {
             omv_gpio_irq_enable(OMV_CEC_PIN, true);
@@ -420,8 +415,7 @@ static bool CEC_SendFrame(uint8_t InitiatorAddress, uint8_t FollowerAddress, uin
     return true;
 }
 
-static uint32_t CEC_ReceiveFrame(uint8_t* Message, uint8_t FollLogAdd)
-{
+static uint32_t CEC_ReceiveFrame(uint8_t *Message, uint8_t FollLogAdd) {
     uint32_t i = 0;
     uint32_t InitiatorAddress = 0;
     uint32_t ReceiveStatus = 1;
@@ -448,27 +442,28 @@ static uint32_t CEC_ReceiveFrame(uint8_t* Message, uint8_t FollLogAdd)
                         /* Build the frame */
                         Message[i] = cec_byte;
                         i++;
-                    } else { /* If the byte has not been received correctly */
+                    } else {
+                        /* If the byte has not been received correctly */
                         /* Set receive status bit (Error) */
                         ReceiveStatus = 0;
                     }
                 }
             }
         }
-    } else { /* If the start bit has not been received successfully */
+    } else {
+        /* If the start bit has not been received successfully */
         /* Set receive status bit (Error) */
         ReceiveStatus = 0;
     }
 
     /* Return the different receive infos: Receive status, number of data byte received,
-    Frame send to me or not and the initiator address */
+       Frame send to me or not and the initiator address */
     return ((((InitiatorAddress) | (i << 8)) | (ReceiveStatus << 16)) | (FrameSendToMe << 17));
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 
-static bool lcd_cec_receive_frame_int(mp_obj_t dst_addr, bool assertOnError)
-{
+static bool lcd_cec_receive_frame_int(mp_obj_t dst_addr, bool assertOnError) {
     mp_obj_array_t *bytes = (mp_obj_array_t *) lcd_cec_bytes;
     uint32_t result = CEC_ReceiveFrame(bytes->items, mp_obj_get_int(dst_addr));
     bool receiveFrameStatus = result & ReceiveFrameStatusMask;
@@ -487,8 +482,7 @@ static bool lcd_cec_receive_frame_int(mp_obj_t dst_addr, bool assertOnError)
     return false;
 }
 
-void lcd_cec_send_frame(mp_obj_t dst_addr, mp_obj_t src_addr, mp_obj_t bytes)
-{
+void lcd_cec_send_frame(mp_obj_t dst_addr, mp_obj_t src_addr, mp_obj_t bytes) {
     size_t len;
     uint8_t *data = (uint8_t *) mp_obj_str_get_data(bytes, &len);
     if (!CEC_SendFrame(mp_obj_get_int(src_addr), mp_obj_get_int(dst_addr), len, data)) {
@@ -496,18 +490,15 @@ void lcd_cec_send_frame(mp_obj_t dst_addr, mp_obj_t src_addr, mp_obj_t bytes)
     }
 }
 
-mp_obj_t lcd_cec_received_frame_src_addr()
-{
+mp_obj_t lcd_cec_received_frame_src_addr() {
     return mp_obj_new_int(lcd_cec_src_addr);
 }
 
-mp_obj_t lcd_cec_received_frame_bytes()
-{
+mp_obj_t lcd_cec_received_frame_bytes() {
     return lcd_cec_bytes;
 }
 
-mp_obj_t lcd_cec_receive_frame(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
-{
+mp_obj_t lcd_cec_receive_frame(uint n_args, const mp_obj_t *args, mp_map_t *kw_args) {
     if (n_args > 0) {
         int timeout = py_helper_keyword_int(n_args, args, 1, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_timeout), 1000);
 
@@ -518,21 +509,19 @@ mp_obj_t lcd_cec_receive_frame(uint n_args, const mp_obj_t *args, mp_map_t *kw_a
             }
         }
 
-        return  mp_obj_new_bool(lcd_cec_receive_frame_int(args[0], true));
+        return mp_obj_new_bool(lcd_cec_receive_frame_int(args[0], true));
     }
 
     mp_raise_msg(&mp_type_OSError, MP_ERROR_TEXT("Expected destination address!"));
 }
 
-static void lcd_cec_extint_callback(void *data)
-{
+static void lcd_cec_extint_callback(void *data) {
     if (lcd_cec_user_cb && lcd_cec_receive_frame_int(lcd_cec_dst_addr, false)) {
         mp_call_function_0(lcd_cec_user_cb);
     }
 }
 
-void lcd_cec_deinit()
-{
+void lcd_cec_deinit() {
     omv_gpio_irq_enable(OMV_CEC_PIN, false);
 
     lcd_cec_user_cb = NULL;
@@ -543,8 +532,7 @@ void lcd_cec_deinit()
     omv_gpio_deinit(OMV_CEC_PIN);
 }
 
-void lcd_cec_init()
-{
+void lcd_cec_init() {
     omv_gpio_config(OMV_CEC_PIN, OMV_GPIO_MODE_OUTPUT_OD, OMV_GPIO_PULL_NONE, OMV_GPIO_SPEED_LOW, -1);
     omv_gpio_write(OMV_CEC_PIN, 1);
     mp_hal_delay_ms(1);
@@ -555,8 +543,7 @@ void lcd_cec_init()
     omv_gpio_irq_register(OMV_CEC_PIN, lcd_cec_extint_callback, NULL);
 }
 
-void lcd_cec_register_cec_receive_cb(mp_obj_t cb, mp_obj_t dst_addr)
-{
+void lcd_cec_register_cec_receive_cb(mp_obj_t cb, mp_obj_t dst_addr) {
     omv_gpio_irq_enable(OMV_CEC_PIN, false);
     lcd_cec_user_cb = cb;
     lcd_cec_dst_addr = dst_addr;

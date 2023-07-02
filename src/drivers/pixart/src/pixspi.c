@@ -22,17 +22,16 @@
 
 #include "pixspi.h"
 
-#define SPI_BUS_TIMEOUT         (5000)  // in ms
+#define SPI_BUS_TIMEOUT      (5000)     // in ms
 #ifdef PIXART_SPI_DEBUG
-#define debug_printf(...)   printf(__VA_ARGS__)
+#define debug_printf(...)    printf(__VA_ARGS__)
 #else
 #define debug_printf(...)
 #endif
 
 static omv_spi_t spi_bus;
 
-static int spi_send(uint8_t *txbuf, uint16_t len)
-{
+static int spi_send(uint8_t *txbuf, uint16_t len) {
     int ret = 0;
 
     omv_spi_transfer_t spi_xfer = {
@@ -52,8 +51,7 @@ static int spi_send(uint8_t *txbuf, uint16_t len)
     return ret;
 }
 
-static int spi_send_recv(uint8_t *txbuf, uint8_t *rxbuf, uint16_t len)
-{
+static int spi_send_recv(uint8_t *txbuf, uint8_t *rxbuf, uint16_t len) {
     int ret = 0;
 
     omv_spi_transfer_t spi_xfer = {
@@ -79,16 +77,15 @@ static int spi_send_recv(uint8_t *txbuf, uint8_t *rxbuf, uint16_t len)
     return ret;
 }
 
-bool pixspi_init()
-{
+bool pixspi_init() {
     // Init SPI
     omv_spi_config_t spi_config;
     omv_spi_default_config(&spi_config, ISC_SPI_ID);
 
-    spi_config.baudrate    = 5000000;
-    spi_config.nss_enable  = false; // Soft NSS
-    spi_config.clk_pol     = OMV_SPI_CPOL_HIGH;
-    spi_config.clk_pha     = OMV_SPI_CPHA_2EDGE;
+    spi_config.baudrate = 5000000;
+    spi_config.nss_enable = false;  // Soft NSS
+    spi_config.clk_pol = OMV_SPI_CPOL_HIGH;
+    spi_config.clk_pha = OMV_SPI_CPHA_2EDGE;
 
     if (omv_spi_init(&spi_bus, &spi_config) != 0) {
         return false;
@@ -96,14 +93,12 @@ bool pixspi_init()
     return true;
 }
 
-void pixspi_release()
-{
+void pixspi_release() {
     omv_gpio_write(spi_bus.cs, 1);
     omv_spi_deinit(&spi_bus);
 }
 
-int pixspi_regs_read(uint8_t addr, uint8_t * data, uint16_t length)
-{
+int pixspi_regs_read(uint8_t addr, uint8_t *data, uint16_t length) {
     if (addr & 0x80) {
         debug_printf("pixspi_regs_read() address (0x%x) overflow.\n", addr);
         return -1;
@@ -116,8 +111,7 @@ int pixspi_regs_read(uint8_t addr, uint8_t * data, uint16_t length)
     return 0;
 }
 
-int pixspi_regs_write(uint8_t addr, const uint8_t * data, uint16_t length)
-{
+int pixspi_regs_write(uint8_t addr, const uint8_t *data, uint16_t length) {
     uint8_t buff[64] = {};
     if (addr & 0x80) {
         debug_printf("pixspi_regs_read() address (0x%x) overflow.\n", addr);
@@ -130,7 +124,7 @@ int pixspi_regs_write(uint8_t addr, const uint8_t * data, uint16_t length)
     do {
         uint16_t len = remaining > MAX_LENGTH ? MAX_LENGTH : remaining;
         buff[0] = addr;
-        memcpy(buff+1, data, len);
+        memcpy(buff + 1, data, len);
         if (spi_send(buff, len + 1) == -1) {
             debug_printf("spi_send() failed.\n");
             return -1;

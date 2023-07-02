@@ -16,36 +16,42 @@
 #include "imlib.h"
 #include "omv_boardconfig.h"
 
-#define TIME_JPEG   (0)
+#define TIME_JPEG                  (0)
 #if (TIME_JPEG == 1)
 #include "py/mphal.h"
 #endif
 
-#define MCU_W                       (8)
-#define MCU_H                       (8)
-#define JPEG_444_GS_MCU_SIZE        ((MCU_W) * (MCU_H))
-#define JPEG_444_YCBCR_MCU_SIZE     ((JPEG_444_GS_MCU_SIZE) * 3)
+#define MCU_W                      (8)
+#define MCU_H                      (8)
+#define JPEG_444_GS_MCU_SIZE       ((MCU_W) *(MCU_H))
+#define JPEG_444_YCBCR_MCU_SIZE    ((JPEG_444_GS_MCU_SIZE) * 3)
 
 // Expand 4 bits to 32 for binary to grayscale - process 4 pixels at a time
 #if (OMV_HARDWARE_JPEG == 1)
-#define JPEG_BINARY_0 0x00
-#define JPEG_BINARY_1 0xFF
-static const uint32_t jpeg_expand[16] = {0x0, 0xff, 0xff00, 0xffff, 0xff0000,
-    0xff00ff, 0xffff00, 0xffffff, 0xff000000, 0xff0000ff, 0xff00ff00,
-    0xff00ffff, 0xffff0000, 0xffff00ff, 0xffffff00, 0xffffffff};
+#define JPEG_BINARY_0              0x00
+#define JPEG_BINARY_1              0xFF
+static const uint32_t jpeg_expand[16] = {
+    0x00000000, 0x000000ff, 0x0000ff00, 0x0000ffff,
+    0x00ff0000, 0x00ff00ff, 0x00ffff00, 0x00ffffff,
+    0xff000000, 0xff0000ff, 0xff00ff00, 0xff00ffff,
+    0xffff0000, 0xffff00ff, 0xffffff00, 0xffffffff
+};
 #else
-#define JPEG_BINARY_0 0x80
-#define JPEG_BINARY_1 0x7F
-static const uint32_t jpeg_expand[16] = {0x80808080, 0x8080807f, 0x80807f80, 0x80807f7f, 0x807f8080,
-    0x807f807f, 0x807f7f80, 0x807f7f7f, 0x7f808080, 0x7f80807f, 0x7f807f80,
-    0x7f807f7f, 0x7f7f8080, 0x7f7f807f, 0x7f7f7f80, 0x7f7f7f7f};
+#define JPEG_BINARY_0              0x80
+#define JPEG_BINARY_1              0x7F
+static const uint32_t jpeg_expand[16] = {
+    0x80808080, 0x8080807f, 0x80807f80, 0x80807f7f,
+    0x807f8080, 0x807f807f, 0x807f7f80, 0x807f7f7f,
+    0x7f808080, 0x7f80807f, 0x7f807f80, 0x7f807f7f,
+    0x7f7f8080, 0x7f7f807f, 0x7f7f7f80, 0x7f7f7f7f
+};
 #endif
 
-static void jpeg_get_mcu(image_t *src, int x_offset, int y_offset, int dx, int dy, int8_t *Y0, int8_t *CB, int8_t *CR)
-{
+static void jpeg_get_mcu(image_t *src, int x_offset, int y_offset, int dx, int dy, int8_t *Y0, int8_t *CB, int8_t *CR) {
     switch (src->pixfmt) {
         case PIXFORMAT_BINARY: {
-            if ((dx != MCU_W) || (dy != MCU_H)) { // partial MCU, fill with 0's to start
+            if ((dx != MCU_W) || (dy != MCU_H)) {
+                // partial MCU, fill with 0's to start
                 memset(Y0, 0, JPEG_444_GS_MCU_SIZE);
             }
 
@@ -83,7 +89,8 @@ static void jpeg_get_mcu(image_t *src, int x_offset, int y_offset, int dx, int d
             break;
         }
         case PIXFORMAT_GRAYSCALE: {
-            if ((dx != MCU_W) || (dy != MCU_H)) { // partial MCU, fill with 0's to start
+            if ((dx != MCU_W) || (dy != MCU_H)) {
+                // partial MCU, fill with 0's to start
                 memset(Y0, 0, JPEG_444_GS_MCU_SIZE);
             }
 
@@ -91,55 +98,55 @@ static void jpeg_get_mcu(image_t *src, int x_offset, int y_offset, int dx, int d
                 uint8_t *rp = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(src, y) + x_offset;
 
                 #if (OMV_HARDWARE_JPEG == 0)
-                    if (dx == MCU_W) {
-                        *((uint32_t *) Y0) = *((uint32_t *) rp) ^ 0x80808080;
-                        *(((uint32_t *) Y0) + 1) = *(((uint32_t *) rp) + 1) ^ 0x80808080;
-                    } else if (dx >= 4) {
-                        *((uint32_t *) Y0) = *((uint32_t *) rp) ^ 0x80808080;
+                if (dx == MCU_W) {
+                    *((uint32_t *) Y0) = *((uint32_t *) rp) ^ 0x80808080;
+                    *(((uint32_t *) Y0) + 1) = *(((uint32_t *) rp) + 1) ^ 0x80808080;
+                } else if (dx >= 4) {
+                    *((uint32_t *) Y0) = *((uint32_t *) rp) ^ 0x80808080;
 
-                        if (dx >= 6) {
-                            *(((uint16_t *) Y0) + 2) = *(((uint16_t *) rp) + 2) ^ 0x8080;
-
-                            if (dx & 1) {
-                                Y0[6] = rp[6] ^ 0x80;
-                            }
-                        } else if (dx & 1) {
-                            Y0[4] = rp[4] ^ 0x80;
-                        }
-                    } else if (dx >= 2) {
-                        *((uint16_t *) Y0) = *((uint16_t *) rp) ^ 0x8080;
+                    if (dx >= 6) {
+                        *(((uint16_t *) Y0) + 2) = *(((uint16_t *) rp) + 2) ^ 0x8080;
 
                         if (dx & 1) {
-                            Y0[2] = rp[2] ^ 0x80;
+                            Y0[6] = rp[6] ^ 0x80;
                         }
-                    } else {
-                        *Y0 = *rp ^ 0x80;
+                    } else if (dx & 1) {
+                        Y0[4] = rp[4] ^ 0x80;
                     }
+                } else if (dx >= 2) {
+                    *((uint16_t *) Y0) = *((uint16_t *) rp) ^ 0x8080;
+
+                    if (dx & 1) {
+                        Y0[2] = rp[2] ^ 0x80;
+                    }
+                } else{
+                    *Y0 = *rp ^ 0x80;
+                }
                 #else
-                    if (dx == MCU_W) {
-                        *((uint32_t *) Y0) = *((uint32_t *) rp);
-                        *(((uint32_t *) Y0) + 1) = *(((uint32_t *) rp) + 1);
-                    } else if (dx >= 4) {
-                        *((uint32_t *) Y0) = *((uint32_t *) rp);
+                if (dx == MCU_W) {
+                    *((uint32_t *) Y0) = *((uint32_t *) rp);
+                    *(((uint32_t *) Y0) + 1) = *(((uint32_t *) rp) + 1);
+                } else if (dx >= 4) {
+                    *((uint32_t *) Y0) = *((uint32_t *) rp);
 
-                        if (dx >= 6) {
-                            *(((uint16_t *) Y0) + 2) = *(((uint16_t *) rp) + 2);
-
-                            if (dx & 1) {
-                                Y0[6] = rp[6];
-                            }
-                        } else if (dx & 1) {
-                            Y0[4] = rp[4];
-                        }
-                    } else if (dx >= 2) {
-                        *((uint16_t *) Y0) = *((uint16_t *) rp);
+                    if (dx >= 6) {
+                        *(((uint16_t *) Y0) + 2) = *(((uint16_t *) rp) + 2);
 
                         if (dx & 1) {
-                            Y0[2] = rp[2];
+                            Y0[6] = rp[6];
                         }
-                    } else {
-                        *Y0 = *rp;
+                    } else if (dx & 1) {
+                        Y0[4] = rp[4];
                     }
+                } else if (dx >= 2) {
+                    *((uint16_t *) Y0) = *((uint16_t *) rp);
+
+                    if (dx & 1) {
+                        Y0[2] = rp[2];
+                    }
+                } else{
+                    *Y0 = *rp;
+                }
                 #endif
 
                 Y0 += MCU_W;
@@ -147,7 +154,8 @@ static void jpeg_get_mcu(image_t *src, int x_offset, int y_offset, int dx, int d
             break;
         }
         case PIXFORMAT_RGB565: {
-            if ((dx != MCU_W) || (dy != MCU_H)) { // partial MCU, fill with 0's to start
+            if ((dx != MCU_W) || (dy != MCU_H)) {
+                // partial MCU, fill with 0's to start
                 memset(Y0, 0, JPEG_444_GS_MCU_SIZE);
                 memset(CB, 0, JPEG_444_GS_MCU_SIZE);
                 memset(CR, 0, JPEG_444_GS_MCU_SIZE);
@@ -223,7 +231,8 @@ static void jpeg_get_mcu(image_t *src, int x_offset, int y_offset, int dx, int d
             break;
         }
         case PIXFORMAT_YUV_ANY: {
-            if ((dx != MCU_W) || (dy != MCU_H)) { // partial MCU, fill with 0's to start
+            if ((dx != MCU_W) || (dy != MCU_H)) {
+                // partial MCU, fill with 0's to start
                 memset(Y0, 0, JPEG_444_GS_MCU_SIZE);
                 memset(CB, 0, JPEG_444_GS_MCU_SIZE);
                 memset(CR, 0, JPEG_444_GS_MCU_SIZE);
@@ -291,7 +300,8 @@ static void jpeg_get_mcu(image_t *src, int x_offset, int y_offset, int dx, int d
             break;
         }
         case PIXFORMAT_BAYER_ANY: {
-            if ((dx != MCU_W) || (dy != MCU_H)) { // partial MCU, fill with 0's to start
+            if ((dx != MCU_W) || (dy != MCU_H)) {
+                // partial MCU, fill with 0's to start
                 memset(Y0, 0, JPEG_444_GS_MCU_SIZE);
                 memset(CB, 0, JPEG_444_GS_MCU_SIZE);
                 memset(CR, 0, JPEG_444_GS_MCU_SIZE);
@@ -302,8 +312,8 @@ static void jpeg_get_mcu(image_t *src, int x_offset, int y_offset, int dx, int d
 
             if (x_offset && y_offset && (x_offset < (src_w - MCU_W)) && (y_offset < (src_h - MCU_H))) {
                 for (int y = y_offset - 1, yy = y + MCU_H - 1, index_e = 0, index_o = MCU_W; y < yy; y += 2,
-                        index_e += MCU_W,
-                        index_o += MCU_W) {
+                     index_e += MCU_W,
+                     index_o += MCU_W) {
                     uint8_t *rowptr_grgr_0 = src->data + (y * src_w);
                     uint8_t *rowptr_bgbg_1 = rowptr_grgr_0 + src_w;
                     uint8_t *rowptr_grgr_2 = rowptr_bgbg_1 + src_w;
@@ -608,7 +618,8 @@ static void jpeg_get_mcu(image_t *src, int x_offset, int y_offset, int dx, int d
                         rowptr_bgbg_1 = rowptr_grgr_0 + src_w;
                         rowptr_grgr_2 = rowptr_grgr_0;
                         rowptr_bgbg_3 = rowptr_bgbg_1;
-                    } else { // get 4 neighboring rows
+                    } else {
+                        // get 4 neighboring rows
                         rowptr_grgr_0 = src->data + ((y - 1) * src_w);
                         rowptr_bgbg_1 = rowptr_grgr_0 + src_w;
                         rowptr_grgr_2 = rowptr_bgbg_1 + src_w;
@@ -671,7 +682,8 @@ static void jpeg_get_mcu(image_t *src, int x_offset, int y_offset, int dx, int d
                             row_grgr_2 = (row_grgr_2 << 16) | row_grgr_2;
                             row_bgbg_3 = *((uint16_t *) (rowptr_bgbg_3 + x - 1));
                             row_bgbg_3 = (row_bgbg_3 << 16) | row_bgbg_3;
-                        } else { // get 4 neighboring rows
+                        } else {
+                            // get 4 neighboring rows
                             row_grgr_0 = *((uint32_t *) (rowptr_grgr_0 + x - 1));
                             row_bgbg_1 = *((uint32_t *) (rowptr_bgbg_1 + x - 1));
                             row_grgr_2 = *((uint32_t *) (rowptr_grgr_2 + x - 1));
@@ -963,10 +975,10 @@ static void jpeg_get_mcu(image_t *src, int x_offset, int y_offset, int dx, int d
 #include STM32_HAL_H
 #include "irq.h"
 
-#define FB_ALLOC_PADDING            ((__SCB_DCACHE_LINE_SIZE) * 4)
-#define OUTPUT_CHUNK_SIZE           (512) // The minimum output buffer size is 2x this - so 1KB.
-#define JPEG_INPUT_FIFO_BYTES       (32)
-#define JPEG_OUTPUT_FIFO_BYTES      (32)
+#define FB_ALLOC_PADDING          ((__SCB_DCACHE_LINE_SIZE) * 4)
+#define OUTPUT_CHUNK_SIZE         (512)   // The minimum output buffer size is 2x this - so 1KB.
+#define JPEG_INPUT_FIFO_BYTES     (32)
+#define JPEG_OUTPUT_FIFO_BYTES    (32)
 
 static JPEG_HandleTypeDef JPEG_Handle = {};
 static JPEG_ConfTypeDef JPEG_Config = {};
@@ -993,27 +1005,23 @@ static const uint8_t JPEG_APP0[] = {
     0xFF, 0xFE // COM
 };
 
-void JPEG_IRQHandler()
-{
+void JPEG_IRQHandler() {
     IRQ_ENTER(JPEG_IRQn);
     HAL_JPEG_IRQHandler(&JPEG_Handle);
     IRQ_EXIT(JPEG_IRQn);
 }
 
-void jpeg_mdma_irq_handler()
-{
+void jpeg_mdma_irq_handler() {
     HAL_MDMA_IRQHandler(&JPEG_MDMA_Handle_In);
     HAL_MDMA_IRQHandler(&JPEG_MDMA_Handle_Out);
 }
 
-static void jpeg_get_data_callback(JPEG_HandleTypeDef *hjpeg, uint32_t NbDecodedData)
-{
+static void jpeg_get_data_callback(JPEG_HandleTypeDef *hjpeg, uint32_t NbDecodedData) {
     HAL_JPEG_Pause(hjpeg, JPEG_PAUSE_RESUME_INPUT);
     JPEG_input_paused = true;
 }
 
-static void jpeg_data_ready_callback(JPEG_HandleTypeDef *hjpeg, uint8_t *pDataOut, uint32_t OutDataLength)
-{
+static void jpeg_data_ready_callback(JPEG_HandleTypeDef *hjpeg, uint8_t *pDataOut, uint32_t OutDataLength) {
     // We have received this much data.
     JPEG_out_data_length += OutDataLength;
 
@@ -1038,30 +1046,29 @@ static void jpeg_data_ready_callback(JPEG_HandleTypeDef *hjpeg, uint8_t *pDataOu
     }
 }
 
-bool jpeg_compress(image_t *src, image_t *dst, int quality, bool realloc)
-{
-#if (TIME_JPEG==1)
+bool jpeg_compress(image_t *src, image_t *dst, int quality, bool realloc) {
+#if (TIME_JPEG == 1)
     mp_uint_t start = mp_hal_ticks_ms();
 #endif
 
     int mcu_size = 0;
     JPEG_ConfTypeDef JPEG_Info;
-    JPEG_Info.ImageWidth    = src->w;
-    JPEG_Info.ImageHeight   = src->h;
-    JPEG_Info.ImageQuality  = quality;
+    JPEG_Info.ImageWidth = src->w;
+    JPEG_Info.ImageHeight = src->h;
+    JPEG_Info.ImageQuality = quality;
 
     switch (src->pixfmt) {
         case PIXFORMAT_BINARY:
         case PIXFORMAT_GRAYSCALE:
-            mcu_size                    = JPEG_444_GS_MCU_SIZE;
-            JPEG_Info.ColorSpace        = JPEG_GRAYSCALE_COLORSPACE;
+            mcu_size = JPEG_444_GS_MCU_SIZE;
+            JPEG_Info.ColorSpace = JPEG_GRAYSCALE_COLORSPACE;
             JPEG_Info.ChromaSubsampling = JPEG_444_SUBSAMPLING;
             break;
         case PIXFORMAT_RGB565:
         case PIXFORMAT_BAYER_ANY:
         case PIXFORMAT_YUV_ANY:
-            mcu_size                    = JPEG_444_YCBCR_MCU_SIZE;
-            JPEG_Info.ColorSpace        = JPEG_YCBCR_COLORSPACE;
+            mcu_size = JPEG_444_YCBCR_MCU_SIZE;
+            JPEG_Info.ColorSpace = JPEG_YCBCR_COLORSPACE;
             JPEG_Info.ChromaSubsampling = JPEG_444_SUBSAMPLING;
             break;
         default:
@@ -1215,15 +1222,14 @@ bool jpeg_compress(image_t *src, image_t *dst, int quality, bool realloc)
     // Clean trailing data after 0xFFD9 at the end of the jpeg byte stream.
     dst->size = jpeg_clean_trailing_bytes(dst->size, dst->data);
 
-#if (TIME_JPEG==1)
+    #if (TIME_JPEG == 1)
     printf("time: %u ms\n", mp_hal_ticks_ms() - start);
-#endif
+    #endif
 
     return false;
 }
 
-void imlib_jpeg_compress_init()
-{
+void imlib_jpeg_compress_init() {
     JPEG_Handle.Instance = JPEG;
     HAL_JPEG_Init(&JPEG_Handle);
     // Register JPEG callbacks.
@@ -1233,47 +1239,46 @@ void imlib_jpeg_compress_init()
     NVIC_SetPriority(JPEG_IRQn, IRQ_PRI_JPEG);
     HAL_NVIC_EnableIRQ(JPEG_IRQn);
 
-    JPEG_MDMA_Handle_In.Instance                        = MDMA_Channel7; // in has a lower pri than out
-    JPEG_MDMA_Handle_In.Init.Request                    = MDMA_REQUEST_JPEG_INFIFO_TH;
-    JPEG_MDMA_Handle_In.Init.TransferTriggerMode        = MDMA_BUFFER_TRANSFER;
-    JPEG_MDMA_Handle_In.Init.Priority                   = MDMA_PRIORITY_LOW;
-    JPEG_MDMA_Handle_In.Init.Endianness                 = MDMA_LITTLE_ENDIANNESS_PRESERVE;
-    JPEG_MDMA_Handle_In.Init.SourceInc                  = MDMA_SRC_INC_DOUBLEWORD;
-    JPEG_MDMA_Handle_In.Init.DestinationInc             = MDMA_DEST_INC_DISABLE;
-    JPEG_MDMA_Handle_In.Init.SourceDataSize             = MDMA_SRC_DATASIZE_DOUBLEWORD;
-    JPEG_MDMA_Handle_In.Init.DestDataSize               = MDMA_DEST_DATASIZE_WORD;
-    JPEG_MDMA_Handle_In.Init.DataAlignment              = MDMA_DATAALIGN_PACKENABLE;
-    JPEG_MDMA_Handle_In.Init.BufferTransferLength       = JPEG_INPUT_FIFO_BYTES;
-    JPEG_MDMA_Handle_In.Init.SourceBurst                = MDMA_SOURCE_BURST_4BEATS;
-    JPEG_MDMA_Handle_In.Init.DestBurst                  = MDMA_DEST_BURST_8BEATS;
-    JPEG_MDMA_Handle_In.Init.SourceBlockAddressOffset   = 0;
-    JPEG_MDMA_Handle_In.Init.DestBlockAddressOffset     = 0;
+    JPEG_MDMA_Handle_In.Instance = MDMA_Channel7;                        // in has a lower pri than out
+    JPEG_MDMA_Handle_In.Init.Request = MDMA_REQUEST_JPEG_INFIFO_TH;
+    JPEG_MDMA_Handle_In.Init.TransferTriggerMode = MDMA_BUFFER_TRANSFER;
+    JPEG_MDMA_Handle_In.Init.Priority = MDMA_PRIORITY_LOW;
+    JPEG_MDMA_Handle_In.Init.Endianness = MDMA_LITTLE_ENDIANNESS_PRESERVE;
+    JPEG_MDMA_Handle_In.Init.SourceInc = MDMA_SRC_INC_DOUBLEWORD;
+    JPEG_MDMA_Handle_In.Init.DestinationInc = MDMA_DEST_INC_DISABLE;
+    JPEG_MDMA_Handle_In.Init.SourceDataSize = MDMA_SRC_DATASIZE_DOUBLEWORD;
+    JPEG_MDMA_Handle_In.Init.DestDataSize = MDMA_DEST_DATASIZE_WORD;
+    JPEG_MDMA_Handle_In.Init.DataAlignment = MDMA_DATAALIGN_PACKENABLE;
+    JPEG_MDMA_Handle_In.Init.BufferTransferLength = JPEG_INPUT_FIFO_BYTES;
+    JPEG_MDMA_Handle_In.Init.SourceBurst = MDMA_SOURCE_BURST_4BEATS;
+    JPEG_MDMA_Handle_In.Init.DestBurst = MDMA_DEST_BURST_8BEATS;
+    JPEG_MDMA_Handle_In.Init.SourceBlockAddressOffset = 0;
+    JPEG_MDMA_Handle_In.Init.DestBlockAddressOffset = 0;
 
     HAL_MDMA_Init(&JPEG_MDMA_Handle_In);
     __HAL_LINKDMA(&JPEG_Handle, hdmain, JPEG_MDMA_Handle_In);
 
-    JPEG_MDMA_Handle_Out.Instance                       = MDMA_Channel6; // out has a higher pri than in
-    JPEG_MDMA_Handle_Out.Init.Request                   = MDMA_REQUEST_JPEG_OUTFIFO_TH;
-    JPEG_MDMA_Handle_Out.Init.TransferTriggerMode       = MDMA_BUFFER_TRANSFER;
-    JPEG_MDMA_Handle_Out.Init.Priority                  = MDMA_PRIORITY_LOW;
-    JPEG_MDMA_Handle_Out.Init.Endianness                = MDMA_LITTLE_ENDIANNESS_PRESERVE;
-    JPEG_MDMA_Handle_Out.Init.SourceInc                 = MDMA_SRC_INC_DISABLE;
-    JPEG_MDMA_Handle_Out.Init.DestinationInc            = MDMA_DEST_INC_DOUBLEWORD;
-    JPEG_MDMA_Handle_Out.Init.SourceDataSize            = MDMA_SRC_DATASIZE_WORD;
-    JPEG_MDMA_Handle_Out.Init.DestDataSize              = MDMA_DEST_DATASIZE_DOUBLEWORD;
-    JPEG_MDMA_Handle_Out.Init.DataAlignment             = MDMA_DATAALIGN_PACKENABLE;
-    JPEG_MDMA_Handle_Out.Init.BufferTransferLength      = JPEG_OUTPUT_FIFO_BYTES;
-    JPEG_MDMA_Handle_Out.Init.SourceBurst               = MDMA_SOURCE_BURST_8BEATS;
-    JPEG_MDMA_Handle_Out.Init.DestBurst                 = MDMA_DEST_BURST_4BEATS;
-    JPEG_MDMA_Handle_Out.Init.SourceBlockAddressOffset  = 0;
-    JPEG_MDMA_Handle_Out.Init.DestBlockAddressOffset    = 0;
+    JPEG_MDMA_Handle_Out.Instance = MDMA_Channel6;                       // out has a higher pri than in
+    JPEG_MDMA_Handle_Out.Init.Request = MDMA_REQUEST_JPEG_OUTFIFO_TH;
+    JPEG_MDMA_Handle_Out.Init.TransferTriggerMode = MDMA_BUFFER_TRANSFER;
+    JPEG_MDMA_Handle_Out.Init.Priority = MDMA_PRIORITY_LOW;
+    JPEG_MDMA_Handle_Out.Init.Endianness = MDMA_LITTLE_ENDIANNESS_PRESERVE;
+    JPEG_MDMA_Handle_Out.Init.SourceInc = MDMA_SRC_INC_DISABLE;
+    JPEG_MDMA_Handle_Out.Init.DestinationInc = MDMA_DEST_INC_DOUBLEWORD;
+    JPEG_MDMA_Handle_Out.Init.SourceDataSize = MDMA_SRC_DATASIZE_WORD;
+    JPEG_MDMA_Handle_Out.Init.DestDataSize = MDMA_DEST_DATASIZE_DOUBLEWORD;
+    JPEG_MDMA_Handle_Out.Init.DataAlignment = MDMA_DATAALIGN_PACKENABLE;
+    JPEG_MDMA_Handle_Out.Init.BufferTransferLength = JPEG_OUTPUT_FIFO_BYTES;
+    JPEG_MDMA_Handle_Out.Init.SourceBurst = MDMA_SOURCE_BURST_8BEATS;
+    JPEG_MDMA_Handle_Out.Init.DestBurst = MDMA_DEST_BURST_4BEATS;
+    JPEG_MDMA_Handle_Out.Init.SourceBlockAddressOffset = 0;
+    JPEG_MDMA_Handle_Out.Init.DestBlockAddressOffset = 0;
 
     HAL_MDMA_Init(&JPEG_MDMA_Handle_Out);
     __HAL_LINKDMA(&JPEG_Handle, hdmaout, JPEG_MDMA_Handle_Out);
 }
 
-void imlib_jpeg_compress_deinit()
-{
+void imlib_jpeg_compress_deinit() {
     memset(&JPEG_Config, 0, sizeof(JPEG_ConfTypeDef));
     HAL_JPEG_Abort(&JPEG_Handle);
     HAL_MDMA_DeInit(&JPEG_MDMA_Handle_Out);
@@ -1285,13 +1290,13 @@ void imlib_jpeg_compress_deinit()
 #else
 
 // Software JPEG implementation.
-#define FIX_0_382683433  ((int32_t)   98)
-#define FIX_0_541196100  ((int32_t)  139)
-#define FIX_0_707106781  ((int32_t)  181)
-#define FIX_1_306562965  ((int32_t)  334)
+#define FIX_0_382683433    ((int32_t) 98)
+#define FIX_0_541196100    ((int32_t) 139)
+#define FIX_0_707106781    ((int32_t) 181)
+#define FIX_1_306562965    ((int32_t) 334)
 
-#define DESCALE(x, y)   (x>>y)
-#define MULTIPLY(x, y)  DESCALE((x) * (y), 8)
+#define DESCALE(x, y)      (x >> y)
+#define MULTIPLY(x, y)     DESCALE((x) * (y), 8)
 
 typedef struct {
     int idx;
@@ -1329,14 +1334,14 @@ static const uint8_t YQT[] = {
 };
 
 static const uint8_t UVQT[] = {
-    17,18,24,47,99,99,99,99,
-    18,21,26,66,99,99,99,99,
-    24,26,56,99,99,99,99,99,
-    47,66,99,99,99,99,99,99,
-    99,99,99,99,99,99,99,99,
-    99,99,99,99,99,99,99,99,
-    99,99,99,99,99,99,99,99,
-    99,99,99,99,99,99,99,99
+    17, 18, 24, 47, 99, 99, 99, 99,
+    18, 21, 26, 66, 99, 99, 99, 99,
+    24, 26, 56, 99, 99, 99, 99, 99,
+    47, 66, 99, 99, 99, 99, 99, 99,
+    99, 99, 99, 99, 99, 99, 99, 99,
+    99, 99, 99, 99, 99, 99, 99, 99,
+    99, 99, 99, 99, 99, 99, 99, 99,
+    99, 99, 99, 99, 99, 99, 99, 99
 };
 
 static const float aasf[] = {
@@ -1345,111 +1350,209 @@ static const float aasf[] = {
 };
 
 
-static const uint8_t std_dc_luminance_nrcodes[] = {0,0,1,5,1,1,1,1,1,1,0,0,0,0,0,0,0};
-static const uint8_t std_dc_luminance_values[] = {0,1,2,3,4,5,6,7,8,9,10,11};
-static const uint8_t std_ac_luminance_nrcodes[] = {0,0,2,1,3,3,2,4,3,5,5,4,4,0,0,1,0x7d};
+static const uint8_t std_dc_luminance_nrcodes[] = {0, 0, 1, 5, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0};
+static const uint8_t std_dc_luminance_values[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11};
+static const uint8_t std_ac_luminance_nrcodes[] = {0, 0, 2, 1, 3, 3, 2, 4, 3, 5, 5, 4, 4, 0, 0, 1, 0x7d};
 static const uint8_t std_ac_luminance_values[] = {
-    0x01,0x02,0x03,0x00,0x04,0x11,0x05,0x12,0x21,0x31,0x41,0x06,0x13,0x51,0x61,0x07,0x22,0x71,0x14,0x32,0x81,0x91,0xa1,0x08,
-    0x23,0x42,0xb1,0xc1,0x15,0x52,0xd1,0xf0,0x24,0x33,0x62,0x72,0x82,0x09,0x0a,0x16,0x17,0x18,0x19,0x1a,0x25,0x26,0x27,0x28,
-    0x29,0x2a,0x34,0x35,0x36,0x37,0x38,0x39,0x3a,0x43,0x44,0x45,0x46,0x47,0x48,0x49,0x4a,0x53,0x54,0x55,0x56,0x57,0x58,0x59,
-    0x5a,0x63,0x64,0x65,0x66,0x67,0x68,0x69,0x6a,0x73,0x74,0x75,0x76,0x77,0x78,0x79,0x7a,0x83,0x84,0x85,0x86,0x87,0x88,0x89,
-    0x8a,0x92,0x93,0x94,0x95,0x96,0x97,0x98,0x99,0x9a,0xa2,0xa3,0xa4,0xa5,0xa6,0xa7,0xa8,0xa9,0xaa,0xb2,0xb3,0xb4,0xb5,0xb6,
-    0xb7,0xb8,0xb9,0xba,0xc2,0xc3,0xc4,0xc5,0xc6,0xc7,0xc8,0xc9,0xca,0xd2,0xd3,0xd4,0xd5,0xd6,0xd7,0xd8,0xd9,0xda,0xe1,0xe2,
-    0xe3,0xe4,0xe5,0xe6,0xe7,0xe8,0xe9,0xea,0xf1,0xf2,0xf3,0xf4,0xf5,0xf6,0xf7,0xf8,0xf9,0xfa
+    0x01, 0x02, 0x03, 0x00, 0x04, 0x11, 0x05, 0x12, 0x21,
+    0x31, 0x41, 0x06, 0x13, 0x51, 0x61, 0x07, 0x22, 0x71,
+    0x14, 0x32, 0x81, 0x91, 0xa1, 0x08, 0x23, 0x42, 0xb1,
+    0xc1, 0x15, 0x52, 0xd1, 0xf0, 0x24, 0x33, 0x62, 0x72,
+    0x82, 0x09, 0x0a, 0x16, 0x17, 0x18, 0x19, 0x1a, 0x25,
+    0x26, 0x27, 0x28, 0x29, 0x2a, 0x34, 0x35, 0x36, 0x37,
+    0x38, 0x39, 0x3a, 0x43, 0x44, 0x45, 0x46, 0x47, 0x48,
+    0x49, 0x4a, 0x53, 0x54, 0x55, 0x56, 0x57, 0x58, 0x59,
+    0x5a, 0x63, 0x64, 0x65, 0x66, 0x67, 0x68, 0x69, 0x6a,
+    0x73, 0x74, 0x75, 0x76, 0x77, 0x78, 0x79, 0x7a, 0x83,
+    0x84, 0x85, 0x86, 0x87, 0x88, 0x89, 0x8a, 0x92, 0x93,
+    0x94, 0x95, 0x96, 0x97, 0x98, 0x99, 0x9a, 0xa2, 0xa3,
+    0xa4, 0xa5, 0xa6, 0xa7, 0xa8, 0xa9, 0xaa, 0xb2, 0xb3,
+    0xb4, 0xb5, 0xb6, 0xb7, 0xb8, 0xb9, 0xba, 0xc2, 0xc3,
+    0xc4, 0xc5, 0xc6, 0xc7, 0xc8, 0xc9, 0xca, 0xd2, 0xd3,
+    0xd4, 0xd5, 0xd6, 0xd7, 0xd8, 0xd9, 0xda, 0xe1, 0xe2,
+    0xe3, 0xe4, 0xe5, 0xe6, 0xe7, 0xe8, 0xe9, 0xea, 0xf1,
+    0xf2, 0xf3, 0xf4, 0xf5, 0xf6, 0xf7, 0xf8, 0xf9, 0xfa
 };
 
-static const uint8_t std_dc_chrominance_nrcodes[] = {0,0,3,1,1,1,1,1,1,1,1,1,0,0,0,0,0};
-static const uint8_t std_dc_chrominance_values[] = {0,1,2,3,4,5,6,7,8,9,10,11};
-static const uint8_t std_ac_chrominance_nrcodes[] = {0,0,2,1,2,4,4,3,4,7,5,4,4,0,1,2,0x77};
+static const uint8_t std_dc_chrominance_nrcodes[] = {0, 0, 3, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0};
+static const uint8_t std_dc_chrominance_values[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11};
+static const uint8_t std_ac_chrominance_nrcodes[] = {0, 0, 2, 1, 2, 4, 4, 3, 4, 7, 5, 4, 4, 0, 1, 2, 0x77};
 static const uint8_t std_ac_chrominance_values[] = {
-    0x00,0x01,0x02,0x03,0x11,0x04,0x05,0x21,0x31,0x06,0x12,0x41,0x51,0x07,0x61,0x71,0x13,0x22,0x32,0x81,0x08,0x14,0x42,0x91,
-    0xa1,0xb1,0xc1,0x09,0x23,0x33,0x52,0xf0,0x15,0x62,0x72,0xd1,0x0a,0x16,0x24,0x34,0xe1,0x25,0xf1,0x17,0x18,0x19,0x1a,0x26,
-    0x27,0x28,0x29,0x2a,0x35,0x36,0x37,0x38,0x39,0x3a,0x43,0x44,0x45,0x46,0x47,0x48,0x49,0x4a,0x53,0x54,0x55,0x56,0x57,0x58,
-    0x59,0x5a,0x63,0x64,0x65,0x66,0x67,0x68,0x69,0x6a,0x73,0x74,0x75,0x76,0x77,0x78,0x79,0x7a,0x82,0x83,0x84,0x85,0x86,0x87,
-    0x88,0x89,0x8a,0x92,0x93,0x94,0x95,0x96,0x97,0x98,0x99,0x9a,0xa2,0xa3,0xa4,0xa5,0xa6,0xa7,0xa8,0xa9,0xaa,0xb2,0xb3,0xb4,
-    0xb5,0xb6,0xb7,0xb8,0xb9,0xba,0xc2,0xc3,0xc4,0xc5,0xc6,0xc7,0xc8,0xc9,0xca,0xd2,0xd3,0xd4,0xd5,0xd6,0xd7,0xd8,0xd9,0xda,
-    0xe2,0xe3,0xe4,0xe5,0xe6,0xe7,0xe8,0xe9,0xea,0xf2,0xf3,0xf4,0xf5,0xf6,0xf7,0xf8,0xf9,0xfa
+    0x00, 0x01, 0x02, 0x03, 0x11, 0x04, 0x05, 0x21, 0x31,
+    0x06, 0x12, 0x41, 0x51, 0x07, 0x61, 0x71, 0x13, 0x22,
+    0x32, 0x81, 0x08, 0x14, 0x42, 0x91, 0xa1, 0xb1, 0xc1,
+    0x09, 0x23, 0x33, 0x52, 0xf0, 0x15, 0x62, 0x72, 0xd1,
+    0x0a, 0x16, 0x24, 0x34, 0xe1, 0x25, 0xf1, 0x17, 0x18,
+    0x19, 0x1a, 0x26, 0x27, 0x28, 0x29, 0x2a, 0x35, 0x36,
+    0x37, 0x38, 0x39, 0x3a, 0x43, 0x44, 0x45, 0x46, 0x47,
+    0x48, 0x49, 0x4a, 0x53, 0x54, 0x55, 0x56, 0x57, 0x58,
+    0x59, 0x5a, 0x63, 0x64, 0x65, 0x66, 0x67, 0x68, 0x69,
+    0x6a, 0x73, 0x74, 0x75, 0x76, 0x77, 0x78, 0x79, 0x7a,
+    0x82, 0x83, 0x84, 0x85, 0x86, 0x87, 0x88, 0x89, 0x8a,
+    0x92, 0x93, 0x94, 0x95, 0x96, 0x97, 0x98, 0x99, 0x9a,
+    0xa2, 0xa3, 0xa4, 0xa5, 0xa6, 0xa7, 0xa8, 0xa9, 0xaa,
+    0xb2, 0xb3, 0xb4, 0xb5, 0xb6, 0xb7, 0xb8, 0xb9, 0xba,
+    0xc2, 0xc3, 0xc4, 0xc5, 0xc6, 0xc7, 0xc8, 0xc9, 0xca,
+    0xd2, 0xd3, 0xd4, 0xd5, 0xd6, 0xd7, 0xd8, 0xd9, 0xda,
+    0xe2, 0xe3, 0xe4, 0xe5, 0xe6, 0xe7, 0xe8, 0xe9, 0xea,
+    0xf2, 0xf3, 0xf4, 0xf5, 0xf6, 0xf7, 0xf8, 0xf9, 0xfa
 };
 
 // Huffman tables
-static const uint16_t YDC_HT[12][2] = { {0,2},{2,3},{3,3},{4,3},{5,3},{6,3},{14,4},{30,5},{62,6},{126,7},{254,8},{510,9}};
-static const uint16_t UVDC_HT[12][2] = { {0,2},{1,2},{2,2},{6,3},{14,4},{30,5},{62,6},{126,7},{254,8},{510,9},{1022,10},{2046,11}};
+static const uint16_t YDC_HT[12][2] = {
+    {0, 2}, {2, 3}, {3, 3}, {4, 3},
+    {5, 3}, {6, 3}, {14, 4}, {30, 5},
+    {62, 6}, {126, 7}, {254, 8}, {510, 9},
+};
+
+static const uint16_t UVDC_HT[12][2] = {
+    {0, 2}, {1, 2}, {2, 2}, {6, 3},
+    {14, 4}, {30, 5}, {62, 6}, {126, 7},
+    {254, 8}, {510, 9}, {1022, 10}, {2046, 11},
+};
+
 static const uint16_t YAC_HT[256][2] = {
-    {0x000A, 0x0004},{0x0000, 0x0002},{0x0001, 0x0002},{0x0004, 0x0003},{0x000B, 0x0004},{0x001A, 0x0005},{0x0078, 0x0007},{0x00F8, 0x0008},
-    {0x03F6, 0x000A},{0xFF82, 0x0010},{0xFF83, 0x0010},{0x0000, 0x0000},{0x0000, 0x0000},{0x0000, 0x0000},{0x0000, 0x0000},{0x0000, 0x0000},
-    {0x0000, 0x0000},{0x000C, 0x0004},{0x001B, 0x0005},{0x0079, 0x0007},{0x01F6, 0x0009},{0x07F6, 0x000B},{0xFF84, 0x0010},{0xFF85, 0x0010},
-    {0xFF86, 0x0010},{0xFF87, 0x0010},{0xFF88, 0x0010},{0x0000, 0x0000},{0x0000, 0x0000},{0x0000, 0x0000},{0x0000, 0x0000},{0x0000, 0x0000},
-    {0x0000, 0x0000},{0x001C, 0x0005},{0x00F9, 0x0008},{0x03F7, 0x000A},{0x0FF4, 0x000C},{0xFF89, 0x0010},{0xFF8A, 0x0010},{0xFF8B, 0x0010},
-    {0xFF8C, 0x0010},{0xFF8D, 0x0010},{0xFF8E, 0x0010},{0x0000, 0x0000},{0x0000, 0x0000},{0x0000, 0x0000},{0x0000, 0x0000},{0x0000, 0x0000},
-    {0x0000, 0x0000},{0x003A, 0x0006},{0x01F7, 0x0009},{0x0FF5, 0x000C},{0xFF8F, 0x0010},{0xFF90, 0x0010},{0xFF91, 0x0010},{0xFF92, 0x0010},
-    {0xFF93, 0x0010},{0xFF94, 0x0010},{0xFF95, 0x0010},{0x0000, 0x0000},{0x0000, 0x0000},{0x0000, 0x0000},{0x0000, 0x0000},{0x0000, 0x0000},
-    {0x0000, 0x0000},{0x003B, 0x0006},{0x03F8, 0x000A},{0xFF96, 0x0010},{0xFF97, 0x0010},{0xFF98, 0x0010},{0xFF99, 0x0010},{0xFF9A, 0x0010},
-    {0xFF9B, 0x0010},{0xFF9C, 0x0010},{0xFF9D, 0x0010},{0x0000, 0x0000},{0x0000, 0x0000},{0x0000, 0x0000},{0x0000, 0x0000},{0x0000, 0x0000},
-    {0x0000, 0x0000},{0x007A, 0x0007},{0x07F7, 0x000B},{0xFF9E, 0x0010},{0xFF9F, 0x0010},{0xFFA0, 0x0010},{0xFFA1, 0x0010},{0xFFA2, 0x0010},
-    {0xFFA3, 0x0010},{0xFFA4, 0x0010},{0xFFA5, 0x0010},{0x0000, 0x0000},{0x0000, 0x0000},{0x0000, 0x0000},{0x0000, 0x0000},{0x0000, 0x0000},
-    {0x0000, 0x0000},{0x007B, 0x0007},{0x0FF6, 0x000C},{0xFFA6, 0x0010},{0xFFA7, 0x0010},{0xFFA8, 0x0010},{0xFFA9, 0x0010},{0xFFAA, 0x0010},
-    {0xFFAB, 0x0010},{0xFFAC, 0x0010},{0xFFAD, 0x0010},{0x0000, 0x0000},{0x0000, 0x0000},{0x0000, 0x0000},{0x0000, 0x0000},{0x0000, 0x0000},
-    {0x0000, 0x0000},{0x00FA, 0x0008},{0x0FF7, 0x000C},{0xFFAE, 0x0010},{0xFFAF, 0x0010},{0xFFB0, 0x0010},{0xFFB1, 0x0010},{0xFFB2, 0x0010},
-    {0xFFB3, 0x0010},{0xFFB4, 0x0010},{0xFFB5, 0x0010},{0x0000, 0x0000},{0x0000, 0x0000},{0x0000, 0x0000},{0x0000, 0x0000},{0x0000, 0x0000},
-    {0x0000, 0x0000},{0x01F8, 0x0009},{0x7FC0, 0x000F},{0xFFB6, 0x0010},{0xFFB7, 0x0010},{0xFFB8, 0x0010},{0xFFB9, 0x0010},{0xFFBA, 0x0010},
-    {0xFFBB, 0x0010},{0xFFBC, 0x0010},{0xFFBD, 0x0010},{0x0000, 0x0000},{0x0000, 0x0000},{0x0000, 0x0000},{0x0000, 0x0000},{0x0000, 0x0000},
-    {0x0000, 0x0000},{0x01F9, 0x0009},{0xFFBE, 0x0010},{0xFFBF, 0x0010},{0xFFC0, 0x0010},{0xFFC1, 0x0010},{0xFFC2, 0x0010},{0xFFC3, 0x0010},
-    {0xFFC4, 0x0010},{0xFFC5, 0x0010},{0xFFC6, 0x0010},{0x0000, 0x0000},{0x0000, 0x0000},{0x0000, 0x0000},{0x0000, 0x0000},{0x0000, 0x0000},
-    {0x0000, 0x0000},{0x01FA, 0x0009},{0xFFC7, 0x0010},{0xFFC8, 0x0010},{0xFFC9, 0x0010},{0xFFCA, 0x0010},{0xFFCB, 0x0010},{0xFFCC, 0x0010},
-    {0xFFCD, 0x0010},{0xFFCE, 0x0010},{0xFFCF, 0x0010},{0x0000, 0x0000},{0x0000, 0x0000},{0x0000, 0x0000},{0x0000, 0x0000},{0x0000, 0x0000},
-    {0x0000, 0x0000},{0x03F9, 0x000A},{0xFFD0, 0x0010},{0xFFD1, 0x0010},{0xFFD2, 0x0010},{0xFFD3, 0x0010},{0xFFD4, 0x0010},{0xFFD5, 0x0010},
-    {0xFFD6, 0x0010},{0xFFD7, 0x0010},{0xFFD8, 0x0010},{0x0000, 0x0000},{0x0000, 0x0000},{0x0000, 0x0000},{0x0000, 0x0000},{0x0000, 0x0000},
-    {0x0000, 0x0000},{0x03FA, 0x000A},{0xFFD9, 0x0010},{0xFFDA, 0x0010},{0xFFDB, 0x0010},{0xFFDC, 0x0010},{0xFFDD, 0x0010},{0xFFDE, 0x0010},
-    {0xFFDF, 0x0010},{0xFFE0, 0x0010},{0xFFE1, 0x0010},{0x0000, 0x0000},{0x0000, 0x0000},{0x0000, 0x0000},{0x0000, 0x0000},{0x0000, 0x0000},
-    {0x0000, 0x0000},{0x07F8, 0x000B},{0xFFE2, 0x0010},{0xFFE3, 0x0010},{0xFFE4, 0x0010},{0xFFE5, 0x0010},{0xFFE6, 0x0010},{0xFFE7, 0x0010},
-    {0xFFE8, 0x0010},{0xFFE9, 0x0010},{0xFFEA, 0x0010},{0x0000, 0x0000},{0x0000, 0x0000},{0x0000, 0x0000},{0x0000, 0x0000},{0x0000, 0x0000},
-    {0x0000, 0x0000},{0xFFEB, 0x0010},{0xFFEC, 0x0010},{0xFFED, 0x0010},{0xFFEE, 0x0010},{0xFFEF, 0x0010},{0xFFF0, 0x0010},{0xFFF1, 0x0010},
-    {0xFFF2, 0x0010},{0xFFF3, 0x0010},{0xFFF4, 0x0010},{0x0000, 0x0000},{0x0000, 0x0000},{0x0000, 0x0000},{0x0000, 0x0000},{0x0000, 0x0000},
-    {0x07F9, 0x000B},{0xFFF5, 0x0010},{0xFFF6, 0x0010},{0xFFF7, 0x0010},{0xFFF8, 0x0010},{0xFFF9, 0x0010},{0xFFFA, 0x0010},{0xFFFB, 0x0010},
-    {0xFFFC, 0x0010},{0xFFFD, 0x0010},{0xFFFE, 0x0010},{0x0000, 0x0000},{0x0000, 0x0000},{0x0000, 0x0000},{0x0000, 0x0000},{0x0000, 0x0000},
+    {0x000A, 0x0004}, {0x0000, 0x0002}, {0x0001, 0x0002}, {0x0004, 0x0003},
+    {0x000B, 0x0004}, {0x001A, 0x0005}, {0x0078, 0x0007}, {0x00F8, 0x0008},
+    {0x03F6, 0x000A}, {0xFF82, 0x0010}, {0xFF83, 0x0010}, {0x0000, 0x0000},
+    {0x0000, 0x0000}, {0x0000, 0x0000}, {0x0000, 0x0000}, {0x0000, 0x0000},
+    {0x0000, 0x0000}, {0x000C, 0x0004}, {0x001B, 0x0005}, {0x0079, 0x0007},
+    {0x01F6, 0x0009}, {0x07F6, 0x000B}, {0xFF84, 0x0010}, {0xFF85, 0x0010},
+    {0xFF86, 0x0010}, {0xFF87, 0x0010}, {0xFF88, 0x0010}, {0x0000, 0x0000},
+    {0x0000, 0x0000}, {0x0000, 0x0000}, {0x0000, 0x0000}, {0x0000, 0x0000},
+    {0x0000, 0x0000}, {0x001C, 0x0005}, {0x00F9, 0x0008}, {0x03F7, 0x000A},
+    {0x0FF4, 0x000C}, {0xFF89, 0x0010}, {0xFF8A, 0x0010}, {0xFF8B, 0x0010},
+    {0xFF8C, 0x0010}, {0xFF8D, 0x0010}, {0xFF8E, 0x0010}, {0x0000, 0x0000},
+    {0x0000, 0x0000}, {0x0000, 0x0000}, {0x0000, 0x0000}, {0x0000, 0x0000},
+    {0x0000, 0x0000}, {0x003A, 0x0006}, {0x01F7, 0x0009}, {0x0FF5, 0x000C},
+    {0xFF8F, 0x0010}, {0xFF90, 0x0010}, {0xFF91, 0x0010}, {0xFF92, 0x0010},
+    {0xFF93, 0x0010}, {0xFF94, 0x0010}, {0xFF95, 0x0010}, {0x0000, 0x0000},
+    {0x0000, 0x0000}, {0x0000, 0x0000}, {0x0000, 0x0000}, {0x0000, 0x0000},
+    {0x0000, 0x0000}, {0x003B, 0x0006}, {0x03F8, 0x000A}, {0xFF96, 0x0010},
+    {0xFF97, 0x0010}, {0xFF98, 0x0010}, {0xFF99, 0x0010}, {0xFF9A, 0x0010},
+    {0xFF9B, 0x0010}, {0xFF9C, 0x0010}, {0xFF9D, 0x0010}, {0x0000, 0x0000},
+    {0x0000, 0x0000}, {0x0000, 0x0000}, {0x0000, 0x0000}, {0x0000, 0x0000},
+    {0x0000, 0x0000}, {0x007A, 0x0007}, {0x07F7, 0x000B}, {0xFF9E, 0x0010},
+    {0xFF9F, 0x0010}, {0xFFA0, 0x0010}, {0xFFA1, 0x0010}, {0xFFA2, 0x0010},
+    {0xFFA3, 0x0010}, {0xFFA4, 0x0010}, {0xFFA5, 0x0010}, {0x0000, 0x0000},
+    {0x0000, 0x0000}, {0x0000, 0x0000}, {0x0000, 0x0000}, {0x0000, 0x0000},
+    {0x0000, 0x0000}, {0x007B, 0x0007}, {0x0FF6, 0x000C}, {0xFFA6, 0x0010},
+    {0xFFA7, 0x0010}, {0xFFA8, 0x0010}, {0xFFA9, 0x0010}, {0xFFAA, 0x0010},
+    {0xFFAB, 0x0010}, {0xFFAC, 0x0010}, {0xFFAD, 0x0010}, {0x0000, 0x0000},
+    {0x0000, 0x0000}, {0x0000, 0x0000}, {0x0000, 0x0000}, {0x0000, 0x0000},
+    {0x0000, 0x0000}, {0x00FA, 0x0008}, {0x0FF7, 0x000C}, {0xFFAE, 0x0010},
+    {0xFFAF, 0x0010}, {0xFFB0, 0x0010}, {0xFFB1, 0x0010}, {0xFFB2, 0x0010},
+    {0xFFB3, 0x0010}, {0xFFB4, 0x0010}, {0xFFB5, 0x0010}, {0x0000, 0x0000},
+    {0x0000, 0x0000}, {0x0000, 0x0000}, {0x0000, 0x0000}, {0x0000, 0x0000},
+    {0x0000, 0x0000}, {0x01F8, 0x0009}, {0x7FC0, 0x000F}, {0xFFB6, 0x0010},
+    {0xFFB7, 0x0010}, {0xFFB8, 0x0010}, {0xFFB9, 0x0010}, {0xFFBA, 0x0010},
+    {0xFFBB, 0x0010}, {0xFFBC, 0x0010}, {0xFFBD, 0x0010}, {0x0000, 0x0000},
+    {0x0000, 0x0000}, {0x0000, 0x0000}, {0x0000, 0x0000}, {0x0000, 0x0000},
+    {0x0000, 0x0000}, {0x01F9, 0x0009}, {0xFFBE, 0x0010}, {0xFFBF, 0x0010},
+    {0xFFC0, 0x0010}, {0xFFC1, 0x0010}, {0xFFC2, 0x0010}, {0xFFC3, 0x0010},
+    {0xFFC4, 0x0010}, {0xFFC5, 0x0010}, {0xFFC6, 0x0010}, {0x0000, 0x0000},
+    {0x0000, 0x0000}, {0x0000, 0x0000}, {0x0000, 0x0000}, {0x0000, 0x0000},
+    {0x0000, 0x0000}, {0x01FA, 0x0009}, {0xFFC7, 0x0010}, {0xFFC8, 0x0010},
+    {0xFFC9, 0x0010}, {0xFFCA, 0x0010}, {0xFFCB, 0x0010}, {0xFFCC, 0x0010},
+    {0xFFCD, 0x0010}, {0xFFCE, 0x0010}, {0xFFCF, 0x0010}, {0x0000, 0x0000},
+    {0x0000, 0x0000}, {0x0000, 0x0000}, {0x0000, 0x0000}, {0x0000, 0x0000},
+    {0x0000, 0x0000}, {0x03F9, 0x000A}, {0xFFD0, 0x0010}, {0xFFD1, 0x0010},
+    {0xFFD2, 0x0010}, {0xFFD3, 0x0010}, {0xFFD4, 0x0010}, {0xFFD5, 0x0010},
+    {0xFFD6, 0x0010}, {0xFFD7, 0x0010}, {0xFFD8, 0x0010}, {0x0000, 0x0000},
+    {0x0000, 0x0000}, {0x0000, 0x0000}, {0x0000, 0x0000}, {0x0000, 0x0000},
+    {0x0000, 0x0000}, {0x03FA, 0x000A}, {0xFFD9, 0x0010}, {0xFFDA, 0x0010},
+    {0xFFDB, 0x0010}, {0xFFDC, 0x0010}, {0xFFDD, 0x0010}, {0xFFDE, 0x0010},
+    {0xFFDF, 0x0010}, {0xFFE0, 0x0010}, {0xFFE1, 0x0010}, {0x0000, 0x0000},
+    {0x0000, 0x0000}, {0x0000, 0x0000}, {0x0000, 0x0000}, {0x0000, 0x0000},
+    {0x0000, 0x0000}, {0x07F8, 0x000B}, {0xFFE2, 0x0010}, {0xFFE3, 0x0010},
+    {0xFFE4, 0x0010}, {0xFFE5, 0x0010}, {0xFFE6, 0x0010}, {0xFFE7, 0x0010},
+    {0xFFE8, 0x0010}, {0xFFE9, 0x0010}, {0xFFEA, 0x0010}, {0x0000, 0x0000},
+    {0x0000, 0x0000}, {0x0000, 0x0000}, {0x0000, 0x0000}, {0x0000, 0x0000},
+    {0x0000, 0x0000}, {0xFFEB, 0x0010}, {0xFFEC, 0x0010}, {0xFFED, 0x0010},
+    {0xFFEE, 0x0010}, {0xFFEF, 0x0010}, {0xFFF0, 0x0010}, {0xFFF1, 0x0010},
+    {0xFFF2, 0x0010}, {0xFFF3, 0x0010}, {0xFFF4, 0x0010}, {0x0000, 0x0000},
+    {0x0000, 0x0000}, {0x0000, 0x0000}, {0x0000, 0x0000}, {0x0000, 0x0000},
+    {0x07F9, 0x000B}, {0xFFF5, 0x0010}, {0xFFF6, 0x0010}, {0xFFF7, 0x0010},
+    {0xFFF8, 0x0010}, {0xFFF9, 0x0010}, {0xFFFA, 0x0010}, {0xFFFB, 0x0010},
+    {0xFFFC, 0x0010}, {0xFFFD, 0x0010}, {0xFFFE, 0x0010}, {0x0000, 0x0000},
+    {0x0000, 0x0000}, {0x0000, 0x0000}, {0x0000, 0x0000}, {0x0000, 0x0000},
 };
 
 static const uint16_t UVAC_HT[256][2] = {
-    {0x0000, 0x0002},{0x0001, 0x0002},{0x0004, 0x0003},{0x000A, 0x0004},{0x0018, 0x0005},{0x0019, 0x0005},{0x0038, 0x0006},{0x0078, 0x0007},
-    {0x01F4, 0x0009},{0x03F6, 0x000A},{0x0FF4, 0x000C},{0x0000, 0x0000},{0x0000, 0x0000},{0x0000, 0x0000},{0x0000, 0x0000},{0x0000, 0x0000},
-    {0x0000, 0x0000},{0x000B, 0x0004},{0x0039, 0x0006},{0x00F6, 0x0008},{0x01F5, 0x0009},{0x07F6, 0x000B},{0x0FF5, 0x000C},{0xFF88, 0x0010},
-    {0xFF89, 0x0010},{0xFF8A, 0x0010},{0xFF8B, 0x0010},{0x0000, 0x0000},{0x0000, 0x0000},{0x0000, 0x0000},{0x0000, 0x0000},{0x0000, 0x0000},
-    {0x0000, 0x0000},{0x001A, 0x0005},{0x00F7, 0x0008},{0x03F7, 0x000A},{0x0FF6, 0x000C},{0x7FC2, 0x000F},{0xFF8C, 0x0010},{0xFF8D, 0x0010},
-    {0xFF8E, 0x0010},{0xFF8F, 0x0010},{0xFF90, 0x0010},{0x0000, 0x0000},{0x0000, 0x0000},{0x0000, 0x0000},{0x0000, 0x0000},{0x0000, 0x0000},
-    {0x0000, 0x0000},{0x001B, 0x0005},{0x00F8, 0x0008},{0x03F8, 0x000A},{0x0FF7, 0x000C},{0xFF91, 0x0010},{0xFF92, 0x0010},{0xFF93, 0x0010},
-    {0xFF94, 0x0010},{0xFF95, 0x0010},{0xFF96, 0x0010},{0x0000, 0x0000},{0x0000, 0x0000},{0x0000, 0x0000},{0x0000, 0x0000},{0x0000, 0x0000},
-    {0x0000, 0x0000},{0x003A, 0x0006},{0x01F6, 0x0009},{0xFF97, 0x0010},{0xFF98, 0x0010},{0xFF99, 0x0010},{0xFF9A, 0x0010},{0xFF9B, 0x0010},
-    {0xFF9C, 0x0010},{0xFF9D, 0x0010},{0xFF9E, 0x0010},{0x0000, 0x0000},{0x0000, 0x0000},{0x0000, 0x0000},{0x0000, 0x0000},{0x0000, 0x0000},
-    {0x0000, 0x0000},{0x003B, 0x0006},{0x03F9, 0x000A},{0xFF9F, 0x0010},{0xFFA0, 0x0010},{0xFFA1, 0x0010},{0xFFA2, 0x0010},{0xFFA3, 0x0010},
-    {0xFFA4, 0x0010},{0xFFA5, 0x0010},{0xFFA6, 0x0010},{0x0000, 0x0000},{0x0000, 0x0000},{0x0000, 0x0000},{0x0000, 0x0000},{0x0000, 0x0000},
-    {0x0000, 0x0000},{0x0079, 0x0007},{0x07F7, 0x000B},{0xFFA7, 0x0010},{0xFFA8, 0x0010},{0xFFA9, 0x0010},{0xFFAA, 0x0010},{0xFFAB, 0x0010},
-    {0xFFAC, 0x0010},{0xFFAD, 0x0010},{0xFFAE, 0x0010},{0x0000, 0x0000},{0x0000, 0x0000},{0x0000, 0x0000},{0x0000, 0x0000},{0x0000, 0x0000},
-    {0x0000, 0x0000},{0x007A, 0x0007},{0x07F8, 0x000B},{0xFFAF, 0x0010},{0xFFB0, 0x0010},{0xFFB1, 0x0010},{0xFFB2, 0x0010},{0xFFB3, 0x0010},
-    {0xFFB4, 0x0010},{0xFFB5, 0x0010},{0xFFB6, 0x0010},{0x0000, 0x0000},{0x0000, 0x0000},{0x0000, 0x0000},{0x0000, 0x0000},{0x0000, 0x0000},
-    {0x0000, 0x0000},{0x00F9, 0x0008},{0xFFB7, 0x0010},{0xFFB8, 0x0010},{0xFFB9, 0x0010},{0xFFBA, 0x0010},{0xFFBB, 0x0010},{0xFFBC, 0x0010},
-    {0xFFBD, 0x0010},{0xFFBE, 0x0010},{0xFFBF, 0x0010},{0x0000, 0x0000},{0x0000, 0x0000},{0x0000, 0x0000},{0x0000, 0x0000},{0x0000, 0x0000},
-    {0x0000, 0x0000},{0x01F7, 0x0009},{0xFFC0, 0x0010},{0xFFC1, 0x0010},{0xFFC2, 0x0010},{0xFFC3, 0x0010},{0xFFC4, 0x0010},{0xFFC5, 0x0010},
-    {0xFFC6, 0x0010},{0xFFC7, 0x0010},{0xFFC8, 0x0010},{0x0000, 0x0000},{0x0000, 0x0000},{0x0000, 0x0000},{0x0000, 0x0000},{0x0000, 0x0000},
-    {0x0000, 0x0000},{0x01F8, 0x0009},{0xFFC9, 0x0010},{0xFFCA, 0x0010},{0xFFCB, 0x0010},{0xFFCC, 0x0010},{0xFFCD, 0x0010},{0xFFCE, 0x0010},
-    {0xFFCF, 0x0010},{0xFFD0, 0x0010},{0xFFD1, 0x0010},{0x0000, 0x0000},{0x0000, 0x0000},{0x0000, 0x0000},{0x0000, 0x0000},{0x0000, 0x0000},
-    {0x0000, 0x0000},{0x01F9, 0x0009},{0xFFD2, 0x0010},{0xFFD3, 0x0010},{0xFFD4, 0x0010},{0xFFD5, 0x0010},{0xFFD6, 0x0010},{0xFFD7, 0x0010},
-    {0xFFD8, 0x0010},{0xFFD9, 0x0010},{0xFFDA, 0x0010},{0x0000, 0x0000},{0x0000, 0x0000},{0x0000, 0x0000},{0x0000, 0x0000},{0x0000, 0x0000},
-    {0x0000, 0x0000},{0x01FA, 0x0009},{0xFFDB, 0x0010},{0xFFDC, 0x0010},{0xFFDD, 0x0010},{0xFFDE, 0x0010},{0xFFDF, 0x0010},{0xFFE0, 0x0010},
-    {0xFFE1, 0x0010},{0xFFE2, 0x0010},{0xFFE3, 0x0010},{0x0000, 0x0000},{0x0000, 0x0000},{0x0000, 0x0000},{0x0000, 0x0000},{0x0000, 0x0000},
-    {0x0000, 0x0000},{0x07F9, 0x000B},{0xFFE4, 0x0010},{0xFFE5, 0x0010},{0xFFE6, 0x0010},{0xFFE7, 0x0010},{0xFFE8, 0x0010},{0xFFE9, 0x0010},
-    {0xFFEA, 0x0010},{0xFFEB, 0x0010},{0xFFEC, 0x0010},{0x0000, 0x0000},{0x0000, 0x0000},{0x0000, 0x0000},{0x0000, 0x0000},{0x0000, 0x0000},
-    {0x0000, 0x0000},{0x3FE0, 0x000E},{0xFFED, 0x0010},{0xFFEE, 0x0010},{0xFFEF, 0x0010},{0xFFF0, 0x0010},{0xFFF1, 0x0010},{0xFFF2, 0x0010},
-    {0xFFF3, 0x0010},{0xFFF4, 0x0010},{0xFFF5, 0x0010},{0x0000, 0x0000},{0x0000, 0x0000},{0x0000, 0x0000},{0x0000, 0x0000},{0x0000, 0x0000},
-    {0x03FA, 0x000A},{0x7FC3, 0x000F},{0xFFF6, 0x0010},{0xFFF7, 0x0010},{0xFFF8, 0x0010},{0xFFF9, 0x0010},{0xFFFA, 0x0010},{0xFFFB, 0x0010},
-    {0xFFFC, 0x0010},{0xFFFD, 0x0010},{0xFFFE, 0x0010},{0x0000, 0x0000},{0x0000, 0x0000},{0x0000, 0x0000},{0x0000, 0x0000},{0x0000, 0x0000},
+    {0x0000, 0x0002}, {0x0001, 0x0002}, {0x0004, 0x0003}, {0x000A, 0x0004},
+    {0x0018, 0x0005}, {0x0019, 0x0005}, {0x0038, 0x0006}, {0x0078, 0x0007},
+    {0x01F4, 0x0009}, {0x03F6, 0x000A}, {0x0FF4, 0x000C}, {0x0000, 0x0000},
+    {0x0000, 0x0000}, {0x0000, 0x0000}, {0x0000, 0x0000}, {0x0000, 0x0000},
+    {0x0000, 0x0000}, {0x000B, 0x0004}, {0x0039, 0x0006}, {0x00F6, 0x0008},
+    {0x01F5, 0x0009}, {0x07F6, 0x000B}, {0x0FF5, 0x000C}, {0xFF88, 0x0010},
+    {0xFF89, 0x0010}, {0xFF8A, 0x0010}, {0xFF8B, 0x0010}, {0x0000, 0x0000},
+    {0x0000, 0x0000}, {0x0000, 0x0000}, {0x0000, 0x0000}, {0x0000, 0x0000},
+    {0x0000, 0x0000}, {0x001A, 0x0005}, {0x00F7, 0x0008}, {0x03F7, 0x000A},
+    {0x0FF6, 0x000C}, {0x7FC2, 0x000F}, {0xFF8C, 0x0010}, {0xFF8D, 0x0010},
+    {0xFF8E, 0x0010}, {0xFF8F, 0x0010}, {0xFF90, 0x0010}, {0x0000, 0x0000},
+    {0x0000, 0x0000}, {0x0000, 0x0000}, {0x0000, 0x0000}, {0x0000, 0x0000},
+    {0x0000, 0x0000}, {0x001B, 0x0005}, {0x00F8, 0x0008}, {0x03F8, 0x000A},
+    {0x0FF7, 0x000C}, {0xFF91, 0x0010}, {0xFF92, 0x0010}, {0xFF93, 0x0010},
+    {0xFF94, 0x0010}, {0xFF95, 0x0010}, {0xFF96, 0x0010}, {0x0000, 0x0000},
+    {0x0000, 0x0000}, {0x0000, 0x0000}, {0x0000, 0x0000}, {0x0000, 0x0000},
+    {0x0000, 0x0000}, {0x003A, 0x0006}, {0x01F6, 0x0009}, {0xFF97, 0x0010},
+    {0xFF98, 0x0010}, {0xFF99, 0x0010}, {0xFF9A, 0x0010}, {0xFF9B, 0x0010},
+    {0xFF9C, 0x0010}, {0xFF9D, 0x0010}, {0xFF9E, 0x0010}, {0x0000, 0x0000},
+    {0x0000, 0x0000}, {0x0000, 0x0000}, {0x0000, 0x0000}, {0x0000, 0x0000},
+    {0x0000, 0x0000}, {0x003B, 0x0006}, {0x03F9, 0x000A}, {0xFF9F, 0x0010},
+    {0xFFA0, 0x0010}, {0xFFA1, 0x0010}, {0xFFA2, 0x0010}, {0xFFA3, 0x0010},
+    {0xFFA4, 0x0010}, {0xFFA5, 0x0010}, {0xFFA6, 0x0010}, {0x0000, 0x0000},
+    {0x0000, 0x0000}, {0x0000, 0x0000}, {0x0000, 0x0000}, {0x0000, 0x0000},
+    {0x0000, 0x0000}, {0x0079, 0x0007}, {0x07F7, 0x000B}, {0xFFA7, 0x0010},
+    {0xFFA8, 0x0010}, {0xFFA9, 0x0010}, {0xFFAA, 0x0010}, {0xFFAB, 0x0010},
+    {0xFFAC, 0x0010}, {0xFFAD, 0x0010}, {0xFFAE, 0x0010}, {0x0000, 0x0000},
+    {0x0000, 0x0000}, {0x0000, 0x0000}, {0x0000, 0x0000}, {0x0000, 0x0000},
+    {0x0000, 0x0000}, {0x007A, 0x0007}, {0x07F8, 0x000B}, {0xFFAF, 0x0010},
+    {0xFFB0, 0x0010}, {0xFFB1, 0x0010}, {0xFFB2, 0x0010}, {0xFFB3, 0x0010},
+    {0xFFB4, 0x0010}, {0xFFB5, 0x0010}, {0xFFB6, 0x0010}, {0x0000, 0x0000},
+    {0x0000, 0x0000}, {0x0000, 0x0000}, {0x0000, 0x0000}, {0x0000, 0x0000},
+    {0x0000, 0x0000}, {0x00F9, 0x0008}, {0xFFB7, 0x0010}, {0xFFB8, 0x0010},
+    {0xFFB9, 0x0010}, {0xFFBA, 0x0010}, {0xFFBB, 0x0010}, {0xFFBC, 0x0010},
+    {0xFFBD, 0x0010}, {0xFFBE, 0x0010}, {0xFFBF, 0x0010}, {0x0000, 0x0000},
+    {0x0000, 0x0000}, {0x0000, 0x0000}, {0x0000, 0x0000}, {0x0000, 0x0000},
+    {0x0000, 0x0000}, {0x01F7, 0x0009}, {0xFFC0, 0x0010}, {0xFFC1, 0x0010},
+    {0xFFC2, 0x0010}, {0xFFC3, 0x0010}, {0xFFC4, 0x0010}, {0xFFC5, 0x0010},
+    {0xFFC6, 0x0010}, {0xFFC7, 0x0010}, {0xFFC8, 0x0010}, {0x0000, 0x0000},
+    {0x0000, 0x0000}, {0x0000, 0x0000}, {0x0000, 0x0000}, {0x0000, 0x0000},
+    {0x0000, 0x0000}, {0x01F8, 0x0009}, {0xFFC9, 0x0010}, {0xFFCA, 0x0010},
+    {0xFFCB, 0x0010}, {0xFFCC, 0x0010}, {0xFFCD, 0x0010}, {0xFFCE, 0x0010},
+    {0xFFCF, 0x0010}, {0xFFD0, 0x0010}, {0xFFD1, 0x0010}, {0x0000, 0x0000},
+    {0x0000, 0x0000}, {0x0000, 0x0000}, {0x0000, 0x0000}, {0x0000, 0x0000},
+    {0x0000, 0x0000}, {0x01F9, 0x0009}, {0xFFD2, 0x0010}, {0xFFD3, 0x0010},
+    {0xFFD4, 0x0010}, {0xFFD5, 0x0010}, {0xFFD6, 0x0010}, {0xFFD7, 0x0010},
+    {0xFFD8, 0x0010}, {0xFFD9, 0x0010}, {0xFFDA, 0x0010}, {0x0000, 0x0000},
+    {0x0000, 0x0000}, {0x0000, 0x0000}, {0x0000, 0x0000}, {0x0000, 0x0000},
+    {0x0000, 0x0000}, {0x01FA, 0x0009}, {0xFFDB, 0x0010}, {0xFFDC, 0x0010},
+    {0xFFDD, 0x0010}, {0xFFDE, 0x0010}, {0xFFDF, 0x0010}, {0xFFE0, 0x0010},
+    {0xFFE1, 0x0010}, {0xFFE2, 0x0010}, {0xFFE3, 0x0010}, {0x0000, 0x0000},
+    {0x0000, 0x0000}, {0x0000, 0x0000}, {0x0000, 0x0000}, {0x0000, 0x0000},
+    {0x0000, 0x0000}, {0x07F9, 0x000B}, {0xFFE4, 0x0010}, {0xFFE5, 0x0010},
+    {0xFFE6, 0x0010}, {0xFFE7, 0x0010}, {0xFFE8, 0x0010}, {0xFFE9, 0x0010},
+    {0xFFEA, 0x0010}, {0xFFEB, 0x0010}, {0xFFEC, 0x0010}, {0x0000, 0x0000},
+    {0x0000, 0x0000}, {0x0000, 0x0000}, {0x0000, 0x0000}, {0x0000, 0x0000},
+    {0x0000, 0x0000}, {0x3FE0, 0x000E}, {0xFFED, 0x0010}, {0xFFEE, 0x0010},
+    {0xFFEF, 0x0010}, {0xFFF0, 0x0010}, {0xFFF1, 0x0010}, {0xFFF2, 0x0010},
+    {0xFFF3, 0x0010}, {0xFFF4, 0x0010}, {0xFFF5, 0x0010}, {0x0000, 0x0000},
+    {0x0000, 0x0000}, {0x0000, 0x0000}, {0x0000, 0x0000}, {0x0000, 0x0000},
+    {0x03FA, 0x000A}, {0x7FC3, 0x000F}, {0xFFF6, 0x0010}, {0xFFF7, 0x0010},
+    {0xFFF8, 0x0010}, {0xFFF9, 0x0010}, {0xFFFA, 0x0010}, {0xFFFB, 0x0010},
+    {0xFFFC, 0x0010}, {0xFFFD, 0x0010}, {0xFFFE, 0x0010}, {0x0000, 0x0000},
+    {0x0000, 0x0000}, {0x0000, 0x0000}, {0x0000, 0x0000}, {0x0000, 0x0000},
 };
 
 // Macro to write variable length codes to the output stream more efficiently
-#define STORECODE(pOut, iLen, ulCode, ulAcc, iNewLen) \
-        if (iLen+iNewLen > 32) { while (iLen >= 8) \
-                        {unsigned char c = (unsigned char)(ulAcc >> 24); *pOut++ = c; \
-        if (c == 0xff) { *pOut++ = 0;} ulAcc <<= 8; iLen -= 8; }} \
-        iLen += iNewLen; ulAcc |= (ulCode << (32-iLen));
+#define STORECODE(pOut, iLen, ulCode, ulAcc, iNewLen)                                         \
+    if (iLen + iNewLen > 32) { while (iLen >= 8)                                              \
+                               {unsigned char c = (unsigned char) (ulAcc >> 24); *pOut++ = c; \
+                                if (c == 0xff) { *pOut++ = 0;}                                \
+                                ulAcc <<= 8; iLen -= 8; }                                     \
+    }                                                                                         \
+    iLen += iNewLen; ulAcc |= (ulCode << (32 - iLen));
 
 //
 // See if we're close to filling up the output buffer
@@ -1459,9 +1562,8 @@ static const uint16_t UVAC_HT[256][2] = {
 // If we're out of space and the realloc option is not available
 // return true to indicate that encoding has to halt
 //
-static int jpeg_check_highwater(jpeg_buf_t *jpeg_buf)
-{
-    if ((jpeg_buf->idx+1) >= jpeg_buf->length - 256) {
+static int jpeg_check_highwater(jpeg_buf_t *jpeg_buf) {
+    if ((jpeg_buf->idx + 1) >= jpeg_buf->length - 256) {
         if (jpeg_buf->realloc == false) {
             // Can't realloc buffer
             jpeg_buf->overflow = true;
@@ -1476,26 +1578,24 @@ static int jpeg_check_highwater(jpeg_buf_t *jpeg_buf)
 //
 // Restore buffer pointer variables from local copies
 //
-void jpeg_restore_buf(jpeg_buf_t *jpeg_buf, uint8_t *pOut, int iBitCount, uint32_t ulBits)
-{
+void jpeg_restore_buf(jpeg_buf_t *jpeg_buf, uint8_t *pOut, int iBitCount, uint32_t ulBits) {
     uint8_t c;
     while (iBitCount >= 8) {
-        c = (uint8_t)(ulBits >> 24);
+        c = (uint8_t) (ulBits >> 24);
         *pOut++ = c;
         if (c == 0xff) {
             *pOut++ = 0;
         }
         ulBits <<= 8; iBitCount -= 8;
     }
-    jpeg_buf->idx = (int)(pOut - jpeg_buf->buf);
+    jpeg_buf->idx = (int) (pOut - jpeg_buf->buf);
     jpeg_buf->bitb = ulBits >> 8;
     jpeg_buf->bitc = iBitCount;
 
 } /* jpeg_restore_buf() */
 
-static void jpeg_put_char(jpeg_buf_t *jpeg_buf, char c)
-{
-    if ((jpeg_buf->idx+1) >= jpeg_buf->length) {
+static void jpeg_put_char(jpeg_buf_t *jpeg_buf, char c) {
+    if ((jpeg_buf->idx + 1) >= jpeg_buf->length) {
         if (jpeg_buf->realloc == false) {
             // Can't realloc buffer
             jpeg_buf->overflow = true;
@@ -1505,12 +1605,11 @@ static void jpeg_put_char(jpeg_buf_t *jpeg_buf, char c)
         jpeg_buf->buf = xrealloc(jpeg_buf->buf, jpeg_buf->length);
     }
 
-    jpeg_buf->buf[jpeg_buf->idx++]=c;
+    jpeg_buf->buf[jpeg_buf->idx++] = c;
 }
 
-static void jpeg_put_bytes(jpeg_buf_t *jpeg_buf, const void *data, int size)
-{
-    if ((jpeg_buf->idx+size) >= jpeg_buf->length) {
+static void jpeg_put_bytes(jpeg_buf_t *jpeg_buf, const void *data, int size) {
+    if ((jpeg_buf->idx + size) >= jpeg_buf->length) {
         if (jpeg_buf->realloc == false) {
             // Can't realloc buffer
             jpeg_buf->overflow = true;
@@ -1520,19 +1619,18 @@ static void jpeg_put_bytes(jpeg_buf_t *jpeg_buf, const void *data, int size)
         jpeg_buf->buf = xrealloc(jpeg_buf->buf, jpeg_buf->length);
     }
 
-    memcpy(jpeg_buf->buf+jpeg_buf->idx, data, size);
+    memcpy(jpeg_buf->buf + jpeg_buf->idx, data, size);
     jpeg_buf->idx += size;
 }
 
-static void jpeg_writeBits(jpeg_buf_t *jpeg_buf, const uint16_t *bs)
-{
+static void jpeg_writeBits(jpeg_buf_t *jpeg_buf, const uint16_t *bs) {
     jpeg_buf->bitc += bs[1];
     jpeg_buf->bitb |= bs[0] << (24 - jpeg_buf->bitc);
 
     while (jpeg_buf->bitc > 7) {
         uint8_t c = (jpeg_buf->bitb >> 16) & 255;
         jpeg_put_char(jpeg_buf, c);
-        if(c == 255) {
+        if (c == 255) {
             jpeg_put_char(jpeg_buf, 0);
         }
         jpeg_buf->bitb <<= 8;
@@ -1542,17 +1640,17 @@ static void jpeg_writeBits(jpeg_buf_t *jpeg_buf, const uint16_t *bs)
 
 //Huffman-encoded magnitude value
 static void jpeg_calcBits(int val, uint16_t bits[2]) {
-    int t1=val;
-    if (val<0) {
+    int t1 = val;
+    if (val < 0) {
         t1 = -val;
-        val = val-1;
+        val = val - 1;
     }
-    bits[1] = 32-__CLZ(t1);
-    bits[0] = val & ((1<<bits[1])-1);
+    bits[1] = 32 - __CLZ(t1);
+    bits[0] = val & ((1 << bits[1]) - 1);
 }
 
-static int jpeg_processDU(jpeg_buf_t *jpeg_buf, int8_t *CDU, float *fdtbl, int DC, const uint16_t (*HTDC)[2], const uint16_t (*HTAC)[2])
-{
+static int jpeg_processDU(jpeg_buf_t *jpeg_buf, int8_t *CDU, float *fdtbl, int DC, const uint16_t (*HTDC)[2],
+                          const uint16_t (*HTAC)[2]) {
     int DU[64];
     int DUQ[64];
     int z1, z2, z3, z4, z5, z11, z13;
@@ -1561,7 +1659,7 @@ static int jpeg_processDU(jpeg_buf_t *jpeg_buf, int8_t *CDU, float *fdtbl, int D
     const uint16_t M16zeroes[2] = { HTAC[0xF0][0], HTAC[0xF0][1] };
 
     // DCT rows
-    for (int i=8, *p=DU; i>0; i--, p+=8, CDU+=8) {
+    for (int i = 8, *p = DU; i > 0; i--, p += 8, CDU += 8) {
         t0 = CDU[0] + CDU[7];
         t1 = CDU[1] + CDU[6];
         t2 = CDU[2] + CDU[5];
@@ -1604,31 +1702,31 @@ static int jpeg_processDU(jpeg_buf_t *jpeg_buf, int8_t *CDU, float *fdtbl, int D
     }
 
     // DCT columns
-    for (int i=8, *p=DU; i>0; i--, p++) {
-        t0 = p[0]  + p[56];
-        t1 = p[8]  + p[48];
+    for (int i = 8, *p = DU; i > 0; i--, p++) {
+        t0 = p[0] + p[56];
+        t1 = p[8] + p[48];
         t2 = p[16] + p[40];
         t3 = p[24] + p[32];
 
-        t7 = p[0]  - p[56];
-        t6 = p[8]  - p[48];
+        t7 = p[0] - p[56];
+        t6 = p[8] - p[48];
         t5 = p[16] - p[40];
         t4 = p[24] - p[32];
 
         // Even part
-        t10 = t0 + t3;	// phase 2
+        t10 = t0 + t3;  // phase 2
         t13 = t0 - t3;
         t11 = t1 + t2;
         t12 = t1 - t2;
         z1 = MULTIPLY(t12 + t13, FIX_0_707106781); // c4
 
-        p[0] = t10 + t11; 		// phase 3
+        p[0] = t10 + t11;               // phase 3
         p[32] = t10 - t11;
-        p[16] = t13 + z1; 		// phase 5
+        p[16] = t13 + z1;               // phase 5
         p[48] = t13 - z1;
 
         // Odd part
-        t10 = t4 + t5; 		// phase 2
+        t10 = t4 + t5;          // phase 2
         t11 = t5 + t6;
         t12 = t6 + t7;
 
@@ -1637,7 +1735,7 @@ static int jpeg_processDU(jpeg_buf_t *jpeg_buf, int8_t *CDU, float *fdtbl, int D
         z2 = MULTIPLY(t10, FIX_0_541196100) + z5; // 1.306562965f-c6
         z4 = MULTIPLY(t12, FIX_1_306562965) + z5; // 1.306562965f+c6
         z3 = MULTIPLY(t11, FIX_0_707106781); // c4
-        z11 = t7 + z3;		// phase 5
+        z11 = t7 + z3;          // phase 5
         z13 = t7 - z3;
 
         p[40] = z13 + z2;// phase 6
@@ -1649,15 +1747,17 @@ static int jpeg_processDU(jpeg_buf_t *jpeg_buf, int8_t *CDU, float *fdtbl, int D
     // first non-zero element in reverse order
     int end0pos = 0;
     // Quantize/descale/zigzag the coefficients
-    for(int i=0; i<64; ++i) {
-		DUQ[s_jpeg_ZigZag[i]] = fast_roundf(DU[i]*fdtbl[i]);
+    for (int i = 0; i < 64; ++i) {
+        DUQ[s_jpeg_ZigZag[i]] = fast_roundf(DU[i] * fdtbl[i]);
         if (s_jpeg_ZigZag[i] > end0pos && DUQ[s_jpeg_ZigZag[i]]) {
             end0pos = s_jpeg_ZigZag[i];
         }
     }
 
-    if (jpeg_check_highwater(jpeg_buf)) // check if we're getting close to the end of the buffer
-       return 0; // stop encoding, we've run out of space
+    if (jpeg_check_highwater(jpeg_buf)) {
+        // check if we're getting close to the end of the buffer
+        return 0; // stop encoding, we've run out of space
+    }
     // Use local vars to speed up buffer access
     // and a macro (STORECODE) to manipulate the local vars
     uint8_t *pOut, iBitCount; // output pointer and bit count
@@ -1678,63 +1778,61 @@ static int jpeg_processDU(jpeg_buf_t *jpeg_buf, int8_t *CDU, float *fdtbl, int D
     }
 
     // Encode ACs
-    if(end0pos == 0) {
+    if (end0pos == 0) {
         STORECODE(pOut, iBitCount, EOB[0], ulBits, EOB[1])
         jpeg_restore_buf(jpeg_buf, pOut, iBitCount, ulBits);
         return DUQ[0];
     }
 
-    for(int i = 1; i <= end0pos; ++i) {
+    for (int i = 1; i <= end0pos; ++i) {
         int startpos = i;
-        for (; DUQ[i]==0 && i<=end0pos ; ++i) {
+        for (; DUQ[i] == 0 && i <= end0pos ; ++i) {
         }
-        int nrzeroes = i-startpos;
-        if ( nrzeroes >= 16 ) {
-            int lng = nrzeroes>>4;
-            for (int nrmarker=1; nrmarker <= lng; ++nrmarker) {
+        int nrzeroes = i - startpos;
+        if (nrzeroes >= 16) {
+            int lng = nrzeroes >> 4;
+            for (int nrmarker = 1; nrmarker <= lng; ++nrmarker) {
                 STORECODE(pOut, iBitCount, M16zeroes[0], ulBits, M16zeroes[1])
             } // for
             nrzeroes &= 15;
         }
         uint16_t bits[2];
         jpeg_calcBits(DUQ[i], bits);
-        STORECODE(pOut, iBitCount, HTAC[(nrzeroes<<4)+bits[1]][0], ulBits, HTAC[(nrzeroes<<4)+bits[1]][1])
+        STORECODE(pOut, iBitCount, HTAC[(nrzeroes << 4) + bits[1]][0], ulBits, HTAC[(nrzeroes << 4) + bits[1]][1])
         STORECODE(pOut, iBitCount, bits[0], ulBits, bits[1])
     }
-    if(end0pos != 63) {
+    if (end0pos != 63) {
         STORECODE(pOut, iBitCount, EOB[0], ulBits, EOB[1])
     }
     jpeg_restore_buf(jpeg_buf, pOut, iBitCount, ulBits);
     return DUQ[0];
 }
 
-static void jpeg_init(int quality)
-{
-    static int q =0;
+static void jpeg_init(int quality) {
+    static int q = 0;
 
     quality = quality < 50 ? 5000 / quality : 200 - quality * 2;
 
     // If quality changed, update quantization matrix
     if (q != quality) {
         q = quality;
-        for(int i = 0; i < 64; ++i) {
-            int yti = (YQT[i]*quality+50)/100;
+        for (int i = 0; i < 64; ++i) {
+            int yti = (YQT[i] * quality + 50) / 100;
             YTable[s_jpeg_ZigZag[i]] = yti < 1 ? 1 : yti > 255 ? 255 : yti;
-            int uvti  = (UVQT[i]*quality+50)/100;
+            int uvti = (UVQT[i] * quality + 50) / 100;
             UVTable[s_jpeg_ZigZag[i]] = uvti < 1 ? 1 : uvti > 255 ? 255 : uvti;
         }
 
-        for(int r = 0, k = 0; r < 8; ++r) {
-            for(int c = 0; c < 8; ++c, ++k) {
-                fdtbl_Y[k]  = 1.0f / (aasf[r] * aasf[c] * YTable [s_jpeg_ZigZag[k]] * 8.0f);
+        for (int r = 0, k = 0; r < 8; ++r) {
+            for (int c = 0; c < 8; ++c, ++k) {
+                fdtbl_Y[k] = 1.0f / (aasf[r] * aasf[c] * YTable [s_jpeg_ZigZag[k]] * 8.0f);
                 fdtbl_UV[k] = 1.0f / (aasf[r] * aasf[c] * UVTable[s_jpeg_ZigZag[k]] * 8.0f);
             }
         }
     }
 }
 
-static void jpeg_write_headers(jpeg_buf_t *jpeg_buf, int w, int h, int bpp, jpeg_subsample_t jpeg_subsample)
-{
+static void jpeg_write_headers(jpeg_buf_t *jpeg_buf, int w, int h, int bpp, jpeg_subsample_t jpeg_subsample) {
     // Number of components (1 or 3)
     uint8_t nr_comp = (bpp == 1)? 1 : 3;
 
@@ -1743,7 +1841,7 @@ static void jpeg_write_headers(jpeg_buf_t *jpeg_buf, int w, int h, int bpp, jpeg
         0xFF, 0xD8          // SOI
     };
 
-    uint8_t m_app0[] =  {
+    uint8_t m_app0[] = {
         0xFF, 0xE0,         // APP0
         0x00, 0x10,  'J',  'F',  'I',  'F', 0x00, 0x01,
         0x01, 0x00, 0x00, 0x01, 0x00, 0x01, 0x00, 0x00
@@ -1751,30 +1849,30 @@ static void jpeg_write_headers(jpeg_buf_t *jpeg_buf, int w, int h, int bpp, jpeg
 
     uint8_t m_dqt[] = {
         0xFF, 0xDB,         // DQT
-        (bpp*65+2)>>8,      // Header length MSB
-        (bpp*65+2)&0xFF,    // Header length LSB
+        (bpp * 65 + 2) >> 8,      // Header length MSB
+        (bpp * 65 + 2) & 0xFF,    // Header length LSB
     };
 
     uint8_t m_sof0[] = {
         0xFF, 0xC0,         // SOF0
-        (nr_comp*3+8)>>8,   // Header length MSB
-        (nr_comp*3+8)&0xFF, // Header length LSB
+        (nr_comp * 3 + 8) >> 8,   // Header length MSB
+        (nr_comp * 3 + 8) & 0xFF, // Header length LSB
         0x08,               // Bits per sample
-        h>>8, h&0xFF,       // Height
-        w>>8, w&0xFF,       // Width
+        h >> 8, h & 0xFF,       // Height
+        w >> 8, w & 0xFF,       // Width
         nr_comp,            // Number of components
     };
 
     uint8_t m_dht[] = {
         0xFF, 0xC4,         // DHT
-        (bpp*208+2)>>8,     // Header length MSB
-        (bpp*208+2)&0xFF,   // Header length LSB
+        (bpp * 208 + 2) >> 8,     // Header length MSB
+        (bpp * 208 + 2) & 0xFF,   // Header length LSB
     };
 
     uint8_t m_sos[] = {
         0xFF, 0xDA,         // SOS
-        (nr_comp*2+6)>>8,   // Header length MSB
-        (nr_comp*2+6)&0xFF, // Header length LSB
+        (nr_comp * 2 + 6) >> 8,   // Header length MSB
+        (nr_comp * 2 + 6) & 0xFF, // Header length LSB
         nr_comp,            // Number of components
     };
 
@@ -1786,20 +1884,20 @@ static void jpeg_write_headers(jpeg_buf_t *jpeg_buf, int w, int h, int bpp, jpeg
     // Write DQT marker
     jpeg_put_bytes(jpeg_buf, m_dqt, sizeof(m_dqt));
     // Write Y quantization table (index, table)
-    jpeg_put_char (jpeg_buf, 0);
+    jpeg_put_char(jpeg_buf, 0);
     jpeg_put_bytes(jpeg_buf, YTable, sizeof(YTable));
 
     if (bpp > 1) {
         // Write UV quantization table (index, table)
-        jpeg_put_char (jpeg_buf, 1);
+        jpeg_put_char(jpeg_buf, 1);
         jpeg_put_bytes(jpeg_buf, UVTable, sizeof(UVTable));
     }
 
     // Write SOF0 marker
     jpeg_put_bytes(jpeg_buf, m_sof0, sizeof(m_sof0));
-    for (int i=0; i<nr_comp; i++) {
+    for (int i = 0; i < nr_comp; i++) {
         // Component ID, HV sampling, q table idx
-        jpeg_put_bytes(jpeg_buf, (uint8_t [3]){i+1, (i==0 && bpp==2)? jpeg_subsample:0x11, (i>0)}, 3);
+        jpeg_put_bytes(jpeg_buf, (uint8_t [3]) {i + 1, (i == 0 && bpp == 2)? jpeg_subsample:0x11, (i > 0)}, 3);
 
     }
 
@@ -1807,45 +1905,44 @@ static void jpeg_write_headers(jpeg_buf_t *jpeg_buf, int w, int h, int bpp, jpeg
     jpeg_put_bytes(jpeg_buf, m_dht, sizeof(m_dht));
 
     // Write DHT-YDC
-    jpeg_put_char (jpeg_buf, 0x00);
-    jpeg_put_bytes(jpeg_buf, std_dc_luminance_nrcodes+1, sizeof(std_dc_luminance_nrcodes)-1);
+    jpeg_put_char(jpeg_buf, 0x00);
+    jpeg_put_bytes(jpeg_buf, std_dc_luminance_nrcodes + 1, sizeof(std_dc_luminance_nrcodes) - 1);
     jpeg_put_bytes(jpeg_buf, std_dc_luminance_values, sizeof(std_dc_luminance_values));
 
     // Write DHT-YAC
-    jpeg_put_char (jpeg_buf, 0x10);
-    jpeg_put_bytes(jpeg_buf, std_ac_luminance_nrcodes+1, sizeof(std_ac_luminance_nrcodes)-1);
+    jpeg_put_char(jpeg_buf, 0x10);
+    jpeg_put_bytes(jpeg_buf, std_ac_luminance_nrcodes + 1, sizeof(std_ac_luminance_nrcodes) - 1);
     jpeg_put_bytes(jpeg_buf, std_ac_luminance_values, sizeof(std_ac_luminance_values));
 
     if (bpp > 1) {
         // Write DHT-UDC
-        jpeg_put_char (jpeg_buf, 0x01);
-        jpeg_put_bytes(jpeg_buf, std_dc_chrominance_nrcodes+1, sizeof(std_dc_chrominance_nrcodes)-1);
+        jpeg_put_char(jpeg_buf, 0x01);
+        jpeg_put_bytes(jpeg_buf, std_dc_chrominance_nrcodes + 1, sizeof(std_dc_chrominance_nrcodes) - 1);
         jpeg_put_bytes(jpeg_buf, std_dc_chrominance_values, sizeof(std_dc_chrominance_values));
 
         // Write DHT-UAC
-        jpeg_put_char (jpeg_buf, 0x11);
-        jpeg_put_bytes(jpeg_buf, std_ac_chrominance_nrcodes+1, sizeof(std_ac_chrominance_nrcodes)-1);
+        jpeg_put_char(jpeg_buf, 0x11);
+        jpeg_put_bytes(jpeg_buf, std_ac_chrominance_nrcodes + 1, sizeof(std_ac_chrominance_nrcodes) - 1);
         jpeg_put_bytes(jpeg_buf, std_ac_chrominance_values, sizeof(std_ac_chrominance_values));
     }
 
     // Write SOS marker
     jpeg_put_bytes(jpeg_buf, m_sos, sizeof(m_sos));
-    for (int i=0; i<nr_comp; i++) {
-        jpeg_put_bytes(jpeg_buf, (uint8_t [2]){i+1, (i==0)? 0x00:0x11}, 2);
+    for (int i = 0; i < nr_comp; i++) {
+        jpeg_put_bytes(jpeg_buf, (uint8_t [2]) {i + 1, (i == 0)? 0x00:0x11}, 2);
     }
 
     // Spectral selection
-    jpeg_put_bytes(jpeg_buf, (uint8_t [3]){0x00, 0x3F, 0x0}, 3);
+    jpeg_put_bytes(jpeg_buf, (uint8_t [3]) {0x00, 0x3F, 0x0}, 3);
 }
 
-bool jpeg_compress(image_t *src, image_t *dst, int quality, bool realloc)
-{
-    #if (TIME_JPEG==1)
+bool jpeg_compress(image_t *src, image_t *dst, int quality, bool realloc) {
+    #if (TIME_JPEG == 1)
     mp_uint_t start = mp_hal_ticks_ms();
     #endif
 
     if (!dst->data) {
-        uint32_t size=0;
+        uint32_t size = 0;
         dst->data = fb_alloc_all(&size, FB_ALLOC_PREFER_SIZE | FB_ALLOC_CACHE_ALIGN);
         dst->size = IMLIB_IMAGE_MAX_SIZE(size);
     }
@@ -1915,7 +2012,8 @@ bool jpeg_compress(image_t *src, image_t *dst, int quality, bool realloc)
             }
             break;
         }
-        case JPEG_SUBSAMPLE_2x1: { // color only
+        case JPEG_SUBSAMPLE_2x1: {
+            // color only
             int8_t YDU[JPEG_444_GS_MCU_SIZE * 2];
             int8_t UDU[JPEG_444_GS_MCU_SIZE * 2];
             int8_t VDU[JPEG_444_GS_MCU_SIZE * 2];
@@ -1953,10 +2051,10 @@ bool jpeg_compress(image_t *src, image_t *dst, int quality, bool realloc)
                     int8_t *VDUp1 = VDUp0 + JPEG_444_GS_MCU_SIZE;
                     for (int j = 0; j < JPEG_444_GS_MCU_SIZE; j += MCU_W) {
                         for (int i = 0; i < MCU_W; i += 2) {
-                            UDU_avg[j+(i/2)] = (UDUp0[i]+UDUp0[i+1]) / 2;
-                            VDU_avg[j+(i/2)] = (VDUp0[i]+VDUp0[i+1]) / 2;
-                            UDU_avg[j+(i/2)+(MCU_W/2)] = (UDUp1[i]+UDUp1[i+1]) / 2;
-                            VDU_avg[j+(i/2)+(MCU_W/2)] = (VDUp1[i]+VDUp1[i+1]) / 2;
+                            UDU_avg[j + (i / 2)] = (UDUp0[i] + UDUp0[i + 1]) / 2;
+                            VDU_avg[j + (i / 2)] = (VDUp0[i] + VDUp0[i + 1]) / 2;
+                            UDU_avg[j + (i / 2) + (MCU_W / 2)] = (UDUp1[i] + UDUp1[i + 1]) / 2;
+                            VDU_avg[j + (i / 2) + (MCU_W / 2)] = (VDUp1[i] + VDUp1[i + 1]) / 2;
                         }
                         UDUp0 += MCU_W;
                         VDUp0 += MCU_W;
@@ -1974,7 +2072,8 @@ bool jpeg_compress(image_t *src, image_t *dst, int quality, bool realloc)
             }
             break;
         }
-        case JPEG_SUBSAMPLE_2x2: { // color only
+        case JPEG_SUBSAMPLE_2x2: {
+            // color only
             int8_t YDU[JPEG_444_GS_MCU_SIZE * 4];
             int8_t UDU[JPEG_444_GS_MCU_SIZE * 4];
             int8_t VDU[JPEG_444_GS_MCU_SIZE * 4];
@@ -2027,14 +2126,18 @@ bool jpeg_compress(image_t *src, image_t *dst, int quality, bool realloc)
                     int8_t *VDUp3 = VDUp2 + JPEG_444_GS_MCU_SIZE;
                     for (int j = 0, k = JPEG_444_GS_MCU_SIZE / 2; k < JPEG_444_GS_MCU_SIZE; j += MCU_W, k += MCU_W) {
                         for (int i = 0; i < MCU_W; i += 2) {
-                            UDU_avg[j+(i/2)] = (UDUp0[i]+UDUp0[i+1]+UDUp0[i+MCU_W]+UDUp0[i+1+MCU_W]) / 4;
-                            VDU_avg[j+(i/2)] = (VDUp0[i]+VDUp0[i+1]+VDUp0[i+MCU_W]+VDUp0[i+1+MCU_W]) / 4;
-                            UDU_avg[j+(i/2)+(MCU_W/2)] = (UDUp1[i]+UDUp1[i+1]+UDUp1[i+MCU_W]+UDUp1[i+1+MCU_W]) / 4;
-                            VDU_avg[j+(i/2)+(MCU_W/2)] = (VDUp1[i]+VDUp1[i+1]+VDUp1[i+MCU_W]+VDUp1[i+1+MCU_W]) / 4;
-                            UDU_avg[k+(i/2)] = (UDUp2[i]+UDUp2[i+1]+UDUp2[i+MCU_W]+UDUp2[i+1+MCU_W]) / 4;
-                            VDU_avg[k+(i/2)] = (VDUp2[i]+VDUp2[i+1]+VDUp2[i+MCU_W]+VDUp2[i+1+MCU_W]) / 4;
-                            UDU_avg[k+(i/2)+(MCU_W/2)] = (UDUp3[i]+UDUp3[i+1]+UDUp3[i+MCU_W]+UDUp3[i+1+MCU_W]) / 4;
-                            VDU_avg[k+(i/2)+(MCU_W/2)] = (VDUp3[i]+VDUp3[i+1]+VDUp3[i+MCU_W]+VDUp3[i+1+MCU_W]) / 4;
+                            UDU_avg[j + (i / 2)] = (UDUp0[i] + UDUp0[i + 1] + UDUp0[i + MCU_W] + UDUp0[i + 1 + MCU_W]) / 4;
+                            VDU_avg[j + (i / 2)] = (VDUp0[i] + VDUp0[i + 1] + VDUp0[i + MCU_W] + VDUp0[i + 1 + MCU_W]) / 4;
+                            UDU_avg[j + (i / 2) +
+                                    (MCU_W / 2)] = (UDUp1[i] + UDUp1[i + 1] + UDUp1[i + MCU_W] + UDUp1[i + 1 + MCU_W]) / 4;
+                            VDU_avg[j + (i / 2) +
+                                    (MCU_W / 2)] = (VDUp1[i] + VDUp1[i + 1] + VDUp1[i + MCU_W] + VDUp1[i + 1 + MCU_W]) / 4;
+                            UDU_avg[k + (i / 2)] = (UDUp2[i] + UDUp2[i + 1] + UDUp2[i + MCU_W] + UDUp2[i + 1 + MCU_W]) / 4;
+                            VDU_avg[k + (i / 2)] = (VDUp2[i] + VDUp2[i + 1] + VDUp2[i + MCU_W] + VDUp2[i + 1 + MCU_W]) / 4;
+                            UDU_avg[k + (i / 2) +
+                                    (MCU_W / 2)] = (UDUp3[i] + UDUp3[i + 1] + UDUp3[i + MCU_W] + UDUp3[i + 1 + MCU_W]) / 4;
+                            VDU_avg[k + (i / 2) +
+                                    (MCU_W / 2)] = (VDUp3[i] + VDUp3[i + 1] + VDUp3[i + MCU_W] + VDUp3[i + 1 + MCU_W]) / 4;
                         }
                         UDUp0 += MCU_W * 2;
                         VDUp0 += MCU_W * 2;
@@ -2072,7 +2175,7 @@ bool jpeg_compress(image_t *src, image_t *dst, int quality, bool realloc)
     dst->size = jpeg_buf.idx;
     dst->data = jpeg_buf.buf;
 
-    #if (TIME_JPEG==1)
+    #if (TIME_JPEG == 1)
     printf("time: %lums\n", mp_hal_ticks_ms() - start);
     #endif
 
@@ -2081,9 +2184,8 @@ bool jpeg_compress(image_t *src, image_t *dst, int quality, bool realloc)
 
 #endif // (OMV_HARDWARE_JPEG == 1)
 
-int jpeg_clean_trailing_bytes(int size, uint8_t *data)
-{
-    while ((size > 1) && ((data[size-2] != 0xFF) || (data[size-1] != 0xD9))) {
+int jpeg_clean_trailing_bytes(int size, uint8_t *data) {
+    while ((size > 1) && ((data[size - 2] != 0xFF) || (data[size - 1] != 0xD9))) {
         size -= 1;
     }
 
@@ -2092,8 +2194,7 @@ int jpeg_clean_trailing_bytes(int size, uint8_t *data)
 
 #if defined(IMLIB_ENABLE_IMAGE_FILE_IO)
 // This function inits the geometry values of an image.
-void jpeg_read_geometry(FIL *fp, image_t *img, const char *path, jpg_read_settings_t *rs)
-{
+void jpeg_read_geometry(FIL *fp, image_t *img, const char *path, jpg_read_settings_t *rs) {
     for (;;) {
         uint16_t header;
         read_word(fp, &header);
@@ -2101,18 +2202,16 @@ void jpeg_read_geometry(FIL *fp, image_t *img, const char *path, jpg_read_settin
         if ((0xFFD0 <= header) && (header <= 0xFFD9)) {
             continue;
         } else if (((0xFFC0 <= header) && (header <= 0xFFCF))
-                || ((0xFFDA <= header) && (header <= 0xFFDF))
-                || ((0xFFE0 <= header) && (header <= 0xFFEF))
-                || ((0xFFF0 <= header) && (header <= 0xFFFE)))
-        {
+                   || ((0xFFDA <= header) && (header <= 0xFFDF))
+                   || ((0xFFE0 <= header) && (header <= 0xFFEF))
+                   || ((0xFFF0 <= header) && (header <= 0xFFFE))) {
             uint16_t size;
             read_word(fp, &size);
             size = __REV16(size);
             if (((0xFFC0 <= header) && (header <= 0xFFC3))
-             || ((0xFFC5 <= header) && (header <= 0xFFC7))
-             || ((0xFFC9 <= header) && (header <= 0xFFCB))
-             || ((0xFFCD <= header) && (header <= 0xFFCF)))
-            {
+                || ((0xFFC5 <= header) && (header <= 0xFFC7))
+                || ((0xFFC9 <= header) && (header <= 0xFFCB))
+                || ((0xFFCD <= header) && (header <= 0xFFCF))) {
                 read_byte_ignore(fp);
                 uint16_t height;
                 read_word(fp, &height);
@@ -2122,13 +2221,13 @@ void jpeg_read_geometry(FIL *fp, image_t *img, const char *path, jpg_read_settin
                 read_word(fp, &width);
                 width = __REV16(width);
 
-                rs->jpg_w   = width;
-                rs->jpg_h   = height;
+                rs->jpg_w = width;
+                rs->jpg_h = height;
                 rs->jpg_size = IMLIB_IMAGE_MAX_SIZE(f_size(fp));
 
-                img->w      = rs->jpg_w;
-                img->h      = rs->jpg_h;
-                img->size   = rs->jpg_size;
+                img->w = rs->jpg_w;
+                img->h = rs->jpg_h;
+                img->size = rs->jpg_size;
                 img->pixfmt = PIXFORMAT_JPEG;
                 return;
             } else {
@@ -2141,14 +2240,12 @@ void jpeg_read_geometry(FIL *fp, image_t *img, const char *path, jpg_read_settin
 }
 
 // This function reads the pixel values of an image.
-void jpeg_read_pixels(FIL *fp, image_t *img)
-{
+void jpeg_read_pixels(FIL *fp, image_t *img) {
     file_seek(fp, 0);
     read_data(fp, img->pixels, img->size);
 }
 
-void jpeg_read(image_t *img, const char *path)
-{
+void jpeg_read(image_t *img, const char *path) {
     FIL fp;
     jpg_read_settings_t rs;
 
@@ -2165,14 +2262,13 @@ void jpeg_read(image_t *img, const char *path)
     file_close(&fp);
 }
 
-void jpeg_write(image_t *img, const char *path, int quality)
-{
+void jpeg_write(image_t *img, const char *path, int quality) {
     FIL fp;
     file_write_open(&fp, path);
     if (IM_IS_JPEG(img)) {
         write_data(&fp, img->pixels, img->size);
     } else {
-        image_t out = { .w=img->w, .h=img->h, .pixfmt=PIXFORMAT_JPEG, .size=0, .pixels=NULL }; // alloc in jpeg compress
+        image_t out = { .w = img->w, .h = img->h, .pixfmt = PIXFORMAT_JPEG, .size = 0, .pixels = NULL }; // alloc in jpeg compress
         // When jpeg_compress needs more memory than in currently allocated it
         // will try to realloc. MP will detect that the pointer is outside of
         // the heap and return NULL which will cause an out of memory error.

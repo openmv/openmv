@@ -16,23 +16,23 @@
 
 // Transfer speeds
 typedef enum _omv_i2c_speed {
-    OMV_I2C_SPEED_STANDARD  = (0U),
-    OMV_I2C_SPEED_FULL      = (1U),
-    OMV_I2C_SPEED_FAST      = (2U),
-    OMV_I2C_SPEED_MAX       = (3U)
+    OMV_I2C_SPEED_STANDARD = (0U),
+    OMV_I2C_SPEED_FULL     = (1U),
+    OMV_I2C_SPEED_FAST     = (2U),
+    OMV_I2C_SPEED_MAX      = (3U)
 } omv_i2c_speed_t;
 
 // For use with read/write_bytes
 typedef enum omv_i2c_xfer_flags {
     // Stop condition after the transfer.
     // Normal transfer with start condition, address, data and stop condition.
-    OMV_I2C_XFER_NO_FLAGS =   (0<<0),
+    OMV_I2C_XFER_NO_FLAGS =   (0 << 0),
     // No stop condition after the transfer.
     // This flag allows the next transfer to change direction with repeated start.
-    OMV_I2C_XFER_NO_STOP  =   (1<<0),
+    OMV_I2C_XFER_NO_STOP =   (1 << 0),
     // No stop condition after the transfer.
     // This flag allows chaining multiple writes or reads with the same direction.
-    OMV_I2C_XFER_SUSPEND  =   (1<<1),
+    OMV_I2C_XFER_SUSPEND =   (1 << 1),
 } omv_i2c_xfer_flags_t;
 
 typedef struct _omv_i2c {

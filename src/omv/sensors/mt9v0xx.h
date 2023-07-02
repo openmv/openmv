@@ -11,7 +11,7 @@
 #ifndef __MT9V0XX_H__
 #define __MT9V0XX_H__
 #ifndef MT9V0XX_XCLK_FREQ
-#define MT9V0XX_XCLK_FREQ 26666666
+#define MT9V0XX_XCLK_FREQ    26666666
 #endif
 int mt9v0xx_init(sensor_t *sensor);
 #endif // __MT9V0XX_H__

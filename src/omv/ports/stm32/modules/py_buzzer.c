@@ -21,8 +21,7 @@ static TIM_HandleTypeDef buzzer_tim_handle = {};
 static int buzzer_freq = OMV_BUZZER_FREQ;
 static int buzzer_duty = 0;
 
-static void buzzer_setup(int freq, int duty)
-{
+static void buzzer_setup(int freq, int duty) {
     int tclk = OMV_BUZZER_TIM_PCLK_FREQ() * 2;
     int period = (tclk / freq) - 1;
     int pulse = (period * duty) / 510;
@@ -63,8 +62,7 @@ static void buzzer_setup(int freq, int duty)
     buzzer_duty = duty;
 }
 
-STATIC mp_obj_t py_buzzer_freq(uint n_args, const mp_obj_t *args)
-{
+STATIC mp_obj_t py_buzzer_freq(uint n_args, const mp_obj_t *args) {
     if (!n_args) {
         return mp_obj_new_int(buzzer_freq);
     } else {
@@ -74,8 +72,7 @@ STATIC mp_obj_t py_buzzer_freq(uint n_args, const mp_obj_t *args)
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(py_buzzer_freq_obj, 0, 1, py_buzzer_freq);
 
-STATIC mp_obj_t py_buzzer_duty(uint n_args, const mp_obj_t *args)
-{
+STATIC mp_obj_t py_buzzer_duty(uint n_args, const mp_obj_t *args) {
     if (!n_args) {
         return mp_obj_new_int(buzzer_duty);
     } else {
@@ -99,8 +96,7 @@ const mp_obj_module_t buzzer_module = {
     .globals = (mp_obj_t) &globals_dict,
 };
 
-void py_buzzer_init0()
-{
+void py_buzzer_init0() {
     buzzer_setup(OMV_BUZZER_FREQ, 0);
 }
 

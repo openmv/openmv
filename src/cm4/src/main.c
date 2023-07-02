@@ -1,21 +1,20 @@
 #include STM32_HAL_H
-#define HSEM_ID_0       (0U) /* HW semaphore 0*/
-#define LED_RED         GPIO_PIN_5
-#define LED_GREEN       GPIO_PIN_6
-#define LED_BLUE        GPIO_PIN_7
+#define HSEM_ID_0    (0U)    /* HW semaphore 0*/
+#define LED_RED      GPIO_PIN_5
+#define LED_GREEN    GPIO_PIN_6
+#define LED_BLUE     GPIO_PIN_7
 
-void blink_led(uint32_t led)
-{
+void blink_led(uint32_t led) {
     __GPIOK_CLK_ENABLE();
-    GPIO_InitTypeDef  GPIO_InitStructure;
-    GPIO_InitStructure.Pin   = led;
-    GPIO_InitStructure.Pull  = GPIO_PULLDOWN;
-    GPIO_InitStructure.Mode  = GPIO_MODE_OUTPUT_PP;
+    GPIO_InitTypeDef GPIO_InitStructure;
+    GPIO_InitStructure.Pin = led;
+    GPIO_InitStructure.Pull = GPIO_PULLDOWN;
+    GPIO_InitStructure.Mode = GPIO_MODE_OUTPUT_PP;
     GPIO_InitStructure.Speed = GPIO_SPEED_LOW;
     HAL_GPIO_Init(GPIOK, &GPIO_InitStructure);
     HAL_GPIO_WritePin(GPIOK, led, GPIO_PIN_SET);
 
-    for (int i=0; i<5; i++) {
+    for (int i = 0; i < 5; i++) {
         HAL_GPIO_WritePin(GPIOK, led, GPIO_PIN_RESET);
         HAL_Delay(100);
         HAL_GPIO_WritePin(GPIOK, led, GPIO_PIN_SET);
@@ -24,8 +23,7 @@ void blink_led(uint32_t led)
     __GPIOK_CLK_DISABLE();
 }
 
-int main(void)
-{  
+int main(void) {
     HAL_Init();
 
     blink_led(LED_GREEN);

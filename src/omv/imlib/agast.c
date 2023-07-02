@@ -18,9 +18,9 @@
 #include "fb_alloc.h"
 #include "gc.h"
 
-#define MAX_ROW         (480u)
-#define MAX_CORNERS     (2000u)
-#define Compare(X, Y) ((X)>=(Y))
+#define MAX_ROW          (480u)
+#define MAX_CORNERS      (2000u)
+#define Compare(X, Y)    ((X) >= (Y))
 
 typedef struct {
     uint16_t x;
@@ -28,7 +28,7 @@ typedef struct {
     uint16_t score;
 } corner_t;
 
-static int s_width=-1;
+static int s_width = -1;
 static int_fast16_t s_offset0;
 static int_fast16_t s_offset1;
 static int_fast16_t s_offset2;
@@ -38,48 +38,46 @@ static int_fast16_t s_offset5;
 static int_fast16_t s_offset6;
 static int_fast16_t s_offset7;
 
-static corner_t *agast58_detect(image_t *img, int b, int* num_corners, rectangle_t *roi);
-static int agast58_score(const unsigned char* p, int bstart);
+static corner_t *agast58_detect(image_t *img, int b, int *num_corners, rectangle_t *roi);
+static int agast58_score(const unsigned char *p, int bstart);
 static void nonmax_suppression(corner_t *corners, int num_corners, array_t *keypoints);
 
-static kp_t *alloc_keypoint(uint16_t x, uint16_t y, uint16_t score)
-{
+static kp_t *alloc_keypoint(uint16_t x, uint16_t y, uint16_t score) {
     // Note must set keypoint descriptor to zeros
-    kp_t *kpt = xalloc0(sizeof*kpt);
+    kp_t *kpt = xalloc0(sizeof *kpt);
     kpt->x = x;
     kpt->y = y;
     kpt->score = score;
     return kpt;
 }
 
-static void init5_8_pattern(int image_width)
-{
-	if(image_width==s_width)
-		return;
+static void init5_8_pattern(int image_width) {
+    if (image_width == s_width) {
+        return;
+    }
 
-	s_width=image_width;
+    s_width = image_width;
 
-	s_offset0=(-1)+(0)*s_width;
-	s_offset1=(-1)+(-1)*s_width;
-	s_offset2=(0)+(-1)*s_width;
-	s_offset3=(1)+(-1)*s_width;
-	s_offset4=(1)+(0)*s_width;
-	s_offset5=(1)+(1)*s_width;
-	s_offset6=(0)+(1)*s_width;
-	s_offset7=(-1)+(1)*s_width;
+    s_offset0 = (-1) + (0) * s_width;
+    s_offset1 = (-1) + (-1) * s_width;
+    s_offset2 = (0) + (-1) * s_width;
+    s_offset3 = (1) + (-1) * s_width;
+    s_offset4 = (1) + (0) * s_width;
+    s_offset5 = (1) + (1) * s_width;
+    s_offset6 = (0) + (1) * s_width;
+    s_offset7 = (-1) + (1) * s_width;
 }
 
-void agast_detect(image_t *image, array_t *keypoints, int threshold, rectangle_t *roi)
-{
-    int num_corners=0;
-	init5_8_pattern(image->w);
+void agast_detect(image_t *image, array_t *keypoints, int threshold, rectangle_t *roi) {
+    int num_corners = 0;
+    init5_8_pattern(image->w);
 
     // Find corners
     corner_t *corners = agast58_detect(image, threshold, &num_corners, roi);
     if (num_corners) {
         // Score corners
-        for(int i=0; i<num_corners; i++) {
-            corners[i].score = agast58_score(image->pixels + (corners[i].y*image->w + corners[i].x), threshold);
+        for (int i = 0; i < num_corners; i++) {
+            corners[i].score = agast58_score(image->pixels + (corners[i].y * image->w + corners[i].x), threshold);
         }
         // Non-max suppression
         nonmax_suppression(corners, num_corners, keypoints);
@@ -89,28 +87,27 @@ void agast_detect(image_t *image, array_t *keypoints, int threshold, rectangle_t
     fb_free();
 }
 
-static void nonmax_suppression(corner_t *corners, int num_corners, array_t *keypoints)
-{
+static void nonmax_suppression(corner_t *corners, int num_corners, array_t *keypoints) {
     gc_info_t info;
 
-	int last_row;
-	int16_t row_start[MAX_ROW+1];
-	const int sz = num_corners;
+    int last_row;
+    int16_t row_start[MAX_ROW + 1];
+    const int sz = num_corners;
 
-	/* Point above points (roughly) to the pixel above
+    /* Point above points (roughly) to the pixel above
        the one of interest, if there is a feature there.*/
-	int point_above = 0;
-	int point_below = 0;
+    int point_above = 0;
+    int point_below = 0;
 
-	/* Find where each row begins (the corners are output in raster scan order).
+    /* Find where each row begins (the corners are output in raster scan order).
        A beginning of -1 signifies that there are no corners on that row. */
-	last_row  = corners[sz-1].y;
+    last_row = corners[sz - 1].y;
 
-	for(int i=0; i<last_row+1; i++) {
-		row_start[i] = -1;
+    for (int i = 0; i < last_row + 1; i++) {
+        row_start[i] = -1;
     }
 
-    for (int i=0, prev_row=-1; i<sz; i++) {
+    for (int i = 0, prev_row = -1; i < sz; i++) {
         corner_t *c = &corners[i];
         if (c->y != prev_row) {
             row_start[c->y] = i;
@@ -118,60 +115,66 @@ static void nonmax_suppression(corner_t *corners, int num_corners, array_t *keyp
         }
     }
 
-    for(int i=0; i<sz; i++) {
+    for (int i = 0; i < sz; i++) {
         corner_t pos = corners[i];
         uint16_t score = pos.score;
 
         /*Check left */
         if (i > 0) {
-            if (corners[i-1].x == pos.x-1 && corners[i-1].y == pos.y && Compare(corners[i-1].score, score)) {
+            if (corners[i - 1].x == pos.x - 1 && corners[i - 1].y == pos.y && Compare(corners[i - 1].score, score)) {
                 goto nonmax;
             }
         }
 
         /*Check right*/
         if (i < (sz - 1)) {
-            if (corners[i+1].x == pos.x+1 && corners[i+1].y == pos.y && Compare(corners[i+1].score, score)) {
+            if (corners[i + 1].x == pos.x + 1 && corners[i + 1].y == pos.y && Compare(corners[i + 1].score, score)) {
                 goto nonmax;
             }
         }
 
         /*Check above (if there is a valid row above)*/
-        if (pos.y != 0 && row_start[pos.y - 1] != -1)  {
+        if (pos.y != 0 && row_start[pos.y - 1] != -1) {
             /*Make sure that current point_above is one row above.*/
-            if(corners[point_above].y < pos.y - 1)
-                point_above = row_start[pos.y-1];
+            if (corners[point_above].y < pos.y - 1) {
+                point_above = row_start[pos.y - 1];
+            }
 
             /*Make point_above point to the first of the pixels above the current point, if it exists.*/
             for (; corners[point_above].y < pos.y && corners[point_above].x < pos.x - 1; point_above++) {
 
             }
 
-            for (int j=point_above; corners[j].y < pos.y && corners[j].x <= pos.x + 1; j++) {
+            for (int j = point_above; corners[j].y < pos.y && corners[j].x <= pos.x + 1; j++) {
                 int x = corners[j].x;
-                if( (x == pos.x - 1 || x ==pos.x || x == pos.x+1) && Compare(corners[j].score, score))
+                if ( (x == pos.x - 1 || x == pos.x || x == pos.x + 1) && Compare(corners[j].score, score)) {
                     goto nonmax;
+                }
             }
         }
 
         /*Check below (if there is anything below)*/
-        if (pos.y != last_row && row_start[pos.y + 1] != -1 && point_below < sz) /*Nothing below*/ {
-            if (corners[point_below].y < pos.y + 1)
-                point_below = row_start[pos.y+1];
-
-            /* Make point below point to one of the pixels belowthe current point, if it exists.*/
-            for (; point_below < sz && corners[point_below].y == pos.y+1 && corners[point_below].x < pos.x - 1; point_below++) {
+        if (pos.y != last_row && row_start[pos.y + 1] != -1 && point_below < sz) {
+            /*Nothing below*/
+            if (corners[point_below].y < pos.y + 1) {
+                point_below = row_start[pos.y + 1];
             }
 
-            for (int j=point_below; j < sz && corners[j].y == pos.y+1 && corners[j].x <= pos.x + 1; j++) {
+            /* Make point below point to one of the pixels belowthe current point, if it exists.*/
+            for (; point_below < sz && corners[point_below].y == pos.y + 1 && corners[point_below].x < pos.x - 1;
+                 point_below++) {
+            }
+
+            for (int j = point_below; j < sz && corners[j].y == pos.y + 1 && corners[j].x <= pos.x + 1; j++) {
                 int x = corners[j].x;
-                if( (x == pos.x - 1 || x ==pos.x || x == pos.x+1) && Compare(corners[j].score, score))
+                if ( (x == pos.x - 1 || x == pos.x || x == pos.x + 1) && Compare(corners[j].score, score)) {
                     goto nonmax;
+                }
             }
         }
 
         gc_info(&info);
-        #define MIN_MEM (10*1024)
+#define MIN_MEM    (10 * 1024)
         // Allocate keypoints until we're almost out of memory
         if (info.free < MIN_MEM) {
             // Try collecting memory
@@ -190,6 +193,7 @@ static void nonmax_suppression(corner_t *corners, int num_corners, array_t *keyp
     }
 }
 
+// *INDENT-OFF*
 static corner_t *agast58_detect(image_t *img, int b, int* num_corners, rectangle_t *roi)
 {
 	int total=0;
@@ -1284,3 +1288,4 @@ static int agast58_score(const unsigned char* p, int bstart)
 		b = (bmin + bmax) / 2;
 	}
 }
+// *INDENT-ON*

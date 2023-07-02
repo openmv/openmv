@@ -28,25 +28,24 @@
 sensor_t sensor = {};
 extern uint8_t _line_buf[OMV_LINE_BUF_SIZE];
 
-#define CSI_IRQ_FLAGS   ( CSI_CR1_SOF_INTEN_MASK            \
-                        | CSI_CR1_FB2_DMA_DONE_INTEN_MASK   \
-                        | CSI_CR1_FB1_DMA_DONE_INTEN_MASK )
-                        //CSI_CR1_RF_OR_INTEN_MASK
+#define CSI_IRQ_FLAGS    (CSI_CR1_SOF_INTEN_MASK            \
+                          | CSI_CR1_FB2_DMA_DONE_INTEN_MASK \
+                          | CSI_CR1_FB1_DMA_DONE_INTEN_MASK)
+//CSI_CR1_RF_OR_INTEN_MASK
 
-#define copy_line(dstp, srcp)                               \
-    for (int i = MAIN_FB()->u, h = MAIN_FB()->v; i; i--) {  \
-        *dstp = *srcp++;                                    \
-        dstp += h;                                          \
+#define copy_line(dstp, srcp)                              \
+    for (int i = MAIN_FB()->u, h = MAIN_FB()->v; i; i--) { \
+        *dstp = *srcp++;                                   \
+        dstp += h;                                         \
     }
 
-#define copy_line_rev(dstp, srcp)                           \
-    for (int i = MAIN_FB()->u, h = MAIN_FB()->v; i; i--) {  \
-        *dstp = __REV16(*srcp++);                           \
-        dstp += h;                                          \
+#define copy_line_rev(dstp, srcp)                          \
+    for (int i = MAIN_FB()->u, h = MAIN_FB()->v; i; i--) { \
+        *dstp = __REV16(*srcp++);                          \
+        dstp += h;                                         \
     }
 
-void sensor_init0()
-{
+void sensor_init0() {
     sensor_abort();
 
     // Re-init I2C to reset the bus state after soft reset, which
@@ -63,8 +62,7 @@ void sensor_init0()
     sensor_set_frame_callback(NULL);
 }
 
-int sensor_init()
-{
+int sensor_init() {
     int init_ret = 0;
 
     mimxrt_hal_csi_init(CSI);
@@ -111,8 +109,7 @@ int sensor_init()
     return 0;
 }
 
-int sensor_dcmi_config(uint32_t pixformat)
-{
+int sensor_dcmi_config(uint32_t pixformat) {
     CSI_Reset(CSI);
     NVIC_DisableIRQ(CSI_IRQn);
 
@@ -126,7 +123,7 @@ int sensor_dcmi_config(uint32_t pixformat)
     CSI_REG_CR1(CSI) |= CSI_CR1_EXT_VSYNC_MASK;
     CSI_REG_CR1(CSI) |= !sensor.hw_flags.vsync ? CSI_CR1_SOF_POL_MASK    : 0;
     CSI_REG_CR1(CSI) |= !sensor.hw_flags.hsync ? CSI_CR1_HSYNC_POL_MASK  : 0;
-    CSI_REG_CR1(CSI) |=  sensor.hw_flags.pixck ? CSI_CR1_REDGE_MASK      : 0;
+    CSI_REG_CR1(CSI) |= sensor.hw_flags.pixck ? CSI_CR1_REDGE_MASK      : 0;
 
     // Stride config: No stride.
     CSI_REG_FBUF_PARA(CSI) = 0;
@@ -147,8 +144,7 @@ int sensor_dcmi_config(uint32_t pixformat)
     return 0;
 }
 
-int sensor_abort()
-{
+int sensor_abort() {
     NVIC_DisableIRQ(CSI_IRQn);
     CSI_DisableInterrupts(CSI, CSI_IRQ_FLAGS);
     CSI_REG_CR18(CSI) &= ~(CSI_CR18_CSI_ENABLE_MASK | CSI_CR3_DMA_REQ_EN_RFF_MASK);
@@ -156,8 +152,7 @@ int sensor_abort()
     return 0;
 }
 
-int sensor_set_xclk_frequency(uint32_t frequency)
-{
+int sensor_set_xclk_frequency(uint32_t frequency) {
     if (frequency == 24000000) {
         CLOCK_SetDiv(kCLOCK_CsiDiv, 0);
     } else if (frequency == 12000000) {
@@ -174,25 +169,23 @@ int sensor_set_xclk_frequency(uint32_t frequency)
     return 0;
 }
 
-uint32_t sensor_get_xclk_frequency()
-{
+uint32_t sensor_get_xclk_frequency() {
     return 24000000 / (CLOCK_GetDiv(kCLOCK_CsiDiv) + 1);
 }
 
-void sensor_sof_callback()
-{
+void sensor_sof_callback() {
     // Get current framebuffer.
     vbuffer_t *buffer = framebuffer_get_tail(FB_PEEK);
     if (buffer == NULL) {
         sensor_abort();
-    } if (buffer->offset < MAIN_FB()->v) {
+    }
+    if (buffer->offset < MAIN_FB()->v) {
         // Missed a few lines, reset buffer state and continue.
         buffer->reset_state = true;
     }
 }
 
-void sensor_line_callback(uint32_t addr)
-{
+void sensor_line_callback(uint32_t addr) {
     // Get current framebuffer.
     vbuffer_t *buffer = framebuffer_get_tail(FB_PEEK);
 
@@ -256,7 +249,7 @@ void sensor_line_callback(uint32_t addr)
             edma_memcpy(buffer, dst16, src16, sizeof(uint16_t), sensor.transpose);
             #else
             if ((sensor.pixformat == PIXFORMAT_RGB565 && sensor.hw_flags.rgb_swap)
-            ||  (sensor.pixformat == PIXFORMAT_YUV422 && sensor.hw_flags.yuv_swap)) {
+                || (sensor.pixformat == PIXFORMAT_YUV422 && sensor.hw_flags.yuv_swap)) {
                 if (!sensor.transpose) {
                     unaligned_memcpy_rev16(dst16, src16, MAIN_FB()->u);
                 } else {
@@ -283,8 +276,7 @@ void sensor_line_callback(uint32_t addr)
 }
 
 // This is the default snapshot function, which can be replaced in sensor_init functions.
-int sensor_snapshot(sensor_t *sensor, image_t *image, uint32_t flags)
-{
+int sensor_snapshot(sensor_t *sensor, image_t *image, uint32_t flags) {
     // Used to restore MAIN_FB's width and height.
     uint32_t w = MAIN_FB()->u;
     uint32_t h = MAIN_FB()->v;
@@ -320,8 +312,8 @@ int sensor_snapshot(sensor_t *sensor, image_t *image, uint32_t flags)
         uint32_t bytes_per_pixel = sensor_get_src_bpp();
         uint32_t dma_line_bytes = resolution[sensor->framesize][0] * bytes_per_pixel;
         CSI_REG_IMAG_PARA(CSI) =
-            (dma_line_bytes << CSI_IMAG_PARA_IMAGE_WIDTH_SHIFT ) |
-            (1              << CSI_IMAG_PARA_IMAGE_HEIGHT_SHIFT);
+            (dma_line_bytes << CSI_IMAG_PARA_IMAGE_WIDTH_SHIFT) |
+            (1 << CSI_IMAG_PARA_IMAGE_HEIGHT_SHIFT);
 
         // Configure and enable CSI interrupts.
         CSI_EnableInterrupts(CSI, CSI_IRQ_FLAGS);
@@ -358,7 +350,7 @@ int sensor_snapshot(sensor_t *sensor, image_t *image, uint32_t flags)
             MAIN_FB()->pixfmt = PIXFORMAT_RGB565;
             break;
         case PIXFORMAT_BAYER:
-            MAIN_FB()->pixfmt    = PIXFORMAT_BAYER;
+            MAIN_FB()->pixfmt = PIXFORMAT_BAYER;
             MAIN_FB()->subfmt_id = sensor->hw_flags.bayer;
             break;
         case PIXFORMAT_YUV422: {

@@ -33,8 +33,7 @@ sensor_t sensor = {};
 static void dma_irq_handler();
 extern void __fatal_error(const char *msg);
 
-static void sensor_dma_config(int w, int h, int bpp, uint32_t *capture_buf, bool rev_bytes)
-{
+static void sensor_dma_config(int w, int h, int bpp, uint32_t *capture_buf, bool rev_bytes) {
     dma_channel_abort(DCMI_DMA_CHANNEL);
     dma_irqn_set_channel_enabled(DCMI_DMA, DCMI_DMA_CHANNEL, false);
 
@@ -45,18 +44,17 @@ static void sensor_dma_config(int w, int h, int bpp, uint32_t *capture_buf, bool
     channel_config_set_bswap(&c, rev_bytes);
 
     dma_channel_configure(DCMI_DMA_CHANNEL, &c,
-        capture_buf,                // Destinatinon pointer.
-        &DCMI_PIO->rxf[DCMI_SM],    // Source pointer.
-        (w*h*bpp)>>2,               // Number of transfers in words.
-        true                        // Start immediately, will block on SM.
-    );
+                          capture_buf, // Destinatinon pointer.
+                          &DCMI_PIO->rxf[DCMI_SM], // Source pointer.
+                          (w * h * bpp) >> 2, // Number of transfers in words.
+                          true      // Start immediately, will block on SM.
+                          );
 
     // Re-enable DMA IRQs.
     dma_irqn_set_channel_enabled(DCMI_DMA, DCMI_DMA_CHANNEL, true);
 }
 
-int sensor_init()
-{
+int sensor_init() {
     int init_ret = 0;
 
     // PIXCLK
@@ -139,8 +137,7 @@ int sensor_init()
     return 0;
 }
 
-int sensor_abort()
-{
+int sensor_abort() {
     // Disable DMA channel
     dma_channel_abort(DCMI_DMA_CHANNEL);
     dma_irqn_set_channel_enabled(DCMI_DMA, DCMI_DMA_CHANNEL, false);
@@ -155,8 +152,7 @@ int sensor_abort()
     return 0;
 }
 
-int sensor_set_xclk_frequency(uint32_t frequency)
-{
+int sensor_set_xclk_frequency(uint32_t frequency) {
     uint32_t p = 4;
 
     // Allocate pin to the PWM
@@ -166,10 +162,10 @@ int sensor_set_xclk_frequency(uint32_t frequency)
     uint slice_num = pwm_gpio_to_slice_num(DCMI_XCLK_PIN);
 
     // Set period to p cycles
-    pwm_set_wrap(slice_num, p-1);
+    pwm_set_wrap(slice_num, p - 1);
 
     // Set channel A 50% duty cycle.
-    pwm_set_chan_level(slice_num, PWM_CHAN_A, p/2);
+    pwm_set_chan_level(slice_num, PWM_CHAN_A, p / 2);
 
     // Set sysclk divider
     // f = 125000000 / (p * (1 + (p/16)))
@@ -181,13 +177,11 @@ int sensor_set_xclk_frequency(uint32_t frequency)
     return 0;
 }
 
-int sensor_set_windowing(int x, int y, int w, int h)
-{
+int sensor_set_windowing(int x, int y, int w, int h) {
     return SENSOR_ERROR_CTL_UNSUPPORTED;
 }
 
-static void dma_irq_handler()
-{
+static void dma_irq_handler() {
     if (dma_irqn_get_channel_status(DCMI_DMA, DCMI_DMA_CHANNEL)) {
         // Clear the interrupt request.
         dma_irqn_acknowledge_channel(DCMI_DMA, DCMI_DMA_CHANNEL);
@@ -208,8 +202,7 @@ static void dma_irq_handler()
 }
 
 // This is the default snapshot function, which can be replaced in sensor_init functions.
-int sensor_snapshot(sensor_t *sensor, image_t *image, uint32_t flags)
-{
+int sensor_snapshot(sensor_t *sensor, image_t *image, uint32_t flags) {
     // Compress the framebuffer for the IDE preview.
     framebuffer_update_jpeg_buffer();
 
@@ -240,7 +233,7 @@ int sensor_snapshot(sensor_t *sensor, image_t *image, uint32_t flags)
 
         // Configure the DMA on the first frame, for later frames only the write is changed.
         sensor_dma_config(MAIN_FB()->u, MAIN_FB()->v, MAIN_FB()->bpp,
-                (void *) buffer->data, (sensor->hw_flags.rgb_swap && MAIN_FB()->bpp == 2));
+                          (void *) buffer->data, (sensor->hw_flags.rgb_swap && MAIN_FB()->bpp == 2));
 
 
         // Re-enable the state machine.

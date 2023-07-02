@@ -20,17 +20,20 @@
 #include "imlib.h"
 #include "ff_wrapper.h"
 
-static void read_int_reset(ppm_read_settings_t *rs)
-{
+static void read_int_reset(ppm_read_settings_t *rs) {
     rs->read_int_c_valid = false;
 }
 
-static void read_int(FIL *fp, uint32_t *i, ppm_read_settings_t *rs)
-{
-    enum { EAT_WHITESPACE, EAT_COMMENT, EAT_NUMBER } mode = EAT_WHITESPACE;
-    for(*i = 0;;) {
+static void read_int(FIL *fp, uint32_t *i, ppm_read_settings_t *rs) {
+    enum {
+        EAT_WHITESPACE, EAT_COMMENT, EAT_NUMBER
+    }
+    mode = EAT_WHITESPACE;
+    for (*i = 0;;) {
         if (!rs->read_int_c_valid) {
-            if (file_tell_w_buf(fp) == file_size_w_buf(fp)) return;
+            if (file_tell_w_buf(fp) == file_size_w_buf(fp)) {
+                return;
+            }
             read_byte(fp, &rs->read_int_c);
             rs->read_int_c_valid = true;
         }
@@ -57,13 +60,12 @@ static void read_int(FIL *fp, uint32_t *i, ppm_read_settings_t *rs)
 }
 
 // This function inits the geometry values of an image.
-void ppm_read_geometry(FIL *fp, image_t *img, const char *path, ppm_read_settings_t *rs)
-{
+void ppm_read_geometry(FIL *fp, image_t *img, const char *path, ppm_read_settings_t *rs) {
     read_int_reset(rs);
     read_byte_expect(fp, 'P');
     read_byte(fp, &rs->ppm_fmt);
 
-    if ((rs->ppm_fmt!='2') && (rs->ppm_fmt!='3') && (rs->ppm_fmt!='5') && (rs->ppm_fmt!='6')) {
+    if ((rs->ppm_fmt != '2') && (rs->ppm_fmt != '3') && (rs->ppm_fmt != '5') && (rs->ppm_fmt != '6')) {
         ff_unsupported_format(fp);
     }
 
@@ -84,8 +86,7 @@ void ppm_read_geometry(FIL *fp, image_t *img, const char *path, ppm_read_setting
 }
 
 // This function reads the pixel values of an image.
-void ppm_read_pixels(FIL *fp, image_t *img, int n_lines, ppm_read_settings_t *rs)
-{
+void ppm_read_pixels(FIL *fp, image_t *img, int n_lines, ppm_read_settings_t *rs) {
     if (rs->ppm_fmt == '2') {
         for (int i = 0; i < n_lines; i++) {
             for (int j = 0; j < img->w; j++) {
@@ -119,8 +120,7 @@ void ppm_read_pixels(FIL *fp, image_t *img, int n_lines, ppm_read_settings_t *rs
     }
 }
 
-void ppm_read(image_t *img, const char *path)
-{
+void ppm_read(image_t *img, const char *path) {
     FIL fp;
     ppm_read_settings_t rs;
 
@@ -137,8 +137,7 @@ void ppm_read(image_t *img, const char *path)
     file_close(&fp);
 }
 
-void ppm_write_subimg(image_t *img, const char *path, rectangle_t *r)
-{
+void ppm_write_subimg(image_t *img, const char *path, rectangle_t *r) {
     rectangle_t rect;
     if (!rectangle_subimg(img, r, &rect)) {
         mp_raise_msg(&mp_type_OSError, MP_ERROR_TEXT("No intersection!"));
@@ -157,7 +156,7 @@ void ppm_write_subimg(image_t *img, const char *path, rectangle_t *r)
                        rect.w * rect.h);
         } else {
             for (int i = 0; i < rect.h; i++) {
-                write_data(&fp, img->pixels+((rect.y+i)*img->w)+rect.x, rect.w);
+                write_data(&fp, img->pixels + ((rect.y + i) * img->w) + rect.x, rect.w);
             }
         }
     } else {

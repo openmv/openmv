@@ -17,12 +17,12 @@
 // Config options are defined in ports so they can be used
 // directly to initialize peripherals without remapping them.
 typedef enum {
-    OMV_SPI_XFER_DMA        = (1 << 0),
-    OMV_SPI_XFER_BLOCKING   = (1 << 1),
-    OMV_SPI_XFER_NONBLOCK   = (1 << 2),
-    OMV_SPI_XFER_CIRCULAR   = (1 << 3),
-    OMV_SPI_XFER_FAILED     = (1 << 4),
-    OMV_SPI_XFER_COMPLETE   = (1 << 5),
+    OMV_SPI_XFER_DMA      = (1 << 0),
+    OMV_SPI_XFER_BLOCKING = (1 << 1),
+    OMV_SPI_XFER_NONBLOCK = (1 << 2),
+    OMV_SPI_XFER_CIRCULAR = (1 << 3),
+    OMV_SPI_XFER_FAILED   = (1 << 4),
+    OMV_SPI_XFER_COMPLETE = (1 << 5),
 } omv_spi_xfer_flags_t;
 
 typedef struct _omv_spi_config {
@@ -42,7 +42,7 @@ typedef struct _omv_spi_config {
 
 typedef struct _omv_spi omv_spi_t;
 
-typedef void (*omv_spi_callback_t)(omv_spi_t *spi, void *data);
+typedef void (*omv_spi_callback_t) (omv_spi_t *spi, void *data);
 
 typedef struct _omv_spi_transfer {
     void *txbuf;

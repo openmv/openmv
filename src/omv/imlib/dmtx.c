@@ -16,47 +16,44 @@
 #pragma GCC diagnostic ignored "-Wunused-variable"
 #pragma GCC diagnostic ignored "-Wunused-but-set-variable"
 
-////////////////////////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////////////////////////
-
 #define perror(str)
 #define fprintf(stream, format, ...)
-#define free(ptr) ({ umm_free(ptr); })
-#define malloc(size) ({ void *_r = umm_malloc(size); if(!_r) fb_alloc_fail(); _r; })
-#define realloc(ptr, size) ({ void *_r = umm_realloc((ptr), (size)); if(!_r) fb_alloc_fail(); _r; })
-#define calloc(num, item_size) ({ void *_r = umm_calloc((num), (item_size)); if(!_r) fb_alloc_fail(); _r; })
+#define free(ptr)                 ({ umm_free(ptr); })
+#define malloc(size)              ({ void *_r = umm_malloc(size); if (!_r) fb_alloc_fail(); _r; })
+#define realloc(ptr, size)        ({ void *_r = umm_realloc((ptr), (size)); if (!_r) fb_alloc_fail(); _r; })
+#define calloc(num, item_size)    ({ void *_r = umm_calloc((num), (item_size)); if (!_r) fb_alloc_fail(); _r; })
 #undef assert
 #define assert(expression)
-#define sqrt(x) fast_sqrtf(x)
-#define sqrtf(x) fast_sqrtf(x)
-#define floor(x) fast_floorf(x)
-#define floorf(x) fast_floorf(x)
-#define ceil(x) fast_ceilf(x)
-#define ceilf(x) fast_ceilf(x)
-#define round(x) fast_roundf(x)
-#define roundf(x) fast_roundf(x)
-#define atan(x) fast_atanf(x)
-#define atanf(x) fast_atanf(x)
-#define atan2(y, x) fast_atan2f((y), (x))
-#define atan2f(y, x) fast_atan2f((y), (x))
-#define exp(x) fast_expf(x)
-#define expf(x) fast_expf(x)
-#define cbrt(x) fast_cbrtf(x)
-#define cbrtf(x) fast_cbrtf(x)
-#define fabs(x) fast_fabsf(x)
-#define fabsf(x) fast_fabsf(x)
-#define log(x) fast_log(x)
-#define logf(x) fast_log(x)
+#define sqrt(x)                   fast_sqrtf(x)
+#define sqrtf(x)                  fast_sqrtf(x)
+#define floor(x)                  fast_floorf(x)
+#define floorf(x)                 fast_floorf(x)
+#define ceil(x)                   fast_ceilf(x)
+#define ceilf(x)                  fast_ceilf(x)
+#define round(x)                  fast_roundf(x)
+#define roundf(x)                 fast_roundf(x)
+#define atan(x)                   fast_atanf(x)
+#define atanf(x)                  fast_atanf(x)
+#define atan2(y, x)               fast_atan2f((y), (x))
+#define atan2f(y, x)              fast_atan2f((y), (x))
+#define exp(x)                    fast_expf(x)
+#define expf(x)                   fast_expf(x)
+#define cbrt(x)                   fast_cbrtf(x)
+#define cbrtf(x)                  fast_cbrtf(x)
+#define fabs(x)                   fast_fabsf(x)
+#define fabsf(x)                  fast_fabsf(x)
+#define log(x)                    fast_log(x)
+#define logf(x)                   fast_log(x)
 #undef log2
-#define log2(x) fast_log2(x)
+#define log2(x)                   fast_log2(x)
 #undef log2f
-#define log2f(x) fast_log2(x)
-#define cos(x) cosf(x)
-#define sin(x) sinf(x)
-#define acos(x) acosf(x)
-#define asin(x) asinf(x)
+#define log2f(x)                  fast_log2(x)
+#define cos(x)                    cosf(x)
+#define sin(x)                    sinf(x)
+#define acos(x)                   acosf(x)
+#define asin(x)                   asinf(x)
 
+// *INDENT-OFF*
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 //////// "dmtx.h"
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -6410,3 +6407,4 @@ void imlib_find_datamatrices(list_t *out, image_t *ptr, rectangle_t *roi, int ef
 
 #pragma GCC diagnostic pop
 #endif //IMLIB_ENABLE_DATAMATRICES
+// *INDENT-ON*

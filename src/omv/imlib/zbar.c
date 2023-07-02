@@ -15,19 +15,17 @@
 #pragma GCC diagnostic ignored "-Wunused-variable"
 #pragma GCC diagnostic ignored "-Wunused-but-set-variable"
 
-////////////////////////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////////////////////////
-
-#define free(ptr) ({ umm_free(ptr); })
-#define malloc(size) ({ void *_r = umm_malloc(size); if(!_r) fb_alloc_fail(); _r; })
-#define realloc(ptr, size) ({ void *_r = umm_realloc((ptr), (size)); if(!_r) fb_alloc_fail(); _r; })
-#define calloc(num, item_size) ({ void *_r = umm_calloc((num), (item_size)); if(!_r) fb_alloc_fail(); _r; })
+#define free(ptr)                                  ({ umm_free(ptr); })
+#define malloc(size)                               ({ void *_r = umm_malloc(size); if (!_r) fb_alloc_fail(); _r; })
+#define realloc(ptr, size)                         ({ void *_r = umm_realloc((ptr), (size)); if (!_r) fb_alloc_fail(); _r; })
+#define calloc(num,                                                                                                            \
+               item_size)                          ({ void *_r = umm_calloc((num), (item_size)); if (!_r) fb_alloc_fail(); _r; \
+                                                    })
 #undef assert
 #define assert(expression)
 #define zprintf(...)
-#define dbprintf(...) while(0)
-#define zassert(condition, retval, format, ...) do { if(!(condition)) return(retval); } while(0)
+#define dbprintf(...)                              while (0)
+#define zassert(condition, retval, format, ...)    do { if (!(condition)) return(retval); } while (0)
 
 #define zbar_image_write_png(...)
 #define svg_open(...)
@@ -49,6 +47,7 @@
 #define ENABLE_CODE128
 #define ENABLE_PDF417
 
+// *INDENT-OFF*
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 //////// "zbar.h"
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -8865,4 +8864,4 @@ void imlib_find_barcodes(list_t *out, image_t *ptr, rectangle_t *roi)
 }
 
 #pragma GCC diagnostic pop
-#endif //IMLIB_ENABLE_BARCODES
+#endif //IMLIB_ENABLE_BARCODES *INDENT-ON*

@@ -22,12 +22,11 @@
 #include "omv_gpio.h"
 #include "common.h"
 
-#define IOMUXC_SET_REG(base, reg, val) *((volatile uint32_t *) ((((uint32_t) base) << 16) | reg)) = (val)
+#define IOMUXC_SET_REG(base, reg, val)    *((volatile uint32_t *) ((((uint32_t) base) << 16) | reg)) = (val)
 
 extern omv_gpio_irq_descr_t *const gpio_irq_descr_table[MIMXRT_PAD_COUNT];
 
-static uint32_t omv_gpio_irq_get_gpio(omv_gpio_t pin)
-{
+static uint32_t omv_gpio_irq_get_gpio(omv_gpio_t pin) {
     const imxrt_pad_t *pad = pin->pad;
     GPIO_Type *gpio_all[] = GPIO_BASE_PTRS;
 
@@ -39,8 +38,7 @@ static uint32_t omv_gpio_irq_get_gpio(omv_gpio_t pin)
     return 0;
 }
 
-static uint32_t omv_gpio_irq_get_irqn(omv_gpio_t pin)
-{
+static uint32_t omv_gpio_irq_get_irqn(omv_gpio_t pin) {
     const imxrt_pad_t *pad = pin->pad;
     uint32_t gpio = omv_gpio_irq_get_gpio(pin);
     uint8_t low_irqs[] = GPIO_COMBINED_LOW_IRQS;
@@ -48,8 +46,7 @@ static uint32_t omv_gpio_irq_get_irqn(omv_gpio_t pin)
     return (pad->pin < 16) ? low_irqs[gpio] : high_irqs[gpio];
 }
 
-static omv_gpio_irq_descr_t *omv_gpio_irq_get_descr(omv_gpio_t pin)
-{
+static omv_gpio_irq_descr_t *omv_gpio_irq_get_descr(omv_gpio_t pin) {
     const imxrt_pad_t *pad = pin->pad;
     uint32_t gpio = omv_gpio_irq_get_gpio(pin);
     if (gpio && gpio_irq_descr_table[gpio]) {
@@ -58,13 +55,12 @@ static omv_gpio_irq_descr_t *omv_gpio_irq_get_descr(omv_gpio_t pin)
     return NULL;
 }
 
-static const imxrt_pad_af_t *omv_gpio_find_af(omv_gpio_t pin, uint32_t af)
-{
+static const imxrt_pad_af_t *omv_gpio_find_af(omv_gpio_t pin, uint32_t af) {
     static const imxrt_pad_af_t af_gpio = {5, 0, 0};
     if (af == 5) {
         return &af_gpio;
     }
-    
+
     const imxrt_pad_t *pad = pin->pad;
     for (size_t i = 0; i < pad->af_count; i++) {
         if (af == pad->af_list[i].idx) {
@@ -74,8 +70,7 @@ static const imxrt_pad_af_t *omv_gpio_find_af(omv_gpio_t pin, uint32_t af)
     return NULL;
 }
 
-void omv_gpio_config(omv_gpio_t pin, uint32_t mode, uint32_t pull, uint32_t speed, uint32_t af)
-{
+void omv_gpio_config(omv_gpio_t pin, uint32_t mode, uint32_t pull, uint32_t speed, uint32_t af) {
     const imxrt_pad_t *pad = pin->pad;
     af = ((af == -1) ? pin->af : af);
     const imxrt_pad_af_t *pad_af = omv_gpio_find_af(pin, af);
@@ -131,25 +126,21 @@ void omv_gpio_config(omv_gpio_t pin, uint32_t mode, uint32_t pull, uint32_t spee
     GPIO_PinInit(pad->port, pad->pin, &pin_config);
 }
 
-void omv_gpio_deinit(omv_gpio_t pin)
-{
+void omv_gpio_deinit(omv_gpio_t pin) {
 
 }
 
-bool omv_gpio_read(omv_gpio_t pin)
-{
+bool omv_gpio_read(omv_gpio_t pin) {
     const imxrt_pad_t *pad = pin->pad;
     return GPIO_PinRead(pad->port, pad->pin);
 }
 
-void omv_gpio_write(omv_gpio_t pin, bool value)
-{
+void omv_gpio_write(omv_gpio_t pin, bool value) {
     const imxrt_pad_t *pad = pin->pad;
     GPIO_PinWrite(pad->port, pad->pin, value);
 }
 
-void omv_gpio_irq_register(omv_gpio_t pin, omv_gpio_callback_t callback, void *data)
-{
+void omv_gpio_irq_register(omv_gpio_t pin, omv_gpio_callback_t callback, void *data) {
     omv_gpio_irq_descr_t *irq_descr = omv_gpio_irq_get_descr(pin);
     if (irq_descr) {
         irq_descr->enabled = true;
@@ -158,8 +149,7 @@ void omv_gpio_irq_register(omv_gpio_t pin, omv_gpio_callback_t callback, void *d
     }
 }
 
-void omv_gpio_irq_enable(omv_gpio_t pin, bool enable)
-{
+void omv_gpio_irq_enable(omv_gpio_t pin, bool enable) {
     const imxrt_pad_t *pad = pin->pad;
     uint32_t irqn = omv_gpio_irq_get_irqn(pin);
     omv_gpio_irq_descr_t *irq_descr = omv_gpio_irq_get_descr(pin);
@@ -181,8 +171,7 @@ void omv_gpio_irq_enable(omv_gpio_t pin, bool enable)
     irq_descr->enabled = enable;
 }
 
-void omv_gpio_irq_handler(GPIO_Type *gpio, uint32_t gpio_nr, uint32_t pin_nr)
-{
+void omv_gpio_irq_handler(GPIO_Type *gpio, uint32_t gpio_nr, uint32_t pin_nr) {
     omv_gpio_irq_descr_t *irq_descr = NULL;
     if (gpio_irq_descr_table[gpio_nr]) {
         irq_descr = &gpio_irq_descr_table[gpio_nr][pin_nr];

@@ -13,6 +13,7 @@
 #include <stdio.h>
 #include "imlib.h"
 
+// *INDENT-OFF*
 // Enable new code optimizations
 #define OPTIMIZED
 
@@ -12534,5 +12535,5 @@ void imlib_rotation_corr(image_t *img, float x_rotation, float y_rotation, float
 
     fb_free();
 }
-#endif //IMLIB_ENABLE_ROTATION_CORR
+#endif //IMLIB_ENABLE_ROTATION_CORR *INDENT-ON*
 #pragma GCC diagnostic pop

@@ -16,11 +16,10 @@
 #include "omv_i2c.h"
 #include "common.h"
 
-#define I2C_TIMEOUT             (1000)
-#define I2C_SCAN_TIMEOUT        (100)
+#define I2C_TIMEOUT         (1000)
+#define I2C_SCAN_TIMEOUT    (100)
 
-int omv_i2c_init(omv_i2c_t *i2c, uint32_t bus_id, uint32_t speed)
-{
+int omv_i2c_init(omv_i2c_t *i2c, uint32_t bus_id, uint32_t speed) {
     i2c->id = bus_id;
     i2c->initialized = false;
 
@@ -56,11 +55,11 @@ int omv_i2c_init(omv_i2c_t *i2c, uint32_t bus_id, uint32_t speed)
     }
 
     nrfx_twi_config_t config = {
-       .scl                = i2c->scl_pin,
-       .sda                = i2c->sda_pin,
-       .frequency          = i2c->speed,
-       .interrupt_priority = 4,
-       .hold_bus_uninit    = false
+        .scl = i2c->scl_pin,
+        .sda = i2c->sda_pin,
+        .frequency = i2c->speed,
+        .interrupt_priority = 4,
+        .hold_bus_uninit = false
     };
 
     if (nrfx_twi_init(&i2c->inst, &config, NULL, NULL) != NRFX_SUCCESS) {
@@ -74,8 +73,7 @@ int omv_i2c_init(omv_i2c_t *i2c, uint32_t bus_id, uint32_t speed)
     return 0;
 }
 
-int omv_i2c_deinit(omv_i2c_t *i2c)
-{
+int omv_i2c_deinit(omv_i2c_t *i2c) {
     if (i2c->initialized) {
         nrfx_twi_disable(&i2c->inst);
         nrfx_twi_uninit(&i2c->inst);
@@ -84,12 +82,11 @@ int omv_i2c_deinit(omv_i2c_t *i2c)
     return 0;
 }
 
-int omv_i2c_scan(omv_i2c_t *i2c, uint8_t *list, uint8_t size)
-{
+int omv_i2c_scan(omv_i2c_t *i2c, uint8_t *list, uint8_t size) {
     int idx = 0;
     uint8_t data;
     uint32_t xfer_flags = 0;
-    for (uint8_t addr=0x09; addr<=0x77; addr++) {
+    for (uint8_t addr = 0x09; addr <= 0x77; addr++) {
         nrfx_twi_xfer_desc_t desc = NRFX_TWI_XFER_DESC_RX(addr, &data, 1);
         if (nrfx_twi_xfer(&i2c->inst, &desc, xfer_flags) == NRFX_SUCCESS) {
             if (list == NULL || size == 0) {
@@ -104,8 +101,7 @@ int omv_i2c_scan(omv_i2c_t *i2c, uint8_t *list, uint8_t size)
     return idx;
 }
 
-int omv_i2c_enable(omv_i2c_t *i2c, bool enable)
-{
+int omv_i2c_enable(omv_i2c_t *i2c, bool enable) {
     if (i2c->initialized) {
         if (enable) {
             nrfx_twi_enable(&i2c->inst);
@@ -116,8 +112,7 @@ int omv_i2c_enable(omv_i2c_t *i2c, bool enable)
     return 0;
 }
 
-int omv_i2c_gencall(omv_i2c_t *i2c, uint8_t cmd)
-{
+int omv_i2c_gencall(omv_i2c_t *i2c, uint8_t cmd) {
     uint32_t xfer_flags = 0;
     nrfx_twi_xfer_desc_t desc = NRFX_TWI_XFER_DESC_TX(0x00, &cmd, 1);
     if (nrfx_twi_xfer(&i2c->inst, &desc, xfer_flags) != NRFX_SUCCESS) {
@@ -126,8 +121,7 @@ int omv_i2c_gencall(omv_i2c_t *i2c, uint8_t cmd)
     return 0;
 }
 
-int omv_i2c_readb(omv_i2c_t *i2c, uint8_t slv_addr, uint8_t reg_addr, uint8_t *reg_data)
-{
+int omv_i2c_readb(omv_i2c_t *i2c, uint8_t slv_addr, uint8_t reg_addr, uint8_t *reg_data) {
     int ret = 0;
     slv_addr = slv_addr >> 1;
 
@@ -148,8 +142,7 @@ i2c_error:
     return ret;
 }
 
-int omv_i2c_writeb(omv_i2c_t *i2c, uint8_t slv_addr, uint8_t reg_addr, uint8_t reg_data)
-{
+int omv_i2c_writeb(omv_i2c_t *i2c, uint8_t slv_addr, uint8_t reg_addr, uint8_t reg_data) {
     int ret = 0;
     slv_addr = slv_addr >> 1;
 
@@ -170,8 +163,7 @@ i2c_error:
     return ret;
 }
 
-int omv_i2c_read_bytes(omv_i2c_t *i2c, uint8_t slv_addr, uint8_t *buf, int len, uint32_t flags)
-{
+int omv_i2c_read_bytes(omv_i2c_t *i2c, uint8_t slv_addr, uint8_t *buf, int len, uint32_t flags) {
     int ret = 0;
     slv_addr = slv_addr >> 1;
     uint32_t xfer_flags = 0;
@@ -186,8 +178,7 @@ int omv_i2c_read_bytes(omv_i2c_t *i2c, uint8_t slv_addr, uint8_t *buf, int len, 
     return ret;
 }
 
-int omv_i2c_write_bytes(omv_i2c_t *i2c, uint8_t slv_addr, uint8_t *buf, int len, uint32_t flags)
-{
+int omv_i2c_write_bytes(omv_i2c_t *i2c, uint8_t slv_addr, uint8_t *buf, int len, uint32_t flags) {
     int ret = 0;
     slv_addr = slv_addr >> 1;
     uint32_t xfer_flags = 0;
@@ -204,10 +195,9 @@ int omv_i2c_write_bytes(omv_i2c_t *i2c, uint8_t slv_addr, uint8_t *buf, int len,
     return ret;
 }
 
-int omv_i2c_pulse_scl(omv_i2c_t *i2c)
-{
+int omv_i2c_pulse_scl(omv_i2c_t *i2c) {
     omv_i2c_deinit(i2c);
-    for (int i=0; i<10000; i++) {
+    for (int i = 0; i < 10000; i++) {
         nrfx_twi_bus_recover(i2c->scl_pin, i2c->sda_pin);
     }
     return 0;

@@ -25,10 +25,10 @@
 #include "vl53l5cx_api.h"
 #endif
 
-#define VL53L5CX_ADDR                   0x52
-#define VL53L5CX_WIDTH                  8
-#define VL53L5CX_HEIGHT                 8
-#define VL53L5CX_FRAME_DATA_SIZE        64
+#define VL53L5CX_ADDR               0x52
+#define VL53L5CX_WIDTH              8
+#define VL53L5CX_HEIGHT             8
+#define VL53L5CX_FRAME_DATA_SIZE    64
 
 static omv_i2c_t tof_bus = {};
 
@@ -37,7 +37,8 @@ static enum {
     #if (OMV_ENABLE_TOF_VL53L5CX == 1)
     TOF_VL53L5CX,
     #endif
-} tof_sensor = TOF_NONE;
+}
+tof_sensor = TOF_NONE;
 
 static int tof_width = 0;
 static int tof_height = 0;
@@ -53,8 +54,7 @@ static VL53L5CX_Configuration vl53l5cx_dev = {
 #endif
 
 // img->w == data_w && img->h == data_h && img->pixfmt == PIXFORMAT_GRAYSCALE
-static void tof_fill_image_float_obj(image_t *img, mp_obj_t *data, float min, float max)
-{
+static void tof_fill_image_float_obj(image_t *img, mp_obj_t *data, float min, float max) {
     float tmp = min;
     min = (min < max) ? min : max;
     max = (max > tmp) ? max : tmp;
@@ -84,8 +84,7 @@ static void tof_fill_image_float_obj(image_t *img, mp_obj_t *data, float min, fl
 }
 
 #if (OMV_ENABLE_TOF_VL53L5CX == 1)
-static void tof_vl53l5cx_get_depth(VL53L5CX_Configuration *vl53l5cx_dev, float *frame, uint32_t timeout)
-{
+static void tof_vl53l5cx_get_depth(VL53L5CX_Configuration *vl53l5cx_dev, float *frame, uint32_t timeout) {
     uint8_t frame_ready = 0;
     // Note depending on the config in platform.h, this struct can be too big to alloc on the stack.
     VL53L5CX_ResultsData ranging_data;
@@ -109,8 +108,7 @@ static void tof_vl53l5cx_get_depth(VL53L5CX_Configuration *vl53l5cx_dev, float *
     }
 }
 
-static mp_obj_t tof_get_depth_obj(int w, int h, float *frame, bool mirror, bool flip, bool dst_transpose, bool src_transpose)
-{
+static mp_obj_t tof_get_depth_obj(int w, int h, float *frame, bool mirror, bool flip, bool dst_transpose, bool src_transpose) {
     mp_obj_list_t *list = (mp_obj_list_t *) mp_obj_new_list(w * h, NULL);
     float min = FLT_MAX;
     float max = -FLT_MAX;
@@ -184,8 +182,7 @@ static mp_obj_t tof_get_depth_obj(int w, int h, float *frame, bool mirror, bool 
 }
 #endif
 
-static mp_obj_t py_tof_deinit()
-{
+static mp_obj_t py_tof_deinit() {
     tof_width = 0;
     tof_height = 0;
     tof_transposed = false;
@@ -204,8 +201,7 @@ static mp_obj_t py_tof_deinit()
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_tof_deinit_obj, py_tof_deinit);
 
-mp_obj_t py_tof_init(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
-{
+mp_obj_t py_tof_init(uint n_args, const mp_obj_t *args, mp_map_t *kw_args) {
     py_tof_deinit();
     bool first_init = true;
     int type = py_helper_keyword_int(n_args, args, 0, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_type), -1);
@@ -216,7 +212,7 @@ mp_obj_t py_tof_init(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
         // Scan and detect any supported sensor.
         uint8_t dev_list[10];
         int dev_size = omv_i2c_scan(&tof_bus, dev_list, sizeof(dev_list));
-        for (int i=0; i<dev_size && type==-1; i++) {
+        for (int i = 0; i < dev_size && type == -1; i++) {
             switch (dev_list[i]) {
                 #if (OMV_ENABLE_TOF_VL53L5CX == 1)
                 case (VL53L5CX_ADDR): {
@@ -248,15 +244,15 @@ mp_obj_t py_tof_init(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
         #if (OMV_ENABLE_TOF_VL53L5CX == 1)
         case TOF_VL53L5CX: {
             int error = 0;
-            uint8_t isAlive=0;
+            uint8_t isAlive = 0;
             TOF_VL53L5CX_RETRY:
             //vl53l5cx_dev.platform.bus     = tof_bus;
             //vl53l5cx_dev.platform.address = VL53L5CX_ADDRESS;
             omv_i2c_init(&tof_bus, TOF_I2C_ID, OMV_I2C_SPEED_FAST);
 
             // Check sensor and initialize.
-	        error |= vl53l5cx_is_alive(&vl53l5cx_dev, &isAlive);
-	        error |= vl53l5cx_init(&vl53l5cx_dev);
+            error |= vl53l5cx_is_alive(&vl53l5cx_dev, &isAlive);
+            error |= vl53l5cx_init(&vl53l5cx_dev);
 
             // Set resolution (number of zones).
             // NOTE: This function must be called before updating the ranging frequency.
@@ -287,7 +283,7 @@ mp_obj_t py_tof_init(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
                 mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Failed to init the VL53L5CX"));
             }
             tof_sensor = TOF_VL53L5CX;
-            tof_width  = VL53L5CX_WIDTH;
+            tof_width = VL53L5CX_WIDTH;
             tof_height = VL53L5CX_HEIGHT;
             break;
         }
@@ -301,29 +297,31 @@ mp_obj_t py_tof_init(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_tof_init_obj, 0, py_tof_init);
 
-static mp_obj_t py_tof_type()
-{
-    if (tof_sensor == TOF_NONE) return mp_const_none;
+static mp_obj_t py_tof_type() {
+    if (tof_sensor == TOF_NONE) {
+        return mp_const_none;
+    }
     return mp_obj_new_int(tof_sensor);
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_tof_type_obj, py_tof_type);
 
-static mp_obj_t py_tof_width()
-{
-    if (tof_sensor == TOF_NONE) return mp_const_none;
+static mp_obj_t py_tof_width() {
+    if (tof_sensor == TOF_NONE) {
+        return mp_const_none;
+    }
     return mp_obj_new_int(tof_width);
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_tof_width_obj, py_tof_width);
 
-static mp_obj_t py_tof_height()
-{
-    if (tof_sensor == TOF_NONE) return mp_const_none;
+static mp_obj_t py_tof_height() {
+    if (tof_sensor == TOF_NONE) {
+        return mp_const_none;
+    }
     return mp_obj_new_int(tof_height);
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_tof_height_obj, py_tof_height);
 
-static mp_obj_t py_tof_refresh()
-{
+static mp_obj_t py_tof_refresh() {
     switch (tof_sensor) {
         #if (OMV_ENABLE_TOF_VL53L5CX == 1)
         case TOF_VL53L5CX:
@@ -335,21 +333,20 @@ static mp_obj_t py_tof_refresh()
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_tof_refresh_obj, py_tof_refresh);
 
-mp_obj_t py_tof_read_depth(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
-{
+mp_obj_t py_tof_read_depth(uint n_args, const mp_obj_t *args, mp_map_t *kw_args) {
     bool arg_hmirror = py_helper_keyword_int(n_args, args, 0, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_hmirror), false);
     bool arg_vflip = py_helper_keyword_int(n_args, args, 1, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_vflip), false);
     tof_transposed = py_helper_keyword_int(n_args, args, 2, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_transpose), false);
     int arg_timeout = py_helper_keyword_int(n_args, args, 3, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_timeout), -1);
 
-    switch(tof_sensor) {
+    switch (tof_sensor) {
         #if (OMV_ENABLE_TOF_VL53L5CX == 1)
         case TOF_VL53L5CX: {
             fb_alloc_mark();
             float *frame = fb_alloc(VL53L5CX_WIDTH * VL53L5CX_HEIGHT * sizeof(float), FB_ALLOC_PREFER_SPEED);
             tof_vl53l5cx_get_depth(&vl53l5cx_dev, frame, arg_timeout);
             mp_obj_t result = tof_get_depth_obj(VL53L5CX_WIDTH, VL53L5CX_HEIGHT, frame,
-                    arg_hmirror ^ true, arg_vflip, tof_transposed, true);
+                                                arg_hmirror ^ true, arg_vflip, tof_transposed, true);
             fb_alloc_free_till_mark();
             return result;
         }
@@ -362,8 +359,7 @@ mp_obj_t py_tof_read_depth(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_tof_read_depth_obj, 0, py_tof_read_depth);
 
-mp_obj_t py_tof_draw_depth(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
-{
+mp_obj_t py_tof_draw_depth(uint n_args, const mp_obj_t *args, mp_map_t *kw_args) {
     image_t *dst_img = py_helper_arg_to_image_mutable(args[0]);
 
     image_t src_img;
@@ -411,11 +407,11 @@ mp_obj_t py_tof_draw_depth(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 
     float arg_x_scale = 1.f;
     bool got_x_scale = py_helper_keyword_float_maybe(n_args, args,
-            offset + 0, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_x_scale), &arg_x_scale);
+                                                     offset + 0, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_x_scale), &arg_x_scale);
 
     float arg_y_scale = 1.f;
     bool got_y_scale = py_helper_keyword_float_maybe(n_args, args,
-            offset + 1, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_y_scale), &arg_y_scale);
+                                                     offset + 1, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_y_scale), &arg_y_scale);
 
     rectangle_t arg_roi;
     py_helper_keyword_rectangle_roi(&src_img, n_args, args, offset + 2, kw_args, &arg_roi);
@@ -453,10 +449,20 @@ mp_obj_t py_tof_draw_depth(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
     image_hint_t hint = py_helper_keyword_int(n_args, args, offset + 7, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_hint), 0);
 
     int arg_x_size;
-    bool got_x_size = py_helper_keyword_int_maybe(n_args, args, offset + 8, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_x_size), &arg_x_size);
+    bool got_x_size = py_helper_keyword_int_maybe(n_args,
+                                                  args,
+                                                  offset + 8,
+                                                  kw_args,
+                                                  MP_OBJ_NEW_QSTR(MP_QSTR_x_size),
+                                                  &arg_x_size);
 
     int arg_y_size;
-    bool got_y_size = py_helper_keyword_int_maybe(n_args, args, offset + 9, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_y_size), &arg_y_size);
+    bool got_y_size = py_helper_keyword_int_maybe(n_args,
+                                                  args,
+                                                  offset + 9,
+                                                  kw_args,
+                                                  MP_OBJ_NEW_QSTR(MP_QSTR_y_size),
+                                                  &arg_y_size);
 
     if (got_x_scale && got_x_size) {
         mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Choose either x_scale or x_size not both!"));
@@ -516,9 +522,10 @@ mp_obj_t py_tof_draw_depth(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_tof_draw_depth_obj, 2, py_tof_draw_depth);
 
-mp_obj_t py_tof_snapshot(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
-{
-    if (tof_sensor == TOF_NONE) return mp_const_none;
+mp_obj_t py_tof_snapshot(uint n_args, const mp_obj_t *args, mp_map_t *kw_args) {
+    if (tof_sensor == TOF_NONE) {
+        return mp_const_none;
+    }
 
     bool arg_hmirror = py_helper_keyword_int(n_args, args, 0, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_hmirror), false);
     bool arg_vflip = py_helper_keyword_int(n_args, args, 1, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_vflip), false);
@@ -627,7 +634,7 @@ mp_obj_t py_tof_snapshot(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
         bool fb = py_helper_is_equal_to_framebuffer(arg_other);
         size_t buf_size = fb ? framebuffer_get_buffer_size() : image_size(arg_other);
         PY_ASSERT_TRUE_MSG((size <= buf_size),
-                "The new image won't fit in the target frame buffer!");
+                           "The new image won't fit in the target frame buffer!");
         dst_img.data = arg_other->data;
         memcpy(arg_other, &dst_img, sizeof(image_t));
         py_helper_update_framebuffer(&dst_img);
@@ -640,7 +647,7 @@ mp_obj_t py_tof_snapshot(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
     fb_alloc_mark();
     src_img.data = fb_alloc(src_img.w * src_img.h * sizeof(uint8_t), FB_ALLOC_NO_HINT);
 
-    switch(tof_sensor) {
+    switch (tof_sensor) {
         #if (OMV_ENABLE_TOF_VL53L5CX == 1)
         case TOF_VL53L5CX: {
             float *frame = fb_alloc(VL53L5CX_WIDTH * VL53L5CX_HEIGHT * sizeof(float), FB_ALLOC_PREFER_SPEED);
@@ -661,8 +668,8 @@ mp_obj_t py_tof_snapshot(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
     }
 
     imlib_draw_image(&dst_img, &src_img, 0, 0, arg_x_scale, arg_y_scale,
-            &arg_roi, arg_rgb_channel, arg_alpha, color_palette, alpha_palette,
-            (hint & (~IMAGE_HINT_CENTER)) | IMAGE_HINT_BLACK_BACKGROUND, NULL, NULL);
+                     &arg_roi, arg_rgb_channel, arg_alpha, color_palette, alpha_palette,
+                     (hint & (~IMAGE_HINT_CENTER)) | IMAGE_HINT_BLACK_BACKGROUND, NULL, NULL);
 
     fb_alloc_free_till_mark();
 

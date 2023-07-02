@@ -15,7 +15,7 @@
 #if OMV_ENABLE_FIR_MLX90621 || \
     OMV_ENABLE_FIR_MLX90640 || \
     OMV_ENABLE_FIR_MLX90641 || \
-    OMV_ENABLE_FIR_AMG8833  || \
+    OMV_ENABLE_FIR_AMG8833 ||  \
     OMV_ENABLE_FIR_LEPTON
 #include "omv_i2c.h"
 #if (OMV_ENABLE_FIR_MLX90621 == 1)
@@ -68,14 +68,14 @@
 
 #define LEPTON_ADDR                     0x54
 
-#define AMG8833_12_TO_16(value) \
-({ \
-    __typeof__ (value) __value = (value); \
-    if ((__value >> 11) & 1) { \
-        __value |= 1 << 15; \
-    } \
-    __value & 0x87FF; \
-})
+#define AMG8833_12_TO_16(value)               \
+    ({                                        \
+        __typeof__ (value) __value = (value); \
+        if ((__value >> 11) & 1) {            \
+            __value |= 1 << 15;               \
+        }                                     \
+        __value & 0x87FF;                     \
+    })
 
 static omv_i2c_t fir_bus = {};
 #if ((OMV_ENABLE_FIR_MLX90621 == 1) || (OMV_ENABLE_FIR_MLX90640 == 1) || (OMV_ENABLE_FIR_MLX90641 == 1))
@@ -84,22 +84,23 @@ static void *fir_mlx_data = NULL;
 
 static enum {
     FIR_NONE,
-#if (OMV_ENABLE_FIR_MLX90621 == 1)
+    #if (OMV_ENABLE_FIR_MLX90621 == 1)
     FIR_MLX90621,
-#endif
-#if (OMV_ENABLE_FIR_MLX90640 == 1)
+    #endif
+    #if (OMV_ENABLE_FIR_MLX90640 == 1)
     FIR_MLX90640,
-#endif
-#if (OMV_ENABLE_FIR_MLX90641 == 1)
+    #endif
+    #if (OMV_ENABLE_FIR_MLX90641 == 1)
     FIR_MLX90641,
-#endif
-#if (OMV_ENABLE_FIR_AMG8833 == 1)
+    #endif
+    #if (OMV_ENABLE_FIR_AMG8833 == 1)
     FIR_AMG8833,
-#endif
-#if (OMV_ENABLE_FIR_LEPTON == 1)
+    #endif
+    #if (OMV_ENABLE_FIR_LEPTON == 1)
     FIR_LEPTON
-#endif
-} fir_sensor = FIR_NONE;
+    #endif
+}
+fir_sensor = FIR_NONE;
 
 static int fir_width = 0;
 static int fir_height = 0;
@@ -108,8 +109,7 @@ static int fir_adc_resolution = 0;
 static bool fir_transposed = false;
 
 // img->w == data_w && img->h == data_h && img->pixfmt == PIXFORMAT_GRAYSCALE
-static void fir_fill_image_float_obj(image_t *img, mp_obj_t *data, float min, float max)
-{
+static void fir_fill_image_float_obj(image_t *img, mp_obj_t *data, float min, float max) {
     float tmp = min;
     min = (min < max) ? min : max;
     max = (max > tmp) ? max : tmp;
@@ -139,8 +139,7 @@ static void fir_fill_image_float_obj(image_t *img, mp_obj_t *data, float min, fl
 }
 
 #if (OMV_ENABLE_FIR_MLX90621 == 1)
-static void fir_MLX90621_get_frame(float *Ta, float *To)
-{
+static void fir_MLX90621_get_frame(float *Ta, float *To) {
     uint16_t *data = fb_alloc(MLX90621_FRAME_DATA_SIZE * sizeof(uint16_t), FB_ALLOC_NO_HINT);
 
     PY_ASSERT_TRUE_MSG(MLX90621_GetFrameData(data) >= 0,
@@ -153,8 +152,7 @@ static void fir_MLX90621_get_frame(float *Ta, float *To)
 #endif
 
 #if (OMV_ENABLE_FIR_MLX90640 == 1)
-static void fir_MLX90640_get_frame(float *Ta, float *To)
-{
+static void fir_MLX90640_get_frame(float *Ta, float *To) {
     uint16_t *data = fb_alloc(MLX90640_FRAME_DATA_SIZE * sizeof(uint16_t), FB_ALLOC_NO_HINT);
 
     // Wait for a new data to be available before calling GetFrameData.
@@ -177,8 +175,7 @@ static void fir_MLX90640_get_frame(float *Ta, float *To)
 #endif
 
 #if (OMV_ENABLE_FIR_MLX90641 == 1)
-static void fir_MLX90641_get_frame(float *Ta, float *To)
-{
+static void fir_MLX90641_get_frame(float *Ta, float *To) {
     uint16_t *data = fb_alloc(MLX90641_FRAME_DATA_SIZE * sizeof(uint16_t), FB_ALLOC_NO_HINT);
 
     // Wait for a new data to be available before calling GetFrameData.
@@ -194,19 +191,22 @@ static void fir_MLX90641_get_frame(float *Ta, float *To)
 #endif
 
 #if (OMV_ENABLE_FIR_AMG8833 == 1)
-static void fir_AMG8833_get_frame(float *Ta, float *To)
-{
+static void fir_AMG8833_get_frame(float *Ta, float *To) {
     int16_t temp;
     int error = 0;
-    error |= omv_i2c_write_bytes(&fir_bus, AMG8833_ADDR, (uint8_t [1]){AMG8833_THERMISTOR_REGISTER}, 1, OMV_I2C_XFER_NO_STOP);
+    error |= omv_i2c_write_bytes(&fir_bus, AMG8833_ADDR, (uint8_t [1]) {AMG8833_THERMISTOR_REGISTER}, 1, OMV_I2C_XFER_NO_STOP);
     error |= omv_i2c_read_bytes(&fir_bus, AMG8833_ADDR, (uint8_t *) &temp, sizeof(temp), OMV_I2C_XFER_NO_FLAGS);
     PY_ASSERT_TRUE_MSG((error == 0), "Failed to read the AMG8833 sensor data!");
 
     *Ta = AMG8833_12_TO_16(temp) * 0.0625f;
 
     int16_t *data = fb_alloc(AMG8833_WIDTH * AMG8833_HEIGHT * sizeof(int16_t), FB_ALLOC_NO_HINT);
-    error |= omv_i2c_write_bytes(&fir_bus, AMG8833_ADDR, (uint8_t [1]){AMG8833_TEMPERATURE_REGISTER}, 1, OMV_I2C_XFER_NO_STOP);
-    error |= omv_i2c_read_bytes(&fir_bus, AMG8833_ADDR, (uint8_t *) data, AMG8833_WIDTH * AMG8833_HEIGHT * 2, OMV_I2C_XFER_NO_FLAGS);
+    error |= omv_i2c_write_bytes(&fir_bus, AMG8833_ADDR, (uint8_t [1]) {AMG8833_TEMPERATURE_REGISTER}, 1, OMV_I2C_XFER_NO_STOP);
+    error |= omv_i2c_read_bytes(&fir_bus,
+                                AMG8833_ADDR,
+                                (uint8_t *) data,
+                                AMG8833_WIDTH * AMG8833_HEIGHT * 2,
+                                OMV_I2C_XFER_NO_FLAGS);
     PY_ASSERT_TRUE_MSG((error == 0), "Failed to read the AMG8833 sensor data!");
 
     for (int i = 0, ii = AMG8833_WIDTH * AMG8833_HEIGHT; i < ii; i++) {
@@ -217,8 +217,7 @@ static void fir_AMG8833_get_frame(float *Ta, float *To)
 }
 #endif
 
-static mp_obj_t fir_get_ir(int w, int h, float Ta, float *To, bool mirror, bool flip, bool dst_transpose, bool src_transpose)
-{
+static mp_obj_t fir_get_ir(int w, int h, float Ta, float *To, bool mirror, bool flip, bool dst_transpose, bool src_transpose) {
     mp_obj_list_t *list = (mp_obj_list_t *) mp_obj_new_list(w * h, NULL);
     float min = FLT_MAX;
     float max = -FLT_MAX;
@@ -291,8 +290,7 @@ static mp_obj_t fir_get_ir(int w, int h, float Ta, float *To, bool mirror, bool 
     return mp_obj_new_tuple(4, tuple);
 }
 
-static mp_obj_t py_fir_deinit()
-{
+static mp_obj_t py_fir_deinit() {
     #if (OMV_ENABLE_FIR_LEPTON == 1)
     if (fir_sensor == FIR_LEPTON) {
         fir_lepton_deinit();
@@ -320,8 +318,7 @@ static mp_obj_t py_fir_deinit()
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_fir_deinit_obj, py_fir_deinit);
 
-mp_obj_t py_fir_init(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
-{
+mp_obj_t py_fir_init(uint n_args, const mp_obj_t *args, mp_map_t *kw_args) {
     py_fir_deinit();
     bool first_init = true;
     int type = py_helper_keyword_int(n_args, args, 0, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_type), -1);
@@ -331,7 +328,7 @@ mp_obj_t py_fir_init(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
         // Scan and detect any supported sensor.
         uint8_t dev_list[10];
         int dev_size = omv_i2c_scan(&fir_bus, dev_list, sizeof(dev_list));
-        for (int i=0; i<dev_size && type==-1; i++) {
+        for (int i = 0; i < dev_size && type == -1; i++) {
             switch (dev_list[i]) {
                 #if (OMV_ENABLE_FIR_MLX90621 == 1)
                 case (MLX90621_ADDR << 1): {
@@ -345,8 +342,8 @@ mp_obj_t py_fir_init(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
                     break;
                 }
                 #endif
-                #if (OMV_ENABLE_FIR_MLX90640 == 0)\
-                 && (OMV_ENABLE_FIR_MLX90641 == 1)
+                #if (OMV_ENABLE_FIR_MLX90640 == 0) \
+                && (OMV_ENABLE_FIR_MLX90641 == 1)
                 case (MLX90641_ADDR << 1): {
                     type = FIR_MLX90641;
                     break;
@@ -531,7 +528,7 @@ mp_obj_t py_fir_init(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
             omv_i2c_init(&fir_bus, FIR_I2C_ID, OMV_I2C_SPEED_STANDARD);
 
             int error = omv_i2c_write_bytes(&fir_bus, AMG8833_ADDR,
-                    (uint8_t [2]){AMG8833_RESET_REGISTER, AMG8833_INITIAL_RESET_VALUE}, 2, 0);
+                                            (uint8_t [2]) {AMG8833_RESET_REGISTER, AMG8833_INITIAL_RESET_VALUE}, 2, 0);
             if (error != 0) {
                 if (first_init) {
                     first_init = false;
@@ -581,29 +578,31 @@ mp_obj_t py_fir_init(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_fir_init_obj, 0, py_fir_init);
 
-static mp_obj_t py_fir_type()
-{
-    if (fir_sensor == FIR_NONE) return mp_const_none;
+static mp_obj_t py_fir_type() {
+    if (fir_sensor == FIR_NONE) {
+        return mp_const_none;
+    }
     return mp_obj_new_int(fir_sensor);
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_fir_type_obj, py_fir_type);
 
-static mp_obj_t py_fir_width()
-{
-    if (fir_sensor == FIR_NONE) return mp_const_none;
+static mp_obj_t py_fir_width() {
+    if (fir_sensor == FIR_NONE) {
+        return mp_const_none;
+    }
     return mp_obj_new_int(fir_width);
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_fir_width_obj, py_fir_width);
 
-static mp_obj_t py_fir_height()
-{
-    if (fir_sensor == FIR_NONE) return mp_const_none;
+static mp_obj_t py_fir_height() {
+    if (fir_sensor == FIR_NONE) {
+        return mp_const_none;
+    }
     return mp_obj_new_int(fir_height);
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_fir_height_obj, py_fir_height);
 
-static mp_obj_t py_fir_refresh()
-{
+static mp_obj_t py_fir_refresh() {
     #if (OMV_ENABLE_FIR_MLX90621 == 1)
     const int mlx_90621_refresh_rates[16] = {512, 512, 512, 512, 512, 512, 256, 128, 64, 32, 16, 8, 4, 2, 1, 0};
     #endif
@@ -640,8 +639,7 @@ static mp_obj_t py_fir_refresh()
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_fir_refresh_obj, py_fir_refresh);
 
-static mp_obj_t py_fir_resolution()
-{
+static mp_obj_t py_fir_resolution() {
     switch (fir_sensor) {
         case FIR_NONE:
             return mp_const_none;
@@ -673,8 +671,7 @@ static mp_obj_t py_fir_resolution()
 STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_fir_resolution_obj, py_fir_resolution);
 
 #if (OMV_ENABLE_FIR_LEPTON == 1)
-static mp_obj_t py_fir_radiometric()
-{
+static mp_obj_t py_fir_radiometric() {
     if (fir_sensor == FIR_LEPTON) {
         return fir_lepton_get_radiometry();
     }
@@ -684,8 +681,7 @@ static mp_obj_t py_fir_radiometric()
 STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_fir_radiometric_obj, py_fir_radiometric);
 
 #if defined(OMV_FIR_LEPTON_VSYNC_PRESENT)
-static mp_obj_t py_fir_register_vsync_cb(mp_obj_t cb)
-{
+static mp_obj_t py_fir_register_vsync_cb(mp_obj_t cb) {
     if (fir_sensor == FIR_LEPTON) {
         fir_lepton_register_vsync_cb(cb);
     }
@@ -695,8 +691,7 @@ static mp_obj_t py_fir_register_vsync_cb(mp_obj_t cb)
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_fir_register_vsync_cb_obj, py_fir_register_vsync_cb);
 #endif
 
-static mp_obj_t py_fir_register_frame_cb(mp_obj_t cb)
-{
+static mp_obj_t py_fir_register_frame_cb(mp_obj_t cb) {
     if (fir_sensor == FIR_LEPTON) {
         fir_lepton_register_frame_cb(cb);
     }
@@ -705,8 +700,7 @@ static mp_obj_t py_fir_register_frame_cb(mp_obj_t cb)
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_fir_register_frame_cb_obj, py_fir_register_frame_cb);
 
-static mp_obj_t py_fir_get_frame_available()
-{
+static mp_obj_t py_fir_get_frame_available() {
     if (fir_sensor == FIR_LEPTON) {
         return fir_lepton_get_frame_available();
     }
@@ -715,8 +709,7 @@ static mp_obj_t py_fir_get_frame_available()
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_fir_get_frame_available_obj, py_fir_get_frame_available);
 
-static mp_obj_t py_fir_trigger_ffc(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
-{
+static mp_obj_t py_fir_trigger_ffc(uint n_args, const mp_obj_t *args, mp_map_t *kw_args) {
     if (fir_sensor == FIR_LEPTON) {
         fir_lepton_trigger_ffc(n_args, args, kw_args);
     }
@@ -726,9 +719,8 @@ static mp_obj_t py_fir_trigger_ffc(uint n_args, const mp_obj_t *args, mp_map_t *
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_fir_trigger_ffc_obj, 0, py_fir_trigger_ffc);
 #endif
 
-mp_obj_t py_fir_read_ta()
-{
-    switch(fir_sensor) {
+mp_obj_t py_fir_read_ta() {
+    switch (fir_sensor) {
         case FIR_NONE: {
             return mp_const_none;
         }
@@ -769,7 +761,11 @@ mp_obj_t py_fir_read_ta()
         case FIR_AMG8833: {
             int16_t temp;
             int error = 0;
-            error |= omv_i2c_write_bytes(&fir_bus, AMG8833_ADDR, (uint8_t [1]){AMG8833_THERMISTOR_REGISTER}, 1, OMV_I2C_XFER_NO_STOP);
+            error |= omv_i2c_write_bytes(&fir_bus,
+                                         AMG8833_ADDR,
+                                         (uint8_t [1]) {AMG8833_THERMISTOR_REGISTER},
+                                         1,
+                                         OMV_I2C_XFER_NO_STOP);
             error |= omv_i2c_read_bytes(&fir_bus, AMG8833_ADDR, (uint8_t *) &temp, sizeof(temp), OMV_I2C_XFER_NO_FLAGS);
             PY_ASSERT_TRUE_MSG((error == 0), "Failed to read the AMG8833 sensor data!");
             return mp_obj_new_float(AMG8833_12_TO_16(temp) * 0.0625f);
@@ -786,8 +782,7 @@ mp_obj_t py_fir_read_ta()
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_fir_read_ta_obj, py_fir_read_ta);
 
-mp_obj_t py_fir_read_ir(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
-{
+mp_obj_t py_fir_read_ir(uint n_args, const mp_obj_t *args, mp_map_t *kw_args) {
     bool arg_hmirror = py_helper_keyword_int(n_args, args, 0, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_hmirror), false);
     bool arg_vflip = py_helper_keyword_int(n_args, args, 1, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_vflip), false);
     fir_transposed = py_helper_keyword_int(n_args, args, 2, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_transpose), false);
@@ -795,7 +790,7 @@ mp_obj_t py_fir_read_ir(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
     int arg_timeout = py_helper_keyword_int(n_args, args, 3, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_timeout), -1);
     #endif
 
-    switch(fir_sensor) {
+    switch (fir_sensor) {
         case FIR_NONE: {
             return mp_const_none;
         }
@@ -854,8 +849,7 @@ mp_obj_t py_fir_read_ir(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_fir_read_ir_obj, 0, py_fir_read_ir);
 
-mp_obj_t py_fir_draw_ir(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
-{
+mp_obj_t py_fir_draw_ir(uint n_args, const mp_obj_t *args, mp_map_t *kw_args) {
     image_t *dst_img = py_helper_arg_to_image_mutable(args[0]);
 
     image_t src_img;
@@ -903,11 +897,11 @@ mp_obj_t py_fir_draw_ir(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 
     float arg_x_scale = 1.f;
     bool got_x_scale = py_helper_keyword_float_maybe(n_args, args,
-            offset + 0, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_x_scale), &arg_x_scale);
+                                                     offset + 0, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_x_scale), &arg_x_scale);
 
     float arg_y_scale = 1.f;
     bool got_y_scale = py_helper_keyword_float_maybe(n_args, args,
-            offset + 1, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_y_scale), &arg_y_scale);
+                                                     offset + 1, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_y_scale), &arg_y_scale);
 
     rectangle_t arg_roi;
     py_helper_keyword_rectangle_roi(&src_img, n_args, args, offset + 2, kw_args, &arg_roi);
@@ -945,10 +939,20 @@ mp_obj_t py_fir_draw_ir(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
     image_hint_t hint = py_helper_keyword_int(n_args, args, offset + 7, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_hint), 0);
 
     int arg_x_size;
-    bool got_x_size = py_helper_keyword_int_maybe(n_args, args, offset + 8, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_x_size), &arg_x_size);
+    bool got_x_size = py_helper_keyword_int_maybe(n_args,
+                                                  args,
+                                                  offset + 8,
+                                                  kw_args,
+                                                  MP_OBJ_NEW_QSTR(MP_QSTR_x_size),
+                                                  &arg_x_size);
 
     int arg_y_size;
-    bool got_y_size = py_helper_keyword_int_maybe(n_args, args, offset + 9, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_y_size), &arg_y_size);
+    bool got_y_size = py_helper_keyword_int_maybe(n_args,
+                                                  args,
+                                                  offset + 9,
+                                                  kw_args,
+                                                  MP_OBJ_NEW_QSTR(MP_QSTR_y_size),
+                                                  &arg_y_size);
 
     if (got_x_scale && got_x_size) {
         mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Choose either x_scale or x_size not both!"));
@@ -1008,9 +1012,10 @@ mp_obj_t py_fir_draw_ir(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_fir_draw_ir_obj, 2, py_fir_draw_ir);
 
-mp_obj_t py_fir_snapshot(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
-{
-    if (fir_sensor == FIR_NONE) return mp_const_none;
+mp_obj_t py_fir_snapshot(uint n_args, const mp_obj_t *args, mp_map_t *kw_args) {
+    if (fir_sensor == FIR_NONE) {
+        return mp_const_none;
+    }
 
     bool arg_hmirror = py_helper_keyword_int(n_args, args, 0, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_hmirror), false);
     bool arg_vflip = py_helper_keyword_int(n_args, args, 1, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_vflip), false);
@@ -1119,7 +1124,7 @@ mp_obj_t py_fir_snapshot(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
         bool fb = py_helper_is_equal_to_framebuffer(arg_other);
         size_t buf_size = fb ? framebuffer_get_buffer_size() : image_size(arg_other);
         PY_ASSERT_TRUE_MSG((size <= buf_size),
-                "The new image won't fit in the target frame buffer!");
+                           "The new image won't fit in the target frame buffer!");
         dst_img.data = arg_other->data;
         memcpy(arg_other, &dst_img, sizeof(image_t));
         py_helper_update_framebuffer(&dst_img);
@@ -1134,7 +1139,7 @@ mp_obj_t py_fir_snapshot(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
     fb_alloc_mark();
     src_img.data = fb_alloc(src_img.w * src_img.h * sizeof(uint8_t), FB_ALLOC_NO_HINT);
 
-    switch(fir_sensor) {
+    switch (fir_sensor) {
         #if (OMV_ENABLE_FIR_MLX90621 == 1)
         case FIR_MLX90621: {
             float Ta, *To = fb_alloc(MLX90621_WIDTH * MLX90621_HEIGHT * sizeof(float), FB_ALLOC_NO_HINT);
@@ -1208,8 +1213,8 @@ mp_obj_t py_fir_snapshot(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
     }
 
     imlib_draw_image(&dst_img, &src_img, 0, 0, arg_x_scale, arg_y_scale,
-            &arg_roi, arg_rgb_channel, arg_alpha, color_palette, alpha_palette,
-            (hint & (~IMAGE_HINT_CENTER)) | IMAGE_HINT_BLACK_BACKGROUND, NULL, NULL);
+                     &arg_roi, arg_rgb_channel, arg_alpha, color_palette, alpha_palette,
+                     (hint & (~IMAGE_HINT_CENTER)) | IMAGE_HINT_BLACK_BACKGROUND, NULL, NULL);
 
     fb_alloc_free_till_mark();
 
@@ -1277,8 +1282,7 @@ const mp_obj_module_t fir_module = {
     .globals = (mp_obj_t) &globals_dict,
 };
 
-void py_fir_init0()
-{
+void py_fir_init0() {
     py_fir_deinit();
 }
 

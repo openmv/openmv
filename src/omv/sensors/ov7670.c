@@ -325,8 +325,7 @@ static const uint8_t qqvga_regs[][2] = {
 };
 #endif
 
-static int reset(sensor_t *sensor)
-{
+static int reset(sensor_t *sensor) {
     // Reset all registers
     int ret = omv_i2c_writeb(&sensor->i2c_bus, sensor->slv_addr, COM7, COM7_RESET);
 
@@ -344,8 +343,7 @@ static int reset(sensor_t *sensor)
     return ret;
 }
 
-static int sleep(sensor_t *sensor, int enable)
-{
+static int sleep(sensor_t *sensor, int enable) {
     uint8_t reg;
     int ret = omv_i2c_readb(&sensor->i2c_bus, sensor->slv_addr, COM2, &reg);
 
@@ -359,8 +357,7 @@ static int sleep(sensor_t *sensor, int enable)
     return omv_i2c_writeb(&sensor->i2c_bus, sensor->slv_addr, COM2, reg) | ret;
 }
 
-static int read_reg(sensor_t *sensor, uint16_t reg_addr)
-{
+static int read_reg(sensor_t *sensor, uint16_t reg_addr) {
     uint8_t reg_data;
     if (omv_i2c_readb(&sensor->i2c_bus, sensor->slv_addr, reg_addr, &reg_data) != 0) {
         return -1;
@@ -368,15 +365,13 @@ static int read_reg(sensor_t *sensor, uint16_t reg_addr)
     return reg_data;
 }
 
-static int write_reg(sensor_t *sensor, uint16_t reg_addr, uint16_t reg_data)
-{
+static int write_reg(sensor_t *sensor, uint16_t reg_addr, uint16_t reg_data) {
     return omv_i2c_writeb(&sensor->i2c_bus, sensor->slv_addr, reg_addr, reg_data);
 }
 
-static int set_pixformat(sensor_t *sensor, pixformat_t pixformat)
-{
+static int set_pixformat(sensor_t *sensor, pixformat_t pixformat) {
     int ret = 0;
-    const uint8_t (*regs)[2];
+    const uint8_t(*regs)[2];
 
     switch (pixformat) {
         case PIXFORMAT_RGB565:
@@ -391,17 +386,16 @@ static int set_pixformat(sensor_t *sensor, pixformat_t pixformat)
     }
 
     // Write pixel format registers
-    for (int i=0; regs[i][0] != 0xff; i++) {
+    for (int i = 0; regs[i][0] != 0xff; i++) {
         ret |= omv_i2c_writeb(&sensor->i2c_bus, sensor->slv_addr, regs[i][0], regs[i][1]);
     }
 
     return ret;
 }
 
-static int set_framesize(sensor_t *sensor, framesize_t framesize)
-{
+static int set_framesize(sensor_t *sensor, framesize_t framesize) {
     int ret = 0;
-    const uint8_t (*regs)[2];
+    const uint8_t(*regs)[2];
 
     switch (framesize) {
         case FRAMESIZE_VGA:
@@ -418,47 +412,46 @@ static int set_framesize(sensor_t *sensor, framesize_t framesize)
     }
 
     // Write pixel format registers
-    for (int i=0; regs[i][0] != 0xFF; i++) {
+    for (int i = 0; regs[i][0] != 0xFF; i++) {
         ret |= omv_i2c_writeb(&sensor->i2c_bus, sensor->slv_addr, regs[i][0], regs[i][1]);
     }
     return ret;
 }
 
-int ov7670_init(sensor_t *sensor)
-{
+int ov7670_init(sensor_t *sensor) {
     // Initialize sensor structure.
-    sensor->reset               = reset;
-    sensor->sleep               = sleep;
-    sensor->read_reg            = read_reg;
-    sensor->write_reg           = write_reg;
-    sensor->set_pixformat       = set_pixformat;
-    sensor->set_framesize       = set_framesize;
+    sensor->reset = reset;
+    sensor->sleep = sleep;
+    sensor->read_reg = read_reg;
+    sensor->write_reg = write_reg;
+    sensor->set_pixformat = set_pixformat;
+    sensor->set_framesize = set_framesize;
 #if 0
-    sensor->set_contrast        = set_contrast;
-    sensor->set_brightness      = set_brightness;
-    sensor->set_saturation      = set_saturation;
-    sensor->set_gainceiling     = set_gainceiling;
-    sensor->set_colorbar        = set_colorbar;
-    sensor->set_auto_gain       = set_auto_gain;
-    sensor->get_gain_db         = get_gain_db;
-    sensor->set_auto_exposure   = set_auto_exposure;
-    sensor->get_exposure_us     = get_exposure_us;
-    sensor->set_auto_whitebal   = set_auto_whitebal;
-    sensor->get_rgb_gain_db     = get_rgb_gain_db;
-    sensor->set_hmirror         = set_hmirror;
-    sensor->set_vflip           = set_vflip;
-    sensor->set_special_effect  = set_special_effect;
+    sensor->set_contrast = set_contrast;
+    sensor->set_brightness = set_brightness;
+    sensor->set_saturation = set_saturation;
+    sensor->set_gainceiling = set_gainceiling;
+    sensor->set_colorbar = set_colorbar;
+    sensor->set_auto_gain = set_auto_gain;
+    sensor->get_gain_db = get_gain_db;
+    sensor->set_auto_exposure = set_auto_exposure;
+    sensor->get_exposure_us = get_exposure_us;
+    sensor->set_auto_whitebal = set_auto_whitebal;
+    sensor->get_rgb_gain_db = get_rgb_gain_db;
+    sensor->set_hmirror = set_hmirror;
+    sensor->set_vflip = set_vflip;
+    sensor->set_special_effect = set_special_effect;
     sensor->set_lens_correction = set_lens_correction;
 #endif
     // Set sensor flags
-    sensor->hw_flags.vsync      = 1;
-    sensor->hw_flags.hsync      = 0;
-    sensor->hw_flags.pixck      = 1;
-    sensor->hw_flags.fsync      = 0;
-    sensor->hw_flags.jpege      = 0;
-    sensor->hw_flags.gs_bpp     = 2;
-    sensor->hw_flags.rgb_swap   = 1;
-    sensor->hw_flags.yuv_order  = SENSOR_HW_FLAGS_YVU422;
+    sensor->hw_flags.vsync = 1;
+    sensor->hw_flags.hsync = 0;
+    sensor->hw_flags.pixck = 1;
+    sensor->hw_flags.fsync = 0;
+    sensor->hw_flags.jpege = 0;
+    sensor->hw_flags.gs_bpp = 2;
+    sensor->hw_flags.rgb_swap = 1;
+    sensor->hw_flags.yuv_order = SENSOR_HW_FLAGS_YVU422;
 
     return 0;
 }

@@ -17,8 +17,7 @@
 // bitmap //
 ////////////
 
-typedef struct bitmap
-{
+typedef struct bitmap {
     size_t size;
     char *data;
 }
@@ -29,15 +28,14 @@ void bitmap_free(bitmap_t *ptr);
 void bitmap_clear(bitmap_t *ptr);
 void bitmap_bit_set(bitmap_t *ptr, size_t index);
 bool bitmap_bit_get(bitmap_t *ptr, size_t index);
-#define BITMAP_COMPUTE_ROW_INDEX(image, y) (((image)->w)*(y))
-#define BITMAP_COMPUTE_INDEX(row_index, x) ((row_index)+(x))
+#define BITMAP_COMPUTE_ROW_INDEX(image, y)    (((image)->w) * (y))
+#define BITMAP_COMPUTE_INDEX(row_index, x)    ((row_index) + (x))
 
 //////////
 // lifo //
 //////////
 
-typedef struct lifo
-{
+typedef struct lifo {
     size_t len, size, data_len;
     char *data;
 }
@@ -59,8 +57,7 @@ void lifo_peek(lifo_t *ptr, void *data);
 // fifo //
 //////////
 
-typedef struct fifo
-{
+typedef struct fifo {
     size_t head_ptr, tail_ptr, len, size, data_len;
     char *data;
 }
@@ -82,15 +79,13 @@ void fifo_peek(fifo_t *ptr, void *data);
 // list //
 //////////
 
-typedef struct list_lnk
-{
+typedef struct list_lnk {
     struct list_lnk *next_ptr, *prev_ptr;
     char data[];
 }
 list_lnk_t;
 
-typedef struct list
-{
+typedef struct list {
     list_lnk_t *head_ptr, *tail_ptr;
     size_t size, data_len;
 }

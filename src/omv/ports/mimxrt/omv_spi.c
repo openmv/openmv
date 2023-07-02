@@ -40,38 +40,37 @@ typedef struct omv_spi_descr {
 static const omv_spi_descr_t omv_spi_descr_all[] = {
     #if defined(LPSPI1_ID)
     { LPSPI1, LPSPI1_SSEL_PIN,
-        { DMA0, DMAMUX, LPSPI1_DMA_TX_CHANNEL, kDmaRequestMuxLPSPI1Tx },
-        { DMA0, DMAMUX, LPSPI1_DMA_RX_CHANNEL, kDmaRequestMuxLPSPI1Rx } },
+      { DMA0, DMAMUX, LPSPI1_DMA_TX_CHANNEL, kDmaRequestMuxLPSPI1Tx },
+      { DMA0, DMAMUX, LPSPI1_DMA_RX_CHANNEL, kDmaRequestMuxLPSPI1Rx } },
     #else
     { NULL, NULL, { NULL, NULL, 0, 0 }, { NULL, NULL, 0, 0 } },
     #endif
     #if defined(LPSPI2_ID)
     { LPSPI2, LPSPI2_SSEL_PIN,
-        { DMA0, DMAMUX, LPSPI2_DMA_TX_CHANNEL, kDmaRequestMuxLPSPI2Tx },
-        { DMA0, DMAMUX, LPSPI2_DMA_RX_CHANNEL, kDmaRequestMuxLPSPI2Rx } },
+      { DMA0, DMAMUX, LPSPI2_DMA_TX_CHANNEL, kDmaRequestMuxLPSPI2Tx },
+      { DMA0, DMAMUX, LPSPI2_DMA_RX_CHANNEL, kDmaRequestMuxLPSPI2Rx } },
     #else
     { NULL, NULL, { NULL, NULL, 0, 0 }, { NULL, NULL, 0, 0 } },
     #endif
 
     #if defined(LPSPI3_ID)
     { LPSPI3, LPSPI3_SSEL_PIN,
-        { DMA0, DMAMUX, LPSPI3_DMA_TX_CHANNEL, kDmaRequestMuxLPSPI3Tx },
-        { DMA0, DMAMUX, LPSPI3_DMA_RX_CHANNEL, kDmaRequestMuxLPSPI3Rx } },
+      { DMA0, DMAMUX, LPSPI3_DMA_TX_CHANNEL, kDmaRequestMuxLPSPI3Tx },
+      { DMA0, DMAMUX, LPSPI3_DMA_RX_CHANNEL, kDmaRequestMuxLPSPI3Rx } },
     #else
     { NULL, NULL, { NULL, NULL, 0, 0 }, { NULL, NULL, 0, 0 } },
     #endif
 
     #if defined(LPSPI4_ID)
     { LPSPI4, LPSPI4_SSEL_PIN,
-        { DMA0, DMAMUX, LPSPI4_DMA_TX_CHANNEL, kDmaRequestMuxLPSPI4Tx },
-        { DMA0, DMAMUX, LPSPI4_DMA_RX_CHANNEL, kDmaRequestMuxLPSPI4Rx } },
+      { DMA0, DMAMUX, LPSPI4_DMA_TX_CHANNEL, kDmaRequestMuxLPSPI4Tx },
+      { DMA0, DMAMUX, LPSPI4_DMA_RX_CHANNEL, kDmaRequestMuxLPSPI4Rx } },
     #else
     { NULL, NULL, { NULL, NULL, 0, 0 }, { NULL, NULL, 0, 0 } },
     #endif
 };
 
-static void spi_master_callback(LPSPI_Type *base, void *handle, status_t status, void *user)
-{
+static void spi_master_callback(LPSPI_Type *base, void *handle, status_t status, void *user) {
     omv_spi_t *spi = (omv_spi_t *) user;
 
     if (status == kStatus_Success) {
@@ -98,17 +97,16 @@ static void spi_master_callback(LPSPI_Type *base, void *handle, status_t status,
     }
 }
 
-int omv_spi_transfer_start(omv_spi_t *spi, omv_spi_transfer_t *xfer)
-{
-    spi->callback   = xfer->callback;
-    spi->userdata   = xfer->userdata;
+int omv_spi_transfer_start(omv_spi_t *spi, omv_spi_transfer_t *xfer) {
+    spi->callback = xfer->callback;
+    spi->userdata = xfer->userdata;
     spi->xfer_flags = xfer->flags;
     // Duplicate & stash transfer in spi struct, to avoid recreating
     // it for circular transfers. NOTE: If circular transfers ever
     // works this can be removed.
-    spi->xfer_descr.txData      = xfer->txbuf;
-    spi->xfer_descr.rxData      = xfer->rxbuf;
-    spi->xfer_descr.dataSize    = xfer->size;
+    spi->xfer_descr.txData = xfer->txbuf;
+    spi->xfer_descr.rxData = xfer->rxbuf;
+    spi->xfer_descr.dataSize = xfer->size;
     spi->xfer_descr.configFlags = kLPSPI_MasterPcs0 | kLPSPI_MasterPcsContinuous | kLPSPI_MasterByteSwap;
     spi->xfer_flags &= ~(OMV_SPI_XFER_FAILED | OMV_SPI_XFER_COMPLETE);
 
@@ -146,22 +144,19 @@ int omv_spi_transfer_start(omv_spi_t *spi, omv_spi_transfer_t *xfer)
     return 0;
 }
 
-int omv_spi_transfer_abort(omv_spi_t *spi)
-{
+int omv_spi_transfer_abort(omv_spi_t *spi) {
     LPSPI_MasterTransferAbortEDMA(spi->inst, &spi->descr_master_edma);
     return 0;
 }
 
-static int omv_spi_dma_init(edma_handle_t *dma_handle, const dma_descr_t *dma_descr)
-{
+static int omv_spi_dma_init(edma_handle_t *dma_handle, const dma_descr_t *dma_descr) {
     DMAMUX_SetSource(dma_descr->dma_mux, dma_descr->channel, dma_descr->request);
     DMAMUX_EnableChannel(dma_descr->dma_mux, dma_descr->channel);
     EDMA_CreateHandle(dma_handle, dma_descr->dma_inst, dma_descr->channel);
     return 0;
 }
 
-int omv_spi_init(omv_spi_t *spi, omv_spi_config_t *config)
-{
+int omv_spi_init(omv_spi_t *spi, omv_spi_config_t *config) {
     // Configure clocks, pins and DMA MUX.
     mimxrt_hal_spi_init(config->id, config->nss_enable, config->nss_pol);
 
@@ -179,14 +174,14 @@ int omv_spi_init(omv_spi_t *spi, omv_spi_config_t *config)
     lpspi_master_config_t spi_config;
     LPSPI_MasterGetDefaultConfig(&spi_config);
 
-    spi_config.whichPcs           = kLPSPI_Pcs0;
-    spi_config.baudRate           = config->baudrate;
-    spi_config.bitsPerFrame       = config->datasize;
-    spi_config.direction          = config->bit_order;
+    spi_config.whichPcs = kLPSPI_Pcs0;
+    spi_config.baudRate = config->baudrate;
+    spi_config.bitsPerFrame = config->datasize;
+    spi_config.direction = config->bit_order;
     spi_config.pcsActiveHighOrLow = config->nss_pol;
-    spi_config.cpol               = config->clk_pol;
-    spi_config.cpha               = config->clk_pha;
-    spi_config.dataOutConfig      = config->data_retained ? kLpspiDataOutRetained : kLpspiDataOutTristate;
+    spi_config.cpol = config->clk_pol;
+    spi_config.cpha = config->clk_pha;
+    spi_config.dataOutConfig = config->data_retained ? kLpspiDataOutRetained : kLpspiDataOutTristate;
     LPSPI_MasterInit(spi->inst, &spi_config, BOARD_BOOTCLOCKRUN_LPSPI_CLK_ROOT);
 
     if (config->dma_enable) {
@@ -198,41 +193,39 @@ int omv_spi_init(omv_spi_t *spi, omv_spi_config_t *config)
 
         // Link TX/RX DMA descriptors to SPI descriptor.
         LPSPI_MasterTransferCreateHandleEDMA(
-                spi->inst,
-                &spi->descr_master_edma,
-                (lpspi_master_edma_transfer_callback_t) spi_master_callback,
-                spi,
-                &spi->dma_descr_rx,
-                &spi->dma_descr_tx);
+            spi->inst,
+            &spi->descr_master_edma,
+            (lpspi_master_edma_transfer_callback_t) spi_master_callback,
+            spi,
+            &spi->dma_descr_rx,
+            &spi->dma_descr_tx);
     } else {
         LPSPI_MasterTransferCreateHandle(
-                spi->inst,
-                &spi->descr_master,
-                (lpspi_master_transfer_callback_t) spi_master_callback,
-                spi);
+            spi->inst,
+            &spi->descr_master,
+            (lpspi_master_transfer_callback_t) spi_master_callback,
+            spi);
     }
     spi->initialized = true;
     return 0;
 }
 
-int omv_spi_deinit(omv_spi_t *spi)
-{
+int omv_spi_deinit(omv_spi_t *spi) {
     return 0;
 }
 
-int omv_spi_default_config(omv_spi_config_t *config, uint32_t bus_id)
-{
-    config->id          = bus_id;
-    config->baudrate    = 10000000;
-    config->datasize    = 8;
-    config->spi_mode    = OMV_SPI_MODE_MASTER;
-    config->bus_mode    = OMV_SPI_BUS_TX_RX;
-    config->bit_order   = OMV_SPI_MSB_FIRST;
-    config->clk_pol     = OMV_SPI_CPOL_HIGH;
-    config->clk_pha     = OMV_SPI_CPHA_2EDGE;
-    config->nss_pol     = OMV_SPI_NSS_LOW;
-    config->nss_enable  = true;
-    config->dma_enable  = false;
+int omv_spi_default_config(omv_spi_config_t *config, uint32_t bus_id) {
+    config->id = bus_id;
+    config->baudrate = 10000000;
+    config->datasize = 8;
+    config->spi_mode = OMV_SPI_MODE_MASTER;
+    config->bus_mode = OMV_SPI_BUS_TX_RX;
+    config->bit_order = OMV_SPI_MSB_FIRST;
+    config->clk_pol = OMV_SPI_CPOL_HIGH;
+    config->clk_pha = OMV_SPI_CPHA_2EDGE;
+    config->nss_pol = OMV_SPI_NSS_LOW;
+    config->nss_enable = true;
+    config->dma_enable = false;
     config->data_retained = true;
     return 0;
 }

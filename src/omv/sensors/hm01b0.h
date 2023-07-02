@@ -10,6 +10,6 @@
  */
 #ifndef __HM01B0_H__
 #define __HM01B0_H__
-#define HM01B0_XCLK_FREQ (6000000)
+#define HM01B0_XCLK_FREQ    (6000000)
 int hm01b0_init(sensor_t *sensor);
 #endif // __HM01B0_H__

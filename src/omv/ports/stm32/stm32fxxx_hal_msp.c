@@ -21,53 +21,52 @@
 extern void SystemClock_Config(void);
 extern uint32_t omv_exti_get_gpio(uint32_t line);
 
-void HAL_MspInit(void)
-{
+void HAL_MspInit(void) {
     /* Set the system clock */
     SystemClock_Config();
 
-    #if defined(OMV_DMA_REGION_D1_BASE)\
-     || defined(OMV_DMA_REGION_D2_BASE)\
-     || defined(OMV_DMA_REGION_D3_BASE)
+    #if defined(OMV_DMA_REGION_D1_BASE) \
+    || defined(OMV_DMA_REGION_D2_BASE)  \
+    || defined(OMV_DMA_REGION_D3_BASE)
     __DSB(); __ISB();
     HAL_MPU_Disable();
 
     // Configure the MPU attributes to disable caching DMA buffers.
     MPU_Region_InitTypeDef MPU_InitStruct;
     MPU_InitStruct.AccessPermission = MPU_REGION_FULL_ACCESS;
-    MPU_InitStruct.IsBufferable     = MPU_ACCESS_NOT_BUFFERABLE;
-    MPU_InitStruct.IsCacheable      = MPU_ACCESS_NOT_CACHEABLE;
-    MPU_InitStruct.IsShareable      = MPU_ACCESS_NOT_SHAREABLE;
-    MPU_InitStruct.TypeExtField     = MPU_TEX_LEVEL1;
+    MPU_InitStruct.IsBufferable = MPU_ACCESS_NOT_BUFFERABLE;
+    MPU_InitStruct.IsCacheable = MPU_ACCESS_NOT_CACHEABLE;
+    MPU_InitStruct.IsShareable = MPU_ACCESS_NOT_SHAREABLE;
+    MPU_InitStruct.TypeExtField = MPU_TEX_LEVEL1;
     MPU_InitStruct.SubRegionDisable = 0x00;
-    MPU_InitStruct.DisableExec      = MPU_INSTRUCTION_ACCESS_ENABLE;
+    MPU_InitStruct.DisableExec = MPU_INSTRUCTION_ACCESS_ENABLE;
 
     // Disable all regions.
-    for (int i=MPU_REGION_NUMBER0; i<MPU_REGION_NUMBER15; i++) {
+    for (int i = MPU_REGION_NUMBER0; i < MPU_REGION_NUMBER15; i++) {
         MPU_InitStruct.Number = i;
         MPU_InitStruct.Enable = MPU_REGION_DISABLE;
         HAL_MPU_ConfigRegion(&MPU_InitStruct);
     }
 
-    MPU_InitStruct.Enable           = MPU_REGION_ENABLE;
+    MPU_InitStruct.Enable = MPU_REGION_ENABLE;
     #if defined(OMV_DMA_REGION_D1_BASE)
-    MPU_InitStruct.Number           = MPU_REGION_NUMBER15;
-    MPU_InitStruct.BaseAddress      = OMV_DMA_REGION_D1_BASE;
-    MPU_InitStruct.Size             = OMV_DMA_REGION_D1_SIZE;
+    MPU_InitStruct.Number = MPU_REGION_NUMBER15;
+    MPU_InitStruct.BaseAddress = OMV_DMA_REGION_D1_BASE;
+    MPU_InitStruct.Size = OMV_DMA_REGION_D1_SIZE;
     HAL_MPU_ConfigRegion(&MPU_InitStruct);
     #endif // defined(OMV_DMA_REGION_D1_BASE)
 
     #if defined(OMV_DMA_REGION_D2_BASE)
-    MPU_InitStruct.Number           = MPU_REGION_NUMBER14;
-    MPU_InitStruct.BaseAddress      = OMV_DMA_REGION_D2_BASE;
-    MPU_InitStruct.Size             = OMV_DMA_REGION_D2_SIZE;
+    MPU_InitStruct.Number = MPU_REGION_NUMBER14;
+    MPU_InitStruct.BaseAddress = OMV_DMA_REGION_D2_BASE;
+    MPU_InitStruct.Size = OMV_DMA_REGION_D2_SIZE;
     HAL_MPU_ConfigRegion(&MPU_InitStruct);
     #endif // defined(OMV_DMA_REGION_D2_BASE)
 
     #if defined(OMV_DMA_REGION_D3_BASE)
-    MPU_InitStruct.Number           = MPU_REGION_NUMBER13;
-    MPU_InitStruct.BaseAddress      = OMV_DMA_REGION_D3_BASE;
-    MPU_InitStruct.Size             = OMV_DMA_REGION_D3_SIZE;
+    MPU_InitStruct.Number = MPU_REGION_NUMBER13;
+    MPU_InitStruct.BaseAddress = OMV_DMA_REGION_D3_BASE;
+    MPU_InitStruct.Size = OMV_DMA_REGION_D3_SIZE;
     HAL_MPU_ConfigRegion(&MPU_InitStruct);
     #endif // defined(OMV_DMA_REGION_D3_BASE)
 
@@ -84,14 +83,14 @@ void HAL_MspInit(void)
     SCB_DisableDCache();
     #else
     // Enable caches if not enabled, or clean and invalidate.
-    if (!(SCB->CCR & (uint32_t)SCB_CCR_IC_Msk)) {
+    if (!(SCB->CCR & (uint32_t) SCB_CCR_IC_Msk)) {
         SCB_EnableICache();
     } else {
         SCB_InvalidateICache();
         __ISB(); __DSB(); __DMB();
     }
 
-    if (!(SCB->CCR & (uint32_t)SCB_CCR_DC_Msk)) {
+    if (!(SCB->CCR & (uint32_t) SCB_CCR_DC_Msk)) {
         SCB_EnableDCache();
     } else {
         SCB_CleanInvalidateDCache();
@@ -211,8 +210,7 @@ void HAL_MspInit(void)
     #endif
 }
 
-void HAL_I2C_MspInit(I2C_HandleTypeDef *hi2c)
-{
+void HAL_I2C_MspInit(I2C_HandleTypeDef *hi2c) {
     omv_gpio_t scl_pin = NULL;
     omv_gpio_t sda_pin = NULL;
 
@@ -256,8 +254,7 @@ void HAL_I2C_MspInit(I2C_HandleTypeDef *hi2c)
     }
 }
 
-void HAL_I2C_MspDeInit(I2C_HandleTypeDef *hi2c)
-{
+void HAL_I2C_MspDeInit(I2C_HandleTypeDef *hi2c) {
     if (hi2c->Instance == ISC_I2C) {
         ISC_I2C_FORCE_RESET();
         ISC_I2C_RELEASE_RESET();
@@ -289,8 +286,7 @@ void HAL_I2C_MspDeInit(I2C_HandleTypeDef *hi2c)
     }
 }
 
-void HAL_TIM_PWM_MspInit(TIM_HandleTypeDef *htim)
-{
+void HAL_TIM_PWM_MspInit(TIM_HandleTypeDef *htim) {
     #if (OMV_XCLK_SOURCE == OMV_XCLK_TIM)
     if (htim->Instance == DCMI_TIM) {
         // Enable DCMI timer clock.
@@ -316,8 +312,7 @@ void HAL_TIM_PWM_MspInit(TIM_HandleTypeDef *htim)
     #endif
 }
 
-void HAL_TIM_PWM_MspDeInit(TIM_HandleTypeDef *htim)
-{
+void HAL_TIM_PWM_MspDeInit(TIM_HandleTypeDef *htim) {
     #if defined(OMV_LCD_BL_TIM)
     if (htim->Instance == OMV_LCD_BL_TIM) {
         OMV_LCD_BL_TIM_FORCE_RESET();
@@ -335,8 +330,7 @@ void HAL_TIM_PWM_MspDeInit(TIM_HandleTypeDef *htim)
     #endif
 }
 
-void HAL_DCMI_MspInit(DCMI_HandleTypeDef* hdcmi)
-{
+void HAL_DCMI_MspInit(DCMI_HandleTypeDef *hdcmi) {
     const omv_gpio_t dcmi_pins[] = {
         DCMI_D0_PIN,
         DCMI_D1_PIN,
@@ -359,17 +353,16 @@ void HAL_DCMI_MspInit(DCMI_HandleTypeDef* hdcmi)
     if (exti_gpio == 0)
     #endif
     {
-    omv_gpio_config(DCMI_VSYNC_PIN, OMV_GPIO_MODE_IT_BOTH, OMV_GPIO_PULL_UP, OMV_GPIO_SPEED_MAX, -1);
+        omv_gpio_config(DCMI_VSYNC_PIN, OMV_GPIO_MODE_IT_BOTH, OMV_GPIO_PULL_UP, OMV_GPIO_SPEED_MAX, -1);
     }
 
     // Configure DCMI pins.
-    for (int i=0; i<OMV_ARRAY_SIZE(dcmi_pins); i++) {
+    for (int i = 0; i < OMV_ARRAY_SIZE(dcmi_pins); i++) {
         omv_gpio_config(dcmi_pins[i], OMV_GPIO_MODE_ALT, OMV_GPIO_PULL_UP, OMV_GPIO_SPEED_MAX, -1);
     }
 }
 
-void HAL_DCMI_MspDeInit(DCMI_HandleTypeDef* hdcmi)
-{
+void HAL_DCMI_MspDeInit(DCMI_HandleTypeDef *hdcmi) {
     const omv_gpio_t dcmi_pins[] = {
         DCMI_D0_PIN,
         DCMI_D1_PIN,
@@ -388,13 +381,12 @@ void HAL_DCMI_MspDeInit(DCMI_HandleTypeDef* hdcmi)
     __DCMI_CLK_DISABLE();
 
     // Deinit pins.
-    for (int i=0; i<OMV_ARRAY_SIZE(dcmi_pins); i++) {
+    for (int i = 0; i < OMV_ARRAY_SIZE(dcmi_pins); i++) {
         omv_gpio_deinit(dcmi_pins[i]);
     }
 }
 
-void HAL_SPI_MspInit(SPI_HandleTypeDef *hspi)
-{
+void HAL_SPI_MspInit(SPI_HandleTypeDef *hspi) {
     typedef struct {
         omv_gpio_t sclk_pin;
         omv_gpio_t miso_pin;
@@ -408,32 +400,44 @@ void HAL_SPI_MspInit(SPI_HandleTypeDef *hspi)
     #if defined(SPI1_ID)
     } else if (hspi->Instance == SPI1) {
         __HAL_RCC_SPI1_CLK_ENABLE();
-        spi_pins = (spi_pins_t) { SPI1_SCLK_PIN, SPI1_MISO_PIN, SPI1_MOSI_PIN, SPI1_SSEL_PIN };
+        spi_pins = (spi_pins_t) {
+            SPI1_SCLK_PIN, SPI1_MISO_PIN, SPI1_MOSI_PIN, SPI1_SSEL_PIN
+        };
     #endif
     #if defined(SPI2_ID)
     } else if (hspi->Instance == SPI2) {
         __HAL_RCC_SPI2_CLK_ENABLE();
-        spi_pins = (spi_pins_t) { SPI2_SCLK_PIN, SPI2_MISO_PIN, SPI2_MOSI_PIN, SPI2_SSEL_PIN };
+        spi_pins = (spi_pins_t) {
+            SPI2_SCLK_PIN, SPI2_MISO_PIN, SPI2_MOSI_PIN, SPI2_SSEL_PIN
+        };
     #endif
     #if defined(SPI3_ID)
     } else if (hspi->Instance == SPI3) {
         __HAL_RCC_SPI3_CLK_ENABLE();
-        spi_pins = (spi_pins_t) { SPI3_SCLK_PIN, SPI3_MISO_PIN, SPI3_MOSI_PIN, SPI3_SSEL_PIN };
+        spi_pins = (spi_pins_t) {
+            SPI3_SCLK_PIN, SPI3_MISO_PIN, SPI3_MOSI_PIN, SPI3_SSEL_PIN
+        };
     #endif
     #if defined(SPI4_ID)
     } else if (hspi->Instance == SPI4) {
         __HAL_RCC_SPI4_CLK_ENABLE();
-        spi_pins = (spi_pins_t) { SPI4_SCLK_PIN, SPI4_MISO_PIN, SPI4_MOSI_PIN, SPI4_SSEL_PIN };
+        spi_pins = (spi_pins_t) {
+            SPI4_SCLK_PIN, SPI4_MISO_PIN, SPI4_MOSI_PIN, SPI4_SSEL_PIN
+        };
     #endif
     #if defined(SPI5_ID)
     } else if (hspi->Instance == SPI5) {
         __HAL_RCC_SPI5_CLK_ENABLE();
-        spi_pins = (spi_pins_t) { SPI5_SCLK_PIN, SPI5_MISO_PIN, SPI5_MOSI_PIN, SPI5_SSEL_PIN };
+        spi_pins = (spi_pins_t) {
+            SPI5_SCLK_PIN, SPI5_MISO_PIN, SPI5_MOSI_PIN, SPI5_SSEL_PIN
+        };
     #endif
     #if defined(SPI6_ID)
     } else if (hspi->Instance == SPI6) {
         __HAL_RCC_SPI6_CLK_ENABLE();
-        spi_pins = (spi_pins_t) { SPI6_SCLK_PIN, SPI6_MISO_PIN, SPI6_MOSI_PIN, SPI6_SSEL_PIN };
+        spi_pins = (spi_pins_t) {
+            SPI6_SCLK_PIN, SPI6_MISO_PIN, SPI6_MOSI_PIN, SPI6_SSEL_PIN
+        };
     #endif
     } else {
         return;
@@ -456,14 +460,12 @@ void HAL_SPI_MspInit(SPI_HandleTypeDef *hspi)
     }
 }
 
-void HAL_SPI_MspDeInit(SPI_HandleTypeDef *hspi)
-{
+void HAL_SPI_MspDeInit(SPI_HandleTypeDef *hspi) {
 
 }
 
 #if defined(AUDIO_SAI)
-void HAL_SAI_MspInit(SAI_HandleTypeDef* hsai)
-{
+void HAL_SAI_MspInit(SAI_HandleTypeDef *hsai) {
     if (hsai->Instance == AUDIO_SAI) {
         AUDIO_SAI_CLK_ENABLE();
         omv_gpio_config(AUDIO_SAI_CK_PIN, OMV_GPIO_MODE_ALT, OMV_GPIO_PULL_NONE, OMV_GPIO_SPEED_LOW, -1);
@@ -471,8 +473,7 @@ void HAL_SAI_MspInit(SAI_HandleTypeDef* hsai)
     }
 }
 
-void HAL_SAI_MspDeInit(SAI_HandleTypeDef* hsai)
-{
+void HAL_SAI_MspDeInit(SAI_HandleTypeDef *hsai) {
     if (hsai->Instance == SAI4_Block_A) {
         AUDIO_SAI_CLK_DISABLE();
         omv_gpio_deinit(AUDIO_SAI_CK_PIN);
@@ -480,8 +481,7 @@ void HAL_SAI_MspDeInit(SAI_HandleTypeDef* hsai)
     }
 }
 #elif defined(AUDIO_DFSDM)
-void HAL_DFSDM_ChannelMspInit(DFSDM_Channel_HandleTypeDef *hdfsdm)
-{
+void HAL_DFSDM_ChannelMspInit(DFSDM_Channel_HandleTypeDef *hdfsdm) {
     if (hdfsdm->Instance == AUDIO_DFSDM) {
         AUDIO_DFSDM_CLK_ENABLE();
         omv_gpio_config(AUDIO_DFSDM_CK_PIN, OMV_GPIO_MODE_ALT, OMV_GPIO_PULL_NONE, OMV_GPIO_SPEED_LOW, -1);
@@ -489,8 +489,7 @@ void HAL_DFSDM_ChannelMspInit(DFSDM_Channel_HandleTypeDef *hdfsdm)
     }
 }
 
-void HAL_DFSDM_ChannelMspDeInit(DFSDM_Channel_HandleTypeDef *hdfsdm)
-{
+void HAL_DFSDM_ChannelMspDeInit(DFSDM_Channel_HandleTypeDef *hdfsdm) {
     if (hdfsdm->Instance == AUDIO_DFSDM) {
         AUDIO_DFSDM_CLK_DISABLE();
         omv_gpio_deinit(AUDIO_DFSDM_CK_PIN);
@@ -499,36 +498,30 @@ void HAL_DFSDM_ChannelMspDeInit(DFSDM_Channel_HandleTypeDef *hdfsdm)
 }
 #endif
 
-void HAL_CRC_MspInit(CRC_HandleTypeDef* hcrc)
-{
+void HAL_CRC_MspInit(CRC_HandleTypeDef *hcrc) {
     __HAL_RCC_CRC_CLK_ENABLE();
 }
 
-void HAL_CRC_MspDeInit(CRC_HandleTypeDef* hcrc)
-{
+void HAL_CRC_MspDeInit(CRC_HandleTypeDef *hcrc) {
     __HAL_RCC_CRC_CLK_DISABLE();
 }
 
-void HAL_DMA2D_MspInit(DMA2D_HandleTypeDef *hdma2d)
-{
+void HAL_DMA2D_MspInit(DMA2D_HandleTypeDef *hdma2d) {
     __HAL_RCC_DMA2D_CLK_ENABLE();
 }
 
-void HAL_DMA2D_MspDeInit(DMA2D_HandleTypeDef *hdma2d)
-{
+void HAL_DMA2D_MspDeInit(DMA2D_HandleTypeDef *hdma2d) {
     __HAL_RCC_DMA2D_FORCE_RESET();
     __HAL_RCC_DMA2D_RELEASE_RESET();
     __HAL_RCC_DMA2D_CLK_DISABLE();
 }
 
 #if (OMV_HARDWARE_JPEG == 1)
-void HAL_JPEG_MspInit(JPEG_HandleTypeDef *hjpeg)
-{
+void HAL_JPEG_MspInit(JPEG_HandleTypeDef *hjpeg) {
     __HAL_RCC_JPEG_CLK_ENABLE();
 }
 
-void HAL_JPEG_MspDeInit(JPEG_HandleTypeDef *hjpeg)
-{
+void HAL_JPEG_MspDeInit(JPEG_HandleTypeDef *hjpeg) {
     __HAL_RCC_JPEG_FORCE_RESET();
     __HAL_RCC_JPEG_RELEASE_RESET();
     __HAL_RCC_JPEG_CLK_DISABLE();
@@ -569,8 +562,7 @@ static const omv_gpio_t ltdc_pins[] = {
 #endif
 
 #if defined(OMV_LCD_CONTROLLER) || defined(OMV_DSI_CONTROLLER)
-void HAL_LTDC_MspInit(LTDC_HandleTypeDef *hltdc)
-{
+void HAL_LTDC_MspInit(LTDC_HandleTypeDef *hltdc) {
     #if defined(OMV_DSI_CONTROLLER)
     if (hltdc->Instance == OMV_LCD_CONTROLLER) {
         OMV_LCD_CLK_ENABLE();
@@ -579,7 +571,7 @@ void HAL_LTDC_MspInit(LTDC_HandleTypeDef *hltdc)
     if (hltdc->Instance == OMV_LCD_CONTROLLER) {
         OMV_LCD_CLK_ENABLE();
 
-        for (int i=0; i<OMV_ARRAY_SIZE(ltdc_pins); i++) {
+        for (int i = 0; i < OMV_ARRAY_SIZE(ltdc_pins); i++) {
             omv_gpio_config(ltdc_pins[i], OMV_GPIO_MODE_ALT, OMV_GPIO_PULL_NONE, OMV_GPIO_SPEED_MAX, -1);
         }
 
@@ -596,8 +588,7 @@ void HAL_LTDC_MspInit(LTDC_HandleTypeDef *hltdc)
     #endif
 }
 
-void HAL_LTDC_MspDeInit(LTDC_HandleTypeDef *hltdc)
-{
+void HAL_LTDC_MspDeInit(LTDC_HandleTypeDef *hltdc) {
     #if defined(OMV_DSI_CONTROLLER)
     if (hltdc->Instance == OMV_LCD_CONTROLLER) {
         OMV_LCD_FORCE_RESET();
@@ -610,7 +601,7 @@ void HAL_LTDC_MspDeInit(LTDC_HandleTypeDef *hltdc)
         OMV_LCD_RELEASE_RESET();
         OMV_LCD_CLK_DISABLE();
 
-        for (int i=0; i<OMV_ARRAY_SIZE(ltdc_pins); i++) {
+        for (int i = 0; i < OMV_ARRAY_SIZE(ltdc_pins); i++) {
             omv_gpio_deinit(ltdc_pins[i]);
         }
 
@@ -626,8 +617,7 @@ void HAL_LTDC_MspDeInit(LTDC_HandleTypeDef *hltdc)
 }
 #endif
 
-void HAL_DAC_MspInit(DAC_HandleTypeDef *hdac)
-{
+void HAL_DAC_MspInit(DAC_HandleTypeDef *hdac) {
     #if defined(OMV_SPI_LCD_BL_DAC)
     if (hdac->Instance == OMV_SPI_LCD_BL_DAC) {
         OMV_SPI_LCD_BL_DAC_CLK_ENABLE();
@@ -635,8 +625,7 @@ void HAL_DAC_MspInit(DAC_HandleTypeDef *hdac)
     #endif
 }
 
-void HAL_DAC_MspDeInit(DAC_HandleTypeDef *hdac)
-{
+void HAL_DAC_MspDeInit(DAC_HandleTypeDef *hdac) {
     #if defined(OMV_SPI_LCD_BL_DAC)
     if (hdac->Instance == OMV_SPI_LCD_BL_DAC) {
         OMV_SPI_LCD_BL_DAC_FORCE_RESET();
@@ -646,13 +635,11 @@ void HAL_DAC_MspDeInit(DAC_HandleTypeDef *hdac)
     #endif
 }
 
-void HAL_MspDeInit(void)
-{
+void HAL_MspDeInit(void) {
 
 }
 
-void MDMA_IRQHandler()
-{
+void MDMA_IRQHandler() {
     IRQ_ENTER(MDMA_IRQn);
     #if (OMV_HARDWARE_JPEG == 1)
     jpeg_mdma_irq_handler();
