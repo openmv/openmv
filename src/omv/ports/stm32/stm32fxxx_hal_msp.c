@@ -214,40 +214,33 @@ void HAL_I2C_MspInit(I2C_HandleTypeDef *hi2c) {
     omv_gpio_t scl_pin = NULL;
     omv_gpio_t sda_pin = NULL;
 
-    if (hi2c->Instance == ISC_I2C) {
-        // Enable I2C clock.
-        ISC_I2C_CLK_ENABLE();
-        scl_pin = ISC_I2C_SCL_PIN;
-        sda_pin = ISC_I2C_SDA_PIN;
-    #if defined(FIR_I2C)
-    } else if (hi2c->Instance == FIR_I2C) {
-        // Enable I2C clock.
-        FIR_I2C_CLK_ENABLE();
-        scl_pin = FIR_I2C_SCL_PIN;
-        sda_pin = FIR_I2C_SDA_PIN;
+    if (0) {
+    #if defined(I2C1_ID)
+    } else if (hi2c->Instance == I2C1) {
+        __HAL_RCC_I2C1_CLK_ENABLE();
+        scl_pin = I2C1_SCL_PIN;
+        sda_pin = I2C1_SDA_PIN;
     #endif
-    #if defined(TOF_I2C)
-    } else if (hi2c->Instance == TOF_I2C) {
-        // Enable I2C clock.
-        TOF_I2C_CLK_ENABLE();
-        scl_pin = TOF_I2C_SCL_PIN;
-        sda_pin = TOF_I2C_SDA_PIN;
+    #if defined(I2C2_ID)
+    } else if (hi2c->Instance == I2C2) {
+        __HAL_RCC_I2C2_CLK_ENABLE();
+        scl_pin = I2C2_SCL_PIN;
+        sda_pin = I2C2_SDA_PIN;
     #endif
-    #if defined(IMU_I2C)
-    } else if (hi2c->Instance == IMU_I2C) {
-        // Enable I2C clock.
-        IMU_I2C_CLK_ENABLE();
-        scl_pin = IMU_I2C_SCL_PIN;
-        sda_pin = IMU_I2C_SDA_PIN;
+    #if defined(I2C3_ID)
+    } else if (hi2c->Instance == I2C3) {
+        __HAL_RCC_I2C3_CLK_ENABLE();
+        scl_pin = I2C3_SCL_PIN;
+        sda_pin = I2C3_SDA_PIN;
     #endif
-    #if defined(ISC_I2C_ALT)
-    } else if (hi2c->Instance == ISC_I2C_ALT) {
-        // Enable I2C clock.
-        ISC_I2C_ALT_CLK_ENABLE();
-        scl_pin = ISC_I2C_ALT_SCL_PIN;
-        sda_pin = ISC_I2C_ALT_SDA_PIN;
+    #if defined(I2C4_ID)
+    } else if (hi2c->Instance == I2C4) {
+        __HAL_RCC_I2C4_CLK_ENABLE();
+        scl_pin = I2C4_SCL_PIN;
+        sda_pin = I2C4_SDA_PIN;
     #endif
     }
+
     if (scl_pin && sda_pin) {
         omv_gpio_config(scl_pin, OMV_GPIO_MODE_ALT_OD, OMV_GPIO_PULL_NONE, OMV_GPIO_SPEED_LOW, -1);
         omv_gpio_config(sda_pin, OMV_GPIO_MODE_ALT_OD, OMV_GPIO_PULL_NONE, OMV_GPIO_SPEED_LOW, -1);
@@ -255,33 +248,30 @@ void HAL_I2C_MspInit(I2C_HandleTypeDef *hi2c) {
 }
 
 void HAL_I2C_MspDeInit(I2C_HandleTypeDef *hi2c) {
-    if (hi2c->Instance == ISC_I2C) {
-        ISC_I2C_FORCE_RESET();
-        ISC_I2C_RELEASE_RESET();
-        ISC_I2C_CLK_DISABLE();
-    #if defined(FIR_I2C)
-    } else if (hi2c->Instance == FIR_I2C) {
-        FIR_I2C_FORCE_RESET();
-        FIR_I2C_RELEASE_RESET();
-        FIR_I2C_CLK_DISABLE();
+    if (0) {
+    #if defined(I2C1_ID)
+    } else if (hi2c->Instance == I2C1) {
+        __HAL_RCC_I2C1_FORCE_RESET();
+        __HAL_RCC_I2C1_RELEASE_RESET();
+        __HAL_RCC_I2C1_CLK_DISABLE();
     #endif
-    #if defined(TOF_I2C)
-    } else if (hi2c->Instance == TOF_I2C) {
-        TOF_I2C_FORCE_RESET();
-        TOF_I2C_RELEASE_RESET();
-        TOF_I2C_CLK_DISABLE();
+    #if defined(I2C2_ID)
+    } else if (hi2c->Instance == I2C2) {
+        __HAL_RCC_I2C2_FORCE_RESET();
+        __HAL_RCC_I2C2_RELEASE_RESET();
+        __HAL_RCC_I2C2_CLK_DISABLE();
     #endif
-    #if defined(IMU_I2C)
-    } else if (hi2c->Instance == IMU_I2C) {
-        IMU_I2C_FORCE_RESET();
-        IMU_I2C_RELEASE_RESET();
-        IMU_I2C_CLK_DISABLE();
+    #if defined(I2C3_ID)
+    } else if (hi2c->Instance == I2C3) {
+        __HAL_RCC_I2C3_FORCE_RESET();
+        __HAL_RCC_I2C3_RELEASE_RESET();
+        __HAL_RCC_I2C3_CLK_DISABLE();
     #endif
-    #if defined(ISC_I2C_ALT)
-    } else if (hi2c->Instance == ISC_I2C_ALT) {
-        ISC_I2C_ALT_FORCE_RESET();
-        ISC_I2C_ALT_RELEASE_RESET();
-        ISC_I2C_ALT_CLK_DISABLE();
+    #if defined(I2C4_ID)
+    } else if (hi2c->Instance == I2C4) {
+        __HAL_RCC_I2C4_FORCE_RESET();
+        __HAL_RCC_I2C4_RELEASE_RESET();
+        __HAL_RCC_I2C4_CLK_DISABLE();
     #endif
     }
 }

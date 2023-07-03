@@ -100,31 +100,39 @@ int omv_i2c_init(omv_i2c_t *i2c, uint32_t bus_id, uint32_t speed) {
     i2c->sda_pin = NULL;
 
     switch (bus_id) {
-        #if defined(I2C1)
+        #if defined(I2C1_ID)
         case 1: {
             i2c->inst = &I2CHandle1;
             i2c->inst->Instance = I2C1;
+            i2c->scl_pin = I2C1_SCL_PIN;
+            i2c->sda_pin = I2C1_SDA_PIN;
             break;
         }
         #endif
-        #if defined(I2C2)
+        #if defined(I2C2_ID)
         case 2: {
             i2c->inst = &I2CHandle2;
             i2c->inst->Instance = I2C2;
+            i2c->scl_pin = I2C2_SCL_PIN;
+            i2c->sda_pin = I2C2_SDA_PIN;
             break;
         }
         #endif
-        #if defined(I2C3)
+        #if defined(I2C3_ID)
         case 3: {
             i2c->inst = &I2CHandle3;
             i2c->inst->Instance = I2C3;
+            i2c->scl_pin = I2C3_SCL_PIN;
+            i2c->sda_pin = I2C3_SDA_PIN;
             break;
         }
         #endif
-        #if defined(I2C4)
+        #if defined(I2C4_ID)
         case 4: {
             i2c->inst = &I2CHandle4;
             i2c->inst->Instance = I2C4;
+            i2c->scl_pin = I2C4_SCL_PIN;
+            i2c->sda_pin = I2C4_SDA_PIN;
             break;
         }
         #endif
@@ -134,26 +142,6 @@ int omv_i2c_init(omv_i2c_t *i2c, uint32_t bus_id, uint32_t speed) {
 
     if (speed < 0 || speed >= OMV_I2C_SPEED_MAX) {
         return -1;
-    }
-
-    if (i2c->inst->Instance == ISC_I2C) {
-        i2c->scl_pin = ISC_I2C_SCL_PIN;
-        i2c->sda_pin = ISC_I2C_SDA_PIN;
-    #if defined(TOF_I2C)
-    } else if (i2c->inst->Instance == TOF_I2C) {
-        i2c->scl_pin = TOF_I2C_SCL_PIN;
-        i2c->sda_pin = TOF_I2C_SDA_PIN;
-    #endif
-    #if defined(FIR_I2C)
-    } else if (i2c->inst->Instance == FIR_I2C) {
-        i2c->scl_pin = FIR_I2C_SCL_PIN;
-        i2c->sda_pin = FIR_I2C_SDA_PIN;
-    #endif
-    #if defined(ISC_I2C_ALT)
-    } else if (i2c->inst->Instance == ISC_I2C_ALT) {
-        i2c->scl_pin = ISC_I2C_ALT_SCL_PIN;
-        i2c->sda_pin = ISC_I2C_ALT_SDA_PIN;
-    #endif
     }
 
     // Configure the I2C handle
@@ -215,28 +203,28 @@ static int omv_i2c_set_irq_state(omv_i2c_t *i2c, bool enabled) {
     IRQn_Type ev_irqn;
     IRQn_Type er_irqn;
     switch (i2c->id) {
-        #if defined(I2C1)
+        #if defined(I2C1_ID)
         case 1: {
             ev_irqn = I2C1_EV_IRQn;
             er_irqn = I2C1_ER_IRQn;
             break;
         }
         #endif
-        #if defined(I2C2)
+        #if defined(I2C2_ID)
         case 2: {
             ev_irqn = I2C2_EV_IRQn;
             er_irqn = I2C2_ER_IRQn;
             break;
         }
         #endif
-        #if defined(I2C3)
+        #if defined(I2C3_ID)
         case 3: {
             ev_irqn = I2C3_EV_IRQn;
             er_irqn = I2C3_ER_IRQn;
             break;
         }
         #endif
-        #if defined(I2C4)
+        #if defined(I2C4_ID)
         case 4: {
             ev_irqn = I2C4_EV_IRQn;
             er_irqn = I2C4_ER_IRQn;

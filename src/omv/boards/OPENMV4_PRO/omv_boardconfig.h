@@ -234,51 +234,23 @@
 #define OMV_AXI_QOS_MDMA_W_PRI                15 // Max pri to move data.
 
 // Image sensor I2C configuration
-#define ISC_I2C                               (I2C2)
 #define ISC_I2C_ID                            (2)
 #define ISC_I2C_SPEED                         (OMV_I2C_SPEED_STANDARD)
-#define ISC_I2C_SCL_PIN                       (&omv_pin_H4_I2C2)
-#define ISC_I2C_SDA_PIN                       (&omv_pin_H5_I2C2)
-#define ISC_I2C_CLK_ENABLE()                  __HAL_RCC_I2C2_CLK_ENABLE()
-#define ISC_I2C_CLK_DISABLE()                 __HAL_RCC_I2C2_CLK_DISABLE()
-#define ISC_I2C_FORCE_RESET()                 __HAL_RCC_I2C2_FORCE_RESET()
-#define ISC_I2C_RELEASE_RESET()               __HAL_RCC_I2C2_RELEASE_RESET()
 
 // FIR sensor I2C configuration
-#define FIR_I2C                               (I2C1)
 #define FIR_I2C_ID                            (1)
 #define FIR_I2C_SPEED                         (OMV_I2C_SPEED_STANDARD)
-#define FIR_I2C_SCL_PIN                       (&omv_pin_B8_I2C1)
-#define FIR_I2C_SDA_PIN                       (&omv_pin_B9_I2C1)
-#define FIR_I2C_CLK_ENABLE()                  __HAL_RCC_I2C1_CLK_ENABLE()
-#define FIR_I2C_CLK_DISABLE()                 __HAL_RCC_I2C1_CLK_DISABLE()
-#define FIR_I2C_FORCE_RESET()                 __HAL_RCC_I2C1_FORCE_RESET()
-#define FIR_I2C_RELEASE_RESET()               __HAL_RCC_I2C1_RELEASE_RESET()
 
 // TOF sensor I2C configuration
-#define TOF_I2C                               (I2C4)
 #define TOF_I2C_ID                            (4)
 #define TOF_I2C_SPEED                         (OMV_I2C_SPEED_STANDARD)
-#define TOF_I2C_SCL_PIN                       (&omv_pin_B6_I2C4)
-#define TOF_I2C_SDA_PIN                       (&omv_pin_B7_I2C4)
-#define TOF_I2C_CLK_ENABLE()                  __HAL_RCC_I2C4_CLK_ENABLE()
-#define TOF_I2C_CLK_DISABLE()                 __HAL_RCC_I2C4_CLK_DISABLE()
-#define TOF_I2C_FORCE_RESET()                 __HAL_RCC_I2C4_FORCE_RESET()
-#define TOF_I2C_RELEASE_RESET()               __HAL_RCC_I2C4_RELEASE_RESET()
 
 // IMU I2C configuration
-#define IMU_I2C                               (I2C4)
 #define IMU_I2C_ID                            (4)
 #define IMU_I2C_SPEED                         (0x4030040B)
-#define IMU_I2C_SCL_PIN                       (&omv_pin_B6_I2C4)
-#define IMU_I2C_SDA_PIN                       (&omv_pin_B7_I2C4)
-#define IMU_I2C_CLK_ENABLE()                  __HAL_RCC_I2C4_CLK_ENABLE()
-#define IMU_I2C_CLK_DISABLE()                 __HAL_RCC_I2C4_CLK_DISABLE()
-#define IMU_I2C_FORCE_RESET()                 __HAL_RCC_I2C4_FORCE_RESET()
-#define IMU_I2C_RELEASE_RESET()               __HAL_RCC_I2C4_RELEASE_RESET()
 #define IMU_CHIP_LSM6DS3                      (1)
-#define OMV_IMU_X_Y_ROTATION_DEGREES          0
-#define OMV_IMU_MOUNTING_Z_DIRECTION          -1
+#define OMV_IMU_X_Y_ROTATION_DEGREES          (0)
+#define OMV_IMU_MOUNTING_Z_DIRECTION          (-1)
 
 // DCMI timer configuration
 #define DCMI_TIM                              (TIM1)
@@ -305,6 +277,20 @@
 #define DCMI_VSYNC_PIN                        (&omv_pin_G9_DCMI)
 #define DCMI_HSYNC_PIN                        (&omv_pin_A4_DCMI)
 #define DCMI_PXCLK_PIN                        (&omv_pin_A6_DCMI)
+
+// Physical I2C buses.
+// I2C bus 1
+#define I2C1_ID                               (1)
+#define I2C1_SCL_PIN                          (&omv_pin_B8_I2C1)
+#define I2C1_SDA_PIN                          (&omv_pin_B9_I2C1)
+// I2C bus 2
+#define I2C2_ID                               (2)
+#define I2C2_SCL_PIN                          (&omv_pin_H4_I2C2)
+#define I2C2_SDA_PIN                          (&omv_pin_H5_I2C2)
+// I2C bus 4
+#define I2C4_ID                               (4)
+#define I2C4_SCL_PIN                          (&omv_pin_B6_I2C4)
+#define I2C4_SDA_PIN                          (&omv_pin_B7_I2C4)
 
 #define ISC_SPI                               (SPI6)
 // SPI6 clock source is PLL3Q (80MHz/4 == 20MHz) - Minimum (164*240*8*27 = 8,501,760Hz)

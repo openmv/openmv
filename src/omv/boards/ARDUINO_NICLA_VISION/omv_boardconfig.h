@@ -219,26 +219,12 @@
 #define OMV_AXI_QOS_MDMA_W_PRI                15 // Max pri to move data.
 
 // Main image sensor I2C bus
-#define ISC_I2C                               (I2C3)
 #define ISC_I2C_ID                            (3)
 #define ISC_I2C_SPEED                         (OMV_I2C_SPEED_STANDARD)
-#define ISC_I2C_SCL_PIN                       (&omv_pin_A8_I2C3)
-#define ISC_I2C_SDA_PIN                       (&omv_pin_C9_I2C3)
-#define ISC_I2C_CLK_ENABLE()                  __I2C3_CLK_ENABLE()
-#define ISC_I2C_CLK_DISABLE()                 __I2C3_CLK_DISABLE()
-#define ISC_I2C_FORCE_RESET()                 __HAL_RCC_I2C3_FORCE_RESET()
-#define ISC_I2C_RELEASE_RESET()               __HAL_RCC_I2C3_RELEASE_RESET()
 
 // Thermal image sensor I2C bus
-#define FIR_I2C                               (I2C1)
 #define FIR_I2C_ID                            (1)
 #define FIR_I2C_SPEED                         (OMV_I2C_SPEED_FULL)
-#define FIR_I2C_SCL_PIN                       (&omv_pin_B8_I2C1)
-#define FIR_I2C_SDA_PIN                       (&omv_pin_B9_I2C1)
-#define FIR_I2C_CLK_ENABLE()                  __I2C1_CLK_ENABLE()
-#define FIR_I2C_CLK_DISABLE()                 __I2C1_CLK_DISABLE()
-#define FIR_I2C_FORCE_RESET()                 __HAL_RCC_I2C1_FORCE_RESET()
-#define FIR_I2C_RELEASE_RESET()               __HAL_RCC_I2C1_RELEASE_RESET()
 
 // Soft I2C bus
 #define SOFT_I2C_SIOC_PIN                     (&omv_pin_C10_GPIO)
@@ -301,7 +287,19 @@
 #define AUDIO_DFSDM_CLK_DISABLE()             __HAL_RCC_DFSDM1_CLK_DISABLE()
 #define AUDIO_DFSDM_DMA_CLK_ENABLE()          __HAL_RCC_DMA1_CLK_ENABLE()
 
+// Physical I2C buses
+// I2C bus 1
+#define I2C1_ID                               (1)
+#define I2C1_SCL_PIN                          (&omv_pin_B8_I2C1)
+#define I2C1_SDA_PIN                          (&omv_pin_B9_I2C1)
+
+// I2C bus 3
+#define I2C3_ID                               (3)
+#define I2C3_SCL_PIN                          (&omv_pin_A8_I2C3)
+#define I2C3_SDA_PIN                          (&omv_pin_C9_I2C3)
+
 // Physical SPI buses.
+// SPI bus 5
 #define SPI5_ID                               (5)
 #define SPI5_SCLK_PIN                         (&omv_pin_F7_SPI5)
 #define SPI5_MISO_PIN                         (&omv_pin_F8_SPI5)
