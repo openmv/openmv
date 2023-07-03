@@ -1,13 +1,21 @@
 name: '🔎 Check Code Formatting'
 
 on:
+  push:
+    branches:
+      - 'master'
+    paths:
+      - 'src/**'
+      - '!**/README.md'
+      - '!**.rst'
+
   pull_request:
     types:
       - opened
       - edited
       - reopened
       - synchronize
-    branches:    
+    branches:
       - 'master'
 
 jobs:
