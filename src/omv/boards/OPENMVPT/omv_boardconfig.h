@@ -226,26 +226,12 @@
 #define OMV_AXI_QOS_LTDC_R_PRI                     15 // Max pri to read out the frame buffer.
 
 // Main image sensor I2C bus
-#define ISC_I2C                                    (I2C1)
 #define ISC_I2C_ID                                 (1)
 #define ISC_I2C_SPEED                              (OMV_I2C_SPEED_STANDARD)
-#define ISC_I2C_SCL_PIN                            (&omv_pin_B8_I2C1)
-#define ISC_I2C_SDA_PIN                            (&omv_pin_B9_I2C1)
-#define ISC_I2C_CLK_ENABLE()                       __I2C1_CLK_ENABLE()
-#define ISC_I2C_CLK_DISABLE()                      __I2C1_CLK_DISABLE()
-#define ISC_I2C_FORCE_RESET()                      __HAL_RCC_I2C1_FORCE_RESET()
-#define ISC_I2C_RELEASE_RESET()                    __HAL_RCC_I2C1_RELEASE_RESET()
 
 // Thermal image sensor I2C bus
-#define FIR_I2C                                    (I2C2)
 #define FIR_I2C_ID                                 (2)
 #define FIR_I2C_SPEED                              (OMV_I2C_SPEED_FULL)
-#define FIR_I2C_SCL_PIN                            (&omv_pin_B10_I2C2)
-#define FIR_I2C_SDA_PIN                            (&omv_pin_B11_I2C2)
-#define FIR_I2C_CLK_ENABLE()                       __I2C2_CLK_ENABLE()
-#define FIR_I2C_CLK_DISABLE()                      __I2C2_CLK_DISABLE()
-#define FIR_I2C_FORCE_RESET()                      __HAL_RCC_I2C2_FORCE_RESET()
-#define FIR_I2C_RELEASE_RESET()                    __HAL_RCC_I2C2_RELEASE_RESET()
 
 // Soft I2C bus.
 #define SOFT_I2C_SIOC_PIN                          (&omv_pin_B10_GPIO)
@@ -285,13 +271,25 @@
 #define DCMI_VSYNC_PIN                             (&omv_pin_B7_DCMI)
 #define DCMI_PXCLK_PIN                             (&omv_pin_A6_DCMI)
 
-// Physical SPI buses.
+// Physical I2C buses.
+// I2C bus 1
+#define I2C1_ID                                    (1)
+#define I2C1_SCL_PIN                               (&omv_pin_B8_I2C1)
+#define I2C1_SDA_PIN                               (&omv_pin_B9_I2C1)
+// I2C bus 2
+#define I2C2_ID                                    (2)
+#define I2C2_SCL_PIN                               (&omv_pin_B10_I2C2)
+#define I2C2_SDA_PIN                               (&omv_pin_B11_I2C2)
 
-#define SPI_ID                                     (5)
+// Physical SPI buses.
+// SPI bus 5
+#define SPI5_ID                                    (5)
 #define SPI5_SCLK_PIN                              (&omv_pin_H6_SPI5)
 #define SPI5_MISO_PIN                              (&omv_pin_H7_SPI5)
 #define SPI5_MOSI_PIN                              (&omv_pin_J10_SPI5)
 #define SPI5_SSEL_PIN                              (&omv_pin_K1_GPIO)
+#define SPI5_DMA_TX_CHANNEL                        (DMA2_Stream4)
+#define SPI5_DMA_RX_CHANNEL                        (DMA2_Stream3)
 
 // LCD Interface
 #define OMV_LCD_CONTROLLER                         (LTDC)
