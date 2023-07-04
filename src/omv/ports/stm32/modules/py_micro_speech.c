@@ -22,7 +22,7 @@
 #include "omv_boardconfig.h"
 #include "libtf.h"
 #include "py_tf.h"
-#include "common.h"
+#include "omv_common.h"
 
 #if MICROPY_PY_MICRO_SPEECH
 #define kMaxAudioSampleSize        (512)

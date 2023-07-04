@@ -20,7 +20,7 @@
 #include CLOCK_CONFIG_H
 
 #include "mimxrt_hal.h"
-#include "common.h"
+#include "omv_common.h"
 #include "omv_spi.h"
 
 typedef struct dma_descr {

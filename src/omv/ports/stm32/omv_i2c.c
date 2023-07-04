@@ -14,7 +14,7 @@
 #include "py/mphal.h"
 
 #include "omv_boardconfig.h"
-#include "common.h"
+#include "omv_common.h"
 #include "omv_gpio.h"
 #include "omv_i2c.h"
 

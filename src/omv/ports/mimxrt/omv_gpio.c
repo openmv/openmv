@@ -20,7 +20,7 @@
 #include "mimxrt_hal.h"
 #include "omv_boardconfig.h"
 #include "omv_gpio.h"
-#include "common.h"
+#include "omv_common.h"
 
 #define IOMUXC_SET_REG(base, reg, val)    *((volatile uint32_t *) ((((uint32_t) base) << 16) | reg)) = (val)
 

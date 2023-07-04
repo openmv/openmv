@@ -22,7 +22,7 @@
 #include "extmod/modnetwork.h"
 #include "pin.h"
 #include "genhdr/pins.h"
-#include "common.h"
+#include "omv_common.h"
 #include "py_helper.h"
 #include "ff_wrapper.h"
 

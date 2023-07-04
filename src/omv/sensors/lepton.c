@@ -15,7 +15,7 @@
 #include "sensor.h"
 #include "vospi.h"
 #include "py/mphal.h"
-#include "common.h"
+#include "omv_common.h"
 #include "omv_gpio.h"
 #include "omv_i2c.h"
 #include "framebuffer.h"

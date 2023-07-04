@@ -12,7 +12,7 @@
 #include "py/mphal.h"
 
 #include "omv_boardconfig.h"
-#include "common.h"
+#include "omv_common.h"
 #include "dma_utils.h"
 
 // Defined in micropython/ports/stm32/dma.c

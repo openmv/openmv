@@ -23,7 +23,7 @@
 #include "pdm2pcm_glo.h"
 #include "fb_alloc.h"
 #include "omv_boardconfig.h"
-#include "common.h"
+#include "omv_common.h"
 #include "dma_utils.h"
 
 #if MICROPY_PY_AUDIO

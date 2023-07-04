@@ -16,7 +16,7 @@
 #include <string.h>
 #include <stdbool.h>
 
-#include "common.h"
+#include "omv_common.h"
 #include "omv_gpio.h"
 #include "omv_spi.h"
 
