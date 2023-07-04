@@ -9,7 +9,7 @@
  * Fast approximate math functions.
  */
 #include "fmath.h"
-#include "common.h"
+#include "omv_common.h"
 
 #define M_PI      3.14159265f
 #define M_PI_2    1.57079632f

@@ -14,7 +14,7 @@
 #include <stdint.h>
 #include <errno.h>
 #include "winc.h"
-#include "common.h"
+#include "omv_common.h"
 
 // WINC's includes
 #include "driver/include/nmasic.h"

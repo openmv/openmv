@@ -16,7 +16,7 @@
 
 #include "omv_boardconfig.h"
 #include "irq.h"
-#include "common.h"
+#include "omv_common.h"
 #include "dma_utils.h"
 #include "omv_spi.h"
 

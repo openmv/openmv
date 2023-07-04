@@ -16,7 +16,7 @@
 
 #include "vospi.h"
 #include "crc16.h"
-#include "common.h"
+#include "omv_common.h"
 #include "omv_spi.h"
 
 #define VOSPI_LINE_PIXELS         (80)

@@ -18,7 +18,7 @@
 #include "py/mphal.h"
 #include "dma_alloc.h"
 #include "omv_boardconfig.h"
-#include "common.h"
+#include "omv_common.h"
 
 typedef union block block_t;
 union block {

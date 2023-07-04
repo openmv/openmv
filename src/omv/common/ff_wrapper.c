@@ -14,7 +14,7 @@
 #include "extmod/vfs.h"
 #include "extmod/vfs_fat.h"
 
-#include "common.h"
+#include "omv_common.h"
 #include "fb_alloc.h"
 #include "ff_wrapper.h"
 #define FF_MIN(x, y)    (((x) < (y))?(x):(y))

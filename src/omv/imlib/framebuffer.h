@@ -13,7 +13,7 @@
 #include <stdint.h>
 #include "imlib.h"
 #include "mutex.h"
-#include "common.h"
+#include "omv_common.h"
 
 // DMA Buffers need to be aligned by cache lines or 16 bytes.
 #ifndef __DCACHE_PRESENT

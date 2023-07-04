@@ -16,7 +16,7 @@
 #include "array.h"
 #include "ff_wrapper.h"
 #include "imlib.h"
-#include "common.h"
+#include "omv_common.h"
 #include "omv_boardconfig.h"
 
 void imlib_init_all() {

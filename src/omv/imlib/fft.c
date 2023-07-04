@@ -11,7 +11,7 @@
 #include <arm_math.h>
 #include "fb_alloc.h"
 #include "ff_wrapper.h"
-#include "common.h"
+#include "omv_common.h"
 #include "fft.h"
 // http://processors.wiki.ti.com/index.php/Efficient_FFT_Computation_of_Real_Input
 

@@ -13,7 +13,7 @@
 #include "imlib.h"
 #include "irq.h"
 #include "omv_boardconfig.h"
-#include "common.h"
+#include "omv_common.h"
 // Define pin objects in this file.
 #define OMV_GPIO_DEFINE_PINS    (1)
 #include "omv_gpio.h"

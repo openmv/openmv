@@ -14,7 +14,7 @@
 
 #include "omv_boardconfig.h"
 #include "omv_i2c.h"
-#include "common.h"
+#include "omv_common.h"
 
 #define I2C_TIMEOUT         (1000)
 #define I2C_SCAN_TIMEOUT    (100)
