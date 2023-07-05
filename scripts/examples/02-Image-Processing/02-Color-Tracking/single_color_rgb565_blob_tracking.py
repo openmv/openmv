@@ -2,7 +2,9 @@
 #
 # This example shows off single color RGB565 tracking using the OpenMV Cam.
 
-import sensor, image, time, math
+import sensor
+import time
+import math
 
 threshold_index = 0 # 0 for red, 1 for green, 2 for blue
 

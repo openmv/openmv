@@ -3,7 +3,11 @@
 # This example shows off how to overlay a heatmap onto your OpenMV Cam's
 # live video output from the main camera.
 
-import sensor, image, time, fir, lcd
+import sensor
+import image
+import time
+import fir
+import lcd
 
 drawing_hint = image.BICUBIC # or image.BILINEAR or 0 (nearest neighbor)
 

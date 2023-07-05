@@ -10,7 +10,9 @@
 # 45 or so degree angle. Please make sure that only the line is within the
 # camera's field of view.
 
-import sensor, image, time, math
+import sensor
+import time
+import math
 
 # Tracks a black line. Use [(128, 255)] for a tracking a white line.
 GRAYSCALE_THRESHOLD = [(0, 64)]

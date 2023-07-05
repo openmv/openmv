@@ -7,7 +7,9 @@
 # stablizes. You can force the re-calibration to not happen if you need to via the lepton API.
 # However, it is not recommended because the image will degrade overtime.
 
-import sensor, image, time, math, lcd
+import sensor
+import time
+import lcd
 
 # Color Tracking Thresholds (Grayscale Min, Grayscale Max)
 threshold_list = [(220, 255)]

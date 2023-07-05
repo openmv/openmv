@@ -2,7 +2,9 @@
 #
 # This example shows off how to draw images in the frame buffer.
 
-import sensor, image, time, pyb
+import sensor
+import time
+import pyb
 
 sensor.reset()
 sensor.set_pixformat(sensor.RGB565) # or GRAYSCALE...

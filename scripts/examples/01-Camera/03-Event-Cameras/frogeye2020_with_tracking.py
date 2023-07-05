@@ -3,7 +3,9 @@
 # The frogeye2020 is a 320x240 event camera. There are two bits per pixel which show no motion,
 # motion in one direction, or motion in another direction. The sensor runs at 50 FPS.
 
-import sensor, image, time
+import sensor
+import image
+import time
 
 sensor.reset()
 sensor.set_pixformat(sensor.GRAYSCALE)

@@ -6,7 +6,13 @@
 #
 # This script is designed to pair with "popular_features_as_the_controller_device.py".
 
-import image, network, math, rpc, sensor, struct, tf
+import image
+import network
+import math
+import rpc
+import sensor
+import struct
+import tf
 
 sensor.reset()
 sensor.set_pixformat(sensor.RGB565)

@@ -3,7 +3,8 @@
 # This script shows off the binary image filter. You may pass binary any
 # number of thresholds to segment the image by.
 
-import sensor, image, time
+import sensor
+import time
 
 sensor.reset()
 sensor.set_framesize(sensor.QVGA)

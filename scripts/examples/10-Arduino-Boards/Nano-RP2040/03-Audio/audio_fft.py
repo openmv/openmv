@@ -1,4 +1,6 @@
-import image, audio, time
+import image
+import audio
+import time
 from ulab import numpy as np
 from ulab import scipy as sp
 from ulab import utils

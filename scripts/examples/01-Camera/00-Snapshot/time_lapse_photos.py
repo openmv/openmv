@@ -8,7 +8,10 @@
 # pictures it will run the bootloader each time. Please power the camera
 # from something other than USB to not have the bootloader run.
 
-import pyb, machine, sensor, image, pyb, os
+import pyb
+import machine
+import sensor
+import os
 
 # Create and init RTC object. This will allow us to set the current time for
 # the RTC and let us set an interrupt to wake up later on.

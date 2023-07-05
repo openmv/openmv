@@ -22,7 +22,8 @@
 # more when the lighting changes versus the exposure being constant and
 # the gain changing.
 
-import sensor, image, time
+import sensor
+import time
 
 sensor.reset()                      # Reset and initialize the sensor.
 sensor.set_pixformat(sensor.RGB565) # Set pixel format to RGB565 (or GRAYSCALE)

@@ -4,7 +4,8 @@
 #
 # The LCD Shield allows you to view your OpenMV Cam's frame buffer on the go.
 
-import sensor, image, lcd
+import sensor
+import lcd
 
 sensor.reset() # Initialize the camera sensor.
 sensor.set_pixformat(sensor.RGB565) # or sensor.GRAYSCALE

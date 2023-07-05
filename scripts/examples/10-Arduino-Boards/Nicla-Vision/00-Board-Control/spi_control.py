@@ -3,7 +3,8 @@
 # This example shows how to use the SPI bus to control the
 # 1.8" TFT LCD display (JD-T18003-T01) with ST7735R driver.
 
-import sensor, image, time
+import sensor
+import time
 from pyb import Pin, SPI
 
 cs  = Pin("GPIO1", Pin.OUT_OD)

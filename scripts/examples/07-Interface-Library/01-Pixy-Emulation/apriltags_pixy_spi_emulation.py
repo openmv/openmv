@@ -43,7 +43,11 @@ analog_out_mode = 0 # 0 == x position of largest tag - 1 == y position of larges
 
 ##############################################################################
 
-import image, math, pyb, sensor, struct, time
+import math
+import pyb
+import sensor
+import struct
+import time
 
 # Camera Setup
 

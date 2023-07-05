@@ -2,7 +2,10 @@
 #
 # This example shows off how to overlay a depth map onto
 # OpenMV Cam's live video output from the main camera.
-import sensor, image, time, tof
+import sensor
+import image
+import time
+import tof
 
 sensor.reset()
 sensor.set_pixformat(sensor.RGB565)

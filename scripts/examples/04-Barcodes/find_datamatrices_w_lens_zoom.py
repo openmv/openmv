@@ -3,7 +3,9 @@
 # This example shows off how easy it is to detect data matrices using the
 # OpenMV Cam M7. Data matrices detection does not work on the M4 Camera.
 
-import sensor, image, time, math
+import sensor
+import time
+import math
 
 sensor.reset()
 sensor.set_pixformat(sensor.RGB565)

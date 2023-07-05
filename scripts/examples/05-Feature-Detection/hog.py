@@ -5,7 +5,8 @@
 # Note: Due to JPEG artifacts, the HoG visualization looks blurry. To see the
 # image without JPEG artifacts, uncomment the lines that save the image to uSD.
 
-import sensor, image, time
+import sensor
+import time
 
 sensor.reset()
 # Set sensor settings

@@ -3,7 +3,9 @@
 # This example shows off how to overlay a depth map onto
 # OpenMV Cam's live video output from the main camera.
 
-import image, time, tof
+import image
+import time
+import tof
 
 IMAGE_SCALE  = 10             # Higher scaling uses more memory.
 drawing_hint = image.BILINEAR # or image.BILINEAR or 0 (nearest neighbor)

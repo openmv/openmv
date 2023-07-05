@@ -7,7 +7,8 @@
 #    mosquitto_pub -t "openmv/test" -m "Hello World!" -h test.mosquitto.org -p 1883
 #
 # NOTE: If the mosquitto broker is unreachable, try another broker (For example: broker.hivemq.com)
-import time, network
+import time
+import network
 from mqtt import MQTTClient
 
 SSID='' # Network SSID

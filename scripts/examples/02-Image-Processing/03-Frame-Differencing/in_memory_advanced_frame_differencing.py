@@ -4,7 +4,10 @@
 # example is advanced because it preforms a background update to deal with the
 # backgound image changing overtime.
 
-import sensor, image, pyb, os, time
+import sensor
+import pyb
+import os
+import time
 
 TRIGGER_THRESHOLD = 5
 

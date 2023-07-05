@@ -2,7 +2,9 @@
 #
 # This example shows how to load and copy an image to framebuffer for testing.
 
-import sensor, image, time
+import sensor
+import image
+import time
 
 # Still need to init sensor
 sensor.reset()

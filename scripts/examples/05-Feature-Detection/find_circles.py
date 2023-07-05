@@ -6,7 +6,8 @@
 # Note that the find_circles() method will only find circles which are completely
 # inside of the image. Circles which go outside of the image/roi are ignored...
 
-import sensor, image, time
+import sensor
+import time
 
 sensor.reset()
 sensor.set_pixformat(sensor.RGB565) # grayscale is faster

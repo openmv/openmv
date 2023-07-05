@@ -5,7 +5,9 @@
 # script finds a face in the image using the frontalface Haar Cascade.
 # After which the script uses the keypoints feature to automatically learn your
 # face and track it. Keypoints can be used to automatically track anything.
-import sensor, time, image
+import sensor
+import time
+import image
 
 # Reset sensor
 sensor.reset()

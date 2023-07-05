@@ -3,7 +3,8 @@
 # This example shows off how to use the rotation_corr() to fix perspective
 # issues related to how your OpenMV Cam is mounted.
 
-import sensor, image, time
+import sensor
+import time
 
 sensor.reset()
 sensor.set_pixformat(sensor.RGB565)

@@ -18,7 +18,10 @@
 # of activations. Note that use a CNN with a sliding window is extremely compute
 # expensive so for an exhaustive search do not expect the CNN to be real-time.
 
-import sensor, image, time, os, tf
+import sensor
+import time
+import os
+import tf
 
 sensor.reset()                         # Reset and initialize the sensor.
 sensor.set_pixformat(sensor.RGB565)    # Set pixel format to RGB565 (or GRAYSCALE)

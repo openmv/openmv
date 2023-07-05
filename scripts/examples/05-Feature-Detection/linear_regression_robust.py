@@ -16,7 +16,8 @@ THRESHOLD = (0, 100) # Grayscale threshold for dark things...
 BINARY_VISIBLE = True # Does binary first so you can see what the linear regression
                       # is being run on... might lower FPS though.
 
-import sensor, image, time
+import sensor
+import time
 
 sensor.reset()
 sensor.set_pixformat(sensor.GRAYSCALE)

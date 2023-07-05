@@ -9,7 +9,10 @@
 # pass the thresholding test... otherwise, you don't get a distance
 # benefit.
 
-import sensor, image, time, math, omv
+import sensor
+import image
+import time
+import omv
 
 # Set the thresholds to find a white object (i.e. tag border)
 thresholds = (150, 255)

@@ -5,7 +5,8 @@
 # detection. Increase the strength below until lines are straight in the view.
 # Zoom in (higher) or out (lower) until you see enough of the image.
 
-import sensor, image, time
+import sensor
+import time
 
 sensor.reset()
 sensor.set_pixformat(sensor.RGB565)

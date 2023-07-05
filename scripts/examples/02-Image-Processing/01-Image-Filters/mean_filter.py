@@ -4,7 +4,8 @@
 # filter in a NxN neighborhood. Mean filtering removes noise in the image by
 # bluring everything. But, it's the fastest kernel filter operation.
 
-import sensor, image, time
+import sensor
+import time
 
 sensor.reset() # Initialize the camera sensor.
 sensor.set_pixformat(sensor.RGB565) # or sensor.GRAYSCALE

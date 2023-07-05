@@ -2,7 +2,10 @@
 #
 # This example shows how to get the current time using NTP with the WiFi shield.
 
-import network, socket, ustruct, utime
+import network
+import socket
+import ustruct
+import utime
 
 SSID='' # Network SSID
 KEY=''  # Network key

@@ -2,7 +2,9 @@
 #
 # This example shows off multi color blob tracking using the OpenMV Cam.
 
-import sensor, image, time, math
+import sensor
+import time
+import math
 
 # Color Tracking Thresholds (L Min, L Max, A Min, A Max, B Min, B Max)
 # The below thresholds track in general red/green things. You may wish to tune them...

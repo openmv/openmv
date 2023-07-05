@@ -2,7 +2,8 @@
 #
 # This example shows off how to use a generic kernel filter.
 
-import sensor, image, time
+import sensor
+import time
 
 sensor.reset() # Initialize the camera sensor.
 sensor.set_pixformat(sensor.GRAYSCALE) # or sensor.RGB565

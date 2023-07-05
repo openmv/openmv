@@ -4,7 +4,8 @@
 # a binary image to remove noise. This example was originally a test but its
 # useful for showing off how these functions work.
 
-import pyb, sensor, image
+import pyb
+import sensor
 
 sensor.reset()
 sensor.set_framesize(sensor.QVGA)

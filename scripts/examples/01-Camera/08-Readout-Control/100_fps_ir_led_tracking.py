@@ -3,7 +3,8 @@
 
 # This example is was designed and tested on the OpenMV Cam H7 Plus using the OV5640 sensor.
 
-import sensor, image, time
+import sensor
+import time
 
 EXPOSURE_MICROSECONDS = 1000
 TRACKING_THRESHOLDS = [(128, 255)] # When you lower the exposure you darken everything.

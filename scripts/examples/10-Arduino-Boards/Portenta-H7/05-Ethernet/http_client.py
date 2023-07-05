@@ -1,5 +1,6 @@
 # Ethernet LAN HTTP client example.
-import network, usocket
+import network
+import usocket
 
 PORT = 80
 HOST = "www.google.com"

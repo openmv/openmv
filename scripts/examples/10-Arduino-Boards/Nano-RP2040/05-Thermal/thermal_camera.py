@@ -3,7 +3,9 @@
 # This example shows how to use common low-res FIR sensors (like MLX or AMG).
 # NOTE: Only the AMG8833 is currently enabled for NANO RP2040.
 
-import image, time, fir
+import image
+import time
+import fir
 
 IMAGE_SCALE = 5   # Higher scaling uses more memory.
 drawing_hint = image.BICUBIC # or image.BILINEAR or 0 (nearest neighbor)

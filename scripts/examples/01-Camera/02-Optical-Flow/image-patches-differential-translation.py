@@ -20,7 +20,8 @@ BLOCK_H = 16 # pow2
 # watch the numbers change. Note that you can see displacement numbers
 # up +- half of the hoizontal and vertical resolution.
 
-import sensor, image, time
+import sensor
+import time
 
 # NOTE!!! You have to use a small power of 2 resolution when using
 # find_displacement(). This is because the algorithm is powered by

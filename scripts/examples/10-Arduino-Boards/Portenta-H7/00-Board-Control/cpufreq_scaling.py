@@ -1,7 +1,10 @@
 # CPU frequency scaling example.
 #
 # This example shows how to use the cpufreq module to change the CPU frequency on the fly.
-import sensor, image, time, cpufreq
+import sensor
+import image
+import time
+import cpufreq
 
 sensor.reset()                          # Reset and initialize the sensor.
 sensor.set_pixformat(sensor.GRAYSCALE)  # Set pixel format to RGB565 (or GRAYSCALE)

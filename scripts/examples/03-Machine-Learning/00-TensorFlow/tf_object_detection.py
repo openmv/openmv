@@ -2,7 +2,10 @@
 #
 # This examples uses the builtin FOMO model to detect faces.
 
-import sensor, image, time, tf, math
+import sensor
+import time
+import tf
+import math
 
 sensor.reset()                         # Reset and initialize the sensor.
 sensor.set_pixformat(sensor.RGB565)    # Set pixel format to RGB565 (or GRAYSCALE)

@@ -2,7 +2,8 @@
 #
 # This example shows off using the bilateral filter on color images.
 
-import sensor, image, time
+import sensor
+import time
 
 sensor.reset() # Initialize the camera sensor.
 sensor.set_pixformat(sensor.RGB565) # or sensor.RGB565

@@ -7,7 +7,8 @@
 # histeq() on the image without outliers from oversaturated
 # parts of the image breaking the algorithm...
 
-import sensor, image, time
+import sensor
+import time
 
 sensor.reset() # Initialize the camera sensor.
 sensor.set_pixformat(sensor.GRAYSCALE) # or sensor.RGB565

@@ -3,7 +3,9 @@
 # This example shows how your OpenMV Cam tests itself before being allowed out
 # of the factory. Every OpenMV Cam should pass this test.
 
-import sensor, time, pyb
+import sensor
+import time
+import pyb
 
 def test_int_adc():
     adc  = pyb.ADCAll(12)

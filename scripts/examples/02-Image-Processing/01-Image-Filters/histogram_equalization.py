@@ -3,7 +3,8 @@
 # This example shows off how to use histogram equalization to improve
 # the contrast in the image.
 
-import sensor, image, time
+import sensor
+import time
 
 sensor.reset()
 sensor.set_pixformat(sensor.RGB565)

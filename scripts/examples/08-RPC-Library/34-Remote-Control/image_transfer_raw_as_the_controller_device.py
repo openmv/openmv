@@ -4,7 +4,13 @@
 #
 # This script shows off how to transfer the frame buffer from one OpenMV Cam to another.
 
-import image, network, omv, rpc, sensor, struct, time
+import image
+import network
+import omv
+import rpc
+import sensor
+import struct
+import time
 
 # The RPC library above is installed on your OpenMV Cam and provides mutliple classes for
 # allowing your OpenMV Cam to control over CAN, I2C, SPI, UART, or LAN/WLAN.

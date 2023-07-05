@@ -5,7 +5,11 @@
 # You can use a program like VLC to view the video stream by connecting to the
 # OpenMV Cam's IP address.
 
-import network, omv, rtsp, sensor, time
+import network
+import omv
+import rtsp
+import sensor
+import time
 
 # RTP MJPEG streaming works using JPEG images produced by the OV2640/OV5640 camera modules.
 # Not all programs (e.g. VLC) implement the full JPEG standard for decoding any JPEG image

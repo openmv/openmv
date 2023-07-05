@@ -1,4 +1,4 @@
-import sensor, image
+import sensor
 import time
 from pyb import UART
 from modbus import ModbusRTU

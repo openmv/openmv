@@ -2,7 +2,8 @@
 #
 # This example shows off single color automatic grayscale color tracking using the OpenMV Cam.
 
-import sensor, image, time
+import sensor
+import time
 print("Letting auto algorithms run. Don't put anything in front of the camera!")
 
 sensor.reset()

@@ -2,7 +2,8 @@
 #
 # This example shows off using the laplacian filter to sharpen images.
 
-import sensor, image, time
+import sensor
+import time
 
 sensor.reset() # Initialize the camera sensor.
 sensor.set_pixformat(sensor.GRAYSCALE) # or sensor.RGB565

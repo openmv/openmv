@@ -9,7 +9,11 @@
 # This example demonstrates using face tracking on your OpenMV Cam to take a
 # gif.
 
-import sensor, image, time, gif, pyb
+import sensor
+import image
+import time
+import gif
+import pyb
 
 RED_LED_PIN = 1
 BLUE_LED_PIN = 3

@@ -1,6 +1,8 @@
 # OpenMV Unit Tests.
 #
-import os, sensor, gc
+import os
+import sensor
+import gc
 
 TEST_DIR    = "unittest"
 TEMP_DIR    = "unittest/temp"

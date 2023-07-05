@@ -6,7 +6,10 @@
 # OpenMV Cam sees for later analysis using the Image Reader object. Images written to disk
 # by the Image Writer object are stored in a simple file format readable by your OpenMV Cam.
 
-import sensor, image, pyb, time
+import sensor
+import image
+import pyb
+import time
 
 record_time = 10000 # 10 seconds in milliseconds
 

@@ -7,7 +7,9 @@
 #
 # Note: This script does not detect a face first, use it with the telephoto lens.
 
-import sensor, time, image
+import sensor
+import time
+import image
 
 # Reset sensor
 sensor.reset()

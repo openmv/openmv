@@ -2,7 +2,9 @@
 #
 # This example shows off single color grayscale tracking using the OpenMV Cam.
 
-import sensor, image, time, math
+import sensor
+import time
+import math
 
 # Color Tracking Thresholds (Grayscale Min, Grayscale Max)
 # The below grayscale threshold is set to only find extremely bright white areas.

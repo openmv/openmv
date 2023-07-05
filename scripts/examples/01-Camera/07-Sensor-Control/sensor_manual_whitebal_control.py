@@ -13,7 +13,8 @@
 # the sensor on startup you can control the colors
 # the camera sees.
 
-import sensor, image, time
+import sensor
+import time
 
 sensor.reset()                      # Reset and initialize the sensor.
 sensor.set_pixformat(sensor.RGB565) # Set pixel format to RGB565 (or GRAYSCALE)

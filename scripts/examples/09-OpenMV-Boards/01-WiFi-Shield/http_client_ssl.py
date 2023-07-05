@@ -1,6 +1,8 @@
 # Simple HTTPS client example.
 
-import network, usocket, ussl
+import network
+import usocket
+import ussl
 
 # AP info
 SSID="" # Network SSID

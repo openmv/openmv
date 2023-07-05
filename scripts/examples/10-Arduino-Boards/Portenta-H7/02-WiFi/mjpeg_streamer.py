@@ -3,7 +3,11 @@
 # This example shows off how to do MJPEG streaming to a FIREFOX webrowser
 # Chrome, Firefox and MJpegViewer App on Android have been tested.
 # Connect to the IP address/port printed out from ifconfig to view the stream.
-import sensor, image, time, network, socket, sys
+import sensor
+import time
+import network
+import socket
+import sys
 
 SSID=''      # Network SSID
 KEY=''       # Network key

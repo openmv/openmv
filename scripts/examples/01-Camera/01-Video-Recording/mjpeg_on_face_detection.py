@@ -10,7 +10,11 @@
 # This example demonstrates using face tracking on your OpenMV Cam to take a
 # mjpeg.
 
-import sensor, image, time, mjpeg, pyb
+import sensor
+import image
+import time
+import mjpeg
+import pyb
 
 RED_LED_PIN = 1
 BLUE_LED_PIN = 3

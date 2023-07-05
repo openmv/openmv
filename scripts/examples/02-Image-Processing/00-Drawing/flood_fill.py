@@ -2,7 +2,8 @@
 #
 # This example shows off flood filling areas in the image.
 
-import sensor, image, time
+import sensor
+import time
 
 sensor.reset()
 sensor.set_pixformat(sensor.RGB565) # or GRAYSCALE...

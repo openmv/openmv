@@ -12,7 +12,8 @@
 # continously by the camera and because you have to wait for the integration to finish before
 # readout of the frame.
 
-import sensor, image, time
+import sensor
+import time
 
 sensor.reset()                      # Reset and initialize the sensor.
 sensor.set_pixformat(sensor.GRAYSCALE) # Set pixel format to GRAYSCALE

@@ -4,7 +4,8 @@
 # $> sudo ifconfig eth0 192.168.1.100 up
 # $> ping 192.168.1.102
 
-import network, time
+import network
+import time
 
 lan = network.LAN()
 lan.active(True)

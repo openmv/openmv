@@ -4,7 +4,11 @@
 #
 # This script shows off how to transfer the frame buffer to your computer as a jpeg image.
 
-import image, network, omv, rpc, sensor, struct
+import network
+import omv
+import rpc
+import sensor
+import struct
 
 sensor.reset()
 sensor.set_pixformat(sensor.RGB565)

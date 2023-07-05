@@ -4,7 +4,8 @@
 # main.py script on the SD card (if attached) or the main.py script on
 # your OpenMV Cam's internal flash drive.
 
-import time, pyb
+import time
+import pyb
 
 led = pyb.LED(3) # Red LED = 1, Green LED = 2, Blue LED = 3, IR LEDs = 4.
 usb = pyb.USB_VCP() # This is a serial port object that allows you to

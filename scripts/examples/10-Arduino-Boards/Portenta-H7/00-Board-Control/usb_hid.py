@@ -20,7 +20,8 @@
 # Note: To restore the default VCP+MSC USB mode, either use the PC to remove boot.py
 # from the uSD card, or use the following Python line: import os; os.remove('boot.py')
 
-import pyb, time
+import pyb
+import time
 
 hid = pyb.USB_HID()
 

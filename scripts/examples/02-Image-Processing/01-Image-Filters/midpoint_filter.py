@@ -3,7 +3,8 @@
 # This example shows off midpoint filtering. Midpoint filtering replaces each
 # pixel by the average of the min and max pixel values for a NxN neighborhood.
 
-import sensor, image, time
+import sensor
+import time
 
 sensor.reset() # Initialize the camera sensor.
 sensor.set_pixformat(sensor.RGB565) # or sensor.GRAYSCALE

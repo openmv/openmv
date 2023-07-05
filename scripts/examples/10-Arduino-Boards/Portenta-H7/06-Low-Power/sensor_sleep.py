@@ -2,7 +2,8 @@
 # This example demonstrates the sensor sleep mode. The sleep mode saves around
 # 40mA when enabled and it's automatically cleared when calling sensor reset().
 
-import sensor, image, time
+import sensor
+import time
 
 sensor.reset()                      # Reset and initialize the sensor.
 sensor.set_pixformat(sensor.GRAYSCALE) # Set pixel format to RGB565 (or GRAYSCALE)

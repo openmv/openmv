@@ -7,7 +7,9 @@
 # The TV Shield's resolution is 352x240 (SIF). By default display output is not buffered.
 # You may enable triple buffering at the cost of 372 KB to make display updates non-blocking.
 
-import sensor, image, tv, time
+import sensor
+import tv
+import time
 
 sensor.reset() # Initialize the camera sensor.
 sensor.set_pixformat(sensor.RGB565) # or sensor.GRAYSCALE

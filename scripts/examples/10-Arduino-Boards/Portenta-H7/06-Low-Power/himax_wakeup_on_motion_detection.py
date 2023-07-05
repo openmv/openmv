@@ -1,7 +1,10 @@
 # This examples shows how to use the Himax Motion Detection feature
 # to wake up from low-power Stop Mode on motion detection interrupts.
 
-import sensor, image, time, pyb, machine
+import sensor
+import time
+import pyb
+import machine
 from pyb import Pin, ExtInt
 
 sensor.reset()

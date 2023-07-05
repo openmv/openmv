@@ -3,7 +3,8 @@
 # This example shows the power of the OpenMV Cam to detect QR Codes
 # without needing lens correction.
 
-import sensor, image, time
+import sensor
+import time
 
 sensor.reset()
 sensor.set_pixformat(sensor.GRAYSCALE)

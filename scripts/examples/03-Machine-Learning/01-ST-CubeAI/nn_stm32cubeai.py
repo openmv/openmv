@@ -1,7 +1,9 @@
 # STM32 CUBE.AI on OpenMV MNIST Example
 # See https://github.com/openmv/openmv/blob/master/src/stm32cubeai/README.MD
 
-import sensor, image, time, nn_st
+import sensor
+import time
+import nn_st
 
 sensor.reset()                      # Reset and initialize the sensor.
 sensor.set_contrast(3)

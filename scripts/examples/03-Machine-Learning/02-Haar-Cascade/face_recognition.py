@@ -7,7 +7,9 @@
 #
 # NOTE: This is just a PoC implementation of the paper mentioned above, it does Not work well in real life conditions.
 
-import sensor, time, image
+import sensor
+import time
+import image
 
 SUB = "s2"
 NUM_SUBJECTS = 5

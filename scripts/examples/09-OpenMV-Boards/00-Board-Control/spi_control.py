@@ -4,7 +4,8 @@
 # the LCD shield without using the built-in lcd shield driver. You will need
 # the LCD shield to run this example.
 
-import sensor, image, time
+import sensor
+import time
 from pyb import Pin, SPI
 
 cs  = Pin("P3", Pin.OUT_OD)

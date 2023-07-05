@@ -3,7 +3,8 @@
 # This example shows off vertically flipping the image in hardware
 # from the camera sensor.
 
-import sensor, image, time
+import sensor
+import time
 
 sensor.reset()                      # Reset and initialize the sensor.
 sensor.set_pixformat(sensor.RGB565) # Set pixel format to RGB565 (or GRAYSCALE)

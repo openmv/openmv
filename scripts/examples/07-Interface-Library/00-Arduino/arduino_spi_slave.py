@@ -8,7 +8,9 @@
 # OpenMV Cam Slave Select        (P3) - Arduino Uno SS   (10)
 # OpenMV Cam Ground                   - Arduino Ground
 
-import pyb, ustruct, time
+import pyb
+import ustruct
+import time
 
 text = "Hello World!\n"
 data = ustruct.pack("<bi%ds" % len(text), 85, len(text), text) # 85 is a sync char.

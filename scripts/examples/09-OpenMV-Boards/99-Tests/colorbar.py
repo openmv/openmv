@@ -4,7 +4,8 @@
 # out of the factory. The OMV sensors can output a color bar image which you
 # can threshold to check the the camera bus is connected correctly.
 
-import sensor, time
+import sensor
+import time
 
 sensor.reset()
 # Set sensor settings

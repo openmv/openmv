@@ -4,7 +4,8 @@
 # perspective distortion and then to rotate the new corrected image in 3D
 # space aftwards to handle movement.
 
-import sensor, image, time
+import sensor
+import time
 
 sensor.reset()
 sensor.set_pixformat(sensor.RGB565)

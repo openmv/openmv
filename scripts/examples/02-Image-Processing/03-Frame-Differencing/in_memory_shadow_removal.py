@@ -3,7 +3,10 @@
 # This example demonstrates using frame differencing with your OpenMV Cam using
 # shadow removal to help reduce the affects of cast shadows in your scene.
 
-import sensor, image, pyb, os, time
+import sensor
+import pyb
+import os
+import time
 
 TRIGGER_THRESHOLD = 5
 

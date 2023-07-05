@@ -22,7 +22,9 @@ BLOCK_H = 16 # pow2
 # forward/backwards to see the numbers change.
 # I.e. Z direction changes only.
 
-import sensor, image, time, math
+import sensor
+import time
+import math
 
 # NOTE!!! You have to use a small power of 2 resolution when using
 # find_displacement(). This is because the algorithm is powered by

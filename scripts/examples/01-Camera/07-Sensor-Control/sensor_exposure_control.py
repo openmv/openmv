@@ -15,7 +15,8 @@
 # noise. So, it's best to let the exposure increase as much as possible
 # and then use gain control to make up any remaining ground.
 
-import sensor, image, time
+import sensor
+import time
 
 # Change this value to adjust the exposure. Try 10.0/0.1/etc.
 EXPOSURE_TIME_SCALE = 1.0

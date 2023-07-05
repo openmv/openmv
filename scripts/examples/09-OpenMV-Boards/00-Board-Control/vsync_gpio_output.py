@@ -2,7 +2,8 @@
 #
 # This example shows how to toggle a pin on VSYNC interrupt.
 
-import sensor, image, time
+import sensor
+import time
 from pyb import Pin
 
 sensor.reset()                      # Reset and initialize the sensor.

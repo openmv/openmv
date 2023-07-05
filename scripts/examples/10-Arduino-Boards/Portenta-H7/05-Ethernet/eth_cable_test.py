@@ -2,7 +2,8 @@
 #
 # This example prints the cable connection status.
 
-import network, time
+import network
+import time
 
 lan = network.LAN()
 

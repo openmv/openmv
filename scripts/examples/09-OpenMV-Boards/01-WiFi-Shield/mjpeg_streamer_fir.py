@@ -4,7 +4,11 @@
 # (IE and Chrome do not work). Just input your network SSID and KEY and then
 # connect to the IP address/port printed out from ifconfig.
 
-import sensor, image, network, usocket, fir
+import sensor
+import image
+import network
+import usocket
+import fir
 
 SSID=''     # Network SSID
 KEY=''      # Network key

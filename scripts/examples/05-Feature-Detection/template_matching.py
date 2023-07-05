@@ -8,7 +8,9 @@
 # a lot of work to be made into somethin useful. This script will reamin to show
 # that the functionality exists, but, in its current state is inadequate.
 
-import time, sensor, image
+import time
+import sensor
+import image
 from image import SEARCH_EX, SEARCH_DS
 
 # Reset sensor

@@ -8,7 +8,9 @@
 # Altered to allow full speed reading from SD card for extraction of sequences to the network etc. 
 # Set the new pause parameter to false
 
-import sensor, image, time
+import sensor
+import image
+import time
 
 snapshot_source = False # Set to true once finished to pull data from sensor.
 

@@ -17,7 +17,8 @@
 # leptons don't have radiometry support or they don't activate their calibration process often
 # enough to deal with temperature changes (FLIR 2.5).
 
-import sensor, image, time, math
+import sensor
+import time
 
 # Color Tracking Thresholds (Grayscale Min, Grayscale Max)
 threshold_list = [(220, 255)]

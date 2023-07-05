@@ -7,7 +7,10 @@
 # recording a Mjpeg file you can use VLC to play it. If you are on Ubuntu then
 # the built-in video player will work too.
 
-import sensor, image, time, mjpeg, pyb
+import sensor
+import time
+import mjpeg
+import pyb
 
 RED_LED_PIN = 1
 BLUE_LED_PIN = 3

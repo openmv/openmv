@@ -12,7 +12,8 @@
 # time so you will not get the maximum readout speed unless you reduce the exposure time too.
 # This results in a dark image however so YOU NEED A LOT of lighting for high FPS.
 
-import sensor, image, time
+import sensor
+import time
 
 sensor.reset()                      # Reset and initialize the sensor.
 sensor.set_pixformat(sensor.GRAYSCALE) # Set pixel format to GRAYSCALE

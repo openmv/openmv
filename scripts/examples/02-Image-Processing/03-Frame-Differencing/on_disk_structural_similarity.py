@@ -7,7 +7,10 @@
 # 8x8 blocks of pixels between two images to determine a similarity
 # score between two images.
 
-import sensor, image, pyb, os, time
+import sensor
+import pyb
+import os
+import time
 
 # The image has likely changed if the sim.min() is lower than this.
 MIN_TRIGGER_THRESHOLD = -0.4

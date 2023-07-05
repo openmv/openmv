@@ -2,7 +2,8 @@
 #
 # This example shows how to get the IP address for websites via DNS.
 
-import network, usocket
+import network
+import usocket
 
 SSID='' # Network SSID
 KEY=''  # Network key

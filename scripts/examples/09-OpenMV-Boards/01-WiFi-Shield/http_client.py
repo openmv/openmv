@@ -1,6 +1,7 @@
 # Simple HTTP client example.
 
-import network, usocket
+import network
+import usocket
 
 # AP info
 SSID='' # Network SSID

@@ -1,7 +1,9 @@
 # ExtInt Wake-Up from Stop Mode Example
 # This example demonstrates using external interrupts to wake up from low-power mode.
 
-import time, pyb, machine
+import time
+import pyb
+import machine
 from pyb import Pin, ExtInt
 
 def callback(line):

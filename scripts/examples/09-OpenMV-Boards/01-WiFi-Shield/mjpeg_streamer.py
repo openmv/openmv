@@ -4,7 +4,11 @@
 # Chrome, Firefox and MJpegViewer App on Android have been tested.
 # Connect to the IP address/port printed out from ifconfig to view the stream.
 
-import sensor, image, time, network, usocket, sys
+import sensor
+import time
+import network
+import usocket
+import sys
 
 SSID =''     # Network SSID
 KEY  =''     # Network key

@@ -7,7 +7,9 @@
 
 # DISABLE THE FRAME BUFFER TO SEE THE REAL FPS
 
-import sensor, image, time
+import sensor
+import image
+import time
 
 up_hint = 0 # image.BILINEAR image.BICUBIC
 down_hint = image.AREA # image.BILINEAR image.BICUBIC image.AREA

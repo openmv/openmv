@@ -4,7 +4,8 @@
 # When median(threshold=True) the median() method adaptive thresholds the image
 # by comparing the median of the pixels around a pixel, minus an offset, with that pixel.
 
-import sensor, image, time
+import sensor
+import time
 
 sensor.reset() # Initialize the camera sensor.
 sensor.set_pixformat(sensor.RGB565) # or sensor.GRAYSCALE

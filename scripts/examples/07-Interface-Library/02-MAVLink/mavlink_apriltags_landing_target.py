@@ -5,7 +5,11 @@
 #
 # P4 = TXD
 
-import image, math, pyb, sensor, struct, time
+import math
+import pyb
+import sensor
+import struct
+import time
 
 # Parameters #################################################################
 

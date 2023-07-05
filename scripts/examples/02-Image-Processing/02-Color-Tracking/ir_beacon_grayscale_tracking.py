@@ -2,7 +2,8 @@
 #
 # This example shows off IR beacon Grayscale tracking using the OpenMV Cam.
 
-import sensor, image, time
+import sensor
+import time
 
 thresholds = (255, 255) # thresholds for bright white light from IR.
 

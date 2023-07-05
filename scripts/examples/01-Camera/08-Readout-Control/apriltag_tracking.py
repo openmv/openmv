@@ -3,7 +3,8 @@
 
 # This example is was designed and tested on the OpenMV Cam H7 Plus using the OV5640 sensor.
 
-import sensor, image, time
+import sensor
+import time
 
 # This example script forces the exposure to a constant value for the whole time. However, you may
 # wish to dynamically adjust the exposure when the readout window shrinks to a small size.

@@ -3,7 +3,8 @@
 # This example shows off how to use the rotation_corr() to play with the scene
 # window your OpenMV Cam sees.
 
-import sensor, image, time
+import sensor
+import time
 
 # Degrees per frame to rotation by...
 X_ROTATION_DEGREE_RATE = 5

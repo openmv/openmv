@@ -6,7 +6,10 @@
 # recorder object RGB565 frames or Grayscale frames. Use photo editing software
 # like GIMP to compress and optimize the Gif before uploading it to the web.
 
-import sensor, image, time, gif, pyb
+import sensor
+import time
+import gif
+import pyb
 
 RED_LED_PIN = 1
 BLUE_LED_PIN = 3

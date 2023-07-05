@@ -1,7 +1,9 @@
 # Edge detection with Canny:
 #
 # This example demonstrates the Canny edge detector.
-import sensor, image, time
+import sensor
+import image
+import time
 
 sensor.reset() # Initialize the camera sensor.
 sensor.set_pixformat(sensor.GRAYSCALE) # or sensor.RGB565

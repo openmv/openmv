@@ -3,7 +3,8 @@
 # This example shows off negating the image. This is not a particularly
 # useful method but it can come in handy once in a while.
 
-import sensor, image, time
+import sensor
+import time
 
 sensor.reset() # Initialize the camera sensor.
 sensor.set_pixformat(sensor.RGB565) # or sensor.GRAYSCALE

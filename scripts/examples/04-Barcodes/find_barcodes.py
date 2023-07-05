@@ -3,7 +3,10 @@
 # This example shows off how easy it is to detect bar codes using the
 # OpenMV Cam M7. Barcode detection does not work on the M4 Camera.
 
-import sensor, image, time, math
+import sensor
+import image
+import time
+import math
 
 sensor.reset()
 sensor.set_pixformat(sensor.GRAYSCALE)

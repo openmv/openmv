@@ -2,7 +2,8 @@
 #
 # Welcome to the OpenMV IDE! Click on the green run arrow button below to run the script!
 
-import sensor, image, time
+import sensor
+import time
 
 sensor.reset()                      # Reset and initialize the sensor.
 sensor.set_pixformat(sensor.RGB565) # Set pixel format to RGB565 (or GRAYSCALE)

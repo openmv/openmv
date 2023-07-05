@@ -5,7 +5,8 @@
 # by comparing the mode of the pixels around a pixel, minus an offset, with that pixel.
 # Avoid using the mode filter on RGB565 images. It will cause artifacts on image edges...
 
-import sensor, image, time
+import sensor
+import time
 
 sensor.reset() # Initialize the camera sensor.
 sensor.set_pixformat(sensor.GRAYSCALE) # or sensor.RGB565

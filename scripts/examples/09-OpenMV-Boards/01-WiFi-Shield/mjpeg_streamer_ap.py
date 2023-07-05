@@ -4,7 +4,11 @@
 # Chrome, Firefox and MJpegViewer App on Android have been tested.
 # Connect to OPENMV_AP and use this URL: http://192.168.1.1:8080 to view the stream.
 
-import sensor, image, time, network, usocket, sys
+import sensor
+import time
+import network
+import usocket
+import sys
 
 SSID ='OPENMV_AP'    # Network SSID
 KEY  ='1234567890'    # Network key (must be 10 chars)

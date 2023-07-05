@@ -5,7 +5,9 @@
 # This example demonstrates using frame differencing with your OpenMV Cam to do
 # motion detection. After motion is detected your OpenMV Cam will take picture.
 
-import sensor, image, pyb, os
+import sensor
+import pyb
+import os
 
 RED_LED_PIN = 1
 BLUE_LED_PIN = 3

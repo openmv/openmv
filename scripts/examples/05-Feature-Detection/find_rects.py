@@ -7,7 +7,8 @@
 # distortion causes those rectangles to look bent. Rounded rectangles are no problem!
 # (But, given this the code will also detect small radius circles too)...
 
-import sensor, image, time
+import sensor
+import time
 
 sensor.reset()
 sensor.set_pixformat(sensor.RGB565) # grayscale is faster (160x120 max on OpenMV-M7)

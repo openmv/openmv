@@ -6,7 +6,8 @@
 # the image contrast versus a global histogram equalization. Additionally,
 # you may specify a clip limit to prevent the contrast from going wild.
 
-import sensor, image, time
+import sensor
+import time
 
 sensor.reset()
 sensor.set_pixformat(sensor.RGB565)

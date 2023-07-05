@@ -4,7 +4,8 @@
 # with the median value of it's NxN neighborhood. Median filtering is good for
 # removing noise in the image while preserving edges.
 
-import sensor, image, time
+import sensor
+import time
 
 sensor.reset() # Initialize the camera sensor.
 sensor.set_pixformat(sensor.RGB565) # or sensor.GRAYSCALE

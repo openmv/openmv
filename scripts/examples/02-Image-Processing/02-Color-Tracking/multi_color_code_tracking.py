@@ -5,7 +5,8 @@
 # A color code is a blob composed of two or more colors. The example below will
 # only track colored objects which have two or more the colors below in them.
 
-import sensor, image, time
+import sensor
+import time
 
 # Color Tracking Thresholds (L Min, L Max, A Min, A Max, B Min, B Max)
 # The below thresholds track in general red/green things. You may wish to tune them...

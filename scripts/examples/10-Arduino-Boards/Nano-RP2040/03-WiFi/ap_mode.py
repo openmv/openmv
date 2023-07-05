@@ -1,7 +1,11 @@
 # WiFi AP Mode Example
 #
 # This example shows how to use WiFi in Access Point mode.
-import network, socket, sys, time, gc
+import network
+import socket
+import sys
+import time
+import gc
 
 SSID ='OPENMV_AP'   # Network SSID
 KEY  ='1234567890'  # Network key (must be 10 chars)

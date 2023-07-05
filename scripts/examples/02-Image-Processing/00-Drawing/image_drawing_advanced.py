@@ -2,7 +2,10 @@
 #
 # Exercise draw image with many different values for testing
 
-import sensor, image, time, pyb
+import sensor
+import image
+import time
+import pyb
 
 sensor.reset()
 sensor.set_pixformat(sensor.RGB565) # or GRAYSCALE...

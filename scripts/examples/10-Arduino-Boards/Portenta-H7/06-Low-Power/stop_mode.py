@@ -1,7 +1,9 @@
 # Stop Mode Example
 # This example demonstrates using the low-power Stop Mode.
 
-import time, pyb, machine
+import time
+import pyb
+import machine
 
 # Create and init RTC object.
 rtc = pyb.RTC()

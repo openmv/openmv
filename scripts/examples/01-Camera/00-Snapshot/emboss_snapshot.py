@@ -4,7 +4,8 @@
 #
 # You can use your OpenMV Cam to save modified image files.
 
-import sensor, image, pyb
+import sensor
+import pyb
 
 RED_LED_PIN = 1
 BLUE_LED_PIN = 3

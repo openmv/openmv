@@ -4,7 +4,8 @@
 # NOTE: ndarrays cause the heap to be fragmented easily. If you run out of memory,
 # there's not much that can be done about it, lowering the resolution might help.
 
-import sensor, image, time
+import sensor
+import time
 from ulab import numpy as np
 
 sensor.reset()                          # Reset and initialize the sensor.

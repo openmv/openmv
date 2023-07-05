@@ -3,7 +3,8 @@
 # This example shows off gamma correction to make the image brighter. The gamma
 # correction method can also fix contrast and brightness too.
 
-import sensor, image, time
+import sensor
+import time
 
 sensor.reset()
 sensor.set_pixformat(sensor.RGB565)

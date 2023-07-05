@@ -2,7 +2,8 @@
 #
 # This example shows off IR beacon RGB565 tracking using the OpenMV Cam.
 
-import sensor, image, time
+import sensor
+import time
 
 thresholds = (100, 100, 0, 0, 0, 0) # thresholds for bright white light from IR.
 

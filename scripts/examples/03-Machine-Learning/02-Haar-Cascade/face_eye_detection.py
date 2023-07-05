@@ -4,7 +4,9 @@
 # the eyes within the face. If you want to determine the eye gaze please see the
 # iris_detection script for an example on how to do that.
 
-import sensor, time, image
+import sensor
+import time
+import image
 
 # Reset sensor
 sensor.reset()

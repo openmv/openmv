@@ -2,7 +2,10 @@
 #
 # This example shows off how to draw images in the frame buffer with a custom generated color palette.
 
-import sensor, image, time, pyb
+import sensor
+import image
+import time
+import pyb
 
 sensor.reset()
 sensor.set_pixformat(sensor.GRAYSCALE) # or GRAYSCALE...

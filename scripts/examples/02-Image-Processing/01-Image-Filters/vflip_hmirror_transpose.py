@@ -8,7 +8,9 @@
 # vflip=True,  hmirror=True,  transpose=False -> 180 degree rotation
 # vflip=False, hmirror=True,  transpose=True  -> 270 degree rotation
 
-import sensor, image, time, pyb
+import sensor
+import time
+import pyb
 
 sensor.reset()
 sensor.set_pixformat(sensor.RGB565)

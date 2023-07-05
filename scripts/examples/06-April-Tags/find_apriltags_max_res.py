@@ -3,7 +3,11 @@
 # This example shows the power of the OpenMV Cam to detect April Tags
 # on the OpenMV Cam M7. The M4 versions cannot detect April Tags.
 
-import sensor, image, time, math, omv
+import sensor
+import image
+import time
+import math
+import omv
 
 sensor.reset()
 sensor.set_pixformat(sensor.GRAYSCALE)

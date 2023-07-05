@@ -2,7 +2,8 @@
 #
 # This example shows how to scan for networks with the WiFi shield.
 
-import time, network
+import time
+import network
 
 wlan = network.WINC()
 print("\nFirmware version:", wlan.fw_version())

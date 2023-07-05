@@ -4,7 +4,10 @@
 #
 # This script shows off how to transfer the frame buffer from one OpenMV Cam to another.
 
-import image, network, rpc, sensor, struct
+import network
+import rpc
+import sensor
+import struct
 
 sensor.reset()
 sensor.set_pixformat(sensor.RGB565)

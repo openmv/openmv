@@ -1,5 +1,7 @@
 # Ethernet LAN HTTP client example.
-import network, usocket, ussl
+import network
+import usocket
+import ussl
 
 PORT = 443
 HOST = "www.google.com"

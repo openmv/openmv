@@ -2,7 +2,8 @@
 #
 # This example shows how to scan for WiFi networks.
 
-import time, network
+import time
+import network
 
 wlan = network.WLAN(network.STA_IF)
 wlan.active(True)

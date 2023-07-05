@@ -2,7 +2,9 @@
 #
 # This example shows how to use the ImageIO stream to record frames in memory and play them back.
 # Note: While this should work on any board, the board should have an SDRAM to be of any use.
-import sensor, image, time
+import sensor
+import image
+import time
 
 # Number of frames to pre-allocate and record
 N_FRAMES = 500

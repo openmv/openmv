@@ -8,7 +8,8 @@
 
 enable_lens_corr = False # turn on for straighter lines...
 
-import sensor, image, time
+import sensor
+import time
 
 sensor.reset()
 sensor.set_pixformat(sensor.RGB565) # grayscale is faster

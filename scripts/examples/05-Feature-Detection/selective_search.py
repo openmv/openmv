@@ -1,6 +1,7 @@
 # Selective Search Example
 
-import sensor, image, time
+import sensor
+import time
 from random import randint
 
 sensor.reset()                      # Reset and initialize the sensor.

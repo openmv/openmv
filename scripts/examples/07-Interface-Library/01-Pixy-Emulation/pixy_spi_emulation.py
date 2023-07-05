@@ -66,7 +66,11 @@ for i in range(len(lab_color_thresholds)):
         e_lab_color_code.append(lab_color_thresholds[i][6])
         e_lab_color_signatures.append(i + 1)
 
-import image, math, pyb, sensor, struct, time
+import math
+import pyb
+import sensor
+import struct
+import time
 
 # Camera Setup
 

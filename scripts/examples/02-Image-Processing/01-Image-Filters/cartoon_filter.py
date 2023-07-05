@@ -4,7 +4,8 @@
 # filter works by joining similar pixel areas of an image and replacing
 # the pixels in those areas with the area mean.
 
-import sensor, image, time
+import sensor
+import time
 
 sensor.reset()
 sensor.set_pixformat(sensor.RGB565) # or GRAYSCALE...

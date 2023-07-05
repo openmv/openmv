@@ -6,7 +6,9 @@
 #
 # This script is designed to pair with "popular_features_as_the_remote_device.py".
 
-import json, rpc, struct
+import json
+import rpc
+import struct
 
 # The RPC library above is installed on your OpenMV Cam and provides mutliple classes for
 # allowing your OpenMV Cam to control over CAN, I2C, SPI, or UART.

@@ -4,7 +4,9 @@
 # You can use the keypoints_editor.py util to remove unwanted keypoints.
 #
 # NOTE: Please reset the camera after running this script to see the new file.
-import sensor, time, image
+import sensor
+import time
+import image
 
 # Reset sensor
 sensor.reset()

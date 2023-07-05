@@ -5,7 +5,8 @@
 # become translations in the X direction and exponential changes
 # in scale (x2, x4, etc.) become linear translations in the Y direction.
 
-import sensor, image, time
+import sensor
+import time
 
 sensor.reset() # Initialize the camera sensor.
 sensor.set_pixformat(sensor.RGB565) # or sensor.GRAYSCALE

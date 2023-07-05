@@ -6,7 +6,10 @@
 # called basic frame differencing because there's no background image update.
 # So, as time passes the background image may change resulting in issues.
 
-import sensor, image, pyb, os, time
+import sensor
+import pyb
+import os
+import time
 
 TRIGGER_THRESHOLD = 5
 

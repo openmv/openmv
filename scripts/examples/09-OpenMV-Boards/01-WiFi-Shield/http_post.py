@@ -1,5 +1,8 @@
 # Post files with HTTP/Post urequests module example
-import network, usocket, ussl, urequests
+import network
+import usocket
+import ussl
+import urequests
 
 # AP info
 SSID='' # Network SSID

@@ -2,7 +2,8 @@
 #
 # This script computes the statistics of the image and prints it out.
 
-import sensor, image, time
+import sensor
+import time
 
 sensor.reset()
 sensor.set_pixformat(sensor.GRAYSCALE) # or RGB565.

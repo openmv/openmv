@@ -6,7 +6,8 @@
 # OpenMV Cam Master I2C Clock (P4) - Arduino Uno Clock (A5)
 # OpenMV Cam Ground                - Arduino Ground
 
-import pyb, ustruct
+import pyb
+import ustruct
 
 text = "Hello World!\n"
 data = ustruct.pack("<%ds" % len(text), text)

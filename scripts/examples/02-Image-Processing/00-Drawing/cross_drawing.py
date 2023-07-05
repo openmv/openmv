@@ -2,7 +2,9 @@
 #
 # This example shows off drawing crosses on the OpenMV Cam.
 
-import sensor, image, time, pyb
+import sensor
+import time
+import pyb
 
 sensor.reset()
 sensor.set_pixformat(sensor.RGB565) # or GRAYSCALE...

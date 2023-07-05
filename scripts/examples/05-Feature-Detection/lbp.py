@@ -7,7 +7,9 @@
 # a lot of work to be made into somethin useful. This script will reamin to show
 # that the functionality exists, but, in its current state is inadequate.
 
-import sensor, time, image
+import sensor
+import time
+import image
 sensor.reset()
 
 # Reset sensor

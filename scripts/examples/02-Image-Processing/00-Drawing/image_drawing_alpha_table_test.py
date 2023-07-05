@@ -5,7 +5,9 @@
 # area scaling along with color channel extraction, alpha blending,
 # color palette application, and alpha palette application.
 
-import sensor, image, time
+import sensor
+import image
+import time
 
 sensor.reset()
 sensor.set_pixformat(sensor.RGB565)

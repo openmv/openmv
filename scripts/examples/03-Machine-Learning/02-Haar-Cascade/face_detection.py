@@ -11,7 +11,9 @@
 # contrast check in constant time (the reason for feature detection being
 # grayscale only is because of the space requirment for the integral image).
 
-import sensor, time, image
+import sensor
+import time
+import image
 
 # Reset sensor
 sensor.reset()

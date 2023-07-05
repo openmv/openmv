@@ -3,7 +3,8 @@
 # This example demonstrates CAN communications between two cameras.
 # NOTE: you need two CAN transceiver shields and DB9 cable to run this example.
 
-import time, omv
+import time
+import omv
 from pyb import CAN
 
 # NOTE: Set to False on receiving node.

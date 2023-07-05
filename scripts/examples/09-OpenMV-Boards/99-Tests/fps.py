@@ -1,5 +1,6 @@
 # FPS Test Script.
-import sensor, image, time
+import sensor
+import time
 
 sensor.reset() # Initialize the camera sensor.
 sensor.set_framesize(sensor.QQVGA) # or sensor.QQVGA (or others)

@@ -3,7 +3,9 @@
 # This example shows off drawing keypoints on the OpenMV Cam. Usually you call draw_keypoints()
 # on a keypoints object but you can also call it on a list of 3-value tuples...
 
-import sensor, image, time, pyb
+import sensor
+import time
+import pyb
 
 sensor.reset()
 sensor.set_pixformat(sensor.RGB565) # or GRAYSCALE...

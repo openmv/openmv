@@ -20,7 +20,9 @@
 # with open("img.jpg", "w") as f:
 #     f.write(img)
 
-import sensor, image, time, ustruct
+import sensor
+import time
+import ustruct
 from pyb import USB_VCP
 
 usb = USB_VCP()
