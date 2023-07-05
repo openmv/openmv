@@ -7,11 +7,10 @@ import sensor
 import time
 import network
 import socket
-import sys
 
-SSID=''      # Network SSID
-KEY=''       # Network key
-HOST =''     # Use first available interface
+SSID = ""  # Network SSID
+KEY = ""  # Network key
+HOST = ""  # Use first available interface
 PORT = 8080  # Arbitrary non-privileged port
 
 # Init sensor
@@ -25,7 +24,7 @@ wlan.active(True)
 wlan.connect(SSID, KEY)
 
 while not wlan.isconnected():
-    print("Trying to connect to \"{:s}\"...".format(SSID))
+    print('Trying to connect to "{:s}"...'.format(SSID))
     time.sleep_ms(1000)
 
 # We should have a valid IP now via DHCP
@@ -42,43 +41,49 @@ s.listen(5)
 # Set server socket to blocking
 s.setblocking(True)
 
+
 def start_streaming(s):
-    print ('Waiting for connections..')
+    print("Waiting for connections..")
     client, addr = s.accept()
     # set client socket timeout to 5s
     client.settimeout(5.0)
-    print ('Connected to ' + addr[0] + ':' + str(addr[1]))
+    print("Connected to " + addr[0] + ":" + str(addr[1]))
 
     # Read request from client
     data = client.recv(1024)
     # Should parse client request here
 
     # Send multipart header
-    client.sendall("HTTP/1.1 200 OK\r\n" \
-                "Server: OpenMV\r\n" \
-                "Content-Type: multipart/x-mixed-replace;boundary=openmv\r\n" \
-                "Cache-Control: no-cache\r\n" \
-                "Pragma: no-cache\r\n\r\n")
+    client.sendall(
+        "HTTP/1.1 200 OK\r\n"
+        "Server: OpenMV\r\n"
+        "Content-Type: multipart/x-mixed-replace;boundary=openmv\r\n"
+        "Cache-Control: no-cache\r\n"
+        "Pragma: no-cache\r\n\r\n"
+    )
 
     # FPS clock
     clock = time.clock()
 
     # Start streaming images
     # NOTE: Disable IDE preview to increase streaming FPS.
-    while (True):
-        clock.tick() # Track elapsed milliseconds between snapshots().
+    while True:
+        clock.tick()  # Track elapsed milliseconds between snapshots().
         frame = sensor.snapshot()
         cframe = frame.compressed(quality=35)
-        header = "\r\n--openmv\r\n" \
-                 "Content-Type: image/jpeg\r\n"\
-                 "Content-Length:"+str(cframe.size())+"\r\n\r\n"
+        header = (
+            "\r\n--openmv\r\n"
+            "Content-Type: image/jpeg\r\n"
+            "Content-Length:" + str(cframe.size()) + "\r\n\r\n"
+        )
         client.sendall(header)
         client.sendall(cframe)
         print(clock.fps())
 
-while (True):
+
+while True:
     try:
         start_streaming(s)
     except OSError as e:
         print("socket error: ", e)
-        #sys.print_exception(e)
+        # sys.print_exception(e)

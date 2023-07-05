@@ -1,7 +1,6 @@
 # Stop Mode Example
 # This example demonstrates using the low-power Stop Mode.
 
-import time
 import pyb
 import machine
 

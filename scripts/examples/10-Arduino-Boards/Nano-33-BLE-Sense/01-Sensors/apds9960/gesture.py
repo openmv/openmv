@@ -28,4 +28,3 @@ while True:
     if apds.isGestureAvailable():
         motion = apds.readGesture()
         print("Gesture={}".format(dirs.get(motion, "unknown")))
-

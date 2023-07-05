@@ -11,8 +11,8 @@ import time
 import network
 from mqtt import MQTTClient
 
-SSID='' # Network SSID
-KEY=''  # Network key
+SSID = ""  # Network SSID
+KEY = ""  # Network key
 
 # Init wlan module and connect to network
 print("Trying to connect... (may take a while)...")
@@ -26,13 +26,15 @@ print(wlan.ifconfig())
 client = MQTTClient("openmv", "test.mosquitto.org", port=1883)
 client.connect()
 
+
 def callback(topic, msg):
     print(topic, msg)
+
 
 # must set callback first
 client.set_callback(callback)
 client.subscribe("openmv/test")
 
-while (True):
-    client.check_msg() # poll for messages.
+while True:
+    client.check_msg()  # poll for messages.
     time.sleep_ms(1000)

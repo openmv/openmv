@@ -26,7 +26,7 @@ print(face_cascade, eyes_cascade)
 # FPS clock
 clock = time.clock()
 
-while (True):
+while True:
     clock.tick()
 
     # Capture snapshot
@@ -42,7 +42,9 @@ while (True):
         img.draw_rectangle(face)
         # Now find eyes within each face.
         # Note: Use a higher threshold here (more detections) and lower scale (to find small objects)
-        eyes = img.find_features(eyes_cascade, threshold=0.5, scale_factor=1.2, roi=face)
+        eyes = img.find_features(
+            eyes_cascade, threshold=0.5, scale_factor=1.2, roi=face
+        )
         for e in eyes:
             img.draw_rectangle(e)
 

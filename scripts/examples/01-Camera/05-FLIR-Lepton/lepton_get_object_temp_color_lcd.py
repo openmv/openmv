@@ -32,10 +32,20 @@ print("Resetting Lepton...")
 # These settings are applied on reset
 sensor.reset()
 sensor.ioctl(sensor.IOCTL_LEPTON_SET_MEASUREMENT_MODE, True)
-sensor.ioctl(sensor.IOCTL_LEPTON_SET_MEASUREMENT_RANGE, min_temp_in_celsius, max_temp_in_celsius)
-print("Lepton Res (%dx%d)" % (sensor.ioctl(sensor.IOCTL_LEPTON_GET_WIDTH),
-                              sensor.ioctl(sensor.IOCTL_LEPTON_GET_HEIGHT)))
-print("Radiometry Available: " + ("Yes" if sensor.ioctl(sensor.IOCTL_LEPTON_GET_RADIOMETRY) else "No"))
+sensor.ioctl(
+    sensor.IOCTL_LEPTON_SET_MEASUREMENT_RANGE, min_temp_in_celsius, max_temp_in_celsius
+)
+print(
+    "Lepton Res (%dx%d)"
+    % (
+        sensor.ioctl(sensor.IOCTL_LEPTON_GET_WIDTH),
+        sensor.ioctl(sensor.IOCTL_LEPTON_GET_HEIGHT),
+    )
+)
+print(
+    "Radiometry Available: "
+    + ("Yes" if sensor.ioctl(sensor.IOCTL_LEPTON_GET_RADIOMETRY) else "No")
+)
 
 sensor.set_pixformat(sensor.GRAYSCALE)
 sensor.set_framesize(sensor.LCD)
@@ -47,24 +57,44 @@ lcd.init()
 # returned by "find_blobs" below. Change "pixels_threshold" and "area_threshold" if you change the
 # camera resolution. "merge=True" merges all overlapping blobs in the image.
 
-def map_g_to_temp(g):
-    return ((g * (max_temp_in_celsius - min_temp_in_celsius)) / 255.0) + min_temp_in_celsius
 
-while(True):
+def map_g_to_temp(g):
+    return (
+        (g * (max_temp_in_celsius - min_temp_in_celsius)) / 255.0
+    ) + min_temp_in_celsius
+
+
+while True:
     clock.tick()
     img = sensor.snapshot()
     blob_stats = []
-    blobs = img.find_blobs(threshold_list, pixels_threshold=200, area_threshold=200, merge=True)
+    blobs = img.find_blobs(
+        threshold_list, pixels_threshold=200, area_threshold=200, merge=True
+    )
     # Collect stats into a list of tuples
     for blob in blobs:
-        blob_stats.append((blob.x(), blob.y(), map_g_to_temp(img.get_statistics(thresholds=threshold_list,
-                                                                                roi=blob.rect()).mean())))
-    img.to_rainbow(color_palette=sensor.PALETTE_IRONBOW) # color it
+        blob_stats.append(
+            (
+                blob.x(),
+                blob.y(),
+                map_g_to_temp(
+                    img.get_statistics(
+                        thresholds=threshold_list, roi=blob.rect()
+                    ).mean()
+                ),
+            )
+        )
+    img.to_rainbow(color_palette=sensor.PALETTE_IRONBOW)  # color it
     # Draw stuff on the colored image
     for blob in blobs:
         img.draw_rectangle(blob.rect())
         img.draw_cross(blob.cx(), blob.cy())
     for blob_stat in blob_stats:
-        img.draw_string(blob_stat[0], blob_stat[1] - 10, "%.2f C" % blob_stat[2], mono_space=False)
+        img.draw_string(
+            blob_stat[0], blob_stat[1] - 10, "%.2f C" % blob_stat[2], mono_space=False
+        )
     lcd.display(img)
-    print("FPS %f - Lepton Temp: %f C" % (clock.fps(), sensor.ioctl(sensor.IOCTL_LEPTON_GET_FPA_TEMPERATURE)))
+    print(
+        "FPS %f - Lepton Temp: %f C"
+        % (clock.fps(), sensor.ioctl(sensor.IOCTL_LEPTON_GET_FPA_TEMPERATURE))
+    )

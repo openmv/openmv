@@ -16,9 +16,17 @@ threshold_list = [(220, 255)]
 print("Resetting Lepton...")
 # These settings are applied on reset
 sensor.reset()
-print("Lepton Res (%dx%d)" % (sensor.ioctl(sensor.IOCTL_LEPTON_GET_WIDTH),
-                              sensor.ioctl(sensor.IOCTL_LEPTON_GET_HEIGHT)))
-print("Radiometry Available: " + ("Yes" if sensor.ioctl(sensor.IOCTL_LEPTON_GET_RADIOMETRY) else "No"))
+print(
+    "Lepton Res (%dx%d)"
+    % (
+        sensor.ioctl(sensor.IOCTL_LEPTON_GET_WIDTH),
+        sensor.ioctl(sensor.IOCTL_LEPTON_GET_HEIGHT),
+    )
+)
+print(
+    "Radiometry Available: "
+    + ("Yes" if sensor.ioctl(sensor.IOCTL_LEPTON_GET_RADIOMETRY) else "No")
+)
 
 sensor.set_pixformat(sensor.GRAYSCALE)
 sensor.set_framesize(sensor.QQVGA)
@@ -29,10 +37,12 @@ clock = time.clock()
 # returned by "find_blobs" below. Change "pixels_threshold" and "area_threshold" if you change the
 # camera resolution. "merge=True" merges all overlapping blobs in the image.
 
-while(True):
+while True:
     clock.tick()
     img = sensor.snapshot()
-    for blob in img.find_blobs(threshold_list, pixels_threshold=200, area_threshold=200, merge=True):
+    for blob in img.find_blobs(
+        threshold_list, pixels_threshold=200, area_threshold=200, merge=True
+    ):
         img.draw_rectangle(blob.rect(), color=127)
         img.draw_cross(blob.cx(), blob.cy(), color=127)
     print(clock.fps())

@@ -5,12 +5,11 @@
 import sensor
 import image
 import time
-import pyb
 
 sensor.reset()
-sensor.set_pixformat(sensor.GRAYSCALE) # or GRAYSCALE...
-sensor.set_framesize(sensor.QQVGA) # or QQVGA...
-sensor.skip_frames(time = 2000)
+sensor.set_pixformat(sensor.GRAYSCALE)  # or GRAYSCALE...
+sensor.set_framesize(sensor.QQVGA)  # or QQVGA...
+sensor.skip_frames(time=2000)
 clock = time.clock()
 
 # the color palette is actually an image, this allows you to use image ops to create palettes
@@ -23,11 +22,16 @@ for i, color in enumerate(palette_source_colors):
     palette_source_color_image[i] = color
 
 # Scale the image to palette width and smooth them
-palette = image.Image(256,1, sensor.RGB565)
-palette.draw_image(palette_source_color_image, 0, 0, x_scale=palette.width() / palette_source_color_image.width())
-palette.mean(int(palette.width() / palette_source_color_image.width()/2))
+palette = image.Image(256, 1, sensor.RGB565)
+palette.draw_image(
+    palette_source_color_image,
+    0,
+    0,
+    x_scale=palette.width() / palette_source_color_image.width(),
+)
+palette.mean(int(palette.width() / palette_source_color_image.width() / 2))
 
-while(True):
+while True:
     clock.tick()
 
     img = sensor.snapshot()
@@ -40,7 +44,20 @@ while(True):
     palette_scale_x = (sensor.width() - palette_boundary_inset * 2) / palette.width()
 
     img.draw_image(img_copy, 0, 0, color_palette=palette)
-    img.draw_image(palette, palette_boundary_inset, palette_boundary_inset, x_scale=palette_scale_x, y_scale=8)
-    img.draw_rectangle(palette_boundary_inset, palette_boundary_inset, int(palette.width()*palette_scale_x), 8, color=(255,255,255), thickness=1)
+    img.draw_image(
+        palette,
+        palette_boundary_inset,
+        palette_boundary_inset,
+        x_scale=palette_scale_x,
+        y_scale=8,
+    )
+    img.draw_rectangle(
+        palette_boundary_inset,
+        palette_boundary_inset,
+        int(palette.width() * palette_scale_x),
+        8,
+        color=(255, 255, 255),
+        thickness=1,
+    )
 
     print(clock.fps())

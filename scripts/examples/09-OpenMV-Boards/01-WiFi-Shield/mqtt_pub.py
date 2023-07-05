@@ -11,8 +11,8 @@ import time
 import network
 from mqtt import MQTTClient
 
-SSID='' # Network SSID
-KEY=''  # Network key
+SSID = ""  # Network SSID
+KEY = ""  # Network key
 
 # Init wlan module and connect to network
 print("Trying to connect... (may take a while)...")
@@ -26,6 +26,6 @@ print(wlan.ifconfig())
 client = MQTTClient("openmv", "test.mosquitto.org", port=1883)
 client.connect()
 
-while (True):
+while True:
     client.publish("openmv/test", "Hello World!")
     time.sleep_ms(1000)

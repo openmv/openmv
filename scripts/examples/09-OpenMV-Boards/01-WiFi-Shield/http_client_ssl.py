@@ -5,8 +5,8 @@ import usocket
 import ussl
 
 # AP info
-SSID="" # Network SSID
-KEY=""  # Network key
+SSID = ""  # Network SSID
+KEY = ""  # Network key
 
 PORT = 443
 HOST = "www.google.com"
@@ -40,7 +40,7 @@ request += "HOST: %s\r\n"
 request += "User-Agent: Mozilla/5.0\r\n"
 request += "Connection: keep-alive\r\n\r\n"
 # Add more headers if needed.
-client.write(request%(HOST)+"\r\n")
+client.write(request % (HOST) + "\r\n")
 
 response = client.read(1024)
 for l in response.split(b"\r\n"):

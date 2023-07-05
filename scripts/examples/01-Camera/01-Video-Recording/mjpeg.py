@@ -15,14 +15,14 @@ import pyb
 RED_LED_PIN = 1
 BLUE_LED_PIN = 3
 
-sensor.reset() # Initialize the camera sensor.
-sensor.set_pixformat(sensor.RGB565) # or sensor.GRAYSCALE
-sensor.set_framesize(sensor.QVGA) # or sensor.QQVGA (or others)
-sensor.skip_frames(time = 2000) # Let new settings take affect.
-clock = time.clock() # Tracks FPS.
+sensor.reset()  # Reset and initialize the sensor.
+sensor.set_pixformat(sensor.RGB565)  # Set pixel format to RGB565 (or GRAYSCALE)
+sensor.set_framesize(sensor.QVGA)  # Set frame size to QVGA (320x240)
+sensor.skip_frames(time=2000)  # Wait for settings take effect.
+clock = time.clock()  # Create a clock object to track the FPS.
 
 pyb.LED(RED_LED_PIN).on()
-sensor.skip_frames(time = 2000) # Give the user time to get ready.
+sensor.skip_frames(time=2000)  # Give the user time to get ready.
 
 pyb.LED(RED_LED_PIN).off()
 pyb.LED(BLUE_LED_PIN).on()

@@ -18,10 +18,10 @@ import pyb
 RED_LED_PIN = 1
 BLUE_LED_PIN = 3
 
-sensor.reset() # Initialize the camera sensor.
-sensor.set_pixformat(sensor.GRAYSCALE) # or sensor.
-sensor.set_framesize(sensor.QQVGA) # or sensor.HQVGA (or others)
-sensor.skip_frames(time = 2000) # Let new settings take affect.
+sensor.reset()  # Initialize the camera sensor.
+sensor.set_pixformat(sensor.GRAYSCALE)  # Set pixel format to RGB565 (or GRAYSCALE)
+sensor.set_framesize(sensor.QQVGA)  # Set frame size to QQVGA (160x120)
+sensor.skip_frames(time=2000)  # Wait for settings take effect.
 
 # Load up a face detection HaarCascade. This is object that your OpenMV Cam
 # can use to detect faces using the find_features() method below. Your OpenMV
@@ -31,18 +31,17 @@ sensor.skip_frames(time = 2000) # Let new settings take affect.
 # stages.
 face_cascade = image.HaarCascade("frontalface", stages=25)
 
-while(True):
-
+while True:
     pyb.LED(RED_LED_PIN).on()
     print("About to start detecting faces...")
-    sensor.skip_frames(time = 2000) # Give the user time to get ready.
+    sensor.skip_frames(time=2000)  # Give the user time to get ready.
 
     pyb.LED(RED_LED_PIN).off()
     print("Now detecting faces!")
     pyb.LED(BLUE_LED_PIN).on()
 
-    diff = 10 # We'll say we detected a face after 10 frames.
-    while(diff):
+    diff = 10  # We'll say we detected a face after 10 frames.
+    while diff:
         img = sensor.snapshot()
         # Threshold can be between 0.0 and 1.0. A higher threshold results in a
         # higher detection rate with more false positives. The scale value
@@ -56,12 +55,12 @@ while(True):
 
     g = gif.Gif("example-%d.gif" % pyb.rng(), loop=True)
 
-    clock = time.clock() # Tracks FPS.
+    clock = time.clock()  # Tracks FPS.
     print("You're on camera!")
     for i in range(100):
         clock.tick()
         # clock.avg() returns the milliseconds between frames - gif delay is in
-        g.add_frame(sensor.snapshot(), delay=int(clock.avg()/10)) # centiseconds.
+        g.add_frame(sensor.snapshot(), delay=int(clock.avg() / 10))  # centiseconds.
         print(clock.fps())
 
     g.close()

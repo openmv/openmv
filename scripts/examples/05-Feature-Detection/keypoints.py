@@ -16,8 +16,9 @@ sensor.set_framesize(sensor.VGA)
 sensor.set_windowing((320, 240))
 sensor.set_pixformat(sensor.GRAYSCALE)
 
-sensor.skip_frames(time = 2000)
+sensor.skip_frames(time=2000)
 sensor.set_auto_gain(False, value=100)
+
 
 def draw_keypoints(img, kpts):
     if kpts:
@@ -26,17 +27,18 @@ def draw_keypoints(img, kpts):
         img = sensor.snapshot()
         time.sleep_ms(1000)
 
+
 kpts1 = None
 # NOTE: uncomment to load a keypoints descriptor from file
-#kpts1 = image.load_descriptor("/desc.orb")
-#img = sensor.snapshot()
-#draw_keypoints(img, kpts1)
+# kpts1 = image.load_descriptor("/desc.orb")
+# img = sensor.snapshot()
+# draw_keypoints(img, kpts1)
 
 clock = time.clock()
-while (True):
+while True:
     clock.tick()
     img = sensor.snapshot()
-    if (kpts1 == None):
+    if kpts1 is None:
         # NOTE: By default find_keypoints returns multi-scale keypoints extracted from an image pyramid.
         kpts1 = img.find_keypoints(max_keypoints=150, threshold=10, scale_factor=1.2)
         draw_keypoints(img, kpts1)
@@ -44,17 +46,17 @@ while (True):
         # NOTE: When extracting keypoints to match the first descriptor, we use normalized=True to extract
         # keypoints from the first scale only, which will match one of the scales in the first descriptor.
         kpts2 = img.find_keypoints(max_keypoints=150, threshold=10, normalized=True)
-        if (kpts2):
+        if kpts2:
             match = image.match_descriptor(kpts1, kpts2, threshold=85)
-            if (match.count()>10):
+            if match.count() > 10:
                 # If we have at least n "good matches"
                 # Draw bounding rectangle and cross.
                 img.draw_rectangle(match.rect())
                 img.draw_cross(match.cx(), match.cy(), size=10)
 
-            print(kpts2, "matched:%d dt:%d"%(match.count(), match.theta()))
+            print(kpts2, "matched:%d dt:%d" % (match.count(), match.theta()))
             # NOTE: uncomment if you want to draw the keypoints
-            #img.draw_keypoints(kpts2, size=KEYPOINTS_SIZE, matched=True)
+            # img.draw_keypoints(kpts2, size=KEYPOINTS_SIZE, matched=True)
 
     # Draw FPS
-    img.draw_string(0, 0, "FPS:%.2f"%(clock.fps()))
+    img.draw_string(0, 0, "FPS:%.2f" % (clock.fps()))

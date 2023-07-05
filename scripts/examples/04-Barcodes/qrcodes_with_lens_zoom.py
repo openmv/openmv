@@ -9,15 +9,15 @@ import time
 sensor.reset()
 sensor.set_pixformat(sensor.GRAYSCALE)
 sensor.set_framesize(sensor.VGA)
-sensor.set_windowing((240, 240)) # look at center 240x240 pixels of the VGA resolution.
-sensor.skip_frames(time = 2000)
-sensor.set_auto_gain(False) # must turn this off to prevent image washout...
+sensor.set_windowing((240, 240))  # look at center 240x240 pixels of the VGA resolution.
+sensor.skip_frames(time=2000)
+sensor.set_auto_gain(False)  # must turn this off to prevent image washout...
 clock = time.clock()
 
-while(True):
+while True:
     clock.tick()
     img = sensor.snapshot()
     for code in img.find_qrcodes():
-        img.draw_rectangle(code.rect(), color = 127)
+        img.draw_rectangle(code.rect(), color=127)
         print(code)
     print(clock.fps())

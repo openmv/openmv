@@ -4,8 +4,8 @@
 
 import network
 
-SSID='' # Network SSID
-KEY=''  # Network key
+SSID = ""  # Network SSID
+KEY = ""  # Network key
 
 # Init wlan module and connect to network
 print("Trying to connect... (may take a while)...")

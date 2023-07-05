@@ -7,7 +7,7 @@ import sensor
 import time
 
 EXPOSURE_MICROSECONDS = 1000
-TRACKING_THRESHOLDS = [(128, 255)] # When you lower the exposure you darken everything.
+TRACKING_THRESHOLDS = [(128, 255)]  # When you lower the exposure you darken everything.
 
 SEARCHING_RESOLUTION = sensor.VGA
 SEARCHING_AREA_THRESHOLD = 16
@@ -17,32 +17,34 @@ TRACKING_RESOLUTION = sensor.QQVGA
 TRACKING_AREA_THRESHOLD = 256
 TRACKING_PIXEL_THRESHOLD = TRACKING_AREA_THRESHOLD
 
-TRACKING_EDGE_TOLERANCE = 0.05 # Blob can move 5% away from the center.
+TRACKING_EDGE_TOLERANCE = 0.05  # Blob can move 5% away from the center.
 
-sensor.reset()                         # Reset and initialize the sensor.
-sensor.set_pixformat(sensor.GRAYSCALE) # Set pixel format to GRAYSCALE
+sensor.reset()  # Reset and initialize the sensor.
+sensor.set_pixformat(sensor.GRAYSCALE)  # Set pixel format to GRAYSCALE
 sensor.set_framesize(SEARCHING_RESOLUTION)
-sensor.skip_frames(time = 1000)        # Wait for settings take effect.
-clock = time.clock()                   # Create a clock object to track the FPS.
+sensor.skip_frames(time=1000)  # Wait for settings take effect.
+clock = time.clock()  # Create a clock object to track the FPS.
 
-sensor.set_auto_gain(False)            # Turn off as it will oscillate.
+sensor.set_auto_gain(False)  # Turn off as it will oscillate.
 sensor.set_auto_exposure(False, exposure_us=EXPOSURE_MICROSECONDS)
-sensor.skip_frames(time = 1000)
+sensor.skip_frames(time=1000)
 
 # sensor_w and sensor_h are the image sensor raw pixels w/h (x/y are 0 initially).
 x, y, sensor_w, sensor_h = sensor.ioctl(sensor.IOCTL_GET_READOUT_WINDOW)
 
-while(True):
+while True:
     clock.tick()
     img = sensor.snapshot()
 
     # We need to find an IR object to track - it's likely to be really bright.
-    blobs = img.find_blobs(TRACKING_THRESHOLDS,
-                           area_threshold=SEARCHING_AREA_THRESHOLD,
-                           pixels_threshold=SEARCHING_PIXEL_THRESHOLD)
+    blobs = img.find_blobs(
+        TRACKING_THRESHOLDS,
+        area_threshold=SEARCHING_AREA_THRESHOLD,
+        pixels_threshold=SEARCHING_PIXEL_THRESHOLD,
+    )
 
     if len(blobs):
-        most_dense_blob = max(blobs, key = lambda x: x.density())
+        most_dense_blob = max(blobs, key=lambda x: x.density())
         img.draw_rectangle(most_dense_blob.rect())
 
         def get_mapped_centroid(b):
@@ -69,7 +71,7 @@ while(True):
             # Add in our displacement from the sensor center
             mapped_cy += y + (sensor_h / 2.0)
 
-            return (mapped_cx, mapped_cy) # X/Y location on the sensor array.
+            return (mapped_cx, mapped_cy)  # X/Y location on the sensor array.
 
         def center_on_blob(b, res):
             mapped_cx, mapped_cy = get_mapped_centroid(b)
@@ -93,22 +95,28 @@ while(True):
             x_error = x - new_x
             y_error = y - new_y
 
-            if x_error < 0: print("-X Limit Reached ", end="")
-            if x_error > 0: print("+X Limit Reached ", end="")
-            if y_error < 0: print("-Y Limit Reached ", end="")
-            if y_error > 0: print("+Y Limit Reached ", end="")
+            if x_error < 0:
+                print("-X Limit Reached ", end="")
+            if x_error > 0:
+                print("+X Limit Reached ", end="")
+            if y_error < 0:
+                print("-Y Limit Reached ", end="")
+            if y_error > 0:
+                print("+Y Limit Reached ", end="")
 
         center_on_blob(most_dense_blob, TRACKING_RESOLUTION)
 
         # This loop will track the blob at a much higher readout speed and lower resolution.
-        while(True):
+        while True:
             clock.tick()
             img = sensor.snapshot()
 
             # Find the blob in the lower resolution image.
-            blobs = img.find_blobs(TRACKING_THRESHOLDS,
-                                   area_threshold=TRACKING_AREA_THRESHOLD,
-                                   pixels_threshold=TRACKING_PIXEL_THRESHOLD)
+            blobs = img.find_blobs(
+                TRACKING_THRESHOLDS,
+                area_threshold=TRACKING_AREA_THRESHOLD,
+                pixels_threshold=TRACKING_PIXEL_THRESHOLD,
+            )
 
             # If we loose the blob then we need to find a new one.
             if not len(blobs):
@@ -118,10 +126,12 @@ while(True):
                 break
 
             # Narrow down the blob list and highlight the blob.
-            most_dense_blob = max(blobs, key = lambda x: x.density())
+            most_dense_blob = max(blobs, key=lambda x: x.density())
             img.draw_rectangle(most_dense_blob.rect())
 
-            print(clock.fps(), "BLOB cx:%d, cy:%d" % get_mapped_centroid(most_dense_blob))
+            print(
+                clock.fps(), "BLOB cx:%d, cy:%d" % get_mapped_centroid(most_dense_blob)
+            )
 
             x_diff = most_dense_blob.cx() - (sensor.width() / 2.0)
             y_diff = most_dense_blob.cy() - (sensor.height() / 2.0)

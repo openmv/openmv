@@ -9,13 +9,13 @@ import time
 # Number of frames to pre-allocate and record
 N_FRAMES = 500
 
-sensor.reset()
-sensor.set_pixformat(sensor.RGB565)
-sensor.set_framesize(sensor.QVGA)
+sensor.reset()  # Reset and initialize the sensor.
+sensor.set_pixformat(sensor.RGB565)  # Set pixel format to RGB565 (or GRAYSCALE)
+sensor.set_framesize(sensor.QVGA)  # Set frame size to QVGA (320x240)
 
 # This frame size must match the image size passed to ImageIO
 sensor.set_windowing((120, 120))
-sensor.skip_frames(time = 2000)
+sensor.skip_frames(time=2000)
 
 clock = time.clock()
 
@@ -27,7 +27,7 @@ for i in range(0, N_FRAMES):
     stream.write(sensor.snapshot())
     print(clock.fps())
 
-while (True):
+while True:
     # Rewind stream and play back
     stream.seek(0)
     for i in range(0, N_FRAMES):

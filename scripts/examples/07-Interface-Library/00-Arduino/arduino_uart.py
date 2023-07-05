@@ -12,7 +12,7 @@
 #   // put your setup code here, to run once:
 #   Serial.begin(19200);
 # }
-# 
+#
 # void loop() {
 #   // put your main code here, to run repeatedly:
 #   if (Serial.available()) {
@@ -31,8 +31,8 @@ from pyb import UART
 # UART 3, and baudrate.
 uart = UART(3, 19200)
 
-while(True):
+while True:
     uart.write("Hello World!\n")
-    if (uart.any()):
+    if uart.any():
         print(uart.read())
     time.sleep_ms(1000)

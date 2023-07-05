@@ -11,12 +11,12 @@ import time
 sensor.reset()
 sensor.set_pixformat(sensor.RGB565)
 sensor.set_framesize(sensor.QVGA)
-sensor.skip_frames(time = 2000)
+sensor.skip_frames(time=2000)
 clock = time.clock()
 
-while(True):
+while True:
     clock.tick()
 
-    img = sensor.snapshot().lens_corr(strength = 1.8, zoom = 1.0)
+    img = sensor.snapshot().lens_corr(strength=1.8, zoom=1.0)
 
     print(clock.fps())

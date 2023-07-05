@@ -4,21 +4,19 @@
 # shadow removal to help reduce the affects of cast shadows in your scene.
 
 import sensor
-import pyb
-import os
 import time
 
 TRIGGER_THRESHOLD = 5
 
-sensor.reset() # Initialize the camera sensor.
-sensor.set_pixformat(sensor.RGB565) # or sensor.GRAYSCALE
-sensor.set_framesize(sensor.QQVGA) # or sensor.QVGA (or others)
-if sensor.get_id() == sensor.OV7725: # Reduce sensor PLL from 6x to 4x.
+sensor.reset()  # Initialize the camera sensor.
+sensor.set_pixformat(sensor.RGB565)  # or sensor.GRAYSCALE
+sensor.set_framesize(sensor.QQVGA)  # or sensor.QVGA (or others)
+if sensor.get_id() == sensor.OV7725:  # Reduce sensor PLL from 6x to 4x.
     sensor.__write_reg(0x0D, (sensor.__read_reg(0x0D) & 0x3F) | 0x40)
-sensor.skip_frames(time = 2000) # Let new settings take affect.
-sensor.set_auto_whitebal(False) # Turn off white balance.
-sensor.set_auto_gain(False) # Turn this off too.
-clock = time.clock() # Tracks FPS.
+sensor.skip_frames(time=2000)  # Let new settings take affect.
+sensor.set_auto_whitebal(False)  # Turn off white balance.
+sensor.set_auto_gain(False)  # Turn this off too.
+clock = time.clock()  # Tracks FPS.
 
 # Take from the main frame buffer's RAM to allocate a second frame buffer.
 # There's a lot more RAM in the frame buffer than in the MicroPython heap.
@@ -29,13 +27,13 @@ clock = time.clock() # Tracks FPS.
 extra_fb = sensor.alloc_extra_fb(sensor.width(), sensor.height(), sensor.RGB565)
 
 print("About to save background image...")
-sensor.skip_frames(time = 2000) # Give the user time to get ready.
+sensor.skip_frames(time=2000)  # Give the user time to get ready.
 extra_fb.replace(sensor.snapshot())
 print("Saved background image - Now frame differencing!")
 
-while(True):
-    clock.tick() # Track elapsed milliseconds between snapshots().
-    img = sensor.snapshot() # Take a picture and return the image.
+while True:
+    clock.tick()  # Track elapsed milliseconds between snapshots().
+    img = sensor.snapshot()  # Take a picture and return the image.
 
     # Note that for shadow removal to work the background image must be
     # shadow free and have the same lighting as the latest image. Unlike max()
@@ -52,5 +50,5 @@ while(True):
     diff = hist.get_percentile(0.99).l_value() - hist.get_percentile(0.90).l_value()
     triggered = diff > TRIGGER_THRESHOLD
 
-    print(clock.fps(), triggered) # Note: Your OpenMV Cam runs about half as fast while
+    print(clock.fps(), triggered)  # Note: Your OpenMV Cam runs about half as fast while
     # connected to your computer. The FPS should increase once disconnected.

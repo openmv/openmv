@@ -7,7 +7,7 @@ from pyb import ADC
 
 adc = ADC("A0")
 
-while(True):
+while True:
     # The ADC has 12-bits of resolution for 4096 values.
     print("ADC = %fv" % ((adc.read() * 3.3) / 4095))
     time.sleep_ms(100)

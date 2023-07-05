@@ -11,13 +11,13 @@ import image
 import pyb
 import time
 
-record_time = 10000 # 10 seconds in milliseconds
+record_time = 10000  # 10 seconds in milliseconds
 
-sensor.reset()
-sensor.set_pixformat(sensor.RGB565)
-sensor.set_framesize(sensor.QQVGA)
-sensor.skip_frames(time = 2000)
-clock = time.clock()
+sensor.reset()  # Reset and initialize the sensor.
+sensor.set_pixformat(sensor.RGB565)  # Set pixel format to RGB565 (or GRAYSCALE)
+sensor.set_framesize(sensor.QQVGA)  # Set frame size to QQVGA (160x120)
+sensor.skip_frames(time=2000)  # Wait for settings take effect.
+clock = time.clock()  # Create a clock object to track the FPS.
 
 stream = image.ImageIO("/stream.bin", "w")
 

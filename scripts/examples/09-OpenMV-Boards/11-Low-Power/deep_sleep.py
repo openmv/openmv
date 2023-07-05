@@ -22,7 +22,7 @@ sensor.sleep(True)
 
 # Optionally bypass the regulator on OV7725
 # for the lowest possible power consumption.
-if (sensor.get_id() == sensor.OV7725):
+if sensor.get_id() == sensor.OV7725:
     # Bypass internal regulator
     sensor.__write_reg(0x4F, 0x18)
 

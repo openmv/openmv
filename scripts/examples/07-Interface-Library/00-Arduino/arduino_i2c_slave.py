@@ -27,7 +27,7 @@ data = ustruct.pack("<%ds" % len(text), text)
 
 # The hardware I2C bus for your OpenMV Cam is always I2C bus 2.
 bus = pyb.I2C(2, pyb.I2C.SLAVE, addr=0x12)
-bus.deinit() # Fully reset I2C device...
+bus.deinit()  # Fully reset I2C device...
 bus = pyb.I2C(2, pyb.I2C.SLAVE, addr=0x12)
 print("Waiting for Arduino...")
 
@@ -35,18 +35,20 @@ print("Waiting for Arduino...")
 # Arduino starts to poll the OpenMV Cam for data. Otherwise the I2C byte framing gets messed up,
 # and etc. So, keep the Arduino in reset until the OpenMV Cam is "Waiting for Arduino...".
 
-while(True):
+while True:
     try:
-        bus.send(ustruct.pack("<h", len(data)), timeout=10000) # Send the len first (16-bits).
+        bus.send(
+            ustruct.pack("<h", len(data)), timeout=10000
+        )  # Send the len first (16-bits).
         try:
-            bus.send(data, timeout=10000) # Send the data second.
-            print("Sent Data!") # Only reached on no error.
+            bus.send(data, timeout=10000)  # Send the data second.
+            print("Sent Data!")  # Only reached on no error.
         except OSError as err:
-            pass # Don't care about errors - so pass.
+            pass  # Don't care about errors - so pass.
             # Note that there are 3 possible errors. A timeout error, a general purpose error, or
             # a busy error. The error codes are 116, 5, 16 respectively for "err.arg[0]".
     except OSError as err:
-        pass # Don't care about errors - so pass.
+        pass  # Don't care about errors - so pass.
         # Note that there are 3 possible errors. A timeout error, a general purpose error, or
         # a busy error. The error codes are 116, 5, 16 respectively for "err.arg[0]".
 

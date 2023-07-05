@@ -9,8 +9,8 @@ import time
 
 lan = network.LAN()
 lan.active(True)
-lan.ifconfig(('192.168.1.102', '255.255.255.0', '192.168.1.1', '192.168.1.1'))
+lan.ifconfig(("192.168.1.102", "255.255.255.0", "192.168.1.1", "192.168.1.1"))
 
-while (True):
+while True:
     # Nothing else to do.
     time.sleep(1.0)

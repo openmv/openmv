@@ -11,15 +11,15 @@ import sensor
 import tv
 import time
 
-sensor.reset() # Initialize the camera sensor.
-sensor.set_pixformat(sensor.RGB565) # or sensor.GRAYSCALE
+sensor.reset()  # Initialize the camera sensor.
+sensor.set_pixformat(sensor.RGB565)  # or sensor.GRAYSCALE
 sensor.set_framesize(sensor.SIF)
 clock = time.clock()
 
-tv.init(triple_buffer=False) # Initialize the tv.
-tv.channel(8) # For wireless video transmitter shield
+tv.init(triple_buffer=False)  # Initialize the tv.
+tv.channel(8)  # For wireless video transmitter shield
 
-while(True):
+while True:
     clock.tick()
-    tv.display(sensor.snapshot()) # Take a picture and display the image.
+    tv.display(sensor.snapshot())  # Take a picture and display the image.
     print(clock.fps())

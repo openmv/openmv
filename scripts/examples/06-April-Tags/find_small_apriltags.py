@@ -19,25 +19,28 @@ thresholds = (150, 255)
 
 sensor.reset()
 sensor.set_pixformat(sensor.GRAYSCALE)
-if omv.board_type() == "H7": sensor.set_framesize(sensor.VGA)
-elif omv.board_type() == "M7": sensor.set_framesize(sensor.QVGA)
-else: raise Exception("You need a more powerful OpenMV Cam to run this script")
-sensor.skip_frames(time = 200) # increase this to let the auto methods run for longer
-sensor.set_auto_gain(False) # must be turned off for color tracking
-sensor.set_auto_whitebal(False) # must be turned off for color tracking
+if omv.board_type() == "H7":
+    sensor.set_framesize(sensor.VGA)
+elif omv.board_type() == "M7":
+    sensor.set_framesize(sensor.QVGA)
+else:
+    raise Exception("You need a more powerful OpenMV Cam to run this script")
+sensor.skip_frames(time=200)  # increase this to let the auto methods run for longer
+sensor.set_auto_gain(False)  # must be turned off for color tracking
+sensor.set_auto_whitebal(False)  # must be turned off for color tracking
 clock = time.clock()
 
 # The apriltag code supports up to 6 tag families which can be processed at the same time.
 # Returned tag objects will have their tag family and id within the tag family.
 tag_families = 0
-tag_families |= image.TAG16H5 # comment out to disable this family
-tag_families |= image.TAG25H7 # comment out to disable this family
-tag_families |= image.TAG25H9 # comment out to disable this family
-tag_families |= image.TAG36H10 # comment out to disable this family
-tag_families |= image.TAG36H11 # comment out to disable this family (default family)
-tag_families |= image.ARTOOLKIT # comment out to disable this family
+tag_families |= image.TAG16H5  # comment out to disable this family
+tag_families |= image.TAG25H7  # comment out to disable this family
+tag_families |= image.TAG25H9  # comment out to disable this family
+tag_families |= image.TAG36H10  # comment out to disable this family
+tag_families |= image.TAG36H11  # comment out to disable this family (default family)
+tag_families |= image.ARTOOLKIT  # comment out to disable this family
 
-while(True):
+while True:
     clock.tick()
     img = sensor.snapshot()
 
@@ -47,20 +50,24 @@ while(True):
     # AprilTags may fail due to not having enough ram given the image sie being passed.
     tag_list = []
 
-    for blob in img.find_blobs([thresholds], pixels_threshold=100, area_threshold=100, merge=True):
+    for blob in img.find_blobs(
+        [thresholds], pixels_threshold=100, area_threshold=100, merge=True
+    ):
         # Next we look for a tag in an ROI that's bigger than the blob.
-        w = min(max(int(blob.w() * 1.2), 10), 160) # Not too small, not too big.
-        h = min(max(int(blob.h() * 1.2), 10), 160) # Not too small, not too big.
-        x = min(max(int(blob.x() + (blob.w()/4) - (w * 0.1)), 0), img.width()-1)
-        y = min(max(int(blob.y() + (blob.h()/4) - (h * 0.1)), 0), img.height()-1)
+        w = min(max(int(blob.w() * 1.2), 10), 160)  # Not too small, not too big.
+        h = min(max(int(blob.h() * 1.2), 10), 160)  # Not too small, not too big.
+        x = min(max(int(blob.x() + (blob.w() / 4) - (w * 0.1)), 0), img.width() - 1)
+        y = min(max(int(blob.y() + (blob.h() / 4) - (h * 0.1)), 0), img.height() - 1)
 
-        box_list.append((x, y, w, h)) # We'll draw these later.
+        box_list.append((x, y, w, h))  # We'll draw these later.
 
         # Since we constrict the roi size apriltags shouldn't run out of ram.
         # But, if it does we handle it...
         try:
-            tag_list.extend(img.find_apriltags(roi=(x,y,w,h), families=tag_families))
-        except (MemoryError): # Don't catch all exceptions otherwise you can't stop the script.
+            tag_list.extend(img.find_apriltags(roi=(x, y, w, h), families=tag_families))
+        except (
+            MemoryError
+        ):  # Don't catch all exceptions otherwise you can't stop the script.
             pass
 
     for b in box_list:

@@ -1,11 +1,13 @@
 import time
 from ubluepy import Scanner, constants
 
+
 def bytes_to_str(bytes):
     string = ""
     for b in bytes:
         string += chr(b)
     return string
+
 
 def get_device_names(scan_entries):
     dev_names = []
@@ -18,6 +20,7 @@ def get_device_names(scan_entries):
                 dev_names.append((e, bytes_to_str(s[2])))
     return dev_names
 
+
 def find_device_by_name(name):
     s = Scanner()
     scan_res = s.scan(1000)
@@ -26,7 +29,8 @@ def find_device_by_name(name):
         if name == dev[1]:
             return dev[0]
 
-while (True):
+
+while True:
     res = find_device_by_name("micr")
     if res:
         print("address:", res.addr())

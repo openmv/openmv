@@ -31,10 +31,20 @@ print("Resetting Lepton...")
 # These settings are applied on reset
 sensor.reset()
 sensor.ioctl(sensor.IOCTL_LEPTON_SET_MEASUREMENT_MODE, True)
-sensor.ioctl(sensor.IOCTL_LEPTON_SET_MEASUREMENT_RANGE, min_temp_in_celsius, max_temp_in_celsius)
-print("Lepton Res (%dx%d)" % (sensor.ioctl(sensor.IOCTL_LEPTON_GET_WIDTH),
-                              sensor.ioctl(sensor.IOCTL_LEPTON_GET_HEIGHT)))
-print("Radiometry Available: " + ("Yes" if sensor.ioctl(sensor.IOCTL_LEPTON_GET_RADIOMETRY) else "No"))
+sensor.ioctl(
+    sensor.IOCTL_LEPTON_SET_MEASUREMENT_RANGE, min_temp_in_celsius, max_temp_in_celsius
+)
+print(
+    "Lepton Res (%dx%d)"
+    % (
+        sensor.ioctl(sensor.IOCTL_LEPTON_GET_WIDTH),
+        sensor.ioctl(sensor.IOCTL_LEPTON_GET_HEIGHT),
+    )
+)
+print(
+    "Radiometry Available: "
+    + ("Yes" if sensor.ioctl(sensor.IOCTL_LEPTON_GET_RADIOMETRY) else "No")
+)
 
 sensor.set_pixformat(sensor.GRAYSCALE)
 sensor.set_framesize(sensor.QQVGA)
@@ -45,15 +55,29 @@ clock = time.clock()
 # returned by "find_blobs" below. Change "pixels_threshold" and "area_threshold" if you change the
 # camera resolution. "merge=True" merges all overlapping blobs in the image.
 
-def map_g_to_temp(g):
-    return ((g * (max_temp_in_celsius - min_temp_in_celsius)) / 255.0) + min_temp_in_celsius
 
-while(True):
+def map_g_to_temp(g):
+    return (
+        (g * (max_temp_in_celsius - min_temp_in_celsius)) / 255.0
+    ) + min_temp_in_celsius
+
+
+while True:
     clock.tick()
     img = sensor.snapshot()
-    for blob in img.find_blobs(threshold_list, pixels_threshold=200, area_threshold=200, merge=True):
+    for blob in img.find_blobs(
+        threshold_list, pixels_threshold=200, area_threshold=200, merge=True
+    ):
         stats = img.get_statistics(thresholds=threshold_list, roi=blob.rect())
         img.draw_rectangle(blob.rect())
         img.draw_cross(blob.cx(), blob.cy())
-        img.draw_string(blob.x(), blob.y() - 10, "%.2f C" % map_g_to_temp(stats.mean()), mono_space=False)
-    print("FPS %f - Lepton Temp: %f C" % (clock.fps(), sensor.ioctl(sensor.IOCTL_LEPTON_GET_FPA_TEMPERATURE)))
+        img.draw_string(
+            blob.x(),
+            blob.y() - 10,
+            "%.2f C" % map_g_to_temp(stats.mean()),
+            mono_space=False,
+        )
+    print(
+        "FPS %f - Lepton Temp: %f C"
+        % (clock.fps(), sensor.ioctl(sensor.IOCTL_LEPTON_GET_FPA_TEMPERATURE))
+    )

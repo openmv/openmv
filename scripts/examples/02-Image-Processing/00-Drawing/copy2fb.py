@@ -1,4 +1,4 @@
-# Copy image to framebuffer. 
+# Copy image to framebuffer.
 #
 # This example shows how to load and copy an image to framebuffer for testing.
 

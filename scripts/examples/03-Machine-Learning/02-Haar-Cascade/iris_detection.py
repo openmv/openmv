@@ -34,7 +34,7 @@ print(eyes_cascade)
 # FPS clock
 clock = time.clock()
 
-while (True):
+while True:
     clock.tick()
     # Capture snapshot
     img = sensor.snapshot()

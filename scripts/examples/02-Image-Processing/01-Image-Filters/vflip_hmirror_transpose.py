@@ -15,20 +15,22 @@ import pyb
 sensor.reset()
 sensor.set_pixformat(sensor.RGB565)
 sensor.set_framesize(sensor.QVGA)
-sensor.skip_frames(time = 2000)
+sensor.skip_frames(time=2000)
 clock = time.clock()
 
 mills = pyb.millis()
 counter = 0
 
-while(True):
+while True:
     clock.tick()
 
-    img = sensor.snapshot().replace(vflip=(counter//2)%2,
-                                    hmirror=(counter//4)%2,
-                                    transpose=(counter//8)%2)
+    img = sensor.snapshot().replace(
+        vflip=(counter // 2) % 2,
+        hmirror=(counter // 4) % 2,
+        transpose=(counter // 8) % 2,
+    )
 
-    if (pyb.millis() > (mills + 1000)):
+    if pyb.millis() > (mills + 1000):
         mills = pyb.millis()
         counter += 1
 

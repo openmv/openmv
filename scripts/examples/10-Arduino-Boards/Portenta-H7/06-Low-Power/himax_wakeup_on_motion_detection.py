@@ -2,7 +2,6 @@
 # to wake up from low-power Stop Mode on motion detection interrupts.
 
 import sensor
-import time
 import pyb
 import machine
 from pyb import Pin, ExtInt
@@ -17,18 +16,20 @@ sensor.ioctl(sensor.IOCTL_HIMAX_MD_WINDOW, (0, 0, 320, 240))
 sensor.ioctl(sensor.IOCTL_HIMAX_MD_CLEAR)
 sensor.ioctl(sensor.IOCTL_HIMAX_MD_ENABLE, True)
 
+
 def on_motion(line):
     pass
+
 
 led = pyb.LED(3)
 ext = ExtInt(Pin("PC15"), ExtInt.IRQ_RISING, Pin.PULL_DOWN, on_motion)
 
-while(True):
+while True:
     led.off()
-    sensor.ioctl(sensor.IOCTL_HIMAX_OSC_ENABLE, True)   # Switch to internal OSC
-    sensor.ioctl(sensor.IOCTL_HIMAX_MD_CLEAR)           # Clear MD flag
-    machine.sleep() # Enter low-power mode, will wake up on MD interrupt.
+    sensor.ioctl(sensor.IOCTL_HIMAX_OSC_ENABLE, True)  # Switch to internal OSC
+    sensor.ioctl(sensor.IOCTL_HIMAX_MD_CLEAR)  # Clear MD flag
+    machine.sleep()  # Enter low-power mode, will wake up on MD interrupt.
     sensor.ioctl(sensor.IOCTL_HIMAX_OSC_ENABLE, False)  # Switch back to MCLK
     led.on()
-    for i in range(0, 60): # Capture a few frames
+    for i in range(0, 60):  # Capture a few frames
         img = sensor.snapshot()

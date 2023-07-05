@@ -5,11 +5,11 @@
 import time
 from pyb import Servo
 
-s1 = Servo(1) # P7
-s2 = Servo(2) # P8
-s3 = Servo(3) # P9
+s1 = Servo(1)  # P7
+s2 = Servo(2)  # P8
+s3 = Servo(3)  # P9
 
-while(True):
+while True:
     for i in range(1000):
         s1.pulse_width(1000 + i)
         s2.pulse_width(1999 - i)

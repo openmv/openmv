@@ -12,10 +12,10 @@ import time
 sensor.reset()
 sensor.set_pixformat(sensor.RGB565)
 sensor.set_framesize(sensor.QQVGA)
-sensor.skip_frames(time = 2000)
+sensor.skip_frames(time=2000)
 clock = time.clock()
 
-while(True):
+while True:
     clock.tick()
 
     # A clip_limit of < 0 gives you normal adaptive histogram equalization

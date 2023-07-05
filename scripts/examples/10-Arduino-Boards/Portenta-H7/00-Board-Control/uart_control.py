@@ -12,6 +12,6 @@ from pyb import UART
 # example see the BLE-Shield driver.
 uart = UART(3, 19200)
 
-while(True):
+while True:
     uart.write("Hello World!\r")
     time.sleep_ms(1000)

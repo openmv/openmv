@@ -8,4 +8,3 @@ distance = VL53L1X(i2c)
 while True:
     print("range: mm ", distance.read())
     time.sleep_ms(50)
-    

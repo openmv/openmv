@@ -1,8 +1,11 @@
 import pca9685
 import math
 
+
 class Servos:
-    def __init__(self, i2c, address=0x40, freq=50, min_us=600, max_us=2400, degrees=180):
+    def __init__(
+        self, i2c, address=0x40, freq=50, min_us=600, max_us=2400, degrees=180
+    ):
         self.period = 1000000 / freq
         self.min_duty = self._us2duty(min_us)
         self.max_duty = self._us2duty(max_us)
