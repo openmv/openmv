@@ -7,10 +7,10 @@
 #
 # Add the following script to boot.py:
 #
-##import pyb #(UNCOMMENT THIS LINE!)
-##pyb.usb_mode('VCP+HID') # serial device + mouse (UNCOMMENT THIS LINE!)
-##pyb.usb_mode('VCP+MSC') # serial device + storage device (default)
-##pyb.usb_mode('VCP+HID', hid=pyb.hid_keyboard) # serial device + keyboard
+# import pyb
+# pyb.usb_mode('VCP+HID') # serial device + mouse (UNCOMMENT THIS LINE!)
+# pyb.usb_mode('VCP+MSC') # serial device + storage device (default)
+# pyb.usb_mode('VCP+HID', hid=pyb.hid_keyboard) # serial device + keyboard
 #
 # Copy boot.py to the root of the uSD card and restart the camera, it should now
 # act as a serial device and a mouse.
@@ -20,11 +20,12 @@
 # Note: To restore the default VCP+MSC USB mode, either use the PC to remove boot.py
 # from the uSD card, or use the following Python line: import os; os.remove('boot.py')
 
-import pyb, time
+import pyb
+import time
 
 hid = pyb.USB_HID()
 
-while(True):
+while True:
     # x, y and scroll
     # move 10 pixels to the right
     hid.send((0, 10, 0, 0))

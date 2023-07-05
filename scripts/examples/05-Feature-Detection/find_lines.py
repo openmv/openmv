@@ -9,14 +9,15 @@
 
 # find_lines() finds infinite length lines. Use find_line_segments() to find non-infinite lines.
 
-enable_lens_corr = False # turn on for straighter lines...
+import sensor
+import time
 
-import sensor, image, time
+ENABLE_LENS_CORR = False  # turn on for straighter lines...
 
 sensor.reset()
-sensor.set_pixformat(sensor.RGB565) # grayscale is faster
+sensor.set_pixformat(sensor.RGB565)  # grayscale is faster
 sensor.set_framesize(sensor.QQVGA)
-sensor.skip_frames(time = 2000)
+sensor.skip_frames(time=2000)
 clock = time.clock()
 
 # All line objects have a `theta()` method to get their rotation angle in degrees.
@@ -28,10 +29,11 @@ max_degree = 179
 # All lines also have `x1()`, `y1()`, `x2()`, and `y2()` methods to get their end-points
 # and a `line()` method to get all the above as one 4 value tuple for `draw_line()`.
 
-while(True):
+while True:
     clock.tick()
     img = sensor.snapshot()
-    if enable_lens_corr: img.lens_corr(1.8) # for 2.8mm lens...
+    if ENABLE_LENS_CORR:
+        img.lens_corr(1.8)  # for 2.8mm lens...
 
     # `threshold` controls how many lines in the image are found. Only lines with
     # edge difference magnitude sums greater than `threshold` are detected...
@@ -45,9 +47,9 @@ while(True):
     # `theta_margin` and `rho_margin` control merging similar lines. If two lines
     # theta and rho value differences are less than the margins then they are merged.
 
-    for l in img.find_lines(threshold = 1000, theta_margin = 25, rho_margin = 25):
+    for l in img.find_lines(threshold=1000, theta_margin=25, rho_margin=25):
         if (min_degree <= l.theta()) and (l.theta() <= max_degree):
-            img.draw_line(l.line(), color = (255, 0, 0))
+            img.draw_line(l.line(), color=(255, 0, 0))
             # print(l)
 
     print("FPS %f" % clock.fps())

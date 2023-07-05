@@ -8,8 +8,12 @@
 # a lot of work to be made into somethin useful. This script will reamin to show
 # that the functionality exists, but, in its current state is inadequate.
 
-import time, sensor, image
-from image import SEARCH_EX, SEARCH_DS
+import time
+import sensor
+import image
+from image import SEARCH_EX
+
+# from image import SEARCH_DS
 
 # Reset sensor
 sensor.reset()
@@ -20,7 +24,7 @@ sensor.set_gainceiling(16)
 # Max resolution for template matching with SEARCH_EX is QQVGA
 sensor.set_framesize(sensor.QQVGA)
 # You can set windowing to reduce the search image.
-#sensor.set_windowing(((640-80)//2, (480-60)//2, 80, 60))
+# sensor.set_windowing(((640-80)//2, (480-60)//2, 80, 60))
 sensor.set_pixformat(sensor.GRAYSCALE)
 
 # Load template.
@@ -30,7 +34,7 @@ template = image.Image("/template.pgm")
 clock = time.clock()
 
 # Run template matching
-while (True):
+while True:
     clock.tick()
     img = sensor.snapshot()
 
@@ -41,7 +45,9 @@ while (True):
     #
     # Note1: ROI has to be smaller than the image and bigger than the template.
     # Note2: In diamond search, step and ROI are both ignored.
-    r = img.find_template(template, 0.70, step=4, search=SEARCH_EX) #, roi=(10, 0, 60, 60))
+    r = img.find_template(
+        template, 0.70, step=4, search=SEARCH_EX
+    )  # , roi=(10, 0, 60, 60))
     if r:
         img.draw_rectangle(r)
 

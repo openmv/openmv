@@ -8,4 +8,3 @@ tof = VL53L1X(I2C(2))
 while True:
     print(f"Distance: {tof.read()}mm")
     time.sleep_ms(50)
-    

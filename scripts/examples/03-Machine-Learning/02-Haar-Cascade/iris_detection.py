@@ -7,7 +7,9 @@
 #
 # Note: This script does not detect a face first, use it with the telephoto lens.
 
-import sensor, time, image
+import sensor
+import time
+import image
 
 # Reset sensor
 sensor.reset()
@@ -32,7 +34,7 @@ print(eyes_cascade)
 # FPS clock
 clock = time.clock()
 
-while (True):
+while True:
     clock.tick()
     # Capture snapshot
     img = sensor.snapshot()

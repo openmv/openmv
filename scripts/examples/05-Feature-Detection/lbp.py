@@ -7,8 +7,9 @@
 # a lot of work to be made into somethin useful. This script will reamin to show
 # that the functionality exists, but, in its current state is inadequate.
 
-import sensor, time, image
-sensor.reset()
+import sensor
+import time
+import image
 
 # Reset sensor
 sensor.reset()
@@ -31,10 +32,10 @@ for i in range(0, 30):
     img.draw_string(0, 0, "Please wait...")
 
 d0 = None
-#d0 = image.load_descriptor("/desc.lbp")
+# d0 = image.load_descriptor("/desc.lbp")
 clock = time.clock()
 
-while (True):
+while True:
     clock.tick()
     img = sensor.snapshot()
 
@@ -42,12 +43,12 @@ while (True):
     if objects:
         face = objects[0]
         d1 = img.find_lbp(face)
-        if (d0 == None):
+        if d0 is None:
             d0 = d1
         else:
             dist = image.match_descriptor(d0, d1)
-            img.draw_string(0, 10, "Match %d%%"%(dist))
+            img.draw_string(0, 10, "Match %d%%" % (dist))
 
         img.draw_rectangle(face)
     # Draw FPS
-    img.draw_string(0, 0, "FPS:%.2f"%(clock.fps()))
+    img.draw_string(0, 0, "FPS:%.2f" % (clock.fps()))

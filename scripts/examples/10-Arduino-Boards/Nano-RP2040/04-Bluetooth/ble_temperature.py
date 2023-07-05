@@ -45,7 +45,9 @@ class BLETemperature:
         ((self._handle,),) = self._ble.gatts_register_services((_ENV_SENSE_SERVICE,))
         self._connections = set()
         self._payload = advertising_payload(
-            name=name, services=[_ENV_SENSE_UUID], appearance=_ADV_APPEARANCE_GENERIC_THERMOMETER
+            name=name,
+            services=[_ENV_SENSE_UUID],
+            appearance=_ADV_APPEARANCE_GENERIC_THERMOMETER,
         )
         self._advertise()
 

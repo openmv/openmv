@@ -4,12 +4,15 @@
 #
 # This script shows off how to transfer the frame buffer to your computer as a jpeg image.
 
-import image, network, omv, rpc, sensor, struct
+import omv
+import rpc
+import sensor
+import struct
 
 sensor.reset()
 sensor.set_pixformat(sensor.RGB565)
 sensor.set_framesize(sensor.QVGA)
-sensor.skip_frames(time = 2000)
+sensor.skip_frames(time=2000)
 
 # Turn off the frame buffer connection to the IDE from the OpenMV Cam side.
 #
@@ -31,6 +34,7 @@ omv.disable_fb(True)
 interface = rpc.rpc_usb_vcp_slave()
 
 # Uncomment the below line to setup your OpenMV Cam for control over the lan.
+# import network
 #
 # network_if = network.LAN()
 # network_if.active(True)
@@ -40,6 +44,7 @@ interface = rpc.rpc_usb_vcp_slave()
 
 # Uncomment the below line to setup your OpenMV Cam for control over the wlan.
 #
+# import network
 # network_if = network.WLAN(network.STA_IF)
 # network_if.active(True)
 # network_if.connect('your-ssid', 'your-password')
@@ -49,6 +54,7 @@ interface = rpc.rpc_usb_vcp_slave()
 ################################################################
 # Call Backs
 ################################################################
+
 
 # When called sets the pixformat and framesize, takes a snapshot
 # and then returns the frame buffer jpg size to store the image in.
@@ -61,8 +67,10 @@ def jpeg_image_snapshot(data):
     img = sensor.snapshot().compress(quality=90)
     return struct.pack("<I", img.size())
 
+
 def jpeg_image_read_cb():
-    interface.put_bytes(sensor.get_fb().bytearray(), 5000) # timeout
+    interface.put_bytes(sensor.get_fb().bytearray(), 5000)  # timeout
+
 
 # Read data from the frame buffer given a offset and size.
 # If data is empty then a transfer is scheduled after the RPC call finishes.
@@ -74,7 +82,8 @@ def jpeg_image_read(data):
         return bytes()
     else:
         offset, size = struct.unpack("<II", data)
-        return memoryview(sensor.get_fb().bytearray())[offset:offset+size]
+        return memoryview(sensor.get_fb().bytearray())[offset : offset + size]
+
 
 # Register call backs.
 

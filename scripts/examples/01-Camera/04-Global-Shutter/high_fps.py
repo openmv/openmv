@@ -12,18 +12,19 @@
 # time so you will not get the maximum readout speed unless you reduce the exposure time too.
 # This results in a dark image however so YOU NEED A LOT of lighting for high FPS.
 
-import sensor, image, time
+import sensor
+import time
 
-sensor.reset()                      # Reset and initialize the sensor.
-sensor.set_pixformat(sensor.GRAYSCALE) # Set pixel format to GRAYSCALE
-sensor.set_framesize(sensor.QQVGA)  # Set frame size to QQVGA (160x120) - make smaller to go faster
-sensor.skip_frames(time = 2000)     # Wait for settings take effect.
-clock = time.clock()                # Create a clock object to track the FPS.
+sensor.reset()  # Reset and initialize the sensor.
+sensor.set_pixformat(sensor.GRAYSCALE)  # Set pixel format to GRAYSCALE
+sensor.set_framesize(sensor.QQVGA)  # Set frame size to QQVGA (160x120)
+sensor.skip_frames(time=2000)  # Wait for settings take effect.
+clock = time.clock()  # Create a clock object to track the FPS.
 
-sensor.set_auto_exposure(True, exposure_us=5000) # make smaller to go faster
+sensor.set_auto_exposure(True, exposure_us=5000)  # make smaller to go faster
 
-while(True):
-    clock.tick()                    # Update the FPS clock.
-    img = sensor.snapshot()         # Take a picture and return the image.
-    print(clock.fps())              # Note: OpenMV Cam runs about half as fast when connected
-                                    # to the IDE. The FPS should increase once disconnected.
+while True:
+    clock.tick()  # Update the FPS clock.
+    img = sensor.snapshot()  # Take a picture and return the image.
+    print(clock.fps())  # Note: OpenMV Cam runs about half as fast when connected
+    # to the IDE. The FPS should increase once disconnected.

@@ -2,7 +2,8 @@
 #
 # This example prints the cable connection status.
 
-import network, time
+import network
+import time
 
 lan = network.LAN()
 
@@ -12,9 +13,9 @@ lan.config(low_power=False)
 # Delay for auto negotiation
 time.sleep(3.0)
 
-while (True):
+while True:
     print("Cable is", "connected." if lan.status() else "disconnected.")
     time.sleep(1.0)
 
 # Put Eth back in low-power mode if needed.
-#lan.config(low_power=True)
+# lan.config(low_power=True)

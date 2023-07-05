@@ -12,18 +12,19 @@
 # continously by the camera and because you have to wait for the integration to finish before
 # readout of the frame.
 
-import sensor, image, time
+import sensor
+import time
 
-sensor.reset()                      # Reset and initialize the sensor.
-sensor.set_pixformat(sensor.GRAYSCALE) # Set pixel format to GRAYSCALE
-sensor.set_framesize(sensor.VGA)    # Set frame size to VGA (640x480)
-sensor.skip_frames(time = 2000)     # Wait for settings take effect.
-clock = time.clock()                # Create a clock object to track the FPS.
+sensor.reset()  # Reset and initialize the sensor.
+sensor.set_pixformat(sensor.GRAYSCALE)  # Set pixel format to GRAYSCALE
+sensor.set_framesize(sensor.VGA)  # Set frame size to VGA (640x480)
+sensor.skip_frames(time=2000)  # Wait for settings take effect.
+clock = time.clock()  # Create a clock object to track the FPS.
 
 sensor.ioctl(sensor.IOCTL_SET_TRIGGERED_MODE, True)
 
-while(True):
-    clock.tick()                    # Update the FPS clock.
-    img = sensor.snapshot()         # Take a picture and return the image.
-    print(clock.fps())              # Note: OpenMV Cam runs about half as fast when connected
-                                    # to the IDE. The FPS should increase once disconnected.
+while True:
+    clock.tick()  # Update the FPS clock.
+    img = sensor.snapshot()  # Take a picture and return the image.
+    print(clock.fps())  # Note: OpenMV Cam runs about half as fast when connected
+    # to the IDE. The FPS should increase once disconnected.

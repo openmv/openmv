@@ -12,11 +12,11 @@ on:
     branches:    
       - 'master'
     paths:
-      - 'scripts/examples/*.py'
-      - 'scripts/libraries/*.py'
+      - 'scripts/examples/**.py'
+      - 'scripts/libraries/**.py'
 
 jobs:
-  build:
+  formatting-check:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -35,12 +35,12 @@ jobs:
 
     - name: '🛠 Install dependencies'
       run: |
-        pip install -r requirements.txt
+        pip install -r .github/workflows/requirements.txt
         flake8 --version
         pytest --version
 
     - name: '😾 Lint with flake8'
       run: |
         # stop the build if there are Python syntax errors or undefined names
-        flake8 --count --select=E9,F63,F7,F82 --ignore=F821 --show-source --statistics scripts/libraries/
-        flake8 --count --max-complexity=15 --max-line-length=120 --ignore=F821,E722,E741,C901,E713,W605,E203,W503,F841,F403,F405 --statistics scripts/libraries/
+        flake8 --count --select=E9,F63,F7,F82 --ignore=F821 --show-source --statistics scripts/libraries/ scripts/examples/
+        flake8 --count --max-complexity=15 --max-line-length=120 --ignore=F821,E722,E741,C901,E713,W605,E203,W503,F841,F403,F405 --statistics scripts/libraries/ scripts/examples/

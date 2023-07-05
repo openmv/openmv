@@ -1,7 +1,3 @@
-import sys
-
-sys.path.append("")
-
 from micropython import const
 
 import uasyncio as asyncio
@@ -62,5 +58,6 @@ async def main():
     t1 = asyncio.create_task(sensor_task())
     t2 = asyncio.create_task(peripheral_task())
     await asyncio.gather(t1, t2)
+
 
 asyncio.run(main())

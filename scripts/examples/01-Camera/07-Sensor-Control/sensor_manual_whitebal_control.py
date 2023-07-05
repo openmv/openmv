@@ -13,13 +13,14 @@
 # the sensor on startup you can control the colors
 # the camera sees.
 
-import sensor, image, time
+import sensor
+import time
 
-sensor.reset()                      # Reset and initialize the sensor.
-sensor.set_pixformat(sensor.RGB565) # Set pixel format to RGB565 (or GRAYSCALE)
-sensor.set_framesize(sensor.QVGA)   # Set frame size to QVGA (320x240)
-sensor.skip_frames(time = 2000)     # Wait for settings take effect.
-clock = time.clock()                # Create a clock object to track the FPS.
+sensor.reset()  # Reset and initialize the sensor.
+sensor.set_pixformat(sensor.RGB565)  # Set pixel format to RGB565 (or GRAYSCALE)
+sensor.set_framesize(sensor.QVGA)  # Set frame size to QVGA (320x240)
+sensor.skip_frames(time=2000)  # Wait for settings take effect.
+clock = time.clock()  # Create a clock object to track the FPS.
 
 # You can control the white balance gains here. The first value is the
 # R gain in db, and then the G gain in db, followed by the B gain in db.
@@ -32,8 +33,7 @@ clock = time.clock()                # Create a clock object to track the FPS.
 # comming out. Do not expect the exact value going in to be equal to the value
 # comming out.
 
-while(True):
-    clock.tick()                    # Update the FPS clock.
-    img = sensor.snapshot()         # Take a picture and return the image.
-    print(clock.fps(), \
-        sensor.get_rgb_gain_db())   # Prints the AWB current RGB gains.
+while True:
+    clock.tick()  # Update the FPS clock.
+    img = sensor.snapshot()  # Take a picture and return the image.
+    print(clock.fps(), sensor.get_rgb_gain_db())  # Prints the AWB current RGB gains.

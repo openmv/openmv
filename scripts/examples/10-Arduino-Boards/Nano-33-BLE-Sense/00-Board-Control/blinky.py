@@ -8,7 +8,7 @@ led_green = LED(2)
 led_blue = LED(3)
 led_yellow = LED(4)
 
-while (True):
+while True:
     led_blue.on()
     time.sleep_ms(250)
     led_blue.off()
@@ -26,4 +26,3 @@ while (True):
     led_yellow.off()
 
     time.sleep_ms(500)
-    

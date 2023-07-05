@@ -14,7 +14,7 @@ appKey = "12345678901234567890123456789012"
 try:
     lora.join_OTAA(appEui, appKey)
     # Or ABP:
-    #lora.join_ABP(devAddr, nwkSKey, appSKey, timeout=5000)
+    # lora.join_ABP(devAddr, nwkSKey, appSKey, timeout=5000)
 # You can catch individual errors like timeout, rx etc...
 except LoraErrorTimeout as e:
     print("Something went wrong; are you indoor? Move near a window and retry")
@@ -35,8 +35,8 @@ except LoraErrorTimeout as e:
     print("ErrorTimeout:", e)
 
 # Read downlink messages
-while (True):
-    if (lora.available()):
+while True:
+    if lora.available():
         data = lora.receive_data()
         if data:
             print("Port: " + data["port"])

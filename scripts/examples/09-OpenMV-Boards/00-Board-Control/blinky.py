@@ -7,7 +7,7 @@ from machine import Pin
 # other than the RGB LED connected to Nina WiFi module.
 led = Pin("LED_BLUE", Pin.OUT)
 
-while (True):
+while True:
     led.on()
     time.sleep_ms(250)
     led.off()

@@ -1,10 +1,11 @@
 # Simple HTTP client example.
 
-import network, usocket
+import network
+import usocket
 
 # AP info
-SSID='' # Network SSID
-KEY=''  # Network key
+SSID = ""  # Network SSID
+KEY = ""  # Network key
 
 PORT = 80
 HOST = "www.google.com"
@@ -30,7 +31,7 @@ client.connect(addr)
 client.settimeout(3.0)
 
 # Send HTTP request and recv response
-client.send("GET / HTTP/1.1\r\nHost: %s\r\n\r\n"%(HOST))
+client.send("GET / HTTP/1.1\r\nHost: %s\r\n\r\n" % (HOST))
 print(client.recv(1024))
 
 # Close socket

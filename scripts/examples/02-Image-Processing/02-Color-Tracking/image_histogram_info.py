@@ -2,17 +2,18 @@
 #
 # This script computes the histogram of the image and prints it out.
 
-import sensor, image, time
+import sensor
+import time
 
 sensor.reset()
-sensor.set_pixformat(sensor.GRAYSCALE) # or RGB565.
+sensor.set_pixformat(sensor.GRAYSCALE)  # or RGB565.
 sensor.set_framesize(sensor.QVGA)
-sensor.skip_frames(time = 2000)
-sensor.set_auto_gain(False) # must be turned off for color tracking
-sensor.set_auto_whitebal(False) # must be turned off for color tracking
+sensor.skip_frames(time=2000)
+sensor.set_auto_gain(False)  # must be turned off for color tracking
+sensor.set_auto_whitebal(False)  # must be turned off for color tracking
 clock = time.clock()
 
-while(True):
+while True:
     clock.tick()
     img = sensor.snapshot()
     # Gets the grayscale histogram for the image into 8 bins.

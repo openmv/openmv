@@ -3,16 +3,19 @@
 # This example shows off how to overlay a heatmap onto your OpenMV Cam's
 # live video output from the main camera.
 
-import sensor, image, time, fir
+import sensor
+import image
+import time
+import fir
 
-drawing_hint = image.BICUBIC # or image.BILINEAR or 0 (nearest neighbor)
+drawing_hint = image.BICUBIC  # or image.BILINEAR or 0 (nearest neighbor)
 
-ALT_OVERLAY = False # Set to True to allocate a second ir image.
+ALT_OVERLAY = False  # Set to True to allocate a second ir image.
 
 sensor.reset()
 sensor.set_pixformat(sensor.RGB565)
 sensor.set_framesize(sensor.QQVGA)
-sensor.skip_frames(time = 2000)
+sensor.skip_frames(time=2000)
 
 # Initialize the thermal sensor
 fir.init()
@@ -23,7 +26,7 @@ extra_fb = sensor.alloc_extra_fb(sensor.width(), sensor.height(), sensor.RGB565)
 # FPS clock
 clock = time.clock()
 
-while (True):
+while True:
     clock.tick()
 
     # Capture an image
@@ -49,9 +52,13 @@ while (True):
         img.blend(extra_fb, alpha=128)
 
     # Draw ambient, min and max temperatures.
-    img.draw_string(8, 0, "Ta: %0.2f C" % ta, color = (255, 0, 0), mono_space = False)
-    img.draw_string(8, 8, "To min: %0.2f C" % to_min, color = (255, 0, 0), mono_space = False)
-    img.draw_string(8, 16, "To max: %0.2f C"% to_max, color = (255, 0, 0), mono_space = False)
+    img.draw_string(8, 0, "Ta: %0.2f C" % ta, color=(255, 0, 0), mono_space=False)
+    img.draw_string(
+        8, 8, "To min: %0.2f C" % to_min, color=(255, 0, 0), mono_space=False
+    )
+    img.draw_string(
+        8, 16, "To max: %0.2f C" % to_max, color=(255, 0, 0), mono_space=False
+    )
 
     # Force high quality streaming...
     img.compress(quality=90)

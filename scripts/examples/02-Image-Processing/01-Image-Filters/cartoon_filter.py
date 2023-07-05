@@ -4,15 +4,16 @@
 # filter works by joining similar pixel areas of an image and replacing
 # the pixels in those areas with the area mean.
 
-import sensor, image, time
+import sensor
+import time
 
 sensor.reset()
-sensor.set_pixformat(sensor.RGB565) # or GRAYSCALE...
-sensor.set_framesize(sensor.QVGA) # or QQVGA...
-sensor.skip_frames(time = 2000)
+sensor.set_pixformat(sensor.RGB565)  # or GRAYSCALE...
+sensor.set_framesize(sensor.QVGA)  # or QQVGA...
+sensor.skip_frames(time=2000)
 clock = time.clock()
 
-while(True):
+while True:
     clock.tick()
 
     # seed_threshold controls the maximum area growth of a colored

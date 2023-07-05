@@ -11,7 +11,9 @@
 # contrast check in constant time (the reason for feature detection being
 # grayscale only is because of the space requirment for the integral image).
 
-import sensor, time, image
+import sensor
+import time
+import image
 
 # Reset sensor
 sensor.reset()
@@ -31,7 +33,7 @@ print(face_cascade)
 # FPS clock
 clock = time.clock()
 
-while (True):
+while True:
     clock.tick()
 
     # Capture snapshot

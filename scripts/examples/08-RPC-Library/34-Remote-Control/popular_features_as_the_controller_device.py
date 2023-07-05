@@ -6,7 +6,9 @@
 #
 # This script is designed to pair with "popular_features_as_the_remote_device.py".
 
-import json, rpc, struct
+import json
+import rpc
+import struct
 
 # The RPC library above is installed on your OpenMV Cam and provides mutliple classes for
 # allowing your OpenMV Cam to control over CAN, I2C, SPI, or UART.
@@ -61,20 +63,27 @@ interface = rpc.rpc_uart_master(baudrate=115200)
 # Call Back Handlers
 ##############################################################
 
+
 def exe_face_detection():
     result = interface.call("face_detection")
     if result is not None and len(result):
-        print("Largest Face Detected [x=%d, y=%d, w=%d, h=%d]" % struct.unpack("<HHHH", result))
+        print(
+            "Largest Face Detected [x=%d, y=%d, w=%d, h=%d]"
+            % struct.unpack("<HHHH", result)
+        )
+
 
 def exe_person_detection():
     result = interface.call("person_detection")
     if result is not None:
         print(bytes(result).decode())
 
+
 def exe_qrcode_detection():
     result = interface.call("qrcode_detection")
     if result is not None and len(result):
         print(bytes(result).decode())
+
 
 def exe_all_qrcode_detection():
     result = interface.call("all_qrcode_detection")
@@ -83,10 +92,15 @@ def exe_all_qrcode_detection():
         for obj in json.loads(result):
             print(obj)
 
+
 def exe_apriltag_detection():
     result = interface.call("apriltag_detection")
     if result is not None and len(result):
-        print("Largest Tag Detected [cx=%d, cy=%d, id=%d, rot=%d]" % struct.unpack("<HHHH",result))
+        print(
+            "Largest Tag Detected [cx=%d, cy=%d, id=%d, rot=%d]"
+            % struct.unpack("<HHHH", result)
+        )
+
 
 def exe_all_apriltag_detection():
     result = interface.call("all_apriltag_detection")
@@ -95,10 +109,12 @@ def exe_all_apriltag_detection():
         for obj in json.loads(result):
             print(obj)
 
+
 def exe_datamatrix_detection():
     result = interface.call("datamatrix_detection")
     if result is not None and len(result):
         print(bytes(result).decode())
+
 
 def exe_all_datamatrix_detection():
     result = interface.call("all_datamatrix_detection")
@@ -107,10 +123,12 @@ def exe_all_datamatrix_detection():
         for obj in json.loads(result):
             print(obj)
 
+
 def exe_barcode_detection():
     result = interface.call("barcode_detection")
     if result is not None and len(result):
         print(bytes(result).decode())
+
 
 def exe_all_barcode_detection():
     result = interface.call("all_barcode_detection")
@@ -119,15 +137,19 @@ def exe_all_barcode_detection():
         for obj in json.loads(result):
             print(obj)
 
+
 def exe_color_detection():
-    thresholds = (30, 100, 15, 127, 15, 127) # generic red thresholds
+    thresholds = (30, 100, 15, 127, 15, 127)  # generic red thresholds
     # thresholds = (30, 100, -64, -8, -32, 32) # generic green thresholds
     # thresholds = (0, 30, 0, 64, -128, 0) # generic blue thresholds
     result = interface.call("color_detection", struct.pack("<bbbbbb", *thresholds))
     if result is not None and len(result):
         print("Largest Color Detected [cx=%d, cy=%d]" % struct.unpack("<HH", result))
 
+
 number = 0
+
+
 def exe_jpeg_snapshot():
     global number
     result = interface.call("jpeg_snapshot")
@@ -138,12 +160,13 @@ def exe_jpeg_snapshot():
             snap.write(result)
             number += 1
 
+
 # Execute remote functions in a loop. Please choose and uncomment one remote function below.
 # Executing multiple at a time may run slowly if the camera needs to change camera modes
 # per execution.
 
-while(True):
-    exe_face_detection() # Face should be about 2ft away.
+while True:
+    exe_face_detection()  # Face should be about 2ft away.
     # exe_person_detection()
     # exe_qrcode_detection() # Place the QRCode about 2ft away.
     # exe_all_qrcode_detection() # Place the QRCode about 2ft away.

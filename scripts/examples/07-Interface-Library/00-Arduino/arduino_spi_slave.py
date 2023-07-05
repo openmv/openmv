@@ -8,10 +8,12 @@
 # OpenMV Cam Slave Select        (P3) - Arduino Uno SS   (10)
 # OpenMV Cam Ground                   - Arduino Ground
 
-import pyb, ustruct, time
+import pyb
+import ustruct
+import time
 
 text = "Hello World!\n"
-data = ustruct.pack("<bi%ds" % len(text), 85, len(text), text) # 85 is a sync char.
+data = ustruct.pack("<bi%ds" % len(text), 85, len(text), text)  # 85 is a sync char.
 # Use "ustruct" to build data packets to send.
 # "<" puts the data in the struct in little endian order.
 # "b" puts a signed char in the data stream.
@@ -38,20 +40,22 @@ data = ustruct.pack("<bi%ds" % len(text), 85, len(text), text) # 85 is a sync ch
 # phase = 0 -> sample data on rising clock edge, output data on falling clock edge.
 spi = pyb.SPI(2, pyb.SPI.SLAVE, polarity=0, phase=0)
 
+
 # NSS callback.
 def nss_callback(line):
     global spi, data
     try:
         spi.send(data, timeout=1000)
     except OSError as err:
-        pass # Don't care about errors - so pass.
+        pass  # Don't care about errors - so pass.
         # Note that there are 3 possible errors. A timeout error, a general purpose error, or
         # a busy error. The error codes are 116, 5, 16 respectively for "err.arg[0]".
+
 
 # Configure NSS/CS in IRQ mode to send data when requested by the master.
 pyb.ExtInt(pyb.Pin("P3"), pyb.ExtInt.IRQ_FALLING, pyb.Pin.PULL_UP, nss_callback)
 
-while(True):
+while True:
     time.sleep_ms(1000)
 
 ###################################################################################################
@@ -62,7 +66,7 @@ while(True):
 # #define SS_PIN 10
 # #define BAUD_RATE 19200
 # #define CHAR_BUF 128
-# 
+#
 # void setup() {
 #   pinMode(SS_PIN, OUTPUT);
 #   Serial.begin(BAUD_RATE);
@@ -72,13 +76,13 @@ while(True):
 #   SPI.setDataMode(SPI_MODE0);
 #   delay(1000); // Give the OpenMV Cam time to bootup.
 # }
-# 
+#
 # void loop() {
 #   int32_t len = 0;
 #   char buff[CHAR_BUF] = {0};
 #   digitalWrite(SS_PIN, LOW);
 #   delay(1); // Give the OpenMV Cam some time to setup to send data.
-# 
+#
 #   if(SPI.transfer(1) == 85) { // saw sync char?
 #     SPI.transfer(&len, 4); // get length
 #     if (len) {
@@ -87,7 +91,7 @@ while(True):
 #     }
 #     while (len--) SPI.transfer(0); // eat any remaining bytes
 #   }
-# 
+#
 #   digitalWrite(SS_PIN, HIGH);
 #   Serial.print(buff);
 #   delay(1); // Don't loop to quickly.
