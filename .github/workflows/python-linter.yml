@@ -4,12 +4,6 @@
 name: '🔎 Python Linter'
 
 on:
-  push:
-    branches:    
-      - 'master'
-    paths:
-      - 'scripts/libraries/*.py'
-
   pull_request:
     types:
       - opened
@@ -18,11 +12,11 @@ on:
     branches:    
       - 'master'
     paths:
+      - 'scripts/examples/*.py'
       - 'scripts/libraries/*.py'
 
 jobs:
   build:
-
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -36,13 +30,14 @@ jobs:
     - name: '🐍 Set up Python ${{ matrix.python-version }}'
       uses: actions/setup-python@v4
       with:
+        cache: 'pip'
         python-version: ${{ matrix.python-version }}
 
     - name: '🛠 Install dependencies'
       run: |
-        python -m pip install --upgrade pip
-        python -m pip install flake8 pytest
-        if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+        pip install -r requirements.txt
+        flake8 --version
+        pytest --version
 
     - name: '😾 Lint with flake8'
       run: |
