@@ -12,7 +12,6 @@ require("neopixel")
 # Networking
 require("ntptime")
 require("webrepl")
-freeze ("$(OMV_LIB_DIR)/", "urequests.py")
 
 # Utils
 require("time")
