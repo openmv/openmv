@@ -12,6 +12,7 @@ require("neopixel")
 # Networking
 require("ntptime")
 require("webrepl")
+freeze ("$(MPY_DIR)/lib/micropython-lib/python-ecosys/urequests", "urequests.py")
 
 # Utils
 require("time")

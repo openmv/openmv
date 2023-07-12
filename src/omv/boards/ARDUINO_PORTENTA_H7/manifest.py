@@ -19,6 +19,7 @@ require("webrepl")
 freeze ("$(OMV_LIB_DIR)/", "rpc.py")
 freeze ("$(OMV_LIB_DIR)/", "rtsp.py")
 freeze ("$(OMV_LIB_DIR)/", "mqtt.py")
+freeze ("$(MPY_DIR)/lib/micropython-lib/python-ecosys/urequests", "urequests.py")
 
 # Utils
 require("time")
