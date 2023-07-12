@@ -171,8 +171,9 @@ def request(method, url, data=None, json=None, files=None, headers={}, auth=None
         resp_headers = b"\r\n".join(resp_headers)
         content = b"\r\n".join(response)
     except OSError:
-        s.close()
         raise
+    finally:
+        s.close()
 
     return Response(resp_code, resp_reason, resp_headers, content)
 
