@@ -117,10 +117,8 @@ static void tinyusb_debug_task(void) {
                 // Host-to-device data phase
                 int bytes = MIN(xfer_length, DEBUG_MAX_PACKET);
                 uint32_t count = tud_cdc_read(dbg_buf, bytes);
-                if (count == bytes) {
-                    xfer_length -= count;
-                    usbdbg_data_out(dbg_buf, count);
-                }
+                xfer_length -= count;
+                usbdbg_data_out(dbg_buf, count);
             }
         }
     }
