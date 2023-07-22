@@ -6,10 +6,11 @@
 # This work is licensed under the MIT license, see the file LICENSE for details.
 
 import errno
-import pyb
+import random
 import re
 import socket
 import struct
+import time
 
 
 class rtsp_server:
@@ -87,13 +88,13 @@ class rtsp_server:
         self.__pause_cb = None
         self.__teardown_cb = None
         self.__pathname = ""
-        self.__session = pyb.rng()
+        self.__session = random.getrandbits(30)
         self.__transport_is_tcp = False
         self.__client_rtp_addr = None
         self.__playing = False
         self.__playing_session = 0
-        self.__sequence_number = pyb.rng() & 0xFFFF
-        self.__ssrc = pyb.rng()
+        self.__sequence_number = random.getrandbits(16)
+        self.__ssrc = random.getrandbits(30)
         print("IP Address:Port %s:%d\nRunning..." % self.__myaddr)
 
     def register_setup_cb(self, cb):  # public
@@ -160,7 +161,7 @@ class rtsp_server:
                     elif request == "DESCRIBE":
                         payload = (
                             "v=0\r\no=- %d %d IN IP4 %s\r\ns=OpenMV Video\r\nt=0 0\r\nm=video 0 RTP/AVP 26"
-                            % (pyb.rng(), pyb.rng(), self.__myip)
+                            % (random.getrandbits(30), random.getrandbits(30), self.__myip)
                         )
                         self.__send_rtsp_response_ok(
                             seq,
@@ -185,8 +186,8 @@ class rtsp_server:
                                     self.__client_addr[0],
                                     self.__client_rtcp_port,
                                 )
-                                self.__session = pyb.rng()
-                                self.__ssrc = pyb.rng()
+                                self.__session = random.getrandbits(30)
+                                self.__ssrc = random.getrandbits(30)
                                 self.__valid_udp_socket()
                                 self.__send_rtsp_response_ok(
                                     seq,
@@ -209,8 +210,8 @@ class rtsp_server:
                                 self.__transport_is_tcp = True
                                 self.__client_rtp_channel = int(m.group(1))
                                 self.__client_rtcp_channel = int(m.group(2))
-                                self.__session = pyb.rng()
-                                self.__ssrc = pyb.rng()
+                                self.__session = random.getrandbits(30)
+                                self.__ssrc = random.getrandbits(30)
                                 self.__send_rtsp_response_ok(
                                     seq, "%s\r\nSession: %d\r\n" % (s[2], self.__session)
                                 )
@@ -308,7 +309,7 @@ class rtsp_server:
         if self.__valid_socket():
             try:
                 self.__settimeout(5)
-                timestamp = (pyb.millis() * 90) & 0xFFFFFFFF
+                timestamp = (time.ticks_ms() * 90) & 0xFFFFFFFF
                 mv = memoryview(img)
                 while l:
                     rtp_header = struct.pack(
