@@ -203,4 +203,9 @@
 #define DCMI_HSYNC_PIN             (&omv_pin_DCMI_HSYNC)
 #define DCMI_VSYNC_PIN             (&omv_pin_DCMI_VSYNC)
 #define DCMI_PXCLK_PIN             (&omv_pin_DCMI_PXCLK)
+
+// Temporary Solution to make Bluetooth work.
+#define BT_UART_CTS_PIN             (&omv_pin_BT_UART_CTS)
+#define BT_UART_RTS_PIN             (&omv_pin_BT_UART_RTS)
+
 #endif //__OMV_BOARDCONFIG_H__

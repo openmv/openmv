@@ -91,6 +91,11 @@ void mimxrt_hal_init() {
     edma_config_t edma_config = {0};
     EDMA_GetDefaultConfig(&edma_config);
     EDMA_Init(DMA0, &edma_config);
+
+    // Temporary Solution to make Bluetooth work.
+    omv_gpio_config(BT_UART_CTS_PIN, OMV_GPIO_MODE_INPUT, OMV_GPIO_PULL_NONE, OMV_GPIO_SPEED_LOW, -1);
+    omv_gpio_config(BT_UART_RTS_PIN, OMV_GPIO_MODE_OUTPUT, OMV_GPIO_PULL_NONE, OMV_GPIO_SPEED_LOW, -1);
+    omv_gpio_write(BT_UART_RTS_PIN, 0);
 }
 
 void mimxrt_hal_bootloader() {
