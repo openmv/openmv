@@ -271,6 +271,7 @@ soft_reset:
 
     mp_printf(MP_PYTHON_PRINTER, "MPY: soft reboot\n");
     machine_pin_irq_deinit();
+    machine_rtc_irq_deinit();
     #if MICROPY_PY_LWIP
     systick_disable_dispatch(SYSTICK_DISPATCH_LWIP);
     #endif
