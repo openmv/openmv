@@ -45,7 +45,9 @@ MEMORY
 
 _start = main;
 __flash_start = ORIGIN(FLASH);
+#if defined(OMV_DRAM_ORIGIN)
 __sdram_start = ORIGIN(DRAM);
+#endif
 __vfs_start = ORIGIN(FLASH_VFS);
 __vfs_end = ORIGIN(FLASH_VFS) + LENGTH(FLASH_VFS);  
 
