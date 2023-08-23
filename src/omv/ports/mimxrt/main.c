@@ -88,6 +88,7 @@ void exec_boot_script(const char *path, bool interruptible) {
 }
 
 int main(void) {
+    bool sdcard_detected = false;
     bool sdcard_mounted = false;
     bool first_soft_reset = true;
 
@@ -139,7 +140,6 @@ soft_reset:
     machine_adc_init();
     #if MICROPY_PY_MACHINE_SDCARD
     machine_sdcard_init0();
-    sdcard_init_pins(&mimxrt_sdcard_objs[MICROPY_HW_SDCARD_SDMMC - 1]);
     #endif
     #if MICROPY_PY_MACHINE_I2S
     machine_i2s_init0();
@@ -187,7 +187,14 @@ soft_reset:
     // Mount or create a fresh filesystem.
     mp_obj_t mount_point = MP_OBJ_NEW_QSTR(MP_QSTR__slash_);
     #if MICROPY_PY_MACHINE_SDCARD
-    if (sdcard_detect(&mimxrt_sdcard_objs[MICROPY_HW_SDCARD_SDMMC - 1])) {
+    mimxrt_sdcard_obj_t *sdcard = &mimxrt_sdcard_objs[MICROPY_HW_SDCARD_SDMMC - 1];
+    if (!sdcard->state->initialized) {
+        mp_hal_pin_input(sdcard->pins->cd_b.pin);
+        sdcard_detected = !mp_hal_pin_read(sdcard->pins->cd_b.pin);
+    } else {
+        sdcard_detected = sdcard_detect(sdcard);
+    }
+    if (sdcard_detected) {
         mp_obj_t args[] = { MP_OBJ_NEW_SMALL_INT(MICROPY_HW_SDCARD_SDMMC) };
         mp_obj_t bdev = MP_OBJ_TYPE_GET_SLOT(&machine_sdcard_type, make_new) (&machine_sdcard_type, 1, 0, args);
         if (mp_vfs_mount_and_chdir_protected(bdev, mount_point) == 0) {
