@@ -14,6 +14,7 @@ CFLAGS += -DCPU_$(MCU_VARIANT)\
           -D__FPU_PRESENT=1 -D__VFP_FP__\
           -DHSE_VALUE=$(OMV_HSE_VALUE) \
           -DMICROPY_PY_MACHINE_SDCARD=1 \
+          -DMICROPY_HW_ENABLE_CAN=1 \
           -DXIP_EXTERNAL_FLASH=1 \
 	      -DXIP_BOOT_HEADER_ENABLE=1 \
 	      -DFSL_SDK_ENABLE_DRIVER_CACHE_CONTROL=1 \
@@ -231,6 +232,7 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/,\
 	led.o                               \
 	machine_adc.o                       \
 	machine_bitstream.o                 \
+	machine_can.o                       \
 	machine_i2c.o                       \
 	machine_i2s.o                       \
 	machine_led.o                       \

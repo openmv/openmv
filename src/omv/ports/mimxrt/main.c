@@ -123,9 +123,6 @@ soft_reset:
     #endif // MICROPY_PY_BUZZER
     imlib_init_all();
     readline_init0();
-    #if MICROPY_HW_ENABLE_CAN
-    can_init0();
-    #endif
     fb_alloc_init0();
     framebuffer_init0();
     sensor_init0();
@@ -277,6 +274,9 @@ soft_reset:
     }
 
     mp_printf(MP_PYTHON_PRINTER, "MPY: soft reboot\n");
+    #if MICROPY_HW_ENABLE_CAN
+    machine_can_irq_deinit();
+    #endif
     machine_pin_irq_deinit();
     machine_rtc_irq_deinit();
     #if MICROPY_PY_LWIP
