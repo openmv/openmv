@@ -8,12 +8,9 @@
  *
  * Fast approximate math functions.
  */
+#include <arm_math.h>
 #include "fmath.h"
 #include "omv_common.h"
-
-#define M_PI      3.14159265f
-#define M_PI_2    1.57079632f
-#define M_PI_4    0.78539816f
 
 const float __atanf_lut[4] = {
     -0.0443265554792128f,    //p7
@@ -55,7 +52,11 @@ float OMV_ATTR_ALWAYS_INLINE fast_sqrtf(float x) {
 int OMV_ATTR_ALWAYS_INLINE fast_floorf(float x) {
     int i;
     asm volatile (
+    #if (__CORTEX_M > 4)
         "vcvtm.S32.f32  %[r], %[x]\n"
+    #else
+        "vcvt.S32.f32  %[r], %[x]\n"
+    #endif
         : [r] "=t" (i)
         : [x] "t"  (x));
     return i;
@@ -63,8 +64,18 @@ int OMV_ATTR_ALWAYS_INLINE fast_floorf(float x) {
 
 int OMV_ATTR_ALWAYS_INLINE fast_ceilf(float x) {
     int i;
+    #if (__CORTEX_M > 4)
     asm volatile (
         "vcvtp.S32.f32  %[r], %[x]\n"
+    #else
+    #pragma GCC diagnostic push
+    #pragma GCC diagnostic ignored "-Wstrict-aliasing"
+    uint32_t max = 0x3f7fffff;
+    x += *((float *) &max);
+    #pragma GCC diagnostic pop
+    asm volatile (
+        "vcvt.S32.f32  %[r], %[x]\n"
+    #endif
         : [r] "=t" (i)
         : [x] "t"  (x));
     return i;
@@ -86,7 +97,6 @@ float OMV_ATTR_ALWAYS_INLINE fast_fabsf(float x) {
         : [x] "t"  (x));
     return x;
 }
-
 #endif
 
 #pragma GCC diagnostic push
