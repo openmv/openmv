@@ -938,21 +938,21 @@ mp_obj_t py_fir_draw_ir(uint n_args, const mp_obj_t *args, mp_map_t *kw_args) {
 
     image_hint_t hint = py_helper_keyword_int(n_args, args, offset + 7, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_hint), 0);
 
-    int arg_x_size;
-    bool got_x_size = py_helper_keyword_int_maybe(n_args,
-                                                  args,
-                                                  offset + 8,
-                                                  kw_args,
-                                                  MP_OBJ_NEW_QSTR(MP_QSTR_x_size),
-                                                  &arg_x_size);
+    float arg_x_size;
+    bool got_x_size = py_helper_keyword_float_maybe(n_args,
+                                                    args,
+                                                    offset + 8,
+                                                    kw_args,
+                                                    MP_OBJ_NEW_QSTR(MP_QSTR_x_size),
+                                                    &arg_x_size);
 
-    int arg_y_size;
-    bool got_y_size = py_helper_keyword_int_maybe(n_args,
-                                                  args,
-                                                  offset + 9,
-                                                  kw_args,
-                                                  MP_OBJ_NEW_QSTR(MP_QSTR_y_size),
-                                                  &arg_y_size);
+    float arg_y_size;
+    bool got_y_size = py_helper_keyword_float_maybe(n_args,
+                                                    args,
+                                                    offset + 9,
+                                                    kw_args,
+                                                    MP_OBJ_NEW_QSTR(MP_QSTR_y_size),
+                                                    &arg_y_size);
 
     if (got_x_scale && got_x_size) {
         mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Choose either x_scale or x_size not both!"));
@@ -963,11 +963,11 @@ mp_obj_t py_fir_draw_ir(uint n_args, const mp_obj_t *args, mp_map_t *kw_args) {
     }
 
     if (got_x_size) {
-        arg_x_scale = arg_x_size / ((float) arg_roi.w);
+        arg_x_scale = arg_x_size / arg_roi.w;
     }
 
     if (got_y_size) {
-        arg_y_scale = arg_y_size / ((float) arg_roi.h);
+        arg_y_scale = arg_y_size / arg_roi.h;
     }
 
     if ((!got_x_scale) && (!got_x_size) && got_y_size) {
@@ -1050,11 +1050,13 @@ mp_obj_t py_fir_snapshot(uint n_args, const mp_obj_t *args, mp_map_t *kw_args) {
 
     image_hint_t hint = py_helper_keyword_int(n_args, args, 10, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_hint), 0);
 
-    int arg_x_size;
-    bool got_x_size = py_helper_keyword_int_maybe(n_args, args, 11, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_x_size), &arg_x_size);
+    float arg_x_size;
+    bool got_x_size = py_helper_keyword_float_maybe(n_args, args, 11, kw_args,
+                                                    MP_OBJ_NEW_QSTR(MP_QSTR_x_size), &arg_x_size);
 
-    int arg_y_size;
-    bool got_y_size = py_helper_keyword_int_maybe(n_args, args, 12, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_y_size), &arg_y_size);
+    float arg_y_size;
+    bool got_y_size = py_helper_keyword_float_maybe(n_args, args, 12, kw_args,
+                                                    MP_OBJ_NEW_QSTR(MP_QSTR_y_size), &arg_y_size);
 
     if (got_x_scale && got_x_size) {
         mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Choose either x_scale or x_size not both!"));
@@ -1065,11 +1067,11 @@ mp_obj_t py_fir_snapshot(uint n_args, const mp_obj_t *args, mp_map_t *kw_args) {
     }
 
     if (got_x_size) {
-        arg_x_scale = arg_x_size / ((float) arg_roi.w);
+        arg_x_scale = arg_x_size / arg_roi.w;
     }
 
     if (got_y_size) {
-        arg_y_scale = arg_y_size / ((float) arg_roi.h);
+        arg_y_scale = arg_y_size / arg_roi.h;
     }
 
     if ((!got_x_scale) && (!got_x_size) && got_y_size) {
