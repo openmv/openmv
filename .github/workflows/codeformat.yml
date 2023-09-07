@@ -42,7 +42,7 @@ jobs:
 
     - name: '📜 Get list of changed files'
       id: changed-files
-      uses: tj-actions/changed-files@v37
+      uses: tj-actions/changed-files@v39
       with:
         files: |
             src/**/*.c
