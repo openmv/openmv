@@ -11,12 +11,7 @@
 #include "fb_alloc.h"
 #include "framebuffer.h"
 #include "omv_boardconfig.h"
-
-#ifndef __DCACHE_PRESENT
-#define FB_ALLOC_ALIGNMENT    32 // Use 32-byte alignment on MCUs with no cache for DMA buffer alignment.
-#else
-#define FB_ALLOC_ALIGNMENT    __SCB_DCACHE_LINE_SIZE
-#endif
+#include "omv_common.h"
 
 extern char _fballoc;
 static char *pointer = &_fballoc;
@@ -130,8 +125,8 @@ void *fb_alloc(uint32_t size, int hints) {
     size = ((size + sizeof(uint32_t) - 1) / sizeof(uint32_t)) * sizeof(uint32_t); // Round Up
 
     if (hints & FB_ALLOC_CACHE_ALIGN) {
-        size = ((size + FB_ALLOC_ALIGNMENT - 1) / FB_ALLOC_ALIGNMENT) * FB_ALLOC_ALIGNMENT;
-        size += FB_ALLOC_ALIGNMENT - sizeof(uint32_t);
+        size = ((size + OMV_ALLOC_ALIGNMENT - 1) / OMV_ALLOC_ALIGNMENT) * OMV_ALLOC_ALIGNMENT;
+        size += OMV_ALLOC_ALIGNMENT - sizeof(uint32_t);
     }
 
     char *result = pointer - size;
@@ -165,9 +160,9 @@ void *fb_alloc(uint32_t size, int hints) {
     #endif
 
     if (hints & FB_ALLOC_CACHE_ALIGN) {
-        int offset = ((uint32_t) result) % FB_ALLOC_ALIGNMENT;
+        int offset = ((uint32_t) result) % OMV_ALLOC_ALIGNMENT;
         if (offset) {
-            result += FB_ALLOC_ALIGNMENT - offset;
+            result += OMV_ALLOC_ALIGNMENT - offset;
         }
     }
 
@@ -223,13 +218,14 @@ void *fb_alloc_all(uint32_t *size, int hints) {
     #endif
 
     if (hints & FB_ALLOC_CACHE_ALIGN) {
-        int offset = ((uint32_t) result) % FB_ALLOC_ALIGNMENT;
+        int offset = ((uint32_t) result) % OMV_ALLOC_ALIGNMENT;
         if (offset) {
-            int inc = FB_ALLOC_ALIGNMENT - offset;
+            int inc = OMV_ALLOC_ALIGNMENT - offset;
             result += inc;
             *size -= inc;
         }
-        *size = (*size / FB_ALLOC_ALIGNMENT) * FB_ALLOC_ALIGNMENT;
+
+        *size = (*size / OMV_ALLOC_ALIGNMENT) * OMV_ALLOC_ALIGNMENT;
     }
 
     return result;

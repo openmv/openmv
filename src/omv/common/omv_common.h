@@ -16,6 +16,15 @@
 #define OMV_ATTR_OPTIMIZE(o)      __attribute__((optimize(o)))
 #define OMV_BREAK()               __asm__ volatile ("BKPT")
 
+// Use 32-byte alignment on MCUs with no cache for DMA buffer alignment.
+#ifndef __DCACHE_PRESENT
+#define OMV_ALLOC_ALIGNMENT       (32)
+#else
+#define OMV_ALLOC_ALIGNMENT       (__SCB_DCACHE_LINE_SIZE)
+#endif
+
+#define OMV_ATTR_ALIGNED_DMA(x)   OMV_ATTR_ALIGNED(x, OMV_ALLOC_ALIGNMENT)
+
 #ifdef OMV_DEBUG_PRINTF
 #define debug_printf(fmt, ...) \
     do { printf("%s(): " fmt, __func__, ##__VA_ARGS__);} while (0)
@@ -36,4 +45,5 @@
     })
 
 #define OMV_ARRAY_SIZE(a)         (sizeof(a) / sizeof(a[0]))
+
 #endif //__OMV_COMMON_H__
