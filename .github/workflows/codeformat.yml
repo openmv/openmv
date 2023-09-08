@@ -27,7 +27,6 @@ jobs:
       with:
         submodules: false
         persist-credentials: false
-#        repository: ${{ github.event.pull_request.head.repo.full_name }}
 
     - name: '♻ Caching dependencies'
       uses: actions/cache@v3.3.1
