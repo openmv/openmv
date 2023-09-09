@@ -319,12 +319,6 @@ static int set_auto_exposure(sensor_t *sensor, int enable, int exposure_us) {
     ret |= omv_i2c_readw(&sensor->i2c_bus, sensor->slv_addr, horizontal_blanking, &row_time_1);
 
     int clock = sensor_get_xclk_frequency();
-    if (read_mode_reg & MT9V0XX_READ_MODE_COL_BIN_2) {
-        clock /= 2;
-    }
-    if (read_mode_reg & MT9V0XX_READ_MODE_COL_BIN_4) {
-        clock /= 4;
-    }
 
     int exposure = IM_MIN(exposure_us, MICROSECOND_CLKS / 2) * (clock / MICROSECOND_CLKS);
     int row_time = row_time_0 + row_time_1;
@@ -371,12 +365,6 @@ static int get_exposure_us(sensor_t *sensor, int *exposure_us) {
     }
 
     int clock = sensor_get_xclk_frequency();
-    if (read_mode_reg & MT9V0XX_READ_MODE_COL_BIN_2) {
-        clock /= 2;
-    }
-    if (read_mode_reg & MT9V0XX_READ_MODE_COL_BIN_4) {
-        clock /= 4;
-    }
 
     if (reg & (context ? MT9V0X4_AEC_ENABLE_B : MT9V0XX_AEC_ENABLE)) {
         ret |= omv_i2c_readw(&sensor->i2c_bus, sensor->slv_addr, MT9V0XX_AEC_EXPOSURE_OUTPUT, &int_rows);
