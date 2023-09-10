@@ -618,6 +618,38 @@ static int set_lens_correction(sensor_t *sensor, int enable, int radi, int coef)
     return ret;
 }
 
+static int ioctl(sensor_t *sensor, int request, va_list ap) {
+    int ret = 0;
+    uint8_t reg;
+
+    switch (request) {
+        case IOCTL_SET_NIGHT_MODE: {
+            int enable = va_arg(ap, int);
+            ret = omv_i2c_readb(&sensor->i2c_bus, sensor->slv_addr, COM5, &reg);
+            ret |= omv_i2c_writeb(&sensor->i2c_bus, sensor->slv_addr, COM5, COM5_SET_AFR(reg, (enable != 0)));
+            if (enable == 0) {
+                ret |= omv_i2c_writeb(&sensor->i2c_bus, sensor->slv_addr, ADVFL, 0);
+                ret |= omv_i2c_writeb(&sensor->i2c_bus, sensor->slv_addr, ADVFH, 0);
+            }
+            break;
+        }
+        case IOCTL_GET_NIGHT_MODE: {
+            int *enable = va_arg(ap, int *);
+            ret = omv_i2c_readb(&sensor->i2c_bus, sensor->slv_addr, COM5, &reg);
+            if (ret >= 0) {
+                *enable = reg & COM5_AFR;
+            }
+            break;
+        }
+        default: {
+            ret = -1;
+            break;
+        }
+    }
+
+    return ret;
+}
+
 int ov7725_init(sensor_t *sensor) {
     // Initialize sensor structure.
     sensor->reset = reset;
@@ -643,6 +675,7 @@ int ov7725_init(sensor_t *sensor) {
     sensor->set_vflip = set_vflip;
     sensor->set_special_effect = set_special_effect;
     sensor->set_lens_correction = set_lens_correction;
+    sensor->ioctl = ioctl;
 
     // Set sensor flags
     sensor->hw_flags.vsync = 1;

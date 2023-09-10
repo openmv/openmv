@@ -68,6 +68,7 @@
 #define COM5_AFR_8x                 0x08 /* Add frame when AGC reaches 8x gain  */
 #define COM5_AFR_16x                0x0c /* Add frame when AGC reaches 16x gain */
 #define COM5_AEC_NO_LIMIT           0x01 /* No limit to AEC increase step       */
+#define COM5_SET_AFR(r, x)          ((r & 0x7F) | ((x & 0x1) << 7))
 
 #define COM6                        0x0F /* Common Control 6 */
 #define COM6_AUTO_WINDOW            0x01 /* Auto window setting ON/OFF selection when format changes */
