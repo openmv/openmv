@@ -46,6 +46,7 @@
 #define OMV_GPIO_MODE_IT_FALL   ((6 << 17) | IOMUXC_PAD_CTL(DSE, 0U) | IOMUXC_PAD_CTL(HYS, 1U))
 #define OMV_GPIO_MODE_IT_RISE   ((7 << 17) | IOMUXC_PAD_CTL(DSE, 0U) | IOMUXC_PAD_CTL(HYS, 1U))
 #define OMV_GPIO_MODE_IT_BOTH   ((8 << 17) | IOMUXC_PAD_CTL(DSE, 0U) | IOMUXC_PAD_CTL(HYS, 1U))
+
 // *INDENT-OFF*
 
 typedef struct {
@@ -106,14 +107,21 @@ typedef LPI2C_Type *omv_i2c_dev_t;
 #define OMV_SPI_NSS_LOW         (kLPSPI_PcsActiveLow)
 #define OMV_SPI_NSS_HIGH        (kLPSPI_PcsActiveHigh)
 
+#define OMV_SPI_MAX_8BIT_XFER   (32768U - 32U)
+#define OMV_SPI_MAX_16BIT_XFER  (32768U - 16U)
+#define OMV_SPI_MAX_TIMEOUT     (0xFFFFFFFF)
+
 #define OMV_SPI_PORT_BITS                               \
 struct {                                                \
     LPSPI_Type *inst;                                   \
+    lpspi_master_config_t config_backup;                \
     edma_handle_t dma_descr_tx;                         \
     edma_handle_t dma_descr_rx;                         \
     union {                                             \
         lpspi_slave_handle_t  descr_slave;              \
         lpspi_master_handle_t descr_master;             \
+    };                                                  \
+    union {                                             \
         lpspi_slave_edma_handle_t  descr_slave_edma;    \
         lpspi_master_edma_handle_t descr_master_edma;   \
     };                                                  \

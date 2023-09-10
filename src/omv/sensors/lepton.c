@@ -432,7 +432,7 @@ static int snapshot(sensor_t *sensor, image_t *image, uint32_t flags) {
 
                     // Value is the 14/16-bit value from the FLIR IR camera.
                     // However, with AGC enabled only the bottom 8-bits are non-zero.
-                    int value = __REV16(row_ptr[fast_floorf(x * scale_inv)]);
+                    int value = row_ptr[fast_floorf(x * scale_inv)];
 
                     if (lepton.measurement_mode) {
                         // Need to convert 14/16-bits to 8-bits ourselves...

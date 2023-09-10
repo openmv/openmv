@@ -124,7 +124,7 @@ static int omv_spi_prescaler(SPI_TypeDef *spi, uint32_t baudrate) {
     return SPI_BAUDRATEPRESCALER_256;
 }
 
-static void omv_spi_callback(SPI_HandleTypeDef *hspi) {
+static omv_spi_t *omv_spi_get_descr(SPI_HandleTypeDef *hspi) {
     omv_spi_t *spi = NULL;
     if (0) {
     #if defined(SPI1_ID)
@@ -152,18 +152,72 @@ static void omv_spi_callback(SPI_HandleTypeDef *hspi) {
         spi = omv_spi_descr_all[5];
     #endif
     }
-    if (spi == NULL) {
-        return;
-    }
+    return spi;
+}
 
+static void omv_spi_callback_error_check(SPI_HandleTypeDef *hspi, omv_spi_t *spi) {
     if (hspi->ErrorCode != HAL_SPI_ERROR_NONE) {
         spi->xfer_flags |= OMV_SPI_XFER_FAILED;
         spi->xfer_error = hspi->ErrorCode;
         omv_spi_transfer_abort(spi);
+    } else {
+        spi->xfer_flags |= OMV_SPI_XFER_COMPLETE;
+    }
+}
+
+static void *omv_spi_callback_rxbuf(omv_spi_t *spi) {
+    // On TX without RX pRxBuffPtr is zero.
+    uint8_t *rxbuf = (uint8_t *) spi->descr->pRxBuffPtr;
+    if (spi->xfer_flags & OMV_SPI_XFER_HALF) {
+        return rxbuf;
+    } else {
+        // On TX without RX RxXferSize is zero.
+        uint32_t rxsize = spi->descr->RxXferSize * ((spi->xfer_flags & OMV_SPI_XFER_16_BIT) ? 2 : 1);
+        return rxbuf + (rxsize / 2);
+    }
+}
+
+static void omv_spi_callback(SPI_HandleTypeDef *hspi) {
+    omv_spi_t *spi = omv_spi_get_descr(hspi);
+    if (spi == NULL) {
+        return;
     }
 
+    omv_spi_callback_error_check(hspi, spi);
+    spi->xfer_flags &= ~OMV_SPI_XFER_HALF;
+
     if (spi->callback) {
-        spi->callback(spi, spi->userdata);
+        spi->callback(spi, spi->userdata, omv_spi_callback_rxbuf(spi));
+    }
+}
+
+static void omv_spi_half_callback(SPI_HandleTypeDef *hspi) {
+    omv_spi_t *spi = omv_spi_get_descr(hspi);
+    if (spi == NULL) {
+        return;
+    }
+
+    omv_spi_callback_error_check(hspi, spi);
+    spi->xfer_flags |= OMV_SPI_XFER_HALF;
+
+    if (spi->callback) {
+        spi->callback(spi, spi->userdata, omv_spi_callback_rxbuf(spi));
+    }
+}
+
+static void omv_spi_dma_burst_mode(DMA_HandleTypeDef *hdma, bool on, bool sixteenbit) {
+    // Handle may not be initialized.
+    if (hdma->State == HAL_DMA_STATE_READY) {
+        hdma->Init.MemBurst = on ? DMA_MBURST_INC4 : DMA_MBURST_SINGLE;
+        hdma->Init.FIFOThreshold = on ? DMA_FIFO_THRESHOLD_FULL : DMA_FIFO_THRESHOLD_1QUARTERFULL;
+        uint32_t registerValue = ((DMA_Stream_TypeDef *) hdma->Instance)->CR;
+        #if defined(MCU_SERIES_F4) || defined(MCU_SERIES_F7)
+        hdma->Init.PeriphDataAlignment = sixteenbit ? DMA_PDATAALIGN_HALFWORD : DMA_PDATAALIGN_BYTE;
+        registerValue = (registerValue & ~DMA_SxCR_PSIZE) | hdma->Init.PeriphDataAlignment;
+        #endif
+        ((DMA_Stream_TypeDef *) hdma->Instance)->CR = (registerValue & ~DMA_SxCR_MBURST) | hdma->Init.MemBurst;
+        registerValue = ((DMA_Stream_TypeDef *) hdma->Instance)->FCR;
+        ((DMA_Stream_TypeDef *) hdma->Instance)->FCR = (registerValue & ~DMA_SxFCR_FTH) | hdma->Init.FIFOThreshold;
     }
 }
 
@@ -172,6 +226,37 @@ int omv_spi_transfer_start(omv_spi_t *spi, omv_spi_transfer_t *xfer) {
     spi->userdata = xfer->userdata;
     spi->xfer_error = 0;
     spi->xfer_flags = xfer->flags;
+
+    bool sixteenbit = xfer->flags & OMV_SPI_XFER_16_BIT;
+    size_t xfer_byte_size = xfer->size * (sixteenbit ? 2 : 1);
+    #if defined(MCU_SERIES_H7)
+    // Default to moving one element at a time through the fifo for 8-bit/16-bit transfers.
+    uint8_t fthlv = SPI_FIFO_THRESHOLD_01DATA;
+    // Do word sized transfers one at a time.
+    if (!(xfer_byte_size % 4)) {
+        fthlv = sixteenbit ? SPI_FIFO_THRESHOLD_02DATA : SPI_FIFO_THRESHOLD_04DATA;
+    }
+    #endif
+
+    spi->descr->Init.DataSize = sixteenbit ? SPI_DATASIZE_16BIT : SPI_DATASIZE_8BIT;
+    #if defined(MCU_SERIES_H7)
+    spi->descr->Init.FifoThreshold = fthlv;
+    spi->descr->Instance->CFG1 = (spi->descr->Instance->CFG1 & ~SPI_CFG1_DSIZE_Msk) | spi->descr->Init.DataSize;
+    spi->descr->Instance->CFG1 = (spi->descr->Instance->CFG1 & ~SPI_CFG1_FTHLV_Msk) | fthlv;
+    #elif defined(MCU_SERIES_F7)
+    spi->descr->Instance->CR2 = (spi->descr->Instance->CR2 & ~SPI_CR2_DS_Msk) | spi->descr->Init.DataSize;
+    #elif defined(MCU_SERIES_F4)
+    spi->descr->Instance->CR1 = (spi->descr->Instance->CR1 & ~SPI_CR1_DFF_Msk) | spi->descr->Init.DataSize;
+    #endif
+
+    // If the DMA transfer is not a multiple of 16 bytes then we cannot use any burst modes.
+    if (xfer->flags & OMV_SPI_XFER_DMA) {
+        bool on = !(xfer_byte_size % 16);
+        omv_spi_dma_burst_mode(&spi->dma_descr_tx, on, sixteenbit);
+        omv_spi_dma_burst_mode(&spi->dma_descr_rx, on, sixteenbit);
+    }
+
+    spi->xfer_flags &= ~(OMV_SPI_XFER_FAILED | OMV_SPI_XFER_COMPLETE | OMV_SPI_XFER_HALF);
 
     if (spi->xfer_flags & OMV_SPI_XFER_BLOCKING) {
         if (xfer->txbuf && xfer->rxbuf) {
@@ -185,6 +270,21 @@ int omv_spi_transfer_start(omv_spi_t *spi, omv_spi_transfer_t *xfer) {
             }
         } else if (xfer->rxbuf) {
             if (HAL_SPI_Receive(spi->descr, xfer->rxbuf, xfer->size, xfer->timeout) != HAL_OK) {
+                return -1;
+            }
+        }
+    } else if (spi->xfer_flags & OMV_SPI_XFER_NONBLOCK) {
+        if (xfer->txbuf && xfer->rxbuf) {
+            if (HAL_SPI_TransmitReceive_IT(spi->descr, xfer->txbuf,
+                                           xfer->rxbuf, xfer->size) != HAL_OK) {
+                return -1;
+            }
+        } else if (xfer->txbuf) {
+            if (HAL_SPI_Transmit_IT(spi->descr, xfer->txbuf, xfer->size) != HAL_OK) {
+                return -1;
+            }
+        } else if (xfer->rxbuf) {
+            if (HAL_SPI_Receive_IT(spi->descr, xfer->rxbuf, xfer->size) != HAL_OK) {
                 return -1;
             }
         }
@@ -210,12 +310,15 @@ int omv_spi_transfer_start(omv_spi_t *spi, omv_spi_transfer_t *xfer) {
 }
 
 int omv_spi_transfer_abort(omv_spi_t *spi) {
-    HAL_NVIC_DisableIRQ(spi->irqn);
-    HAL_SPI_Abort(spi->descr);
+    if (SCB->ICSR & SCB_ICSR_VECTACTIVE_Msk) {
+        HAL_SPI_Abort_IT(spi->descr);
+    } else {
+        HAL_SPI_Abort(spi->descr);
+    }
     return 0;
 }
 
-static int omv_spi_dma_init(omv_spi_t *spi, uint32_t direction) {
+static int omv_spi_dma_init(omv_spi_t *spi, uint32_t direction, omv_spi_config_t *config) {
     DMA_HandleTypeDef *dma_descr;
 
     if (direction == DMA_MEMORY_TO_PERIPH) {
@@ -225,19 +328,19 @@ static int omv_spi_dma_init(omv_spi_t *spi, uint32_t direction) {
     }
 
     // Configure the SPI DMA steam.
-    dma_descr->Init.Mode = DMA_CIRCULAR;                // TODO FIX
-    dma_descr->Init.Priority = DMA_PRIORITY_HIGH;
+    dma_descr->Init.Mode = (config->dma_flags & OMV_SPI_DMA_CIRCULAR) ? DMA_CIRCULAR : DMA_NORMAL;
+    dma_descr->Init.Priority = DMA_PRIORITY_LOW;
     dma_descr->Init.Direction = direction;
-    // When the DMA is configured in direct mode (the FIFO is disabled), the source and
-    // destination transfer widths are equal, and both defined by PSIZE (MSIZE is ignored).
-    // Additionally, burst transfers are not possible (MBURST and PBURST are both ignored).
-    dma_descr->Init.FIFOMode = DMA_FIFOMODE_DISABLE;
+    dma_descr->Init.FIFOMode = DMA_FIFOMODE_ENABLE;
     dma_descr->Init.FIFOThreshold = DMA_FIFO_THRESHOLD_FULL;
-    // Note MBURST and PBURST are ignored.
     dma_descr->Init.MemBurst = DMA_MBURST_INC4;
-    dma_descr->Init.PeriphBurst = DMA_PBURST_INC4;
     dma_descr->Init.MemDataAlignment = DMA_MDATAALIGN_WORD;
+    dma_descr->Init.PeriphBurst = DMA_PBURST_SINGLE;
+    #if defined(MCU_SERIES_H7)
     dma_descr->Init.PeriphDataAlignment = DMA_PDATAALIGN_WORD;
+    #else
+    dma_descr->Init.PeriphDataAlignment = DMA_PDATAALIGN_BYTE;
+    #endif
     dma_descr->Init.MemInc = DMA_MINC_ENABLE;
     dma_descr->Init.PeriphInc = DMA_PINC_DISABLE;
 
@@ -261,7 +364,7 @@ static int omv_spi_dma_init(omv_spi_t *spi, uint32_t direction) {
     uint8_t dma_irqn = dma_utils_channel_to_irqn(dma_descr->Instance);
 
     // Configure and enable DMA IRQ channel.
-    NVIC_SetPriority(dma_irqn, IRQ_PRI_DMA21);
+    NVIC_SetPriority(dma_irqn, IRQ_PRI_DMA);
     HAL_NVIC_EnableIRQ(dma_irqn);
 
     return 0;
@@ -272,8 +375,9 @@ static int omv_spi_bus_init(omv_spi_t *spi, omv_spi_config_t *config) {
 
     spi_descr->Init.Mode = config->spi_mode;
     spi_descr->Init.TIMode = SPI_TIMODE_DISABLE;
+    spi_descr->Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;
     spi_descr->Init.NSS = (config->nss_enable == false) ? SPI_NSS_SOFT : SPI_NSS_HARD_OUTPUT;
-    spi_descr->Init.DataSize = (config->datasize == 8) ? SPI_DATASIZE_8BIT : SPI_DATASIZE_16BIT;
+    spi_descr->Init.DataSize = SPI_DATASIZE_8BIT;
     spi_descr->Init.FirstBit = config->bit_order;
     spi_descr->Init.CLKPhase = config->clk_pha;
     spi_descr->Init.CLKPolarity = config->clk_pol;
@@ -282,9 +386,13 @@ static int omv_spi_bus_init(omv_spi_t *spi, omv_spi_config_t *config) {
     spi_descr->Init.NSSPMode = SPI_NSS_PULSE_DISABLE;
     #if defined(MCU_SERIES_H7)
     spi_descr->Init.NSSPolarity = (config->nss_pol == 0) ? SPI_NSS_POLARITY_LOW : SPI_NSS_POLARITY_HIGH;
-    spi_descr->Init.FifoThreshold = SPI_FIFO_THRESHOLD_04DATA;
+    spi_descr->Init.FifoThreshold = SPI_FIFO_THRESHOLD_01DATA;
+    spi_descr->Init.MasterSSIdleness = SPI_MASTER_SS_IDLENESS_00CYCLE;
+    spi_descr->Init.MasterInterDataIdleness = SPI_MASTER_INTERDATA_IDLENESS_00CYCLE;
+    spi_descr->Init.MasterReceiverAutoSusp = SPI_MASTER_RX_AUTOSUSP_DISABLE;
     spi_descr->Init.MasterKeepIOState = (config->data_retained == true) ?
                                         SPI_MASTER_KEEP_IO_STATE_ENABLE : SPI_MASTER_KEEP_IO_STATE_ENABLE;
+    spi_descr->Init.IOSwap = SPI_IO_SWAP_DISABLE;
     #endif
     #endif
 
@@ -344,29 +452,30 @@ int omv_spi_init(omv_spi_t *spi, omv_spi_config_t *config) {
         return -1;
     }
 
-    if (config->dma_enable) {
+    if (config->dma_flags & (OMV_SPI_DMA_NORMAL | OMV_SPI_DMA_CIRCULAR)) {
         if (config->bus_mode & OMV_SPI_BUS_TX) {
-            omv_spi_dma_init(spi, DMA_MEMORY_TO_PERIPH);
+            omv_spi_dma_init(spi, DMA_MEMORY_TO_PERIPH, config);
         }
         if (config->bus_mode & OMV_SPI_BUS_RX) {
-            omv_spi_dma_init(spi, DMA_PERIPH_TO_MEMORY);
+            omv_spi_dma_init(spi, DMA_PERIPH_TO_MEMORY, config);
         }
-        // Configure and enable SPI IRQ channel.
-        NVIC_SetPriority(spi->irqn, IRQ_PRI_DCMI);// TODO use lower priority
-        HAL_NVIC_EnableIRQ(spi->irqn);
     }
+    // Configure and enable SPI IRQ channel.
+    NVIC_SetPriority(spi->irqn, IRQ_PRI_SPI);
+    HAL_NVIC_EnableIRQ(spi->irqn);
 
     // Install TX/RX callbacks even if DMA mode is not enabled for non-blocking transfers.
-    if (config->bus_mode & OMV_SPI_BUS_TX) {
-        HAL_SPI_RegisterCallback(spi->descr, HAL_SPI_TX_COMPLETE_CB_ID, omv_spi_callback);
-    }
-
-    if (config->bus_mode & OMV_SPI_BUS_RX) {
-        HAL_SPI_RegisterCallback(spi->descr, HAL_SPI_RX_COMPLETE_CB_ID, omv_spi_callback);
+    HAL_SPI_RegisterCallback(spi->descr, HAL_SPI_TX_RX_COMPLETE_CB_ID, omv_spi_callback);
+    HAL_SPI_RegisterCallback(spi->descr, HAL_SPI_TX_COMPLETE_CB_ID, omv_spi_callback);
+    HAL_SPI_RegisterCallback(spi->descr, HAL_SPI_RX_COMPLETE_CB_ID, omv_spi_callback);
+    if (config->dma_flags & OMV_SPI_DMA_DOUBLE) {
+        HAL_SPI_RegisterCallback(spi->descr, HAL_SPI_TX_RX_HALF_COMPLETE_CB_ID, omv_spi_half_callback);
+        HAL_SPI_RegisterCallback(spi->descr, HAL_SPI_TX_HALF_COMPLETE_CB_ID, omv_spi_half_callback);
+        HAL_SPI_RegisterCallback(spi->descr, HAL_SPI_RX_HALF_COMPLETE_CB_ID, omv_spi_half_callback);
     }
 
     spi->initialized = true;
-    spi->dma_enabled = config->dma_enable;
+    spi->dma_flags = config->dma_flags;
     omv_spi_descr_all[config->id - 1] = spi;
     return 0;
 }
@@ -376,18 +485,29 @@ int omv_spi_deinit(omv_spi_t *spi) {
         spi->initialized = false;
         omv_spi_descr_all[spi->id - 1] = NULL;
         omv_spi_transfer_abort(spi);
-        if (spi->dma_enabled) {
-            // TODO: Deinit DMA
+        if (spi->dma_flags & (OMV_SPI_DMA_NORMAL | OMV_SPI_DMA_CIRCULAR)) {
+            if (spi->descr->hdmatx != NULL) {
+                HAL_DMA_Abort(spi->descr->hdmatx);
+            }
+            if (spi->descr->hdmarx != NULL) {
+                HAL_DMA_Abort(spi->descr->hdmarx);
+            }
         }
         HAL_SPI_DeInit(spi->descr);
+        HAL_NVIC_DisableIRQ(spi->irqn);
     }
+    return 0;
+}
+
+// This function is only needed for the py_tv driver on the RT1060 to slow down the SPI bus on reads.
+// The STM32 is capable of reading data on the SPI bus at high speeds without issues...
+int omv_spi_set_baudrate(omv_spi_t *spi, uint32_t baudrate) {
     return 0;
 }
 
 int omv_spi_default_config(omv_spi_config_t *config, uint32_t bus_id) {
     config->id = bus_id;
     config->baudrate = 10000000;
-    config->datasize = 8;
     config->spi_mode = OMV_SPI_MODE_MASTER;
     config->bus_mode = OMV_SPI_BUS_TX_RX;
     config->bit_order = OMV_SPI_MSB_FIRST;
@@ -395,7 +515,7 @@ int omv_spi_default_config(omv_spi_config_t *config, uint32_t bus_id) {
     config->clk_pha = OMV_SPI_CPHA_1EDGE;
     config->nss_pol = OMV_SPI_NSS_LOW;
     config->nss_enable = true;
-    config->dma_enable = false;
+    config->dma_flags = 0;
     config->data_retained = true;
     return 0;
 }

@@ -10,154 +10,184 @@
  */
 #include "omv_boardconfig.h"
 #if OMV_ENABLE_VOSPI || OMV_ENABLE_LEPTON
-
-#include <stdint.h>
 #include "py/mphal.h"
 
-#include "vospi.h"
 #include "crc16.h"
+
 #include "omv_common.h"
 #include "omv_spi.h"
 
-#define VOSPI_LINE_PIXELS         (80)
-#define VOSPI_NUMBER_PACKETS      (60)
-#define VOSPI_SPECIAL_PACKET      (20)
-#define VOSPI_LINE_SIZE           (80 * 2)
-#define VOSPI_HEADER_SIZE         (4)
-#define VOSPI_PACKET_SIZE         (VOSPI_HEADER_SIZE + VOSPI_LINE_SIZE)
-#define VOSPI_FIRST_PACKET        (0)
-#define VOSPI_FIRST_SEGMENT       (1)
-#ifndef VOSPI_PACKET_ALIGNMENT
-#define VOSPI_PACKET_ALIGNMENT    (4)
-#endif
-#define VOSPI_HEADER_SEG(buf)     (((buf[0] >> 4) & 0x7))
-#define VOSPI_HEADER_PID(buf)     (((buf[0] << 8) | (buf[1] << 0)) & 0x0FFF)
-#define VOSPI_HEADER_CRC(buf)     (((buf[2] << 8) | (buf[3] << 0)))
+static volatile bool waiting_for_data = false;
+static uint16_t *framebuffer = 0;
 
-typedef enum {
-    VOSPI_FLAGS_RESET  = (1 << 0),
-    VOSPI_FLAGS_RESYNC = (1 << 1),
-} vospi_flags_t;
+static bool vospi_lepton_3 = false;
 
-typedef struct _vospi_state {
-    volatile uint32_t pid;
-    volatile uint32_t sid;
-    uint8_t *buffer;
-    uint32_t n_packets;
-    omv_spi_t spi_bus;
-    volatile uint32_t flags;
-} vospi_state_t;
+static omv_spi_t spi_bus = {};
 
-static vospi_state_t vospi;
-static uint8_t OMV_ATTR_SECTION(
-    OMV_ATTR_ALIGNED(vospi_packet[VOSPI_PACKET_SIZE], VOSPI_PACKET_ALIGNMENT), ".dma_buffer"
-    );
+#define VOSPI_HEADER_WORDS       (2) // 16-bits
+#define VOSPI_PID_SIZE_PIXELS    (80) // w, 16-bits per pixel
+#define VOSPI_PIDS_PER_SEG       (60) // h
+#define VOSPI_SEGS_PER_FRAME     (4)
+#define VOSPI_PACKET_SIZE        (VOSPI_HEADER_WORDS + VOSPI_PID_SIZE_PIXELS) // 16-bits
+#define VOSPI_SEG_SIZE_PIXELS    (VOSPI_PIDS_PER_SEG * VOSPI_PID_SIZE_PIXELS) // 16-bits
 
-static void vospi_callback(omv_spi_t *spi, void *data);
-#if (OMV_ENABLE_VOSPI_CRC)
-static uint16_t vospi_calc_crc(uint8_t *buf) {
-    buf[0] &= 0x0F;
-    buf[1] &= 0xFF;
-    buf[2] = 0;
-    buf[3] = 0;
-    return CalcCRC16Bytes(VOSPI_PACKET_SIZE, (char *) buf);
-}
-#endif
+#define VOSPI_BUFFER_SIZE        (VOSPI_PACKET_SIZE * 2) // 16-bits
+#define VOSPI_CLOCK_SPEED        20000000 // hz
+#define VOSPI_SYNC_MS            200 // ms
 
-static void vospi_do_resync() {
+static int vospi_rx_cb_expected_pid = 0;
+static int vospi_rx_cb_expected_seg = 0;
+static uint16_t OMV_ATTR_SECTION(OMV_ATTR_ALIGNED_DMA(vospi_buf[VOSPI_BUFFER_SIZE]), ".dma_buffer");
+static void vospi_callback(omv_spi_t *spi, void *userdata, void *rxbuf);
+
+static volatile bool vospi_resync_callback_flag = true;
+static void vospi_resync_callback() {
     omv_spi_transfer_t spi_xfer = {
-        .txbuf = NULL,
-        .rxbuf = vospi_packet,
-        .size = VOSPI_PACKET_SIZE,
-        .timeout = 0,
-        .flags = OMV_SPI_XFER_DMA | OMV_SPI_XFER_CIRCULAR,
-        .userdata = NULL,
+        .rxbuf = vospi_buf,
+        .size = VOSPI_BUFFER_SIZE,
+        .flags = OMV_SPI_XFER_DMA | OMV_SPI_XFER_16_BIT,
         .callback = vospi_callback,
     };
 
-    omv_spi_transfer_abort(&vospi.spi_bus);
-    mp_hal_delay_ms(200);
-    vospi.flags = VOSPI_FLAGS_RESET;
-    omv_spi_transfer_start(&vospi.spi_bus, &spi_xfer);
-    debug_printf("vospi resync...\n");
+    mp_hal_delay_ms(VOSPI_SYNC_MS);
+    omv_spi_transfer_start(&spi_bus, &spi_xfer);
 }
 
-static void vospi_callback(omv_spi_t *spi, void *data) {
-    if (vospi.flags & VOSPI_FLAGS_RESYNC) {
-        // Captured a packet before an resync is complete.
+#if defined(OMV_ENABLE_VOSPI_CRC)
+static bool vospi_check_crc(const uint16_t *base) {
+    int id = base[0];
+    int packet_crc = base[1];
+    int crc = ByteCRC16((id >> 8) & 0x0F, 0);
+    crc = ByteCRC16(id, crc);
+    crc = ByteCRC16(0, crc);
+    crc = ByteCRC16(0, crc);
+
+    for (int i = VOSPI_HEADER_WORDS; i < VOSPI_PACKET_SIZE; i++) {
+        int value = base[i];
+        crc = ByteCRC16(value >> 8, crc);
+        crc = ByteCRC16(value, crc);
+    }
+
+    return packet_crc == crc;
+}
+#endif
+
+
+void vospi_callback(omv_spi_t *spi, void *userdata, void *rxbuf) {
+    if (!waiting_for_data) {
         return;
     }
 
-    if (vospi.flags & VOSPI_FLAGS_RESET) {
-        vospi.pid = VOSPI_FIRST_PACKET;
-        vospi.sid = VOSPI_FIRST_SEGMENT;
-        vospi.flags &= ~(VOSPI_FLAGS_RESET);
+    const uint16_t *base = (uint16_t *) rxbuf;
+
+    int id = base[0];
+
+    // Ignore don't care packets.
+    if ((id & 0x0F00) == 0x0F00) {
+        return;
     }
 
-    if (vospi.pid < vospi.n_packets && (vospi_packet[0] & 0xF) != 0xF) {
-        uint32_t pid = VOSPI_HEADER_PID(vospi_packet);
-        uint32_t sid = VOSPI_HEADER_SEG(vospi_packet);
-        if (pid != (vospi.pid % VOSPI_NUMBER_PACKETS)) {
-            if (vospi.pid != VOSPI_FIRST_PACKET) {
-                vospi.flags |= VOSPI_FLAGS_RESYNC; // lost sync
-                debug_printf("lost sync, packet id:%lu expected id:%lu \n", pid, vospi.pid);
+    int pid = id & 0x0FFF;
+    int seg = ((id >> 12) & 0x7) - 1;
+
+    // Discard packets with a pid != 0 when waiting for the first packet.
+    if ((vospi_rx_cb_expected_pid == 0) && (pid != 0)) {
+        return;
+    }
+
+    // Discard segments with a seg != 0 when waiting for the first segment.
+    if (vospi_lepton_3 && (pid == 20) && (vospi_rx_cb_expected_seg == 0) && (seg != 0)) {
+        vospi_rx_cb_expected_pid = 0;
+        return;
+    }
+
+    // Are we in sync with the flir lepton?
+    if ((pid != vospi_rx_cb_expected_pid)
+    #if defined(OMV_ENABLE_VOSPI_CRC)
+        || (!vospi_check_crc(base))
+    #endif
+        || (vospi_lepton_3 && (pid == 20) && (seg != vospi_rx_cb_expected_seg))) {
+        vospi_rx_cb_expected_pid = 0;
+        vospi_rx_cb_expected_seg = 0;
+        omv_spi_transfer_abort(&spi_bus);
+        vospi_resync_callback_flag = true;
+        return;
+    }
+
+    memcpy(framebuffer
+           + (vospi_rx_cb_expected_pid * VOSPI_PID_SIZE_PIXELS)
+           + (vospi_rx_cb_expected_seg * VOSPI_SEG_SIZE_PIXELS),
+           base + VOSPI_HEADER_WORDS, VOSPI_PID_SIZE_PIXELS * sizeof(uint16_t));
+
+    vospi_rx_cb_expected_pid += 1;
+    if (vospi_rx_cb_expected_pid == VOSPI_PIDS_PER_SEG) {
+        vospi_rx_cb_expected_pid = 0;
+
+        bool frame_ready = false;
+
+        // For the FLIR Lepton 3 we have to receive all the pids in all the segments.
+        if (vospi_lepton_3) {
+            vospi_rx_cb_expected_seg += 1;
+            if (vospi_rx_cb_expected_seg == VOSPI_SEGS_PER_FRAME) {
+                vospi_rx_cb_expected_seg = 0;
+                frame_ready = true;
             }
-        } else if (vospi.n_packets > VOSPI_NUMBER_PACKETS
-                   && pid == VOSPI_SPECIAL_PACKET && sid != vospi.sid) {
-            if (vospi.sid != VOSPI_FIRST_SEGMENT) {
-                vospi.flags |= VOSPI_FLAGS_RESYNC; // lost sync
-                debug_printf("lost sync, segment id:%lu expected id:%lu\n", sid, vospi.sid);
-            }
+            // For the FLIR Lepton 1/2 we just have to receive all the pids.
         } else {
-            memcpy(vospi.buffer + vospi.pid * VOSPI_LINE_SIZE,
-                   vospi_packet + VOSPI_HEADER_SIZE, VOSPI_LINE_SIZE);
-            if ((++vospi.pid % VOSPI_NUMBER_PACKETS) == 0) {
-                vospi.sid++;
-            }
+            frame_ready = true;
+        }
+
+        if (frame_ready) {
+            waiting_for_data = false;
         }
     }
 }
 
 int vospi_init(uint32_t n_packets, void *buffer) {
-    memset(&vospi, 0, sizeof(vospi_state_t));
-    vospi.buffer = buffer;
-    vospi.n_packets = n_packets;
-    // resync on first snapshot.
-    vospi.flags = VOSPI_FLAGS_RESYNC;
+    vospi_lepton_3 = n_packets > VOSPI_PIDS_PER_SEG;
+    framebuffer = buffer;
 
     omv_spi_config_t spi_config;
     omv_spi_default_config(&spi_config, ISC_SPI_ID);
 
+    spi_config.baudrate = VOSPI_CLOCK_SPEED;
     spi_config.bus_mode = OMV_SPI_BUS_RX;
-    spi_config.baudrate = ISC_SPI_BAUDRATE;
-    spi_config.dma_enable = true;
+    spi_config.dma_flags = OMV_SPI_DMA_CIRCULAR | OMV_SPI_DMA_DOUBLE;
 
-    if (omv_spi_init(&vospi.spi_bus, &spi_config) != 0) {
+    if (omv_spi_init(&spi_bus, &spi_config) != 0) {
         return -1;
     }
     return 0;
 }
 
 int vospi_snapshot(uint32_t timeout_ms) {
-    // Restart counters to capture a new frame.
-    vospi.flags |= VOSPI_FLAGS_RESET;
+    waiting_for_data = true;
 
-    // Snapshot start tick
     mp_uint_t tick_start = mp_hal_ticks_ms();
 
-    do {
-        if (vospi.flags & VOSPI_FLAGS_RESYNC) {
-            vospi_do_resync();
+    for (;;) {
+        if (vospi_resync_callback_flag) {
+            vospi_resync_callback_flag = false;
+            vospi_resync_callback();
         }
 
-        if ((mp_hal_ticks_ms() - tick_start) >= timeout_ms) {
-            // Timeout error.
-            return -1;
+        if (!waiting_for_data) {
+            break;
         }
 
         MICROPY_EVENT_POLL_HOOK
-    } while (vospi.pid < vospi.n_packets);
+
+        if ((mp_hal_ticks_ms() - tick_start) > timeout_ms) {
+            omv_spi_transfer_abort(&spi_bus);
+            waiting_for_data = false;
+            vospi_rx_cb_expected_pid = 0;
+            vospi_rx_cb_expected_seg = 0;
+            vospi_resync_callback_flag = true;
+            return -1;
+        }
+    }
 
     return 0;
 }
+
 #endif
