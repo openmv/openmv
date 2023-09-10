@@ -87,6 +87,8 @@
 #define TIMING_TC_REG_20       0x3820
 #define TIMING_TC_REG_21       0x3821
 
+#define AEC_CTRL_00            0x3A00
+
 #define AEC_GAIN_CEILING_H     0x3A18
 #define AEC_GAIN_CEILING_L     0x3A18
 

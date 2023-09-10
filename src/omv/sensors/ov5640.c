@@ -1326,6 +1326,7 @@ static int set_lens_correction(sensor_t *sensor, int enable, int radi, int coef)
 
 static int ioctl(sensor_t *sensor, int request, va_list ap) {
     int ret = 0;
+    uint8_t reg;
 
     switch (request) {
         case IOCTL_SET_READOUT_WINDOW: {
@@ -1371,7 +1372,6 @@ static int ioctl(sensor_t *sensor, int request, va_list ap) {
         case IOCTL_WAIT_ON_AUTO_FOCUS: {
             mp_uint_t start_tick = mp_hal_ticks_ms(), delay_ms = va_arg(ap, uint32_t);
             for (;;) {
-                uint8_t reg;
                 ret = omv_i2c_readb2(&sensor->i2c_bus, sensor->slv_addr, AF_CMD_ACK, &reg);
                 if ((ret < 0) || (!reg)) {
                     break;
@@ -1384,6 +1384,21 @@ static int ioctl(sensor_t *sensor, int request, va_list ap) {
             break;
         }
     #endif
+        case IOCTL_SET_NIGHT_MODE: {
+            int enable = va_arg(ap, int);
+            ret = omv_i2c_readb2(&sensor->i2c_bus, sensor->slv_addr, AEC_CTRL_00, &reg);
+            ret |= omv_i2c_writeb2(&sensor->i2c_bus, sensor->slv_addr, AEC_CTRL_00,
+                                   (reg & 0xFB) | ((enable != 0) << 2));
+            break;
+        }
+        case IOCTL_GET_NIGHT_MODE: {
+            int *enable = va_arg(ap, int *);
+            ret = omv_i2c_readb2(&sensor->i2c_bus, sensor->slv_addr, AEC_CTRL_00, &reg);
+            if (ret >= 0) {
+                *enable = reg & 0x4;
+            }
+            break;
+        }
         default: {
             ret = -1;
             break;
@@ -1435,5 +1450,4 @@ int ov5640_init(sensor_t *sensor) {
 
     return 0;
 }
-
 #endif // (OMV_ENABLE_OV5640 == 1)
