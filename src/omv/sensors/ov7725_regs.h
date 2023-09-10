@@ -184,6 +184,7 @@
 #define COM13_ADC_EN                0x40 /* ADC channel BLC ON/OFF control */
 #define COM13_ANALOG_BLC            0x20 /* Analog processing channel BLC ON/OFF control */
 #define COM13_ABLC_GAIN_EN          0x04 /* ABLC gain trigger enable */
+#define COM13_SET_BLC(r, x)         ((r & 0x7F) | ((x & 0x1) << 7))
 
 #define COM14                       0x3F /* Common Control 14 */
 #define COM15                       0x40 /* Common Control 15 */
