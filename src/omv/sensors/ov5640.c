@@ -1241,6 +1241,32 @@ static int get_rgb_gain_db(sensor_t *sensor, float *r_gain_db, float *g_gain_db,
     return ret;
 }
 
+static int set_auto_blc(sensor_t *sensor, int enable, int *regs) {
+    uint8_t reg;
+    int ret = omv_i2c_readb2(&sensor->i2c_bus, sensor->slv_addr, BLC_CTRL_00, &reg);
+    ret |= omv_i2c_writeb2(&sensor->i2c_bus, sensor->slv_addr, BLC_CTRL_00, (reg & 0xFE) | (enable != 0));
+
+    if ((enable == 0) && (regs != NULL)) {
+        for (uint32_t i = 0; i < sensor->hw_flags.blc_size; i++) {
+            ret |= omv_i2c_writeb2(&sensor->i2c_bus, sensor->slv_addr, BLACK_LEVEL_00_H + i, regs[i]);
+        }
+    }
+
+    return ret;
+}
+
+static int get_blc_regs(sensor_t *sensor, int *regs) {
+    int ret = 0;
+
+    for (uint32_t i = 0; i < sensor->hw_flags.blc_size; i++) {
+        uint8_t reg;
+        ret |= omv_i2c_readb2(&sensor->i2c_bus, sensor->slv_addr, BLACK_LEVEL_00_H + i, &reg);
+        regs[i] = reg;
+    }
+
+    return ret;
+}
+
 static int set_hmirror(sensor_t *sensor, int enable) {
     uint8_t reg;
     int ret = omv_i2c_readb2(&sensor->i2c_bus, sensor->slv_addr, TIMING_TC_REG_21, &reg);
@@ -1387,6 +1413,8 @@ int ov5640_init(sensor_t *sensor) {
     sensor->get_exposure_us = get_exposure_us;
     sensor->set_auto_whitebal = set_auto_whitebal;
     sensor->get_rgb_gain_db = get_rgb_gain_db;
+    sensor->set_auto_blc = set_auto_blc;
+    sensor->get_blc_regs = get_blc_regs;
     sensor->set_hmirror = set_hmirror;
     sensor->set_vflip = set_vflip;
     sensor->set_special_effect = set_special_effect;
@@ -1403,7 +1431,9 @@ int ov5640_init(sensor_t *sensor) {
     sensor->hw_flags.gs_bpp = 1;
     sensor->hw_flags.rgb_swap = 0;
     sensor->hw_flags.yuv_order = SENSOR_HW_FLAGS_YVU422;
+    sensor->hw_flags.blc_size = 8;
 
     return 0;
 }
+
 #endif // (OMV_ENABLE_OV5640 == 1)

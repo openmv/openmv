@@ -90,6 +90,20 @@
 #define AEC_GAIN_CEILING_H     0x3A18
 #define AEC_GAIN_CEILING_L     0x3A18
 
+#define BLC_CTRL_00            0x4000
+
+#define BLACK_LEVEL_00_H       0x402C
+#define BLACK_LEVEL_00_L       0x402D
+
+#define BLACK_LEVEL_01_H       0x402E
+#define BLACK_LEVEL_01_L       0x402F
+
+#define BLACK_LEVEL_10_H       0x4030
+#define BLACK_LEVEL_10_L       0x4031
+
+#define BLACK_LEVEL_11_H       0x4032
+#define BLACK_LEVEL_11_L       0x4033
+
 #define FORMAT_CONTROL         0x4300
 
 #define VFIFO_HSIZE_H          0x4602
