@@ -40,6 +40,7 @@ MPY_CFLAGS += -I$(TOP_DIR)/$(MICROPY_DIR)/lib/tinyusb/src
 MPY_CFLAGS += -I$(TOP_DIR)/$(MICROPY_DIR)/lib/lwip/src/include/
 MPY_CFLAGS += -I$(TOP_DIR)/$(MICROPY_DIR)/ports/mimxrt/
 MPY_CFLAGS += -I$(TOP_DIR)/$(MICROPY_DIR)/ports/mimxrt/lwip_inc/
+MPY_CFLAGS += -I$(TOP_DIR)/$(MICROPY_DIR)/shared/runtime/
 
 ifeq ($(MICROPY_PY_LWIP), 0)
 MICROPY_ARGS += MICROPY_PY_LWIP=0 MICROPY_PY_USSL=0

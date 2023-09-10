@@ -45,16 +45,22 @@ static TIM_HandleTypeDef fir_lepton_mclk_tim_handle = {};
 static LEP_CAMERA_PORT_DESC_T fir_lepton_handle = {};
 static omv_spi_t spi_bus = {};
 
-#define VOSPI_HEADER_WORDS       (2) // 16-bits
-#define VOSPI_PID_SIZE_PIXELS    (80) // w, 16-bits per pixel
-#define VOSPI_PIDS_PER_SEG       (60) // h
-#define VOSPI_SEGS_PER_FRAME     (4)
-#define VOSPI_PACKET_SIZE        (VOSPI_HEADER_WORDS + VOSPI_PID_SIZE_PIXELS) // 16-bits
-#define VOSPI_SEG_SIZE_PIXELS    (VOSPI_PIDS_PER_SEG * VOSPI_PID_SIZE_PIXELS) // 16-bits
+#define VOSPI_HEADER_WORDS          (2) // 16-bits
+#define VOSPI_PID_SIZE_PIXELS       (80) // w, 16-bits per pixel
+#define VOSPI_PIDS_PER_SEG          (60) // h
+#define VOSPI_SEGS_PER_FRAME        (4)
+#define VOSPI_PACKET_SIZE           (VOSPI_HEADER_WORDS + VOSPI_PID_SIZE_PIXELS) // 16-bits
+#define VOSPI_SEG_SIZE_PIXELS       (VOSPI_PIDS_PER_SEG * VOSPI_PID_SIZE_PIXELS) // 16-bits
 
-#define VOSPI_BUFFER_SIZE        (VOSPI_PACKET_SIZE * 2) // 16-bits
-#define VOSPI_CLOCK_SPEED        20000000 // hz
-#define VOSPI_SYNC_MS            200 // ms
+#define VOSPI_SPECIAL_PACKET        (20)
+#define VOSPI_DONT_CARE_PACKET      (0x0F00)
+#define VOSPI_HEADER_DONT_CARE(x)   (((x) & VOSPI_DONT_CARE_PACKET) == VOSPI_DONT_CARE_PACKET)
+#define VOSPI_HEADER_PID(id)        ((id) & 0x0FFF)
+#define VOSPI_HEADER_SID(id)        (((id) >> 12) & 0x7)
+
+#define VOSPI_BUFFER_SIZE           (VOSPI_PACKET_SIZE * 2) // 16-bits
+#define VOSPI_CLOCK_SPEED           20000000 // hz
+#define VOSPI_SYNC_MS               200 // ms
 
 static soft_timer_entry_t flir_lepton_spi_rx_timer = {};
 static int fir_lepton_spi_rx_cb_tail = 0;
@@ -119,12 +125,12 @@ void fir_lepton_spi_callback(omv_spi_t *spi, void *userdata, void *buf) {
     int id = base[0];
 
     // Ignore don't care packets.
-    if ((id & 0x0F00) == 0x0F00) {
+    if (VOSPI_HEADER_DONT_CARE(id)) {
         return;
     }
 
-    int pid = id & 0x0FFF;
-    int seg = ((id >> 12) & 0x7) - 1;
+    int pid = VOSPI_HEADER_PID(id);
+    int seg = VOSPI_HEADER_SID(id) - 1;
 
     // Discard packets with a pid != 0 when waiting for the first packet.
     if ((fir_lepton_spi_rx_cb_expected_pid == 0) && (pid != 0)) {
@@ -132,7 +138,7 @@ void fir_lepton_spi_callback(omv_spi_t *spi, void *userdata, void *buf) {
     }
 
     // Discard segments with a seg != 0 when waiting for the first segment.
-    if (fir_lepton_3 && (pid == 20) && (fir_lepton_spi_rx_cb_expected_seg == 0) && (seg != 0)) {
+    if (fir_lepton_3 && (pid == VOSPI_SPECIAL_PACKET) && (fir_lepton_spi_rx_cb_expected_seg == 0) && (seg != 0)) {
         fir_lepton_spi_rx_cb_expected_pid = 0;
         return;
     }
@@ -142,7 +148,7 @@ void fir_lepton_spi_callback(omv_spi_t *spi, void *userdata, void *buf) {
     #if defined(OMV_FIR_LEPTON_CHECK_CRC)
         || (!fir_lepton_spi_check_crc(base))
     #endif
-        || (fir_lepton_3 && (pid == 20) && (seg != fir_lepton_spi_rx_cb_expected_seg))) {
+        || (fir_lepton_3 && (pid == VOSPI_SPECIAL_PACKET) && (seg != fir_lepton_spi_rx_cb_expected_seg))) {
         fir_lepton_spi_rx_cb_expected_pid = 0;
         fir_lepton_spi_rx_cb_expected_seg = 0;
         omv_spi_transfer_abort(&spi_bus);

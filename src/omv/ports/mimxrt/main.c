@@ -28,6 +28,10 @@
 #include "systick.h"
 #include "modmimxrt.h"
 
+#include "py_lcd.h"
+#include "py_fir.h"
+#include "py_tv.h"
+
 #if MICROPY_PY_LWIP
 #include "lwip/init.h"
 #include "lwip/apps/mdns.h"
@@ -114,7 +118,7 @@ soft_reset:
     #if MICROPY_PY_LCD
     py_lcd_init0();
     #endif
-    //py_fir_init0();
+    py_fir_init0();
     #if MICROPY_PY_TV
     py_tv_init0();
     #endif

@@ -124,7 +124,7 @@ static int omv_spi_prescaler(SPI_TypeDef *spi, uint32_t baudrate) {
     return SPI_BAUDRATEPRESCALER_256;
 }
 
-static omv_spi_t *omv_spi_get_descr(SPI_HandleTypeDef *hspi) {
+static void omv_spi_callback(SPI_HandleTypeDef *hspi) {
     omv_spi_t *spi = NULL;
     if (0) {
     #if defined(SPI1_ID)
@@ -152,10 +152,11 @@ static omv_spi_t *omv_spi_get_descr(SPI_HandleTypeDef *hspi) {
         spi = omv_spi_descr_all[5];
     #endif
     }
-    return spi;
-}
 
-static void omv_spi_callback_error_check(SPI_HandleTypeDef *hspi, omv_spi_t *spi) {
+    if (spi == NULL) {
+        return;
+    }
+
     if (hspi->ErrorCode != HAL_SPI_ERROR_NONE) {
         spi->xfer_flags |= OMV_SPI_XFER_FAILED;
         spi->xfer_error = hspi->ErrorCode;
@@ -163,45 +164,17 @@ static void omv_spi_callback_error_check(SPI_HandleTypeDef *hspi, omv_spi_t *spi
     } else {
         spi->xfer_flags |= OMV_SPI_XFER_COMPLETE;
     }
-}
-
-static void *omv_spi_callback_rxbuf(omv_spi_t *spi) {
-    // On TX without RX pRxBuffPtr is zero.
-    uint8_t *rxbuf = (uint8_t *) spi->descr->pRxBuffPtr;
-    if (spi->xfer_flags & OMV_SPI_XFER_HALF) {
-        return rxbuf;
-    } else {
-        // On TX without RX RxXferSize is zero.
-        uint32_t rxsize = spi->descr->RxXferSize * ((spi->xfer_flags & OMV_SPI_XFER_16_BIT) ? 2 : 1);
-        return rxbuf + (rxsize / 2);
-    }
-}
-
-static void omv_spi_callback(SPI_HandleTypeDef *hspi) {
-    omv_spi_t *spi = omv_spi_get_descr(hspi);
-    if (spi == NULL) {
-        return;
-    }
-
-    omv_spi_callback_error_check(hspi, spi);
-    spi->xfer_flags &= ~OMV_SPI_XFER_HALF;
 
     if (spi->callback) {
-        spi->callback(spi, spi->userdata, omv_spi_callback_rxbuf(spi));
-    }
-}
-
-static void omv_spi_half_callback(SPI_HandleTypeDef *hspi) {
-    omv_spi_t *spi = omv_spi_get_descr(hspi);
-    if (spi == NULL) {
-        return;
-    }
-
-    omv_spi_callback_error_check(hspi, spi);
-    spi->xfer_flags |= OMV_SPI_XFER_HALF;
-
-    if (spi->callback) {
-        spi->callback(spi, spi->userdata, omv_spi_callback_rxbuf(spi));
+        uint8_t *buf = spi->descr->pRxBuffPtr ? spi->descr->pRxBuffPtr : spi->descr->pTxBuffPtr;
+        if (spi->dma_flags & OMV_SPI_DMA_DOUBLE) {
+            if (spi->xfer_flags & OMV_SPI_XFER_HALF) {
+                uint32_t size = spi->descr->RxXferSize ? spi->descr->RxXferSize : spi->descr->TxXferSize;
+                buf += (size * ((spi->xfer_flags & OMV_SPI_XFER_16_BIT) ? 2 : 1)) / 2;
+            }
+            spi->xfer_flags ^= OMV_SPI_XFER_HALF;
+        }
+        spi->callback(spi, spi->userdata, buf);
     }
 }
 
@@ -222,6 +195,11 @@ static void omv_spi_dma_burst_mode(DMA_HandleTypeDef *hdma, bool on, bool sixtee
 }
 
 int omv_spi_transfer_start(omv_spi_t *spi, omv_spi_transfer_t *xfer) {
+    // No TX trasnfers in circular or double buffer mode.
+    if ((spi->dma_flags & (OMV_SPI_DMA_CIRCULAR | OMV_SPI_DMA_DOUBLE)) && xfer->txbuf) {
+        return -1;
+    }
+
     spi->callback = xfer->callback;
     spi->userdata = xfer->userdata;
     spi->xfer_error = 0;
@@ -469,9 +447,9 @@ int omv_spi_init(omv_spi_t *spi, omv_spi_config_t *config) {
     HAL_SPI_RegisterCallback(spi->descr, HAL_SPI_TX_COMPLETE_CB_ID, omv_spi_callback);
     HAL_SPI_RegisterCallback(spi->descr, HAL_SPI_RX_COMPLETE_CB_ID, omv_spi_callback);
     if (config->dma_flags & OMV_SPI_DMA_DOUBLE) {
-        HAL_SPI_RegisterCallback(spi->descr, HAL_SPI_TX_RX_HALF_COMPLETE_CB_ID, omv_spi_half_callback);
-        HAL_SPI_RegisterCallback(spi->descr, HAL_SPI_TX_HALF_COMPLETE_CB_ID, omv_spi_half_callback);
-        HAL_SPI_RegisterCallback(spi->descr, HAL_SPI_RX_HALF_COMPLETE_CB_ID, omv_spi_half_callback);
+        HAL_SPI_RegisterCallback(spi->descr, HAL_SPI_TX_RX_HALF_COMPLETE_CB_ID, omv_spi_callback);
+        HAL_SPI_RegisterCallback(spi->descr, HAL_SPI_TX_HALF_COMPLETE_CB_ID, omv_spi_callback);
+        HAL_SPI_RegisterCallback(spi->descr, HAL_SPI_RX_HALF_COMPLETE_CB_ID, omv_spi_callback);
     }
 
     spi->initialized = true;

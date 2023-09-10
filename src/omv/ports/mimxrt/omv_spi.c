@@ -17,7 +17,6 @@
 #include "fsl_lpspi_edma.h"
 #include "fsl_dmamux.h"
 #include CLOCK_CONFIG_H
-#include "dma_manager.h"
 
 #include "mimxrt_hal.h"
 #include "omv_common.h"
@@ -26,6 +25,7 @@
 typedef struct dma_descr {
     DMA_Type *dma_inst;
     DMAMUX_Type *dma_mux;
+    uint32_t channel;
     uint32_t request;
 } dma_descr_t;
 
@@ -39,63 +39,45 @@ typedef struct omv_spi_descr {
 static const omv_spi_descr_t omv_spi_descr_all[] = {
     #if defined(LPSPI1_ID)
     { LPSPI1, LPSPI1_SSEL_PIN,
-      { DMA0, DMAMUX, kDmaRequestMuxLPSPI1Tx },
-      { DMA0, DMAMUX, kDmaRequestMuxLPSPI1Rx } },
+      { LPSPI1_DMA, LPSPI1_DMA_MUX, LPSPI1_DMA_TX_CHANNEL, kDmaRequestMuxLPSPI1Tx },
+      { LPSPI1_DMA, LPSPI1_DMA_MUX, LPSPI1_DMA_RX_CHANNEL, kDmaRequestMuxLPSPI1Rx } },
     #else
-    { NULL, NULL, { NULL, NULL, 0 }, { NULL, NULL, 0 } },
+    { NULL, NULL, { NULL, NULL, 0, 0 }, { NULL, NULL, 0, 0 } },
     #endif
 
     #if defined(LPSPI2_ID)
     { LPSPI2, LPSPI2_SSEL_PIN,
-      { DMA0, DMAMUX, kDmaRequestMuxLPSPI2Tx },
-      { DMA0, DMAMUX, kDmaRequestMuxLPSPI2Rx } },
+      { LPSPI2_DMA, LPSPI2_DMA_MUX, LPSPI2_DMA_TX_CHANNEL, kDmaRequestMuxLPSPI2Tx },
+      { LPSPI2_DMA, LPSPI2_DMA_MUX, LPSPI2_DMA_RX_CHANNEL, kDmaRequestMuxLPSPI2Rx } },
     #else
-    { NULL, NULL, { NULL, NULL, 0 }, { NULL, NULL, 0 } },
+    { NULL, NULL, { NULL, NULL, 0, 0 }, { NULL, NULL, 0, 0 } },
     #endif
 
     #if defined(LPSPI3_ID)
     { LPSPI3, LPSPI3_SSEL_PIN,
-      { DMA0, DMAMUX, kDmaRequestMuxLPSPI3Tx },
-      { DMA0, DMAMUX, kDmaRequestMuxLPSPI3Rx } },
+      { LPSPI3_DMA, LPSPI3_DMA_MUX, LPSPI3_DMA_TX_CHANNEL, kDmaRequestMuxLPSPI3Tx },
+      { LPSPI3_DMA, LPSPI3_DMA_MUX, LPSPI3_DMA_RX_CHANNEL, kDmaRequestMuxLPSPI3Rx } },
     #else
-    { NULL, NULL, { NULL, NULL, 0 }, { NULL, NULL, 0 } },
+    { NULL, NULL, { NULL, NULL, 0, 0 }, { NULL, NULL, 0, 0 } },
     #endif
 
     #if defined(LPSPI4_ID)
     { LPSPI4, LPSPI4_SSEL_PIN,
-      { DMA0, DMAMUX, kDmaRequestMuxLPSPI4Tx },
-      { DMA0, DMAMUX, kDmaRequestMuxLPSPI4Rx } },
+      { LPSPI4_DMA, LPSPI4_DMA_MUX, LPSPI4_DMA_TX_CHANNEL, kDmaRequestMuxLPSPI4Tx },
+      { LPSPI4_DMA, LPSPI4_DMA_MUX, LPSPI4_DMA_RX_CHANNEL, kDmaRequestMuxLPSPI4Rx } },
     #else
-    { NULL, NULL, { NULL, NULL, 0 }, { NULL, NULL, 0 } },
+    { NULL, NULL, { NULL, NULL, 0, 0 }, { NULL, NULL, 0, 0 } },
     #endif
 };
 
-// LPSPI_MasterTransferEDMA doesn't have any code at all to generate a callback on transmit complete. So, we
-// add one here that simulates that. However, the DMA interrupt will occur before the SPI bus is done sending
-// data. So, we cannot call spi_master_callback below as it will happen before the data is actually sent. Instead,
-// we use the SPI transfer complete interrupt to call spi_master_callback at the right time. Note that we have
-// to zero out the descriptor to prevent LPSPI_MasterTransferHandleIRQ from doing anything we don't want it to do.
+// Enable the SPI frame transfer complete at the end of the DMA transfer, when are absolutely sure that the whole
+// DMA transfer is complete. This way we get one interrupt at the end of the transfer, vs after every SPI frame.
+// descr_master.rxData must be set to null to ensure LPSPI_MasterTransferHandleIRQ clears the
+// kLPSPI_TransferCompleteFlag and calls LPSPI_MasterTransferComplete which calls spi_master_callback.
 static void EDMA_LpspiMasterTxCallback(edma_handle_t *edmaHandle, void *user, bool transferDone, uint32_t tcds) {
     omv_spi_t *spi = (omv_spi_t *) user;
     spi->descr_master_edma.state = (uint8_t) kLPSPI_Idle;
-    spi->descr_master.state = (uint8_t) kLPSPI_Idle;
-    spi->descr_master.txData = NULL;
     spi->descr_master.rxData = NULL;
-    spi->descr_master.txRemainingByteCount = 0;
-    spi->descr_master.rxRemainingByteCount = 0;
-    spi->descr_master.totalByteCount = 0;
-    spi->descr_master.writeTcrInIsr = false;
-    spi->descr_master.bytesPerFrame = 0;
-    spi->descr_master.writeRegRemainingTimes = 0;
-    spi->descr_master.readRegRemainingTimes = 0;
-    spi->descr_master.txBuffIfNull = 0;
-    spi->descr_master.fifoSize = 0;
-    spi->descr_master.isPcsContinuous = 0;
-    spi->descr_master.isByteSwap = 0;
-    spi->descr_master.bytesEachWrite = 0;
-    spi->descr_master.bytesEachRead = 0;
-    spi->descr_master.rxWatermark = 0;
-    spi->descr_master.isTxMask = 0;
     LPSPI_EnableInterrupts(spi->inst, (uint32_t) kLPSPI_TransferCompleteFlag);
 }
 
@@ -110,29 +92,24 @@ static void spi_master_callback(LPSPI_Type *base, void *handle, status_t status,
         omv_spi_transfer_abort(spi);
     }
 
-    void *rxBuf = spi->xfer_descr.rxData;
+    void *buf = spi->xfer_descr.rxData;
+
+    if (buf == NULL) {
+        buf = spi->xfer_descr.txData;
+    }
 
     // The IMXRT doesn't support half complete transfer interrupts (in the lpspi driver) like the STM32
     // does. So, mimick support for them by toggling the half flag.
     uint32_t flags = (OMV_SPI_XFER_DMA | OMV_SPI_XFER_COMPLETE);
     if ((spi->dma_flags & OMV_SPI_DMA_DOUBLE) && ((spi->xfer_flags & flags) == flags)) {
-        if (spi->xfer_flags & OMV_SPI_XFER_HALF) {
-            spi->xfer_flags &= ~OMV_SPI_XFER_HALF;
-            if (spi->xfer_descr.txData) {
-                spi->xfer_descr.txData -= spi->xfer_descr.dataSize;
-            }
-            if (spi->xfer_descr.rxData) {
-                spi->xfer_descr.rxData -= spi->xfer_descr.dataSize;
-            }
-        } else {
-            spi->xfer_flags |= OMV_SPI_XFER_HALF;
-            if (spi->xfer_descr.txData) {
-                spi->xfer_descr.txData += spi->xfer_descr.dataSize;
-            }
-            if (spi->xfer_descr.rxData) {
-                spi->xfer_descr.rxData += spi->xfer_descr.dataSize;
-            }
+        int32_t offset = (spi->xfer_flags & OMV_SPI_XFER_HALF) ? -spi->xfer_descr.dataSize : spi->xfer_descr.dataSize;
+        if (spi->xfer_descr.txData) {
+            spi->xfer_descr.txData += offset;
         }
+        if (spi->xfer_descr.rxData) {
+            spi->xfer_descr.rxData += offset;
+        }
+        spi->xfer_flags ^= OMV_SPI_XFER_HALF;
     }
 
     // Start the next DMA transfer before calling the callback. This minimizes the time
@@ -144,12 +121,14 @@ static void spi_master_callback(LPSPI_Type *base, void *handle, status_t status,
     }
 
     if (spi->callback) {
-        spi->callback(spi, spi->userdata, rxBuf);
+        spi->callback(spi, spi->userdata, buf);
     }
 
     // Clear after the callback so the callback gets the xfer complete flag set.
     // This needs to be cleared to prevent circular DMA from re-triggering on a failure.
-    spi->xfer_flags &= ~(OMV_SPI_XFER_COMPLETE);
+    if (spi->dma_flags & OMV_SPI_DMA_CIRCULAR) {
+        spi->xfer_flags &= ~(OMV_SPI_XFER_COMPLETE);
+    }
 }
 
 // The LPSPI_MasterTransferNonBlocking function call does not clear the LPSPI_TCR_FRAMESZ_MASK bit
@@ -169,6 +148,11 @@ void omv_spi_set_frame_size(omv_spi_t *spi, uint16_t size) {
 }
 
 int omv_spi_transfer_start(omv_spi_t *spi, omv_spi_transfer_t *xfer) {
+    // No TX trasnfers in circular or double buffer mode.
+    if ((spi->dma_flags & (OMV_SPI_DMA_CIRCULAR | OMV_SPI_DMA_DOUBLE)) && xfer->txbuf) {
+        return -1;
+    }
+
     spi->callback = xfer->callback;
     spi->userdata = xfer->userdata;
     spi->xfer_error = 0;
@@ -201,15 +185,7 @@ int omv_spi_transfer_start(omv_spi_t *spi, omv_spi_transfer_t *xfer) {
         spi->xfer_descr.configFlags |= kLPSPI_MasterByteSwap;
     }
 
-    if (spi->xfer_flags & OMV_SPI_XFER_BLOCKING) {
-        if (LPSPI_MasterTransferBlocking(spi->inst, &spi->xfer_descr) != kStatus_Success) {
-            return -1;
-        }
-    } else if (spi->xfer_flags & OMV_SPI_XFER_NONBLOCK) {
-        if (LPSPI_MasterTransferNonBlocking(spi->inst, &spi->descr_master, &spi->xfer_descr) != kStatus_Success) {
-            return -1;
-        }
-    } else if (spi->xfer_flags & OMV_SPI_XFER_DMA) {
+    if (spi->xfer_flags & OMV_SPI_XFER_DMA) {
         if (LPSPI_MasterTransferEDMA(spi->inst, &spi->descr_master_edma, &spi->xfer_descr) != kStatus_Success) {
             return -1;
         }
@@ -219,6 +195,28 @@ int omv_spi_transfer_start(omv_spi_t *spi, omv_spi_transfer_t *xfer) {
             EDMA_SetCallback(&spi->dma_descr_tx, EDMA_LpspiMasterTxCallback, spi);
             EDMA_EnableChannelInterrupts(spi->dma_descr_tx.base, spi->dma_descr_tx.channel,
                                          (uint32_t) kEDMA_MajorInterruptEnable);
+        }
+    } else if (spi->xfer_flags & (OMV_SPI_XFER_BLOCKING | OMV_SPI_XFER_NONBLOCK)) {
+        // Use non-blocking mode for both non-blocking and blocking
+        // transfers, this way we can control the timeout better.
+        if (LPSPI_MasterTransferNonBlocking(spi->inst, &spi->descr_master, &spi->xfer_descr) != kStatus_Success) {
+            return -1;
+        }
+
+        // Non-blocking transfetr, return immediately and the user
+        // callback will be called when the transfer is done.
+        if (spi->xfer_flags & OMV_SPI_XFER_NONBLOCK) {
+            return 0;
+        }
+
+        // Blocking transfetr, wait for transfer complete or timeout.
+        mp_uint_t start = mp_hal_ticks_ms();
+        while (!(spi->xfer_flags & (OMV_SPI_XFER_COMPLETE | OMV_SPI_XFER_FAILED))) {
+            if ((spi->xfer_flags & OMV_SPI_XFER_FAILED) ||
+                ((mp_hal_ticks_ms() - start) > xfer->timeout)) {
+                return -1;
+            }
+            MICROPY_EVENT_POLL_HOOK
         }
     } else {
         return -1;
@@ -230,16 +228,16 @@ int omv_spi_transfer_abort(omv_spi_t *spi) {
     if (spi->dma_flags & (OMV_SPI_DMA_NORMAL | OMV_SPI_DMA_CIRCULAR)) {
         LPSPI_MasterTransferAbortEDMA(spi->inst, &spi->descr_master_edma);
     }
+    // The SPI bus must be aborted too on LPSPI_MasterTransferAbortEDMA.
     LPSPI_MasterTransferAbort(spi->inst, &spi->descr_master);
     LPSPI_MasterInit(spi->inst, &spi->config_backup, BOARD_BOOTCLOCKRUN_LPSPI_CLK_ROOT);
     return 0;
 }
 
 static int omv_spi_dma_init(edma_handle_t *dma_handle, const dma_descr_t *dma_descr) {
-    int channel = allocate_dma_channel();
-    DMAMUX_SetSource(dma_descr->dma_mux, channel, dma_descr->request);
-    DMAMUX_EnableChannel(dma_descr->dma_mux, channel);
-    EDMA_CreateHandle(dma_handle, dma_descr->dma_inst, channel);
+    DMAMUX_SetSource(dma_descr->dma_mux, dma_descr->channel, dma_descr->request);
+    DMAMUX_EnableChannel(dma_descr->dma_mux, dma_descr->channel);
+    EDMA_CreateHandle(dma_handle, dma_descr->dma_inst, dma_descr->channel);
     return 0;
 }
 
@@ -312,9 +310,7 @@ int omv_spi_deinit(omv_spi_t *spi) {
         if (spi->dma_flags & (OMV_SPI_DMA_NORMAL | OMV_SPI_DMA_CIRCULAR)) {
             const omv_spi_descr_t *spi_descr = &omv_spi_descr_all[spi->id - 1];
             DMAMUX_DisableChannel(spi_descr->dma_descr_tx.dma_mux, spi->dma_descr_tx.channel);
-            free_dma_channel(spi->dma_descr_tx.channel);
             DMAMUX_DisableChannel(spi_descr->dma_descr_rx.dma_mux, spi->dma_descr_rx.channel);
-            free_dma_channel(spi->dma_descr_rx.channel);
         }
         LPSPI_Deinit(spi->inst);
         mimxrt_hal_spi_deinit(spi->id);
