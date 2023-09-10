@@ -222,6 +222,7 @@ typedef struct _sensor {
     } hw_flags;
 
     const uint16_t *color_palette;    // Color palette used for color lookup.
+    bool disable_delays;        // Set to true to disable all sensor settling time delays.
     bool disable_full_flush;    // Turn off default frame buffer flush policy when full.
 
     vsync_cb_t vsync_callback;  // VSYNC callback.

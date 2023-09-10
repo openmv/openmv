@@ -247,7 +247,9 @@ static int set_colorbar(sensor_t *sensor, int enable) {
     ret = omv_i2c_readw(&sensor->i2c_bus, sensor->slv_addr, MT9V0XX_ROW_NOISE_CORR_CONTROL, &reg);
     ret |= omv_i2c_writew(&sensor->i2c_bus, sensor->slv_addr, MT9V0XX_ROW_NOISE_CORR_CONTROL,
                           (reg & (~mask)) | ((enable == 0) ? mask : 0));
-    ret |= sensor->snapshot(sensor, NULL, 0); // Force shadow mode register to update...
+    if (!sensor->disable_delays) {
+        ret |= sensor->snapshot(sensor, NULL, 0); // Force shadow mode register to update...
+    }
     return ret;
 }
 
@@ -259,7 +261,9 @@ static int set_auto_gain(sensor_t *sensor, int enable, float gain_db, float gain
     int ret = omv_i2c_readw(&sensor->i2c_bus, sensor->slv_addr, MT9V0XX_AEC_AGC_ENABLE, &reg);
     ret |= omv_i2c_writew(&sensor->i2c_bus, sensor->slv_addr, MT9V0XX_AEC_AGC_ENABLE,
                           (reg & (~agc_mask)) | ((enable != 0) ? agc_mask : 0));
-    ret |= sensor->snapshot(sensor, NULL, 0); // Force shadow mode register to update...
+    if (!sensor->disable_delays) {
+        ret |= sensor->snapshot(sensor, NULL, 0); // Force shadow mode register to update...
+    }
 
     if ((enable == 0) && (!isnanf(gain_db)) && (!isinff(gain_db))) {
         int gain = IM_MAX(IM_MIN(fast_roundf(fast_expf((gain_db / 20.0f) * fast_log(10.0f)) * 16.0f), 64), 16);
@@ -309,8 +313,9 @@ static int set_auto_exposure(sensor_t *sensor, int enable, int exposure_us) {
     ret |= omv_i2c_readw(&sensor->i2c_bus, sensor->slv_addr, MT9V0XX_AEC_AGC_ENABLE, &reg);
     ret |= omv_i2c_writew(&sensor->i2c_bus, sensor->slv_addr, MT9V0XX_AEC_AGC_ENABLE,
                           (reg & (~aec_mask)) | ((enable != 0) ? aec_mask : 0));
-    ret |= sensor->snapshot(sensor, NULL, 0); // Force shadow mode register to update...
-
+    if (!sensor->disable_delays) {
+        ret |= sensor->snapshot(sensor, NULL, 0); // Force shadow mode register to update...
+    }
     int read_mode = context ? MT9V0X4_READ_MODE_B : MT9V0XX_READ_MODE;
     int window_width = context ? MT9V0X4_WINDOW_WIDTH_B : MT9V0XX_WINDOW_WIDTH;
     int horizontal_blanking = context ? MT9V0X4_HORIZONTAL_BLANKING_B : MT9V0XX_HORIZONTAL_BLANKING;
@@ -389,7 +394,9 @@ static int set_hmirror(sensor_t *sensor, int enable) {
                               (read_mode & (~MT9V0XX_READ_MODE_COL_FLIP)) | ((enable == 0) ? MT9V0XX_READ_MODE_COL_FLIP : 0));
     }
 
-    ret |= sensor->snapshot(sensor, NULL, 0); // Force shadow mode register to update...
+    if (!sensor->disable_delays) {
+        ret |= sensor->snapshot(sensor, NULL, 0); // Force shadow mode register to update...
+    }
     return ret;
 }
 
@@ -405,7 +412,9 @@ static int set_vflip(sensor_t *sensor, int enable) {
                               (read_mode & (~MT9V0XX_READ_MODE_ROW_FLIP)) | ((enable == 0) ? MT9V0XX_READ_MODE_ROW_FLIP : 0));
     }
 
-    ret |= sensor->snapshot(sensor, NULL, 0); // Force shadow mode register to update...
+    if (!sensor->disable_delays) {
+        ret |= sensor->snapshot(sensor, NULL, 0); // Force shadow mode register to update...
+    }
     return ret;
 }
 
@@ -462,7 +471,9 @@ static int ioctl(sensor_t *sensor, int request, va_list ap) {
             ret |= omv_i2c_writew(&sensor->i2c_bus, sensor->slv_addr, MT9V0XX_CHIP_CONTROL,
                                   (chip_control & (~MT9V0XX_CHIP_CONTROL_MODE_MASK))
                                   | ((enable != 0) ? MT9V0XX_CHIP_CONTROL_SNAP_MODE : MT9V0XX_CHIP_CONTROL_MASTER_MODE));
-            ret |= sensor->snapshot(sensor, NULL, 0); // Force shadow mode register to update...
+            if (!sensor->disable_delays) {
+                ret |= sensor->snapshot(sensor, NULL, 0); // Force shadow mode register to update...
+            }
             break;
         }
         case IOCTL_GET_TRIGGERED_MODE: {

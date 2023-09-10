@@ -338,7 +338,9 @@ static int reset(sensor_t *sensor) {
     }
 
     // Delay 300 ms
-    mp_hal_delay_ms(300);
+    if (!sensor->disable_delays) {
+        mp_hal_delay_ms(300);
+    }
 
     return ret;
 }
