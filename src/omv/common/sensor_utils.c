@@ -921,6 +921,34 @@ __weak int sensor_get_rgb_gain_db(float *r_gain_db, float *g_gain_db, float *b_g
     return 0;
 }
 
+__weak int sensor_set_auto_blc(int enable, int *regs) {
+    // Check if the control is supported.
+    if (sensor.set_auto_blc == NULL) {
+        return SENSOR_ERROR_CTL_UNSUPPORTED;
+    }
+
+    // Call the sensor specific function.
+    if (sensor.set_auto_blc(&sensor, enable, regs) != 0) {
+        return SENSOR_ERROR_CTL_FAILED;
+    }
+
+    return 0;
+}
+
+__weak int sensor_get_blc_regs(int *regs) {
+    // Check if the control is supported.
+    if (sensor.get_blc_regs == NULL) {
+        return SENSOR_ERROR_CTL_UNSUPPORTED;
+    }
+
+    // Call the sensor specific function.
+    if (sensor.get_blc_regs(&sensor, regs) != 0) {
+        return SENSOR_ERROR_CTL_FAILED;
+    }
+
+    return 0;
+}
+
 __weak int sensor_set_hmirror(int enable) {
     // Check if the value has changed.
     if (sensor.hmirror == ((bool) enable)) {

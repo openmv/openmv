@@ -219,6 +219,7 @@ typedef struct _sensor {
         uint32_t yuv_swap : 1;    // Byte-swap 2BPP YUV formats after capture.
         uint32_t bayer : 3;       // Bayer/CFA pattern.
         uint32_t yuv_order : 1;   // YUV/YVU order.
+        uint32_t blc_size : 4;    // Number of black level calibration registers.
     } hw_flags;
 
     const uint16_t *color_palette;    // Color palette used for color lookup.
@@ -266,6 +267,8 @@ typedef struct _sensor {
     int (*get_exposure_us) (sensor_t *sensor, int *exposure_us);
     int (*set_auto_whitebal) (sensor_t *sensor, int enable, float r_gain_db, float g_gain_db, float b_gain_db);
     int (*get_rgb_gain_db) (sensor_t *sensor, float *r_gain_db, float *g_gain_db, float *b_gain_db);
+    int (*set_auto_blc) (sensor_t *sensor, int enable, int *regs);
+    int (*get_blc_regs) (sensor_t *sensor, int *regs);
     int (*set_hmirror) (sensor_t *sensor, int enable);
     int (*set_vflip) (sensor_t *sensor, int enable);
     int (*set_special_effect) (sensor_t *sensor, sde_t sde);
@@ -378,6 +381,12 @@ int sensor_set_auto_whitebal(int enable, float r_gain_db, float g_gain_db, float
 
 // Get the rgb gain values.
 int sensor_get_rgb_gain_db(float *r_gain_db, float *g_gain_db, float *b_gain_db);
+
+// Enable auto blc (black level calibration) or set from previous calibration.
+int sensor_set_auto_blc(int enable, int *regs);
+
+// Get black level valibration register values.
+int sensor_get_blc_regs(int *regs);
 
 // Enable/disable the hmirror mode.
 int sensor_set_hmirror(int enable);

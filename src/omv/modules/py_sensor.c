@@ -451,6 +451,48 @@ static mp_obj_t py_sensor_get_rgb_gain_db() {
     });
 }
 
+static mp_obj_t py_sensor_set_auto_blc(uint n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
+    enum { ARG_enable, ARG_regs };
+    static const mp_arg_t allowed_args[] = {
+        { MP_QSTR_enable, MP_ARG_REQUIRED | MP_ARG_INT },
+        { MP_QSTR_regs,   MP_ARG_OBJ, {.u_rom_obj = MP_ROM_NONE} },
+    };
+
+    mp_arg_val_t args[MP_ARRAY_SIZE(allowed_args)];
+    mp_arg_parse_all(n_args, pos_args, kw_args, MP_ARRAY_SIZE(allowed_args), allowed_args, args);
+
+    int enable = args[ARG_enable].u_int;
+    int regs[sensor.hw_flags.blc_size];
+    bool regs_present = args[ARG_regs].u_obj != mp_const_none;
+    if (regs_present) {
+        mp_obj_t *arg_array;
+        mp_obj_get_array_fixed_n(args[ARG_regs].u_obj, sensor.hw_flags.blc_size, &arg_array);
+        for (uint32_t i = 0; i < sensor.hw_flags.blc_size; i++) {
+            regs[i] = mp_obj_get_int(arg_array[i]);
+        }
+    }
+
+    int error = sensor_set_auto_blc(enable, regs_present ? regs : NULL);
+    if (error != 0) {
+        sensor_raise_error(error);
+    }
+    return mp_const_none;
+}
+
+static mp_obj_t py_sensor_get_blc_regs() {
+    int regs[sensor.hw_flags.blc_size];
+    int error = sensor_get_blc_regs(regs);
+    if (error != 0) {
+        sensor_raise_error(error);
+    }
+
+    mp_obj_list_t *l = mp_obj_new_list(sensor.hw_flags.blc_size, NULL);
+    for (uint32_t i = 0; i < sensor.hw_flags.blc_size; i++) {
+        l->items[i] = mp_obj_new_int(regs[i]);
+    }
+    return l;
+}
+
 static mp_obj_t py_sensor_set_hmirror(mp_obj_t enable) {
     int error = sensor_set_hmirror(mp_obj_is_true(enable));
     if (error != 0) {
@@ -924,6 +966,8 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_sensor_set_auto_exposure_obj, 1, py_sensor_
 STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_sensor_get_exposure_us_obj,     py_sensor_get_exposure_us);
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_sensor_set_auto_whitebal_obj, 1, py_sensor_set_auto_whitebal);
 STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_sensor_get_rgb_gain_db_obj,     py_sensor_get_rgb_gain_db);
+STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_sensor_set_auto_blc_obj, 1,    py_sensor_set_auto_blc);
+STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_sensor_get_blc_regs_obj,        py_sensor_get_blc_regs);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_set_hmirror_obj,         py_sensor_set_hmirror);
 STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_sensor_get_hmirror_obj,         py_sensor_get_hmirror);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_set_vflip_obj,           py_sensor_set_vflip);
@@ -1101,6 +1145,8 @@ STATIC const mp_map_elem_t globals_dict_table[] = {
     { MP_OBJ_NEW_QSTR(MP_QSTR_get_exposure_us),     (mp_obj_t) &py_sensor_get_exposure_us_obj },
     { MP_OBJ_NEW_QSTR(MP_QSTR_set_auto_whitebal),   (mp_obj_t) &py_sensor_set_auto_whitebal_obj },
     { MP_OBJ_NEW_QSTR(MP_QSTR_get_rgb_gain_db),     (mp_obj_t) &py_sensor_get_rgb_gain_db_obj },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_set_auto_blc),        (mp_obj_t) &py_sensor_set_auto_blc_obj },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_get_blc_regs),        (mp_obj_t) &py_sensor_get_blc_regs_obj },
     { MP_OBJ_NEW_QSTR(MP_QSTR_set_hmirror),         (mp_obj_t) &py_sensor_set_hmirror_obj },
     { MP_OBJ_NEW_QSTR(MP_QSTR_get_hmirror),         (mp_obj_t) &py_sensor_get_hmirror_obj },
     { MP_OBJ_NEW_QSTR(MP_QSTR_set_vflip),           (mp_obj_t) &py_sensor_set_vflip_obj },
