@@ -153,18 +153,18 @@ int sensor_abort() {
 }
 
 int sensor_set_xclk_frequency(uint32_t frequency) {
-    if (frequency == 24000000) {
+    if (frequency >= 24000000) {
         CLOCK_SetDiv(kCLOCK_CsiDiv, 0);
-    } else if (frequency == 12000000) {
+    } else if (frequency >= 12000000) {
         CLOCK_SetDiv(kCLOCK_CsiDiv, 1);
-    } else if (frequency == 8000000) {
+    } else if (frequency >= 8000000) {
         CLOCK_SetDiv(kCLOCK_CsiDiv, 2);
-    } else if (frequency == 6000000) {
+    } else if (frequency >= 6000000) {
         CLOCK_SetDiv(kCLOCK_CsiDiv, 3);
-    } else if (frequency == 4000000) {
+    } else if (frequency >= 4000000) {
         CLOCK_SetDiv(kCLOCK_CsiDiv, 5);
     } else {
-        return -1;
+        CLOCK_SetDiv(kCLOCK_CsiDiv, 7);
     }
     return 0;
 }
