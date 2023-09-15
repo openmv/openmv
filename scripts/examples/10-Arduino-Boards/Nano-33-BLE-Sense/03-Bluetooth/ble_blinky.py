@@ -11,7 +11,7 @@ def event_handler(id, handle, data):
     if id == constants.EVT_GAP_CONNECTED:
         pass
     elif id == constants.EVT_GAP_DISCONNECTED:
-        # restart advertisment
+        # restart advertisement
         periph.advertise(device_name="Nano Blinky", services=[service])
     elif id == constants.EVT_GATTS_WRITE:
         LED(1).on() if int(data[0]) else LED(1).off()

@@ -1,6 +1,6 @@
 # Blur Filter Example
 #
-# This example shows off using the guassian filter to blur images.
+# This example shows off using the gaussian filter to blur images.
 
 import sensor
 import time

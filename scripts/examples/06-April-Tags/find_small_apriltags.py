@@ -47,7 +47,7 @@ while True:
     # First, we find blobs that may be candidates for tags.
     box_list = []
 
-    # AprilTags may fail due to not having enough ram given the image sie being passed.
+    # AprilTags may fail due to not having enough ram given the image size being passed.
     tag_list = []
 
     for blob in img.find_blobs(

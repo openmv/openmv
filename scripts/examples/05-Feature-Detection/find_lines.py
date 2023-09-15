@@ -40,7 +40,7 @@ while True:
 
     # More about `threshold` - each pixel in the image contributes a magnitude value
     # to a line. The sum of all contributions is the magintude for that line. Then
-    # when lines are merged their magnitudes are added togheter. Note that `threshold`
+    # when lines are merged their magnitudes are added together. Note that `threshold`
     # filters out lines with low magnitudes before merging. To see the magnitude of
     # un-merged lines set `theta_margin` and `rho_margin` to 0...
 

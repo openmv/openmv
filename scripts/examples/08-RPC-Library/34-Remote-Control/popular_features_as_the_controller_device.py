@@ -10,7 +10,7 @@ import json
 import rpc
 import struct
 
-# The RPC library above is installed on your OpenMV Cam and provides mutliple classes for
+# The RPC library above is installed on your OpenMV Cam and provides multiple classes for
 # allowing your OpenMV Cam to control over CAN, I2C, SPI, or UART.
 
 ##############################################################

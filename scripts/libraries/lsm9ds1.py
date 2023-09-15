@@ -79,7 +79,7 @@ class LSM9DS1:
         self.init_magnetometer()
 
     def init_gyro_accel(self, sample_rate=6, scale_gyro=0, scale_accel=0):
-        """Initalizes Gyro and Accelerator.
+        """Initializes Gyro and Accelerator.
         sample rate: 0-6 (off, 14.9Hz, 59.5Hz, 119Hz, 238Hz, 476Hz, 952Hz)
         scale_gyro: 0-2 (245dps, 500dps, 2000dps )
         scale_accel: 0-3 (+/-2g, +/-4g, +/-8g, +-16g)
@@ -107,7 +107,7 @@ class LSM9DS1:
         mv[5] = 0x2
         i2c.writeto_mem(addr, CTRL_REG4_G, mv[:6])
 
-        # fifo: use continous mode (overwrite old data if overflow)
+        # fifo: use continuous mode (overwrite old data if overflow)
         i2c.writeto_mem(addr, FIFO_CTRL_REG, b"\x00")
         i2c.writeto_mem(addr, FIFO_CTRL_REG, b"\xc0")
 
@@ -126,7 +126,7 @@ class LSM9DS1:
         mv = memoryview(self.scratch)
         mv[0] = 0x40 | (sample_rate << 2)  # ctrl1: high performance mode
         mv[1] = scale_magnet << 5  # ctrl2: scale, normal mode, no reset
-        mv[2] = 0x00  # ctrl3: continous conversion, no low power, I2C
+        mv[2] = 0x00  # ctrl3: continuous conversion, no low power, I2C
         mv[3] = 0x08  # ctrl4: high performance z-axis
         mv[4] = 0x00  # ctr5: no fast read, no block update
         i2c.writeto_mem(addr, CTRL_REG1_M, mv[:5])

@@ -30,8 +30,8 @@ clock = time.clock()  # Create a clock object to track the FPS.
 # sensor.set_auto_whitebal(False, rgb_gain_db = (0.0, 0.0, 0.0))
 
 # Note: Putting (0.0, 0.0, 0.0) for the gain results in something close to zero
-# comming out. Do not expect the exact value going in to be equal to the value
-# comming out.
+# coming out. Do not expect the exact value going in to be equal to the value
+# coming out.
 
 while True:
     clock.tick()  # Update the FPS clock.

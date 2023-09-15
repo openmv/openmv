@@ -26,7 +26,7 @@ clock = time.clock()
 
 # Only blobs that with more pixels than "pixel_threshold" and more area than "area_threshold" are
 # returned by "find_blobs" below. Change "pixels_threshold" and "area_threshold" if you change the
-# camera resolution. Don't set "merge=True" becuase that will merge blobs which we don't want here.
+# camera resolution. Don't set "merge=True" because that will merge blobs which we don't want here.
 
 while True:
     clock.tick()

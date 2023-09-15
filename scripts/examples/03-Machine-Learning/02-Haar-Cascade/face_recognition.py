@@ -3,7 +3,7 @@
 #
 # Before running the example:
 # 1) Download the AT&T faces database http://www.cl.cam.ac.uk/Research/DTG/attarchive/pub/data/att_faces.zip
-# 2) Exract and copy the orl_faces directory to the SD card root.
+# 2) Extract and copy the orl_faces directory to the SD card root.
 #
 # NOTE: This is just a PoC implementation of the paper mentioned above, it does Not work well in real life conditions.
 

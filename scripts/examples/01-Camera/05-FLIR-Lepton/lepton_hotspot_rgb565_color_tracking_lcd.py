@@ -4,7 +4,7 @@
 
 # FLIR Lepton Shutter Note: FLIR Leptons with radiometry and a shutter will pause the video often
 # as they heatup to re-calibrate. This will happen less and less often as the sensor temperature
-# stablizes. You can force the re-calibration to not happen if you need to via the lepton API.
+# stabilizes. You can force the re-calibration to not happen if you need to via the lepton API.
 # However, it is not recommended because the image will degrade overtime.
 
 import sensor

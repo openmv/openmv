@@ -10,7 +10,7 @@ import io, pygame, rpc, serial, serial.tools.list_ports, socket, struct, sys
 try: input = raw_input
 except NameError: pass
 
-# The RPC library above is installed on your OpenMV Cam and provides mutliple classes for
+# The RPC library above is installed on your OpenMV Cam and provides multiple classes for
 # allowing your OpenMV Cam to control over USB or WIFI.
 
 ##############################################################
@@ -105,13 +105,13 @@ clock = pygame.time.Clock()
 while(True):
     sys.stdout.flush()
 
-    # You may change the pixformat and the framesize of the image transfered from the remote device
+    # You may change the pixformat and the framesize of the image transferred from the remote device
     # by modifying the below arguments.
     #
     # When cutthrough is False the image will be transferred through the RPC library with CRC and
     # retry protection on all data moved. For faster data transfer set cutthrough to True so that
     # get_bytes() and put_bytes() are called after an RPC call completes to transfer data
-    # more quicly from one image buffer to another. Note: This works because once an RPC call
+    # more quickly from one image buffer to another. Note: This works because once an RPC call
     # completes successfully both the master and slave devices are synchronized completely.
     #
     img = get_frame_buffer_call_back("sensor.RGB565", "sensor.QQVGA", cutthrough=True, silent=True)

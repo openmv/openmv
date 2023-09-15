@@ -3,7 +3,7 @@ Example:
 from pid import PID
 pid1 = PID(p=0.07, i=0, imax=90)
 while(True):
-    error = 50 #error should be caculated, target - mesure
+    error = 50 #error should be calculated, target - measure
     output=pid1.get_pid(error,1)
     #control value with output
 """
