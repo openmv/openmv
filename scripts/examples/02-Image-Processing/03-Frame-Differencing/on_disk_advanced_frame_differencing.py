@@ -3,8 +3,8 @@
 # Note: You will need an SD card to run this example.
 #
 # This example demonstrates using frame differencing with your OpenMV Cam. This
-# example is advanced because it preforms a background update to deal with the
-# backgound image changing overtime.
+# example is advanced because it performs a background update to deal with the
+# background image changing overtime.
 
 import sensor
 import os
@@ -41,7 +41,7 @@ while True:
     if frame_count > BG_UPDATE_FRAMES:
         frame_count = 0
         # Blend in new frame. We're doing 256-alpha here because we want to
-        # blend the new frame into the backgound. Not the background into the
+        # blend the new frame into the background. Not the background into the
         # new frame which would be just alpha. Blend replaces each pixel by
         # ((NEW*(alpha))+(OLD*(256-alpha)))/256. So, a low alpha results in
         # low blending of the new image while a high alpha results in high

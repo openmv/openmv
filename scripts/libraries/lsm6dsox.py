@@ -87,7 +87,7 @@ class LSM6DSOX:
         accel_scale=4,
         ucf=None,
     ):
-        """Initalizes Gyro and Accelerator.
+        """Initializes Gyro and Accelerator.
         accel_odr: (0, 1.6Hz, 3.33Hz, 6.66Hz, 12.5Hz, 26Hz, 52Hz, 104Hz, 208Hz, 416Hz, 888Hz)
         gyro_odr:  (0, 1.6Hz, 3.33Hz, 6.66Hz, 12.5Hz, 26Hz, 52Hz, 104Hz, 208Hz, 416Hz, 888Hz)
         gyro_scale:  (245dps, 500dps, 1000dps, 2000dps)

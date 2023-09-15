@@ -24,7 +24,7 @@ except (
     OSError
 ):  # If the log file doesn't exist then set the RTC and set newFile to True
     # datetime format: year, month, day, weekday (Monday=1, Sunday=7),
-    # hours (24 hour clock), minutes, seconds, subseconds (counds down from 255 to 0)
+    # hours (24 hour clock), minutes, seconds, subseconds (counts down from 255 to 0)
     rtc.datetime((2018, 3, 9, 5, 13, 0, 0, 0))
     newFile = True
 

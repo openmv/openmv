@@ -19,7 +19,7 @@ data = ustruct.pack("<%ds" % len(text), text)
 # READ ME!!!
 #
 # Please understand that when your OpenMV Cam is not the I2C master it may miss responding to
-# sending data as a I2C slave no matter if you call "i2c.send()" in an interupt callback or in the
+# sending data as a I2C slave no matter if you call "i2c.send()" in an interrupt callback or in the
 # main loop below. When this happens the Arduino will get a NAK and have to try reading from the
 # OpenMV Cam again. Note that both the Arduino and OpenMV Cam I2C drivers are not good at getting
 # unstuck after encountering any I2C errors. On the OpenMV Cam and Arduino you can recover by

@@ -6,7 +6,7 @@
 # 3) Reset the camera from the IDE.
 # 4) Run this script to update the firmware.
 #
-# NOTE: Older fimware versions are no longer supported by the host driver.
+# NOTE: Older firmware versions are no longer supported by the host driver.
 # NOTE: The latest firmware (19.7.6) only works on ATWINC1500-MR210PB.
 # NOTE: Firmware is at <openmv-ide-install-dir>/share/qtcreator/firmware/WINC1500/winc_19_7_6.bin
 

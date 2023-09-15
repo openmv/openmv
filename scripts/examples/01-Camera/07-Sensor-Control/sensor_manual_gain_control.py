@@ -31,7 +31,7 @@ print("Initial gain == %f db" % sensor.get_gain_db())
 sensor.skip_frames(time=2000)  # Wait for settings take effect.
 clock = time.clock()  # Create a clock object to track the FPS.
 
-# You have to turn automatic exposure control and automatic white blance off
+# You have to turn automatic exposure control and automatic white balance off
 # otherwise they will change the image exposure to undo any gain settings
 # that you put in place...
 sensor.set_auto_exposure(False)

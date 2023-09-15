@@ -22,7 +22,7 @@ sensor.skip_frames(time=2000)
 
 omv.disable_fb(True)
 
-# The RPC library above is installed on your OpenMV Cam and provides mutliple classes for
+# The RPC library above is installed on your OpenMV Cam and provides multiple classes for
 # allowing your OpenMV Cam to be controlled over USB or LAN/WLAN.
 
 ################################################################

@@ -9,7 +9,7 @@
 # only evaluated if previous stages pass. Additionally, your OpenMV Cam uses
 # a data structure called the integral image to quickly execute each area
 # contrast check in constant time (the reason for feature detection being
-# grayscale only is because of the space requirment for the integral image).
+# grayscale only is because of the space requirement for the integral image).
 
 import sensor
 import time

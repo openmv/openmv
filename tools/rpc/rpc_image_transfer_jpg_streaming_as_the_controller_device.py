@@ -10,7 +10,7 @@ import io, pygame, rpc, serial, serial.tools.list_ports, socket, sys
 try: input = raw_input
 except NameError: pass
 
-# The RPC library above is installed on your OpenMV Cam and provides mutliple classes for
+# The RPC library above is installed on your OpenMV Cam and provides multiple classes for
 # allowing your OpenMV Cam to control over USB or WIFI.
 
 ##############################################################
@@ -72,7 +72,7 @@ def jpg_frame_buffer_cb(data):
 while(True):
     sys.stdout.flush()
 
-    # You may change the pixformat and the framesize of the image transfered from the remote device
+    # You may change the pixformat and the framesize of the image transferred from the remote device
     # by modifying the below arguments.
     result = interface.call("jpeg_image_stream", "sensor.RGB565,sensor.QQVGA")
     if result is not None:

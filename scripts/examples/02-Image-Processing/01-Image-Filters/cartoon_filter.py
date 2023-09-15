@@ -23,7 +23,7 @@ while True:
     # when growing a region. Settings this very high will quickly combine
     # all pixels in the image. You should keep this small.
 
-    # cartoon() will grow regions while both thresholds are statisfied...
+    # cartoon() will grow regions while both thresholds are satisfied...
 
     img = sensor.snapshot().cartoon(seed_threshold=0.05, floating_thresholds=0.05)
 

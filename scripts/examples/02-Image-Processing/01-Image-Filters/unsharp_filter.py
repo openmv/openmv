@@ -1,6 +1,6 @@
 # Unsharp Filter Example
 #
-# This example shows off using the guassian filter to unsharp mask filter images.
+# This example shows off using the gaussian filter to unsharp mask filter images.
 
 import sensor
 import time
