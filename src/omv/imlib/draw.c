@@ -2872,7 +2872,7 @@ void imlib_draw_image(image_t *dst_img,
     // Clamp start x to image bounds.
     int src_x_start = 0;
     if (dst_x_start < 0) {
-        src_x_start -= dst_x_start; // this is an add becasue dst_x_start is negative
+        src_x_start -= dst_x_start; // this is an add because dst_x_start is negative
         dst_x_start = 0;
     }
 
@@ -2887,7 +2887,7 @@ void imlib_draw_image(image_t *dst_img,
     // Clamp start y to image bounds.
     int src_y_start = 0;
     if (dst_y_start < 0) {
-        src_y_start -= dst_y_start; // this is an add becasue dst_y_start is negative
+        src_y_start -= dst_y_start; // this is an add because dst_y_start is negative
         dst_y_start = 0;
     }
 
@@ -4238,19 +4238,19 @@ void imlib_draw_image(image_t *dst_img,
                             pixel_row_2 = __UHADD8(pixel_row_2, 0);
                             pixel_row_3 = __UHADD8(pixel_row_3, 0);
 
-                            // Need 1/3 gaurd bits.
+                            // Need 1/3 guard bits.
                             pixel_row_0 = __UHADD8(pixel_row_0, 0);
                             pixel_row_1 = __UHADD8(pixel_row_1, 0);
                             pixel_row_2 = __UHADD8(pixel_row_2, 0);
                             pixel_row_3 = __UHADD8(pixel_row_3, 0);
 
-                            // Need 2/3 gaurd bits.
+                            // Need 2/3 guard bits.
                             pixel_row_0 = __UHADD8(pixel_row_0, 0);
                             pixel_row_1 = __UHADD8(pixel_row_1, 0);
                             pixel_row_2 = __UHADD8(pixel_row_2, 0);
                             pixel_row_3 = __UHADD8(pixel_row_3, 0);
 
-                            // Need 3/3 gaurd bits.
+                            // Need 3/3 guard bits.
                             pixel_row_0 = __UHADD8(pixel_row_0, 0);
                             pixel_row_1 = __UHADD8(pixel_row_1, 0);
                             pixel_row_2 = __UHADD8(pixel_row_2, 0);

@@ -515,7 +515,7 @@ array_t *orb_find_keypoints(image_t *img, bool normalized, int threshold,
     return kpts;
 }
 
-// This is a modifed popcount that counts every 2 different bits as 1.
+// This is a modified popcount that counts every 2 different bits as 1.
 // This is what should actually be used with wta_k == 3 or 4.
 static inline uint32_t popcount(uint32_t i) {
     i = i - ((i >> 1) & 0x55555555);

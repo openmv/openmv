@@ -582,7 +582,7 @@ static const mp_rom_map_elem_t winc_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_WEP),           MP_OBJ_NEW_SMALL_INT(M2M_WIFI_SEC_WEP) },    // Security type WEP.
     { MP_ROM_QSTR(MP_QSTR_WPA_PSK),       MP_OBJ_NEW_SMALL_INT(M2M_WIFI_SEC_WPA_PSK) },// Network secured with WPA/WPA2 personal(PSK).
     { MP_ROM_QSTR(MP_QSTR_802_1X),        MP_OBJ_NEW_SMALL_INT(M2M_WIFI_SEC_802_1X) }, // Network is secured with WPA/WPA2 Enterprise.
-    { MP_ROM_QSTR(MP_QSTR_MODE_STA),      MP_OBJ_NEW_SMALL_INT(WINC_MODE_STA) },       // Start in Staion mode.
+    { MP_ROM_QSTR(MP_QSTR_MODE_STA),      MP_OBJ_NEW_SMALL_INT(WINC_MODE_STA) },       // Start in Station mode.
     { MP_ROM_QSTR(MP_QSTR_MODE_AP),       MP_OBJ_NEW_SMALL_INT(WINC_MODE_AP) },        // Start in Access Point mode.
     { MP_ROM_QSTR(MP_QSTR_MODE_P2P),      MP_OBJ_NEW_SMALL_INT(WINC_MODE_P2P) },       // Start in P2P (WiFi Direct) mode.
     { MP_ROM_QSTR(MP_QSTR_MODE_BSP),      MP_OBJ_NEW_SMALL_INT(WINC_MODE_BSP) },       // Init BSP.

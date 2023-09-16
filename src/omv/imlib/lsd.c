@@ -1785,7 +1785,7 @@ static rect_iter *ri_ini(struct rect *r) {
 
     return i;
 }
-// We don't need to spend time allocating and freeing the interator structure
+// We don't need to spend time allocating and freeing the iterator structure
 // since we only use 1 at a time and it's small enough to safely use as a stack var
 void ri_ini_fast(rect_iter *i, struct rect *r) {
     float vx[4], vy[4];

@@ -73,7 +73,7 @@ static const uint8_t default_regs[][2] = {
     {REG_COM23,  0x00}, /* Disable Color bar/Analog Color Gain */
     {REG_PSHFT,  0x00}, /* Pixel delay after HREF  */
     {REG_COM10,  0x00}, /* Slave mode, HREF vs HSYNC, signals negate */
-    {REG_EDGE,   0xa6}, /* Edge enhancement treshhold and factor */
+    {REG_EDGE,   0xa6}, /* Edge enhancement threshold and factor */
     {REG_COM6,   0x43}, /* HREF & ADBLC options */
     {REG_COM22,  0x20}, /* Edge enhancement/Denoising */
 
@@ -212,7 +212,7 @@ static int reset(sensor_t *sensor) {
     /* delay n ms */
     mp_hal_delay_ms(10);
 
-    /* Write initial regsiters */
+    /* Write initial registers */
     while (regs[i][0]) {
         omv_i2c_writeb(&sensor->i2c_bus, sensor->slv_addr, regs[i][0], regs[i][1]);
         i++;

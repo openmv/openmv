@@ -6859,7 +6859,7 @@ static inline unsigned postprocess_c (zbar_decoder_t *dcode,
 {
     unsigned i, j;
 
-    /* expand buffer to accomodate 2x set C characters (2 digits per-char) */
+    /* expand buffer to accommodate 2x set C characters (2 digits per-char) */
     unsigned delta = end - start;
     unsigned newlen = dcode->code128.character + delta;
     size_buf(dcode, newlen);

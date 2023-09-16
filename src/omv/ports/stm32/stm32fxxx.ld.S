@@ -148,7 +148,7 @@ SECTIONS
     . = . + OMV_MSC_BUF_SIZE;
 
     . = ALIGN(16);
-    _vfs_buf  = .;      // VFS sturct + FATFS file buffer  (around 624 bytes)
+    _vfs_buf  = .;      // VFS struct + FATFS file buffer  (around 624 bytes)
     . = . + OMV_VFS_BUF_SIZE;
 
     . = ALIGN(16);
@@ -219,7 +219,7 @@ SECTIONS
   .bss (NOLOAD) :
   {
     . = ALIGN(4);
-    _sbss = .;          // Used by the startup to initialize the .bss secion
+    _sbss = .;          // Used by the startup to initialize the .bss section
     . = ALIGN(4);
     *(.bss*)
     . = ALIGN(4);

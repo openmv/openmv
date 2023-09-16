@@ -1200,7 +1200,7 @@ bool jpeg_compress(image_t *src, image_t *dst, int quality, bool realloc) {
     // Set output size.
     dst->size = JPEG_out_data_length;
 
-    // STM32H7 BUG FIX! The JPEG Encoder will ocassionally trigger the EOCF interrupt before writing
+    // STM32H7 BUG FIX! The JPEG Encoder will occasionally trigger the EOCF interrupt before writing
     // a final 0x000000D9 long into the output fifo as the end of the JPEG image. When this occurs
     // the output fifo will have a single 0 value in it after the encoding process finishes.
     if (__HAL_JPEG_GET_FLAG(&JPEG_Handle, JPEG_FLAG_OFNEF) && (!JPEG_Handle.Instance->DOR)) {

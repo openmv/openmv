@@ -87,7 +87,7 @@
 
 /**
 * @brief  USBD_Init
-*         Initailizes the device stack and load the class driver
+*         Initializes the device stack and loads the class driver
 * @param  pdev: device instance
 * @param  core_address: USB OTG core ID
 * @param  pdesc: Descriptor structure address

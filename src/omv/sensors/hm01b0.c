@@ -34,7 +34,7 @@ static const uint16_t default_regs[][2] = {
     {BLC_TGT,              0x08},          //  BLC target :8  at 8 bit mode
     {BLC2_TGT,             0x08},          //  BLI target :8  at 8 bit mode
     {0x3044,               0x0A},          //  Increase CDS time for settling
-    {0x3045,               0x00},          //  Make symetric for cds_tg and rst_tg
+    {0x3045,               0x00},          //  Make symmetric for cds_tg and rst_tg
     {0x3047,               0x0A},          //  Increase CDS time for settling
     {0x3050,               0xC0},          //  Make negative offset up to 4x
     {0x3051,               0x42},
@@ -145,7 +145,7 @@ static int reset(sensor_t *sensor) {
         mp_hal_delay_ms(10);
     }
 
-    // Write default regsiters
+    // Write default registers
     int ret = 0;
     for (int i = 0; default_regs[i][0] && ret == 0; i++) {
         ret |= omv_i2c_writeb2(&sensor->i2c_bus, sensor->slv_addr, default_regs[i][0], default_regs[i][1]);

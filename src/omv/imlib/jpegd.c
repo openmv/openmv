@@ -850,7 +850,7 @@ static int JPEGMakeHuffTables(JPEGIMAGE *pJPEG, int bThumbnail) {
                         repeat = 1 << ucMag;
                         iLoop = 1 << (count - ucMag);
                         for (j = 0; j < repeat; j++) {
-                            // calcuate the magnitude coeff already
+                            // calculate the magnitude coeff already
                             if (j & 1 << (ucMag - 1)) {
                                 // positive number
                                 ucCoeff = (unsigned char) j;

@@ -75,7 +75,7 @@ void point_min_area_rectangle(point_t *corners, point_t *new_corners, int corner
     float i_r = 0;
 
     // This algorithm aligns the 4 edges produced by the 4 corners to the x axis and then computes the
-    // min area rect for each alignment. The smallest rect is choosen and then re-rotated and returned.
+    // min area rect for each alignment. The smallest rect is chosen and then re-rotated and returned.
     for (int i = 0; i < corners_len; i++) {
         int16_t x0 = corners[i].x, y0 = corners[i].y;
         int x_diff = corners[(i + 1) % corners_len].x - corners[i].x;

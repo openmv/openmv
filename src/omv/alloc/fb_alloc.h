@@ -8,8 +8,8 @@
  * Theory of operation:
  *
  * The frame buffer stack may be used to allocate large areas of RAM very quickly. You can allocate
- * memory using fb_alloc() which returns a poiner to an allocated region of memory equal in size to
- * the amount requested. If the memory is not avaiable fb_alloc() will generate an exception.
+ * memory using fb_alloc() which returns a pointer to an allocated region of memory equal in size to
+ * the amount requested. If the memory is not available fb_alloc() will generate an exception.
  *
  * After RAM is allocated with fb_alloc() you can free it with fb_free() in the order of allocs.
  *

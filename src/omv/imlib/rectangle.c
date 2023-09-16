@@ -74,9 +74,9 @@ static void rectangle_div(rectangle_t *r, int c) {
 array_t *rectangle_merge(array_t *rectangles) {
     array_t *objects; array_alloc(&objects, xfree);
     array_t *overlap; array_alloc(&overlap, xfree);
-    /* merge overlaping detections */
+    /* merge overlapping detections */
     while (array_length(rectangles)) {
-        /* check for overlaping detections */
+        /* check for overlapping detections */
         rectangle_t *rect = (rectangle_t *) array_take(rectangles, 0);
         for (int j = 0; j < array_length(rectangles); j++) {
             // do not cache bound
@@ -84,14 +84,14 @@ array_t *rectangle_merge(array_t *rectangles) {
                 array_push_back(overlap, array_take(rectangles, j--));
             }
         }
-        /* add the overlaping detections */
+        /* add the overlapping detections */
         int count = array_length(overlap);
         for (int i = 0; i < count; i++) {
             rectangle_t *overlap_rect = (rectangle_t *) array_pop_back(overlap);
             rectangle_add(rect, overlap_rect);
             xfree(overlap_rect);
         }
-        /* average the overlaping detections */
+        /* average the overlapping detections */
         rectangle_div(rect, count + 1);
         array_push_back(objects, rect);
     }

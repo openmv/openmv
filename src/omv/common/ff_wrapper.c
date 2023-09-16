@@ -221,7 +221,7 @@ FRESULT f_touch_helper(const TCHAR *path) {
 // we use a temporary buffer to fix the alignment and to speed everything up.
 
 // We use this temporary buffer for both reads and writes. The buffer allows us
-// to do multi-block reads and writes which signifcantly speed things up.
+// to do multi-block reads and writes which significantly speed things up.
 
 static uint32_t file_buffer_offset = 0;
 static uint8_t *file_buffer_pointer = 0;

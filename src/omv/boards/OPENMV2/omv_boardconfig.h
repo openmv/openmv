@@ -108,7 +108,7 @@
 
 #define OMV_LINE_BUF_SIZE                     (2 * 1024) // Image line buffer round(320 * 2BPP * 2 buffers).
 #define OMV_MSC_BUF_SIZE                      (2K) // USB MSC bot data
-#define OMV_VFS_BUF_SIZE                      (1K) // VFS sturct + FATFS file buffer (624 bytes)
+#define OMV_VFS_BUF_SIZE                      (1K) // VFS struct + FATFS file buffer (624 bytes)
 #define OMV_FIR_LEPTON_BUF_SIZE               (1K) // FIR Lepton Packet Double Buffer (328 bytes)
 #define OMV_FFS_BUF_SIZE                      (16K) // Flash filesystem cache
 #define OMV_JPEG_BUF_SIZE                     (8 * 1024) // IDE JPEG buffer size (header + data).
