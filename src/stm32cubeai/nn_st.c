@@ -67,7 +67,7 @@ __STATIC_INLINE void aiPrintLayoutBuffer(const char *msg, int idx,
 }
 
 /**
- * @brief Displays informations about the network to serial port
+ * @brief Displays information about the network to serial port
  *
  * @param report - An ai_network_report structure to be displayed
  */
@@ -105,7 +105,7 @@ ai_u32 aiBufferSize(const ai_buffer *buffer) {
 }
 
 /**
- * @brief Displays informations about the errors which can occur with Cube.AI C
+ * @brief Displays information about the errors which can occur with Cube.AI C
  * API
  *
  * @param err an ai_error struct
@@ -120,7 +120,7 @@ void aiLogErr(const ai_error err, const char *fct) {
 }
 
 /**
- * @brief Intitialization code for the network
+ * @brief Initialization code for the network
  *
  * @param nn_name the name of the network
  * @return int error code, 0 if it's ok, anything else is error

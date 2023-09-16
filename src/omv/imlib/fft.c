@@ -252,7 +252,7 @@ static void unpack_fft(float *in, float *out, int N_pow2) {
 }
 
 // The IFFT takes N real and imaginary pairs to generate N real and imaginary
-// outputs with the imaginary part set to zero. To be more efficent this function
+// outputs with the imaginary part set to zero. To be more efficient this function
 // packs 2N data into an N IFFT so that the N real and imaginary outputs have
 // even/odd real values.
 

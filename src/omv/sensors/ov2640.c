@@ -353,7 +353,7 @@ static int reset(sensor_t *sensor) {
     // Delay 5 ms
     mp_hal_delay_ms(5);
 
-    // Write default regsiters
+    // Write default registers
     for (int i = 0; default_regs[i][0]; i++) {
         ret |= omv_i2c_writeb(&sensor->i2c_bus, sensor->slv_addr, default_regs[i][0], default_regs[i][1]);
     }
@@ -412,7 +412,7 @@ static int set_pixformat(sensor_t *sensor, pixformat_t pixformat) {
             return -1;
     }
 
-    // Write regsiters
+    // Write registers
     for (int i = 0; regs[i][0]; i++) {
         ret |= omv_i2c_writeb(&sensor->i2c_bus, sensor->slv_addr, regs[i][0], regs[i][1]);
     }
@@ -429,7 +429,7 @@ static int set_framesize(sensor_t *sensor, framesize_t framesize) {
     uint16_t h = resolution[framesize][1];
 
     if ((w % 4) || (h % 4) || (w > UXGA_WIDTH) || (h > UXGA_HEIGHT)) {
-        // w/h must be divisble by 4
+        // w/h must be divisible by 4
         return -1;
     }
 
@@ -448,7 +448,7 @@ static int set_framesize(sensor_t *sensor, framesize_t framesize) {
         sensor_h = UXGA_HEIGHT;
     }
 
-    // Write setup regsiters
+    // Write setup registers
     for (int i = 0; regs[i][0]; i++) {
         ret |= omv_i2c_writeb(&sensor->i2c_bus, sensor->slv_addr, regs[i][0], regs[i][1]);
     }

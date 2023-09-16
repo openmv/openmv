@@ -252,7 +252,7 @@ uint32_t framebuffer_get_buffer_size() {
     // Remove the size of the state header plus alignment padding.
     size -= sizeof(vbuffer_t);
 
-    // Do we have an estimate on the frame size with mutliple buffers? If so, we can reduce the
+    // Do we have an estimate on the frame size with multiple buffers? If so, we can reduce the
     // RAM each buffer takes up giving some space back to fb_alloc().
     if ((framebuffer->n_buffers != 1) && framebuffer->u && framebuffer->v) {
         // Typically a framebuffer will not need more than u*v*2 bytes.

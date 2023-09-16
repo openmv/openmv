@@ -91,12 +91,12 @@ const int resolution[][2] = {
 };
 
 __weak void sensor_init0() {
-    // Reset the sesnor state
+    // Reset the sensor state
     memset(&sensor, 0, sizeof(sensor_t));
 }
 
 __weak int sensor_init() {
-    // Reset the sesnor state
+    // Reset the sensor state
     memset(&sensor, 0, sizeof(sensor_t));
     return SENSOR_ERROR_CTL_UNSUPPORTED;
 }

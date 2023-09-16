@@ -87,7 +87,7 @@ void mimxrt_hal_init() {
                          );
     #endif
 
-    // Confgure and enable EDMA
+    // Configure and enable EDMA
     edma_config_t edma_config = {0};
     EDMA_GetDefaultConfig(&edma_config);
     EDMA_Init(DMA0, &edma_config);

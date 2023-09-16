@@ -120,7 +120,7 @@ int sensor_init() {
         #endif
     };
 
-    // Reset the sesnor state
+    // Reset the sensor state
     memset(&sensor, 0, sizeof(sensor_t));
 
     // Set default snapshot function.
@@ -535,7 +535,7 @@ void DCMI_DMAConvCpltUser(uint32_t addr) {
         bytes_per_pixel = sizeof(uint8_t);
     }
 
-    // For all non-JPEG and non-transposed modes we can completely offload image catpure to MDMA
+    // For all non-JPEG and non-transposed modes we can completely offload image capture to MDMA
     // and we do not need to receive any line interrupts for the rest of the frame until it ends.
     #if (OMV_ENABLE_SENSOR_MDMA == 1)
     if (!sensor.transpose) {

@@ -58,7 +58,7 @@ int sensor_init() {
     nrf_gpio_pin_write(DCMI_RESET_PIN, 1);
     #endif
 
-    // Reset the sesnor state
+    // Reset the sensor state
     memset(&sensor, 0, sizeof(sensor_t));
 
     // Set default snapshot function.

@@ -1795,7 +1795,7 @@ matd_t *matd_transpose(const matd_t *a)
 static
 float matd_det_general(const matd_t *a)
 {
-    // Use LU decompositon to calculate the determinant
+    // Use LU decomposition to calculate the determinant
     matd_plu_t *mlu = matd_plu(a);
     matd_t *L = matd_plu_l(mlu);
     matd_t *U = matd_plu_u(mlu);
@@ -9785,7 +9785,7 @@ int fit_quad(apriltag_detector_t *td, image_u8_t *im, zarray_t *cluster, struct 
     if ((!overrideMode) && (dot < 0))
         return 0;
 
-    // we now sort the points according to theta. This is a prepatory
+    // we now sort the points according to theta. This is a preparatory
     // step for segmenting them into four lines.
     if (1) {
         //        zarray_sort(cluster, pt_compare_theta);
@@ -12446,7 +12446,7 @@ void imlib_rotation_corr(image_t *img, float x_rotation, float y_rotation, float
                     break;
                 }
             }
-        } else { // warp persepective
+        } else { // warp perspective
             switch (img->pixfmt) {
                 case PIXFORMAT_BINARY: {
                     uint32_t *tmp = (uint32_t *) data;

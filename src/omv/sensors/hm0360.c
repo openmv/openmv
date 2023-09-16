@@ -346,7 +346,7 @@ static int reset(sensor_t *sensor) {
         mp_hal_delay_ms(10);
     }
 
-    // Write default regsiters
+    // Write default registers
     int ret = 0;
     for (int i = 0; default_regs[i][0] && ret == 0; i++) {
         ret |= omv_i2c_writeb2(&sensor->i2c_bus, sensor->slv_addr, default_regs[i][0], default_regs[i][1]);

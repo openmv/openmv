@@ -386,7 +386,7 @@ void *umm_malloc(size_t size) {
          */
 
         if (blockSize == blocks) {
-            /* It's an exact fit and we don't neet to split off a block. */
+            /* It's an exact fit and we don't need to split off a block. */
             DBGLOG_DEBUG("Allocating %6i blocks starting at %6i - exact\n", blocks, cf);
 
             /* Disconnect this block from the FREE list */

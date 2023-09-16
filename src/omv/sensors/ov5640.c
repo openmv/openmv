@@ -659,7 +659,7 @@ static int reset(sensor_t *sensor) {
     // Delay 5 ms
     mp_hal_delay_ms(5);
 
-    // Write default regsiters
+    // Write default registers
     for (int i = 0; default_regs[i][0]; i++) {
         int addr = (default_regs[i][0] << 8) | (default_regs[i][1] << 0);
         int data = default_regs[i][2];

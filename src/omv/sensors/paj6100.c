@@ -56,7 +56,7 @@ static int8_t init_res;
 
 static int16_t bank_cache = -1;
 
-// Exposure time related paramaters +
+// Exposure time related parameters +
 #define QVGA_MAX_EXPO_PA         85161
 #define QQVGA_MAX_EXPO_PA        25497
 
@@ -83,7 +83,7 @@ static uint8_t skip_frame = 0;
 
 static bool is_ae_enabled = true;
 static int exp_us_cache = -1;
-// Exposure time related paramaters -
+// Exposure time related parameters -
 
 static int set_auto_gain(sensor_t *sensor, int enable,
                          float gain_db, float gain_db_ceiling);

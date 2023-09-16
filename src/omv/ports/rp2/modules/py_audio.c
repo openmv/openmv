@@ -105,7 +105,7 @@ static void dma_irq_handler() {
         dma_irqn_acknowledge_channel(PDM_DMA, audio_data->dma_channel);
 
         // Set the next PDM buffer and retrigger the DMA channel
-        // immediatley while PDM samples are converted to PCM samples.
+        // immediately while PDM samples are converted to PCM samples.
         dma_channel_set_write_addr(audio_data->dma_channel,
                                    &audio_data->pdm_buffer[(audio_data->dma_buf_idx ^ 1) * PDM_BUFFER_SIZE], true);
 

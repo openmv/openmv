@@ -92,7 +92,7 @@
 #include "sensor.h"
 
 uint32_t HAL_GetHalVersion() {
-    // Hard-coded becasue it's not defined in SDK
+    // Hard-coded because it's not defined in SDK
     return ((2 << 24) | (0 << 16) | (0 << 8) | (0 << 0));
 }
 
