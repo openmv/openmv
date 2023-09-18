@@ -215,7 +215,7 @@
 #define OMV_SPI_LCD_BL_PIN              (&omv_pin_P6_GPIO)
 #define OMV_SPI_LCD_RST_PIN             (&omv_pin_P7_GPIO)
 
-#define OMV_SPI_LCD_DEF_TRIPLE_BUF      (true)
+#define OMV_SPI_LCD_DEF_TRIPLE_BUF      (1)
 
 #define OMV_SPI_LCD_RX_CLK_DIV          (8)
 

@@ -372,7 +372,7 @@
 #define OMV_SPI_LCD_RS_PIN                    (&omv_pin_C6_GPIO)
 #define OMV_SPI_LCD_RST_PIN                   (&omv_pin_C7_GPIO)
 
-#define OMV_SPI_LCD_DEF_TRIPLE_BUF            (true)
+#define OMV_SPI_LCD_DEF_TRIPLE_BUF            (1)
 
 // FIR Lepton
 #define OMV_FIR_LEPTON_I2C_BUS                (FIR_I2C_ID)

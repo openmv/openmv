@@ -103,9 +103,6 @@ static void spi_master_callback(LPSPI_Type *base, void *handle, status_t status,
     uint32_t flags = (OMV_SPI_XFER_DMA | OMV_SPI_XFER_COMPLETE);
     if ((spi->dma_flags & OMV_SPI_DMA_DOUBLE) && ((spi->xfer_flags & flags) == flags)) {
         int32_t offset = (spi->xfer_flags & OMV_SPI_XFER_HALF) ? -spi->xfer_descr.dataSize : spi->xfer_descr.dataSize;
-        if (spi->xfer_descr.txData) {
-            spi->xfer_descr.txData += offset;
-        }
         if (spi->xfer_descr.rxData) {
             spi->xfer_descr.rxData += offset;
         }
@@ -131,24 +128,8 @@ static void spi_master_callback(LPSPI_Type *base, void *handle, status_t status,
     }
 }
 
-// The LPSPI_MasterTransferNonBlocking function call does not clear the LPSPI_TCR_FRAMESZ_MASK bit
-// even if kLPSPI_MasterByteSwap is not set in the xfer. So, we have to clear this bit at the same
-// time as changing the framesize. Splitting this will result in inconsitent settings. Finally,
-// the TCR register doesn't always update itself correctly so you have to try in a loop...
-void omv_spi_set_frame_size(omv_spi_t *spi, uint16_t size) {
-    for (;;) {
-        uint32_t tcr = spi->inst->TCR;
-        uint16_t s = (uint16_t) ((tcr & LPSPI_TCR_FRAMESZ_MASK) >> LPSPI_TCR_FRAMESZ_SHIFT) + 1U;
-        if (s != size) {
-            spi->inst->TCR = (tcr & ~(LPSPI_TCR_BYSW_MASK | LPSPI_TCR_FRAMESZ_MASK)) | LPSPI_TCR_FRAMESZ(size - 1U);
-        } else {
-            break;
-        }
-    }
-}
-
 int omv_spi_transfer_start(omv_spi_t *spi, omv_spi_transfer_t *xfer) {
-    // No TX trasnfers in circular or double buffer mode.
+    // No TX transfers in circular or double buffer mode.
     if ((spi->dma_flags & (OMV_SPI_DMA_CIRCULAR | OMV_SPI_DMA_DOUBLE)) && xfer->txbuf) {
         return -1;
     }
@@ -158,34 +139,18 @@ int omv_spi_transfer_start(omv_spi_t *spi, omv_spi_transfer_t *xfer) {
     spi->xfer_error = 0;
     spi->xfer_flags = xfer->flags;
 
-    uint32_t datasize = 8;
-    if (xfer->flags & OMV_SPI_XFER_16_BIT) {
-        datasize = 16;
-    }
-
-    omv_spi_set_frame_size(spi, datasize);
-
     spi->xfer_descr.txData = xfer->txbuf;
     spi->xfer_descr.rxData = xfer->rxbuf;
-    spi->xfer_descr.dataSize = xfer->size;
+    spi->xfer_descr.dataSize = xfer->size * (spi->config_backup.bitsPerFrame / 8);
     spi->xfer_descr.configFlags = kLPSPI_MasterPcs0 | kLPSPI_MasterPcsContinuous;
-    spi->xfer_flags &= ~(OMV_SPI_XFER_FAILED | OMV_SPI_XFER_COMPLETE);
-
-    if (xfer->flags & OMV_SPI_XFER_16_BIT) {
-        spi->xfer_descr.dataSize *= 2;
-    }
+    spi->xfer_flags &= ~(OMV_SPI_XFER_FAILED | OMV_SPI_XFER_COMPLETE | OMV_SPI_XFER_HALF);
 
     if (spi->dma_flags & OMV_SPI_DMA_DOUBLE) {
         spi->xfer_descr.dataSize /= 2;
     }
 
-    // Check if we can optimize the transfer by doing things in 32-bit chunks.
-    if ((!(spi->xfer_descr.dataSize % 4)) && (!(xfer->flags & OMV_SPI_XFER_16_BIT))) {
-        omv_spi_set_frame_size(spi, 32);
-        spi->xfer_descr.configFlags |= kLPSPI_MasterByteSwap;
-    }
-
     if (spi->xfer_flags & OMV_SPI_XFER_DMA) {
+        // DMA transfer (circular or one-shot)
         if (LPSPI_MasterTransferEDMA(spi->inst, &spi->descr_master_edma, &spi->xfer_descr) != kStatus_Success) {
             return -1;
         }
@@ -214,6 +179,7 @@ int omv_spi_transfer_start(omv_spi_t *spi, omv_spi_transfer_t *xfer) {
         while (!(spi->xfer_flags & (OMV_SPI_XFER_COMPLETE | OMV_SPI_XFER_FAILED))) {
             if ((spi->xfer_flags & OMV_SPI_XFER_FAILED) ||
                 ((mp_hal_ticks_ms() - start) > xfer->timeout)) {
+                // The SPI bus was aborted by spi_master_callback.
                 return -1;
             }
             MICROPY_EVENT_POLL_HOOK
@@ -259,7 +225,7 @@ int omv_spi_init(omv_spi_t *spi, omv_spi_config_t *config) {
 
     spi_config.whichPcs = kLPSPI_Pcs0;
     spi_config.baudRate = config->baudrate;
-    spi_config.bitsPerFrame = 8;
+    spi_config.bitsPerFrame = config->datasize;
     spi_config.direction = config->bit_order;
     spi_config.pcsActiveHighOrLow = config->nss_pol;
     spi_config.cpol = config->clk_pol;
@@ -328,6 +294,7 @@ int omv_spi_set_baudrate(omv_spi_t *spi, uint32_t baudrate) {
 int omv_spi_default_config(omv_spi_config_t *config, uint32_t bus_id) {
     config->id = bus_id;
     config->baudrate = 10000000;
+    config->datasize = 8;
     config->spi_mode = OMV_SPI_MODE_MASTER;
     config->bus_mode = OMV_SPI_BUS_TX_RX;
     config->bit_order = OMV_SPI_MSB_FIRST;

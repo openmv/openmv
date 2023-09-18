@@ -29,13 +29,13 @@ typedef enum {
     OMV_SPI_XFER_NONBLOCK = (1 << 2),
     OMV_SPI_XFER_FAILED   = (1 << 3),
     OMV_SPI_XFER_COMPLETE = (1 << 4),
-    OMV_SPI_XFER_16_BIT   = (1 << 5),
     OMV_SPI_XFER_HALF     = (1 << 6), // Internal for Double Buffer mode.
 } omv_spi_xfer_flags_t;
 
 typedef struct _omv_spi_config {
     uint8_t id;
     uint32_t baudrate;
+    uint8_t datasize;
     uint32_t spi_mode;
     uint32_t bus_mode;
     uint32_t bit_order;
@@ -49,7 +49,7 @@ typedef struct _omv_spi_config {
 
 typedef struct _omv_spi omv_spi_t;
 
-typedef void (*omv_spi_callback_t) (omv_spi_t *spi, void *userdata, void *rxbuf);
+typedef void (*omv_spi_callback_t) (omv_spi_t *spi, void *userdata, void *buf);
 
 typedef struct _omv_spi_transfer {
     void *txbuf;
@@ -79,7 +79,7 @@ typedef struct _omv_spi {
 } omv_spi_t;
 
 int omv_spi_init(omv_spi_t *spi, omv_spi_config_t *config);
-// Default config: MASTER | FDX | 10MHz | MSB FIRST | NSS HARD | NSS/CPHA/CPOL LOW.
+// Default config: MASTER | FDX | 10MHz | 8 bits | MSB FIRST | NSS HARD | NSS/CPHA/CPOL LOW.
 int omv_spi_default_config(omv_spi_config_t *config, uint32_t bus_id);
 int omv_spi_deinit(omv_spi_t *spi);
 int omv_spi_set_baudrate(omv_spi_t *spi, uint32_t baudrate);

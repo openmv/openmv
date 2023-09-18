@@ -170,7 +170,7 @@ static void omv_spi_callback(SPI_HandleTypeDef *hspi) {
         if (spi->dma_flags & OMV_SPI_DMA_DOUBLE) {
             if (spi->xfer_flags & OMV_SPI_XFER_HALF) {
                 uint32_t size = spi->descr->RxXferSize ? spi->descr->RxXferSize : spi->descr->TxXferSize;
-                buf += (size * ((spi->xfer_flags & OMV_SPI_XFER_16_BIT) ? 2 : 1)) / 2;
+                buf += (size * ((spi->descr->Init.DataSize == SPI_DATASIZE_8BIT) ? 1 : 2)) / 2;
             }
             spi->xfer_flags ^= OMV_SPI_XFER_HALF;
         }
@@ -178,24 +178,8 @@ static void omv_spi_callback(SPI_HandleTypeDef *hspi) {
     }
 }
 
-static void omv_spi_dma_burst_mode(DMA_HandleTypeDef *hdma, bool on, bool sixteenbit) {
-    // Handle may not be initialized.
-    if (hdma->State == HAL_DMA_STATE_READY) {
-        hdma->Init.MemBurst = on ? DMA_MBURST_INC4 : DMA_MBURST_SINGLE;
-        hdma->Init.FIFOThreshold = on ? DMA_FIFO_THRESHOLD_FULL : DMA_FIFO_THRESHOLD_1QUARTERFULL;
-        uint32_t registerValue = ((DMA_Stream_TypeDef *) hdma->Instance)->CR;
-        #if defined(MCU_SERIES_F4) || defined(MCU_SERIES_F7)
-        hdma->Init.PeriphDataAlignment = sixteenbit ? DMA_PDATAALIGN_HALFWORD : DMA_PDATAALIGN_BYTE;
-        registerValue = (registerValue & ~DMA_SxCR_PSIZE) | hdma->Init.PeriphDataAlignment;
-        #endif
-        ((DMA_Stream_TypeDef *) hdma->Instance)->CR = (registerValue & ~DMA_SxCR_MBURST) | hdma->Init.MemBurst;
-        registerValue = ((DMA_Stream_TypeDef *) hdma->Instance)->FCR;
-        ((DMA_Stream_TypeDef *) hdma->Instance)->FCR = (registerValue & ~DMA_SxFCR_FTH) | hdma->Init.FIFOThreshold;
-    }
-}
-
 int omv_spi_transfer_start(omv_spi_t *spi, omv_spi_transfer_t *xfer) {
-    // No TX trasnfers in circular or double buffer mode.
+    // No TX transfers in circular or double buffer mode.
     if ((spi->dma_flags & (OMV_SPI_DMA_CIRCULAR | OMV_SPI_DMA_DOUBLE)) && xfer->txbuf) {
         return -1;
     }
@@ -204,35 +188,6 @@ int omv_spi_transfer_start(omv_spi_t *spi, omv_spi_transfer_t *xfer) {
     spi->userdata = xfer->userdata;
     spi->xfer_error = 0;
     spi->xfer_flags = xfer->flags;
-
-    bool sixteenbit = xfer->flags & OMV_SPI_XFER_16_BIT;
-    size_t xfer_byte_size = xfer->size * (sixteenbit ? 2 : 1);
-    #if defined(MCU_SERIES_H7)
-    // Default to moving one element at a time through the fifo for 8-bit/16-bit transfers.
-    uint8_t fthlv = SPI_FIFO_THRESHOLD_01DATA;
-    // Do word sized transfers one at a time.
-    if (!(xfer_byte_size % 4)) {
-        fthlv = sixteenbit ? SPI_FIFO_THRESHOLD_02DATA : SPI_FIFO_THRESHOLD_04DATA;
-    }
-    #endif
-
-    spi->descr->Init.DataSize = sixteenbit ? SPI_DATASIZE_16BIT : SPI_DATASIZE_8BIT;
-    #if defined(MCU_SERIES_H7)
-    spi->descr->Init.FifoThreshold = fthlv;
-    spi->descr->Instance->CFG1 = (spi->descr->Instance->CFG1 & ~SPI_CFG1_DSIZE_Msk) | spi->descr->Init.DataSize;
-    spi->descr->Instance->CFG1 = (spi->descr->Instance->CFG1 & ~SPI_CFG1_FTHLV_Msk) | fthlv;
-    #elif defined(MCU_SERIES_F7)
-    spi->descr->Instance->CR2 = (spi->descr->Instance->CR2 & ~SPI_CR2_DS_Msk) | spi->descr->Init.DataSize;
-    #elif defined(MCU_SERIES_F4)
-    spi->descr->Instance->CR1 = (spi->descr->Instance->CR1 & ~SPI_CR1_DFF_Msk) | spi->descr->Init.DataSize;
-    #endif
-
-    // If the DMA transfer is not a multiple of 16 bytes then we cannot use any burst modes.
-    if (xfer->flags & OMV_SPI_XFER_DMA) {
-        bool on = !(xfer_byte_size % 16);
-        omv_spi_dma_burst_mode(&spi->dma_descr_tx, on, sixteenbit);
-        omv_spi_dma_burst_mode(&spi->dma_descr_rx, on, sixteenbit);
-    }
 
     spi->xfer_flags &= ~(OMV_SPI_XFER_FAILED | OMV_SPI_XFER_COMPLETE | OMV_SPI_XFER_HALF);
 
@@ -307,17 +262,21 @@ static int omv_spi_dma_init(omv_spi_t *spi, uint32_t direction, omv_spi_config_t
 
     // Configure the SPI DMA steam.
     dma_descr->Init.Mode = (config->dma_flags & OMV_SPI_DMA_CIRCULAR) ? DMA_CIRCULAR : DMA_NORMAL;
-    dma_descr->Init.Priority = DMA_PRIORITY_LOW;
+    dma_descr->Init.Priority = DMA_PRIORITY_HIGH;
     dma_descr->Init.Direction = direction;
-    dma_descr->Init.FIFOMode = DMA_FIFOMODE_ENABLE;
-    dma_descr->Init.FIFOThreshold = DMA_FIFO_THRESHOLD_FULL;
-    dma_descr->Init.MemBurst = DMA_MBURST_INC4;
-    dma_descr->Init.MemDataAlignment = DMA_MDATAALIGN_WORD;
+    // When the DMA is configured in direct mode (the FIFO is disabled), the source and
+    // destination transfer widths are equal, and both defined by PSIZE (MSIZE is ignored).
+    // Additionally, burst transfers are not possible (MBURST and PBURST are both ignored).
+    dma_descr->Init.FIFOMode = DMA_FIFOMODE_DISABLE;
+    dma_descr->Init.FIFOThreshold = DMA_FIFO_THRESHOLD_1QUARTERFULL;
+    // Note MBURST and PBURST are ignored.
+    dma_descr->Init.MemBurst = DMA_MBURST_SINGLE;
     dma_descr->Init.PeriphBurst = DMA_PBURST_SINGLE;
+    dma_descr->Init.MemDataAlignment = DMA_MDATAALIGN_WORD;
     #if defined(MCU_SERIES_H7)
     dma_descr->Init.PeriphDataAlignment = DMA_PDATAALIGN_WORD;
     #else
-    dma_descr->Init.PeriphDataAlignment = DMA_PDATAALIGN_BYTE;
+    dma_descr->Init.PeriphDataAlignment = (config->datasize == 8) ? DMA_PDATAALIGN_BYTE : DMA_PDATAALIGN_HALFWORD;
     #endif
     dma_descr->Init.MemInc = DMA_MINC_ENABLE;
     dma_descr->Init.PeriphInc = DMA_PINC_DISABLE;
@@ -355,7 +314,7 @@ static int omv_spi_bus_init(omv_spi_t *spi, omv_spi_config_t *config) {
     spi_descr->Init.TIMode = SPI_TIMODE_DISABLE;
     spi_descr->Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;
     spi_descr->Init.NSS = (config->nss_enable == false) ? SPI_NSS_SOFT : SPI_NSS_HARD_OUTPUT;
-    spi_descr->Init.DataSize = SPI_DATASIZE_8BIT;
+    spi_descr->Init.DataSize = (config->datasize == 8) ? SPI_DATASIZE_8BIT : SPI_DATASIZE_16BIT;
     spi_descr->Init.FirstBit = config->bit_order;
     spi_descr->Init.CLKPhase = config->clk_pha;
     spi_descr->Init.CLKPolarity = config->clk_pol;
@@ -364,12 +323,12 @@ static int omv_spi_bus_init(omv_spi_t *spi, omv_spi_config_t *config) {
     spi_descr->Init.NSSPMode = SPI_NSS_PULSE_DISABLE;
     #if defined(MCU_SERIES_H7)
     spi_descr->Init.NSSPolarity = (config->nss_pol == 0) ? SPI_NSS_POLARITY_LOW : SPI_NSS_POLARITY_HIGH;
-    spi_descr->Init.FifoThreshold = SPI_FIFO_THRESHOLD_01DATA;
+    spi_descr->Init.FifoThreshold = SPI_FIFO_THRESHOLD_04DATA;
     spi_descr->Init.MasterSSIdleness = SPI_MASTER_SS_IDLENESS_00CYCLE;
     spi_descr->Init.MasterInterDataIdleness = SPI_MASTER_INTERDATA_IDLENESS_00CYCLE;
     spi_descr->Init.MasterReceiverAutoSusp = SPI_MASTER_RX_AUTOSUSP_DISABLE;
     spi_descr->Init.MasterKeepIOState = (config->data_retained == true) ?
-                                        SPI_MASTER_KEEP_IO_STATE_ENABLE : SPI_MASTER_KEEP_IO_STATE_ENABLE;
+                                        SPI_MASTER_KEEP_IO_STATE_ENABLE : SPI_MASTER_KEEP_IO_STATE_DISABLE;
     spi_descr->Init.IOSwap = SPI_IO_SWAP_DISABLE;
     #endif
     #endif
@@ -486,6 +445,7 @@ int omv_spi_set_baudrate(omv_spi_t *spi, uint32_t baudrate) {
 int omv_spi_default_config(omv_spi_config_t *config, uint32_t bus_id) {
     config->id = bus_id;
     config->baudrate = 10000000;
+    config->datasize = 8;
     config->spi_mode = OMV_SPI_MODE_MASTER;
     config->bus_mode = OMV_SPI_BUS_TX_RX;
     config->bit_order = OMV_SPI_MSB_FIRST;

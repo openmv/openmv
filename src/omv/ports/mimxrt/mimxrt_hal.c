@@ -20,7 +20,6 @@
 #include "fsl_usb_phy.h"
 #include "fsl_device_registers.h"
 #include CLOCK_CONFIG_H
-#include "dma_manager.h"
 #include "irq.h"
 
 #include "omv_boardconfig.h"

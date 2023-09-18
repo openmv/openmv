@@ -317,7 +317,7 @@
 #define OMV_SPI_LCD_BL_DAC_FORCE_RESET()      __HAL_RCC_DAC12_FORCE_RESET()
 #define OMV_SPI_LCD_BL_DAC_RELEASE_RESET()    __HAL_RCC_DAC12_RELEASE_RESET()
 
-#define OMV_SPI_LCD_DEF_TRIPLE_BUF            (true)
+#define OMV_SPI_LCD_DEF_TRIPLE_BUF            (1)
 
 // FIR Lepton
 #define OMV_FIR_LEPTON_I2C_BUS                (FIR_I2C_ID)
