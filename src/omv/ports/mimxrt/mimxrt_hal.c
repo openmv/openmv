@@ -198,6 +198,22 @@ int mimxrt_hal_spi_init(uint32_t bus_id, bool nss_enable, uint32_t nss_pol) {
             break;
         }
         #endif
+        #if defined(LPSPI2_ID)
+        case LPSPI2_ID: {
+            spi_pins = (spi_pins_t) {
+                LPSPI2_SCLK_PIN, LPSPI2_MISO_PIN, LPSPI2_MOSI_PIN, LPSPI2_SSEL_PIN
+            };
+            break;
+        }
+        #endif
+        #if defined(LPSPI3_ID)
+        case LPSPI3_ID: {
+            spi_pins = (spi_pins_t) {
+                LPSPI3_SCLK_PIN, LPSPI3_MISO_PIN, LPSPI3_MOSI_PIN, LPSPI3_SSEL_PIN
+            };
+            break;
+        }
+        #endif
         #if defined(LPSPI4_ID)
         case LPSPI4_ID: {
             spi_pins = (spi_pins_t) {
@@ -216,13 +232,67 @@ int mimxrt_hal_spi_init(uint32_t bus_id, bool nss_enable, uint32_t nss_pol) {
     if (nss_enable) {
         omv_gpio_config(spi_pins.ssel_pin, OMV_GPIO_MODE_ALT, OMV_GPIO_PULL_UP, OMV_GPIO_SPEED_MED, -1);
     } else {
-        omv_gpio_config(spi_pins.ssel_pin, OMV_GPIO_MODE_OUTPUT, OMV_GPIO_PULL_UP, OMV_GPIO_SPEED_MED, -1);
+        omv_gpio_config(spi_pins.ssel_pin, OMV_GPIO_MODE_OUTPUT, OMV_GPIO_PULL_UP, OMV_GPIO_SPEED_MED, 5);
         if (nss_pol == OMV_SPI_NSS_LOW) {
             omv_gpio_write(spi_pins.ssel_pin, 1);
         } else {
             omv_gpio_write(spi_pins.ssel_pin, 0);
         }
     }
+    return 0;
+}
+
+int mimxrt_hal_spi_deinit(uint32_t bus_id) {
+    typedef struct {
+        omv_gpio_t sclk_pin;
+        omv_gpio_t miso_pin;
+        omv_gpio_t mosi_pin;
+        omv_gpio_t ssel_pin;
+    } spi_pins_t;
+
+    spi_pins_t spi_pins = { NULL, NULL, NULL, NULL };
+
+    switch (bus_id) {
+        #if defined(LPSPI1_ID)
+        case LPSPI1_ID: {
+            spi_pins = (spi_pins_t) {
+                LPSPI1_SCLK_PIN, LPSPI1_MISO_PIN, LPSPI1_MOSI_PIN, LPSPI1_SSEL_PIN
+            };
+            break;
+        }
+        #endif
+        #if defined(LPSPI2_ID)
+        case LPSPI2_ID: {
+            spi_pins = (spi_pins_t) {
+                LPSPI2_SCLK_PIN, LPSPI2_MISO_PIN, LPSPI2_MOSI_PIN, LPSPI2_SSEL_PIN
+            };
+            break;
+        }
+        #endif
+        #if defined(LPSPI3_ID)
+        case LPSPI3_ID: {
+            spi_pins = (spi_pins_t) {
+                LPSPI3_SCLK_PIN, LPSPI3_MISO_PIN, LPSPI3_MOSI_PIN, LPSPI3_SSEL_PIN
+            };
+            break;
+        }
+        #endif
+        #if defined(LPSPI4_ID)
+        case LPSPI4_ID: {
+            spi_pins = (spi_pins_t) {
+                LPSPI4_SCLK_PIN, LPSPI4_MISO_PIN, LPSPI4_MOSI_PIN, LPSPI4_SSEL_PIN
+            };
+            break;
+        }
+        #endif
+        default:
+            return -1;
+    }
+
+    omv_gpio_deinit(spi_pins.sclk_pin);
+    omv_gpio_deinit(spi_pins.miso_pin);
+    omv_gpio_deinit(spi_pins.mosi_pin);
+    omv_gpio_deinit(spi_pins.ssel_pin);
     return 0;
 }
 

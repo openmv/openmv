@@ -433,7 +433,17 @@ void HAL_SPI_MspInit(SPI_HandleTypeDef *hspi) {
         return;
     }
 
+    #if defined(MCU_SERIES_H7)
     omv_gpio_config(spi_pins.sclk_pin, OMV_GPIO_MODE_ALT, OMV_GPIO_PULL_NONE, OMV_GPIO_SPEED_HIGH, -1);
+    #else
+    // The STM32F4 and STM32F7 don't set the initial state of the clock line until transmitting the
+    // first packet... which means the first packet may be seen as corrupt by the slave device.
+    if (hspi->Init.CLKPolarity == SPI_POLARITY_HIGH) {
+        omv_gpio_config(spi_pins.sclk_pin, OMV_GPIO_MODE_ALT, OMV_GPIO_PULL_UP, OMV_GPIO_SPEED_HIGH, -1);
+    } else {
+        omv_gpio_config(spi_pins.sclk_pin, OMV_GPIO_MODE_ALT, OMV_GPIO_PULL_DOWN, OMV_GPIO_SPEED_HIGH, -1);
+    }
+    #endif
     omv_gpio_config(spi_pins.miso_pin, OMV_GPIO_MODE_ALT, OMV_GPIO_PULL_NONE, OMV_GPIO_SPEED_HIGH, -1);
     omv_gpio_config(spi_pins.mosi_pin, OMV_GPIO_MODE_ALT, OMV_GPIO_PULL_NONE, OMV_GPIO_SPEED_HIGH, -1);
     if (hspi->Init.NSS != SPI_NSS_SOFT) {
@@ -446,12 +456,85 @@ void HAL_SPI_MspInit(SPI_HandleTypeDef *hspi) {
         } else {
             omv_gpio_write(spi_pins.ssel_pin, 0);
         }
+        #else
+        omv_gpio_write(spi_pins.ssel_pin, 1);
         #endif
     }
 }
 
 void HAL_SPI_MspDeInit(SPI_HandleTypeDef *hspi) {
+    typedef struct {
+        omv_gpio_t sclk_pin;
+        omv_gpio_t miso_pin;
+        omv_gpio_t mosi_pin;
+        omv_gpio_t ssel_pin;
+    } spi_pins_t;
 
+    spi_pins_t spi_pins = { NULL, NULL, NULL, NULL };
+
+    if (0) {
+    #if defined(SPI1_ID)
+    } else if (hspi->Instance == SPI1) {
+        __HAL_RCC_SPI1_FORCE_RESET();
+        __HAL_RCC_SPI1_RELEASE_RESET();
+        __HAL_RCC_SPI1_CLK_DISABLE();
+        spi_pins = (spi_pins_t) {
+            SPI1_SCLK_PIN, SPI1_MISO_PIN, SPI1_MOSI_PIN, SPI1_SSEL_PIN
+        };
+    #endif
+    #if defined(SPI2_ID)
+    } else if (hspi->Instance == SPI2) {
+        __HAL_RCC_SPI2_FORCE_RESET();
+        __HAL_RCC_SPI2_RELEASE_RESET();
+        __HAL_RCC_SPI2_CLK_DISABLE();
+        spi_pins = (spi_pins_t) {
+            SPI2_SCLK_PIN, SPI2_MISO_PIN, SPI2_MOSI_PIN, SPI2_SSEL_PIN
+        };
+    #endif
+    #if defined(SPI3_ID)
+    } else if (hspi->Instance == SPI3) {
+        __HAL_RCC_SPI3_FORCE_RESET();
+        __HAL_RCC_SPI3_RELEASE_RESET();
+        __HAL_RCC_SPI3_CLK_DISABLE();
+        spi_pins = (spi_pins_t) {
+            SPI3_SCLK_PIN, SPI3_MISO_PIN, SPI3_MOSI_PIN, SPI3_SSEL_PIN
+        };
+    #endif
+    #if defined(SPI4_ID)
+    } else if (hspi->Instance == SPI4) {
+        __HAL_RCC_SPI4_FORCE_RESET();
+        __HAL_RCC_SPI4_RELEASE_RESET();
+        __HAL_RCC_SPI4_CLK_DISABLE();
+        spi_pins = (spi_pins_t) {
+            SPI4_SCLK_PIN, SPI4_MISO_PIN, SPI4_MOSI_PIN, SPI4_SSEL_PIN
+        };
+    #endif
+    #if defined(SPI5_ID)
+    } else if (hspi->Instance == SPI5) {
+        __HAL_RCC_SPI5_FORCE_RESET();
+        __HAL_RCC_SPI5_RELEASE_RESET();
+        __HAL_RCC_SPI5_CLK_DISABLE();
+        spi_pins = (spi_pins_t) {
+            SPI5_SCLK_PIN, SPI5_MISO_PIN, SPI5_MOSI_PIN, SPI5_SSEL_PIN
+        };
+    #endif
+    #if defined(SPI6_ID)
+    } else if (hspi->Instance == SPI6) {
+        __HAL_RCC_SPI6_FORCE_RESET();
+        __HAL_RCC_SPI6_RELEASE_RESET();
+        __HAL_RCC_SPI6_CLK_DISABLE();
+        spi_pins = (spi_pins_t) {
+            SPI6_SCLK_PIN, SPI6_MISO_PIN, SPI6_MOSI_PIN, SPI6_SSEL_PIN
+        };
+    #endif
+    } else {
+        return;
+    }
+
+    omv_gpio_deinit(spi_pins.sclk_pin);
+    omv_gpio_deinit(spi_pins.miso_pin);
+    omv_gpio_deinit(spi_pins.mosi_pin);
+    omv_gpio_deinit(spi_pins.ssel_pin);
 }
 
 #if defined(AUDIO_SAI)

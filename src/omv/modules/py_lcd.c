@@ -11,12 +11,11 @@
 #include "omv_boardconfig.h"
 
 #if MICROPY_PY_LCD
-#include STM32_HAL_H
+
 #include "py/obj.h"
 #include "py/nlr.h"
 #include "py/runtime.h"
 #include "pendsv.h"
-#include "spi.h"
 
 #include "py_lcd_cec.h"
 #include "py_lcd_touch.h"
@@ -24,6 +23,7 @@
 #include "py_image.h"
 #include "extmod/machine_i2c.h"
 #include "omv_gpio.h"
+#include "omv_spi.h"
 
 #define FRAMEBUFFER_COUNT    3
 static int framebuffer_tail = 0;
@@ -72,58 +72,71 @@ lcd_resolution = LCD_DISPLAY_QVGA;
 static int lcd_refresh = 0;
 static int lcd_intensity = 0;
 
-#ifdef OMV_SPI_LCD_CONTROLLER
-static DMA_HandleTypeDef spi_tx_dma = {};
+#ifdef OMV_SPI_LCD_SPI_BUS
+static omv_spi_t spi_bus = {};
 
-static volatile enum {
-    SPI_TX_CB_IDLE,
-    SPI_TX_CB_MEMORY_WRITE_CMD,
-    SPI_TX_CB_MEMORY_WRITE,
-    SPI_TX_CB_DISPLAY_ON,
-    SPI_TX_CB_DISPLAY_OFF
+static bool spi_tx_thread_running = false;
+static uint32_t spi_tx_baudrate = 0;
+
+static void spi_transmit(uint8_t *txdata, uint16_t size, bool end) {
+    omv_spi_transfer_t spi_xfer = {
+        .txbuf = txdata,
+        .size = size,
+        .timeout = OMV_SPI_MAX_TIMEOUT,
+        .flags = OMV_SPI_XFER_BLOCKING
+    };
+
+    omv_gpio_write(OMV_SPI_LCD_SSEL_PIN, 0);
+    omv_spi_transfer_start(&spi_bus, &spi_xfer);
+
+    if (end) {
+        omv_gpio_write(OMV_SPI_LCD_SSEL_PIN, 1);
+    }
 }
-spi_tx_cb_state = SPI_TX_CB_IDLE;
+
+static void spi_transmit_16(uint8_t *txdata, uint16_t size) {
+    omv_spi_transfer_t spi_xfer = {
+        .txbuf = txdata,
+        .size = (!lcd_byte_reverse) ? size : (size * 2),
+        .timeout = OMV_SPI_MAX_TIMEOUT,
+        .flags = OMV_SPI_XFER_BLOCKING,
+    };
+
+    omv_spi_transfer_start(&spi_bus, &spi_xfer);
+}
 
 static void spi_config_deinit() {
     if (lcd_triple_buffer) {
-        HAL_SPI_Abort(OMV_SPI_LCD_CONTROLLER->spi);
-        spi_tx_cb_state = SPI_TX_CB_IDLE;
+        omv_spi_transfer_abort(&spi_bus);
+        spi_tx_thread_running = false;
         fb_alloc_free_till_mark_past_mark_permanent();
     }
 
-    spi_deinit(OMV_SPI_LCD_CONTROLLER);
+    spi_tx_baudrate = 0;
 
-    // Do not put in HAL_SPI_MspDeinit as other modules share the SPI2 bus.
-    omv_gpio_deinit(OMV_SPI_LCD_MOSI_PIN);
-    omv_gpio_deinit(OMV_SPI_LCD_SCLK_PIN);
-    omv_gpio_deinit(OMV_SPI_LCD_RST_PIN);
+    omv_spi_deinit(&spi_bus);
+
     omv_gpio_deinit(OMV_SPI_LCD_RS_PIN);
-    omv_gpio_deinit(OMV_SPI_LCD_SSEL_PIN);
+    omv_gpio_deinit(OMV_SPI_LCD_RST_PIN);
 }
 
-static void spi_lcd_callback(SPI_HandleTypeDef *hspi);
+static void spi_config_init(int w, int h, int refresh_rate, bool triple_buffer, bool bgr, bool byte_reverse) {
+    omv_spi_config_t spi_config;
+    omv_spi_default_config(&spi_config, OMV_SPI_LCD_SPI_BUS);
 
-static void spi_config_init(int w, int h, int refresh_rate, bool triple_buffer, bool bgr) {
-    SPI_HandleTypeDef *hspi = OMV_SPI_LCD_CONTROLLER->spi;
+    spi_tx_baudrate = w * h * refresh_rate * 16;
+    spi_config.baudrate = spi_tx_baudrate;
+    spi_config.bus_mode = OMV_SPI_BUS_TX;
+    spi_config.nss_enable = false;
+    omv_spi_init(&spi_bus, &spi_config);
 
-    hspi->Init.Mode = SPI_MODE_MASTER;
-    hspi->Init.Direction = SPI_DIRECTION_1LINE;
-    hspi->Init.NSS = SPI_NSS_SOFT;
-    hspi->Init.TIMode = SPI_TIMODE_DISABLE;
-    hspi->Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;
-    spi_set_params(OMV_SPI_LCD_CONTROLLER, 0xffffffff, w * h * refresh_rate * 16, 0, 0, 8, 0);
-    spi_init(OMV_SPI_LCD_CONTROLLER, true);
-    HAL_SPI_RegisterCallback(hspi, HAL_SPI_TX_COMPLETE_CB_ID, spi_lcd_callback);
+    omv_gpio_write(OMV_SPI_LCD_SSEL_PIN, 1);
 
-    // Do not put in HAL_SPI_MspInit as other modules share the SPI2 bus.
-    omv_gpio_config(OMV_SPI_LCD_MOSI_PIN, OMV_GPIO_MODE_ALT, OMV_GPIO_PULL_NONE, OMV_GPIO_SPEED_MED, -1);
-    omv_gpio_config(OMV_SPI_LCD_SCLK_PIN, OMV_GPIO_MODE_ALT, OMV_GPIO_PULL_NONE, OMV_GPIO_SPEED_MED, -1);
     omv_gpio_config(OMV_SPI_LCD_RST_PIN, OMV_GPIO_MODE_OUTPUT, OMV_GPIO_PULL_NONE, OMV_GPIO_SPEED_LOW, -1);
     omv_gpio_write(OMV_SPI_LCD_RST_PIN, 1);
+
     omv_gpio_config(OMV_SPI_LCD_RS_PIN, OMV_GPIO_MODE_OUTPUT, OMV_GPIO_PULL_NONE, OMV_GPIO_SPEED_LOW, -1);
     omv_gpio_write(OMV_SPI_LCD_RS_PIN, 1);
-    omv_gpio_config(OMV_SPI_LCD_SSEL_PIN, OMV_GPIO_MODE_OUTPUT, OMV_GPIO_PULL_NONE, OMV_GPIO_SPEED_LOW, -1);
-    omv_gpio_write(OMV_SPI_LCD_SSEL_PIN, 1);
 
     omv_gpio_write(OMV_SPI_LCD_RST_PIN, 0);
     mp_hal_delay_ms(100);
@@ -131,29 +144,19 @@ static void spi_config_init(int w, int h, int refresh_rate, bool triple_buffer, 
     mp_hal_delay_ms(100);
 
     omv_gpio_write(OMV_SPI_LCD_RS_PIN, 0);
-    omv_gpio_write(OMV_SPI_LCD_SSEL_PIN, 0);
-    HAL_SPI_Transmit(hspi, (uint8_t []) {0x11}, 1, HAL_MAX_DELAY); // sleep out
-    omv_gpio_write(OMV_SPI_LCD_SSEL_PIN, 1);
+    spi_transmit((uint8_t []) {0x11}, 1, true); // sleep out
     omv_gpio_write(OMV_SPI_LCD_RS_PIN, 1);
     mp_hal_delay_ms(120);
 
     omv_gpio_write(OMV_SPI_LCD_RS_PIN, 0);
-    omv_gpio_write(OMV_SPI_LCD_SSEL_PIN, 0);
-    HAL_SPI_Transmit(hspi, (uint8_t []) {0x36}, 1, HAL_MAX_DELAY); // memory data access control
-    omv_gpio_write(OMV_SPI_LCD_SSEL_PIN, 1);
+    spi_transmit((uint8_t []) {0x36}, 1, true); // memory data access control
     omv_gpio_write(OMV_SPI_LCD_RS_PIN, 1);
-    omv_gpio_write(OMV_SPI_LCD_SSEL_PIN, 0);
-    HAL_SPI_Transmit(hspi, (uint8_t []) {bgr ? 0xC8 : 0xC0}, 1, HAL_MAX_DELAY); // argument
-    omv_gpio_write(OMV_SPI_LCD_SSEL_PIN, 1);
+    spi_transmit((uint8_t []) {bgr ? 0xC8 : 0xC0}, 1, true); // argument
 
     omv_gpio_write(OMV_SPI_LCD_RS_PIN, 0);
-    omv_gpio_write(OMV_SPI_LCD_SSEL_PIN, 0);
-    HAL_SPI_Transmit(hspi, (uint8_t []) {0x3A}, 1, HAL_MAX_DELAY); // interface pixel format
-    omv_gpio_write(OMV_SPI_LCD_SSEL_PIN, 1);
+    spi_transmit((uint8_t []) {0x3A}, 1, true); // interface pixel format
     omv_gpio_write(OMV_SPI_LCD_RS_PIN, 1);
-    omv_gpio_write(OMV_SPI_LCD_SSEL_PIN, 0);
-    HAL_SPI_Transmit(hspi, (uint8_t []) {0x05}, 1, HAL_MAX_DELAY); // argument
-    omv_gpio_write(OMV_SPI_LCD_SSEL_PIN, 1);
+    spi_transmit((uint8_t []) {0x05}, 1, true); // argument
 
     if (triple_buffer) {
         fb_alloc_mark();
@@ -165,161 +168,112 @@ static void spi_config_init(int w, int h, int refresh_rate, bool triple_buffer, 
             framebuffers[i] = (uint16_t *) fb_alloc0(w * h * sizeof(uint16_t), FB_ALLOC_CACHE_ALIGN);
         }
 
-        dma_init(&spi_tx_dma, OMV_SPI_LCD_CONTROLLER->tx_dma_descr, DMA_MEMORY_TO_PERIPH, hspi);
-        hspi->hdmatx = &spi_tx_dma;
-        hspi->hdmarx = NULL;
-        #if defined(MCU_SERIES_H7)
-        spi_tx_dma.Init.PeriphDataAlignment = DMA_PDATAALIGN_WORD;
-        #else
-        spi_tx_dma.Init.PeriphDataAlignment = DMA_PDATAALIGN_HALFWORD;
-        #endif
-        spi_tx_dma.Init.MemDataAlignment = DMA_MDATAALIGN_WORD;
-        spi_tx_dma.Init.FIFOMode = DMA_FIFOMODE_ENABLE;
-        spi_tx_dma.Init.FIFOThreshold = DMA_FIFO_THRESHOLD_FULL;
-        spi_tx_dma.Init.MemBurst = DMA_MBURST_INC4;
-        #if defined(MCU_SERIES_H7)
-        spi_tx_dma.Init.PeriphBurst = DMA_PBURST_INC4;
-        #else
-        spi_tx_dma.Init.PeriphBurst = DMA_PBURST_SINGLE;
-        #endif
-        DMA_Stream_TypeDef *dma_chan = spi_tx_dma.Instance;
-        #if defined(MCU_SERIES_H7)
-        dma_chan->CR = (dma_chan->CR & ~DMA_SxCR_PSIZE_Msk) | DMA_PDATAALIGN_WORD;
-        #else
-        dma_chan->CR = (dma_chan->CR & ~DMA_SxCR_PSIZE_Msk) | DMA_PDATAALIGN_HALFWORD;
-        #endif
-        dma_chan->CR = (dma_chan->CR & ~DMA_SxCR_MSIZE_Msk) | DMA_MDATAALIGN_WORD;
-        dma_chan->FCR = (dma_chan->FCR & ~DMA_SxFCR_DMDIS_Msk) | DMA_FIFOMODE_ENABLE;
-        dma_chan->FCR = (dma_chan->FCR & ~DMA_SxFCR_FTH_Msk) | DMA_FIFO_THRESHOLD_FULL;
-        dma_chan->CR = (dma_chan->CR & ~DMA_SxCR_MBURST_Msk) | DMA_MBURST_INC4;
-        #if defined(MCU_SERIES_H7)
-        dma_chan->CR = (dma_chan->CR & ~DMA_SxCR_PBURST_Msk) | DMA_PBURST_INC4;
-        #else
-        dma_chan->CR = (dma_chan->CR & ~DMA_SxCR_PBURST_Msk) | DMA_PBURST_SINGLE;
-        #endif
         fb_alloc_mark_permanent();
     }
 }
-
-static bool spi_tx_cb_state_on[FRAMEBUFFER_COUNT] = {};
 
 static const uint8_t display_off[] = {0x28};
 static const uint8_t display_on[] = {0x29};
 static const uint8_t memory_write[] = {0x2C};
 
-static void spi_lcd_callback(SPI_HandleTypeDef *hspi) {
-    if (lcd_type == LCD_SHIELD) {
-        static uint16_t *spi_tx_cb_state_memory_write_addr = NULL;
-        static size_t spi_tx_cb_state_memory_write_count = 0;
-        static bool spi_tx_cb_state_memory_write_first = false;
+static void spi_lcd_switch_mode(int bits, bool dma) {
+    omv_spi_deinit(&spi_bus);
 
-        switch (spi_tx_cb_state) {
-            case SPI_TX_CB_MEMORY_WRITE_CMD: {
-                if (!spi_tx_cb_state_on[framebuffer_tail]) {
-                    omv_gpio_write(OMV_SPI_LCD_SSEL_PIN, 1);
-                    omv_gpio_write(OMV_SPI_LCD_RS_PIN, 0);
-                    spi_tx_cb_state = SPI_TX_CB_DISPLAY_OFF;
-                    framebuffer_head = framebuffer_tail;
-                    omv_gpio_write(OMV_SPI_LCD_SSEL_PIN, 0);
-                    HAL_SPI_Transmit_IT(hspi, (uint8_t *) display_off, sizeof(display_off));
-                } else {
-                    omv_gpio_write(OMV_SPI_LCD_SSEL_PIN, 1);
-                    omv_gpio_write(OMV_SPI_LCD_RS_PIN, 0);
-                    spi_tx_cb_state = SPI_TX_CB_MEMORY_WRITE;
-                    spi_tx_cb_state_memory_write_addr = framebuffers[framebuffer_tail];
-                    spi_tx_cb_state_memory_write_count = lcd_width * lcd_height;
-                    spi_tx_cb_state_memory_write_first = true;
-                    framebuffer_head = framebuffer_tail;
-                    omv_gpio_write(OMV_SPI_LCD_SSEL_PIN, 0);
-                    // When starting the interrupt chain the first HAL_SPI_Transmit_IT is not executed
-                    // in interrupt context. So, disable interrupts for the first HAL_SPI_Transmit_IT so
-                    // that it completes first and unlocks the SPI bus before allowing the interrupt
-                    // it causes to trigger starting the interrupt chain.
-                    uint32_t irq_state = disable_irq();
-                    HAL_SPI_Transmit_IT(hspi, (uint8_t *) memory_write, sizeof(memory_write));
-                    enable_irq(irq_state);
-                }
-                break;
+    omv_spi_config_t spi_config;
+    omv_spi_default_config(&spi_config, OMV_SPI_LCD_SPI_BUS);
+
+    spi_config.baudrate = spi_tx_baudrate;
+    spi_config.datasize = bits;
+    spi_config.bus_mode = OMV_SPI_BUS_TX;
+    spi_config.nss_enable = false;
+    spi_config.dma_flags = dma ? OMV_SPI_DMA_NORMAL : 0;
+    omv_spi_init(&spi_bus, &spi_config);
+}
+
+static void spi_lcd_callback(omv_spi_t *spi, void *userdata, void *buf) {
+    if (lcd_type == LCD_SHIELD) {
+        static uint8_t *spi_tx_cb_state_memory_write_addr = NULL;
+        static size_t spi_tx_cb_state_memory_write_count = 0;
+
+        // If userdata is not null then it means that we are being kicked off.
+        if (userdata != NULL) {
+            spi_tx_cb_state_memory_write_count = 0;
+        }
+
+        if (!spi_tx_cb_state_memory_write_count) {
+            spi_tx_cb_state_memory_write_addr = (uint8_t *) framebuffers[framebuffer_tail];
+            spi_tx_cb_state_memory_write_count = lcd_width * lcd_height;
+
+            if (lcd_byte_reverse) {
+                spi_tx_cb_state_memory_write_count *= 2;
             }
-            case SPI_TX_CB_MEMORY_WRITE: {
-                uint16_t *addr = spi_tx_cb_state_memory_write_addr;
-                size_t count = IM_MIN(spi_tx_cb_state_memory_write_count, (65536 - 8u));
-                spi_tx_cb_state =
-                    (spi_tx_cb_state_memory_write_count > (65536 - 8u)) ? SPI_TX_CB_MEMORY_WRITE : SPI_TX_CB_DISPLAY_ON;
-                spi_tx_cb_state_memory_write_addr += count;
-                spi_tx_cb_state_memory_write_count -= count;
-                if (spi_tx_cb_state_memory_write_first) {
-                    omv_gpio_write(OMV_SPI_LCD_SSEL_PIN, 1);
-                    omv_gpio_write(OMV_SPI_LCD_RS_PIN, 1);
-                    spi_tx_cb_state_memory_write_first = false;
-                    if (!lcd_byte_reverse) {
-                        hspi->Init.DataSize = SPI_DATASIZE_16BIT;
-                        #if defined(MCU_SERIES_H7)
-                        hspi->Instance->CFG1 = (hspi->Instance->CFG1 & ~SPI_CFG1_DSIZE_Msk) | SPI_DATASIZE_16BIT;
-                        hspi->Instance->CFG1 = (hspi->Instance->CFG1 & ~SPI_CFG1_FTHLV_Msk) | SPI_FIFO_THRESHOLD_08DATA;
-                        #elif defined(MCU_SERIES_F7)
-                        hspi->Instance->CR2 = (hspi->Instance->CR2 & ~SPI_CR2_DS_Msk) | SPI_DATASIZE_16BIT;
-                        #elif defined(MCU_SERIES_F4)
-                        hspi->Instance->CR1 = (hspi->Instance->CR1 & ~SPI_CR1_DFF_Msk) | SPI_DATASIZE_16BIT;
-                        #endif
-                    }
-                    omv_gpio_write(OMV_SPI_LCD_SSEL_PIN, 0);
-                }
-                HAL_SPI_Transmit_DMA(hspi, (uint8_t *) addr, count);
-                break;
-            }
-            case SPI_TX_CB_DISPLAY_ON: {
-                omv_gpio_write(OMV_SPI_LCD_SSEL_PIN, 1);
-                omv_gpio_write(OMV_SPI_LCD_RS_PIN, 0);
-                spi_tx_cb_state = SPI_TX_CB_MEMORY_WRITE_CMD;
-                hspi->Init.DataSize = SPI_DATASIZE_8BIT;
-                #if defined(MCU_SERIES_H7)
-                hspi->Instance->CFG1 = (hspi->Instance->CFG1 & ~SPI_CFG1_DSIZE_Msk) | SPI_DATASIZE_8BIT;
-                hspi->Instance->CFG1 = (hspi->Instance->CFG1 & ~SPI_CFG1_FTHLV_Msk) | SPI_FIFO_THRESHOLD_01DATA;
-                #elif defined(MCU_SERIES_F7)
-                hspi->Instance->CR2 = (hspi->Instance->CR2 & ~SPI_CR2_DS_Msk) | SPI_DATASIZE_8BIT;
-                #elif defined(MCU_SERIES_F4)
-                hspi->Instance->CR1 = (hspi->Instance->CR1 & ~SPI_CR1_DFF_Msk) | SPI_DATASIZE_8BIT;
-                #endif
-                omv_gpio_write(OMV_SPI_LCD_SSEL_PIN, 0);
-                HAL_SPI_Transmit_IT(hspi, (uint8_t *) display_on, sizeof(display_on));
-                break;
-            }
-            case SPI_TX_CB_DISPLAY_OFF: {
-                omv_gpio_write(OMV_SPI_LCD_SSEL_PIN, 1);
-                spi_tx_cb_state = SPI_TX_CB_IDLE;
-                break;
-            }
-            default: {
-                break;
-            }
+
+            framebuffer_head = framebuffer_tail;
+        }
+
+        size_t spi_tx_cb_state_memory_write_limit = (!lcd_byte_reverse)
+            ? OMV_SPI_MAX_16BIT_XFER : OMV_SPI_MAX_8BIT_XFER;
+        uint8_t *addr = spi_tx_cb_state_memory_write_addr;
+        size_t count = IM_MIN(spi_tx_cb_state_memory_write_count, spi_tx_cb_state_memory_write_limit);
+        spi_tx_cb_state_memory_write_addr += (!lcd_byte_reverse) ? (count * 2) : count;
+        spi_tx_cb_state_memory_write_count -= count;
+        // When starting the interrupt chain the first transfer is not executed
+        // in interrupt context. So, disable interrupts for the first transfer so
+        // that it completes first and unlocks the SPI bus before allowing the interrupt
+        // it causes to trigger starting the interrupt chain.
+        omv_spi_transfer_t spi_xfer = {
+            .txbuf = addr,
+            .size = count,
+            .flags = OMV_SPI_XFER_DMA,
+            .callback = spi_lcd_callback,
+        };
+        if (userdata != NULL) {
+            uint32_t irq_state = disable_irq();
+            omv_spi_transfer_start(&spi_bus, &spi_xfer);
+            enable_irq(irq_state);
+        } else {
+            omv_spi_transfer_start(&spi_bus, &spi_xfer);
         }
     }
 }
 
-// If the callback chain is not running restart it. Display off may have been called so we need wait
-// for that operation to complete before restarting the process.
 static void spi_lcd_kick() {
-    int spi_tx_cb_state_sampled = spi_tx_cb_state; // volatile
+    if (!spi_tx_thread_running) {
+        omv_gpio_write(OMV_SPI_LCD_RS_PIN, 0);
+        spi_transmit((uint8_t *) memory_write, sizeof(memory_write), true);
+        omv_gpio_write(OMV_SPI_LCD_RS_PIN, 1);
 
-    if ((spi_tx_cb_state_sampled == SPI_TX_CB_IDLE)
-        || (spi_tx_cb_state_sampled == SPI_TX_CB_DISPLAY_OFF)) {
-        uint32_t tick = mp_hal_ticks_ms();
+        spi_lcd_switch_mode((!lcd_byte_reverse) ? 16 : 8, true);
+        omv_gpio_write(OMV_SPI_LCD_SSEL_PIN, 0);
 
-        while (spi_tx_cb_state != SPI_TX_CB_IDLE) {
-            // volatile
-            if ((mp_hal_ticks_ms() - tick) > 1000) {
-                return; // give up (should not happen)
-            }
+        // Limit the transfer size to single lines as you cannot send more
+        // than 64KB per SPI transaction generally.
+        for (int i = 0; i < lcd_height; i++) {
+            spi_transmit_16((uint8_t *) (framebuffers[framebuffer_tail] + (lcd_width * i)), lcd_width);
         }
 
-        spi_tx_cb_state = SPI_TX_CB_MEMORY_WRITE_CMD;
-        spi_lcd_callback(OMV_SPI_LCD_CONTROLLER->spi);
+        spi_lcd_switch_mode(8, false);
+        omv_gpio_write(OMV_SPI_LCD_SSEL_PIN, 1);
+
+        omv_gpio_write(OMV_SPI_LCD_RS_PIN, 0);
+        spi_transmit((uint8_t *) display_on, sizeof(display_on), true);
+        omv_gpio_write(OMV_SPI_LCD_RS_PIN, 1);
+
+        omv_gpio_write(OMV_SPI_LCD_RS_PIN, 0);
+        spi_transmit((uint8_t *) memory_write, sizeof(memory_write), true);
+        omv_gpio_write(OMV_SPI_LCD_RS_PIN, 1);
+
+        spi_lcd_switch_mode((!lcd_byte_reverse) ? 16 : 8, true);
+        omv_gpio_write(OMV_SPI_LCD_SSEL_PIN, 0);
+
+        // Kickoff interrupt driven image update.
+        spi_tx_thread_running = true;
+        spi_lcd_callback(&spi_bus, &spi_bus, NULL);
     }
 }
 
 static void spi_lcd_draw_image_cb(int x_start, int x_end, int y_row, imlib_draw_row_data_t *data) {
-    HAL_SPI_Transmit(OMV_SPI_LCD_CONTROLLER->spi, data->dst_row_override, lcd_width, HAL_MAX_DELAY);
+    spi_transmit_16(data->dst_row_override, lcd_width);
 }
 
 static void spi_lcd_display(image_t *src_img, int dst_x_start, int dst_y_start,
@@ -335,35 +289,24 @@ static void spi_lcd_display(image_t *src_img, int dst_x_start, int dst_y_start,
                                              x_scale, y_scale, roi, alpha, alpha_palette, hint, &x0, &x1, &y0, &y1);
 
     if (!lcd_triple_buffer) {
-        SPI_HandleTypeDef *hspi = OMV_SPI_LCD_CONTROLLER->spi;
         dst_img.data = fb_alloc0(lcd_width * sizeof(uint16_t), FB_ALLOC_NO_HINT);
 
         omv_gpio_write(OMV_SPI_LCD_RS_PIN, 0);
-        omv_gpio_write(OMV_SPI_LCD_SSEL_PIN, 0);
-        // memory write
-        HAL_SPI_Transmit(hspi, (uint8_t *) memory_write, sizeof(memory_write), HAL_MAX_DELAY);
-        omv_gpio_write(OMV_SPI_LCD_SSEL_PIN, 1);
+        spi_transmit((uint8_t *) memory_write, sizeof(memory_write), true);
         omv_gpio_write(OMV_SPI_LCD_RS_PIN, 1);
 
+        spi_lcd_switch_mode((!lcd_byte_reverse) ? 16 : 8, true);
         omv_gpio_write(OMV_SPI_LCD_SSEL_PIN, 0);
-        hspi->Init.DataSize = SPI_DATASIZE_16BIT;
-        #if defined(MCU_SERIES_H7)
-        hspi->Instance->CFG1 = (hspi->Instance->CFG1 & ~SPI_CFG1_DSIZE_Msk) | SPI_DATASIZE_16BIT;
-        #elif defined(MCU_SERIES_F7)
-        hspi->Instance->CR2 = (hspi->Instance->CR2 & ~SPI_CR2_DS_Msk) | SPI_DATASIZE_16BIT;
-        #elif defined(MCU_SERIES_F4)
-        hspi->Instance->CR1 = (hspi->Instance->CR1 & ~SPI_CR1_DFF_Msk) | SPI_DATASIZE_16BIT;
-        #endif
 
         if (black) {
             // zero the whole image
             for (int i = 0; i < lcd_height; i++) {
-                HAL_SPI_Transmit(hspi, dst_img.data, lcd_width, HAL_MAX_DELAY);
+                spi_transmit_16(dst_img.data, lcd_width);
             }
         } else {
             // Zero the top rows
             for (int i = 0; i < y0; i++) {
-                HAL_SPI_Transmit(hspi, dst_img.data, lcd_width, HAL_MAX_DELAY);
+                spi_transmit_16(dst_img.data, lcd_width);
             }
 
             // Transmits left/right parts already zeroed...
@@ -375,25 +318,17 @@ static void spi_lcd_display(image_t *src_img, int dst_x_start, int dst_y_start,
             if (y1 < lcd_height) {
                 memset(dst_img.data, 0, lcd_width * sizeof(uint16_t));
             }
+
             for (int i = y1; i < lcd_height; i++) {
-                HAL_SPI_Transmit(hspi, dst_img.data, lcd_width, HAL_MAX_DELAY);
+                spi_transmit_16(dst_img.data, lcd_width);
             }
         }
 
-        hspi->Init.DataSize = SPI_DATASIZE_8BIT;
-        #if defined(MCU_SERIES_H7)
-        hspi->Instance->CFG1 = (hspi->Instance->CFG1 & ~SPI_CFG1_DSIZE_Msk) | SPI_DATASIZE_8BIT;
-        #elif defined(MCU_SERIES_F7)
-        hspi->Instance->CR2 = (hspi->Instance->CR2 & ~SPI_CR2_DS_Msk) | SPI_DATASIZE_8BIT;
-        #elif defined(MCU_SERIES_F4)
-        hspi->Instance->CR1 = (hspi->Instance->CR1 & ~SPI_CR1_DFF_Msk) | SPI_DATASIZE_8BIT;
-        #endif
+        spi_lcd_switch_mode(8, false);
         omv_gpio_write(OMV_SPI_LCD_SSEL_PIN, 1);
 
         omv_gpio_write(OMV_SPI_LCD_RS_PIN, 0);
-        omv_gpio_write(OMV_SPI_LCD_SSEL_PIN, 0);
-        HAL_SPI_Transmit(hspi, (uint8_t *) display_on, sizeof(display_on), HAL_MAX_DELAY);
-        omv_gpio_write(OMV_SPI_LCD_SSEL_PIN, 1);
+        spi_transmit((uint8_t *) display_on, sizeof(display_on), true);
         omv_gpio_write(OMV_SPI_LCD_RS_PIN, 1);
 
         fb_free();
@@ -440,9 +375,6 @@ static void spi_lcd_display(image_t *src_img, int dst_x_start, int dst_y_start,
             }
         }
 
-        // Tell the call back FSM that we want to turn the display on.
-        spi_tx_cb_state_on[new_framebuffer_tail] = true;
-
         #ifdef __DCACHE_PRESENT
         // Flush data for DMA
         SCB_CleanDCache_by_Addr((uint32_t *) dst_img.data, image_size(&dst_img));
@@ -457,29 +389,16 @@ static void spi_lcd_display(image_t *src_img, int dst_x_start, int dst_y_start,
 }
 
 static void spi_lcd_clear() {
-    if (!lcd_triple_buffer) {
-        omv_gpio_write(OMV_SPI_LCD_RS_PIN, 0);
-        omv_gpio_write(OMV_SPI_LCD_SSEL_PIN, 0);
-        HAL_SPI_Transmit(OMV_SPI_LCD_CONTROLLER->spi, (uint8_t *) display_off, sizeof(display_off), HAL_MAX_DELAY);
+    if (spi_tx_thread_running) {
+        omv_spi_transfer_abort(&spi_bus);
+        spi_tx_thread_running = false;
+        spi_lcd_switch_mode(8, false);
         omv_gpio_write(OMV_SPI_LCD_SSEL_PIN, 1);
-        omv_gpio_write(OMV_SPI_LCD_RS_PIN, 1);
-    } else {
-        // For triple buffering we are never drawing where tail or head (which may instantly update to
-        // to be equal to tail) is.
-        int new_framebuffer_tail = (framebuffer_tail + 1) % FRAMEBUFFER_COUNT;
-        if (new_framebuffer_tail == framebuffer_head) {
-            new_framebuffer_tail = (new_framebuffer_tail + 1) % FRAMEBUFFER_COUNT;
-        }
-
-        // Tell the call back FSM that we want to turn the display off.
-        spi_tx_cb_state_on[new_framebuffer_tail] = false;
-
-        // Update tail which means a new image is ready.
-        framebuffer_tail = new_framebuffer_tail;
-
-        // Kick off an update of the display.
-        spi_lcd_kick();
     }
+
+    omv_gpio_write(OMV_SPI_LCD_RS_PIN, 0);
+    spi_transmit((uint8_t *) display_off, sizeof(display_off), true);
+    omv_gpio_write(OMV_SPI_LCD_RS_PIN, 1);
 }
 
 #ifdef OMV_SPI_LCD_BL_DAC
@@ -529,7 +448,7 @@ static void spi_lcd_set_backlight(int intensity) {
     lcd_intensity = intensity;
 }
 #endif // OMV_SPI_LCD_BL_PIN
-#endif // OMV_SPI_LCD_CONTROLLER
+#endif // OMV_SPI_LCD_SPI_BUS
 
 #ifdef OMV_LCD_CONTROLLER
 static const uint32_t resolution_clock[] = {
@@ -1303,7 +1222,7 @@ static void ltdc_dvi_register_hotplug_cb(mp_obj_t cb) {
 
 STATIC mp_obj_t py_lcd_deinit() {
     switch (lcd_type) {
-        #ifdef OMV_SPI_LCD_CONTROLLER
+        #ifdef OMV_SPI_LCD_SPI_BUS
         case LCD_SHIELD: {
             spi_config_deinit();
             #ifdef OMV_SPI_LCD_BL_PIN
@@ -1361,7 +1280,7 @@ STATIC mp_obj_t py_lcd_init(uint n_args, const mp_obj_t *args, mp_map_t *kw_args
     int type = py_helper_keyword_int(n_args, args, 0, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_type), LCD_SHIELD);
 
     switch (type) {
-        #ifdef OMV_SPI_LCD_CONTROLLER
+        #ifdef OMV_SPI_LCD_SPI_BUS
         case LCD_SHIELD: {
             int w = py_helper_keyword_int(n_args, args, 1, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_width), 128);
             if ((w <= 0) || (32767 < w)) {
@@ -1375,10 +1294,16 @@ STATIC mp_obj_t py_lcd_init(uint n_args, const mp_obj_t *args, mp_map_t *kw_args
             if ((refresh_rate < 30) || (120 < refresh_rate)) {
                 mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Invalid Refresh Rate!"));
             }
-            bool triple_buffer = py_helper_keyword_int(n_args, args, 4, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_triple_buffer), false);
+            bool triple_buffer_def = false;
+            #ifdef OMV_SPI_LCD_DEF_TRIPLE_BUF
+            triple_buffer_def = OMV_SPI_LCD_DEF_TRIPLE_BUF;
+            #endif
+            bool triple_buffer = py_helper_keyword_int(n_args, args, 4, kw_args,
+                                                       MP_OBJ_NEW_QSTR(MP_QSTR_triple_buffer), triple_buffer_def);
             bool bgr = py_helper_keyword_int(n_args, args, 5, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_bgr), false);
-            bool byte_reverse = py_helper_keyword_int(n_args, args, 6, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_byte_reverse), false);
-            spi_config_init(w, h, refresh_rate, triple_buffer, bgr);
+            bool byte_reverse = py_helper_keyword_int(n_args, args, 6, kw_args,
+                                                      MP_OBJ_NEW_QSTR(MP_QSTR_byte_reverse), false);
+            spi_config_init(w, h, refresh_rate, triple_buffer, bgr, byte_reverse);
             #ifdef OMV_SPI_LCD_BL_PIN
             spi_lcd_set_backlight(255); // to on state
             #endif
@@ -1517,7 +1442,7 @@ STATIC mp_obj_t py_lcd_set_backlight(mp_obj_t intensity_obj) {
     }
 
     switch (lcd_type) {
-        #if defined(OMV_SPI_LCD_CONTROLLER) && defined(OMV_SPI_LCD_BL_PIN)
+        #if defined(OMV_SPI_LCD_SPI_BUS) && defined(OMV_SPI_LCD_BL_PIN)
         case LCD_SHIELD: {
             spi_lcd_set_backlight(intensity);
             break;
@@ -1736,7 +1661,7 @@ STATIC mp_obj_t py_lcd_display(uint n_args, const mp_obj_t *args, mp_map_t *kw_a
     }
 
     switch (lcd_type) {
-        #ifdef OMV_SPI_LCD_CONTROLLER
+        #ifdef OMV_SPI_LCD_SPI_BUS
         case LCD_SHIELD: {
             fb_alloc_mark();
             spi_lcd_display(arg_img, arg_x_off, arg_y_off, arg_x_scale, arg_y_scale, &arg_roi,
@@ -1765,7 +1690,7 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_lcd_display_obj, 1, py_lcd_display);
 
 STATIC mp_obj_t py_lcd_clear(uint n_args, const mp_obj_t *args) {
     switch (lcd_type) {
-        #ifdef OMV_SPI_LCD_CONTROLLER
+        #ifdef OMV_SPI_LCD_SPI_BUS
         case LCD_SHIELD: {
             if (n_args && mp_obj_get_int(*args)) {
                 // turns the display off (may not be black)
@@ -1916,4 +1841,5 @@ void py_lcd_init0() {
 }
 
 MP_REGISTER_MODULE(MP_QSTR_lcd, lcd_module);
+
 #endif // MICROPY_PY_LCD

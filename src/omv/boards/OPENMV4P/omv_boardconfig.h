@@ -170,7 +170,6 @@
 #define OMV_LINE_BUF_SIZE                     (11 * 1024) // Image line buffer round(2592 * 2BPP * 2 buffers).
 #define OMV_MSC_BUF_SIZE                      (2K) // USB MSC bot data
 #define OMV_VFS_BUF_SIZE                      (1K) // VFS struct + FATFS file buffer (624 bytes)
-#define OMV_FIR_LEPTON_BUF_SIZE               (1K) // FIR Lepton Packet Double Buffer (328 bytes)
 #define OMV_JPEG_BUF_SIZE                     (1024 * 1024) // IDE JPEG buffer (header + data).
 
 // Memory map.
@@ -234,7 +233,6 @@
 
 // Main image sensor SPI bus
 #define ISC_SPI_ID                            (3)
-#define ISC_SPI_BAUDRATE                      (20000000)
 
 // WINC1500 WiFi module SPI bus
 #define WINC_SPI_ID                           (2)
@@ -270,16 +268,19 @@
 #define DCMI_PXCLK_PIN                        (&omv_pin_A6_DCMI)
 
 // Physical I2C buses.
+
 // I2C bus 1
 #define I2C1_ID                               (1)
 #define I2C1_SCL_PIN                          (&omv_pin_B8_I2C1)
 #define I2C1_SDA_PIN                          (&omv_pin_B9_I2C1)
+
 // I2C bus 2
 #define I2C2_ID                               (2)
 #define I2C2_SCL_PIN                          (&omv_pin_B10_I2C2)
 #define I2C2_SDA_PIN                          (&omv_pin_B11_I2C2)
 
 // Physical SPI buses.
+
 // SPI bus 2
 #define SPI2_ID                               (2)
 #define SPI2_SCLK_PIN                         (&omv_pin_B13_SPI2)
@@ -289,6 +290,7 @@
 #define SPI2_DMA_TX_CHANNEL                   (DMA1_Stream4)
 #define SPI2_DMA_RX_CHANNEL                   (DMA1_Stream3)
 
+// SPI bus 3
 #define SPI3_ID                               (3)
 #define SPI3_SCLK_PIN                         (&omv_pin_B3_SPI3)
 #define SPI3_MISO_PIN                         (&omv_pin_B4_SPI3)
@@ -298,9 +300,7 @@
 #define SPI3_DMA_RX_CHANNEL                   (DMA1_Stream2)
 
 // SPI LCD Interface
-#define OMV_SPI_LCD_CONTROLLER                (&spi_obj[1])
-#define OMV_SPI_LCD_CONTROLLER_INSTANCE       (SPI2)
-
+#define OMV_SPI_LCD_SPI_BUS                   (SPI2_ID)
 #define OMV_SPI_LCD_MOSI_PIN                  (&omv_pin_B15_SPI2)
 #define OMV_SPI_LCD_MISO_PIN                  (&omv_pin_B14_SPI2)
 #define OMV_SPI_LCD_SCLK_PIN                  (&omv_pin_B13_SPI2)
@@ -317,12 +317,13 @@
 #define OMV_SPI_LCD_BL_DAC_FORCE_RESET()      __HAL_RCC_DAC12_FORCE_RESET()
 #define OMV_SPI_LCD_BL_DAC_RELEASE_RESET()    __HAL_RCC_DAC12_RELEASE_RESET()
 
+#define OMV_SPI_LCD_DEF_TRIPLE_BUF            (1)
+
 // FIR Lepton
 #define OMV_FIR_LEPTON_I2C_BUS                (FIR_I2C_ID)
 #define OMV_FIR_LEPTON_I2C_BUS_SPEED          (FIR_I2C_SPEED)
-#define OMV_FIR_LEPTON_CONTROLLER             (&spi_obj[1])
-#define OMV_FIR_LEPTON_CONTROLLER_INSTANCE    (SPI2)
 
+#define OMV_FIR_LEPTON_SPI_BUS                (SPI2_ID)
 #define OMV_FIR_LEPTON_MOSI_PIN               (&omv_pin_B15_SPI2)
 #define OMV_FIR_LEPTON_MISO_PIN               (&omv_pin_B14_SPI2)
 #define OMV_FIR_LEPTON_SCLK_PIN               (&omv_pin_B13_SPI2)

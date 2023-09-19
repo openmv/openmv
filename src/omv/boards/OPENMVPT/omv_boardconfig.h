@@ -175,7 +175,6 @@
 #define OMV_LINE_BUF_SIZE                          (11 * 1024) // Image line buffer round(2592 * 2BPP * 2 buffers).
 #define OMV_MSC_BUF_SIZE                           (2K) // USB MSC bot data
 #define OMV_VFS_BUF_SIZE                           (1K) // VFS struct + FATFS file buffer (624 bytes)
-#define OMV_FIR_LEPTON_BUF_SIZE                    (1K) // FIR Lepton Packet Double Buffer (328 bytes)
 #define OMV_JPEG_BUF_SIZE                          (1024 * 1024) // IDE JPEG buffer (header + data).
 
 // Memory map.
@@ -272,16 +271,37 @@
 #define DCMI_PXCLK_PIN                             (&omv_pin_A6_DCMI)
 
 // Physical I2C buses.
+
 // I2C bus 1
 #define I2C1_ID                                    (1)
 #define I2C1_SCL_PIN                               (&omv_pin_B8_I2C1)
 #define I2C1_SDA_PIN                               (&omv_pin_B9_I2C1)
+
 // I2C bus 2
 #define I2C2_ID                                    (2)
 #define I2C2_SCL_PIN                               (&omv_pin_B10_I2C2)
 #define I2C2_SDA_PIN                               (&omv_pin_B11_I2C2)
 
 // Physical SPI buses.
+
+// SPI bus 2
+#define SPI2_ID                                    (2)
+#define SPI2_SCLK_PIN                              (&omv_pin_B13_SPI2)
+#define SPI2_MISO_PIN                              (&omv_pin_B14_SPI2)
+#define SPI2_MOSI_PIN                              (&omv_pin_B15_SPI2)
+#define SPI2_SSEL_PIN                              (&omv_pin_B12_GPIO)
+#define SPI2_DMA_TX_CHANNEL                        (DMA1_Stream4)
+#define SPI2_DMA_RX_CHANNEL                        (DMA1_Stream3)
+
+// SPI bus 3
+#define SPI3_ID                                    (3)
+#define SPI3_SCLK_PIN                              (&omv_pin_B3_SPI3)
+#define SPI3_MISO_PIN                              (&omv_pin_B4_SPI3)
+#define SPI3_MOSI_PIN                              (&omv_pin_B5_SPI3)
+#define SPI3_SSEL_PIN                              (&omv_pin_A15_GPIO)
+#define SPI3_DMA_TX_CHANNEL                        (DMA1_Stream7)
+#define SPI3_DMA_RX_CHANNEL                        (DMA1_Stream2)
+
 // SPI bus 5
 #define SPI5_ID                                    (5)
 #define SPI5_SCLK_PIN                              (&omv_pin_H6_SPI5)
@@ -342,17 +362,15 @@
 #define OMV_LCD_BL_TIM_PCLK_FREQ()                 HAL_RCC_GetPCLK1Freq()
 
 // SPI LCD Interface
-#define OMV_SPI_LCD_CONTROLLER                     (&spi_obj[1])
-#define OMV_SPI_LCD_CONTROLLER_INSTANCE            (SPI2)
-
+#define OMV_SPI_LCD_SPI_BUS                        (SPI2_ID)
 #define OMV_SPI_LCD_MOSI_PIN                       (&omv_pin_B15_SPI2)
 #define OMV_SPI_LCD_MISO_PIN                       (&omv_pin_B14_SPI2)
 #define OMV_SPI_LCD_SCLK_PIN                       (&omv_pin_B13_SPI2)
-
-#define OMV_SPI_LCD_RST_PIN                        (&omv_pin_D12_GPIO)
-#define OMV_SPI_LCD_RS_PIN                         (&omv_pin_D13_GPIO)
 #define OMV_SPI_LCD_SSEL_PIN                       (&omv_pin_B12_GPIO)
+
+#define OMV_SPI_LCD_RS_PIN                         (&omv_pin_D13_GPIO)
 #define OMV_SPI_LCD_BL_PIN                         (&omv_pin_A5_GPIO)
+#define OMV_SPI_LCD_RST_PIN                        (&omv_pin_D12_GPIO)
 
 #define OMV_SPI_LCD_BL_DAC                         (DAC1)
 #define OMV_SPI_LCD_BL_DAC_CHANNEL                 (DAC_CHANNEL_2)
@@ -360,6 +378,8 @@
 #define OMV_SPI_LCD_BL_DAC_CLK_DISABLE()           __HAL_RCC_DAC12_CLK_DISABLE()
 #define OMV_SPI_LCD_BL_DAC_FORCE_RESET()           __HAL_RCC_DAC12_FORCE_RESET()
 #define OMV_SPI_LCD_BL_DAC_RELEASE_RESET()         __HAL_RCC_DAC12_RELEASE_RESET()
+
+#define OMV_SPI_LCD_DEF_TRIPLE_BUF                 (1)
 
 // DVI TFP410PAP I/O
 #define OMV_DVI_PRESENT
@@ -387,9 +407,8 @@
 // FIR Lepton
 #define OMV_FIR_LEPTON_I2C_BUS                     (ISC_I2C_ID)
 #define OMV_FIR_LEPTON_I2C_BUS_SPEED               (ISC_I2C_SPEED)
-#define OMV_FIR_LEPTON_CONTROLLER                  (&spi_obj[2])
-#define OMV_FIR_LEPTON_CONTROLLER_INSTANCE         (SPI3)
 
+#define OMV_FIR_LEPTON_SPI_BUS                     (SPI3_ID)
 #define OMV_FIR_LEPTON_MOSI_PIN                    (&omv_pin_B5_SPI3)
 #define OMV_FIR_LEPTON_MISO_PIN                    (&omv_pin_B4_SPI3)
 #define OMV_FIR_LEPTON_SCLK_PIN                    (&omv_pin_B3_SPI3)

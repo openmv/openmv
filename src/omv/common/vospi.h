@@ -8,7 +8,6 @@
  *
  * VOSPI driver.
  */
-
 #ifndef __VOSPI_H__
 #define __VOSPI_H__
 int vospi_init(uint32_t n_packets, void *buffer);

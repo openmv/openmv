@@ -10,12 +10,10 @@
  */
 #include "omv_boardconfig.h"
 #if (OMV_ENABLE_FIR_LEPTON == 1)
-#include STM32_HAL_H
 #include "py/nlr.h"
 #include "py/runtime.h"
 #include "py/obj.h"
 #include "py/mphal.h"
-#include "spi.h"
 #include "softtimer.h"
 
 #include "crc16.h"
@@ -28,7 +26,9 @@
 #include "LEPTON_I2C_Reg.h"
 
 #include "py_helper.h"
+#include "omv_common.h"
 #include "omv_gpio.h"
+#include "omv_spi.h"
 
 #define FRAMEBUFFER_COUNT    3
 static volatile int framebuffer_tail = 0;
@@ -43,24 +43,31 @@ static TIM_HandleTypeDef fir_lepton_mclk_tim_handle = {};
 #endif
 
 static LEP_CAMERA_PORT_DESC_T fir_lepton_handle = {};
-static DMA_HandleTypeDef fir_lepton_spi_rx_dma = {};
+static omv_spi_t spi_bus = {};
 
-#define VOSPI_HEADER_WORDS       (2) // 16-bits
-#define VOSPI_PID_SIZE_PIXELS    (80) // w, 16-bits per pixel
-#define VOSPI_PIDS_PER_SEG       (60) // h
-#define VOSPI_SEGS_PER_FRAME     (4)
-#define VOSPI_PACKET_SIZE        (VOSPI_HEADER_WORDS + VOSPI_PID_SIZE_PIXELS) // 16-bits
-#define VOSPI_SEG_SIZE_PIXELS    (VOSPI_PIDS_PER_SEG * VOSPI_PID_SIZE_PIXELS) // 16-bits
+#define VOSPI_HEADER_WORDS          (2) // 16-bits
+#define VOSPI_PID_SIZE_PIXELS       (80) // w, 16-bits per pixel
+#define VOSPI_PIDS_PER_SID          (60) // h
+#define VOSPI_SIDS_PER_FRAME        (4)
+#define VOSPI_PACKET_SIZE           (VOSPI_HEADER_WORDS + VOSPI_PID_SIZE_PIXELS) // 16-bits
+#define VOSPI_SID_SIZE_PIXELS       (VOSPI_PIDS_PER_SID * VOSPI_PID_SIZE_PIXELS) // 16-bits
 
-#define VOSPI_BUFFER_SIZE        (VOSPI_PACKET_SIZE * 2) // 16-bits
-#define VOSPI_CLOCK_SPEED        20000000 // hz
-#define VOSPI_SYNC_MS            200 // ms
+#define VOSPI_BUFFER_SIZE           (VOSPI_PACKET_SIZE * 2) // 16-bits
+#define VOSPI_CLOCK_SPEED           20000000 // hz
+#define VOSPI_SYNC_MS               200 // ms
+
+#define VOSPI_SPECIAL_PACKET        (20)
+#define VOSPI_DONT_CARE_PACKET      (0x0F00)
+#define VOSPI_HEADER_DONT_CARE(x)   (((x) & VOSPI_DONT_CARE_PACKET) == VOSPI_DONT_CARE_PACKET)
+#define VOSPI_HEADER_PID(id)        ((id) & 0x0FFF)
+#define VOSPI_HEADER_SID(id)        (((id) >> 12) & 0x7)
 
 static soft_timer_entry_t flir_lepton_spi_rx_timer = {};
 static int fir_lepton_spi_rx_cb_tail = 0;
 static int fir_lepton_spi_rx_cb_expected_pid = 0;
-static int fir_lepton_spi_rx_cb_expected_seg = 0;
-extern int _fir_lepton_buf[];
+static int fir_lepton_spi_rx_cb_expected_sid = 0;
+static uint16_t OMV_ATTR_SECTION(OMV_ATTR_ALIGNED_DMA(fir_lepton_buf[VOSPI_BUFFER_SIZE]), ".dma_buffer");
+static void fir_lepton_spi_callback(omv_spi_t *spi, void *userdata, void *buf);
 
 STATIC mp_obj_t fir_lepton_spi_resync_callback(mp_obj_t unused) {
     // For triple buffering we are never drawing where tail or head
@@ -70,9 +77,15 @@ STATIC mp_obj_t fir_lepton_spi_resync_callback(mp_obj_t unused) {
         fir_lepton_spi_rx_cb_tail = (fir_lepton_spi_rx_cb_tail + 1) % FRAMEBUFFER_COUNT;
     }
 
-    omv_gpio_write(OMV_FIR_LEPTON_SSEL_PIN, 0);
-    HAL_SPI_Receive_DMA(OMV_FIR_LEPTON_CONTROLLER->spi, (uint8_t *) &_fir_lepton_buf, VOSPI_BUFFER_SIZE);
+    omv_spi_transfer_t spi_xfer = {
+        .rxbuf = fir_lepton_buf,
+        .size = VOSPI_BUFFER_SIZE,
+        .flags = OMV_SPI_XFER_DMA,
+        .callback = fir_lepton_spi_callback,
+    };
 
+    omv_gpio_write(OMV_FIR_LEPTON_SSEL_PIN, 0);
+    omv_spi_transfer_start(&spi_bus, &spi_xfer);
     return mp_const_none;
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(fir_lepton_spi_resync_callback_obj, fir_lepton_spi_resync_callback);
@@ -106,24 +119,26 @@ static bool fir_lepton_spi_check_crc(const uint16_t *base) {
 
 static mp_obj_t fir_lepton_frame_cb = mp_const_none;
 
-void fir_lepton_spi_callback(const uint16_t *base) {
+void fir_lepton_spi_callback(omv_spi_t *spi, void *userdata, void *buf) {
+    const uint16_t *base = (uint16_t *) buf;
+
     int id = base[0];
 
     // Ignore don't care packets.
-    if ((id & 0x0F00) == 0x0F00) {
+    if (VOSPI_HEADER_DONT_CARE(id)) {
         return;
     }
 
-    int pid = id & 0x0FFF;
-    int seg = ((id >> 12) & 0x7) - 1;
+    int pid = VOSPI_HEADER_PID(id);
+    int sid = VOSPI_HEADER_SID(id) - 1;
 
     // Discard packets with a pid != 0 when waiting for the first packet.
     if ((fir_lepton_spi_rx_cb_expected_pid == 0) && (pid != 0)) {
         return;
     }
 
-    // Discard segments with a seg != 0 when waiting for the first segment.
-    if (fir_lepton_3 && (pid == 20) && (fir_lepton_spi_rx_cb_expected_seg == 0) && (seg != 0)) {
+    // Discard sidments with a sid != 0 when waiting for the first segment.
+    if (fir_lepton_3 && (pid == VOSPI_SPECIAL_PACKET) && (fir_lepton_spi_rx_cb_expected_sid == 0) && (sid != 0)) {
         fir_lepton_spi_rx_cb_expected_pid = 0;
         return;
     }
@@ -133,10 +148,10 @@ void fir_lepton_spi_callback(const uint16_t *base) {
     #if defined(OMV_FIR_LEPTON_CHECK_CRC)
         || (!fir_lepton_spi_check_crc(base))
     #endif
-        || (fir_lepton_3 && (pid == 20) && (seg != fir_lepton_spi_rx_cb_expected_seg))) {
+        || (fir_lepton_3 && (pid == VOSPI_SPECIAL_PACKET) && (sid != fir_lepton_spi_rx_cb_expected_sid))) {
         fir_lepton_spi_rx_cb_expected_pid = 0;
-        fir_lepton_spi_rx_cb_expected_seg = 0;
-        HAL_SPI_Abort_IT(OMV_FIR_LEPTON_CONTROLLER->spi);
+        fir_lepton_spi_rx_cb_expected_sid = 0;
+        omv_spi_transfer_abort(&spi_bus);
         omv_gpio_write(OMV_FIR_LEPTON_SSEL_PIN, 1);
         fir_lepton_spi_resync();
         return;
@@ -144,20 +159,20 @@ void fir_lepton_spi_callback(const uint16_t *base) {
 
     memcpy(framebuffers[fir_lepton_spi_rx_cb_tail]
            + (fir_lepton_spi_rx_cb_expected_pid * VOSPI_PID_SIZE_PIXELS)
-           + (fir_lepton_spi_rx_cb_expected_seg * VOSPI_SEG_SIZE_PIXELS),
+           + (fir_lepton_spi_rx_cb_expected_sid * VOSPI_SID_SIZE_PIXELS),
            base + VOSPI_HEADER_WORDS, VOSPI_PID_SIZE_PIXELS * sizeof(uint16_t));
 
     fir_lepton_spi_rx_cb_expected_pid += 1;
-    if (fir_lepton_spi_rx_cb_expected_pid == VOSPI_PIDS_PER_SEG) {
+    if (fir_lepton_spi_rx_cb_expected_pid == VOSPI_PIDS_PER_SID) {
         fir_lepton_spi_rx_cb_expected_pid = 0;
 
         bool frame_ready = false;
 
         // For the FLIR Lepton 3 we have to receive all the pids in all the segments.
         if (fir_lepton_3) {
-            fir_lepton_spi_rx_cb_expected_seg += 1;
-            if (fir_lepton_spi_rx_cb_expected_seg == VOSPI_SEGS_PER_FRAME) {
-                fir_lepton_spi_rx_cb_expected_seg = 0;
+            fir_lepton_spi_rx_cb_expected_sid += 1;
+            if (fir_lepton_spi_rx_cb_expected_sid == VOSPI_SIDS_PER_FRAME) {
+                fir_lepton_spi_rx_cb_expected_sid = 0;
                 frame_ready = true;
             }
             // For the FLIR Lepton 1/2 we just have to receive all the pids.
@@ -184,14 +199,6 @@ void fir_lepton_spi_callback(const uint16_t *base) {
     }
 }
 
-static void fir_lepton_spi_callback_half(SPI_HandleTypeDef *hspi) {
-    fir_lepton_spi_callback((uint16_t *) &_fir_lepton_buf);
-}
-
-static void fir_lepton_spi_callback_full(SPI_HandleTypeDef *hspi) {
-    fir_lepton_spi_callback(((uint16_t *) &_fir_lepton_buf) + VOSPI_PACKET_SIZE);
-}
-
 #if defined(OMV_FIR_LEPTON_VSYNC_PIN)
 static mp_obj_t fir_lepton_vsync_cb = NULL;
 
@@ -203,9 +210,9 @@ static void fir_lepton_extint_callback(void *data) {
 #endif
 
 void fir_lepton_deinit() {
-    HAL_SPI_Abort(OMV_FIR_LEPTON_CONTROLLER->spi);
+    omv_spi_transfer_abort(&spi_bus);
     fir_lepton_spi_rx_cb_expected_pid = 0;
-    fir_lepton_spi_rx_cb_expected_seg = 0;
+    fir_lepton_spi_rx_cb_expected_sid = 0;
     fb_alloc_free_till_mark_past_mark_permanent();
 
     #if defined(OMV_FIR_LEPTON_MCLK)
@@ -217,48 +224,40 @@ void fir_lepton_deinit() {
     omv_gpio_deinit(OMV_FIR_LEPTON_MCLK_PIN);
     #endif
 
-    spi_deinit(OMV_FIR_LEPTON_CONTROLLER);
+    omv_spi_deinit(&spi_bus);
 
-    // Do not put in HAL_SPI_MspDeinit as other modules may share the SPI bus.
-    omv_gpio_deinit(OMV_FIR_LEPTON_MOSI_PIN);
-    omv_gpio_deinit(OMV_FIR_LEPTON_MISO_PIN);
-    omv_gpio_deinit(OMV_FIR_LEPTON_SCLK_PIN);
-    omv_gpio_deinit(OMV_FIR_LEPTON_SSEL_PIN);
     #if defined(OMV_FIR_LEPTON_RESET_PIN)
     omv_gpio_deinit(OMV_FIR_LEPTON_RESET_PIN);
     #endif
+
     #if defined(OMV_FIR_LEPTON_POWER_PIN)
     omv_gpio_deinit(OMV_FIR_LEPTON_POWER_PIN);
     #endif
 }
 
 int fir_lepton_init(omv_i2c_t *bus, int *w, int *h, int *refresh, int *resolution) {
-    SPI_HandleTypeDef *hspi = OMV_FIR_LEPTON_CONTROLLER->spi;
+    omv_spi_config_t spi_config;
+    omv_spi_default_config(&spi_config, OMV_FIR_LEPTON_SPI_BUS);
 
-    hspi->Init.Mode = SPI_MODE_MASTER;
-    hspi->Init.Direction = SPI_DIRECTION_2LINES_RXONLY;
-    hspi->Init.NSS = SPI_NSS_SOFT;
-    hspi->Init.TIMode = SPI_TIMODE_DISABLE;
-    hspi->Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;
-    #if defined(MCU_SERIES_H7)
-    hspi->Init.FifoThreshold = SPI_FIFO_THRESHOLD_02DATA;
-    hspi->Init.MasterKeepIOState = SPI_MASTER_KEEP_IO_STATE_ENABLE;
+    #if OMV_FIR_LEPTON_RX_CLK_DIV
+    spi_config.baudrate = VOSPI_CLOCK_SPEED / OMV_FIR_LEPTON_RX_CLK_DIV;
+    #else
+    spi_config.baudrate = VOSPI_CLOCK_SPEED;
     #endif
-    spi_set_params(OMV_FIR_LEPTON_CONTROLLER, 0xffffffff, VOSPI_CLOCK_SPEED, 1, 1, 16, 0);
-    spi_init(OMV_FIR_LEPTON_CONTROLLER, true);
-    HAL_SPI_RegisterCallback(hspi, HAL_SPI_RX_COMPLETE_CB_ID, fir_lepton_spi_callback_full);
-    HAL_SPI_RegisterCallback(hspi, HAL_SPI_RX_HALF_COMPLETE_CB_ID, fir_lepton_spi_callback_half);
 
-    // Do not put in HAL_SPI_MspInit as other modules share the SPI2/3 bus.
-    omv_gpio_config(OMV_FIR_LEPTON_MOSI_PIN, OMV_GPIO_MODE_ALT, OMV_GPIO_PULL_UP, OMV_GPIO_SPEED_MED, -1);
-    omv_gpio_config(OMV_FIR_LEPTON_MISO_PIN, OMV_GPIO_MODE_ALT, OMV_GPIO_PULL_UP, OMV_GPIO_SPEED_MED, -1);
-    omv_gpio_config(OMV_FIR_LEPTON_SCLK_PIN, OMV_GPIO_MODE_ALT, OMV_GPIO_PULL_UP, OMV_GPIO_SPEED_MED, -1);
-    omv_gpio_config(OMV_FIR_LEPTON_SSEL_PIN, OMV_GPIO_MODE_OUTPUT, OMV_GPIO_PULL_UP, OMV_GPIO_SPEED_LOW, -1);
+    spi_config.datasize = 16;
+    spi_config.bus_mode = OMV_SPI_BUS_RX;
+    spi_config.nss_enable = false;
+    spi_config.dma_flags = OMV_SPI_DMA_CIRCULAR | OMV_SPI_DMA_DOUBLE;
+    omv_spi_init(&spi_bus, &spi_config);
+
     omv_gpio_write(OMV_FIR_LEPTON_SSEL_PIN, 1);
+
     #if defined(OMV_FIR_LEPTON_RESET_PIN)
     omv_gpio_config(OMV_FIR_LEPTON_RESET_PIN, OMV_GPIO_MODE_OUTPUT, OMV_GPIO_PULL_UP, OMV_GPIO_SPEED_LOW, -1);
     omv_gpio_write(OMV_FIR_LEPTON_RESET_PIN, 1);
     #endif
+
     #if defined(OMV_FIR_LEPTON_POWER_PIN)
     omv_gpio_config(OMV_FIR_LEPTON_POWER_PIN, OMV_GPIO_MODE_OUTPUT, OMV_GPIO_PULL_UP, OMV_GPIO_SPEED_LOW, -1);
     omv_gpio_write(OMV_FIR_LEPTON_POWER_PIN, 1);
@@ -374,7 +373,7 @@ int fir_lepton_init(omv_i2c_t *bus, int *w, int *h, int *refresh, int *resolutio
 
     int flir_w = roi.endCol + 1;
     int flir_h = roi.endRow + 1;
-    fir_lepton_3 = flir_h > VOSPI_PIDS_PER_SEG;
+    fir_lepton_3 = flir_h > VOSPI_PIDS_PER_SID;
     fir_lepton_rad_en = rad == LEP_RAD_ENABLE;
     *w = flir_w;
     *h = flir_h;
@@ -399,38 +398,6 @@ int fir_lepton_init(omv_i2c_t *bus, int *w, int *h, int *refresh, int *resolutio
     for (int i = 0; i < FRAMEBUFFER_COUNT; i++) {
         framebuffers[i] = (uint16_t *) fb_alloc0(flir_w * flir_h * sizeof(uint16_t), FB_ALLOC_NO_HINT);
     }
-
-    dma_init(&fir_lepton_spi_rx_dma, OMV_FIR_LEPTON_CONTROLLER->rx_dma_descr, DMA_PERIPH_TO_MEMORY, hspi);
-
-    hspi->hdmatx = NULL;
-    hspi->hdmarx = &fir_lepton_spi_rx_dma;
-
-    #if defined(MCU_SERIES_H7)
-    fir_lepton_spi_rx_dma.Init.PeriphDataAlignment = DMA_PDATAALIGN_WORD;
-    #else
-    fir_lepton_spi_rx_dma.Init.PeriphDataAlignment = DMA_PDATAALIGN_HALFWORD;
-    #endif
-    fir_lepton_spi_rx_dma.Init.MemDataAlignment = DMA_MDATAALIGN_WORD;
-    fir_lepton_spi_rx_dma.Init.Mode = DMA_CIRCULAR;
-    fir_lepton_spi_rx_dma.Init.FIFOMode = DMA_FIFOMODE_ENABLE;
-    fir_lepton_spi_rx_dma.Init.FIFOThreshold = DMA_FIFO_THRESHOLD_1QUARTERFULL;
-    fir_lepton_spi_rx_dma.Init.MemBurst = DMA_MBURST_SINGLE;
-    fir_lepton_spi_rx_dma.Init.PeriphBurst = DMA_PBURST_SINGLE;
-
-    DMA_Stream_TypeDef *dma_chan = (DMA_Stream_TypeDef *) fir_lepton_spi_rx_dma.Instance;
-    dma_chan->CR =
-        (dma_chan->CR & ~DMA_SxCR_PSIZE_Msk) |
-        #if defined(MCU_SERIES_H7)
-        DMA_PDATAALIGN_WORD;
-        #else
-        DMA_PDATAALIGN_HALFWORD;
-        #endif
-    dma_chan->CR = (dma_chan->CR & ~DMA_SxCR_MSIZE_Msk) | DMA_MDATAALIGN_WORD;
-    dma_chan->CR = (dma_chan->CR & ~DMA_SxCR_CIRC_Msk) | DMA_CIRCULAR;
-    dma_chan->FCR = (dma_chan->FCR & ~DMA_SxFCR_DMDIS_Msk) | DMA_FIFOMODE_ENABLE;
-    dma_chan->FCR = (dma_chan->FCR & ~DMA_SxFCR_FTH_Msk) | DMA_FIFO_THRESHOLD_1QUARTERFULL;
-    dma_chan->CR = (dma_chan->CR & ~DMA_SxCR_MBURST_Msk) | DMA_MBURST_SINGLE;
-    dma_chan->CR = (dma_chan->CR & ~DMA_SxCR_PBURST_Msk) | DMA_PBURST_SINGLE;
 
     fb_alloc_mark_permanent();
     fir_lepton_spi_resync();
@@ -476,7 +443,7 @@ static const uint16_t *fir_lepton_get_frame(int timeout) {
                 mp_raise_msg(&mp_type_OSError, MP_ERROR_TEXT("Timeout!"));
             }
 
-            __WFI();
+            MICROPY_EVENT_POLL_HOOK
         }
     }
 

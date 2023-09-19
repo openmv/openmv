@@ -9,7 +9,6 @@
  * OMV SPI bus port for mimxrt.
  */
 #include "omv_boardconfig.h"
-#include <stdint.h>
 #include "py/mphal.h"
 
 #include "fsl_gpio.h"
@@ -40,35 +39,47 @@ typedef struct omv_spi_descr {
 static const omv_spi_descr_t omv_spi_descr_all[] = {
     #if defined(LPSPI1_ID)
     { LPSPI1, LPSPI1_SSEL_PIN,
-      { DMA0, DMAMUX, LPSPI1_DMA_TX_CHANNEL, kDmaRequestMuxLPSPI1Tx },
-      { DMA0, DMAMUX, LPSPI1_DMA_RX_CHANNEL, kDmaRequestMuxLPSPI1Rx } },
+      { LPSPI1_DMA, LPSPI1_DMA_MUX, LPSPI1_DMA_TX_CHANNEL, kDmaRequestMuxLPSPI1Tx },
+      { LPSPI1_DMA, LPSPI1_DMA_MUX, LPSPI1_DMA_RX_CHANNEL, kDmaRequestMuxLPSPI1Rx } },
     #else
     { NULL, NULL, { NULL, NULL, 0, 0 }, { NULL, NULL, 0, 0 } },
     #endif
+
     #if defined(LPSPI2_ID)
     { LPSPI2, LPSPI2_SSEL_PIN,
-      { DMA0, DMAMUX, LPSPI2_DMA_TX_CHANNEL, kDmaRequestMuxLPSPI2Tx },
-      { DMA0, DMAMUX, LPSPI2_DMA_RX_CHANNEL, kDmaRequestMuxLPSPI2Rx } },
+      { LPSPI2_DMA, LPSPI2_DMA_MUX, LPSPI2_DMA_TX_CHANNEL, kDmaRequestMuxLPSPI2Tx },
+      { LPSPI2_DMA, LPSPI2_DMA_MUX, LPSPI2_DMA_RX_CHANNEL, kDmaRequestMuxLPSPI2Rx } },
     #else
     { NULL, NULL, { NULL, NULL, 0, 0 }, { NULL, NULL, 0, 0 } },
     #endif
 
     #if defined(LPSPI3_ID)
     { LPSPI3, LPSPI3_SSEL_PIN,
-      { DMA0, DMAMUX, LPSPI3_DMA_TX_CHANNEL, kDmaRequestMuxLPSPI3Tx },
-      { DMA0, DMAMUX, LPSPI3_DMA_RX_CHANNEL, kDmaRequestMuxLPSPI3Rx } },
+      { LPSPI3_DMA, LPSPI3_DMA_MUX, LPSPI3_DMA_TX_CHANNEL, kDmaRequestMuxLPSPI3Tx },
+      { LPSPI3_DMA, LPSPI3_DMA_MUX, LPSPI3_DMA_RX_CHANNEL, kDmaRequestMuxLPSPI3Rx } },
     #else
     { NULL, NULL, { NULL, NULL, 0, 0 }, { NULL, NULL, 0, 0 } },
     #endif
 
     #if defined(LPSPI4_ID)
     { LPSPI4, LPSPI4_SSEL_PIN,
-      { DMA0, DMAMUX, LPSPI4_DMA_TX_CHANNEL, kDmaRequestMuxLPSPI4Tx },
-      { DMA0, DMAMUX, LPSPI4_DMA_RX_CHANNEL, kDmaRequestMuxLPSPI4Rx } },
+      { LPSPI4_DMA, LPSPI4_DMA_MUX, LPSPI4_DMA_TX_CHANNEL, kDmaRequestMuxLPSPI4Tx },
+      { LPSPI4_DMA, LPSPI4_DMA_MUX, LPSPI4_DMA_RX_CHANNEL, kDmaRequestMuxLPSPI4Rx } },
     #else
     { NULL, NULL, { NULL, NULL, 0, 0 }, { NULL, NULL, 0, 0 } },
     #endif
 };
+
+// Enable the SPI frame transfer complete at the end of the DMA transfer, when are absolutely sure that the whole
+// DMA transfer is complete. This way we get one interrupt at the end of the transfer, vs after every SPI frame.
+// descr_master.rxData must be set to null to ensure LPSPI_MasterTransferHandleIRQ clears the
+// kLPSPI_TransferCompleteFlag and calls LPSPI_MasterTransferComplete which calls spi_master_callback.
+static void EDMA_LpspiMasterTxCallback(edma_handle_t *edmaHandle, void *user, bool transferDone, uint32_t tcds) {
+    omv_spi_t *spi = (omv_spi_t *) user;
+    spi->descr_master_edma.state = (uint8_t) kLPSPI_Idle;
+    spi->descr_master.rxData = NULL;
+    LPSPI_EnableInterrupts(spi->inst, (uint32_t) kLPSPI_TransferCompleteFlag);
+}
 
 static void spi_master_callback(LPSPI_Type *base, void *handle, status_t status, void *user) {
     omv_spi_t *spi = (omv_spi_t *) user;
@@ -78,42 +89,77 @@ static void spi_master_callback(LPSPI_Type *base, void *handle, status_t status,
     } else {
         spi->xfer_flags |= OMV_SPI_XFER_FAILED;
         spi->xfer_error = status;
-        if (spi->xfer_flags & OMV_SPI_XFER_DMA) {
-            LPSPI_MasterTransferAbortEDMA(spi->inst, &spi->descr_master_edma);
-        } else {
-            LPSPI_MasterTransferAbort(spi->inst, &spi->descr_master);
+        omv_spi_transfer_abort(spi);
+    }
+
+    void *buf = spi->xfer_descr.rxData;
+
+    if (buf == NULL) {
+        buf = spi->xfer_descr.txData;
+    }
+
+    // The IMXRT doesn't support half complete transfer interrupts (in the lpspi driver) like the STM32
+    // does. So, mimick support for them by toggling the half flag.
+    uint32_t flags = (OMV_SPI_XFER_DMA | OMV_SPI_XFER_COMPLETE);
+    if ((spi->dma_flags & OMV_SPI_DMA_DOUBLE) && ((spi->xfer_flags & flags) == flags)) {
+        int32_t offset = (spi->xfer_flags & OMV_SPI_XFER_HALF) ? -spi->xfer_descr.dataSize : spi->xfer_descr.dataSize;
+        if (spi->xfer_descr.rxData) {
+            spi->xfer_descr.rxData += offset;
         }
+        spi->xfer_flags ^= OMV_SPI_XFER_HALF;
+    }
+
+    // Start the next DMA transfer before calling the callback. This minimizes the time
+    // when DMA is not running. Also, if the callback aborts this will stop the DMA transfer.
+    if ((spi->dma_flags & OMV_SPI_DMA_CIRCULAR) && ((spi->xfer_flags & flags) == flags)) {
+        // Restart transfer for circular transfers. Note that we can't be interrupted again
+        // by this until this callback finishes so it is okay to clear xfer complete later.
+        LPSPI_MasterTransferEDMA(spi->inst, &spi->descr_master_edma, &spi->xfer_descr);
     }
 
     if (spi->callback) {
-        spi->callback(spi, spi->userdata);
+        spi->callback(spi, spi->userdata, buf);
     }
 
-    uint32_t flags = (OMV_SPI_XFER_DMA | OMV_SPI_XFER_CIRCULAR | OMV_SPI_XFER_COMPLETE);
-    if ((spi->xfer_flags & flags) == flags) {
-        // Restart transfer for circular transfers.
+    // Clear after the callback so the callback gets the xfer complete flag set.
+    // This needs to be cleared to prevent circular DMA from re-triggering on a failure.
+    if (spi->dma_flags & OMV_SPI_DMA_CIRCULAR) {
         spi->xfer_flags &= ~(OMV_SPI_XFER_COMPLETE);
-        LPSPI_MasterTransferEDMA(spi->inst, &spi->descr_master_edma, &spi->xfer_descr);
     }
 }
 
 int omv_spi_transfer_start(omv_spi_t *spi, omv_spi_transfer_t *xfer) {
+    // No TX transfers in circular or double buffer mode.
+    if ((spi->dma_flags & (OMV_SPI_DMA_CIRCULAR | OMV_SPI_DMA_DOUBLE)) && xfer->txbuf) {
+        return -1;
+    }
+
     spi->callback = xfer->callback;
     spi->userdata = xfer->userdata;
+    spi->xfer_error = 0;
     spi->xfer_flags = xfer->flags;
-    // Duplicate & stash transfer in spi struct, to avoid recreating
-    // it for circular transfers. NOTE: If circular transfers ever
-    // works this can be removed.
+
     spi->xfer_descr.txData = xfer->txbuf;
     spi->xfer_descr.rxData = xfer->rxbuf;
-    spi->xfer_descr.dataSize = xfer->size;
-    spi->xfer_descr.configFlags = kLPSPI_MasterPcs0 | kLPSPI_MasterPcsContinuous | kLPSPI_MasterByteSwap;
-    spi->xfer_flags &= ~(OMV_SPI_XFER_FAILED | OMV_SPI_XFER_COMPLETE);
+    spi->xfer_descr.dataSize = xfer->size * (spi->config_backup.bitsPerFrame / 8);
+    spi->xfer_descr.configFlags = kLPSPI_MasterPcs0 | kLPSPI_MasterPcsContinuous;
+    spi->xfer_flags &= ~(OMV_SPI_XFER_FAILED | OMV_SPI_XFER_COMPLETE | OMV_SPI_XFER_HALF);
+
+    if (spi->dma_flags & OMV_SPI_DMA_DOUBLE) {
+        spi->xfer_descr.dataSize /= 2;
+    }
 
     if (spi->xfer_flags & OMV_SPI_XFER_DMA) {
         // DMA transfer (circular or one-shot)
         if (LPSPI_MasterTransferEDMA(spi->inst, &spi->descr_master_edma, &spi->xfer_descr) != kStatus_Success) {
             return -1;
+        }
+        if (xfer->txbuf) {
+            // There isn't a race condition here to worry about since the major interrupt status flag
+            // will remain asserted even if the DMA transfer was to complete before we enable the interrupt.
+            EDMA_SetCallback(&spi->dma_descr_tx, EDMA_LpspiMasterTxCallback, spi);
+            EDMA_EnableChannelInterrupts(spi->dma_descr_tx.base, spi->dma_descr_tx.channel,
+                                         (uint32_t) kEDMA_MajorInterruptEnable);
         }
     } else if (spi->xfer_flags & (OMV_SPI_XFER_BLOCKING | OMV_SPI_XFER_NONBLOCK)) {
         // Use non-blocking mode for both non-blocking and blocking
@@ -130,10 +176,10 @@ int omv_spi_transfer_start(omv_spi_t *spi, omv_spi_transfer_t *xfer) {
 
         // Blocking transfetr, wait for transfer complete or timeout.
         mp_uint_t start = mp_hal_ticks_ms();
-        while (!(spi->xfer_flags & OMV_SPI_XFER_COMPLETE)) {
+        while (!(spi->xfer_flags & (OMV_SPI_XFER_COMPLETE | OMV_SPI_XFER_FAILED))) {
             if ((spi->xfer_flags & OMV_SPI_XFER_FAILED) ||
                 ((mp_hal_ticks_ms() - start) > xfer->timeout)) {
-                LPSPI_MasterTransferAbort(spi->inst, &spi->descr_master);
+                // The SPI bus was aborted by spi_master_callback.
                 return -1;
             }
             MICROPY_EVENT_POLL_HOOK
@@ -145,7 +191,12 @@ int omv_spi_transfer_start(omv_spi_t *spi, omv_spi_transfer_t *xfer) {
 }
 
 int omv_spi_transfer_abort(omv_spi_t *spi) {
-    LPSPI_MasterTransferAbortEDMA(spi->inst, &spi->descr_master_edma);
+    if (spi->dma_flags & (OMV_SPI_DMA_NORMAL | OMV_SPI_DMA_CIRCULAR)) {
+        LPSPI_MasterTransferAbortEDMA(spi->inst, &spi->descr_master_edma);
+    }
+    // The SPI bus must be aborted too on LPSPI_MasterTransferAbortEDMA.
+    LPSPI_MasterTransferAbort(spi->inst, &spi->descr_master);
+    LPSPI_MasterInit(spi->inst, &spi->config_backup, BOARD_BOOTCLOCKRUN_LPSPI_CLK_ROOT);
     return 0;
 }
 
@@ -157,19 +208,17 @@ static int omv_spi_dma_init(edma_handle_t *dma_handle, const dma_descr_t *dma_de
 }
 
 int omv_spi_init(omv_spi_t *spi, omv_spi_config_t *config) {
-    // Configure clocks, pins and DMA MUX.
-    mimxrt_hal_spi_init(config->id, config->nss_enable, config->nss_pol);
+    memset(spi, 0, sizeof(omv_spi_t));
 
     const omv_spi_descr_t *spi_descr = &omv_spi_descr_all[config->id - 1];
     if (spi_descr->inst == NULL) {
         return -1;
     }
 
-    memset(spi, 0, sizeof(omv_spi_t));
     spi->id = config->id;
     spi->inst = spi_descr->inst;
     spi->cs = spi_descr->cs;
-    spi->dma_enabled = config->dma_enable;
+    spi->dma_flags = config->dma_flags;
 
     lpspi_master_config_t spi_config;
     LPSPI_MasterGetDefaultConfig(&spi_config);
@@ -181,10 +230,25 @@ int omv_spi_init(omv_spi_t *spi, omv_spi_config_t *config) {
     spi_config.pcsActiveHighOrLow = config->nss_pol;
     spi_config.cpol = config->clk_pol;
     spi_config.cpha = config->clk_pha;
+    spi_config.pcsToSckDelayInNanoSec = 0;
+    spi_config.lastSckToPcsDelayInNanoSec = 0;
+    spi_config.betweenTransferDelayInNanoSec = 0;
+    spi_config.pinCfg = kLPSPI_SdiInSdoOut;
     spi_config.dataOutConfig = config->data_retained ? kLpspiDataOutRetained : kLpspiDataOutTristate;
+    spi_config.enableInputDelay = false;
     LPSPI_MasterInit(spi->inst, &spi_config, BOARD_BOOTCLOCKRUN_LPSPI_CLK_ROOT);
+    spi->config_backup = spi_config;
 
-    if (config->dma_enable) {
+    // Configure pins.
+    mimxrt_hal_spi_init(config->id, config->nss_enable, config->nss_pol);
+
+    LPSPI_MasterTransferCreateHandle(
+        spi->inst,
+        &spi->descr_master,
+        (lpspi_master_transfer_callback_t) spi_master_callback,
+        spi);
+
+    if (config->dma_flags & (OMV_SPI_DMA_NORMAL | OMV_SPI_DMA_CIRCULAR)) {
         // Configure DMA.
         // Note the FSL driver doesn't support half-duplex, so the both
         // TX/RX channels, descriptors etc... must be initialized.
@@ -199,18 +263,31 @@ int omv_spi_init(omv_spi_t *spi, omv_spi_config_t *config) {
             spi,
             &spi->dma_descr_rx,
             &spi->dma_descr_tx);
-    } else {
-        LPSPI_MasterTransferCreateHandle(
-            spi->inst,
-            &spi->descr_master,
-            (lpspi_master_transfer_callback_t) spi_master_callback,
-            spi);
     }
+
     spi->initialized = true;
     return 0;
 }
 
 int omv_spi_deinit(omv_spi_t *spi) {
+    if (spi && spi->initialized) {
+        spi->initialized = false;
+        omv_spi_transfer_abort(spi);
+        if (spi->dma_flags & (OMV_SPI_DMA_NORMAL | OMV_SPI_DMA_CIRCULAR)) {
+            const omv_spi_descr_t *spi_descr = &omv_spi_descr_all[spi->id - 1];
+            DMAMUX_DisableChannel(spi_descr->dma_descr_tx.dma_mux, spi->dma_descr_tx.channel);
+            DMAMUX_DisableChannel(spi_descr->dma_descr_rx.dma_mux, spi->dma_descr_rx.channel);
+        }
+        LPSPI_Deinit(spi->inst);
+        mimxrt_hal_spi_deinit(spi->id);
+    }
+    return 0;
+}
+
+int omv_spi_set_baudrate(omv_spi_t *spi, uint32_t baudrate) {
+    // LPSPI_MasterSetBaudRate doesn't work. Change the baudrate via a reinit here.
+    spi->config_backup.baudRate = baudrate;
+    omv_spi_transfer_abort(spi);
     return 0;
 }
 
@@ -222,10 +299,10 @@ int omv_spi_default_config(omv_spi_config_t *config, uint32_t bus_id) {
     config->bus_mode = OMV_SPI_BUS_TX_RX;
     config->bit_order = OMV_SPI_MSB_FIRST;
     config->clk_pol = OMV_SPI_CPOL_HIGH;
-    config->clk_pha = OMV_SPI_CPHA_2EDGE;
+    config->clk_pha = OMV_SPI_CPHA_1EDGE;
     config->nss_pol = OMV_SPI_NSS_LOW;
     config->nss_enable = true;
-    config->dma_enable = false;
+    config->dma_flags = 0;
     config->data_retained = true;
     return 0;
 }

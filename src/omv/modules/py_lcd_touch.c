@@ -11,8 +11,6 @@
 #include "omv_boardconfig.h"
 
 #if MICROPY_PY_LCD
-#include STM32_HAL_H
-
 #include "py/obj.h"
 #include "py/nlr.h"
 #include "py/runtime.h"

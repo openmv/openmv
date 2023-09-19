@@ -86,6 +86,10 @@ typedef I2C_HandleTypeDef *omv_i2c_dev_t;
 #define OMV_SPI_NSS_LOW        (0)
 #define OMV_SPI_NSS_HIGH       (1)
 
+#define OMV_SPI_MAX_8BIT_XFER  (65536U - 16U)
+#define OMV_SPI_MAX_16BIT_XFER (65536U - 8U)
+#define OMV_SPI_MAX_TIMEOUT    (HAL_MAX_DELAY)
+
 #define OMV_SPI_PORT_BITS               \
     struct {                            \
         IRQn_Type irqn;                 \
