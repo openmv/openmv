@@ -289,9 +289,9 @@ void HAL_TIM_PWM_MspInit(TIM_HandleTypeDef *htim) {
     }
     #endif // (OMV_XCLK_SOURCE == OMV_XCLK_TIM)
 
-    #if defined(OMV_LCD_BL_TIM)
-    if (htim->Instance == OMV_LCD_BL_TIM) {
-        OMV_LCD_BL_TIM_CLK_ENABLE();
+    #if defined(OMV_DISPLAY_BL_TIM)
+    if (htim->Instance == OMV_DISPLAY_BL_TIM) {
+        OMV_DISPLAY_BL_TIM_CLK_ENABLE();
     }
     #endif
 
@@ -303,11 +303,11 @@ void HAL_TIM_PWM_MspInit(TIM_HandleTypeDef *htim) {
 }
 
 void HAL_TIM_PWM_MspDeInit(TIM_HandleTypeDef *htim) {
-    #if defined(OMV_LCD_BL_TIM)
-    if (htim->Instance == OMV_LCD_BL_TIM) {
-        OMV_LCD_BL_TIM_FORCE_RESET();
-        OMV_LCD_BL_TIM_RELEASE_RESET();
-        OMV_LCD_BL_TIM_CLK_DISABLE();
+    #if defined(OMV_DISPLAY_BL_TIM)
+    if (htim->Instance == OMV_DISPLAY_BL_TIM) {
+        OMV_DISPLAY_BL_TIM_FORCE_RESET();
+        OMV_DISPLAY_BL_TIM_RELEASE_RESET();
+        OMV_DISPLAY_BL_TIM_CLK_DISABLE();
     }
     #endif
 
@@ -601,109 +601,128 @@ void HAL_JPEG_MspDeInit(JPEG_HandleTypeDef *hjpeg) {
 }
 #endif
 
-#if defined(OMV_LCD_CONTROLLER) && (!defined(OMV_DSI_CONTROLLER))
-static const omv_gpio_t ltdc_pins[] = {
-    OMV_LCD_R0_PIN,
-    OMV_LCD_R1_PIN,
-    OMV_LCD_R2_PIN,
-    OMV_LCD_R3_PIN,
-    OMV_LCD_R4_PIN,
-    OMV_LCD_R5_PIN,
-    OMV_LCD_R6_PIN,
-    OMV_LCD_R7_PIN,
-    OMV_LCD_G0_PIN,
-    OMV_LCD_G1_PIN,
-    OMV_LCD_G2_PIN,
-    OMV_LCD_G3_PIN,
-    OMV_LCD_G4_PIN,
-    OMV_LCD_G5_PIN,
-    OMV_LCD_G6_PIN,
-    OMV_LCD_G7_PIN,
-    OMV_LCD_B0_PIN,
-    OMV_LCD_B1_PIN,
-    OMV_LCD_B2_PIN,
-    OMV_LCD_B3_PIN,
-    OMV_LCD_B4_PIN,
-    OMV_LCD_B5_PIN,
-    OMV_LCD_B6_PIN,
-    OMV_LCD_B7_PIN,
-    OMV_LCD_CLK_PIN,
-    OMV_LCD_DE_PIN,
-    OMV_LCD_HSYNC_PIN,
-    OMV_LCD_VSYNC_PIN,
-};
-#endif
-
-#if defined(OMV_LCD_CONTROLLER) || defined(OMV_DSI_CONTROLLER)
+#if defined(OMV_RGB_DISPLAY_CONTROLLER)
 void HAL_LTDC_MspInit(LTDC_HandleTypeDef *hltdc) {
-    #if defined(OMV_DSI_CONTROLLER)
-    if (hltdc->Instance == OMV_LCD_CONTROLLER) {
-        OMV_LCD_CLK_ENABLE();
+    #if defined(OMV_RGB_DISPLAY_R0_PIN)
+    const omv_gpio_t ltdc_pins[] = {
+        OMV_RGB_DISPLAY_R0_PIN,
+        OMV_RGB_DISPLAY_R1_PIN,
+        OMV_RGB_DISPLAY_R2_PIN,
+        OMV_RGB_DISPLAY_R3_PIN,
+        OMV_RGB_DISPLAY_R4_PIN,
+        OMV_RGB_DISPLAY_R5_PIN,
+        OMV_RGB_DISPLAY_R6_PIN,
+        OMV_RGB_DISPLAY_R7_PIN,
+        OMV_RGB_DISPLAY_G0_PIN,
+        OMV_RGB_DISPLAY_G1_PIN,
+        OMV_RGB_DISPLAY_G2_PIN,
+        OMV_RGB_DISPLAY_G3_PIN,
+        OMV_RGB_DISPLAY_G4_PIN,
+        OMV_RGB_DISPLAY_G5_PIN,
+        OMV_RGB_DISPLAY_G6_PIN,
+        OMV_RGB_DISPLAY_G7_PIN,
+        OMV_RGB_DISPLAY_B0_PIN,
+        OMV_RGB_DISPLAY_B1_PIN,
+        OMV_RGB_DISPLAY_B2_PIN,
+        OMV_RGB_DISPLAY_B3_PIN,
+        OMV_RGB_DISPLAY_B4_PIN,
+        OMV_RGB_DISPLAY_B5_PIN,
+        OMV_RGB_DISPLAY_B6_PIN,
+        OMV_RGB_DISPLAY_B7_PIN,
+        OMV_RGB_DISPLAY_CLK_PIN,
+        OMV_RGB_DISPLAY_DE_PIN,
+        OMV_RGB_DISPLAY_HSYNC_PIN,
+        OMV_RGB_DISPLAY_VSYNC_PIN,
+    };
+    #endif
+
+    OMV_RGB_DISPLAY_CLK_ENABLE();
+
+    #if defined(OMV_RGB_DISPLAY_R0_PIN)
+    for (int i = 0; i < OMV_ARRAY_SIZE(ltdc_pins); i++) {
+        omv_gpio_config(ltdc_pins[i], OMV_GPIO_MODE_ALT, OMV_GPIO_PULL_NONE, OMV_GPIO_SPEED_MAX, -1);
     }
-    #elif defined(OMV_LCD_CONTROLLER)
-    if (hltdc->Instance == OMV_LCD_CONTROLLER) {
-        OMV_LCD_CLK_ENABLE();
+    #endif
 
-        for (int i = 0; i < OMV_ARRAY_SIZE(ltdc_pins); i++) {
-            omv_gpio_config(ltdc_pins[i], OMV_GPIO_MODE_ALT, OMV_GPIO_PULL_NONE, OMV_GPIO_SPEED_MAX, -1);
-        }
+    #if defined(OMV_RGB_DISPLAY_DISP_PIN)
+    omv_gpio_config(OMV_RGB_DISPLAY_DISP_PIN, OMV_GPIO_MODE_OUTPUT, OMV_GPIO_PULL_NONE, OMV_GPIO_SPEED_LOW, -1);
+    omv_gpio_write(OMV_RGB_DISPLAY_DISP_PIN, 0);
+    #endif
 
-        #if defined(OMV_LCD_DISP_PIN)
-        omv_gpio_config(OMV_LCD_DISP_PIN, OMV_GPIO_MODE_OUTPUT, OMV_GPIO_PULL_NONE, OMV_GPIO_SPEED_LOW, -1);
-        omv_gpio_write(OMV_LCD_DISP_PIN, 0);
-        #endif
-
-        #if defined(OMV_LCD_BL_PIN)
-        omv_gpio_config(OMV_LCD_BL_PIN, OMV_GPIO_MODE_OUTPUT, OMV_GPIO_PULL_NONE, OMV_GPIO_SPEED_LOW, -1);
-        omv_gpio_write(OMV_LCD_BL_PIN, 0);
-        #endif
-    }
+    #if defined(OMV_RGB_DISPLAY_BL_PIN)
+    omv_gpio_config(OMV_RGB_DISPLAY_BL_PIN, OMV_GPIO_MODE_OUTPUT, OMV_GPIO_PULL_NONE, OMV_GPIO_SPEED_LOW, -1);
+    omv_gpio_write(OMV_RGB_DISPLAY_BL_PIN, 0);
     #endif
 }
 
 void HAL_LTDC_MspDeInit(LTDC_HandleTypeDef *hltdc) {
-    #if defined(OMV_DSI_CONTROLLER)
-    if (hltdc->Instance == OMV_LCD_CONTROLLER) {
-        OMV_LCD_FORCE_RESET();
-        OMV_LCD_RELEASE_RESET();
-        OMV_LCD_CLK_DISABLE();
+    #if defined(OMV_RGB_DISPLAY_R0_PIN)
+    const omv_gpio_t ltdc_pins[] = {
+        OMV_RGB_DISPLAY_R0_PIN,
+        OMV_RGB_DISPLAY_R1_PIN,
+        OMV_RGB_DISPLAY_R2_PIN,
+        OMV_RGB_DISPLAY_R3_PIN,
+        OMV_RGB_DISPLAY_R4_PIN,
+        OMV_RGB_DISPLAY_R5_PIN,
+        OMV_RGB_DISPLAY_R6_PIN,
+        OMV_RGB_DISPLAY_R7_PIN,
+        OMV_RGB_DISPLAY_G0_PIN,
+        OMV_RGB_DISPLAY_G1_PIN,
+        OMV_RGB_DISPLAY_G2_PIN,
+        OMV_RGB_DISPLAY_G3_PIN,
+        OMV_RGB_DISPLAY_G4_PIN,
+        OMV_RGB_DISPLAY_G5_PIN,
+        OMV_RGB_DISPLAY_G6_PIN,
+        OMV_RGB_DISPLAY_G7_PIN,
+        OMV_RGB_DISPLAY_B0_PIN,
+        OMV_RGB_DISPLAY_B1_PIN,
+        OMV_RGB_DISPLAY_B2_PIN,
+        OMV_RGB_DISPLAY_B3_PIN,
+        OMV_RGB_DISPLAY_B4_PIN,
+        OMV_RGB_DISPLAY_B5_PIN,
+        OMV_RGB_DISPLAY_B6_PIN,
+        OMV_RGB_DISPLAY_B7_PIN,
+        OMV_RGB_DISPLAY_CLK_PIN,
+        OMV_RGB_DISPLAY_DE_PIN,
+        OMV_RGB_DISPLAY_HSYNC_PIN,
+        OMV_RGB_DISPLAY_VSYNC_PIN,
+    };
+    #endif
+
+    OMV_RGB_DISPLAY_FORCE_RESET();
+    OMV_RGB_DISPLAY_RELEASE_RESET();
+    OMV_RGB_DISPLAY_CLK_DISABLE();
+
+    #if defined(OMV_RGB_DISPLAY_R0_PIN)
+    for (int i = 0; i < OMV_ARRAY_SIZE(ltdc_pins); i++) {
+        omv_gpio_deinit(ltdc_pins[i]);
     }
-    #elif defined(OMV_LCD_CONTROLLER)
-    if (hltdc->Instance == OMV_LCD_CONTROLLER) {
-        OMV_LCD_FORCE_RESET();
-        OMV_LCD_RELEASE_RESET();
-        OMV_LCD_CLK_DISABLE();
+    #endif
 
-        for (int i = 0; i < OMV_ARRAY_SIZE(ltdc_pins); i++) {
-            omv_gpio_deinit(ltdc_pins[i]);
-        }
+    #if defined(OMV_RGB_DISPLAY_DISP_PIN)
+    omv_gpio_deinit(OMV_RGB_DISPLAY_DISP_PIN);
+    #endif
 
-        #if defined(OMV_LCD_DISP_PIN)
-        omv_gpio_deinit(OMV_LCD_DISP_PIN);
-        #endif
-
-        #if defined(OMV_LCD_BL_PIN)
-        omv_gpio_deinit(OMV_LCD_BL_PIN);
-        #endif
-    }
+    #if defined(OMV_RGB_DISPLAY_BL_PIN)
+    omv_gpio_deinit(OMV_RGB_DISPLAY_BL_PIN);
     #endif
 }
 #endif
 
 void HAL_DAC_MspInit(DAC_HandleTypeDef *hdac) {
-    #if defined(OMV_SPI_LCD_BL_DAC)
-    if (hdac->Instance == OMV_SPI_LCD_BL_DAC) {
-        OMV_SPI_LCD_BL_DAC_CLK_ENABLE();
+    #if defined(OMV_DISPLAY_BL_DAC)
+    if (hdac->Instance == OMV_DISPLAY_BL_DAC) {
+        OMV_DISPLAY_BL_DAC_CLK_ENABLE();
     }
     #endif
 }
 
 void HAL_DAC_MspDeInit(DAC_HandleTypeDef *hdac) {
-    #if defined(OMV_SPI_LCD_BL_DAC)
-    if (hdac->Instance == OMV_SPI_LCD_BL_DAC) {
-        OMV_SPI_LCD_BL_DAC_FORCE_RESET();
-        OMV_SPI_LCD_BL_DAC_RELEASE_RESET();
-        OMV_SPI_LCD_BL_DAC_CLK_DISABLE();
+    #if defined(OMV_DISPLAY_BL_DAC)
+    if (hdac->Instance == OMV_DISPLAY_BL_DAC) {
+        OMV_DISPLAY_BL_DAC_FORCE_RESET();
+        OMV_DISPLAY_BL_DAC_RELEASE_RESET();
+        OMV_DISPLAY_BL_DAC_CLK_DISABLE();
     }
     #endif
 }
