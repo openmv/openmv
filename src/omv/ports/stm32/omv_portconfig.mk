@@ -51,6 +51,7 @@ OMV_CFLAGS += -I$(TOP_DIR)/$(MLX90621_DIR)/include/
 OMV_CFLAGS += -I$(TOP_DIR)/$(MLX90640_DIR)/include/
 OMV_CFLAGS += -I$(TOP_DIR)/$(MLX90641_DIR)/include/
 OMV_CFLAGS += -I$(TOP_DIR)/$(PIXART_DIR)/include/
+OMV_CFLAGS += -I$(TOP_DIR)/$(DISPLAY_DIR)/include/
 OMV_CFLAGS += -I$(TOP_DIR)/$(TENSORFLOW_DIR)/
 OMV_CFLAGS += -I$(BUILD)/$(TENSORFLOW_DIR)/
 OMV_CFLAGS += -I$(TOP_DIR)/$(LIBPDM_DIR)/
@@ -125,6 +126,7 @@ FIRM_OBJ += $(wildcard $(BUILD)/$(MLX90640_DIR)/src/*.o)
 FIRM_OBJ += $(wildcard $(BUILD)/$(MLX90641_DIR)/src/*.o)
 FIRM_OBJ += $(wildcard $(BUILD)/$(VL53L5CX_DIR)/src/*.o)
 FIRM_OBJ += $(wildcard $(BUILD)/$(PIXART_DIR)/src/*.o)
+FIRM_OBJ += $(wildcard $(BUILD)/$(DISPLAY_DIR)/src/*.o)
 
 #------------- OpenMV Objects ----------------#
 FIRM_OBJ += $(addprefix $(BUILD)/$(CMSIS_DIR)/src/, \
@@ -654,6 +656,7 @@ endif
 	$(MAKE)  -C $(MLX90641_DIR)              BUILD=$(BUILD)/$(MLX90641_DIR)     CFLAGS="$(CFLAGS) -MMD"
 	$(MAKE)  -C $(VL53L5CX_DIR)              BUILD=$(BUILD)/$(VL53L5CX_DIR)     CFLAGS="$(CFLAGS) -MMD"
 	$(MAKE)  -C $(PIXART_DIR)                BUILD=$(BUILD)/$(PIXART_DIR)       CFLAGS="$(CFLAGS) -MMD"
+	$(MAKE)  -C $(DISPLAY_DIR)               BUILD=$(BUILD)/$(DISPLAY_DIR)      CFLAGS="$(CFLAGS) -MMD"
 	$(MAKE)  -C $(OMV_DIR)                   BUILD=$(BUILD)/$(OMV_DIR)          CFLAGS="$(CFLAGS) -MMD"
 ifeq ($(CUBEAI), 1)
 	$(MAKE)  -C $(CUBEAI_DIR)                BUILD=$(BUILD)/$(CUBEAI_DIR)       CFLAGS="$(CFLAGS) -fno-strict-aliasing -MMD"

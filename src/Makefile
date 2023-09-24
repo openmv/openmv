@@ -62,6 +62,7 @@ MLX90640_DIR=drivers/mlx90640
 MLX90641_DIR=drivers/mlx90641
 VL53L5CX_DIR=drivers/vl53l5cx
 PIXART_DIR=drivers/pixart
+DISPLAY_DIR=drivers/display
 LIBPDM_DIR=lib/libpdm
 TENSORFLOW_DIR=lib/libtf
 OMV_BOARD_CONFIG_DIR=$(TOP_DIR)/$(OMV_DIR)/boards/$(TARGET)/
