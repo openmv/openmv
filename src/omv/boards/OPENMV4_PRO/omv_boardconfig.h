@@ -317,20 +317,18 @@
 #define ISC_SPI_MOSI_PIN                      (&omv_pin_G14_SPI6)
 #define ISC_SPI_SSEL_PIN                      (&omv_pin_A15_SPI6)
 
-// SPI LCD Interface
-#define OMV_SPI_LCD_CONTROLLER                (&spi_obj[1])
-#define OMV_SPI_LCD_CONTROLLER_INSTANCE       (SPI2)
-
-#define OMV_SPI_LCD_MOSI_PIN                  (&omv_pin_C1_SPI2)
-#define OMV_SPI_LCD_MISO_PIN                  (&omv_pin_C2_SPI2)
-#define OMV_SPI_LCD_SCLK_PIN                  (&omv_pin_A12_SPI2)
-#define OMV_SPI_LCD_SSEL_PIN                  (&omv_pin_A11_GPIO)
-
-#define OMV_SPI_LCD_RST_PIN                   (&omv_pin_C6_GPIO)
-#define OMV_SPI_LCD_RS_PIN                    (&omv_pin_C7_GPIO)
-#define OMV_SPI_LCD_BL_PIN                    (&omv_pin_C5_GPIO)
-
 #if 0
+// SPI LCD Interface
+#define OMV_SPI_DISPLAY_CONTROLLER            (&spi_obj[1])
+#define OMV_SPI_DISPLAY_MOSI_PIN              (&omv_pin_C1_SPI2)
+#define OMV_SPI_DISPLAY_MISO_PIN              (&omv_pin_C2_SPI2)
+#define OMV_SPI_DISPLAY_SCLK_PIN              (&omv_pin_A12_SPI2)
+#define OMV_SPI_DISPLAY_SSEL_PIN              (&omv_pin_A11_GPIO)
+
+#define OMV_SPI_DISPLAY_RST_PIN               (&omv_pin_C6_GPIO)
+#define OMV_SPI_DISPLAY_RS_PIN                (&omv_pin_C7_GPIO)
+#define OMV_SPI_DISPLAY_BL_PIN                (&omv_pin_C5_GPIO)
+
 // FIR Lepton
 #define OMV_FIR_LEPTON_I2C_BUS                (FIR_I2C_ID)
 #define OMV_FIR_LEPTON_I2C_BUS_SPEED          (FIR_I2C_SPEED)

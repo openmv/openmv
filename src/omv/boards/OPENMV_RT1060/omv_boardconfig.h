@@ -205,19 +205,17 @@
 #define LPSPI4_DMA_RX_CHANNEL           (0U)
 
 // SPI LCD Interface
-#define OMV_SPI_LCD_SPI_BUS             (LPSPI3_ID)
-#define OMV_SPI_LCD_MOSI_PIN            (&omv_pin_LPSPI3_MOSI)
-#define OMV_SPI_LCD_MISO_PIN            (&omv_pin_LPSPI3_MISO)
-#define OMV_SPI_LCD_SCLK_PIN            (&omv_pin_LPSPI3_SCLK)
-#define OMV_SPI_LCD_SSEL_PIN            (&omv_pin_LPSPI3_GPIO)
+#define OMV_SPI_DISPLAY_CONTROLLER      (LPSPI3_ID)
+#define OMV_SPI_DISPLAY_MOSI_PIN        (&omv_pin_LPSPI3_MOSI)
+#define OMV_SPI_DISPLAY_MISO_PIN        (&omv_pin_LPSPI3_MISO)
+#define OMV_SPI_DISPLAY_SCLK_PIN        (&omv_pin_LPSPI3_SCLK)
+#define OMV_SPI_DISPLAY_SSEL_PIN        (&omv_pin_LPSPI3_GPIO)
 
-#define OMV_SPI_LCD_RS_PIN              (&omv_pin_P8_GPIO)
-#define OMV_SPI_LCD_BL_PIN              (&omv_pin_P6_GPIO)
-#define OMV_SPI_LCD_RST_PIN             (&omv_pin_P7_GPIO)
-
-#define OMV_SPI_LCD_DEF_TRIPLE_BUF      (1)
-
-#define OMV_SPI_LCD_RX_CLK_DIV          (8)
+#define OMV_SPI_DISPLAY_RS_PIN          (&omv_pin_P8_GPIO)
+#define OMV_SPI_DISPLAY_RST_PIN         (&omv_pin_P7_GPIO)
+#define OMV_SPI_DISPLAY_BL_PIN          (&omv_pin_P6_GPIO)
+#define OMV_SPI_DISPLAY_TRIPLE_BUFFER   (0)
+#define OMV_SPI_DISPLAY_RX_CLK_DIV      (8)
 
 // FIR Lepton
 #define OMV_FIR_LEPTON_I2C_BUS          (FIR_I2C_ID)

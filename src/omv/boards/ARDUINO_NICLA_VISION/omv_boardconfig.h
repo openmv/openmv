@@ -246,9 +246,9 @@
 #define DCMI_TIM_PCLK_FREQ()                  HAL_RCC_GetPCLK1Freq()
 
 // DCMI pins
-//#define DCMI_RESET_PIN         (&omv_pin_A10_GPIO)
-//#define DCMI_POWER_PIN         (&omv_pin_G3_GPIO)
-//#define DCMI_FSYNC_PIN         (&omv_pin_B4_GPIO)
+//#define DCMI_RESET_PIN                      (&omv_pin_A10_GPIO)
+//#define DCMI_POWER_PIN                      (&omv_pin_G3_GPIO)
+//#define DCMI_FSYNC_PIN                      (&omv_pin_B4_GPIO)
 
 #define DCMI_D0_PIN                           (&omv_pin_C6_DCMI)
 #define DCMI_D1_PIN                           (&omv_pin_C7_DCMI)
@@ -319,14 +319,14 @@
 #define SPI5_DMA_RX_CHANNEL                   (DMA2_Stream3)
 
 // SPI LCD Interface
-#define OMV_SPI_LCD_SPI_BUS                   (SPI4_ID)
-#define OMV_SPI_LCD_MOSI_PIN                  (&omv_pin_E14_SPI4)
-#define OMV_SPI_LCD_MISO_PIN                  (&omv_pin_E13_SPI4)
-#define OMV_SPI_LCD_SCLK_PIN                  (&omv_pin_E12_SPI4)
-#define OMV_SPI_LCD_SSEL_PIN                  (&omv_pin_E11_GPIO)
+#define OMV_SPI_DISPLAY_CONTROLLER            (SPI4_ID)
+#define OMV_SPI_DISPLAY_MOSI_PIN              (&omv_pin_E14_SPI4)
+#define OMV_SPI_DISPLAY_MISO_PIN              (&omv_pin_E13_SPI4)
+#define OMV_SPI_DISPLAY_SCLK_PIN              (&omv_pin_E12_SPI4)
+#define OMV_SPI_DISPLAY_SSEL_PIN              (&omv_pin_E11_GPIO)
 
-#define OMV_SPI_LCD_RS_PIN                    (&omv_pin_G12_GPIO)
-#define OMV_SPI_LCD_RST_PIN                   (&omv_pin_G1_GPIO)
+#define OMV_SPI_DISPLAY_RS_PIN                (&omv_pin_G12_GPIO)
+#define OMV_SPI_DISPLAY_RST_PIN               (&omv_pin_G1_GPIO)
 
 // FIR Lepton
 #define OMV_FIR_LEPTON_I2C_BUS                (FIR_I2C_ID)

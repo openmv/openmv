@@ -300,24 +300,23 @@
 #define SPI3_DMA_RX_CHANNEL                   (DMA1_Stream2)
 
 // SPI LCD Interface
-#define OMV_SPI_LCD_SPI_BUS                   (SPI2_ID)
-#define OMV_SPI_LCD_MOSI_PIN                  (&omv_pin_B15_SPI2)
-#define OMV_SPI_LCD_MISO_PIN                  (&omv_pin_B14_SPI2)
-#define OMV_SPI_LCD_SCLK_PIN                  (&omv_pin_B13_SPI2)
-#define OMV_SPI_LCD_SSEL_PIN                  (&omv_pin_B12_GPIO)
+#define OMV_SPI_DISPLAY_CONTROLLER            (SPI2_ID)
+#define OMV_SPI_DISPLAY_MOSI_PIN              (&omv_pin_B15_SPI2)
+#define OMV_SPI_DISPLAY_MISO_PIN              (&omv_pin_B14_SPI2)
+#define OMV_SPI_DISPLAY_SCLK_PIN              (&omv_pin_B13_SPI2)
+#define OMV_SPI_DISPLAY_SSEL_PIN              (&omv_pin_B12_GPIO)
 
-#define OMV_SPI_LCD_RS_PIN                    (&omv_pin_D13_GPIO)
-#define OMV_SPI_LCD_BL_PIN                    (&omv_pin_A5_GPIO)
-#define OMV_SPI_LCD_RST_PIN                   (&omv_pin_D12_GPIO)
+#define OMV_SPI_DISPLAY_RS_PIN                (&omv_pin_D13_GPIO)
+#define OMV_SPI_DISPLAY_RST_PIN               (&omv_pin_D12_GPIO)
+#define OMV_SPI_DISPLAY_BL_PIN                (&omv_pin_A5_GPIO)
+#define OMV_SPI_DISPLAY_TRIPLE_BUFFER         (1)
 
-#define OMV_SPI_LCD_BL_DAC                    (DAC1)
-#define OMV_SPI_LCD_BL_DAC_CHANNEL            (DAC_CHANNEL_2)
-#define OMV_SPI_LCD_BL_DAC_CLK_ENABLE()       __HAL_RCC_DAC12_CLK_ENABLE()
-#define OMV_SPI_LCD_BL_DAC_CLK_DISABLE()      __HAL_RCC_DAC12_CLK_DISABLE()
-#define OMV_SPI_LCD_BL_DAC_FORCE_RESET()      __HAL_RCC_DAC12_FORCE_RESET()
-#define OMV_SPI_LCD_BL_DAC_RELEASE_RESET()    __HAL_RCC_DAC12_RELEASE_RESET()
-
-#define OMV_SPI_LCD_DEF_TRIPLE_BUF            (1)
+#define OMV_DISPLAY_BL_DAC                    (DAC1)
+#define OMV_DISPLAY_BL_DAC_CHANNEL            (DAC_CHANNEL_2)
+#define OMV_DISPLAY_BL_DAC_CLK_ENABLE()       __HAL_RCC_DAC12_CLK_ENABLE()
+#define OMV_DISPLAY_BL_DAC_CLK_DISABLE()      __HAL_RCC_DAC12_CLK_DISABLE()
+#define OMV_DISPLAY_BL_DAC_FORCE_RESET()      __HAL_RCC_DAC12_FORCE_RESET()
+#define OMV_DISPLAY_BL_DAC_RELEASE_RESET()    __HAL_RCC_DAC12_RELEASE_RESET()
 
 // FIR Lepton
 #define OMV_FIR_LEPTON_I2C_BUS                (FIR_I2C_ID)
