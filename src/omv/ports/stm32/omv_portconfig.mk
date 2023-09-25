@@ -247,6 +247,7 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/,\
 	pendsv.o                \
 	bufhelper.o             \
 	usb.o                   \
+	usrsw.o                 \
 	eth.o                   \
 	gccollect.o             \
 	help.o                  \
