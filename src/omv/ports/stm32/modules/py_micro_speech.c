@@ -170,7 +170,7 @@ STATIC mp_obj_t py_micro_speech_listen(uint n_args, const mp_obj_t *args, mp_map
 
     uint32_t start = HAL_GetTick();
     while (timeout == 0 || (HAL_GetTick() - start) < timeout) {
-        __WFI();
+        MICROPY_EVENT_POLL_HOOK
 
         if (microspeech->new_slices == false) {
             continue;

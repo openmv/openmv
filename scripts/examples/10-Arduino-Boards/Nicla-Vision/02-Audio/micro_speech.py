@@ -23,7 +23,7 @@ audio.start_streaming(speech.audio_callback)
 
 while True:
     # Run micro-speech without a timeout and filter detections by label index.
-    idx = speech.listen(model, timeout=0, threshold=0.78, filter=[2, 3])
+    idx = speech.listen(model, timeout=0, threshold=0.70, filter=[2, 3])
     led = led_green if idx == 2 else led_red
     print(labels[idx])
     for i in range(0, 4):
