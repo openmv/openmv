@@ -348,20 +348,20 @@ static int set_auto_gain(sensor_t *sensor, int enable, float gain_db, float gain
     ret |= omv_i2c_writeb(&sensor->i2c_bus, sensor->slv_addr, COM8, COM8_SET_AGC(reg, (enable != 0)));
 
     if ((enable == 0) && (!isnanf(gain_db)) && (!isinff(gain_db))) {
-        float gain = IM_MAX(IM_MIN(fast_expf((gain_db / 20.0) * fast_log(10.0)), 32.0), 1.0);
+        float gain = IM_MAX(IM_MIN(expf((gain_db / 20.0f) * M_LN10), 32.0f), 1.0f);
 
-        int gain_temp = fast_roundf(fast_log2(IM_MAX(gain / 2.0, 1.0)));
+        int gain_temp = fast_ceilf(logf(IM_MAX(gain / 2.0f, 1.0f)) / M_LN2);
         int gain_hi = 0xF >> (4 - gain_temp);
-        int gain_lo = IM_MIN(fast_roundf(((gain / (1 << gain_temp)) - 1.0) * 16.0), 15);
+        int gain_lo = IM_MIN(fast_roundf(((gain / (1 << gain_temp)) - 1.0f) * 16.0f), 15);
 
         ret |= omv_i2c_writeb(&sensor->i2c_bus, sensor->slv_addr, GAIN, (gain_hi << 4) | (gain_lo << 0));
     } else if ((enable != 0) && (!isnanf(gain_db_ceiling)) && (!isinff(gain_db_ceiling))) {
-        float gain_ceiling = IM_MAX(IM_MIN(fast_expf((gain_db_ceiling / 20.0) * fast_log(10.0)), 32.0), 2.0);
+        float gain_ceiling = IM_MAX(IM_MIN(expf((gain_db_ceiling / 20.0f) * M_LN10), 32.0f), 2.0f);
 
         ret |= omv_i2c_readb(&sensor->i2c_bus, sensor->slv_addr, COM9, &reg);
         ret |=
             omv_i2c_writeb(&sensor->i2c_bus, sensor->slv_addr, COM9,
-                           (reg & 0x8F) | ((fast_ceilf(fast_log2(gain_ceiling)) - 1) << 4));
+                           (reg & 0x8F) | ((fast_ceilf(logf(gain_ceiling) / M_LN2) - 1) << 4));
     }
 
     return ret;
@@ -386,8 +386,8 @@ static int get_gain_db(sensor_t *sensor, float *gain_db) {
     // DISABLED
 
     int hi_gain = 1 << (((gain >> 7) & 1) + ((gain >> 6) & 1) + ((gain >> 5) & 1) + ((gain >> 4) & 1));
-    float lo_gain = 1.0 + (((gain >> 0) & 0xF) / 16.0);
-    *gain_db = 20.0 * (fast_log(hi_gain * lo_gain) / fast_log(10.0));
+    float lo_gain = 1.0f + (((gain >> 0) & 0xF) / 16.0f);
+    *gain_db = 20.0f * log10f(hi_gain * lo_gain);
 
     return ret;
 }
@@ -501,11 +501,11 @@ static int set_auto_whitebal(sensor_t *sensor, int enable, float r_gain_db, floa
     if ((enable == 0) && (!isnanf(r_gain_db)) && (!isnanf(g_gain_db)) && (!isnanf(b_gain_db))
         && (!isinff(r_gain_db)) && (!isinff(g_gain_db)) && (!isinff(b_gain_db))) {
         ret |= omv_i2c_readb(&sensor->i2c_bus, sensor->slv_addr, AWB_CTRL1, &reg);
-        float gain_div = (reg & 0x2) ? 64.0 : 128.0;
+        float gain_div = (reg & 0x2) ? 64.0f : 128.0f;
 
-        int r_gain = IM_MAX(IM_MIN(fast_roundf(fast_expf((r_gain_db / 20.0) * fast_log(10.0)) * gain_div), 255), 0);
-        int g_gain = IM_MAX(IM_MIN(fast_roundf(fast_expf((g_gain_db / 20.0) * fast_log(10.0)) * gain_div), 255), 0);
-        int b_gain = IM_MAX(IM_MIN(fast_roundf(fast_expf((b_gain_db / 20.0) * fast_log(10.0)) * gain_div), 255), 0);
+        int r_gain = IM_MAX(IM_MIN(fast_roundf(expf((r_gain_db / 20.0f) * M_LN10) * gain_div), 255), 0);
+        int g_gain = IM_MAX(IM_MIN(fast_roundf(expf((g_gain_db / 20.0f) * M_LN10) * gain_div), 255), 0);
+        int b_gain = IM_MAX(IM_MIN(fast_roundf(expf((b_gain_db / 20.0f) * M_LN10) * gain_div), 255), 0);
 
         ret |= omv_i2c_writeb(&sensor->i2c_bus, sensor->slv_addr, BLUE, b_gain);
         ret |= omv_i2c_writeb(&sensor->i2c_bus, sensor->slv_addr, RED, r_gain);
@@ -536,11 +536,11 @@ static int get_rgb_gain_db(sensor_t *sensor, float *r_gain_db, float *g_gain_db,
     // DISABLED
 
     ret |= omv_i2c_readb(&sensor->i2c_bus, sensor->slv_addr, AWB_CTRL1, &reg);
-    float gain_div = (reg & 0x2) ? 64.0 : 128.0;
+    float gain_div = (reg & 0x2) ? 64.0f : 128.0f;
 
-    *r_gain_db = 20.0 * (fast_log(red / gain_div) / fast_log(10.0));
-    *g_gain_db = 20.0 * (fast_log(green / gain_div) / fast_log(10.0));
-    *b_gain_db = 20.0 * (fast_log(blue / gain_div) / fast_log(10.0));
+    *r_gain_db = 20.0f * log10f(red / gain_div);
+    *g_gain_db = 20.0f * log10f(green / gain_div);
+    *b_gain_db = 20.0f * log10f(blue / gain_div);
 
     return ret;
 }

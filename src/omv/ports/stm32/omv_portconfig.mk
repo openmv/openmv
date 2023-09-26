@@ -518,6 +518,7 @@ endif
 ifeq ($(OMV_ENABLE_UVC), 1)
 UVC = uvc
 # UVC object files
+UVC_OBJ += $(BUILD)/$(MICROPY_DIR)/lib/libm/math.o
 UVC_OBJ += $(wildcard $(BUILD)/$(UVC_DIR)/src/*.o)
 UVC_OBJ += $(wildcard $(BUILD)/$(HAL_DIR)/src/*.o)
 UVC_OBJ += $(addprefix $(BUILD)/$(CMSIS_DIR)/src/,\

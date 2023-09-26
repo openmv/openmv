@@ -785,7 +785,7 @@ static int set_auto_gain(sensor_t *sensor, int enable, float gain_db, float gain
     }
 
     if ((enable == 0) && (!isnanf(gain_db)) && (!isinff(gain_db))) {
-        int gain = IM_MAX(IM_MIN(fast_expf((gain_db / 20.f) * fast_log(10.f)) * 32.f, 0xffff), 0x0000);
+        int gain = IM_MAX(IM_MIN(expf((gain_db / 20.0f) * M_LN10) * 32.0f, 0xffff), 0x0000);
 
         if (omv_i2c_writew2(&sensor->i2c_bus, sensor->slv_addr, MT9M114_REG_UVC_GAIN_CONTROL, gain) != 0) {
             return -1;
@@ -802,7 +802,7 @@ static int get_gain_db(sensor_t *sensor, float *gain_db) {
         return -1;
     }
 
-    *gain_db = 20.f * (fast_log(gain / 32.f) / fast_log(10.f));
+    *gain_db = 20.0f * log10f(gain / 32.0f);
 
     return 0;
 }

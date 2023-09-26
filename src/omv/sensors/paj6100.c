@@ -314,7 +314,7 @@ static void auto_exposure(sensor_t *sensor) {
             gain_target = 8;
         }
         //gain_target = IM_MIN(IM_MAX(fast_ceilf(GEP_target/expo_target), R_AE_MinGain), R_AE_MaxGain);
-        gain_db = 20 * (fast_log((float) gain_target) / fast_log(10.0));
+        gain_db = 20 * log10f((float) gain_target);
         expo_target = IM_MIN(IM_MAX(fast_roundf(GEP_target / gain_target), R_AE_MinExpoTime), R_AE_MaxExpoTime);
         #ifdef DEBUG_AE
         printf("Gain Target: %ld (%d DB (x1000))\n", gain_target, (int) (gain_db * 1000));
