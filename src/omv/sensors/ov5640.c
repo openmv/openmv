@@ -1175,7 +1175,7 @@ static int set_auto_exposure(sensor_t *sensor, int enable, int exposure_us) {
 }
 
 static int get_exposure_us(sensor_t *sensor, int *exposure_us) {
-    uint8_t spc0, spc1, spc2, spc3, sysrootdiv, aec_0, aec_1, aec_2, hts_h, hts_l;
+    uint8_t spc0, spc1, spc2, spc3, sysrootdiv, aec_0, aec_1, aec_2, hts_h, hts_l, vts_h, vts_l;
     int ret = 0;
 
     ret |= omv_i2c_readb2(&sensor->i2c_bus, sensor->slv_addr, SC_PLL_CONTRL0, &spc0);
@@ -1191,8 +1191,14 @@ static int get_exposure_us(sensor_t *sensor, int *exposure_us) {
     ret |= omv_i2c_readb2(&sensor->i2c_bus, sensor->slv_addr, TIMING_HTS_H, &hts_h);
     ret |= omv_i2c_readb2(&sensor->i2c_bus, sensor->slv_addr, TIMING_HTS_L, &hts_l);
 
+    ret |= omv_i2c_readb2(&sensor->i2c_bus, sensor->slv_addr, TIMING_VTS_H, &vts_h);
+    ret |= omv_i2c_readb2(&sensor->i2c_bus, sensor->slv_addr, TIMING_VTS_L, &vts_l);
+
     uint32_t aec = ((aec_0 << 16) | (aec_1 << 8) | aec_2) >> 4;
     uint16_t hts = (hts_h << 8) | hts_l;
+    uint16_t vts = (vts_h << 8) | vts_l;
+
+    aec = IM_MIN(aec, vts);
 
     int pclk_freq = calc_pclk_freq(spc0, spc1, spc2, spc3, sysrootdiv);
     int clocks_per_us = pclk_freq / 1000000;
