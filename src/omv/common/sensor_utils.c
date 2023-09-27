@@ -34,8 +34,8 @@
 #include "omv_gpio.h"
 #include "omv_i2c.h"
 
-#if (OMV_ENABLE_PAJ6100 == 1)
-#define OMV_ENABLE_NONI2CIS
+#ifndef OMV_ISC_MAX_DEVICES
+#define OMV_ISC_MAX_DEVICES (5)
 #endif
 
 #ifndef __weak
@@ -169,12 +169,77 @@ __weak int sensor_reset() {
     return 0;
 }
 
+static int sensor_detect() {
+    uint8_t devs_list[OMV_ISC_MAX_DEVICES];
+    int n_devs = omv_i2c_scan(&sensor.i2c_bus, devs_list, OMV_ARRAY_SIZE(devs_list));
+
+    for (int i = 0; i < OMV_MIN(n_devs, OMV_ISC_MAX_DEVICES); i++) {
+        uint8_t slv_addr = devs_list[i];
+        switch (slv_addr) {
+            #if (OMV_ENABLE_OV2640 == 1)
+            case OV2640_SLV_ADDR: // Or OV9650.
+                omv_i2c_readb(&sensor.i2c_bus, slv_addr, OV_CHIP_ID, &sensor.chip_id);
+                return slv_addr;
+            #endif // (OMV_ENABLE_OV2640 == 1)
+
+            #if (OMV_ENABLE_OV5640 == 1)
+            case OV5640_SLV_ADDR:
+                omv_i2c_readb2(&sensor.i2c_bus, slv_addr, OV5640_CHIP_ID, &sensor.chip_id);
+                return slv_addr;
+            #endif // (OMV_ENABLE_OV5640 == 1)
+
+            #if (OMV_ENABLE_OV7725 == 1) || (OMV_ENABLE_OV7670 == 1) || (OMV_ENABLE_OV7690 == 1)
+            case OV7725_SLV_ADDR: // Or OV7690 or OV7670.
+                omv_i2c_readb(&sensor.i2c_bus, slv_addr, OV_CHIP_ID, &sensor.chip_id);
+                return slv_addr;
+            #endif //(OMV_ENABLE_OV7725 == 1) || (OMV_ENABLE_OV7670 == 1) || (OMV_ENABLE_OV7690 == 1)
+
+            #if (OMV_ENABLE_MT9V0XX == 1)
+            case MT9V0XX_SLV_ADDR:
+                omv_i2c_readw(&sensor.i2c_bus, slv_addr, ON_CHIP_ID, &sensor.chip_id_w);
+                return slv_addr;
+            #endif //(OMV_ENABLE_MT9V0XX == 1)
+
+            #if (OMV_ENABLE_MT9M114 == 1)
+            case MT9M114_SLV_ADDR:
+                omv_i2c_readw2(&sensor.i2c_bus, slv_addr, ON_CHIP_ID, &sensor.chip_id_w);
+                return slv_addr;
+            #endif // (OMV_ENABLE_MT9M114 == 1)
+
+            #if (OMV_ENABLE_LEPTON == 1)
+            case LEPTON_SLV_ADDR:
+                sensor.chip_id = LEPTON_ID;
+                return slv_addr;
+            #endif // (OMV_ENABLE_LEPTON == 1)
+
+            #if (OMV_ENABLE_HM01B0 == 1) || (OMV_ENABLE_HM0360 == 1)
+            case HM0XX0_SLV_ADDR:
+                omv_i2c_readb2(&sensor.i2c_bus, slv_addr, HIMAX_CHIP_ID, &sensor.chip_id);
+                return slv_addr;
+            #endif // (OMV_ENABLE_HM01B0 == 1) || (OMV_ENABLE_HM0360 == 1)
+
+            #if (OMV_ENABLE_GC2145 == 1)
+            case GC2145_SLV_ADDR:
+                omv_i2c_readb(&sensor.i2c_bus, slv_addr, GC_CHIP_ID, &sensor.chip_id);
+                return slv_addr;
+            #endif //(OMV_ENABLE_GC2145 == 1)
+
+            #if (OMV_ENABLE_FROGEYE2020 == 1)
+            case FROGEYE2020_SLV_ADDR:
+                sensor.chip_id_w = FROGEYE2020_ID;
+                return slv_addr;
+            #endif // (OMV_ENABLE_FROGEYE2020 == 1)
+        }
+    }
+
+    return 0;
+}
+
 int sensor_probe_init(uint32_t bus_id, uint32_t bus_speed) {
     int init_ret = 0;
-    int freq;
-    (void) freq;
 
     #if defined(DCMI_POWER_PIN)
+    sensor.pwdn_pol = ACTIVE_HIGH;
     // Do a power cycle
     omv_gpio_write(DCMI_POWER_PIN, 1);
     mp_hal_delay_ms(10);
@@ -183,14 +248,8 @@ int sensor_probe_init(uint32_t bus_id, uint32_t bus_speed) {
     mp_hal_delay_ms(10);
     #endif
 
-    /* Some sensors have different reset polarities, and we can't know which sensor
-       is connected before initializing i2c and probing the sensor, which in turn
-       requires pulling the sensor out of the reset state. So we try to probe the
-       sensor with both polarities to determine line state. */
-    sensor.pwdn_pol = ACTIVE_HIGH;
-    sensor.reset_pol = ACTIVE_HIGH;
-
     #if defined(DCMI_RESET_PIN)
+    sensor.reset_pol = ACTIVE_HIGH;
     // Reset the sensor
     omv_gpio_write(DCMI_RESET_PIN, 1);
     mp_hal_delay_ms(10);
@@ -203,122 +262,51 @@ int sensor_probe_init(uint32_t bus_id, uint32_t bus_speed) {
     omv_i2c_init(&sensor.i2c_bus, bus_id, bus_speed);
     mp_hal_delay_ms(10);
 
-    // Probe the sensor
-    sensor.slv_addr = omv_i2c_scan(&sensor.i2c_bus, NULL, 0);
-    if (sensor.slv_addr == 0) {
-        /* Sensor has been held in reset,
-           so the reset line is active low */
-        sensor.reset_pol = ACTIVE_LOW;
-
+    // Scan the bus multiple times using different reset and power-down
+    // polarities, until a supported sensor is detected.
+    if ((sensor.slv_addr = sensor_detect()) == 0) {
+        // No devices were detected, try scanning the bus
+        // again with different reset/power-down polarities.
         #if defined(DCMI_RESET_PIN)
-        // Pull the sensor out of the reset state.
+        sensor.reset_pol = ACTIVE_LOW;
         omv_gpio_write(DCMI_RESET_PIN, 1);
         mp_hal_delay_ms(10);
         #endif
 
-        // Probe again to set the slave addr.
-        sensor.slv_addr = omv_i2c_scan(&sensor.i2c_bus, NULL, 0);
-        if (sensor.slv_addr == 0) {
-            sensor.pwdn_pol = ACTIVE_LOW;
-
+        if ((sensor.slv_addr = sensor_detect()) == 0) {
             #if defined(DCMI_POWER_PIN)
+            sensor.pwdn_pol = ACTIVE_LOW;
             omv_gpio_write(DCMI_POWER_PIN, 1);
             mp_hal_delay_ms(10);
             #endif
 
-            sensor.slv_addr = omv_i2c_scan(&sensor.i2c_bus, NULL, 0);
-            if (sensor.slv_addr == 0) {
-                sensor.reset_pol = ACTIVE_HIGH;
-
+            if ((sensor.slv_addr = sensor_detect()) == 0) {
                 #if defined(DCMI_RESET_PIN)
+                sensor.reset_pol = ACTIVE_HIGH;
                 omv_gpio_write(DCMI_RESET_PIN, 0);
                 mp_hal_delay_ms(10);
                 #endif
-
-                sensor.slv_addr = omv_i2c_scan(&sensor.i2c_bus, NULL, 0);
-                #ifndef OMV_ENABLE_NONI2CIS
-                if (sensor.slv_addr == 0) {
-                    return SENSOR_ERROR_ISC_UNDETECTED;
-                }
-                #endif
+                sensor.slv_addr = sensor_detect();
             }
         }
-    }
 
-    switch (sensor.slv_addr) {
-        #if (OMV_ENABLE_OV2640 == 1)
-        case OV2640_SLV_ADDR: // Or OV9650.
-            omv_i2c_readb(&sensor.i2c_bus, sensor.slv_addr, OV_CHIP_ID, &sensor.chip_id);
-            break;
-        #endif // (OMV_ENABLE_OV2640 == 1)
-
-        #if (OMV_ENABLE_OV5640 == 1)
-        case OV5640_SLV_ADDR:
-            omv_i2c_readb2(&sensor.i2c_bus, sensor.slv_addr, OV5640_CHIP_ID, &sensor.chip_id);
-            break;
-        #endif // (OMV_ENABLE_OV5640 == 1)
-
-        #if (OMV_ENABLE_OV7725 == 1) || (OMV_ENABLE_OV7670 == 1) || (OMV_ENABLE_OV7690 == 1)
-        case OV7725_SLV_ADDR: // Or OV7690 or OV7670.
-            omv_i2c_readb(&sensor.i2c_bus, sensor.slv_addr, OV_CHIP_ID, &sensor.chip_id);
-            break;
-        #endif //(OMV_ENABLE_OV7725 == 1) || (OMV_ENABLE_OV7670 == 1) || (OMV_ENABLE_OV7690 == 1)
-
-        #if (OMV_ENABLE_MT9V0XX == 1)
-        case MT9V0XX_SLV_ADDR:
-            omv_i2c_readw(&sensor.i2c_bus, sensor.slv_addr, ON_CHIP_ID, &sensor.chip_id_w);
-            break;
-        #endif //(OMV_ENABLE_MT9V0XX == 1)
-
-        #if (OMV_ENABLE_MT9M114 == 1)
-        case MT9M114_SLV_ADDR:
-            omv_i2c_readw2(&sensor.i2c_bus, sensor.slv_addr, ON_CHIP_ID, &sensor.chip_id_w);
-            break;
-        #endif // (OMV_ENABLE_MT9M114 == 1)
-
-        #if (OMV_ENABLE_LEPTON == 1)
-        case LEPTON_SLV_ADDR:
-            sensor.chip_id = LEPTON_ID;
-            break;
-        #endif // (OMV_ENABLE_LEPTON == 1)
-
-        #if (OMV_ENABLE_HM01B0 == 1) || (OMV_ENABLE_HM0360 == 1)
-        case HM0XX0_SLV_ADDR:
-            omv_i2c_readb2(&sensor.i2c_bus, sensor.slv_addr, HIMAX_CHIP_ID, &sensor.chip_id);
-            break;
-        #endif // (OMV_ENABLE_HM01B0 == 1) || (OMV_ENABLE_HM0360 == 1)
-
-        #if (OMV_ENABLE_GC2145 == 1)
-        case GC2145_SLV_ADDR:
-            omv_i2c_readb(&sensor.i2c_bus, sensor.slv_addr, GC_CHIP_ID, &sensor.chip_id);
-            break;
-        #endif //(OMV_ENABLE_GC2145 == 1)
-
-        #if (OMV_ENABLE_FROGEYE2020 == 1)
-        case FROGEYE2020_SLV_ADDR:
-            sensor.chip_id_w = FROGEYE2020_ID;
-            sensor.pwdn_pol = ACTIVE_HIGH;
-            sensor.reset_pol = ACTIVE_HIGH;
-            break;
-        #endif // (OMV_ENABLE_FROGEYE2020 == 1)
-
-        #if (OMV_ENABLE_PAJ6100 == 1)
-        case 0:
-            if (paj6100_detect(&sensor)) {
+        // If no devices were detected on the I2C bus, try the SPI bus.
+        if (sensor.slv_addr == 0) {
+            if (0) {
+            #if (OMV_ENABLE_PAJ6100 == 1)
+            } else if (paj6100_detect(&sensor)) {
                 // Found PixArt PAJ6100
                 sensor.chip_id_w = PAJ6100_ID;
                 sensor.pwdn_pol = ACTIVE_LOW;
                 sensor.reset_pol = ACTIVE_LOW;
-                break;
+            #endif
+            } else {
+                return SENSOR_ERROR_ISC_UNDETECTED;
             }
-            return SENSOR_ERROR_ISC_UNDETECTED;
-        #endif
-
-        default:
-            return SENSOR_ERROR_ISC_UNSUPPORTED;
-            break;
+        }
     }
 
+    // A supported sensor was detected, try to initialize it.
     switch (sensor.chip_id_w) {
         #if (OMV_ENABLE_OV2640 == 1)
         case OV2640_ID:
@@ -330,8 +318,8 @@ int sensor_probe_init(uint32_t bus_id, uint32_t bus_speed) {
         #endif // (OMV_ENABLE_OV2640 == 1)
 
         #if (OMV_ENABLE_OV5640 == 1)
-        case OV5640_ID:
-            freq = OMV_OV5640_XCLK_FREQ;
+        case OV5640_ID: {
+            int freq = OMV_OV5640_XCLK_FREQ;
             #if (OMV_OV5640_REV_Y_CHECK == 1)
             if (HAL_GetREVID() < 0x2003) {
                 // Is this REV Y?
@@ -343,6 +331,7 @@ int sensor_probe_init(uint32_t bus_id, uint32_t bus_speed) {
             }
             init_ret = ov5640_init(&sensor);
             break;
+        }
         #endif // (OMV_ENABLE_OV5640 == 1)
 
         #if (OMV_ENABLE_OV7670 == 1)
