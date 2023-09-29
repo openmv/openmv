@@ -601,7 +601,19 @@ void HAL_JPEG_MspDeInit(JPEG_HandleTypeDef *hjpeg) {
 }
 #endif
 
-#if defined(OMV_RGB_DISPLAY_CONTROLLER)
+#if defined(OMV_DSI_DISPLAY_CONTROLLER)
+void HAL_DSI_MspInit(DSI_HandleTypeDef *hdsi) {
+    __HAL_RCC_DSI_CLK_ENABLE();
+}
+
+void HAL_DSI_MspDeInit(DSI_HandleTypeDef *hdsi) {
+    __HAL_RCC_DSI_FORCE_RESET();
+    __HAL_RCC_DSI_RELEASE_RESET();
+    __HAL_RCC_DSI_CLK_DISABLE();
+}
+#endif
+
+#if defined(OMV_RGB_DISPLAY_CONTROLLER) || defined(OMV_DSI_DISPLAY_CONTROLLER)
 void HAL_LTDC_MspInit(LTDC_HandleTypeDef *hltdc) {
     #if defined(OMV_RGB_DISPLAY_R0_PIN)
     const omv_gpio_t ltdc_pins[] = {

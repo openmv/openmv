@@ -41,6 +41,7 @@ typedef enum {
 
 typedef struct _py_display_obj_t {
     mp_obj_base_t base;
+    uint32_t vcid;
     uint32_t width;
     uint32_t height;
     uint32_t framesize;
@@ -49,6 +50,7 @@ typedef struct _py_display_obj_t {
     bool bgr;
     bool byte_swap;
     bool display_on;
+    mp_obj_t controller;
     #if defined(OMV_SPI_DISPLAY_CONTROLLER)
     omv_spi_t spi_bus;
     bool spi_tx_running;
@@ -68,6 +70,11 @@ typedef struct _py_display_p_t {
                    float x_scale, float y_scale, rectangle_t *roi, int rgb_channel, int alpha,
                    const uint16_t *color_palette, const uint8_t *alpha_palette, image_hint_t hint);
     void (*set_backlight) (py_display_obj_t *self, uint32_t intensity);
+    #ifdef OMV_DSI_DISPLAY_CONTROLLER
+    // To be implemented by MIPI DSI controllers.
+    int (*dsi_write) (py_display_obj_t *self, uint8_t cmd, uint8_t *args, size_t n_args, bool dcs);
+    int (*dsi_read) (py_display_obj_t *self, uint8_t cmd, uint8_t *args, size_t n_args, uint8_t *buf, size_t len, bool dcs);
+    #endif
 } py_display_p_t;
 
 extern const mp_obj_type_t py_spi_display_type;
