@@ -256,12 +256,12 @@ static const uint8_t vga_regs[][2] = {
     { COM14,        0x00 },
     { 0x72,         0x11 },     // downsample by 4
     { 0x73,         0xf0 },     // divide by 4
-    { HSTART,       0x12 },
-    { HSTOP,        0x00 },
+    { HSTART,       0x13 },
+    { HSTOP,        0x01 },
     { HREF,         0xb6 },
     { VSTART,       0x02 },
     { VSTOP,        0x7a },
-    { VREF,         0x00 },
+    { VREF,         0x03 },
     { 0xFF,         0xFF },
 };
 
