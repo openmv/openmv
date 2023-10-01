@@ -34,7 +34,7 @@
 #error "TV_HEIGHT not even"
 #endif
 
-#ifdef OMV_SPI_LCD_SPI_BUS
+#ifdef OMV_SPI_DISPLAY_CONTROLLER
 /////////////////////////////////////////////////////////////
 // http://www.vsdsp-forum.com/phpbb/viewtopic.php?f=14&t=1801
 /////////////////////////////////////////////////////////////
@@ -219,11 +219,11 @@ static void SpiTransmitReceivePacket(uint8_t *txdata, uint8_t *rxdata, uint16_t 
         .flags = OMV_SPI_XFER_BLOCKING
     };
 
-    omv_gpio_write(OMV_SPI_LCD_SSEL_PIN, 0);
+    omv_gpio_write(OMV_SPI_DISPLAY_SSEL_PIN, 0);
     omv_spi_transfer_start(&spi_bus, &spi_xfer);
 
     if (end) {
-        omv_gpio_write(OMV_SPI_LCD_SSEL_PIN, 1);
+        omv_gpio_write(OMV_SPI_DISPLAY_SSEL_PIN, 1);
     }
 }
 
@@ -395,7 +395,7 @@ tv_type = TV_NONE;
 
 static bool tv_triple_buffer = false;
 
-#ifdef OMV_SPI_LCD_SPI_BUS
+#ifdef OMV_SPI_DISPLAY_CONTROLLER
 static volatile enum {
     SPI_TX_CB_IDLE,
     SPI_TX_CB_MEMORY_WRITE_CMD,
@@ -415,14 +415,14 @@ static void spi_config_deinit() {
 
 static void spi_config_init(bool triple_buffer) {
     omv_spi_config_t spi_config;
-    omv_spi_default_config(&spi_config, OMV_SPI_LCD_SPI_BUS);
+    omv_spi_default_config(&spi_config, OMV_SPI_DISPLAY_CONTROLLER);
 
     spi_config.baudrate = TV_BAUDRATE;
     spi_config.nss_enable = false;
     spi_config.dma_flags = triple_buffer ? OMV_SPI_DMA_NORMAL : 0;
     omv_spi_init(&spi_bus, &spi_config);
 
-    omv_gpio_write(OMV_SPI_LCD_SSEL_PIN, 1);
+    omv_gpio_write(OMV_SPI_DISPLAY_SSEL_PIN, 1);
 
     SpiRamVideoInit();
 
@@ -458,12 +458,12 @@ static void spi_tv_callback(omv_spi_t *spi, void *userdata, void *buf) {
 
         switch (spi_tx_cb_state) {
             case SPI_TX_CB_MEMORY_WRITE_CMD: {
-                omv_gpio_write(OMV_SPI_LCD_SSEL_PIN, 1);
+                omv_gpio_write(OMV_SPI_DISPLAY_SSEL_PIN, 1);
                 spi_tx_cb_state = SPI_TX_CB_MEMORY_WRITE;
                 spi_tx_cb_state_memory_write_addr = (uint8_t *) framebuffers[framebuffer_head];
                 spi_tx_cb_state_memory_write_count = PICLINE_LENGTH_BYTES * TV_HEIGHT;
                 framebuffer_tail = framebuffer_head;
-                omv_gpio_write(OMV_SPI_LCD_SSEL_PIN, 0);
+                omv_gpio_write(OMV_SPI_DISPLAY_SSEL_PIN, 0);
                 // When starting the interrupt chain the first transfer is not executed
                 // in interrupt context. So, disable interrupts for the first transfer so
                 // that it completes first and unlocks the SPI bus before allowing the interrupt
@@ -621,7 +621,7 @@ static void spi_tv_display(image_t *src_img, int dst_x_start, int dst_y_start, f
             }
         }
 
-        omv_gpio_write(OMV_SPI_LCD_SSEL_PIN, 1);
+        omv_gpio_write(OMV_SPI_DISPLAY_SSEL_PIN, 1);
         fb_free();
     } else {
         // For triple buffering we are never drawing where head or tail (which may instantly update to
@@ -736,7 +736,7 @@ static void spi_tv_display(image_t *src_img, int dst_x_start, int dst_y_start, f
 
 STATIC mp_obj_t py_tv_deinit() {
     switch (tv_type) {
-        #ifdef OMV_SPI_LCD_SPI_BUS
+        #ifdef OMV_SPI_DISPLAY_CONTROLLER
         case TV_SHIELD: {
             spi_config_deinit();
             break;
@@ -760,11 +760,11 @@ STATIC mp_obj_t py_tv_init(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
                                      MP_OBJ_NEW_QSTR(MP_QSTR_type), TV_SHIELD);
 
     switch (type) {
-        #ifdef OMV_SPI_LCD_SPI_BUS
+        #ifdef OMV_SPI_DISPLAY_CONTROLLER
         case TV_SHIELD: {
             bool triple_buffer_def = false;
-            #ifdef OMV_SPI_LCD_DEF_TRIPLE_BUF
-            triple_buffer_def = OMV_SPI_LCD_DEF_TRIPLE_BUF;
+            #ifdef OMV_SPI_DISPLAY_TRIPLE_BUFFER
+            triple_buffer_def = OMV_SPI_DISPLAY_TRIPLE_BUFFER;
             #endif
             bool triple_buffer = py_helper_keyword_int(n_args, args, 1, kw_args,
                                                        MP_OBJ_NEW_QSTR(MP_QSTR_triple_buffer), triple_buffer_def);
@@ -833,11 +833,11 @@ STATIC mp_obj_t py_tv_channel(uint n_args, const mp_obj_t *args) {
         return mp_const_none;
     }
 
-    #ifdef OMV_SPI_LCD_SPI_BUS
+    #ifdef OMV_SPI_DISPLAY_CONTROLLER
     if (tv_triple_buffer) {
         omv_spi_transfer_abort(&spi_bus);
         spi_tx_cb_state = SPI_TX_CB_IDLE;
-        omv_gpio_write(OMV_SPI_LCD_SSEL_PIN, 1);
+        omv_gpio_write(OMV_SPI_DISPLAY_SSEL_PIN, 1);
     }
 
     if (n_args) {
@@ -849,11 +849,11 @@ STATIC mp_obj_t py_tv_channel(uint n_args, const mp_obj_t *args) {
 
         SpiRamWriteByteRegister(WRITE_GPIO, 0x70 | (channel - 1));
     } else {
-        #ifdef OMV_SPI_LCD_RX_CLK_DIV
-        omv_spi_set_baudrate(&spi_bus, TV_BAUDRATE / OMV_SPI_LCD_RX_CLK_DIV);
+        #ifdef OMV_SPI_DISPLAY_RX_CLK_DIV
+        omv_spi_set_baudrate(&spi_bus, TV_BAUDRATE / OMV_SPI_DISPLAY_RX_CLK_DIV);
         #endif
         int channel = SpiRamReadByteRegister(READ_GPIO);
-        #ifdef OMV_SPI_LCD_RX_CLK_DIV
+        #ifdef OMV_SPI_DISPLAY_RX_CLK_DIV
         omv_spi_set_baudrate(&spi_bus, TV_BAUDRATE);
         #endif
         return mp_obj_new_int((channel & 0x7) + 1);
@@ -949,7 +949,7 @@ STATIC mp_obj_t py_tv_display(uint n_args, const mp_obj_t *args, mp_map_t *kw_ar
     }
 
     switch (tv_type) {
-        #ifdef OMV_SPI_LCD_SPI_BUS
+        #ifdef OMV_SPI_DISPLAY_CONTROLLER
         case TV_SHIELD: {
             fb_alloc_mark();
             spi_tv_display(arg_img, arg_x_off, arg_y_off, arg_x_scale, arg_y_scale, &arg_roi,
@@ -969,7 +969,7 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_tv_display_obj, 1, py_tv_display);
 
 STATIC mp_obj_t py_tv_clear() {
     switch (tv_type) {
-        #ifdef OMV_SPI_LCD_SPI_BUS
+        #ifdef OMV_SPI_DISPLAY_CONTROLLER
         case TV_SHIELD: {
             fb_alloc_mark();
             spi_tv_display(NULL, 0, 0, 1.f, 1.f, NULL,

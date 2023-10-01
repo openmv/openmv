@@ -9,7 +9,7 @@
 
 import sensor
 import time
-import lcd
+import display
 
 # Color Tracking Thresholds (L Min, L Max, A Min, A Max, B Min, B Max)
 threshold_list = [(70, 100, -30, 40, 20, 100)]
@@ -35,7 +35,7 @@ sensor.set_pixformat(sensor.RGB565)
 sensor.set_framesize(sensor.LCD)
 sensor.skip_frames(time=5000)
 clock = time.clock()
-lcd.init()
+lcd = display.SPIDisplay()
 
 # Only blobs that with more pixels than "pixel_threshold" and more area than "area_threshold" are
 # returned by "find_blobs" below. Change "pixels_threshold" and "area_threshold" if you change the
@@ -49,5 +49,5 @@ while True:
     ):
         img.draw_rectangle(blob.rect())
         img.draw_cross(blob.cx(), blob.cy())
-    lcd.display(img)
+    lcd.write(img)
     print(clock.fps())

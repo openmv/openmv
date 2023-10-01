@@ -28,7 +28,6 @@
 #include "systick.h"
 #include "modmimxrt.h"
 
-#include "py_lcd.h"
 #include "py_fir.h"
 #include "py_tv.h"
 
@@ -115,9 +114,6 @@ soft_reset:
     mp_init();
 
     // Initialise low-level sub-systems.
-    #if MICROPY_PY_LCD
-    py_lcd_init0();
-    #endif
     py_fir_init0();
     #if MICROPY_PY_TV
     py_tv_init0();

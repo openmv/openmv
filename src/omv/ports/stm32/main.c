@@ -67,7 +67,6 @@
 #include "usbd_cdc_interface.h"
 
 #include "py_image.h"
-#include "py_lcd.h"
 #include "py_fir.h"
 #include "py_tv.h"
 #include "py_buzzer.h"
@@ -359,9 +358,6 @@ soft_reset:
 
     // Initialise low-level sub-systems. Here we need to do the very basic
     // things like zeroing out memory and resetting any of the sub-systems.
-    #if MICROPY_PY_LCD
-    py_lcd_init0();
-    #endif
     py_fir_init0();
     #if MICROPY_PY_TV
     py_tv_init0();

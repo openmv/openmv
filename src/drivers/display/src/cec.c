@@ -1,36 +1,25 @@
 /*
  * This file is part of the OpenMV project.
  *
- * Copyright (c) 2013-2023 Ibrahim Abdelkader <iabdalkader@openmv.io>
- * Copyright (c) 2013-2023 Kwabena W. Agyeman <kwagyeman@openmv.io>
+ * Copyright (c) 2009 STMicroelectronics
+ * Copyright (c) 2023 Ibrahim Abdelkader <iabdalkader@openmv.io>
+ * Copyright (c) 2023 Kwabena W. Agyeman <kwagyeman@openmv.io>
  *
  * This work is licensed under the MIT license, see the file LICENSE for details.
  *
- * LCD Python module.
+ * CEC driver.
  */
+#include "omv_boardconfig.h"
+
+#if OMV_DISPLAY_CEC_ENABLE
+
+#include <stdint.h>
 #include "py/obj.h"
 #include "py/mphal.h"
-#include "py/objarray.h"
-#include "py/nlr.h"
 #include "py/runtime.h"
 
-#include "py_helper.h"
-#include "py_lcd_cec.h"
-#include "omv_boardconfig.h"
 #include "omv_gpio.h"
-
-#if MICROPY_PY_LCD
-
-#ifdef OMV_CEC_PRESENT
-static mp_obj_t lcd_cec_user_cb = NULL;
-
-static volatile uint8_t lcd_cec_src_addr = 0;
-static volatile mp_obj_t lcd_cec_dst_addr = NULL;
-static volatile mp_obj_t lcd_cec_bytes = NULL;
-
-////////////////////////////////////////////////////////////////////////////////
-// stsw-stm32086 - https://www.st.com/en/embedded-software/stsw-stm32086.html
-////////////////////////////////////////////////////////////////////////////////
+#include "cec.h"
 
 /* Start bit timings */
 #define Sbit_Nom_LD               37 /* Start Bit Nominal Low duration: 37 x 100µs = 3.7ms */
@@ -360,7 +349,19 @@ static uint8_t CEC_ReceiveByte(uint8_t HeaderDataIndicator) {
     }
 }
 
-static bool CEC_SendFrame(uint8_t InitiatorAddress, uint8_t FollowerAddress, uint8_t MessageLength, uint8_t *Message) {
+int cec_init(void) {
+    omv_gpio_config(OMV_CEC_PIN, OMV_GPIO_MODE_OUTPUT_OD, OMV_GPIO_PULL_NONE, OMV_GPIO_SPEED_LOW, -1);
+    omv_gpio_write(OMV_CEC_PIN, 1);
+    mp_hal_delay_ms(1);
+    return 0;
+}
+
+void cec_deinit(void) {
+    omv_gpio_irq_enable(OMV_CEC_PIN, false);
+    omv_gpio_deinit(OMV_CEC_PIN);
+}
+
+int cec_send_frame(uint8_t InitiatorAddress, uint8_t FollowerAddress, uint8_t MessageLength, uint8_t *Message) {
     uint8_t i = 0;
     uint8_t HeaderBlockValueToSend = 0;
 
@@ -369,25 +370,14 @@ static bool CEC_SendFrame(uint8_t InitiatorAddress, uint8_t FollowerAddress, uin
     /* Build the Header block to send */
     HeaderBlockValueToSend = (((InitiatorAddress & 0xF) << 4) | (FollowerAddress & 0xF));
 
-    /* Disable EXTI global interrupt to avoid the EXTI to enter EXTI interrupt
-       while transmitting a frame */
-
-    if (lcd_cec_user_cb) {
-        omv_gpio_irq_enable(OMV_CEC_PIN, false);
-    }
-
     /* Send start bit */
     CEC_SendStartBit();
 
     /* Send initiator and follower addresses. If the Header block is not
        transmitted successfully then exit and return error */
     if (CEC_SendByte(HeaderBlockValueToSend) == false) {
-        if (lcd_cec_user_cb) {
-            omv_gpio_irq_enable(OMV_CEC_PIN, true);
-        }
-
         /* Exit and return send failed */
-        return false;
+        return -1;
     }
 
     /* Send data bytes */
@@ -398,26 +388,18 @@ static bool CEC_SendFrame(uint8_t InitiatorAddress, uint8_t FollowerAddress, uin
 
         /* Send data byte and check if the follower sent the ACK bit = 0 */
         if (CEC_SendByte(Message[i]) == false) {
-            if (lcd_cec_user_cb) {
-                omv_gpio_irq_enable(OMV_CEC_PIN, true);
-            }
-
             /* Exit and return send failed */
-            return false;
+            return -1;
         }
     }
 
-    if (lcd_cec_user_cb) {
-        omv_gpio_irq_enable(OMV_CEC_PIN, true);
-    }
-
-    /* Exit and return send succeeded */
-    return true;
+    return 0;
 }
 
-static uint32_t CEC_ReceiveFrame(uint8_t *Message, uint8_t FollLogAdd) {
+int cec_receive_frame(uint8_t *Message, size_t *MessageLength,
+                      uint8_t FollowerAddress, uint8_t *InitiatorAddress) {
     uint32_t i = 0;
-    uint32_t InitiatorAddress = 0;
+    uint32_t InitAddress = 0;
     uint32_t ReceiveStatus = 1;
     uint32_t FrameSendToMe = 0;
     cec_byte = 0;
@@ -428,10 +410,10 @@ static uint32_t CEC_ReceiveFrame(uint8_t *Message, uint8_t FollLogAdd) {
         /* Get the first byte and check if the byte has been received correctly */
         if (CEC_ReceiveByte(HeaderBlock)) {
             /* Get the initiator address */
-            InitiatorAddress = cec_byte >> 4;
+            InitAddress = cec_byte >> 4;
 
             /* If the frame was sent to me */
-            if ((cec_byte & 0x0F) == FollLogAdd) {
+            if ((cec_byte & 0x0F) == FollowerAddress) {
                 CEC_SendAckBit(); /* Send Acknowledge bit = 0 */
                 FrameSendToMe = 1;
 
@@ -456,101 +438,11 @@ static uint32_t CEC_ReceiveFrame(uint8_t *Message, uint8_t FollLogAdd) {
         ReceiveStatus = 0;
     }
 
-    /* Return the different receive infos: Receive status, number of data byte received,
-       Frame send to me or not and the initiator address */
-    return ((((InitiatorAddress) | (i << 8)) | (ReceiveStatus << 16)) | (FrameSendToMe << 17));
-}
-
-////////////////////////////////////////////////////////////////////////////////
-
-static bool lcd_cec_receive_frame_int(mp_obj_t dst_addr, bool assertOnError) {
-    mp_obj_array_t *bytes = (mp_obj_array_t *) lcd_cec_bytes;
-    uint32_t result = CEC_ReceiveFrame(bytes->items, mp_obj_get_int(dst_addr));
-    bool receiveFrameStatus = result & ReceiveFrameStatusMask;
-    bool frameSendToMe = result & FrameSendToMeMask;
-
-    if (assertOnError && (!receiveFrameStatus)) {
-        mp_raise_msg(&mp_type_OSError, MP_ERROR_TEXT("Receive Failed!"));
+    if (ReceiveStatus && FrameSendToMe) {
+        *MessageLength = i;
+        *InitiatorAddress = InitAddress;
+        return 0;
     }
-
-    if (receiveFrameStatus && frameSendToMe) {
-        lcd_cec_src_addr = result & InitiatorAddressMask;
-        bytes->len = (result >> 8) & 0xFF;
-        return true;
-    }
-
-    return false;
+    return -1;
 }
-
-void lcd_cec_send_frame(mp_obj_t dst_addr, mp_obj_t src_addr, mp_obj_t bytes) {
-    size_t len;
-    uint8_t *data = (uint8_t *) mp_obj_str_get_data(bytes, &len);
-    if (!CEC_SendFrame(mp_obj_get_int(src_addr), mp_obj_get_int(dst_addr), len, data)) {
-        mp_raise_msg(&mp_type_OSError, MP_ERROR_TEXT("Send Failed!"));
-    }
-}
-
-mp_obj_t lcd_cec_received_frame_src_addr() {
-    return mp_obj_new_int(lcd_cec_src_addr);
-}
-
-mp_obj_t lcd_cec_received_frame_bytes() {
-    return lcd_cec_bytes;
-}
-
-mp_obj_t lcd_cec_receive_frame(uint n_args, const mp_obj_t *args, mp_map_t *kw_args) {
-    if (n_args > 0) {
-        int timeout = py_helper_keyword_int(n_args, args, 1, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_timeout), 1000);
-
-        mp_uint_t start = mp_hal_ticks_ms();
-        while (omv_gpio_read(OMV_CEC_PIN)) {
-            if ((mp_hal_ticks_ms() - start) > timeout) {
-                mp_raise_msg(&mp_type_OSError, MP_ERROR_TEXT("Receive timeout!"));
-            }
-        }
-
-        return mp_obj_new_bool(lcd_cec_receive_frame_int(args[0], true));
-    }
-
-    mp_raise_msg(&mp_type_OSError, MP_ERROR_TEXT("Expected destination address!"));
-}
-
-static void lcd_cec_extint_callback(void *data) {
-    if (lcd_cec_user_cb && lcd_cec_receive_frame_int(lcd_cec_dst_addr, false)) {
-        mp_call_function_0(lcd_cec_user_cb);
-    }
-}
-
-void lcd_cec_deinit() {
-    omv_gpio_irq_enable(OMV_CEC_PIN, false);
-
-    lcd_cec_user_cb = NULL;
-    lcd_cec_src_addr = 0;
-    lcd_cec_dst_addr = NULL;
-    lcd_cec_bytes = NULL;
-
-    omv_gpio_deinit(OMV_CEC_PIN);
-}
-
-void lcd_cec_init() {
-    omv_gpio_config(OMV_CEC_PIN, OMV_GPIO_MODE_OUTPUT_OD, OMV_GPIO_PULL_NONE, OMV_GPIO_SPEED_LOW, -1);
-    omv_gpio_write(OMV_CEC_PIN, 1);
-    mp_hal_delay_ms(1);
-
-    lcd_cec_bytes = mp_obj_new_bytearray_by_ref(0, m_new(byte, 16));
-
-    omv_gpio_config(OMV_CEC_PIN, OMV_GPIO_MODE_IT_FALL, OMV_GPIO_PULL_UP, OMV_GPIO_SPEED_LOW, -1);
-    omv_gpio_irq_register(OMV_CEC_PIN, lcd_cec_extint_callback, NULL);
-}
-
-void lcd_cec_register_cec_receive_cb(mp_obj_t cb, mp_obj_t dst_addr) {
-    omv_gpio_irq_enable(OMV_CEC_PIN, false);
-    lcd_cec_user_cb = cb;
-    lcd_cec_dst_addr = dst_addr;
-    if (cb != mp_const_none) {
-        omv_gpio_irq_enable(OMV_CEC_PIN, true);
-    }
-}
-#endif // OMV_CEC_PRESENT
-
-#endif // MICROPY_PY_LCD
+#endif // OMV_DISPLAY_CEC_ENABLE

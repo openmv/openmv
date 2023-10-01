@@ -19,7 +19,7 @@
 
 import sensor
 import time
-import lcd
+import display
 
 # Color Tracking Thresholds (Grayscale Min, Grayscale Max)
 threshold_list = [(200, 255)]
@@ -51,7 +51,7 @@ sensor.set_pixformat(sensor.GRAYSCALE)
 sensor.set_framesize(sensor.LCD)
 sensor.skip_frames(time=5000)
 clock = time.clock()
-lcd.init()
+lcd = display.SPIDisplay()
 
 # Only blobs that with more pixels than "pixel_threshold" and more area than "area_threshold" are
 # returned by "find_blobs" below. Change "pixels_threshold" and "area_threshold" if you change the
@@ -79,7 +79,7 @@ while True:
             "%.2f C" % map_g_to_temp(stats.mean()),
             mono_space=False,
         )
-    lcd.display(img)
+    lcd.write(img)
     print(
         "FPS %f - Lepton Temp: %f C"
         % (clock.fps(), sensor.ioctl(sensor.IOCTL_LEPTON_GET_FPA_TEMPERATURE))

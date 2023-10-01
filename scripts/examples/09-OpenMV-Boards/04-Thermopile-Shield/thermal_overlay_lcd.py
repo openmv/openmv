@@ -7,7 +7,7 @@ import sensor
 import image
 import time
 import fir
-import lcd
+import display
 
 drawing_hint = image.BICUBIC  # or image.BILINEAR or 0 (nearest neighbor)
 
@@ -22,7 +22,7 @@ sensor.skip_frames(time=2000)
 fir.init()
 
 # Init the lcd.
-lcd.init()
+lcd = display.SPIDisplay()
 
 # Allocate another frame buffer for smoother video.
 extra_fb = sensor.alloc_extra_fb(sensor.width(), sensor.height(), sensor.RGB565)
@@ -64,7 +64,7 @@ while True:
         8, 16, "To max: %0.2f C" % to_max, color=(255, 0, 0), mono_space=False
     )
 
-    lcd.display(img)
+    lcd.write(img)
     # Force high quality streaming...
     img.compress(quality=90)
 
