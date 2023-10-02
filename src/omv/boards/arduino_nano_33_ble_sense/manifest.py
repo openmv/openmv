@@ -3,7 +3,6 @@
 # Drivers
 require("hts221")
 require("lps22h")
-require("lsm9ds1")
 require("bmm150")
 require("bmi270")
 require("hs3003")

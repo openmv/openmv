@@ -1,9 +1,17 @@
+# Relative humidity and temperature sensor example.
+# Note Arduino Nano BLE 33 Sense Rev2 uses the HS3003.
+
 import time
-import hts221
+from hts221 import HTS221
 from machine import Pin, I2C
 
 bus = I2C(1, scl=Pin(15), sda=Pin(14))
-hts = hts221.HTS221(bus)
+try:
+    hts = HTS221(bus)
+except OSError:
+    from hs3003 import HS3003
+
+    hts = HS3003(bus)
 
 while True:
     rH = hts.humidity()
