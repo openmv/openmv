@@ -1,7 +1,7 @@
-# HTS221 + BLE example.
+# BLE temperature sensor example.
 
 import time
-import hts221
+from hts221 import HTS221
 from board import LED
 from machine import Pin, I2C
 from ubluepy import Service, Characteristic, UUID, Peripheral, constants
@@ -45,7 +45,12 @@ periph.setConnectionHandler(event_handler)
 periph.advertise(device_name="Temperature Sensor", services=[service])
 
 bus = I2C(1, scl=Pin(15), sda=Pin(14))
-hts = hts221.HTS221(bus)
+try:
+    hts = HTS221(bus)
+except OSError:
+    from hs3003 import HS3003
+
+    hts = HS3003(bus)
 
 while True:
     if notif_enabled:

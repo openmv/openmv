@@ -27,7 +27,7 @@ UCF_LABELS = {0: "no vibration", 1: "low vibration", 2: "high vibration"}
 # NOTE: Selected data rate and scale must match the MLC data rate and scale.
 lsm = LSM6DSOX(
     SPI(5),
-    cs_pin=Pin("PF6", Pin.OUT_PP, Pin.PULL_UP),
+    cs=Pin("PF6", Pin.OUT_PP, Pin.PULL_UP),
     gyro_odr=26,
     accel_odr=26,
     gyro_scale=2000,
@@ -48,8 +48,8 @@ while True:
     if INT_MODE:
         if INT_FLAG:
             INT_FLAG = False
-            print(UCF_LABELS[lsm.read_mlc_output()[0]])
+            print(UCF_LABELS[lsm.mlc_output()[0]])
     else:
-        buf = lsm.read_mlc_output()
+        buf = lsm.mlc_output()
         if buf is not None:
             print(UCF_LABELS[buf[0]])
