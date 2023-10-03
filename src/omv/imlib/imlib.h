@@ -514,6 +514,7 @@ typedef struct image {
 
 void image_init(image_t *ptr, int w, int h, pixformat_t pixfmt, uint32_t size, void *pixels);
 void image_copy(image_t *dst, image_t *src);
+size_t image_line_size(image_t *ptr);
 size_t image_size(image_t *ptr);
 bool image_get_mask_pixel(image_t *ptr, int x, int y);
 

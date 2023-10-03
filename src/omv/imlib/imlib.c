@@ -251,6 +251,27 @@ void image_copy(image_t *dst, image_t *src) {
     memcpy(dst, src, sizeof(image_t));
 }
 
+size_t image_line_size(image_t *ptr) {
+    switch (ptr->pixfmt) {
+        case PIXFORMAT_BINARY: {
+            return IMAGE_BINARY_LINE_LEN_BYTES(ptr);
+        }
+        case PIXFORMAT_GRAYSCALE:
+        case PIXFORMAT_BAYER_ANY: {
+            // re-use
+            return IMAGE_GRAYSCALE_LINE_LEN_BYTES(ptr);
+        }
+        case PIXFORMAT_RGB565:
+        case PIXFORMAT_YUV_ANY: {
+            // re-use
+            return IMAGE_RGB565_LINE_LEN_BYTES(ptr);
+        }
+        default: {
+            return 0;
+        }
+    }
+}
+
 size_t image_size(image_t *ptr) {
     switch (ptr->pixfmt) {
         case PIXFORMAT_BINARY: {

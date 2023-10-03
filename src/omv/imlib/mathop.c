@@ -148,12 +148,51 @@ void imlib_replace(image_t *img,
         other = &temp;
     }
 
-    imlib_replace_line_op_state_t state;
-    state.hmirror = hmirror;
-    state.vflip = vflip;
-    state.mask = mask;
-    state.transpose = transpose;
-    imlib_image_operation(img, path, other, scalar, imlib_replace_line_op, &state);
+    // To improve transpose performance we will split the operation up into chunks that fit in
+    // onchip RAM. These chunks will then be copied to the target buffer in an efficent manner.
+    if (path == NULL && other && transpose) {
+        uint32_t size;
+        void *data = fb_alloc_all(&size, FB_ALLOC_PREFER_SPEED);
+        // line_num stores how many lines we can do at a time with on-chip RAM.
+        int line_num = size / image_line_size(other);
+        // Transposed chunks will be copied to the output image...
+        uint8_t *img_data = img->data;
+        int t_line_size = (image_line_size(img) * img->h) / img->w;
+        // Work top to bottom transposing as many lines at a time in a chunk of the image.
+        for (int i = 0, ii = other->h; i < ii; i += line_num) {
+            line_num = IM_MIN(line_num, (ii - i));
+            // Make an image that is a slice of the input image.
+            image_t in = {.w = other->w, .h = line_num, .pixfmt = other->pixfmt};
+            in.data = other->data + (image_line_size(other) * i);
+            // Make an image that will hold the transposed output.
+            image_t out = in;
+            out.data = data;
+            // Transpose the slice of the input image.
+            imlib_replace_line_op_state_t state;
+            state.hmirror = hmirror;
+            state.vflip = vflip;
+            state.mask = mask;
+            state.transpose = true;
+            imlib_image_operation(&out, NULL, &in, 0, imlib_replace_line_op, &state);
+            out.w = line_num;
+            out.h = other->w;
+            // Copy lines of the chunk to the target image.
+            int out_line_size = image_line_size(&out);
+            for (int j = 0, jj = out.h; j < jj; j++) {
+                memcpy(img_data + (t_line_size * j), out.data + (out_line_size * j), out_line_size);
+            }
+            // Slide the offset for the first line over by the size of the slice we transposed.
+            img_data += out_line_size;
+        }
+        fb_free(); // fb_alloc_all
+    } else {
+        imlib_replace_line_op_state_t state;
+        state.hmirror = hmirror;
+        state.vflip = vflip;
+        state.mask = mask;
+        state.transpose = transpose;
+        imlib_image_operation(img, path, other, scalar, imlib_replace_line_op, &state);
+    }
 
     if (in_place) {
         fb_free();
