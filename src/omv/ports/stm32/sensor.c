@@ -400,6 +400,12 @@ static void mdma_memcpy(vbuffer_t *buffer, void *dst, void *src, int bpp, bool t
     // backedup we don't have to disable the channel if it is flushing trailing data to SDRAM.
     MDMA_HandleTypeDef *handle = (buffer->offset % 2) ? &DCMI_MDMA_Handle1 : &DCMI_MDMA_Handle0;
 
+    // Drop the frame if MDMA is not keeping up as the image will be corrupt.
+    if (handle->Instance->CCR & MDMA_CCR_EN) {
+        drop_frame = true;
+        return;
+    }
+
     // If MDMA is still running from a previous transfer HAL_MDMA_Start() will disable that transfer
     // and start a new transfer.
     __HAL_UNLOCK(handle);
