@@ -88,7 +88,6 @@ static const uint8_t default_regs[][2] = {
     { COM5,             0x61 },
     { COM6,             0x4b },
     { 0x16,             0x02 },
-    { MVFP,             0x07 },
     { 0x21,             0x02 },
     { 0x22,             0x91 },
     { 0x29,             0x07 },
@@ -219,7 +218,6 @@ static const uint8_t rgb565_regs[][2] = {
     { RGB444,   0                           },    /* No RGB444 please */
     { COM1,     0x0                         },    /* CCIR601 */
     { COM15,    COM15_FMT_RGB565 | COM15_OUT_00_FF},
-    { MVFP,     MVFP_BLACK_SUN_EN           },
     { COM9,     0x6A                        },     /* 128x gain ceiling; 0x8 is reserved bit */
     { MTX1,     0xb3                        },     /* "matrix coefficient 1" */
     { MTX2,     0xb3                        },     /* "matrix coefficient 2" */
@@ -418,6 +416,25 @@ static int set_framesize(sensor_t *sensor, framesize_t framesize) {
     return ret;
 }
 
+static int set_hmirror(sensor_t *sensor, int enable) {
+    uint8_t val;
+    int ret = omv_i2c_readb(&sensor->i2c_bus, sensor->slv_addr, MVFP, &val);
+    ret |=
+        omv_i2c_writeb(&sensor->i2c_bus, sensor->slv_addr, MVFP,
+                       enable ? (val | MVFP_MIRROR) : (val & (~MVFP_MIRROR)));
+
+    return ret;
+}
+
+static int set_vflip(sensor_t *sensor, int enable) {
+    uint8_t val;
+    int ret = omv_i2c_readb(&sensor->i2c_bus, sensor->slv_addr, MVFP, &val);
+    ret |=
+        omv_i2c_writeb(&sensor->i2c_bus, sensor->slv_addr, MVFP,
+                       enable ? (val | MVFP_VFLIP) : (val & (~MVFP_VFLIP)));
+
+    return ret;
+}
 int ov7670_init(sensor_t *sensor) {
     // Initialize sensor structure.
     sensor->reset = reset;
@@ -426,23 +443,9 @@ int ov7670_init(sensor_t *sensor) {
     sensor->write_reg = write_reg;
     sensor->set_pixformat = set_pixformat;
     sensor->set_framesize = set_framesize;
-#if 0
-    sensor->set_contrast = set_contrast;
-    sensor->set_brightness = set_brightness;
-    sensor->set_saturation = set_saturation;
-    sensor->set_gainceiling = set_gainceiling;
-    sensor->set_colorbar = set_colorbar;
-    sensor->set_auto_gain = set_auto_gain;
-    sensor->get_gain_db = get_gain_db;
-    sensor->set_auto_exposure = set_auto_exposure;
-    sensor->get_exposure_us = get_exposure_us;
-    sensor->set_auto_whitebal = set_auto_whitebal;
-    sensor->get_rgb_gain_db = get_rgb_gain_db;
     sensor->set_hmirror = set_hmirror;
     sensor->set_vflip = set_vflip;
-    sensor->set_special_effect = set_special_effect;
-    sensor->set_lens_correction = set_lens_correction;
-#endif
+
     // Set sensor flags
     sensor->hw_flags.vsync = 1;
     sensor->hw_flags.hsync = 0;
