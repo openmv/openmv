@@ -748,5 +748,9 @@ void MDMA_IRQHandler() {
     #if defined(OMV_MDMA_CHANNEL_JPEG_IN)
     jpeg_mdma_irq_handler();
     #endif
+    #if defined(OMV_MDMA_CHANNEL_DCMI_0)
+    extern void sensor_mdma_irq_handler(void);
+    sensor_mdma_irq_handler();
+    #endif
     IRQ_EXIT(MDMA_IRQn);
 }

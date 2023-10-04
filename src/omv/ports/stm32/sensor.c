@@ -57,6 +57,17 @@ void ISC_SPI_IRQHandler(void) {
 }
 #endif // ISC_SPI
 
+#if defined(OMV_MDMA_CHANNEL_DCMI_0)
+void sensor_mdma_irq_handler(void) {
+    if (MDMA->GISR0 & (1 << OMV_MDMA_CHANNEL_DCMI_0)) {
+        HAL_MDMA_IRQHandler(&DCMI_MDMA_Handle0);
+    }
+    if (MDMA->GISR0 & (1 << OMV_MDMA_CHANNEL_DCMI_1)) {
+        HAL_MDMA_IRQHandler(&DCMI_MDMA_Handle1);
+    }
+}
+#endif
+
 static int sensor_dma_config() {
     // DMA Stream configuration
     #if defined(MCU_SERIES_H7)
