@@ -102,6 +102,8 @@ void sensor_init0() {
         omv_i2c_init(&sensor.i2c_bus, sensor.i2c_bus.id, sensor.i2c_bus.speed);
     }
 
+    sensor.disable_delays = false;
+
     // Disable VSYNC IRQ and callback
     sensor_set_vsync_callback(NULL);
 

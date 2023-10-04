@@ -359,7 +359,9 @@ static int reset(sensor_t *sensor) {
     }
 
     // Delay 300 ms
-    mp_hal_delay_ms(300);
+    if (!sensor->disable_delays) {
+        mp_hal_delay_ms(300);
+    }
 
     return ret;
 }
@@ -584,20 +586,20 @@ static int set_auto_gain(sensor_t *sensor, int enable, float gain_db, float gain
     ret |= omv_i2c_writeb(&sensor->i2c_bus, sensor->slv_addr, COM8, (reg & (~COM8_AGC_EN)) | ((enable != 0) ? COM8_AGC_EN : 0));
 
     if ((enable == 0) && (!isnanf(gain_db)) && (!isinff(gain_db))) {
-        float gain = IM_MAX(IM_MIN(fast_expf((gain_db / 20.0) * fast_log(10.0)), 32.0), 1.0);
+        float gain = IM_MAX(IM_MIN(expf((gain_db / 20.0f) * M_LN10), 32.0f), 1.0f);
 
-        int gain_temp = fast_roundf(fast_log2(IM_MAX(gain / 2.0, 1.0)));
+        int gain_temp = fast_ceilf(logf(IM_MAX(gain / 2.0f, 1.0f)) / M_LN2);
         int gain_hi = 0xF >> (4 - gain_temp);
-        int gain_lo = IM_MIN(fast_roundf(((gain / (1 << gain_temp)) - 1.0) * 16.0), 15);
+        int gain_lo = IM_MIN(fast_roundf(((gain / (1 << gain_temp)) - 1.0f) * 16.0f), 15);
 
         ret |= omv_i2c_writeb(&sensor->i2c_bus, sensor->slv_addr, GAIN, (gain_hi << 4) | (gain_lo << 0));
     } else if ((enable != 0) && (!isnanf(gain_db_ceiling)) && (!isinff(gain_db_ceiling))) {
-        float gain_ceiling = IM_MAX(IM_MIN(fast_expf((gain_db_ceiling / 20.0) * fast_log(10.0)), 128.0), 2.0);
+        float gain_ceiling = IM_MAX(IM_MIN(expf((gain_db_ceiling / 20.0f) * M_LN10), 128.0f), 2.0f);
 
         ret |= omv_i2c_readb(&sensor->i2c_bus, sensor->slv_addr, COM9, &reg);
         ret |=
             omv_i2c_writeb(&sensor->i2c_bus, sensor->slv_addr, COM9,
-                           (reg & 0x1F) | ((fast_ceilf(fast_log2(gain_ceiling)) - 1) << 5));
+                           (reg & 0x1F) | ((fast_ceilf(logf(gain_ceiling) / M_LN2) - 1) << 5));
     }
 
     return ret;
@@ -623,8 +625,8 @@ static int get_gain_db(sensor_t *sensor, float *gain_db) {
     // DISABLED
 
     int hi_gain = 1 << (((gain >> 7) & 1) + ((gain >> 6) & 1) + ((gain >> 5) & 1) + ((gain >> 4) & 1));
-    float lo_gain = 1.0 + (((gain >> 0) & 0xF) / 16.0);
-    *gain_db = 20.0 * (fast_log(hi_gain * lo_gain) / fast_log(10.0));
+    float lo_gain = 1.0f + (((gain >> 0) & 0xF) / 16.0f);
+    *gain_db = 20.0f * log10f(hi_gain * lo_gain);
 
     return ret;
 }
