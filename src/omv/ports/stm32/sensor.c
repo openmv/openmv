@@ -32,9 +32,9 @@ sensor_t sensor = {};
 static TIM_HandleTypeDef TIMHandle = {.Instance = DCMI_TIM};
 static DMA_HandleTypeDef DMAHandle = {.Instance = DMA2_Stream1};
 static DCMI_HandleTypeDef DCMIHandle = {.Instance = DCMI};
-#if (OMV_ENABLE_SENSOR_MDMA == 1)
-static MDMA_HandleTypeDef DCMI_MDMA_Handle0 = {.Instance = MDMA_Channel0};
-static MDMA_HandleTypeDef DCMI_MDMA_Handle1 = {.Instance = MDMA_Channel1};
+#if defined(OMV_MDMA_CHANNEL_DCMI_0)
+static MDMA_HandleTypeDef DCMI_MDMA_Handle0;
+static MDMA_HandleTypeDef DCMI_MDMA_Handle1;
 #endif
 // SPI on image sensor connector.
 #ifdef ISC_SPI
@@ -56,6 +56,17 @@ void ISC_SPI_IRQHandler(void) {
     HAL_SPI_IRQHandler(&ISC_SPIHandle);
 }
 #endif // ISC_SPI
+
+#if defined(OMV_MDMA_CHANNEL_DCMI_0)
+void sensor_mdma_irq_handler(void) {
+    if (MDMA->GISR0 & (1 << OMV_MDMA_CHANNEL_DCMI_0)) {
+        HAL_MDMA_IRQHandler(&DCMI_MDMA_Handle0);
+    }
+    if (MDMA->GISR0 & (1 << OMV_MDMA_CHANNEL_DCMI_1)) {
+        HAL_MDMA_IRQHandler(&DCMI_MDMA_Handle1);
+    }
+}
+#endif
 
 static int sensor_dma_config() {
     // DMA Stream configuration
@@ -93,6 +104,11 @@ static int sensor_dma_config() {
 }
 
 void sensor_init0() {
+    #if defined(OMV_MDMA_CHANNEL_DCMI_0)
+    DCMI_MDMA_Handle0.Instance = MDMA_CHAN_TO_INSTANCE(OMV_MDMA_CHANNEL_DCMI_0);
+    DCMI_MDMA_Handle1.Instance = MDMA_CHAN_TO_INSTANCE(OMV_MDMA_CHANNEL_DCMI_1);
+    #endif
+
     sensor_abort();
 
     // Re-init i2c bus to reset the bus state after soft reset, which
@@ -220,7 +236,7 @@ int sensor_abort() {
         DCMI->CR &= ~DCMI_CR_ENABLE;
         HAL_DMA_Abort(&DMAHandle);
         HAL_NVIC_EnableIRQ(DMA2_Stream1_IRQn);
-        #if (OMV_ENABLE_SENSOR_MDMA == 1)
+        #if defined(OMV_MDMA_CHANNEL_DCMI_0)
         HAL_MDMA_Abort(&DCMI_MDMA_Handle0);
         HAL_MDMA_Abort(&DCMI_MDMA_Handle1);
         HAL_MDMA_DeInit(&DCMI_MDMA_Handle0);
@@ -374,7 +390,7 @@ static uint32_t get_dcmi_hw_crop(uint32_t bytes_per_pixel) {
 // moving the tail to the next buffer.
 void HAL_DCMI_FrameEventCallback(DCMI_HandleTypeDef *hdcmi) {
     // This can be executed at any time since this interrupt has a higher priority than DMA2_Stream1_IRQn.
-    #if (OMV_ENABLE_SENSOR_MDMA == 1)
+    #if defined(OMV_MDMA_CHANNEL_DCMI_0)
     // Clear out any stale flags.
     DMA2->LIFCR = DMA_FLAG_TCIF1_5 | DMA_FLAG_HTIF1_5;
     // Re-enable the DMA IRQ to catch the next start line.
@@ -395,7 +411,7 @@ void HAL_DCMI_FrameEventCallback(DCMI_HandleTypeDef *hdcmi) {
     }
 }
 
-#if (OMV_ENABLE_SENSOR_MDMA == 1)
+#if defined(OMV_MDMA_CHANNEL_DCMI_0)
 static void mdma_memcpy(vbuffer_t *buffer, void *dst, void *src, int bpp, bool transposed) {
     // We're using two handles to give each channel the maximum amount of time possible to do the line
     // transfer. In most situations only one channel will be running at a time. However, if SDRAM is
@@ -445,7 +461,7 @@ void DCMI_DMAConvCpltUser(uint32_t addr) {
     if (drop_frame) {
         // If we're dropping a frame in full offload mode it's safe to disable this interrupt saving
         // ourselves from having to service the DMA complete callback.
-        #if (OMV_ENABLE_SENSOR_MDMA == 1)
+        #if defined(OMV_MDMA_CHANNEL_DCMI_0)
         if (!sensor.transpose) {
             HAL_NVIC_DisableIRQ(DMA2_Stream1_IRQn);
         }
@@ -460,7 +476,7 @@ void DCMI_DMAConvCpltUser(uint32_t addr) {
     if (!buffer) {
         DCMI->CR &= ~DCMI_CR_ENABLE;
         HAL_DMA_Abort_IT(&DMAHandle); // Note: Use HAL_DMA_Abort_IT and not HAL_DMA_Abort inside an interrupt.
-        #if (OMV_ENABLE_SENSOR_MDMA == 1)
+        #if defined(OMV_MDMA_CHANNEL_DCMI_0)
         HAL_MDMA_DeInit(&DCMI_MDMA_Handle0);
         HAL_MDMA_DeInit(&DCMI_MDMA_Handle1);
         #endif
@@ -529,7 +545,7 @@ void DCMI_DMAConvCpltUser(uint32_t addr) {
 
     // DCMI_DMAXferCplt in the HAL DCMI driver always calls DCMI_DMAConvCpltUser with the other
     // MAR register. So, we have to fix the address in full MDMA offload mode...
-    #if (OMV_ENABLE_SENSOR_MDMA == 1)
+    #if defined(OMV_MDMA_CHANNEL_DCMI_0)
     if (!sensor.transpose) {
         addr = (uint32_t) &_line_buf;
     }
@@ -545,7 +561,7 @@ void DCMI_DMAConvCpltUser(uint32_t addr) {
 
     // For all non-JPEG and non-transposed modes we can completely offload image capture to MDMA
     // and we do not need to receive any line interrupts for the rest of the frame until it ends.
-    #if (OMV_ENABLE_SENSOR_MDMA == 1)
+    #if defined(OMV_MDMA_CHANNEL_DCMI_0)
     if (!sensor.transpose) {
         // NOTE: We're starting MDMA here because it gives the maximum amount of time before we
         // have to drop the frame if there's no space. If you use the FRAME/VSYNC callbacks then
@@ -580,7 +596,7 @@ void DCMI_DMAConvCpltUser(uint32_t addr) {
 
     switch (sensor.pixformat) {
         case PIXFORMAT_BAYER:
-            #if (OMV_ENABLE_SENSOR_MDMA == 1)
+            #if defined(OMV_MDMA_CHANNEL_DCMI_0)
             mdma_memcpy(buffer, dst, src, sizeof(uint8_t), sensor.transpose);
             #else
             if (!sensor.transpose) {
@@ -594,7 +610,7 @@ void DCMI_DMAConvCpltUser(uint32_t addr) {
             #endif
             break;
         case PIXFORMAT_GRAYSCALE:
-            #if (OMV_ENABLE_SENSOR_MDMA == 1)
+            #if defined(OMV_MDMA_CHANNEL_DCMI_0)
             mdma_memcpy(buffer, dst, src, sizeof(uint8_t), sensor.transpose);
             #else
             if (sensor.hw_flags.gs_bpp == 1) {
@@ -622,7 +638,7 @@ void DCMI_DMAConvCpltUser(uint32_t addr) {
             break;
         case PIXFORMAT_RGB565:
         case PIXFORMAT_YUV422:
-            #if (OMV_ENABLE_SENSOR_MDMA == 1)
+            #if defined(OMV_MDMA_CHANNEL_DCMI_0)
             mdma_memcpy(buffer, dst16, src16, sizeof(uint16_t), sensor.transpose);
             #else
             if ((sensor.pixformat == PIXFORMAT_RGB565 && sensor.hw_flags.rgb_swap)
@@ -652,7 +668,7 @@ void DCMI_DMAConvCpltUser(uint32_t addr) {
     }
 }
 
-#if (OMV_ENABLE_SENSOR_MDMA == 1)
+#if defined(OMV_MDMA_CHANNEL_DCMI_0)
 // Configures an MDMA channel to completely offload the CPU in copying one line of pixels.
 static void mdma_config(MDMA_InitTypeDef *init, sensor_t *sensor, uint32_t bytes_per_pixel) {
     init->Request = MDMA_REQUEST_SW;
@@ -799,7 +815,7 @@ int sensor_snapshot(sensor_t *sensor, image_t *image, uint32_t flags) {
             return SENSOR_ERROR_FRAMEBUFFER_ERROR;
         }
 
-        #if (OMV_ENABLE_SENSOR_MDMA == 1)
+        #if defined(OMV_MDMA_CHANNEL_DCMI_0)
         // The code below will enable MDMA data transfer from the DCMI line buffer for non-JPEG modes.
         if (sensor->pixformat != PIXFORMAT_JPEG) {
             mdma_config(&DCMI_MDMA_Handle0.Init, sensor, bytes_per_pixel);
@@ -864,7 +880,7 @@ int sensor_snapshot(sensor_t *sensor, image_t *image, uint32_t flags) {
             if (length > DMA_MAX_XFER_SIZE) {
                 length /= 2;
             }
-        #if (OMV_ENABLE_SENSOR_MDMA == 1)
+        #if defined(OMV_MDMA_CHANNEL_DCMI_0)
             // Special transfer mode with MDMA that completely offloads the line capture load.
         } else if ((sensor->pixformat != PIXFORMAT_JPEG) && (!sensor->transpose)) {
             // DMA to circular mode writing the same line over and over again.
