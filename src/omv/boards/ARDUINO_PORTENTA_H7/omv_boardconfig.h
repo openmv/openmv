@@ -31,8 +31,11 @@
 // Enable hardware JPEG
 #define OMV_HARDWARE_JPEG                   (1)
 
-// Enable MDMA sensor offload.
-#define OMV_ENABLE_SENSOR_MDMA              (1)
+// MDMA configuration
+#define OMV_MDMA_CHANNEL_DCMI_0             (0)
+#define OMV_MDMA_CHANNEL_DCMI_1             (1)
+#define OMV_MDMA_CHANNEL_JPEG_IN            (7) // in has a lower pri than out
+#define OMV_MDMA_CHANNEL_JPEG_OUT           (6) // out has a higher pri than in
 
 // Enable additional GPIO banks.
 #define OMV_ENABLE_GPIO_BANK_F              (1)

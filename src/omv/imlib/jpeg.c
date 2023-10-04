@@ -974,6 +974,7 @@ static void jpeg_get_mcu(image_t *src, int x_offset, int y_offset, int dx, int d
 #if (OMV_HARDWARE_JPEG == 1)
 #include STM32_HAL_H
 #include "irq.h"
+#include "dma_utils.h"
 
 #define FB_ALLOC_PADDING          ((__SCB_DCACHE_LINE_SIZE) * 4)
 #define OUTPUT_CHUNK_SIZE         (512)   // The minimum output buffer size is 2x this - so 1KB.
@@ -1012,8 +1013,12 @@ void JPEG_IRQHandler() {
 }
 
 void jpeg_mdma_irq_handler() {
-    HAL_MDMA_IRQHandler(&JPEG_MDMA_Handle_In);
-    HAL_MDMA_IRQHandler(&JPEG_MDMA_Handle_Out);
+    if (MDMA->GISR0 & (1 << OMV_MDMA_CHANNEL_JPEG_IN)) {
+        HAL_MDMA_IRQHandler(&JPEG_MDMA_Handle_In);
+    }
+    if (MDMA->GISR0 & (1 << OMV_MDMA_CHANNEL_JPEG_OUT)) {
+        HAL_MDMA_IRQHandler(&JPEG_MDMA_Handle_Out);
+    }
 }
 
 static void jpeg_get_data_callback(JPEG_HandleTypeDef *hjpeg, uint32_t NbDecodedData) {
@@ -1239,7 +1244,7 @@ void imlib_jpeg_compress_init() {
     NVIC_SetPriority(JPEG_IRQn, IRQ_PRI_JPEG);
     HAL_NVIC_EnableIRQ(JPEG_IRQn);
 
-    JPEG_MDMA_Handle_In.Instance = MDMA_Channel7;                        // in has a lower pri than out
+    JPEG_MDMA_Handle_In.Instance = MDMA_CHAN_TO_INSTANCE(OMV_MDMA_CHANNEL_JPEG_IN);
     JPEG_MDMA_Handle_In.Init.Request = MDMA_REQUEST_JPEG_INFIFO_TH;
     JPEG_MDMA_Handle_In.Init.TransferTriggerMode = MDMA_BUFFER_TRANSFER;
     JPEG_MDMA_Handle_In.Init.Priority = MDMA_PRIORITY_LOW;
@@ -1258,7 +1263,7 @@ void imlib_jpeg_compress_init() {
     HAL_MDMA_Init(&JPEG_MDMA_Handle_In);
     __HAL_LINKDMA(&JPEG_Handle, hdmain, JPEG_MDMA_Handle_In);
 
-    JPEG_MDMA_Handle_Out.Instance = MDMA_Channel6;                       // out has a higher pri than in
+    JPEG_MDMA_Handle_Out.Instance = MDMA_CHAN_TO_INSTANCE(OMV_MDMA_CHANNEL_JPEG_OUT);
     JPEG_MDMA_Handle_Out.Init.Request = MDMA_REQUEST_JPEG_OUTFIFO_TH;
     JPEG_MDMA_Handle_Out.Init.TransferTriggerMode = MDMA_BUFFER_TRANSFER;
     JPEG_MDMA_Handle_Out.Init.Priority = MDMA_PRIORITY_LOW;
