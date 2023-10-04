@@ -227,6 +227,7 @@ static void pll_config(int framesize, int refresh) {
 #ifdef OMV_DSI_DISPLAY_CONTROLLER
 static void dsi_init(py_display_obj_t *self) {
     const display_mode_t *dm = &display_modes[self->framesize];
+    uint32_t pixel_clock = (dm->pixel_clock * self->refresh) / 60;
 
     DSI_PLLInitTypeDef dsi_pllinit;
     dsi_pllinit.PLLNDIV = 125;
@@ -236,7 +237,7 @@ static void dsi_init(py_display_obj_t *self) {
 
     display.hdsi.Instance = DSI;
     display.hdsi.Init.NumberOfLanes = DSI_TWO_DATA_LANES;
-    display.hdsi.Init.TXEscapeCkdiv = 3;
+    display.hdsi.Init.TXEscapeCkdiv = 4;
     display.hdsi.Init.AutomaticClockLaneControl = DSI_AUTO_CLK_LANE_CTRL_DISABLE;
     HAL_DSI_Init(&display.hdsi, &dsi_pllinit);
 
@@ -281,10 +282,10 @@ static void dsi_init(py_display_obj_t *self) {
     dsi_vidcfg.NullPacketSize = 0xFFF;
     dsi_vidcfg.NumberOfChunks = 0;
     dsi_vidcfg.PacketSize = self->width;
-    dsi_vidcfg.HorizontalSyncActive = dm->hsync_len * LANE_BYTE_CLOCK / dm->pixel_clock;
-    dsi_vidcfg.HorizontalBackPorch = dm->hback_porch * LANE_BYTE_CLOCK / dm->pixel_clock;
+    dsi_vidcfg.HorizontalSyncActive = dm->hsync_len * LANE_BYTE_CLOCK / pixel_clock;
+    dsi_vidcfg.HorizontalBackPorch = dm->hback_porch * LANE_BYTE_CLOCK / pixel_clock;
     dsi_vidcfg.HorizontalLine = (self->width + dm->hsync_len + dm->hback_porch + dm->hfront_porch)
-                                * LANE_BYTE_CLOCK / dm->pixel_clock;
+                                * LANE_BYTE_CLOCK / pixel_clock;
     dsi_vidcfg.VerticalSyncActive = dm->vsync_len;
     dsi_vidcfg.VerticalBackPorch = dm->vback_porch;
     dsi_vidcfg.VerticalFrontPorch = dm->vfront_porch;
