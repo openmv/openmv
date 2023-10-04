@@ -9,7 +9,7 @@
 
 # The Open-Source Machine Vision Project
   - [Overview](#overview)
-  - [Tensorflow support](#tensorflow-support)
+  - [TensorFlow support](#tensorflow-support)
   - [Interface library](#interface-library)
     + [Note on serial port](#note-on-serial-port)
   - [ Building the firmware from source](#building-the-firmware-from-source)
@@ -26,8 +26,8 @@ The OpenMV Cam comes with a cross-platform IDE (based on Qt Creator) designed sp
 The first generation of OpenMV cameras is based on STM32 ARM Cortex-M Digital Signal Processors (DSPs) and OmniVision sensors. The boards have built-in RGB and IR LEDs, USB FS support for programming and video streaming, a uSD socket, and I/O headers breaking out PWM, UARTs, SPI, I2C, CAN, and more. Additionally, the OpenMV Cam supports extension modules (shields) using the I/O headers for adding a WiFi adapter, a LCD Display, a Thermal Vision Sensor, a Motor Driver, and more.
 The OpenMV project was successfully funded via Kickstarter back in 2015 and has come a long way since then. For more information, please visit [https://openmv.io](https://openmv.io)
 
-## Tensorflow support
-The OpenMV firmware supports loading quantized Tensorflow Lite models. The firmware supports loading external models that reside on the filesystem to memory (on boards with SDRAM), and internal models (embedded into the firmware) in place. To load an external Tensorflow model from the filesystem from Python use [`tf`](https://docs.openmv.io/library/omv.tf.html) Python module. For information on embedding Tensorflow models into the firmware, and loading them, please see [Tensorflow Support](https://github.com/openmv/openmv/blob/master/src/lib/libtf/README.md).
+## TensorFlow support
+The OpenMV firmware supports loading quantized TensorFlow Lite models. The firmware supports loading external models that reside on the filesystem to memory (on boards with SDRAM), and internal models (embedded into the firmware) in place. To load an external TensoFlow model from the filesystem from Python use [`tf`](https://docs.openmv.io/library/omv.tf.html) Python module. For information on embedding TensorFlow models into the firmware, and loading them, please see [TensorFlow Support](https://github.com/openmv/openmv/blob/master/src/lib/libtf/README.md).
 
 ## Interface library
 
@@ -72,7 +72,7 @@ The above code works for Windows, Mac, or Linux. You just need to change the abo
 
 ## Building the firmware from source
 
-The easiest way to patch the firmware and rebuild it, is to fork this repository, enable Actions (from the Actions tab) in the forked repository, and pushing the changes. Our github workflow rebuilds the firmware on pushes to the master branch and/or merging pull requests, and generates a development release with attached separate firmware packages per supported board. For more complex changes, and building the OpenMV firmware from source locally, see [Building the Firmware From Source](https://github.com/openmv/openmv/blob/master/src/README.md).
+The easiest way to patch the firmware and rebuild it, is to fork this repository, enable Actions (from the Actions tab) in the forked repository, and pushing the changes. Our GitHub workflow rebuilds the firmware on pushes to the master branch and/or merging pull requests and generates a development release with attached separate firmware packages per supported board. For more complex changes, and building the OpenMV firmware from source locally, see [Building the Firmware From Source](https://github.com/openmv/openmv/blob/master/src/README.md).
 
 ## Contributing to the project
 
