@@ -365,14 +365,15 @@ static void ltdc_init(py_display_obj_t *self) {
     HAL_NVIC_EnableIRQ(LTDC_IRQn);
 
     // Start interrupt chain.
-    HAL_LTDC_ProgramLineEvent(&display.hltdc, 13); // AccumulatedVBP
+    HAL_LTDC_Reload(&display.hltdc, LTDC_RELOAD_VERTICAL_BLANKING);
 }
 
-void HAL_LTDC_LineEventCallback(LTDC_HandleTypeDef *hltdc) {
+void HAL_LTDC_ReloadEventCallback(LTDC_HandleTypeDef *hltdc) {
     py_display_obj_t *self = display.self;
 
     HAL_LTDC_ConfigLayer_NoReload(&display.hltdc,
                                   &display.framebuffer_layers[self->framebuffer_tail], LTDC_LAYER_1);
+    // Continue chain...
     HAL_LTDC_Reload(&display.hltdc, LTDC_RELOAD_VERTICAL_BLANKING);
 
     #if defined(OMV_DISPLAY_DISP_PIN)
@@ -382,9 +383,6 @@ void HAL_LTDC_LineEventCallback(LTDC_HandleTypeDef *hltdc) {
     }
     #endif
     self->framebuffer_head = self->framebuffer_tail;
-
-    // Continue chain...
-    HAL_LTDC_ProgramLineEvent(&display.hltdc, 13); // AccumulatedVBP
 }
 
 static void display_write(py_display_obj_t *self, image_t *src_img, int dst_x_start, int dst_y_start,
