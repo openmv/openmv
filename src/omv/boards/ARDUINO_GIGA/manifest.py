@@ -7,6 +7,8 @@ require("neopixel")
 freeze ("$(OMV_LIB_DIR)/", "modbus.py")
 freeze ("$(OMV_LIB_DIR)/", "pid.py")
 freeze ("$(OMV_LIB_DIR)/", "gt911.py")
+freeze ("$(OMV_LIB_DIR)/", "machine.py")
+freeze ("$(OMV_LIB_DIR)/", "display.py")
 
 # Networking
 require("ntptime")
@@ -15,7 +17,6 @@ freeze ("$(OMV_LIB_DIR)/", "rpc.py")
 freeze ("$(OMV_LIB_DIR)/", "rtsp.py")
 freeze ("$(OMV_LIB_DIR)/", "mqtt.py")
 freeze ("$(OMV_LIB_DIR)/", "urequests.py")
-freeze ("$(OMV_LIB_DIR)/", "display.py")
 
 # Utils
 require("time")

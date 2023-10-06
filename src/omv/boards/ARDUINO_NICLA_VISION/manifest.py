@@ -10,6 +10,7 @@ require("neopixel")
 freeze ("$(OMV_LIB_DIR)/", "modbus.py")
 freeze ("$(OMV_LIB_DIR)/", "pid.py")
 freeze ("$(OMV_LIB_DIR)/", "vl53l1x.py")
+freeze ("$(OMV_LIB_DIR)/", "machine.py")
 
 # Networking
 require("ntptime")
