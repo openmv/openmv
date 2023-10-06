@@ -224,10 +224,28 @@ static void pll_config(int framesize, int refresh) {
     mp_raise_msg(&mp_type_OSError, MP_ERROR_TEXT("Unable to initialize LTDC PLL!"));
 }
 
+static void get_display_mode(display_mode_t *dm_out, uint32_t framesize, bool portrait) {
+    const display_mode_t *dm = &display_modes[framesize];
+    if (portrait == false) {
+        *dm_out = *dm;
+    } else {
+        dm_out->hactive = dm->vactive;
+        dm_out->vactive = dm->hactive;
+        dm_out->hsync_len = dm->vsync_len;
+        dm_out->vsync_len = dm->hsync_len;
+        dm_out->hback_porch = dm->vback_porch;
+        dm_out->vback_porch = dm->hback_porch;
+        dm_out->hfront_porch = dm->vfront_porch;
+        dm_out->vfront_porch = dm->hfront_porch;
+        dm_out->pixel_clock = dm->pixel_clock;
+    }
+}
+
 #ifdef OMV_DSI_DISPLAY_CONTROLLER
 static void dsi_init(py_display_obj_t *self) {
-    const display_mode_t *dm = &display_modes[self->framesize];
-    uint32_t pixel_clock = (dm->pixel_clock * self->refresh) / 60;
+    display_mode_t dm;
+    get_display_mode(&dm, self->framesize, self->portrait);
+    uint32_t pixel_clock = (dm.pixel_clock * self->refresh) / 60;
 
     DSI_PLLInitTypeDef dsi_pllinit;
     dsi_pllinit.PLLNDIV = 125;
@@ -281,15 +299,15 @@ static void dsi_init(py_display_obj_t *self) {
     dsi_vidcfg.Mode = DSI_VID_MODE_BURST;
     dsi_vidcfg.NullPacketSize = 0xFFF;
     dsi_vidcfg.NumberOfChunks = 0;
-    dsi_vidcfg.PacketSize = self->width;
-    dsi_vidcfg.HorizontalSyncActive = dm->hsync_len * LANE_BYTE_CLOCK / pixel_clock;
-    dsi_vidcfg.HorizontalBackPorch = dm->hback_porch * LANE_BYTE_CLOCK / pixel_clock;
-    dsi_vidcfg.HorizontalLine = (self->width + dm->hsync_len + dm->hback_porch + dm->hfront_porch)
+    dsi_vidcfg.PacketSize = dm.hactive;
+    dsi_vidcfg.HorizontalSyncActive = dm.hsync_len * LANE_BYTE_CLOCK / pixel_clock;
+    dsi_vidcfg.HorizontalBackPorch = dm.hback_porch * LANE_BYTE_CLOCK / pixel_clock;
+    dsi_vidcfg.HorizontalLine = (dm.hactive + dm.hsync_len + dm.hback_porch + dm.hfront_porch)
                                 * LANE_BYTE_CLOCK / pixel_clock;
-    dsi_vidcfg.VerticalSyncActive = dm->vsync_len;
-    dsi_vidcfg.VerticalBackPorch = dm->vback_porch;
-    dsi_vidcfg.VerticalFrontPorch = dm->vfront_porch;
-    dsi_vidcfg.VerticalActive = self->height;
+    dsi_vidcfg.VerticalSyncActive = dm.vsync_len;
+    dsi_vidcfg.VerticalBackPorch = dm.vback_porch;
+    dsi_vidcfg.VerticalFrontPorch = dm.vfront_porch;
+    dsi_vidcfg.VerticalActive = dm.vactive;
 
     // Enable/disable sending LP command while streaming
     dsi_vidcfg.LPCommandEnable = DSI_LP_COMMAND_ENABLE;
@@ -317,24 +335,25 @@ static void dsi_init(py_display_obj_t *self) {
 #endif
 
 static void ltdc_init(py_display_obj_t *self) {
-    const display_mode_t *dm = &display_modes[self->framesize];
-    uint32_t fb_size = self->width * self->height * sizeof(uint16_t);
+    display_mode_t dm;
+    get_display_mode(&dm, self->framesize, self->portrait);
+    uint32_t fb_size = dm.hactive * dm.vactive * sizeof(uint16_t);
 
     fb_alloc_mark();
     for (int i = 0; i < FRAMEBUFFER_COUNT; i++) {
         self->framebuffers[i] = (uint16_t *) fb_alloc0(fb_size, FB_ALLOC_CACHE_ALIGN);
         display.framebuffer_layers[i].WindowX0 = 0;
-        display.framebuffer_layers[i].WindowX1 = self->width;
+        display.framebuffer_layers[i].WindowX1 = dm.hactive;
         display.framebuffer_layers[i].WindowY0 = 0;
-        display.framebuffer_layers[i].WindowY1 = self->height;
+        display.framebuffer_layers[i].WindowY1 = dm.vactive;
         display.framebuffer_layers[i].PixelFormat = LTDC_PIXEL_FORMAT_RGB565;
         display.framebuffer_layers[i].Alpha = 0;
         display.framebuffer_layers[i].Alpha0 = 0;
         display.framebuffer_layers[i].BlendingFactor1 = LTDC_BLENDING_FACTOR1_PAxCA;
         display.framebuffer_layers[i].BlendingFactor2 = LTDC_BLENDING_FACTOR2_PAxCA;
         display.framebuffer_layers[i].FBStartAdress = (uint32_t) self->framebuffers[i];
-        display.framebuffer_layers[i].ImageWidth = self->width;
-        display.framebuffer_layers[i].ImageHeight = self->height;
+        display.framebuffer_layers[i].ImageWidth = dm.hactive;
+        display.framebuffer_layers[i].ImageHeight = dm.vactive;
         display.framebuffer_layers[i].Backcolor.Blue = 0;
         display.framebuffer_layers[i].Backcolor.Green = 0;
         display.framebuffer_layers[i].Backcolor.Red = 0;
@@ -347,14 +366,14 @@ static void ltdc_init(py_display_obj_t *self) {
     display.hltdc.Init.DEPolarity = LTDC_DEPOLARITY_AL,
     display.hltdc.Init.PCPolarity = LTDC_PCPOLARITY_IPC,
 
-    display.hltdc.Init.HorizontalSync = dm->hsync_len - 1;
-    display.hltdc.Init.VerticalSync = dm->vsync_len - 1;
-    display.hltdc.Init.AccumulatedHBP = dm->hsync_len + dm->hback_porch - 1;
-    display.hltdc.Init.AccumulatedVBP = dm->vsync_len + dm->vback_porch - 1;
-    display.hltdc.Init.AccumulatedActiveW = dm->hsync_len + dm->hback_porch + self->width - 1;
-    display.hltdc.Init.AccumulatedActiveH = dm->vsync_len + dm->vback_porch + self->height - 1;
-    display.hltdc.Init.TotalWidth = dm->hsync_len + dm->hback_porch + self->width + dm->hfront_porch - 1;
-    display.hltdc.Init.TotalHeigh = dm->vsync_len + dm->vback_porch + self->height + dm->vfront_porch - 1;
+    display.hltdc.Init.HorizontalSync = dm.hsync_len - 1;
+    display.hltdc.Init.VerticalSync = dm.vsync_len - 1;
+    display.hltdc.Init.AccumulatedHBP = dm.hsync_len + dm.hback_porch - 1;
+    display.hltdc.Init.AccumulatedVBP = dm.vsync_len + dm.vback_porch - 1;
+    display.hltdc.Init.AccumulatedActiveW = dm.hsync_len + dm.hback_porch + dm.hactive - 1;
+    display.hltdc.Init.AccumulatedActiveH = dm.vsync_len + dm.vback_porch + dm.vactive - 1;
+    display.hltdc.Init.TotalWidth = dm.hsync_len + dm.hback_porch + dm.hactive + dm.hfront_porch - 1;
+    display.hltdc.Init.TotalHeigh = dm.vsync_len + dm.vback_porch + dm.vactive + dm.vfront_porch - 1;
 
     display.hltdc.Init.Backcolor.Blue = 0;
     display.hltdc.Init.Backcolor.Green = 0;
@@ -619,7 +638,8 @@ mp_obj_t display_make_new(const mp_obj_type_t *type, size_t n_args, size_t n_kw,
     self->framebuffer_tail = 0;
     self->framebuffer_head = 0;
     self->framesize = args[ARG_framesize].u_int;
-    if (args[ARG_portrait].u_bool) {
+    self->portrait = args[ARG_portrait].u_bool;
+    if (self->portrait) {
         self->width = display_modes[self->framesize].vactive;
         self->height = display_modes[self->framesize].hactive;
     } else {
