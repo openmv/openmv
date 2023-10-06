@@ -3064,30 +3064,8 @@ void imlib_draw_image(image_t *dst_img,
             new_src_img.data = fb_alloc(size, FB_ALLOC_CACHE_ALIGN);
 
             switch (new_src_img.pixfmt) {
-                case PIXFORMAT_BINARY: {
-                    if (src_img->is_bayer) {
-                        imlib_debayer_image(&new_src_img, src_img);
-                    } else if (src_img->is_yuv) {
-                        imlib_deyuv_image(&new_src_img, src_img);
-                    } else if (is_jpeg) {
-                        jpeg_decompress(&new_src_img, src_img);
-                    } else if (is_png) {
-                        png_decompress(&new_src_img, src_img);
-                    }
-                    break;
-                }
-                case PIXFORMAT_GRAYSCALE: {
-                    if (src_img->is_bayer) {
-                        imlib_debayer_image(&new_src_img, src_img);
-                    } else if (src_img->is_yuv) {
-                        imlib_deyuv_image(&new_src_img, src_img);
-                    } else if (is_jpeg) {
-                        jpeg_decompress(&new_src_img, src_img);
-                    } else if (is_png) {
-                        png_decompress(&new_src_img, src_img);
-                    }
-                    break;
-                }
+                case PIXFORMAT_BINARY:
+                case PIXFORMAT_GRAYSCALE:
                 case PIXFORMAT_RGB565: {
                     if (src_img->is_bayer) {
                         imlib_debayer_image(&new_src_img, src_img);
