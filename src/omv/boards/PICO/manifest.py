@@ -9,6 +9,7 @@ require("onewire")
 require("ds18x20")
 require("dht")
 require("neopixel")
+freeze ("$(OMV_LIB_DIR)/", "machine.py")
 
 # Utils
 require("time")
