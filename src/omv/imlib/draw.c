@@ -15,6 +15,7 @@
 #ifdef IMLIB_ENABLE_DMA2D
 #include STM32_HAL_H
 #include "dma.h"
+#include "omv_common.h"
 #endif
 
 void *imlib_compute_row_ptr(const image_t *img, int y) {
@@ -519,7 +520,7 @@ void imlib_draw_row_setup(imlib_draw_row_data_t *data) {
     data->toggle = 0;
     data->row_buffer[0] = fb_alloc(image_row_size, FB_ALLOC_CACHE_ALIGN);
 
-#ifdef IMLIB_ENABLE_DMA2D
+    #ifdef IMLIB_ENABLE_DMA2D
     data->dma2d_enabled = false;
     data->dma2d_initialized = false;
 
@@ -568,7 +569,7 @@ void imlib_draw_row_setup(imlib_draw_row_data_t *data) {
             case PIXFORMAT_GRAYSCALE: {
                 data->dma2d.LayerCfg[1].InputColorMode = DMA2D_INPUT_L8;
                 data->dma2d.LayerCfg[1].AlphaMode = DMA2D_COMBINE_ALPHA;
-                uint32_t *clut = fb_alloc(256 * sizeof(uint32_t), FB_ALLOC_NO_HINT);
+                uint32_t *clut = fb_alloc(256 * sizeof(uint32_t), FB_ALLOC_CACHE_ALIGN);
 
                 if (!data->alpha_palette) {
                     if (!data->color_palette) {
@@ -636,9 +637,9 @@ void imlib_draw_row_setup(imlib_draw_row_data_t *data) {
     } else {
         data->row_buffer[1] = data->row_buffer[0];
     }
-#else
+    #else
     data->row_buffer[1] = data->row_buffer[0];
-#endif
+    #endif
 
     int alpha = data->alpha, max = 256;
 
@@ -667,7 +668,7 @@ void imlib_draw_row_teardown(imlib_draw_row_data_t *data) {
     if (data->smuad_alpha_palette) {
         fb_free();
     }
-#ifdef IMLIB_ENABLE_DMA2D
+    #ifdef IMLIB_ENABLE_DMA2D
     if (data->dma2d_initialized) {
         if (!data->callback) {
             HAL_DMA2D_PollForTransfer(&data->dma2d, 1000);
@@ -678,7 +679,7 @@ void imlib_draw_row_teardown(imlib_draw_row_data_t *data) {
         }
         fb_free(); // data->row_buffer[1]
     }
-#endif
+    #endif
     fb_free(); // data->row_buffer[0]
 }
 
@@ -699,11 +700,11 @@ void *imlib_draw_row_get_row_buffer(imlib_draw_row_data_t *data) {
 void imlib_draw_row_put_row_buffer(imlib_draw_row_data_t *data, void *row_buffer) {
     data->row_buffer[data->toggle] = row_buffer;
     data->toggle = !data->toggle;
-#ifdef IMLIB_ENABLE_DMA2D
+    #ifdef IMLIB_ENABLE_DMA2D
     if (data->dma2d_enabled && (!DMA_BUFFER(row_buffer))) {
         data->dma2d_enabled = false;
     }
-#endif
+    #endif
 }
 
 // Draws (x_end - x_start) pixels.
@@ -2174,14 +2175,25 @@ void imlib_draw_row(int x_start, int x_end, int y_row, imlib_draw_row_data_t *da
                 }
                 case PIXFORMAT_GRAYSCALE: {
                     uint8_t *src8 = ((uint8_t *) data->row_buffer[!data->toggle]) + x_start;
-#ifdef IMLIB_ENABLE_DMA2D
+                    #ifdef IMLIB_ENABLE_DMA2D
+                    // Confirm destination row starts and end on a complete cache line.
+                    if (data->dma2d_enabled
+                        && ((((uint32_t) (dst16 + x_start)) % OMV_ALLOC_ALIGNMENT)
+                            || (((uint32_t) (dst16 + x_end)) % OMV_ALLOC_ALIGNMENT))) {
+                        data->dma2d_enabled = false;
+                    }
                     if (data->dma2d_enabled) {
                         if (!data->callback) {
                             HAL_DMA2D_PollForTransfer(&data->dma2d, 1000);
                         }
                         #if defined(MCU_SERIES_F7) || defined(MCU_SERIES_H7)
+                        // Memory referenced by src8 between (x_end - x_start) may or may not be
+                        // cache algined. However, after being flushed it shouldn't change again
+                        // so DMA2D can safety read the line of pixels.
                         SCB_CleanDCache_by_Addr((uint32_t *) src8, (x_end - x_start) * sizeof(uint8_t));
-                        SCB_CleanInvalidateDCache_by_Addr((uint32_t *) dst16, (x_end - x_start) * sizeof(uint16_t));
+                        // DMA2D will overwrite this area. dst16 (x_end - x_start) must be cache
+                        // aligned or the line of pixels will be corrutped.
+                        SCB_InvalidateDCache_by_Addr((uint32_t *) dst16, (x_end - x_start) * sizeof(uint16_t));
                         #endif
                         HAL_DMA2D_BlendingStart(&data->dma2d,
                                                 (uint32_t) src8,
@@ -2193,9 +2205,9 @@ void imlib_draw_row(int x_start, int x_end, int y_row, imlib_draw_row_data_t *da
                             HAL_DMA2D_PollForTransfer(&data->dma2d, 1000);
                         }
                     } else if (data->smuad_alpha_palette) {
-#else
+                    #else
                     if (data->smuad_alpha_palette) {
-#endif
+                    #endif
                         const uint32_t *smuad_alpha_palette = data->smuad_alpha_palette;
                         if (!data->color_palette) {
                             if (!data->black_background) {
@@ -2334,14 +2346,25 @@ void imlib_draw_row(int x_start, int x_end, int y_row, imlib_draw_row_data_t *da
                         } else {
                             long smuad_alpha = data->smuad_alpha;
                             if (!data->color_palette) {
-#ifdef IMLIB_ENABLE_DMA2D
+                                #ifdef IMLIB_ENABLE_DMA2D
+                                // Confirm destination row starts and end on a complete cache line.
+                                if (data->dma2d_enabled
+                                    && ((((uint32_t) (dst16 + x_start)) % OMV_ALLOC_ALIGNMENT)
+                                        || (((uint32_t) (dst16 + x_end)) % OMV_ALLOC_ALIGNMENT))) {
+                                    data->dma2d_enabled = false;
+                                }
                                 if (data->dma2d_enabled) {
                                     if (!data->callback) {
                                         HAL_DMA2D_PollForTransfer(&data->dma2d, 1000);
                                     }
                                     #if defined(MCU_SERIES_F7) || defined(MCU_SERIES_H7)
+                                    // Memory referenced by src16 between (x_end - x_start) may or may not be
+                                    // cache algined. However, after being flushed it shouldn't change again
+                                    // so DMA2D can safety read the line of pixels.
                                     SCB_CleanDCache_by_Addr((uint32_t *) src16, (x_end - x_start) * sizeof(uint16_t));
-                                    SCB_CleanInvalidateDCache_by_Addr((uint32_t *) dst16, (x_end - x_start) * sizeof(uint16_t));
+                                    // DMA2D will overwrite this area. dst16 (x_end - x_start) must be cache
+                                    // aligned or the line of pixels will be corrutped.
+                                    SCB_InvalidateDCache_by_Addr((uint32_t *) dst16, (x_end - x_start) * sizeof(uint16_t));
                                     #endif
                                     HAL_DMA2D_BlendingStart(&data->dma2d,
                                                             (uint32_t) src16,
@@ -2353,9 +2376,9 @@ void imlib_draw_row(int x_start, int x_end, int y_row, imlib_draw_row_data_t *da
                                         HAL_DMA2D_PollForTransfer(&data->dma2d, 1000);
                                     }
                                 } else if (!data->black_background) {
-#else
+                                #else
                                 if (!data->black_background) {
-#endif
+                                #endif
                                     for (int x = x_start; x < x_end; x++) {
                                         int src_pixel = *src16++;
                                         int dst_pixel = *dst16;
@@ -2991,7 +3014,7 @@ void imlib_draw_image(image_t *dst_img,
         new_src_img.w = src_img_w; // same width as source image
         new_src_img.h = src_img_h; // same height as source image
         new_src_img.pixfmt = color_palette ? PIXFORMAT_RGB565 : PIXFORMAT_GRAYSCALE;
-        new_src_img.data = fb_alloc(image_size(&new_src_img), FB_ALLOC_NO_HINT);
+        new_src_img.data = fb_alloc(image_size(&new_src_img), FB_ALLOC_CACHE_ALIGN);
         imlib_draw_image(&new_src_img, src_img, 0, 0, 1.f, 1.f, NULL, rgb_channel, 256, color_palette, NULL, 0, NULL, NULL);
         src_img = &new_src_img;
         rgb_channel = -1;
@@ -3041,30 +3064,8 @@ void imlib_draw_image(image_t *dst_img,
             new_src_img.data = fb_alloc(size, FB_ALLOC_CACHE_ALIGN);
 
             switch (new_src_img.pixfmt) {
-                case PIXFORMAT_BINARY: {
-                    if (src_img->is_bayer) {
-                        imlib_debayer_image(&new_src_img, src_img);
-                    } else if (src_img->is_yuv) {
-                        imlib_deyuv_image(&new_src_img, src_img);
-                    } else if (is_jpeg) {
-                        jpeg_decompress(&new_src_img, src_img);
-                    } else if (is_png) {
-                        png_decompress(&new_src_img, src_img);
-                    }
-                    break;
-                }
-                case PIXFORMAT_GRAYSCALE: {
-                    if (src_img->is_bayer) {
-                        imlib_debayer_image(&new_src_img, src_img);
-                    } else if (src_img->is_yuv) {
-                        imlib_deyuv_image(&new_src_img, src_img);
-                    } else if (is_jpeg) {
-                        jpeg_decompress(&new_src_img, src_img);
-                    } else if (is_png) {
-                        png_decompress(&new_src_img, src_img);
-                    }
-                    break;
-                }
+                case PIXFORMAT_BINARY:
+                case PIXFORMAT_GRAYSCALE:
                 case PIXFORMAT_RGB565: {
                     if (src_img->is_bayer) {
                         imlib_debayer_image(&new_src_img, src_img);
@@ -3092,7 +3093,7 @@ void imlib_draw_image(image_t *dst_img,
         } else {
             new_src_img.pixfmt = src_img->pixfmt;
             size_t size = image_size(&new_src_img);
-            new_src_img.data = fb_alloc(size, FB_ALLOC_NO_HINT);
+            new_src_img.data = fb_alloc(size, FB_ALLOC_CACHE_ALIGN);
             memcpy(new_src_img.data, src_img->data, size);
         }
 
