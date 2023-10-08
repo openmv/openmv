@@ -5,7 +5,7 @@
 
 import sensor
 import time
-import pyb
+from random import randint
 
 sensor.reset()
 sensor.set_pixformat(sensor.RGB565)  # or GRAYSCALE...
@@ -19,13 +19,13 @@ while True:
     img = sensor.snapshot()
 
     for i in range(20):
-        x = (pyb.rng() % (2 * img.width())) - (img.width() // 2)
-        y = (pyb.rng() % (2 * img.height())) - (img.height() // 2)
-        rot = pyb.rng() % 360
+        x = randint(0, 2 * img.width()) - img.width() // 2
+        y = randint(0, 2 * img.height()) - img.height() // 2
+        rot = randint(0, 360)
 
-        r = (pyb.rng() % 127) + 128
-        g = (pyb.rng() % 127) + 128
-        b = (pyb.rng() % 127) + 128
+        r = randint(0, 127) + 128
+        g = randint(0, 127) + 128
+        b = randint(0, 127) + 128
 
         # This method draws a keypoints object or a list of (x, y, rot) tuples...
         img.draw_keypoints(

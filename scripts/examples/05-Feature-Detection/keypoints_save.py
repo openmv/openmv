@@ -2,8 +2,6 @@
 # This example shows how to save a keypoints descriptor to file. Show the camera an object
 # and then run the script. The script will extract and save a keypoints descriptor and the image.
 # You can use the keypoints_editor.py util to remove unwanted keypoints.
-#
-# NOTE: Please reset the camera after running this script to see the new file.
 import sensor
 import time
 import image
@@ -36,4 +34,5 @@ img.save("/%s.pgm" % (FILE_NAME))
 img.draw_keypoints(kpts)
 sensor.snapshot()
 time.sleep_ms(1000)
-raise (Exception("Done! Please reset the camera"))
+
+raise (Exception("Please reset the camera to see the new file."))

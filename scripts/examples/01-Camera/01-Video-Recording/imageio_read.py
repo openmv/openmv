@@ -1,10 +1,10 @@
 # Image Reader Example
 #
-# USE THIS EXAMPLE WITH A USD CARD!
+# NOTE: This example requires an SD card.
 #
 # This example shows how to use the Image Reader object to replay snapshots of what your
 # OpenMV Cam saw saved by the Image Writer object for testing machine vision algorithms.
-
+#
 # Altered to allow full speed reading from SD card for extraction of sequences to the network etc.
 # Set the new pause parameter to false
 

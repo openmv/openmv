@@ -11,9 +11,8 @@ import omv
 
 sensor.reset()
 sensor.set_pixformat(sensor.GRAYSCALE)
-sensor.set_framesize(
-    sensor.VGA
-)  # we run out of memory if the resolution is much bigger...
+sensor.set_framesize(sensor.VGA)
+
 # AprilTags works on a maximum of < 64K pixels.
 if omv.board_type() == "H7":
     sensor.set_windowing((240, 240))

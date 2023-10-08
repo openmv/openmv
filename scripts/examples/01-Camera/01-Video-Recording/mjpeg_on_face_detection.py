@@ -14,15 +14,14 @@ import sensor
 import image
 import time
 import mjpeg
-import pyb
-
-RED_LED_PIN = 1
-BLUE_LED_PIN = 3
+import random
 
 sensor.reset()  # Reset and initialize the sensor.
 sensor.set_pixformat(sensor.GRAYSCALE)  # Set pixel format to RGB565 (or GRAYSCALE)
 sensor.set_framesize(sensor.QQVGA)  # Set frame size to QQVGA (160x120)
 sensor.skip_frames(time=2000)  # Wait for settings take effect.
+
+led = machine.LED("LED_RED")
 
 # Load up a face detection HaarCascade. This is object that your OpenMV Cam
 # can use to detect faces using the find_features() method below. Your OpenMV
@@ -33,13 +32,10 @@ sensor.skip_frames(time=2000)  # Wait for settings take effect.
 face_cascade = image.HaarCascade("frontalface", stages=25)
 
 while True:
-    pyb.LED(RED_LED_PIN).on()
     print("About to start detecting faces...")
     sensor.skip_frames(time=2000)  # Give the user time to get ready.
 
-    pyb.LED(RED_LED_PIN).off()
     print("Now detecting faces!")
-    pyb.LED(BLUE_LED_PIN).on()
 
     diff = 10  # We'll say we detected a face after 10 frames.
     while diff:
@@ -54,15 +50,15 @@ while True:
             for r in faces:
                 img.draw_rectangle(r)
 
-    m = mjpeg.Mjpeg("example-%d.mjpeg" % pyb.rng())
+    led.on()
+    m = mjpeg.Mjpeg("example-%d.mjpeg" % random.getrandbits(32))
 
     clock = time.clock()  # Tracks FPS.
-    print("You're on camera!")
     for i in range(200):
         clock.tick()
         m.add_frame(sensor.snapshot())
         print(clock.fps())
 
     m.close(clock.fps())
-    pyb.LED(BLUE_LED_PIN).off()
+    led.off()
     print("Restarting...")
