@@ -87,6 +87,7 @@ STATIC mp_obj_t py_mjpeg_size(mp_obj_t self) {
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_mjpeg_size_obj, py_mjpeg_size);
 
 STATIC mp_obj_t py_mjpeg_write(uint n_args, const mp_obj_t *args, mp_map_t *kw_args) {
+    fb_alloc_mark();
     py_mjpeg_obj_t *arg_mjpeg = py_mjpeg_obj(args[0]);
     image_t *arg_img = py_image_cobj(args[1]);
 
@@ -117,6 +118,7 @@ STATIC mp_obj_t py_mjpeg_write(uint n_args, const mp_obj_t *args, mp_map_t *kw_a
                 arg_img, arg_q, &arg_roi, arg_rgb_channel, arg_alpha,
                 color_palette, alpha_palette, hint);
 
+    fb_alloc_free_till_mark();
     return args[0];
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_mjpeg_write_obj, 2, py_mjpeg_write);

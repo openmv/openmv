@@ -868,6 +868,7 @@ STATIC mp_obj_t py_tv_channel(uint n_args, const mp_obj_t *args) {
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(py_tv_channel_obj, 0, 1, py_tv_channel);
 
 STATIC mp_obj_t py_tv_display(uint n_args, const mp_obj_t *args, mp_map_t *kw_args) {
+    fb_alloc_mark();
     image_t *arg_img = py_image_cobj(args[0]);
 
     int arg_x_off = 0;
@@ -954,10 +955,8 @@ STATIC mp_obj_t py_tv_display(uint n_args, const mp_obj_t *args, mp_map_t *kw_ar
     switch (tv_type) {
         #ifdef OMV_SPI_DISPLAY_CONTROLLER
         case TV_SHIELD: {
-            fb_alloc_mark();
             spi_tv_display(arg_img, arg_x_off, arg_y_off, arg_x_scale, arg_y_scale, &arg_roi,
                            arg_rgb_channel, arg_alpha, color_palette, alpha_palette, hint);
-            fb_alloc_free_till_mark();
             break;
         }
         #endif
@@ -966,6 +965,7 @@ STATIC mp_obj_t py_tv_display(uint n_args, const mp_obj_t *args, mp_map_t *kw_ar
         }
     }
 
+    fb_alloc_free_till_mark();
     return mp_const_none;
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_tv_display_obj, 1, py_tv_display);

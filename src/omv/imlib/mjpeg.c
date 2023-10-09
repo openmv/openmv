@@ -118,8 +118,6 @@ void mjpeg_write(FIL *fp, int width, int height, uint32_t *frames, uint32_t *byt
                   (color_palette == NULL) &&
                   (alpha_palette == NULL);
 
-    fb_alloc_mark();
-
     if ((dst_img.pixfmt != img->pixfmt) || (!simple)) {
         image_t temp;
         memcpy(&temp, img, sizeof(image_t));
@@ -192,8 +190,6 @@ void mjpeg_write(FIL *fp, int width, int height, uint32_t *frames, uint32_t *byt
 
     *frames += 1;
     *bytes += size_padded;
-
-    fb_alloc_free_till_mark();
 }
 
 void mjpeg_sync(FIL *fp, uint32_t *frames, uint32_t *bytes, float fps) {

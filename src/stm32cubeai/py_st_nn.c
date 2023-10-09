@@ -38,6 +38,7 @@ STATIC void py_net_print(const mp_print_t *print, mp_obj_t self_in,
  * pointed to by args[1]*/
 STATIC mp_obj_t __attribute__((optimize("O0")))
 py_net_predict(uint n_args, const mp_obj_t *args, mp_map_t *kw_args) {
+  fb_alloc_mark();
   stnn_t *net = py_st_net_cobj(args[0]);
   image_t *img = py_helper_arg_to_image_mutable(args[1]);
 
@@ -53,6 +54,7 @@ py_net_predict(uint n_args, const mp_obj_t *args, mp_map_t *kw_args) {
   for (int i = 0; i < AI_NETWORK_OUT_1_SIZE; i++) {
     mp_obj_list_append(output_list, mp_obj_new_float(*(out_data + i)));
   }
+  fb_alloc_free_till_mark();
   return output_list;
 }
 

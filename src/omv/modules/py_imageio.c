@@ -171,6 +171,7 @@ STATIC mp_obj_t py_imageio_size(mp_obj_t self) {
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_imageio_size_obj, py_imageio_size);
 
 STATIC mp_obj_t py_imageio_write(mp_obj_t self, mp_obj_t img_obj) {
+    fb_alloc_mark();
     py_imageio_obj_t *stream = py_imageio_obj(self);
     image_t *image = py_image_cobj(img_obj);
 
@@ -241,6 +242,7 @@ STATIC mp_obj_t py_imageio_write(mp_obj_t self, mp_obj_t img_obj) {
 
     stream->offset += 1;
 
+    fb_alloc_free_till_mark();
     return self;
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_imageio_write_obj, py_imageio_write);
@@ -309,7 +311,7 @@ STATIC void int_py_imageio_read_chunk(py_imageio_obj_t *stream, image_t *image, 
 #endif
 
 STATIC mp_obj_t py_imageio_read(uint n_args, const mp_obj_t *args, mp_map_t *kw_args) {
-
+    fb_alloc_mark();
     py_imageio_obj_t *stream = py_imageio_obj(args[0]);
 
     mp_obj_t copy_to_fb_obj = py_helper_keyword_object(n_args, args, 1, kw_args,
@@ -336,6 +338,7 @@ STATIC mp_obj_t py_imageio_read(uint n_args, const mp_obj_t *args, mp_map_t *kw_
 
         if (f_eof(fp)) {
             if (!py_helper_keyword_int(n_args, args, 2, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_loop), true)) {
+                fb_alloc_free_till_mark();
                 return mp_const_none;
             }
 
@@ -345,6 +348,7 @@ STATIC mp_obj_t py_imageio_read(uint n_args, const mp_obj_t *args, mp_map_t *kw_
 
             if (f_eof(fp)) {
                 // empty file
+                fb_alloc_free_till_mark();
                 return mp_const_none;
             }
         }
@@ -418,6 +422,7 @@ STATIC mp_obj_t py_imageio_read(uint n_args, const mp_obj_t *args, mp_map_t *kw_
         framebuffer_update_jpeg_buffer();
     }
 
+    fb_alloc_free_till_mark();
     return py_image_from_struct(&image);
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_imageio_read_obj, 1, py_imageio_read);

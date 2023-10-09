@@ -100,8 +100,8 @@ void py_helper_arg_to_scale(const mp_obj_t arg_x_scale, const mp_obj_t arg_y_sca
     }
 }
 
-image_t *py_helper_keyword_to_image_mutable(uint n_args, const mp_obj_t *args, uint arg_index,
-                                            mp_map_t *kw_args, mp_obj_t kw, image_t *default_val) {
+image_t *py_helper_keyword_to_image(uint n_args, const mp_obj_t *args, uint arg_index,
+                                    mp_map_t *kw_args, mp_obj_t kw, image_t *default_val) {
     mp_map_elem_t *kw_arg = mp_map_lookup(kw_args, kw, MP_MAP_LOOKUP);
 
     if (kw_arg) {
@@ -111,21 +111,6 @@ image_t *py_helper_keyword_to_image_mutable(uint n_args, const mp_obj_t *args, u
     }
 
     return default_val;
-}
-
-image_t *py_helper_keyword_to_image_mutable_mask(uint n_args, const mp_obj_t *args, uint arg_index,
-                                                 mp_map_t *kw_args) {
-    return py_helper_keyword_to_image_mutable(n_args, args, arg_index, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_mask), NULL);
-}
-
-image_t *py_helper_keyword_to_image_mutable_color_palette(uint n_args, const mp_obj_t *args, uint arg_index,
-                                                          mp_map_t *kw_args) {
-    return py_helper_keyword_to_image_mutable(n_args, args, arg_index, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_color_palette), NULL);
-}
-
-image_t *py_helper_keyword_to_image_mutable_alpha_palette(uint n_args, const mp_obj_t *args, uint arg_index,
-                                                          mp_map_t *kw_args) {
-    return py_helper_keyword_to_image_mutable(n_args, args, arg_index, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_alpha_palette), NULL);
 }
 
 void py_helper_keyword_rectangle(image_t *img, uint n_args, const mp_obj_t *args, uint arg_index,
@@ -478,7 +463,8 @@ const uint16_t *py_helper_keyword_color_palette(uint n_args, const mp_obj_t *arg
         }
     } else {
         image_t *arg_color_palette =
-            py_helper_keyword_to_image_mutable_color_palette(n_args, args, arg_index, kw_args);
+            py_helper_keyword_to_image(n_args, args, arg_index, kw_args,
+                                       MP_OBJ_NEW_QSTR(MP_QSTR_color_palette), NULL);
 
         if (arg_color_palette) {
             if (arg_color_palette->pixfmt != PIXFORMAT_RGB565) {
@@ -501,7 +487,7 @@ const uint16_t *py_helper_keyword_color_palette(uint n_args, const mp_obj_t *arg
 const uint8_t *py_helper_keyword_alpha_palette(uint n_args, const mp_obj_t *args,
                                                uint arg_index, mp_map_t *kw_args, const uint8_t *default_alpha_palette) {
     image_t *arg_alpha_palette =
-        py_helper_keyword_to_image_mutable_alpha_palette(n_args, args, 9, kw_args);
+        py_helper_keyword_to_image(n_args, args, 9, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_alpha_palette), NULL);
 
     if (arg_alpha_palette) {
         if (arg_alpha_palette->pixfmt != PIXFORMAT_GRAYSCALE) {

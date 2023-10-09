@@ -145,6 +145,7 @@ STATIC mp_obj_t py_display_write(uint n_args, const mp_obj_t *pos_args, mp_map_t
     mp_arg_val_t args[MP_ARRAY_SIZE(allowed_args)];
     mp_arg_parse_all(n_args - 1, pos_args + 1, kw_args, MP_ARRAY_SIZE(allowed_args), allowed_args, args);
 
+    fb_alloc_mark();
     image_t *image = py_helper_arg_to_image(args[ARG_image].u_obj, 0);
     rectangle_t roi = py_helper_arg_to_roi(args[ARG_roi].u_obj, image);
 
@@ -167,7 +168,6 @@ STATIC mp_obj_t py_display_write(uint n_args, const mp_obj_t *pos_args, mp_map_t
     const uint16_t *color_palette = py_helper_arg_to_palette(args[ARG_color_palette].u_obj, PIXFORMAT_RGB565);
     const uint8_t *alpha_palette = py_helper_arg_to_palette(args[ARG_alpha_palette].u_obj, PIXFORMAT_GRAYSCALE);
 
-    fb_alloc_mark();
     py_display_p_t *display_p = (py_display_p_t *) MP_OBJ_TYPE_GET_SLOT(self->base.type, protocol);
     display_p->write(self, image, args[ARG_x].u_int, args[ARG_y].u_int, x_scale, y_scale, &roi,
                      args[ARG_channel].u_int, args[ARG_alpha].u_int, color_palette, alpha_palette, args[ARG_hint].u_int);

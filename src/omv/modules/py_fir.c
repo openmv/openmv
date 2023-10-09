@@ -850,6 +850,7 @@ mp_obj_t py_fir_read_ir(uint n_args, const mp_obj_t *args, mp_map_t *kw_args) {
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_fir_read_ir_obj, 0, py_fir_read_ir);
 
 mp_obj_t py_fir_draw_ir(uint n_args, const mp_obj_t *args, mp_map_t *kw_args) {
+    fb_alloc_mark();
     image_t *dst_img = py_helper_arg_to_image(args[0], ARG_IMAGE_MUTABLE);
 
     image_t src_img;
@@ -998,8 +999,6 @@ mp_obj_t py_fir_draw_ir(uint n_args, const mp_obj_t *args, mp_map_t *kw_args) {
         }
     }
 
-    fb_alloc_mark();
-
     src_img.data = fb_alloc(src_img.w * src_img.h * sizeof(uint8_t), FB_ALLOC_NO_HINT);
     fir_fill_image_float_obj(&src_img, arg_to, min, max);
 
@@ -1017,6 +1016,7 @@ mp_obj_t py_fir_snapshot(uint n_args, const mp_obj_t *args, mp_map_t *kw_args) {
         return mp_const_none;
     }
 
+    fb_alloc_mark();
     bool arg_hmirror = py_helper_keyword_int(n_args, args, 0, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_hmirror), false);
     bool arg_vflip = py_helper_keyword_int(n_args, args, 1, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_vflip), false);
     bool arg_transpose = py_helper_keyword_int(n_args, args, 2, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_transpose), false);
@@ -1138,7 +1138,6 @@ mp_obj_t py_fir_snapshot(uint n_args, const mp_obj_t *args, mp_map_t *kw_args) {
     int arg_timeout = py_helper_keyword_int(n_args, args, 16, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_timeout), -1);
     #endif
 
-    fb_alloc_mark();
     src_img.data = fb_alloc(src_img.w * src_img.h * sizeof(uint8_t), FB_ALLOC_NO_HINT);
 
     switch (fir_sensor) {

@@ -200,7 +200,6 @@ int aiRun(stnn_t *net, image_t *img, rectangle_t *roi) {
   ai_i32 nbatch;
   ai_error err;
 
-  fb_alloc_mark();
   AI_ALIGNED(4)
   ai_u8 *activations = fb_alloc(AI_NETWORK_DATA_ACTIVATIONS_SIZE, FB_ALLOC_NO_HINT);
   AI_ALIGNED(4)
@@ -244,8 +243,6 @@ int aiRun(stnn_t *net, image_t *img, rectangle_t *roi) {
   }
 
   net->nn_exec_ctx_ptr->report.outputs->data = out_data;
-
-  fb_alloc_free_till_mark();
 
   return 0;
 }

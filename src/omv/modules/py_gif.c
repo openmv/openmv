@@ -79,6 +79,7 @@ static mp_obj_t py_gif_loop(mp_obj_t gif_obj) {
 
 static mp_obj_t py_gif_add_frame(uint n_args, const mp_obj_t *args, mp_map_t *kw_args) {
     #if defined(IMLIB_ENABLE_IMAGE_FILE_IO)
+    fb_alloc_mark();
     py_gif_obj_t *arg_gif = args[0];
     image_t *arg_img = py_image_cobj(args[1]);
     PY_ASSERT_FALSE_MSG(IM_IS_JPEG(arg_img),   "Operation not supported on JPEG images.");
@@ -89,6 +90,7 @@ static mp_obj_t py_gif_add_frame(uint n_args, const mp_obj_t *args, mp_map_t *kw
     int delay = py_helper_keyword_int(n_args, args, 2, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_delay), 10);
 
     gif_add_frame(&arg_gif->fp, arg_img, delay);
+    fb_alloc_free_till_mark();
     #else
     mp_raise_msg(&mp_type_OSError, MP_ERROR_TEXT("Image I/O is not supported"));
     #endif
