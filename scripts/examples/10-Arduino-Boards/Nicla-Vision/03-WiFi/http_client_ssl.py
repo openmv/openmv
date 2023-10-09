@@ -1,7 +1,8 @@
 # Simple HTTPS client example.
 import network
 import socket
-import ussl
+import ssl
+import time
 
 # AP info
 SSID = ""  # Network SSID
@@ -34,7 +35,7 @@ client.connect(addr)
 # Set timeout
 client.settimeout(3.0)
 
-client = ussl.wrap_socket(client, server_hostname=HOST)
+client = ssl.wrap_socket(client, server_hostname=HOST)
 
 # Send HTTP request and recv response
 request = "GET / HTTP/1.1\r\n"

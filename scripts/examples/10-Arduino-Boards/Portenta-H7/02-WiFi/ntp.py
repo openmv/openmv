@@ -4,8 +4,8 @@
 
 import network
 import socket
-import ustruct
-import utime
+import struct
+import time
 
 SSID = ""  # Network SSID
 KEY = ""  # Network key
@@ -13,6 +13,7 @@ KEY = ""  # Network key
 TIMESTAMP = 2208988800 + 946684800
 
 # Init wlan module and connect to network
+print("Trying to connect... (This may take a while)...")
 wlan = network.WLAN(network.STA_IF)
 wlan.active(True)
 wlan.connect(SSID, KEY)
@@ -35,5 +36,5 @@ client.sendto("\x1b" + 47 * "\0", addr)
 data, address = client.recvfrom(1024)
 
 # Print time
-t = ustruct.unpack(">IIIIIIIIIIII", data)[10] - TIMESTAMP
-print("Year:%d Month:%d Day:%d Time: %d:%d:%d" % (utime.localtime(t)[0:6]))
+t = struct.unpack(">IIIIIIIIIIII", data)[10] - TIMESTAMP
+print("Year:%d Month:%d Day:%d Time: %d:%d:%d" % (time.localtime(t)[0:6]))

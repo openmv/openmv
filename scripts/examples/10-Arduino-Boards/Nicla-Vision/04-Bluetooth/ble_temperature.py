@@ -8,7 +8,7 @@ import random
 import struct
 import time
 from ble_advertising import advertising_payload
-
+from machine import LED
 from micropython import const
 
 _IRQ_CENTRAL_CONNECT = const(1)
@@ -36,7 +36,7 @@ _ADV_APPEARANCE_GENERIC_THERMOMETER = const(768)
 
 
 class BLETemperature:
-    def __init__(self, ble, name="PORTENTA_BLE"):
+    def __init__(self, ble, name="Nicla-Vision"):
         self._ble = ble
         self._ble.active(True)
         self._ble.irq(self._irq)
@@ -48,17 +48,20 @@ class BLETemperature:
             appearance=_ADV_APPEARANCE_GENERIC_THERMOMETER,
         )
         self._advertise()
+        self.led = LED("LED_BLUE")
 
     def _irq(self, event, data):
         # Track connections so we can send notifications.
         if event == _IRQ_CENTRAL_CONNECT:
             conn_handle, _, _ = data
             self._connections.add(conn_handle)
+            self.led.on()
         elif event == _IRQ_CENTRAL_DISCONNECT:
             conn_handle, _, _ = data
             self._connections.remove(conn_handle)
             # Start advertising again to allow a new connection.
             self._advertise()
+            self.led.off()
         elif event == _IRQ_GATTS_INDICATE_DONE:
             conn_handle, value_handle, status = data
 
@@ -79,7 +82,7 @@ class BLETemperature:
         self._ble.gap_advertise(interval_us, adv_data=self._payload)
 
 
-def demo():
+if __name__ == "__main__":
     ble = bluetooth.BLE()
     temp = BLETemperature(ble)
 
@@ -93,7 +96,3 @@ def demo():
         # Random walk the temperature.
         t += random.uniform(-0.5, 0.5)
         time.sleep_ms(1000)
-
-
-if __name__ == "__main__":
-    demo()
