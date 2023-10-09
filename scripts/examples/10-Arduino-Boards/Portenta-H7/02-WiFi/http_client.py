@@ -2,6 +2,7 @@
 
 import network
 import socket
+import time
 
 # AP info
 SSID = ""  # Network SSID

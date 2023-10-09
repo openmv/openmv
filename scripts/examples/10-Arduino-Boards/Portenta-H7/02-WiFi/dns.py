@@ -3,7 +3,7 @@
 # This example shows how to get the IP address for websites via DNS.
 
 import network
-import usocket
+import time
 
 SSID = ""  # Network SSID
 KEY = ""  # Network key

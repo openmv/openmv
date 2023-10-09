@@ -3,6 +3,7 @@
 # This example shows how to connect your OpenMV Cam with a WiFi shield to the net.
 
 import network
+import time
 
 SSID = ""  # Network SSID
 KEY = ""  # Network key
