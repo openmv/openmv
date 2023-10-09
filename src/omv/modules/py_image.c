@@ -1180,7 +1180,10 @@ static mp_obj_t py_image_to(pixformat_t pixfmt, const uint16_t *default_color_pa
                            "The new image won't fit in the target frame buffer!");
         // DO NOT MODIFY arg_other YET (as it could point to src_img)!
         dst_img.data = arg_other->data;
-        py_helper_update_framebuffer(&dst_img);
+        // Update now if not in place to possibly freeup framebuffer RAM, otherwise update after.
+        if (dst_img.data != src_img->data) {
+            py_helper_update_framebuffer(&dst_img);
+        }
     } else {
         dst_img.data = xalloc(size);
     }
@@ -1201,6 +1204,9 @@ static mp_obj_t py_image_to(pixformat_t pixfmt, const uint16_t *default_color_pa
     }
 
     if (arg_other) {
+        if (dst_img.data == src_img->data) {
+            py_helper_update_framebuffer(&dst_img);
+        }
         memcpy(arg_other, &dst_img, sizeof(image_t));
     }
 
