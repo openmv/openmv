@@ -35,3 +35,6 @@ class LED:
 
     def toggle(self):
         self.pin(not self.pin())
+
+    def value(self, v=None):
+        self.pin(v ^ self.inverted if v is not None else None)
