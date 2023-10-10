@@ -9,6 +9,7 @@
  * Sensor Python module.
  */
 #include <stdarg.h>
+#include <stdio.h>
 #include "py/mphal.h"
 #include "py/runtime.h"
 
@@ -31,7 +32,8 @@ extern sensor_t sensor;
 static mp_obj_t vsync_callback = mp_const_none;
 static mp_obj_t frame_callback = mp_const_none;
 
-#define sensor_raise_error(err)    mp_raise_msg(&mp_type_RuntimeError, (mp_rom_error_text_t) sensor_strerror(err))
+#define sensor_raise_error(err) mp_raise_msg(&mp_type_RuntimeError, (mp_rom_error_text_t) sensor_strerror(err))
+#define sensor_print_error(op)  printf("\x1B[31mWARNING: %s control is not supported by this image sensor.\x1B[0m\n", op);
 
 #if MICROPY_PY_IMU
 static void do_auto_rotation(int pitch_deadzone, int roll_activezone) {
@@ -394,7 +396,10 @@ static mp_obj_t py_sensor_set_auto_gain(uint n_args, const mp_obj_t *args, mp_ma
 
     int error = sensor_set_auto_gain(enable, gain_db, gain_db_ceiling);
     if (error != 0) {
-        sensor_raise_error(error);
+        if (error != SENSOR_ERROR_CTL_UNSUPPORTED) {
+            sensor_raise_error(error);
+        }
+        sensor_print_error("Auto Gain");
     }
     return mp_const_none;
 }
@@ -412,7 +417,10 @@ static mp_obj_t py_sensor_set_auto_exposure(uint n_args, const mp_obj_t *args, m
     int exposure_us = py_helper_keyword_int(n_args, args, 1, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_exposure_us), -1);
     int error = sensor_set_auto_exposure(mp_obj_get_int(args[0]), exposure_us);
     if (error != 0) {
-        sensor_raise_error(error);
+        if (error != SENSOR_ERROR_CTL_UNSUPPORTED) {
+            sensor_raise_error(error);
+        }
+        sensor_print_error("Auto Exposure");
     }
     return mp_const_none;
 }
@@ -433,7 +441,10 @@ static mp_obj_t py_sensor_set_auto_whitebal(uint n_args, const mp_obj_t *args, m
 
     int error = sensor_set_auto_whitebal(enable, rgb_gain_db[0], rgb_gain_db[1], rgb_gain_db[2]);
     if (error != 0) {
-        sensor_raise_error(error);
+        if (error != SENSOR_ERROR_CTL_UNSUPPORTED) {
+            sensor_raise_error(error);
+        }
+        sensor_print_error("Auto White Balance");
     }
     return mp_const_none;
 }
@@ -474,7 +485,10 @@ static mp_obj_t py_sensor_set_auto_blc(uint n_args, const mp_obj_t *pos_args, mp
 
     int error = sensor_set_auto_blc(enable, regs_present ? regs : NULL);
     if (error != 0) {
-        sensor_raise_error(error);
+        if (error != SENSOR_ERROR_CTL_UNSUPPORTED) {
+            sensor_raise_error(error);
+        }
+        sensor_print_error("Auto BLC");
     }
     return mp_const_none;
 }
