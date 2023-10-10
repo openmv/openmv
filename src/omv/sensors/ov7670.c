@@ -257,9 +257,9 @@ static const uint8_t vga_regs[][2] = {
     { HSTART,       0x13 },
     { HSTOP,        0x01 },
     { HREF,         0xb6 },
-    { VSTART,       0x02 },
-    { VSTOP,        0x7a },
-    { VREF,         0x03 },
+    { VSTART,       0x03 },
+    { VSTOP,        0x00 },
+    { VREF,         0x0a },
     { 0xFF,         0xFF },
 };
 
