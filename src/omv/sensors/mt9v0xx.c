@@ -109,6 +109,9 @@ static int reset(sensor_t *sensor) {
         ret |= omv_i2c_writew(&sensor->i2c_bus, sensor->slv_addr, MT9V0XX_ADC_COMPANDING_MODE,
                               MT9V0XX_ADC_COMPANDING_MODE_LINEAR | MT9V0X4_ADC_COMPANDING_MODE_LINEAR_B);
 
+        ret |= omv_i2c_writew(&sensor->i2c_bus, sensor->slv_addr, MT9V0XX_ROW_NOISE_CORR_CONTROL,
+                              MT9V0X4_ROW_NOISE_CORR_ENABLE | MT9V0X4_ROW_NOISE_CORR_ENABLE_B);
+
         ret |= omv_i2c_writew(&sensor->i2c_bus, sensor->slv_addr, MT9V0XX_AEC_AGC_ENABLE,
                               MT9V0XX_AEC_ENABLE | MT9V0X4_AEC_ENABLE_B | MT9V0XX_AGC_ENABLE | MT9V0X4_AGC_ENABLE_B);
     }
