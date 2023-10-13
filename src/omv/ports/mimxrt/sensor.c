@@ -325,15 +325,36 @@ int sensor_snapshot(sensor_t *sensor, image_t *image, uint32_t flags) {
         CSI_REG_CR18(CSI) |= CSI_CR18_CSI_ENABLE_MASK;
     }
 
+    // Let the camera know we want to trigger it now.
+    #if defined(DCMI_FSYNC_PIN)
+    if (sensor->hw_flags.fsync) {
+        omv_gpio_write(DCMI_FSYNC_PIN, 1);
+    }
+    #endif
+
     vbuffer_t *buffer = framebuffer_get_head(FB_NO_FLAGS);
     // Wait for the DMA to finish the transfer.
     for (mp_uint_t ticks = mp_hal_ticks_ms(); buffer == NULL;) {
         buffer = framebuffer_get_head(FB_NO_FLAGS);
         if ((mp_hal_ticks_ms() - ticks) > 3000) {
             sensor_abort();
+
+            #if defined(DCMI_FSYNC_PIN)
+            if (sensor->hw_flags.fsync) {
+                omv_gpio_write(DCMI_FSYNC_PIN, 0);
+            }
+            #endif
+
             return SENSOR_ERROR_CAPTURE_TIMEOUT;
         }
     }
+
+    // We're done receiving data.
+    #if defined(DCMI_FSYNC_PIN)
+    if (sensor->hw_flags.fsync) {
+        omv_gpio_write(DCMI_FSYNC_PIN, 0);
+    }
+    #endif
 
     if (!sensor->transpose) {
         MAIN_FB()->w = w;
