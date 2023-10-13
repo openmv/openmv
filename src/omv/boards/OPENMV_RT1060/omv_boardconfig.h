@@ -234,7 +234,7 @@
 
 #define DCMI_RESET_PIN                  (&omv_pin_DCMI_RESET)
 #define DCMI_POWER_PIN                  (&omv_pin_DCMI_POWER)
-//#define DCMI_FSYNC_PIN                  (&omv_pin_DCMI_FSYNC)
+#define DCMI_FSYNC_PIN                  (&omv_pin_DCMI_FSYNC)
 
 #define DCMI_D0_PIN                     (&omv_pin_DCMI_D0)
 #define DCMI_D1_PIN                     (&omv_pin_DCMI_D1)
