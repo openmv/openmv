@@ -6870,95 +6870,77 @@ mp_obj_t py_image_from_struct(image_t *img) {
     return o;
 }
 
-mp_obj_t py_image_load_image(uint n_args, const mp_obj_t *args, mp_map_t *kw_args) {
-    // mode == false -> load behavior
-    // mode == true -> make behavior
-    bool mode = mp_obj_is_integer(args[0]);
-    const char *path = mode ? NULL : mp_obj_str_get_str(args[0]);
+mp_obj_t py_image_load_image(uint n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
+    enum { ARG_height, ARG_pixformat, ARG_buffer, ARG_copy_to_fb };
+    static const mp_arg_t allowed_args[] = {
+        { MP_QSTR_height,       MP_ARG_INT, {.u_int = -1} },
+        { MP_QSTR_pixformat,    MP_ARG_INT, {.u_int = -1} },
+        { MP_QSTR_buffer,       MP_ARG_OBJ | MP_ARG_KW_ONLY, {.u_rom_obj = MP_ROM_NONE} },
+        { MP_QSTR_copy_to_fb,   MP_ARG_BOOL | MP_ARG_KW_ONLY, {.u_bool = false} },
+    };
 
-    mp_obj_t copy_to_fb_obj = py_helper_keyword_object(n_args, args,
-                                                       mode ? 3 : 1, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_copy_to_fb), NULL);
-    bool copy_to_fb = false;
-    image_t *arg_other = NULL;
-
-    if (copy_to_fb_obj) {
-        if (mp_obj_is_integer(copy_to_fb_obj)) {
-            copy_to_fb = mp_obj_get_int(copy_to_fb_obj);
-        } else {
-            arg_other = py_helper_arg_to_image_mutable(copy_to_fb_obj);
-        }
-    }
+    mp_arg_val_t args[MP_ARRAY_SIZE(allowed_args)];
+    mp_arg_parse_all(n_args - 1, pos_args + 1, kw_args, MP_ARRAY_SIZE(allowed_args), allowed_args, args);
 
     image_t image = {0};
 
-    if (mode) {
-        PY_ASSERT_TRUE_MSG(n_args >= 3, "Expected width, height, and type");
-
-        image.w = mp_obj_get_int(args[0]);
-        PY_ASSERT_TRUE_MSG(image.w > 0, "Width must be > 0");
-
-        image.h = mp_obj_get_int(args[1]);
-        PY_ASSERT_TRUE_MSG(image.h > 0, "Height must be > 0");
-
-        switch (mp_obj_get_int(args[2])) {
-            case PIXFORMAT_BINARY:
-                image.pixfmt = PIXFORMAT_BINARY;
-                break;
-            case PIXFORMAT_GRAYSCALE:
-                image.pixfmt = PIXFORMAT_GRAYSCALE;
-                break;
-            case PIXFORMAT_RGB565:
-                image.pixfmt = PIXFORMAT_RGB565;
-                break;
-            default:
-                PY_ASSERT_TRUE_MSG(false, "Unsupported type");
-                break;
-        }
-    } else {
+    if (mp_obj_is_str(pos_args[0])) {
         #if defined(IMLIB_ENABLE_IMAGE_FILE_IO)
-        fb_alloc_mark();
         FIL fp;
         img_read_settings_t rs;
+        const char *path = mp_obj_str_get_str(pos_args[0]);
+
+        fb_alloc_mark();
         imlib_read_geometry(&fp, &image, path, &rs);
         file_buffer_off(&fp);
         file_close(&fp);
-        #else
-        (void) path;
-        mp_raise_msg(&mp_type_OSError, MP_ERROR_TEXT("Image I/O is not supported"));
-        #endif //IMLIB_ENABLE_IMAGE_FILE_IO
-    }
 
-    size_t size = image_size(&image);
+        if (args[ARG_copy_to_fb].u_bool) {
+            py_helper_set_to_framebuffer(&image);
+        } else {
+            image.data = xalloc(image_size(&image));
+        }
 
-    if (copy_to_fb) {
-        py_helper_set_to_framebuffer(&image);
-    } else if (arg_other) {
-        PY_ASSERT_TRUE_MSG((size <= image_size(arg_other)),
-                           "The new image won't fit in the target frame buffer!");
-        image.data = arg_other->data;
-    } else if (mode) {
-        image.data = xalloc(size);
-    }
-
-    if (mode) {
-        memset(image.data, 0, size);
-    } else {
-        #if defined(IMLIB_ENABLE_IMAGE_FILE_IO)
         imlib_load_image(&image, path);
         fb_alloc_free_till_mark();
-        #endif
+        #else
+        mp_raise_msg(&mp_type_OSError, MP_ERROR_TEXT("Image I/O is not supported"));
+        #endif // IMLIB_ENABLE_IMAGE_FILE_IO
+    } else {
+        image.w = mp_obj_get_int(pos_args[0]);
+        PY_ASSERT_TRUE_MSG(image.w > 0, "Image width must be > 0");
+
+        image.h = args[ARG_height].u_int;
+        PY_ASSERT_TRUE_MSG(image.h > 0, "Image height must be > 0");
+
+        image.pixfmt = args[ARG_pixformat].u_int;
+        PY_ASSERT_TRUE_MSG(IMLIB_PIXFORMAT_IS_VALID(image.pixfmt), "Pixel format is not set or unsupported");
+
+        mp_buffer_info_t bufinfo = {0};
+        if (args[ARG_buffer].u_obj != mp_const_none) {
+            mp_get_buffer_raise(args[ARG_buffer].u_obj, &bufinfo, MP_BUFFER_READ);
+            image.size = bufinfo.len;
+        } else if (image.is_compressed) {
+            mp_raise_ValueError(MP_ERROR_TEXT("Expected an image buffer"));
+        }
+
+        if (args[ARG_copy_to_fb].u_bool) {
+            py_helper_set_to_framebuffer(&image);
+            if (bufinfo.buf != NULL) {
+                memcpy(image.data, bufinfo.buf, bufinfo.len);
+            } else {
+                memset(image.data, 0, image_size(&image));
+            }
+        } else if (bufinfo.buf != NULL) {
+            image.data = bufinfo.buf;
+        } else {
+            image.data = xalloc0(image_size(&image));
+        }
     }
 
-    py_helper_update_framebuffer(&image);
-
-    if (arg_other) {
-        memcpy(arg_other, &image, sizeof(image_t));
-    }
-
-    if (copy_to_fb) {
+    if (args[ARG_copy_to_fb].u_bool) {
         framebuffer_update_jpeg_buffer();
     }
-
     return py_image_from_struct(&image);
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_load_image_obj, 1, py_image_load_image);
