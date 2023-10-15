@@ -12,6 +12,7 @@
 #include <stdbool.h>
 #include <string.h>
 #include "ini.h"
+#include "file_utils.h"
 
 /*-------------------------------------------------------------------------
    _isppace.c - part of ctype.h
@@ -190,7 +191,7 @@ int ini_fgetc(FIL *fp) {
     char c;
     UINT b;
 
-    if (f_read(fp, &c, 1, &b) != FR_OK || b != 1) {
+    if (file_ll_read(fp, &c, 1, &b) != FR_OK || b != 1) {
         return (EOF);
     }
     return (c);

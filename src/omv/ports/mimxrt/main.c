@@ -59,7 +59,7 @@
 #include "tinyusb_debug.h"
 #include "fb_alloc.h"
 #include "dma_alloc.h"
-#include "ff_wrapper.h"
+#include "file_utils.h"
 #include "mimxrt_hal.h"
 
 extern uint8_t _sstack, _estack, _heap_start, _heap_end;

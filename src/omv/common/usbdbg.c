@@ -24,7 +24,6 @@
 #include "sensor.h"
 #endif
 #include "framebuffer.h"
-#include "ff.h"
 #include "usbdbg.h"
 #include "omv_boardconfig.h"
 #include "py_image.h"

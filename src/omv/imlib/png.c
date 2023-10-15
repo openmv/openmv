@@ -12,7 +12,7 @@
 #include "imlib.h"
 #include "py/mphal.h"
 #include "py/runtime.h"
-#include "ff_wrapper.h"
+#include "file_utils.h"
 #if defined(IMLIB_ENABLE_PNG_ENCODER) || defined(IMLIB_ENABLE_PNG_DECODER)
 #include "lodepng.h"
 #include "umm_malloc.h"
@@ -265,12 +265,12 @@ void png_decompress(image_t *dst, image_t *src) {
 void png_read_geometry(FIL *fp, image_t *img, const char *path, png_read_settings_t *rs) {
     uint32_t header;
     file_seek(fp, 12); // start of IHDR
-    read_long(fp, &header);
+    file_read(fp, &header, 4);
     if (header == 0x52444849) {
         // IHDR
         uint32_t width, height;
-        read_long(fp, &width);
-        read_long(fp, &height);
+        file_read(fp, &width, 4);
+        file_read(fp, &height, 4);
         width = __builtin_bswap32(width);
         height = __builtin_bswap32(height);
 
@@ -283,23 +283,23 @@ void png_read_geometry(FIL *fp, image_t *img, const char *path, png_read_setting
         img->size = rs->png_size;
         img->pixfmt = PIXFORMAT_PNG;
     } else {
-        ff_file_corrupted(fp);
+        file_raise_corrupted(fp);
     }
 }
 
 // This function reads the pixel values of an image.
 void png_read_pixels(FIL *fp, image_t *img) {
     file_seek(fp, 0);
-    read_data(fp, img->pixels, img->size);
+    file_read(fp, img->pixels, img->size);
 }
 
 void png_read(image_t *img, const char *path) {
     FIL fp;
     png_read_settings_t rs;
 
-    file_read_open(&fp, path);
+    // Do not use file buferring here.
+    file_open(&fp, path, false, FA_READ | FA_OPEN_EXISTING);
 
-    // Do not use file_buffer_on() here.
     png_read_geometry(&fp, img, path, &rs);
 
     if (!img->pixels) {
@@ -312,13 +312,13 @@ void png_read(image_t *img, const char *path) {
 
 void png_write(image_t *img, const char *path) {
     FIL fp;
-    file_write_open(&fp, path);
+    file_open(&fp, path, false, FA_WRITE | FA_CREATE_ALWAYS);
     if (img->pixfmt == PIXFORMAT_PNG) {
-        write_data(&fp, img->pixels, img->size);
+        file_write(&fp, img->pixels, img->size);
     } else {
         image_t out = { .w = img->w, .h = img->h, .pixfmt = PIXFORMAT_PNG, .size = 0, .pixels = NULL }; // alloc in png compress
         png_compress(img, &out);
-        write_data(&fp, out.pixels, out.size);
+        file_write(&fp, out.pixels, out.size);
         fb_free(); // frees alloc in png_compress()
     }
     file_close(&fp);

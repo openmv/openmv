@@ -11,10 +11,10 @@
 #if (OMV_ENABLE_HASH == 1)
 #include STM32_HAL_H
 #include <stdbool.h>
-#include <ff_wrapper.h>
 #include <stdio.h>
-#include "fb_alloc.h"
 #include "hash.h"
+#include "fb_alloc.h"
+#include "file_utils.h"
 
 #define BLOCK_SIZE    (512)
 static HASH_HandleTypeDef hhash;
@@ -56,7 +56,7 @@ int hash_from_file(const char *path, uint8_t *digest) {
     int ret = -1;
     uint8_t *buf = fb_alloc(BLOCK_SIZE, FB_ALLOC_NO_HINT);
 
-    if (f_open_helper(&fp, path, FA_READ | FA_OPEN_EXISTING) != FR_OK) {
+    if (file_ll_open(&fp, path, FA_READ | FA_OPEN_EXISTING) != FR_OK) {
         goto error;
     }
 
@@ -66,7 +66,7 @@ int hash_from_file(const char *path, uint8_t *digest) {
     while (size) {
         // Read a block.
         bytes = MIN(size, BLOCK_SIZE);
-        if (f_read(&fp, buf, bytes, &bytes_out) != FR_OK || bytes != bytes_out) {
+        if (file_ll_read(&fp, buf, bytes, &bytes_out) != FR_OK || bytes != bytes_out) {
             printf("hash_from_file: file read error!\n");
             goto error;
         }
@@ -92,7 +92,7 @@ int hash_from_file(const char *path, uint8_t *digest) {
 
 error:
     fb_free();
-    f_close(&fp);
+    file_ll_close(&fp);
     return ret;
 }
 #endif //OMV_ENABLE_HASH == 1

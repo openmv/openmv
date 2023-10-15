@@ -12,7 +12,7 @@
  */
 #include <stdio.h>
 
-#include "ff_wrapper.h"
+#include "file_utils.h"
 #include "imlib.h"
 #include "omv_boardconfig.h"
 
@@ -2202,7 +2202,7 @@ int jpeg_clean_trailing_bytes(int size, uint8_t *data) {
 void jpeg_read_geometry(FIL *fp, image_t *img, const char *path, jpg_read_settings_t *rs) {
     for (;;) {
         uint16_t header;
-        read_word(fp, &header);
+        file_read(fp, &header, 2);
         header = __REV16(header);
         if ((0xFFD0 <= header) && (header <= 0xFFD9)) {
             continue;
@@ -2211,19 +2211,19 @@ void jpeg_read_geometry(FIL *fp, image_t *img, const char *path, jpg_read_settin
                    || ((0xFFE0 <= header) && (header <= 0xFFEF))
                    || ((0xFFF0 <= header) && (header <= 0xFFFE))) {
             uint16_t size;
-            read_word(fp, &size);
+            file_read(fp, &size, 2);
             size = __REV16(size);
             if (((0xFFC0 <= header) && (header <= 0xFFC3))
                 || ((0xFFC5 <= header) && (header <= 0xFFC7))
                 || ((0xFFC9 <= header) && (header <= 0xFFCB))
                 || ((0xFFCD <= header) && (header <= 0xFFCF))) {
-                read_byte_ignore(fp);
+                file_read(fp, NULL, 1);
                 uint16_t height;
-                read_word(fp, &height);
+                file_read(fp, &height, 2);
                 height = __REV16(height);
 
                 uint16_t width;
-                read_word(fp, &width);
+                file_read(fp, &width, 2);
                 width = __REV16(width);
 
                 rs->jpg_w = width;
@@ -2239,7 +2239,7 @@ void jpeg_read_geometry(FIL *fp, image_t *img, const char *path, jpg_read_settin
                 file_seek(fp, f_tell(fp) + size - 2);
             }
         } else {
-            ff_file_corrupted(fp);
+            file_raise_corrupted(fp);
         }
     }
 }
@@ -2247,16 +2247,15 @@ void jpeg_read_geometry(FIL *fp, image_t *img, const char *path, jpg_read_settin
 // This function reads the pixel values of an image.
 void jpeg_read_pixels(FIL *fp, image_t *img) {
     file_seek(fp, 0);
-    read_data(fp, img->pixels, img->size);
+    file_read(fp, img->pixels, img->size);
 }
 
 void jpeg_read(image_t *img, const char *path) {
     FIL fp;
     jpg_read_settings_t rs;
 
-    file_read_open(&fp, path);
-
-    // Do not use file_buffer_on() here.
+    // Do not use file buffering here.
+    file_open(&fp, path, false, FA_READ | FA_OPEN_EXISTING);
     jpeg_read_geometry(&fp, img, path, &rs);
 
     if (!img->pixels) {
@@ -2269,16 +2268,16 @@ void jpeg_read(image_t *img, const char *path) {
 
 void jpeg_write(image_t *img, const char *path, int quality) {
     FIL fp;
-    file_write_open(&fp, path);
+    file_open(&fp, path, false, FA_WRITE | FA_CREATE_ALWAYS);
     if (IM_IS_JPEG(img)) {
-        write_data(&fp, img->pixels, img->size);
+        file_write(&fp, img->pixels, img->size);
     } else {
         image_t out = { .w = img->w, .h = img->h, .pixfmt = PIXFORMAT_JPEG, .size = 0, .pixels = NULL }; // alloc in jpeg compress
         // When jpeg_compress needs more memory than in currently allocated it
         // will try to realloc. MP will detect that the pointer is outside of
         // the heap and return NULL which will cause an out of memory error.
         jpeg_compress(img, &out, quality, false);
-        write_data(&fp, out.pixels, out.size);
+        file_write(&fp, out.pixels, out.size);
         fb_free(); // frees alloc in jpeg_compress()
     }
     file_close(&fp);

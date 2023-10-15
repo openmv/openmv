@@ -17,7 +17,7 @@ SRCS += $(addprefix alloc/,     \
 
 SRCS += $(addprefix common/,    \
 	array.c                     \
-	ff_wrapper.c                \
+	file_utils.c                \
 	ini.c                       \
 	ringbuf.c                   \
 	trace.c                     \

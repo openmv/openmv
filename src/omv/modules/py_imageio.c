@@ -22,7 +22,7 @@
 #include "py_imageio.h"
 
 #if defined(IMLIB_ENABLE_IMAGE_FILE_IO)
-#include "ff_wrapper.h"
+#include "file_utils.h"
 #endif
 #include "framebuffer.h"
 #include "omv_boardconfig.h"
@@ -182,37 +182,37 @@ STATIC mp_obj_t py_imageio_write(mp_obj_t self, mp_obj_t img_obj) {
     } else if (stream->type == IMAGE_IO_FILE_STREAM) {
         FIL *fp = &stream->fp;
 
-        write_long(fp, elapsed_ms);
-        write_long(fp, image->w);
-        write_long(fp, image->h);
+        file_write_long(fp, elapsed_ms);
+        file_write_long(fp, image->w);
+        file_write_long(fp, image->h);
 
         char padding[ALIGN_SIZE] = {};
 
         if (stream->version < NEW_PIXFORMAT_VER) {
             if (image->pixfmt == PIXFORMAT_BINARY) {
-                write_long(fp, OLD_BINARY_BPP);
+                file_write_long(fp, OLD_BINARY_BPP);
             } else if (image->pixfmt == PIXFORMAT_GRAYSCALE) {
-                write_long(fp, OLD_GRAYSCALE_BPP);
+                file_write_long(fp, OLD_GRAYSCALE_BPP);
             } else if (image->pixfmt == PIXFORMAT_RGB565) {
-                write_long(fp, OLD_RGB565_BPP);
+                file_write_long(fp, OLD_RGB565_BPP);
             } else if (image->pixfmt == PIXFORMAT_BAYER) {
-                write_long(fp, OLD_BAYER_BPP);
+                file_write_long(fp, OLD_BAYER_BPP);
             } else if (image->pixfmt == PIXFORMAT_JPEG) {
-                write_long(fp, image->size);
+                file_write_long(fp, image->size);
             } else {
                 mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Invalid image stream bpp"));
             }
         } else {
-            write_long(fp, image->pixfmt);
-            write_long(fp, image->size);
-            write_data(fp, padding, AFTER_SIZE_PADDING);
+            file_write_long(fp, image->pixfmt);
+            file_write_long(fp, image->size);
+            file_write(fp, padding, AFTER_SIZE_PADDING);
         }
 
         uint32_t size = image_size(image);
-        write_data(fp, image->data, size);
+        file_write(fp, image->data, size);
 
         if (size % ALIGN_SIZE) {
-            write_data(fp, padding, ALIGN_SIZE - (size % ALIGN_SIZE));
+            file_write(fp, padding, ALIGN_SIZE - (size % ALIGN_SIZE));
         }
 
         // Seeking to the middle of a file and writing data corrupts the remainder of the file. So,
@@ -251,7 +251,7 @@ STATIC void int_py_imageio_pause(py_imageio_obj_t *stream, bool pause) {
     if (0) {
     #if defined(IMLIB_ENABLE_IMAGE_FILE_IO)
     } else if (stream->type == IMAGE_IO_FILE_STREAM) {
-        read_long(&stream->fp, &elapsed_ms);
+        file_read(&stream->fp, &elapsed_ms, 4);
     #endif
     } else if (stream->type == IMAGE_IO_MEMORY_STREAM) {
         elapsed_ms = *((uint32_t *) (stream->buffer + (stream->offset * stream->size)));
@@ -274,11 +274,11 @@ STATIC void int_py_imageio_read_chunk(py_imageio_obj_t *stream, image_t *image, 
 
     int_py_imageio_pause(stream, pause);
 
-    read_long(fp, (uint32_t *) &image->w);
-    read_long(fp, (uint32_t *) &image->h);
+    file_read(fp, &image->w, 4);
+    file_read(fp, &image->h, 4);
 
     uint32_t bpp;
-    read_long(fp, (uint32_t *) &bpp);
+    file_read(fp, &bpp, 4);
 
     if (stream->version < NEW_PIXFORMAT_VER) {
         if (bpp < 0) {
@@ -300,10 +300,10 @@ STATIC void int_py_imageio_read_chunk(py_imageio_obj_t *stream, image_t *image, 
         }
 
         image->pixfmt = bpp;
-        read_long(fp, (uint32_t *) &image->size);
+        file_read(fp, &image->size, 4);
 
         char ignore[AFTER_SIZE_PADDING];
-        read_data(fp, ignore, AFTER_SIZE_PADDING);
+        file_read(fp, ignore, AFTER_SIZE_PADDING);
     }
 }
 #endif
@@ -377,7 +377,7 @@ STATIC mp_obj_t py_imageio_read(uint n_args, const mp_obj_t *args, mp_map_t *kw_
     #if defined(IMLIB_ENABLE_IMAGE_FILE_IO)
     } else if (stream->type == IMAGE_IO_FILE_STREAM) {
         FIL *fp = &stream->fp;
-        read_data(fp, image.data, size);
+        file_read(fp, image.data, size);
 
         // Check if original byte reversed data.
         if ((image.pixfmt == PIXFORMAT_RGB565) && (stream->version == ORIGINAL_VER)) {
@@ -395,7 +395,7 @@ STATIC mp_obj_t py_imageio_read(uint n_args, const mp_obj_t *args, mp_map_t *kw_
 
         if (size % ALIGN_SIZE) {
             char ignore[ALIGN_SIZE];
-            read_data(fp, ignore, ALIGN_SIZE - (size % ALIGN_SIZE));
+            file_read(fp, ignore, ALIGN_SIZE - (size % ALIGN_SIZE));
         }
 
         if (stream->offset >= stream->count) {
@@ -507,20 +507,20 @@ STATIC mp_obj_t py_imageio_make_new(const mp_obj_type_t *type, size_t n_args, si
         char mode = mp_obj_str_get_str(args[1])[0];
 
         if ((mode == 'W') || (mode == 'w')) {
-            file_read_write_open_always(fp, mp_obj_str_get_str(args[0]));
+            file_open(fp, mp_obj_str_get_str(args[0]), false, FA_READ | FA_WRITE | FA_OPEN_ALWAYS);
             const char string[] = "OMV IMG STR V2.0";
             stream->version = NEW_PIXFORMAT_VER;
 
             // Overwrite if file is too small.
             if (f_size(fp) < MAGIC_SIZE) {
-                write_data(fp, string, sizeof(string) - 1); // exclude null terminator
+                file_write(fp, string, sizeof(string) - 1); // exclude null terminator
             } else {
                 uint8_t version_hi, period, version_lo;
                 char temp[sizeof(string) - 3] = {};
-                read_data(fp, temp, sizeof(temp) - 1);
-                read_byte(fp, &version_hi);
-                read_byte(fp, &period);
-                read_byte(fp, &version_lo);
+                file_read(fp, temp, sizeof(temp) - 1);
+                file_read(fp, &version_hi, 1);
+                file_read(fp, &period, 1);
+                file_read(fp, &version_lo, 1);
                 int version = ((version_hi - '0') * 10) + (version_lo - '0');
 
                 // Overwrite if file magic does not match.
@@ -530,7 +530,7 @@ STATIC mp_obj_t py_imageio_make_new(const mp_obj_type_t *type, size_t n_args, si
                     || (version != RGB565_FIXED_VER)
                     || (version != NEW_PIXFORMAT_VER)) {
                     file_seek(fp, 0);
-                    write_data(fp, string, sizeof(string) - 1); // exclude null terminator
+                    file_write(fp, string, sizeof(string) - 1); // exclude null terminator
                 } else {
                     file_close(fp);
                     mode = 'R';
@@ -540,14 +540,12 @@ STATIC mp_obj_t py_imageio_make_new(const mp_obj_type_t *type, size_t n_args, si
 
         if ((mode == 'R') || (mode == 'r')) {
             uint8_t version_hi, version_lo;
-            file_read_write_open_existing(fp, mp_obj_str_get_str(args[0]));
-            read_long_expect(fp, *((uint32_t *) "OMV ")); // OpenMV
-            read_long_expect(fp, *((uint32_t *) "IMG ")); // Image
-            read_long_expect(fp, *((uint32_t *) "STR ")); // Stream
-            read_byte_expect(fp, 'V');
-            read_byte(fp, &version_hi);
-            read_byte_expect(fp, '.');
-            read_byte(fp, &version_lo);
+            file_open(fp, mp_obj_str_get_str(args[0]), false, FA_READ | FA_WRITE | FA_OPEN_EXISTING);
+            file_read_check(fp, "OMV IMG STR ", 12); // Magic
+            file_read_check(fp, "V", 1);
+            file_read(fp, &version_hi, 1);
+            file_read_check(fp, ".", 1);
+            file_read(fp, &version_lo, 1);
 
             stream->version = ((version_hi - '0') * 10) + (version_lo - '0');
 

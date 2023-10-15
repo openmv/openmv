@@ -20,7 +20,7 @@
 #include "py_helper.h"
 #include "py_image.h"
 
-#include "ff_wrapper.h"
+#include "file_utils.h"
 #include "framebuffer.h"
 #include "omv_boardconfig.h"
 
@@ -144,7 +144,7 @@ STATIC mp_obj_t py_mjpeg_open(uint n_args, const mp_obj_t *args, mp_map_t *kw_ar
     mjpeg->height = py_helper_keyword_int(n_args, args, 2, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_height), MAIN_FB()->h);
     mjpeg->frames = 0;
     mjpeg->bytes = 0;
-    file_write_open(&mjpeg->fp, mp_obj_str_get_str(args[0]));
+    file_open(&mjpeg->fp, mp_obj_str_get_str(args[0]), false, FA_WRITE | FA_CREATE_ALWAYS);
     mjpeg_open(&mjpeg->fp, mjpeg->width, mjpeg->height);
     return mjpeg;
 }

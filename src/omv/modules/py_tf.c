@@ -23,7 +23,7 @@
 
 #ifdef IMLIB_ENABLE_TF
 #include "py_image.h"
-#include "ff_wrapper.h"
+#include "file_utils.h"
 #include "py_tf.h"
 #include "libtf_builtin_models.h"
 #define GRAYSCALE_RANGE    ((COLOR_GRAYSCALE_MAX) -(COLOR_GRAYSCALE_MIN))
@@ -178,12 +178,12 @@ STATIC mp_obj_t int_py_tf_load(mp_obj_t path_obj, bool alloc_mode, bool helper_m
     if (tf_model->model_data == NULL) {
         #if defined(IMLIB_ENABLE_IMAGE_FILE_IO)
         FIL fp;
-        file_read_open(&fp, path);
+        file_open(&fp, path, false, FA_READ | FA_OPEN_EXISTING);
         tf_model->model_data_len = f_size(&fp);
         tf_model->model_data = alloc_mode
             ? fb_alloc(tf_model->model_data_len, FB_ALLOC_PREFER_SIZE)
             : xalloc(tf_model->model_data_len);
-        read_data(&fp, tf_model->model_data, tf_model->model_data_len);
+        file_read(&fp, tf_model->model_data, tf_model->model_data_len);
         file_close(&fp);
         #else
         mp_raise_msg(&mp_type_OSError, MP_ERROR_TEXT("Image I/O is not supported"));
