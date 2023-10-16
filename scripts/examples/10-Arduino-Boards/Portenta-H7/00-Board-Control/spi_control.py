@@ -8,9 +8,9 @@ import sensor
 import time
 from pyb import Pin, SPI
 
-cs = Pin("P3", Pin.OUT_OD)
-rst = Pin("P7", Pin.OUT_PP)
-rs = Pin("P8", Pin.OUT_PP)
+cs = Pin("D11", Pin.OUT_OD)
+rst = Pin("D12", Pin.OUT_PP)
+rs = Pin("D13", Pin.OUT_PP)
 # The hardware SPI bus for your OpenMV Cam is always SPI bus 2.
 
 # NOTE: The SPI clock frequency will not always be the requested frequency. The hardware only supports

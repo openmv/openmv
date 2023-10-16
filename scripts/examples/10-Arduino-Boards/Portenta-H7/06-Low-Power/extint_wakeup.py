@@ -12,7 +12,7 @@ def callback(line):
 
 
 led = pyb.LED(3)
-pin = Pin("P5", Pin.IN, Pin.PULL_UP)
+pin = Pin("D0", Pin.IN, Pin.PULL_UP)
 ext = ExtInt(pin, ExtInt.IRQ_FALLING, Pin.PULL_UP, callback)
 
 # Enter Stop Mode. Note the IDE will disconnect.
