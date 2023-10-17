@@ -12,6 +12,7 @@
 #if OMV_ENABLE_VOSPI || OMV_ENABLE_LEPTON
 
 #include <stdint.h>
+#include <string.h>
 #include "py/mphal.h"
 
 #include "vospi.h"
