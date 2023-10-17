@@ -19,6 +19,7 @@
 #include "gc.h"
 
 #define MAX_ROW          (480u)
+#define MIN_MEM          (10 * 1024)
 #define MAX_CORNERS      (2000u)
 #define Compare(X, Y)    ((X) >= (Y))
 
@@ -82,7 +83,6 @@ void agast_detect(image_t *image, array_t *keypoints, int threshold, rectangle_t
         // Non-max suppression
         nonmax_suppression(corners, num_corners, keypoints);
     }
-
     // Free corners;
     fb_free();
 }
@@ -91,7 +91,7 @@ static void nonmax_suppression(corner_t *corners, int num_corners, array_t *keyp
     gc_info_t info;
 
     int last_row;
-    int16_t row_start[MAX_ROW + 1];
+    int16_t *row_start;
     const int sz = num_corners;
 
     /* Point above points (roughly) to the pixel above
@@ -102,6 +102,7 @@ static void nonmax_suppression(corner_t *corners, int num_corners, array_t *keyp
     /* Find where each row begins (the corners are output in raster scan order).
        A beginning of -1 signifies that there are no corners on that row. */
     last_row = corners[sz - 1].y;
+    row_start = fb_alloc((last_row + 1) * sizeof(uint16_t), FB_ALLOC_NO_HINT);
 
     for (int i = 0; i < last_row + 1; i++) {
         row_start[i] = -1;
@@ -174,7 +175,7 @@ static void nonmax_suppression(corner_t *corners, int num_corners, array_t *keyp
         }
 
         gc_info(&info);
-#define MIN_MEM    (10 * 1024)
+
         // Allocate keypoints until we're almost out of memory
         if (info.free < MIN_MEM) {
             // Try collecting memory
@@ -185,12 +186,13 @@ static void nonmax_suppression(corner_t *corners, int num_corners, array_t *keyp
                 break;
             }
         }
-
-        #undef MIN_MEM
         array_push_back(keypoints, alloc_keypoint(pos.x, pos.y, pos.score));
         nonmax:
         ;
     }
+
+    // Free temp rows.
+    fb_free();
 }
 
 // *INDENT-OFF*
