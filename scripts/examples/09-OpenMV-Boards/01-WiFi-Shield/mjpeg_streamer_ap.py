@@ -62,18 +62,21 @@ def start_streaming(s):
             "Content-Type: image/jpeg\r\n"
             "Content-Length:" + str(cframe.size()) + "\r\n\r\n"
         )
-        client.send(header)
-        client.send(cframe)
+        client.sendall(header)
+        client.sendall(cframe)
         print(clock.fps())
 
 
 while True:
     # Create server socket
     s = usocket.socket(usocket.AF_INET, usocket.SOCK_STREAM)
+    s.setsockopt(usocket.SOL_SOCKET, usocket.SO_REUSEADDR, True)
     try:
         # Bind and listen
         s.bind([HOST, PORT])
         s.listen(5)
+        # Set server socket to blocking
+        s.setblocking(True)
 
         # Set server socket timeout
         # NOTE: Due to a WINC FW bug, the server socket must be closed and reopened if

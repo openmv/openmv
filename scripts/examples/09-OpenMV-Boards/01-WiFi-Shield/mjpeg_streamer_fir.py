@@ -37,6 +37,9 @@ s = usocket.socket(usocket.AF_INET, usocket.SOCK_STREAM)
 s.bind((HOST, PORT))
 s.listen(5)
 
+# Set server socket to blocking
+s.setblocking(True)
+
 # Set timeout to 1s
 s.settimeout(1.0)
 
@@ -78,11 +81,11 @@ while True:
     image.draw_string(0, 16, "To max: %0.2f" % to_max, color=(0xFF, 0x00, 0x00))
 
     cimage = image.compressed(quality=90)
-    client.send(
+    client.sendall(
         "\r\n--openmv\r\n"
         "Content-Type: image/jpeg\r\n"
         "Content-Length:" + str(cimage.size()) + "\r\n\r\n"
     )
-    client.send(cimage)
+    client.sendall(cimage)
 
 client.close()
