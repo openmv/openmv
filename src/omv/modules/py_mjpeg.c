@@ -188,6 +188,10 @@ const mp_obj_module_t mjpeg_module = {
     .globals = (mp_obj_t) &globals_dict,
 };
 
-MP_REGISTER_MODULE(MP_QSTR_mjpeg, mjpeg_module);
+#ifdef MP_REGISTER_EXTENSIBLE_MODULE
+MP_REGISTER_EXTENSIBLE_MODULE(MP_QSTR_mjpeg, mjpeg_module);
+#else
+MP_REGISTER_MODULE(MP_QSTR_umjpeg, mjpeg_module);
+#endif
 
 #endif // IMLIB_ENABLE_IMAGE_FILE_IO
