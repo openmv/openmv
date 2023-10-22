@@ -29,6 +29,7 @@ print(wlan.ifconfig())
 
 # Create server socket
 s = usocket.socket(usocket.AF_INET, usocket.SOCK_STREAM)
+s.setsockopt(usocket.SOL_SOCKET, usocket.SO_REUSEADDR, True)
 
 # Bind and listen
 s.bind([HOST, PORT])
@@ -50,7 +51,7 @@ def start_streaming(s):
     # Should parse client request here
 
     # Send multipart header
-    client.send(
+    client.sendall(
         "HTTP/1.1 200 OK\r\n"
         "Server: OpenMV\r\n"
         "Content-Type: multipart/x-mixed-replace;boundary=openmv\r\n"
@@ -72,8 +73,8 @@ def start_streaming(s):
             "Content-Type: image/jpeg\r\n"
             "Content-Length:" + str(cframe.size()) + "\r\n\r\n"
         )
-        client.send(header)
-        client.send(cframe)
+        client.sendall(header)
+        client.sendall(cframe)
         print(clock.fps())
 
 
