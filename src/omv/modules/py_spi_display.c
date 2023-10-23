@@ -352,7 +352,7 @@ static void spi_display_deinit(py_display_obj_t *self) {
 }
 
 mp_obj_t spi_display_make_new(const mp_obj_type_t *type, size_t n_args, size_t n_kw, const mp_obj_t *all_args) {
-    enum { ARG_width, ARG_height, ARG_refresh, ARG_triple_buffer, ARG_bgr, ARG_byte_swap};
+    enum { ARG_width, ARG_height, ARG_refresh, ARG_bgr, ARG_byte_swap, ARG_triple_buffer };
     static const mp_arg_t allowed_args[] = {
         { MP_QSTR_width,         MP_ARG_INT,  {.u_int = 128  } },
         { MP_QSTR_height,        MP_ARG_INT,  {.u_int = 160  } },
