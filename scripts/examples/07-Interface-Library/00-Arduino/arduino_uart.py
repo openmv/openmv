@@ -1,3 +1,7 @@
+# This work is licensed under the MIT license.
+# Copyright (c) 2013-2023 OpenMV LLC. All rights reserved.
+# https://github.com/openmv/openmv/blob/master/LICENSE
+#
 # Basic UART communications between OpenMV and Arduino Uno.
 
 # 1) Wire up your OpenMV Cam to your Arduino Uno like this:

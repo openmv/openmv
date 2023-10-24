@@ -1,3 +1,7 @@
+# This work is licensed under the MIT license.
+# Copyright (c) 2013-2023 OpenMV LLC. All rights reserved.
+# https://github.com/openmv/openmv/blob/master/LICENSE
+#
 # DAC Timed Write Example
 #
 # This example shows how to use the DAC pin output onboard your OpenMV Cam.

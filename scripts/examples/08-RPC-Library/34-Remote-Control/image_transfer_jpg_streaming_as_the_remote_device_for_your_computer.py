@@ -1,3 +1,7 @@
+# This work is licensed under the MIT license.
+# Copyright (c) 2013-2023 OpenMV LLC. All rights reserved.
+# https://github.com/openmv/openmv/blob/master/LICENSE
+#
 # Image Transfer - As The Remote Device
 #
 # This script is meant to talk to the "image_transfer_jpg_streaming_as_the_controller_device.py" on your computer.

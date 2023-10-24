@@ -1,3 +1,7 @@
+# This work is licensed under the MIT license.
+# Copyright (c) 2013-2023 OpenMV LLC. All rights reserved.
+# https://github.com/openmv/openmv/blob/master/LICENSE
+#
 # Template Matching Example - Normalized Cross Correlation (NCC)
 #
 # This example shows off how to use the NCC feature of your OpenMV Cam to match

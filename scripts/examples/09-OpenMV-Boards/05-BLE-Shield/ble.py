@@ -1,3 +1,7 @@
+# This work is licensed under the MIT license.
+# Copyright (c) 2013-2023 OpenMV LLC. All rights reserved.
+# https://github.com/openmv/openmv/blob/master/LICENSE
+#
 # ble.py - ASM001/ASM002 BLE Driver
 #
 # Note: You should copy this module to your OpenMV Cam's SD card or internal

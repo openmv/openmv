@@ -1,3 +1,7 @@
+# This work is licensed under the MIT license.
+# Copyright (c) 2013-2023 OpenMV LLC. All rights reserved.
+# https://github.com/openmv/openmv/blob/master/LICENSE
+#
 # MAVLink AprilTags Landing Target Script.
 #
 # This script sends out AprilTag detections using the MAVLink protocol to

@@ -1,3 +1,7 @@
+# This work is licensed under the MIT license.
+# Copyright (c) 2013-2023 OpenMV LLC. All rights reserved.
+# https://github.com/openmv/openmv/blob/master/LICENSE
+#
 # I2C scanner examples
 # 7-bit addresses for NANO33 BLE SENSE
 # Sensors on I2C 1 bus:

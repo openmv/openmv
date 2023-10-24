@@ -1,3 +1,7 @@
+# This work is licensed under the MIT license.
+# Copyright (c) 2013-2023 OpenMV LLC. All rights reserved.
+# https://github.com/openmv/openmv/blob/master/LICENSE
+#
 # AprilTags Pixy SPI Emulation Script
 #
 # This script allows your OpenMV Cam to transmit AprilTag detection data like

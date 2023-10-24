@@ -1,3 +1,7 @@
+# This work is licensed under the MIT license.
+# Copyright (c) 2013-2023 OpenMV LLC. All rights reserved.
+# https://github.com/openmv/openmv/blob/master/LICENSE
+#
 # TV Example
 #
 # Note: To run this example you will need a tv or wireless tv shield for your OpenMV Cam.

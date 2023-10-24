@@ -1,3 +1,7 @@
+# This work is licensed under the MIT license.
+# Copyright (c) 2013-2023 OpenMV LLC. All rights reserved.
+# https://github.com/openmv/openmv/blob/master/LICENSE
+#
 # Object tracking with keypoints example.
 # Show the camera an object and then run the script. A set of keypoints will be extracted
 # once and then tracked in the following frames. If you want a new set of keypoints re-run

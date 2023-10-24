@@ -1,3 +1,7 @@
+# This work is licensed under the MIT license.
+# Copyright (c) 2013-2023 OpenMV LLC. All rights reserved.
+# https://github.com/openmv/openmv/blob/master/LICENSE
+#
 # This example shows off using the frogeye2020 event camera.
 #
 # The frogeye2020 is a 320x240 event camera. There are two bits per pixel which show no motion,

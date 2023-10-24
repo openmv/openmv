@@ -1,3 +1,7 @@
+# This work is licensed under the MIT license.
+# Copyright (c) 2013-2023 OpenMV LLC. All rights reserved.
+# https://github.com/openmv/openmv/blob/master/LICENSE
+#
 # Single Color RGB565 Blob Tracking Example
 #
 # This example shows off single color RGB565 tracking using the OpenMV Cam using the FLIR LEPTON.

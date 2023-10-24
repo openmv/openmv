@@ -1,3 +1,7 @@
+# This work is licensed under the MIT license.
+# Copyright (c) 2013-2023 OpenMV LLC. All rights reserved.
+# https://github.com/openmv/openmv/blob/master/LICENSE
+#
 # Remote Control - As The Remote Device
 #
 # This script configures your OpenMV Cam as a co-processor that can be remotely controlled by
