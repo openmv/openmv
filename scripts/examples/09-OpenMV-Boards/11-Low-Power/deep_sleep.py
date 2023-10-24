@@ -1,3 +1,7 @@
+# This work is licensed under the MIT license.
+# Copyright (c) 2013-2023 OpenMV LLC. All rights reserved.
+# https://github.com/openmv/openmv/blob/master/LICENSE
+#
 # Deep Sleep Mode Example
 # This example demonstrates the low-power deep sleep mode plus sensor shutdown.
 # Note the camera will reset after wake-up from deep sleep. To find out if the cause of reset

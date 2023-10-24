@@ -1,3 +1,7 @@
+# This work is licensed under the MIT license.
+# Copyright (c) 2013-2023 OpenMV LLC. All rights reserved.
+# https://github.com/openmv/openmv/blob/master/LICENSE
+#
 # Automatic RGB565 Color Tracking Example
 #
 # This example shows off single color automatic RGB565 color tracking using the OpenMV Cam.

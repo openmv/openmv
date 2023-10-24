@@ -1,3 +1,7 @@
+# This work is licensed under the MIT license.
+# Copyright (c) 2013-2023 OpenMV LLC. All rights reserved.
+# https://github.com/openmv/openmv/blob/master/LICENSE
+#
 # Iris Detection 2 Example
 #
 # This example shows how to find the eye gaze (pupil detection) after finding

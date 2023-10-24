@@ -1,3 +1,7 @@
+# This work is licensed under the MIT license.
+# Copyright (c) 2013-2023 OpenMV LLC. All rights reserved.
+# https://github.com/openmv/openmv/blob/master/LICENSE
+#
 # WINC Firmware Update Script.
 #
 # This script updates the ATWINC1500 WiFi module firmware.

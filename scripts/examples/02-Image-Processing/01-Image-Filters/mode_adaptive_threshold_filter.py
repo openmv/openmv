@@ -1,3 +1,7 @@
+# This work is licensed under the MIT license.
+# Copyright (c) 2013-2023 OpenMV LLC. All rights reserved.
+# https://github.com/openmv/openmv/blob/master/LICENSE
+#
 # Mode Adaptive Threshold Filter Example
 #
 # This example shows off mode filtering with adaptive thresholding.

@@ -1,3 +1,7 @@
+# This work is licensed under the MIT license.
+# Copyright (c) 2013-2023 OpenMV LLC. All rights reserved.
+# https://github.com/openmv/openmv/blob/master/LICENSE
+#
 # Making OpenMV Camera act as a Mouse using HID.
 #
 # First we need to create boot.py file to change the default USB mode (VCP+MSC).

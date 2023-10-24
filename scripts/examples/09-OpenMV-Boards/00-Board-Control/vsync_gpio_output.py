@@ -1,3 +1,7 @@
+# This work is licensed under the MIT license.
+# Copyright (c) 2013-2023 OpenMV LLC. All rights reserved.
+# https://github.com/openmv/openmv/blob/master/LICENSE
+#
 # VSYNC GPIO output example.
 #
 # This example shows how to toggle a pin on VSYNC interrupt.

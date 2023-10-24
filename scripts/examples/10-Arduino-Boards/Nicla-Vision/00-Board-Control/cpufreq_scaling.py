@@ -1,3 +1,7 @@
+# This work is licensed under the MIT license.
+# Copyright (c) 2013-2023 OpenMV LLC. All rights reserved.
+# https://github.com/openmv/openmv/blob/master/LICENSE
+#
 # CPU frequency scaling example.
 #
 # This example shows how to use the cpufreq module to change the CPU frequency on the fly.

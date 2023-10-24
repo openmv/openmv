@@ -1,3 +1,7 @@
+# This work is licensed under the MIT license.
+# Copyright (c) 2013-2023 OpenMV LLC. All rights reserved.
+# https://github.com/openmv/openmv/blob/master/LICENSE
+#
 # Pixy I2C Emulation Script
 #
 # This script allows your OpenMV Cam to emulate the Pixy (CMUcam5) in I2C mode.

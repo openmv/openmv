@@ -1,3 +1,7 @@
+# This work is licensed under the MIT license.
+# Copyright (c) 2013-2023 OpenMV LLC. All rights reserved.
+# https://github.com/openmv/openmv/blob/master/LICENSE
+#
 # Keypoints Drawing
 #
 # This example shows off drawing keypoints on the OpenMV Cam. Usually you call draw_keypoints()

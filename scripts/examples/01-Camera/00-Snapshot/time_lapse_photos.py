@@ -1,3 +1,7 @@
+# This work is licensed under the MIT license.
+# Copyright (c) 2013-2023 OpenMV LLC. All rights reserved.
+# https://github.com/openmv/openmv/blob/master/LICENSE
+#
 # Time Lapse Photos (Credit nedhorning)
 #
 # This example shows off how to take time lapse photos using your OpenMV

@@ -1,3 +1,7 @@
+# This work is licensed under the MIT license.
+# Copyright (c) 2013-2023 OpenMV LLC. All rights reserved.
+# https://github.com/openmv/openmv/blob/master/LICENSE
+#
 # This example demonstrates a simple temperature sensor peripheral.
 #
 # The sensor's local value updates every second, and it will notify

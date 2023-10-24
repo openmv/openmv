@@ -1,3 +1,7 @@
+# This work is licensed under the MIT license.
+# Copyright (c) 2013-2023 OpenMV LLC. All rights reserved.
+# https://github.com/openmv/openmv/blob/master/LICENSE
+#
 # Sensor Sleep Mode Example.
 # This example demonstrates the sensor sleep mode. The sleep mode saves around
 # 40mA when enabled and it's automatically cleared when calling sensor reset().

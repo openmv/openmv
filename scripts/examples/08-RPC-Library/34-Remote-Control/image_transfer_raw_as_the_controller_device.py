@@ -1,3 +1,7 @@
+# This work is licensed under the MIT license.
+# Copyright (c) 2013-2023 OpenMV LLC. All rights reserved.
+# https://github.com/openmv/openmv/blob/master/LICENSE
+#
 # Image Transfer - As The Controller Device
 #
 # This script is made to pair with another OpenMV Cam running "image_transfer_raw_as_the_remote_device.py"

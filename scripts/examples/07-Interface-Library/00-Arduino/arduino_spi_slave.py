@@ -1,3 +1,7 @@
+# This work is licensed under the MIT license.
+# Copyright (c) 2013-2023 OpenMV LLC. All rights reserved.
+# https://github.com/openmv/openmv/blob/master/LICENSE
+#
 # SPI with the Arduino as the master device and the OpenMV Cam as the slave.
 #
 # Please wire up your OpenMV Cam to your Arduino like this:

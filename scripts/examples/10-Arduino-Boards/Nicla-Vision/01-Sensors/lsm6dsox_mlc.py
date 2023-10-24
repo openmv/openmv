@@ -1,3 +1,7 @@
+# This work is licensed under the MIT license.
+# Copyright (c) 2013-2023 OpenMV LLC. All rights reserved.
+# https://github.com/openmv/openmv/blob/master/LICENSE
+#
 # LSM6DSOX IMU MLC (Machine Learning Core) Example.
 # Download the raw UCF file, copy to storage and reset.
 

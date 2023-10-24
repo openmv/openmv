@@ -1,3 +1,7 @@
+# This work is licensed under the MIT license.
+# Copyright (c) 2013-2023 OpenMV LLC. All rights reserved.
+# https://github.com/openmv/openmv/blob/master/LICENSE
+#
 # This example shows off how to use readout window control to readout a small part of a camera
 # sensor pixel array at a very high speed and move that readout window around.
 

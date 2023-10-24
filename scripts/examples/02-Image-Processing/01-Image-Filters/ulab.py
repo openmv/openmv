@@ -1,3 +1,7 @@
+# This work is licensed under the MIT license.
+# Copyright (c) 2013-2023 OpenMV LLC. All rights reserved.
+# https://github.com/openmv/openmv/blob/master/LICENSE
+#
 # Ulab is a numpy-like module for micropython, meant to simplify and speed up common
 # mathematical operations on arrays. This basic example shows mean/std on an image.
 #

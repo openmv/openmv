@@ -1,3 +1,7 @@
+# This work is licensed under the MIT license.
+# Copyright (c) 2013-2023 OpenMV LLC. All rights reserved.
+# https://github.com/openmv/openmv/blob/master/LICENSE
+#
 # In Memory Shadow Removal w/ Frame Differencing Example
 #
 # This example demonstrates using frame differencing with your OpenMV Cam using

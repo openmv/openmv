@@ -1,3 +1,7 @@
+# This work is licensed under the MIT license.
+# Copyright (c) 2013-2023 OpenMV LLC. All rights reserved.
+# https://github.com/openmv/openmv/blob/master/LICENSE
+#
 # Keypoints descriptor example.
 # This example shows how to save a keypoints descriptor to file. Show the camera an object
 # and then run the script. The script will extract and save a keypoints descriptor and the image.

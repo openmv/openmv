@@ -1,3 +1,7 @@
+# This work is licensed under the MIT license.
+# Copyright (c) 2013-2023 OpenMV LLC. All rights reserved.
+# https://github.com/openmv/openmv/blob/master/LICENSE
+#
 # Relative humidity and temperature sensor example.
 # Note Arduino Nano BLE 33 Sense Rev2 uses the HS3003.
 
