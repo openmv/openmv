@@ -66,6 +66,7 @@ DISPLAY_DIR=drivers/display
 LIBPDM_DIR=lib/libpdm
 TENSORFLOW_DIR=lib/libtf
 OMV_BOARD_CONFIG_DIR=$(TOP_DIR)/$(OMV_DIR)/boards/$(TARGET)/
+OMV_PORT_DIR=$(TOP_DIR)/$(OMV_DIR)/ports/$(PORT)
 MP_BOARD_CONFIG_DIR=$(TOP_DIR)/$(MICROPY_DIR)/ports/$(PORT)/boards/$(TARGET)/
 OMV_LIB_DIR=$(TOP_DIR)/../scripts/libraries
 FROZEN_MANIFEST=$(OMV_BOARD_CONFIG_DIR)/manifest.py
@@ -195,9 +196,10 @@ endif
 
 MPY_PENDSV_ENTRIES := $(shell echo $(MPY_PENDSV_ENTRIES) | tr -d '[:space:]')
 MPY_CFLAGS += -DMICROPY_BOARD_PENDSV_ENTRIES="$(MPY_PENDSV_ENTRIES)"
+MPY_CFLAGS += -DMP_CONFIGFILE=\<$(OMV_PORT_DIR)/omv_mpconfigport.h\>
 
 # Include the port Makefile.
-include $(OMV_DIR)/ports/$(PORT)/omv_portconfig.mk
+include $(OMV_PORT_DIR)/omv_portconfig.mk
 
 clean:
 	$(RM) -fr $(BUILD)
