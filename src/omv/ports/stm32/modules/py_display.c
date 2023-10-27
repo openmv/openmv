@@ -55,9 +55,6 @@ typedef struct _display_state {
     #ifdef OMV_DSI_DISPLAY_CONTROLLER
     DSI_HandleTypeDef hdsi;
     #endif
-    #ifdef OMV_DISPLAY_BL_TIM
-    TIM_HandleTypeDef htim;
-    #endif
     LTDC_LayerCfgTypeDef framebuffer_layers[FRAMEBUFFER_COUNT];
 } display_state_t;
 
@@ -485,56 +482,10 @@ static void display_clear(py_display_obj_t *self, bool off) {
 
 #ifdef OMV_DISPLAY_BL_PIN
 static void display_set_backlight(py_display_obj_t *self, uint32_t intensity) {
-    #ifdef OMV_DISPLAY_BL_TIM
-    if ((self->intensity < 255) && (255 <= intensity)) {
-    #else
-    if ((self->intensity < 1) && (1 <= intensity)) {
-    #endif
-        omv_gpio_config(OMV_DISPLAY_BL_PIN, OMV_GPIO_MODE_OUTPUT, OMV_GPIO_PULL_NONE, OMV_GPIO_SPEED_LOW, -1);
-        omv_gpio_write(OMV_DISPLAY_BL_PIN, 1);
-    } else if ((0 < self->intensity) && (intensity <= 0)) {
-        omv_gpio_write(OMV_DISPLAY_BL_PIN, 0);
-        omv_gpio_deinit(OMV_DISPLAY_BL_PIN);
-    }
-
-    #ifdef OMV_DISPLAY_BL_TIM
-    int tclk = OMV_DISPLAY_BL_TIM_PCLK_FREQ() * 2;
-    int period = (tclk / OMV_DISPLAY_BL_TIM_FREQ) - 1;
-
-    if (((self->intensity <= 0) || (255 <= self->intensity)) && (0 < intensity) && (intensity < 255)) {
-        omv_gpio_config(OMV_DISPLAY_BL_PIN, OMV_GPIO_MODE_ALT, OMV_GPIO_PULL_NONE, OMV_GPIO_SPEED_LOW, -1);
-
-        display.htim.Instance = OMV_DISPLAY_BL_TIM;
-        display.htim.Init.Prescaler = 0;
-        display.htim.Init.CounterMode = TIM_COUNTERMODE_UP;
-        display.htim.Init.Period = period;
-        display.htim.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
-        display.htim.Init.RepetitionCounter = 0;
-        display.htim.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
-
-        TIM_OC_InitTypeDef lcd_tim_oc_handle;
-        lcd_tim_oc_handle.Pulse = (period * intensity) / 255;
-        lcd_tim_oc_handle.OCMode = TIM_OCMODE_PWM1;
-        lcd_tim_oc_handle.OCPolarity = TIM_OCPOLARITY_HIGH;
-        lcd_tim_oc_handle.OCNPolarity = TIM_OCNPOLARITY_HIGH;
-        lcd_tim_oc_handle.OCFastMode = TIM_OCFAST_DISABLE;
-        lcd_tim_oc_handle.OCIdleState = TIM_OCIDLESTATE_RESET;
-        lcd_tim_oc_handle.OCNIdleState = TIM_OCNIDLESTATE_RESET;
-
-        HAL_TIM_PWM_Init(&display.htim);
-        HAL_TIM_PWM_ConfigChannel(&display.htim, &lcd_tim_oc_handle, OMV_DISPLAY_BL_TIM_CHANNEL);
-        HAL_TIM_PWM_Start(&display.htim, OMV_DISPLAY_BL_TIM_CHANNEL);
-    } else if ((0 < self->intensity) && (self->intensity < 255) && ((intensity <= 0) || (255 <= intensity))) {
-        HAL_TIM_PWM_Stop(&display.htim, OMV_DISPLAY_BL_TIM_CHANNEL);
-        HAL_TIM_PWM_DeInit(&display.htim);
-    } else if ((0 < self->intensity) && (self->intensity < 255) && (0 < intensity) && (intensity < 255)) {
-        __HAL_TIM_SET_COMPARE(&display.htim, OMV_DISPLAY_BL_TIM_CHANNEL, (period * intensity) / 255);
-    }
-    #endif
-
-    self->intensity = intensity;
+    omv_gpio_config(OMV_DISPLAY_BL_PIN, OMV_GPIO_MODE_OUTPUT, OMV_GPIO_PULL_NONE, OMV_GPIO_SPEED_LOW, -1);
+    omv_gpio_write(OMV_DISPLAY_BL_PIN, !!intensity);
 }
-#endif // OMV_DISPLAY_BL_PIN
+#endif
 
 #ifdef OMV_DSI_DISPLAY_CONTROLLER
 int display_dsi_write(py_display_obj_t *self, uint8_t cmd, uint8_t *args, size_t n_args, bool dcs) {
@@ -591,18 +542,18 @@ static void display_deinit(py_display_obj_t *self) {
         }
     }
 
-    fb_alloc_free_till_mark_past_mark_permanent();
-
     #ifdef OMV_DISPLAY_BL_PIN
-    if (self->display_on) {
-        // back to default state
-        display_set_backlight(self, 0);
-    }
-    #endif // OMV_DISPLAY_BL_PIN
+    omv_gpio_deinit(OMV_DISPLAY_BL_PIN);
+    #endif
+
+    fb_alloc_free_till_mark_past_mark_permanent();
 }
 
 mp_obj_t display_make_new(const mp_obj_type_t *type, size_t n_args, size_t n_kw, const mp_obj_t *all_args) {
-    enum { ARG_framesize, ARG_refresh, ARG_display_on, ARG_triple_buffer, ARG_portrait, ARG_channel, ARG_controller };
+    enum {
+        ARG_framesize, ARG_refresh, ARG_display_on, ARG_triple_buffer,
+        ARG_portrait, ARG_channel, ARG_controller, ARG_backlight
+    };
     static const mp_arg_t allowed_args[] = {
         { MP_QSTR_framesize,     MP_ARG_INT,  {.u_int = DISPLAY_RESOLUTION_FWVGA  } },
         { MP_QSTR_refresh,       MP_ARG_INT | MP_ARG_KW_ONLY, {.u_int = 60  } },
@@ -611,6 +562,7 @@ mp_obj_t display_make_new(const mp_obj_type_t *type, size_t n_args, size_t n_kw,
         { MP_QSTR_portrait,      MP_ARG_BOOL | MP_ARG_KW_ONLY, {.u_bool = false} },
         { MP_QSTR_channel,       MP_ARG_INT | MP_ARG_KW_ONLY, {.u_int = 0  } },
         { MP_QSTR_controller,    MP_ARG_OBJ | MP_ARG_KW_ONLY, {.u_rom_obj = MP_ROM_NONE} },
+        { MP_QSTR_backlight,     MP_ARG_OBJ | MP_ARG_KW_ONLY, {.u_rom_obj = MP_ROM_NONE} },
     };
 
     // Parse args.
@@ -647,6 +599,7 @@ mp_obj_t display_make_new(const mp_obj_type_t *type, size_t n_args, size_t n_kw,
         self->height = display_modes[self->framesize].vactive;
     }
     self->controller = args[ARG_controller].u_obj;
+    self->bl_controller = args[ARG_backlight].u_obj;
 
     // Store state to access it from IRQ handlers or callbacks
     display.self = self;
@@ -671,12 +624,6 @@ mp_obj_t display_make_new(const mp_obj_type_t *type, size_t n_args, size_t n_kw,
         }
     }
     #endif
-
-    #ifdef OMV_DISPLAY_BL_PIN
-    if (self->display_on) {
-        display_set_backlight(self, 255); // to on state
-    }
-    #endif // OMV_DISPLAY_BL_PIN
 
     return MP_OBJ_FROM_PTR(self);
 }

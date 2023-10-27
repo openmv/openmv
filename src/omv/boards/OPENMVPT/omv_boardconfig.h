@@ -355,15 +355,6 @@
 #define OMV_RGB_DISPLAY_DISP_PIN                   (&omv_pin_G9_GPIO)
 #define OMV_RGB_DISPLAY_BL_PIN                     (&omv_pin_B0_TIM3)
 
-#define OMV_DISPLAY_BL_TIM                         (TIM3)
-#define OMV_DISPLAY_BL_TIM_FREQ                    (100000)
-#define OMV_DISPLAY_BL_TIM_CHANNEL                 (TIM_CHANNEL_3)
-#define OMV_DISPLAY_BL_TIM_CLK_ENABLE()            __HAL_RCC_TIM3_CLK_ENABLE()
-#define OMV_DISPLAY_BL_TIM_CLK_DISABLE()           __HAL_RCC_TIM3_CLK_DISABLE()
-#define OMV_DISPLAY_BL_TIM_FORCE_RESET()           __HAL_RCC_TIM3_FORCE_RESET()
-#define OMV_DISPLAY_BL_TIM_RELEASE_RESET()         __HAL_RCC_TIM3_RELEASE_RESET()
-#define OMV_DISPLAY_BL_TIM_PCLK_FREQ()             HAL_RCC_GetPCLK1Freq()
-
 // SPI LCD Interface
 #define OMV_SPI_DISPLAY_CONTROLLER                 (SPI2_ID)
 #define OMV_SPI_DISPLAY_MOSI_PIN                   (&omv_pin_B15_SPI2)
@@ -375,13 +366,6 @@
 #define OMV_SPI_DISPLAY_RST_PIN                    (&omv_pin_D12_GPIO)
 #define OMV_SPI_DISPLAY_BL_PIN                     (&omv_pin_A5_GPIO)
 #define OMV_SPI_DISPLAY_TRIPLE_BUFFER              (1)
-
-#define OMV_DISPLAY_BL_DAC                         (DAC1)
-#define OMV_DISPLAY_BL_DAC_CHANNEL                 (DAC_CHANNEL_2)
-#define OMV_DISPLAY_BL_DAC_CLK_ENABLE()            __HAL_RCC_DAC12_CLK_ENABLE()
-#define OMV_DISPLAY_BL_DAC_CLK_DISABLE()           __HAL_RCC_DAC12_CLK_DISABLE()
-#define OMV_DISPLAY_BL_DAC_FORCE_RESET()           __HAL_RCC_DAC12_FORCE_RESET()
-#define OMV_DISPLAY_BL_DAC_RELEASE_RESET()         __HAL_RCC_DAC12_RELEASE_RESET()
 
 // HDMI CEC/DDC I/O
 #define OMV_DISPLAY_CEC_ENABLE                     (1)

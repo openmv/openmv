@@ -69,6 +69,13 @@ STATIC mp_obj_t py_display_deinit(mp_obj_t self_in) {
     if (display_p->deinit != NULL) {
         display_p->deinit(self);
     }
+    if (self->bl_controller != mp_const_none) {
+        mp_obj_t dest[2];
+        mp_load_method_maybe(self->bl_controller, MP_QSTR_deinit, dest);
+        if (dest[0] != MP_OBJ_NULL) {
+            mp_call_method_n_kw(0, 0, dest);
+        }
+    }
     return mp_const_none;
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_display_deinit_obj, py_display_deinit);
@@ -86,17 +93,27 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(py_display_clear_obj, 1, 2, py_displa
 
 STATIC mp_obj_t py_display_backlight(uint n_args, const mp_obj_t *args) {
     py_display_obj_t *self = MP_OBJ_TO_PTR(args[0]);
-
     if (n_args > 1) {
         uint32_t intensity = mp_obj_get_int(args[1]);
-        if ((intensity < 0) || (255 < intensity)) {
-            mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("0 <= intensity <= 255!"));
+        if (intensity > 100) {
+            mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Intensity ranges between 0 (off) and 100 (full on)"));
         }
-
-        py_display_p_t *display_p = (py_display_p_t *) MP_OBJ_TYPE_GET_SLOT(self->base.type, protocol);
-        if (display_p->set_backlight != NULL) {
-            display_p->set_backlight(self, intensity);
+        if (self->bl_controller != mp_const_none) {
+            // If the display has a backlight controller set, call it first.
+            mp_obj_t dest[3];
+            mp_load_method(self->bl_controller, MP_QSTR_backlight, dest);
+            dest[2] = args[1];
+            mp_call_method_n_kw(1, 0, dest);
+        } else {
+            // Otherwise, if the display protocol's set_backlight is set, call it.
+            py_display_p_t *display_p = (py_display_p_t *) MP_OBJ_TYPE_GET_SLOT(self->base.type, protocol);
+            if (display_p->set_backlight != NULL) {
+                display_p->set_backlight(self, intensity);
+            } else {
+                mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Display does not support backlight control."));
+            }
         }
+        self->intensity = intensity;
     } else {
         return mp_obj_new_int(self->intensity);
     }
