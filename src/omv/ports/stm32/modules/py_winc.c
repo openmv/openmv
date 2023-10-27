@@ -129,7 +129,7 @@ static mp_obj_t py_winc_active(size_t n_args, const mp_obj_t *args) {
 // method connect(ssid, key=None, *, security=WPA2, bssid=None)
 static mp_obj_t py_winc_connect(mp_uint_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
     static const mp_arg_t allowed_args[] = {
-        { MP_QSTR_essid,    MP_ARG_REQUIRED | MP_ARG_OBJ, {.u_obj = MP_OBJ_NULL} },
+        { MP_QSTR_ssid,     MP_ARG_REQUIRED | MP_ARG_OBJ, {.u_obj = MP_OBJ_NULL} },
         { MP_QSTR_key,      MP_ARG_OBJ, {.u_obj = mp_const_none} },
         { MP_QSTR_security, MP_ARG_KW_ONLY | MP_ARG_INT, {.u_int = M2M_WIFI_SEC_WPA_PSK} },
         { MP_QSTR_channel,  MP_ARG_KW_ONLY | MP_ARG_INT, {.u_int = 1} },
@@ -141,9 +141,9 @@ static mp_obj_t py_winc_connect(mp_uint_t n_args, const mp_obj_t *pos_args, mp_m
     mp_arg_parse_all(n_args - 1, pos_args + 1, kw_args, MP_ARRAY_SIZE(allowed_args), allowed_args, args);
 
     // get ssid
-    const char *essid = mp_obj_str_get_str(args[0].u_obj);
+    const char *ssid = mp_obj_str_get_str(args[0].u_obj);
 
-    if (strlen(essid) == 0) {
+    if (strlen(ssid) == 0) {
         mp_raise_msg(&mp_type_OSError, MP_ERROR_TEXT("SSID can't be empty!"));
     }
 
@@ -162,9 +162,9 @@ static mp_obj_t py_winc_connect(mp_uint_t n_args, const mp_obj_t *pos_args, mp_m
 
     if (self->itf == WINC_MODE_STA) {
         // Connect to AP
-        if (winc_connect(essid, security, key, M2M_WIFI_CH_ALL) != 0) {
+        if (winc_connect(ssid, security, key, M2M_WIFI_CH_ALL) != 0) {
             mp_raise_msg_varg(&mp_type_OSError,
-                              MP_ERROR_TEXT("could not connect to ssid=%s, sec=%d, key=%s\n"), essid, security, key);
+                              MP_ERROR_TEXT("could not connect to ssid=%s, sec=%d, key=%s\n"), ssid, security, key);
         }
     } else {
         mp_uint_t channel = args[3].u_int;
@@ -174,7 +174,7 @@ static mp_obj_t py_winc_connect(mp_uint_t n_args, const mp_obj_t *pos_args, mp_m
         }
 
         // Initialize WiFi in AP mode.
-        if (winc_start_ap(essid, security, key, channel) != 0) {
+        if (winc_start_ap(ssid, security, key, channel) != 0) {
             mp_raise_msg(&mp_type_OSError, MP_ERROR_TEXT("failed to start in AP mode"));
         }
     }
@@ -275,23 +275,15 @@ static mp_obj_t py_winc_netinfo(mp_obj_t self_in) {
 
 static int winc_scan_callback(winc_scan_result_t *scan_result, void *arg) {
     mp_obj_t scan_list = (mp_obj_t) arg;
-
-    // Format MAC address
-    VSTR_FIXED(mac_vstr, 18);
-    vstr_printf(&mac_vstr, "%02X:%02X:%02X:%02X:%02X:%02X",
-                scan_result->bssid[0], scan_result->bssid[1], scan_result->bssid[2],
-                scan_result->bssid[3], scan_result->bssid[4], scan_result->bssid[5]);
-
-    mp_obj_t ap[5] = {
+    mp_obj_t ap[6] = {
+        mp_obj_new_bytes((uint8_t *) scan_result->ssid, strlen(scan_result->ssid)),
+        mp_obj_new_bytes(scan_result->bssid, sizeof(scan_result->bssid)),
         mp_obj_new_int(scan_result->channel),
         mp_obj_new_int(scan_result->rssi),
         mp_obj_new_int(scan_result->security),
-        mp_obj_new_str(mac_vstr.buf, mac_vstr.len),
-        mp_obj_new_str(scan_result->ssid, strlen(scan_result->ssid)),
+        MP_OBJ_NEW_SMALL_INT(1), // N
     };
-
     mp_obj_list_append(scan_list, mp_obj_new_tuple(MP_ARRAY_SIZE(ap), ap));
-
     return 0;
 }
 
