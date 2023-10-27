@@ -573,18 +573,11 @@ int winc_connect(const char *ssid, uint8_t security, const char *key, uint16_t c
 int winc_start_ap(const char *ssid, uint8_t security, const char *key, uint16_t channel) {
     tstrM2MAPConfig apconfig;
 
-    if (security == M2M_WIFI_SEC_WEP && key == NULL) {
-        return -1;
-    }
-
-    if (security != M2M_WIFI_SEC_OPEN && security != M2M_WIFI_SEC_WEP) {
-        return -1;
-    }
-
     memset(&apconfig, 0, sizeof(tstrM2MAPConfig));
     strcpy((char *) &apconfig.au8SSID, ssid);
     apconfig.u8ListenChannel = channel;
     apconfig.u8SecType = security;
+    apconfig.u8SsidHide = false;
 
     apconfig.au8DHCPServerIP[0] = 192;
     apconfig.au8DHCPServerIP[1] = 168;
@@ -597,9 +590,9 @@ int winc_start_ap(const char *ssid, uint8_t security, const char *key, uint16_t 
     memcpy(ifconfig.dns_addr, apconfig.au8DHCPServerIP, WINC_IPV4_ADDR_LEN);
 
     if (security != M2M_WIFI_SEC_OPEN) {
-        strcpy((char *) &apconfig.au8WepKey, key);
-        apconfig.u8KeySz = WEP_40_KEY_STRING_SIZE;
-        apconfig.u8KeyIndx = 1;
+        size_t size = OMV_MIN(strlen(key), M2M_MAX_PSK_LEN);
+        memcpy(&apconfig.au8Key, key, size);
+        apconfig.u8KeySz = size;
     }
 
     // Initialize WiFi in AP mode.

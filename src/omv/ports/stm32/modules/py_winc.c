@@ -161,19 +161,14 @@ static mp_obj_t py_winc_connect(mp_uint_t n_args, const mp_obj_t *pos_args, mp_m
     }
 
     if (self->itf == WINC_MODE_STA) {
-        // Connect to AP
+        // Initialize WiFi in STA mode.
         if (winc_connect(ssid, security, key, M2M_WIFI_CH_ALL) != 0) {
             mp_raise_msg_varg(&mp_type_OSError,
                               MP_ERROR_TEXT("could not connect to ssid=%s, sec=%d, key=%s\n"), ssid, security, key);
         }
     } else {
-        mp_uint_t channel = args[3].u_int;
-
-        if (security != M2M_WIFI_SEC_OPEN && security != M2M_WIFI_SEC_WEP) {
-            mp_raise_msg(&mp_type_OSError, MP_ERROR_TEXT("AP mode supports WEP security only."));
-        }
-
         // Initialize WiFi in AP mode.
+        mp_uint_t channel = args[3].u_int;
         if (winc_start_ap(ssid, security, key, channel) != 0) {
             mp_raise_msg(&mp_type_OSError, MP_ERROR_TEXT("failed to start in AP mode"));
         }
@@ -571,7 +566,6 @@ static const mp_rom_map_elem_t winc_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_fw_update),     MP_ROM_PTR(&py_winc_fw_update_obj) },
 
     { MP_ROM_QSTR(MP_QSTR_OPEN),          MP_OBJ_NEW_SMALL_INT(M2M_WIFI_SEC_OPEN) },   // Network is not secured.
-    { MP_ROM_QSTR(MP_QSTR_WEP),           MP_OBJ_NEW_SMALL_INT(M2M_WIFI_SEC_WEP) },    // Security type WEP.
     { MP_ROM_QSTR(MP_QSTR_WPA_PSK),       MP_OBJ_NEW_SMALL_INT(M2M_WIFI_SEC_WPA_PSK) },// Network secured with WPA/WPA2 personal(PSK).
     { MP_ROM_QSTR(MP_QSTR_802_1X),        MP_OBJ_NEW_SMALL_INT(M2M_WIFI_SEC_802_1X) }, // Network is secured with WPA/WPA2 Enterprise.
     { MP_ROM_QSTR(MP_QSTR_MODE_STA),      MP_OBJ_NEW_SMALL_INT(WINC_MODE_STA) },       // Start in Station mode.
