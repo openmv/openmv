@@ -289,12 +289,6 @@ void HAL_TIM_PWM_MspInit(TIM_HandleTypeDef *htim) {
     }
     #endif // (OMV_XCLK_SOURCE == OMV_XCLK_TIM)
 
-    #if defined(OMV_DISPLAY_BL_TIM)
-    if (htim->Instance == OMV_DISPLAY_BL_TIM) {
-        OMV_DISPLAY_BL_TIM_CLK_ENABLE();
-    }
-    #endif
-
     #if defined(OMV_BUZZER_TIM)
     if (htim->Instance == OMV_BUZZER_TIM) {
         OMV_BUZZER_TIM_CLK_ENABLE();
@@ -303,14 +297,6 @@ void HAL_TIM_PWM_MspInit(TIM_HandleTypeDef *htim) {
 }
 
 void HAL_TIM_PWM_MspDeInit(TIM_HandleTypeDef *htim) {
-    #if defined(OMV_DISPLAY_BL_TIM)
-    if (htim->Instance == OMV_DISPLAY_BL_TIM) {
-        OMV_DISPLAY_BL_TIM_FORCE_RESET();
-        OMV_DISPLAY_BL_TIM_RELEASE_RESET();
-        OMV_DISPLAY_BL_TIM_CLK_DISABLE();
-    }
-    #endif
-
     #if defined(OMV_BUZZER_TIM)
     if (htim->Instance == OMV_BUZZER_TIM) {
         OMV_BUZZER_TIM_FORCE_RESET();
@@ -660,11 +646,6 @@ void HAL_LTDC_MspInit(LTDC_HandleTypeDef *hltdc) {
     omv_gpio_config(OMV_RGB_DISPLAY_DISP_PIN, OMV_GPIO_MODE_OUTPUT, OMV_GPIO_PULL_NONE, OMV_GPIO_SPEED_LOW, -1);
     omv_gpio_write(OMV_RGB_DISPLAY_DISP_PIN, 0);
     #endif
-
-    #if defined(OMV_RGB_DISPLAY_BL_PIN)
-    omv_gpio_config(OMV_RGB_DISPLAY_BL_PIN, OMV_GPIO_MODE_OUTPUT, OMV_GPIO_PULL_NONE, OMV_GPIO_SPEED_LOW, -1);
-    omv_gpio_write(OMV_RGB_DISPLAY_BL_PIN, 0);
-    #endif
 }
 
 void HAL_LTDC_MspDeInit(LTDC_HandleTypeDef *hltdc) {
@@ -714,30 +695,8 @@ void HAL_LTDC_MspDeInit(LTDC_HandleTypeDef *hltdc) {
     #if defined(OMV_RGB_DISPLAY_DISP_PIN)
     omv_gpio_deinit(OMV_RGB_DISPLAY_DISP_PIN);
     #endif
-
-    #if defined(OMV_RGB_DISPLAY_BL_PIN)
-    omv_gpio_deinit(OMV_RGB_DISPLAY_BL_PIN);
-    #endif
 }
 #endif
-
-void HAL_DAC_MspInit(DAC_HandleTypeDef *hdac) {
-    #if defined(OMV_DISPLAY_BL_DAC)
-    if (hdac->Instance == OMV_DISPLAY_BL_DAC) {
-        OMV_DISPLAY_BL_DAC_CLK_ENABLE();
-    }
-    #endif
-}
-
-void HAL_DAC_MspDeInit(DAC_HandleTypeDef *hdac) {
-    #if defined(OMV_DISPLAY_BL_DAC)
-    if (hdac->Instance == OMV_DISPLAY_BL_DAC) {
-        OMV_DISPLAY_BL_DAC_FORCE_RESET();
-        OMV_DISPLAY_BL_DAC_RELEASE_RESET();
-        OMV_DISPLAY_BL_DAC_CLK_DISABLE();
-    }
-    #endif
-}
 
 void HAL_MspDeInit(void) {
 

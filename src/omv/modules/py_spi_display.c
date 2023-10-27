@@ -288,53 +288,12 @@ static void spi_display_clear(py_display_obj_t *self, bool display_off) {
     }
 }
 
-#ifdef OMV_DISPLAY_BL_DAC
-static DAC_HandleTypeDef lcd_dac_handle;
-#endif
-
 #ifdef OMV_SPI_DISPLAY_BL_PIN
 static void spi_display_set_backlight(py_display_obj_t *self, uint32_t intensity) {
-    #ifdef OMV_DISPLAY_BL_DAC
-    if ((self->intensity < 255) && (255 <= intensity)) {
-    #else
-    if ((self->intensity < 1) && (1 <= intensity)) {
-    #endif
-        omv_gpio_write(OMV_SPI_DISPLAY_BL_PIN, 1);
-        omv_gpio_deinit(OMV_SPI_DISPLAY_BL_PIN);
-    } else if ((0 < self->intensity) && (intensity <= 0)) {
-        omv_gpio_config(OMV_SPI_DISPLAY_BL_PIN, OMV_GPIO_MODE_OUTPUT, OMV_GPIO_PULL_NONE, OMV_GPIO_SPEED_LOW, -1);
-        omv_gpio_write(OMV_SPI_DISPLAY_BL_PIN, 0);
-    }
-
-    #ifdef OMV_DISPLAY_BL_DAC
-    if (((self->intensity <= 0) || (255 <= self->intensity)) && (0 < intensity) && (intensity < 255)) {
-        omv_gpio_config(OMV_SPI_DISPLAY_BL_PIN, OMV_GPIO_MODE_ANALOG, OMV_GPIO_PULL_NONE, OMV_GPIO_SPEED_LOW, -1);
-
-        DAC_ChannelConfTypeDef lcd_dac_channel_handle;
-        lcd_dac_handle.Instance = OMV_DISPLAY_BL_DAC;
-        lcd_dac_channel_handle.DAC_Trigger = DAC_TRIGGER_NONE;
-        lcd_dac_channel_handle.DAC_OutputBuffer = DAC_OUTPUTBUFFER_ENABLE;
-        #if defined(MCU_SERIES_H7)
-        lcd_dac_channel_handle.DAC_SampleAndHold = DAC_SAMPLEANDHOLD_DISABLE;
-        lcd_dac_channel_handle.DAC_ConnectOnChipPeripheral = DAC_CHIPCONNECT_DISABLE;
-        lcd_dac_channel_handle.DAC_UserTrimming = DAC_TRIMMING_FACTORY;
-        #endif
-
-        HAL_DAC_Init(&lcd_dac_handle);
-        HAL_DAC_ConfigChannel(&lcd_dac_handle, &lcd_dac_channel_handle, OMV_DISPLAY_BL_DAC_CHANNEL);
-        HAL_DAC_Start(&lcd_dac_handle, OMV_DISPLAY_BL_DAC_CHANNEL);
-        HAL_DAC_SetValue(&lcd_dac_handle, OMV_DISPLAY_BL_DAC_CHANNEL, DAC_ALIGN_8B_R, intensity);
-    } else if ((0 < self->intensity) && (self->intensity < 255) && ((intensity <= 0) || (255 <= intensity))) {
-        HAL_DAC_Stop(&lcd_dac_handle, OMV_DISPLAY_BL_DAC_CHANNEL);
-        HAL_DAC_DeInit(&lcd_dac_handle);
-    } else if ((0 < self->intensity) && (self->intensity < 255) && (0 < intensity) && (intensity < 255)) {
-        HAL_DAC_SetValue(&lcd_dac_handle, OMV_DISPLAY_BL_DAC_CHANNEL, DAC_ALIGN_8B_R, intensity);
-    }
-    #endif
-
-    self->intensity = intensity;
+    omv_gpio_config(OMV_SPI_DISPLAY_BL_PIN, OMV_GPIO_MODE_OUTPUT, OMV_GPIO_PULL_NONE, OMV_GPIO_SPEED_LOW, -1);
+    omv_gpio_write(OMV_SPI_DISPLAY_BL_PIN, !!intensity);
 }
-#endif // OMV_SPI_DISPLAY_BL_PIN
+#endif
 
 static void spi_display_deinit(py_display_obj_t *self) {
     if (self->triple_buffer) {
@@ -345,14 +304,13 @@ static void spi_display_deinit(py_display_obj_t *self) {
     omv_spi_deinit(&self->spi_bus);
     omv_gpio_deinit(OMV_SPI_DISPLAY_RS_PIN);
     omv_gpio_deinit(OMV_SPI_DISPLAY_RST_PIN);
-
     #ifdef OMV_SPI_DISPLAY_BL_PIN
-    spi_display_set_backlight(self, 255);
+    omv_gpio_deinit(OMV_SPI_DISPLAY_BL_PIN);
     #endif
 }
 
 mp_obj_t spi_display_make_new(const mp_obj_type_t *type, size_t n_args, size_t n_kw, const mp_obj_t *all_args) {
-    enum { ARG_width, ARG_height, ARG_refresh, ARG_bgr, ARG_byte_swap, ARG_triple_buffer };
+    enum { ARG_width, ARG_height, ARG_refresh, ARG_bgr, ARG_byte_swap, ARG_triple_buffer, ARG_backlight };
     static const mp_arg_t allowed_args[] = {
         { MP_QSTR_width,         MP_ARG_INT,  {.u_int = 128  } },
         { MP_QSTR_height,        MP_ARG_INT,  {.u_int = 160  } },
@@ -360,6 +318,7 @@ mp_obj_t spi_display_make_new(const mp_obj_type_t *type, size_t n_args, size_t n
         { MP_QSTR_bgr,           MP_ARG_BOOL, {.u_bool = false} },
         { MP_QSTR_byte_swap,     MP_ARG_BOOL, {.u_bool = false} },
         { MP_QSTR_triple_buffer, MP_ARG_BOOL, {.u_bool = LCD_TRIPLE_BUFFER_DEFAULT} },
+        { MP_QSTR_backlight,     MP_ARG_OBJ | MP_ARG_KW_ONLY, {.u_rom_obj = MP_ROM_NONE} },
     };
 
     // Parse args.
@@ -386,6 +345,7 @@ mp_obj_t spi_display_make_new(const mp_obj_type_t *type, size_t n_args, size_t n
     self->triple_buffer = args[ARG_triple_buffer].u_bool;
     self->bgr = args[ARG_bgr].u_bool;
     self->byte_swap = args[ARG_byte_swap].u_bool;
+    self->bl_controller = args[ARG_backlight].u_obj;
 
     omv_spi_config_t spi_config;
     omv_spi_default_config(&spi_config, OMV_SPI_DISPLAY_CONTROLLER);
@@ -425,10 +385,6 @@ mp_obj_t spi_display_make_new(const mp_obj_type_t *type, size_t n_args, size_t n
         }
         fb_alloc_mark_permanent();
     }
-
-    #ifdef OMV_SPI_DISPLAY_BL_PIN
-    spi_display_set_backlight(self, 255);
-    #endif
 
     return MP_OBJ_FROM_PTR(self);
 }

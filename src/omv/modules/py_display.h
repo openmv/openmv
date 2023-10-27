@@ -52,6 +52,7 @@ typedef struct _py_display_obj_t {
     bool display_on;
     bool portrait;
     mp_obj_t controller;
+    mp_obj_t bl_controller;
     #if defined(OMV_SPI_DISPLAY_CONTROLLER)
     omv_spi_t spi_bus;
     bool spi_tx_running;

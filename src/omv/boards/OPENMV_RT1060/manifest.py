@@ -12,6 +12,7 @@ freeze ("$(OMV_LIB_DIR)/", "ssd1306.py")
 freeze ("$(OMV_LIB_DIR)/", "tb6612.py")
 freeze ("$(OMV_LIB_DIR)/", "vl53l1x.py")
 freeze ("$(OMV_LIB_DIR)/", "machine.py")
+freeze ("$(OMV_LIB_DIR)/", "display.py")
 
 # Networking
 require("ntptime")
