@@ -565,11 +565,13 @@ static void spi_tv_draw_image_cb_convert_rgb565(uint16_t *row_pointer_i, uint8_t
 }
 
 static void spi_tv_draw_image_cb_grayscale(int x_start, int x_end, int y_row, imlib_draw_row_data_t *data) {
+    memset(((uint8_t *) data->dst_row_override) + x_end, 0, TV_WIDTH - x_end); // clear trailing bytes.
     spi_tv_draw_image_cb_convert_grayscale((uint8_t *) data->dst_row_override, (uint8_t *) data->dst_row_override);
     SpiTransmitReceivePacket(data->dst_row_override, NULL, PICLINE_LENGTH_BYTES, false);
 }
 
 static void spi_tv_draw_image_cb_rgb565(int x_start, int x_end, int y_row, imlib_draw_row_data_t *data) {
+    memset(data->dst_row_override, 0, x_start * sizeof(uint16_t)); // clear leading bytes.
     spi_tv_draw_image_cb_convert_rgb565((uint16_t *) data->dst_row_override, (uint8_t *) data->dst_row_override);
     SpiTransmitReceivePacket(data->dst_row_override, NULL, PICLINE_LENGTH_BYTES, false);
 }
