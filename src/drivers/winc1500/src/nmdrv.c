@@ -262,7 +262,7 @@ ERR1:
 sint8 nm_drv_init_hold(void)
 {
 	sint8 ret = M2M_SUCCESS;
-	
+
 	ret = nm_bus_iface_init(NULL);
 	if (M2M_SUCCESS != ret) {
 		M2M_ERR("[nmi start]: fail init bus\n");
@@ -272,7 +272,7 @@ sint8 nm_drv_init_hold(void)
 #ifdef BUS_ONLY
 	return;
 #endif
-	
+
 #ifdef NO_HW_CHIP_EN
 	ret = chip_wake();
 
@@ -297,8 +297,8 @@ sint8 nm_drv_init_hold(void)
 	return ret;
 #ifdef NO_HW_CHIP_EN
 ERR2:
-	nm_bus_iface_deinit();
 #endif
+	nm_bus_iface_deinit();
 ERR1:
 	return ret;
 }
@@ -319,18 +319,18 @@ sint8 nm_drv_init_start(void * arg)
 	if (M2M_SUCCESS != ret) {
 		goto ERR2;
 	}
-		
+
 	ret = wait_for_firmware_start(u8Mode);
 	if (M2M_SUCCESS != ret) {
 		goto ERR2;
 	}
-	
+
 	if((M2M_WIFI_MODE_ATE_HIGH == u8Mode)||(M2M_WIFI_MODE_ATE_LOW == u8Mode)) {
 		goto ERR1;
 	} else {
 		/*continue running*/
 	}
-	
+
 	ret = enable_interrupts();
 	if (M2M_SUCCESS != ret) {
 		M2M_ERR("failed to enable interrupts..\n");

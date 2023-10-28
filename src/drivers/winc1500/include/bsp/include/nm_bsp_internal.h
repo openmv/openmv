@@ -96,6 +96,10 @@
 #include "bsp/include/nm_bsp_same70.h"
 #endif
 
+#if (defined __SAMR30G18A__) || (defined __SAMR30E18A__)
+#include "bsp/include/nm_bsp_samr30.h"
+#endif
+
 #ifdef CORTUS_APP
 #include "crt_iface.h"
 #endif

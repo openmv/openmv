@@ -310,6 +310,8 @@ sint8 chip_wake(void)
 	sint8 ret = M2M_SUCCESS;
 	uint32 reg = 0, clk_status_reg = 0,trials = 0;
 
+	nm_bus_speed(LOW);
+
 	ret = nm_read_reg_with_ret(HOST_CORT_COMM, &reg);
 	if(ret != M2M_SUCCESS)goto _WAKE_EXIT;
 	
@@ -353,6 +355,7 @@ sint8 chip_wake(void)
 	nm_bus_reset();
 	
 _WAKE_EXIT:
+	nm_bus_speed(HIGH);
 	return ret;
 }
 sint8 cpu_halt(void)

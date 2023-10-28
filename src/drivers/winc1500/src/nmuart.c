@@ -68,32 +68,32 @@ sint8 nm_uart_sync_cmd(void)
 	/*read reg*/
 	while (retries--)
 	{
-	b[0] = 0x12;
-	rsz = 1;
-	strUart.pu8Buf = b;
-	strUart.u16Sz = 1;
+		b[0] = 0x12;
+		rsz = 1;
+		strUart.pu8Buf = b;
+		strUart.u16Sz = 1;
 
-	if(M2M_SUCCESS == nm_bus_ioctl(NM_BUS_IOCTL_W, &strUart))
-	{
-		strUart.u16Sz = rsz;
+		if (M2M_SUCCESS == nm_bus_ioctl(NM_BUS_IOCTL_W, &strUart))
+		{
+			strUart.u16Sz = rsz;
 			b[0] = 0;
 
 			// Pull all chars from buffer, we only care about the last
 			while (M2M_SUCCESS == nm_bus_ioctl(NM_BUS_IOCTL_R, &strUart))
-	{
+			{
 				strUart.u16Sz = rsz;
-	}
+			}
 
-	if (b[0] == 0x5a)
-	{
+			if (b[0] == 0x5a)
+			{
 				s8Ret = 1; // found on-chip (no bridge)
-		M2M_INFO("Built-in WINC1500 UART Found\n");
-	}
-	else if(b[0] == 0x5b)
-	{
+				M2M_INFO("Built-in WINC1500 UART Found\n");
+			}
+			else if (b[0] == 0x5b)
+			{
 				s8Ret = 0; // found off-chip (std serial bridge)
-		M2M_INFO("WINC1500 Serial Bridge Found\n");
-	}
+				M2M_INFO("WINC1500 Serial Bridge Found\n");
+			}
 			else if (b[0] == 0x5c)
 			{
 				s8Ret = 0; // found of-chip (at cmd app serial bridge)

@@ -55,7 +55,20 @@ sint8 nm_bus_deinit(void) {
 	return M2M_SUCCESS;
 }
 
-static sint8 nm_bus_rw(uint8 *txbuf, uint8 *rxbuf, uint16 size) {
+sint8 nm_bus_reinit(void* config)
+{
+	return M2M_SUCCESS;
+}
+
+sint8 nm_bus_speed(uint8 level)
+{
+	if ((level == HIGH) || (level == LOW))
+		return M2M_SUCCESS;
+		
+	return M2M_ERR_INVALID_ARG;
+}
+
+sint8 nm_spi_rw(uint8 *txbuf, uint8 *rxbuf, uint16 size) {
     sint8 result = M2M_SUCCESS;
     omv_spi_transfer_t spi_xfer = {
         .txbuf = txbuf,
@@ -85,7 +98,7 @@ sint8 nm_bus_ioctl(uint8 cmd, void *arg) {
 	switch (cmd) {
 		case NM_BUS_IOCTL_RW: {
 			tstrNmSpiRw *spi_rw = (tstrNmSpiRw *) arg;
-			ret = nm_bus_rw(spi_rw->pu8InBuf, spi_rw->pu8OutBuf, spi_rw->u16Sz);
+			ret = nm_spi_rw(spi_rw->pu8InBuf, spi_rw->pu8OutBuf, spi_rw->u16Sz);
 		}
 		break;
 		default:
