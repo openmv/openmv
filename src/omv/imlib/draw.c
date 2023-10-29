@@ -2765,6 +2765,13 @@ void imlib_draw_image_get_bounds(image_t *dst_img,
     int src_width_scaled = fast_floorf(fast_fabsf(x_scale) * (roi ? roi->w : src_img->w));
     int src_height_scaled = fast_floorf(fast_fabsf(y_scale) * (roi ? roi->h : src_img->h));
 
+    // Make sure bounds checking works when transposed.
+    if (hint & IMAGE_HINT_TRANSPOSE) {
+        int temp = src_width_scaled;
+        src_width_scaled = src_height_scaled;
+        src_height_scaled = temp;
+    }
+
     // Center src if hint is set.
     if (hint & IMAGE_HINT_CENTER) {
         dst_x_start -= src_width_scaled / 2;
@@ -2846,12 +2853,18 @@ void imlib_draw_image(image_t *dst_img,
         dst_delta_x = -1;
         x_scale = -x_scale;
     }
+    if (hint & IMAGE_HINT_HMIRROR) {
+        dst_delta_x = -dst_delta_x;
+    }
 
     int dst_delta_y = 1; // positive direction
     if (y_scale < 0.f) {
         // flip Y
         dst_delta_y = -1;
         y_scale = -y_scale;
+    }
+    if (hint & IMAGE_HINT_VFLIP) {
+        dst_delta_y = -dst_delta_y;
     }
 
     int src_img_w = roi ? roi->w : src_img->w;
@@ -2887,6 +2900,15 @@ void imlib_draw_image(image_t *dst_img,
         }
     }
 
+    // Make sure bounds checking works when transposed.
+    if (hint & IMAGE_HINT_TRANSPOSE) {
+        int temp = src_width_scaled;
+        src_width_scaled = src_height_scaled;
+        src_height_scaled = temp;
+    }
+
+    int dst_x_start_backup = dst_x_start;
+    int dst_y_start_backup = dst_y_start;
     // Center src if hint is set.
     if (hint & IMAGE_HINT_CENTER) {
         dst_x_start -= src_width_scaled / 2;
@@ -3100,6 +3122,130 @@ void imlib_draw_image(image_t *dst_img,
         }
 
         src_img = &new_src_img;
+    }
+
+    // To improve transpose performance we will split the operation up into chunks that fit in
+    // onchip RAM. These chunks will then be copied to the target buffer in an efficent manner.
+    // However, this doesn't work when the image is being scaled. So, we have to scale the image
+    // first if that is requested.
+    if (hint & IMAGE_HINT_TRANSPOSE) {
+        rectangle_t t_roi = {};
+        image_t t_src_img;
+        t_src_img.pixfmt = src_img->pixfmt;
+
+        // Are we scaling?
+        if ((src_x_frac != 65536) || (src_y_frac != 65536)) {
+            t_src_img.w = t_roi.w = src_height_scaled; // was transposed
+            t_src_img.h = t_roi.h = src_width_scaled; // was transposed
+            t_src_img.data = fb_alloc(image_size(&t_src_img), FB_ALLOC_CACHE_ALIGN);
+            imlib_draw_image(&t_src_img, src_img, 0, 0, x_scale, y_scale, roi,
+                             -1, 256, NULL, NULL,
+                             hint & (IMAGE_HINT_AREA | IMAGE_HINT_BILINEAR | IMAGE_HINT_BICUBIC),
+                             NULL, NULL, NULL);
+        } else {
+            memcpy(&t_roi, roi, sizeof(rectangle_t));
+            t_src_img.w = src_img->w;
+            t_src_img.h = src_img->h;
+            t_src_img.data = src_img->data;
+        }
+
+        uint32_t size;
+        void *data = fb_alloc_all(&size, FB_ALLOC_PREFER_SPEED | FB_ALLOC_CACHE_ALIGN);
+
+        // line_num stores how many lines we can do at a time with on-chip RAM.
+        image_t temp = {.w = t_roi.w, .h = t_roi.h, .pixfmt = t_src_img.pixfmt};
+        int line_num = size / image_line_size(&temp);
+
+        // Work top to bottom transposing as many lines at a time in a chunk of the image.
+        for (int i = t_roi.y; i < t_roi.h; i += line_num) {
+            line_num = IM_MIN(line_num, (t_roi.h - i));
+
+            // Make an image that is a slice of the input image.
+            image_t in = {.w = t_src_img.w, .h = line_num, .pixfmt = t_src_img.pixfmt};
+            in.data = t_src_img.data + (image_line_size(&t_src_img) *
+                                        ((dst_delta_y < 0) ? (t_roi.h - i - 1) : i));
+
+            // Make an image that will hold the transposed output.
+            image_t out = in;
+            out.w = line_num;
+            out.h = t_roi.w;
+            out.data = data;
+
+            switch (t_src_img.pixfmt) {
+                case PIXFORMAT_BINARY: {
+                    for (int y = 0; y < in.h; y++) {
+                        int y_2 = (dst_delta_y < 0) ? -y : y;
+                        uint32_t *row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR((&in), y_2);
+                        if (dst_delta_x < 0) {
+                            for (int x = 0; x < t_roi.w; x++) {
+                                int pixel = IMAGE_GET_BINARY_PIXEL_FAST(row_ptr, (t_roi.x + (t_roi.w - x - 1)));
+                                IMAGE_PUT_BINARY_PIXEL((&out), y, x, pixel);
+                            }
+                        } else {
+                            for (int x = 0; x < t_roi.w; x++) {
+                                int pixel = IMAGE_GET_BINARY_PIXEL_FAST(row_ptr, (t_roi.x + x));
+                                IMAGE_PUT_BINARY_PIXEL((&out), y, x, pixel);
+                            }
+                        }
+                    }
+                    break;
+                }
+                case PIXFORMAT_GRAYSCALE: {
+                    for (int y = 0; y < in.h; y++) {
+                        int y_2 = (dst_delta_y < 0) ? -y : y;
+                        uint8_t *i_row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR((&in), y_2) + t_roi.x;
+                        uint8_t *o_row_ptr = ((uint8_t *) out.data) + y;
+                        if (dst_delta_x < 0) {
+                            for (int x = t_roi.w - 1; x >= 0; x--, o_row_ptr += line_num) {
+                                *o_row_ptr = i_row_ptr[x];
+                            }
+                        } else {
+                            for (int x = 0; x < t_roi.w; x++, o_row_ptr += line_num) {
+                                *o_row_ptr = i_row_ptr[x];
+                            }
+                        }
+                    }
+                    break;
+                }
+                case PIXFORMAT_RGB565: {
+                    for (int y = 0; y < in.h; y++) {
+                        int y_2 = (dst_delta_y < 0) ? -y : y;
+                        uint16_t *i_row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR((&in), y_2) + t_roi.x;
+                        uint16_t *o_row_ptr = ((uint16_t *) out.data) + y;
+                        if (dst_delta_x < 0) {
+                            for (int x = t_roi.w - 1; x >= 0; x--, o_row_ptr += line_num) {
+                                *o_row_ptr = i_row_ptr[x];
+                            }
+                        } else {
+                            for (int x = 0; x < t_roi.w; x++, o_row_ptr += line_num) {
+                                *o_row_ptr = i_row_ptr[x];
+                            }
+                        }
+                    }
+                    break;
+                }
+                default: {
+                    break;
+                }
+            }
+
+            imlib_draw_image(dst_img, &out, dst_x_start_backup + i, dst_y_start_backup, 1.f, 1.f, NULL,
+                             rgb_channel, alpha, color_palette, alpha_palette,
+                             hint & (IMAGE_HINT_CENTER | IMAGE_HINT_BLACK_BACKGROUND),
+                             callback, callback_arg, dst_row_override);
+        }
+
+        fb_free(); // fb_alloc_all
+
+        if (t_src_img.data != src_img->data) {
+            fb_free();
+        }
+
+        if (&new_src_img == src_img) {
+            fb_free();
+        }
+
+        return;
     }
 
     imlib_draw_row_data_t imlib_draw_row_data;
