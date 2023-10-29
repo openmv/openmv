@@ -93,7 +93,7 @@ target_sources(${MICROPY_TARGET} PRIVATE
     ${TOP_DIR}/${OMV_DIR}/alloc/unaligned_memcpy.c
 
     ${TOP_DIR}/${OMV_DIR}/common/array.c
-    ${TOP_DIR}/${OMV_DIR}/common/ff_wrapper.c
+    ${TOP_DIR}/${OMV_DIR}/common/file_utils.c
     ${TOP_DIR}/${OMV_DIR}/common/ini.c
     ${TOP_DIR}/${OMV_DIR}/common/ringbuf.c
     ${TOP_DIR}/${OMV_DIR}/common/trace.c

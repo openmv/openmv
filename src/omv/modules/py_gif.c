@@ -11,7 +11,7 @@
 #include "py/mphal.h"
 #include "py/runtime.h"
 
-#include "ff_wrapper.h"
+#include "file_utils.h"
 #include "framebuffer.h"
 #include "imlib.h"
 #include "py_assert.h"
@@ -40,7 +40,7 @@ static mp_obj_t py_gif_open(uint n_args, const mp_obj_t *args, mp_map_t *kw_args
     gif->base.type = &py_gif_type;
 
     #if defined(IMLIB_ENABLE_IMAGE_FILE_IO)
-    file_write_open(&gif->fp, mp_obj_str_get_str(args[0]));
+    file_open(&gif->fp, mp_obj_str_get_str(args[0]), false, FA_WRITE | FA_CREATE_ALWAYS);
     gif_open(&gif->fp, gif->width, gif->height, gif->color, gif->loop);
     #else
     mp_raise_msg(&mp_type_OSError, MP_ERROR_TEXT("Image I/O is not supported"));
@@ -66,7 +66,7 @@ static mp_obj_t py_gif_format(mp_obj_t gif_obj) {
 static mp_obj_t py_gif_size(mp_obj_t gif_obj) {
     #if defined(IMLIB_ENABLE_IMAGE_FILE_IO)
     py_gif_obj_t *arg_gif = gif_obj;
-    return mp_obj_new_int(file_size_w_buf(&arg_gif->fp));
+    return mp_obj_new_int(file_size(&arg_gif->fp));
     #else
     return mp_obj_new_int(0);
     #endif

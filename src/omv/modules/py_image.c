@@ -23,7 +23,7 @@
 
 #include "imlib.h"
 #include "array.h"
-#include "ff_wrapper.h"
+#include "file_utils.h"
 #include "xalloc.h"
 #include "fb_alloc.h"
 #include "framebuffer.h"
@@ -6892,7 +6892,6 @@ mp_obj_t py_image_load_image(uint n_args, const mp_obj_t *pos_args, mp_map_t *kw
 
         fb_alloc_mark();
         imlib_read_geometry(&fp, &image, path, &rs);
-        file_buffer_off(&fp);
         file_close(&fp);
 
         if (args[ARG_copy_to_fb].u_bool) {
@@ -6980,59 +6979,54 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_load_cascade_obj, 1, py_image_load_ca
 #if defined(IMLIB_ENABLE_IMAGE_FILE_IO)
 mp_obj_t py_image_load_descriptor(uint n_args, const mp_obj_t *args, mp_map_t *kw_args) {
     FIL fp;
-    UINT bytes;
-    FRESULT res;
+    FRESULT res = FR_OK;
 
     uint32_t desc_type;
     mp_obj_t desc = mp_const_none;
     const char *path = mp_obj_str_get_str(args[0]);
 
-    if ((res = f_open_helper(&fp, path, FA_READ | FA_OPEN_EXISTING)) == FR_OK) {
-        // Read descriptor type
-        res = f_read(&fp, &desc_type, sizeof(desc_type), &bytes);
-        if (res != FR_OK || bytes != sizeof(desc_type)) {
-            goto error;
-        }
+    file_open(&fp, path, false, FA_READ | FA_OPEN_EXISTING);
 
-        // Load descriptor
-        switch (desc_type) {
-            #if defined(IMLIB_ENABLE_FIND_LBP)
-            case DESC_LBP: {
-                py_lbp_obj_t *lbp = m_new_obj(py_lbp_obj_t);
-                lbp->base.type = &py_lbp_type;
+    // Read descriptor type
+    file_read(&fp, &desc_type, sizeof(desc_type));
 
-                res = imlib_lbp_desc_load(&fp, &lbp->hist);
-                if (res == FR_OK) {
-                    desc = lbp;
-                }
-                break;
+    // Load descriptor
+    switch (desc_type) {
+        #if defined(IMLIB_ENABLE_FIND_LBP)
+        case DESC_LBP: {
+            py_lbp_obj_t *lbp = m_new_obj(py_lbp_obj_t);
+            lbp->base.type = &py_lbp_type;
+
+            res = imlib_lbp_desc_load(&fp, &lbp->hist);
+            if (res == FR_OK) {
+                desc = lbp;
             }
-            #endif  //IMLIB_ENABLE_FIND_LBP
-            #if defined(IMLIB_ENABLE_FIND_KEYPOINTS)
-            case DESC_ORB: {
-                array_t *kpts = NULL;
-                array_alloc(&kpts, xfree);
-
-                res = orb_load_descriptor(&fp, kpts);
-                if (res == FR_OK) {
-                    // Return keypoints MP object
-                    py_kp_obj_t *kp_obj = m_new_obj(py_kp_obj_t);
-                    kp_obj->base.type = &py_kp_type;
-                    kp_obj->kpts = kpts;
-                    kp_obj->threshold = 10;
-                    kp_obj->normalized = false;
-                    desc = kp_obj;
-                }
-                break;
-            }
-            #endif //IMLIB_ENABLE_FIND_KEYPOINTS
+            break;
         }
+        #endif  //IMLIB_ENABLE_FIND_LBP
+        #if defined(IMLIB_ENABLE_FIND_KEYPOINTS)
+        case DESC_ORB: {
+            array_t *kpts = NULL;
+            array_alloc(&kpts, xfree);
 
-        f_close(&fp);
+            res = orb_load_descriptor(&fp, kpts);
+            if (res == FR_OK) {
+                // Return keypoints MP object
+                py_kp_obj_t *kp_obj = m_new_obj(py_kp_obj_t);
+                kp_obj->base.type = &py_kp_type;
+                kp_obj->kpts = kpts;
+                kp_obj->threshold = 10;
+                kp_obj->normalized = false;
+                desc = kp_obj;
+            }
+            break;
+        }
+        #endif //IMLIB_ENABLE_FIND_KEYPOINTS
     }
 
-error:
-    // File open or write error
+    file_close(&fp);
+
+    // File read error
     if (res != FR_OK) {
         mp_raise_msg(&mp_type_OSError, (mp_rom_error_text_t) ffs_strerror(res));
     }
@@ -7047,58 +7041,54 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_load_descriptor_obj, 1, py_image_load
 
 mp_obj_t py_image_save_descriptor(uint n_args, const mp_obj_t *args, mp_map_t *kw_args) {
     FIL fp;
-    UINT bytes;
-    FRESULT res;
+    FRESULT res = FR_OK;
 
     uint32_t desc_type;
     const char *path = mp_obj_str_get_str(args[1]);
 
-    if ((res = f_open_helper(&fp, path, FA_WRITE | FA_CREATE_ALWAYS)) == FR_OK) {
-        // Find descriptor type
-        const mp_obj_type_t *desc_obj_type = mp_obj_get_type(args[0]);
-        if (0) {
-        #if defined(IMLIB_ENABLE_FIND_LBP)
-        } else if (desc_obj_type == &py_lbp_type) {
-            desc_type = DESC_LBP;
-        #endif //IMLIB_ENABLE_FIND_LBP
-        #if defined(IMLIB_ENABLE_FIND_KEYPOINTS)
-        } else if (desc_obj_type == &py_kp_type) {
-            desc_type = DESC_ORB;
-        #endif //IMLIB_ENABLE_FIND_KEYPOINTS
-        } else {
-            (void) desc_obj_type;
-            mp_raise_msg(&mp_type_OSError, MP_ERROR_TEXT("Descriptor type is not supported"));
-        }
+    file_open(&fp, path, false, FA_WRITE | FA_CREATE_ALWAYS);
 
-        // Write descriptor type
-        res = f_write(&fp, &desc_type, sizeof(desc_type), &bytes);
-        if (res != FR_OK || bytes != sizeof(desc_type)) {
-            goto error;
-        }
-
-        // Write descriptor
-        switch (desc_type) {
-            #if defined(IMLIB_ENABLE_FIND_LBP)
-            case DESC_LBP: {
-                py_lbp_obj_t *lbp = ((py_lbp_obj_t *) args[0]);
-                res = imlib_lbp_desc_save(&fp, lbp->hist);
-                break;
-            }
-            #endif //IMLIB_ENABLE_FIND_LBP
-            #if defined(IMLIB_ENABLE_FIND_KEYPOINTS)
-            case DESC_ORB: {
-                py_kp_obj_t *kpts = ((py_kp_obj_t *) args[0]);
-                res = orb_save_descriptor(&fp, kpts->kpts);
-                break;
-            }
-            #endif //IMLIB_ENABLE_FIND_KEYPOINTS
-        }
-        // ignore unsupported descriptors when saving
-        f_close(&fp);
+    // Find descriptor type
+    const mp_obj_type_t *desc_obj_type = mp_obj_get_type(args[0]);
+    if (0) {
+    #if defined(IMLIB_ENABLE_FIND_LBP)
+    } else if (desc_obj_type == &py_lbp_type) {
+        desc_type = DESC_LBP;
+    #endif //IMLIB_ENABLE_FIND_LBP
+    #if defined(IMLIB_ENABLE_FIND_KEYPOINTS)
+    } else if (desc_obj_type == &py_kp_type) {
+        desc_type = DESC_ORB;
+    #endif //IMLIB_ENABLE_FIND_KEYPOINTS
+    } else {
+        (void) desc_obj_type;
+        mp_raise_msg(&mp_type_OSError, MP_ERROR_TEXT("Descriptor type is not supported"));
     }
 
-error:
-    // File open or read error
+    // Write descriptor type
+    file_write(&fp, &desc_type, sizeof(desc_type));
+
+    // Write descriptor
+    switch (desc_type) {
+        #if defined(IMLIB_ENABLE_FIND_LBP)
+        case DESC_LBP: {
+            py_lbp_obj_t *lbp = ((py_lbp_obj_t *) args[0]);
+            res = imlib_lbp_desc_save(&fp, lbp->hist);
+            break;
+        }
+        #endif //IMLIB_ENABLE_FIND_LBP
+        #if defined(IMLIB_ENABLE_FIND_KEYPOINTS)
+        case DESC_ORB: {
+            py_kp_obj_t *kpts = ((py_kp_obj_t *) args[0]);
+            res = orb_save_descriptor(&fp, kpts->kpts);
+            break;
+        }
+        #endif //IMLIB_ENABLE_FIND_KEYPOINTS
+    }
+
+    // ignore unsupported descriptors when saving
+    file_close(&fp);
+
+    // File write error
     if (res != FR_OK) {
         mp_raise_msg(&mp_type_OSError, (mp_rom_error_text_t) ffs_strerror(res));
     }
@@ -7194,18 +7184,12 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_match_descriptor_obj, 2, py_image_mat
 #if defined(IMLIB_ENABLE_FIND_KEYPOINTS) && defined(IMLIB_ENABLE_IMAGE_FILE_IO)
 int py_image_descriptor_from_roi(image_t *img, const char *path, rectangle_t *roi) {
     FIL fp;
-    FRESULT res = FR_OK;
-
-    printf("Save Descriptor: ROI(%d %d %d %d)\n", roi->x, roi->y, roi->w, roi->h);
     array_t *kpts = orb_find_keypoints(img, false, 20, 1.5f, 100, CORNER_AGAST, roi);
-    printf("Save Descriptor: KPTS(%d)\n", array_length(kpts));
-
     if (array_length(kpts)) {
-        if ((res = f_open_helper(&fp, path, FA_WRITE | FA_CREATE_ALWAYS)) == FR_OK) {
-            res = orb_save_descriptor(&fp, kpts);
-            f_close(&fp);
-        }
-        // File open/write error
+        file_open(&fp, path, false, FA_WRITE | FA_CREATE_ALWAYS);
+        FRESULT res = orb_save_descriptor(&fp, kpts);
+        file_close(&fp);
+        // File write error
         if (res != FR_OK) {
             mp_raise_msg(&mp_type_OSError, (mp_rom_error_text_t) ffs_strerror(res));
         }

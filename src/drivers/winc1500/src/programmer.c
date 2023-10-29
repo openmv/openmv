@@ -8,9 +8,9 @@
  *
  * Framebuffer functions.
  */
-#include <ff_wrapper.h>
 #include <stdio.h>
 #include "fb_alloc.h"
+#include "file_utils.h"
 
 #include "programmer/programmer.h"
 #include "spi_flash/include/spi_flash_map.h"
@@ -34,7 +34,7 @@ int burn_firmware(const char *path)
     int ret = M2M_ERR_FAIL;
     uint8_t	*buf = fb_alloc(FLASH_SECTOR_SZ, FB_ALLOC_NO_HINT);
 
-    if (f_open_helper(&fp, path, FA_READ|FA_OPEN_EXISTING) != FR_OK) {
+    if (file_ll_open(&fp, path, FA_READ|FA_OPEN_EXISTING) != FR_OK) {
         goto error;
     }
 
@@ -44,7 +44,7 @@ int burn_firmware(const char *path)
     while (size) {
         // Read a chuck (max FLASH_SECTOR_SZ bytes).
         bytes = MIN(size, FLASH_SECTOR_SZ);
-        if (f_read(&fp, buf, bytes, &bytes_out) != FR_OK || bytes != bytes_out) {
+        if (file_ll_read(&fp, buf, bytes, &bytes_out) != FR_OK || bytes != bytes_out) {
             printf("burn_firmware: file read error!\n");
             goto error;
         }
@@ -63,7 +63,7 @@ int burn_firmware(const char *path)
 
 error:
     fb_free();
-    f_close(&fp);
+    file_ll_close(&fp);
     return ret;
 }
 
@@ -81,7 +81,7 @@ int verify_firmware(const char *path)
     uint8_t	*file_buf = fb_alloc(FLASH_SECTOR_SZ, FB_ALLOC_NO_HINT);
     uint8_t	*flash_buf = fb_alloc(FLASH_SECTOR_SZ, FB_ALLOC_NO_HINT);
 
-    if (f_open_helper(&fp, path, FA_READ|FA_OPEN_EXISTING) != FR_OK) {
+    if (file_ll_open(&fp, path, FA_READ|FA_OPEN_EXISTING) != FR_OK) {
         goto error;
     }
 
@@ -92,7 +92,7 @@ int verify_firmware(const char *path)
         // Firmware chuck size (max FLASH_SECTOR_SZ bytes).
         bytes = MIN(size, FLASH_SECTOR_SZ);
 
-        if (f_read(&fp, file_buf, bytes, &bytes_out) != FR_OK || bytes_out != bytes) {
+        if (file_ll_read(&fp, file_buf, bytes, &bytes_out) != FR_OK || bytes_out != bytes) {
             printf("verify_firmware: file read error!\n");
             goto error;
         }
@@ -118,7 +118,7 @@ int verify_firmware(const char *path)
 error:
     fb_free();
     fb_free();
-    f_close(&fp);
+    file_ll_close(&fp);
     return ret;
 }
 
@@ -135,7 +135,7 @@ int dump_firmware(const char *path)
     int ret = M2M_ERR_FAIL;
     uint8_t	*flash_buf = fb_alloc(FLASH_SECTOR_SZ, FB_ALLOC_NO_HINT);
 
-    if (f_open_helper(&fp, path, FA_WRITE | FA_CREATE_ALWAYS) != FR_OK) {
+    if (file_ll_open(&fp, path, FA_WRITE | FA_CREATE_ALWAYS) != FR_OK) {
         goto error;
     }
 
@@ -151,7 +151,7 @@ int dump_firmware(const char *path)
             goto error;
         }
 
-        if (f_write(&fp, flash_buf, bytes, &bytes_out) != FR_OK || bytes_out != bytes) {
+        if (file_ll_write(&fp, flash_buf, bytes, &bytes_out) != FR_OK || bytes_out != bytes) {
             printf("dump_firmware: file write error!\n");
             goto error;
         }
@@ -164,6 +164,6 @@ int dump_firmware(const char *path)
 
 error:
     fb_free();
-    f_close(&fp);
+    file_ll_close(&fp);
     return ret;
 }

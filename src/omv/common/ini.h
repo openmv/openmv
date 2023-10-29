@@ -21,7 +21,7 @@ bool ini_is_true(const char *value);
 extern "C" {
 #endif
 
-#include "ff_wrapper.h"
+#include "file_utils.h"
 
 /* Nonzero if ini_handler callback should accept lineno parameter. */
 #ifndef INI_HANDLER_LINENO

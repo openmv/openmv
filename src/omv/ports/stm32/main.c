@@ -33,7 +33,6 @@
 #include "rtc.h"
 #include "storage.h"
 #include "sdcard.h"
-#include "ff.h"
 #include "extmod/modnetwork.h"
 #include "modmachine.h"
 
@@ -59,7 +58,7 @@
 #include "sdram.h"
 #include "fb_alloc.h"
 #include "dma_alloc.h"
-#include "ff_wrapper.h"
+#include "file_utils.h"
 
 #include "usbd_core.h"
 #include "usbd_desc.h"
@@ -124,9 +123,9 @@ void NORETURN __fatal_error(const char *msg) {
                    FA_WRITE | FA_CREATE_ALWAYS) == FR_OK) {
             UINT bytes;
             const char *hdr = "FATAL ERROR:\n";
-            f_write(&fp, hdr, strlen(hdr), &bytes);
-            f_write(&fp, msg, strlen(msg), &bytes);
-            f_close(&fp);
+            file_ll_write(&fp, hdr, strlen(hdr), &bytes);
+            file_ll_write(&fp, msg, strlen(msg), &bytes);
+            file_ll_close(&fp);
             storage_flush();
             // Initialize the USB device if it's not already initialize to allow
             // the host to mount the filesystem and access the error log.
@@ -234,7 +233,7 @@ FRESULT exec_boot_script(const char *path, bool selftest, bool interruptible, bo
         // Try to run the frozen module first.
         if (pyexec_frozen_module(path, true) == false) {
             // No frozen module, try the filesystem.
-            f_res = f_stat(&vfs_fat->fatfs, path, NULL);
+            f_res = file_ll_stat(path, NULL);
             if (f_res == FR_OK) {
                 // Parse, compile and execute the script.
                 pyexec_file(path, true);
@@ -270,7 +269,7 @@ FRESULT exec_boot_script(const char *path, bool selftest, bool interruptible, bo
 
     if (selftest && f_res == FR_OK) {
         // Remove self tests script and flush cache
-        f_unlink(&vfs_fat->fatfs, path);
+        file_ll_unlink(path);
         storage_flush();
 
         #ifdef OMV_SELF_TEST_SWD_ADDR
@@ -507,7 +506,7 @@ else {
     MP_STATE_PORT(vfs_cur) = vfs;
 
     // Mark FS as OpenMV disk.
-    f_touch_helper("/.openmv_disk");
+    file_ll_touch("/.openmv_disk");
 
     // Parse OpenMV configuration file.
     openmv_config_t openmv_config;

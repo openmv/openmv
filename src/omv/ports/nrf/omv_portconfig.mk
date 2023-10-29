@@ -100,7 +100,7 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/alloc/, \
 
 FIRM_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/common/, \
 	array.o                     \
-	ff_wrapper.o                \
+	file_utils.o                \
 	ini.o                       \
 	ringbuf.o                   \
 	trace.o                     \

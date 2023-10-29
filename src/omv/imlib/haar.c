@@ -13,12 +13,11 @@
 #include "py/obj.h"
 #include "py/nlr.h"
 
-#include "ff.h"
-#include "ff_wrapper.h"
 #include "xalloc.h"
 #include "imlib.h"
 // built-in cascades
 #include "cascade.h"
+#include "file_utils.h"
 
 static int eval_weak_classifier(cascade_t *cascade, point_t pt, int t_idx, int w_idx, int r_idx) {
     int32_t sumw = 0;
@@ -169,14 +168,13 @@ int imlib_load_cascade_from_file(cascade_t *cascade, const char *path) {
     FIL fp;
     FRESULT res = FR_OK;
 
-    file_read_open(&fp, path);
-    file_buffer_on(&fp);
+    file_open(&fp, path, true, FA_READ | FA_OPEN_EXISTING);
 
-    /* read detection window size */
-    read_data(&fp, &cascade->window, sizeof(cascade->window));
+    // Read detection window size
+    file_read(&fp, &cascade->window, sizeof(cascade->window));
 
-    /* read num stages */
-    read_data(&fp, &cascade->n_stages, sizeof(cascade->n_stages));
+    // Read num stages
+    file_read(&fp, &cascade->n_stages, sizeof(cascade->n_stages));
 
     cascade->stages_array = xalloc(sizeof(*cascade->stages_array) * cascade->n_stages);
     cascade->stages_thresh_array = xalloc(sizeof(*cascade->stages_thresh_array) * cascade->n_stages);
@@ -187,7 +185,7 @@ int imlib_load_cascade_from_file(cascade_t *cascade, const char *path) {
     }
 
     /* read num features in each stages */
-    read_data(&fp, cascade->stages_array, sizeof(uint8_t) * cascade->n_stages);
+    file_read(&fp, cascade->stages_array, sizeof(uint8_t) * cascade->n_stages);
 
     /* sum num of features in each stages*/
     for (i = 0, cascade->n_features = 0; i < cascade->n_stages; i++) {
@@ -209,19 +207,19 @@ int imlib_load_cascade_from_file(cascade_t *cascade, const char *path) {
     }
 
     /* read stages thresholds */
-    read_data(&fp, cascade->stages_thresh_array, sizeof(int16_t) * cascade->n_stages);
+    file_read(&fp, cascade->stages_thresh_array, sizeof(int16_t) * cascade->n_stages);
 
     /* read features thresholds */
-    read_data(&fp, cascade->tree_thresh_array, sizeof(*cascade->tree_thresh_array) * cascade->n_features);
+    file_read(&fp, cascade->tree_thresh_array, sizeof(*cascade->tree_thresh_array) * cascade->n_features);
 
     /* read alpha 1 */
-    read_data(&fp, cascade->alpha1_array, sizeof(*cascade->alpha1_array) * cascade->n_features);
+    file_read(&fp, cascade->alpha1_array, sizeof(*cascade->alpha1_array) * cascade->n_features);
 
     /* read alpha 2 */
-    read_data(&fp, cascade->alpha2_array, sizeof(*cascade->alpha2_array) * cascade->n_features);
+    file_read(&fp, cascade->alpha2_array, sizeof(*cascade->alpha2_array) * cascade->n_features);
 
     /* read num rectangles per feature*/
-    read_data(&fp, cascade->num_rectangles_array, sizeof(*cascade->num_rectangles_array) * cascade->n_features);
+    file_read(&fp, cascade->num_rectangles_array, sizeof(*cascade->num_rectangles_array) * cascade->n_features);
 
     /* sum num of recatngles per feature*/
     for (i = 0, cascade->n_rectangles = 0; i < cascade->n_features; i++) {
@@ -238,13 +236,12 @@ int imlib_load_cascade_from_file(cascade_t *cascade, const char *path) {
     }
 
     /* read rectangles weights */
-    read_data(&fp, cascade->weights_array, sizeof(*cascade->weights_array) * cascade->n_rectangles);
+    file_read(&fp, cascade->weights_array, sizeof(*cascade->weights_array) * cascade->n_rectangles);
 
     /* read rectangles num rectangles * 4 points */
-    read_data(&fp, cascade->rectangles_array, sizeof(*cascade->rectangles_array) * cascade->n_rectangles * 4);
+    file_read(&fp, cascade->rectangles_array, sizeof(*cascade->rectangles_array) * cascade->n_rectangles * 4);
 
 error:
-    file_buffer_off(&fp);
     file_close(&fp);
     return res;
 }
