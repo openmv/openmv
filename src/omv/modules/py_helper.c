@@ -23,24 +23,6 @@ mp_obj_t py_func_unavailable(uint n_args, const mp_obj_t *args, mp_map_t *kw_arg
 }
 MP_DEFINE_CONST_FUN_OBJ_KW(py_func_unavailable_obj, 0, py_func_unavailable);
 
-image_t *py_helper_arg_to_image_mutable(const mp_obj_t arg) {
-    image_t *arg_img = py_image_cobj(arg);
-    PY_ASSERT_TRUE_MSG(arg_img->is_mutable, "Image is not mutable!");
-    return arg_img;
-}
-
-image_t *py_helper_arg_to_image_not_compressed(const mp_obj_t arg) {
-    image_t *arg_img = py_image_cobj(arg);
-    PY_ASSERT_FALSE_MSG(arg_img->is_compressed, "Image is compressed!");
-    return arg_img;
-}
-
-image_t *py_helper_arg_to_image_grayscale(const mp_obj_t arg) {
-    image_t *arg_img = py_image_cobj(arg);
-    PY_ASSERT_TRUE_MSG(arg_img->pixfmt == PIXFORMAT_GRAYSCALE, "Image is not grayscale!");
-    return arg_img;
-}
-
 image_t *py_helper_arg_to_image(const mp_obj_t arg, uint32_t flags) {
     image_t *arg_img = py_image_cobj(arg);
     if (flags) {
@@ -102,9 +84,9 @@ image_t *py_helper_keyword_to_image_mutable(uint n_args, const mp_obj_t *args, u
     mp_map_elem_t *kw_arg = mp_map_lookup(kw_args, kw, MP_MAP_LOOKUP);
 
     if (kw_arg) {
-        default_val = py_helper_arg_to_image_mutable(kw_arg->value);
+        default_val = py_helper_arg_to_image(kw_arg->value, ARG_IMAGE_MUTABLE);
     } else if (n_args > arg_index) {
-        default_val = py_helper_arg_to_image_mutable(args[arg_index]);
+        default_val = py_helper_arg_to_image(args[arg_index], ARG_IMAGE_MUTABLE);
     }
 
     return default_val;
