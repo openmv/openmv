@@ -136,7 +136,7 @@ void mjpeg_write(FIL *fp, int width, int height, uint32_t *frames, uint32_t *byt
 
             point_t p0, p1;
             imlib_draw_image_get_bounds(&temp, img, center_x, center_y, scale, scale, roi,
-                                        alpha, alpha_palette, hint, &p0, &p1);
+                                        alpha, alpha_palette, (hint & (~IMAGE_HINT_CENTER)), &p0, &p1);
             bool black = p0.x == -1;
 
             if (black) {
