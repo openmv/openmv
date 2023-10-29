@@ -23,6 +23,8 @@ extern const mp_obj_fun_builtin_var_t py_func_unavailable_obj;
 image_t *py_helper_arg_to_image(const mp_obj_t arg, uint32_t flags);
 const void *py_helper_arg_to_palette(const mp_obj_t arg, uint32_t pixfmt);
 rectangle_t py_helper_arg_to_roi(const mp_obj_t arg, const image_t *img);
+void py_helper_arg_to_scale(const mp_obj_t arg_x_scale, const mp_obj_t arg_y_scale,
+                            float *x_scale, float *y_scale, rectangle_t *roi);
 image_t *py_helper_keyword_to_image_mutable(uint n_args, const mp_obj_t *args, uint arg_index,
                                             mp_map_t *kw_args, mp_obj_t kw, image_t *default_val);
 image_t *py_helper_keyword_to_image_mutable_mask(uint n_args, const mp_obj_t *args, uint arg_index,

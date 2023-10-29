@@ -79,6 +79,27 @@ rectangle_t py_helper_arg_to_roi(const mp_obj_t arg, const image_t *img) {
     return roi;
 }
 
+void py_helper_arg_to_scale(const mp_obj_t arg_x_scale, const mp_obj_t arg_y_scale,
+                            float *x_scale, float *y_scale, rectangle_t *roi) {
+    if (mp_obj_is_float(arg_x_scale)) {
+        *x_scale = mp_obj_get_float(arg_x_scale);
+    } else if (mp_obj_is_int(arg_x_scale)) {
+        *x_scale = mp_obj_get_int(arg_x_scale) / (float) roi->w;
+    }
+
+    if (mp_obj_is_float(arg_y_scale)) {
+        *y_scale = mp_obj_get_float(arg_y_scale);
+    } else if (mp_obj_is_int(arg_y_scale)) {
+        *y_scale = mp_obj_get_int(arg_y_scale) / (float) roi->h;
+    }
+
+    if (arg_x_scale == mp_const_none && arg_y_scale != mp_const_none) {
+        *x_scale = *y_scale;
+    } else if (arg_y_scale == mp_const_none && arg_x_scale != mp_const_none) {
+        *y_scale = *x_scale;
+    }
+}
+
 image_t *py_helper_keyword_to_image_mutable(uint n_args, const mp_obj_t *args, uint arg_index,
                                             mp_map_t *kw_args, mp_obj_t kw, image_t *default_val) {
     mp_map_elem_t *kw_arg = mp_map_lookup(kw_args, kw, MP_MAP_LOOKUP);
