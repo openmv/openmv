@@ -208,6 +208,12 @@
 
 #define TV_BAUDRATE                  (TV_WIDTH * TV_HEIGHT * TV_REFRESH * PICBITS)
 
+#if OMV_SPI_DISPLAY_TRIPLE_BUFFER
+#define TV_TRIPLE_BUFFER_DEFAULT   (true)
+#else
+#define TV_TRIPLE_BUFFER_DEFAULT   (false)
+#endif
+
 static omv_spi_t spi_bus = {};
 
 static void SpiTransmitReceivePacket(uint8_t *txdata, uint8_t *rxdata, uint16_t size, bool end) {
@@ -387,12 +393,12 @@ static int framebuffer_head = 0;
 static volatile int framebuffer_tail = 0;
 static uint16_t *framebuffers[FRAMEBUFFER_COUNT] = {};
 
-static enum {
+typedef enum tv_type {
     TV_NONE,
     TV_SHIELD,
-}
-tv_type = TV_NONE;
+} tv_type_t;
 
+static tv_type_t tv_type = TV_NONE;
 static bool tv_triple_buffer = false;
 
 #ifdef OMV_SPI_DISPLAY_CONTROLLER
@@ -745,41 +751,40 @@ STATIC mp_obj_t py_tv_deinit() {
             break;
         }
         #endif
-        default: {
+        default:
             break;
-        }
     }
 
+    tv_type = TV_NONE;
     tv_triple_buffer = false;
 
     return mp_const_none;
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_tv_deinit_obj, py_tv_deinit);
 
-STATIC mp_obj_t py_tv_init(uint n_args, const mp_obj_t *args, mp_map_t *kw_args) {
+STATIC mp_obj_t py_tv_init(uint n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
+    enum { ARG_type, ARG_triple_buffer };
+    static const mp_arg_t allowed_args[] = {
+        { MP_QSTR_type, MP_ARG_INT, {.u_int = TV_SHIELD } },
+        { MP_QSTR_triple_buffer, MP_ARG_BOOL | MP_ARG_KW_ONLY, {.u_bool = TV_TRIPLE_BUFFER_DEFAULT } },
+    };
+
+    // Parse args.
+    mp_arg_val_t args[MP_ARRAY_SIZE(allowed_args)];
+    mp_arg_parse_all(n_args, pos_args, kw_args, MP_ARRAY_SIZE(allowed_args), allowed_args, args);
+
     py_tv_deinit();
+    tv_type = args[ARG_type].u_int;
+    tv_triple_buffer = args[ARG_triple_buffer].u_bool;
 
-    int type = py_helper_keyword_int(n_args, args, 0, kw_args,
-                                     MP_OBJ_NEW_QSTR(MP_QSTR_type), TV_SHIELD);
-
-    switch (type) {
+    switch (tv_type) {
         #ifdef OMV_SPI_DISPLAY_CONTROLLER
-        case TV_SHIELD: {
-            bool triple_buffer_def = false;
-            #ifdef OMV_SPI_DISPLAY_TRIPLE_BUFFER
-            triple_buffer_def = OMV_SPI_DISPLAY_TRIPLE_BUFFER;
-            #endif
-            bool triple_buffer = py_helper_keyword_int(n_args, args, 1, kw_args,
-                                                       MP_OBJ_NEW_QSTR(MP_QSTR_triple_buffer), triple_buffer_def);
-            spi_config_init(triple_buffer);
-            tv_type = TV_SHIELD;
-            tv_triple_buffer = triple_buffer;
+        case TV_SHIELD:
+            spi_config_init(tv_triple_buffer);
             break;
-        }
         #endif
-        default: {
-            break;
-        }
+        default:
+            mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Failed to detect a supported TV controller."));
     }
 
     return mp_const_none;
@@ -787,53 +792,49 @@ STATIC mp_obj_t py_tv_init(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_tv_init_obj, 0, py_tv_init);
 
 STATIC mp_obj_t py_tv_width() {
-    if (tv_type == TV_NONE) {
-        return mp_const_none;
+    if (tv_type != TV_NONE) {
+        return mp_obj_new_int(TV_WIDTH);
     }
 
-    return mp_obj_new_int(TV_WIDTH);
+    mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("TV controller is not initialized"));
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_tv_width_obj, py_tv_width);
 
 STATIC mp_obj_t py_tv_height() {
-    if (tv_type == TV_NONE) {
-        return mp_const_none;
+    if (tv_type != TV_NONE) {
+        return mp_obj_new_int(TV_HEIGHT);
     }
-
-    return mp_obj_new_int(TV_HEIGHT);
+    mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("TV controller is not initialized"));
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_tv_height_obj, py_tv_height);
 
 STATIC mp_obj_t py_tv_type() {
-    if (tv_type == TV_NONE) {
-        return mp_const_none;
+    if (tv_type != TV_NONE) {
+        return mp_obj_new_int(tv_type);
     }
-
-    return mp_obj_new_int(tv_type);
+    mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("TV controller is not initialized"));
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_tv_type_obj, py_tv_type);
 
 STATIC mp_obj_t py_tv_triple_buffer() {
-    if (tv_type == TV_NONE) {
-        return mp_const_none;
+    if (tv_type != TV_NONE) {
+        return mp_obj_new_int(tv_triple_buffer);
     }
-
-    return mp_obj_new_int(tv_triple_buffer);
+    mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("TV controller is not initialized"));
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_tv_triple_buffer_obj, py_tv_triple_buffer);
 
 STATIC mp_obj_t py_tv_refresh() {
-    if (tv_type == TV_NONE) {
-        return mp_const_none;
+    if (tv_type != TV_NONE) {
+        return mp_obj_new_int(TV_REFRESH);
     }
-
-    return mp_obj_new_int(TV_REFRESH);
+    mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("TV controller is not initialized"));
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_tv_refresh_obj, py_tv_refresh);
 
 STATIC mp_obj_t py_tv_channel(uint n_args, const mp_obj_t *args) {
     if (tv_type == TV_NONE) {
-        return mp_const_none;
+        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("TV controller is not initialized"));
     }
 
     #ifdef OMV_SPI_DISPLAY_CONTROLLER
@@ -847,10 +848,11 @@ STATIC mp_obj_t py_tv_channel(uint n_args, const mp_obj_t *args) {
         int channel = mp_obj_get_int(*args);
 
         if ((channel < 1) || (8 < channel)) {
-            mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("1 <= channel <= 8!"));
+            mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Channel ranges between 1 and 8"));
         }
 
         SpiRamWriteByteRegister(WRITE_GPIO, 0x70 | (channel - 1));
+        return mp_const_none;
     } else {
         #ifdef OMV_SPI_DISPLAY_RX_CLK_DIV
         omv_spi_set_baudrate(&spi_bus, TV_BAUDRATE / OMV_SPI_DISPLAY_RX_CLK_DIV);
@@ -862,108 +864,62 @@ STATIC mp_obj_t py_tv_channel(uint n_args, const mp_obj_t *args) {
         return mp_obj_new_int((channel & 0x7) + 1);
     }
     #endif
-
-    return mp_const_none;
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(py_tv_channel_obj, 0, 1, py_tv_channel);
 
-STATIC mp_obj_t py_tv_display(uint n_args, const mp_obj_t *args, mp_map_t *kw_args) {
-    image_t *arg_img = py_image_cobj(args[0]);
+STATIC mp_obj_t py_tv_display(uint n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
+    enum {
+        ARG_x, ARG_y, ARG_x_scale, ARG_y_scale, ARG_roi, ARG_channel, ARG_alpha,
+        ARG_color_palette, ARG_alpha_palette, ARG_hint
+    };
+    static const mp_arg_t allowed_args[] = {
+        { MP_QSTR_x, MP_ARG_INT | MP_ARG_KW_ONLY,  {.u_int = 0 } },
+        { MP_QSTR_y, MP_ARG_INT | MP_ARG_KW_ONLY,  {.u_int = 0 } },
+        { MP_QSTR_x_scale, MP_ARG_OBJ | MP_ARG_KW_ONLY, {.u_rom_obj = MP_ROM_NONE} },
+        { MP_QSTR_y_scale, MP_ARG_OBJ | MP_ARG_KW_ONLY, {.u_rom_obj = MP_ROM_NONE} },
+        { MP_QSTR_roi, MP_ARG_OBJ | MP_ARG_KW_ONLY, {.u_rom_obj = MP_ROM_NONE} },
+        { MP_QSTR_rgb_channel, MP_ARG_INT | MP_ARG_KW_ONLY,  {.u_int = -1 } },
+        { MP_QSTR_alpha, MP_ARG_INT | MP_ARG_KW_ONLY,  {.u_int = 256 } },
+        { MP_QSTR_color_palette, MP_ARG_OBJ | MP_ARG_KW_ONLY, {.u_rom_obj = MP_ROM_NONE} },
+        { MP_QSTR_alpha_palette, MP_ARG_OBJ | MP_ARG_KW_ONLY, {.u_rom_obj = MP_ROM_NONE} },
+        { MP_QSTR_hint, MP_ARG_INT | MP_ARG_KW_ONLY,  {.u_int = 0 } },
+    };
 
-    int arg_x_off = 0;
-    int arg_y_off = 0;
-    uint offset = 1;
-    if (n_args > 1) {
-        if (MP_OBJ_IS_TYPE(args[1], &mp_type_tuple) || MP_OBJ_IS_TYPE(args[1], &mp_type_list)) {
-            mp_obj_t *arg_vec;
-            mp_obj_get_array_fixed_n(args[1], 2, &arg_vec);
-            arg_x_off = mp_obj_get_int(arg_vec[0]);
-            arg_y_off = mp_obj_get_int(arg_vec[1]);
-            offset = 2;
-        } else if (n_args > 2) {
-            arg_x_off = mp_obj_get_int(args[1]);
-            arg_y_off = mp_obj_get_int(args[2]);
-            offset = 3;
-        } else if (n_args > 1) {
-            mp_raise_msg(&mp_type_TypeError, MP_ERROR_TEXT("Expected x and y offset!"));
-        }
+    // Parse args.
+    mp_arg_val_t args[MP_ARRAY_SIZE(allowed_args)];
+    mp_arg_parse_all(n_args + 1, pos_args - 1, kw_args, MP_ARRAY_SIZE(allowed_args), allowed_args, args);
+
+    image_t *image = py_helper_arg_to_image(pos_args[0], 0);
+    rectangle_t roi = py_helper_arg_to_roi(args[ARG_roi].u_obj, image);
+
+    if (args[ARG_channel].u_int < -1 || args[ARG_channel].u_int > 2) {
+        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("RGB channel can be 0, 1, or 2"));
     }
 
-    float arg_x_scale = 1.f;
-    bool got_x_scale = py_helper_keyword_float_maybe(n_args, args, offset, kw_args,
-                                                     MP_OBJ_NEW_QSTR(MP_QSTR_x_scale), &arg_x_scale);
-
-    float arg_y_scale = 1.f;
-    bool got_y_scale = py_helper_keyword_float_maybe(n_args, args, offset + 1, kw_args,
-                                                     MP_OBJ_NEW_QSTR(MP_QSTR_y_scale), &arg_y_scale);
-
-    rectangle_t arg_roi;
-    py_helper_keyword_rectangle_roi(arg_img, n_args, args, offset + 2, kw_args, &arg_roi);
-
-    int arg_rgb_channel = py_helper_keyword_int(n_args, args, offset + 3, kw_args,
-                                                MP_OBJ_NEW_QSTR(MP_QSTR_rgb_channel), -1);
-
-    if ((arg_rgb_channel < -1) || (2 < arg_rgb_channel)) {
-        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("-1 <= rgb_channel <= 2!"));
+    if (args[ARG_alpha].u_int < 0 || args[ARG_alpha].u_int > 256) {
+        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Alpha ranges between 0 and 256"));
     }
 
-    int arg_alpha = py_helper_keyword_int(n_args, args, offset + 4, kw_args,
-                                          MP_OBJ_NEW_QSTR(MP_QSTR_alpha), 256);
+    float x_scale = 1.0f;
+    float y_scale = 1.0f;
+    py_helper_arg_to_scale(args[ARG_x_scale].u_obj, args[ARG_y_scale].u_obj, &x_scale, &y_scale, &roi);
 
-    if ((arg_alpha < 0) || (256 < arg_alpha)) {
-        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("0 <= alpha <= 256!"));
-    }
-
-    const uint16_t *color_palette = py_helper_keyword_color_palette(n_args, args, offset + 5, kw_args, NULL);
-    const uint8_t *alpha_palette = py_helper_keyword_alpha_palette(n_args, args, offset + 6, kw_args, NULL);
-
-    image_hint_t hint = py_helper_keyword_int(n_args, args, offset + 7, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_hint), 0);
-
-    float arg_x_size;
-    bool got_x_size = py_helper_keyword_float_maybe(n_args, args, offset + 8, kw_args,
-                                                    MP_OBJ_NEW_QSTR(MP_QSTR_x_size), &arg_x_size);
-
-    float arg_y_size;
-    bool got_y_size = py_helper_keyword_float_maybe(n_args, args, offset + 9, kw_args,
-                                                    MP_OBJ_NEW_QSTR(MP_QSTR_y_size), &arg_y_size);
-
-    if (got_x_scale && got_x_size) {
-        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Choose either x_scale or x_size not both!"));
-    }
-
-    if (got_y_scale && got_y_size) {
-        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Choose either y_scale or y_size not both!"));
-    }
-
-    if (got_x_size) {
-        arg_x_scale = arg_x_size / arg_roi.w;
-    }
-
-    if (got_y_size) {
-        arg_y_scale = arg_y_size / arg_roi.h;
-    }
-
-    if ((!got_x_scale) && (!got_x_size) && got_y_size) {
-        arg_x_scale = arg_y_scale;
-    }
-
-    if ((!got_y_scale) && (!got_y_size) && got_x_size) {
-        arg_y_scale = arg_x_scale;
-    }
+    const uint16_t *color_palette = py_helper_arg_to_palette(args[ARG_color_palette].u_obj, PIXFORMAT_RGB565);
+    const uint8_t *alpha_palette = py_helper_arg_to_palette(args[ARG_alpha_palette].u_obj, PIXFORMAT_GRAYSCALE);
 
     switch (tv_type) {
         #ifdef OMV_SPI_DISPLAY_CONTROLLER
         case TV_SHIELD: {
             fb_alloc_mark();
-            spi_tv_display(arg_img, arg_x_off, arg_y_off, arg_x_scale, arg_y_scale, &arg_roi,
-                           arg_rgb_channel, arg_alpha, color_palette, alpha_palette, hint);
+            spi_tv_display(image, args[ARG_x].u_int, args[ARG_y].u_int, x_scale, y_scale, &roi,
+                           args[ARG_channel].u_int, args[ARG_alpha].u_int, color_palette, alpha_palette,
+                           args[ARG_hint].u_int);
             fb_alloc_free_till_mark();
             break;
         }
         #endif
-        default: {
-            break;
-        }
+        default:
+            mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("TV controller is not initialized"));
     }
 
     return mp_const_none;
@@ -982,7 +938,7 @@ STATIC mp_obj_t py_tv_clear() {
         }
         #endif
         default: {
-            break;
+            mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("TV controller is not initialized"));
         }
     }
 
