@@ -41,6 +41,62 @@ image_t *py_helper_arg_to_image_grayscale(const mp_obj_t arg) {
     return arg_img;
 }
 
+image_t *py_helper_arg_to_image(const mp_obj_t arg, uint32_t flags) {
+    image_t *arg_img = py_image_cobj(arg);
+    if (flags) {
+        if ((flags & ARG_IMAGE_MUTABLE) && !arg_img->is_mutable) {
+            mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Expected a mutable image"));
+        } else if ((flags & ARG_IMAGE_UNCOMPRESSED) && arg_img->is_compressed) {
+            mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Expected an uncompressed image"));
+        } else if ((flags & ARG_IMAGE_GRAYSCALE) && arg_img->pixfmt != PIXFORMAT_GRAYSCALE) {
+            mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Expected an uncompressed image"));
+        }
+    }
+    return arg_img;
+}
+
+const void *py_helper_arg_to_palette(const mp_obj_t arg, uint32_t pixfmt) {
+    const void *palette = NULL;
+    if (mp_obj_is_int(arg)) {
+        uint32_t type = mp_obj_get_int(arg);
+        if (type == COLOR_PALETTE_RAINBOW) {
+            palette = rainbow_table;
+        } else if (type == COLOR_PALETTE_IRONBOW) {
+            palette = ironbow_table;
+        } else {
+            mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Invalid color palette"));
+        }
+    } else if (arg != mp_const_none) {
+        image_t *img = py_helper_arg_to_image(arg, ARG_IMAGE_MUTABLE);
+        if (img->pixfmt != pixfmt) {
+            mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Unexpcted color palette format"));
+        }
+        if ((img->w * img->h) != 256) {
+            mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Color palette must be 256 pixels"));
+        }
+        palette = img->data;
+    }
+    return palette;
+}
+
+rectangle_t py_helper_arg_to_roi(const mp_obj_t arg, const image_t *img) {
+    rectangle_t roi = {0, 0, img->w, img->h};
+    if (arg != mp_const_none) {
+        mp_obj_t *arg_roi;
+        mp_obj_get_array_fixed_n(arg, 4, &arg_roi);
+        roi.x = mp_obj_get_int(arg_roi[0]);
+        roi.y = mp_obj_get_int(arg_roi[1]);
+        roi.w = mp_obj_get_int(arg_roi[2]);
+        roi.h = mp_obj_get_int(arg_roi[3]);
+
+        PY_ASSERT_TRUE_MSG((roi.w >= 1) && (roi.h >= 1), "Invalid ROI dimensions!");
+        rectangle_t bounds = {0, 0, img->w, img->h};
+        PY_ASSERT_TRUE_MSG(rectangle_overlap(&roi, &bounds), "ROI does not overlap on the image!");
+        rectangle_intersected(&roi, &bounds);
+    }
+    return roi;
+}
+
 image_t *py_helper_keyword_to_image_mutable(uint n_args, const mp_obj_t *args, uint arg_index,
                                             mp_map_t *kw_args, mp_obj_t kw, image_t *default_val) {
     mp_map_elem_t *kw_arg = mp_map_lookup(kw_args, kw, MP_MAP_LOOKUP);
