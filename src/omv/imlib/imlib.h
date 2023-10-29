@@ -1095,6 +1095,7 @@ typedef struct imlib_draw_row_data {
     const uint8_t *alpha_palette; // user
     bool black_background; // user
     void *callback; // user
+    void *callback_arg; // user
     void *dst_row_override; // user
     int toggle; // private
     void *row_buffer[2]; // private
@@ -1325,6 +1326,7 @@ void imlib_draw_image(image_t *dst_img,
                       const uint8_t *alpha_palette,
                       image_hint_t hint,
                       imlib_draw_row_callback_t callback,
+                      void *callback_arg,
                       void *dst_row_override);
 void imlib_flood_fill(image_t *img, int x, int y,
                       float seed_threshold, float floating_threshold,

@@ -2838,6 +2838,7 @@ void imlib_draw_image(image_t *dst_img,
                       const uint8_t *alpha_palette,
                       image_hint_t hint,
                       imlib_draw_row_callback_t callback,
+                      void *callback_arg,
                       void *dst_row_override) {
     int dst_delta_x = 1; // positive direction
     if (x_scale < 0.f) {
@@ -3015,7 +3016,8 @@ void imlib_draw_image(image_t *dst_img,
         new_src_img.h = src_img_h; // same height as source image
         new_src_img.pixfmt = color_palette ? PIXFORMAT_RGB565 : PIXFORMAT_GRAYSCALE;
         new_src_img.data = fb_alloc(image_size(&new_src_img), FB_ALLOC_CACHE_ALIGN);
-        imlib_draw_image(&new_src_img, src_img, 0, 0, 1.f, 1.f, NULL, rgb_channel, 256, color_palette, NULL, 0, NULL, NULL);
+        imlib_draw_image(&new_src_img, src_img, 0, 0, 1.f, 1.f, NULL,
+                         rgb_channel, 256, color_palette, NULL, 0, NULL, NULL, NULL);
         src_img = &new_src_img;
         rgb_channel = -1;
         color_palette = NULL;
@@ -3109,6 +3111,7 @@ void imlib_draw_image(image_t *dst_img,
     imlib_draw_row_data.alpha_palette = alpha_palette;
     imlib_draw_row_data.black_background = hint & IMAGE_HINT_BLACK_BACKGROUND;
     imlib_draw_row_data.callback = callback;
+    imlib_draw_row_data.callback_arg = callback_arg;
     imlib_draw_row_data.dst_row_override = dst_row_override;
     #ifdef IMLIB_ENABLE_DMA2D
     imlib_draw_row_data.dma2d_request = (alpha != 256) || alpha_palette ||

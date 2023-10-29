@@ -1144,7 +1144,7 @@ static mp_obj_t py_image_to(pixformat_t pixfmt, const uint16_t *default_color_pa
                 temp.data = fb_alloc(image_size(&temp), FB_ALLOC_NO_HINT);
                 imlib_draw_image(&temp, src_img, 0, 0, arg_x_scale, arg_y_scale, &arg_roi,
                                  arg_rgb_channel, arg_alpha, color_palette, alpha_palette,
-                                 (hint & (~IMAGE_HINT_CENTER)) | IMAGE_HINT_BLACK_BACKGROUND, NULL, NULL);
+                                 (hint & (~IMAGE_HINT_CENTER)) | IMAGE_HINT_BLACK_BACKGROUND, NULL, NULL, NULL);
             }
 
             if (((dst_img.pixfmt == PIXFORMAT_JPEG) && jpeg_compress(&temp, &dst_img_tmp, arg_q, false))
@@ -1199,7 +1199,7 @@ static mp_obj_t py_image_to(pixformat_t pixfmt, const uint16_t *default_color_pa
         fb_alloc_mark();
         imlib_draw_image(&dst_img, src_img, 0, 0, arg_x_scale, arg_y_scale, &arg_roi,
                          arg_rgb_channel, arg_alpha, color_palette, alpha_palette,
-                         (hint & (~IMAGE_HINT_CENTER)) | IMAGE_HINT_BLACK_BACKGROUND, NULL, NULL);
+                         (hint & (~IMAGE_HINT_CENTER)) | IMAGE_HINT_BLACK_BACKGROUND, NULL, NULL, NULL);
         fb_alloc_free_till_mark();
     }
 
@@ -1636,7 +1636,7 @@ STATIC mp_obj_t py_image_draw_image(uint n_args, const mp_obj_t *args, mp_map_t 
 
     fb_alloc_mark();
     imlib_draw_image(arg_img, arg_other, arg_x_off, arg_y_off, arg_x_scale, arg_y_scale, &arg_roi,
-                     arg_rgb_channel, arg_alpha, color_palette, alpha_palette, hint, NULL, NULL);
+                     arg_rgb_channel, arg_alpha, color_palette, alpha_palette, hint, NULL, NULL, NULL);
     fb_alloc_free_till_mark();
     return args[0];
 }
