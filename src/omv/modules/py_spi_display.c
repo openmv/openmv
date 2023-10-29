@@ -172,9 +172,10 @@ static void spi_display_write(py_display_obj_t *self, image_t *src_img, int dst_
     dst_img.h = self->height;
     dst_img.pixfmt = PIXFORMAT_RGB565;
 
-    int x0, x1, y0, y1;
-    bool black = !imlib_draw_image_rectangle(&dst_img, src_img, dst_x_start, dst_y_start, x_scale,
-                                             y_scale, roi, alpha, alpha_palette, hint, &x0, &x1, &y0, &y1);
+    point_t p0, p1;
+    imlib_draw_image_get_bounds(&dst_img, src_img, dst_x_start, dst_y_start, x_scale,
+                                y_scale, roi, alpha, alpha_palette, hint, &p0, &p1);
+    bool black = p0.x == -1;
 
     if (!self->triple_buffer) {
         dst_img.data = fb_alloc0(self->width * sizeof(uint16_t), FB_ALLOC_NO_HINT);
@@ -190,7 +191,7 @@ static void spi_display_write(py_display_obj_t *self, image_t *src_img, int dst_
             }
         } else {
             // Zero the top rows
-            for (int i = 0; i < y0; i++) {
+            for (int i = 0; i < p0.y; i++) {
                 spi_transmit_16(self, dst_img.data, self->width);
             }
 
@@ -202,11 +203,11 @@ static void spi_display_write(py_display_obj_t *self, image_t *src_img, int dst_
                              x_scale, y_scale, roi, rgb_channel, alpha, color_palette, alpha_palette,
                              hint | IMAGE_HINT_BLACK_BACKGROUND, spi_display_draw_image_cb, dst_img.data);
             // Zero the bottom rows
-            if (y1 < self->height) {
+            if (p1.y < self->height) {
                 memset(dst_img.data, 0, self->width * sizeof(uint16_t));
             }
 
-            for (int i = y1; i < self->height; i++) {
+            for (int i = p1.y; i < self->height; i++) {
                 spi_transmit_16(self, dst_img.data, self->width);
             }
         }
@@ -229,14 +230,14 @@ static void spi_display_write(py_display_obj_t *self, image_t *src_img, int dst_
             memset(dst_img.data, 0, self->width * self->height * sizeof(uint16_t));
         } else {
             // Zero the top rows
-            if (y0) {
-                memset(dst_img.data, 0, self->width * y0 * sizeof(uint16_t));
+            if (p0.y) {
+                memset(dst_img.data, 0, self->width * p0.y * sizeof(uint16_t));
             }
 
-            if (x0) {
-                for (int i = y0; i < y1; i++) {
+            if (p0.x) {
+                for (int i = p0.y; i < p1.y; i++) {
                     // Zero left
-                    memset(IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(&dst_img, i), 0, x0 * sizeof(uint16_t));
+                    memset(IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(&dst_img, i), 0, p0.x * sizeof(uint16_t));
                 }
             }
 
@@ -244,17 +245,18 @@ static void spi_display_write(py_display_obj_t *self, image_t *src_img, int dst_
                              x_scale, y_scale, roi, rgb_channel, alpha, color_palette,
                              alpha_palette, hint | IMAGE_HINT_BLACK_BACKGROUND, NULL, NULL);
 
-            if (self->width - x1) {
-                for (int i = y0; i < y1; i++) {
+            if (self->width - p1.x) {
+                for (int i = p0.y; i < p1.y; i++) {
                     // Zero right
-                    memset(IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(&dst_img, i) + x1, 0, (self->width - x1) * sizeof(uint16_t));
+                    memset(IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(&dst_img, i) + p1.x, 0,
+                           (self->width - p1.x) * sizeof(uint16_t));
                 }
             }
 
             // Zero the bottom rows
-            if (self->height - y1) {
-                memset(IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(&dst_img, y1),
-                       0, self->width * (self->height - y1) * sizeof(uint16_t));
+            if (self->height - p1.y) {
+                memset(IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(&dst_img, p1.y),
+                       0, self->width * (self->height - p1.y) * sizeof(uint16_t));
             }
         }
 

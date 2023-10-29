@@ -409,9 +409,10 @@ static void display_write(py_display_obj_t *self, image_t *src_img, int dst_x_st
     dst_img.h = self->height;
     dst_img.pixfmt = PIXFORMAT_RGB565;
 
-    int x0, x1, y0, y1;
-    bool black = !imlib_draw_image_rectangle(&dst_img, src_img, dst_x_start, dst_y_start, x_scale, y_scale,
-                                             roi, alpha, alpha_palette, hint, &x0, &x1, &y0, &y1);
+    point_t p0, p1;
+    imlib_draw_image_get_bounds(&dst_img, src_img, dst_x_start, dst_y_start, x_scale, y_scale,
+                                roi, alpha, alpha_palette, hint, &p0, &p1);
+    bool black = p0.x == -1;
 
     // For triple buffering we are never drawing where tail or head (which may instantly update to
     // to be equal to tail) is.
@@ -422,15 +423,15 @@ static void display_write(py_display_obj_t *self, image_t *src_img, int dst_x_st
     dst_img.data = (uint8_t *) self->framebuffers[tail];
 
     // Set default values for the layer to display the whole framebuffer.
-    display.framebuffer_layers[tail].WindowX0 = black ? 0 : x0;
-    display.framebuffer_layers[tail].WindowX1 = black ? self->width : x1;
-    display.framebuffer_layers[tail].WindowY0 = black ? 0 : y0;
-    display.framebuffer_layers[tail].WindowY1 = black ? self->height : y1;
+    display.framebuffer_layers[tail].WindowX0 = black ? 0 : p0.x;
+    display.framebuffer_layers[tail].WindowX1 = black ? self->width : p1.x;
+    display.framebuffer_layers[tail].WindowY0 = black ? 0 : p0.y;
+    display.framebuffer_layers[tail].WindowY1 = black ? self->height : p1.y;
     display.framebuffer_layers[tail].Alpha = black ? 0 : fast_roundf((alpha * 255) / 256.f);
     display.framebuffer_layers[tail].FBStartAdress =
-        black ? ((uint32_t) dst_img.data) : ((uint32_t) (IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(&dst_img, y0) + x0));
+        black ? ((uint32_t) dst_img.data) : ((uint32_t) (IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(&dst_img, p0.y) + p0.x));
     display.framebuffer_layers[tail].ImageWidth = black ? self->width : dst_img.w;
-    display.framebuffer_layers[tail].ImageHeight = black ? self->height : (y1 - y0);
+    display.framebuffer_layers[tail].ImageHeight = black ? self->height : (p1.y - p0.y);
 
     // Set alpha to 256 here as we will use the layer alpha to blend the image into the background color of black for free.
     if (!black) {

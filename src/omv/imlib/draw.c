@@ -2733,22 +2733,22 @@ void imlib_draw_row(int x_start, int x_end, int y_row, imlib_draw_row_data_t *da
 }
 
 // False == Image is black, True == rect valid
-bool imlib_draw_image_rectangle(image_t *dst_img,
-                                image_t *src_img,
-                                int dst_x_start,
-                                int dst_y_start,
-                                float x_scale,
-                                float y_scale,
-                                rectangle_t *roi,
-                                int alpha,
-                                const uint8_t *alpha_palette,
-                                image_hint_t hint,
-                                int *x0,
-                                int *x1,
-                                int *y0,
-                                int *y1) {
+void imlib_draw_image_get_bounds(image_t *dst_img,
+                                 image_t *src_img,
+                                 int dst_x_start,
+                                 int dst_y_start,
+                                 float x_scale,
+                                 float y_scale,
+                                 rectangle_t *roi,
+                                 int alpha,
+                                 const uint8_t *alpha_palette,
+                                 image_hint_t hint,
+                                 point_t *p0,
+                                 point_t *p1) {
+    p0->x = -1;
+
     if (!alpha) {
-        return false;
+        return;
     }
 
     if (alpha_palette) {
@@ -2758,7 +2758,7 @@ bool imlib_draw_image_rectangle(image_t *dst_img,
         }
         if (i == 256) {
             // zero alpha palette
-            return false;
+            return;
         }
     }
 
@@ -2779,13 +2779,13 @@ bool imlib_draw_image_rectangle(image_t *dst_img,
     }
 
     if (dst_x_start >= dst_img->w) {
-        return false;
+        return;
     }
 
     int src_x_dst_width = src_width_scaled - src_x_start;
 
     if (src_x_dst_width <= 0) {
-        return false;
+        return;
     }
 
     // Clamp start y to image bounds.
@@ -2796,13 +2796,13 @@ bool imlib_draw_image_rectangle(image_t *dst_img,
     }
 
     if (dst_y_start >= dst_img->h) {
-        return false;
+        return;
     }
 
     int src_y_dst_height = src_height_scaled - src_y_start;
 
     if (src_y_dst_height <= 0) {
-        return false;
+        return;
     }
 
     // Clamp end x to image bounds.
@@ -2817,12 +2817,12 @@ bool imlib_draw_image_rectangle(image_t *dst_img,
         dst_y_end = dst_img->h;
     }
 
-    *x0 = dst_x_start;
-    *x1 = dst_x_end;
-    *y0 = dst_y_start;
-    *y1 = dst_y_end;
+    p0->x = dst_x_start;
+    p1->x = dst_x_end;
+    p0->y = dst_y_start;
+    p1->y = dst_y_end;
 
-    return true;
+    return;
 }
 
 void imlib_draw_image(image_t *dst_img,

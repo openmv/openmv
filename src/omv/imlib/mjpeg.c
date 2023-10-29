@@ -134,23 +134,24 @@ void mjpeg_write(FIL *fp, int width, int height, uint32_t *frames, uint32_t *byt
             int center_x = fast_floorf((width - (roi->w * scale)) / 2);
             int center_y = fast_floorf((height - (roi->h * scale)) / 2);
 
-            int x0, x1, y0, y1;
-            bool black = !imlib_draw_image_rectangle(&temp, img, center_x, center_y, scale, scale, roi,
-                                                     alpha, alpha_palette, hint, &x0, &x1, &y0, &y1);
+            point_t p0, p1;
+            imlib_draw_image_get_bounds(&temp, img, center_x, center_y, scale, scale, roi,
+                                        alpha, alpha_palette, hint, &p0, &p1);
+            bool black = p0.x == -1;
 
             if (black) {
                 // zero the whole image
                 memset(temp.data, 0, temp.w * temp.h * sizeof(uint16_t));
             } else {
                 // Zero the top rows
-                if (y0) {
-                    memset(temp.data, 0, temp.w * y0 * sizeof(uint16_t));
+                if (p0.y) {
+                    memset(temp.data, 0, temp.w * p0.y * sizeof(uint16_t));
                 }
 
-                if (x0) {
-                    for (int i = y0; i < y1; i++) {
+                if (p0.x) {
+                    for (int i = p0.y; i < p1.y; i++) {
                         // Zero left
-                        memset(IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(&temp, i), 0, x0 * sizeof(uint16_t));
+                        memset(IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(&temp, i), 0, p0.x * sizeof(uint16_t));
                     }
                 }
 
@@ -159,18 +160,18 @@ void mjpeg_write(FIL *fp, int width, int height, uint32_t *frames, uint32_t *byt
                                  (hint & (~IMAGE_HINT_CENTER)) | IMAGE_HINT_BLACK_BACKGROUND,
                                  NULL, NULL);
 
-                if (temp.w - x1) {
-                    for (int i = y0; i < y1; i++) {
+                if (temp.w - p1.x) {
+                    for (int i = p0.y; i < p1.y; i++) {
                         // Zero right
-                        memset(IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(&temp, i) + x1,
-                               0, (temp.w - x1) * sizeof(uint16_t));
+                        memset(IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(&temp, i) + p1.x,
+                               0, (temp.w - p1.x) * sizeof(uint16_t));
                     }
                 }
 
                 // Zero the bottom rows
-                if (temp.h - y1) {
-                    memset(IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(&temp, y1),
-                           0, temp.w * (temp.h - y1) * sizeof(uint16_t));
+                if (temp.h - p1.y) {
+                    memset(IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(&temp, p1.y),
+                           0, temp.w * (temp.h - p1.y) * sizeof(uint16_t));
                 }
             }
         }
