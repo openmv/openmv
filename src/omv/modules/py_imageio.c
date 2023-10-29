@@ -321,7 +321,7 @@ STATIC mp_obj_t py_imageio_read(uint n_args, const mp_obj_t *args, mp_map_t *kw_
         if (mp_obj_is_integer(copy_to_fb_obj)) {
             copy_to_fb = mp_obj_get_int(copy_to_fb_obj);
         } else {
-            arg_other = py_helper_arg_to_image_mutable(copy_to_fb_obj);
+            arg_other = py_helper_arg_to_image(copy_to_fb_obj, ARG_IMAGE_MUTABLE);
         }
     }
 

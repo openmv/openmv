@@ -20,9 +20,6 @@ typedef enum py_helper_arg_image_flags {
 } py_helper_arg_image_flags_t;
 
 extern const mp_obj_fun_builtin_var_t py_func_unavailable_obj;
-image_t *py_helper_arg_to_image_mutable(const mp_obj_t arg);
-image_t *py_helper_arg_to_image_not_compressed(const mp_obj_t arg);
-image_t *py_helper_arg_to_image_grayscale(const mp_obj_t arg);
 image_t *py_helper_arg_to_image(const mp_obj_t arg, uint32_t flags);
 const void *py_helper_arg_to_palette(const mp_obj_t arg, uint32_t pixfmt);
 rectangle_t py_helper_arg_to_roi(const mp_obj_t arg, const image_t *img);

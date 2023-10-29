@@ -850,7 +850,7 @@ mp_obj_t py_fir_read_ir(uint n_args, const mp_obj_t *args, mp_map_t *kw_args) {
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_fir_read_ir_obj, 0, py_fir_read_ir);
 
 mp_obj_t py_fir_draw_ir(uint n_args, const mp_obj_t *args, mp_map_t *kw_args) {
-    image_t *dst_img = py_helper_arg_to_image_mutable(args[0]);
+    image_t *dst_img = py_helper_arg_to_image(args[0], ARG_IMAGE_MUTABLE);
 
     image_t src_img;
     src_img.pixfmt = PIXFORMAT_GRAYSCALE;
@@ -1105,7 +1105,7 @@ mp_obj_t py_fir_snapshot(uint n_args, const mp_obj_t *args, mp_map_t *kw_args) {
         if (mp_obj_is_integer(copy_to_fb_obj)) {
             copy_to_fb = mp_obj_get_int(copy_to_fb_obj);
         } else {
-            arg_other = py_helper_arg_to_image_not_compressed(copy_to_fb_obj);
+            arg_other = py_helper_arg_to_image(copy_to_fb_obj, ARG_IMAGE_UNCOMPRESSED);
         }
     }
 
