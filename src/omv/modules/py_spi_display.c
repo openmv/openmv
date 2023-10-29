@@ -157,10 +157,8 @@ static void spi_display_kick(py_display_obj_t *self) {
     }
 }
 
-// TODO remove this when imlib_draw_image accepts a context.
-static py_display_obj_t *lcd_self;
-
 static void spi_display_draw_image_cb(int x_start, int x_end, int y_row, imlib_draw_row_data_t *data) {
+    py_display_obj_t *lcd_self = (py_display_obj_t *) data->callback_arg;
     spi_transmit_16(lcd_self, data->dst_row_override, lcd_self->width);
 }
 
@@ -195,13 +193,11 @@ static void spi_display_write(py_display_obj_t *self, image_t *src_img, int dst_
                 spi_transmit_16(self, dst_img.data, self->width);
             }
 
-            // TODO remove this when imlib_draw_image accepts a context.
-            lcd_self = self;
-
             // Transmits left/right parts already zeroed...
             imlib_draw_image(&dst_img, src_img, dst_x_start, dst_y_start,
                              x_scale, y_scale, roi, rgb_channel, alpha, color_palette, alpha_palette,
-                             hint | IMAGE_HINT_BLACK_BACKGROUND, spi_display_draw_image_cb, NULL, dst_img.data);
+                             hint | IMAGE_HINT_BLACK_BACKGROUND, spi_display_draw_image_cb, self, dst_img.data);
+
             // Zero the bottom rows
             if (p1.y < self->height) {
                 memset(dst_img.data, 0, self->width * sizeof(uint16_t));
