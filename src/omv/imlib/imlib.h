@@ -1077,13 +1077,16 @@ typedef struct find_barcodes_list_lnk_data {
 } find_barcodes_list_lnk_data_t;
 
 typedef enum image_hint {
-    IMAGE_HINT_AREA     = 1 << 0,
-    IMAGE_HINT_BILINEAR = 1 << 1,
-    IMAGE_HINT_BICUBIC  = 1 << 2,
-    IMAGE_HINT_CENTER   = 1 << 7,
-    IMAGE_HINT_EXTRACT_RGB_CHANNEL_FIRST = 1 << 8,
-    IMAGE_HINT_APPLY_COLOR_PALETTE_FIRST = 1 << 9,
-    IMAGE_HINT_BLACK_BACKGROUND = 1 << 31
+    IMAGE_HINT_AREA      = (1 << 0),
+    IMAGE_HINT_BILINEAR  = (1 << 1),
+    IMAGE_HINT_BICUBIC   = (1 << 2),
+    IMAGE_HINT_HMIRROR   = (1 << 4),
+    IMAGE_HINT_VFLIP     = (1 << 5),
+    IMAGE_HINT_TRANSPOSE = (1 << 6),
+    IMAGE_HINT_CENTER    = (1 << 7),
+    IMAGE_HINT_EXTRACT_RGB_CHANNEL_FIRST = (1 << 8),
+    IMAGE_HINT_APPLY_COLOR_PALETTE_FIRST = (1 << 9),
+    IMAGE_HINT_BLACK_BACKGROUND = (1 << 31)
 } image_hint_t;
 
 typedef struct imlib_draw_row_data {
