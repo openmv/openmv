@@ -14,6 +14,7 @@
 import sensor
 import time
 import display
+import image
 
 # Color Tracking Thresholds (L Min, L Max, A Min, A Max, B Min, B Max)
 threshold_list = [(70, 100, -30, 40, 20, 100)]
@@ -33,7 +34,7 @@ print(
     + ("Yes" if sensor.ioctl(sensor.IOCTL_LEPTON_GET_RADIOMETRY) else "No")
 )
 # Make the color palette cool
-sensor.set_color_palette(sensor.PALETTE_IRONBOW)
+sensor.set_color_palette(image.PALETTE_IRONBOW)
 
 sensor.set_pixformat(sensor.RGB565)
 sensor.set_framesize(sensor.LCD)
