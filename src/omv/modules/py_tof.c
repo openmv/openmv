@@ -514,7 +514,7 @@ mp_obj_t py_tof_draw_depth(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
     tof_fill_image_float_obj(&src_img, arg_to, min, max);
 
     imlib_draw_image(dst_img, &src_img, arg_x_off, arg_y_off, arg_x_scale, arg_y_scale, &arg_roi,
-                     arg_rgb_channel, arg_alpha, color_palette, alpha_palette, hint, NULL, NULL);
+                     arg_rgb_channel, arg_alpha, color_palette, alpha_palette, hint, NULL, NULL, NULL);
 
     fb_alloc_free_till_mark();
 
@@ -671,7 +671,7 @@ mp_obj_t py_tof_snapshot(uint n_args, const mp_obj_t *args, mp_map_t *kw_args) {
 
     imlib_draw_image(&dst_img, &src_img, 0, 0, arg_x_scale, arg_y_scale,
                      &arg_roi, arg_rgb_channel, arg_alpha, color_palette, alpha_palette,
-                     (hint & (~IMAGE_HINT_CENTER)) | IMAGE_HINT_BLACK_BACKGROUND, NULL, NULL);
+                     (hint & (~IMAGE_HINT_CENTER)) | IMAGE_HINT_BLACK_BACKGROUND, NULL, NULL, NULL);
 
     fb_alloc_free_till_mark();
 

@@ -1095,6 +1095,7 @@ typedef struct imlib_draw_row_data {
     const uint8_t *alpha_palette; // user
     bool black_background; // user
     void *callback; // user
+    void *callback_arg; // user
     void *dst_row_override; // user
     int toggle; // private
     void *row_buffer[2]; // private
@@ -1274,20 +1275,18 @@ void imlib_draw_row_deinit_all();
 void *imlib_draw_row_get_row_buffer(imlib_draw_row_data_t *data);
 void imlib_draw_row_put_row_buffer(imlib_draw_row_data_t *data, void *row_buffer);
 void imlib_draw_row(int x_start, int x_end, int y_row, imlib_draw_row_data_t *data);
-bool imlib_draw_image_rectangle(image_t *dst_img,
-                                image_t *src_img,
-                                int dst_x_start,
-                                int dst_y_start,
-                                float x_scale,
-                                float y_scale,
-                                rectangle_t *roi,
-                                int alpha,
-                                const uint8_t *alpha_palette,
-                                image_hint_t hint,
-                                int *x0,
-                                int *x1,
-                                int *y0,
-                                int *y1);
+void imlib_draw_image_get_bounds(image_t *dst_img,
+                                 image_t *src_img,
+                                 int dst_x_start,
+                                 int dst_y_start,
+                                 float x_scale,
+                                 float y_scale,
+                                 rectangle_t *roi,
+                                 int alpha,
+                                 const uint8_t *alpha_palette,
+                                 image_hint_t hint,
+                                 point_t *p0,
+                                 point_t *p1);
 void imlib_flood_fill_int(image_t *out, image_t *img, int x, int y,
                           int seed_threshold, int floating_threshold,
                           flood_fill_call_back_t cb, void *data);
@@ -1327,6 +1326,7 @@ void imlib_draw_image(image_t *dst_img,
                       const uint8_t *alpha_palette,
                       image_hint_t hint,
                       imlib_draw_row_callback_t callback,
+                      void *callback_arg,
                       void *dst_row_override);
 void imlib_flood_fill(image_t *img, int x, int y,
                       float seed_threshold, float floating_threshold,

@@ -359,7 +359,7 @@ STATIC void py_tf_input_data_callback(void *callback_data,
 
     imlib_draw_image(&dst_img, arg->img, 0, 0, scale, scale, arg->roi,
                      -1, 256, NULL, NULL, IMAGE_HINT_BILINEAR | IMAGE_HINT_BLACK_BACKGROUND,
-                     NULL, NULL);
+                     NULL, NULL, NULL);
 
     int size = (params->input_width * params->input_height) - 1; // must be int per countdown loop
 

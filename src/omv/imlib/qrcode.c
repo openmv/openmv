@@ -2978,7 +2978,7 @@ void imlib_find_qrcodes(list_t *out, image_t *ptr, rectangle_t *roi)
     img.h = roi->h;
     img.pixfmt = PIXFORMAT_GRAYSCALE;
     img.data = grayscale_image;
-    imlib_draw_image(&img, ptr, 0, 0, 1.f, 1.f, roi, -1, 256, NULL, NULL, 0, NULL, NULL);
+    imlib_draw_image(&img, ptr, 0, 0, 1.f, 1.f, roi, -1, 256, NULL, NULL, 0, NULL, NULL, NULL);
 
     quirc_end(controller);
     list_init(out, sizeof(find_qrcodes_list_lnk_data_t));

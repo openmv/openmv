@@ -11987,7 +11987,7 @@ void imlib_find_apriltags(list_t *out, image_t *ptr, rectangle_t *roi, apriltag_
     img.h = roi->h;
     img.pixfmt = PIXFORMAT_GRAYSCALE;
     img.data = fb_alloc(image_size(&img), FB_ALLOC_NO_HINT);
-    imlib_draw_image(&img, ptr, 0, 0, 1.f, 1.f, roi, -1, 256, NULL, NULL, 0, NULL, NULL);
+    imlib_draw_image(&img, ptr, 0, 0, 1.f, 1.f, roi, -1, 256, NULL, NULL, 0, NULL, NULL, NULL);
 
     image_u8_t im;
     im.width = roi->w;
@@ -12091,7 +12091,7 @@ void imlib_find_rects(list_t *out, image_t *ptr, rectangle_t *roi, uint32_t thre
     img.h = roi->h;
     img.pixfmt = PIXFORMAT_GRAYSCALE;
     img.data = fb_alloc(image_size(&img), FB_ALLOC_NO_HINT);
-    imlib_draw_image(&img, ptr, 0, 0, 1.f, 1.f, roi, -1, 256, NULL, NULL, 0, NULL, NULL);
+    imlib_draw_image(&img, ptr, 0, 0, 1.f, 1.f, roi, -1, 256, NULL, NULL, 0, NULL, NULL, NULL);
 
     image_u8_t im;
     im.width = roi->w;

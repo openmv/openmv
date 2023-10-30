@@ -588,9 +588,10 @@ static void spi_tv_display(image_t *src_img, int dst_x_start, int dst_y_start, f
     dst_img.h = TV_HEIGHT;
     dst_img.pixfmt = rgb565 ? PIXFORMAT_RGB565 : PIXFORMAT_GRAYSCALE;
 
-    int x0, x1, y0, y1;
-    bool black = !imlib_draw_image_rectangle(&dst_img, src_img, dst_x_start, dst_y_start, x_scale, y_scale,
-                                             roi, alpha, alpha_palette, hint, &x0, &x1, &y0, &y1);
+    point_t p0, p1;
+    imlib_draw_image_get_bounds(&dst_img, src_img, dst_x_start, dst_y_start, x_scale, y_scale,
+                                roi, alpha, alpha_palette, hint, &p0, &p1);
+    bool black = p0.x == -1;
 
     if (!tv_triple_buffer) {
         dst_img.data = fb_alloc0(TV_WIDTH_RGB565, FB_ALLOC_NO_HINT);
@@ -604,21 +605,21 @@ static void spi_tv_display(image_t *src_img, int dst_x_start, int dst_y_start, f
             }
         } else {
             // Zero the top rows
-            for (int i = 0; i < y0; i++) {
+            for (int i = 0; i < p0.y; i++) {
                 SpiTransmitReceivePacket(dst_img.data, NULL, PICLINE_LENGTH_BYTES, false);
             }
 
             // Transmits left/right parts already zeroed...
             imlib_draw_image(&dst_img, src_img, dst_x_start, dst_y_start, x_scale, y_scale, roi,
                              rgb_channel, alpha, color_palette, alpha_palette, hint | IMAGE_HINT_BLACK_BACKGROUND,
-                             cb, dst_img.data);
+                             cb, NULL, dst_img.data);
 
             // Zero the bottom rows
-            if (y1 < TV_HEIGHT) {
+            if (p1.y < TV_HEIGHT) {
                 memset(dst_img.data, 0, TV_WIDTH_RGB565);
             }
 
-            for (int i = y1; i < TV_HEIGHT; i++) {
+            for (int i = p1.y; i < TV_HEIGHT; i++) {
                 SpiTransmitReceivePacket(dst_img.data, NULL, PICLINE_LENGTH_BYTES, false);
             }
         }
@@ -641,33 +642,33 @@ static void spi_tv_display(image_t *src_img, int dst_x_start, int dst_y_start, f
                 memset(dst_img.data, 0, TV_WIDTH * TV_HEIGHT * sizeof(uint16_t));
             } else {
                 // Zero the top rows
-                if (y0) {
-                    memset(dst_img.data, 0, TV_WIDTH * y0 * sizeof(uint16_t));
+                if (p0.y) {
+                    memset(dst_img.data, 0, TV_WIDTH * p0.y * sizeof(uint16_t));
                 }
 
-                if (x0) {
-                    for (int i = y0; i < y1; i++) {
+                if (p0.x) {
+                    for (int i = p0.y; i < p1.y; i++) {
                         // Zero left
-                        memset(IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(&dst_img, i), 0, x0 * sizeof(uint16_t));
+                        memset(IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(&dst_img, i), 0, p0.x * sizeof(uint16_t));
                     }
                 }
 
                 imlib_draw_image(&dst_img, src_img, dst_x_start, dst_y_start, x_scale, y_scale, roi,
                                  rgb_channel, alpha, color_palette, alpha_palette, hint | IMAGE_HINT_BLACK_BACKGROUND,
-                                 NULL, NULL);
+                                 NULL, NULL, NULL);
 
-                if (TV_WIDTH - x1) {
-                    for (int i = y0; i < y1; i++) {
+                if (TV_WIDTH - p1.x) {
+                    for (int i = p0.y; i < p1.y; i++) {
                         // Zero right
-                        memset(IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(&dst_img, i) + x1, 0,
-                               (TV_WIDTH - x1) * sizeof(uint16_t));
+                        memset(IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(&dst_img, i) + p1.x, 0,
+                               (TV_WIDTH - p1.x) * sizeof(uint16_t));
                     }
                 }
 
                 // Zero the bottom rows
-                if (TV_HEIGHT - y1) {
-                    memset(IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(&dst_img, y1), 0,
-                           TV_WIDTH * (TV_HEIGHT - y1) * sizeof(uint16_t));
+                if (TV_HEIGHT - p1.y) {
+                    memset(IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(&dst_img, p1.y), 0,
+                           TV_WIDTH * (TV_HEIGHT - p1.y) * sizeof(uint16_t));
                 }
             }
 
@@ -682,33 +683,33 @@ static void spi_tv_display(image_t *src_img, int dst_x_start, int dst_y_start, f
                 memset(dst_img.data, 0, TV_WIDTH * TV_HEIGHT * sizeof(uint8_t));
             } else {
                 // Zero the top rows
-                if (y0) {
-                    memset(dst_img.data, 0, TV_WIDTH * y0 * sizeof(uint8_t));
+                if (p0.y) {
+                    memset(dst_img.data, 0, TV_WIDTH * p0.y * sizeof(uint8_t));
                 }
 
-                if (x0) {
-                    for (int i = y0; i < y1; i++) {
+                if (p0.x) {
+                    for (int i = p0.y; i < p1.y; i++) {
                         // Zero left
-                        memset(IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(&dst_img, i), 0, x0 * sizeof(uint8_t));
+                        memset(IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(&dst_img, i), 0, p0.x * sizeof(uint8_t));
                     }
                 }
 
                 imlib_draw_image(&dst_img, src_img, dst_x_start, dst_y_start, x_scale, y_scale, roi,
                                  rgb_channel, alpha, color_palette, alpha_palette, hint | IMAGE_HINT_BLACK_BACKGROUND,
-                                 NULL, NULL);
+                                 NULL, NULL, NULL);
 
-                if (TV_WIDTH - x1) {
-                    for (int i = y0; i < y1; i++) {
+                if (TV_WIDTH - p1.x) {
+                    for (int i = p0.y; i < p1.y; i++) {
                         // Zero right
-                        memset(IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(&dst_img, i) + x1, 0,
-                               (TV_WIDTH - x1) * sizeof(uint8_t));
+                        memset(IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(&dst_img, i) + p1.x, 0,
+                               (TV_WIDTH - p1.x) * sizeof(uint8_t));
                     }
                 }
 
                 // Zero the bottom rows
-                if (TV_HEIGHT - y1) {
-                    memset(IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(&dst_img, y1), 0,
-                           TV_WIDTH * (TV_HEIGHT - y1) * sizeof(uint8_t));
+                if (TV_HEIGHT - p1.y) {
+                    memset(IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(&dst_img, p1.y), 0,
+                           TV_WIDTH * (TV_HEIGHT - p1.y) * sizeof(uint8_t));
                 }
             }
 
