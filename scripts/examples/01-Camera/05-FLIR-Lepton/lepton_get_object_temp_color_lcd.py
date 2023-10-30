@@ -24,6 +24,7 @@
 import sensor
 import time
 import display
+import image
 
 # Color Tracking Thresholds (Grayscale Min, Grayscale Max)
 threshold_list = [(200, 255)]
@@ -88,7 +89,7 @@ while True:
                 ),
             )
         )
-    img.to_rainbow(color_palette=sensor.PALETTE_IRONBOW)  # color it
+    img.to_rainbow(color_palette=image.PALETTE_IRONBOW)  # color it
     # Draw stuff on the colored image
     for blob in blobs:
         img.draw_rectangle(blob.rect())

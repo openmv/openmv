@@ -1243,10 +1243,6 @@ STATIC const mp_rom_map_elem_t globals_dict_table[] = {
 #if (OMV_ENABLE_FIR_LEPTON == 1)
     { MP_ROM_QSTR(MP_QSTR_FIR_LEPTON),          MP_ROM_INT(FIR_LEPTON)                      },
 #endif
-    { MP_ROM_QSTR(MP_QSTR_PALETTE_RAINBOW),     MP_ROM_INT(COLOR_PALETTE_RAINBOW)           },
-    { MP_ROM_QSTR(MP_QSTR_PALETTE_IRONBOW),     MP_ROM_INT(COLOR_PALETTE_IRONBOW)           },
-    { MP_ROM_QSTR(MP_QSTR_GRAYSCALE),           MP_ROM_INT(PIXFORMAT_GRAYSCALE)             },
-    { MP_ROM_QSTR(MP_QSTR_RGB565),              MP_ROM_INT(PIXFORMAT_RGB565)                },
     { MP_ROM_QSTR(MP_QSTR_init),                MP_ROM_PTR(&py_fir_init_obj)                },
     { MP_ROM_QSTR(MP_QSTR_deinit),              MP_ROM_PTR(&py_fir_deinit_obj)              },
     { MP_ROM_QSTR(MP_QSTR_type),                MP_ROM_PTR(&py_fir_type_obj)                },

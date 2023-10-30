@@ -81,7 +81,7 @@ while True:
         y_bounce,
         rgb_channel=-1,
         alpha=alpha_value // alpha_div,
-        color_palette=sensor.PALETTE_IRONBOW,
+        color_palette=image.PALETTE_IRONBOW,
         alpha_palette=alpha_lut,
         hint=hint | image.CENTER,
     )

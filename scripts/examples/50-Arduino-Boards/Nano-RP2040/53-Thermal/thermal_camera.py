@@ -29,7 +29,7 @@ while True:
         img = fir.snapshot(
             x_size=w,
             y_size=h,
-            color_palette=fir.PALETTE_IRONBOW,
+            color_palette=image.PALETTE_IRONBOW,
             hint=drawing_hint,
             copy_to_fb=True,
         )

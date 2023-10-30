@@ -57,7 +57,7 @@ static const char fresh_main_py[] =
     "        x_scale = img.width() / fir_img.width()\n"
     "        y_scale = img.height() / fir_img.height()\n"
     "        img.draw_image(fir_img, 0, 0, x_scale = x_scale, y_scale = y_scale,\n"
-    "                       color_palette = sensor.PALETTE_IRONBOW,\n"
+    "                       color_palette = image.PALETTE_IRONBOW,\n"
     "                       alpha_palette = alpha_pal,\n"
     "                       hint = image.BICUBIC)\n"
     "\n"
