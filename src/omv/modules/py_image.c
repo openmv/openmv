@@ -1555,8 +1555,9 @@ STATIC mp_obj_t py_image_draw_edges(uint n_args, const mp_obj_t *args, mp_map_t 
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_draw_edges_obj, 2, py_image_draw_edges);
 
 STATIC mp_obj_t py_image_draw_image(uint n_args, const mp_obj_t *args, mp_map_t *kw_args) {
+    fb_alloc_mark();
     image_t *arg_img = py_helper_arg_to_image(args[0], ARG_IMAGE_MUTABLE);
-    image_t *arg_other = py_helper_arg_to_image(args[1], ARG_IMAGE_UNCOMPRESSED);
+    image_t *arg_other = py_helper_arg_to_image(args[1], ARG_IMAGE_ANY | ARG_IMAGE_ALLOC);
 
     const mp_obj_t *arg_vec;
     uint offset = py_helper_consume_array(n_args, args, 2, 2, &arg_vec);
@@ -1634,7 +1635,6 @@ STATIC mp_obj_t py_image_draw_image(uint n_args, const mp_obj_t *args, mp_map_t 
         arg_y_scale = arg_x_scale;
     }
 
-    fb_alloc_mark();
     imlib_draw_image(arg_img, arg_other, arg_x_off, arg_y_off, arg_x_scale, arg_y_scale, &arg_roi,
                      arg_rgb_channel, arg_alpha, color_palette, alpha_palette, hint, NULL, NULL, NULL);
     fb_alloc_free_till_mark();
