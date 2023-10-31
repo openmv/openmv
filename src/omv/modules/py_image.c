@@ -1311,7 +1311,7 @@ STATIC mp_obj_t py_image_clear(uint n_args, const mp_obj_t *args, mp_map_t *kw_a
     image_t *arg_img = py_helper_arg_to_image(args[0], ARG_IMAGE_UNCOMPRESSED);
 
     image_t *arg_msk =
-        py_helper_keyword_to_image_mutable_mask(n_args, args, 1, kw_args);
+        py_helper_keyword_to_image(n_args, args, 1, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_mask), NULL);
 
     if (!arg_msk) {
         memset(arg_img->data, 0, image_size(arg_img));
@@ -1823,7 +1823,7 @@ STATIC mp_obj_t py_image_flood_fill(uint n_args, const mp_obj_t *args, mp_map_t 
     bool clear_background =
         py_helper_keyword_float(n_args, args, offset + 4, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_clear_background), false);
     image_t *arg_msk =
-        py_helper_keyword_to_image_mutable_mask(n_args, args, offset + 5, kw_args);
+        py_helper_keyword_to_image(n_args, args, offset + 5, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_mask), NULL);
 
     fb_alloc_mark();
     imlib_flood_fill(arg_img, arg_x_off, arg_y_off,
@@ -1910,7 +1910,7 @@ STATIC mp_obj_t py_image_binary(uint n_args, const mp_obj_t *args, mp_map_t *kw_
     bool arg_zero =
         py_helper_keyword_int(n_args, args, 3, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_zero), false);
     image_t *arg_msk =
-        py_helper_keyword_to_image_mutable_mask(n_args, args, 4, kw_args);
+        py_helper_keyword_to_image(n_args, args, 4, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_mask), NULL);
     bool arg_to_bitmap =
         py_helper_keyword_int(n_args, args, 5, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_to_bitmap), false);
     bool arg_copy =
@@ -1965,7 +1965,7 @@ STATIC mp_obj_t py_image_b_and(uint n_args, const mp_obj_t *args, mp_map_t *kw_a
     image_t *arg_img =
         py_helper_arg_to_image(args[0], ARG_IMAGE_MUTABLE);
     image_t *arg_msk =
-        py_helper_keyword_to_image_mutable_mask(n_args, args, 2, kw_args);
+        py_helper_keyword_to_image(n_args, args, 2, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_mask), NULL);
 
     fb_alloc_mark();
 
@@ -1989,7 +1989,7 @@ STATIC mp_obj_t py_image_b_nand(uint n_args, const mp_obj_t *args, mp_map_t *kw_
     image_t *arg_img =
         py_helper_arg_to_image(args[0], ARG_IMAGE_MUTABLE);
     image_t *arg_msk =
-        py_helper_keyword_to_image_mutable_mask(n_args, args, 2, kw_args);
+        py_helper_keyword_to_image(n_args, args, 2, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_mask), NULL);
 
     fb_alloc_mark();
 
@@ -2013,7 +2013,7 @@ STATIC mp_obj_t py_image_b_or(uint n_args, const mp_obj_t *args, mp_map_t *kw_ar
     image_t *arg_img =
         py_helper_arg_to_image(args[0], ARG_IMAGE_MUTABLE);
     image_t *arg_msk =
-        py_helper_keyword_to_image_mutable_mask(n_args, args, 2, kw_args);
+        py_helper_keyword_to_image(n_args, args, 2, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_mask), NULL);
 
     fb_alloc_mark();
 
@@ -2037,7 +2037,7 @@ STATIC mp_obj_t py_image_b_nor(uint n_args, const mp_obj_t *args, mp_map_t *kw_a
     image_t *arg_img =
         py_helper_arg_to_image(args[0], ARG_IMAGE_MUTABLE);
     image_t *arg_msk =
-        py_helper_keyword_to_image_mutable_mask(n_args, args, 2, kw_args);
+        py_helper_keyword_to_image(n_args, args, 2, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_mask), NULL);
 
     fb_alloc_mark();
 
@@ -2061,7 +2061,7 @@ STATIC mp_obj_t py_image_b_xor(uint n_args, const mp_obj_t *args, mp_map_t *kw_a
     image_t *arg_img =
         py_helper_arg_to_image(args[0], ARG_IMAGE_MUTABLE);
     image_t *arg_msk =
-        py_helper_keyword_to_image_mutable_mask(n_args, args, 2, kw_args);
+        py_helper_keyword_to_image(n_args, args, 2, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_mask), NULL);
 
     fb_alloc_mark();
 
@@ -2085,7 +2085,7 @@ STATIC mp_obj_t py_image_b_xnor(uint n_args, const mp_obj_t *args, mp_map_t *kw_
     image_t *arg_img =
         py_helper_arg_to_image(args[0], ARG_IMAGE_MUTABLE);
     image_t *arg_msk =
-        py_helper_keyword_to_image_mutable_mask(n_args, args, 2, kw_args);
+        py_helper_keyword_to_image(n_args, args, 2, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_mask), NULL);
 
     fb_alloc_mark();
 
@@ -2112,7 +2112,7 @@ STATIC mp_obj_t py_image_erode(uint n_args, const mp_obj_t *args, mp_map_t *kw_a
         py_helper_keyword_int(n_args, args, 2, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_threshold),
                               py_helper_ksize_to_n(arg_ksize) - 1);
     image_t *arg_msk =
-        py_helper_keyword_to_image_mutable_mask(n_args, args, 3, kw_args);
+        py_helper_keyword_to_image(n_args, args, 3, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_mask), NULL);
 
     fb_alloc_mark();
     imlib_erode(py_helper_arg_to_image(args[0], ARG_IMAGE_MUTABLE), arg_ksize, arg_threshold, arg_msk);
@@ -2128,7 +2128,7 @@ STATIC mp_obj_t py_image_dilate(uint n_args, const mp_obj_t *args, mp_map_t *kw_
         py_helper_keyword_int(n_args, args, 2, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_threshold),
                               0);
     image_t *arg_msk =
-        py_helper_keyword_to_image_mutable_mask(n_args, args, 3, kw_args);
+        py_helper_keyword_to_image(n_args, args, 3, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_mask), NULL);
 
     fb_alloc_mark();
     imlib_dilate(py_helper_arg_to_image(args[0], ARG_IMAGE_MUTABLE), arg_ksize, arg_threshold, arg_msk);
@@ -2143,7 +2143,7 @@ STATIC mp_obj_t py_image_open(uint n_args, const mp_obj_t *args, mp_map_t *kw_ar
     int arg_threshold =
         py_helper_keyword_int(n_args, args, 2, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_threshold), 0);
     image_t *arg_msk =
-        py_helper_keyword_to_image_mutable_mask(n_args, args, 3, kw_args);
+        py_helper_keyword_to_image(n_args, args, 3, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_mask), NULL);
 
     fb_alloc_mark();
     imlib_open(py_helper_arg_to_image(args[0], ARG_IMAGE_MUTABLE), arg_ksize, arg_threshold, arg_msk);
@@ -2158,7 +2158,7 @@ STATIC mp_obj_t py_image_close(uint n_args, const mp_obj_t *args, mp_map_t *kw_a
     int arg_threshold =
         py_helper_keyword_int(n_args, args, 2, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_threshold), 0);
     image_t *arg_msk =
-        py_helper_keyword_to_image_mutable_mask(n_args, args, 3, kw_args);
+        py_helper_keyword_to_image(n_args, args, 3, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_mask), NULL);
 
     fb_alloc_mark();
     imlib_close(py_helper_arg_to_image(args[0], ARG_IMAGE_MUTABLE), arg_ksize, arg_threshold, arg_msk);
@@ -2189,7 +2189,7 @@ STATIC mp_obj_t py_image_replace(uint n_args, const mp_obj_t *args, mp_map_t *kw
     bool arg_transpose =
         py_helper_keyword_int(n_args, args, 4, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_transpose), false);
     image_t *arg_msk =
-        py_helper_keyword_to_image_mutable_mask(n_args, args, 5, kw_args);
+        py_helper_keyword_to_image(n_args, args, 5, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_mask), NULL);
 
     if (arg_transpose) {
         size_t size0 = image_size(arg_img);
@@ -2230,7 +2230,7 @@ STATIC mp_obj_t py_image_add(uint n_args, const mp_obj_t *args, mp_map_t *kw_arg
     image_t *arg_img =
         py_helper_arg_to_image(args[0], ARG_IMAGE_MUTABLE);
     image_t *arg_msk =
-        py_helper_keyword_to_image_mutable_mask(n_args, args, 2, kw_args);
+        py_helper_keyword_to_image(n_args, args, 2, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_mask), NULL);
 
     fb_alloc_mark();
 
@@ -2256,7 +2256,7 @@ STATIC mp_obj_t py_image_sub(uint n_args, const mp_obj_t *args, mp_map_t *kw_arg
     bool arg_reverse =
         py_helper_keyword_int(n_args, args, 2, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_reverse), false);
     image_t *arg_msk =
-        py_helper_keyword_to_image_mutable_mask(n_args, args, 3, kw_args);
+        py_helper_keyword_to_image(n_args, args, 3, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_mask), NULL);
 
     fb_alloc_mark();
 
@@ -2282,7 +2282,7 @@ STATIC mp_obj_t py_image_mul(uint n_args, const mp_obj_t *args, mp_map_t *kw_arg
     bool arg_invert =
         py_helper_keyword_int(n_args, args, 2, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_invert), false);
     image_t *arg_msk =
-        py_helper_keyword_to_image_mutable_mask(n_args, args, 3, kw_args);
+        py_helper_keyword_to_image(n_args, args, 3, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_mask), NULL);
 
     fb_alloc_mark();
 
@@ -2310,7 +2310,7 @@ STATIC mp_obj_t py_image_div(uint n_args, const mp_obj_t *args, mp_map_t *kw_arg
     bool arg_mod =
         py_helper_keyword_int(n_args, args, 3, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_mod), false);
     image_t *arg_msk =
-        py_helper_keyword_to_image_mutable_mask(n_args, args, 4, kw_args);
+        py_helper_keyword_to_image(n_args, args, 4, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_mask), NULL);
 
     fb_alloc_mark();
 
@@ -2336,7 +2336,7 @@ STATIC mp_obj_t py_image_min(uint n_args, const mp_obj_t *args, mp_map_t *kw_arg
     image_t *arg_img =
         py_helper_arg_to_image(args[0], ARG_IMAGE_MUTABLE);
     image_t *arg_msk =
-        py_helper_keyword_to_image_mutable_mask(n_args, args, 2, kw_args);
+        py_helper_keyword_to_image(n_args, args, 2, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_mask), NULL);
 
     fb_alloc_mark();
 
@@ -2360,7 +2360,7 @@ STATIC mp_obj_t py_image_max(uint n_args, const mp_obj_t *args, mp_map_t *kw_arg
     image_t *arg_img =
         py_helper_arg_to_image(args[0], ARG_IMAGE_MUTABLE);
     image_t *arg_msk =
-        py_helper_keyword_to_image_mutable_mask(n_args, args, 2, kw_args);
+        py_helper_keyword_to_image(n_args, args, 2, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_mask), NULL);
 
     fb_alloc_mark();
 
@@ -2384,7 +2384,7 @@ STATIC mp_obj_t py_image_difference(uint n_args, const mp_obj_t *args, mp_map_t 
     image_t *arg_img =
         py_helper_arg_to_image(args[0], ARG_IMAGE_MUTABLE);
     image_t *arg_msk =
-        py_helper_keyword_to_image_mutable_mask(n_args, args, 2, kw_args);
+        py_helper_keyword_to_image(n_args, args, 2, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_mask), NULL);
 
     fb_alloc_mark();
 
@@ -2411,7 +2411,7 @@ STATIC mp_obj_t py_image_blend(uint n_args, const mp_obj_t *args, mp_map_t *kw_a
         py_helper_keyword_int(n_args, args, 2, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_alpha), 128) / 256.0f;
     PY_ASSERT_TRUE_MSG((0 <= arg_alpha) && (arg_alpha <= 1), "Error: 0 <= alpha <= 256!");
     image_t *arg_msk =
-        py_helper_keyword_to_image_mutable_mask(n_args, args, 3, kw_args);
+        py_helper_keyword_to_image(n_args, args, 3, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_mask), NULL);
 
     fb_alloc_mark();
 
@@ -2439,7 +2439,7 @@ STATIC mp_obj_t py_image_top_hat(uint n_args, const mp_obj_t *args, mp_map_t *kw
     int arg_threshold =
         py_helper_keyword_int(n_args, args, 2, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_threshold), 0);
     image_t *arg_msk =
-        py_helper_keyword_to_image_mutable_mask(n_args, args, 3, kw_args);
+        py_helper_keyword_to_image(n_args, args, 3, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_mask), NULL);
 
     fb_alloc_mark();
     imlib_top_hat(py_helper_arg_to_image(args[0], ARG_IMAGE_MUTABLE), arg_ksize, arg_threshold, arg_msk);
@@ -2454,7 +2454,7 @@ STATIC mp_obj_t py_image_black_hat(uint n_args, const mp_obj_t *args, mp_map_t *
     int arg_threshold =
         py_helper_keyword_int(n_args, args, 2, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_threshold), 0);
     image_t *arg_msk =
-        py_helper_keyword_to_image_mutable_mask(n_args, args, 3, kw_args);
+        py_helper_keyword_to_image(n_args, args, 3, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_mask), NULL);
 
     fb_alloc_mark();
     imlib_black_hat(py_helper_arg_to_image(args[0], ARG_IMAGE_MUTABLE), arg_ksize, arg_threshold, arg_msk);
@@ -2476,7 +2476,7 @@ static mp_obj_t py_image_histeq(uint n_args, const mp_obj_t *args, mp_map_t *kw_
     float arg_clip_limit =
         py_helper_keyword_float(n_args, args, 2, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_clip_limit), -1);
     image_t *arg_msk =
-        py_helper_keyword_to_image_mutable_mask(n_args, args, 3, kw_args);
+        py_helper_keyword_to_image(n_args, args, 3, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_mask), NULL);
 
     fb_alloc_mark();
     if (arg_adaptive) {
@@ -2502,7 +2502,7 @@ STATIC mp_obj_t py_image_mean(uint n_args, const mp_obj_t *args, mp_map_t *kw_ar
     bool arg_invert =
         py_helper_keyword_int(n_args, args, 4, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_invert), false);
     image_t *arg_msk =
-        py_helper_keyword_to_image_mutable_mask(n_args, args, 5, kw_args);
+        py_helper_keyword_to_image(n_args, args, 5, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_mask), NULL);
 
     fb_alloc_mark();
     imlib_mean_filter(arg_img, arg_ksize, arg_threshold, arg_offset, arg_invert, arg_msk);
@@ -2528,7 +2528,7 @@ STATIC mp_obj_t py_image_median(uint n_args, const mp_obj_t *args, mp_map_t *kw_
     bool arg_invert =
         py_helper_keyword_int(n_args, args, 5, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_invert), false);
     image_t *arg_msk =
-        py_helper_keyword_to_image_mutable_mask(n_args, args, 6, kw_args);
+        py_helper_keyword_to_image(n_args, args, 6, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_mask), NULL);
 
     fb_alloc_mark();
     imlib_median_filter(arg_img, arg_ksize, arg_percentile, arg_threshold, arg_offset, arg_invert, arg_msk);
@@ -2551,7 +2551,7 @@ STATIC mp_obj_t py_image_mode(uint n_args, const mp_obj_t *args, mp_map_t *kw_ar
     bool arg_invert =
         py_helper_keyword_int(n_args, args, 4, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_invert), false);
     image_t *arg_msk =
-        py_helper_keyword_to_image_mutable_mask(n_args, args, 5, kw_args);
+        py_helper_keyword_to_image(n_args, args, 5, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_mask), NULL);
 
     fb_alloc_mark();
     imlib_mode_filter(arg_img, arg_ksize, arg_threshold, arg_offset, arg_invert, arg_msk);
@@ -2577,7 +2577,7 @@ STATIC mp_obj_t py_image_midpoint(uint n_args, const mp_obj_t *args, mp_map_t *k
     bool arg_invert =
         py_helper_keyword_int(n_args, args, 5, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_invert), false);
     image_t *arg_msk =
-        py_helper_keyword_to_image_mutable_mask(n_args, args, 6, kw_args);
+        py_helper_keyword_to_image(n_args, args, 6, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_mask), NULL);
 
     fb_alloc_mark();
     imlib_midpoint_filter(arg_img, arg_ksize, arg_bias, arg_threshold, arg_offset, arg_invert, arg_msk);
@@ -2624,7 +2624,7 @@ STATIC mp_obj_t py_image_morph(uint n_args, const mp_obj_t *args, mp_map_t *kw_a
     bool arg_invert =
         py_helper_keyword_int(n_args, args, 7, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_invert), false);
     image_t *arg_msk =
-        py_helper_keyword_to_image_mutable_mask(n_args, args, 8, kw_args);
+        py_helper_keyword_to_image(n_args, args, 8, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_mask), NULL);
 
     imlib_morph(arg_img, arg_ksize, arg_krn, arg_mul, arg_add, arg_threshold, arg_offset, arg_invert, arg_msk);
     fb_alloc_free_till_mark();
@@ -2680,7 +2680,7 @@ STATIC mp_obj_t py_image_gaussian(uint n_args, const mp_obj_t *args, mp_map_t *k
     bool arg_invert =
         py_helper_keyword_int(n_args, args, 7, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_invert), false);
     image_t *arg_msk =
-        py_helper_keyword_to_image_mutable_mask(n_args, args, 8, kw_args);
+        py_helper_keyword_to_image(n_args, args, 8, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_mask), NULL);
 
     imlib_morph(arg_img, arg_ksize, arg_krn, arg_mul, arg_add, arg_threshold, arg_offset, arg_invert, arg_msk);
     fb_alloc_free_till_mark();
@@ -2738,7 +2738,7 @@ STATIC mp_obj_t py_image_laplacian(uint n_args, const mp_obj_t *args, mp_map_t *
     bool arg_invert =
         py_helper_keyword_int(n_args, args, 7, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_invert), false);
     image_t *arg_msk =
-        py_helper_keyword_to_image_mutable_mask(n_args, args, 8, kw_args);
+        py_helper_keyword_to_image(n_args, args, 8, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_mask), NULL);
 
     imlib_morph(arg_img, arg_ksize, arg_krn, arg_mul, arg_add, arg_threshold, arg_offset, arg_invert, arg_msk);
     fb_alloc_free_till_mark();
@@ -2764,7 +2764,7 @@ STATIC mp_obj_t py_image_bilateral(uint n_args, const mp_obj_t *args, mp_map_t *
     bool arg_invert =
         py_helper_keyword_int(n_args, args, 6, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_invert), false);
     image_t *arg_msk =
-        py_helper_keyword_to_image_mutable_mask(n_args, args, 7, kw_args);
+        py_helper_keyword_to_image(n_args, args, 7, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_mask), NULL);
 
     fb_alloc_mark();
     imlib_bilateral_filter(arg_img, arg_ksize, arg_color_sigma, arg_space_sigma, arg_threshold, arg_offset, arg_invert,
@@ -2788,7 +2788,7 @@ STATIC mp_obj_t py_image_cartoon(uint n_args, const mp_obj_t *args, mp_map_t *kw
     PY_ASSERT_TRUE_MSG((0.0f <= arg_floating_threshold) && (arg_floating_threshold <= 1.0f),
                        "Error: 0.0 <= floating_threshold <= 1.0!");
     image_t *arg_msk =
-        py_helper_keyword_to_image_mutable_mask(n_args, args, 3, kw_args);
+        py_helper_keyword_to_image(n_args, args, 3, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_mask), NULL);
 
     fb_alloc_mark();
     imlib_cartoon_filter(arg_img, arg_seed_threshold, arg_floating_threshold, arg_msk);
@@ -3734,7 +3734,7 @@ static mp_obj_t py_image_get_histogram(uint n_args, const mp_obj_t *args, mp_map
     list_init(&thresholds, sizeof(color_thresholds_list_lnk_data_t));
     py_helper_keyword_thresholds(n_args, args, 1, kw_args, &thresholds);
     bool invert = py_helper_keyword_int(n_args, args, 2, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_invert), false);
-    image_t *other = py_helper_keyword_to_image_mutable(n_args, args, 3, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_difference), NULL);
+    image_t *other = py_helper_keyword_to_image(n_args, args, 3, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_difference), NULL);
 
     rectangle_t roi;
     py_helper_keyword_rectangle_roi(arg_img, n_args, args, 3, kw_args, &roi);
@@ -3835,7 +3835,7 @@ static mp_obj_t py_image_get_statistics(uint n_args, const mp_obj_t *args, mp_ma
     list_init(&thresholds, sizeof(color_thresholds_list_lnk_data_t));
     py_helper_keyword_thresholds(n_args, args, 1, kw_args, &thresholds);
     bool invert = py_helper_keyword_int(n_args, args, 2, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_invert), false);
-    image_t *other = py_helper_keyword_to_image_mutable(n_args, args, 3, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_difference), NULL);
+    image_t *other = py_helper_keyword_to_image(n_args, args, 3, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_difference), NULL);
 
     rectangle_t roi;
     py_helper_keyword_rectangle_roi(arg_img, n_args, args, 3, kw_args, &roi);
