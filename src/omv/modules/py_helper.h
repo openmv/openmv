@@ -17,6 +17,7 @@ typedef enum py_helper_arg_image_flags {
     ARG_IMAGE_MUTABLE      = (1 << 0),
     ARG_IMAGE_UNCOMPRESSED = (1 << 1),
     ARG_IMAGE_GRAYSCALE    = (1 << 2),
+    ARG_IMAGE_ALLOC        = (1 << 3)
 } py_helper_arg_image_flags_t;
 
 extern const mp_obj_fun_builtin_var_t py_func_unavailable_obj;
