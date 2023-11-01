@@ -24,17 +24,33 @@ mp_obj_t py_func_unavailable(uint n_args, const mp_obj_t *args, mp_map_t *kw_arg
 MP_DEFINE_CONST_FUN_OBJ_KW(py_func_unavailable_obj, 0, py_func_unavailable);
 
 image_t *py_helper_arg_to_image(const mp_obj_t arg, uint32_t flags) {
-    image_t *arg_img = py_image_cobj(arg);
+    image_t *image = NULL;
+    if ((flags & ARG_IMAGE_ALLOC) && MP_OBJ_IS_STR(arg)) {
+        #if defined(IMLIB_ENABLE_IMAGE_FILE_IO)
+        const char *path = mp_obj_str_get_str(arg);
+        FIL fp;
+        image = xalloc(sizeof(image_t));
+        img_read_settings_t rs;
+        imlib_read_geometry(&fp, image, path, &rs);
+        file_close(&fp);
+        image->data = fb_alloc(image_size(image), FB_ALLOC_CACHE_ALIGN);
+        imlib_load_image(image, path);
+        #else
+        mp_raise_msg(&mp_type_OSError, MP_ERROR_TEXT("Image I/O is not supported"));
+        #endif // IMLIB_ENABLE_IMAGE_FILE_IO
+    } else {
+        image = py_image_cobj(arg);
+    }
     if (flags) {
-        if ((flags & ARG_IMAGE_MUTABLE) && !arg_img->is_mutable) {
+        if ((flags & ARG_IMAGE_MUTABLE) && !image->is_mutable) {
             mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Expected a mutable image"));
-        } else if ((flags & ARG_IMAGE_UNCOMPRESSED) && arg_img->is_compressed) {
+        } else if ((flags & ARG_IMAGE_UNCOMPRESSED) && image->is_compressed) {
             mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Expected an uncompressed image"));
-        } else if ((flags & ARG_IMAGE_GRAYSCALE) && arg_img->pixfmt != PIXFORMAT_GRAYSCALE) {
+        } else if ((flags & ARG_IMAGE_GRAYSCALE) && image->pixfmt != PIXFORMAT_GRAYSCALE) {
             mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Expected an uncompressed image"));
         }
     }
-    return arg_img;
+    return image;
 }
 
 const void *py_helper_arg_to_palette(const mp_obj_t arg, uint32_t pixfmt) {
