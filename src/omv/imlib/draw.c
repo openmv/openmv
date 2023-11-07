@@ -2732,6 +2732,46 @@ void imlib_draw_row(int x_start, int x_end, int y_row, imlib_draw_row_data_t *da
     #undef BLEND_RGB566
 }
 
+static void imlib_draw_image_scale_and_center_helper(image_t *dst_img,
+                                                     int src_img_w,
+                                                     int src_img_h,
+                                                     int *src_width_scaled,
+                                                     int *src_height_scaled,
+                                                     int *dst_x_start,
+                                                     int *dst_y_start,
+                                                     float *x_scale,
+                                                     float *y_scale,
+                                                     image_hint_t *hint) {
+    if (*hint & (IMAGE_HINT_SCALE_ASPECT_KEEP | IMAGE_HINT_SCALE_ASPECT_EXPAND | IMAGE_HINT_SCALE_ASPECT_IGNORE)) {
+        float xs = ((*hint & IMAGE_HINT_TRANSPOSE) ? dst_img->h : dst_img->w) / ((float) src_img_w);
+        float ys = ((*hint & IMAGE_HINT_TRANSPOSE) ? dst_img->w : dst_img->h) / ((float) src_img_h);
+        if (*hint & IMAGE_HINT_SCALE_ASPECT_IGNORE) {
+            *x_scale *= xs;
+            *y_scale *= ys;
+        } else {
+            float scale = (*hint & IMAGE_HINT_SCALE_ASPECT_KEEP) ? IM_MIN(xs, ys) : IM_MAX(xs, ys);
+            *x_scale *= scale;
+            *y_scale *= scale;
+        }
+        *hint &= ~(IMAGE_HINT_SCALE_ASPECT_KEEP | IMAGE_HINT_SCALE_ASPECT_EXPAND | IMAGE_HINT_SCALE_ASPECT_IGNORE);
+    }
+
+    *src_width_scaled = fast_floorf(fast_fabsf(*x_scale) * src_img_w);
+    *src_height_scaled = fast_floorf(fast_fabsf(*y_scale) * src_img_h);
+
+    if (*hint & IMAGE_HINT_TRANSPOSE) {
+        int temp = *src_width_scaled;
+        *src_width_scaled = *src_height_scaled;
+        *src_height_scaled = temp;
+    }
+
+    if (*hint & IMAGE_HINT_CENTER) {
+        *dst_x_start += fast_floorf((dst_img->w - *src_width_scaled) / 2.f);
+        *dst_y_start += fast_floorf((dst_img->h - *src_height_scaled) / 2.f);
+        *hint &= ~IMAGE_HINT_CENTER;
+    }
+}
+
 // False == Image is black, True == rect valid
 void imlib_draw_image_get_bounds(image_t *dst_img,
                                  image_t *src_img,
@@ -2747,6 +2787,13 @@ void imlib_draw_image_get_bounds(image_t *dst_img,
                                  point_t *p1) {
     p0->x = -1;
 
+    int src_img_w = roi ? roi->w : src_img->w;
+    int src_img_h = roi ? roi->h : src_img->h;
+
+    int src_width_scaled, src_height_scaled;
+    imlib_draw_image_scale_and_center_helper(dst_img, src_img_w, src_img_h, &src_width_scaled, &src_height_scaled,
+                                             &dst_x_start, &dst_y_start, &x_scale, &y_scale, &hint);
+
     if (!alpha) {
         return;
     }
@@ -2760,22 +2807,6 @@ void imlib_draw_image_get_bounds(image_t *dst_img,
             // zero alpha palette
             return;
         }
-    }
-
-    int src_width_scaled = fast_floorf(fast_fabsf(x_scale) * (roi ? roi->w : src_img->w));
-    int src_height_scaled = fast_floorf(fast_fabsf(y_scale) * (roi ? roi->h : src_img->h));
-
-    // Make sure bounds checking works when transposed.
-    if (hint & IMAGE_HINT_TRANSPOSE) {
-        int temp = src_width_scaled;
-        src_width_scaled = src_height_scaled;
-        src_height_scaled = temp;
-    }
-
-    // Center src if hint is set.
-    if (hint & IMAGE_HINT_CENTER) {
-        dst_x_start -= src_width_scaled / 2;
-        dst_y_start -= src_height_scaled / 2;
     }
 
     // Clamp start x to image bounds.
@@ -2877,8 +2908,9 @@ void imlib_draw_image(image_t *dst_img,
     int h_limit = h_start + src_img_h - 1;
     int h_limit_m_1 = h_limit - 1;
 
-    int src_width_scaled = fast_floorf(x_scale * src_img_w);
-    int src_height_scaled = fast_floorf(y_scale * src_img_h);
+    int src_width_scaled, src_height_scaled;
+    imlib_draw_image_scale_and_center_helper(dst_img, src_img_w, src_img_h, &src_width_scaled, &src_height_scaled,
+                                             &dst_x_start, &dst_y_start, &x_scale, &y_scale, &hint);
 
     // Nothing to draw
     if ((src_width_scaled < 1) || (src_height_scaled < 1)) {
@@ -2900,20 +2932,8 @@ void imlib_draw_image(image_t *dst_img,
         }
     }
 
-    // Make sure bounds checking works when transposed.
-    if (hint & IMAGE_HINT_TRANSPOSE) {
-        int temp = src_width_scaled;
-        src_width_scaled = src_height_scaled;
-        src_height_scaled = temp;
-    }
-
     int dst_x_start_backup = dst_x_start;
     int dst_y_start_backup = dst_y_start;
-    // Center src if hint is set.
-    if (hint & IMAGE_HINT_CENTER) {
-        dst_x_start -= src_width_scaled / 2;
-        dst_y_start -= src_height_scaled / 2;
-    }
 
     // Clamp start x to image bounds.
     int src_x_start = 0;
@@ -3231,7 +3251,7 @@ void imlib_draw_image(image_t *dst_img,
 
             imlib_draw_image(dst_img, &out, dst_x_start_backup + i, dst_y_start_backup, 1.f, 1.f, NULL,
                              rgb_channel, alpha, color_palette, alpha_palette,
-                             hint & (IMAGE_HINT_CENTER | IMAGE_HINT_BLACK_BACKGROUND),
+                             hint & IMAGE_HINT_BLACK_BACKGROUND,
                              callback, callback_arg, dst_row_override);
         }
 
