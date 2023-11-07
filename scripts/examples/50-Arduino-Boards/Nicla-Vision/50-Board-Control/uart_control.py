@@ -10,7 +10,7 @@ import time
 from pyb import UART
 
 # Init UART object.
-uart = UART(4, 19200)
+uart = UART("LP1", 19200)
 
 while True:
     uart.write("Hello World!\r")
