@@ -1086,6 +1086,9 @@ typedef enum image_hint {
     IMAGE_HINT_CENTER    = (1 << 7),
     IMAGE_HINT_EXTRACT_RGB_CHANNEL_FIRST = (1 << 8),
     IMAGE_HINT_APPLY_COLOR_PALETTE_FIRST = (1 << 9),
+    IMAGE_HINT_SCALE_ASPECT_KEEP         = (1 << 10),
+    IMAGE_HINT_SCALE_ASPECT_EXPAND       = (1 << 11),
+    IMAGE_HINT_SCALE_ASPECT_IGNORE       = (1 << 12),
     IMAGE_HINT_BLACK_BACKGROUND = (1 << 31)
 } image_hint_t;
 
