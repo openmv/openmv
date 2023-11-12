@@ -116,6 +116,49 @@ void py_helper_arg_to_scale(const mp_obj_t arg_x_scale, const mp_obj_t arg_y_sca
     }
 }
 
+void py_helper_arg_to_minmax(const mp_obj_t minmax, float *min, float *max,
+                             const mp_obj_t *array, size_t array_size) {
+    float min_out = FLT_MAX;
+    float max_out = -FLT_MAX;
+
+    if (minmax != mp_const_none) {
+        mp_obj_t *arg_scale;
+        mp_obj_get_array_fixed_n(minmax, 2, &arg_scale);
+        min_out = mp_obj_get_float(arg_scale[0]);
+        max_out = mp_obj_get_float(arg_scale[1]);
+    } else if (array && array_size) {
+        for (int i = 0; i < array_size; i++) {
+            float t = mp_obj_get_float(array[i]);
+            if (t < min_out) {
+                min_out = t;
+            }
+            if (t > max_out) {
+                max_out = t;
+            }
+        }
+    }
+
+    *min = min_out;
+    *max = max_out;
+}
+
+float py_helper_arg_to_float(const mp_obj_t arg, float default_value) {
+    if (arg != mp_const_none) {
+        return mp_obj_get_float(arg);
+    }
+    return default_value;
+}
+
+void py_helper_arg_to_float_array(const mp_obj_t arg, float *array, size_t size) {
+    if (arg != mp_const_none) {
+        mp_obj_t *arg_array;
+        mp_obj_get_array_fixed_n(arg, size, &arg_array);
+        for (int i = 0; i < size; i++) {
+            array[i] = mp_obj_get_float(arg_array[i]);
+        }
+    }
+}
+
 image_t *py_helper_keyword_to_image(uint n_args, const mp_obj_t *args, uint arg_index,
                                     mp_map_t *kw_args, mp_obj_t kw, image_t *default_val) {
     mp_map_elem_t *kw_arg = mp_map_lookup(kw_args, kw, MP_MAP_LOOKUP);
@@ -241,25 +284,6 @@ void py_helper_keyword_int_array(uint n_args, const mp_obj_t *args, uint arg_ind
     }
 }
 
-void py_helper_keyword_float_array(uint n_args, const mp_obj_t *args, uint arg_index,
-                                   mp_map_t *kw_args, mp_obj_t kw, float *x, int size) {
-    mp_map_elem_t *kw_arg = mp_map_lookup(kw_args, kw, MP_MAP_LOOKUP);
-
-    if (kw_arg) {
-        mp_obj_t *arg_array;
-        mp_obj_get_array_fixed_n(kw_arg->value, size, &arg_array);
-        for (int i = 0; i < size; i++) {
-            x[i] = mp_obj_get_float(arg_array[i]);
-        }
-    } else if (n_args > arg_index) {
-        mp_obj_t *arg_array;
-        mp_obj_get_array_fixed_n(args[arg_index], size, &arg_array);
-        for (int i = 0; i < size; i++) {
-            x[i] = mp_obj_get_float(arg_array[i]);
-        }
-    }
-}
-
 float *py_helper_keyword_corner_array(uint n_args, const mp_obj_t *args, uint arg_index,
                                       mp_map_t *kw_args, mp_obj_t kw) {
     mp_map_elem_t *kw_arg = mp_map_lookup(kw_args, kw, MP_MAP_LOOKUP);
@@ -289,25 +313,6 @@ float *py_helper_keyword_corner_array(uint n_args, const mp_obj_t *args, uint ar
     }
 
     return NULL;
-}
-
-mp_obj_t *py_helper_keyword_iterable(uint n_args, const mp_obj_t *args,
-                                     uint arg_index, mp_map_t *kw_args, mp_obj_t kw, size_t *len) {
-    mp_obj_t itr = NULL;
-    mp_obj_t *items = NULL;
-    mp_map_elem_t *kw_arg = mp_map_lookup(kw_args, kw, MP_MAP_LOOKUP);
-
-    if (kw_arg) {
-        itr = kw_arg->value;
-    } else if (n_args > arg_index) {
-        itr = args[arg_index];
-    }
-
-    if (itr && (MP_OBJ_IS_TYPE(itr, &mp_type_tuple) ||
-                MP_OBJ_IS_TYPE(itr, &mp_type_list))) {
-        mp_obj_get_array(itr, len, &items);
-    }
-    return items;
 }
 
 uint py_helper_consume_array(uint n_args, const mp_obj_t *args, uint arg_index, size_t len, const mp_obj_t **items) {
