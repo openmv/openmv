@@ -99,17 +99,17 @@ STATIC void py_imageio_print(const mp_print_t *print, mp_obj_t self, mp_print_ki
               stream->closed ? "\"true\"" : "\"false\"",
               stream->count,
               stream->offset,
-#if defined(IMLIB_ENABLE_IMAGE_FILE_IO)
+              #if defined(IMLIB_ENABLE_IMAGE_FILE_IO)
               (stream->type == IMAGE_IO_FILE_STREAM)  ? stream->version : 0,
-#else
+              #else
               0,
-#endif
+              #endif
               (stream->type == IMAGE_IO_FILE_STREAM) ? 0 : stream->size,
-#if defined(IMLIB_ENABLE_IMAGE_FILE_IO)
+              #if defined(IMLIB_ENABLE_IMAGE_FILE_IO)
               (stream->type == IMAGE_IO_FILE_STREAM) ? f_size(&stream->fp) : (stream->count * stream->size));
-#else
+              #else
               stream->count * stream->size);
-#endif
+              #endif
 }
 
 STATIC mp_obj_t py_imageio_get_type(mp_obj_t self) {
@@ -308,26 +308,20 @@ STATIC void int_py_imageio_read_chunk(py_imageio_obj_t *stream, image_t *image, 
 }
 #endif
 
-STATIC mp_obj_t py_imageio_read(uint n_args, const mp_obj_t *args, mp_map_t *kw_args) {
+STATIC mp_obj_t py_imageio_read(uint n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
+    enum { ARG_copy_to_fb, ARG_loop, ARG_pause };
+    static const mp_arg_t allowed_args[] = {
+        { MP_QSTR_copy_to_fb, MP_ARG_INT,  {.u_bool = true } },
+        { MP_QSTR_loop, MP_ARG_INT | MP_ARG_KW_ONLY,  {.u_bool = true } },
+        { MP_QSTR_pause, MP_ARG_INT | MP_ARG_KW_ONLY,  {.u_bool = true } },
+    };
 
-    py_imageio_obj_t *stream = py_imageio_obj(args[0]);
+    // Parse args.
+    py_imageio_obj_t *stream = py_imageio_obj(pos_args[0]);
+    mp_arg_val_t args[MP_ARRAY_SIZE(allowed_args)];
+    mp_arg_parse_all(n_args - 1, pos_args + 1, kw_args, MP_ARRAY_SIZE(allowed_args), allowed_args, args);
 
-    mp_obj_t copy_to_fb_obj = py_helper_keyword_object(n_args, args, 1, kw_args,
-                                                       MP_OBJ_NEW_QSTR(MP_QSTR_copy_to_fb), NULL);
-    bool copy_to_fb = true;
-    image_t *arg_other = NULL;
-
-    if (copy_to_fb_obj) {
-        if (mp_obj_is_integer(copy_to_fb_obj)) {
-            copy_to_fb = mp_obj_get_int(copy_to_fb_obj);
-        } else {
-            arg_other = py_helper_arg_to_image(copy_to_fb_obj, ARG_IMAGE_MUTABLE);
-        }
-    }
-
-    image_t image = {};
-
-    bool pause = py_helper_keyword_int(n_args, args, 3, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_pause), true);
+    image_t image = { 0 };
 
     if (0) {
     #if defined(IMLIB_ENABLE_IMAGE_FILE_IO)
@@ -335,40 +329,35 @@ STATIC mp_obj_t py_imageio_read(uint n_args, const mp_obj_t *args, mp_map_t *kw_
         FIL *fp = &stream->fp;
 
         if (f_eof(fp)) {
-            if (!py_helper_keyword_int(n_args, args, 2, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_loop), true)) {
+            if (args[ARG_loop].u_bool == false) {
                 return mp_const_none;
             }
-
-            file_seek(fp, MAGIC_SIZE); // skip past the header
+            // Skip the header
+            file_seek(fp, MAGIC_SIZE);
 
             stream->offset = 0;
 
             if (f_eof(fp)) {
-                // empty file
+                // Empty file
                 return mp_const_none;
             }
         }
 
-        int_py_imageio_read_chunk(stream, &image, pause);
+        int_py_imageio_read_chunk(stream, &image, args[ARG_pause].u_bool);
     #endif
     } else if (stream->type == IMAGE_IO_MEMORY_STREAM) {
         if (stream->offset == stream->count) {
             mp_raise_msg(&mp_type_EOFError, MP_ERROR_TEXT("End of stream"));
         }
 
-        int_py_imageio_pause(stream, pause);
-
+        int_py_imageio_pause(stream, args[ARG_pause].u_bool);
         memcpy(&image, stream->buffer + (stream->offset * stream->size) + sizeof(uint32_t), sizeof(image_t));
     }
 
     uint32_t size = image_size(&image);
 
-    if (copy_to_fb) {
+    if (args[ARG_copy_to_fb].u_bool) {
         py_helper_set_to_framebuffer(&image);
-    } else if (arg_other) {
-        PY_ASSERT_TRUE_MSG((size <= image_size(arg_other)),
-                           "The new image won't fit in the target frame buffer!");
-        image.data = arg_other->data;
     } else {
         image.data = xalloc(size);
     }
@@ -410,14 +399,9 @@ STATIC mp_obj_t py_imageio_read(uint n_args, const mp_obj_t *args, mp_map_t *kw_
 
     py_helper_update_framebuffer(&image);
 
-    if (arg_other) {
-        memcpy(arg_other, &image, sizeof(image_t));
-    }
-
-    if (copy_to_fb) {
+    if (args[ARG_copy_to_fb].u_bool) {
         framebuffer_update_jpeg_buffer();
     }
-
     return py_image_from_struct(&image);
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_imageio_read_obj, 1, py_imageio_read);
