@@ -204,46 +204,54 @@ static mp_obj_t py_kptmatch_subscr(mp_obj_t self_in, mp_obj_t index, mp_obj_t va
 mp_obj_t py_kptmatch_cx(mp_obj_t self_in) {
     return ((py_kptmatch_obj_t *) self_in)->cx;
 }
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_kptmatch_cx_obj, py_kptmatch_cx);
+
 mp_obj_t py_kptmatch_cy(mp_obj_t self_in) {
     return ((py_kptmatch_obj_t *) self_in)->cy;
 }
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_kptmatch_cy_obj, py_kptmatch_cy);
+
 mp_obj_t py_kptmatch_x(mp_obj_t self_in) {
     return ((py_kptmatch_obj_t *) self_in)->x;
 }
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_kptmatch_x_obj, py_kptmatch_x);
+
 mp_obj_t py_kptmatch_y(mp_obj_t self_in) {
     return ((py_kptmatch_obj_t *) self_in)->y;
 }
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_kptmatch_y_obj, py_kptmatch_y);
+
 mp_obj_t py_kptmatch_w(mp_obj_t self_in) {
     return ((py_kptmatch_obj_t *) self_in)->w;
 }
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_kptmatch_w_obj, py_kptmatch_w);
+
 mp_obj_t py_kptmatch_h(mp_obj_t self_in) {
     return ((py_kptmatch_obj_t *) self_in)->h;
 }
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_kptmatch_h_obj, py_kptmatch_h);
+
 mp_obj_t py_kptmatch_count(mp_obj_t self_in) {
     return ((py_kptmatch_obj_t *) self_in)->count;
 }
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_kptmatch_count_obj, py_kptmatch_count);
+
 mp_obj_t py_kptmatch_theta(mp_obj_t self_in) {
     return ((py_kptmatch_obj_t *) self_in)->theta;
 }
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_kptmatch_theta_obj, py_kptmatch_theta);
+
 mp_obj_t py_kptmatch_match(mp_obj_t self_in) {
     return ((py_kptmatch_obj_t *) self_in)->match;
 }
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_kptmatch_match_obj, py_kptmatch_match);
+
 mp_obj_t py_kptmatch_rect(mp_obj_t self_in) {
     return mp_obj_new_tuple(4, (mp_obj_t []) {((py_kptmatch_obj_t *) self_in)->x,
                                               ((py_kptmatch_obj_t *) self_in)->y,
                                               ((py_kptmatch_obj_t *) self_in)->w,
                                               ((py_kptmatch_obj_t *) self_in)->h});
 }
-
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_kptmatch_cx_obj,    py_kptmatch_cx);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_kptmatch_cy_obj,    py_kptmatch_cy);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_kptmatch_x_obj,     py_kptmatch_x);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_kptmatch_y_obj,     py_kptmatch_y);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_kptmatch_w_obj,     py_kptmatch_w);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_kptmatch_h_obj,     py_kptmatch_h);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_kptmatch_count_obj, py_kptmatch_count);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_kptmatch_theta_obj, py_kptmatch_theta);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_kptmatch_match_obj, py_kptmatch_match);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_kptmatch_rect_obj,  py_kptmatch_rect);
 
 STATIC const mp_rom_map_elem_t py_kptmatch_locals_dict_table[] = {
@@ -2943,19 +2951,21 @@ static mp_obj_t py_similarity_subscr(mp_obj_t self_in, mp_obj_t index, mp_obj_t 
 mp_obj_t py_similarity_mean(mp_obj_t self_in) {
     return ((py_similarity_obj_t *) self_in)->avg;
 }
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_similarity_mean_obj, py_similarity_mean);
+
 mp_obj_t py_similarity_stdev(mp_obj_t self_in) {
     return ((py_similarity_obj_t *) self_in)->std;
 }
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_similarity_stdev_obj, py_similarity_stdev);
+
 mp_obj_t py_similarity_min(mp_obj_t self_in) {
     return ((py_similarity_obj_t *) self_in)->min;
 }
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_similarity_min_obj, py_similarity_min);
+
 mp_obj_t py_similarity_max(mp_obj_t self_in) {
     return ((py_similarity_obj_t *) self_in)->max;
 }
-
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_similarity_mean_obj, py_similarity_mean);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_similarity_stdev_obj, py_similarity_stdev);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_similarity_min_obj, py_similarity_min);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_similarity_max_obj, py_similarity_max);
 
 STATIC const mp_rom_map_elem_t py_similarity_locals_dict_table[] = {
@@ -3130,131 +3140,161 @@ static mp_obj_t py_statistics_subscr(mp_obj_t self_in, mp_obj_t index, mp_obj_t 
 mp_obj_t py_statistics_mean(mp_obj_t self_in) {
     return ((py_statistics_obj_t *) self_in)->LMean;
 }
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_statistics_mean_obj, py_statistics_mean);
+
 mp_obj_t py_statistics_median(mp_obj_t self_in) {
     return ((py_statistics_obj_t *) self_in)->LMedian;
 }
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_statistics_median_obj, py_statistics_median);
+
 mp_obj_t py_statistics_mode(mp_obj_t self_in) {
     return ((py_statistics_obj_t *) self_in)->LMode;
 }
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_statistics_mode_obj, py_statistics_mode);
+
 mp_obj_t py_statistics_stdev(mp_obj_t self_in) {
     return ((py_statistics_obj_t *) self_in)->LSTDev;
 }
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_statistics_stdev_obj, py_statistics_stdev);
+
 mp_obj_t py_statistics_min(mp_obj_t self_in) {
     return ((py_statistics_obj_t *) self_in)->LMin;
 }
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_statistics_min_obj, py_statistics_min);
+
 mp_obj_t py_statistics_max(mp_obj_t self_in) {
     return ((py_statistics_obj_t *) self_in)->LMax;
 }
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_statistics_max_obj, py_statistics_max);
+
 mp_obj_t py_statistics_lq(mp_obj_t self_in) {
     return ((py_statistics_obj_t *) self_in)->LLQ;
 }
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_statistics_lq_obj, py_statistics_lq);
+
 mp_obj_t py_statistics_uq(mp_obj_t self_in) {
     return ((py_statistics_obj_t *) self_in)->LUQ;
 }
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_statistics_uq_obj, py_statistics_uq);
+
 mp_obj_t py_statistics_l_mean(mp_obj_t self_in) {
     return ((py_statistics_obj_t *) self_in)->LMean;
 }
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_statistics_l_mean_obj, py_statistics_l_mean);
+
 mp_obj_t py_statistics_l_median(mp_obj_t self_in) {
     return ((py_statistics_obj_t *) self_in)->LMedian;
 }
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_statistics_l_median_obj, py_statistics_l_median);
+
 mp_obj_t py_statistics_l_mode(mp_obj_t self_in) {
     return ((py_statistics_obj_t *) self_in)->LMode;
 }
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_statistics_l_mode_obj, py_statistics_l_mode);
+
 mp_obj_t py_statistics_l_stdev(mp_obj_t self_in) {
     return ((py_statistics_obj_t *) self_in)->LSTDev;
 }
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_statistics_l_stdev_obj, py_statistics_l_stdev);
+
 mp_obj_t py_statistics_l_min(mp_obj_t self_in) {
     return ((py_statistics_obj_t *) self_in)->LMin;
 }
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_statistics_l_min_obj, py_statistics_l_min);
+
 mp_obj_t py_statistics_l_max(mp_obj_t self_in) {
     return ((py_statistics_obj_t *) self_in)->LMax;
 }
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_statistics_l_max_obj, py_statistics_l_max);
+
 mp_obj_t py_statistics_l_lq(mp_obj_t self_in) {
     return ((py_statistics_obj_t *) self_in)->LLQ;
 }
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_statistics_l_lq_obj, py_statistics_l_lq);
+
 mp_obj_t py_statistics_l_uq(mp_obj_t self_in) {
     return ((py_statistics_obj_t *) self_in)->LUQ;
 }
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_statistics_l_uq_obj, py_statistics_l_uq);
+
 mp_obj_t py_statistics_a_mean(mp_obj_t self_in) {
     return ((py_statistics_obj_t *) self_in)->AMean;
 }
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_statistics_a_mean_obj, py_statistics_a_mean);
+
 mp_obj_t py_statistics_a_median(mp_obj_t self_in) {
     return ((py_statistics_obj_t *) self_in)->AMedian;
 }
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_statistics_a_median_obj, py_statistics_a_median);
+
 mp_obj_t py_statistics_a_mode(mp_obj_t self_in) {
     return ((py_statistics_obj_t *) self_in)->AMode;
 }
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_statistics_a_mode_obj, py_statistics_a_mode);
+
 mp_obj_t py_statistics_a_stdev(mp_obj_t self_in) {
     return ((py_statistics_obj_t *) self_in)->ASTDev;
 }
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_statistics_a_stdev_obj, py_statistics_a_stdev);
+
 mp_obj_t py_statistics_a_min(mp_obj_t self_in) {
     return ((py_statistics_obj_t *) self_in)->AMin;
 }
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_statistics_a_min_obj, py_statistics_a_min);
+
 mp_obj_t py_statistics_a_max(mp_obj_t self_in) {
     return ((py_statistics_obj_t *) self_in)->AMax;
 }
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_statistics_a_max_obj, py_statistics_a_max);
+
 mp_obj_t py_statistics_a_lq(mp_obj_t self_in) {
     return ((py_statistics_obj_t *) self_in)->ALQ;
 }
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_statistics_a_lq_obj, py_statistics_a_lq);
+
 mp_obj_t py_statistics_a_uq(mp_obj_t self_in) {
     return ((py_statistics_obj_t *) self_in)->AUQ;
 }
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_statistics_a_uq_obj, py_statistics_a_uq);
+
 mp_obj_t py_statistics_b_mean(mp_obj_t self_in) {
     return ((py_statistics_obj_t *) self_in)->BMean;
 }
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_statistics_b_mean_obj, py_statistics_b_mean);
+
 mp_obj_t py_statistics_b_median(mp_obj_t self_in) {
     return ((py_statistics_obj_t *) self_in)->BMedian;
 }
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_statistics_b_median_obj, py_statistics_b_median);
+
 mp_obj_t py_statistics_b_mode(mp_obj_t self_in) {
     return ((py_statistics_obj_t *) self_in)->BMode;
 }
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_statistics_b_mode_obj, py_statistics_b_mode);
+
 mp_obj_t py_statistics_b_stdev(mp_obj_t self_in) {
     return ((py_statistics_obj_t *) self_in)->BSTDev;
 }
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_statistics_b_stdev_obj, py_statistics_b_stdev);
+
 mp_obj_t py_statistics_b_min(mp_obj_t self_in) {
     return ((py_statistics_obj_t *) self_in)->BMin;
 }
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_statistics_b_min_obj, py_statistics_b_min);
+
 mp_obj_t py_statistics_b_max(mp_obj_t self_in) {
     return ((py_statistics_obj_t *) self_in)->BMax;
 }
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_statistics_b_max_obj, py_statistics_b_max);
+
 mp_obj_t py_statistics_b_lq(mp_obj_t self_in) {
     return ((py_statistics_obj_t *) self_in)->BLQ;
 }
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_statistics_b_lq_obj, py_statistics_b_lq);
+
 mp_obj_t py_statistics_b_uq(mp_obj_t self_in) {
     return ((py_statistics_obj_t *) self_in)->BUQ;
 }
-
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_statistics_mean_obj, py_statistics_mean);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_statistics_median_obj, py_statistics_median);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_statistics_mode_obj, py_statistics_mode);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_statistics_stdev_obj, py_statistics_stdev);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_statistics_min_obj, py_statistics_min);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_statistics_max_obj, py_statistics_max);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_statistics_lq_obj, py_statistics_lq);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_statistics_uq_obj, py_statistics_uq);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_statistics_l_mean_obj, py_statistics_l_mean);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_statistics_l_median_obj, py_statistics_l_median);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_statistics_l_mode_obj, py_statistics_l_mode);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_statistics_l_stdev_obj, py_statistics_l_stdev);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_statistics_l_min_obj, py_statistics_l_min);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_statistics_l_max_obj, py_statistics_l_max);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_statistics_l_lq_obj, py_statistics_l_lq);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_statistics_l_uq_obj, py_statistics_l_uq);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_statistics_a_mean_obj, py_statistics_a_mean);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_statistics_a_median_obj, py_statistics_a_median);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_statistics_a_mode_obj, py_statistics_a_mode);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_statistics_a_stdev_obj, py_statistics_a_stdev);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_statistics_a_min_obj, py_statistics_a_min);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_statistics_a_max_obj, py_statistics_a_max);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_statistics_a_lq_obj, py_statistics_a_lq);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_statistics_a_uq_obj, py_statistics_a_uq);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_statistics_b_mean_obj, py_statistics_b_mean);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_statistics_b_median_obj, py_statistics_b_median);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_statistics_b_mode_obj, py_statistics_b_mode);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_statistics_b_stdev_obj, py_statistics_b_stdev);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_statistics_b_min_obj, py_statistics_b_min);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_statistics_b_max_obj, py_statistics_b_max);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_statistics_b_lq_obj, py_statistics_b_lq);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_statistics_b_uq_obj, py_statistics_b_uq);
 
 STATIC const mp_rom_map_elem_t py_statistics_locals_dict_table[] = {
@@ -3363,19 +3403,21 @@ static mp_obj_t py_percentile_subscr(mp_obj_t self_in, mp_obj_t index, mp_obj_t 
 mp_obj_t py_percentile_value(mp_obj_t self_in) {
     return ((py_percentile_obj_t *) self_in)->LValue;
 }
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_percentile_value_obj, py_percentile_value);
+
 mp_obj_t py_percentile_l_value(mp_obj_t self_in) {
     return ((py_percentile_obj_t *) self_in)->LValue;
 }
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_percentile_l_value_obj, py_percentile_l_value);
+
 mp_obj_t py_percentile_a_value(mp_obj_t self_in) {
     return ((py_percentile_obj_t *) self_in)->AValue;
 }
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_percentile_a_value_obj, py_percentile_a_value);
+
 mp_obj_t py_percentile_b_value(mp_obj_t self_in) {
     return ((py_percentile_obj_t *) self_in)->BValue;
 }
-
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_percentile_value_obj, py_percentile_value);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_percentile_l_value_obj, py_percentile_l_value);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_percentile_a_value_obj, py_percentile_a_value);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_percentile_b_value_obj, py_percentile_b_value);
 
 STATIC const mp_rom_map_elem_t py_percentile_locals_dict_table[] = {
@@ -3456,19 +3498,21 @@ static mp_obj_t py_threshold_subscr(mp_obj_t self_in, mp_obj_t index, mp_obj_t v
 mp_obj_t py_threshold_value(mp_obj_t self_in) {
     return ((py_threshold_obj_t *) self_in)->LValue;
 }
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_threshold_value_obj, py_threshold_value);
+
 mp_obj_t py_threshold_l_value(mp_obj_t self_in) {
     return ((py_threshold_obj_t *) self_in)->LValue;
 }
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_threshold_l_value_obj, py_threshold_l_value);
+
 mp_obj_t py_threshold_a_value(mp_obj_t self_in) {
     return ((py_threshold_obj_t *) self_in)->AValue;
 }
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_threshold_a_value_obj, py_threshold_a_value);
+
 mp_obj_t py_threshold_b_value(mp_obj_t self_in) {
     return ((py_threshold_obj_t *) self_in)->BValue;
 }
-
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_threshold_value_obj, py_threshold_value);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_threshold_l_value_obj, py_threshold_l_value);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_threshold_a_value_obj, py_threshold_a_value);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_threshold_b_value_obj, py_threshold_b_value);
 
 STATIC const mp_rom_map_elem_t py_threshold_locals_dict_table[] = {
@@ -3554,15 +3598,22 @@ static mp_obj_t py_histogram_subscr(mp_obj_t self_in, mp_obj_t index, mp_obj_t v
 mp_obj_t py_histogram_bins(mp_obj_t self_in) {
     return ((py_histogram_obj_t *) self_in)->LBins;
 }
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_histogram_bins_obj, py_histogram_bins);
+
 mp_obj_t py_histogram_l_bins(mp_obj_t self_in) {
     return ((py_histogram_obj_t *) self_in)->LBins;
 }
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_histogram_l_bins_obj, py_histogram_l_bins);
+
 mp_obj_t py_histogram_a_bins(mp_obj_t self_in) {
     return ((py_histogram_obj_t *) self_in)->ABins;
 }
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_histogram_a_bins_obj, py_histogram_a_bins);
+
 mp_obj_t py_histogram_b_bins(mp_obj_t self_in) {
     return ((py_histogram_obj_t *) self_in)->BBins;
 }
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_histogram_b_bins_obj, py_histogram_b_bins);
 
 mp_obj_t py_histogram_get_percentile(mp_obj_t self_in, mp_obj_t percentile) {
     histogram_t hist;
@@ -3600,6 +3651,7 @@ mp_obj_t py_histogram_get_percentile(mp_obj_t self_in, mp_obj_t percentile) {
 
     return o;
 }
+STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_histogram_get_percentile_obj, py_histogram_get_percentile);
 
 mp_obj_t py_histogram_get_threshold(mp_obj_t self_in) {
     histogram_t hist;
@@ -3637,6 +3689,7 @@ mp_obj_t py_histogram_get_threshold(mp_obj_t self_in) {
 
     return o;
 }
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_histogram_get_threshold_obj, py_histogram_get_threshold);
 
 mp_obj_t py_histogram_get_statistics(mp_obj_t self_in) {
     histogram_t hist;
@@ -3695,13 +3748,6 @@ mp_obj_t py_histogram_get_statistics(mp_obj_t self_in) {
 
     return o;
 }
-
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_histogram_bins_obj, py_histogram_bins);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_histogram_l_bins_obj, py_histogram_l_bins);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_histogram_a_bins_obj, py_histogram_a_bins);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_histogram_b_bins_obj, py_histogram_b_bins);
-STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_histogram_get_percentile_obj, py_histogram_get_percentile);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_histogram_get_threshold_obj, py_histogram_get_threshold);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_histogram_get_statistics_obj, py_histogram_get_statistics);
 
 STATIC const mp_rom_map_elem_t py_histogram_locals_dict_table[] = {
@@ -3994,40 +4040,46 @@ mp_obj_t py_line_line(mp_obj_t self_in) {
                                               ((py_line_obj_t *) self_in)->x2,
                                               ((py_line_obj_t *) self_in)->y2});
 }
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_line_line_obj, py_line_line);
 
 mp_obj_t py_line_x1(mp_obj_t self_in) {
     return ((py_line_obj_t *) self_in)->x1;
 }
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_line_x1_obj, py_line_x1);
+
 mp_obj_t py_line_y1(mp_obj_t self_in) {
     return ((py_line_obj_t *) self_in)->y1;
 }
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_line_y1_obj, py_line_y1);
+
 mp_obj_t py_line_x2(mp_obj_t self_in) {
     return ((py_line_obj_t *) self_in)->x2;
 }
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_line_x2_obj, py_line_x2);
+
 mp_obj_t py_line_y2(mp_obj_t self_in) {
     return ((py_line_obj_t *) self_in)->y2;
 }
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_line_y2_obj, py_line_y2);
+
 mp_obj_t py_line_length(mp_obj_t self_in) {
     return ((py_line_obj_t *) self_in)->length;
 }
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_line_length_obj, py_line_length);
+
 mp_obj_t py_line_magnitude(mp_obj_t self_in) {
     return ((py_line_obj_t *) self_in)->magnitude;
 }
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_line_magnitude_obj, py_line_magnitude);
+
 mp_obj_t py_line_theta(mp_obj_t self_in) {
     return ((py_line_obj_t *) self_in)->theta;
 }
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_line_theta_obj, py_line_theta);
+
 mp_obj_t py_line_rho(mp_obj_t self_in) {
     return ((py_line_obj_t *) self_in)->rho;
 }
-
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_line_line_obj, py_line_line);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_line_x1_obj, py_line_x1);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_line_y1_obj, py_line_y1);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_line_x2_obj, py_line_x2);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_line_y2_obj, py_line_y2);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_line_length_obj, py_line_length);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_line_magnitude_obj, py_line_magnitude);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_line_theta_obj, py_line_theta);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_line_rho_obj, py_line_rho);
 
 STATIC const mp_rom_map_elem_t py_line_locals_dict_table[] = {
@@ -4176,75 +4228,118 @@ static mp_obj_t py_blob_subscr(mp_obj_t self_in, mp_obj_t index, mp_obj_t value)
 mp_obj_t py_blob_corners(mp_obj_t self_in) {
     return ((py_blob_obj_t *) self_in)->corners;
 }
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_corners_obj, py_blob_corners);
+
 mp_obj_t py_blob_min_corners(mp_obj_t self_in) {
     return ((py_blob_obj_t *) self_in)->min_corners;
 }
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_min_corners_obj, py_blob_min_corners);
+
 mp_obj_t py_blob_rect(mp_obj_t self_in) {
     return mp_obj_new_tuple(4, (mp_obj_t []) {((py_blob_obj_t *) self_in)->x,
                                               ((py_blob_obj_t *) self_in)->y,
                                               ((py_blob_obj_t *) self_in)->w,
                                               ((py_blob_obj_t *) self_in)->h});
 }
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_rect_obj, py_blob_rect);
 
 mp_obj_t py_blob_x(mp_obj_t self_in) {
     return ((py_blob_obj_t *) self_in)->x;
 }
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_x_obj, py_blob_x);
+
 mp_obj_t py_blob_y(mp_obj_t self_in) {
     return ((py_blob_obj_t *) self_in)->y;
 }
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_y_obj, py_blob_y);
+
 mp_obj_t py_blob_w(mp_obj_t self_in) {
     return ((py_blob_obj_t *) self_in)->w;
 }
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_w_obj, py_blob_w);
+
 mp_obj_t py_blob_h(mp_obj_t self_in) {
     return ((py_blob_obj_t *) self_in)->h;
 }
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_h_obj, py_blob_h);
+
 mp_obj_t py_blob_pixels(mp_obj_t self_in) {
     return ((py_blob_obj_t *) self_in)->pixels;
 }
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_pixels_obj, py_blob_pixels);
+
 mp_obj_t py_blob_cx(mp_obj_t self_in) {
     return mp_obj_new_int(fast_roundf(mp_obj_get_float(((py_blob_obj_t *) self_in)->cx)));
 }
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_cx_obj, py_blob_cx);
+
 mp_obj_t py_blob_cxf(mp_obj_t self_in) {
     return ((py_blob_obj_t *) self_in)->cx;
 }
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_cxf_obj, py_blob_cxf);
+
 mp_obj_t py_blob_cy(mp_obj_t self_in) {
     return mp_obj_new_int(fast_roundf(mp_obj_get_float(((py_blob_obj_t *) self_in)->cy)));
 }
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_cy_obj, py_blob_cy);
+
 mp_obj_t py_blob_cyf(mp_obj_t self_in) {
     return ((py_blob_obj_t *) self_in)->cy;
 }
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_cyf_obj, py_blob_cyf);
+
 mp_obj_t py_blob_rotation(mp_obj_t self_in) {
     return ((py_blob_obj_t *) self_in)->rotation;
 }
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_rotation_obj, py_blob_rotation);
+
 mp_obj_t py_blob_rotation_deg(mp_obj_t self_in) {
     return mp_obj_new_int(IM_RAD2DEG(mp_obj_get_float(((py_blob_obj_t *) self_in)->rotation)));
 }
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_rotation_deg_obj, py_blob_rotation_deg);
+
 mp_obj_t py_blob_rotation_rad(mp_obj_t self_in) {
     return ((py_blob_obj_t *) self_in)->rotation;
 }
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_rotation_rad_obj, py_blob_rotation_rad);
+
 mp_obj_t py_blob_code(mp_obj_t self_in) {
     return ((py_blob_obj_t *) self_in)->code;
 }
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_code_obj, py_blob_code);
+
 mp_obj_t py_blob_count(mp_obj_t self_in) {
     return ((py_blob_obj_t *) self_in)->count;
 }
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_count_obj, py_blob_count);
+
 mp_obj_t py_blob_perimeter(mp_obj_t self_in) {
     return ((py_blob_obj_t *) self_in)->perimeter;
 }
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_perimeter_obj, py_blob_perimeter);
+
 mp_obj_t py_blob_roundness(mp_obj_t self_in) {
     return ((py_blob_obj_t *) self_in)->roundness;
 }
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_roundness_obj, py_blob_roundness);
+
 mp_obj_t py_blob_elongation(mp_obj_t self_in) {
     return mp_obj_new_float(1 - mp_obj_get_float(((py_blob_obj_t *) self_in)->roundness));
 }
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_elongation_obj, py_blob_elongation);
+
 mp_obj_t py_blob_area(mp_obj_t self_in) {
     return mp_obj_new_int(mp_obj_get_int(((py_blob_obj_t *) self_in)->w) * mp_obj_get_int(((py_blob_obj_t *) self_in)->h));
 }
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_area_obj, py_blob_area);
+
 mp_obj_t py_blob_density(mp_obj_t self_in) {
     int area = mp_obj_get_int(((py_blob_obj_t *) self_in)->w) * mp_obj_get_int(((py_blob_obj_t *) self_in)->h);
     int pixels = mp_obj_get_int(((py_blob_obj_t *) self_in)->pixels);
     return mp_obj_new_float(IM_DIV(pixels, ((float) area)));
 }
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_density_obj, py_blob_density);
+
 // Rect-area versus pixels (e.g. blob area) -> Above.
 // Rect-area versus perimeter -> Basically the same as the above with a different scale factor.
 // Rect-perimeter versus pixels (e.g. blob area) -> Basically the same as the above with a different scale factor.
@@ -4254,6 +4349,8 @@ mp_obj_t py_blob_compactness(mp_obj_t self_in) {
     float perimeter = mp_obj_get_int(((py_blob_obj_t *) self_in)->perimeter);
     return mp_obj_new_float(IM_DIV((pixels * 4 * M_PI), (perimeter * perimeter)));
 }
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_compactness_obj, py_blob_compactness);
+
 mp_obj_t py_blob_solidity(mp_obj_t self_in) {
     mp_obj_t *corners, *p0, *p1, *p2, *p3;
     mp_obj_get_array_fixed_n(((py_blob_obj_t *) self_in)->min_corners, 4, &corners);
@@ -4277,6 +4374,8 @@ mp_obj_t py_blob_solidity(mp_obj_t self_in) {
     int pixels = mp_obj_get_int(((py_blob_obj_t *) self_in)->pixels);
     return mp_obj_new_float(IM_MIN(IM_DIV(pixels, min_area), 1));
 }
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_solidity_obj, py_blob_solidity);
+
 mp_obj_t py_blob_convexity(mp_obj_t self_in) {
     mp_obj_t *corners, *p0, *p1, *p2, *p3;
     mp_obj_get_array_fixed_n(((py_blob_obj_t *) self_in)->min_corners, 4, &corners);
@@ -4302,16 +4401,22 @@ mp_obj_t py_blob_convexity(mp_obj_t self_in) {
     int perimeter = mp_obj_get_int(((py_blob_obj_t *) self_in)->perimeter);
     return mp_obj_new_float(IM_MIN(IM_DIV(d0 + d1 + d2 + d3, perimeter), 1));
 }
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_convexity_obj, py_blob_convexity);
 // Min rect-area versus pixels (e.g. blob area) -> Above.
 // Min rect-area versus perimeter -> Basically the same as the above with a different scale factor.
 // Min rect-perimeter versus pixels (e.g. blob area) -> Basically the same as the above with a different scale factor.
 // Min rect-perimeter versus perimeter -> Above
+
 mp_obj_t py_blob_x_hist_bins(mp_obj_t self_in) {
     return ((py_blob_obj_t *) self_in)->x_hist_bins;
 }
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_x_hist_bins_obj, py_blob_x_hist_bins);
+
 mp_obj_t py_blob_y_hist_bins(mp_obj_t self_in) {
     return ((py_blob_obj_t *) self_in)->y_hist_bins;
 }
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_y_hist_bins_obj, py_blob_y_hist_bins);
+
 mp_obj_t py_blob_major_axis_line(mp_obj_t self_in) {
     mp_obj_t *corners, *p0, *p1, *p2, *p3;
     mp_obj_get_array_fixed_n(((py_blob_obj_t *) self_in)->min_corners, 4, &corners);
@@ -4354,6 +4459,8 @@ mp_obj_t py_blob_major_axis_line(mp_obj_t self_in) {
                                                   mp_obj_new_int(m3y)});
     }
 }
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_major_axis_line_obj, py_blob_major_axis_line);
+
 mp_obj_t py_blob_minor_axis_line(mp_obj_t self_in) {
     mp_obj_t *corners, *p0, *p1, *p2, *p3;
     mp_obj_get_array_fixed_n(((py_blob_obj_t *) self_in)->min_corners, 4, &corners);
@@ -4396,6 +4503,8 @@ mp_obj_t py_blob_minor_axis_line(mp_obj_t self_in) {
                                                   mp_obj_new_int(m3y)});
     }
 }
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_minor_axis_line_obj, py_blob_minor_axis_line);
+
 mp_obj_t py_blob_enclosing_circle(mp_obj_t self_in) {
     mp_obj_t *corners, *p0, *p1, *p2, *p3;
     mp_obj_get_array_fixed_n(((py_blob_obj_t *) self_in)->min_corners, 4, &corners);
@@ -4427,6 +4536,8 @@ mp_obj_t py_blob_enclosing_circle(mp_obj_t self_in) {
                                               mp_obj_new_int(cy),
                                               mp_obj_new_int(fast_roundf(d))});
 }
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_enclosing_circle_obj, py_blob_enclosing_circle);
+
 mp_obj_t py_blob_enclosed_ellipse(mp_obj_t self_in) {
     mp_obj_t *corners, *p0, *p1, *p2, *p3;
     mp_obj_get_array_fixed_n(((py_blob_obj_t *) self_in)->min_corners, 4, &corners);
@@ -4481,37 +4592,6 @@ mp_obj_t py_blob_enclosed_ellipse(mp_obj_t self_in) {
                                               mp_obj_new_int(b),
                                               mp_obj_new_int(r)});
 }
-
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_corners_obj, py_blob_corners);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_min_corners_obj, py_blob_min_corners);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_rect_obj, py_blob_rect);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_x_obj, py_blob_x);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_y_obj, py_blob_y);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_w_obj, py_blob_w);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_h_obj, py_blob_h);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_pixels_obj, py_blob_pixels);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_cx_obj, py_blob_cx);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_cxf_obj, py_blob_cxf);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_cy_obj, py_blob_cy);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_cyf_obj, py_blob_cyf);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_rotation_obj, py_blob_rotation);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_rotation_deg_obj, py_blob_rotation_deg);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_rotation_rad_obj, py_blob_rotation_rad);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_code_obj, py_blob_code);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_count_obj, py_blob_count);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_perimeter_obj, py_blob_perimeter);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_roundness_obj, py_blob_roundness);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_elongation_obj, py_blob_elongation);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_area_obj, py_blob_area);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_density_obj, py_blob_density);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_compactness_obj, py_blob_compactness);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_solidity_obj, py_blob_solidity);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_convexity_obj, py_blob_convexity);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_x_hist_bins_obj, py_blob_x_hist_bins);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_y_hist_bins_obj, py_blob_y_hist_bins);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_major_axis_line_obj, py_blob_major_axis_line);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_minor_axis_line_obj, py_blob_minor_axis_line);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_enclosing_circle_obj, py_blob_enclosing_circle);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_enclosed_ellipse_obj, py_blob_enclosed_ellipse);
 
 STATIC const mp_rom_map_elem_t py_blob_locals_dict_table[] = {
@@ -4832,24 +4912,26 @@ mp_obj_t py_circle_circle(mp_obj_t self_in) {
                                               ((py_circle_obj_t *) self_in)->y,
                                               ((py_circle_obj_t *) self_in)->r});
 }
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_circle_circle_obj, py_circle_circle);
 
 mp_obj_t py_circle_x(mp_obj_t self_in) {
     return ((py_circle_obj_t *) self_in)->x;
 }
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_circle_x_obj, py_circle_x);
+
 mp_obj_t py_circle_y(mp_obj_t self_in) {
     return ((py_circle_obj_t *) self_in)->y;
 }
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_circle_y_obj, py_circle_y);
+
 mp_obj_t py_circle_r(mp_obj_t self_in) {
     return ((py_circle_obj_t *) self_in)->r;
 }
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_circle_r_obj, py_circle_r);
+
 mp_obj_t py_circle_magnitude(mp_obj_t self_in) {
     return ((py_circle_obj_t *) self_in)->magnitude;
 }
-
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_circle_circle_obj, py_circle_circle);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_circle_x_obj, py_circle_x);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_circle_y_obj, py_circle_y);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_circle_r_obj, py_circle_r);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_circle_magnitude_obj, py_circle_magnitude);
 
 STATIC const mp_rom_map_elem_t py_circle_locals_dict_table[] = {
@@ -4964,35 +5046,39 @@ static mp_obj_t py_rect_subscr(mp_obj_t self_in, mp_obj_t index, mp_obj_t value)
 mp_obj_t py_rect_corners(mp_obj_t self_in) {
     return ((py_rect_obj_t *) self_in)->corners;
 }
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_rect_corners_obj, py_rect_corners);
+
 mp_obj_t py_rect_rect(mp_obj_t self_in) {
     return mp_obj_new_tuple(4, (mp_obj_t []) {((py_rect_obj_t *) self_in)->x,
                                               ((py_rect_obj_t *) self_in)->y,
                                               ((py_rect_obj_t *) self_in)->w,
                                               ((py_rect_obj_t *) self_in)->h});
 }
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_rect_rect_obj, py_rect_rect);
 
 mp_obj_t py_rect_x(mp_obj_t self_in) {
     return ((py_rect_obj_t *) self_in)->x;
 }
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_rect_x_obj, py_rect_x);
+
 mp_obj_t py_rect_y(mp_obj_t self_in) {
     return ((py_rect_obj_t *) self_in)->y;
 }
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_rect_y_obj, py_rect_y);
+
 mp_obj_t py_rect_w(mp_obj_t self_in) {
     return ((py_rect_obj_t *) self_in)->w;
 }
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_rect_w_obj, py_rect_w);
+
 mp_obj_t py_rect_h(mp_obj_t self_in) {
     return ((py_rect_obj_t *) self_in)->h;
 }
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_rect_h_obj, py_rect_h);
+
 mp_obj_t py_rect_magnitude(mp_obj_t self_in) {
     return ((py_rect_obj_t *) self_in)->magnitude;
 }
-
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_rect_corners_obj, py_rect_corners);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_rect_rect_obj, py_rect_rect);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_rect_x_obj, py_rect_x);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_rect_y_obj, py_rect_y);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_rect_w_obj, py_rect_w);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_rect_h_obj, py_rect_h);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_rect_magnitude_obj, py_rect_magnitude);
 
 STATIC const mp_rom_map_elem_t py_rect_locals_dict_table[] = {
@@ -5121,71 +5207,84 @@ static mp_obj_t py_qrcode_subscr(mp_obj_t self_in, mp_obj_t index, mp_obj_t valu
 mp_obj_t py_qrcode_corners(mp_obj_t self_in) {
     return ((py_qrcode_obj_t *) self_in)->corners;
 }
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_qrcode_corners_obj, py_qrcode_corners);
+
 mp_obj_t py_qrcode_rect(mp_obj_t self_in) {
     return mp_obj_new_tuple(4, (mp_obj_t []) {((py_qrcode_obj_t *) self_in)->x,
                                               ((py_qrcode_obj_t *) self_in)->y,
                                               ((py_qrcode_obj_t *) self_in)->w,
                                               ((py_qrcode_obj_t *) self_in)->h});
 }
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_qrcode_rect_obj, py_qrcode_rect);
 
 mp_obj_t py_qrcode_x(mp_obj_t self_in) {
     return ((py_qrcode_obj_t *) self_in)->x;
 }
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_qrcode_x_obj, py_qrcode_x);
+
 mp_obj_t py_qrcode_y(mp_obj_t self_in) {
     return ((py_qrcode_obj_t *) self_in)->y;
 }
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_qrcode_y_obj, py_qrcode_y);
+
 mp_obj_t py_qrcode_w(mp_obj_t self_in) {
     return ((py_qrcode_obj_t *) self_in)->w;
 }
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_qrcode_w_obj, py_qrcode_w);
+
 mp_obj_t py_qrcode_h(mp_obj_t self_in) {
     return ((py_qrcode_obj_t *) self_in)->h;
 }
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_qrcode_h_obj, py_qrcode_h);
+
 mp_obj_t py_qrcode_payload(mp_obj_t self_in) {
     return ((py_qrcode_obj_t *) self_in)->payload;
 }
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_qrcode_payload_obj, py_qrcode_payload);
+
 mp_obj_t py_qrcode_version(mp_obj_t self_in) {
     return ((py_qrcode_obj_t *) self_in)->version;
 }
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_qrcode_version_obj, py_qrcode_version);
+
 mp_obj_t py_qrcode_ecc_level(mp_obj_t self_in) {
     return ((py_qrcode_obj_t *) self_in)->ecc_level;
 }
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_qrcode_ecc_level_obj, py_qrcode_ecc_level);
+
 mp_obj_t py_qrcode_mask(mp_obj_t self_in) {
     return ((py_qrcode_obj_t *) self_in)->mask;
 }
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_qrcode_mask_obj, py_qrcode_mask);
+
 mp_obj_t py_qrcode_data_type(mp_obj_t self_in) {
     return ((py_qrcode_obj_t *) self_in)->data_type;
 }
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_qrcode_data_type_obj, py_qrcode_data_type);
+
 mp_obj_t py_qrcode_eci(mp_obj_t self_in) {
     return ((py_qrcode_obj_t *) self_in)->eci;
 }
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_qrcode_eci_obj, py_qrcode_eci);
+
 mp_obj_t py_qrcode_is_numeric(mp_obj_t self_in) {
     return mp_obj_new_bool(mp_obj_get_int(((py_qrcode_obj_t *) self_in)->data_type) == 1);
 }
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_qrcode_is_numeric_obj, py_qrcode_is_numeric);
+
 mp_obj_t py_qrcode_is_alphanumeric(mp_obj_t self_in) {
     return mp_obj_new_bool(mp_obj_get_int(((py_qrcode_obj_t *) self_in)->data_type) == 2);
 }
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_qrcode_is_alphanumeric_obj, py_qrcode_is_alphanumeric);
+
 mp_obj_t py_qrcode_is_binary(mp_obj_t self_in) {
     return mp_obj_new_bool(mp_obj_get_int(((py_qrcode_obj_t *) self_in)->data_type) == 4);
 }
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_qrcode_is_binary_obj, py_qrcode_is_binary);
+
 mp_obj_t py_qrcode_is_kanji(mp_obj_t self_in) {
     return mp_obj_new_bool(mp_obj_get_int(((py_qrcode_obj_t *) self_in)->data_type) == 8);
 }
-
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_qrcode_corners_obj, py_qrcode_corners);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_qrcode_rect_obj, py_qrcode_rect);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_qrcode_x_obj, py_qrcode_x);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_qrcode_y_obj, py_qrcode_y);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_qrcode_w_obj, py_qrcode_w);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_qrcode_h_obj, py_qrcode_h);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_qrcode_payload_obj, py_qrcode_payload);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_qrcode_version_obj, py_qrcode_version);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_qrcode_ecc_level_obj, py_qrcode_ecc_level);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_qrcode_mask_obj, py_qrcode_mask);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_qrcode_data_type_obj, py_qrcode_data_type);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_qrcode_eci_obj, py_qrcode_eci);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_qrcode_is_numeric_obj, py_qrcode_is_numeric);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_qrcode_is_alphanumeric_obj, py_qrcode_is_alphanumeric);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_qrcode_is_binary_obj, py_qrcode_is_binary);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_qrcode_is_kanji_obj, py_qrcode_is_kanji);
 
 STATIC const mp_rom_map_elem_t py_qrcode_locals_dict_table[] = {
@@ -5347,95 +5446,114 @@ static mp_obj_t py_apriltag_subscr(mp_obj_t self_in, mp_obj_t index, mp_obj_t va
 mp_obj_t py_apriltag_corners(mp_obj_t self_in) {
     return ((py_apriltag_obj_t *) self_in)->corners;
 }
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_apriltag_corners_obj, py_apriltag_corners);
+
 mp_obj_t py_apriltag_rect(mp_obj_t self_in) {
     return mp_obj_new_tuple(4, (mp_obj_t []) {((py_apriltag_obj_t *) self_in)->x,
                                               ((py_apriltag_obj_t *) self_in)->y,
                                               ((py_apriltag_obj_t *) self_in)->w,
                                               ((py_apriltag_obj_t *) self_in)->h});
 }
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_apriltag_rect_obj, py_apriltag_rect);
 
 mp_obj_t py_apriltag_x(mp_obj_t self_in) {
     return ((py_apriltag_obj_t *) self_in)->x;
 }
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_apriltag_x_obj, py_apriltag_x);
+
 mp_obj_t py_apriltag_y(mp_obj_t self_in) {
     return ((py_apriltag_obj_t *) self_in)->y;
 }
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_apriltag_y_obj, py_apriltag_y);
+
 mp_obj_t py_apriltag_w(mp_obj_t self_in) {
     return ((py_apriltag_obj_t *) self_in)->w;
 }
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_apriltag_w_obj, py_apriltag_w);
+
 mp_obj_t py_apriltag_h(mp_obj_t self_in) {
     return ((py_apriltag_obj_t *) self_in)->h;
 }
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_apriltag_h_obj, py_apriltag_h);
+
 mp_obj_t py_apriltag_id(mp_obj_t self_in) {
     return ((py_apriltag_obj_t *) self_in)->id;
 }
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_apriltag_id_obj, py_apriltag_id);
+
 mp_obj_t py_apriltag_family(mp_obj_t self_in) {
     return ((py_apriltag_obj_t *) self_in)->family;
 }
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_apriltag_family_obj, py_apriltag_family);
+
 mp_obj_t py_apriltag_cx(mp_obj_t self_in) {
     return mp_obj_new_int(fast_roundf(mp_obj_get_float(((py_apriltag_obj_t *) self_in)->cx)));
 }
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_apriltag_cx_obj, py_apriltag_cx);
+
 mp_obj_t py_apriltag_cxf(mp_obj_t self_in) {
     return ((py_apriltag_obj_t *) self_in)->cx;
 }
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_apriltag_cxf_obj, py_apriltag_cxf);
+
 mp_obj_t py_apriltag_cy(mp_obj_t self_in) {
     return mp_obj_new_int(fast_roundf(mp_obj_get_float(((py_apriltag_obj_t *) self_in)->cy)));
 }
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_apriltag_cy_obj, py_apriltag_cy);
+
 mp_obj_t py_apriltag_cyf(mp_obj_t self_in) {
     return ((py_apriltag_obj_t *) self_in)->cy;
 }
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_apriltag_cyf_obj, py_apriltag_cyf);
+
 mp_obj_t py_apriltag_rotation(mp_obj_t self_in) {
     return ((py_apriltag_obj_t *) self_in)->rotation;
 }
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_apriltag_rotation_obj, py_apriltag_rotation);
+
 mp_obj_t py_apriltag_decision_margin(mp_obj_t self_in) {
     return ((py_apriltag_obj_t *) self_in)->decision_margin;
 }
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_apriltag_decision_margin_obj, py_apriltag_decision_margin);
+
 mp_obj_t py_apriltag_hamming(mp_obj_t self_in) {
     return ((py_apriltag_obj_t *) self_in)->hamming;
 }
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_apriltag_hamming_obj, py_apriltag_hamming);
+
 mp_obj_t py_apriltag_goodness(mp_obj_t self_in) {
     return ((py_apriltag_obj_t *) self_in)->goodness;
 }
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_apriltag_goodness_obj, py_apriltag_goodness);
+
 mp_obj_t py_apriltag_x_translation(mp_obj_t self_in) {
     return ((py_apriltag_obj_t *) self_in)->x_translation;
 }
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_apriltag_x_translation_obj, py_apriltag_x_translation);
+
 mp_obj_t py_apriltag_y_translation(mp_obj_t self_in) {
     return ((py_apriltag_obj_t *) self_in)->y_translation;
 }
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_apriltag_y_translation_obj, py_apriltag_y_translation);
+
 mp_obj_t py_apriltag_z_translation(mp_obj_t self_in) {
     return ((py_apriltag_obj_t *) self_in)->z_translation;
 }
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_apriltag_z_translation_obj, py_apriltag_z_translation);
+
 mp_obj_t py_apriltag_x_rotation(mp_obj_t self_in) {
     return ((py_apriltag_obj_t *) self_in)->x_rotation;
 }
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_apriltag_x_rotation_obj, py_apriltag_x_rotation);
+
 mp_obj_t py_apriltag_y_rotation(mp_obj_t self_in) {
     return ((py_apriltag_obj_t *) self_in)->y_rotation;
 }
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_apriltag_y_rotation_obj, py_apriltag_y_rotation);
+
 mp_obj_t py_apriltag_z_rotation(mp_obj_t self_in) {
     return ((py_apriltag_obj_t *) self_in)->z_rotation;
 }
-
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_apriltag_corners_obj, py_apriltag_corners);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_apriltag_rect_obj, py_apriltag_rect);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_apriltag_x_obj, py_apriltag_x);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_apriltag_y_obj, py_apriltag_y);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_apriltag_w_obj, py_apriltag_w);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_apriltag_h_obj, py_apriltag_h);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_apriltag_id_obj, py_apriltag_id);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_apriltag_family_obj, py_apriltag_family);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_apriltag_cx_obj, py_apriltag_cx);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_apriltag_cxf_obj, py_apriltag_cxf);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_apriltag_cy_obj, py_apriltag_cy);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_apriltag_cyf_obj, py_apriltag_cyf);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_apriltag_rotation_obj, py_apriltag_rotation);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_apriltag_decision_margin_obj, py_apriltag_decision_margin);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_apriltag_hamming_obj, py_apriltag_hamming);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_apriltag_goodness_obj, py_apriltag_goodness);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_apriltag_x_translation_obj, py_apriltag_x_translation);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_apriltag_y_translation_obj, py_apriltag_y_translation);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_apriltag_z_translation_obj, py_apriltag_z_translation);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_apriltag_x_rotation_obj, py_apriltag_x_rotation);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_apriltag_y_rotation_obj, py_apriltag_y_rotation);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_apriltag_z_rotation_obj, py_apriltag_z_rotation);
 
 STATIC const mp_rom_map_elem_t py_apriltag_locals_dict_table[] = {
@@ -5606,55 +5724,64 @@ static mp_obj_t py_datamatrix_subscr(mp_obj_t self_in, mp_obj_t index, mp_obj_t 
 mp_obj_t py_datamatrix_corners(mp_obj_t self_in) {
     return ((py_datamatrix_obj_t *) self_in)->corners;
 }
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_datamatrix_corners_obj, py_datamatrix_corners);
+
 mp_obj_t py_datamatrix_rect(mp_obj_t self_in) {
     return mp_obj_new_tuple(4, (mp_obj_t []) {((py_datamatrix_obj_t *) self_in)->x,
                                               ((py_datamatrix_obj_t *) self_in)->y,
                                               ((py_datamatrix_obj_t *) self_in)->w,
                                               ((py_datamatrix_obj_t *) self_in)->h});
 }
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_datamatrix_rect_obj, py_datamatrix_rect);
 
 mp_obj_t py_datamatrix_x(mp_obj_t self_in) {
     return ((py_datamatrix_obj_t *) self_in)->x;
 }
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_datamatrix_x_obj, py_datamatrix_x);
+
 mp_obj_t py_datamatrix_y(mp_obj_t self_in) {
     return ((py_datamatrix_obj_t *) self_in)->y;
 }
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_datamatrix_y_obj, py_datamatrix_y);
+
 mp_obj_t py_datamatrix_w(mp_obj_t self_in) {
     return ((py_datamatrix_obj_t *) self_in)->w;
 }
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_datamatrix_w_obj, py_datamatrix_w);
+
 mp_obj_t py_datamatrix_h(mp_obj_t self_in) {
     return ((py_datamatrix_obj_t *) self_in)->h;
 }
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_datamatrix_h_obj, py_datamatrix_h);
+
 mp_obj_t py_datamatrix_payload(mp_obj_t self_in) {
     return ((py_datamatrix_obj_t *) self_in)->payload;
 }
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_datamatrix_payload_obj, py_datamatrix_payload);
+
 mp_obj_t py_datamatrix_rotation(mp_obj_t self_in) {
     return ((py_datamatrix_obj_t *) self_in)->rotation;
 }
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_datamatrix_rotation_obj, py_datamatrix_rotation);
+
 mp_obj_t py_datamatrix_rows(mp_obj_t self_in) {
     return ((py_datamatrix_obj_t *) self_in)->rows;
 }
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_datamatrix_rows_obj, py_datamatrix_rows);
+
 mp_obj_t py_datamatrix_columns(mp_obj_t self_in) {
     return ((py_datamatrix_obj_t *) self_in)->columns;
 }
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_datamatrix_columns_obj, py_datamatrix_columns);
+
 mp_obj_t py_datamatrix_capacity(mp_obj_t self_in) {
     return ((py_datamatrix_obj_t *) self_in)->capacity;
 }
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_datamatrix_capacity_obj, py_datamatrix_capacity);
+
 mp_obj_t py_datamatrix_padding(mp_obj_t self_in) {
     return ((py_datamatrix_obj_t *) self_in)->padding;
 }
-
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_datamatrix_corners_obj, py_datamatrix_corners);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_datamatrix_rect_obj, py_datamatrix_rect);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_datamatrix_x_obj, py_datamatrix_x);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_datamatrix_y_obj, py_datamatrix_y);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_datamatrix_w_obj, py_datamatrix_w);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_datamatrix_h_obj, py_datamatrix_h);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_datamatrix_payload_obj, py_datamatrix_payload);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_datamatrix_rotation_obj, py_datamatrix_rotation);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_datamatrix_rows_obj, py_datamatrix_rows);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_datamatrix_columns_obj, py_datamatrix_columns);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_datamatrix_capacity_obj, py_datamatrix_capacity);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_datamatrix_padding_obj, py_datamatrix_padding);
 
 STATIC const mp_rom_map_elem_t py_datamatrix_locals_dict_table[] = {
@@ -5790,47 +5917,54 @@ static mp_obj_t py_barcode_subscr(mp_obj_t self_in, mp_obj_t index, mp_obj_t val
 mp_obj_t py_barcode_corners(mp_obj_t self_in) {
     return ((py_barcode_obj_t *) self_in)->corners;
 }
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_barcode_corners_obj, py_barcode_corners);
+
 mp_obj_t py_barcode_rect(mp_obj_t self_in) {
     return mp_obj_new_tuple(4, (mp_obj_t []) {((py_barcode_obj_t *) self_in)->x,
                                               ((py_barcode_obj_t *) self_in)->y,
                                               ((py_barcode_obj_t *) self_in)->w,
                                               ((py_barcode_obj_t *) self_in)->h});
 }
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_barcode_rect_obj, py_barcode_rect);
 
 mp_obj_t py_barcode_x(mp_obj_t self_in) {
     return ((py_barcode_obj_t *) self_in)->x;
 }
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_barcode_x_obj, py_barcode_x);
+
 mp_obj_t py_barcode_y(mp_obj_t self_in) {
     return ((py_barcode_obj_t *) self_in)->y;
 }
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_barcode_y_obj, py_barcode_y);
+
 mp_obj_t py_barcode_w(mp_obj_t self_in) {
     return ((py_barcode_obj_t *) self_in)->w;
 }
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_barcode_w_obj, py_barcode_w);
+
 mp_obj_t py_barcode_h(mp_obj_t self_in) {
     return ((py_barcode_obj_t *) self_in)->h;
 }
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_barcode_h_obj, py_barcode_h);
+
 mp_obj_t py_barcode_payload_fun(mp_obj_t self_in) {
     return ((py_barcode_obj_t *) self_in)->payload;
 }
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_barcode_payload_fun_obj, py_barcode_payload_fun);
+
 mp_obj_t py_barcode_type_fun(mp_obj_t self_in) {
     return ((py_barcode_obj_t *) self_in)->type;
 }
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_barcode_type_fun_obj, py_barcode_type_fun);
+
 mp_obj_t py_barcode_rotation_fun(mp_obj_t self_in) {
     return ((py_barcode_obj_t *) self_in)->rotation;
 }
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_barcode_rotation_fun_obj, py_barcode_rotation_fun);
+
 mp_obj_t py_barcode_quality_fun(mp_obj_t self_in) {
     return ((py_barcode_obj_t *) self_in)->quality;
 }
-
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_barcode_corners_obj, py_barcode_corners);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_barcode_rect_obj, py_barcode_rect);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_barcode_x_obj, py_barcode_x);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_barcode_y_obj, py_barcode_y);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_barcode_w_obj, py_barcode_w);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_barcode_h_obj, py_barcode_h);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_barcode_payload_fun_obj, py_barcode_payload_fun);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_barcode_type_fun_obj, py_barcode_type_fun);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_barcode_rotation_fun_obj, py_barcode_rotation_fun);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_barcode_quality_fun_obj, py_barcode_quality_fun);
 
 STATIC const mp_rom_map_elem_t py_barcode_locals_dict_table[] = {
@@ -5952,23 +6086,26 @@ static mp_obj_t py_displacement_subscr(mp_obj_t self_in, mp_obj_t index, mp_obj_
 mp_obj_t py_displacement_x_translation(mp_obj_t self_in) {
     return ((py_displacement_obj_t *) self_in)->x_translation;
 }
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_displacement_x_translation_obj, py_displacement_x_translation);
+
 mp_obj_t py_displacement_y_translation(mp_obj_t self_in) {
     return ((py_displacement_obj_t *) self_in)->y_translation;
 }
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_displacement_y_translation_obj, py_displacement_y_translation);
+
 mp_obj_t py_displacement_rotation(mp_obj_t self_in) {
     return ((py_displacement_obj_t *) self_in)->rotation;
 }
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_displacement_rotation_obj, py_displacement_rotation);
+
 mp_obj_t py_displacement_scale(mp_obj_t self_in) {
     return ((py_displacement_obj_t *) self_in)->scale;
 }
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_displacement_scale_obj, py_displacement_scale);
+
 mp_obj_t py_displacement_response(mp_obj_t self_in) {
     return ((py_displacement_obj_t *) self_in)->response;
 }
-
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_displacement_x_translation_obj, py_displacement_x_translation);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_displacement_y_translation_obj, py_displacement_y_translation);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_displacement_rotation_obj, py_displacement_rotation);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_displacement_scale_obj, py_displacement_scale);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_displacement_response_obj, py_displacement_response);
 
 STATIC const mp_rom_map_elem_t py_displacement_locals_dict_table[] = {
