@@ -692,14 +692,18 @@ static mp_obj_t py_sensor_ioctl(uint n_args, const mp_obj_t *args) {
             break;
         }
 
-        case IOCTL_SET_TRIGGERED_MODE: {
+        case IOCTL_SET_TRIGGERED_MODE:
+        case IOCTL_SET_FOV_WIDE:
+        case IOCTL_SET_NIGHT_MODE: {
             if (n_args >= 2) {
                 error = sensor_ioctl(request, mp_obj_get_int(args[1]));
             }
             break;
         }
 
-        case IOCTL_GET_TRIGGERED_MODE: {
+        case IOCTL_GET_TRIGGERED_MODE:
+        case IOCTL_GET_FOV_WIDE:
+        case IOCTL_GET_NIGHT_MODE: {
             int enabled;
             error = sensor_ioctl(request, &enabled);
             if (error == 0) {
@@ -720,22 +724,6 @@ static mp_obj_t py_sensor_ioctl(uint n_args, const mp_obj_t *args) {
             break;
         }
         #endif
-
-        case IOCTL_SET_NIGHT_MODE: {
-            if (n_args >= 2) {
-                error = sensor_ioctl(request, mp_obj_get_int(args[1]));
-            }
-            break;
-        }
-
-        case IOCTL_GET_NIGHT_MODE: {
-            int enabled;
-            error = sensor_ioctl(request, &enabled);
-            if (error == 0) {
-                ret_obj = mp_obj_new_bool(enabled);
-            }
-            break;
-        }
 
         case IOCTL_LEPTON_GET_WIDTH: {
             int width;
@@ -1102,6 +1090,8 @@ STATIC const mp_map_elem_t globals_dict_table[] = {
     { MP_OBJ_NEW_QSTR(MP_QSTR_IOCTL_GET_READOUT_WINDOW),            MP_OBJ_NEW_SMALL_INT(IOCTL_GET_READOUT_WINDOW)},
     { MP_OBJ_NEW_QSTR(MP_QSTR_IOCTL_SET_TRIGGERED_MODE),            MP_OBJ_NEW_SMALL_INT(IOCTL_SET_TRIGGERED_MODE)},
     { MP_OBJ_NEW_QSTR(MP_QSTR_IOCTL_GET_TRIGGERED_MODE),            MP_OBJ_NEW_SMALL_INT(IOCTL_GET_TRIGGERED_MODE)},
+    { MP_OBJ_NEW_QSTR(MP_QSTR_IOCTL_SET_FOV_WIDE),                  MP_OBJ_NEW_SMALL_INT(IOCTL_SET_FOV_WIDE)},
+    { MP_OBJ_NEW_QSTR(MP_QSTR_IOCTL_GET_FOV_WIDE),                  MP_OBJ_NEW_SMALL_INT(IOCTL_GET_FOV_WIDE)},
     #if (OMV_ENABLE_OV5640_AF == 1)
     { MP_OBJ_NEW_QSTR(MP_QSTR_IOCTL_TRIGGER_AUTO_FOCUS),            MP_OBJ_NEW_SMALL_INT(IOCTL_TRIGGER_AUTO_FOCUS)},
     { MP_OBJ_NEW_QSTR(MP_QSTR_IOCTL_PAUSE_AUTO_FOCUS),              MP_OBJ_NEW_SMALL_INT(IOCTL_PAUSE_AUTO_FOCUS)},

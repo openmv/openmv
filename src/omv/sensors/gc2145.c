@@ -42,6 +42,8 @@ static int16_t readout_y = 0;
 static uint16_t readout_w = ACTIVE_SENSOR_WIDTH;
 static uint16_t readout_h = ACTIVE_SENSOR_HEIGHT;
 
+static bool fov_wide = false;
+
 // SLAVE ADDR 0x78
 static const uint8_t default_regs[][2] = {
     {0xfe, 0xf0},
@@ -726,6 +728,8 @@ static int reset(sensor_t *sensor) {
     readout_w = ACTIVE_SENSOR_WIDTH;
     readout_h = ACTIVE_SENSOR_HEIGHT;
 
+    fov_wide = false;
+
     // Write default registers
     for (int i = 0; default_regs[i][0]; i++) {
         ret |= omv_i2c_writeb(&sensor->i2c_bus, sensor->slv_addr, default_regs[i][0], default_regs[i][1]);
@@ -847,7 +851,7 @@ static int set_framesize(sensor_t *sensor, framesize_t framesize) {
     uint16_t ratio = fast_floorf(IM_MIN(readout_w / ((float) w), readout_h / ((float) h)));
 
     // Limit the maximum amount of scaling allowed to keep the frame rate up.
-    ratio = IM_MIN(ratio, 3);
+    ratio = IM_MIN(ratio, (fov_wide ? 5 : 3));
 
     if (!(ratio % 2)) {
         // camera outputs messed up bayer images at even ratios for some reason...
@@ -957,6 +961,14 @@ static int ioctl(sensor_t *sensor, int request, va_list ap) {
             *va_arg(ap, int *) = readout_y;
             *va_arg(ap, int *) = readout_w;
             *va_arg(ap, int *) = readout_h;
+            break;
+        }
+        case IOCTL_SET_FOV_WIDE: {
+            fov_wide = va_arg(ap, int);
+            break;
+        }
+        case IOCTL_GET_FOV_WIDE: {
+            *va_arg(ap, int *) = fov_wide;
             break;
         }
         default: {
