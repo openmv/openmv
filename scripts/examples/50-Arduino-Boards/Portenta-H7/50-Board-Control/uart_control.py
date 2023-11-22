@@ -14,7 +14,7 @@ from pyb import UART
 # Always pass UART 3 for the UART number for your OpenMV Cam.
 # The second argument is the UART baud rate. For a more advanced UART control
 # example see the BLE-Shield driver.
-uart = UART(3, 19200)
+uart = UART(3, 19200, timeout_char=200)
 
 while True:
     uart.write("Hello World!\r")
