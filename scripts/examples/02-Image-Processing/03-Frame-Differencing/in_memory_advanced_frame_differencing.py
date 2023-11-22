@@ -44,7 +44,7 @@ while True:
     img = sensor.snapshot()  # Take a picture and return the image.
 
     frame_count += 1
-    if frame_count > BG_UPDATE_FRAMES:
+    if frame_count > BG_UPDATE_FRAMES and not triggered:
         frame_count = 0
         # Blend in new frame. We're doing 256-alpha here because we want to
         # blend the new frame into the background. Not the background into the
