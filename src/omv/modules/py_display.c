@@ -159,7 +159,7 @@ STATIC mp_obj_t py_display_write(uint n_args, const mp_obj_t *pos_args, mp_map_t
 
     float x_scale = 1.0f;
     float y_scale = 1.0f;
-    py_helper_arg_to_scale(args[ARG_x_scale].u_obj, args[ARG_y_scale].u_obj, &x_scale, &y_scale, &roi);
+    py_helper_arg_to_scale(args[ARG_x_scale].u_obj, args[ARG_y_scale].u_obj, &x_scale, &y_scale);
 
     if (y_scale < 0 && !self->triple_buffer) {
         mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Vertical flip requires triple buffering!"));
