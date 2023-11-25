@@ -145,9 +145,9 @@ void fir_lepton_spi_callback(omv_spi_t *spi, void *userdata, void *buf) {
 
     // Are we in sync with the flir lepton?
     if ((pid != fir_lepton_spi_rx_cb_expected_pid)
-    #if defined(OMV_FIR_LEPTON_CHECK_CRC)
+        #if defined(OMV_FIR_LEPTON_CHECK_CRC)
         || (!fir_lepton_spi_check_crc(base))
-    #endif
+        #endif
         || (fir_lepton_3 && (pid == VOSPI_SPECIAL_PACKET) && (sid != fir_lepton_spi_rx_cb_expected_sid))) {
         fir_lepton_spi_rx_cb_expected_pid = 0;
         fir_lepton_spi_rx_cb_expected_sid = 0;
@@ -588,12 +588,10 @@ void fir_lepton_fill_image(image_t *img, int w, int h, bool auto_range, float mi
     }
 }
 
-void fir_lepton_trigger_ffc(uint n_args, const mp_obj_t *args, mp_map_t *kw_args) {
+void fir_lepton_trigger_ffc(int timeout) {
     if (LEP_RunSysFFCNormalization(&fir_lepton_handle) != LEP_OK) {
         mp_raise_msg(&mp_type_OSError, MP_ERROR_TEXT("FFC Error!"));
     }
-
-    int timeout = py_helper_keyword_int(n_args, args, 0, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_timeout), -1);
 
     if (timeout >= 0) {
         for (uint32_t start = mp_hal_ticks_ms();;) {

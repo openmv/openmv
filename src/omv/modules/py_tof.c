@@ -32,17 +32,17 @@
 
 static omv_i2c_t tof_bus = {};
 
-static enum {
+typedef enum tof_type {
     TOF_NONE,
     #if (OMV_ENABLE_TOF_VL53L5CX == 1)
     TOF_VL53L5CX,
     #endif
-}
-tof_sensor = TOF_NONE;
+} tof_type_t;
 
 static int tof_width = 0;
 static int tof_height = 0;
 static bool tof_transposed = false;
+static tof_type_t tof_sensor = TOF_NONE;
 
 #if (OMV_ENABLE_TOF_VL53L5CX == 1)
 static VL53L5CX_Configuration vl53l5cx_dev = {
@@ -201,10 +201,19 @@ static mp_obj_t py_tof_deinit() {
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_tof_deinit_obj, py_tof_deinit);
 
-mp_obj_t py_tof_init(uint n_args, const mp_obj_t *args, mp_map_t *kw_args) {
+mp_obj_t py_tof_init(uint n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
+    enum { ARG_type };
+    static const mp_arg_t allowed_args[] = {
+        { MP_QSTR_type, MP_ARG_INT,  {.u_int = -1 } },
+    };
+
+    // Parse args.
+    mp_arg_val_t args[MP_ARRAY_SIZE(allowed_args)];
+    mp_arg_parse_all(n_args, pos_args, kw_args, MP_ARRAY_SIZE(allowed_args), allowed_args, args);
+
     py_tof_deinit();
     bool first_init = true;
-    int type = py_helper_keyword_int(n_args, args, 0, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_type), -1);
+    int type = args[ARG_type].u_int;
 
     if (type == -1) {
         TOF_SCAN_RETRY:
@@ -238,9 +247,6 @@ mp_obj_t py_tof_init(uint n_args, const mp_obj_t *args, mp_map_t *kw_args) {
     // Initialize the detected sensor.
     first_init = true;
     switch (type) {
-        case TOF_NONE: {
-            return mp_const_none;
-        }
         #if (OMV_ENABLE_TOF_VL53L5CX == 1)
         case TOF_VL53L5CX: {
             int error = 0;
@@ -298,26 +304,26 @@ mp_obj_t py_tof_init(uint n_args, const mp_obj_t *args, mp_map_t *kw_args) {
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_tof_init_obj, 0, py_tof_init);
 
 static mp_obj_t py_tof_type() {
-    if (tof_sensor == TOF_NONE) {
-        return mp_const_none;
+    if (tof_sensor != TOF_NONE) {
+        return mp_obj_new_int(tof_sensor);
     }
-    return mp_obj_new_int(tof_sensor);
+    mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("TOF sensor is not initialized"));
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_tof_type_obj, py_tof_type);
 
 static mp_obj_t py_tof_width() {
-    if (tof_sensor == TOF_NONE) {
-        return mp_const_none;
+    if (tof_sensor != TOF_NONE) {
+        return mp_obj_new_int(tof_width);
     }
-    return mp_obj_new_int(tof_width);
+    mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("TOF sensor is not initialized"));
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_tof_width_obj, py_tof_width);
 
 static mp_obj_t py_tof_height() {
-    if (tof_sensor == TOF_NONE) {
-        return mp_const_none;
+    if (tof_sensor != TOF_NONE) {
+        return mp_obj_new_int(tof_height);
     }
-    return mp_obj_new_int(tof_height);
+    mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("TOF sensor is not initialized"));
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_tof_height_obj, py_tof_height);
 
@@ -328,353 +334,224 @@ static mp_obj_t py_tof_refresh() {
             return mp_obj_new_int(15);
         #endif
         default:
-            return mp_const_none;
+            mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("TOF sensor is not initialized"));
     }
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_tof_refresh_obj, py_tof_refresh);
 
-mp_obj_t py_tof_read_depth(uint n_args, const mp_obj_t *args, mp_map_t *kw_args) {
-    bool arg_hmirror = py_helper_keyword_int(n_args, args, 0, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_hmirror), false);
-    bool arg_vflip = py_helper_keyword_int(n_args, args, 1, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_vflip), false);
-    tof_transposed = py_helper_keyword_int(n_args, args, 2, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_transpose), false);
-    int arg_timeout = py_helper_keyword_int(n_args, args, 3, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_timeout), -1);
+mp_obj_t py_tof_read_depth(uint n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
+    enum { ARG_hmirror, ARG_vflip, ARG_transpose, ARG_timeout };
+    static const mp_arg_t allowed_args[] = {
+        { MP_QSTR_hmirror, MP_ARG_INT | MP_ARG_KW_ONLY,  {.u_bool = false } },
+        { MP_QSTR_vflip, MP_ARG_INT | MP_ARG_KW_ONLY,  {.u_bool = false } },
+        { MP_QSTR_transpose, MP_ARG_INT | MP_ARG_KW_ONLY,  {.u_bool = false } },
+        { MP_QSTR_timeout, MP_ARG_INT | MP_ARG_KW_ONLY,  {.u_int = -1 } },
+    };
+
+    // Parse args.
+    mp_arg_val_t args[MP_ARRAY_SIZE(allowed_args)];
+    mp_arg_parse_all(n_args, pos_args, kw_args, MP_ARRAY_SIZE(allowed_args), allowed_args, args);
+
+    tof_transposed = args[ARG_transpose].u_bool;
 
     switch (tof_sensor) {
         #if (OMV_ENABLE_TOF_VL53L5CX == 1)
         case TOF_VL53L5CX: {
             fb_alloc_mark();
             float *frame = fb_alloc(VL53L5CX_WIDTH * VL53L5CX_HEIGHT * sizeof(float), FB_ALLOC_PREFER_SPEED);
-            tof_vl53l5cx_get_depth(&vl53l5cx_dev, frame, arg_timeout);
-            mp_obj_t result = tof_get_depth_obj(VL53L5CX_WIDTH, VL53L5CX_HEIGHT, frame,
-                                                arg_hmirror ^ true, arg_vflip, tof_transposed, true);
+            tof_vl53l5cx_get_depth(&vl53l5cx_dev, frame, args[ARG_timeout].u_int);
+            mp_obj_t result = tof_get_depth_obj(VL53L5CX_WIDTH, VL53L5CX_HEIGHT, frame, !args[ARG_hmirror].u_bool,
+                                                args[ARG_vflip].u_bool, args[ARG_transpose].u_bool, true);
             fb_alloc_free_till_mark();
             return result;
         }
         #endif
         default:
-            return mp_const_none;
+            mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("TOF sensor is not initialized"));
     }
 
     return mp_const_none;
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_tof_read_depth_obj, 0, py_tof_read_depth);
 
-mp_obj_t py_tof_draw_depth(uint n_args, const mp_obj_t *args, mp_map_t *kw_args) {
-    image_t *dst_img = py_helper_arg_to_image(args[0], ARG_IMAGE_MUTABLE);
+mp_obj_t py_tof_draw_depth(uint n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
+    enum {
+        ARG_x, ARG_y, ARG_x_scale, ARG_y_scale, ARG_roi, ARG_channel, ARG_alpha,
+        ARG_color_palette, ARG_alpha_palette, ARG_hint, ARG_scale
+    };
+    static const mp_arg_t allowed_args[] = {
+        { MP_QSTR_x, MP_ARG_INT | MP_ARG_KW_ONLY,  {.u_int = 0 } },
+        { MP_QSTR_y, MP_ARG_INT | MP_ARG_KW_ONLY,  {.u_int = 0 } },
+        { MP_QSTR_x_scale, MP_ARG_OBJ | MP_ARG_KW_ONLY, {.u_rom_obj = MP_ROM_NONE} },
+        { MP_QSTR_y_scale, MP_ARG_OBJ | MP_ARG_KW_ONLY, {.u_rom_obj = MP_ROM_NONE} },
+        { MP_QSTR_roi, MP_ARG_OBJ | MP_ARG_KW_ONLY, {.u_rom_obj = MP_ROM_NONE} },
+        { MP_QSTR_rgb_channel, MP_ARG_INT | MP_ARG_KW_ONLY,  {.u_int = -1 } },
+        { MP_QSTR_alpha, MP_ARG_INT | MP_ARG_KW_ONLY,  {.u_int = 256 } },
+        { MP_QSTR_color_palette, MP_ARG_OBJ | MP_ARG_KW_ONLY, {.u_rom_obj = MP_ROM_INT(COLOR_PALETTE_RAINBOW)} },
+        { MP_QSTR_alpha_palette, MP_ARG_OBJ | MP_ARG_KW_ONLY, {.u_rom_obj = MP_ROM_NONE} },
+        { MP_QSTR_hint, MP_ARG_INT | MP_ARG_KW_ONLY,  {.u_int = 0 } },
+        { MP_QSTR_scale, MP_ARG_OBJ | MP_ARG_KW_ONLY, {.u_rom_obj = MP_ROM_NONE} },
+    };
 
-    image_t src_img;
-    src_img.pixfmt = PIXFORMAT_GRAYSCALE;
+    // Parse args.
+    mp_arg_val_t args[MP_ARRAY_SIZE(allowed_args)];
+    mp_arg_parse_all(n_args - 2, pos_args + 2, kw_args, MP_ARRAY_SIZE(allowed_args), allowed_args, args);
 
-    size_t len;
-    mp_obj_t *items, *arg_to;
-    mp_obj_get_array(args[1], &len, &items);
-
-    if (len == 3) {
-        src_img.w = mp_obj_get_int(items[0]);
-        src_img.h = mp_obj_get_int(items[1]);
-        mp_obj_get_array_fixed_n(items[2], src_img.w * src_img.h, &arg_to);
-    } else if (tof_sensor != TOF_NONE) {
-        src_img.w = tof_transposed ? tof_height : tof_width;
-        src_img.h = tof_transposed ? tof_width : tof_height;
-        // Handle if the user passed an array of the array.
-        if (len == 1) {
-            mp_obj_get_array_fixed_n(*items, src_img.w * src_img.h, &arg_to);
-        } else {
-            mp_obj_get_array_fixed_n(args[1], src_img.w * src_img.h, &arg_to);
-        }
-    } else {
-        mp_raise_msg(&mp_type_TypeError, MP_ERROR_TEXT("Invalid depth array!"));
+    // Sanity checks
+    if (tof_sensor == TOF_NONE) {
+        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("TOF sensor is not initialized"));
     }
 
-    int arg_x_off = 0;
-    int arg_y_off = 0;
-    uint offset = 2;
-    if (n_args > 2) {
-        if (MP_OBJ_IS_TYPE(args[2], &mp_type_tuple) || MP_OBJ_IS_TYPE(args[2], &mp_type_list)) {
-            mp_obj_t *arg_vec;
-            mp_obj_get_array_fixed_n(args[2], 2, &arg_vec);
-            arg_x_off = mp_obj_get_int(arg_vec[0]);
-            arg_y_off = mp_obj_get_int(arg_vec[1]);
-            offset = 3;
-        } else if (n_args > 3) {
-            arg_x_off = mp_obj_get_int(args[2]);
-            arg_y_off = mp_obj_get_int(args[3]);
-            offset = 4;
-        } else if (n_args > 2) {
-            mp_raise_msg(&mp_type_TypeError, MP_ERROR_TEXT("Expected x and y offset!"));
-        }
+    if (args[ARG_channel].u_int < -1 || args[ARG_channel].u_int > 2) {
+        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("RGB channel can be 0, 1, or 2"));
     }
 
-    float arg_x_scale = 1.f;
-    bool got_x_scale = py_helper_keyword_float_maybe(n_args, args,
-                                                     offset + 0, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_x_scale), &arg_x_scale);
-
-    float arg_y_scale = 1.f;
-    bool got_y_scale = py_helper_keyword_float_maybe(n_args, args,
-                                                     offset + 1, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_y_scale), &arg_y_scale);
-
-    rectangle_t arg_roi;
-    py_helper_keyword_rectangle_roi(&src_img, n_args, args, offset + 2, kw_args, &arg_roi);
-
-    float tmp_x_scale = dst_img->w / ((float) arg_roi.w);
-    float tmp_y_scale = dst_img->h / ((float) arg_roi.h);
-    float tmp_scale = IM_MIN(tmp_x_scale, tmp_y_scale);
-
-    if (n_args == 2) {
-        arg_x_off = fast_floorf((dst_img->w - (arg_roi.w * tmp_scale)) / 2.f);
-        arg_y_off = fast_floorf((dst_img->h - (arg_roi.h * tmp_scale)) / 2.f);
+    if (args[ARG_alpha].u_int < 0 || args[ARG_alpha].u_int > 256) {
+        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Alpha ranges between 0 and 256"));
     }
 
-    if (!got_x_scale) {
-        arg_x_scale = tmp_scale;
-    }
+    image_t src_img = {
+        .w = tof_transposed ? tof_height : tof_width,
+        .h = tof_transposed ? tof_width : tof_height,
+        .pixfmt = PIXFORMAT_GRAYSCALE,
+        //.data is allocated later.
+    };
 
-    if (!got_y_scale) {
-        arg_y_scale = tmp_scale;
-    }
+    image_t *dst_img = py_helper_arg_to_image(pos_args[0], ARG_IMAGE_MUTABLE);
 
-    int arg_rgb_channel = py_helper_keyword_int(n_args, args, offset + 3, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_rgb_channel), -1);
-    if ((arg_rgb_channel < -1) || (2 < arg_rgb_channel)) {
-        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("-1 <= rgb_channel <= 2!"));
-    }
+    mp_obj_t *depth_array;
+    mp_obj_get_array_fixed_n(pos_args[1], src_img.w * src_img.h, &depth_array);
 
-    int arg_alpha = py_helper_keyword_int(n_args, args, offset + 4, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_alpha), 128);
-    if ((arg_alpha < 0) || (256 < arg_alpha)) {
-        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("0 <= alpha <= 256!"));
-    }
+    rectangle_t roi = py_helper_arg_to_roi(args[ARG_roi].u_obj, &src_img);
 
-    const uint16_t *color_palette = py_helper_keyword_color_palette(n_args, args, offset + 5, kw_args, rainbow_table);
-    const uint8_t *alpha_palette = py_helper_keyword_alpha_palette(n_args, args, offset + 6, kw_args, NULL);
+    float x_scale = 1.0f;
+    float y_scale = 1.0f;
+    py_helper_arg_to_scale(args[ARG_x_scale].u_obj, args[ARG_y_scale].u_obj, &x_scale, &y_scale, &roi);
 
-    image_hint_t hint = py_helper_keyword_int(n_args, args, offset + 7, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_hint), 0);
+    float min = FLT_MAX;
+    float max = -FLT_MAX;
+    py_helper_arg_to_minmax(args[ARG_scale].u_obj, &min, &max, depth_array, src_img.w * src_img.h);
 
-    float arg_x_size;
-    bool got_x_size = py_helper_keyword_float_maybe(n_args,
-                                                    args,
-                                                    offset + 8,
-                                                    kw_args,
-                                                    MP_OBJ_NEW_QSTR(MP_QSTR_x_size),
-                                                    &arg_x_size);
-
-    float arg_y_size;
-    bool got_y_size = py_helper_keyword_float_maybe(n_args,
-                                                    args,
-                                                    offset + 9,
-                                                    kw_args,
-                                                    MP_OBJ_NEW_QSTR(MP_QSTR_y_size),
-                                                    &arg_y_size);
-
-    if (got_x_scale && got_x_size) {
-        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Choose either x_scale or x_size not both!"));
-    }
-
-    if (got_y_scale && got_y_size) {
-        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Choose either y_scale or y_size not both!"));
-    }
-
-    if (got_x_size) {
-        arg_x_scale = arg_x_size / arg_roi.w;
-    }
-
-    if (got_y_size) {
-        arg_y_scale = arg_y_size / arg_roi.h;
-    }
-
-    if ((!got_x_scale) && (!got_x_size) && got_y_size) {
-        arg_x_scale = arg_y_scale;
-    }
-
-    if ((!got_y_scale) && (!got_y_size) && got_x_size) {
-        arg_y_scale = arg_x_scale;
-    }
-
-    mp_obj_t scale_obj = py_helper_keyword_object(n_args, args, offset + 10, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_scale), NULL);
-    float min = FLT_MAX, max = -FLT_MAX;
-
-    if (scale_obj) {
-        mp_obj_t *arg_scale;
-        mp_obj_get_array_fixed_n(scale_obj, 2, &arg_scale);
-        min = mp_obj_get_float(arg_scale[0]);
-        max = mp_obj_get_float(arg_scale[1]);
-    } else {
-        for (int i = 0, ii = src_img.w * src_img.h; i < ii; i++) {
-            float temp = mp_obj_get_float(arg_to[i]);
-            if (temp < min) {
-                min = temp;
-            }
-            if (temp > max) {
-                max = temp;
-            }
-        }
-    }
+    const uint16_t *color_palette = py_helper_arg_to_palette(args[ARG_color_palette].u_obj, PIXFORMAT_RGB565);
+    const uint8_t *alpha_palette = py_helper_arg_to_palette(args[ARG_alpha_palette].u_obj, PIXFORMAT_GRAYSCALE);
 
     fb_alloc_mark();
-
     src_img.data = fb_alloc(src_img.w * src_img.h * sizeof(uint8_t), FB_ALLOC_NO_HINT);
-    tof_fill_image_float_obj(&src_img, arg_to, min, max);
+    tof_fill_image_float_obj(&src_img, depth_array, min, max);
 
-    imlib_draw_image(dst_img, &src_img, arg_x_off, arg_y_off, arg_x_scale, arg_y_scale, &arg_roi,
-                     arg_rgb_channel, arg_alpha, color_palette, alpha_palette, hint, NULL, NULL, NULL);
+    imlib_draw_image(dst_img, &src_img, args[ARG_x].u_int, args[ARG_y].u_int, x_scale, y_scale, &roi,
+                     args[ARG_channel].u_int, args[ARG_alpha].u_int, color_palette, alpha_palette,
+                     args[ARG_hint].u_int, NULL, NULL, NULL);
 
     fb_alloc_free_till_mark();
-
     return mp_const_none;
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_tof_draw_depth_obj, 2, py_tof_draw_depth);
 
-mp_obj_t py_tof_snapshot(uint n_args, const mp_obj_t *args, mp_map_t *kw_args) {
-    if (tof_sensor == TOF_NONE) {
-        return mp_const_none;
+mp_obj_t py_tof_snapshot(uint n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
+    enum {
+        ARG_hmirror, ARG_vflip, ARG_transpose, ARG_x_scale, ARG_y_scale, ARG_roi, ARG_channel,
+        ARG_alpha, ARG_color_palette, ARG_alpha_palette, ARG_hint, ARG_scale, ARG_pixformat,
+        ARG_copy_to_fb, ARG_timeout
+    };
+    static const mp_arg_t allowed_args[] = {
+        { MP_QSTR_hmirror, MP_ARG_INT | MP_ARG_KW_ONLY,  {.u_bool = false } },
+        { MP_QSTR_vflip, MP_ARG_INT | MP_ARG_KW_ONLY,  {.u_bool = false } },
+        { MP_QSTR_transpose, MP_ARG_INT | MP_ARG_KW_ONLY,  {.u_bool = false } },
+        { MP_QSTR_x_scale, MP_ARG_OBJ | MP_ARG_KW_ONLY, {.u_rom_obj = MP_ROM_NONE} },
+        { MP_QSTR_y_scale, MP_ARG_OBJ | MP_ARG_KW_ONLY, {.u_rom_obj = MP_ROM_NONE} },
+        { MP_QSTR_roi, MP_ARG_OBJ | MP_ARG_KW_ONLY, {.u_rom_obj = MP_ROM_NONE} },
+        { MP_QSTR_rgb_channel, MP_ARG_INT | MP_ARG_KW_ONLY,  {.u_int = -1 } },
+        { MP_QSTR_alpha, MP_ARG_INT | MP_ARG_KW_ONLY,  {.u_int = 256 } },
+        { MP_QSTR_color_palette, MP_ARG_OBJ | MP_ARG_KW_ONLY, {.u_rom_obj = MP_ROM_INT(COLOR_PALETTE_RAINBOW)} },
+        { MP_QSTR_alpha_palette, MP_ARG_OBJ | MP_ARG_KW_ONLY, {.u_rom_obj = MP_ROM_NONE} },
+        { MP_QSTR_hint, MP_ARG_INT | MP_ARG_KW_ONLY,  {.u_int = 0 } },
+        { MP_QSTR_scale, MP_ARG_OBJ | MP_ARG_KW_ONLY, {.u_rom_obj = MP_ROM_NONE} },
+        { MP_QSTR_pixformat, MP_ARG_INT | MP_ARG_KW_ONLY,  {.u_int = PIXFORMAT_RGB565 } },
+        { MP_QSTR_copy_to_fb, MP_ARG_INT | MP_ARG_KW_ONLY,  {.u_bool = false } },
+        { MP_QSTR_timeout, MP_ARG_INT | MP_ARG_KW_ONLY,  {.u_int = -1 } },
+    };
+
+    // Parse args.
+    mp_arg_val_t args[MP_ARRAY_SIZE(allowed_args)];
+    mp_arg_parse_all(n_args, pos_args, kw_args, MP_ARRAY_SIZE(allowed_args), allowed_args, args);
+
+    // Sanity checks
+    if (args[ARG_channel].u_int < -1 || args[ARG_channel].u_int > 2) {
+        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("RGB channel can be 0, 1, or 2"));
     }
 
-    bool arg_hmirror = py_helper_keyword_int(n_args, args, 0, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_hmirror), false);
-    bool arg_vflip = py_helper_keyword_int(n_args, args, 1, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_vflip), false);
-    bool arg_transpose = py_helper_keyword_int(n_args, args, 2, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_transpose), false);
-
-    image_t src_img;
-    src_img.w = arg_transpose ? tof_height : tof_width;
-    src_img.h = arg_transpose ? tof_width : tof_height;
-    src_img.pixfmt = PIXFORMAT_GRAYSCALE;
-
-    float arg_x_scale = 1.f;
-    bool got_x_scale = py_helper_keyword_float_maybe(n_args, args, 3, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_x_scale), &arg_x_scale);
-
-    float arg_y_scale = 1.f;
-    bool got_y_scale = py_helper_keyword_float_maybe(n_args, args, 4, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_y_scale), &arg_y_scale);
-
-    rectangle_t arg_roi;
-    py_helper_keyword_rectangle_roi(&src_img, n_args, args, 5, kw_args, &arg_roi);
-
-    int arg_rgb_channel = py_helper_keyword_int(n_args, args, 6, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_rgb_channel), -1);
-    if ((arg_rgb_channel < -1) || (2 < arg_rgb_channel)) {
-        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("-1 <= rgb_channel <= 2!"));
+    if (args[ARG_alpha].u_int < 0 || args[ARG_alpha].u_int > 256) {
+        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Alpha ranges between 0 and 256"));
     }
 
-    int arg_alpha = py_helper_keyword_int(n_args, args, 7, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_alpha), 128);
-    if ((arg_alpha < 0) || (256 < arg_alpha)) {
-        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("0 <= alpha <= 256!"));
+    if ((args[ARG_pixformat].u_int != PIXFORMAT_GRAYSCALE) && (args[ARG_pixformat].u_int != PIXFORMAT_RGB565)) {
+        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Invalid pixformat"));
     }
 
-    const uint16_t *color_palette = py_helper_keyword_color_palette(n_args, args, 8, kw_args, rainbow_table);
-    const uint8_t *alpha_palette = py_helper_keyword_alpha_palette(n_args, args, 9, kw_args, NULL);
+    image_t src_img = {
+        .w = args[ARG_transpose].u_bool ? tof_height : tof_width,
+        .h = args[ARG_transpose].u_bool ? tof_width : tof_height,
+        .pixfmt = PIXFORMAT_GRAYSCALE,
+        //.data is allocated later.
+    };
 
-    image_hint_t hint = py_helper_keyword_int(n_args, args, 10, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_hint), 0);
+    rectangle_t roi = py_helper_arg_to_roi(args[ARG_roi].u_obj, &src_img);
 
-    float arg_x_size;
-    bool got_x_size = py_helper_keyword_float_maybe(n_args, args, 11, kw_args,
-                                                    MP_OBJ_NEW_QSTR(MP_QSTR_x_size), &arg_x_size);
+    float x_scale = 1.0f;
+    float y_scale = 1.0f;
+    py_helper_arg_to_scale(args[ARG_x_scale].u_obj, args[ARG_y_scale].u_obj, &x_scale, &y_scale, &roi);
 
-    float arg_y_size;
-    bool got_y_size = py_helper_keyword_float_maybe(n_args, args, 12, kw_args,
-                                                    MP_OBJ_NEW_QSTR(MP_QSTR_y_size), &arg_y_size);
+    image_t dst_img = {
+        .w = fast_floorf(roi.w * x_scale),
+        .h = fast_floorf(roi.h * y_scale),
+        .pixfmt = args[ARG_pixformat].u_int,
+    };
 
-    if (got_x_scale && got_x_size) {
-        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Choose either x_scale or x_size not both!"));
-    }
-
-    if (got_y_scale && got_y_size) {
-        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Choose either y_scale or y_size not both!"));
-    }
-
-    if (got_x_size) {
-        arg_x_scale = arg_x_size / arg_roi.w;
-    }
-
-    if (got_y_size) {
-        arg_y_scale = arg_y_size / arg_roi.h;
-    }
-
-    if ((!got_x_scale) && (!got_x_size) && got_y_size) {
-        arg_x_scale = arg_y_scale;
-    }
-
-    if ((!got_y_scale) && (!got_y_size) && got_x_size) {
-        arg_y_scale = arg_x_scale;
-    }
-
-    mp_obj_t scale_obj = py_helper_keyword_object(n_args, args, 13, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_scale), NULL);
-    float min, max;
-
-    if (scale_obj) {
-        mp_obj_t *arg_scale;
-        mp_obj_get_array_fixed_n(scale_obj, 2, &arg_scale);
-        min = mp_obj_get_float(arg_scale[0]);
-        max = mp_obj_get_float(arg_scale[1]);
-    }
-
-    int arg_pixformat = py_helper_keyword_int(n_args, args, 14, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_pixformat), PIXFORMAT_RGB565);
-    if ((arg_pixformat != PIXFORMAT_GRAYSCALE) && (arg_pixformat != PIXFORMAT_RGB565)) {
-        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Invalid pixformat!"));
-    }
-
-    mp_obj_t copy_to_fb_obj = py_helper_keyword_object(n_args, args, 15, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_copy_to_fb), NULL);
-    bool copy_to_fb = false;
-    image_t *arg_other = NULL;
-
-    if (copy_to_fb_obj) {
-        if (mp_obj_is_integer(copy_to_fb_obj)) {
-            copy_to_fb = mp_obj_get_int(copy_to_fb_obj);
-        } else {
-            arg_other = py_helper_arg_to_image(copy_to_fb_obj, ARG_IMAGE_UNCOMPRESSED);
-        }
-    }
-
-    if (copy_to_fb) {
-        framebuffer_update_jpeg_buffer();
-    }
-
-    image_t dst_img;
-    dst_img.w = fast_floorf(arg_roi.w * arg_x_scale);
-    dst_img.h = fast_floorf(arg_roi.h * arg_y_scale);
-    dst_img.pixfmt = (arg_pixformat == PIXFORMAT_RGB565) ? PIXFORMAT_RGB565 : PIXFORMAT_GRAYSCALE;
-
-    size_t size = image_size(&dst_img);
-
-    if (copy_to_fb) {
+    if (args[ARG_copy_to_fb].u_bool == false) {
         py_helper_set_to_framebuffer(&dst_img);
-    } else if (arg_other) {
-        bool fb = py_helper_is_equal_to_framebuffer(arg_other);
-        size_t buf_size = fb ? framebuffer_get_buffer_size() : image_size(arg_other);
-        PY_ASSERT_TRUE_MSG((size <= buf_size),
-                           "The new image won't fit in the target frame buffer!");
-        dst_img.data = arg_other->data;
-        memcpy(arg_other, &dst_img, sizeof(image_t));
-        py_helper_update_framebuffer(&dst_img);
     } else {
-        dst_img.data = xalloc(size);
+        dst_img.data = xalloc(image_size(&dst_img));
     }
 
-    int arg_timeout = py_helper_keyword_int(n_args, args, 16, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_timeout), 1000);
+    float min = FLT_MAX;
+    float max = -FLT_MAX;
+    py_helper_arg_to_minmax(args[ARG_scale].u_obj, &min, &max, NULL, 0);
+
+    const uint16_t *color_palette = py_helper_arg_to_palette(args[ARG_color_palette].u_obj, PIXFORMAT_RGB565);
+    const uint8_t *alpha_palette = py_helper_arg_to_palette(args[ARG_alpha_palette].u_obj, PIXFORMAT_GRAYSCALE);
 
     fb_alloc_mark();
+    // Allocate source image data.
     src_img.data = fb_alloc(src_img.w * src_img.h * sizeof(uint8_t), FB_ALLOC_NO_HINT);
 
     switch (tof_sensor) {
         #if (OMV_ENABLE_TOF_VL53L5CX == 1)
         case TOF_VL53L5CX: {
             float *frame = fb_alloc(VL53L5CX_WIDTH * VL53L5CX_HEIGHT * sizeof(float), FB_ALLOC_PREFER_SPEED);
-            tof_vl53l5cx_get_depth(&vl53l5cx_dev, frame, arg_timeout);
-
-            if (!scale_obj) {
+            tof_vl53l5cx_get_depth(&vl53l5cx_dev, frame, args[ARG_timeout].u_int);
+            if (args[ARG_scale].u_obj == mp_const_none) {
                 fast_get_min_max(frame, VL53L5CX_WIDTH * VL53L5CX_HEIGHT, &min, &max);
             }
-
             imlib_fill_image_from_float(&src_img, VL53L5CX_WIDTH, VL53L5CX_HEIGHT, frame, min, max,
-                                        arg_hmirror ^ true, arg_vflip, arg_transpose, true);
-            fb_free();
+                                        !args[ARG_hmirror].u_bool, args[ARG_vflip].u_bool,
+                                        args[ARG_transpose].u_bool, true);
             break;
         }
         #endif
         default:
-            break;
+            mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("TOF sensor is not initialized"));
     }
 
-    imlib_draw_image(&dst_img, &src_img, 0, 0, arg_x_scale, arg_y_scale,
-                     &arg_roi, arg_rgb_channel, arg_alpha, color_palette, alpha_palette,
-                     (hint & (~IMAGE_HINT_CENTER)) | IMAGE_HINT_BLACK_BACKGROUND, NULL, NULL, NULL);
+    imlib_draw_image(&dst_img, &src_img, 0, 0, x_scale, y_scale, &roi,
+                     args[ARG_channel].u_int, args[ARG_alpha].u_int, color_palette, alpha_palette,
+                     (args[ARG_hint].u_int & (~IMAGE_HINT_CENTER)) | IMAGE_HINT_BLACK_BACKGROUND, NULL, NULL, NULL);
 
     fb_alloc_free_till_mark();
 
+    if (args[ARG_copy_to_fb].u_bool) {
+        framebuffer_update_jpeg_buffer();
+    }
     return py_image_from_struct(&dst_img);
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_tof_snapshot_obj, 0, py_tof_snapshot);

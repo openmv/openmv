@@ -136,14 +136,28 @@ STATIC void py_tf_output_callback(void *callback_data, void *model_output, libtf
     }
 }
 
-STATIC mp_obj_t py_micro_speech_listen(uint n_args, const mp_obj_t *args, mp_map_t *kw_args) {
-    py_micro_speech_obj_t *microspeech = args[0];
-    py_tf_model_obj_t *arg_model = args[1];
-    float threshold = py_helper_keyword_float(n_args, args, 2, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_threshold), 0.9f);
-    uint32_t timeout = py_helper_keyword_int(n_args, args, 3, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_timeout), 1000);
+STATIC mp_obj_t py_micro_speech_listen(uint n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
+    enum { ARG_threshold, ARG_timeout, ARG_filter };
+    static const mp_arg_t allowed_args[] = {
+        { MP_QSTR_threshold, MP_ARG_OBJ | MP_ARG_KW_ONLY, {.u_rom_obj = MP_ROM_NONE} },
+        { MP_QSTR_timeout, MP_ARG_INT | MP_ARG_KW_ONLY,  {.u_int = 1000 } },
+        { MP_QSTR_filter, MP_ARG_OBJ | MP_ARG_KW_ONLY, {.u_rom_obj = MP_ROM_NONE} },
+    };
+
+    // Parse args.
+    mp_arg_val_t args[MP_ARRAY_SIZE(allowed_args)];
+    mp_arg_parse_all(n_args - 2, pos_args + 2, kw_args, MP_ARRAY_SIZE(allowed_args), allowed_args, args);
+
+    py_micro_speech_obj_t *microspeech = pos_args[0];
+    py_tf_model_obj_t *model = pos_args[1];
+    float threshold = py_helper_arg_to_float(args[ARG_threshold].u_obj, 0.9f);
+    uint32_t timeout = args[ARG_timeout].u_int;
+
     size_t labels_filter_len = 0;
-    mp_obj_t *labels_filter = py_helper_keyword_iterable(n_args, args,
-                                                         4, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_filter), &labels_filter_len);
+    mp_obj_t *labels_filter = NULL;
+    if (args[ARG_filter].u_obj != mp_const_none) {
+        mp_obj_get_array(args[ARG_filter].u_obj, &labels_filter_len, &labels_filter);
+    }
 
     fb_alloc_mark();
     py_tf_alloc_putchar_buffer();
@@ -152,7 +166,7 @@ STATIC mp_obj_t py_micro_speech_listen(uint n_args, const mp_obj_t *args, mp_map
     uint8_t *tensor_arena = fb_alloc_all(&tensor_arena_size, FB_ALLOC_PREFER_SIZE);
     libtf_parameters_t params;
 
-    if (libtf_get_parameters(arg_model->model_data, tensor_arena, tensor_arena_size, &params) != 0) {
+    if (libtf_get_parameters(model->model_data, tensor_arena, tensor_arena_size, &params) != 0) {
         mp_raise_msg(&mp_type_OSError, (mp_rom_error_text_t) py_tf_putchar_buffer);
     }
 
@@ -183,7 +197,7 @@ STATIC mp_obj_t py_micro_speech_listen(uint n_args, const mp_obj_t *args, mp_map
         __enable_irq();
 
         // Run model on updated spectrogram
-        if (libtf_invoke(arg_model->model_data,
+        if (libtf_invoke(model->model_data,
                          tensor_arena,
                          &params,
                          py_tf_input_callback,
@@ -218,16 +232,14 @@ STATIC mp_obj_t py_micro_speech_listen(uint n_args, const mp_obj_t *args, mp_map
 
             // If the highest average score is higher than the threshold return a command.
             if (average_scores[highest_index] / (kAverageWindowSamples * 255.0f) > threshold) {
-                bool command_filtered = (labels_filter != NULL);
+                bool command_filtered = (labels_filter_len != 0);
 
                 // If a list of labels is provided to filter commands, check if the
                 // detected command is in that list, otherwise continue the detection.
-                if (labels_filter != NULL) {
-                    for (int i = 0; i < labels_filter_len; i++) {
-                        if (highest_index == mp_obj_get_int(labels_filter[i])) {
-                            command_filtered = false;
-                            break;
-                        }
+                for (int i = 0; i < labels_filter_len; i++) {
+                    if (highest_index == mp_obj_get_int(labels_filter[i])) {
+                        command_filtered = false;
+                        break;
                     }
                 }
 
