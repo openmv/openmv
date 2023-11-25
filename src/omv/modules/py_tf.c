@@ -222,16 +222,16 @@ STATIC mp_obj_t int_py_tf_load(mp_obj_t path_obj, bool alloc_mode, bool helper_m
 }
 
 STATIC mp_obj_t py_tf_load(uint n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
-    enum { ARG_copy_to_fb };
+    enum { ARG_load_to_fb };
     static const mp_arg_t allowed_args[] = {
-        { MP_QSTR_copy_to_fb, MP_ARG_INT | MP_ARG_KW_ONLY,  {.u_bool = false } },
+        { MP_QSTR_load_to_fb, MP_ARG_INT | MP_ARG_KW_ONLY,  {.u_bool = false } },
     };
 
     // Parse args.
     mp_arg_val_t args[MP_ARRAY_SIZE(allowed_args)];
     mp_arg_parse_all(n_args - 1, pos_args + 1, kw_args, MP_ARRAY_SIZE(allowed_args), allowed_args, args);
 
-    return int_py_tf_load(pos_args[0], args[ARG_copy_to_fb].u_int, false);
+    return int_py_tf_load(pos_args[0], args[ARG_load_to_fb].u_int, false);
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_tf_load_obj, 1, py_tf_load);
 
