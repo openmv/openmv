@@ -6,6 +6,7 @@
 
 import sensor
 import time
+import image
 import display
 from gt911 import GT911
 from machine import I2C
@@ -17,8 +18,6 @@ points_colors = ((255, 0, 0), (0, 255, 0), (0, 0, 255), (0, 255, 255), (255, 255
 sensor.reset()  # Reset and initialize the sensor.
 sensor.set_pixformat(sensor.RGB565)  # Set pixel format to RGB565 (or GRAYSCALE)
 sensor.set_framesize(sensor.VGA)  # Set frame size to QVGA (320x240)
-sensor.set_vflip(True)  # Flip image for the display
-# sensor.set_transpose(True) # Hardware transpose will be slower at this resolution
 
 lcd = display.DSIDisplay(
     framesize=display.FWVGA, portrait=True, refresh=60, controller=display.ST7701()
@@ -57,10 +56,7 @@ while True:
             )
         touch_detected = False
 
-    # Rotate the image in place.
-    img.replace(transpose=True)
-
     # Draw the image on the display.
-    lcd.write(img, y=IMG_OFFSET)
+    lcd.write(img, y=IMG_OFFSET, hint=image.TRANSPOSE | image.VFLIP)
 
     print(clock.fps())
