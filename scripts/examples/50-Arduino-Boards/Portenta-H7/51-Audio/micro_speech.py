@@ -20,7 +20,7 @@ led_green = pyb.LED(2)
 
 model = tf.load("/model.tflite")
 speech = micro_speech.MicroSpeech()
-audio.init(channels=1, frequency=16000, gain=24, highpass=0.9883)
+audio.init(channels=1, frequency=16000, gain_db=24, highpass=0.9883)
 
 # Start audio streaming
 audio.start_streaming(speech.audio_callback)
