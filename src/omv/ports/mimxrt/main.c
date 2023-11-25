@@ -224,6 +224,9 @@ soft_reset:
         tusb_init();
     }
 
+    // Mark FS as OpenMV disk.
+    file_ll_touch(".openmv_disk");
+
     // Execute user scripts.
     exec_boot_script("boot.py", false);
 
