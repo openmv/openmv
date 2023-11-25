@@ -11,13 +11,11 @@ import image
 import time
 import fir
 
-IMAGE_SCALE = 5  # Higher scaling uses more memory.
+IMAGE_SCALE = 5  # Scale image to 5x.
 drawing_hint = image.BICUBIC  # or image.BILINEAR or 0 (nearest neighbor)
 
 # Initialize the thermal sensor
 fir.init()  # Auto-detects the connected sensor.
-w = fir.width() * IMAGE_SCALE
-h = fir.height() * IMAGE_SCALE
 
 # FPS clock
 clock = time.clock()
@@ -27,8 +25,8 @@ while True:
 
     try:
         img = fir.snapshot(
-            x_size=w,
-            y_size=h,
+            x_scale=IMAGE_SCALE,
+            y_scale=IMAGE_SCALE,
             color_palette=image.PALETTE_IRONBOW,
             hint=drawing_hint,
             copy_to_fb=True,
