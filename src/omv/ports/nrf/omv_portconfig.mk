@@ -100,13 +100,14 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/alloc/, \
 
 FIRM_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/common/, \
 	array.o                     \
-	file_utils.o                \
 	ini.o                       \
 	ringbuf.o                   \
 	trace.o                     \
 	mutex.o                     \
 	usbdbg.o                    \
 	tinyusb_debug.o             \
+	file_utils.o                \
+	boot_utils.o                \
 	sensor_utils.o              \
    )
 

@@ -90,6 +90,7 @@
 #include "omv_boardconfig.h"
 #include "omv_i2c.h"
 #include "sensor.h"
+#include "boot_utils.h"
 
 uint32_t HAL_GetHalVersion() {
     // Hard-coded because it's not defined in SDK
@@ -122,6 +123,8 @@ STATIC int vfs_mount_and_chdir(mp_obj_t bdev, mp_obj_t mount_point) {
 #endif
 
 int main(int argc, char **argv) {
+    bool first_soft_reset = true;
+
 soft_reset:
     #if defined(MICROPY_BOARD_EARLY_INIT)
     MICROPY_BOARD_EARLY_INIT();
@@ -132,50 +135,41 @@ soft_reset:
     #endif
 
     led_init();
-
     led_state(1, 1); // MICROPY_HW_LED_1 aka MICROPY_HW_LED_RED
 
     mp_stack_set_top(&_ram_end);
-
     // Stack limit should be less than real stack size, so we have a chance
     // to recover from limit hit.  (Limit is measured in bytes.)
     mp_stack_set_limit((char *) &_ram_end - (char *) &_heap_end - 400);
 
-    machine_init();
-
+    // GC init
     gc_init(&_heap_start, &_heap_end);
 
+    machine_init();
     mp_init();
-
     readline_init0();
-
     #if MICROPY_PY_MACHINE_HW_SPI
     spi_init0();
     #endif
-
     #if MICROPY_PY_MACHINE_I2C
     i2c_init0();
     #endif
-
     #if MICROPY_PY_MACHINE_ADC
     adc_init0();
     #endif
-
     #if MICROPY_PY_MACHINE_HW_PWM
     pwm_init0();
     #endif
-
     #if MICROPY_PY_MACHINE_RTCOUNTER
     rtc_init0();
     #endif
-
     #if MICROPY_PY_MACHINE_TIMER
     timer_init0();
     #endif
-
     #if MICROPY_PY_MACHINE_UART
     uart_init0();
     #endif
+    pin_init0();
 
     fb_alloc_init0();
     framebuffer_init0();
@@ -185,17 +179,13 @@ soft_reset:
     #endif
 
     #if (MICROPY_PY_BLE_NUS == 0) && (MICROPY_HW_USB_CDC == 0)
-    {
-        mp_obj_t args[2] = {
-            MP_OBJ_NEW_SMALL_INT(0),
-            MP_OBJ_NEW_SMALL_INT(115200),
-        };
-        MP_STATE_PORT(board_stdio_uart) = machine_hard_uart_type.make_new(
-            (mp_obj_t) &machine_hard_uart_type, MP_ARRAY_SIZE(args), 0, args);
-    }
+    mp_obj_t args[2] = {
+        MP_OBJ_NEW_SMALL_INT(0),
+        MP_OBJ_NEW_SMALL_INT(115200),
+    };
+    MP_STATE_PORT(board_stdio_uart) = machine_hard_uart_type.make_new(
+        (mp_obj_t) &machine_hard_uart_type, MP_ARRAY_SIZE(args), 0, args);
     #endif
-
-    pin_init0();
 
     #if MICROPY_HW_ENABLE_INTERNAL_FLASH_STORAGE
     flashbdev_init();
@@ -280,14 +270,19 @@ soft_reset:
     usb_cdc_init();
     #endif
 
-    #if MICROPY_VFS || MICROPY_MBFS || MICROPY_MODULE_FROZEN
-    // run boot.py and main.py if they exist.
-    pyexec_file_if_exists("boot.py", false);
-    pyexec_file_if_exists("main.py", false);
-    #endif
-
     usbdbg_init();
     pendsv_init();
+
+    #if MICROPY_VFS || MICROPY_MBFS || MICROPY_MODULE_FROZEN
+    // Run boot.py script.
+    bool interrupted = bootutils_exec_bootscript("boot.py", true, false);
+
+    // Run main.py script on first soft-reset.
+    if (first_soft_reset && !interrupted && mp_vfs_import_stat("main.py")) {
+        bootutils_exec_bootscript("main.py", true, false);
+        goto soft_reset_exit;
+    }
+    #endif
 
     // If there's no script ready, just re-exec REPL
     while (!usbdbg_script_ready()) {
@@ -337,6 +332,7 @@ soft_reset:
         }
     }
 
+soft_reset_exit:
     printf("MPY: soft reboot\n");
     #if MICROPY_PY_MACHINE_HW_PWM
     pwm_deinit_all();
@@ -351,9 +347,9 @@ soft_reset:
     MICROPY_BOARD_DEINIT();
     #endif
     mp_deinit();
-    goto soft_reset;
 
-    return 0;
+    first_soft_reset = false;
+    goto soft_reset;
 }
 
 #if !MICROPY_VFS
