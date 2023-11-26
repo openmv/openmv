@@ -41,6 +41,7 @@ MPY_CFLAGS += -I$(TOP_DIR)/$(MICROPY_DIR)/lib/lwip/src/include/
 MPY_CFLAGS += -I$(TOP_DIR)/$(MICROPY_DIR)/ports/mimxrt/
 MPY_CFLAGS += -I$(TOP_DIR)/$(MICROPY_DIR)/ports/mimxrt/lwip_inc/
 MPY_CFLAGS += -I$(TOP_DIR)/$(MICROPY_DIR)/shared/runtime/
+MPY_CFLAGS += -DMICROPY_VFS_FAT=1
 
 ifeq ($(MICROPY_PY_LWIP), 0)
 MICROPY_ARGS += MICROPY_PY_LWIP=0 MICROPY_PY_USSL=0
@@ -127,7 +128,6 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/alloc/, \
 
 FIRM_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/common/, \
 	array.o                     \
-	file_utils.o                \
 	ini.o                       \
 	ringbuf.o                   \
 	trace.o                     \
@@ -135,8 +135,9 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/common/, \
 	vospi.o                     \
 	usbdbg.o                    \
 	tinyusb_debug.o             \
+	file_utils.o                \
+	boot_utils.o                \
 	sensor_utils.o              \
-	factoryreset.o              \
    )
 
 FIRM_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/sensors/,   \
