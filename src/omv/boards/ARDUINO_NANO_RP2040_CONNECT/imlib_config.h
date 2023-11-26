@@ -15,8 +15,7 @@
 //#define IMLIB_ENABLE_IMAGE_IO
 
 // Enable Image File I/O
-// Not filesystem yet
-//#define IMLIB_ENABLE_IMAGE_FILE_IO
+#define IMLIB_ENABLE_IMAGE_FILE_IO
 
 // Enable LAB LUT
 //#define IMLIB_ENABLE_LAB_LUT
