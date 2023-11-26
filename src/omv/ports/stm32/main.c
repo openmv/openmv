@@ -92,7 +92,7 @@
 
 #include "extmod/vfs.h"
 #include "extmod/vfs_fat.h"
-#include "common/factoryreset.h"
+#include "boot_utils.h"
 
 int errno;
 extern char _vfs_buf[];
@@ -213,73 +213,6 @@ int ini_handler_callback(void *user, const char *section, const char *name, cons
     return 1;
 
     #undef MATCH
-}
-
-FRESULT exec_boot_script(const char *path, bool selftest, bool interruptible, bool wifidbg_enabled) {
-    nlr_buf_t nlr;
-    bool interrupted = false;
-    FRESULT f_res = FR_NO_FILE;
-
-    if (nlr_push(&nlr) == 0) {
-        // Enable IDE interrupts if allowed.
-        if (interruptible) {
-            usbdbg_set_irq_enabled(true);
-            usbdbg_set_script_running(true);
-            #if OMV_ENABLE_WIFIDBG && MICROPY_PY_WINC1500
-            wifidbg_set_irq_enabled(wifidbg_enabled);
-            #endif
-        }
-
-        // Try to run the frozen module first.
-        if (pyexec_frozen_module(path, true) == false) {
-            // No frozen module, try the filesystem.
-            f_res = file_ll_stat(path, NULL);
-            if (f_res == FR_OK) {
-                // Parse, compile and execute the script.
-                pyexec_file(path, true);
-            }
-        }
-        nlr_pop();
-    } else {
-        interrupted = true;
-    }
-
-    // Disable IDE interrupts
-    usbdbg_set_irq_enabled(false);
-    usbdbg_set_script_running(false);
-    #if OMV_ENABLE_WIFIDBG && MICROPY_PY_WINC1500
-    wifidbg_set_irq_enabled(false);
-    #endif
-
-    if (interrupted) {
-        if (selftest) {
-            // Get the exception message. TODO: might be a hack.
-            mp_obj_str_t *str = mp_obj_exception_get_value((mp_obj_t) nlr.ret_val);
-            // If any of the self-tests fail log the exception message
-            // and loop forever. Note: IDE exceptions will not be caught.
-            __fatal_error((const char *) str->data);
-        } else {
-            mp_obj_print_exception(&mp_plat_print, (mp_obj_t) nlr.ret_val);
-            if (nlr_push(&nlr) == 0) {
-                flash_error(3);
-                nlr_pop();
-            }// If this gets interrupted again ignore it.
-        }
-    }
-
-    if (selftest && f_res == FR_OK) {
-        // Remove self tests script and flush cache
-        file_ll_unlink(path);
-        storage_flush();
-
-        #ifdef OMV_SELF_TEST_SWD_ADDR
-        // Set flag for SWD debugger.
-        // Note: main.py does not use the frame buffer.
-        OMV_SELF_TEST_SWD_ADDR = 0xDEADBEEF;
-        #endif
-    }
-
-    return f_res;
 }
 
 int main(void) {
@@ -470,7 +403,7 @@ soft_reset:
     if (res == FR_NO_FILESYSTEM) {
         // Create a fresh filesystem.
         led_state(LED_RED, 1);
-        factoryreset_create_filesystem(vfs_fat);
+        bootutils_init_filesystem(vfs_fat);
         led_state(LED_RED, 0);
         // Flush storage
         storage_flush();
@@ -505,7 +438,7 @@ else {
     MP_STATE_VM(vfs_mount_table) = vfs;
     MP_STATE_PORT(vfs_cur) = vfs;
 
-    // Mark FS as OpenMV disk.
+    // Mark the filesystem as an OpenMV storage.
     file_ll_touch("/.openmv_disk");
 
     // Parse OpenMV configuration file.
@@ -522,21 +455,6 @@ else {
     #else
     openmv_config.wifidbg = false;
     #endif
-
-    // Execute frozen _boot.py (if any) for early system setup.
-    pyexec_frozen_module("_boot.py", false);
-
-    // Run boot script(s)
-    if (first_soft_reset) {
-        // Execute the boot.py script before initializing the USB dev to
-        // override the USB mode if required, otherwise VCP+MSC is used.
-        exec_boot_script("boot.py", false, false, false);
-        #if (OMV_ENABLE_SELFTEST == 1)
-        // Execute the selftests.py script before the filesystem is mounted
-        // to avoid corrupting the filesystem when selftests.py is removed.
-        exec_boot_script("selftest.py", true, false, false);
-        #endif
-    }
 
     // Init USB device to default setting if it was not already configured
     if (!(pyb_usb_flags & PYB_USB_FLAG_USB_MODE_CALLED)) {
@@ -558,80 +476,89 @@ else {
     led_state(LED_GREEN, 0);
     led_state(LED_BLUE, 0);
 
-    // Run main script if it exists.
-    if (first_soft_reset) {
-        exec_boot_script("main.py", false, true, openmv_config.wifidbg);
-    } else {
-        do {
-            usbdbg_init();
 
-            if (openmv_config.wifidbg == true) {
-                // Need to reinit imlib in WiFi debug mode.
-                imlib_deinit_all();
-                imlib_init_all();
-            }
+    // Run boot.py script.
+    bool interrupted = bootutils_exec_bootscript("boot.py", true, false);
 
-            // If there's no script ready, just re-exec REPL
-            while (!usbdbg_script_ready()) {
-                nlr_buf_t nlr;
-
-                if (nlr_push(&nlr) == 0) {
-                    // enable IDE interrupt
-                    usbdbg_set_irq_enabled(true);
-                    #if OMV_ENABLE_WIFIDBG && MICROPY_PY_WINC1500
-                    wifidbg_set_irq_enabled(openmv_config.wifidbg);
-                    #endif
-
-                    // run REPL
-                    if (pyexec_mode_kind == PYEXEC_MODE_RAW_REPL) {
-                        if (pyexec_raw_repl() != 0) {
-                            break;
-                        }
-                    } else {
-                        if (pyexec_friendly_repl() != 0) {
-                            break;
-                        }
-                    }
-
-                    nlr_pop();
-                }
-            }
-
-            if (usbdbg_script_ready()) {
-                nlr_buf_t nlr;
-                if (nlr_push(&nlr) == 0) {
-                    // Enable IDE interrupts
-                    usbdbg_set_irq_enabled(true);
-                    #if OMV_ENABLE_WIFIDBG && MICROPY_PY_WINC1500
-                    wifidbg_set_irq_enabled(openmv_config.wifidbg);
-                    #endif
-                    // Execute the script.
-                    pyexec_str(usbdbg_get_script(), true);
-                    // Disable IDE interrupts
-                    usbdbg_set_irq_enabled(false);
-                    nlr_pop();
-                } else {
-                    mp_obj_print_exception(&mp_plat_print, (mp_obj_t) nlr.ret_val);
-                }
-
-                if (usbdbg_is_busy() && nlr_push(&nlr) == 0) {
-                    // Enable IDE interrupt
-                    usbdbg_set_irq_enabled(true);
-                    #if OMV_ENABLE_WIFIDBG && MICROPY_PY_WINC1500
-                    wifidbg_set_irq_enabled(openmv_config.wifidbg);
-                    #endif
-                    // Wait for the current command to finish.
-                    usbdbg_wait_for_command(1000);
-                    // Disable IDE interrupts
-                    usbdbg_set_irq_enabled(false);
-                    nlr_pop();
-                }
-            }
-
-        } while (openmv_config.wifidbg == true);
+    // Run main.py script on first soft-reset.
+    if (first_soft_reset && !interrupted && mp_vfs_import_stat("main.py")) {
+        bootutils_exec_bootscript("main.py", true, openmv_config.wifidbg);
+        goto soft_reset_exit;
     }
 
+    do {
+        usbdbg_init();
+
+        if (openmv_config.wifidbg == true) {
+            // Need to reinit imlib in WiFi debug mode.
+            imlib_deinit_all();
+            imlib_init_all();
+        }
+
+        // If there's no script ready, just re-exec REPL
+        while (!usbdbg_script_ready()) {
+            nlr_buf_t nlr;
+
+            if (nlr_push(&nlr) == 0) {
+                // enable IDE interrupt
+                usbdbg_set_irq_enabled(true);
+                #if OMV_ENABLE_WIFIDBG && MICROPY_PY_WINC1500
+                wifidbg_set_irq_enabled(openmv_config.wifidbg);
+                #endif
+
+                // run REPL
+                if (pyexec_mode_kind == PYEXEC_MODE_RAW_REPL) {
+                    if (pyexec_raw_repl() != 0) {
+                        break;
+                    }
+                } else {
+                    if (pyexec_friendly_repl() != 0) {
+                        break;
+                    }
+                }
+
+                nlr_pop();
+            }
+        }
+
+        if (usbdbg_script_ready()) {
+            nlr_buf_t nlr;
+            if (nlr_push(&nlr) == 0) {
+                // Enable IDE interrupts
+                usbdbg_set_irq_enabled(true);
+                #if OMV_ENABLE_WIFIDBG && MICROPY_PY_WINC1500
+                wifidbg_set_irq_enabled(openmv_config.wifidbg);
+                #endif
+                // Execute the script.
+                pyexec_str(usbdbg_get_script(), true);
+                // Disable IDE interrupts
+                usbdbg_set_irq_enabled(false);
+                nlr_pop();
+            } else {
+                mp_obj_print_exception(&mp_plat_print, (mp_obj_t) nlr.ret_val);
+            }
+
+            if (usbdbg_is_busy() && nlr_push(&nlr) == 0) {
+                // Enable IDE interrupt
+                usbdbg_set_irq_enabled(true);
+                #if OMV_ENABLE_WIFIDBG && MICROPY_PY_WINC1500
+                wifidbg_set_irq_enabled(openmv_config.wifidbg);
+                #endif
+                // Wait for the current command to finish.
+                usbdbg_wait_for_command(1000);
+                // Disable IDE interrupts
+                usbdbg_set_irq_enabled(false);
+                nlr_pop();
+            }
+        }
+
+    } while (openmv_config.wifidbg == true);
+
+soft_reset_exit:
     // soft reset
+    mp_printf(&mp_plat_print, "MPY: soft reboot\n");
+
+    // Flush filesystem storage.
     storage_flush();
 
     // Call GC sweep first, before deinitializing networking drivers

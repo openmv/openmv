@@ -27,7 +27,8 @@ MPY_CFLAGS += -I$(TOP_DIR)/$(MICROPY_DIR)/ports/stm32/usbdev/core/inc/
 MPY_CFLAGS += -I$(TOP_DIR)/$(MICROPY_DIR)/ports/stm32/usbdev/class/inc/
 MPY_CFLAGS += -I$(TOP_DIR)/$(MICROPY_DIR)/ports/stm32/lwip_inc/
 MPY_CFLAGS += -I$(TOP_DIR)/$(MICROPY_DIR)/shared/runtime/
-MPY_CFLAGS += -DMICROPY_PY_USSL=1 -DMICROPY_SSL_MBEDTLS=1 -DMICROPY_STREAMS_POSIX_API=1
+MPY_CFLAGS += -DMICROPY_PY_USSL=1 -DMICROPY_SSL_MBEDTLS=1 -DMICROPY_STREAMS_POSIX_API=1 -DMICROPY_VFS_FAT=1
+
 MICROPY_ARGS += MICROPY_PY_USSL=1 MICROPY_SSL_MBEDTLS=1 MICROPY_PY_BTREE=1\
                 STM32LIB_CMSIS_DIR=$(TOP_DIR)/$(CMSIS_DIR) STM32LIB_HAL_DIR=$(TOP_DIR)/$(HAL_DIR)
 
@@ -144,15 +145,15 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/alloc/, \
 
 FIRM_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/common/, \
 	array.o                     \
-	file_utils.o                \
 	ini.o                       \
 	ringbuf.o                   \
 	trace.o                     \
 	mutex.o                     \
-	usbdbg.o                    \
-	sensor_utils.o              \
-	factoryreset.o              \
 	vospi.o                     \
+	usbdbg.o                    \
+	file_utils.o                \
+	boot_utils.o                \
+	sensor_utils.o              \
    )
 
 FIRM_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/sensors/,   \
