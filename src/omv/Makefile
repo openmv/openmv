@@ -17,16 +17,16 @@ SRCS += $(addprefix alloc/,     \
 
 SRCS += $(addprefix common/,    \
 	array.c                     \
-	file_utils.c                \
 	ini.c                       \
 	ringbuf.c                   \
 	trace.c                     \
 	mutex.c                     \
+	vospi.c                     \
 	usbdbg.c                    \
 	tinyusb_debug.c             \
+	file_utils.c                \
+	boot_utils.c                \
 	sensor_utils.c              \
-	factoryreset.c              \
-	vospi.c                     \
    )
 
 SRCS += $(addprefix sensors/,   \
