@@ -13,7 +13,8 @@ import time
 import fir
 import display
 
-drawing_hint = image.BICUBIC  # or image.BILINEAR or 0 (nearest neighbor)
+# or image.BILINEAR or 0 (nearest neighbor)
+drawing_hint = image.BICUBIC | image.CENTER | image.SCALE_ASPECT_KEEP
 
 ALT_OVERLAY = False  # Set to True to allocate a second ir image.
 

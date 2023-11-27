@@ -11,6 +11,7 @@ import image
 import time
 import fir
 
+IMAGE_SCALE = 5  # Scale image to 5x.
 drawing_hint = image.BICUBIC  # or image.BILINEAR or 0 (nearest neighbor)
 
 # Initialize the thermal sensor
@@ -18,18 +19,8 @@ fir.init()
 w = fir.width()
 h = fir.height()
 
-if fir.type() == fir.FIR_MLX90621:
-    w = w * 5
-    h = h * 5
-elif fir.type() == fir.FIR_MLX90640:
-    w = w * 5
-    h = h * 5
-elif fir.type() == fir.FIR_MLX90641:
-    w = w * 5
-    h = h * 5
-elif fir.type() == fir.FIR_AMG8833:
-    w = w * 10
-    h = h * 10
+if fir.type() == fir.FIR_AMG8833:
+    IMAGE_SCALE = IMAGE_SCALE * 2
 
 # FPS clock
 clock = time.clock()
@@ -39,8 +30,8 @@ while True:
 
     try:
         img = fir.snapshot(
-            x_size=w,
-            y_size=h,
+            x_scale=IMAGE_SCALE,
+            y_scale=IMAGE_SCALE,
             color_palette=image.PALETTE_IRONBOW,
             hint=drawing_hint,
             copy_to_fb=True,

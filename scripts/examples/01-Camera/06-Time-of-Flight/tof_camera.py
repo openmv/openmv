@@ -11,13 +11,11 @@ import image
 import time
 import tof
 
-IMAGE_SCALE = 10  # Higher scaling uses more memory.
+IMAGE_SCALE = 10  # Scale image to 10x.
 drawing_hint = image.BILINEAR  # or image.BILINEAR or 0 (nearest neighbor)
 
 # Initialize the ToF sensor
 tof.init()  # Auto-detects the connected sensor.
-w = tof.width() * IMAGE_SCALE
-h = tof.height() * IMAGE_SCALE
 
 # FPS clock
 clock = time.clock()
@@ -27,8 +25,8 @@ while True:
 
     try:
         img = tof.snapshot(
-            x_size=w,
-            y_size=h,
+            x_scale=IMAGE_SCALE,
+            y_scale=IMAGE_SCALE,
             color_palette=tof.PALETTE_IRONBOW,
             hint=drawing_hint,
             copy_to_fb=True,
