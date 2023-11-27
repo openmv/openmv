@@ -928,7 +928,7 @@ mp_obj_t py_fir_draw_ir(uint n_args, const mp_obj_t *pos_args, mp_map_t *kw_args
 
     float x_scale = 1.0f;
     float y_scale = 1.0f;
-    py_helper_arg_to_scale(args[ARG_x_scale].u_obj, args[ARG_y_scale].u_obj, &x_scale, &y_scale, &roi);
+    py_helper_arg_to_scale(args[ARG_x_scale].u_obj, args[ARG_y_scale].u_obj, &x_scale, &y_scale);
 
     float min = FLT_MAX;
     float max = -FLT_MAX;
@@ -1002,7 +1002,7 @@ mp_obj_t py_fir_snapshot(uint n_args, const mp_obj_t *pos_args, mp_map_t *kw_arg
 
     float x_scale = 1.0f;
     float y_scale = 1.0f;
-    py_helper_arg_to_scale(args[ARG_x_scale].u_obj, args[ARG_y_scale].u_obj, &x_scale, &y_scale, &roi);
+    py_helper_arg_to_scale(args[ARG_x_scale].u_obj, args[ARG_y_scale].u_obj, &x_scale, &y_scale);
 
     image_t dst_img = {
         .w = fast_floorf(roi.w * x_scale),

@@ -25,7 +25,7 @@ image_t *py_helper_arg_to_image(const mp_obj_t arg, uint32_t flags);
 const void *py_helper_arg_to_palette(const mp_obj_t arg, uint32_t pixfmt);
 rectangle_t py_helper_arg_to_roi(const mp_obj_t arg, const image_t *img);
 void py_helper_arg_to_scale(const mp_obj_t arg_x_scale, const mp_obj_t arg_y_scale,
-                            float *x_scale, float *y_scale, rectangle_t *roi);
+                            float *x_scale, float *y_scale);
 void py_helper_arg_to_minmax(const mp_obj_t minmax, float *min, float *max,
                              const mp_obj_t *array, size_t array_size);
 float py_helper_arg_to_float(const mp_obj_t arg, float default_value);
