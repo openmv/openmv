@@ -23,9 +23,6 @@
 #define OMV_MAX_BLOB_FRAME        FRAMESIZE_QCIF
 #define OMV_MAX_BLOB_FRAME_STR    "QCIF"
 
-// Core VBAT for selftests
-#define OMV_CORE_VBAT             "3.3"
-
 // USB IRQn.
 #define OMV_USB_IRQN              (OTG_FS_IRQn)
 

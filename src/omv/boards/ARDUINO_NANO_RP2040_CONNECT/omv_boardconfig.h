@@ -67,9 +67,6 @@ extern unsigned char *OMV_UNIQUE_ID_ADDR;   // Unique address.
 #define OMV_ENABLE_TUSBDBG         (1)
 #define OMV_TUSBDBG_PACKET         (64)
 
-// Enable self-tests on first boot
-#define OMV_ENABLE_SELFTEST        (0)
-
 // If buffer size is bigger than this threshold, the quality is reduced.
 // This is only used for JPEG images sent to the IDE not normal compression.
 #define JPEG_QUALITY_THRESH        (160 * 120)
@@ -80,9 +77,6 @@ extern unsigned char *OMV_UNIQUE_ID_ADDR;   // Unique address.
 
 // FB Heap Block Size
 #define OMV_UMM_BLOCK_SIZE         16
-
-// Core VBAT for selftests
-#define OMV_CORE_VBAT              "3.3"
 
 // USB IRQn.
 #define OMV_USB_IRQN               (USBCTRL_IRQ_IRQn)

@@ -18,9 +18,6 @@
 #define OMV_UNIQUE_ID_SIZE              3            // Unique ID size in words.
 #define OMV_UNIQUE_ID_OFFSET            12           // Bytes offset for multi-word UIDs.
 
-// Needed by the SWD JTAG testrig - located at the bottom of the frame buffer stack.
-#define OMV_SELF_TEST_SWD_ADDR          MAIN_FB()->pixfmt
-
 // Sensor external clock timer frequency.
 #define OMV_XCLK_FREQUENCY              (12000000)
 
@@ -69,9 +66,6 @@
 #define OMV_ENABLE_TUSBDBG              (1)
 #define OMV_TUSBDBG_PACKET              (512)
 
-// Enable self-tests on first boot
-#define OMV_ENABLE_SELFTEST             (0)
-
 // If buffer size is bigger than this threshold, the quality is reduced.
 // This is only used for JPEG images sent to the IDE not normal compression.
 #define JPEG_QUALITY_THRESH             (320 * 240 * 2)
@@ -82,9 +76,6 @@
 
 // FB Heap Block Size
 #define OMV_UMM_BLOCK_SIZE              16
-
-// Core VBAT for selftests
-#define OMV_CORE_VBAT                   "3.3"
 
 // USB config.
 #define OMV_USB_IRQN                    (USB_OTG1_IRQn)
