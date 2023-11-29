@@ -71,9 +71,6 @@
 // Enable WiFi debug
 #define OMV_ENABLE_WIFIDBG                    (0)
 
-// Enable self-tests on first boot
-#define OMV_ENABLE_SELFTEST                   (0)
-
 // If buffer size is bigger than this threshold, the quality is reduced.
 // This is only used for JPEG images sent to the IDE not normal compression.
 #define JPEG_QUALITY_THRESH                   (320 * 240 * 2)
@@ -84,9 +81,6 @@
 
 // FB Heap Block Size
 #define OMV_UMM_BLOCK_SIZE                    16
-
-// Core VBAT for selftests
-#define OMV_CORE_VBAT                         "3.0"
 
 // USB IRQn.
 #define OMV_USB_IRQN                          (OTG_HS_IRQn)
