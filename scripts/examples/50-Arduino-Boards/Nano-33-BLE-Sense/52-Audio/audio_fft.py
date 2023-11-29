@@ -12,7 +12,7 @@ SIZE = 256 // (2 * CHANNELS)
 
 raw_buf = None
 fb = image.Image(SIZE + 50, SIZE, image.RGB565, copy_to_fb=True)
-audio.init(channels=CHANNELS, frequency=16000, gain_db=80, highpass=0.9883)
+audio.init(channels=CHANNELS, frequency=16000, gain_db=80)
 
 
 def audio_callback(buf):
