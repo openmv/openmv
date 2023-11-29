@@ -93,15 +93,15 @@ target_sources(${MICROPY_TARGET} PRIVATE
     ${TOP_DIR}/${OMV_DIR}/alloc/unaligned_memcpy.c
 
     ${TOP_DIR}/${OMV_DIR}/common/array.c
-    ${TOP_DIR}/${OMV_DIR}/common/file_utils.c
     ${TOP_DIR}/${OMV_DIR}/common/ini.c
     ${TOP_DIR}/${OMV_DIR}/common/ringbuf.c
     ${TOP_DIR}/${OMV_DIR}/common/trace.c
     ${TOP_DIR}/${OMV_DIR}/common/mutex.c
     ${TOP_DIR}/${OMV_DIR}/common/usbdbg.c
     ${TOP_DIR}/${OMV_DIR}/common/tinyusb_debug.c
+    ${TOP_DIR}/${OMV_DIR}/common/file_utils.c
+    ${TOP_DIR}/${OMV_DIR}/common/boot_utils.c
     ${TOP_DIR}/${OMV_DIR}/common/sensor_utils.c
-    ${TOP_DIR}/${OMV_DIR}/common/factoryreset.c
 
     ${TOP_DIR}/${OMV_DIR}/sensors/ov2640.c
     ${TOP_DIR}/${OMV_DIR}/sensors/ov5640.c

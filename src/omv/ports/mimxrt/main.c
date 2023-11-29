@@ -50,7 +50,6 @@
 
 #include "extmod/vfs.h"
 #include "extmod/vfs_fat.h"
-#include "common/factoryreset.h"
 
 #include "omv_boardconfig.h"
 #include "framebuffer.h"
@@ -60,35 +59,10 @@
 #include "fb_alloc.h"
 #include "dma_alloc.h"
 #include "file_utils.h"
+#include "boot_utils.h"
 #include "mimxrt_hal.h"
 
 extern uint8_t _sstack, _estack, _heap_start, _heap_end;
-
-void exec_boot_script(const char *path, bool interruptible) {
-    nlr_buf_t nlr;
-    bool interrupted = false;
-    if (nlr_push(&nlr) == 0) {
-        // Enable IDE interrupts if allowed.
-        if (interruptible) {
-            usbdbg_set_irq_enabled(true);
-            usbdbg_set_script_running(true);
-        }
-
-        // Parse, compile and execute the script.
-        pyexec_file_if_exists(path, true);
-        nlr_pop();
-    } else {
-        interrupted = true;
-    }
-
-    // Disable IDE interrupts
-    usbdbg_set_irq_enabled(false);
-    usbdbg_set_script_running(false);
-
-    if (interrupted) {
-        mp_obj_print_exception(&mp_plat_print, (mp_obj_t) nlr.ret_val);
-    }
-}
 
 int main(void) {
     bool sdcard_detected = false;
@@ -101,9 +75,7 @@ int main(void) {
     pendsv_init();
 
 soft_reset:
-    #if defined(MICROPY_HW_LED1)
     led_init();
-    #endif
 
     // Initialise stack extents and GC heap.
     mp_stack_set_top(&_estack);
@@ -178,9 +150,8 @@ soft_reset:
     #endif
 
     #if MICROPY_PY_SENSOR
-    if (first_soft_reset
-        && sensor_init() != 0) {
-        printf("sensor init failed!\n");
+    if (first_soft_reset) {
+        sensor_init();
     }
     #endif
 
@@ -211,7 +182,7 @@ soft_reset:
         } else {
             // Create a fresh filesystem.
             fs_user_mount_t *vfs = MP_OBJ_TYPE_GET_SLOT(&mp_fat_vfs_type, make_new) (&mp_fat_vfs_type, 1, 0, &bdev);
-            if (factoryreset_create_filesystem(vfs) == 0) {
+            if (bootutils_init_filesystem(vfs) == 0) {
                 if (mp_vfs_mount_and_chdir_protected(bdev, mount_point) == 0) {
                     mimxrt_msc_medium = &mimxrt_flash_type;
                 }
@@ -219,19 +190,21 @@ soft_reset:
         }
     }
 
-    // Deferred tusb_init to allow the filesystem to be mounted/created before MSC.
+    // Mark the filesystem as an OpenMV storage.
+    file_ll_touch(".openmv_disk");
+
+    // Initialize TinyUSB after the filesystem is mounted.
     if (!tusb_inited()) {
         tusb_init();
     }
 
-    // Mark FS as OpenMV disk.
-    file_ll_touch(".openmv_disk");
+    // Run boot.py script.
+    bool interrupted = bootutils_exec_bootscript("boot.py", true, false);
 
-    // Execute user scripts.
-    exec_boot_script("boot.py", false);
-
-    if (first_soft_reset) {
-        exec_boot_script("main.py", true);
+    // Run main.py script on first soft-reset.
+    if (first_soft_reset && !interrupted && mp_vfs_import_stat("main.py")) {
+        bootutils_exec_bootscript("main.py", true, false);
+        goto soft_reset_exit;
     }
 
     // If there's no script ready, just re-exec REPL
@@ -279,6 +252,7 @@ soft_reset:
         }
     }
 
+soft_reset_exit:
     mp_printf(MP_PYTHON_PRINTER, "MPY: soft reboot\n");
     machine_pin_irq_deinit();
     machine_rtc_irq_deinit();
@@ -300,7 +274,6 @@ soft_reset:
     mp_deinit();
     first_soft_reset = false;
     goto soft_reset;
-    return 0;
 }
 
 void gc_collect(void) {
