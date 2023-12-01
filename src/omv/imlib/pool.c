@@ -32,7 +32,7 @@ void imlib_midpoint_pool(image_t *img_i, image_t *img_o, int x_div, int y_div, c
             break;
         }
         case PIXFORMAT_GRAYSCALE: {
-            for (int y = 0, yy = img_i->h, yyy = (img_i->h % y_div) / 2 / y_div; y < yy; y++) {
+            for (int y = 0, yy = img_i->h, yyy = (img_i->h % y_div) / 2; y < yy; y++) {
                 uint8_t *row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(img_o, y);
                 for (int x = 0, xx = img_i->w / x_div, xxx = (img_i->w % x_div) / 2; x < xx; x++) {
                     int min = COLOR_GRAYSCALE_MAX, max = COLOR_GRAYSCALE_MIN;
