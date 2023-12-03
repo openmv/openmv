@@ -108,7 +108,7 @@ include $(OMV_BOARD_CONFIG_DIR)/omv_boardconfig.mk
 #OMV_SRC_QSTR := $(wildcard $(TOP_DIR)/$(OMV_DIR)/modules/*.c)
 
 # The following command line args are passed to MicroPython's top Makefile.
-MICROPY_ARGS = PORT=$(PORT) BOARD=$(TARGET) DEBUG=$(DEBUG) OMV_LIB_DIR=$(OMV_LIB_DIR)\
+MICROPY_ARGS = PORT=$(PORT) BOARD=$(TARGET) DEBUG=$(DEBUG) MICROPY_MANIFEST_OMV_LIB_DIR=$(OMV_LIB_DIR)\
                FROZEN_MANIFEST=$(FROZEN_MANIFEST) OMV_SRC_QSTR="$(OMV_SRC_QSTR)"\
                MICROPY_ROM_TEXT_COMPRESSION=$(ROM_TEXT_COMPRESSION) USER_C_MODULES=$(TOP_DIR)/$(OMV_DIR)
 
