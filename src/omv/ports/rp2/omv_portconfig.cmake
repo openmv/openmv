@@ -19,9 +19,9 @@ set(MLX90641_DIR            drivers/mlx90641)
 set(OPENPDM_DIR             ${TOP_DIR}/lib/openpdm)
 set(TENSORFLOW_DIR          ${TOP_DIR}/lib/libtf)
 set(OMV_BOARD_CONFIG_DIR    ${TOP_DIR}/${OMV_DIR}/boards/${TARGET}/)
-set(OMV_LIB_DIR             ${TOP_DIR}/../scripts/libraries)
 set(OMV_COMMON_DIR          ${TOP_DIR}/${OMV_DIR}/common)
 set(PORT_DIR                ${TOP_DIR}/${OMV_DIR}/ports/${PORT})
+set(MICROPY_MANIFEST_OMV_LIB_DIR    ${TOP_DIR}/../scripts/libraries)
 
 # Include board cmake fragment
 include(${OMV_BOARD_CONFIG_DIR}/omv_boardconfig.cmake)
