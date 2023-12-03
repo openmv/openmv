@@ -95,18 +95,12 @@ soft_reset:
     #endif // MICROPY_PY_BUZZER
     imlib_init_all();
     readline_init0();
-    #if MICROPY_HW_ENABLE_CAN
-    can_init0();
-    #endif
     fb_alloc_init0();
     framebuffer_init0();
     sensor_init0();
     //dma_alloc_init0();
     #ifdef IMLIB_ENABLE_IMAGE_FILE_IO
     file_buffer_init0();
-    #endif
-    #if MICROPY_HW_ENABLE_SERVO
-    servo_init();
     #endif
     usbdbg_init();
     machine_adc_init();
@@ -254,6 +248,9 @@ soft_reset:
 
 soft_reset_exit:
     mp_printf(MP_PYTHON_PRINTER, "MPY: soft reboot\n");
+    #if MICROPY_PY_MACHINE_CAN
+    machine_can_irq_deinit();
+    #endif
     machine_pin_irq_deinit();
     machine_rtc_irq_deinit();
     #if MICROPY_PY_LWIP
