@@ -242,6 +242,7 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/,\
 	machine_spi.o                       \
 	machine_uart.o                      \
 	machine_wdt.o                       \
+	machine_can.o                       \
 	mbedtls/mbedtls_port.o              \
 	mimxrt_flash.o                      \
 	mimxrt_sdram.o                      \
