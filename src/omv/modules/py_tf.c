@@ -347,11 +347,6 @@ STATIC void py_tf_input_data_callback(void *callback_data,
     int shift = (params->input_datatype == LIBTF_DATATYPE_INT8) ? GRAYSCALE_MID : 0;
     float fscale = 1.0f / GRAYSCALE_RANGE;
 
-    float xscale = params->input_width / ((float) arg->roi->w);
-    float yscale = params->input_height / ((float) arg->roi->h);
-    // MAX == KeepAspectRationByExpanding - MIN == KeepAspectRatio
-    float scale = IM_MAX(xscale, yscale);
-
     image_t dst_img;
     dst_img.w = params->input_width;
     dst_img.h = params->input_height;
@@ -365,9 +360,9 @@ STATIC void py_tf_input_data_callback(void *callback_data,
         mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Expected model input channels to be 1 or 3!"));
     }
 
-    imlib_draw_image(&dst_img, arg->img, 0, 0, scale, scale, arg->roi,
-                     -1, 256, NULL, NULL, IMAGE_HINT_BILINEAR | IMAGE_HINT_BLACK_BACKGROUND,
-                     NULL, NULL, NULL);
+    imlib_draw_image(&dst_img, arg->img, 0, 0, 1.0f, 1.0f, arg->roi,
+                     -1, 256, NULL, NULL, IMAGE_HINT_BILINEAR | IMAGE_HINT_CENTER |
+                     IMAGE_HINT_SCALE_ASPECT_EXPAND | IMAGE_HINT_BLACK_BACKGROUND, NULL, NULL, NULL);
 
     int size = (params->input_width * params->input_height) - 1; // must be int per countdown loop
 
@@ -704,6 +699,10 @@ STATIC mp_obj_t int_py_tf_segment(bool detecting_mode, uint n_args, const mp_obj
         image_t *img = py_image_cobj(img_list->items[i]);
         float x_scale = roi.w / ((float) img->w);
         float y_scale = roi.h / ((float) img->h);
+        // MAX == KeepAspectRatioByExpanding - MIN == KeepAspectRatio
+        float scale = IM_MIN(x_scale, y_scale);
+        int x_offset = fast_floorf((roi.w - (img->w * scale)) / 2.0f) + roi.x;
+        int y_offset = fast_floorf((roi.h - (img->h * scale)) / 2.0f) + roi.y;
 
         list_t out;
         imlib_find_blobs(&out, img, &((rectangle_t) {0, 0, img->w, img->h}), 1, 1,
@@ -730,10 +729,10 @@ STATIC mp_obj_t int_py_tf_segment(bool detecting_mode, uint n_args, const mp_obj
 
             py_tf_classification_obj_t *o = m_new_obj(py_tf_classification_obj_t);
             o->base.type = &py_tf_classification_type;
-            o->x = mp_obj_new_int(fast_floorf(lnk_data.rect.x * x_scale) + roi.x);
-            o->y = mp_obj_new_int(fast_floorf(lnk_data.rect.y * y_scale) + roi.y);
-            o->w = mp_obj_new_int(fast_floorf(lnk_data.rect.w * x_scale));
-            o->h = mp_obj_new_int(fast_floorf(lnk_data.rect.h * y_scale));
+            o->x = mp_obj_new_int(fast_floorf(lnk_data.rect.x * scale) + x_offset);
+            o->y = mp_obj_new_int(fast_floorf(lnk_data.rect.y * scale) + y_offset);
+            o->w = mp_obj_new_int(fast_floorf(lnk_data.rect.w * scale));
+            o->h = mp_obj_new_int(fast_floorf(lnk_data.rect.h * scale));
             o->output = mp_obj_new_float(stats.LMean * fscale);
             objects_list->items[j] = o;
         }
