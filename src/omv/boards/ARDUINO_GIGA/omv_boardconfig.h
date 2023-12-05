@@ -37,6 +37,11 @@
 #define OMV_MDMA_CHANNEL_JPEG_IN            (7) // in has a lower pri than out
 #define OMV_MDMA_CHANNEL_JPEG_OUT           (6) // out has a higher pri than in
 
+// OV5640 sensor settings
+#define OMV_OV5640_XCLK_FREQ                (12000000)
+#define OMV_OV5640_PLL_CTRL2                (0x90)
+#define OMV_OV5640_PLL_CTRL3                (0x13)
+
 // Enable additional GPIO banks.
 #define OMV_ENABLE_GPIO_BANK_F              (1)
 #define OMV_ENABLE_GPIO_BANK_G              (1)
@@ -47,7 +52,7 @@
 
 // Enable sensor drivers
 #define OMV_ENABLE_OV2640                   (0)
-#define OMV_ENABLE_OV5640                   (0)
+#define OMV_ENABLE_OV5640                   (1)
 #define OMV_ENABLE_OV7670                   (1)
 #define OMV_ENABLE_OV7690                   (0)
 #define OMV_ENABLE_OV7725                   (0)
@@ -71,7 +76,7 @@
 #define OMV_OV7670_CLKRC                    (0)
 
 // Enable sensor features
-#define OMV_ENABLE_OV5640_AF                (0)
+#define OMV_ENABLE_OV5640_AF                (1)
 
 // Enable WiFi debug
 #define OMV_ENABLE_WIFIDBG                  (0)
