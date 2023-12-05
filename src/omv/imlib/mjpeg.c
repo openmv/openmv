@@ -13,14 +13,16 @@
 
 #include "file_utils.h"
 
-#define SIZE_OFFSET        (1 * 4)
-#define MICROS_OFFSET      (8 * 4)
-#define FRAMES_OFFSET      (12 * 4)
-#define RATE_0_OFFSET      (19 * 4)
-#define LENGTH_0_OFFSET    (21 * 4)
-#define RATE_1_OFFSET      (33 * 4)
-#define LENGTH_1_OFFSET    (35 * 4)
-#define MOVI_OFFSET        (54 * 4)
+#define SIZE_OFFSET         (1 * 4)
+#define MICROS_OFFSET       (8 * 4)
+#define FRAMES_OFFSET       (12 * 4)
+#define RATE_0_OFFSET       (19 * 4)
+#define LENGTH_0_OFFSET     (21 * 4)
+#define RATE_1_OFFSET       (33 * 4)
+#define LENGTH_1_OFFSET     (35 * 4)
+#define MOVI_OFFSET         (54 * 4)
+
+#define TIME_SCALE          (1000)
 
 void mjpeg_open(FIL *fp, int width, int height) {
     file_write(fp, "RIFF", 4); // FOURCC fcc; - 0
@@ -43,7 +45,7 @@ void mjpeg_open(FIL *fp, int width, int height) {
     file_write_long(fp, 0); // DWORD dwSuggestedBufferSize; - 15
     file_write_long(fp, width); // DWORD dwWidth; - 16
     file_write_long(fp, height); // DWORD dwHeight; - 17
-    file_write_long(fp, 1000); // DWORD dwScale; - 18
+    file_write_long(fp, TIME_SCALE); // DWORD dwScale; - 18
     file_write_long(fp, 0); // DWORD dwRate; rate - updated on close - 19
     file_write_long(fp, 0); // DWORD dwStart; - 20
     file_write_long(fp, 0); // DWORD dwLength; length - updated on close - 21
@@ -60,7 +62,7 @@ void mjpeg_open(FIL *fp, int width, int height) {
     file_write_short(fp, 0); // WORD wPriority; - 30
     file_write_short(fp, 0); // WORD wLanguage; - 30.5
     file_write_long(fp, 0); // DWORD dwInitialFrames; - 31
-    file_write_long(fp, 1000); // DWORD dwScale; - 32
+    file_write_long(fp, TIME_SCALE); // DWORD dwScale; - 32
     file_write_long(fp, 0); // DWORD dwRate; rate - updated on close - 33
     file_write_long(fp, 0); // DWORD dwStart; - 34
     file_write_long(fp, 0); // DWORD dwLength; length - updated on close - 35
@@ -96,7 +98,7 @@ void mjpeg_write(FIL *fp, int width, int height, uint32_t *frames, uint32_t *byt
                  const uint16_t *color_palette, const uint8_t *alpha_palette, image_hint_t hint) {
     float xscale = width / ((float) roi->w);
     float yscale = height / ((float) roi->h);
-    // MAX == KeepAspectRationByExpanding - MIN == KeepAspectRatio
+    // MAX == KeepAspectRatioByExpanding - MIN == KeepAspectRatio
     float scale = IM_MIN(xscale, yscale);
 
     image_t dst_img = {
@@ -196,43 +198,45 @@ void mjpeg_write(FIL *fp, int width, int height, uint32_t *frames, uint32_t *byt
     fb_alloc_free_till_mark();
 }
 
-void mjpeg_sync(FIL *fp, uint32_t *frames, uint32_t *bytes, float fps) {
+void mjpeg_sync(FIL *fp, uint32_t frames, uint32_t bytes, uint32_t us_avg) {
     uint32_t position = f_tell(fp);
+    // size of all mjpeg headers and jpegs.
+    uint32_t datasize = (frames * 8) + bytes;
+    // frames_per_second == rate / scale
+    uint32_t rate = IM_DIV((1000000 * TIME_SCALE), us_avg);
+    // video length == frames / frames_per_second
+    uint32_t length = IM_DIV((((uint64_t) frames) * TIME_SCALE), rate);
     // Needed
     file_seek(fp, SIZE_OFFSET);
-    file_write_long(fp, 216 + (*frames * 8) + *bytes);
+    file_write_long(fp, 216 + datasize);
     // Needed
     file_seek(fp, MICROS_OFFSET);
-    file_write_long(fp, (!fast_roundf(fps)) ? 0 :
-                    fast_roundf(1000000 / fps));
-    file_write_long(fp, (!(*frames)) ? 0 :
-                    fast_roundf((((*frames * 8) + *bytes) * fps) / *frames));
+    file_write_long(fp, us_avg);
+    file_write_long(fp, IM_DIV((((uint64_t) datasize) * us_avg), frames));
     // Needed
     file_seek(fp, FRAMES_OFFSET);
-    file_write_long(fp, *frames);
+    file_write_long(fp, frames);
     // Probably not needed but writing it just in case.
     file_seek(fp, RATE_0_OFFSET);
-    file_write_long(fp, fast_roundf(fps * 1000));
+    file_write_long(fp, rate);
     // Probably not needed but writing it just in case.
     file_seek(fp, LENGTH_0_OFFSET);
-    file_write_long(fp, (!fast_roundf(fps)) ? 0 :
-                    fast_roundf((*frames * 1000) / fps));
+    file_write_long(fp, length);
     // Probably not needed but writing it just in case.
     file_seek(fp, RATE_1_OFFSET);
-    file_write_long(fp, fast_roundf(fps * 1000));
+    file_write_long(fp, rate);
     // Probably not needed but writing it just in case.
     file_seek(fp, LENGTH_1_OFFSET);
-    file_write_long(fp, (!fast_roundf(fps)) ? 0 :
-                    fast_roundf((*frames * 1000) / fps));
+    file_write_long(fp, length);
     // Needed
     file_seek(fp, MOVI_OFFSET);
-    file_write_long(fp, 4 + (*frames * 8) + *bytes);
+    file_write_long(fp, 4 + datasize);
     file_sync(fp);
     file_seek(fp, position);
 }
 
-void mjpeg_close(FIL *fp, uint32_t *frames, uint32_t *bytes, float fps) {
-    mjpeg_sync(fp, frames, bytes, fps);
+void mjpeg_close(FIL *fp, uint32_t frames, uint32_t bytes, uint32_t us_avg) {
+    mjpeg_sync(fp, frames, bytes, us_avg);
     file_close(fp);
 }
 
