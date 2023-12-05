@@ -29,10 +29,10 @@ m = mjpeg.Mjpeg("example.mjpeg")
 clock = time.clock()  # Create a clock object to track the FPS.
 for i in range(200):
     clock.tick()
-    m.add_frame(sensor.snapshot())
+    m.write(sensor.snapshot())
     print(clock.fps())
 
-m.close(clock.fps())
+m.close()
 led.off()
 
 raise (Exception("Please reset the camera to see the new file."))

@@ -56,9 +56,9 @@ while True:
     clock = time.clock()  # Tracks FPS.
     for i in range(200):
         clock.tick()
-        m.add_frame(sensor.snapshot())
+        m.write(sensor.snapshot())
         print(clock.fps())
 
-    m.close(clock.fps())
+    m.close()
     led.off()
     print("Restarting...")
