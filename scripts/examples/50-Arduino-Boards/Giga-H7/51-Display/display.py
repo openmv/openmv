@@ -31,6 +31,7 @@ touch = GT911(
     irq_pin="PI1",
     touch_points=5,
     refresh_rate=240,
+    reverse_x=True,
     touch_callback=lambda pin: globals().update(touch_detected=True),
 )
 
