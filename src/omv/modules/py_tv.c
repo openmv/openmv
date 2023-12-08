@@ -887,7 +887,7 @@ STATIC mp_obj_t py_tv_display(uint n_args, const mp_obj_t *pos_args, mp_map_t *k
 
     // Parse args.
     mp_arg_val_t args[MP_ARRAY_SIZE(allowed_args)];
-    mp_arg_parse_all(n_args + 1, pos_args - 1, kw_args, MP_ARRAY_SIZE(allowed_args), allowed_args, args);
+    mp_arg_parse_all(n_args - 1, pos_args + 1, kw_args, MP_ARRAY_SIZE(allowed_args), allowed_args, args);
 
     image_t *image = py_helper_arg_to_image(pos_args[0], 0);
     rectangle_t roi = py_helper_arg_to_roi(args[ARG_roi].u_obj, image);
