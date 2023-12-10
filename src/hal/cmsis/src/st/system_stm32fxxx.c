@@ -376,6 +376,15 @@ void SystemClock_Config(void)
     PeriphClkInitStruct.Spi45ClockSelection   = RCC_SPI45CLKSOURCE_PLL2;
     #endif
 
+    #if defined(DSI)
+    PeriphClkInitStruct.PeriphClockSelection |= RCC_PERIPHCLK_DSI;
+    #if defined(OMV_OSC_DSI_CLKSOURCE)
+    PeriphClkInitStruct.DsiClockSelection = OMV_OSC_DSI_CLKSOURCE;
+    #else
+    PeriphClkInitStruct.DsiClockSelection = RCC_DSICLKSOURCE_PHY;
+    #endif // defined(OMV_OSC_DSI_CLKSOURCE)
+    #endif // defined(DSI)
+
     if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInitStruct) != HAL_OK) {
         // Initialization Error
         __fatal_error("HAL_RCCEx_PeriphCLKConfig");

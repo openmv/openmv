@@ -41,9 +41,9 @@ You may use the RPC Interface Library over CAN using [Kvaser](https://www.kvaser
 
 # How to use the Library
 
-Please checkout the following scripts for how to control your OpenMV Cam from the comptuer:
+Please checkout the following scripts for how to control your OpenMV Cam from the computer:
 
-* [Slow but Synchronus JPG Image Transfer](rpc_image_transfer_jpg_as_the_controller_device.py)
+* [Slow but Synchronous JPG Image Transfer](rpc_image_transfer_jpg_as_the_controller_device.py)
 * [Fast JPG Image Streaming](rpc_image_transfer_jpg_streaming_as_the_controller_device.py)
 * [Face Detection, April Tag Detection, Color Tracking, and more](rpc_popular_features_as_the_controller_device_example.py)
 
@@ -59,9 +59,9 @@ Once the interface is created you just need to do:
 
     memory_view_object_result = interface.call("remote_function_or_method_name", bytes_object_argument)
 
-And the `rpc` library will try to execute that `"remote_function_or_method_name"` on your OpenMV Cam. The remote function or method will receive the `bytes_object_argument` which can be up to 2^32-1 bytes in size. Once the remote method finishes executing it will return a `memory_view_object_result` which can also be up to 2^32-1 bytes in size. Because the argument and response are both generic byte containers you can pass anything through the `rpc` library and receive any type of response. A simple way to pass arguments is to use `struct.pack()` to create the argument and `struct.unpack()` to receieve the argument on the OpenMV Cam side. For the response, the OpenMV Cam may send a string object or json string as the result which the computer can then interpret. Most objects or lists returned from method calls on the OpenMV Cam generate valid json strings when you call `str()` on them.
+And the `rpc` library will try to execute that `"remote_function_or_method_name"` on your OpenMV Cam. The remote function or method will receive the `bytes_object_argument` which can be up to 2^32-1 bytes in size. Once the remote method finishes executing it will return a `memory_view_object_result` which can also be up to 2^32-1 bytes in size. Because the argument and response are both generic byte containers you can pass anything through the `rpc` library and receive any type of response. A simple way to pass arguments is to use `struct.pack()` to create the argument and `struct.unpack()` to receive the argument on the OpenMV Cam side. For the response, the OpenMV Cam may send a string object or json string as the result which the computer can then interpret. Most objects or lists returned from method calls on the OpenMV Cam generate valid json strings when you call `str()` on them.
 
-As for errors, if you try to execute a non-existant function or method name on the OpenMV Cam the `call` method will return an empty `bytes()` object. If the `rpc` library failed to communicate with the OpenMV Cam the `rpc` library will return `None`.
+As for errors, if you try to execute a non-existent function or method name on the OpenMV Cam the `call` method will return an empty `bytes()` object. If the `rpc` library failed to communicate with the OpenMV Cam the `rpc` library will return `None`.
 
 To keep things simple the `rpc` library doesn't maintain a connection between the master and slave devices. The `call` method encapsulates trying to connect to the OpenMV Cam, starting execution of the remote function or method, and getting the result.
 
@@ -125,7 +125,7 @@ The `rpc_master` is a pure virtual class and not meant to be used directly. Spec
 
 #### call(name, data=bytes(), send_timeout=1000, recv_timeout=1000):
 
-Executes a remote call on the slave device. `name` is a string name of the remote function or method to execute. `data` is the `bytes` like object that will be sent as the argument of the remote function or method to exeucte. `send_timeout` defines how many milliseconds to wait while trying to connect to the slave and get it to execute the remote function or method. Once the master starts sending the argument to the slave deivce `send_timeout` does not apply. The library will allow the argument to take up to 5 seconds to be sent. `recv_timeout` defines how many milliseconds to wait after the slave started executing the remote method to receive the repsonse. Note that once the master starts receiving the repsonse `recv_timeout` does not apply. The library will allow the response to take up to 5 seconds to be received.
+Executes a remote call on the slave device. `name` is a string name of the remote function or method to execute. `data` is the `bytes` like object that will be sent as the argument of the remote function or method to execute. `send_timeout` defines how many milliseconds to wait while trying to connect to the slave and get it to execute the remote function or method. Once the master starts sending the argument to the slave device `send_timeout` does not apply. The library will allow the argument to take up to 5 seconds to be sent. `recv_timeout` defines how many milliseconds to wait after the slave started executing the remote method to receive the response. Note that once the master starts receiving the response `recv_timeout` does not apply. The library will allow the response to take up to 5 seconds to be received.
 
 Note that a new packet that includes a copy of `data` will be created internally inside the `rpc` library. You may encounter memory issues on the OpenMV Cam if you try to pass very large data arguments.
 

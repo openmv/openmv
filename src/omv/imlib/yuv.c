@@ -10,8 +10,7 @@
  */
 #include "imlib.h"
 
-void imlib_deyuv_line(int x_start, int x_end, int y_row, void *dst_row_ptr, pixformat_t pixfmt, image_t *src)
-{
+void imlib_deyuv_line(int x_start, int x_end, int y_row, void *dst_row_ptr, pixformat_t pixfmt, image_t *src) {
     int shift = (src->pixfmt == PIXFORMAT_YUV422) ? 16 : 0;
     int src_w = src->w, w_limit = src_w - 1;
 
@@ -102,8 +101,7 @@ void imlib_deyuv_line(int x_start, int x_end, int y_row, void *dst_row_ptr, pixf
     }
 }
 
-void imlib_deyuv_image(image_t *dst, image_t *src)
-{
+void imlib_deyuv_image(image_t *dst, image_t *src) {
     for (int y = 0, src_w = src->w, src_h = src->h; y < src_h; y++) {
         void *row_ptr = NULL;
 

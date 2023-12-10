@@ -278,7 +278,7 @@ LEP_RESULT LEP_SelectDevice(LEP_CAMERA_PORT_DESC_T_PTR portDescPtr,
  * @return LEP_RESULT  Lepton Error Code.  LEP_OK if all goes well,
  *         otherise and Lepton error code is retunred.
  */
-LEP_RESULT LEP_OpenPort(cambus_t *bus,
+LEP_RESULT LEP_OpenPort(omv_i2c_t *bus,
                         LEP_CAMERA_PORT_E portType,
                         LEP_UINT16   portBaudRate,
                         LEP_CAMERA_PORT_DESC_T_PTR portDescPtr)

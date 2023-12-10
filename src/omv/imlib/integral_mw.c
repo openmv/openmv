@@ -54,59 +54,55 @@
 #include "fb_alloc.h"
 
 // This macro swaps two pointers.
-#define SWAP_PTRS(a, b)  \
-    ({ __typeof__ (a) _t;\
-       (_t) = ( a);  \
-       ( a) = ( b);  \
-       ( b) = (_t); })
+#define SWAP_PTRS(a, b)   \
+    ({ __typeof__ (a) _t; \
+       (_t) = (a);        \
+       (a) = (b);         \
+       (b) = (_t); })
 
-void imlib_integral_mw_alloc(mw_image_t *sum, int w, int h)
-{
+void imlib_integral_mw_alloc(mw_image_t *sum, int w, int h) {
     sum->w = w;
     sum->h = h;
     sum->y_offs = 0;
-    sum->x_ratio = (1<<16)+1;
-    sum->y_ratio = (1<<16)+1;
+    sum->x_ratio = (1 << 16) + 1;
+    sum->y_ratio = (1 << 16) + 1;
     sum->data = fb_alloc(h * sizeof(*sum->data), FB_ALLOC_NO_HINT);
     // swap is used when shifting the image pointers
     // to avoid overwriting the image rows in sum->data
     sum->swap = fb_alloc(h * sizeof(*sum->data), FB_ALLOC_NO_HINT);
 
-    for (int i=0; i<h; i++) {
+    for (int i = 0; i < h; i++) {
         sum->data[i] = fb_alloc(w * sizeof(**sum->data), FB_ALLOC_NO_HINT);
     }
 }
 
-void imlib_integral_mw_free(mw_image_t *sum)
-{
-    for (int i=0; i<sum->h; i++) {
+void imlib_integral_mw_free(mw_image_t *sum) {
+    for (int i = 0; i < sum->h; i++) {
         fb_free();  // Free h lines
     }
     fb_free();  // Free data
     fb_free();  // Free swap
 }
 
-void imlib_integral_mw_scale(rectangle_t *roi, mw_image_t *sum, int w, int h)
-{
+void imlib_integral_mw_scale(rectangle_t *roi, mw_image_t *sum, int w, int h) {
     // Set new width
     // Note: height doesn't change
     sum->w = w;
     // Reset y offset
     sum->y_offs = 0;
     // Set scaling ratios
-    sum->x_ratio = (int)((roi->w<<16)/w)+1;
-    sum->y_ratio = (int)((roi->h<<16)/h)+1;
+    sum->x_ratio = (int) ((roi->w << 16) / w) + 1;
+    sum->y_ratio = (int) ((roi->h << 16) / h) + 1;
 }
 
-void imlib_integral_mw(image_t *src, mw_image_t *sum)
-{
+void imlib_integral_mw(image_t *src, mw_image_t *sum) {
     // Image pointers
-    typeof(*sum->data) *sum_data = sum->data;
+    typeof(*sum->data) * sum_data = sum->data;
 
     // Compute the first row to avoid branching
-    for (int sx, s=0, x=0; x<sum->w; x++) {
+    for (int sx, s = 0, x = 0; x < sum->w; x++) {
         // X offset
-        sx = (x*sum->x_ratio)>>16;
+        sx = (x * sum->x_ratio) >> 16;
 
         // Accumulate row data
         s += IM_TO_GS_PIXEL(src, sx, 0);
@@ -114,33 +110,32 @@ void imlib_integral_mw(image_t *src, mw_image_t *sum)
     }
 
     // Compute the remaining rows
-    for (int sy, y=1; y<sum->h; y++) {
+    for (int sy, y = 1; y < sum->h; y++) {
         // Y offset
-        sy = (y*sum->y_ratio)>>16;
+        sy = (y * sum->y_ratio) >> 16;
 
         // Sum the current row
-        for (int sx, s=0, x=0; x<sum->w; x++) {
+        for (int sx, s = 0, x = 0; x < sum->w; x++) {
             // X offset
-            sx = (x*sum->x_ratio)>>16;
+            sx = (x * sum->x_ratio) >> 16;
 
             // Accumulate row data
             s += IM_TO_GS_PIXEL(src, sx, sy);
-            sum_data[y][x] = s + sum_data[y-1][x];
+            sum_data[y][x] = s + sum_data[y - 1][x];
         }
     }
 
     sum->y_offs = sum->h;
 }
 
-void imlib_integral_mw_sq(image_t *src, mw_image_t *sum)
-{
+void imlib_integral_mw_sq(image_t *src, mw_image_t *sum) {
     // Image pointers
-    typeof(*sum->data) *sum_data = sum->data;
+    typeof(*sum->data) * sum_data = sum->data;
 
     // Compute the first row to avoid branching
-    for (int sx, s=0, x=0; x<sum->w; x++) {
+    for (int sx, s = 0, x = 0; x < sum->w; x++) {
         // X offset
-        sx = (x*sum->x_ratio)>>16;
+        sx = (x * sum->x_ratio) >> 16;
 
         // Accumulate row data
         s += IM_TO_GS_PIXEL(src, sx, 0) * IM_TO_GS_PIXEL(src, sx, 0);
@@ -148,97 +143,94 @@ void imlib_integral_mw_sq(image_t *src, mw_image_t *sum)
     }
 
     // Compute the remaining rows
-    for (int sy, y=1; y<sum->h; y++) {
+    for (int sy, y = 1; y < sum->h; y++) {
         // Y offset
-        sy = (y*sum->y_ratio)>>16;
+        sy = (y * sum->y_ratio) >> 16;
 
         // Sum the current row
-        for (int sx, s=0, x=0; x<sum->w; x++) {
+        for (int sx, s = 0, x = 0; x < sum->w; x++) {
             // X offset
-            sx = (x*sum->x_ratio)>>16;
+            sx = (x * sum->x_ratio) >> 16;
 
             // Accumulate row data
             s += IM_TO_GS_PIXEL(src, sx, sy) * IM_TO_GS_PIXEL(src, sx, sy);
-            sum_data[y][x] = s + sum_data[y-1][x];
+            sum_data[y][x] = s + sum_data[y - 1][x];
         }
     }
 
     sum->y_offs = sum->h;
 }
 
-void imlib_integral_mw_shift(image_t *src, mw_image_t *sum, int n)
-{
+void imlib_integral_mw_shift(image_t *src, mw_image_t *sum, int n) {
     // Shift integral image rows by n lines
-    for (int y=0; y<sum->h; y++) {
-        sum->swap[y] = sum->data[(y+n) % sum->h];
+    for (int y = 0; y < sum->h; y++) {
+        sum->swap[y] = sum->data[(y + n) % sum->h];
     }
 
     // Swap the data and swap pointers
     SWAP_PTRS(sum->data, sum->swap);
 
     // Pointer to the current sum data
-    typeof(*sum->data) *sum_data = sum->data;
+    typeof(*sum->data) * sum_data = sum->data;
 
     // Compute the last n lines
-    for (int sy, y=(sum->h - n); y<sum->h; y++, sum->y_offs++) {
+    for (int sy, y = (sum->h - n); y < sum->h; y++, sum->y_offs++) {
         // Y offset
-        sy = (sum->y_offs*sum->y_ratio)>>16;
+        sy = (sum->y_offs * sum->y_ratio) >> 16;
 
         // Sum the current row
-        for (int sx, s=0, x=0; x<sum->w; x++) {
+        for (int sx, s = 0, x = 0; x < sum->w; x++) {
             // X offset
-            sx = (x*sum->x_ratio)>>16;
+            sx = (x * sum->x_ratio) >> 16;
 
             // Accumulate row data
             s += IM_TO_GS_PIXEL(src, sx, sy);
-            sum_data[y][x] = s + sum_data[y-1][x];
+            sum_data[y][x] = s + sum_data[y - 1][x];
         }
     }
 }
 
-void imlib_integral_mw_shift_sq(image_t *src, mw_image_t *sum, int n)
-{
+void imlib_integral_mw_shift_sq(image_t *src, mw_image_t *sum, int n) {
     // Shift integral image rows by n lines
-    for (int y=0; y<sum->h; y++) {
-        sum->swap[y] = sum->data[(y+n) % sum->h];
+    for (int y = 0; y < sum->h; y++) {
+        sum->swap[y] = sum->data[(y + n) % sum->h];
     }
 
     // Swap data and swap pointers
     SWAP_PTRS(sum->data, sum->swap);
 
     // Pointer to the current sum data
-    typeof(*sum->data) *sum_data = sum->data;
+    typeof(*sum->data) * sum_data = sum->data;
 
     // Compute the last n lines
-    for (int sy, y=(sum->h - n); y<sum->h; y++, sum->y_offs++) {
+    for (int sy, y = (sum->h - n); y < sum->h; y++, sum->y_offs++) {
         // The y offset is set to the last line + 1
-        sy = (sum->y_offs*sum->y_ratio)>>16;
+        sy = (sum->y_offs * sum->y_ratio) >> 16;
 
         // Sum the current row
-        for (int sx, s=0, x=0; x<sum->w; x++) {
+        for (int sx, s = 0, x = 0; x < sum->w; x++) {
             // X offset
-            sx = (x*sum->x_ratio)>>16;
+            sx = (x * sum->x_ratio) >> 16;
 
             // Accumulate row data
             s += IM_TO_GS_PIXEL(src, sx, sy) * IM_TO_GS_PIXEL(src, sx, sy);
-            sum_data[y][x] = (s + sum_data[y-1][x]);
+            sum_data[y][x] = (s + sum_data[y - 1][x]);
         }
     }
 }
 
-void imlib_integral_mw_ss(image_t *src, mw_image_t *sum, mw_image_t *ssq, rectangle_t *roi)
-{
+void imlib_integral_mw_ss(image_t *src, mw_image_t *sum, mw_image_t *ssq, rectangle_t *roi) {
     // Image data pointers
-    typeof(*sum->data) *sum_data = sum->data;
-    typeof(*sum->data) *ssq_data = ssq->data;
+    typeof(*sum->data) * sum_data = sum->data;
+    typeof(*sum->data) * ssq_data = ssq->data;
 
     // Compute the first row to avoid branching
-    for (int sx, s=0, sq=0, x=0; x<sum->w; x++) {
+    for (int sx, s = 0, sq = 0, x = 0; x < sum->w; x++) {
         // X offset
-        sx = roi->x+((x*sum->x_ratio)>>16);
+        sx = roi->x + ((x * sum->x_ratio) >> 16);
 
         // Accumulate row data
-        s  += IM_TO_GS_PIXEL(src, sx, roi->y);
+        s += IM_TO_GS_PIXEL(src, sx, roi->y);
         sq += IM_TO_GS_PIXEL(src, sx, roi->y) * IM_TO_GS_PIXEL(src, sx, roi->y);
 
         sum_data[0][x] = s;
@@ -246,21 +238,21 @@ void imlib_integral_mw_ss(image_t *src, mw_image_t *sum, mw_image_t *ssq, rectan
     }
 
     // Compute the last n lines
-    for (int sy, y=1; y<sum->h; y++) {
+    for (int sy, y = 1; y < sum->h; y++) {
         // Y offset
-        sy = roi->y+((y*sum->y_ratio)>>16);
+        sy = roi->y + ((y * sum->y_ratio) >> 16);
 
         // Sum the current row
-        for (int sx, s=0, sq=0, x=0; x<sum->w; x++) {
+        for (int sx, s = 0, sq = 0, x = 0; x < sum->w; x++) {
             // X offset
-            sx = roi->x+((x*sum->x_ratio)>>16);
+            sx = roi->x + ((x * sum->x_ratio) >> 16);
 
             // Accumulate row data
-            s  += IM_TO_GS_PIXEL(src, sx, sy);
+            s += IM_TO_GS_PIXEL(src, sx, sy);
             sq += IM_TO_GS_PIXEL(src, sx, sy) * IM_TO_GS_PIXEL(src, sx, sy);
 
-            sum_data[y][x] = s + sum_data[y-1][x];
-            ssq_data[y][x] = sq + ssq_data[y-1][x];
+            sum_data[y][x] = s + sum_data[y - 1][x];
+            ssq_data[y][x] = sq + ssq_data[y - 1][x];
         }
     }
 
@@ -268,12 +260,11 @@ void imlib_integral_mw_ss(image_t *src, mw_image_t *sum, mw_image_t *ssq, rectan
     ssq->y_offs = sum->h;
 }
 
-void imlib_integral_mw_shift_ss(image_t *src, mw_image_t *sum, mw_image_t *ssq, rectangle_t *roi, int n)
-{
+void imlib_integral_mw_shift_ss(image_t *src, mw_image_t *sum, mw_image_t *ssq, rectangle_t *roi, int n) {
     // Shift integral image rows by n lines
-    for (int y=0; y<sum->h; y++) {
-        sum->swap[y] = sum->data[(y+n) % sum->h];
-        ssq->swap[y] = ssq->data[(y+n) % ssq->h];
+    for (int y = 0; y < sum->h; y++) {
+        sum->swap[y] = sum->data[(y + n) % sum->h];
+        ssq->swap[y] = ssq->data[(y + n) % ssq->h];
     }
 
     // Swap the data and swap pointers
@@ -281,33 +272,32 @@ void imlib_integral_mw_shift_ss(image_t *src, mw_image_t *sum, mw_image_t *ssq, 
     SWAP_PTRS(ssq->data, ssq->swap);
 
     // Pointer to the current sum and ssq data
-    typeof(*sum->data) *sum_data = sum->data;
-    typeof(*ssq->data) *ssq_data = ssq->data;
+    typeof(*sum->data) * sum_data = sum->data;
+    typeof(*ssq->data) * ssq_data = ssq->data;
 
     // Compute the last n lines
-    for (int sy, y=(sum->h - n); y<sum->h; y++, sum->y_offs++, ssq->y_offs++) {
+    for (int sy, y = (sum->h - n); y < sum->h; y++, sum->y_offs++, ssq->y_offs++) {
         // The y offset is set to the last line + 1
-        sy = roi->y+((sum->y_offs*sum->y_ratio)>>16);
+        sy = roi->y + ((sum->y_offs * sum->y_ratio) >> 16);
 
         // Sum of the current row
-        for (int sx, s=0, sq=0, x=0; x<sum->w; x++) {
+        for (int sx, s = 0, sq = 0, x = 0; x < sum->w; x++) {
             // X offset
-            sx = roi->x+((x*sum->x_ratio)>>16);
+            sx = roi->x + ((x * sum->x_ratio) >> 16);
 
             // Accumulate row data
-            s  += IM_TO_GS_PIXEL(src, sx, sy);
+            s += IM_TO_GS_PIXEL(src, sx, sy);
             sq += IM_TO_GS_PIXEL(src, sx, sy) * IM_TO_GS_PIXEL(src, sx, sy);
 
-            sum_data[y][x] = s  + sum_data[y-1][x];
-            ssq_data[y][x] = sq + ssq_data[y-1][x];
+            sum_data[y][x] = s + sum_data[y - 1][x];
+            ssq_data[y][x] = sq + ssq_data[y - 1][x];
         }
     }
 }
 
-long imlib_integral_mw_lookup(mw_image_t *sum, int x, int y, int w, int h)
-{
-#define PIXEL_AT(x,y)\
+long imlib_integral_mw_lookup(mw_image_t *sum, int x, int y, int w, int h) {
+#define PIXEL_AT(x, y) \
     (sum->data[(y)][x])
-    return PIXEL_AT(w+x, h+y) + PIXEL_AT(x, y) - PIXEL_AT(w+x, y) - PIXEL_AT(x, h+y);
+    return PIXEL_AT(w + x, h + y) + PIXEL_AT(x, y) - PIXEL_AT(w + x, y) - PIXEL_AT(x, h + y);
 #undef  PIXEL_AT
 }

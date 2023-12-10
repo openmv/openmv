@@ -42,6 +42,10 @@ $(BUILD)/%.o : %.c
 	$(ECHO) "CC $<"
 	$(CC) $(CFLAGS) -c -o $@ $<
 
+$(BUILD)/%.o: %.S
+	$(ECHO) "CC $<"
+	$(CC) $(CFLAGS) -c -o $@ $<
+
 $(BUILD)/%.o : %.s
 	$(ECHO) "AS $<"
 	$(AS) $(AFLAGS) $< -o $@

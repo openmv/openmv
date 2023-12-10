@@ -1,0 +1,55 @@
+Release Name: blhost
+Release Version: 2.6.7
+Package License: LA_OPT_NXP_Software_License.htm - Production Use, Section 2.3 applies
+
+Host tools Source              Description: Source code for blhost                        
+							   Author: Freescale                                 
+							   License: Open Source - BSD-3-Clause               
+							   Format: source code                               
+							   Location: src                     
+
+Host tools - Serial support	   Description: Windows Serial peripheral support    
+                               Author: Bus Pirate Project                        
+                               License: Open Source - CC0-1.0 (Creative Commons Zero)                                             
+                               URL: http://code.google.com/p/the-bus-pirate/     
+                               Format: source code                               
+                               Location:                                         
+                               src/blfwk/serial.h,     
+                               src/blfwk/src/serial.c  
+
+Host tools - USB HID       	   Description: Windows USB HID support              
+support                        Author: HIDAPI                                    
+                               License: Open Source - BSD-3-Clause               
+                               URL: http://github.com/signal11/hidapi            
+                               Format: source code                               
+                               Location:                                         
+                               src/blfwk/hidapi.h,     
+                               src/blfwk/src/hid-*.c   
+
+Host tools - JSON support      Description: Windows JSON support                 
+                               Author: JSONCPP                                   
+                               License: Open Source - MIT                        
+                               Format: source code                               
+                               Location:                                         
+                               src/blfwk/json.h,       
+                               src/jsoncpp.cpp                                                 
+
+Host tools - options           Description: Command line parsing utility         
+support                    	   Author: bradapp@enteract.com                      
+                               License: Open Source - MIT                        
+                               URL: http://www.bradapp.com                       
+                               Format: source code                               
+                               Location:                                         
+                               src/blfwk/options.h,    
+                               src/options.cpp                                                                               
+
+Host tools - blfwk.lib         Description: C++ interface to the Vincent Rijmen's
+                               Rijndael block cipher                             
+                               Author: Szymon Stefanek (stefanek@tin.it)         
+                               License: Public Domain                            
+                               URL:                                              
+                               http://www.pragmaware.net/software/rijndael/index.php                                               
+                               Format: source code                               
+                               Location:                                         
+                               src/blfwk/rijndael.h,   
+                               src/blfwk/src/rijndael.cpp

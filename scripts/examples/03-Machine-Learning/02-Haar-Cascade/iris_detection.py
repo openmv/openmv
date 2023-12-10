@@ -1,3 +1,7 @@
+# This work is licensed under the MIT license.
+# Copyright (c) 2013-2023 OpenMV LLC. All rights reserved.
+# https://github.com/openmv/openmv/blob/master/LICENSE
+#
 # Iris Detection 2 Example
 #
 # This example shows how to find the eye gaze (pupil detection) after finding
@@ -7,7 +11,9 @@
 #
 # Note: This script does not detect a face first, use it with the telephoto lens.
 
-import sensor, time, image
+import sensor
+import time
+import image
 
 # Reset sensor
 sensor.reset()
@@ -32,7 +38,7 @@ print(eyes_cascade)
 # FPS clock
 clock = time.clock()
 
-while (True):
+while True:
     clock.tick()
     # Capture snapshot
     img = sensor.snapshot()

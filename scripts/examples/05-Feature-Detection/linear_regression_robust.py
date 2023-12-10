@@ -1,3 +1,7 @@
+# This work is licensed under the MIT license.
+# Copyright (c) 2013-2023 OpenMV LLC. All rights reserved.
+# https://github.com/openmv/openmv/blob/master/LICENSE
+#
 # Robust Linear Regression Example
 #
 # This example shows off how to use the get_regression() method on your OpenMV Cam
@@ -12,19 +16,19 @@
 # TO LIMIT THE NUMBER OF PIXELS the robust algorithm works on or it can actually
 # take seconds for the algorithm to give you a result... THRESHOLD VERY CAREFULLY!
 
-THRESHOLD = (0, 100) # Grayscale threshold for dark things...
-BINARY_VISIBLE = True # Does binary first so you can see what the linear regression
-                      # is being run on... might lower FPS though.
+import sensor
+import time
 
-import sensor, image, time
+THRESHOLD = (0, 100)  # Grayscale threshold for dark things.
+BINARY_VISIBLE = True  # Binary pass first to see what linear regression is running on.
 
 sensor.reset()
 sensor.set_pixformat(sensor.GRAYSCALE)
-sensor.set_framesize(sensor.QQQVGA) # 80x60 (4,800 pixels) - O(N^2) max = 2,3040,000.
-sensor.skip_frames(time = 2000)     # WARNING: If you use QQVGA it may take seconds
-clock = time.clock()                # to process a frame sometimes.
+sensor.set_framesize(sensor.QQQVGA)  # 80x60 (4,800 pixels) - O(N^2) max = 2,3040,000.
+sensor.skip_frames(time=2000)  # WARNING: If you use QQVGA it may take seconds
+clock = time.clock()  # to process a frame sometimes.
 
-while(True):
+while True:
     clock.tick()
     img = sensor.snapshot().binary([THRESHOLD]) if BINARY_VISIBLE else sensor.snapshot()
 
@@ -35,10 +39,15 @@ while(True):
     # magnitude() represents how well the linear regression worked. It means something
     # different for the robust linear regression. In general, the larger the value the
     # better...
-    line = img.get_regression([(255,255) if BINARY_VISIBLE else THRESHOLD], robust = True)
+    line = img.get_regression(
+        [(255, 255) if BINARY_VISIBLE else THRESHOLD], robust=True
+    )
 
-    if (line): img.draw_line(line.line(), color = 127)
-    print("FPS %f, mag = %s" % (clock.fps(), str(line.magnitude()) if (line) else "N/A"))
+    if line:
+        img.draw_line(line.line(), color=127)
+    print(
+        "FPS %f, mag = %s" % (clock.fps(), str(line.magnitude()) if (line) else "N/A")
+    )
 
 # About negative rho values:
 #

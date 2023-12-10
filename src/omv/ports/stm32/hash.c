@@ -11,16 +11,15 @@
 #if (OMV_ENABLE_HASH == 1)
 #include STM32_HAL_H
 #include <stdbool.h>
-#include <ff_wrapper.h>
 #include <stdio.h>
-#include "fb_alloc.h"
 #include "hash.h"
+#include "fb_alloc.h"
+#include "file_utils.h"
 
-#define BLOCK_SIZE         (512)
-static HASH_HandleTypeDef  hhash;
+#define BLOCK_SIZE    (512)
+static HASH_HandleTypeDef hhash;
 
-int hash_start()
-{
+int hash_start() {
     if (HAL_HASH_DeInit(&hhash) != HAL_OK) {
         return -1;
     }
@@ -28,8 +27,7 @@ int hash_start()
     HAL_HASH_Init(&hhash);
 }
 
-int hash_update(uint8_t *buffer, uint32_t size)
-{
+int hash_update(uint8_t *buffer, uint32_t size) {
     if ((size % 4) != 0) {
         return -1;
     }
@@ -41,8 +39,7 @@ int hash_update(uint8_t *buffer, uint32_t size)
     return 0;
 }
 
-int hash_digest(uint8_t *buffer, uint32_t size, uint8_t *digest)
-{
+int hash_digest(uint8_t *buffer, uint32_t size, uint8_t *digest) {
     if (HAL_HASH_MD5_Start(&hhash, buffer, size, digest, 0xFF) != HAL_OK) {
         return -1;
     }
@@ -50,17 +47,16 @@ int hash_digest(uint8_t *buffer, uint32_t size, uint8_t *digest)
     return 0;
 }
 
-int hash_from_file(const char *path, uint8_t *digest)
-{
+int hash_from_file(const char *path, uint8_t *digest) {
     FIL fp;
     uint32_t offset = 0;
     UINT bytes = 0;
-    UINT bytes_out=0;
+    UINT bytes_out = 0;
 
     int ret = -1;
-    uint8_t	*buf = fb_alloc(BLOCK_SIZE, FB_ALLOC_NO_HINT);
+    uint8_t *buf = fb_alloc(BLOCK_SIZE, FB_ALLOC_NO_HINT);
 
-    if (f_open_helper(&fp, path, FA_READ|FA_OPEN_EXISTING) != FR_OK) {
+    if (file_ll_open(&fp, path, FA_READ | FA_OPEN_EXISTING) != FR_OK) {
         goto error;
     }
 
@@ -70,7 +66,7 @@ int hash_from_file(const char *path, uint8_t *digest)
     while (size) {
         // Read a block.
         bytes = MIN(size, BLOCK_SIZE);
-        if (f_read(&fp, buf, bytes, &bytes_out) != FR_OK || bytes != bytes_out) {
+        if (file_ll_read(&fp, buf, bytes, &bytes_out) != FR_OK || bytes != bytes_out) {
             printf("hash_from_file: file read error!\n");
             goto error;
         }
@@ -96,7 +92,7 @@ int hash_from_file(const char *path, uint8_t *digest)
 
 error:
     fb_free();
-    f_close(&fp);
+    file_ll_close(&fp);
     return ret;
 }
 #endif //OMV_ENABLE_HASH == 1

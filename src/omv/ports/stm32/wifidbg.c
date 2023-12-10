@@ -24,7 +24,6 @@
 #include "socket/include/socket.h"
 #include "driver/include/m2m_wifi.h"
 #include "usbdbg.h"
-#include "cambus.h"
 #include "sensor.h"
 #include "framebuffer.h"
 #include "wifidbg.h"
@@ -32,21 +31,21 @@
 #include STM32_HAL_H
 
 #ifndef WIFIDBG_MIN
-#define WIFIDBG_MIN(x, y) ((x) < (y) ? (x) : (y))
+#define WIFIDBG_MIN(x, y)            ((x) < (y) ? (x) : (y))
 #endif
 
-#define WIFIDBG_BCAST_ADDR          ((uint8_t [4]){255, 255, 255, 255})
-#define WIFIDBG_BCAST_PORT          (0xABD1)
-#define WIFIDBG_SERVER_ADDR         ((uint8_t [4]){192, 168, 1, 1})
-#define WIFIDBG_SERVER_PORT         (9000)
-#define WIFIDBG_BUFFER_SIZE         (SOCKET_BUFFER_MAX_LENGTH)
+#define WIFIDBG_BCAST_ADDR           ((uint8_t [4]) {255, 255, 255, 255})
+#define WIFIDBG_BCAST_PORT           (0xABD1)
+#define WIFIDBG_SERVER_ADDR          ((uint8_t [4]) {192, 168, 1, 1})
+#define WIFIDBG_SERVER_PORT          (9000)
+#define WIFIDBG_BUFFER_SIZE          (SOCKET_BUFFER_MAX_LENGTH)
 
-#define WIFIDBG_BCAST_STRING        "%d.%d.%d.%d:%d:%s"
-#define WIFIDBG_BCAST_STRING_SIZE   4+4+4+4+6+WINC_MAX_BOARD_NAME_LEN+1
-#define WIFIDBG_BCAST_INTERVAL_MS   (1000)
-#define WIFIDBG_POLL_INTERVAL_MS    (10)
+#define WIFIDBG_BCAST_STRING         "%d.%d.%d.%d:%d:%s"
+#define WIFIDBG_BCAST_STRING_SIZE    4 + 4 + 4 + 4 + 6 + WINC_MAX_BOARD_NAME_LEN + 1
+#define WIFIDBG_BCAST_INTERVAL_MS    (1000)
+#define WIFIDBG_POLL_INTERVAL_MS     (10)
 
-#define WIFIDBG_SOCKET_TIMEOUT(x) (x == -ETIMEDOUT || x == SOCK_ERR_TIMEOUT)
+#define WIFIDBG_SOCKET_TIMEOUT(x)    (x == -ETIMEDOUT || x == SOCK_ERR_TIMEOUT)
 
 typedef struct wifidbg {
     int client_fd;
@@ -61,8 +60,7 @@ typedef struct wifidbg {
 
 static wifidbg_t wifidbg;
 
-void wifidbg_close_sockets(wifidbg_t *wifidbg)
-{
+void wifidbg_close_sockets(wifidbg_t *wifidbg) {
     winc_socket_close(wifidbg->client_fd);
     winc_socket_close(wifidbg->server_fd);
     winc_socket_close(wifidbg->bcast_fd);
@@ -71,12 +69,11 @@ void wifidbg_close_sockets(wifidbg_t *wifidbg)
     wifidbg->bcast_fd = -1;
 }
 
-int wifidbg_broadcast(wifidbg_t *wifidbg)
-{
+int wifidbg_broadcast(wifidbg_t *wifidbg) {
     if ((systick_current_millis() - wifidbg->last_bcast) > WIFIDBG_BCAST_INTERVAL_MS) {
         MAKE_SOCKADDR(bcast_sockaddr, WIFIDBG_BCAST_ADDR, WIFIDBG_BCAST_PORT);
         if (winc_socket_sendto(wifidbg->bcast_fd, (uint8_t *) wifidbg->bcast_packet,
-                    strlen(wifidbg->bcast_packet) + 1, &bcast_sockaddr, 10) < 0) {
+                               strlen(wifidbg->bcast_packet) + 1, &bcast_sockaddr, 10) < 0) {
             return -1;
         }
         wifidbg->last_bcast = systick_current_millis();
@@ -84,8 +81,7 @@ int wifidbg_broadcast(wifidbg_t *wifidbg)
     return 0;
 }
 
-void wifidbg_pendsv_callback(void)
-{
+void wifidbg_pendsv_callback(void) {
     int ret = 0;
     uint32_t request = 0;
     uint8_t buf[WIFIDBG_BUFFER_SIZE];
@@ -152,7 +148,7 @@ void wifidbg_pendsv_callback(void)
 
     // Process the request command.
     request = cmdbuf[1];
-    uint32_t xfer_length = *((uint32_t*)(cmdbuf+2));
+    uint32_t xfer_length = *((uint32_t *) (cmdbuf + 2));
     usbdbg_control(NULL, request, xfer_length);
 
     while (xfer_length) {
@@ -186,24 +182,23 @@ exit_dispatch:
     return;
 }
 
-void wifidbg_systick_callback(uint32_t ticks_ms)
-{
+void wifidbg_systick_callback(uint32_t ticks_ms) {
     if (usb_cdc_debug_mode_enabled() == false &&
-            (ticks_ms - wifidbg.last_dispatch) > WIFIDBG_POLL_INTERVAL_MS) {
+        (ticks_ms - wifidbg.last_dispatch) > WIFIDBG_POLL_INTERVAL_MS) {
         pendsv_schedule_dispatch(PENDSV_DISPATCH_WINC, wifidbg_pendsv_callback);
         wifidbg.last_dispatch = systick_current_millis();
     }
 }
 
-int wifidbg_init(wifidbg_config_t *config)
-{
+int wifidbg_init(wifidbg_config_t *config) {
     memset(&wifidbg, 0, sizeof(wifidbg_t));
 
     wifidbg.client_fd = -1;
     wifidbg.server_fd = -1;
     wifidbg.bcast_fd = -1;
 
-    if(!config->mode) { // STA Mode
+    if (!config->mode) {
+        // STA Mode
 
         // Initialize WiFi in STA mode.
         if (winc_init(WINC_MODE_STA) != 0) {
@@ -226,7 +221,8 @@ int wifidbg_init(wifidbg_config_t *config)
 
         memcpy(wifidbg.ipaddr, ifconfig.ip_addr, WINC_IPV4_ADDR_LEN);
 
-    } else { // AP Mode
+    } else {
+        // AP Mode
 
         // Initialize WiFi in AP mode.
         if (winc_init(WINC_MODE_AP) != 0) {
@@ -251,8 +247,7 @@ int wifidbg_init(wifidbg_config_t *config)
     return 0;
 }
 
-void wifidbg_set_irq_enabled(bool enable)
-{
+void wifidbg_set_irq_enabled(bool enable) {
     if (enable) {
         // Re-enable Systick dispatch.
         systick_enable_dispatch(SYSTICK_DISPATCH_WINC, wifidbg_systick_callback);
@@ -263,4 +258,5 @@ void wifidbg_set_irq_enabled(bool enable)
 #endif // OMV_ENABLE_WIFIDBG && MICROPY_PY_WINC1500
 
 // Old timer dispatch, will be removed.
-void wifidbg_dispatch() {}
+void wifidbg_dispatch() {
+}

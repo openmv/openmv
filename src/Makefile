@@ -62,11 +62,13 @@ MLX90640_DIR=drivers/mlx90640
 MLX90641_DIR=drivers/mlx90641
 VL53L5CX_DIR=drivers/vl53l5cx
 PIXART_DIR=drivers/pixart
+DISPLAY_DIR=drivers/display
 LIBPDM_DIR=lib/libpdm
 TENSORFLOW_DIR=lib/libtf
 OMV_BOARD_CONFIG_DIR=$(TOP_DIR)/$(OMV_DIR)/boards/$(TARGET)/
+OMV_PORT_DIR=$(TOP_DIR)/$(OMV_DIR)/ports/$(PORT)
 MP_BOARD_CONFIG_DIR=$(TOP_DIR)/$(MICROPY_DIR)/ports/$(PORT)/boards/$(TARGET)/
-MPY_LIB_DIR=$(TOP_DIR)/../scripts/libraries
+OMV_LIB_DIR=$(TOP_DIR)/../scripts/libraries
 FROZEN_MANIFEST=$(OMV_BOARD_CONFIG_DIR)/manifest.py
 OMV_COMMON_DIR=$(TOP_DIR)/$(OMV_DIR)/common
 
@@ -106,9 +108,12 @@ include $(OMV_BOARD_CONFIG_DIR)/omv_boardconfig.mk
 #OMV_SRC_QSTR := $(wildcard $(TOP_DIR)/$(OMV_DIR)/modules/*.c)
 
 # The following command line args are passed to MicroPython's top Makefile.
-MICROPY_ARGS = PORT=$(PORT) BOARD=$(TARGET) DEBUG=$(DEBUG) MPY_LIB_DIR=$(MPY_LIB_DIR)\
+MICROPY_ARGS = PORT=$(PORT) BOARD=$(TARGET) DEBUG=$(DEBUG) MICROPY_MANIFEST_OMV_LIB_DIR=$(OMV_LIB_DIR)\
                FROZEN_MANIFEST=$(FROZEN_MANIFEST) OMV_SRC_QSTR="$(OMV_SRC_QSTR)"\
                MICROPY_ROM_TEXT_COMPRESSION=$(ROM_TEXT_COMPRESSION) USER_C_MODULES=$(TOP_DIR)/$(OMV_DIR)
+
+# TinyUSB CDC debugger PendSV dispatch entry
+MPY_PENDSV_ENTRIES += PENDSV_DISPATCH_CDC,
 
 # Configure additional built-in modules. Note must define both the CFLAGS and the Make command line args.
 ifeq ($(MICROPY_PY_SENSOR), 1)
@@ -119,6 +124,7 @@ endif
 ifeq ($(MICROPY_PY_WINC1500), 1)
 MPY_CFLAGS += -DMICROPY_PY_WINC1500=1
 MICROPY_ARGS += MICROPY_PY_WINC1500=1
+MPY_PENDSV_ENTRIES += PENDSV_DISPATCH_WINC,
 endif
 
 ifeq ($(MICROPY_PY_IMU), 1)
@@ -168,9 +174,9 @@ MPY_CFLAGS += -DMICROPY_PY_MICRO_SPEECH=1
 MICROPY_ARGS += MICROPY_PY_MICRO_SPEECH=1
 endif
 
-ifeq ($(MICROPY_PY_LCD), 1)
-MPY_CFLAGS += -DMICROPY_PY_LCD=1
-MICROPY_ARGS += MICROPY_PY_LCD=1
+ifeq ($(MICROPY_PY_DISPLAY), 1)
+MPY_CFLAGS += -DMICROPY_PY_DISPLAY=1
+MICROPY_ARGS += MICROPY_PY_DISPLAY=1
 endif
 
 ifeq ($(MICROPY_PY_TV), 1)
@@ -188,8 +194,12 @@ MPY_CFLAGS += -DMICROPY_PY_CUBEAI=1
 MICROPY_ARGS += MICROPY_PY_CUBEAI=1
 endif
 
+MPY_PENDSV_ENTRIES := $(shell echo $(MPY_PENDSV_ENTRIES) | tr -d '[:space:]')
+MPY_CFLAGS += -DMICROPY_BOARD_PENDSV_ENTRIES="$(MPY_PENDSV_ENTRIES)"
+MPY_CFLAGS += -DMP_CONFIGFILE=\<$(OMV_PORT_DIR)/omv_mpconfigport.h\>
+
 # Include the port Makefile.
-include $(OMV_DIR)/ports/$(PORT)/omv_portconfig.mk
+include $(OMV_PORT_DIR)/omv_portconfig.mk
 
 clean:
 	$(RM) -fr $(BUILD)

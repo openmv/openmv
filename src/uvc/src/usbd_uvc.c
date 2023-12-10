@@ -64,7 +64,7 @@
 #include "usbd_ctlreq.h"
 #include "usbd_types.h"
 #include "uvc_desc.h"
-#include "cambus.h"
+#include "omv_i2c.h"
 #include "sensor.h"
 extern sensor_t sensor;
 
@@ -380,7 +380,7 @@ __ALIGN_BEGIN struct usbd_uvc_cfg USBD_UVC_CfgFSDesc __ALIGN_END = {
       .bDescriptorSubType = UVC_VC_OUTPUT_TERMINAL, // 3 (OUTPUT_TERMINAL)
       .bTerminalID = VC_OUTPUT_TERMINAL_ID,    // 2 ID of this Terminal
       .wTerminalType = UVC_TT_STREAMING,           // 0x0101 USB streaming terminal
-      .bAssocTerminal = 0x00,                      // 0 no Terminal assiciated
+      .bAssocTerminal = 0x00,                      // 0 no Terminal associated
       .bSourceID = 0x03,                           // 1 input pin connected to output pin unit 1
       .iTerminal = 0x00,                           // 0 no description available
     },

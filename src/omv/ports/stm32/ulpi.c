@@ -6,38 +6,38 @@
  * License. You may obtain a copy of the License at:
  *                        opensource.org/licenses/BSD-3-Clause
  *
- * USB3320 ULPI functions ported from stm32f7xx_lp_modes.c 
+ * USB3320 ULPI functions ported from stm32f7xx_lp_modes.c
  */
-#include <stdint.h>
-#include "ulpi.h"
 #include "omv_boardconfig.h"
 
 #if (OMV_USB_ULPI == 1)
 #include STM32_HAL_H
+#include <stdint.h>
+#include "ulpi.h"
+#include "omv_gpio.h"
 
-#define USBULPI_PHYCR       ((uint32_t)(0x40040000 + 0x034))
-#define USBULPI_D07         ((uint32_t)0x000000FF)
-#define USBULPI_New         ((uint32_t)0x02000000)
-#define USBULPI_RW          ((uint32_t)0x00400000)
-#define USBULPI_S_BUSY      ((uint32_t)0x04000000)
-#define USBULPI_S_DONE      ((uint32_t)0x08000000)
+#define USBULPI_PHYCR                      ((uint32_t) (0x40040000 + 0x034))
+#define USBULPI_D07                        ((uint32_t) 0x000000FF)
+#define USBULPI_New                        ((uint32_t) 0x02000000)
+#define USBULPI_RW                         ((uint32_t) 0x00400000)
+#define USBULPI_S_BUSY                     ((uint32_t) 0x04000000)
+#define USBULPI_S_DONE                     ((uint32_t) 0x08000000)
 
-#define USB_OTG_READ_REG32(reg)  (*(__IO uint32_t *)(reg))
-#define USB_OTG_WRITE_REG32(reg,value) (*(__IO uint32_t *)(reg) = (value))
+#define USB_OTG_READ_REG32(reg)            (*(__IO uint32_t *) (reg))
+#define USB_OTG_WRITE_REG32(reg, value)    (*(__IO uint32_t *) (reg) = (value))
 
 #if defined(STM32H7)
-#define GPIO_AF10_OTG_HS    (GPIO_AF10_OTG2_HS)
+#define GPIO_AF10_OTG_HS                   (GPIO_AF10_OTG2_HS)
 #endif
 
 extern void __fatal_error(const char *msg);
 
 /**
-  * @brief  Read CR value
-  * @param  Addr the Address of the ULPI Register
-  * @retval Returns value of PHY CR register
-  */
-static uint32_t USB_ULPI_Read(uint32_t Addr)
-{
+ * @brief  Read CR value
+ * @param  Addr the Address of the ULPI Register
+ * @retval Returns value of PHY CR register
+ */
+static uint32_t USB_ULPI_Read(uint32_t Addr) {
     __IO uint32_t val = 0;
     __IO uint32_t timeout = 100; /* Can be tuned based on the Clock or etc... */
 
@@ -51,13 +51,12 @@ static uint32_t USB_ULPI_Read(uint32_t Addr)
 }
 
 /**
-  * @brief  Write CR value
-  * @param  Addr the Address of the ULPI Register
-  * @param  Data Data to write
-  * @retval Returns value of PHY CR register
-  */
-static uint32_t USB_ULPI_Write(uint32_t Addr, uint32_t Data)
-{
+ * @brief  Write CR value
+ * @param  Addr the Address of the ULPI Register
+ * @param  Data Data to write
+ * @retval Returns value of PHY CR register
+ */
+static uint32_t USB_ULPI_Write(uint32_t Addr, uint32_t Data) {
     __IO uint32_t val;
     __IO uint32_t timeout = 10;   /* Can be tuned based on the Clock or etc... */
 
@@ -72,12 +71,11 @@ static uint32_t USB_ULPI_Write(uint32_t Addr, uint32_t Data)
 }
 
 /**
-  * @brief  This function configures the USB PHY to enter the low power mode
-  * @param  None
-  * @retval None
-  */
-void ulpi_enter_low_power(void)
-{
+ * @brief  This function configures the USB PHY to enter the low power mode
+ * @param  None
+ * @retval None
+ */
+void ulpi_enter_low_power(void) {
     __IO uint32_t regval = 0;
 
     /* disable ULPI_CLK by accessing ULPI_PHY */
@@ -123,7 +121,7 @@ void ulpi_enter_low_power(void)
     regval = USB_ULPI_Read(0x07);
     /* write InterfaceControl reg,to disable PullUp on stp,
        to avoid USB_PHY wake up when MCU entering standby */
-    USB_ULPI_Write(0x07, regval | 0x80) ;
+    USB_ULPI_Write(0x07, regval | 0x80);
     /* read InterfaceControl reg */
     regval = USB_ULPI_Read(0x07);
     if (regval != 0x80) {
@@ -156,46 +154,27 @@ void ulpi_enter_low_power(void)
  * @param  None
  * @retval None
  */
-void ulpi_leave_low_power(void)
-{
-    GPIO_InitTypeDef  GPIO_InitStruct;
-
+void ulpi_leave_low_power(void) {
     /* Enable GPIO clock for OTG USB STP pin */
-    __HAL_RCC_GPIOC_CLK_ENABLE();
-    OMV_USB_ULPI_DIR_CLK_ENABLE();
+    omv_gpio_clock_enable(OMV_USB_ULPI_STP_PIN, true);
+    omv_gpio_clock_enable(OMV_USB_ULPI_DIR_PIN, true);
 
-    /* Set OTG STP pin as GP Output  */
-    GPIO_InitStruct.Pin = GPIO_PIN_0;
-    GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-    GPIO_InitStruct.Pull = GPIO_NOPULL;
-    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
-    HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
-
-    GPIO_InitStruct.Pin = OMV_USB_ULPI_DIR_PIN;
-    GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
-    GPIO_InitStruct.Pull = GPIO_NOPULL;
-    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
-    HAL_GPIO_Init(OMV_USB_ULPI_DIR_PORT, &GPIO_InitStruct);
+    /* Configure OTG STP and DIR pin as GP Output  */
+    omv_gpio_config(OMV_USB_ULPI_STP_PIN, OMV_GPIO_MODE_OUTPUT, OMV_GPIO_PULL_NONE, OMV_GPIO_SPEED_LOW, -1);
+    omv_gpio_config(OMV_USB_ULPI_DIR_PIN, OMV_GPIO_MODE_INPUT, OMV_GPIO_PULL_NONE, OMV_GPIO_SPEED_LOW, -1);
 
     /* Set OTG STP pin to High */
-    HAL_GPIO_WritePin(GPIOC, GPIO_PIN_0, GPIO_PIN_SET);
+    omv_gpio_write(OMV_USB_ULPI_STP_PIN, 1);
 
     /* Wait for DIR to go low */
     for (uint32_t ticks = HAL_GetTick();
-            ((HAL_GetTick() - ticks) < 500)
-            && HAL_GPIO_ReadPin(OMV_USB_ULPI_DIR_PORT, OMV_USB_ULPI_DIR_PIN);) {
+         ((HAL_GetTick() - ticks) < 500)
+         && omv_gpio_read(OMV_USB_ULPI_DIR_PIN);) {
         __WFI();
     }
 
-    GPIO_InitStruct.Pin = GPIO_PIN_0;
-    GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
-    GPIO_InitStruct.Alternate = GPIO_AF10_OTG_HS;
-    HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
-
-    GPIO_InitStruct.Pin = OMV_USB_ULPI_DIR_PIN;
-    GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
-    GPIO_InitStruct.Alternate = GPIO_AF10_OTG_HS;
-    HAL_GPIO_Init(OMV_USB_ULPI_DIR_PORT, &GPIO_InitStruct);
-
+    /* Configure OTG STP and DIR pin as USB AF */
+    omv_gpio_config(OMV_USB_ULPI_STP_PIN, OMV_GPIO_MODE_ALT, OMV_GPIO_PULL_NONE, OMV_GPIO_SPEED_MAX, -1);
+    omv_gpio_config(OMV_USB_ULPI_DIR_PIN, OMV_GPIO_MODE_ALT, OMV_GPIO_PULL_NONE, OMV_GPIO_SPEED_MAX, -1);
 }
 #endif // (OMV_USB_ULPI == 1)

@@ -1,3 +1,7 @@
+# This work is licensed under the MIT license.
+# Copyright (c) 2013-2023 OpenMV LLC. All rights reserved.
+# https://github.com/openmv/openmv/blob/master/LICENSE
+#
 # MJPEG Video Recording Example
 #
 # Note: You will need an SD card to run this demo.
@@ -7,31 +11,28 @@
 # recording a Mjpeg file you can use VLC to play it. If you are on Ubuntu then
 # the built-in video player will work too.
 
-import sensor, image, time, mjpeg, pyb
+import sensor
+import time
+import mjpeg
+import machine
 
-RED_LED_PIN = 1
-BLUE_LED_PIN = 3
+sensor.reset()  # Reset and initialize the sensor.
+sensor.set_pixformat(sensor.RGB565)  # Set pixel format to RGB565 (or GRAYSCALE)
+sensor.set_framesize(sensor.QVGA)  # Set frame size to QVGA (320x240)
+sensor.skip_frames(time=2000)  # Wait for settings take effect.
 
-sensor.reset() # Initialize the camera sensor.
-sensor.set_pixformat(sensor.RGB565) # or sensor.GRAYSCALE
-sensor.set_framesize(sensor.QVGA) # or sensor.QQVGA (or others)
-sensor.skip_frames(time = 2000) # Let new settings take affect.
-clock = time.clock() # Tracks FPS.
+led = machine.LED("LED_RED")
 
-pyb.LED(RED_LED_PIN).on()
-sensor.skip_frames(time = 2000) # Give the user time to get ready.
-
-pyb.LED(RED_LED_PIN).off()
-pyb.LED(BLUE_LED_PIN).on()
-
+led.on()
 m = mjpeg.Mjpeg("example.mjpeg")
 
-print("You're on camera!")
+clock = time.clock()  # Create a clock object to track the FPS.
 for i in range(200):
     clock.tick()
-    m.add_frame(sensor.snapshot())
+    m.write(sensor.snapshot())
     print(clock.fps())
 
-m.close(clock.fps())
-pyb.LED(BLUE_LED_PIN).off()
-print("Done! Reset the camera to see the saved recording.")
+m.close()
+led.off()
+
+raise (Exception("Please reset the camera to see the new file."))

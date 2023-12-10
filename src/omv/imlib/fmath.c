@@ -8,12 +8,9 @@
  *
  * Fast approximate math functions.
  */
+#include <arm_math.h>
 #include "fmath.h"
-#include "common.h"
-
-#define M_PI    3.14159265f
-#define M_PI_2  1.57079632f
-#define M_PI_4  0.78539816f
+#include "omv_common.h"
 
 const float __atanf_lut[4] = {
     -0.0443265554792128f,    //p7
@@ -24,84 +21,87 @@ const float __atanf_lut[4] = {
 
 #if (__ARM_ARCH < 7)
 #include <math.h>
-float OMV_ATTR_ALWAYS_INLINE fast_sqrtf(float x)
-{
+float OMV_ATTR_ALWAYS_INLINE fast_sqrtf(float x) {
     return sqrtf(x);
 }
 
-int OMV_ATTR_ALWAYS_INLINE fast_floorf(float x)
-{
+int OMV_ATTR_ALWAYS_INLINE fast_floorf(float x) {
     return floorf(x);
 }
 
-int OMV_ATTR_ALWAYS_INLINE fast_ceilf(float x)
-{
+int OMV_ATTR_ALWAYS_INLINE fast_ceilf(float x) {
     return ceilf(x);
 }
 
-int OMV_ATTR_ALWAYS_INLINE fast_roundf(float x)
-{
+int OMV_ATTR_ALWAYS_INLINE fast_roundf(float x) {
     return roundf(x);
 }
 
-float OMV_ATTR_ALWAYS_INLINE fast_fabsf(float x)
-{
+float OMV_ATTR_ALWAYS_INLINE fast_fabsf(float x) {
     return fabsf(x);
 }
 #else
-float OMV_ATTR_ALWAYS_INLINE fast_sqrtf(float x)
-{
+float OMV_ATTR_ALWAYS_INLINE fast_sqrtf(float x) {
     asm volatile (
-            "vsqrt.f32  %[r], %[x]\n"
-            : [r] "=t" (x)
-            : [x] "t"  (x));
+        "vsqrt.f32  %[r], %[x]\n"
+        : [r] "=t" (x)
+        : [x] "t"  (x));
     return x;
 }
 
-int OMV_ATTR_ALWAYS_INLINE fast_floorf(float x)
-{
+int OMV_ATTR_ALWAYS_INLINE fast_floorf(float x) {
     int i;
     asm volatile (
-            "vcvtm.S32.f32  %[r], %[x]\n"
-            : [r] "=t" (i)
-            : [x] "t"  (x));
+    #if (__CORTEX_M > 4)
+        "vcvtm.S32.f32  %[r], %[x]\n"
+    #else
+        "vcvt.S32.f32  %[r], %[x]\n"
+    #endif
+        : [r] "=t" (i)
+        : [x] "t"  (x));
     return i;
 }
 
-int OMV_ATTR_ALWAYS_INLINE fast_ceilf(float x)
-{
+int OMV_ATTR_ALWAYS_INLINE fast_ceilf(float x) {
     int i;
+    #if (__CORTEX_M > 4)
     asm volatile (
-            "vcvtp.S32.f32  %[r], %[x]\n"
-            : [r] "=t" (i)
-            : [x] "t"  (x));
+        "vcvtp.S32.f32  %[r], %[x]\n"
+    #else
+    #pragma GCC diagnostic push
+    #pragma GCC diagnostic ignored "-Wstrict-aliasing"
+    uint32_t max = 0x3f7fffff;
+    x += *((float *) &max);
+    #pragma GCC diagnostic pop
+    asm volatile (
+        "vcvt.S32.f32  %[r], %[x]\n"
+    #endif
+        : [r] "=t" (i)
+        : [x] "t"  (x));
     return i;
 }
 
-int OMV_ATTR_ALWAYS_INLINE fast_roundf(float x)
-{
+int OMV_ATTR_ALWAYS_INLINE fast_roundf(float x) {
     int i;
     asm volatile (
-            "vcvtr.S32.F32  %[r], %[x]\n"
-            : [r] "=t" (i)
-            : [x] "t"  (x));
+        "vcvtr.S32.F32  %[r], %[x]\n"
+        : [r] "=t" (i)
+        : [x] "t"  (x));
     return i;
 }
 
-float OMV_ATTR_ALWAYS_INLINE fast_fabsf(float x)
-{
+float OMV_ATTR_ALWAYS_INLINE fast_fabsf(float x) {
     asm volatile (
-            "vabs.f32  %[r], %[x]\n"
-            : [r] "=t" (x)
-            : [x] "t"  (x));
+        "vabs.f32  %[r], %[x]\n"
+        : [r] "=t" (x)
+        : [x] "t"  (x));
     return x;
 }
-
 #endif
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wstrict-aliasing"
-typedef union{
+typedef union {
     uint32_t l;
     struct {
         uint32_t m : 20;
@@ -110,15 +110,14 @@ typedef union{
     };
 }exp_t;
 
-float fast_expf(float x)
-{
+float fast_expf(float x) {
     exp_t e;
-    e.l = (uint32_t)(1512775 * x + 1072632447);
+    e.l = (uint32_t) (1512775 * x + 1072632447);
     // IEEE binary32 format
-    e.e = (e.e -1023 + 127) &0xFF; // rebase
+    e.e = (e.e - 1023 + 127) & 0xFF; // rebase
 
-    uint32_t packed = (e.s << 31) | (e.e << 23) | e.m <<3;
-    return *((float*)&packed);
+    uint32_t packed = (e.s << 31) | (e.e << 23) | e.m << 3;
+    return *((float *) &packed);
 }
 #pragma GCC diagnostic pop
 
@@ -129,105 +128,110 @@ float fast_expf(float x)
  * 1/3 is approximated as 1/4 + 1/16 + 1/64 + 1/256 + ... + 1/65536.
  * The constant 0x2a511cd0 balances the relative error at +-0.0321.
  */
-float fast_cbrtf(float x)
-{
-   union {int ix; float x;} v;
-   v.x = x;                // x can be viewed as int.
-   v.ix = v.ix/4 + v.ix/16; // Approximate divide by 3.
-   v.ix = v.ix + v.ix/16;
-   v.ix = v.ix + v.ix/256;
-   v.ix = 0x2a511cd0 + v.ix;  // Initial guess.
-   return v.x;
+float fast_cbrtf(float x) {
+    union {
+        int ix; float x;
+    }
+    v;
+    v.x = x;               // x can be viewed as int.
+    v.ix = v.ix / 4 + v.ix / 16; // Approximate divide by 3.
+    v.ix = v.ix + v.ix / 16;
+    v.ix = v.ix + v.ix / 256;
+    v.ix = 0x2a511cd0 + v.ix; // Initial guess.
+    return v.x;
 }
 
-inline float fast_atanf(float xx)
-{
+inline float fast_atanf(float xx) {
     float x, y, z;
     int sign;
 
     x = xx;
 
     /* make argument positive and save the sign */
-    if( xx < 0.0f )
-    {
+    if (xx < 0.0f) {
         sign = -1;
         x = -xx;
-    }
-    else
-    {
+    } else {
         sign = 1;
         x = xx;
     }
     /* range reduction */
-    if( x > 2.414213562373095f )  /* tan 3pi/8 */
-    {
+    if (x > 2.414213562373095f) {
+        /* tan 3pi/8 */
         y = M_PI_2;
-        x = -( 1.0f/x );
-    }
-
-    else if( x > 0.4142135623730950f ) /* tan pi/8 */
-    {
+        x = -(1.0f / x);
+    } else if (x > 0.4142135623730950f) {
+        /* tan pi/8 */
         y = M_PI_4;
-        x = (x-1.0f)/(x+1.0f);
-    }
-    else
+        x = (x - 1.0f) / (x + 1.0f);
+    } else {
         y = 0.0f;
+    }
 
     z = x * x;
     y +=
-        ((( 8.05374449538e-2f  * z
-          - 1.38776856032E-1f) * z
+        (((8.05374449538e-2f * z
+           - 1.38776856032E-1f) * z
           + 1.99777106478E-1f) * z
-          - 3.33329491539E-1f) * z * x + x;
+         - 3.33329491539E-1f) * z * x + x;
 
-    if( sign < 0 )
+    if (sign < 0) {
         y = -y;
+    }
 
-    return( y );
+    return(y);
 }
 
-float fast_atan2f(float y, float x)
-{
-  if(x > 0 && y >= 0)
-    return fast_atanf(y/x);
+float fast_atan2f(float y, float x) {
+    if (x > 0 && y >= 0) {
+        return fast_atanf(y / x);
+    }
 
-  if(x < 0 && y >= 0)
-    return M_PI - fast_atanf(-y/x);
+    if (x < 0 && y >= 0) {
+        return M_PI - fast_atanf(-y / x);
+    }
 
-  if(x < 0 && y < 0)
-    return M_PI + fast_atanf(y/x);
+    if (x < 0 && y < 0) {
+        return M_PI + fast_atanf(y / x);
+    }
 
-  if(x > 0 && y < 0)
-    return 2*M_PI - fast_atanf(-y/x);
+    if (x > 0 && y < 0) {
+        return 2 * M_PI - fast_atanf(-y / x);
+    }
 
-  return (y == 0) ? 0 : ((y > 0) ? M_PI : -M_PI);
+    return (y == 0) ? 0 : ((y > 0) ? M_PI : -M_PI);
 }
 
-float fast_log2(float x)
-{
-  union { float f; uint32_t i; } vx = { x };
-  union { uint32_t i; float f; } mx = { (vx.i & 0x007FFFFF) | 0x3f000000 };
-  float y = vx.i;
-  y *= 1.1920928955078125e-7f;
+float fast_log2(float x) {
+    union {
+        float f; uint32_t i;
+    }
+    vx = { x };
+    union {
+        uint32_t i; float f;
+    }
+    mx = { (vx.i & 0x007FFFFF) | 0x3f000000 };
+    float y = vx.i;
+    y *= 1.1920928955078125e-7f;
 
-  return y - 124.22551499f - 1.498030302f * mx.f
+    return y - 124.22551499f - 1.498030302f * mx.f
            - 1.72587999f / (0.3520887068f + mx.f);
 }
 
-float fast_log(float x)
-{
-  return 0.69314718f * fast_log2 (x);
+float fast_log(float x) {
+    return 0.69314718f * fast_log2(x);
 }
 
-float fast_powf(float a, float b)
-{
-    union { float d; int x; } u = { a };
-    u.x = (int)((b * (u.x - 1064866805)) + 1064866805);
+float fast_powf(float a, float b) {
+    union {
+        float d; int x;
+    }
+    u = { a };
+    u.x = (int) ((b * (u.x - 1064866805)) + 1064866805);
     return u.d;
 }
 
-void fast_get_min_max(float *data, size_t data_len, float *p_min, float *p_max)
-{
+void fast_get_min_max(float *data, size_t data_len, float *p_min, float *p_max) {
     float min = FLT_MAX, max = -FLT_MAX;
 
     for (size_t i = 0; i < data_len; i++) {

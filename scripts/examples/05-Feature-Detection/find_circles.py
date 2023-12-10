@@ -1,3 +1,7 @@
+# This work is licensed under the MIT license.
+# Copyright (c) 2013-2023 OpenMV LLC. All rights reserved.
+# https://github.com/openmv/openmv/blob/master/LICENSE
+#
 # Find Circles Example
 #
 # This example shows off how to find circles in the image using the Hough
@@ -6,15 +10,16 @@
 # Note that the find_circles() method will only find circles which are completely
 # inside of the image. Circles which go outside of the image/roi are ignored...
 
-import sensor, image, time
+import sensor
+import time
 
 sensor.reset()
-sensor.set_pixformat(sensor.RGB565) # grayscale is faster
+sensor.set_pixformat(sensor.RGB565)  # grayscale is faster
 sensor.set_framesize(sensor.QQVGA)
-sensor.skip_frames(time = 2000)
+sensor.skip_frames(time=2000)
 clock = time.clock()
 
-while(True):
+while True:
     clock.tick()
     img = sensor.snapshot().lens_corr(1.8)
 
@@ -31,9 +36,16 @@ while(True):
     # r_min, r_max, and r_step control what radiuses of circles are tested.
     # Shrinking the number of tested circle radiuses yields a big performance boost.
 
-    for c in img.find_circles(threshold = 2000, x_margin = 10, y_margin = 10, r_margin = 10,
-            r_min = 2, r_max = 100, r_step = 2):
-        img.draw_circle(c.x(), c.y(), c.r(), color = (255, 0, 0))
+    for c in img.find_circles(
+        threshold=2000,
+        x_margin=10,
+        y_margin=10,
+        r_margin=10,
+        r_min=2,
+        r_max=100,
+        r_step=2,
+    ):
+        img.draw_circle(c.x(), c.y(), c.r(), color=(255, 0, 0))
         print(c)
 
     print("FPS %f" % clock.fps())

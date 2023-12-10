@@ -13,18 +13,18 @@
 #if (OMV_ENABLE_TOF_VL53L5CX == 1)
 
 #include "py/mphal.h"
-#include "cambus.h"
+#include "omv_i2c.h"
 #include "platform.h"
 
 uint8_t RdByte(VL53L5CX_Platform *platform, uint16_t regaddr, uint8_t *data)
 {
     regaddr = __REVSH(regaddr);
 
-    if (cambus_write_bytes(platform->bus, platform->address, (uint8_t *) &regaddr, 2, CAMBUS_XFER_NO_STOP) != 0) {
+    if (omv_i2c_write_bytes(platform->bus, platform->address, (uint8_t *) &regaddr, 2, OMV_I2C_XFER_NO_STOP) != 0) {
         return -1;
     }
 
-    if (cambus_read_bytes(platform->bus, platform->address, data, 1, CAMBUS_XFER_NO_FLAGS) != 0) {
+    if (omv_i2c_read_bytes(platform->bus, platform->address, data, 1, OMV_I2C_XFER_NO_FLAGS) != 0) {
         return -1;
     }
     return 0;
@@ -34,11 +34,11 @@ uint8_t WrByte(VL53L5CX_Platform *platform, uint16_t regaddr, uint8_t data)
 {
     regaddr = __REVSH(regaddr);
 
-    if (cambus_write_bytes(platform->bus, platform->address, (uint8_t*) &regaddr, 2, CAMBUS_XFER_SUSPEND) != 0) {
+    if (omv_i2c_write_bytes(platform->bus, platform->address, (uint8_t*) &regaddr, 2, OMV_I2C_XFER_SUSPEND) != 0) {
         return -1;
     }
 
-    if (cambus_write_bytes(platform->bus, platform->address, &data, 1, CAMBUS_XFER_NO_FLAGS) != 0) {
+    if (omv_i2c_write_bytes(platform->bus, platform->address, &data, 1, OMV_I2C_XFER_NO_FLAGS) != 0) {
         return -1;
     }
 
@@ -49,11 +49,11 @@ uint8_t RdMulti(VL53L5CX_Platform *platform, uint16_t regaddr, uint8_t *data, ui
 {
     regaddr = __REVSH(regaddr);
 
-    if (cambus_write_bytes(platform->bus, platform->address, (uint8_t *) &regaddr, 2, CAMBUS_XFER_NO_STOP) != 0) {
+    if (omv_i2c_write_bytes(platform->bus, platform->address, (uint8_t *) &regaddr, 2, OMV_I2C_XFER_NO_STOP) != 0) {
         return -1;
     }
 
-    if (cambus_read_bytes(platform->bus, platform->address, data, size, CAMBUS_XFER_NO_FLAGS) != 0) {
+    if (omv_i2c_read_bytes(platform->bus, platform->address, data, size, OMV_I2C_XFER_NO_FLAGS) != 0) {
         return -1;
     }
     return 0;
@@ -63,11 +63,11 @@ uint8_t WrMulti(VL53L5CX_Platform *platform, uint16_t regaddr, uint8_t *data, ui
 {
     regaddr = __REVSH(regaddr);
 
-    if (cambus_write_bytes(platform->bus, platform->address, (uint8_t*) &regaddr, 2, CAMBUS_XFER_SUSPEND) != 0) {
+    if (omv_i2c_write_bytes(platform->bus, platform->address, (uint8_t*) &regaddr, 2, OMV_I2C_XFER_SUSPEND) != 0) {
         return -1;
     }
 
-    if (cambus_write_bytes(platform->bus, platform->address, data, size, CAMBUS_XFER_NO_FLAGS) != 0) {
+    if (omv_i2c_write_bytes(platform->bus, platform->address, data, size, OMV_I2C_XFER_NO_FLAGS) != 0) {
         return -1;
     }
 

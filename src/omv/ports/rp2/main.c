@@ -62,7 +62,7 @@
 
 #include "omv_boardconfig.h"
 #include "framebuffer.h"
-#include "cambus.h"
+#include "omv_i2c.h"
 #include "sensor.h"
 #include "usbdbg.h"
 #include "tinyusb_debug.h"
@@ -74,8 +74,8 @@
 #if MICROPY_VFS_FAT && MICROPY_HW_USB_MSC
 #include "extmod/vfs.h"
 #include "extmod/vfs_fat.h"
-#include "common/factoryreset.h"
 #endif
+#include "boot_utils.h"
 
 extern uint8_t __StackTop, __StackBottom;
 static char OMV_ATTR_SECTION(OMV_ATTR_ALIGNED(gc_heap[OMV_HEAP_SIZE], 4), ".heap");
@@ -89,11 +89,10 @@ bi_decl(bi_program_version_string(MICROPY_GIT_TAG));
 // Add a section to the picotool output similar to program features, but for frozen modules
 // (it will aggregate BINARY_INFO_ID_MP_FROZEN binary info)
 bi_decl(bi_program_feature_group_with_flags(BINARY_INFO_TAG_MICROPYTHON,
-    BINARY_INFO_ID_MP_FROZEN, "frozen modules",
-    BI_NAMED_GROUP_SEPARATE_COMMAS | BI_NAMED_GROUP_SORT_ALPHA));
+                                            BINARY_INFO_ID_MP_FROZEN, "frozen modules",
+                                            BI_NAMED_GROUP_SEPARATE_COMMAS | BI_NAMED_GROUP_SORT_ALPHA));
 
-void __fatal_error()
-{
+void __fatal_error() {
     gpio_init(LED_PIN);
     gpio_set_dir(LED_PIN, GPIO_OUT);
 
@@ -105,36 +104,8 @@ void __fatal_error()
     }
 }
 
-void pico_reset_to_bootloader(void)
-{
+void pico_reset_to_bootloader(size_t n_args, const void *args_in) {
     reset_usb_boot(0, 0);
-}
-
-void exec_boot_script(const char *path, bool interruptible)
-{
-    nlr_buf_t nlr;
-    bool interrupted = false;
-    if (nlr_push(&nlr) == 0) {
-        // Enable IDE interrupts if allowed.
-        if (interruptible) {
-            usbdbg_set_irq_enabled(true);
-            usbdbg_set_script_running(true);
-        }
-
-        // Parse, compile and execute the script.
-        pyexec_file_if_exists(path, true);
-        nlr_pop();
-    } else {
-        interrupted = true;
-    }
-
-    // Disable IDE interrupts
-    usbdbg_set_irq_enabled(false);
-    usbdbg_set_script_running(false);
-
-    if (interrupted) {
-        mp_obj_print_exception(&mp_plat_print, (mp_obj_t)nlr.ret_val);
-    }
 }
 
 int main(int argc, char **argv) {
@@ -148,7 +119,6 @@ int main(int argc, char **argv) {
 
     #if MICROPY_HW_ENABLE_USBDEV
     bi_decl(bi_program_feature("USB REPL"))
-    tusb_init();
     #endif
 
     #if MICROPY_PY_THREAD
@@ -172,12 +142,6 @@ int main(int argc, char **argv) {
     // Set board unique ID from flash for USB debugging.
     OMV_UNIQUE_ID_ADDR = pico_unique_id.id;
     pico_get_unique_board_id(&pico_unique_id);
-
-    // Install Tinyusb CDC debugger IRQ handler.
-    irq_set_enabled(USBCTRL_IRQ, false);
-    irq_remove_handler(USBCTRL_IRQ, irq_get_exclusive_handler(USBCTRL_IRQ));
-    irq_set_exclusive_handler(USBCTRL_IRQ, USBD_IRQHandler);
-    irq_set_enabled(USBCTRL_IRQ, true);
 
 soft_reset:
     // Initialise stack extents and GC heap.
@@ -218,11 +182,11 @@ soft_reset:
     #if MICROPY_VFS_FAT && MICROPY_HW_USB_MSC
     // Mount or create a fresh filesystem.
     mp_obj_t mount_point = MP_OBJ_NEW_QSTR(MP_QSTR__slash_);
-    mp_obj_t bdev = rp2_flash_type.make_new(&rp2_flash_type, 0, 0, NULL);
+    mp_obj_t bdev = MP_OBJ_TYPE_GET_SLOT(&rp2_flash_type, make_new) (&rp2_flash_type, 0, 0, NULL);
     if (mp_vfs_mount_and_chdir_protected(bdev, mount_point) == -MP_ENODEV) {
         // Create a fresh filesystem.
-        fs_user_mount_t *vfs  = mp_fat_vfs_type.make_new(&mp_fat_vfs_type, 1, 0, &bdev);
-        if (factoryreset_create_filesystem(vfs) == 0) {
+        fs_user_mount_t *vfs = MP_OBJ_TYPE_GET_SLOT(&mp_fat_vfs_type, make_new) (&mp_fat_vfs_type, 1, 0, &bdev);
+        if (bootutils_init_filesystem(vfs) == 0) {
             mp_vfs_mount_and_chdir_protected(bdev, mount_point);
         }
     }
@@ -230,11 +194,26 @@ soft_reset:
     pyexec_frozen_module("_boot.py", false);
     #endif
 
-    // Execute user scripts.
-    exec_boot_script("boot.py", false);
+    // Mark the filesystem as an OpenMV storage.
+    file_ll_touch(".openmv_disk");
 
-    if (first_soft_reset) {
-        exec_boot_script("main.py", true);
+    // Initialize TinyUSB after the filesystem has been mounted.
+    if (!tusb_inited()) {
+        tusb_init();
+
+        // Install Tinyusb CDC debugger IRQ handler.
+        irq_set_enabled(USBCTRL_IRQ, false);
+        irq_remove_handler(USBCTRL_IRQ, irq_get_vtable_handler(USBCTRL_IRQ));
+        irq_set_exclusive_handler(USBCTRL_IRQ, OMV_USB1_IRQ_HANDLER);
+    }
+
+    // Run boot.py script.
+    bool interrupted = bootutils_exec_bootscript("boot.py", true, false);
+
+    // Run main.py script on first soft-reset.
+    if (first_soft_reset && !interrupted && mp_vfs_import_stat("main.py")) {
+        bootutils_exec_bootscript("main.py", true, false);
+        goto soft_reset_exit;
     }
 
     // If there's no script ready, just re-exec REPL
@@ -267,16 +246,25 @@ soft_reset:
             usbdbg_set_irq_enabled(true);
             // Execute the script.
             pyexec_str(usbdbg_get_script(), true);
+            // Disable IDE interrupts
+            usbdbg_set_irq_enabled(false);
             nlr_pop();
         } else {
-            mp_obj_print_exception(&mp_plat_print, (mp_obj_t)nlr.ret_val);
+            mp_obj_print_exception(&mp_plat_print, (mp_obj_t) nlr.ret_val);
+        }
+
+        if (usbdbg_is_busy() && nlr_push(&nlr) == 0) {
+            // Enable IDE interrupt
+            usbdbg_set_irq_enabled(true);
+            // Wait for the current command to finish.
+            usbdbg_wait_for_command(1000);
+            // Disable IDE interrupts
+            usbdbg_set_irq_enabled(false);
+            nlr_pop();
         }
     }
 
-    usbdbg_wait_for_command(1000);
-
-    usbdbg_set_irq_enabled(false);
-
+soft_reset_exit:
     mp_printf(MP_PYTHON_PRINTER, "MPY: soft reboot\n");
     #if MICROPY_PY_AUDIO
     py_audio_deinit();
@@ -320,7 +308,7 @@ void MP_WEAK __assert_func(const char *file, int line, const char *func, const c
 }
 #endif
 
-#define POLY (0xD5)
+#define POLY    (0xD5)
 
 uint8_t rosc_random_u8(size_t cycles) {
     static uint8_t r;

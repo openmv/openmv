@@ -1,145 +1,137 @@
-#include "pixspi.h"
-#include <stdbool.h>
-#include STM32_HAL_H
+/*
+ * This file is part of the OpenMV project.
+ *
+ * Copyright (c) 2021 Lake Fu at <lake_fu@pixart.com>
+ * Copyright (c) 2023 Ibrahim Abdelkader <iabdalkader@openmv.io>
+ * Copyright (c) 2023 Kwabena W. Agyeman <kwagyeman@openmv.io>
+ *
+ * This work is licensed under the MIT license, see the file LICENSE for details.
+ *
+ * Pixart SPI driver.
+ */
+#include "omv_boardconfig.h"
+#ifdef ISC_SPI_ID
+
 #include <stdio.h>
 #include <string.h>
+#include <stdbool.h>
 
-#include "common.h"
-#include "omv_boardconfig.h"
-#include <py/mpconfig.h>
+#include "omv_common.h"
+#include "omv_gpio.h"
+#include "omv_spi.h"
 
-#ifdef ISC_SPI
-#define SPI_TIMEOUT         (5000)  /* in ms */
+#include "pixspi.h"
 
-#define CS_PORT             ISC_SPI_SSEL_PORT
-#define CS_PIN              ISC_SPI_SSEL_PIN
-#define W_CS_LOW()    HAL_GPIO_WritePin(CS_PORT, CS_PIN, GPIO_PIN_RESET)
-#define W_CS_HIGH()   HAL_GPIO_WritePin(CS_PORT, CS_PIN, GPIO_PIN_SET)
+#define SPI_BUS_TIMEOUT      (5000)     // in ms
+#ifdef PIXART_SPI_DEBUG
+#define debug_printf(...)    printf(__VA_ARGS__)
+#else
+#define debug_printf(...)
+#endif
 
-extern SPI_HandleTypeDef ISC_SPIHandle;
+static omv_spi_t spi_bus;
 
-static bool spi_send(uint8_t *data, uint16_t len)
-{
-    HAL_StatusTypeDef status = HAL_OK;
-    W_CS_LOW();
-    //mp_uint_t atomic_state = MICROPY_BEGIN_ATOMIC_SECTION();
-    status = HAL_SPI_Transmit(
-        &ISC_SPIHandle, data, len, SPI_TIMEOUT);
-    //MICROPY_END_ATOMIC_SECTION(atomic_state);
-    W_CS_HIGH();
+static int spi_send(uint8_t *txbuf, uint16_t len) {
+    int ret = 0;
 
-    return (status == HAL_OK);
+    omv_spi_transfer_t spi_xfer = {
+        .txbuf = txbuf,
+        .rxbuf = NULL,
+        .size = len,
+        .timeout = SPI_BUS_TIMEOUT,
+        .flags = OMV_SPI_XFER_BLOCKING,
+        .callback = NULL,
+        .userdata = NULL,
+    };
+
+    omv_gpio_write(spi_bus.cs, 0);
+    ret = omv_spi_transfer_start(&spi_bus, &spi_xfer);
+    omv_gpio_write(spi_bus.cs, 1);
+
+    return ret;
 }
 
-static bool spi_send_recv(uint8_t *txData, uint8_t *rxData, uint16_t len)
-{
-    W_CS_LOW();
-    //mp_uint_t atomic_state = MICROPY_BEGIN_ATOMIC_SECTION();
-    bool res = (HAL_SPI_Transmit(&ISC_SPIHandle, txData, 1, SPI_TIMEOUT) == HAL_OK);
-    res = (HAL_SPI_Receive(&ISC_SPIHandle, rxData, len, SPI_TIMEOUT) == HAL_OK);
-    //MICROPY_END_ATOMIC_SECTION(atomic_state);
-    W_CS_HIGH();
-    return res;
+static int spi_send_recv(uint8_t *txbuf, uint8_t *rxbuf, uint16_t len) {
+    int ret = 0;
+
+    omv_spi_transfer_t spi_xfer = {
+        .timeout = SPI_BUS_TIMEOUT,
+        .flags = OMV_SPI_XFER_BLOCKING,
+        .callback = NULL,
+        .userdata = NULL,
+    };
+
+    omv_gpio_write(spi_bus.cs, 0);
+
+    spi_xfer.size = 1;
+    spi_xfer.txbuf = txbuf;
+    spi_xfer.rxbuf = NULL;
+    ret |= omv_spi_transfer_start(&spi_bus, &spi_xfer);
+
+    spi_xfer.size = len;
+    spi_xfer.txbuf = NULL;
+    spi_xfer.rxbuf = rxbuf;
+    ret |= omv_spi_transfer_start(&spi_bus, &spi_xfer);
+
+    omv_gpio_write(spi_bus.cs, 1);
+    return ret;
 }
 
-bool pixspi_init()
-{
+bool pixspi_init() {
     // Init SPI
-    memset(&ISC_SPIHandle, 0, sizeof(ISC_SPIHandle));
-    ISC_SPIHandle.Instance               = ISC_SPI;
-    ISC_SPIHandle.Init.Mode              = SPI_MODE_MASTER;
-    ISC_SPIHandle.Init.Direction         = SPI_DIRECTION_2LINES;
-    ISC_SPIHandle.Init.DataSize          = SPI_DATASIZE_8BIT;
-    ISC_SPIHandle.Init.CLKPolarity       = SPI_POLARITY_HIGH;
-    ISC_SPIHandle.Init.CLKPhase          = SPI_PHASE_2EDGE;
-    ISC_SPIHandle.Init.NSS               = SPI_NSS_SOFT;
-    ISC_SPIHandle.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_32 ;
-    ISC_SPIHandle.Init.FirstBit          = SPI_FIRSTBIT_MSB;
-    ISC_SPIHandle.Init.TIMode            = SPI_TIMODE_DISABLED;
-    ISC_SPIHandle.Init.CRCCalculation    = SPI_CRCCALCULATION_DISABLED;
-    ISC_SPIHandle.Init.CRCPolynomial     = 0;
+    omv_spi_config_t spi_config;
+    omv_spi_default_config(&spi_config, ISC_SPI_ID);
 
-    if (HAL_SPI_Init(&ISC_SPIHandle) != HAL_OK)
-    {
-        /* Initialization Error */
+    spi_config.baudrate = 5000000;
+    spi_config.nss_enable = false;  // Soft NSS
+    spi_config.clk_pol = OMV_SPI_CPOL_HIGH;
+    spi_config.clk_pha = OMV_SPI_CPHA_2EDGE;
+
+    if (omv_spi_init(&spi_bus, &spi_config) != 0) {
         return false;
     }
-
-    GPIO_InitTypeDef GPIO_InitStructure;
-    // Re-Init GPIO for SPI SS(CS) pin, software control.
-    GPIO_InitStructure.Pin = ISC_SPI_SSEL_PIN;
-    GPIO_InitStructure.Mode = GPIO_MODE_OUTPUT_PP;
-    GPIO_InitStructure.Pull = GPIO_PULLUP;
-    GPIO_InitStructure.Alternate = ISC_SPI_SSEL_AF;
-    GPIO_InitStructure.Speed = GPIO_SPEED_FREQ_LOW;
-    HAL_GPIO_Init(ISC_SPI_SSEL_PORT, &GPIO_InitStructure);
-
-    // Default high.
-    W_CS_HIGH();
     return true;
 }
 
-void pixspi_release()
-{
-    W_CS_LOW();
-    HAL_SPI_DeInit(&ISC_SPIHandle);
+void pixspi_release() {
+    omv_gpio_write(spi_bus.cs, 1);
+    omv_spi_deinit(&spi_bus);
 }
 
-int pixspi_regs_read(uint8_t addr, uint8_t * data, uint16_t length)
-{
-    if ((addr & 0x80))
-    {
-#ifdef DEBUG
-        printf("pixspi_regs_read() address (0x%x) overflow.\n", addr);
-#endif
+int pixspi_regs_read(uint8_t addr, uint8_t *data, uint16_t length) {
+    if (addr & 0x80) {
+        debug_printf("pixspi_regs_read() address (0x%x) overflow.\n", addr);
         return -1;
     }
     addr |= 0x80;
-    if (!spi_send_recv(&addr, data, length))
-    {
-#ifdef DEBUG
-        printf("spi_send_recv() failed.\n");
-#endif
+    if (spi_send_recv(&addr, data, length) == -1) {
+        debug_printf("spi_send_recv() failed.\n");
         return -1;
     }
     return 0;
 }
 
-int pixspi_regs_write(uint8_t addr, const uint8_t * data, uint16_t length)
-{
+int pixspi_regs_write(uint8_t addr, const uint8_t *data, uint16_t length) {
     uint8_t buff[64] = {};
-    if ((addr & 0x80) == 0x80)
-    {
-#ifdef DEBUG
-        printf("pixspi_regs_read() address (0x%x) overflow.\n", addr);
-#endif
+    if (addr & 0x80) {
+        debug_printf("pixspi_regs_read() address (0x%x) overflow.\n", addr);
         return -1;
     }
-    int32_t remaining = length;
 
+    int32_t remaining = length;
     const static uint16_t MAX_LENGTH = 255;
-    do
-    {
-        uint16_t len = remaining>MAX_LENGTH?MAX_LENGTH:remaining;
+
+    do {
+        uint16_t len = remaining > MAX_LENGTH ? MAX_LENGTH : remaining;
         buff[0] = addr;
-        memcpy(buff+1, data, len);
-        bool res = spi_send(buff, len + 1);
-        if (!res)
-        {
-#ifdef DEBUG
-            printf("spi_send() failed.\n");
-#endif
+        memcpy(buff + 1, data, len);
+        if (spi_send(buff, len + 1) == -1) {
+            debug_printf("spi_send() failed.\n");
             return -1;
         }
         remaining = remaining - MAX_LENGTH;
-    }
-    while (remaining > 0);
+    } while (remaining > 0);
 
     return 0;
 }
-#else
-bool pixspi_init() { return false; }
-void pixspi_release() {}
-int pixspi_regs_read(uint8_t addr, uint8_t * data, uint16_t length) { return -1; }
-int pixspi_regs_write(uint8_t addr, const uint8_t * data, uint16_t length) { return -1; }
 #endif

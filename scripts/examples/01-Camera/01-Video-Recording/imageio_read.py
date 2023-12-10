@@ -1,32 +1,21 @@
+# This work is licensed under the MIT license.
+# Copyright (c) 2013-2023 OpenMV LLC. All rights reserved.
+# https://github.com/openmv/openmv/blob/master/LICENSE
+#
 # Image Reader Example
 #
-# USE THIS EXAMPLE WITH A USD CARD!
+# NOTE: This example requires an SD card.
 #
-# This example shows how to use the Image Reader object to replay snapshots of what your
-# OpenMV Cam saw saved by the Image Writer object for testing machine vision algorithms.
+# This example shows how to use the Image Reader object to replay a raw video file.
 
-# Altered to allow full speed reading from SD card for extraction of sequences to the network etc. 
-# Set the new pause parameter to false
+import image
+import time
 
-import sensor, image, time
+stream = image.ImageIO("/stream.bin", "r")
 
-snapshot_source = False # Set to true once finished to pull data from sensor.
-
-sensor.reset()
-sensor.set_pixformat(sensor.RGB565)
-sensor.set_framesize(sensor.QQVGA)
-sensor.skip_frames(time = 2000)
-clock = time.clock()
-
-stream = None
-if snapshot_source == False:
-    stream = image.ImageIO("/stream.bin", "r")
-
-while(True):
+clock = time.clock()  # Create a clock object to track the FPS.
+while True:
     clock.tick()
-    if snapshot_source:
-        img = sensor.snapshot() 
-    else:
-        img = stream.read(copy_to_fb=True, loop=True, pause=True)
+    img = stream.read(copy_to_fb=True, loop=True, pause=True)
     # Do machine vision algorithms on the image here.
     print(clock.fps())

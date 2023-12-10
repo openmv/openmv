@@ -1,34 +1,43 @@
+# This work is licensed under the MIT license.
+# Copyright (c) 2013-2023 OpenMV LLC. All rights reserved.
+# https://github.com/openmv/openmv/blob/master/LICENSE
+#
 # This example shows off how to use readout window control to readout a small part of a camera
 # sensor pixel array at a very high speed and move that readout window around.
 
 # This example is was designed and tested on the OpenMV Cam H7 Plus using the OV5640 sensor.
 
-import sensor, image, time
+import sensor
+import time
 
 # This example script forces the exposure to a constant value for the whole time. However, you may
 # wish to dynamically adjust the exposure when the readout window shrinks to a small size.
 EXPOSURE_MICROSECONDS = 20000
 
 SEARCHING_RESOLUTION = sensor.QVGA
-TRACKING_RESOLUTION = sensor.QQVGA # or sensor.QQQVGA
+TRACKING_RESOLUTION = sensor.QQVGA  # or sensor.QQQVGA
 
-TRACKING_LOW_RATIO_THRESHOLD = 0.2 # Go to a smaller readout window when tag side vs res is smaller.
-TRACKING_HIGH_RATIO_THRESHOLD = 0.8 # Go to a larger readout window when tag side vs res is larger.
+TRACKING_LOW_RATIO_THRESHOLD = (
+    0.2  # Go to a smaller readout window when tag side vs res is smaller.
+)
+TRACKING_HIGH_RATIO_THRESHOLD = (
+    0.8  # Go to a larger readout window when tag side vs res is larger.
+)
 
-sensor.reset()                         # Reset and initialize the sensor.
-sensor.set_pixformat(sensor.GRAYSCALE) # Set pixel format to GRAYSCALE
+sensor.reset()  # Reset and initialize the sensor.
+sensor.set_pixformat(sensor.GRAYSCALE)  # Set pixel format to GRAYSCALE
 sensor.set_framesize(SEARCHING_RESOLUTION)
-sensor.skip_frames(time = 1000)        # Wait for settings take effect.
-clock = time.clock()                   # Create a clock object to track the FPS.
+sensor.skip_frames(time=1000)  # Wait for settings take effect.
+clock = time.clock()  # Create a clock object to track the FPS.
 
-sensor.set_auto_gain(False)            # Turn off as it will oscillate.
+sensor.set_auto_gain(False)  # Turn off as it will oscillate.
 sensor.set_auto_exposure(False, exposure_us=EXPOSURE_MICROSECONDS)
-sensor.skip_frames(time = 1000)
+sensor.skip_frames(time=1000)
 
 # sensor_w and sensor_h are the image sensor raw pixels w/h (x/y are 0 initially).
 x, y, sensor_w, sensor_h = sensor.ioctl(sensor.IOCTL_GET_READOUT_WINDOW)
 
-while(True):
+while True:
     clock.tick()
     img = sensor.snapshot()
 
@@ -36,7 +45,7 @@ while(True):
     tags = img.find_apriltags()
 
     if len(tags):
-        best_tag = max(tags, key = lambda x: x.decision_margin())
+        best_tag = max(tags, key=lambda x: x.decision_margin())
         img.draw_rectangle(best_tag.rect())
 
         # This needs to be less than the sensor output at default so we can move it around.
@@ -67,7 +76,7 @@ while(True):
             # Add in our displacement from the sensor center
             mapped_cy += y + (sensor_h / 2.0)
 
-            return (mapped_cx, mapped_cy) # X/Y location on the sensor array.
+            return (mapped_cx, mapped_cy)  # X/Y location on the sensor array.
 
         def center_on_tag(t, res):
             global readout_window_w
@@ -93,17 +102,21 @@ while(True):
             x_error = x - new_x
             y_error = y - new_y
 
-            if x_error < 0: print("-X Limit Reached ", end="")
-            if x_error > 0: print("+X Limit Reached ", end="")
-            if y_error < 0: print("-Y Limit Reached ", end="")
-            if y_error > 0: print("+Y Limit Reached ", end="")
+            if x_error < 0:
+                print("-X Limit Reached ", end="")
+            if x_error > 0:
+                print("+X Limit Reached ", end="")
+            if y_error < 0:
+                print("-Y Limit Reached ", end="")
+            if y_error > 0:
+                print("+Y Limit Reached ", end="")
 
         center_on_tag(best_tag, TRACKING_RESOLUTION)
 
         loss_count = 0
 
         # This loop will track the tag at a much higher readout speed and lower resolution.
-        while(True):
+        while True:
             clock.tick()
             img = sensor.snapshot()
 
@@ -113,7 +126,7 @@ while(True):
             # If we loose the tag then we need to find a new one.
             if not len(tags):
                 # Handle a few bad frames due to tag flicker.
-                if (loss_count < 2):
+                if loss_count < 2:
                     loss_count += 1
                     continue
                 # Reset resolution.
@@ -124,7 +137,7 @@ while(True):
             loss_count = 0
 
             # Narrow down the blob list and highlight the blob.
-            best_tag = max(tags, key = lambda x: x.decision_margin())
+            best_tag = max(tags, key=lambda x: x.decision_margin())
             img.draw_rectangle(best_tag.rect())
 
             print(clock.fps(), "TAG cx:%d, cy:%d" % get_mapped_centroid(best_tag))
@@ -133,14 +146,18 @@ while(True):
             h_ratio = best_tag.h() / sensor.height()
 
             # Shrink the tracking window until the tag fits.
-            while (w_ratio < TRACKING_LOW_RATIO_THRESHOLD) or (h_ratio < TRACKING_LOW_RATIO_THRESHOLD):
+            while (w_ratio < TRACKING_LOW_RATIO_THRESHOLD) or (
+                h_ratio < TRACKING_LOW_RATIO_THRESHOLD
+            ):
                 readout_window_w /= 2
                 readout_window_h /= 2
                 w_ratio *= 2
                 h_ratio *= 2
 
             # Enlarge the tracking window until the tag fits.
-            while (TRACKING_HIGH_RATIO_THRESHOLD < w_ratio) or (TRACKING_HIGH_RATIO_THRESHOLD < h_ratio):
+            while (TRACKING_HIGH_RATIO_THRESHOLD < w_ratio) or (
+                TRACKING_HIGH_RATIO_THRESHOLD < h_ratio
+            ):
                 readout_window_w *= 2
                 readout_window_h *= 2
                 w_ratio /= 2

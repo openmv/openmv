@@ -15,7 +15,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "cambus.h"
+#include "omv_i2c.h"
 #include "sensor.h"
 #include "mt9m114.h"
 #include "mt9m114_regs.h"
@@ -294,16 +294,15 @@ static const uint16_t cpipe_regs_16_bit[][2] = {
     {0xC87C, 0x005A}  // CAM_AET_BLACK_CLIPPING_TARGET
 };
 
-static int host_command(sensor_t *sensor, uint16_t command)
-{
-    if (cambus_writew2(&sensor->bus, sensor->slv_addr, MT9M114_REG_HOST_COMMAND, (command | MT9M114_HC_OK)) != 0) {
+static int host_command(sensor_t *sensor, uint16_t command) {
+    if (omv_i2c_writew2(&sensor->i2c_bus, sensor->slv_addr, MT9M114_REG_HOST_COMMAND, (command | MT9M114_HC_OK)) != 0) {
         return -1;
     }
 
     for (mp_uint_t start = mp_hal_ticks_ms();; mp_hal_delay_ms(MT9M114_HC_DELAY)) {
         uint16_t reg_data;
 
-        if (cambus_readw2(&sensor->bus, sensor->slv_addr, MT9M114_REG_HOST_COMMAND, &reg_data) != 0) {
+        if (omv_i2c_readw2(&sensor->i2c_bus, sensor->slv_addr, MT9M114_REG_HOST_COMMAND, &reg_data) != 0) {
             return -1;
         }
 
@@ -320,85 +319,79 @@ static int host_command(sensor_t *sensor, uint16_t command)
 }
 
 static int load_patch(sensor_t *sensor, const uint8_t *patch, size_t patch_len,
-        uint16_t patch_loader_address, uint16_t patch_id, uint32_t patch_firmware_id)
-{
+                      uint16_t patch_loader_address, uint16_t patch_id, uint32_t patch_firmware_id) {
     int ret = 0;
     // Patch address is stashed in the first two bytes.
     uint16_t patch_address = (((uint16_t) patch[0]) << 8) | patch[1];
-    ret |= cambus_writew2(&sensor->bus, sensor->slv_addr, MT9M114_REG_XMDA_ACCESS_CTL_STAT, patch_address >> 15);
-    ret |= cambus_writew2(&sensor->bus, sensor->slv_addr, MT9M114_REG_XMDA_PHYSICAL_ADDRESS_ACCESS, patch_address & 0x7FFF);
-    ret |= cambus_write_bytes(&sensor->bus, sensor->slv_addr, (uint8_t *) patch, patch_len, CAMBUS_XFER_NO_FLAGS);
-    ret |= cambus_writew2(&sensor->bus, sensor->slv_addr, MT9M114_REG_XMDA_LOGIC_ADDRESS_ACCESS, 0x0000);
-    ret |= cambus_writew2(&sensor->bus, sensor->slv_addr, MT9M114_REG_PATCHLDR_LOADER_ADDRESS, patch_loader_address);
-    ret |= cambus_writew2(&sensor->bus, sensor->slv_addr, MT9M114_REG_PATCHLDR_PATCH_ID, patch_id);
-    ret |= cambus_writew2(&sensor->bus, sensor->slv_addr, MT9M114_REG_PATCHLDR_FIRMWARE_ID_HI, patch_firmware_id >> 16);
-    ret |= cambus_writew2(&sensor->bus, sensor->slv_addr, MT9M114_REG_PATCHLDR_FIRMWARE_ID_LO, patch_firmware_id);
+    ret |= omv_i2c_writew2(&sensor->i2c_bus, sensor->slv_addr, MT9M114_REG_XMDA_ACCESS_CTL_STAT, patch_address >> 15);
+    ret |=
+        omv_i2c_writew2(&sensor->i2c_bus, sensor->slv_addr, MT9M114_REG_XMDA_PHYSICAL_ADDRESS_ACCESS, patch_address & 0x7FFF);
+    ret |= omv_i2c_write_bytes(&sensor->i2c_bus, sensor->slv_addr, (uint8_t *) patch, patch_len, OMV_I2C_XFER_NO_FLAGS);
+    ret |= omv_i2c_writew2(&sensor->i2c_bus, sensor->slv_addr, MT9M114_REG_XMDA_LOGIC_ADDRESS_ACCESS, 0x0000);
+    ret |= omv_i2c_writew2(&sensor->i2c_bus, sensor->slv_addr, MT9M114_REG_PATCHLDR_LOADER_ADDRESS, patch_loader_address);
+    ret |= omv_i2c_writew2(&sensor->i2c_bus, sensor->slv_addr, MT9M114_REG_PATCHLDR_PATCH_ID, patch_id);
+    ret |= omv_i2c_writew2(&sensor->i2c_bus, sensor->slv_addr, MT9M114_REG_PATCHLDR_FIRMWARE_ID_HI, patch_firmware_id >> 16);
+    ret |= omv_i2c_writew2(&sensor->i2c_bus, sensor->slv_addr, MT9M114_REG_PATCHLDR_FIRMWARE_ID_LO, patch_firmware_id);
 
     ret |= host_command(sensor, MT9M114_HC_APPLY_PATCH);
 
     uint8_t reg_data;
-    ret |= cambus_readb2(&sensor->bus, sensor->slv_addr, MT9M114_REG_PATCHLDR_APPLY_STATUS, &reg_data);
+    ret |= omv_i2c_readb2(&sensor->i2c_bus, sensor->slv_addr, MT9M114_REG_PATCHLDR_APPLY_STATUS, &reg_data);
     ret |= (reg_data == 0) ? 0: -1;
 
     return ret;
 }
 
-static int load_awb_cmm(sensor_t *sensor)
-{
-    return cambus_write_bytes(&sensor->bus, sensor->slv_addr, (uint8_t *) awb_ccm, sizeof(awb_ccm), CAMBUS_XFER_NO_FLAGS);
+static int load_awb_cmm(sensor_t *sensor) {
+    return omv_i2c_write_bytes(&sensor->i2c_bus, sensor->slv_addr, (uint8_t *) awb_ccm, sizeof(awb_ccm), OMV_I2C_XFER_NO_FLAGS);
 }
 
-static int load_awb(sensor_t *sensor)
-{
+static int load_awb(sensor_t *sensor) {
     int ret = 0;
 
-    ret |= cambus_writeb2(&sensor->bus, sensor->slv_addr, MT9M114_REG_CAM_AWB_XSCALE, 0x03);
-    ret |= cambus_writeb2(&sensor->bus, sensor->slv_addr, MT9M114_REG_CAM_AWB_YSCALE, 0x02);
-    ret |= cambus_writew2(&sensor->bus, sensor->slv_addr, MT9M114_REG_CAM_AWB_Y_SHIFT_PRE_ADJ, 0x003C);
-    ret |= cambus_write_bytes(&sensor->bus, sensor->slv_addr,
-            (uint8_t *) awb_weights, sizeof(awb_weights), CAMBUS_XFER_NO_FLAGS);
+    ret |= omv_i2c_writeb2(&sensor->i2c_bus, sensor->slv_addr, MT9M114_REG_CAM_AWB_XSCALE, 0x03);
+    ret |= omv_i2c_writeb2(&sensor->i2c_bus, sensor->slv_addr, MT9M114_REG_CAM_AWB_YSCALE, 0x02);
+    ret |= omv_i2c_writew2(&sensor->i2c_bus, sensor->slv_addr, MT9M114_REG_CAM_AWB_Y_SHIFT_PRE_ADJ, 0x003C);
+    ret |= omv_i2c_write_bytes(&sensor->i2c_bus, sensor->slv_addr,
+                               (uint8_t *) awb_weights, sizeof(awb_weights), OMV_I2C_XFER_NO_FLAGS);
 
     for (int i = 0xC90C; i <= 0xC911; i++) {
-        ret |= cambus_writeb2(&sensor->bus, sensor->slv_addr, i, 0x80);
+        ret |= omv_i2c_writeb2(&sensor->i2c_bus, sensor->slv_addr, i, 0x80);
     }
 
     return ret;
 }
 
-static int load_cpipe(sensor_t *sensor)
-{
+static int load_cpipe(sensor_t *sensor) {
     int ret = 0;
 
     int a_size = sizeof(cpipe_regs_8_bit_a) / sizeof(cpipe_regs_8_bit_a[0]);
     int d_size = sizeof(cpipe_regs_8_bit_d) / sizeof(cpipe_regs_8_bit_d[0]);
 
     for (int i = 0, ii = IM_MIN(a_size, d_size); i < ii; i++) {
-        ret |= cambus_writeb2(&sensor->bus, sensor->slv_addr, cpipe_regs_8_bit_a[i], cpipe_regs_8_bit_d[i]);
+        ret |= omv_i2c_writeb2(&sensor->i2c_bus, sensor->slv_addr, cpipe_regs_8_bit_a[i], cpipe_regs_8_bit_d[i]);
     }
 
     for (int i = 0; i < (sizeof(cpipe_regs_16_bit) / sizeof(cpipe_regs_16_bit[0])); i++) {
-        ret |= cambus_writew2(&sensor->bus, sensor->slv_addr, cpipe_regs_16_bit[i][0], cpipe_regs_16_bit[i][1]);
+        ret |= omv_i2c_writew2(&sensor->i2c_bus, sensor->slv_addr, cpipe_regs_16_bit[i][0], cpipe_regs_16_bit[i][1]);
     }
 
     return ret;
 }
 
-static int set_system_state(sensor_t *sensor, uint8_t state)
-{
-    if (cambus_writeb2(&sensor->bus, sensor->slv_addr, MT9M114_REG_SYSMGR_NEXT_STATE, state) != 0) {
+static int set_system_state(sensor_t *sensor, uint8_t state) {
+    if (omv_i2c_writeb2(&sensor->i2c_bus, sensor->slv_addr, MT9M114_REG_SYSMGR_NEXT_STATE, state) != 0) {
         return -1;
     }
 
     return (host_command(sensor, MT9M114_HC_SET_STATE) == 0) ? 0 : -1;
 }
 
-static int change_config(sensor_t *sensor)
-{
+static int change_config(sensor_t *sensor) {
     return set_system_state(sensor, MT9M114_SS_ENTER_CONFIG_CHANGE);
 }
 
-static int refresh(sensor_t *sensor)
-{
+static int refresh(sensor_t *sensor) {
     int ret = host_command(sensor, MT9M114_HC_REFRESH);
 
     if (ret == 0) {
@@ -407,7 +400,7 @@ static int refresh(sensor_t *sensor)
 
     uint8_t reg_data;
 
-    if (cambus_readb2(&sensor->bus, sensor->slv_addr, MT9M114_REG_SEQ_ERROR_CODE, &reg_data) != 0) {
+    if (omv_i2c_readb2(&sensor->i2c_bus, sensor->slv_addr, MT9M114_REG_SEQ_ERROR_CODE, &reg_data) != 0) {
         return -1;
     }
 
@@ -416,8 +409,7 @@ static int refresh(sensor_t *sensor)
 
 static int set_pixformat(sensor_t *sensor, pixformat_t pixformat);
 static int set_framesize(sensor_t *sensor, framesize_t framesize);
-static int reset(sensor_t *sensor)
-{
+static int reset(sensor_t *sensor) {
     int ret = 0;
     readout_x = 0;
     readout_y = 0;
@@ -425,16 +417,16 @@ static int reset(sensor_t *sensor)
     readout_w = ACTIVE_SENSOR_WIDTH;
     readout_h = ACTIVE_SENSOR_HEIGHT;
 
-    ret |= cambus_writew2(&sensor->bus, sensor->slv_addr, MT9M114_REG_SYSCTL, MT9M114_SYSCTL_SOFT_RESET);
+    ret |= omv_i2c_writew2(&sensor->i2c_bus, sensor->slv_addr, MT9M114_REG_SYSCTL, MT9M114_SYSCTL_SOFT_RESET);
     mp_hal_delay_ms(1);
 
-    ret |= cambus_writew2(&sensor->bus, sensor->slv_addr, MT9M114_REG_SYSCTL, 0);
+    ret |= omv_i2c_writew2(&sensor->i2c_bus, sensor->slv_addr, MT9M114_REG_SYSCTL, 0);
     mp_hal_delay_ms(45);
 
     for (mp_uint_t start = mp_hal_ticks_ms();; mp_hal_delay_ms(MT9M114_HC_DELAY)) {
         uint16_t reg_data;
 
-        if (cambus_readw2(&sensor->bus, sensor->slv_addr, MT9M114_REG_HOST_COMMAND, &reg_data) != 0) {
+        if (omv_i2c_readw2(&sensor->i2c_bus, sensor->slv_addr, MT9M114_REG_HOST_COMMAND, &reg_data) != 0) {
             return -1;
         }
 
@@ -450,7 +442,7 @@ static int reset(sensor_t *sensor)
     for (mp_uint_t start = mp_hal_ticks_ms();; mp_hal_delay_ms(MT9M114_HC_DELAY)) {
         uint8_t reg_data;
 
-        if (cambus_readb2(&sensor->bus, sensor->slv_addr, MT9M114_REG_SYSMGR_CURRENT_STATE, &reg_data) != 0) {
+        if (omv_i2c_readb2(&sensor->i2c_bus, sensor->slv_addr, MT9M114_REG_SYSMGR_CURRENT_STATE, &reg_data) != 0) {
             return -1;
         }
 
@@ -465,16 +457,16 @@ static int reset(sensor_t *sensor)
 
     // Errata 2 (Black Frame Output)
     uint16_t reg;
-    ret |= cambus_readw2(&sensor->bus, sensor->slv_addr, 0x301A, &reg);
-    ret |= cambus_writew2(&sensor->bus, sensor->slv_addr, 0x301A, reg | (1 << 9));
+    ret |= omv_i2c_readw2(&sensor->i2c_bus, sensor->slv_addr, 0x301A, &reg);
+    ret |= omv_i2c_writew2(&sensor->i2c_bus, sensor->slv_addr, 0x301A, reg | (1 << 9));
 
-    ret |= cambus_writew2(&sensor->bus, sensor->slv_addr, MT9M114_REG_CAM_SYSCTL_PLL_DIVIDER_M_N,
-            (sensor_get_xclk_frequency() == MT9M114_XCLK_FREQ)
+    ret |= omv_i2c_writew2(&sensor->i2c_bus, sensor->slv_addr, MT9M114_REG_CAM_SYSCTL_PLL_DIVIDER_M_N,
+                           (sensor_get_xclk_frequency() == MT9M114_XCLK_FREQ)
             ? 0x120 // xclk=24MHz, m=32, n=1, sensor=48MHz, bus=76.8MHz
             : 0x448); // xclk=25MHz, m=72, n=4, sensor=45MHz, bus=72MHz
 
     for (int i = 0; i < (sizeof(default_regs) / sizeof(default_regs[0])); i++) {
-        ret |= cambus_writew2(&sensor->bus, sensor->slv_addr, default_regs[i][0], default_regs[i][1]);
+        ret |= omv_i2c_writew2(&sensor->i2c_bus, sensor->slv_addr, default_regs[i][0], default_regs[i][1]);
     }
 
     ret |= set_framesize(sensor, FRAMESIZE_SXGAM);
@@ -492,18 +484,17 @@ static int reset(sensor_t *sensor)
     ret |= load_awb(sensor);
     ret |= load_cpipe(sensor);
 
-    ret |= cambus_writew2(&sensor->bus, sensor->slv_addr, MT9M114_REG_CAM_PORT_OUTPUT_CONTROL, 0x8008);
-    ret |= cambus_writew2(&sensor->bus, sensor->slv_addr, MT9M114_REG_PAD_SLEW, 0x0777);
-    ret |= cambus_writew2(&sensor->bus, sensor->slv_addr, MT9M114_REG_SENSOR_CONTROL_READ_MODE,
-            MT9M114_SENSOR_CONTROL_READ_MODE_HMIRROR | MT9M114_SENSOR_CONTROL_READ_MODE_VFLIP);
+    ret |= omv_i2c_writew2(&sensor->i2c_bus, sensor->slv_addr, MT9M114_REG_CAM_PORT_OUTPUT_CONTROL, 0x8008);
+    ret |= omv_i2c_writew2(&sensor->i2c_bus, sensor->slv_addr, MT9M114_REG_PAD_SLEW, 0x0777);
+    ret |= omv_i2c_writew2(&sensor->i2c_bus, sensor->slv_addr, MT9M114_REG_SENSOR_CONTROL_READ_MODE,
+                           MT9M114_SENSOR_CONTROL_READ_MODE_HMIRROR | MT9M114_SENSOR_CONTROL_READ_MODE_VFLIP);
 
     ret |= change_config(sensor);
 
     return ret;
 }
 
-static int sleep(sensor_t *sensor, int enable)
-{
+static int sleep(sensor_t *sensor, int enable) {
     uint8_t state = MT9M114_SS_LEAVE_STANDBY;
     uint8_t new_state = MT9M114_SS_STREAMING;
 
@@ -519,7 +510,7 @@ static int sleep(sensor_t *sensor, int enable)
     for (mp_uint_t start = mp_hal_ticks_ms();; mp_hal_delay_ms(MT9M114_HC_DELAY)) {
         uint8_t reg_data;
 
-        if (cambus_readb2(&sensor->bus, sensor->slv_addr, MT9M114_REG_SYSMGR_CURRENT_STATE, &reg_data) != 0) {
+        if (omv_i2c_readb2(&sensor->i2c_bus, sensor->slv_addr, MT9M114_REG_SYSMGR_CURRENT_STATE, &reg_data) != 0) {
             return -1;
         }
 
@@ -534,24 +525,21 @@ static int sleep(sensor_t *sensor, int enable)
 }
 
 
-static int read_reg(sensor_t *sensor, uint16_t reg_addr)
-{
+static int read_reg(sensor_t *sensor, uint16_t reg_addr) {
     uint16_t reg_data;
 
-    if (cambus_readw2(&sensor->bus, sensor->slv_addr, reg_addr, &reg_data) != 0) {
+    if (omv_i2c_readw2(&sensor->i2c_bus, sensor->slv_addr, reg_addr, &reg_data) != 0) {
         return -1;
     }
 
     return reg_data;
 }
 
-static int write_reg(sensor_t *sensor, uint16_t reg_addr, uint16_t reg_data)
-{
-    return cambus_writew2(&sensor->bus, sensor->slv_addr, reg_addr, reg_data);
+static int write_reg(sensor_t *sensor, uint16_t reg_addr, uint16_t reg_data) {
+    return omv_i2c_writew2(&sensor->i2c_bus, sensor->slv_addr, reg_addr, reg_data);
 }
 
-static int set_pixformat(sensor_t *sensor, pixformat_t pixformat)
-{
+static int set_pixformat(sensor_t *sensor, pixformat_t pixformat) {
     uint16_t reg = 0;
 
     switch (pixformat) {
@@ -564,8 +552,8 @@ static int set_pixformat(sensor_t *sensor, pixformat_t pixformat)
             break;
         case PIXFORMAT_BAYER:
             if ((sensor->framesize != FRAMESIZE_INVALID)
-            && (sensor->framesize != FRAMESIZE_VGA)
-            && (sensor->framesize != FRAMESIZE_SXGAM)) {
+                && (sensor->framesize != FRAMESIZE_VGA)
+                && (sensor->framesize != FRAMESIZE_SXGAM)) {
                 return -1;
             }
             reg = MT9M114_OUTPUT_FORMAT_BAYER | MT9M114_OUTPUT_FORMAT_RAW_BAYER_10;
@@ -574,15 +562,14 @@ static int set_pixformat(sensor_t *sensor, pixformat_t pixformat)
             return -1;
     }
 
-    if (cambus_writew2(&sensor->bus, sensor->slv_addr, MT9M114_REG_CAM_OUTPUT_FORMAT, reg) != 0) {
+    if (omv_i2c_writew2(&sensor->i2c_bus, sensor->slv_addr, MT9M114_REG_CAM_OUTPUT_FORMAT, reg) != 0) {
         return -1;
     }
 
     return change_config(sensor);
 }
 
-static int set_framesize(sensor_t *sensor, framesize_t framesize)
-{
+static int set_framesize(sensor_t *sensor, framesize_t framesize) {
     int ret = 0;
     uint16_t w = resolution[framesize][0];
     uint16_t h = resolution[framesize][1];
@@ -609,7 +596,7 @@ static int set_framesize(sensor_t *sensor, framesize_t framesize)
 
     uint16_t read_mode;
 
-    if (cambus_readw2(&sensor->bus, sensor->slv_addr, MT9M114_REG_SENSOR_CONTROL_READ_MODE, &read_mode) != 0) {
+    if (omv_i2c_readw2(&sensor->i2c_bus, sensor->slv_addr, MT9M114_REG_SENSOR_CONTROL_READ_MODE, &read_mode) != 0) {
         return -1;
     }
 
@@ -627,8 +614,8 @@ static int set_framesize(sensor_t *sensor, framesize_t framesize)
     uint16_t sensor_h = readout_h + DUMMY_HEIGHT_BUFFER; // camera hardware needs dummy lines to sync
 
     uint16_t sensor_ws = IM_MAX(IM_MIN((((ACTIVE_SENSOR_WIDTH - sensor_w) / 4) + (readout_x / 2)) * 2,
-            ACTIVE_SENSOR_WIDTH - sensor_w),
-            -(DUMMY_WIDTH_BUFFER / 2)) + DUMMY_COLUMNS; // must be multiple of 2
+                                       ACTIVE_SENSOR_WIDTH - sensor_w),
+                                -(DUMMY_WIDTH_BUFFER / 2)) + DUMMY_COLUMNS; // must be multiple of 2
     uint16_t sensor_we = sensor_ws + sensor_w - 1;
 
     int sensor_ws_mod = sensor_ws % (read_mode_div * 4); // multiple 4/8
@@ -638,8 +625,8 @@ static int set_framesize(sensor_t *sensor, framesize_t framesize)
     }
 
     uint16_t sensor_hs = IM_MAX(IM_MIN((((ACTIVE_SENSOR_HEIGHT - sensor_h) / 4) - (readout_y / 2)) * 2,
-            ACTIVE_SENSOR_HEIGHT - sensor_h),
-            -(DUMMY_HEIGHT_BUFFER / 2)) + DUMMY_LINES; // must be multiple of 2
+                                       ACTIVE_SENSOR_HEIGHT - sensor_h),
+                                -(DUMMY_HEIGHT_BUFFER / 2)) + DUMMY_LINES; // must be multiple of 2
     uint16_t sensor_he = sensor_hs + sensor_h - 1;
 
     int sensor_hs_mod = sensor_hs % (read_mode_div * 4); // multiple 4/8
@@ -667,105 +654,104 @@ static int set_framesize(sensor_t *sensor, framesize_t framesize)
         line_length_pck += 1;
     }
 
-    ret |= cambus_writew2(&sensor->bus, sensor->slv_addr, MT9M114_REG_SENSOR_CFG_Y_ADDR_START, sensor_hs);
-    ret |= cambus_writew2(&sensor->bus, sensor->slv_addr, MT9M114_REG_SENSOR_CFG_X_ADDR_START, sensor_ws);
-    ret |= cambus_writew2(&sensor->bus, sensor->slv_addr, MT9M114_REG_SENSOR_CFG_Y_ADDR_END, sensor_he);
-    ret |= cambus_writew2(&sensor->bus, sensor->slv_addr, MT9M114_REG_SENSOR_CFG_X_ADDR_END, sensor_we);
+    ret |= omv_i2c_writew2(&sensor->i2c_bus, sensor->slv_addr, MT9M114_REG_SENSOR_CFG_Y_ADDR_START, sensor_hs);
+    ret |= omv_i2c_writew2(&sensor->i2c_bus, sensor->slv_addr, MT9M114_REG_SENSOR_CFG_X_ADDR_START, sensor_ws);
+    ret |= omv_i2c_writew2(&sensor->i2c_bus, sensor->slv_addr, MT9M114_REG_SENSOR_CFG_Y_ADDR_END, sensor_he);
+    ret |= omv_i2c_writew2(&sensor->i2c_bus, sensor->slv_addr, MT9M114_REG_SENSOR_CFG_X_ADDR_END, sensor_we);
 
     int pixclk = (sensor_get_xclk_frequency() == MT9M114_XCLK_FREQ) ? 48000000 : 45000000;
 
-    ret |= cambus_writew2(&sensor->bus, sensor->slv_addr, MT9M114_REG_SENSOR_CFG_PIXCLK, pixclk >> 16);
-    ret |= cambus_writew2(&sensor->bus, sensor->slv_addr, MT9M114_REG_SENSOR_CFG_PIXCLK + 2, pixclk);
+    ret |= omv_i2c_writew2(&sensor->i2c_bus, sensor->slv_addr, MT9M114_REG_SENSOR_CFG_PIXCLK, pixclk >> 16);
+    ret |= omv_i2c_writew2(&sensor->i2c_bus, sensor->slv_addr, MT9M114_REG_SENSOR_CFG_PIXCLK + 2, pixclk);
 
-    ret |= cambus_writew2(&sensor->bus, sensor->slv_addr, MT9M114_REG_SENSOR_CFG_FINE_INTEG_TIME_MIN,
-            (read_mode_div == 2) ? 451 : 219); // figured this out by checking register wizard against datasheet
-    ret |= cambus_writew2(&sensor->bus, sensor->slv_addr, MT9M114_REG_SENSOR_CFG_FINE_INTEG_TIME_MAX,
-            (read_mode_div == 2) ? 947 : 1480); // figured this out by checking register wizard against datasheet
-    ret |= cambus_writew2(&sensor->bus, sensor->slv_addr, MT9M114_REG_SENSOR_CFG_FRAME_LENGTH_LINES,
-            frame_length_lines); // figured this out by checking register wizard against datasheet
-    ret |= cambus_writew2(&sensor->bus, sensor->slv_addr, MT9M114_REG_SENSOR_CFG_LINE_LENGTH_PCK,
-            line_length_pck); // figured this out by checking register wizard against datasheet
-    ret |= cambus_writew2(&sensor->bus, sensor->slv_addr, MT9M114_REG_SENSOR_CFG_FINE_CORRECTION,
-            (read_mode_div == 2) ? 224 : 96); // figured this out by checking register wizard against datasheet
-    ret |= cambus_writew2(&sensor->bus, sensor->slv_addr, MT9M114_REG_SENSOR_CFG_CPIPE_LAST_ROW,
-            (readout_h / read_mode_div) + 3); // figured this out by checking register wizard against datasheet
+    ret |= omv_i2c_writew2(&sensor->i2c_bus, sensor->slv_addr, MT9M114_REG_SENSOR_CFG_FINE_INTEG_TIME_MIN,
+                           (read_mode_div == 2) ? 451 : 219); // figured this out by checking register wizard against datasheet
+    ret |= omv_i2c_writew2(&sensor->i2c_bus, sensor->slv_addr, MT9M114_REG_SENSOR_CFG_FINE_INTEG_TIME_MAX,
+                           (read_mode_div == 2) ? 947 : 1480); // figured this out by checking register wizard against datasheet
+    ret |= omv_i2c_writew2(&sensor->i2c_bus, sensor->slv_addr, MT9M114_REG_SENSOR_CFG_FRAME_LENGTH_LINES,
+                           frame_length_lines); // figured this out by checking register wizard against datasheet
+    ret |= omv_i2c_writew2(&sensor->i2c_bus, sensor->slv_addr, MT9M114_REG_SENSOR_CFG_LINE_LENGTH_PCK,
+                           line_length_pck); // figured this out by checking register wizard against datasheet
+    ret |= omv_i2c_writew2(&sensor->i2c_bus, sensor->slv_addr, MT9M114_REG_SENSOR_CFG_FINE_CORRECTION,
+                           (read_mode_div == 2) ? 224 : 96); // figured this out by checking register wizard against datasheet
+    ret |= omv_i2c_writew2(&sensor->i2c_bus, sensor->slv_addr, MT9M114_REG_SENSOR_CFG_CPIPE_LAST_ROW,
+                           (readout_h / read_mode_div) + 3); // figured this out by checking register wizard against datasheet
 
-    ret |= cambus_writew2(&sensor->bus, sensor->slv_addr, MT9M114_REG_SENSOR_CONTROL_READ_MODE, read_mode);
+    ret |= omv_i2c_writew2(&sensor->i2c_bus, sensor->slv_addr, MT9M114_REG_SENSOR_CONTROL_READ_MODE, read_mode);
 
-    ret |= cambus_writew2(&sensor->bus, sensor->slv_addr, MT9M114_REG_CROP_WINDOW_X_OFFSET, x_off);
-    ret |= cambus_writew2(&sensor->bus, sensor->slv_addr, MT9M114_REG_CROP_WINDOW_Y_OFFSET, y_off);
-    ret |= cambus_writew2(&sensor->bus, sensor->slv_addr, MT9M114_REG_CROP_WINDOW_WIDTH, w_mul);
-    ret |= cambus_writew2(&sensor->bus, sensor->slv_addr, MT9M114_REG_CROP_WINDOW_HEIGHT, h_mul);
+    ret |= omv_i2c_writew2(&sensor->i2c_bus, sensor->slv_addr, MT9M114_REG_CROP_WINDOW_X_OFFSET, x_off);
+    ret |= omv_i2c_writew2(&sensor->i2c_bus, sensor->slv_addr, MT9M114_REG_CROP_WINDOW_Y_OFFSET, y_off);
+    ret |= omv_i2c_writew2(&sensor->i2c_bus, sensor->slv_addr, MT9M114_REG_CROP_WINDOW_WIDTH, w_mul);
+    ret |= omv_i2c_writew2(&sensor->i2c_bus, sensor->slv_addr, MT9M114_REG_CROP_WINDOW_HEIGHT, h_mul);
 
-    ret |= cambus_writew2(&sensor->bus, sensor->slv_addr, MT9M114_REG_CAM_OUTPUT_WIDTH, w);
-    ret |= cambus_writew2(&sensor->bus, sensor->slv_addr, MT9M114_REG_CAM_OUTPUT_HEIGHT, h);
+    ret |= omv_i2c_writew2(&sensor->i2c_bus, sensor->slv_addr, MT9M114_REG_CAM_OUTPUT_WIDTH, w);
+    ret |= omv_i2c_writew2(&sensor->i2c_bus, sensor->slv_addr, MT9M114_REG_CAM_OUTPUT_HEIGHT, h);
 
     float rate = (((float) pixclk) / (frame_length_lines * line_length_pck)) * 256;
 
-    ret |= cambus_writew2(&sensor->bus, sensor->slv_addr, MT9M114_REG_CAM_AET_MAX_FRAME_RATE, fast_ceilf(rate));
-    ret |= cambus_writew2(&sensor->bus, sensor->slv_addr, MT9M114_REG_CAM_AET_MIN_FRAME_RATE, fast_floorf(rate / 2.f));
+    ret |= omv_i2c_writew2(&sensor->i2c_bus, sensor->slv_addr, MT9M114_REG_CAM_AET_MAX_FRAME_RATE, fast_ceilf(rate));
+    ret |= omv_i2c_writew2(&sensor->i2c_bus, sensor->slv_addr, MT9M114_REG_CAM_AET_MIN_FRAME_RATE, fast_floorf(rate / 2.f));
 
-    ret |= cambus_writew2(&sensor->bus, sensor->slv_addr, MT9M114_REG_AWB_CLIP_WINDOW_X_START, 0);
-    ret |= cambus_writew2(&sensor->bus, sensor->slv_addr, MT9M114_REG_AWB_CLIP_WINDOW_Y_START, 0);
-    ret |= cambus_writew2(&sensor->bus, sensor->slv_addr, MT9M114_REG_AWB_CLIP_WINDOW_X_END, w - 1);
-    ret |= cambus_writew2(&sensor->bus, sensor->slv_addr, MT9M114_REG_AWB_CLIP_WINDOW_Y_END, h - 1);
+    ret |= omv_i2c_writew2(&sensor->i2c_bus, sensor->slv_addr, MT9M114_REG_AWB_CLIP_WINDOW_X_START, 0);
+    ret |= omv_i2c_writew2(&sensor->i2c_bus, sensor->slv_addr, MT9M114_REG_AWB_CLIP_WINDOW_Y_START, 0);
+    ret |= omv_i2c_writew2(&sensor->i2c_bus, sensor->slv_addr, MT9M114_REG_AWB_CLIP_WINDOW_X_END, w - 1);
+    ret |= omv_i2c_writew2(&sensor->i2c_bus, sensor->slv_addr, MT9M114_REG_AWB_CLIP_WINDOW_Y_END, h - 1);
 
-    ret |= cambus_writew2(&sensor->bus, sensor->slv_addr, MT9M114_REG_AE_INITIAL_WINDOW_X_START, 0);
-    ret |= cambus_writew2(&sensor->bus, sensor->slv_addr, MT9M114_REG_AE_INITIAL_WINDOW_Y_START, 0);
-    ret |= cambus_writew2(&sensor->bus, sensor->slv_addr, MT9M114_REG_AE_INITIAL_WINDOW_X_END, (w / 5) - 1);
-    ret |= cambus_writew2(&sensor->bus, sensor->slv_addr, MT9M114_REG_AE_INITIAL_WINDOW_Y_END, (h / 5) - 1);
+    ret |= omv_i2c_writew2(&sensor->i2c_bus, sensor->slv_addr, MT9M114_REG_AE_INITIAL_WINDOW_X_START, 0);
+    ret |= omv_i2c_writew2(&sensor->i2c_bus, sensor->slv_addr, MT9M114_REG_AE_INITIAL_WINDOW_Y_START, 0);
+    ret |= omv_i2c_writew2(&sensor->i2c_bus, sensor->slv_addr, MT9M114_REG_AE_INITIAL_WINDOW_X_END, (w / 5) - 1);
+    ret |= omv_i2c_writew2(&sensor->i2c_bus, sensor->slv_addr, MT9M114_REG_AE_INITIAL_WINDOW_Y_END, (h / 5) - 1);
 
-    ret |= cambus_writeb2(&sensor->bus, sensor->slv_addr, MT9M114_REG_AUTO_BINNING_MODE, 0);
-    ret |= cambus_writew2(&sensor->bus, sensor->slv_addr, MT9M114_REG_LL_ALGO, 0);
-
-    return change_config(sensor);
-}
-
-static int set_framerate(sensor_t *sensor, int framerate)
-{
-    if (cambus_writew2(&sensor->bus, sensor->slv_addr, MT9M114_REG_CAM_AET_MAX_FRAME_RATE, framerate * 256) != 0) {
-        return -1;
-    }
-
-    if (cambus_writew2(&sensor->bus, sensor->slv_addr, MT9M114_REG_CAM_AET_MIN_FRAME_RATE, framerate * 128) != 0) {
-        return -1;
-    }
+    ret |= omv_i2c_writeb2(&sensor->i2c_bus, sensor->slv_addr, MT9M114_REG_AUTO_BINNING_MODE, 0);
+    ret |= omv_i2c_writew2(&sensor->i2c_bus, sensor->slv_addr, MT9M114_REG_LL_ALGO, 0);
 
     return change_config(sensor);
 }
 
-static int set_contrast(sensor_t *sensor, int level) // -16 to +16
-{
+static int set_framerate(sensor_t *sensor, int framerate) {
+    if (omv_i2c_writew2(&sensor->i2c_bus, sensor->slv_addr, MT9M114_REG_CAM_AET_MAX_FRAME_RATE, framerate * 256) != 0) {
+        return -1;
+    }
+
+    if (omv_i2c_writew2(&sensor->i2c_bus, sensor->slv_addr, MT9M114_REG_CAM_AET_MIN_FRAME_RATE, framerate * 128) != 0) {
+        return -1;
+    }
+
+    return change_config(sensor);
+}
+
+static int set_contrast(sensor_t *sensor, int level) {
+    // -16 to +16
     int new_level = (level > 0) ? (level * 2) : level;
 
     if ((new_level < -16) || (32 < new_level)) {
         return -1;
     }
 
-    if (cambus_writew2(&sensor->bus, sensor->slv_addr, MT9M114_REG_UVC_CONTRAST_CONTROL, new_level + 32) != 0) {
+    if (omv_i2c_writew2(&sensor->i2c_bus, sensor->slv_addr, MT9M114_REG_UVC_CONTRAST_CONTROL, new_level + 32) != 0) {
         return -1;
     }
 
     return refresh(sensor);
 }
 
-static int set_brightness(sensor_t *sensor, int level) // -16 to +16
-{
+static int set_brightness(sensor_t *sensor, int level) {
+    // -16 to +16
     int new_level = level * 2;
 
     if ((new_level < -32) || (32 < new_level)) {
         return -1;
     }
 
-    if (cambus_writew2(&sensor->bus, sensor->slv_addr, MT9M114_REG_UVC_BRIGHTNESS_CONTROL, new_level + 55) != 0) {
+    if (omv_i2c_writew2(&sensor->i2c_bus, sensor->slv_addr, MT9M114_REG_UVC_BRIGHTNESS_CONTROL, new_level + 55) != 0) {
         return -1;
     }
 
     return refresh(sensor);
 }
 
-static int set_saturation(sensor_t *sensor, int level) // -16 to +16
-{
+static int set_saturation(sensor_t *sensor, int level) {
+    // -16 to +16
     int new_level = level * 8;
 
     if ((new_level < -128) || (128 < new_level)) {
@@ -774,37 +760,34 @@ static int set_saturation(sensor_t *sensor, int level) // -16 to +16
 
     new_level = IM_MIN(new_level, 127);
 
-    if (cambus_writew2(&sensor->bus, sensor->slv_addr, MT9M114_REG_UVC_SATURATION_CONTROL, new_level + 128) != 0) {
+    if (omv_i2c_writew2(&sensor->i2c_bus, sensor->slv_addr, MT9M114_REG_UVC_SATURATION_CONTROL, new_level + 128) != 0) {
         return -1;
     }
 
     return refresh(sensor);
 }
 
-static int set_gainceiling(sensor_t *sensor, gainceiling_t gainceiling)
-{
+static int set_gainceiling(sensor_t *sensor, gainceiling_t gainceiling) {
     return 0;
 }
 
-static int set_colorbar(sensor_t *sensor, int enable)
-{
-    if (cambus_writeb2(&sensor->bus, sensor->slv_addr, MT9M114_REG_CAM_MODE_SELECT, enable ? 2 : 0) != 0) {
+static int set_colorbar(sensor_t *sensor, int enable) {
+    if (omv_i2c_writeb2(&sensor->i2c_bus, sensor->slv_addr, MT9M114_REG_CAM_MODE_SELECT, enable ? 2 : 0) != 0) {
         return -1;
     }
 
     return change_config(sensor);
 }
 
-static int set_auto_gain(sensor_t *sensor, int enable, float gain_db, float gain_db_ceiling)
-{
-    if (cambus_writeb2(&sensor->bus, sensor->slv_addr, MT9M114_REG_UVC_AE_MODE_CONTROL, enable ? 0x2 : 0x1) != 0) {
+static int set_auto_gain(sensor_t *sensor, int enable, float gain_db, float gain_db_ceiling) {
+    if (omv_i2c_writeb2(&sensor->i2c_bus, sensor->slv_addr, MT9M114_REG_UVC_AE_MODE_CONTROL, enable ? 0x2 : 0x1) != 0) {
         return -1;
     }
 
     if ((enable == 0) && (!isnanf(gain_db)) && (!isinff(gain_db))) {
-        int gain = IM_MAX(IM_MIN(fast_expf((gain_db / 20.f) * fast_log(10.f)) * 32.f, 0xffff), 0x0000);
+        int gain = IM_MAX(IM_MIN(expf((gain_db / 20.0f) * M_LN10) * 32.0f, 0xffff), 0x0000);
 
-        if (cambus_writew2(&sensor->bus, sensor->slv_addr, MT9M114_REG_UVC_GAIN_CONTROL, gain) != 0) {
+        if (omv_i2c_writew2(&sensor->i2c_bus, sensor->slv_addr, MT9M114_REG_UVC_GAIN_CONTROL, gain) != 0) {
             return -1;
         }
     }
@@ -812,39 +795,37 @@ static int set_auto_gain(sensor_t *sensor, int enable, float gain_db, float gain
     return refresh(sensor);
 }
 
-static int get_gain_db(sensor_t *sensor, float *gain_db)
-{
+static int get_gain_db(sensor_t *sensor, float *gain_db) {
     uint16_t gain;
 
-    if (cambus_readw2(&sensor->bus, sensor->slv_addr, MT9M114_REG_UVC_GAIN_CONTROL, &gain) != 0) {
+    if (omv_i2c_readw2(&sensor->i2c_bus, sensor->slv_addr, MT9M114_REG_UVC_GAIN_CONTROL, &gain) != 0) {
         return -1;
     }
 
-    *gain_db = 20.f * (fast_log(gain / 32.f) / fast_log(10.f));
+    *gain_db = 20.0f * log10f(gain / 32.0f);
 
     return 0;
 }
 
-static int set_auto_exposure(sensor_t *sensor, int enable, int exposure_us)
-{
-    if (cambus_writeb2(&sensor->bus, sensor->slv_addr, MT9M114_REG_UVC_AE_MODE_CONTROL, enable ? 0x2 : 0x1) != 0) {
+static int set_auto_exposure(sensor_t *sensor, int enable, int exposure_us) {
+    if (omv_i2c_writeb2(&sensor->i2c_bus, sensor->slv_addr, MT9M114_REG_UVC_AE_MODE_CONTROL, enable ? 0x2 : 0x1) != 0) {
         return -1;
     }
 
     if ((enable == 0) && (exposure_us >= 0)) {
-        if (cambus_writeb2(&sensor->bus, sensor->slv_addr, MT9M114_REG_UVC_MANUAL_EXPOSURE_CONFIG, 0x1) != 0) {
+        if (omv_i2c_writeb2(&sensor->i2c_bus, sensor->slv_addr, MT9M114_REG_UVC_MANUAL_EXPOSURE_CONFIG, 0x1) != 0) {
             return -1;
         }
 
         int exposure_100_us = exposure_us / 100;
 
-        if (cambus_writew2(&sensor->bus, sensor->slv_addr, MT9M114_REG_UVC_EXPOSURE_TIME_ABSOLUTE_CTRL,
-                exposure_100_us >> 16) != 0) {
+        if (omv_i2c_writew2(&sensor->i2c_bus, sensor->slv_addr, MT9M114_REG_UVC_EXPOSURE_TIME_ABSOLUTE_CTRL,
+                            exposure_100_us >> 16) != 0) {
             return -1;
         }
 
-        if (cambus_writew2(&sensor->bus, sensor->slv_addr, MT9M114_REG_UVC_EXPOSURE_TIME_ABSOLUTE_CTRL + 2,
-                exposure_100_us) != 0) {
+        if (omv_i2c_writew2(&sensor->i2c_bus, sensor->slv_addr, MT9M114_REG_UVC_EXPOSURE_TIME_ABSOLUTE_CTRL + 2,
+                            exposure_100_us) != 0) {
             return -1;
         }
     }
@@ -852,15 +833,14 @@ static int set_auto_exposure(sensor_t *sensor, int enable, int exposure_us)
     return refresh(sensor);
 }
 
-static int get_exposure_us(sensor_t *sensor, int *exposure_us)
-{
+static int get_exposure_us(sensor_t *sensor, int *exposure_us) {
     uint16_t reg_h, reg_l;
 
-    if (cambus_readw2(&sensor->bus, sensor->slv_addr, MT9M114_REG_UVC_EXPOSURE_TIME_ABSOLUTE_CTRL, &reg_h) != 0) {
+    if (omv_i2c_readw2(&sensor->i2c_bus, sensor->slv_addr, MT9M114_REG_UVC_EXPOSURE_TIME_ABSOLUTE_CTRL, &reg_h) != 0) {
         return -1;
     }
 
-    if (cambus_readw2(&sensor->bus, sensor->slv_addr, MT9M114_REG_UVC_EXPOSURE_TIME_ABSOLUTE_CTRL + 2, &reg_l) != 0) {
+    if (omv_i2c_readw2(&sensor->i2c_bus, sensor->slv_addr, MT9M114_REG_UVC_EXPOSURE_TIME_ABSOLUTE_CTRL + 2, &reg_l) != 0) {
         return -1;
     }
 
@@ -869,17 +849,16 @@ static int get_exposure_us(sensor_t *sensor, int *exposure_us)
     return 0;
 }
 
-static int set_auto_whitebal(sensor_t *sensor, int enable, float r_gain_db, float g_gain_db, float b_gain_db)
-{
-    if (cambus_writeb2(&sensor->bus, sensor->slv_addr, MT9M114_REG_UVC_WHITE_BALANCE_AUTO_CONTROL, enable ? 0x1 : 0x0) != 0) {
+static int set_auto_whitebal(sensor_t *sensor, int enable, float r_gain_db, float g_gain_db, float b_gain_db) {
+    if (omv_i2c_writeb2(&sensor->i2c_bus, sensor->slv_addr, MT9M114_REG_UVC_WHITE_BALANCE_AUTO_CONTROL,
+                        enable ? 0x1 : 0x0) != 0) {
         return -1;
     }
 
     return 0;
 }
 
-static int get_rgb_gain_db(sensor_t *sensor, float *r_gain_db, float *g_gain_db, float *b_gain_db)
-{
+static int get_rgb_gain_db(sensor_t *sensor, float *r_gain_db, float *g_gain_db, float *b_gain_db) {
     *r_gain_db = 0;
     *g_gain_db = 0;
     *b_gain_db = 0;
@@ -887,52 +866,49 @@ static int get_rgb_gain_db(sensor_t *sensor, float *r_gain_db, float *g_gain_db,
     return 0;
 }
 
-static int set_hmirror(sensor_t *sensor, int enable)
-{
+static int set_hmirror(sensor_t *sensor, int enable) {
     uint16_t reg_data;
 
-    if (cambus_readw2(&sensor->bus, sensor->slv_addr, MT9M114_REG_SENSOR_CONTROL_READ_MODE, &reg_data) != 0) {
+    if (omv_i2c_readw2(&sensor->i2c_bus, sensor->slv_addr, MT9M114_REG_SENSOR_CONTROL_READ_MODE, &reg_data) != 0) {
         return -1;
     }
 
     reg_data = (reg_data & (~MT9M114_SENSOR_CONTROL_READ_MODE_HMIRROR)) |
-            (enable ? 0x0 : MT9M114_SENSOR_CONTROL_READ_MODE_HMIRROR); // inverted
+               (enable ? 0x0 : MT9M114_SENSOR_CONTROL_READ_MODE_HMIRROR); // inverted
 
-    if (cambus_writew2(&sensor->bus, sensor->slv_addr, MT9M114_REG_SENSOR_CONTROL_READ_MODE, reg_data) != 0) {
+    if (omv_i2c_writew2(&sensor->i2c_bus, sensor->slv_addr, MT9M114_REG_SENSOR_CONTROL_READ_MODE, reg_data) != 0) {
         return -1;
     }
 
     return change_config(sensor);
 }
 
-static int set_vflip(sensor_t *sensor, int enable)
-{
+static int set_vflip(sensor_t *sensor, int enable) {
     uint16_t reg_data;
 
-    if (cambus_readw2(&sensor->bus, sensor->slv_addr, MT9M114_REG_SENSOR_CONTROL_READ_MODE, &reg_data) != 0) {
+    if (omv_i2c_readw2(&sensor->i2c_bus, sensor->slv_addr, MT9M114_REG_SENSOR_CONTROL_READ_MODE, &reg_data) != 0) {
         return -1;
     }
 
     reg_data = (reg_data & (~MT9M114_SENSOR_CONTROL_READ_MODE_VFLIP)) |
-            (enable ? 0x0 : MT9M114_SENSOR_CONTROL_READ_MODE_VFLIP); // inverted
+               (enable ? 0x0 : MT9M114_SENSOR_CONTROL_READ_MODE_VFLIP); // inverted
 
-    if (cambus_writew2(&sensor->bus, sensor->slv_addr, MT9M114_REG_SENSOR_CONTROL_READ_MODE, reg_data) != 0) {
+    if (omv_i2c_writew2(&sensor->i2c_bus, sensor->slv_addr, MT9M114_REG_SENSOR_CONTROL_READ_MODE, reg_data) != 0) {
         return -1;
     }
 
     return change_config(sensor);
 }
 
-static int set_special_effect(sensor_t *sensor, sde_t sde)
-{
+static int set_special_effect(sensor_t *sensor, sde_t sde) {
     switch (sde) {
         case SDE_NEGATIVE:
-            if (cambus_writeb2(&sensor->bus, sensor->slv_addr, MT9M114_REG_CAM_SFX_CONTROL, 0x3) != 0) {
+            if (omv_i2c_writeb2(&sensor->i2c_bus, sensor->slv_addr, MT9M114_REG_CAM_SFX_CONTROL, 0x3) != 0) {
                 return -1;
             }
             break;
         case SDE_NORMAL:
-            if (cambus_writeb2(&sensor->bus, sensor->slv_addr, MT9M114_REG_CAM_SFX_CONTROL, 0x0) != 0) {
+            if (omv_i2c_writeb2(&sensor->i2c_bus, sensor->slv_addr, MT9M114_REG_CAM_SFX_CONTROL, 0x0) != 0) {
                 return -1;
             }
             break;
@@ -943,8 +919,7 @@ static int set_special_effect(sensor_t *sensor, sde_t sde)
     return refresh(sensor);
 }
 
-static int ioctl(sensor_t *sensor, int request, va_list ap)
-{
+static int ioctl(sensor_t *sensor, int request, va_list ap) {
     int ret = 0;
 
     switch (request) {
@@ -984,42 +959,41 @@ static int ioctl(sensor_t *sensor, int request, va_list ap)
     return ret;
 }
 
-int mt9m114_init(sensor_t *sensor)
-{
+int mt9m114_init(sensor_t *sensor) {
     // Initialize sensor structure.
-    sensor->reset               = reset;
-    sensor->sleep               = sleep;
-    sensor->read_reg            = read_reg;
-    sensor->write_reg           = write_reg;
-    sensor->set_pixformat       = set_pixformat;
-    sensor->set_framesize       = set_framesize;
-    sensor->set_framerate       = set_framerate;
-    sensor->set_contrast        = set_contrast;
-    sensor->set_brightness      = set_brightness;
-    sensor->set_saturation      = set_saturation;
-    sensor->set_gainceiling     = set_gainceiling;
-    sensor->set_colorbar        = set_colorbar;
-    sensor->set_auto_gain       = set_auto_gain;
-    sensor->get_gain_db         = get_gain_db;
-    sensor->set_auto_exposure   = set_auto_exposure;
-    sensor->get_exposure_us     = get_exposure_us;
-    sensor->set_auto_whitebal   = set_auto_whitebal;
-    sensor->get_rgb_gain_db     = get_rgb_gain_db;
-    sensor->set_hmirror         = set_hmirror;
-    sensor->set_vflip           = set_vflip;
-    sensor->set_special_effect  = set_special_effect;
-    sensor->ioctl               = ioctl;
+    sensor->reset = reset;
+    sensor->sleep = sleep;
+    sensor->read_reg = read_reg;
+    sensor->write_reg = write_reg;
+    sensor->set_pixformat = set_pixformat;
+    sensor->set_framesize = set_framesize;
+    sensor->set_framerate = set_framerate;
+    sensor->set_contrast = set_contrast;
+    sensor->set_brightness = set_brightness;
+    sensor->set_saturation = set_saturation;
+    sensor->set_gainceiling = set_gainceiling;
+    sensor->set_colorbar = set_colorbar;
+    sensor->set_auto_gain = set_auto_gain;
+    sensor->get_gain_db = get_gain_db;
+    sensor->set_auto_exposure = set_auto_exposure;
+    sensor->get_exposure_us = get_exposure_us;
+    sensor->set_auto_whitebal = set_auto_whitebal;
+    sensor->get_rgb_gain_db = get_rgb_gain_db;
+    sensor->set_hmirror = set_hmirror;
+    sensor->set_vflip = set_vflip;
+    sensor->set_special_effect = set_special_effect;
+    sensor->ioctl = ioctl;
 
     // Set sensor flags
-    sensor->hw_flags.vsync      = 0;
-    sensor->hw_flags.hsync      = 0;
-    sensor->hw_flags.pixck      = 0;
-    sensor->hw_flags.fsync      = 0;
-    sensor->hw_flags.jpege      = 0;
-    sensor->hw_flags.gs_bpp     = 2;
-    sensor->hw_flags.rgb_swap   = 0;
-    sensor->hw_flags.bayer      = SENSOR_HW_FLAGS_BAYER_GBRG;
-    sensor->hw_flags.yuv_order  = SENSOR_HW_FLAGS_YVU422;
+    sensor->hw_flags.vsync = 0;
+    sensor->hw_flags.hsync = 0;
+    sensor->hw_flags.pixck = 0;
+    sensor->hw_flags.fsync = 0;
+    sensor->hw_flags.jpege = 0;
+    sensor->hw_flags.gs_bpp = 2;
+    sensor->hw_flags.rgb_swap = 0;
+    sensor->hw_flags.bayer = SENSOR_HW_FLAGS_BAYER_GBRG;
+    sensor->hw_flags.yuv_order = SENSOR_HW_FLAGS_YVU422;
 
     return 0;
 }

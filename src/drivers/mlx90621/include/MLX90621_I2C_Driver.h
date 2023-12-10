@@ -17,7 +17,7 @@
 #ifndef _MLX90621_I2C_Driver_H_
 #define _MLX90621_I2C_Driver_H_
 #include <stdint.h>
-void MLX90621_I2CInit(cambus_t *bus);
+void MLX90621_I2CInit(omv_i2c_t *bus);
 int MLX90621_I2CReadEEPROM(uint8_t slaveAddr, uint8_t startAddress, uint16_t nMemAddressRead, uint8_t *data);
 int MLX90621_I2CRead(uint8_t slaveAddr, uint8_t command, uint8_t startAddress,
         uint8_t addressStep, uint8_t nMemAddressRead, uint16_t *data);

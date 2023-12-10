@@ -15,7 +15,7 @@
 #include "usbd_desc.h"
 #include "usbd_uvc.h"
 #include "usbd_uvc_if.h"
-#include "cambus.h"
+#include "omv_i2c.h"
 #include "sensor.h"
 #include "framebuffer.h"
 #include "omv_boardconfig.h"
@@ -35,6 +35,27 @@ I2C_HandleTypeDef I2CHandle3;
 #if defined(I2C4)
 I2C_HandleTypeDef I2CHandle4;
 #endif
+
+#if defined(SPI1)
+SPI_HandleTypeDef SPIHandle1;
+#endif
+#if defined(SPI2)
+SPI_HandleTypeDef SPIHandle2;
+#endif
+#if defined(SPI3)
+SPI_HandleTypeDef SPIHandle3;
+#endif
+#if defined(SPI4)
+SPI_HandleTypeDef SPIHandle4;
+#endif
+#if defined(SPI5)
+SPI_HandleTypeDef SPIHandle5;
+#endif
+#if defined(SPI6)
+SPI_HandleTypeDef SPIHandle6;
+#endif
+
+DMA_HandleTypeDef *dma_handle[16];
 
 extern sensor_t sensor;
 USBD_HandleTypeDef hUsbDeviceFS;
@@ -103,6 +124,9 @@ NORETURN void nlr_jump(void *val)
 void *mp_obj_new_exception_msg(const void *exc_type, const char *msg)
 {
     return NULL;
+}
+
+void mp_handle_pending(bool x) {
 }
 
 const void *mp_type_MemoryError = NULL;

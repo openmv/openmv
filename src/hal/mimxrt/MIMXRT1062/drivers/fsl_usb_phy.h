@@ -1,0 +1,143 @@
+/*
+ * Copyright (c) 2015, Freescale Semiconductor, Inc.
+ * Copyright 2016 - 2017 NXP
+ * All rights reserved.
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
+ */
+#ifndef __USB_PHY_H__
+#define __USB_PHY_H__
+
+#include <stdint.h>
+#include <stdio.h>
+
+/*******************************************************************************
+ * Definitions
+ ******************************************************************************/
+typedef enum _usb_status
+{
+    kStatus_USB_Success = 0x00U, /*!< Success */
+    kStatus_USB_Error,           /*!< Failed */
+} usb_status_t;
+
+/*! @brief USB controller ID */
+typedef enum _usb_controller_index
+{
+    kUSB_ControllerKhci0 = 0U, /*!< KHCI 0U */
+    kUSB_ControllerKhci1 = 1U, /*!< KHCI 1U, Currently, there are no platforms which have two KHCI IPs, this is reserved
+                                  to be used in the future. */
+    kUSB_ControllerEhci0 = 2U, /*!< EHCI 0U */
+    kUSB_ControllerEhci1 = 3U, /*!< EHCI 1U */
+
+    kUSB_ControllerLpcIp3511Fs0 = 4U, /*!< LPC USB IP3511 FS controller 0 */
+    kUSB_ControllerLpcIp3511Fs1 = 5U, /*!< LPC USB IP3511 FS controller 1, there are no platforms which have two IP3511
+                                        IPs, this is reserved to be used in the future. */
+
+    kUSB_ControllerLpcIp3511Hs0 = 6U, /*!< LPC USB IP3511 HS controller 0 */
+    kUSB_ControllerLpcIp3511Hs1 = 7U, /*!< LPC USB IP3511 HS controller 1, there are no platforms which have two IP3511
+                                        IPs, this is reserved to be used in the future. */
+
+    kUSB_ControllerOhci0 = 8U, /*!< OHCI 0U */
+    kUSB_ControllerOhci1 = 9U, /*!< OHCI 1U, Currently, there are no platforms which have two OHCI IPs, this is reserved
+                                  to be used in the future. */
+
+    kUSB_ControllerIp3516Hs0 = 10U, /*!< IP3516HS 0U */
+    kUSB_ControllerIp3516Hs1 = 11U, /*!< IP3516HS 1U, Currently, there are no platforms which have two IP3516HS IPs,
+                                  this is reserved to be used in the future. */
+    kUSB_ControllerDwc30 = 12U,     /*!< DWC3 0U */
+    kUSB_ControllerDwc31 = 13U, /*!< DWC3 1U Currently, there are no platforms which have two Dwc IPs, this is reserved
+                              to be used in the future.*/
+} usb_controller_index_t;
+
+typedef struct _usb_phy_config_struct
+{
+    uint8_t D_CAL;     /* Decode to trim the nominal 17.78mA current source */
+    uint8_t TXCAL45DP; /* Decode to trim the nominal 45-Ohm series termination resistance to the USB_DP output pin */
+    uint8_t TXCAL45DM; /* Decode to trim the nominal 45-Ohm series termination resistance to the USB_DM output pin */
+} usb_phy_config_struct_t;
+
+#if defined(__cplusplus)
+extern "C" {
+#endif
+
+/*******************************************************************************
+ * API
+ ******************************************************************************/
+/*!
+ * @brief EHCI PHY get USB phy bass address.
+ *
+ * This function is used to get USB phy bass address.
+ *
+ * @param[in] controllerId    EHCI controller ID; See the #usb_controller_index_t.
+ *
+ * @retval USB phy bass address.
+ */
+extern void *USB_EhciPhyGetBase(uint8_t controllerId);
+
+/*!
+ * @brief EHCI PHY initialization.
+ *
+ * This function initializes the EHCI PHY IP.
+ *
+ * @param[in] controllerId    EHCI controller ID; See the #usb_controller_index_t.
+ * @param[in] freq            The external input clock.
+ *
+ * @retval kStatus_USB_Success      Cancel successfully.
+ * @retval kStatus_USB_Error        The freq value is incorrect.
+ */
+extern uint32_t USB_EhciPhyInit(uint8_t controllerId, uint32_t freq, usb_phy_config_struct_t *phyConfig);
+
+/*!
+ * @brief ehci phy initialization for suspend and resume.
+ *
+ * This function initialize ehci phy IP for suspend and resume.
+ *
+ * @param[in] controllerId   ehci controller id, please reference to #usb_controller_index_t.
+ * @param[in] freq            the external input clock.
+ *                            for example: if the external input clock is 16M, the parameter freq should be 16000000.
+ *
+ * @retval kStatus_USB_Success      cancel successfully.
+ * @retval kStatus_USB_Error        the freq value is incorrect.
+ */
+extern uint32_t USB_EhciLowPowerPhyInit(uint8_t controllerId, uint32_t freq, usb_phy_config_struct_t *phyConfig);
+
+/*!
+ * @brief EHCI PHY deinitialization.
+ *
+ * This function deinitializes the EHCI PHY IP.
+ *
+ * @param[in] controllerId   EHCI controller ID; See #usb_controller_index_t.
+ */
+extern void USB_EhciPhyDeinit(uint8_t controllerId);
+
+/*!
+ * @brief EHCI PHY disconnect detection enable or disable.
+ *
+ * This function enable/disable the host EHCI disconnect detection.
+ *
+ * @param[in] controllerId   EHCI controller ID; See #usb_controller_index_t.
+ * @param[in] enable
+ *            1U - enable;
+ *            0U - disable;
+ */
+extern void USB_EhcihostPhyDisconnectDetectCmd(uint8_t controllerId, uint8_t enable);
+#if ((defined FSL_FEATURE_SOC_USBPHY_COUNT) && (FSL_FEATURE_SOC_USBPHY_COUNT > 0U))
+#if ((defined FSL_FEATURE_USBHSD_HAS_EXIT_HS_ISSUE) && (FSL_FEATURE_USBHSD_HAS_EXIT_HS_ISSUE > 0U))
+/*!
+ * @brief Force the PHY enter FS Mode
+ *
+ * on RT500 and RT600, the device doesn't enter FS Mode after vbus is invalide and the controller works as HS.
+ *
+ * @param[in] controllerId   EHCI controller ID; See #usb_controller_index_t.
+ * @param[in] enable
+ *            1U - enable;
+ *            0U - disable;
+ */
+extern void USB_PhyDeviceForceEnterFSMode(uint8_t controllerId, uint8_t enable);
+#endif
+#endif
+#if defined(__cplusplus)
+}
+#endif
+
+#endif /* __USB_PHY_H__ */

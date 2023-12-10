@@ -15,7 +15,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "cambus.h"
+#include "omv_i2c.h"
 #include "sensor.h"
 #include "ov7670.h"
 #include "ov7670_regs.h"
@@ -23,7 +23,11 @@
 
 static const uint8_t default_regs[][2] = {
     // OV7670 reference registers
-    { CLKRC,            CLKRC_PRESCALER_BYPASS | OMV_OV7670_CLKRC },
+    #if (OMV_OV7670_CLKRC == 0)
+    { CLKRC,            CLKRC_PRESCALER_BYPASS },
+    #else
+    { CLKRC,            OMV_OV7670_CLKRC },
+    #endif
     { TSLB,             0x04 },
     { COM7,             0x00 },
     { HSTART,           0x13 },
@@ -84,7 +88,6 @@ static const uint8_t default_regs[][2] = {
     { COM5,             0x61 },
     { COM6,             0x4b },
     { 0x16,             0x02 },
-    { MVFP,             0x07 },
     { 0x21,             0x02 },
     { 0x22,             0x91 },
     { 0x29,             0x07 },
@@ -215,7 +218,6 @@ static const uint8_t rgb565_regs[][2] = {
     { RGB444,   0                           },    /* No RGB444 please */
     { COM1,     0x0                         },    /* CCIR601 */
     { COM15,    COM15_FMT_RGB565 | COM15_OUT_00_FF},
-    { MVFP,     MVFP_BLACK_SUN_EN           },
     { COM9,     0x6A                        },     /* 128x gain ceiling; 0x8 is reserved bit */
     { MTX1,     0xb3                        },     /* "matrix coefficient 1" */
     { MTX2,     0xb3                        },     /* "matrix coefficient 2" */
@@ -252,12 +254,12 @@ static const uint8_t vga_regs[][2] = {
     { COM14,        0x00 },
     { 0x72,         0x11 },     // downsample by 4
     { 0x73,         0xf0 },     // divide by 4
-    { HSTART,       0x12 },
-    { HSTOP,        0x00 },
+    { HSTART,       0x13 },
+    { HSTOP,        0x01 },
     { HREF,         0xb6 },
-    { VSTART,       0x02 },
-    { VSTOP,        0x7a },
-    { VREF,         0x00 },
+    { VSTART,       0x03 },
+    { VSTOP,        0x00 },
+    { VREF,         0x0a },
     { 0xFF,         0xFF },
 };
 
@@ -321,29 +323,29 @@ static const uint8_t qqvga_regs[][2] = {
 };
 #endif
 
-static int reset(sensor_t *sensor)
-{
+static int reset(sensor_t *sensor) {
     // Reset all registers
-    int ret = cambus_writeb(&sensor->bus, sensor->slv_addr, COM7, COM7_RESET);
+    int ret = omv_i2c_writeb(&sensor->i2c_bus, sensor->slv_addr, COM7, COM7_RESET);
 
     // Delay 2 ms
     mp_hal_delay_ms(2);
 
-    // Write default regsiters
+    // Write default registers
     for (int i = 0; default_regs[i][0] != 0xff; i++) {
-        ret |= cambus_writeb(&sensor->bus, sensor->slv_addr, default_regs[i][0], default_regs[i][1]);
+        ret |= omv_i2c_writeb(&sensor->i2c_bus, sensor->slv_addr, default_regs[i][0], default_regs[i][1]);
     }
 
     // Delay 300 ms
-    mp_hal_delay_ms(300);
+    if (!sensor->disable_delays) {
+        mp_hal_delay_ms(300);
+    }
 
     return ret;
 }
 
-static int sleep(sensor_t *sensor, int enable)
-{
+static int sleep(sensor_t *sensor, int enable) {
     uint8_t reg;
-    int ret = cambus_readb(&sensor->bus, sensor->slv_addr, COM2, &reg);
+    int ret = omv_i2c_readb(&sensor->i2c_bus, sensor->slv_addr, COM2, &reg);
 
     if (enable) {
         reg |= COM2_SOFT_SLEEP;
@@ -352,27 +354,24 @@ static int sleep(sensor_t *sensor, int enable)
     }
 
     // Write back register
-    return cambus_writeb(&sensor->bus, sensor->slv_addr, COM2, reg) | ret;
+    return omv_i2c_writeb(&sensor->i2c_bus, sensor->slv_addr, COM2, reg) | ret;
 }
 
-static int read_reg(sensor_t *sensor, uint16_t reg_addr)
-{
+static int read_reg(sensor_t *sensor, uint16_t reg_addr) {
     uint8_t reg_data;
-    if (cambus_readb(&sensor->bus, sensor->slv_addr, reg_addr, &reg_data) != 0) {
+    if (omv_i2c_readb(&sensor->i2c_bus, sensor->slv_addr, reg_addr, &reg_data) != 0) {
         return -1;
     }
     return reg_data;
 }
 
-static int write_reg(sensor_t *sensor, uint16_t reg_addr, uint16_t reg_data)
-{
-    return cambus_writeb(&sensor->bus, sensor->slv_addr, reg_addr, reg_data);
+static int write_reg(sensor_t *sensor, uint16_t reg_addr, uint16_t reg_data) {
+    return omv_i2c_writeb(&sensor->i2c_bus, sensor->slv_addr, reg_addr, reg_data);
 }
 
-static int set_pixformat(sensor_t *sensor, pixformat_t pixformat)
-{
+static int set_pixformat(sensor_t *sensor, pixformat_t pixformat) {
     int ret = 0;
-    const uint8_t (*regs)[2];
+    const uint8_t(*regs)[2];
 
     switch (pixformat) {
         case PIXFORMAT_RGB565:
@@ -387,17 +386,16 @@ static int set_pixformat(sensor_t *sensor, pixformat_t pixformat)
     }
 
     // Write pixel format registers
-    for (int i=0; regs[i][0] != 0xff; i++) {
-        ret |= cambus_writeb(&sensor->bus, sensor->slv_addr, regs[i][0], regs[i][1]);
+    for (int i = 0; regs[i][0] != 0xff; i++) {
+        ret |= omv_i2c_writeb(&sensor->i2c_bus, sensor->slv_addr, regs[i][0], regs[i][1]);
     }
 
     return ret;
 }
 
-static int set_framesize(sensor_t *sensor, framesize_t framesize)
-{
+static int set_framesize(sensor_t *sensor, framesize_t framesize) {
     int ret = 0;
-    const uint8_t (*regs)[2];
+    const uint8_t(*regs)[2];
 
     switch (framesize) {
         case FRAMESIZE_VGA:
@@ -414,47 +412,51 @@ static int set_framesize(sensor_t *sensor, framesize_t framesize)
     }
 
     // Write pixel format registers
-    for (int i=0; regs[i][0] != 0xFF; i++) {
-        ret |= cambus_writeb(&sensor->bus, sensor->slv_addr, regs[i][0], regs[i][1]);
+    for (int i = 0; regs[i][0] != 0xFF; i++) {
+        ret |= omv_i2c_writeb(&sensor->i2c_bus, sensor->slv_addr, regs[i][0], regs[i][1]);
     }
     return ret;
 }
 
-int ov7670_init(sensor_t *sensor)
-{
+static int set_hmirror(sensor_t *sensor, int enable) {
+    uint8_t val;
+    int ret = omv_i2c_readb(&sensor->i2c_bus, sensor->slv_addr, MVFP, &val);
+    ret |=
+        omv_i2c_writeb(&sensor->i2c_bus, sensor->slv_addr, MVFP,
+                       enable ? (val | MVFP_MIRROR) : (val & (~MVFP_MIRROR)));
+
+    return ret;
+}
+
+static int set_vflip(sensor_t *sensor, int enable) {
+    uint8_t val;
+    int ret = omv_i2c_readb(&sensor->i2c_bus, sensor->slv_addr, MVFP, &val);
+    ret |=
+        omv_i2c_writeb(&sensor->i2c_bus, sensor->slv_addr, MVFP,
+                       enable ? (val | MVFP_VFLIP) : (val & (~MVFP_VFLIP)));
+
+    return ret;
+}
+int ov7670_init(sensor_t *sensor) {
     // Initialize sensor structure.
-    sensor->reset               = reset;
-    sensor->sleep               = sleep;
-    sensor->read_reg            = read_reg;
-    sensor->write_reg           = write_reg;
-    sensor->set_pixformat       = set_pixformat;
-    sensor->set_framesize       = set_framesize;
-#if 0
-    sensor->set_contrast        = set_contrast;
-    sensor->set_brightness      = set_brightness;
-    sensor->set_saturation      = set_saturation;
-    sensor->set_gainceiling     = set_gainceiling;
-    sensor->set_colorbar        = set_colorbar;
-    sensor->set_auto_gain       = set_auto_gain;
-    sensor->get_gain_db         = get_gain_db;
-    sensor->set_auto_exposure   = set_auto_exposure;
-    sensor->get_exposure_us     = get_exposure_us;
-    sensor->set_auto_whitebal   = set_auto_whitebal;
-    sensor->get_rgb_gain_db     = get_rgb_gain_db;
-    sensor->set_hmirror         = set_hmirror;
-    sensor->set_vflip           = set_vflip;
-    sensor->set_special_effect  = set_special_effect;
-    sensor->set_lens_correction = set_lens_correction;
-#endif
+    sensor->reset = reset;
+    sensor->sleep = sleep;
+    sensor->read_reg = read_reg;
+    sensor->write_reg = write_reg;
+    sensor->set_pixformat = set_pixformat;
+    sensor->set_framesize = set_framesize;
+    sensor->set_hmirror = set_hmirror;
+    sensor->set_vflip = set_vflip;
+
     // Set sensor flags
-    sensor->hw_flags.vsync      = 1;
-    sensor->hw_flags.hsync      = 0;
-    sensor->hw_flags.pixck      = 1;
-    sensor->hw_flags.fsync      = 0;
-    sensor->hw_flags.jpege      = 0;
-    sensor->hw_flags.gs_bpp     = 2;
-    sensor->hw_flags.rgb_swap   = 1;
-    sensor->hw_flags.yuv_order  = SENSOR_HW_FLAGS_YVU422;
+    sensor->hw_flags.vsync = 1;
+    sensor->hw_flags.hsync = 0;
+    sensor->hw_flags.pixck = 1;
+    sensor->hw_flags.fsync = 0;
+    sensor->hw_flags.jpege = 0;
+    sensor->hw_flags.gs_bpp = 2;
+    sensor->hw_flags.rgb_swap = 1;
+    sensor->hw_flags.yuv_order = SENSOR_HW_FLAGS_YVU422;
 
     return 0;
 }

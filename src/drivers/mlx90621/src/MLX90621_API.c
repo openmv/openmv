@@ -14,7 +14,7 @@
  * limitations under the License.
  *
  */
-#include "cambus.h"
+#include "omv_i2c.h"
 #include <MLX90621_I2C_Driver.h>
 #include <MLX90621_API.h>
 #include <math.h>

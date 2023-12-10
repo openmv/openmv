@@ -17,15 +17,16 @@ SRCS += $(addprefix alloc/,     \
 
 SRCS += $(addprefix common/,    \
 	array.c                     \
-	ff_wrapper.c                \
 	ini.c                       \
 	ringbuf.c                   \
 	trace.c                     \
 	mutex.c                     \
+	vospi.c                     \
 	usbdbg.c                    \
 	tinyusb_debug.c             \
+	file_utils.c                \
+	boot_utils.c                \
 	sensor_utils.c              \
-	factoryreset.c              \
    )
 
 SRCS += $(addprefix sensors/,   \
@@ -72,6 +73,7 @@ SRCS += $(addprefix imlib/,     \
 	imlib.c                     \
 	integral.c                  \
 	integral_mw.c               \
+	isp.c                       \
 	jpegd.c                     \
 	jpeg.c                      \
 	lodepng.c                   \

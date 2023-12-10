@@ -10,6 +10,6 @@
  */
 #ifndef __FROGEYE2020_H__
 #define __FROGEYE2020_H__
-#define FROGEYE2020_XCLK_FREQ (5000000)
+#define FROGEYE2020_XCLK_FREQ    (5000000)
 int frogeye2020_init(sensor_t *sensor);
 #endif // __FROGEYE2020_H__

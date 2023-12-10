@@ -1,3 +1,7 @@
+# This work is licensed under the MIT license.
+# Copyright (c) 2013-2023 OpenMV LLC. All rights reserved.
+# https://github.com/openmv/openmv/blob/master/LICENSE
+#
 # Vertical Flip - Horizontal Mirror - Transpose
 #
 # This example shows off how to vertically flip, horizontally mirror, or
@@ -8,26 +12,29 @@
 # vflip=True,  hmirror=True,  transpose=False -> 180 degree rotation
 # vflip=False, hmirror=True,  transpose=True  -> 270 degree rotation
 
-import sensor, image, time, pyb
+import sensor
+import time
 
 sensor.reset()
 sensor.set_pixformat(sensor.RGB565)
 sensor.set_framesize(sensor.QVGA)
-sensor.skip_frames(time = 2000)
+sensor.skip_frames(time=2000)
 clock = time.clock()
 
-mills = pyb.millis()
+ticks = time.ticks_ms()
 counter = 0
 
-while(True):
+while True:
     clock.tick()
 
-    img = sensor.snapshot().replace(vflip=(counter//2)%2,
-                                    hmirror=(counter//4)%2,
-                                    transpose=(counter//8)%2)
+    img = sensor.snapshot().replace(
+        vflip=(counter // 2) % 2,
+        hmirror=(counter // 4) % 2,
+        transpose=(counter // 8) % 2,
+    )
 
-    if (pyb.millis() > (mills + 1000)):
-        mills = pyb.millis()
+    if time.ticks_diff(time.ticks_ms(), ticks) > 1000:
+        ticks = time.ticks_ms()
         counter += 1
 
     print(clock.fps())

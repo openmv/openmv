@@ -1,3 +1,7 @@
+# This work is licensed under the MIT license.
+# Copyright (c) 2013-2023 OpenMV LLC. All rights reserved.
+# https://github.com/openmv/openmv/blob/master/LICENSE
+#
 # MJPEG Video Recording on Face Detection Example
 #
 # Note: You will need an SD card to run this example.
@@ -10,15 +14,18 @@
 # This example demonstrates using face tracking on your OpenMV Cam to take a
 # mjpeg.
 
-import sensor, image, time, mjpeg, pyb
+import sensor
+import image
+import time
+import mjpeg
+import random
 
-RED_LED_PIN = 1
-BLUE_LED_PIN = 3
+sensor.reset()  # Reset and initialize the sensor.
+sensor.set_pixformat(sensor.GRAYSCALE)  # Set pixel format to RGB565 (or GRAYSCALE)
+sensor.set_framesize(sensor.QQVGA)  # Set frame size to QQVGA (160x120)
+sensor.skip_frames(time=2000)  # Wait for settings take effect.
 
-sensor.reset() # Initialize the camera sensor.
-sensor.set_pixformat(sensor.GRAYSCALE) # or sensor.
-sensor.set_framesize(sensor.QQVGA) # or sensor.HQVGA (or others)
-sensor.skip_frames(time = 2000) # Let new settings take affect.
+led = machine.LED("LED_RED")
 
 # Load up a face detection HaarCascade. This is object that your OpenMV Cam
 # can use to detect faces using the find_features() method below. Your OpenMV
@@ -28,18 +35,14 @@ sensor.skip_frames(time = 2000) # Let new settings take affect.
 # stages.
 face_cascade = image.HaarCascade("frontalface", stages=25)
 
-while(True):
-
-    pyb.LED(RED_LED_PIN).on()
+while True:
     print("About to start detecting faces...")
-    sensor.skip_frames(time = 2000) # Give the user time to get ready.
+    sensor.skip_frames(time=2000)  # Give the user time to get ready.
 
-    pyb.LED(RED_LED_PIN).off()
     print("Now detecting faces!")
-    pyb.LED(BLUE_LED_PIN).on()
 
-    diff = 10 # We'll say we detected a face after 10 frames.
-    while(diff):
+    diff = 10  # We'll say we detected a face after 10 frames.
+    while diff:
         img = sensor.snapshot()
         # Threshold can be between 0.0 and 1.0. A higher threshold results in a
         # higher detection rate with more false positives. The scale value
@@ -51,15 +54,15 @@ while(True):
             for r in faces:
                 img.draw_rectangle(r)
 
-    m = mjpeg.Mjpeg("example-%d.mjpeg" % pyb.rng())
+    led.on()
+    m = mjpeg.Mjpeg("example-%d.mjpeg" % random.getrandbits(32))
 
-    clock = time.clock() # Tracks FPS.
-    print("You're on camera!")
+    clock = time.clock()  # Tracks FPS.
     for i in range(200):
         clock.tick()
-        m.add_frame(sensor.snapshot())
+        m.write(sensor.snapshot())
         print(clock.fps())
 
-    m.close(clock.fps())
-    pyb.LED(BLUE_LED_PIN).off()
+    m.close()
+    led.off()
     print("Restarting...")

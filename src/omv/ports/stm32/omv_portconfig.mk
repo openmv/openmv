@@ -26,7 +26,9 @@ MPY_CFLAGS += -I$(TOP_DIR)/$(MICROPY_DIR)/ports/stm32/
 MPY_CFLAGS += -I$(TOP_DIR)/$(MICROPY_DIR)/ports/stm32/usbdev/core/inc/
 MPY_CFLAGS += -I$(TOP_DIR)/$(MICROPY_DIR)/ports/stm32/usbdev/class/inc/
 MPY_CFLAGS += -I$(TOP_DIR)/$(MICROPY_DIR)/ports/stm32/lwip_inc/
-MPY_CFLAGS += -DMICROPY_PY_USSL=1 -DMICROPY_SSL_MBEDTLS=1
+MPY_CFLAGS += -I$(TOP_DIR)/$(MICROPY_DIR)/shared/runtime/
+MPY_CFLAGS += -DMICROPY_PY_USSL=1 -DMICROPY_SSL_MBEDTLS=1 -DMICROPY_STREAMS_POSIX_API=1 -DMICROPY_VFS_FAT=1
+
 MICROPY_ARGS += MICROPY_PY_USSL=1 MICROPY_SSL_MBEDTLS=1 MICROPY_PY_BTREE=1\
                 STM32LIB_CMSIS_DIR=$(TOP_DIR)/$(CMSIS_DIR) STM32LIB_HAL_DIR=$(TOP_DIR)/$(HAL_DIR)
 
@@ -50,6 +52,7 @@ OMV_CFLAGS += -I$(TOP_DIR)/$(MLX90621_DIR)/include/
 OMV_CFLAGS += -I$(TOP_DIR)/$(MLX90640_DIR)/include/
 OMV_CFLAGS += -I$(TOP_DIR)/$(MLX90641_DIR)/include/
 OMV_CFLAGS += -I$(TOP_DIR)/$(PIXART_DIR)/include/
+OMV_CFLAGS += -I$(TOP_DIR)/$(DISPLAY_DIR)/include/
 OMV_CFLAGS += -I$(TOP_DIR)/$(TENSORFLOW_DIR)/
 OMV_CFLAGS += -I$(BUILD)/$(TENSORFLOW_DIR)/
 OMV_CFLAGS += -I$(TOP_DIR)/$(LIBPDM_DIR)/
@@ -124,6 +127,7 @@ FIRM_OBJ += $(wildcard $(BUILD)/$(MLX90640_DIR)/src/*.o)
 FIRM_OBJ += $(wildcard $(BUILD)/$(MLX90641_DIR)/src/*.o)
 FIRM_OBJ += $(wildcard $(BUILD)/$(VL53L5CX_DIR)/src/*.o)
 FIRM_OBJ += $(wildcard $(BUILD)/$(PIXART_DIR)/src/*.o)
+FIRM_OBJ += $(wildcard $(BUILD)/$(DISPLAY_DIR)/src/*.o)
 
 #------------- OpenMV Objects ----------------#
 FIRM_OBJ += $(addprefix $(BUILD)/$(CMSIS_DIR)/src/, \
@@ -141,14 +145,15 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/alloc/, \
 
 FIRM_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/common/, \
 	array.o                     \
-	ff_wrapper.o                \
 	ini.o                       \
 	ringbuf.o                   \
 	trace.o                     \
 	mutex.o                     \
+	vospi.o                     \
 	usbdbg.o                    \
+	file_utils.o                \
+	boot_utils.o                \
 	sensor_utils.o              \
-	factoryreset.o              \
    )
 
 FIRM_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/sensors/,   \
@@ -195,6 +200,7 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/imlib/, \
 	imlib.o                     \
 	integral.o                  \
 	integral_mw.o               \
+	isp.o                       \
 	jpegd.o                     \
 	jpeg.o                      \
 	lodepng.o                   \
@@ -244,6 +250,7 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/,\
 	pendsv.o                \
 	bufhelper.o             \
 	usb.o                   \
+	usrsw.o                 \
 	eth.o                   \
 	gccollect.o             \
 	help.o                  \
@@ -290,12 +297,10 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/,\
 	machine_spi.o           \
 	machine_uart.o          \
 	machine_adc.o           \
-	machine_timer.o         \
 	machine_bitstream.o     \
 	pybthread.o             \
 	mpthreadport.o          \
 	posix_helpers.o         \
-	softtimer.o             \
 	mbedtls/mbedtls_port.o  \
 	frozen_content.o        \
 	)
@@ -309,9 +314,10 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/shared/,\
 	runtime/pyexec.o            \
 	runtime/interrupt_char.o    \
 	runtime/sys_stdio_mphal.o   \
-	runtime/gchelper_m3.o       \
+	runtime/gchelper_thumb2.o   \
 	runtime/gchelper_native.o   \
 	runtime/stdout_helpers.o    \
+	runtime/softtimer.o         \
 	netutils/*.o                \
 	timeutils/timeutils.o       \
 	readline/readline.o         \
@@ -391,6 +397,7 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/extmod/,\
 	machine_signal.o    \
 	machine_pinbase.o   \
 	machine_bitstream.o \
+	machine_timer.o     \
 	utime_mphal.o       \
 	modonewire.o        \
 	uos_dupterm.o       \
@@ -466,10 +473,13 @@ endif
 
 ifeq ($(MICROPY_PY_NETWORK_CYW43), 1)
 FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/,\
-	drivers/cyw43/*.o          \
-	extmod/network_cyw43.o     \
+	lib/cyw43-driver/src/*.o    \
+	extmod/network_cyw43.o      \
+	extmod/network_lwip.o       \
 	)
-LIBS += $(MICROPY_DIR)/drivers/cyw43/libcyw43.a
+FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/drivers/,\
+	cyw43/cywbt.o               \
+	)
 endif
 
 ifeq ($(MICROPY_BLUETOOTH_NIMBLE),1)
@@ -512,6 +522,7 @@ endif
 ifeq ($(OMV_ENABLE_UVC), 1)
 UVC = uvc
 # UVC object files
+UVC_OBJ += $(BUILD)/$(MICROPY_DIR)/lib/libm/math.o
 UVC_OBJ += $(wildcard $(BUILD)/$(UVC_DIR)/src/*.o)
 UVC_OBJ += $(wildcard $(BUILD)/$(HAL_DIR)/src/*.o)
 UVC_OBJ += $(addprefix $(BUILD)/$(CMSIS_DIR)/src/,\
@@ -530,6 +541,7 @@ UVC_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/common/, \
 	trace.o                                 \
 	mutex.o                                 \
 	sensor_utils.o                          \
+	vospi.o                                 \
 	)
 
 UVC_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/sensors/, \
@@ -563,8 +575,11 @@ UVC_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/ports/stm32/,\
 	sensor.o                                \
 	stm32fxxx_hal_msp.o                     \
 	soft_i2c.o                              \
-	cambus.o                                \
 	ulpi.o                                  \
+	dma_utils.o                             \
+	omv_gpio.o                              \
+	omv_i2c.o                               \
+	omv_spi.o                               \
 	)
 
 UVC_OBJ += $(wildcard $(BUILD)/$(LEPTON_DIR)/src/*.o)
@@ -643,6 +658,7 @@ endif
 	$(MAKE)  -C $(MLX90641_DIR)              BUILD=$(BUILD)/$(MLX90641_DIR)     CFLAGS="$(CFLAGS) -MMD"
 	$(MAKE)  -C $(VL53L5CX_DIR)              BUILD=$(BUILD)/$(VL53L5CX_DIR)     CFLAGS="$(CFLAGS) -MMD"
 	$(MAKE)  -C $(PIXART_DIR)                BUILD=$(BUILD)/$(PIXART_DIR)       CFLAGS="$(CFLAGS) -MMD"
+	$(MAKE)  -C $(DISPLAY_DIR)               BUILD=$(BUILD)/$(DISPLAY_DIR)      CFLAGS="$(CFLAGS) -MMD"
 	$(MAKE)  -C $(OMV_DIR)                   BUILD=$(BUILD)/$(OMV_DIR)          CFLAGS="$(CFLAGS) -MMD"
 ifeq ($(CUBEAI), 1)
 	$(MAKE)  -C $(CUBEAI_DIR)                BUILD=$(BUILD)/$(CUBEAI_DIR)       CFLAGS="$(CFLAGS) -fno-strict-aliasing -MMD"
@@ -664,7 +680,7 @@ endif
 $(FIRMWARE): FIRMWARE_OBJS
 	$(CPP) -P -E -I$(OMV_BOARD_CONFIG_DIR) $(OMV_DIR)/ports/$(PORT)/$(LDSCRIPT).ld.S > $(BUILD)/$(LDSCRIPT).lds
 	$(CC) $(LDFLAGS) $(FIRM_OBJ) -o $(FW_DIR)/$(FIRMWARE).elf $(LIBS) -lgcc
-	$(OBJCOPY) -Obinary -R .big_const* $(FW_DIR)/$(FIRMWARE).elf $(FW_DIR)/$(FIRMWARE).bin
+	$(OBJCOPY) -Obinary $(FW_DIR)/$(FIRMWARE).elf $(FW_DIR)/$(FIRMWARE).bin
 	$(PYTHON) $(MKDFU) -D $(DFU_DEVICE) -b $(MAIN_APP_ADDR):$(FW_DIR)/$(FIRMWARE).bin $(FW_DIR)/$(FIRMWARE).dfu
 
 ifeq ($(OMV_ENABLE_BL), 1)

@@ -1,14 +1,19 @@
+# This work is licensed under the MIT license.
+# Copyright (c) 2013-2023 OpenMV LLC. All rights reserved.
+# https://github.com/openmv/openmv/blob/master/LICENSE
+#
 # Perspective Correction
 #
 # This example shows off how to use the rotation_corr() to fix perspective
 # issues related to how your OpenMV Cam is mounted.
 
-import sensor, image, time
+import sensor
+import time
 
 sensor.reset()
 sensor.set_pixformat(sensor.RGB565)
 sensor.set_framesize(sensor.QVGA)
-sensor.skip_frames(time = 2000)
+sensor.skip_frames(time=2000)
 clock = time.clock()
 
 # The image will be warped such that the following points become the new:
@@ -26,14 +31,16 @@ clock = time.clock()
 w = sensor.width()
 h = sensor.height()
 
-TARGET_POINTS = [(0,   0),   # (x, y) CHANGE ME!
-                 (w-1, 0),   # (x, y) CHANGE ME!
-                 (w-1, h-1), # (x, y) CHANGE ME!
-                 (0,   h-1)] # (x, y) CHANGE ME!
+TARGET_POINTS = [
+    (0, 0),  # (x, y) CHANGE ME!
+    (w - 1, 0),  # (x, y) CHANGE ME!
+    (w - 1, h - 1),  # (x, y) CHANGE ME!
+    (0, h - 1),
+]  # (x, y) CHANGE ME!
 
-while(True):
+while True:
     clock.tick()
 
-    img = sensor.snapshot().rotation_corr(corners = TARGET_POINTS)
+    img = sensor.snapshot().rotation_corr(corners=TARGET_POINTS)
 
     print(clock.fps())

@@ -13,19 +13,19 @@
 #include <stdint.h>
 #include "imlib.h"
 #include "mutex.h"
-#include "common.h"
+#include "omv_common.h"
 
 // DMA Buffers need to be aligned by cache lines or 16 bytes.
 #ifndef __DCACHE_PRESENT
-#define FRAMEBUFFER_ALIGNMENT 16
+#define FRAMEBUFFER_ALIGNMENT    16
 #else
-#define FRAMEBUFFER_ALIGNMENT __SCB_DCACHE_LINE_SIZE
+#define FRAMEBUFFER_ALIGNMENT    __SCB_DCACHE_LINE_SIZE
 #endif
 
 typedef struct framebuffer {
-    int32_t x,y;
-    int32_t w,h;
-    int32_t u,v;
+    int32_t x, y;
+    int32_t w, h;
+    int32_t u, v;
     PIXFORMAT_STRUCT;
     int32_t streaming_enabled;
     uint32_t raw_buffer_size;
@@ -56,7 +56,7 @@ typedef struct vbuffer {
 } vbuffer_t;
 
 typedef struct jpegbuffer {
-    int32_t w,h;
+    int32_t w, h;
     int32_t size;
     int32_t enabled;
     int32_t quality;
@@ -132,7 +132,7 @@ vbuffer_t *framebuffer_get_tail(framebuffer_flags_t flags);
 char *framebuffer_get_buffers_end();
 
 // Use these macros to get a pointer to main or JPEG framebuffer.
-#define MAIN_FB()           (framebuffer)
-#define JPEG_FB()           (jpeg_framebuffer)
+#define MAIN_FB()    (framebuffer)
+#define JPEG_FB()    (jpeg_framebuffer)
 
 #endif /* __FRAMEBUFFER_H__ */

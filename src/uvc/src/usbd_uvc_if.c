@@ -361,7 +361,7 @@ static int8_t UVC_VS_ControlSet(uint8_t cmd, uint8_t* pbuf, uint16_t length, uin
   *           
   *         @note
   *         This function will block any OUT packet reception on USB endpoint 
-  *         untill exiting this function. If you exit this function before transfer
+  *         until exiting this function. If you exit this function before transfer
   *         is complete on UVC interface (ie. using DMA controller) it will result 
   *         in receiving more data while previous ones are still not sent.
   *                 

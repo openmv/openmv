@@ -18,20 +18,23 @@
 
 #include "xalloc.h"
 #include "imlib.h"
-#include "ff_wrapper.h"
+#include "file_utils.h"
 
-static void read_int_reset(ppm_read_settings_t *rs)
-{
+static void read_int_reset(ppm_read_settings_t *rs) {
     rs->read_int_c_valid = false;
 }
 
-static void read_int(FIL *fp, uint32_t *i, ppm_read_settings_t *rs)
-{
-    enum { EAT_WHITESPACE, EAT_COMMENT, EAT_NUMBER } mode = EAT_WHITESPACE;
-    for(*i = 0;;) {
+static void read_int(FIL *fp, uint32_t *i, ppm_read_settings_t *rs) {
+    enum {
+        EAT_WHITESPACE, EAT_COMMENT, EAT_NUMBER
+    }
+    mode = EAT_WHITESPACE;
+    for (*i = 0;;) {
         if (!rs->read_int_c_valid) {
-            if (file_tell_w_buf(fp) == file_size_w_buf(fp)) return;
-            read_byte(fp, &rs->read_int_c);
+            if (file_tell(fp) == file_size(fp)) {
+                return;
+            }
+            file_read(fp, &rs->read_int_c, 1);
             rs->read_int_c_valid = true;
         }
         if (mode == EAT_WHITESPACE) {
@@ -57,14 +60,13 @@ static void read_int(FIL *fp, uint32_t *i, ppm_read_settings_t *rs)
 }
 
 // This function inits the geometry values of an image.
-void ppm_read_geometry(FIL *fp, image_t *img, const char *path, ppm_read_settings_t *rs)
-{
+void ppm_read_geometry(FIL *fp, image_t *img, const char *path, ppm_read_settings_t *rs) {
     read_int_reset(rs);
-    read_byte_expect(fp, 'P');
-    read_byte(fp, &rs->ppm_fmt);
+    file_read_check(fp, "P", 1);
+    file_read(fp, &rs->ppm_fmt, 1);
 
-    if ((rs->ppm_fmt!='2') && (rs->ppm_fmt!='3') && (rs->ppm_fmt!='5') && (rs->ppm_fmt!='6')) {
-        ff_unsupported_format(fp);
+    if ((rs->ppm_fmt != '2') && (rs->ppm_fmt != '3') && (rs->ppm_fmt != '5') && (rs->ppm_fmt != '6')) {
+        file_raise_format(fp);
     }
 
     img->pixfmt = ((rs->ppm_fmt == '2') || (rs->ppm_fmt == '5')) ? PIXFORMAT_GRAYSCALE : PIXFORMAT_RGB565;
@@ -73,19 +75,18 @@ void ppm_read_geometry(FIL *fp, image_t *img, const char *path, ppm_read_setting
     read_int(fp, (uint32_t *) &img->h, rs);
 
     if ((img->w == 0) || (img->h == 0)) {
-        ff_file_corrupted(fp);
+        file_raise_corrupted(fp);
     }
 
     uint32_t max;
     read_int(fp, &max, rs);
     if (max != 255) {
-        ff_unsupported_format(fp);
+        file_raise_format(fp);
     }
 }
 
 // This function reads the pixel values of an image.
-void ppm_read_pixels(FIL *fp, image_t *img, int n_lines, ppm_read_settings_t *rs)
-{
+void ppm_read_pixels(FIL *fp, image_t *img, int n_lines, ppm_read_settings_t *rs) {
     if (rs->ppm_fmt == '2') {
         for (int i = 0; i < n_lines; i++) {
             for (int j = 0; j < img->w; j++) {
@@ -105,65 +106,58 @@ void ppm_read_pixels(FIL *fp, image_t *img, int n_lines, ppm_read_settings_t *rs
             }
         }
     } else if (rs->ppm_fmt == '5') {
-        read_data(fp, img->pixels, n_lines * img->w);
+        file_read(fp, img->pixels, n_lines * img->w);
     } else if (rs->ppm_fmt == '6') {
         for (int i = 0; i < n_lines; i++) {
             for (int j = 0; j < img->w; j++) {
                 uint8_t r, g, b;
-                read_byte(fp, &r);
-                read_byte(fp, &g);
-                read_byte(fp, &b);
+                file_read(fp, &r, 1);
+                file_read(fp, &g, 1);
+                file_read(fp, &b, 1);
                 IM_SET_RGB565_PIXEL(img, j, i, COLOR_R8_G8_B8_TO_RGB565(r, g, b));
             }
         }
     }
 }
 
-void ppm_read(image_t *img, const char *path)
-{
+void ppm_read(image_t *img, const char *path) {
     FIL fp;
     ppm_read_settings_t rs;
 
-    file_read_open(&fp, path);
-    file_buffer_on(&fp);
+    file_open(&fp, path, true, FA_READ | FA_OPEN_EXISTING);
     ppm_read_geometry(&fp, img, path, &rs);
 
     if (!img->pixels) {
         img->pixels = xalloc(img->w * img->h * img->bpp);
     }
     ppm_read_pixels(&fp, img, img->h, &rs);
-
-    file_buffer_off(&fp);
     file_close(&fp);
 }
 
-void ppm_write_subimg(image_t *img, const char *path, rectangle_t *r)
-{
+void ppm_write_subimg(image_t *img, const char *path, rectangle_t *r) {
     rectangle_t rect;
     if (!rectangle_subimg(img, r, &rect)) {
         mp_raise_msg(&mp_type_OSError, MP_ERROR_TEXT("No intersection!"));
     }
 
     FIL fp;
-    file_write_open(&fp, path);
-    file_buffer_on(&fp);
+    file_open(&fp, path, true, FA_WRITE | FA_CREATE_ALWAYS);
+
     if (IM_IS_GS(img)) {
         char buffer[20]; // exactly big enough for 5-digit w/h
         int len = snprintf(buffer, 20, "P5\n%d %d\n255\n", rect.w, rect.h);
-        write_data(&fp, buffer, len);
+        file_write(&fp, buffer, len);
         if ((rect.x == 0) && (rect.w == img->w)) {
-            write_data(&fp, // Super Fast - Zoom, Zoom!
-                       img->pixels + (rect.y * img->w),
-                       rect.w * rect.h);
+            file_write(&fp, img->pixels + (rect.y * img->w), rect.w * rect.h);
         } else {
             for (int i = 0; i < rect.h; i++) {
-                write_data(&fp, img->pixels+((rect.y+i)*img->w)+rect.x, rect.w);
+                file_write(&fp, img->pixels + ((rect.y + i) * img->w) + rect.x, rect.w);
             }
         }
     } else {
         char buffer[20]; // exactly big enough for 5-digit w/h
         int len = snprintf(buffer, 20, "P6\n%d %d\n255\n", rect.w, rect.h);
-        write_data(&fp, buffer, len);
+        file_write(&fp, buffer, len);
         for (int i = 0; i < rect.h; i++) {
             for (int j = 0; j < rect.w; j++) {
                 int pixel = IM_GET_RGB565_PIXEL(img, (rect.x + j), (rect.y + i));
@@ -171,12 +165,10 @@ void ppm_write_subimg(image_t *img, const char *path, rectangle_t *r)
                 buff[0] = COLOR_RGB565_TO_R8(pixel);
                 buff[1] = COLOR_RGB565_TO_G8(pixel);
                 buff[2] = COLOR_RGB565_TO_B8(pixel);
-                write_data(&fp, buff, 3);
+                file_write(&fp, buff, 3);
             }
         }
     }
-    file_buffer_off(&fp);
-
     file_close(&fp);
 }
 #endif //IMLIB_ENABLE_IMAGE_FILE_IO

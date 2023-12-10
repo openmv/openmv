@@ -10,6 +10,8 @@
  */
 #include "imlib.h"
 #ifdef IMLIB_ENABLE_QRCODES
+
+// *INDENT-OFF*
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 //////// "quirc.h"
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -978,7 +980,7 @@ static void threshold(struct quirc *q)
     if (threshold_s < THRESHOLD_S_MIN)
         threshold_s = THRESHOLD_S_MIN;
 
-    fracmul = (32768 * (threshold_s - 1)) / threshold_s; // to use multipy instead of divide (not too many bits or we'll overflow)
+    fracmul = (32768 * (threshold_s - 1)) / threshold_s; // to use multiply instead of divide (not too many bits or we'll overflow)
     // to get the effect used below (a fraction of threshold_s-1/threshold_s
     // The second constant is to reduce the averaged values to compare with the current pixel
     fracmul2 = (0x100000 * (100 - THRESHOLD_T)) / (200 * threshold_s); // use as many bits as possible without overflowing
@@ -2976,7 +2978,7 @@ void imlib_find_qrcodes(list_t *out, image_t *ptr, rectangle_t *roi)
     img.h = roi->h;
     img.pixfmt = PIXFORMAT_GRAYSCALE;
     img.data = grayscale_image;
-    imlib_draw_image(&img, ptr, 0, 0, 1.f, 1.f, roi, -1, 256, NULL, NULL, 0, NULL, NULL);
+    imlib_draw_image(&img, ptr, 0, 0, 1.f, 1.f, roi, -1, 256, NULL, NULL, 0, NULL, NULL, NULL);
 
     quirc_end(controller);
     list_init(out, sizeof(find_qrcodes_list_lnk_data_t));
@@ -3026,4 +3028,4 @@ void imlib_find_qrcodes(list_t *out, image_t *ptr, rectangle_t *roi)
 
     quirc_destroy(controller);
 }
-#endif //IMLIB_ENABLE_QRCODES
+#endif //IMLIB_ENABLE_QRCODES *INDENT-ON*

@@ -11,8 +11,8 @@
 #ifndef __MUTEX_H__
 #define __MUTEX_H__
 #include <stdint.h>
-#define MUTEX_TID_IDE (1<<0)
-#define MUTEX_TID_OMV (1<<1)
+#define MUTEX_TID_IDE    (1 << 0)
+#define MUTEX_TID_OMV    (1 << 1)
 
 typedef volatile struct {
     uint32_t tid;

@@ -20,7 +20,7 @@ typedef struct py_tf_model_obj {
 } py_tf_model_obj_t;
 
 // Log buffer
-#define PY_TF_PUTCHAR_BUFFER_LEN 1023
+#define PY_TF_PUTCHAR_BUFFER_LEN    1023
 extern char *py_tf_putchar_buffer;
 extern size_t py_tf_putchar_buffer_index;
 extern size_t py_tf_putchar_buffer_len;

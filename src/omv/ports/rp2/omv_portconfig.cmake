@@ -10,7 +10,6 @@ set(CM4_DIR                 cm4)
 set(BOOTLDR_DIR             bootloader)
 set(CUBEAI_DIR              stm32cubeai)
 set(CMSIS_DIR               hal/cmsis)
-#set(MICROPY_DIR micropython)
 set(LEPTON_DIR              drivers/lepton)
 set(LSM6DS3_DIR             drivers/lsm6ds3)
 set(WINC1500_DIR            drivers/winc1500)
@@ -20,10 +19,9 @@ set(MLX90641_DIR            drivers/mlx90641)
 set(OPENPDM_DIR             ${TOP_DIR}/lib/openpdm)
 set(TENSORFLOW_DIR          ${TOP_DIR}/lib/libtf)
 set(OMV_BOARD_CONFIG_DIR    ${TOP_DIR}/${OMV_DIR}/boards/${TARGET}/)
-#set(MP_BOARD_CONFIG_DIR    ${TOP_DIR}/${MICROPY_DIR}/ports/${PORT}/boards/${TARGET}/
-set(MPY_LIB_DIR             ${TOP_DIR}/../scripts/libraries)
 set(OMV_COMMON_DIR          ${TOP_DIR}/${OMV_DIR}/common)
 set(PORT_DIR                ${TOP_DIR}/${OMV_DIR}/ports/${PORT})
+set(MICROPY_MANIFEST_OMV_LIB_DIR    ${TOP_DIR}/../scripts/libraries)
 
 # Include board cmake fragment
 include(${OMV_BOARD_CONFIG_DIR}/omv_boardconfig.cmake)
@@ -56,6 +54,7 @@ pico_set_linker_script(${MICROPY_TARGET} ${BUILD}/rp2.ld)
 file(GLOB OMV_SRC_QSTR1 ${TOP_DIR}/${OMV_DIR}/modules/*.c)
 file(GLOB OMV_SRC_QSTR2 ${TOP_DIR}/${OMV_DIR}/ports/${PORT}/modules/*.c)
 list(APPEND MICROPY_SOURCE_QSTR ${OMV_SRC_QSTR1} ${OMV_SRC_QSTR2})
+set(MPY_PENDSV_ENTRIES PENDSV_DISPATCH_CDC,)
 
 target_include_directories(${MICROPY_TARGET} PRIVATE
     ${TOP_DIR}/${CMSIS_DIR}/include/
@@ -94,15 +93,15 @@ target_sources(${MICROPY_TARGET} PRIVATE
     ${TOP_DIR}/${OMV_DIR}/alloc/unaligned_memcpy.c
 
     ${TOP_DIR}/${OMV_DIR}/common/array.c
-    ${TOP_DIR}/${OMV_DIR}/common/ff_wrapper.c
     ${TOP_DIR}/${OMV_DIR}/common/ini.c
     ${TOP_DIR}/${OMV_DIR}/common/ringbuf.c
     ${TOP_DIR}/${OMV_DIR}/common/trace.c
     ${TOP_DIR}/${OMV_DIR}/common/mutex.c
     ${TOP_DIR}/${OMV_DIR}/common/usbdbg.c
     ${TOP_DIR}/${OMV_DIR}/common/tinyusb_debug.c
+    ${TOP_DIR}/${OMV_DIR}/common/file_utils.c
+    ${TOP_DIR}/${OMV_DIR}/common/boot_utils.c
     ${TOP_DIR}/${OMV_DIR}/common/sensor_utils.c
-    ${TOP_DIR}/${OMV_DIR}/common/factoryreset.c
 
     ${TOP_DIR}/${OMV_DIR}/sensors/ov2640.c
     ${TOP_DIR}/${OMV_DIR}/sensors/ov5640.c
@@ -142,6 +141,7 @@ target_sources(${MICROPY_TARGET} PRIVATE
     ${TOP_DIR}/${OMV_DIR}/imlib/imlib.c
     ${TOP_DIR}/${OMV_DIR}/imlib/integral.c
     ${TOP_DIR}/${OMV_DIR}/imlib/integral_mw.c
+    ${TOP_DIR}/${OMV_DIR}/imlib/isp.c
     ${TOP_DIR}/${OMV_DIR}/imlib/jpegd.c
     ${TOP_DIR}/${OMV_DIR}/imlib/jpeg.c
     ${TOP_DIR}/${OMV_DIR}/imlib/lodepng.c
@@ -172,8 +172,9 @@ target_sources(${MICROPY_TARGET} PRIVATE
     ${TOP_DIR}/${OMV_DIR}/imlib/zbar.c
 
     ${TOP_DIR}/${OMV_DIR}/ports/${PORT}/main.c
-    ${TOP_DIR}/${OMV_DIR}/ports/${PORT}/cambus.c
     ${TOP_DIR}/${OMV_DIR}/ports/${PORT}/sensor.c
+    ${TOP_DIR}/${OMV_DIR}/ports/${PORT}/omv_gpio.c
+    ${TOP_DIR}/${OMV_DIR}/ports/${PORT}/omv_i2c.c
 
     ${OMV_USER_MODULES}
 )
@@ -260,6 +261,10 @@ if(MICROPY_PY_ULAB)
         ULAB_CONFIG_FILE="${OMV_BOARD_CONFIG_DIR}/ulab_config.h"
     )
 endif()
+
+target_compile_definitions(${MICROPY_TARGET} PRIVATE
+    MICROPY_BOARD_PENDSV_ENTRIES=${MPY_PENDSV_ENTRIES}
+)
 
 add_custom_command(TARGET ${MICROPY_TARGET}
     POST_BUILD

@@ -10,8 +10,7 @@
  */
 #include "imlib.h"
 
-void imlib_debayer_line(int x_start, int x_end, int y_row, void *dst_row_ptr, pixformat_t pixfmt, image_t *src)
-{
+void imlib_debayer_line(int x_start, int x_end, int y_row, void *dst_row_ptr, pixformat_t pixfmt, image_t *src) {
     int src_w = src->w, w_limit = src_w - 1, w_limit_m_1 = w_limit - 1;
     int src_h = src->h, h_limit = src_h - 1, h_limit_m_1 = h_limit - 1;
 
@@ -35,7 +34,8 @@ void imlib_debayer_line(int x_start, int x_end, int y_row, void *dst_row_ptr, pi
         rowptr_bgbg_1 = rowptr_grgr_0 + src_w;
         rowptr_grgr_2 = rowptr_grgr_0;
         rowptr_bgbg_3 = rowptr_bgbg_1;
-    } else { // get 4 neighboring rows
+    } else {
+        // get 4 neighboring rows
         rowptr_grgr_0 = src->data + ((y - 1) * src_w);
         rowptr_bgbg_1 = rowptr_grgr_0 + src_w;
         rowptr_grgr_2 = rowptr_bgbg_1 + src_w;
@@ -43,7 +43,8 @@ void imlib_debayer_line(int x_start, int x_end, int y_row, void *dst_row_ptr, pi
     }
 
     // If the image is an odd width this will go for the last loop and we drop the last column.
-    if (!y_row_odd) { // even
+    if (!y_row_odd) {
+        // even
         for (int x = x_start, i = 0; x < x_end; x += 2, i += 2) {
             uint32_t row_grgr_0, row_bgbg_1, row_grgr_2;
 
@@ -88,7 +89,8 @@ void imlib_debayer_line(int x_start, int x_end, int y_row, void *dst_row_ptr, pi
                 row_bgbg_1 = (row_bgbg_1 << 16) | row_bgbg_1;
                 row_grgr_2 = *((uint16_t *) (rowptr_grgr_2 + x - 1));
                 row_grgr_2 = (row_grgr_2 << 16) | row_grgr_2;
-            } else { // get 4 neighboring rows
+            } else {
+                // get 4 neighboring rows
                 row_grgr_0 = *((uint32_t *) (rowptr_grgr_0 + x - 1));
                 row_bgbg_1 = *((uint32_t *) (rowptr_bgbg_1 + x - 1));
                 row_grgr_2 = *((uint32_t *) (rowptr_grgr_2 + x - 1));
@@ -234,9 +236,11 @@ void imlib_debayer_line(int x_start, int x_end, int y_row, void *dst_row_ptr, pi
                                    ((g_pixels_0 << 3) & 0x07e007e0) |
                                    ((b_pixels_0 >> 3) & 0x001f001f);
 
-                    if (x == w_limit) { // just put bottom
+                    if (x == w_limit) {
+                        // just put bottom
                         IMAGE_PUT_RGB565_PIXEL_FAST(dst_row_ptr_16, i, rgb565_0);
-                    } else { // put both
+                    } else {
+                        // put both
                         *((uint32_t *) (dst_row_ptr_16 + i)) = rgb565_0;
                     }
 
@@ -247,7 +251,8 @@ void imlib_debayer_line(int x_start, int x_end, int y_row, void *dst_row_ptr, pi
                 }
             }
         }
-    } else { // odd
+    } else {
+        // odd
         for (int x = x_start, i = 0; x < x_end; x += 2, i += 2) {
             uint32_t row_bgbg_1, row_grgr_2, row_bgbg_3;
 
@@ -292,7 +297,8 @@ void imlib_debayer_line(int x_start, int x_end, int y_row, void *dst_row_ptr, pi
                 row_grgr_2 = (row_grgr_2 << 16) | row_grgr_2;
                 row_bgbg_3 = *((uint16_t *) (rowptr_bgbg_3 + x - 1));
                 row_bgbg_3 = (row_bgbg_3 << 16) | row_bgbg_3;
-            } else { // get 4 neighboring rows
+            } else {
+                // get 4 neighboring rows
                 row_bgbg_1 = *((uint32_t *) (rowptr_bgbg_1 + x - 1));
                 row_grgr_2 = *((uint32_t *) (rowptr_grgr_2 + x - 1));
                 row_bgbg_3 = *((uint32_t *) (rowptr_bgbg_3 + x - 1));
@@ -438,9 +444,11 @@ void imlib_debayer_line(int x_start, int x_end, int y_row, void *dst_row_ptr, pi
                                    ((g_pixels_1 << 3) & 0x07e007e0) |
                                    ((b_pixels_1 >> 3) & 0x001f001f);
 
-                    if (x == w_limit) { // just put bottom
+                    if (x == w_limit) {
+                        // just put bottom
                         IMAGE_PUT_RGB565_PIXEL_FAST(dst_row_ptr_16, i, rgb565_1);
-                    } else { // put both
+                    } else {
+                        // put both
                         *((uint32_t *) (dst_row_ptr_16 + i)) = rgb565_1;
                     }
 
@@ -455,8 +463,7 @@ void imlib_debayer_line(int x_start, int x_end, int y_row, void *dst_row_ptr, pi
 }
 
 // Does no bounds checking on the destination. Destination must be mutable.
-void imlib_debayer_image(image_t *dst, image_t *src)
-{
+void imlib_debayer_image(image_t *dst, image_t *src) {
     int src_w = src->w, w_limit = src_w - 1, w_limit_m_1 = w_limit - 1;
     int src_h = src->h, h_limit = src_h - 1, h_limit_m_1 = h_limit - 1;
 
@@ -500,7 +507,8 @@ void imlib_debayer_image(image_t *dst, image_t *src)
             rowptr_bgbg_1 = rowptr_grgr_0 + src_w;
             rowptr_grgr_2 = rowptr_grgr_0;
             rowptr_bgbg_3 = rowptr_bgbg_1;
-        } else { // get 4 neighboring rows
+        } else {
+            // get 4 neighboring rows
             rowptr_grgr_0 = src->data + ((y - 1) * src_w);
             rowptr_bgbg_1 = rowptr_grgr_0 + src_w;
             rowptr_grgr_2 = rowptr_bgbg_1 + src_w;
@@ -562,7 +570,8 @@ void imlib_debayer_image(image_t *dst, image_t *src)
                 row_grgr_2 = (row_grgr_2 << 16) | row_grgr_2;
                 row_bgbg_3 = *((uint16_t *) (rowptr_bgbg_3 + x - 1));
                 row_bgbg_3 = (row_bgbg_3 << 16) | row_bgbg_3;
-            } else { // get 4 neighboring rows
+            } else {
+                // get 4 neighboring rows
                 row_grgr_0 = *((uint32_t *) (rowptr_grgr_0 + x - 1));
                 row_bgbg_1 = *((uint32_t *) (rowptr_bgbg_1 + x - 1));
                 row_grgr_2 = *((uint32_t *) (rowptr_grgr_2 + x - 1));
@@ -709,9 +718,11 @@ void imlib_debayer_image(image_t *dst, image_t *src)
                                    ((g_pixels_0 << 3) & 0x07e007e0) |
                                    ((b_pixels_0 >> 3) & 0x001f001f);
 
-                    if (x == w_limit) { // just put bottom
+                    if (x == w_limit) {
+                        // just put bottom
                         IMAGE_PUT_RGB565_PIXEL_FAST(row_ptr_e_16, x, rgb565_0);
-                    } else { // put both
+                    } else {
+                        // put both
                         *((uint32_t *) (row_ptr_e_16 + x)) = rgb565_0;
                     }
 
@@ -863,9 +874,11 @@ void imlib_debayer_image(image_t *dst, image_t *src)
                                    ((g_pixels_1 << 3) & 0x07e007e0) |
                                    ((b_pixels_1 >> 3) & 0x001f001f);
 
-                    if (x == w_limit) { // just put bottom
+                    if (x == w_limit) {
+                        // just put bottom
                         IMAGE_PUT_RGB565_PIXEL_FAST(row_ptr_o_16, x, rgb565_1);
-                    } else { // put both
+                    } else {
+                        // put both
                         *((uint32_t *) (row_ptr_o_16 + x)) = rgb565_1;
                     }
 

@@ -1,3 +1,7 @@
+# This work is licensed under the MIT license.
+# Copyright (c) 2013-2023 OpenMV LLC. All rights reserved.
+# https://github.com/openmv/openmv/blob/master/LICENSE
+#
 # Snapshot on Face Detection Example
 #
 # Note: You will need an SD card to run this example.
@@ -5,15 +9,17 @@
 # This example demonstrates using face tracking on your OpenMV Cam to take a
 # picture.
 
-import sensor, image, pyb
+import sensor
+import image
+import random
+import machine
 
-RED_LED_PIN = 1
-BLUE_LED_PIN = 3
+sensor.reset()  # Reset and initialize the sensor.
+sensor.set_pixformat(sensor.GRAYSCALE)  # Set pixel format to RGB565 (or GRAYSCALE)
+sensor.set_framesize(sensor.QVGA)  # Set frame size to QVGA
+sensor.skip_frames(time=2000)  # Wait for settings take effect.
 
-sensor.reset() # Initialize the camera sensor.
-sensor.set_pixformat(sensor.GRAYSCALE)
-sensor.set_framesize(sensor.HQVGA) # or sensor.QQVGA (or others)
-sensor.skip_frames(time = 2000) # Let new settings take affect.
+led = machine.LED("LED_RED")
 
 # Load up a face detection HaarCascade. This is object that your OpenMV Cam
 # can use to detect faces using the find_features() method below. Your OpenMV
@@ -23,18 +29,14 @@ sensor.skip_frames(time = 2000) # Let new settings take affect.
 # stages.
 face_cascade = image.HaarCascade("frontalface", stages=25)
 
-while(True):
-
-    pyb.LED(RED_LED_PIN).on()
+while True:
     print("About to start detecting faces...")
-    sensor.skip_frames(time = 2000) # Give the user time to get ready.
+    sensor.skip_frames(time=2000)  # Give the user time to get ready.
 
-    pyb.LED(RED_LED_PIN).off()
     print("Now detecting faces!")
-    pyb.LED(BLUE_LED_PIN).on()
+    diff = 10  # We'll say we detected a face after 10 frames.
 
-    diff = 10 # We'll say we detected a face after 10 frames.
-    while(diff):
+    while diff:
         img = sensor.snapshot()
         # Threshold can be between 0.0 and 1.0. A higher threshold results in a
         # higher detection rate with more false positives. The scale value
@@ -45,7 +47,7 @@ while(True):
             diff -= 1
             for r in faces:
                 img.draw_rectangle(r)
-
-    pyb.LED(BLUE_LED_PIN).off()
+    led.on()
     print("Face detected! Saving image...")
-    sensor.snapshot().save("snapshot-%d.jpg" % pyb.rng()) # Save Pic.
+    sensor.snapshot().save("snapshot-%d.jpg" % random.getrandbits(32))  # Save Pic.
+    led.off()

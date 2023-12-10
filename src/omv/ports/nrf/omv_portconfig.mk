@@ -100,13 +100,14 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/alloc/, \
 
 FIRM_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/common/, \
 	array.o                     \
-	ff_wrapper.o                \
 	ini.o                       \
 	ringbuf.o                   \
 	trace.o                     \
 	mutex.o                     \
 	usbdbg.o                    \
 	tinyusb_debug.o             \
+	file_utils.o                \
+	boot_utils.o                \
 	sensor_utils.o              \
    )
 
@@ -150,6 +151,7 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/imlib/, \
 	imlib.o                     \
 	integral.o                  \
 	integral_mw.o               \
+	isp.o                       \
 	jpegd.o                     \
 	jpeg.o                      \
 	lodepng.o                   \
@@ -222,6 +224,7 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/extmod/,\
 	modurandom.o        \
 	modutimeq.o         \
 	machine_i2c.o       \
+	machine_pwm.o       \
 	utime_mphal.o       \
 	vfs.o               \
 	vfs_fat.o           \
@@ -293,7 +296,6 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/modules/,\
 	machine/pin.o                       \
 	machine/timer.o                     \
 	machine/rtcounter.o                 \
-	machine/pwm.o                       \
 	machine/temp.o                      \
 	uos/moduos.o                        \
 	uos/microbitfs.o                    \

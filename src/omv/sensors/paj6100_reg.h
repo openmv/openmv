@@ -29,48 +29,48 @@
  * SOFTWARE.
  * -----
  * HISTORY:
- * Date      	By	Comments
+ * Date         By	Comments
  * ----------	---	----------------------------------------------------------
  */
 
 #include <stdint.h>
 
-#define REG_BANK_SWITCH             0x7F
+#define REG_BANK_SWITCH        0x7F
 
 // =======================================
-#define BANK_0                      0x00
+#define BANK_0                 0x00
 // ---------------------------------------
-#define REG_CMD_HSYNC_INV           0X07 // bit7
-#define REG_CMD_VSYNC_INV           0X07 // bit6
+#define REG_CMD_HSYNC_INV      0X07      // bit7
+#define REG_CMD_VSYNC_INV      0X07      // bit6
 
-#define REG_CMD_AAVG_V              0X07 // bit3
-#define REG_CMD_AAVG_H              0X07 // bit2
+#define REG_CMD_AAVG_V         0X07      // bit3
+#define REG_CMD_AAVG_H         0X07      // bit2
 
-#define REG_ABC_START_LINE          0x0D // bit3:1
+#define REG_ABC_START_LINE     0x0D      // bit3:1
 
 
-#define REG_FGH                     0x11 // bit5:4
-#define REG_GGH                     0x12 // bit7
+#define REG_FGH                0x11      // bit5:4
+#define REG_GGH                0x12      // bit7
 
-#define REG_EXP_OFFSET_L            0x18
-#define REG_EXP_OFFSET_H            0x19
-#define REG_CMD_EXPO_L              0x48
-#define REG_CMD_EXPO_H              0x49
-#define REG_CMD_EXPO_2H             0x4A
+#define REG_EXP_OFFSET_L       0x18
+#define REG_EXP_OFFSET_H       0x19
+#define REG_CMD_EXPO_L         0x48
+#define REG_CMD_EXPO_H         0x49
+#define REG_CMD_EXPO_2H        0x4A
 
-#define REG_FRAME_TIME_L            0x7A
-#define REG_FRAME_TIME_H            0x7B
-#define REG_FRAME_TIME_2H           0x7C
+#define REG_FRAME_TIME_L       0x7A
+#define REG_FRAME_TIME_H       0x7B
+#define REG_FRAME_TIME_2H      0x7C
 // =======================================
-#define BANK_1                      0x01
+#define BANK_1                 0x01
 // ---------------------------------------
-#define REG_ISP_UPDATE              0x00
+#define REG_ISP_UPDATE         0x00
 
-#define REG_CMD_SENSOR_MODE         0X23 // bit7
-#define REG_CMD_LPM_ENH             0x23 // bit6
+#define REG_CMD_SENSOR_MODE    0X23      // bit7
+#define REG_CMD_LPM_ENH        0x23      // bit6
 
-#define REG_CP_WOI_VOFFSET          0x45
-#define REG_ABC_SAMPLE_SIZE         0x46 // bit2:0
+#define REG_CP_WOI_VOFFSET     0x45
+#define REG_ABC_SAMPLE_SIZE    0x46      // bit2:0
 
 
 // 20180504

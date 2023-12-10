@@ -25,6 +25,10 @@
        "labels": ["drivers"]
      },
      {
+       "title": "## 🧱 Modules",
+       "labels": ["modules"]
+     },
+     {
        "title": "## 🐍 Micropython",
        "labels": ["micropython"]
      },
@@ -89,6 +93,12 @@
       },
       {
         "pattern": "(^drivers)(.+)",
+        "method": "replace",
+        "target": "$1",
+        "on_property": "title"
+      },
+      {
+        "pattern": "(^modules)(.+)",
         "method": "replace",
         "target": "$1",
         "on_property": "title"
