@@ -335,7 +335,7 @@ int sensor_snapshot(sensor_t *sensor, image_t *image, uint32_t flags) {
     vbuffer_t *buffer = framebuffer_get_head(FB_NO_FLAGS);
     // Wait for the DMA to finish the transfer.
     for (mp_uint_t ticks = mp_hal_ticks_ms(); buffer == NULL;) {
-        buffer = framebuffer_get_head(FB_NO_FLAGS);
+        MICROPY_EVENT_POLL_HOOK
         if ((mp_hal_ticks_ms() - ticks) > 3000) {
             sensor_abort();
 
@@ -347,6 +347,7 @@ int sensor_snapshot(sensor_t *sensor, image_t *image, uint32_t flags) {
 
             return SENSOR_ERROR_CAPTURE_TIMEOUT;
         }
+        buffer = framebuffer_get_head(FB_NO_FLAGS);
     }
 
     // We're done receiving data.
