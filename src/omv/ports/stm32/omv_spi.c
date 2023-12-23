@@ -19,6 +19,7 @@
 #include "irq.h"
 #include "omv_common.h"
 #include "dma_utils.h"
+#include "omv_gpio.h"
 #include "omv_spi.h"
 
 // If an SPI handle is already defined in MicroPython, reuse that handle to allow
@@ -433,6 +434,8 @@ int omv_spi_deinit(omv_spi_t *spi) {
         }
         HAL_SPI_DeInit(spi->descr);
         HAL_NVIC_DisableIRQ(spi->irqn);
+        // Deinit the CS pin here versus in HAL_SPI_MspDeInit which is shared code.
+        omv_gpio_deinit(spi->cs);
     }
     return 0;
 }
