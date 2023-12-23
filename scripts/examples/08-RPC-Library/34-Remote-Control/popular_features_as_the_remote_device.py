@@ -15,7 +15,6 @@ import math
 import rpc
 import sensor
 import struct
-import tf
 
 sensor.reset()
 sensor.set_pixformat(sensor.RGB565)
@@ -132,20 +131,6 @@ def face_detection(data):
         sensor.get_fb().draw_rectangle(f, color=(255, 255, 255))
     out_face = max(faces, key=lambda f: f[2] * f[3])
     return struct.pack("<HHHH", out_face[0], out_face[1], out_face[2], out_face[3])
-
-
-# When called returns if there's a "person" or "no_person" within view.
-#
-# data is unused
-labels, net = tf.load_builtin_model("person_detection")
-
-
-def person_detection(data):
-    global net
-    sensor.set_pixformat(sensor.RGB565)
-    sensor.set_framesize(sensor.QVGA)
-    scores = net.classify(sensor.snapshot())[0].output()
-    return labels[scores.index(max(scores))].encode()
 
 
 # When called returns the payload string for the largest qrcode
@@ -300,7 +285,6 @@ def jpeg_snapshot(data):
 # Register call backs.
 
 interface.register_callback(face_detection)
-interface.register_callback(person_detection)
 interface.register_callback(qrcode_detection)
 interface.register_callback(all_qrcode_detection)
 interface.register_callback(apriltag_detection)
