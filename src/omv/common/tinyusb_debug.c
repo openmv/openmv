@@ -82,44 +82,48 @@ void tinyusb_debug_tx_strn(const char *str, mp_uint_t len) {
 }
 
 static void tinyusb_debug_task(void) {
-    tud_task();
+    tud_task_ext(0, false);
+
+    if (!tinyusb_debug_enabled() || !tud_cdc_connected() || tud_cdc_available() < 6) {
+        return;
+    }
 
     uint8_t dbg_buf[DEBUG_MAX_PACKET];
-    if (tud_cdc_connected() && tud_cdc_available() >= 6) {
-        uint32_t count = tud_cdc_read(dbg_buf, 6);
-        if (count < 6 || dbg_buf[0] != 0x30) {
-            // Maybe we should try to recover from this state
-            // but for now, call __fatal_error which doesn't
-            // return.
-            __fatal_error();
-            return;
-        }
-        usbdbg_cmd_t *cmd = (usbdbg_cmd_t *) dbg_buf;
-        uint8_t request = cmd->request;
-        uint32_t xfer_length = cmd->xfer_length;
-        usbdbg_control(NULL, request, xfer_length);
+    uint32_t count = tud_cdc_read(dbg_buf, 6);
 
-        while (xfer_length) {
-            // && tud_cdc_connected())
-            if (tud_task_event_ready()) {
-                tud_task();
+    if (count < 6 || dbg_buf[0] != 0x30) {
+        // Maybe we should try to recover from this state
+        // but for now, call __fatal_error which doesn't
+        // return.
+        __fatal_error();
+        return;
+    }
+
+    usbdbg_cmd_t *cmd = (usbdbg_cmd_t *) dbg_buf;
+    uint8_t request = cmd->request;
+    uint32_t xfer_length = cmd->xfer_length;
+    usbdbg_control(NULL, request, xfer_length);
+
+    while (xfer_length) {
+        // && tud_cdc_connected())
+        if (tud_task_event_ready()) {
+            tud_task_ext(0, false);
+        }
+        if (request & 0x80) {
+            // Device-to-host data phase
+            int bytes = MIN(xfer_length, DEBUG_MAX_PACKET);
+            if (bytes <= tud_cdc_write_available()) {
+                xfer_length -= bytes;
+                usbdbg_data_in(dbg_buf, bytes);
+                tud_cdc_write(dbg_buf, bytes);
             }
-            if (request & 0x80) {
-                // Device-to-host data phase
-                int bytes = MIN(xfer_length, DEBUG_MAX_PACKET);
-                if (bytes <= tud_cdc_write_available()) {
-                    xfer_length -= bytes;
-                    usbdbg_data_in(dbg_buf, bytes);
-                    tud_cdc_write(dbg_buf, bytes);
-                }
-                tud_cdc_write_flush();
-            } else {
-                // Host-to-device data phase
-                int bytes = MIN(xfer_length, DEBUG_MAX_PACKET);
-                uint32_t count = tud_cdc_read(dbg_buf, bytes);
-                xfer_length -= count;
-                usbdbg_data_out(dbg_buf, count);
-            }
+            tud_cdc_write_flush();
+        } else {
+            // Host-to-device data phase
+            int bytes = MIN(xfer_length, DEBUG_MAX_PACKET);
+            uint32_t count = tud_cdc_read(dbg_buf, bytes);
+            xfer_length -= count;
+            usbdbg_data_out(dbg_buf, count);
         }
     }
 }
@@ -129,7 +133,7 @@ static void tinyusb_debug_task(void) {
 void OMV_USB1_IRQ_HANDLER(void) {
     dcd_int_handler(0);
     // If there are any event to process, schedule a call to cdc loop.
-    if (tinyusb_debug_enabled()) {
+    if (tud_task_event_ready()) {
         pendsv_schedule_dispatch(PENDSV_DISPATCH_CDC, tinyusb_debug_task);
     }
 }
@@ -138,7 +142,7 @@ void OMV_USB1_IRQ_HANDLER(void) {
 void OMV_USB2_IRQ_HANDLER(void) {
     dcd_int_handler(1);
     // If there are any event to process, schedule a call to cdc loop.
-    if (tinyusb_debug_enabled()) {
+    if (tud_task_event_ready()) {
         pendsv_schedule_dispatch(PENDSV_DISPATCH_CDC, tinyusb_debug_task);
     }
 }
