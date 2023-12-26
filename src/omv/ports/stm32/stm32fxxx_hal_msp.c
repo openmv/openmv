@@ -520,7 +520,9 @@ void HAL_SPI_MspDeInit(SPI_HandleTypeDef *hspi) {
     omv_gpio_deinit(spi_pins.sclk_pin);
     omv_gpio_deinit(spi_pins.miso_pin);
     omv_gpio_deinit(spi_pins.mosi_pin);
-    omv_gpio_deinit(spi_pins.ssel_pin);
+    // Deinited by omv_spi.c so as to not deinit the pin when HAL_SPI_MspDeInit is called
+    // from deiniting the SPI bus from the machine or pyb module.
+    // omv_gpio_deinit(spi_pins.ssel_pin);
 }
 
 #if defined(AUDIO_SAI)
