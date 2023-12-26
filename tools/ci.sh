@@ -34,8 +34,7 @@ ci_build_target() {
     export PATH=${TOOLCHAIN_PATH}/bin:${PATH}
     make -j$(nproc) -C src/micropython/mpy-cross
     make -j$(nproc) TARGET=${1} -C src
-    mkdir firmware
-    mv src/build/bin firmware/${1}
+    mv src/build/bin ${1}
 }
 
 ########################################################################################

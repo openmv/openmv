@@ -57,8 +57,8 @@ jobs:
       if: github.event_name != 'pull_request'
       uses: actions/upload-artifact@v4
       with:
-        name: firmware
-        path: firmware
+        name: ${{ matrix.target }}
+        path: ${{ matrix.target }}
         if-no-files-found: error
 
   stable-release:
@@ -74,7 +74,6 @@ jobs:
     - name: '🤌 Download artifacts'
       uses: actions/download-artifact@v4
       with:
-        name: firmware
         path: firmware
 
     - name: '📦 Package firmware'
@@ -119,7 +118,6 @@ jobs:
     - name: '🤌 Download artifacts'
       uses: actions/download-artifact@v4
       with:
-        name: firmware
         path: firmware
 
     - name: '📦 Package firmware'
