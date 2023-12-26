@@ -77,12 +77,6 @@ def exe_face_detection():
         )
 
 
-def exe_person_detection():
-    result = interface.call("person_detection")
-    if result is not None:
-        print(bytes(result).decode())
-
-
 def exe_qrcode_detection():
     result = interface.call("qrcode_detection")
     if result is not None and len(result):
@@ -171,7 +165,6 @@ def exe_jpeg_snapshot():
 
 while True:
     exe_face_detection()  # Face should be about 2ft away.
-    # exe_person_detection()
     # exe_qrcode_detection() # Place the QRCode about 2ft away.
     # exe_all_qrcode_detection() # Place the QRCode about 2ft away.
     # exe_apriltag_detection()

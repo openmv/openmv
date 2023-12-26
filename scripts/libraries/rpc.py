@@ -6,12 +6,12 @@
 # This work is licensed under the MIT license, see the file LICENSE for details.
 
 import gc
+import machine
 import omv
-import pyb
 import select
 import socket
-import stm
 import struct
+import time
 
 
 class rpc:
@@ -32,6 +32,7 @@ class rpc:
 
     @micropython.viper
     def __stm_crc_16(self, data, size: int) -> int:  # private
+        import stm
         ptr32(stm.CRC + stm.CRC_CR)[0] = (1 << 3) | 1
         crc8 = ptr8(stm.CRC + stm.CRC_DR)
         d = ptr8(data)
@@ -70,10 +71,12 @@ class rpc:
     def __init__(self):  # private
         self.__crc_16 = self.__def_crc_16
         if omv.board_type() == "H7":
+            import stm
             stm.mem32[stm.RCC + stm.RCC_AHB4ENR] = stm.mem32[stm.RCC + stm.RCC_AHB4ENR] | (1 << 19)
             stm.mem32[stm.CRC + stm.CRC_POL] = 0x1021
             self.__crc_16 = self.__stm_crc_16
         elif omv.board_type() == "F7":
+            import stm
             stm.mem32[stm.RCC + stm.RCC_AHB1ENR] = stm.mem32[stm.RCC + stm.RCC_AHB1ENR] | (1 << 12)
             stm.mem32[stm.CRC + stm.CRC_POL] = 0x1021
             self.__crc_16 = self.__stm_crc_16
@@ -195,8 +198,8 @@ class rpc_master(rpc):
             self._COMMAND_HEADER_PACKET_MAGIC, struct.pack("<II", command, len(data))
         )
         out_data = self._set_packet(self._COMMAND_DATA_PACKET_MAGIC, data)
-        start = pyb.millis()
-        while pyb.elapsed_millis(start) < timeout:
+        start = time.ticks_ms()
+        while time.ticks_diff(time.ticks_ms(), start) < timeout:
             gc.collect()  # Avoid collection during the transfer.
             self._zero(self.__in_command_header_buf[0], len(self.__in_command_header_buf[0]))
             self._zero(self.__in_command_data_buf[0], len(self.__in_command_data_buf[0]))
@@ -228,8 +231,8 @@ class rpc_master(rpc):
     def __get_result(self, timeout):  # private
         self._put_short_timeout = self._put_short_timeout_reset
         self._get_short_timeout = self._get_short_timeout_reset
-        start = pyb.millis()
-        while pyb.elapsed_millis(start) < timeout:
+        start = time.ticks_ms()
+        while time.ticks_diff(time.ticks_ms(), start) < timeout:
             gc.collect()  # Avoid collection during the transfer.
             self._zero(self.__in_result_header_buf[0], len(self.__in_result_header_buf[0]))
             self._flush()
@@ -279,8 +282,8 @@ class rpc_slave(rpc):
     def __get_command(self, timeout):  # private
         self._put_short_timeout = self._put_short_timeout_reset
         self._get_short_timeout = self._get_short_timeout_reset
-        start = pyb.millis()
-        while pyb.elapsed_millis(start) < timeout:
+        start = time.ticks_ms()
+        while time.ticks_diff(time.ticks_ms(), start) < timeout:
             gc.collect()  # Avoid collection during the transfer.
             self._zero(self.__in_command_header_buf[0], len(self.__in_command_header_buf[0]))
             self._flush()
@@ -311,8 +314,8 @@ class rpc_slave(rpc):
             self._RESULT_HEADER_PACKET_MAGIC, struct.pack("<I", len(data))
         )
         out_data = self._set_packet(self._RESULT_DATA_PACKET_MAGIC, data)
-        start = pyb.millis()
-        while pyb.elapsed_millis(start) < timeout:
+        start = time.ticks_ms()
+        while time.ticks_diff(time.ticks_ms(), start) < timeout:
             gc.collect()  # Avoid collection during the transfer.
             self._zero(self.__in_response_header_buf[0], len(self.__in_response_header_buf[0]))
             self._zero(self.__in_response_data_buf[0], len(self.__in_response_data_buf[0]))
@@ -367,6 +370,7 @@ class rpc_slave(rpc):
 
 class rpc_can_master(rpc_master):
     def __init__(self, message_id=0x7FF, bit_rate=250000, sample_point=75, can_bus=2):
+        import pyb
         self.__message_id = message_id
         self.__can = pyb.CAN(
             can_bus,
@@ -398,10 +402,10 @@ class rpc_can_master(rpc_master):
                 if id == self.__message_id and rtr == 0 and fmi == 0 and len(data) == expected:
                     buff[i : i + 8] = data
                 else:
-                    pyb.delay(self._get_short_timeout)
+                    time.sleep_ms(self._get_short_timeout)
                     return None
             except OSError:
-                pyb.delay(self._get_short_timeout)
+                time.sleep_ms(self._get_short_timeout)
                 return None
         return buff
 
@@ -416,6 +420,7 @@ class rpc_can_master(rpc_master):
 
 class rpc_can_slave(rpc_slave):
     def __init__(self, message_id=0x7FF, bit_rate=250000, sample_point=75, can_bus=2):
+        import pyb
         self.__message_id = message_id
         self.__can = pyb.CAN(
             can_bus,
@@ -463,6 +468,7 @@ class rpc_can_slave(rpc_slave):
 
 class rpc_i2c_master(rpc_master):
     def __init__(self, slave_addr=0x12, rate=100000, i2c_bus=2):  # private
+        import pyb
         self.__addr = slave_addr
         self.__freq = rate
         self.__i2c = pyb.I2C(i2c_bus)
@@ -470,9 +476,10 @@ class rpc_i2c_master(rpc_master):
         self._stream_writer_queue_depth_max = 1
 
     def get_bytes(self, buff, timeout_ms):  # protected
+        import pyb
         view = memoryview(buff)
         for i in range(0, len(view), 65535):
-            pyb.udelay(100)  # Give slave time to get ready.
+            time.sleep_us(100)  # Give slave time to get ready.
             self.__i2c.init(pyb.I2C.MASTER, baudrate=self.__freq, dma=True)
             try:
                 self.__i2c.recv(view[i : i + 65535], self.__addr, timeout=timeout_ms)
@@ -482,13 +489,14 @@ class rpc_i2c_master(rpc_master):
             if view is None:
                 break
         if view is None or self._same(view, len(view)):
-            pyb.delay(self._get_short_timeout)
+            time.sleep_ms(self._get_short_timeout)
         return view
 
     def put_bytes(self, data, timeout_ms):  # protected
+        import pyb
         view = memoryview(data)
         for i in range(0, len(view), 65535):
-            pyb.udelay(100)  # Give slave time to get ready.
+            time.sleep_us(100)  # Give slave time to get ready.
             self.__i2c.init(pyb.I2C.MASTER, baudrate=self.__freq, dma=True)
             try:
                 self.__i2c.send(view[i : i + 65535], self.__addr, timeout=timeout_ms)
@@ -501,12 +509,14 @@ class rpc_i2c_master(rpc_master):
 
 class rpc_i2c_slave(rpc_slave):
     def __init__(self, slave_addr=0x12, i2c_bus=2):  # private
+        import pyb
         self.__addr = slave_addr
         self.__i2c = pyb.I2C(i2c_bus)
         rpc_slave.__init__(self)
         self._stream_writer_queue_depth_max = 1
 
     def get_bytes(self, buff, timeout_ms):  # protected
+        import pyb
         view = memoryview(buff)
         for i in range(0, len(view), 65535):
             self.__i2c.init(pyb.I2C.SLAVE, addr=self.__addr, dma=True)
@@ -520,6 +530,7 @@ class rpc_i2c_slave(rpc_slave):
         return view
 
     def put_bytes(self, data, timeout_ms):  # protected
+        import pyb
         view = memoryview(data)
         for i in range(0, len(view), 65535):
             self.__i2c.init(pyb.I2C.SLAVE, addr=self.__addr, dma=True)
@@ -536,6 +547,7 @@ class rpc_spi_master(rpc_master):
     def __init__(
         self, cs_pin="P3", freq=1000000, clk_polarity=1, clk_phase=0, spi_bus=2
     ):  # private
+        import pyb
         self.__pin = pyb.Pin(cs_pin, pyb.Pin.OUT_PP)
         self.__freq = freq
         self.__polarity = clk_polarity
@@ -545,8 +557,9 @@ class rpc_spi_master(rpc_master):
         self._stream_writer_queue_depth_max = 1
 
     def get_bytes(self, buff, timeout_ms):  # protected
+        import pyb
         self.__pin.value(False)
-        pyb.udelay(100)  # Give slave time to get ready.
+        time.sleep_us(100)  # Give slave time to get ready.
         self.__spi.init(
             pyb.SPI.MASTER, self.__freq, polarity=self.__polarity, phase=self.__clk_phase
         )
@@ -557,12 +570,13 @@ class rpc_spi_master(rpc_master):
         self.__spi.deinit()
         self.__pin.value(True)
         if buff is None or self._same(buff, len(buff)):
-            pyb.delay(self._get_short_timeout)
+            time.sleep_ms(self._get_short_timeout)
         return buff
 
     def put_bytes(self, data, timeout_ms):  # protected
+        import pyb
         self.__pin.value(False)
-        pyb.udelay(100)  # Give slave time to get ready.
+        time.sleep_us(100)  # Give slave time to get ready.
         self.__spi.init(
             pyb.SPI.MASTER, self.__freq, polarity=self.__polarity, phase=self.__clk_phase
         )
@@ -576,6 +590,7 @@ class rpc_spi_master(rpc_master):
 
 class rpc_spi_slave(rpc_slave):
     def __init__(self, cs_pin="P3", clk_polarity=1, clk_phase=0, spi_bus=2):  # private
+        import pyb
         self.__pin = pyb.Pin(cs_pin, pyb.Pin.IN)
         self.__polarity = clk_polarity
         self.__clk_phase = clk_phase
@@ -584,6 +599,7 @@ class rpc_spi_slave(rpc_slave):
         self._stream_writer_queue_depth_max = 1
 
     def get_bytes(self, buff, timeout_ms):  # protected
+        import pyb
         start = pyb.millis()
         while self.__pin.value():
             if pyb.elapsed_millis(start) >= self._get_short_timeout:
@@ -597,6 +613,7 @@ class rpc_spi_slave(rpc_slave):
         return buff
 
     def put_bytes(self, data, timeout_ms):  # protected
+        import pyb
         start = pyb.millis()
         while self.__pin.value():
             if pyb.elapsed_millis(start) >= self._put_short_timeout:
@@ -611,7 +628,7 @@ class rpc_spi_slave(rpc_slave):
 
 class rpc_uart_master(rpc_master):
     def __init__(self, baudrate=9600, uart_port=3):  # private
-        self.__uart = pyb.UART(uart_port, baudrate, timeout=2, timeout_char=2)
+        self.__uart = machine.UART(uart_port, baudrate, timeout=2, timeout_char=2)
         rpc_master.__init__(self)
 
     def _flush(self):  # protected
@@ -619,7 +636,7 @@ class rpc_uart_master(rpc_master):
 
     def get_bytes(self, buff, timeout_ms):  # protected
         if self.__uart.readinto(buff) is None:
-            pyb.delay(self._get_short_timeout)
+            time.sleep_ms(self._get_short_timeout)
             return None
         return buff
 
@@ -635,7 +652,7 @@ class rpc_uart_master(rpc_master):
 
 class rpc_uart_slave(rpc_slave):
     def __init__(self, baudrate=9600, uart_port=3):  # private
-        self.__uart = pyb.UART(uart_port, baudrate, timeout=2, timeout_char=2)
+        self.__uart = machine.UART(uart_port, baudrate, timeout=2, timeout_char=2)
         rpc_slave.__init__(self)
 
     def _flush(self):  # protected
@@ -658,6 +675,7 @@ class rpc_uart_slave(rpc_slave):
 
 class rpc_usb_vcp_master(rpc_master):
     def __init__(self):  # private
+        import pyb
         self.__usb_vcp = pyb.USB_VCP()
         if self.__usb_vcp.debug_mode_enabled():
             raise OSError("You cannot use the USB VCP while the IDE is connected!")
@@ -678,6 +696,7 @@ class rpc_usb_vcp_master(rpc_master):
 
 class rpc_usb_vcp_slave(rpc_slave):
     def __init__(self):  # private
+        import pyb
         self.__usb_vcp = pyb.USB_VCP()
         if self.__usb_vcp.debug_mode_enabled():
             raise OSError("You cannot use the USB VCP while the IDE is connected!")
