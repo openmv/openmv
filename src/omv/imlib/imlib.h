@@ -1171,7 +1171,6 @@ void png_read_pixels(FIL *fp, image_t *img);
 void png_read(image_t *img, const char *path);
 void png_write(image_t *img, const char *path);
 bool imlib_read_geometry(FIL *fp, image_t *img, const char *path, img_read_settings_t *rs);
-void imlib_image_operation(image_t *img, const char *path, image_t *other, int scalar, line_op_t op, void *data);
 void imlib_load_image(image_t *img, const char *path);
 void imlib_save_image(image_t *img, const char *path, rectangle_t *roi, int quality);
 
@@ -1406,9 +1405,17 @@ void imlib_rotation_corr(image_t *img, float x_rotation, float y_rotation,
                          float zoom, float fov, float *corners);
 // Statistics
 void imlib_get_similarity(image_t *img,
-                          const char *path,
                           image_t *other,
-                          int scalar,
+                          int x_start,
+                          int y_start,
+                          float x_scale,
+                          float y_scale,
+                          rectangle_t *roi,
+                          int rgb_channel,
+                          int alpha,
+                          const uint16_t *color_palette,
+                          const uint8_t *alpha_palette,
+                          image_hint_t hint,
                           float *avg,
                           float *std,
                           float *min,
