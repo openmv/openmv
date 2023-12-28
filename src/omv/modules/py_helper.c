@@ -439,10 +439,6 @@ int py_helper_arg_to_ksize(const mp_obj_t arg) {
     return ksize;
 }
 
-int py_helper_ksize_to_n(int ksize) {
-    return ((ksize * 2) + 1) * ((ksize * 2) + 1);
-}
-
 mp_obj_t py_helper_keyword_object(uint n_args, const mp_obj_t *args,
                                   uint arg_index, mp_map_t *kw_args, mp_obj_t kw, mp_obj_t default_val) {
     mp_map_elem_t *kw_arg = mp_map_lookup(kw_args, kw, MP_MAP_LOOKUP);

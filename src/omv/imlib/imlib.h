@@ -95,6 +95,8 @@
 #define IM_DEG2RAD(x)            (((x) * M_PI) / 180)
 #define IM_RAD2DEG(x)            (((x) * 180) / M_PI)
 
+int imlib_ksize_to_n(int ksize);
+
 /////////////////
 // Point Stuff //
 /////////////////
@@ -924,6 +926,7 @@ typedef struct img_read_settings {
     save_image_format_t format;
 } img_read_settings_t;
 
+typedef void (*morph_op_t) (image_t *, int, int, image_t *);
 typedef void (*line_op_t) (image_t *, int, void *, void *, bool);
 typedef void (*flood_fill_call_back_t) (image_t *, int, int, int, void *);
 
@@ -1344,12 +1347,12 @@ void imlib_gamma(image_t *img, float gamma, float scale, float offset);
 // Binary Functions
 void imlib_binary(image_t *out, image_t *img, list_t *thresholds, bool invert, bool zero, image_t *mask);
 void imlib_invert(image_t *img);
-void imlib_b_and(image_t *img, const char *path, image_t *other, int scalar, image_t *mask);
-void imlib_b_nand(image_t *img, const char *path, image_t *other, int scalar, image_t *mask);
-void imlib_b_or(image_t *img, const char *path, image_t *other, int scalar, image_t *mask);
-void imlib_b_nor(image_t *img, const char *path, image_t *other, int scalar, image_t *mask);
-void imlib_b_xor(image_t *img, const char *path, image_t *other, int scalar, image_t *mask);
-void imlib_b_xnor(image_t *img, const char *path, image_t *other, int scalar, image_t *mask);
+void imlib_b_and_line_op(int x, int x_end, int y_row, imlib_draw_row_data_t *data);
+void imlib_b_nand_line_op(int x, int x_end, int y_row, imlib_draw_row_data_t *data);
+void imlib_b_or_line_op(int x, int x_end, int y_row, imlib_draw_row_data_t *data);
+void imlib_b_nor_line_op(int x, int x_end, int y_row, imlib_draw_row_data_t *data);
+void imlib_b_xor_line_op(int x, int x_end, int y_row, imlib_draw_row_data_t *data);
+void imlib_b_xnor_line_op(int x, int x_end, int y_row, imlib_draw_row_data_t *data);
 void imlib_erode(image_t *img, int ksize, int threshold, image_t *mask);
 void imlib_dilate(image_t *img, int ksize, int threshold, image_t *mask);
 void imlib_open(image_t *img, int ksize, int threshold, image_t *mask);
@@ -1357,23 +1360,16 @@ void imlib_close(image_t *img, int ksize, int threshold, image_t *mask);
 void imlib_top_hat(image_t *img, int ksize, int threshold, image_t *mask);
 void imlib_black_hat(image_t *img, int ksize, int threshold, image_t *mask);
 // Math Functions
-void imlib_negate(image_t *img);
-void imlib_replace(image_t *img,
-                   const char *path,
-                   image_t *other,
-                   int scalar,
-                   bool hmirror,
-                   bool vflip,
-                   bool transpose,
-                   image_t *mask);
-void imlib_add(image_t *img, const char *path, image_t *other, int scalar, image_t *mask);
-void imlib_sub(image_t *img, const char *path, image_t *other, int scalar, bool reverse, image_t *mask);
-void imlib_mul(image_t *img, const char *path, image_t *other, int scalar, bool invert, image_t *mask);
-void imlib_div(image_t *img, const char *path, image_t *other, int scalar, bool invert, bool mod, image_t *mask);
-void imlib_min(image_t *img, const char *path, image_t *other, int scalar, image_t *mask);
-void imlib_max(image_t *img, const char *path, image_t *other, int scalar, image_t *mask);
-void imlib_difference(image_t *img, const char *path, image_t *other, int scalar, image_t *mask);
-void imlib_blend(image_t *img, const char *path, image_t *other, int scalar, float alpha, image_t *mask);
+void imlib_zero_line_op(int x, int x_end, int y_row, imlib_draw_row_data_t *data);
+void imlib_mask_line_op(int x, int x_end, int y_row, imlib_draw_row_data_t *data);
+void imlib_add_line_op(int x, int x_end, int y_row, imlib_draw_row_data_t *data);
+void imlib_sub_line_op(int x, int x_end, int y_row, imlib_draw_row_data_t *data);
+void imlib_rsub_line_op(int x, int x_end, int y_row, imlib_draw_row_data_t *data);
+void imlib_mul_line_op(int x, int x_end, int y_row, imlib_draw_row_data_t *data);
+void imlib_imul_line_op(int x, int x_end, int y_row, imlib_draw_row_data_t *data);
+void imlib_min_line_op(int x, int x_end, int y_row, imlib_draw_row_data_t *data);
+void imlib_max_line_op(int x, int x_end, int y_row, imlib_draw_row_data_t *data);
+void imlib_difference_line_op(int x, int x_end, int y_row, imlib_draw_row_data_t *data);
 // Filtering Functions
 void imlib_histeq(image_t *img, image_t *mask);
 void imlib_clahe_histeq(image_t *img, float clip_limit, image_t *mask);

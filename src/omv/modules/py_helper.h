@@ -58,7 +58,6 @@ void py_helper_arg_to_thresholds(const mp_obj_t arg, list_t *thresholds);
 void py_helper_keyword_thresholds(uint n_args, const mp_obj_t *args, uint arg_index,
                                   mp_map_t *kw_args, list_t *thresholds);
 int py_helper_arg_to_ksize(const mp_obj_t arg);
-int py_helper_ksize_to_n(int ksize);
 mp_obj_t py_helper_keyword_object(uint n_args, const mp_obj_t *args,
                                   uint arg_index, mp_map_t *kw_args, mp_obj_t kw, mp_obj_t default_val);
 const uint16_t *py_helper_keyword_color_palette(uint n_args, const mp_obj_t *args,
