@@ -304,9 +304,5 @@ const mp_obj_module_t display_module = {
     .globals = (mp_obj_t) &globals_dict,
 };
 
-#ifdef MP_REGISTER_EXTENSIBLE_MODULE
 MP_REGISTER_EXTENSIBLE_MODULE(MP_QSTR_display, display_module);
-#else
-MP_REGISTER_MODULE(MP_QSTR_udisplay, display_module);
-#endif
 #endif // MICROPY_PY_DISPLAY
