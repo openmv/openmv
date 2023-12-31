@@ -72,7 +72,7 @@ while True:
         rgb_channel=-1,
         alpha=alpha_value // alpha_div,
         alpha_palette=alpha_lut,
-        hint=hint | image.CENTER,
+        hint=hint
     )
 
     x_bounce += x_bounce_toggle

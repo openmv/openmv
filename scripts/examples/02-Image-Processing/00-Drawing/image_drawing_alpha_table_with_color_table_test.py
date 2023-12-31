@@ -83,7 +83,7 @@ while True:
         alpha=alpha_value // alpha_div,
         color_palette=image.PALETTE_IRONBOW,
         alpha_palette=alpha_lut,
-        hint=hint | image.CENTER,
+        hint=hint
     )
 
     x_bounce += x_bounce_toggle
