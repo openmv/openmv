@@ -15,7 +15,7 @@
 #include "py/objarray.h"
 #include "py/runtime.h"
 #include "mphal.h"
-#include "extmod/machine_i2c.h"
+#include "extmod/modmachine.h"
 
 #include "omv_gpio.h"
 #include "fb_alloc.h"

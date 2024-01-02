@@ -32,32 +32,26 @@
 #include "py/mperrno.h"
 #include "py/mphal.h"
 #include "py/stackctrl.h"
+#include "extmod/modbluetooth.h"
+#include "extmod/modnetwork.h"
 #include "shared/readline/readline.h"
 #include "shared/runtime/gchelper.h"
 #include "shared/runtime/pyexec.h"
+#include "shared/runtime/softtimer.h"
 #include "tusb.h"
 #include "uart.h"
 #include "modmachine.h"
 #include "modrp2.h"
-#include "genhdr/mpversion.h"
-#include "pendsv.h"
-
-#if MICROPY_PY_BLUETOOTH
-#include "extmod/modbluetooth.h"
 #include "mpbthciport.h"
-#endif
-
-#if MICROPY_PY_NETWORK
-#include "extmod/modnetwork.h"
-#endif
-
+#include "mpnetworkport.h"
+#include "genhdr/mpversion.h"
 #include "pico/stdlib.h"
 #include "pico/binary_info.h"
+#include "pico/unique_id.h"
 #include "hardware/rtc.h"
 #include "hardware/irq.h"
 #include "hardware/regs/intctrl.h"
 #include "hardware/structs/rosc.h"
-#include "pico/unique_id.h"
 #include "pico/bootrom.h"
 
 #include "omv_boardconfig.h"
@@ -70,6 +64,7 @@
 #if MICROPY_PY_AUDIO
 #include "py_audio.h"
 #endif
+#include "pendsv.h"
 
 #if MICROPY_VFS_FAT && MICROPY_HW_USB_MSC
 #include "extmod/vfs.h"
@@ -115,6 +110,10 @@ int main(int argc, char **argv) {
     bi_decl(bi_program_feature("UART REPL"))
     setup_default_uart();
     mp_uart_init();
+    #else
+    #ifndef NDEBUG
+    stdio_init_all();
+    #endif
     #endif
 
     #if MICROPY_HW_ENABLE_USBDEV
@@ -138,6 +137,7 @@ int main(int argc, char **argv) {
     };
     rtc_init();
     rtc_set_datetime(&t);
+    mp_hal_time_ns_set_from_rtc();
 
     // Set board unique ID from flash for USB debugging.
     OMV_UNIQUE_ID_ADDR = pico_unique_id.id;
@@ -157,6 +157,8 @@ soft_reset:
     readline_init0();
     machine_pin_init();
     rp2_pio_init();
+    rp2_dma_init();
+    machine_i2s_init0();
 
     #if MICROPY_PY_BLUETOOTH
     mp_bluetooth_hci_init();
@@ -276,6 +278,8 @@ soft_reset_exit:
     mod_network_deinit();
     #endif
     rp2_pio_deinit();
+    rp2_dma_deinit();
+    machine_pwm_deinit_all();
     machine_pin_deinit();
     gc_sweep_all();
     mp_deinit();
@@ -326,40 +330,3 @@ uint32_t rosc_random_u32(void) {
     }
     return value;
 }
-
-const char rp2_help_text[] =
-    "Welcome to MicroPython!\n"
-    "\n"
-    "For online help please visit https://micropython.org/help/.\n"
-    "\n"
-    "For access to the hardware use the 'machine' module.  RP2 specific commands\n"
-    "are in the 'rp2' module.\n"
-    "\n"
-    "Quick overview of some objects:\n"
-    "  machine.Pin(pin) -- get a pin, eg machine.Pin(0)\n"
-    "  machine.Pin(pin, m, [p]) -- get a pin and configure it for IO mode m, pull mode p\n"
-    "    methods: init(..), value([v]), high(), low(), irq(handler)\n"
-    "  machine.ADC(pin) -- make an analog object from a pin\n"
-    "    methods: read_u16()\n"
-    "  machine.PWM(pin) -- make a PWM object from a pin\n"
-    "    methods: deinit(), freq([f]), duty_u16([d]), duty_ns([d])\n"
-    "  machine.I2C(id) -- create an I2C object (id=0,1)\n"
-    "    methods: readfrom(addr, buf, stop=True), writeto(addr, buf, stop=True)\n"
-    "             readfrom_mem(addr, memaddr, arg), writeto_mem(addr, memaddr, arg)\n"
-    "  machine.SPI(id, baudrate=1000000) -- create an SPI object (id=0,1)\n"
-    "    methods: read(nbytes, write=0x00), write(buf), write_readinto(wr_buf, rd_buf)\n"
-    "  machine.Timer(freq, callback) -- create a software timer object\n"
-    "    eg: machine.Timer(freq=1, callback=lambda t:print(t))\n"
-    "\n"
-    "Pins are numbered 0-29, and 26-29 have ADC capabilities\n"
-    "Pin IO modes are: Pin.IN, Pin.OUT, Pin.ALT\n"
-    "Pin pull modes are: Pin.PULL_UP, Pin.PULL_DOWN\n"
-    "\n"
-    "Useful control commands:\n"
-    "  CTRL-C -- interrupt a running program\n"
-    "  CTRL-D -- on a blank line, do a soft reset of the board\n"
-    "  CTRL-E -- on a blank line, enter paste mode\n"
-    "\n"
-    "For further help on a specific object, type help(obj)\n"
-    "For a list of available modules, type help('modules')\n"
-;

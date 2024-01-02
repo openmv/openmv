@@ -264,6 +264,7 @@ endif()
 
 target_compile_definitions(${MICROPY_TARGET} PRIVATE
     MICROPY_BOARD_PENDSV_ENTRIES=${MPY_PENDSV_ENTRIES}
+    MP_CONFIGFILE="${TOP_DIR}/${OMV_DIR}/ports/${PORT}/omv_mpconfigport.h"
 )
 
 add_custom_command(TARGET ${MICROPY_TARGET}

@@ -13,6 +13,7 @@ freeze ("$(OMV_LIB_DIR)/", "machine.py")
 # Networking
 require("ntptime")
 require("webrepl")
+freeze ("$(OMV_LIB_DIR)/", "mqtt.py")
 freeze ("$(OMV_LIB_DIR)/", "urequests.py")
 
 # Utils

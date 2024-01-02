@@ -33,8 +33,9 @@
 #include "rtc.h"
 #include "storage.h"
 #include "sdcard.h"
-#include "extmod/modnetwork.h"
 #include "modmachine.h"
+#include "extmod/modnetwork.h"
+#include "extmod/modmachine.h"
 
 #include "extmod/vfs.h"
 #include "extmod/vfs_fat.h"
@@ -180,8 +181,8 @@ int ini_handler_callback(void *user, const char *section, const char *name, cons
                 MP_OBJ_NEW_SMALL_INT(115200) // Baud Rate
             };
 
-            MP_STATE_PORT(pyb_stdio_uart) = MP_OBJ_TYPE_GET_SLOT(&pyb_uart_type, make_new) (
-                (mp_obj_t) &pyb_uart_type, MP_ARRAY_SIZE(args), 0, args);
+            MP_STATE_PORT(pyb_stdio_uart) = MP_OBJ_TYPE_GET_SLOT(&machine_uart_type, make_new) (
+                (mp_obj_t) &machine_uart_type, MP_ARRAY_SIZE(args), 0, args);
             uart_attach_to_repl(MP_STATE_PORT(pyb_stdio_uart), true);
         }
     } else if (MATCH("BoardConfig", "WiFiDebug")) {

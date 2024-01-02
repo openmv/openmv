@@ -17,7 +17,7 @@ CFLAGS += -DCPU_$(MCU_VARIANT)\
           -DXIP_EXTERNAL_FLASH=1 \
 	      -DXIP_BOOT_HEADER_ENABLE=1 \
 	      -DFSL_SDK_ENABLE_DRIVER_CACHE_CONTROL=1 \
-          -DCFG_TUSB_MCU=OPT_MCU_MIMXRT \
+	      -DCFG_TUSB_MCU=OPT_MCU_MIMXRT1XXX \
 	      -DCPU_HEADER_H='<$(MCU_SERIES).h>' \
 	      -DCLOCK_CONFIG_H='<boards/$(MCU_SERIES)_clock_config.h>' \
           -DCSI_DRIVER_FRAG_MODE=1\
@@ -44,10 +44,10 @@ MPY_CFLAGS += -I$(TOP_DIR)/$(MICROPY_DIR)/shared/runtime/
 MPY_CFLAGS += -DMICROPY_VFS_FAT=1
 
 ifeq ($(MICROPY_PY_LWIP), 0)
-MICROPY_ARGS += MICROPY_PY_LWIP=0 MICROPY_PY_USSL=0
+MICROPY_ARGS += MICROPY_PY_LWIP=0 MICROPY_PY_SSL=0
 else
-MPY_CFLAGS += -DMICROPY_PY_USSL=1 -DMICROPY_SSL_MBEDTLS=1
-MICROPY_ARGS += MICROPY_PY_USSL=1 MICROPY_SSL_MBEDTLS=1
+MPY_CFLAGS += -DMICROPY_PY_SSL=1 -DMICROPY_SSL_MBEDTLS=1
+MICROPY_ARGS += MICROPY_PY_SSL=1 MICROPY_SSL_MBEDTLS=1
 endif
 MICROPY_ARGS += MCU_DIR=$(TOP_DIR)/$(HAL_DIR) CMSIS_DIR=$(TOP_DIR)/$(CMSIS_DIR)\
                 SUPPORTS_HARDWARE_FP_SINGLE=1 MICROPY_VFS_LFS2=0
@@ -231,24 +231,18 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/,\
 	frozen_content.o                    \
 	flash.o                             \
 	led.o                               \
-	machine_adc.o                       \
 	machine_bitstream.o                 \
+	machine_can.o                       \
 	machine_i2c.o                       \
-	machine_i2s.o                       \
 	machine_led.o                       \
 	machine_pin.o                       \
 	machine_rtc.o                       \
 	machine_sdcard.o                    \
 	machine_spi.o                       \
-	machine_uart.o                      \
-	machine_wdt.o                       \
-	machine_can.o                       \
 	mbedtls/mbedtls_port.o              \
 	mimxrt_flash.o                      \
 	mimxrt_sdram.o                      \
-	modmachine.o                        \
 	modmimxrt.o                         \
-	modutime.o                          \
 	mpnetworkport.o                     \
 	msc_disk.o                          \
 	network_lan.o                       \
@@ -348,8 +342,11 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/lib/tinyusb/src/, \
 	)
 
 FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/extmod/,\
+	machine_adc.o       \
+	machine_adc_block.o \
 	machine_bitstream.o \
 	machine_i2c.o       \
+	machine_i2s.o       \
 	machine_mem.o       \
 	machine_pinbase.o   \
 	machine_pulse.o     \
@@ -357,28 +354,30 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/extmod/,\
 	machine_signal.o    \
 	machine_spi.o       \
 	machine_timer.o     \
+	machine_uart.o      \
+	machine_wdt.o       \
 	modframebuf.o       \
+	modmachine.o        \
 	modnetwork.o        \
 	modonewire.o        \
-	moduasyncio.o       \
-	modubinascii.o      \
-	moducryptolib.o     \
+	modasyncio.o        \
+	modbinascii.o       \
+	modcryptolib.o      \
+	moddeflate.o        \
 	moductypes.o        \
-	moduhashlib.o       \
-	moduheapq.o         \
-	modujson.o          \
-	moduos.o            \
-	moduplatform.o      \
-	modurandom.o        \
-	modure.o            \
-	moduselect.o        \
-	modusocket.o        \
-	modussl_axtls.o     \
-	modussl_mbedtls.o   \
-	modutimeq.o         \
-	moduzlib.o          \
-	uos_dupterm.o       \
-	utime_mphal.o       \
+	modhashlib.o        \
+	modheapq.o          \
+	modjson.o           \
+	modos.o             \
+	modplatform.o       \
+	modrandom.o         \
+	modre.o             \
+	modselect.o         \
+	modsocket.o         \
+	modssl_axtls.o      \
+	modssl_mbedtls.o    \
+	modtime.o           \
+	os_dupterm.o        \
 	vfs_blockdev.o      \
 	vfs_fat_diskio.o    \
 	vfs_fat_file.o      \
@@ -442,7 +441,7 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/,\
 	lib/lwip/src/netif/*.o     \
 	lib/lwip/src/apps/*/*.o    \
 	extmod/modlwip.o           \
-	extmod/moduwebsocket.o     \
+	extmod/modwebsocket.o      \
 	extmod/modwebrepl.o        \
 	extmod/network_lwip.o      \
 	)
