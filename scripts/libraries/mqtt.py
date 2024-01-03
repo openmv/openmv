@@ -20,10 +20,12 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 #
-# Source: https://github.com/micropython/micropython-lib/tree/master/micropython/umqtt.simple
+# Based on: https://github.com/micropython/micropython-lib/tree/master/micropython/umqtt.simple
 
-import usocket as socket
-import ustruct as struct
+import socket
+import struct
+import select
+import ssl
 
 
 class MQTTException(Exception):
@@ -35,26 +37,23 @@ class MQTTClient:
         self,
         client_id,
         server,
-        port=0,
+        port,
+        ssl_params=None,
         user=None,
         password=None,
         keepalive=0,
-        ssl=False,
-        ssl_params={},
+        callback=None,
     ):
-        if port == 0:
-            port = 8883 if ssl else 1883
         self.client_id = client_id
-        self.sock = None
         self.server = server
         self.port = port
-        self.ssl = ssl
         self.ssl_params = ssl_params
-        self.pid = 0
-        self.cb = None
         self.user = user
         self.pswd = password
         self.keepalive = keepalive
+        self.cb = callback
+        self.sock = None
+        self.pid = 0
         self.lw_topic = None
         self.lw_msg = None
         self.lw_qos = 0
@@ -85,15 +84,27 @@ class MQTTClient:
         self.lw_qos = qos
         self.lw_retain = retain
 
-    def connect(self, clean_session=True):
-        self.sock = socket.socket()
-        addr = None
+    def connect(self, clean_session=True, timeout=5.0):
         addr = socket.getaddrinfo(self.server, self.port)[0][-1]
-        self.sock.connect(addr)
-        if self.ssl:
-            import ussl
 
-            self.sock = ussl.wrap_socket(self.sock, **self.ssl_params)
+        if self.sock is not None:
+            self.sock.close()
+            self.sock = None
+
+        try:
+            self.sock = socket.socket()
+            self.sock.settimeout(timeout)
+            if self.ssl_params is not None:
+                self.sock = ssl.wrap_socket(self.sock, self.ssl_params)
+            self.sock.connect(addr)
+        except Exception:
+            self.sock.close()
+            self.sock = socket.socket()
+            self.sock.settimeout(timeout)
+            self.sock.connect(addr)
+            if self.ssl_params is not None:
+                self.sock = ssl.wrap_socket(self.sock, self.ssl_params)
+
         premsg = bytearray(b"\x10\0\0\0\0\0")
         msg = bytearray(b"\x04MQTT\x04\x02\0\0")
 
@@ -120,7 +131,6 @@ class MQTTClient:
 
         self.sock.write(premsg[0 : i + 2])
         self.sock.write(msg)
-        # print(hex(len(msg)), hexlify(msg, ":"))
         self._send_str(self.client_id)
         if self.lw_topic:
             self._send_str(self.lw_topic)
@@ -201,9 +211,8 @@ class MQTTClient:
     # messages processed internally.
     def wait_msg(self):
         res = self.sock.read(1)
-        if res == b"" or res is None:
+        if res is None or res == b"":
             return None
-        self.sock.setblocking(True)
         if res == b"\xd0":  # PINGRESP
             sz = self.sock.read(1)[0]
             assert sz == 0
@@ -233,5 +242,6 @@ class MQTTClient:
     # If not, returns immediately with None. Otherwise, does
     # the same processing as wait_msg.
     def check_msg(self):
-        self.sock.setblocking(False)
-        return self.wait_msg()
+        r, w, e = select.select([self.sock], [], [], 0.05)
+        if len(r):
+            return self.wait_msg()
