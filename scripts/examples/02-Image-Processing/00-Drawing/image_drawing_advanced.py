@@ -101,7 +101,7 @@ while True:
             x_scale=rescale,
             y_scale=rescale,
             alpha=240,
-            hint=image.BILINEAR | image.CENTER,
+            hint=image.BILINEAR
         )
         status += "alpha:240 "
         status += "+mask "
@@ -113,7 +113,7 @@ while True:
             x_scale=rescale,
             y_scale=rescale,
             alpha=128,
-            hint=image.BILINEAR | image.CENTER,
+            hint=image.BILINEAR
         )
         status += "alpha:128 "
 
