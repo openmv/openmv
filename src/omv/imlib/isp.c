@@ -1042,7 +1042,7 @@ void imlib_ccm(image_t *img, float *ccm, bool offset) {
 }
 
 void imlib_gamma(image_t *img, float gamma, float contrast, float brightness) {
-    gamma = IM_DIV(1.0, gamma);
+    gamma = IM_DIV(1.0f, gamma);
     switch (img->pixfmt) {
         case PIXFORMAT_BINARY: {
             float pScale = COLOR_BINARY_MAX - COLOR_BINARY_MIN;
