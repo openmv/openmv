@@ -1,4 +1,4 @@
-#include("$(MPY_DIR)/extmod/uasyncio")
+#include("$(MPY_DIR)/extmod/asyncio")
 
 # Drivers
 require("hts221")

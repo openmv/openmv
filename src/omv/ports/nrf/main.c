@@ -43,7 +43,7 @@
 #include "gccollect.h"
 #include "modmachine.h"
 #include "modmusic.h"
-#include "modules/uos/microbitfs.h"
+#include "modules/os/microbitfs.h"
 #include "led.h"
 #include "uart.h"
 #include "nrf.h"

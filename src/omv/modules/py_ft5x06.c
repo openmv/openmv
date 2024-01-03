@@ -15,7 +15,7 @@
 #include "py/obj.h"
 #include "py/nlr.h"
 #include "py/runtime.h"
-#include "extmod/machine_i2c.h"
+#include "extmod/modmachine.h"
 
 #include "py_helper.h"
 #include "omv_gpio.h"

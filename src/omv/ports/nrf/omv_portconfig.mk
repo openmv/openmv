@@ -211,21 +211,30 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/,\
 	)
 
 FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/extmod/,\
-	modujson.o          \
-	moduselect.o        \
-	modure.o            \
-	modframebuf.o       \
-	moduasyncio.o       \
-	moductypes.o        \
-	moduzlib.o          \
-	moduhashlib.o       \
-	moduheapq.o         \
-	modubinascii.o      \
-	modurandom.o        \
-	modutimeq.o         \
+	machine_adc.o       \
+	machine_adc_block.o \
 	machine_i2c.o       \
+	machine_spi.o       \
 	machine_pwm.o       \
-	utime_mphal.o       \
+	machine_mem.o       \
+	machine_uart.o      \
+	machine_signal.o    \
+	modjson.o           \
+	modselect.o         \
+	modre.o             \
+	modframebuf.o       \
+	modasyncio.o        \
+	moductypes.o        \
+	modhashlib.o        \
+	moddeflate.o        \
+	modheapq.o          \
+	modbinascii.o       \
+	modrandom.o         \
+	modtime.o           \
+	os_dupterm.o        \
+	modmachine.o        \
+	modos.o             \
+	modplatform.o       \
 	vfs.o               \
 	vfs_fat.o           \
 	vfs_lfs.o           \
@@ -233,7 +242,7 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/extmod/,\
 	vfs_fat_diskio.o    \
 	vfs_reader.o        \
 	vfs_blockdev.o      \
-	machine_mem.o       \
+	virtpin.o           \
 	)
 
 FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/lib/,\
@@ -288,18 +297,13 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/lib/libm/,\
 	)
 
 FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/modules/,\
-	machine/modmachine.o                \
-	machine/uart.o                      \
 	machine/spi.o                       \
 	machine/i2c.o                       \
-	machine/adc.o                       \
 	machine/pin.o                       \
 	machine/timer.o                     \
 	machine/rtcounter.o                 \
 	machine/temp.o                      \
-	uos/moduos.o                        \
-	uos/microbitfs.o                    \
-	utime/modutime.o                    \
+	os/microbitfs.o                     \
 	board/modboard.o                    \
 	board/led.o                         \
 	ubluepy/modubluepy.o                \

@@ -53,6 +53,7 @@ stm32h7xx_hal_uart.c\
 stm32h7xx_hal_usart.c\
 stm32h7xx_hal_jpeg.c\
 stm32h7xx_hal_qspi.c\
+stm32h7xx_ll_rcc.c\
 stm32h7xx_ll_usb.c\
 stm32h7xx_ll_sdmmc.c\
 stm32h7xx_ll_fmc.c\

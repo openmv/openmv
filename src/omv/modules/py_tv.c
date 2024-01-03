@@ -15,6 +15,7 @@
 
 #include "py/obj.h"
 #include "py/nlr.h"
+#include "py/mphal.h"
 #include "py/runtime.h"
 
 #include "py_helper.h"
@@ -480,9 +481,9 @@ static void spi_tv_callback(omv_spi_t *spi, void *userdata, void *buf) {
                     .flags = OMV_SPI_XFER_NONBLOCK,
                     .callback = spi_tv_callback,
                 };
-                uint32_t irq_state = disable_irq();
+                uint32_t irq_state = MICROPY_BEGIN_ATOMIC_SECTION();
                 omv_spi_transfer_start(&spi_bus, &spi_xfer);
-                enable_irq(irq_state);
+                MICROPY_END_ATOMIC_SECTION(irq_state);
                 break;
             }
             case SPI_TX_CB_MEMORY_WRITE: {
