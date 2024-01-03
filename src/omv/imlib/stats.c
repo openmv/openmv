@@ -543,8 +543,10 @@ void imlib_get_threshold(threshold_t *out, pixformat_t pixfmt, histogram_t *ptr)
         }
         case PIXFORMAT_RGB565: {
             out->LValue = (ostu(ptr->LBinCount, ptr->LBins) * (COLOR_L_MAX - COLOR_L_MIN)) / (ptr->LBinCount - 1);
-            out->AValue = (ostu(ptr->ABinCount, ptr->ABins) * (COLOR_A_MAX - COLOR_A_MIN)) / (ptr->ABinCount - 1);
-            out->BValue = (ostu(ptr->BBinCount, ptr->BBins) * (COLOR_B_MAX - COLOR_B_MIN)) / (ptr->BBinCount - 1);
+            out->AValue = ((ostu(ptr->ABinCount, ptr->ABins) * (COLOR_A_MAX - COLOR_A_MIN)) / (ptr->ABinCount - 1)) +
+                          COLOR_A_MIN;
+            out->BValue = ((ostu(ptr->BBinCount, ptr->BBins) * (COLOR_B_MAX - COLOR_B_MIN)) / (ptr->BBinCount - 1)) +
+                          COLOR_B_MIN;
             break;
         }
         default: {
