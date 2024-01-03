@@ -10,7 +10,7 @@
 # 3) Install the mosquitto client on PC and run the following command:
 #    mosquitto_pub -t "openmv/test" -m "Hello World!" -h test.mosquitto.org -p 1883
 #
-# NOTE: If the mosquitto broker is unreachable, try another broker (For example: broker.hivemq.com)
+# NOTE: If the mosquitto broker is unreachable, try another broker (For example: broker.hivemq.com or broker.emqx.io)
 
 import time
 import network
