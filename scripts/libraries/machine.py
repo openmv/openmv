@@ -37,4 +37,6 @@ class LED:
         self.pin(not self.pin())
 
     def value(self, v=None):
-        self.pin(v ^ self.inverted if v is not None else None)
+        if v is None:
+            return self.pin()
+        self.pin(v ^ self.inverted)
