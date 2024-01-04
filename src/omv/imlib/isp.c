@@ -963,15 +963,9 @@ void imlib_awb(image_t *img, bool max) {
 }
 
 void imlib_ccm(image_t *img, float *ccm, bool offset) {
-    float rr = ccm[0], rg = ccm[3], rb = ccm[6], ro = 0.f;
-    float gr = ccm[1], gg = ccm[4], gb = ccm[7], go = 0.f;
-    float br = ccm[2], bg = ccm[5], bb = ccm[8], bo = 0.f;
-
-    if (offset) {
-        ro = ccm[9];
-        go = ccm[10];
-        bo = ccm[11];
-    }
+    float rr = ccm[0], rg = ccm[1], rb = ccm[2], ro = ccm[3];
+    float gr = ccm[4], gg = ccm[5], gb = ccm[6], go = ccm[7];
+    float br = ccm[8], bg = ccm[9], bb = ccm[10], bo = ccm[11];
 
     int i_rr = IM_MIN(fast_roundf(rr * 64), 1024);
     int i_rg = IM_MIN(fast_roundf(rg * 32), 512);

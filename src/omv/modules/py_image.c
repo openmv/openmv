@@ -1861,23 +1861,52 @@ STATIC mp_obj_t py_awb(uint n_args, const mp_obj_t *args, mp_map_t *kw_args) {
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_awb_obj, 1, py_awb);
 
 STATIC mp_obj_t py_ccm(mp_obj_t img_obj, mp_obj_t ccm_obj) {
-    image_t *arg_img =
-        py_helper_arg_to_image(img_obj, ARG_IMAGE_MUTABLE);
+    image_t *image = py_helper_arg_to_image(img_obj, ARG_IMAGE_MUTABLE);
+
+    float ccm[12] = {};
+    bool offset = false;
 
     size_t len;
     mp_obj_t *items;
     mp_obj_get_array(ccm_obj, &len, &items);
 
-    if ((len != 9) && (len != 12)) {
-        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Expected a 3x3 or 4x3 matrix!"));
+    // Form [[rr, rg, rb], [gr, gg, gb], [br, bg, bb]]
+    // Form [[rr, rg, rb], [gr, gg, gb], [br, bg, bb], [xx, xx, xx]]
+    // Form [[rr, rg, rb, ro], [gr, gg, gb, go], [br, bg, bb, bo]]
+    // Form [[rr, rg, rb, ro], [gr, gg, gb, go], [br, bg, bb, bo], [xx, xx, xx, xx]]
+    if ((len == 3) || (len == 4)) {
+        for (size_t i = 0; i < 3; i++) {
+            size_t row_len;
+            mp_obj_t *row_items;
+            mp_obj_get_array(items[i], &row_len, &row_items);
+            offset = offset || (row_len == 4);
+            if ((row_len == 3) || (row_len == 4)) {
+                for (size_t j = 0; j < row_len; j++) {
+                    ccm[(i * 4) + j] = mp_obj_get_float(row_items[j]);
+                }
+            } else {
+                mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Unexpected matrix dimensions!"));
+            }
+        }
+        // Form [rr, rg, rb, gr, gg, gb, br, bg, bb]
+    } else if (len == 9) {
+        for (size_t i = 0; i < 3; i++) {
+            for (size_t j = 0; j < 3; j++) {
+                ccm[(i * 4) + j] = mp_obj_get_float(items[(i * 3) + j]);
+            }
+        }
+        // Form [rr, rg, rb, ro, gr, gg, gb, go, br, bg, bb, bo]
+        // Form [rr, rg, rb, ro, gr, gg, gb, go, br, bg, bb, bo, xx, xx, xx, xx]
+    } else if (len == 12 || len == 16) {
+        offset = true;
+        for (size_t i = 0; i < 12; i++) {
+            ccm[i] = mp_obj_get_float(items[i]);
+        }
+    } else {
+        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Unexpected matrix dimensions!"));
     }
 
-    float ccm[12] = {};
-    for (size_t i = 0; i < len; i++) {
-        ccm[i] = mp_obj_get_float(items[i]);
-    }
-
-    imlib_ccm(arg_img, ccm, len == 12);
+    imlib_ccm(image, ccm, offset);
     return img_obj;
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_ccm_obj, py_ccm);
