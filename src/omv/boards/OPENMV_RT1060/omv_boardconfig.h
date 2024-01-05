@@ -75,7 +75,7 @@
 #define JPEG_QUALITY_HIGH               90
 
 // FB Heap Block Size
-#define OMV_UMM_BLOCK_SIZE              16
+#define OMV_UMM_BLOCK_SIZE              256
 
 // USB config.
 #define OMV_USB_IRQN                    (USB_OTG1_IRQn)
