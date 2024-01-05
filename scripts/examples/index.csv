@@ -1,6 +1,6 @@
 # "Relative Path Regex", "Board Type Regex", "Sensor Type Regex", "Flatten Regex"
-"examples/00-HelloWorld/blinky.py", ".+", ".+", ""
-"examples/00-HelloWorld/helloworld.py", ".+", "^(?!None).*$", ""
+"examples/00-HelloWorld/blinky.py", "^(?!OPENMVPT).*$", ".+", ""
+"examples/00-HelloWorld/helloworld.py", "^(?!OPENMVPT).*$", "^(?!None).*$", ""
 "examples/01-Camera/00-Snapshot", ".+", "^(?!None).*$", ""
 "examples/01-Camera/01-Video-Recording", ".+", "^(?!None).*$", ""
 "examples/01-Camera/02-Optical-Flow", ".+", "^(?!None).*$", ""
