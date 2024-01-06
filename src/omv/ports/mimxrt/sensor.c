@@ -315,6 +315,9 @@ void sensor_line_callback(uint32_t addr) {
         // Release the current framebuffer.
         framebuffer_get_tail(FB_NO_FLAGS);
         CSI_REG_CR3(CSI) &= ~CSI_CR3_DMA_REQ_EN_RFF_MASK;
+        if (sensor.frame_callback) {
+            sensor.frame_callback();
+        }
     }
 }
 
