@@ -12220,7 +12220,7 @@ void imlib_find_rects(list_t *out, image_t *ptr, rectangle_t *roi, uint32_t thre
         uint32_t magnitude = 0;
 
         for (int i = 0; i < 4; i++) {
-            if(!lb_clip_line(&lines[i], 0, 0, roi->w, roi->h)) {
+            if(!lb_clip_line(&lines[i], 0, 0, ptr->w, ptr->h)) {
                 continue;
             }
 
