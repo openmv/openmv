@@ -1,8 +1,8 @@
 /*
  * This file is part of the OpenMV project.
  *
- * Copyright (c) 2013-2023 Ibrahim Abdelkader <iabdalkader@openmv.io>
- * Copyright (c) 2013-2023 Kwabena W. Agyeman <kwagyeman@openmv.io>
+ * Copyright (c) 2013-2024 Ibrahim Abdelkader <iabdalkader@openmv.io>
+ * Copyright (c) 2013-2024 Kwabena W. Agyeman <kwagyeman@openmv.io>
  *
  * This work is licensed under the MIT license, see the file LICENSE for details.
  *
@@ -27,6 +27,9 @@
 // Sensor struct.
 sensor_t sensor = {};
 extern uint8_t _line_buf[OMV_LINE_BUF_SIZE];
+
+static bool first_line = false;
+static bool drop_frame = false;
 
 #define CSI_IRQ_FLAGS    (CSI_CR1_SOF_INTEN_MASK            \
                           | CSI_CR1_FB2_DMA_DONE_INTEN_MASK \
@@ -152,6 +155,10 @@ int sensor_abort() {
     NVIC_DisableIRQ(CSI_IRQn);
     CSI_DisableInterrupts(CSI, CSI_IRQ_FLAGS);
     CSI_REG_CR18(CSI) &= ~(CSI_CR18_CSI_ENABLE_MASK | CSI_CR3_DMA_REQ_EN_RFF_MASK);
+    first_line = false;
+    drop_frame = false;
+    sensor.last_frame_ms = 0;
+    sensor.last_frame_ms_valid = false;
     framebuffer_reset_buffers();
     return 0;
 }
@@ -178,10 +185,16 @@ uint32_t sensor_get_xclk_frequency() {
 }
 
 void sensor_sof_callback() {
+    first_line = false;
+    drop_frame = false;
     // Get current framebuffer.
     vbuffer_t *buffer = framebuffer_get_tail(FB_PEEK);
     if (buffer == NULL) {
         sensor_abort();
+        // Reset the queue of frames when we start dropping frames.
+        if (!sensor.disable_full_flush) {
+            framebuffer_flush_buffers();
+        }
     }
     if (buffer->offset < MAIN_FB()->v) {
         // Missed a few lines, reset buffer state and continue.
@@ -190,8 +203,34 @@ void sensor_sof_callback() {
 }
 
 void sensor_line_callback(uint32_t addr) {
+    if (!first_line) {
+        first_line = true;
+        uint32_t tick = mp_hal_ticks_ms();
+        uint32_t framerate_ms = IM_DIV(1000, sensor.framerate);
+
+        // Drops frames to match the frame rate requested by the user. The frame is NOT copied to
+        // SRAM/SDRAM when dropping to save CPU cycles/energy that would be wasted.
+        // If framerate is zero then this does nothing...
+        if (sensor.last_frame_ms_valid && ((tick - sensor.last_frame_ms) < framerate_ms)) {
+            drop_frame = true;
+        } else if (sensor.last_frame_ms_valid) {
+            sensor.last_frame_ms += framerate_ms;
+        } else {
+            sensor.last_frame_ms = tick;
+            sensor.last_frame_ms_valid = true;
+        }
+    }
+
     // Get current framebuffer.
     vbuffer_t *buffer = framebuffer_get_tail(FB_PEEK);
+
+    if (drop_frame) {
+        if (++buffer->offset == MAIN_FB()->v) {
+            buffer->offset = 0;
+            CSI_REG_CR3(CSI) &= ~CSI_CR3_DMA_REQ_EN_RFF_MASK;
+        }
+        return;
+    }
 
     // Copy from DMA buffer to framebuffer.
     uint32_t bytes_per_pixel = sensor_get_src_bpp();
