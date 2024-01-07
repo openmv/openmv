@@ -1862,7 +1862,7 @@ STATIC mp_obj_t py_awb(uint n_args, const mp_obj_t *pos_args, mp_map_t *kw_args)
 
     uint32_t r_out, g_out, b_out;
 
-    if (args[ARG_max].u_int) {
+    if (args[ARG_max].u_bool) {
         imlib_awb_rgb_max(image, &r_out, &g_out, &b_out); // white patch algorithm
     } else {
         imlib_awb_rgb_avg(image, &r_out, &g_out, &b_out); // gray world algorithm
