@@ -195,8 +195,7 @@ void sensor_sof_callback() {
         if (!sensor.disable_full_flush) {
             framebuffer_flush_buffers();
         }
-    }
-    if (buffer->offset < MAIN_FB()->v) {
+    } else if (buffer->offset < resolution[sensor.framesize][1]) {
         // Missed a few lines, reset buffer state and continue.
         buffer->reset_state = true;
     }
@@ -225,93 +224,95 @@ void sensor_line_callback(uint32_t addr) {
     vbuffer_t *buffer = framebuffer_get_tail(FB_PEEK);
 
     if (drop_frame) {
-        if (++buffer->offset == MAIN_FB()->v) {
+        if (++buffer->offset == resolution[sensor.framesize][1]) {
             buffer->offset = 0;
             CSI_REG_CR3(CSI) &= ~CSI_CR3_DMA_REQ_EN_RFF_MASK;
         }
         return;
     }
 
-    // Copy from DMA buffer to framebuffer.
-    uint32_t bytes_per_pixel = sensor_get_src_bpp();
-    uint8_t *src = ((uint8_t *) addr) + (MAIN_FB()->x * bytes_per_pixel);
-    uint8_t *dst = buffer->data;
+    if ((MAIN_FB()->y <= buffer->offset) && (buffer->offset < (MAIN_FB()->y + MAIN_FB()->v))) {
+        // Copy from DMA buffer to framebuffer.
+        uint32_t bytes_per_pixel = sensor_get_src_bpp();
+        uint8_t *src = ((uint8_t *) addr) + (MAIN_FB()->x * bytes_per_pixel);
+        uint8_t *dst = buffer->data;
 
-    // Adjust BPP for Grayscale.
-    if (sensor.pixformat == PIXFORMAT_GRAYSCALE) {
-        bytes_per_pixel = 1;
-    }
+        // Adjust BPP for Grayscale.
+        if (sensor.pixformat == PIXFORMAT_GRAYSCALE) {
+            bytes_per_pixel = 1;
+        }
 
-    if (sensor.transpose) {
-        dst += bytes_per_pixel * buffer->offset;
-    } else {
-        dst += MAIN_FB()->u * bytes_per_pixel * buffer->offset;
-    }
+        if (sensor.transpose) {
+            dst += bytes_per_pixel * (buffer->offset - MAIN_FB()->y);
+        } else {
+            dst += MAIN_FB()->u * bytes_per_pixel * (buffer->offset - MAIN_FB()->y);
+        }
 
-    // Implement per line, per pixel cropping, and image transposing (for image rotation) in
-    // in software using the CPU to transfer the image from the line buffers to the frame buffer.
-    uint16_t *src16 = (uint16_t *) src;
-    uint16_t *dst16 = (uint16_t *) dst;
+        // Implement per line, per pixel cropping, and image transposing (for image rotation) in
+        // in software using the CPU to transfer the image from the line buffers to the frame buffer.
+        uint16_t *src16 = (uint16_t *) src;
+        uint16_t *dst16 = (uint16_t *) dst;
 
-    switch (sensor.pixformat) {
-        case PIXFORMAT_BAYER:
-            #if (OMV_ENABLE_SENSOR_EDMA == 1)
-            edma_memcpy(buffer, dst, src, sizeof(uint8_t), sensor.transpose);
-            #else
-            if (!sensor.transpose) {
-                unaligned_memcpy(dst, src, MAIN_FB()->u);
-            } else {
-                copy_line(dst, src);
-            }
-            #endif
-            break;
-        case PIXFORMAT_GRAYSCALE:
-            #if (OMV_ENABLE_SENSOR_EDMA == 1)
-            edma_memcpy(buffer, dst, src, sizeof(uint8_t), sensor.transpose);
-            #else
-            if (sensor.hw_flags.gs_bpp == 1) {
-                // 1BPP GRAYSCALE.
+        switch (sensor.pixformat) {
+            case PIXFORMAT_BAYER:
+                #if (OMV_ENABLE_SENSOR_EDMA == 1)
+                edma_memcpy(buffer, dst, src, sizeof(uint8_t), sensor.transpose);
+                #else
                 if (!sensor.transpose) {
                     unaligned_memcpy(dst, src, MAIN_FB()->u);
                 } else {
                     copy_line(dst, src);
                 }
-            } else {
-                // Extract Y channel from YUV.
-                if (!sensor.transpose) {
-                    unaligned_2_to_1_memcpy(dst, src16, MAIN_FB()->u);
+                #endif
+                break;
+            case PIXFORMAT_GRAYSCALE:
+                #if (OMV_ENABLE_SENSOR_EDMA == 1)
+                edma_memcpy(buffer, dst, src, sizeof(uint8_t), sensor.transpose);
+                #else
+                if (sensor.hw_flags.gs_bpp == 1) {
+                    // 1BPP GRAYSCALE.
+                    if (!sensor.transpose) {
+                        unaligned_memcpy(dst, src, MAIN_FB()->u);
+                    } else {
+                        copy_line(dst, src);
+                    }
                 } else {
-                    copy_line(dst, src16);
+                    // Extract Y channel from YUV.
+                    if (!sensor.transpose) {
+                        unaligned_2_to_1_memcpy(dst, src16, MAIN_FB()->u);
+                    } else {
+                        copy_line(dst, src16);
+                    }
                 }
-            }
-            #endif
-            break;
-        case PIXFORMAT_RGB565:
-        case PIXFORMAT_YUV422:
-            #if (OMV_ENABLE_SENSOR_EDMA == 1)
-            edma_memcpy(buffer, dst16, src16, sizeof(uint16_t), sensor.transpose);
-            #else
-            if ((sensor.pixformat == PIXFORMAT_RGB565 && sensor.hw_flags.rgb_swap)
-                || (sensor.pixformat == PIXFORMAT_YUV422 && sensor.hw_flags.yuv_swap)) {
-                if (!sensor.transpose) {
-                    unaligned_memcpy_rev16(dst16, src16, MAIN_FB()->u);
+                #endif
+                break;
+            case PIXFORMAT_RGB565:
+            case PIXFORMAT_YUV422:
+                #if (OMV_ENABLE_SENSOR_EDMA == 1)
+                edma_memcpy(buffer, dst16, src16, sizeof(uint16_t), sensor.transpose);
+                #else
+                if ((sensor.pixformat == PIXFORMAT_RGB565 && sensor.hw_flags.rgb_swap)
+                    || (sensor.pixformat == PIXFORMAT_YUV422 && sensor.hw_flags.yuv_swap)) {
+                    if (!sensor.transpose) {
+                        unaligned_memcpy_rev16(dst16, src16, MAIN_FB()->u);
+                    } else {
+                        copy_line_rev(dst16, src16);
+                    }
                 } else {
-                    copy_line_rev(dst16, src16);
+                    if (!sensor.transpose) {
+                        unaligned_memcpy(dst16, src16, MAIN_FB()->u * sizeof(uint16_t));
+                    } else {
+                        copy_line(dst16, src16);
+                    }
                 }
-            } else {
-                if (!sensor.transpose) {
-                    unaligned_memcpy(dst16, src16, MAIN_FB()->u * sizeof(uint16_t));
-                } else {
-                    copy_line(dst16, src16);
-                }
-            }
-            #endif
-            break;
-        default:
-            break;
+                #endif
+                break;
+            default:
+                break;
+        }
     }
 
-    if (++buffer->offset == MAIN_FB()->v) {
+    if (++buffer->offset == resolution[sensor.framesize][1]) {
         // Release the current framebuffer.
         framebuffer_get_tail(FB_NO_FLAGS);
         CSI_REG_CR3(CSI) &= ~CSI_CR3_DMA_REQ_EN_RFF_MASK;
