@@ -12,7 +12,7 @@
 
 #ifdef IMLIB_ENABLE_ISP_OPS
 
-static void imlib_rgb_avg(image_t *img, uint32_t *r_out, uint32_t *g_out, uint32_t *b_out) {
+void imlib_awb_rgb_avg(image_t *img, uint32_t *r_out, uint32_t *g_out, uint32_t *b_out) {
     uint32_t area = img->w * img->h;
     uint32_t r_acc = 0, g_acc = 0, b_acc = 0;
 
@@ -305,7 +305,7 @@ static void imlib_rgb_avg(image_t *img, uint32_t *r_out, uint32_t *g_out, uint32
     }
 }
 
-static void imlib_rgb_max(image_t *img, uint32_t *r_out, uint32_t *g_out, uint32_t *b_out) {
+void imlib_awb_rgb_max(image_t *img, uint32_t *r_out, uint32_t *g_out, uint32_t *b_out) {
     uint32_t area = img->w * img->h;
     uint32_t r_acc = 0, g_acc = 0, b_acc = 0;
 
@@ -712,15 +712,8 @@ static void imlib_rgb_max(image_t *img, uint32_t *r_out, uint32_t *g_out, uint32
     }
 }
 
-void imlib_awb(image_t *img, bool max) {
+void imlib_awb(image_t *img, uint32_t r_out, uint32_t g_out, uint32_t b_out) {
     uint32_t area = img->w * img->h;
-    uint32_t r_out, g_out, b_out;
-
-    if (max) {
-        imlib_rgb_max(img, &r_out, &g_out, &b_out); // white patch algorithm
-    } else {
-        imlib_rgb_avg(img, &r_out, &g_out, &b_out); // gray world algorithm
-    }
 
     int red_gain = IM_DIV(g_out * 32, r_out);
     red_gain = IM_MIN(red_gain, 128);
@@ -1049,7 +1042,7 @@ void imlib_ccm(image_t *img, float *ccm, bool offset) {
 }
 
 void imlib_gamma(image_t *img, float gamma, float contrast, float brightness) {
-    gamma = IM_DIV(1.0, gamma);
+    gamma = IM_DIV(1.0f, gamma);
     switch (img->pixfmt) {
         case PIXFORMAT_BINARY: {
             float pScale = COLOR_BINARY_MAX - COLOR_BINARY_MIN;

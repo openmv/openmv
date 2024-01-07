@@ -1849,14 +1849,27 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_flood_fill_obj, 2, py_image_flood_fil
 // ISP Methods
 //////////////
 
-STATIC mp_obj_t py_awb(uint n_args, const mp_obj_t *args, mp_map_t *kw_args) {
-    image_t *arg_img =
-        py_helper_arg_to_image(args[0], ARG_IMAGE_UNCOMPRESSED);
-    bool arg_max =
-        py_helper_keyword_float(n_args, args, 1, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_max), false);
+STATIC mp_obj_t py_awb(uint n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
+    enum { ARG_max };
+    static const mp_arg_t allowed_args[] = {
+        { MP_QSTR_max, MP_ARG_BOOL | MP_ARG_KW_ONLY, {.u_bool = false} },
+    };
 
-    imlib_awb(arg_img, arg_max);
-    return args[0];
+    // Parse args.
+    image_t *image = py_helper_arg_to_image(pos_args[0], ARG_IMAGE_UNCOMPRESSED);
+    mp_arg_val_t args[MP_ARRAY_SIZE(allowed_args)];
+    mp_arg_parse_all(n_args - 1, pos_args + 1, kw_args, MP_ARRAY_SIZE(allowed_args), allowed_args, args);
+
+    uint32_t r_out, g_out, b_out;
+
+    if (args[ARG_max].u_bool) {
+        imlib_awb_rgb_max(image, &r_out, &g_out, &b_out); // white patch algorithm
+    } else {
+        imlib_awb_rgb_avg(image, &r_out, &g_out, &b_out); // gray world algorithm
+    }
+
+    imlib_awb(image, r_out, g_out, b_out);
+    return pos_args[0];
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_awb_obj, 1, py_awb);
 
@@ -1882,20 +1895,27 @@ STATIC mp_obj_t py_ccm(mp_obj_t img_obj, mp_obj_t ccm_obj) {
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_ccm_obj, py_ccm);
 
-STATIC mp_obj_t py_image_gamma(uint n_args, const mp_obj_t *args, mp_map_t *kw_args) {
-    image_t *arg_img =
-        py_helper_arg_to_image(args[0], ARG_IMAGE_UNCOMPRESSED);
-    float arg_gamma =
-        py_helper_keyword_float(n_args, args, 1, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_gamma), 1.0f);
-    float arg_contrast =
-        py_helper_keyword_float(n_args, args, 2, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_contrast), 1.0f);
-    float arg_brightness =
-        py_helper_keyword_float(n_args, args, 3, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_brightness), 0.0f);
+STATIC mp_obj_t py_image_gamma(uint n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
+    enum { ARG_gamma, ARG_contrast, ARG_brightness };
+    static const mp_arg_t allowed_args[] = {
+        { MP_QSTR_gamma, MP_ARG_OBJ | MP_ARG_KW_ONLY, {.u_rom_obj = MP_ROM_NONE } },
+        { MP_QSTR_contrast, MP_ARG_OBJ | MP_ARG_KW_ONLY, {.u_bool = MP_ROM_NONE } },
+        { MP_QSTR_brightness, MP_ARG_OBJ | MP_ARG_KW_ONLY, {.u_bool = MP_ROM_NONE } },
+    };
+
+    // Parse args.
+    image_t *image = py_helper_arg_to_image(pos_args[0], ARG_IMAGE_UNCOMPRESSED);
+    mp_arg_val_t args[MP_ARRAY_SIZE(allowed_args)];
+    mp_arg_parse_all(n_args - 1, pos_args + 1, kw_args, MP_ARRAY_SIZE(allowed_args), allowed_args, args);
+
+    float gamma = py_helper_arg_to_float(args[ARG_gamma].u_obj, 1.0f);
+    float contrast = py_helper_arg_to_float(args[ARG_contrast].u_obj, 1.0f);
+    float brightness = py_helper_arg_to_float(args[ARG_brightness].u_obj, 0.0f);
 
     fb_alloc_mark();
-    imlib_gamma(arg_img, arg_gamma, arg_contrast, arg_brightness);
+    imlib_gamma(image, gamma, contrast, brightness);
     fb_alloc_free_till_mark();
-    return args[0];
+    return pos_args[0];
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_gamma_obj, 1, py_image_gamma);
 

@@ -1338,7 +1338,9 @@ void imlib_flood_fill(image_t *img, int x, int y,
                       float seed_threshold, float floating_threshold,
                       int c, bool invert, bool clear_background, image_t *mask);
 // ISP Functions
-void imlib_awb(image_t *img, bool max);
+void imlib_awb_rgb_avg(image_t *img, uint32_t *r_out, uint32_t *g_out, uint32_t *b_out);
+void imlib_awb_rgb_max(image_t *img, uint32_t *r_out, uint32_t *g_out, uint32_t *b_out);
+void imlib_awb(image_t *img, uint32_t r_out, uint32_t g_out, uint32_t b_out);
 void imlib_ccm(image_t *img, float *ccm, bool offset);
 void imlib_gamma(image_t *img, float gamma, float scale, float offset);
 // Binary Functions
