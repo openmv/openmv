@@ -1,4 +1,4 @@
-import pyb
+import time
 
 VL51L1X_DEFAULT_CONFIGURATION = bytes(
     [
@@ -106,16 +106,15 @@ class VL53L1X:
         self.i2c = i2c
         self.address = address
         self.reset()
-        pyb.delay(1)
+        time.sleep_ms(1)
         if self.read_model_id() != 0xEACC:
             raise RuntimeError("Failed to find expected ID register values. Check wiring!")
         # write default configuration
         self.i2c.writeto_mem(self.address, 0x2D, VL51L1X_DEFAULT_CONFIGURATION, addrsize=16)
-        # pyb.delay(100)
         # the API triggers this change in VL53L1_init_and_start_range() once a
         # measurement is started; assumes MM1 and MM2 are disabled
         self.writeReg16Bit(0x001E, self.readReg16Bit(0x0022) * 4)
-        pyb.delay(200)
+        time.sleep_ms(200)
 
     def writeReg(self, reg, value):
         return self.i2c.writeto_mem(self.address, reg, bytes([value]), addrsize=16)
@@ -137,7 +136,7 @@ class VL53L1X:
 
     def reset(self):
         self.writeReg(0x0000, 0x00)
-        pyb.delay(100)
+        time.sleep_ms(100)
         self.writeReg(0x0000, 0x01)
 
     def read(self):
