@@ -109,7 +109,7 @@
 #define OMV_HEAP_SIZE                   (280K)
 #define OMV_SDRAM_SIZE                  (32 * 1024 * 1024)  // This needs to be here for UVC firmware.
 
-#define OMV_LINE_BUF_SIZE               (10 * 1024)  // Image line buffer.
+#define OMV_LINE_BUF_SIZE               (11 * 1024)  // Image line buffer.
 // TODO remove
 #define OMV_MSC_BUF_SIZE                (2K)         // USB MSC bot data
 #define OMV_VFS_BUF_SIZE                (1K)         // VFS struct + FATFS file buffer (624 bytes)
