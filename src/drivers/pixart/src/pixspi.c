@@ -112,7 +112,7 @@ int pixspi_regs_read(uint8_t addr, uint8_t *data, uint16_t length) {
 }
 
 int pixspi_regs_write(uint8_t addr, const uint8_t *data, uint16_t length) {
-    uint8_t buff[64] = {};
+    uint8_t buff[256] = {};
     if (addr & 0x80) {
         debug_printf("pixspi_regs_read() address (0x%x) overflow.\n", addr);
         return -1;
