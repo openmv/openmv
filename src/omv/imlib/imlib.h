@@ -732,6 +732,17 @@ bool image_get_mask_pixel(image_t *ptr, int x, int y);
         ((uint16_t *) _image->data) + (_image->w * _y); \
     })
 
+////////////////
+// JPEG Stuff //
+////////////////
+
+#define JPEG_MCU_W                 (8)
+#define JPEG_MCU_H                 (8)
+#define JPEG_444_GS_MCU_SIZE       ((JPEG_MCU_W) *(JPEG_MCU_H))
+#define JPEG_444_YCBCR_MCU_SIZE    ((JPEG_444_GS_MCU_SIZE) * 3)
+#define JPEG_422_YCBCR_MCU_SIZE    ((JPEG_444_GS_MCU_SIZE) * 4)
+#define JPEG_420_YCBCR_MCU_SIZE    ((JPEG_444_GS_MCU_SIZE) * 6)
+
 // Old Image Macros - Will be refactor and removed. But, only after making sure through testing new macros work.
 
 // Image kernels
@@ -1150,12 +1161,14 @@ void bmp_read_pixels(FIL *fp, image_t *img, int n_lines, bmp_read_settings_t *rs
 void bmp_read(image_t *img, const char *path);
 void bmp_write_subimg(image_t *img, const char *path, rectangle_t *r);
 #if (OMV_HARDWARE_JPEG == 1)
-void imlib_jpeg_compress_init();
-void imlib_jpeg_compress_deinit();
-void jpeg_mdma_irq_handler();
+void imlib_hardware_jpeg_init();
+void imlib_hardware_jpeg_deinit();
 #endif
+void jpeg_get_mcu(image_t *src, int x_offset, int y_offset, int dx, int dy,
+                  int8_t *Y0, int8_t *CB, int8_t *CR);
 void jpeg_decompress(image_t *dst, image_t *src);
 bool jpeg_compress(image_t *src, image_t *dst, int quality, bool realloc);
+bool jpeg_is_valid(image_t *img);
 int jpeg_clean_trailing_bytes(int bpp, uint8_t *data);
 void jpeg_read_geometry(FIL *fp, image_t *img, const char *path, jpg_read_settings_t *rs);
 void jpeg_read_pixels(FIL *fp, image_t *img);

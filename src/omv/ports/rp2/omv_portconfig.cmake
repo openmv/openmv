@@ -143,7 +143,7 @@ target_sources(${MICROPY_TARGET} PRIVATE
     ${TOP_DIR}/${OMV_DIR}/imlib/integral_mw.c
     ${TOP_DIR}/${OMV_DIR}/imlib/isp.c
     ${TOP_DIR}/${OMV_DIR}/imlib/jpegd.c
-    ${TOP_DIR}/${OMV_DIR}/imlib/jpeg.c
+    ${TOP_DIR}/${OMV_DIR}/imlib/jpege.c
     ${TOP_DIR}/${OMV_DIR}/imlib/lodepng.c
     ${TOP_DIR}/${OMV_DIR}/imlib/png.c
     ${TOP_DIR}/${OMV_DIR}/imlib/kmeans.c

@@ -204,7 +204,7 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/imlib/, \
 	integral_mw.o               \
 	isp.o                       \
 	jpegd.o                     \
-	jpeg.o                      \
+	jpege.o                     \
 	lodepng.o                   \
 	png.o                       \
 	kmeans.o                    \
@@ -575,13 +575,14 @@ UVC_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/imlib/,\
 	lab_tab.o                               \
 	xyz_tab.o                               \
 	rainbow_tab.o                           \
-	jpeg.o                                  \
+	jpege.o                                 \
 	fmath.o                                 \
 	imlib.o                                 \
 	framebuffer.o                           \
 	)
 
 UVC_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/ports/stm32/,\
+	jpeg.o                                  \
 	sensor.o                                \
 	stm32fxxx_hal_msp.o                     \
 	soft_i2c.o                              \

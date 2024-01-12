@@ -706,7 +706,8 @@ void HAL_MspDeInit(void) {
 
 void MDMA_IRQHandler() {
     IRQ_ENTER(MDMA_IRQn);
-    #if defined(OMV_MDMA_CHANNEL_JPEG_IN)
+    #if (OMV_HARDWARE_JPEG == 1)
+    extern void jpeg_mdma_irq_handler(void);
     jpeg_mdma_irq_handler();
     #endif
     #if defined(OMV_MDMA_CHANNEL_DCMI_0)
