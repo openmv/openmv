@@ -1137,6 +1137,7 @@ void imlib_fill_image_from_float(image_t *img, int w, int h, float *data, float 
                                  bool mirror, bool flip, bool dst_transpose, bool src_transpose);
 
 // Bayer Image Processing
+pixformat_t imlib_bayer_shift(pixformat_t pixfmt, int x, int y, bool transpose);
 void imlib_debayer_line(int x_start, int x_end, int y_row, void *dst_row_ptr, pixformat_t pixfmt, image_t *src);
 void imlib_debayer_image(image_t *dst, image_t *src);
 

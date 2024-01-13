@@ -10,6 +10,53 @@
  */
 #include "imlib.h"
 
+pixformat_t imlib_bayer_shift(pixformat_t pixfmt, int x, int y, bool transpose) {
+    bool shift_right = x % 2;
+    bool shift_down = y % 2;
+
+    switch (pixfmt) {
+        case PIXFORMAT_BAYER_BGGR: {
+            if (shift_right && shift_down) {
+                return PIXFORMAT_BAYER_RGGB;
+            } else if (shift_right) {
+                return transpose ? PIXFORMAT_BAYER_GRBG : PIXFORMAT_BAYER_GBRG;
+            } else if (shift_down) {
+                return transpose ? PIXFORMAT_BAYER_GBRG : PIXFORMAT_BAYER_GRBG;
+            }
+        }
+        case PIXFORMAT_BAYER_GBRG: {
+            if (shift_right && shift_down) {
+                return transpose ? PIXFORMAT_BAYER_GBRG : PIXFORMAT_BAYER_GRBG;
+            } else if (shift_right) {
+                return PIXFORMAT_BAYER_BGGR;
+            } else if (shift_down) {
+                return PIXFORMAT_BAYER_RGGB;
+            }
+        }
+        case PIXFORMAT_BAYER_GRBG: {
+            if (shift_right && shift_down) {
+                return transpose ? PIXFORMAT_BAYER_GRBG : PIXFORMAT_BAYER_GBRG;
+            } else if (shift_right) {
+                return PIXFORMAT_BAYER_RGGB;
+            } else if (shift_down) {
+                return PIXFORMAT_BAYER_BGGR;
+            }
+        }
+        case PIXFORMAT_BAYER_RGGB: {
+            if (shift_right && shift_down) {
+                return PIXFORMAT_BAYER_BGGR;
+            } else if (shift_right) {
+                return transpose ? PIXFORMAT_BAYER_GBRG : PIXFORMAT_BAYER_GRBG;
+            } else if (shift_down) {
+                return transpose ? PIXFORMAT_BAYER_GRBG : PIXFORMAT_BAYER_GBRG;
+            }
+        }
+        default: {
+            return pixfmt;
+        }
+    }
+}
+
 void imlib_debayer_line(int x_start, int x_end, int y_row, void *dst_row_ptr, pixformat_t pixfmt, image_t *src) {
     int src_w = src->w, w_limit = src_w - 1, w_limit_m_1 = w_limit - 1;
     int src_h = src->h, h_limit = src_h - 1, h_limit_m_1 = h_limit - 1;

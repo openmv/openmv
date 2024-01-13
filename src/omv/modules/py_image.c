@@ -1055,53 +1055,7 @@ static mp_obj_t py_image_to(pixformat_t pixfmt, const uint16_t *default_color_pa
             (alpha_palette != NULL)) {
             mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Only bayer copying/cropping is supported!"));
         } else {
-            bool shift_right = arg_roi.x % 2;
-            bool shift_down = arg_roi.y % 2;
-            switch (dst_img.pixfmt) {
-                case PIXFORMAT_BAYER_BGGR: {
-                    if (shift_right && shift_down) {
-                        dst_img.pixfmt = PIXFORMAT_BAYER_RGGB;
-                    } else if (shift_right) {
-                        dst_img.pixfmt = PIXFORMAT_BAYER_GBRG;
-                    } else if (shift_down) {
-                        dst_img.pixfmt = PIXFORMAT_BAYER_GRBG;
-                    }
-                    break;
-                }
-                case PIXFORMAT_BAYER_GBRG: {
-                    if (shift_right && shift_down) {
-                        dst_img.pixfmt = PIXFORMAT_BAYER_GRBG;
-                    } else if (shift_right) {
-                        dst_img.pixfmt = PIXFORMAT_BAYER_BGGR;
-                    } else if (shift_down) {
-                        dst_img.pixfmt = PIXFORMAT_BAYER_RGGB;
-                    }
-                    break;
-                }
-                case PIXFORMAT_BAYER_GRBG: {
-                    if (shift_right && shift_down) {
-                        dst_img.pixfmt = PIXFORMAT_BAYER_GBRG;
-                    } else if (shift_right) {
-                        dst_img.pixfmt = PIXFORMAT_BAYER_RGGB;
-                    } else if (shift_down) {
-                        dst_img.pixfmt = PIXFORMAT_BAYER_BGGR;
-                    }
-                    break;
-                }
-                case PIXFORMAT_BAYER_RGGB: {
-                    if (shift_right && shift_down) {
-                        dst_img.pixfmt = PIXFORMAT_BAYER_BGGR;
-                    } else if (shift_right) {
-                        dst_img.pixfmt = PIXFORMAT_BAYER_GRBG;
-                    } else if (shift_down) {
-                        dst_img.pixfmt = PIXFORMAT_BAYER_GBRG;
-                    }
-                    break;
-                }
-                default: {
-                    break;
-                }
-            }
+            dst_img.pixfmt = imlib_bayer_shift(dst_img.pixfmt, arg_roi.x, arg_roi.y, false);
             hint &= ~(IMAGE_HINT_AREA |
                       IMAGE_HINT_BICUBIC |
                       IMAGE_HINT_BILINEAR |
