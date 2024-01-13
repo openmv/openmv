@@ -10,6 +10,14 @@
  */
 #include "imlib.h"
 
+pixformat_t imlib_yuv_shift(pixformat_t pixfmt, int x) {
+    if (x % 2) {
+        return (pixfmt == PIXFORMAT_YUV422) ? PIXFORMAT_YVU422 : PIXFORMAT_YUV422;
+    }
+
+    return pixfmt;
+}
+
 void imlib_deyuv_line(int x_start, int x_end, int y_row, void *dst_row_ptr, pixformat_t pixfmt, image_t *src) {
     int shift = (src->pixfmt == PIXFORMAT_YUV422) ? 16 : 0;
     int src_w = src->w, w_limit = src_w - 1;

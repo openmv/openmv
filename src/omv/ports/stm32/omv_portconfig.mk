@@ -579,6 +579,7 @@ UVC_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/imlib/,\
 	fmath.o                                 \
 	imlib.o                                 \
 	framebuffer.o                           \
+	yuv.o                                   \
 	)
 
 UVC_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/ports/stm32/,\
