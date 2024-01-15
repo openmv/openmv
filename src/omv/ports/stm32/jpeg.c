@@ -353,6 +353,10 @@ void jpeg_decompress(image_t *dst, image_t *src) {
     HAL_JPEG_Decode(&JPEG_state.jpeg_descr, JPEG_state.jpeg_descr.pJpegInBuffPtr, JPEG_state.in_data_len,
                     temp, JPEG_OUTPUT_CHUNK_SIZE, JPEG_CODEC_TIMEOUT);
 
+    if ((src->w != JPEG_state.jpeg_descr.Conf.ImageWidth) || (src->h != JPEG_state.jpeg_descr.Conf.ImageHeight)) {
+        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("JPEG Geometry does not match Image Object Geometry!"));
+    }
+
     // Set handles for full decoding.
     HAL_JPEG_RegisterGetDataCallback(&JPEG_state.jpeg_descr, jpeg_decompress_get_data);
     HAL_JPEG_RegisterDataReadyCallback(&JPEG_state.jpeg_descr, jpeg_decompress_data_ready);
