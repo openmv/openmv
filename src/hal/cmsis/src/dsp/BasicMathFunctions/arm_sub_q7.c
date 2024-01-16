@@ -3,13 +3,13 @@
  * Title:        arm_sub_q7.c
  * Description:  Q7 vector subtraction
  *
- * $Date:        27. January 2017
- * $Revision:    V.1.5.1
+ * $Date:        23 April 2021
+ * $Revision:    V1.9.0
  *
- * Target Processor: Cortex-M cores
+ * Target Processor: Cortex-M and Cortex-A cores
  * -------------------------------------------------------------------- */
 /*
- * Copyright (C) 2010-2017 ARM Limited or its affiliates. All rights reserved.
+ * Copyright (C) 2010-2021 ARM Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -26,94 +26,133 @@
  * limitations under the License.
  */
 
-#include "arm_math.h"
+#include "dsp/basic_math_functions.h"
 
 /**
- * @ingroup groupMath
+  @ingroup groupMath
  */
 
 /**
- * @addtogroup BasicSub
- * @{
+  @addtogroup BasicSub
+  @{
  */
 
 /**
- * @brief Q7 vector subtraction.
- * @param[in]       *pSrcA points to the first input vector
- * @param[in]       *pSrcB points to the second input vector
- * @param[out]      *pDst points to the output vector
- * @param[in]       blockSize number of samples in each vector
- * @return none.
- *
- * <b>Scaling and Overflow Behavior:</b>
- * \par
- * The function uses saturating arithmetic.
- * Results outside of the allowable Q7 range [0x80 0x7F] will be saturated.
+  @brief         Q7 vector subtraction.
+  @param[in]     pSrcA      points to the first input vector
+  @param[in]     pSrcB      points to the second input vector
+  @param[out]    pDst       points to the output vector
+  @param[in]     blockSize  number of samples in each vector
+  @return        none
+
+  @par           Scaling and Overflow Behavior
+                   The function uses saturating arithmetic.
+                   Results outside of the allowable Q7 range [0x80 0x7F] will be saturated.
  */
+#if defined(ARM_MATH_MVEI) && !defined(ARM_MATH_AUTOVECTORIZE)
+
+#include "arm_helium_utils.h"
 
 void arm_sub_q7(
-  q7_t * pSrcA,
-  q7_t * pSrcB,
-  q7_t * pDst,
-  uint32_t blockSize)
+    const q7_t * pSrcA,
+    const q7_t * pSrcB,
+    q7_t * pDst,
+    uint32_t blockSize)
 {
-  uint32_t blkCnt;                               /* loop counter */
+    uint32_t  blkCnt;           /* loop counters */
+    q7x16_t vecA;
+    q7x16_t vecB;
 
-#if defined (ARM_MATH_DSP)
+    /* Compute 16 outputs at a time */
+    blkCnt = blockSize >> 4;
+    while (blkCnt > 0U)
+    {
+        /*
+         * C = A - B
+         * Subtract and then store the results in the destination buffer.
+         */
+        vecA = vld1q(pSrcA);
+        vecB = vld1q(pSrcB);
+        vst1q(pDst, vqsubq(vecA, vecB));
+        /*
+         * Decrement the blockSize loop counter
+         */
+        blkCnt--;
+        /*
+         * advance vector source and destination pointers
+         */
+        pSrcA  += 16;
+        pSrcB  += 16;
+        pDst   += 16;
+    }
+    /*
+     * tail
+     */
+    blkCnt = blockSize & 0xF;
+    if (blkCnt > 0U)
+    {
+        mve_pred16_t p0 = vctp8q(blkCnt);
+        vecA = vld1q(pSrcA);
+        vecB = vld1q(pSrcB);
+        vstrbq_p(pDst, vqsubq(vecA, vecB), p0);
+    }
+}
+#else
+void arm_sub_q7(
+  const q7_t * pSrcA,
+  const q7_t * pSrcB,
+        q7_t * pDst,
+        uint32_t blockSize)
+{
+        uint32_t blkCnt;                               /* Loop counter */
 
-/* Run the below code for Cortex-M4 and Cortex-M3 */
+#if defined (ARM_MATH_LOOPUNROLL)
 
-  /*loop Unrolling */
+  /* Loop unrolling: Compute 4 outputs at a time */
   blkCnt = blockSize >> 2U;
 
-  /* First part of the processing with loop unrolling.  Compute 4 outputs at a time.
-   ** a second loop below computes the remaining 1 to 3 samples. */
   while (blkCnt > 0U)
   {
     /* C = A - B */
-    /* Subtract and then store the results in the destination buffer 4 samples at a time. */
-    *__SIMD32(pDst)++ = __QSUB8(*__SIMD32(pSrcA)++, *__SIMD32(pSrcB)++);
 
-    /* Decrement the loop counter */
+#if defined (ARM_MATH_DSP)
+    /* Subtract and store result in destination buffer (4 samples at a time). */
+    write_q7x4_ia (&pDst, __QSUB8(read_q7x4_ia (&pSrcA), read_q7x4_ia (&pSrcB)));
+#else
+    *pDst++ = (q7_t) __SSAT((q15_t) *pSrcA++ - *pSrcB++, 8);
+    *pDst++ = (q7_t) __SSAT((q15_t) *pSrcA++ - *pSrcB++, 8);
+    *pDst++ = (q7_t) __SSAT((q15_t) *pSrcA++ - *pSrcB++, 8);
+    *pDst++ = (q7_t) __SSAT((q15_t) *pSrcA++ - *pSrcB++, 8);
+#endif
+
+    /* Decrement loop counter */
     blkCnt--;
   }
 
-  /* If the blockSize is not a multiple of 4, compute any remaining output samples here.
-   ** No loop unrolling is used. */
+  /* Loop unrolling: Compute remaining outputs */
   blkCnt = blockSize % 0x4U;
 
-  while (blkCnt > 0U)
-  {
-    /* C = A - B */
-    /* Subtract and then store the result in the destination buffer. */
-    *pDst++ = __SSAT(*pSrcA++ - *pSrcB++, 8);
-
-    /* Decrement the loop counter */
-    blkCnt--;
-  }
-
 #else
-
-  /* Run the below code for Cortex-M0 */
 
   /* Initialize blkCnt with number of samples */
   blkCnt = blockSize;
 
+#endif /* #if defined (ARM_MATH_LOOPUNROLL) */
+
   while (blkCnt > 0U)
   {
     /* C = A - B */
-    /* Subtract and then store the result in the destination buffer. */
-    *pDst++ = (q7_t) __SSAT((q15_t) * pSrcA++ - *pSrcB++, 8);
 
-    /* Decrement the loop counter */
+    /* Subtract and store result in destination buffer. */
+    *pDst++ = (q7_t) __SSAT((q15_t) *pSrcA++ - *pSrcB++, 8);
+
+    /* Decrement loop counter */
     blkCnt--;
   }
 
-#endif /* #if defined (ARM_MATH_DSP) */
-
-
 }
+#endif /* defined(ARM_MATH_MVEI) */
 
 /**
- * @} end of BasicSub group
+  @} end of BasicSub group
  */

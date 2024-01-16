@@ -3,13 +3,13 @@
  * Title:        arm_cfft_radix4_init_f32.c
  * Description:  Radix-4 Decimation in Frequency Floating-point CFFT & CIFFT Initialization function
  *
- * $Date:        27. January 2017
- * $Revision:    V.1.5.1
+ * $Date:        23 April 2021
+ * $Revision:    V1.9.0
  *
- * Target Processor: Cortex-M cores
+ * Target Processor: Cortex-M and Cortex-A cores
  * -------------------------------------------------------------------- */
 /*
- * Copyright (C) 2010-2017 ARM Limited or its affiliates. All rights reserved.
+ * Copyright (C) 2010-2021 ARM Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -26,40 +26,44 @@
  * limitations under the License.
  */
 
-#include "arm_math.h"
+#include "dsp/transform_functions.h"
 #include "arm_common_tables.h"
 
 /**
- * @ingroup groupTransforms
+  @ingroup groupTransforms
  */
 
 /**
- * @addtogroup ComplexFFT
- * @{
+  @addtogroup ComplexFFT
+  @{
  */
 
 /**
-* @brief  Initialization function for the floating-point CFFT/CIFFT.
-* @deprecated Do not use this function.  It has been superceded by \ref arm_cfft_f32 and will be removed
-* in the future.
-* @param[in,out] *S             points to an instance of the floating-point CFFT/CIFFT structure.
-* @param[in]     fftLen         length of the FFT.
-* @param[in]     ifftFlag       flag that selects forward (ifftFlag=0) or inverse (ifftFlag=1) transform.
-* @param[in]     bitReverseFlag flag that enables (bitReverseFlag=1) or disables (bitReverseFlag=0) bit reversal of output.
-* @return        The function returns ARM_MATH_SUCCESS if initialization is successful or ARM_MATH_ARGUMENT_ERROR if <code>fftLen</code> is not a supported value.
-*
-* \par Description:
-* \par
-* The parameter <code>ifftFlag</code> controls whether a forward or inverse transform is computed.
-* Set(=1) ifftFlag for calculation of CIFFT otherwise  CFFT is calculated
-* \par
-* The parameter <code>bitReverseFlag</code> controls whether output is in normal order or bit reversed order.
-* Set(=1) bitReverseFlag for output to be in normal order otherwise output is in bit reversed order.
-* \par
-* The parameter <code>fftLen</code>	Specifies length of CFFT/CIFFT process. Supported FFT Lengths are 16, 64, 256, 1024.
-* \par
-* This Function also initializes Twiddle factor table pointer and Bit reversal table pointer.
-*/
+  @brief         Initialization function for the floating-point CFFT/CIFFT.
+  @deprecated    Do not use this function. It has been superceded by \ref arm_cfft_f32 and will be removed in the future.
+  @param[in,out] S              points to an instance of the floating-point CFFT/CIFFT structure
+  @param[in]     fftLen         length of the FFT
+  @param[in]     ifftFlag       flag that selects transform direction
+                   - value = 0: forward transform
+                   - value = 1: inverse transform
+  @param[in]     bitReverseFlag flag that enables / disables bit reversal of output
+                   - value = 0: disables bit reversal of output
+                   - value = 1: enables bit reversal of output
+  @return        execution status
+                   - \ref ARM_MATH_SUCCESS        : Operation successful
+                   - \ref ARM_MATH_ARGUMENT_ERROR : <code>fftLen</code> is not a supported length
+
+  @par           Details
+                   The parameter <code>ifftFlag</code> controls whether a forward or inverse transform is computed.
+                   Set(=1) ifftFlag for calculation of CIFFT otherwise  CFFT is calculated
+  @par
+                   The parameter <code>bitReverseFlag</code> controls whether output is in normal order or bit reversed order.
+                   Set(=1) bitReverseFlag for output to be in normal order otherwise output is in bit reversed order.
+  @par
+                   The parameter <code>fftLen</code> Specifies length of CFFT/CIFFT process. Supported FFT Lengths are 16, 64, 256, 1024.
+  @par
+                   This Function also initializes Twiddle factor table pointer and Bit reversal table pointer.
+ */
 
 arm_status arm_cfft_radix4_init_f32(
   arm_cfft_radix4_instance_f32 * S,
@@ -67,8 +71,15 @@ arm_status arm_cfft_radix4_init_f32(
   uint8_t ifftFlag,
   uint8_t bitReverseFlag)
 {
+   /*  Initialise the default arm status */
+  arm_status status = ARM_MATH_ARGUMENT_ERROR;
+
+#if !defined(ARM_DSP_CONFIG_TABLES) || defined(ARM_FFT_ALLOW_TABLES)
+
+#if !defined(ARM_DSP_CONFIG_TABLES) || defined(ARM_ALL_FFT_TABLES) || defined(ARM_TABLE_TWIDDLECOEF_F32_4096)
+
   /*  Initialise the default arm status */
-  arm_status status = ARM_MATH_SUCCESS;
+  status = ARM_MATH_SUCCESS;
 
   /*  Initialise the FFT length */
   S->fftLen = fftLen;
@@ -81,6 +92,8 @@ arm_status arm_cfft_radix4_init_f32(
 
   /*  Initialise the Flag for calculation Bit reversal or not */
   S->bitReverseFlag = bitReverseFlag;
+
+#if !defined(ARM_DSP_CONFIG_TABLES) || defined(ARM_ALL_FFT_TABLES) || defined(ARM_TABLE_TWIDDLECOEF_F32_4096)
 
   /*  Initializations of structure parameters depending on the FFT length */
   switch (S->fftLen)
@@ -143,10 +156,13 @@ arm_status arm_cfft_radix4_init_f32(
     status = ARM_MATH_ARGUMENT_ERROR;
     break;
   }
-
+#endif
+#endif
+#endif
+  
   return (status);
 }
 
 /**
- * @} end of ComplexFFT group
+  @} end of ComplexFFT group
  */

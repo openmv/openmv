@@ -3,13 +3,13 @@
  * Title:        arm_mean_f32.c
  * Description:  Mean value of a floating-point vector
  *
- * $Date:        27. January 2017
- * $Revision:    V.1.5.1
+ * $Date:        23 April 2021
+ * $Revision:    V1.9.0
  *
- * Target Processor: Cortex-M cores
+ * Target Processor: Cortex-M and Cortex-A cores
  * -------------------------------------------------------------------- */
 /*
- * Copyright (C) 2010-2017 ARM Limited or its affiliates. All rights reserved.
+ * Copyright (C) 2010-2021 ARM Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -26,85 +26,104 @@
  * limitations under the License.
  */
 
-#include "arm_math.h"
+#include "dsp/statistics_functions.h"
 
 /**
- * @ingroup groupStats
- */
-
-/**
- * @defgroup mean Mean
- *
- * Calculates the mean of the input vector. Mean is defined as the average of the elements in the vector.
- * The underlying algorithm is used:
- *
- * <pre>
- * 	Result = (pSrc[0] + pSrc[1] + pSrc[2] + ... + pSrc[blockSize-1]) / blockSize;
- * </pre>
- *
- * There are separate functions for floating-point, Q31, Q15, and Q7 data types.
- */
-
-/**
- * @addtogroup mean
- * @{
+  @ingroup groupStats
  */
 
 
 /**
- * @brief Mean value of a floating-point vector.
- * @param[in]       *pSrc points to the input vector
- * @param[in]       blockSize length of the input vector
- * @param[out]      *pResult mean value returned here
- * @return none.
+  @addtogroup mean
+  @{
  */
+
+/**
+  @brief         Mean value of a floating-point vector.
+  @param[in]     pSrc       points to the input vector.
+  @param[in]     blockSize  number of samples in input vector.
+  @param[out]    pResult    mean value returned here.
+  @return        none
+ */
+#if defined(ARM_MATH_MVEF) && !defined(ARM_MATH_AUTOVECTORIZE)
+
+#include "arm_helium_utils.h"
 
 void arm_mean_f32(
-  float32_t * pSrc,
+  const float32_t * pSrc,
+  uint32_t blockSize,
+  float32_t * pResult)
+{
+    uint32_t  blkCnt;           /* loop counters */
+    f32x4_t vecSrc;
+    f32x4_t sumVec = vdupq_n_f32(0.0f);
+    float32_t sum = 0.0f; 
+
+    /* Compute 4 outputs at a time */
+    blkCnt = blockSize >> 2U;
+    while (blkCnt > 0U)
+    {
+        vecSrc = vldrwq_f32(pSrc);
+        sumVec = vaddq_f32(sumVec, vecSrc);
+
+        blkCnt --;
+        pSrc += 4;
+    }
+
+    sum = vecAddAcrossF32Mve(sumVec);
+
+    /* Tail */
+    blkCnt = blockSize & 0x3;
+
+    while (blkCnt > 0U)
+    {
+      /* C = (A[0] + A[1] + A[2] + ... + A[blockSize-1]) */
+      sum += *pSrc++;
+  
+      /* Decrement loop counter */
+      blkCnt--;
+    }
+
+    *pResult = sum / (float32_t) blockSize;
+}
+
+
+#else
+#if defined(ARM_MATH_NEON_EXPERIMENTAL) && !defined(ARM_MATH_AUTOVECTORIZE)
+void arm_mean_f32(
+  const float32_t * pSrc,
   uint32_t blockSize,
   float32_t * pResult)
 {
   float32_t sum = 0.0f;                          /* Temporary result storage */
-  uint32_t blkCnt;                               /* loop counter */
+  float32x4_t sumV = vdupq_n_f32(0.0f);                          /* Temporary result storage */
+  float32x2_t sumV2;
 
-#if defined (ARM_MATH_DSP)
-  /* Run the below code for Cortex-M4 and Cortex-M3 */
+  uint32_t blkCnt;                               /* Loop counter */
 
-  float32_t in1, in2, in3, in4;
+  float32x4_t inV;
 
-  /*loop Unrolling */
   blkCnt = blockSize >> 2U;
 
-  /* First part of the processing with loop unrolling.  Compute 4 outputs at a time.
+  /* Compute 4 outputs at a time.
    ** a second loop below computes the remaining 1 to 3 samples. */
   while (blkCnt > 0U)
   {
     /* C = (A[0] + A[1] + A[2] + ... + A[blockSize-1]) */
-    in1 = *pSrc++;
-    in2 = *pSrc++;
-    in3 = *pSrc++;
-    in4 = *pSrc++;
-
-    sum += in1;
-    sum += in2;
-    sum += in3;
-    sum += in4;
-
+    inV = vld1q_f32(pSrc);
+    sumV = vaddq_f32(sumV, inV);
+    
+    pSrc += 4;
     /* Decrement the loop counter */
     blkCnt--;
   }
 
+  sumV2 = vpadd_f32(vget_low_f32(sumV),vget_high_f32(sumV));
+  sum = vget_lane_f32(sumV2, 0) + vget_lane_f32(sumV2, 1);
+
   /* If the blockSize is not a multiple of 4, compute any remaining output samples here.
    ** No loop unrolling is used. */
-  blkCnt = blockSize % 0x4U;
-
-#else
-  /* Run the below code for Cortex-M0 */
-
-  /* Loop over blockSize number of values */
-  blkCnt = blockSize;
-
-#endif /* #if defined (ARM_MATH_DSP) */
+  blkCnt = blockSize & 3;
 
   while (blkCnt > 0U)
   {
@@ -119,7 +138,61 @@ void arm_mean_f32(
   /* Store the result to the destination */
   *pResult = sum / (float32_t) blockSize;
 }
+#else
+void arm_mean_f32(
+  const float32_t * pSrc,
+        uint32_t blockSize,
+        float32_t * pResult)
+{
+        uint32_t blkCnt;                               /* Loop counter */
+        float32_t sum = 0.0f;                          /* Temporary result storage */
+
+#if defined (ARM_MATH_LOOPUNROLL) && !defined(ARM_MATH_AUTOVECTORIZE)
+
+  /* Loop unrolling: Compute 4 outputs at a time */
+  blkCnt = blockSize >> 2U;
+
+  while (blkCnt > 0U)
+  {
+    /* C = (A[0] + A[1] + A[2] + ... + A[blockSize-1]) */
+    sum += *pSrc++;
+
+    sum += *pSrc++;
+
+    sum += *pSrc++;
+
+    sum += *pSrc++;
+
+    /* Decrement the loop counter */
+    blkCnt--;
+  }
+
+  /* Loop unrolling: Compute remaining outputs */
+  blkCnt = blockSize % 0x4U;
+
+#else
+
+  /* Initialize blkCnt with number of samples */
+  blkCnt = blockSize;
+
+#endif /* #if defined (ARM_MATH_LOOPUNROLL) */
+
+  while (blkCnt > 0U)
+  {
+    /* C = (A[0] + A[1] + A[2] + ... + A[blockSize-1]) */
+    sum += *pSrc++;
+
+    /* Decrement loop counter */
+    blkCnt--;
+  }
+
+  /* C = (A[0] + A[1] + A[2] + ... + A[blockSize-1]) / blockSize  */
+  /* Store result to destination */
+  *pResult = (sum / blockSize);
+}
+#endif /* #if defined(ARM_MATH_NEON) */
+#endif /* defined(ARM_MATH_MVEF) && !defined(ARM_MATH_AUTOVECTORIZE) */
 
 /**
- * @} end of mean group
+  @} end of mean group
  */

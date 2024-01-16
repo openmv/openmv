@@ -3,13 +3,13 @@
  * Title:        arm_offset_f32.c
  * Description:  Floating-point vector offset
  *
- * $Date:        27. January 2017
- * $Revision:    V.1.5.1
+ * $Date:        23 April 2021
+ * $Revision:    V1.9.0
  *
- * Target Processor: Cortex-M cores
+ * Target Processor: Cortex-M and Cortex-A cores
  * -------------------------------------------------------------------- */
 /*
- * Copyright (C) 2010-2017 ARM Limited or its affiliates. All rights reserved.
+ * Copyright (C) 2010-2021 ARM Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -26,129 +26,171 @@
  * limitations under the License.
  */
 
-#include "arm_math.h"
+#include "dsp/basic_math_functions.h"
 
 /**
- * @ingroup groupMath
+  @ingroup groupMath
  */
 
 /**
- * @defgroup offset Vector Offset
- *
- * Adds a constant offset to each element of a vector.
- *
- * <pre>
- *     pDst[n] = pSrc[n] + offset,   0 <= n < blockSize.
- * </pre>
- *
- * The functions support in-place computation allowing the source and
- * destination pointers to reference the same memory buffer.
- * There are separate functions for floating-point, Q7, Q15, and Q31 data types.
+  @defgroup BasicOffset Vector Offset
+
+  Adds a constant offset to each element of a vector.
+
+  <pre>
+      pDst[n] = pSrc[n] + offset,   0 <= n < blockSize.
+  </pre>
+
+  The functions support in-place computation allowing the source and
+  destination pointers to reference the same memory buffer.
+  There are separate functions for floating-point, Q7, Q15, and Q31 data types.
  */
 
 /**
- * @addtogroup offset
- * @{
+  @addtogroup BasicOffset
+  @{
  */
 
 /**
- * @brief  Adds a constant offset to a floating-point vector.
- * @param[in]  *pSrc points to the input vector
- * @param[in]  offset is the offset to be added
- * @param[out]  *pDst points to the output vector
- * @param[in]  blockSize number of samples in the vector
- * @return none.
+  @brief         Adds a constant offset to a floating-point vector.
+  @param[in]     pSrc       points to the input vector
+  @param[in]     offset     is the offset to be added
+  @param[out]    pDst       points to the output vector
+  @param[in]     blockSize  number of samples in each vector
+  @return        none
  */
 
+#if defined(ARM_MATH_MVEF) && !defined(ARM_MATH_AUTOVECTORIZE)
+
+#include "arm_helium_utils.h"
 
 void arm_offset_f32(
-  float32_t * pSrc,
-  float32_t offset,
-  float32_t * pDst,
-  uint32_t blockSize)
+  const float32_t * pSrc,
+        float32_t offset,
+        float32_t * pDst,
+        uint32_t blockSize)
 {
-  uint32_t blkCnt;                               /* loop counter */
+        uint32_t blkCnt;                               /* Loop counter */
 
-#if defined (ARM_MATH_DSP)
+    f32x4_t vec1;
+    f32x4_t res;
 
-/* Run the below code for Cortex-M4 and Cortex-M3 */
-  float32_t in1, in2, in3, in4;
+    /* Compute 4 outputs at a time */
+    blkCnt = blockSize >> 2U;
+    while (blkCnt > 0U)
+    {
+        /* C = A + offset */
+ 
+        /* Add offset and then store the results in the destination buffer. */
+        vec1 = vld1q(pSrc);
+        res = vaddq(vec1,offset);
+        vst1q(pDst, res);
 
-  /*loop Unrolling */
+        /* Increment pointers */
+        pSrc += 4;
+        pDst += 4;
+        
+        /* Decrement the loop counter */
+        blkCnt--;
+    }
+
+    /* Tail */
+    blkCnt = blockSize & 0x3;
+
+    if (blkCnt > 0U)
+    {
+        mve_pred16_t p0 = vctp32q(blkCnt);
+        vec1 = vld1q((float32_t const *) pSrc);
+        vstrwq_p(pDst, vaddq(vec1, offset), p0);
+    }
+
+
+}
+
+#else
+void arm_offset_f32(
+  const float32_t * pSrc,
+        float32_t offset,
+        float32_t * pDst,
+        uint32_t blockSize)
+{
+        uint32_t blkCnt;                               /* Loop counter */
+
+#if defined(ARM_MATH_NEON_EXPERIMENTAL) && !defined(ARM_MATH_AUTOVECTORIZE)
+    f32x4_t vec1;
+    f32x4_t res;
+
+    /* Compute 4 outputs at a time */
+    blkCnt = blockSize >> 2U;
+
+    while (blkCnt > 0U)
+    {
+        /* C = A + offset */
+ 
+        /* Add offset and then store the results in the destination buffer. */
+        vec1 = vld1q_f32(pSrc);
+        res = vaddq_f32(vec1,vdupq_n_f32(offset));
+        vst1q_f32(pDst, res);
+
+        /* Increment pointers */
+        pSrc += 4;
+        pDst += 4;
+        
+        /* Decrement the loop counter */
+        blkCnt--;
+    }
+
+    /* Tail */
+    blkCnt = blockSize & 0x3;
+
+#else
+#if defined (ARM_MATH_LOOPUNROLL) && !defined(ARM_MATH_AUTOVECTORIZE)
+
+  /* Loop unrolling: Compute 4 outputs at a time */
   blkCnt = blockSize >> 2U;
 
-  /* First part of the processing with loop unrolling.  Compute 4 outputs at a time.
-   ** a second loop below computes the remaining 1 to 3 samples. */
   while (blkCnt > 0U)
   {
     /* C = A + offset */
-    /* Add offset and then store the results in the destination buffer. */
-    /* read samples from source */
-    in1 = *pSrc;
-    in2 = *(pSrc + 1);
 
-    /* add offset to input */
-    in1 = in1 + offset;
+    /* Add offset and store result in destination buffer. */
+    *pDst++ = (*pSrc++) + offset;
 
-    /* read samples from source */
-    in3 = *(pSrc + 2);
+    *pDst++ = (*pSrc++) + offset;
 
-    /* add offset to input */
-    in2 = in2 + offset;
+    *pDst++ = (*pSrc++) + offset;
 
-    /* read samples from source */
-    in4 = *(pSrc + 3);
+    *pDst++ = (*pSrc++) + offset;
 
-    /* add offset to input */
-    in3 = in3 + offset;
-
-    /* store result to destination */
-    *pDst = in1;
-
-    /* add offset to input */
-    in4 = in4 + offset;
-
-    /* store result to destination */
-    *(pDst + 1) = in2;
-
-    /* store result to destination */
-    *(pDst + 2) = in3;
-
-    /* store result to destination */
-    *(pDst + 3) = in4;
-
-    /* update pointers to process next samples */
-    pSrc += 4U;
-    pDst += 4U;
-
-    /* Decrement the loop counter */
+    /* Decrement loop counter */
     blkCnt--;
   }
 
-  /* If the blockSize is not a multiple of 4, compute any remaining output samples here.
-   ** No loop unrolling is used. */
+  /* Loop unrolling: Compute remaining outputs */
   blkCnt = blockSize % 0x4U;
 
 #else
 
-  /* Run the below code for Cortex-M0 */
-
   /* Initialize blkCnt with number of samples */
   blkCnt = blockSize;
 
-#endif /* #if defined (ARM_MATH_DSP) */
+#endif /* #if defined (ARM_MATH_LOOPUNROLL) */
+#endif /* #if defined(ARM_MATH_NEON_EXPERIMENTAL) */
 
   while (blkCnt > 0U)
   {
     /* C = A + offset */
-    /* Add offset and then store the result in the destination buffer. */
+
+    /* Add offset and store result in destination buffer. */
     *pDst++ = (*pSrc++) + offset;
 
-    /* Decrement the loop counter */
+    /* Decrement loop counter */
     blkCnt--;
   }
+
 }
+#endif /* defined(ARM_MATH_MVEF) && !defined(ARM_MATH_AUTOVECTORIZE) */
 
 /**
- * @} end of offset group
+  @} end of BasicOffset group
  */

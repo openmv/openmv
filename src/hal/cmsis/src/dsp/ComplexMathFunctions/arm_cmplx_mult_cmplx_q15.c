@@ -3,13 +3,13 @@
  * Title:        arm_cmplx_mult_cmplx_q15.c
  * Description:  Q15 complex-by-complex multiplication
  *
- * $Date:        27. January 2017
- * $Revision:    V.1.5.1
+ * $Date:        23 April 2021
+ * $Revision:    V1.9.0
  *
- * Target Processor: Cortex-M cores
+ * Target Processor: Cortex-M and Cortex-A cores
  * -------------------------------------------------------------------- */
 /*
- * Copyright (C) 2010-2017 ARM Limited or its affiliates. All rights reserved.
+ * Copyright (C) 2010-2021 ARM Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -26,156 +26,233 @@
  * limitations under the License.
  */
 
-#include "arm_math.h"
+#include "dsp/complex_math_functions.h"
 
 /**
- * @ingroup groupCmplxMath
+  @ingroup groupCmplxMath
  */
 
 /**
- * @addtogroup CmplxByCmplxMult
- * @{
+  @addtogroup CmplxByCmplxMult
+  @{
  */
 
 /**
- * @brief  Q15 complex-by-complex multiplication
- * @param[in]  *pSrcA points to the first input vector
- * @param[in]  *pSrcB points to the second input vector
- * @param[out]  *pDst  points to the output vector
- * @param[in]  numSamples number of complex samples in each vector
- * @return none.
- *
- * <b>Scaling and Overflow Behavior:</b>
- * \par
- * The function implements 1.15 by 1.15 multiplications and finally output is converted into 3.13 format.
+  @brief         Q15 complex-by-complex multiplication.
+  @param[in]     pSrcA       points to first input vector
+  @param[in]     pSrcB       points to second input vector
+  @param[out]    pDst        points to output vector
+  @param[in]     numSamples  number of samples in each vector
+  @return        none
+
+  @par           Scaling and Overflow Behavior
+                   The function implements 1.15 by 1.15 multiplications and finally output is converted into 3.13 format.
  */
+
+#if defined(ARM_MATH_MVEI) && !defined(ARM_MATH_AUTOVECTORIZE)
 
 void arm_cmplx_mult_cmplx_q15(
-  q15_t * pSrcA,
-  q15_t * pSrcB,
-  q15_t * pDst,
-  uint32_t numSamples)
+  const q15_t * pSrcA,
+  const q15_t * pSrcB,
+        q15_t * pDst,
+        uint32_t numSamples)
 {
-  q15_t a, b, c, d;                              /* Temporary variables to store real and imaginary values */
+   int32_t         blkCnt;
+    q15x8_t         vecSrcA, vecSrcB;
+    q15x8_t         vecSrcC, vecSrcD;
+    q15x8_t         vecDst;
 
-#if defined (ARM_MATH_DSP)
+    blkCnt = (numSamples >> 3);
+    blkCnt -= 1;
+    if (blkCnt > 0) 
+    {
+        /* should give more freedom to generate stall free code */
+        vecSrcA = vld1q(pSrcA);
+        vecSrcB = vld1q(pSrcB);
+        pSrcA += 8;
+        pSrcB += 8;
 
-  /* Run the below code for Cortex-M4 and Cortex-M3 */
-  uint32_t blkCnt;                               /* loop counters */
+        while (blkCnt > 0) 
+        {
 
-  /* loop Unrolling */
+            /* C[2 * i] = A[2 * i] * B[2 * i] - A[2 * i + 1] * B[2 * i + 1].  */
+            vecDst = vqdmlsdhq(vuninitializedq_s16(), vecSrcA, vecSrcB);
+            vecSrcC = vld1q(pSrcA);
+            pSrcA += 8;
+
+            /* C[2 * i + 1] = A[2 * i] * B[2 * i + 1] + A[2 * i + 1] * B[2 * i].  */
+            vecDst = vqdmladhxq(vecDst, vecSrcA, vecSrcB);
+            vecSrcD = vld1q(pSrcB);
+            pSrcB += 8;
+
+            vstrhq_s16(pDst, vshrq(vecDst, 2));
+            pDst += 8;
+
+            vecDst = vqdmlsdhq(vuninitializedq_s16(), vecSrcC, vecSrcD);
+            vecSrcA = vld1q(pSrcA);
+            pSrcA += 8;
+
+            vecDst = vqdmladhxq(vecDst, vecSrcC, vecSrcD);
+            vecSrcB = vld1q(pSrcB);
+            pSrcB += 8;
+
+            vstrhq_s16(pDst, vshrq(vecDst, 2));
+            pDst += 8;
+
+            /*
+             * Decrement the blockSize loop counter
+             */
+            blkCnt--;
+        }
+
+        /* process last elements out of the loop avoid the armclang breaking the SW pipeline */
+        vecDst = vqdmlsdhq(vuninitializedq_s16(), vecSrcA, vecSrcB);
+        vecSrcC = vld1q(pSrcA);
+
+        vecDst = vqdmladhxq(vecDst, vecSrcA, vecSrcB);
+        vecSrcD = vld1q(pSrcB);
+
+        vstrhq_s16(pDst, vshrq(vecDst, 2));
+        pDst += 8;
+
+        vecDst = vqdmlsdhq(vuninitializedq_s16(), vecSrcC, vecSrcD);
+        vecDst = vqdmladhxq(vecDst, vecSrcC, vecSrcD);
+
+        vstrhq_s16(pDst, vshrq(vecDst, 2));
+        pDst += 8;
+
+        /*
+         * tail
+         */
+        blkCnt = CMPLX_DIM * (numSamples & 7);
+        do 
+        {
+            mve_pred16_t    p = vctp16q(blkCnt);
+
+            pSrcA += 8;
+            pSrcB += 8;
+
+            vecSrcA = vldrhq_z_s16(pSrcA, p);
+            vecSrcB = vldrhq_z_s16(pSrcB, p);
+
+            vecDst = vqdmlsdhq_m(vuninitializedq_s16(), vecSrcA, vecSrcB, p);
+            vecDst = vqdmladhxq_m(vecDst, vecSrcA, vecSrcB, p);
+
+            vecDst = vshrq_m(vuninitializedq_s16(), vecDst, 2, p);
+            vstrhq_p_s16(pDst, vecDst, p);
+            pDst += 8;
+
+            blkCnt -= 8;
+        }
+        while ((int32_t) blkCnt > 0);
+    } 
+    else 
+    {
+        blkCnt = numSamples * CMPLX_DIM;
+        while (blkCnt > 0) {
+            mve_pred16_t    p = vctp16q(blkCnt);
+
+            vecSrcA = vldrhq_z_s16(pSrcA, p);
+            vecSrcB = vldrhq_z_s16(pSrcB, p);
+
+            vecDst = vqdmlsdhq_m(vuninitializedq_s16(), vecSrcA, vecSrcB, p);
+            vecDst = vqdmladhxq_m(vecDst, vecSrcA, vecSrcB, p);
+
+            vecDst = vshrq_m(vuninitializedq_s16(), vecDst, 2, p);
+            vstrhq_p_s16(pDst, vecDst, p);
+
+            pDst += 8;
+            pSrcA += 8;
+            pSrcB += 8;
+
+            blkCnt -= 8;
+    }
+  }
+}
+#else
+void arm_cmplx_mult_cmplx_q15(
+  const q15_t * pSrcA,
+  const q15_t * pSrcB,
+        q15_t * pDst,
+        uint32_t numSamples)
+{
+        uint32_t blkCnt;                               /* Loop counter */
+        q15_t a, b, c, d;                              /* Temporary variables */
+
+#if defined (ARM_MATH_LOOPUNROLL)
+
+  /* Loop unrolling: Compute 4 outputs at a time */
   blkCnt = numSamples >> 2U;
 
-  /* First part of the processing with loop unrolling.  Compute 4 outputs at a time.
-   ** a second loop below computes the remaining 1 to 3 samples. */
   while (blkCnt > 0U)
   {
-    /* C[2 * i] = A[2 * i] * B[2 * i] - A[2 * i + 1] * B[2 * i + 1].  */
-    /* C[2 * i + 1] = A[2 * i] * B[2 * i + 1] + A[2 * i + 1] * B[2 * i].  */
-    a = *pSrcA++;
-    b = *pSrcA++;
-    c = *pSrcB++;
-    d = *pSrcB++;
-
-    /* store the result in 3.13 format in the destination buffer. */
-    *pDst++ =
-      (q15_t) (q31_t) (((q31_t) a * c) >> 17) - (((q31_t) b * d) >> 17);
-    /* store the result in 3.13 format in the destination buffer. */
-    *pDst++ =
-      (q15_t) (q31_t) (((q31_t) a * d) >> 17) + (((q31_t) b * c) >> 17);
+    /* C[2 * i    ] = A[2 * i] * B[2 * i    ] - A[2 * i + 1] * B[2 * i + 1]. */
+    /* C[2 * i + 1] = A[2 * i] * B[2 * i + 1] + A[2 * i + 1] * B[2 * i    ]. */
 
     a = *pSrcA++;
     b = *pSrcA++;
     c = *pSrcB++;
     d = *pSrcB++;
-
-    /* store the result in 3.13 format in the destination buffer. */
-    *pDst++ =
-      (q15_t) (q31_t) (((q31_t) a * c) >> 17) - (((q31_t) b * d) >> 17);
-    /* store the result in 3.13 format in the destination buffer. */
-    *pDst++ =
-      (q15_t) (q31_t) (((q31_t) a * d) >> 17) + (((q31_t) b * c) >> 17);
+    /* store result in 3.13 format in destination buffer. */
+    *pDst++ = (q15_t) ( (((q31_t) a * c) >> 17) - (((q31_t) b * d) >> 17) );
+    *pDst++ = (q15_t) ( (((q31_t) a * d) >> 17) + (((q31_t) b * c) >> 17) );
 
     a = *pSrcA++;
     b = *pSrcA++;
     c = *pSrcB++;
     d = *pSrcB++;
-
-    /* store the result in 3.13 format in the destination buffer. */
-    *pDst++ =
-      (q15_t) (q31_t) (((q31_t) a * c) >> 17) - (((q31_t) b * d) >> 17);
-    /* store the result in 3.13 format in the destination buffer. */
-    *pDst++ =
-      (q15_t) (q31_t) (((q31_t) a * d) >> 17) + (((q31_t) b * c) >> 17);
+    *pDst++ = (q15_t) ( (((q31_t) a * c) >> 17) - (((q31_t) b * d) >> 17) );
+    *pDst++ = (q15_t) ( (((q31_t) a * d) >> 17) + (((q31_t) b * c) >> 17) );
 
     a = *pSrcA++;
     b = *pSrcA++;
     c = *pSrcB++;
     d = *pSrcB++;
+    *pDst++ = (q15_t) ( (((q31_t) a * c) >> 17) - (((q31_t) b * d) >> 17) );
+    *pDst++ = (q15_t) ( (((q31_t) a * d) >> 17) + (((q31_t) b * c) >> 17) );
 
-    /* store the result in 3.13 format in the destination buffer. */
-    *pDst++ =
-      (q15_t) (q31_t) (((q31_t) a * c) >> 17) - (((q31_t) b * d) >> 17);
-    /* store the result in 3.13 format in the destination buffer. */
-    *pDst++ =
-      (q15_t) (q31_t) (((q31_t) a * d) >> 17) + (((q31_t) b * c) >> 17);
+    a = *pSrcA++;
+    b = *pSrcA++;
+    c = *pSrcB++;
+    d = *pSrcB++;
+    *pDst++ = (q15_t) ( (((q31_t) a * c) >> 17) - (((q31_t) b * d) >> 17) );
+    *pDst++ = (q15_t) ( (((q31_t) a * d) >> 17) + (((q31_t) b * c) >> 17) );
 
-    /* Decrement the blockSize loop counter */
+    /* Decrement loop counter */
     blkCnt--;
   }
 
-  /* If the blockSize is not a multiple of 4, compute any remaining output samples here.
-   ** No loop unrolling is used. */
+  /* Loop unrolling: Compute remaining outputs */
   blkCnt = numSamples % 0x4U;
-
-  while (blkCnt > 0U)
-  {
-    /* C[2 * i] = A[2 * i] * B[2 * i] - A[2 * i + 1] * B[2 * i + 1].  */
-    /* C[2 * i + 1] = A[2 * i] * B[2 * i + 1] + A[2 * i + 1] * B[2 * i].  */
-    a = *pSrcA++;
-    b = *pSrcA++;
-    c = *pSrcB++;
-    d = *pSrcB++;
-
-    /* store the result in 3.13 format in the destination buffer. */
-    *pDst++ =
-      (q15_t) (q31_t) (((q31_t) a * c) >> 17) - (((q31_t) b * d) >> 17);
-    /* store the result in 3.13 format in the destination buffer. */
-    *pDst++ =
-      (q15_t) (q31_t) (((q31_t) a * d) >> 17) + (((q31_t) b * c) >> 17);
-
-    /* Decrement the blockSize loop counter */
-    blkCnt--;
-  }
 
 #else
 
-  /* Run the below code for Cortex-M0 */
+  /* Initialize blkCnt with number of samples */
+  blkCnt = numSamples;
 
-  while (numSamples > 0U)
+#endif /* #if defined (ARM_MATH_LOOPUNROLL) */
+
+  while (blkCnt > 0U)
   {
-    /* C[2 * i] = A[2 * i] * B[2 * i] - A[2 * i + 1] * B[2 * i + 1].  */
-    /* C[2 * i + 1] = A[2 * i] * B[2 * i + 1] + A[2 * i + 1] * B[2 * i].  */
+    /* C[2 * i    ] = A[2 * i] * B[2 * i    ] - A[2 * i + 1] * B[2 * i + 1]. */
+    /* C[2 * i + 1] = A[2 * i] * B[2 * i + 1] + A[2 * i + 1] * B[2 * i    ]. */
+
     a = *pSrcA++;
     b = *pSrcA++;
     c = *pSrcB++;
     d = *pSrcB++;
 
-    /* store the result in 3.13 format in the destination buffer. */
-    *pDst++ =
-      (q15_t) (q31_t) (((q31_t) a * c) >> 17) - (((q31_t) b * d) >> 17);
-    /* store the result in 3.13 format in the destination buffer. */
-    *pDst++ =
-      (q15_t) (q31_t) (((q31_t) a * d) >> 17) + (((q31_t) b * c) >> 17);
+    /* store result in 3.13 format in destination buffer. */
+    *pDst++ = (q15_t) ( (((q31_t) a * c) >> 17) - (((q31_t) b * d) >> 17) );
+    *pDst++ = (q15_t) ( (((q31_t) a * d) >> 17) + (((q31_t) b * c) >> 17) );
 
-    /* Decrement the blockSize loop counter */
-    numSamples--;
+    /* Decrement loop counter */
+    blkCnt--;
   }
 
-#endif /* #if defined (ARM_MATH_DSP) */
-
 }
+#endif /* defined(ARM_MATH_MVEI) */
 
 /**
- * @} end of CmplxByCmplxMult group
+  @} end of CmplxByCmplxMult group
  */

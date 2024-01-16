@@ -3,13 +3,13 @@
  * Title:        arm_var_q15.c
  * Description:  Variance of an array of Q15 type
  *
- * $Date:        27. January 2017
- * $Revision:    V.1.5.1
+ * $Date:        23 April 2021
+ * $Revision:    V1.9.0
  *
- * Target Processor: Cortex-M cores
+ * Target Processor: Cortex-M and Cortex-A cores
  * -------------------------------------------------------------------- */
 /*
- * Copyright (C) 2010-2017 ARM Limited or its affiliates. All rights reserved.
+ * Copyright (C) 2010-2021 ARM Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -26,147 +26,205 @@
  * limitations under the License.
  */
 
-#include "arm_math.h"
+#include "dsp/statistics_functions.h"
 
 /**
- * @ingroup groupStats
+  @ingroup groupStats
  */
 
 /**
- * @addtogroup variance
- * @{
+  @addtogroup variance
+  @{
  */
 
 /**
- * @brief Variance of the elements of a Q15 vector.
- * @param[in]       *pSrc points to the input vector
- * @param[in]       blockSize length of the input vector
- * @param[out]      *pResult variance value returned here
- * @return none.
- * @details
- * <b>Scaling and Overflow Behavior:</b>
- *
- * \par
- * The function is implemented using a 64-bit internal accumulator.
- * The input is represented in 1.15 format.
- * Intermediate multiplication yields a 2.30 format, and this
- * result is added without saturation to a 64-bit accumulator in 34.30 format.
- * With 33 guard bits in the accumulator, there is no risk of overflow, and the
- * full precision of the intermediate multiplication is preserved.
- * Finally, the 34.30 result is truncated to 34.15 format by discarding the lower
- * 15 bits, and then saturated to yield a result in 1.15 format.
- */
+  @brief         Variance of the elements of a Q15 vector.
+  @param[in]     pSrc       points to the input vector
+  @param[in]     blockSize  number of samples in input vector
+  @param[out]    pResult    variance value returned here
+  @return        none
 
+  @par           Scaling and Overflow Behavior
+                   The function is implemented using a 64-bit internal accumulator.
+                   The input is represented in 1.15 format.
+                   Intermediate multiplication yields a 2.30 format, and this
+                   result is added without saturation to a 64-bit accumulator in 34.30 format.
+                   With 33 guard bits in the accumulator, there is no risk of overflow, and the
+                   full precision of the intermediate multiplication is preserved.
+                   Finally, the 34.30 result is truncated to 34.15 format by discarding the lower
+                   15 bits, and then saturated to yield a result in 1.15 format.
+ */
+#if defined(ARM_MATH_MVEI) && !defined(ARM_MATH_AUTOVECTORIZE)
 void arm_var_q15(
-  q15_t * pSrc,
-  uint32_t blockSize,
-  q15_t * pResult)
+  const q15_t * pSrc,
+        uint32_t blockSize,
+        q15_t * pResult)
 {
-  q31_t sum = 0;                                 /* Accumulator */
-  q31_t meanOfSquares, squareOfMean;             /* square of mean and mean of square */
-  uint32_t blkCnt;                               /* loop counter */
-  q63_t sumOfSquares = 0;                        /* Accumulator */
+    uint32_t  blkCnt;     /* loop counters */
+    q15x8_t         vecSrc;
+    q63_t           sumOfSquares = 0LL;
+    q63_t           meanOfSquares, squareOfMean;        /* square of mean and mean of square */
+    q63_t           sum = 0LL;
+    q15_t in; 
+
+    if (blockSize <= 1U) {
+        *pResult = 0;
+        return;
+    }
+
+
+    blkCnt = blockSize >> 3;
+    while (blkCnt > 0U)
+    {
+        vecSrc = vldrhq_s16(pSrc);
+        /* C = (A[0] * A[0] + A[1] * A[1] + ... + A[blockSize-1] * A[blockSize-1]) */
+        /* Compute Sum of squares of the input samples
+         * and then store the result in a temporary variable, sumOfSquares. */
+
+        sumOfSquares = vmlaldavaq_s16(sumOfSquares, vecSrc, vecSrc);
+        sum = vaddvaq_s16(sum, vecSrc);
+
+        blkCnt --;
+        pSrc += 8;
+    }
+
+    /* Tail */
+    blkCnt = blockSize & 7;
+    while (blkCnt > 0U)
+    {
+      /* C = A[0] * A[0] + A[1] * A[1] + ... + A[blockSize-1] * A[blockSize-1] */
+      /* C = A[0] + A[1] + ... + A[blockSize-1] */
+
+      in = *pSrc++;
+      /* Compute sum of squares and store result in a temporary variable, sumOfSquares. */
 #if defined (ARM_MATH_DSP)
-  q31_t in;                                      /* input value */
-  q15_t in1;                                     /* input value */
+      sumOfSquares = __SMLALD(in, in, sumOfSquares);
 #else
-  q15_t in;                                      /* input value */
+      sumOfSquares += (in * in);
+#endif /* #if defined (ARM_MATH_DSP) */
+      /* Compute sum and store result in a temporary variable, sum. */
+      sum += in;
+  
+      /* Decrement loop counter */
+      blkCnt--;
+    }
+
+    /* Compute Mean of squares of the input samples
+     * and then store the result in a temporary variable, meanOfSquares. */
+    meanOfSquares = arm_div_q63_to_q31(sumOfSquares, (blockSize - 1U));
+
+    /* Compute square of mean */
+    squareOfMean = arm_div_q63_to_q31((q63_t)sum * sum, (q31_t)(blockSize * (blockSize - 1U)));
+
+    /* mean of the squares minus the square of the mean. */
+    *pResult = (meanOfSquares - squareOfMean) >> 15;
+}
+#else
+void arm_var_q15(
+  const q15_t * pSrc,
+        uint32_t blockSize,
+        q15_t * pResult)
+{
+        uint32_t blkCnt;                               /* Loop counter */
+        q31_t sum = 0;                                 /* Accumulator */
+        q31_t meanOfSquares, squareOfMean;             /* Square of mean and mean of square */
+        q63_t sumOfSquares = 0;                        /* Sum of squares */
+        q15_t in;                                      /* Temporary variable to store input value */
+
+#if defined (ARM_MATH_LOOPUNROLL) && defined (ARM_MATH_DSP)
+        q31_t in32;                                    /* Temporary variable to store input value */
 #endif
 
-  if (blockSize == 1U)
+  if (blockSize <= 1U)
   {
     *pResult = 0;
     return;
   }
 
-#if defined (ARM_MATH_DSP)
-  /* Run the below code for Cortex-M4 and Cortex-M3 */
+#if defined (ARM_MATH_LOOPUNROLL)
 
-  /*loop Unrolling */
+  /* Loop unrolling: Compute 4 outputs at a time */
   blkCnt = blockSize >> 2U;
 
-  /* First part of the processing with loop unrolling.  Compute 4 outputs at a time.
-   ** a second loop below computes the remaining 1 to 3 samples. */
   while (blkCnt > 0U)
   {
-    /* C = (A[0] * A[0] + A[1] * A[1] + ... + A[blockSize-1] * A[blockSize-1])  */
-    /* Compute Sum of squares of the input samples
-     * and then store the result in a temporary variable, sum. */
-    in = *__SIMD32(pSrc)++;
-    sum += ((in << 16U) >> 16U);
-    sum +=  (in >> 16U);
-    sumOfSquares = __SMLALD(in, in, sumOfSquares);
-    in = *__SIMD32(pSrc)++;
-    sum += ((in << 16U) >> 16U);
-    sum +=  (in >> 16U);
-    sumOfSquares = __SMLALD(in, in, sumOfSquares);
+    /* C = A[0] * A[0] + A[1] * A[1] + ... + A[blockSize-1] * A[blockSize-1] */
+    /* C = A[0] + A[1] + ... + A[blockSize-1] */
 
-    /* Decrement the loop counter */
-    blkCnt--;
-  }
+    /* Compute sum of squares and store result in a temporary variable, sumOfSquares. */
+    /* Compute sum and store result in a temporary variable, sum. */
+#if defined (ARM_MATH_DSP)
+    in32 = read_q15x2_ia (&pSrc);
+    sumOfSquares = __SMLALD(in32, in32, sumOfSquares);
+    sum += ((in32 << 16U) >> 16U);
+    sum +=  (in32 >> 16U);
 
-  /* If the blockSize is not a multiple of 4, compute any remaining output samples here.
-   ** No loop unrolling is used. */
-  blkCnt = blockSize % 0x4U;
-
-  while (blkCnt > 0U)
-  {
-    /* C = (A[0] * A[0] + A[1] * A[1] + ... + A[blockSize-1] * A[blockSize-1]) */
-    /* Compute Sum of squares of the input samples
-     * and then store the result in a temporary variable, sum. */
-    in1 = *pSrc++;
-    sumOfSquares = __SMLALD(in1, in1, sumOfSquares);
-    sum += in1;
-
-    /* Decrement the loop counter */
-    blkCnt--;
-  }
-
-  /* Compute Mean of squares of the input samples
-   * and then store the result in a temporary variable, meanOfSquares. */
-  meanOfSquares = (q31_t)(sumOfSquares / (q63_t)(blockSize - 1U));
-
-  /* Compute square of mean */
-  squareOfMean = (q31_t)((q63_t)sum * sum / (q63_t)(blockSize * (blockSize - 1U)));
-
-  /* mean of the squares minus the square of the mean. */
-  *pResult = (meanOfSquares - squareOfMean) >> 15U;
-
+    in32 = read_q15x2_ia (&pSrc);
+    sumOfSquares = __SMLALD(in32, in32, sumOfSquares);
+    sum += ((in32 << 16U) >> 16U);
+    sum +=  (in32 >> 16U);
 #else
-  /* Run the below code for Cortex-M0 */
-
-  /* Loop over blockSize number of values */
-  blkCnt = blockSize;
-
-  while (blkCnt > 0U)
-  {
-    /* C = (A[0] * A[0] + A[1] * A[1] + ... + A[blockSize-1] * A[blockSize-1]) */
-    /* Compute Sum of squares of the input samples
-     * and then store the result in a temporary variable, sumOfSquares. */
     in = *pSrc++;
     sumOfSquares += (in * in);
-
-    /* C = (A[0] + A[1] + A[2] + ... + A[blockSize-1]) */
-    /* Compute sum of all input values and then store the result in a temporary variable, sum. */
     sum += in;
 
-    /* Decrement the loop counter */
+    in = *pSrc++;
+    sumOfSquares += (in * in);
+    sum += in;
+
+    in = *pSrc++;
+    sumOfSquares += (in * in);
+    sum += in;
+
+    in = *pSrc++;
+    sumOfSquares += (in * in);
+    sum += in;
+#endif /* #if defined (ARM_MATH_DSP) */
+
+    /* Decrement loop counter */
     blkCnt--;
   }
 
-  /* Compute Mean of squares of the input samples
-   * and then store the result in a temporary variable, meanOfSquares. */
-  meanOfSquares = (q31_t)(sumOfSquares / (q63_t)(blockSize - 1U));
+  /* Loop unrolling: Compute remaining outputs */
+  blkCnt = blockSize % 0x4U;
+
+#else
+
+  /* Initialize blkCnt with number of samples */
+  blkCnt = blockSize;
+
+#endif /* #if defined (ARM_MATH_LOOPUNROLL) */
+
+  while (blkCnt > 0U)
+  {
+    /* C = A[0] * A[0] + A[1] * A[1] + ... + A[blockSize-1] * A[blockSize-1] */
+    /* C = A[0] + A[1] + ... + A[blockSize-1] */
+
+    in = *pSrc++;
+    /* Compute sum of squares and store result in a temporary variable, sumOfSquares. */
+#if defined (ARM_MATH_DSP)
+    sumOfSquares = __SMLALD(in, in, sumOfSquares);
+#else
+    sumOfSquares += (in * in);
+#endif /* #if defined (ARM_MATH_DSP) */
+    /* Compute sum and store result in a temporary variable, sum. */
+    sum += in;
+
+    /* Decrement loop counter */
+    blkCnt--;
+  }
+
+  /* Compute Mean of squares and store result in a temporary variable, meanOfSquares. */
+  meanOfSquares = (q31_t) (sumOfSquares / (q63_t)(blockSize - 1U));
 
   /* Compute square of mean */
-  squareOfMean = (q31_t)((q63_t)sum * sum / (q63_t)(blockSize * (blockSize - 1U)));
+  squareOfMean = (q31_t) ((q63_t) sum * sum / (q63_t)(blockSize * (blockSize - 1U)));
 
-  /* mean of the squares minus the square of the mean. */
-  *pResult = (meanOfSquares - squareOfMean) >> 15;
-
-#endif /* #if defined (ARM_MATH_DSP) */
+  /* mean of squares minus the square of mean. */
+  *pResult = (meanOfSquares - squareOfMean) >> 15U;
 }
+#endif /* defined(ARM_MATH_MVEI) */
 
 /**
- * @} end of variance group
+  @} end of variance group
  */

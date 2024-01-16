@@ -10,23 +10,12 @@
 SRC_S = src/$(STARTUP).s
 SRC_C = src/$(SYSTEM).c
 
-SRC_C  += $(wildcard src/dsp/CommonTables/*.c)
-SRC_C  += $(wildcard src/dsp/FastMathFunctions/*.c)
-ifeq ($(CUBEAI), 1)
-SRC_C  += $(wildcard src/dsp/MatrixFunctions/*.c)
-endif
-#SRC_C  += $(wildcard src/nn/ActivationFunctions/*.c)
-#SRC_C  += $(wildcard src/nn/ConvolutionFunctions/*.c)
-#SRC_C  += $(wildcard src/nn/FullyConnectedFunctions/*.c)
-#SRC_C  += $(wildcard src/nn/NNSupportFunctions/*.c)
-#SRC_C  += $(wildcard src/nn/PoolingFunctions/*.c)
-#SRC_C  += $(wildcard src/nn/SoftmaxFunctions/*.c)
-#SRC_C  += $(wildcard src/dsp/ComplexMathFunctions/*.c)
-#SRC_C  += $(wildcard src/dsp/ControllerFunctions/*.c)
-#SRC_C  += $(wildcard src/dsp/FilteringFunctions/*.c)
-#SRC_C  += $(wildcard src/dsp/StatisticsFunctions/*.c)
-#SRC_C  += $(wildcard src/dsp/SupportFunctions/*.c)
-#SRC_C  += $(wildcard src/dsp/TransformFunctions/*.c)
+SRC_C += $(addprefix src/dsp/,\
+	CommonTables/CommonTables.c \
+	CommonTables/CommonTablesF16.c \
+	FastMathFunctions/FastMathFunctions.c \
+	FastMathFunctions/FastMathFunctionsF16.c \
+)
 
 OBJS  = $(addprefix $(BUILD)/, $(SRC_S:.s=.o))
 OBJS += $(addprefix $(BUILD)/, $(SRC_C:.c=.o))

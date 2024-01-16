@@ -3,13 +3,13 @@
  * Title:        arm_offset_q31.c
  * Description:  Q31 vector offset
  *
- * $Date:        27. January 2017
- * $Revision:    V.1.5.1
+ * $Date:        23 April 2021
+ * $Revision:    V1.9.0
  *
- * Target Processor: Cortex-M cores
+ * Target Processor: Cortex-M and Cortex-A cores
  * -------------------------------------------------------------------- */
 /*
- * Copyright (C) 2010-2017 ARM Limited or its affiliates. All rights reserved.
+ * Copyright (C) 2010-2021 ARM Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -26,103 +26,134 @@
  * limitations under the License.
  */
 
-#include "arm_math.h"
+#include "dsp/basic_math_functions.h"
 
 /**
- * @ingroup groupMath
+  @ingroup groupMath
  */
 
 /**
- * @addtogroup offset
- * @{
+  @addtogroup BasicOffset
+  @{
  */
 
 /**
- * @brief  Adds a constant offset to a Q31 vector.
- * @param[in]  *pSrc points to the input vector
- * @param[in]  offset is the offset to be added
- * @param[out]  *pDst points to the output vector
- * @param[in]  blockSize number of samples in the vector
- * @return none.
- *
- * <b>Scaling and Overflow Behavior:</b>
- * \par
- * The function uses saturating arithmetic.
- * Results outside of the allowable Q31 range [0x80000000 0x7FFFFFFF] are saturated.
+  @brief         Adds a constant offset to a Q31 vector.
+  @param[in]     pSrc       points to the input vector
+  @param[in]     offset     is the offset to be added
+  @param[out]    pDst       points to the output vector
+  @param[in]     blockSize  number of samples in each vector
+  @return        none
+
+  @par           Scaling and Overflow Behavior
+                   The function uses saturating arithmetic.
+                   Results outside of the allowable Q31 range [0x80000000 0x7FFFFFFF] are saturated.
  */
+
+#if defined(ARM_MATH_MVEI) && !defined(ARM_MATH_AUTOVECTORIZE)
+
+#include "arm_helium_utils.h"
 
 void arm_offset_q31(
-  q31_t * pSrc,
-  q31_t offset,
-  q31_t * pDst,
-  uint32_t blockSize)
+    const q31_t * pSrc,
+    q31_t   offset,
+    q31_t * pDst,
+    uint32_t blockSize)
 {
-  uint32_t blkCnt;                               /* loop counter */
+    uint32_t  blkCnt;           /* loop counters */
+    q31x4_t vecSrc;
 
-#if defined (ARM_MATH_DSP)
-
-/* Run the below code for Cortex-M4 and Cortex-M3 */
-  q31_t in1, in2, in3, in4;
-
-
-  /*loop Unrolling */
-  blkCnt = blockSize >> 2U;
-
-  /* First part of the processing with loop unrolling.  Compute 4 outputs at a time.
-   ** a second loop below computes the remaining 1 to 3 samples. */
-  while (blkCnt > 0U)
-  {
-    /* C = A + offset */
-    /* Add offset and then store the results in the destination buffer. */
-    in1 = *pSrc++;
-    in2 = *pSrc++;
-    in3 = *pSrc++;
-    in4 = *pSrc++;
-
-    *pDst++ = __QADD(in1, offset);
-    *pDst++ = __QADD(in2, offset);
-    *pDst++ = __QADD(in3, offset);
-    *pDst++ = __QADD(in4, offset);
-
-    /* Decrement the loop counter */
-    blkCnt--;
-  }
-
-  /* If the blockSize is not a multiple of 4, compute any remaining output samples here.
-   ** No loop unrolling is used. */
-  blkCnt = blockSize % 0x4U;
-
-  while (blkCnt > 0U)
-  {
-    /* C = A + offset */
-    /* Add offset and then store the result in the destination buffer. */
-    *pDst++ = __QADD(*pSrc++, offset);
-
-    /* Decrement the loop counter */
-    blkCnt--;
-  }
+    /* Compute 4 outputs at a time */
+    blkCnt = blockSize >> 2;
+    while (blkCnt > 0U)
+    {
+        /*
+         * C = A + offset
+         * Add offset and then store the result in the destination buffer.
+         */
+        vecSrc = vld1q(pSrc);
+        vst1q(pDst, vqaddq(vecSrc, offset));
+        /*
+         * Decrement the blockSize loop counter
+         */
+        blkCnt--;
+        /*
+         * advance vector source and destination pointers
+         */
+        pSrc += 4;
+        pDst += 4;
+    }
+    /*
+     * tail
+     */
+    blkCnt = blockSize & 3;
+    if (blkCnt > 0U)
+    {
+        mve_pred16_t p0 = vctp32q(blkCnt);
+        vecSrc = vld1q(pSrc);
+        vstrwq_p(pDst, vqaddq(vecSrc, offset), p0);
+    }
+}
 
 #else
+void arm_offset_q31(
+  const q31_t * pSrc,
+        q31_t offset,
+        q31_t * pDst,
+        uint32_t blockSize)
+{
+        uint32_t blkCnt;                               /* Loop counter */
 
-  /* Run the below code for Cortex-M0 */
+#if defined (ARM_MATH_LOOPUNROLL)
+
+  /* Loop unrolling: Compute 4 outputs at a time */
+  blkCnt = blockSize >> 2U;
+
+  while (blkCnt > 0U)
+  {
+    /* C = A + offset */
+
+    /* Add offset and store result in destination buffer. */
+    *pDst++ = __QADD(*pSrc++, offset);
+    
+    *pDst++ = __QADD(*pSrc++, offset);
+    
+    *pDst++ = __QADD(*pSrc++, offset);
+    
+    *pDst++ = __QADD(*pSrc++, offset);
+
+    /* Decrement loop counter */
+    blkCnt--;
+  }
+
+  /* Loop unrolling: Compute remaining outputs */
+  blkCnt = blockSize % 0x4U;
+
+#else
 
   /* Initialize blkCnt with number of samples */
   blkCnt = blockSize;
 
+#endif /* #if defined (ARM_MATH_LOOPUNROLL) */
+
   while (blkCnt > 0U)
   {
     /* C = A + offset */
-    /* Add offset and then store the result in the destination buffer. */
-    *pDst++ = (q31_t) clip_q63_to_q31((q63_t) * pSrc++ + offset);
 
-    /* Decrement the loop counter */
+    /* Add offset and store result in destination buffer. */
+#if defined (ARM_MATH_DSP)
+    *pDst++ = __QADD(*pSrc++, offset);
+#else
+    *pDst++ = (q31_t) clip_q63_to_q31((q63_t) * pSrc++ + offset);
+#endif
+
+    /* Decrement loop counter */
     blkCnt--;
   }
 
-#endif /* #if defined (ARM_MATH_DSP) */
-
 }
+#endif /* defined(ARM_MATH_MVEI) */
 
 /**
- * @} end of offset group
+  @} end of BasicOffset group
  */

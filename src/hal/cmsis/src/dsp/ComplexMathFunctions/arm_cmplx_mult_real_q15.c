@@ -3,13 +3,13 @@
  * Title:        arm_cmplx_mult_real_q15.c
  * Description:  Q15 complex by real multiplication
  *
- * $Date:        27. January 2017
- * $Revision:    V.1.5.1
+ * $Date:        23 April 2021
+ * $Revision:    V1.9.0
  *
- * Target Processor: Cortex-M cores
+ * Target Processor: Cortex-M and Cortex-A cores
  * -------------------------------------------------------------------- */
 /*
- * Copyright (C) 2010-2017 ARM Limited or its affiliates. All rights reserved.
+ * Copyright (C) 2010-2021 ARM Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -26,80 +26,129 @@
  * limitations under the License.
  */
 
-#include "arm_math.h"
+#include "dsp/complex_math_functions.h"
 
 /**
- * @ingroup groupCmplxMath
+  @ingroup groupCmplxMath
  */
 
 /**
- * @addtogroup CmplxByRealMult
- * @{
+  @addtogroup CmplxByRealMult
+  @{
  */
-
 
 /**
- * @brief  Q15 complex-by-real multiplication
- * @param[in]  *pSrcCmplx points to the complex input vector
- * @param[in]  *pSrcReal points to the real input vector
- * @param[out]  *pCmplxDst points to the complex output vector
- * @param[in]  numSamples number of samples in each vector
- * @return none.
- *
- * <b>Scaling and Overflow Behavior:</b>
- * \par
- * The function uses saturating arithmetic.
- * Results outside of the allowable Q15 range [0x8000 0x7FFF] will be saturated.
+  @brief         Q15 complex-by-real multiplication.
+  @param[in]     pSrcCmplx   points to complex input vector
+  @param[in]     pSrcReal    points to real input vector
+  @param[out]    pCmplxDst   points to complex output vector
+  @param[in]     numSamples  number of samples in each vector
+  @return        none
+
+  @par           Scaling and Overflow Behavior
+                   The function uses saturating arithmetic.
+                   Results outside of the allowable Q15 range [0x8000 0x7FFF] are saturated.
  */
+#if defined(ARM_MATH_MVEI) && !defined(ARM_MATH_AUTOVECTORIZE)
 
 void arm_cmplx_mult_real_q15(
-  q15_t * pSrcCmplx,
-  q15_t * pSrcReal,
-  q15_t * pCmplxDst,
-  uint32_t numSamples)
+  const q15_t * pSrcCmplx,
+  const q15_t * pSrcReal,
+        q15_t * pCmplxDst,
+        uint32_t numSamples)
 {
-  q15_t in;                                      /* Temporary variable to store input value */
+  static const uint16_t stride_cmplx_x_real_16[8] = {
+      0, 0, 1, 1, 2, 2, 3, 3
+      };
+  q15x8_t rVec;
+  q15x8_t cmplxVec;
+  q15x8_t dstVec;
+  uint16x8_t strideVec;
+  uint32_t blockSizeC = numSamples * CMPLX_DIM;   /* loop counters */
+  uint32_t blkCnt;
+  q15_t in;  
 
-#if defined (ARM_MATH_DSP)
+  /*
+  * stride vector for pairs of real generation
+  */
+  strideVec = vld1q(stride_cmplx_x_real_16);
 
-  /* Run the below code for Cortex-M4 and Cortex-M3 */
-  uint32_t blkCnt;                               /* loop counters */
-  q31_t inA1, inA2;                              /* Temporary variables to hold input data */
-  q31_t inB1;                                    /* Temporary variables to hold input data */
-  q15_t out1, out2, out3, out4;                  /* Temporary variables to hold output data */
-  q31_t mul1, mul2, mul3, mul4;                  /* Temporary variables to hold intermediate data */
+  blkCnt = blockSizeC >> 3;
 
-  /* loop Unrolling */
-  blkCnt = numSamples >> 2U;
+  while (blkCnt > 0U) 
+  {
+    cmplxVec = vld1q(pSrcCmplx);
+    rVec = vldrhq_gather_shifted_offset_s16(pSrcReal, strideVec);
+    dstVec = vqdmulhq(cmplxVec, rVec);
+    vst1q(pCmplxDst, dstVec);
 
-  /* First part of the processing with loop unrolling.  Compute 4 outputs at a time.
-   ** a second loop below computes the remaining 1 to 3 samples. */
+    pSrcReal += 4;
+    pSrcCmplx += 8;
+    pCmplxDst += 8;
+    blkCnt --;
+  }
+
+  /* Tail */
+  blkCnt = (blockSizeC & 7) >> 1;
   while (blkCnt > 0U)
   {
-    /* C[2 * i] = A[2 * i] * B[i].            */
-    /* C[2 * i + 1] = A[2 * i + 1] * B[i].        */
-    /* read complex number both real and imaginary from complex input buffer */
-    inA1 = *__SIMD32(pSrcCmplx)++;
-    /* read two real values at a time from real input buffer */
-    inB1 = *__SIMD32(pSrcReal)++;
-    /* read complex number both real and imaginary from complex input buffer */
-    inA2 = *__SIMD32(pSrcCmplx)++;
+    /* C[2 * i    ] = A[2 * i    ] * B[i]. */
+    /* C[2 * i + 1] = A[2 * i + 1] * B[i]. */
+
+    in = *pSrcReal++;
+    /* store the result in the destination buffer. */
+    *pCmplxDst++ = (q15_t) __SSAT((((q31_t) *pSrcCmplx++ * in) >> 15), 16);
+    *pCmplxDst++ = (q15_t) __SSAT((((q31_t) *pSrcCmplx++ * in) >> 15), 16);
+
+    /* Decrement loop counter */
+    blkCnt--;
+  }
+}
+#else
+void arm_cmplx_mult_real_q15(
+  const q15_t * pSrcCmplx,
+  const q15_t * pSrcReal,
+        q15_t * pCmplxDst,
+        uint32_t numSamples)
+{
+        uint32_t blkCnt;                               /* Loop counter */
+        q15_t in;                                      /* Temporary variable */
+
+#if defined (ARM_MATH_LOOPUNROLL)
+
+#if defined (ARM_MATH_DSP)
+        q31_t inA1, inA2;                              /* Temporary variables to hold input data */
+        q31_t inB1;                                    /* Temporary variables to hold input data */
+        q15_t out1, out2, out3, out4;                  /* Temporary variables to hold output data */
+        q31_t mul1, mul2, mul3, mul4;                  /* Temporary variables to hold intermediate data */
+#endif
+
+  /* Loop unrolling: Compute 4 outputs at a time */
+  blkCnt = numSamples >> 2U;
+
+  while (blkCnt > 0U)
+  {
+    /* C[2 * i    ] = A[2 * i    ] * B[i]. */
+    /* C[2 * i + 1] = A[2 * i + 1] * B[i]. */
+
+#if defined (ARM_MATH_DSP)
+    /* read 2 complex numbers both real and imaginary from complex input buffer */
+    inA1 = read_q15x2_ia (&pSrcCmplx);
+    inA2 = read_q15x2_ia (&pSrcCmplx);
+    /* read 2 real values at a time from real input buffer */
+    inB1 = read_q15x2_ia (&pSrcReal);
 
     /* multiply complex number with real numbers */
 #ifndef ARM_MATH_BIG_ENDIAN
-
-    mul1 = (q31_t) ((q15_t) (inA1) * (q15_t) (inB1));
+    mul1 = (q31_t) ((q15_t) (inA1)       * (q15_t) (inB1));
     mul2 = (q31_t) ((q15_t) (inA1 >> 16) * (q15_t) (inB1));
-    mul3 = (q31_t) ((q15_t) (inA2) * (q15_t) (inB1 >> 16));
+    mul3 = (q31_t) ((q15_t) (inA2)       * (q15_t) (inB1 >> 16));
     mul4 = (q31_t) ((q15_t) (inA2 >> 16) * (q15_t) (inB1 >> 16));
-
 #else
-
     mul2 = (q31_t) ((q15_t) (inA1 >> 16) * (q15_t) (inB1 >> 16));
-    mul1 = (q31_t) ((q15_t) inA1 * (q15_t) (inB1 >> 16));
+    mul1 = (q31_t) ((q15_t) inA1         * (q15_t) (inB1 >> 16));
     mul4 = (q31_t) ((q15_t) (inA2 >> 16) * (q15_t) inB1);
-    mul3 = (q31_t) ((q15_t) inA2 * (q15_t) inB1);
-
+    mul3 = (q31_t) ((q15_t) inA2         * (q15_t) inB1);
 #endif /* #ifndef ARM_MATH_BIG_ENDIAN */
 
     /* saturate the result */
@@ -109,27 +158,23 @@ void arm_cmplx_mult_real_q15(
     out4 = (q15_t) __SSAT(mul4 >> 15U, 16);
 
     /* pack real and imaginary outputs and store them to destination */
-    *__SIMD32(pCmplxDst)++ = __PKHBT(out1, out2, 16);
-    *__SIMD32(pCmplxDst)++ = __PKHBT(out3, out4, 16);
+    write_q15x2_ia (&pCmplxDst, __PKHBT(out1, out2, 16));
+    write_q15x2_ia (&pCmplxDst, __PKHBT(out3, out4, 16));
 
-    inA1 = *__SIMD32(pSrcCmplx)++;
-    inB1 = *__SIMD32(pSrcReal)++;
-    inA2 = *__SIMD32(pSrcCmplx)++;
+    inA1 = read_q15x2_ia (&pSrcCmplx);
+    inA2 = read_q15x2_ia (&pSrcCmplx);
+    inB1 = read_q15x2_ia (&pSrcReal);
 
 #ifndef ARM_MATH_BIG_ENDIAN
-
-    mul1 = (q31_t) ((q15_t) (inA1) * (q15_t) (inB1));
+    mul1 = (q31_t) ((q15_t) (inA1)       * (q15_t) (inB1));
     mul2 = (q31_t) ((q15_t) (inA1 >> 16) * (q15_t) (inB1));
-    mul3 = (q31_t) ((q15_t) (inA2) * (q15_t) (inB1 >> 16));
+    mul3 = (q31_t) ((q15_t) (inA2)       * (q15_t) (inB1 >> 16));
     mul4 = (q31_t) ((q15_t) (inA2 >> 16) * (q15_t) (inB1 >> 16));
-
 #else
-
     mul2 = (q31_t) ((q15_t) (inA1 >> 16) * (q15_t) (inB1 >> 16));
-    mul1 = (q31_t) ((q15_t) inA1 * (q15_t) (inB1 >> 16));
+    mul1 = (q31_t) ((q15_t) inA1         * (q15_t) (inB1 >> 16));
     mul4 = (q31_t) ((q15_t) (inA2 >> 16) * (q15_t) inB1);
     mul3 = (q31_t) ((q15_t) inA2 * (q15_t) inB1);
-
 #endif /* #ifndef ARM_MATH_BIG_ENDIAN */
 
     out1 = (q15_t) __SSAT(mul1 >> 15U, 16);
@@ -137,55 +182,57 @@ void arm_cmplx_mult_real_q15(
     out3 = (q15_t) __SSAT(mul3 >> 15U, 16);
     out4 = (q15_t) __SSAT(mul4 >> 15U, 16);
 
-    *__SIMD32(pCmplxDst)++ = __PKHBT(out1, out2, 16);
-    *__SIMD32(pCmplxDst)++ = __PKHBT(out3, out4, 16);
-
-    /* Decrement the numSamples loop counter */
-    blkCnt--;
-  }
-
-  /* If the numSamples is not a multiple of 4, compute any remaining output samples here.
-   ** No loop unrolling is used. */
-  blkCnt = numSamples % 0x4U;
-
-  while (blkCnt > 0U)
-  {
-    /* C[2 * i] = A[2 * i] * B[i].            */
-    /* C[2 * i + 1] = A[2 * i + 1] * B[i].        */
+    write_q15x2_ia (&pCmplxDst, __PKHBT(out1, out2, 16));
+    write_q15x2_ia (&pCmplxDst, __PKHBT(out3, out4, 16));
+#else
     in = *pSrcReal++;
-    /* store the result in the destination buffer. */
-    *pCmplxDst++ =
-      (q15_t) __SSAT((((q31_t) (*pSrcCmplx++) * (in)) >> 15), 16);
-    *pCmplxDst++ =
-      (q15_t) __SSAT((((q31_t) (*pSrcCmplx++) * (in)) >> 15), 16);
+    *pCmplxDst++ = (q15_t) __SSAT((((q31_t) *pSrcCmplx++ * in) >> 15), 16);
+    *pCmplxDst++ = (q15_t) __SSAT((((q31_t) *pSrcCmplx++ * in) >> 15), 16);
 
-    /* Decrement the numSamples loop counter */
+    in = *pSrcReal++;
+    *pCmplxDst++ = (q15_t) __SSAT((((q31_t) *pSrcCmplx++ * in) >> 15), 16);
+    *pCmplxDst++ = (q15_t) __SSAT((((q31_t) *pSrcCmplx++ * in) >> 15), 16);
+
+    in = *pSrcReal++;
+    *pCmplxDst++ = (q15_t) __SSAT((((q31_t) *pSrcCmplx++ * in) >> 15), 16);
+    *pCmplxDst++ = (q15_t) __SSAT((((q31_t) *pSrcCmplx++ * in) >> 15), 16);
+
+    in = *pSrcReal++;
+    *pCmplxDst++ = (q15_t) __SSAT((((q31_t) *pSrcCmplx++ * in) >> 15), 16);
+    *pCmplxDst++ = (q15_t) __SSAT((((q31_t) *pSrcCmplx++ * in) >> 15), 16);
+#endif
+
+    /* Decrement loop counter */
     blkCnt--;
   }
+
+  /* Loop unrolling: Compute remaining outputs */
+  blkCnt = numSamples % 0x4U;
 
 #else
 
-  /* Run the below code for Cortex-M0 */
+  /* Initialize blkCnt with number of samples */
+  blkCnt = numSamples;
 
-  while (numSamples > 0U)
+#endif /* #if defined (ARM_MATH_LOOPUNROLL) */
+
+  while (blkCnt > 0U)
   {
-    /* realOut = realA * realB.            */
-    /* imagOut = imagA * realB.                */
+    /* C[2 * i    ] = A[2 * i    ] * B[i]. */
+    /* C[2 * i + 1] = A[2 * i + 1] * B[i]. */
+
     in = *pSrcReal++;
     /* store the result in the destination buffer. */
-    *pCmplxDst++ =
-      (q15_t) __SSAT((((q31_t) (*pSrcCmplx++) * (in)) >> 15), 16);
-    *pCmplxDst++ =
-      (q15_t) __SSAT((((q31_t) (*pSrcCmplx++) * (in)) >> 15), 16);
+    *pCmplxDst++ = (q15_t) __SSAT((((q31_t) *pSrcCmplx++ * in) >> 15), 16);
+    *pCmplxDst++ = (q15_t) __SSAT((((q31_t) *pSrcCmplx++ * in) >> 15), 16);
 
-    /* Decrement the numSamples loop counter */
-    numSamples--;
+    /* Decrement loop counter */
+    blkCnt--;
   }
 
-#endif /* #if defined (ARM_MATH_DSP) */
-
 }
+#endif /* defined(ARM_MATH_MVEI) */
 
 /**
- * @} end of CmplxByRealMult group
+  @} end of CmplxByRealMult group
  */
