@@ -178,6 +178,11 @@ target_sources(${MICROPY_TARGET} PRIVATE
 
     ${OMV_USER_MODULES}
 )
+set_source_files_properties(
+    ${TOP_DIR}/${OMV_DIR}/imlib/fmath.c
+    PROPERTIES
+    COMPILE_OPTIONS "-fno-strict-aliasing"
+)
 
 if(MICROPY_PY_SENSOR)
     target_compile_definitions(${MICROPY_TARGET} PRIVATE

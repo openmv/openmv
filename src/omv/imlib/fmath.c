@@ -69,11 +69,8 @@ int OMV_ATTR_ALWAYS_INLINE fast_ceilf(float x) {
     asm volatile (
         "vcvtp.S32.f32  %[r], %[x]\n"
     #else
-    #pragma GCC diagnostic push
-    #pragma GCC diagnostic ignored "-Wstrict-aliasing"
     uint32_t max = 0x3f7fffff;
     x += *((float *) &max);
-    #pragma GCC diagnostic pop
     asm volatile (
         "vcvt.S32.f32  %[r], %[x]\n"
     #endif
@@ -100,8 +97,6 @@ float OMV_ATTR_ALWAYS_INLINE fast_fabsf(float x) {
 }
 #endif
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wstrict-aliasing"
 typedef union {
     uint32_t l;
     struct {
@@ -120,7 +115,6 @@ float fast_expf(float x) {
     uint32_t packed = (e.s << 31) | (e.e << 23) | e.m << 3;
     return *((float *) &packed);
 }
-#pragma GCC diagnostic pop
 
 /*
  * From Hackers Delight:

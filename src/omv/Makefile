@@ -121,4 +121,6 @@ $(BUILD)/%.o : %.s
 	$(ECHO) "AS $<"
 	$(AS) $(AFLAGS) $< -o $@
 
+$(BUILD)/imlib/fmath.o: override CFLAGS += -fno-strict-aliasing
+
 -include $(OBJS:%.o=%.d)
