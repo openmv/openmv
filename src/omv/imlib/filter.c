@@ -1239,7 +1239,7 @@ void imlib_morph(image_t *img,
                  const int ksize,
                  const int *krn,
                  const float m,
-                 const int b,
+                 const float b,
                  bool threshold,
                  int offset,
                  bool invert,
@@ -1250,7 +1250,7 @@ void imlib_morph(image_t *img,
     buf.h = brows;
     buf.pixfmt = img->pixfmt;
     const int32_t m_int = fast_roundf(65536 * m);
-    const int32_t b_int = b << 16;
+    const int32_t b_int = fast_roundf(65536 * b);
     invert = invert ? 1 : 0; // ensure binary
 
     switch (img->pixfmt) {
