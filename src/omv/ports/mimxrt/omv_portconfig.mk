@@ -19,6 +19,7 @@ CFLAGS += -DCPU_$(MCU_VARIANT)\
 	      -DFSL_SDK_ENABLE_DRIVER_CACHE_CONTROL=1 \
 	      -DCFG_TUSB_MCU=OPT_MCU_MIMXRT1XXX \
 	      -DCPU_HEADER_H='<$(MCU_SERIES).h>' \
+	      -DCMSIS_MCU_H=$(CMSIS_MCU_H) \
 	      -DCLOCK_CONFIG_H='<boards/$(MCU_SERIES)_clock_config.h>' \
           -DCSI_DRIVER_FRAG_MODE=1\
           -D__START=main\

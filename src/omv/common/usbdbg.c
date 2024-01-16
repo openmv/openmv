@@ -113,8 +113,10 @@ static void usbdbg_interrupt_vm(bool ready) {
     // Clear interrupt traceback
     mp_obj_exception_clear_traceback(&ide_exception);
 
+    #if (__ARM_ARCH >= 7)
     // Remove the BASEPRI masking (if any)
     __set_BASEPRI(0);
+    #endif
 
     // Interrupt running REPL
     // Note: setting pendsv explicitly here because the VM is probably

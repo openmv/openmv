@@ -21,6 +21,7 @@
 #include "fsl_device_registers.h"
 #include CLOCK_CONFIG_H
 #include "irq.h"
+#include CMSIS_MCU_H
 
 #include "omv_boardconfig.h"
 // Define pin objects in this file.

@@ -3,13 +3,13 @@
  * Title:        arm_mean_q31.c
  * Description:  Mean value of a Q31 vector
  *
- * $Date:        27. January 2017
- * $Revision:    V.1.5.1
+ * $Date:        23 April 2021
+ * $Revision:    V1.9.0
  *
- * Target Processor: Cortex-M cores
+ * Target Processor: Cortex-M and Cortex-A cores
  * -------------------------------------------------------------------- */
 /*
- * Copyright (C) 2010-2017 ARM Limited or its affiliates. All rights reserved.
+ * Copyright (C) 2010-2021 ARM Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -26,98 +26,124 @@
  * limitations under the License.
  */
 
-#include "arm_math.h"
+#include "dsp/statistics_functions.h"
 
 /**
- * @ingroup groupStats
+  @ingroup groupStats
  */
 
 /**
- * @addtogroup mean
- * @{
+  @addtogroup mean
+  @{
  */
-
 
 /**
- * @brief Mean value of a Q31 vector.
- * @param[in]       *pSrc points to the input vector
- * @param[in]       blockSize length of the input vector
- * @param[out]      *pResult mean value returned here
- * @return none.
- *
- * @details
- * <b>Scaling and Overflow Behavior:</b>
- *\par
- * The function is implemented using a 64-bit internal accumulator.
- * The input is represented in 1.31 format and is accumulated in a 64-bit
- * accumulator in 33.31 format.
- * There is no risk of internal overflow with this approach, and the
- * full precision of intermediate result is preserved.
- * Finally, the accumulator is truncated to yield a result of 1.31 format.
- *
- */
+  @brief         Mean value of a Q31 vector.
+  @param[in]     pSrc       points to the input vector
+  @param[in]     blockSize  number of samples in input vector
+  @param[out]    pResult    mean value returned here
+  @return        none
 
+  @par           Scaling and Overflow Behavior
+                   The function is implemented using a 64-bit internal accumulator.
+                   The input is represented in 1.31 format and is accumulated in a 64-bit
+                   accumulator in 33.31 format.
+                   There is no risk of internal overflow with this approach, and the
+                   full precision of intermediate result is preserved.
+                   Finally, the accumulator is truncated to yield a result of 1.31 format.
+ */
+#if defined(ARM_MATH_MVEI) && !defined(ARM_MATH_AUTOVECTORIZE)
 void arm_mean_q31(
-  q31_t * pSrc,
-  uint32_t blockSize,
-  q31_t * pResult)
+  const q31_t * pSrc,
+        uint32_t blockSize,
+        q31_t * pResult)
 {
-  q63_t sum = 0;                                 /* Temporary result storage */
-  uint32_t blkCnt;                               /* loop counter */
+    uint32_t  blkCnt;           /* loop counters */
+    q31x4_t vecSrc;
+    q63_t     sum = 0LL;
 
-#if defined (ARM_MATH_DSP)
-  /* Run the below code for Cortex-M4 and Cortex-M3 */
 
-  q31_t in1, in2, in3, in4;
+    /* Compute 4 outputs at a time */
+    blkCnt = blockSize >> 2U;
+    while (blkCnt > 0U)
+    {
 
-  /*loop Unrolling */
-  blkCnt = blockSize >> 2U;
+        vecSrc = vldrwq_s32(pSrc);
+        /*
+         * sum lanes
+         */
+        sum = vaddlvaq(sum, vecSrc);
 
-  /* First part of the processing with loop unrolling.  Compute 4 outputs at a time.
-   ** a second loop below computes the remaining 1 to 3 samples. */
-  while (blkCnt > 0U)
-  {
-    /* C = (A[0] + A[1] + A[2] + ... + A[blockSize-1]) */
-    in1 = *pSrc++;
-    in2 = *pSrc++;
-    in3 = *pSrc++;
-    in4 = *pSrc++;
+        blkCnt --;
+        pSrc += 4;
+    }
 
-    sum += in1;
-    sum += in2;
-    sum += in3;
-    sum += in4;
+    /* Tail */
+    blkCnt = blockSize & 0x3;
 
-    /* Decrement the loop counter */
-    blkCnt--;
-  }
+    while (blkCnt > 0U)
+    {
+      /* C = (A[0] + A[1] + A[2] + ... + A[blockSize-1]) */
+      sum += *pSrc++;
+      blkCnt --;
+    }
 
-  /* If the blockSize is not a multiple of 4, compute any remaining output samples here.
-   ** No loop unrolling is used. */
-  blkCnt = blockSize % 0x4U;
-
+    *pResult = arm_div_q63_to_q31(sum, blockSize);
+}
 #else
-  /* Run the below code for Cortex-M0 */
+void arm_mean_q31(
+  const q31_t * pSrc,
+        uint32_t blockSize,
+        q31_t * pResult)
+{
+        uint32_t blkCnt;                               /* Loop counter */
+        q63_t sum = 0;                                 /* Temporary result storage */
 
-  /* Loop over blockSize number of values */
-  blkCnt = blockSize;
+#if defined (ARM_MATH_LOOPUNROLL)
 
-#endif /* #if defined (ARM_MATH_DSP) */
+  /* Loop unrolling: Compute 4 outputs at a time */
+  blkCnt = blockSize >> 2U;
 
   while (blkCnt > 0U)
   {
     /* C = (A[0] + A[1] + A[2] + ... + A[blockSize-1]) */
     sum += *pSrc++;
 
+    sum += *pSrc++;
+
+    sum += *pSrc++;
+
+    sum += *pSrc++;
+
     /* Decrement the loop counter */
     blkCnt--;
   }
 
+  /* Loop unrolling: Compute remaining outputs */
+  blkCnt = blockSize % 0x4U;
+
+#else
+
+  /* Initialize blkCnt with number of samples */
+  blkCnt = blockSize;
+
+#endif /* #if defined (ARM_MATH_LOOPUNROLL) */
+
+  while (blkCnt > 0U)
+  {
+    /* C = (A[0] + A[1] + A[2] + ... + A[blockSize-1]) */
+    sum += *pSrc++;
+
+    /* Decrement loop counter */
+    blkCnt--;
+  }
+
   /* C = (A[0] + A[1] + A[2] + ... + A[blockSize-1]) / blockSize  */
-  /* Store the result to the destination */
-  *pResult = (q31_t) (sum / (int32_t) blockSize);
+  /* Store result to destination */
+  *pResult = (q31_t) (sum / blockSize);
 }
+#endif /* defined(ARM_MATH_MVEI) */
 
 /**
- * @} end of mean group
+  @} end of mean group
  */

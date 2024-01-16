@@ -3,13 +3,13 @@
  * Title:        arm_cfft_radix2_q31.c
  * Description:  Radix-2 Decimation in Frequency CFFT & CIFFT Fixed point processing function
  *
- * $Date:        27. January 2017
- * $Revision:    V.1.5.1
+ * $Date:        23 April 2021
+ * $Revision:    V1.9.0
  *
- * Target Processor: Cortex-M cores
+ * Target Processor: Cortex-M and Cortex-A cores
  * -------------------------------------------------------------------- */
 /*
- * Copyright (C) 2010-2017 ARM Limited or its affiliates. All rights reserved.
+ * Copyright (C) 2010-2021 ARM Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -26,47 +26,46 @@
  * limitations under the License.
  */
 
-#include "arm_math.h"
+#include "dsp/transform_functions.h"
 
 void arm_radix2_butterfly_q31(
-  q31_t * pSrc,
-  uint32_t fftLen,
-  q31_t * pCoef,
-  uint16_t twidCoefModifier);
+        q31_t * pSrc,
+        uint32_t fftLen,
+  const q31_t * pCoef,
+        uint16_t twidCoefModifier);
 
 void arm_radix2_butterfly_inverse_q31(
-  q31_t * pSrc,
-  uint32_t fftLen,
-  q31_t * pCoef,
-  uint16_t twidCoefModifier);
+        q31_t * pSrc,
+        uint32_t fftLen,
+  const q31_t * pCoef,
+        uint16_t twidCoefModifier);
 
 void arm_bitreversal_q31(
-  q31_t * pSrc,
-  uint32_t fftLen,
-  uint16_t bitRevFactor,
-  uint16_t * pBitRevTab);
+        q31_t * pSrc,
+        uint32_t fftLen,
+        uint16_t bitRevFactor,
+  const uint16_t * pBitRevTab);
 
 /**
-* @ingroup groupTransforms
-*/
+  @ingroup groupTransforms
+ */
 
 /**
-* @addtogroup ComplexFFT
-* @{
-*/
+  @addtogroup ComplexFFT
+  @{
+ */
 
 /**
-* @details
-* @brief Processing function for the fixed-point CFFT/CIFFT.
-* @deprecated Do not use this function.  It has been superseded by \ref arm_cfft_q31 and will be removed
-* @param[in]      *S    points to an instance of the fixed-point CFFT/CIFFT structure.
-* @param[in, out] *pSrc points to the complex data buffer of size <code>2*fftLen</code>. Processing occurs in-place.
-* @return none.
-*/
+  @brief         Processing function for the fixed-point CFFT/CIFFT.
+  @deprecated    Do not use this function. It has been superseded by \ref arm_cfft_q31 and will be removed in the future.
+  @param[in]     S    points to an instance of the fixed-point CFFT/CIFFT structure
+  @param[in,out] pSrc points to the complex data buffer of size <code>2*fftLen</code>. Processing occurs in-place
+  @return        none
+ */
 
 void arm_cfft_radix2_q31(
-const arm_cfft_radix2_instance_q31 * S,
-q31_t * pSrc)
+  const arm_cfft_radix2_instance_q31 * S,
+        q31_t * pSrc)
 {
 
    if (S->ifftFlag == 1U)
@@ -84,14 +83,14 @@ q31_t * pSrc)
 }
 
 /**
-* @} end of ComplexFFT group
-*/
+  @} end of ComplexFFT group
+ */
 
 void arm_radix2_butterfly_q31(
-q31_t * pSrc,
-uint32_t fftLen,
-q31_t * pCoef,
-uint16_t twidCoefModifier)
+        q31_t * pSrc,
+        uint32_t fftLen,
+  const q31_t * pCoef,
+        uint16_t twidCoefModifier)
 {
 
    unsigned i, j, k, l, m;
@@ -216,10 +215,10 @@ uint16_t twidCoefModifier)
 
 
 void arm_radix2_butterfly_inverse_q31(
-q31_t * pSrc,
-uint32_t fftLen,
-q31_t * pCoef,
-uint16_t twidCoefModifier)
+        q31_t * pSrc,
+        uint32_t fftLen,
+  const q31_t * pCoef,
+        uint16_t twidCoefModifier)
 {
 
    unsigned i, j, k, l;

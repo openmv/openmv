@@ -3,13 +3,13 @@
  * Title:        arm_mat_init_f32.c
  * Description:  Floating-point matrix initialization
  *
- * $Date:        27. January 2017
- * $Revision:    V.1.5.1
+ * $Date:        23 April 2021
+ * $Revision:    V1.9.0
  *
- * Target Processor: Cortex-M cores
+ * Target Processor: Cortex-M and Cortex-A cores
  * -------------------------------------------------------------------- */
 /*
- * Copyright (C) 2010-2017 ARM Limited or its affiliates. All rights reserved.
+ * Copyright (C) 2010-2021 ARM Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -26,34 +26,34 @@
  * limitations under the License.
  */
 
-#include "arm_math.h"
+#include "dsp/matrix_functions.h"
 
 /**
- * @ingroup groupMatrix
+  @ingroup groupMatrix
  */
 
 /**
- * @defgroup MatrixInit Matrix Initialization
- *
- * Initializes the underlying matrix data structure.
- * The functions set the <code>numRows</code>,
- * <code>numCols</code>, and <code>pData</code> fields
- * of the matrix data structure.
+  @defgroup MatrixInit Matrix Initialization
+ 
+  Initializes the underlying matrix data structure.
+  The functions set the <code>numRows</code>,
+  <code>numCols</code>, and <code>pData</code> fields
+  of the matrix data structure.
  */
 
 /**
- * @addtogroup MatrixInit
- * @{
+  @addtogroup MatrixInit
+  @{
  */
 
 /**
-   * @brief  Floating-point matrix initialization.
-   * @param[in,out] *S             points to an instance of the floating-point matrix structure.
-   * @param[in]     nRows          number of rows in the matrix.
-   * @param[in]     nColumns       number of columns in the matrix.
-   * @param[in]     *pData	   points to the matrix data array.
-   * @return        none
-   */
+  @brief         Floating-point matrix initialization.
+  @param[in,out] S         points to an instance of the floating-point matrix structure
+  @param[in]     nRows     number of rows in the matrix
+  @param[in]     nColumns  number of columns in the matrix
+  @param[in]     pData     points to the matrix data array
+  @return        none
+ */
 
 void arm_mat_init_f32(
   arm_matrix_instance_f32 * S,
@@ -72,5 +72,5 @@ void arm_mat_init_f32(
 }
 
 /**
- * @} end of MatrixInit group
+  @} end of MatrixInit group
  */

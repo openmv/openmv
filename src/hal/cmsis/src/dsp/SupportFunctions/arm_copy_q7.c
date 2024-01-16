@@ -3,13 +3,13 @@
  * Title:        arm_copy_q7.c
  * Description:  Copies the elements of a Q7 vector
  *
- * $Date:        27. January 2017
- * $Revision:    V.1.5.1
+ * $Date:        23 April 2021
+ * $Revision:    V1.9.0
  *
- * Target Processor: Cortex-M cores
+ * Target Processor: Cortex-M and Cortex-A cores
  * -------------------------------------------------------------------- */
 /*
- * Copyright (C) 2010-2017 ARM Limited or its affiliates. All rights reserved.
+ * Copyright (C) 2010-2021 ARM Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -26,78 +26,107 @@
  * limitations under the License.
  */
 
-#include "arm_math.h"
+#include "dsp/support_functions.h"
 
 /**
- * @ingroup groupSupport
+  @ingroup groupSupport
  */
 
 /**
- * @addtogroup copy
- * @{
+  @addtogroup copy
+  @{
  */
 
 /**
- * @brief Copies the elements of a Q7 vector.
- * @param[in]       *pSrc points to input vector
- * @param[out]      *pDst points to output vector
- * @param[in]       blockSize length of the input vector
- * @return none.
- *
+  @brief         Copies the elements of a Q7 vector.
+  @param[in]     pSrc       points to input vector
+  @param[out]    pDst       points to output vector
+  @param[in]     blockSize  number of samples in each vector
+  @return        none
  */
-
+#if defined(ARM_MATH_MVEI) && !defined(ARM_MATH_AUTOVECTORIZE)
 void arm_copy_q7(
-  q7_t * pSrc,
-  q7_t * pDst,
-  uint32_t blockSize)
+  const q7_t * pSrc,
+        q7_t * pDst,
+        uint32_t blockSize)
 {
-  uint32_t blkCnt;                               /* loop counter */
 
-#if defined (ARM_MATH_DSP)
+  uint32_t blkCnt;  
 
-  /* Run the below code for Cortex-M4 and Cortex-M3 */
-
-  /*loop Unrolling */
-  blkCnt = blockSize >> 2U;
-
-  /* First part of the processing with loop unrolling.  Compute 4 outputs at a time.
-   ** a second loop below computes the remaining 1 to 3 samples. */
+  blkCnt = blockSize >> 4;
   while (blkCnt > 0U)
   {
-    /* C = A */
-    /* Copy and then store the results in the destination buffer */
-    /* 4 samples are copied and stored at a time using SIMD */
-    *__SIMD32(pDst)++ = *__SIMD32(pSrc)++;
 
-    /* Decrement the loop counter */
-    blkCnt--;
+        vstrbq_s8(pDst,vldrbq_s8(pSrc));
+        /*
+         * Decrement the blockSize loop counter
+         * Advance vector source and destination pointers
+         */
+        pSrc += 16;
+        pDst += 16;
+        blkCnt --;
   }
 
-  /* If the blockSize is not a multiple of 4, compute any remaining output samples here.
-   ** No loop unrolling is used. */
-  blkCnt = blockSize % 0x4U;
-
-#else
-
-  /* Run the below code for Cortex-M0 */
-
-  /* Loop over blockSize number of values */
-  blkCnt = blockSize;
-
-#endif /* #if defined (ARM_MATH_DSP) */
-
-
+  blkCnt = blockSize & 0xF;
   while (blkCnt > 0U)
   {
     /* C = A */
-    /* Copy and then store the results in the destination buffer */
+
+    /* Copy and store result in destination buffer */
     *pDst++ = *pSrc++;
 
-    /* Decrement the loop counter */
+    /* Decrement loop counter */
     blkCnt--;
   }
 }
 
+#else
+void arm_copy_q7(
+  const q7_t * pSrc,
+        q7_t * pDst,
+        uint32_t blockSize)
+{
+  uint32_t blkCnt;                               /* Loop counter */
+
+#if defined (ARM_MATH_LOOPUNROLL)
+
+  /* Loop unrolling: Compute 4 outputs at a time */
+  blkCnt = blockSize >> 2U;
+
+  while (blkCnt > 0U)
+  {
+    /* C = A */
+
+    /* read 4 samples at a time */
+    write_q7x4_ia (&pDst, read_q7x4_ia (&pSrc));
+
+    /* Decrement loop counter */
+    blkCnt--;
+  }
+
+  /* Loop unrolling: Compute remaining outputs */
+  blkCnt = blockSize % 0x4U;
+
+#else
+
+  /* Initialize blkCnt with number of samples */
+  blkCnt = blockSize;
+
+#endif /* #if defined (ARM_MATH_LOOPUNROLL) */
+
+  while (blkCnt > 0U)
+  {
+    /* C = A */
+
+    /* Copy and store result in destination buffer */
+    *pDst++ = *pSrc++;
+
+    /* Decrement loop counter */
+    blkCnt--;
+  }
+}
+#endif /* defined(ARM_MATH_MVEI) */
+
 /**
- * @} end of BasicCopy group
+  @} end of BasicCopy group
  */

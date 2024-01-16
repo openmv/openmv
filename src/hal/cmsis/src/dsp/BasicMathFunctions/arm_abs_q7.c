@@ -3,13 +3,13 @@
  * Title:        arm_abs_q7.c
  * Description:  Q7 vector absolute value
  *
- * $Date:        27. January 2017
- * $Revision:    V.1.5.1
+ * $Date:        23 April 2021
+ * $Revision:    V1.9.0
  *
- * Target Processor: Cortex-M cores
+ * Target Processor: Cortex-M and Cortex-A cores
  * -------------------------------------------------------------------- */
 /*
- * Copyright (C) 2010-2017 ARM Limited or its affiliates. All rights reserved.
+ * Copyright (C) 2010-2021 ARM Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -26,120 +26,155 @@
  * limitations under the License.
  */
 
-#include "arm_math.h"
+#include "dsp/basic_math_functions.h"
 
 /**
- * @ingroup groupMath
+  @ingroup groupMath
  */
 
 /**
- * @addtogroup BasicAbs
- * @{
+  @addtogroup BasicAbs
+  @{
  */
 
 /**
- * @brief Q7 vector absolute value.
- * @param[in]       *pSrc points to the input buffer
- * @param[out]      *pDst points to the output buffer
- * @param[in]       blockSize number of samples in each vector
- * @return none.
- *
- * \par Conditions for optimum performance
- *  Input and output buffers should be aligned by 32-bit
- *
- *
- * <b>Scaling and Overflow Behavior:</b>
- * \par
- * The function uses saturating arithmetic.
- * The Q7 value -1 (0x80) will be saturated to the maximum allowable positive value 0x7F.
+  @brief         Q7 vector absolute value.
+  @param[in]     pSrc       points to the input vector
+  @param[out]    pDst       points to the output vector
+  @param[in]     blockSize  number of samples in each vector
+  @return        none
+
+  @par           Conditions for optimum performance
+                   Input and output buffers should be aligned by 32-bit
+  @par           Scaling and Overflow Behavior
+                   The function uses saturating arithmetic.
+                   The Q7 value -1 (0x80) will be saturated to the maximum allowable positive value 0x7F.
  */
+
+#if defined(ARM_MATH_MVEI) && !defined(ARM_MATH_AUTOVECTORIZE)
+
+#include "arm_helium_utils.h"
 
 void arm_abs_q7(
-  q7_t * pSrc,
-  q7_t * pDst,
-  uint32_t blockSize)
+    const q7_t * pSrc,
+    q7_t * pDst,
+    uint32_t blockSize)
 {
-  uint32_t blkCnt;                               /* loop counter */
-  q7_t in;                                       /* Input value1 */
+    uint32_t  blkCnt;           /* loop counters */
+    q7x16_t vecSrc;
 
-#if defined (ARM_MATH_DSP)
-
-  /* Run the below code for Cortex-M4 and Cortex-M3 */
-  q31_t in1, in2, in3, in4;                      /* temporary input variables */
-  q31_t out1, out2, out3, out4;                  /* temporary output variables */
-
-  /*loop Unrolling */
-  blkCnt = blockSize >> 2U;
-
-  /* First part of the processing with loop unrolling.  Compute 4 outputs at a time.
-   ** a second loop below computes the remaining 1 to 3 samples. */
-  while (blkCnt > 0U)
-  {
-    /* C = |A| */
-    /* Read inputs */
-    in1 = (q31_t) * pSrc;
-    in2 = (q31_t) * (pSrc + 1);
-    in3 = (q31_t) * (pSrc + 2);
-
-    /* find absolute value */
-    out1 = (in1 > 0) ? in1 : (q31_t)__QSUB8(0, in1);
-
-    /* read input */
-    in4 = (q31_t) * (pSrc + 3);
-
-    /* find absolute value */
-    out2 = (in2 > 0) ? in2 : (q31_t)__QSUB8(0, in2);
-
-    /* store result to destination */
-    *pDst = (q7_t) out1;
-
-    /* find absolute value */
-    out3 = (in3 > 0) ? in3 : (q31_t)__QSUB8(0, in3);
-
-    /* find absolute value */
-    out4 = (in4 > 0) ? in4 : (q31_t)__QSUB8(0, in4);
-
-    /* store result to destination */
-    *(pDst + 1) = (q7_t) out2;
-
-    /* store result to destination */
-    *(pDst + 2) = (q7_t) out3;
-
-    /* store result to destination */
-    *(pDst + 3) = (q7_t) out4;
-
-    /* update pointers to process next samples */
-    pSrc += 4U;
-    pDst += 4U;
-
-    /* Decrement the loop counter */
-    blkCnt--;
-  }
-
-  /* If the blockSize is not a multiple of 4, compute any remaining output samples here.
-   ** No loop unrolling is used. */
-  blkCnt = blockSize % 0x4U;
-#else
-
-  /* Run the below code for Cortex-M0 */
-  blkCnt = blockSize;
-
-#endif /* #define ARM_MATH_CM0_FAMILY */
-
-  while (blkCnt > 0U)
-  {
-    /* C = |A| */
-    /* Read the input */
-    in = *pSrc++;
-
-    /* Store the Absolute result in the destination buffer */
-    *pDst++ = (in > 0) ? in : ((in == (q7_t) 0x80) ? 0x7f : -in);
-
-    /* Decrement the loop counter */
-    blkCnt--;
-  }
+    /* Compute 16 outputs at a time */
+    blkCnt = blockSize >> 4;
+    while (blkCnt > 0U)
+    {
+        /*
+         * C = |A|
+         * Calculate absolute and then store the results in the destination buffer.
+         */
+        vecSrc = vld1q(pSrc);
+        vst1q(pDst, vqabsq(vecSrc));
+        /*
+         * Decrement the blockSize loop counter
+         */
+        blkCnt--;
+        /*
+         * advance vector source and destination pointers
+         */
+        pSrc += 16;
+        pDst += 16;
+    }
+    /*
+     * tail
+     */
+    blkCnt = blockSize & 0xF;
+    if (blkCnt > 0U)
+    {
+        mve_pred16_t p0 = vctp8q(blkCnt);
+        vecSrc = vld1q(pSrc);
+        vstrbq_p(pDst, vqabsq(vecSrc), p0);
+    }
 }
 
+#else
+void arm_abs_q7(
+  const q7_t * pSrc,
+        q7_t * pDst,
+        uint32_t blockSize)
+{
+        uint32_t blkCnt;                               /* Loop counter */
+        q7_t in;                                       /* Temporary input variable */
+
+#if defined (ARM_MATH_LOOPUNROLL)
+
+  /* Loop unrolling: Compute 4 outputs at a time */
+  blkCnt = blockSize >> 2U;
+
+  while (blkCnt > 0U)
+  {
+    /* C = |A| */
+
+    /* Calculate absolute of input (if -1 then saturated to 0x7f) and store result in destination buffer. */
+    in = *pSrc++;
+#if defined (ARM_MATH_DSP)
+    *pDst++ = (in > 0) ? in : (q7_t)__QSUB8(0, in);
+#else
+    *pDst++ = (in > 0) ? in : ((in == (q7_t) 0x80) ? (q7_t) 0x7f : -in);
+#endif
+
+    in = *pSrc++;
+#if defined (ARM_MATH_DSP)
+    *pDst++ = (in > 0) ? in : (q7_t)__QSUB8(0, in);
+#else
+    *pDst++ = (in > 0) ? in : ((in == (q7_t) 0x80) ? (q7_t) 0x7f : -in);
+#endif
+
+    in = *pSrc++;
+#if defined (ARM_MATH_DSP)
+    *pDst++ = (in > 0) ? in : (q7_t)__QSUB8(0, in);
+#else
+    *pDst++ = (in > 0) ? in : ((in == (q7_t) 0x80) ? (q7_t) 0x7f : -in);
+#endif
+
+    in = *pSrc++;
+#if defined (ARM_MATH_DSP)
+    *pDst++ = (in > 0) ? in : (q7_t)__QSUB8(0, in);
+#else
+    *pDst++ = (in > 0) ? in : ((in == (q7_t) 0x80) ? (q7_t) 0x7f : -in);
+#endif
+
+    /* Decrement loop counter */
+    blkCnt--;
+  }
+
+  /* Loop unrolling: Compute remaining outputs */
+  blkCnt = blockSize % 0x4U;
+
+#else
+
+  /* Initialize blkCnt with number of samples */
+  blkCnt = blockSize;
+
+#endif /* #if defined (ARM_MATH_LOOPUNROLL) */
+
+  while (blkCnt > 0U)
+  {
+    /* C = |A| */
+
+    /* Calculate absolute of input (if -1 then saturated to 0x7f) and store result in destination buffer. */
+    in = *pSrc++;
+#if defined (ARM_MATH_DSP)
+    *pDst++ = (in > 0) ? in : (q7_t) __QSUB8(0, in);
+#else
+    *pDst++ = (in > 0) ? in : ((in == (q7_t) 0x80) ? (q7_t) 0x7f : -in);
+#endif
+
+    /* Decrement loop counter */
+    blkCnt--;
+  }
+
+}
+#endif /* defined(ARM_MATH_MVEI) */
+
 /**
- * @} end of BasicAbs group
+  @} end of BasicAbs group
  */

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010-2018 Arm Limited or its affiliates. All rights reserved.
+ * Copyright (C) 2010-2021 Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -21,15 +21,15 @@
  * Title:        arm_depthwise_separable_conv_HWC_q7.c
  * Description:  Q7 depthwise separable convolution function
  *
- * $Date:        17. January 2018
- * $Revision:    V.1.0.0
+ * $Date:        July 20, 2021
+ * $Revision:    V.1.1.2
  *
  * Target Processor:  Cortex-M cores
  *
  * -------------------------------------------------------------------- */
 
-#include "arm_math.h"
 #include "arm_nnfunctions.h"
+#include "arm_nnsupportfunctions.h"
 
 /**
  *  @ingroup groupNN
@@ -43,7 +43,7 @@
 /**
  * @brief Q7 depthwise separable convolution function
  * @param[in]       Im_in       pointer to input tensor
- * @param[in]       dim_im_in   input tensor dimention
+ * @param[in]       dim_im_in   input tensor dimension
  * @param[in]       ch_im_in    number of input tensor channels
  * @param[in]       wt          pointer to kernel weights
  * @param[in]       ch_im_out   number of filters, i.e., output tensor channels
@@ -79,34 +79,34 @@
  * Outer loop: loop over different output (x, y)
  */
 
-arm_status arm_depthwise_separable_conv_HWC_q7(const q7_t * Im_in,
+arm_status arm_depthwise_separable_conv_HWC_q7(const q7_t *Im_in,
                                                const uint16_t dim_im_in,
                                                const uint16_t ch_im_in,
-                                               const q7_t * wt,
+                                               const q7_t *wt,
                                                const uint16_t ch_im_out,
                                                const uint16_t dim_kernel,
                                                const uint16_t padding,
                                                const uint16_t stride,
-                                               const q7_t * bias,
+                                               const q7_t *bias,
                                                const uint16_t bias_shift,
                                                const uint16_t out_shift,
-                                               q7_t * Im_out, 
-                                               const uint16_t dim_im_out, 
-                                               q15_t * bufferA, 
-                                               q7_t * bufferB)
+                                               q7_t *Im_out,
+                                               const uint16_t dim_im_out,
+                                               q15_t *bufferA,
+                                               q7_t *bufferB)
 {
-
-#if defined (ARM_MATH_DSP)
+    (void)bufferB;
+#if defined(ARM_MATH_DSP) && !defined(ARM_MATH_MVEI)
     /* Run the following code for Cortex-M4 and Cortex-M7 */
 
-    int16_t   i_out_y, i_out_x;
-    int16_t   i_ker_y, i_ker_x;
-    q7_t     *colBuffer = (q7_t *) bufferA;
-    q7_t     *pBuffer = colBuffer;
+    int16_t i_out_y, i_out_x;
+    int16_t i_ker_y, i_ker_x;
+    q7_t *colBuffer = (q7_t *)bufferA;
+    q7_t *pBuffer = colBuffer;
     const q7_t *pBias = bias;
-    q7_t     *pOut = Im_out;
-    uint16_t  rowCnt;
-    uint16_t  row_shift;
+    q7_t *pOut = Im_out;
+    uint16_t rowCnt;
+    uint16_t row_shift;
 
     /* do some checking here, basically ch_im_in == ch_im_out */
     if (ch_im_in != ch_im_out)
@@ -127,10 +127,12 @@ arm_status arm_depthwise_separable_conv_HWC_q7(const q7_t * Im_in,
                     {
                         /* arm_fill_q7(0, pBuffer, ch_im_in); */
                         memset(pBuffer, 0, ch_im_in);
-                    } else
+                    }
+                    else
                     {
-                        /* arm_copy_q7((q7_t *) Im_in + (i_ker_y * dim_im_in + i_ker_x) * ch_im_in, pBuffer, ch_im_in); */
-                        memcpy(pBuffer, (q7_t *) Im_in + (i_ker_y * dim_im_in + i_ker_x) * ch_im_in, ch_im_in);
+                        /* arm_copy_q7((q7_t *) Im_in + (i_ker_y * dim_im_in + i_ker_x) * ch_im_in, pBuffer, ch_im_in);
+                         */
+                        memcpy(pBuffer, (q7_t *)Im_in + (i_ker_y * dim_im_in + i_ker_x) * ch_im_in, ch_im_in);
                     }
                     pBuffer += ch_im_in;
                 }
@@ -143,13 +145,13 @@ arm_status arm_depthwise_separable_conv_HWC_q7(const q7_t * Im_in,
 
             while (rowCnt)
             {
-                q31_t     sum =  ((q31_t)(*pBias++) << bias_shift) + NN_ROUND(out_shift);
-                q31_t     sum2 = ((q31_t)(*pBias++) << bias_shift) + NN_ROUND(out_shift);
-                q31_t     sum3 = ((q31_t)(*pBias++) << bias_shift) + NN_ROUND(out_shift);
-                q31_t     sum4 = ((q31_t)(*pBias++) << bias_shift) + NN_ROUND(out_shift);
+                q31_t sum = ((q31_t)(*pBias++) << bias_shift) + NN_ROUND(out_shift);
+                q31_t sum2 = ((q31_t)(*pBias++) << bias_shift) + NN_ROUND(out_shift);
+                q31_t sum3 = ((q31_t)(*pBias++) << bias_shift) + NN_ROUND(out_shift);
+                q31_t sum4 = ((q31_t)(*pBias++) << bias_shift) + NN_ROUND(out_shift);
 
-                uint16_t  colCnt = (dim_kernel * dim_kernel) >> 1;
-                q7_t     *pB = colBuffer + row_shift;
+                uint16_t colCnt = (dim_kernel * dim_kernel) >> 1;
+                q7_t *pB = colBuffer + row_shift;
                 const q7_t *pA = wt + row_shift;
                 row_shift += 4;
 
@@ -159,17 +161,17 @@ arm_status arm_depthwise_separable_conv_HWC_q7(const q7_t * Im_in,
 
                 while (colCnt)
                 {
-                    q31_t     inA1, inA2, inB1, inB2, opA, opB;
+                    q31_t inA1, inA2, inB1, inB2, opA, opB;
 
-                    inB1 = *__SIMD32(pB);
+                    inB1 = arm_nn_read_q7x4(pB);
                     pB += ch_im_in;
-                    opB = *__SIMD32(pB);
+                    opB = arm_nn_read_q7x4(pB);
                     pB += ch_im_in;
                     inB2 = __PKHTB(opB, inB1, 16);
                     inB1 = __PKHBT(inB1, opB, 16);
-                    inA1 = *__SIMD32(pA);
+                    inA1 = arm_nn_read_q7x4(pA);
                     pA += ch_im_in;
-                    opB = *__SIMD32(pA);
+                    opB = arm_nn_read_q7x4(pA);
                     pA += ch_im_in;
                     inA2 = __PKHTB(opB, inA1, 16);
                     inA1 = __PKHBT(inA1, opB, 16);
@@ -191,17 +193,17 @@ arm_status arm_depthwise_separable_conv_HWC_q7(const q7_t * Im_in,
 
                 while (colCnt)
                 {
-                    q31_t     inA1, inA2, inB1, inB2, opA, opB;
+                    q31_t inA1, inA2, inB1, inB2, opA, opB;
 
-                    inB1 = *__SIMD32(pB);
+                    inB1 = arm_nn_read_q7x4(pB);
                     pB += ch_im_in;
-                    opB = *__SIMD32(pB);
+                    opB = arm_nn_read_q7x4(pB);
                     pB += ch_im_in;
                     inB2 = __PKHBT(opB, inB1, 16);
                     inB1 = __PKHTB(inB1, opB, 16);
-                    inA1 = *__SIMD32(pA);
+                    inA1 = arm_nn_read_q7x4(pA);
                     pA += ch_im_in;
-                    opB = *__SIMD32(pA);
+                    opB = arm_nn_read_q7x4(pA);
                     pA += ch_im_in;
                     inA2 = __PKHBT(opB, inA1, 16);
                     inA1 = __PKHTB(inA1, opB, 16);
@@ -220,7 +222,7 @@ arm_status arm_depthwise_separable_conv_HWC_q7(const q7_t * Im_in,
                     colCnt--;
                 }
 
-#endif                          /* ARM_MATH_BIG_ENDIAN */
+#endif /* ARM_MATH_BIG_ENDIAN */
 
 #else
 
@@ -230,95 +232,101 @@ arm_status arm_depthwise_separable_conv_HWC_q7(const q7_t * Im_in,
                  *  inA1, inA2, inB1, inB2, opA, opB
                  */
 
-                asm volatile ("COL_LOOP_%=:\n"
-                              "ldr.w r2, [%[pB], #0]\n"
-                              "add.w %[pB], %[pB], %[ch_im_in]\n"
-                              "ldr.w r5, [%[pB], #0]\n"
-                              "add.w %[pB], %[pB], %[ch_im_in]\n"
-                              "pkhtb r3, r5, r2, ASR #16\n"
-                              "pkhbt r2, r2, r5, LSL #16\n"
-                              "ldr.w r0, [%[pA], #0]\n"
-                              "add.w %[pA], %[pA], %[ch_im_in]\n"
-                              "ldr.w r5, [%[pA], #0]\n"
-                              "add.w %[pA], %[pA], %[ch_im_in]\n"
-                              "pkhtb r1, r5, r0, ASR #16\n"
-                              "pkhbt r0, r0, r5, LSL #16\n"
-                              "sxtb16 r4, r0\n"
-                              "sxtb16 r5, r2\n"
-                              "smlad %[sum], r4, r5, %[sum]\n"
-                              "mov.w r4, r0, ror #8\n"
-                              "mov.w r5, r2, ror #8\n"
-                              "sxtb16 r4, r4\n"
-                              "sxtb16 r5, r5\n"
-                              "smlad %[sum2], r4, r5, %[sum2]\n"
-                              "sxtb16 r4, r1\n"
-                              "sxtb16 r5, r3\n"
-                              "smlad %[sum3], r4, r5, %[sum3]\n"
-                              "mov.w r4, r1, ror #8\n"
-                              "mov.w r5, r3, ror #8\n"
-                              "sxtb16 r4, r4\n"
-                              "sxtb16 r5, r5\n"
-                              "smlad %[sum4], r4, r5, %[sum4]\n"
-                              "subs %[colCnt], #1\n"
-                              "bne COL_LOOP_%=\n":[sum]
-                              "+r"(sum),[sum2] "+r"(sum2),
-                              [sum3] "+r"(sum3),
-                              [sum4] "+r"(sum4),[pB] "+r"(pB),
-                              [pA] "+r"(pA):[colCnt]
-                              "r"(colCnt),[ch_im_in] "r"(ch_im_in):"r0", "r1", "r2", "r3", "r4", "r5");
+                asm volatile("COL_LOOP_%=:\n"
+                             "ldr.w r2, [%[pB], #0]\n"
+                             "add.w %[pB], %[pB], %[ch_im_in]\n"
+                             "ldr.w r5, [%[pB], #0]\n"
+                             "add.w %[pB], %[pB], %[ch_im_in]\n"
+                             "pkhtb r3, r5, r2, ASR #16\n"
+                             "pkhbt r2, r2, r5, LSL #16\n"
+                             "ldr.w r0, [%[pA], #0]\n"
+                             "add.w %[pA], %[pA], %[ch_im_in]\n"
+                             "ldr.w r5, [%[pA], #0]\n"
+                             "add.w %[pA], %[pA], %[ch_im_in]\n"
+                             "pkhtb r1, r5, r0, ASR #16\n"
+                             "pkhbt r0, r0, r5, LSL #16\n"
+                             "sxtb16 r4, r0\n"
+                             "sxtb16 r5, r2\n"
+                             "smlad %[sum], r4, r5, %[sum]\n"
+                             "mov.w r4, r0, ror #8\n"
+                             "mov.w r5, r2, ror #8\n"
+                             "sxtb16 r4, r4\n"
+                             "sxtb16 r5, r5\n"
+                             "smlad %[sum2], r4, r5, %[sum2]\n"
+                             "sxtb16 r4, r1\n"
+                             "sxtb16 r5, r3\n"
+                             "smlad %[sum3], r4, r5, %[sum3]\n"
+                             "mov.w r4, r1, ror #8\n"
+                             "mov.w r5, r3, ror #8\n"
+                             "sxtb16 r4, r4\n"
+                             "sxtb16 r5, r5\n"
+                             "smlad %[sum4], r4, r5, %[sum4]\n"
+                             "subs %[colCnt], #1\n"
+                             "bne COL_LOOP_%=\n"
+                             : [ sum ] "+r"(sum),
+                               [ sum2 ] "+r"(sum2),
+                               [ sum3 ] "+r"(sum3),
+                               [ sum4 ] "+r"(sum4),
+                               [ pB ] "+r"(pB),
+                               [ pA ] "+r"(pA)
+                             : [ colCnt ] "r"(colCnt), [ ch_im_in ] "r"(ch_im_in)
+                             : "r0", "r1", "r2", "r3", "r4", "r5");
 #else
                 /*
                  *  r0    r1    r2    r3    r4   r5
                  * inA1, inA2, inB1, inB2, opA, opB
                  */
-                asm volatile ("COL_LOOP_%=:\n"
-                              "ldr.w r2, [%[pB], #0]\n"
-                              "add.w %[pB], %[pB], %[ch_im_in]\n"
-                              "ldr.w r5, [%[pB], #0]\n"
-                              "add.w %[pB], %[pB], %[ch_im_in]\n"
-                              "pkhbt r3, r5, r2, LSL #16\n"
-                              "pkhtb r2, r2, r5, ASR #16\n"
-                              "ldr.w r0, [%[pA], #0]\n"
-                              "add.w %[pA], %[pA], %[ch_im_in]\n"
-                              "ldr.w r5, [%[pA], #0]\n"
-                              "add.w %[pA], %[pA], %[ch_im_in]\n"
-                              "pkhbt r1, r5, r0, LSL #16\n"
-                              "pkhtb r0, r0, r5, ASR #16\n"
-                              "sxtb16 r4, r0\n"
-                              "sxtb16 r5, r2\n"
-                              "smlad %[sum2], r4, r5, %[sum2]\n"
-                              "mov.w r4, r0, ror #8\n"
-                              "mov.w r5, r2, ror #8\n"
-                              "sxtb16 r4, r4\n"
-                              "sxtb16 r5, r5\n"
-                              "smlad %[sum], r4, r5, %[sum]\n"
-                              "sxtb16 r4, r1\n"
-                              "sxtb16 r5, r3\n"
-                              "smlad %[sum4], r4, r5, %[sum4]\n"
-                              "mov.w r4, r1, ror #8\n"
-                              "mov.w r5, r3, ror #8\n"
-                              "sxtb16 r4, r4\n"
-                              "sxtb16 r5, r5\n"
-                              "smlad %[sum3], r4, r5, %[sum3]\n"
-                              "subs %[colCnt], #1\n"
-                              "bne COL_LOOP_%=\n":[sum]
-                              "+r"(sum),[sum2] "+r"(sum2),
-                              [sum3] "+r"(sum3),
-                              [sum4] "+r"(sum4),[pB] "+r"(pB),
-                              [pA] "+r"(pA):[colCnt]
-                              "r"(colCnt),[ch_im_in] "r"(ch_im_in):"r0", "r1", "r2", "r3", "r4", "r5");
+                asm volatile("COL_LOOP_%=:\n"
+                             "ldr.w r2, [%[pB], #0]\n"
+                             "add.w %[pB], %[pB], %[ch_im_in]\n"
+                             "ldr.w r5, [%[pB], #0]\n"
+                             "add.w %[pB], %[pB], %[ch_im_in]\n"
+                             "pkhbt r3, r5, r2, LSL #16\n"
+                             "pkhtb r2, r2, r5, ASR #16\n"
+                             "ldr.w r0, [%[pA], #0]\n"
+                             "add.w %[pA], %[pA], %[ch_im_in]\n"
+                             "ldr.w r5, [%[pA], #0]\n"
+                             "add.w %[pA], %[pA], %[ch_im_in]\n"
+                             "pkhbt r1, r5, r0, LSL #16\n"
+                             "pkhtb r0, r0, r5, ASR #16\n"
+                             "sxtb16 r4, r0\n"
+                             "sxtb16 r5, r2\n"
+                             "smlad %[sum2], r4, r5, %[sum2]\n"
+                             "mov.w r4, r0, ror #8\n"
+                             "mov.w r5, r2, ror #8\n"
+                             "sxtb16 r4, r4\n"
+                             "sxtb16 r5, r5\n"
+                             "smlad %[sum], r4, r5, %[sum]\n"
+                             "sxtb16 r4, r1\n"
+                             "sxtb16 r5, r3\n"
+                             "smlad %[sum4], r4, r5, %[sum4]\n"
+                             "mov.w r4, r1, ror #8\n"
+                             "mov.w r5, r3, ror #8\n"
+                             "sxtb16 r4, r4\n"
+                             "sxtb16 r5, r5\n"
+                             "smlad %[sum3], r4, r5, %[sum3]\n"
+                             "subs %[colCnt], #1\n"
+                             "bne COL_LOOP_%=\n"
+                             : [ sum ] "+r"(sum),
+                               [ sum2 ] "+r"(sum2),
+                               [ sum3 ] "+r"(sum3),
+                               [ sum4 ] "+r"(sum4),
+                               [ pB ] "+r"(pB),
+                               [ pA ] "+r"(pA)
+                             : [ colCnt ] "r"(colCnt), [ ch_im_in ] "r"(ch_im_in)
+                             : "r0", "r1", "r2", "r3", "r4", "r5");
 
-#endif                          /* ARM_MATH_BIG_ENDIAN */
+#endif /* ARM_MATH_BIG_ENDIAN */
 
-#endif                          /* USE_INTRINSIC */
+#endif /* USE_INTRINSIC */
 
                 colCnt = (dim_kernel * dim_kernel) & 0x1;
                 while (colCnt)
                 {
                     union arm_nnword inA, inB;
-                    inA.word = *__SIMD32(pA);
+                    inA.word = arm_nn_read_q7x4(pA);
                     pA += ch_im_in;
-                    inB.word = *__SIMD32(pB);
+                    inB.word = arm_nn_read_q7x4(pB);
                     pB += ch_im_in;
                     sum += inA.bytes[0] * inB.bytes[0];
                     sum2 += inA.bytes[1] * inB.bytes[1];
@@ -327,10 +335,10 @@ arm_status arm_depthwise_separable_conv_HWC_q7(const q7_t * Im_in,
                     colCnt--;
                 }
 
-                *pOut++ = (q7_t) __SSAT((sum >> out_shift), 8);
-                *pOut++ = (q7_t) __SSAT((sum2 >> out_shift), 8);
-                *pOut++ = (q7_t) __SSAT((sum3 >> out_shift), 8);
-                *pOut++ = (q7_t) __SSAT((sum4 >> out_shift), 8);
+                *pOut++ = (q7_t)__SSAT((sum >> out_shift), 8);
+                *pOut++ = (q7_t)__SSAT((sum2 >> out_shift), 8);
+                *pOut++ = (q7_t)__SSAT((sum3 >> out_shift), 8);
+                *pOut++ = (q7_t)__SSAT((sum4 >> out_shift), 8);
 
                 rowCnt--;
             }
@@ -338,24 +346,24 @@ arm_status arm_depthwise_separable_conv_HWC_q7(const q7_t * Im_in,
             rowCnt = ch_im_out & 0x3;
             while (rowCnt)
             {
-                q7_t     *pB = colBuffer + row_shift;
+                q7_t *pB = colBuffer + row_shift;
                 const q7_t *pA = wt + row_shift;
-                q31_t     sum = ((q31_t)(*pBias++) << bias_shift) + NN_ROUND(out_shift);
-                uint16_t  colCnt = (dim_kernel * dim_kernel);
+                q31_t sum = ((q31_t)(*pBias++) << bias_shift) + NN_ROUND(out_shift);
+                uint16_t colCnt = (dim_kernel * dim_kernel);
 
                 row_shift += 1;
 
                 while (colCnt)
                 {
-                    q7_t      A1 = *pA;
-                    q7_t      B1 = *pB;
+                    q7_t A1 = *pA;
+                    q7_t B1 = *pB;
                     pA += ch_im_in;
                     pB += ch_im_in;
                     sum += A1 * B1;
 
                     colCnt--;
                 }
-                *pOut++ = (q7_t) __SSAT((sum >> out_shift), 8);
+                *pOut++ = (q7_t)__SSAT((sum >> out_shift), 8);
                 rowCnt--;
             }
 
@@ -365,9 +373,10 @@ arm_status arm_depthwise_separable_conv_HWC_q7(const q7_t * Im_in,
     }
 
 #else
+    (void)bufferA;
     /* Run the following code as reference implementation for Cortex-M0 and Cortex-M3 */
-    int       i_out_y, i_out_x, i_ch_out, i_ker_x, i_ker_y;
-    int       conv_out;
+    int i_out_y, i_out_x, i_ch_out, i_ker_x, i_ker_y;
+    int conv_out;
 
     /* do some checking here, basically ch_im_in == ch_im_out */
     if (ch_im_in != ch_im_out)
@@ -387,30 +396,25 @@ arm_status arm_depthwise_separable_conv_HWC_q7(const q7_t * Im_in,
                 {
                     for (i_ker_x = 0; i_ker_x < dim_kernel; i_ker_x++)
                     {
-                        int       in_row = stride * i_out_y + i_ker_y - padding;
-                        int       in_col = stride * i_out_x + i_ker_x - padding;
+                        int in_row = stride * i_out_y + i_ker_y - padding;
+                        int in_col = stride * i_out_x + i_ker_x - padding;
                         if (in_row >= 0 && in_col >= 0 && in_row < dim_im_in && in_col < dim_im_in)
                         {
-                            conv_out +=
-                                Im_in[(in_row *
-                                       dim_im_in +
-                                       in_col) *
-                                      ch_im_in +
-                                      i_ch_out] * wt[(i_ker_y * dim_kernel + i_ker_x) * ch_im_out + i_ch_out];
+                            conv_out += Im_in[(in_row * dim_im_in + in_col) * ch_im_in + i_ch_out] *
+                                wt[(i_ker_y * dim_kernel + i_ker_x) * ch_im_out + i_ch_out];
                         }
                     }
                 }
-                Im_out[(i_out_y * dim_im_out +
-                        i_out_x) * ch_im_out + i_ch_out] = (q7_t) __SSAT((conv_out >> out_shift), 8);
+                Im_out[(i_out_y * dim_im_out + i_out_x) * ch_im_out + i_ch_out] =
+                    (q7_t)__SSAT((conv_out >> out_shift), 8);
             }
         }
     }
 
-#endif                          /* ARM_MATH_DSP */
+#endif /* ARM_MATH_DSP */
 
     /* Return to application */
     return ARM_MATH_SUCCESS;
-
 }
 
 /**

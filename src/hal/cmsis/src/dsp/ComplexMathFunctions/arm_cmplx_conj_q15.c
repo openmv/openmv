@@ -3,13 +3,13 @@
  * Title:        arm_cmplx_conj_q15.c
  * Description:  Q15 complex conjugate
  *
- * $Date:        27. January 2017
- * $Revision:    V.1.5.1
+ * $Date:        23 April 2021
+ * $Revision:    V1.9.0
  *
- * Target Processor: Cortex-M cores
+ * Target Processor: Cortex-M and Cortex-A cores
  * -------------------------------------------------------------------- */
 /*
- * Copyright (C) 2010-2017 ARM Limited or its affiliates. All rights reserved.
+ * Copyright (C) 2010-2021 ARM Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -26,71 +26,118 @@
  * limitations under the License.
  */
 
-#include "arm_math.h"
+#include "dsp/complex_math_functions.h"
 
 /**
- * @ingroup groupCmplxMath
+  @ingroup groupCmplxMath
  */
 
 /**
- * @addtogroup cmplx_conj
- * @{
+  @addtogroup cmplx_conj
+  @{
  */
 
 /**
- * @brief  Q15 complex conjugate.
- * @param  *pSrc points to the input vector
- * @param  *pDst points to the output vector
- * @param  numSamples number of complex samples in each vector
- * @return none.
- *
- * <b>Scaling and Overflow Behavior:</b>
- * \par
- * The function uses saturating arithmetic.
- * The Q15 value -1 (0x8000) will be saturated to the maximum allowable positive value 0x7FFF.
+  @brief         Q15 complex conjugate.
+  @param[in]     pSrc        points to the input vector
+  @param[out]    pDst        points to the output vector
+  @param[in]     numSamples  number of samples in each vector
+  @return        none
+
+  @par           Scaling and Overflow Behavior
+                   The function uses saturating arithmetic.
+                   The Q15 value -1 (0x8000) is saturated to the maximum allowable positive value 0x7FFF.
  */
 
+
+#if defined(ARM_MATH_MVEI) && !defined(ARM_MATH_AUTOVECTORIZE)
 void arm_cmplx_conj_q15(
-  q15_t * pSrc,
-  q15_t * pDst,
-  uint32_t numSamples)
+  const q15_t * pSrc,
+        q15_t * pDst,
+        uint32_t numSamples)
 {
+    uint32_t blockSize = numSamples * CMPLX_DIM;   /* loop counters */
+    uint32_t blkCnt;
+    q31_t in1; 
 
-#if defined (ARM_MATH_DSP)
+    q15x8x2_t vecSrc;
+    q15x8_t zero;
 
-  /* Run the below code for Cortex-M4 and Cortex-M3 */
-  uint32_t blkCnt;                               /* loop counter */
-  q31_t in1, in2, in3, in4;
-  q31_t zero = 0;
+    zero = vdupq_n_s16(0);
 
-  /*loop Unrolling */
+    /* Compute 8 real samples at a time */
+    blkCnt = blockSize >> 4U;
+    while (blkCnt > 0U)
+    {
+        vecSrc = vld2q(pSrc);
+        vecSrc.val[1] = vqsubq(zero, vecSrc.val[1]);
+        vst2q(pDst,vecSrc);
+        /*
+         * Decrement the blkCnt loop counter
+         * Advance vector source and destination pointers
+         */
+        pSrc += 16;
+        pDst += 16;
+        blkCnt --;
+    }
+    
+     /* Tail */
+    blkCnt = (blockSize & 0xF) >> 1;
+
+    while (blkCnt > 0U)
+    {
+      /* C[0] + jC[1] = A[0]+ j(-1)A[1] */
+  
+      /* Calculate Complex Conjugate and store result in destination buffer. */
+      *pDst++ =  *pSrc++;
+      in1 = *pSrc++;
+      *pDst++ = __SSAT(-in1, 16);
+  
+      /* Decrement loop counter */
+      blkCnt--;
+    }
+}
+#else
+void arm_cmplx_conj_q15(
+  const q15_t * pSrc,
+        q15_t * pDst,
+        uint32_t numSamples)
+{
+        uint32_t blkCnt;                               /* Loop counter */
+        q31_t in1;                                     /* Temporary input variable */
+
+#if defined (ARM_MATH_LOOPUNROLL) && defined (ARM_MATH_DSP)
+        q31_t in2, in3, in4;                           /* Temporary input variables */
+#endif
+
+
+#if defined (ARM_MATH_LOOPUNROLL)
+
+  /* Loop unrolling: Compute 4 outputs at a time */
   blkCnt = numSamples >> 2U;
 
-  /* First part of the processing with loop unrolling.  Compute 4 outputs at a time.
-   ** a second loop below computes the remaining 1 to 3 samples. */
   while (blkCnt > 0U)
   {
-    /* C[0]+jC[1] = A[0]+ j (-1) A[1] */
-    /* Calculate Complex Conjugate and then store the results in the destination buffer. */
-    in1 = *__SIMD32(pSrc)++;
-    in2 = *__SIMD32(pSrc)++;
-    in3 = *__SIMD32(pSrc)++;
-    in4 = *__SIMD32(pSrc)++;
+    /* C[0] + jC[1] = A[0]+ j(-1)A[1] */
+
+    /* Calculate Complex Conjugate and store result in destination buffer. */
+
+#if defined (ARM_MATH_DSP)
+    in1 = read_q15x2_ia (&pSrc);
+    in2 = read_q15x2_ia (&pSrc);
+    in3 = read_q15x2_ia (&pSrc);
+    in4 = read_q15x2_ia (&pSrc);
 
 #ifndef ARM_MATH_BIG_ENDIAN
-
-    in1 = __QASX(zero, in1);
-    in2 = __QASX(zero, in2);
-    in3 = __QASX(zero, in3);
-    in4 = __QASX(zero, in4);
-
+    in1 = __QASX(0, in1);
+    in2 = __QASX(0, in2);
+    in3 = __QASX(0, in3);
+    in4 = __QASX(0, in4);
 #else
-
-    in1 = __QSAX(zero, in1);
-    in2 = __QSAX(zero, in2);
-    in3 = __QSAX(zero, in3);
-    in4 = __QSAX(zero, in4);
-
+    in1 = __QSAX(0, in1);
+    in2 = __QSAX(0, in2);
+    in3 = __QSAX(0, in3);
+    in4 = __QSAX(0, in4);
 #endif /* #ifndef ARM_MATH_BIG_ENDIAN */
 
     in1 = ((uint32_t) in1 >> 16) | ((uint32_t) in1 << 16);
@@ -98,52 +145,63 @@ void arm_cmplx_conj_q15(
     in3 = ((uint32_t) in3 >> 16) | ((uint32_t) in3 << 16);
     in4 = ((uint32_t) in4 >> 16) | ((uint32_t) in4 << 16);
 
-    *__SIMD32(pDst)++ = in1;
-    *__SIMD32(pDst)++ = in2;
-    *__SIMD32(pDst)++ = in3;
-    *__SIMD32(pDst)++ = in4;
-
-    /* Decrement the loop counter */
-    blkCnt--;
-  }
-
-  /* If the numSamples is not a multiple of 4, compute any remaining output samples here.
-   ** No loop unrolling is used. */
-  blkCnt = numSamples % 0x4U;
-
-  while (blkCnt > 0U)
-  {
-    /* C[0]+jC[1] = A[0]+ j (-1) A[1] */
-    /* Calculate Complex Conjugate and then store the results in the destination buffer. */
-    *pDst++ = *pSrc++;
-    *pDst++ = __SSAT(-*pSrc++, 16);
-
-    /* Decrement the loop counter */
-    blkCnt--;
-  }
-
+    write_q15x2_ia (&pDst, in1);
+    write_q15x2_ia (&pDst, in2);
+    write_q15x2_ia (&pDst, in3);
+    write_q15x2_ia (&pDst, in4);
 #else
+    *pDst++ =  *pSrc++;
+    in1 = *pSrc++;
+    *pDst++ = (in1 == (q15_t) 0x8000) ? (q15_t) 0x7fff : -in1;
 
-  q15_t in;
+    *pDst++ =  *pSrc++;
+    in1 = *pSrc++;
+    *pDst++ = (in1 == (q15_t) 0x8000) ? (q15_t) 0x7fff : -in1;
 
-  /* Run the below code for Cortex-M0 */
+    *pDst++ =  *pSrc++;
+    in1 = *pSrc++;
+    *pDst++ = (in1 == (q15_t) 0x8000) ? (q15_t) 0x7fff : -in1;
 
-  while (numSamples > 0U)
-  {
-    /* realOut + j (imagOut) = realIn+ j (-1) imagIn */
-    /* Calculate Complex Conjugate and then store the results in the destination buffer. */
-    *pDst++ = *pSrc++;
-    in = *pSrc++;
-    *pDst++ = (in == (q15_t) 0x8000) ? 0x7fff : -in;
-
-    /* Decrement the loop counter */
-    numSamples--;
-  }
+    *pDst++ =  *pSrc++;
+    in1 = *pSrc++;
+    *pDst++ = (in1 == (q15_t) 0x8000) ? (q15_t) 0x7fff : -in1;
 
 #endif /* #if defined (ARM_MATH_DSP) */
 
+    /* Decrement loop counter */
+    blkCnt--;
+  }
+
+  /* Loop unrolling: Compute remaining outputs */
+  blkCnt = numSamples % 0x4U;
+
+#else
+
+  /* Initialize blkCnt with number of samples */
+  blkCnt = numSamples;
+
+#endif /* #if defined (ARM_MATH_LOOPUNROLL) */
+
+  while (blkCnt > 0U)
+  {
+    /* C[0] + jC[1] = A[0]+ j(-1)A[1] */
+
+    /* Calculate Complex Conjugate and store result in destination buffer. */
+    *pDst++ =  *pSrc++;
+    in1 = *pSrc++;
+#if defined (ARM_MATH_DSP)
+    *pDst++ = __SSAT(-in1, 16);
+#else
+    *pDst++ = (in1 == (q15_t) 0x8000) ? (q15_t) 0x7fff : -in1;
+#endif
+
+    /* Decrement loop counter */
+    blkCnt--;
+  }
+
 }
+#endif /* defined(ARM_MATH_MVEI) */
 
 /**
- * @} end of cmplx_conj group
+  @} end of cmplx_conj group
  */

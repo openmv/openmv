@@ -3,8 +3,8 @@
  * Title:        arm_nn_tables.h
  * Description:  Extern declaration for NN tables
  *
- * $Date:        17. January 2018
- * $Revision:    V.1.0.0
+ * $Date:        17. August 2021
+ * $Revision:    V.1.0.2
  *
  * Target Processor:  Cortex-M cores
  * -------------------------------------------------------------------- */
@@ -29,12 +29,12 @@
 #ifndef _ARM_NN_TABLES_H
 #define _ARM_NN_TABLES_H
 
-#include "arm_math.h"
+#include "arm_nn_math_types.h"
 
 /**
-* @brief tables for various activation functions
-*
-*/
+ * @brief tables for various activation functions
+ *
+ */
 
 extern const q15_t sigmoidTable_q15[256];
 extern const q7_t sigmoidTable_q7[256];
@@ -42,18 +42,15 @@ extern const q7_t sigmoidTable_q7[256];
 extern const q7_t tanhTable_q7[256];
 extern const q15_t tanhTable_q15[256];
 
-  /**
-   * @brief 2-way tables for various activation functions
-   *
-   * 2-way table, H table for value larger than 1/4
-   * L table for value smaller than 1/4, H table for remaining
-   * We have this only for the q15_t version. It does not make
-   * sense to have it for q7_t type
-   */
+/**
+ * @brief 2-way tables for various activation functions
+ *
+ * 2-way table, H table for value larger than 1/4
+ * L table for value smaller than 1/4, H table for remaining
+ * We have this only for the q15_t version. It does not make
+ * sense to have it for q7_t type
+ */
 extern const q15_t sigmoidHTable_q15[192];
 extern const q15_t sigmoidLTable_q15[128];
 
-extern const q15_t sigmoidLTable_q15[128];
-extern const q15_t sigmoidHTable_q15[192];
-
-#endif                          /*  ARM_NN_TABLES_H */
+#endif /*  ARM_NN_TABLES_H */

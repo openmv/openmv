@@ -21,14 +21,13 @@
  * Title:        arm_softmax_q15.c
  * Description:  Q15 softmax function
  *
- * $Date:        20. February 2018
- * $Revision:    V.1.0.0
+ * $Date:        09. October 2020
+ * $Revision:    V.1.0.1
  *
  * Target Processor:  Cortex-M cores
  *
  * -------------------------------------------------------------------- */
 
-#include "arm_math.h"
 #include "arm_nnfunctions.h"
 
 /**
@@ -40,32 +39,31 @@
  * @{
  */
 
-  /**
-   * @brief Q15 softmax function
-   * @param[in]       vec_in      pointer to input vector
-   * @param[in]       dim_vec     input vector dimention
-   * @param[out]      p_out       pointer to output vector
-   * @return none.
-   *
-   * @details
-   *
-   *  Here, instead of typical e based softmax, we use
-   *  2-based softmax, i.e.,:
-   *
-   *  y_i = 2^(x_i) / sum(2^x_j)
-   *
-   *  The relative output will be different here.
-   *  But mathematically, the gradient will be the same
-   *  with a log(2) scaling factor.
-   *
-   */
+/**
+ * @brief Q15 softmax function
+ * @param[in]       vec_in      pointer to input vector
+ * @param[in]       dim_vec     input vector dimention
+ * @param[out]      p_out       pointer to output vector
+ *
+ * @details
+ *
+ *  Here, instead of typical e based softmax, we use
+ *  2-based softmax, i.e.,:
+ *
+ *  y_i = 2^(x_i) / sum(2^x_j)
+ *
+ *  The relative output will be different here.
+ *  But mathematically, the gradient will be the same
+ *  with a log(2) scaling factor.
+ *
+ */
 
-void arm_softmax_q15(const q15_t * vec_in, const uint16_t dim_vec, q15_t * p_out)
+void arm_softmax_q15(const q15_t *vec_in, const uint16_t dim_vec, q15_t *p_out)
 {
-    q31_t     sum;
-    int16_t   i;
-    uint8_t   shift;
-    q31_t     base;
+    q31_t sum;
+    int16_t i;
+    uint8_t shift;
+    q31_t base;
     base = -1 * 0x100000;
     for (i = 0; i < dim_vec; i++)
     {
@@ -75,7 +73,7 @@ void arm_softmax_q15(const q15_t * vec_in, const uint16_t dim_vec, q15_t * p_out
         }
     }
 
-    /* we ignore really small values  
+    /* we ignore really small values
      * anyway, they will be 0 after shrinking
      * to q15_t
      */
@@ -102,17 +100,17 @@ void arm_softmax_q15(const q15_t * vec_in, const uint16_t dim_vec, q15_t * p_out
      */
     for (i = 0; i < dim_vec; i++)
     {
-        if (vec_in[i] > base) 
+        if (vec_in[i] > base)
         {
             /* Here minimum value of 17+base-vec[i] will be 1 */
-            shift = (uint8_t)__USAT(17+base-vec_in[i], 5);
-            p_out[i] = (q15_t) __SSAT((output_base >> shift), 16);
-        } else
+            shift = (uint8_t)__USAT(17 + base - vec_in[i], 5);
+            p_out[i] = (q15_t)__SSAT((output_base >> shift), 16);
+        }
+        else
         {
             p_out[i] = 0;
         }
     }
-
 }
 
 /**

@@ -10,7 +10,7 @@
  */
 #ifndef __CMSIS_EXTENSION_H
 #define __CMSIS_EXTENSION_H
-#include "cmsis_gcc.h"
+#include "cmsis_compiler.h"
 
 #if ((defined (__ARM_ARCH_7M__      ) && (__ARM_ARCH_7M__      == 1)) || \
      (defined (__ARM_ARCH_7EM__     ) && (__ARM_ARCH_7EM__     == 1)) || \

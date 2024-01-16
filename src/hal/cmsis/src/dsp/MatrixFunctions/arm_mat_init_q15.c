@@ -3,13 +3,13 @@
  * Title:        arm_mat_init_q15.c
  * Description:  Q15 matrix initialization
  *
- * $Date:        27. January 2017
- * $Revision:    V.1.5.1
+ * $Date:        23 April 2021
+ * $Revision:    V1.9.0
  *
- * Target Processor: Cortex-M cores
+ * Target Processor: Cortex-M and Cortex-A cores
  * -------------------------------------------------------------------- */
 /*
- * Copyright (C) 2010-2017 ARM Limited or its affiliates. All rights reserved.
+ * Copyright (C) 2010-2021 ARM Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -26,25 +26,25 @@
  * limitations under the License.
  */
 
-#include "arm_math.h"
+#include "dsp/matrix_functions.h"
 
 /**
- * @ingroup groupMatrix
+  @ingroup groupMatrix
  */
 
 /**
- * @addtogroup MatrixInit
- * @{
+  @addtogroup MatrixInit
+  @{
  */
 
-  /**
-   * @brief  Q15 matrix initialization.
-   * @param[in,out] *S             points to an instance of the floating-point matrix structure.
-   * @param[in]     nRows          number of rows in the matrix.
-   * @param[in]     nColumns       number of columns in the matrix.
-   * @param[in]     *pData	   points to the matrix data array.
-   * @return        none
-   */
+/**
+  @brief         Q15 matrix initialization.
+  @param[in,out] S         points to an instance of the floating-point matrix structure
+  @param[in]     nRows     number of rows in the matrix
+  @param[in]     nColumns  number of columns in the matrix
+  @param[in]     pData     points to the matrix data array
+  @return        none
+ */
 
 void arm_mat_init_q15(
   arm_matrix_instance_q15 * S,
@@ -63,5 +63,5 @@ void arm_mat_init_q15(
 }
 
 /**
- * @} end of MatrixInit group
+  @} end of MatrixInit group
  */
