@@ -122,7 +122,7 @@ STATIC int vfs_mount_and_chdir(mp_obj_t bdev, mp_obj_t mount_point) {
 }
 #endif
 
-int main(int argc, char **argv) {
+void NORETURN _start(void) {
     bool first_soft_reset = true;
 
 soft_reset:
@@ -417,8 +417,4 @@ void nlr_jump_fail(void *val) {
 void MP_WEAK __assert_func(const char *file, int line, const char *func, const char *expr) {
     printf("Assertion '%s' failed, at file %s:%d\n", expr, file, line);
     __fatal_error("Assertion failed");
-}
-
-void _start(void) {
-    main(0, NULL);
 }

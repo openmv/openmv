@@ -9,7 +9,7 @@
  * Trace buffer.
  */
 #include <stdint.h>
-#include "cmsis_gcc.h"
+#include "cmsis_compiler.h"
 #include "trace.h"
 
 #define TRACEBUF_SIZE    (256)

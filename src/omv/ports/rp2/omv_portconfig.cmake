@@ -8,7 +8,6 @@ set(OMV_DIR                 omv)
 set(UVC_DIR                 uvc)
 set(CM4_DIR                 cm4)
 set(BOOTLDR_DIR             bootloader)
-set(CUBEAI_DIR              stm32cubeai)
 set(CMSIS_DIR               hal/cmsis)
 set(LEPTON_DIR              drivers/lepton)
 set(LSM6DS3_DIR             drivers/lsm6ds3)
@@ -29,6 +28,7 @@ include(${OMV_BOARD_CONFIG_DIR}/omv_boardconfig.cmake)
 target_compile_definitions(${MICROPY_TARGET} PRIVATE
     ARM_MATH_CM0PLUS
     ${OMV_BOARD_MODULES_DEFINITIONS}
+    CMSIS_MCU_H="${CMSIS_MCU_H}"
 )
 
 target_link_libraries(${MICROPY_TARGET}

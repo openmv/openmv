@@ -8,9 +8,10 @@
  *
  * Fast approximate math functions.
  */
-#include <arm_math.h>
 #include "fmath.h"
 #include "omv_common.h"
+#include CMSIS_MCU_H
+#include "arm_math.h"
 
 const float __atanf_lut[4] = {
     -0.0443265554792128f,    //p7
