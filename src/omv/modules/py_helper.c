@@ -11,9 +11,11 @@
 #include "py/obj.h"
 #include "py/runtime.h"
 #include "framebuffer.h"
-#include "sensor.h"
 #include "py_helper.h"
 #include "py_assert.h"
+#if MICROPY_PY_SENSOR
+#include "sensor.h"
+#endif
 
 extern void *py_image_cobj(mp_obj_t img_obj);
 
