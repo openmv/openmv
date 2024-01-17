@@ -44,7 +44,7 @@ jobs:
       id: cache
       with:
         path: ~/cache/gcc
-        key: 'gcc-arm-none-eabi-10-2020-q4-major'
+        key: 'arm-gnu-toolchain-13.2.rel1'
 
     - name: '🛠 Install toolchain '
       if: steps.cache.outputs.cache-hit != 'true'
