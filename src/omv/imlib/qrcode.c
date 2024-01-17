@@ -840,26 +840,16 @@ typedef struct xylf
 }
 xylf_t;
 
-static void lifo_enqueue_fast(lifo_t *ptr, void *data)
+static void lifo_enqueue_fast(lifo_t *ptr, xylf_t *data)
 {
-// we know the structure size is 8 bytes, so don't waste time calling memcpy
-    uint32_t *d = (uint32_t *)(ptr->data + (ptr->len * ptr->data_len));
-    uint32_t *s = (uint32_t *)data;
-//    memcpy(ptr->data + (ptr->len * ptr->data_len), data, ptr->data_len);
-    d[0] = s[0]; d[1] = s[1]; // copy 8 bytes
+    *((xylf_t *)(ptr->data + (ptr->len * ptr->data_len))) = *data;
     ptr->len += 1;
 }
 
-static void lifo_dequeue_fast(lifo_t *ptr, void *data)
+static void lifo_dequeue_fast(lifo_t *ptr, xylf_t *data)
 {
-    // we know the structure size is 8 bytes, so don't waste time calling memcpy
-    uint32_t *s = (uint32_t *)(ptr->data + ((ptr->len-1) * ptr->data_len));
-    uint32_t *d = (uint32_t *)data;
-//    if (data) {
-//        memcpy(data, ptr->data + ((ptr->len - 1) * ptr->data_len), ptr->data_len);
-//    }
-    d[0] = s[0]; d[1] = s[1]; // copy 8 bytes
     ptr->len -= 1;
+    *data = *((xylf_t *)(ptr->data + (ptr->len * ptr->data_len)));
 }
 
 static void flood_fill_seed(struct quirc *q, int x, int y, int from, int to,
