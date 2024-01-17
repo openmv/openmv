@@ -13,9 +13,9 @@
 #include "py/mphal.h"
 
 #include "omv_boardconfig.h"
-#include "omv_i2c.h"
 
 #if (MICROPY_PY_TOF == 1)
+#include "omv_i2c.h"
 #include "py_assert.h"
 #include "py_helper.h"
 #include "py_image.h"
