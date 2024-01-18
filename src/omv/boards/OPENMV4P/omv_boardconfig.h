@@ -13,7 +13,7 @@
 
 // Architecture info
 #define OMV_ARCH_STR                          "OMV4P H7 32768 SDRAM" // 33 chars max
-#define OMV_BOARD_TYPE                        "H7"
+#define OMV_BOARD_TYPE                        "M4"
 #define OMV_UNIQUE_ID_ADDR                    0x1FF1E800 // Unique ID address.
 #define OMV_UNIQUE_ID_SIZE                    3 // Unique ID size in words.
 #define OMV_UNIQUE_ID_OFFSET                  4 // Bytes offset for multi-word UIDs.
