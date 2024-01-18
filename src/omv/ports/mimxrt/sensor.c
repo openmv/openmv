@@ -154,7 +154,8 @@ int sensor_dcmi_config(uint32_t pixformat) {
 int sensor_abort() {
     NVIC_DisableIRQ(CSI_IRQn);
     CSI_DisableInterrupts(CSI, CSI_IRQ_FLAGS);
-    CSI_REG_CR18(CSI) &= ~(CSI_CR18_CSI_ENABLE_MASK | CSI_CR3_DMA_REQ_EN_RFF_MASK);
+    CSI_REG_CR3(CSI) &= ~CSI_CR3_DMA_REQ_EN_RFF_MASK;
+    CSI_REG_CR18(CSI) &= ~CSI_CR18_CSI_ENABLE_MASK;
     first_line = false;
     drop_frame = false;
     sensor.last_frame_ms = 0;
@@ -190,7 +191,16 @@ void sensor_sof_callback() {
     // Get current framebuffer.
     vbuffer_t *buffer = framebuffer_get_tail(FB_PEEK);
     if (buffer == NULL) {
-        sensor_abort();
+        // Do not call abort here as it calls framebuffer_reset_buffers() which will invalidate
+        // all the frame buffers. framebuffer_flush_buffers() keeps the latest frame.
+        NVIC_DisableIRQ(CSI_IRQn);
+        CSI_DisableInterrupts(CSI, CSI_IRQ_FLAGS);
+        CSI_REG_CR3(CSI) &= ~CSI_CR3_DMA_REQ_EN_RFF_MASK;
+        CSI_REG_CR18(CSI) &= ~CSI_CR18_CSI_ENABLE_MASK;
+        first_line = false;
+        drop_frame = false;
+        sensor.last_frame_ms = 0;
+        sensor.last_frame_ms_valid = false;
         // Reset the queue of frames when we start dropping frames.
         if (!sensor.disable_full_flush) {
             framebuffer_flush_buffers();
@@ -222,6 +232,59 @@ void sensor_line_callback(uint32_t addr) {
 
     // Get current framebuffer.
     vbuffer_t *buffer = framebuffer_get_tail(FB_PEEK);
+
+    if (sensor.pixformat == PIXFORMAT_JPEG) {
+        if (drop_frame) {
+            return;
+        }
+        bool jpeg_end = false;
+        if (sensor.hw_flags.jpeg_mode == 4) {
+            // JPEG MODE 4:
+            //
+            // The width and height are fixed in each frame. The first two bytes are valid data
+            // length in every line, followed by valid image data. Dummy data (0xFF) may be used as
+            // padding at each line end if the current valid image data is less than the line width.
+            //
+            // In this mode `offset` holds the size of all jpeg data transferred.
+            //
+            // Note: We are using this mode for the OV5640 because it allows us to use the line
+            // buffers to fifo the JPEG image data input so we can handle SDRAM refresh hiccups
+            // that will cause data loss if we make the DMA hardware write directly to the FB.
+            //
+            uint16_t size = __REV16(*((uint16_t *) addr));
+            // Prevent a buffer overflow when writing the jpeg data.
+            if (buffer->offset + size > framebuffer_get_buffer_size()) {
+                buffer->jpeg_buffer_overflow = true;
+                jpeg_end = true;
+            } else {
+                unaligned_memcpy(buffer->data + buffer->offset, ((uint16_t *) addr) + 1, size);
+                for (int i = 0; i < size; i++) {
+                    int e = buffer->offset + i;
+                    int s = IM_MAX(e - 1, 0);
+                    if ((buffer->data[s] == 0xFF) && (buffer->data[e] == 0xD9)) {
+                        jpeg_end = true;
+                        break;
+                    }
+                }
+                buffer->offset += size;
+            }
+        } else if (sensor.hw_flags.jpeg_mode == 3) {
+            // OV2640 JPEG TODO
+        }
+        // In JPEG mode the camera sensor will output some number of lines that doesn't match the
+        // the current framesize. Since we don't have an end-of-frame interrupt on the mimxrt we
+        // detect the end of the frame when there's no more jpeg data.
+        if (jpeg_end) {
+            // Release the current framebuffer.
+            framebuffer_get_tail(FB_NO_FLAGS);
+            CSI_REG_CR3(CSI) &= ~CSI_CR3_DMA_REQ_EN_RFF_MASK;
+            if (sensor.frame_callback) {
+                sensor.frame_callback();
+            }
+            drop_frame = true;
+        }
+        return;
+    }
 
     if (drop_frame) {
         if (++buffer->offset == resolution[sensor.framesize][1]) {
@@ -402,6 +465,11 @@ int sensor_snapshot(sensor_t *sensor, image_t *image, uint32_t flags) {
     }
     #endif
 
+    // The JPEG in the frame buffer is actually invalid.
+    if (buffer->jpeg_buffer_overflow) {
+        return SENSOR_ERROR_JPEG_OVERFLOW;
+    }
+
     if (!sensor->transpose) {
         MAIN_FB()->w = w;
         MAIN_FB()->h = h;
@@ -427,6 +495,20 @@ int sensor_snapshot(sensor_t *sensor, image_t *image, uint32_t flags) {
             int even = yuv_order ? PIXFORMAT_YUV422 : PIXFORMAT_YVU422;
             int odd = yuv_order ? PIXFORMAT_YVU422 : PIXFORMAT_YUV422;
             MAIN_FB()->pixfmt = (MAIN_FB()->x % 2) ? odd : even;
+            break;
+        }
+        case PIXFORMAT_JPEG: {
+            int32_t size = 0;
+            if (sensor->chip_id == OV5640_ID) {
+                // Offset contains the sum of all the bytes transferred from the offset buffers
+                // while in sensor_line_callback().
+                size = buffer->offset;
+            } else {
+                // OV2640 JPEG TODO
+            }
+            // Clean trailing data after 0xFFD9 at the end of the jpeg byte stream.
+            MAIN_FB()->pixfmt = PIXFORMAT_JPEG;
+            MAIN_FB()->size = jpeg_clean_trailing_bytes(size, buffer->data);
             break;
         }
         default:
