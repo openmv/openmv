@@ -90,7 +90,8 @@ endif
 CFLAGS += $(HAL_CFLAGS) $(MPY_CFLAGS) $(OMV_CFLAGS)
 # Linker Flags
 LDFLAGS = -mcpu=$(CPU) -mabi=aapcs-linux -mthumb -mfpu=$(FPU) -mfloat-abi=hard -nostdlib \
-          -Wl,--print-memory-usage -Wl,--gc-sections -Wl,-T$(BUILD)/$(LDSCRIPT).lds
+          -Wl,--print-memory-usage -Wl,--gc-sections -Wl,-T$(BUILD)/$(LDSCRIPT).lds \
+          -Wl,--wrap=tud_cdc_rx_cb -Wl,--wrap=mp_hal_stdout_tx_strn
 
 #------------- Libraries ----------------#
 LIBS += $(TOP_DIR)/$(TENSORFLOW_DIR)/$(CPU)/libtf*.a
