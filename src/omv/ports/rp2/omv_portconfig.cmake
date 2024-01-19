@@ -25,6 +25,11 @@ set(MICROPY_MANIFEST_OMV_LIB_DIR    ${TOP_DIR}/../scripts/libraries)
 # Include board cmake fragment
 include(${OMV_BOARD_CONFIG_DIR}/omv_boardconfig.cmake)
 
+target_link_options(${MICROPY_TARGET} PRIVATE
+    -Wl,--wrap=tud_cdc_rx_cb
+    -Wl,--wrap=mp_hal_stdout_tx_strn
+)
+
 target_compile_definitions(${MICROPY_TARGET} PRIVATE
     ARM_MATH_CM0PLUS
     ${OMV_BOARD_MODULES_DEFINITIONS}

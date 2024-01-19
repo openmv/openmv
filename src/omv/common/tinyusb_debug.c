@@ -70,14 +70,28 @@ bool tinyusb_debug_enabled(void) {
     return tinyusb_debug_mode;
 }
 
-void tinyusb_debug_tx_strn(const char *str, mp_uint_t len) {
-    // TODO can be faster.
-    if (tinyusb_debug_enabled() && tud_cdc_connected()) {
-        for (int i = 0; i < len; i++) {
-            NVIC_DisableIRQ(PendSV_IRQn);
-            ringbuf_put((ringbuf_t *) &debug_ringbuf, str[i]);
-            NVIC_EnableIRQ(PendSV_IRQn);
+extern void __real_tud_cdc_rx_cb(uint8_t itf);
+void __wrap_tud_cdc_rx_cb(uint8_t itf) {
+    if (tinyusb_debug_enabled()) {
+        return;
+    } else {
+        __real_tud_cdc_rx_cb(itf);
+    }
+}
+
+extern mp_uint_t __real_mp_hal_stdout_tx_strn(const char *str, mp_uint_t len);
+mp_uint_t __wrap_mp_hal_stdout_tx_strn(const char *str, mp_uint_t len) {
+    if (tinyusb_debug_enabled()) {
+        if (tud_cdc_connected()) {
+            for (int i = 0; i < len; i++) {
+                NVIC_DisableIRQ(PendSV_IRQn);
+                ringbuf_put((ringbuf_t *) &debug_ringbuf, str[i]);
+                NVIC_EnableIRQ(PendSV_IRQn);
+            }
         }
+        return len;
+    } else {
+        return __real_mp_hal_stdout_tx_strn(str, len);
     }
 }
 
