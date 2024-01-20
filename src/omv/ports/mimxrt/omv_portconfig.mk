@@ -135,6 +135,7 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/common/, \
 	trace.o                     \
 	mutex.o                     \
 	vospi.o                     \
+	pendsv.o                    \
 	usbdbg.o                    \
 	tinyusb_debug.o             \
 	file_utils.o                \
@@ -249,7 +250,6 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/,\
 	msc_disk.o                          \
 	network_lan.o                       \
 	mphalport.o                         \
-	pendsv.o                            \
 	pin.o                               \
 	pins_gen.o                          \
 	sdcard.o                            \
