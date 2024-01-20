@@ -106,6 +106,7 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/common/, \
 	ringbuf.o                   \
 	trace.o                     \
 	mutex.o                     \
+	pendsv.o                    \
 	usbdbg.o                    \
 	tinyusb_debug.o             \
 	file_utils.o                \
@@ -195,7 +196,6 @@ FIRM_OBJ += $(wildcard $(BUILD)/$(MICROPY_DIR)/boards/$(TARGET)/*.o)
 
 FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/,\
 	mphalport.o                     \
-	pendsv.o                        \
 	help.o                          \
 	gccollect.o                     \
 	pins_gen.o                      \

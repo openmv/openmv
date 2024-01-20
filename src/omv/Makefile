@@ -22,6 +22,7 @@ SRCS += $(addprefix common/,    \
 	trace.c                     \
 	mutex.c                     \
 	vospi.c                     \
+	pendsv.c                    \
 	usbdbg.c                    \
 	tinyusb_debug.c             \
 	file_utils.c                \

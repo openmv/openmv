@@ -151,6 +151,7 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/common/, \
 	trace.o                     \
 	mutex.o                     \
 	vospi.o                     \
+	pendsv.o                    \
 	usbdbg.o                    \
 	file_utils.o                \
 	boot_utils.o                \
@@ -248,7 +249,6 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/,\
 	usbd_cdc_interface.o    \
 	usbd_hid_interface.o    \
 	usbd_msc_interface.o    \
-	pendsv.o                \
 	bufhelper.o             \
 	usb.o                   \
 	usrsw.o                 \
