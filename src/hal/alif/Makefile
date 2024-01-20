@@ -34,6 +34,7 @@ SRCS += \
 	se_services/source/services_host_maintenance.c \
 	Device/common/source/clk.c \
 	Device/common/source/dcd.c \
+	Device/common/source/pm.c \
 	Device/common/source/mpu_M55.c \
 	Device/common/source/tgu_M55.c \
 	Device/common/source/system_M55.c \
