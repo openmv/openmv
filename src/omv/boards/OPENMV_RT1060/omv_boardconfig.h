@@ -30,7 +30,7 @@
 #define OMV_OV7725_BANDING              (0x7F)
 
 // OV5640 Sensor Settings
-#define OMV_ENABLE_OV5640_AF            (0)
+#define OMV_ENABLE_OV5640_AF            (1)
 #define OMV_OV5640_XCLK_FREQ            (24000000)
 #define OMV_OV5640_PLL_CTRL2            (0x64)
 #define OMV_OV5640_PLL_CTRL3            (0x13)

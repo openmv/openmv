@@ -76,7 +76,7 @@
 #define OMV_ENABLE_GPIO_BANK_I                (1)
 
 // Enable sensor features
-#define OMV_ENABLE_OV5640_AF                  (0)
+#define OMV_ENABLE_OV5640_AF                  (1)
 
 // Enable WiFi debug
 #define OMV_ENABLE_WIFIDBG                    (1)
