@@ -72,6 +72,7 @@
 #endif
 #include "boot_utils.h"
 
+extern void pendsv_init(void);
 extern uint8_t __StackTop, __StackBottom;
 static char OMV_ATTR_SECTION(OMV_ATTR_ALIGNED(gc_heap[OMV_HEAP_SIZE], 4), ".heap");
 

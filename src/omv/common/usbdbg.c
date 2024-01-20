@@ -43,6 +43,7 @@ static const mp_rom_obj_tuple_t ide_exception_args_obj = {
     {&mp_type_tuple}, 1, {MP_ROM_PTR(&ide_exception_msg)}
 };
 
+extern void pendsv_nlr_jump(void *val);
 
 // These functions must be implemented in MicroPython CDC driver.
 extern uint32_t usb_cdc_buf_len();
