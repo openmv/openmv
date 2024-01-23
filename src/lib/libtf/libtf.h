@@ -1,5 +1,5 @@
 /* This file is part of the OpenMV project.
- * Copyright (c) 2013-2023 Ibrahim Abdelkader <iabdalkader@openmv.io> & Kwabena W. Agyeman <kwagyeman@openmv.io>
+ * Copyright (c) 2013-2024 Ibrahim Abdelkader <iabdalkader@openmv.io> & Kwabena W. Agyeman <kwagyeman@openmv.io>
  * This work is licensed under the MIT license, see the file LICENSE for details.
  */
 
@@ -33,10 +33,26 @@ typedef struct libtf_parameters {
 // Call this first to get the model parameters.
 // Returns 0 on success and 1 on failure.
 // Errors are printed to stdout.
-int libtf_get_parameters(const unsigned char *model_data, // TensorFlow Lite binary model (8-bit quant).
-                         unsigned char *tensor_arena, // As big as you can make it scratch buffer.
-                         size_t tensor_arena_size, // Size of the above scratch buffer.
-                         libtf_parameters_t *params); // Struct to hold model parameters.
+int libtf_minimum_ops_get_parameters(const unsigned char *model_data, // TensorFlow Lite binary model (8-bit quant).
+                                     unsigned char *tensor_arena, // As big as you can make it scratch buffer.
+                                     size_t tensor_arena_size, // Size of the above scratch buffer.
+                                     libtf_parameters_t *params); // Struct to hold model parameters.
+
+// Call this first to get the model parameters.
+// Returns 0 on success and 1 on failure.
+// Errors are printed to stdout.
+int libtf_reduced_ops_get_parameters(const unsigned char *model_data, // TensorFlow Lite binary model (8-bit quant).
+                                     unsigned char *tensor_arena, // As big as you can make it scratch buffer.
+                                     size_t tensor_arena_size, // Size of the above scratch buffer.
+                                     libtf_parameters_t *params); // Struct to hold model parameters.
+
+// Call this first to get the model parameters.
+// Returns 0 on success and 1 on failure.
+// Errors are printed to stdout.
+int libtf_all_ops_get_parameters(const unsigned char *model_data, // TensorFlow Lite binary model (8-bit quant).
+                                 unsigned char *tensor_arena, // As big as you can make it scratch buffer.
+                                 size_t tensor_arena_size, // Size of the above scratch buffer.
+                                 libtf_parameters_t *params); // Struct to hold model parameters.
 
 // Callback to populate the model input data byte array (laid out in [height][width][channel] order).
 typedef void (*libtf_input_data_callback_t)(void *callback_data,
@@ -50,13 +66,33 @@ typedef void (*libtf_output_data_callback_t)(void *callback_data,
 
 // Returns 0 on success and 1 on failure.
 // Errors are printed to stdout.
-int libtf_invoke(const unsigned char *model_data, // TensorFlow Lite binary model (8-bit quant).
-                 unsigned char *tensor_arena, // As big as you can make it scratch buffer.
-                 libtf_parameters_t *params, // Struct with model parameters.
-                 libtf_input_data_callback_t input_callback, // Callback to populate the model input data byte array.
-                 void *input_callback_data, // User data structure passed to input callback.
-                 libtf_output_data_callback_t output_callback, // Callback to use the model output data byte array.
-                 void *output_callback_data); // User data structure passed to output callback.
+int libtf_minimum_ops_invoke(const unsigned char *model_data, // TensorFlow Lite binary model (8-bit quant).
+                             unsigned char *tensor_arena, // As big as you can make it scratch buffer.
+                             libtf_parameters_t *params, // Struct with model parameters.
+                             libtf_input_data_callback_t input_callback, // Callback to populate the model input data byte array.
+                             void *input_callback_data, // User data structure passed to input callback.
+                             libtf_output_data_callback_t output_callback, // Callback to use the model output data byte array.
+                             void *output_callback_data); // User data structure passed to output callback.
+
+// Returns 0 on success and 1 on failure.
+// Errors are printed to stdout.
+int libtf_reduced_ops_invoke(const unsigned char *model_data, // TensorFlow Lite binary model (8-bit quant).
+                             unsigned char *tensor_arena, // As big as you can make it scratch buffer.
+                             libtf_parameters_t *params, // Struct with model parameters.
+                             libtf_input_data_callback_t input_callback, // Callback to populate the model input data byte array.
+                             void *input_callback_data, // User data structure passed to input callback.
+                             libtf_output_data_callback_t output_callback, // Callback to use the model output data byte array.
+                             void *output_callback_data); // User data structure passed to output callback.
+
+// Returns 0 on success and 1 on failure.
+// Errors are printed to stdout.
+int libtf_all_ops_invoke(const unsigned char *model_data, // TensorFlow Lite binary model (8-bit quant).
+                         unsigned char *tensor_arena, // As big as you can make it scratch buffer.
+                         libtf_parameters_t *params, // Struct with model parameters.
+                         libtf_input_data_callback_t input_callback, // Callback to populate the model input data byte array.
+                         void *input_callback_data, // User data structure passed to input callback.
+                         libtf_output_data_callback_t output_callback, // Callback to use the model output data byte array.
+                         void *output_callback_data); // User data structure passed to output callback.
 
 // Returns 0 on success and 1 on failure.
 // Errors are printed to stdout.
@@ -71,9 +107,6 @@ int libtf_generate_micro_features(const int16_t *input, // Audio samples
                                   int output_size, // Slice data size
                                   int8_t *output, // Slice data
                                   size_t *num_samples_read); // Number of samples used
-
-// runs regression on 2D/ 1D input(provided as array) and return 1D output
-int libtf_regression(const unsigned char *model_data, uint8_t* tensor_arena, libtf_parameters_t* params, float* input_data, float* output_data);
 
 #ifdef __cplusplus
 }
