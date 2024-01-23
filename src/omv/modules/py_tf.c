@@ -18,9 +18,6 @@
 #include "py_helper.h"
 #include "imlib_config.h"
 
-#include "ulab/code/ulab.h"
-#include "ulab/code/ndarray.h"
-
 #ifdef IMLIB_ENABLE_TF
 #include "py_image.h"
 #include "file_utils.h"
@@ -267,49 +264,6 @@ STATIC py_tf_model_obj_t *py_tf_load_alloc(mp_obj_t path_obj) {
         return (py_tf_model_obj_t *) int_py_tf_load(path_obj, true, true);
     }
 }
-
-STATIC mp_obj_t py_tf_regression(uint n_args, const mp_obj_t *args, mp_map_t *kw_args) {
-    fb_alloc_mark();
-    py_tf_alloc_putchar_buffer();
-
-    // read model
-    py_tf_model_obj_t *model = py_tf_load_alloc(args[0]);
-
-    // read input(2D or 1D) and output size(1D)
-    size_t input_size_width = (&model->params)->input_width;
-    size_t input_size_height = (&model->params)->input_height;
-    size_t output_size = (&model->params)->output_channels;
-
-    // read input
-    ndarray_obj_t *arg_input_array = args[1];
-
-    // check for the input size
-    if ((input_size_width * input_size_height) != arg_input_array->len) {
-        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Input array size is not same as model input size!"));
-    }
-    float *input_array = (float *) (arg_input_array->array);
-
-    uint8_t *tensor_arena = fb_alloc(model->params.tensor_arena_size, FB_ALLOC_PREFER_SPEED | FB_ALLOC_CACHE_ALIGN);
-
-
-    float output_data[output_size];
-
-    // predict the output using tflite model
-    if (libtf_regression(model->model_data,
-                         tensor_arena, &model->params, input_array, output_data) != 0) {
-        mp_raise_msg(&mp_type_OSError, MP_ERROR_TEXT("Coundnt execute the model to predict the output"));
-    }
-
-    // read output
-    mp_obj_list_t *out = (mp_obj_list_t *) mp_obj_new_list(output_size, NULL);
-    for (size_t j = 0; j < (output_size); j++) {
-        out->items[j] = mp_obj_new_float(output_data[j]);
-    }
-
-    fb_alloc_free_till_mark();
-    return out;
-}
-STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_tf_regression_obj, 2, py_tf_regression);
 
 typedef struct py_tf_input_callback_data {
     image_t *img;
@@ -773,6 +727,107 @@ STATIC mp_obj_t py_tf_detect(uint n_args, const mp_obj_t *pos_args, mp_map_t *kw
     return out_list;
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_tf_detect_obj, 2, py_tf_detect);
+
+STATIC void py_tf_regression_input_callback(void *callback_data,
+                                            void *model_input,
+                                            libtf_parameters_t *params) {
+    size_t len;
+    mp_obj_t *items;
+    mp_obj_get_array(*((mp_obj_t *) callback_data), &len, &items);
+
+    if (len == (params->input_height * params->input_width * params->input_channels)) {
+        if (params->input_datatype == LIBTF_DATATYPE_FLOAT) {
+            float *model_input_float = (float *) model_input;
+            for (size_t i = 0; i < len; i++) {
+                model_input_float[i] = mp_obj_get_float(items[i]);
+            }
+        } else {
+            uint8_t *model_input_8 = (uint8_t *) model_input;
+            for (size_t i = 0; i < len; i++) {
+                model_input_8[i] = fast_roundf((mp_obj_get_float(items[i]) /
+                                                params->input_scale) + params->input_zero_point);
+            }
+        }
+    } else if (len == params->input_height) {
+        for (size_t i = 0; i < len; i++) {
+            size_t row_len;
+            mp_obj_t *row_items;
+            mp_obj_get_array(items[i], &row_len, &row_items);
+
+            if (row_len == (params->input_width * params->input_channels)) {
+                if (params->input_datatype == LIBTF_DATATYPE_FLOAT) {
+                    float *model_input_float = (float *) model_input;
+                    for (size_t j = 0; j < row_len; j++) {
+                        size_t index = (i * row_len) + j;
+                        model_input_float[index] = mp_obj_get_float(row_items[index]);
+                    }
+                } else {
+                    uint8_t *model_input_8 = (uint8_t *) model_input;
+                    for (size_t j = 0; j < row_len; j++) {
+                        size_t index = (i * row_len) + j;
+                        model_input_8[index] = fast_roundf((mp_obj_get_float(row_items[index]) /
+                                                            params->input_scale) + params->input_zero_point);
+                    }
+                }
+            } else if (row_len == params->input_height) {
+                for (size_t j = 0; j < row_len; j++) {
+                    size_t c_len;
+                    mp_obj_t *c_items;
+                    mp_obj_get_array(row_items[i], &c_len, &c_items);
+
+                    if (c_len == params->input_channels) {
+                        if (params->input_datatype == LIBTF_DATATYPE_FLOAT) {
+                            float *model_input_float = (float *) model_input;
+                            for (size_t k = 0; k < c_len; k++) {
+                                size_t index = (i * row_len) + (j * c_len) + k;
+                                model_input_float[index] = mp_obj_get_float(c_items[index]);
+                            }
+                        } else {
+                            uint8_t *model_input_8 = (uint8_t *) model_input;
+                            for (size_t k = 0; k < c_len; k++) {
+                                size_t index = (i * row_len) + (j * c_len) + k;
+                                model_input_8[index] = fast_roundf((mp_obj_get_float(c_items[index]) /
+                                                                    params->input_scale) + params->input_zero_point);
+                            }
+                        }
+                    } else {
+                        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Channel count mismatch!"));
+                    }
+                }
+            } else {
+                mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Column count mismatch!"));
+            }
+        }
+    } else {
+        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Row count mismatch!"));
+    }
+}
+
+STATIC mp_obj_t py_tf_regression(mp_obj_t model_obj, mp_obj_t array_obj) {
+    fb_alloc_mark();
+    py_tf_alloc_putchar_buffer();
+
+    py_tf_model_obj_t *model = py_tf_load_alloc(model_obj);
+    uint8_t *tensor_arena = fb_alloc(model->params.tensor_arena_size, FB_ALLOC_PREFER_SPEED | FB_ALLOC_CACHE_ALIGN);
+
+    mp_obj_t py_tf_classify_output_callback_data;
+
+    if (libtf_invoke(model->model_data,
+                     tensor_arena,
+                     &model->params,
+                     py_tf_regression_input_callback,
+                     &array_obj,
+                     py_tf_classify_output_callback,
+                     &py_tf_classify_output_callback_data) != 0) {
+        // Note can't use MP_ERROR_TEXT here.
+        mp_raise_msg(&mp_type_OSError, (mp_rom_error_text_t) py_tf_putchar_buffer);
+    }
+
+    fb_alloc_free_till_mark();
+
+    return py_tf_classify_output_callback_data;
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_tf_regression_obj, py_tf_regression);
 
 mp_obj_t py_tf_len(mp_obj_t self_in) {
     return mp_obj_new_int(((py_tf_model_obj_t *) self_in)->model_data_len);

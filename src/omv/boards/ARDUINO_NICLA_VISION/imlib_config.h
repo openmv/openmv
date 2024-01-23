@@ -130,7 +130,7 @@
 
 // Enable Tensor Flow
 #if !defined(CUBEAI)
-#define IMLIB_ENABLE_TF
+#define IMLIB_ENABLE_TF (IMLIB_TF_DEFAULT)
 #endif
 
 // Enable FAST (20+ KBs).
@@ -158,8 +158,8 @@
 #define IMLIB_ENABLE_DMA2D
 
 // Enable PNG encoder/decoder
-#define IMLIB_ENABLE_PNG_ENCODER
-#define IMLIB_ENABLE_PNG_DECODER
+// #define IMLIB_ENABLE_PNG_ENCODER
+// #define IMLIB_ENABLE_PNG_DECODER
 
 // Stereo Imaging
 // #define IMLIB_ENABLE_STEREO_DISPARITY

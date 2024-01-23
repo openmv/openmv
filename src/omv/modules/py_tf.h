@@ -11,6 +11,7 @@
 #ifndef __PY_TF_H__
 #define __PY_TF_H__
 #include "libtf.h"
+#include "imlib_config.h"
 
 typedef struct py_tf_model_obj {
     mp_obj_base_t base;
@@ -25,5 +26,14 @@ extern char *py_tf_putchar_buffer;
 extern size_t py_tf_putchar_buffer_index;
 extern size_t py_tf_putchar_buffer_len;
 void py_tf_alloc_putchar_buffer();
+
+// Functionality select
+#if IMLIB_ENABLE_TF == IMLIB_TF_FULLOPS
+#define libtf_get_parameters libtf_get_parameters_fullops
+#define libtf_invoke libtf_invoke_fullops
+#elif IMLIB_ENABLE_TF == IMLIB_TF_DEFAULT
+#define libtf_get_parameters libtf_get_parameters_default
+#define libtf_invoke libtf_invoke_default
+#endif
 
 #endif // __PY_TF_H__
