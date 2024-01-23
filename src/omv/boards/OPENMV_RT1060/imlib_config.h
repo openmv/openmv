@@ -28,6 +28,9 @@
 // Enable midpoint pooling
 #define IMLIB_ENABLE_MIDPOINT_POOLING
 
+// Enable ISP ops
+#define IMLIB_ENABLE_ISP_OPS
+
 // Enable binary ops
 #define IMLIB_ENABLE_BINARY_OPS
 
