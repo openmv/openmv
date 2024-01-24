@@ -115,6 +115,8 @@ int sensor_dcmi_config(uint32_t pixformat) {
     CSI_Reset(CSI);
     NVIC_DisableIRQ(CSI_IRQn);
 
+    // CSI_Reset does not zero CR1.
+    CSI_REG_CR1(CSI) = 0;
     // CSI mode: HSYNC, VSYNC, and PIXCLK signals are used.
     CSI_REG_CR1(CSI) |= CSI_CR1_GCLK_MODE(1U);
     // Synchronous FIFO clear.
