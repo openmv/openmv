@@ -1928,8 +1928,8 @@ STATIC mp_obj_t py_image_gamma(uint n_args, const mp_obj_t *pos_args, mp_map_t *
     enum { ARG_gamma, ARG_contrast, ARG_brightness };
     static const mp_arg_t allowed_args[] = {
         { MP_QSTR_gamma, MP_ARG_OBJ | MP_ARG_KW_ONLY, {.u_rom_obj = MP_ROM_NONE } },
-        { MP_QSTR_contrast, MP_ARG_OBJ | MP_ARG_KW_ONLY, {.u_bool = MP_ROM_NONE } },
-        { MP_QSTR_brightness, MP_ARG_OBJ | MP_ARG_KW_ONLY, {.u_bool = MP_ROM_NONE } },
+        { MP_QSTR_contrast, MP_ARG_OBJ | MP_ARG_KW_ONLY, {.u_rom_obj = MP_ROM_NONE } },
+        { MP_QSTR_brightness, MP_ARG_OBJ | MP_ARG_KW_ONLY, {.u_rom_obj = MP_ROM_NONE } },
     };
 
     // Parse args.
