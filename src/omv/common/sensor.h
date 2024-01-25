@@ -299,7 +299,7 @@ int sensor_probe_init(uint32_t bus_id, uint32_t bus_speed);
 int sensor_dcmi_config(uint32_t pixformat);
 
 // Abort frame capture and disable IRQs, DMA etc..
-int sensor_abort();
+int sensor_abort(bool fifo_flush, bool in_irq);
 
 // Reset the sensor to its default state.
 int sensor_reset();

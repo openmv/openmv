@@ -137,7 +137,7 @@ int sensor_init() {
     return 0;
 }
 
-int sensor_abort() {
+int sensor_abort(bool fifo_flush, bool in_irq) {
     // Disable DMA channel
     dma_channel_abort(DCMI_DMA_CHANNEL);
     dma_irqn_set_channel_enabled(DCMI_DMA, DCMI_DMA_CHANNEL, false);
@@ -249,7 +249,7 @@ int sensor_snapshot(sensor_t *sensor, image_t *image, uint32_t flags) {
     for (mp_uint_t ticks = mp_hal_ticks_ms(); buffer == NULL;) {
         buffer = framebuffer_get_head(FB_NO_FLAGS);
         if ((mp_hal_ticks_ms() - ticks) > 3000) {
-            sensor_abort();
+            sensor_abort(true, false);
             return SENSOR_ERROR_CAPTURE_TIMEOUT;
         }
     }

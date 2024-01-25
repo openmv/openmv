@@ -97,9 +97,8 @@ static int sensor_dma_config() {
     // Set DMA IRQ handle
     dma_utils_set_irq_descr(DMA2_Stream1, &DMAHandle);
 
-    // Configure and enable DMA IRQ Channel
+    // Configure the DMA IRQ Channel
     NVIC_SetPriority(DMA2_Stream1_IRQn, IRQ_PRI_DMA21);
-    HAL_NVIC_EnableIRQ(DMA2_Stream1_IRQn);
     return 0;
 }
 
@@ -109,7 +108,7 @@ void sensor_init0() {
     DCMI_MDMA_Handle1.Instance = MDMA_CHAN_TO_INSTANCE(OMV_MDMA_CHANNEL_DCMI_1);
     #endif
 
-    sensor_abort();
+    sensor_abort(true, false);
 
     // Re-init i2c bus to reset the bus state after soft reset, which
     // could have interrupted the bus in the middle of a transfer.
@@ -229,16 +228,22 @@ int sensor_dcmi_config(uint32_t pixformat) {
     return 0;
 }
 
-int sensor_abort() {
+int sensor_abort(bool fifo_flush, bool in_irq) {
     // This stops the DCMI hardware from generating DMA requests immediately and then stops the DMA
     // hardware. Note that HAL_DMA_Abort is a blocking operation. Do not use this in an interrupt.
     if (DCMI->CR & DCMI_CR_ENABLE) {
         DCMI->CR &= ~DCMI_CR_ENABLE;
-        HAL_DMA_Abort(&DMAHandle);
-        HAL_NVIC_EnableIRQ(DMA2_Stream1_IRQn);
+        if (in_irq) {
+            HAL_DMA_Abort_IT(&DMAHandle);
+        } else {
+            HAL_DMA_Abort(&DMAHandle);
+        }
+        HAL_NVIC_DisableIRQ(DMA2_Stream1_IRQn);
         #if defined(OMV_MDMA_CHANNEL_DCMI_0)
-        HAL_MDMA_Abort(&DCMI_MDMA_Handle0);
-        HAL_MDMA_Abort(&DCMI_MDMA_Handle1);
+        if (!in_irq) {
+            HAL_MDMA_Abort(&DCMI_MDMA_Handle0);
+            HAL_MDMA_Abort(&DCMI_MDMA_Handle1);
+        }
         HAL_MDMA_DeInit(&DCMI_MDMA_Handle0);
         HAL_MDMA_DeInit(&DCMI_MDMA_Handle1);
         #endif
@@ -250,7 +255,11 @@ int sensor_abort() {
         sensor.last_frame_ms_valid = false;
     }
 
-    framebuffer_flush_buffers(true);
+    if (fifo_flush) {
+        framebuffer_flush_buffers(true);
+    } else if (!sensor.disable_full_flush) {
+        framebuffer_flush_buffers(false);
+    }
 
     return 0;
 }
@@ -321,7 +330,7 @@ int sensor_set_xclk_frequency(uint32_t frequency) {
 
 int sensor_shutdown(int enable) {
     int ret = 0;
-    sensor_abort();
+    sensor_abort(true, false);
 
     if (enable) {
         #if defined(DCMI_POWER_PIN)
@@ -474,22 +483,7 @@ void DCMI_DMAConvCpltUser(uint32_t addr) {
     // If snapshot was not already waiting to receive data then we have missed this frame and have
     // to drop it. So, abort this and future transfers. Snapshot will restart the process.
     if (!buffer) {
-        DCMI->CR &= ~DCMI_CR_ENABLE;
-        HAL_DMA_Abort_IT(&DMAHandle); // Note: Use HAL_DMA_Abort_IT and not HAL_DMA_Abort inside an interrupt.
-        #if defined(OMV_MDMA_CHANNEL_DCMI_0)
-        HAL_MDMA_DeInit(&DCMI_MDMA_Handle0);
-        HAL_MDMA_DeInit(&DCMI_MDMA_Handle1);
-        #endif
-        __HAL_DCMI_DISABLE_IT(&DCMIHandle, DCMI_IT_FRAME);
-        __HAL_DCMI_CLEAR_FLAG(&DCMIHandle, DCMI_FLAG_FRAMERI);
-        first_line = false;
-        drop_frame = false;
-        sensor.last_frame_ms = 0;
-        sensor.last_frame_ms_valid = false;
-        // Reset the queue of frames when we start dropping frames.
-        if (!sensor.disable_full_flush) {
-            framebuffer_flush_buffers(false);
-        }
+        sensor_abort(false, true);
         return;
     }
 
@@ -768,12 +762,13 @@ int sensor_snapshot(sensor_t *sensor, image_t *image, uint32_t flags) {
     // case. We know the transfer was stopped by checking DCMI_CR_ENABLE.
     framebuffer_free_current_buffer();
 
-    // We will be in one of the following states now:
-    // 1. No transfer is currently running right now and DCMI_CR_ENABLE is not set.
-    // 2. A transfer is running and we are waiting for the data to be received.
-
-    // We are not using DCMI_CR_CAPTURE because when this bit is cleared to stop the continuous transfer it does not actually go
-    // low until the end of the frame (yes, you read that right). DCMI_CR_ENABLE stops the capture when cleared and stays low.
+    // We can be in one of the following two states:
+    // 1. No ongoing transfer, and DCMI_CR_ENABLE is cleared.
+    // 2. A transfer is in progress and we are awaiting the reception of data.
+    //
+    // Note that DCMI_CR_CAPTURE is not used because when it's cleared, it does not immediately go
+    // low, instead, it waits until the end of the frame. Conversely, DCMI_CR_ENABLE effectively
+    // aborts the capture when cleared and stays low.
     //
     // When DCMI_CR_ENABLE is cleared during a DCMI transfer the hardware will automatically
     // wait for the start of the next frame when it's re-enabled again below. So, we do not
@@ -848,14 +843,14 @@ int sensor_snapshot(sensor_t *sensor, image_t *image, uint32_t flags) {
         // Reset the circular, current target, and double buffer mode flags which get set by the below calls.
         ((DMA_Stream_TypeDef *) DMAHandle.Instance)->CR &= ~(DMA_SxCR_CIRC | DMA_SxCR_CT | DMA_SxCR_DBM);
 
-        // Note that HAL_DCMI_Start_DMA and HAL_DCMI_Start_DMA_MB are effectively the same
-        // method. The only difference between them is how large the DMA transfer size gets
-        // set at. For both of them DMA doesn't actually care how much data the DCMI hardware
-        // generates. It's just trying to move fixed size DMA transfers from the DCMI hardware
-        // to one memory address or another memory address. After transferring X bytes to one
-        // address it will switch to the next address and transfer X bytes again. Both of these
-        // methods set the addresses right after each other. So, effectively DMA is just writing
-        // data to a circular buffer with an interrupt every time 1/2 of it is written.
+        // Enable the DMA IRQ before starting the transfer.
+        HAL_NVIC_EnableIRQ(DMA2_Stream1_IRQn);
+
+        // Note: HAL_DCMI_Start_DMA and HAL_DCMI_Start_DMA_MB are essentially the same, differing
+        // only in DMA transfer size. After transferring X bytes to one address it will switch to
+        // the next address and transfer X bytes again. Both of these methods set the addresses
+        // right after each other. So, effectively DMA is just writing data to a circular buffer
+        // with an interrupt every time 1/2 of it is written.
         if ((sensor->pixformat == PIXFORMAT_JPEG) && (sensor->chip_id == OV2640_ID)) {
             // The JPEG image will be directly transferred to the frame buffer.
             // The DCMI hardware can transfer up to 524,280 bytes.
@@ -924,7 +919,7 @@ int sensor_snapshot(sensor_t *sensor, image_t *image, uint32_t flags) {
 
         // If we haven't exited this loop before the timeout then we need to abort the transfer.
         if ((HAL_GetTick() - tick_start) > SENSOR_TIMEOUT_MS) {
-            sensor_abort();
+            sensor_abort(true, false);
 
             #if defined(DCMI_FSYNC_PIN)
             if (sensor->hw_flags.fsync) {
@@ -940,7 +935,7 @@ int sensor_snapshot(sensor_t *sensor, image_t *image, uint32_t flags) {
     // line will contain how many transfers we completed.
     // The DMA counter must be used to get the number of remaining words to be transferred.
     if ((sensor->pixformat == PIXFORMAT_JPEG) && (sensor->chip_id == OV2640_ID)) {
-        sensor_abort();
+        sensor_abort(true, false);
     }
 
     // We're done receiving data.
