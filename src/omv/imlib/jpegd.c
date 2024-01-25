@@ -2031,8 +2031,7 @@ static void JPEGPixel2LE(uint16_t *pDest, int iY1, int iY2, int iCb, int iCr) {
 static void JPEGPutMCU11(JPEGIMAGE *pJPEG, int x, int y) {
     int iCr, iCb;
     signed int Y;
-    int iCol;
-    int iRow;
+    int iCol, iRow, cx, cy;
     const int iPitch = pJPEG->iWidth;
     uint8_t *pY, *pCr, *pCb;
     uint16_t *pOutput = (uint16_t *) &pJPEG->pImage[(y * iPitch * 2) + x * 2];
@@ -2090,15 +2089,23 @@ static void JPEGPutMCU11(JPEGIMAGE *pJPEG, int x, int y) {
         JPEGPixelLE(pOutput + 1 + iPitch, Y, iCb, iCr);
         return;
     }
-    for (iRow = 0; iRow < 8; iRow++) {
+    cx = cy = 8; // assume full size fits
+    if (x + cx > pJPEG->iWidth) {
+        cx = pJPEG->iWidth - x;
+    }
+    if (y + cy > pJPEG->iHeight) {
+        cy = pJPEG->iHeight - y;
+    }
+    for (iRow = 0; iRow < cy; iRow++) {
         // up to 8 rows to do
-        for (iCol = 0; iCol < 8; iCol++) {
+        for (iCol = 0; iCol < cx; iCol++) {
             // up to 4x2 cols to do
-            iCr = *pCr++;
-            iCb = *pCb++;
-            Y = (int) (*pY++) << 12;
+            iCr = pCr[iCol];
+            iCb = pCb[iCol];
+            Y = (int) (pY[iCol]) << 12;
             JPEGPixelLE(pOutput + iCol, Y, iCb, iCr);
         } // for col
+        pCr += 8; pCb += 8; pY += 8; // next row
         pOutput += iPitch;
     }     // for row
 }         /* JPEGPutMCU11() */
@@ -2389,6 +2396,13 @@ static void JPEGPutMCU12(JPEGIMAGE *pJPEG, int x, int y) {
     /* Convert YCC pixels into RGB pixels and store in output image */
     iYCount = 16;
     iXCount = 8;
+    // crop last MCU to reported image size
+    if (x + 8 > pJPEG->iWidth) {
+        iXCount = pJPEG->iWidth - x;
+    }
+    if (y + 16 > pJPEG->iHeight) {
+        iYCount = pJPEG->iHeight - y;
+    }
     for (iRow = 0; iRow < iYCount; iRow += 2) {
         // up to 16 rows to do
         for (iCol = 0; iCol < iXCount; iCol++) {
