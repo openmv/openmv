@@ -164,7 +164,7 @@ __weak int sensor_reset() {
     }
 
     // Reset framebuffers
-    framebuffer_reset_buffers();
+    framebuffer_flush_buffers(true);
 
     return 0;
 }

@@ -101,11 +101,9 @@ void framebuffer_init_from_image(image_t *img);
 // if the src is JPEG and fits in the JPEG buffer, or encode and stream src image to the IDE if not.
 void framebuffer_update_jpeg_buffer();
 
-// Clears out all old captures frames in the framebuffer.
-void framebuffer_flush_buffers();
-
-// Resets all buffers (for use after aborting)
-void framebuffer_reset_buffers();
+// Clear the framebuffer FIFO. If fifo_flush is true, reset and discard all framebuffers,
+// otherwise, retain the last frame in the fifo.
+void framebuffer_flush_buffers(bool fifo_flush);
 
 // Controls the number of virtual buffers in the frame buffer.
 int framebuffer_set_buffers(int32_t n_buffers);

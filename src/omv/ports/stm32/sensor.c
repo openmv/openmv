@@ -250,7 +250,7 @@ int sensor_abort() {
         sensor.last_frame_ms_valid = false;
     }
 
-    framebuffer_reset_buffers();
+    framebuffer_flush_buffers(true);
 
     return 0;
 }
@@ -488,7 +488,7 @@ void DCMI_DMAConvCpltUser(uint32_t addr) {
         sensor.last_frame_ms_valid = false;
         // Reset the queue of frames when we start dropping frames.
         if (!sensor.disable_full_flush) {
-            framebuffer_flush_buffers();
+            framebuffer_flush_buffers(false);
         }
         return;
     }

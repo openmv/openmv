@@ -160,7 +160,7 @@ int sensor_abort() {
     drop_frame = false;
     sensor.last_frame_ms = 0;
     sensor.last_frame_ms_valid = false;
-    framebuffer_reset_buffers();
+    framebuffer_flush_buffers(true);
     return 0;
 }
 
@@ -191,8 +191,6 @@ void sensor_sof_callback() {
     // Get current framebuffer.
     vbuffer_t *buffer = framebuffer_get_tail(FB_PEEK);
     if (buffer == NULL) {
-        // Do not call abort here as it calls framebuffer_reset_buffers() which will invalidate
-        // all the frame buffers. framebuffer_flush_buffers() keeps the latest frame.
         NVIC_DisableIRQ(CSI_IRQn);
         CSI_DisableInterrupts(CSI, CSI_IRQ_FLAGS);
         CSI_REG_CR3(CSI) &= ~CSI_CR3_DMA_REQ_EN_RFF_MASK;
@@ -203,7 +201,7 @@ void sensor_sof_callback() {
         sensor.last_frame_ms_valid = false;
         // Reset the queue of frames when we start dropping frames.
         if (!sensor.disable_full_flush) {
-            framebuffer_flush_buffers();
+            framebuffer_flush_buffers(false);
         }
     } else if (buffer->offset < resolution[sensor.framesize][1]) {
         // Missed a few lines, reset buffer state and continue.
