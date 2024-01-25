@@ -1,8 +1,8 @@
 /*
  * This file is part of the OpenMV project.
  *
- * Copyright (c) 2013-2023 Ibrahim Abdelkader <iabdalkader@openmv.io>
- * Copyright (c) 2013-2023 Kwabena W. Agyeman <kwagyeman@openmv.io>
+ * Copyright (c) 2013-2024 Ibrahim Abdelkader <iabdalkader@openmv.io>
+ * Copyright (c) 2013-2024 Kwabena W. Agyeman <kwagyeman@openmv.io>
  *
  * This work is licensed under the MIT license, see the file LICENSE for details.
  *
@@ -27,6 +27,9 @@
 // Sensor struct.
 sensor_t sensor = {};
 extern uint8_t _line_buf[OMV_LINE_BUF_SIZE];
+
+static bool first_line = false;
+static bool drop_frame = false;
 
 #define CSI_IRQ_FLAGS    (CSI_CR1_SOF_INTEN_MASK            \
                           | CSI_CR1_FB2_DMA_DONE_INTEN_MASK \
@@ -151,7 +154,12 @@ int sensor_dcmi_config(uint32_t pixformat) {
 int sensor_abort() {
     NVIC_DisableIRQ(CSI_IRQn);
     CSI_DisableInterrupts(CSI, CSI_IRQ_FLAGS);
-    CSI_REG_CR18(CSI) &= ~(CSI_CR18_CSI_ENABLE_MASK | CSI_CR3_DMA_REQ_EN_RFF_MASK);
+    CSI_REG_CR3(CSI) &= ~CSI_CR3_DMA_REQ_EN_RFF_MASK;
+    CSI_REG_CR18(CSI) &= ~CSI_CR18_CSI_ENABLE_MASK;
+    first_line = false;
+    drop_frame = false;
+    sensor.last_frame_ms = 0;
+    sensor.last_frame_ms_valid = false;
     framebuffer_reset_buffers();
     return 0;
 }
@@ -178,104 +186,202 @@ uint32_t sensor_get_xclk_frequency() {
 }
 
 void sensor_sof_callback() {
+    first_line = false;
+    drop_frame = false;
     // Get current framebuffer.
     vbuffer_t *buffer = framebuffer_get_tail(FB_PEEK);
     if (buffer == NULL) {
-        sensor_abort();
-    }
-    if (buffer->offset < MAIN_FB()->v) {
+        // Do not call abort here as it calls framebuffer_reset_buffers() which will invalidate
+        // all the frame buffers. framebuffer_flush_buffers() keeps the latest frame.
+        NVIC_DisableIRQ(CSI_IRQn);
+        CSI_DisableInterrupts(CSI, CSI_IRQ_FLAGS);
+        CSI_REG_CR3(CSI) &= ~CSI_CR3_DMA_REQ_EN_RFF_MASK;
+        CSI_REG_CR18(CSI) &= ~CSI_CR18_CSI_ENABLE_MASK;
+        first_line = false;
+        drop_frame = false;
+        sensor.last_frame_ms = 0;
+        sensor.last_frame_ms_valid = false;
+        // Reset the queue of frames when we start dropping frames.
+        if (!sensor.disable_full_flush) {
+            framebuffer_flush_buffers();
+        }
+    } else if (buffer->offset < resolution[sensor.framesize][1]) {
         // Missed a few lines, reset buffer state and continue.
         buffer->reset_state = true;
     }
 }
 
 void sensor_line_callback(uint32_t addr) {
+    if (!first_line) {
+        first_line = true;
+        uint32_t tick = mp_hal_ticks_ms();
+        uint32_t framerate_ms = IM_DIV(1000, sensor.framerate);
+
+        // Drops frames to match the frame rate requested by the user. The frame is NOT copied to
+        // SRAM/SDRAM when dropping to save CPU cycles/energy that would be wasted.
+        // If framerate is zero then this does nothing...
+        if (sensor.last_frame_ms_valid && ((tick - sensor.last_frame_ms) < framerate_ms)) {
+            drop_frame = true;
+        } else if (sensor.last_frame_ms_valid) {
+            sensor.last_frame_ms += framerate_ms;
+        } else {
+            sensor.last_frame_ms = tick;
+            sensor.last_frame_ms_valid = true;
+        }
+    }
+
     // Get current framebuffer.
     vbuffer_t *buffer = framebuffer_get_tail(FB_PEEK);
 
-    // Copy from DMA buffer to framebuffer.
-    uint32_t bytes_per_pixel = sensor_get_src_bpp();
-    uint8_t *src = ((uint8_t *) addr) + (MAIN_FB()->x * bytes_per_pixel);
-    uint8_t *dst = buffer->data;
-
-    // Adjust BPP for Grayscale.
-    if (sensor.pixformat == PIXFORMAT_GRAYSCALE) {
-        bytes_per_pixel = 1;
-    }
-
-    if (sensor.transpose) {
-        dst += bytes_per_pixel * buffer->offset;
-    } else {
-        dst += MAIN_FB()->u * bytes_per_pixel * buffer->offset;
-    }
-
-    // Implement per line, per pixel cropping, and image transposing (for image rotation) in
-    // in software using the CPU to transfer the image from the line buffers to the frame buffer.
-    uint16_t *src16 = (uint16_t *) src;
-    uint16_t *dst16 = (uint16_t *) dst;
-
-    switch (sensor.pixformat) {
-        case PIXFORMAT_BAYER:
-            #if (OMV_ENABLE_SENSOR_EDMA == 1)
-            edma_memcpy(buffer, dst, src, sizeof(uint8_t), sensor.transpose);
-            #else
-            if (!sensor.transpose) {
-                unaligned_memcpy(dst, src, MAIN_FB()->u);
+    if (sensor.pixformat == PIXFORMAT_JPEG) {
+        if (drop_frame) {
+            return;
+        }
+        bool jpeg_end = false;
+        if (sensor.hw_flags.jpeg_mode == 4) {
+            // JPEG MODE 4:
+            //
+            // The width and height are fixed in each frame. The first two bytes are valid data
+            // length in every line, followed by valid image data. Dummy data (0xFF) may be used as
+            // padding at each line end if the current valid image data is less than the line width.
+            //
+            // In this mode `offset` holds the size of all jpeg data transferred.
+            //
+            // Note: We are using this mode for the OV5640 because it allows us to use the line
+            // buffers to fifo the JPEG image data input so we can handle SDRAM refresh hiccups
+            // that will cause data loss if we make the DMA hardware write directly to the FB.
+            //
+            uint16_t size = __REV16(*((uint16_t *) addr));
+            // Prevent a buffer overflow when writing the jpeg data.
+            if (buffer->offset + size > framebuffer_get_buffer_size()) {
+                buffer->jpeg_buffer_overflow = true;
+                jpeg_end = true;
             } else {
-                copy_line(dst, src);
+                unaligned_memcpy(buffer->data + buffer->offset, ((uint16_t *) addr) + 1, size);
+                for (int i = 0; i < size; i++) {
+                    int e = buffer->offset + i;
+                    int s = IM_MAX(e - 1, 0);
+                    if ((buffer->data[s] == 0xFF) && (buffer->data[e] == 0xD9)) {
+                        jpeg_end = true;
+                        break;
+                    }
+                }
+                buffer->offset += size;
             }
-            #endif
-            break;
-        case PIXFORMAT_GRAYSCALE:
-            #if (OMV_ENABLE_SENSOR_EDMA == 1)
-            edma_memcpy(buffer, dst, src, sizeof(uint8_t), sensor.transpose);
-            #else
-            if (sensor.hw_flags.gs_bpp == 1) {
-                // 1BPP GRAYSCALE.
+        } else if (sensor.hw_flags.jpeg_mode == 3) {
+            // OV2640 JPEG TODO
+        }
+        // In JPEG mode the camera sensor will output some number of lines that doesn't match the
+        // the current framesize. Since we don't have an end-of-frame interrupt on the mimxrt we
+        // detect the end of the frame when there's no more jpeg data.
+        if (jpeg_end) {
+            // Release the current framebuffer.
+            framebuffer_get_tail(FB_NO_FLAGS);
+            CSI_REG_CR3(CSI) &= ~CSI_CR3_DMA_REQ_EN_RFF_MASK;
+            if (sensor.frame_callback) {
+                sensor.frame_callback();
+            }
+            drop_frame = true;
+        }
+        return;
+    }
+
+    if (drop_frame) {
+        if (++buffer->offset == resolution[sensor.framesize][1]) {
+            buffer->offset = 0;
+            CSI_REG_CR3(CSI) &= ~CSI_CR3_DMA_REQ_EN_RFF_MASK;
+        }
+        return;
+    }
+
+    if ((MAIN_FB()->y <= buffer->offset) && (buffer->offset < (MAIN_FB()->y + MAIN_FB()->v))) {
+        // Copy from DMA buffer to framebuffer.
+        uint32_t bytes_per_pixel = sensor_get_src_bpp();
+        uint8_t *src = ((uint8_t *) addr) + (MAIN_FB()->x * bytes_per_pixel);
+        uint8_t *dst = buffer->data;
+
+        // Adjust BPP for Grayscale.
+        if (sensor.pixformat == PIXFORMAT_GRAYSCALE) {
+            bytes_per_pixel = 1;
+        }
+
+        if (sensor.transpose) {
+            dst += bytes_per_pixel * (buffer->offset - MAIN_FB()->y);
+        } else {
+            dst += MAIN_FB()->u * bytes_per_pixel * (buffer->offset - MAIN_FB()->y);
+        }
+
+        // Implement per line, per pixel cropping, and image transposing (for image rotation) in
+        // in software using the CPU to transfer the image from the line buffers to the frame buffer.
+        uint16_t *src16 = (uint16_t *) src;
+        uint16_t *dst16 = (uint16_t *) dst;
+
+        switch (sensor.pixformat) {
+            case PIXFORMAT_BAYER:
+                #if (OMV_ENABLE_SENSOR_EDMA == 1)
+                edma_memcpy(buffer, dst, src, sizeof(uint8_t), sensor.transpose);
+                #else
                 if (!sensor.transpose) {
                     unaligned_memcpy(dst, src, MAIN_FB()->u);
                 } else {
                     copy_line(dst, src);
                 }
-            } else {
-                // Extract Y channel from YUV.
-                if (!sensor.transpose) {
-                    unaligned_2_to_1_memcpy(dst, src16, MAIN_FB()->u);
+                #endif
+                break;
+            case PIXFORMAT_GRAYSCALE:
+                #if (OMV_ENABLE_SENSOR_EDMA == 1)
+                edma_memcpy(buffer, dst, src, sizeof(uint8_t), sensor.transpose);
+                #else
+                if (sensor.hw_flags.gs_bpp == 1) {
+                    // 1BPP GRAYSCALE.
+                    if (!sensor.transpose) {
+                        unaligned_memcpy(dst, src, MAIN_FB()->u);
+                    } else {
+                        copy_line(dst, src);
+                    }
                 } else {
-                    copy_line(dst, src16);
+                    // Extract Y channel from YUV.
+                    if (!sensor.transpose) {
+                        unaligned_2_to_1_memcpy(dst, src16, MAIN_FB()->u);
+                    } else {
+                        copy_line(dst, src16);
+                    }
                 }
-            }
-            #endif
-            break;
-        case PIXFORMAT_RGB565:
-        case PIXFORMAT_YUV422:
-            #if (OMV_ENABLE_SENSOR_EDMA == 1)
-            edma_memcpy(buffer, dst16, src16, sizeof(uint16_t), sensor.transpose);
-            #else
-            if ((sensor.pixformat == PIXFORMAT_RGB565 && sensor.hw_flags.rgb_swap)
-                || (sensor.pixformat == PIXFORMAT_YUV422 && sensor.hw_flags.yuv_swap)) {
-                if (!sensor.transpose) {
-                    unaligned_memcpy_rev16(dst16, src16, MAIN_FB()->u);
+                #endif
+                break;
+            case PIXFORMAT_RGB565:
+            case PIXFORMAT_YUV422:
+                #if (OMV_ENABLE_SENSOR_EDMA == 1)
+                edma_memcpy(buffer, dst16, src16, sizeof(uint16_t), sensor.transpose);
+                #else
+                if ((sensor.pixformat == PIXFORMAT_RGB565 && sensor.hw_flags.rgb_swap)
+                    || (sensor.pixformat == PIXFORMAT_YUV422 && sensor.hw_flags.yuv_swap)) {
+                    if (!sensor.transpose) {
+                        unaligned_memcpy_rev16(dst16, src16, MAIN_FB()->u);
+                    } else {
+                        copy_line_rev(dst16, src16);
+                    }
                 } else {
-                    copy_line_rev(dst16, src16);
+                    if (!sensor.transpose) {
+                        unaligned_memcpy(dst16, src16, MAIN_FB()->u * sizeof(uint16_t));
+                    } else {
+                        copy_line(dst16, src16);
+                    }
                 }
-            } else {
-                if (!sensor.transpose) {
-                    unaligned_memcpy(dst16, src16, MAIN_FB()->u * sizeof(uint16_t));
-                } else {
-                    copy_line(dst16, src16);
-                }
-            }
-            #endif
-            break;
-        default:
-            break;
+                #endif
+                break;
+            default:
+                break;
+        }
     }
 
-    if (++buffer->offset == MAIN_FB()->v) {
+    if (++buffer->offset == resolution[sensor.framesize][1]) {
         // Release the current framebuffer.
         framebuffer_get_tail(FB_NO_FLAGS);
         CSI_REG_CR3(CSI) &= ~CSI_CR3_DMA_REQ_EN_RFF_MASK;
+        if (sensor.frame_callback) {
+            sensor.frame_callback();
+        }
     }
 }
 
@@ -359,6 +465,11 @@ int sensor_snapshot(sensor_t *sensor, image_t *image, uint32_t flags) {
     }
     #endif
 
+    // The JPEG in the frame buffer is actually invalid.
+    if (buffer->jpeg_buffer_overflow) {
+        return SENSOR_ERROR_JPEG_OVERFLOW;
+    }
+
     if (!sensor->transpose) {
         MAIN_FB()->w = w;
         MAIN_FB()->h = h;
@@ -384,6 +495,20 @@ int sensor_snapshot(sensor_t *sensor, image_t *image, uint32_t flags) {
             int even = yuv_order ? PIXFORMAT_YUV422 : PIXFORMAT_YVU422;
             int odd = yuv_order ? PIXFORMAT_YVU422 : PIXFORMAT_YUV422;
             MAIN_FB()->pixfmt = (MAIN_FB()->x % 2) ? odd : even;
+            break;
+        }
+        case PIXFORMAT_JPEG: {
+            int32_t size = 0;
+            if (sensor->chip_id == OV5640_ID) {
+                // Offset contains the sum of all the bytes transferred from the offset buffers
+                // while in sensor_line_callback().
+                size = buffer->offset;
+            } else {
+                // OV2640 JPEG TODO
+            }
+            // Clean trailing data after 0xFFD9 at the end of the jpeg byte stream.
+            MAIN_FB()->pixfmt = PIXFORMAT_JPEG;
+            MAIN_FB()->size = jpeg_clean_trailing_bytes(size, buffer->data);
             break;
         }
         default:
