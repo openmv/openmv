@@ -1,12 +1,12 @@
 /*
  * This file is part of the OpenMV project.
  *
- * Copyright (c) 2013-2023 Ibrahim Abdelkader <iabdalkader@openmv.io>
- * Copyright (c) 2013-2023 Kwabena W. Agyeman <kwagyeman@openmv.io>
+ * Copyright (c) 2013-2024 Ibrahim Abdelkader <iabdalkader@openmv.io>
+ * Copyright (c) 2013-2024 Kwabena W. Agyeman <kwagyeman@openmv.io>
  *
  * This work is licensed under the MIT license, see the file LICENSE for details.
  *
- * Sensor abstraction layer for nRF port.
+ * Sensor driver for mimxrt port.
  */
 #if MICROPY_PY_SENSOR
 #include <string.h>
