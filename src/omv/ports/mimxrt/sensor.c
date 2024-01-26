@@ -6,7 +6,7 @@
  *
  * This work is licensed under the MIT license, see the file LICENSE for details.
  *
- * Sensor abstraction layer for nRF port.
+ * Sensor driver for mimxrt port.
  */
 #if MICROPY_PY_SENSOR
 #include <string.h>
