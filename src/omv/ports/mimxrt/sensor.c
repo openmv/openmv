@@ -49,7 +49,7 @@ static bool drop_frame = false;
     }
 
 void sensor_init0() {
-    sensor_abort();
+    sensor_abort(true, false);
 
     // Re-init I2C to reset the bus state after soft reset, which
     // could have interrupted the bus in the middle of a transfer.
@@ -151,7 +151,7 @@ int sensor_dcmi_config(uint32_t pixformat) {
     return 0;
 }
 
-int sensor_abort() {
+int sensor_abort(bool fifo_flush, bool in_irq) {
     NVIC_DisableIRQ(CSI_IRQn);
     CSI_DisableInterrupts(CSI, CSI_IRQ_FLAGS);
     CSI_REG_CR3(CSI) &= ~CSI_CR3_DMA_REQ_EN_RFF_MASK;
@@ -160,7 +160,11 @@ int sensor_abort() {
     drop_frame = false;
     sensor.last_frame_ms = 0;
     sensor.last_frame_ms_valid = false;
-    framebuffer_reset_buffers();
+    if (fifo_flush) {
+        framebuffer_flush_buffers(true);
+    } else if (!sensor.disable_full_flush) {
+        framebuffer_flush_buffers(false);
+    }
     return 0;
 }
 
@@ -191,20 +195,7 @@ void sensor_sof_callback() {
     // Get current framebuffer.
     vbuffer_t *buffer = framebuffer_get_tail(FB_PEEK);
     if (buffer == NULL) {
-        // Do not call abort here as it calls framebuffer_reset_buffers() which will invalidate
-        // all the frame buffers. framebuffer_flush_buffers() keeps the latest frame.
-        NVIC_DisableIRQ(CSI_IRQn);
-        CSI_DisableInterrupts(CSI, CSI_IRQ_FLAGS);
-        CSI_REG_CR3(CSI) &= ~CSI_CR3_DMA_REQ_EN_RFF_MASK;
-        CSI_REG_CR18(CSI) &= ~CSI_CR18_CSI_ENABLE_MASK;
-        first_line = false;
-        drop_frame = false;
-        sensor.last_frame_ms = 0;
-        sensor.last_frame_ms_valid = false;
-        // Reset the queue of frames when we start dropping frames.
-        if (!sensor.disable_full_flush) {
-            framebuffer_flush_buffers();
-        }
+        sensor_abort(false, true);
     } else if (buffer->offset < resolution[sensor.framesize][1]) {
         // Missed a few lines, reset buffer state and continue.
         buffer->reset_state = true;
@@ -445,7 +436,7 @@ int sensor_snapshot(sensor_t *sensor, image_t *image, uint32_t flags) {
     for (mp_uint_t ticks = mp_hal_ticks_ms(); buffer == NULL;) {
         MICROPY_EVENT_POLL_HOOK
         if ((mp_hal_ticks_ms() - ticks) > 3000) {
-            sensor_abort();
+            sensor_abort(true, false);
 
             #if defined(DCMI_FSYNC_PIN)
             if (sensor->hw_flags.fsync) {

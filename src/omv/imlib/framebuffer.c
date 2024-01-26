@@ -274,20 +274,18 @@ vbuffer_t *framebuffer_get_buffer(int32_t index) {
     return (vbuffer_t *) (framebuffer->data + offset);
 }
 
-void framebuffer_flush_buffers() {
+void framebuffer_flush_buffers(bool fifo_flush) {
+    if (fifo_flush) {
+        // Drop all frame buffers.
+        for (int32_t i = 0; i < framebuffer->n_buffers; i++) {
+            memset(framebuffer_get_buffer(i), 0, sizeof(vbuffer_t));
+        }
+    }
     // Move the tail pointer to the head which empties the virtual fifo while keeping the same
     // position of the current frame for the rest of the code.
     framebuffer->tail = framebuffer->head;
     framebuffer->check_head = true;
     framebuffer->sampled_head = 0;
-}
-
-void framebuffer_reset_buffers() {
-    for (int32_t i = 0; i < framebuffer->n_buffers; i++) {
-        memset(framebuffer_get_buffer(i), 0, sizeof(vbuffer_t));
-    }
-
-    framebuffer_flush_buffers();
 }
 
 int framebuffer_set_buffers(int32_t n_buffers) {
@@ -307,7 +305,7 @@ int framebuffer_set_buffers(int32_t n_buffers) {
     framebuffer->n_buffers = n_buffers;
     framebuffer->head = 0;
 
-    framebuffer_reset_buffers();
+    framebuffer_flush_buffers(true);
 
     return 0;
 }

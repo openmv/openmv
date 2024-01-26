@@ -101,13 +101,13 @@ __weak int sensor_init() {
     return SENSOR_ERROR_CTL_UNSUPPORTED;
 }
 
-__weak int sensor_abort() {
+__weak int sensor_abort(bool fifo_flush, bool in_irq) {
     return SENSOR_ERROR_CTL_UNSUPPORTED;
 }
 
 __weak int sensor_reset() {
     // Disable any ongoing frame capture.
-    sensor_abort();
+    sensor_abort(true, false);
 
     // Reset the sensor state
     sensor.sde = 0;
@@ -164,7 +164,7 @@ __weak int sensor_reset() {
     }
 
     // Reset framebuffers
-    framebuffer_reset_buffers();
+    framebuffer_flush_buffers(true);
 
     return 0;
 }
@@ -472,7 +472,7 @@ __weak bool sensor_is_detected() {
 
 __weak int sensor_sleep(int enable) {
     // Disable any ongoing frame capture.
-    sensor_abort();
+    sensor_abort(true, false);
 
     // Check if the control is supported.
     if (sensor.sleep == NULL) {
@@ -491,7 +491,7 @@ __weak int sensor_shutdown(int enable) {
     int ret = 0;
 
     // Disable any ongoing frame capture.
-    sensor_abort();
+    sensor_abort(true, false);
 
     #if defined(DCMI_POWER_PIN)
     if (enable) {
@@ -568,7 +568,7 @@ __weak int sensor_set_pixformat(pixformat_t pixformat) {
     }
 
     // Disable any ongoing frame capture.
-    sensor_abort();
+    sensor_abort(true, false);
 
     // Flush previous frame.
     framebuffer_update_jpeg_buffer();
@@ -607,7 +607,7 @@ __weak int sensor_set_framesize(framesize_t framesize) {
     }
 
     // Disable any ongoing frame capture.
-    sensor_abort();
+    sensor_abort(true, false);
 
     // Flush previous frame.
     framebuffer_update_jpeg_buffer();
@@ -715,7 +715,7 @@ __weak int sensor_set_windowing(int x, int y, int w, int h) {
     }
 
     // Disable any ongoing frame capture.
-    sensor_abort();
+    sensor_abort(true, false);
 
     // Flush previous frame.
     framebuffer_update_jpeg_buffer();
@@ -945,7 +945,7 @@ __weak int sensor_set_hmirror(int enable) {
     }
 
     // Disable any ongoing frame capture.
-    sensor_abort();
+    sensor_abort(true, false);
 
     // Check if the control is supported.
     if (sensor.set_hmirror == NULL) {
@@ -979,7 +979,7 @@ __weak int sensor_set_vflip(int enable) {
     }
 
     // Disable any ongoing frame capture.
-    sensor_abort();
+    sensor_abort(true, false);
 
     // Check if the control is supported.
     if (sensor.set_vflip == NULL) {
@@ -1013,7 +1013,7 @@ __weak int sensor_set_transpose(bool enable) {
     }
 
     // Disable any ongoing frame capture.
-    sensor_abort();
+    sensor_abort(true, false);
 
     if (sensor.pixformat == PIXFORMAT_JPEG) {
         return SENSOR_ERROR_PIXFORMAT_UNSUPPORTED;
@@ -1036,7 +1036,7 @@ __weak int sensor_set_auto_rotation(bool enable) {
     }
 
     // Disable any ongoing frame capture.
-    sensor_abort();
+    sensor_abort(true, false);
 
     // Operation not supported on JPEG images.
     if (sensor.pixformat == PIXFORMAT_JPEG) {
@@ -1054,7 +1054,7 @@ __weak bool sensor_get_auto_rotation() {
 
 __weak int sensor_set_framebuffers(int count) {
     // Disable any ongoing frame capture.
-    sensor_abort();
+    sensor_abort(true, false);
 
     // Flush previous frame.
     framebuffer_update_jpeg_buffer();
@@ -1100,7 +1100,7 @@ __weak int sensor_set_lens_correction(int enable, int radi, int coef) {
 
 __weak int sensor_ioctl(int request, ... /* arg */) {
     // Disable any ongoing frame capture.
-    sensor_abort();
+    sensor_abort(true, false);
 
     // Check if the control is supported.
     if (sensor.ioctl == NULL) {
