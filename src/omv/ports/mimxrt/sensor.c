@@ -480,6 +480,7 @@ int sensor_snapshot(sensor_t *sensor, image_t *image, uint32_t flags) {
         case PIXFORMAT_BAYER:
             MAIN_FB()->pixfmt = PIXFORMAT_BAYER;
             MAIN_FB()->subfmt_id = sensor->hw_flags.bayer;
+            MAIN_FB()->pixfmt = imlib_bayer_shift(MAIN_FB()->pixfmt, MAIN_FB()->x, MAIN_FB()->y, sensor->transpose);
             break;
         case PIXFORMAT_YUV422: {
             bool yuv_order = sensor->hw_flags.yuv_order == SENSOR_HW_FLAGS_YUV422;

@@ -571,6 +571,7 @@ UVC_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/sensors/, \
 	)
 
 UVC_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/imlib/,\
+	bayer.o                                 \
 	lab_tab.o                               \
 	xyz_tab.o                               \
 	rainbow_tab.o                           \
