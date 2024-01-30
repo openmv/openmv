@@ -88,27 +88,157 @@ static void point_fill(image_t *img, int cx, int cy, int r0, int r1, int c) {
     }
 }
 
-// https://rosettacode.org/wiki/Bitmap/Bresenham%27s_line_algorithm#C
-void imlib_draw_line(image_t *img, int x0, int y0, int x1, int y1, int c, int thickness) {
-    if (thickness > 0) {
-        int thickness0 = (thickness - 0) / 2;
-        int thickness1 = (thickness - 1) / 2;
-        int dx = abs(x1 - x0), sx = (x0 < x1) ? 1 : -1;
-        int dy = abs(y1 - y0), sy = (y0 < y1) ? 1 : -1;
-        int err = ((dx > dy) ? dx : -dy) / 2;
+static void imlib_set_pixel_aa(image_t *img, int x, int y, int err, int c) {
+    // float alpha = 1 - err / 256.0;
+    void *row_ptr = imlib_compute_row_ptr(img, y);
+    int old_c = imlib_get_pixel_fast(img, row_ptr, x);
+    int new_c;
 
-        for (;;) {
-            point_fill(img, x0, y0, -thickness0, thickness1, c);
-            if ((x0 == x1) && (y0 == y1)) {
+    switch (img->pixfmt) {
+        case PIXFORMAT_BINARY: {
+            new_c = c;
+            break;
+        }
+        case PIXFORMAT_GRAYSCALE: {
+            new_c = (((old_c - c) * err) >> 8) + c;
+            break;
+        }
+        case PIXFORMAT_RGB565: {
+            int old_r8 = COLOR_RGB565_TO_R8(old_c);
+            int old_g8 = COLOR_RGB565_TO_G8(old_c);
+            int old_b8 = COLOR_RGB565_TO_B8(old_c);
+
+            int r8 = COLOR_RGB565_TO_R8(c);
+            int g8 = COLOR_RGB565_TO_G8(c);
+            int b8 = COLOR_RGB565_TO_B8(c);
+
+            int new_r8 = (((old_r8 - r8) * err) >> 8) + r8;
+            int new_g8 = (((old_g8 - g8) * err) >> 8) + g8;
+            int new_b8 = (((old_b8 - b8) * err) >> 8) + b8;
+
+            new_c = COLOR_R8_G8_B8_TO_RGB565(new_r8, new_g8, new_b8);
+            break;
+        }
+        default: {
+            // This shouldn't happen, at least we return a valid memory block
+            return;
+        }
+    }
+    imlib_set_pixel(img, x, y, new_c);
+}
+
+// https://gist.github.com/randvoorhies/807ce6e20840ab5314eb7c547899de68#file-bresenham-js-L381
+static void imlib_draw_thin_line(image_t *img, int x0, int y0, int x1, int y1, int c) {
+    const int dx = abs(x1 - x0);
+    const int sx = x0 < x1 ? 1 : -1;
+    const int dy = abs(y1 - y0);
+    const int sy = y0 < y1 ? 1 : -1;
+    int err = dx - dy;
+    int e2, x2; // error value e_xy
+    int ed = dx + dy == 0 ? 1 : fast_sqrtf(dx * dx + dy * dy);
+
+    for (;;) {
+        // pixel loop
+        imlib_set_pixel_aa(img, x0, y0, 256 * abs(err - dx + dy) / ed, c);
+        e2 = err;
+        x2 = x0;
+        if (2 * e2 >= -dx) {
+            // x step
+            if (x0 == x1) {
                 break;
             }
-            int e2 = err;
-            if (e2 > -dx) {
-                err -= dy; x0 += sx;
+            if (e2 + dy < ed) {
+                imlib_set_pixel_aa(img, x0, y0 + sy, 256 * (e2 + dy) / ed, c);
             }
-            if (e2 < dy) {
-                err += dx; y0 += sy;
+            err -= dy;
+            x0 += sx;
+        }
+        if (2 * e2 <= dy) {
+            // y step
+            if (y0 == y1) {
+                break;
             }
+            if (dx - e2 < ed) {
+                imlib_set_pixel_aa(img, x2 + sx, y0, 256 * (dx - e2) / ed, c);
+            }
+            err += dx;
+            y0 += sy;
+        }
+    }
+}
+
+// https://gist.github.com/randvoorhies/807ce6e20840ab5314eb7c547899de68#file-bresenham-js-L813
+void imlib_draw_line(image_t *img, int x0, int y0, int x1, int y1, int c, int th) {
+
+    line_t line = {x0, y0, x1, y1};
+    if (!lb_clip_line(&line, 0, 0, img->w, img->h)) {
+        return;
+    }
+
+    x0 = line.x1;
+    y0 = line.y1;
+    x1 = line.x2;
+    y1 = line.y2;
+
+    int r = th / 2;
+    point_fill(img, x0, y0, -r, r, c); // add round at start
+    point_fill(img, x1, y1, -r, r, c); // add round at end
+
+    // plot an anti-aliased line of width th pixel
+    const int ex = abs(x1 - x0);
+    const int sx = x0 < x1 ? 1 : -1;
+    const int ey = abs(y1 - y0);
+    const int sy = y0 < y1 ? 1 : -1;
+    int e2 = fast_sqrtf(ex * ex + ey * ey); // length
+
+    if (th <= 1 || e2 == 0) {
+        return imlib_draw_thin_line(img, x0, y0, x1, y1, c); // assert
+    }
+    int dx = ex * 256 / e2;
+    int dy = ey * 256 / e2;
+    th = 256 * (th - 1); // scale values
+
+    if (dx < dy) {
+        // steep line
+        x1 = (e2 + th / 2) / dy; // start offset
+        int err = x1 * dy - th / 2;   // shift error value to offset width
+        for (x0 -= x1 * sx;; y0 += sy) {
+            x1 = x0;
+            imlib_set_pixel_aa(img, x1, y0, err, c); // aliasing pre-pixel
+            for (e2 = dy - err - th; e2 + dy < 256; e2 += dy) {
+                x1 += sx;
+                imlib_set_pixel(img, x1, y0, c); // pixel on the line
+            }
+            imlib_set_pixel_aa(img, x1 + sx, y0, e2, c); // aliasing post-pixel
+            if (y0 == y1) {
+                break;
+            }
+            err += dx; // y-step
+            if (err > 256) {
+                err -= dy;
+                x0 += sx;
+            } // x-step
+        }
+    } else {
+        // flat line
+        y1 = (e2 + th / 2) / dx; // start offset
+        int err = y1 * dx - th / 2;   // shift error value to offset width
+        for (y0 -= y1 * sy;; x0 += sx) {
+            y1 = y0;
+            imlib_set_pixel_aa(img, x0, y1, err, c); // aliasing pre-pixel
+            for (e2 = dx - err - th; e2 + dx < 256; e2 += dx) {
+                y1 += sy;
+                imlib_set_pixel(img, x0, y1, c); // pixel on the line
+            }
+            imlib_set_pixel_aa(img, x0, y1 + sy, e2, c); // aliasing post-pixel
+            if (x0 == x1) {
+                break;
+            }
+            err += dy; // x-step
+            if (err > 256) {
+                err -= dx;
+                y0 += sy;
+            } // y-step
         }
     }
 }
