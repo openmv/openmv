@@ -272,7 +272,7 @@ int omv_i2c_deinit(omv_i2c_t *i2c) {
 int omv_i2c_scan(omv_i2c_t *i2c, uint8_t *list, uint8_t size) {
     int idx = 0;
     for (uint8_t addr = 0x09; addr <= 0x77; addr++) {
-        if (HAL_I2C_IsDeviceReady(i2c->inst, addr << 1, 10, I2C_SCAN_TIMEOUT) == HAL_OK) {
+        if (HAL_I2C_IsDeviceReady(i2c->inst, addr << 1, 1, I2C_SCAN_TIMEOUT) == HAL_OK) {
             if (list == NULL || size == 0) {
                 return (addr << 1);
             } else if (idx < size) {
