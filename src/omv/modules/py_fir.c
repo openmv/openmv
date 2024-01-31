@@ -309,7 +309,6 @@ static mp_obj_t py_fir_deinit() {
 
     #if ((OMV_ENABLE_FIR_MLX90621 == 1) || (OMV_ENABLE_FIR_MLX90640 == 1) || (OMV_ENABLE_FIR_MLX90641 == 1))
     if (fir_mlx_data != NULL) {
-        xfree(fir_mlx_data);
         fir_mlx_data = NULL;
     }
     #endif
@@ -1161,5 +1160,8 @@ void py_fir_init0() {
     py_fir_deinit();
 }
 
+#if ((OMV_ENABLE_FIR_MLX90621 == 1) || (OMV_ENABLE_FIR_MLX90640 == 1) || (OMV_ENABLE_FIR_MLX90641 == 1))
+MP_REGISTER_ROOT_POINTER(void *fir_mlx_data);
+#endif
 MP_REGISTER_MODULE(MP_QSTR_fir, fir_module);
 #endif
