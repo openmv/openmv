@@ -45,6 +45,9 @@
 // Enable hardware JPEG
 #define OMV_HARDWARE_JPEG                          (1)
 
+// Enable fast line transfer with DMA.
+#define OMA_ENABLE_DMA_MEMCPY                      (1)
+
 // MDMA configuration
 #define OMV_MDMA_CHANNEL_DCMI_0                    (0)
 #define OMV_MDMA_CHANNEL_DCMI_1                    (1)
