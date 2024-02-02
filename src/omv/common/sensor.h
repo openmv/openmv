@@ -252,6 +252,8 @@ typedef struct _sensor {
     pixformat_t pixformat;      // Pixel format
     framesize_t framesize;      // Frame size
     int framerate;              // Frame rate
+    bool first_line;            // Set to true when the first line of the frame is being read.
+    bool drop_frame;            // Set to true to drop the current frame.
     uint32_t last_frame_ms;     // Last sampled frame timestamp in milliseconds.
     bool last_frame_ms_valid;   // Last sampled frame timestamp in milliseconds valid.
     gainceiling_t gainceiling;  // AGC gainceiling
