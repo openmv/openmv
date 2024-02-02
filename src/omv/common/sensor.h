@@ -204,10 +204,31 @@ typedef enum {
 
 // Bayer patterns.
 // NOTE: These must match the Bayer subformats in imlib.h
+//
+// BGGR matches the bayer pattern of BGBG... etc. coming out of the sensor.
+//                                   GRGR... etc.
+//
+// GBRG matches the bayer pattern of GBGB... etc. coming out of the sensor.
+//                                   RGRG... etc.
+//
+// GRBG matches the bayer pattern of GRGR... etc. coming out of the sensor.
+//                                   BGBG... etc.
+//
+// RGGB matches the bayer pattern of RGRG... etc. coming out of the sensor.
+//                                   GBGB... etc.
+//
 #define SENSOR_HW_FLAGS_BAYER_BGGR    (SUBFORMAT_ID_BGGR)
 #define SENSOR_HW_FLAGS_BAYER_GBRG    (SUBFORMAT_ID_GBRG)
 #define SENSOR_HW_FLAGS_BAYER_GRBG    (SUBFORMAT_ID_GRBG)
 #define SENSOR_HW_FLAGS_BAYER_RGGB    (SUBFORMAT_ID_RGGB)
+
+// YUV patterns.
+// NOTE: These must match the YUV subformats in imlib.h
+//
+// YUV422 matches the YUV pattern of YUYV... etc. coming out of the sensor.
+//
+// YVU422 matches the YUV pattern of YVYU... etc. coming out of the sensor.
+//
 #define SENSOR_HW_FLAGS_YUV422        (SUBFORMAT_ID_YUV422)
 #define SENSOR_HW_FLAGS_YVU422        (SUBFORMAT_ID_YVU422)
 
