@@ -36,18 +36,6 @@ static bool drop_frame = false;
                           | CSI_CR1_FB1_DMA_DONE_INTEN_MASK)
 //CSI_CR1_RF_OR_INTEN_MASK
 
-#define copy_line(dstp, srcp)                              \
-    for (int i = MAIN_FB()->u, h = MAIN_FB()->v; i; i--) { \
-        *dstp = *srcp++;                                   \
-        dstp += h;                                         \
-    }
-
-#define copy_line_rev(dstp, srcp)                          \
-    for (int i = MAIN_FB()->u, h = MAIN_FB()->v; i; i--) { \
-        *dstp = __REV16(*srcp++);                          \
-        dstp += h;                                         \
-    }
-
 void sensor_init0() {
     sensor_abort(true, false);
 
@@ -315,7 +303,7 @@ void sensor_line_callback(uint32_t addr) {
                 if (!sensor.transpose) {
                     unaligned_memcpy(dst, src, MAIN_FB()->u);
                 } else {
-                    copy_line(dst, src);
+                    copy_transposed_line(dst, src);
                 }
                 #endif
                 break;
@@ -328,14 +316,14 @@ void sensor_line_callback(uint32_t addr) {
                     if (!sensor.transpose) {
                         unaligned_memcpy(dst, src, MAIN_FB()->u);
                     } else {
-                        copy_line(dst, src);
+                        copy_transposed_line(dst, src);
                     }
                 } else {
                     // Extract Y channel from YUV.
                     if (!sensor.transpose) {
                         unaligned_2_to_1_memcpy(dst, src16, MAIN_FB()->u);
                     } else {
-                        copy_line(dst, src16);
+                        copy_transposed_line(dst, src16);
                     }
                 }
                 #endif
@@ -350,13 +338,13 @@ void sensor_line_callback(uint32_t addr) {
                     if (!sensor.transpose) {
                         unaligned_memcpy_rev16(dst16, src16, MAIN_FB()->u);
                     } else {
-                        copy_line_rev(dst16, src16);
+                        copy_transposed_line_rev16(dst16, src16);
                     }
                 } else {
                     if (!sensor.transpose) {
                         unaligned_memcpy(dst16, src16, MAIN_FB()->u * sizeof(uint16_t));
                     } else {
-                        copy_line(dst16, src16);
+                        copy_transposed_line(dst16, src16);
                     }
                 }
                 #endif

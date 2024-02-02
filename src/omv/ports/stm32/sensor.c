@@ -596,10 +596,7 @@ void DCMI_DMAConvCpltUser(uint32_t addr) {
             if (!sensor.transpose) {
                 unaligned_memcpy(dst, src, MAIN_FB()->u);
             } else {
-                for (int i = MAIN_FB()->u, h = MAIN_FB()->v; i; i--) {
-                    *dst = *src++;
-                    dst += h;
-                }
+                copy_transposed_line(dst, src);
             }
             #endif
             break;
@@ -612,20 +609,14 @@ void DCMI_DMAConvCpltUser(uint32_t addr) {
                 if (!sensor.transpose) {
                     unaligned_memcpy(dst, src, MAIN_FB()->u);
                 } else {
-                    for (int i = MAIN_FB()->u, h = MAIN_FB()->v; i; i--) {
-                        *dst = *src++;
-                        dst += h;
-                    }
+                    copy_transposed_line(dst, src);
                 }
             } else {
                 // Extract Y channel from YUV.
                 if (!sensor.transpose) {
                     unaligned_2_to_1_memcpy(dst, src16, MAIN_FB()->u);
                 } else {
-                    for (int i = MAIN_FB()->u, h = MAIN_FB()->v; i; i--) {
-                        *dst = *src16++;
-                        dst += h;
-                    }
+                    copy_transposed_line(dst, src16);
                 }
             }
             #endif
@@ -640,19 +631,13 @@ void DCMI_DMAConvCpltUser(uint32_t addr) {
                 if (!sensor.transpose) {
                     unaligned_memcpy_rev16(dst16, src16, MAIN_FB()->u);
                 } else {
-                    for (int i = MAIN_FB()->u, h = MAIN_FB()->v; i; i--) {
-                        *dst16 = __REV16(*src16++);
-                        dst16 += h;
-                    }
+                    copy_transposed_line_rev16(dst16, src16);
                 }
             } else {
                 if (!sensor.transpose) {
                     unaligned_memcpy(dst16, src16, MAIN_FB()->u * sizeof(uint16_t));
                 } else {
-                    for (int i = MAIN_FB()->u, h = MAIN_FB()->v; i; i--) {
-                        *dst16 = *src16++;
-                        dst16 += h;
-                    }
+                    copy_transposed_line(dst16, src16);
                 }
             }
             #endif

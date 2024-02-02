@@ -14,6 +14,18 @@
 #include "omv_i2c.h"
 #include "imlib.h"
 
+#define copy_transposed_line(dstp, srcp)                   \
+    for (int i = MAIN_FB()->u, h = MAIN_FB()->v; i; i--) { \
+        *dstp = *srcp++;                                   \
+        dstp += h;                                         \
+    }
+
+#define copy_transposed_line_rev16(dstp, srcp)             \
+    for (int i = MAIN_FB()->u, h = MAIN_FB()->v; i; i--) { \
+        *dstp = __REV16(*srcp++);                          \
+        dstp += h;                                         \
+    }
+
 #define OV2640_SLV_ADDR         (0x60)
 #define OV5640_SLV_ADDR         (0x78)
 #define OV7725_SLV_ADDR         (0x42)
