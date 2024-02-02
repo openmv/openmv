@@ -442,27 +442,11 @@ static void mdma_memcpy(vbuffer_t *buffer, void *dst, void *src, int bpp, bool t
 }
 #endif
 
-// This function is called back after each line transfer is complete,
-// with a pointer to the line buffer that was used. At this point the
-// DMA transfers the next line to the other half of the line buffer.
+// This function is called back after each line transfer is complete, with a pointer to the
+// buffer that was used. At this point the DMA transfers the next line to the next buffer.
 void DCMI_DMAConvCpltUser(uint32_t addr) {
-    if (!sensor.first_line) {
-        sensor.first_line = true;
-        uint32_t tick = HAL_GetTick();
-        uint32_t framerate_ms = IM_DIV(1000, sensor.framerate);
-
-        // Drops frames to match the frame rate requested by the user. The frame is NOT copied to
-        // SRAM/SDRAM when dropping to save CPU cycles/energy that would be wasted.
-        // If framerate is zero then this does nothing...
-        if (sensor.last_frame_ms_valid && ((tick - sensor.last_frame_ms) < framerate_ms)) {
-            sensor.drop_frame = true;
-        } else if (sensor.last_frame_ms_valid) {
-            sensor.last_frame_ms += framerate_ms;
-        } else {
-            sensor.last_frame_ms = tick;
-            sensor.last_frame_ms_valid = true;
-        }
-    }
+    // Throttle frames to match the current frame rate.
+    sensor_throttle_framerate();
 
     if (sensor.drop_frame) {
         // If we're dropping a frame in full offload mode it's safe to disable this interrupt saving

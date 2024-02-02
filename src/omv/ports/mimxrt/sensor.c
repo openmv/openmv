@@ -188,23 +188,8 @@ void sensor_sof_callback() {
 }
 
 void sensor_line_callback(uint32_t addr) {
-    if (!sensor.first_line) {
-        sensor.first_line = true;
-        uint32_t tick = mp_hal_ticks_ms();
-        uint32_t framerate_ms = IM_DIV(1000, sensor.framerate);
-
-        // Drops frames to match the frame rate requested by the user. The frame is NOT copied to
-        // SRAM/SDRAM when dropping to save CPU cycles/energy that would be wasted.
-        // If framerate is zero then this does nothing...
-        if (sensor.last_frame_ms_valid && ((tick - sensor.last_frame_ms) < framerate_ms)) {
-            sensor.drop_frame = true;
-        } else if (sensor.last_frame_ms_valid) {
-            sensor.last_frame_ms += framerate_ms;
-        } else {
-            sensor.last_frame_ms = tick;
-            sensor.last_frame_ms_valid = true;
-        }
-    }
+    // Throttle frames to match the current frame rate.
+    sensor_throttle_framerate();
 
     // Get current framebuffer.
     vbuffer_t *buffer = framebuffer_get_tail(FB_PEEK);
