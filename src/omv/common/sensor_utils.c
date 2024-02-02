@@ -114,6 +114,8 @@ __weak int sensor_reset() {
     sensor.pixformat = 0;
     sensor.framesize = 0;
     sensor.framerate = 0;
+    sensor.first_line = false;
+    sensor.drop_frame = false;
     sensor.last_frame_ms = 0;
     sensor.last_frame_ms_valid = false;
     sensor.gainceiling = 0;

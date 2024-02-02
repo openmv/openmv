@@ -41,9 +41,6 @@ static MDMA_HandleTypeDef DCMI_MDMA_Handle1;
 SPI_HandleTypeDef ISC_SPIHandle = {.Instance = ISC_SPI};
 #endif // ISC_SPI
 
-static bool first_line = false;
-static bool drop_frame = false;
-
 extern uint8_t _line_buf;
 extern uint32_t hal_get_exti_gpio(uint32_t line);
 
@@ -249,8 +246,8 @@ int sensor_abort(bool fifo_flush, bool in_irq) {
         #endif
         __HAL_DCMI_DISABLE_IT(&DCMIHandle, DCMI_IT_FRAME);
         __HAL_DCMI_CLEAR_FLAG(&DCMIHandle, DCMI_FLAG_FRAMERI);
-        first_line = false;
-        drop_frame = false;
+        sensor.first_line = false;
+        sensor.drop_frame = false;
         sensor.last_frame_ms = 0;
         sensor.last_frame_ms_valid = false;
     }
@@ -407,9 +404,9 @@ void HAL_DCMI_FrameEventCallback(DCMI_HandleTypeDef *hdcmi) {
     #endif
 
     // Reset DCMI_DMAConvCpltUser frame drop state.
-    first_line = false;
-    if (drop_frame) {
-        drop_frame = false;
+    sensor.first_line = false;
+    if (sensor.drop_frame) {
+        sensor.drop_frame = false;
         return;
     }
 
@@ -429,7 +426,7 @@ static void mdma_memcpy(vbuffer_t *buffer, void *dst, void *src, int bpp, bool t
 
     // Drop the frame if MDMA is not keeping up as the image will be corrupt.
     if (handle->Instance->CCR & MDMA_CCR_EN) {
-        drop_frame = true;
+        sensor.drop_frame = true;
         return;
     }
 
@@ -449,8 +446,8 @@ static void mdma_memcpy(vbuffer_t *buffer, void *dst, void *src, int bpp, bool t
 // with a pointer to the line buffer that was used. At this point the
 // DMA transfers the next line to the other half of the line buffer.
 void DCMI_DMAConvCpltUser(uint32_t addr) {
-    if (!first_line) {
-        first_line = true;
+    if (!sensor.first_line) {
+        sensor.first_line = true;
         uint32_t tick = HAL_GetTick();
         uint32_t framerate_ms = IM_DIV(1000, sensor.framerate);
 
@@ -458,7 +455,7 @@ void DCMI_DMAConvCpltUser(uint32_t addr) {
         // SRAM/SDRAM when dropping to save CPU cycles/energy that would be wasted.
         // If framerate is zero then this does nothing...
         if (sensor.last_frame_ms_valid && ((tick - sensor.last_frame_ms) < framerate_ms)) {
-            drop_frame = true;
+            sensor.drop_frame = true;
         } else if (sensor.last_frame_ms_valid) {
             sensor.last_frame_ms += framerate_ms;
         } else {
@@ -467,7 +464,7 @@ void DCMI_DMAConvCpltUser(uint32_t addr) {
         }
     }
 
-    if (drop_frame) {
+    if (sensor.drop_frame) {
         // If we're dropping a frame in full offload mode it's safe to disable this interrupt saving
         // ourselves from having to service the DMA complete callback.
         #if defined(OMV_MDMA_CHANNEL_DCMI_0)
@@ -596,10 +593,7 @@ void DCMI_DMAConvCpltUser(uint32_t addr) {
             if (!sensor.transpose) {
                 unaligned_memcpy(dst, src, MAIN_FB()->u);
             } else {
-                for (int i = MAIN_FB()->u, h = MAIN_FB()->v; i; i--) {
-                    *dst = *src++;
-                    dst += h;
-                }
+                copy_transposed_line(dst, src);
             }
             #endif
             break;
@@ -612,20 +606,14 @@ void DCMI_DMAConvCpltUser(uint32_t addr) {
                 if (!sensor.transpose) {
                     unaligned_memcpy(dst, src, MAIN_FB()->u);
                 } else {
-                    for (int i = MAIN_FB()->u, h = MAIN_FB()->v; i; i--) {
-                        *dst = *src++;
-                        dst += h;
-                    }
+                    copy_transposed_line(dst, src);
                 }
             } else {
                 // Extract Y channel from YUV.
                 if (!sensor.transpose) {
                     unaligned_2_to_1_memcpy(dst, src16, MAIN_FB()->u);
                 } else {
-                    for (int i = MAIN_FB()->u, h = MAIN_FB()->v; i; i--) {
-                        *dst = *src16++;
-                        dst += h;
-                    }
+                    copy_transposed_line(dst, src16);
                 }
             }
             #endif
@@ -640,19 +628,13 @@ void DCMI_DMAConvCpltUser(uint32_t addr) {
                 if (!sensor.transpose) {
                     unaligned_memcpy_rev16(dst16, src16, MAIN_FB()->u);
                 } else {
-                    for (int i = MAIN_FB()->u, h = MAIN_FB()->v; i; i--) {
-                        *dst16 = __REV16(*src16++);
-                        dst16 += h;
-                    }
+                    copy_transposed_line_rev16(dst16, src16);
                 }
             } else {
                 if (!sensor.transpose) {
                     unaligned_memcpy(dst16, src16, MAIN_FB()->u * sizeof(uint16_t));
                 } else {
-                    for (int i = MAIN_FB()->u, h = MAIN_FB()->v; i; i--) {
-                        *dst16 = *src16++;
-                        dst16 += h;
-                    }
+                    copy_transposed_line(dst16, src16);
                 }
             }
             #endif

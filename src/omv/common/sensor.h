@@ -14,6 +14,18 @@
 #include "omv_i2c.h"
 #include "imlib.h"
 
+#define copy_transposed_line(dstp, srcp)                   \
+    for (int i = MAIN_FB()->u, h = MAIN_FB()->v; i; i--) { \
+        *dstp = *srcp++;                                   \
+        dstp += h;                                         \
+    }
+
+#define copy_transposed_line_rev16(dstp, srcp)             \
+    for (int i = MAIN_FB()->u, h = MAIN_FB()->v; i; i--) { \
+        *dstp = __REV16(*srcp++);                          \
+        dstp += h;                                         \
+    }
+
 #define OV2640_SLV_ADDR         (0x60)
 #define OV5640_SLV_ADDR         (0x78)
 #define OV7725_SLV_ADDR         (0x42)
@@ -192,10 +204,31 @@ typedef enum {
 
 // Bayer patterns.
 // NOTE: These must match the Bayer subformats in imlib.h
+//
+// BGGR matches the bayer pattern of BGBG... etc. coming out of the sensor.
+//                                   GRGR... etc.
+//
+// GBRG matches the bayer pattern of GBGB... etc. coming out of the sensor.
+//                                   RGRG... etc.
+//
+// GRBG matches the bayer pattern of GRGR... etc. coming out of the sensor.
+//                                   BGBG... etc.
+//
+// RGGB matches the bayer pattern of RGRG... etc. coming out of the sensor.
+//                                   GBGB... etc.
+//
 #define SENSOR_HW_FLAGS_BAYER_BGGR    (SUBFORMAT_ID_BGGR)
 #define SENSOR_HW_FLAGS_BAYER_GBRG    (SUBFORMAT_ID_GBRG)
 #define SENSOR_HW_FLAGS_BAYER_GRBG    (SUBFORMAT_ID_GRBG)
 #define SENSOR_HW_FLAGS_BAYER_RGGB    (SUBFORMAT_ID_RGGB)
+
+// YUV patterns.
+// NOTE: These must match the YUV subformats in imlib.h
+//
+// YUV422 matches the YUV pattern of YUYV... etc. coming out of the sensor.
+//
+// YVU422 matches the YUV pattern of YVYU... etc. coming out of the sensor.
+//
 #define SENSOR_HW_FLAGS_YUV422        (SUBFORMAT_ID_YUV422)
 #define SENSOR_HW_FLAGS_YVU422        (SUBFORMAT_ID_YVU422)
 
@@ -240,6 +273,8 @@ typedef struct _sensor {
     pixformat_t pixformat;      // Pixel format
     framesize_t framesize;      // Frame size
     int framerate;              // Frame rate
+    bool first_line;            // Set to true when the first line of the frame is being read.
+    bool drop_frame;            // Set to true to drop the current frame.
     uint32_t last_frame_ms;     // Last sampled frame timestamp in milliseconds.
     bool last_frame_ms_valid;   // Last sampled frame timestamp in milliseconds valid.
     gainceiling_t gainceiling;  // AGC gainceiling

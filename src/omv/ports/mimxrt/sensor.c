@@ -28,25 +28,10 @@
 sensor_t sensor = {};
 extern uint8_t _line_buf[OMV_LINE_BUF_SIZE];
 
-static bool first_line = false;
-static bool drop_frame = false;
-
 #define CSI_IRQ_FLAGS    (CSI_CR1_SOF_INTEN_MASK            \
                           | CSI_CR1_FB2_DMA_DONE_INTEN_MASK \
                           | CSI_CR1_FB1_DMA_DONE_INTEN_MASK)
 //CSI_CR1_RF_OR_INTEN_MASK
-
-#define copy_line(dstp, srcp)                              \
-    for (int i = MAIN_FB()->u, h = MAIN_FB()->v; i; i--) { \
-        *dstp = *srcp++;                                   \
-        dstp += h;                                         \
-    }
-
-#define copy_line_rev(dstp, srcp)                          \
-    for (int i = MAIN_FB()->u, h = MAIN_FB()->v; i; i--) { \
-        *dstp = __REV16(*srcp++);                          \
-        dstp += h;                                         \
-    }
 
 void sensor_init0() {
     sensor_abort(true, false);
@@ -156,8 +141,8 @@ int sensor_abort(bool fifo_flush, bool in_irq) {
     CSI_DisableInterrupts(CSI, CSI_IRQ_FLAGS);
     CSI_REG_CR3(CSI) &= ~CSI_CR3_DMA_REQ_EN_RFF_MASK;
     CSI_REG_CR18(CSI) &= ~CSI_CR18_CSI_ENABLE_MASK;
-    first_line = false;
-    drop_frame = false;
+    sensor.first_line = false;
+    sensor.drop_frame = false;
     sensor.last_frame_ms = 0;
     sensor.last_frame_ms_valid = false;
     if (fifo_flush) {
@@ -190,8 +175,8 @@ uint32_t sensor_get_xclk_frequency() {
 }
 
 void sensor_sof_callback() {
-    first_line = false;
-    drop_frame = false;
+    sensor.first_line = false;
+    sensor.drop_frame = false;
     // Get current framebuffer.
     vbuffer_t *buffer = framebuffer_get_tail(FB_PEEK);
     if (buffer == NULL) {
@@ -203,8 +188,8 @@ void sensor_sof_callback() {
 }
 
 void sensor_line_callback(uint32_t addr) {
-    if (!first_line) {
-        first_line = true;
+    if (!sensor.first_line) {
+        sensor.first_line = true;
         uint32_t tick = mp_hal_ticks_ms();
         uint32_t framerate_ms = IM_DIV(1000, sensor.framerate);
 
@@ -212,7 +197,7 @@ void sensor_line_callback(uint32_t addr) {
         // SRAM/SDRAM when dropping to save CPU cycles/energy that would be wasted.
         // If framerate is zero then this does nothing...
         if (sensor.last_frame_ms_valid && ((tick - sensor.last_frame_ms) < framerate_ms)) {
-            drop_frame = true;
+            sensor.drop_frame = true;
         } else if (sensor.last_frame_ms_valid) {
             sensor.last_frame_ms += framerate_ms;
         } else {
@@ -225,7 +210,7 @@ void sensor_line_callback(uint32_t addr) {
     vbuffer_t *buffer = framebuffer_get_tail(FB_PEEK);
 
     if (sensor.pixformat == PIXFORMAT_JPEG) {
-        if (drop_frame) {
+        if (sensor.drop_frame) {
             return;
         }
         bool jpeg_end = false;
@@ -272,12 +257,12 @@ void sensor_line_callback(uint32_t addr) {
             if (sensor.frame_callback) {
                 sensor.frame_callback();
             }
-            drop_frame = true;
+            sensor.drop_frame = true;
         }
         return;
     }
 
-    if (drop_frame) {
+    if (sensor.drop_frame) {
         if (++buffer->offset == resolution[sensor.framesize][1]) {
             buffer->offset = 0;
             CSI_REG_CR3(CSI) &= ~CSI_CR3_DMA_REQ_EN_RFF_MASK;
@@ -315,7 +300,7 @@ void sensor_line_callback(uint32_t addr) {
                 if (!sensor.transpose) {
                     unaligned_memcpy(dst, src, MAIN_FB()->u);
                 } else {
-                    copy_line(dst, src);
+                    copy_transposed_line(dst, src);
                 }
                 #endif
                 break;
@@ -328,14 +313,14 @@ void sensor_line_callback(uint32_t addr) {
                     if (!sensor.transpose) {
                         unaligned_memcpy(dst, src, MAIN_FB()->u);
                     } else {
-                        copy_line(dst, src);
+                        copy_transposed_line(dst, src);
                     }
                 } else {
                     // Extract Y channel from YUV.
                     if (!sensor.transpose) {
                         unaligned_2_to_1_memcpy(dst, src16, MAIN_FB()->u);
                     } else {
-                        copy_line(dst, src16);
+                        copy_transposed_line(dst, src16);
                     }
                 }
                 #endif
@@ -350,13 +335,13 @@ void sensor_line_callback(uint32_t addr) {
                     if (!sensor.transpose) {
                         unaligned_memcpy_rev16(dst16, src16, MAIN_FB()->u);
                     } else {
-                        copy_line_rev(dst16, src16);
+                        copy_transposed_line_rev16(dst16, src16);
                     }
                 } else {
                     if (!sensor.transpose) {
                         unaligned_memcpy(dst16, src16, MAIN_FB()->u * sizeof(uint16_t));
                     } else {
-                        copy_line(dst16, src16);
+                        copy_transposed_line(dst16, src16);
                     }
                 }
                 #endif
