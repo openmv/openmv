@@ -30,6 +30,7 @@
 #include "frogeye2020.h"
 #include "gc2145.h"
 #include "framebuffer.h"
+#include "unaligned_memcpy.h"
 #include "omv_boardconfig.h"
 #include "omv_gpio.h"
 #include "omv_i2c.h"
@@ -1246,6 +1247,85 @@ __weak int sensor_auto_crop_framebuffer() {
 
     // Pickout a good buffer count for the user.
     framebuffer_auto_adjust_buffers();
+    return 0;
+}
+
+#define copy_transposed_line(dstp, srcp)                   \
+    for (int i = MAIN_FB()->u, h = MAIN_FB()->v; i; i--) { \
+        *dstp = *srcp++;                                   \
+        dstp += h;                                         \
+    }
+
+#define copy_transposed_line_rev16(dstp, srcp)             \
+    for (int i = MAIN_FB()->u, h = MAIN_FB()->v; i; i--) { \
+        *dstp = __REV16(*srcp++);                          \
+        dstp += h;                                         \
+    }
+
+__weak int sensor_copy_line(void *dma, uint8_t *src, uint8_t *dst) {
+    uint16_t *src16 = (uint16_t *) src;
+    uint16_t *dst16 = (uint16_t *) dst;
+    #if OMA_ENABLE_DMA_MEMCPY
+    extern int sensor_dma_memcpy(void *dma, void *dst, void *src, int bpp, bool transposed);
+    #endif
+
+    switch (sensor.pixformat) {
+        case PIXFORMAT_BAYER:
+            #if OMA_ENABLE_DMA_MEMCPY
+            sensor_dma_memcpy(dma, dst, src, sizeof(uint8_t), sensor.transpose);
+            #else
+            if (!sensor.transpose) {
+                unaligned_memcpy(dst, src, MAIN_FB()->u);
+            } else {
+                copy_transposed_line(dst, src);
+            }
+            #endif
+            break;
+        case PIXFORMAT_GRAYSCALE:
+            #if OMA_ENABLE_DMA_MEMCPY
+            sensor_dma_memcpy(dma, dst, src, sizeof(uint8_t), sensor.transpose);
+            #else
+            if (sensor.hw_flags.gs_bpp == 1) {
+                // 1BPP GRAYSCALE.
+                if (!sensor.transpose) {
+                    unaligned_memcpy(dst, src, MAIN_FB()->u);
+                } else {
+                    copy_transposed_line(dst, src);
+                }
+            } else {
+                // Extract Y channel from YUV.
+                if (!sensor.transpose) {
+                    unaligned_2_to_1_memcpy(dst, src16, MAIN_FB()->u);
+                } else {
+                    copy_transposed_line(dst, src16);
+                }
+            }
+            #endif
+            break;
+        case PIXFORMAT_RGB565:
+        case PIXFORMAT_YUV422:
+            #if OMA_ENABLE_DMA_MEMCPY
+            sensor_dma_memcpy(dma, dst16, src16, sizeof(uint16_t), sensor.transpose);
+            #else
+            if ((sensor.pixformat == PIXFORMAT_RGB565 && sensor.hw_flags.rgb_swap)
+                || (sensor.pixformat == PIXFORMAT_YUV422 && sensor.hw_flags.yuv_swap)) {
+                if (!sensor.transpose) {
+                    unaligned_memcpy_rev16(dst16, src16, MAIN_FB()->u);
+                } else {
+                    copy_transposed_line_rev16(dst16, src16);
+                }
+            } else {
+                if (!sensor.transpose) {
+                    unaligned_memcpy(dst16, src16, MAIN_FB()->u * sizeof(uint16_t));
+                } else {
+                    copy_transposed_line(dst16, src16);
+                }
+            }
+            #endif
+            break;
+        default:
+            break;
+    }
     return 0;
 }
 
