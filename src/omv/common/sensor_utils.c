@@ -666,6 +666,25 @@ __weak int sensor_set_framerate(int framerate) {
     return 0;
 }
 
+__weak void sensor_throttle_framerate() {
+    if (!sensor.first_line) {
+        sensor.first_line = true;
+        uint32_t tick = mp_hal_ticks_ms();
+        uint32_t framerate_ms = IM_DIV(1000, sensor.framerate);
+
+        if (sensor.last_frame_ms_valid && ((tick - sensor.last_frame_ms) < framerate_ms)) {
+            // Drop the current frame to match the requested frame rate. Note that if the frame
+            // is marked to be dropped, it should not be copied to SRAM/SDRAM to save CPU time.
+            sensor.drop_frame = true;
+        } else if (sensor.last_frame_ms_valid) {
+            sensor.last_frame_ms += framerate_ms;
+        } else {
+            sensor.last_frame_ms = tick;
+            sensor.last_frame_ms_valid = true;
+        }
+    }
+}
+
 __weak bool sensor_get_cropped() {
     if (sensor.framesize != FRAMESIZE_INVALID) {
         return (MAIN_FB()->x != 0)                                  // should be zero if not cropped.
@@ -675,7 +694,6 @@ __weak bool sensor_get_cropped() {
     }
     return false;
 }
-
 
 __weak uint32_t sensor_get_src_bpp() {
     switch (sensor.pixformat) {
@@ -1231,6 +1249,10 @@ __weak int sensor_auto_crop_framebuffer() {
     return 0;
 }
 
+__weak int sensor_snapshot(sensor_t *sensor, image_t *image, uint32_t flags) {
+    return -1;
+}
+
 const char *sensor_strerror(int error) {
     static const char *sensor_errors[] = {
         "No error.",
@@ -1264,9 +1286,5 @@ const char *sensor_strerror(int error) {
     } else {
         return sensor_errors[error];
     }
-}
-
-__weak int sensor_snapshot(sensor_t *sensor, image_t *image, uint32_t flags) {
-    return -1;
 }
 #endif //MICROPY_PY_SENSOR

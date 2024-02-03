@@ -454,6 +454,9 @@ bool sensor_get_auto_rotation();
 // Set the number of virtual frame buffers.
 int sensor_set_framebuffers(int count);
 
+// Drop the next frame to match the current frame rate.
+void sensor_throttle_framerate();
+
 // Set special digital effects (SDE).
 int sensor_set_special_effect(sde_t sde);
 
