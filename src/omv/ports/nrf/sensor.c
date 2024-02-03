@@ -43,6 +43,11 @@ static const volatile uint32_t *_pclkPort;
 #define portInputRegister(P)      ((P == 0) ? &NRF_P0->IN : &NRF_P1->IN)
 #endif
 
+#ifndef I2S_CONFIG_MCKFREQ_MCKFREQ_32MDIV2
+// Note this define is out of spec and has been removed from hal.
+#define I2S_CONFIG_MCKFREQ_MCKFREQ_32MDIV2    (0x80000000UL)  /*!< 32 MHz / 2 = 16.0 MHz */
+#endif
+
 extern void __fatal_error(const char *msg);
 
 int sensor_init() {
@@ -136,11 +141,6 @@ uint32_t sensor_get_xclk_frequency() {
 }
 
 int sensor_set_xclk_frequency(uint32_t frequency) {
-    #ifndef I2S_CONFIG_MCKFREQ_MCKFREQ_32MDIV2
-    // Note this define is out of spec and has been removed from hal.
-#define I2S_CONFIG_MCKFREQ_MCKFREQ_32MDIV2    (0x80000000UL)  /*!< 32 MHz / 2 = 16.0 MHz */
-    #endif
-
     nrf_gpio_cfg_output(DCMI_XCLK_PIN);
 
     // Generates 16 MHz signal using I2S peripheral
@@ -197,21 +197,19 @@ int sensor_snapshot(sensor_t *sensor, image_t *image, uint32_t flags) {
 
     // Falling edge indicates start of frame
     while ((*_vsyncPort & _vsyncMask) == 0) {
-        ;                                    // wait for HIGH
+        // Wait for high
     }
     while ((*_vsyncPort & _vsyncMask) != 0) {
-        ;                                    // wait for LOW
-
+        // Wait for low
     }
     for (int i = 0; i < _height; i++) {
         // rising edge indicates start of line
         while ((*_hrefPort & _hrefMask) == 0) {
-            ;                                  // wait for HIGH
-
+            // Wait for high
         }
         for (int j = 0; j < bytesPerRow; j++) {
             while ((*_pclkPort & _pclkMask) != 0) {
-                ;                                  // wait for LOW
+                // Wait for low
             }
             uint32_t in = port->IN; // read all bits in parallel
             if (!_grayscale || !(j & 1)) {
@@ -219,11 +217,11 @@ int sensor_snapshot(sensor_t *sensor, image_t *image, uint32_t flags) {
                 *b++ = ((in >> 8) | ((in >> 3) & 1) | ((in >> 1) & 2));
             }
             while ((*_pclkPort & _pclkMask) == 0) {
-                ;                                  // wait for HIGH
+                // Wait for high
             }
         }
         while ((*_hrefPort & _hrefMask) != 0) {
-            ;                                  // wait for LOW
+            // Wait for low
         }
     }
 
