@@ -418,16 +418,13 @@ void HAL_DCMI_FrameEventCallback(DCMI_HandleTypeDef *hdcmi) {
 }
 
 #if defined(OMV_MDMA_CHANNEL_DCMI_0)
-static void mdma_memcpy(vbuffer_t *buffer, void *dst, void *src, int bpp, bool transposed) {
-    // We're using two handles to give each channel the maximum amount of time possible to do the line
-    // transfer. In most situations only one channel will be running at a time. However, if SDRAM is
-    // backedup we don't have to disable the channel if it is flushing trailing data to SDRAM.
-    MDMA_HandleTypeDef *handle = (buffer->offset % 2) ? &DCMI_MDMA_Handle1 : &DCMI_MDMA_Handle0;
+int sensor_dma_memcpy(void *dma, void *dst, void *src, int bpp, bool transposed) {
+    MDMA_HandleTypeDef *handle = dma;
 
     // Drop the frame if MDMA is not keeping up as the image will be corrupt.
     if (handle->Instance->CCR & MDMA_CCR_EN) {
         sensor.drop_frame = true;
-        return;
+        return 0;
     }
 
     // If MDMA is still running from a previous transfer HAL_MDMA_Start() will disable that transfer
@@ -439,6 +436,7 @@ static void mdma_memcpy(vbuffer_t *buffer, void *dst, void *src, int bpp, bool t
                    (uint32_t) dst,
                    transposed ? bpp : (MAIN_FB()->u * bpp),
                    transposed ? MAIN_FB()->u : 1);
+    return 0;
 }
 #endif
 
@@ -564,68 +562,14 @@ void DCMI_DMAConvCpltUser(uint32_t addr) {
         dst += bytes_per_pixel * buffer->offset++;
     }
 
-    // Implement per line, per pixel cropping, and image transposing (for image rotation) in
-    // in software using the CPU to transfer the image from the line buffers to the frame buffer.
-    uint16_t *src16 = (uint16_t *) src;
-    uint16_t *dst16 = (uint16_t *) dst;
-
-    switch (sensor.pixformat) {
-        case PIXFORMAT_BAYER:
-            #if defined(OMV_MDMA_CHANNEL_DCMI_0)
-            mdma_memcpy(buffer, dst, src, sizeof(uint8_t), sensor.transpose);
-            #else
-            if (!sensor.transpose) {
-                unaligned_memcpy(dst, src, MAIN_FB()->u);
-            } else {
-                copy_transposed_line(dst, src);
-            }
-            #endif
-            break;
-        case PIXFORMAT_GRAYSCALE:
-            #if defined(OMV_MDMA_CHANNEL_DCMI_0)
-            mdma_memcpy(buffer, dst, src, sizeof(uint8_t), sensor.transpose);
-            #else
-            if (sensor.hw_flags.gs_bpp == 1) {
-                // 1BPP GRAYSCALE.
-                if (!sensor.transpose) {
-                    unaligned_memcpy(dst, src, MAIN_FB()->u);
-                } else {
-                    copy_transposed_line(dst, src);
-                }
-            } else {
-                // Extract Y channel from YUV.
-                if (!sensor.transpose) {
-                    unaligned_2_to_1_memcpy(dst, src16, MAIN_FB()->u);
-                } else {
-                    copy_transposed_line(dst, src16);
-                }
-            }
-            #endif
-            break;
-        case PIXFORMAT_RGB565:
-        case PIXFORMAT_YUV422:
-            #if defined(OMV_MDMA_CHANNEL_DCMI_0)
-            mdma_memcpy(buffer, dst16, src16, sizeof(uint16_t), sensor.transpose);
-            #else
-            if ((sensor.pixformat == PIXFORMAT_RGB565 && sensor.hw_flags.rgb_swap)
-                || (sensor.pixformat == PIXFORMAT_YUV422 && sensor.hw_flags.yuv_swap)) {
-                if (!sensor.transpose) {
-                    unaligned_memcpy_rev16(dst16, src16, MAIN_FB()->u);
-                } else {
-                    copy_transposed_line_rev16(dst16, src16);
-                }
-            } else {
-                if (!sensor.transpose) {
-                    unaligned_memcpy(dst16, src16, MAIN_FB()->u * sizeof(uint16_t));
-                } else {
-                    copy_transposed_line(dst16, src16);
-                }
-            }
-            #endif
-            break;
-        default:
-            break;
-    }
+    #if defined(OMV_MDMA_CHANNEL_DCMI_0)
+    // We're using two handles to give each channel the maximum amount of time possible to do the line
+    // transfer. In most situations only one channel will be running at a time. However, if SDRAM is
+    // backedup we don't have to disable the channel if it is flushing trailing data to SDRAM.
+    sensor_copy_line((buffer->offset % 2) ? &DCMI_MDMA_Handle1 : &DCMI_MDMA_Handle0, src, dst);
+    #else
+    sensor_copy_line(NULL, src, dst);
+    #endif
 }
 
 #if defined(OMV_MDMA_CHANNEL_DCMI_0)

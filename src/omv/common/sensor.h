@@ -14,18 +14,6 @@
 #include "omv_i2c.h"
 #include "imlib.h"
 
-#define copy_transposed_line(dstp, srcp)                   \
-    for (int i = MAIN_FB()->u, h = MAIN_FB()->v; i; i--) { \
-        *dstp = *srcp++;                                   \
-        dstp += h;                                         \
-    }
-
-#define copy_transposed_line_rev16(dstp, srcp)             \
-    for (int i = MAIN_FB()->u, h = MAIN_FB()->v; i; i--) { \
-        *dstp = __REV16(*srcp++);                          \
-        dstp += h;                                         \
-    }
-
 #define OV2640_SLV_ADDR         (0x60)
 #define OV5640_SLV_ADDR         (0x78)
 #define OV7725_SLV_ADDR         (0x42)
@@ -483,6 +471,10 @@ int sensor_check_framebuffer_size();
 
 // Auto-crop frame buffer until it fits in RAM (may switch pixel format to BAYER).
 int sensor_auto_crop_framebuffer();
+
+// Copy a single line buffer to its destination. The copying process is
+// DMA-accelerated, if available, and falls back to slow software if not.
+int sensor_copy_line(void *dma, uint8_t *src, uint8_t *dst);
 
 // Default snapshot function.
 int sensor_snapshot(sensor_t *sensor, image_t *image, uint32_t flags);
