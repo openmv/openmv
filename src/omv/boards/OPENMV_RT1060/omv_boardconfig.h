@@ -192,7 +192,12 @@
 
 // Camera interface configuration.
 #define OMV_CSI_BASE                    (CSI)
+#define OMV_CSI_DMA                     (DMA0)
+#define OMV_CSI_DMA_MUX                 (DMAMUX)
+#define OMV_CSI_DMA_CHANNEL_START       (4U)
+#define OMV_CSI_DMA_CHANNEL_COUNT       (2U)
 #define OMV_CSI_XCLK_FREQUENCY          (12000000)
+#define OMV_CSI_DMA_MEMCPY_ENABLE       (1)
 #define OMV_CSI_HW_SWAP_ENABLE          (1)
 
 #define OMV_CSI_D0_PIN                  (&omv_pin_DCMI_D0)
