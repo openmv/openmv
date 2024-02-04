@@ -9,7 +9,7 @@
  * OV7690 driver.
  */
 #include "omv_boardconfig.h"
-#if (OMV_ENABLE_OV7690 == 1)
+#if (OMV_OV7690_ENABLE == 1)
 
 #include <stdint.h>
 #include <stdlib.h>
@@ -453,7 +453,8 @@ static int set_auto_exposure(sensor_t *sensor, int enable, int exposure_us) {
         }
 
         int exposure =
-            IM_MAX(IM_MIN(((exposure_us * ((((OV7690_XCLK_FREQ / clk_rc) * pll_mult) / pll_div) / 1000000)) / t_pclk) / t_line,
+            IM_MAX(IM_MIN(((exposure_us * ((((OMV_OV7690_XCLK_FREQ / clk_rc) * pll_mult) / pll_div) / 1000000)) / t_pclk) /
+                          t_line,
                           0xFFFF), 0x0000);
 
         ret |= omv_i2c_writeb(&sensor->i2c_bus, sensor->slv_addr, AECL, ((exposure >> 0) & 0xFF));
@@ -496,7 +497,8 @@ static int get_exposure_us(sensor_t *sensor, int *exposure_us) {
     }
 
     *exposure_us =
-        (((aec_h << 8) + (aec_l << 0)) * t_line * t_pclk) / ((((OV7690_XCLK_FREQ / clk_rc) * pll_mult) / pll_div) / 1000000);
+        (((aec_h <<
+            8) + (aec_l << 0)) * t_line * t_pclk) / ((((OMV_OV7690_XCLK_FREQ / clk_rc) * pll_mult) / pll_div) / 1000000);
 
     return ret;
 }
@@ -619,4 +621,4 @@ int ov7690_init(sensor_t *sensor) {
 
     return 0;
 }
-#endif //(OMV_ENABLE_OV7690 == 1)
+#endif //(OMV_OV7690_ENABLE == 1)

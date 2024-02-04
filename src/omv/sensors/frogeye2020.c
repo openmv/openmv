@@ -9,7 +9,7 @@
  * FrogEye2020 driver.
  */
 #include "omv_boardconfig.h"
-#if (OMV_ENABLE_FROGEYE2020 == 1)
+#if (OMV_FROGEYE2020_ENABLE == 1)
 
 #include "sensor.h"
 
@@ -29,4 +29,4 @@ int frogeye2020_init(sensor_t *sensor) {
     return 0;
 }
 
-#endif // (OMV_ENABLE_FROGEYE2020 == 1)
+#endif // (OMV_FROGEYE2020_ENABLE == 1)

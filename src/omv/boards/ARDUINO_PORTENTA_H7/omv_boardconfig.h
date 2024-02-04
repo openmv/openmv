@@ -1,8 +1,8 @@
 /*
  * This file is part of the OpenMV project.
  *
- * Copyright (c) 2013-2021 Ibrahim Abdelkader <iabdalkader@openmv.io>
- * Copyright (c) 2013-2021 Kwabena W. Agyeman <kwagyeman@openmv.io>
+ * Copyright (c) 2013-2024 Ibrahim Abdelkader <iabdalkader@openmv.io>
+ * Copyright (c) 2013-2024 Kwabena W. Agyeman <kwagyeman@openmv.io>
  *
  * This work is licensed under the MIT license, see the file LICENSE for details.
  *
@@ -12,64 +12,21 @@
 #define __OMV_BOARDCONFIG_H__
 
 // Architecture info
-#define OMV_ARCH_STR                        "PORTENTA H7 8192 SDRAM"    // 33 chars max
+#define OMV_BOARD_ARCH                      "PORTENTA H7 8192 SDRAM"    // 33 chars max
 #define OMV_BOARD_TYPE                      "H7"
-#define OMV_UNIQUE_ID_ADDR                  0x1FF1E800    // Unique ID address.
-#define OMV_UNIQUE_ID_SIZE                  3       // Unique ID size in words.
-#define OMV_UNIQUE_ID_OFFSET                4       // Bytes offset for multi-word UIDs.
+#define OMV_BOARD_UID_ADDR                  0x1FF1E800  // Unique ID address.
+#define OMV_BOARD_UID_SIZE                  3           // Unique ID size in words.
+#define OMV_BOARD_UID_OFFSET                4           // Bytes offset for multi-word UIDs.
 
-#define OMV_XCLK_MCO                        (0U)
-#define OMV_XCLK_TIM                        (1U)
-#define OMV_XCLK_OSC                        (2U)
+// JPEG configuration.
+#define OMV_JPEG_CODEC_ENABLE               (1)
+#define OMV_JPEG_QUALITY_LOW                (50)
+#define OMV_JPEG_QUALITY_HIGH               (90)
+#define OMV_JPEG_QUALITY_THRESHOLD          (320 * 240 * 2)
 
-// Sensor external clock source.
-#define OMV_XCLK_SOURCE                     (OMV_XCLK_TIM)
-
-// Sensor external clock timer frequency.
-#define OMV_XCLK_FREQUENCY                  (12000000)
-
-// Enable hardware JPEG
-#define OMV_HARDWARE_JPEG                   (1)
-
-// Enable fast line transfer with DMA.
-#define OMA_ENABLE_DMA_MEMCPY               (1)
-
-// MDMA configuration
-#define OMV_MDMA_CHANNEL_DCMI_0             (0)
-#define OMV_MDMA_CHANNEL_DCMI_1             (1)
-#define OMV_MDMA_CHANNEL_JPEG_IN            (7) // in has a lower pri than out
-#define OMV_MDMA_CHANNEL_JPEG_OUT           (6) // out has a higher pri than in
-
-// Enable additional GPIO banks.
-#define OMV_ENABLE_GPIO_BANK_F              (1)
-#define OMV_ENABLE_GPIO_BANK_G              (1)
-#define OMV_ENABLE_GPIO_BANK_H              (1)
-#define OMV_ENABLE_GPIO_BANK_I              (1)
-#define OMV_ENABLE_GPIO_BANK_J              (1)
-#define OMV_ENABLE_GPIO_BANK_K              (1)
-
-// Enable sensor drivers
-#define OMV_ENABLE_OV2640                   (0)
-#define OMV_ENABLE_OV5640                   (0)
-#define OMV_ENABLE_OV7690                   (0)
-#define OMV_ENABLE_OV7725                   (0)
-#define OMV_ENABLE_OV9650                   (0)
-#define OMV_ENABLE_MT9M114                  (0)
-#define OMV_ENABLE_MT9V0XX                  (0)
-#define OMV_ENABLE_LEPTON                   (0)
-#define OMV_ENABLE_HM01B0                   (1)
-#define OMV_ENABLE_HM0360                   (1)
-#define OMV_ENABLE_GC2145                   (0)
-
-// OV7725 sensor settings
-#define OMV_OV7725_PLL_CONFIG               (0x41)    // x4
-#define OMV_OV7725_BANDING                  (0x7F)
-
-// MT9V0XX sensor settings
-#define MT9V0XX_XCLK_FREQ                   (25000000)
-
-// OV5640 sensor settings
-#define OMV_ENABLE_OV5640_AF                (1)
+// Image sensor drivers configuration.
+#define OMV_OV5640_ENABLE                   (0)
+#define OMV_OV5640_AF_ENABLE                (1)
 #define OMV_OV5640_XCLK_FREQ                (12500000)
 #define OMV_OV5640_PLL_CTRL2                (0x7E)
 #define OMV_OV5640_PLL_CTRL3                (0x13)
@@ -78,25 +35,17 @@
 #define OMV_OV5640_REV_Y_CTRL2              (0x7E)
 #define OMV_OV5640_REV_Y_CTRL3              (0x13)
 
-// FIR Module
-#define OMV_ENABLE_FIR_MLX90621             (1)
-#define OMV_ENABLE_FIR_MLX90640             (1)
-#define OMV_ENABLE_FIR_MLX90641             (1)
-#define OMV_ENABLE_FIR_AMG8833              (1)
-#define OMV_ENABLE_FIR_LEPTON               (1)
+#define OMV_HM01B0_ENABLE                   (1)
+#define OMV_HM0360_ENABLE                   (1)
 
-// Enable WiFi debug
-#define OMV_ENABLE_WIFIDBG                  (0)
+// FIR sensor drivers configuration.
+#define OMV_FIR_MLX90621_ENABLE             (1)
+#define OMV_FIR_MLX90640_ENABLE             (1)
+#define OMV_FIR_MLX90641_ENABLE             (1)
+#define OMV_FIR_AMG8833_ENABLE              (1)
+#define OMV_FIR_LEPTON_ENABLE               (1)
 
-// If buffer size is bigger than this threshold, the quality is reduced.
-// This is only used for JPEG images sent to the IDE not normal compression.
-#define JPEG_QUALITY_THRESH                 (320 * 240 * 2)
-
-// Low and high JPEG QS.
-#define JPEG_QUALITY_LOW                    50
-#define JPEG_QUALITY_HIGH                   90
-
-// FB Heap Block Size
+// UMM heap block size
 #define OMV_UMM_BLOCK_SIZE                  256
 
 // USB IRQn.
@@ -226,127 +175,138 @@
 #define OMV_DMA_REGION_D3_BASE              (OMV_SRAM4_ORIGIN + (0 * 1024))
 #define OMV_DMA_REGION_D3_SIZE              MPU_REGION_SIZE_64KB
 
+// MDMA configuration
+#define OMV_MDMA_CHANNEL_DCMI_0             (0)
+#define OMV_MDMA_CHANNEL_DCMI_1             (1)
+#define OMV_MDMA_CHANNEL_JPEG_IN            (7) // in has a lower pri than out
+#define OMV_MDMA_CHANNEL_JPEG_OUT           (6) // out has a higher pri than in
+
 // AXI QoS - Low-High (0:15) - default 0
 #define OMV_AXI_QOS_MDMA_R_PRI              14    // Max pri to move data.
 #define OMV_AXI_QOS_MDMA_W_PRI              15    // Max pri to move data.
 #define OMV_AXI_QOS_LTDC_R_PRI              15    // Max pri to read out the frame buffer.
 
+// Enable additional GPIO ports.
+#define OMV_GPIO_PORT_F_ENABLE              (1)
+#define OMV_GPIO_PORT_G_ENABLE              (1)
+#define OMV_GPIO_PORT_H_ENABLE              (1)
+#define OMV_GPIO_PORT_I_ENABLE              (1)
+#define OMV_GPIO_PORT_J_ENABLE              (1)
+#define OMV_GPIO_PORT_K_ENABLE              (1)
+
 // Image sensor I2C
-#define ISC_I2C_ID                          (3)
-#define ISC_I2C_SPEED                       (OMV_I2C_SPEED_STANDARD)
+#define OMV_CSI_I2C_ID                      (3)
+#define OMV_CSI_I2C_SPEED                   (OMV_I2C_SPEED_STANDARD)
 
 // Alternate I2C bus for the Portenta breakout
-#define ISC_I2C_ALT_ID                      (4)
-#define ISC_I2C_ALT_SPEED                   (OMV_I2C_SPEED_STANDARD)
+#define OMV_CSI_I2C_ALT_ID                  (4)
+#define OMV_CSI_I2C_ALT_SPEED               (OMV_I2C_SPEED_STANDARD)
 
 // Thermal image sensor I2C bus
-#define FIR_I2C_ID                          (3)
-#define FIR_I2C_SPEED                       (OMV_I2C_SPEED_STANDARD)
+#define OMV_FIR_I2C_ID                      (3)
+#define OMV_FIR_I2C_SPEED                   (OMV_I2C_SPEED_STANDARD)
 
-// Soft I2C bus
-//#define SOFT_I2C_SIOC_PIN                 (&omv_pin_PH7_GPIO)
-//#define SOFT_I2C_SIOD_PIN                 (&omv_pin_PH8_GPIO)
-//#define SOFT_I2C_SPIN_DELAY               64
+// Camera interface.
+#define OMV_CSI_XCLK_SOURCE                 (XCLK_SOURCE_TIM)
+#define OMV_CSI_XCLK_FREQUENCY              (12000000)
+#define OMV_CSI_TIM                         (TIM1)
+#define OMV_CSI_TIM_PIN                     (&omv_pin_K1_TIM1)
+// Enable TIM1-CH1 on PA8 too for Portenta breakout.
+#define OMV_CSI_TIM_EXT_PIN                 (&omv_pin_A8_TIM1)
+#define OMV_CSI_TIM_CHANNEL                 (TIM_CHANNEL_1)
+#define OMV_CSI_TIM_CLK_ENABLE()            __TIM1_CLK_ENABLE()
+#define OMV_CSI_TIM_CLK_DISABLE()           __TIM1_CLK_DISABLE()
+#define OMV_CSI_TIM_PCLK_FREQ()             HAL_RCC_GetPCLK2Freq()
+#define OMV_CSI_DMA_MEMCPY_ENABLE           (1)
 
+#define OMV_CSI_D0_PIN                      (&omv_pin_H9_DCMI)
+#define OMV_CSI_D1_PIN                      (&omv_pin_H10_DCMI)
+#define OMV_CSI_D2_PIN                      (&omv_pin_H11_DCMI)
+#define OMV_CSI_D3_PIN                      (&omv_pin_H12_DCMI)
+#define OMV_CSI_D4_PIN                      (&omv_pin_H14_DCMI)
+#define OMV_CSI_D5_PIN                      (&omv_pin_I4_DCMI)
+#define OMV_CSI_D6_PIN                      (&omv_pin_I6_DCMI)
+#define OMV_CSI_D7_PIN                      (&omv_pin_I7_DCMI)
+
+#define OMV_CSI_HSYNC_PIN                   (&omv_pin_A4_DCMI)
+#define OMV_CSI_VSYNC_PIN                   (&omv_pin_I5_DCMI)
+#define OMV_CSI_PXCLK_PIN                   (&omv_pin_A6_DCMI)
 // GPIO.0 is connected to the sensor module reset pin on the Portenta
 // breakout board and to the LDO's LDO_ENABLE pin on the Himax shield.
 // The sensor probing process will detect the right reset or powerdown
 // polarity, so it should be fine to enable it for both boards.
-#define DCMI_RESET_PIN                      (&omv_pin_C13_GPIO)
+#define OMV_CSI_RESET_PIN                   (&omv_pin_C13_GPIO)
 
 // GPIO.1 is connected to the sensor module frame sync pin (OUTPUT) on
 // the Portenta breakout board and to the INT pin (OUTPUT) on the Himax
 // shield, so it can't be enabled for the two boards at the same time.
-//#define DCMI_FSYNC_PIN                    (&omv_pin_C15_GPIO)
+//#define OMV_CSI_FSYNC_PIN                    (&omv_pin_C15_GPIO)
 
 // GPIO.3 is connected to the powerdown pin on the Portenta breakout board,
 // and to the STROBE pin on the Himax shield, however it's not actually
 // used on the Himax shield and can be safely enable for the two boards.
-#define DCMI_POWER_PIN                      (&omv_pin_D5_GPIO)
-
-/* DCMI */
-#define DCMI_TIM                            (TIM1)
-#define DCMI_TIM_PIN                        (&omv_pin_K1_TIM1)
-// Enable TIM1-CH1 on PA8 too for Portenta breakout.
-#define DCMI_TIM_EXT_PIN                    (&omv_pin_A8_TIM1)
-#define DCMI_TIM_CHANNEL                    (TIM_CHANNEL_1)
-#define DCMI_TIM_CLK_ENABLE()               __TIM1_CLK_ENABLE()
-#define DCMI_TIM_CLK_DISABLE()              __TIM1_CLK_DISABLE()
-#define DCMI_TIM_PCLK_FREQ()                HAL_RCC_GetPCLK2Freq()
-
-#define DCMI_D0_PIN                         (&omv_pin_H9_DCMI)
-#define DCMI_D1_PIN                         (&omv_pin_H10_DCMI)
-#define DCMI_D2_PIN                         (&omv_pin_H11_DCMI)
-#define DCMI_D3_PIN                         (&omv_pin_H12_DCMI)
-#define DCMI_D4_PIN                         (&omv_pin_H14_DCMI)
-#define DCMI_D5_PIN                         (&omv_pin_I4_DCMI)
-#define DCMI_D6_PIN                         (&omv_pin_I6_DCMI)
-#define DCMI_D7_PIN                         (&omv_pin_I7_DCMI)
-
-#define DCMI_HSYNC_PIN                      (&omv_pin_A4_DCMI)
-#define DCMI_VSYNC_PIN                      (&omv_pin_I5_DCMI)
-#define DCMI_PXCLK_PIN                      (&omv_pin_A6_DCMI)
+#define OMV_CSI_POWER_PIN                   (&omv_pin_D5_GPIO)
 
 // Physical I2C buses.
 
 // I2C bus 3
-#define I2C3_ID                             (3)
-#define I2C3_SCL_PIN                        (&omv_pin_H7_I2C3)
-#define I2C3_SDA_PIN                        (&omv_pin_H8_I2C3)
+#define OMV_I2C3_ID                         (3)
+#define OMV_I2C3_SCL_PIN                    (&omv_pin_H7_I2C3)
+#define OMV_I2C3_SDA_PIN                    (&omv_pin_H8_I2C3)
 
 // I2C bus 4
-#define I2C4_ID                             (4)
-#define I2C4_SCL_PIN                        (&omv_pin_H11_I2C4)
-#define I2C4_SDA_PIN                        (&omv_pin_H12_I2C4)
+#define OMV_I2C4_ID                         (4)
+#define OMV_I2C4_SCL_PIN                    (&omv_pin_H11_I2C4)
+#define OMV_I2C4_SDA_PIN                    (&omv_pin_H12_I2C4)
 
 // Physical SPI buses.
 
 // SPI bus 2
-#define SPI2_ID                             (2)
-#define SPI2_SCLK_PIN                       (&omv_pin_I1_SPI2)
-#define SPI2_MISO_PIN                       (&omv_pin_C2_SPI2)
-#define SPI2_MOSI_PIN                       (&omv_pin_C3_SPI2)
-#define SPI2_SSEL_PIN                       (&omv_pin_I0_SPI2)
-#define SPI2_DMA_TX_CHANNEL                 (DMA1_Stream4)
-#define SPI2_DMA_RX_CHANNEL                 (DMA1_Stream3)
+#define OMV_SPI2_ID                         (2)
+#define OMV_SPI2_SCLK_PIN                   (&omv_pin_I1_SPI2)
+#define OMV_SPI2_MISO_PIN                   (&omv_pin_C2_SPI2)
+#define OMV_SPI2_MOSI_PIN                   (&omv_pin_C3_SPI2)
+#define OMV_SPI2_SSEL_PIN                   (&omv_pin_I0_SPI2)
+#define OMV_SPI2_DMA_TX_CHANNEL             (DMA1_Stream4)
+#define OMV_SPI2_DMA_RX_CHANNEL             (DMA1_Stream3)
 
 // SAI4
-#define AUDIO_SAI                           (SAI4_Block_A)
+#define OMV_SAI                             (SAI4_Block_A)
 // SCKx frequency = SAI_KER_CK / MCKDIV / 2
-#define AUDIO_SAI_MCKDIV                    (12)
-#define AUDIO_SAI_FREQKHZ                   (2048U) // 2048KHz
-#define AUDIO_MAX_CHANNELS                  (2) // Maximum number of channels.
+#define OMV_SAI_MCKDIV                      (12)
+#define OMV_SAI_FREQKHZ                     (2048U) // 2048KHz
+#define OMV_AUDIO_MAX_CHANNELS              (2) // Maximum number of channels.
 
-#define AUDIO_SAI_CK_PIN                    (&omv_pin_E2_SAI4)
-#define AUDIO_SAI_D1_PIN                    (&omv_pin_B2_SAI4)
+#define OMV_SAI_CK_PIN                      (&omv_pin_E2_SAI4)
+#define OMV_SAI_D1_PIN                      (&omv_pin_B2_SAI4)
 
-#define AUDIO_SAI_DMA_STREAM                BDMA_Channel1
-#define AUDIO_SAI_DMA_REQUEST               BDMA_REQUEST_SAI4_A
-#define AUDIO_SAI_DMA_IRQ                   BDMA_Channel1_IRQn
-#define AUDIO_SAI_DMA_IRQHandler            BDMA_Channel1_IRQHandler
+#define OMV_SAI_DMA_STREAM                  BDMA_Channel1
+#define OMV_SAI_DMA_REQUEST                 BDMA_REQUEST_SAI4_A
+#define OMV_SAI_DMA_IRQ                     BDMA_Channel1_IRQn
+#define OMV_SAI_DMA_IRQHandler              BDMA_Channel1_IRQHandler
 
-#define AUDIO_SAI_CLK_ENABLE()              __HAL_RCC_SAI4_CLK_ENABLE()
-#define AUDIO_SAI_CLK_DISABLE()             __HAL_RCC_SAI4_CLK_DISABLE()
-#define AUDIO_SAI_DMA_CLK_ENABLE()          __HAL_RCC_BDMA_CLK_ENABLE()
+#define OMV_SAI_CLK_ENABLE()                __HAL_RCC_SAI4_CLK_ENABLE()
+#define OMV_SAI_CLK_DISABLE()               __HAL_RCC_SAI4_CLK_DISABLE()
+#define OMV_SAI_DMA_CLK_ENABLE()            __HAL_RCC_BDMA_CLK_ENABLE()
 
 // SAI1
 // Set SAI1 clock source in system ex: Sai1ClockSelection = RCC_SAI1CLKSOURCE_PLL;
-//#define AUDIO_SAI                         (SAI1_Block_A)
-//#define AUDIO_SAI_MCKDIV                  (12)
-//#define AUDIO_SAI_FREQKHZ                 (2048U) // 2048KHz
-//#define AUDIO_MAX_CHANNELS                (2) // Maximum number of channels.
+//#define OMV_SAI                             (SAI1_Block_A)
+//#define OMV_SAI_MCKDIV                      (12)
+//#define OMV_SAI_FREQKHZ                     (2048U) // 2048KHz
+//#define OMV_AUDIO_MAX_CHANNELS                    (2) // Maximum number of channels.
 //
-//#define AUDIO_SAI_CK_PIN                  (&omv_pin_E2_SAI1)
-//#define AUDIO_SAI_D1_PIN                  (&omv_pin_B2_SAI1)
+//#define OMV_SAI_CK_PIN                      (&omv_pin_E2_SAI1)
+//#define OMV_SAI_D1_PIN                      (&omv_pin_B2_SAI1)
 //
-//#define AUDIO_SAI_DMA_STREAM              DMA2_Stream6
-//#define AUDIO_SAI_DMA_REQUEST             DMA_REQUEST_SAI1_A
-//#define AUDIO_SAI_DMA_IRQ                 DMA2_Stream6_IRQn
-//#define AUDIO_SAI_DMA_IRQHandler          DMA2_Stream6_IRQHandler
+//#define OMV_SAI_DMA_STREAM                  DMA2_Stream6
+//#define OMV_SAI_DMA_REQUEST                 DMA_REQUEST_SAI1_A
+//#define OMV_SAI_DMA_IRQ                     DMA2_Stream6_IRQn
+//#define OMV_SAI_DMA_IRQHandler              DMA2_Stream6_IRQHandler
 //
-//#define AUDIO_SAI_CLK_ENABLE()            __HAL_RCC_SAI1_CLK_ENABLE()
-//#define AUDIO_SAI_CLK_DISABLE()           __HAL_RCC_SAI1_CLK_DISABLE()
-//#define AUDIO_SAI_DMA_CLK_ENABLE()        __HAL_RCC_DMA2_CLK_ENABLE()
+//#define OMV_SAI_CLK_ENABLE()                __HAL_RCC_SAI1_CLK_ENABLE()
+//#define OMV_SAI_CLK_DISABLE()               __HAL_RCC_SAI1_CLK_DISABLE()
+//#define OMV_SAI_DMA_CLK_ENABLE()            __HAL_RCC_DMA2_CLK_ENABLE()
 
 // LCD Interface
 #define OMV_RGB_DISPLAY_CONTROLLER          (LTDC)
@@ -363,7 +323,7 @@
 //#define OMV_DSI_DISPLAY_RELEASE_RESET()   __HAL_RCC_DSI_RELEASE_RESET()
 
 // SPI LCD Interface
-#define OMV_SPI_DISPLAY_CONTROLLER          (SPI2_ID)
+#define OMV_SPI_DISPLAY_CONTROLLER          (OMV_SPI2_ID)
 #define OMV_SPI_DISPLAY_MOSI_PIN            (&omv_pin_C3_SPI2)
 #define OMV_SPI_DISPLAY_MISO_PIN            (&omv_pin_C2_SPI2)
 #define OMV_SPI_DISPLAY_SCLK_PIN            (&omv_pin_I1_SPI2)
@@ -374,10 +334,10 @@
 #define OMV_SPI_DISPLAY_TRIPLE_BUFFER       (1)
 
 // FIR Lepton
-#define OMV_FIR_LEPTON_I2C_BUS              (FIR_I2C_ID)
-#define OMV_FIR_LEPTON_I2C_BUS_SPEED        (FIR_I2C_SPEED)
+#define OMV_FIR_LEPTON_I2C_BUS              (OMV_FIR_I2C_ID)
+#define OMV_FIR_LEPTON_I2C_BUS_SPEED        (OMV_FIR_I2C_SPEED)
 
-#define OMV_FIR_LEPTON_SPI_BUS              (SPI2_ID)
+#define OMV_FIR_LEPTON_SPI_BUS              (OMV_SPI2_ID)
 #define OMV_FIR_LEPTON_MOSI_PIN             (&omv_pin_C3_SPI2)
 #define OMV_FIR_LEPTON_MISO_PIN             (&omv_pin_C2_SPI2)
 #define OMV_FIR_LEPTON_SCLK_PIN             (&omv_pin_I1_SPI2)

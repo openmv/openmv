@@ -9,7 +9,7 @@
  * OV7725 driver.
  */
 #include "omv_boardconfig.h"
-#if (OMV_ENABLE_OV7725 == 1)
+#if (OMV_OV7725_ENABLE == 1)
 
 #include <stdint.h>
 #include <stdlib.h>
@@ -40,7 +40,7 @@ static const uint8_t default_regs[][2] = {
     {FIXGAIN,       0x09},
     {AWB_CTRL0,     0xe0},
     {DSP_CTRL1,     0xff},
-    {DSP_CTRL2,     0x20 | DSP_CTRL2_VDCW_EN | DSP_CTRL2_HDCW_EN | DSP_CTRL2_VZOOM_EN | DSP_CTRL2_HZOOM_EN}, // {DSP_CTRL2, 0x20},
+    {DSP_CTRL2,     0x20 | DSP_CTRL2_VDCW_EN | DSP_CTRL2_HDCW_EN | DSP_CTRL2_VZOOM_EN | DSP_CTRL2_HZOOM_EN},
     {DSP_CTRL3,     0x00},
     {DSP_CTRL4,     0x48},
 
@@ -102,12 +102,10 @@ static const uint8_t default_regs[][2] = {
 
     {COM5,          0xf5}, // {COM5, 0x65},
 
-// OpenMV Custom.
-
+    // OpenMV Custom.
     {COM7,          COM7_FMT_RGB565},
 
-// End.
-
+    // End.
     {0x00,          0x00},
 };
 
@@ -429,8 +427,8 @@ static int set_auto_exposure(sensor_t *sensor, int enable, int exposure_us) {
         }
 
         int exposure =
-            IM_MAX(IM_MIN(((exposure_us * (((OMV_XCLK_FREQUENCY / clk_rc) * pll_mult) / 1000000)) / t_pclk) / t_line, 0xFFFF),
-                   0x0000);
+            IM_MAX(IM_MIN(((exposure_us * (((OMV_CSI_XCLK_FREQUENCY / clk_rc) * pll_mult) / 1000000)) / t_pclk) / t_line,
+                          0xFFFF), 0x0000);
 
         ret |= omv_i2c_writeb(&sensor->i2c_bus, sensor->slv_addr, AEC, ((exposure >> 0) & 0xFF));
         ret |= omv_i2c_writeb(&sensor->i2c_bus, sensor->slv_addr, AECH, ((exposure >> 8) & 0xFF));
@@ -488,7 +486,8 @@ static int get_exposure_us(sensor_t *sensor, int *exposure_us) {
         clk_rc = ((reg & CLKRC_PRESCALER) + 1) * 2;
     }
 
-    *exposure_us = (((aec_h << 8) + (aec_l << 0)) * t_line * t_pclk) / (((OMV_XCLK_FREQUENCY / clk_rc) * pll_mult) / 1000000);
+    *exposure_us =
+        (((aec_h << 8) + (aec_l << 0)) * t_line * t_pclk) / (((OMV_CSI_XCLK_FREQUENCY / clk_rc) * pll_mult) / 1000000);
 
     return ret;
 }
@@ -690,4 +689,4 @@ int ov7725_init(sensor_t *sensor) {
 
     return 0;
 }
-#endif // (OMV_ENABLE_OV7725 == 1)
+#endif // (OMV_OV7725_ENABLE == 1)

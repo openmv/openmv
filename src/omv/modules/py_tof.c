@@ -21,7 +21,7 @@
 #include "py_image.h"
 #include "framebuffer.h"
 
-#if (OMV_ENABLE_TOF_VL53L5CX == 1)
+#if (OMV_TOF_VL53L5CX_ENABLE == 1)
 #include "vl53l5cx_api.h"
 #endif
 
@@ -34,7 +34,7 @@ static omv_i2c_t tof_bus = {};
 
 typedef enum tof_type {
     TOF_NONE,
-    #if (OMV_ENABLE_TOF_VL53L5CX == 1)
+    #if (OMV_TOF_VL53L5CX_ENABLE == 1)
     TOF_VL53L5CX,
     #endif
 } tof_type_t;
@@ -44,7 +44,7 @@ static int tof_height = 0;
 static bool tof_transposed = false;
 static tof_type_t tof_sensor = TOF_NONE;
 
-#if (OMV_ENABLE_TOF_VL53L5CX == 1)
+#if (OMV_TOF_VL53L5CX_ENABLE == 1)
 static VL53L5CX_Configuration vl53l5cx_dev = {
     .platform = {
         .bus = &tof_bus,
@@ -83,7 +83,7 @@ static void tof_fill_image_float_obj(image_t *img, mp_obj_t *data, float min, fl
     }
 }
 
-#if (OMV_ENABLE_TOF_VL53L5CX == 1)
+#if (OMV_TOF_VL53L5CX_ENABLE == 1)
 static void tof_vl53l5cx_get_depth(VL53L5CX_Configuration *vl53l5cx_dev, float *frame, uint32_t timeout) {
     uint8_t frame_ready = 0;
     // Note depending on the config in platform.h, this struct can be too big to alloc on the stack.
@@ -188,7 +188,7 @@ static mp_obj_t py_tof_deinit() {
     tof_transposed = false;
 
     if (tof_sensor != TOF_NONE) {
-        #if (OMV_ENABLE_TOF_VL53L5CX == 1)
+        #if (OMV_TOF_VL53L5CX_ENABLE == 1)
         if (tof_sensor == TOF_VL53L5CX) {
             vl53l5cx_stop_ranging(&vl53l5cx_dev);
         }
@@ -223,7 +223,7 @@ mp_obj_t py_tof_init(uint n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
         int dev_size = omv_i2c_scan(&tof_bus, dev_list, sizeof(dev_list));
         for (int i = 0; i < dev_size && type == -1; i++) {
             switch (dev_list[i]) {
-                #if (OMV_ENABLE_TOF_VL53L5CX == 1)
+                #if (OMV_TOF_VL53L5CX_ENABLE == 1)
                 case (VL53L5CX_ADDR): {
                     type = TOF_VL53L5CX;
                     break;
@@ -247,7 +247,7 @@ mp_obj_t py_tof_init(uint n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
     // Initialize the detected sensor.
     first_init = true;
     switch (type) {
-        #if (OMV_ENABLE_TOF_VL53L5CX == 1)
+        #if (OMV_TOF_VL53L5CX_ENABLE == 1)
         case TOF_VL53L5CX: {
             int error = 0;
             uint8_t isAlive = 0;
@@ -329,7 +329,7 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_tof_height_obj, py_tof_height);
 
 static mp_obj_t py_tof_refresh() {
     switch (tof_sensor) {
-        #if (OMV_ENABLE_TOF_VL53L5CX == 1)
+        #if (OMV_TOF_VL53L5CX_ENABLE == 1)
         case TOF_VL53L5CX:
             return mp_obj_new_int(15);
         #endif
@@ -355,7 +355,7 @@ mp_obj_t py_tof_read_depth(uint n_args, const mp_obj_t *pos_args, mp_map_t *kw_a
     tof_transposed = args[ARG_transpose].u_bool;
 
     switch (tof_sensor) {
-        #if (OMV_ENABLE_TOF_VL53L5CX == 1)
+        #if (OMV_TOF_VL53L5CX_ENABLE == 1)
         case TOF_VL53L5CX: {
             fb_alloc_mark();
             float *frame = fb_alloc(VL53L5CX_WIDTH * VL53L5CX_HEIGHT * sizeof(float), FB_ALLOC_PREFER_SPEED);
@@ -526,7 +526,7 @@ mp_obj_t py_tof_snapshot(uint n_args, const mp_obj_t *pos_args, mp_map_t *kw_arg
     src_img.data = fb_alloc(src_img.w * src_img.h * sizeof(uint8_t), FB_ALLOC_NO_HINT);
 
     switch (tof_sensor) {
-        #if (OMV_ENABLE_TOF_VL53L5CX == 1)
+        #if (OMV_TOF_VL53L5CX_ENABLE == 1)
         case TOF_VL53L5CX: {
             float *frame = fb_alloc(VL53L5CX_WIDTH * VL53L5CX_HEIGHT * sizeof(float), FB_ALLOC_PREFER_SPEED);
             tof_vl53l5cx_get_depth(&vl53l5cx_dev, frame, args[ARG_timeout].u_int);
@@ -559,7 +559,7 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_tof_snapshot_obj, 0, py_tof_snapshot);
 STATIC const mp_rom_map_elem_t globals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR___name__),            MP_ROM_QSTR(MP_QSTR_tof)                },
     { MP_ROM_QSTR(MP_QSTR_TOF_NONE),            MP_ROM_INT(TOF_NONE)                    },
-    #if (OMV_ENABLE_TOF_VL53L5CX == 1)
+    #if (OMV_TOF_VL53L5CX_ENABLE == 1)
     { MP_ROM_QSTR(MP_QSTR_TOF_VL53L5CX),        MP_ROM_INT(TOF_VL53L5CX)                },
     #endif
     { MP_ROM_QSTR(MP_QSTR_PALETTE_RAINBOW),     MP_ROM_INT(COLOR_PALETTE_RAINBOW)       },

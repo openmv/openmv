@@ -9,7 +9,7 @@
  * OV5640 driver.
  */
 #include "omv_boardconfig.h"
-#if (OMV_ENABLE_OV5640 == 1)
+#if (OMV_OV5640_ENABLE == 1)
 
 #include <stdint.h>
 #include <stdlib.h>
@@ -344,7 +344,7 @@ static const uint8_t default_regs[][3] = {
     { 0x00, 0x00, 0x00 }
 };
 
-#if (OMV_ENABLE_OV5640_AF == 1)
+#if (OMV_OV5640_AF_ENABLE == 1)
 static const uint8_t af_firmware_regs[] = {
     0x02, 0x0f, 0xd6, 0x02, 0x0a, 0x39, 0xc2, 0x01, 0x22, 0x22, 0x00, 0x02, 0x0f, 0xb2, 0xe5, 0x1f,
     0x70, 0x72, 0xf5, 0x1e, 0xd2, 0x35, 0xff, 0xef, 0x25, 0xe0, 0x24, 0x4e, 0xf8, 0xe4, 0xf6, 0x08,
@@ -681,7 +681,7 @@ static int reset(sensor_t *sensor) {
         ret |= omv_i2c_writeb2(&sensor->i2c_bus, sensor->slv_addr, addr, data);
     }
 
-    #if (OMV_ENABLE_OV5640_AF == 1)
+    #if (OMV_OV5640_AF_ENABLE == 1)
     ret |= omv_i2c_writeb2(&sensor->i2c_bus, sensor->slv_addr, SYSTEM_RESET_00, 0x20); // force mcu reset
 
     // Write firmware
@@ -1362,7 +1362,7 @@ static int ioctl(sensor_t *sensor, int request, va_list ap) {
             *va_arg(ap, int *) = readout_h;
             break;
         }
-    #if (OMV_ENABLE_OV5640_AF == 1)
+    #if (OMV_OV5640_AF_ENABLE == 1)
         case IOCTL_TRIGGER_AUTO_FOCUS: {
             ret = omv_i2c_writeb2(&sensor->i2c_bus, sensor->slv_addr, AF_CMD_MAIN, 0x03);
             break;
@@ -1456,4 +1456,4 @@ int ov5640_init(sensor_t *sensor) {
 
     return 0;
 }
-#endif // (OMV_ENABLE_OV5640 == 1)
+#endif // (OMV_OV5640_ENABLE == 1)

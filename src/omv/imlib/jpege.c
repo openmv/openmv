@@ -19,7 +19,7 @@
 #endif
 
 // Expand 4 bits to 32 for binary to grayscale - process 4 pixels at a time
-#if (OMV_HARDWARE_JPEG == 1)
+#if (OMV_JPEG_CODEC_ENABLE == 1)
 #define JPEG_BINARY_0              0x00
 #define JPEG_BINARY_1              0xFF
 static const uint32_t jpeg_expand[16] = {
@@ -90,7 +90,7 @@ void jpeg_get_mcu(image_t *src, int x_offset, int y_offset, int dx, int dy,
             for (int y = y_offset, yy = y + dy; y < yy; y++) {
                 uint8_t *rp = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(src, y) + x_offset;
 
-                #if (OMV_HARDWARE_JPEG == 0)
+                #if (OMV_JPEG_CODEC_ENABLE == 0)
                 if (dx == JPEG_MCU_W) {
                     *((uint32_t *) Y0) = *((uint32_t *) rp) ^ 0x80808080;
                     *(((uint32_t *) Y0) + 1) = *(((uint32_t *) rp) + 1) ^ 0x80808080;
@@ -165,7 +165,7 @@ void jpeg_get_mcu(image_t *src, int x_offset, int y_offset, int dx, int dy,
 
                     int y = ((r_pixels * 38) + (g_pixels * 75) + (b_pixels * 15)) >> 7;
 
-                    #if (OMV_HARDWARE_JPEG == 0)
+                    #if (OMV_JPEG_CODEC_ENABLE == 0)
                     y ^= 0x800080;
                     #endif
 
@@ -173,7 +173,7 @@ void jpeg_get_mcu(image_t *src, int x_offset, int y_offset, int dx, int dy,
 
                     int u = __SSUB16(b_pixels * 64, (r_pixels * 21) + (g_pixels * 43)) >> 7;
 
-                    #if (OMV_HARDWARE_JPEG == 1)
+                    #if (OMV_JPEG_CODEC_ENABLE == 1)
                     u ^= 0x800080;
                     #endif
 
@@ -181,7 +181,7 @@ void jpeg_get_mcu(image_t *src, int x_offset, int y_offset, int dx, int dy,
 
                     int v = __SSUB16(r_pixels * 64, (g_pixels * 54) + (b_pixels * 10)) >> 7;
 
-                    #if (OMV_HARDWARE_JPEG == 1)
+                    #if (OMV_JPEG_CODEC_ENABLE == 1)
                     v ^= 0x800080;
                     #endif
 
@@ -196,7 +196,7 @@ void jpeg_get_mcu(image_t *src, int x_offset, int y_offset, int dx, int dy,
 
                     int y0 = COLOR_RGB888_TO_Y(r, g, b);
 
-                    #if (OMV_HARDWARE_JPEG == 0)
+                    #if (OMV_JPEG_CODEC_ENABLE == 0)
                     y0 ^= 0x80;
                     #endif
 
@@ -204,7 +204,7 @@ void jpeg_get_mcu(image_t *src, int x_offset, int y_offset, int dx, int dy,
 
                     int cb = COLOR_RGB888_TO_U(r, g, b);
 
-                    #if (OMV_HARDWARE_JPEG == 1)
+                    #if (OMV_JPEG_CODEC_ENABLE == 1)
                     cb ^= 0x80;
                     #endif
 
@@ -212,7 +212,7 @@ void jpeg_get_mcu(image_t *src, int x_offset, int y_offset, int dx, int dy,
 
                     int cr = COLOR_RGB888_TO_V(r, g, b);
 
-                    #if (OMV_HARDWARE_JPEG == 1)
+                    #if (OMV_JPEG_CODEC_ENABLE == 1)
                     cr ^= 0x80;
                     #endif
 
@@ -239,7 +239,7 @@ void jpeg_get_mcu(image_t *src, int x_offset, int y_offset, int dx, int dy,
                 for (int x = 0, xx = dx - 1; x < xx; x += 2, index += 2) {
                     int pixels = *rp++;
 
-                    #if (OMV_HARDWARE_JPEG == 0)
+                    #if (OMV_JPEG_CODEC_ENABLE == 0)
                     pixels ^= 0x80808080;
                     #endif
 
@@ -255,7 +255,7 @@ void jpeg_get_mcu(image_t *src, int x_offset, int y_offset, int dx, int dy,
                 if (dx & 1) {
                     int pixel = *((uint16_t *) rp);
 
-                    #if (OMV_HARDWARE_JPEG == 0)
+                    #if (OMV_JPEG_CODEC_ENABLE == 0)
                     pixel ^= 0x8080;
                     #endif
 
@@ -272,13 +272,13 @@ void jpeg_get_mcu(image_t *src, int x_offset, int y_offset, int dx, int dy,
                     } else {
                         if (shift == 8) {
                             CB[index] = pixel >> 8;
-                            #if (OMV_HARDWARE_JPEG == 0)
+                            #if (OMV_JPEG_CODEC_ENABLE == 0)
                             CR[index++] = 0;
                             #else
                             CR[index++] = 0x80;
                             #endif
                         } else {
-                            #if (OMV_HARDWARE_JPEG == 0)
+                            #if (OMV_JPEG_CODEC_ENABLE == 0)
                             CB[index] = 0;
                             #else
                             CB[index] = 0x80;
@@ -431,7 +431,7 @@ void jpeg_get_mcu(image_t *src, int x_offset, int y_offset, int dx, int dy,
 
                         int y0 = ((r_pixels_0 * 38) + (g_pixels_0 * 75) + (b_pixels_0 * 15)) >> 7;
 
-                        #if (OMV_HARDWARE_JPEG == 0)
+                        #if (OMV_JPEG_CODEC_ENABLE == 0)
                         y0 ^= 0x800080;
                         #endif
 
@@ -439,7 +439,7 @@ void jpeg_get_mcu(image_t *src, int x_offset, int y_offset, int dx, int dy,
 
                         int u0 = __SSUB16(b_pixels_0 * 64, (r_pixels_0 * 21) + (g_pixels_0 * 43)) >> 7;
 
-                        #if (OMV_HARDWARE_JPEG == 1)
+                        #if (OMV_JPEG_CODEC_ENABLE == 1)
                         u0 ^= 0x800080;
                         #endif
 
@@ -447,7 +447,7 @@ void jpeg_get_mcu(image_t *src, int x_offset, int y_offset, int dx, int dy,
 
                         int v0 = __SSUB16(r_pixels_0 * 64, (g_pixels_0 * 54) + (b_pixels_0 * 10)) >> 7;
 
-                        #if (OMV_HARDWARE_JPEG == 1)
+                        #if (OMV_JPEG_CODEC_ENABLE == 1)
                         v0 ^= 0x800080;
                         #endif
 
@@ -566,7 +566,7 @@ void jpeg_get_mcu(image_t *src, int x_offset, int y_offset, int dx, int dy,
 
                         int y1 = ((r_pixels_1 * 38) + (g_pixels_1 * 75) + (b_pixels_1 * 15)) >> 7;
 
-                        #if (OMV_HARDWARE_JPEG == 0)
+                        #if (OMV_JPEG_CODEC_ENABLE == 0)
                         y1 ^= 0x800080;
                         #endif
 
@@ -574,7 +574,7 @@ void jpeg_get_mcu(image_t *src, int x_offset, int y_offset, int dx, int dy,
 
                         int u1 = __SSUB16(b_pixels_1 * 64, (r_pixels_1 * 21) + (g_pixels_1 * 43)) >> 7;
 
-                        #if (OMV_HARDWARE_JPEG == 1)
+                        #if (OMV_JPEG_CODEC_ENABLE == 1)
                         u1 ^= 0x800080;
                         #endif
 
@@ -582,7 +582,7 @@ void jpeg_get_mcu(image_t *src, int x_offset, int y_offset, int dx, int dy,
 
                         int v1 = __SSUB16(r_pixels_1 * 64, (g_pixels_1 * 54) + (b_pixels_1 * 10)) >> 7;
 
-                        #if (OMV_HARDWARE_JPEG == 1)
+                        #if (OMV_JPEG_CODEC_ENABLE == 1)
                         v1 ^= 0x800080;
                         #endif
 
@@ -796,7 +796,7 @@ void jpeg_get_mcu(image_t *src, int x_offset, int y_offset, int dx, int dy,
 
                         int y0 = ((r_pixels_0 * 38) + (g_pixels_0 * 75) + (b_pixels_0 * 15)) >> 7;
 
-                        #if (OMV_HARDWARE_JPEG == 0)
+                        #if (OMV_JPEG_CODEC_ENABLE == 0)
                         y0 ^= 0x800080;
                         #endif
 
@@ -804,7 +804,7 @@ void jpeg_get_mcu(image_t *src, int x_offset, int y_offset, int dx, int dy,
 
                         int u0 = __SSUB16(b_pixels_0 * 64, (r_pixels_0 * 21) + (g_pixels_0 * 43)) >> 7;
 
-                        #if (OMV_HARDWARE_JPEG == 1)
+                        #if (OMV_JPEG_CODEC_ENABLE == 1)
                         u0 ^= 0x800080;
                         #endif
 
@@ -812,7 +812,7 @@ void jpeg_get_mcu(image_t *src, int x_offset, int y_offset, int dx, int dy,
 
                         int v0 = __SSUB16(r_pixels_0 * 64, (g_pixels_0 * 54) + (b_pixels_0 * 10)) >> 7;
 
-                        #if (OMV_HARDWARE_JPEG == 1)
+                        #if (OMV_JPEG_CODEC_ENABLE == 1)
                         v0 ^= 0x800080;
                         #endif
 
@@ -931,7 +931,7 @@ void jpeg_get_mcu(image_t *src, int x_offset, int y_offset, int dx, int dy,
 
                         int y1 = ((r_pixels_1 * 38) + (g_pixels_1 * 75) + (b_pixels_1 * 15)) >> 7;
 
-                        #if (OMV_HARDWARE_JPEG == 0)
+                        #if (OMV_JPEG_CODEC_ENABLE == 0)
                         y1 ^= 0x800080;
                         #endif
 
@@ -939,7 +939,7 @@ void jpeg_get_mcu(image_t *src, int x_offset, int y_offset, int dx, int dy,
 
                         int u1 = __SSUB16(b_pixels_1 * 64, (r_pixels_1 * 21) + (g_pixels_1 * 43)) >> 7;
 
-                        #if (OMV_HARDWARE_JPEG == 1)
+                        #if (OMV_JPEG_CODEC_ENABLE == 1)
                         u1 ^= 0x800080;
                         #endif
 
@@ -947,7 +947,7 @@ void jpeg_get_mcu(image_t *src, int x_offset, int y_offset, int dx, int dy,
 
                         int v1 = __SSUB16(r_pixels_1 * 64, (g_pixels_1 * 54) + (b_pixels_1 * 10)) >> 7;
 
-                        #if (OMV_HARDWARE_JPEG == 1)
+                        #if (OMV_JPEG_CODEC_ENABLE == 1)
                         v1 ^= 0x800080;
                         #endif
 
@@ -964,7 +964,7 @@ void jpeg_get_mcu(image_t *src, int x_offset, int y_offset, int dx, int dy,
     }
 }
 
-#if (OMV_HARDWARE_JPEG == 0)
+#if (OMV_JPEG_CODEC_ENABLE == 0)
 
 // Software JPEG implementation.
 #define FIX_0_382683433    ((int32_t) 98)
@@ -1849,7 +1849,7 @@ bool jpeg_compress(image_t *src, image_t *dst, int quality, bool realloc) {
     return false;
 }
 
-#endif // (OMV_HARDWARE_JPEG == 0)
+#endif // (OMV_JPEG_CODEC_ENABLE == 0)
 
 bool jpeg_is_valid(image_t *img) {
     uint8_t *p = img->data, *p_end = img->data + img->size;

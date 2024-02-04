@@ -1,8 +1,8 @@
 /*
  * This file is part of the OpenMV project.
  *
- * Copyright (c) 2013-2021 Ibrahim Abdelkader <iabdalkader@openmv.io>
- * Copyright (c) 2013-2021 Kwabena W. Agyeman <kwagyeman@openmv.io>
+ * Copyright (c) 2013-2024 Ibrahim Abdelkader <iabdalkader@openmv.io>
+ * Copyright (c) 2013-2024 Kwabena W. Agyeman <kwagyeman@openmv.io>
  *
  * This work is licensed under the MIT license, see the file LICENSE for details.
  *
@@ -11,8 +11,6 @@
 #ifndef __OMV_BOARDCONFIG_H__
 #define __OMV_BOARDCONFIG_H__
 
-// Sensor external clock frequency.
-#define OMV_XCLK_FREQUENCY        (12000000)
 // Max integral image.
 #define OMV_MAX_INT_FRAME         FRAMESIZE_QCIF
 #define OMV_MAX_INT_FRAME_STR     "QCIF"
@@ -64,52 +62,53 @@
 #define SCCB_SCL_PIN              (GPIO_PIN_8)
 #define SCCB_SDA_PIN              (GPIO_PIN_9)
 
-/* DCMI */
-#define DCMI_TIM                  (TIM1)
-#define DCMI_TIM_PIN              (GPIO_PIN_9)
-#define DCMI_TIM_PORT             (GPIOE)
-#define DCMI_TIM_AF               (GPIO_AF1_TIM1)
-#define DCMI_TIM_CHANNEL          (TIM_CHANNEL_1)
-#define DCMI_TIM_CLK_ENABLE()     __TIM1_CLK_ENABLE()
-#define DCMI_TIM_CLK_DISABLE()    __TIM1_CLK_DISABLE()
+// Camera interface
+#define OMV_CSI_XCLK_FREQUENCY    (12000000)
+#define OMV_CSI_TIM               (TIM1)
+#define OMV_CSI_TIM_PIN           (GPIO_PIN_9)
+#define OMV_CSI_TIM_PORT          (GPIOE)
+#define OMV_CSI_TIM_AF            (GPIO_AF1_TIM1)
+#define OMV_CSI_TIM_CHANNEL       (TIM_CHANNEL_1)
+#define OMV_CSI_TIM_CLK_ENABLE()  __TIM1_CLK_ENABLE()
+#define OMV_CSI_TIM_CLK_DISABLE() __TIM1_CLK_DISABLE()
 
-#define DCMI_RESET_PIN            (GPIO_PIN_10)
-#define DCMI_RESET_PORT           (GPIOA)
+#define OMV_CSI_RESET_PIN         (GPIO_PIN_10)
+#define OMV_CSI_RESET_PORT        (GPIOA)
 
-#define DCMI_PWDN_PIN             (GPIO_PIN_5)
-#define DCMI_PWDN_PORT            (GPIOB)
+#define OMV_CSI_PWDN_PIN          (GPIO_PIN_5)
+#define OMV_CSI_PWDN_PORT         (GPIOB)
 
-#define DCMI_D0_PIN               (GPIO_PIN_6)
-#define DCMI_D1_PIN               (GPIO_PIN_7)
-#define DCMI_D2_PIN               (GPIO_PIN_0)
-#define DCMI_D3_PIN               (GPIO_PIN_1)
-#define DCMI_D4_PIN               (GPIO_PIN_4)
-#define DCMI_D5_PIN               (GPIO_PIN_5)
-#define DCMI_D6_PIN               (GPIO_PIN_6)
-#define DCMI_D7_PIN               (GPIO_PIN_6)
+#define OMV_CSI_D0_PIN            (GPIO_PIN_6)
+#define OMV_CSI_D1_PIN            (GPIO_PIN_7)
+#define OMV_CSI_D2_PIN            (GPIO_PIN_0)
+#define OMV_CSI_D3_PIN            (GPIO_PIN_1)
+#define OMV_CSI_D4_PIN            (GPIO_PIN_4)
+#define OMV_CSI_D5_PIN            (GPIO_PIN_5)
+#define OMV_CSI_D6_PIN            (GPIO_PIN_6)
+#define OMV_CSI_D7_PIN            (GPIO_PIN_6)
 
-#define DCMI_D0_PORT              (GPIOC)
-#define DCMI_D1_PORT              (GPIOC)
-#define DCMI_D2_PORT              (GPIOE)
-#define DCMI_D3_PORT              (GPIOE)
-#define DCMI_D4_PORT              (GPIOE)
-#define DCMI_D5_PORT              (GPIOE)
-#define DCMI_D6_PORT              (GPIOE)
-#define DCMI_D7_PORT              (GPIOB)
+#define OMV_CSI_D0_PORT           (GPIOC)
+#define OMV_CSI_D1_PORT           (GPIOC)
+#define OMV_CSI_D2_PORT           (GPIOE)
+#define OMV_CSI_D3_PORT           (GPIOE)
+#define OMV_CSI_D4_PORT           (GPIOE)
+#define OMV_CSI_D5_PORT           (GPIOE)
+#define OMV_CSI_D6_PORT           (GPIOE)
+#define OMV_CSI_D7_PORT           (GPIOB)
 
-#define DCMI_HSYNC_PIN            (GPIO_PIN_7)
-#define DCMI_VSYNC_PIN            (GPIO_PIN_4)
-#define DCMI_PXCLK_PIN            (GPIO_PIN_6)
+#define OMV_CSI_HSYNC_PIN         (GPIO_PIN_7)
+#define OMV_CSI_VSYNC_PIN         (GPIO_PIN_4)
+#define OMV_CSI_PXCLK_PIN         (GPIO_PIN_6)
 
-#define DCMI_HSYNC_PORT           (GPIOB)
-#define DCMI_VSYNC_PORT           (GPIOA)
-#define DCMI_PXCLK_PORT           (GPIOA)
+#define OMV_CSI_HSYNC_PORT        (GPIOB)
+#define OMV_CSI_VSYNC_PORT        (GPIOA)
+#define OMV_CSI_PXCLK_PORT        (GPIOA)
 
-#define DCMI_RESET_LOW()          HAL_GPIO_WritePin(DCMI_RESET_PORT, DCMI_RESET_PIN, GPIO_PIN_RESET)
-#define DCMI_RESET_HIGH()         HAL_GPIO_WritePin(DCMI_RESET_PORT, DCMI_RESET_PIN, GPIO_PIN_SET)
+#define OMV_CSI_RESET_LOW()       HAL_GPIO_WritePin(OMV_CSI_RESET_PORT, OMV_CSI_RESET_PIN, GPIO_PIN_RESET)
+#define OMV_CSI_RESET_HIGH()      HAL_GPIO_WritePin(OMV_CSI_RESET_PORT, OMV_CSI_RESET_PIN, GPIO_PIN_SET)
 
-#define DCMI_PWDN_LOW()           HAL_GPIO_WritePin(DCMI_PWDN_PORT, DCMI_PWDN_PIN, GPIO_PIN_RESET)
-#define DCMI_PWDN_HIGH()          HAL_GPIO_WritePin(DCMI_PWDN_PORT, DCMI_PWDN_PIN, GPIO_PIN_SET)
+#define OMV_CSI_PWDN_LOW()        HAL_GPIO_WritePin(OMV_CSI_PWDN_PORT, OMV_CSI_PWDN_PIN, GPIO_PIN_RESET)
+#define OMV_CSI_PWDN_HIGH()       HAL_GPIO_WritePin(OMV_CSI_PWDN_PORT, OMV_CSI_PWDN_PIN, GPIO_PIN_SET)
 
 /* uSD */
 #define SD_SPI                    (SPI2)

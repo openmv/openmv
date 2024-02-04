@@ -9,7 +9,7 @@
  * OV2640 driver.
  */
 #include "omv_boardconfig.h"
-#if (OMV_ENABLE_OV2640 == 1)
+#if (OMV_OV2640_ENABLE == 1)
 
 #include <stdint.h>
 #include <stdlib.h>
@@ -670,8 +670,8 @@ static int set_auto_exposure(sensor_t *sensor, int enable, int exposure_us) {
         }
 
         int exposure =
-            IM_MAX(IM_MIN(((exposure_us * (((OMV_XCLK_FREQUENCY / clk_rc) * pll_mult) / 1000000)) / t_pclk) / t_line, 0xFFFF),
-                   0x0000);
+            IM_MAX(IM_MIN(((exposure_us * (((OMV_CSI_XCLK_FREQUENCY / clk_rc) * pll_mult) / 1000000)) / t_pclk) / t_line,
+                          0xFFFF), 0x0000);
 
         ret |= omv_i2c_writeb(&sensor->i2c_bus, sensor->slv_addr, BANK_SEL, BANK_SEL_SENSOR);
 
@@ -741,7 +741,7 @@ static int get_exposure_us(sensor_t *sensor, int *exposure_us) {
     }
 
     uint16_t exposure = ((aec_1510 & 0x3F) << 10) + ((aec_92 & 0xFF) << 2) + ((aec_10 & 0x3) << 0);
-    *exposure_us = (exposure * t_line * t_pclk) / (((OMV_XCLK_FREQUENCY / clk_rc) * pll_mult) / 1000000);
+    *exposure_us = (exposure * t_line * t_pclk) / (((OMV_CSI_XCLK_FREQUENCY / clk_rc) * pll_mult) / 1000000);
 
     return ret;
 }
@@ -877,4 +877,4 @@ int ov2640_init(sensor_t *sensor) {
 
     return 0;
 }
-#endif // (OMV_ENABLE_OV2640 == 1)
+#endif // (OMV_OV2640_ENABLE == 1)

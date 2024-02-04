@@ -36,9 +36,9 @@ sint8 nm_bus_init(void *pvinit) {
 	sint8 result = M2M_SUCCESS;
 
     omv_spi_config_t spi_config;
-    omv_spi_default_config(&spi_config, WINC_SPI_ID);
+    omv_spi_default_config(&spi_config, OMV_WINC_SPI_ID);
 
-    spi_config.baudrate    = WINC_SPI_BAUDRATE;
+    spi_config.baudrate    = OMV_WINC_SPI_BAUDRATE;
     spi_config.nss_enable  = false; // Soft NSS
 
     if (omv_spi_init(&spi_bus, &spi_config) != 0) {

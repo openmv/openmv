@@ -23,7 +23,7 @@
 #endif
 #include "omv_boardconfig.h"
 #include "usbdbg.h"
-#if OMV_ENABLE_WIFIDBG
+#if OMV_WIFIDBG_ENABLE
 #include "wifidbg.h"
 #endif
 #include "file_utils.h"
@@ -68,7 +68,7 @@ bool bootutils_exec_bootscript(const char *path, bool interruptible, bool wifidb
         if (interruptible) {
             usbdbg_set_irq_enabled(true);
             usbdbg_set_script_running(true);
-            #if OMV_ENABLE_WIFIDBG
+            #if OMV_WIFIDBG_ENABLE
             wifidbg_set_irq_enabled(wifidbg_enabled);
             #endif
         }
@@ -83,7 +83,7 @@ bool bootutils_exec_bootscript(const char *path, bool interruptible, bool wifidb
     // Disable IDE interrupts
     usbdbg_set_irq_enabled(false);
     usbdbg_set_script_running(false);
-    #if OMV_ENABLE_WIFIDBG
+    #if OMV_WIFIDBG_ENABLE
     wifidbg_set_irq_enabled(false);
     #endif
 

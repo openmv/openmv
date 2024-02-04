@@ -9,7 +9,7 @@
  * FIR Python module.
  */
 #include "omv_boardconfig.h"
-#if (OMV_ENABLE_FIR_LEPTON == 1)
+#if (OMV_FIR_LEPTON_ENABLE == 1)
 #include "py/nlr.h"
 #include "py/runtime.h"
 #include "py/obj.h"
@@ -614,4 +614,4 @@ void fir_lepton_trigger_ffc(int timeout) {
     }
 }
 
-#endif // OMV_ENABLE_FIR_LEPTON
+#endif // OMV_FIR_LEPTON_ENABLE

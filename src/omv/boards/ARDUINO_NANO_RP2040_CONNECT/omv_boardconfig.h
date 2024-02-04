@@ -1,8 +1,8 @@
 /*
  * This file is part of the OpenMV project.
  *
- * Copyright (c) 2013-2021 Ibrahim Abdelkader <iabdalkader@openmv.io>
- * Copyright (c) 2013-2021 Kwabena W. Agyeman <kwagyeman@openmv.io>
+ * Copyright (c) 2013-2024 Ibrahim Abdelkader <iabdalkader@openmv.io>
+ * Copyright (c) 2013-2024 Kwabena W. Agyeman <kwagyeman@openmv.io>
  *
  * This work is licensed under the MIT license, see the file LICENSE for details.
  *
@@ -12,70 +12,33 @@
 #define __OMV_BOARDCONFIG_H__
 
 // Architecture info
-#define OMV_ARCH_STR               "PICO M0" // 33 chars max
+#define OMV_BOARD_ARCH             "PICO M0" // 33 chars max
 #define OMV_BOARD_TYPE             "PICO"
-
 #ifndef LINKER_SCRIPT
-extern unsigned char *OMV_UNIQUE_ID_ADDR;   // Unique address.
+extern unsigned char *OMV_BOARD_UID_ADDR;    // Unique address.
 #endif
-#define OMV_UNIQUE_ID_SIZE         2        // Unique ID size in words.
-#define OMV_UNIQUE_ID_OFFSET       4        // Bytes offset for multi-word UIDs.
+#define OMV_BOARD_UID_SIZE         2         // Unique ID size in words.
+#define OMV_BOARD_UID_OFFSET       4         // Bytes offset for multi-word UIDs.
 
+// JPEG configuration.
+#define OMV_JPEG_CODEC_ENABLE      (0)
+#define OMV_JPEG_QUALITY_LOW       (35)
+#define OMV_JPEG_QUALITY_HIGH      (60)
+#define OMV_JPEG_QUALITY_THRESHOLD (160 * 120)
 
-#define OMV_XCLK_MCO               (0U)
-#define OMV_XCLK_TIM               (1U)
-
-// Sensor external clock source.
-#define OMV_XCLK_SOURCE            (OMV_XCLK_TIM)
-
-// Sensor external clock timer frequency.
-// TODO Not actually used right now, frequency is hardcoded.
-#define OMV_XCLK_FREQUENCY         (12500000)
-
-// Enable hardware JPEG
-#define OMV_HARDWARE_JPEG          (0)
-
-// Enable sensor drivers
-#define OMV_ENABLE_OV2640          (0)
-#define OMV_ENABLE_OV5640          (0)
-#define OMV_ENABLE_OV7670          (1)
-#define OMV_ENABLE_OV7690          (0)
-#define OMV_ENABLE_OV7725          (0)
-#define OMV_ENABLE_OV9650          (0)
-#define OMV_ENABLE_MT9V0XX         (0)
-#define OMV_ENABLE_LEPTON          (0)
-#define OMV_ENABLE_HM01B0          (0)
-
-// Set which OV767x sensor is used
+// Image sensor drivers configuration.
+#define OMV_OV7670_ENABLE          (1)
 #define OMV_OV7670_VERSION         (70)
-
-// OV7670 clock divider
 #define OMV_OV7670_CLKRC           (0x00)
 
-// FIR Module
-#define OMV_ENABLE_FIR_MLX90621    (0)
-#define OMV_ENABLE_FIR_MLX90640    (0)
-#define OMV_ENABLE_FIR_MLX90641    (0)
-#define OMV_ENABLE_FIR_AMG8833     (1)
-#define OMV_ENABLE_FIR_LEPTON      (0)
+// FIR sensor drivers configuration.
+#define OMV_FIR_AMG8833_ENABLE     (1)
 
-// Enable sensor features
-#define OMV_ENABLE_OV5640_AF       (0)
-
-// Enable WiFi debug
-#define OMV_ENABLE_WIFIDBG         (0)
-#define OMV_ENABLE_TUSBDBG         (1)
+// Debugging configuration.
+#define OMV_TUSBDBG_ENABLE         (1)
 #define OMV_TUSBDBG_PACKET         (64)
 
-// If buffer size is bigger than this threshold, the quality is reduced.
-// This is only used for JPEG images sent to the IDE not normal compression.
-#define JPEG_QUALITY_THRESH        (160 * 120)
-
-// Low and high JPEG QS.
-#define JPEG_QUALITY_LOW           35
-#define JPEG_QUALITY_HIGH          60
-
-// FB Heap Block Size
+// UMM heap block size
 #define OMV_UMM_BLOCK_SIZE         16
 
 // USB IRQn.
@@ -94,74 +57,66 @@ extern unsigned char *OMV_UNIQUE_ID_ADDR;   // Unique address.
 #define OMV_JPEG_BUF_SIZE          (20 * 1024) // IDE JPEG buffer (header + data).
 
 // GP LED
-#define LED_PIN                    (6)
+#define OMV_LED_PIN                (6)
 
 // FIR I2C
-#define FIR_I2C_ID                 (0)
-#define FIR_I2C_SCL_PIN            (13)
-#define FIR_I2C_SDA_PIN            (12)
-#define FIR_I2C_SPEED              (OMV_I2C_SPEED_FULL)
+#define OMV_FIR_I2C_ID             (0)
+#define OMV_FIR_I2C_SPEED          (OMV_I2C_SPEED_FULL)
 
 // ISC I2C
-#define ISC_I2C_ID                 (0)
-#define ISC_I2C_SCL_PIN            (13)
-#define ISC_I2C_SDA_PIN            (12)
-#define ISC_I2C_SPEED              (OMV_I2C_SPEED_STANDARD)
+#define OMV_CSI_I2C_ID             (0)
+#define OMV_CSI_I2C_SPEED          (OMV_I2C_SPEED_STANDARD)
 
 // I2C0
-#define I2C0_ID                    (0)
-#define I2C0_SCL_PIN               (13)
-#define I2C0_SDA_PIN               (12)
-#define I2C0_SPEED                 (OMV_I2C_SPEED_FULL)
+#define OMV_I2C0_ID                (0)
+#define OMV_I2C0_SCL_PIN           (13)
+#define OMV_I2C0_SDA_PIN           (12)
 
 // I2C1
-#define I2C1_ID                    (1)
-#define I2C1_SCL_PIN               (27)
-#define I2C1_SDA_PIN               (26)
-#define I2C1_SPEED                 (OMV_I2C_SPEED_FULL)
+#define OMV_I2C1_ID                (1)
+#define OMV_I2C1_SCL_PIN           (27)
+#define OMV_I2C1_SDA_PIN           (26)
 
 // LCD config.
-#define LCD_SPI                    (spi0)
-#define LCD_CS_PIN                 (5)
-#define LCD_MOSI_PIN               (7)
-#define LCD_SCLK_PIN               (6)
-#define LCD_RST_PIN                (4)
-#define LCD_RS_PIN                 (0)
+#define OMV_LCD_SPI                (spi0)
+#define OMV_LCD_CS_PIN             (5)
+#define OMV_LCD_MOSI_PIN           (7)
+#define OMV_LCD_SCLK_PIN           (6)
+#define OMV_LCD_RST_PIN            (4)
+#define OMV_LCD_RS_PIN             (0)
 
 // AUDIO config.
-#define PDM_PIO                    (pio1)
-#define PDM_SM                     (0)
-#define PDM_DMA                    (1)
-#define PDM_DMA_IRQ                (DMA_IRQ_1)
-#define PDM_DMA_CHANNEL            (0)
+#define OMV_PDM_PIO                (pio1)
+#define OMV_PDM_SM                 (0)
+#define OMV_PDM_DMA                (1)
+#define OMV_PDM_DMA_IRQ            (DMA_IRQ_1)
+#define OMV_PDM_DMA_CHANNEL        (0)
+#define OMV_PDM_CLK_PIN            (23)
+#define OMV_PDM_DIN_PIN            (22)
 
-#define PDM_CLK_PIN                (23)
-#define PDM_DIN_PIN                (22)
+// Camera interface
+#define OMV_CSI_PIO                (pio0)
+#define OMV_CSI_SM                 (0)
+#define OMV_CSI_DMA                (0)
+#define OMV_CSI_DMA_IRQ            (DMA_IRQ_0)
+#define OMV_CSI_DMA_CHANNEL        (0)
+#define OMV_CSI_XCLK_SOURCE        (XCLK_SOURCE_TIM)
+#define OMV_CSI_XCLK_FREQUENCY     (12500000)
 
-// DCMI config.
-#define DCMI_PIO                   (pio0)
-#define DCMI_SM                    (0)
-#define DCMI_DMA                   (0)
-#define DCMI_DMA_IRQ               (DMA_IRQ_0)
-#define DCMI_DMA_CHANNEL           (0)
+#define OMV_CSI_D0_PIN             (15)
+#define OMV_CSI_D1_PIN             (16)
+#define OMV_CSI_D2_PIN             (17)
+#define OMV_CSI_D3_PIN             (18)
+#define OMV_CSI_D4_PIN             (19)
+#define OMV_CSI_D5_PIN             (20)
+#define OMV_CSI_D6_PIN             (21)
+#define OMV_CSI_D7_PIN             (25) // MSB is read separately.
 
-#define DCMI_POWER_PIN             (0)
-#define DCMI_RESET_PIN             (1)
-
-#define DCMI_D0_PIN                (15)
-#define DCMI_D1_PIN                (16)
-#define DCMI_D2_PIN                (17)
-#define DCMI_D3_PIN                (18)
-#define DCMI_D4_PIN                (19)
-#define DCMI_D5_PIN                (20)
-#define DCMI_D6_PIN                (21)
-#define DCMI_D7_PIN                (25) // MSB is read separately.
-
-#define DCMI_XCLK_PIN              (28)
-
-// Must match the pins defined in dcmi.pio.
-#define DCMI_PXCLK_PIN             (29)
-#define DCMI_HSYNC_PIN             (27)
-#define DCMI_VSYNC_PIN             (26)
+#define OMV_CSI_HSYNC_PIN          (27)
+#define OMV_CSI_VSYNC_PIN          (26)
+#define OMV_CSI_PXCLK_PIN          (29)
+#define OMV_CSI_MXCLK_PIN          (28)
+#define OMV_CSI_POWER_PIN          (0)
+#define OMV_CSI_RESET_PIN          (1)
 
 #endif //__OMV_BOARDCONFIG_H__

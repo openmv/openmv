@@ -57,12 +57,12 @@ int sensor_init() {
 
     mimxrt_hal_csi_init(CSI);
 
-    #if defined(DCMI_POWER_PIN)
-    omv_gpio_write(DCMI_POWER_PIN, 1);
+    #if defined(OMV_CSI_POWER_PIN)
+    omv_gpio_write(OMV_CSI_POWER_PIN, 1);
     #endif
 
-    #if defined(DCMI_RESET_PIN)
-    omv_gpio_write(DCMI_RESET_PIN, 1);
+    #if defined(OMV_CSI_RESET_PIN)
+    omv_gpio_write(OMV_CSI_RESET_PIN, 1);
     #endif
 
     // Reset the sensor state
@@ -73,13 +73,13 @@ int sensor_init() {
     sensor.snapshot = sensor_snapshot;
 
     // Configure the sensor external clock (XCLK).
-    if (sensor_set_xclk_frequency(OMV_XCLK_FREQUENCY) != 0) {
+    if (sensor_set_xclk_frequency(OMV_CSI_XCLK_FREQUENCY) != 0) {
         // Failed to initialize the sensor clock.
         return SENSOR_ERROR_TIM_INIT_FAILED;
     }
 
     // Detect and initialize the image sensor.
-    if ((init_ret = sensor_probe_init(ISC_I2C_ID, ISC_I2C_SPEED)) != 0) {
+    if ((init_ret = sensor_probe_init(OMV_CSI_I2C_ID, OMV_CSI_I2C_SPEED)) != 0) {
         // Sensor probe/init failed.
         return init_ret;
     }
@@ -335,9 +335,9 @@ int sensor_snapshot(sensor_t *sensor, image_t *image, uint32_t flags) {
     }
 
     // Let the camera know we want to trigger it now.
-    #if defined(DCMI_FSYNC_PIN)
+    #if defined(OMV_CSI_FSYNC_PIN)
     if (sensor->hw_flags.fsync) {
-        omv_gpio_write(DCMI_FSYNC_PIN, 1);
+        omv_gpio_write(OMV_CSI_FSYNC_PIN, 1);
     }
     #endif
 
@@ -348,9 +348,9 @@ int sensor_snapshot(sensor_t *sensor, image_t *image, uint32_t flags) {
         if ((mp_hal_ticks_ms() - ticks) > 3000) {
             sensor_abort(true, false);
 
-            #if defined(DCMI_FSYNC_PIN)
+            #if defined(OMV_CSI_FSYNC_PIN)
             if (sensor->hw_flags.fsync) {
-                omv_gpio_write(DCMI_FSYNC_PIN, 0);
+                omv_gpio_write(OMV_CSI_FSYNC_PIN, 0);
             }
             #endif
 
@@ -360,9 +360,9 @@ int sensor_snapshot(sensor_t *sensor, image_t *image, uint32_t flags) {
     }
 
     // We're done receiving data.
-    #if defined(DCMI_FSYNC_PIN)
+    #if defined(OMV_CSI_FSYNC_PIN)
     if (sensor->hw_flags.fsync) {
-        omv_gpio_write(DCMI_FSYNC_PIN, 0);
+        omv_gpio_write(OMV_CSI_FSYNC_PIN, 0);
     }
     #endif
 

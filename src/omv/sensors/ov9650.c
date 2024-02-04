@@ -9,7 +9,7 @@
  * OV9650 driver.
  */
 #include "omv_boardconfig.h"
-#if (OMV_ENABLE_OV9650 == 1)
+#if (OMV_OV9650_ENABLE == 1)
 
 #include <stdint.h>
 #include <stdlib.h>
@@ -413,8 +413,8 @@ static int set_auto_exposure(sensor_t *sensor, int enable, int exposure_us) {
         int clk_rc = ((reg & REG_CLKRC_DIVIDER_MASK) + 1) * 2;
 
         int exposure =
-            IM_MAX(IM_MIN(((exposure_us * (((OMV_XCLK_FREQUENCY / clk_rc) * pll_mult) / 1000000)) / t_pclk) / t_line, 0xFFFF),
-                   0x0000);
+            IM_MAX(IM_MIN(((exposure_us * (((OMV_CSI_XCLK_FREQUENCY / clk_rc) * pll_mult) / 1000000)) / t_pclk) / t_line,
+                          0xFFFF), 0x0000);
 
         ret |= omv_i2c_readb(&sensor->i2c_bus, sensor->slv_addr, REG_COM1, &reg);
         ret |= omv_i2c_writeb(&sensor->i2c_bus, sensor->slv_addr, REG_COM1, (reg & 0xFC) | ((exposure >> 0) & 0x3));
@@ -470,7 +470,7 @@ static int get_exposure_us(sensor_t *sensor, int *exposure_us) {
     int clk_rc = ((reg & REG_CLKRC_DIVIDER_MASK) + 1) * 2;
 
     uint16_t exposure = ((aec_1510 & 0x3F) << 10) + ((aec_92 & 0xFF) << 2) + ((aec_10 & 0x3) << 0);
-    *exposure_us = (exposure * t_line * t_pclk) / (((OMV_XCLK_FREQUENCY / clk_rc) * pll_mult) / 1000000);
+    *exposure_us = (exposure * t_line * t_pclk) / (((OMV_CSI_XCLK_FREQUENCY / clk_rc) * pll_mult) / 1000000);
 
     return ret;
 }
@@ -569,4 +569,4 @@ int ov9650_init(sensor_t *sensor) {
 
     return 0;
 }
-#endif // (OMV_ENABLE_OV9650 == 1)
+#endif // (OMV_OV9650_ENABLE == 1)

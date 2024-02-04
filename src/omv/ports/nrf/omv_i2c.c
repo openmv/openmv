@@ -39,14 +39,14 @@ int omv_i2c_init(omv_i2c_t *i2c, uint32_t bus_id, uint32_t speed) {
 
     switch (bus_id) {
         case 0: {
-            i2c->scl_pin = TWI0_SCL_PIN;
-            i2c->sda_pin = TWI0_SDA_PIN;
+            i2c->scl_pin = OMV_I2C0_SCL_PIN;
+            i2c->sda_pin = OMV_I2C0_SDA_PIN;
             i2c->inst = (nrfx_twi_t) NRFX_TWI_INSTANCE(0);
             break;
         }
         case 1: {
-            i2c->scl_pin = TWI1_SCL_PIN;
-            i2c->sda_pin = TWI1_SDA_PIN;
+            i2c->scl_pin = OMV_I2C1_SCL_PIN;
+            i2c->sda_pin = OMV_I2C1_SDA_PIN;
             i2c->inst = (nrfx_twi_t) NRFX_TWI_INSTANCE(1);
             break;
         }

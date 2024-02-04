@@ -9,7 +9,7 @@
  * HM01B0 driver.
  */
 #include "omv_boardconfig.h"
-#if (OMV_ENABLE_HM01B0 == 1)
+#if (OMV_HM01B0_ENABLE == 1)
 
 #include <stdint.h>
 #include <stdlib.h>
@@ -377,7 +377,7 @@ static int get_vt_pix_clk(sensor_t *sensor, uint32_t *vt_pix_clk) {
     uint32_t vt_sys_div = 8 / (1 << (reg & 0x03));
 
     // vt_pix_clk = MCLK / vt_sys_div
-    *vt_pix_clk = OMV_XCLK_FREQUENCY / vt_sys_div;
+    *vt_pix_clk = OMV_CSI_XCLK_FREQUENCY / vt_sys_div;
     return 0;
 }
 
@@ -542,4 +542,4 @@ int hm01b0_init(sensor_t *sensor) {
 
     return 0;
 }
-#endif //(OMV_ENABLE_HM01B0 == 1)
+#endif //(OMV_HM01B0_ENABLE == 1)

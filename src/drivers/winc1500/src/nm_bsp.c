@@ -27,11 +27,11 @@ sint8 nm_bsp_init(void) {
     gpfIsr = NULL;
 
     // Configure GPIO pins
-    omv_gpio_config(WINC_EN_PIN, OMV_GPIO_MODE_OUTPUT, OMV_GPIO_PULL_UP, OMV_GPIO_SPEED_LOW, -1);
-    omv_gpio_write(WINC_EN_PIN, 1);
+    omv_gpio_config(OMV_WINC_EN_PIN, OMV_GPIO_MODE_OUTPUT, OMV_GPIO_PULL_UP, OMV_GPIO_SPEED_LOW, -1);
+    omv_gpio_write(OMV_WINC_EN_PIN, 1);
 
-    omv_gpio_config(WINC_RST_PIN, OMV_GPIO_MODE_OUTPUT, OMV_GPIO_PULL_UP, OMV_GPIO_SPEED_LOW, -1);
-    omv_gpio_write(WINC_RST_PIN, 1);
+    omv_gpio_config(OMV_WINC_RST_PIN, OMV_GPIO_MODE_OUTPUT, OMV_GPIO_PULL_UP, OMV_GPIO_SPEED_LOW, -1);
+    omv_gpio_write(OMV_WINC_RST_PIN, 1);
 
     // Perform chip reset.
     nm_bsp_reset();
@@ -40,12 +40,12 @@ sint8 nm_bsp_init(void) {
 }
 
 void nm_bsp_reset(void) {
-    omv_gpio_write(WINC_EN_PIN, 0);
-    omv_gpio_write(WINC_RST_PIN, 0);
+    omv_gpio_write(OMV_WINC_EN_PIN, 0);
+    omv_gpio_write(OMV_WINC_RST_PIN, 0);
     nm_bsp_sleep(100);
-    omv_gpio_write(WINC_EN_PIN, 1);
+    omv_gpio_write(OMV_WINC_EN_PIN, 1);
     nm_bsp_sleep(100);
-    omv_gpio_write(WINC_RST_PIN, 1);
+    omv_gpio_write(OMV_WINC_RST_PIN, 1);
     nm_bsp_sleep(100);
 }
 
@@ -61,11 +61,11 @@ static void nm_bsp_extint_callback(void *data) {
 
 void nm_bsp_register_isr(tpfNmBspIsr pfIsr) {
     gpfIsr = pfIsr;
-    omv_gpio_config(WINC_IRQ_PIN, OMV_GPIO_MODE_IT_FALL, OMV_GPIO_PULL_UP, OMV_GPIO_SPEED_LOW, -1);
-    omv_gpio_irq_register(WINC_IRQ_PIN, nm_bsp_extint_callback, NULL);
-    omv_gpio_irq_enable(WINC_IRQ_PIN, true);
+    omv_gpio_config(OMV_WINC_IRQ_PIN, OMV_GPIO_MODE_IT_FALL, OMV_GPIO_PULL_UP, OMV_GPIO_SPEED_LOW, -1);
+    omv_gpio_irq_register(OMV_WINC_IRQ_PIN, nm_bsp_extint_callback, NULL);
+    omv_gpio_irq_enable(OMV_WINC_IRQ_PIN, true);
 }
 
 void nm_bsp_interrupt_ctrl(uint8 enable) {
-    omv_gpio_irq_enable(WINC_IRQ_PIN, enable);
+    omv_gpio_irq_enable(OMV_WINC_IRQ_PIN, enable);
 }

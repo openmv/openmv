@@ -81,8 +81,8 @@ static mp_obj_t py_audio_init(uint n_args, const mp_obj_t *pos_args, mp_map_t *k
     int gain_db = args[ARG_gain_db].u_int;
 
     nrfx_pdm_config_t nrfx_pdm_config = {
-        .pin_clk = PDM_CLK_PIN,
-        .pin_din = PDM_DIN_PIN,
+        .pin_clk = OMV_PDM_CLK_PIN,
+        .pin_din = OMV_PDM_DIN_PIN,
         .gain_l = gain_db,
         .gain_r = gain_db,
         .interrupt_priority = PDM_IRQ_PRIORITY,
@@ -124,8 +124,8 @@ static mp_obj_t py_audio_init(uint n_args, const mp_obj_t *pos_args, mp_map_t *k
     }
 
     // Power the mic on.
-    nrf_gpio_cfg_output(PDM_PWR_PIN);
-    nrf_gpio_pin_set(PDM_PWR_PIN);
+    nrf_gpio_cfg_output(OMV_PDM_PWR_PIN);
+    nrf_gpio_pin_set(OMV_PDM_PWR_PIN);
 
     // Allocate global PCM buffer.
     g_pcmbuf = mp_obj_new_bytearray_by_ref(PDM_BUFFER_SIZE * sizeof(int16_t), m_new(int16_t, PDM_BUFFER_SIZE));
@@ -140,9 +140,9 @@ void py_audio_deinit() {
     nrfx_pdm_uninit();
 
     // Power the mic off
-    nrf_gpio_cfg_output(PDM_PWR_PIN);
-    nrf_gpio_pin_clear(PDM_PWR_PIN);
-    nrf_gpio_cfg_input(PDM_PWR_PIN, NRF_GPIO_PIN_PULLDOWN);
+    nrf_gpio_cfg_output(OMV_PDM_PWR_PIN);
+    nrf_gpio_pin_clear(OMV_PDM_PWR_PIN);
+    nrf_gpio_cfg_input(OMV_PDM_PWR_PIN, NRF_GPIO_PIN_PULLDOWN);
 
     g_channels = 0;
     g_pcmbuf = NULL;

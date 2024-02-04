@@ -56,33 +56,33 @@ int omv_i2c_init(omv_i2c_t *i2c, uint32_t bus_id, uint32_t speed) {
     }
 
     switch (bus_id) {
-        case LPI2C1_ID: {
+        case OMV_I2C1_ID: {
             i2c->inst = LPI2C1;
-            i2c->scl_pin = LPI2C1_SCL_PIN;
-            i2c->sda_pin = LPI2C1_SDA_PIN;
+            i2c->scl_pin = OMV_I2C1_SCL_PIN;
+            i2c->sda_pin = OMV_I2C1_SDA_PIN;
             break;
         }
-        #if defined(LPI2C2_ID)
-        case LPI2C2_ID: {
+        #if defined(OMV_I2C2_ID)
+        case OMV_I2C2_ID: {
             i2c->inst = LPI2C2;
-            i2c->scl_pin = LPI2C2_SCL_PIN;
-            i2c->sda_pin = LPI2C2_SDA_PIN;
+            i2c->scl_pin = OMV_I2C2_SCL_PIN;
+            i2c->sda_pin = OMV_I2C2_SDA_PIN;
             break;
         }
         #endif
-        #if defined(LPI2C3_ID)
-        case LPI2C3_ID: {
+        #if defined(OMV_I2C3_ID)
+        case OMV_I2C3_ID: {
             i2c->inst = LPI2C3;
-            i2c->scl_pin = LPI2C3_SCL_PIN;
-            i2c->sda_pin = LPI2C3_SDA_PIN;
+            i2c->scl_pin = OMV_I2C3_SCL_PIN;
+            i2c->sda_pin = OMV_I2C3_SDA_PIN;
             break;
         }
         #endif
-        #if defined(LPI2C4_ID)
-        case LPI2C4_ID: {
+        #if defined(OMV_I2C4_ID)
+        case OMV_I2C4_ID: {
             i2c->inst = LPI2C4;
-            i2c->scl_pin = LPI2C4_SCL_PIN;
-            i2c->sda_pin = LPI2C4_SDA_PIN;
+            i2c->scl_pin = OMV_I2C4_SCL_PIN;
+            i2c->sda_pin = OMV_I2C4_SDA_PIN;
             break;
         }
         #endif

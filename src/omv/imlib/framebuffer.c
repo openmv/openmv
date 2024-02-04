@@ -85,7 +85,7 @@ void framebuffer_init0() {
     MAIN_FB()->streaming_enabled = true; // controlled by the OpenMV Cam.
 
     // Set default quality
-    JPEG_FB()->quality = ((JPEG_QUALITY_HIGH - JPEG_QUALITY_LOW) / 2) + JPEG_QUALITY_LOW;
+    JPEG_FB()->quality = ((OMV_JPEG_QUALITY_HIGH - OMV_JPEG_QUALITY_LOW) / 2) + OMV_JPEG_QUALITY_LOW;
 
     // Set fb_enabled
     JPEG_FB()->enabled = fb_enabled; // controlled by the IDE.
@@ -184,8 +184,8 @@ void framebuffer_update_jpeg_buffer() {
                     }
 
                     // Dynamically adjust our quality if the image is huge.
-                    bool big_frame_buffer = image_size(src) > JPEG_QUALITY_THRESH;
-                    int jpeg_quality_max = big_frame_buffer ? JPEG_QUALITY_LOW : JPEG_QUALITY_HIGH;
+                    bool big_frame_buffer = image_size(src) > OMV_JPEG_QUALITY_THRESHOLD;
+                    int jpeg_quality_max = big_frame_buffer ? OMV_JPEG_QUALITY_LOW : OMV_JPEG_QUALITY_HIGH;
 
                     // No buffer overflow, increase quality up to max quality based on frame size...
                     if ((!overflow_count) && (jpeg_framebuffer->quality < jpeg_quality_max)) {
