@@ -565,8 +565,8 @@ __weak int sensor_set_pixformat(pixformat_t pixformat) {
     }
 
     // Cropping and transposing (and thus auto rotation) don't work in JPEG mode.
-    if ((pixformat == PIXFORMAT_JPEG)
-        && (sensor_get_cropped() || sensor.transpose || sensor.auto_rotation)) {
+    if (((pixformat == PIXFORMAT_YUV422) && (sensor.transpose || sensor.auto_rotation)) ||
+        ((pixformat == PIXFORMAT_JPEG) && (sensor_get_cropped() || sensor.transpose || sensor.auto_rotation))) {
         return SENSOR_ERROR_PIXFORMAT_UNSUPPORTED;
     }
 
@@ -1036,7 +1036,7 @@ __weak int sensor_set_transpose(bool enable) {
     // Disable any ongoing frame capture.
     sensor_abort(true, false);
 
-    if (sensor.pixformat == PIXFORMAT_JPEG) {
+    if ((sensor.pixformat == PIXFORMAT_YUV422) || (sensor.pixformat == PIXFORMAT_JPEG)) {
         return SENSOR_ERROR_PIXFORMAT_UNSUPPORTED;
     }
 
@@ -1060,7 +1060,7 @@ __weak int sensor_set_auto_rotation(bool enable) {
     sensor_abort(true, false);
 
     // Operation not supported on JPEG images.
-    if (sensor.pixformat == PIXFORMAT_JPEG) {
+    if ((sensor.pixformat == PIXFORMAT_YUV422) || (sensor.pixformat == PIXFORMAT_JPEG)) {
         return SENSOR_ERROR_PIXFORMAT_UNSUPPORTED;
     }
 

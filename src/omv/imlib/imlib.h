@@ -1143,6 +1143,7 @@ void imlib_debayer_line(int x_start, int x_end, int y_row, void *dst_row_ptr, pi
 void imlib_debayer_image(image_t *dst, image_t *src);
 
 // YUV Image Processing
+pixformat_t imlib_yuv_shift(pixformat_t pixfmt, int x);
 void imlib_deyuv_line(int x_start, int x_end, int y_row, void *dst_row_ptr, pixformat_t pixfmt, image_t *src);
 void imlib_deyuv_image(image_t *dst, image_t *src);
 

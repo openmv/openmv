@@ -1071,9 +1071,7 @@ static mp_obj_t py_image_to(pixformat_t pixfmt, const uint16_t *default_color_pa
             (alpha_palette != NULL)) {
             mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Only YUV422 copying/cropping is supported!"));
         } else {
-            if (arg_roi.x % 2) {
-                dst_img.pixfmt = (dst_img.pixfmt == PIXFORMAT_YUV422) ? PIXFORMAT_YVU422 : PIXFORMAT_YUV422;
-            }
+            dst_img.pixfmt = imlib_yuv_shift(dst_img.pixfmt, arg_roi.x);
             hint &= ~(IMAGE_HINT_AREA |
                       IMAGE_HINT_BICUBIC |
                       IMAGE_HINT_BILINEAR |

@@ -393,10 +393,9 @@ int sensor_snapshot(sensor_t *sensor, image_t *image, uint32_t flags) {
             MAIN_FB()->pixfmt = imlib_bayer_shift(MAIN_FB()->pixfmt, MAIN_FB()->x, MAIN_FB()->y, sensor->transpose);
             break;
         case PIXFORMAT_YUV422: {
-            bool yuv_order = sensor->hw_flags.yuv_order == SENSOR_HW_FLAGS_YUV422;
-            int even = yuv_order ? PIXFORMAT_YUV422 : PIXFORMAT_YVU422;
-            int odd = yuv_order ? PIXFORMAT_YVU422 : PIXFORMAT_YUV422;
-            MAIN_FB()->pixfmt = (MAIN_FB()->x % 2) ? odd : even;
+            MAIN_FB()->pixfmt = PIXFORMAT_YUV;
+            MAIN_FB()->subfmt_id = sensor->hw_flags.yuv_order;
+            MAIN_FB()->pixfmt = imlib_yuv_shift(MAIN_FB()->pixfmt, MAIN_FB()->x);
             break;
         }
         case PIXFORMAT_JPEG: {
