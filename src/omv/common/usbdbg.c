@@ -417,7 +417,11 @@ void usbdbg_control(void *buffer, uint8_t request, uint32_t length) {
             break;
 
         case USBDBG_SYS_RESET:
+            #if defined(OMV_BOARD_RESET)
+            OMV_BOARD_RESET();
+            #else
             NVIC_SystemReset();
+            #endif
             break;
 
         case USBDBG_SYS_RESET_TO_BL: {
