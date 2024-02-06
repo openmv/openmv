@@ -100,9 +100,9 @@ static void audio_task_callback(mp_sched_node_t *node) {
 }
 
 static void dma_irq_handler() {
-    if (dma_irqn_get_channel_status(PDM_DMA, audio_data->dma_channel)) {
+    if (dma_irqn_get_channel_status(OMV_PDM_DMA, audio_data->dma_channel)) {
         // Clear the interrupt request.
-        dma_irqn_acknowledge_channel(PDM_DMA, audio_data->dma_channel);
+        dma_irqn_acknowledge_channel(OMV_PDM_DMA, audio_data->dma_channel);
 
         // Set the next PDM buffer and retrigger the DMA channel
         // immediately while PDM samples are converted to PCM samples.
@@ -237,8 +237,8 @@ static mp_obj_t py_audio_init(uint n_args, const mp_obj_t *pos_args, mp_map_t *k
         div = ((float) clock_get_hz(clk_sys)) / (args[ARG_frequency].u_int * decimation * 2);
     }
 
-    uint offset = pio_add_program(PDM_PIO, &pdm_pio_program);
-    pdm_pio_program_init(PDM_PIO, PDM_SM, offset, PDM_CLK_PIN, PDM_DIN_PIN, div);
+    uint offset = pio_add_program(OMV_PDM_PIO, &pdm_pio_program);
+    pdm_pio_program_init(OMV_PDM_PIO, OMV_PDM_SM, offset, OMV_PDM_CLK_PIN, OMV_PDM_DIN_PIN, div);
 
     // Wait for microphone to settle.
     mp_hal_delay_ms(100);
@@ -253,33 +253,33 @@ static mp_obj_t py_audio_init(uint n_args, const mp_obj_t *pos_args, mp_map_t *k
     dma_channel_config c = dma_channel_get_default_config(audio_data->dma_channel);
     channel_config_set_read_increment(&c, false);
     channel_config_set_write_increment(&c, true);
-    channel_config_set_dreq(&c, pio_get_dreq(PDM_PIO, PDM_SM, false));
+    channel_config_set_dreq(&c, pio_get_dreq(OMV_PDM_PIO, OMV_PDM_SM, false));
     channel_config_set_transfer_data_size(&c, DMA_SIZE_8);
 
     // Configure DMA channel without starting.
     dma_channel_configure(audio_data->dma_channel, &c,
                           audio_data->pdm_buffer, // Destinatinon pointer, first buffer.
-                          &PDM_PIO->rxf[PDM_SM], // Source pointer.
+                          &OMV_PDM_PIO->rxf[OMV_PDM_SM], // Source pointer.
                           PDM_BUFFER_SIZE, // Number of transfers.
                           false     // Don't start immediately.
                           );
 
     // Setup DMA IRQ handler.
     // Disable IRQs.
-    irq_set_enabled(PDM_DMA_IRQ, false);
+    irq_set_enabled(OMV_PDM_DMA_IRQ, false);
 
     // Clear DMA interrupts.
-    dma_irqn_acknowledge_channel(PDM_DMA, audio_data->dma_channel);
+    dma_irqn_acknowledge_channel(OMV_PDM_DMA, audio_data->dma_channel);
 
     if (!irq_handler_installed) {
         irq_handler_installed = true;
         // Install shared DMA IRQ handler.
-        irq_add_shared_handler(PDM_DMA_IRQ, dma_irq_handler, PICO_HIGHEST_IRQ_PRIORITY);
+        irq_add_shared_handler(OMV_PDM_DMA_IRQ, dma_irq_handler, PICO_HIGHEST_IRQ_PRIORITY);
     }
 
     // Re-enable IRQs.
-    irq_set_enabled(PDM_DMA_IRQ, true);
-    dma_irqn_set_channel_enabled(PDM_DMA, audio_data->dma_channel, true);
+    irq_set_enabled(OMV_PDM_DMA_IRQ, true);
+    dma_irqn_set_channel_enabled(OMV_PDM_DMA, audio_data->dma_channel, true);
 
     audio_initialized = true;
     return mp_const_none;
@@ -313,8 +313,8 @@ static mp_obj_t py_audio_start_streaming(mp_obj_t callback_obj) {
     }
 
     // Re-enable the state machine.
-    pio_sm_clear_fifos(PDM_PIO, PDM_SM);
-    pio_sm_set_enabled(PDM_PIO, PDM_SM, true);
+    pio_sm_clear_fifos(OMV_PDM_PIO, OMV_PDM_SM);
+    pio_sm_set_enabled(OMV_PDM_PIO, OMV_PDM_SM, true);
 
     dma_channel_start(audio_data->dma_channel);
 
@@ -327,16 +327,16 @@ static mp_obj_t py_audio_stop_streaming() {
     if (audio_data->streaming) {
         // Disable PDM and IRQ
         dma_channel_abort(audio_data->dma_channel);
-        //irq_set_enabled(PDM_DMA_IRQ, false);
-        dma_irqn_set_channel_enabled(PDM_DMA, audio_data->dma_channel, false);
+        //irq_set_enabled(OMV_PDM_DMA_IRQ, false);
+        dma_irqn_set_channel_enabled(OMV_PDM_DMA, audio_data->dma_channel, false);
 
         // Disable state machine.
-        pio_sm_set_enabled(PDM_PIO, PDM_SM, false);
-        pio_sm_clear_fifos(PDM_PIO, PDM_SM);
+        pio_sm_set_enabled(OMV_PDM_PIO, OMV_PDM_SM, false);
+        pio_sm_clear_fifos(OMV_PDM_PIO, OMV_PDM_SM);
 
         if (irq_handler_installed) {
             irq_handler_installed = false;
-            irq_remove_handler(PDM_DMA_IRQ, dma_irq_handler);
+            irq_remove_handler(OMV_PDM_DMA_IRQ, dma_irq_handler);
         }
 
         audio_data->streaming = false;

@@ -43,14 +43,14 @@ int omv_i2c_init(omv_i2c_t *i2c, uint32_t bus_id, uint32_t speed) {
     switch (bus_id) {
         case 0: {
             i2c->inst = i2c0;
-            i2c->scl_pin = I2C0_SCL_PIN;
-            i2c->sda_pin = I2C0_SDA_PIN;
+            i2c->scl_pin = OMV_I2C0_SCL_PIN;
+            i2c->sda_pin = OMV_I2C0_SDA_PIN;
             break;
         }
         case 1: {
             i2c->inst = i2c1;
-            i2c->scl_pin = I2C1_SCL_PIN;
-            i2c->sda_pin = I2C1_SDA_PIN;
+            i2c->scl_pin = OMV_I2C1_SCL_PIN;
+            i2c->sda_pin = OMV_I2C1_SDA_PIN;
             break;
         }
         default:

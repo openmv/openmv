@@ -20,7 +20,7 @@
 #include "omv_boardconfig.h"
 
 void imlib_init_all() {
-    #if (OMV_HARDWARE_JPEG == 1)
+    #if (OMV_JPEG_CODEC_ENABLE == 1)
     imlib_hardware_jpeg_init();
     #endif
 }
@@ -29,7 +29,7 @@ void imlib_deinit_all() {
     #ifdef IMLIB_ENABLE_DMA2D
     imlib_draw_row_deinit_all();
     #endif
-    #if (OMV_HARDWARE_JPEG == 1)
+    #if (OMV_JPEG_CODEC_ENABLE == 1)
     imlib_hardware_jpeg_deinit();
     #endif
 }

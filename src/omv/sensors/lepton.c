@@ -9,7 +9,7 @@
  * Lepton driver.
  */
 #include "omv_boardconfig.h"
-#if (OMV_ENABLE_LEPTON == 1)
+#if (OMV_LEPTON_ENABLE == 1)
 
 #include <stdio.h>
 #include "sensor.h"
@@ -61,10 +61,10 @@ static int lepton_reset(sensor_t *sensor, bool measurement_mode, bool high_temp_
 
 static int sleep(sensor_t *sensor, int enable) {
     if (enable) {
-        omv_gpio_write(DCMI_POWER_PIN, 0);
+        omv_gpio_write(OMV_CSI_POWER_PIN, 0);
         mp_hal_delay_ms(100);
     } else {
-        omv_gpio_write(DCMI_POWER_PIN, 1);
+        omv_gpio_write(OMV_CSI_POWER_PIN, 1);
         mp_hal_delay_ms(100);
     }
 
@@ -266,16 +266,16 @@ static int ioctl(sensor_t *sensor, int request, va_list ap) {
 }
 
 static int lepton_reset(sensor_t *sensor, bool measurement_mode, bool high_temp_mode) {
-    omv_gpio_write(DCMI_POWER_PIN, 0);
+    omv_gpio_write(OMV_CSI_POWER_PIN, 0);
     mp_hal_delay_ms(10);
 
-    omv_gpio_write(DCMI_POWER_PIN, 1);
+    omv_gpio_write(OMV_CSI_POWER_PIN, 1);
     mp_hal_delay_ms(10);
 
-    omv_gpio_write(DCMI_RESET_PIN, 0);
+    omv_gpio_write(OMV_CSI_RESET_PIN, 0);
     mp_hal_delay_ms(10);
 
-    omv_gpio_write(DCMI_RESET_PIN, 1);
+    omv_gpio_write(OMV_CSI_RESET_PIN, 1);
     mp_hal_delay_ms(1000);
 
     LEP_RAD_ENABLE_E rad;
@@ -536,4 +536,4 @@ int lepton_init(sensor_t *sensor) {
     }
     return 0;
 }
-#endif // (OMV_ENABLE_LEPTON == 1)
+#endif // (OMV_LEPTON_ENABLE == 1)

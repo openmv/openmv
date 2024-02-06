@@ -108,22 +108,22 @@ void HAL_MspInit(void) {
     __GPIOC_CLK_ENABLE();
     __GPIOD_CLK_ENABLE();
     __GPIOE_CLK_ENABLE();
-    #if OMV_ENABLE_GPIO_BANK_F
+    #if OMV_GPIO_PORT_F_ENABLE
     __GPIOF_CLK_ENABLE();
     #endif
-    #if OMV_ENABLE_GPIO_BANK_G
+    #if OMV_GPIO_PORT_G_ENABLE
     __GPIOG_CLK_ENABLE();
     #endif
-    #if OMV_ENABLE_GPIO_BANK_H
+    #if OMV_GPIO_PORT_H_ENABLE
     __GPIOH_CLK_ENABLE();
     #endif
-    #if OMV_ENABLE_GPIO_BANK_I
+    #if OMV_GPIO_PORT_I_ENABLE
     __GPIOI_CLK_ENABLE();
     #endif
-    #if OMV_ENABLE_GPIO_BANK_J
+    #if OMV_GPIO_PORT_J_ENABLE
     __GPIOJ_CLK_ENABLE();
     #endif
-    #if OMV_ENABLE_GPIO_BANK_K
+    #if OMV_GPIO_PORT_K_ENABLE
     __GPIOK_CLK_ENABLE();
     #endif
 
@@ -176,14 +176,14 @@ void HAL_MspInit(void) {
     OMV_AXI_QOS_LTDC_W_SET(OMV_AXI_QOS_LTDC_W_PRI);
     #endif
 
-    #if defined(DCMI_RESET_PIN)
-    omv_gpio_config(DCMI_RESET_PIN, OMV_GPIO_MODE_OUTPUT, OMV_GPIO_PULL_DOWN, OMV_GPIO_SPEED_LOW, -1);
+    #if defined(OMV_CSI_RESET_PIN)
+    omv_gpio_config(OMV_CSI_RESET_PIN, OMV_GPIO_MODE_OUTPUT, OMV_GPIO_PULL_DOWN, OMV_GPIO_SPEED_LOW, -1);
     #endif
-    #if defined(DCMI_FSYNC_PIN)
-    omv_gpio_config(DCMI_FSYNC_PIN, OMV_GPIO_MODE_OUTPUT, OMV_GPIO_PULL_DOWN, OMV_GPIO_SPEED_LOW, -1);
+    #if defined(OMV_CSI_FSYNC_PIN)
+    omv_gpio_config(OMV_CSI_FSYNC_PIN, OMV_GPIO_MODE_OUTPUT, OMV_GPIO_PULL_DOWN, OMV_GPIO_SPEED_LOW, -1);
     #endif
-    #if defined(DCMI_POWER_PIN)
-    omv_gpio_config(DCMI_POWER_PIN, OMV_GPIO_MODE_OUTPUT, OMV_GPIO_PULL_UP, OMV_GPIO_SPEED_LOW, -1);
+    #if defined(OMV_CSI_POWER_PIN)
+    omv_gpio_config(OMV_CSI_POWER_PIN, OMV_GPIO_MODE_OUTPUT, OMV_GPIO_PULL_UP, OMV_GPIO_SPEED_LOW, -1);
     #endif
 
     #if defined(OMV_FIR_LEPTON_RESET_PIN)
@@ -215,29 +215,29 @@ void HAL_I2C_MspInit(I2C_HandleTypeDef *hi2c) {
     omv_gpio_t sda_pin = NULL;
 
     if (0) {
-    #if defined(I2C1_ID)
+    #if defined(OMV_I2C1_ID)
     } else if (hi2c->Instance == I2C1) {
         __HAL_RCC_I2C1_CLK_ENABLE();
-        scl_pin = I2C1_SCL_PIN;
-        sda_pin = I2C1_SDA_PIN;
+        scl_pin = OMV_I2C1_SCL_PIN;
+        sda_pin = OMV_I2C1_SDA_PIN;
     #endif
-    #if defined(I2C2_ID)
+    #if defined(OMV_I2C2_ID)
     } else if (hi2c->Instance == I2C2) {
         __HAL_RCC_I2C2_CLK_ENABLE();
-        scl_pin = I2C2_SCL_PIN;
-        sda_pin = I2C2_SDA_PIN;
+        scl_pin = OMV_I2C2_SCL_PIN;
+        sda_pin = OMV_I2C2_SDA_PIN;
     #endif
-    #if defined(I2C3_ID)
+    #if defined(OMV_I2C3_ID)
     } else if (hi2c->Instance == I2C3) {
         __HAL_RCC_I2C3_CLK_ENABLE();
-        scl_pin = I2C3_SCL_PIN;
-        sda_pin = I2C3_SDA_PIN;
+        scl_pin = OMV_I2C3_SCL_PIN;
+        sda_pin = OMV_I2C3_SDA_PIN;
     #endif
-    #if defined(I2C4_ID)
+    #if defined(OMV_I2C4_ID)
     } else if (hi2c->Instance == I2C4) {
         __HAL_RCC_I2C4_CLK_ENABLE();
-        scl_pin = I2C4_SCL_PIN;
-        sda_pin = I2C4_SDA_PIN;
+        scl_pin = OMV_I2C4_SCL_PIN;
+        sda_pin = OMV_I2C4_SDA_PIN;
     #endif
     }
 
@@ -249,25 +249,25 @@ void HAL_I2C_MspInit(I2C_HandleTypeDef *hi2c) {
 
 void HAL_I2C_MspDeInit(I2C_HandleTypeDef *hi2c) {
     if (0) {
-    #if defined(I2C1_ID)
+    #if defined(OMV_I2C1_ID)
     } else if (hi2c->Instance == I2C1) {
         __HAL_RCC_I2C1_FORCE_RESET();
         __HAL_RCC_I2C1_RELEASE_RESET();
         __HAL_RCC_I2C1_CLK_DISABLE();
     #endif
-    #if defined(I2C2_ID)
+    #if defined(OMV_I2C2_ID)
     } else if (hi2c->Instance == I2C2) {
         __HAL_RCC_I2C2_FORCE_RESET();
         __HAL_RCC_I2C2_RELEASE_RESET();
         __HAL_RCC_I2C2_CLK_DISABLE();
     #endif
-    #if defined(I2C3_ID)
+    #if defined(OMV_I2C3_ID)
     } else if (hi2c->Instance == I2C3) {
         __HAL_RCC_I2C3_FORCE_RESET();
         __HAL_RCC_I2C3_RELEASE_RESET();
         __HAL_RCC_I2C3_CLK_DISABLE();
     #endif
-    #if defined(I2C4_ID)
+    #if defined(OMV_I2C4_ID)
     } else if (hi2c->Instance == I2C4) {
         __HAL_RCC_I2C4_FORCE_RESET();
         __HAL_RCC_I2C4_RELEASE_RESET();
@@ -277,17 +277,17 @@ void HAL_I2C_MspDeInit(I2C_HandleTypeDef *hi2c) {
 }
 
 void HAL_TIM_PWM_MspInit(TIM_HandleTypeDef *htim) {
-    #if (OMV_XCLK_SOURCE == OMV_XCLK_TIM)
-    if (htim->Instance == DCMI_TIM) {
+    #if (OMV_CSI_XCLK_SOURCE == XCLK_SOURCE_TIM)
+    if (htim->Instance == OMV_CSI_TIM) {
         // Enable DCMI timer clock.
-        DCMI_TIM_CLK_ENABLE();
+        OMV_CSI_TIM_CLK_ENABLE();
         // Timer GPIO configuration.
-        omv_gpio_config(DCMI_TIM_PIN, OMV_GPIO_MODE_ALT, OMV_GPIO_PULL_UP, OMV_GPIO_SPEED_HIGH, -1);
-        #if defined(DCMI_TIM_EXT_PIN)
-        omv_gpio_config(DCMI_TIM_EXT_PIN, OMV_GPIO_MODE_ALT, OMV_GPIO_PULL_UP, OMV_GPIO_SPEED_HIGH, -1);
+        omv_gpio_config(OMV_CSI_TIM_PIN, OMV_GPIO_MODE_ALT, OMV_GPIO_PULL_UP, OMV_GPIO_SPEED_HIGH, -1);
+        #if defined(OMV_CSI_TIM_EXT_PIN)
+        omv_gpio_config(OMV_CSI_TIM_EXT_PIN, OMV_GPIO_MODE_ALT, OMV_GPIO_PULL_UP, OMV_GPIO_SPEED_HIGH, -1);
         #endif
     }
-    #endif // (OMV_XCLK_SOURCE == OMV_XCLK_TIM)
+    #endif // (OMV_CSI_XCLK_SOURCE == XCLK_SOURCE_TIM)
 
     #if defined(OMV_BUZZER_TIM)
     if (htim->Instance == OMV_BUZZER_TIM) {
@@ -308,17 +308,17 @@ void HAL_TIM_PWM_MspDeInit(TIM_HandleTypeDef *htim) {
 
 void HAL_DCMI_MspInit(DCMI_HandleTypeDef *hdcmi) {
     const omv_gpio_t dcmi_pins[] = {
-        DCMI_D0_PIN,
-        DCMI_D1_PIN,
-        DCMI_D2_PIN,
-        DCMI_D3_PIN,
-        DCMI_D4_PIN,
-        DCMI_D5_PIN,
-        DCMI_D6_PIN,
-        DCMI_D7_PIN,
-        DCMI_HSYNC_PIN,
-        DCMI_VSYNC_PIN,
-        DCMI_PXCLK_PIN,
+        OMV_CSI_D0_PIN,
+        OMV_CSI_D1_PIN,
+        OMV_CSI_D2_PIN,
+        OMV_CSI_D3_PIN,
+        OMV_CSI_D4_PIN,
+        OMV_CSI_D5_PIN,
+        OMV_CSI_D6_PIN,
+        OMV_CSI_D7_PIN,
+        OMV_CSI_HSYNC_PIN,
+        OMV_CSI_VSYNC_PIN,
+        OMV_CSI_PXCLK_PIN,
     };
 
     // DCMI clock enable
@@ -329,7 +329,7 @@ void HAL_DCMI_MspInit(DCMI_HandleTypeDef *hdcmi) {
     if (exti_gpio == 0)
     #endif
     {
-        omv_gpio_config(DCMI_VSYNC_PIN, OMV_GPIO_MODE_IT_BOTH, OMV_GPIO_PULL_UP, OMV_GPIO_SPEED_MAX, -1);
+        omv_gpio_config(OMV_CSI_VSYNC_PIN, OMV_GPIO_MODE_IT_BOTH, OMV_GPIO_PULL_UP, OMV_GPIO_SPEED_MAX, -1);
     }
 
     // Configure DCMI pins.
@@ -340,17 +340,17 @@ void HAL_DCMI_MspInit(DCMI_HandleTypeDef *hdcmi) {
 
 void HAL_DCMI_MspDeInit(DCMI_HandleTypeDef *hdcmi) {
     const omv_gpio_t dcmi_pins[] = {
-        DCMI_D0_PIN,
-        DCMI_D1_PIN,
-        DCMI_D2_PIN,
-        DCMI_D3_PIN,
-        DCMI_D4_PIN,
-        DCMI_D5_PIN,
-        DCMI_D6_PIN,
-        DCMI_D7_PIN,
-        DCMI_HSYNC_PIN,
-        DCMI_VSYNC_PIN,
-        DCMI_PXCLK_PIN,
+        OMV_CSI_D0_PIN,
+        OMV_CSI_D1_PIN,
+        OMV_CSI_D2_PIN,
+        OMV_CSI_D3_PIN,
+        OMV_CSI_D4_PIN,
+        OMV_CSI_D5_PIN,
+        OMV_CSI_D6_PIN,
+        OMV_CSI_D7_PIN,
+        OMV_CSI_HSYNC_PIN,
+        OMV_CSI_VSYNC_PIN,
+        OMV_CSI_PXCLK_PIN,
     };
 
     // Disable DCMI clock.
@@ -373,39 +373,39 @@ void HAL_SPI_MspInit(SPI_HandleTypeDef *hspi) {
     spi_pins_t spi_pins = { NULL, NULL, NULL, NULL };
 
     if (0) {
-    #if defined(SPI1_ID)
+    #if defined(OMV_SPI1_ID)
     } else if (hspi->Instance == SPI1) {
         __HAL_RCC_SPI1_CLK_ENABLE();
         spi_pins = (spi_pins_t) {
-            SPI1_SCLK_PIN, SPI1_MISO_PIN, SPI1_MOSI_PIN, SPI1_SSEL_PIN
+            OMV_SPI1_SCLK_PIN, OMV_SPI1_MISO_PIN, OMV_SPI1_MOSI_PIN, OMV_SPI1_SSEL_PIN
         };
     #endif
-    #if defined(SPI2_ID)
+    #if defined(OMV_SPI2_ID)
     } else if (hspi->Instance == SPI2) {
         __HAL_RCC_SPI2_CLK_ENABLE();
         spi_pins = (spi_pins_t) {
-            SPI2_SCLK_PIN, SPI2_MISO_PIN, SPI2_MOSI_PIN, SPI2_SSEL_PIN
+            OMV_SPI2_SCLK_PIN, OMV_SPI2_MISO_PIN, OMV_SPI2_MOSI_PIN, OMV_SPI2_SSEL_PIN
         };
     #endif
-    #if defined(SPI3_ID)
+    #if defined(OMV_SPI3_ID)
     } else if (hspi->Instance == SPI3) {
         __HAL_RCC_SPI3_CLK_ENABLE();
         spi_pins = (spi_pins_t) {
-            SPI3_SCLK_PIN, SPI3_MISO_PIN, SPI3_MOSI_PIN, SPI3_SSEL_PIN
+            OMV_SPI3_SCLK_PIN, OMV_SPI3_MISO_PIN, OMV_SPI3_MOSI_PIN, OMV_SPI3_SSEL_PIN
         };
     #endif
-    #if defined(SPI4_ID)
+    #if defined(OMV_SPI4_ID)
     } else if (hspi->Instance == SPI4) {
         __HAL_RCC_SPI4_CLK_ENABLE();
         spi_pins = (spi_pins_t) {
-            SPI4_SCLK_PIN, SPI4_MISO_PIN, SPI4_MOSI_PIN, SPI4_SSEL_PIN
+            OMV_SPI4_SCLK_PIN, OMV_SPI4_MISO_PIN, OMV_SPI4_MOSI_PIN, OMV_SPI4_SSEL_PIN
         };
     #endif
-    #if defined(SPI5_ID)
+    #if defined(OMV_SPI5_ID)
     } else if (hspi->Instance == SPI5) {
         __HAL_RCC_SPI5_CLK_ENABLE();
         spi_pins = (spi_pins_t) {
-            SPI5_SCLK_PIN, SPI5_MISO_PIN, SPI5_MOSI_PIN, SPI5_SSEL_PIN
+            OMV_SPI5_SCLK_PIN, OMV_SPI5_MISO_PIN, OMV_SPI5_MOSI_PIN, OMV_SPI5_SSEL_PIN
         };
     #endif
     #if defined(SPI6_ID)
@@ -459,49 +459,49 @@ void HAL_SPI_MspDeInit(SPI_HandleTypeDef *hspi) {
     spi_pins_t spi_pins = { NULL, NULL, NULL, NULL };
 
     if (0) {
-    #if defined(SPI1_ID)
+    #if defined(OMV_SPI1_ID)
     } else if (hspi->Instance == SPI1) {
         __HAL_RCC_SPI1_FORCE_RESET();
         __HAL_RCC_SPI1_RELEASE_RESET();
         __HAL_RCC_SPI1_CLK_DISABLE();
         spi_pins = (spi_pins_t) {
-            SPI1_SCLK_PIN, SPI1_MISO_PIN, SPI1_MOSI_PIN, SPI1_SSEL_PIN
+            OMV_SPI1_SCLK_PIN, OMV_SPI1_MISO_PIN, OMV_SPI1_MOSI_PIN, OMV_SPI1_SSEL_PIN
         };
     #endif
-    #if defined(SPI2_ID)
+    #if defined(OMV_SPI2_ID)
     } else if (hspi->Instance == SPI2) {
         __HAL_RCC_SPI2_FORCE_RESET();
         __HAL_RCC_SPI2_RELEASE_RESET();
         __HAL_RCC_SPI2_CLK_DISABLE();
         spi_pins = (spi_pins_t) {
-            SPI2_SCLK_PIN, SPI2_MISO_PIN, SPI2_MOSI_PIN, SPI2_SSEL_PIN
+            OMV_SPI2_SCLK_PIN, OMV_SPI2_MISO_PIN, OMV_SPI2_MOSI_PIN, OMV_SPI2_SSEL_PIN
         };
     #endif
-    #if defined(SPI3_ID)
+    #if defined(OMV_SPI3_ID)
     } else if (hspi->Instance == SPI3) {
         __HAL_RCC_SPI3_FORCE_RESET();
         __HAL_RCC_SPI3_RELEASE_RESET();
         __HAL_RCC_SPI3_CLK_DISABLE();
         spi_pins = (spi_pins_t) {
-            SPI3_SCLK_PIN, SPI3_MISO_PIN, SPI3_MOSI_PIN, SPI3_SSEL_PIN
+            OMV_SPI3_SCLK_PIN, OMV_SPI3_MISO_PIN, OMV_SPI3_MOSI_PIN, OMV_SPI3_SSEL_PIN
         };
     #endif
-    #if defined(SPI4_ID)
+    #if defined(OMV_SPI4_ID)
     } else if (hspi->Instance == SPI4) {
         __HAL_RCC_SPI4_FORCE_RESET();
         __HAL_RCC_SPI4_RELEASE_RESET();
         __HAL_RCC_SPI4_CLK_DISABLE();
         spi_pins = (spi_pins_t) {
-            SPI4_SCLK_PIN, SPI4_MISO_PIN, SPI4_MOSI_PIN, SPI4_SSEL_PIN
+            OMV_SPI4_SCLK_PIN, OMV_SPI4_MISO_PIN, OMV_SPI4_MOSI_PIN, OMV_SPI4_SSEL_PIN
         };
     #endif
-    #if defined(SPI5_ID)
+    #if defined(OMV_SPI5_ID)
     } else if (hspi->Instance == SPI5) {
         __HAL_RCC_SPI5_FORCE_RESET();
         __HAL_RCC_SPI5_RELEASE_RESET();
         __HAL_RCC_SPI5_CLK_DISABLE();
         spi_pins = (spi_pins_t) {
-            SPI5_SCLK_PIN, SPI5_MISO_PIN, SPI5_MOSI_PIN, SPI5_SSEL_PIN
+            OMV_SPI5_SCLK_PIN, OMV_SPI5_MISO_PIN, OMV_SPI5_MOSI_PIN, OMV_SPI5_SSEL_PIN
         };
     #endif
     #if defined(SPI6_ID)
@@ -525,36 +525,36 @@ void HAL_SPI_MspDeInit(SPI_HandleTypeDef *hspi) {
     // omv_gpio_deinit(spi_pins.ssel_pin);
 }
 
-#if defined(AUDIO_SAI)
+#if defined(OMV_SAI)
 void HAL_SAI_MspInit(SAI_HandleTypeDef *hsai) {
-    if (hsai->Instance == AUDIO_SAI) {
-        AUDIO_SAI_CLK_ENABLE();
-        omv_gpio_config(AUDIO_SAI_CK_PIN, OMV_GPIO_MODE_ALT, OMV_GPIO_PULL_NONE, OMV_GPIO_SPEED_LOW, -1);
-        omv_gpio_config(AUDIO_SAI_D1_PIN, OMV_GPIO_MODE_ALT, OMV_GPIO_PULL_NONE, OMV_GPIO_SPEED_LOW, -1);
+    if (hsai->Instance == OMV_SAI) {
+        OMV_SAI_CLK_ENABLE();
+        omv_gpio_config(OMV_SAI_CK_PIN, OMV_GPIO_MODE_ALT, OMV_GPIO_PULL_NONE, OMV_GPIO_SPEED_LOW, -1);
+        omv_gpio_config(OMV_SAI_D1_PIN, OMV_GPIO_MODE_ALT, OMV_GPIO_PULL_NONE, OMV_GPIO_SPEED_LOW, -1);
     }
 }
 
 void HAL_SAI_MspDeInit(SAI_HandleTypeDef *hsai) {
     if (hsai->Instance == SAI4_Block_A) {
-        AUDIO_SAI_CLK_DISABLE();
-        omv_gpio_deinit(AUDIO_SAI_CK_PIN);
-        omv_gpio_deinit(AUDIO_SAI_D1_PIN);
+        OMV_SAI_CLK_DISABLE();
+        omv_gpio_deinit(OMV_SAI_CK_PIN);
+        omv_gpio_deinit(OMV_SAI_D1_PIN);
     }
 }
-#elif defined(AUDIO_DFSDM)
+#elif defined(OMV_DFSDM)
 void HAL_DFSDM_ChannelMspInit(DFSDM_Channel_HandleTypeDef *hdfsdm) {
-    if (hdfsdm->Instance == AUDIO_DFSDM) {
-        AUDIO_DFSDM_CLK_ENABLE();
-        omv_gpio_config(AUDIO_DFSDM_CK_PIN, OMV_GPIO_MODE_ALT, OMV_GPIO_PULL_NONE, OMV_GPIO_SPEED_LOW, -1);
-        omv_gpio_config(AUDIO_DFSDM_D1_PIN, OMV_GPIO_MODE_ALT, OMV_GPIO_PULL_NONE, OMV_GPIO_SPEED_LOW, -1);
+    if (hdfsdm->Instance == OMV_DFSDM) {
+        OMV_DFSDM_CLK_ENABLE();
+        omv_gpio_config(OMV_DFSDM_CK_PIN, OMV_GPIO_MODE_ALT, OMV_GPIO_PULL_NONE, OMV_GPIO_SPEED_LOW, -1);
+        omv_gpio_config(OMV_DFSDM_D1_PIN, OMV_GPIO_MODE_ALT, OMV_GPIO_PULL_NONE, OMV_GPIO_SPEED_LOW, -1);
     }
 }
 
 void HAL_DFSDM_ChannelMspDeInit(DFSDM_Channel_HandleTypeDef *hdfsdm) {
-    if (hdfsdm->Instance == AUDIO_DFSDM) {
-        AUDIO_DFSDM_CLK_DISABLE();
-        omv_gpio_deinit(AUDIO_DFSDM_CK_PIN);
-        omv_gpio_deinit(AUDIO_DFSDM_D1_PIN);
+    if (hdfsdm->Instance == OMV_DFSDM) {
+        OMV_DFSDM_CLK_DISABLE();
+        omv_gpio_deinit(OMV_DFSDM_CK_PIN);
+        omv_gpio_deinit(OMV_DFSDM_D1_PIN);
     }
 }
 #endif
@@ -577,7 +577,7 @@ void HAL_DMA2D_MspDeInit(DMA2D_HandleTypeDef *hdma2d) {
     __HAL_RCC_DMA2D_CLK_DISABLE();
 }
 
-#if (OMV_HARDWARE_JPEG == 1)
+#if (OMV_JPEG_CODEC_ENABLE == 1)
 void HAL_JPEG_MspInit(JPEG_HandleTypeDef *hjpeg) {
     __HAL_RCC_JPEG_CLK_ENABLE();
 }
@@ -706,7 +706,7 @@ void HAL_MspDeInit(void) {
 
 void MDMA_IRQHandler() {
     IRQ_ENTER(MDMA_IRQn);
-    #if (OMV_HARDWARE_JPEG == 1)
+    #if (OMV_JPEG_CODEC_ENABLE == 1)
     extern void jpeg_mdma_irq_handler(void);
     jpeg_mdma_irq_handler();
     #endif

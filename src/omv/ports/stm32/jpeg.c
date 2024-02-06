@@ -9,7 +9,7 @@
  * Hardware Accelerated JPEG Encoder and Decoder
  */
 #include "omv_boardconfig.h"
-#if (OMV_HARDWARE_JPEG == 1)
+#if (OMV_JPEG_CODEC_ENABLE == 1)
 #include "imlib.h"
 
 #include "py/mphal.h"

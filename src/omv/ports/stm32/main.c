@@ -448,7 +448,7 @@ else {
     ini_parse(&vfs_fat->fatfs, "/openmv.config", ini_handler_callback, &openmv_config);
 
     // Init wifi debugging if enabled and on first soft-reset only.
-    #if OMV_ENABLE_WIFIDBG && MICROPY_PY_WINC1500
+    #if OMV_WIFIDBG_ENABLE && MICROPY_PY_WINC1500
     if (openmv_config.wifidbg == true &&
         wifidbg_init(&openmv_config.wifidbg_config) != 0) {
         openmv_config.wifidbg = false;
@@ -503,7 +503,7 @@ else {
             if (nlr_push(&nlr) == 0) {
                 // enable IDE interrupt
                 usbdbg_set_irq_enabled(true);
-                #if OMV_ENABLE_WIFIDBG && MICROPY_PY_WINC1500
+                #if OMV_WIFIDBG_ENABLE && MICROPY_PY_WINC1500
                 wifidbg_set_irq_enabled(openmv_config.wifidbg);
                 #endif
 
@@ -527,7 +527,7 @@ else {
             if (nlr_push(&nlr) == 0) {
                 // Enable IDE interrupts
                 usbdbg_set_irq_enabled(true);
-                #if OMV_ENABLE_WIFIDBG && MICROPY_PY_WINC1500
+                #if OMV_WIFIDBG_ENABLE && MICROPY_PY_WINC1500
                 wifidbg_set_irq_enabled(openmv_config.wifidbg);
                 #endif
                 // Execute the script.
@@ -542,7 +542,7 @@ else {
             if (usbdbg_is_busy() && nlr_push(&nlr) == 0) {
                 // Enable IDE interrupt
                 usbdbg_set_irq_enabled(true);
-                #if OMV_ENABLE_WIFIDBG && MICROPY_PY_WINC1500
+                #if OMV_WIFIDBG_ENABLE && MICROPY_PY_WINC1500
                 wifidbg_set_irq_enabled(openmv_config.wifidbg);
                 #endif
                 // Wait for the current command to finish.

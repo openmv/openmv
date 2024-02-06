@@ -9,7 +9,7 @@
  * HM0360 driver.
  */
 #include "omv_boardconfig.h"
-#if (OMV_ENABLE_HM0360 == 1)
+#if (OMV_HM0360_ENABLE == 1)
 
 #include <stdint.h>
 #include <stdlib.h>
@@ -571,7 +571,7 @@ static int get_vt_pix_clk(sensor_t *sensor, uint32_t *vt_pix_clk) {
     uint32_t vt_sys_div = (1 << (reg & 0x03));
 
     // vt_pix_clk = MCLK / vt_sys_div
-    *vt_pix_clk = OMV_XCLK_FREQUENCY / vt_sys_div;
+    *vt_pix_clk = OMV_CSI_XCLK_FREQUENCY / vt_sys_div;
     return 0;
 }
 
@@ -771,4 +771,4 @@ int hm0360_init(sensor_t *sensor) {
 
     return 0;
 }
-#endif //(OMV_ENABLE_HM0360 == 1)
+#endif //(OMV_HM0360_ENABLE == 1)

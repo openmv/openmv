@@ -37,34 +37,34 @@ typedef struct omv_spi_descr {
 } omv_spi_descr_t;
 
 static const omv_spi_descr_t omv_spi_descr_all[] = {
-    #if defined(LPSPI1_ID)
-    { LPSPI1, LPSPI1_SSEL_PIN,
-      { LPSPI1_DMA, LPSPI1_DMA_MUX, LPSPI1_DMA_TX_CHANNEL, kDmaRequestMuxLPSPI1Tx },
-      { LPSPI1_DMA, LPSPI1_DMA_MUX, LPSPI1_DMA_RX_CHANNEL, kDmaRequestMuxLPSPI1Rx } },
+    #if defined(OMV_SPI1_ID)
+    { LPSPI1, OMV_SPI1_SSEL_PIN,
+      { OMV_SPI1_DMA, OMV_SPI1_DMA_MUX, OMV_SPI1_DMA_TX_CHANNEL, kDmaRequestMuxLPSPI1Tx },
+      { OMV_SPI1_DMA, OMV_SPI1_DMA_MUX, OMV_SPI1_DMA_RX_CHANNEL, kDmaRequestMuxLPSPI1Rx } },
     #else
     { NULL, NULL, { NULL, NULL, 0, 0 }, { NULL, NULL, 0, 0 } },
     #endif
 
-    #if defined(LPSPI2_ID)
-    { LPSPI2, LPSPI2_SSEL_PIN,
-      { LPSPI2_DMA, LPSPI2_DMA_MUX, LPSPI2_DMA_TX_CHANNEL, kDmaRequestMuxLPSPI2Tx },
-      { LPSPI2_DMA, LPSPI2_DMA_MUX, LPSPI2_DMA_RX_CHANNEL, kDmaRequestMuxLPSPI2Rx } },
+    #if defined(OMV_SPI2_ID)
+    { LPSPI2, OMV_SPI2_SSEL_PIN,
+      { OMV_SPI2_DMA, OMV_SPI2_DMA_MUX, OMV_SPI2_DMA_TX_CHANNEL, kDmaRequestMuxLPSPI2Tx },
+      { OMV_SPI2_DMA, OMV_SPI2_DMA_MUX, OMV_SPI2_DMA_RX_CHANNEL, kDmaRequestMuxLPSPI2Rx } },
     #else
     { NULL, NULL, { NULL, NULL, 0, 0 }, { NULL, NULL, 0, 0 } },
     #endif
 
-    #if defined(LPSPI3_ID)
-    { LPSPI3, LPSPI3_SSEL_PIN,
-      { LPSPI3_DMA, LPSPI3_DMA_MUX, LPSPI3_DMA_TX_CHANNEL, kDmaRequestMuxLPSPI3Tx },
-      { LPSPI3_DMA, LPSPI3_DMA_MUX, LPSPI3_DMA_RX_CHANNEL, kDmaRequestMuxLPSPI3Rx } },
+    #if defined(OMV_SPI3_ID)
+    { LPSPI3, OMV_SPI3_SSEL_PIN,
+      { OMV_SPI3_DMA, OMV_SPI3_DMA_MUX, OMV_SPI3_DMA_TX_CHANNEL, kDmaRequestMuxLPSPI3Tx },
+      { OMV_SPI3_DMA, OMV_SPI3_DMA_MUX, OMV_SPI3_DMA_RX_CHANNEL, kDmaRequestMuxLPSPI3Rx } },
     #else
     { NULL, NULL, { NULL, NULL, 0, 0 }, { NULL, NULL, 0, 0 } },
     #endif
 
-    #if defined(LPSPI4_ID)
-    { LPSPI4, LPSPI4_SSEL_PIN,
-      { LPSPI4_DMA, LPSPI4_DMA_MUX, LPSPI4_DMA_TX_CHANNEL, kDmaRequestMuxLPSPI4Tx },
-      { LPSPI4_DMA, LPSPI4_DMA_MUX, LPSPI4_DMA_RX_CHANNEL, kDmaRequestMuxLPSPI4Rx } },
+    #if defined(OMV_SPI4_ID)
+    { LPSPI4, OMV_SPI4_SSEL_PIN,
+      { OMV_SPI4_DMA, OMV_SPI4_DMA_MUX, OMV_SPI4_DMA_TX_CHANNEL, kDmaRequestMuxLPSPI4Tx },
+      { OMV_SPI4_DMA, OMV_SPI4_DMA_MUX, OMV_SPI4_DMA_RX_CHANNEL, kDmaRequestMuxLPSPI4Rx } },
     #else
     { NULL, NULL, { NULL, NULL, 0, 0 }, { NULL, NULL, 0, 0 } },
     #endif

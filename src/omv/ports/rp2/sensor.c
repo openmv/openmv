@@ -34,53 +34,53 @@ static void dma_irq_handler();
 extern void __fatal_error(const char *msg);
 
 static void sensor_dma_config(int w, int h, int bpp, uint32_t *capture_buf, bool rev_bytes) {
-    dma_channel_abort(DCMI_DMA_CHANNEL);
-    dma_irqn_set_channel_enabled(DCMI_DMA, DCMI_DMA_CHANNEL, false);
+    dma_channel_abort(OMV_CSI_DMA_CHANNEL);
+    dma_irqn_set_channel_enabled(OMV_CSI_DMA, OMV_CSI_DMA_CHANNEL, false);
 
-    dma_channel_config c = dma_channel_get_default_config(DCMI_DMA_CHANNEL);
+    dma_channel_config c = dma_channel_get_default_config(OMV_CSI_DMA_CHANNEL);
     channel_config_set_read_increment(&c, false);
     channel_config_set_write_increment(&c, true);
-    channel_config_set_dreq(&c, pio_get_dreq(DCMI_PIO, DCMI_SM, false));
+    channel_config_set_dreq(&c, pio_get_dreq(OMV_CSI_PIO, OMV_CSI_SM, false));
     channel_config_set_bswap(&c, rev_bytes);
 
-    dma_channel_configure(DCMI_DMA_CHANNEL, &c,
+    dma_channel_configure(OMV_CSI_DMA_CHANNEL, &c,
                           capture_buf, // Destinatinon pointer.
-                          &DCMI_PIO->rxf[DCMI_SM], // Source pointer.
+                          &OMV_CSI_PIO->rxf[OMV_CSI_SM], // Source pointer.
                           (w * h * bpp) >> 2, // Number of transfers in words.
                           true      // Start immediately, will block on SM.
                           );
 
     // Re-enable DMA IRQs.
-    dma_irqn_set_channel_enabled(DCMI_DMA, DCMI_DMA_CHANNEL, true);
+    dma_irqn_set_channel_enabled(OMV_CSI_DMA, OMV_CSI_DMA_CHANNEL, true);
 }
 
 int sensor_init() {
     int init_ret = 0;
 
     // PIXCLK
-    gpio_init(DCMI_PXCLK_PIN);
-    gpio_set_dir(DCMI_PXCLK_PIN, GPIO_IN);
+    gpio_init(OMV_CSI_PXCLK_PIN);
+    gpio_set_dir(OMV_CSI_PXCLK_PIN, GPIO_IN);
 
     // HSYNC
-    gpio_init(DCMI_HSYNC_PIN);
-    gpio_set_dir(DCMI_HSYNC_PIN, GPIO_IN);
+    gpio_init(OMV_CSI_HSYNC_PIN);
+    gpio_set_dir(OMV_CSI_HSYNC_PIN, GPIO_IN);
 
     // VSYNC
-    gpio_init(DCMI_VSYNC_PIN);
-    gpio_set_dir(DCMI_VSYNC_PIN, GPIO_IN);
+    gpio_init(OMV_CSI_VSYNC_PIN);
+    gpio_set_dir(OMV_CSI_VSYNC_PIN, GPIO_IN);
 
-    #if defined(DCMI_POWER_PIN)
-    gpio_init(DCMI_POWER_PIN);
-    gpio_set_dir(DCMI_POWER_PIN, GPIO_OUT);
-    gpio_pull_down(DCMI_POWER_PIN);
-    gpio_put(DCMI_POWER_PIN, 1);
+    #if defined(OMV_CSI_POWER_PIN)
+    gpio_init(OMV_CSI_POWER_PIN);
+    gpio_set_dir(OMV_CSI_POWER_PIN, GPIO_OUT);
+    gpio_pull_down(OMV_CSI_POWER_PIN);
+    gpio_put(OMV_CSI_POWER_PIN, 1);
     #endif
 
-    #if defined(DCMI_RESET_PIN)
-    gpio_init(DCMI_RESET_PIN);
-    gpio_set_dir(DCMI_RESET_PIN, GPIO_OUT);
-    gpio_pull_up(DCMI_RESET_PIN);
-    gpio_put(DCMI_RESET_PIN, 1);
+    #if defined(OMV_CSI_RESET_PIN)
+    gpio_init(OMV_CSI_RESET_PIN);
+    gpio_set_dir(OMV_CSI_RESET_PIN, GPIO_OUT);
+    gpio_pull_up(OMV_CSI_RESET_PIN);
+    gpio_put(OMV_CSI_RESET_PIN, 1);
     #endif
 
     // Reset the sensor state
@@ -91,13 +91,13 @@ int sensor_init() {
     sensor.snapshot = sensor_snapshot;
 
     // Configure the sensor external clock (XCLK).
-    if (sensor_set_xclk_frequency(OMV_XCLK_FREQUENCY) != 0) {
+    if (sensor_set_xclk_frequency(OMV_CSI_XCLK_FREQUENCY) != 0) {
         // Failed to initialize the sensor clock.
         return SENSOR_ERROR_TIM_INIT_FAILED;
     }
 
     // Detect and initialize the image sensor.
-    if ((init_ret = sensor_probe_init(ISC_I2C_ID, ISC_I2C_SPEED)) != 0) {
+    if ((init_ret = sensor_probe_init(OMV_CSI_I2C_ID, OMV_CSI_I2C_SPEED)) != 0) {
         // Sensor probe/init failed.
         return init_ret;
     }
@@ -107,23 +107,23 @@ int sensor_init() {
 
     // Set new DMA IRQ handler.
     // Disable IRQs.
-    irq_set_enabled(DCMI_DMA_IRQ, false);
+    irq_set_enabled(OMV_CSI_DMA_IRQ, false);
 
     // Clear DMA interrupts.
-    dma_irqn_acknowledge_channel(DCMI_DMA, DCMI_DMA_CHANNEL);
+    dma_irqn_acknowledge_channel(OMV_CSI_DMA, OMV_CSI_DMA_CHANNEL);
 
     // Remove current handler if any
-    irq_handler_t irq_handler = irq_get_exclusive_handler(DCMI_DMA_IRQ);
+    irq_handler_t irq_handler = irq_get_exclusive_handler(OMV_CSI_DMA_IRQ);
     if (irq_handler != NULL) {
-        irq_remove_handler(DCMI_DMA_IRQ, irq_handler);
+        irq_remove_handler(OMV_CSI_DMA_IRQ, irq_handler);
     }
 
     // Set new exclusive IRQ handler.
-    irq_set_exclusive_handler(DCMI_DMA_IRQ, dma_irq_handler);
+    irq_set_exclusive_handler(OMV_CSI_DMA_IRQ, dma_irq_handler);
     // Or set shared IRQ handler, but this needs to be called once.
-    // irq_add_shared_handler(DCMI_DMA_IRQ, dma_irq_handler, PICO_DEFAULT_IRQ_PRIORITY);
+    // irq_add_shared_handler(OMV_CSI_DMA_IRQ, dma_irq_handler, PICO_DEFAULT_IRQ_PRIORITY);
 
-    irq_set_enabled(DCMI_DMA_IRQ, true);
+    irq_set_enabled(OMV_CSI_DMA_IRQ, true);
 
     // Disable VSYNC IRQ and callback
     sensor_set_vsync_callback(NULL);
@@ -139,12 +139,12 @@ int sensor_init() {
 
 int sensor_abort(bool fifo_flush, bool in_irq) {
     // Disable DMA channel
-    dma_channel_abort(DCMI_DMA_CHANNEL);
-    dma_irqn_set_channel_enabled(DCMI_DMA, DCMI_DMA_CHANNEL, false);
+    dma_channel_abort(OMV_CSI_DMA_CHANNEL);
+    dma_irqn_set_channel_enabled(OMV_CSI_DMA, OMV_CSI_DMA_CHANNEL, false);
 
     // Disable state machine.
-    pio_sm_set_enabled(DCMI_PIO, DCMI_SM, false);
-    pio_sm_clear_fifos(DCMI_PIO, DCMI_SM);
+    pio_sm_set_enabled(OMV_CSI_PIO, OMV_CSI_SM, false);
+    pio_sm_clear_fifos(OMV_CSI_PIO, OMV_CSI_SM);
 
     // Clear bpp flag.
     MAIN_FB()->pixfmt = PIXFORMAT_INVALID;
@@ -156,10 +156,10 @@ int sensor_set_xclk_frequency(uint32_t frequency) {
     uint32_t p = 4;
 
     // Allocate pin to the PWM
-    gpio_set_function(DCMI_XCLK_PIN, GPIO_FUNC_PWM);
+    gpio_set_function(OMV_CSI_MXCLK_PIN, GPIO_FUNC_PWM);
 
     // Find out which PWM slice is connected to the GPIO
-    uint slice_num = pwm_gpio_to_slice_num(DCMI_XCLK_PIN);
+    uint slice_num = pwm_gpio_to_slice_num(OMV_CSI_MXCLK_PIN);
 
     // Set period to p cycles
     pwm_set_wrap(slice_num, p - 1);
@@ -182,21 +182,21 @@ int sensor_set_windowing(int x, int y, int w, int h) {
 }
 
 static void dma_irq_handler() {
-    if (dma_irqn_get_channel_status(DCMI_DMA, DCMI_DMA_CHANNEL)) {
+    if (dma_irqn_get_channel_status(OMV_CSI_DMA, OMV_CSI_DMA_CHANNEL)) {
         // Clear the interrupt request.
-        dma_irqn_acknowledge_channel(DCMI_DMA, DCMI_DMA_CHANNEL);
+        dma_irqn_acknowledge_channel(OMV_CSI_DMA, OMV_CSI_DMA_CHANNEL);
 
         framebuffer_get_tail(FB_NO_FLAGS);
         vbuffer_t *buffer = framebuffer_get_tail(FB_PEEK);
         if (buffer != NULL) {
             // Set next buffer and retrigger the DMA channel.
-            dma_channel_set_write_addr(DCMI_DMA_CHANNEL, buffer->data, true);
+            dma_channel_set_write_addr(OMV_CSI_DMA_CHANNEL, buffer->data, true);
 
             // Unblock the state machine
-            pio_sm_restart(DCMI_PIO, DCMI_SM);
-            pio_sm_clear_fifos(DCMI_PIO, DCMI_SM);
-            pio_sm_put_blocking(DCMI_PIO, DCMI_SM, (MAIN_FB()->v - 1));
-            pio_sm_put_blocking(DCMI_PIO, DCMI_SM, (MAIN_FB()->u * MAIN_FB()->bpp) - 1);
+            pio_sm_restart(OMV_CSI_PIO, OMV_CSI_SM);
+            pio_sm_clear_fifos(OMV_CSI_PIO, OMV_CSI_SM);
+            pio_sm_put_blocking(OMV_CSI_PIO, OMV_CSI_SM, (MAIN_FB()->v - 1));
+            pio_sm_put_blocking(OMV_CSI_PIO, OMV_CSI_SM, (MAIN_FB()->u * MAIN_FB()->bpp) - 1);
         }
     }
 }
@@ -223,7 +223,7 @@ int sensor_snapshot(sensor_t *sensor, image_t *image, uint32_t flags) {
 
     // If there's no ready buffer in the fifo, and the DMA is Not currently
     // transferring a new buffer, reconfigure and restart the DMA transfer.
-    if (buffer == NULL && !dma_channel_is_busy(DCMI_DMA_CHANNEL)) {
+    if (buffer == NULL && !dma_channel_is_busy(OMV_CSI_DMA_CHANNEL)) {
         framebuffer_setup_buffers();
 
         buffer = framebuffer_get_tail(FB_PEEK);
@@ -237,12 +237,12 @@ int sensor_snapshot(sensor_t *sensor, image_t *image, uint32_t flags) {
 
 
         // Re-enable the state machine.
-        pio_sm_clear_fifos(DCMI_PIO, DCMI_SM);
-        pio_sm_set_enabled(DCMI_PIO, DCMI_SM, true);
+        pio_sm_clear_fifos(OMV_CSI_PIO, OMV_CSI_SM);
+        pio_sm_set_enabled(OMV_CSI_PIO, OMV_CSI_SM, true);
 
         // Unblock the state machine
-        pio_sm_put_blocking(DCMI_PIO, DCMI_SM, (MAIN_FB()->v - 1));
-        pio_sm_put_blocking(DCMI_PIO, DCMI_SM, (MAIN_FB()->u * MAIN_FB()->bpp) - 1);
+        pio_sm_put_blocking(OMV_CSI_PIO, OMV_CSI_SM, (MAIN_FB()->v - 1));
+        pio_sm_put_blocking(OMV_CSI_PIO, OMV_CSI_SM, (MAIN_FB()->u * MAIN_FB()->bpp) - 1);
     }
 
     // Wait for the DMA to finish the transfer.

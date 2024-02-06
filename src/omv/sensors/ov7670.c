@@ -9,7 +9,7 @@
  * OV7670 driver.
  */
 #include "omv_boardconfig.h"
-#if (OMV_ENABLE_OV7670 == 1)
+#if (OMV_OV7670_ENABLE == 1)
 
 #include <stdint.h>
 #include <stdlib.h>
@@ -460,4 +460,4 @@ int ov7670_init(sensor_t *sensor) {
 
     return 0;
 }
-#endif // (OMV_ENABLE_OV7670 == 1)
+#endif // (OMV_OV7670_ENABLE == 1)

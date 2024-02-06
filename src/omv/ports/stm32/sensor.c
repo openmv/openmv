@@ -29,17 +29,13 @@
 #define ARRAY_SIZE(a)            (sizeof(a) / sizeof((a)[0]))
 
 sensor_t sensor = {};
-static TIM_HandleTypeDef TIMHandle = {.Instance = DCMI_TIM};
+static TIM_HandleTypeDef TIMHandle = {.Instance = OMV_CSI_TIM};
 static DMA_HandleTypeDef DMAHandle = {.Instance = DMA2_Stream1};
 static DCMI_HandleTypeDef DCMIHandle = {.Instance = DCMI};
 #if defined(OMV_MDMA_CHANNEL_DCMI_0)
 static MDMA_HandleTypeDef DCMI_MDMA_Handle0;
 static MDMA_HandleTypeDef DCMI_MDMA_Handle1;
 #endif
-// SPI on image sensor connector.
-#ifdef ISC_SPI
-SPI_HandleTypeDef ISC_SPIHandle = {.Instance = ISC_SPI};
-#endif // ISC_SPI
 
 extern uint8_t _line_buf;
 extern uint32_t hal_get_exti_gpio(uint32_t line);
@@ -47,12 +43,6 @@ extern uint32_t hal_get_exti_gpio(uint32_t line);
 void DCMI_IRQHandler(void) {
     HAL_DCMI_IRQHandler(&DCMIHandle);
 }
-
-#ifdef ISC_SPI
-void ISC_SPI_IRQHandler(void) {
-    HAL_SPI_IRQHandler(&ISC_SPIHandle);
-}
-#endif // ISC_SPI
 
 #if defined(OMV_MDMA_CHANNEL_DCMI_0)
 void sensor_mdma_irq_handler(void) {
@@ -128,9 +118,9 @@ int sensor_init() {
 
     // List of I2C buses to scan.
     uint32_t buses[][2] = {
-        {ISC_I2C_ID, ISC_I2C_SPEED},
-        #if defined(ISC_I2C_ALT)
-        {ISC_I2C_ALT_ID, ISC_I2C_ALT_SPEED},
+        {OMV_CSI_I2C_ID, OMV_CSI_I2C_SPEED},
+        #if defined(OMV_CSI_I2C_ALT_ID)
+        {OMV_CSI_I2C_ALT_ID, OMV_CSI_I2C_ALT_SPEED},
         #endif
     };
 
@@ -142,7 +132,7 @@ int sensor_init() {
     sensor.snapshot = sensor_snapshot;
 
     // Configure the sensor external clock (XCLK).
-    if (sensor_set_xclk_frequency(OMV_XCLK_FREQUENCY) != 0) {
+    if (sensor_set_xclk_frequency(OMV_CSI_XCLK_FREQUENCY) != 0) {
         // Failed to initialize the sensor clock.
         return SENSOR_ERROR_TIM_INIT_FAILED;
     }
@@ -262,21 +252,21 @@ int sensor_abort(bool fifo_flush, bool in_irq) {
 }
 
 uint32_t sensor_get_xclk_frequency() {
-    return (DCMI_TIM_PCLK_FREQ() * 2) / (TIMHandle.Init.Period + 1);
+    return (OMV_CSI_TIM_PCLK_FREQ() * 2) / (TIMHandle.Init.Period + 1);
 }
 
 int sensor_set_xclk_frequency(uint32_t frequency) {
-    #if (OMV_XCLK_SOURCE == OMV_XCLK_TIM)
+    #if (OMV_CSI_XCLK_SOURCE == XCLK_SOURCE_TIM)
     if (frequency == 0 && TIMHandle.Init.Period) {
-        HAL_TIM_PWM_Stop(&TIMHandle, DCMI_TIM_CHANNEL);
+        HAL_TIM_PWM_Stop(&TIMHandle, OMV_CSI_TIM_CHANNEL);
         HAL_TIM_PWM_DeInit(&TIMHandle);
         memset(&TIMHandle, 0, sizeof(TIMHandle));
-        TIMHandle.Instance = DCMI_TIM;
+        TIMHandle.Instance = OMV_CSI_TIM;
         return 0;
     }
 
     // TCLK (PCLK * 2)
-    int tclk = DCMI_TIM_PCLK_FREQ() * 2;
+    int tclk = OMV_CSI_TIM_PCLK_FREQ() * 2;
 
     // Find highest possible frequency under requested.
     int period = fast_ceilf(tclk / ((float) frequency)) - 1;
@@ -285,7 +275,7 @@ int sensor_set_xclk_frequency(uint32_t frequency) {
     if (TIMHandle.Init.Period && (TIMHandle.Init.Period != period)) {
         // __HAL_TIM_SET_AUTORELOAD sets TIMHandle.Init.Period...
         __HAL_TIM_SET_AUTORELOAD(&TIMHandle, period);
-        __HAL_TIM_SET_COMPARE(&TIMHandle, DCMI_TIM_CHANNEL, pulse);
+        __HAL_TIM_SET_COMPARE(&TIMHandle, OMV_CSI_TIM_CHANNEL, pulse);
         return 0;
     }
 
@@ -308,20 +298,20 @@ int sensor_set_xclk_frequency(uint32_t frequency) {
     TIMOCHandle.OCNIdleState = TIM_OCNIDLESTATE_RESET;
 
     if ((HAL_TIM_PWM_Init(&TIMHandle) != HAL_OK)
-        || (HAL_TIM_PWM_ConfigChannel(&TIMHandle, &TIMOCHandle, DCMI_TIM_CHANNEL) != HAL_OK)
-        || (HAL_TIM_PWM_Start(&TIMHandle, DCMI_TIM_CHANNEL) != HAL_OK)) {
+        || (HAL_TIM_PWM_ConfigChannel(&TIMHandle, &TIMOCHandle, OMV_CSI_TIM_CHANNEL) != HAL_OK)
+        || (HAL_TIM_PWM_Start(&TIMHandle, OMV_CSI_TIM_CHANNEL) != HAL_OK)) {
         return -1;
     }
-    #elif (OMV_XCLK_SOURCE == OMV_XCLK_MCO)
+    #elif (OMV_CSI_XCLK_SOURCE == XCLK_SOURCE_MCO)
     // Pass through the MCO1 clock with source input set to HSE (12MHz).
     // Note MCO1 is multiplexed on OPENMV2/TIM1 only.
     HAL_RCC_MCOConfig(RCC_MCO1, RCC_MCO1SOURCE_HSE, RCC_MCODIV_1);
-    #elif (OMV_XCLK_SOURCE == OMV_XCLK_OSC)
+    #elif (OMV_CSI_XCLK_SOURCE == XCLK_SOURCE_OSC)
     // An external oscillator is used for the sensor clock.
     // Configure and enable external oscillator if needed.
     #else
-    #error "OMV_XCLK_SOURCE is not set!"
-    #endif // (OMV_XCLK_SOURCE == OMV_XCLK_TIM)
+    #error "OMV_CSI_XCLK_SOURCE is not set!"
+    #endif // (OMV_CSI_XCLK_SOURCE == XCLK_SOURCE_TIM)
     return 0;
 }
 
@@ -330,21 +320,21 @@ int sensor_shutdown(int enable) {
     sensor_abort(true, false);
 
     if (enable) {
-        #if defined(DCMI_POWER_PIN)
+        #if defined(OMV_CSI_POWER_PIN)
         if (sensor.pwdn_pol == ACTIVE_HIGH) {
-            omv_gpio_write(DCMI_POWER_PIN, 1);
+            omv_gpio_write(OMV_CSI_POWER_PIN, 1);
         } else {
-            omv_gpio_write(DCMI_POWER_PIN, 0);
+            omv_gpio_write(OMV_CSI_POWER_PIN, 0);
         }
         #endif
         HAL_NVIC_DisableIRQ(DCMI_IRQn);
         HAL_DCMI_DeInit(&DCMIHandle);
     } else {
-        #if defined(DCMI_POWER_PIN)
+        #if defined(OMV_CSI_POWER_PIN)
         if (sensor.pwdn_pol == ACTIVE_HIGH) {
-            omv_gpio_write(DCMI_POWER_PIN, 0);
+            omv_gpio_write(OMV_CSI_POWER_PIN, 0);
         } else {
-            omv_gpio_write(DCMI_POWER_PIN, 1);
+            omv_gpio_write(OMV_CSI_POWER_PIN, 1);
         }
         #endif
         ret = sensor_dcmi_config(sensor.pixformat);
@@ -356,7 +346,7 @@ int sensor_shutdown(int enable) {
 
 static void sensor_vsync_callback(void *data) {
     if (sensor.vsync_callback != NULL) {
-        sensor.vsync_callback(omv_gpio_read(DCMI_VSYNC_PIN));
+        sensor.vsync_callback(omv_gpio_read(OMV_CSI_VSYNC_PIN));
     }
 }
 
@@ -365,12 +355,12 @@ int sensor_set_vsync_callback(vsync_cb_t vsync_cb) {
     if (sensor.vsync_callback == NULL) {
         #if (DCMI_VSYNC_EXTI_SHARED == 0)
         // Disable VSYNC EXTI IRQ
-        omv_gpio_irq_enable(DCMI_VSYNC_PIN, false);
+        omv_gpio_irq_enable(OMV_CSI_VSYNC_PIN, false);
         #endif
     } else {
         // Enable VSYNC EXTI IRQ
-        omv_gpio_irq_register(DCMI_VSYNC_PIN, sensor_vsync_callback, NULL);
-        omv_gpio_irq_enable(DCMI_VSYNC_PIN, true);
+        omv_gpio_irq_register(OMV_CSI_VSYNC_PIN, sensor_vsync_callback, NULL);
+        omv_gpio_irq_enable(OMV_CSI_VSYNC_PIN, true);
     }
     return 0;
 }
@@ -805,9 +795,9 @@ int sensor_snapshot(sensor_t *sensor, image_t *image, uint32_t flags) {
     }
 
     // Let the camera know we want to trigger it now.
-    #if defined(DCMI_FSYNC_PIN)
+    #if defined(OMV_CSI_FSYNC_PIN)
     if (sensor->hw_flags.fsync) {
-        omv_gpio_write(DCMI_FSYNC_PIN, 1);
+        omv_gpio_write(OMV_CSI_FSYNC_PIN, 1);
     }
     #endif
 
@@ -831,9 +821,9 @@ int sensor_snapshot(sensor_t *sensor, image_t *image, uint32_t flags) {
         if ((HAL_GetTick() - tick_start) > SENSOR_TIMEOUT_MS) {
             sensor_abort(true, false);
 
-            #if defined(DCMI_FSYNC_PIN)
+            #if defined(OMV_CSI_FSYNC_PIN)
             if (sensor->hw_flags.fsync) {
-                omv_gpio_write(DCMI_FSYNC_PIN, 0);
+                omv_gpio_write(OMV_CSI_FSYNC_PIN, 0);
             }
             #endif
 
@@ -849,9 +839,9 @@ int sensor_snapshot(sensor_t *sensor, image_t *image, uint32_t flags) {
     }
 
     // We're done receiving data.
-    #if defined(DCMI_FSYNC_PIN)
+    #if defined(OMV_CSI_FSYNC_PIN)
     if (sensor->hw_flags.fsync) {
-        omv_gpio_write(DCMI_FSYNC_PIN, 0);
+        omv_gpio_write(OMV_CSI_FSYNC_PIN, 0);
     }
     #endif
 

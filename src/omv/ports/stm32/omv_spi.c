@@ -28,33 +28,33 @@
     static SPI_HandleTypeDef SPIHandle##n; \
     void SPI##n##_IRQHandler(void) { HAL_SPI_IRQHandler(&SPIHandle##n); }
 
-#if defined(SPI1_ID) && defined(MICROPY_HW_SPI1_SCK)
+#if defined(OMV_SPI1_ID) && defined(MICROPY_HW_SPI1_SCK)
 extern SPI_HandleTypeDef SPIHandle1;
-#elif defined(SPI1_ID)
+#elif defined(OMV_SPI1_ID)
 DEFINE_SPI_INSTANCE(1)
 #endif
 
-#if defined(SPI2_ID) && defined(MICROPY_HW_SPI2_SCK)
+#if defined(OMV_SPI2_ID) && defined(MICROPY_HW_SPI2_SCK)
 extern SPI_HandleTypeDef SPIHandle2;
-#elif defined(SPI2_ID)
+#elif defined(OMV_SPI2_ID)
 DEFINE_SPI_INSTANCE(2)
 #endif
 
-#if defined(SPI3_ID) && defined(MICROPY_HW_SPI3_SCK)
+#if defined(OMV_SPI3_ID) && defined(MICROPY_HW_SPI3_SCK)
 extern SPI_HandleTypeDef SPIHandle3;
-#elif defined(SPI3_ID)
+#elif defined(OMV_SPI3_ID)
 DEFINE_SPI_INSTANCE(3)
 #endif
 
-#if defined(SPI4_ID) && defined(MICROPY_HW_SPI4_SCK)
+#if defined(OMV_SPI4_ID) && defined(MICROPY_HW_SPI4_SCK)
 extern SPI_HandleTypeDef SPIHandle4;
-#elif defined(SPI4_ID)
+#elif defined(OMV_SPI4_ID)
 DEFINE_SPI_INSTANCE(4)
 #endif
 
-#if defined(SPI5_ID) && defined(MICROPY_HW_SPI5_SCK)
+#if defined(OMV_SPI5_ID) && defined(MICROPY_HW_SPI5_SCK)
 extern SPI_HandleTypeDef SPIHandle5;
-#elif defined(SPI5_ID)
+#elif defined(OMV_SPI5_ID)
 DEFINE_SPI_INSTANCE(5)
 #endif
 
@@ -64,17 +64,17 @@ extern SPI_HandleTypeDef SPIHandle6;
 DEFINE_SPI_INSTANCE(6)
 #endif
 
-#define INITIALIZE_SPI_DESCR(spi, spi_number)                                   \
-    do {                                                                        \
-        (spi)->id = spi_number;                                                 \
-        (spi)->irqn = SPI##spi_number##_IRQn;                                   \
-        (spi)->cs = SPI##spi_number##_SSEL_PIN;                                 \
-        (spi)->descr = &SPIHandle##spi_number;                                  \
-        (spi)->descr->Instance = SPI##spi_number;                               \
-        (spi)->dma_descr_tx = (DMA_HandleTypeDef)                               \
-        {SPI##spi_number##_DMA_TX_CHANNEL, {DMA_REQUEST_SPI##spi_number##_TX}}; \
-        (spi)->dma_descr_rx = (DMA_HandleTypeDef)                               \
-        {SPI##spi_number##_DMA_RX_CHANNEL, {DMA_REQUEST_SPI##spi_number##_RX}}; \
+#define INITIALIZE_SPI_DESCR(spi, spi_number)                                       \
+    do {                                                                            \
+        (spi)->id = spi_number;                                                     \
+        (spi)->irqn = SPI##spi_number##_IRQn;                                       \
+        (spi)->cs = OMV_SPI##spi_number##_SSEL_PIN;                                 \
+        (spi)->descr = &SPIHandle##spi_number;                                      \
+        (spi)->descr->Instance = SPI##spi_number;                                   \
+        (spi)->dma_descr_tx = (DMA_HandleTypeDef)                                   \
+        {OMV_SPI##spi_number##_DMA_TX_CHANNEL, {DMA_REQUEST_SPI##spi_number##_TX}}; \
+        (spi)->dma_descr_rx = (DMA_HandleTypeDef)                                   \
+        {OMV_SPI##spi_number##_DMA_RX_CHANNEL, {DMA_REQUEST_SPI##spi_number##_RX}}; \
     } while (0)
 
 static omv_spi_t *omv_spi_descr_all[6] = { NULL };
@@ -129,23 +129,23 @@ static int omv_spi_prescaler(SPI_TypeDef *spi, uint32_t baudrate) {
 static void omv_spi_callback(SPI_HandleTypeDef *hspi) {
     omv_spi_t *spi = NULL;
     if (0) {
-    #if defined(SPI1_ID)
+    #if defined(OMV_SPI1_ID)
     } else if (hspi->Instance == SPI1) {
         spi = omv_spi_descr_all[0];
     #endif
-    #if defined(SPI2_ID)
+    #if defined(OMV_SPI2_ID)
     } else if (hspi->Instance == SPI2) {
         spi = omv_spi_descr_all[1];
     #endif
-    #if defined(SPI3_ID)
+    #if defined(OMV_SPI3_ID)
     } else if (hspi->Instance == SPI3) {
         spi = omv_spi_descr_all[2];
     #endif
-    #if defined(SPI4_ID)
+    #if defined(OMV_SPI4_ID)
     } else if (hspi->Instance == SPI4) {
         spi = omv_spi_descr_all[3];
     #endif
-    #if defined(SPI5_ID)
+    #if defined(OMV_SPI5_ID)
     } else if (hspi->Instance == SPI5) {
         spi = omv_spi_descr_all[4];
     #endif
@@ -359,23 +359,23 @@ int omv_spi_init(omv_spi_t *spi, omv_spi_config_t *config) {
     memset(spi, 0, sizeof(omv_spi_t));
 
     if (0) {
-    #if defined(SPI1_ID)
+    #if defined(OMV_SPI1_ID)
     } else if (config->id == 1) {
         INITIALIZE_SPI_DESCR(spi, 1);
     #endif
-    #if defined(SPI2_ID)
+    #if defined(OMV_SPI2_ID)
     } else if (config->id == 2) {
         INITIALIZE_SPI_DESCR(spi, 2);
     #endif
-    #if defined(SPI3_ID)
+    #if defined(OMV_SPI3_ID)
     } else if (config->id == 3) {
         INITIALIZE_SPI_DESCR(spi, 3);
     #endif
-    #if defined(SPI4_ID)
+    #if defined(OMV_SPI4_ID)
     } else if (config->id == 4) {
         INITIALIZE_SPI_DESCR(spi, 4);
     #endif
-    #if defined(SPI5_ID)
+    #if defined(OMV_SPI5_ID)
     } else if (config->id == 5) {
         INITIALIZE_SPI_DESCR(spi, 5);
     #endif

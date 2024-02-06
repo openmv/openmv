@@ -9,7 +9,7 @@
  * WiFi debugger.
  */
 #include "omv_boardconfig.h"
-#if OMV_ENABLE_WIFIDBG && MICROPY_PY_WINC1500
+#if OMV_WIFIDBG_ENABLE && MICROPY_PY_WINC1500
 
 #include <string.h>
 #include <stdint.h>
@@ -255,7 +255,7 @@ void wifidbg_set_irq_enabled(bool enable) {
         systick_disable_dispatch(SYSTICK_DISPATCH_WINC);
     }
 }
-#endif // OMV_ENABLE_WIFIDBG && MICROPY_PY_WINC1500
+#endif // OMV_WIFIDBG_ENABLE && MICROPY_PY_WINC1500
 
 // Old timer dispatch, will be removed.
 void wifidbg_dispatch() {

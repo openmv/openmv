@@ -20,7 +20,7 @@
 #include <stdio.h>
 #endif
 
-#if (OMV_HARDWARE_JPEG == 0)
+#if (OMV_JPEG_CODEC_ENABLE == 0)
 /* Software JPEG decoder */
 #define FILE_HIGHWATER         1536
 #define JPEG_FILE_BUF_SIZE     2048

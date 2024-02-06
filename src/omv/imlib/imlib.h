@@ -1163,7 +1163,7 @@ bool bmp_read_geometry(FIL *fp, image_t *img, const char *path, bmp_read_setting
 void bmp_read_pixels(FIL *fp, image_t *img, int n_lines, bmp_read_settings_t *rs);
 void bmp_read(image_t *img, const char *path);
 void bmp_write_subimg(image_t *img, const char *path, rectangle_t *r);
-#if (OMV_HARDWARE_JPEG == 1)
+#if (OMV_JPEG_CODEC_ENABLE == 1)
 void imlib_hardware_jpeg_init();
 void imlib_hardware_jpeg_deinit();
 #endif

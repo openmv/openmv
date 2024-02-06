@@ -10,7 +10,7 @@
  */
 
 #include "omv_boardconfig.h"
-#if (OMV_ENABLE_TUSBDBG == 1)
+#if (OMV_TUSBDBG_ENABLE == 1)
 #include "py/runtime.h"
 #include "py/stream.h"
 #include "py/mphal.h"

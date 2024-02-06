@@ -9,7 +9,7 @@
  * MT9M114 driver.
  */
 #include "omv_boardconfig.h"
-#if (OMV_ENABLE_MT9M114 == 1)
+#if (OMV_MT9M114_ENABLE == 1)
 
 #include <stdint.h>
 #include <stdlib.h>
@@ -461,7 +461,7 @@ static int reset(sensor_t *sensor) {
     ret |= omv_i2c_writew2(&sensor->i2c_bus, sensor->slv_addr, 0x301A, reg | (1 << 9));
 
     ret |= omv_i2c_writew2(&sensor->i2c_bus, sensor->slv_addr, MT9M114_REG_CAM_SYSCTL_PLL_DIVIDER_M_N,
-                           (sensor_get_xclk_frequency() == MT9M114_XCLK_FREQ)
+                           (sensor_get_xclk_frequency() == OMV_MT9M114_XCLK_FREQ)
             ? 0x120 // xclk=24MHz, m=32, n=1, sensor=48MHz, bus=76.8MHz
             : 0x448); // xclk=25MHz, m=72, n=4, sensor=45MHz, bus=72MHz
 
@@ -659,7 +659,7 @@ static int set_framesize(sensor_t *sensor, framesize_t framesize) {
     ret |= omv_i2c_writew2(&sensor->i2c_bus, sensor->slv_addr, MT9M114_REG_SENSOR_CFG_Y_ADDR_END, sensor_he);
     ret |= omv_i2c_writew2(&sensor->i2c_bus, sensor->slv_addr, MT9M114_REG_SENSOR_CFG_X_ADDR_END, sensor_we);
 
-    int pixclk = (sensor_get_xclk_frequency() == MT9M114_XCLK_FREQ) ? 48000000 : 45000000;
+    int pixclk = (sensor_get_xclk_frequency() == OMV_MT9M114_XCLK_FREQ) ? 48000000 : 45000000;
 
     ret |= omv_i2c_writew2(&sensor->i2c_bus, sensor->slv_addr, MT9M114_REG_SENSOR_CFG_PIXCLK, pixclk >> 16);
     ret |= omv_i2c_writew2(&sensor->i2c_bus, sensor->slv_addr, MT9M114_REG_SENSOR_CFG_PIXCLK + 2, pixclk);
@@ -998,4 +998,4 @@ int mt9m114_init(sensor_t *sensor) {
     return 0;
 }
 
-#endif // (OMV_ENABLE_MT9M114 == 1)
+#endif // (OMV_MT9M114_ENABLE == 1)

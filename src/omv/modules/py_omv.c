@@ -27,7 +27,7 @@ static mp_obj_t py_omv_version_string() {
 STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_omv_version_string_obj, py_omv_version_string);
 
 static mp_obj_t py_omv_arch() {
-    char *str = OMV_ARCH_STR;
+    char *str = OMV_BOARD_ARCH;
     return mp_obj_new_str(str, strlen(str));
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_omv_arch_obj, py_omv_arch);
@@ -41,9 +41,9 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_omv_board_type_obj, py_omv_board_type);
 static mp_obj_t py_omv_board_id() {
     char str[25];
     snprintf(str, 25, "%08X%08X%08X",
-             *((unsigned int *) (OMV_UNIQUE_ID_ADDR + 8)),
-             *((unsigned int *) (OMV_UNIQUE_ID_ADDR + 4)),
-             *((unsigned int *) (OMV_UNIQUE_ID_ADDR + 0)));
+             *((unsigned int *) (OMV_BOARD_UID_ADDR + 8)),
+             *((unsigned int *) (OMV_BOARD_UID_ADDR + 4)),
+             *((unsigned int *) (OMV_BOARD_UID_ADDR + 0)));
     return mp_obj_new_str(str, strlen(str));
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_omv_board_id_obj, py_omv_board_id);

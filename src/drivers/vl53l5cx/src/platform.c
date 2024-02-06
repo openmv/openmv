@@ -10,7 +10,7 @@
  */
 
 #include "omv_boardconfig.h"
-#if (OMV_ENABLE_TOF_VL53L5CX == 1)
+#if (OMV_TOF_VL53L5CX_ENABLE == 1)
 
 #include "py/mphal.h"
 #include "omv_i2c.h"
@@ -112,4 +112,4 @@ uint8_t WaitMs(VL53L5CX_Platform *platform, uint32_t ms)
     mp_hal_delay_ms(ms);
     return 0;
 }
-#endif // #if (OMV_ENABLE_TOF_VL53L5CX == 1)
+#endif // #if (OMV_TOF_VL53L5CX_ENABLE == 1)

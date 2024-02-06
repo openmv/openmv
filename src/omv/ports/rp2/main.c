@@ -76,7 +76,7 @@ extern void pendsv_init(void);
 extern uint8_t __StackTop, __StackBottom;
 static char OMV_ATTR_SECTION(OMV_ATTR_ALIGNED(gc_heap[OMV_HEAP_SIZE], 4), ".heap");
 
-uint8_t *OMV_UNIQUE_ID_ADDR;
+uint8_t *OMV_BOARD_UID_ADDR;
 static pico_unique_board_id_t OMV_ATTR_ALIGNED(pico_unique_id, 4);
 
 // Embed version info in the binary in machine readable form
@@ -89,13 +89,13 @@ bi_decl(bi_program_feature_group_with_flags(BINARY_INFO_TAG_MICROPYTHON,
                                             BI_NAMED_GROUP_SEPARATE_COMMAS | BI_NAMED_GROUP_SORT_ALPHA));
 
 void __fatal_error() {
-    gpio_init(LED_PIN);
-    gpio_set_dir(LED_PIN, GPIO_OUT);
+    gpio_init(OMV_LED_PIN);
+    gpio_set_dir(OMV_LED_PIN, GPIO_OUT);
 
     while (true) {
-        gpio_put(LED_PIN, 1);
+        gpio_put(OMV_LED_PIN, 1);
         sleep_ms(100);
-        gpio_put(LED_PIN, 0);
+        gpio_put(OMV_LED_PIN, 0);
         sleep_ms(100);
     }
 }
@@ -141,7 +141,7 @@ int main(int argc, char **argv) {
     mp_hal_time_ns_set_from_rtc();
 
     // Set board unique ID from flash for USB debugging.
-    OMV_UNIQUE_ID_ADDR = pico_unique_id.id;
+    OMV_BOARD_UID_ADDR = pico_unique_id.id;
     pico_get_unique_board_id(&pico_unique_id);
 
 soft_reset:

@@ -200,16 +200,16 @@ void usbdbg_data_in(void *buffer, int length) {
 
         case USBDBG_ARCH_STR: {
             unsigned int uid[3] = {
-                #if (OMV_UNIQUE_ID_SIZE == 2)
+                #if (OMV_BOARD_UID_SIZE == 2)
                 0U,
                 #else
-                *((unsigned int *) (OMV_UNIQUE_ID_ADDR + OMV_UNIQUE_ID_OFFSET * 2)),
+                *((unsigned int *) (OMV_BOARD_UID_ADDR + OMV_BOARD_UID_OFFSET * 2)),
                 #endif
-                *((unsigned int *) (OMV_UNIQUE_ID_ADDR + OMV_UNIQUE_ID_OFFSET * 1)),
-                *((unsigned int *) (OMV_UNIQUE_ID_ADDR + OMV_UNIQUE_ID_OFFSET * 0)),
+                *((unsigned int *) (OMV_BOARD_UID_ADDR + OMV_BOARD_UID_OFFSET * 1)),
+                *((unsigned int *) (OMV_BOARD_UID_ADDR + OMV_BOARD_UID_OFFSET * 0)),
             };
             snprintf((char *) buffer, 64, "%s [%s:%08X%08X%08X]",
-                     OMV_ARCH_STR, OMV_BOARD_TYPE, uid[0], uid[1], uid[2]);
+                     OMV_BOARD_ARCH, OMV_BOARD_TYPE, uid[0], uid[1], uid[2]);
             cmd = USBDBG_NONE;
             break;
         }

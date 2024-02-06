@@ -9,7 +9,7 @@
  * GC2145 driver.
  */
 #include "omv_boardconfig.h"
-#if (OMV_ENABLE_GC2145 == 1)
+#if (OMV_GC2145_ENABLE == 1)
 
 #include <stdint.h>
 #include <stdlib.h>
@@ -1006,4 +1006,4 @@ int gc2145_init(sensor_t *sensor) {
 
     return 0;
 }
-#endif // (OMV_ENABLE_GC2145 == 1)
+#endif // (OMV_GC2145_ENABLE == 1)

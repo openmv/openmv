@@ -9,7 +9,7 @@
  * MT9V0XX driver.
  */
 #include "omv_boardconfig.h"
-#if (OMV_ENABLE_MT9V0XX == 1)
+#if (OMV_MT9V0XX_ENABLE == 1)
 
 #include <stdint.h>
 #include <stdlib.h>
@@ -550,4 +550,4 @@ int mt9v0xx_init(sensor_t *sensor) {
     return ret;
 }
 
-#endif // (OMV_ENABLE_MT9V0XX == 1)
+#endif // (OMV_MT9V0XX_ENABLE == 1)

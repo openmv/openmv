@@ -12,21 +12,21 @@
 #include "py/objlist.h"
 #include "omv_boardconfig.h"
 
-#if OMV_ENABLE_FIR_MLX90621 || \
-    OMV_ENABLE_FIR_MLX90640 || \
-    OMV_ENABLE_FIR_MLX90641 || \
-    OMV_ENABLE_FIR_AMG8833 ||  \
-    OMV_ENABLE_FIR_LEPTON
+#if OMV_FIR_MLX90621_ENABLE || \
+    OMV_FIR_MLX90640_ENABLE || \
+    OMV_FIR_MLX90641_ENABLE || \
+    OMV_FIR_AMG8833_ENABLE ||  \
+    OMV_FIR_LEPTON_ENABLE
 #include "omv_i2c.h"
-#if (OMV_ENABLE_FIR_MLX90621 == 1)
+#if (OMV_FIR_MLX90621_ENABLE == 1)
 #include "MLX90621_API.h"
 #include "MLX90621_I2C_Driver.h"
 #endif
-#if (OMV_ENABLE_FIR_MLX90640 == 1)
+#if (OMV_FIR_MLX90640_ENABLE == 1)
 #include "MLX90640_API.h"
 #include "MLX90640_I2C_Driver.h"
 #endif
-#if (OMV_ENABLE_FIR_MLX90641 == 1)
+#if (OMV_FIR_MLX90641_ENABLE == 1)
 #include "MLX90641_API.h"
 #include "MLX90641_I2C_Driver.h"
 #endif
@@ -36,7 +36,7 @@
 #include "py_helper.h"
 #include "py_image.h"
 
-#if (OMV_ENABLE_FIR_LEPTON == 1)
+#if (OMV_FIR_LEPTON_ENABLE == 1)
 #include "py_fir_lepton.h"
 #endif
 
@@ -78,25 +78,25 @@
     })
 
 static omv_i2c_t fir_bus = {};
-#if ((OMV_ENABLE_FIR_MLX90621 == 1) || (OMV_ENABLE_FIR_MLX90640 == 1) || (OMV_ENABLE_FIR_MLX90641 == 1))
+#if ((OMV_FIR_MLX90621_ENABLE == 1) || (OMV_FIR_MLX90640_ENABLE == 1) || (OMV_FIR_MLX90641_ENABLE == 1))
 static void *fir_mlx_data = NULL;
 #endif
 
 typedef enum fir_sensor_type {
     FIR_NONE,
-    #if (OMV_ENABLE_FIR_MLX90621 == 1)
+    #if (OMV_FIR_MLX90621_ENABLE == 1)
     FIR_MLX90621,
     #endif
-    #if (OMV_ENABLE_FIR_MLX90640 == 1)
+    #if (OMV_FIR_MLX90640_ENABLE == 1)
     FIR_MLX90640,
     #endif
-    #if (OMV_ENABLE_FIR_MLX90641 == 1)
+    #if (OMV_FIR_MLX90641_ENABLE == 1)
     FIR_MLX90641,
     #endif
-    #if (OMV_ENABLE_FIR_AMG8833 == 1)
+    #if (OMV_FIR_AMG8833_ENABLE == 1)
     FIR_AMG8833,
     #endif
-    #if (OMV_ENABLE_FIR_LEPTON == 1)
+    #if (OMV_FIR_LEPTON_ENABLE == 1)
     FIR_LEPTON
     #endif
 } fir_sensor_type_t;
@@ -138,7 +138,7 @@ static void fir_fill_image_float_obj(image_t *img, mp_obj_t *data, float min, fl
     }
 }
 
-#if (OMV_ENABLE_FIR_MLX90621 == 1)
+#if (OMV_FIR_MLX90621_ENABLE == 1)
 static void fir_MLX90621_get_frame(float *Ta, float *To) {
     uint16_t *data = fb_alloc(MLX90621_FRAME_DATA_SIZE * sizeof(uint16_t), FB_ALLOC_NO_HINT);
 
@@ -151,7 +151,7 @@ static void fir_MLX90621_get_frame(float *Ta, float *To) {
 }
 #endif
 
-#if (OMV_ENABLE_FIR_MLX90640 == 1)
+#if (OMV_FIR_MLX90640_ENABLE == 1)
 static void fir_MLX90640_get_frame(float *Ta, float *To) {
     uint16_t *data = fb_alloc(MLX90640_FRAME_DATA_SIZE * sizeof(uint16_t), FB_ALLOC_NO_HINT);
 
@@ -174,7 +174,7 @@ static void fir_MLX90640_get_frame(float *Ta, float *To) {
 }
 #endif
 
-#if (OMV_ENABLE_FIR_MLX90641 == 1)
+#if (OMV_FIR_MLX90641_ENABLE == 1)
 static void fir_MLX90641_get_frame(float *Ta, float *To) {
     uint16_t *data = fb_alloc(MLX90641_FRAME_DATA_SIZE * sizeof(uint16_t), FB_ALLOC_NO_HINT);
 
@@ -190,7 +190,7 @@ static void fir_MLX90641_get_frame(float *Ta, float *To) {
 }
 #endif
 
-#if (OMV_ENABLE_FIR_AMG8833 == 1)
+#if (OMV_FIR_AMG8833_ENABLE == 1)
 static void fir_AMG8833_get_frame(float *Ta, float *To) {
     int16_t temp;
     int error = 0;
@@ -296,7 +296,7 @@ static mp_obj_t fir_get_ir(int w, int h, float Ta, float *To, bool mirror,
 }
 
 static mp_obj_t py_fir_deinit() {
-    #if (OMV_ENABLE_FIR_LEPTON == 1)
+    #if (OMV_FIR_LEPTON_ENABLE == 1)
     if (fir_sensor == FIR_LEPTON) {
         fir_lepton_deinit();
     }
@@ -307,7 +307,7 @@ static mp_obj_t py_fir_deinit() {
         fir_sensor = FIR_NONE;
     }
 
-    #if ((OMV_ENABLE_FIR_MLX90621 == 1) || (OMV_ENABLE_FIR_MLX90640 == 1) || (OMV_ENABLE_FIR_MLX90641 == 1))
+    #if ((OMV_FIR_MLX90621_ENABLE == 1) || (OMV_FIR_MLX90640_ENABLE == 1) || (OMV_FIR_MLX90641_ENABLE == 1))
     if (fir_mlx_data != NULL) {
         fir_mlx_data = NULL;
     }
@@ -339,38 +339,38 @@ mp_obj_t py_fir_init(uint n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
     int type = args[ARG_type].u_int;
     if (type == -1) {
         FIR_SCAN_RETRY:
-        omv_i2c_init(&fir_bus, FIR_I2C_ID, OMV_I2C_SPEED_STANDARD);
+        omv_i2c_init(&fir_bus, OMV_FIR_I2C_ID, OMV_I2C_SPEED_STANDARD);
         // Scan and detect any supported sensor.
         uint8_t dev_list[10];
         int dev_size = omv_i2c_scan(&fir_bus, dev_list, sizeof(dev_list));
         for (int i = 0; i < dev_size && type == -1; i++) {
             switch (dev_list[i]) {
-                #if (OMV_ENABLE_FIR_MLX90621 == 1)
+                #if (OMV_FIR_MLX90621_ENABLE == 1)
                 case (MLX90621_ADDR << 1): {
                     type = FIR_MLX90621;
                     break;
                 }
                 #endif
-                #if (OMV_ENABLE_FIR_MLX90640 == 1)
+                #if (OMV_FIR_MLX90640_ENABLE == 1)
                 case (MLX90640_ADDR << 1): {
                     type = FIR_MLX90640;
                     break;
                 }
                 #endif
-                #if (OMV_ENABLE_FIR_MLX90640 == 0) \
-                && (OMV_ENABLE_FIR_MLX90641 == 1)
+                #if (OMV_FIR_MLX90640_ENABLE == 0) \
+                && (OMV_FIR_MLX90641_ENABLE == 1)
                 case (MLX90641_ADDR << 1): {
                     type = FIR_MLX90641;
                     break;
                 }
                 #endif
-                #if (OMV_ENABLE_FIR_AMG8833 == 1)
+                #if (OMV_FIR_AMG8833_ENABLE == 1)
                 case AMG8833_ADDR: {
                     type = FIR_AMG8833;
                     break;
                 }
                 #endif
-                #if (OMV_ENABLE_FIR_LEPTON == 1)
+                #if (OMV_FIR_LEPTON_ENABLE == 1)
                 case LEPTON_ADDR: {
                     type = FIR_LEPTON;
                     break;
@@ -394,7 +394,7 @@ mp_obj_t py_fir_init(uint n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
     // Initialize the detected sensor.
     first_init = true;
     switch (type) {
-        #if (OMV_ENABLE_FIR_MLX90621 == 1)
+        #if (OMV_FIR_MLX90621_ENABLE == 1)
         case FIR_MLX90621: {
             // Set refresh rate and ADC resolution
             uint32_t ir_fresh_rate = args[ARG_refresh].u_int != -1 ? args[ARG_refresh].u_int : 64;
@@ -408,7 +408,7 @@ mp_obj_t py_fir_init(uint n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
 
             fir_sensor = FIR_MLX90621;
             FIR_MLX90621_RETRY:
-            omv_i2c_init(&fir_bus, FIR_I2C_ID, OMV_I2C_SPEED_FULL); // The EEPROM must be read at <= 400KHz.
+            omv_i2c_init(&fir_bus, OMV_FIR_I2C_ID, OMV_I2C_SPEED_FULL); // The EEPROM must be read at <= 400KHz.
             MLX90621_I2CInit(&fir_bus);
 
             fb_alloc_mark();
@@ -433,7 +433,7 @@ mp_obj_t py_fir_init(uint n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
 
             // Switch to FAST speed
             omv_i2c_deinit(&fir_bus);
-            omv_i2c_init(&fir_bus, FIR_I2C_ID, OMV_I2C_SPEED_FAST);
+            omv_i2c_init(&fir_bus, OMV_FIR_I2C_ID, OMV_I2C_SPEED_FAST);
             fir_width = MLX90621_WIDTH;
             fir_height = MLX90621_HEIGHT;
             fir_ir_fresh_rate = ir_fresh_rate;
@@ -441,7 +441,7 @@ mp_obj_t py_fir_init(uint n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
             return mp_const_none;
         }
         #endif
-        #if (OMV_ENABLE_FIR_MLX90640 == 1)
+        #if (OMV_FIR_MLX90640_ENABLE == 1)
         case FIR_MLX90640: {
             // Set refresh rate and ADC resolution
             uint32_t ir_fresh_rate = args[ARG_refresh].u_int != -1 ? args[ARG_refresh].u_int : 32;
@@ -455,7 +455,7 @@ mp_obj_t py_fir_init(uint n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
 
             fir_sensor = FIR_MLX90640;
             FIR_MLX90640_RETRY:
-            omv_i2c_init(&fir_bus, FIR_I2C_ID, OMV_I2C_SPEED_FULL); // The EEPROM must be read at <= 400KHz.
+            omv_i2c_init(&fir_bus, OMV_FIR_I2C_ID, OMV_I2C_SPEED_FULL); // The EEPROM must be read at <= 400KHz.
             MLX90640_I2CInit(&fir_bus);
 
             fb_alloc_mark();
@@ -479,7 +479,7 @@ mp_obj_t py_fir_init(uint n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
 
             // Switch to FAST speed
             omv_i2c_deinit(&fir_bus);
-            omv_i2c_init(&fir_bus, FIR_I2C_ID, OMV_I2C_SPEED_FAST);
+            omv_i2c_init(&fir_bus, OMV_FIR_I2C_ID, OMV_I2C_SPEED_FAST);
             fir_width = MLX90640_WIDTH;
             fir_height = MLX90640_HEIGHT;
             fir_ir_fresh_rate = ir_fresh_rate;
@@ -487,7 +487,7 @@ mp_obj_t py_fir_init(uint n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
             return mp_const_none;
         }
         #endif
-        #if (OMV_ENABLE_FIR_MLX90641 == 1)
+        #if (OMV_FIR_MLX90641_ENABLE == 1)
         case FIR_MLX90641: {
             // Set refresh rate and ADC resolution
             uint32_t ir_fresh_rate = args[ARG_refresh].u_int != -1 ? args[ARG_refresh].u_int : 32;
@@ -501,7 +501,7 @@ mp_obj_t py_fir_init(uint n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
 
             fir_sensor = FIR_MLX90641;
             FIR_MLX90641_RETRY:
-            omv_i2c_init(&fir_bus, FIR_I2C_ID, OMV_I2C_SPEED_FULL); // The EEPROM must be read at <= 400KHz.
+            omv_i2c_init(&fir_bus, OMV_FIR_I2C_ID, OMV_I2C_SPEED_FULL); // The EEPROM must be read at <= 400KHz.
             MLX90641_I2CInit(&fir_bus);
 
             fb_alloc_mark();
@@ -525,7 +525,7 @@ mp_obj_t py_fir_init(uint n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
 
             // Switch to FAST speed
             omv_i2c_deinit(&fir_bus);
-            omv_i2c_init(&fir_bus, FIR_I2C_ID, OMV_I2C_SPEED_FAST);
+            omv_i2c_init(&fir_bus, OMV_FIR_I2C_ID, OMV_I2C_SPEED_FAST);
             fir_width = MLX90641_WIDTH;
             fir_height = MLX90641_HEIGHT;
             fir_ir_fresh_rate = ir_fresh_rate;
@@ -533,11 +533,11 @@ mp_obj_t py_fir_init(uint n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
             return mp_const_none;
         }
         #endif
-        #if (OMV_ENABLE_FIR_AMG8833 == 1)
+        #if (OMV_FIR_AMG8833_ENABLE == 1)
         case FIR_AMG8833: {
             fir_sensor = FIR_AMG8833;
             FIR_AMG8833_RETRY:
-            omv_i2c_init(&fir_bus, FIR_I2C_ID, OMV_I2C_SPEED_STANDARD);
+            omv_i2c_init(&fir_bus, OMV_FIR_I2C_ID, OMV_I2C_SPEED_STANDARD);
 
             int error = omv_i2c_write_bytes(&fir_bus, AMG8833_ADDR,
                                             (uint8_t [2]) {AMG8833_RESET_REGISTER, AMG8833_INITIAL_RESET_VALUE}, 2, 0);
@@ -559,7 +559,7 @@ mp_obj_t py_fir_init(uint n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
             return mp_const_none;
         }
         #endif
-        #if (OMV_ENABLE_FIR_LEPTON == 1)
+        #if (OMV_FIR_LEPTON_ENABLE == 1)
         case FIR_LEPTON: {
             fir_sensor = FIR_LEPTON;
             FIR_LEPTON_RETRY:
@@ -615,30 +615,30 @@ static mp_obj_t py_fir_height() {
 STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_fir_height_obj, py_fir_height);
 
 static mp_obj_t py_fir_refresh() {
-    #if (OMV_ENABLE_FIR_MLX90621 == 1)
+    #if (OMV_FIR_MLX90621_ENABLE == 1)
     const int mlx_90621_refresh_rates[16] = {512, 512, 512, 512, 512, 512, 256, 128, 64, 32, 16, 8, 4, 2, 1, 0};
     #endif
-    #if (OMV_ENABLE_FIR_MLX90640 == 1) || (OMV_ENABLE_FIR_MLX90641 == 1)
+    #if (OMV_FIR_MLX90640_ENABLE == 1) || (OMV_FIR_MLX90641_ENABLE == 1)
     const int mlx_90640_1_refresh_rates[8] = {0, 1, 2, 4, 8, 16, 32, 64};
     #endif
     switch (fir_sensor) {
-        #if (OMV_ENABLE_FIR_MLX90621 == 1)
+        #if (OMV_FIR_MLX90621_ENABLE == 1)
         case FIR_MLX90621:
             return mp_obj_new_int(mlx_90621_refresh_rates[fir_ir_fresh_rate]);
         #endif
-        #if (OMV_ENABLE_FIR_MLX90640 == 1)
+        #if (OMV_FIR_MLX90640_ENABLE == 1)
         case FIR_MLX90640:
             return mp_obj_new_int(mlx_90640_1_refresh_rates[fir_ir_fresh_rate]);
         #endif
-        #if (OMV_ENABLE_FIR_MLX90641 == 1)
+        #if (OMV_FIR_MLX90641_ENABLE == 1)
         case FIR_MLX90641:
             return mp_obj_new_int(mlx_90640_1_refresh_rates[fir_ir_fresh_rate]);
         #endif
-        #if (OMV_ENABLE_FIR_AMG8833 == 1)
+        #if (OMV_FIR_AMG8833_ENABLE == 1)
         case FIR_AMG8833:
             return mp_obj_new_int(fir_ir_fresh_rate);
         #endif
-        #if (OMV_ENABLE_FIR_LEPTON == 1)
+        #if (OMV_FIR_LEPTON_ENABLE == 1)
         case FIR_LEPTON:
             return mp_obj_new_int(fir_ir_fresh_rate);
         #endif
@@ -650,23 +650,23 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_fir_refresh_obj, py_fir_refresh);
 
 static mp_obj_t py_fir_resolution() {
     switch (fir_sensor) {
-        #if (OMV_ENABLE_FIR_MLX90621 == 1)
+        #if (OMV_FIR_MLX90621_ENABLE == 1)
         case FIR_MLX90621:
             return mp_obj_new_int(fir_adc_resolution + 15);
         #endif
-        #if (OMV_ENABLE_FIR_MLX90640 == 1)
+        #if (OMV_FIR_MLX90640_ENABLE == 1)
         case FIR_MLX90640:
             return mp_obj_new_int(fir_adc_resolution + 16);
         #endif
-        #if (OMV_ENABLE_FIR_MLX90641 == 1)
+        #if (OMV_FIR_MLX90641_ENABLE == 1)
         case FIR_MLX90641:
             return mp_obj_new_int(fir_adc_resolution + 16);
         #endif
-        #if (OMV_ENABLE_FIR_AMG8833 == 1)
+        #if (OMV_FIR_AMG8833_ENABLE == 1)
         case FIR_AMG8833:
             return mp_obj_new_int(fir_adc_resolution);
         #endif
-        #if (OMV_ENABLE_FIR_LEPTON == 1)
+        #if (OMV_FIR_LEPTON_ENABLE == 1)
         case FIR_LEPTON:
             return mp_obj_new_int(fir_adc_resolution);
         #endif
@@ -676,7 +676,7 @@ static mp_obj_t py_fir_resolution() {
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_fir_resolution_obj, py_fir_resolution);
 
-#if (OMV_ENABLE_FIR_LEPTON == 1)
+#if (OMV_FIR_LEPTON_ENABLE == 1)
 static mp_obj_t py_fir_radiometric() {
     if (fir_sensor == FIR_LEPTON) {
         return fir_lepton_get_radiometry();
@@ -739,7 +739,7 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_fir_trigger_ffc_obj, 0, py_fir_trigger_ffc)
 
 mp_obj_t py_fir_read_ta() {
     switch (fir_sensor) {
-        #if (OMV_ENABLE_FIR_MLX90621 == 1)
+        #if (OMV_FIR_MLX90621_ENABLE == 1)
         case FIR_MLX90621: {
             fb_alloc_mark();
             uint16_t *data = fb_alloc(MLX90621_FRAME_DATA_SIZE * sizeof(uint16_t), FB_ALLOC_NO_HINT);
@@ -750,7 +750,7 @@ mp_obj_t py_fir_read_ta() {
             return result;
         }
         #endif
-        #if (OMV_ENABLE_FIR_MLX90640 == 1)
+        #if (OMV_FIR_MLX90640_ENABLE == 1)
         case FIR_MLX90640: {
             fb_alloc_mark();
             uint16_t *data = fb_alloc(MLX90640_FRAME_DATA_SIZE * sizeof(uint16_t), FB_ALLOC_NO_HINT);
@@ -761,7 +761,7 @@ mp_obj_t py_fir_read_ta() {
             return result;
         }
         #endif
-        #if (OMV_ENABLE_FIR_MLX90641 == 1)
+        #if (OMV_FIR_MLX90641_ENABLE == 1)
         case FIR_MLX90641: {
             fb_alloc_mark();
             uint16_t *data = fb_alloc(MLX90641_FRAME_DATA_SIZE * sizeof(uint16_t), FB_ALLOC_NO_HINT);
@@ -772,7 +772,7 @@ mp_obj_t py_fir_read_ta() {
             return result;
         }
         #endif
-        #if (OMV_ENABLE_FIR_AMG8833 == 1)
+        #if (OMV_FIR_AMG8833_ENABLE == 1)
         case FIR_AMG8833: {
             int16_t temp;
             int error = 0;
@@ -786,7 +786,7 @@ mp_obj_t py_fir_read_ta() {
             return mp_obj_new_float(AMG8833_12_TO_16(temp) * 0.0625f);
         }
         #endif
-        #if (OMV_ENABLE_FIR_LEPTON == 1)
+        #if (OMV_FIR_LEPTON_ENABLE == 1)
         case FIR_LEPTON: {
             return fir_lepton_read_ta();
         }
@@ -816,7 +816,7 @@ mp_obj_t py_fir_read_ir(uint n_args, const mp_obj_t *pos_args, mp_map_t *kw_args
     fir_transposed = args[ARG_transpose].u_bool;
 
     switch (fir_sensor) {
-        #if (OMV_ENABLE_FIR_MLX90621 == 1)
+        #if (OMV_FIR_MLX90621_ENABLE == 1)
         case FIR_MLX90621: {
             fb_alloc_mark();
             float Ta, *To = fb_alloc(MLX90621_WIDTH * MLX90621_HEIGHT * sizeof(float), FB_ALLOC_NO_HINT);
@@ -827,7 +827,7 @@ mp_obj_t py_fir_read_ir(uint n_args, const mp_obj_t *pos_args, mp_map_t *kw_args
             return result;
         }
         #endif
-        #if (OMV_ENABLE_FIR_MLX90640 == 1)
+        #if (OMV_FIR_MLX90640_ENABLE == 1)
         case FIR_MLX90640: {
             fb_alloc_mark();
             float Ta, *To = fb_alloc(MLX90640_WIDTH * MLX90640_HEIGHT * sizeof(float), FB_ALLOC_NO_HINT);
@@ -838,7 +838,7 @@ mp_obj_t py_fir_read_ir(uint n_args, const mp_obj_t *pos_args, mp_map_t *kw_args
             return result;
         }
         #endif
-        #if (OMV_ENABLE_FIR_MLX90641 == 1)
+        #if (OMV_FIR_MLX90641_ENABLE == 1)
         case FIR_MLX90641: {
             fb_alloc_mark();
             float Ta, *To = fb_alloc(MLX90641_WIDTH * MLX90641_HEIGHT * sizeof(float), FB_ALLOC_NO_HINT);
@@ -849,7 +849,7 @@ mp_obj_t py_fir_read_ir(uint n_args, const mp_obj_t *pos_args, mp_map_t *kw_args
             return result;
         }
         #endif
-        #if (OMV_ENABLE_FIR_AMG8833 == 1)
+        #if (OMV_FIR_AMG8833_ENABLE == 1)
         case FIR_AMG8833: {
             fb_alloc_mark();
             float Ta, *To = fb_alloc(AMG8833_WIDTH * AMG8833_HEIGHT * sizeof(float), FB_ALLOC_NO_HINT);
@@ -860,7 +860,7 @@ mp_obj_t py_fir_read_ir(uint n_args, const mp_obj_t *pos_args, mp_map_t *kw_args
             return result;
         }
         #endif
-        #if (OMV_ENABLE_FIR_LEPTON == 1)
+        #if (OMV_FIR_LEPTON_ENABLE == 1)
         case FIR_LEPTON: {
             return fir_lepton_read_ir(fir_width, fir_height, args[ARG_hmirror].u_bool,
                                       args[ARG_vflip].u_bool, args[ARG_transpose].u_bool, args[ARG_timeout].u_int);
@@ -1026,7 +1026,7 @@ mp_obj_t py_fir_snapshot(uint n_args, const mp_obj_t *pos_args, mp_map_t *kw_arg
     src_img.data = fb_alloc(src_img.w * src_img.h * sizeof(uint8_t), FB_ALLOC_NO_HINT);
 
     switch (fir_sensor) {
-        #if (OMV_ENABLE_FIR_MLX90621 == 1)
+        #if (OMV_FIR_MLX90621_ENABLE == 1)
         case FIR_MLX90621: {
             float Ta, *To = fb_alloc(MLX90621_WIDTH * MLX90621_HEIGHT * sizeof(float), FB_ALLOC_NO_HINT);
             fir_MLX90621_get_frame(&Ta, To);
@@ -1038,7 +1038,7 @@ mp_obj_t py_fir_snapshot(uint n_args, const mp_obj_t *pos_args, mp_map_t *kw_arg
             break;
         }
         #endif
-        #if (OMV_ENABLE_FIR_MLX90640 == 1)
+        #if (OMV_FIR_MLX90640_ENABLE == 1)
         case FIR_MLX90640: {
             float Ta, *To = fb_alloc(MLX90640_WIDTH * MLX90640_HEIGHT * sizeof(float), FB_ALLOC_NO_HINT);
             fir_MLX90640_get_frame(&Ta, To);
@@ -1050,7 +1050,7 @@ mp_obj_t py_fir_snapshot(uint n_args, const mp_obj_t *pos_args, mp_map_t *kw_arg
             break;
         }
         #endif
-        #if (OMV_ENABLE_FIR_MLX90641 == 1)
+        #if (OMV_FIR_MLX90641_ENABLE == 1)
         case FIR_MLX90641: {
             float Ta, *To = fb_alloc(MLX90641_WIDTH * MLX90641_HEIGHT * sizeof(float), FB_ALLOC_NO_HINT);
             fir_MLX90641_get_frame(&Ta, To);
@@ -1062,7 +1062,7 @@ mp_obj_t py_fir_snapshot(uint n_args, const mp_obj_t *pos_args, mp_map_t *kw_arg
             break;
         }
         #endif
-        #if (OMV_ENABLE_FIR_AMG8833 == 1)
+        #if (OMV_FIR_AMG8833_ENABLE == 1)
         case FIR_AMG8833: {
             float Ta, *To = fb_alloc(AMG8833_WIDTH * AMG8833_HEIGHT * sizeof(float), FB_ALLOC_NO_HINT);
             fir_AMG8833_get_frame(&Ta, To);
@@ -1074,7 +1074,7 @@ mp_obj_t py_fir_snapshot(uint n_args, const mp_obj_t *pos_args, mp_map_t *kw_arg
             break;
         }
         #endif
-        #if (OMV_ENABLE_FIR_LEPTON == 1)
+        #if (OMV_FIR_LEPTON_ENABLE == 1)
         case FIR_LEPTON: {
             bool auto_range = args[ARG_scale].u_obj == mp_const_none;
             fir_lepton_fill_image(&src_img, fir_width, fir_height, auto_range, min, max,
@@ -1103,20 +1103,20 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_fir_snapshot_obj, 0, py_fir_snapshot);
 
 STATIC const mp_rom_map_elem_t globals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR___name__),            MP_ROM_QSTR(MP_QSTR_fir)                    },
-    #if (OMV_ENABLE_FIR_MLX90621 == 1)
+    #if (OMV_FIR_MLX90621_ENABLE == 1)
     { MP_ROM_QSTR(MP_QSTR_FIR_SHIELD),          MP_ROM_INT(FIR_MLX90621)                    },
     { MP_ROM_QSTR(MP_QSTR_FIR_MLX90621),        MP_ROM_INT(FIR_MLX90621)                    },
     #endif
-    #if (OMV_ENABLE_FIR_MLX90640 == 1)
+    #if (OMV_FIR_MLX90640_ENABLE == 1)
     { MP_ROM_QSTR(MP_QSTR_FIR_MLX90640),        MP_ROM_INT(FIR_MLX90640)                    },
     #endif
-    #if (OMV_ENABLE_FIR_MLX90641 == 1)
+    #if (OMV_FIR_MLX90641_ENABLE == 1)
     { MP_ROM_QSTR(MP_QSTR_FIR_MLX90641),        MP_ROM_INT(FIR_MLX90641)                    },
     #endif
-    #if (OMV_ENABLE_FIR_AMG8833 == 1)
+    #if (OMV_FIR_AMG8833_ENABLE == 1)
     { MP_ROM_QSTR(MP_QSTR_FIR_AMG8833),         MP_ROM_INT(FIR_AMG8833)                     },
     #endif
-    #if (OMV_ENABLE_FIR_LEPTON == 1)
+    #if (OMV_FIR_LEPTON_ENABLE == 1)
     { MP_ROM_QSTR(MP_QSTR_FIR_LEPTON),          MP_ROM_INT(FIR_LEPTON)                      },
     #endif
     { MP_ROM_QSTR(MP_QSTR_init),                MP_ROM_PTR(&py_fir_init_obj)                },
@@ -1126,7 +1126,7 @@ STATIC const mp_rom_map_elem_t globals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_height),              MP_ROM_PTR(&py_fir_height_obj)              },
     { MP_ROM_QSTR(MP_QSTR_refresh),             MP_ROM_PTR(&py_fir_refresh_obj)             },
     { MP_ROM_QSTR(MP_QSTR_resolution),          MP_ROM_PTR(&py_fir_resolution_obj)          },
-    #if (OMV_ENABLE_FIR_LEPTON == 1)
+    #if (OMV_FIR_LEPTON_ENABLE == 1)
     { MP_ROM_QSTR(MP_QSTR_radiometric),         MP_ROM_PTR(&py_fir_radiometric_obj)         },
     #if defined(OMV_FIR_LEPTON_VSYNC_PRESENT)
     { MP_ROM_QSTR(MP_QSTR_register_vsync_cb),   MP_ROM_PTR(&py_fir_register_vsync_cb_obj)   },
@@ -1160,7 +1160,7 @@ void py_fir_init0() {
     py_fir_deinit();
 }
 
-#if ((OMV_ENABLE_FIR_MLX90621 == 1) || (OMV_ENABLE_FIR_MLX90640 == 1) || (OMV_ENABLE_FIR_MLX90641 == 1))
+#if ((OMV_FIR_MLX90621_ENABLE == 1) || (OMV_FIR_MLX90640_ENABLE == 1) || (OMV_FIR_MLX90641_ENABLE == 1))
 MP_REGISTER_ROOT_POINTER(void *fir_mlx_data);
 #endif
 MP_REGISTER_MODULE(MP_QSTR_fir, fir_module);

@@ -142,16 +142,16 @@ __weak int sensor_reset() {
     // Disable the bus before reset.
     omv_i2c_enable(&sensor.i2c_bus, false);
 
-    #if defined(DCMI_RESET_PIN)
+    #if defined(OMV_CSI_RESET_PIN)
     // Hard-reset the sensor
     if (sensor.reset_pol == ACTIVE_HIGH) {
-        omv_gpio_write(DCMI_RESET_PIN, 1);
+        omv_gpio_write(OMV_CSI_RESET_PIN, 1);
         mp_hal_delay_ms(10);
-        omv_gpio_write(DCMI_RESET_PIN, 0);
+        omv_gpio_write(OMV_CSI_RESET_PIN, 0);
     } else {
-        omv_gpio_write(DCMI_RESET_PIN, 0);
+        omv_gpio_write(OMV_CSI_RESET_PIN, 0);
         mp_hal_delay_ms(10);
-        omv_gpio_write(DCMI_RESET_PIN, 1);
+        omv_gpio_write(OMV_CSI_RESET_PIN, 1);
     }
     #endif
 
@@ -179,59 +179,59 @@ static int sensor_detect() {
     for (int i = 0; i < OMV_MIN(n_devs, OMV_ISC_MAX_DEVICES); i++) {
         uint8_t slv_addr = devs_list[i];
         switch (slv_addr) {
-            #if (OMV_ENABLE_OV2640 == 1)
+            #if (OMV_OV2640_ENABLE == 1)
             case OV2640_SLV_ADDR: // Or OV9650.
                 omv_i2c_readb(&sensor.i2c_bus, slv_addr, OV_CHIP_ID, &sensor.chip_id);
                 return slv_addr;
-            #endif // (OMV_ENABLE_OV2640 == 1)
+            #endif // (OMV_OV2640_ENABLE == 1)
 
-            #if (OMV_ENABLE_OV5640 == 1)
+            #if (OMV_OV5640_ENABLE == 1)
             case OV5640_SLV_ADDR:
                 omv_i2c_readb2(&sensor.i2c_bus, slv_addr, OV5640_CHIP_ID, &sensor.chip_id);
                 return slv_addr;
-            #endif // (OMV_ENABLE_OV5640 == 1)
+            #endif // (OMV_OV5640_ENABLE == 1)
 
-            #if (OMV_ENABLE_OV7725 == 1) || (OMV_ENABLE_OV7670 == 1) || (OMV_ENABLE_OV7690 == 1)
+            #if (OMV_OV7725_ENABLE == 1) || (OMV_OV7670_ENABLE == 1) || (OMV_OV7690_ENABLE == 1)
             case OV7725_SLV_ADDR: // Or OV7690 or OV7670.
                 omv_i2c_readb(&sensor.i2c_bus, slv_addr, OV_CHIP_ID, &sensor.chip_id);
                 return slv_addr;
-            #endif //(OMV_ENABLE_OV7725 == 1) || (OMV_ENABLE_OV7670 == 1) || (OMV_ENABLE_OV7690 == 1)
+            #endif //(OMV_OV7725_ENABLE == 1) || (OMV_OV7670_ENABLE == 1) || (OMV_OV7690_ENABLE == 1)
 
-            #if (OMV_ENABLE_MT9V0XX == 1)
+            #if (OMV_MT9V0XX_ENABLE == 1)
             case MT9V0XX_SLV_ADDR:
                 omv_i2c_readw(&sensor.i2c_bus, slv_addr, ON_CHIP_ID, &sensor.chip_id_w);
                 return slv_addr;
-            #endif //(OMV_ENABLE_MT9V0XX == 1)
+            #endif //(OMV_MT9V0XX_ENABLE == 1)
 
-            #if (OMV_ENABLE_MT9M114 == 1)
+            #if (OMV_MT9M114_ENABLE == 1)
             case MT9M114_SLV_ADDR:
                 omv_i2c_readw2(&sensor.i2c_bus, slv_addr, ON_CHIP_ID, &sensor.chip_id_w);
                 return slv_addr;
-            #endif // (OMV_ENABLE_MT9M114 == 1)
+            #endif // (OMV_MT9M114_ENABLE == 1)
 
-            #if (OMV_ENABLE_LEPTON == 1)
+            #if (OMV_LEPTON_ENABLE == 1)
             case LEPTON_SLV_ADDR:
                 sensor.chip_id = LEPTON_ID;
                 return slv_addr;
-            #endif // (OMV_ENABLE_LEPTON == 1)
+            #endif // (OMV_LEPTON_ENABLE == 1)
 
-            #if (OMV_ENABLE_HM01B0 == 1) || (OMV_ENABLE_HM0360 == 1)
+            #if (OMV_HM01B0_ENABLE == 1) || (OMV_HM0360_ENABLE == 1)
             case HM0XX0_SLV_ADDR:
                 omv_i2c_readb2(&sensor.i2c_bus, slv_addr, HIMAX_CHIP_ID, &sensor.chip_id);
                 return slv_addr;
-            #endif // (OMV_ENABLE_HM01B0 == 1) || (OMV_ENABLE_HM0360 == 1)
+            #endif // (OMV_HM01B0_ENABLE == 1) || (OMV_HM0360_ENABLE == 1)
 
-            #if (OMV_ENABLE_GC2145 == 1)
+            #if (OMV_GC2145_ENABLE == 1)
             case GC2145_SLV_ADDR:
                 omv_i2c_readb(&sensor.i2c_bus, slv_addr, GC_CHIP_ID, &sensor.chip_id);
                 return slv_addr;
-            #endif //(OMV_ENABLE_GC2145 == 1)
+            #endif //(OMV_GC2145_ENABLE == 1)
 
-            #if (OMV_ENABLE_FROGEYE2020 == 1)
+            #if (OMV_FROGEYE2020_ENABLE == 1)
             case FROGEYE2020_SLV_ADDR:
                 sensor.chip_id_w = FROGEYE2020_ID;
                 return slv_addr;
-            #endif // (OMV_ENABLE_FROGEYE2020 == 1)
+            #endif // (OMV_FROGEYE2020_ENABLE == 1)
         }
     }
 
@@ -241,23 +241,23 @@ static int sensor_detect() {
 int sensor_probe_init(uint32_t bus_id, uint32_t bus_speed) {
     int init_ret = 0;
 
-    #if defined(DCMI_POWER_PIN)
+    #if defined(OMV_CSI_POWER_PIN)
     sensor.pwdn_pol = ACTIVE_HIGH;
     // Do a power cycle
-    omv_gpio_write(DCMI_POWER_PIN, 1);
+    omv_gpio_write(OMV_CSI_POWER_PIN, 1);
     mp_hal_delay_ms(10);
 
-    omv_gpio_write(DCMI_POWER_PIN, 0);
+    omv_gpio_write(OMV_CSI_POWER_PIN, 0);
     mp_hal_delay_ms(10);
     #endif
 
-    #if defined(DCMI_RESET_PIN)
+    #if defined(OMV_CSI_RESET_PIN)
     sensor.reset_pol = ACTIVE_HIGH;
     // Reset the sensor
-    omv_gpio_write(DCMI_RESET_PIN, 1);
+    omv_gpio_write(OMV_CSI_RESET_PIN, 1);
     mp_hal_delay_ms(10);
 
-    omv_gpio_write(DCMI_RESET_PIN, 0);
+    omv_gpio_write(OMV_CSI_RESET_PIN, 0);
     mp_hal_delay_ms(10);
     #endif
 
@@ -270,23 +270,23 @@ int sensor_probe_init(uint32_t bus_id, uint32_t bus_speed) {
     if ((sensor.slv_addr = sensor_detect()) == 0) {
         // No devices were detected, try scanning the bus
         // again with different reset/power-down polarities.
-        #if defined(DCMI_RESET_PIN)
+        #if defined(OMV_CSI_RESET_PIN)
         sensor.reset_pol = ACTIVE_LOW;
-        omv_gpio_write(DCMI_RESET_PIN, 1);
+        omv_gpio_write(OMV_CSI_RESET_PIN, 1);
         mp_hal_delay_ms(10);
         #endif
 
         if ((sensor.slv_addr = sensor_detect()) == 0) {
-            #if defined(DCMI_POWER_PIN)
+            #if defined(OMV_CSI_POWER_PIN)
             sensor.pwdn_pol = ACTIVE_LOW;
-            omv_gpio_write(DCMI_POWER_PIN, 1);
+            omv_gpio_write(OMV_CSI_POWER_PIN, 1);
             mp_hal_delay_ms(10);
             #endif
 
             if ((sensor.slv_addr = sensor_detect()) == 0) {
-                #if defined(DCMI_RESET_PIN)
+                #if defined(OMV_CSI_RESET_PIN)
                 sensor.reset_pol = ACTIVE_HIGH;
-                omv_gpio_write(DCMI_RESET_PIN, 0);
+                omv_gpio_write(OMV_CSI_RESET_PIN, 0);
                 mp_hal_delay_ms(10);
                 #endif
                 sensor.slv_addr = sensor_detect();
@@ -296,7 +296,7 @@ int sensor_probe_init(uint32_t bus_id, uint32_t bus_speed) {
         // If no devices were detected on the I2C bus, try the SPI bus.
         if (sensor.slv_addr == 0) {
             if (0) {
-            #if (OMV_ENABLE_PAJ6100 == 1)
+            #if (OMV_PAJ6100_ENABLE == 1)
             } else if (paj6100_detect(&sensor)) {
                 // Found PixArt PAJ6100
                 sensor.chip_id_w = PAJ6100_ID;
@@ -311,16 +311,16 @@ int sensor_probe_init(uint32_t bus_id, uint32_t bus_speed) {
 
     // A supported sensor was detected, try to initialize it.
     switch (sensor.chip_id_w) {
-        #if (OMV_ENABLE_OV2640 == 1)
+        #if (OMV_OV2640_ENABLE == 1)
         case OV2640_ID:
-            if (sensor_set_xclk_frequency(OV2640_XCLK_FREQ) != 0) {
+            if (sensor_set_xclk_frequency(OMV_OV2640_XCLK_FREQ) != 0) {
                 return SENSOR_ERROR_TIM_INIT_FAILED;
             }
             init_ret = ov2640_init(&sensor);
             break;
-        #endif // (OMV_ENABLE_OV2640 == 1)
+        #endif // (OMV_OV2640_ENABLE == 1)
 
-        #if (OMV_ENABLE_OV5640 == 1)
+        #if (OMV_OV5640_ENABLE == 1)
         case OV5640_ID: {
             int freq = OMV_OV5640_XCLK_FREQ;
             #if (OMV_OV5640_REV_Y_CHECK == 1)
@@ -335,114 +335,114 @@ int sensor_probe_init(uint32_t bus_id, uint32_t bus_speed) {
             init_ret = ov5640_init(&sensor);
             break;
         }
-        #endif // (OMV_ENABLE_OV5640 == 1)
+        #endif // (OMV_OV5640_ENABLE == 1)
 
-        #if (OMV_ENABLE_OV7670 == 1)
+        #if (OMV_OV7670_ENABLE == 1)
         case OV7670_ID:
-            if (sensor_set_xclk_frequency(OV7670_XCLK_FREQ) != 0) {
+            if (sensor_set_xclk_frequency(OMV_OV7670_XCLK_FREQ) != 0) {
                 return SENSOR_ERROR_TIM_INIT_FAILED;
             }
             init_ret = ov7670_init(&sensor);
             break;
-        #endif // (OMV_ENABLE_OV7670 == 1)
+        #endif // (OMV_OV7670_ENABLE == 1)
 
-        #if (OMV_ENABLE_OV7690 == 1)
+        #if (OMV_OV7690_ENABLE == 1)
         case OV7690_ID:
-            if (sensor_set_xclk_frequency(OV7690_XCLK_FREQ) != 0) {
+            if (sensor_set_xclk_frequency(OMV_OV7690_XCLK_FREQ) != 0) {
                 return SENSOR_ERROR_TIM_INIT_FAILED;
             }
             init_ret = ov7690_init(&sensor);
             break;
-        #endif // (OMV_ENABLE_OV7690 == 1)
+        #endif // (OMV_OV7690_ENABLE == 1)
 
-        #if (OMV_ENABLE_OV7725 == 1)
+        #if (OMV_OV7725_ENABLE == 1)
         case OV7725_ID:
             init_ret = ov7725_init(&sensor);
             break;
-        #endif // (OMV_ENABLE_OV7725 == 1)
+        #endif // (OMV_OV7725_ENABLE == 1)
 
-        #if (OMV_ENABLE_OV9650 == 1)
+        #if (OMV_OV9650_ENABLE == 1)
         case OV9650_ID:
             init_ret = ov9650_init(&sensor);
             break;
-        #endif // (OMV_ENABLE_OV9650 == 1)
+        #endif // (OMV_OV9650_ENABLE == 1)
 
-        #if (OMV_ENABLE_MT9V0XX == 1)
+        #if (OMV_MT9V0XX_ENABLE == 1)
         case MT9V0X2_ID_V_1:
         case MT9V0X2_ID_V_2:
             // Force old versions to the newest.
             sensor.chip_id_w = MT9V0X2_ID;
         case MT9V0X2_ID:
         case MT9V0X4_ID:
-            if (sensor_set_xclk_frequency(MT9V0XX_XCLK_FREQ) != 0) {
+            if (sensor_set_xclk_frequency(OMV_MT9V0XX_XCLK_FREQ) != 0) {
                 return SENSOR_ERROR_TIM_INIT_FAILED;
             }
             init_ret = mt9v0xx_init(&sensor);
             break;
-        #endif //(OMV_ENABLE_MT9V0XX == 1)
+        #endif //(OMV_MT9V0XX_ENABLE == 1)
 
-        #if (OMV_ENABLE_MT9M114 == 1)
+        #if (OMV_MT9M114_ENABLE == 1)
         case MT9M114_ID:
-            if (sensor_set_xclk_frequency(MT9M114_XCLK_FREQ) != 0) {
+            if (sensor_set_xclk_frequency(OMV_MT9M114_XCLK_FREQ) != 0) {
                 return SENSOR_ERROR_TIM_INIT_FAILED;
             }
             init_ret = mt9m114_init(&sensor);
             break;
-        #endif //(OMV_ENABLE_MT9M114 == 1)
+        #endif //(OMV_MT9M114_ENABLE == 1)
 
-        #if (OMV_ENABLE_LEPTON == 1)
+        #if (OMV_LEPTON_ENABLE == 1)
         case LEPTON_ID:
-            if (sensor_set_xclk_frequency(LEPTON_XCLK_FREQ) != 0) {
+            if (sensor_set_xclk_frequency(OMV_LEPTON_XCLK_FREQ) != 0) {
                 return SENSOR_ERROR_TIM_INIT_FAILED;
             }
             init_ret = lepton_init(&sensor);
             break;
-        #endif // (OMV_ENABLE_LEPTON == 1)
+        #endif // (OMV_LEPTON_ENABLE == 1)
 
-        #if (OMV_ENABLE_HM01B0 == 1)
+        #if (OMV_HM01B0_ENABLE == 1)
         case HM01B0_ID:
-            if (sensor_set_xclk_frequency(HM01B0_XCLK_FREQ) != 0) {
+            if (sensor_set_xclk_frequency(OMV_HM01B0_XCLK_FREQ) != 0) {
                 return SENSOR_ERROR_TIM_INIT_FAILED;
             }
             init_ret = hm01b0_init(&sensor);
             break;
-        #endif //(OMV_ENABLE_HM01B0 == 1)
+        #endif //(OMV_HM01B0_ENABLE == 1)
 
-        #if (OMV_ENABLE_HM0360 == 1)
+        #if (OMV_HM0360_ENABLE == 1)
         case HM0360_ID:
-            if (sensor_set_xclk_frequency(HM0360_XCLK_FREQ) != 0) {
+            if (sensor_set_xclk_frequency(OMV_HM0360_XCLK_FREQ) != 0) {
                 return SENSOR_ERROR_TIM_INIT_FAILED;
             }
             init_ret = hm0360_init(&sensor);
             break;
-        #endif //(OMV_ENABLE_HM0360 == 1)
+        #endif //(OMV_HM0360_ENABLE == 1)
 
-        #if (OMV_ENABLE_GC2145 == 1)
+        #if (OMV_GC2145_ENABLE == 1)
         case GC2145_ID:
-            if (sensor_set_xclk_frequency(GC2145_XCLK_FREQ) != 0) {
+            if (sensor_set_xclk_frequency(OMV_GC2145_XCLK_FREQ) != 0) {
                 return SENSOR_ERROR_TIM_INIT_FAILED;
             }
             init_ret = gc2145_init(&sensor);
             break;
-        #endif //(OMV_ENABLE_GC2145 == 1)
+        #endif //(OMV_GC2145_ENABLE == 1)
 
-        #if (OMV_ENABLE_PAJ6100 == 1)
+        #if (OMV_PAJ6100_ENABLE == 1)
         case PAJ6100_ID:
-            if (sensor_set_xclk_frequency(PAJ6100_XCLK_FREQ) != 0) {
+            if (sensor_set_xclk_frequency(OMV_PAJ6100_XCLK_FREQ) != 0) {
                 return SENSOR_ERROR_TIM_INIT_FAILED;
             }
             init_ret = paj6100_init(&sensor);
             break;
-        #endif // (OMV_ENABLE_PAJ6100 == 1)
+        #endif // (OMV_PAJ6100_ENABLE == 1)
 
-        #if (OMV_ENABLE_FROGEYE2020 == 1)
+        #if (OMV_FROGEYE2020_ENABLE == 1)
         case FROGEYE2020_ID:
-            if (sensor_set_xclk_frequency(FROGEYE2020_XCLK_FREQ) != 0) {
+            if (sensor_set_xclk_frequency(OMV_FROGEYE2020_XCLK_FREQ) != 0) {
                 return SENSOR_ERROR_TIM_INIT_FAILED;
             }
             init_ret = frogeye2020_init(&sensor);
             break;
-        #endif // (OMV_ENABLE_FROGEYE2020 == 1)
+        #endif // (OMV_FROGEYE2020_ENABLE == 1)
 
         default:
             return SENSOR_ERROR_ISC_UNSUPPORTED;
@@ -496,18 +496,18 @@ __weak int sensor_shutdown(int enable) {
     // Disable any ongoing frame capture.
     sensor_abort(true, false);
 
-    #if defined(DCMI_POWER_PIN)
+    #if defined(OMV_CSI_POWER_PIN)
     if (enable) {
         if (sensor.pwdn_pol == ACTIVE_HIGH) {
-            omv_gpio_write(DCMI_POWER_PIN, 1);
+            omv_gpio_write(OMV_CSI_POWER_PIN, 1);
         } else {
-            omv_gpio_write(DCMI_POWER_PIN, 0);
+            omv_gpio_write(OMV_CSI_POWER_PIN, 0);
         }
     } else {
         if (sensor.pwdn_pol == ACTIVE_HIGH) {
-            omv_gpio_write(DCMI_POWER_PIN, 0);
+            omv_gpio_write(OMV_CSI_POWER_PIN, 0);
         } else {
-            omv_gpio_write(DCMI_POWER_PIN, 1);
+            omv_gpio_write(OMV_CSI_POWER_PIN, 1);
         }
     }
     #endif
@@ -1265,13 +1265,13 @@ __weak int sensor_auto_crop_framebuffer() {
 __weak int sensor_copy_line(void *dma, uint8_t *src, uint8_t *dst) {
     uint16_t *src16 = (uint16_t *) src;
     uint16_t *dst16 = (uint16_t *) dst;
-    #if OMA_ENABLE_DMA_MEMCPY
+    #if OMV_CSI_DMA_MEMCPY_ENABLE
     extern int sensor_dma_memcpy(void *dma, void *dst, void *src, int bpp, bool transposed);
     #endif
 
     switch (sensor.pixformat) {
         case PIXFORMAT_BAYER:
-            #if OMA_ENABLE_DMA_MEMCPY
+            #if OMV_CSI_DMA_MEMCPY_ENABLE
             sensor_dma_memcpy(dma, dst, src, sizeof(uint8_t), sensor.transpose);
             #else
             if (!sensor.transpose) {
@@ -1282,7 +1282,7 @@ __weak int sensor_copy_line(void *dma, uint8_t *src, uint8_t *dst) {
             #endif
             break;
         case PIXFORMAT_GRAYSCALE:
-            #if OMA_ENABLE_DMA_MEMCPY
+            #if OMV_CSI_DMA_MEMCPY_ENABLE
             sensor_dma_memcpy(dma, dst, src, sizeof(uint8_t), sensor.transpose);
             #else
             if (sensor.hw_flags.gs_bpp == 1) {
@@ -1304,7 +1304,7 @@ __weak int sensor_copy_line(void *dma, uint8_t *src, uint8_t *dst) {
             break;
         case PIXFORMAT_RGB565:
         case PIXFORMAT_YUV422:
-            #if OMA_ENABLE_DMA_MEMCPY
+            #if OMV_CSI_DMA_MEMCPY_ENABLE
             sensor_dma_memcpy(dma, dst16, src16, sizeof(uint16_t), sensor.transpose);
             #else
             if ((sensor.pixformat == PIXFORMAT_RGB565 && sensor.hw_flags.rgb_swap)

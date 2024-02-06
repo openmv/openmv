@@ -78,33 +78,33 @@ int sensor_dcmi_config(uint32_t pixformat)
     uint offset;
     pio_sm_config config;
 
-    pio_sm_set_enabled(DCMI_PIO, DCMI_SM, false);
-    pio_sm_clear_fifos(DCMI_PIO, DCMI_SM);
+    pio_sm_set_enabled(OMV_CSI_PIO, OMV_CSI_SM, false);
+    pio_sm_clear_fifos(OMV_CSI_PIO, OMV_CSI_SM);
 
-    for(uint i=DCMI_D0_PIN; i<DCMI_D0_PIN+7; i++) {
-        pio_gpio_init(DCMI_PIO, i);
+    for(uint i=OMV_CSI_D0_PIN; i<OMV_CSI_D0_PIN+7; i++) {
+        pio_gpio_init(OMV_CSI_PIO, i);
     }
-    pio_sm_set_consecutive_pindirs(DCMI_PIO, DCMI_SM, DCMI_D0_PIN, 7, false);
+    pio_sm_set_consecutive_pindirs(OMV_CSI_PIO, OMV_CSI_SM, OMV_CSI_D0_PIN, 7, false);
 
     if (pixformat == PIXFORMAT_GRAYSCALE) {
-        offset = pio_add_program(DCMI_PIO, &dcmi_odd_byte_program);
+        offset = pio_add_program(OMV_CSI_PIO, &dcmi_odd_byte_program);
         config = dcmi_odd_byte_program_get_default_config(offset);
     } else {
-        offset = pio_add_program(DCMI_PIO, &dcmi_default_program);
+        offset = pio_add_program(OMV_CSI_PIO, &dcmi_default_program);
         config = dcmi_default_program_get_default_config(offset);
     }
 
     sm_config_set_clkdiv(&config, 1);
-    sm_config_set_in_pins(&config, DCMI_D0_PIN);
+    sm_config_set_in_pins(&config, OMV_CSI_D0_PIN);
 
-    gpio_init(DCMI_D7_PIN);
-    gpio_set_dir(DCMI_D7_PIN, GPIO_IN);
-    sm_config_set_jmp_pin(&config, DCMI_D7_PIN);
+    gpio_init(OMV_CSI_D7_PIN);
+    gpio_set_dir(OMV_CSI_D7_PIN, GPIO_IN);
+    sm_config_set_jmp_pin(&config, OMV_CSI_D7_PIN);
 
     sm_config_set_in_shift(&config, true, true, 32);
 
-    pio_sm_init(DCMI_PIO, DCMI_SM, offset, &config);
-    pio_sm_set_enabled(DCMI_PIO, DCMI_SM, true);
+    pio_sm_init(OMV_CSI_PIO, OMV_CSI_SM, offset, &config);
+    pio_sm_set_enabled(OMV_CSI_PIO, OMV_CSI_SM, true);
     return 0;
 }
 %}

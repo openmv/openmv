@@ -17,12 +17,12 @@
 #include "omv_boardconfig.h"
 #include "omv_gpio.h"
 
-#if defined(SOFT_I2C_SIOC_PIN)
+#if defined(OMV_SOFT_I2C_SIOC_PIN)
 #define ACK     0
 #define NACK    1
 
 static void delay(void) {
-    for (volatile int i = 0; i < SOFT_I2C_SPIN_DELAY; i++) {
+    for (volatile int i = 0; i < OMV_SOFT_I2C_SPIN_DELAY; i++) {
         ;
     }
 }
@@ -30,47 +30,47 @@ static void delay(void) {
 static void i2c_start(void) {
     /* The start of data transmission occurs when
        SIO_D is driven low while SIO_C is high */
-    omv_gpio_write(SOFT_I2C_SIOD_PIN, 0);
+    omv_gpio_write(OMV_SOFT_I2C_SIOD_PIN, 0);
     delay();
-    omv_gpio_write(SOFT_I2C_SIOC_PIN, 0);
+    omv_gpio_write(OMV_SOFT_I2C_SIOC_PIN, 0);
     delay();
 }
 
 static void i2c_stop(void) {
     /* The stop of data transmission occurs when
        SIO_D is driven high while SIO_C is high */
-    omv_gpio_write(SOFT_I2C_SIOC_PIN, 1);
+    omv_gpio_write(OMV_SOFT_I2C_SIOC_PIN, 1);
     delay();
-    omv_gpio_write(SOFT_I2C_SIOD_PIN, 1);
+    omv_gpio_write(OMV_SOFT_I2C_SIOD_PIN, 1);
     delay();
 }
 
 static uint8_t i2c_read_byte(char ack) {
     uint8_t data = 0;
 
-    omv_gpio_write(SOFT_I2C_SIOD_PIN, 1);
+    omv_gpio_write(OMV_SOFT_I2C_SIOD_PIN, 1);
     delay();
 
     for (char i = 0; i < 8; i++) {
-        omv_gpio_write(SOFT_I2C_SIOC_PIN, 1);
+        omv_gpio_write(OMV_SOFT_I2C_SIOC_PIN, 1);
         delay();
-        data += data + omv_gpio_read(SOFT_I2C_SIOD_PIN);
+        data += data + omv_gpio_read(OMV_SOFT_I2C_SIOD_PIN);
         delay();
-        omv_gpio_write(SOFT_I2C_SIOC_PIN, 0);
+        omv_gpio_write(OMV_SOFT_I2C_SIOC_PIN, 0);
         delay();
     }
 
     /* Write ACK */
-    omv_gpio_write(SOFT_I2C_SIOD_PIN, ack);
+    omv_gpio_write(OMV_SOFT_I2C_SIOD_PIN, ack);
     delay();
 
-    omv_gpio_write(SOFT_I2C_SIOC_PIN, 1);
+    omv_gpio_write(OMV_SOFT_I2C_SIOC_PIN, 1);
     delay();
 
-    omv_gpio_write(SOFT_I2C_SIOC_PIN, 0);
+    omv_gpio_write(OMV_SOFT_I2C_SIOC_PIN, 0);
     delay();
 
-    omv_gpio_write(SOFT_I2C_SIOD_PIN, 0);
+    omv_gpio_write(OMV_SOFT_I2C_SIOD_PIN, 0);
     delay();
     return data;
 }
@@ -79,28 +79,28 @@ static char i2c_write_byte(uint8_t data) {
     char i;
 
     for (i = 0; i < 8; i++) {
-        omv_gpio_write(SOFT_I2C_SIOD_PIN, (data >> (7 - i)) & 1);
+        omv_gpio_write(OMV_SOFT_I2C_SIOD_PIN, (data >> (7 - i)) & 1);
         delay();
-        omv_gpio_write(SOFT_I2C_SIOC_PIN, 1);
+        omv_gpio_write(OMV_SOFT_I2C_SIOC_PIN, 1);
         delay();
-        omv_gpio_write(SOFT_I2C_SIOC_PIN, 0);
+        omv_gpio_write(OMV_SOFT_I2C_SIOC_PIN, 0);
         delay();
     }
 
-    omv_gpio_write(SOFT_I2C_SIOD_PIN, 1);
+    omv_gpio_write(OMV_SOFT_I2C_SIOD_PIN, 1);
     delay();
 
-    omv_gpio_write(SOFT_I2C_SIOC_PIN, 1);
+    omv_gpio_write(OMV_SOFT_I2C_SIOC_PIN, 1);
     delay();
 
     /* Read ACK */
-    i = omv_gpio_read(SOFT_I2C_SIOD_PIN);
+    i = omv_gpio_read(OMV_SOFT_I2C_SIOD_PIN);
     delay();
 
-    omv_gpio_write(SOFT_I2C_SIOC_PIN, 0);
+    omv_gpio_write(OMV_SOFT_I2C_SIOC_PIN, 0);
     delay();
 
-    omv_gpio_write(SOFT_I2C_SIOD_PIN, 0);
+    omv_gpio_write(OMV_SOFT_I2C_SIOD_PIN, 0);
     delay();
     return i;
 }
@@ -116,9 +116,9 @@ int soft_i2c_read_bytes(uint8_t slv_addr, uint8_t *buf, int len, bool stop) {
     if (stop) {
         i2c_stop();
     } else {
-        omv_gpio_write(SOFT_I2C_SIOD_PIN, 1);
+        omv_gpio_write(OMV_SOFT_I2C_SIOD_PIN, 1);
         delay();
-        omv_gpio_write(SOFT_I2C_SIOC_PIN, 1);
+        omv_gpio_write(OMV_SOFT_I2C_SIOC_PIN, 1);
         delay();
     }
     MICROPY_END_ATOMIC_SECTION(atomic_state);
@@ -136,9 +136,9 @@ int soft_i2c_write_bytes(uint8_t slv_addr, uint8_t *buf, int len, bool stop) {
     if (stop) {
         i2c_stop();
     } else {
-        omv_gpio_write(SOFT_I2C_SIOD_PIN, 1);
+        omv_gpio_write(OMV_SOFT_I2C_SIOD_PIN, 1);
         delay();
-        omv_gpio_write(SOFT_I2C_SIOC_PIN, 1);
+        omv_gpio_write(OMV_SOFT_I2C_SIOC_PIN, 1);
         delay();
     }
     MICROPY_END_ATOMIC_SECTION(atomic_state);
@@ -146,11 +146,11 @@ int soft_i2c_write_bytes(uint8_t slv_addr, uint8_t *buf, int len, bool stop) {
 }
 
 void soft_i2c_init() {
-    omv_gpio_write(SOFT_I2C_SIOC_PIN, 1); // Set first to prevent glitches.
-    omv_gpio_config(SOFT_I2C_SIOC_PIN, OMV_GPIO_MODE_OUTPUT_OD, OMV_GPIO_PULL_NONE, OMV_GPIO_SPEED_LOW, -1);
+    omv_gpio_write(OMV_SOFT_I2C_SIOC_PIN, 1); // Set first to prevent glitches.
+    omv_gpio_config(OMV_SOFT_I2C_SIOC_PIN, OMV_GPIO_MODE_OUTPUT_OD, OMV_GPIO_PULL_NONE, OMV_GPIO_SPEED_LOW, -1);
 
-    omv_gpio_write(SOFT_I2C_SIOD_PIN, 1); // Set first to prevent glitches.
-    omv_gpio_config(SOFT_I2C_SIOD_PIN, OMV_GPIO_MODE_OUTPUT_OD, OMV_GPIO_PULL_NONE, OMV_GPIO_SPEED_LOW, -1);
+    omv_gpio_write(OMV_SOFT_I2C_SIOD_PIN, 1); // Set first to prevent glitches.
+    omv_gpio_config(OMV_SOFT_I2C_SIOD_PIN, OMV_GPIO_MODE_OUTPUT_OD, OMV_GPIO_PULL_NONE, OMV_GPIO_SPEED_LOW, -1);
 
     for (volatile int i = 0; i < 1000; i++) {
         ;
@@ -166,7 +166,7 @@ void soft_i2c_deinit() {
     for (volatile int i = 0; i < 1000; i++) {
         ;
     }
-    omv_gpio_deinit(SOFT_I2C_SIOC_PIN);
-    omv_gpio_deinit(SOFT_I2C_SIOD_PIN);
+    omv_gpio_deinit(OMV_SOFT_I2C_SIOC_PIN);
+    omv_gpio_deinit(OMV_SOFT_I2C_SIOD_PIN);
 }
-#endif // defined(SOFT_I2C_SIOC_PIN)
+#endif // defined(OMV_SOFT_I2C_SIOC_PIN)

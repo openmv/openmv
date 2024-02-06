@@ -9,7 +9,7 @@
  * VOSPI driver.
  */
 #include "omv_boardconfig.h"
-#if OMV_ENABLE_VOSPI || OMV_ENABLE_LEPTON
+#if OMV_ENABLE_VOSPI || OMV_LEPTON_ENABLE
 
 #include <stdint.h>
 #include <string.h>
@@ -159,7 +159,7 @@ int vospi_init(uint32_t n_packets, void *buffer) {
     vospi.flags = VOSPI_FLAGS_RESYNC;
 
     omv_spi_config_t spi_config;
-    omv_spi_default_config(&spi_config, ISC_SPI_ID);
+    omv_spi_default_config(&spi_config, OMV_CSI_SPI_ID);
 
     spi_config.bus_mode = OMV_SPI_BUS_RX;
     spi_config.datasize = 16;

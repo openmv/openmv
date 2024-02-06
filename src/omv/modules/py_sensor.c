@@ -792,7 +792,7 @@ static mp_obj_t py_sensor_ioctl(uint n_args, const mp_obj_t *args) {
             break;
         }
 
-        #if (OMV_ENABLE_OV5640_AF == 1)
+        #if (OMV_OV5640_AF_ENABLE == 1)
         case IOCTL_TRIGGER_AUTO_FOCUS:
         case IOCTL_PAUSE_AUTO_FOCUS:
         case IOCTL_RESET_AUTO_FOCUS: {
@@ -926,7 +926,7 @@ static mp_obj_t py_sensor_ioctl(uint n_args, const mp_obj_t *args) {
             break;
         }
 
-        #if (OMV_ENABLE_HM01B0 == 1)
+        #if (OMV_HM01B0_ENABLE == 1)
         case IOCTL_HIMAX_MD_ENABLE: {
             if (n_args >= 2) {
                 error = sensor_ioctl(request, mp_obj_get_int(args[1]));
@@ -979,7 +979,7 @@ static mp_obj_t py_sensor_ioctl(uint n_args, const mp_obj_t *args) {
             }
             break;
         }
-        #endif // (OMV_ENABLE_HM01B0 == 1)
+        #endif // (OMV_HM01B0_ENABLE == 1)
 
         default: {
             sensor_raise_error(SENSOR_ERROR_CTL_UNSUPPORTED);
@@ -1124,7 +1124,7 @@ STATIC const mp_rom_map_elem_t globals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_IOCTL_GET_TRIGGERED_MODE),            MP_ROM_INT(IOCTL_GET_TRIGGERED_MODE)},
     { MP_ROM_QSTR(MP_QSTR_IOCTL_SET_FOV_WIDE),                  MP_ROM_INT(IOCTL_SET_FOV_WIDE)},
     { MP_ROM_QSTR(MP_QSTR_IOCTL_GET_FOV_WIDE),                  MP_ROM_INT(IOCTL_GET_FOV_WIDE)},
-    #if (OMV_ENABLE_OV5640_AF == 1)
+    #if (OMV_OV5640_AF_ENABLE == 1)
     { MP_ROM_QSTR(MP_QSTR_IOCTL_TRIGGER_AUTO_FOCUS),            MP_ROM_INT(IOCTL_TRIGGER_AUTO_FOCUS)},
     { MP_ROM_QSTR(MP_QSTR_IOCTL_PAUSE_AUTO_FOCUS),              MP_ROM_INT(IOCTL_PAUSE_AUTO_FOCUS)},
     { MP_ROM_QSTR(MP_QSTR_IOCTL_RESET_AUTO_FOCUS),              MP_ROM_INT(IOCTL_RESET_AUTO_FOCUS)},
@@ -1146,7 +1146,7 @@ STATIC const mp_rom_map_elem_t globals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_IOCTL_LEPTON_GET_MEASUREMENT_MODE),   MP_ROM_INT(IOCTL_LEPTON_GET_MEASUREMENT_MODE)},
     { MP_ROM_QSTR(MP_QSTR_IOCTL_LEPTON_SET_MEASUREMENT_RANGE),  MP_ROM_INT(IOCTL_LEPTON_SET_MEASUREMENT_RANGE)},
     { MP_ROM_QSTR(MP_QSTR_IOCTL_LEPTON_GET_MEASUREMENT_RANGE),  MP_ROM_INT(IOCTL_LEPTON_GET_MEASUREMENT_RANGE)},
-    #if (OMV_ENABLE_HM01B0 == 1)
+    #if (OMV_HM01B0_ENABLE == 1)
     { MP_ROM_QSTR(MP_QSTR_IOCTL_HIMAX_MD_ENABLE),       MP_ROM_INT(IOCTL_HIMAX_MD_ENABLE)},
     { MP_ROM_QSTR(MP_QSTR_IOCTL_HIMAX_MD_WINDOW),       MP_ROM_INT(IOCTL_HIMAX_MD_WINDOW)},
     { MP_ROM_QSTR(MP_QSTR_IOCTL_HIMAX_MD_THRESHOLD),    MP_ROM_INT(IOCTL_HIMAX_MD_THRESHOLD)},

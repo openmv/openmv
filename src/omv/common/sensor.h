@@ -133,6 +133,12 @@ typedef enum {
 } polarity_t;
 
 typedef enum {
+    XCLK_SOURCE_MCO = 0U,
+    XCLK_SOURCE_TIM = 1U,
+    XCLK_SOURCE_OSC = 2U,
+} xclk_source_t;
+
+typedef enum {
     IOCTL_SET_READOUT_WINDOW,
     IOCTL_GET_READOUT_WINDOW,
     IOCTL_SET_TRIGGERED_MODE,
