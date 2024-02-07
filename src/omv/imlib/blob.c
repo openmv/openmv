@@ -152,9 +152,8 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
     list_init(out, sizeof(find_blobs_list_lnk_data_t));
 
     size_t code = 0;
-    for (list_lnk_t *it = iterator_start_from_head(thresholds); it; it = iterator_next(it)) {
-        color_thresholds_list_lnk_data_t lnk_data;
-        iterator_get(thresholds, it, &lnk_data);
+    list_for_each(it, thresholds) {
+        color_thresholds_list_lnk_data_t *lnk_data = list_get_data(it);
 
         switch (ptr->pixfmt) {
             case PIXFORMAT_BINARY: {
@@ -163,7 +162,7 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                     uint32_t *bmp_row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(&bmp, y);
                     for (int x = roi->x + (y % x_stride), xx = roi->x + roi->w, x_max = xx - 1; x < xx; x += x_stride) {
                         if ((!IMAGE_GET_BINARY_PIXEL_FAST(bmp_row_ptr, x))
-                            && COLOR_THRESHOLD_BINARY(IMAGE_GET_BINARY_PIXEL_FAST(row_ptr, x), &lnk_data, invert)) {
+                            && COLOR_THRESHOLD_BINARY(IMAGE_GET_BINARY_PIXEL_FAST(row_ptr, x), lnk_data, invert)) {
                             int old_x = x;
                             int old_y = y;
 
@@ -205,14 +204,14 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
 
                                 while ((left > roi->x)
                                        && (!IMAGE_GET_BINARY_PIXEL_FAST(bmp_row, left - 1))
-                                       && COLOR_THRESHOLD_BINARY(IMAGE_GET_BINARY_PIXEL_FAST(row, left - 1), &lnk_data,
+                                       && COLOR_THRESHOLD_BINARY(IMAGE_GET_BINARY_PIXEL_FAST(row, left - 1), lnk_data,
                                                                  invert)) {
                                     left--;
                                 }
 
                                 while ((right < (roi->x + roi->w - 1))
                                        && (!IMAGE_GET_BINARY_PIXEL_FAST(bmp_row, right + 1))
-                                       && COLOR_THRESHOLD_BINARY(IMAGE_GET_BINARY_PIXEL_FAST(row, right + 1), &lnk_data,
+                                       && COLOR_THRESHOLD_BINARY(IMAGE_GET_BINARY_PIXEL_FAST(row, right + 1), lnk_data,
                                                                  invert)) {
                                     right++;
                                 }
@@ -278,7 +277,7 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                                                 if ((!IMAGE_GET_BINARY_PIXEL_FAST(bmp_row, i))
                                                     && (ok =
                                                             COLOR_THRESHOLD_BINARY(IMAGE_GET_BINARY_PIXEL_FAST(row, i),
-                                                                                   &lnk_data,
+                                                                                   lnk_data,
                                                                                    invert))) {
                                                     xylr_t context;
                                                     context.x = x;
@@ -314,7 +313,7 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                                                 if ((!IMAGE_GET_BINARY_PIXEL_FAST(bmp_row, i))
                                                     && (ok =
                                                             COLOR_THRESHOLD_BINARY(IMAGE_GET_BINARY_PIXEL_FAST(row, i),
-                                                                                   &lnk_data,
+                                                                                   lnk_data,
                                                                                    invert))) {
                                                     xylr_t context;
                                                     context.x = x;
@@ -469,7 +468,7 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                     uint32_t *bmp_row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(&bmp, y);
                     for (int x = roi->x + (y % x_stride), xx = roi->x + roi->w, x_max = xx - 1; x < xx; x += x_stride) {
                         if ((!IMAGE_GET_BINARY_PIXEL_FAST(bmp_row_ptr, x))
-                            && COLOR_THRESHOLD_GRAYSCALE(IMAGE_GET_GRAYSCALE_PIXEL_FAST(row_ptr, x), &lnk_data, invert)) {
+                            && COLOR_THRESHOLD_GRAYSCALE(IMAGE_GET_GRAYSCALE_PIXEL_FAST(row_ptr, x), lnk_data, invert)) {
                             int old_x = x;
                             int old_y = y;
 
@@ -511,14 +510,14 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
 
                                 while ((left > roi->x)
                                        && (!IMAGE_GET_BINARY_PIXEL_FAST(bmp_row, left - 1))
-                                       && COLOR_THRESHOLD_GRAYSCALE(IMAGE_GET_GRAYSCALE_PIXEL_FAST(row, left - 1), &lnk_data,
+                                       && COLOR_THRESHOLD_GRAYSCALE(IMAGE_GET_GRAYSCALE_PIXEL_FAST(row, left - 1), lnk_data,
                                                                     invert)) {
                                     left--;
                                 }
 
                                 while ((right < (roi->x + roi->w - 1))
                                        && (!IMAGE_GET_BINARY_PIXEL_FAST(bmp_row, right + 1))
-                                       && COLOR_THRESHOLD_GRAYSCALE(IMAGE_GET_GRAYSCALE_PIXEL_FAST(row, right + 1), &lnk_data,
+                                       && COLOR_THRESHOLD_GRAYSCALE(IMAGE_GET_GRAYSCALE_PIXEL_FAST(row, right + 1), lnk_data,
                                                                     invert)) {
                                     right++;
                                 }
@@ -584,7 +583,7 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                                                 if ((!IMAGE_GET_BINARY_PIXEL_FAST(bmp_row, i))
                                                     && (ok =
                                                             COLOR_THRESHOLD_GRAYSCALE(IMAGE_GET_GRAYSCALE_PIXEL_FAST(row, i),
-                                                                                      &lnk_data,
+                                                                                      lnk_data,
                                                                                       invert))) {
                                                     xylr_t context;
                                                     context.x = x;
@@ -620,7 +619,7 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                                                 if ((!IMAGE_GET_BINARY_PIXEL_FAST(bmp_row, i))
                                                     && (ok =
                                                             COLOR_THRESHOLD_GRAYSCALE(IMAGE_GET_GRAYSCALE_PIXEL_FAST(row, i),
-                                                                                      &lnk_data,
+                                                                                      lnk_data,
                                                                                       invert))) {
                                                     xylr_t context;
                                                     context.x = x;
@@ -775,7 +774,7 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                     uint32_t *bmp_row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(&bmp, y);
                     for (int x = roi->x + (y % x_stride), xx = roi->x + roi->w, x_max = xx - 1; x < xx; x += x_stride) {
                         if ((!IMAGE_GET_BINARY_PIXEL_FAST(bmp_row_ptr, x))
-                            && COLOR_THRESHOLD_RGB565(IMAGE_GET_RGB565_PIXEL_FAST(row_ptr, x), &lnk_data, invert)) {
+                            && COLOR_THRESHOLD_RGB565(IMAGE_GET_RGB565_PIXEL_FAST(row_ptr, x), lnk_data, invert)) {
                             int old_x = x;
                             int old_y = y;
 
@@ -817,14 +816,14 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
 
                                 while ((left > roi->x)
                                        && (!IMAGE_GET_BINARY_PIXEL_FAST(bmp_row, left - 1))
-                                       && COLOR_THRESHOLD_RGB565(IMAGE_GET_RGB565_PIXEL_FAST(row, left - 1), &lnk_data,
+                                       && COLOR_THRESHOLD_RGB565(IMAGE_GET_RGB565_PIXEL_FAST(row, left - 1), lnk_data,
                                                                  invert)) {
                                     left--;
                                 }
 
                                 while ((right < (roi->x + roi->w - 1))
                                        && (!IMAGE_GET_BINARY_PIXEL_FAST(bmp_row, right + 1))
-                                       && COLOR_THRESHOLD_RGB565(IMAGE_GET_RGB565_PIXEL_FAST(row, right + 1), &lnk_data,
+                                       && COLOR_THRESHOLD_RGB565(IMAGE_GET_RGB565_PIXEL_FAST(row, right + 1), lnk_data,
                                                                  invert)) {
                                     right++;
                                 }
@@ -890,7 +889,7 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                                                 if ((!IMAGE_GET_BINARY_PIXEL_FAST(bmp_row, i))
                                                     && (ok =
                                                             COLOR_THRESHOLD_RGB565(IMAGE_GET_RGB565_PIXEL_FAST(row, i),
-                                                                                   &lnk_data,
+                                                                                   lnk_data,
                                                                                    invert))) {
                                                     xylr_t context;
                                                     context.x = x;
@@ -926,7 +925,7 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                                                 if ((!IMAGE_GET_BINARY_PIXEL_FAST(bmp_row, i))
                                                     && (ok =
                                                             COLOR_THRESHOLD_RGB565(IMAGE_GET_RGB565_PIXEL_FAST(row, i),
-                                                                                   &lnk_data,
+                                                                                   lnk_data,
                                                                                    invert))) {
                                                     xylr_t context;
                                                     context.x = x;

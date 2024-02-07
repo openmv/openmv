@@ -18,16 +18,16 @@ void imlib_binary(image_t *out, image_t *img, list_t *thresholds, bool invert, b
     bmp.pixfmt = PIXFORMAT_BINARY;
     bmp.data = fb_alloc0(image_size(&bmp), FB_ALLOC_NO_HINT);
 
-    for (list_lnk_t *it = iterator_start_from_head(thresholds); it; it = iterator_next(it)) {
-        color_thresholds_list_lnk_data_t lnk_data;
-        iterator_get(thresholds, it, &lnk_data);
+    list_for_each(it, thresholds) {
+        color_thresholds_list_lnk_data_t *lnk_data = list_get_data(it);
+
         switch (img->pixfmt) {
             case PIXFORMAT_BINARY: {
                 for (int y = 0, yy = img->h; y < yy; y++) {
                     uint32_t *old_row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(img, y);
                     uint32_t *bmp_row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(&bmp, y);
                     for (int x = 0, xx = img->w; x < xx; x++) {
-                        if (COLOR_THRESHOLD_BINARY(IMAGE_GET_BINARY_PIXEL_FAST(old_row_ptr, x), &lnk_data, invert)) {
+                        if (COLOR_THRESHOLD_BINARY(IMAGE_GET_BINARY_PIXEL_FAST(old_row_ptr, x), lnk_data, invert)) {
                             IMAGE_SET_BINARY_PIXEL_FAST(bmp_row_ptr, x);
                         }
                     }
@@ -39,7 +39,7 @@ void imlib_binary(image_t *out, image_t *img, list_t *thresholds, bool invert, b
                     uint8_t *old_row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(img, y);
                     uint32_t *bmp_row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(&bmp, y);
                     for (int x = 0, xx = img->w; x < xx; x++) {
-                        if (COLOR_THRESHOLD_GRAYSCALE(IMAGE_GET_GRAYSCALE_PIXEL_FAST(old_row_ptr, x), &lnk_data, invert)) {
+                        if (COLOR_THRESHOLD_GRAYSCALE(IMAGE_GET_GRAYSCALE_PIXEL_FAST(old_row_ptr, x), lnk_data, invert)) {
                             IMAGE_SET_BINARY_PIXEL_FAST(bmp_row_ptr, x);
                         }
                     }
@@ -51,7 +51,7 @@ void imlib_binary(image_t *out, image_t *img, list_t *thresholds, bool invert, b
                     uint16_t *old_row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(img, y);
                     uint32_t *bmp_row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(&bmp, y);
                     for (int x = 0, xx = img->w; x < xx; x++) {
-                        if (COLOR_THRESHOLD_RGB565(IMAGE_GET_RGB565_PIXEL_FAST(old_row_ptr, x), &lnk_data, invert)) {
+                        if (COLOR_THRESHOLD_RGB565(IMAGE_GET_RGB565_PIXEL_FAST(old_row_ptr, x), lnk_data, invert)) {
                             IMAGE_SET_BINARY_PIXEL_FAST(bmp_row_ptr, x);
                         }
                     }
