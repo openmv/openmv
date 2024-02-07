@@ -119,5 +119,7 @@ list_lnk_t *iterator_next(list_lnk_t *lnk);
 list_lnk_t *iterator_prev(list_lnk_t *lnk);
 void iterator_get(list_t *ptr, list_lnk_t *lnk, void *data);
 void iterator_set(list_t *ptr, list_lnk_t *lnk, void *data);
+void iterator_insert(list_t *ptr, list_lnk_t *lnk, void *data);
+void iterator_remove(list_t *ptr, list_lnk_t *lnk, void *data);
 
 #endif /* __COLLECTIONS_H__ */

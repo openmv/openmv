@@ -476,3 +476,37 @@ void iterator_get(list_t *ptr, list_lnk_t *lnk, void *data) {
 void iterator_set(list_t *ptr, list_lnk_t *lnk, void *data) {
     memcpy(lnk->data, data, ptr->data_len);
 }
+
+void iterator_insert(list_t *ptr, list_lnk_t *lnk, void *data) {
+    if (ptr->head_ptr == lnk) {
+        list_push_front(ptr, data);
+    } else if (!lnk) {
+        list_push_back(ptr, data);
+    } else {
+        list_lnk_t *tmp = (list_lnk_t *) xalloc(sizeof(list_lnk_t) + ptr->data_len);
+        memcpy(tmp->data, data, ptr->data_len);
+
+        tmp->next_ptr = lnk;
+        tmp->prev_ptr = lnk->prev_ptr;
+        lnk->prev_ptr->next_ptr = tmp;
+        lnk->prev_ptr = tmp;
+        ptr->size += 1;
+    }
+}
+
+void iterator_remove(list_t *ptr, list_lnk_t *lnk, void *data) {
+    if (ptr->head_ptr == lnk) {
+        list_pop_front(ptr, data);
+    } else if (ptr->tail_ptr == lnk) {
+        list_pop_back(ptr, data);
+    } else {
+        if (data) {
+            memcpy(data, lnk->data, ptr->data_len);
+        }
+
+        lnk->prev_ptr->next_ptr = lnk->next_ptr;
+        lnk->next_ptr->prev_ptr = lnk->prev_ptr;
+        ptr->size -= 1;
+        xfree(lnk);
+    }
+}

@@ -123,6 +123,7 @@
 #if !defined(CUBEAI)
 #define IMLIB_ENABLE_TF
 #define IMLIB_ENABLE_TF_ALL_OPS
+#define IMLIB_ENABLE_TF_YOLO
 #endif
 
 // Enable FAST (20+ KBs).

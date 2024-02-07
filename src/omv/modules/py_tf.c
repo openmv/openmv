@@ -728,6 +728,263 @@ STATIC mp_obj_t py_tf_detect(uint n_args, const mp_obj_t *pos_args, mp_map_t *kw
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_tf_detect_obj, 2, py_tf_detect);
 
+#ifdef IMLIB_ENABLE_TF_YOLO
+typedef enum {
+    PY_TF_YOLOV3,
+    PY_TF_YOLOV5,
+    PY_TF_YOLOV7,
+    PY_TF_YOLO_COUNT
+} py_tf_yolo_version_t;
+
+typedef struct py_tf_yolo_output_callback_data {
+    rectangle_t *roi;
+    py_tf_yolo_version_t version;
+    float score_threshold, label_threshold, nms_threshold, nms_sigma;
+    mp_obj_t *output;
+} py_tf_yolo_output_callback_data_t;
+
+typedef struct py_tf_yolo_output_callback_lnk_data {
+    rectangle_t rect;
+    float score;
+    int label_index;
+} py_tf_yolo_output_callback_lnk_data_t;
+
+STATIC float py_tf_yolo_get_output(void *model_output, libtf_parameters_t *params, size_t i, size_t j) {
+    if (params->output_datatype == LIBTF_DATATYPE_FLOAT) {
+        float *output = ((float *) model_output) + (i * params->output_channels);
+        return output[j];
+    } else if (params->output_datatype == LIBTF_DATATYPE_INT8) {
+        int8_t *output = ((int8_t *) model_output) + (i * params->output_channels);
+        return (output[j] - params->output_zero_point) * params->output_scale;
+    } else {
+        uint8_t *output = ((uint8_t *) model_output) + (i * params->output_channels);
+        return (output[j] - params->output_zero_point) * params->output_scale;
+    }
+}
+
+STATIC float py_tf_yolo_iou(py_tf_yolo_output_callback_lnk_data_t *a, py_tf_yolo_output_callback_lnk_data_t *b) {
+    int x1 = IM_MAX(a->rect.x, b->rect.x);
+    int y1 = IM_MAX(a->rect.y, b->rect.y);
+    int x2 = IM_MIN(a->rect.x + a->rect.w, b->rect.x + b->rect.w);
+    int y2 = IM_MIN(a->rect.y + a->rect.h, b->rect.y + b->rect.h);
+    int w = IM_MAX(0, x2 - x1);
+    int h = IM_MAX(0, y2 - y1);
+    int rect_intersection = w * h;
+    int rect_union = (a->rect.w * a->rect.h) + (b->rect.w * b->rect.h) - rect_intersection;
+    return ((float) rect_intersection) / ((float) rect_union);
+}
+
+STATIC void py_tf_yolo_output_callback(void *callback_data, void *model_output, libtf_parameters_t *params) {
+    py_tf_yolo_output_callback_data_t *arg = (py_tf_yolo_output_callback_data_t *) callback_data;
+
+    if (params->output_height != 1) {
+        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Expected model output height to be 1!"));
+    }
+
+    if ((arg->version == PY_TF_YOLOV3) || (arg->version == PY_TF_YOLOV5)) {
+        if (params->output_channels < 5) {
+            mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Expected model output channels to be >= 5"));
+        }
+    } else {
+        if (params->output_channels != 7) {
+            mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Expected model output channels to be 7!"));
+        }
+    }
+
+    list_t detections;
+    list_init(&detections, sizeof(py_tf_yolo_output_callback_lnk_data_t));
+
+    for (size_t i = 0; i < params->output_width; i++) {
+        py_tf_yolo_output_callback_lnk_data_t lnk_data;
+        int xmin, ymin, xmax, ymax;
+
+        if ((arg->version == PY_TF_YOLOV3) || (arg->version == PY_TF_YOLOV5)) {
+            // cx, cy, cw, ch, score, class[n]
+            float cx = py_tf_yolo_get_output(model_output, params, i, 0);
+            float cy = py_tf_yolo_get_output(model_output, params, i, 1);
+            float cw = py_tf_yolo_get_output(model_output, params, i, 2) * 0.5f;
+            float ch = py_tf_yolo_get_output(model_output, params, i, 3) * 0.5f;
+            xmin = fast_floorf((cx - cw) * params->input_width);
+            ymin = fast_floorf((cy - ch) * params->input_height);
+            xmax = fast_floorf((cx + cw) * params->input_width);
+            ymax = fast_floorf((cy + ch) * params->input_height);
+            lnk_data.label_index = 0;
+            lnk_data.score = py_tf_yolo_get_output(model_output, params, i, 4);
+
+            if (params->output_channels > 5) {
+                // Find the class with the highest score above a threshold.
+                float max_label = 0.0f;
+                size_t max_label_index = 0;
+                for (size_t j = 5; j < params->output_channels; j++) {
+                    float label = py_tf_yolo_get_output(model_output, params, i, j);
+                    if ((label >= arg->label_threshold) && (label > max_label)) {
+                        max_label = label;
+                        max_label_index = j - 5;
+                        break;
+                    }
+                }
+
+                if (max_label > 0.0f) {
+                    lnk_data.label_index = max_label_index;
+                } else {
+                    continue;
+                }
+            }
+        } else {
+            // batch, xmin, ymin, xmax, ymax, class, score
+            xmin = fast_floorf(py_tf_yolo_get_output(model_output, params, i, 1));
+            ymin = fast_floorf(py_tf_yolo_get_output(model_output, params, i, 2));
+            xmax = fast_floorf(py_tf_yolo_get_output(model_output, params, i, 3));
+            ymax = fast_floorf(py_tf_yolo_get_output(model_output, params, i, 4));
+            lnk_data.label_index = fast_floorf(py_tf_yolo_get_output(model_output, params, i, 5));
+            lnk_data.score = py_tf_yolo_get_output(model_output, params, i, 6);
+        }
+
+        xmin = IM_MIN(IM_MAX(xmin, 0), ((int) (params->input_width - 1)));
+        ymin = IM_MIN(IM_MAX(ymin, 0), ((int) (params->input_height - 1)));
+        xmax = IM_MIN(IM_MAX(xmax, 0), ((int) (params->input_width - 1)));
+        ymax = IM_MIN(IM_MAX(ymax, 0), ((int) (params->input_height - 1)));
+
+        lnk_data.rect.x = xmin;
+        lnk_data.rect.y = ymin;
+        lnk_data.rect.w = xmax - xmin + 1;
+        lnk_data.rect.h = ymax - ymin + 1;
+
+        if ((lnk_data.rect.w > 0) && (lnk_data.rect.h > 0) &&
+            (lnk_data.score >= arg->score_threshold) && (lnk_data.score <= 1.0f)) {
+            // Insertion sort detections by score.
+            list_lnk_t *it = iterator_start_from_head(&detections);
+            for (; it; it = iterator_next(it)) {
+                if (lnk_data.score > ((py_tf_yolo_output_callback_lnk_data_t *) it->data)->score) {
+                    iterator_insert(&detections, it, &lnk_data);
+                    break;
+                }
+            }
+
+            if (!it) {
+                list_push_back(&detections, &lnk_data);
+            }
+        }
+    }
+
+    // We're using soft non-max supression below with a gaussian as this provides the best results
+    // for YOLO. The gaussian is used to give a soft score penalty to overlapping boxes. On loop
+    // entry "detections" is sorted but after each iteration we have to pick the next highest next
+    // score again given the score penalty changes the order.
+
+    float sigma = (arg->nms_sigma > 0.0f) ? (-1.0f / arg->nms_sigma) : 0.0f;
+
+    list_t nms_detections;
+    list_init(&nms_detections, sizeof(py_tf_yolo_output_callback_lnk_data_t));
+
+    // The first detection has the higest score since the list is sorted.
+    list_lnk_t *max_it = iterator_start_from_head(&detections);
+    while (list_size(&detections)) {
+        py_tf_yolo_output_callback_lnk_data_t lnk_data;
+        iterator_remove(&detections, max_it, &lnk_data);
+        list_push_back(&nms_detections, &lnk_data);
+
+        float max_score = 0.0f;
+        for (list_lnk_t *it = iterator_start_from_head(&detections); it; ) {
+            py_tf_yolo_output_callback_lnk_data_t *lnk_data2 = (py_tf_yolo_output_callback_lnk_data_t *) it->data;
+
+            list_lnk_t *old_it = it;
+            it = iterator_next(it);
+
+            float iou = py_tf_yolo_iou(&lnk_data, lnk_data2);
+            lnk_data2->score *= fast_expf(sigma * iou * iou);
+
+            if (lnk_data2->score < arg->nms_threshold) {
+                iterator_remove(&detections, old_it, NULL);
+            } else if (lnk_data2->score > max_score) {
+                max_score = lnk_data2->score;
+                max_it = old_it;
+            }
+        }
+    }
+
+    float x_scale = arg->roi->w / ((float) params->input_width);
+    float y_scale = arg->roi->h / ((float) params->input_height);
+    // MAX == KeepAspectRatioByExpanding - MIN == KeepAspectRatio
+    float scale = IM_MIN(x_scale, y_scale);
+    int x_offset = fast_floorf((arg->roi->w - (params->input_width * scale)) / 2.0f) + arg->roi->x;
+    int y_offset = fast_floorf((arg->roi->h - (params->input_height * scale)) / 2.0f) + arg->roi->y;
+
+    size_t len = list_size(&nms_detections);
+    arg->output = mp_obj_new_list(len, NULL);
+    for (size_t i = 0; i < len; i++) {
+        py_tf_yolo_output_callback_lnk_data_t lnk_data;
+        list_pop_front(&nms_detections, &lnk_data);
+        py_tf_classification_obj_t *o = m_new_obj(py_tf_classification_obj_t);
+        o->base.type = &py_tf_classification_type;
+        o->x = mp_obj_new_int(fast_floorf(lnk_data.rect.x * scale) + x_offset);
+        o->y = mp_obj_new_int(fast_floorf(lnk_data.rect.y * scale) + y_offset);
+        o->w = mp_obj_new_int(fast_floorf(lnk_data.rect.w * scale));
+        o->h = mp_obj_new_int(fast_floorf(lnk_data.rect.h * scale));
+        o->output = mp_obj_new_tuple(2, (mp_obj_t []) {mp_obj_new_int(lnk_data.label_index),
+                                                       mp_obj_new_float(lnk_data.score)});
+        ((mp_obj_list_t *) arg->output)->items[i] = o;
+    }
+}
+
+STATIC mp_obj_t py_tf_detect_yolo(uint n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
+    enum { ARG_roi, ARG_version, ARG_score_threshold, ARG_label_threshold, ARG_nms_threshold, ARG_nms_sigma };
+    static const mp_arg_t allowed_args[] = {
+        { MP_QSTR_roi, MP_ARG_OBJ | MP_ARG_KW_ONLY, {.u_rom_obj = MP_ROM_NONE} },
+        { MP_QSTR_version,  MP_ARG_INT | MP_ARG_KW_ONLY, {.u_int = PY_TF_YOLOV5 } },
+        { MP_QSTR_score_threshold,  MP_ARG_OBJ | MP_ARG_KW_ONLY, {.u_rom_obj = MP_ROM_NONE } },
+        { MP_QSTR_label_threshold,  MP_ARG_OBJ | MP_ARG_KW_ONLY, {.u_rom_obj = MP_ROM_NONE } },
+        { MP_QSTR_nms_threshold,  MP_ARG_OBJ | MP_ARG_KW_ONLY, {.u_rom_obj = MP_ROM_NONE } },
+        { MP_QSTR_nms_sigma,  MP_ARG_OBJ | MP_ARG_KW_ONLY, {.u_rom_obj = MP_ROM_NONE } },
+    };
+
+    // Parse args.
+    mp_arg_val_t args[MP_ARRAY_SIZE(allowed_args)];
+    mp_arg_parse_all(n_args - 2, pos_args + 2, kw_args, MP_ARRAY_SIZE(allowed_args), allowed_args, args);
+
+    image_t *image = py_helper_arg_to_image(pos_args[1], ARG_IMAGE_ANY);
+    rectangle_t roi = py_helper_arg_to_roi(args[ARG_roi].u_obj, image);
+
+    if ((args[ARG_version].u_int < 0) || (args[ARG_version].u_int >= PY_TF_YOLO_COUNT)) {
+        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Invalid YOLO version!"));
+    }
+
+    fb_alloc_mark();
+    py_tf_alloc_putchar_buffer();
+
+    py_tf_model_obj_t *model = py_tf_load_alloc(pos_args[0]);
+    uint8_t *tensor_arena = fb_alloc(model->params.tensor_arena_size, FB_ALLOC_PREFER_SPEED | FB_ALLOC_CACHE_ALIGN);
+
+    py_tf_input_callback_data_t py_tf_input_callback_data;
+    py_tf_input_callback_data.img = image;
+    py_tf_input_callback_data.roi = &roi;
+
+    py_tf_yolo_output_callback_data_t py_tf_yolo_output_callback_data;
+    py_tf_yolo_output_callback_data.roi = &roi;
+    py_tf_yolo_output_callback_data.version = (py_tf_yolo_version_t) args[ARG_version].u_int;
+    py_tf_yolo_output_callback_data.score_threshold = py_helper_arg_to_float(args[ARG_score_threshold].u_obj, 0.5f);
+    py_tf_yolo_output_callback_data.label_threshold = py_helper_arg_to_float(args[ARG_label_threshold].u_obj, 0.5f);
+    py_tf_yolo_output_callback_data.nms_threshold = py_helper_arg_to_float(args[ARG_nms_threshold].u_obj, 0.1f);
+    py_tf_yolo_output_callback_data.nms_sigma = py_helper_arg_to_float(args[ARG_nms_sigma].u_obj, 0.1f);
+
+    if (libtf_invoke(model->model_data,
+                     tensor_arena,
+                     &model->params,
+                     py_tf_input_callback,
+                     &py_tf_input_callback_data,
+                     py_tf_yolo_output_callback,
+                     &py_tf_yolo_output_callback_data) != 0) {
+        // Note can't use MP_ERROR_TEXT here.
+        mp_raise_msg(&mp_type_OSError, (mp_rom_error_text_t) py_tf_putchar_buffer);
+    }
+
+    fb_alloc_free_till_mark();
+
+    return py_tf_yolo_output_callback_data.output;
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_tf_detect_yolo_obj, 2, py_tf_detect_yolo);
+#endif // IMLIB_ENABLE_TF_YOLO
+
 STATIC void py_tf_regression_input_callback(void *callback_data,
                                             void *model_input,
                                             libtf_parameters_t *params) {
@@ -919,6 +1176,12 @@ STATIC const mp_rom_map_elem_t locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_classify),            MP_ROM_PTR(&py_tf_classify_obj) },
     { MP_ROM_QSTR(MP_QSTR_segment),             MP_ROM_PTR(&py_tf_segment_obj) },
     { MP_ROM_QSTR(MP_QSTR_detect),              MP_ROM_PTR(&py_tf_detect_obj) },
+    { MP_ROM_QSTR(MP_QSTR_detect_fomo),         MP_ROM_PTR(&py_tf_detect_obj) },
+    #ifdef IMLIB_ENABLE_TF_YOLO
+    { MP_ROM_QSTR(MP_QSTR_detect_yolo),         MP_ROM_PTR(&py_tf_detect_yolo_obj) },
+    #else
+    { MP_ROM_QSTR(MP_QSTR_detect_yolo),         MP_ROM_PTR(&py_func_unavailable_obj) },
+    #endif
     { MP_ROM_QSTR(MP_QSTR_regression),          MP_ROM_PTR(&py_tf_regression_obj) }
 };
 
@@ -937,12 +1200,23 @@ STATIC MP_DEFINE_CONST_OBJ_TYPE(
 STATIC const mp_rom_map_elem_t globals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR___name__),        MP_OBJ_NEW_QSTR(MP_QSTR_tf) },
     #ifdef IMLIB_ENABLE_TF
+    #ifdef IMLIB_ENABLE_TF_YOLO
+    { MP_ROM_QSTR(MP_QSTR_YOLOV3),              MP_ROM_INT(PY_TF_YOLOV3) },
+    { MP_ROM_QSTR(MP_QSTR_YOLOV5),              MP_ROM_INT(PY_TF_YOLOV5) },
+    { MP_ROM_QSTR(MP_QSTR_YOLOV7),              MP_ROM_INT(PY_TF_YOLOV7) },
+    #endif
     { MP_ROM_QSTR(MP_QSTR_load),                MP_ROM_PTR(&py_tf_load_obj) },
     { MP_ROM_QSTR(MP_QSTR_load_builtin_model),  MP_ROM_PTR(&py_tf_load_builtin_model_obj) },
     { MP_ROM_QSTR(MP_QSTR_free_from_fb),        MP_ROM_PTR(&py_tf_free_from_fb_obj) },
     { MP_ROM_QSTR(MP_QSTR_classify),            MP_ROM_PTR(&py_tf_classify_obj) },
     { MP_ROM_QSTR(MP_QSTR_segment),             MP_ROM_PTR(&py_tf_segment_obj) },
     { MP_ROM_QSTR(MP_QSTR_detect),              MP_ROM_PTR(&py_tf_detect_obj) },
+    { MP_ROM_QSTR(MP_QSTR_detect_fomo),         MP_ROM_PTR(&py_tf_detect_obj) },
+    #ifdef IMLIB_ENABLE_TF_YOLO
+    { MP_ROM_QSTR(MP_QSTR_detect_yolo),         MP_ROM_PTR(&py_tf_detect_yolo_obj) },
+    #else
+    { MP_ROM_QSTR(MP_QSTR_detect_yolo),         MP_ROM_PTR(&py_func_unavailable_obj) },
+    #endif
     { MP_ROM_QSTR(MP_QSTR_regression),          MP_ROM_PTR(&py_tf_regression_obj) }
     #else
     { MP_ROM_QSTR(MP_QSTR_load),                MP_ROM_PTR(&py_func_unavailable_obj) },
@@ -951,6 +1225,8 @@ STATIC const mp_rom_map_elem_t globals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_classify),            MP_ROM_PTR(&py_func_unavailable_obj) },
     { MP_ROM_QSTR(MP_QSTR_segment),             MP_ROM_PTR(&py_func_unavailable_obj) },
     { MP_ROM_QSTR(MP_QSTR_detect),              MP_ROM_PTR(&py_func_unavailable_obj) },
+    { MP_ROM_QSTR(MP_QSTR_detect_fomo),         MP_ROM_PTR(&py_func_unavailable_obj) },
+    { MP_ROM_QSTR(MP_QSTR_detect_yolo),         MP_ROM_PTR(&py_func_unavailable_obj) },
     { MP_ROM_QSTR(MP_QSTR_regression),          MP_ROM_PTR(&py_func_unavailable_obj) }
     #endif // IMLIB_ENABLE_TF
 };
