@@ -2,7 +2,6 @@ include("$(MPY_DIR)/extmod/asyncio")
 
 # Drivers
 require("lsm6dsox")
-require("espflash")
 require("onewire")
 require("ds18x20")
 require("dht")
