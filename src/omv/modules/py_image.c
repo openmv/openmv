@@ -35,7 +35,6 @@
 #include "py_imageio.h"
 #endif
 
-static const mp_obj_type_t py_cascade_type;
 static const mp_obj_type_t py_image_type;
 
 #if defined(IMLIB_ENABLE_IMAGE_FILE_IO)
@@ -43,6 +42,9 @@ extern const char *ffs_strerror(FRESULT res);
 #endif
 
 // Haar Cascade ///////////////////////////////////////////////////////////////
+
+#ifdef IMLIB_ENABLE_FEATURES
+static const mp_obj_type_t py_cascade_type;
 
 typedef struct _py_cascade_obj_t {
     mp_obj_base_t base;
@@ -67,6 +69,8 @@ STATIC MP_DEFINE_CONST_OBJ_TYPE(
     MP_TYPE_FLAG_NONE,
     print, py_cascade_print
     );
+#endif // IMLIB_ENABLE_FEATURES
+
 // Keypoints object ///////////////////////////////////////////////////////////
 
 #ifdef IMLIB_ENABLE_FIND_KEYPOINTS
@@ -6209,6 +6213,7 @@ static mp_obj_t py_image_find_template(uint n_args, const mp_obj_t *args, mp_map
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_find_template_obj, 3, py_image_find_template);
 #endif // IMLIB_FIND_TEMPLATE
 
+#ifdef IMLIB_ENABLE_FEATURES
 static mp_obj_t py_image_find_features(uint n_args, const mp_obj_t *args, mp_map_t *kw_args) {
     image_t *arg_img = py_helper_arg_to_image(args[0], ARG_IMAGE_MUTABLE);
     cascade_t *cascade = py_cascade_cobj(args[1]);
@@ -6243,6 +6248,7 @@ static mp_obj_t py_image_find_features(uint n_args, const mp_obj_t *args, mp_map
     return objects_list;
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_find_features_obj, 2, py_image_find_features);
+#endif // IMLIB_ENABLE_FEATURES
 
 static mp_obj_t py_image_find_eye(uint n_args, const mp_obj_t *args, mp_map_t *kw_args) {
     image_t *arg_img = py_helper_arg_to_image(args[0], ARG_IMAGE_GRAYSCALE);
@@ -6722,7 +6728,11 @@ static const mp_rom_map_elem_t locals_dict_table[] = {
     #else
     {MP_ROM_QSTR(MP_QSTR_find_template),       MP_ROM_PTR(&py_func_unavailable_obj)},
     #endif
+    #ifdef IMLIB_ENABLE_FEATURES
     {MP_ROM_QSTR(MP_QSTR_find_features),       MP_ROM_PTR(&py_image_find_features_obj)},
+    #else
+    {MP_ROM_QSTR(MP_QSTR_find_features),       MP_ROM_PTR(&py_func_unavailable_obj)},
+    #endif
     {MP_ROM_QSTR(MP_QSTR_find_eye),            MP_ROM_PTR(&py_image_find_eye_obj)},
     #ifdef IMLIB_ENABLE_FIND_LBP
     {MP_ROM_QSTR(MP_QSTR_find_lbp),            MP_ROM_PTR(&py_image_find_lbp_obj)},
@@ -7084,6 +7094,7 @@ mp_obj_t py_image_load_image(uint n_args, const mp_obj_t *pos_args, mp_map_t *kw
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_load_image_obj, 1, py_image_load_image);
 
+#ifdef IMLIB_ENABLE_FEATURES
 mp_obj_t py_image_load_cascade(uint n_args, const mp_obj_t *args, mp_map_t *kw_args) {
     cascade_t cascade;
     const char *path = mp_obj_str_get_str(args[0]);
@@ -7114,6 +7125,7 @@ mp_obj_t py_image_load_cascade(uint n_args, const mp_obj_t *args, mp_map_t *kw_a
     return o;
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_load_cascade_obj, 1, py_image_load_cascade);
+#endif // IMLIB_ENABLE_FEATURES
 
 #if defined(IMLIB_ENABLE_DESCRIPTOR)
 #if defined(IMLIB_ENABLE_IMAGE_FILE_IO)
@@ -7425,7 +7437,9 @@ static const mp_rom_map_elem_t globals_dict_table[] = {
     {MP_ROM_QSTR(MP_QSTR_yuv_to_rgb),          MP_ROM_PTR(&py_image_yuv_to_rgb_obj)},
     {MP_ROM_QSTR(MP_QSTR_yuv_to_lab),          MP_ROM_PTR(&py_image_yuv_to_lab_obj)},
     {MP_ROM_QSTR(MP_QSTR_Image),               MP_ROM_PTR(&py_image_load_image_obj)},
+    #ifdef IMLIB_ENABLE_FEATURES
     {MP_ROM_QSTR(MP_QSTR_HaarCascade),         MP_ROM_PTR(&py_image_load_cascade_obj)},
+    #endif
     #if defined(IMLIB_ENABLE_DESCRIPTOR) && defined(IMLIB_ENABLE_IMAGE_FILE_IO)
     {MP_ROM_QSTR(MP_QSTR_load_descriptor),     MP_ROM_PTR(&py_image_load_descriptor_obj)},
     {MP_ROM_QSTR(MP_QSTR_save_descriptor),     MP_ROM_PTR(&py_image_save_descriptor_obj)},

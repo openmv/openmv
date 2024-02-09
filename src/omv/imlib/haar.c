@@ -19,6 +19,7 @@
 #include "cascade.h"
 #include "file_utils.h"
 
+#ifdef IMLIB_ENABLE_FEATURES
 static int eval_weak_classifier(cascade_t *cascade, point_t pt, int t_idx, int w_idx, int r_idx) {
     int32_t sumw = 0;
     mw_image_t *sum = cascade->sum;
@@ -249,7 +250,9 @@ error:
 
 int imlib_load_cascade(cascade_t *cascade, const char *path) {
     // built-in cascade
-    if (strcmp(path, "frontalface") == 0) {
+    if (0) {
+    #ifdef IMLIB_ENABLE_FEATURES_BUILTIN_FACE_CASCADE
+    } else if (strcmp(path, "frontalface") == 0) {
         cascade->window.w = frontalface_window_w;
         cascade->window.h = frontalface_window_h;
         cascade->n_stages = frontalface_n_stages;
@@ -261,6 +264,8 @@ int imlib_load_cascade(cascade_t *cascade, const char *path) {
         cascade->num_rectangles_array = (int8_t *) frontalface_num_rectangles_array;
         cascade->weights_array = (int8_t *) frontalface_weights_array;
         cascade->rectangles_array = (int8_t *) frontalface_rectangles_array;
+    #endif
+    #ifdef IMLIB_ENABLE_FEATURES_BUILTIN_EYES_CASCADE
     } else if (strcmp(path, "eye") == 0) {
         cascade->window.w = eye_window_w;
         cascade->window.h = eye_window_h;
@@ -273,6 +278,7 @@ int imlib_load_cascade(cascade_t *cascade, const char *path) {
         cascade->num_rectangles_array = (int8_t *) eye_num_rectangles_array;
         cascade->weights_array = (int8_t *) eye_weights_array;
         cascade->rectangles_array = (int8_t *) eye_rectangles_array;
+    #endif
     } else {
         #if defined(IMLIB_ENABLE_IMAGE_FILE_IO)
         // xml cascade
@@ -294,3 +300,4 @@ int imlib_load_cascade(cascade_t *cascade, const char *path) {
     }
     return FR_OK;
 }
+#endif // IMLIB_ENABLE_FEATURES
