@@ -322,6 +322,14 @@ int sensor_snapshot(sensor_t *sensor, image_t *image, uint32_t flags) {
         // Re/configure and re/start the CSI.
         uint32_t bytes_per_pixel = sensor_get_src_bpp();
         uint32_t dma_line_bytes = resolution[sensor->framesize][0] * bytes_per_pixel;
+
+        if ((sensor->pixformat == PIXFORMAT_RGB565 && sensor->hw_flags.rgb_swap)
+            || (sensor->pixformat == PIXFORMAT_YUV422 && sensor->hw_flags.yuv_swap)) {
+            CSI_REG_CR1(CSI) |= CSI_CR1_SWAP16_EN_MASK | CSI_CR1_PACK_DIR_MASK;
+        } else {
+            CSI_REG_CR1(CSI) &= ~(CSI_CR1_SWAP16_EN_MASK | CSI_CR1_PACK_DIR_MASK);
+        }
+
         CSI_REG_IMAG_PARA(CSI) =
             (dma_line_bytes << CSI_IMAG_PARA_IMAGE_WIDTH_SHIFT) |
             (1 << CSI_IMAG_PARA_IMAGE_HEIGHT_SHIFT);
