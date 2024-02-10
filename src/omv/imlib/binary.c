@@ -224,28 +224,41 @@ void imlib_binary(image_t *out, image_t *img, list_t *thresholds, bool invert, b
 }
 
 void imlib_invert(image_t *img) {
+    uint32_t n = image_size(img);
+    uint32_t *p32 = (uint32_t *) img->data;
+
     switch (img->pixfmt) {
         case PIXFORMAT_BINARY: {
-            for (uint32_t *start = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(img, 0),
-                 *end = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(img, img->h);
-                 start < end; start++) {
-                *start = ~*start;
+            for (; n >= 4; n -= 4, p32++) {
+                *p32 = ~*p32;
             }
             break;
         }
         case PIXFORMAT_GRAYSCALE: {
-            for (uint8_t *start = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(img, 0),
-                 *end = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(img, img->h);
-                 start < end; start++) {
-                *start = ~*start;
+            #if (__ARM_ARCH > 6)
+            for (; n >= 4; n -= 4, p32++) {
+                *p32 = ~*p32;
+            }
+            #endif
+
+            uint8_t *p8 = (uint8_t *) p32;
+
+            for (; n >= 1; n -= 1, p8++) {
+                *p8 = ~*p8;
             }
             break;
         }
         case PIXFORMAT_RGB565: {
-            for (uint16_t *start = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(img, 0),
-                 *end = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(img, img->h);
-                 start < end; start++) {
-                *start = ~*start;
+            #if (__ARM_ARCH > 6)
+            for (; n >= 4; n -= 4, p32++) {
+                *p32 = ~*p32;
+            }
+            #endif
+
+            uint16_t *p16 = (uint16_t *) p32;
+
+            for (; n >= 2; n -= 2, p16++) {
+                *p16 = ~*p16;
             }
             break;
         }

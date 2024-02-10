@@ -11,61 +11,6 @@
 #include "imlib.h"
 
 #ifdef IMLIB_ENABLE_MATH_OPS
-void imlib_negate(image_t *img) {
-    switch (img->pixfmt) {
-        case PIXFORMAT_BINARY: {
-            for (int y = 0, yy = img->h; y < yy; y++) {
-                uint32_t *data = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(img, y);
-                int x = 0, xx = img->w;
-                uint32_t *s = data;
-                for (; x < xx - 31; x += 32) {
-                    // do it faster with bit access
-                    s[0] = ~s[0]; // invert 32 bits (pixels) in one shot
-                    s++;
-                }
-                for (; x < xx; x++) {
-                    int dataPixel = IMAGE_GET_BINARY_PIXEL_FAST(data, x);
-                    int p = (COLOR_BINARY_MAX - COLOR_BINARY_MIN) - dataPixel;
-                    IMAGE_PUT_BINARY_PIXEL_FAST(data, x, p);
-                }
-            }
-            break;
-        }
-        case PIXFORMAT_GRAYSCALE: {
-            for (int y = 0, yy = img->h; y < yy; y++) {
-                uint8_t *data = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(img, y);
-                int x = 0, xx = img->w;
-                uint32_t a, b, *s = (uint32_t *) data;
-                for (; x < xx - 7; x += 8) {
-                    // process a pair of 4 pixels at a time
-                    a = s[0]; b = s[1]; // read 8 pixels
-                    s[0] = ~a; s[1] = ~b;
-                    s += 2;
-                }
-                for (; x < xx; x++) {
-                    int dataPixel = IMAGE_GET_GRAYSCALE_PIXEL_FAST(data, x);
-                    int p = (COLOR_GRAYSCALE_MAX - COLOR_GRAYSCALE_MIN) - dataPixel;
-                    IMAGE_PUT_GRAYSCALE_PIXEL_FAST(data, x, p);
-                }
-            }
-            break;
-        }
-        case PIXFORMAT_RGB565: {
-            for (int y = 0, yy = img->h; y < yy; y++) {
-                uint16_t *data = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(img, y);
-                for (int x = 0, xx = img->w; x < xx; x++) {
-                    int dataPixel = IMAGE_GET_RGB565_PIXEL_FAST(data, x);
-                    IMAGE_PUT_RGB565_PIXEL_FAST(data, x, ~dataPixel);
-                }
-            }
-            break;
-        }
-        default: {
-            break;
-        }
-    }
-}
-
 typedef struct imlib_replace_line_op_state {
     bool hmirror, vflip, transpose;
     image_t *mask;
