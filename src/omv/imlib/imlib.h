@@ -96,6 +96,8 @@
 #define IM_DEG2RAD(x)            (((x) * M_PI) / 180)
 #define IM_RAD2DEG(x)            (((x) * 180) / M_PI)
 
+int imlib_ksize_to_n(int ksize);
+
 /////////////////
 // Point Stuff //
 /////////////////

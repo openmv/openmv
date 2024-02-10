@@ -34,6 +34,10 @@ void imlib_deinit_all() {
     #endif
 }
 
+int imlib_ksize_to_n(int ksize) {
+    return ((ksize * 2) + 1) * ((ksize * 2) + 1);
+}
+
 /////////////////
 // Point Stuff //
 /////////////////
