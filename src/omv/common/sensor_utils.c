@@ -1307,13 +1307,16 @@ __weak int sensor_copy_line(void *dma, uint8_t *src, uint8_t *dst) {
             #if OMV_CSI_DMA_MEMCPY_ENABLE
             sensor_dma_memcpy(dma, dst16, src16, sizeof(uint16_t), sensor.transpose);
             #else
-            if ((sensor.pixformat == PIXFORMAT_RGB565 && sensor.hw_flags.rgb_swap)
-                || (sensor.pixformat == PIXFORMAT_YUV422 && sensor.hw_flags.yuv_swap)) {
+            if (0) {
+            #if !OMV_CSI_HW_SWAP_ENABLE
+            } else if ((sensor.pixformat == PIXFORMAT_RGB565 && sensor.hw_flags.rgb_swap)
+                       || (sensor.pixformat == PIXFORMAT_YUV422 && sensor.hw_flags.yuv_swap)) {
                 if (!sensor.transpose) {
                     unaligned_memcpy_rev16(dst16, src16, MAIN_FB()->u);
                 } else {
                     copy_transposed_line_rev16(dst16, src16);
                 }
+            #endif
             } else {
                 if (!sensor.transpose) {
                     unaligned_memcpy(dst16, src16, MAIN_FB()->u * sizeof(uint16_t));
