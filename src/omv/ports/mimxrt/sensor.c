@@ -140,10 +140,6 @@ int sensor_config(sensor_config_t config) {
         CSI_REG_CR2(CSI) |= CSI_CR2_DMA_BURST_TYPE_RFF(3U);
         CSI_REG_CR3(CSI) |= 7U << CSI_CR3_RxFF_LEVEL_SHIFT;
 
-        // Configure DMA buffers.
-        CSI_REG_DMASA_FB1(CSI) = (uint32_t) (&_line_buf[OMV_LINE_BUF_SIZE * 0]);
-        CSI_REG_DMASA_FB2(CSI) = (uint32_t) (&_line_buf[OMV_LINE_BUF_SIZE / 2]);
-
         // Write to memory from first completed frame.
         // DMA CSI addr switch at dma transfer done.
         CSI_REG_CR18(CSI) |= CSI_CR18_MASK_OPTION(0);
@@ -189,6 +185,17 @@ uint32_t sensor_get_xclk_frequency() {
     return 24000000 / (CLOCK_GetDiv(kCLOCK_CsiDiv) + 1);
 }
 
+bool sensor_grayscale_extract() {
+    return (sensor.pixformat == PIXFORMAT_GRAYSCALE) && (sensor.hw_flags.gs_bpp == 2);
+}
+
+bool sensor_full_offload_ok() {
+    return (sensor.pixformat != PIXFORMAT_JPEG) &&
+           (!sensor.transpose) &&
+           (!sensor_get_cropped()) &&
+           (!sensor_grayscale_extract());
+}
+
 void sensor_sof_callback() {
     sensor.first_line = false;
     sensor.drop_frame = false;
@@ -196,10 +203,24 @@ void sensor_sof_callback() {
     vbuffer_t *buffer = framebuffer_get_tail(FB_PEEK);
     if (buffer == NULL) {
         sensor_abort(false, true);
-    } else if (buffer->offset < resolution[sensor.framesize][1]) {
+        return;
+    } else if (sensor_full_offload_ok()) {
+        // Drop the frame here to avoid wasting SDRAM bandwidth.
+        sensor_throttle_framerate();
+        if (sensor.drop_frame) {
+            return;
+        }
+        CSI_REG_DMASA_FB1(CSI) = (uint32_t) buffer->data;
+        CSI_REG_DMASA_FB2(CSI) = (uint32_t) buffer->data;
+        CSI_REG_IMAG_PARA(CSI) =
+            ((MAIN_FB()->u * sensor_get_src_bpp()) << CSI_IMAG_PARA_IMAGE_WIDTH_SHIFT) |
+            (MAIN_FB()->v << CSI_IMAG_PARA_IMAGE_HEIGHT_SHIFT);
+    } else if ((sensor.pixformat != PIXFORMAT_JPEG) && (buffer->offset < resolution[sensor.framesize][1])) {
         // Missed a few lines, reset buffer state and continue.
         buffer->reset_state = true;
     }
+    // Clear the FIFO and re/enable DMA.
+    CSI_REG_CR3(CSI) |= (CSI_CR3_DMA_REFLASH_RFF_MASK | CSI_CR3_DMA_REQ_EN_RFF_MASK);
 }
 
 #if defined(OMV_CSI_DMA)
@@ -243,7 +264,21 @@ int sensor_dma_memcpy(void *dma, void *dst, void *src, int bpp, bool transposed)
 }
 #endif
 
+void sensor_line_callback_end() {
+    // Release the current framebuffer.
+    framebuffer_get_tail(FB_NO_FLAGS);
+    CSI_REG_CR3(CSI) &= ~CSI_CR3_DMA_REQ_EN_RFF_MASK;
+    if (sensor.frame_callback) {
+        sensor.frame_callback();
+    }
+}
+
 void sensor_line_callback(uint32_t addr) {
+    if (sensor_full_offload_ok()) {
+        sensor_line_callback_end();
+        return;
+    }
+
     // Throttle frames to match the current frame rate.
     sensor_throttle_framerate();
 
@@ -292,12 +327,7 @@ void sensor_line_callback(uint32_t addr) {
         // the current framesize. Since we don't have an end-of-frame interrupt on the mimxrt we
         // detect the end of the frame when there's no more jpeg data.
         if (jpeg_end) {
-            // Release the current framebuffer.
-            framebuffer_get_tail(FB_NO_FLAGS);
-            CSI_REG_CR3(CSI) &= ~CSI_CR3_DMA_REQ_EN_RFF_MASK;
-            if (sensor.frame_callback) {
-                sensor.frame_callback();
-            }
+            sensor_line_callback_end();
             sensor.drop_frame = true;
         }
         return;
@@ -339,12 +369,7 @@ void sensor_line_callback(uint32_t addr) {
     }
 
     if (++buffer->offset == resolution[sensor.framesize][1]) {
-        // Release the current framebuffer.
-        framebuffer_get_tail(FB_NO_FLAGS);
-        CSI_REG_CR3(CSI) &= ~CSI_CR3_DMA_REQ_EN_RFF_MASK;
-        if (sensor.frame_callback) {
-            sensor.frame_callback();
-        }
+        sensor_line_callback_end();
     }
 }
 
@@ -354,7 +379,7 @@ static void edma_config(sensor_t *sensor, uint32_t bytes_per_pixel) {
     uint32_t line_width_bytes = MAIN_FB()->u * bytes_per_pixel;
 
     // YUV422 Source -> Y Destination
-    if ((sensor->pixformat == PIXFORMAT_GRAYSCALE) && (sensor->hw_flags.gs_bpp == 2)) {
+    if (sensor_grayscale_extract()) {
         line_width_bytes /= 2;
     }
 
@@ -381,7 +406,7 @@ static void edma_config(sensor_t *sensor, uint32_t bytes_per_pixel) {
     }
 
     // YUV422 Source -> Y Destination
-    if ((sensor->pixformat == PIXFORMAT_GRAYSCALE) && (sensor->hw_flags.gs_bpp == 2)) {
+    if (sensor_grayscale_extract()) {
         src_inc = 2;
         src_size = 1;
     }
@@ -449,6 +474,9 @@ int sensor_snapshot(sensor_t *sensor, image_t *image, uint32_t flags) {
             CSI_REG_CR1(CSI) &= ~(CSI_CR1_SWAP16_EN_MASK | CSI_CR1_PACK_DIR_MASK);
         }
 
+        // Configure DMA buffers.
+        CSI_REG_DMASA_FB1(CSI) = (uint32_t) (&_line_buf[OMV_LINE_BUF_SIZE * 0]);
+        CSI_REG_DMASA_FB2(CSI) = (uint32_t) (&_line_buf[OMV_LINE_BUF_SIZE / 2]);
         CSI_REG_IMAG_PARA(CSI) =
             (dma_line_bytes << CSI_IMAG_PARA_IMAGE_WIDTH_SHIFT) |
             (1 << CSI_IMAG_PARA_IMAGE_HEIGHT_SHIFT);
