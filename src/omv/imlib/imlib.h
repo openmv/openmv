@@ -30,6 +30,11 @@
 #include "imlib_config.h"
 #include "omv_boardconfig.h"
 
+// Enables 38 TensorFlow Lite operators.
+#define IMLIB_TF_DEFAULT        (1)
+// Enables 78 TensofFlow Lite operators.
+#define IMLIB_TF_FULLOPS        (2)
+
 #ifndef M_PI
 #define M_PI                     3.14159265f
 #define M_PI_2                   1.57079632f
