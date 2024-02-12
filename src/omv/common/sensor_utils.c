@@ -1272,19 +1272,22 @@ __weak int sensor_copy_line(void *dma, uint8_t *src, uint8_t *dst) {
     switch (sensor.pixformat) {
         case PIXFORMAT_BAYER:
             #if OMV_CSI_DMA_MEMCPY_ENABLE
-            sensor_dma_memcpy(dma, dst, src, sizeof(uint8_t), sensor.transpose);
-            #else
+            if (!sensor_dma_memcpy(dma, dst, src, sizeof(uint8_t), sensor.transpose)) {
+                break;
+            }
+            #endif
             if (!sensor.transpose) {
                 unaligned_memcpy(dst, src, MAIN_FB()->u);
             } else {
                 copy_transposed_line(dst, src);
             }
-            #endif
             break;
         case PIXFORMAT_GRAYSCALE:
             #if OMV_CSI_DMA_MEMCPY_ENABLE
-            sensor_dma_memcpy(dma, dst, src, sizeof(uint8_t), sensor.transpose);
-            #else
+            if (!sensor_dma_memcpy(dma, dst, src, sizeof(uint8_t), sensor.transpose)) {
+                break;
+            }
+            #endif
             if (sensor.hw_flags.gs_bpp == 1) {
                 // 1BPP GRAYSCALE.
                 if (!sensor.transpose) {
@@ -1300,13 +1303,14 @@ __weak int sensor_copy_line(void *dma, uint8_t *src, uint8_t *dst) {
                     copy_transposed_line(dst, src16);
                 }
             }
-            #endif
             break;
         case PIXFORMAT_RGB565:
         case PIXFORMAT_YUV422:
             #if OMV_CSI_DMA_MEMCPY_ENABLE
-            sensor_dma_memcpy(dma, dst16, src16, sizeof(uint16_t), sensor.transpose);
-            #else
+            if (!sensor_dma_memcpy(dma, dst16, src16, sizeof(uint16_t), sensor.transpose)) {
+                break;
+            }
+            #endif
             if (0) {
             #if !OMV_CSI_HW_SWAP_ENABLE
             } else if ((sensor.pixformat == PIXFORMAT_RGB565 && sensor.hw_flags.rgb_swap)
@@ -1324,7 +1328,6 @@ __weak int sensor_copy_line(void *dma, uint8_t *src, uint8_t *dst) {
                     copy_transposed_line(dst16, src16);
                 }
             }
-            #endif
             break;
         default:
             break;
