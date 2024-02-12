@@ -82,11 +82,10 @@ int sensor_init() {
         return init_ret;
     }
 
-
-    // Configure the DCMI interface.
-    if (sensor_dcmi_config(PIXFORMAT_INVALID) != 0) {
-        // DCMI config failed
-        return SENSOR_ERROR_DCMI_INIT_FAILED;
+    // Configure the CSI interface.
+    if (sensor_config(SENSOR_CONFIG_INIT) != 0) {
+        // CSI config failed
+        return SENSOR_ERROR_CSI_INIT_FAILED;
     }
 
     // Clear fb_enabled flag
@@ -105,33 +104,35 @@ int sensor_init() {
     return 0;
 }
 
-int sensor_dcmi_config(uint32_t pixformat) {
-    uint32_t dcmi_pins[] = {
-        OMV_CSI_D0_PIN,
-        OMV_CSI_D1_PIN,
-        OMV_CSI_D2_PIN,
-        OMV_CSI_D3_PIN,
-        OMV_CSI_D4_PIN,
-        OMV_CSI_D5_PIN,
-        OMV_CSI_D6_PIN,
-        OMV_CSI_D7_PIN,
-        OMV_CSI_VSYNC_PIN,
-        OMV_CSI_HSYNC_PIN,
-        OMV_CSI_PXCLK_PIN,
-    };
+int sensor_config(sensor_config_t config) {
+    if (config == SENSOR_CONFIG_INIT) {
+        uint32_t csi_pins[] = {
+            OMV_CSI_D0_PIN,
+            OMV_CSI_D1_PIN,
+            OMV_CSI_D2_PIN,
+            OMV_CSI_D3_PIN,
+            OMV_CSI_D4_PIN,
+            OMV_CSI_D5_PIN,
+            OMV_CSI_D6_PIN,
+            OMV_CSI_D7_PIN,
+            OMV_CSI_VSYNC_PIN,
+            OMV_CSI_HSYNC_PIN,
+            OMV_CSI_PXCLK_PIN,
+        };
 
-    // Configure DCMI input pins
-    for (int i = 0; i < sizeof(dcmi_pins) / sizeof(dcmi_pins[0]); i++) {
-        nrf_gpio_cfg_input(dcmi_pins[i], NRF_GPIO_PIN_PULLUP);
+        // Configure CSI input pins
+        for (int i = 0; i < sizeof(csi_pins) / sizeof(csi_pins[0]); i++) {
+            nrf_gpio_cfg_input(csi_pins[i], NRF_GPIO_PIN_PULLUP);
+        }
+
+        _vsyncMask = digitalPinToBitMask(OMV_CSI_VSYNC_PIN);
+        _hrefMask = digitalPinToBitMask(OMV_CSI_HSYNC_PIN);
+        _pclkMask = digitalPinToBitMask(OMV_CSI_PXCLK_PIN);
+
+        _vsyncPort = portInputRegister(digitalPinToPort(OMV_CSI_VSYNC_PIN));
+        _hrefPort = portInputRegister(digitalPinToPort(OMV_CSI_HSYNC_PIN));
+        _pclkPort = portInputRegister(digitalPinToPort(OMV_CSI_PXCLK_PIN));
     }
-
-    _vsyncMask = digitalPinToBitMask(OMV_CSI_VSYNC_PIN);
-    _hrefMask = digitalPinToBitMask(OMV_CSI_HSYNC_PIN);
-    _pclkMask = digitalPinToBitMask(OMV_CSI_PXCLK_PIN);
-
-    _vsyncPort = portInputRegister(digitalPinToPort(OMV_CSI_VSYNC_PIN));
-    _hrefPort = portInputRegister(digitalPinToPort(OMV_CSI_HSYNC_PIN));
-    _pclkPort = portInputRegister(digitalPinToPort(OMV_CSI_PXCLK_PIN));
 
     return 0;
 }

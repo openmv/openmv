@@ -457,6 +457,10 @@ int sensor_probe_init(uint32_t bus_id, uint32_t bus_speed) {
     return 0;
 }
 
+__weak int sensor_config(sensor_config_t config) {
+    return 0;
+}
+
 __weak int sensor_get_id() {
     return sensor.chip_id_w;
 }
@@ -599,8 +603,8 @@ __weak int sensor_set_pixformat(pixformat_t pixformat) {
     // Pickout a good buffer count for the user.
     framebuffer_auto_adjust_buffers();
 
-    // Reconfigure the DCMI if needed.
-    return sensor_dcmi_config(pixformat);
+    // Reconfigure the hardware if needed.
+    return sensor_config(SENSOR_CONFIG_PIXFORMAT);
 }
 
 __weak int sensor_set_framesize(framesize_t framesize) {
@@ -643,7 +647,8 @@ __weak int sensor_set_framesize(framesize_t framesize) {
     // Pickout a good buffer count for the user.
     framebuffer_auto_adjust_buffers();
 
-    return 0;
+    // Reconfigure the hardware if needed.
+    return sensor_config(SENSOR_CONFIG_FRAMESIZE);
 }
 
 __weak int sensor_set_framerate(int framerate) {
@@ -752,7 +757,8 @@ __weak int sensor_set_windowing(int x, int y, int w, int h) {
     // Pickout a good buffer count for the user.
     framebuffer_auto_adjust_buffers();
 
-    return 0;
+    // Reconfigure the hardware if needed.
+    return sensor_config(SENSOR_CONFIG_WINDOWING);
 }
 
 __weak int sensor_set_contrast(int level) {
@@ -1347,9 +1353,9 @@ const char *sensor_strerror(int error) {
         "Failed to detect the image sensor or image sensor is detached.",
         "The detected image sensor is not supported.",
         "Failed to initialize the image sensor.",
-        "Failed to initialize the image sensor clock.",
-        "Failed to initialize the image sensor DMA.",
-        "Failed to initialize the image sensor DCMI.",
+        "Failed to initialize the external clock.",
+        "Failed to initialize the CSI DMA.",
+        "Failed to initialize the CSI interface.",
         "An low level I/O error has occurred.",
         "Frame capture has failed.",
         "Frame capture has timed out.",
