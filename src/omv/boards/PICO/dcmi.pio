@@ -57,32 +57,33 @@ PIXEL_LOOP:
 .wrap
 
 % c-sdk {
-int sensor_dcmi_config(uint32_t pixformat)
-{
-    uint offset;
-    pio_sm_config config;
+int sensor_config(sensor_config_t config) {
+    if (config == SENSOR_CONFIG_PIXFORMAT) {
+        uint offset;
+        pio_sm_config config;
 
-    pio_sm_set_enabled(OMV_CSI_PIO, OMV_CSI_SM, false);
-    pio_sm_clear_fifos(OMV_CSI_PIO, OMV_CSI_SM);
+        pio_sm_set_enabled(OMV_CSI_PIO, OMV_CSI_SM, false);
+        pio_sm_clear_fifos(OMV_CSI_PIO, OMV_CSI_SM);
 
-    for(uint i=OMV_CSI_D0_PIN; i<OMV_CSI_D0_PIN+8; i++) {
-        pio_gpio_init(OMV_CSI_PIO, i);
+        for(uint i=OMV_CSI_D0_PIN; i<OMV_CSI_D0_PIN+8; i++) {
+            pio_gpio_init(OMV_CSI_PIO, i);
+        }
+        pio_sm_set_consecutive_pindirs(OMV_CSI_PIO, OMV_CSI_SM, OMV_CSI_D0_PIN, 8, false);
+
+        if (sensor.pixformat == PIXFORMAT_GRAYSCALE) {
+            offset = pio_add_program(OMV_CSI_PIO, &dcmi_odd_byte_program);
+            config = dcmi_odd_byte_program_get_default_config(offset);
+        } else {
+            offset = pio_add_program(OMV_CSI_PIO, &dcmi_default_program);
+            config = dcmi_default_program_get_default_config(offset);
+        }
+
+        sm_config_set_clkdiv(&config, 1);
+        sm_config_set_in_pins(&config, OMV_CSI_D0_PIN);
+        sm_config_set_in_shift(&config, true, true, 32);
+        pio_sm_init(OMV_CSI_PIO, OMV_CSI_SM, offset, &config);
+        pio_sm_set_enabled(OMV_CSI_PIO, OMV_CSI_SM, true);
     }
-    pio_sm_set_consecutive_pindirs(OMV_CSI_PIO, OMV_CSI_SM, OMV_CSI_D0_PIN, 8, false);
-
-    if (pixformat == PIXFORMAT_GRAYSCALE) {
-        offset = pio_add_program(OMV_CSI_PIO, &dcmi_odd_byte_program);
-        config = dcmi_odd_byte_program_get_default_config(offset);
-    } else {
-        offset = pio_add_program(OMV_CSI_PIO, &dcmi_default_program);
-        config = dcmi_default_program_get_default_config(offset);
-    }
-
-    sm_config_set_clkdiv(&config, 1);
-    sm_config_set_in_pins(&config, OMV_CSI_D0_PIN);
-    sm_config_set_in_shift(&config, true, true, 32);
-    pio_sm_init(OMV_CSI_PIO, OMV_CSI_SM, offset, &config);
-    pio_sm_set_enabled(OMV_CSI_PIO, OMV_CSI_SM, true);
     return 0;
 }
 %}

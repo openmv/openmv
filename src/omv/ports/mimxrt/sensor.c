@@ -84,6 +84,12 @@ int sensor_init() {
         return init_ret;
     }
 
+    // Configure the CSI interface.
+    if (sensor_config(SENSOR_CONFIG_INIT) != 0) {
+        // CSI config failed
+        return SENSOR_ERROR_CSI_INIT_FAILED;
+    }
+
     // Set default color palette.
     sensor.color_palette = rainbow_table;
 
@@ -99,40 +105,42 @@ int sensor_init() {
     return 0;
 }
 
-int sensor_dcmi_config(uint32_t pixformat) {
-    CSI_Reset(CSI);
-    NVIC_DisableIRQ(CSI_IRQn);
+int sensor_config(sensor_config_t config) {
+    if (config == SENSOR_CONFIG_INIT) {
+        CSI_Reset(CSI);
+        NVIC_DisableIRQ(CSI_IRQn);
 
-    // CSI_Reset does not zero CR1.
-    CSI_REG_CR1(CSI) = 0;
-    // CSI mode: HSYNC, VSYNC, and PIXCLK signals are used.
-    CSI_REG_CR1(CSI) |= CSI_CR1_GCLK_MODE(1U);
-    // Synchronous FIFO clear.
-    // RXFIFO and STATFIFO are cleared on every SOF.
-    CSI_REG_CR1(CSI) |= CSI_CR1_FCC_MASK;
+        // CSI_Reset does not zero CR1.
+        CSI_REG_CR1(CSI) = 0;
+        // CSI mode: HSYNC, VSYNC, and PIXCLK signals are used.
+        CSI_REG_CR1(CSI) |= CSI_CR1_GCLK_MODE(1U);
+        // Synchronous FIFO clear.
+        // RXFIFO and STATFIFO are cleared on every SOF.
+        CSI_REG_CR1(CSI) |= CSI_CR1_FCC_MASK;
 
-    // Configure VSYNC, HSYNC and PIXCLK signals.
-    CSI_REG_CR1(CSI) |= CSI_CR1_EXT_VSYNC_MASK;
-    CSI_REG_CR1(CSI) |= !sensor.hw_flags.vsync ? CSI_CR1_SOF_POL_MASK    : 0;
-    CSI_REG_CR1(CSI) |= !sensor.hw_flags.hsync ? CSI_CR1_HSYNC_POL_MASK  : 0;
-    CSI_REG_CR1(CSI) |= sensor.hw_flags.pixck ? CSI_CR1_REDGE_MASK      : 0;
+        // Configure VSYNC, HSYNC and PIXCLK signals.
+        CSI_REG_CR1(CSI) |= CSI_CR1_EXT_VSYNC_MASK;
+        CSI_REG_CR1(CSI) |= !sensor.hw_flags.vsync ? CSI_CR1_SOF_POL_MASK    : 0;
+        CSI_REG_CR1(CSI) |= !sensor.hw_flags.hsync ? CSI_CR1_HSYNC_POL_MASK  : 0;
+        CSI_REG_CR1(CSI) |= sensor.hw_flags.pixck ? CSI_CR1_REDGE_MASK      : 0;
 
-    // Stride config: No stride.
-    CSI_REG_FBUF_PARA(CSI) = 0;
-    // Reset frame counter
-    CSI_REG_CR3(CSI) |= CSI_CR3_FRMCNT_RST_MASK;
+        // Stride config: No stride.
+        CSI_REG_FBUF_PARA(CSI) = 0;
+        // Reset frame counter
+        CSI_REG_CR3(CSI) |= CSI_CR3_FRMCNT_RST_MASK;
 
-    // Configure CSI FIFO depth and DMA burst size.
-    CSI_REG_CR2(CSI) |= CSI_CR2_DMA_BURST_TYPE_RFF(3U);
-    CSI_REG_CR3(CSI) |= 7U << CSI_CR3_RxFF_LEVEL_SHIFT;
+        // Configure CSI FIFO depth and DMA burst size.
+        CSI_REG_CR2(CSI) |= CSI_CR2_DMA_BURST_TYPE_RFF(3U);
+        CSI_REG_CR3(CSI) |= 7U << CSI_CR3_RxFF_LEVEL_SHIFT;
 
-    // Configure DMA buffers.
-    CSI_REG_DMASA_FB1(CSI) = (uint32_t) (&_line_buf[OMV_LINE_BUF_SIZE * 0]);
-    CSI_REG_DMASA_FB2(CSI) = (uint32_t) (&_line_buf[OMV_LINE_BUF_SIZE / 2]);
+        // Configure DMA buffers.
+        CSI_REG_DMASA_FB1(CSI) = (uint32_t) (&_line_buf[OMV_LINE_BUF_SIZE * 0]);
+        CSI_REG_DMASA_FB2(CSI) = (uint32_t) (&_line_buf[OMV_LINE_BUF_SIZE / 2]);
 
-    // Write to memory from first completed frame.
-    // DMA CSI addr switch at dma transfer done.
-    CSI_REG_CR18(CSI) |= CSI_CR18_MASK_OPTION(0);
+        // Write to memory from first completed frame.
+        // DMA CSI addr switch at dma transfer done.
+        CSI_REG_CR18(CSI) |= CSI_CR18_MASK_OPTION(0);
+    }
     return 0;
 }
 

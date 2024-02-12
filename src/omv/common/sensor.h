@@ -181,7 +181,7 @@ typedef enum {
     SENSOR_ERROR_ISC_INIT_FAILED       = -5,
     SENSOR_ERROR_TIM_INIT_FAILED       = -6,
     SENSOR_ERROR_DMA_INIT_FAILED       = -7,
-    SENSOR_ERROR_DCMI_INIT_FAILED      = -8,
+    SENSOR_ERROR_CSI_INIT_FAILED       = -8,
     SENSOR_ERROR_IO_ERROR              = -9,
     SENSOR_ERROR_CAPTURE_FAILED        = -10,
     SENSOR_ERROR_CAPTURE_TIMEOUT       = -11,
@@ -196,20 +196,27 @@ typedef enum {
     SENSOR_ERROR_JPEG_OVERFLOW         = -20,
 } sensor_error_t;
 
+typedef enum {
+    SENSOR_CONFIG_INIT      = (1 << 0),
+    SENSOR_CONFIG_FRAMESIZE = (1 << 1),
+    SENSOR_CONFIG_PIXFORMAT = (1 << 2),
+    SENSOR_CONFIG_WINDOWING = (1 << 3),
+} sensor_config_t;
+
 // Bayer patterns.
 // NOTE: These must match the Bayer subformats in imlib.h
 //
-// BGGR matches the bayer pattern of BGBG... etc. coming out of the sensor.
-//                                   GRGR... etc.
+// BGGR matches the bayer pattern of BGBG...
+//                                   GRGR...
 //
-// GBRG matches the bayer pattern of GBGB... etc. coming out of the sensor.
-//                                   RGRG... etc.
+// GBRG matches the bayer pattern of GBGB...
+//                                   RGRG...
 //
-// GRBG matches the bayer pattern of GRGR... etc. coming out of the sensor.
-//                                   BGBG... etc.
+// GRBG matches the bayer pattern of GRGR...
+//                                   BGBG...
 //
-// RGGB matches the bayer pattern of RGRG... etc. coming out of the sensor.
-//                                   GBGB... etc.
+// RGGB matches the bayer pattern of RGRG...
+//                                   GBGB...
 //
 #define SENSOR_HW_FLAGS_BAYER_BGGR    (SUBFORMAT_ID_BGGR)
 #define SENSOR_HW_FLAGS_BAYER_GBRG    (SUBFORMAT_ID_GBRG)
@@ -324,8 +331,9 @@ int sensor_init();
 // Detect and initialize the image sensor.
 int sensor_probe_init(uint32_t bus_id, uint32_t bus_speed);
 
-// Configure DCMI hardware interface.
-int sensor_dcmi_config(uint32_t pixformat);
+// This function is called after a setting that may require reconfiguring
+// the hardware changes, such as window size, frame size, or pixel format.
+int sensor_config(sensor_config_t config);
 
 // Abort frame capture and disable IRQs, DMA etc..
 int sensor_abort(bool fifo_flush, bool in_irq);

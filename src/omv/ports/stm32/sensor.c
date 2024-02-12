@@ -159,9 +159,9 @@ int sensor_init() {
     }
 
     // Configure the DCMI interface.
-    if (sensor_dcmi_config(PIXFORMAT_INVALID) != 0) {
+    if (sensor_config(SENSOR_CONFIG_INIT) != 0) {
         // DCMI config failed
-        return SENSOR_ERROR_DCMI_INIT_FAILED;
+        return SENSOR_ERROR_CSI_INIT_FAILED;
     }
 
     // Clear fb_enabled flag
@@ -177,41 +177,44 @@ int sensor_init() {
     return 0;
 }
 
-int sensor_dcmi_config(uint32_t pixformat) {
-    // VSYNC clock polarity
-    DCMIHandle.Init.VSPolarity = sensor.hw_flags.vsync ? DCMI_VSPOLARITY_HIGH : DCMI_VSPOLARITY_LOW;
-    // HSYNC clock polarity
-    DCMIHandle.Init.HSPolarity = sensor.hw_flags.hsync ? DCMI_HSPOLARITY_HIGH : DCMI_HSPOLARITY_LOW;
-    // PXCLK clock polarity
-    DCMIHandle.Init.PCKPolarity = sensor.hw_flags.pixck ? DCMI_PCKPOLARITY_RISING : DCMI_PCKPOLARITY_FALLING;
+int sensor_config(sensor_config_t config) {
+    if (config == SENSOR_CONFIG_INIT) {
+        // VSYNC clock polarity
+        DCMIHandle.Init.VSPolarity = sensor.hw_flags.vsync ? DCMI_VSPOLARITY_HIGH : DCMI_VSPOLARITY_LOW;
+        // HSYNC clock polarity
+        DCMIHandle.Init.HSPolarity = sensor.hw_flags.hsync ? DCMI_HSPOLARITY_HIGH : DCMI_HSPOLARITY_LOW;
+        // PXCLK clock polarity
+        DCMIHandle.Init.PCKPolarity = sensor.hw_flags.pixck ? DCMI_PCKPOLARITY_RISING : DCMI_PCKPOLARITY_FALLING;
 
-    // Setup capture parameters.
-    DCMIHandle.Init.SynchroMode = DCMI_SYNCHRO_HARDWARE;    // Enable Hardware synchronization
-    DCMIHandle.Init.CaptureRate = DCMI_CR_ALL_FRAME;        // Capture rate all frames
-    DCMIHandle.Init.ExtendedDataMode = DCMI_EXTEND_DATA_8B; // Capture 8 bits on every pixel clock
-    // Set JPEG Mode
-    DCMIHandle.Init.JPEGMode = (pixformat == PIXFORMAT_JPEG) ?
-                               DCMI_JPEG_ENABLE : DCMI_JPEG_DISABLE;
-    #if defined(MCU_SERIES_F7) || defined(MCU_SERIES_H7)
-    DCMIHandle.Init.ByteSelectMode = DCMI_BSM_ALL;          // Capture all received bytes
-    DCMIHandle.Init.ByteSelectStart = DCMI_OEBS_ODD;        // Ignored
-    DCMIHandle.Init.LineSelectMode = DCMI_LSM_ALL;          // Capture all received lines
-    DCMIHandle.Init.LineSelectStart = DCMI_OELS_ODD;        // Ignored
-    #endif
+        // Setup capture parameters.
+        DCMIHandle.Init.SynchroMode = DCMI_SYNCHRO_HARDWARE;    // Enable Hardware synchronization
+        DCMIHandle.Init.CaptureRate = DCMI_CR_ALL_FRAME;        // Capture rate all frames
+        DCMIHandle.Init.ExtendedDataMode = DCMI_EXTEND_DATA_8B; // Capture 8 bits on every pixel clock
+        DCMIHandle.Init.JPEGMode = DCMI_JPEG_DISABLE;
+        #if defined(MCU_SERIES_F7) || defined(MCU_SERIES_H7)
+        DCMIHandle.Init.ByteSelectMode = DCMI_BSM_ALL;          // Capture all received bytes
+        DCMIHandle.Init.ByteSelectStart = DCMI_OEBS_ODD;        // Ignored
+        DCMIHandle.Init.LineSelectMode = DCMI_LSM_ALL;          // Capture all received lines
+        DCMIHandle.Init.LineSelectStart = DCMI_OELS_ODD;        // Ignored
+        #endif
 
-    // Associate the DMA handle to the DCMI handle
-    __HAL_LINKDMA(&DCMIHandle, DMA_Handle, DMAHandle);
+        // Associate the DMA handle to the DCMI handle
+        __HAL_LINKDMA(&DCMIHandle, DMA_Handle, DMAHandle);
 
-    // Initialize the DCMI
-    HAL_DCMI_DeInit(&DCMIHandle);
-    if (HAL_DCMI_Init(&DCMIHandle) != HAL_OK) {
-        // Initialization Error
-        return -1;
+        // Initialize the DCMI
+        HAL_DCMI_DeInit(&DCMIHandle);
+        if (HAL_DCMI_Init(&DCMIHandle) != HAL_OK) {
+            // Initialization Error
+            return -1;
+        }
+
+        // Configure and enable DCMI IRQ Channel
+        NVIC_SetPriority(DCMI_IRQn, IRQ_PRI_DCMI);
+        HAL_NVIC_EnableIRQ(DCMI_IRQn);
+    } else if (config == SENSOR_CONFIG_PIXFORMAT) {
+        DCMI->CR &= ~(DCMI_CR_JPEG_Msk << DCMI_CR_JPEG_Pos);
+        DCMI->CR |= (sensor.pixformat == PIXFORMAT_JPEG) ? DCMI_JPEG_ENABLE : DCMI_JPEG_DISABLE;
     }
-
-    // Configure and enable DCMI IRQ Channel
-    NVIC_SetPriority(DCMI_IRQn, IRQ_PRI_DCMI);
-    HAL_NVIC_EnableIRQ(DCMI_IRQn);
     return 0;
 }
 
@@ -337,7 +340,7 @@ int sensor_shutdown(int enable) {
             omv_gpio_write(OMV_CSI_POWER_PIN, 1);
         }
         #endif
-        ret = sensor_dcmi_config(sensor.pixformat);
+        ret = sensor_config(SENSOR_CONFIG_INIT);
     }
 
     mp_hal_delay_ms(10);
