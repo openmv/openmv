@@ -1365,6 +1365,8 @@ void imlib_awb(image_t *img, uint32_t r_out, uint32_t g_out, uint32_t b_out);
 void imlib_ccm(image_t *img, float *ccm, bool offset);
 void imlib_gamma(image_t *img, float gamma, float scale, float offset);
 // Binary Functions
+void imlib_zero_line_op(int x, int x_end, int y_row, imlib_draw_row_data_t *data);
+void imlib_mask_line_op(int x, int x_end, int y_row, imlib_draw_row_data_t *data);
 void imlib_binary(image_t *out, image_t *img, list_t *thresholds, bool invert, bool zero, image_t *mask);
 void imlib_invert(image_t *img);
 void imlib_b_and(image_t *img, const char *path, image_t *other, int scalar, image_t *mask);
