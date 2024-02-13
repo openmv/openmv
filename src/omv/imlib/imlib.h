@@ -1422,7 +1422,6 @@ void imlib_bilateral_filter(image_t *img,
                             int offset,
                             bool invert,
                             image_t *mask);
-void imlib_cartoon_filter(image_t *img, float seed_threshold, float floating_threshold, image_t *mask);
 // Image Correction
 void imlib_logpolar_int(image_t *dst, image_t *src, rectangle_t *roi, bool linear, bool reverse); // helper/internal
 void imlib_logpolar(image_t *img, bool linear, bool reverse);

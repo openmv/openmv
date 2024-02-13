@@ -2788,29 +2788,6 @@ STATIC mp_obj_t py_image_bilateral(uint n_args, const mp_obj_t *args, mp_map_t *
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_bilateral_obj, 2, py_image_bilateral);
 #endif // IMLIB_ENABLE_BILATERAL
 
-#ifdef IMLIB_ENABLE_CARTOON
-STATIC mp_obj_t py_image_cartoon(uint n_args, const mp_obj_t *args, mp_map_t *kw_args) {
-    image_t *arg_img =
-        py_helper_arg_to_image(args[0], ARG_IMAGE_MUTABLE);
-    float arg_seed_threshold =
-        py_helper_keyword_float(n_args, args, 1, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_seed_threshold), 0.05);
-    PY_ASSERT_TRUE_MSG((0.0f <= arg_seed_threshold) && (arg_seed_threshold <= 1.0f),
-                       "Error: 0.0 <= seed_threshold <= 1.0!");
-    float arg_floating_threshold =
-        py_helper_keyword_float(n_args, args, 2, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_floating_threshold), 0.05);
-    PY_ASSERT_TRUE_MSG((0.0f <= arg_floating_threshold) && (arg_floating_threshold <= 1.0f),
-                       "Error: 0.0 <= floating_threshold <= 1.0!");
-    image_t *arg_msk =
-        py_helper_keyword_to_image(n_args, args, 3, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_mask), NULL);
-
-    fb_alloc_mark();
-    imlib_cartoon_filter(arg_img, arg_seed_threshold, arg_floating_threshold, arg_msk);
-    fb_alloc_free_till_mark();
-    return args[0];
-}
-STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_cartoon_obj, 1, py_image_cartoon);
-#endif // IMLIB_ENABLE_CARTOON
-
 ////////////////////
 // Geometric Methods
 ////////////////////
@@ -6636,11 +6613,6 @@ static const mp_rom_map_elem_t locals_dict_table[] = {
     {MP_ROM_QSTR(MP_QSTR_bilateral),           MP_ROM_PTR(&py_image_bilateral_obj)},
     #else
     {MP_ROM_QSTR(MP_QSTR_bilateral),           MP_ROM_PTR(&py_func_unavailable_obj)},
-    #endif
-    #ifdef IMLIB_ENABLE_CARTOON
-    {MP_ROM_QSTR(MP_QSTR_cartoon),             MP_ROM_PTR(&py_image_cartoon_obj)},
-    #else
-    {MP_ROM_QSTR(MP_QSTR_cartoon),             MP_ROM_PTR(&py_func_unavailable_obj)},
     #endif
     /* Geometric Methods */
     #ifdef IMLIB_ENABLE_LINPOLAR

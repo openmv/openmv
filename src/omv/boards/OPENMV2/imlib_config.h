@@ -62,9 +62,6 @@
 // Enable bilateral()
 //#define IMLIB_ENABLE_BILATERAL
 
-// Enable cartoon()
-//#define IMLIB_ENABLE_CARTOON
-
 // Enable linpolar()
 //#define IMLIB_ENABLE_LINPOLAR
 
