@@ -888,12 +888,12 @@ static void imlib_erode_dilate(image_t *img, int ksize, int threshold, int e_or_
 }
 
 void imlib_erode(image_t *img, int ksize, int threshold, image_t *mask) {
-    // Threshold should be equal to (((ksize*2)+1)*((ksize*2)+1))-1
-    // for normal operation. E.g. for ksize==3 -> threshold==8
+    // Threshold should be equal to 0
+    // for normal operation. E.g. for ksize==3 -> threshold==0
     // Basically you're adjusting the number of data that
     // must be set in the kernel (besides the center) for the output to be 1.
     // Erode normally requires all data to be 1.
-    imlib_erode_dilate(img, ksize, threshold, 0, mask);
+    imlib_erode_dilate(img, ksize, imlib_ksize_to_n(ksize) - 1 - threshold, 0, mask);
 }
 
 void imlib_dilate(image_t *img, int ksize, int threshold, image_t *mask) {
@@ -906,13 +906,13 @@ void imlib_dilate(image_t *img, int ksize, int threshold, image_t *mask) {
 }
 
 void imlib_open(image_t *img, int ksize, int threshold, image_t *mask) {
-    imlib_erode(img, ksize, imlib_ksize_to_n(ksize) - 1 - threshold, mask);
-    imlib_dilate(img, ksize, 0 + threshold, mask);
+    imlib_erode(img, ksize, threshold, mask);
+    imlib_dilate(img, ksize, threshold, mask);
 }
 
 void imlib_close(image_t *img, int ksize, int threshold, image_t *mask) {
-    imlib_dilate(img, ksize, 0 + threshold, mask);
-    imlib_erode(img, ksize, imlib_ksize_to_n(ksize) - 1 - threshold, mask);
+    imlib_dilate(img, ksize, threshold, mask);
+    imlib_erode(img, ksize, threshold, mask);
 }
 
 void imlib_top_hat(image_t *img, int ksize, int threshold, image_t *mask) {
