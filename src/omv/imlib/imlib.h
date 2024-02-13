@@ -1369,10 +1369,13 @@ void imlib_gamma(image_t *img, float gamma, float scale, float offset);
 // Binary Functions
 void imlib_binary(image_t *out, image_t *img, list_t *thresholds, bool invert, bool zero, image_t *mask);
 void imlib_invert(image_t *img);
+void imlib_b_and_line_op(image_t *img, int line, void *other, void *data, bool vflipped);
 void imlib_b_and(image_t *img, const char *path, image_t *other, int scalar, image_t *mask);
 void imlib_b_nand(image_t *img, const char *path, image_t *other, int scalar, image_t *mask);
+void imlib_b_or_line_op(image_t *img, int line, void *other, void *data, bool vflipped);
 void imlib_b_or(image_t *img, const char *path, image_t *other, int scalar, image_t *mask);
 void imlib_b_nor(image_t *img, const char *path, image_t *other, int scalar, image_t *mask);
+void imlib_b_xor_line_op(image_t *img, int line, void *other, void *data, bool vflipped);
 void imlib_b_xor(image_t *img, const char *path, image_t *other, int scalar, image_t *mask);
 void imlib_b_xnor(image_t *img, const char *path, image_t *other, int scalar, image_t *mask);
 void imlib_erode(image_t *img, int ksize, int threshold, image_t *mask);

@@ -268,7 +268,7 @@ void imlib_invert(image_t *img) {
     }
 }
 
-static void imlib_b_and_line_op(image_t *img, int line, void *other, void *data, bool vflipped) {
+void imlib_b_and_line_op(image_t *img, int line, void *other, void *data, bool vflipped) {
     image_t *mask = (image_t *) data;
 
     switch (img->pixfmt) {
@@ -404,7 +404,7 @@ void imlib_b_nand(image_t *img, const char *path, image_t *other, int scalar, im
     imlib_image_operation(img, path, other, scalar, imlib_b_nand_line_op, mask);
 }
 
-static void imlib_b_or_line_op(image_t *img, int line, void *other, void *data, bool vflipped) {
+void imlib_b_or_line_op(image_t *img, int line, void *other, void *data, bool vflipped) {
     image_t *mask = (image_t *) data;
 
     switch (img->pixfmt) {
@@ -540,7 +540,7 @@ void imlib_b_nor(image_t *img, const char *path, image_t *other, int scalar, ima
     imlib_image_operation(img, path, other, scalar, imlib_b_nor_line_op,  mask);
 }
 
-static void imlib_b_xor_line_op(image_t *img, int line, void *other, void *data, bool vflipped) {
+void imlib_b_xor_line_op(image_t *img, int line, void *other, void *data, bool vflipped) {
     image_t *mask = (image_t *) data;
 
     switch (img->pixfmt) {
