@@ -2123,7 +2123,7 @@ STATIC mp_obj_t py_image_erode(uint n_args, const mp_obj_t *args, mp_map_t *kw_a
         py_helper_arg_to_ksize(args[1]);
     int arg_threshold =
         py_helper_keyword_int(n_args, args, 2, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_threshold),
-                              py_helper_ksize_to_n(arg_ksize) - 1);
+                              imlib_ksize_to_n(arg_ksize) - 1);
     image_t *arg_msk =
         py_helper_keyword_to_image(n_args, args, 3, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_mask), NULL);
 
@@ -2607,7 +2607,7 @@ STATIC mp_obj_t py_image_morph(uint n_args, const mp_obj_t *args, mp_map_t *kw_a
     int arg_ksize =
         py_helper_arg_to_ksize(args[1]);
 
-    int n = py_helper_ksize_to_n(arg_ksize);
+    int n = imlib_ksize_to_n(arg_ksize);
 
     mp_obj_t *krn;
     mp_obj_get_array_fixed_n(args[2], n, &krn);

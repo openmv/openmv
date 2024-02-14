@@ -906,13 +906,13 @@ void imlib_dilate(image_t *img, int ksize, int threshold, image_t *mask) {
 }
 
 void imlib_open(image_t *img, int ksize, int threshold, image_t *mask) {
-    imlib_erode(img, ksize, (((ksize * 2) + 1) * ((ksize * 2) + 1)) - 1 - threshold, mask);
+    imlib_erode(img, ksize, imlib_ksize_to_n(ksize) - 1 - threshold, mask);
     imlib_dilate(img, ksize, 0 + threshold, mask);
 }
 
 void imlib_close(image_t *img, int ksize, int threshold, image_t *mask) {
     imlib_dilate(img, ksize, 0 + threshold, mask);
-    imlib_erode(img, ksize, (((ksize * 2) + 1) * ((ksize * 2) + 1)) - 1 - threshold, mask);
+    imlib_erode(img, ksize, imlib_ksize_to_n(ksize) - 1 - threshold, mask);
 }
 
 void imlib_top_hat(image_t *img, int ksize, int threshold, image_t *mask) {
