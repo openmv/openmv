@@ -260,11 +260,13 @@ uint32_t sensor_get_xclk_frequency() {
 
 int sensor_set_xclk_frequency(uint32_t frequency) {
     #if (OMV_CSI_XCLK_SOURCE == XCLK_SOURCE_TIM)
-    if (frequency == 0 && TIMHandle.Init.Period) {
-        HAL_TIM_PWM_Stop(&TIMHandle, OMV_CSI_TIM_CHANNEL);
-        HAL_TIM_PWM_DeInit(&TIMHandle);
-        memset(&TIMHandle, 0, sizeof(TIMHandle));
-        TIMHandle.Instance = OMV_CSI_TIM;
+    if (frequency == 0) {
+        if (TIMHandle.Init.Period) {
+            HAL_TIM_PWM_Stop(&TIMHandle, OMV_CSI_TIM_CHANNEL);
+            HAL_TIM_PWM_DeInit(&TIMHandle);
+            memset(&TIMHandle, 0, sizeof(TIMHandle));
+            TIMHandle.Instance = OMV_CSI_TIM;
+        }
         return 0;
     }
 
