@@ -72,11 +72,8 @@ typedef struct _py_display_p_t {
                    float x_scale, float y_scale, rectangle_t *roi, int rgb_channel, int alpha,
                    const uint16_t *color_palette, const uint8_t *alpha_palette, image_hint_t hint);
     void (*set_backlight) (py_display_obj_t *self, uint32_t intensity);
-    #ifdef OMV_DSI_DISPLAY_CONTROLLER
-    // To be implemented by MIPI DSI controllers.
-    int (*dsi_write) (py_display_obj_t *self, uint8_t cmd, uint8_t *args, size_t n_args, bool dcs);
-    int (*dsi_read) (py_display_obj_t *self, uint8_t cmd, uint8_t *args, size_t n_args, uint8_t *buf, size_t len, bool dcs);
-    #endif
+    int (*bus_write) (py_display_obj_t *self, uint8_t cmd, uint8_t *args, size_t n_args, bool dcs);
+    int (*bus_read) (py_display_obj_t *self, uint8_t cmd, uint8_t *args, size_t n_args, uint8_t *buf, size_t len, bool dcs);
 } py_display_p_t;
 
 extern const mp_obj_type_t py_spi_display_type;

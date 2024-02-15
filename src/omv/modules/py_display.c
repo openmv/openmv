@@ -177,8 +177,7 @@ STATIC mp_obj_t py_display_write(uint n_args, const mp_obj_t *pos_args, mp_map_t
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_display_write_obj, 2, py_display_write);
 
-#ifdef OMV_DSI_DISPLAY_CONTROLLER
-STATIC mp_obj_t py_display_dsi_write(uint n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
+STATIC mp_obj_t py_display_bus_write(uint n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
     enum { ARG_cmd, ARG_args, ARG_dcs };
     static const mp_arg_t allowed_args[] = {
         { MP_QSTR_cmd,  MP_ARG_INT | MP_ARG_REQUIRED },
@@ -192,23 +191,23 @@ STATIC mp_obj_t py_display_dsi_write(uint n_args, const mp_obj_t *pos_args, mp_m
     mp_arg_parse_all(n_args - 1, pos_args + 1, kw_args, MP_ARRAY_SIZE(allowed_args), allowed_args, args);
 
     py_display_p_t *display_p = (py_display_p_t *) MP_OBJ_TYPE_GET_SLOT(self->base.type, protocol);
-    if (display_p->dsi_write == NULL) {
-        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Expected a DSI display controller"));
+    if (display_p->bus_write == NULL) {
+        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Expected a display controller"));
     } else if (args[ARG_args].u_obj == mp_const_none) {
-        display_p->dsi_write(self, args[ARG_cmd].u_int, NULL, 0, args[ARG_dcs].u_bool);
+        display_p->bus_write(self, args[ARG_cmd].u_int, NULL, 0, args[ARG_dcs].u_bool);
     } else if (mp_obj_is_int(args[ARG_args].u_obj)) {
         uint8_t arg = mp_obj_get_int(args[ARG_args].u_obj);
-        display_p->dsi_write(self, args[ARG_cmd].u_int, &arg, 1, args[ARG_dcs].u_bool);
+        display_p->bus_write(self, args[ARG_cmd].u_int, &arg, 1, args[ARG_dcs].u_bool);
     } else {
         mp_buffer_info_t rbuf;
         mp_get_buffer_raise(args[ARG_args].u_obj, &rbuf, MP_BUFFER_READ);
-        display_p->dsi_write(self, args[ARG_cmd].u_int, rbuf.buf, rbuf.len, args[ARG_dcs].u_bool);
+        display_p->bus_write(self, args[ARG_cmd].u_int, rbuf.buf, rbuf.len, args[ARG_dcs].u_bool);
     }
     return mp_const_none;
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_display_dsi_write_obj, 1, py_display_dsi_write);
+STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_display_bus_write_obj, 1, py_display_bus_write);
 
-STATIC mp_obj_t py_display_dsi_read(uint n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
+STATIC mp_obj_t py_display_bus_read(uint n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
     enum { ARG_cmd, ARG_len, ARG_args, ARG_dcs };
     static const mp_arg_t allowed_args[] = {
         { MP_QSTR_cmd,  MP_ARG_INT | MP_ARG_REQUIRED },
@@ -225,23 +224,22 @@ STATIC mp_obj_t py_display_dsi_read(uint n_args, const mp_obj_t *pos_args, mp_ma
     py_display_p_t *display_p = (py_display_p_t *) MP_OBJ_TYPE_GET_SLOT(self->base.type, protocol);
     mp_obj_array_t *wbuf = MP_OBJ_TO_PTR(mp_obj_new_bytearray_by_ref(args[ARG_len].u_int,
                                                                      m_new(byte, args[ARG_len].u_int)));
-    if (display_p->dsi_read == NULL) {
-        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Expected a DSI display controller"));
+    if (display_p->bus_read == NULL) {
+        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Expected a display controller"));
     } else if (args[ARG_args].u_obj == mp_const_none) {
-        display_p->dsi_read(self, args[ARG_cmd].u_int, NULL, 0, wbuf->items, wbuf->len, args[ARG_dcs].u_bool);
+        display_p->bus_read(self, args[ARG_cmd].u_int, NULL, 0, wbuf->items, wbuf->len, args[ARG_dcs].u_bool);
     } else if (mp_obj_is_int(args[ARG_args].u_obj)) {
         uint8_t arg = mp_obj_get_int(args[ARG_args].u_obj);
-        display_p->dsi_read(self, args[ARG_cmd].u_int, &arg, 1, wbuf->items, wbuf->len, args[ARG_dcs].u_bool);
+        display_p->bus_read(self, args[ARG_cmd].u_int, &arg, 1, wbuf->items, wbuf->len, args[ARG_dcs].u_bool);
     } else {
         mp_buffer_info_t rbuf;
         mp_get_buffer_raise(args[ARG_args].u_obj, &rbuf, MP_BUFFER_READ);
-        display_p->dsi_read(self, args[ARG_cmd].u_int, rbuf.buf, rbuf.len,
+        display_p->bus_read(self, args[ARG_cmd].u_int, rbuf.buf, rbuf.len,
                             wbuf->items, wbuf->len, args[ARG_dcs].u_bool);
     }
     return MP_OBJ_FROM_PTR(wbuf);
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_display_dsi_read_obj, 1, py_display_dsi_read);
-#endif
+STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_display_bus_read_obj, 1, py_display_bus_read);
 
 STATIC const mp_rom_map_elem_t py_display_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR___name__),            MP_ROM_QSTR(MP_QSTR_display)              },
@@ -256,10 +254,8 @@ STATIC const mp_rom_map_elem_t py_display_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_clear),               MP_ROM_PTR(&py_display_clear_obj)         },
     { MP_ROM_QSTR(MP_QSTR_backlight),           MP_ROM_PTR(&py_display_backlight_obj)     },
     { MP_ROM_QSTR(MP_QSTR_write),               MP_ROM_PTR(&py_display_write_obj)         },
-    #ifdef OMV_DSI_DISPLAY_CONTROLLER
-    { MP_ROM_QSTR(MP_QSTR_dsi_write),           MP_ROM_PTR(&py_display_dsi_write_obj)     },
-    { MP_ROM_QSTR(MP_QSTR_dsi_read),            MP_ROM_PTR(&py_display_dsi_read_obj)      },
-    #endif
+    { MP_ROM_QSTR(MP_QSTR_bus_write),           MP_ROM_PTR(&py_display_bus_write_obj)     },
+    { MP_ROM_QSTR(MP_QSTR_bus_read),            MP_ROM_PTR(&py_display_bus_read_obj)      },
 };
 MP_DEFINE_CONST_DICT(py_display_locals_dict, py_display_locals_dict_table);
 
