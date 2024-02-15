@@ -185,11 +185,17 @@ static int sensor_detect() {
                 return slv_addr;
             #endif // (OMV_OV2640_ENABLE == 1)
 
-            #if (OMV_OV5640_ENABLE == 1)
-            case OV5640_SLV_ADDR:
-                omv_i2c_readb2(&sensor.i2c_bus, slv_addr, OV5640_CHIP_ID, &sensor.chip_id);
+            #if (OMV_OV5640_ENABLE == 1) || (OMV_GC2145_ENABLE == 1)
+            // OV5640 and GC2145 share the same I2C address
+            case OV5640_SLV_ADDR:   // Or GC2145
+                // Try to read GC2145 chip ID first
+                omv_i2c_readb(&sensor.i2c_bus, slv_addr, GC_CHIP_ID, &sensor.chip_id);
+                if (sensor.chip_id != GC_CHIP_ID) {
+                    // If it fails, try reading OV5640 chip ID.
+                    omv_i2c_readb2(&sensor.i2c_bus, slv_addr, OV5640_CHIP_ID, &sensor.chip_id);
+                }
                 return slv_addr;
-            #endif // (OMV_OV5640_ENABLE == 1)
+            #endif // (OMV_OV5640_ENABLE == 1) || (OMV_GC2145_ENABLE == 1)
 
             #if (OMV_OV7725_ENABLE == 1) || (OMV_OV7670_ENABLE == 1) || (OMV_OV7690_ENABLE == 1)
             case OV7725_SLV_ADDR: // Or OV7690 or OV7670.
@@ -220,12 +226,6 @@ static int sensor_detect() {
                 omv_i2c_readb2(&sensor.i2c_bus, slv_addr, HIMAX_CHIP_ID, &sensor.chip_id);
                 return slv_addr;
             #endif // (OMV_HM01B0_ENABLE == 1) || (OMV_HM0360_ENABLE == 1)
-
-            #if (OMV_GC2145_ENABLE == 1)
-            case GC2145_SLV_ADDR:
-                omv_i2c_readb(&sensor.i2c_bus, slv_addr, GC_CHIP_ID, &sensor.chip_id);
-                return slv_addr;
-            #endif //(OMV_GC2145_ENABLE == 1)
 
             #if (OMV_FROGEYE2020_ENABLE == 1)
             case FROGEYE2020_SLV_ADDR:
