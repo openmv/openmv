@@ -273,7 +273,7 @@ int sensor_set_xclk_frequency(uint32_t frequency) {
 
     // Find highest possible frequency under requested.
     int period = fast_ceilf(tclk / ((float) frequency)) - 1;
-    int pulse = period / 2;
+    int pulse = (period + 1) / 2;
 
     if (TIMHandle.Init.Period && (TIMHandle.Init.Period != period)) {
         // __HAL_TIM_SET_AUTORELOAD sets TIMHandle.Init.Period...
