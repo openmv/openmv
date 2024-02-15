@@ -29,9 +29,9 @@
 #define ARRAY_SIZE(a)            (sizeof(a) / sizeof((a)[0]))
 
 sensor_t sensor = {};
-static TIM_HandleTypeDef TIMHandle = {.Instance = OMV_CSI_TIM};
-static DMA_HandleTypeDef DMAHandle = {.Instance = DMA2_Stream1};
-static DCMI_HandleTypeDef DCMIHandle = {.Instance = DCMI};
+static TIM_HandleTypeDef TIMHandle = {};
+static DMA_HandleTypeDef DMAHandle = {};
+static DCMI_HandleTypeDef DCMIHandle = {};
 #if defined(OMV_MDMA_CHANNEL_DCMI_0)
 static MDMA_HandleTypeDef DCMI_MDMA_Handle0;
 static MDMA_HandleTypeDef DCMI_MDMA_Handle1;
@@ -57,6 +57,7 @@ void sensor_mdma_irq_handler(void) {
 
 static int sensor_dma_config() {
     // DMA Stream configuration
+    DMAHandle.Instance = DMA2_Stream1;
     #if defined(MCU_SERIES_H7)
     DMAHandle.Init.Request = DMA_REQUEST_DCMI;                      /* DMA Channel                      */
     #else
@@ -179,6 +180,7 @@ int sensor_init() {
 
 int sensor_config(sensor_config_t config) {
     if (config == SENSOR_CONFIG_INIT) {
+        DCMIHandle.Instance = DCMI;
         // VSYNC clock polarity
         DCMIHandle.Init.VSPolarity = sensor.hw_flags.vsync ? DCMI_VSPOLARITY_HIGH : DCMI_VSPOLARITY_LOW;
         // HSYNC clock polarity
@@ -260,20 +262,23 @@ uint32_t sensor_get_xclk_frequency() {
 
 int sensor_set_xclk_frequency(uint32_t frequency) {
     #if (OMV_CSI_XCLK_SOURCE == XCLK_SOURCE_TIM)
-    if (frequency == 0 && TIMHandle.Init.Period) {
-        HAL_TIM_PWM_Stop(&TIMHandle, OMV_CSI_TIM_CHANNEL);
-        HAL_TIM_PWM_DeInit(&TIMHandle);
-        memset(&TIMHandle, 0, sizeof(TIMHandle));
-        TIMHandle.Instance = OMV_CSI_TIM;
+    if (frequency == 0) {
+        if (TIMHandle.Init.Period) {
+            HAL_TIM_PWM_Stop(&TIMHandle, OMV_CSI_TIM_CHANNEL);
+            HAL_TIM_PWM_DeInit(&TIMHandle);
+            memset(&TIMHandle, 0, sizeof(TIMHandle));
+        }
         return 0;
     }
+
+    TIMHandle.Instance = OMV_CSI_TIM;
 
     // TCLK (PCLK * 2)
     int tclk = OMV_CSI_TIM_PCLK_FREQ() * 2;
 
     // Find highest possible frequency under requested.
     int period = fast_ceilf(tclk / ((float) frequency)) - 1;
-    int pulse = period / 2;
+    int pulse = (period + 1) / 2;
 
     if (TIMHandle.Init.Period && (TIMHandle.Init.Period != period)) {
         // __HAL_TIM_SET_AUTORELOAD sets TIMHandle.Init.Period...
