@@ -73,13 +73,18 @@ static void spi_switch_mode(py_display_obj_t *self, int bits, bool dma) {
     omv_spi_init(&self->spi_bus, &spi_config);
 }
 
-static void spi_display_command(py_display_obj_t *self, uint8_t cmd, uint8_t arg) {
+static int spi_write(py_display_obj_t *self, uint8_t cmd, uint8_t *args, size_t n_args, bool dcs) {
     omv_gpio_write(OMV_SPI_DISPLAY_RS_PIN, 0);
     spi_transmit(self, (uint8_t []) { cmd }, 1);
     omv_gpio_write(OMV_SPI_DISPLAY_RS_PIN, 1);
-    if (arg) {
-        spi_transmit(self, (uint8_t []) { arg }, 1);
+    if (n_args) {
+        spi_transmit(self, args, n_args);
     }
+    return 0;
+}
+
+static void spi_display_command(py_display_obj_t *self, uint8_t cmd, uint8_t arg) {
+    spi_write(self, cmd, &arg, (arg > 0) ? 1 : 0, false);
 }
 
 static void spi_display_callback(omv_spi_t *spi, void *userdata, void *buf) {
@@ -308,7 +313,10 @@ static void spi_display_deinit(py_display_obj_t *self) {
 }
 
 mp_obj_t spi_display_make_new(const mp_obj_type_t *type, size_t n_args, size_t n_kw, const mp_obj_t *all_args) {
-    enum { ARG_width, ARG_height, ARG_refresh, ARG_bgr, ARG_byte_swap, ARG_triple_buffer, ARG_backlight };
+    enum {
+        ARG_width, ARG_height, ARG_refresh, ARG_bgr, ARG_byte_swap, ARG_triple_buffer,
+        ARG_controller, ARG_backlight
+    };
     static const mp_arg_t allowed_args[] = {
         { MP_QSTR_width,         MP_ARG_INT,  {.u_int = 128  } },
         { MP_QSTR_height,        MP_ARG_INT,  {.u_int = 160  } },
@@ -316,6 +324,7 @@ mp_obj_t spi_display_make_new(const mp_obj_type_t *type, size_t n_args, size_t n
         { MP_QSTR_bgr,           MP_ARG_BOOL, {.u_bool = false} },
         { MP_QSTR_byte_swap,     MP_ARG_BOOL, {.u_bool = false} },
         { MP_QSTR_triple_buffer, MP_ARG_BOOL, {.u_bool = LCD_TRIPLE_BUFFER_DEFAULT} },
+        { MP_QSTR_controller,    MP_ARG_OBJ | MP_ARG_KW_ONLY, {.u_rom_obj = MP_ROM_NONE} },
         { MP_QSTR_backlight,     MP_ARG_OBJ | MP_ARG_KW_ONLY, {.u_rom_obj = MP_ROM_NONE} },
     };
 
@@ -343,6 +352,7 @@ mp_obj_t spi_display_make_new(const mp_obj_type_t *type, size_t n_args, size_t n
     self->triple_buffer = args[ARG_triple_buffer].u_bool;
     self->bgr = args[ARG_bgr].u_bool;
     self->byte_swap = args[ARG_byte_swap].u_bool;
+    self->controller = args[ARG_controller].u_obj;
     self->bl_controller = args[ARG_backlight].u_obj;
 
     omv_spi_config_t spi_config;
@@ -367,13 +377,23 @@ mp_obj_t spi_display_make_new(const mp_obj_type_t *type, size_t n_args, size_t n
     omv_gpio_write(OMV_SPI_DISPLAY_RST_PIN, 1);
     mp_hal_delay_ms(100);
 
-    // Sleep out
-    spi_display_command(self, LCD_COMMAND_SLPOUT, 0);
-    mp_hal_delay_ms(120);
-    // Memory data access control
-    spi_display_command(self, LCD_COMMAND_MADCTL, self->bgr ? 0xC8 : 0xC0);
-    // Interface pixel format
-    spi_display_command(self, LCD_COMMAND_COLMOD, 0x05);
+    // Init the display controller.
+    if (self->controller != mp_const_none) {
+        mp_obj_t dest[3];
+        mp_load_method_maybe(self->controller, MP_QSTR_init, dest);
+        if (dest[0] != MP_OBJ_NULL) {
+            dest[2] = MP_OBJ_FROM_PTR(self);
+            mp_call_method_n_kw(1, 0, dest);
+        }
+    } else {
+        // Sleep out
+        spi_display_command(self, LCD_COMMAND_SLPOUT, 0);
+        mp_hal_delay_ms(120);
+        // Memory data access control
+        spi_display_command(self, LCD_COMMAND_MADCTL, self->bgr ? 0xC8 : 0xC0);
+        // Interface pixel format
+        spi_display_command(self, LCD_COMMAND_COLMOD, 0x05);
+    }
 
     if (self->triple_buffer) {
         fb_alloc_mark();
@@ -394,6 +414,7 @@ STATIC const py_display_p_t py_display_p = {
     #ifdef OMV_SPI_DISPLAY_BL_PIN
     .set_backlight = spi_display_set_backlight,
     #endif
+    .bus_write = spi_write,
 };
 
 MP_DEFINE_CONST_OBJ_TYPE(
