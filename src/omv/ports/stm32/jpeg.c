@@ -132,6 +132,10 @@ bool jpeg_compress(image_t *src, image_t *dst, int quality, bool realloc) {
             mcu_size = JPEG_444_YCBCR_MCU_SIZE;
             JPEG_Info.ColorSpace = JPEG_YCBCR_COLORSPACE;
             JPEG_Info.ChromaSubsampling = JPEG_444_SUBSAMPLING;
+            if (quality < 60) {
+                mcu_size = JPEG_422_YCBCR_MCU_SIZE;
+                JPEG_Info.ChromaSubsampling = JPEG_422_SUBSAMPLING;
+            }
             break;
         default:
             break;
@@ -141,7 +145,8 @@ bool jpeg_compress(image_t *src, image_t *dst, int quality, bool realloc) {
         HAL_JPEG_ConfigEncoding(&JPEG_state.jpeg_descr, &JPEG_Info);
     }
 
-    int src_w_mcus = (src->w + JPEG_MCU_W - 1) / JPEG_MCU_W;
+    int mcu_w = (JPEG_Info.ChromaSubsampling == JPEG_444_SUBSAMPLING) ? JPEG_MCU_W : (JPEG_MCU_W * 2);
+    int src_w_mcus = (src->w + mcu_w - 1) / mcu_w;
     int src_w_mcus_bytes = src_w_mcus * mcu_size;
     int src_w_mcus_bytes_2 = src_w_mcus_bytes * 2;
 
@@ -195,14 +200,89 @@ bool jpeg_compress(image_t *src, image_t *dst, int quality, bool realloc) {
         uint8_t *mcu_row_buffer_ptr = mcu_row_buffer + (src_w_mcus_bytes * ((y_offset / JPEG_MCU_H) % 2));
         int dy = IM_MIN(JPEG_MCU_H, src->h - y_offset);
 
-        for (int x_offset = 0; x_offset < src->w; x_offset += JPEG_MCU_W) {
-            int8_t *Y0 = (int8_t *) (mcu_row_buffer_ptr + (mcu_size * (x_offset / JPEG_MCU_W)));
-            int8_t *CB = Y0 + JPEG_444_GS_MCU_SIZE;
-            int8_t *CR = CB + JPEG_444_GS_MCU_SIZE;
-            int dx = IM_MIN(JPEG_MCU_W, src->w - x_offset);
+        if (JPEG_Info.ChromaSubsampling == JPEG_444_SUBSAMPLING) {
+            for (int x_offset = 0; x_offset < src->w; x_offset += JPEG_MCU_W) {
+                int8_t *Y0 = (int8_t *) (mcu_row_buffer_ptr + (mcu_size * (x_offset / JPEG_MCU_W)));
+                int8_t *CB = Y0 + JPEG_444_GS_MCU_SIZE;
+                int8_t *CR = CB + JPEG_444_GS_MCU_SIZE;
+                int dx = IM_MIN(JPEG_MCU_W, src->w - x_offset);
 
-            // Copy 8x8 MCUs.
-            jpeg_get_mcu(src, x_offset, y_offset, dx, dy, Y0, CB, CR);
+                // Copy 8x8 MCUs.
+                jpeg_get_mcu(src, x_offset, y_offset, dx, dy, Y0, CB, CR);
+            }
+        } else if (JPEG_Info.ChromaSubsampling == JPEG_422_SUBSAMPLING) {
+            // color only
+            int8_t CB[JPEG_444_GS_MCU_SIZE * 2];
+            int8_t CR[JPEG_444_GS_MCU_SIZE * 2];
+
+            for (int x_offset = 0; x_offset < src->w; ) {
+                int8_t *Y0 = (int8_t *) (mcu_row_buffer_ptr + (mcu_size * (x_offset / (JPEG_MCU_W * 2))));
+                int8_t *Y1 = Y0 + JPEG_444_GS_MCU_SIZE;
+                int8_t *CB_avg = Y1 + JPEG_444_GS_MCU_SIZE;
+                int8_t *CR_avg = CB_avg + JPEG_444_GS_MCU_SIZE;
+
+                for (int i = 0; i < (JPEG_444_GS_MCU_SIZE * 2);
+                     i += JPEG_444_GS_MCU_SIZE, x_offset += JPEG_MCU_W) {
+                    int dx = IM_MIN(JPEG_MCU_W, src->w - x_offset);
+
+                    if (dx > 0) {
+                        // Copy 8x8 MCUs.
+                        jpeg_get_mcu(src, x_offset, y_offset, dx, dy, Y0 + i, CB + i, CR + i);
+                    } else {
+                        memset(Y0 + i, 0, JPEG_444_GS_MCU_SIZE);
+                        memset(CB + i, 0, JPEG_444_GS_MCU_SIZE);
+                        memset(CR + i, 0, JPEG_444_GS_MCU_SIZE);
+                    }
+                }
+
+                // horizontal subsampling of U & V
+                uint32_t mask = 0x80808080;
+                uint32_t *CBp0 = (uint32_t *) CB;
+                uint32_t *CRp0 = (uint32_t *) CR;
+                uint32_t *CBp1 = (uint32_t *) (CB + JPEG_444_GS_MCU_SIZE);
+                uint32_t *CRp1 = (uint32_t *) (CR + JPEG_444_GS_MCU_SIZE);
+                for (int j = 0; j < JPEG_444_GS_MCU_SIZE; j += JPEG_MCU_W) {
+                    uint32_t CBp0_3210 = *CBp0++ ^ mask;
+                    uint32_t CBp0_avg_32_10 = __SHADD8(CBp0_3210, __UXTB16_RORn(CBp0_3210, 8)) ^ mask;
+                    CB_avg[j] = CBp0_avg_32_10;
+                    CB_avg[j + 1] = CBp0_avg_32_10 >> 16;
+
+                    uint32_t CBp0_7654 = *CBp0++ ^ mask;
+                    uint32_t CBp0_avg_76_54 = __SHADD8(CBp0_7654, __UXTB16_RORn(CBp0_7654, 8)) ^ mask;
+                    CB_avg[j + 2] = CBp0_avg_76_54;
+                    CB_avg[j + 3] = CBp0_avg_76_54 >> 16;
+
+                    uint32_t CBp1_3210 = *CBp1++ ^ mask;
+                    uint32_t CBp1_avg_32_10 = __SHADD8(CBp1_3210, __UXTB16_RORn(CBp1_3210, 8)) ^ mask;
+                    CB_avg[j + 4] = CBp1_avg_32_10;
+                    CB_avg[j + 5] = CBp1_avg_32_10 >> 16;
+
+                    uint32_t CBp1_7654 = *CBp1++ ^ mask;
+                    uint32_t CBp1_avg_76_54 = __SHADD8(CBp1_7654, __UXTB16_RORn(CBp1_7654, 8)) ^ mask;
+                    CB_avg[j + 6] = CBp1_avg_76_54;
+                    CB_avg[j + 7] = CBp1_avg_76_54 >> 16;
+
+                    uint32_t CRp0_3210 = *CRp0++ ^ mask;
+                    uint32_t CRp0_avg_32_10 = __SHADD8(CRp0_3210, __UXTB16_RORn(CRp0_3210, 8)) ^ mask;
+                    CR_avg[j] = CRp0_avg_32_10;
+                    CR_avg[j + 1] = CRp0_avg_32_10 >> 16;
+
+                    uint32_t CRp0_7654 = *CRp0++ ^ mask;
+                    uint32_t CRp0_avg_76_54 = __SHADD8(CRp0_7654, __UXTB16_RORn(CRp0_7654, 8)) ^ mask;
+                    CR_avg[j + 2] = CRp0_avg_76_54;
+                    CR_avg[j + 3] = CRp0_avg_76_54 >> 16;
+
+                    uint32_t CRp1_3210 = *CRp1++ ^ mask;
+                    uint32_t CRp1_avg_32_10 = __SHADD8(CRp1_3210, __UXTB16_RORn(CRp1_3210, 8)) ^ mask;
+                    CR_avg[j + 4] = CRp1_avg_32_10;
+                    CR_avg[j + 5] = CRp1_avg_32_10 >> 16;
+
+                    uint32_t CRp1_7654 = *CRp1++ ^ mask;
+                    uint32_t CRp1_avg_76_54 = __SHADD8(CRp1_7654, __UXTB16_RORn(CRp1_7654, 8)) ^ mask;
+                    CR_avg[j + 6] = CRp1_avg_76_54;
+                    CR_avg[j + 7] = CRp1_avg_76_54 >> 16;
+                }
+            }
         }
 
         // Flush the MCU row for DMA...
