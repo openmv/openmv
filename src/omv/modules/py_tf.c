@@ -614,18 +614,6 @@ STATIC float py_tf_yolo_get_output(void *model_output, libtf_parameters_t *param
     }
 }
 
-STATIC float py_tf_yolo_iou(py_tf_yolo_output_callback_lnk_data_t *a, py_tf_yolo_output_callback_lnk_data_t *b) {
-    int x1 = IM_MAX(a->rect.x, b->rect.x);
-    int y1 = IM_MAX(a->rect.y, b->rect.y);
-    int x2 = IM_MIN(a->rect.x + a->rect.w, b->rect.x + b->rect.w);
-    int y2 = IM_MIN(a->rect.y + a->rect.h, b->rect.y + b->rect.h);
-    int w = IM_MAX(0, x2 - x1);
-    int h = IM_MAX(0, y2 - y1);
-    int rect_intersection = w * h;
-    int rect_union = (a->rect.w * a->rect.h) + (b->rect.w * b->rect.h) - rect_intersection;
-    return ((float) rect_intersection) / ((float) rect_union);
-}
-
 STATIC void py_tf_yolo_output_callback(void *callback_data, void *model_output, libtf_parameters_t *params) {
     py_tf_yolo_output_callback_data_t *arg = (py_tf_yolo_output_callback_data_t *) callback_data;
 
@@ -761,7 +749,7 @@ STATIC void py_tf_yolo_output_callback(void *callback_data, void *model_output, 
             list_lnk_t *old_it = it;
             it = it->next;
 
-            float iou = py_tf_yolo_iou(&lnk_data, lnk_data2);
+            float iou = rectangle_iou(&lnk_data.rect, &lnk_data2->rect);
             // Do not use fast_expf() as it does not output 1 when it's input is 0.
             // This will cause the scores of non-overlapping bounding boxes to decay.
             lnk_data2->score *= expf(sigma_scale * iou * iou);
@@ -807,6 +795,20 @@ STATIC void py_tf_yolo_output_callback(void *callback_data, void *model_output, 
 }
 #endif // IMLIB_ENABLE_TF_YOLO
 
+typedef struct py_tf_model_hash {
+    uint32_t hash;
+    py_tf_detect_model_t model;
+} py_tf_model_hash_t;
+
+STATIC py_tf_model_hash_t py_tf_model_hash_table[] = {
+    { 0x4456e6e7, PY_TF_MODEL_FOMO },
+    { 0x6e374bf1, PY_TF_MODEL_YOLOV3 }, // float32
+    { 0xadab3de1, PY_TF_MODEL_YOLOV3 }, // int8
+    { 0xbadc1ccd, PY_TF_MODEL_YOLOV3 }, // int8
+    { 0xdd6aacc1, PY_TF_MODEL_YOLOV3 }, // int8
+    { 0x0aa58fc3, PY_TF_MODEL_YOLOV5 } // int8
+};
+
 STATIC mp_obj_t py_tf_detect(uint n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
     enum {
         ARG_roi, ARG_thresholds, ARG_invert, ARG_model, ARG_score_threshold, ARG_label_threshold,
@@ -831,15 +833,25 @@ STATIC mp_obj_t py_tf_detect(uint n_args, const mp_obj_t *pos_args, mp_map_t *kw
     rectangle_t roi = py_helper_arg_to_roi(args[ARG_roi].u_obj, image);
     bool invert = args[ARG_invert].u_int;
 
-    if ((args[ARG_model].u_int < 0) || (args[ARG_model].u_int >= PY_TF_MODEL_COUNT)) {
-        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Invalid model type!"));
-    }
-
     fb_alloc_mark();
     py_tf_alloc_putchar_buffer();
 
     py_tf_model_obj_t *model = py_tf_load_alloc(pos_args[0]);
     uint8_t *tensor_arena = fb_alloc(model->params.tensor_arena_size, FB_ALLOC_PREFER_SPEED | FB_ALLOC_CACHE_ALIGN);
+
+    if (args[ARG_model].u_int == -1) {
+        for (size_t i = 0; i < MP_ARRAY_SIZE(py_tf_model_hash_table); i++) {
+            if (py_tf_model_hash_table[i].hash == model->params.operators_hash) {
+                args[ARG_model].u_int = py_tf_model_hash_table[i].model;
+                break;
+            }
+        }
+        if (args[ARG_model].u_int == -1) {
+            mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Unknown model type!"));
+        }
+    } else if ((args[ARG_model].u_int < 0) || (args[ARG_model].u_int >= PY_TF_MODEL_COUNT)) {
+        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Invalid model type!"));
+    }
 
     py_tf_input_callback_data_t py_tf_input_callback_data;
     py_tf_input_callback_data.img = image;
@@ -1132,6 +1144,16 @@ mp_obj_t py_tf_output_zero_point(mp_obj_t self_in) {
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_tf_output_zero_point_obj, py_tf_output_zero_point);
 
+mp_obj_t py_tf_operator_count(mp_obj_t self_in) {
+    return mp_obj_new_int_from_uint(((py_tf_model_obj_t *) self_in)->params.operators_size);
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_tf_operator_count_obj, py_tf_operator_count);
+
+mp_obj_t py_tf_operator_hash(mp_obj_t self_in) {
+    return mp_obj_new_int_from_uint(((py_tf_model_obj_t *) self_in)->params.operators_hash);
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_tf_operator_hash_obj, py_tf_operator_hash);
+
 STATIC const mp_rom_map_elem_t locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_len),                 MP_ROM_PTR(&py_tf_len_obj) },
     { MP_ROM_QSTR(MP_QSTR_ram),                 MP_ROM_PTR(&py_tf_ram_obj) },
@@ -1147,6 +1169,8 @@ STATIC const mp_rom_map_elem_t locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_output_datatype),     MP_ROM_PTR(&py_tf_output_datatype_obj) },
     { MP_ROM_QSTR(MP_QSTR_output_scale),        MP_ROM_PTR(&py_tf_output_scale_obj) },
     { MP_ROM_QSTR(MP_QSTR_output_zero_point),   MP_ROM_PTR(&py_tf_output_zero_point_obj) },
+    { MP_ROM_QSTR(MP_QSTR_operator_count),      MP_ROM_PTR(&py_tf_operator_count_obj) },
+    { MP_ROM_QSTR(MP_QSTR_operator_hash),       MP_ROM_PTR(&py_tf_operator_hash_obj) },
     { MP_ROM_QSTR(MP_QSTR_classify),            MP_ROM_PTR(&py_tf_classify_obj) },
     { MP_ROM_QSTR(MP_QSTR_segment),             MP_ROM_PTR(&py_tf_segment_obj) },
     { MP_ROM_QSTR(MP_QSTR_detect),              MP_ROM_PTR(&py_tf_detect_obj) },
@@ -1163,11 +1187,8 @@ STATIC MP_DEFINE_CONST_OBJ_TYPE(
     locals_dict, &py_tf_locals_dict
     );
 
-#endif // IMLIB_ENABLE_TF
-
 STATIC const mp_rom_map_elem_t globals_dict_table[] = {
-    { MP_ROM_QSTR(MP_QSTR___name__),        MP_OBJ_NEW_QSTR(MP_QSTR_tf) },
-    #ifdef IMLIB_ENABLE_TF
+    { MP_ROM_QSTR(MP_QSTR___name__),            MP_OBJ_NEW_QSTR(MP_QSTR_tf) },
     { MP_ROM_QSTR(MP_QSTR_FOMO),                MP_ROM_INT(PY_TF_MODEL_FOMO) },
     #ifdef IMLIB_ENABLE_TF_YOLO
     { MP_ROM_QSTR(MP_QSTR_YOLOV3),              MP_ROM_INT(PY_TF_MODEL_YOLOV3) },
@@ -1182,15 +1203,6 @@ STATIC const mp_rom_map_elem_t globals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_segment),             MP_ROM_PTR(&py_tf_segment_obj) },
     { MP_ROM_QSTR(MP_QSTR_detect),              MP_ROM_PTR(&py_tf_detect_obj) },
     { MP_ROM_QSTR(MP_QSTR_regression),          MP_ROM_PTR(&py_tf_regression_obj) }
-    #else
-    { MP_ROM_QSTR(MP_QSTR_load),                MP_ROM_PTR(&py_func_unavailable_obj) },
-    { MP_ROM_QSTR(MP_QSTR_load_builtin_model),  MP_ROM_PTR(&py_func_unavailable_obj) },
-    { MP_ROM_QSTR(MP_QSTR_free_from_fb),        MP_ROM_PTR(&py_func_unavailable_obj) },
-    { MP_ROM_QSTR(MP_QSTR_classify),            MP_ROM_PTR(&py_func_unavailable_obj) },
-    { MP_ROM_QSTR(MP_QSTR_segment),             MP_ROM_PTR(&py_func_unavailable_obj) },
-    { MP_ROM_QSTR(MP_QSTR_detect),              MP_ROM_PTR(&py_func_unavailable_obj) },
-    { MP_ROM_QSTR(MP_QSTR_regression),          MP_ROM_PTR(&py_func_unavailable_obj) }
-    #endif // IMLIB_ENABLE_TF
 };
 
 STATIC MP_DEFINE_CONST_DICT(globals_dict, globals_dict_table);
@@ -1201,3 +1213,5 @@ const mp_obj_module_t tf_module = {
 };
 
 MP_REGISTER_MODULE(MP_QSTR_tf, tf_module);
+
+#endif // IMLIB_ENABLE_TF

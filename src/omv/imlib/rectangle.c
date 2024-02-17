@@ -116,3 +116,15 @@ void rectangle_expand(rectangle_t *r, int x, int y) {
         r->h = y;
     }
 }
+
+float rectangle_iou(rectangle_t *r1, rectangle_t *r2) {
+    int x1 = IM_MAX(r1->x, r2->x);
+    int y1 = IM_MAX(r1->y, r2->y);
+    int x2 = IM_MIN(r1->x + r1->w, r2->x + r2->w);
+    int y2 = IM_MIN(r1->y + r1->h, r2->y + r2->h);
+    int w = IM_MAX(0, x2 - x1);
+    int h = IM_MAX(0, y2 - y1);
+    int rect_intersection = w * h;
+    int rect_union = (r1->w * r1->h) + (r2->w * r2->h) - rect_intersection;
+    return ((float) rect_intersection) / ((float) rect_union);
+}
