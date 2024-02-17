@@ -39,8 +39,9 @@ if len(sys.argv)!= 2:
     print ('usage: pyopenmv_fb.py <serial port>')
     sys.exit(1)
 
-portname = sys.argv[1]
 connected = False
+portname = sys.argv[1]
+
 pyopenmv.disconnect()
 for i in range(10):
     try:
@@ -68,6 +69,9 @@ pyopenmv.exec_script(script)
 
 # init screen
 running = True
+screen = None
+IMAGE_SCALE = 4
+
 Clock = pygame.time.Clock()
 font = pygame.font.SysFont("monospace", 15)
 
@@ -76,13 +80,17 @@ while running:
 
     # read framebuffer
     fb = pyopenmv.fb_dump()
-    if fb != None:
-        # create image from RGB888
-        image = pygame.image.frombuffer(fb[2].flat[0:], (fb[0], fb[1]), 'RGB')
-        # TODO check if res changed
-        screen = pygame.display.set_mode((fb[0], fb[1]), pygame.DOUBLEBUF, 32)
-
+    if fb is not None:
         fps = Clock.get_fps()
+        w, h, data = fb[0], fb[1], fb[2]
+
+        # create image from RGB888
+        image = pygame.image.frombuffer(data.flat[0:], (w, h), 'RGB')
+        image = pygame.transform.scale(image, (w * IMAGE_SCALE, h * IMAGE_SCALE))
+
+        if screen is None:
+            screen = pygame.display.set_mode((w * IMAGE_SCALE, h * IMAGE_SCALE), pygame.DOUBLEBUF, 32)
+
         # blit stuff
         screen.blit(image, (0, 0))
         screen.blit(font.render("FPS %.2f"%(fps), 1, (255, 0, 0)), (0, 0))
