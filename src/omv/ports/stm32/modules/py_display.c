@@ -637,8 +637,8 @@ STATIC const py_display_p_t py_display_p = {
     .set_backlight = display_set_backlight,
     #endif
     #ifdef OMV_DSI_DISPLAY_CONTROLLER
-    .dsi_write = display_dsi_write,
-    .dsi_read = display_dsi_read,
+    .bus_write = display_dsi_write,
+    .bus_read = display_dsi_read,
     #endif
 };
 
