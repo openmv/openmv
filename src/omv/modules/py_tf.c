@@ -276,29 +276,6 @@ STATIC void py_tf_input_callback(void *callback_data,
                                  libtf_parameters_t *params) {
     py_tf_input_callback_data_t *arg = (py_tf_input_callback_data_t *) callback_data;
 
-    // Disable checking input scaling and zero-point. Nets can be all over the place on the input
-    // scaling and zero-point but still work with the code below.
-
-    // if (params->input_datatype == LIBTF_DATATYPE_UINT8) {
-    //     if (fast_roundf(params->input_scale * GRAYSCALE_RANGE) != 1) {
-    //         mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Expected model input scale to be 1/255!"));
-    //     }
-
-    //     if (params->input_zero_point != 0) {
-    //         mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Expected model input zero point to be 0!"));
-    //     }
-    // }
-
-    // if (params->input_datatype == LIBTF_DATATYPE_INT8) {
-    //     if (fast_roundf(params->input_scale * GRAYSCALE_RANGE) != 1) {
-    //         mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Expected model input scale to be 1/255!"));
-    //     }
-
-    //     if (params->input_zero_point != -GRAYSCALE_MID) {
-    //         mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Expected model input zero point to be -128!"));
-    //     }
-    // }
-
     int shift = (params->input_datatype == LIBTF_DATATYPE_INT8) ? GRAYSCALE_MID : 0;
 
     image_t dst_img;
@@ -520,29 +497,6 @@ STATIC void py_tf_segment_output_callback(void *callback_data,
                                           void *model_output,
                                           libtf_parameters_t *params) {
     mp_obj_t *arg = (mp_obj_t *) callback_data;
-
-    // Disable checking output scaling and zero-point. Nets can be all over the place on the output
-    // scaling and zero-point but still work with the code below.
-
-    // if (params->output_datatype == LIBTF_DATATYPE_UINT8) {
-    //     if (fast_roundf(params->output_scale * GRAYSCALE_RANGE) != 1) {
-    //         mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Expected model output scale to be 1/255!"));
-    //     }
-
-    //     if (params->output_zero_point != 0) {
-    //         mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Expected model output zero point to be 0!"));
-    //     }
-    // }
-
-    // if (params->output_datatype == LIBTF_DATATYPE_INT8) {
-    //     if (fast_roundf(params->output_scale * GRAYSCALE_RANGE) != 1) {
-    //         mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Expected model output scale to be 1/255!"));
-    //     }
-
-    //     if (params->output_zero_point != -GRAYSCALE_MID) {
-    //         mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Expected model output zero point to be -128!"));
-    //     }
-    // }
 
     int shift = (params->output_datatype == LIBTF_DATATYPE_INT8) ? GRAYSCALE_MID : 0;
 
