@@ -16,6 +16,7 @@
 #define TIME_JPEG                  (0)
 #if (TIME_JPEG == 1)
 #include <stdio.h>
+#include "py/mphal.h"
 #endif
 
 // Expand 4 bits to 32 for binary to grayscale - process 4 pixels at a time
@@ -1941,7 +1942,7 @@ bool jpeg_compress(image_t *src, image_t *dst, int quality, bool realloc) {
     dst->data = jpeg_buf.buf;
 
     #if (TIME_JPEG == 1)
-    printf("time: %lums\n", mp_hal_ticks_ms() - start);
+    printf("compress time: %u ms\n", mp_hal_ticks_ms() - start);
     #endif
 
     return false;
