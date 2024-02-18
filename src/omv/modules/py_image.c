@@ -2186,12 +2186,6 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_close_obj, 2, py_image_close);
 // Math Methods
 ///////////////
 
-STATIC mp_obj_t py_image_negate(mp_obj_t img_obj) {
-    imlib_negate(py_helper_arg_to_image(img_obj, ARG_IMAGE_MUTABLE));
-    return img_obj;
-}
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_image_negate_obj, py_image_negate);
-
 STATIC mp_obj_t py_image_replace(uint n_args, const mp_obj_t *args, mp_map_t *kw_args) {
     image_t *arg_img =
         py_helper_arg_to_image(args[0], ARG_IMAGE_MUTABLE);
@@ -6479,7 +6473,7 @@ static const mp_rom_map_elem_t locals_dict_table[] = {
     #endif
     #ifdef IMLIB_ENABLE_MATH_OPS
     /* Math Methods */
-    {MP_ROM_QSTR(MP_QSTR_negate),              MP_ROM_PTR(&py_image_negate_obj)},
+    {MP_ROM_QSTR(MP_QSTR_negate),              MP_ROM_PTR(&py_image_invert_obj)},
     {MP_ROM_QSTR(MP_QSTR_assign),              MP_ROM_PTR(&py_image_replace_obj)},
     {MP_ROM_QSTR(MP_QSTR_replace),             MP_ROM_PTR(&py_image_replace_obj)},
     {MP_ROM_QSTR(MP_QSTR_set),                 MP_ROM_PTR(&py_image_replace_obj)},

@@ -1382,7 +1382,6 @@ void imlib_close(image_t *img, int ksize, int threshold, image_t *mask);
 void imlib_top_hat(image_t *img, int ksize, int threshold, image_t *mask);
 void imlib_black_hat(image_t *img, int ksize, int threshold, image_t *mask);
 // Math Functions
-void imlib_negate(image_t *img);
 void imlib_replace(image_t *img,
                    const char *path,
                    image_t *other,
