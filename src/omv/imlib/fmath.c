@@ -9,9 +9,6 @@
  * Fast approximate math functions.
  */
 #include "fmath.h"
-#include "omv_common.h"
-#include CMSIS_MCU_H
-#include "arm_math.h"
 
 const float __atanf_lut[4] = {
     -0.0443265554792128f,    //p7
@@ -19,83 +16,6 @@ const float __atanf_lut[4] = {
     +0.1555786518463281f,    //p5
     +0.9997878412794807f     //p1
 };
-
-#if (__ARM_ARCH < 7)
-#include <math.h>
-float OMV_ATTR_ALWAYS_INLINE fast_sqrtf(float x) {
-    return sqrtf(x);
-}
-
-int OMV_ATTR_ALWAYS_INLINE fast_floorf(float x) {
-    return floorf(x);
-}
-
-int OMV_ATTR_ALWAYS_INLINE fast_ceilf(float x) {
-    return ceilf(x);
-}
-
-int OMV_ATTR_ALWAYS_INLINE fast_roundf(float x) {
-    return roundf(x);
-}
-
-float OMV_ATTR_ALWAYS_INLINE fast_fabsf(float x) {
-    return fabsf(x);
-}
-#else
-float OMV_ATTR_ALWAYS_INLINE fast_sqrtf(float x) {
-    asm volatile (
-        "vsqrt.f32  %[r], %[x]\n"
-        : [r] "=t" (x)
-        : [x] "t"  (x));
-    return x;
-}
-
-int OMV_ATTR_ALWAYS_INLINE fast_floorf(float x) {
-    int i;
-    asm volatile (
-    #if (__CORTEX_M > 4)
-        "vcvtm.S32.f32  %[r], %[x]\n"
-    #else
-        "vcvt.S32.f32  %[r], %[x]\n"
-    #endif
-        : [r] "=t" (i)
-        : [x] "t"  (x));
-    return i;
-}
-
-int OMV_ATTR_ALWAYS_INLINE fast_ceilf(float x) {
-    int i;
-    #if (__CORTEX_M > 4)
-    asm volatile (
-        "vcvtp.S32.f32  %[r], %[x]\n"
-    #else
-    uint32_t max = 0x3f7fffff;
-    x += *((float *) &max);
-    asm volatile (
-        "vcvt.S32.f32  %[r], %[x]\n"
-    #endif
-        : [r] "=t" (i)
-        : [x] "t"  (x));
-    return i;
-}
-
-int OMV_ATTR_ALWAYS_INLINE fast_roundf(float x) {
-    int i;
-    asm volatile (
-        "vcvtr.S32.F32  %[r], %[x]\n"
-        : [r] "=t" (i)
-        : [x] "t"  (x));
-    return i;
-}
-
-float OMV_ATTR_ALWAYS_INLINE fast_fabsf(float x) {
-    asm volatile (
-        "vabs.f32  %[r], %[x]\n"
-        : [r] "=t" (x)
-        : [x] "t"  (x));
-    return x;
-}
-#endif
 
 typedef union {
     uint32_t l;
