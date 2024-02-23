@@ -156,44 +156,76 @@ static void imlib_add_line_op(image_t *img, int line, void *other, void *data, b
 
     switch (img->pixfmt) {
         case PIXFORMAT_BINARY: {
-            uint32_t *data = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(img, line);
-            for (int i = 0, j = img->w; i < j; i++) {
-                if ((!mask) || image_get_mask_pixel(mask, i, line)) {
-                    int dataPixel = IMAGE_GET_BINARY_PIXEL_FAST(data, i);
-                    int otherPixel = IMAGE_GET_BINARY_PIXEL_FAST(((uint32_t *) other), i);
-                    int p = dataPixel | otherPixel; //dataPixel + otherPixel;
-//                    p = IM_MIN(p, COLOR_BINARY_MAX);
-                    IMAGE_PUT_BINARY_PIXEL_FAST(data, i, p);
-                }
-            }
+            imlib_b_or_line_op(img, line, other, data, vflipped);
             break;
         }
         case PIXFORMAT_GRAYSCALE: {
-            uint8_t *data = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(img, line);
-            for (int i = 0, j = img->w; i < j; i++) {
-                if ((!mask) || image_get_mask_pixel(mask, i, line)) {
-                    int dataPixel = IMAGE_GET_GRAYSCALE_PIXEL_FAST(data, i);
-                    int otherPixel = IMAGE_GET_GRAYSCALE_PIXEL_FAST(((uint8_t *) other), i);
-                    int p = dataPixel + otherPixel;
-                    p = IM_MIN(p, COLOR_GRAYSCALE_MAX);
-                    IMAGE_PUT_GRAYSCALE_PIXEL_FAST(data, i, p);
+            uint8_t *row0 = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(img, line);
+            uint8_t *row1 = (uint8_t *) other;
+
+            if (!mask) {
+                size_t x = 0;
+                #if defined(ARM_MATH_DSP)
+                for (; (img->w - x) >= 4; x += 4) {
+                    uint32_t p0 = *((uint32_t *) (row0 + x));
+                    uint32_t p1 = *((uint32_t *) (row1 + x));
+                    *((uint32_t *) (row0 + x)) = __UQADD8(p0, p1);
+                }
+                #endif
+
+                for (; x < img->w; x++) {
+                    uint32_t p0 = IMAGE_GET_GRAYSCALE_PIXEL_FAST(row0, x);
+                    uint32_t p1 = IMAGE_GET_GRAYSCALE_PIXEL_FAST(row1, x);
+                    uint32_t p = __USAT(p0 + p1, 8);
+                    IMAGE_PUT_GRAYSCALE_PIXEL_FAST(row0, x, p);
+                }
+            } else {
+                for (size_t x = 0; x < img->w; x++) {
+                    if (image_get_mask_pixel(mask, x, line)) {
+                        uint32_t p0 = IMAGE_GET_GRAYSCALE_PIXEL_FAST(row0, x);
+                        uint32_t p1 = IMAGE_GET_GRAYSCALE_PIXEL_FAST(row1, x);
+                        uint32_t p = __USAT(p0 + p1, 8);
+                        IMAGE_PUT_GRAYSCALE_PIXEL_FAST(row0, x, p);
+                    }
                 }
             }
             break;
         }
         case PIXFORMAT_RGB565: {
-            uint16_t *data = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(img, line);
-            for (int i = 0, j = img->w; i < j; i++) {
-                if ((!mask) || image_get_mask_pixel(mask, i, line)) {
-                    int dataPixel = IMAGE_GET_RGB565_PIXEL_FAST(data, i);
-                    int otherPixel = IMAGE_GET_RGB565_PIXEL_FAST(((uint16_t *) other), i);
-                    int r = COLOR_RGB565_TO_R5(dataPixel) + COLOR_RGB565_TO_R5(otherPixel);
-                    int g = COLOR_RGB565_TO_G6(dataPixel) + COLOR_RGB565_TO_G6(otherPixel);
-                    int b = COLOR_RGB565_TO_B5(dataPixel) + COLOR_RGB565_TO_B5(otherPixel);
-                    r = IM_MIN(r, COLOR_R5_MAX);
-                    g = IM_MIN(g, COLOR_G6_MAX);
-                    b = IM_MIN(b, COLOR_B5_MAX);
-                    IMAGE_PUT_RGB565_PIXEL_FAST(data, i, COLOR_R5_G6_B5_TO_RGB565(r, g, b));
+            uint16_t *row0 = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(img, line);
+            uint16_t *row1 = (uint16_t *) other;
+
+            if (!mask) {
+                size_t x = 0;
+                #if defined(ARM_MATH_DSP)
+                for (; (img->w - x) >= 2; x += 2) {
+                    uint32_t p0 = *((uint32_t *) (row0 + x));
+                    uint32_t p1 = *((uint32_t *) (row1 + x));
+                    uint32_t r = __USAT16(((p0 >> 11) & 0x1f001f) + ((p1 >> 11) & 0x1f001f), 5);
+                    uint32_t g = __USAT16(((p0 >> 5) & 0x3f003f) + ((p1 >> 5) & 0x3f003f), 6);
+                    uint32_t b = __USAT16((p0 & 0x1f001f) + (p1 & 0x1f001f), 5);
+                    *((uint32_t *) (row0 + x)) = COLOR_R5_G6_B5_TO_RGB565(r, g, b);
+                }
+                #endif
+
+                for (; x < img->w; x++) {
+                    uint32_t p0 = IMAGE_GET_RGB565_PIXEL_FAST(row0, x);
+                    uint32_t p1 = IMAGE_GET_RGB565_PIXEL_FAST(row1, x);
+                    uint32_t r = __USAT(COLOR_RGB565_TO_R5(p0) + COLOR_RGB565_TO_R5(p1), 5);
+                    uint32_t g = __USAT(COLOR_RGB565_TO_G6(p0) + COLOR_RGB565_TO_G6(p1), 6);
+                    uint32_t b = __USAT(COLOR_RGB565_TO_B5(p0) + COLOR_RGB565_TO_B5(p1), 5);
+                    IMAGE_PUT_RGB565_PIXEL_FAST(row0, x, COLOR_R5_G6_B5_TO_RGB565(r, g, b));
+                }
+            } else {
+                for (size_t x = 0; x < img->w; x++) {
+                    if (image_get_mask_pixel(mask, x, line)) {
+                        uint32_t p0 = IMAGE_GET_RGB565_PIXEL_FAST(row0, x);
+                        uint32_t p1 = IMAGE_GET_RGB565_PIXEL_FAST(row1, x);
+                        uint32_t r = __USAT(COLOR_RGB565_TO_R5(p0) + COLOR_RGB565_TO_R5(p1), 5);
+                        uint32_t g = __USAT(COLOR_RGB565_TO_G6(p0) + COLOR_RGB565_TO_G6(p1), 6);
+                        uint32_t b = __USAT(COLOR_RGB565_TO_B5(p0) + COLOR_RGB565_TO_B5(p1), 5);
+                        IMAGE_PUT_RGB565_PIXEL_FAST(row0, x, COLOR_R5_G6_B5_TO_RGB565(r, g, b));
+                    }
                 }
             }
             break;
@@ -208,61 +240,222 @@ void imlib_add(image_t *img, const char *path, image_t *other, int scalar, image
     imlib_image_operation(img, path, other, scalar, imlib_add_line_op, mask);
 }
 
-typedef struct imlib_sub_line_op_state {
-    bool reverse;
-    image_t *mask;
-} imlib_sub_line_op_state_t;
-
 static void imlib_sub_line_op(image_t *img, int line, void *other, void *data, bool vflipped) {
-    bool reverse = ((imlib_sub_line_op_state_t *) data)->reverse;
-    image_t *mask = ((imlib_sub_line_op_state_t *) data)->mask;
+    image_t *mask = (image_t *) data;
 
     switch (img->pixfmt) {
         case PIXFORMAT_BINARY: {
-            uint32_t *data = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(img, line);
-            for (int i = 0, j = img->w; i < j; i++) {
-                if ((!mask) || image_get_mask_pixel(mask, i, line)) {
-                    int dataPixel = IMAGE_GET_BINARY_PIXEL_FAST(data, i);
-                    int otherPixel = IMAGE_GET_BINARY_PIXEL_FAST(((uint32_t *) other), i);
-                    int p = reverse ? (otherPixel - dataPixel) : (dataPixel - otherPixel);
-                    p = IM_MAX(p, COLOR_BINARY_MIN);
-                    IMAGE_PUT_BINARY_PIXEL_FAST(data, i, p);
+            uint32_t *row0 = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(img, line);
+            uint32_t *row1 = (uint32_t *) other;
+
+            if (!mask) {
+                size_t x = 0;
+                #if (__ARM_ARCH > 6)
+                for (; (img->w - x) >= 32; x += 32) {
+                    uint32_t p0 = row0[x / 32];
+                    uint32_t p1 = row1[x / 32];
+                    row0[x / 32] = p0 & (~p1); // the same as p0 > p1 for all bits
+                }
+                #endif
+
+                for (; x < img->w; x++) {
+                    uint32_t p0 = IMAGE_GET_BINARY_PIXEL_FAST(row0, x);
+                    uint32_t p1 = IMAGE_GET_BINARY_PIXEL_FAST(row1, x);
+                    uint32_t p = p0 > p1;
+                    IMAGE_PUT_BINARY_PIXEL_FAST(row0, x, p);
+                }
+            } else {
+                for (size_t x = 0; x < img->w; x++) {
+                    if (image_get_mask_pixel(mask, x, line)) {
+                        uint32_t p0 = IMAGE_GET_BINARY_PIXEL_FAST(row0, x);
+                        uint32_t p1 = IMAGE_GET_BINARY_PIXEL_FAST(row1, x);
+                        uint32_t p = p0 > p1;
+                        IMAGE_PUT_BINARY_PIXEL_FAST(row0, x, p);
+                    }
                 }
             }
             break;
         }
         case PIXFORMAT_GRAYSCALE: {
-            uint8_t *data = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(img, line);
-            for (int i = 0, j = img->w; i < j; i++) {
-                if ((!mask) || image_get_mask_pixel(mask, i, line)) {
-                    int dataPixel = IMAGE_GET_GRAYSCALE_PIXEL_FAST(data, i);
-                    int otherPixel = IMAGE_GET_GRAYSCALE_PIXEL_FAST(((uint8_t *) other), i);
-                    int p = reverse ? (otherPixel - dataPixel) : (dataPixel - otherPixel);
-                    p = IM_MAX(p, COLOR_GRAYSCALE_MIN);
-                    IMAGE_PUT_GRAYSCALE_PIXEL_FAST(data, i, p);
+            uint8_t *row0 = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(img, line);
+            uint8_t *row1 = (uint8_t *) other;
+
+            if (!mask) {
+                size_t x = 0;
+                #if defined(ARM_MATH_DSP)
+                for (; (img->w - x) >= 4; x += 4) {
+                    uint32_t p0 = *((uint32_t *) (row0 + x));
+                    uint32_t p1 = *((uint32_t *) (row1 + x));
+                    *((uint32_t *) (row0 + x)) = __UQSUB8(p0, p1);
+                }
+                #endif
+
+                for (; x < img->w; x++) {
+                    uint32_t p0 = IMAGE_GET_GRAYSCALE_PIXEL_FAST(row0, x);
+                    uint32_t p1 = IMAGE_GET_GRAYSCALE_PIXEL_FAST(row1, x);
+                    uint32_t p = __USAT((int32_t) (p0 - p1), 8);
+                    IMAGE_PUT_GRAYSCALE_PIXEL_FAST(row0, x, p);
+                }
+            } else {
+                for (size_t x = 0; x < img->w; x++) {
+                    if (image_get_mask_pixel(mask, x, line)) {
+                        uint32_t p0 = IMAGE_GET_GRAYSCALE_PIXEL_FAST(row0, x);
+                        uint32_t p1 = IMAGE_GET_GRAYSCALE_PIXEL_FAST(row1, x);
+                        uint32_t p = __USAT((int32_t) (p0 - p1), 8);
+                        IMAGE_PUT_GRAYSCALE_PIXEL_FAST(row0, x, p);
+                    }
                 }
             }
             break;
         }
         case PIXFORMAT_RGB565: {
-            uint16_t *data = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(img, line);
-            for (int i = 0, j = img->w; i < j; i++) {
-                if ((!mask) || image_get_mask_pixel(mask, i, line)) {
-                    int dataPixel = IMAGE_GET_RGB565_PIXEL_FAST(data, i);
-                    int otherPixel = IMAGE_GET_RGB565_PIXEL_FAST(((uint16_t *) other), i);
-                    int dR = COLOR_RGB565_TO_R5(dataPixel);
-                    int dG = COLOR_RGB565_TO_G6(dataPixel);
-                    int dB = COLOR_RGB565_TO_B5(dataPixel);
-                    int oR = COLOR_RGB565_TO_R5(otherPixel);
-                    int oG = COLOR_RGB565_TO_G6(otherPixel);
-                    int oB = COLOR_RGB565_TO_B5(otherPixel);
-                    int r = reverse ? (oR - dR) : (dR - oR);
-                    int g = reverse ? (oG - dG) : (dG - oG);
-                    int b = reverse ? (oB - dB) : (dB - oB);
-                    r = IM_MAX(r, COLOR_R5_MIN);
-                    g = IM_MAX(g, COLOR_G6_MIN);
-                    b = IM_MAX(b, COLOR_B5_MIN);
-                    IMAGE_PUT_RGB565_PIXEL_FAST(data, i, COLOR_R5_G6_B5_TO_RGB565(r, g, b));
+            uint16_t *row0 = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(img, line);
+            uint16_t *row1 = (uint16_t *) other;
+
+            if (!mask) {
+                size_t x = 0;
+                #if defined(ARM_MATH_DSP)
+                for (; (img->w - x) >= 2; x += 2) {
+                    uint32_t p0 = *((uint32_t *) (row0 + x));
+                    uint32_t p1 = *((uint32_t *) (row1 + x));
+                    uint32_t r = __USAT16(__SSUB16((p0 >> 11) & 0x1f001f, (p1 >> 11) & 0x1f001f), 5);
+                    uint32_t g = __USAT16(__SSUB16((p0 >> 5) & 0x3f003f, (p1 >> 5) & 0x3f003f), 6);
+                    uint32_t b = __USAT16(__SSUB16(p0 & 0x1f001f, p1 & 0x1f001f), 5);
+                    *((uint32_t *) (row0 + x)) = COLOR_R5_G6_B5_TO_RGB565(r, g, b);
+                }
+                #endif
+
+                for (; x < img->w; x++) {
+                    uint32_t p0 = IMAGE_GET_RGB565_PIXEL_FAST(row0, x);
+                    uint32_t p1 = IMAGE_GET_RGB565_PIXEL_FAST(row1, x);
+                    uint32_t r = __USAT((int32_t) (COLOR_RGB565_TO_R5(p0) - COLOR_RGB565_TO_R5(p1)), 5);
+                    uint32_t g = __USAT((int32_t) (COLOR_RGB565_TO_G6(p0) - COLOR_RGB565_TO_G6(p1)), 6);
+                    uint32_t b = __USAT((int32_t) (COLOR_RGB565_TO_B5(p0) - COLOR_RGB565_TO_B5(p1)), 5);
+                    IMAGE_PUT_RGB565_PIXEL_FAST(row0, x, COLOR_R5_G6_B5_TO_RGB565(r, g, b));
+                }
+            } else {
+                for (size_t x = 0; x < img->w; x++) {
+                    if (image_get_mask_pixel(mask, x, line)) {
+                        uint32_t p0 = IMAGE_GET_RGB565_PIXEL_FAST(row0, x);
+                        uint32_t p1 = IMAGE_GET_RGB565_PIXEL_FAST(row1, x);
+                        uint32_t r = __USAT((int32_t) (COLOR_RGB565_TO_R5(p0) - COLOR_RGB565_TO_R5(p1)), 5);
+                        uint32_t g = __USAT((int32_t) (COLOR_RGB565_TO_G6(p0) - COLOR_RGB565_TO_G6(p1)), 6);
+                        uint32_t b = __USAT((int32_t) (COLOR_RGB565_TO_B5(p0) - COLOR_RGB565_TO_B5(p1)), 5);
+                        IMAGE_PUT_RGB565_PIXEL_FAST(row0, x, COLOR_R5_G6_B5_TO_RGB565(r, g, b));
+                    }
+                }
+            }
+            break;
+        }
+        default: {
+            break;
+        }
+    }
+}
+
+static void imlib_rsub_line_op(image_t *img, int line, void *other, void *data, bool vflipped) {
+    image_t *mask = (image_t *) data;
+
+    switch (img->pixfmt) {
+        case PIXFORMAT_BINARY: {
+            uint32_t *row0 = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(img, line);
+            uint32_t *row1 = (uint32_t *) other;
+
+            if (!mask) {
+                size_t x = 0;
+                #if (__ARM_ARCH > 6)
+                for (; (img->w - x) >= 32; x += 32) {
+                    uint32_t p0 = row0[x / 32];
+                    uint32_t p1 = row1[x / 32];
+                    row0[x / 32] = p1 & (~p0); // the same as p1 > p0 for all bits
+                }
+                #endif
+
+                for (; x < img->w; x++) {
+                    uint32_t p0 = IMAGE_GET_BINARY_PIXEL_FAST(row0, x);
+                    uint32_t p1 = IMAGE_GET_BINARY_PIXEL_FAST(row1, x);
+                    uint32_t p = p1 > p0;
+                    IMAGE_PUT_BINARY_PIXEL_FAST(row0, x, p);
+                }
+            } else {
+                for (size_t x = 0; x < img->w; x++) {
+                    if (image_get_mask_pixel(mask, x, line)) {
+                        uint32_t p0 = IMAGE_GET_BINARY_PIXEL_FAST(row0, x);
+                        uint32_t p1 = IMAGE_GET_BINARY_PIXEL_FAST(row1, x);
+                        uint32_t p = p1 > p0;
+                        IMAGE_PUT_BINARY_PIXEL_FAST(row0, x, p);
+                    }
+                }
+            }
+            break;
+        }
+        case PIXFORMAT_GRAYSCALE: {
+            uint8_t *row0 = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(img, line);
+            uint8_t *row1 = (uint8_t *) other;
+
+            if (!mask) {
+                size_t x = 0;
+                #if defined(ARM_MATH_DSP)
+                for (; (img->w - x) >= 4; x += 4) {
+                    uint32_t p0 = *((uint32_t *) (row0 + x));
+                    uint32_t p1 = *((uint32_t *) (row1 + x));
+                    *((uint32_t *) (row0 + x)) = __UQSUB8(p1, p0);
+                }
+                #endif
+
+                for (; x < img->w; x++) {
+                    uint32_t p0 = IMAGE_GET_GRAYSCALE_PIXEL_FAST(row0, x);
+                    uint32_t p1 = IMAGE_GET_GRAYSCALE_PIXEL_FAST(row1, x);
+                    uint32_t p = __USAT((int32_t) (p1 - p0), 8);
+                    IMAGE_PUT_GRAYSCALE_PIXEL_FAST(row0, x, p);
+                }
+            } else {
+                for (size_t x = 0; x < img->w; x++) {
+                    if (image_get_mask_pixel(mask, x, line)) {
+                        uint32_t p0 = IMAGE_GET_GRAYSCALE_PIXEL_FAST(row0, x);
+                        uint32_t p1 = IMAGE_GET_GRAYSCALE_PIXEL_FAST(row1, x);
+                        uint32_t p = __USAT((int32_t) (p1 - p0), 8);
+                        IMAGE_PUT_GRAYSCALE_PIXEL_FAST(row0, x, p);
+                    }
+                }
+            }
+            break;
+        }
+        case PIXFORMAT_RGB565: {
+            uint16_t *row0 = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(img, line);
+            uint16_t *row1 = (uint16_t *) other;
+
+            if (!mask) {
+                size_t x = 0;
+                #if defined(ARM_MATH_DSP)
+                for (; (img->w - x) >= 2; x += 2) {
+                    uint32_t p0 = *((uint32_t *) (row0 + x));
+                    uint32_t p1 = *((uint32_t *) (row1 + x));
+                    uint32_t r = __USAT16(__SSUB16((p1 >> 11) & 0x1f001f, (p0 >> 11) & 0x1f001f), 5);
+                    uint32_t g = __USAT16(__SSUB16((p1 >> 5) & 0x3f003f, (p0 >> 5) & 0x3f003f), 6);
+                    uint32_t b = __USAT16(__SSUB16(p1 & 0x1f001f, p0 & 0x1f001f), 5);
+                    *((uint32_t *) (row0 + x)) = COLOR_R5_G6_B5_TO_RGB565(r, g, b);
+                }
+                #endif
+
+                for (; x < img->w; x++) {
+                    uint32_t p0 = IMAGE_GET_RGB565_PIXEL_FAST(row0, x);
+                    uint32_t p1 = IMAGE_GET_RGB565_PIXEL_FAST(row1, x);
+                    uint32_t r = __USAT((int32_t) (COLOR_RGB565_TO_R5(p1) - COLOR_RGB565_TO_R5(p0)), 5);
+                    uint32_t g = __USAT((int32_t) (COLOR_RGB565_TO_G6(p1) - COLOR_RGB565_TO_G6(p0)), 6);
+                    uint32_t b = __USAT((int32_t) (COLOR_RGB565_TO_B5(p1) - COLOR_RGB565_TO_B5(p0)), 5);
+                    IMAGE_PUT_RGB565_PIXEL_FAST(row0, x, COLOR_R5_G6_B5_TO_RGB565(r, g, b));
+                }
+            } else {
+                for (size_t x = 0; x < img->w; x++) {
+                    if (image_get_mask_pixel(mask, x, line)) {
+                        uint32_t p0 = IMAGE_GET_RGB565_PIXEL_FAST(row0, x);
+                        uint32_t p1 = IMAGE_GET_RGB565_PIXEL_FAST(row1, x);
+                        uint32_t r = __USAT((int32_t) (COLOR_RGB565_TO_R5(p1) - COLOR_RGB565_TO_R5(p0)), 5);
+                        uint32_t g = __USAT((int32_t) (COLOR_RGB565_TO_G6(p1) - COLOR_RGB565_TO_G6(p0)), 6);
+                        uint32_t b = __USAT((int32_t) (COLOR_RGB565_TO_B5(p1) - COLOR_RGB565_TO_B5(p0)), 5);
+                        IMAGE_PUT_RGB565_PIXEL_FAST(row0, x, COLOR_R5_G6_B5_TO_RGB565(r, g, b));
+                    }
                 }
             }
             break;
@@ -274,10 +467,7 @@ static void imlib_sub_line_op(image_t *img, int line, void *other, void *data, b
 }
 
 void imlib_sub(image_t *img, const char *path, image_t *other, int scalar, bool reverse, image_t *mask) {
-    imlib_sub_line_op_state_t state;
-    state.reverse = reverse;
-    state.mask = mask;
-    imlib_image_operation(img, path, other, scalar, imlib_sub_line_op, &state);
+    imlib_image_operation(img, path, other, scalar, reverse ? imlib_rsub_line_op : imlib_sub_line_op, mask);
 }
 
 static void imlib_min_line_op(image_t *img, int line, void *other, void *data, bool vflipped) {
@@ -285,39 +475,79 @@ static void imlib_min_line_op(image_t *img, int line, void *other, void *data, b
 
     switch (img->pixfmt) {
         case PIXFORMAT_BINARY: {
-            uint32_t *data = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(img, line);
-            for (int i = 0, j = img->w; i < j; i++) {
-                if ((!mask) || image_get_mask_pixel(mask, i, line)) {
-                    int dataPixel = IMAGE_GET_BINARY_PIXEL_FAST(data, i);
-                    int otherPixel = IMAGE_GET_BINARY_PIXEL_FAST(((uint32_t *) other), i);
-                    int p = IM_MIN(dataPixel, otherPixel);
-                    IMAGE_PUT_BINARY_PIXEL_FAST(data, i, p);
-                }
-            }
-            break;
+            imlib_b_and_line_op(img, line, other, data, vflipped);
         }
         case PIXFORMAT_GRAYSCALE: {
-            uint8_t *data = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(img, line);
-            for (int i = 0, j = img->w; i < j; i++) {
-                if ((!mask) || image_get_mask_pixel(mask, i, line)) {
-                    int dataPixel = IMAGE_GET_GRAYSCALE_PIXEL_FAST(data, i);
-                    int otherPixel = IMAGE_GET_GRAYSCALE_PIXEL_FAST(((uint8_t *) other), i);
-                    int p = IM_MIN(dataPixel, otherPixel);
-                    IMAGE_PUT_GRAYSCALE_PIXEL_FAST(data, i, p);
+            uint8_t *row0 = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(img, line);
+            uint8_t *row1 = (uint8_t *) other;
+
+            if (!mask) {
+                size_t x = 0;
+                #if defined(ARM_MATH_DSP)
+                for (; (img->w - x) >= 4; x += 4) {
+                    uint32_t p0 = *((uint32_t *) (row0 + x));
+                    uint32_t p1 = *((uint32_t *) (row1 + x));
+                    __USUB8(p0, p1);
+                    *((uint32_t *) (row0 + x)) = __SEL(p1, p0);
+                }
+                #endif
+
+                for (; x < img->w; x++) {
+                    uint32_t p0 = IMAGE_GET_GRAYSCALE_PIXEL_FAST(row0, x);
+                    uint32_t p1 = IMAGE_GET_GRAYSCALE_PIXEL_FAST(row1, x);
+                    uint32_t p = IM_MIN(p0, p1);
+                    IMAGE_PUT_GRAYSCALE_PIXEL_FAST(row0, x, p);
+                }
+            } else {
+                for (size_t x = 0; x < img->w; x++) {
+                    if (image_get_mask_pixel(mask, x, line)) {
+                        uint32_t p0 = IMAGE_GET_GRAYSCALE_PIXEL_FAST(row0, x);
+                        uint32_t p1 = IMAGE_GET_GRAYSCALE_PIXEL_FAST(row1, x);
+                        uint32_t p = IM_MIN(p0, p1);
+                        IMAGE_PUT_GRAYSCALE_PIXEL_FAST(row0, x, p);
+                    }
                 }
             }
             break;
         }
         case PIXFORMAT_RGB565: {
-            uint16_t *data = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(img, line);
-            for (int i = 0, j = img->w; i < j; i++) {
-                if ((!mask) || image_get_mask_pixel(mask, i, line)) {
-                    int dataPixel = IMAGE_GET_RGB565_PIXEL_FAST(data, i);
-                    int otherPixel = IMAGE_GET_RGB565_PIXEL_FAST(((uint16_t *) other), i);
-                    int r = IM_MIN(COLOR_RGB565_TO_R5(dataPixel), COLOR_RGB565_TO_R5(otherPixel));
-                    int g = IM_MIN(COLOR_RGB565_TO_G6(dataPixel), COLOR_RGB565_TO_G6(otherPixel));
-                    int b = IM_MIN(COLOR_RGB565_TO_B5(dataPixel), COLOR_RGB565_TO_B5(otherPixel));
-                    IMAGE_PUT_RGB565_PIXEL_FAST(data, i, COLOR_R5_G6_B5_TO_RGB565(r, g, b));
+            uint16_t *row0 = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(img, line);
+            uint16_t *row1 = (uint16_t *) other;
+
+            if (!mask) {
+                size_t x = 0;
+                #if defined(ARM_MATH_DSP)
+                for (; (img->w - x) >= 2; x += 2) {
+                    uint32_t p0 = *((uint32_t *) (row0 + x));
+                    uint32_t p1 = *((uint32_t *) (row1 + x));
+                    uint32_t p0_rb = p0 & 0xf81ff81f, p1_rb = p1 & 0xf81ff81f;
+                    __USUB8(p0_rb, p1_rb);
+                    uint32_t rb = __SEL(p1_rb, p0_rb);
+                    uint32_t p0_g = p0 & 0x07e007e0, p1_g = p1 & 0x07e007e0;
+                    __USUB16(p0_g, p1_g);
+                    uint32_t g = __SEL(p1_g, p0_g);
+                    *((uint32_t *) (row0 + x)) = rb | g;
+                }
+                #endif
+
+                for (; x < img->w; x++) {
+                    uint32_t p0 = IMAGE_GET_RGB565_PIXEL_FAST(row0, x);
+                    uint32_t p1 = IMAGE_GET_RGB565_PIXEL_FAST(row1, x);
+                    uint32_t r = IM_MIN(COLOR_RGB565_TO_R5(p0), COLOR_RGB565_TO_R5(p1));
+                    uint32_t g = IM_MIN(COLOR_RGB565_TO_G6(p0), COLOR_RGB565_TO_G6(p1));
+                    uint32_t b = IM_MIN(COLOR_RGB565_TO_B5(p0), COLOR_RGB565_TO_B5(p1));
+                    IMAGE_PUT_RGB565_PIXEL_FAST(row0, x, COLOR_R5_G6_B5_TO_RGB565(r, g, b));
+                }
+            } else {
+                for (size_t x = 0; x < img->w; x++) {
+                    if (image_get_mask_pixel(mask, x, line)) {
+                        uint32_t p0 = IMAGE_GET_RGB565_PIXEL_FAST(row0, x);
+                        uint32_t p1 = IMAGE_GET_RGB565_PIXEL_FAST(row1, x);
+                        uint32_t r = IM_MIN(COLOR_RGB565_TO_R5(p0), COLOR_RGB565_TO_R5(p1));
+                        uint32_t g = IM_MIN(COLOR_RGB565_TO_G6(p0), COLOR_RGB565_TO_G6(p1));
+                        uint32_t b = IM_MIN(COLOR_RGB565_TO_B5(p0), COLOR_RGB565_TO_B5(p1));
+                        IMAGE_PUT_RGB565_PIXEL_FAST(row0, x, COLOR_R5_G6_B5_TO_RGB565(r, g, b));
+                    }
                 }
             }
             break;
@@ -337,39 +567,80 @@ static void imlib_max_line_op(image_t *img, int line, void *other, void *data, b
 
     switch (img->pixfmt) {
         case PIXFORMAT_BINARY: {
-            uint32_t *data = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(img, line);
-            for (int i = 0, j = img->w; i < j; i++) {
-                if ((!mask) || image_get_mask_pixel(mask, i, line)) {
-                    int dataPixel = IMAGE_GET_BINARY_PIXEL_FAST(data, i);
-                    int otherPixel = IMAGE_GET_BINARY_PIXEL_FAST(((uint32_t *) other), i);
-                    int p = IM_MAX(dataPixel, otherPixel);
-                    IMAGE_PUT_BINARY_PIXEL_FAST(data, i, p);
-                }
-            }
+            imlib_b_or_line_op(img, line, other, data, vflipped);
             break;
         }
         case PIXFORMAT_GRAYSCALE: {
-            uint8_t *data = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(img, line);
-            for (int i = 0, j = img->w; i < j; i++) {
-                if ((!mask) || image_get_mask_pixel(mask, i, line)) {
-                    int dataPixel = IMAGE_GET_GRAYSCALE_PIXEL_FAST(data, i);
-                    int otherPixel = IMAGE_GET_GRAYSCALE_PIXEL_FAST(((uint8_t *) other), i);
-                    int p = IM_MAX(dataPixel, otherPixel);
-                    IMAGE_PUT_GRAYSCALE_PIXEL_FAST(data, i, p);
+            uint8_t *row0 = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(img, line);
+            uint8_t *row1 = (uint8_t *) other;
+
+            if (!mask) {
+                size_t x = 0;
+                #if defined(ARM_MATH_DSP)
+                for (; (img->w - x) >= 4; x += 4) {
+                    uint32_t p0 = *((uint32_t *) (row0 + x));
+                    uint32_t p1 = *((uint32_t *) (row1 + x));
+                    __USUB8(p0, p1);
+                    *((uint32_t *) (row0 + x)) = __SEL(p0, p1);
+                }
+                #endif
+
+                for (; x < img->w; x++) {
+                    uint32_t p0 = IMAGE_GET_GRAYSCALE_PIXEL_FAST(row0, x);
+                    uint32_t p1 = IMAGE_GET_GRAYSCALE_PIXEL_FAST(row1, x);
+                    uint32_t p = IM_MAX(p0, p1);
+                    IMAGE_PUT_GRAYSCALE_PIXEL_FAST(row0, x, p);
+                }
+            } else {
+                for (size_t x = 0; x < img->w; x++) {
+                    if (image_get_mask_pixel(mask, x, line)) {
+                        uint32_t p0 = IMAGE_GET_GRAYSCALE_PIXEL_FAST(row0, x);
+                        uint32_t p1 = IMAGE_GET_GRAYSCALE_PIXEL_FAST(row1, x);
+                        uint32_t p = IM_MAX(p0, p1);
+                        IMAGE_PUT_GRAYSCALE_PIXEL_FAST(row0, x, p);
+                    }
                 }
             }
             break;
         }
         case PIXFORMAT_RGB565: {
-            uint16_t *data = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(img, line);
-            for (int i = 0, j = img->w; i < j; i++) {
-                if ((!mask) || image_get_mask_pixel(mask, i, line)) {
-                    int dataPixel = IMAGE_GET_RGB565_PIXEL_FAST(data, i);
-                    int otherPixel = IMAGE_GET_RGB565_PIXEL_FAST(((uint16_t *) other), i);
-                    int r = IM_MAX(COLOR_RGB565_TO_R5(dataPixel), COLOR_RGB565_TO_R5(otherPixel));
-                    int g = IM_MAX(COLOR_RGB565_TO_G6(dataPixel), COLOR_RGB565_TO_G6(otherPixel));
-                    int b = IM_MAX(COLOR_RGB565_TO_B5(dataPixel), COLOR_RGB565_TO_B5(otherPixel));
-                    IMAGE_PUT_RGB565_PIXEL_FAST(data, i, COLOR_R5_G6_B5_TO_RGB565(r, g, b));
+            uint16_t *row0 = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(img, line);
+            uint16_t *row1 = (uint16_t *) other;
+
+            if (!mask) {
+                size_t x = 0;
+                #if defined(ARM_MATH_DSP)
+                for (; (img->w - x) >= 2; x += 2) {
+                    uint32_t p0 = *((uint32_t *) (row0 + x));
+                    uint32_t p1 = *((uint32_t *) (row1 + x));
+                    uint32_t p0_rb = p0 & 0xf81ff81f, p1_rb = p1 & 0xf81ff81f;
+                    __USUB8(p0_rb, p1_rb);
+                    uint32_t rb = __SEL(p0_rb, p1_rb);
+                    uint32_t p0_g = p0 & 0x07e007e0, p1_g = p1 & 0x07e007e0;
+                    __USUB16(p0_g, p1_g);
+                    uint32_t g = __SEL(p0_g, p1_g);
+                    *((uint32_t *) (row0 + x)) = rb | g;
+                }
+                #endif
+
+                for (; x < img->w; x++) {
+                    uint32_t p0 = IMAGE_GET_RGB565_PIXEL_FAST(row0, x);
+                    uint32_t p1 = IMAGE_GET_RGB565_PIXEL_FAST(row1, x);
+                    uint32_t r = IM_MAX(COLOR_RGB565_TO_R5(p0), COLOR_RGB565_TO_R5(p1));
+                    uint32_t g = IM_MAX(COLOR_RGB565_TO_G6(p0), COLOR_RGB565_TO_G6(p1));
+                    uint32_t b = IM_MAX(COLOR_RGB565_TO_B5(p0), COLOR_RGB565_TO_B5(p1));
+                    IMAGE_PUT_RGB565_PIXEL_FAST(row0, x, COLOR_R5_G6_B5_TO_RGB565(r, g, b));
+                }
+            } else {
+                for (size_t x = 0; x < img->w; x++) {
+                    if (image_get_mask_pixel(mask, x, line)) {
+                        uint32_t p0 = IMAGE_GET_RGB565_PIXEL_FAST(row0, x);
+                        uint32_t p1 = IMAGE_GET_RGB565_PIXEL_FAST(row1, x);
+                        uint32_t r = IM_MAX(COLOR_RGB565_TO_R5(p0), COLOR_RGB565_TO_R5(p1));
+                        uint32_t g = IM_MAX(COLOR_RGB565_TO_G6(p0), COLOR_RGB565_TO_G6(p1));
+                        uint32_t b = IM_MAX(COLOR_RGB565_TO_B5(p0), COLOR_RGB565_TO_B5(p1));
+                        IMAGE_PUT_RGB565_PIXEL_FAST(row0, x, COLOR_R5_G6_B5_TO_RGB565(r, g, b));
+                    }
                 }
             }
             break;
@@ -389,39 +660,83 @@ static void imlib_difference_line_op(image_t *img, int line, void *other, void *
 
     switch (img->pixfmt) {
         case PIXFORMAT_BINARY: {
-            uint32_t *data = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(img, line);
-            for (int i = 0, j = img->w; i < j; i++) {
-                if ((!mask) || image_get_mask_pixel(mask, i, line)) {
-                    int dataPixel = IMAGE_GET_BINARY_PIXEL_FAST(data, i);
-                    int otherPixel = IMAGE_GET_BINARY_PIXEL_FAST(((uint32_t *) other), i);
-                    int p = dataPixel ^ otherPixel; // abs(dataPixel - otherPixel);
-                    IMAGE_PUT_BINARY_PIXEL_FAST(data, i, p);
-                }
-            }
+            imlib_b_xor_line_op(img, line, other, data, vflipped);
             break;
         }
         case PIXFORMAT_GRAYSCALE: {
-            uint8_t *data = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(img, line);
-            for (int i = 0, j = img->w; i < j; i++) {
-                if ((!mask) || image_get_mask_pixel(mask, i, line)) {
-                    int dataPixel = IMAGE_GET_GRAYSCALE_PIXEL_FAST(data, i);
-                    int otherPixel = IMAGE_GET_GRAYSCALE_PIXEL_FAST(((uint8_t *) other), i);
-                    int p = abs(dataPixel - otherPixel);
-                    IMAGE_PUT_GRAYSCALE_PIXEL_FAST(data, i, p);
+            uint8_t *row0 = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(img, line);
+            uint8_t *row1 = (uint8_t *) other;
+
+            if (!mask) {
+                size_t x = 0;
+                #if defined(ARM_MATH_DSP)
+                for (; (img->w - x) >= 4; x += 4) {
+                    uint32_t p0 = *((uint32_t *) (row0 + x));
+                    uint32_t p1 = *((uint32_t *) (row1 + x));
+                    uint32_t sub0 = __USUB8(p0, p1);
+                    uint32_t sub1 = __USUB8(p1, p0);
+                    *((uint32_t *) (row0 + x)) = __SEL(sub1, sub0);
+                }
+                #endif
+
+                for (; x < img->w; x++) {
+                    uint32_t p0 = IMAGE_GET_GRAYSCALE_PIXEL_FAST(row0, x);
+                    uint32_t p1 = IMAGE_GET_GRAYSCALE_PIXEL_FAST(row1, x);
+                    uint32_t p = __USAD8(p0, p1);
+                    IMAGE_PUT_GRAYSCALE_PIXEL_FAST(row0, x, p);
+                }
+            } else {
+                for (size_t x = 0; x < img->w; x++) {
+                    if (image_get_mask_pixel(mask, x, line)) {
+                        uint32_t p0 = IMAGE_GET_GRAYSCALE_PIXEL_FAST(row0, x);
+                        uint32_t p1 = IMAGE_GET_GRAYSCALE_PIXEL_FAST(row1, x);
+                        uint32_t p = __USAD8(p0, p1);
+                        IMAGE_PUT_GRAYSCALE_PIXEL_FAST(row0, x, p);
+                    }
                 }
             }
             break;
         }
         case PIXFORMAT_RGB565: {
-            uint16_t *data = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(img, line);
-            for (int i = 0, j = img->w; i < j; i++) {
-                if ((!mask) || image_get_mask_pixel(mask, i, line)) {
-                    int dataPixel = IMAGE_GET_RGB565_PIXEL_FAST(data, i);
-                    int otherPixel = IMAGE_GET_RGB565_PIXEL_FAST(((uint16_t *) other), i);
-                    int r = abs(COLOR_RGB565_TO_R5(dataPixel) - COLOR_RGB565_TO_R5(otherPixel));
-                    int g = abs(COLOR_RGB565_TO_G6(dataPixel) - COLOR_RGB565_TO_G6(otherPixel));
-                    int b = abs(COLOR_RGB565_TO_B5(dataPixel) - COLOR_RGB565_TO_B5(otherPixel));
-                    IMAGE_PUT_RGB565_PIXEL_FAST(data, i, COLOR_R5_G6_B5_TO_RGB565(r, g, b));
+            uint16_t *row0 = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(img, line);
+            uint16_t *row1 = (uint16_t *) other;
+
+            if (!mask) {
+                size_t x = 0;
+                #if defined(ARM_MATH_DSP)
+                for (; (img->w - x) >= 2; x += 2) {
+                    uint32_t p0 = *((uint32_t *) (row0 + x));
+                    uint32_t p1 = *((uint32_t *) (row1 + x));
+                    uint32_t p0_rb = p0 & 0xf81ff81f, p1_rb = p1 & 0xf81ff81f;
+                    uint32_t sub0 = __USUB8(p0_rb, p1_rb);
+                    uint32_t sub1 = __USUB8(p1_rb, p0_rb);
+                    uint32_t rb = __SEL(sub1, sub0);
+                    uint32_t p0_g = p0 & 0x07e007e0, p1_g = p1 & 0x07e007e0;
+                    sub0 = __USUB16(p0_g, p1_g);
+                    sub1 = __USUB16(p1_g, p0_g);
+                    uint32_t g = __SEL(sub1, sub0);
+                    *((uint32_t *) (row0 + x)) = rb | g;
+                }
+                #endif
+
+                for (; x < img->w; x++) {
+                    uint32_t p0 = IMAGE_GET_RGB565_PIXEL_FAST(row0, x);
+                    uint32_t p1 = IMAGE_GET_RGB565_PIXEL_FAST(row1, x);
+                    uint32_t r = __USAD8(COLOR_RGB565_TO_R5(p0), COLOR_RGB565_TO_R5(p1));
+                    uint32_t g = __USAD8(COLOR_RGB565_TO_G6(p0), COLOR_RGB565_TO_G6(p1));
+                    uint32_t b = __USAD8(COLOR_RGB565_TO_B5(p0), COLOR_RGB565_TO_B5(p1));
+                    IMAGE_PUT_RGB565_PIXEL_FAST(row0, x, COLOR_R5_G6_B5_TO_RGB565(r, g, b));
+                }
+            } else {
+                for (size_t x = 0; x < img->w; x++) {
+                    if (image_get_mask_pixel(mask, x, line)) {
+                        uint32_t p0 = IMAGE_GET_RGB565_PIXEL_FAST(row0, x);
+                        uint32_t p1 = IMAGE_GET_RGB565_PIXEL_FAST(row1, x);
+                        uint32_t r = __USAD8(COLOR_RGB565_TO_R5(p0), COLOR_RGB565_TO_R5(p1));
+                        uint32_t g = __USAD8(COLOR_RGB565_TO_G6(p0), COLOR_RGB565_TO_G6(p1));
+                        uint32_t b = __USAD8(COLOR_RGB565_TO_B5(p0), COLOR_RGB565_TO_B5(p1));
+                        IMAGE_PUT_RGB565_PIXEL_FAST(row0, x, COLOR_R5_G6_B5_TO_RGB565(r, g, b));
+                    }
                 }
             }
             break;

@@ -249,5 +249,23 @@ __STATIC_FORCEINLINE uint32_t __SSUB16(uint32_t op1, uint32_t op2)
   return ((op1 & 0xFFFF0000) - (op2 & 0xFFFF0000)) | ((op1 - op2) & 0xFFFF);
 }
 
+__STATIC_FORCEINLINE uint32_t __USAD8(uint32_t op1, uint32_t op2)
+{
+  uint32_t result = abs((op1 & 0xFF) - (op2 & 0xFF));
+  result += abs(((op1 >> 8) & 0xFF) - ((op2 >> 8) & 0xFF));
+  result += abs(((op1 >> 16) & 0xFF) - ((op2 >> 16) & 0xFF));
+  result += abs(((op1 >> 24) & 0xFF) - ((op2 >> 24) & 0xFF));
+  return result;
+}
+
+__STATIC_FORCEINLINE uint32_t __USADA8(uint32_t op1, uint32_t op2, uint32_t op3)
+{
+  op3 += abs((op1 & 0xFF) - (op2 & 0xFF));
+  op3 += abs(((op1 >> 8) & 0xFF) - ((op2 >> 8) & 0xFF));
+  op3 += abs(((op1 >> 16) & 0xFF) - ((op2 >> 16) & 0xFF));
+  op3 += abs(((op1 >> 24) & 0xFF) - ((op2 >> 24) & 0xFF));
+  return op3;
+}
+
 #endif /* (__ARM_FEATURE_DSP == 1) */
 #endif /* __CMSIS_EXTENSIONS_H */
