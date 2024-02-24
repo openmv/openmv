@@ -294,7 +294,7 @@ static void auto_exposure(sensor_t *sensor) {
         uint32_t GEP = gain * expo;
         float l_ratio = ((float) l_target_total) / l_total;
         float GEP_target = GEP * l_ratio;
-        uint32_t expo_target = IM_MIN(IM_MAX(fast_roundf(GEP_target / R_AE_MinGain), R_AE_MinExpoTime), R_AE_MaxExpoTime);
+        uint32_t expo_target = IM_CLAMP(fast_roundf(GEP_target / R_AE_MinGain), R_AE_MinExpoTime, R_AE_MaxExpoTime);
 
         #ifdef DEBUG_AE
         printf("GEP: %ld ", GEP);
@@ -313,9 +313,9 @@ static void auto_exposure(sensor_t *sensor) {
         } else {
             gain_target = 8;
         }
-        //gain_target = IM_MIN(IM_MAX(fast_ceilf(GEP_target/expo_target), R_AE_MinGain), R_AE_MaxGain);
+        //gain_target = IM_CLAMP(fast_ceilf(GEP_target/expo_target), R_AE_MinGain, R_AE_MaxGain);
         gain_db = 20 * log10f((float) gain_target);
-        expo_target = IM_MIN(IM_MAX(fast_roundf(GEP_target / gain_target), R_AE_MinExpoTime), R_AE_MaxExpoTime);
+        expo_target = IM_CLAMP(fast_roundf(GEP_target / gain_target), R_AE_MinExpoTime, R_AE_MaxExpoTime);
         #ifdef DEBUG_AE
         printf("Gain Target: %ld (%d DB (x1000))\n", gain_target, (int) (gain_db * 1000));
         printf("Final Expo Target: %ld (max: %ld) \n", expo_target, R_AE_MaxExpoTime);

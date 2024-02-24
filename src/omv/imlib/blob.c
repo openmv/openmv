@@ -172,9 +172,9 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                             // These values are initialized to their maximum before we minimize.
                             for (int i = 0; i < FIND_BLOBS_CORNERS_RESOLUTION; i++) {
                                 corners[i].x =
-                                    IM_MAX(IM_MIN(x_max * sign(cos_table[FIND_BLOBS_ANGLE_RESOLUTION * i]), x_max), 0);
+                                    IM_CLAMP(x_max * sign(cos_table[FIND_BLOBS_ANGLE_RESOLUTION * i]), 0, x_max);
                                 corners[i].y =
-                                    IM_MAX(IM_MIN(y_max * sign(sin_table[FIND_BLOBS_ANGLE_RESOLUTION * i]), y_max), 0);
+                                    IM_CLAMP(y_max * sign(sin_table[FIND_BLOBS_ANGLE_RESOLUTION * i]), 0, y_max);
                                 corners_acc[i] = (corners[i].x * cos_table[FIND_BLOBS_ANGLE_RESOLUTION * i]) +
                                                  (corners[i].y * sin_table[FIND_BLOBS_ANGLE_RESOLUTION * i]);
                                 corners_n[i] = 1;
@@ -478,9 +478,9 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                             // These values are initialized to their maximum before we minimize.
                             for (int i = 0; i < FIND_BLOBS_CORNERS_RESOLUTION; i++) {
                                 corners[i].x =
-                                    IM_MAX(IM_MIN(x_max * sign(cos_table[FIND_BLOBS_ANGLE_RESOLUTION * i]), x_max), 0);
+                                    IM_CLAMP(x_max * sign(cos_table[FIND_BLOBS_ANGLE_RESOLUTION * i]), 0, x_max);
                                 corners[i].y =
-                                    IM_MAX(IM_MIN(y_max * sign(sin_table[FIND_BLOBS_ANGLE_RESOLUTION * i]), y_max), 0);
+                                    IM_CLAMP(y_max * sign(sin_table[FIND_BLOBS_ANGLE_RESOLUTION * i]), 0, y_max);
                                 corners_acc[i] = (corners[i].x * cos_table[FIND_BLOBS_ANGLE_RESOLUTION * i]) +
                                                  (corners[i].y * sin_table[FIND_BLOBS_ANGLE_RESOLUTION * i]);
                                 corners_n[i] = 1;
@@ -784,9 +784,9 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                             // Ensures that maximum goes all the way to the edge of the image.
                             for (int i = 0; i < FIND_BLOBS_CORNERS_RESOLUTION; i++) {
                                 corners[i].x =
-                                    IM_MAX(IM_MIN(x_max * sign(cos_table[FIND_BLOBS_ANGLE_RESOLUTION * i]), x_max), 0);
+                                    IM_CLAMP(x_max * sign(cos_table[FIND_BLOBS_ANGLE_RESOLUTION * i]), 0, x_max);
                                 corners[i].y =
-                                    IM_MAX(IM_MIN(y_max * sign(sin_table[FIND_BLOBS_ANGLE_RESOLUTION * i]), y_max), 0);
+                                    IM_CLAMP(y_max * sign(sin_table[FIND_BLOBS_ANGLE_RESOLUTION * i]), 0, y_max);
                                 corners_acc[i] = (corners[i].x * cos_table[FIND_BLOBS_ANGLE_RESOLUTION * i]) +
                                                  (corners[i].y * sin_table[FIND_BLOBS_ANGLE_RESOLUTION * i]);
                                 corners_n[i] = 1;
@@ -1107,10 +1107,10 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                     list_pop_front(out, &tmp_blob);
 
                     rectangle_t temp;
-                    temp.x = IM_MAX(IM_MIN(tmp_blob.rect.x - margin, INT16_MAX), INT16_MIN);
-                    temp.y = IM_MAX(IM_MIN(tmp_blob.rect.y - margin, INT16_MAX), INT16_MIN);
-                    temp.w = IM_MAX(IM_MIN(tmp_blob.rect.w + (margin * 2), INT16_MAX), 0);
-                    temp.h = IM_MAX(IM_MIN(tmp_blob.rect.h + (margin * 2), INT16_MAX), 0);
+                    temp.x = __SSAT(tmp_blob.rect.x - margin, 16);
+                    temp.y = __SSAT(tmp_blob.rect.y - margin, 16);
+                    temp.w = __USAT(tmp_blob.rect.w + (margin * 2), 15);
+                    temp.h = __USAT(tmp_blob.rect.h + (margin * 2), 15);
 
                     if (rectangle_overlap(&(lnk_blob.rect), &temp)
                         && ((merge_cb_arg == NULL) || merge_cb(merge_cb_arg, &lnk_blob, &tmp_blob))) {

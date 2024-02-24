@@ -63,6 +63,8 @@
     ({__typeof__ (a) _a = (a); __typeof__ (b) _b = (b); \
       __builtin_choose_expr(IM_SIGN_COMPARE(_a, _b), (void) 0, (_a < _b ? _a : _b)); })
 
+#define IM_CLAMP(x, min, max)    IM_MAX(IM_MIN((x), (max)), (min))
+
 #define IM_DIV(a, b)             ({ __typeof__ (a) _a = (a); __typeof__ (b) _b = (b); _b ? (_a / _b) : 0; })
 #define IM_MOD(a, b)             ({ __typeof__ (a) _a = (a); __typeof__ (b) _b = (b); _b ? (_a % _b) : 0; })
 

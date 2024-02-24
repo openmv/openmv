@@ -201,8 +201,8 @@ static int set_framesize(sensor_t *sensor, framesize_t framesize) {
 
     int readout_x_max = (ACTIVE_SENSOR_WIDTH - (w * read_mode_mul)) / 2;
     int readout_y_max = (ACTIVE_SENSOR_HEIGHT - (h * read_mode_mul)) / 2;
-    readout_x = IM_MAX(IM_MIN(readout_x, readout_x_max), -readout_x_max);
-    readout_y = IM_MAX(IM_MIN(readout_y, readout_y_max), -readout_y_max);
+    readout_x = IM_CLAMP(readout_x, -readout_x_max, readout_x_max);
+    readout_y = IM_CLAMP(readout_y, -readout_y_max, readout_y_max);
 
     ret |= omv_i2c_writew(&sensor->i2c_bus, sensor->slv_addr, col_start_addr,
                           readout_x_max - readout_x + MT9V0XX_COL_START_MIN); // sensor is mirrored by default
@@ -269,7 +269,7 @@ static int set_auto_gain(sensor_t *sensor, int enable, float gain_db, float gain
     }
 
     if ((enable == 0) && (!isnanf(gain_db)) && (!isinff(gain_db))) {
-        int gain = IM_MAX(IM_MIN(fast_roundf(expf((gain_db / 20.0f) * M_LN10) * 16.0f), 64), 16);
+        int gain = IM_CLAMP(fast_roundf(expf((gain_db / 20.0f) * M_LN10) * 16.0f), 16, 64);
 
         ret |= omv_i2c_readw(&sensor->i2c_bus, sensor->slv_addr, MT9V0XX_ANALOG_GAIN, &reg);
         ret |= omv_i2c_writew(&sensor->i2c_bus, sensor->slv_addr, MT9V0XX_ANALOG_GAIN, (reg & 0xFF80) | gain);
@@ -279,7 +279,7 @@ static int set_auto_gain(sensor_t *sensor, int enable, float gain_db, float gain
             ret |= omv_i2c_writew(&sensor->i2c_bus, sensor->slv_addr, MT9V0X4_ANALOG_GAIN_B, (reg & 0xFF80) | gain);
         }
     } else if ((enable != 0) && (!isnanf(gain_db_ceiling)) && (!isinff(gain_db_ceiling))) {
-        int gain_ceiling = IM_MAX(IM_MIN(fast_roundf(expf((gain_db_ceiling / 20.0f) * M_LN10) * 16.0f), 64), 16);
+        int gain_ceiling = IM_CLAMP(fast_roundf(expf((gain_db_ceiling / 20.0f) * M_LN10) * 16.0f), 16, 64);
         int max_gain = (is_mt9v0x4(sensor)) ? MT9V0X4_MAX_GAIN : MT9V0X2_MAX_GAIN;
 
         ret |= omv_i2c_readw(&sensor->i2c_bus, sensor->slv_addr, max_gain, &reg);
@@ -450,8 +450,8 @@ static int ioctl(sensor_t *sensor, int request, va_list ap) {
             int tmp_readout_y = va_arg(ap, int);
             int readout_x_max = (ACTIVE_SENSOR_WIDTH - tmp_readout_w) / 2;
             int readout_y_max = (ACTIVE_SENSOR_HEIGHT - tmp_readout_h) / 2;
-            tmp_readout_x = IM_MAX(IM_MIN(tmp_readout_x, readout_x_max), -readout_x_max);
-            tmp_readout_y = IM_MAX(IM_MIN(tmp_readout_y, readout_y_max), -readout_y_max);
+            tmp_readout_x = IM_CLAMP(tmp_readout_x, -readout_x_max, readout_x_max);
+            tmp_readout_y = IM_CLAMP(tmp_readout_y, -readout_y_max, readout_y_max);
             bool changed = (tmp_readout_x != readout_x) ||
                            (tmp_readout_y != readout_y);
             readout_x = tmp_readout_x;

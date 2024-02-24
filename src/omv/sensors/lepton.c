@@ -245,6 +245,7 @@ static int ioctl(sensor_t *sensor, int request, va_list ap) {
             float *arg_max_temp = va_arg(ap, float *);
             float min_temp_range = (lepton.high_temp_mode) ? LEPTON_MIN_TEMP_HIGH : LEPTON_MIN_TEMP_NORM;
             float max_temp_range = (lepton.high_temp_mode) ? LEPTON_MAX_TEMP_HIGH : LEPTON_MAX_TEMP_NORM;
+            // Don't use clamp here, the order of comparison is important.
             lepton.min_temp = IM_MAX(IM_MIN(*arg_min_temp, *arg_max_temp), min_temp_range);
             lepton.max_temp = IM_MIN(IM_MAX(*arg_max_temp, *arg_min_temp), max_temp_range);
             break;
@@ -440,9 +441,9 @@ static int snapshot(sensor_t *sensor, image_t *image, uint32_t flags) {
                             value = (value - 8192) + kelvin;
                         }
                         float celsius = (value * 0.01f) - 273.15f;
-                        celsius = IM_MAX(IM_MIN(celsius, lepton.max_temp), lepton.min_temp);
-                        value = IM_MAX(IM_MIN(IM_DIV(((celsius - lepton.min_temp) * 255),
-                                                     (lepton.max_temp - lepton.min_temp)), 255), 0);
+                        celsius = IM_CLAMP(celsius, lepton.min_temp, lepton.max_temp);
+                        value = __USAT(IM_DIV(((celsius - lepton.min_temp) * 255),
+                                              (lepton.max_temp - lepton.min_temp)), 8);
                     }
 
                     int t_x = x - MAIN_FB()->x;

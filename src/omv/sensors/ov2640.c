@@ -586,7 +586,7 @@ static int set_auto_gain(sensor_t *sensor, int enable, float gain_db, float gain
     ret |= omv_i2c_writeb(&sensor->i2c_bus, sensor->slv_addr, COM8, (reg & (~COM8_AGC_EN)) | ((enable != 0) ? COM8_AGC_EN : 0));
 
     if ((enable == 0) && (!isnanf(gain_db)) && (!isinff(gain_db))) {
-        float gain = IM_MAX(IM_MIN(expf((gain_db / 20.0f) * M_LN10), 32.0f), 1.0f);
+        float gain = IM_CLAMP(expf((gain_db / 20.0f) * M_LN10), 1.0f, 32.0f);
 
         int gain_temp = fast_ceilf(logf(IM_MAX(gain / 2.0f, 1.0f)) / M_LN2);
         int gain_hi = 0xF >> (4 - gain_temp);
@@ -594,7 +594,7 @@ static int set_auto_gain(sensor_t *sensor, int enable, float gain_db, float gain
 
         ret |= omv_i2c_writeb(&sensor->i2c_bus, sensor->slv_addr, GAIN, (gain_hi << 4) | (gain_lo << 0));
     } else if ((enable != 0) && (!isnanf(gain_db_ceiling)) && (!isinff(gain_db_ceiling))) {
-        float gain_ceiling = IM_MAX(IM_MIN(expf((gain_db_ceiling / 20.0f) * M_LN10), 128.0f), 2.0f);
+        float gain_ceiling = IM_CLAMP(expf((gain_db_ceiling / 20.0f) * M_LN10), 2.0f, 128.0f);
 
         ret |= omv_i2c_readb(&sensor->i2c_bus, sensor->slv_addr, COM9, &reg);
         ret |=
@@ -670,8 +670,7 @@ static int set_auto_exposure(sensor_t *sensor, int enable, int exposure_us) {
         }
 
         int exposure =
-            IM_MAX(IM_MIN(((exposure_us * (((OMV_CSI_XCLK_FREQUENCY / clk_rc) * pll_mult) / 1000000)) / t_pclk) / t_line,
-                          0xFFFF), 0x0000);
+            __USAT(((exposure_us * (((OMV_CSI_XCLK_FREQUENCY / clk_rc) * pll_mult) / 1000000)) / t_pclk) / t_line, 16);
 
         ret |= omv_i2c_writeb(&sensor->i2c_bus, sensor->slv_addr, BANK_SEL, BANK_SEL_SENSOR);
 

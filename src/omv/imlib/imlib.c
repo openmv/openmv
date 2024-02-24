@@ -432,7 +432,7 @@ int8_t imlib_rgb565_to_l(uint16_t pixel) {
 
     y = (y > 0.008856f) ? fast_cbrtf(y) : ((y * 7.787037f) + 0.137931f);
 
-    return IM_MAX(IM_MIN(fast_floorf(116 * y) - 16, COLOR_L_MAX), COLOR_L_MIN);
+    return IM_CLAMP(fast_floorf(116 * y) - 16, COLOR_L_MIN, COLOR_L_MAX);
 }
 
 int8_t imlib_rgb565_to_a(uint16_t pixel) {
@@ -446,7 +446,7 @@ int8_t imlib_rgb565_to_a(uint16_t pixel) {
     x = (x > 0.008856f) ? fast_cbrtf(x) : ((x * 7.787037f) + 0.137931f);
     y = (y > 0.008856f) ? fast_cbrtf(y) : ((y * 7.787037f) + 0.137931f);
 
-    return IM_MAX(IM_MIN(fast_floorf(500 * (x - y)), COLOR_A_MAX), COLOR_A_MIN);
+    return __SSAT(fast_floorf(500 * (x - y)), 8);
 }
 
 int8_t imlib_rgb565_to_b(uint16_t pixel) {
@@ -460,7 +460,7 @@ int8_t imlib_rgb565_to_b(uint16_t pixel) {
     y = (y > 0.008856f) ? fast_cbrtf(y) : ((y * 7.787037f) + 0.137931f);
     z = (z > 0.008856f) ? fast_cbrtf(z) : ((z * 7.787037f) + 0.137931f);
 
-    return IM_MAX(IM_MIN(fast_floorf(200 * (y - z)), COLOR_B_MAX), COLOR_B_MIN);
+    return __SSAT(fast_floorf(200 * (y - z)), 8);
 }
 
 // https://en.wikipedia.org/wiki/Lab_color_space -> CIELAB-CIEXYZ conversions
@@ -482,18 +482,18 @@ uint16_t imlib_lab_to_rgb(uint8_t l, int8_t a, int8_t b) {
     g_lin = (g_lin > 0.0031308f) ? ((1.055f * powf(g_lin, 0.416666f)) - 0.055f) : (g_lin * 12.92f);
     b_lin = (b_lin > 0.0031308f) ? ((1.055f * powf(b_lin, 0.416666f)) - 0.055f) : (b_lin * 12.92f);
 
-    uint32_t red = IM_MAX(IM_MIN(fast_floorf(r_lin * COLOR_R8_MAX), COLOR_R8_MAX), COLOR_R8_MIN);
-    uint32_t green = IM_MAX(IM_MIN(fast_floorf(g_lin * COLOR_G8_MAX), COLOR_G8_MAX), COLOR_G8_MIN);
-    uint32_t blue = IM_MAX(IM_MIN(fast_floorf(b_lin * COLOR_B8_MAX), COLOR_B8_MAX), COLOR_B8_MIN);
+    uint32_t red = __USAT(fast_floorf(r_lin * COLOR_R8_MAX), 8);
+    uint32_t green = __USAT(fast_floorf(g_lin * COLOR_G8_MAX), 8);
+    uint32_t blue = __USAT(fast_floorf(b_lin * COLOR_B8_MAX), 8);
 
     return COLOR_R8_G8_B8_TO_RGB565(red, green, blue);
 }
 
 // https://en.wikipedia.org/wiki/YCbCr -> JPEG Conversion
 uint16_t imlib_yuv_to_rgb(uint8_t y, int8_t u, int8_t v) {
-    uint32_t r = IM_MAX(IM_MIN(y + ((91881 * v) >> 16), COLOR_R8_MAX), COLOR_R8_MIN);
-    uint32_t g = IM_MAX(IM_MIN(y - (((22554 * u) + (46802 * v)) >> 16), COLOR_G8_MAX), COLOR_G8_MIN);
-    uint32_t b = IM_MAX(IM_MIN(y + ((116130 * u) >> 16), COLOR_B8_MAX), COLOR_B8_MIN);
+    uint32_t r = __USAT(y + ((91881 * v) >> 16), 8);
+    uint32_t g = __USAT(y - (((22554 * u) + (46802 * v)) >> 16), 8);
+    uint32_t b = __USAT(y + ((116130 * u) >> 16), 8);
 
     return COLOR_R8_G8_B8_TO_RGB565(r, g, b);
 }
@@ -1155,7 +1155,7 @@ void imlib_sepconv3(image_t *img, const int8_t *krn, const float m, const int b)
                 acc = __SMLAD(krn[1], buffer[((y - 1) % 2) * img->w + x + 1], acc);
                 acc = __SMLAD(krn[2], buffer[((y - 1) % 2) * img->w + x + 2], acc);
                 acc = (acc * m) + b; // scale, offset, and clamp
-                acc = IM_MAX(IM_MIN(acc, IM_MAX_GS), 0);
+                acc = __USAT(acc, 8);
                 IM_SET_GS_PIXEL(img, (x + 1), (y), acc);
             }
         }

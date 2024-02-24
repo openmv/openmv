@@ -333,9 +333,9 @@ int py_helper_keyword_color(image_t *img, uint n_args, const mp_obj_t *args, uin
         } else {
             mp_obj_t *arg_color;
             mp_obj_get_array_fixed_n(kw_arg->value, 3, &arg_color);
-            default_val = COLOR_R8_G8_B8_TO_RGB565(IM_MAX(IM_MIN(mp_obj_get_int(arg_color[0]), COLOR_R8_MAX), COLOR_R8_MIN),
-                                                   IM_MAX(IM_MIN(mp_obj_get_int(arg_color[1]), COLOR_G8_MAX), COLOR_G8_MIN),
-                                                   IM_MAX(IM_MIN(mp_obj_get_int(arg_color[2]), COLOR_B8_MAX), COLOR_B8_MIN));
+            default_val = COLOR_R8_G8_B8_TO_RGB565(__USAT(mp_obj_get_int(arg_color[0]), 8),
+                                                   __USAT(mp_obj_get_int(arg_color[1]), 8),
+                                                   __USAT(mp_obj_get_int(arg_color[2]), 8));
             switch (img->pixfmt) {
                 case PIXFORMAT_BINARY: {
                     default_val = COLOR_RGB565_TO_BINARY(default_val);
@@ -356,9 +356,9 @@ int py_helper_keyword_color(image_t *img, uint n_args, const mp_obj_t *args, uin
         } else {
             mp_obj_t *arg_color;
             mp_obj_get_array_fixed_n(args[arg_index], 3, &arg_color);
-            default_val = COLOR_R8_G8_B8_TO_RGB565(IM_MAX(IM_MIN(mp_obj_get_int(arg_color[0]), COLOR_R8_MAX), COLOR_R8_MIN),
-                                                   IM_MAX(IM_MIN(mp_obj_get_int(arg_color[1]), COLOR_G8_MAX), COLOR_G8_MIN),
-                                                   IM_MAX(IM_MIN(mp_obj_get_int(arg_color[2]), COLOR_B8_MAX), COLOR_B8_MIN));
+            default_val = COLOR_R8_G8_B8_TO_RGB565(__USAT(mp_obj_get_int(arg_color[0]), 8),
+                                                   __USAT(mp_obj_get_int(arg_color[1]), 8),
+                                                   __USAT(mp_obj_get_int(arg_color[2]), 8));
             switch (img->pixfmt) {
                 case PIXFORMAT_BINARY: {
                     default_val = COLOR_RGB565_TO_BINARY(default_val);
@@ -391,26 +391,18 @@ void py_helper_arg_to_thresholds(const mp_obj_t arg, list_t *thresholds) {
         mp_obj_get_array(arg_thresholds[i], &arg_threshold_len, &arg_threshold);
         if (arg_threshold_len) {
             color_thresholds_list_lnk_data_t lnk_data;
-            lnk_data.LMin = (arg_threshold_len > 0) ? IM_MAX(IM_MIN(mp_obj_get_int(arg_threshold[0]),
-                                                                    IM_MAX(COLOR_L_MAX, COLOR_GRAYSCALE_MAX)),
-                                                             IM_MIN(COLOR_L_MIN, COLOR_GRAYSCALE_MIN)) :
+            lnk_data.LMin = (arg_threshold_len > 0) ? __USAT(mp_obj_get_int(arg_threshold[0]), 8) :
                             IM_MIN(COLOR_L_MIN, COLOR_GRAYSCALE_MIN);
-            lnk_data.LMax = (arg_threshold_len > 1) ? IM_MAX(IM_MIN(mp_obj_get_int(arg_threshold[1]),
-                                                                    IM_MAX(COLOR_L_MAX, COLOR_GRAYSCALE_MAX)),
-                                                             IM_MIN(COLOR_L_MIN, COLOR_GRAYSCALE_MIN)) :
+            lnk_data.LMax = (arg_threshold_len > 1) ? __USAT(mp_obj_get_int(arg_threshold[1]), 8) :
                             IM_MAX(COLOR_L_MAX, COLOR_GRAYSCALE_MAX);
             lnk_data.AMin =
-                (arg_threshold_len > 2) ? IM_MAX(IM_MIN(mp_obj_get_int(arg_threshold[2]), COLOR_A_MAX),
-                                                 COLOR_A_MIN) : COLOR_A_MIN;
+                (arg_threshold_len > 2) ? __SSAT(mp_obj_get_int(arg_threshold[2]), 8) : COLOR_A_MIN;
             lnk_data.AMax =
-                (arg_threshold_len > 3) ? IM_MAX(IM_MIN(mp_obj_get_int(arg_threshold[3]), COLOR_A_MAX),
-                                                 COLOR_A_MIN) : COLOR_A_MAX;
+                (arg_threshold_len > 3) ? __SSAT(mp_obj_get_int(arg_threshold[3]), 8) : COLOR_A_MAX;
             lnk_data.BMin =
-                (arg_threshold_len > 4) ? IM_MAX(IM_MIN(mp_obj_get_int(arg_threshold[4]), COLOR_B_MAX),
-                                                 COLOR_B_MIN) : COLOR_B_MIN;
+                (arg_threshold_len > 4) ? __SSAT(mp_obj_get_int(arg_threshold[4]), 8) : COLOR_B_MIN;
             lnk_data.BMax =
-                (arg_threshold_len > 5) ? IM_MAX(IM_MIN(mp_obj_get_int(arg_threshold[5]), COLOR_B_MAX),
-                                                 COLOR_B_MIN) : COLOR_B_MAX;
+                (arg_threshold_len > 5) ? __SSAT(mp_obj_get_int(arg_threshold[5]), 8) : COLOR_B_MAX;
             color_thresholds_list_lnk_data_t lnk_data_tmp;
             memcpy(&lnk_data_tmp, &lnk_data, sizeof(color_thresholds_list_lnk_data_t));
             lnk_data.LMin = IM_MIN(lnk_data_tmp.LMin, lnk_data_tmp.LMax);

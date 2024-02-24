@@ -157,11 +157,11 @@ void imlib_stereo_disparity(image_t *img, bool reversed, int max_disparity, int 
                         // slow way
                         for (int i = 0, j = -BLOCK_H_U; j <= BLOCK_H_D; j++) {
                             int y_p = y + j;
-                            int y = IM_MIN(IM_MAX(y_p, 0), height_1_m_1);
+                            int y = IM_CLAMP(y_p, 0, height_1_m_1);
                             uint8_t *k_row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(img, y);
                             for (int k = -BLOCK_W_L; k <= BLOCK_W_R; k++) {
                                 int x_p = xl + k;
-                                int x = IM_MIN(IM_MAX(x_p, 0), width_2_m_1) + xl_offset;
+                                int x = IM_CLAMP(x_p, 0, width_2_m_1) + xl_offset;
                                 data_l[i++] = IMAGE_GET_GRAYSCALE_PIXEL_FAST(k_row_ptr, x);
                             }
                         }
@@ -179,11 +179,11 @@ void imlib_stereo_disparity(image_t *img, bool reversed, int max_disparity, int 
                             // slow way
                             for (int i = 0, j = -BLOCK_H_U; j <= BLOCK_H_D; j++) {
                                 int y_p = y + j;
-                                int y = IM_MIN(IM_MAX(y_p, 0), height_1_m_1);
+                                int y = IM_CLAMP(y_p, 0, height_1_m_1);
                                 uint8_t *k_row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(img, y);
                                 for (int k = -BLOCK_W_L; k <= BLOCK_W_R; k++) {
                                     int x_p = xr + k;
-                                    int x = IM_MIN(IM_MAX(x_p, 0), width_2_m_1) + xr_offset;
+                                    int x = IM_CLAMP(x_p, 0, width_2_m_1) + xr_offset;
                                     data_r[i++] = IMAGE_GET_GRAYSCALE_PIXEL_FAST(k_row_ptr, x);
                                 }
                             }
