@@ -28,6 +28,8 @@ typedef struct libtf_parameters {
     libtf_datatype_t output_datatype;
     float output_scale;
     int output_zero_point;
+    size_t operators_size;
+    uint32_t operators_hash;
 } libtf_parameters_t;
 
 // Call this first to get the model parameters.
