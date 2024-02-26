@@ -190,7 +190,7 @@ static int sensor_detect() {
             case OV5640_SLV_ADDR:   // Or GC2145
                 // Try to read GC2145 chip ID first
                 omv_i2c_readb(&sensor.i2c_bus, slv_addr, GC_CHIP_ID, &sensor.chip_id);
-                if (sensor.chip_id != GC_CHIP_ID) {
+                if (sensor.chip_id != GC2145_ID) {
                     // If it fails, try reading OV5640 chip ID.
                     omv_i2c_readb2(&sensor.i2c_bus, slv_addr, OV5640_CHIP_ID, &sensor.chip_id);
                 }
