@@ -893,6 +893,9 @@ static int set_framesize(sensor_t *sensor, framesize_t framesize) {
 static int set_hmirror(sensor_t *sensor, int enable) {
     int ret = 0;
     uint8_t reg;
+    #if (OMV_GC2145_ROTATE == 1)
+    enable = !enable;
+    #endif
 
     // P0 regs
     ret |= omv_i2c_writeb(&sensor->i2c_bus, sensor->slv_addr, 0xFE, 0x00);
@@ -904,6 +907,9 @@ static int set_hmirror(sensor_t *sensor, int enable) {
 static int set_vflip(sensor_t *sensor, int enable) {
     int ret = 0;
     uint8_t reg;
+    #if (OMV_GC2145_ROTATE == 1)
+    enable = !enable;
+    #endif
 
     // P0 regs
     ret |= omv_i2c_writeb(&sensor->i2c_bus, sensor->slv_addr, 0xFE, 0x00);
