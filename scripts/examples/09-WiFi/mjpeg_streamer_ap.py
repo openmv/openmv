@@ -25,9 +25,9 @@ sensor.set_pixformat(sensor.GRAYSCALE)
 
 # Init wlan module in AP mode.
 wlan = network.WLAN(network.AP_IF)
+wlan.config(ssid=SSID, key=KEY, channel=2)
 wlan.active(True)
-# Note some WiFi modules only support WEP in AP mode.
-wlan.config(ssid=SSID, key=KEY, channel=2)  # security=wlan.WEP
+
 print("AP mode started. SSID: {} IP: {}".format(SSID, wlan.ifconfig()[0]))
 
 # You can block waiting for client to connect

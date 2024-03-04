@@ -160,6 +160,12 @@ static mp_obj_t py_winc_connect(mp_uint_t n_args, const mp_obj_t *pos_args, mp_m
         mp_raise_msg(&mp_type_OSError, MP_ERROR_TEXT("Key can't be empty!"));
     }
 
+    // Activate the interface if it's inactive.
+    if (!self->active) {
+        mp_obj_t args[2] = { pos_args[0], MP_OBJ_NEW_SMALL_INT(1) };
+        py_winc_active(2, args);
+    }
+
     if (self->itf == WINC_MODE_STA) {
         // Initialize WiFi in STA mode.
         if (winc_connect(ssid, security, key, M2M_WIFI_CH_ALL) != 0) {

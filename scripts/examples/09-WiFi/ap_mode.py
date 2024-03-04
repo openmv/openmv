@@ -15,8 +15,9 @@ PORT = 8080  # Arbitrary non-privileged port
 
 # Init wlan module and connect to network
 wlan = network.WLAN(network.AP_IF)
+wlan.config(ssid=SSID, key=KEY, channel=2)
 wlan.active(True)
-wlan.config(essid=SSID, key=KEY, security=wlan.WEP, channel=2)
+
 print("AP mode started. SSID: {} IP: {}".format(SSID, wlan.ifconfig()[0]))
 
 
