@@ -91,19 +91,11 @@ class MQTTClient:
             self.sock.close()
             self.sock = None
 
-        try:
-            self.sock = socket.socket()
-            self.sock.settimeout(timeout)
-            if self.ssl_params is not None:
-                self.sock = ssl.wrap_socket(self.sock, self.ssl_params)
-            self.sock.connect(addr)
-        except Exception:
-            self.sock.close()
-            self.sock = socket.socket()
-            self.sock.settimeout(timeout)
-            self.sock.connect(addr)
-            if self.ssl_params is not None:
-                self.sock = ssl.wrap_socket(self.sock, self.ssl_params)
+        self.sock = socket.socket()
+        self.sock.settimeout(timeout)
+        self.sock.connect(addr)
+        if self.ssl_params is not None:
+            self.sock = ssl.wrap_socket(self.sock, **self.ssl_params)
 
         premsg = bytearray(b"\x10\0\0\0\0\0")
         msg = bytearray(b"\x04MQTT\x04\x02\0\0")
