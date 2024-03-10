@@ -943,6 +943,7 @@ typedef struct img_read_settings {
     save_image_format_t format;
 } img_read_settings_t;
 
+typedef void (*binary_morph_op_t) (image_t *, int, int, image_t *);
 typedef void (*line_op_t) (image_t *, int, void *, void *, bool);
 typedef void (*flood_fill_call_back_t) (image_t *, int, int, int, void *);
 
