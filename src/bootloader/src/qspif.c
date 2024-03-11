@@ -46,7 +46,7 @@ static int qspif_poll_status_flag(uint32_t mask, uint32_t match, uint32_t timeou
 
 int qspif_init() {
     QSPIHandle.Instance = QUADSPI;
-    QSPIHandle.Init.ClockPrescaler = 1;     // clock = 200MHz / (1+1) = 100MHz
+    QSPIHandle.Init.ClockPrescaler = 3;     // clock = 200MHz / (1+1) = 100MHz
     QSPIHandle.Init.FifoThreshold = 3;
     QSPIHandle.Init.SampleShifting = QSPI_SAMPLE_SHIFTING_HALFCYCLE;
     QSPIHandle.Init.FlashSize = OMV_BOOT_QSPIF_SIZE_BITS - 1;
