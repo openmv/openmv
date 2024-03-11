@@ -331,7 +331,7 @@ static int set_auto_gain(sensor_t *sensor, int enable, float gain_db, float gain
                        (reg & (~REG_COM8_AGC)) | ((enable != 0) ? REG_COM8_AGC : 0));
 
     if ((enable == 0) && (!isnanf(gain_db)) && (!isinf(gain_db))) {
-        float gain = IM_MAX(IM_MIN(expf((gain_db / 20.0f) * M_LN10), 128.0f), 1.0f);
+        float gain = IM_CLAMP(expf((gain_db / 20.0f) * M_LN10), 1.0f, 128.0f);
 
         int gain_temp = fast_ceilf(logf(IM_MAX(gain / 2.0f, 1.0f)) / M_LN2);
         int gain_hi = 0x3F >> (6 - gain_temp);
@@ -341,7 +341,7 @@ static int set_auto_gain(sensor_t *sensor, int enable, float gain_db, float gain
         ret |= omv_i2c_readb(&sensor->i2c_bus, sensor->slv_addr, REG_VREF, &reg);
         ret |= omv_i2c_writeb(&sensor->i2c_bus, sensor->slv_addr, REG_VREF, ((gain_hi & 0x30) << 2) | (reg & 0x3F));
     } else if ((enable != 0) && (!isnanf(gain_db_ceiling)) && (!isinf(gain_db_ceiling))) {
-        float gain_ceiling = IM_MAX(IM_MIN(expf((gain_db_ceiling / 20.0f) * M_LN10), 128.0f), 2.0f);
+        float gain_ceiling = IM_CLAMP(expf((gain_db_ceiling / 20.0f) * M_LN10), 2.0f, 128.0f);
 
         ret |= omv_i2c_readb(&sensor->i2c_bus, sensor->slv_addr, REG_COM9, &reg);
         ret |=
@@ -413,8 +413,7 @@ static int set_auto_exposure(sensor_t *sensor, int enable, int exposure_us) {
         int clk_rc = ((reg & REG_CLKRC_DIVIDER_MASK) + 1) * 2;
 
         int exposure =
-            IM_MAX(IM_MIN(((exposure_us * (((OMV_CSI_XCLK_FREQUENCY / clk_rc) * pll_mult) / 1000000)) / t_pclk) / t_line,
-                          0xFFFF), 0x0000);
+            __USAT(((exposure_us * (((OMV_CSI_XCLK_FREQUENCY / clk_rc) * pll_mult) / 1000000)) / t_pclk) / t_line, 16);
 
         ret |= omv_i2c_readb(&sensor->i2c_bus, sensor->slv_addr, REG_COM1, &reg);
         ret |= omv_i2c_writeb(&sensor->i2c_bus, sensor->slv_addr, REG_COM1, (reg & 0xFC) | ((exposure >> 0) & 0x3));
@@ -486,8 +485,8 @@ static int set_auto_whitebal(sensor_t *sensor, int enable, float r_gain_db, floa
 
     if ((enable == 0) && (!isnanf(r_gain_db)) && (!isnanf(g_gain_db)) && (!isnanf(b_gain_db))
         && (!isinff(r_gain_db)) && (!isinff(g_gain_db)) && (!isinff(b_gain_db))) {
-        int r_gain = IM_MAX(IM_MIN(fast_roundf(expf((r_gain_db / 20.0f) * M_LN10) * 128.0f), 255), 0);
-        int b_gain = IM_MAX(IM_MIN(fast_roundf(expf((b_gain_db / 20.0f) * M_LN10) * 128.0f), 255), 0);
+        int r_gain = __USAT(fast_roundf(expf((r_gain_db / 20.0f) * M_LN10) * 128.0f), 8);
+        int b_gain = __USAT(fast_roundf(expf((b_gain_db / 20.0f) * M_LN10) * 128.0f), 8);
 
         ret |= omv_i2c_writeb(&sensor->i2c_bus, sensor->slv_addr, REG_BLUE, b_gain);
         ret |= omv_i2c_writeb(&sensor->i2c_bus, sensor->slv_addr, REG_RED, r_gain);

@@ -1045,7 +1045,7 @@ void imlib_gamma(image_t *img, float gamma, float contrast, float brightness) {
 
             for (int i = COLOR_BINARY_MIN; i <= COLOR_BINARY_MAX; i++) {
                 int p = ((fast_powf(i * pDiv, gamma) * contrast) + brightness) * pScale;
-                p_lut[i] = IM_MIN(IM_MAX(p, COLOR_BINARY_MIN), COLOR_BINARY_MAX);
+                p_lut[i] = __USAT(p, 1);
             }
 
             for (int y = 0, yy = img->h; y < yy; y++) {
@@ -1069,7 +1069,7 @@ void imlib_gamma(image_t *img, float gamma, float contrast, float brightness) {
 
             for (int i = COLOR_GRAYSCALE_MIN; i <= COLOR_GRAYSCALE_MAX; i++) {
                 int p = ((fast_powf(i * pDiv, gamma) * contrast) + brightness) * pScale;
-                p_lut[i] = IM_MIN(IM_MAX(p, COLOR_GRAYSCALE_MIN), COLOR_GRAYSCALE_MAX);
+                p_lut[i] = __USAT(p, 8);
             }
 
             uint8_t *ptr = (uint8_t *) img->data;
@@ -1101,17 +1101,17 @@ void imlib_gamma(image_t *img, float gamma, float contrast, float brightness) {
 
             for (int i = COLOR_R5_MIN; i <= COLOR_R5_MAX; i++) {
                 int r = ((fast_powf(i * rDiv, gamma) * contrast) + brightness) * rScale;
-                r_lut[i] = IM_MIN(IM_MAX(r, COLOR_R5_MIN), COLOR_R5_MAX);
+                r_lut[i] = __USAT(r, 5);
             }
 
             for (int i = COLOR_G6_MIN; i <= COLOR_G6_MAX; i++) {
                 int g = ((fast_powf(i * gDiv, gamma) * contrast) + brightness) * gScale;
-                g_lut[i] = IM_MIN(IM_MAX(g, COLOR_G6_MIN), COLOR_G6_MAX);
+                g_lut[i] = __USAT(g, 6);
             }
 
             for (int i = COLOR_B5_MIN; i <= COLOR_B5_MAX; i++) {
                 int b = ((fast_powf(i * bDiv, gamma) * contrast) + brightness) * bScale;
-                b_lut[i] = IM_MIN(IM_MAX(b, COLOR_B5_MIN), COLOR_B5_MAX);
+                b_lut[i] = __USAT(b, 5);
             }
 
             uint16_t *ptr = (uint16_t *) img->data;

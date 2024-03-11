@@ -341,13 +341,13 @@ static int set_colorbar(sensor_t *sensor, int enable) {
 static int set_auto_gain(sensor_t *sensor, int enable, float gain_db, float gain_db_ceiling) {
     int ret = 0;
     if ((enable == 0) && (!isnanf(gain_db)) && (!isinff(gain_db))) {
-        gain_db = IM_MAX(IM_MIN(gain_db, 24.0f), 0.0f);
+        gain_db = IM_CLAMP(gain_db, 0.0f, 24.0f);
         int gain = fast_ceilf(logf(expf((gain_db / 20.0f) * M_LN10)) / M_LN2);
         ret |= omv_i2c_writeb2(&sensor->i2c_bus, sensor->slv_addr, AE_CTRL, 0); // Must disable AE
         ret |= omv_i2c_writeb2(&sensor->i2c_bus, sensor->slv_addr, ANALOG_GAIN, ((gain & 0x7) << 4));
         ret |= omv_i2c_writeb2(&sensor->i2c_bus, sensor->slv_addr, GRP_PARAM_HOLD, 0x01);
     } else if ((enable != 0) && (!isnanf(gain_db_ceiling)) && (!isinff(gain_db_ceiling))) {
-        gain_db_ceiling = IM_MAX(IM_MIN(gain_db_ceiling, 24.0f), 0.0f);
+        gain_db_ceiling = IM_CLAMP(gain_db_ceiling, 0.0f, 24.0f);
         int gain = fast_ceilf(logf(expf((gain_db_ceiling / 20.0f) * M_LN10) / M_LN2));
         ret |= omv_i2c_writeb2(&sensor->i2c_bus, sensor->slv_addr, MAX_AGAIN_FULL, (gain & 0x7));
         ret |= omv_i2c_writeb2(&sensor->i2c_bus, sensor->slv_addr, MAX_AGAIN_BIN2, (gain & 0x7));

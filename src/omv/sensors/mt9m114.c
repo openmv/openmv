@@ -589,8 +589,8 @@ static int set_framesize(sensor_t *sensor, framesize_t framesize) {
 
     int readout_x_max = (ACTIVE_SENSOR_WIDTH - readout_w) / 2;
     int readout_y_max = (ACTIVE_SENSOR_HEIGHT - readout_h) / 2;
-    readout_x = IM_MAX(IM_MIN(readout_x, readout_x_max), -readout_x_max);
-    readout_y = IM_MAX(IM_MIN(readout_y, readout_y_max), -readout_y_max);
+    readout_x = IM_CLAMP(readout_x, -readout_x_max, readout_x_max);
+    readout_y = IM_CLAMP(readout_y, -readout_y_max, readout_y_max);
 
     // Step 1: Determine readout area and subsampling amount.
 
@@ -613,9 +613,9 @@ static int set_framesize(sensor_t *sensor, framesize_t framesize) {
     uint16_t sensor_w = readout_w + DUMMY_WIDTH_BUFFER; // camera hardware needs dummy pixels to sync
     uint16_t sensor_h = readout_h + DUMMY_HEIGHT_BUFFER; // camera hardware needs dummy lines to sync
 
-    uint16_t sensor_ws = IM_MAX(IM_MIN((((ACTIVE_SENSOR_WIDTH - sensor_w) / 4) + (readout_x / 2)) * 2,
-                                       ACTIVE_SENSOR_WIDTH - sensor_w),
-                                -(DUMMY_WIDTH_BUFFER / 2)) + DUMMY_COLUMNS; // must be multiple of 2
+    uint16_t sensor_ws = IM_CLAMP((((ACTIVE_SENSOR_WIDTH - sensor_w) / 4) + (readout_x / 2)) * 2,
+                                  -(DUMMY_WIDTH_BUFFER / 2),
+                                  ACTIVE_SENSOR_WIDTH - sensor_w) + DUMMY_COLUMNS; // must be multiple of 2
     uint16_t sensor_we = sensor_ws + sensor_w - 1;
 
     int sensor_ws_mod = sensor_ws % (read_mode_div * 4); // multiple 4/8
@@ -624,9 +624,9 @@ static int set_framesize(sensor_t *sensor, framesize_t framesize) {
         sensor_we += read_mode_div;
     }
 
-    uint16_t sensor_hs = IM_MAX(IM_MIN((((ACTIVE_SENSOR_HEIGHT - sensor_h) / 4) - (readout_y / 2)) * 2,
-                                       ACTIVE_SENSOR_HEIGHT - sensor_h),
-                                -(DUMMY_HEIGHT_BUFFER / 2)) + DUMMY_LINES; // must be multiple of 2
+    uint16_t sensor_hs = IM_CLAMP((((ACTIVE_SENSOR_HEIGHT - sensor_h) / 4) - (readout_y / 2)) * 2,
+                                  -(DUMMY_HEIGHT_BUFFER / 2),
+                                  ACTIVE_SENSOR_HEIGHT - sensor_h) + DUMMY_LINES; // must be multiple of 2
     uint16_t sensor_he = sensor_hs + sensor_h - 1;
 
     int sensor_hs_mod = sensor_hs % (read_mode_div * 4); // multiple 4/8
@@ -785,7 +785,7 @@ static int set_auto_gain(sensor_t *sensor, int enable, float gain_db, float gain
     }
 
     if ((enable == 0) && (!isnanf(gain_db)) && (!isinff(gain_db))) {
-        int gain = IM_MAX(IM_MIN(expf((gain_db / 20.0f) * M_LN10) * 32.0f, 0xffff), 0x0000);
+        int gain = __USAT(expf((gain_db / 20.0f) * M_LN10) * 32.0f, 16);
 
         if (omv_i2c_writew2(&sensor->i2c_bus, sensor->slv_addr, MT9M114_REG_UVC_GAIN_CONTROL, gain) != 0) {
             return -1;
@@ -926,12 +926,12 @@ static int ioctl(sensor_t *sensor, int request, va_list ap) {
         case IOCTL_SET_READOUT_WINDOW: {
             int tmp_readout_x = va_arg(ap, int);
             int tmp_readout_y = va_arg(ap, int);
-            int tmp_readout_w = IM_MAX(IM_MIN(va_arg(ap, int), ACTIVE_SENSOR_WIDTH), resolution[sensor->framesize][0]);
-            int tmp_readout_h = IM_MAX(IM_MIN(va_arg(ap, int), ACTIVE_SENSOR_HEIGHT), resolution[sensor->framesize][1]);
+            int tmp_readout_w = IM_CLAMP(va_arg(ap, int), resolution[sensor->framesize][0], ACTIVE_SENSOR_WIDTH);
+            int tmp_readout_h = IM_CLAMP(va_arg(ap, int), resolution[sensor->framesize][1], ACTIVE_SENSOR_HEIGHT);
             int readout_x_max = (ACTIVE_SENSOR_WIDTH - tmp_readout_w) / 2;
             int readout_y_max = (ACTIVE_SENSOR_HEIGHT - tmp_readout_h) / 2;
-            tmp_readout_x = IM_MAX(IM_MIN(tmp_readout_x, readout_x_max), -readout_x_max);
-            tmp_readout_y = IM_MAX(IM_MIN(tmp_readout_y, readout_y_max), -readout_y_max);
+            tmp_readout_x = IM_CLAMP(tmp_readout_x, -readout_x_max, readout_x_max);
+            tmp_readout_y = IM_CLAMP(tmp_readout_y, -readout_y_max, readout_y_max);
             bool changed = (tmp_readout_x != readout_x) || (tmp_readout_y != readout_y) ||
                            (tmp_readout_w != readout_w) || (tmp_readout_h != readout_h);
             readout_x = tmp_readout_x;

@@ -886,8 +886,8 @@ static int set_framesize(sensor_t *sensor, framesize_t framesize) {
 
     int readout_x_max = (ACTIVE_SENSOR_WIDTH - readout_w) / 2;
     int readout_y_max = (ACTIVE_SENSOR_HEIGHT - readout_h) / 2;
-    readout_x = IM_MAX(IM_MIN(readout_x, readout_x_max), -readout_x_max);
-    readout_y = IM_MAX(IM_MIN(readout_y, readout_y_max), -readout_y_max);
+    readout_x = IM_CLAMP(readout_x, -readout_x_max, readout_x_max);
+    readout_y = IM_CLAMP(readout_y, -readout_y_max, readout_y_max);
 
     // Step 1: Determine readout area and subsampling amount.
 
@@ -905,13 +905,13 @@ static int set_framesize(sensor_t *sensor, framesize_t framesize) {
     uint16_t sensor_h = readout_h + DUMMY_HEIGHT_BUFFER; // camera hardware needs dummy lines to sync
 
     uint16_t sensor_ws =
-        IM_MAX(IM_MIN((((ACTIVE_SENSOR_WIDTH - sensor_w) / 4) + (readout_x / 2)) * 2, ACTIVE_SENSOR_WIDTH - sensor_w),
-               -(DUMMY_WIDTH_BUFFER / 2)) + DUMMY_COLUMNS;                                                                                                                          // must be multiple of 2
+        IM_CLAMP((((ACTIVE_SENSOR_WIDTH - sensor_w) / 4) + (readout_x / 2)) * 2, -(DUMMY_WIDTH_BUFFER / 2),
+                 ACTIVE_SENSOR_WIDTH - sensor_w) + DUMMY_COLUMNS; // must be multiple of 2
     uint16_t sensor_we = sensor_ws + sensor_w - 1;
 
     uint16_t sensor_hs =
-        IM_MAX(IM_MIN((((ACTIVE_SENSOR_HEIGHT - sensor_h) / 4) - (readout_y / 2)) * 2, ACTIVE_SENSOR_HEIGHT - sensor_h),
-               -(DUMMY_HEIGHT_BUFFER / 2)) + DUMMY_LINES;                                                                                                                            // must be multiple of 2
+        IM_CLAMP((((ACTIVE_SENSOR_HEIGHT - sensor_h) / 4) - (readout_y / 2)) * 2, -(DUMMY_HEIGHT_BUFFER / 2),
+                 ACTIVE_SENSOR_HEIGHT - sensor_h) + DUMMY_LINES; // must be multiple of 2
     uint16_t sensor_he = sensor_hs + sensor_h - 1;
 
     // Step 3: Determine scaling window offset.
@@ -1079,13 +1079,13 @@ static int set_auto_gain(sensor_t *sensor, int enable, float gain_db, float gain
     ret |= omv_i2c_writeb2(&sensor->i2c_bus, sensor->slv_addr, AEC_PK_MANUAL, (reg & 0xFD) | ((enable == 0) << 1));
 
     if ((enable == 0) && (!isnanf(gain_db)) && (!isinff(gain_db))) {
-        int gain = IM_MAX(IM_MIN(fast_roundf(expf((gain_db / 20.0f) * M_LN10) * 16.0f), 1023), 0);
+        int gain = __USAT(fast_roundf(expf((gain_db / 20.0f) * M_LN10) * 16.0f), 10);
 
         ret |= omv_i2c_readb2(&sensor->i2c_bus, sensor->slv_addr, AEC_PK_REAL_GAIN_H, &reg);
         ret |= omv_i2c_writeb2(&sensor->i2c_bus, sensor->slv_addr, AEC_PK_REAL_GAIN_H, (reg & 0xFC) | (gain >> 8));
         ret |= omv_i2c_writeb2(&sensor->i2c_bus, sensor->slv_addr, AEC_PK_REAL_GAIN_L, gain);
     } else if ((enable != 0) && (!isnanf(gain_db_ceiling)) && (!isinff(gain_db_ceiling))) {
-        int gain_ceiling = IM_MAX(IM_MIN(fast_roundf(expf((gain_db_ceiling / 20.0f) * M_LN10) * 16.0f), 1023), 0);
+        int gain_ceiling = __USAT(fast_roundf(expf((gain_db_ceiling / 20.0f) * M_LN10) * 16.0f), 10);
 
         ret |= omv_i2c_readb2(&sensor->i2c_bus, sensor->slv_addr, AEC_GAIN_CEILING_H, &reg);
         ret |= omv_i2c_writeb2(&sensor->i2c_bus, sensor->slv_addr, AEC_GAIN_CEILING_H, (reg & 0xFC) | (gain_ceiling >> 8));
@@ -1159,7 +1159,7 @@ static int set_auto_exposure(sensor_t *sensor, int enable, int exposure_us) {
 
         int pclk_freq = calc_pclk_freq(spc0, spc1, spc2, spc3, sysrootdiv);
         int clocks_per_us = pclk_freq / 1000000;
-        int exposure = IM_MAX(IM_MIN((exposure_us * clocks_per_us) / hts, 0xFFFF), 0x0000);
+        int exposure = __USAT((exposure_us * clocks_per_us) / hts, 16);
 
         int new_vts = IM_MAX(exposure, vts);
 
@@ -1215,9 +1215,9 @@ static int set_auto_whitebal(sensor_t *sensor, int enable, float r_gain_db, floa
     if ((enable == 0) && (!isnanf(r_gain_db)) && (!isnanf(g_gain_db)) && (!isnanf(b_gain_db))
         && (!isinff(r_gain_db)) && (!isinff(g_gain_db)) && (!isinff(b_gain_db))) {
 
-        int r_gain = IM_MAX(IM_MIN(fast_roundf(expf((r_gain_db / 20.0f) * M_LN10)), 4095), 0);
-        int g_gain = IM_MAX(IM_MIN(fast_roundf(expf((g_gain_db / 20.0f) * M_LN10)), 4095), 0);
-        int b_gain = IM_MAX(IM_MIN(fast_roundf(expf((b_gain_db / 20.0f) * M_LN10)), 4095), 0);
+        int r_gain = __USAT(fast_roundf(expf((r_gain_db / 20.0f) * M_LN10)), 12);
+        int g_gain = __USAT(fast_roundf(expf((g_gain_db / 20.0f) * M_LN10)), 12);
+        int b_gain = __USAT(fast_roundf(expf((b_gain_db / 20.0f) * M_LN10)), 12);
 
         ret |= omv_i2c_writeb2(&sensor->i2c_bus, sensor->slv_addr, AWB_R_GAIN_H, r_gain >> 8);
         ret |= omv_i2c_writeb2(&sensor->i2c_bus, sensor->slv_addr, AWB_R_GAIN_L, r_gain);
@@ -1338,12 +1338,12 @@ static int ioctl(sensor_t *sensor, int request, va_list ap) {
         case IOCTL_SET_READOUT_WINDOW: {
             int tmp_readout_x = va_arg(ap, int);
             int tmp_readout_y = va_arg(ap, int);
-            int tmp_readout_w = IM_MAX(IM_MIN(va_arg(ap, int), ACTIVE_SENSOR_WIDTH), resolution[sensor->framesize][0]);
-            int tmp_readout_h = IM_MAX(IM_MIN(va_arg(ap, int), ACTIVE_SENSOR_HEIGHT), resolution[sensor->framesize][1]);
+            int tmp_readout_w = IM_CLAMP(va_arg(ap, int), resolution[sensor->framesize][0], ACTIVE_SENSOR_WIDTH);
+            int tmp_readout_h = IM_CLAMP(va_arg(ap, int), resolution[sensor->framesize][1], ACTIVE_SENSOR_HEIGHT);
             int readout_x_max = (ACTIVE_SENSOR_WIDTH - tmp_readout_w) / 2;
             int readout_y_max = (ACTIVE_SENSOR_HEIGHT - tmp_readout_h) / 2;
-            tmp_readout_x = IM_MAX(IM_MIN(tmp_readout_x, readout_x_max), -readout_x_max);
-            tmp_readout_y = IM_MAX(IM_MIN(tmp_readout_y, readout_y_max), -readout_y_max);
+            tmp_readout_x = IM_CLAMP(tmp_readout_x, -readout_x_max, readout_x_max);
+            tmp_readout_y = IM_CLAMP(tmp_readout_y, -readout_y_max, readout_y_max);
             bool changed = (tmp_readout_x != readout_x) || (tmp_readout_y != readout_y) || (tmp_readout_w != readout_w) ||
                            (tmp_readout_h != readout_h);
             readout_x = tmp_readout_x;

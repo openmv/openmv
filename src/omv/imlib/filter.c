@@ -170,12 +170,12 @@ void imlib_mean_filter(image_t *img, const int ksize, bool threshold, int offset
                         acc = 0;
 
                         for (int j = -ksize; j <= ksize; j++) {
-                            uint32_t *k_row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(img,
-                                                                                     IM_MIN(IM_MAX(y + j, 0), (img->h - 1)));
+                            int y_j = IM_CLAMP(y + j, 0, (img->h - 1));
+                            uint32_t *k_row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(img, y_j);
 
                             for (int k = -ksize; k <= ksize; k++) {
-                                acc += IMAGE_GET_BINARY_PIXEL_FAST(k_row_ptr,
-                                                                   IM_MIN(IM_MAX(x + k, 0), (img->w - 1)));
+                                int x_k = IM_CLAMP(x + k, 0, (img->w - 1));
+                                acc += IMAGE_GET_BINARY_PIXEL_FAST(k_row_ptr, x_k);
                             }
                         }
                     }
@@ -233,12 +233,12 @@ void imlib_mean_filter(image_t *img, const int ksize, bool threshold, int offset
                     } else {
                         acc = 0;
                         for (int j = -ksize; j <= ksize; j++) {
-                            uint8_t *k_row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(img,
-                                                                                       IM_MIN(IM_MAX(y + j, 0), (img->h - 1)));
+                            int y_j = IM_CLAMP(y + j, 0, (img->h - 1));
+                            uint8_t *k_row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(img, y_j);
 
                             for (int k = -ksize; k <= ksize; k++) {
-                                acc += IMAGE_GET_GRAYSCALE_PIXEL_FAST(k_row_ptr,
-                                                                      IM_MIN(IM_MAX(x + k, 0), (img->w - 1)));
+                                int x_k = IM_CLAMP(x + k, 0, (img->w - 1));
+                                acc += IMAGE_GET_GRAYSCALE_PIXEL_FAST(k_row_ptr, x_k);
                             }
                         }
                     }
@@ -306,12 +306,12 @@ void imlib_mean_filter(image_t *img, const int ksize, bool threshold, int offset
                         // check bounds and do full sum calculations
                         r_acc = g_acc = b_acc = 0;
                         for (int j = -ksize; j <= ksize; j++) {
-                            uint16_t *k_row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(img,
-                                                                                     IM_MIN(IM_MAX(y + j, 0), (img->h - 1)));
+                            int y_j = IM_CLAMP(y + j, 0, (img->h - 1));
+                            uint16_t *k_row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(img, y_j);
 
                             for (int k = -ksize; k <= ksize; k++) {
-                                pixel = IMAGE_GET_RGB565_PIXEL_FAST(k_row_ptr,
-                                                                    IM_MIN(IM_MAX(x + k, 0), (img->w - 1)));
+                                int x_k = IM_CLAMP(x + k, 0, (img->w - 1));
+                                pixel = IMAGE_GET_RGB565_PIXEL_FAST(k_row_ptr, x_k);
                                 r_acc += COLOR_RGB565_TO_R5(pixel);
                                 g_acc += COLOR_RGB565_TO_G6(pixel);
                                 b_acc += COLOR_RGB565_TO_B5(pixel);
@@ -422,12 +422,12 @@ void imlib_median_filter(image_t *img, const int ksize, float percentile, bool t
                     } else {
                         sum = 0;
                         for (int j = -ksize; j <= ksize; j++) {
-                            uint32_t *k_row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(img,
-                                                                                     IM_MIN(IM_MAX(y + j, 0), (img->h - 1)));
+                            int y_j = IM_CLAMP(y + j, 0, (img->h - 1));
+                            uint32_t *k_row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(img, y_j);
 
                             for (int k = -ksize; k <= ksize; k++) {
-                                sum += IMAGE_GET_BINARY_PIXEL_FAST(k_row_ptr,
-                                                                   IM_MIN(IM_MAX(x + k, 0), (img->w - 1)));
+                                int x_k = IM_CLAMP(x + k, 0, (img->w - 1));
+                                sum += IMAGE_GET_BINARY_PIXEL_FAST(k_row_ptr, x_k);
                             }
                         }
                     }
@@ -489,12 +489,12 @@ void imlib_median_filter(image_t *img, const int ksize, float percentile, bool t
                         // slow way
                         memset(data, 0, 64);
                         for (int j = -ksize; j <= ksize; j++) {
-                            uint8_t *k_row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(img,
-                                                                                       IM_MIN(IM_MAX(y + j, 0), (img->h - 1)));
+                            int y_j = IM_CLAMP(y + j, 0, (img->h - 1));
+                            uint8_t *k_row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(img, y_j);
 
                             for (int k = -ksize; k <= ksize; k++) {
-                                pixel = IMAGE_GET_GRAYSCALE_PIXEL_FAST(k_row_ptr,
-                                                                       IM_MIN(IM_MAX(x + k, 0), (img->w - 1)));
+                                int x_k = IM_CLAMP(x + k, 0, (img->w - 1));
+                                pixel = IMAGE_GET_GRAYSCALE_PIXEL_FAST(k_row_ptr, x_k);
                                 data[pixel >> 2]++;
                             }
                         }
@@ -565,12 +565,12 @@ void imlib_median_filter(image_t *img, const int ksize, float percentile, bool t
                         // need to check bounds
                         memset(r_data, 0, 32); memset(g_data, 0, 64); memset(b_data, 0, 32);
                         for (int j = -ksize; j <= ksize; j++) {
-                            uint16_t *k_row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(img,
-                                                                                     IM_MIN(IM_MAX(y + j, 0), (img->h - 1)));
+                            int y_j = IM_CLAMP(y + j, 0, (img->h - 1));
+                            uint16_t *k_row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(img, y_j);
 
                             for (int k = -ksize; k <= ksize; k++) {
-                                int pixel = IMAGE_GET_RGB565_PIXEL_FAST(k_row_ptr,
-                                                                        IM_MIN(IM_MAX(x + k, 0), (img->w - 1)));
+                                int x_k = IM_CLAMP(x + k, 0, (img->w - 1));
+                                int pixel = IMAGE_GET_RGB565_PIXEL_FAST(k_row_ptr, x_k);
                                 r_data[COLOR_RGB565_TO_R5(pixel)]++;
                                 g_data[COLOR_RGB565_TO_G6(pixel)]++;
                                 b_data[COLOR_RGB565_TO_B5(pixel)]++;
@@ -672,11 +672,11 @@ void imlib_mode_filter(image_t *img, const int ksize, bool threshold, int offset
                     } else {
                         bins = 0;
                         for (int j = -ksize; j <= ksize; j++) {
-                            uint32_t *k_row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(img,
-                                                                                     IM_MIN(IM_MAX(y + j, 0), (img->h - 1)));
+                            int y_j = IM_CLAMP(y + j, 0, (img->h - 1));
+                            uint32_t *k_row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(img, y_j);
                             for (int k = -ksize; k <= ksize; k++) {
-                                bins += IMAGE_GET_BINARY_PIXEL_FAST(k_row_ptr,
-                                                                    IM_MIN(IM_MAX(x + k, 0), (img->w - 1)));
+                                int x_k = IM_CLAMP(x + k, 0, (img->w - 1));
+                                bins += IMAGE_GET_BINARY_PIXEL_FAST(k_row_ptr, x_k);
                             }
                         }
                     }
@@ -756,12 +756,12 @@ void imlib_mode_filter(image_t *img, const int ksize, bool threshold, int offset
                         mcount = -1;
                         memset(bins, 0, (COLOR_GRAYSCALE_MAX - COLOR_GRAYSCALE_MIN + 1));
                         for (int j = -ksize; j <= ksize; j++) {
-                            uint8_t *k_row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(img,
-                                                                                       IM_MIN(IM_MAX(y + j, 0), (img->h - 1)));
+                            int y_j = IM_CLAMP(y + j, 0, (img->h - 1));
+                            uint8_t *k_row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(img, y_j);
 
                             for (int k = -ksize; k <= ksize; k++) {
-                                pixel = IMAGE_GET_GRAYSCALE_PIXEL_FAST(k_row_ptr,
-                                                                       IM_MIN(IM_MAX(x + k, 0), (img->w - 1)));
+                                int x_k = IM_CLAMP(x + k, 0, (img->w - 1));
+                                pixel = IMAGE_GET_GRAYSCALE_PIXEL_FAST(k_row_ptr, x_k);
                                 bins[pixel]++;
 
                                 if (bins[pixel] > mcount) {
@@ -898,12 +898,12 @@ void imlib_mode_filter(image_t *img, const int ksize, bool threshold, int offset
                         memset(b_bins, 0, (COLOR_B5_MAX - COLOR_B5_MIN + 1));
                         r_mcount = g_mcount = b_mcount = 0;
                         for (int j = -ksize; j <= ksize; j++) {
-                            uint16_t *k_row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(img,
-                                                                                     IM_MIN(IM_MAX(y + j, 0), (img->h - 1)));
+                            int y_j = IM_CLAMP(y + j, 0, (img->h - 1));
+                            uint16_t *k_row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(img, y_j);
 
                             for (int k = -ksize; k <= ksize; k++) {
-                                pixel = IMAGE_GET_RGB565_PIXEL_FAST(k_row_ptr,
-                                                                    IM_MIN(IM_MAX(x + k, 0), (img->w - 1)));
+                                int x_k = IM_CLAMP(x + k, 0, (img->w - 1));
+                                pixel = IMAGE_GET_RGB565_PIXEL_FAST(k_row_ptr, x_k);
                                 r_pixel = COLOR_RGB565_TO_R5(pixel);
                                 g_pixel = COLOR_RGB565_TO_G6(pixel);
                                 b_pixel = COLOR_RGB565_TO_B5(pixel);
@@ -1002,12 +1002,12 @@ void imlib_midpoint_filter(image_t *img, const int ksize, float bias, bool thres
                         }
                     } else {
                         for (int j = -ksize; j <= ksize; j++) {
-                            uint32_t *k_row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(img,
-                                                                                     IM_MIN(IM_MAX(y + j, 0), (img->h - 1)));
+                            int y_j = IM_CLAMP(y + j, 0, (img->h - 1));
+                            uint32_t *k_row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(img, y_j);
 
                             for (int k = -ksize; k <= ksize; k++) {
-                                int pixel = IMAGE_GET_BINARY_PIXEL_FAST(k_row_ptr,
-                                                                        IM_MIN(IM_MAX(x + k, 0), (img->w - 1)));
+                                int x_k = IM_CLAMP(x + k, 0, (img->w - 1));
+                                int pixel = IMAGE_GET_BINARY_PIXEL_FAST(k_row_ptr, x_k);
                                 min &= pixel;
                                 max |= pixel;
                             }
@@ -1073,12 +1073,12 @@ void imlib_midpoint_filter(image_t *img, const int ksize, float bias, bool thres
                         }
                     } else {
                         for (int j = -ksize; j <= ksize; j++) {
-                            uint8_t *k_row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(img,
-                                                                                       IM_MIN(IM_MAX(y + j, 0), (img->h - 1)));
+                            int y_j = IM_CLAMP(y + j, 0, (img->h - 1));
+                            uint8_t *k_row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(img, y_j);
 
                             for (int k = -ksize; k <= ksize; k++) {
-                                int pixel = IMAGE_GET_GRAYSCALE_PIXEL_FAST(k_row_ptr,
-                                                                           IM_MIN(IM_MAX(x + k, 0), (img->w - 1)));
+                                int x_k = IM_CLAMP(x + k, 0, (img->w - 1));
+                                int pixel = IMAGE_GET_GRAYSCALE_PIXEL_FAST(k_row_ptr, x_k);
                                 if (pixel < min) {
                                     min = pixel;
                                 } else if (pixel > max) {
@@ -1162,12 +1162,12 @@ void imlib_midpoint_filter(image_t *img, const int ksize, float bias, bool thres
                         }
                     } else {
                         for (int j = -ksize; j <= ksize; j++) {
-                            uint16_t *k_row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(img,
-                                                                                     IM_MIN(IM_MAX(y + j, 0), (img->h - 1)));
+                            int y_j = IM_CLAMP(y + j, 0, (img->h - 1));
+                            uint16_t *k_row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(img, y_j);
 
                             for (int k = -ksize; k <= ksize; k++) {
-                                int pixel = IMAGE_GET_RGB565_PIXEL_FAST(k_row_ptr,
-                                                                        IM_MIN(IM_MAX(x + k, 0), (img->w - 1)));
+                                int x_k = IM_CLAMP(x + k, 0, (img->w - 1));
+                                int pixel = IMAGE_GET_RGB565_PIXEL_FAST(k_row_ptr, x_k);
                                 int r_pixel = COLOR_RGB565_TO_R5(pixel);
                                 int g_pixel = COLOR_RGB565_TO_G6(pixel);
                                 int b_pixel = COLOR_RGB565_TO_B5(pixel);
@@ -1279,11 +1279,11 @@ void imlib_morph(image_t *img,
                         }
                     } else {
                         for (int j = -ksize; j <= ksize; j++) {
-                            int y_j = IM_MIN(IM_MAX(y + j, 0), (img->h - 1));
+                            int y_j = IM_CLAMP(y + j, 0, (img->h - 1));
                             uint32_t *k_row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(img, y_j);
 
                             for (int k = -ksize; k <= ksize; k++) {
-                                int x_k = IM_MIN(IM_MAX(x + k, 0), (img->w - 1));
+                                int x_k = IM_CLAMP(x + k, 0, (img->w - 1));
                                 acc += krn[ptr++] * IMAGE_GET_BINARY_PIXEL_FAST(k_row_ptr, x_k);
                             }
                         }
@@ -1456,11 +1456,11 @@ void imlib_morph(image_t *img,
                             }
                         } else {
                             for (int j = -ksize; j <= ksize; j++) {
-                                int y_j = IM_MIN(IM_MAX(y + j, 0), (img->h - 1));
+                                int y_j = IM_CLAMP(y + j, 0, (img->h - 1));
                                 uint8_t *k_row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(img, y_j);
 
                                 for (int k = -ksize; k <= ksize; k++) {
-                                    int x_k = IM_MIN(IM_MAX(x + k, 0), (img->w - 1));
+                                    int x_k = IM_CLAMP(x + k, 0, (img->w - 1));
                                     acc += krn[ptr++] * IMAGE_GET_GRAYSCALE_PIXEL_FAST(k_row_ptr, x_k);
                                 }
                             }
@@ -1694,11 +1694,11 @@ void imlib_morph(image_t *img,
                             }
                         } else {
                             for (int j = -ksize; j <= ksize; j++) {
-                                int y_j = IM_MIN(IM_MAX(y + j, 0), (img->h - 1));
+                                int y_j = IM_CLAMP(y + j, 0, (img->h - 1));
                                 uint16_t *k_row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(img, y_j);
 
                                 for (int k = -ksize; k <= ksize; k++) {
-                                    int x_k = IM_MIN(IM_MAX(x + k, 0), (img->w - 1));
+                                    int x_k = IM_CLAMP(x + k, 0, (img->w - 1));
                                     int pixel = IMAGE_GET_RGB565_PIXEL_FAST(k_row_ptr, x_k);
                                     r_acc += krn[ptr] * COLOR_RGB565_TO_R5(pixel);
                                     g_acc += krn[ptr] * COLOR_RGB565_TO_G6(pixel);
@@ -1809,12 +1809,12 @@ void imlib_bilateral_filter(image_t *img,
                     float i_acc = 0, w_acc = 0;
                     int ptr = 0;
                     for (int j = -ksize; j <= ksize; j++) {
-                        uint32_t *k_row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(img,
-                                                                                 IM_MIN(IM_MAX(y + j, 0), (img->h - 1)));
+                        int y_j = IM_CLAMP(y + j, 0, (img->h - 1));
+                        uint32_t *k_row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(img, y_j);
 
                         for (int k = -ksize; k <= ksize; k++) {
-                            int pixel = IMAGE_GET_BINARY_PIXEL_FAST(k_row_ptr,
-                                                                    IM_MIN(IM_MAX(x + k, 0), (img->w - 1)));
+                            int x_k = IM_CLAMP(x + k, 0, (img->w - 1));
+                            int pixel = IMAGE_GET_BINARY_PIXEL_FAST(k_row_ptr, x_k);
                             float w = gi_lut[(this_pixel - pixel)] * gs_lut[ptr++];
                             i_acc += pixel * w;
                             w_acc += w;
@@ -1898,12 +1898,12 @@ void imlib_bilateral_filter(image_t *img,
                         }
                     } else {
                         for (int j = -ksize; j <= ksize; j++) {
-                            uint8_t *k_row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(img,
-                                                                                       IM_MIN(IM_MAX(y + j, 0), (img->h - 1)));
+                            int y_j = IM_CLAMP(y + j, 0, (img->h - 1));
+                            uint8_t *k_row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(img, y_j);
 
                             for (int k = -ksize; k <= ksize; k++) {
-                                int pixel = IMAGE_GET_GRAYSCALE_PIXEL_FAST(k_row_ptr,
-                                                                           IM_MIN(IM_MAX(x + k, 0), (img->w - 1)));
+                                int x_k = IM_CLAMP(x + k, 0, (img->w - 1));
+                                int pixel = IMAGE_GET_GRAYSCALE_PIXEL_FAST(k_row_ptr, x_k);
                                 float w = gi_lut[(this_pixel - pixel)] * gs_lut[ptr++];
                                 i_acc += pixel * w;
                                 w_acc += w;
@@ -2012,12 +2012,12 @@ void imlib_bilateral_filter(image_t *img,
                     } else {
                         // check boundary conditions
                         for (int j = -ksize; j <= ksize; j++) {
-                            uint16_t *k_row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(img,
-                                                                                     IM_MIN(IM_MAX(y + j, 0), (img->h - 1)));
+                            int y_j = IM_CLAMP(y + j, 0, (img->h - 1));
+                            uint16_t *k_row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(img, y_j);
 
                             for (int k = -ksize; k <= ksize; k++) {
-                                int pixel = IMAGE_GET_RGB565_PIXEL_FAST(k_row_ptr,
-                                                                        IM_MIN(IM_MAX(x + k, 0), (img->w - 1)));
+                                int x_k = IM_CLAMP(x + k, 0, (img->w - 1));
+                                int pixel = IMAGE_GET_RGB565_PIXEL_FAST(k_row_ptr, x_k);
                                 int r_pixel = COLOR_RGB565_TO_R5(pixel);
                                 int g_pixel = COLOR_RGB565_TO_G6(pixel);
                                 int b_pixel = COLOR_RGB565_TO_B5(pixel);

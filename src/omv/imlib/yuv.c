@@ -85,17 +85,17 @@ void imlib_deyuv_line(int x_start, int x_end, int y_row, void *dst_row_ptr, pixf
                 int by = (227 * v) >> 7;
 
                 int r0 = y0 + ry, g0 = y0 - gy, b0 = y0 + by;
-                r0 = IM_MIN(IM_MAX(r0, COLOR_R8_MIN), COLOR_R8_MAX);
-                g0 = IM_MIN(IM_MAX(g0, COLOR_G8_MIN), COLOR_G8_MAX);
-                b0 = IM_MIN(IM_MAX(b0, COLOR_B8_MIN), COLOR_B8_MAX);
+                r0 = __USAT(r0, 8);
+                g0 = __USAT(g0, 8);
+                b0 = __USAT(b0, 8);
                 int rgb565_0 = COLOR_R8_G8_B8_TO_RGB565(r0, g0, b0);
                 IMAGE_PUT_RGB565_PIXEL_FAST(row_ptr_16, x, rgb565_0);
 
                 if (x != w_limit) {
                     int r1 = y1 + ry, g1 = y1 - gy, b1 = y1 + by;
-                    r1 = IM_MIN(IM_MAX(r1, COLOR_R8_MIN), COLOR_R8_MAX);
-                    g1 = IM_MIN(IM_MAX(g1, COLOR_G8_MIN), COLOR_G8_MAX);
-                    b1 = IM_MIN(IM_MAX(b1, COLOR_B8_MIN), COLOR_B8_MAX);
+                    r1 = __USAT(r1, 8);
+                    g1 = __USAT(g1, 8);
+                    b1 = __USAT(b1, 8);
                     int rgb565_1 = COLOR_R8_G8_B8_TO_RGB565(r1, g1, b1);
                     IMAGE_PUT_RGB565_PIXEL_FAST(row_ptr_16, x + 1, rgb565_1);
                 }
