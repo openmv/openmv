@@ -435,16 +435,20 @@ void HAL_SPI_MspInit(SPI_HandleTypeDef *hspi) {
     if (hspi->Init.NSS != SPI_NSS_SOFT) {
         omv_gpio_config(spi_pins.ssel_pin, OMV_GPIO_MODE_ALT, OMV_GPIO_PULL_UP, OMV_GPIO_SPEED_HIGH, -1);
     } else {
-        omv_gpio_config(spi_pins.ssel_pin, OMV_GPIO_MODE_OUTPUT, OMV_GPIO_PULL_UP, OMV_GPIO_SPEED_HIGH, -1);
-        #if defined(MCU_SERIES_H7)
-        if (hspi->Init.NSSPolarity == SPI_NSS_POLARITY_LOW) {
+        if (hspi->Init.Mode == SPI_MODE_MASTER) {
+            omv_gpio_config(spi_pins.ssel_pin, OMV_GPIO_MODE_OUTPUT, OMV_GPIO_PULL_UP, OMV_GPIO_SPEED_HIGH, -1);
+            #if defined(MCU_SERIES_H7)
+            if (hspi->Init.NSSPolarity == SPI_NSS_POLARITY_LOW) {
+                omv_gpio_write(spi_pins.ssel_pin, 1);
+            } else {
+                omv_gpio_write(spi_pins.ssel_pin, 0);
+            }
+            #else
             omv_gpio_write(spi_pins.ssel_pin, 1);
+            #endif
         } else {
-            omv_gpio_write(spi_pins.ssel_pin, 0);
+            omv_gpio_config(spi_pins.ssel_pin, OMV_GPIO_MODE_INPUT, OMV_GPIO_PULL_UP, OMV_GPIO_SPEED_HIGH, -1);
         }
-        #else
-        omv_gpio_write(spi_pins.ssel_pin, 1);
-        #endif
     }
 }
 
