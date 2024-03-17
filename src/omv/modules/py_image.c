@@ -1025,6 +1025,9 @@ static mp_obj_t py_image_to(pixformat_t pixfmt, const uint16_t *default_color_pa
     bool arg_e = py_helper_keyword_int(n_args, args, 13, kw_args,
                                        MP_OBJ_NEW_QSTR(MP_QSTR_encode_for_ide), encode_for_ide_default);
 
+    jpeg_subsampling_t subsampling =
+        py_helper_keyword_int(n_args, args, 14, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_subsampling), JPEG_SUBSAMPLING_AUTO);
+
     if (copy_obj) {
         if (mp_obj_is_integer(copy_obj)) {
             copy = mp_obj_get_int(copy_obj);
@@ -1111,7 +1114,7 @@ static mp_obj_t py_image_to(pixformat_t pixfmt, const uint16_t *default_color_pa
                                  (hint & (~IMAGE_HINT_CENTER)) | IMAGE_HINT_BLACK_BACKGROUND, NULL, NULL, NULL);
             }
 
-            if (((dst_img.pixfmt == PIXFORMAT_JPEG) && jpeg_compress(&temp, &dst_img_tmp, arg_q, false))
+            if (((dst_img.pixfmt == PIXFORMAT_JPEG) && jpeg_compress(&temp, &dst_img_tmp, arg_q, false, subsampling))
                 || ((dst_img.pixfmt == PIXFORMAT_PNG) && png_compress(&temp, &dst_img_tmp))) {
                 mp_raise_msg(&mp_type_OSError, MP_ERROR_TEXT("Compression Failed!"));
             }
@@ -7246,6 +7249,10 @@ static const mp_rom_map_elem_t globals_dict_table[] = {
     {MP_ROM_QSTR(MP_QSTR_ROTATE_90),           MP_ROM_INT(IMAGE_HINT_VFLIP | IMAGE_HINT_TRANSPOSE)},
     {MP_ROM_QSTR(MP_QSTR_ROTATE_180),          MP_ROM_INT(IMAGE_HINT_HMIRROR | IMAGE_HINT_VFLIP)},
     {MP_ROM_QSTR(MP_QSTR_ROTATE_270),          MP_ROM_INT(IMAGE_HINT_HMIRROR | IMAGE_HINT_TRANSPOSE)},
+    {MP_ROM_QSTR(MP_QSTR_JPEG_SUBSAMPLING_AUTO), MP_ROM_INT(JPEG_SUBSAMPLING_AUTO)},
+    {MP_ROM_QSTR(MP_QSTR_JPEG_SUBSAMPLING_444), MP_ROM_INT(JPEG_SUBSAMPLING_444)},
+    {MP_ROM_QSTR(MP_QSTR_JPEG_SUBSAMPLING_422), MP_ROM_INT(JPEG_SUBSAMPLING_422)},
+    {MP_ROM_QSTR(MP_QSTR_JPEG_SUBSAMPLING_420), MP_ROM_INT(JPEG_SUBSAMPLING_420)},
     #ifdef IMLIB_FIND_TEMPLATE
     {MP_ROM_QSTR(MP_QSTR_SEARCH_EX),           MP_ROM_INT(SEARCH_EX)},
     {MP_ROM_QSTR(MP_QSTR_SEARCH_DS),           MP_ROM_INT(SEARCH_DS)},

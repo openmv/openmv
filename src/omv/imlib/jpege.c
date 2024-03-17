@@ -1509,7 +1509,7 @@ static void jpeg_init(int quality) {
     }
 }
 
-static void jpeg_write_headers(jpeg_buf_t *jpeg_buf, int w, int h, int bpp, jpeg_subsample_t jpeg_subsample) {
+static void jpeg_write_headers(jpeg_buf_t *jpeg_buf, int w, int h, int bpp, jpeg_subsampling_t subsampling) {
     // Number of components (1 or 3)
     uint8_t nr_comp = (bpp == 1)? 1 : 3;
 
@@ -1574,7 +1574,7 @@ static void jpeg_write_headers(jpeg_buf_t *jpeg_buf, int w, int h, int bpp, jpeg
     jpeg_put_bytes(jpeg_buf, m_sof0, sizeof(m_sof0));
     for (int i = 0; i < nr_comp; i++) {
         // Component ID, HV sampling, q table idx
-        jpeg_put_bytes(jpeg_buf, (uint8_t [3]) {i + 1, (i == 0 && bpp == 2)? jpeg_subsample:0x11, (i > 0)}, 3);
+        jpeg_put_bytes(jpeg_buf, (uint8_t [3]) {i + 1, (i == 0 && bpp == 2)? subsampling:0x11, (i > 0)}, 3);
 
     }
 
@@ -1613,7 +1613,7 @@ static void jpeg_write_headers(jpeg_buf_t *jpeg_buf, int w, int h, int bpp, jpeg
     jpeg_put_bytes(jpeg_buf, (uint8_t [3]) {0x00, 0x3F, 0x0}, 3);
 }
 
-bool jpeg_compress(image_t *src, image_t *dst, int quality, bool realloc) {
+bool jpeg_compress(image_t *src, image_t *dst, int quality, bool realloc, jpeg_subsampling_t subsampling) {
     #if (TIME_JPEG == 1)
     mp_uint_t start = mp_hal_ticks_ms();
     #endif
@@ -1642,22 +1642,30 @@ bool jpeg_compress(image_t *src, image_t *dst, int quality, bool realloc) {
     // Initialize quantization tables
     jpeg_init(quality);
 
-    jpeg_subsample_t jpeg_subsample = JPEG_SUBSAMPLE_1x1;
-
     if (src->is_color) {
-        if (quality <= 35) {
-            jpeg_subsample = JPEG_SUBSAMPLE_2x2;
-        } else if (quality < 60) {
-            jpeg_subsample = JPEG_SUBSAMPLE_2x1;
+        if (subsampling == JPEG_SUBSAMPLING_AUTO) {
+            if (quality <= 35) {
+                subsampling = JPEG_SUBSAMPLING_420;
+            } else if (quality < 60) {
+                subsampling = JPEG_SUBSAMPLING_422;
+            } else {
+                subsampling = JPEG_SUBSAMPLING_444;
+            }
         }
+    } else {
+        subsampling = JPEG_SUBSAMPLING_444;
     }
 
-    jpeg_write_headers(&jpeg_buf, src->w, src->h, src->is_color ? 2 : 1, jpeg_subsample);
+    jpeg_write_headers(&jpeg_buf, src->w, src->h, src->is_color ? 2 : 1, subsampling);
 
     int DCY = 0, DCU = 0, DCV = 0;
 
-    switch (jpeg_subsample) {
-        case JPEG_SUBSAMPLE_1x1: {
+    switch (subsampling) {
+        // Quiet GCC compiler warning (this is never reached)
+        case JPEG_SUBSAMPLING_AUTO: {
+            break;
+        }
+        case JPEG_SUBSAMPLING_444: {
             int8_t YDU[JPEG_444_GS_MCU_SIZE];
             int8_t UDU[JPEG_444_GS_MCU_SIZE];
             int8_t VDU[JPEG_444_GS_MCU_SIZE];
@@ -1683,7 +1691,7 @@ bool jpeg_compress(image_t *src, image_t *dst, int quality, bool realloc) {
             }
             break;
         }
-        case JPEG_SUBSAMPLE_2x1: {
+        case JPEG_SUBSAMPLING_422: {
             // color only
             int8_t YDU[JPEG_444_GS_MCU_SIZE * 2];
             int8_t UDU[JPEG_444_GS_MCU_SIZE * 2];
@@ -1738,7 +1746,7 @@ bool jpeg_compress(image_t *src, image_t *dst, int quality, bool realloc) {
             }
             break;
         }
-        case JPEG_SUBSAMPLE_2x2: {
+        case JPEG_SUBSAMPLING_420: {
             // color only
             int8_t YDU[JPEG_444_GS_MCU_SIZE * 4];
             int8_t UDU[JPEG_444_GS_MCU_SIZE * 4];
@@ -1972,7 +1980,7 @@ void jpeg_write(image_t *img, const char *path, int quality) {
         // When jpeg_compress needs more memory than in currently allocated it
         // will try to realloc. MP will detect that the pointer is outside of
         // the heap and return NULL which will cause an out of memory error.
-        jpeg_compress(img, &out, quality, false);
+        jpeg_compress(img, &out, quality, false, JPEG_SUBSAMPLING_AUTO);
         file_write(&fp, out.pixels, out.size);
         fb_free(); // frees alloc in jpeg_compress()
     }

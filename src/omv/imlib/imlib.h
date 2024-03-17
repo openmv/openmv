@@ -753,6 +753,13 @@ bool image_get_mask_pixel(image_t *ptr, int x, int y);
 #define JPEG_422_YCBCR_MCU_SIZE    ((JPEG_444_GS_MCU_SIZE) * 4)
 #define JPEG_420_YCBCR_MCU_SIZE    ((JPEG_444_GS_MCU_SIZE) * 6)
 
+typedef enum jpeg_subsampling {
+    JPEG_SUBSAMPLING_AUTO = 0,
+    JPEG_SUBSAMPLING_444  = 0x11, // Chroma subsampling 4:4:4 (No subsampling)
+    JPEG_SUBSAMPLING_422  = 0x21, // Chroma subsampling 4:2:2
+    JPEG_SUBSAMPLING_420  = 0x22, // Chroma subsampling 4:2:0
+} jpeg_subsampling_t;
+
 // Old Image Macros - Will be refactor and removed. But, only after making sure through testing new macros work.
 
 // Image kernels
@@ -964,12 +971,6 @@ typedef enum template_match {
     SEARCH_DS,  // Diamond search
 } template_match_t;
 
-typedef enum  jpeg_subsample {
-    JPEG_SUBSAMPLE_1x1 = 0x11,  // 1x1 chroma subsampling (No subsampling)
-    JPEG_SUBSAMPLE_2x1 = 0x21,  // 2x2 chroma subsampling
-    JPEG_SUBSAMPLE_2x2 = 0x22,  // 2x2 chroma subsampling
-} jpeg_subsample_t;
-
 typedef enum corner_detector_type {
     CORNER_FAST,
     CORNER_AGAST
@@ -1180,7 +1181,7 @@ void imlib_hardware_jpeg_deinit();
 void jpeg_get_mcu(image_t *src, int x_offset, int y_offset, int dx, int dy,
                   int8_t *Y0, int8_t *CB, int8_t *CR);
 void jpeg_decompress(image_t *dst, image_t *src);
-bool jpeg_compress(image_t *src, image_t *dst, int quality, bool realloc);
+bool jpeg_compress(image_t *src, image_t *dst, int quality, bool realloc, jpeg_subsampling_t subsampling);
 bool jpeg_is_valid(image_t *img);
 int jpeg_clean_trailing_bytes(int bpp, uint8_t *data);
 void jpeg_read_geometry(FIL *fp, image_t *img, const char *path, jpg_read_settings_t *rs);

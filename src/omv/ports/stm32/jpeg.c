@@ -105,7 +105,7 @@ static void jpeg_compress_data_ready(JPEG_HandleTypeDef *hjpeg, uint8_t *pDataOu
     }
 }
 
-bool jpeg_compress(image_t *src, image_t *dst, int quality, bool realloc) {
+bool jpeg_compress(image_t *src, image_t *dst, int quality, bool realloc, jpeg_subsampling_t subsampling) {
     #if (TIME_JPEG == 1)
     mp_uint_t start = mp_hal_ticks_ms();
     #endif
@@ -132,9 +132,17 @@ bool jpeg_compress(image_t *src, image_t *dst, int quality, bool realloc) {
             mcu_size = JPEG_444_YCBCR_MCU_SIZE;
             JPEG_Info.ColorSpace = JPEG_YCBCR_COLORSPACE;
             JPEG_Info.ChromaSubsampling = JPEG_444_SUBSAMPLING;
-            if (quality < 60) {
+            if (subsampling == JPEG_SUBSAMPLING_AUTO) {
+                if (quality < 60) {
+                    mcu_size = JPEG_422_YCBCR_MCU_SIZE;
+                    JPEG_Info.ChromaSubsampling = JPEG_422_SUBSAMPLING;
+                }
+            } else if (subsampling == JPEG_SUBSAMPLING_422) {
                 mcu_size = JPEG_422_YCBCR_MCU_SIZE;
                 JPEG_Info.ChromaSubsampling = JPEG_422_SUBSAMPLING;
+            } else if (subsampling == JPEG_SUBSAMPLING_420) {
+                // not supported
+                return true;
             }
             break;
         default:
