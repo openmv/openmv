@@ -181,7 +181,7 @@ void mjpeg_write(FIL *fp, int width, int height, uint32_t *frames, uint32_t *byt
         // When jpeg_compress needs more memory than in currently allocated it
         // will try to realloc. MP will detect that the pointer is outside of
         // the heap and return NULL which will cause an out of memory error.
-        jpeg_compress(&temp, &dst_img, quality, true);
+        jpeg_compress(&temp, &dst_img, quality, true, JPEG_SUBSAMPLING_AUTO);
     } else {
         dst_img.size = img->size;
         dst_img.data = img->data;

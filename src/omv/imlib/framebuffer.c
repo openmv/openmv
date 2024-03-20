@@ -166,7 +166,7 @@ void framebuffer_update_jpeg_buffer() {
                     .pixels = jpeg_framebuffer->pixels
                 };
                 // Note: lower quality saves USB bandwidth and results in a faster IDE FPS.
-                bool overflow = jpeg_compress(src, &dst, jpeg_framebuffer->quality, false);
+                bool overflow = jpeg_compress(src, &dst, jpeg_framebuffer->quality, false, JPEG_SUBSAMPLING_AUTO);
 
                 if (overflow) {
                     // JPEG buffer overflowed, reduce JPEG quality for the next frame

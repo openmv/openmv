@@ -6,6 +6,7 @@
 # This work is licensed under the MIT license, see the file LICENSE for details.
 
 import errno
+import image
 import random
 import re
 import socket
@@ -294,7 +295,8 @@ class rtsp_server:
             self.__close_udp_socket()
 
     def __send_rtp(self, image_callback, quality):  # private
-        img = image_callback(self.__pathname, self.__session).to_jpeg(quality=quality)
+        img = image_callback(self.__pathname, self.__session)
+        img = img.to_jpeg(quality=quality, subsampling=image.JPEG_SUBSAMPLING_422)
         if img.width() >= 2040:
             raise ValueError("Maximum width is 2040")
         if img.height() >= 2040:
