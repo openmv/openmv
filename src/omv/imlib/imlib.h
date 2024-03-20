@@ -151,6 +151,7 @@ bool rectangle_equal_fast(rectangle_t *ptr0, rectangle_t *ptr1);
 bool rectangle_overlap(rectangle_t *ptr0, rectangle_t *ptr1);
 void rectangle_intersected(rectangle_t *dst, rectangle_t *src);
 void rectangle_united(rectangle_t *dst, rectangle_t *src);
+float rectangle_iou(rectangle_t *r1, rectangle_t *r2);
 
 /////////////////
 // Color Stuff //
