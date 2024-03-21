@@ -39,22 +39,22 @@ void HAL_MspInit() {
     __GPIOC_CLK_ENABLE();
     __GPIOD_CLK_ENABLE();
     __GPIOE_CLK_ENABLE();
-    #ifdef OMV_ENABLE_GPIO_BANK_F
+    #ifdef OMV_GPIO_PORT_F_ENABLE
     __GPIOF_CLK_ENABLE();
     #endif
-    #ifdef OMV_ENABLE_GPIO_BANK_G
+    #ifdef OMV_GPIO_PORT_G_ENABLE
     __GPIOG_CLK_ENABLE();
     #endif
-    #ifdef OMV_ENABLE_GPIO_BANK_H
+    #ifdef OMV_GPIO_PORT_H_ENABLE
     __GPIOH_CLK_ENABLE();
     #endif
-    #ifdef OMV_ENABLE_GPIO_BANK_I
+    #ifdef OMV_GPIO_PORT_I_ENABLE
     __GPIOI_CLK_ENABLE();
     #endif
-    #ifdef OMV_ENABLE_GPIO_BANK_J
+    #ifdef OMV_GPIO_PORT_J_ENABLE
     __GPIOJ_CLK_ENABLE();
     #endif
-    #ifdef OMV_ENABLE_GPIO_BANK_K
+    #ifdef OMV_GPIO_PORT_K_ENABLE
     __GPIOK_CLK_ENABLE();
     #endif
 
