@@ -1914,34 +1914,35 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_gamma_obj, 1, py_image_gamma);
 // Binary Methods
 /////////////////
 
-STATIC mp_obj_t py_image_binary(uint n_args, const mp_obj_t *args, mp_map_t *kw_args) {
-    image_t *arg_img = py_helper_arg_to_image(args[0], ARG_IMAGE_MUTABLE);
+STATIC mp_obj_t py_image_binary(uint n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
+    enum { ARG_thresholds, ARG_invert, ARG_zero, ARG_mask, ARG_to_bitmap, ARG_copy };
+    static const mp_arg_t allowed_args[] = {
+        { MP_QSTR_thresholds, MP_ARG_OBJ | MP_ARG_REQUIRED, },
+        { MP_QSTR_invert, MP_ARG_BOOL | MP_ARG_KW_ONLY, {.u_bool = false} },
+        { MP_QSTR_zero, MP_ARG_BOOL | MP_ARG_KW_ONLY, {.u_bool = false} },
+        { MP_QSTR_mask, MP_ARG_OBJ | MP_ARG_KW_ONLY,  {.u_rom_obj = MP_ROM_NONE} },
+        { MP_QSTR_to_bitmap, MP_ARG_BOOL | MP_ARG_KW_ONLY, {.u_bool = false} },
+        { MP_QSTR_copy, MP_ARG_BOOL | MP_ARG_KW_ONLY, {.u_bool = false} },
+    };
 
-    list_t arg_thresholds;
-    list_init(&arg_thresholds, sizeof(color_thresholds_list_lnk_data_t));
-    py_helper_arg_to_thresholds(args[1], &arg_thresholds);
+    // Parse args.
+    image_t *image = py_helper_arg_to_image(pos_args[0], ARG_IMAGE_MUTABLE);
+    mp_arg_val_t args[MP_ARRAY_SIZE(allowed_args)];
+    mp_arg_parse_all(n_args - 1, pos_args + 1, kw_args, MP_ARRAY_SIZE(allowed_args), allowed_args, args);
 
-    bool arg_invert =
-        py_helper_keyword_int(n_args, args, 2, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_invert), false);
-    bool arg_zero =
-        py_helper_keyword_int(n_args, args, 3, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_zero), false);
-    image_t *arg_msk =
-        py_helper_keyword_to_image(n_args, args, 4, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_mask), NULL);
-    bool arg_to_bitmap =
-        py_helper_keyword_int(n_args, args, 5, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_to_bitmap), false);
-    bool arg_copy =
-        py_helper_keyword_int(n_args, args, 6, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_copy), false);
+    if (args[ARG_to_bitmap].u_int && (image->pixfmt != PIXFORMAT_BINARY) &&
+        (args[ARG_zero].u_int || (args[ARG_mask].u_obj != mp_const_none))) {
+        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Incompatible arguments!"));
+    }
 
-    if (arg_to_bitmap && (!arg_copy)) {
-        switch (arg_img->pixfmt) {
+    if (args[ARG_to_bitmap].u_int && (!args[ARG_copy].u_int)) {
+        switch (image->pixfmt) {
             case PIXFORMAT_GRAYSCALE: {
-                PY_ASSERT_TRUE_MSG((arg_img->w >= (sizeof(uint32_t) / sizeof(uint8_t))),
-                                   "Can't convert to bitmap in place!");
+                PY_ASSERT_TRUE_MSG((image->w >= 4), "Can't convert to bitmap in place!");
                 break;
             }
             case PIXFORMAT_RGB565: {
-                PY_ASSERT_TRUE_MSG((arg_img->w >= (sizeof(uint32_t) / sizeof(uint16_t))),
-                                   "Can't convert to bitmap in place!");
+                PY_ASSERT_TRUE_MSG((image->w >= 2), "Can't convert to bitmap in place!");
                 break;
             }
             default: {
@@ -1950,26 +1951,35 @@ STATIC mp_obj_t py_image_binary(uint n_args, const mp_obj_t *args, mp_map_t *kw_
         }
     }
 
+    list_t thresholds;
+    list_init(&thresholds, sizeof(color_thresholds_list_lnk_data_t));
+    py_helper_arg_to_thresholds(args[ARG_thresholds].u_obj, &thresholds);
+
     image_t out;
-    out.w = arg_img->w;
-    out.h = arg_img->h;
-    out.pixfmt = arg_to_bitmap ? PIXFORMAT_BINARY  : arg_img->pixfmt;
-    out.pixels = arg_copy ? xalloc(image_size(&out)) : arg_img->pixels;
+    out.w = image->w;
+    out.h = image->h;
+    out.pixfmt = args[ARG_to_bitmap].u_int ? PIXFORMAT_BINARY : image->pixfmt;
+    out.data = args[ARG_copy].u_int ? xalloc(image_size(&out)) : image->pixels;
 
     fb_alloc_mark();
-    imlib_binary(&out, arg_img, &arg_thresholds, arg_invert, arg_zero, arg_msk);
+    image_t *mask = NULL;
+    if (args[ARG_mask].u_obj != mp_const_none) {
+        mask = py_helper_arg_to_image(args[ARG_mask].u_obj, ARG_IMAGE_MUTABLE | ARG_IMAGE_ALLOC);
+    }
+
+    imlib_binary(&out, image, &thresholds, args[ARG_invert].u_int, args[ARG_zero].u_int, mask);
     fb_alloc_free_till_mark();
 
-    list_free(&arg_thresholds);
+    list_free(&thresholds);
 
-    if (arg_to_bitmap && (!arg_copy)) {
-        arg_img->pixfmt = PIXFORMAT_BINARY;
+    if (args[ARG_to_bitmap].u_int && (!args[ARG_copy].u_int)) {
+        image->pixfmt = PIXFORMAT_BINARY;
         py_helper_update_framebuffer(&out);
     }
 
     return py_image_from_struct(&out);
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_binary_obj, 2, py_image_binary);
+STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_binary_obj, 1, py_image_binary);
 
 STATIC mp_obj_t py_image_invert(mp_obj_t img_obj) {
     imlib_invert(py_helper_arg_to_image(img_obj, ARG_IMAGE_MUTABLE));
