@@ -1327,6 +1327,7 @@ void imlib_flood_fill_int(image_t *out, image_t *img, int x, int y,
 int imlib_get_pixel(image_t *img, int x, int y);
 int imlib_get_pixel_fast(image_t *img, const void *row_ptr, int x);
 void imlib_set_pixel(image_t *img, int x, int y, int p);
+void imlib_set_pixel_aa(image_t *img, int x, int y, int err, int p);
 void imlib_draw_line(image_t *img, int x0, int y0, int x1, int y1, int c, int thickness);
 void imlib_draw_rectangle(image_t *img, int rx, int ry, int rw, int rh, int c, int thickness, bool fill);
 void imlib_draw_circle(image_t *img, int cx, int cy, int r, int c, int thickness, bool fill);
@@ -1345,7 +1346,8 @@ void imlib_draw_string(image_t *img,
                        bool char_vflip,
                        int string_rotation,
                        bool string_hmirror,
-                       bool string_hflip);
+                       bool string_hflip,
+                       const char *font_path);
 void imlib_draw_image(image_t *dst_img,
                       image_t *src_img,
                       int dst_x_start,

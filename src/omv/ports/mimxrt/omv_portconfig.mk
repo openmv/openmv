@@ -177,7 +177,6 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/imlib/, \
 	fft.o                       \
 	filter.o                    \
 	fmath.o                     \
-	font.o                      \
 	framebuffer.o               \
 	fsort.o                     \
 	gif.o                       \
@@ -213,6 +212,7 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/imlib/, \
 	stats.o                     \
 	stereo.o                    \
 	template.o                  \
+	truetype.o                  \
 	xyz_tab.o                   \
 	yuv.o                       \
 	zbar.o                      \

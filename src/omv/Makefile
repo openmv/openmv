@@ -64,7 +64,6 @@ SRCS += $(addprefix imlib/,     \
 	fft.c                       \
 	filter.c                    \
 	fmath.c                     \
-	font.c                      \
 	framebuffer.c               \
 	fsort.c                     \
 	gif.c                       \
@@ -100,6 +99,7 @@ SRCS += $(addprefix imlib/,     \
 	stats.c                     \
 	stereo.c                    \
 	template.c                  \
+	truetype.c                  \
 	xyz_tab.c                   \
 	yuv.c                       \
 	zbar.c                      \

@@ -12,7 +12,6 @@
 #include "py/obj.h"
 #include "py/runtime.h"
 
-#include "font.h"
 #include "array.h"
 #include "file_utils.h"
 #include "imlib.h"
