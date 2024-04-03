@@ -2882,26 +2882,57 @@ STATIC MP_DEFINE_CONST_OBJ_TYPE(
     locals_dict, &py_similarity_locals_dict
     );
 
-static mp_obj_t py_image_get_similarity(mp_obj_t img_obj, mp_obj_t other_obj) {
-    image_t *arg_img = py_helper_arg_to_image(img_obj, ARG_IMAGE_MUTABLE);
-    float avg, std, min, max;
+static mp_obj_t py_image_get_similarity(uint n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
+    enum {
+        ARG_image, ARG_x, ARG_y, ARG_x_scale, ARG_y_scale, ARG_roi,
+        ARG_channel, ARG_alpha, ARG_color_palette, ARG_alpha_palette, ARG_hint, ARG_dssim
+    };
+    static const mp_arg_t allowed_args[] = {
+        { MP_QSTR_image, MP_ARG_OBJ | MP_ARG_REQUIRED, {.u_rom_obj = MP_ROM_NONE} },
+        { MP_QSTR_x, MP_ARG_INT,  {.u_int = 0 } },
+        { MP_QSTR_y, MP_ARG_INT,  {.u_int = 0 } },
+        { MP_QSTR_x_scale, MP_ARG_OBJ | MP_ARG_KW_ONLY, {.u_rom_obj = MP_ROM_NONE} },
+        { MP_QSTR_y_scale, MP_ARG_OBJ | MP_ARG_KW_ONLY, {.u_rom_obj = MP_ROM_NONE} },
+        { MP_QSTR_roi, MP_ARG_OBJ | MP_ARG_KW_ONLY, {.u_rom_obj = MP_ROM_NONE} },
+        { MP_QSTR_rgb_channel, MP_ARG_INT | MP_ARG_KW_ONLY,  {.u_int = -1 } },
+        { MP_QSTR_alpha, MP_ARG_INT | MP_ARG_KW_ONLY,  {.u_int = 256 } },
+        { MP_QSTR_color_palette, MP_ARG_OBJ | MP_ARG_KW_ONLY, {.u_rom_obj = MP_ROM_NONE} },
+        { MP_QSTR_alpha_palette, MP_ARG_OBJ | MP_ARG_KW_ONLY, {.u_rom_obj = MP_ROM_NONE} },
+        { MP_QSTR_hint, MP_ARG_INT | MP_ARG_KW_ONLY,  {.u_int = 0 } },
+        { MP_QSTR_dssim, MP_ARG_BOOL | MP_ARG_KW_ONLY, {.u_bool = false } },
+    };
+
+    // Parse args.
+    image_t *image = py_helper_arg_to_image(pos_args[0], ARG_IMAGE_MUTABLE);
+    mp_arg_val_t args[MP_ARRAY_SIZE(allowed_args)];
+    mp_arg_parse_all(n_args - 1, pos_args + 1, kw_args, MP_ARRAY_SIZE(allowed_args), allowed_args, args);
 
     fb_alloc_mark();
+    image_t *other = py_helper_arg_to_image(args[ARG_image].u_obj, ARG_IMAGE_ANY | ARG_IMAGE_ALLOC);
+    rectangle_t roi = py_helper_arg_to_roi(args[ARG_roi].u_obj, other);
 
-    if (MP_OBJ_IS_STR(other_obj)) {
-        imlib_get_similarity(arg_img, mp_obj_str_get_str(other_obj), NULL, 0, &avg, &std, &min, &max);
-    } else if (MP_OBJ_IS_TYPE(other_obj, &py_image_type)) {
-        imlib_get_similarity(arg_img, NULL,
-                             py_helper_arg_to_image(other_obj, ARG_IMAGE_MUTABLE),
-                             0, &avg, &std, &min, &max);
-    } else {
-        imlib_get_similarity(arg_img, NULL, NULL,
-                             py_helper_keyword_color(arg_img, 1, &other_obj, 0, NULL, 0),
-                             &avg, &std, &min, &max);
+    if (args[ARG_channel].u_int < -1 || args[ARG_channel].u_int > 2) {
+        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("RGB channel can be 0, 1, or 2"));
     }
 
-    fb_alloc_free_till_mark();
+    if (args[ARG_alpha].u_int < 0 || args[ARG_alpha].u_int > 256) {
+        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Alpha ranges between 0 and 256"));
+    }
 
+    float x_scale = 1.0f;
+    float y_scale = 1.0f;
+    py_helper_arg_to_scale(args[ARG_x_scale].u_obj, args[ARG_y_scale].u_obj, &x_scale, &y_scale);
+
+    const uint16_t *color_palette = py_helper_arg_to_palette(args[ARG_color_palette].u_obj, PIXFORMAT_RGB565);
+    const uint8_t *alpha_palette = py_helper_arg_to_palette(args[ARG_alpha_palette].u_obj, PIXFORMAT_GRAYSCALE);
+
+    float avg = 0.0f, std = 0.0f, min = 0.0f, max = 0.0f;
+    imlib_get_similarity(image, other, args[ARG_x].u_int, args[ARG_y].u_int, x_scale, y_scale, &roi,
+                         args[ARG_channel].u_int, args[ARG_alpha].u_int, color_palette, alpha_palette,
+                         args[ARG_hint].u_int | IMAGE_HINT_BLACK_BACKGROUND, args[ARG_dssim].u_bool,
+                         &avg, &std, &min, &max);
+
+    fb_alloc_free_till_mark();
     py_similarity_obj_t *o = m_new_obj(py_similarity_obj_t);
     o->base.type = &py_similarity_type;
     o->avg = mp_obj_new_float(avg);
@@ -2910,7 +2941,7 @@ static mp_obj_t py_image_get_similarity(mp_obj_t img_obj, mp_obj_t other_obj) {
     o->max = mp_obj_new_float(max);
     return o;
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_image_get_similarity_obj, py_image_get_similarity);
+STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_get_similarity_obj, 1, py_image_get_similarity);
 #endif // IMLIB_ENABLE_GET_SIMILARITY
 
 // Statistics Object //
