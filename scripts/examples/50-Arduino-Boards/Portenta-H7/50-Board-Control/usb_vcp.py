@@ -37,6 +37,6 @@ sensor.skip_frames(time=2000)  # Wait for settings take effect.
 while True:
     cmd = usb.recv(4, timeout=5000)
     if cmd == b"snap":
-        img = sensor.snapshot().compress()
+        img = sensor.snapshot().to_jpeg()
         usb.send(ustruct.pack("<L", img.size()))
         usb.send(img)

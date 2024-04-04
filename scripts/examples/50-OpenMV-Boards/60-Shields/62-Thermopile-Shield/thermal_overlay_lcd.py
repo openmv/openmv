@@ -71,7 +71,7 @@ while True:
 
     lcd.write(img)
     # Force high quality streaming...
-    img.compress(quality=90)
+    img.to_jpeg(quality=90)
 
     # Print FPS.
     print(clock.fps())
