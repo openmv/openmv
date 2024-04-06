@@ -186,10 +186,6 @@ void imlib_draw_line(image_t *img, int x0, int y0, int x1, int y1, int c, int th
     x1 = line.x2;
     y1 = line.y2;
 
-    int r = th / 2;
-    point_fill(img, x0, y0, -r, r, c); // add round at start
-    point_fill(img, x1, y1, -r, r, c); // add round at end
-
     // plot an anti-aliased line of width th pixel
     const int ex = abs(x1 - x0);
     const int sx = x0 < x1 ? 1 : -1;
