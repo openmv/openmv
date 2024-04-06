@@ -910,18 +910,19 @@ static void imlib_erode_dilate(image_t *img, int ksize, int threshold, int e_or_
         case PIXFORMAT_BINARY: {
             buf.data = fb_alloc(IMAGE_BINARY_LINE_LEN_BYTES(img) * brows, FB_ALLOC_NO_HINT);
 
-            for (int y = 0, yy = img->h; y < yy; y++) {
+            for (int y = 0; y < img->h; y++) {
                 uint32_t *row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(img, y);
                 uint32_t *buf_row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(&buf, (y % brows));
                 int acc = 0;
 
-                for (int x = 0, xx = img->w; x < xx; x++) {
+                for (int x = 0; x < img->w; x++) {
                     int pixel = IMAGE_GET_BINARY_PIXEL_FAST(row_ptr, x);
                     IMAGE_PUT_BINARY_PIXEL_FAST(buf_row_ptr, x, pixel);
 
                     if (mask && (!image_get_mask_pixel(mask, x, y))) {
                         continue; // Short circuit.
                     }
+
                     if (x > ksize && x < img->w - ksize && y >= ksize && y < img->h - ksize) {
                         // faster
                         for (int j = -ksize; j <= ksize; j++) {
@@ -966,7 +967,7 @@ static void imlib_erode_dilate(image_t *img, int ksize, int threshold, int e_or_
             }
 
             // Copy any remaining lines from the buffer image...
-            for (int y = IM_MAX(img->h - ksize, 0), yy = img->h; y < yy; y++) {
+            for (int y = IM_MAX(img->h - ksize, 0); y < img->h; y++) {
                 memcpy(IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(img, y),
                        IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(&buf, (y % brows)),
                        IMAGE_BINARY_LINE_LEN_BYTES(img));
@@ -978,12 +979,17 @@ static void imlib_erode_dilate(image_t *img, int ksize, int threshold, int e_or_
         case PIXFORMAT_GRAYSCALE: {
             buf.data = fb_alloc(IMAGE_GRAYSCALE_LINE_LEN_BYTES(img) * brows, FB_ALLOC_NO_HINT);
 
-            for (int y = 0, yy = img->h; y < yy; y++) {
+            #if defined(ARM_MATH_DSP)
+            int32_t threshold_x4 = __USAT(threshold, 7) * 0x01010101;
+            uint32_t e_or_d_mask_x4 = e_or_d ? 0xFFFFFFFF : 0x00000000;
+            #endif
+
+            for (int y = 0; y < img->h; y++) {
                 uint8_t *row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(img, y);
                 uint8_t *buf_row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(&buf, (y % brows));
                 int acc = 0;
 
-                for (int x = 0, xx = img->w; x < xx; x++) {
+                for (int x = 0; x < img->w; x++) {
                     int pixel = IMAGE_GET_GRAYSCALE_PIXEL_FAST(row_ptr, x);
                     IMAGE_PUT_GRAYSCALE_PIXEL_FAST(buf_row_ptr, x, pixel);
 
@@ -992,13 +998,47 @@ static void imlib_erode_dilate(image_t *img, int ksize, int threshold, int e_or_
                     }
 
                     if (x > ksize && x < img->w - ksize && y >= ksize && y < img->h - ksize) {
-                        // faster
-                        for (int j = -ksize; j <= ksize; j++) {
-                            uint8_t *k_row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(img, y + j);
-                            // subtract old left edge and add new right edge to sum
-                            acc -= (IMAGE_GET_GRAYSCALE_PIXEL_FAST(k_row_ptr, x - ksize - 1) > 0);
-                            acc += (IMAGE_GET_GRAYSCALE_PIXEL_FAST(k_row_ptr, x + ksize) > 0);
-                        } // for j
+                        if (0) {
+                        #if defined(ARM_MATH_DSP)
+                            // acc will never be larger than 121 (<= 127) for ksize <= 5.
+                        } else if ((x < img->w - ksize - 3) && (ksize <= 5) && (!mask)) {
+                            int32_t acc_x4 = acc & 0xFF;
+
+                            for (int j = -ksize; j <= ksize; j++) {
+                                uint8_t *k_row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(img, y + j);
+                                // subtract old left edge 4x
+                                __USUB8(*((uint32_t *) (k_row_ptr + x - ksize - 1)), 0x01010101);
+                                acc_x4 = __SSUB8(acc_x4, __SEL(0x01010101, 0));
+                                // add new right edge to sum 4x
+                                __USUB8(*((uint32_t *) (k_row_ptr + x + ksize)), 0x01010101);
+                                acc_x4 = __SADD8(acc_x4, __SEL(0x01010101, 0));
+                            }
+
+                            // After the loop the lowest 8-bits contain a valid acc value. We
+                            // compute the next 3 acc values by adding the sums up.
+
+                            acc_x4 = __SADD8(acc_x4, acc_x4 << 8);
+                            acc_x4 = __SADD8(acc_x4, acc_x4 << 16);
+                            acc = acc_x4 >> 24;
+
+                            // Compute all erode/dilate thresholds at once.
+
+                            uint32_t pixel_x4 = *((uint32_t *) (row_ptr + x));
+                            __SSUB8(e_or_d ? threshold_x4 : acc_x4, e_or_d ? acc_x4 : threshold_x4);
+                            *((uint32_t *) (buf_row_ptr + x)) = __SEL(pixel_x4, e_or_d_mask_x4);
+
+                            x += 3;
+                            continue;
+                        #endif
+                        } else {
+                            // faster
+                            for (int j = -ksize; j <= ksize; j++) {
+                                uint8_t *k_row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(img, y + j);
+                                // subtract old left edge and add new right edge to sum
+                                acc -= (IMAGE_GET_GRAYSCALE_PIXEL_FAST(k_row_ptr, x - ksize - 1) > 0);
+                                acc += (IMAGE_GET_GRAYSCALE_PIXEL_FAST(k_row_ptr, x + ksize) > 0);
+                            }
+                        }
                     } else {
                         // slower way which checks boundaries per pixel
                         acc = e_or_d ? 0 : -1; // Don't count center pixel...
@@ -1009,21 +1049,19 @@ static void imlib_erode_dilate(image_t *img, int ksize, int threshold, int e_or_
                             for (int k = -ksize; k <= ksize; k++) {
                                 int x_k = IM_CLAMP(x + k, 0, (img->w - 1));
                                 acc += IMAGE_GET_GRAYSCALE_PIXEL_FAST(k_row_ptr, x_k) > 0;
-                            }  // for k
-                        } // for j
+                            }
+                        }
                     }
 
                     if (!e_or_d) {
                         // Preserve original pixel value... or clear it.
                         if (acc < threshold) {
-                            IMAGE_PUT_GRAYSCALE_PIXEL_FAST(buf_row_ptr, x,
-                                                           COLOR_GRAYSCALE_BINARY_MIN);
+                            IMAGE_PUT_GRAYSCALE_PIXEL_FAST(buf_row_ptr, x, COLOR_GRAYSCALE_BINARY_MIN);
                         }
                     } else {
                         // Preserve original pixel value... or set it.
                         if (acc > threshold) {
-                            IMAGE_PUT_GRAYSCALE_PIXEL_FAST(buf_row_ptr, x,
-                                                           COLOR_GRAYSCALE_BINARY_MAX);
+                            IMAGE_PUT_GRAYSCALE_PIXEL_FAST(buf_row_ptr, x, COLOR_GRAYSCALE_BINARY_MAX);
                         }
                     }
                 }
@@ -1037,7 +1075,7 @@ static void imlib_erode_dilate(image_t *img, int ksize, int threshold, int e_or_
             }
 
             // Copy any remaining lines from the buffer image...
-            for (int y = IM_MAX(img->h - ksize, 0), yy = img->h; y < yy; y++) {
+            for (int y = IM_MAX(img->h - ksize, 0); y < img->h; y++) {
                 memcpy(IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(img, y),
                        IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(&buf, (y % brows)),
                        IMAGE_GRAYSCALE_LINE_LEN_BYTES(img));
@@ -1049,12 +1087,17 @@ static void imlib_erode_dilate(image_t *img, int ksize, int threshold, int e_or_
         case PIXFORMAT_RGB565: {
             buf.data = fb_alloc(IMAGE_RGB565_LINE_LEN_BYTES(img) * brows, FB_ALLOC_NO_HINT);
 
-            for (int y = 0, yy = img->h; y < yy; y++) {
+            #if defined(ARM_MATH_DSP)
+            int32_t threshold_x2 = __USAT(threshold, 15) * 0x00010001;
+            uint32_t e_or_d_mask_x2 = e_or_d ? 0xFFFFFFFF : 0x00000000;
+            #endif
+
+            for (int y = 0; y < img->h; y++) {
                 uint16_t *row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(img, y);
                 uint16_t *buf_row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(&buf, (y % brows));
                 int acc = 0;
 
-                for (int x = 0, xx = img->w; x < xx; x++) {
+                for (int x = 0; x < img->w; x++) {
                     int pixel = IMAGE_GET_RGB565_PIXEL_FAST(row_ptr, x);
                     IMAGE_PUT_RGB565_PIXEL_FAST(buf_row_ptr, x, pixel);
 
@@ -1063,12 +1106,45 @@ static void imlib_erode_dilate(image_t *img, int ksize, int threshold, int e_or_
                     }
 
                     if (x > ksize && x < img->w - ksize && y >= ksize && y < img->h - ksize) {
-                        // faster
-                        for (int j = -ksize; j <= ksize; j++) {
-                            uint16_t *k_row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(img, y + j);
-                            // subtract old left column and add new right column
-                            acc -= IMAGE_GET_RGB565_PIXEL_FAST(k_row_ptr, x - ksize - 1) > 0;
-                            acc += IMAGE_GET_RGB565_PIXEL_FAST(k_row_ptr, x + ksize) > 0;
+                        if (0) {
+                        #if defined(ARM_MATH_DSP)
+                            // acc will never be larger than 32,761 (<= 32767) for ksize <= 90.
+                        } else if ((x < img->w - ksize - 1) && (ksize <= 90) && (!mask)) {
+                            int32_t acc_x2 = acc & 0xFFFF;
+
+                            for (int j = -ksize; j <= ksize; j++) {
+                                uint16_t *k_row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(img, y + j);
+                                // subtract old left edge 2x
+                                __USUB16(*((uint32_t *) (k_row_ptr + x - ksize - 1)), 0x00010001);
+                                acc_x2 = __SSUB16(acc_x2, __SEL(0x00010001, 0));
+                                // add new right edge to sum 2x
+                                __USUB16(*((uint32_t *) (k_row_ptr + x + ksize)), 0x00010001);
+                                acc_x2 = __SADD16(acc_x2, __SEL(0x00010001, 0));
+                            }
+
+                            // After the loop the lowest 16-bits contain a valid acc value. We
+                            // compute the next acc value by adding the sums up.
+
+                            acc_x2 = __SADD16(acc_x2, acc_x2 << 16);
+                            acc = acc_x2 >> 16;
+
+                            // Compute all erode/dilate thresholds at once.
+
+                            uint32_t pixel_x2 = *((uint32_t *) (row_ptr + x));
+                            __SSUB16(e_or_d ? threshold_x2 : acc_x2, e_or_d ? acc_x2 : threshold_x2);
+                            *((uint32_t *) (buf_row_ptr + x)) = __SEL(pixel_x2, e_or_d_mask_x2);
+
+                            x += 1;
+                            continue;
+                        #endif
+                        } else {
+                            // faster
+                            for (int j = -ksize; j <= ksize; j++) {
+                                uint16_t *k_row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(img, y + j);
+                                // subtract old left column and add new right column
+                                acc -= IMAGE_GET_RGB565_PIXEL_FAST(k_row_ptr, x - ksize - 1) > 0;
+                                acc += IMAGE_GET_RGB565_PIXEL_FAST(k_row_ptr, x + ksize) > 0;
+                            }
                         }
                     } else {
                         // need to check boundary conditions for each pixel
@@ -1087,14 +1163,12 @@ static void imlib_erode_dilate(image_t *img, int ksize, int threshold, int e_or_
                     if (!e_or_d) {
                         // Preserve original pixel value... or clear it.
                         if (acc < threshold) {
-                            IMAGE_PUT_RGB565_PIXEL_FAST(buf_row_ptr, x,
-                                                        COLOR_RGB565_BINARY_MIN);
+                            IMAGE_PUT_RGB565_PIXEL_FAST(buf_row_ptr, x, COLOR_RGB565_BINARY_MIN);
                         }
                     } else {
                         // Preserve original pixel value... or set it.
                         if (acc > threshold) {
-                            IMAGE_PUT_RGB565_PIXEL_FAST(buf_row_ptr, x,
-                                                        COLOR_RGB565_BINARY_MAX);
+                            IMAGE_PUT_RGB565_PIXEL_FAST(buf_row_ptr, x, COLOR_RGB565_BINARY_MAX);
                         }
                     }
                 }
@@ -1108,7 +1182,7 @@ static void imlib_erode_dilate(image_t *img, int ksize, int threshold, int e_or_
             }
 
             // Copy any remaining lines from the buffer image...
-            for (int y = IM_MAX(img->h - ksize, 0), yy = img->h; y < yy; y++) {
+            for (int y = IM_MAX(img->h - ksize, 0); y < img->h; y++) {
                 memcpy(IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(img, y),
                        IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(&buf, (y % brows)),
                        IMAGE_RGB565_LINE_LEN_BYTES(img));
