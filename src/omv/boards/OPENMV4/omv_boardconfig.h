@@ -44,6 +44,7 @@
 #define OMV_MT9M114_ENABLE                    (1)
 #define OMV_MT9V0XX_ENABLE                    (1)
 #define OMV_LEPTON_ENABLE                     (1)
+#define OMV_PAG7920_ENABLE                    (1)
 #define OMV_PAJ6100_ENABLE                    (1)
 #define OMV_FROGEYE2020_ENABLE                (1)
 

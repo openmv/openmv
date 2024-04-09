@@ -23,6 +23,7 @@
 #define HM0XX0_SLV_ADDR         (0x48)
 #define GC2145_SLV_ADDR         (0x78)
 #define FROGEYE2020_SLV_ADDR    (0x6E)
+#define PAG7920_SLV_ADDR        (0x80)
 
 // Chip ID Registers
 #define OV5640_CHIP_ID          (0x300A)
@@ -30,6 +31,7 @@
 #define ON_CHIP_ID              (0x00)
 #define HIMAX_CHIP_ID           (0x0001)
 #define GC_CHIP_ID              (0xF0)
+#define PIXART_CHIP_ID          (0x00)
 
 // Chip ID Values
 #define OV2640_ID               (0x26)
@@ -55,6 +57,7 @@
 #define HM01B0_ID               (0xB0)
 #define HM0360_ID               (0x60)
 #define GC2145_ID               (0x21)
+#define PAG7920_ID              (0x7920)
 #define PAJ6100_ID              (0x6100)
 #define FROGEYE2020_ID          (0x2020)
 
