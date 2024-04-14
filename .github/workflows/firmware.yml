@@ -124,7 +124,7 @@ jobs:
       run: source tools/ci.sh && ci_package_firmware_development
 
     - name: '🧹 Delete old release'
-      uses: dev-drprasad/delete-tag-and-release@v1.0.1
+      uses: dev-drprasad/delete-tag-and-release@v1.1
       with:
         delete_release: true
         tag_name: development
