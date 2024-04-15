@@ -45,6 +45,10 @@ float py_helper_keyword_float(uint n_args, const mp_obj_t *args, uint arg_index,
                               mp_map_t *kw_args, mp_obj_t kw, float default_val);
 bool py_helper_keyword_float_maybe(uint n_args, const mp_obj_t *args, uint arg_index,
                                    mp_map_t *kw_args, mp_obj_t kw, float *value);
+const char *py_helper_keyword_string(uint n_args, const mp_obj_t *args, uint arg_index,
+                                     mp_map_t *kw_args, mp_obj_t kw, const char *default_val);
+const char *py_helper_keyword_bytes(uint n_args, const mp_obj_t *args, uint arg_index,
+                                    mp_map_t *kw_args, mp_obj_t kw, const char *default_val, size_t *len);
 void py_helper_keyword_int_array(uint n_args, const mp_obj_t *args, uint arg_index,
                                  mp_map_t *kw_args, mp_obj_t kw, int *x, int size);
 void py_helper_keyword_float_array(uint n_args, const mp_obj_t *args, uint arg_index,

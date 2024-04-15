@@ -137,7 +137,6 @@ target_sources(${MICROPY_TARGET} PRIVATE
     ${TOP_DIR}/${OMV_DIR}/imlib/fft.c
     ${TOP_DIR}/${OMV_DIR}/imlib/filter.c
     ${TOP_DIR}/${OMV_DIR}/imlib/fmath.c
-    ${TOP_DIR}/${OMV_DIR}/imlib/font.c
     ${TOP_DIR}/${OMV_DIR}/imlib/framebuffer.c
     ${TOP_DIR}/${OMV_DIR}/imlib/fsort.c
     ${TOP_DIR}/${OMV_DIR}/imlib/gif.c
@@ -173,6 +172,7 @@ target_sources(${MICROPY_TARGET} PRIVATE
     ${TOP_DIR}/${OMV_DIR}/imlib/stats.c
     ${TOP_DIR}/${OMV_DIR}/imlib/stereo.c
     ${TOP_DIR}/${OMV_DIR}/imlib/template.c
+    ${TOP_DIR}/${OMV_DIR}/imlib/truetype.c
     ${TOP_DIR}/${OMV_DIR}/imlib/xyz_tab.c
     ${TOP_DIR}/${OMV_DIR}/imlib/yuv.c
     ${TOP_DIR}/${OMV_DIR}/imlib/zbar.c
