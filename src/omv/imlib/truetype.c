@@ -6028,7 +6028,8 @@ void imlib_draw_string(
     int string_rotation,
     bool string_hmirror,
     bool string_vflip,
-    const char *font_path
+    const char *font_content,
+    size_t font_length
     ) {
     // Convert to Unicode Encoding.
     int str_size = strlen(str) + 1;
@@ -6041,22 +6042,13 @@ void imlib_draw_string(
     float font_scale;
     stbtt_fontinfo font;
 
-    const unsigned char *font_file;
-    unsigned char *free_fontfile = NULL;
-
-    if (strlen(font_path) == 0) {
-        font_file = builtin_ttf;
+    // Initialize font and get scale.
+    if (font_length == 0) {
+        stbtt_InitFont(&font, builtin_ttf, 0);
     } else {
-        FIL font_filefp;
-        file_open(&font_filefp, font_path, true, FA_READ | FA_OPEN_EXISTING);
-        size_t font_size = file_size(&font_filefp);
-        font_file = free_fontfile = (unsigned char *) malloc(font_size);
-        file_read(&font_filefp, (void *) font_file, font_size);
-        file_close(&font_filefp);
+        stbtt_InitFont(&font, (const unsigned char *) font_content, 0);
     }
 
-    // Initialize font and get scale.
-    stbtt_InitFont(&font, font_file, 0);
     font_scale = stbtt_ScaleForPixelHeight(&font, font_size);
     stbtt_GetFontVMetrics(&font, &ascent, 0, 0);
     baseline = (int) (ascent * font_scale);
@@ -6201,9 +6193,6 @@ void imlib_draw_string(
         stbtt_FreeBitmap(bitmap, NULL);
     }
 
-    if (free_fontfile != NULL) {
-        free(free_fontfile);
-    }
     free(codepoint);
     free(reverse_codepoint);
     return;

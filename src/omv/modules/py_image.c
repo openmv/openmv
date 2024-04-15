@@ -1408,12 +1408,13 @@ STATIC mp_obj_t py_image_draw_string(uint n_args, const mp_obj_t *args, mp_map_t
         py_helper_keyword_int(n_args, args, offset + 9, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_string_hmirror), false);
     int arg_string_vflip =
         py_helper_keyword_int(n_args, args, offset + 10, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_string_vflip), false);
+    size_t arg_font_len;
     const char *arg_font =
-        py_helper_keyword_string(n_args, args, offset + 11, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_font), "");
+        py_helper_keyword_bytes(n_args, args, offset + 11, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_font), "", &arg_font_len);
     imlib_draw_string(arg_img, arg_x_off, arg_y_off, arg_str,
                       arg_c, arg_scale, arg_x_spacing, arg_y_spacing, arg_mono_space,
                       arg_char_rotation, arg_char_hmirror, arg_char_vflip,
-                      arg_string_rotation, arg_string_hmirror, arg_string_vflip, arg_font);
+                      arg_string_rotation, arg_string_hmirror, arg_string_vflip, arg_font, arg_font_len);
     return args[0];
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_draw_string_obj, 2, py_image_draw_string);

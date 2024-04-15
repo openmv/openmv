@@ -1347,7 +1347,8 @@ void imlib_draw_string(image_t *img,
                        int string_rotation,
                        bool string_hmirror,
                        bool string_hflip,
-                       const char *font_path);
+                       const char *font_content,
+                       size_t font_length);
 void imlib_draw_image(image_t *dst_img,
                       image_t *src_img,
                       int dst_x_start,

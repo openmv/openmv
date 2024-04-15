@@ -249,6 +249,19 @@ const char *py_helper_keyword_string(uint n_args, const mp_obj_t *args, uint arg
     return default_val;
 }
 
+const char *py_helper_keyword_bytes(uint n_args, const mp_obj_t *args, uint arg_index,
+                                    mp_map_t *kw_args, mp_obj_t kw, const char *default_val, size_t *len) {
+    mp_map_elem_t *kw_arg = mp_map_lookup(kw_args, kw, MP_MAP_LOOKUP);
+    *len = strlen(default_val);
+    if (kw_arg) {
+        default_val = mp_obj_str_get_data(kw_arg->value, len);
+    } else if (n_args > arg_index) {
+        default_val = mp_obj_str_get_data(args[arg_index], len);
+    }
+
+    return default_val;
+}
+
 float py_helper_keyword_float(uint n_args, const mp_obj_t *args, uint arg_index,
                               mp_map_t *kw_args, mp_obj_t kw, float default_val) {
     mp_map_elem_t *kw_arg = mp_map_lookup(kw_args, kw, MP_MAP_LOOKUP);
