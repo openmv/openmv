@@ -89,21 +89,28 @@ static void point_fill(image_t *img, int cx, int cy, int r0, int r1, int c) {
 }
 
 static void imlib_set_pixel_aa(image_t *img, int x, int y, int err, int c) {
-    // float alpha = 1 - err / 256.0;
-    void *row_ptr = imlib_compute_row_ptr(img, y);
-    int old_c = imlib_get_pixel_fast(img, row_ptr, x);
-    int new_c;
+    if (!((0 <= x) && (x < img->w) && (0 <= y) && (y < img->h))) {
+        return;
+    }
 
     switch (img->pixfmt) {
         case PIXFORMAT_BINARY: {
-            new_c = c;
+            uint32_t *ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(img, y);
+            int old_c = IMAGE_GET_BINARY_PIXEL_FAST(ptr, x);
+            int new_c = (((old_c - c) * err) >> 8) + c;
+            IMAGE_PUT_BINARY_PIXEL_FAST(ptr, x, new_c);
             break;
         }
         case PIXFORMAT_GRAYSCALE: {
-            new_c = (((old_c - c) * err) >> 8) + c;
+            uint8_t *ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(img, y);
+            int old_c = IMAGE_GET_GRAYSCALE_PIXEL_FAST(ptr, x);
+            int new_c = (((old_c - c) * err) >> 8) + c;
+            IMAGE_PUT_GRAYSCALE_PIXEL_FAST(ptr, x, new_c);
             break;
         }
         case PIXFORMAT_RGB565: {
+            uint16_t *ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(img, y);
+            int old_c = IMAGE_GET_RGB565_PIXEL_FAST(ptr, x);
             int old_r8 = COLOR_RGB565_TO_R8(old_c);
             int old_g8 = COLOR_RGB565_TO_G8(old_c);
             int old_b8 = COLOR_RGB565_TO_B8(old_c);
@@ -116,15 +123,14 @@ static void imlib_set_pixel_aa(image_t *img, int x, int y, int err, int c) {
             int new_g8 = (((old_g8 - g8) * err) >> 8) + g8;
             int new_b8 = (((old_b8 - b8) * err) >> 8) + b8;
 
-            new_c = COLOR_R8_G8_B8_TO_RGB565(new_r8, new_g8, new_b8);
+            int new_c = COLOR_R8_G8_B8_TO_RGB565(new_r8, new_g8, new_b8);
+            IMAGE_PUT_RGB565_PIXEL_FAST(ptr, x, new_c);
             break;
         }
         default: {
-            // This shouldn't happen, at least we return a valid memory block
-            return;
+            break;
         }
     }
-    imlib_set_pixel(img, x, y, new_c);
 }
 
 // https://gist.github.com/randvoorhies/807ce6e20840ab5314eb7c547899de68#file-bresenham-js-L381
