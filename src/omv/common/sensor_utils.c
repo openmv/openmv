@@ -26,6 +26,7 @@
 #include "lepton.h"
 #include "hm01b0.h"
 #include "hm0360.h"
+#include "pag7920.h"
 #include "paj6100.h"
 #include "frogeye2020.h"
 #include "gc2145.h"
@@ -232,6 +233,13 @@ static int sensor_detect() {
                 sensor.chip_id_w = FROGEYE2020_ID;
                 return slv_addr;
             #endif // (OMV_FROGEYE2020_ENABLE == 1)
+
+            #if (OMV_PAG7920_ENABLE == 1)
+            case PAG7920_SLV_ADDR:
+                omv_i2c_readw(&sensor.i2c_bus, slv_addr, ON_CHIP_ID, &sensor.chip_id_w);
+                sensor.chip_id_w = (sensor.chip_id_w << 8) | (sensor.chip_id_w >> 8);
+                return slv_addr;
+            #endif // (OMV_PAG7920_ENABLE == 1)
         }
     }
 
@@ -425,6 +433,15 @@ int sensor_probe_init(uint32_t bus_id, uint32_t bus_speed) {
             init_ret = gc2145_init(&sensor);
             break;
         #endif //(OMV_GC2145_ENABLE == 1)
+
+        #if (OMV_PAG7920_ENABLE == 1)
+        case PAG7920_ID:
+            if (sensor_set_xclk_frequency(OMV_PAG7920_XCLK_FREQ) != 0) {
+                return SENSOR_ERROR_TIM_INIT_FAILED;
+            }
+            init_ret = pag7920_init(&sensor);
+            break;
+        #endif // (OMV_PAG7920_ENABLE == 1)
 
         #if (OMV_PAJ6100_ENABLE == 1)
         case PAJ6100_ID:
