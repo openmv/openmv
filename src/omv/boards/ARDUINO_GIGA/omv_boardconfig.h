@@ -36,6 +36,7 @@
 #define OMV_OV7670_CLKRC                    (0)
 
 #define OMV_GC2145_ENABLE                   (1)
+#define OMV_GC2145_ROTATE                   (1)
 
 // FIR sensor drivers configuration.
 #define OMV_FIR_MLX90621_ENABLE             (1)
