@@ -364,7 +364,7 @@ void imlib_mean_filter(image_t *img, const int ksize, bool threshold, int offset
 #ifdef IMLIB_ENABLE_MEDIAN
 static uint8_t hist_median(uint8_t *data, int len, const int cutoff) {
     int i;
-#if defined(ARM_MATH_CM7) || defined(ARM_MATH_CM4)
+#if defined(ARM_MATH_DSP)
     uint32_t oldsum = 0, sum32 = 0;
 
     for (i = 0; i < len; i += 4) {

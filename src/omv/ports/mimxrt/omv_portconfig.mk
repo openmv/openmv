@@ -10,7 +10,7 @@ CFLAGS += -std=gnu99 -Wall -Werror -Warray-bounds -nostartfiles -fdata-sections 
 # TODO: FIX HSE
 CFLAGS += -DCPU_$(MCU_VARIANT)\
           -D$(TARGET)\
-          -D$(ARM_MATH) -DARM_NN_TRUNCATE\
+          -DARM_NN_TRUNCATE\
           -D__FPU_PRESENT=1 -D__VFP_FP__\
           -DHSE_VALUE=$(OMV_HSE_VALUE) \
           -DMICROPY_PY_MACHINE_SDCARD=1 \
