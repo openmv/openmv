@@ -5,7 +5,7 @@ LDSCRIPT  ?= stm32fxxx
 
 # Compiler Flags
 CFLAGS += -std=gnu99 -Wall -Werror -Warray-bounds -mthumb -nostartfiles -fdata-sections -ffunction-sections
-CFLAGS += -fno-inline-small-functions -D$(MCU) -D$(CFLAGS_MCU) -D$(ARM_MATH) -DARM_NN_TRUNCATE\
+CFLAGS += -fno-inline-small-functions -D$(MCU) -D$(CFLAGS_MCU) -DARM_NN_TRUNCATE\
           -fsingle-precision-constant -Wdouble-promotion -mcpu=$(CPU) -mtune=$(CPU) -mfpu=$(FPU) -mfloat-abi=hard
 CFLAGS += -D__FPU_PRESENT=1 -D__VFP_FP__ -DUSE_DEVICE_MODE -DHSE_VALUE=$(OMV_HSE_VALUE)\
           -D$(TARGET) -DVECT_TAB_OFFSET=$(VECT_TAB_OFFSET) -DMAIN_APP_ADDR=$(MAIN_APP_ADDR) -DSTM32_HAL_H=$(HAL_INC)\
@@ -87,7 +87,7 @@ else
 CM4_CFLAGS += -O2 -DNDEBUG
 endif
 CM4_CFLAGS += -std=gnu99 -Wall -Werror -Warray-bounds -mthumb -nostartfiles -fdata-sections -ffunction-sections
-CM4_CFLAGS += -D$(MCU) -D$(CFLAGS_MCU) -D$(ARM_MATH) -DARM_NN_TRUNCATE -DCORE_CM4\
+CM4_CFLAGS += -D$(MCU) -D$(CFLAGS_MCU) -DARM_NN_TRUNCATE -DCORE_CM4\
               -fsingle-precision-constant -Wdouble-promotion -mcpu=cortex-m4 -mtune=cortex-m4 -mfpu=$(FPU) -mfloat-abi=hard
 CM4_CFLAGS += -D__FPU_PRESENT=1 -D__VFP_FP__ -DHSE_VALUE=$(OMV_HSE_VALUE)\
               -D$(TARGET) -DVECT_TAB_OFFSET=$(M4_VECT_TAB_OFFSET) -DMAIN_APP_ADDR=$(M4_APP_ADDR) -DSTM32_HAL_H=$(HAL_INC)

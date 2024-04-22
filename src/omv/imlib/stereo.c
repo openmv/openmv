@@ -23,7 +23,7 @@
 #define BLOCK_SIZE    ((BLOCK_W) *(BLOCK_H))
 
 static inline void shift(uint8_t *data, image_t *img, int x, int y) {
-#if (defined(ARM_MATH_CM7) || defined(ARM_MATH_CM4)) && (!(BLOCK_SIZE % 4))
+#if defined(ARM_MATH_DSP) && (!(BLOCK_SIZE % 4))
     int x_2 = x + BLOCK_W_R;
     uint32_t *data_32 = (uint32_t *) data;
 
@@ -77,7 +77,7 @@ static inline void shift(uint8_t *data, image_t *img, int x, int y) {
 static inline uint32_t sad(uint8_t *data_l, uint8_t *data_r) {
     uint32_t diff = 0;
 
-#if (defined(ARM_MATH_CM7) || defined(ARM_MATH_CM4)) && (!(BLOCK_SIZE % 4))
+#if defined(ARM_MATH_DSP) && (!(BLOCK_SIZE % 4))
     uint32_t *data_l_32 = (uint32_t *) data_l;
     uint32_t *data_r_32 = (uint32_t *) data_r;
 

@@ -10247,7 +10247,7 @@ image_u8_t *threshold(apriltag_detector_t *td, image_u8_t *im)
     // first, collect min/max statistics for each tile
     for (int ty = 0; ty < th; ty++) {
         for (int tx = 0; tx < tw; tx++) {
-#if defined( OPTIMIZED ) && (defined(ARM_MATH_CM7) || defined(ARM_MATH_CM4))
+#if defined( OPTIMIZED ) && defined(ARM_MATH_DSP)
         uint32_t tmp, max32 = 0, min32 = 0xffffffff;
         for (int dy=0; dy < tilesz; dy++) {
             uint32_t v = *(uint32_t *)&im->buf[(ty*tilesz+dy)*s + tx*tilesz];
@@ -10416,7 +10416,7 @@ image_u8_t *threshold(apriltag_detector_t *td, image_u8_t *im)
         fb_free(); // im_min_tmp
         fb_free(); // im_max_tmp
     }
-#if defined( OPTIMIZED ) && (defined(ARM_MATH_CM7) || defined(ARM_MATH_CM4))
+#if defined( OPTIMIZED ) && defined(ARM_MATH_DSP)
     if ((s & 0x3) == 0 && tilesz == 4) // if each line is a multiple of 4, we can do this faster
     {
         const uint32_t lowcontrast = 0x7f7f7f7f;
