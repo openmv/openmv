@@ -36,8 +36,16 @@
 #include "omv_gpio.h"
 #include "omv_i2c.h"
 
-#ifndef OMV_ISC_MAX_DEVICES
-#define OMV_ISC_MAX_DEVICES (5)
+#ifndef OMV_CSI_MAX_DEVICES
+#define OMV_CSI_MAX_DEVICES (5)
+#endif
+
+#ifndef OMV_CSI_RESET_DELAY
+#define OMV_CSI_RESET_DELAY (10)
+#endif
+
+#ifndef OMV_CSI_POWER_DELAY
+#define OMV_CSI_POWER_DELAY (10)
 #endif
 
 #ifndef __weak
@@ -156,7 +164,7 @@ __weak int sensor_reset() {
     }
     #endif
 
-    mp_hal_delay_ms(20);
+    mp_hal_delay_ms(OMV_CSI_RESET_DELAY);
 
     // Re-enable the bus.
     omv_i2c_enable(&sensor.i2c_bus, true);
@@ -174,10 +182,10 @@ __weak int sensor_reset() {
 }
 
 static int sensor_detect() {
-    uint8_t devs_list[OMV_ISC_MAX_DEVICES];
+    uint8_t devs_list[OMV_CSI_MAX_DEVICES];
     int n_devs = omv_i2c_scan(&sensor.i2c_bus, devs_list, OMV_ARRAY_SIZE(devs_list));
 
-    for (int i = 0; i < OMV_MIN(n_devs, OMV_ISC_MAX_DEVICES); i++) {
+    for (int i = 0; i < OMV_MIN(n_devs, OMV_CSI_MAX_DEVICES); i++) {
         uint8_t slv_addr = devs_list[i];
         switch (slv_addr) {
             #if (OMV_OV2640_ENABLE == 1)
@@ -256,7 +264,7 @@ int sensor_probe_init(uint32_t bus_id, uint32_t bus_speed) {
     mp_hal_delay_ms(10);
 
     omv_gpio_write(OMV_CSI_POWER_PIN, 0);
-    mp_hal_delay_ms(10);
+    mp_hal_delay_ms(OMV_CSI_POWER_DELAY);
     #endif
 
     #if defined(OMV_CSI_RESET_PIN)
@@ -266,7 +274,7 @@ int sensor_probe_init(uint32_t bus_id, uint32_t bus_speed) {
     mp_hal_delay_ms(10);
 
     omv_gpio_write(OMV_CSI_RESET_PIN, 0);
-    mp_hal_delay_ms(10);
+    mp_hal_delay_ms(OMV_CSI_RESET_DELAY);
     #endif
 
     // Initialize the camera bus.
@@ -281,21 +289,21 @@ int sensor_probe_init(uint32_t bus_id, uint32_t bus_speed) {
         #if defined(OMV_CSI_RESET_PIN)
         sensor.reset_pol = ACTIVE_LOW;
         omv_gpio_write(OMV_CSI_RESET_PIN, 1);
-        mp_hal_delay_ms(10);
+        mp_hal_delay_ms(OMV_CSI_RESET_DELAY);
         #endif
 
         if ((sensor.slv_addr = sensor_detect()) == 0) {
             #if defined(OMV_CSI_POWER_PIN)
             sensor.pwdn_pol = ACTIVE_LOW;
             omv_gpio_write(OMV_CSI_POWER_PIN, 1);
-            mp_hal_delay_ms(10);
+            mp_hal_delay_ms(OMV_CSI_POWER_DELAY);
             #endif
 
             if ((sensor.slv_addr = sensor_detect()) == 0) {
                 #if defined(OMV_CSI_RESET_PIN)
                 sensor.reset_pol = ACTIVE_HIGH;
                 omv_gpio_write(OMV_CSI_RESET_PIN, 0);
-                mp_hal_delay_ms(10);
+                mp_hal_delay_ms(OMV_CSI_RESET_DELAY);
                 #endif
                 sensor.slv_addr = sensor_detect();
             }
