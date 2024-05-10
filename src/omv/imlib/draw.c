@@ -141,7 +141,7 @@ static void imlib_draw_thin_line(image_t *img, int x0, int y0, int x1, int y1, i
     const int sy = y0 < y1 ? 1 : -1;
     int err = dx - dy;
     int e2, x2; // error value e_xy
-    int ed = dx + dy == 0 ? 1 : fast_sqrtf(dx * dx + dy * dy);
+    int ed = dx + dy == 0 ? 1 : fast_floorf(fast_sqrtf(dx * dx + dy * dy));
 
     for (;;) {
         // pixel loop
@@ -175,7 +175,6 @@ static void imlib_draw_thin_line(image_t *img, int x0, int y0, int x1, int y1, i
 
 // https://gist.github.com/randvoorhies/807ce6e20840ab5314eb7c547899de68#file-bresenham-js-L813
 void imlib_draw_line(image_t *img, int x0, int y0, int x1, int y1, int c, int th) {
-
     line_t line = {x0, y0, x1, y1};
     if (!lb_clip_line(&line, 0, 0, img->w, img->h)) {
         return;
@@ -186,20 +185,17 @@ void imlib_draw_line(image_t *img, int x0, int y0, int x1, int y1, int c, int th
     x1 = line.x2;
     y1 = line.y2;
 
-    int r = th / 2;
-    point_fill(img, x0, y0, -r, r, c); // add round at start
-    point_fill(img, x1, y1, -r, r, c); // add round at end
-
     // plot an anti-aliased line of width th pixel
     const int ex = abs(x1 - x0);
     const int sx = x0 < x1 ? 1 : -1;
     const int ey = abs(y1 - y0);
     const int sy = y0 < y1 ? 1 : -1;
-    int e2 = fast_sqrtf(ex * ex + ey * ey); // length
+    int e2 = fast_floorf(fast_sqrtf(ex * ex + ey * ey)); // length
 
     if (th <= 1 || e2 == 0) {
         return imlib_draw_thin_line(img, x0, y0, x1, y1, c); // assert
     }
+
     int dx = ex * 256 / e2;
     int dy = ey * 256 / e2;
     th = 256 * (th - 1); // scale values
@@ -207,7 +203,7 @@ void imlib_draw_line(image_t *img, int x0, int y0, int x1, int y1, int c, int th
     if (dx < dy) {
         // steep line
         x1 = (e2 + th / 2) / dy; // start offset
-        int err = x1 * dy - th / 2;   // shift error value to offset width
+        int err = x1 * dy - th / 2; // shift error value to offset width
         for (x0 -= x1 * sx;; y0 += sy) {
             x1 = x0;
             imlib_set_pixel_aa(img, x1, y0, err, c); // aliasing pre-pixel
@@ -228,7 +224,7 @@ void imlib_draw_line(image_t *img, int x0, int y0, int x1, int y1, int c, int th
     } else {
         // flat line
         y1 = (e2 + th / 2) / dx; // start offset
-        int err = y1 * dx - th / 2;   // shift error value to offset width
+        int err = y1 * dx - th / 2; // shift error value to offset width
         for (y0 -= y1 * sy;; x0 += sx) {
             y1 = y0;
             imlib_set_pixel_aa(img, x0, y1, err, c); // aliasing pre-pixel
