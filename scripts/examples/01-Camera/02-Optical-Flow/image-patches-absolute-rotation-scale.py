@@ -30,7 +30,7 @@
 #
 # Your OpenMV Cam supports power of 2 resolutions of 64x32, 64x64,
 # 128x64, and 128x128. If you want a resolution of 32x32 you can create
-# it by doing "img.pool(2, 2)" on a 64x64 image.
+# it by doing "img.scale(x_scale=0.5, y_scale=0.5, hint=image.AREA)" on a 64x64 image.
 
 import sensor
 import time

@@ -23,12 +23,6 @@
 // Enable YUV LUT
 //#define IMLIB_ENABLE_YUV_LUT
 
-// Enable mean pooling
-//#define IMLIB_ENABLE_MEAN_POOLING
-
-// Enable midpoint pooling
-//#define IMLIB_ENABLE_MIDPOINT_POOLING
-
 // Enable ISP ops
 //#define IMLIB_ENABLE_ISP_OPS
 

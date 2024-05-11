@@ -8,6 +8,7 @@
 
 import sensor
 import time
+import image
 
 sensor.reset()
 sensor.set_pixformat(sensor.RGB565)  # or GRAYSCALE...
@@ -19,7 +20,7 @@ while True:
     clock.tick()
 
     img = sensor.snapshot()
-    small_img = img.mean_pooled(4, 4)  # Makes a copy.
+    small_img = img.scale(x_scale=0.25, y_scale=0.25, hint=image.AREA, copy=True)
 
     x = (img.width() // 2) - (small_img.width() // 2)
     y = (img.height() // 2) - (small_img.height() // 2)

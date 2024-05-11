@@ -840,108 +840,6 @@ STATIC mp_obj_t py_image_set_pixel(uint n_args, const mp_obj_t *args, mp_map_t *
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_set_pixel_obj, 2, py_image_set_pixel);
 
-#ifdef IMLIB_ENABLE_MEAN_POOLING
-static mp_obj_t py_image_mean_pool(mp_obj_t img_obj, mp_obj_t x_div_obj, mp_obj_t y_div_obj) {
-    image_t *arg_img = py_helper_arg_to_image(img_obj, ARG_IMAGE_MUTABLE);
-
-    int arg_x_div = mp_obj_get_int(x_div_obj);
-    PY_ASSERT_TRUE_MSG(arg_x_div >= 1, "Width divisor must be greater than >= 1");
-    PY_ASSERT_TRUE_MSG(arg_x_div <= arg_img->w, "Width divisor must be less than <= img width");
-    int arg_y_div = mp_obj_get_int(y_div_obj);
-    PY_ASSERT_TRUE_MSG(arg_y_div >= 1, "Height divisor must be greater than >= 1");
-    PY_ASSERT_TRUE_MSG(arg_y_div <= arg_img->h, "Height divisor must be less than <= img height");
-
-    image_t out_img;
-    out_img.w = arg_img->w / arg_x_div;
-    out_img.h = arg_img->h / arg_y_div;
-    out_img.pixfmt = arg_img->pixfmt;
-    out_img.pixels = arg_img->pixels;
-    PY_ASSERT_TRUE_MSG(image_size(&out_img) <= image_size(arg_img), "Can't pool in place!");
-
-    imlib_mean_pool(arg_img, &out_img, arg_x_div, arg_y_div);
-    arg_img->w = out_img.w;
-    arg_img->h = out_img.h;
-    py_helper_update_framebuffer(arg_img);
-    return img_obj;
-}
-STATIC MP_DEFINE_CONST_FUN_OBJ_3(py_image_mean_pool_obj, py_image_mean_pool);
-
-static mp_obj_t py_image_mean_pooled(mp_obj_t img_obj, mp_obj_t x_div_obj, mp_obj_t y_div_obj) {
-    image_t *arg_img = py_helper_arg_to_image(img_obj, ARG_IMAGE_MUTABLE);
-
-    int arg_x_div = mp_obj_get_int(x_div_obj);
-    PY_ASSERT_TRUE_MSG(arg_x_div >= 1, "Width divisor must be greater than >= 1");
-    PY_ASSERT_TRUE_MSG(arg_x_div <= arg_img->w, "Width divisor must be less than <= img width");
-    int arg_y_div = mp_obj_get_int(y_div_obj);
-    PY_ASSERT_TRUE_MSG(arg_y_div >= 1, "Height divisor must be greater than >= 1");
-    PY_ASSERT_TRUE_MSG(arg_y_div <= arg_img->h, "Height divisor must be less than <= img height");
-
-    image_t out_img;
-    out_img.w = arg_img->w / arg_x_div;
-    out_img.h = arg_img->h / arg_y_div;
-    out_img.pixfmt = arg_img->pixfmt;
-    out_img.pixels = xalloc(image_size(&out_img));
-
-    imlib_mean_pool(arg_img, &out_img, arg_x_div, arg_y_div);
-    return py_image_from_struct(&out_img);
-}
-STATIC MP_DEFINE_CONST_FUN_OBJ_3(py_image_mean_pooled_obj, py_image_mean_pooled);
-#endif // IMLIB_ENABLE_MEAN_POOLING
-
-#ifdef IMLIB_ENABLE_MIDPOINT_POOLING
-static mp_obj_t py_image_midpoint_pool(uint n_args, const mp_obj_t *args, mp_map_t *kw_args) {
-    image_t *arg_img = py_helper_arg_to_image(args[0], ARG_IMAGE_MUTABLE);
-
-    int arg_x_div = mp_obj_get_int(args[1]);
-    PY_ASSERT_TRUE_MSG(arg_x_div >= 1, "Width divisor must be greater than >= 1");
-    PY_ASSERT_TRUE_MSG(arg_x_div <= arg_img->w, "Width divisor must be less than <= img width");
-    int arg_y_div = mp_obj_get_int(args[2]);
-    PY_ASSERT_TRUE_MSG(arg_y_div >= 1, "Height divisor must be greater than >= 1");
-    PY_ASSERT_TRUE_MSG(arg_y_div <= arg_img->h, "Height divisor must be less than <= img height");
-
-    int arg_bias = py_helper_keyword_float(n_args, args, 3, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_bias), 0.5) * 256;
-    PY_ASSERT_TRUE_MSG((0 <= arg_bias) && (arg_bias <= 256), "Error: 0 <= bias <= 1!");
-
-    image_t out_img;
-    out_img.w = arg_img->w / arg_x_div;
-    out_img.h = arg_img->h / arg_y_div;
-    out_img.pixfmt = arg_img->pixfmt;
-    out_img.pixels = arg_img->pixels;
-    PY_ASSERT_TRUE_MSG(image_size(&out_img) <= image_size(arg_img), "Can't pool in place!");
-
-    imlib_midpoint_pool(arg_img, &out_img, arg_x_div, arg_y_div, arg_bias);
-    arg_img->w = out_img.w;
-    arg_img->h = out_img.h;
-    py_helper_update_framebuffer(arg_img);
-    return args[0];
-}
-STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_midpoint_pool_obj, 3, py_image_midpoint_pool);
-
-static mp_obj_t py_image_midpoint_pooled(uint n_args, const mp_obj_t *args, mp_map_t *kw_args) {
-    image_t *arg_img = py_helper_arg_to_image(args[0], ARG_IMAGE_MUTABLE);
-
-    int arg_x_div = mp_obj_get_int(args[1]);
-    PY_ASSERT_TRUE_MSG(arg_x_div >= 1, "Width divisor must be greater than >= 1");
-    PY_ASSERT_TRUE_MSG(arg_x_div <= arg_img->w, "Width divisor must be less than <= img width");
-    int arg_y_div = mp_obj_get_int(args[2]);
-    PY_ASSERT_TRUE_MSG(arg_y_div >= 1, "Height divisor must be greater than >= 1");
-    PY_ASSERT_TRUE_MSG(arg_y_div <= arg_img->h, "Height divisor must be less than <= img height");
-
-    int arg_bias = py_helper_keyword_float(n_args, args, 3, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_bias), 0.5) * 256;
-    PY_ASSERT_TRUE_MSG((0 <= arg_bias) && (arg_bias <= 256), "Error: 0 <= bias <= 1!");
-
-    image_t out_img;
-    out_img.w = arg_img->w / arg_x_div;
-    out_img.h = arg_img->h / arg_y_div;
-    out_img.pixfmt = arg_img->pixfmt;
-    out_img.pixels = xalloc(image_size(&out_img));
-
-    imlib_midpoint_pool(arg_img, &out_img, arg_x_div, arg_y_div, arg_bias);
-    return py_image_from_struct(&out_img);
-}
-STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_midpoint_pooled_obj, 3, py_image_midpoint_pooled);
-#endif // IMLIB_ENABLE_MIDPOINT_POOLING
-
 static mp_obj_t py_image_to(pixformat_t pixfmt, mp_rom_obj_t default_color_palette, bool default_copy,
                             uint n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
     enum {
@@ -6271,20 +6169,6 @@ static const mp_rom_map_elem_t locals_dict_table[] = {
     {MP_ROM_QSTR(MP_QSTR_bytearray),           MP_ROM_PTR(&py_image_bytearray_obj)},
     {MP_ROM_QSTR(MP_QSTR_get_pixel),           MP_ROM_PTR(&py_image_get_pixel_obj)},
     {MP_ROM_QSTR(MP_QSTR_set_pixel),           MP_ROM_PTR(&py_image_set_pixel_obj)},
-    #ifdef IMLIB_ENABLE_MEAN_POOLING
-    {MP_ROM_QSTR(MP_QSTR_mean_pool),           MP_ROM_PTR(&py_image_mean_pool_obj)},
-    {MP_ROM_QSTR(MP_QSTR_mean_pooled),         MP_ROM_PTR(&py_image_mean_pooled_obj)},
-    #else
-    {MP_ROM_QSTR(MP_QSTR_mean_pool),           MP_ROM_PTR(&py_func_unavailable_obj)},
-    {MP_ROM_QSTR(MP_QSTR_mean_pooled),         MP_ROM_PTR(&py_func_unavailable_obj)},
-    #endif
-    #ifdef IMLIB_ENABLE_MIDPOINT_POOLING
-    {MP_ROM_QSTR(MP_QSTR_midpoint_pool),       MP_ROM_PTR(&py_image_midpoint_pool_obj)},
-    {MP_ROM_QSTR(MP_QSTR_midpoint_pooled),     MP_ROM_PTR(&py_image_midpoint_pooled_obj)},
-    #else
-    {MP_ROM_QSTR(MP_QSTR_midpoint_pool),       MP_ROM_PTR(&py_func_unavailable_obj)},
-    {MP_ROM_QSTR(MP_QSTR_midpoint_pooled),     MP_ROM_PTR(&py_func_unavailable_obj)},
-    #endif
     {MP_ROM_QSTR(MP_QSTR_to_bitmap),           MP_ROM_PTR(&py_image_to_bitmap_obj)},
     {MP_ROM_QSTR(MP_QSTR_to_grayscale),        MP_ROM_PTR(&py_image_to_grayscale_obj)},
     {MP_ROM_QSTR(MP_QSTR_to_rgb565),           MP_ROM_PTR(&py_image_to_rgb565_obj)},

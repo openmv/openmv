@@ -90,7 +90,6 @@ SRCS += $(addprefix imlib/,     \
 	orb.c                       \
 	phasecorrelation.c          \
 	point.c                     \
-	pool.c                      \
 	ppm.c                       \
 	qrcode.c                    \
 	qsort.c                     \
