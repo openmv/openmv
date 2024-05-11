@@ -286,11 +286,69 @@ void imlib_draw_rectangle(image_t *img, int rx, int ry, int rw, int rh, int c, i
     }
 }
 
+// https://gist.github.com/randvoorhies/807ce6e20840ab5314eb7c547899de68#file-bresenham-js-L404
+static void imlib_draw_circle_thin(image_t *img, int cx, int cy, int r, int c, bool fill) {
+    int x = r;
+    int y = 0; // II. quadrant from bottom left to top right
+    int err = 2 - (2 * r); // error of 1.step
+    r = 1 - err;
+    for (;;) {
+        int i = 256 * abs(err + (2 * (x + y)) - 2) / r; // get blend value of pixel
+        imlib_set_pixel_aa(img, cx + x, cy - y, i, c); // I. Quadrant
+        imlib_set_pixel_aa(img, cx + y, cy + x, i, c); // II. Quadrant
+        imlib_set_pixel_aa(img, cx - x, cy + y, i, c); // III. Quadrant
+        imlib_set_pixel_aa(img, cx - y, cy - x, i, c); // IV. Quadrant
+        if (fill) {
+            xLine(img, cx,         cx + x - 1, cy - y,     c);
+            yLine(img, cx + y,     cy,         cy + x - 1, c);
+            xLine(img, cx - x + 1, cx,         cy + y,     c);
+            yLine(img, cx - y,     cy - x + 1, cy,         c);
+        }
+        if (x == 0) {
+            break;
+        }
+        int e2 = err;
+        int x2 = x; // remember values
+        if (err > y) {
+            // x step
+            i = 256 * (err + (2 * x) - 1) / r; // outward pixel
+            if (i < 256) {
+                imlib_set_pixel_aa(img, cx + x,     cy - y + 1, i, c);
+                imlib_set_pixel_aa(img, cx + y - 1, cy + x,     i, c);
+                imlib_set_pixel_aa(img, cx - x,     cy + y - 1, i, c);
+                imlib_set_pixel_aa(img, cx - y + 1, cy - x,     i, c);
+            }
+            err -= (--x * 2) - 1;
+        }
+        if (e2 <= x2--) {
+            // y step
+            if (!fill) {
+                i = 256 * (1 - (2 * y) - e2) / r; // inward pixel
+                if (i < 256) {
+                    imlib_set_pixel_aa(img, cx + x2, cy - y,      i, c);
+                    imlib_set_pixel_aa(img, cx + y,  cy + x2, i, c);
+                    imlib_set_pixel_aa(img, cx - x2, cy + y,      i, c);
+                    imlib_set_pixel_aa(img, cx - y,  cy - x2, i, c);
+                }
+            }
+            err -= (--y * 2) - 1;
+        }
+    }
+}
+
 // https://stackoverflow.com/questions/27755514/circle-with-thickness-drawing-algorithm
 void imlib_draw_circle(image_t *img, int cx, int cy, int r, int c, int thickness, bool fill) {
-    if (fill) {
-        point_fill(img, cx, cy, -r, r, c);
-    } else if (thickness > 0) {
+    if ((r == 0) && (fill || (thickness > 0))) {
+        imlib_set_pixel(img, cx, cy, c);
+    }
+
+    if ((r <= 0) || ((!fill) && (thickness <= 0))) {
+        return;
+    }
+
+    if (thickness == 1 || fill) {
+        imlib_draw_circle_thin(img, cx, cy, r + (IM_MAX(thickness, 0) / 2), c, fill);
+    } else {
         int thickness0 = (thickness - 0) / 2;
         int thickness1 = (thickness - 1) / 2;
 
@@ -331,6 +389,10 @@ void imlib_draw_circle(image_t *img, int cx, int cy, int r, int c, int thickness
                 }
             }
         }
+
+        // Anti-alias the outer and inner edges.
+        imlib_draw_circle_thin(img, cx, cy, r + thickness0, c, false);
+        imlib_draw_circle_thin(img, cx, cy, xi_tmp, c, false);
     }
 }
 
