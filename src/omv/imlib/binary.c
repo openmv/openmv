@@ -923,7 +923,7 @@ static void imlib_erode_dilate(image_t *img, int ksize, int threshold, int e_or_
                         continue; // Short circuit.
                     }
 
-                    if (x > ksize && x < img->w - ksize && y >= ksize && y < img->h - ksize) {
+                    if (!mask && x > ksize && x < img->w - ksize && y >= ksize && y < img->h - ksize) {
                         // faster
                         for (int j = -ksize; j <= ksize; j++) {
                             uint32_t *k_row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(img, y + j);
@@ -997,11 +997,11 @@ static void imlib_erode_dilate(image_t *img, int ksize, int threshold, int e_or_
                         continue; // Short circuit.
                     }
 
-                    if (x > ksize && x < img->w - ksize && y >= ksize && y < img->h - ksize) {
+                    if (!mask && x > ksize && x < img->w - ksize && y >= ksize && y < img->h - ksize) {
                         if (0) {
                         #if defined(ARM_MATH_DSP)
                             // acc will never be larger than 121 (<= 127) for ksize <= 5.
-                        } else if ((x < img->w - ksize - 3) && (ksize <= 5) && (!mask)) {
+                        } else if ((x < img->w - ksize - 3) && (ksize <= 5)) {
                             int32_t acc_x4 = acc & 0xFF;
 
                             for (int j = -ksize; j <= ksize; j++) {
@@ -1105,11 +1105,11 @@ static void imlib_erode_dilate(image_t *img, int ksize, int threshold, int e_or_
                         continue; // Short circuit.
                     }
 
-                    if (x > ksize && x < img->w - ksize && y >= ksize && y < img->h - ksize) {
+                    if (!mask && x > ksize && x < img->w - ksize && y >= ksize && y < img->h - ksize) {
                         if (0) {
                         #if defined(ARM_MATH_DSP)
                             // acc will never be larger than 32,761 (<= 32767) for ksize <= 90.
-                        } else if ((x < img->w - ksize - 1) && (ksize <= 90) && (!mask)) {
+                        } else if ((x < img->w - ksize - 1) && (ksize <= 90)) {
                             int32_t acc_x2 = acc & 0xFFFF;
 
                             for (int j = -ksize; j <= ksize; j++) {
