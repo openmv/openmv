@@ -2424,161 +2424,213 @@ static MP_DEFINE_CONST_FUN_OBJ_KW(py_image_midpoint_obj, 2, py_image_midpoint);
 #endif // IMLIB_ENABLE_MIDPOINT
 
 #ifdef IMLIB_ENABLE_MORPH
-static mp_obj_t py_image_morph(uint n_args, const mp_obj_t *args, mp_map_t *kw_args) {
-    image_t *arg_img =
-        py_helper_arg_to_image(args[0], ARG_IMAGE_MUTABLE);
-    int arg_ksize =
-        py_helper_arg_to_ksize(args[1]);
+static mp_obj_t py_image_morph(uint n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
+    enum { ARG_mul, ARG_add, ARG_threshold, ARG_offset, ARG_invert, ARG_mask };
+    static const mp_arg_t allowed_args[] = {
+        { MP_QSTR_mul, MP_ARG_OBJ | MP_ARG_KW_ONLY,  {.u_rom_obj = MP_ROM_NONE } },
+        { MP_QSTR_add, MP_ARG_OBJ | MP_ARG_KW_ONLY,  {.u_rom_obj = MP_ROM_NONE } },
+        { MP_QSTR_threshold, MP_ARG_BOOL | MP_ARG_KW_ONLY,  {.u_bool = false } },
+        { MP_QSTR_offset, MP_ARG_INT | MP_ARG_KW_ONLY,  {.u_int = 0 } },
+        { MP_QSTR_invert, MP_ARG_BOOL | MP_ARG_KW_ONLY,  {.u_bool = false } },
+        { MP_QSTR_mask, MP_ARG_OBJ | MP_ARG_KW_ONLY,  {.u_rom_obj = MP_ROM_NONE} },
+    };
 
-    int n = imlib_ksize_to_n(arg_ksize);
+    // Parse args.
+    image_t *image = py_helper_arg_to_image(pos_args[0], ARG_IMAGE_MUTABLE);
+    int ksize = py_helper_arg_to_ksize(pos_args[1]);
+    int n = (ksize * 2) + 1;
 
-    mp_obj_t *krn;
-    mp_obj_get_array_fixed_n(args[2], n, &krn);
+    if (n > 31) {
+        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Kernel size too large!"));
+    }
+
+    size_t len;
+    mp_obj_t *items;
+    mp_obj_get_array(pos_args[2], &len, &items);
+
+    mp_arg_val_t args[MP_ARRAY_SIZE(allowed_args)];
+    mp_arg_parse_all(n_args - 3, pos_args + 3, kw_args, MP_ARRAY_SIZE(allowed_args), allowed_args, args);
 
     fb_alloc_mark();
 
-    int *arg_krn = fb_alloc(n * sizeof(int), FB_ALLOC_NO_HINT);
-    int arg_m = 0;
+    int krn[n * n];
+    int sum = 0;
 
-    for (int i = 0; i < n; i++) {
-        arg_krn[i] = mp_obj_get_int(krn[i]);
-        arg_m += arg_krn[i];
+    if (len == n) {
+        for (int i = 0; i < n; i++) {
+            size_t row_len;
+            mp_obj_t *row_items;
+            mp_obj_get_array(items[i], &row_len, &row_items);
+
+            if (row_len == n) {
+                for (int j = 0; j < n; j++) {
+                    krn[(i * n) + j] = mp_obj_get_int(row_items[j]);
+                    sum += krn[(i * n) + j];
+                }
+            } else {
+                mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Unexpected kernel dimensions!"));
+            }
+        }
+    } else if (len == (n * n)) {
+        for (int i = 0; i < (n * n); i++) {
+            krn[i] = mp_obj_get_int(items[i]);
+            sum += krn[i];
+        }
+    } else {
+        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Unexpected kernel dimensions!"));
     }
 
-    if (arg_m == 0) {
-        arg_m = 1;
+    if (sum == 0) {
+        sum = 1;
     }
 
-    float arg_mul =
-        py_helper_keyword_float(n_args, args, 3, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_mul), 1.0f / arg_m);
-    float arg_add =
-        py_helper_keyword_float(n_args, args, 4, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_add), 0.0f);
-    bool arg_threshold =
-        py_helper_keyword_int(n_args, args, 5, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_threshold), false);
-    int arg_offset =
-        py_helper_keyword_int(n_args, args, 6, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_offset), 0);
-    bool arg_invert =
-        py_helper_keyword_int(n_args, args, 7, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_invert), false);
-    image_t *arg_msk =
-        py_helper_keyword_to_image(n_args, args, 8, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_mask), NULL);
+    image_t *mask = NULL;
+    if (args[ARG_mask].u_obj != mp_const_none) {
+        mask = py_helper_arg_to_image(args[ARG_mask].u_obj, ARG_IMAGE_MUTABLE | ARG_IMAGE_ALLOC);
+    }
 
-    imlib_morph(arg_img, arg_ksize, arg_krn, arg_mul, arg_add, arg_threshold, arg_offset, arg_invert, arg_msk);
+    float mul = py_helper_arg_to_float(args[ARG_mul].u_obj, 1.0f);
+    float add = py_helper_arg_to_float(args[ARG_add].u_obj, 0.0f);
+
+    imlib_morph(image, ksize, krn, mul / sum, add, args[ARG_threshold].u_bool,
+                args[ARG_offset].u_int, args[ARG_invert].u_bool, mask);
     fb_alloc_free_till_mark();
-    return args[0];
+    return pos_args[0];
 }
 static MP_DEFINE_CONST_FUN_OBJ_KW(py_image_morph_obj, 3, py_image_morph);
-#endif //IMLIB_ENABLE_MORPH
+#endif // IMLIB_ENABLE_MORPH
 
 #ifdef IMLIB_ENABLE_GAUSSIAN
-static mp_obj_t py_image_gaussian(uint n_args, const mp_obj_t *args, mp_map_t *kw_args) {
-    image_t *arg_img =
-        py_helper_arg_to_image(args[0], ARG_IMAGE_MUTABLE);
-    int arg_ksize =
-        py_helper_arg_to_ksize(args[1]);
+static mp_obj_t py_image_gaussian(uint n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
+    enum { ARG_unsharp, ARG_mul, ARG_add, ARG_threshold, ARG_offset, ARG_invert, ARG_mask };
+    static const mp_arg_t allowed_args[] = {
+        { MP_QSTR_unsharp, MP_ARG_BOOL | MP_ARG_KW_ONLY, {.u_bool = false } },
+        { MP_QSTR_mul, MP_ARG_OBJ | MP_ARG_KW_ONLY,  {.u_rom_obj = MP_ROM_NONE } },
+        { MP_QSTR_add, MP_ARG_OBJ | MP_ARG_KW_ONLY,  {.u_rom_obj = MP_ROM_NONE } },
+        { MP_QSTR_threshold, MP_ARG_BOOL | MP_ARG_KW_ONLY,  {.u_bool = false } },
+        { MP_QSTR_offset, MP_ARG_INT | MP_ARG_KW_ONLY,  {.u_int = 0 } },
+        { MP_QSTR_invert, MP_ARG_BOOL | MP_ARG_KW_ONLY,  {.u_bool = false } },
+        { MP_QSTR_mask, MP_ARG_OBJ | MP_ARG_KW_ONLY,  {.u_rom_obj = MP_ROM_NONE} },
+    };
 
-    int k_2 = arg_ksize * 2;
-    int n = k_2 + 1;
+    // Parse args.
+    image_t *image = py_helper_arg_to_image(pos_args[0], ARG_IMAGE_MUTABLE);
+    int ksize = py_helper_arg_to_ksize(pos_args[1]);
+    int n = (ksize * 2) + 1;
+
+    if (n > 31) {
+        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Kernel size too large!"));
+    }
+
+    mp_arg_val_t args[MP_ARRAY_SIZE(allowed_args)];
+    mp_arg_parse_all(n_args - 2, pos_args + 2, kw_args, MP_ARRAY_SIZE(allowed_args), allowed_args, args);
 
     fb_alloc_mark();
 
-    int *pascal = fb_alloc(n * sizeof(int), FB_ALLOC_NO_HINT);
+    int pascal[n];
     pascal[0] = 1;
 
-    for (int i = 0; i < k_2; i++) {
+    for (int i = 0; i < (ksize * 2); i++) {
         // Compute a row of pascal's triangle.
-        pascal[i + 1] = (pascal[i] * (k_2 - i)) / (i + 1);
+        pascal[i + 1] = (pascal[i] * ((ksize * 2) - i)) / (i + 1);
     }
 
-    int *arg_krn = fb_alloc(n * n * sizeof(int), FB_ALLOC_NO_HINT);
-    int arg_m = 0;
+    int krn[n * n];
+    int sum = 0;
 
     for (int i = 0; i < n; i++) {
         for (int j = 0; j < n; j++) {
             int temp = pascal[i] * pascal[j];
-            arg_krn[(i * n) + j] = temp;
-            arg_m += temp;
+            krn[(i * n) + j] = temp;
+            sum += temp;
         }
     }
 
-    if (py_helper_keyword_int(n_args, args, 2, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_unsharp), false)) {
-        arg_krn[((n / 2) * n) + (n / 2)] -= arg_m * 2;
-        arg_m = -arg_m;
+    if (args[ARG_unsharp].u_bool) {
+        krn[(n * n) / 2] -= sum * 2;
+        sum = -sum;
     }
 
-    float arg_mul =
-        py_helper_keyword_float(n_args, args, 3, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_mul), 1.0f / arg_m);
-    float arg_add =
-        py_helper_keyword_float(n_args, args, 4, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_add), 0.0f);
-    bool arg_threshold =
-        py_helper_keyword_int(n_args, args, 5, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_threshold), false);
-    int arg_offset =
-        py_helper_keyword_int(n_args, args, 6, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_offset), 0);
-    bool arg_invert =
-        py_helper_keyword_int(n_args, args, 7, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_invert), false);
-    image_t *arg_msk =
-        py_helper_keyword_to_image(n_args, args, 8, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_mask), NULL);
+    image_t *mask = NULL;
+    if (args[ARG_mask].u_obj != mp_const_none) {
+        mask = py_helper_arg_to_image(args[ARG_mask].u_obj, ARG_IMAGE_MUTABLE | ARG_IMAGE_ALLOC);
+    }
 
-    imlib_morph(arg_img, arg_ksize, arg_krn, arg_mul, arg_add, arg_threshold, arg_offset, arg_invert, arg_msk);
+    float mul = py_helper_arg_to_float(args[ARG_mul].u_obj, 1.0f);
+    float add = py_helper_arg_to_float(args[ARG_add].u_obj, 0.0f);
+
+    imlib_morph(image, ksize, krn, mul / sum, add, args[ARG_threshold].u_bool,
+                args[ARG_offset].u_int, args[ARG_invert].u_bool, mask);
     fb_alloc_free_till_mark();
-    return args[0];
+    return pos_args[0];
 }
 static MP_DEFINE_CONST_FUN_OBJ_KW(py_image_gaussian_obj, 2, py_image_gaussian);
 #endif // IMLIB_ENABLE_GAUSSIAN
 
 #ifdef IMLIB_ENABLE_LAPLACIAN
-static mp_obj_t py_image_laplacian(uint n_args, const mp_obj_t *args, mp_map_t *kw_args) {
-    image_t *arg_img =
-        py_helper_arg_to_image(args[0], ARG_IMAGE_MUTABLE);
-    int arg_ksize =
-        py_helper_arg_to_ksize(args[1]);
+static mp_obj_t py_image_laplacian(uint n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
+    enum { ARG_sharpen, ARG_mul, ARG_add, ARG_threshold, ARG_offset, ARG_invert, ARG_mask };
+    static const mp_arg_t allowed_args[] = {
+        { MP_QSTR_sharpen, MP_ARG_BOOL | MP_ARG_KW_ONLY, {.u_bool = false } },
+        { MP_QSTR_mul, MP_ARG_OBJ | MP_ARG_KW_ONLY,  {.u_rom_obj = MP_ROM_NONE } },
+        { MP_QSTR_add, MP_ARG_OBJ | MP_ARG_KW_ONLY,  {.u_rom_obj = MP_ROM_NONE } },
+        { MP_QSTR_threshold, MP_ARG_BOOL | MP_ARG_KW_ONLY,  {.u_bool = false } },
+        { MP_QSTR_offset, MP_ARG_INT | MP_ARG_KW_ONLY,  {.u_int = 0 } },
+        { MP_QSTR_invert, MP_ARG_BOOL | MP_ARG_KW_ONLY,  {.u_bool = false } },
+        { MP_QSTR_mask, MP_ARG_OBJ | MP_ARG_KW_ONLY,  {.u_rom_obj = MP_ROM_NONE} },
+    };
 
-    int k_2 = arg_ksize * 2;
-    int n = k_2 + 1;
+    // Parse args.
+    image_t *image = py_helper_arg_to_image(pos_args[0], ARG_IMAGE_MUTABLE);
+    int ksize = py_helper_arg_to_ksize(pos_args[1]);
+    int n = (ksize * 2) + 1;
+
+    if (n > 31) {
+        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Kernel size too large!"));
+    }
+
+    mp_arg_val_t args[MP_ARRAY_SIZE(allowed_args)];
+    mp_arg_parse_all(n_args - 2, pos_args + 2, kw_args, MP_ARRAY_SIZE(allowed_args), allowed_args, args);
 
     fb_alloc_mark();
 
-    int *pascal = fb_alloc(n * sizeof(int), FB_ALLOC_NO_HINT);
+    int pascal[n];
     pascal[0] = 1;
 
-    for (int i = 0; i < k_2; i++) {
+    for (int i = 0; i < (ksize * 2); i++) {
         // Compute a row of pascal's triangle.
-        pascal[i + 1] = (pascal[i] * (k_2 - i)) / (i + 1);
+        pascal[i + 1] = (pascal[i] * ((ksize * 2) - i)) / (i + 1);
     }
 
-    int *arg_krn = fb_alloc(n * n * sizeof(int), FB_ALLOC_NO_HINT);
-    int arg_m = 0;
+    int krn[n * n];
+    int sum = 0;
 
     for (int i = 0; i < n; i++) {
         for (int j = 0; j < n; j++) {
             int temp = pascal[i] * pascal[j];
-            arg_krn[(i * n) + j] = -temp;
-            arg_m += temp;
+            krn[(i * n) + j] = -temp;
+            sum += temp;
         }
     }
 
-    arg_krn[((n / 2) * n) + (n / 2)] += arg_m;
-    arg_m = arg_krn[((n / 2) * n) + (n / 2)];
+    krn[(n * n) / 2] += sum;
 
-    if (py_helper_keyword_int(n_args, args, 2, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_sharpen), false)) {
-        arg_krn[((n / 2) * n) + (n / 2)] += arg_m;
+    if (args[ARG_sharpen].u_bool) {
+        krn[(n * n) / 2] += sum;
     }
 
-    float arg_mul =
-        py_helper_keyword_float(n_args, args, 3, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_mul), 1.0f / arg_m);
-    float arg_add =
-        py_helper_keyword_float(n_args, args, 4, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_add), 0.0f);
-    bool arg_threshold =
-        py_helper_keyword_int(n_args, args, 5, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_threshold), false);
-    int arg_offset =
-        py_helper_keyword_int(n_args, args, 6, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_offset), 0);
-    bool arg_invert =
-        py_helper_keyword_int(n_args, args, 7, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_invert), false);
-    image_t *arg_msk =
-        py_helper_keyword_to_image(n_args, args, 8, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_mask), NULL);
+    image_t *mask = NULL;
+    if (args[ARG_mask].u_obj != mp_const_none) {
+        mask = py_helper_arg_to_image(args[ARG_mask].u_obj, ARG_IMAGE_MUTABLE | ARG_IMAGE_ALLOC);
+    }
 
-    imlib_morph(arg_img, arg_ksize, arg_krn, arg_mul, arg_add, arg_threshold, arg_offset, arg_invert, arg_msk);
+    float mul = py_helper_arg_to_float(args[ARG_mul].u_obj, 1.0f);
+    float add = py_helper_arg_to_float(args[ARG_add].u_obj, 0.0f);
+
+    imlib_morph(image, ksize, krn, mul / sum, add, args[ARG_threshold].u_bool,
+                args[ARG_offset].u_int, args[ARG_invert].u_bool, mask);
     fb_alloc_free_till_mark();
-    return args[0];
+    return pos_args[0];
 }
 static MP_DEFINE_CONST_FUN_OBJ_KW(py_image_laplacian_obj, 2, py_image_laplacian);
 #endif // IMLIB_ENABLE_LAPLACIAN
