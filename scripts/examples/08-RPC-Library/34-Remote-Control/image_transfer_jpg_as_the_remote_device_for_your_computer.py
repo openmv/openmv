@@ -68,7 +68,8 @@ def jpeg_image_snapshot(data):
     pixformat, framesize = bytes(data).decode().split(",")
     sensor.set_pixformat(eval(pixformat))
     sensor.set_framesize(eval(framesize))
-    img = sensor.snapshot().compress(quality=90)
+    img = sensor.snapshot()
+    img.to_jpeg(quality=90)
     return struct.pack("<I", img.size())
 
 

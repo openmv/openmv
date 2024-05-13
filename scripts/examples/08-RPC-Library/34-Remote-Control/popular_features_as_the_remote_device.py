@@ -279,7 +279,9 @@ def color_detection(data):
 def jpeg_snapshot(data):
     sensor.set_pixformat(sensor.RGB565)
     sensor.set_framesize(sensor.QVGA)
-    return sensor.snapshot().compress(quality=90).bytearray()
+    img = sensor.snapshot()
+    img.to_jpeg(quality=90)
+    return img.bytearray()
 
 
 # Register call backs.

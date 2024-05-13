@@ -35,10 +35,8 @@ while True:
     clock.tick()
 
     img = sensor.snapshot()
-    # Handle sensor rotation.
-    img.assign(hmirror=True, vflip=True)
     # Make pretty.
-    img.to_rainbow(color_palette=palette)
+    img.to_rainbow(color_palette=palette, hint=image.ROTATE_180)
     # Cleanup noise.
     img.erode(1)
 

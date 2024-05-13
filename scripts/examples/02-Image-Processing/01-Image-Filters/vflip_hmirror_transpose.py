@@ -14,6 +14,7 @@
 
 import sensor
 import time
+import image
 
 sensor.reset()
 sensor.set_pixformat(sensor.RGB565)
@@ -27,11 +28,11 @@ counter = 0
 while True:
     clock.tick()
 
-    img = sensor.snapshot().replace(
-        vflip=(counter // 2) % 2,
-        hmirror=(counter // 4) % 2,
-        transpose=(counter // 8) % 2,
-    )
+    # You can also use image.ROTATE_180, image.ROTATE_90, image.ROTATE_270, etc.
+    vflip = image.VFLIP if (counter // 2) % 2 else 0
+    hmirror = image.HMIRROR if (counter // 4) % 2 else 0
+    transpose = image.TRANSPOSE if (counter // 8) % 2 else 0
+    img = sensor.snapshot().scale(hint=(vflip | hmirror | transpose))
 
     if time.ticks_diff(time.ticks_ms(), ticks) > 1000:
         ticks = time.ticks_ms()

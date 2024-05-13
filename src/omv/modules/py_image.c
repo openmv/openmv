@@ -942,162 +942,122 @@ static mp_obj_t py_image_midpoint_pooled(uint n_args, const mp_obj_t *args, mp_m
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_midpoint_pooled_obj, 3, py_image_midpoint_pooled);
 #endif // IMLIB_ENABLE_MIDPOINT_POOLING
 
-static mp_obj_t py_image_to(pixformat_t pixfmt, const uint16_t *default_color_palette, bool copy_to_fb,
-                            mp_obj_t copy_default, bool quality_is_first_arg, bool encode_for_ide_default,
-                            uint n_args, const mp_obj_t *args, mp_map_t *kw_args) {
-    image_t *src_img = py_image_cobj(args[0]);
+static mp_obj_t py_image_to(pixformat_t pixfmt, mp_rom_obj_t default_color_palette, bool default_copy,
+                            uint n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
+    enum {
+        ARG_x_scale, ARG_y_scale, ARG_roi, ARG_channel, ARG_alpha, ARG_color_palette, ARG_alpha_palette, ARG_hint,
+        ARG_copy, ARG_copy_to_fb, ARG_quality, ARG_encode_for_ide, ARG_subsampling
+    };
+    const mp_arg_t allowed_args[] = {
+        { MP_QSTR_x_scale, MP_ARG_OBJ | MP_ARG_KW_ONLY, {.u_rom_obj = MP_ROM_NONE} },
+        { MP_QSTR_y_scale, MP_ARG_OBJ | MP_ARG_KW_ONLY, {.u_rom_obj = MP_ROM_NONE} },
+        { MP_QSTR_roi, MP_ARG_OBJ | MP_ARG_KW_ONLY, {.u_rom_obj = MP_ROM_NONE} },
+        { MP_QSTR_rgb_channel, MP_ARG_INT | MP_ARG_KW_ONLY,  {.u_int = -1 } },
+        { MP_QSTR_alpha, MP_ARG_INT | MP_ARG_KW_ONLY,  {.u_int = 256 } },
+        { MP_QSTR_color_palette, MP_ARG_OBJ | MP_ARG_KW_ONLY, {.u_rom_obj = default_color_palette} },
+        { MP_QSTR_alpha_palette, MP_ARG_OBJ | MP_ARG_KW_ONLY, {.u_rom_obj = MP_ROM_NONE} },
+        { MP_QSTR_hint, MP_ARG_INT | MP_ARG_KW_ONLY,  {.u_int = 0 } },
+        { MP_QSTR_copy, MP_ARG_BOOL | MP_ARG_KW_ONLY, {.u_bool = default_copy} },
+        { MP_QSTR_copy_to_fb, MP_ARG_BOOL | MP_ARG_KW_ONLY, {.u_bool = false} },
+        { MP_QSTR_quality, MP_ARG_INT | MP_ARG_KW_ONLY, {.u_int = 90} },
+        { MP_QSTR_encode_for_ide, MP_ARG_BOOL | MP_ARG_KW_ONLY,  {.u_bool = false} },
+        { MP_QSTR_subsampling, MP_ARG_INT | MP_ARG_KW_ONLY,  {.u_int = JPEG_SUBSAMPLING_AUTO} },
+    };
 
-    int quality_default = 90;
-    if (quality_is_first_arg && (n_args > 1)) {
-        quality_default = mp_obj_get_int(args[1]);
-        n_args -= 1;
-        args += 1;
+    // Parse args.
+    image_t *src_img = py_image_cobj(pos_args[0]);
+    mp_arg_val_t args[MP_ARRAY_SIZE(allowed_args)];
+    mp_arg_parse_all(n_args - 1, pos_args + 1, kw_args, MP_ARRAY_SIZE(allowed_args), allowed_args, args);
+
+    rectangle_t roi = py_helper_arg_to_roi(args[ARG_roi].u_obj, src_img);
+
+    if (args[ARG_channel].u_int < -1 || args[ARG_channel].u_int > 2) {
+        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("RGB channel can be 0, 1, or 2"));
     }
 
-    float arg_x_scale = 1.f;
-    bool got_x_scale = py_helper_keyword_float_maybe(n_args, args, 1, kw_args,
-                                                     MP_OBJ_NEW_QSTR(MP_QSTR_x_scale), &arg_x_scale);
-
-    float arg_y_scale = 1.f;
-    bool got_y_scale = py_helper_keyword_float_maybe(n_args, args, 2, kw_args,
-                                                     MP_OBJ_NEW_QSTR(MP_QSTR_y_scale), &arg_y_scale);
-
-    rectangle_t arg_roi;
-    py_helper_keyword_rectangle_roi(src_img, n_args, args, 3, kw_args, &arg_roi);
-
-    int arg_rgb_channel = py_helper_keyword_int(n_args, args, 4, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_rgb_channel), -1);
-    if ((arg_rgb_channel < -1) || (2 < arg_rgb_channel)) {
-        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("-1 <= rgb_channel <= 2!"));
+    if (args[ARG_alpha].u_int < 0 || args[ARG_alpha].u_int > 256) {
+        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Alpha ranges between 0 and 256"));
     }
 
-    int arg_alpha = py_helper_keyword_int(n_args, args, 5, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_alpha), 256);
-    if ((arg_alpha < 0) || (256 < arg_alpha)) {
-        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("0 <= alpha <= 256!"));
+    if (args[ARG_quality].u_int < 1 || args[ARG_quality].u_int > 100) {
+        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Quality ranges between 0 and 100"));
     }
 
-    const uint16_t *color_palette = py_helper_keyword_color_palette(n_args, args, 6, kw_args, default_color_palette);
-    const uint8_t *alpha_palette = py_helper_keyword_alpha_palette(n_args, args, 7, kw_args, NULL);
+    float x_scale = 1.0f;
+    float y_scale = 1.0f;
+    py_helper_arg_to_scale(args[ARG_x_scale].u_obj, args[ARG_y_scale].u_obj, &x_scale, &y_scale);
 
-    image_hint_t hint = py_helper_keyword_int(n_args, args, 8, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_hint), 0);
+    const uint16_t *color_palette = py_helper_arg_to_palette(args[ARG_color_palette].u_obj, PIXFORMAT_RGB565);
+    const uint8_t *alpha_palette = py_helper_arg_to_palette(args[ARG_alpha_palette].u_obj, PIXFORMAT_GRAYSCALE);
 
-    float arg_x_size;
-    bool got_x_size = py_helper_keyword_float_maybe(n_args, args, 9, kw_args,
-                                                    MP_OBJ_NEW_QSTR(MP_QSTR_x_size), &arg_x_size);
+    args[ARG_hint].u_int = (args[ARG_hint].u_int & ~(IMAGE_HINT_CENTER |
+                                                     IMAGE_HINT_SCALE_ASPECT_KEEP |
+                                                     IMAGE_HINT_SCALE_ASPECT_EXPAND |
+                                                     IMAGE_HINT_SCALE_ASPECT_IGNORE)) | IMAGE_HINT_BLACK_BACKGROUND;
 
-    float arg_y_size;
-    bool got_y_size = py_helper_keyword_float_maybe(n_args, args, 10, kw_args,
-                                                    MP_OBJ_NEW_QSTR(MP_QSTR_y_size), &arg_y_size);
-
-    if (got_x_scale && got_x_size) {
-        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Choose either x_scale or x_size not both!"));
-    }
-
-    if (got_y_scale && got_y_size) {
-        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Choose either y_scale or y_size not both!"));
-    }
-
-    if (got_x_size) {
-        arg_x_scale = arg_x_size / arg_roi.w;
-    }
-
-    if (got_y_size) {
-        arg_y_scale = arg_y_size / arg_roi.h;
-    }
-
-    if ((!got_x_scale) && (!got_x_size) && got_y_size) {
-        arg_x_scale = arg_y_scale;
-    }
-
-    if ((!got_y_scale) && (!got_y_size) && got_x_size) {
-        arg_y_scale = arg_x_scale;
-    }
-
-    mp_obj_t copy_obj = py_helper_keyword_object(n_args, args, 11, kw_args,
-                                                 MP_OBJ_NEW_QSTR(copy_to_fb ? MP_QSTR_copy_to_fb : MP_QSTR_copy), copy_default);
-    bool copy = false;
-    image_t *arg_other = copy_to_fb ? NULL : src_img;
-
-    int arg_q = py_helper_keyword_int(n_args, args, 12, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_quality), quality_default);
-    if ((arg_q < 1) || (100 < arg_q)) {
-        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("1 <= quality <= 100!"));
-    }
-
-    bool arg_e = py_helper_keyword_int(n_args, args, 13, kw_args,
-                                       MP_OBJ_NEW_QSTR(MP_QSTR_encode_for_ide), encode_for_ide_default);
-
-    jpeg_subsampling_t subsampling =
-        py_helper_keyword_int(n_args, args, 14, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_subsampling), JPEG_SUBSAMPLING_AUTO);
-
-    if (copy_obj) {
-        if (mp_obj_is_integer(copy_obj)) {
-            copy = mp_obj_get_int(copy_obj);
-            if (copy) {
-                arg_other = NULL;
-            }
-        } else {
-            arg_other = py_image_cobj(copy_obj);
-        }
-    }
-
-    if (copy_to_fb && copy) {
+    if (args[ARG_copy_to_fb].u_bool) {
         framebuffer_update_jpeg_buffer();
     }
 
     image_t dst_img = {
-        .w = fast_floorf(arg_roi.w * arg_x_scale),
-        .h = fast_floorf(arg_roi.h * arg_y_scale),
+        .w = fast_floorf(roi.w * x_scale),
+        .h = fast_floorf(roi.h * y_scale),
         .pixfmt = (pixfmt == PIXFORMAT_INVALID) ? src_img->pixfmt : pixfmt,
         .size = src_img->size,
         .pixels = NULL,
     };
 
+    bool transposed = false;
+    if (args[ARG_hint].u_int & IMAGE_HINT_TRANSPOSE) {
+        int temp = dst_img.w;
+        dst_img.w = dst_img.h;
+        dst_img.h = temp;
+        transposed = true;
+    }
+
     image_t dst_img_tmp = dst_img;
 
+    if ((dst_img.is_bayer || dst_img.is_yuv) &&
+        (((x_scale != 1.0f) && (x_scale != -1.0f)) ||
+         ((y_scale != 1.0f) && (y_scale != -1.0f)) ||
+         (args[ARG_channel].u_int != -1) ||
+         (args[ARG_alpha].u_int != 256) ||
+         (color_palette != NULL) || (alpha_palette != NULL))) {
+        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Only copying/cropping is supported for Bayer/YUV!"));
+    }
+
     if (dst_img.is_bayer) {
-        if (((arg_x_scale != 1) && (arg_x_scale != -1)) ||
-            ((arg_y_scale != 1) && (arg_y_scale != -1)) ||
-            (arg_rgb_channel != -1) ||
-            (arg_alpha != 256) ||
-            (color_palette != NULL) ||
-            (alpha_palette != NULL)) {
-            mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Only bayer copying/cropping is supported!"));
-        } else {
-            dst_img.pixfmt = imlib_bayer_shift(dst_img.pixfmt, arg_roi.x, arg_roi.y, false);
-            hint &= ~(IMAGE_HINT_AREA |
-                      IMAGE_HINT_BICUBIC |
-                      IMAGE_HINT_BILINEAR |
-                      IMAGE_HINT_EXTRACT_RGB_CHANNEL_FIRST |
-                      IMAGE_HINT_APPLY_COLOR_PALETTE_FIRST);
-        }
+        dst_img.pixfmt = imlib_bayer_shift(dst_img.pixfmt, roi.x, roi.y, transposed);
+        args[ARG_hint].u_int &= ~(IMAGE_HINT_AREA |
+                                  IMAGE_HINT_BICUBIC |
+                                  IMAGE_HINT_BILINEAR |
+                                  IMAGE_HINT_EXTRACT_RGB_CHANNEL_FIRST |
+                                  IMAGE_HINT_APPLY_COLOR_PALETTE_FIRST);
     } else if (dst_img.is_yuv) {
-        if (((arg_x_scale != 1) && (arg_x_scale != -1)) ||
-            ((arg_y_scale != 1) && (arg_y_scale != -1)) ||
-            (arg_rgb_channel != -1) ||
-            (arg_alpha != 256) ||
-            (color_palette != NULL) ||
-            (alpha_palette != NULL)) {
-            mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Only YUV422 copying/cropping is supported!"));
+        if (transposed) {
+            mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("YUV422 images cannot be tranposed/rotated!"));
         } else {
-            dst_img.pixfmt = imlib_yuv_shift(dst_img.pixfmt, arg_roi.x);
-            hint &= ~(IMAGE_HINT_AREA |
-                      IMAGE_HINT_BICUBIC |
-                      IMAGE_HINT_BILINEAR |
-                      IMAGE_HINT_EXTRACT_RGB_CHANNEL_FIRST |
-                      IMAGE_HINT_APPLY_COLOR_PALETTE_FIRST);
+            dst_img.pixfmt = imlib_yuv_shift(dst_img.pixfmt, roi.x);
+            args[ARG_hint].u_int &= ~(IMAGE_HINT_AREA |
+                                      IMAGE_HINT_BICUBIC |
+                                      IMAGE_HINT_BILINEAR |
+                                      IMAGE_HINT_EXTRACT_RGB_CHANNEL_FIRST |
+                                      IMAGE_HINT_APPLY_COLOR_PALETTE_FIRST);
         }
     } else if (dst_img.is_compressed) {
         fb_alloc_mark();
 
-        bool simple = (arg_x_scale == 1) &&
-                      (arg_y_scale == 1) &&
-                      (arg_roi.x == 0) &&
-                      (arg_roi.y == 0) &&
-                      (arg_roi.w == src_img->w) &&
-                      (arg_roi.h == src_img->h) &&
-                      (arg_rgb_channel == -1) &&
-                      (arg_alpha == 256) &&
+        bool simple = (x_scale == 1.0f) &&
+                      (y_scale == 1.0f) &&
+                      (roi.x == 0) &&
+                      (roi.y == 0) &&
+                      (roi.w == src_img->w) &&
+                      (roi.h == src_img->h) &&
+                      (args[ARG_channel].u_int == -1) &&
+                      (args[ARG_alpha].u_int == 256) &&
                       (color_palette == NULL) &&
-                      (alpha_palette == NULL);
+                      (alpha_palette == NULL) &&
+                      (!transposed);
 
         if ((dst_img.pixfmt != src_img->pixfmt) || (!simple)) {
             image_t temp;
@@ -1106,26 +1066,27 @@ static mp_obj_t py_image_to(pixformat_t pixfmt, const uint16_t *default_color_pa
             if (src_img->is_compressed || (!simple)) {
                 temp.w = dst_img.w;
                 temp.h = dst_img.h;
-                temp.pixfmt = PIXFORMAT_RGB565; // TODO PIXFORMAT_ARGB8888
+                temp.pixfmt = src_img->is_color ? PIXFORMAT_RGB565 : PIXFORMAT_GRAYSCALE;
                 temp.size = 0;
                 temp.data = fb_alloc(image_size(&temp), FB_ALLOC_NO_HINT);
-                imlib_draw_image(&temp, src_img, 0, 0, arg_x_scale, arg_y_scale, &arg_roi,
-                                 arg_rgb_channel, arg_alpha, color_palette, alpha_palette,
-                                 (hint & (~IMAGE_HINT_CENTER)) | IMAGE_HINT_BLACK_BACKGROUND, NULL, NULL, NULL);
+                imlib_draw_image(&temp, src_img, 0, 0, x_scale, y_scale, &roi,
+                                 args[ARG_channel].u_int, args[ARG_alpha].u_int, color_palette, alpha_palette,
+                                 args[ARG_hint].u_int, NULL, NULL, NULL);
             }
 
-            if (((dst_img.pixfmt == PIXFORMAT_JPEG) && jpeg_compress(&temp, &dst_img_tmp, arg_q, false, subsampling))
+            if (((dst_img.pixfmt == PIXFORMAT_JPEG) &&
+                 jpeg_compress(&temp, &dst_img_tmp, args[ARG_quality].u_int, false, args[ARG_subsampling].u_int))
                 || ((dst_img.pixfmt == PIXFORMAT_PNG) && png_compress(&temp, &dst_img_tmp))) {
                 mp_raise_msg(&mp_type_OSError, MP_ERROR_TEXT("Compression Failed!"));
             }
-        } else if (arg_e) {
+        } else if (args[ARG_encode_for_ide].u_bool) {
             dst_img_tmp.data = fb_alloc(image_size(&dst_img_tmp), FB_ALLOC_NO_HINT);
             memcpy(dst_img_tmp.data, src_img->data, dst_img_tmp.size);
         } else {
             dst_img_tmp.data = src_img->data;
         }
 
-        if (arg_e) {
+        if (args[ARG_encode_for_ide].u_bool) {
             dst_img.size = fb_encode_for_ide_new_size(&dst_img_tmp);
         } else {
             dst_img.size = dst_img_tmp.size;
@@ -1134,29 +1095,22 @@ static mp_obj_t py_image_to(pixformat_t pixfmt, const uint16_t *default_color_pa
 
     uint32_t size = image_size(&dst_img);
 
-    if (copy) {
-        if (copy_to_fb) {
-            py_helper_set_to_framebuffer(&dst_img);
-        } else {
-            dst_img.data = xalloc(size);
-        }
-    } else if (arg_other) {
-        bool fb = py_helper_is_equal_to_framebuffer(arg_other);
-        size_t buf_size = fb ? framebuffer_get_buffer_size() : image_size(arg_other);
-        PY_ASSERT_TRUE_MSG((size <= buf_size),
-                           "The new image won't fit in the target frame buffer!");
-        // DO NOT MODIFY arg_other YET (as it could point to src_img)!
-        dst_img.data = arg_other->data;
-        // Update now if not in place to possibly freeup framebuffer RAM, otherwise update after.
-        if (dst_img.data != src_img->data) {
-            py_helper_update_framebuffer(&dst_img);
-        }
-    } else {
+    if (args[ARG_copy_to_fb].u_bool) {
+        // Convert to FB.
+        py_helper_set_to_framebuffer(&dst_img);
+    } else if (args[ARG_copy].u_bool) {
+        // Create dynamic copy.
         dst_img.data = xalloc(size);
+    } else {
+        // Convert in place.
+        bool fb = py_helper_is_equal_to_framebuffer(src_img);
+        size_t buf_size = fb ? framebuffer_get_buffer_size() : image_size(src_img);
+        PY_ASSERT_TRUE_MSG((size <= buf_size), "The image doesn't fit in the frame buffer!");
+        dst_img.data = src_img->data;
     }
 
     if (dst_img.is_compressed) {
-        if (arg_e) {
+        if (args[ARG_encode_for_ide].u_bool) {
             fb_encode_for_ide(dst_img.data, &dst_img_tmp);
         } else if (dst_img.data != dst_img_tmp.data) {
             memcpy(dst_img.data, dst_img_tmp.data, dst_img.size);
@@ -1164,86 +1118,64 @@ static mp_obj_t py_image_to(pixformat_t pixfmt, const uint16_t *default_color_pa
         fb_alloc_free_till_mark();
     } else {
         fb_alloc_mark();
-        imlib_draw_image(&dst_img, src_img, 0, 0, arg_x_scale, arg_y_scale, &arg_roi,
-                         arg_rgb_channel, arg_alpha, color_palette, alpha_palette,
-                         (hint & (~IMAGE_HINT_CENTER)) | IMAGE_HINT_BLACK_BACKGROUND, NULL, NULL, NULL);
+        imlib_draw_image(&dst_img, src_img, 0, 0, x_scale, y_scale, &roi,
+                         args[ARG_channel].u_int, args[ARG_alpha].u_int, color_palette, alpha_palette,
+                         args[ARG_hint].u_int, NULL, NULL, NULL);
         fb_alloc_free_till_mark();
     }
 
-    if (arg_other) {
-        if (dst_img.data == src_img->data) {
-            py_helper_update_framebuffer(&dst_img);
-        }
-        memcpy(arg_other, &dst_img, sizeof(image_t));
+    if ((!args[ARG_copy_to_fb].u_bool) && (!args[ARG_copy].u_bool)) {
+        py_helper_update_framebuffer(&dst_img);
+        memcpy(src_img, &dst_img, sizeof(image_t));
     }
 
     return py_image_from_struct(&dst_img);
 }
 
 static mp_obj_t py_image_to_bitmap(uint n_args, const mp_obj_t *args, mp_map_t *kw_args) {
-    return py_image_to(PIXFORMAT_BINARY, NULL, false, NULL, false, false, n_args, args, kw_args);
+    return py_image_to(PIXFORMAT_BINARY, MP_ROM_NONE, false, n_args, args, kw_args);
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_to_bitmap_obj, 1, py_image_to_bitmap);
 
 static mp_obj_t py_image_to_grayscale(uint n_args, const mp_obj_t *args, mp_map_t *kw_args) {
-    return py_image_to(PIXFORMAT_GRAYSCALE, NULL, false, NULL, false, false, n_args, args, kw_args);
+    return py_image_to(PIXFORMAT_GRAYSCALE, MP_ROM_NONE, false, n_args, args, kw_args);
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_to_grayscale_obj, 1, py_image_to_grayscale);
 
 static mp_obj_t py_image_to_rgb565(uint n_args, const mp_obj_t *args, mp_map_t *kw_args) {
-    return py_image_to(PIXFORMAT_RGB565, NULL, false, NULL, false, false, n_args, args, kw_args);
+    return py_image_to(PIXFORMAT_RGB565, MP_ROM_NONE, false, n_args, args, kw_args);
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_to_rgb565_obj, 1, py_image_to_rgb565);
 
 static mp_obj_t py_image_to_rainbow(uint n_args, const mp_obj_t *args, mp_map_t *kw_args) {
-    return py_image_to(PIXFORMAT_RGB565, rainbow_table, false, NULL, false, false, n_args, args, kw_args);
+    return py_image_to(PIXFORMAT_RGB565, MP_ROM_INT(COLOR_PALETTE_RAINBOW), false, n_args, args, kw_args);
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_to_rainbow_obj, 1, py_image_to_rainbow);
 
 static mp_obj_t py_image_to_ironbow(uint n_args, const mp_obj_t *args, mp_map_t *kw_args) {
-    return py_image_to(PIXFORMAT_RGB565, ironbow_table, false, NULL, false, false, n_args, args, kw_args);
+    return py_image_to(PIXFORMAT_RGB565, MP_ROM_INT(COLOR_PALETTE_IRONBOW), false, n_args, args, kw_args);
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_to_ironbow_obj, 1, py_image_to_ironbow);
 
 static mp_obj_t py_image_to_jpeg(uint n_args, const mp_obj_t *args, mp_map_t *kw_args) {
-    return py_image_to(PIXFORMAT_JPEG, NULL, false, NULL, false, false, n_args, args, kw_args);
+    return py_image_to(PIXFORMAT_JPEG, MP_ROM_NONE, false, n_args, args, kw_args);
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_to_jpeg_obj, 1, py_image_to_jpeg);
 
 static mp_obj_t py_image_to_png(uint n_args, const mp_obj_t *args, mp_map_t *kw_args) {
-    return py_image_to(PIXFORMAT_PNG, NULL, false, NULL, false, false, n_args, args, kw_args);
+    return py_image_to(PIXFORMAT_PNG, MP_ROM_NONE, false, n_args, args, kw_args);
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_to_png_obj, 1, py_image_to_png);
 
 static mp_obj_t py_image_copy(uint n_args, const mp_obj_t *args, mp_map_t *kw_args) {
-    return py_image_to(PIXFORMAT_INVALID, NULL, true, NULL, false, false, n_args, args, kw_args);
+    return py_image_to(PIXFORMAT_INVALID, MP_ROM_NONE, true, n_args, args, kw_args);
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_copy_obj, 1, py_image_copy);
 
 static mp_obj_t py_image_crop(uint n_args, const mp_obj_t *args, mp_map_t *kw_args) {
-    return py_image_to(PIXFORMAT_INVALID, NULL, false, NULL, false, false, n_args, args, kw_args);
+    return py_image_to(PIXFORMAT_INVALID, MP_ROM_NONE, false, n_args, args, kw_args);
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_crop_obj, 1, py_image_crop);
-
-static mp_obj_t py_image_compress(uint n_args, const mp_obj_t *args, mp_map_t *kw_args) {
-    return py_image_to(PIXFORMAT_JPEG, NULL, false, NULL, true, false, n_args, args, kw_args);
-}
-STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_compress_obj, 1, py_image_compress);
-
-static mp_obj_t py_image_compress_for_ide(uint n_args, const mp_obj_t *args, mp_map_t *kw_args) {
-    return py_image_to(PIXFORMAT_JPEG, NULL, false, NULL, true, true, n_args, args, kw_args);
-}
-STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_compress_for_ide_obj, 1, py_image_compress_for_ide);
-
-static mp_obj_t py_image_compressed(uint n_args, const mp_obj_t *args, mp_map_t *kw_args) {
-    return py_image_to(PIXFORMAT_JPEG, NULL, false, mp_const_true, true, false, n_args, args, kw_args);
-}
-STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_compressed_obj, 1, py_image_compressed);
-
-static mp_obj_t py_image_compressed_for_ide(uint n_args, const mp_obj_t *args, mp_map_t *kw_args) {
-    return py_image_to(PIXFORMAT_JPEG, NULL, false, mp_const_true, true, true, n_args, args, kw_args);
-}
-STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_compressed_for_ide_obj, 1, py_image_compressed_for_ide);
 
 #if defined(IMLIB_ENABLE_IMAGE_FILE_IO)
 static mp_obj_t py_image_save(uint n_args, const mp_obj_t *args, mp_map_t *kw_args) {
@@ -6360,12 +6292,7 @@ static const mp_rom_map_elem_t locals_dict_table[] = {
     {MP_ROM_QSTR(MP_QSTR_to_ironbow),          MP_ROM_PTR(&py_image_to_ironbow_obj)},
     {MP_ROM_QSTR(MP_QSTR_to_jpeg),             MP_ROM_PTR(&py_image_to_jpeg_obj)},
     {MP_ROM_QSTR(MP_QSTR_to_png),              MP_ROM_PTR(&py_image_to_png_obj)},
-    {MP_ROM_QSTR(MP_QSTR_compress),            MP_ROM_PTR(&py_image_compress_obj)},
-    {MP_ROM_QSTR(MP_QSTR_compress_for_ide),    MP_ROM_PTR(&py_image_compress_for_ide_obj)},
-    {MP_ROM_QSTR(MP_QSTR_compressed),          MP_ROM_PTR(&py_image_compressed_obj)},
-    {MP_ROM_QSTR(MP_QSTR_compressed_for_ide),  MP_ROM_PTR(&py_image_compressed_for_ide_obj)},
-    {MP_ROM_QSTR(MP_QSTR_jpeg_encode_for_ide), MP_ROM_PTR(&py_image_compress_for_ide_obj)},
-    {MP_ROM_QSTR(MP_QSTR_jpeg_encoded_for_ide), MP_ROM_PTR(&py_image_compressed_for_ide_obj)},
+    {MP_ROM_QSTR(MP_QSTR_compress),            MP_ROM_PTR(&py_image_to_jpeg_obj)},
     {MP_ROM_QSTR(MP_QSTR_copy),                MP_ROM_PTR(&py_image_copy_obj)},
     {MP_ROM_QSTR(MP_QSTR_crop),                MP_ROM_PTR(&py_image_crop_obj)},
     {MP_ROM_QSTR(MP_QSTR_scale),               MP_ROM_PTR(&py_image_crop_obj)},

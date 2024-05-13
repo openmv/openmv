@@ -3209,7 +3209,7 @@ void imlib_draw_image(image_t *dst_img,
                                  (color_palette ? PIXFORMAT_GRAYSCALE :
                                   dst_img->pixfmt);
 
-    bool no_scaling_nearest_neighbor = (dst_delta_x == 1)
+    bool no_scaling_nearest_neighbor = (dst_delta_x == 1) && (dst_delta_y == 1)
                                        && (dst_x_start == 0) && (src_x_start == 0)
                                        && (src_x_frac == 65536) && (src_y_frac == 65536);
 

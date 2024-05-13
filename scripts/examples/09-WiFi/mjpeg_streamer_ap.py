@@ -56,7 +56,7 @@ def start_streaming(client):
     while True:
         clock.tick()  # Track elapsed milliseconds between snapshots().
         frame = sensor.snapshot()
-        cframe = frame.compressed(quality=35)
+        cframe = frame.to_jpeg(quality=35, copy=True)
         header = (
             "\r\n--openmv\r\n"
             "Content-Type: image/jpeg\r\n"
