@@ -2063,7 +2063,7 @@ STATIC mp_obj_t py_image_b_xnor(uint n_args, const mp_obj_t *args, mp_map_t *kw_
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_b_xnor_obj, 2, py_image_b_xnor);
 
-static mp_obj_t py_image_binary_moprh_op(uint n_args, const mp_obj_t *pos_args, mp_map_t *kw_args,
+static mp_obj_t py_image_binary_morph_op(uint n_args, const mp_obj_t *pos_args, mp_map_t *kw_args,
                                          binary_morph_op_t op) {
     enum { ARG_ksize, ARG_threshold, ARG_mask };
     static const mp_arg_t allowed_args[] = {
@@ -2089,22 +2089,22 @@ static mp_obj_t py_image_binary_moprh_op(uint n_args, const mp_obj_t *pos_args, 
 }
 
 STATIC mp_obj_t py_image_erode(uint n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
-    return py_image_binary_moprh_op(n_args, pos_args, kw_args, imlib_erode);
+    return py_image_binary_morph_op(n_args, pos_args, kw_args, imlib_erode);
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_erode_obj, 1, py_image_erode);
 
 STATIC mp_obj_t py_image_dilate(uint n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
-    return py_image_binary_moprh_op(n_args, pos_args, kw_args, imlib_dilate);
+    return py_image_binary_morph_op(n_args, pos_args, kw_args, imlib_dilate);
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_dilate_obj, 1, py_image_dilate);
 
 STATIC mp_obj_t py_image_open(uint n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
-    return py_image_binary_moprh_op(n_args, pos_args, kw_args, imlib_open);
+    return py_image_binary_morph_op(n_args, pos_args, kw_args, imlib_open);
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_open_obj, 1, py_image_open);
 
 STATIC mp_obj_t py_image_close(uint n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
-    return py_image_binary_moprh_op(n_args, pos_args, kw_args, imlib_close);
+    return py_image_binary_morph_op(n_args, pos_args, kw_args, imlib_close);
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_close_obj, 1, py_image_close);
 #endif // IMLIB_ENABLE_BINARY_OPS
@@ -2313,12 +2313,12 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_blend_obj, 2, py_image_blend);
 
 #if defined(IMLIB_ENABLE_MATH_OPS) && defined(IMLIB_ENABLE_BINARY_OPS)
 STATIC mp_obj_t py_image_top_hat(uint n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
-    return py_image_binary_moprh_op(n_args, pos_args, kw_args, imlib_top_hat);
+    return py_image_binary_morph_op(n_args, pos_args, kw_args, imlib_top_hat);
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_top_hat_obj, 1, py_image_top_hat);
 
 STATIC mp_obj_t py_image_black_hat(uint n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
-    return py_image_binary_moprh_op(n_args, pos_args, kw_args, imlib_black_hat);
+    return py_image_binary_morph_op(n_args, pos_args, kw_args, imlib_black_hat);
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_black_hat_obj, 1, py_image_black_hat);
 #endif // defined(IMLIB_ENABLE_MATH_OPS) && defined(IMLIB_ENABLE_BINARY_OPS)
