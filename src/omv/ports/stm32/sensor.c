@@ -405,6 +405,12 @@ void HAL_DCMI_FrameEventCallback(DCMI_HandleTypeDef *hdcmi) {
     sensor.first_line = false;
     if (sensor.drop_frame) {
         sensor.drop_frame = false;
+        // If the frame was dropped, the buffer will not change, so its state
+        // must be reset.
+        vbuffer_t *buffer = framebuffer_get_tail(FB_PEEK);
+        if (buffer) {
+            buffer->reset_state = true;
+        }
         return;
     }
 
