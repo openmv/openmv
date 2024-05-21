@@ -224,10 +224,18 @@ int sensor_dma_memcpy(void *dma, void *dst, void *src, int bpp, bool transposed)
                                MAIN_FB()->u * bpp, // bytesEachRequest
                                MAIN_FB()->u * bpp); // transferBytes
 
-    // Drop the frame if EDMA is not keeping up as the image will be corrupt.
-    if (EDMA_SubmitTransfer(handle, &config) != kStatus_Success) {
-        sensor.drop_frame = true;
-        return 0;
+    size_t retry = 3;
+    status_t status = kStatus_EDMA_Busy;
+    while (status == kStatus_EDMA_Busy) {
+        status = EDMA_SubmitTransfer(handle, &config);
+        if (status == kStatus_Success) {
+            break;
+        }
+        if (--retry == 0) {
+            // Drop the frame if EDMA is not keeping up as the image will be corrupt.
+            sensor.drop_frame = true;
+            return 0;
+        }
     }
 
     EDMA_TriggerChannelStart(handle->base, handle->channel);
