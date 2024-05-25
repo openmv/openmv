@@ -236,6 +236,7 @@
 // The sensor probing process will detect the right reset or powerdown
 // polarity, so it should be fine to enable it for both boards.
 #define OMV_CSI_RESET_PIN                   (&omv_pin_C13_GPIO)
+#define OMV_CSI_RESET_DELAY                 (100)
 
 // GPIO.1 is connected to the sensor module frame sync pin (OUTPUT) on
 // the Portenta breakout board and to the INT pin (OUTPUT) on the Himax
@@ -246,6 +247,7 @@
 // and to the STROBE pin on the Himax shield, however it's not actually
 // used on the Himax shield and can be safely enable for the two boards.
 #define OMV_CSI_POWER_PIN                   (&omv_pin_D5_GPIO)
+#define OMV_CSI_POWER_DELAY                 (100)
 
 // Physical I2C buses.
 
