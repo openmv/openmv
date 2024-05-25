@@ -55,7 +55,9 @@ while True:
 
     img = sensor.snapshot()
     # Makes a scaled copy of the sensor
-    small_img = img.mean_pooled(SMALL_IMAGE_SCALE, SMALL_IMAGE_SCALE)
+    small_img = img.scale(x_scale=1.0 / SMALL_IMAGE_SCALE,
+                          y_scale=1.0 / SMALL_IMAGE_SCALE,
+                          hint=image.AREA, copy=True)
 
     status = "rgb565 "
     if CYCLE_FORMATS:

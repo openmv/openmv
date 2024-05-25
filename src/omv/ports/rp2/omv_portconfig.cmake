@@ -162,7 +162,6 @@ target_sources(${MICROPY_TARGET} PRIVATE
     ${TOP_DIR}/${OMV_DIR}/imlib/orb.c
     ${TOP_DIR}/${OMV_DIR}/imlib/phasecorrelation.c
     ${TOP_DIR}/${OMV_DIR}/imlib/point.c
-    ${TOP_DIR}/${OMV_DIR}/imlib/pool.c
     ${TOP_DIR}/${OMV_DIR}/imlib/ppm.c
     ${TOP_DIR}/${OMV_DIR}/imlib/qrcode.c
     ${TOP_DIR}/${OMV_DIR}/imlib/qsort.c

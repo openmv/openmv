@@ -169,7 +169,6 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/imlib/, \
 	orb.o                       \
 	phasecorrelation.o          \
 	point.o                     \
-	pool.o                      \
 	ppm.o                       \
 	qrcode.o                    \
 	qsort.o                     \
