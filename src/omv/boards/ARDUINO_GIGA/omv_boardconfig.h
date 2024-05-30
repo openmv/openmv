@@ -38,6 +38,9 @@
 #define OMV_GC2145_ENABLE                   (1)
 #define OMV_GC2145_ROTATE                   (1)
 
+#define OMV_HM01B0_ENABLE                   (1)
+#define OMV_HM0360_ENABLE                   (1)
+
 // FIR sensor drivers configuration.
 #define OMV_FIR_MLX90621_ENABLE             (1)
 #define OMV_FIR_MLX90640_ENABLE             (1)
