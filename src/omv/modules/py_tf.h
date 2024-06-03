@@ -18,6 +18,8 @@ typedef struct py_tf_model_obj {
     unsigned char *model_data;
     unsigned int model_data_len;
     libtf_parameters_t params;
+    mp_obj_t input_shape; // pre-allocated tuple for fast access
+    mp_obj_t output_shape; // pre-allocated tuple for fast access
 } py_tf_model_obj_t;
 
 // Log buffer

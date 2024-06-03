@@ -215,6 +215,14 @@ STATIC mp_obj_t int_py_tf_load(mp_obj_t path_obj, bool alloc_mode, bool helper_m
         fb_alloc_mark_permanent(); // tf_model->model_data will not be popped on exception.
     }
 
+    tf_model->input_shape = mp_obj_new_tuple(3, (mp_obj_t []) {mp_obj_new_int(tf_model->params.input_height),
+                                                               mp_obj_new_int(tf_model->params.input_width),
+                                                               mp_obj_new_int(tf_model->params.input_channels)});
+
+    tf_model->output_shape = mp_obj_new_tuple(3, (mp_obj_t []) {mp_obj_new_int(tf_model->params.output_height),
+                                                                mp_obj_new_int(tf_model->params.output_width),
+                                                                mp_obj_new_int(tf_model->params.output_channels)});
+
     return tf_model;
 }
 
@@ -265,9 +273,19 @@ STATIC py_tf_model_obj_t *py_tf_load_alloc(mp_obj_t path_obj) {
     }
 }
 
+typedef enum {
+    PY_TF_SCALE_NONE,
+    PY_TF_SCALE_0_1,
+    PY_TF_SCALE_S1_1,
+    PY_TF_SCALE_S128_127
+} py_tf_scale_t;
+
 typedef struct py_tf_input_callback_data {
     image_t *img;
     rectangle_t *roi;
+    py_tf_scale_t scale;
+    float mean[3];
+    float stdev[3];
 } py_tf_input_callback_data_t;
 
 STATIC void py_tf_input_callback(void *callback_data,
@@ -275,31 +293,50 @@ STATIC void py_tf_input_callback(void *callback_data,
                                  libtf_parameters_t *params) {
     py_tf_input_callback_data_t *arg = (py_tf_input_callback_data_t *) callback_data;
 
-    // Disable checking input scaling and zero-point. Nets can be all over the place on the input
-    // scaling and zero-point but still work with the code below.
-
-    // if (params->input_datatype == LIBTF_DATATYPE_UINT8) {
-    //     if (fast_roundf(params->input_scale * GRAYSCALE_RANGE) != 1) {
-    //         mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Expected model input scale to be 1/255!"));
-    //     }
-
-    //     if (params->input_zero_point != 0) {
-    //         mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Expected model input zero point to be 0!"));
-    //     }
-    // }
-
-    // if (params->input_datatype == LIBTF_DATATYPE_INT8) {
-    //     if (fast_roundf(params->input_scale * GRAYSCALE_RANGE) != 1) {
-    //         mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Expected model input scale to be 1/255!"));
-    //     }
-
-    //     if (params->input_zero_point != -GRAYSCALE_MID) {
-    //         mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Expected model input zero point to be -128!"));
-    //     }
-    // }
-
     int shift = (params->input_datatype == LIBTF_DATATYPE_INT8) ? GRAYSCALE_MID : 0;
-    float fscale = 1.0f / GRAYSCALE_RANGE;
+    float fscale = 1.0f, fadd = 0.0f;
+
+    switch (arg->scale) {
+        case PY_TF_SCALE_0_1:
+            fscale = 1.0f / 255.0f;
+            break;
+        case PY_TF_SCALE_S1_1:
+            fscale = 2.0f / 255.0f;
+            fadd = -1.0f;
+            break;
+        case PY_TF_SCALE_S128_127:
+            fscale = 255.0f / 127.0f;
+            fadd = -128.0f;
+            break;
+        case PY_TF_SCALE_NONE:
+        default:
+            break;
+    }
+
+    float fscale_r = fscale, fadd_r = fadd;
+    float fscale_g = fscale, fadd_g = fadd;
+    float fscale_b = fscale, fadd_b = fadd;
+
+    // To normalize the input image we need to subtract the mean and divide by the standard deviation.
+    // We can do this by applying the normalization to fscale and fadd outside the loop.
+
+    // Red
+    fadd_r = (fadd_r - arg->mean[0]) / arg->stdev[0];
+    fscale_r /= arg->stdev[0];
+
+    // Green
+    fadd_g = (fadd_g - arg->mean[1]) / arg->stdev[1];
+    fscale_g /= arg->stdev[1];
+
+    // Blue
+    fadd_b = (fadd_b - arg->mean[2]) / arg->stdev[2];
+    fscale_b /= arg->stdev[2];
+
+    // Grayscale -> Y = 0.299R + 0.587G + 0.114B
+    float mean = (arg->mean[0] * 0.299f) + (arg->mean[1] * 0.587f) + (arg->mean[2] * 0.114f);
+    float std = (arg->stdev[0] * 0.299f) + (arg->stdev[1] * 0.587f) + (arg->stdev[2] * 0.114f);
+    fadd = (fadd - mean) / std;
+    fscale /= std;
 
     image_t dst_img;
     dst_img.w = params->input_width;
@@ -328,7 +365,7 @@ STATIC void py_tf_input_callback(void *callback_data,
             float *model_input_f32 = (float *) model_input;
 
             for (; size >= 0; size -= 1) {
-                model_input_f32[size] = model_input_u8[size] * fscale;
+                model_input_f32[size] = (model_input_u8[size] * fscale) + fadd;
             }
         } else {
             if (shift) {
@@ -356,9 +393,9 @@ STATIC void py_tf_input_callback(void *callback_data,
 
             for (; size >= 0; size -= 1, rgb_size -= 3) {
                 int pixel = model_input_u16[size];
-                model_input_f32[rgb_size] = COLOR_RGB565_TO_R8(pixel) * fscale;
-                model_input_f32[rgb_size + 1] = COLOR_RGB565_TO_G8(pixel) * fscale;
-                model_input_f32[rgb_size + 2] = COLOR_RGB565_TO_B8(pixel) * fscale;
+                model_input_f32[rgb_size] = (COLOR_RGB565_TO_R8(pixel) * fscale_r) + fadd_r;
+                model_input_f32[rgb_size + 1] = (COLOR_RGB565_TO_G8(pixel) * fscale_g) + fadd_g;
+                model_input_f32[rgb_size + 2] = (COLOR_RGB565_TO_B8(pixel) * fscale_b) + fadd_b;
             }
         } else {
             uint16_t *model_input_u16 = (uint16_t *) model_input;
@@ -374,34 +411,26 @@ STATIC void py_tf_input_callback(void *callback_data,
     }
 }
 
-STATIC void py_tf_classify_output_callback(void *callback_data,
-                                           void *model_output,
-                                           libtf_parameters_t *params) {
+STATIC void py_tf_output_callback(void *callback_data,
+                                  void *model_output,
+                                  libtf_parameters_t *params) {
     mp_obj_t *arg = (mp_obj_t *) callback_data;
-
-    if (params->output_height != 1) {
-        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Expected model output height to be 1!"));
-    }
-
-    if (params->output_width != 1) {
-        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Expected model output width to be 1!"));
-    }
-
-    *arg = mp_obj_new_list(params->output_channels, NULL);
+    size_t len = params->output_height * params->output_width * params->output_channels;
+    *arg = mp_obj_new_list(len, NULL);
 
     if (params->output_datatype == LIBTF_DATATYPE_FLOAT) {
-        for (int i = 0, ii = params->output_channels; i < ii; i++) {
+        for (size_t i = 0; i < len; i++) {
             ((mp_obj_list_t *) *arg)->items[i] =
                 mp_obj_new_float(((float *) model_output)[i]);
         }
     } else if (params->output_datatype == LIBTF_DATATYPE_INT8) {
-        for (int i = 0, ii = params->output_channels; i < ii; i++) {
+        for (size_t i = 0; i < len; i++) {
             ((mp_obj_list_t *) *arg)->items[i] =
                 mp_obj_new_float( ((float) (((int8_t *) model_output)[i] - params->output_zero_point)) *
                                   params->output_scale);
         }
     } else {
-        for (int i = 0, ii = params->output_channels; i < ii; i++) {
+        for (size_t i = 0; i < len; i++) {
             ((mp_obj_list_t *) *arg)->items[i] =
                 mp_obj_new_float( ((float) (((uint8_t *) model_output)[i] - params->output_zero_point)) *
                                   params->output_scale);
@@ -409,139 +438,10 @@ STATIC void py_tf_classify_output_callback(void *callback_data,
     }
 }
 
-STATIC mp_obj_t py_tf_classify(uint n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
-    enum { ARG_roi, ARG_min_scale, ARG_scale_mul, ARG_x_overlap, ARG_y_overlap };
-    static const mp_arg_t allowed_args[] = {
-        { MP_QSTR_roi, MP_ARG_OBJ | MP_ARG_KW_ONLY, {.u_rom_obj = MP_ROM_NONE} },
-        { MP_QSTR_min_scale, MP_ARG_OBJ | MP_ARG_KW_ONLY, {.u_rom_obj = MP_ROM_NONE} },
-        { MP_QSTR_scale_mul, MP_ARG_OBJ | MP_ARG_KW_ONLY, {.u_rom_obj = MP_ROM_NONE} },
-        { MP_QSTR_x_overlap, MP_ARG_OBJ | MP_ARG_KW_ONLY, {.u_rom_obj = MP_ROM_NONE} },
-        { MP_QSTR_y_overlap, MP_ARG_OBJ | MP_ARG_KW_ONLY, {.u_rom_obj = MP_ROM_NONE} },
-    };
-
-    // Parse args.
-    mp_arg_val_t args[MP_ARRAY_SIZE(allowed_args)];
-    mp_arg_parse_all(n_args - 2, pos_args + 2, kw_args, MP_ARRAY_SIZE(allowed_args), allowed_args, args);
-
-    image_t *image = py_helper_arg_to_image(pos_args[1], ARG_IMAGE_ANY);
-    rectangle_t roi = py_helper_arg_to_roi(args[ARG_roi].u_obj, image);
-    float min_scale = py_helper_arg_to_float(args[ARG_min_scale].u_obj, 1.0f);
-    float scale_mul = py_helper_arg_to_float(args[ARG_scale_mul].u_obj, 0.5f);
-    float x_overlap = py_helper_arg_to_float(args[ARG_x_overlap].u_obj, 0.0f);
-    float y_overlap = py_helper_arg_to_float(args[ARG_y_overlap].u_obj, 0.0f);
-
-    // Sanity checks
-    if ((min_scale <= 0.0f) || (min_scale > 1.0f)) {
-        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("0 < min_scale <= 1"));
-    }
-
-    if ((scale_mul < 0.0f) || (scale_mul >= 1.0f)) {
-        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("0 <= scale_mul < 1"));
-    }
-
-    if ((x_overlap != -1.f) && ((x_overlap < 0.0f) || (x_overlap >= 1.0f))) {
-        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("0 <= x_overlap < 1"));
-    }
-
-    if ((y_overlap != -1.0f) && ((y_overlap < 0.0f) || (y_overlap >= 1.0f))) {
-        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("0 <= y_overlap < 1"));
-    }
-
-    fb_alloc_mark();
-    py_tf_alloc_putchar_buffer();
-
-    py_tf_model_obj_t *model = py_tf_load_alloc(pos_args[0]);
-    uint8_t *tensor_arena = fb_alloc(model->params.tensor_arena_size, FB_ALLOC_PREFER_SPEED | FB_ALLOC_CACHE_ALIGN);
-
-    mp_obj_t objects_list = mp_obj_new_list(0, NULL);
-
-    for (float scale = 1.0f; scale >= min_scale; scale *= scale_mul) {
-        // Either provide a subtle offset to center multiple detection windows or center the only detection window.
-        for (int y = roi.y + ((y_overlap != -1.0f)
-                ? (fmodf(roi.h, (roi.h * scale)) / 2.0f)
-                : ((roi.h - (roi.h * scale)) / 2.0f));
-             // Finish when the detection window is outside of the ROI.
-             (y + (roi.h * scale)) <= (roi.y + roi.h);
-             // Step by an overlap amount accounting for scale or just terminate after one iteration.
-             y += ((y_overlap != -1.0f) ? (roi.h * scale * (1.0f - y_overlap)) : roi.h)) {
-            // Either provide a subtle offset to center multiple detection windows or center the only detection window.
-            for (int x = roi.x + ((x_overlap != -1.0f)
-                    ? (fmodf(roi.w, (roi.w * scale)) / 2.0f)
-                    : ((roi.w - (roi.w * scale)) / 2.0f));
-                 // Finish when the detection window is outside of the ROI.
-                 (x + (roi.w * scale)) <= (roi.x + roi.w);
-                 // Step by an overlap amount accounting for scale or just terminate after one iteration.
-                 x += ((x_overlap != -1.0f) ? (roi.w * scale * (1.0f - x_overlap)) : roi.w)) {
-
-                rectangle_t new_roi;
-                rectangle_init(&new_roi, x, y, roi.w * scale, roi.h * scale);
-
-                if (rectangle_overlap(&roi, &new_roi)) {
-                    // Check if new_roi is null...
-
-                    py_tf_input_callback_data_t py_tf_input_callback_data;
-                    py_tf_input_callback_data.img = image;
-                    py_tf_input_callback_data.roi = &new_roi;
-
-                    mp_obj_t py_tf_classify_output_callback_data;
-
-                    if (libtf_invoke(model->model_data,
-                                     tensor_arena,
-                                     &model->params,
-                                     py_tf_input_callback,
-                                     &py_tf_input_callback_data,
-                                     py_tf_classify_output_callback,
-                                     &py_tf_classify_output_callback_data) != 0) {
-                        // Note can't use MP_ERROR_TEXT here.
-                        mp_raise_msg(&mp_type_OSError, (mp_rom_error_text_t) py_tf_putchar_buffer);
-                    }
-
-                    py_tf_classification_obj_t *o = m_new_obj(py_tf_classification_obj_t);
-                    o->base.type = &py_tf_classification_type;
-                    o->x = mp_obj_new_int(new_roi.x);
-                    o->y = mp_obj_new_int(new_roi.y);
-                    o->w = mp_obj_new_int(new_roi.w);
-                    o->h = mp_obj_new_int(new_roi.h);
-                    o->output = py_tf_classify_output_callback_data;
-                    mp_obj_list_append(objects_list, o);
-                }
-            }
-        }
-    }
-
-    fb_alloc_free_till_mark();
-
-    return objects_list;
-}
-STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_tf_classify_obj, 2, py_tf_classify);
-
 STATIC void py_tf_segment_output_callback(void *callback_data,
                                           void *model_output,
                                           libtf_parameters_t *params) {
     mp_obj_t *arg = (mp_obj_t *) callback_data;
-
-    // Disable checking output scaling and zero-point. Nets can be all over the place on the output
-    // scaling and zero-point but still work with the code below.
-
-    // if (params->output_datatype == LIBTF_DATATYPE_UINT8) {
-    //     if (fast_roundf(params->output_scale * GRAYSCALE_RANGE) != 1) {
-    //         mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Expected model output scale to be 1/255!"));
-    //     }
-
-    //     if (params->output_zero_point != 0) {
-    //         mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Expected model output zero point to be 0!"));
-    //     }
-    // }
-
-    // if (params->output_datatype == LIBTF_DATATYPE_INT8) {
-    //     if (fast_roundf(params->output_scale * GRAYSCALE_RANGE) != 1) {
-    //         mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Expected model output scale to be 1/255!"));
-    //     }
-
-    //     if (params->output_zero_point != -GRAYSCALE_MID) {
-    //         mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Expected model output zero point to be -128!"));
-    //     }
-    // }
 
     int shift = (params->output_datatype == LIBTF_DATATYPE_INT8) ? GRAYSCALE_MID : 0;
 
@@ -578,9 +478,12 @@ STATIC void py_tf_segment_output_callback(void *callback_data,
 }
 
 STATIC mp_obj_t py_tf_segment(uint n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
-    enum { ARG_roi };
+    enum { ARG_roi, ARG_scale, ARG_mean, ARG_stdev };
     static const mp_arg_t allowed_args[] = {
-        { MP_QSTR_roi, MP_ARG_OBJ | MP_ARG_KW_ONLY, {.u_rom_obj = MP_ROM_NONE} }
+        { MP_QSTR_roi, MP_ARG_OBJ | MP_ARG_KW_ONLY, {.u_rom_obj = MP_ROM_NONE} },
+        { MP_QSTR_scale, MP_ARG_INT | MP_ARG_KW_ONLY, {.u_int = PY_TF_SCALE_0_1} },
+        { MP_QSTR_mean, MP_ARG_OBJ | MP_ARG_KW_ONLY, {.u_rom_obj = MP_ROM_NONE} },
+        { MP_QSTR_stdev, MP_ARG_OBJ | MP_ARG_KW_ONLY, {.u_rom_obj = MP_ROM_NONE} },
     };
 
     // Parse args.
@@ -596,9 +499,15 @@ STATIC mp_obj_t py_tf_segment(uint n_args, const mp_obj_t *pos_args, mp_map_t *k
     py_tf_model_obj_t *model = py_tf_load_alloc(pos_args[0]);
     uint8_t *tensor_arena = fb_alloc(model->params.tensor_arena_size, FB_ALLOC_PREFER_SPEED | FB_ALLOC_CACHE_ALIGN);
 
-    py_tf_input_callback_data_t py_tf_input_callback_data;
-    py_tf_input_callback_data.img = image;
-    py_tf_input_callback_data.roi = &roi;
+    py_tf_input_callback_data_t py_tf_input_callback_data = {
+        .img = image,
+        .roi = &roi,
+        .scale = args[ARG_scale].u_int,
+        .mean = {0.0f, 0.0f, 0.0f},
+        .stdev = {1.0f, 1.0f, 1.0f}
+    };
+    py_helper_arg_to_float_array(args[ARG_mean].u_obj, py_tf_input_callback_data.mean, 3);
+    py_helper_arg_to_float_array(args[ARG_stdev].u_obj, py_tf_input_callback_data.stdev, 3);
 
     mp_obj_t py_tf_segment_output_callback_data;
 
@@ -620,11 +529,14 @@ STATIC mp_obj_t py_tf_segment(uint n_args, const mp_obj_t *pos_args, mp_map_t *k
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_tf_segment_obj, 2, py_tf_segment);
 
 STATIC mp_obj_t py_tf_detect(uint n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
-    enum { ARG_roi, ARG_thresholds, ARG_invert };
+    enum { ARG_roi, ARG_thresholds, ARG_invert, ARG_scale, ARG_mean, ARG_stdev };
     static const mp_arg_t allowed_args[] = {
         { MP_QSTR_roi, MP_ARG_OBJ | MP_ARG_KW_ONLY, {.u_rom_obj = MP_ROM_NONE} },
         { MP_QSTR_thresholds, MP_ARG_OBJ | MP_ARG_KW_ONLY, {.u_rom_obj = MP_ROM_NONE} },
         { MP_QSTR_invert,  MP_ARG_INT | MP_ARG_KW_ONLY, {.u_bool = false } },
+        { MP_QSTR_scale, MP_ARG_INT | MP_ARG_KW_ONLY, {.u_int = PY_TF_SCALE_0_1} },
+        { MP_QSTR_mean, MP_ARG_OBJ | MP_ARG_KW_ONLY, {.u_rom_obj = MP_ROM_NONE} },
+        { MP_QSTR_stdev, MP_ARG_OBJ | MP_ARG_KW_ONLY, {.u_rom_obj = MP_ROM_NONE} },
     };
 
     // Parse args.
@@ -641,9 +553,15 @@ STATIC mp_obj_t py_tf_detect(uint n_args, const mp_obj_t *pos_args, mp_map_t *kw
     py_tf_model_obj_t *model = py_tf_load_alloc(pos_args[0]);
     uint8_t *tensor_arena = fb_alloc(model->params.tensor_arena_size, FB_ALLOC_PREFER_SPEED | FB_ALLOC_CACHE_ALIGN);
 
-    py_tf_input_callback_data_t py_tf_input_callback_data;
-    py_tf_input_callback_data.img = image;
-    py_tf_input_callback_data.roi = &roi;
+    py_tf_input_callback_data_t py_tf_input_callback_data = {
+        .img = image,
+        .roi = &roi,
+        .scale = args[ARG_scale].u_int,
+        .mean = {0.0f, 0.0f, 0.0f},
+        .stdev = {1.0f, 1.0f, 1.0f}
+    };
+    py_helper_arg_to_float_array(args[ARG_mean].u_obj, py_tf_input_callback_data.mean, 3);
+    py_helper_arg_to_float_array(args[ARG_stdev].u_obj, py_tf_input_callback_data.stdev, 3);
 
     mp_obj_t py_tf_segment_output_callback_data;
 
@@ -803,123 +721,401 @@ STATIC void py_tf_regression_input_callback(void *callback_data,
     }
 }
 
-STATIC mp_obj_t py_tf_regression(mp_obj_t model_obj, mp_obj_t array_obj) {
+typedef struct py_tf_model_output_obj {
+    mp_obj_base_t base;
+    rectangle_t *roi;
+    void *model_output;
+    libtf_parameters_t *params;
+    // Pre-compute for lookup speed.
+    size_t output_size;
+    mp_obj_t rect;
+    // Convenience stuff.
+    list_t bounding_boxes;
+} py_tf_model_output_obj_t;
+
+STATIC void py_tf_model_output_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest) {
+    py_tf_model_output_obj_t *self = MP_OBJ_TO_PTR(self_in);
+    if (dest[0] == MP_OBJ_NULL) {
+        // Load attribute.
+        switch (attr) {
+            case MP_QSTR_rect:
+                dest[0] = self->rect;
+                break;
+            default:
+                // Continue lookup in locals_dict.
+                dest[1] = MP_OBJ_SENTINEL;
+                break;
+        }
+    }
+}
+
+STATIC mp_obj_t py_tf_model_output_subscr(mp_obj_t self_in, mp_obj_t index, mp_obj_t value) {
+    if (value == MP_OBJ_SENTINEL) {
+        // load
+        py_tf_model_output_obj_t *self = self_in;
+        void *model_output = self->model_output;
+        libtf_parameters_t *params = self->params;
+        if (MP_OBJ_IS_TYPE(index, &mp_type_slice)) {
+            mp_bound_slice_t slice;
+            if (!mp_seq_get_fast_slice_indexes(self->output_size, index, &slice)) {
+                mp_raise_msg(&mp_type_OSError, MP_ERROR_TEXT("only slices with step=1 (aka None) are supported"));
+            }
+            mp_obj_tuple_t *result = mp_obj_new_tuple(slice.stop - slice.start, NULL);
+            for (size_t i = 0; i < result->len; i++) {
+                size_t j = i + slice.start;
+                switch (params->output_datatype) {
+                    case LIBTF_DATATYPE_FLOAT: {
+                        result->items[i] = mp_obj_new_float(((float *) model_output)[j]);
+                        break;
+                    }
+                    case LIBTF_DATATYPE_INT8: {
+                        int8_t mo = ((int8_t *) model_output)[i];
+                        result->items[i] = mp_obj_new_float((mo - params->output_zero_point) * params->output_scale);
+                        break;
+                    }
+                    case LIBTF_DATATYPE_UINT8: {
+                        uint8_t mo = ((uint8_t *) model_output)[i];
+                        result->items[i] = mp_obj_new_float((mo - params->output_zero_point) * params->output_scale);
+                        break;
+                    }
+                }
+            }
+            return result;
+        }
+        size_t i = mp_get_index(self->base.type, self->output_size, index, false);
+        switch (params->output_datatype) {
+            case LIBTF_DATATYPE_FLOAT: {
+                return mp_obj_new_float(((float *) model_output)[i]);
+            }
+            case LIBTF_DATATYPE_INT8: {
+                int8_t mo = ((int8_t *) model_output)[i];
+                return mp_obj_new_float((mo - params->output_zero_point) * params->output_scale);
+            }
+            case LIBTF_DATATYPE_UINT8: {
+                uint8_t mo = ((uint8_t *) model_output)[i];
+                return mp_obj_new_float((mo - params->output_zero_point) * params->output_scale);
+            }
+        }
+    }
+    return MP_OBJ_NULL; // op not supported
+}
+
+typedef struct py_tf_model_output_bounding_box_lnk_data {
+    rectangle_t rect;
+    float score;
+    int label_index;
+} py_tf_model_output_bounding_box_lnk_data_t;
+
+// This convenience function is designed to collect bounding boxes, allowing for a non-maximal
+// suppression of them later. It is not necessary to use this function to parse model output.
+// The use of mp_arg_parse_all() is deliberately avoided here to ensure this method remains fast.
+STATIC mp_obj_t py_tf_model_output_add_bounding_box(uint n_args, const mp_obj_t *pos_args) {
+    enum { ARG_self, ARG_xmin, ARG_ymin, ARG_xmax, ARG_ymax, ARG_score, ARG_label_index };
+    py_tf_model_output_obj_t *self_in = (py_tf_model_output_obj_t *) pos_args[ARG_self];
+
+    py_tf_model_output_bounding_box_lnk_data_t lnk_data;
+    lnk_data.score = mp_obj_get_float(pos_args[ARG_score]);
+
+    if ((lnk_data.score >= 0.0f) && (lnk_data.score <= 1.0f)) {
+        float xmin = IM_CLAMP(mp_obj_get_float(pos_args[ARG_xmin]), 0.0f, (float) (self_in->params->input_width));
+        float ymin = IM_CLAMP(mp_obj_get_float(pos_args[ARG_ymin]), 0.0f, (float) (self_in->params->input_height));
+        float xmax = IM_CLAMP(mp_obj_get_float(pos_args[ARG_xmax]), 0.0f, (float) (self_in->params->input_width));
+        float ymax = IM_CLAMP(mp_obj_get_float(pos_args[ARG_ymax]), 0.0f, (float) (self_in->params->input_height));
+
+        lnk_data.rect.w = fast_floorf(xmax - xmin);
+        lnk_data.rect.h = fast_floorf(ymax - ymin);
+
+        if ((lnk_data.rect.w > 0) && (lnk_data.rect.h > 0)) {
+            lnk_data.rect.x = fast_floorf(xmin);
+            lnk_data.rect.y = fast_floorf(ymin);
+            lnk_data.label_index = mp_obj_get_int(pos_args[ARG_label_index]);
+
+            // Insertion sort bounding boxes by score.
+            list_lnk_t *it = self_in->bounding_boxes.head;
+            for (; it; it = it->next) {
+                if (lnk_data.score > ((py_tf_model_output_bounding_box_lnk_data_t *) it->data)->score) {
+                    list_insert(&self_in->bounding_boxes, it, &lnk_data);
+                    break;
+                }
+            }
+
+            if (!it) {
+                list_push_back(&self_in->bounding_boxes, &lnk_data);
+            }
+        }
+    }
+
+    return mp_const_none;
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(py_tf_model_output_add_bounding_box_obj, 7, 7,
+                                           py_tf_model_output_add_bounding_box);
+
+// This function performs non-maximal suppression on bounding boxes collected using the add_bounding_box
+// function and returns the final list of bounding boxes, mapped to the image ROI and separated by label
+// index into their own lists. Note that using this function to parse the model output is optional.
+STATIC mp_obj_t py_tf_model_output_get_bounding_boxes(uint n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
+    enum { ARG_threshold, ARG_sigma };
+    static const mp_arg_t allowed_args[] = {
+        { MP_QSTR_threshold,  MP_ARG_OBJ | MP_ARG_KW_ONLY, {.u_rom_obj = MP_ROM_NONE } },
+        { MP_QSTR_sigma,  MP_ARG_OBJ | MP_ARG_KW_ONLY, {.u_rom_obj = MP_ROM_NONE } },
+    };
+
+    mp_arg_val_t args[MP_ARRAY_SIZE(allowed_args)];
+    mp_arg_parse_all(n_args - 1, pos_args + 1, kw_args, MP_ARRAY_SIZE(allowed_args), allowed_args, args);
+
+    py_tf_model_output_obj_t *self_in = (py_tf_model_output_obj_t *) pos_args[0];
+    float threshold = py_helper_arg_to_float(args[ARG_threshold].u_obj, 0.1f);
+    float sigma = py_helper_arg_to_float(args[ARG_sigma].u_obj, 0.1f);
+
+    // Soft non-max suppression with a Gaussian is used below, as this provides the best results.
+    // A Gaussian is used to apply a soft score penalty to overlapping boxes. On loop entry,
+    // "bounding_boxes" is sorted, but after each iteration, the next highest score must be picked
+    // again, given that the score penalty changes the order.
+
+    float sigma_scale = (sigma > 0.0f) ? (-1.0f / sigma) : 0.0f;
+
+    list_t nms_bounding_boxes;
+    list_init(&nms_bounding_boxes, sizeof(py_tf_model_output_bounding_box_lnk_data_t));
+
+    int max_label = 0;
+
+    // The first detection has the higest score since the list is sorted.
+    list_lnk_t *max_it = self_in->bounding_boxes.head;
+    while (list_size(&self_in->bounding_boxes)) {
+        py_tf_model_output_bounding_box_lnk_data_t lnk_data;
+        list_remove(&self_in->bounding_boxes, max_it, &lnk_data);
+        list_push_back(&nms_bounding_boxes, &lnk_data);
+
+        float max_score = 0.0f;
+        for (list_lnk_t *it = self_in->bounding_boxes.head; it; ) {
+            py_tf_model_output_bounding_box_lnk_data_t *lnk_data2 = list_get_data(it);
+
+            // Advance to next now as "it" will be invalid if we remove the current item.
+            list_lnk_t *old_it = it;
+            it = it->next;
+
+            float iou = rectangle_iou(&lnk_data.rect, &lnk_data2->rect);
+            // Do not use fast_expf() as it does not output 1 when it's input is 0.
+            // This will cause the scores of non-overlapping bounding boxes to decay.
+            lnk_data2->score *= expf(sigma_scale * iou * iou);
+
+            if (lnk_data2->score < threshold) {
+                list_remove(&self_in->bounding_boxes, old_it, NULL);
+            } else if (lnk_data2->score > max_score) {
+                max_score = lnk_data2->score;
+                max_it = old_it;
+            }
+        }
+
+        // Find the maximum label index for the output list.
+        max_label = IM_MAX(lnk_data.label_index, max_label);
+    }
+
+    memcpy(&self_in->bounding_boxes, &nms_bounding_boxes, sizeof(list_t));
+
+    // Create a list per class label.
+    mp_obj_t list = mp_obj_new_list(max_label + 1, NULL);
+    for (size_t i = 0; i <= max_label; i++) {
+        ((mp_obj_list_t *) list)->items[i] = mp_obj_new_list(0, NULL);
+    }
+
+    float x_scale = self_in->roi->w / ((float) self_in->params->input_width);
+    float y_scale = self_in->roi->h / ((float) self_in->params->input_height);
+    // MAX == KeepAspectRatioByExpanding - MIN == KeepAspectRatio
+    float scale = IM_MIN(x_scale, y_scale);
+    int x_offset = fast_floorf((self_in->roi->w - (self_in->params->input_width * scale)) / 2.0f) + self_in->roi->x;
+    int y_offset = fast_floorf((self_in->roi->h - (self_in->params->input_height * scale)) / 2.0f) + self_in->roi->y;
+
+    size_t len = list_size(&nms_bounding_boxes);
+    for (size_t i = 0; i < len; i++) {
+        py_tf_model_output_bounding_box_lnk_data_t lnk_data;
+        list_pop_front(&nms_bounding_boxes, &lnk_data);
+        py_tf_classification_obj_t *o = m_new_obj(py_tf_classification_obj_t);
+        o->base.type = &py_tf_classification_type;
+        o->x = mp_obj_new_int(fast_floorf(lnk_data.rect.x * scale) + x_offset);
+        o->y = mp_obj_new_int(fast_floorf(lnk_data.rect.y * scale) + y_offset);
+        o->w = mp_obj_new_int(fast_floorf(lnk_data.rect.w * scale));
+        o->h = mp_obj_new_int(fast_floorf(lnk_data.rect.h * scale));
+        o->output = mp_obj_new_float(lnk_data.score);
+        mp_obj_list_append(((mp_obj_list_t *) list)->items[lnk_data.label_index], o);
+    }
+
+    return list;
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_tf_model_output_get_bounding_boxes_obj, 1, py_tf_model_output_get_bounding_boxes);
+
+STATIC const mp_rom_map_elem_t py_tf_model_output_locals_table[] = {
+    { MP_ROM_QSTR(MP_QSTR_add_bounding_box),    MP_ROM_PTR(&py_tf_model_output_add_bounding_box_obj) },
+    { MP_ROM_QSTR(MP_QSTR_get_bounding_boxes),  MP_ROM_PTR(&py_tf_model_output_get_bounding_boxes_obj) },
+};
+
+STATIC MP_DEFINE_CONST_DICT(py_tf_model_output_locals_dict, py_tf_model_output_locals_table);
+
+STATIC MP_DEFINE_CONST_OBJ_TYPE(
+    py_tf_model_output_type,
+    MP_QSTR_tf_model_output,
+    MP_TYPE_FLAG_NONE,
+    attr, py_tf_model_output_attr,
+    subscr, py_tf_model_output_subscr,
+    locals_dict, &py_tf_model_output_locals_dict
+    );
+
+typedef struct py_tf_predict_callback_data {
+    mp_obj_t model;
+    rectangle_t *roi;
+    mp_obj_t callback;
+    mp_obj_t *out;
+} py_tf_predict_callback_data_t;
+
+STATIC void py_tf_predict_output_callback(void *callback_data,
+                                          void *model_output,
+                                          libtf_parameters_t *params) {
+    py_tf_predict_callback_data_t *arg = (py_tf_predict_callback_data_t *) callback_data;
+    py_tf_model_output_obj_t *o = m_new_obj(py_tf_model_output_obj_t);
+    o->base.type = &py_tf_model_output_type;
+    o->roi = arg->roi;
+    o->model_output = model_output;
+    o->params = params;
+    o->output_size = params->output_height * params->output_width * params->output_channels;
+    o->rect = mp_obj_new_tuple(4, (mp_obj_t []) {mp_obj_new_int(arg->roi->x),
+                                                 mp_obj_new_int(arg->roi->y),
+                                                 mp_obj_new_int(arg->roi->w),
+                                                 mp_obj_new_int(arg->roi->h)});
+    list_init(&o->bounding_boxes, sizeof(py_tf_model_output_bounding_box_lnk_data_t));
+    *(arg->out) = mp_call_function_2(arg->callback, arg->model, o);
+}
+
+STATIC mp_obj_t py_tf_predict(uint n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
+    enum { ARG_roi, ARG_callback, ARG_scale, ARG_mean, ARG_stdev };
+    static const mp_arg_t allowed_args[] = {
+        { MP_QSTR_roi, MP_ARG_OBJ | MP_ARG_KW_ONLY, {.u_rom_obj = MP_ROM_NONE} },
+        { MP_QSTR_callback, MP_ARG_OBJ | MP_ARG_KW_ONLY, {.u_rom_obj = MP_ROM_NONE} },
+        { MP_QSTR_scale, MP_ARG_INT | MP_ARG_KW_ONLY, {.u_int = PY_TF_SCALE_0_1} },
+        { MP_QSTR_mean, MP_ARG_OBJ | MP_ARG_KW_ONLY, {.u_rom_obj = MP_ROM_NONE} },
+        { MP_QSTR_stdev, MP_ARG_OBJ | MP_ARG_KW_ONLY, {.u_rom_obj = MP_ROM_NONE} },
+    };
+
+    // Parse args.
+    mp_arg_val_t args[MP_ARRAY_SIZE(allowed_args)];
+    mp_arg_parse_all(n_args - 2, pos_args + 2, kw_args, MP_ARRAY_SIZE(allowed_args), allowed_args, args);
+
     fb_alloc_mark();
     py_tf_alloc_putchar_buffer();
 
-    py_tf_model_obj_t *model = py_tf_load_alloc(model_obj);
+    py_tf_model_obj_t *model = py_tf_load_alloc(pos_args[0]);
     uint8_t *tensor_arena = fb_alloc(model->params.tensor_arena_size, FB_ALLOC_PREFER_SPEED | FB_ALLOC_CACHE_ALIGN);
 
-    mp_obj_t py_tf_classify_output_callback_data;
+    mp_obj_t output_callback_data;
+    int invoke_result;
 
-    if (libtf_invoke(model->model_data,
-                     tensor_arena,
-                     &model->params,
-                     py_tf_regression_input_callback,
-                     &array_obj,
-                     py_tf_classify_output_callback,
-                     &py_tf_classify_output_callback_data) != 0) {
+    if (MP_OBJ_IS_TYPE(pos_args[1], &mp_type_tuple) || MP_OBJ_IS_TYPE(pos_args[1], &mp_type_list)) {
+        invoke_result = libtf_invoke(model->model_data,
+                                     tensor_arena,
+                                     &model->params,
+                                     py_tf_regression_input_callback,
+                                     (void *) &pos_args[1],
+                                     py_tf_output_callback,
+                                     &output_callback_data);
+    } else {
+        image_t *image = py_helper_arg_to_image(pos_args[1], ARG_IMAGE_ANY);
+        rectangle_t roi = py_helper_arg_to_roi(args[ARG_roi].u_obj, image);
+        py_tf_input_callback_data_t py_tf_input_callback_data = {
+            .img = image,
+            .roi = &roi,
+            .scale = args[ARG_scale].u_int,
+            .mean = {0.0f, 0.0f, 0.0f},
+            .stdev = {1.0f, 1.0f, 1.0f}
+        };
+        py_helper_arg_to_float_array(args[ARG_mean].u_obj, py_tf_input_callback_data.mean, 3);
+        py_helper_arg_to_float_array(args[ARG_stdev].u_obj, py_tf_input_callback_data.stdev, 3);
+
+        if (args[ARG_callback].u_obj != mp_const_none) {
+            py_tf_predict_callback_data_t py_tf_predict_output_callback_data;
+            py_tf_predict_output_callback_data.model = model;
+            py_tf_predict_output_callback_data.roi = &roi;
+            py_tf_predict_output_callback_data.callback = args[ARG_callback].u_obj;
+            py_tf_predict_output_callback_data.out = &output_callback_data;
+            invoke_result = libtf_invoke(model->model_data,
+                                         tensor_arena,
+                                         &model->params,
+                                         py_tf_input_callback,
+                                         &py_tf_input_callback_data,
+                                         py_tf_predict_output_callback,
+                                         &py_tf_predict_output_callback_data);
+        } else {
+            invoke_result = libtf_invoke(model->model_data,
+                                         tensor_arena,
+                                         &model->params,
+                                         py_tf_input_callback,
+                                         &py_tf_input_callback_data,
+                                         py_tf_output_callback,
+                                         &output_callback_data);
+        }
+    }
+
+    if (invoke_result != 0) {
         // Note can't use MP_ERROR_TEXT here.
         mp_raise_msg(&mp_type_OSError, (mp_rom_error_text_t) py_tf_putchar_buffer);
     }
 
     fb_alloc_free_till_mark();
 
-    return py_tf_classify_output_callback_data;
+    return output_callback_data;
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_tf_regression_obj, py_tf_regression);
+STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_tf_predict_obj, 2, py_tf_predict);
 
-mp_obj_t py_tf_len(mp_obj_t self_in) {
-    return mp_obj_new_int(((py_tf_model_obj_t *) self_in)->model_data_len);
+STATIC void py_tf_model_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest) {
+    py_tf_model_obj_t *self = MP_OBJ_TO_PTR(self_in);
+    const char *str;
+    if (dest[0] == MP_OBJ_NULL) {
+        // Load attribute.
+        switch (attr) {
+            case MP_QSTR_len:
+                dest[0] = mp_obj_new_int(self->model_data_len);
+                break;
+            case MP_QSTR_ram:
+                dest[0] = mp_obj_new_int(self->params.tensor_arena_size);
+                break;
+            case MP_QSTR_input_shape:
+                dest[0] = self->input_shape;
+                break;
+            case MP_QSTR_input_datatype:
+                str = py_tf_map_datatype(self->params.input_datatype);
+                dest[0] = mp_obj_new_str(str, strlen(str));
+                break;
+            case MP_QSTR_input_scale:
+                dest[0] = mp_obj_new_float(self->params.input_scale);
+                break;
+            case MP_QSTR_input_zero_point:
+                dest[0] = mp_obj_new_int(self->params.input_zero_point);
+                break;
+            case MP_QSTR_output_shape:
+                dest[0] = self->output_shape;
+                break;
+            case MP_QSTR_output_datatype:
+                str = py_tf_map_datatype(self->params.output_datatype);
+                dest[0] = mp_obj_new_str(str, strlen(str));
+                break;
+            case MP_QSTR_output_scale:
+                dest[0] = mp_obj_new_float(self->params.output_scale);
+                break;
+            case MP_QSTR_output_zero_point:
+                dest[0] = mp_obj_new_int(self->params.output_zero_point);
+                break;
+            default:
+                // Continue lookup in locals_dict.
+                dest[1] = MP_OBJ_SENTINEL;
+                break;
+        }
+    }
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_tf_len_obj, py_tf_len);
-
-mp_obj_t py_tf_ram(mp_obj_t self_in) {
-    return mp_obj_new_int(((py_tf_model_obj_t *) self_in)->params.tensor_arena_size);
-}
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_tf_ram_obj, py_tf_ram);
-
-mp_obj_t py_tf_input_height(mp_obj_t self_in) {
-    return mp_obj_new_int(((py_tf_model_obj_t *) self_in)->params.input_height);
-}
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_tf_input_height_obj, py_tf_input_height);
-
-mp_obj_t py_tf_input_width(mp_obj_t self_in) {
-    return mp_obj_new_int(((py_tf_model_obj_t *) self_in)->params.input_width);
-}
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_tf_input_width_obj, py_tf_input_width);
-
-mp_obj_t py_tf_input_channels(mp_obj_t self_in) {
-    return mp_obj_new_int(((py_tf_model_obj_t *) self_in)->params.input_channels);
-}
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_tf_input_channels_obj, py_tf_input_channels);
-
-mp_obj_t py_tf_input_datatype(mp_obj_t self_in) {
-    const char *str = py_tf_map_datatype(((py_tf_model_obj_t *) self_in)->params.input_datatype);
-    return mp_obj_new_str(str, strlen(str));
-}
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_tf_input_datatype_obj, py_tf_input_datatype);
-
-mp_obj_t py_tf_input_scale(mp_obj_t self_in) {
-    return mp_obj_new_float(((py_tf_model_obj_t *) self_in)->params.input_scale);
-}
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_tf_input_scale_obj, py_tf_input_scale);
-
-mp_obj_t py_tf_input_zero_point(mp_obj_t self_in) {
-    return mp_obj_new_int(((py_tf_model_obj_t *) self_in)->params.input_zero_point);
-}
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_tf_input_zero_point_obj, py_tf_input_zero_point);
-
-mp_obj_t py_tf_output_height(mp_obj_t self_in) {
-    return mp_obj_new_int(((py_tf_model_obj_t *) self_in)->params.output_height);
-}
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_tf_output_height_obj, py_tf_output_height);
-
-mp_obj_t py_tf_output_width(mp_obj_t self_in) {
-    return mp_obj_new_int(((py_tf_model_obj_t *) self_in)->params.output_width);
-}
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_tf_output_width_obj, py_tf_output_width);
-
-mp_obj_t py_tf_output_channels(mp_obj_t self_in) {
-    return mp_obj_new_int(((py_tf_model_obj_t *) self_in)->params.output_channels);
-}
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_tf_output_channels_obj, py_tf_output_channels);
-
-mp_obj_t py_tf_output_datatype(mp_obj_t self_in) {
-    const char *str = py_tf_map_datatype(((py_tf_model_obj_t *) self_in)->params.output_datatype);
-    return mp_obj_new_str(str, strlen(str));
-}
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_tf_output_datatype_obj, py_tf_output_datatype);
-
-mp_obj_t py_tf_output_scale(mp_obj_t self_in) {
-    return mp_obj_new_float(((py_tf_model_obj_t *) self_in)->params.output_scale);
-}
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_tf_output_scale_obj, py_tf_output_scale);
-
-mp_obj_t py_tf_output_zero_point(mp_obj_t self_in) {
-    return mp_obj_new_int(((py_tf_model_obj_t *) self_in)->params.output_zero_point);
-}
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_tf_output_zero_point_obj, py_tf_output_zero_point);
 
 STATIC const mp_rom_map_elem_t locals_dict_table[] = {
-    { MP_ROM_QSTR(MP_QSTR_len),                 MP_ROM_PTR(&py_tf_len_obj) },
-    { MP_ROM_QSTR(MP_QSTR_ram),                 MP_ROM_PTR(&py_tf_ram_obj) },
-    { MP_ROM_QSTR(MP_QSTR_input_height),        MP_ROM_PTR(&py_tf_input_height_obj) },
-    { MP_ROM_QSTR(MP_QSTR_input_width),         MP_ROM_PTR(&py_tf_input_width_obj) },
-    { MP_ROM_QSTR(MP_QSTR_input_channels),      MP_ROM_PTR(&py_tf_input_channels_obj) },
-    { MP_ROM_QSTR(MP_QSTR_input_datatype),      MP_ROM_PTR(&py_tf_input_datatype_obj) },
-    { MP_ROM_QSTR(MP_QSTR_input_scale),         MP_ROM_PTR(&py_tf_input_scale_obj) },
-    { MP_ROM_QSTR(MP_QSTR_input_zero_point),    MP_ROM_PTR(&py_tf_input_zero_point_obj) },
-    { MP_ROM_QSTR(MP_QSTR_output_height),       MP_ROM_PTR(&py_tf_output_height_obj) },
-    { MP_ROM_QSTR(MP_QSTR_output_width),        MP_ROM_PTR(&py_tf_output_width_obj) },
-    { MP_ROM_QSTR(MP_QSTR_output_channels),     MP_ROM_PTR(&py_tf_output_channels_obj) },
-    { MP_ROM_QSTR(MP_QSTR_output_datatype),     MP_ROM_PTR(&py_tf_output_datatype_obj) },
-    { MP_ROM_QSTR(MP_QSTR_output_scale),        MP_ROM_PTR(&py_tf_output_scale_obj) },
-    { MP_ROM_QSTR(MP_QSTR_output_zero_point),   MP_ROM_PTR(&py_tf_output_zero_point_obj) },
-    { MP_ROM_QSTR(MP_QSTR_classify),            MP_ROM_PTR(&py_tf_classify_obj) },
+    { MP_ROM_QSTR(MP_QSTR_classify),            MP_ROM_PTR(&py_tf_predict_obj) },
     { MP_ROM_QSTR(MP_QSTR_segment),             MP_ROM_PTR(&py_tf_segment_obj) },
     { MP_ROM_QSTR(MP_QSTR_detect),              MP_ROM_PTR(&py_tf_detect_obj) },
-    { MP_ROM_QSTR(MP_QSTR_regression),          MP_ROM_PTR(&py_tf_regression_obj) }
+    { MP_ROM_QSTR(MP_QSTR_regression),          MP_ROM_PTR(&py_tf_predict_obj) },
+    { MP_ROM_QSTR(MP_QSTR_predict),             MP_ROM_PTR(&py_tf_predict_obj) },
 };
 
 STATIC MP_DEFINE_CONST_DICT(py_tf_locals_dict, locals_dict_table);
@@ -928,31 +1124,25 @@ STATIC MP_DEFINE_CONST_OBJ_TYPE(
     py_tf_model_type,
     MP_QSTR_tf_model,
     MP_TYPE_FLAG_NONE,
+    attr, py_tf_model_attr,
     print, py_tf_model_print,
     locals_dict, &py_tf_locals_dict
     );
 
-#endif // IMLIB_ENABLE_TF
-
 STATIC const mp_rom_map_elem_t globals_dict_table[] = {
-    { MP_ROM_QSTR(MP_QSTR___name__),        MP_OBJ_NEW_QSTR(MP_QSTR_tf) },
-    #ifdef IMLIB_ENABLE_TF
+    { MP_ROM_QSTR(MP_QSTR___name__),            MP_OBJ_NEW_QSTR(MP_QSTR_tf) },
+    { MP_ROM_QSTR(MP_QSTR_SCALE_NONE),          MP_ROM_INT(PY_TF_SCALE_NONE) },
+    { MP_ROM_QSTR(MP_QSTR_SCALE_0_1),           MP_ROM_INT(PY_TF_SCALE_0_1) },
+    { MP_ROM_QSTR(MP_QSTR_SCALE_S1_1),          MP_ROM_INT(PY_TF_SCALE_S1_1) },
+    { MP_ROM_QSTR(MP_QSTR_SCALE_S128_127),      MP_ROM_INT(PY_TF_SCALE_S128_127) },
     { MP_ROM_QSTR(MP_QSTR_load),                MP_ROM_PTR(&py_tf_load_obj) },
     { MP_ROM_QSTR(MP_QSTR_load_builtin_model),  MP_ROM_PTR(&py_tf_load_builtin_model_obj) },
     { MP_ROM_QSTR(MP_QSTR_free_from_fb),        MP_ROM_PTR(&py_tf_free_from_fb_obj) },
-    { MP_ROM_QSTR(MP_QSTR_classify),            MP_ROM_PTR(&py_tf_classify_obj) },
+    { MP_ROM_QSTR(MP_QSTR_classify),            MP_ROM_PTR(&py_tf_predict_obj) },
     { MP_ROM_QSTR(MP_QSTR_segment),             MP_ROM_PTR(&py_tf_segment_obj) },
     { MP_ROM_QSTR(MP_QSTR_detect),              MP_ROM_PTR(&py_tf_detect_obj) },
-    { MP_ROM_QSTR(MP_QSTR_regression),          MP_ROM_PTR(&py_tf_regression_obj) }
-    #else
-    { MP_ROM_QSTR(MP_QSTR_load),                MP_ROM_PTR(&py_func_unavailable_obj) },
-    { MP_ROM_QSTR(MP_QSTR_load_builtin_model),  MP_ROM_PTR(&py_func_unavailable_obj) },
-    { MP_ROM_QSTR(MP_QSTR_free_from_fb),        MP_ROM_PTR(&py_func_unavailable_obj) },
-    { MP_ROM_QSTR(MP_QSTR_classify),            MP_ROM_PTR(&py_func_unavailable_obj) },
-    { MP_ROM_QSTR(MP_QSTR_segment),             MP_ROM_PTR(&py_func_unavailable_obj) },
-    { MP_ROM_QSTR(MP_QSTR_detect),              MP_ROM_PTR(&py_func_unavailable_obj) },
-    { MP_ROM_QSTR(MP_QSTR_regression),          MP_ROM_PTR(&py_func_unavailable_obj) }
-    #endif // IMLIB_ENABLE_TF
+    { MP_ROM_QSTR(MP_QSTR_regression),          MP_ROM_PTR(&py_tf_predict_obj) },
+    { MP_ROM_QSTR(MP_QSTR_predict),             MP_ROM_PTR(&py_tf_predict_obj) },
 };
 
 STATIC MP_DEFINE_CONST_DICT(globals_dict, globals_dict_table);
@@ -963,3 +1153,5 @@ const mp_obj_module_t tf_module = {
 };
 
 MP_REGISTER_MODULE(MP_QSTR_tf, tf_module);
+
+#endif // IMLIB_ENABLE_TF
