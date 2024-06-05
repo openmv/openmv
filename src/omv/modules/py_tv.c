@@ -729,7 +729,7 @@ static void spi_tv_display(image_t *src_img, int dst_x_start, int dst_y_start, f
 
         #ifdef __DCACHE_PRESENT
         // Flush data for DMA
-        SCB_CleanDCache();
+        SCB_CleanDCache_by_Addr((uint32_t *) dst_img.data, image_size(&dst_img));
         #endif
 
         // Update head which means a new image is ready.

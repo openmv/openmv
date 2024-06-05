@@ -718,7 +718,20 @@ void jpeg_decompress(image_t *dst, image_t *src) {
                 case PIXFORMAT_RGB565: {
                     uint16_t *rp = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(dst, y_offset);
                     HAL_DMA2D_Start(&DMA2D_Handle, (uint32_t) this_mcu_row_buffer_ptr, (uint32_t) rp, dst->w, dy);
+
+                    // Invalidate any cached reads for the previous line that was just written.
+                    if ((y_offset - mcu_h) >= 0) {
+                        uint16_t *previous_rp = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(dst, (y_offset - mcu_h));
+                        SCB_InvalidateDCache_by_Addr((uint32_t *) previous_rp, dst->w * mcu_h * sizeof(uint16_t));
+                    }
+
                     HAL_DMA2D_PollForTransfer(&DMA2D_Handle, JPEG_CODEC_TIMEOUT);
+
+                    // For the last row invalidate any cached reads for the line that was just written.
+                    if ((y_offset + mcu_h) >= src->h) {
+                        SCB_InvalidateDCache_by_Addr((uint32_t *) rp, dst->w * mcu_h * sizeof(uint16_t));
+                    }
+
                     break;
                 }
             }
@@ -751,9 +764,6 @@ exit_cleanup:
 
     if ((JPEG_state.jpeg_descr.Conf.ColorSpace == JPEG_YCBCR_COLORSPACE) && dst->is_color) {
         HAL_DMA2D_DeInit(&DMA2D_Handle);
-
-        // Ensure any cached reads are dropped.
-        SCB_InvalidateDCache_by_Addr((uint32_t *) dst->data, image_size(dst));
     }
 
     if (((uint32_t) src->data) % __SCB_DCACHE_LINE_SIZE) {
