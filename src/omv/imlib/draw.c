@@ -801,7 +801,7 @@ void imlib_draw_row_setup(imlib_draw_row_data_t *data) {
                 cfg.pCLUT = clut;
                 cfg.CLUTColorMode = DMA2D_CCM_ARGB8888;
                 cfg.Size = 255;
-                #if defined(MCU_SERIES_F7) || defined(MCU_SERIES_H7)
+                #if __DCACHE_PRESENT
                 SCB_CleanDCache_by_Addr(clut, 256 * sizeof(uint32_t));
                 #endif
                 HAL_DMA2D_CLUTLoad(&data->dma2d, cfg, 1);
@@ -828,6 +828,10 @@ void imlib_draw_row_setup(imlib_draw_row_data_t *data) {
         data->dma2d.LayerCfg[1].ChromaSubSampling = DMA2D_NO_CSS;
         #endif
         HAL_DMA2D_ConfigLayer(&data->dma2d, 1);
+        #if __DCACHE_PRESENT
+        // SCB_InvalidateDCache_by_Addr does nothing if dsize is 0.
+        data->dma2d_invalidate_dsize = 0;
+        #endif
     } else {
         data->row_buffer[1] = data->row_buffer[0];
     }
@@ -866,6 +870,10 @@ void imlib_draw_row_teardown(imlib_draw_row_data_t *data) {
     if (data->dma2d_initialized) {
         if (!data->callback) {
             HAL_DMA2D_PollForTransfer(&data->dma2d, 1000);
+            #if __DCACHE_PRESENT
+            // Ensures any cached reads to dst16 are dropped.
+            SCB_InvalidateDCache_by_Addr(data->dma2d_invalidate_addr, data->dma2d_invalidate_dsize);
+            #endif
         }
         HAL_DMA2D_DeInit(&data->dma2d);
         if (data->src_img_pixfmt == PIXFORMAT_GRAYSCALE) {
@@ -2379,15 +2387,24 @@ void imlib_draw_row(int x_start, int x_end, int y_row, imlib_draw_row_data_t *da
                     if (data->dma2d_enabled) {
                         if (!data->callback) {
                             HAL_DMA2D_PollForTransfer(&data->dma2d, 1000);
+                            #if __DCACHE_PRESENT
+                            // Ensures any cached reads to dst16 are dropped.
+                            SCB_InvalidateDCache_by_Addr(data->dma2d_invalidate_addr,
+                                                         data->dma2d_invalidate_dsize);
+                            #endif
                         }
-                        #if defined(MCU_SERIES_F7) || defined(MCU_SERIES_H7)
+                        #if __DCACHE_PRESENT
                         // Memory referenced by src8 between (x_end - x_start) may or may not be
                         // cache algined. However, after being flushed it shouldn't change again
                         // so DMA2D can safety read the line of pixels.
                         SCB_CleanDCache_by_Addr((uint32_t *) src8, (x_end - x_start) * sizeof(uint8_t));
                         // DMA2D will overwrite this area. dst16 (x_end - x_start) must be cache
                         // aligned or the line of pixels will be corrutped.
-                        SCB_InvalidateDCache_by_Addr((uint32_t *) dst16, (x_end - x_start) * sizeof(uint16_t));
+                        // Ensures any cached writes to dst16 are dropped.
+                        data->dma2d_invalidate_addr = (uint32_t *) dst16;
+                        data->dma2d_invalidate_dsize = (x_end - x_start) * sizeof(uint16_t);
+                        SCB_InvalidateDCache_by_Addr(data->dma2d_invalidate_addr,
+                                                     data->dma2d_invalidate_dsize);
                         #endif
                         HAL_DMA2D_BlendingStart(&data->dma2d,
                                                 (uint32_t) src8,
@@ -2397,6 +2414,11 @@ void imlib_draw_row(int x_start, int x_end, int y_row, imlib_draw_row_data_t *da
                                                 1);
                         if (data->callback) {
                             HAL_DMA2D_PollForTransfer(&data->dma2d, 1000);
+                            #if __DCACHE_PRESENT
+                            // Ensures any cached reads to dst16 are dropped.
+                            SCB_InvalidateDCache_by_Addr(data->dma2d_invalidate_addr,
+                                                         data->dma2d_invalidate_dsize);
+                            #endif
                         }
                     } else if (data->smuad_alpha_palette) {
                     #else
@@ -2550,15 +2572,24 @@ void imlib_draw_row(int x_start, int x_end, int y_row, imlib_draw_row_data_t *da
                                 if (data->dma2d_enabled) {
                                     if (!data->callback) {
                                         HAL_DMA2D_PollForTransfer(&data->dma2d, 1000);
+                                        #if __DCACHE_PRESENT
+                                        // Ensures any cached reads to dst16 are dropped.
+                                        SCB_InvalidateDCache_by_Addr(data->dma2d_invalidate_addr,
+                                                                     data->dma2d_invalidate_dsize);
+                                        #endif
                                     }
-                                    #if defined(MCU_SERIES_F7) || defined(MCU_SERIES_H7)
+                                    #if __DCACHE_PRESENT
                                     // Memory referenced by src16 between (x_end - x_start) may or may not be
                                     // cache algined. However, after being flushed it shouldn't change again
                                     // so DMA2D can safety read the line of pixels.
                                     SCB_CleanDCache_by_Addr((uint32_t *) src16, (x_end - x_start) * sizeof(uint16_t));
                                     // DMA2D will overwrite this area. dst16 (x_end - x_start) must be cache
                                     // aligned or the line of pixels will be corrutped.
-                                    SCB_InvalidateDCache_by_Addr((uint32_t *) dst16, (x_end - x_start) * sizeof(uint16_t));
+                                    // Ensures any cached writes to dst16 are dropped.
+                                    data->dma2d_invalidate_addr = (uint32_t *) dst16;
+                                    data->dma2d_invalidate_dsize = (x_end - x_start) * sizeof(uint16_t);
+                                    SCB_InvalidateDCache_by_Addr(data->dma2d_invalidate_addr,
+                                                                 data->dma2d_invalidate_dsize);
                                     #endif
                                     HAL_DMA2D_BlendingStart(&data->dma2d,
                                                             (uint32_t) src16,
@@ -2568,6 +2599,11 @@ void imlib_draw_row(int x_start, int x_end, int y_row, imlib_draw_row_data_t *da
                                                             1);
                                     if (data->callback) {
                                         HAL_DMA2D_PollForTransfer(&data->dma2d, 1000);
+                                        #if __DCACHE_PRESENT
+                                        // Ensures any cached reads to dst16 are dropped.
+                                        SCB_InvalidateDCache_by_Addr(data->dma2d_invalidate_addr,
+                                                                     data->dma2d_invalidate_dsize);
+                                        #endif
                                     }
                                 } else if (!data->black_background) {
                                 #else
