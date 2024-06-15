@@ -78,9 +78,6 @@
     })
 
 static omv_i2c_t fir_bus = {};
-#if ((OMV_FIR_MLX90621_ENABLE == 1) || (OMV_FIR_MLX90640_ENABLE == 1) || (OMV_FIR_MLX90641_ENABLE == 1))
-static void *fir_mlx_data = NULL;
-#endif
 
 typedef enum fir_sensor_type {
     FIR_NONE,
@@ -144,8 +141,8 @@ static void fir_MLX90621_get_frame(float *Ta, float *To) {
 
     PY_ASSERT_TRUE_MSG(MLX90621_GetFrameData(data) >= 0,
                        "Failed to read the MLX90621 sensor data!");
-    *Ta = MLX90621_GetTa(data, fir_mlx_data);
-    MLX90621_CalculateTo(data, fir_mlx_data, 0.95f, *Ta - 8, To);
+    *Ta = MLX90621_GetTa(data, MP_STATE_PORT(fir_mlx_data));
+    MLX90621_CalculateTo(data, MP_STATE_PORT(fir_mlx_data), 0.95f, *Ta - 8, To);
 
     fb_free();
 }
@@ -161,14 +158,14 @@ static void fir_MLX90640_get_frame(float *Ta, float *To) {
     // Calculate 1st sub-frame...
     PY_ASSERT_TRUE_MSG(MLX90640_GetFrameData(MLX90640_ADDR, data) >= 0,
                        "Failed to read the MLX90640 sensor data!");
-    *Ta = MLX90640_GetTa(data, fir_mlx_data);
-    MLX90640_CalculateTo(data, fir_mlx_data, 0.95f, *Ta - 8, To);
+    *Ta = MLX90640_GetTa(data, MP_STATE_PORT(fir_mlx_data));
+    MLX90640_CalculateTo(data, MP_STATE_PORT(fir_mlx_data), 0.95f, *Ta - 8, To);
 
     // Calculate 2nd sub-frame...
     PY_ASSERT_TRUE_MSG(MLX90640_GetFrameData(MLX90640_ADDR, data) >= 0,
                        "Failed to read the MLX90640 sensor data!");
-    *Ta = MLX90640_GetTa(data, fir_mlx_data);
-    MLX90640_CalculateTo(data, fir_mlx_data, 0.95f, *Ta - 8, To);
+    *Ta = MLX90640_GetTa(data, MP_STATE_PORT(fir_mlx_data));
+    MLX90640_CalculateTo(data, MP_STATE_PORT(fir_mlx_data), 0.95f, *Ta - 8, To);
 
     fb_free();
 }
@@ -183,8 +180,8 @@ static void fir_MLX90641_get_frame(float *Ta, float *To) {
 
     PY_ASSERT_TRUE_MSG(MLX90641_GetFrameData(MLX90641_ADDR, data) >= 0,
                        "Failed to read the MLX90641 sensor data!");
-    *Ta = MLX90641_GetTa(data, fir_mlx_data);
-    MLX90641_CalculateTo(data, fir_mlx_data, 0.95f, *Ta - 8, To);
+    *Ta = MLX90641_GetTa(data, MP_STATE_PORT(fir_mlx_data));
+    MLX90641_CalculateTo(data, MP_STATE_PORT(fir_mlx_data), 0.95f, *Ta - 8, To);
 
     fb_free();
 }
@@ -308,8 +305,8 @@ static mp_obj_t py_fir_deinit() {
     }
 
     #if ((OMV_FIR_MLX90621_ENABLE == 1) || (OMV_FIR_MLX90640_ENABLE == 1) || (OMV_FIR_MLX90641_ENABLE == 1))
-    if (fir_mlx_data != NULL) {
-        fir_mlx_data = NULL;
+    if (MP_STATE_PORT(fir_mlx_data) != NULL) {
+        MP_STATE_PORT(fir_mlx_data) = NULL;
     }
     #endif
 
@@ -404,7 +401,7 @@ mp_obj_t py_fir_init(uint n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
             ir_fresh_rate = 14 - __CLZ(__RBIT((ir_fresh_rate > 512) ? 512 : ((ir_fresh_rate < 1) ? 1 : ir_fresh_rate)));
             adc_resolution = ((adc_resolution > 18) ? 18 : ((adc_resolution < 15) ? 15 : adc_resolution)) - 15;
 
-            fir_mlx_data = xalloc(sizeof(paramsMLX90621));
+            MP_STATE_PORT(fir_mlx_data) = xalloc(sizeof(paramsMLX90621));
 
             fir_sensor = FIR_MLX90621;
             FIR_MLX90621_RETRY:
@@ -417,7 +414,7 @@ mp_obj_t py_fir_init(uint n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
             error |= MLX90621_Configure(eeprom);
             error |= MLX90621_SetRefreshRate(ir_fresh_rate);
             error |= MLX90621_SetResolution(adc_resolution);
-            error |= MLX90621_ExtractParameters(eeprom, fir_mlx_data);
+            error |= MLX90621_ExtractParameters(eeprom, MP_STATE_PORT(fir_mlx_data));
             fb_alloc_free_till_mark();
 
             if (error != 0) {
@@ -451,7 +448,7 @@ mp_obj_t py_fir_init(uint n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
             ir_fresh_rate = __CLZ(__RBIT((ir_fresh_rate > 64) ? 64 : ((ir_fresh_rate < 1) ? 1 : ir_fresh_rate))) + 1;
             adc_resolution = ((adc_resolution > 19) ? 19 : ((adc_resolution < 16) ? 16 : adc_resolution)) - 16;
 
-            fir_mlx_data = xalloc(sizeof(paramsMLX90640));
+            MP_STATE_PORT(fir_mlx_data) = xalloc(sizeof(paramsMLX90640));
 
             fir_sensor = FIR_MLX90640;
             FIR_MLX90640_RETRY:
@@ -463,7 +460,7 @@ mp_obj_t py_fir_init(uint n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
             int error = MLX90640_DumpEE(MLX90640_ADDR, eeprom);
             error |= MLX90640_SetRefreshRate(MLX90640_ADDR, ir_fresh_rate);
             error |= MLX90640_SetResolution(MLX90640_ADDR, adc_resolution);
-            error |= MLX90640_ExtractParameters(eeprom, fir_mlx_data);
+            error |= MLX90640_ExtractParameters(eeprom, MP_STATE_PORT(fir_mlx_data));
             fb_alloc_free_till_mark();
 
             if (error != 0) {
@@ -497,7 +494,7 @@ mp_obj_t py_fir_init(uint n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
             ir_fresh_rate = __CLZ(__RBIT((ir_fresh_rate > 64) ? 64 : ((ir_fresh_rate < 1) ? 1 : ir_fresh_rate))) + 1;
             adc_resolution = ((adc_resolution > 19) ? 19 : ((adc_resolution < 16) ? 16 : adc_resolution)) - 16;
 
-            fir_mlx_data = xalloc(sizeof(paramsMLX90641));
+            MP_STATE_PORT(fir_mlx_data) = xalloc(sizeof(paramsMLX90641));
 
             fir_sensor = FIR_MLX90641;
             FIR_MLX90641_RETRY:
@@ -509,7 +506,7 @@ mp_obj_t py_fir_init(uint n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
             int error = MLX90641_DumpEE(MLX90641_ADDR, eeprom);
             error |= MLX90641_SetRefreshRate(MLX90641_ADDR, ir_fresh_rate);
             error |= MLX90641_SetResolution(MLX90641_ADDR, adc_resolution);
-            error |= MLX90641_ExtractParameters(eeprom, fir_mlx_data);
+            error |= MLX90641_ExtractParameters(eeprom, MP_STATE_PORT(fir_mlx_data));
             fb_alloc_free_till_mark();
 
             if (error != 0) {
@@ -745,7 +742,7 @@ mp_obj_t py_fir_read_ta() {
             uint16_t *data = fb_alloc(MLX90621_FRAME_DATA_SIZE * sizeof(uint16_t), FB_ALLOC_NO_HINT);
             PY_ASSERT_TRUE_MSG(MLX90621_GetFrameData(data) >= 0,
                                "Failed to read the MLX90640 sensor data!");
-            mp_obj_t result = mp_obj_new_float(MLX90621_GetTa(data, fir_mlx_data));
+            mp_obj_t result = mp_obj_new_float(MLX90621_GetTa(data, MP_STATE_PORT(fir_mlx_data)));
             fb_alloc_free_till_mark();
             return result;
         }
@@ -756,7 +753,7 @@ mp_obj_t py_fir_read_ta() {
             uint16_t *data = fb_alloc(MLX90640_FRAME_DATA_SIZE * sizeof(uint16_t), FB_ALLOC_NO_HINT);
             PY_ASSERT_TRUE_MSG(MLX90640_GetFrameData(MLX90640_ADDR, data) >= 0,
                                "Failed to read the MLX90640 sensor data!");
-            mp_obj_t result = mp_obj_new_float(MLX90640_GetTa(data, fir_mlx_data));
+            mp_obj_t result = mp_obj_new_float(MLX90640_GetTa(data, MP_STATE_PORT(fir_mlx_data)));
             fb_alloc_free_till_mark();
             return result;
         }
@@ -767,7 +764,7 @@ mp_obj_t py_fir_read_ta() {
             uint16_t *data = fb_alloc(MLX90641_FRAME_DATA_SIZE * sizeof(uint16_t), FB_ALLOC_NO_HINT);
             PY_ASSERT_TRUE_MSG(MLX90641_GetFrameData(MLX90641_ADDR, data) >= 0,
                                "Failed to read the MLX90641 sensor data!");
-            mp_obj_t result = mp_obj_new_float(MLX90641_GetTa(data, fir_mlx_data));
+            mp_obj_t result = mp_obj_new_float(MLX90641_GetTa(data, MP_STATE_PORT(fir_mlx_data)));
             fb_alloc_free_till_mark();
             return result;
         }

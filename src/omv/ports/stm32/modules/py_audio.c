@@ -51,8 +51,6 @@ int32_t OMV_ATTR_SECTION(OMV_ATTR_ALIGNED(PDM_BUFFER[PDM_BUFFER_SIZE], 32), ".d2
 #endif
 
 static volatile uint32_t xfer_status = 0;
-static mp_obj_array_t *g_pcmbuf = NULL;
-static mp_obj_t g_audio_callback = mp_const_none;
 static int g_channels = OMV_AUDIO_MAX_CHANNELS;
 static mp_sched_node_t audio_task_sched_node;
 
@@ -82,7 +80,7 @@ void HAL_DFSDM_FilterRegConvHalfCpltCallback(DFSDM_Filter_HandleTypeDef *hdfsdm_
 {
     xfer_status |= DMA_XFER_HALF;
     SCB_InvalidateDCache_by_Addr((uint32_t *) (&PDM_BUFFER[0]), sizeof(PDM_BUFFER) / 2);
-    if (g_audio_callback != mp_const_none) {
+    if (MP_STATE_PORT(audio_callback) != mp_const_none) {
         mp_sched_schedule_node(&audio_task_sched_node, audio_task_callback);
     }
 }
@@ -95,7 +93,7 @@ void HAL_DFSDM_FilterRegConvCpltCallback(DFSDM_Filter_HandleTypeDef *hdfsdm_filt
 {
     xfer_status |= DMA_XFER_FULL;
     SCB_InvalidateDCache_by_Addr((uint32_t *) (&PDM_BUFFER[PDM_BUFFER_SIZE / 2]), sizeof(PDM_BUFFER) / 2);
-    if (g_audio_callback != mp_const_none) {
+    if (MP_STATE_PORT(audio_callback) != mp_const_none) {
         mp_sched_schedule_node(&audio_task_sched_node, audio_task_callback);
     }
 }
@@ -330,9 +328,9 @@ static mp_obj_t py_audio_init(uint n_args, const mp_obj_t *pos_args, mp_map_t *k
     #endif  // defined(OMV_SAI)
 
     // Allocate global PCM buffer.
-    g_pcmbuf = mp_obj_new_bytearray_by_ref(
-        samples_per_channel * g_channels * sizeof(int16_t),
-        m_new(int16_t, samples_per_channel * g_channels));
+    MP_STATE_PORT(audio_pcm_buffer) = m_new(int16_t, samples_per_channel * g_channels);
+    MP_STATE_PORT(audio_pcm_array) = mp_obj_new_bytearray_by_ref(samples_per_channel * g_channels * sizeof(int16_t),
+                                                                 MP_STATE_PORT(audio_pcm_buffer));
 
     return mp_const_none;
 }
@@ -378,11 +376,14 @@ void py_audio_deinit() {
     #endif
 
     g_channels = 0;
-    g_pcmbuf = NULL;
-    g_audio_callback = mp_const_none;
+    MP_STATE_PORT(audio_pcm_buffer) = NULL;
+    MP_STATE_PORT(audio_pcm_array) = mp_const_none;
+    MP_STATE_PORT(audio_callback) = mp_const_none;
 }
 
 static void audio_task_callback(mp_sched_node_t *node) {
+    int16_t *pcmbuf = (int16_t *) MP_STATE_PORT(audio_pcm_buffer);
+
     // Check for half transfer complete.
     if ((xfer_status & DMA_XFER_HALF)) {
         // Clear buffer state.
@@ -391,10 +392,9 @@ static void audio_task_callback(mp_sched_node_t *node) {
         #if defined(OMV_SAI)
         // Convert PDM samples to PCM.
         for (int i = 0; i < g_channels; i++) {
-            PDM_Filter(&((uint8_t *) PDM_BUFFER)[i], &((int16_t *) g_pcmbuf->items)[i], &PDM_FilterHandler[i]);
+            PDM_Filter(&((uint8_t *) PDM_BUFFER)[i], &pcmbuf[i], &PDM_FilterHandler[i]);
         }
         #elif defined(OMV_DFSDM)
-        int16_t *pcmbuf = (int16_t *) g_pcmbuf->items;
         for (int i = 0; i < PDM_BUFFER_SIZE / 2; i++) {
             pcmbuf[i] = SaturaLH((PDM_BUFFER[i] >> 8), -32768, 32767);
         }
@@ -407,28 +407,25 @@ static void audio_task_callback(mp_sched_node_t *node) {
         #if defined(OMV_SAI)
         // Convert PDM samples to PCM.
         for (int i = 0; i < g_channels; i++) {
-            PDM_Filter(&((uint8_t *) PDM_BUFFER)[PDM_BUFFER_SIZE / 2 + i],
-                       &((int16_t *) g_pcmbuf->items)[i],
-                       &PDM_FilterHandler[i]);
+            PDM_Filter(&((uint8_t *) PDM_BUFFER)[PDM_BUFFER_SIZE / 2 + i], &pcmbuf[i], &PDM_FilterHandler[i]);
         }
         #elif defined(OMV_DFSDM)
-        int16_t *pcmbuf = (int16_t *) g_pcmbuf->items;
         for (int i = 0; i < PDM_BUFFER_SIZE / 2; i++) {
             pcmbuf[i] = SaturaLH((PDM_BUFFER[PDM_BUFFER_SIZE / 2 + i] >> 8), -32768, 32767);
         }
         #endif
     }
+
     // Call user callback
-    mp_call_function_1(g_audio_callback, MP_OBJ_FROM_PTR(g_pcmbuf));
+    mp_call_function_1(MP_STATE_PORT(audio_callback), MP_STATE_PORT(audio_pcm_array));
 }
 
 static mp_obj_t py_audio_start_streaming(mp_obj_t callback_obj) {
-    g_audio_callback = callback_obj;
-
-    if (!mp_obj_is_callable(g_audio_callback)) {
-        g_audio_callback = mp_const_none;
+    if (!mp_obj_is_callable(callback_obj)) {
         RAISE_OS_EXCEPTION("Invalid callback object!");
     }
+
+    MP_STATE_PORT(audio_callback) = callback_obj;
 
     // Clear DMA buffer status
     xfer_status &= DMA_XFER_NONE;
@@ -436,7 +433,7 @@ static mp_obj_t py_audio_start_streaming(mp_obj_t callback_obj) {
     #if defined(OMV_SAI)
     // Start DMA transfer
     if (HAL_SAI_Receive_DMA(&hsai, (uint8_t *) PDM_BUFFER, PDM_BUFFER_SIZE / g_channels) != HAL_OK) {
-        g_audio_callback = mp_const_none;
+        MP_STATE_PORT(audio_callback) = mp_const_none;
         RAISE_OS_EXCEPTION("SAI DMA transfer failed!");
     }
     #elif defined(OMV_DFSDM)
@@ -461,7 +458,7 @@ static mp_obj_t py_audio_stop_streaming() {
         HAL_DFSDM_FilterRegularStop_DMA(&hdfsdm_filter[0]);
     }
     #endif
-    g_audio_callback = mp_const_none;
+    MP_STATE_PORT(audio_callback) = mp_const_none;
     return mp_const_none;
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_audio_stop_streaming_obj, py_audio_stop_streaming);
@@ -538,5 +535,8 @@ const mp_obj_module_t audio_module = {
     .globals = (mp_obj_t) &globals_dict,
 };
 
+MP_REGISTER_ROOT_POINTER(mp_obj_t audio_callback);
+MP_REGISTER_ROOT_POINTER(mp_obj_t audio_pcm_array);
+MP_REGISTER_ROOT_POINTER(int16_t * audio_pcm_buffer);
 MP_REGISTER_MODULE(MP_QSTR_audio, audio_module);
 #endif //MICROPY_PY_AUDIO
