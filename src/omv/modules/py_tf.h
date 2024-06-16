@@ -13,21 +13,19 @@
 #include "libtf.h"
 #include "imlib_config.h"
 
+// TF Model Object.
 typedef struct py_tf_model_obj {
     mp_obj_base_t base;
-    unsigned char *model_data;
-    unsigned int model_data_len;
+    unsigned int size;
+    unsigned char *data;
+    bool fb_alloc;
+    mp_obj_t input_shape;
+    mp_obj_t output_shape;
     libtf_parameters_t params;
-    mp_obj_t input_shape; // pre-allocated tuple for fast access
-    mp_obj_t output_shape; // pre-allocated tuple for fast access
 } py_tf_model_obj_t;
 
-// Log buffer
-#define PY_TF_PUTCHAR_BUFFER_LEN    1023
-extern char *py_tf_putchar_buffer;
-extern size_t py_tf_putchar_buffer_index;
-extern size_t py_tf_putchar_buffer_len;
-void py_tf_alloc_putchar_buffer();
+extern char *py_tf_log_buffer;
+void py_tf_alloc_log_buffer();
 
 // Functionality select
 #if IMLIB_ENABLE_TF == IMLIB_TF_FULLOPS
