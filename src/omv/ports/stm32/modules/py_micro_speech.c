@@ -148,8 +148,8 @@ STATIC mp_obj_t py_micro_speech_listen(uint n_args, const mp_obj_t *pos_args, mp
     mp_arg_val_t args[MP_ARRAY_SIZE(allowed_args)];
     mp_arg_parse_all(n_args - 2, pos_args + 2, kw_args, MP_ARRAY_SIZE(allowed_args), allowed_args, args);
 
-    py_micro_speech_obj_t *microspeech = pos_args[0];
-    py_tf_model_obj_t *model = pos_args[1];
+    py_micro_speech_obj_t *microspeech = MP_OBJ_TO_PTR(pos_args[0]);
+    py_tf_model_obj_t *model = MP_OBJ_TO_PTR(pos_args[1]);
     float threshold = py_helper_arg_to_float(args[ARG_threshold].u_obj, 0.9f);
     uint32_t timeout = args[ARG_timeout].u_int;
 
@@ -159,28 +159,18 @@ STATIC mp_obj_t py_micro_speech_listen(uint n_args, const mp_obj_t *pos_args, mp
         mp_obj_get_array(args[ARG_filter].u_obj, &labels_filter_len, &labels_filter);
     }
 
-    fb_alloc_mark();
-    py_tf_alloc_putchar_buffer();
-
-    uint32_t tensor_arena_size;
-    uint8_t *tensor_arena = fb_alloc_all(&tensor_arena_size, FB_ALLOC_PREFER_SIZE);
-    libtf_parameters_t params;
-
-    if (libtf_get_parameters(model->model_data, tensor_arena, tensor_arena_size, &params) != 0) {
-        mp_raise_msg(&mp_type_OSError, (mp_rom_error_text_t) py_tf_putchar_buffer);
-    }
-
-    fb_free(); // free fb_alloc_all()
-
-    tensor_arena = fb_alloc(params.tensor_arena_size, FB_ALLOC_PREFER_SPEED | FB_ALLOC_CACHE_ALIGN);
-    int8_t spectrogram[kFeatureElementCount];
-
     uint32_t return_label = 0;
     uint32_t results_count = 0;
     uint8_t previous_scores[kAverageWindowSamples][kCategoryCount];
     uint32_t average_scores[kCategoryCount];
     memset(previous_scores, 0, kAverageWindowSamples * kCategoryCount);
     memset(average_scores, 0, kCategoryCount * sizeof(*average_scores));
+
+    int8_t spectrogram[kFeatureElementCount];
+
+    fb_alloc_mark();
+    py_tf_alloc_log_buffer();
+    uint8_t *tensor_arena = fb_alloc(model->params.tensor_arena_size, FB_ALLOC_PREFER_SPEED | FB_ALLOC_CACHE_ALIGN);
 
     uint32_t start = HAL_GetTick();
     while (timeout == 0 || (HAL_GetTick() - start) < timeout) {
@@ -197,17 +187,17 @@ STATIC mp_obj_t py_micro_speech_listen(uint n_args, const mp_obj_t *pos_args, mp
         __enable_irq();
 
         // Run model on updated spectrogram
-        if (libtf_invoke(model->model_data,
+        if (libtf_invoke(model->data,
                          tensor_arena,
-                         &params,
+                         &model->params,
                          py_tf_input_callback,
                          spectrogram,
                          py_tf_output_callback,
                          previous_scores[results_count]) != 0) {
-            mp_raise_msg(&mp_type_OSError, (mp_rom_error_text_t) py_tf_putchar_buffer);
+            mp_raise_msg(&mp_type_OSError, (mp_rom_error_text_t) py_tf_log_buffer);
         }
 
-        // If we have enough samples calculate average scores.
+        // If enough samples have been captured, calculate the average scores.
         if ((HAL_GetTick() - start) > (kAverageWindowSamples * kFeatureSliceDurationMs)) {
             uint32_t highest_index = 0, highest_score = 0;
 
