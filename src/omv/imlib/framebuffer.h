@@ -40,8 +40,9 @@ typedef struct framebuffer {
 extern framebuffer_t *framebuffer;
 
 typedef enum {
-    FB_NO_FLAGS =   (0 << 0),
-    FB_PEEK     =   (1 << 0),   // If set, will not move the head/tail.
+    FB_NO_FLAGS   = (0 << 0),
+    FB_PEEK       = (1 << 0),   // If set, will not move the head/tail.
+    FB_INVALIDATE = (1 << 1),   // If set, invalidate the buffer on return.
 } framebuffer_flags_t;
 
 typedef struct vbuffer {

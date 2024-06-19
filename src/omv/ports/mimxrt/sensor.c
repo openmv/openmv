@@ -26,6 +26,7 @@
 
 #define DMA_LENGTH_ALIGNMENT     (8)
 #define SENSOR_TIMEOUT_MS        (3000)
+#define MIN_EDMA_DST_INC         (4)
 
 // Sensor struct.
 sensor_t sensor = {};
@@ -156,6 +157,7 @@ int sensor_abort(bool fifo_flush, bool in_irq) {
     CSI_DisableInterrupts(CSI, CSI_IRQ_FLAGS);
     CSI_REG_CR3(CSI) &= ~CSI_CR3_DMA_REQ_EN_RFF_MASK;
     CSI_REG_CR18(CSI) &= ~CSI_CR18_CSI_ENABLE_MASK;
+    dest_inc_size = 0;
     sensor.first_line = false;
     sensor.drop_frame = false;
     sensor.last_frame_ms = 0;
@@ -208,7 +210,7 @@ int sensor_dma_memcpy(void *dma, void *dst, void *src, int bpp, bool transposed)
     // beats. Additionally, the CSI hardware lacks cropping so we cannot align the source address.
     // Given this, performance will be lacking on cropped images. So much so that we do not use
     // the EDMA for anything less than 4-byte transfers otherwise you get sensor timeout errors.
-    if (dest_inc_size < 4) {
+    if (dest_inc_size < MIN_EDMA_DST_INC) {
         return -1;
     }
 
@@ -468,7 +470,16 @@ int sensor_snapshot(sensor_t *sensor, image_t *image, uint32_t flags) {
     }
     #endif
 
-    vbuffer_t *buffer = framebuffer_get_head(FB_NO_FLAGS);
+    framebuffer_flags_t fb_flags = FB_NO_FLAGS;
+
+    #if defined(OMV_CSI_DMA)
+    // dest_inc_size will be less than MIN_EDMA_DST_INC if the EDMA is not initialized or unusable.
+    if (dest_inc_size >= MIN_EDMA_DST_INC) {
+        fb_flags = FB_INVALIDATE;
+    }
+    #endif
+
+    vbuffer_t *buffer = framebuffer_get_head(fb_flags);
     // Wait for the DMA to finish the transfer.
     for (mp_uint_t ticks = mp_hal_ticks_ms(); buffer == NULL;) {
         MICROPY_EVENT_POLL_HOOK
@@ -483,7 +494,7 @@ int sensor_snapshot(sensor_t *sensor, image_t *image, uint32_t flags) {
 
             return SENSOR_ERROR_CAPTURE_TIMEOUT;
         }
-        buffer = framebuffer_get_head(FB_NO_FLAGS);
+        buffer = framebuffer_get_head(fb_flags);
     }
 
     // We're done receiving data.

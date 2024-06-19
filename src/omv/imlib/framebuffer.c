@@ -404,8 +404,10 @@ vbuffer_t *framebuffer_get_head(framebuffer_flags_t flags) {
     vbuffer_t *buffer = framebuffer_get_buffer(new_head);
 
     #ifdef __DCACHE_PRESENT
-    // Make sure any cached CPU reads are dropped before returning the buffer.
-    SCB_InvalidateDCache_by_Addr(buffer->data, framebuffer_get_buffer_size());
+    if (flags & FB_INVALIDATE) {
+        // Make sure any cached CPU reads are dropped before returning the buffer.
+        SCB_InvalidateDCache_by_Addr(buffer->data, framebuffer_get_buffer_size());
+    }
     #endif
 
     return buffer;
