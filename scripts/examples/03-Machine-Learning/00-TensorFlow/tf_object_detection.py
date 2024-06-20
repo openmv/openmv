@@ -14,10 +14,10 @@ import math
 sensor.reset()  # Reset and initialize the sensor.
 sensor.set_pixformat(sensor.RGB565)  # Set pixel format to RGB565 (or GRAYSCALE)
 sensor.set_framesize(sensor.QVGA)  # Set frame size to QVGA (320x240)
-sensor.set_windowing((240, 240))  # Set 240x240 window.
 sensor.skip_frames(time=2000)  # Let the camera adjust.
 
 min_confidence = 0.4
+threshold_list = [(math.ceil(min_confidence * 255), 255)]
 
 # Load built-in FOMO face detection model
 labels, net = tf.Model("fomo_face_detection")
@@ -36,18 +36,38 @@ colors = [  # Add more colors if you are detecting more than 7 types of classes 
     (255, 255, 255),
 ]
 
+# FOMO outputs an image per class where each pixel in the image is the centroid of the trained
+# object. So, we will get those output images and then run find_blobs() on them to extract the
+# centroids. We will also run get_stats() on the detected blobs to determine their score.
+# The Non-Max-Supression (NMS) object then filters out overlapping detections and maps their
+# position in the output image back to the original input image. The callback then returns a
+# list per class which each contain a list of (rect, score) tuples representing the detected
+# objects.
+
+
+def fomo_callback(model, rect):
+    out = model.output[0]
+    oh, ow, oc = model.output_shape
+    nms = tf.NMS(ow, oh, rect)
+    for i in range(oc):
+        img = out.get_image(i)
+        blobs = img.find_blobs(threshold_list, x_stride=1, area_threshold=1, pixels_threshold=1)
+        for b in blobs:
+            rect = b.rect()
+            x, y, w, h = rect
+            score = img.get_statistics(thresholds=threshold_list, roi=rect).l_mean() / 255.0
+            nms.add_bounding_box(x, y, x + w, y + h, score, i)
+    return nms.get_bounding_boxes()
+
+
 clock = time.clock()
 while True:
     clock.tick()
 
     img = sensor.snapshot()
 
-    # detect() returns all objects found in the image (splitted out per class already)
-    # we skip class index 0, as that is the background, and then draw circles of the center
-    # of our objects
-
     for i, detection_list in enumerate(
-        net.detect(img, thresholds=[(math.ceil(min_confidence * 255), 255)])
+        net.predict(img, callback=fomo_callback)
     ):
         if i == 0:
             continue  # background class
