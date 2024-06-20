@@ -709,7 +709,6 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_tf_model_deinit_obj, py_tf_model_deinit);
 
 STATIC const mp_rom_map_elem_t py_tf_model_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR___del__),             MP_ROM_PTR(&py_tf_model_deinit_obj) },
-    { MP_ROM_QSTR(MP_QSTR_regression),          MP_ROM_PTR(&py_tf_model_predict_obj) },
     { MP_ROM_QSTR(MP_QSTR_predict),             MP_ROM_PTR(&py_tf_model_predict_obj) },
 };
 
@@ -735,8 +734,6 @@ STATIC const mp_rom_map_elem_t py_tf_globals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_SCALE_S128_127),      MP_ROM_INT(PY_TF_SCALE_S128_127) },
     { MP_ROM_QSTR(MP_QSTR_Model),               MP_ROM_PTR(&py_tf_model_type) },
     { MP_ROM_QSTR(MP_QSTR_NMS),                 MP_ROM_PTR(&py_tf_nms_type) },
-    { MP_ROM_QSTR(MP_QSTR_load),                MP_ROM_PTR(&py_tf_model_type) },
-    { MP_ROM_QSTR(MP_QSTR_load_builtin_model),  MP_ROM_PTR(&py_tf_model_type) },
 };
 
 STATIC MP_DEFINE_CONST_DICT(py_tf_globals_dict, py_tf_globals_dict_table);
