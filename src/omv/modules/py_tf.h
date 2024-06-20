@@ -21,6 +21,7 @@ typedef struct py_tf_model_obj {
     bool fb_alloc;
     mp_obj_t input_shape;
     mp_obj_t output_shape;
+    mp_obj_t model_output_list;
     libtf_parameters_t params;
 } py_tf_model_obj_t;
 
