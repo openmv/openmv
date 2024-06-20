@@ -159,31 +159,13 @@ typedef struct py_tf_model_output_obj {
     mp_obj_base_t base;
     void *model_output;
     libtf_parameters_t *params;
-    // Pre-compute for lookup speed.
     size_t output_size;
-    mp_obj_t rect;
 } py_tf_model_output_obj_t;
-
-STATIC void py_tf_model_output_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest) {
-    py_tf_model_output_obj_t *self = MP_OBJ_TO_PTR(self_in);
-    if (dest[0] == MP_OBJ_NULL) {
-        // Load attribute.
-        switch (attr) {
-            case MP_QSTR_rect:
-                dest[0] = self->rect;
-                break;
-            default:
-                // Continue lookup in locals_dict.
-                dest[1] = MP_OBJ_SENTINEL;
-                break;
-        }
-    }
-}
 
 STATIC mp_obj_t py_tf_model_output_subscr(mp_obj_t self_in, mp_obj_t index, mp_obj_t value) {
     if (value == MP_OBJ_SENTINEL) {
         // load
-        py_tf_model_output_obj_t *self = self_in;
+        py_tf_model_output_obj_t *self = MP_OBJ_TO_PTR(self_in);
         void *model_output = self->model_output;
         libtf_parameters_t *params = self->params;
         if (MP_OBJ_IS_TYPE(index, &mp_type_slice)) {
@@ -235,7 +217,6 @@ STATIC MP_DEFINE_CONST_OBJ_TYPE(
     py_tf_model_output_type,
     MP_QSTR_tf_model_output,
     MP_TYPE_FLAG_NONE,
-    attr, py_tf_model_output_attr,
     subscr, py_tf_model_output_subscr
     );
 
@@ -523,16 +504,25 @@ STATIC void py_tf_predict_output_callback(void *callback_data,
                                           void *model_output,
                                           libtf_parameters_t *params) {
     py_tf_predict_callback_data_t *arg = (py_tf_predict_callback_data_t *) callback_data;
+    py_tf_model_obj_t *model = MP_OBJ_TO_PTR(arg->model);
+    mp_obj_t rect = mp_obj_new_tuple(4, (mp_obj_t []) {mp_obj_new_int(arg->roi->x),
+                                                       mp_obj_new_int(arg->roi->y),
+                                                       mp_obj_new_int(arg->roi->w),
+                                                       mp_obj_new_int(arg->roi->h)});
+
+    // This will support multiple output tensors once the API is updated.
+    mp_obj_list_t *list = MP_OBJ_TO_PTR(mp_obj_new_list(0, NULL));
+
     py_tf_model_output_obj_t *o = m_new_obj(py_tf_model_output_obj_t);
     o->base.type = &py_tf_model_output_type;
     o->model_output = model_output;
     o->params = params;
     o->output_size = params->output_height * params->output_width * params->output_channels;
-    o->rect = mp_obj_new_tuple(4, (mp_obj_t []) {mp_obj_new_int(arg->roi->x),
-                                                 mp_obj_new_int(arg->roi->y),
-                                                 mp_obj_new_int(arg->roi->w),
-                                                 mp_obj_new_int(arg->roi->h)});
-    *(arg->out) = mp_call_function_2(arg->callback, arg->model, o);
+    mp_obj_list_append(list, o);
+
+    model->output_list = MP_OBJ_FROM_PTR(list);
+    *(arg->out) = mp_call_function_2(arg->callback, model, rect);
+    model->output_list = mp_const_none;
 }
 
 // TF Model Object.
@@ -841,6 +831,9 @@ STATIC void py_tf_model_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest) {
             case MP_QSTR_output_zero_point:
                 dest[0] = mp_obj_new_int(self->params.output_zero_point);
                 break;
+            case MP_QSTR_output:
+                dest[0] = self->output_list;
+                break;
             default:
                 // Continue lookup in locals_dict.
                 dest[1] = MP_OBJ_SENTINEL;
@@ -917,6 +910,8 @@ mp_obj_t py_tf_model_make_new(const mp_obj_type_t *type, size_t n_args, size_t n
     model->output_shape = mp_obj_new_tuple(3, (mp_obj_t []) {mp_obj_new_int(model->params.output_height),
                                                              mp_obj_new_int(model->params.output_width),
                                                              mp_obj_new_int(model->params.output_channels)});
+
+    model->output_list = mp_const_none;
 
     if (model->fb_alloc) {
         // The model data will Not be free'd on exceptions.
