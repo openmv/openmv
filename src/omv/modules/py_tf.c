@@ -1018,7 +1018,6 @@ mp_obj_t py_tf_model_make_new(const mp_obj_type_t *type, size_t n_args, size_t n
     mp_arg_parse_all_kw_array(n_args, n_kw, all_args, MP_ARRAY_SIZE(allowed_args), allowed_args, args);
 
     fb_alloc_mark();
-    py_tf_alloc_log_buffer();
 
     const char *path = mp_obj_str_get_str(args[ARG_path].u_obj);
 
@@ -1058,6 +1057,7 @@ mp_obj_t py_tf_model_make_new(const mp_obj_type_t *type, size_t n_args, size_t n
         #endif
     }
 
+    py_tf_alloc_log_buffer();
     uint32_t tensor_arena_size;
     uint8_t *tensor_arena = fb_alloc_all(&tensor_arena_size, FB_ALLOC_PREFER_SIZE);
     if (libtf_get_parameters(model->data, tensor_arena, tensor_arena_size, &model->params) != 0) {
