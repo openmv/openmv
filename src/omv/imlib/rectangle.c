@@ -128,3 +128,86 @@ float rectangle_iou(rectangle_t *r1, rectangle_t *r2) {
     int rect_union = (r1->w * r1->h) + (r2->w * r2->h) - rect_intersection;
     return ((float) rect_intersection) / ((float) rect_union);
 }
+
+// Adds a bounding box to the list of bounding boxes in descending order of score.
+void rectangle_nms_add_bounding_box(list_t *bounding_boxes, bounding_box_lnk_data_t *box) {
+    // Insertion sort bounding boxes by score.
+    list_lnk_t *it = bounding_boxes->head;
+    for (; it; it = it->next) {
+        if (box->score > ((bounding_box_lnk_data_t *) it->data)->score) {
+            list_insert(bounding_boxes, it, box);
+            break;
+        }
+    }
+
+    if (!it) {
+        list_push_back(bounding_boxes, box);
+    }
+}
+
+// Soft non-max supress the list of bounding boxes. Returns the maximum label index of the new list.
+int rectangle_nms_get_bounding_boxes(list_t *bounding_boxes, float threshold, float sigma) {
+    // Soft non-max suppression with a Gaussian is used below, as this provides the best results.
+    // A Gaussian is used to apply a soft score penalty to overlapping boxes. On loop entry,
+    // "bounding_boxes" is sorted, but after each iteration, the next highest score must be picked
+    // again, given that the score penalty changes the order.
+    float sigma_scale = (sigma > 0.0f) ? (-1.0f / sigma) : 0.0f;
+
+    list_t nms_bounding_boxes;
+    list_init(&nms_bounding_boxes, sizeof(bounding_box_lnk_data_t));
+
+    int max_label_index = 0;
+
+    // The first detection has the higest score since the list is sorted.
+    list_lnk_t *max_it = bounding_boxes->head;
+    while (list_size(bounding_boxes)) {
+        bounding_box_lnk_data_t lnk_data;
+        memcpy(&lnk_data, max_it->data, bounding_boxes->data_len);
+        list_move_back(&nms_bounding_boxes, bounding_boxes, max_it);
+
+        float max_score = 0.0f;
+        for (list_lnk_t *it = bounding_boxes->head; it; ) {
+            bounding_box_lnk_data_t *lnk_data2 = list_get_data(it);
+
+            // Advance to next now as "it" will be invalid if we remove the current item.
+            list_lnk_t *old_it = it;
+            it = it->next;
+
+            float iou = rectangle_iou(&lnk_data.rect, &lnk_data2->rect);
+            // Do not use fast_expf() as it does not output 1 when it's input is 0.
+            // This will cause the scores of non-overlapping bounding boxes to decay.
+            lnk_data2->score *= expf(sigma_scale * iou * iou);
+
+            if (lnk_data2->score < threshold) {
+                list_remove(bounding_boxes, old_it, NULL);
+            } else if (lnk_data2->score > max_score) {
+                max_score = lnk_data2->score;
+                max_it = old_it;
+            }
+        }
+
+        // Find the maximum label index for the output list.
+        max_label_index = IM_MAX(lnk_data.label_index, max_label_index);
+    }
+
+    // Set the original list pointers to equal the new list.
+    memcpy(bounding_boxes, &nms_bounding_boxes, sizeof(list_t));
+    return max_label_index;
+}
+
+void rectangle_map_bounding_boxes(list_t *bounding_boxes, int window_w, int window_h, rectangle_t *roi) {
+    float x_scale = roi->w / ((float) window_w);
+    float y_scale = roi->h / ((float) window_h);
+    // MAX == KeepAspectRatioByExpanding - MIN == KeepAspectRatio
+    float scale = IM_MIN(x_scale, y_scale);
+    int x_offset = fast_floorf((roi->w - (window_w * scale)) / 2.0f) + roi->x;
+    int y_offset = fast_floorf((roi->h - (window_h * scale)) / 2.0f) + roi->y;
+
+    list_for_each(it, bounding_boxes) {
+        rectangle_t *rect = &((bounding_box_lnk_data_t *) it->data)->rect;
+        rect->x = fast_floorf((rect->x * scale) + x_offset);
+        rect->y = fast_floorf((rect->y * scale) + y_offset);
+        rect->w = fast_floorf(rect->w * scale);
+        rect->h = fast_floorf(rect->h * scale);
+    }
+}

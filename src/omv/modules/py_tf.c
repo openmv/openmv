@@ -157,14 +157,11 @@ MP_DEFINE_CONST_OBJ_TYPE(
 // TF Model Output Object.
 typedef struct py_tf_model_output_obj {
     mp_obj_base_t base;
-    rectangle_t *roi;
     void *model_output;
     libtf_parameters_t *params;
     // Pre-compute for lookup speed.
     size_t output_size;
     mp_obj_t rect;
-    // Convenience stuff.
-    list_t bounding_boxes;
 } py_tf_model_output_obj_t;
 
 STATIC void py_tf_model_output_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest) {
@@ -234,164 +231,12 @@ STATIC mp_obj_t py_tf_model_output_subscr(mp_obj_t self_in, mp_obj_t index, mp_o
     return MP_OBJ_NULL; // op not supported
 }
 
-typedef struct py_tf_model_output_bounding_box_lnk_data {
-    rectangle_t rect;
-    float score;
-    int label_index;
-} py_tf_model_output_bounding_box_lnk_data_t;
-
-// This convenience function is designed to collect bounding boxes, allowing for a non-maximal
-// suppression of them later. It is not necessary to use this function to parse model output.
-// The use of mp_arg_parse_all() is deliberately avoided here to ensure this method remains fast.
-STATIC mp_obj_t py_tf_model_output_add_bounding_box(uint n_args, const mp_obj_t *pos_args) {
-    enum { ARG_self, ARG_xmin, ARG_ymin, ARG_xmax, ARG_ymax, ARG_score, ARG_label_index };
-    py_tf_model_output_obj_t *self_in = (py_tf_model_output_obj_t *) pos_args[ARG_self];
-
-    py_tf_model_output_bounding_box_lnk_data_t lnk_data;
-    lnk_data.score = mp_obj_get_float(pos_args[ARG_score]);
-
-    if ((lnk_data.score >= 0.0f) && (lnk_data.score <= 1.0f)) {
-        float xmin = IM_CLAMP(mp_obj_get_float(pos_args[ARG_xmin]), 0.0f, (float) (self_in->params->input_width));
-        float ymin = IM_CLAMP(mp_obj_get_float(pos_args[ARG_ymin]), 0.0f, (float) (self_in->params->input_height));
-        float xmax = IM_CLAMP(mp_obj_get_float(pos_args[ARG_xmax]), 0.0f, (float) (self_in->params->input_width));
-        float ymax = IM_CLAMP(mp_obj_get_float(pos_args[ARG_ymax]), 0.0f, (float) (self_in->params->input_height));
-
-        lnk_data.rect.w = fast_floorf(xmax - xmin);
-        lnk_data.rect.h = fast_floorf(ymax - ymin);
-
-        if ((lnk_data.rect.w > 0) && (lnk_data.rect.h > 0)) {
-            lnk_data.rect.x = fast_floorf(xmin);
-            lnk_data.rect.y = fast_floorf(ymin);
-            lnk_data.label_index = mp_obj_get_int(pos_args[ARG_label_index]);
-
-            // Insertion sort bounding boxes by score.
-            list_lnk_t *it = self_in->bounding_boxes.head;
-            for (; it; it = it->next) {
-                if (lnk_data.score > ((py_tf_model_output_bounding_box_lnk_data_t *) it->data)->score) {
-                    list_insert(&self_in->bounding_boxes, it, &lnk_data);
-                    break;
-                }
-            }
-
-            if (!it) {
-                list_push_back(&self_in->bounding_boxes, &lnk_data);
-            }
-        }
-    }
-
-    return mp_const_none;
-}
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(py_tf_model_output_add_bounding_box_obj, 7, 7,
-                                           py_tf_model_output_add_bounding_box);
-
-// This function performs non-maximal suppression on bounding boxes collected using the add_bounding_box
-// function and returns the final list of bounding boxes, mapped to the image ROI and separated by label
-// index into their own lists. Note that using this function to parse the model output is optional.
-STATIC mp_obj_t py_tf_model_output_get_bounding_boxes(uint n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
-    enum { ARG_threshold, ARG_sigma };
-    static const mp_arg_t allowed_args[] = {
-        { MP_QSTR_threshold,  MP_ARG_OBJ | MP_ARG_KW_ONLY, {.u_rom_obj = MP_ROM_NONE } },
-        { MP_QSTR_sigma,  MP_ARG_OBJ | MP_ARG_KW_ONLY, {.u_rom_obj = MP_ROM_NONE } },
-    };
-
-    mp_arg_val_t args[MP_ARRAY_SIZE(allowed_args)];
-    mp_arg_parse_all(n_args - 1, pos_args + 1, kw_args, MP_ARRAY_SIZE(allowed_args), allowed_args, args);
-
-    py_tf_model_output_obj_t *self_in = (py_tf_model_output_obj_t *) pos_args[0];
-    float threshold = py_helper_arg_to_float(args[ARG_threshold].u_obj, 0.1f);
-    float sigma = py_helper_arg_to_float(args[ARG_sigma].u_obj, 0.1f);
-
-    // Soft non-max suppression with a Gaussian is used below, as this provides the best results.
-    // A Gaussian is used to apply a soft score penalty to overlapping boxes. On loop entry,
-    // "bounding_boxes" is sorted, but after each iteration, the next highest score must be picked
-    // again, given that the score penalty changes the order.
-
-    float sigma_scale = (sigma > 0.0f) ? (-1.0f / sigma) : 0.0f;
-
-    list_t nms_bounding_boxes;
-    list_init(&nms_bounding_boxes, sizeof(py_tf_model_output_bounding_box_lnk_data_t));
-
-    int max_label = 0;
-
-    // The first detection has the higest score since the list is sorted.
-    list_lnk_t *max_it = self_in->bounding_boxes.head;
-    while (list_size(&self_in->bounding_boxes)) {
-        py_tf_model_output_bounding_box_lnk_data_t lnk_data;
-        list_remove(&self_in->bounding_boxes, max_it, &lnk_data);
-        list_push_back(&nms_bounding_boxes, &lnk_data);
-
-        float max_score = 0.0f;
-        for (list_lnk_t *it = self_in->bounding_boxes.head; it; ) {
-            py_tf_model_output_bounding_box_lnk_data_t *lnk_data2 = list_get_data(it);
-
-            // Advance to next now as "it" will be invalid if we remove the current item.
-            list_lnk_t *old_it = it;
-            it = it->next;
-
-            float iou = rectangle_iou(&lnk_data.rect, &lnk_data2->rect);
-            // Do not use fast_expf() as it does not output 1 when it's input is 0.
-            // This will cause the scores of non-overlapping bounding boxes to decay.
-            lnk_data2->score *= expf(sigma_scale * iou * iou);
-
-            if (lnk_data2->score < threshold) {
-                list_remove(&self_in->bounding_boxes, old_it, NULL);
-            } else if (lnk_data2->score > max_score) {
-                max_score = lnk_data2->score;
-                max_it = old_it;
-            }
-        }
-
-        // Find the maximum label index for the output list.
-        max_label = IM_MAX(lnk_data.label_index, max_label);
-    }
-
-    memcpy(&self_in->bounding_boxes, &nms_bounding_boxes, sizeof(list_t));
-
-    // Create a list per class label.
-    mp_obj_t list = mp_obj_new_list(max_label + 1, NULL);
-    for (size_t i = 0; i <= max_label; i++) {
-        ((mp_obj_list_t *) list)->items[i] = mp_obj_new_list(0, NULL);
-    }
-
-    float x_scale = self_in->roi->w / ((float) self_in->params->input_width);
-    float y_scale = self_in->roi->h / ((float) self_in->params->input_height);
-    // MAX == KeepAspectRatioByExpanding - MIN == KeepAspectRatio
-    float scale = IM_MIN(x_scale, y_scale);
-    int x_offset = fast_floorf((self_in->roi->w - (self_in->params->input_width * scale)) / 2.0f) + self_in->roi->x;
-    int y_offset = fast_floorf((self_in->roi->h - (self_in->params->input_height * scale)) / 2.0f) + self_in->roi->y;
-
-    size_t len = list_size(&nms_bounding_boxes);
-    for (size_t i = 0; i < len; i++) {
-        py_tf_model_output_bounding_box_lnk_data_t lnk_data;
-        list_pop_front(&nms_bounding_boxes, &lnk_data);
-        py_tf_classification_obj_t *o = m_new_obj(py_tf_classification_obj_t);
-        o->base.type = &py_tf_classification_type;
-        o->x = mp_obj_new_int(fast_floorf(lnk_data.rect.x * scale) + x_offset);
-        o->y = mp_obj_new_int(fast_floorf(lnk_data.rect.y * scale) + y_offset);
-        o->w = mp_obj_new_int(fast_floorf(lnk_data.rect.w * scale));
-        o->h = mp_obj_new_int(fast_floorf(lnk_data.rect.h * scale));
-        o->output = mp_obj_new_float(lnk_data.score);
-        mp_obj_list_append(((mp_obj_list_t *) list)->items[lnk_data.label_index], o);
-    }
-
-    return list;
-}
-STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_tf_model_output_get_bounding_boxes_obj, 1, py_tf_model_output_get_bounding_boxes);
-
-STATIC const mp_rom_map_elem_t py_tf_model_output_locals_table[] = {
-    { MP_ROM_QSTR(MP_QSTR_add_bounding_box),    MP_ROM_PTR(&py_tf_model_output_add_bounding_box_obj) },
-    { MP_ROM_QSTR(MP_QSTR_get_bounding_boxes),  MP_ROM_PTR(&py_tf_model_output_get_bounding_boxes_obj) },
-};
-
-STATIC MP_DEFINE_CONST_DICT(py_tf_model_output_locals_dict, py_tf_model_output_locals_table);
-
 STATIC MP_DEFINE_CONST_OBJ_TYPE(
     py_tf_model_output_type,
     MP_QSTR_tf_model_output,
     MP_TYPE_FLAG_NONE,
     attr, py_tf_model_output_attr,
-    subscr, py_tf_model_output_subscr,
-    locals_dict, &py_tf_model_output_locals_dict
+    subscr, py_tf_model_output_subscr
     );
 
 // TF Input/Output callback functions.
@@ -680,7 +525,6 @@ STATIC void py_tf_predict_output_callback(void *callback_data,
     py_tf_predict_callback_data_t *arg = (py_tf_predict_callback_data_t *) callback_data;
     py_tf_model_output_obj_t *o = m_new_obj(py_tf_model_output_obj_t);
     o->base.type = &py_tf_model_output_type;
-    o->roi = arg->roi;
     o->model_output = model_output;
     o->params = params;
     o->output_size = params->output_height * params->output_width * params->output_channels;
@@ -688,7 +532,6 @@ STATIC void py_tf_predict_output_callback(void *callback_data,
                                                  mp_obj_new_int(arg->roi->y),
                                                  mp_obj_new_int(arg->roi->w),
                                                  mp_obj_new_int(arg->roi->h)});
-    list_init(&o->bounding_boxes, sizeof(py_tf_model_output_bounding_box_lnk_data_t));
     *(arg->out) = mp_call_function_2(arg->callback, arg->model, o);
 }
 
@@ -1119,6 +962,8 @@ STATIC MP_DEFINE_CONST_OBJ_TYPE(
     locals_dict, &py_tf_model_locals_dict
     );
 
+extern const mp_obj_type_t py_tf_nms_type;
+
 STATIC const mp_rom_map_elem_t py_tf_globals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR___name__),            MP_OBJ_NEW_QSTR(MP_QSTR_tf) },
     { MP_ROM_QSTR(MP_QSTR_SCALE_NONE),          MP_ROM_INT(PY_TF_SCALE_NONE) },
@@ -1126,6 +971,7 @@ STATIC const mp_rom_map_elem_t py_tf_globals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_SCALE_S1_1),          MP_ROM_INT(PY_TF_SCALE_S1_1) },
     { MP_ROM_QSTR(MP_QSTR_SCALE_S128_127),      MP_ROM_INT(PY_TF_SCALE_S128_127) },
     { MP_ROM_QSTR(MP_QSTR_Model),               MP_ROM_PTR(&py_tf_model_type) },
+    { MP_ROM_QSTR(MP_QSTR_NMS),                 MP_ROM_PTR(&py_tf_nms_type) },
     { MP_ROM_QSTR(MP_QSTR_load),                MP_ROM_PTR(&py_tf_model_type) },
     { MP_ROM_QSTR(MP_QSTR_load_builtin_model),  MP_ROM_PTR(&py_tf_model_type) },
 };
