@@ -218,18 +218,17 @@ STATIC void py_tf_input_callback(void *callback_data,
     float fscale = 1.0f, fadd = 0.0f;
 
     switch (arg->scale) {
-        case PY_TF_SCALE_0_1:
+        case PY_TF_SCALE_0_1: // convert 0->255 to 0->1
             fscale = 1.0f / 255.0f;
             break;
-        case PY_TF_SCALE_S1_1:
+        case PY_TF_SCALE_S1_1: // convert 0->255 to -1->1
             fscale = 2.0f / 255.0f;
             fadd = -1.0f;
             break;
-        case PY_TF_SCALE_S128_127:
-            fscale = 255.0f / 127.0f;
+        case PY_TF_SCALE_S128_127: // convert 0->255 to -128->127
             fadd = -128.0f;
             break;
-        case PY_TF_SCALE_NONE:
+        case PY_TF_SCALE_NONE: // convert 0->255 to 0->255
         default:
             break;
     }
