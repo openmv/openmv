@@ -27,7 +27,6 @@
 #define PY_TF_LOG_BUFFER_SIZE           (512)
 #define PY_TF_GRAYSCALE_RANGE           ((COLOR_GRAYSCALE_MAX) -(COLOR_GRAYSCALE_MIN))
 #define PY_TF_GRAYSCALE_MID             (((PY_TF_GRAYSCALE_RANGE) +1) / 2)
-#define PY_TF_CLASSIFICATION_OBJ_SIZE   (5)
 
 typedef enum {
     PY_TF_SCALE_NONE,
@@ -61,98 +60,6 @@ STATIC const char *py_tf_map_datatype(libtf_datatype_t datatype) {
         return "float";
     }
 }
-
-// TF Classification Object
-typedef struct py_tf_classification_obj {
-    mp_obj_base_t base;
-    mp_obj_t x, y, w, h, output;
-} py_tf_classification_obj_t;
-
-STATIC void py_tf_classification_print(const mp_print_t *print, mp_obj_t self_in, mp_print_kind_t kind) {
-    py_tf_classification_obj_t *self = self_in;
-    mp_printf(print,
-              "{\"x\":%d, \"y\":%d, \"w\":%d, \"h\":%d, \"output\":",
-              mp_obj_get_int(self->x),
-              mp_obj_get_int(self->y),
-              mp_obj_get_int(self->w),
-              mp_obj_get_int(self->h));
-    mp_obj_print_helper(print, self->output, kind);
-    mp_printf(print, "}");
-}
-
-STATIC mp_obj_t py_tf_classification_subscr(mp_obj_t self_in, mp_obj_t index, mp_obj_t value) {
-    if (value == MP_OBJ_SENTINEL) {
-        // load
-        py_tf_classification_obj_t *self = self_in;
-        if (MP_OBJ_IS_TYPE(index, &mp_type_slice)) {
-            mp_bound_slice_t slice;
-            if (!mp_seq_get_fast_slice_indexes(PY_TF_CLASSIFICATION_OBJ_SIZE, index, &slice)) {
-                mp_raise_msg(&mp_type_OSError, MP_ERROR_TEXT("only slices with step=1 (aka None) are supported"));
-            }
-            mp_obj_tuple_t *result = mp_obj_new_tuple(slice.stop - slice.start, NULL);
-            mp_seq_copy(result->items, &(self->x) + slice.start, result->len, mp_obj_t);
-            return result;
-        }
-        switch (mp_get_index(self->base.type, PY_TF_CLASSIFICATION_OBJ_SIZE, index, false)) {
-            case 0: return self->x;
-            case 1: return self->y;
-            case 2: return self->w;
-            case 3: return self->h;
-            case 4: return self->output;
-        }
-    }
-    return MP_OBJ_NULL; // op not supported
-}
-
-mp_obj_t py_tf_classification_rect(mp_obj_t self_in) {
-    return mp_obj_new_tuple(4, (mp_obj_t []) {((py_tf_classification_obj_t *) self_in)->x,
-                                              ((py_tf_classification_obj_t *) self_in)->y,
-                                              ((py_tf_classification_obj_t *) self_in)->w,
-                                              ((py_tf_classification_obj_t *) self_in)->h});
-}
-
-mp_obj_t py_tf_classification_x(mp_obj_t self_in) {
-    return ((py_tf_classification_obj_t *) self_in)->x;
-}
-mp_obj_t py_tf_classification_y(mp_obj_t self_in) {
-    return ((py_tf_classification_obj_t *) self_in)->y;
-}
-mp_obj_t py_tf_classification_w(mp_obj_t self_in) {
-    return ((py_tf_classification_obj_t *) self_in)->w;
-}
-mp_obj_t py_tf_classification_h(mp_obj_t self_in) {
-    return ((py_tf_classification_obj_t *) self_in)->h;
-}
-mp_obj_t py_tf_classification_output(mp_obj_t self_in) {
-    return ((py_tf_classification_obj_t *) self_in)->output;
-}
-
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_tf_classification_rect_obj, py_tf_classification_rect);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_tf_classification_x_obj, py_tf_classification_x);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_tf_classification_y_obj, py_tf_classification_y);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_tf_classification_w_obj, py_tf_classification_w);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_tf_classification_h_obj, py_tf_classification_h);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_tf_classification_output_obj, py_tf_classification_output);
-
-STATIC const mp_rom_map_elem_t py_tf_classification_locals_dict_table[] = {
-    { MP_ROM_QSTR(MP_QSTR_rect), MP_ROM_PTR(&py_tf_classification_rect_obj) },
-    { MP_ROM_QSTR(MP_QSTR_x), MP_ROM_PTR(&py_tf_classification_x_obj) },
-    { MP_ROM_QSTR(MP_QSTR_y), MP_ROM_PTR(&py_tf_classification_y_obj) },
-    { MP_ROM_QSTR(MP_QSTR_w), MP_ROM_PTR(&py_tf_classification_w_obj) },
-    { MP_ROM_QSTR(MP_QSTR_h), MP_ROM_PTR(&py_tf_classification_h_obj) },
-    { MP_ROM_QSTR(MP_QSTR_output), MP_ROM_PTR(&py_tf_classification_output_obj) }
-};
-
-STATIC MP_DEFINE_CONST_DICT(py_tf_classification_locals_dict, py_tf_classification_locals_dict_table);
-
-MP_DEFINE_CONST_OBJ_TYPE(
-    py_tf_classification_type,
-    MP_QSTR_tf_classification,
-    MP_TYPE_FLAG_NONE,
-    print, py_tf_classification_print,
-    subscr, py_tf_classification_subscr,
-    locals_dict, &py_tf_classification_locals_dict
-    );
 
 // TF Model Output Object.
 typedef struct py_tf_model_output_obj {
@@ -695,14 +602,15 @@ STATIC mp_obj_t py_tf_model_detect(uint n_args, const mp_obj_t *pos_args, mp_map
             imlib_get_statistics(&stats, img->pixfmt, &hist);
             fb_free(); // fb_alloc(hist.LBinCount * sizeof(float), FB_ALLOC_NO_HINT);
 
-            py_tf_classification_obj_t *o = m_new_obj(py_tf_classification_obj_t);
-            o->base.type = &py_tf_classification_type;
-            o->x = mp_obj_new_int(fast_floorf(lnk_data.rect.x * scale) + x_offset);
-            o->y = mp_obj_new_int(fast_floorf(lnk_data.rect.y * scale) + y_offset);
-            o->w = mp_obj_new_int(fast_floorf(lnk_data.rect.w * scale));
-            o->h = mp_obj_new_int(fast_floorf(lnk_data.rect.h * scale));
-            o->output = mp_obj_new_float(stats.LMean * fscale);
-            objects_list->items[j] = o;
+            mp_obj_t rect = mp_obj_new_tuple(4, (mp_obj_t []) {
+                mp_obj_new_int(fast_floorf(lnk_data.rect.x * scale) + x_offset),
+                mp_obj_new_int(fast_floorf(lnk_data.rect.y * scale) + y_offset),
+                mp_obj_new_int(fast_floorf(lnk_data.rect.w * scale)),
+                mp_obj_new_int(fast_floorf(lnk_data.rect.h * scale))
+            });
+            objects_list->items[j] = mp_obj_new_tuple(2, (mp_obj_t []) {
+                rect, mp_obj_new_float(stats.LMean * fscale)
+            });
         }
 
         out_list->items[i] = objects_list;
@@ -938,7 +846,6 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_tf_model_deinit_obj, py_tf_model_deinit);
 
 STATIC const mp_rom_map_elem_t py_tf_model_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR___del__),             MP_ROM_PTR(&py_tf_model_deinit_obj) },
-    { MP_ROM_QSTR(MP_QSTR_classify),            MP_ROM_PTR(&py_tf_model_predict_obj) },
     { MP_ROM_QSTR(MP_QSTR_segment),             MP_ROM_PTR(&py_tf_model_segment_obj) },
     { MP_ROM_QSTR(MP_QSTR_detect),              MP_ROM_PTR(&py_tf_model_detect_obj) },
     { MP_ROM_QSTR(MP_QSTR_regression),          MP_ROM_PTR(&py_tf_model_predict_obj) },

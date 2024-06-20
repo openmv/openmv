@@ -1,5 +1,5 @@
 # This work is licensed under the MIT license.
-# Copyright (c) 2013-2023 OpenMV LLC. All rights reserved.
+# Copyright (c) 2013-2024 OpenMV LLC. All rights reserved.
 # https://github.com/openmv/openmv/blob/master/LICENSE
 #
 # TensorFlow Lite Object Detection Example
@@ -20,10 +20,10 @@ sensor.skip_frames(time=2000)  # Let the camera adjust.
 min_confidence = 0.4
 
 # Load built-in FOMO face detection model
-labels, net = tf.load_builtin_model("fomo_face_detection")
+labels, net = tf.Model("fomo_face_detection")
 
 # Alternatively, models can be loaded from the filesystem storage.
-# net = tf.load('<object_detection_network>', load_to_fb=True)
+# net = tf.Model('<object_detection_network>', load_to_fb=True)
 # labels = [line.rstrip('\n') for line in open("labels.txt")]
 
 colors = [  # Add more colors if you are detecting more than 7 types of classes at once.
@@ -55,11 +55,10 @@ while True:
             continue  # no detections for this class?
 
         print("********** %s **********" % labels[i])
-        for d in detection_list:
-            [x, y, w, h] = d.rect()
+        for (x, y, w, h), score in detection_list:
             center_x = math.floor(x + (w / 2))
             center_y = math.floor(y + (h / 2))
-            print(f"x {center_x}\ty {center_y}")
+            print(f"x {center_x}\ty {center_y}\tscore {score}")
             img.draw_circle((center_x, center_y, 12), color=colors[i], thickness=2)
 
     print(clock.fps(), "fps", end="\n")
