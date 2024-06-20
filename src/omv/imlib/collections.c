@@ -211,106 +211,91 @@ size_t list_size(list_t *ptr) {
     return ptr->size;
 }
 
-void list_push_front(list_t *ptr, void *data) {
-    list_lnk_t *tmp = (list_lnk_t *) xalloc(sizeof(list_lnk_t) + ptr->data_len);
-    memcpy(tmp->data, data, ptr->data_len);
-
-    if (ptr->size++) {
-        tmp->next = ptr->head;
-        tmp->prev = NULL;
-        ptr->head->prev = tmp;
-        ptr->head = tmp;
+static void list_link(list_t *dst, list_lnk_t *insert_before, list_lnk_t *lnk) {
+    if (!dst->size) {
+        lnk->next = NULL;
+        lnk->prev = NULL;
+        dst->head = lnk;
+        dst->tail = lnk;
+    } else if (dst->head == insert_before) {
+        lnk->next = insert_before;
+        lnk->prev = NULL;
+        insert_before->prev = lnk;
+        dst->head = lnk;
+    } else if (!insert_before) {
+        lnk->next = NULL;
+        lnk->prev = dst->tail;
+        dst->tail->next = lnk;
+        dst->tail = lnk;
     } else {
-        tmp->next = NULL;
-        tmp->prev = NULL;
-        ptr->head = tmp;
-        ptr->tail = tmp;
+        lnk->next = insert_before;
+        lnk->prev = insert_before->prev;
+        insert_before->prev->next = lnk;
+        insert_before->prev = lnk;
     }
+
+    dst->size += 1;
 }
 
-void list_push_back(list_t *ptr, void *data) {
-    list_lnk_t *tmp = (list_lnk_t *) xalloc(sizeof(list_lnk_t) + ptr->data_len);
-    memcpy(tmp->data, data, ptr->data_len);
-
-    if (ptr->size++) {
-        tmp->next = NULL;
-        tmp->prev = ptr->tail;
-        ptr->tail->next = tmp;
-        ptr->tail = tmp;
+static void list_unlink(list_t *src, list_lnk_t *lnk) {
+    if (src->head == lnk) {
+        if (lnk->next) {
+            lnk->next->prev = NULL;
+        }
+        src->head = lnk->next;
+    } else if (src->tail == lnk) {
+        if (lnk->prev) {
+            lnk->prev->next = NULL;
+        }
+        src->tail = lnk->prev;
     } else {
-        tmp->next = NULL;
-        tmp->prev = NULL;
-        ptr->head = tmp;
-        ptr->tail = tmp;
-    }
-}
-
-void list_pop_front(list_t *ptr, void *data) {
-    list_lnk_t *tmp = ptr->head;
-
-    if (data) {
-        memcpy(data, tmp->data, ptr->data_len);
+        lnk->prev->next = lnk->next;
+        lnk->next->prev = lnk->prev;
     }
 
-    if (tmp->next) {
-        tmp->next->prev = NULL;
-    }
-    ptr->head = tmp->next;
-    ptr->size -= 1;
-    xfree(tmp);
-}
-
-void list_pop_back(list_t *ptr, void *data) {
-    list_lnk_t *tmp = ptr->tail;
-
-    if (data) {
-        memcpy(data, tmp->data, ptr->data_len);
-    }
-
-    tmp->prev->next = NULL;
-    ptr->tail = tmp->prev;
-    ptr->size -= 1;
-    xfree(tmp);
-}
-
-void list_get(list_t *ptr, list_lnk_t *lnk, void *data) {
-    memcpy(data, lnk->data, ptr->data_len);
-}
-
-void list_set(list_t *ptr, list_lnk_t *lnk, void *data) {
-    memcpy(lnk->data, data, ptr->data_len);
+    src->size -= 1;
 }
 
 void list_insert(list_t *ptr, list_lnk_t *lnk, void *data) {
-    if (ptr->head == lnk) {
-        list_push_front(ptr, data);
-    } else if (!lnk) {
-        list_push_back(ptr, data);
-    } else {
-        list_lnk_t *tmp = (list_lnk_t *) xalloc(sizeof(list_lnk_t) + ptr->data_len);
-        memcpy(tmp->data, data, ptr->data_len);
+    list_lnk_t *tmp = (list_lnk_t *) xalloc(sizeof(list_lnk_t) + ptr->data_len);
+    memcpy(tmp->data, data, ptr->data_len);
+    list_link(ptr, lnk, tmp);
+}
 
-        tmp->next = lnk;
-        tmp->prev = lnk->prev;
-        lnk->prev->next = tmp;
-        lnk->prev = tmp;
-        ptr->size += 1;
-    }
+void list_push_front(list_t *ptr, void *data) {
+    list_insert(ptr, ptr->head, data);
+}
+
+void list_push_back(list_t *ptr, void *data) {
+    list_insert(ptr, NULL, data);
 }
 
 void list_remove(list_t *ptr, list_lnk_t *lnk, void *data) {
-    if (ptr->head == lnk) {
-        list_pop_front(ptr, data);
-    } else if (ptr->tail == lnk) {
-        list_pop_back(ptr, data);
-    } else {
-        if (data) {
-            memcpy(data, lnk->data, ptr->data_len);
-        }
-
-        lnk->prev->next = lnk->next;
-        lnk->next->prev = lnk->prev;
-        ptr->size -= 1;
-        xfree(lnk);
+    if (data) {
+        memcpy(data, lnk->data, ptr->data_len);
     }
+
+    list_unlink(ptr, lnk);
+    xfree(lnk);
+}
+
+void list_pop_front(list_t *ptr, void *data) {
+    list_remove(ptr, ptr->head, data);
+}
+
+void list_pop_back(list_t *ptr, void *data) {
+    list_remove(ptr, ptr->tail, data);
+}
+
+void list_move(list_t *dst, list_t *src, list_lnk_t *before, list_lnk_t *lnk) {
+    list_unlink(src, lnk);
+    list_link(dst, before, lnk);
+}
+
+void list_move_front(list_t *dst, list_t *src, list_lnk_t *lnk) {
+    list_move(dst, src, dst->head, lnk);
+}
+
+void list_move_back(list_t *dst, list_t *src, list_lnk_t *lnk) {
+    list_move(dst, src, NULL, lnk);
 }

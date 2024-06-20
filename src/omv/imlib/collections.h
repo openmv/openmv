@@ -88,12 +88,15 @@ void list_copy(list_t *dst, list_t *src);
 void list_free(list_t *ptr);
 void list_clear(list_t *ptr);
 size_t list_size(list_t *ptr);
+void list_insert(list_t *ptr, list_lnk_t *lnk, void *data);
 void list_push_front(list_t *ptr, void *data);
 void list_push_back(list_t *ptr, void *data);
+void list_remove(list_t *ptr, list_lnk_t *lnk, void *data);
 void list_pop_front(list_t *ptr, void *data);
 void list_pop_back(list_t *ptr, void *data);
-void list_insert(list_t *ptr, list_lnk_t *lnk, void *data);
-void list_remove(list_t *ptr, list_lnk_t *lnk, void *data);
+void list_move(list_t *dst, list_t *src, list_lnk_t *before, list_lnk_t *lnk);
+void list_move_front(list_t *dst, list_t *src, list_lnk_t *lnk);
+void list_move_back(list_t *dst, list_t *src, list_lnk_t *lnk);
 #define list_for_each(iterator, list) \
     for (list_lnk_t *iterator = list->head; iterator != NULL; iterator = iterator->next)
 #define list_get_data(iterator) ((void *) iterator->data)
