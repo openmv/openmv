@@ -306,8 +306,6 @@ void CSI_IRQHandler(void) {
     CSI_REG_SR(CSI) = csisr;
 
     if (csisr & CSI_SR_SOF_INT_MASK) {
-        // Clear the FIFO and re/enable DMA.
-        CSI_REG_CR3(CSI) |= (CSI_CR3_DMA_REFLASH_RFF_MASK | CSI_CR3_DMA_REQ_EN_RFF_MASK);
         sensor_sof_callback();
     } else if (csisr & CSI_SR_DMA_TSF_DONE_FB1_MASK) {
         sensor_line_callback(CSI_REG_DMASA_FB1(CSI));
