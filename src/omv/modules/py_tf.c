@@ -24,6 +24,8 @@
 #include "py_tf.h"
 #include "libtf_builtin_models.h"
 
+#include "ulab/code/ndarray.h"
+
 #define PY_TF_LOG_BUFFER_SIZE           (512)
 #define PY_TF_GRAYSCALE_RANGE           ((COLOR_GRAYSCALE_MAX) -(COLOR_GRAYSCALE_MIN))
 #define PY_TF_GRAYSCALE_MID             (((PY_TF_GRAYSCALE_RANGE) +1) / 2)
@@ -432,6 +434,58 @@ STATIC void py_tf_array_input_callback(void *callback_data,
     }
 }
 
+STATIC void py_tf_ndarray_input_callback(void *callback_data,
+                                         void *model_input,
+                                         libtf_parameters_t *params) {
+    ndarray_obj_t *ndarray = MP_OBJ_TO_PTR(callback_data);
+
+    if (ndarray->shape[ULAB_MAX_DIMS - ndarray->ndim] !=
+        (params->input_height * params->input_width * params->input_channels)) {
+        #if ULAB_MAX_DIMS > 1
+        if (ndarray->shape[ULAB_MAX_DIMS - ndarray->ndim] != params->input_height) {
+            mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Row count mismatch!"));
+        }
+        if (ndarray->ndim > 1) {
+            if (ndarray->shape[ULAB_MAX_DIMS - ndarray->ndim + 1] !=
+                (params->input_width * params->input_channels)) {
+                #if ULAB_MAX_DIMS > 2
+                if (ndarray->shape[ULAB_MAX_DIMS - ndarray->ndim + 1] != params->input_width) {
+                    mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Column count mismatch!"));
+                }
+                if (ndarray->ndim > 2) {
+                    if (ndarray->shape[ULAB_MAX_DIMS - ndarray->ndim + 2] != params->input_channels) {
+                        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Channel count mismatch!"));
+                    }
+                } else {
+                    mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Channel count mismatch!"));
+                }
+                #else
+                mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Column count mismatch!"));
+                #endif
+            }
+        } else {
+            mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Column count mismatch!"));
+        }
+        #else
+        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Row count mismatch!"));
+        #endif
+    }
+
+    if (params->input_datatype == LIBTF_DATATYPE_FLOAT) {
+        float *model_input_float = (float *) model_input;
+        for (size_t i = 0; i < ndarray->len; i++) {
+            float value = ndarray_get_float_index(ndarray->array, ndarray->dtype, i);
+            model_input_float[i] = value;
+        }
+    } else {
+        uint8_t *model_input_8 = (uint8_t *) model_input;
+        for (size_t i = 0; i < ndarray->len; i++) {
+            float value = ndarray_get_float_index(ndarray->array, ndarray->dtype, i);
+            model_input_8[i] = fast_roundf((value / params->input_scale) + params->input_zero_point);
+        }
+    }
+}
+
 typedef struct py_tf_predict_callback_data {
     mp_obj_t model;
     rectangle_t *roi;
@@ -513,6 +567,14 @@ STATIC mp_obj_t py_tf_model_predict(uint n_args, const mp_obj_t *pos_args, mp_ma
                                      &model->params,
                                      py_tf_array_input_callback,
                                      (void *) &pos_args[1],
+                                     py_tf_array_output_callback,
+                                     &output_callback_data);
+    } else if (MP_OBJ_IS_TYPE(pos_args[1], &ulab_ndarray_type)) {
+        invoke_result = libtf_invoke(model->data,
+                                     tensor_arena,
+                                     &model->params,
+                                     py_tf_ndarray_input_callback,
+                                     (void *) pos_args[1],
                                      py_tf_array_output_callback,
                                      &output_callback_data);
     } else {
