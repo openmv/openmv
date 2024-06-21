@@ -200,19 +200,18 @@ STATIC MP_DEFINE_CONST_OBJ_TYPE(
     locals_dict, &py_tf_model_output_locals_dict
     );
 
-// TF Input/Output callback functions.
-typedef struct py_tf_input_callback_data {
+typedef struct py_tf_image_input_callback_data {
     image_t *img;
     rectangle_t *roi;
     py_tf_scale_t scale;
     float mean[3];
     float stdev[3];
-} py_tf_input_callback_data_t;
+} py_tf_image_input_callback_data_t;
 
-STATIC void py_tf_input_callback(void *callback_data,
-                                 void *model_input,
-                                 libtf_parameters_t *params) {
-    py_tf_input_callback_data_t *arg = (py_tf_input_callback_data_t *) callback_data;
+STATIC void py_tf_image_input_callback(void *callback_data,
+                                       void *model_input,
+                                       libtf_parameters_t *params) {
+    py_tf_image_input_callback_data_t *arg = (py_tf_image_input_callback_data_t *) callback_data;
 
     int shift = (params->input_datatype == LIBTF_DATATYPE_INT8) ? PY_TF_GRAYSCALE_MID : 0;
     float fscale = 1.0f, fadd = 0.0f;
@@ -331,9 +330,9 @@ STATIC void py_tf_input_callback(void *callback_data,
     }
 }
 
-STATIC void py_tf_output_callback(void *callback_data,
-                                  void *model_output,
-                                  libtf_parameters_t *params) {
+STATIC void py_tf_array_output_callback(void *callback_data,
+                                        void *model_output,
+                                        libtf_parameters_t *params) {
     mp_obj_t *arg = (mp_obj_t *) callback_data;
     size_t len = params->output_height * params->output_width * params->output_channels;
     *arg = mp_obj_new_list(len, NULL);
@@ -358,9 +357,9 @@ STATIC void py_tf_output_callback(void *callback_data,
     }
 }
 
-STATIC void py_tf_regression_input_callback(void *callback_data,
-                                            void *model_input,
-                                            libtf_parameters_t *params) {
+STATIC void py_tf_array_input_callback(void *callback_data,
+                                       void *model_input,
+                                       libtf_parameters_t *params) {
     size_t len;
     mp_obj_t *items;
     mp_obj_get_array(*((mp_obj_t *) callback_data), &len, &items);
@@ -512,22 +511,22 @@ STATIC mp_obj_t py_tf_model_predict(uint n_args, const mp_obj_t *pos_args, mp_ma
         invoke_result = libtf_invoke(model->data,
                                      tensor_arena,
                                      &model->params,
-                                     py_tf_regression_input_callback,
+                                     py_tf_array_input_callback,
                                      (void *) &pos_args[1],
-                                     py_tf_output_callback,
+                                     py_tf_array_output_callback,
                                      &output_callback_data);
     } else {
         image_t *image = py_helper_arg_to_image(pos_args[1], ARG_IMAGE_ANY);
         rectangle_t roi = py_helper_arg_to_roi(args[ARG_roi].u_obj, image);
-        py_tf_input_callback_data_t py_tf_input_callback_data = {
+        py_tf_image_input_callback_data_t py_tf_image_input_callback_data = {
             .img = image,
             .roi = &roi,
             .scale = args[ARG_scale].u_int,
             .mean = {0.0f, 0.0f, 0.0f},
             .stdev = {1.0f, 1.0f, 1.0f}
         };
-        py_helper_arg_to_float_array(args[ARG_mean].u_obj, py_tf_input_callback_data.mean, 3);
-        py_helper_arg_to_float_array(args[ARG_stdev].u_obj, py_tf_input_callback_data.stdev, 3);
+        py_helper_arg_to_float_array(args[ARG_mean].u_obj, py_tf_image_input_callback_data.mean, 3);
+        py_helper_arg_to_float_array(args[ARG_stdev].u_obj, py_tf_image_input_callback_data.stdev, 3);
 
         if (args[ARG_callback].u_obj != mp_const_none) {
             py_tf_predict_callback_data_t py_tf_predict_output_callback_data;
@@ -538,17 +537,17 @@ STATIC mp_obj_t py_tf_model_predict(uint n_args, const mp_obj_t *pos_args, mp_ma
             invoke_result = libtf_invoke(model->data,
                                          tensor_arena,
                                          &model->params,
-                                         py_tf_input_callback,
-                                         &py_tf_input_callback_data,
+                                         py_tf_image_input_callback,
+                                         &py_tf_image_input_callback_data,
                                          py_tf_predict_output_callback,
                                          &py_tf_predict_output_callback_data);
         } else {
             invoke_result = libtf_invoke(model->data,
                                          tensor_arena,
                                          &model->params,
-                                         py_tf_input_callback,
-                                         &py_tf_input_callback_data,
-                                         py_tf_output_callback,
+                                         py_tf_image_input_callback,
+                                         &py_tf_image_input_callback_data,
+                                         py_tf_array_output_callback,
                                          &output_callback_data);
         }
     }
