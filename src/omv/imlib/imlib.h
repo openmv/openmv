@@ -145,6 +145,12 @@ typedef struct rectangle {
     int16_t h;
 } rectangle_t;
 
+typedef struct bounding_box_lnk_data {
+    rectangle_t rect;
+    float score;
+    int label_index;
+} bounding_box_lnk_data_t;
+
 void rectangle_init(rectangle_t *ptr, int x, int y, int w, int h);
 void rectangle_copy(rectangle_t *dst, rectangle_t *src);
 bool rectangle_equal_fast(rectangle_t *ptr0, rectangle_t *ptr1);
@@ -152,6 +158,9 @@ bool rectangle_overlap(rectangle_t *ptr0, rectangle_t *ptr1);
 void rectangle_intersected(rectangle_t *dst, rectangle_t *src);
 void rectangle_united(rectangle_t *dst, rectangle_t *src);
 float rectangle_iou(rectangle_t *r1, rectangle_t *r2);
+void rectangle_nms_add_bounding_box(list_t *bounding_boxes, bounding_box_lnk_data_t *box);
+int rectangle_nms_get_bounding_boxes(list_t *bounding_boxes, float threshold, float sigma);
+void rectangle_map_bounding_boxes(list_t *bounding_boxes, int window_w, int window_h, rectangle_t *roi);
 
 /////////////////
 // Color Stuff //
