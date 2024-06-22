@@ -26,7 +26,7 @@ SRCS += $(addprefix common/,    \
 	usbdbg.c                    \
 	tinyusb_debug.c             \
 	file_utils.c                \
-	boot_utils.c                \
+	mp_utils.c                  \
 	sensor_utils.c              \
    )
 
