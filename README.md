@@ -27,7 +27,7 @@ The first generation of OpenMV cameras is based on STM32 ARM Cortex-M Digital Si
 The OpenMV project was successfully funded via Kickstarter back in 2015 and has come a long way since then. For more information, please visit [https://openmv.io](https://openmv.io)
 
 ## TensorFlow support
-The OpenMV firmware supports loading quantized TensorFlow Lite models. The firmware supports loading external models that reside on the filesystem to memory (on boards with SDRAM), and internal models (embedded into the firmware) in place. To load an external TensoFlow model from the filesystem from Python use [`tf`](https://docs.openmv.io/library/omv.tf.html) Python module. For information on embedding TensorFlow models into the firmware, and loading them, please see [TensorFlow Support](https://github.com/openmv/openmv/blob/master/src/lib/libtf/README.md).
+The OpenMV firmware supports loading quantized TensorFlow Lite models. The firmware supports loading external models that reside on the filesystem to memory (on boards with SDRAM), and internal models (embedded into the firmware) in place. To load an external TensorFlow model from the filesystem from Python use [`tf`](https://docs.openmv.io/library/omv.tf.html) Python module. For information on embedding TensorFlow models into the firmware, and loading them, please see [TensorFlow Support](https://github.com/openmv/openmv/blob/master/src/lib/libtf/README.md).
 
 ## Interface library
 
