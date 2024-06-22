@@ -106,7 +106,7 @@ target_sources(${MICROPY_TARGET} PRIVATE
     ${TOP_DIR}/${OMV_DIR}/common/usbdbg.c
     ${TOP_DIR}/${OMV_DIR}/common/tinyusb_debug.c
     ${TOP_DIR}/${OMV_DIR}/common/file_utils.c
-    ${TOP_DIR}/${OMV_DIR}/common/boot_utils.c
+    ${TOP_DIR}/${OMV_DIR}/common/mp_utils.c
     ${TOP_DIR}/${OMV_DIR}/common/sensor_utils.c
 
     ${TOP_DIR}/${OMV_DIR}/sensors/ov2640.c
