@@ -35,7 +35,7 @@
 #include "py_imageio.h"
 #endif
 
-static const mp_obj_type_t py_image_type;
+const mp_obj_type_t py_image_type;
 
 #if defined(IMLIB_ENABLE_IMAGE_FILE_IO)
 extern const char *ffs_strerror(FRESULT res);
@@ -6492,7 +6492,7 @@ static const mp_rom_map_elem_t locals_dict_table[] = {
 
 STATIC MP_DEFINE_CONST_DICT(py_image_locals_dict, locals_dict_table);
 
-STATIC MP_DEFINE_CONST_OBJ_TYPE(
+MP_DEFINE_CONST_OBJ_TYPE(
     py_image_type,
     MP_QSTR_Image,
     MP_TYPE_FLAG_ITER_IS_GETITER,
