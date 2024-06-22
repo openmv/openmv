@@ -51,13 +51,6 @@ _ram_end    = ORIGIN(OMV_MAIN_MEMORY) + LENGTH(OMV_MAIN_MEMORY);
 _ffs_cache          = ORIGIN(OMV_FFS_MEMORY) + OMV_FFS_MEMORY_OFFSET;
 #endif
 
-#if defined(OMV_JPEG_MEMORY)
-#if !defined(OMV_JPEG_MEMORY_OFFSET)
-#define OMV_JPEG_MEMORY_OFFSET          (0)
-#endif
-_jpeg_buf           = ORIGIN(OMV_JPEG_MEMORY) + OMV_JPEG_MEMORY_OFFSET;
-#endif
-
 #if defined(OMV_VOSPI_MEMORY)
 #if !defined(OMV_VOSPI_MEMORY_OFFSET)
 #define OMV_VOSPI_MEMORY_OFFSET         (0)
@@ -111,6 +104,17 @@ SECTIONS
     . = . + OMV_FB_OVERLAY_SIZE;
     _fballoc_overlay_end = .;
   } >OMV_FB_OVERLAY_MEMORY
+  #endif
+
+  #if defined(OMV_JPEG_MEMORY)
+  /* JPEG framebuffer memory */
+  .jpeg_memory (NOLOAD) :
+  {
+    . = ALIGN(4);
+    _jpeg_buf = .;      // IDE JPEG buffer
+    . = . + OMV_JPEG_BUF_SIZE;
+    . = ALIGN(4);
+  } >OMV_JPEG_MEMORY
   #endif
 
   /* Misc DMA buffers section */

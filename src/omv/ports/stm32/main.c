@@ -93,7 +93,7 @@
 
 #include "extmod/vfs.h"
 #include "extmod/vfs_fat.h"
-#include "boot_utils.h"
+#include "mp_utils.h"
 
 int errno;
 extern char _vfs_buf[];
@@ -273,13 +273,8 @@ soft_reset:
     mp_thread_init();
     #endif
 
-    // Stack limit should be less than real stack size, so we have a
-    // chance to recover from limit hit. (Limit is measured in bytes)
-    mp_stack_set_top(&_estack);
-    mp_stack_set_limit((char *) &_estack - (char *) &_sstack - 1024);
-
-    // GC init
-    gc_init(&_heap_start, &_heap_end);
+    // Initialize the stack and GC memory.
+    mp_init_gc_stack(&_sstack, &_estack, &_heap_start, &_heap_end, 1024);
 
     #if MICROPY_ENABLE_PYSTACK
     static mp_obj_t pystack[384];
@@ -405,7 +400,7 @@ soft_reset:
     if (res == FR_NO_FILESYSTEM) {
         // Create a fresh filesystem.
         led_state(LED_RED, 1);
-        bootutils_init_filesystem(vfs_fat);
+        mp_init_filesystem(vfs_fat);
         led_state(LED_RED, 0);
         // Flush storage
         storage_flush();
@@ -480,11 +475,11 @@ else {
 
 
     // Run boot.py script.
-    bool interrupted = bootutils_exec_bootscript("boot.py", true, false);
+    bool interrupted = mp_exec_bootscript("boot.py", true, false);
 
     // Run main.py script on first soft-reset.
     if (first_soft_reset && !interrupted && mp_vfs_import_stat("main.py")) {
-        bootutils_exec_bootscript("main.py", true, openmv_config.wifidbg);
+        mp_exec_bootscript("main.py", true, openmv_config.wifidbg);
         goto soft_reset_exit;
     }
 

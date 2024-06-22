@@ -61,21 +61,19 @@
 // Linker script constants (see the linker script template stm32fxxx.ld.S).
 // Note: fb_alloc is a stack-based, dynamically allocated memory on FB.
 // The maximum available fb_alloc memory = FB_ALLOC_SIZE + FB_SIZE - (w*h*bpp).
-#define OMV_FB_MEMORY                         SRAM1 // Framebuffer, fb_alloc
 #define OMV_MAIN_MEMORY                       DTCM // data, bss and heap
+#define OMV_HEAP_SIZE                         (55K)
 #define OMV_STACK_MEMORY                      ITCM // stack memory
+#define OMV_STACK_SIZE                        (16K)
 #define OMV_DMA_MEMORY                        DTCM // Misc DMA buffers
-
+#define OMV_FB_MEMORY                         SRAM1 // Framebuffer, fb_alloc
 #define OMV_FB_SIZE                           (300K) // FB memory: header + VGA/GS image
 #define OMV_FB_ALLOC_SIZE                     (84K) // minimum fb alloc size
-#define OMV_STACK_SIZE                        (16K)
-#define OMV_HEAP_SIZE                         (55K)
-
-#define OMV_LINE_BUF_SIZE                     (3 * 1024) // Image line buffer round(640 * 2BPP * 2 buffers).
+#define OMV_JPEG_BUF_SIZE                     (22 * 1024) // IDE JPEG buffer (header + data).
 #define OMV_MSC_BUF_SIZE                      (2K) // USB MSC bot data
 #define OMV_VFS_BUF_SIZE                      (1K) // VFS struct + FATFS file buffer (624 bytes)
 #define OMV_FFS_BUF_SIZE                      (32K) // Flash filesystem cache
-#define OMV_JPEG_BUF_SIZE                     (22 * 1024) // IDE JPEG buffer (header + data).
+#define OMV_LINE_BUF_SIZE                     (3 * 1024) // Image line buffer round(640 * 2BPP * 2 buffers).
 
 // Memory map.
 #define OMV_FLASH_ORIGIN                      0x08000000
