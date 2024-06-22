@@ -57,13 +57,6 @@ __iomux_gpr16_adr = 0x400AC040;
 __iomux_gpr17_adr = 0x400AC044;
 __iomux_gpr17_value = OMV_FLEXRAM_CONFIG;
 
-#if defined(OMV_JPEG_MEMORY)
-#if !defined(OMV_JPEG_MEMORY_OFFSET)
-#define OMV_JPEG_MEMORY_OFFSET          (0)
-#endif
-_jpeg_buf           = ORIGIN(OMV_JPEG_MEMORY) + OMV_JPEG_MEMORY_OFFSET;
-#endif
-
 #if defined(OMV_VOSPI_MEMORY)
 #if !defined(OMV_VOSPI_MEMORY_OFFSET)
 #define OMV_VOSPI_MEMORY_OFFSET         (0)
@@ -194,6 +187,27 @@ SECTIONS
     __stack  = .;
   } >OMV_STACK_MEMORY
 
+  #if defined(OMV_GC_BLOCK0_MEMORY)
+  .gc_block0 (NOLOAD) :
+  {
+    . = ALIGN(4);
+    . += OMV_GC_BLOCK0_SIZE;
+    . = ALIGN(4);
+  } >OMV_GC_BLOCK0_MEMORY
+  #endif
+
+  .gc_blocks_table :
+  {
+    . = ALIGN(4);
+    _gc_blocks_table_start = .;
+    #if defined(OMV_GC_BLOCK0_MEMORY)
+    LONG (ADDR(.gc_block0))
+    LONG (SIZEOF(.gc_block0) / 4)
+    #endif
+    _gc_blocks_table_end = .;
+    . = ALIGN(4);
+  } > FLASH_TEXT
+
   /* Main framebuffer memory */
   .fb_memory (NOLOAD) :
   {
@@ -201,12 +215,12 @@ SECTIONS
     _fb_base = .;
     . += OMV_FB_SIZE;
 
+    . = ALIGN(4);
     _fb_end = .;
     . += OMV_FB_ALLOC_SIZE;
 
     . = ALIGN(4);
     _fballoc = .;
-    . = ALIGN(4);
   } >OMV_FB_MEMORY
 
   #if defined(OMV_FB_OVERLAY_MEMORY)
@@ -217,6 +231,17 @@ SECTIONS
     . = . + OMV_FB_OVERLAY_SIZE;
     _fballoc_overlay_end = .;
   } >OMV_FB_OVERLAY_MEMORY
+  #endif
+
+  #if defined(OMV_JPEG_MEMORY)
+  /* JPEG framebuffer memory */
+  .jpeg_memory (NOLOAD) :
+  {
+    . = ALIGN(4);
+    _jpeg_buf = .;      // IDE JPEG buffer
+    . = . + OMV_JPEG_BUF_SIZE;
+    . = ALIGN(4);
+  } >OMV_JPEG_MEMORY
   #endif
 
   /* Misc DMA buffers section */

@@ -1,5 +1,6 @@
 #include <mpconfigport.h>
 
+#define MICROPY_GC_SPLIT_HEAP   (1)
 #define MICROPY_NLR_RAISE_HOOK                 \
     do {                                       \
         extern void fb_alloc_free_till_mark(); \
