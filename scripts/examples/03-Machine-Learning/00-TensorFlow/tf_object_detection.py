@@ -10,6 +10,7 @@ import sensor
 import time
 import tf
 import math
+import image
 
 sensor.reset()  # Reset and initialize the sensor.
 sensor.set_pixformat(sensor.RGB565)  # Set pixel format to RGB565 (or GRAYSCALE)
@@ -40,17 +41,16 @@ colors = [  # Add more colors if you are detecting more than 7 types of classes 
 # object. So, we will get those output images and then run find_blobs() on them to extract the
 # centroids. We will also run get_stats() on the detected blobs to determine their score.
 # The Non-Max-Supression (NMS) object then filters out overlapping detections and maps their
-# position in the output image back to the original input image. The callback then returns a
+# position in the output image back to the original input image. The function then returns a
 # list per class which each contain a list of (rect, score) tuples representing the detected
 # objects.
 
 
-def fomo_callback(model, rect):
-    out = model.output[0]
+def fomo_post_process(model, output, rect):
     oh, ow, oc = model.output_shape
     nms = tf.NMS(ow, oh, rect)
     for i in range(oc):
-        img = out.get_image(i)
+        img = image.Image(output, shape=(oh, ow, 1), strides=(i, oc), scale=(255, 0))
         blobs = img.find_blobs(threshold_list, x_stride=1, area_threshold=1, pixels_threshold=1)
         for b in blobs:
             rect = b.rect()
@@ -67,7 +67,7 @@ while True:
     img = sensor.snapshot()
 
     for i, detection_list in enumerate(
-        net.predict(img, callback=fomo_callback)
+        fomo_post_process(net, net.predict(img), rect=(0, 0, img.width(), img.height()))
     ):
         if i == 0:
             continue  # background class
