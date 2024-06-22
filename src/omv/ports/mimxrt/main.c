@@ -59,10 +59,8 @@
 #include "fb_alloc.h"
 #include "dma_alloc.h"
 #include "file_utils.h"
-#include "boot_utils.h"
+#include "mp_utils.h"
 #include "mimxrt_hal.h"
-
-extern uint8_t _sstack, _estack, _heap_start, _heap_end;
 
 int main(void) {
     bool sdcard_detected = false;
@@ -77,10 +75,9 @@ int main(void) {
 soft_reset:
     led_init();
 
-    // Initialise stack extents and GC heap.
-    mp_stack_set_top(&_estack);
-    mp_stack_set_limit(&_estack - &_sstack - 1024);
-    gc_init(&_heap_start, &_heap_end);
+    // Initialize the stack and GC memory.
+    extern uint8_t _sstack, _estack, _heap_start, _heap_end;
+    mp_init_gc_stack(&_sstack, &_estack, &_heap_start, &_heap_end, 1024);
 
     // Initialise MicroPython runtime.
     mp_init();
@@ -177,7 +174,7 @@ soft_reset:
         } else {
             // Create a fresh filesystem.
             fs_user_mount_t *vfs = MP_OBJ_TYPE_GET_SLOT(&mp_fat_vfs_type, make_new) (&mp_fat_vfs_type, 1, 0, &bdev);
-            if (bootutils_init_filesystem(vfs) == 0) {
+            if (mp_init_filesystem(vfs) == 0) {
                 if (mp_vfs_mount_and_chdir_protected(bdev, mount_point) == 0) {
                     mimxrt_msc_medium = &mimxrt_flash_type;
                 }
@@ -194,11 +191,11 @@ soft_reset:
     }
 
     // Run boot.py script.
-    bool interrupted = bootutils_exec_bootscript("boot.py", true, false);
+    bool interrupted = mp_exec_bootscript("boot.py", true, false);
 
     // Run main.py script on first soft-reset.
     if (first_soft_reset && !interrupted && mp_vfs_import_stat("main.py")) {
-        bootutils_exec_bootscript("main.py", true, false);
+        mp_exec_bootscript("main.py", true, false);
         goto soft_reset_exit;
     }
 
@@ -272,12 +269,6 @@ soft_reset_exit:
     mp_deinit();
     first_soft_reset = false;
     goto soft_reset;
-}
-
-void gc_collect(void) {
-    gc_collect_start();
-    gc_helper_collect_regs_and_stack();
-    gc_collect_end();
 }
 
 void nlr_jump_fail(void *val) {

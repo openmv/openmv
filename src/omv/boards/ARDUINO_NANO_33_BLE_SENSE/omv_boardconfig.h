@@ -47,14 +47,13 @@
 #define OMV_USB1_IRQ_HANDLER       (USBD_IRQHandler)
 
 // Linker script constants (see the linker script template port/x.ld.S).
-#define OMV_FB_MEMORY              SRAM // Framebuffer, fb_alloc
 #define OMV_MAIN_MEMORY            SRAM // data, bss and heap memory
+#define OMV_HEAP_SIZE              (64K)
 #define OMV_STACK_MEMORY           SRAM // stack memory
-
+#define OMV_STACK_SIZE             (8K)
+#define OMV_FB_MEMORY              SRAM // Framebuffer, fb_alloc
 #define OMV_FB_SIZE                (128K) // FB memory: header + QVGA/GS image
 #define OMV_FB_ALLOC_SIZE          (16K) // minimum fb alloc size
-#define OMV_STACK_SIZE             (8K)
-#define OMV_HEAP_SIZE              (64K)
 #define OMV_JPEG_BUF_SIZE          (16 * 1024) // IDE JPEG buffer (header + data).
 
 #define OMV_TEXT_ORIGIN            0x00026000

@@ -114,23 +114,21 @@
 // Linker script constants (see the linker script template stm32fxxx.ld.S).
 // Note: fb_alloc is a stack-based, dynamically allocated memory on FB.
 // The maximum available fb_alloc memory = FB_ALLOC_SIZE + FB_SIZE - (w*h*bpp).
-#define OMV_FFS_MEMORY                        DTCM // Flash filesystem cache memory
 #define OMV_MAIN_MEMORY                       SRAM1 // data, bss and heap memory
+#define OMV_HEAP_SIZE                         (228K)
 #define OMV_STACK_MEMORY                      ITCM // stack memory
-#define OMV_DMA_MEMORY                        SRAM2 // DMA buffers memory.
+#define OMV_STACK_SIZE                        (64K)
 #define OMV_FB_MEMORY                         AXI_SRAM // Framebuffer, fb_alloc
-#define OMV_JPEG_MEMORY                       SRAM3 // JPEG buffer memory.
-#define OMV_VOSPI_MEMORY                      SRAM4 // VoSPI buffer memory.
-
 #define OMV_FB_SIZE                           (400K) // FB memory: header + VGA/GS image
 #define OMV_FB_ALLOC_SIZE                     (100K) // minimum fb alloc size
-#define OMV_STACK_SIZE                        (64K)
-#define OMV_HEAP_SIZE                         (228K)
-
-#define OMV_LINE_BUF_SIZE                     (5 * 1024) // Image line buffer.
+#define OMV_JPEG_MEMORY                       SRAM3 // JPEG buffer memory.
+#define OMV_JPEG_BUF_SIZE                     (32 * 1024) // IDE JPEG buffer (header + data).
+#define OMV_DMA_MEMORY                        SRAM2 // DMA buffers memory.
+#define OMV_VOSPI_MEMORY                      SRAM4 // VoSPI buffer memory.
+#define OMV_FFS_MEMORY                        DTCM // Flash filesystem cache memory
 #define OMV_MSC_BUF_SIZE                      (2K) // USB MSC bot data
 #define OMV_VFS_BUF_SIZE                      (1K) // VFS struct + FATFS file buffer (624 bytes)
-#define OMV_JPEG_BUF_SIZE                     (32 * 1024) // IDE JPEG buffer (header + data).
+#define OMV_LINE_BUF_SIZE                     (5 * 1024) // Image line buffer.
 
 // Memory map.
 #define OMV_FLASH_ORIGIN                      0x08000000

@@ -52,7 +52,7 @@ void mimxrt_hal_init() {
     SCB_EnableICache();
 
     // SDRAM
-    #ifdef OMV_SDRAM_SIZE
+    #ifdef OMV_DRAM_ORIGIN
     extern void mimxrt_sdram_init(void);
     mimxrt_sdram_init();
     #endif

@@ -8,7 +8,7 @@ SD_DIR     = $(TOP_DIR)/drivers/nrf
 CFLAGS += -std=gnu99 -Wall -Werror -Warray-bounds -mthumb -nostartfiles -fdata-sections -ffunction-sections
 CFLAGS += -D$(MCU) -D$(CFLAGS_MCU) -DARM_NN_TRUNCATE -D__FPU_PRESENT=1 -D__VFP_FP__ -D$(TARGET)\
           -fsingle-precision-constant -Wdouble-promotion -mcpu=$(CPU) -mtune=$(CPU) -mfpu=$(FPU) -mfloat-abi=hard\
-          -DCMSIS_MCU_H=$(CMSIS_MCU_H)
+          -DCMSIS_MCU_H=$(CMSIS_MCU_H) -DMP_PORT_NO_SOFTTIMER
 CFLAGS += $(OMV_BOARD_EXTRA_CFLAGS)
 
 # Disable LTO and set the SD
@@ -110,7 +110,7 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/common/, \
 	usbdbg.o                    \
 	tinyusb_debug.o             \
 	file_utils.o                \
-	boot_utils.o                \
+	mp_utils.o                  \
 	sensor_utils.o              \
    )
 

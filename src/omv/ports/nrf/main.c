@@ -90,7 +90,7 @@
 #include "omv_boardconfig.h"
 #include "omv_i2c.h"
 #include "sensor.h"
-#include "boot_utils.h"
+#include "mp_utils.h"
 
 uint32_t HAL_GetHalVersion() {
     // Hard-coded because it's not defined in SDK
@@ -137,13 +137,8 @@ soft_reset:
     led_init();
     led_state(1, 1); // MICROPY_HW_LED_1 aka MICROPY_HW_LED_RED
 
-    mp_stack_set_top(&_ram_end);
-    // Stack limit should be less than real stack size, so we have a chance
-    // to recover from limit hit.  (Limit is measured in bytes.)
-    mp_stack_set_limit((char *) &_ram_end - (char *) &_heap_end - 400);
-
-    // GC init
-    gc_init(&_heap_start, &_heap_end);
+    // Initialize the stack and GC memory.
+    mp_init_gc_stack(&_heap_end, &_ram_end, &_heap_start, &_heap_end, 400);
 
     machine_init();
     mp_init();
@@ -275,11 +270,11 @@ soft_reset:
 
     #if MICROPY_VFS || MICROPY_MBFS || MICROPY_MODULE_FROZEN
     // Run boot.py script.
-    bool interrupted = bootutils_exec_bootscript("boot.py", true, false);
+    bool interrupted = mp_exec_bootscript("boot.py", true, false);
 
     // Run main.py script on first soft-reset.
     if (first_soft_reset && !interrupted && mp_vfs_import_stat("main.py")) {
-        bootutils_exec_bootscript("main.py", true, false);
+        mp_exec_bootscript("main.py", true, false);
         goto soft_reset_exit;
     }
     #endif

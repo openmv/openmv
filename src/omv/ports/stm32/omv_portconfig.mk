@@ -154,7 +154,7 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/common/, \
 	pendsv.o                    \
 	usbdbg.o                    \
 	file_utils.o                \
-	boot_utils.o                \
+	mp_utils.o                  \
 	sensor_utils.o              \
    )
 
@@ -253,7 +253,6 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/,\
 	usb.o                   \
 	usrsw.o                 \
 	eth.o                   \
-	gccollect.o             \
 	help.o                  \
 	flash.o                 \
 	flashbdev.o             \

@@ -139,7 +139,7 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/common/, \
 	usbdbg.o                    \
 	tinyusb_debug.o             \
 	file_utils.o                \
-	boot_utils.o                \
+	mp_utils.o                  \
 	sensor_utils.o              \
    )
 

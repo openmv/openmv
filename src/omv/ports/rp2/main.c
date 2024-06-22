@@ -70,7 +70,7 @@
 #include "extmod/vfs.h"
 #include "extmod/vfs_fat.h"
 #endif
-#include "boot_utils.h"
+#include "mp_utils.h"
 
 extern void pendsv_init(void);
 extern uint8_t __StackTop, __StackBottom;
@@ -146,9 +146,7 @@ int main(int argc, char **argv) {
 
 soft_reset:
     // Initialise stack extents and GC heap.
-    mp_stack_set_top(&__StackTop);
-    mp_stack_set_limit(&__StackTop - &__StackBottom - 256);
-    gc_init(&gc_heap[0], &gc_heap[MP_ARRAY_SIZE(gc_heap)]);
+    mp_init_gc_stack(&__StackBottom, &__StackTop, &gc_heap[0], &gc_heap[MP_ARRAY_SIZE(gc_heap)], 256);
 
     // Initialise MicroPython runtime.
     mp_init();
@@ -189,7 +187,7 @@ soft_reset:
     if (mp_vfs_mount_and_chdir_protected(bdev, mount_point) == -MP_ENODEV) {
         // Create a fresh filesystem.
         fs_user_mount_t *vfs = MP_OBJ_TYPE_GET_SLOT(&mp_fat_vfs_type, make_new) (&mp_fat_vfs_type, 1, 0, &bdev);
-        if (bootutils_init_filesystem(vfs) == 0) {
+        if (mp_init_filesystem(vfs) == 0) {
             mp_vfs_mount_and_chdir_protected(bdev, mount_point);
         }
     }
@@ -211,11 +209,11 @@ soft_reset:
     }
 
     // Run boot.py script.
-    bool interrupted = bootutils_exec_bootscript("boot.py", true, false);
+    bool interrupted = mp_exec_bootscript("boot.py", true, false);
 
     // Run main.py script on first soft-reset.
     if (first_soft_reset && !interrupted && mp_vfs_import_stat("main.py")) {
-        bootutils_exec_bootscript("main.py", true, false);
+        mp_exec_bootscript("main.py", true, false);
         goto soft_reset_exit;
     }
 
@@ -287,15 +285,6 @@ soft_reset_exit:
     first_soft_reset = false;
     goto soft_reset;
     return 0;
-}
-
-void gc_collect(void) {
-    gc_collect_start();
-    gc_helper_collect_regs_and_stack();
-    #if MICROPY_PY_THREAD
-    mp_thread_gc_others();
-    #endif
-    gc_collect_end();
 }
 
 void nlr_jump_fail(void *val) {
