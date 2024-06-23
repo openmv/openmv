@@ -19,8 +19,14 @@ def main():
     parser.add_argument('--header', action = 'store_true', help = 'Generate header file.', required=False, default=False)
     args = parser.parse_args()
 
-    libtf_builtin_models = []
+    tflm_builtin_models = []
+    tflm_builtin_models_index = []
     print('/* NOTE: This file is auto-generated. */\n')
+
+    with open(os.path.join(args.input, "index.txt"), 'r') as f:
+        for l in f.readlines():
+            if not l.startswith("#"):
+                tflm_builtin_models_index.append(os.path.basename(os.path.splitext(l.strip())[0]))
 
     models_list = glob.glob(os.path.join(args.input, "*tflite"))
     if (args.header):
@@ -32,11 +38,12 @@ def main():
         print('    const char **labels;')
         print('    const unsigned int size;')
         print('    const unsigned char *data;')
-        print('}libtf_builtin_model_t;\n')
-        print('extern const libtf_builtin_model_t libtf_builtin_models[{:d}];'.format(len(models_list)))
+        print('}tflm_builtin_model_t;\n')
+        print('extern const tflm_builtin_model_t tflm_builtin_models[];')
     else:
         # Generate the C file
-        print('#include "libtf_builtin_models.h"')
+        print('#include "imlib_config.h"')
+        print('#include "tflm_builtin_models.h"')
         for model_file in models_list:
             model_size = os.path.getsize(model_file)
             model_name = os.path.basename(os.path.splitext(model_file)[0])
@@ -45,13 +52,14 @@ def main():
             # Generate model labels.
             labels = []
             n_labels = 0
-            with open(labels_file, 'r') as f:
-                labels = ['"{:s}"'.format(l.strip()) for l in f.readlines()]
-                n_labels = len(labels)
-            print('const char *libtf_{:s}_labels[] = {{{:s}}};'.format(model_name, ', '.join(labels)))
+            if os.path.exists(labels_file):
+                with open(labels_file, 'r') as f:
+                    labels = ['"{:s}"'.format(l.strip()) for l in f.readlines()]
+                    n_labels = len(labels)
+            print('static const char *tflm_{:s}_labels[] __attribute__((aligned(16))) = {{{:s}}};'.format(model_name, ', '.join(labels)))
 
             # Generate model data.
-            print('const unsigned char libtf_{:s}_data[] = {{'.format(model_name))
+            print('static const unsigned char tflm_{:s}_data[] = {{'.format(model_name))
             with open(model_file, 'rb') as f:
                 for chunk in iter(lambda: f.read(12), b''):
                     print('  ', end='')
@@ -59,18 +67,23 @@ def main():
             print('};')
 
             # Store model info in builtin models table.
-            libtf_builtin_models.append([
+            tflm_builtin_models.append([
                     model_name,
                     n_labels,
-                    'libtf_{:s}_labels'.format(model_name),
+                    'tflm_{:s}_labels'.format(model_name),
                     model_size,
-                    'libtf_{:s}_data'.format(model_name)]
+                    'tflm_{:s}_data'.format(model_name)]
             )
 
         # Generate built-in models table.
-        print('const libtf_builtin_model_t libtf_builtin_models[{:d}] = {{'.format(len(models_list)))
-        for model in libtf_builtin_models:
-            print('    {{"{:s}", {:d}, {:s}, {:d}, {:s}}},'.format(*model))
+        print('const tflm_builtin_model_t tflm_builtin_models[] = {')
+        for model in tflm_builtin_models:
+            if model[0] in tflm_builtin_models_index:
+                print('    #if defined(IMLIB_ENABLE_TFLM_BUILTIN_{:s})'.format(model[0].upper()))
+            print('    {{ "{:s}", {:d}, {:s}, {:d}, {:s} }},'.format(*model))
+            if model[0] in tflm_builtin_models_index:
+                print('    #endif')
+        print('    {0, 0, 0, 0, 0}')
         print('};')
 
 if __name__ == '__main__':
