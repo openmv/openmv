@@ -121,7 +121,7 @@ SECTIONS
     __exidx_end = .;
   } > FLASH_TEXT
 
-  __etext = .;    /* define a global symbol at end of code */
+  __etext = LOADADDR(.data);    /* define a global symbol at end of code */
 
     /* Initialized data sections */
   .data :

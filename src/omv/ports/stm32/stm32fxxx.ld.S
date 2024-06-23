@@ -113,7 +113,7 @@ SECTIONS
   } >OMV_GC_BLOCK0_MEMORY
   #endif
 
-  .gc_blocks_table :
+  .gc_blocks_table (READONLY) :
   {
     . = ALIGN(4);
     _gc_blocks_table_start = .;
