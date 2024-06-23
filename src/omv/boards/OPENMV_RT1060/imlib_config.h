@@ -113,18 +113,15 @@
 #define IMLIB_ENABLE_FEATURES_BUILTIN_FACE_CASCADE
 #define IMLIB_ENABLE_FEATURES_BUILTIN_EYES_CASCADE
 
-// Enable CMSIS NN
-// #if !defined(CUBEAI)
-// #define IMLIB_ENABLE_CNN
-// #endif
-
 // Enable Tensor Flow
 #if !defined(CUBEAI)
-#define IMLIB_ENABLE_TF (IMLIB_TF_FULLOPS)
+#define IMLIB_ENABLE_TFLM
+#define IMLIB_ENABLE_TFLM_BUILTIN_FOMO_FACE_DETECTION
+#define IMLIB_ENABLE_TFLM_BUILTIN_PERSON_DETECT
 #endif
 
 // Enable FAST (20+ KBs).
-// #define IMLIB_ENABLE_FAST
+#define IMLIB_ENABLE_FAST
 
 // Enable find_template()
 #define IMLIB_FIND_TEMPLATE

@@ -114,14 +114,9 @@
 //#define IMLIB_ENABLE_FEATURES_BUILTIN_FACE_CASCADE
 //#define IMLIB_ENABLE_FEATURES_BUILTIN_EYES_CASCADE
 
-// Enable CMSIS NN
-// #if !defined(CUBEAI)
-// #define IMLIB_ENABLE_CNN
-// #endif
-
 // Enable Tensor Flow
 #if !defined(CUBEAI)
-//#define IMLIB_ENABLE_TF
+//#define IMLIB_ENABLE_TFLM
 #endif
 
 // Enable FAST (20+ KBs).
