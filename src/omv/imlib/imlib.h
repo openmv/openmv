@@ -1143,6 +1143,10 @@ typedef struct imlib_draw_row_data {
     bool dma2d_enabled; // private
     bool dma2d_initialized; // private
     DMA2D_HandleTypeDef dma2d; // private
+    #if __DCACHE_PRESENT
+    void *dma2d_invalidate_addr; // private
+    int32_t dma2d_invalidate_dsize; // private
+    #endif
     #endif
     long smuad_alpha; // private
     uint32_t *smuad_alpha_palette; // private
