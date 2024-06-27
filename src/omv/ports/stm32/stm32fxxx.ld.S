@@ -76,6 +76,18 @@ _micropy_hw_internal_flash_storage_ram_cache_start = ORIGIN(OMV_FFS_MEMORY) + OM
 _micropy_hw_internal_flash_storage_ram_cache_end = LENGTH(OMV_FFS_MEMORY);
 #endif
 
+#define OMV_DEFINE_GC_BLOCK(n) \
+    .gc_block##n (NOLOAD) : \
+    { \
+      . = ALIGN(4); \
+      . += OMV_GC_BLOCK##n##_SIZE; \
+      . = ALIGN(4); \
+    } >OMV_GC_BLOCK##n##_MEMORY \
+
+#define OMV_ADD_GC_BLOCK(n) \
+    LONG (ADDR(.gc_block##n)) \
+    LONG (SIZEOF(.gc_block##n) / 4)
+
 /* Define output sections */
 SECTIONS
 {
@@ -105,12 +117,13 @@ SECTIONS
   _sidata = LOADADDR(.data);
 
   #if defined(OMV_GC_BLOCK0_MEMORY)
-  .gc_block0 (NOLOAD) :
-  {
-    . = ALIGN(4);
-    . += OMV_GC_BLOCK0_SIZE;
-    . = ALIGN(4);
-  } >OMV_GC_BLOCK0_MEMORY
+  OMV_DEFINE_GC_BLOCK(0)
+  #endif
+  #if defined(OMV_GC_BLOCK1_MEMORY)
+  OMV_DEFINE_GC_BLOCK(1)
+  #endif
+  #if defined(OMV_GC_BLOCK2_MEMORY)
+  OMV_DEFINE_GC_BLOCK(2)
   #endif
 
   .gc_blocks_table (READONLY) :
@@ -118,8 +131,13 @@ SECTIONS
     . = ALIGN(4);
     _gc_blocks_table_start = .;
     #if defined(OMV_GC_BLOCK0_MEMORY)
-    LONG (ADDR(.gc_block0))
-    LONG (SIZEOF(.gc_block0) / 4)
+    OMV_ADD_GC_BLOCK(0)
+    #endif
+    #if defined(OMV_GC_BLOCK1_MEMORY)
+    OMV_ADD_GC_BLOCK(1)
+    #endif
+    #if defined(OMV_GC_BLOCK2_MEMORY)
+    OMV_ADD_GC_BLOCK(2)
     #endif
     _gc_blocks_table_end = .;
     . = ALIGN(4);
@@ -257,8 +275,7 @@ SECTIONS
 
     . = ALIGN(4);
     _heap_end  = .;
-
-  } >OMV_MAIN_MEMORY
+  } >OMV_HEAP_MEMORY
 
   /* Make sure there is enough ram for the stack */
   ._stack (NOLOAD) :

@@ -212,8 +212,7 @@ SECTIONS
 
     . = ALIGN(4);
     _heap_end  = .;
-
-  } >OMV_MAIN_MEMORY
+  } >OMV_HEAP_MEMORY
 
   /* Make sure there is enough ram for the stack */
   ._stack (NOLOAD) :
