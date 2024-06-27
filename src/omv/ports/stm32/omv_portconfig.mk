@@ -4,13 +4,46 @@ STARTUP   ?= st/startup_$(shell echo $(MCU) | tr '[:upper:]' '[:lower:]')
 LDSCRIPT  ?= stm32fxxx
 
 # Compiler Flags
-CFLAGS += -std=gnu99 -Wall -Werror -Warray-bounds -mthumb -nostartfiles -fdata-sections -ffunction-sections
-CFLAGS += -fno-inline-small-functions -D$(MCU) -D$(CFLAGS_MCU) -DARM_NN_TRUNCATE\
-          -fsingle-precision-constant -Wdouble-promotion -mcpu=$(CPU) -mtune=$(CPU) -mfpu=$(FPU) -mfloat-abi=hard
-CFLAGS += -D__FPU_PRESENT=1 -D__VFP_FP__ -DUSE_DEVICE_MODE -DHSE_VALUE=$(OMV_HSE_VALUE)\
-          -D$(TARGET) -DVECT_TAB_OFFSET=$(VECT_TAB_OFFSET) -DMAIN_APP_ADDR=$(MAIN_APP_ADDR) -DSTM32_HAL_H=$(HAL_INC)\
-          -DCMSIS_MCU_H=$(CMSIS_MCU_H) -DUSE_FULL_LL_DRIVER
-CFLAGS += $(OMV_BOARD_EXTRA_CFLAGS)
+CFLAGS += -std=gnu99 \
+          -Wall \
+          -Werror \
+          -Warray-bounds \
+          -mthumb \
+          -nostartfiles \
+          -fdata-sections \
+          -ffunction-sections \
+          -fno-inline-small-functions \
+          -fsingle-precision-constant \
+          -Wdouble-promotion \
+          -mcpu=$(CPU) \
+          -mtune=$(CPU) \
+          -mfpu=$(FPU) \
+          -mfloat-abi=hard \
+          -D$(CFLAGS_MCU)
+
+CFLAGS += -D$(MCU) \
+          -D$(TARGET) \
+          -DARM_NN_TRUNCATE \
+          -D__FPU_PRESENT=1 \
+          -D__VFP_FP__ \
+          -DUSE_DEVICE_MODE \
+          -DHSE_VALUE=$(OMV_HSE_VALUE)\
+          -DVECT_TAB_OFFSET=$(VECT_TAB_OFFSET) \
+          -DMAIN_APP_ADDR=$(MAIN_APP_ADDR) \
+          -DSTM32_HAL_H=$(HAL_INC) \
+          -DCMSIS_MCU_H=$(CMSIS_MCU_H) \
+          -DUSE_FULL_LL_DRIVER \
+          $(OMV_BOARD_EXTRA_CFLAGS)
+
+# Linker Flags
+LDFLAGS = -mcpu=$(CPU) \
+          -mabi=aapcs-linux \
+          -mthumb \
+          -mfpu=$(FPU) \
+          -mfloat-abi=hard \
+          -Wl,--gc-sections \
+          -Wl,--print-memory-usage \
+          -Wl,-T$(BUILD)/$(LDSCRIPT).lds
 
 HAL_CFLAGS += -I$(TOP_DIR)/$(CMSIS_DIR)/include/
 HAL_CFLAGS += -I$(TOP_DIR)/$(CMSIS_DIR)/include/st
@@ -29,10 +62,16 @@ MPY_CFLAGS += -I$(TOP_DIR)/$(MICROPY_DIR)/ports/stm32/usbdev/core/inc/
 MPY_CFLAGS += -I$(TOP_DIR)/$(MICROPY_DIR)/ports/stm32/usbdev/class/inc/
 MPY_CFLAGS += -I$(TOP_DIR)/$(MICROPY_DIR)/ports/stm32/lwip_inc/
 MPY_CFLAGS += -I$(TOP_DIR)/$(MICROPY_DIR)/shared/runtime/
-MPY_CFLAGS += -DMICROPY_PY_SSL=1 -DMICROPY_SSL_MBEDTLS=1 -DMICROPY_STREAMS_POSIX_API=1 -DMICROPY_VFS_FAT=1
+MPY_CFLAGS += -DMICROPY_PY_SSL=1 \
+              -DMICROPY_SSL_MBEDTLS=1 \
+              -DMICROPY_STREAMS_POSIX_API=1 \
+              -DMICROPY_VFS_FAT=1
 
-MICROPY_ARGS += MICROPY_PY_SSL=1 MICROPY_SSL_MBEDTLS=1 MICROPY_PY_BTREE=1\
-                STM32LIB_CMSIS_DIR=$(TOP_DIR)/$(CMSIS_DIR) STM32LIB_HAL_DIR=$(TOP_DIR)/$(HAL_DIR)
+MICROPY_ARGS += MICROPY_PY_SSL=1 \
+                MICROPY_SSL_MBEDTLS=1 \
+                MICROPY_PY_BTREE=1\
+                STM32LIB_CMSIS_DIR=$(TOP_DIR)/$(CMSIS_DIR) \
+                STM32LIB_HAL_DIR=$(TOP_DIR)/$(HAL_DIR)
 
 OMV_CFLAGS += -I$(OMV_BOARD_CONFIG_DIR)
 OMV_CFLAGS += -I$(TOP_DIR)/$(OMV_DIR)/
@@ -55,9 +94,8 @@ OMV_CFLAGS += -I$(TOP_DIR)/$(MLX90640_DIR)/include/
 OMV_CFLAGS += -I$(TOP_DIR)/$(MLX90641_DIR)/include/
 OMV_CFLAGS += -I$(TOP_DIR)/$(PIXART_DIR)/include/
 OMV_CFLAGS += -I$(TOP_DIR)/$(DISPLAY_DIR)/include/
-OMV_CFLAGS += -I$(TOP_DIR)/$(TENSORFLOW_DIR)/
-OMV_CFLAGS += -I$(BUILD)/$(TENSORFLOW_DIR)/
 OMV_CFLAGS += -I$(TOP_DIR)/$(LIBPDM_DIR)/
+OMV_CFLAGS += -I$(BUILD)/$(TENSORFLOW_DIR)/
 
 ifeq ($(OMV_ENABLE_BL), 1)
 CFLAGS     += -DOMV_ENABLE_BOOTLOADER
@@ -65,8 +103,13 @@ BL_CFLAGS  := $(CFLAGS) $(HAL_CFLAGS)
 BL_CFLAGS  += -I$(OMV_BOARD_CONFIG_DIR)
 BL_CFLAGS  += -I$(TOP_DIR)/$(BOOTLDR_DIR)/include/
 # Linker Flags
-BL_LDFLAGS = -mcpu=$(CPU) -mabi=aapcs-linux -mthumb -mfpu=$(FPU) -mfloat-abi=hard\
-               -nostdlib -Wl,--gc-sections -Wl,-T$(BUILD)/$(BOOTLDR_DIR)/stm32fxxx.lds
+BL_LDFLAGS = -mcpu=$(CPU) \
+             -mabi=aapcs-linux \
+             -mthumb \
+             -mfpu=$(FPU) \
+             -mfloat-abi=hard \
+             -Wl,--gc-sections \
+             -Wl,-T$(BUILD)/$(BOOTLDR_DIR)/stm32fxxx.lds
 endif
 
 ifeq ($(OMV_ENABLE_UVC), 1)
@@ -75,8 +118,13 @@ UVC_CFLAGS += -I$(OMV_BOARD_CONFIG_DIR)
 UVC_CFLAGS += -I$(TOP_DIR)/$(UVC_DIR)/include/
 UVC_CFLAGS += $(OMV_CFLAGS) $(MPY_CFLAGS)
 # Linker Flags
-UVC_LDFLAGS = -mcpu=$(CPU) -mabi=aapcs-linux -mthumb -mfpu=$(FPU) -mfloat-abi=hard\
-               -nostdlib -Wl,--gc-sections -Wl,-T$(BUILD)/$(UVC_DIR)/stm32fxxx.lds
+UVC_LDFLAGS = -mcpu=$(CPU) \
+              -mabi=aapcs-linux \
+              -mthumb \
+              -mfpu=$(FPU) \
+              -mfloat-abi=hard\
+              -Wl,--gc-sections \
+              -Wl,-T$(BUILD)/$(UVC_DIR)/stm32fxxx.lds
 endif
 
 ifeq ($(OMV_ENABLE_CM4), 1)
@@ -86,30 +134,53 @@ CM4_CFLAGS += -Og -ggdb3 -Wno-maybe-uninitialized
 else
 CM4_CFLAGS += -O2 -DNDEBUG
 endif
-CM4_CFLAGS += -std=gnu99 -Wall -Werror -Warray-bounds -mthumb -nostartfiles -fdata-sections -ffunction-sections
-CM4_CFLAGS += -D$(MCU) -D$(CFLAGS_MCU) -DARM_NN_TRUNCATE -DCORE_CM4\
-              -fsingle-precision-constant -Wdouble-promotion -mcpu=cortex-m4 -mtune=cortex-m4 -mfpu=$(FPU) -mfloat-abi=hard
-CM4_CFLAGS += -D__FPU_PRESENT=1 -D__VFP_FP__ -DHSE_VALUE=$(OMV_HSE_VALUE)\
-              -D$(TARGET) -DVECT_TAB_OFFSET=$(M4_VECT_TAB_OFFSET) -DMAIN_APP_ADDR=$(M4_APP_ADDR) -DSTM32_HAL_H=$(HAL_INC)
+CM4_CFLAGS += -std=gnu99 \
+              -Wall \
+              -Werror \
+              -Warray-bounds \
+              -mthumb \
+              -nostartfiles \
+              -fdata-sections \
+              -ffunction-sections \
+              -fsingle-precision-constant \
+              -Wdouble-promotion \
+              -mcpu=cortex-m4 \
+              -mtune=cortex-m4 \
+              -mfpu=$(FPU) \
+              -mfloat-abi=hard
+
+CM4_CFLAGS += -D$(MCU) \
+              -D$(CFLAGS_MCU) \
+              -DARM_NN_TRUNCATE \
+              -DCORE_CM4 \
+              -D__FPU_PRESENT=1 \
+              -D__VFP_FP__ \
+              -DHSE_VALUE=$(OMV_HSE_VALUE) \
+              -D$(TARGET) \
+              -DMAIN_APP_ADDR=$(M4_APP_ADDR) \
+              -DSTM32_HAL_H=$(HAL_INC) \
+              -DVECT_TAB_OFFSET=$(M4_VECT_TAB_OFFSET) \
+
 CM4_CFLAGS += $(HAL_CFLAGS)
 CM4_CFLAGS += -I$(OMV_BOARD_CONFIG_DIR)
 CM4_CFLAGS += -I$(TOP_DIR)/$(CM4_DIR)/include/
 # Linker Flags
-CM4_LDFLAGS = -mcpu=cortex-m4 -mabi=aapcs-linux -mthumb -mfpu=$(FPU) -mfloat-abi=hard\
-               -nostdlib -Wl,--gc-sections -Wl,-T$(BUILD)/$(CM4_DIR)/stm32fxxx.lds
+CM4_LDFLAGS = -mcpu=cortex-m4 \
+              -mabi=aapcs-linux \
+              -mthumb \
+              -mfpu=$(FPU) \
+              -mfloat-abi=hard \
+              -Wl,--gc-sections \
+              -Wl,-T$(BUILD)/$(CM4_DIR)/stm32fxxx.lds
 endif
 
 CFLAGS += $(HAL_CFLAGS) $(MPY_CFLAGS) $(OMV_CFLAGS)
 
-# Linker Flags
-LDFLAGS = -mcpu=$(CPU) -mabi=aapcs-linux -mthumb -mfpu=$(FPU) -mfloat-abi=hard\
-          -nostdlib -Wl,--gc-sections -Wl,-T$(BUILD)/$(LDSCRIPT).lds
-
 #------------- Libraries ----------------#
-LIBS += $(TOP_DIR)/$(TENSORFLOW_DIR)/$(CPU)/libtf*.a
 ifeq ($(MICROPY_PY_AUDIO), 1)
 LIBS += $(TOP_DIR)/$(LIBPDM_DIR)/libPDMFilter_CM7_GCC_wc32.a
 endif
+LIBS += $(TOP_DIR)/$(TENSORFLOW_DIR)/libtflm/lib/libtflm-$(CPU)+fp-release.a
 
 #------------- Firmware Objects ----------------#
 FIRM_OBJ += $(wildcard $(BUILD)/$(CMSIS_DIR)/src/dsp/*/*.o)
@@ -321,36 +392,6 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/shared/,\
 FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/lib/,\
 	berkeley-db-1.xx/btree/*.o  \
 	berkeley-db-1.xx/mpool/*.o  \
-	)
-
-FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/lib/libm/,\
-	math.o              \
-	roundf.o            \
-	asinfacosf.o        \
-	atanf.o             \
-	atan2f.o            \
-	fmodf.o             \
-	log1pf.o            \
-	acoshf.o            \
-	asinhf.o            \
-	atanhf.o            \
-	kf_rem_pio2.o       \
-	kf_sin.o            \
-	kf_cos.o            \
-	kf_tan.o            \
-	ef_rem_pio2.o       \
-	erf_lgamma.o        \
-	sf_sin.o            \
-	sf_cos.o            \
-	sf_tan.o            \
-	sf_frexp.o          \
-	sf_modf.o           \
-	sf_ldexp.o          \
-	sf_erf.o            \
-	wf_lgamma.o         \
-	wf_tgamma.o         \
-	nearbyintf.o        \
-	thumb_vfp_sqrtf.o   \
 	)
 
 #------------- mbedtls -------------------#
@@ -654,9 +695,9 @@ $(FW_DIR):
 
 FIRMWARE_OBJS: | $(BUILD) $(FW_DIR)
 	$(MAKE)  -C $(CMSIS_DIR)                 BUILD=$(BUILD)/$(CMSIS_DIR)        CFLAGS="$(CFLAGS) -fno-strict-aliasing -MMD"
-	$(MAKE)  -C $(TENSORFLOW_DIR)            BUILD=$(BUILD)/$(TENSORFLOW_DIR)   CFLAGS="$(CFLAGS) -MMD"
-	$(MAKE)  -C $(MICROPY_DIR)/ports/$(PORT) BUILD=$(BUILD)/$(MICROPY_DIR)      $(MICROPY_ARGS)
 	$(MAKE)  -C $(HAL_DIR)                   BUILD=$(BUILD)/$(HAL_DIR)          CFLAGS="$(CFLAGS) -MMD"
+	$(MAKE)  -C $(TENSORFLOW_DIR)            BUILD=$(BUILD)/$(TENSORFLOW_DIR)   CFLAGS="$(CFLAGS) -MMD" headers
+	$(MAKE)  -C $(MICROPY_DIR)/ports/$(PORT) BUILD=$(BUILD)/$(MICROPY_DIR)      $(MICROPY_ARGS)
 	$(MAKE)  -C $(LEPTON_DIR)                BUILD=$(BUILD)/$(LEPTON_DIR)       CFLAGS="$(CFLAGS) -MMD"
 ifeq ($(MICROPY_PY_IMU), 1)
 	$(MAKE)  -C $(LSM6DS3_DIR)               BUILD=$(BUILD)/$(LSM6DS3_DIR)      CFLAGS="$(CFLAGS) -MMD"
@@ -671,6 +712,7 @@ endif
 	$(MAKE)  -C $(VL53L5CX_DIR)              BUILD=$(BUILD)/$(VL53L5CX_DIR)     CFLAGS="$(CFLAGS) -MMD"
 	$(MAKE)  -C $(PIXART_DIR)                BUILD=$(BUILD)/$(PIXART_DIR)       CFLAGS="$(CFLAGS) -MMD"
 	$(MAKE)  -C $(DISPLAY_DIR)               BUILD=$(BUILD)/$(DISPLAY_DIR)      CFLAGS="$(CFLAGS) -MMD"
+	$(MAKE)  -C $(TENSORFLOW_DIR)            BUILD=$(BUILD)/$(TENSORFLOW_DIR)   CFLAGS="$(CFLAGS) -MMD"
 	$(MAKE)  -C $(OMV_DIR)                   BUILD=$(BUILD)/$(OMV_DIR)          CFLAGS="$(CFLAGS) -MMD"
 ifeq ($(CUBEAI), 1)
 	$(MAKE)  -C $(CUBEAI_DIR)                BUILD=$(BUILD)/$(CUBEAI_DIR)       CFLAGS="$(CFLAGS) -fno-strict-aliasing -MMD"
@@ -691,7 +733,7 @@ endif
 # This target generates the main/app firmware image located at 0x08010000
 $(FIRMWARE): FIRMWARE_OBJS
 	$(CPP) -P -E -I$(OMV_BOARD_CONFIG_DIR) $(OMV_DIR)/ports/$(PORT)/$(LDSCRIPT).ld.S > $(BUILD)/$(LDSCRIPT).lds
-	$(CC) $(LDFLAGS) $(FIRM_OBJ) -o $(FW_DIR)/$(FIRMWARE).elf $(LIBS) -lgcc
+	$(CC) $(LDFLAGS) $(FIRM_OBJ) -o $(FW_DIR)/$(FIRMWARE).elf $(LIBS) -lm
 	$(OBJCOPY) -Obinary $(FW_DIR)/$(FIRMWARE).elf $(FW_DIR)/$(FIRMWARE).bin
 	$(PYTHON) $(MKDFU) -D $(DFU_DEVICE) -b $(MAIN_APP_ADDR):$(FW_DIR)/$(FIRMWARE).bin $(FW_DIR)/$(FIRMWARE).dfu
 
@@ -699,7 +741,7 @@ ifeq ($(OMV_ENABLE_BL), 1)
 # This target generates the bootloader.
 $(BOOTLOADER): FIRMWARE_OBJS BOOTLOADER_OBJS
 	$(CPP) -P -E -I$(OMV_BOARD_CONFIG_DIR) $(BOOTLDR_DIR)/stm32fxxx.ld.S > $(BUILD)/$(BOOTLDR_DIR)/stm32fxxx.lds
-	$(CC) $(BL_LDFLAGS) $(BOOT_OBJ) -o $(FW_DIR)/$(BOOTLOADER).elf -lgcc
+	$(CC) $(BL_LDFLAGS) $(BOOT_OBJ) -o $(FW_DIR)/$(BOOTLOADER).elf
 	$(OBJCOPY) -Obinary $(FW_DIR)/$(BOOTLOADER).elf $(FW_DIR)/$(BOOTLOADER).bin
 	$(PYTHON) $(MKDFU) -D $(DFU_DEVICE) -b 0x08000000:$(FW_DIR)/$(BOOTLOADER).bin $(FW_DIR)/$(BOOTLOADER).dfu
 endif
