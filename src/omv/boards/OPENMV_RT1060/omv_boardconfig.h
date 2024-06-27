@@ -73,7 +73,8 @@
 // Linker script constants (see the linker script template mimxrt10xx.ld.S).
 // Note: fb_alloc is a stack-based, dynamically allocated memory on FB.
 // The maximum available fb_alloc memory = FB_ALLOC_SIZE + FB_SIZE - (w*h*bpp).
-#define OMV_MAIN_MEMORY                 DTCM    // data, bss and heap memory
+#define OMV_MAIN_MEMORY                 DTCM    // Data/BSS memory
+#define OMV_HEAP_MEMORY                 DTCM    // Heap memory
 #define OMV_HEAP_SIZE                   (284K)
 #define OMV_STACK_MEMORY                ITCM1   // stack memory
 #define OMV_STACK_SIZE                  (32K)

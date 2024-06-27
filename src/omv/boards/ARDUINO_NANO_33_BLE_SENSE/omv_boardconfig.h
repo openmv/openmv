@@ -47,7 +47,8 @@
 #define OMV_USB1_IRQ_HANDLER       (USBD_IRQHandler)
 
 // Linker script constants (see the linker script template port/x.ld.S).
-#define OMV_MAIN_MEMORY            SRAM // data, bss and heap memory
+#define OMV_MAIN_MEMORY            SRAM // Data, BSS memory
+#define OMV_HEAP_MEMORY            SRAM // Heap memory
 #define OMV_HEAP_SIZE              (64K)
 #define OMV_STACK_MEMORY           SRAM // stack memory
 #define OMV_STACK_SIZE             (8K)
