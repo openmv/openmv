@@ -825,10 +825,19 @@ int sensor_snapshot(sensor_t *sensor, image_t *image, uint32_t flags) {
         __HAL_DCMI_ENABLE_IT(&DCMIHandle, DCMI_IT_FRAME);
     }
 
+    framebuffer_flags_t fb_flags = FB_NO_FLAGS;
+
+    #if defined(OMV_MDMA_CHANNEL_DCMI_0)
+    // DCMI_MDMA_Handle0.State will be HAL_MDMA_STATE_RESET if the MDMA is not initialized.
+    if (DCMI_MDMA_Handle0.State != HAL_MDMA_STATE_RESET) {
+        fb_flags = FB_INVALIDATE;
+    }
+    #endif
+
     vbuffer_t *buffer = NULL;
     // Wait for the frame data. __WFI() below will exit right on time because of DCMI_IT_FRAME.
     // While waiting SysTick will trigger allowing us to timeout.
-    for (uint32_t tick_start = HAL_GetTick(); !(buffer = framebuffer_get_head(FB_NO_FLAGS)); ) {
+    for (uint32_t tick_start = HAL_GetTick(); !(buffer = framebuffer_get_head(fb_flags)); ) {
         __WFI();
 
         // If we haven't exited this loop before the timeout then we need to abort the transfer.
