@@ -46,7 +46,8 @@ extern unsigned char *OMV_BOARD_UID_ADDR;   // Unique ID address.
 #define OMV_USB1_IRQ_HANDLER       (USBD_IRQHandler)
 
 // Linker script constants (see the linker script template port/x.ld.S).
-#define OMV_MAIN_MEMORY            RAM          // data, bss and heap memory
+#define OMV_MAIN_MEMORY            RAM          // Data/BSS memory
+#define OMV_HEAP_MEMORY            RAM          // Heap memory
 #define OMV_HEAP_SIZE              (32 * 1024)  // MicroPython's heap
 #define OMV_STACK_MEMORY           RAM          // stack memory
 #define OMV_STACK_SIZE             (8K)

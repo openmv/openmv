@@ -10,25 +10,25 @@
  */
 #include "imlib_config.h"
 
-#ifdef IMLIB_ENABLE_TF
+#ifdef IMLIB_ENABLE_TFLM
 #include "py/runtime.h"
 #include "py_helper.h"
 
 // TF NMS Object.
-typedef struct py_tf_nms_obj {
+typedef struct py_ml_nms_obj {
     mp_obj_base_t base;
     int window_w;
     int window_h;
     rectangle_t roi;
     list_t bounding_boxes;
-} py_tf_nms_obj_t;
+} py_ml_nms_obj_t;
 
-const mp_obj_type_t py_tf_nms_type;
+const mp_obj_type_t py_ml_nms_type;
 
 // The use of mp_arg_parse_all() is deliberately avoided here to ensure this method remains fast.
-STATIC mp_obj_t py_tf_nms_add_bounding_box(uint n_args, const mp_obj_t *pos_args) {
+STATIC mp_obj_t py_ml_nms_add_bounding_box(uint n_args, const mp_obj_t *pos_args) {
     enum { ARG_self, ARG_xmin, ARG_ymin, ARG_xmax, ARG_ymax, ARG_score, ARG_label_index };
-    py_tf_nms_obj_t *self_in = MP_OBJ_TO_PTR(pos_args[ARG_self]);
+    py_ml_nms_obj_t *self_in = MP_OBJ_TO_PTR(pos_args[ARG_self]);
 
     bounding_box_lnk_data_t lnk_data;
     lnk_data.score = mp_obj_get_float(pos_args[ARG_score]);
@@ -52,9 +52,9 @@ STATIC mp_obj_t py_tf_nms_add_bounding_box(uint n_args, const mp_obj_t *pos_args
 
     return mp_const_none;
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(py_tf_nms_add_bounding_box_obj, 7, 7, py_tf_nms_add_bounding_box);
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(py_ml_nms_add_bounding_box_obj, 7, 7, py_ml_nms_add_bounding_box);
 
-STATIC mp_obj_t py_tf_nms_get_bounding_boxes(uint n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
+STATIC mp_obj_t py_ml_nms_get_bounding_boxes(uint n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
     enum { ARG_threshold, ARG_sigma };
     static const mp_arg_t allowed_args[] = {
         { MP_QSTR_threshold,  MP_ARG_OBJ | MP_ARG_KW_ONLY, {.u_rom_obj = MP_ROM_NONE } },
@@ -64,7 +64,7 @@ STATIC mp_obj_t py_tf_nms_get_bounding_boxes(uint n_args, const mp_obj_t *pos_ar
     mp_arg_val_t args[MP_ARRAY_SIZE(allowed_args)];
     mp_arg_parse_all(n_args - 1, pos_args + 1, kw_args, MP_ARRAY_SIZE(allowed_args), allowed_args, args);
 
-    py_tf_nms_obj_t *self_in = MP_OBJ_TO_PTR(pos_args[0]);
+    py_ml_nms_obj_t *self_in = MP_OBJ_TO_PTR(pos_args[0]);
     float threshold = py_helper_arg_to_float(args[ARG_threshold].u_obj, 0.1f);
     float sigma = py_helper_arg_to_float(args[ARG_sigma].u_obj, 0.1f);
     int max_label = rectangle_nms_get_bounding_boxes(&self_in->bounding_boxes, threshold, sigma);
@@ -88,9 +88,9 @@ STATIC mp_obj_t py_tf_nms_get_bounding_boxes(uint n_args, const mp_obj_t *pos_ar
 
     return list;
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_tf_nms_get_bounding_boxes_obj, 1, py_tf_nms_get_bounding_boxes);
+STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_ml_nms_get_bounding_boxes_obj, 1, py_ml_nms_get_bounding_boxes);
 
-mp_obj_t py_tf_nms_make_new(const mp_obj_type_t *type, size_t n_args, size_t n_kw, const mp_obj_t *all_args) {
+mp_obj_t py_ml_nms_make_new(const mp_obj_type_t *type, size_t n_args, size_t n_kw, const mp_obj_t *all_args) {
     enum { ARG_window_w, ARG_window_h, ARG_roi };
     static const mp_arg_t allowed_args[] = {
         { MP_QSTR_window_w, MP_ARG_INT | MP_ARG_REQUIRED, {.u_int = 0 } },
@@ -116,8 +116,8 @@ mp_obj_t py_tf_nms_make_new(const mp_obj_type_t *type, size_t n_args, size_t n_k
         mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Invalid ROI dimensions!"));
     }
 
-    py_tf_nms_obj_t *model = m_new_obj(py_tf_nms_obj_t);
-    model->base.type = &py_tf_nms_type;
+    py_ml_nms_obj_t *model = m_new_obj(py_ml_nms_obj_t);
+    model->base.type = &py_ml_nms_type;
     model->window_w = args[ARG_window_w].u_int;
     model->window_h = args[ARG_window_h].u_int;
     model->roi = roi;
@@ -125,19 +125,18 @@ mp_obj_t py_tf_nms_make_new(const mp_obj_type_t *type, size_t n_args, size_t n_k
     return MP_OBJ_FROM_PTR(model);
 }
 
-STATIC const mp_rom_map_elem_t py_tf_nms_locals_table[] = {
-    { MP_ROM_QSTR(MP_QSTR_add_bounding_box),    MP_ROM_PTR(&py_tf_nms_add_bounding_box_obj) },
-    { MP_ROM_QSTR(MP_QSTR_get_bounding_boxes),  MP_ROM_PTR(&py_tf_nms_get_bounding_boxes_obj) },
+STATIC const mp_rom_map_elem_t py_ml_nms_locals_table[] = {
+    { MP_ROM_QSTR(MP_QSTR_add_bounding_box),    MP_ROM_PTR(&py_ml_nms_add_bounding_box_obj) },
+    { MP_ROM_QSTR(MP_QSTR_get_bounding_boxes),  MP_ROM_PTR(&py_ml_nms_get_bounding_boxes_obj) },
 };
 
-STATIC MP_DEFINE_CONST_DICT(py_tf_nms_locals_dict, py_tf_nms_locals_table);
+STATIC MP_DEFINE_CONST_DICT(py_ml_nms_locals_dict, py_ml_nms_locals_table);
 
 MP_DEFINE_CONST_OBJ_TYPE(
-    py_tf_nms_type,
+    py_ml_nms_type,
     MP_QSTR_tf_nms,
     MP_TYPE_FLAG_NONE,
-    make_new, py_tf_nms_make_new,
-    locals_dict, &py_tf_nms_locals_dict
+    make_new, py_ml_nms_make_new,
+    locals_dict, &py_ml_nms_locals_dict
     );
-
-#endif // IMLIB_ENABLE_TF
+#endif // IMLIB_ENABLE_TFLM

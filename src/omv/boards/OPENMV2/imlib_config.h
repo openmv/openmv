@@ -112,7 +112,7 @@
 //#define IMLIB_ENABLE_FEATURES_BUILTIN_EYES_CASCADE
 
 // Enable Tensor Flow
-//#define IMLIB_ENABLE_TF
+//#define IMLIB_ENABLE_TFLM
 
 // Enable FAST (20+ KBs).
 //#define IMLIB_ENABLE_FAST

@@ -69,6 +69,18 @@ _vospi_buf          = ORIGIN(OMV_VOSPI_MEMORY) + OMV_VOSPI_MEMORY_OFFSET;
 // _micropy_hw_internal_flash_storage_start = ORIGIN(FLASH_FFS);
 // _micropy_hw_internal_flash_storage_end = ORIGIN(FLASH_FFS) + LENGTH(FLASH_FFS);
 
+#define OMV_DEFINE_GC_BLOCK(n) \
+    .gc_block##n (NOLOAD) : \
+    { \
+      . = ALIGN(4); \
+      . += OMV_GC_BLOCK##n##_SIZE; \
+      . = ALIGN(4); \
+    } >OMV_GC_BLOCK##n##_MEMORY \
+
+#define OMV_ADD_GC_BLOCK(n) \
+    LONG (ADDR(.gc_block##n)) \
+    LONG (SIZEOF(.gc_block##n) / 4)
+
 /* Define output sections */
 SECTIONS
 {
@@ -121,7 +133,7 @@ SECTIONS
     __exidx_end = .;
   } > FLASH_TEXT
 
-  __etext = .;    /* define a global symbol at end of code */
+  __etext = LOADADDR(.data);    /* define a global symbol at end of code */
 
     /* Initialized data sections */
   .data :
@@ -173,8 +185,7 @@ SECTIONS
 
     . = ALIGN(4);
     _heap_end  = .;
-
-  } > OMV_MAIN_MEMORY
+  } >OMV_HEAP_MEMORY
 
   ._stack (NOLOAD) :
   {
@@ -188,21 +199,27 @@ SECTIONS
   } >OMV_STACK_MEMORY
 
   #if defined(OMV_GC_BLOCK0_MEMORY)
-  .gc_block0 (NOLOAD) :
-  {
-    . = ALIGN(4);
-    . += OMV_GC_BLOCK0_SIZE;
-    . = ALIGN(4);
-  } >OMV_GC_BLOCK0_MEMORY
+  OMV_DEFINE_GC_BLOCK(0)
+  #endif
+  #if defined(OMV_GC_BLOCK1_MEMORY)
+  OMV_DEFINE_GC_BLOCK(1)
+  #endif
+  #if defined(OMV_GC_BLOCK2_MEMORY)
+  OMV_DEFINE_GC_BLOCK(2)
   #endif
 
-  .gc_blocks_table :
+  .gc_blocks_table (READONLY) :
   {
     . = ALIGN(4);
     _gc_blocks_table_start = .;
     #if defined(OMV_GC_BLOCK0_MEMORY)
-    LONG (ADDR(.gc_block0))
-    LONG (SIZEOF(.gc_block0) / 4)
+    OMV_ADD_GC_BLOCK(0)
+    #endif
+    #if defined(OMV_GC_BLOCK1_MEMORY)
+    OMV_ADD_GC_BLOCK(1)
+    #endif
+    #if defined(OMV_GC_BLOCK2_MEMORY)
+    OMV_ADD_GC_BLOCK(2)
     #endif
     _gc_blocks_table_end = .;
     . = ALIGN(4);

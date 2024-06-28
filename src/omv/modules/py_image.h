@@ -11,6 +11,7 @@
 #ifndef __PY_IMAGE_H__
 #define __PY_IMAGE_H__
 #include "imlib.h"
+extern const mp_obj_type_t py_image_type;
 mp_obj_t py_image(int width, int height, pixformat_t pixfmt, uint32_t size, void *pixels);
 mp_obj_t py_image_from_struct(image_t *img);
 void *py_image_cobj(mp_obj_t img_obj);

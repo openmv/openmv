@@ -73,7 +73,7 @@
 //#define IMLIB_ENABLE_FEATURES_BUILTIN_EYES_CASCADE
 
 // Enable Tensor Flow
-//#define IMLIB_ENABLE_TF
+//#define IMLIB_ENABLE_TFLM
 
 // Enable STM32 DMA2D
 #define IMLIB_ENABLE_DMA2D

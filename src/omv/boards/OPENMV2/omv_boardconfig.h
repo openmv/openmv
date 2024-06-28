@@ -62,17 +62,18 @@
 // Note: fb_alloc is a stack-based, dynamically allocated memory on FB.
 // The maximum available fb_alloc memory = FB_ALLOC_SIZE + FB_SIZE - (w*h*bpp).
 // Note: fb_alloc overwrites the line buffer which is only used during readout.
-#define OMV_MAIN_MEMORY                       DTCM // data, bss and heap memory
-#define OMV_DMA_MEMORY                        SRAM2 // Misc DMA buffers
-#define OMV_HEAP_SIZE                         (47K)
-#define OMV_STACK_MEMORY                      DTCM // stack memory
+#define OMV_MAIN_MEMORY                       DTCM  // Data/BSS memory
+#define OMV_HEAP_MEMORY                       DTCM  // Heap memory
+#define OMV_HEAP_SIZE                         (46K)
+#define OMV_STACK_MEMORY                      DTCM  // stack memory
 #define OMV_STACK_SIZE                        (8K)
 #define OMV_FB_MEMORY                         SRAM1 // Framebuffer, fb_alloc
 #define OMV_FB_SIZE                           (152K) // FB memory: header + QVGA/GS image
 #define OMV_FB_ALLOC_SIZE                     (10K) // minimum fb alloc size
 #define OMV_JPEG_BUF_SIZE                     (8 * 1024) // IDE JPEG buffer size (header + data).
-#define OMV_MSC_BUF_SIZE                      (2K) // USB MSC bot data
-#define OMV_VFS_BUF_SIZE                      (1K) // VFS struct + FATFS file buffer (624 bytes)
+#define OMV_DMA_MEMORY                        SRAM2 // Misc DMA buffers
+#define OMV_MSC_BUF_SIZE                      (2K)  // USB MSC bot data
+#define OMV_VFS_BUF_SIZE                      (1K)  // VFS struct + FATFS file buffer (624 bytes)
 #define OMV_FFS_BUF_SIZE                      (16K) // Flash filesystem cache
 #define OMV_LINE_BUF_SIZE                     (2 * 1024) // Image line buffer round(320 * 2BPP * 2 buffers).
 

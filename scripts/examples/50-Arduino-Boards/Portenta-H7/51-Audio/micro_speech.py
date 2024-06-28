@@ -1,40 +1,26 @@
 # This work is licensed under the MIT license.
-# Copyright (c) 2013-2023 OpenMV LLC. All rights reserved.
+# Copyright (c) 2024 OpenMV LLC. All rights reserved.
 # https://github.com/openmv/openmv/blob/master/LICENSE
 #
-# MicroSpeech demo.
-#
-# Download the pre-trained Yes/No model from here:
-# https://raw.githubusercontent.com/iabdalkader/microspeech-yesno-model/main/model.tflite
-# Save the model to storage, reset and run the example.
-import audio
+# The MicroSpeech module is designed for real-time audio processing and speech recognition
+# on microcontroller platforms. It leverages pre-trained models for audio preprocessing and
+# speech recognition, specifically optimized for detecting keywords such as "Yes" and "No".
+import ml
 import time
-import tf
-import micro_speech
-import pyb
 
-labels = ["Silence", "Unknown", "Yes", "No"]
 
-led_red = pyb.LED(1)
-led_green = pyb.LED(2)
+def callback(label, scores):
+    print(f'\nHeard: "{label}" @{time.ticks_ms()}ms Scores: {scores}')
 
-model = tf.load("/model.tflite")
-speech = micro_speech.MicroSpeech()
-audio.init(channels=1, frequency=16000, gain_db=24, highpass=0.9883)
 
-# Start audio streaming
-audio.start_streaming(speech.audio_callback)
+# By default, the MicroSpeech object uses the built-in audio preprocessor (float) and the
+# micro speech module for audio preprocessing and speech recognition, respectively. The
+# user can override both by passing two models:
+# MicroSpeech(preprocessor=ml.Model(...), micro_speech=ml.Model(...), labels=["label",...])
+speech = ml.MicroSpeech()
 
-while True:
-    # Run micro-speech without a timeout and filter detections by label index.
-    idx = speech.listen(model, timeout=0, threshold=0.70, filter=[2, 3])
-    led = led_green if idx == 2 else led_red
-    print(labels[idx])
-    for i in range(0, 4):
-        led.on()
-        time.sleep_ms(25)
-        led.off()
-        time.sleep_ms(25)
-
-# Stop streaming
-audio.stop_streaming()
+# Starts the audio streaming and processes incoming audio to recognize speech commands.
+# If a callback is passed, listen() will loop forever and call the callback when a keyword
+# is detected. Alternatively, `listen()` can be called with a timeout (in ms), and it
+# returns if the timeout expires before detecting a keyword.
+speech.listen(callback=callback, threshold=0.70)

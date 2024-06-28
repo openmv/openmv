@@ -5,3 +5,6 @@
 [submodule "src/omv/modules/ulab"]
 	path = src/omv/modules/ulab
 	url = https://github.com/v923z/micropython-ulab.git
+[submodule "src/lib/tflm/libtflm"]
+	path = src/lib/tflm/libtflm
+	url = https://github.com/openmv/libtflm.git
