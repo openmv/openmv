@@ -56,10 +56,10 @@ def main():
                 with open(labels_file, 'r') as f:
                     labels = ['"{:s}"'.format(l.strip()) for l in f.readlines()]
                     n_labels = len(labels)
-            print('static const char *tflm_{:s}_labels[] __attribute__((aligned(16))) = {{{:s}}};'.format(model_name, ', '.join(labels)))
+            print('static const char *tflm_{:s}_labels[] = {{{:s}}};'.format(model_name, ', '.join(labels)))
 
             # Generate model data.
-            print('static const unsigned char tflm_{:s}_data[] = {{'.format(model_name))
+            print('static const unsigned char tflm_{:s}_data[] __attribute__((aligned(16))) = {{'.format(model_name))
             with open(model_file, 'rb') as f:
                 for chunk in iter(lambda: f.read(12), b''):
                     print('  ', end='')
