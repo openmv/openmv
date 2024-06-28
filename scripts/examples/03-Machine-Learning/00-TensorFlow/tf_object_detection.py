@@ -8,7 +8,7 @@
 
 import sensor
 import time
-import tf
+import ml
 import math
 import image
 
@@ -21,10 +21,10 @@ min_confidence = 0.4
 threshold_list = [(math.ceil(min_confidence * 255), 255)]
 
 # Load built-in FOMO face detection model
-labels, net = tf.Model("fomo_face_detection")
+labels, model = ml.Model("fomo_face_detection")
 
 # Alternatively, models can be loaded from the filesystem storage.
-# net = tf.Model('<object_detection_network>', load_to_fb=True)
+# model = ml.Model('<object_detection_modelwork>.tflite', load_to_fb=True)
 # labels = [line.rstrip('\n') for line in open("labels.txt")]
 
 colors = [  # Add more colors if you are detecting more than 7 types of classes at once.
@@ -37,6 +37,7 @@ colors = [  # Add more colors if you are detecting more than 7 types of classes 
     (255, 255, 255),
 ]
 
+
 # FOMO outputs an image per class where each pixel in the image is the centroid of the trained
 # object. So, we will get those output images and then run find_blobs() on them to extract the
 # centroids. We will also run get_stats() on the detected blobs to determine their score.
@@ -44,18 +45,20 @@ colors = [  # Add more colors if you are detecting more than 7 types of classes 
 # position in the output image back to the original input image. The function then returns a
 # list per class which each contain a list of (rect, score) tuples representing the detected
 # objects.
-
-
 def fomo_post_process(model, output, rect):
-    oh, ow, oc = model.output_shape
-    nms = tf.NMS(ow, oh, rect)
+    n, oh, ow, oc = model.output_shape[0]
+    nms = ml.NMS(ow, oh, rect)
     for i in range(oc):
-        img = image.Image(output, shape=(oh, ow, 1), strides=(i, oc), scale=(255, 0))
-        blobs = img.find_blobs(threshold_list, x_stride=1, area_threshold=1, pixels_threshold=1)
+        img = image.Image(output[0], shape=(oh, ow, 1), strides=(i, oc), scale=(255, 0))
+        blobs = img.find_blobs(
+            threshold_list, x_stride=1, area_threshold=1, pixels_threshold=1
+        )
         for b in blobs:
             rect = b.rect()
             x, y, w, h = rect
-            score = img.get_statistics(thresholds=threshold_list, roi=rect).l_mean() / 255.0
+            score = (
+                img.get_statistics(thresholds=threshold_list, roi=rect).l_mean() / 255.0
+            )
             nms.add_bounding_box(x, y, x + w, y + h, score, i)
     return nms.get_bounding_boxes()
 
@@ -66,9 +69,7 @@ while True:
 
     img = sensor.snapshot()
 
-    for i, detection_list in enumerate(
-        fomo_post_process(net, net.predict(img), rect=(0, 0, img.width(), img.height()))
-    ):
+    for i, detection_list in enumerate(model.predict(img, callback=fomo_post_process)):
         if i == 0:
             continue  # background class
         if len(detection_list) == 0:
