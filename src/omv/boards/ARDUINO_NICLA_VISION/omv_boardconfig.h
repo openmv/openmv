@@ -101,20 +101,22 @@
 // Note: fb_alloc is a stack-based, dynamically allocated memory on FB.
 // The maximum available fb_alloc memory = FB_ALLOC_SIZE + FB_SIZE - (w*h*bpp).
 #define OMV_MAIN_MEMORY                       DTCM      // Data/BSS memory.
-#define OMV_HEAP_MEMORY                       ITCM      // Heap memory
-#define OMV_HEAP_SIZE                         (64K)
 #define OMV_STACK_MEMORY                      DTCM      // stack memory
 #define OMV_STACK_SIZE                        (32K)
 #define OMV_FB_MEMORY                         AXI_SRAM  // Framebuffer, fb_alloc
 #define OMV_FB_SIZE                           (400K)    // FB memory: header + VGA/GS image
-#define OMV_FB_ALLOC_SIZE                     (100K)    // minimum fb alloc size
-#define OMV_JPEG_MEMORY                       SRAM4     // JPEG buffer memory buffer.
-#define OMV_JPEG_BUF_SIZE                     (32 * 1024)   // IDE JPEG buffer (header + data).
-#define OMV_GC_BLOCK0_MEMORY                  SRAM1     // Extra GC block 0.
-#define OMV_GC_BLOCK0_SIZE                    (276K)
-#define OMV_GC_BLOCK1_MEMORY                  SRAM4     // Extra GC block 0.
-#define OMV_GC_BLOCK1_SIZE                    (32K)
+#define OMV_FB_ALLOC_SIZE                     (76K)     // minimum fb alloc size
+#define OMV_JPEG_MEMORY                       AXI_SRAM  // JPEG buffer memory buffer.
+#define OMV_JPEG_SIZE                         (32 * 1024)   // IDE JPEG buffer (header + data).
 #define OMV_DMA_MEMORY                        SRAM2     // DMA buffers memory.
+#define OMV_DMA_MEMORY_D1                     AXI_SRAM  // Domain 1 DMA buffers.
+#define OMV_DMA_MEMORY_D2                     SRAM2     // Domain 2 DMA buffers.
+#define OMV_GC_BLOCK0_MEMORY                  DTCM      // Main GC block 0.
+#define OMV_GC_BLOCK0_SIZE                    (32K)
+#define OMV_GC_BLOCK1_MEMORY                  SRAM4     // Extra GC block 1.
+#define OMV_GC_BLOCK1_SIZE                    (64K)
+#define OMV_GC_BLOCK2_MEMORY                  SRAM1     // Extra GC block 2.
+#define OMV_GC_BLOCK2_SIZE                    (276K)
 #define OMV_MSC_BUF_SIZE                      (2K)      // USB MSC bot data
 #define OMV_VFS_BUF_SIZE                      (1K)      // VFS struct + FATFS file buffer (624 bytes)
 #define OMV_LINE_BUF_SIZE                     (3 * 1024) // Image line buffer round(640 * 2BPP * 2 buffers).
@@ -146,24 +148,6 @@
 #define OMV_FLASH_EXT_LENGTH                  16M
 #define OMV_CM4_FLASH_ORIGIN                  0x08020000
 #define OMV_CM4_FLASH_LENGTH                  128K
-
-// Domain 1 DMA buffers region.
-#define OMV_DMA_MEMORY_D1                     AXI_SRAM
-#define OMV_DMA_MEMORY_D1_SIZE                (8 * 1024) // Reserved memory for DMA buffers
-#define OMV_DMA_REGION_D1_BASE                (OMV_AXI_SRAM_ORIGIN + (500 * 1024))
-#define OMV_DMA_REGION_D1_SIZE                MPU_REGION_SIZE_8KB
-
-// Domain 2 DMA buffers region.
-#define OMV_DMA_MEMORY_D2                     SRAM2
-#define OMV_DMA_MEMORY_D2_SIZE                (1 * 1024) // Reserved memory for DMA buffers
-#define OMV_DMA_REGION_D2_BASE                (OMV_SRAM2_ORIGIN + (0 * 1024))
-#define OMV_DMA_REGION_D2_SIZE                MPU_REGION_SIZE_16KB
-
-// Domain 3 DMA buffers region.
-// #define OMV_DMA_MEMORY_D3                     SRAM4
-// #define OMV_DMA_MEMORY_D3_SIZE                (4 * 1024) // Reserved memory for DMA buffers
-// #define OMV_DMA_REGION_D3_BASE                (OMV_SRAM4_ORIGIN + (60 * 1024))
-// #define OMV_DMA_REGION_D3_SIZE                MPU_REGION_SIZE_4KB
 
 // MDMA configuration
 #define OMV_MDMA_CHANNEL_DCMI_0               (0)

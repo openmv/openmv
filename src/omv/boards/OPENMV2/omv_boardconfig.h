@@ -63,15 +63,15 @@
 // The maximum available fb_alloc memory = FB_ALLOC_SIZE + FB_SIZE - (w*h*bpp).
 // Note: fb_alloc overwrites the line buffer which is only used during readout.
 #define OMV_MAIN_MEMORY                       DTCM  // Data/BSS memory
-#define OMV_HEAP_MEMORY                       DTCM  // Heap memory
-#define OMV_HEAP_SIZE                         (46K)
 #define OMV_STACK_MEMORY                      DTCM  // stack memory
 #define OMV_STACK_SIZE                        (8K)
 #define OMV_FB_MEMORY                         SRAM1 // Framebuffer, fb_alloc
-#define OMV_FB_SIZE                           (152K) // FB memory: header + QVGA/GS image
+#define OMV_FB_SIZE                           (150K) // FB memory: header + QVGA/GS image
 #define OMV_FB_ALLOC_SIZE                     (10K) // minimum fb alloc size
-#define OMV_JPEG_BUF_SIZE                     (8 * 1024) // IDE JPEG buffer size (header + data).
 #define OMV_DMA_MEMORY                        SRAM2 // Misc DMA buffers
+#define OMV_GC_BLOCK0_MEMORY                  DTCM  // Main GC block
+#define OMV_GC_BLOCK0_SIZE                    (46K)
+#define OMV_JPEG_SIZE                         (8 * 1024) // IDE JPEG buffer size (header + data).
 #define OMV_MSC_BUF_SIZE                      (2K)  // USB MSC bot data
 #define OMV_VFS_BUF_SIZE                      (1K)  // VFS struct + FATFS file buffer (624 bytes)
 #define OMV_FFS_BUF_SIZE                      (16K) // Flash filesystem cache
@@ -83,9 +83,9 @@
 #define OMV_DTCM_ORIGIN                       0x10000000
 #define OMV_DTCM_LENGTH                       64K
 #define OMV_SRAM1_ORIGIN                      0x20000000
-#define OMV_SRAM1_LENGTH                      162K
-#define OMV_SRAM2_ORIGIN                      0x20028800
-#define OMV_SRAM2_LENGTH                      30K
+#define OMV_SRAM1_LENGTH                      160K
+#define OMV_SRAM2_ORIGIN                      0x20028000
+#define OMV_SRAM2_LENGTH                      32K
 
 // Flash configuration.
 #define OMV_FLASH_FFS_ORIGIN                  0x08004000
