@@ -1,0 +1,233 @@
+// NOTE this linker script is pre-processed using the CPP first before
+// passing it to LD. It has access to the board config file, can define
+// and use CPP macros, and it uses a lot of magic 🪄.
+
+/* Adds a section to a table */
+#define OMV_ADD_SECTION(s) \
+  LONG (ADDR(s)) \
+  LONG (SIZEOF(s) / 4)
+
+/* Aligns a section to the next power of 2. */
+#define OMV_ALIGN_DMA_SECTION(section) \
+    ALIGN(., 1 << LOG2CEIL(SIZEOF(section)))
+
+/* Define a new GC block. */
+#define OMV_GC_BLOCK_NEW(n) \
+  .gc.block##n (NOLOAD) : { \
+    . = ALIGN(4); \
+    . += OMV_GC_BLOCK##n##_SIZE; \
+    . = ALIGN(4); \
+  } >OMV_GC_BLOCK##n##_MEMORY \
+
+/* Define a new DMA buffer region. */
+#define OMV_DMA_MEMORY_NEW(X) \
+    .dma.memory##X (NOLOAD) : ALIGN(16) \
+    { \
+        *(.d##X##_dma_buffer) \
+        . = OMV_ALIGN_DMA_SECTION(.dma.memory##X); \
+    } >OMV_DMA_MEMORY_D##X
+
+/* Main GC heap for MicroPython */
+#if defined(OMV_GC_BLOCK0_MEMORY)
+.gc.block0 (NOLOAD) : ALIGN(4)
+{
+  _heap_start = .;
+  . = . + OMV_GC_BLOCK0_SIZE;
+  . = ALIGN(4);
+  _heap_end  = .;
+} >OMV_GC_BLOCK0_MEMORY
+#endif
+
+/* Additional GC heap blocks */
+#if defined(OMV_GC_BLOCK1_MEMORY)
+OMV_GC_BLOCK_NEW(1)
+#endif
+#if defined(OMV_GC_BLOCK2_MEMORY)
+OMV_GC_BLOCK_NEW(2)
+#endif
+#if defined(OMV_GC_BLOCK3_MEMORY)
+OMV_GC_BLOCK_NEW(3)
+#endif
+#if defined(OMV_GC_BLOCK4_MEMORY)
+OMV_GC_BLOCK_NEW(4)
+#endif
+
+/* Additional GC heap blocks table */
+#if defined(OMV_GC_BLOCK1_MEMORY)
+.gc.blocks.table (READONLY) :
+{
+  . = ALIGN(4);
+  _gc_blocks_table_start = .;
+  OMV_ADD_SECTION(.gc.block1)
+  #if defined(OMV_GC_BLOCK2_MEMORY)
+  OMV_ADD_SECTION(.gc.block2)
+  #endif
+  #if defined(OMV_GC_BLOCK3_MEMORY)
+  OMV_ADD_SECTION(.gc.block3)
+  #endif
+  #if defined(OMV_GC_BLOCK4_MEMORY)
+  OMV_ADD_SECTION(.gc.block4)
+  #endif
+  _gc_blocks_table_end = .;
+  . = ALIGN(4);
+} > FLASH_TEXT
+#endif
+
+/* Heap memfor libc malloc/sbrk */
+#if defined(OMV_HEAP_MEMORY)
+.heap (NOLOAD) : ALIGN(4)
+{
+  __end__ = .;
+  PROVIDE(end = .);
+  . = . + OMV_HEAP_SIZE;
+  . = ALIGN(4);
+  _heap_limit = .;
+} > OMV_MAIN_MEMORY
+#endif
+
+/* Stack memory */
+#if defined(OMV_STACK_MEMORY)
+.stack (NOLOAD) : ALIGN(8)
+{
+  _sstack  = .;
+  __StackLimit = .;
+  . = . + OMV_STACK_SIZE;
+  . = ALIGN(8);
+  _estack  = .;
+  __StackTop = .;
+} > OMV_STACK_MEMORY
+PROVIDE(__stack = __StackTop);
+#endif
+
+/* JPEG framebuffer memory */
+#if defined(OMV_JPEG_MEMORY)
+.jpeg_memory (NOLOAD) :
+{
+  . = ALIGN(4);
+  _jpeg_buf = .;
+  . = . + OMV_JPEG_SIZE;
+  . = ALIGN(4);
+} >OMV_JPEG_MEMORY
+#endif
+
+/* VOSPI framebuffer memory */
+#if defined(OMV_VOSPI_MEMORY)
+.vospi_memory (NOLOAD) :
+{
+  . = ALIGN(4);
+  _vospi_buf = .;
+  . = . + OMV_VOSPI_SIZE;
+  . = ALIGN(4);
+} >OMV_VOSPI_MEMORY
+#endif
+
+/* Main framebuffer memory */
+#if defined(OMV_FB_MEMORY)
+.fb_memory (NOLOAD) :
+{
+  . = ALIGN(4);
+  _fb_base = .;
+  . += OMV_FB_SIZE;
+
+  _fb_end = .;
+  . += OMV_FB_ALLOC_SIZE;
+
+  . = ALIGN(4);
+  _fballoc = .;
+  . = ALIGN(4);
+} >OMV_FB_MEMORY
+#endif
+
+/* Main framebuffer fast memory */
+#if defined(OMV_FB_OVERLAY_MEMORY)
+.fb_overlay_memory (NOLOAD) :
+{
+  . = ALIGN(4);
+  _fballoc_overlay_start = .;
+  . = . + OMV_FB_OVERLAY_SIZE;
+  _fballoc_overlay_end = .;
+} >OMV_FB_OVERLAY_MEMORY
+#endif
+
+/* Misc DMA buffers section */
+.dma.memory0 (NOLOAD) : ALIGN(16)
+{
+  /* Image line buffer. */
+  #if defined(OMV_LINE_BUF_SIZE)
+  . = ALIGN(16);
+  _line_buf = .;
+  . = . + OMV_LINE_BUF_SIZE;
+  #endif
+
+  /* USB MSC bot data (2K) */
+  #if defined(OMV_MSC_BUF_SIZE)
+  . = ALIGN(16);
+  _msc_buf  = .;
+  . = . + OMV_MSC_BUF_SIZE;
+  #endif
+
+  /* VFS + FATFS buffer */
+  #if defined(OMV_VFS_BUF_SIZE)
+  . = ALIGN(16);
+  _vfs_buf  = .;
+  . = . + OMV_VFS_BUF_SIZE;
+  #endif
+
+  #if !defined(OMV_JPEG_MEMORY)
+  . = ALIGN(16);
+  _jpeg_buf = .;      // IDE JPEG buffer
+  . = . + OMV_JPEG_SIZE;
+  #endif
+
+  /* FFS (internal) filesystem buffer */
+  #if defined(OMV_FFS_BUF_SIZE)
+  . = ALIGN(16);
+  _micropy_hw_internal_flash_storage_ram_cache_start = .;
+  . = . + OMV_FFS_BUF_SIZE;
+  _micropy_hw_internal_flash_storage_ram_cache_end = .;
+  #endif
+
+ . = ALIGN(16);
+  *(.dma_buffer)
+
+ . = ALIGN(16);
+ *(NonCacheable)
+
+  . = OMV_ALIGN_DMA_SECTION(.dma.memory0);
+#if defined(OMV_DMA_MEMORY)
+} >OMV_DMA_MEMORY
+#else
+} >OMV_MAIN_MEMORY
+#endif
+
+/* Additional DMA memory buffers */
+#if defined(OMV_DMA_MEMORY_D1)
+OMV_DMA_MEMORY_NEW(1)
+#endif
+#if defined(OMV_DMA_MEMORY_D2)
+OMV_DMA_MEMORY_NEW(2)
+#endif
+#if defined(OMV_DMA_MEMORY_D3)
+OMV_DMA_MEMORY_NEW(3)
+#endif
+
+/* Additional DMA memory tables */
+.dma.memory.table (READONLY) :
+{
+  . = ALIGN(4);
+  _dma_memory_table_start = .;
+  OMV_ADD_SECTION(.dma.memory0)
+  #if defined(OMV_DMA_MEMORY_D1)
+  OMV_ADD_SECTION(.dma.memory1)
+  #endif
+  #if defined(OMV_DMA_MEMORY_D2)
+  OMV_ADD_SECTION(.dma.memory2)
+  #endif
+  #if defined(OMV_DMA_MEMORY_D3)
+  OMV_ADD_SECTION(.dma.memory3)
+  #endif
+  _dma_memory_table_end = .;
+  . = ALIGN(4);
+} > FLASH_TEXT
+
+.ARM.attributes 0 : { *(.ARM.attributes) }
