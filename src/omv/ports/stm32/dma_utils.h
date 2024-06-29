@@ -19,4 +19,5 @@
 uint8_t dma_utils_channel_to_irqn(DMA_Stream_TypeDef *dma_channel);
 uint8_t dma_utils_channel_to_id(DMA_Stream_TypeDef *dma_channel);
 int dma_utils_set_irq_descr(DMA_Stream_TypeDef *dma_channel, DMA_HandleTypeDef *dma_descr);
+uint8_t dma_utils_mpu_region_size(uint32_t size);
 #endif // __DMA_UTILS_H__

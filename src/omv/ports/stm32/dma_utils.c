@@ -173,3 +173,92 @@ int dma_utils_set_irq_descr(DMA_Stream_TypeDef *dma_channel, DMA_HandleTypeDef *
     }
     return -1;
 }
+
+uint8_t dma_utils_mpu_region_size(uint32_t size) {
+    switch (size) {
+        case 0x00000020U: {
+            return MPU_REGION_SIZE_32B;
+        }
+        case 0x00000040U: {
+            return MPU_REGION_SIZE_64B;
+        }
+        case 0x00000080U: {
+            return MPU_REGION_SIZE_128B;
+        }
+        case 0x00000100U: {
+            return MPU_REGION_SIZE_256B;
+        }
+        case 0x00000200U: {
+            return MPU_REGION_SIZE_512B;
+        }
+        case 0x00000400U: {
+            return MPU_REGION_SIZE_1KB;
+        }
+        case 0x00000800U: {
+            return MPU_REGION_SIZE_2KB;
+        }
+        case 0x00001000U: {
+            return MPU_REGION_SIZE_4KB;
+        }
+        case 0x00002000U: {
+            return MPU_REGION_SIZE_8KB;
+        }
+        case 0x00004000U: {
+            return MPU_REGION_SIZE_16KB;
+        }
+        case 0x00008000U: {
+            return MPU_REGION_SIZE_32KB;
+        }
+        case 0x00010000U: {
+            return MPU_REGION_SIZE_64KB;
+        }
+        case 0x00020000U: {
+            return MPU_REGION_SIZE_128KB;
+        }
+        case 0x00040000U: {
+            return MPU_REGION_SIZE_256KB;
+        }
+        case 0x00080000U: {
+            return MPU_REGION_SIZE_512KB;
+        }
+        case 0x00100000U: {
+            return MPU_REGION_SIZE_1MB;
+        }
+        case 0x00200000U: {
+            return MPU_REGION_SIZE_2MB;
+        }
+        case 0x00400000U: {
+            return MPU_REGION_SIZE_4MB;
+        }
+        case 0x00800000U: {
+            return MPU_REGION_SIZE_8MB;
+        }
+        case 0x01000000U: {
+            return MPU_REGION_SIZE_16MB;
+        }
+        case 0x02000000U: {
+            return MPU_REGION_SIZE_32MB;
+        }
+        case 0x04000000U: {
+            return MPU_REGION_SIZE_64MB;
+        }
+        case 0x08000000U: {
+            return MPU_REGION_SIZE_128MB;
+        }
+        case 0x10000000U: {
+            return MPU_REGION_SIZE_256MB;
+        }
+        case 0x20000000U: {
+            return MPU_REGION_SIZE_512MB;
+        }
+        case 0x40000000U: {
+            return MPU_REGION_SIZE_1GB;
+        }
+        case 0x80000000U: {
+            return MPU_REGION_SIZE_2GB;
+        }
+        default: {
+            return MPU_REGION_SIZE_4GB;
+        }
+    }
+}
