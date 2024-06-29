@@ -17,14 +17,15 @@ ENTRY(Reset_Handler)
 /* Specify the memory areas */
 MEMORY
 {
-    SRAM (xrw)      : ORIGIN = OMV_SRAM_ORIGIN,    LENGTH = OMV_SRAM_LENGTH
-    FLASH_TEXT (rx) : ORIGIN = OMV_TEXT_ORIGIN,    LENGTH = OMV_TEXT_LENGTH
+  SRAM (xrw)      : ORIGIN = OMV_SRAM_ORIGIN, LENGTH = OMV_SRAM_LENGTH
+  FLASH_TEXT (rx) : ORIGIN = OMV_TEXT_ORIGIN, LENGTH = OMV_TEXT_LENGTH
 }
 
-_heap_size  = OMV_HEAP_SIZE;    /* required amount of heap */
-_stack_size = OMV_STACK_SIZE;   /* minimum amount of stack */
-_fs_start   = OMV_TEXT_ORIGIN + OMV_TEXT_LENGTH;
-_fs_end     = OMV_TEXT_ORIGIN + OMV_TEXT_LENGTH + OMV_FFS_LENGTH;
+_ram_start  = ORIGIN(SRAM);
+_ram_end    = ORIGIN(SRAM) + LENGTH(SRAM);
+
+_fs_start   = ORIGIN(FLASH_TEXT) + LENGTH(FLASH_TEXT);
+_fs_end     = ORIGIN(FLASH_TEXT) + LENGTH(FLASH_TEXT) + OMV_FFS_LENGTH;
 
 /* define output sections */
 SECTIONS
@@ -33,94 +34,49 @@ SECTIONS
     .text :
     {
         . = ALIGN(4);
-        KEEP(*(.isr_vector)) /* Startup code */
-        *(.text)             /* .text sections (code) */
-        *(.text*)            /* .text* sections (code) */
-        *(.rodata)           /* .rodata sections (constants, strings, etc.) */
-        *(.rodata*)          /* .rodata* sections (constants, strings, etc.) */
+        KEEP(*(.isr_vector)) // ISR table
         . = ALIGN(4);
-        _etext = .;          /* define a global symbol at end of code */
+        *(.text)             // .text sections (code)
+        . = ALIGN(4);
+        *(.text*)            // .text* sections (code)
+        . = ALIGN(4);
+        *(.rodata)           // .rodata sections (constants, strings, etc.)
+        . = ALIGN(4);
+        *(.rodata*)          // .rodata sections (constants, strings, etc.)
+        . = ALIGN(4);
+        _etext = .;
         _unused_flash_start = .;
     } >FLASH_TEXT
 
-    /* used by the startup to initialize data */
+    /* The address used as the source for copying the initialized data section. */
     _sidata = LOADADDR(.data);
 
-    /* This is the initialized data section
-    The program executes knowing that the data is in the RAM
-    but the loader puts the initial values in the FLASH (inidata).
-    It is one task of the startup to copy the initial values from FLASH to RAM. */
+    /* Initialized data sections */
     .data :
     {
+        . = ALIGN(4);       // Used by the startup to initialize the data section
+        _sdata = .;
+        *(.data)            // .data sections
         . = ALIGN(4);
-        _sdata = .;         /* create a global symbol at data start; used by startup code to initialise the .data section in RAM */
-        _ram_start = .;     /* create a global symbol at ram start for garbage collector */
-        *(.data)            /* .data sections */
-        *(.data*)           /* .data* sections */
-
+        *(.data*)           // .data sections
         . = ALIGN(4);
-        _edata = .;         /* define a global symbol at data end; used by startup code to initialise the .data section in RAM */
+        _edata = .;
     } >SRAM AT>FLASH_TEXT
 
     /* Uninitialized data section */
     .bss :
     {
         . = ALIGN(4);
-        _sbss = .;         /* define a global symbol at bss start; used by startup code */
+        _sbss = .;          // Used by the startup to initialize the .bss section
         *(.bss)
+        . = ALIGN(4);
         *(.bss*)
         *(COMMON)
-
         . = ALIGN(4);
-        _ebss = .;         /* define a global symbol at bss end; used by startup code and GC */
+        _ebss = .;          // define a global symbol at bss end
     } >SRAM
 
-    /* Reserve heap memory */
-    ._heap (NOLOAD) :
-    {
-      . = ALIGN(4);
-      _heap_start = .;
-      . = . + _heap_size;
-
-      . = ALIGN(4);
-      _heap_end  = .;
-
-    } >OMV_MAIN_MEMORY
-
-    /* Reserve stack memory */
-    ._stack (NOLOAD) :
-    {
-      . = ALIGN(4);
-      _sstack  = .;
-      . = . + _stack_size;
-
-      . = ALIGN(4);
-      _estack  = .;
-      _ram_end = .;
-    } >OMV_STACK_MEMORY
-
-    /* Main framebuffer memory */
-    .fb_memory (NOLOAD) :
-    {
-      . = ALIGN(4);
-      _fb_base = .;
-      . += OMV_FB_SIZE;
-
-      _fb_end = .;
-      . += OMV_FB_ALLOC_SIZE;
-
-      . = ALIGN(4);
-      _fballoc = .;
-      . = ALIGN(4);
-
-      #if !defined(OMV_JPEG_MEMORY)
-      _jpeg_buf = .;      // IDE JPEG buffer
-      . = . + OMV_JPEG_BUF_SIZE;
-      . = ALIGN(4);
-      #endif
-    } >OMV_FB_MEMORY
-
-    .ARM.attributes 0 : { *(.ARM.attributes) }
+    #include "common.ld.S"
 }
 
 _unused_flash_len = (ORIGIN(FLASH_TEXT) + LENGTH(FLASH_TEXT)) - _unused_flash_start;
