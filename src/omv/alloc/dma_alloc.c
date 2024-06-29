@@ -47,23 +47,23 @@ union block {
     (((block_t *) ptr) - 1)
 
 // Initialize the first block in a block chain.
-#define INIT_BLOCK_CHAIN(D)                                          \
-    ({                                                               \
-        block_t *block = (block_t *) DMA_MEMORY_##D;                 \
-        block->used = false;                                         \
-        block->size = OMV_DMA_MEMORY_ ##D ##_SIZE - sizeof(block_t); \
-        block->next = NULL;                                          \
-        block->periph = NULL;                                        \
+#define INIT_BLOCK_CHAIN(D)                                         \
+    ({                                                              \
+        block_t *block = (block_t *) DMA_MEMORY_##D;                \
+        block->used = false;                                        \
+        block->size = OMV_DMA_ALLOC_ ##D ##_SIZE - sizeof(block_t); \
+        block->next = NULL;                                         \
+        block->periph = NULL;                                       \
     })
 
-#if defined(OMV_DMA_MEMORY_D1)
-static uint8_t OMV_ATTR_SECTION(OMV_ATTR_ALIGNED(DMA_MEMORY_D1[OMV_DMA_MEMORY_D1_SIZE], 16), ".d1_dma_buffer");
+#if defined(OMV_DMA_ALLOC_D1_SIZE)
+static uint8_t OMV_ATTR_SECTION(OMV_ATTR_ALIGNED(DMA_MEMORY_D1[OMV_DMA_ALLOC_D1_SIZE], 16), ".d1_dma_buffer");
 #endif
-#if defined(OMV_DMA_MEMORY_D2)
-static uint8_t OMV_ATTR_SECTION(OMV_ATTR_ALIGNED(DMA_MEMORY_D2[OMV_DMA_MEMORY_D2_SIZE], 16), ".d2_dma_buffer");
+#if defined(OMV_DMA_ALLOC_D2_SIZE)
+static uint8_t OMV_ATTR_SECTION(OMV_ATTR_ALIGNED(DMA_MEMORY_D2[OMV_DMA_ALLOC_D2_SIZE], 16), ".d2_dma_buffer");
 #endif
-#if defined(OMV_DMA_MEMORY_D3)
-static uint8_t OMV_ATTR_SECTION(OMV_ATTR_ALIGNED(DMA_MEMORY_D3[OMV_DMA_MEMORY_D3_SIZE], 16), ".d3_dma_buffer");
+#if defined(OMV_DMA_ALLOC_D3_SIZE)
+static uint8_t OMV_ATTR_SECTION(OMV_ATTR_ALIGNED(DMA_MEMORY_D3[OMV_DMA_ALLOC_D3_SIZE], 16), ".d3_dma_buffer");
 #endif
 
 NORETURN static void dma_alloc_fail(uint32_t size) {
@@ -73,13 +73,13 @@ NORETURN static void dma_alloc_fail(uint32_t size) {
 
 void dma_alloc_init0() {
     // Initialize the first block in each DMA buffer.
-    #if defined(OMV_DMA_MEMORY_D1)
+    #if defined(OMV_DMA_ALLOC_D1_SIZE)
     INIT_BLOCK_CHAIN(D1);
     #endif
-    #if defined(OMV_DMA_MEMORY_D2)
+    #if defined(OMV_DMA_ALLOC_D2_SIZE)
     INIT_BLOCK_CHAIN(D2);
     #endif
-    #if defined(OMV_DMA_MEMORY_D3)
+    #if defined(OMV_DMA_ALLOC_D3_SIZE)
     INIT_BLOCK_CHAIN(D3);
     #endif
 }
@@ -89,19 +89,19 @@ static int periph_to_domain(void *periph) {
     uint32_t base = ((uint32_t) periph) & 0xFFFF0000;
 
     switch (base) {
-        #if defined(OMV_DMA_MEMORY_D1)
+        #if defined(OMV_DMA_ALLOC_D1_SIZE)
         case D1_APB1PERIPH_BASE:
         case D1_AHB1PERIPH_BASE:
             return 1;
         #endif
-        #if defined(OMV_DMA_MEMORY_D2)
+        #if defined(OMV_DMA_ALLOC_D2_SIZE)
         case D2_APB1PERIPH_BASE:
         case D2_APB2PERIPH_BASE:
         case D2_AHB1PERIPH_BASE:
         case D2_AHB2PERIPH_BASE:
             return 2;
         #endif
-        #if defined(OMV_DMA_MEMORY_D3)
+        #if defined(OMV_DMA_ALLOC_D3_SIZE)
         case D3_APB1PERIPH_BASE:
         case D3_AHB1PERIPH_BASE:
             return 3;
@@ -116,22 +116,22 @@ static void block_chain_from_domain(void *periph, void **start, void **end) {
     int domain = periph_to_domain(periph);
 
     switch (domain) {
-        #if defined(OMV_DMA_MEMORY_D1)
+        #if defined(OMV_DMA_ALLOC_D1_SIZE)
         case 1:
             *start = DMA_MEMORY_D1;
-            *end = (DMA_MEMORY_D1 + OMV_DMA_MEMORY_D1_SIZE);
+            *end = (DMA_MEMORY_D1 + OMV_DMA_ALLOC_D1_SIZE);
             break;
         #endif
-        #if defined(OMV_DMA_MEMORY_D2)
+        #if defined(OMV_DMA_ALLOC_D2_SIZE)
         case 2:
             *start = DMA_MEMORY_D2;
-            *end = (DMA_MEMORY_D2 + OMV_DMA_MEMORY_D2_SIZE);
+            *end = (DMA_MEMORY_D2 + OMV_DMA_ALLOC_D2_SIZE);
             break;
         #endif
-        #if defined(OMV_DMA_MEMORY_D3)
+        #if defined(OMV_DMA_ALLOC_D3_SIZE)
         case 3:
             *start = DMA_MEMORY_D3;
-            *end = (DMA_MEMORY_D3 + OMV_DMA_MEMORY_D3_SIZE);
+            *end = (DMA_MEMORY_D3 + OMV_DMA_ALLOC_D3_SIZE);
             break;
         #endif
         default:

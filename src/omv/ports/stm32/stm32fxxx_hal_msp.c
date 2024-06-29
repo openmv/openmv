@@ -17,6 +17,13 @@
 // Define pin objects in this file.
 #define OMV_GPIO_DEFINE_PINS    (1)
 #include "omv_gpio.h"
+#include "dma_utils.h"
+
+#if defined(MPU_REGION_NUMBER15)
+#define MPU_REGION_NUMBER_MAX   (MPU_REGION_NUMBER15)
+#else
+#define MPU_REGION_NUMBER_MAX   (MPU_REGION_NUMBER7)
+#endif
 
 extern void SystemClock_Config(void);
 extern uint32_t omv_exti_get_gpio(uint32_t line);
@@ -25,10 +32,7 @@ void HAL_MspInit(void) {
     /* Set the system clock */
     SystemClock_Config();
 
-    #if defined(OMV_DMA_REGION_D1_BASE) \
-    || defined(OMV_DMA_REGION_D2_BASE)  \
-    || defined(OMV_DMA_REGION_D3_BASE)
-    __DSB(); __ISB();
+    #if (__DCACHE_PRESENT == 1) && defined(OMV_DMA_MEMORY)
     HAL_MPU_Disable();
 
     // Configure the MPU attributes to disable caching DMA buffers.
@@ -42,38 +46,35 @@ void HAL_MspInit(void) {
     MPU_InitStruct.DisableExec = MPU_INSTRUCTION_ACCESS_ENABLE;
 
     // Disable all regions.
-    for (int i = MPU_REGION_NUMBER0; i < MPU_REGION_NUMBER15; i++) {
+    for (int i = MPU_REGION_NUMBER0; i <= MPU_REGION_NUMBER_MAX; i++) {
         MPU_InitStruct.Number = i;
         MPU_InitStruct.Enable = MPU_REGION_DISABLE;
         HAL_MPU_ConfigRegion(&MPU_InitStruct);
     }
 
-    MPU_InitStruct.Enable = MPU_REGION_ENABLE;
-    #if defined(OMV_DMA_REGION_D1_BASE)
-    MPU_InitStruct.Number = MPU_REGION_NUMBER15;
-    MPU_InitStruct.BaseAddress = OMV_DMA_REGION_D1_BASE;
-    MPU_InitStruct.Size = OMV_DMA_REGION_D1_SIZE;
-    HAL_MPU_ConfigRegion(&MPU_InitStruct);
-    #endif // defined(OMV_DMA_REGION_D1_BASE)
+    typedef struct {
+        uint32_t *addr;
+        uint32_t size;
+    } dma_memory_table_t;
 
-    #if defined(OMV_DMA_REGION_D2_BASE)
-    MPU_InitStruct.Number = MPU_REGION_NUMBER14;
-    MPU_InitStruct.BaseAddress = OMV_DMA_REGION_D2_BASE;
-    MPU_InitStruct.Size = OMV_DMA_REGION_D2_SIZE;
-    HAL_MPU_ConfigRegion(&MPU_InitStruct);
-    #endif // defined(OMV_DMA_REGION_D2_BASE)
+    uint8_t region_number = MPU_REGION_NUMBER_MAX;
+    extern const dma_memory_table_t _dma_memory_table_start;
+    extern const dma_memory_table_t _dma_memory_table_end;
 
-    #if defined(OMV_DMA_REGION_D3_BASE)
-    MPU_InitStruct.Number = MPU_REGION_NUMBER13;
-    MPU_InitStruct.BaseAddress = OMV_DMA_REGION_D3_BASE;
-    MPU_InitStruct.Size = OMV_DMA_REGION_D3_SIZE;
-    HAL_MPU_ConfigRegion(&MPU_InitStruct);
-    #endif // defined(OMV_DMA_REGION_D3_BASE)
+    for (dma_memory_table_t const *buf = &_dma_memory_table_start; buf < &_dma_memory_table_end; buf++) {
+        if (buf->size >= 32) {
+            MPU_InitStruct.Number = region_number--;
+            MPU_InitStruct.Enable = MPU_REGION_ENABLE;
+            MPU_InitStruct.BaseAddress = *(buf->addr);
+            MPU_InitStruct.Size = dma_utils_mpu_region_size(buf->size);
+            HAL_MPU_ConfigRegion(&MPU_InitStruct);
+        }
+    }
 
     // Enable the MPU.
     HAL_MPU_Enable(MPU_PRIVILEGED_DEFAULT);
     __DSB(); __ISB();
-    #endif // defined(OMV_DMA_REGION_D1_BASE || OMV_DMA_REGION_D2_BASE || OMV_DMA_REGION_D3_BASE)
+    #endif // defined(OMV_DMA_MEMORY)
 
     // Enable I/D cache.
     #if defined(MCU_SERIES_F7) || defined(MCU_SERIES_H7)
