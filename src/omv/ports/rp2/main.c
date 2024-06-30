@@ -74,7 +74,7 @@
 
 extern void pendsv_init(void);
 extern uint8_t __StackTop, __StackBottom;
-static char OMV_ATTR_SECTION(OMV_ATTR_ALIGNED(gc_heap[OMV_HEAP_SIZE], 4), ".heap");
+static char OMV_ATTR_SECTION(OMV_ATTR_ALIGNED(gc_heap[OMV_GC_BLOCK0_SIZE], 4), ".heap");
 
 uint8_t *OMV_BOARD_UID_ADDR;
 static pico_unique_board_id_t OMV_ATTR_ALIGNED(pico_unique_id, 4);

@@ -48,14 +48,14 @@
 
 // Linker script constants (see the linker script template port/x.ld.S).
 #define OMV_MAIN_MEMORY            SRAM // Data, BSS memory
-#define OMV_HEAP_MEMORY            SRAM // Heap memory
-#define OMV_HEAP_SIZE              (64K)
 #define OMV_STACK_MEMORY           SRAM // stack memory
 #define OMV_STACK_SIZE             (8K)
 #define OMV_FB_MEMORY              SRAM // Framebuffer, fb_alloc
 #define OMV_FB_SIZE                (128K) // FB memory: header + QVGA/GS image
-#define OMV_FB_ALLOC_SIZE          (16K) // minimum fb alloc size
-#define OMV_JPEG_BUF_SIZE          (16 * 1024) // IDE JPEG buffer (header + data).
+#define OMV_FB_ALLOC_SIZE          (16K)  // minimum fb alloc size
+#define OMV_GC_BLOCK0_MEMORY       SRAM   // Main GC block.
+#define OMV_GC_BLOCK0_SIZE         (64K)
+#define OMV_JPEG_SIZE              (16 * 1024) // IDE JPEG buffer (header + data).
 
 #define OMV_TEXT_ORIGIN            0x00026000
 #define OMV_FFS_LENGTH             64K

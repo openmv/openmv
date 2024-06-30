@@ -199,7 +199,7 @@ SECTIONS
 
       #if !defined(OMV_JPEG_MEMORY)
       _jpeg_buf = .;      // IDE JPEG buffer
-      . = . + OMV_JPEG_BUF_SIZE;
+      . = . + OMV_JPEG_SIZE;
       . = ALIGN(4);
       #endif
     } >OMV_FB_MEMORY

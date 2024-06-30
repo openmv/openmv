@@ -48,9 +48,10 @@ LDFLAGS = -mthumb \
           -mabi=aapcs-linux \
           -Wl,--print-memory-usage \
           -Wl,--gc-sections \
-          -Wl,-T$(BUILD)/$(LDSCRIPT).lds \
           -Wl,--wrap=tud_cdc_rx_cb \
-          -Wl,--wrap=mp_hal_stdout_tx_strn
+          -Wl,--wrap=mp_hal_stdout_tx_strn \
+          -Wl,-T$(BUILD)/$(LDSCRIPT).lds \
+          -Wl,-Map=$(BUILD)/$(FIRMWARE).map
 
 HAL_CFLAGS += -I$(TOP_DIR)/$(CMSIS_DIR)/include/
 HAL_CFLAGS += -I$(TOP_DIR)/$(CMSIS_DIR)/include/mimxrt
@@ -517,8 +518,8 @@ endif
 
 # This target generates the main/app firmware image located at 0x08010000
 $(FIRMWARE): FIRMWARE_OBJS
-	$(CPP) -P -E -DLINKER_SCRIPT -I$(OMV_BOARD_CONFIG_DIR) \
-    $(OMV_DIR)/ports/$(PORT)/$(LDSCRIPT).ld.S > $(BUILD)/$(LDSCRIPT).lds
+	$(CPP) -P -E -DLINKER_SCRIPT -I$(OMV_COMMON_DIR) -I$(OMV_BOARD_CONFIG_DIR) \
+        $(OMV_DIR)/ports/$(PORT)/$(LDSCRIPT).ld.S > $(BUILD)/$(LDSCRIPT).lds
 	$(CC) $(LDFLAGS) $(FIRM_OBJ) -o $(FW_DIR)/$(FIRMWARE).elf $(LIBS) -lm
 	$(OBJCOPY) -Obinary -R .big_const* $(FW_DIR)/$(FIRMWARE).elf $(FW_DIR)/$(FIRMWARE).bin
 

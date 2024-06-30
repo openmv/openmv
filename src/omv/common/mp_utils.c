@@ -133,7 +133,7 @@ void mp_init_gc_stack(void *sstack, void *estack, void *heap_start, void *heap_e
     gc_init(heap_start, heap_end);
 
     // Add GC blocks (if enabled).
-    #ifdef OMV_GC_BLOCK0_MEMORY
+    #ifdef OMV_GC_BLOCK1_MEMORY
     typedef struct {
         uint32_t *addr;
         uint32_t size;

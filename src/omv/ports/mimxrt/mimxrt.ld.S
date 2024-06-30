@@ -57,30 +57,6 @@ __iomux_gpr16_adr = 0x400AC040;
 __iomux_gpr17_adr = 0x400AC044;
 __iomux_gpr17_value = OMV_FLEXRAM_CONFIG;
 
-#if defined(OMV_VOSPI_MEMORY)
-#if !defined(OMV_VOSPI_MEMORY_OFFSET)
-#define OMV_VOSPI_MEMORY_OFFSET         (0)
-#endif
-_vospi_buf          = ORIGIN(OMV_VOSPI_MEMORY) + OMV_VOSPI_MEMORY_OFFSET;
-#endif
-
-// Location of filesystem flash storage
-// Not used in MIMXRT port.
-// _micropy_hw_internal_flash_storage_start = ORIGIN(FLASH_FFS);
-// _micropy_hw_internal_flash_storage_end = ORIGIN(FLASH_FFS) + LENGTH(FLASH_FFS);
-
-#define OMV_DEFINE_GC_BLOCK(n) \
-    .gc_block##n (NOLOAD) : \
-    { \
-      . = ALIGN(4); \
-      . += OMV_GC_BLOCK##n##_SIZE; \
-      . = ALIGN(4); \
-    } >OMV_GC_BLOCK##n##_MEMORY \
-
-#define OMV_ADD_GC_BLOCK(n) \
-    LONG (ADDR(.gc_block##n)) \
-    LONG (SIZEOF(.gc_block##n) / 4)
-
 /* Define output sections */
 SECTIONS
 {
@@ -126,33 +102,42 @@ SECTIONS
     . = ALIGN(4);
   } > FLASH_TEXT
 
-  .ARM :
-  {
-    __exidx_start = .;
-    *(.ARM.exidx*)
-    __exidx_end = .;
-  } > FLASH_TEXT
+  /* The address used as the source for copying the initialized data section. */
+  __etext = LOADADDR(.data);
 
-  __etext = LOADADDR(.data);    /* define a global symbol at end of code */
-
-    /* Initialized data sections */
-  .data :
+  /* Initialized data sections */
+  .data : ALIGN(4)
   {
-    . = ALIGN(4);
     _ram_start = .;
-    __DATA_RAM = .;
-    __data_start__ = .;      /* create a global symbol at data start */
+    __data_start__ = .;      // Used by the startup to initialize the data section
     *(m_usb_dma_init_data)
-    *(.data)                 /* .data sections */
-    *(.data*)                /* .data* sections */
+    . = ALIGN(4);
+    *(.data)                 // .data sections */
+    . = ALIGN(4);
+    *(.data*)                // .data* sections */
     KEEP(*(.jcr*))
     . = ALIGN(4);
-    __data_end__ = .;        /* define a global symbol at data end */
+    __data_end__ = .;        // Define a global symbol at data end
   } > OMV_MAIN_MEMORY AT> FLASH_TEXT
 
-  .ram_function :
+  /* Uninitialized data section */
+  .bss (NOLOAD) : ALIGN(4)
   {
+    __bss_start__ = .;       // Used by the startup to initialize the .bss section
+    *(m_usb_dma_noninit_data)
     . = ALIGN(4);
+    *(.bss)
+    . = ALIGN(4);
+    *(.bss*)
+    . = ALIGN(4);
+    *(COMMON)
+    . = ALIGN(4);
+    _ebss = .;
+    __bss_end__ = .;
+  } > OMV_MAIN_MEMORY
+
+  .ram_function : ALIGN(4)
+  {
     __ram_function_start__ = .;
     *(.ram_functions*)
     *(.text*)
@@ -160,123 +145,5 @@ SECTIONS
     __ram_function_end__ = .;
   } > OMV_RAMFUNC_MEMORY AT> FLASH_TEXT
 
-  /* Uninitialized data section */
-  .bss (NOLOAD) :
-  {
-    /* This is used by the startup in order to initialize the .bss section */
-    . = ALIGN(4);
-    __START_BSS = .;
-    __bss_start__ = .;
-    *(m_usb_dma_noninit_data)
-    *(.bss)
-    *(.bss*)
-    *(COMMON)
-    . = ALIGN(4);
-    _ebss = .;
-    __bss_end__ = .;
-    __END_BSS = .;
-  } > OMV_MAIN_MEMORY
-
-  ._heap (NOLOAD) :
-  {
-    . = ALIGN(4);
-    _heap_start = .;
-    . = . + OMV_HEAP_SIZE;
-
-    . = ALIGN(4);
-    _heap_end  = .;
-  } >OMV_HEAP_MEMORY
-
-  ._stack (NOLOAD) :
-  {
-    . = ALIGN(8);
-    _sstack  = .;
-    . = . + OMV_STACK_SIZE;
-
-    . = ALIGN(8);
-    _estack  = .;
-    __stack  = .;
-  } >OMV_STACK_MEMORY
-
-  #if defined(OMV_GC_BLOCK0_MEMORY)
-  OMV_DEFINE_GC_BLOCK(0)
-  #endif
-  #if defined(OMV_GC_BLOCK1_MEMORY)
-  OMV_DEFINE_GC_BLOCK(1)
-  #endif
-  #if defined(OMV_GC_BLOCK2_MEMORY)
-  OMV_DEFINE_GC_BLOCK(2)
-  #endif
-
-  .gc_blocks_table (READONLY) :
-  {
-    . = ALIGN(4);
-    _gc_blocks_table_start = .;
-    #if defined(OMV_GC_BLOCK0_MEMORY)
-    OMV_ADD_GC_BLOCK(0)
-    #endif
-    #if defined(OMV_GC_BLOCK1_MEMORY)
-    OMV_ADD_GC_BLOCK(1)
-    #endif
-    #if defined(OMV_GC_BLOCK2_MEMORY)
-    OMV_ADD_GC_BLOCK(2)
-    #endif
-    _gc_blocks_table_end = .;
-    . = ALIGN(4);
-  } > FLASH_TEXT
-
-  /* Main framebuffer memory */
-  .fb_memory (NOLOAD) :
-  {
-    . = ALIGN(4);
-    _fb_base = .;
-    . += OMV_FB_SIZE;
-
-    . = ALIGN(4);
-    _fb_end = .;
-    . += OMV_FB_ALLOC_SIZE;
-
-    . = ALIGN(4);
-    _fballoc = .;
-  } >OMV_FB_MEMORY
-
-  #if defined(OMV_FB_OVERLAY_MEMORY)
-  .fb_overlay_memory (NOLOAD) :
-  {
-    . = ALIGN(4);
-    _fballoc_overlay_start = .;
-    . = . + OMV_FB_OVERLAY_SIZE;
-    _fballoc_overlay_end = .;
-  } >OMV_FB_OVERLAY_MEMORY
-  #endif
-
-  #if defined(OMV_JPEG_MEMORY)
-  /* JPEG framebuffer memory */
-  .jpeg_memory (NOLOAD) :
-  {
-    . = ALIGN(4);
-    _jpeg_buf = .;      // IDE JPEG buffer
-    . = . + OMV_JPEG_BUF_SIZE;
-    . = ALIGN(4);
-  } >OMV_JPEG_MEMORY
-  #endif
-
-  /* Misc DMA buffers section */
-  .dma_memory (NOLOAD) :
-  {
-    . = ALIGN(8);
-    _line_buf = .;      // Image line buffer.
-    . = . + OMV_LINE_BUF_SIZE;
-
-    #if !defined(OMV_JPEG_MEMORY)
-    . = ALIGN(16);
-    _jpeg_buf = .;      // IDE JPEG buffer
-    . = . + OMV_JPEG_BUF_SIZE;
-    #endif
-
-   . = ALIGN(16);
-    *(.dma_buffer)
-  } >OMV_DMA_MEMORY
-
-  .ARM.attributes 0 : { *(.ARM.attributes) }
+  #include "common.ld.S"
 }

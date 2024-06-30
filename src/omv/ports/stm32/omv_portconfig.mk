@@ -43,7 +43,8 @@ LDFLAGS = -mcpu=$(CPU) \
           -mfloat-abi=hard \
           -Wl,--gc-sections \
           -Wl,--print-memory-usage \
-          -Wl,-T$(BUILD)/$(LDSCRIPT).lds
+          -Wl,-T$(BUILD)/$(LDSCRIPT).lds \
+          -Wl,-Map=$(BUILD)/$(FIRMWARE).map
 
 HAL_CFLAGS += -I$(TOP_DIR)/$(CMSIS_DIR)/include/
 HAL_CFLAGS += -I$(TOP_DIR)/$(CMSIS_DIR)/include/st
@@ -732,7 +733,8 @@ endif
 
 # This target generates the main/app firmware image located at 0x08010000
 $(FIRMWARE): FIRMWARE_OBJS
-	$(CPP) -P -E -I$(OMV_BOARD_CONFIG_DIR) $(OMV_DIR)/ports/$(PORT)/$(LDSCRIPT).ld.S > $(BUILD)/$(LDSCRIPT).lds
+	$(CPP) -P -E  -I$(OMV_COMMON_DIR) -I$(OMV_BOARD_CONFIG_DIR) \
+                    $(OMV_DIR)/ports/$(PORT)/$(LDSCRIPT).ld.S > $(BUILD)/$(LDSCRIPT).lds
 	$(CC) $(LDFLAGS) $(FIRM_OBJ) -o $(FW_DIR)/$(FIRMWARE).elf $(LIBS) -lm
 	$(OBJCOPY) -Obinary $(FW_DIR)/$(FIRMWARE).elf $(FW_DIR)/$(FIRMWARE).bin
 	$(PYTHON) $(MKDFU) -D $(DFU_DEVICE) -b $(MAIN_APP_ADDR):$(FW_DIR)/$(FIRMWARE).bin $(FW_DIR)/$(FIRMWARE).dfu
@@ -740,7 +742,8 @@ $(FIRMWARE): FIRMWARE_OBJS
 ifeq ($(OMV_ENABLE_BL), 1)
 # This target generates the bootloader.
 $(BOOTLOADER): FIRMWARE_OBJS BOOTLOADER_OBJS
-	$(CPP) -P -E -I$(OMV_BOARD_CONFIG_DIR) $(BOOTLDR_DIR)/stm32fxxx.ld.S > $(BUILD)/$(BOOTLDR_DIR)/stm32fxxx.lds
+	$(CPP) -P -E -I$(OMV_COMMON_DIR) -I$(OMV_BOARD_CONFIG_DIR) \
+                   $(BOOTLDR_DIR)/stm32fxxx.ld.S > $(BUILD)/$(BOOTLDR_DIR)/stm32fxxx.lds
 	$(CC) $(BL_LDFLAGS) $(BOOT_OBJ) -o $(FW_DIR)/$(BOOTLOADER).elf
 	$(OBJCOPY) -Obinary $(FW_DIR)/$(BOOTLOADER).elf $(FW_DIR)/$(BOOTLOADER).bin
 	$(PYTHON) $(MKDFU) -D $(DFU_DEVICE) -b 0x08000000:$(FW_DIR)/$(BOOTLOADER).bin $(FW_DIR)/$(BOOTLOADER).dfu
@@ -749,7 +752,8 @@ endif
 ifeq ($(OMV_ENABLE_UVC), 1)
 # This target generates the UVC firmware.
 $(UVC): FIRMWARE_OBJS UVC_OBJS
-	$(CPP) -P -E -I$(OMV_BOARD_CONFIG_DIR) $(UVC_DIR)/stm32fxxx.ld.S > $(BUILD)/$(UVC_DIR)/stm32fxxx.lds
+	$(CPP) -P -E -I$(OMV_COMMON_DIR) -I$(OMV_BOARD_CONFIG_DIR) \
+                   $(UVC_DIR)/stm32fxxx.ld.S > $(BUILD)/$(UVC_DIR)/stm32fxxx.lds
 	$(CC) $(UVC_LDFLAGS) $(UVC_OBJ) -o $(FW_DIR)/$(UVC).elf -lgcc
 	$(OBJCOPY) -Obinary $(FW_DIR)/$(UVC).elf $(FW_DIR)/$(UVC).bin
 	$(PYTHON) $(MKDFU) -D $(DFU_DEVICE) -b $(MAIN_APP_ADDR):$(FW_DIR)/$(UVC).bin $(FW_DIR)/$(UVC).dfu
