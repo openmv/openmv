@@ -25,6 +25,10 @@ set(MICROPY_MANIFEST_OMV_LIB_DIR    ${TOP_DIR}/../scripts/libraries)
 # Include board cmake fragment
 include(${OMV_BOARD_CONFIG_DIR}/omv_boardconfig.cmake)
 
+get_target_property(MICROPY_SOURCES ${MICROPY_TARGET} SOURCES)
+list(REMOVE_ITEM MICROPY_SOURCES pendsv.c main.c)
+set_property(TARGET ${MICROPY_TARGET} PROPERTY SOURCES ${MICROPY_SOURCES})
+
 target_link_options(${MICROPY_TARGET} PRIVATE
     -Wl,--wrap=tud_cdc_rx_cb
     -Wl,--wrap=mp_hal_stdout_tx_strn
@@ -234,6 +238,7 @@ if(MICROPY_PY_ULAB)
         ${MICROPY_ULAB_DIR}/code/ndarray_operators.c
         ${MICROPY_ULAB_DIR}/code/ndarray_properties.c
         ${MICROPY_ULAB_DIR}/code/numpy/approx.c
+        ${MICROPY_ULAB_DIR}/code/numpy/bitwise.c
         ${MICROPY_ULAB_DIR}/code/numpy/carray/carray.c
         ${MICROPY_ULAB_DIR}/code/numpy/carray/carray_tools.c
         ${MICROPY_ULAB_DIR}/code/numpy/compare.c
@@ -248,6 +253,7 @@ if(MICROPY_PY_ULAB)
         ${MICROPY_ULAB_DIR}/code/numpy/numerical.c
         ${MICROPY_ULAB_DIR}/code/numpy/numpy.c
         ${MICROPY_ULAB_DIR}/code/numpy/poly.c
+        ${MICROPY_ULAB_DIR}/code/numpy/random/random.c
         ${MICROPY_ULAB_DIR}/code/numpy/stats.c
         ${MICROPY_ULAB_DIR}/code/numpy/transform.c
         ${MICROPY_ULAB_DIR}/code/numpy/vector.c

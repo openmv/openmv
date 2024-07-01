@@ -228,7 +228,8 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/extmod/,\
 	modheapq.o          \
 	modbinascii.o       \
 	modrandom.o         \
-	modtime.o           \
+    modtime.o           \
+	modvfs.o            \
 	os_dupterm.o        \
 	modmachine.o        \
 	modos.o             \
@@ -320,37 +321,39 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/modules/,\
 	)
 
 ifeq ($(MICROPY_PY_ULAB), 1)
-FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/modules/ulab/,\
-	code/ndarray.o                      \
-	code/ndarray_operators.o            \
-	code/ndarray_properties.o           \
-	code/numpy/approx.o                 \
-	code/numpy/carray/carray.o          \
-	code/numpy/carray/carray_tools.o    \
-	code/numpy/compare.o                \
-	code/numpy/create.o                 \
-	code/numpy/fft/fft.o                \
-	code/numpy/fft/fft_tools.o          \
-	code/numpy/filter.o                 \
-	code/numpy/io/io.o                  \
-	code/numpy/linalg/linalg.o          \
-	code/numpy/linalg/linalg_tools.o    \
-	code/numpy/ndarray/ndarray_iter.o   \
-	code/numpy/numerical.o              \
-	code/numpy/numpy.o                  \
-	code/numpy/poly.o                   \
-	code/numpy/stats.o                  \
-	code/numpy/transform.o              \
-	code/numpy/vector.o                 \
-	code/scipy/linalg/linalg.o          \
-	code/scipy/optimize/optimize.o      \
-	code/scipy/scipy.o                  \
-	code/scipy/signal/signal.o          \
-	code/scipy/special/special.o        \
-	code/ulab.o                         \
-	code/ulab_tools.o                   \
-	code/user/user.o                    \
-	code/utils/utils.o                  \
+FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/modules/ulab/code/,\
+	ndarray.o                       \
+	ndarray_operators.o             \
+	ndarray_properties.o            \
+	numpy/approx.o                  \
+	numpy/bitwise.o                 \
+	numpy/carray/carray.o           \
+	numpy/carray/carray_tools.o     \
+	numpy/compare.o                 \
+	numpy/create.o                  \
+	numpy/fft/fft.o                 \
+	numpy/fft/fft_tools.o           \
+	numpy/filter.o                  \
+	numpy/io/io.o                   \
+	numpy/linalg/linalg.o           \
+	numpy/linalg/linalg_tools.o     \
+	numpy/ndarray/ndarray_iter.o    \
+	numpy/numerical.o               \
+	numpy/numpy.o                   \
+	numpy/poly.o                    \
+	numpy/random/random.o           \
+	numpy/stats.o                   \
+	numpy/transform.o               \
+	numpy/vector.o                  \
+	scipy/linalg/linalg.o           \
+	scipy/optimize/optimize.o       \
+	scipy/scipy.o                   \
+	scipy/signal/signal.o           \
+	scipy/special/special.o         \
+	ulab.o                          \
+	ulab_tools.o                    \
+	user/user.o                     \
+	utils/utils.o                   \
 	)
 endif
 

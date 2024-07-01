@@ -36,8 +36,8 @@ CFLAGS += -DCPU_$(MCU_VARIANT) \
 	      -DCLOCK_CONFIG_H='<boards/$(MCU_SERIES)_clock_config.h>' \
           -DCSI_DRIVER_FRAG_MODE=1 \
           -D__START=main \
-          -D__STARTUP_CLEAR_BSS\
-          -D__STARTUP_INITIALIZE_RAMFUNCTION\
+          -D__STARTUP_CLEAR_BSS \
+          -D__STARTUP_INITIALIZE_RAMFUNCTION \
           $(OMV_BOARD_EXTRA_CFLAGS)
 
 # Linker Flags
@@ -79,7 +79,9 @@ endif
 MICROPY_ARGS += MCU_DIR=$(TOP_DIR)/$(HAL_DIR) \
                 CMSIS_DIR=$(TOP_DIR)/$(CMSIS_DIR)\
                 SUPPORTS_HARDWARE_FP_SINGLE=1 \
-                MICROPY_VFS_LFS2=0
+                MICROPY_VFS_LFS2=0 \
+                MICROPY_PY_OPENAMP=$(MICROPY_PY_OPENAMP)\
+                MICROPY_PY_OPENAMP_REMOTEPROC=$(MICROPY_PY_OPENAMP_REMOTEPROC)
 
 OMV_CFLAGS += -I$(OMV_BOARD_CONFIG_DIR)
 OMV_CFLAGS += -I$(TOP_DIR)/$(OMV_DIR)/
@@ -325,51 +327,61 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/lib/tinyusb/src/, \
 	)
 
 FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/extmod/,\
-	machine_adc.o       \
-	machine_adc_block.o \
-	machine_bitstream.o \
-	machine_i2c.o       \
-	machine_i2s.o       \
-	machine_mem.o       \
-	machine_pinbase.o   \
-	machine_pulse.o     \
-	machine_pwm.o       \
-	machine_signal.o    \
-	machine_spi.o       \
-	machine_timer.o     \
-	machine_uart.o      \
-	machine_wdt.o       \
-	modframebuf.o       \
-	modmachine.o        \
-	modnetwork.o        \
-	modonewire.o        \
-	modasyncio.o        \
-	modbinascii.o       \
-	modcryptolib.o      \
-	moddeflate.o        \
-	moductypes.o        \
-	modhashlib.o        \
-	modheapq.o          \
-	modjson.o           \
-	modos.o             \
-	modplatform.o       \
-	modrandom.o         \
-	modre.o             \
-	modselect.o         \
-	modsocket.o         \
-	modssl_axtls.o      \
-	modssl_mbedtls.o    \
-	modtime.o           \
-	os_dupterm.o        \
-	vfs_blockdev.o      \
-	vfs_fat_diskio.o    \
-	vfs_fat_file.o      \
-	vfs_fat.o           \
-	vfs.o               \
-	vfs_posix_file.o    \
-	vfs_posix.o         \
-	vfs_reader.o        \
-	virtpin.o           \
+	machine_adc.o           \
+	machine_adc_block.o     \
+	machine_bitstream.o     \
+	machine_i2c.o           \
+	machine_i2s.o           \
+	machine_mem.o           \
+	machine_pinbase.o       \
+	machine_pulse.o         \
+	machine_pwm.o           \
+	machine_signal.o        \
+	machine_spi.o           \
+	machine_timer.o         \
+	machine_uart.o          \
+	machine_usb_device.o    \
+	machine_wdt.o           \
+	modasyncio.o            \
+	modbinascii.o           \
+	modbtree.o              \
+	modcryptolib.o          \
+	moddeflate.o            \
+	modframebuf.o           \
+	modhashlib.o            \
+	modheapq.o              \
+	modjson.o               \
+	modmachine.o            \
+	modnetwork.o            \
+	modonewire.o            \
+	modopenamp.o            \
+	modopenamp_remoteproc.o \
+	modopenamp_remoteproc_store.o \
+	modos.o                 \
+	modplatform.o           \
+	modrandom.o             \
+	modre.o                 \
+	modselect.o             \
+	modsocket.o             \
+	modtls_axtls.o          \
+	modtls_mbedtls.o        \
+	modtime.o               \
+	moductypes.o            \
+	modvfs.o                \
+	network_esp_hosted.o    \
+	network_ninaw10.o       \
+	network_wiznet5k.o      \
+	os_dupterm.o            \
+	vfs.o                   \
+	vfs_blockdev.o          \
+	vfs_fat.o               \
+	vfs_fat_diskio.o        \
+	vfs_fat_file.o          \
+	vfs_lfs.o               \
+	vfs_posix.o             \
+	vfs_posix_file.o        \
+	vfs_reader.o            \
+	virtpin.o               \
 	)
 
 FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/lib/oofatfs/,\
@@ -383,37 +395,39 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/drivers/,\
 	)
 
 ifeq ($(MICROPY_PY_ULAB), 1)
-FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/modules/ulab/,\
-	code/ndarray.o                      \
-	code/ndarray_operators.o            \
-	code/ndarray_properties.o           \
-	code/numpy/approx.o                 \
-	code/numpy/carray/carray.o          \
-	code/numpy/carray/carray_tools.o    \
-	code/numpy/compare.o                \
-	code/numpy/create.o                 \
-	code/numpy/fft/fft.o                \
-	code/numpy/fft/fft_tools.o          \
-	code/numpy/filter.o                 \
-	code/numpy/io/io.o                  \
-	code/numpy/linalg/linalg.o          \
-	code/numpy/linalg/linalg_tools.o    \
-	code/numpy/ndarray/ndarray_iter.o   \
-	code/numpy/numerical.o              \
-	code/numpy/numpy.o                  \
-	code/numpy/poly.o                   \
-	code/numpy/stats.o                  \
-	code/numpy/transform.o              \
-	code/numpy/vector.o                 \
-	code/scipy/linalg/linalg.o          \
-	code/scipy/optimize/optimize.o      \
-	code/scipy/scipy.o                  \
-	code/scipy/signal/signal.o          \
-	code/scipy/special/special.o        \
-	code/ulab.o                         \
-	code/ulab_tools.o                   \
-	code/user/user.o                    \
-	code/utils/utils.o                  \
+FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/modules/ulab/code/,\
+	ndarray.o                       \
+	ndarray_operators.o             \
+	ndarray_properties.o            \
+	numpy/approx.o                  \
+	numpy/bitwise.o                 \
+	numpy/carray/carray.o           \
+	numpy/carray/carray_tools.o     \
+	numpy/compare.o                 \
+	numpy/create.o                  \
+	numpy/fft/fft.o                 \
+	numpy/fft/fft_tools.o           \
+	numpy/filter.o                  \
+	numpy/io/io.o                   \
+	numpy/linalg/linalg.o           \
+	numpy/linalg/linalg_tools.o     \
+	numpy/ndarray/ndarray_iter.o    \
+	numpy/numerical.o               \
+	numpy/numpy.o                   \
+	numpy/poly.o                    \
+	numpy/random/random.o           \
+	numpy/stats.o                   \
+	numpy/transform.o               \
+	numpy/vector.o                  \
+	scipy/linalg/linalg.o           \
+	scipy/optimize/optimize.o       \
+	scipy/scipy.o                   \
+	scipy/signal/signal.o           \
+	scipy/special/special.o         \
+	ulab.o                          \
+	ulab_tools.o                    \
+	user/user.o                     \
+	utils/utils.o                   \
 	)
 endif
 
@@ -458,6 +472,40 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/,\
 	extmod/nimble/nimble/nimble_npl_os.o        \
 	extmod/nimble/hal/hal_uart.o                \
 	extmod/modbluetooth.o                       \
+	)
+endif
+
+ifeq ($(MICROPY_PY_OPENAMP),1)
+FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/openamp/metal/,\
+	device.o                        \
+	dma.o                           \
+	init.o                          \
+	io.o                            \
+	irq.o                           \
+	log.o                           \
+	shmem.o                         \
+	softirq.o                       \
+	version.o                       \
+	system/micropython/condition.o  \
+	system/micropython/device.o     \
+	system/micropython/io.o         \
+	system/micropython/irq.o        \
+	system/micropython/shmem.o      \
+	system/micropython/time.o       \
+	)
+
+FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/,\
+	mpmetalport.o                                   \
+	mpremoteprocport.o                              \
+	lib/open-amp/lib/virtio/virtio.o                \
+	lib/open-amp/lib/virtio/virtqueue.o             \
+	lib/open-amp/lib/virtio_mmio/virtio_mmio_drv.o  \
+	lib/open-amp/lib/rpmsg/rpmsg.o                  \
+	lib/open-amp/lib/rpmsg/rpmsg_virtio.o           \
+	lib/open-amp/lib/remoteproc/elf_loader.o        \
+	lib/open-amp/lib/remoteproc/remoteproc.o        \
+	lib/open-amp/lib/remoteproc/remoteproc_virtio.o \
+	lib/open-amp/lib/remoteproc/rsc_table_parser.o  \
 	)
 endif
 
