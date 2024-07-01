@@ -213,47 +213,66 @@ int ml_backend_init_model(py_ml_model_obj_t *model) {
         mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Failed to allocate tensors"));
     }
 
-    // Check input data type.
-    TfLiteTensor *input = interpreter.input(0);
-    if (!ml_backend_valid_dataype(input->type)) {
-        mp_raise_msg_varg(&mp_type_ValueError, MP_ERROR_TEXT("Unsupported input data type %d"), input->type);
-    }
+    size_t inputs_size = interpreter.inputs_size();
+    model->input_shape = (mp_obj_tuple_t *) MP_OBJ_TO_PTR(mp_obj_new_tuple(inputs_size, NULL));
+    model->input_scale = (mp_obj_tuple_t *) MP_OBJ_TO_PTR(mp_obj_new_tuple(inputs_size, NULL));
+    model->input_zero_point = (mp_obj_tuple_t *) MP_OBJ_TO_PTR(mp_obj_new_tuple(inputs_size, NULL));
+    model->input_dtype = (mp_obj_tuple_t *) MP_OBJ_TO_PTR(mp_obj_new_tuple(inputs_size, NULL));
 
-    // Check output data type.
-    TfLiteTensor *output = interpreter.output(0);
-    if (!ml_backend_valid_dataype(output->type)) {
-        mp_raise_msg_varg(&mp_type_ValueError, MP_ERROR_TEXT("Unsupported output data type %d"), output->type);
-    }
-
-    model->input_shape = (mp_obj_tuple_t *) MP_OBJ_TO_PTR(mp_obj_new_tuple(interpreter.inputs_size(), NULL));
-    for (size_t i=0; i<interpreter.inputs_size(); i++) {
+    for (size_t i=0; i<inputs_size; i++) {
         TfLiteTensor *input = interpreter.input(i);
+
+        // Check input data type.
+        if (!ml_backend_valid_dataype(input->type)) {
+            mp_raise_msg_varg(&mp_type_ValueError, MP_ERROR_TEXT("Unsupported input data type %d"), input->type);
+        }
+
         mp_obj_tuple_t *o = (mp_obj_tuple_t *) MP_OBJ_TO_PTR(mp_obj_new_tuple(input->dims->size, NULL));
         for (int j=0; j<input->dims->size; j++) {
             o->items[j] = mp_obj_new_int(input->dims->data[j]);
         }
+
+        float input_scale = input->params.scale;
+        if (input_scale == 0.0f) {
+            input_scale = 1.0f;
+        }
+
         model->input_shape->items[i] = MP_OBJ_FROM_PTR(o);
+        model->input_scale->items[i] = mp_obj_new_float(input_scale);
+        model->input_zero_point->items[i] = mp_obj_new_int(input->params.zero_point);
+        model->input_dtype->items[i] = mp_obj_new_int(ml_backend_map_dtype(input->type));
     }
 
-    model->inputs_size = interpreter.inputs_size();
-    model->input_dtype = ml_backend_map_dtype(input->type);
-    model->input_scale = input->params.scale;
-    model->input_zero_point = input->params.zero_point;
+    size_t outputs_size = interpreter.outputs_size();
+    model->output_shape = (mp_obj_tuple_t *) MP_OBJ_TO_PTR(mp_obj_new_tuple(outputs_size, NULL));
+    model->output_scale = (mp_obj_tuple_t *) MP_OBJ_TO_PTR(mp_obj_new_tuple(outputs_size, NULL));
+    model->output_zero_point = (mp_obj_tuple_t *) MP_OBJ_TO_PTR(mp_obj_new_tuple(outputs_size, NULL));
+    model->output_dtype = (mp_obj_tuple_t *) MP_OBJ_TO_PTR(mp_obj_new_tuple(outputs_size, NULL));
 
-    model->output_shape = (mp_obj_tuple_t *) MP_OBJ_TO_PTR(mp_obj_new_tuple(interpreter.outputs_size(), NULL));
-    for (size_t i=0; i<interpreter.outputs_size(); i++) {
+    for (size_t i=0; i<outputs_size; i++) {
         TfLiteTensor *output = interpreter.output(i);
+
+        // Check output data type.
+        if (!ml_backend_valid_dataype(output->type)) {
+            mp_raise_msg_varg(&mp_type_ValueError, MP_ERROR_TEXT("Unsupported output data type %d"), output->type);
+        }
+
         mp_obj_tuple_t *o = (mp_obj_tuple_t *) MP_OBJ_TO_PTR(mp_obj_new_tuple(output->dims->size, NULL));
         for (int j=0; j<output->dims->size; j++) {
             o->items[j] = mp_obj_new_int(output->dims->data[j]);
         }
+
+        float output_scale = output->params.scale;
+        if (output_scale == 0.0f) {
+            output_scale = 1.0f;
+        }
+
         model->output_shape->items[i] = MP_OBJ_FROM_PTR(o);
+        model->output_scale->items[i] = mp_obj_new_float(output_scale);
+        model->output_zero_point->items[i] = mp_obj_new_int(output->params.zero_point);
+        model->output_dtype->items[i] = mp_obj_new_int(ml_backend_map_dtype(output->type));
     }
 
-    model->outputs_size = interpreter.outputs_size();
-    model->output_dtype = ml_backend_map_dtype(output->type);
-    model->output_scale = output->params.scale;
-    model->output_zero_point = output->params.zero_point;
     model->memory_size = interpreter.arena_used_bytes() + 1024;
 
     // Free the temporary arena.
