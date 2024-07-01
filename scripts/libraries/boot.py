@@ -10,8 +10,10 @@ sensor.set_pixformat(sensor.RGB565)
 sensor.set_framesize(sensor.QVGA)
 sensor.skip_frames(time=2000)
 while True:
-pyb.LED(RED_LED_PIN).on()
-sensor.skip_frames(time=2000)
+  pyb.LED(RED_LED_PIN).on()
+  pyb.LED(BLUE_LED_PIN).on()
+  pyb.delay(1000)
+  sensor.skip_frames(time=2000)
 
 
 
