@@ -1,8 +1,8 @@
 /*
  * This file is part of the OpenMV project.
  *
- * Copyright (c) 2013-2021 Ibrahim Abdelkader <iabdalkader@openmv.io>
- * Copyright (c) 2013-2021 Kwabena W. Agyeman <kwagyeman@openmv.io>
+ * Copyright (c) 2013-2024 Ibrahim Abdelkader <iabdalkader@openmv.io>
+ * Copyright (c) 2013-2024 Kwabena W. Agyeman <kwagyeman@openmv.io>
  *
  * This work is licensed under the MIT license, see the file LICENSE for details.
  *
@@ -10,6 +10,8 @@
  */
 #ifndef __PY_ML_H__
 #define __PY_ML_H__
+#include "imlib.h"
+
 typedef enum {
     PY_ML_SCALE_NONE,
     PY_ML_SCALE_0_1,
@@ -44,14 +46,21 @@ typedef struct py_ml_model_obj {
     void *state; // Private context for the backend.
 } py_ml_model_obj_t;
 
+typedef void (py_ml_input_callback_t) (void *self, py_ml_model_obj_t *model, size_t index);
+
+// ML Image Arg Object.
+typedef struct py_ml_image_arg_obj {
+    mp_obj_base_t base;
+    py_ml_input_callback_t *input_callback;
+    image_t *image;
+    rectangle_t roi;
+    py_ml_scale_t scale;
+    float mean[3];
+    float stdev[3];
+} py_image_arg_obj_t;
+
 // Initialize a model.
 int ml_backend_init_model(py_ml_model_obj_t *model);
-
-// Callback to populate the model input data.
-typedef void (*ml_backend_input_callback_t) (py_ml_model_obj_t *model, void *arg);
-
-// Callback to get the model output data.
-typedef void (*ml_backend_output_callback_t) (py_ml_model_obj_t *model, void *arg);
 
 // Return an input tensor by index.
 void *ml_backend_get_input(py_ml_model_obj_t *model, size_t index);
@@ -60,9 +69,5 @@ void *ml_backend_get_input(py_ml_model_obj_t *model, size_t index);
 void *ml_backend_get_output(py_ml_model_obj_t *model, size_t index);
 
 // Run inference.
-int ml_backend_run_inference(py_ml_model_obj_t *model,
-                             ml_backend_input_callback_t input_callback, // Callback to populate the model input data.
-                             void *input_data, // User data structure passed to input callback.
-                             ml_backend_output_callback_t output_callback, // Callback to use the model output data.
-                             void *output_data); // User data structure passed to output callback.
+int ml_backend_run_inference(py_ml_model_obj_t *model);
 #endif // __PY_ML_H__

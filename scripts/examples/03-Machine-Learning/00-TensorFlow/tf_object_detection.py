@@ -45,9 +45,9 @@ colors = [  # Add more colors if you are detecting more than 7 types of classes 
 # position in the output image back to the original input image. The function then returns a
 # list per class which each contain a list of (rect, score) tuples representing the detected
 # objects.
-def fomo_post_process(model, output, rect):
+def fomo_post_process(model, input, output):
     n, oh, ow, oc = model.output_shape[0]
-    nms = ml.NMS(ow, oh, rect)
+    nms = ml.NMS(ow, oh, input[0].roi)
     for i in range(oc):
         img = image.Image(output[0], shape=(oh, ow, 1), strides=(i, oc), scale=(255, 0))
         blobs = img.find_blobs(
@@ -69,7 +69,7 @@ while True:
 
     img = sensor.snapshot()
 
-    for i, detection_list in enumerate(model.predict(img, callback=fomo_post_process)):
+    for i, detection_list in enumerate(model.predict([ml.Image(img)], callback=fomo_post_process)):
         if i == 0:
             continue  # background class
         if len(detection_list) == 0:

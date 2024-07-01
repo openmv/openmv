@@ -278,21 +278,14 @@ int ml_backend_init_model(py_ml_model_obj_t *model) {
     return 0;
 }
 
-int ml_backend_run_inference(py_ml_model_obj_t *model,
-                             ml_backend_input_callback_t input_callback,
-                             void *input_arg,
-                             ml_backend_output_callback_t output_callback,
-                             void *output_arg) {
+int ml_backend_run_inference(py_ml_model_obj_t *model) {
     RegisterDebugLogCallback(ml_backend_log_handler);
     ml_backend_state_t *state = (ml_backend_state_t *) model->state;
-
-    input_callback(model, input_arg);
 
     if (state->interpreter->Invoke() != kTfLiteOk) {
         mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Invoke failed"));
     }
 
-    output_callback(model, output_arg);
     return 0;
 }
 
