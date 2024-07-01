@@ -23,6 +23,7 @@ static void py_ml_image_arg_input_callback(void *self, py_ml_model_obj_t *model,
     py_image_arg_obj_t *image_arg = MP_OBJ_TO_PTR(self);
     void *model_input = ml_backend_get_input(model, index);
     mp_obj_tuple_t *input_shape = MP_OBJ_TO_PTR(model->input_shape->items[index]);
+    int input_dtype = mp_obj_get_int(model->input_dtype->items[index]);
 
     if ((input_shape->len != 3) && (input_shape->len != 4)) {
         mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Expected a tensor of (1, h, w, c) or (h, w, c)!"));
@@ -37,7 +38,7 @@ static void py_ml_image_arg_input_callback(void *self, py_ml_model_obj_t *model,
         mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Invalid tensor height or width!"));
     }
 
-    int shift = (model->input_dtype == PY_ML_DTYPE_INT8) ? PY_ML_GRAYSCALE_MID : 0;
+    int shift = (input_dtype == PY_ML_DTYPE_INT8) ? PY_ML_GRAYSCALE_MID : 0;
     float fscale = 1.0f, fadd = 0.0f;
 
     switch (image_arg->scale) {
@@ -102,7 +103,7 @@ static void py_ml_image_arg_input_callback(void *self, py_ml_model_obj_t *model,
 
     if (input_channels == 1) {
         // GRAYSCALE
-        if (model->input_dtype == PY_ML_DTYPE_FLOAT) {
+        if (input_dtype == PY_ML_DTYPE_FLOAT) {
             // convert u8 -> f32
             uint8_t *model_input_u8 = (uint8_t *) model_input;
             float *model_input_f32 = (float *) model_input;
@@ -126,7 +127,7 @@ static void py_ml_image_arg_input_callback(void *self, py_ml_model_obj_t *model,
     } else if (input_channels == 3) {
         // RGB888
         int rgb_size = size * 3; // must be int per countdown loop
-        if (model->input_dtype == PY_ML_DTYPE_FLOAT) {
+        if (input_dtype == PY_ML_DTYPE_FLOAT) {
             uint16_t *model_input_u16 = (uint16_t *) model_input;
             float *model_input_f32 = (float *) model_input;
             for (; size >= 0; size -= 1, rgb_size -= 3) {

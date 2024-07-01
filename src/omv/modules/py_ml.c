@@ -25,18 +25,6 @@
 #include "tflm_builtin_models.h"
 #include "ulab/code/ndarray.h"
 
-static const char *py_ml_map_dtype(py_ml_dtype_t dtype) {
-    if (dtype == PY_ML_DTYPE_UINT8) {
-        return "uint8";
-    } else if (dtype == PY_ML_DTYPE_INT8) {
-        return "int8";
-    } else if (dtype == PY_ML_DTYPE_INT16) {
-        return "int16";
-    } else {
-        return "float";
-    }
-}
-
 static size_t py_ml_tuple_sum(mp_obj_tuple_t *o) {
     if (o->len < 1) {
         mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Unexpected tensor shape"));
@@ -53,6 +41,9 @@ static void py_ml_ndarray_input_callback(void *self, py_ml_model_obj_t *model, s
     ndarray_obj_t *input_array = MP_OBJ_TO_PTR(self);
     void *model_input = ml_backend_get_input(model, index);
     mp_obj_tuple_t *input_shape = MP_OBJ_TO_PTR(model->input_shape->items[index]);
+    float input_scale = 1.0f / mp_obj_get_float(model->input_scale->items[index]);
+    int input_zero_point = mp_obj_get_int(model->input_zero_point->items[index]);
+    int input_dtype = mp_obj_get_int(model->input_dtype->items[index]);
 
     if (input_array->ndim != input_shape->len) {
         mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Input shape does not match the model input shape"));
@@ -64,52 +55,55 @@ static void py_ml_ndarray_input_callback(void *self, py_ml_model_obj_t *model, s
         }
     }
 
-    if (model->input_dtype == PY_ML_DTYPE_FLOAT) {
+    if (input_dtype == PY_ML_DTYPE_FLOAT) {
         float *model_input_float = (float *) model_input;
         for (size_t i = 0; i < input_array->len; i++) {
             float value = ndarray_get_float_index(input_array->array, input_array->dtype, i);
             model_input_float[i] = value;
         }
-    } else if ((model->input_dtype == PY_ML_DTYPE_INT8) || (model->input_dtype == PY_ML_DTYPE_UINT8)) {
+    } else if ((input_dtype == PY_ML_DTYPE_INT8) || (input_dtype == PY_ML_DTYPE_UINT8)) {
         int8_t *model_input_8 = (int8_t *) model_input;
         for (size_t i = 0; i < input_array->len; i++) {
             float value = ndarray_get_float_index(input_array->array, input_array->dtype, i);
-            model_input_8[i] = (int8_t) ((value / model->input_scale) + model->input_zero_point);
+            model_input_8[i] = (int8_t) ((value * input_scale) + input_zero_point);
         }
     } else {
         int16_t *model_input_16 = (int16_t *) model_input;
         for (size_t i = 0; i < input_array->len; i++) {
             float value = ndarray_get_float_index(input_array->array, input_array->dtype, i);
-            model_input_16[i] = (int16_t) ((value / model->input_scale) + model->input_zero_point);
+            model_input_16[i] = (int16_t) ((value * input_scale) + input_zero_point);
         }
     }
 }
 
 static mp_obj_t py_ml_output_callback(py_ml_model_obj_t *model) {
-    mp_obj_list_t *output_list = MP_OBJ_TO_PTR(mp_obj_new_list(model->outputs_size, NULL));
-    for (size_t i = 0; i < model->outputs_size; i++) {
+    mp_obj_list_t *output_list = MP_OBJ_TO_PTR(mp_obj_new_list(model->output_shape->len, NULL));
+    for (size_t i = 0; i < model->output_shape->len; i++) {
         void *model_output = ml_backend_get_output(model, i);
         size_t size = py_ml_tuple_sum(MP_OBJ_TO_PTR(model->output_shape->items[i]));
         mp_obj_tuple_t *output = MP_OBJ_TO_PTR(mp_obj_new_tuple(size, NULL));
+        float output_scale = mp_obj_get_float(model->output_scale->items[i]);
+        int output_zero_point = mp_obj_get_int(model->output_zero_point->items[i]);
+        int output_dtype = mp_obj_get_int(model->output_dtype->items[i]);
 
-        if (model->output_dtype == PY_ML_DTYPE_FLOAT) {
+        if (output_dtype == PY_ML_DTYPE_FLOAT) {
             for (size_t j = 0; j < size; j++) {
                 output->items[j] = mp_obj_new_float(((float *) model_output)[j]);
             }
-        } else if (model->output_dtype == PY_ML_DTYPE_INT8) {
+        } else if (output_dtype == PY_ML_DTYPE_INT8) {
             for (size_t j = 0; j < size; j++) {
-                float v = (((int8_t *) model_output)[j] - model->output_zero_point);
-                output->items[j] = mp_obj_new_float(v * model->output_scale);
+                float v = (((int8_t *) model_output)[j] - output_zero_point);
+                output->items[j] = mp_obj_new_float(v * output_scale);
             }
-        } else if (model->output_dtype == PY_ML_DTYPE_UINT8) {
+        } else if (output_dtype == PY_ML_DTYPE_UINT8) {
             for (size_t j = 0; j < size; j++) {
-                float v = (((uint8_t *) model_output)[j] - model->output_zero_point);
-                output->items[j] = mp_obj_new_float(v * model->output_scale);
+                float v = (((uint8_t *) model_output)[j] - output_zero_point);
+                output->items[j] = mp_obj_new_float(v * output_scale);
             }
         } else {
             for (size_t j = 0; j < size; j++) {
-                float v = (((int8_t *) model_output)[j] - model->output_zero_point);
-                output->items[j] = mp_obj_new_float(v * model->output_scale);
+                float v = (((int8_t *) model_output)[j] - output_zero_point);
+                output->items[j] = mp_obj_new_float(v * output_scale);
             }
         }
         output_list->items[i] = MP_OBJ_FROM_PTR(output);
@@ -122,12 +116,24 @@ static const mp_obj_type_t py_ml_model_type;
 
 static void py_ml_model_print(const mp_print_t *print, mp_obj_t self_in, mp_print_kind_t kind) {
     py_ml_model_obj_t *self = MP_OBJ_TO_PTR(self_in);
-    mp_printf(print,
-              "{size: %d, ram: %d, inputs_size: %d, input_dtype: %s, input_scale: %f, input_zero_point: %d, "
-              "outputs_size: %d output_dtype: %s, output_scale: %f, output_zero_point: %d}",
-              self->size, self->memory_size, self->inputs_size, py_ml_map_dtype(self->input_dtype),
-              (double) self->input_scale, self->input_zero_point, self->outputs_size, py_ml_map_dtype(self->output_dtype),
-              (double) self->output_scale, self->output_zero_point);
+    mp_printf(print, "{size: %d, ram: %d", self->size, self->memory_size);
+    mp_printf(print, ", input_shape: ");
+    mp_obj_print_helper(print, self->input_shape, kind);
+    mp_printf(print, ", input_scale: ");
+    mp_obj_print_helper(print, self->input_scale, kind);
+    mp_printf(print, ", input_zero_point: ");
+    mp_obj_print_helper(print, self->input_zero_point, kind);
+    mp_printf(print, ", input_dtype: ");
+    mp_obj_print_helper(print, self->input_dtype, kind);
+    mp_printf(print, ", output_shape: ");
+    mp_obj_print_helper(print, self->output_shape, kind);
+    mp_printf(print, ", output_scale: ");
+    mp_obj_print_helper(print, self->output_scale, kind);
+    mp_printf(print, ", output_zero_point: ");
+    mp_obj_print_helper(print, self->output_zero_point, kind);
+    mp_printf(print, ", output_dtype: ");
+    mp_obj_print_helper(print, self->output_dtype, kind);
+    mp_printf(print, "}");
 }
 
 extern const mp_obj_type_t py_ml_image_arg_type;
@@ -148,7 +154,7 @@ static mp_obj_t py_ml_model_predict(uint n_args, const mp_obj_t *pos_args, mp_ma
     mp_obj_t *items;
     mp_obj_get_array(pos_args[1], &len, &items);
 
-    if (len != model->inputs_size) {
+    if (len != model->input_shape->len) {
         mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Number of inputs does not match the model number of inputs!"));
     }
 
@@ -178,7 +184,6 @@ static MP_DEFINE_CONST_FUN_OBJ_KW(py_ml_model_predict_obj, 2, py_ml_model_predic
 
 static void py_ml_model_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest) {
     py_ml_model_obj_t *self = MP_OBJ_TO_PTR(self_in);
-    const char *str;
     if (dest[0] == MP_OBJ_NULL) {
         // Load attribute.
         switch (attr) {
@@ -192,27 +197,25 @@ static void py_ml_model_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest) {
                 dest[0] = MP_OBJ_FROM_PTR(self->input_shape);
                 break;
             case MP_QSTR_input_dtype:
-                str = py_ml_map_dtype(self->input_dtype);
-                dest[0] = mp_obj_new_str(str, strlen(str));
+                dest[0] = MP_OBJ_FROM_PTR(self->input_dtype);
                 break;
             case MP_QSTR_input_scale:
-                dest[0] = mp_obj_new_float(self->input_scale);
+                dest[0] = MP_OBJ_FROM_PTR(self->input_scale);
                 break;
             case MP_QSTR_input_zero_point:
-                dest[0] = mp_obj_new_int(self->input_zero_point);
+                dest[0] = MP_OBJ_FROM_PTR(self->input_zero_point);
                 break;
             case MP_QSTR_output_shape:
                 dest[0] = MP_OBJ_FROM_PTR(self->output_shape);
                 break;
             case MP_QSTR_output_dtype:
-                str = py_ml_map_dtype(self->output_dtype);
-                dest[0] = mp_obj_new_str(str, strlen(str));
+                dest[0] = MP_OBJ_FROM_PTR(self->output_dtype);
                 break;
             case MP_QSTR_output_scale:
-                dest[0] = mp_obj_new_float(self->output_scale);
+                dest[0] = MP_OBJ_FROM_PTR(self->output_scale);
                 break;
             case MP_QSTR_output_zero_point:
-                dest[0] = mp_obj_new_int(self->output_zero_point);
+                dest[0] = MP_OBJ_FROM_PTR(self->output_zero_point);
                 break;
             default:
                 // Continue lookup in locals_dict.
@@ -278,16 +281,7 @@ mp_obj_t py_ml_model_make_new(const mp_obj_type_t *type, size_t n_args, size_t n
         fb_alloc_free_till_mark();
     }
 
-
     ml_backend_init_model(model);
-
-    if (model->input_scale == 0.0f) {
-        model->input_scale = 1.0;
-    }
-
-    if (model->output_scale == 0.0f) {
-        model->output_scale = 1.0;
-    }
 
     if (labels == NULL) {
         return MP_OBJ_FROM_PTR(model);
@@ -333,6 +327,10 @@ static const mp_rom_map_elem_t py_ml_globals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_SCALE_0_1),           MP_ROM_INT(PY_ML_SCALE_0_1) },
     { MP_ROM_QSTR(MP_QSTR_SCALE_S1_1),          MP_ROM_INT(PY_ML_SCALE_S1_1) },
     { MP_ROM_QSTR(MP_QSTR_SCALE_S128_127),      MP_ROM_INT(PY_ML_SCALE_S128_127) },
+    { MP_ROM_QSTR(MP_QSTR_DTYPE_INT8),          MP_ROM_INT(PY_ML_DTYPE_INT8) },
+    { MP_ROM_QSTR(MP_QSTR_DTYPE_UINT8),         MP_ROM_INT(PY_ML_DTYPE_UINT8) },
+    { MP_ROM_QSTR(MP_QSTR_DTYPE_INT167),        MP_ROM_INT(PY_ML_DTYPE_INT16) },
+    { MP_ROM_QSTR(MP_QSTR_DTYPE_FLOAT),         MP_ROM_INT(PY_ML_DTYPE_FLOAT) },
 };
 
 static MP_DEFINE_CONST_DICT(py_ml_globals_dict, py_ml_globals_dict_table);

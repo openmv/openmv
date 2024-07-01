@@ -33,16 +33,14 @@ typedef struct py_ml_model_obj {
     unsigned char *data;
     size_t memory_size;
     bool fb_alloc;
-    size_t inputs_size;
     mp_obj_tuple_t *input_shape;
-    float input_scale;
-    int input_zero_point;
-    py_ml_dtype_t input_dtype;
-    size_t outputs_size;
+    mp_obj_tuple_t *input_scale;
+    mp_obj_tuple_t *input_zero_point;
+    mp_obj_tuple_t *input_dtype;
     mp_obj_tuple_t *output_shape;
-    float output_scale;
-    int output_zero_point;
-    py_ml_dtype_t output_dtype;
+    mp_obj_tuple_t *output_scale;
+    mp_obj_tuple_t *output_zero_point;
+    mp_obj_tuple_t *output_dtype;
     void *state; // Private context for the backend.
 } py_ml_model_obj_t;
 
