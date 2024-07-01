@@ -25,9 +25,6 @@
 #include "tflm_builtin_models.h"
 #include "ulab/code/ndarray.h"
 
-#define PY_ML_GRAYSCALE_RANGE   ((COLOR_GRAYSCALE_MAX) -(COLOR_GRAYSCALE_MIN))
-#define PY_ML_GRAYSCALE_MID     (((PY_ML_GRAYSCALE_RANGE) +1) / 2)
-
 static const char *py_ml_map_dtype(py_ml_dtype_t dtype) {
     if (dtype == PY_ML_DTYPE_UINT8) {
         return "uint8";
@@ -39,17 +36,6 @@ static const char *py_ml_map_dtype(py_ml_dtype_t dtype) {
         return "float";
     }
 }
-
-// TF Input/Output callback functions.
-typedef mp_obj_t py_ml_output_data_t;
-
-typedef struct _py_ml_input_callback_data {
-    void *data;
-    rectangle_t roi;
-    py_ml_scale_t scale;
-    float mean[3];
-    float stdev[3];
-} py_ml_input_data_t;
 
 static size_t py_ml_tuple_sum(mp_obj_tuple_t *o) {
     if (o->len < 1) {
@@ -63,146 +49,15 @@ static size_t py_ml_tuple_sum(mp_obj_tuple_t *o) {
     return size;
 }
 
-static void py_ml_tuple_hwc(mp_obj_tuple_t *o, size_t *h, size_t *w, size_t *c) {
-    if (o->len != 1 || ((mp_obj_tuple_t *) MP_OBJ_TO_PTR(o->items[0]))->len != 4) {
-        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Unexpected tensor shape"));
-    }
-    o = MP_OBJ_TO_PTR(o->items[0]);
-    *h = mp_obj_get_int(o->items[1]);
-    *w = mp_obj_get_int(o->items[2]);
-    *c = mp_obj_get_int(o->items[3]);
-}
-
-static void py_ml_input_callback(py_ml_model_obj_t *model, void *arg) {
-    // TODO we assume that there's a single input.
-    void *model_input = ml_backend_get_input(model, 0);
-    py_ml_input_data_t *input_data = (py_ml_input_data_t *) arg;
-
-    // TODO we assume that the input shape is (1, h, w, c)
-    size_t input_height = 0, input_width = 0, input_channels = 0;
-    py_ml_tuple_hwc(model->input_shape, &input_height, &input_width, &input_channels);
-
-    int shift = (model->input_dtype == PY_ML_DTYPE_INT8) ? PY_ML_GRAYSCALE_MID : 0;
-    float fscale = 1.0f, fadd = 0.0f;
-
-    switch (input_data->scale) {
-        case PY_ML_SCALE_0_1: // convert 0->255 to 0->1
-            fscale = 1.0f / 255.0f;
-            break;
-        case PY_ML_SCALE_S1_1: // convert 0->255 to -1->1
-            fscale = 2.0f / 255.0f;
-            fadd = -1.0f;
-            break;
-        case PY_ML_SCALE_S128_127: // convert 0->255 to -128->127
-            fadd = -128.0f;
-            break;
-        case PY_ML_SCALE_NONE: // convert 0->255 to 0->255
-        default:
-            break;
-    }
-
-    float fscale_r = fscale, fadd_r = fadd;
-    float fscale_g = fscale, fadd_g = fadd;
-    float fscale_b = fscale, fadd_b = fadd;
-
-    // To normalize the input image we need to subtract the mean and divide by the standard deviation.
-    // We can do this by applying the normalization to fscale and fadd outside the loop.
-    // Red
-    fadd_r = (fadd_r - input_data->mean[0]) / input_data->stdev[0];
-    fscale_r /= input_data->stdev[0];
-
-    // Green
-    fadd_g = (fadd_g - input_data->mean[1]) / input_data->stdev[1];
-    fscale_g /= input_data->stdev[1];
-
-    // Blue
-    fadd_b = (fadd_b - input_data->mean[2]) / input_data->stdev[2];
-    fscale_b /= input_data->stdev[2];
-
-    // Grayscale -> Y = 0.299R + 0.587G + 0.114B
-    float mean = (input_data->mean[0] * 0.299f) + (input_data->mean[1] * 0.587f) + (input_data->mean[2] * 0.114f);
-    float std = (input_data->stdev[0] * 0.299f) + (input_data->stdev[1] * 0.587f) + (input_data->stdev[2] * 0.114f);
-    fadd = (fadd - mean) / std;
-    fscale /= std;
-
-    image_t dst_img;
-    dst_img.w = input_width;
-    dst_img.h = input_height;
-    dst_img.data = (uint8_t *) model_input;
-
-    if (input_channels == 1) {
-        dst_img.pixfmt = PIXFORMAT_GRAYSCALE;
-    } else if (input_channels == 3) {
-        dst_img.pixfmt = PIXFORMAT_RGB565;
-    } else {
-        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Expected model input channels to be 1 or 3!"));
-    }
-
-    imlib_draw_image(&dst_img, input_data->data, 0, 0, 1.0f, 1.0f, &input_data->roi,
-                     -1, 256, NULL, NULL, IMAGE_HINT_BILINEAR | IMAGE_HINT_CENTER |
-                     IMAGE_HINT_SCALE_ASPECT_EXPAND | IMAGE_HINT_BLACK_BACKGROUND, NULL, NULL, NULL);
-
-    int size = (input_width * input_height) - 1; // must be int per countdown loop
-
-    if (input_channels == 1) {
-        // GRAYSCALE
-        if (model->input_dtype == PY_ML_DTYPE_FLOAT) {
-            // convert u8 -> f32
-            uint8_t *model_input_u8 = (uint8_t *) model_input;
-            float *model_input_f32 = (float *) model_input;
-            for (; size >= 0; size -= 1) {
-                model_input_f32[size] = (model_input_u8[size] * fscale) + fadd;
-            }
-        } else {
-            if (shift) {
-                // convert u8 -> s8
-                uint8_t *model_input_8 = (uint8_t *) model_input;
-                #if (__ARM_ARCH > 6)
-                for (; size >= 3; size -= 4) {
-                    *((uint32_t *) (model_input_8 + size - 3)) ^= 0x80808080;
-                }
-                #endif
-                for (; size >= 0; size -= 1) {
-                    model_input_8[size] ^= PY_ML_GRAYSCALE_MID;
-                }
-            }
-        }
-    } else if (input_channels == 3) {
-        // RGB888
-        int rgb_size = size * 3; // must be int per countdown loop
-        if (model->input_dtype == PY_ML_DTYPE_FLOAT) {
-            uint16_t *model_input_u16 = (uint16_t *) model_input;
-            float *model_input_f32 = (float *) model_input;
-            for (; size >= 0; size -= 1, rgb_size -= 3) {
-                int pixel = model_input_u16[size];
-                model_input_f32[rgb_size] = (COLOR_RGB565_TO_R8(pixel) * fscale_r) + fadd_r;
-                model_input_f32[rgb_size + 1] = (COLOR_RGB565_TO_G8(pixel) * fscale_g) + fadd_g;
-                model_input_f32[rgb_size + 2] = (COLOR_RGB565_TO_B8(pixel) * fscale_b) + fadd_b;
-            }
-        } else {
-            uint16_t *model_input_u16 = (uint16_t *) model_input;
-            uint8_t *model_input_8 = (uint8_t *) model_input;
-            for (; size >= 0; size -= 1, rgb_size -= 3) {
-                int pixel = model_input_u16[size];
-                model_input_8[rgb_size] = COLOR_RGB565_TO_R8(pixel) ^ shift;
-                model_input_8[rgb_size + 1] = COLOR_RGB565_TO_G8(pixel) ^ shift;
-                model_input_8[rgb_size + 2] = COLOR_RGB565_TO_B8(pixel) ^ shift;
-            }
-        }
-    }
-}
-
-static void py_ml_input_callback_regression(py_ml_model_obj_t *model, void *arg) {
-    // TODO we assume that there's a single input.
-    void *model_input = ml_backend_get_input(model, 0);
-    py_ml_input_data_t *input_data = (py_ml_input_data_t *) arg;
-
-    mp_obj_tuple_t *input_shape = MP_OBJ_TO_PTR(model->input_shape->items[0]);
-    ndarray_obj_t *input_array = MP_OBJ_TO_PTR(*((mp_obj_t *) input_data->data));
+static void py_ml_ndarray_input_callback(void *self, py_ml_model_obj_t *model, size_t index) {
+    ndarray_obj_t *input_array = MP_OBJ_TO_PTR(self);
+    void *model_input = ml_backend_get_input(model, index);
+    mp_obj_tuple_t *input_shape = MP_OBJ_TO_PTR(model->input_shape->items[index]);
 
     if (input_array->ndim != input_shape->len) {
         mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Input shape does not match the model input shape"));
     }
+
     for (size_t i = 0; i < input_array->ndim; i++) {
         if (input_array->shape[i] != mp_obj_get_int(input_shape->items[i])) {
             mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Input shape does not match the model input shape"));
@@ -215,17 +70,11 @@ static void py_ml_input_callback_regression(py_ml_model_obj_t *model, void *arg)
             float value = ndarray_get_float_index(input_array->array, input_array->dtype, i);
             model_input_float[i] = value;
         }
-    } else if (model->input_dtype == PY_ML_DTYPE_INT8) {
+    } else if ((model->input_dtype == PY_ML_DTYPE_INT8) || (model->input_dtype == PY_ML_DTYPE_UINT8)) {
         int8_t *model_input_8 = (int8_t *) model_input;
         for (size_t i = 0; i < input_array->len; i++) {
             float value = ndarray_get_float_index(input_array->array, input_array->dtype, i);
             model_input_8[i] = (int8_t) ((value / model->input_scale) + model->input_zero_point);
-        }
-    } else if (model->input_dtype == PY_ML_DTYPE_UINT8) {
-        uint8_t *model_input_8 = (uint8_t *) model_input;
-        for (size_t i = 0; i < input_array->len; i++) {
-            float value = ndarray_get_float_index(input_array->array, input_array->dtype, i);
-            model_input_8[i] = (uint8_t) ((value / model->input_scale) + model->input_zero_point);
         }
     } else {
         int16_t *model_input_16 = (int16_t *) model_input;
@@ -236,7 +85,7 @@ static void py_ml_input_callback_regression(py_ml_model_obj_t *model, void *arg)
     }
 }
 
-static void py_ml_output_callback(py_ml_model_obj_t *model, void *arg) {
+static mp_obj_t py_ml_output_callback(py_ml_model_obj_t *model) {
     mp_obj_list_t *output_list = MP_OBJ_TO_PTR(mp_obj_new_list(model->outputs_size, NULL));
     for (size_t i = 0; i < model->outputs_size; i++) {
         void *model_output = ml_backend_get_output(model, i);
@@ -265,7 +114,7 @@ static void py_ml_output_callback(py_ml_model_obj_t *model, void *arg) {
         }
         output_list->items[i] = MP_OBJ_FROM_PTR(output);
     }
-    *((py_ml_output_data_t *) arg) = MP_OBJ_FROM_PTR(output_list);
+    return MP_OBJ_FROM_PTR(output_list);
 }
 
 // TF Model Object.
@@ -281,14 +130,12 @@ static void py_ml_model_print(const mp_print_t *print, mp_obj_t self_in, mp_prin
               (double) self->output_scale, self->output_zero_point);
 }
 
+extern const mp_obj_type_t py_ml_image_arg_type;
+
 static mp_obj_t py_ml_model_predict(uint n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
-    enum { ARG_roi, ARG_callback, ARG_scale, ARG_mean, ARG_stdev };
+    enum { ARG_callback };
     static const mp_arg_t allowed_args[] = {
-        { MP_QSTR_roi, MP_ARG_OBJ | MP_ARG_KW_ONLY, {.u_rom_obj = MP_ROM_NONE} },
         { MP_QSTR_callback, MP_ARG_OBJ | MP_ARG_KW_ONLY, {.u_rom_obj = MP_ROM_NONE} },
-        { MP_QSTR_scale, MP_ARG_INT | MP_ARG_KW_ONLY, {.u_int = PY_ML_SCALE_0_1} },
-        { MP_QSTR_mean, MP_ARG_OBJ | MP_ARG_KW_ONLY, {.u_rom_obj = MP_ROM_NONE} },
-        { MP_QSTR_stdev, MP_ARG_OBJ | MP_ARG_KW_ONLY, {.u_rom_obj = MP_ROM_NONE} },
     };
 
     // Parse args.
@@ -297,41 +144,32 @@ static mp_obj_t py_ml_model_predict(uint n_args, const mp_obj_t *pos_args, mp_ma
 
     py_ml_model_obj_t *model = MP_OBJ_TO_PTR(pos_args[0]);
 
-    py_ml_input_data_t input_data = {
-        .scale = args[ARG_scale].u_int,
-        .mean = {0.0f, 0.0f, 0.0f},
-        .stdev = {1.0f, 1.0f, 1.0f}
-    };
-    ml_backend_input_callback_t input_callback = py_ml_input_callback;
+    size_t len;
+    mp_obj_t *items;
+    mp_obj_get_array(pos_args[1], &len, &items);
 
-    py_ml_output_data_t output_data;
-    ml_backend_output_callback_t output_callback = py_ml_output_callback;
-
-    if (MP_OBJ_IS_TYPE(pos_args[1], &ulab_ndarray_type)) {
-        input_data.data = (void *) &pos_args[1];
-        input_callback = py_ml_input_callback_regression;
-    } else if (MP_OBJ_IS_TYPE(pos_args[1], &py_image_type)) {
-        input_data.data = py_helper_arg_to_image(pos_args[1], ARG_IMAGE_ANY);
-        input_data.roi = py_helper_arg_to_roi(args[ARG_roi].u_obj, input_data.data);
-        py_helper_arg_to_float_array(args[ARG_mean].u_obj, input_data.mean, 3);
-        py_helper_arg_to_float_array(args[ARG_stdev].u_obj, input_data.stdev, 3);
-    } else {
-        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Unsupported input type"));
+    if (len != model->inputs_size) {
+        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Number of inputs does not match the model number of inputs!"));
     }
 
-    ml_backend_run_inference(model, input_callback, &input_data, output_callback, &output_data);
+    for (size_t i = 0; i < len; i++) {
+        if (MP_OBJ_IS_TYPE(items[i], &ulab_ndarray_type)) {
+            py_ml_ndarray_input_callback(items[i], model, i);
+        } else if (MP_OBJ_IS_TYPE(items[i], &py_ml_image_arg_type)) {
+            py_image_arg_obj_t *image_arg = MP_OBJ_TO_PTR(items[i]);
+            image_arg->input_callback(image_arg, model, i);
+        } else {
+            mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Unsupported input type!"));
+        }
+    }
+
+    ml_backend_run_inference(model);
+
+    mp_obj_t output_data = py_ml_output_callback(model);
 
     if (args[ARG_callback].u_obj != mp_const_none) {
-        mp_obj_t rect = mp_obj_new_tuple(4, (mp_obj_t []) { mp_obj_new_int(input_data.roi.x),
-                                                            mp_obj_new_int(input_data.roi.y),
-                                                            mp_obj_new_int(input_data.roi.w),
-                                                            mp_obj_new_int(input_data.roi.h) });
-        mp_obj_t fun_args[3] = { MP_OBJ_FROM_PTR(model), output_data, rect };
-        if (!MP_OBJ_IS_TYPE(pos_args[1], &py_image_type)) {
-            output_data = mp_call_function_n_kw(args[ARG_callback].u_obj, 2, 0, fun_args);
-        } else {
-            output_data = mp_call_function_n_kw(args[ARG_callback].u_obj, 3, 0, fun_args);
-        }
+        mp_obj_t fun_args[3] = { MP_OBJ_FROM_PTR(model), pos_args[1], output_data };
+        output_data = mp_call_function_n_kw(args[ARG_callback].u_obj, 3, 0, fun_args);
     }
 
     return output_data;
@@ -488,6 +326,7 @@ extern const mp_obj_type_t py_ml_nms_type;
 
 static const mp_rom_map_elem_t py_ml_globals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR___name__),            MP_OBJ_NEW_QSTR(MP_QSTR_ml) },
+    { MP_ROM_QSTR(MP_QSTR_Image),               MP_ROM_PTR(&py_ml_image_arg_type) },
     { MP_ROM_QSTR(MP_QSTR_Model),               MP_ROM_PTR(&py_ml_model_type) },
     { MP_ROM_QSTR(MP_QSTR_NMS),                 MP_ROM_PTR(&py_ml_nms_type) },
     { MP_ROM_QSTR(MP_QSTR_SCALE_NONE),          MP_ROM_INT(PY_ML_SCALE_NONE) },

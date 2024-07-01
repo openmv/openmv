@@ -72,12 +72,12 @@ class MicroSpeech:
         # Roll the spectrogram to the left and add the new slice.
         self.spectrogram = np.roll(self.spectrogram, -_SLICE_SIZE, axis=1)
         self.spectrogram[0, -_SLICE_SIZE:] = self.preprocessor.predict(
-            self.audio_buffer
+            [self.audio_buffer]
         )
 
         # Roll the prediction history and add the new prediction.
         self.pred_history = np.roll(self.pred_history, -1, axis=0)
-        self.pred_history[-1] = self.micro_speech.predict(self.spectrogram)[0]
+        self.pred_history[-1] = self.micro_speech.predict([self.spectrogram])[0]
 
     def start_audio_streaming(self):
         if self.audio_started is False:
