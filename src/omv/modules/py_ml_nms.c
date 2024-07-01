@@ -14,7 +14,7 @@
 #include "py/runtime.h"
 #include "py_helper.h"
 
-// TF NMS Object.
+// ML NMS Object.
 typedef struct py_ml_nms_obj {
     mp_obj_base_t base;
     int window_w;
@@ -134,7 +134,7 @@ static MP_DEFINE_CONST_DICT(py_ml_nms_locals_dict, py_ml_nms_locals_table);
 
 MP_DEFINE_CONST_OBJ_TYPE(
     py_ml_nms_type,
-    MP_QSTR_tf_nms,
+    MP_QSTR_ml_nms,
     MP_TYPE_FLAG_NONE,
     make_new, py_ml_nms_make_new,
     locals_dict, &py_ml_nms_locals_dict
