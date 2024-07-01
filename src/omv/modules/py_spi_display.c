@@ -407,7 +407,7 @@ mp_obj_t spi_display_make_new(const mp_obj_type_t *type, size_t n_args, size_t n
     return MP_OBJ_FROM_PTR(self);
 }
 
-STATIC const py_display_p_t py_display_p = {
+static const py_display_p_t py_display_p = {
     .deinit = spi_display_deinit,
     .clear = spi_display_clear,
     .write = spi_display_write,

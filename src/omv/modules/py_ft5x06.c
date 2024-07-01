@@ -56,7 +56,7 @@ typedef struct _py_ft5x06_obj_t {
 
 const mp_obj_type_t py_ft5x06_type;
 
-STATIC mp_obj_t py_ft5x06_update_points(mp_obj_t self_in);
+static mp_obj_t py_ft5x06_update_points(mp_obj_t self_in);
 
 static void ft5x06_extint_callback(mp_obj_t self_in) {
     py_ft5x06_obj_t *self = MP_OBJ_TO_PTR(self_in);
@@ -67,19 +67,19 @@ static void ft5x06_extint_callback(mp_obj_t self_in) {
     }
 }
 
-STATIC mp_obj_t py_ft5x06_get_gesture(mp_obj_t self_in) {
+static mp_obj_t py_ft5x06_get_gesture(mp_obj_t self_in) {
     py_ft5x06_obj_t *self = MP_OBJ_TO_PTR(self_in);
     return mp_obj_new_int(self->touch_gesture);
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_ft5x06_get_gesture_obj, py_ft5x06_get_gesture);
+static MP_DEFINE_CONST_FUN_OBJ_1(py_ft5x06_get_gesture_obj, py_ft5x06_get_gesture);
 
-STATIC mp_obj_t py_ft5x06_get_points(mp_obj_t self_in) {
+static mp_obj_t py_ft5x06_get_points(mp_obj_t self_in) {
     py_ft5x06_obj_t *self = MP_OBJ_TO_PTR(self_in);
     return mp_obj_new_int(self->touch_points);
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_ft5x06_get_points_obj, py_ft5x06_get_points);
+static MP_DEFINE_CONST_FUN_OBJ_1(py_ft5x06_get_points_obj, py_ft5x06_get_points);
 
-STATIC mp_obj_t py_ft5x06_get_point_flag(mp_obj_t self_in, mp_obj_t index) {
+static mp_obj_t py_ft5x06_get_point_flag(mp_obj_t self_in, mp_obj_t index) {
     py_ft5x06_obj_t *self = MP_OBJ_TO_PTR(self_in);
     int i = mp_obj_get_int(index);
 
@@ -88,9 +88,9 @@ STATIC mp_obj_t py_ft5x06_get_point_flag(mp_obj_t self_in, mp_obj_t index) {
     }
     return mp_obj_new_int(self->touch_flag[i]);
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_ft5x06_get_point_flag_obj, py_ft5x06_get_point_flag);
+static MP_DEFINE_CONST_FUN_OBJ_2(py_ft5x06_get_point_flag_obj, py_ft5x06_get_point_flag);
 
-STATIC mp_obj_t py_ft5x06_get_point_id(mp_obj_t self_in, mp_obj_t index) {
+static mp_obj_t py_ft5x06_get_point_id(mp_obj_t self_in, mp_obj_t index) {
     py_ft5x06_obj_t *self = MP_OBJ_TO_PTR(self_in);
     int i = mp_obj_get_int(index);
 
@@ -99,9 +99,9 @@ STATIC mp_obj_t py_ft5x06_get_point_id(mp_obj_t self_in, mp_obj_t index) {
     }
     return mp_obj_new_int(self->touch_id[i]);
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_ft5x06_get_point_id_obj, py_ft5x06_get_point_id);
+static MP_DEFINE_CONST_FUN_OBJ_2(py_ft5x06_get_point_id_obj, py_ft5x06_get_point_id);
 
-STATIC mp_obj_t py_ft5x06_get_point_x(mp_obj_t self_in, mp_obj_t index) {
+static mp_obj_t py_ft5x06_get_point_x(mp_obj_t self_in, mp_obj_t index) {
     py_ft5x06_obj_t *self = MP_OBJ_TO_PTR(self_in);
     int i = mp_obj_get_int(index);
 
@@ -110,9 +110,9 @@ STATIC mp_obj_t py_ft5x06_get_point_x(mp_obj_t self_in, mp_obj_t index) {
     }
     return mp_obj_new_int(self->x[i]);
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_ft5x06_get_point_x_obj, py_ft5x06_get_point_x);
+static MP_DEFINE_CONST_FUN_OBJ_2(py_ft5x06_get_point_x_obj, py_ft5x06_get_point_x);
 
-STATIC mp_obj_t py_ft5x06_get_point_y(mp_obj_t self_in, mp_obj_t index) {
+static mp_obj_t py_ft5x06_get_point_y(mp_obj_t self_in, mp_obj_t index) {
     py_ft5x06_obj_t *self = MP_OBJ_TO_PTR(self_in);
     int i = mp_obj_get_int(index);
 
@@ -121,9 +121,9 @@ STATIC mp_obj_t py_ft5x06_get_point_y(mp_obj_t self_in, mp_obj_t index) {
     }
     return mp_obj_new_int(self->y[i]);
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_ft5x06_get_point_y_obj, py_ft5x06_get_point_y);
+static MP_DEFINE_CONST_FUN_OBJ_2(py_ft5x06_get_point_y_obj, py_ft5x06_get_point_y);
 
-STATIC mp_obj_t py_ft5x06_callback(mp_obj_t self_in, mp_obj_t cb) {
+static mp_obj_t py_ft5x06_callback(mp_obj_t self_in, mp_obj_t cb) {
     py_ft5x06_obj_t *self = MP_OBJ_TO_PTR(self_in);
 
     self->touch_callback = cb;
@@ -136,9 +136,9 @@ STATIC mp_obj_t py_ft5x06_callback(mp_obj_t self_in, mp_obj_t cb) {
     }
     return mp_const_none;
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_ft5x06_callback_obj, py_ft5x06_callback);
+static MP_DEFINE_CONST_FUN_OBJ_2(py_ft5x06_callback_obj, py_ft5x06_callback);
 
-STATIC mp_obj_t py_ft5x06_update_points(mp_obj_t self_in) {
+static mp_obj_t py_ft5x06_update_points(mp_obj_t self_in) {
     py_ft5x06_obj_t *self = MP_OBJ_TO_PTR(self_in);
 
     if (mp_machine_soft_i2c_transfer(self->i2c_bus, self->i2c_addr, 1, &((mp_machine_i2c_buf_t) {
@@ -189,9 +189,9 @@ STATIC mp_obj_t py_ft5x06_update_points(mp_obj_t self_in) {
 
     mp_raise_msg(&mp_type_OSError, MP_ERROR_TEXT("Failed to update the number of touch points!"));
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_ft5x06_update_points_obj, py_ft5x06_update_points);
+static MP_DEFINE_CONST_FUN_OBJ_1(py_ft5x06_update_points_obj, py_ft5x06_update_points);
 
-STATIC mp_obj_t py_ft5x06_deinit(mp_obj_t self_in) {
+static mp_obj_t py_ft5x06_deinit(mp_obj_t self_in) {
     omv_gpio_irq_enable(OMV_FT5X06_INT_PIN, false);
 
     omv_gpio_write(OMV_FT5X06_RESET_PIN, 0);
@@ -207,7 +207,7 @@ STATIC mp_obj_t py_ft5x06_deinit(mp_obj_t self_in) {
     HAL_GPIO_DeInit(OMV_FT5X06_SCL_PIN->gpio, OMV_FT5X06_SCL_PIN->pin_mask);
     return mp_const_none;
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_ft5x06_deinit_obj, py_ft5x06_deinit);
+static MP_DEFINE_CONST_FUN_OBJ_1(py_ft5x06_deinit_obj, py_ft5x06_deinit);
 
 mp_obj_t py_ft5x06_make_new(const mp_obj_type_t *type, size_t n_args, size_t n_kw, const mp_obj_t *all_args) {
     enum { ARG_i2c_addr };
@@ -242,7 +242,7 @@ mp_obj_t py_ft5x06_make_new(const mp_obj_type_t *type, size_t n_args, size_t n_k
     return MP_OBJ_FROM_PTR(self);
 }
 
-STATIC const mp_rom_map_elem_t py_ft5x06_locals_dict_table[] = {
+static const mp_rom_map_elem_t py_ft5x06_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR___name__),                MP_ROM_QSTR(MP_QSTR_ft5x06)                },
     { MP_ROM_QSTR(MP_QSTR___del__),                 MP_ROM_PTR(&py_ft5x06_deinit_obj)          },
 
@@ -266,7 +266,7 @@ STATIC const mp_rom_map_elem_t py_ft5x06_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_touch_callback),          MP_ROM_PTR(&py_ft5x06_callback_obj)        },
     { MP_ROM_QSTR(MP_QSTR_update_points),           MP_ROM_PTR(&py_ft5x06_update_points_obj)   },
 };
-STATIC MP_DEFINE_CONST_DICT(py_ft5x06_locals_dict, py_ft5x06_locals_dict_table);
+static MP_DEFINE_CONST_DICT(py_ft5x06_locals_dict, py_ft5x06_locals_dict_table);
 
 MP_DEFINE_CONST_OBJ_TYPE(
     py_ft5x06_type,
@@ -276,11 +276,11 @@ MP_DEFINE_CONST_OBJ_TYPE(
     locals_dict, &py_ft5x06_locals_dict
     );
 
-STATIC const mp_rom_map_elem_t globals_dict_table[] = {
+static const mp_rom_map_elem_t globals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR___name__),    MP_ROM_QSTR(MP_QSTR_ft5x06) },
     { MP_ROM_QSTR(MP_QSTR_FT5X06),      MP_ROM_PTR(&py_ft5x06_type) },
 };
-STATIC MP_DEFINE_CONST_DICT(globals_dict, globals_dict_table);
+static MP_DEFINE_CONST_DICT(globals_dict, globals_dict_table);
 
 const mp_obj_module_t ft5x06_module = {
     .base = { &mp_type_module },

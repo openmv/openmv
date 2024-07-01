@@ -42,31 +42,31 @@ static mp_obj_t py_gif_width(mp_obj_t self_in) {
     py_gif_obj_t *self = MP_OBJ_TO_PTR(self_in);
     return mp_obj_new_int(self->width);
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_gif_width_obj, py_gif_width);
+static MP_DEFINE_CONST_FUN_OBJ_1(py_gif_width_obj, py_gif_width);
 
 static mp_obj_t py_gif_height(mp_obj_t self_in) {
     py_gif_obj_t *self = MP_OBJ_TO_PTR(self_in);
     return mp_obj_new_int(self->height);
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_gif_height_obj, py_gif_height);
+static MP_DEFINE_CONST_FUN_OBJ_1(py_gif_height_obj, py_gif_height);
 
 static mp_obj_t py_gif_format(mp_obj_t self_in) {
     py_gif_obj_t *self = MP_OBJ_TO_PTR(self_in);
     return mp_obj_new_int(self->color ? PIXFORMAT_RGB565 : PIXFORMAT_GRAYSCALE);
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_gif_format_obj, py_gif_format);
+static MP_DEFINE_CONST_FUN_OBJ_1(py_gif_format_obj, py_gif_format);
 
 static mp_obj_t py_gif_size(mp_obj_t self_in) {
     py_gif_obj_t *self = MP_OBJ_TO_PTR(self_in);
     return mp_obj_new_int(file_size(&self->fp));
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_gif_size_obj, py_gif_size);
+static MP_DEFINE_CONST_FUN_OBJ_1(py_gif_size_obj, py_gif_size);
 
 static mp_obj_t py_gif_loop(mp_obj_t self_in) {
     py_gif_obj_t *self = MP_OBJ_TO_PTR(self_in);
     return mp_obj_new_int(self->loop);
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_gif_loop_obj, py_gif_loop);
+static MP_DEFINE_CONST_FUN_OBJ_1(py_gif_loop_obj, py_gif_loop);
 
 static mp_obj_t py_gif_add_frame(uint n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
     enum { ARG_delay };
@@ -91,14 +91,14 @@ static mp_obj_t py_gif_add_frame(uint n_args, const mp_obj_t *pos_args, mp_map_t
     gif_add_frame(&self->fp, image, args[ARG_delay].u_int);
     return mp_const_none;
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_gif_add_frame_obj, 2, py_gif_add_frame);
+static MP_DEFINE_CONST_FUN_OBJ_KW(py_gif_add_frame_obj, 2, py_gif_add_frame);
 
-STATIC mp_obj_t py_gif_close(mp_obj_t self_in) {
+static mp_obj_t py_gif_close(mp_obj_t self_in) {
     py_gif_obj_t *self = MP_OBJ_TO_PTR(self_in);
     gif_close(&self->fp);
     return mp_const_none;
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_gif_close_obj, py_gif_close);
+static MP_DEFINE_CONST_FUN_OBJ_1(py_gif_close_obj, py_gif_close);
 
 static mp_obj_t py_gif_open(uint n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
     enum { ARG_width, ARG_height, ARG_color, ARG_loop };
@@ -125,9 +125,9 @@ static mp_obj_t py_gif_open(uint n_args, const mp_obj_t *pos_args, mp_map_t *kw_
     gif_open(&gif->fp, gif->width, gif->height, gif->color, gif->loop);
     return gif;
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_gif_open_obj, 1, py_gif_open);
+static MP_DEFINE_CONST_FUN_OBJ_KW(py_gif_open_obj, 1, py_gif_open);
 
-STATIC const mp_rom_map_elem_t py_gif_locals_dict_table[] = {
+static const mp_rom_map_elem_t py_gif_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR___name__),        MP_ROM_QSTR(MP_QSTR_gif)          },
     { MP_ROM_QSTR(MP_QSTR___del__),         MP_ROM_PTR(&py_gif_close_obj)     },
 
@@ -140,9 +140,9 @@ STATIC const mp_rom_map_elem_t py_gif_locals_dict_table[] = {
     { MP_OBJ_NEW_QSTR(MP_QSTR_close),       MP_ROM_PTR(&py_gif_close_obj)     },
     { NULL, NULL },
 };
-STATIC MP_DEFINE_CONST_DICT(py_gif_locals_dict, py_gif_locals_dict_table);
+static MP_DEFINE_CONST_DICT(py_gif_locals_dict, py_gif_locals_dict_table);
 
-STATIC MP_DEFINE_CONST_OBJ_TYPE(
+static MP_DEFINE_CONST_OBJ_TYPE(
     py_gif_type,
     MP_QSTR_Gif,
     MP_TYPE_FLAG_NONE,
@@ -150,12 +150,12 @@ STATIC MP_DEFINE_CONST_OBJ_TYPE(
     locals_dict, &py_gif_locals_dict
     );
 
-STATIC const mp_rom_map_elem_t globals_dict_table[] = {
+static const mp_rom_map_elem_t globals_dict_table[] = {
     { MP_OBJ_NEW_QSTR(MP_QSTR___name__),    MP_OBJ_NEW_QSTR(MP_QSTR_gif) },
     { MP_OBJ_NEW_QSTR(MP_QSTR_Gif),         MP_ROM_PTR(&py_gif_open_obj) },
     { NULL, NULL },
 };
-STATIC MP_DEFINE_CONST_DICT(globals_dict, globals_dict_table);
+static MP_DEFINE_CONST_DICT(globals_dict, globals_dict_table);
 
 const mp_obj_module_t gif_module = {
     .base = { &mp_type_module },

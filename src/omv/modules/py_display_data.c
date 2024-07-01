@@ -49,7 +49,7 @@ static void cec_extint_callback(mp_obj_t self_in) {
     }
 }
 
-STATIC mp_obj_t py_cec_send_frame(uint n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
+static mp_obj_t py_cec_send_frame(uint n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
     enum { ARG_dst_addr, ARG_src_addr, ARG_data };
     static const mp_arg_t allowed_args[] = {
         { MP_QSTR_dst_addr, MP_ARG_REQUIRED | MP_ARG_INT },
@@ -77,9 +77,9 @@ STATIC mp_obj_t py_cec_send_frame(uint n_args, const mp_obj_t *pos_args, mp_map_
     }
     return mp_const_none;
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_cec_send_frame_obj, 4, py_cec_send_frame);
+static MP_DEFINE_CONST_FUN_OBJ_KW(py_cec_send_frame_obj, 4, py_cec_send_frame);
 
-STATIC mp_obj_t py_cec_receive_frame(uint n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
+static mp_obj_t py_cec_receive_frame(uint n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
     enum { ARG_dst_addr, ARG_timeout };
     static const mp_arg_t allowed_args[] = {
         { MP_QSTR_dst_addr, MP_ARG_REQUIRED | MP_ARG_INT },
@@ -103,9 +103,9 @@ STATIC mp_obj_t py_cec_receive_frame(uint n_args, const mp_obj_t *pos_args, mp_m
     }
     return mp_obj_new_tuple(2, (mp_obj_t []) { MP_OBJ_NEW_SMALL_INT(src_addr), frame });
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_cec_receive_frame_obj, 2, py_cec_receive_frame);
+static MP_DEFINE_CONST_FUN_OBJ_KW(py_cec_receive_frame_obj, 2, py_cec_receive_frame);
 
-STATIC mp_obj_t py_cec_frame_callback(mp_obj_t self_in, mp_obj_t cb, mp_obj_t dst_addr) {
+static mp_obj_t py_cec_frame_callback(mp_obj_t self_in, mp_obj_t cb, mp_obj_t dst_addr) {
     py_display_data_obj_t *self = MP_OBJ_TO_PTR(self_in);
 
     self->cec_callback = cb;
@@ -121,7 +121,7 @@ STATIC mp_obj_t py_cec_frame_callback(mp_obj_t self_in, mp_obj_t cb, mp_obj_t ds
     }
     return mp_const_none;
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_3(py_cec_frame_callback_obj, py_cec_frame_callback);
+static MP_DEFINE_CONST_FUN_OBJ_3(py_cec_frame_callback_obj, py_cec_frame_callback);
 #endif // OMV_DISPLAY_CEC_ENABLE
 
 #if OMV_DISPLAY_DDC_ENABLE
@@ -136,7 +136,7 @@ static bool ddc_checksum(uint8_t *data, int long_count) {
     return !(sum & 0xFF);
 }
 
-STATIC mp_obj_t py_ddc_display_id(mp_obj_t self_in) {
+static mp_obj_t py_ddc_display_id(mp_obj_t self_in) {
     py_display_data_obj_t *self = MP_OBJ_TO_PTR(self_in);
 
     if (mp_machine_soft_i2c_transfer(self->ddc_bus, self->ddc_addr, 1, &((mp_machine_i2c_buf_t) {
@@ -174,7 +174,7 @@ STATIC mp_obj_t py_ddc_display_id(mp_obj_t self_in) {
 
     mp_raise_msg(&mp_type_OSError, MP_ERROR_TEXT("Failed to get display id data!"));
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_ddc_display_id_obj, py_ddc_display_id);
+static MP_DEFINE_CONST_FUN_OBJ_1(py_ddc_display_id_obj, py_ddc_display_id);
 #endif // OMV_DISPLAY_DDC_ENABLE
 
 mp_obj_t py_display_data_make_new(const mp_obj_type_t *type, size_t n_args, size_t n_kw, const mp_obj_t *all_args) {
@@ -219,7 +219,7 @@ mp_obj_t py_display_data_make_new(const mp_obj_type_t *type, size_t n_args, size
     return MP_OBJ_FROM_PTR(self);
 }
 
-STATIC mp_obj_t py_display_data_deinit(mp_obj_t self_in) {
+static mp_obj_t py_display_data_deinit(mp_obj_t self_in) {
     py_display_data_obj_t *self = MP_OBJ_TO_PTR(self_in);
 
     #if OMV_DISPLAY_DDC_ENABLE
@@ -236,9 +236,9 @@ STATIC mp_obj_t py_display_data_deinit(mp_obj_t self_in) {
 
     return mp_const_none;
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_display_data_deinit_obj, py_display_data_deinit);
+static MP_DEFINE_CONST_FUN_OBJ_1(py_display_data_deinit_obj, py_display_data_deinit);
 
-STATIC const mp_rom_map_elem_t py_display_data_locals_dict_table[] = {
+static const mp_rom_map_elem_t py_display_data_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR___name__),                MP_ROM_QSTR(MP_QSTR_display_data)       },
     { MP_ROM_QSTR(MP_QSTR___del__),                 MP_ROM_PTR(&py_display_data_deinit_obj) },
     #if OMV_DISPLAY_DDC_ENABLE

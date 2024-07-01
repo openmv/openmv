@@ -38,7 +38,7 @@ typedef struct py_mjpeg_obj {
     FIL fp;
 } py_mjpeg_obj_t;
 
-STATIC void py_mjpeg_print(const mp_print_t *print, mp_obj_t self_in, mp_print_kind_t kind) {
+static void py_mjpeg_print(const mp_print_t *print, mp_obj_t self_in, mp_print_kind_t kind) {
     py_mjpeg_obj_t *self = MP_OBJ_TO_PTR(self_in);
     mp_printf(print, "{\"closed\":%s, \"width\":%u, \"height\":%u, \"count\":%u, \"size\":%u}",
               self->closed ? "\"true\"" : "\"false\"",
@@ -48,37 +48,37 @@ STATIC void py_mjpeg_print(const mp_print_t *print, mp_obj_t self_in, mp_print_k
               f_size(&self->fp));
 }
 
-STATIC mp_obj_t py_mjpeg_is_closed(mp_obj_t self_in) {
+static mp_obj_t py_mjpeg_is_closed(mp_obj_t self_in) {
     py_mjpeg_obj_t *self = MP_OBJ_TO_PTR(self_in);
     return mp_obj_new_int(self->closed);
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_mjpeg_is_closed_obj, py_mjpeg_is_closed);
+static MP_DEFINE_CONST_FUN_OBJ_1(py_mjpeg_is_closed_obj, py_mjpeg_is_closed);
 
-STATIC mp_obj_t py_mjpeg_width(mp_obj_t self_in) {
+static mp_obj_t py_mjpeg_width(mp_obj_t self_in) {
     py_mjpeg_obj_t *self = MP_OBJ_TO_PTR(self_in);
     return mp_obj_new_int(self->width);
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_mjpeg_width_obj, py_mjpeg_width);
+static MP_DEFINE_CONST_FUN_OBJ_1(py_mjpeg_width_obj, py_mjpeg_width);
 
-STATIC mp_obj_t py_mjpeg_height(mp_obj_t self_in) {
+static mp_obj_t py_mjpeg_height(mp_obj_t self_in) {
     py_mjpeg_obj_t *self = MP_OBJ_TO_PTR(self_in);
     return mp_obj_new_int(self->height);
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_mjpeg_height_obj, py_mjpeg_height);
+static MP_DEFINE_CONST_FUN_OBJ_1(py_mjpeg_height_obj, py_mjpeg_height);
 
-STATIC mp_obj_t py_mjpeg_count(mp_obj_t self_in) {
+static mp_obj_t py_mjpeg_count(mp_obj_t self_in) {
     py_mjpeg_obj_t *self = MP_OBJ_TO_PTR(self_in);
     return mp_obj_new_int(self->frames);
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_mjpeg_count_obj, py_mjpeg_count);
+static MP_DEFINE_CONST_FUN_OBJ_1(py_mjpeg_count_obj, py_mjpeg_count);
 
-STATIC mp_obj_t py_mjpeg_size(mp_obj_t self_in) {
+static mp_obj_t py_mjpeg_size(mp_obj_t self_in) {
     py_mjpeg_obj_t *self = MP_OBJ_TO_PTR(self_in);
     return mp_obj_new_int(f_size(&self->fp));
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_mjpeg_size_obj, py_mjpeg_size);
+static MP_DEFINE_CONST_FUN_OBJ_1(py_mjpeg_size_obj, py_mjpeg_size);
 
-STATIC mp_obj_t py_mjpeg_write(uint n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
+static mp_obj_t py_mjpeg_write(uint n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
     enum { ARG_roi, ARG_channel, ARG_alpha, ARG_color_palette, ARG_alpha_palette, ARG_hint, ARG_quality };
     static const mp_arg_t allowed_args[] = {
         { MP_QSTR_roi, MP_ARG_OBJ | MP_ARG_KW_ONLY, {.u_rom_obj = MP_ROM_NONE} },
@@ -139,9 +139,9 @@ STATIC mp_obj_t py_mjpeg_write(uint n_args, const mp_obj_t *pos_args, mp_map_t *
 
     return mp_const_none;
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_mjpeg_write_obj, 2, py_mjpeg_write);
+static MP_DEFINE_CONST_FUN_OBJ_KW(py_mjpeg_write_obj, 2, py_mjpeg_write);
 
-STATIC mp_obj_t py_mjpeg_sync(mp_obj_t self_in) {
+static mp_obj_t py_mjpeg_sync(mp_obj_t self_in) {
     py_mjpeg_obj_t *self = MP_OBJ_TO_PTR(self_in);
     if (self->closed) {
         mp_raise_msg(&mp_type_OSError, MP_ERROR_TEXT("MJPEG stream is closed"));
@@ -149,9 +149,9 @@ STATIC mp_obj_t py_mjpeg_sync(mp_obj_t self_in) {
     mjpeg_sync(&self->fp, self->frames, self->bytes, self->us_avg);
     return mp_const_none;
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_mjpeg_sync_obj, py_mjpeg_sync);
+static MP_DEFINE_CONST_FUN_OBJ_1(py_mjpeg_sync_obj, py_mjpeg_sync);
 
-STATIC mp_obj_t py_mjpeg_close(mp_obj_t self_in) {
+static mp_obj_t py_mjpeg_close(mp_obj_t self_in) {
     py_mjpeg_obj_t *self = MP_OBJ_TO_PTR(self_in);
     if (!self->closed) {
         mjpeg_close(&self->fp, self->frames, self->bytes, self->us_avg);
@@ -159,9 +159,9 @@ STATIC mp_obj_t py_mjpeg_close(mp_obj_t self_in) {
     self->closed = true;
     return mp_const_none;
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_mjpeg_close_obj, py_mjpeg_close);
+static MP_DEFINE_CONST_FUN_OBJ_1(py_mjpeg_close_obj, py_mjpeg_close);
 
-STATIC mp_obj_t py_mjpeg_open(uint n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
+static mp_obj_t py_mjpeg_open(uint n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
     enum { ARG_width, ARG_height };
     static const mp_arg_t allowed_args[] = {
         { MP_QSTR_width, MP_ARG_INT,  {.u_int = -1 } },
@@ -183,9 +183,9 @@ STATIC mp_obj_t py_mjpeg_open(uint n_args, const mp_obj_t *pos_args, mp_map_t *k
     mjpeg_open(&mjpeg->fp, mjpeg->width, mjpeg->height);
     return mjpeg;
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_mjpeg_open_obj, 1, py_mjpeg_open);
+static MP_DEFINE_CONST_FUN_OBJ_KW(py_mjpeg_open_obj, 1, py_mjpeg_open);
 
-STATIC const mp_rom_map_elem_t py_mjpeg_locals_dict_table[] = {
+static const mp_rom_map_elem_t py_mjpeg_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR___name__),    MP_ROM_QSTR(MP_QSTR_Mjpeg)          },
     { MP_ROM_QSTR(MP_QSTR___del__),     MP_ROM_PTR(&py_mjpeg_close_obj)     },
     { MP_ROM_QSTR(MP_QSTR_is_closed),   MP_ROM_PTR(&py_mjpeg_is_closed_obj) },
@@ -199,9 +199,9 @@ STATIC const mp_rom_map_elem_t py_mjpeg_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_close),       MP_ROM_PTR(&py_mjpeg_close_obj)     },
 };
 
-STATIC MP_DEFINE_CONST_DICT(py_mjpeg_locals_dict, py_mjpeg_locals_dict_table);
+static MP_DEFINE_CONST_DICT(py_mjpeg_locals_dict, py_mjpeg_locals_dict_table);
 
-STATIC MP_DEFINE_CONST_OBJ_TYPE(
+static MP_DEFINE_CONST_OBJ_TYPE(
     py_mjpeg_type,
     MP_QSTR_Mjpeg,
     MP_TYPE_FLAG_NONE,
@@ -209,12 +209,12 @@ STATIC MP_DEFINE_CONST_OBJ_TYPE(
     locals_dict, &py_mjpeg_locals_dict
     );
 
-STATIC const mp_rom_map_elem_t globals_dict_table[] = {
+static const mp_rom_map_elem_t globals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR___name__),    MP_ROM_QSTR(MP_QSTR_mjpeg)      },
     { MP_ROM_QSTR(MP_QSTR_Mjpeg),       MP_ROM_PTR(&py_mjpeg_open_obj)  },
 };
 
-STATIC MP_DEFINE_CONST_DICT(globals_dict, globals_dict_table);
+static MP_DEFINE_CONST_DICT(globals_dict, globals_dict_table);
 
 const mp_obj_module_t mjpeg_module = {
     .base = { &mp_type_module },

@@ -101,7 +101,7 @@ extern uint32_t _heap_start;
 extern uint32_t _heap_end;
 
 #if MICROPY_HW_ENABLE_INTERNAL_FLASH_STORAGE
-STATIC int vfs_mount_and_chdir(mp_obj_t bdev, mp_obj_t mount_point) {
+static int vfs_mount_and_chdir(mp_obj_t bdev, mp_obj_t mount_point) {
     nlr_buf_t nlr;
     mp_int_t ret = -MP_EIO;
     if (nlr_push(&nlr) == 0) {

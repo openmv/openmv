@@ -744,7 +744,7 @@ static void spi_tv_display(image_t *src_img, int dst_x_start, int dst_y_start, f
 }
 #endif
 
-STATIC mp_obj_t py_tv_deinit() {
+static mp_obj_t py_tv_deinit() {
     switch (tv_type) {
         #ifdef OMV_SPI_DISPLAY_CONTROLLER
         case TV_SHIELD: {
@@ -761,9 +761,9 @@ STATIC mp_obj_t py_tv_deinit() {
 
     return mp_const_none;
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_tv_deinit_obj, py_tv_deinit);
+static MP_DEFINE_CONST_FUN_OBJ_0(py_tv_deinit_obj, py_tv_deinit);
 
-STATIC mp_obj_t py_tv_init(uint n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
+static mp_obj_t py_tv_init(uint n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
     enum { ARG_type, ARG_triple_buffer };
     static const mp_arg_t allowed_args[] = {
         { MP_QSTR_type, MP_ARG_INT, {.u_int = TV_SHIELD } },
@@ -790,50 +790,50 @@ STATIC mp_obj_t py_tv_init(uint n_args, const mp_obj_t *pos_args, mp_map_t *kw_a
 
     return mp_const_none;
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_tv_init_obj, 0, py_tv_init);
+static MP_DEFINE_CONST_FUN_OBJ_KW(py_tv_init_obj, 0, py_tv_init);
 
-STATIC mp_obj_t py_tv_width() {
+static mp_obj_t py_tv_width() {
     if (tv_type != TV_NONE) {
         return mp_obj_new_int(TV_WIDTH);
     }
 
     mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("TV controller is not initialized"));
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_tv_width_obj, py_tv_width);
+static MP_DEFINE_CONST_FUN_OBJ_0(py_tv_width_obj, py_tv_width);
 
-STATIC mp_obj_t py_tv_height() {
+static mp_obj_t py_tv_height() {
     if (tv_type != TV_NONE) {
         return mp_obj_new_int(TV_HEIGHT);
     }
     mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("TV controller is not initialized"));
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_tv_height_obj, py_tv_height);
+static MP_DEFINE_CONST_FUN_OBJ_0(py_tv_height_obj, py_tv_height);
 
-STATIC mp_obj_t py_tv_type() {
+static mp_obj_t py_tv_type() {
     if (tv_type != TV_NONE) {
         return mp_obj_new_int(tv_type);
     }
     mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("TV controller is not initialized"));
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_tv_type_obj, py_tv_type);
+static MP_DEFINE_CONST_FUN_OBJ_0(py_tv_type_obj, py_tv_type);
 
-STATIC mp_obj_t py_tv_triple_buffer() {
+static mp_obj_t py_tv_triple_buffer() {
     if (tv_type != TV_NONE) {
         return mp_obj_new_int(tv_triple_buffer);
     }
     mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("TV controller is not initialized"));
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_tv_triple_buffer_obj, py_tv_triple_buffer);
+static MP_DEFINE_CONST_FUN_OBJ_0(py_tv_triple_buffer_obj, py_tv_triple_buffer);
 
-STATIC mp_obj_t py_tv_refresh() {
+static mp_obj_t py_tv_refresh() {
     if (tv_type != TV_NONE) {
         return mp_obj_new_int(TV_REFRESH);
     }
     mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("TV controller is not initialized"));
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_tv_refresh_obj, py_tv_refresh);
+static MP_DEFINE_CONST_FUN_OBJ_0(py_tv_refresh_obj, py_tv_refresh);
 
-STATIC mp_obj_t py_tv_channel(uint n_args, const mp_obj_t *args) {
+static mp_obj_t py_tv_channel(uint n_args, const mp_obj_t *args) {
     if (tv_type == TV_NONE) {
         mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("TV controller is not initialized"));
     }
@@ -866,9 +866,9 @@ STATIC mp_obj_t py_tv_channel(uint n_args, const mp_obj_t *args) {
     }
     #endif
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(py_tv_channel_obj, 0, 1, py_tv_channel);
+static MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(py_tv_channel_obj, 0, 1, py_tv_channel);
 
-STATIC mp_obj_t py_tv_display(uint n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
+static mp_obj_t py_tv_display(uint n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
     enum {
         ARG_x, ARG_y, ARG_x_scale, ARG_y_scale, ARG_roi, ARG_channel, ARG_alpha,
         ARG_color_palette, ARG_alpha_palette, ARG_hint
@@ -925,9 +925,9 @@ STATIC mp_obj_t py_tv_display(uint n_args, const mp_obj_t *pos_args, mp_map_t *k
 
     return mp_const_none;
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_tv_display_obj, 1, py_tv_display);
+static MP_DEFINE_CONST_FUN_OBJ_KW(py_tv_display_obj, 1, py_tv_display);
 
-STATIC mp_obj_t py_tv_clear() {
+static mp_obj_t py_tv_clear() {
     switch (tv_type) {
         #ifdef OMV_SPI_DISPLAY_CONTROLLER
         case TV_SHIELD: {
@@ -945,9 +945,9 @@ STATIC mp_obj_t py_tv_clear() {
 
     return mp_const_none;
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_tv_clear_obj, py_tv_clear);
+static MP_DEFINE_CONST_FUN_OBJ_0(py_tv_clear_obj, py_tv_clear);
 
-STATIC const mp_rom_map_elem_t globals_dict_table[] = {
+static const mp_rom_map_elem_t globals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR___name__),        MP_OBJ_NEW_QSTR(MP_QSTR_tv)          },
     { MP_ROM_QSTR(MP_QSTR_TV_NONE),         MP_ROM_INT(TV_NONE)                  },
     { MP_ROM_QSTR(MP_QSTR_TV_SHIELD),       MP_ROM_INT(TV_SHIELD)                },
@@ -963,7 +963,7 @@ STATIC const mp_rom_map_elem_t globals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_clear),           MP_ROM_PTR(&py_tv_clear_obj)         },
 };
 
-STATIC MP_DEFINE_CONST_DICT(globals_dict, globals_dict_table);
+static MP_DEFINE_CONST_DICT(globals_dict, globals_dict_table);
 
 const mp_obj_module_t tv_module = {
     .base = { &mp_type_module },
