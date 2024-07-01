@@ -189,8 +189,7 @@ mp_obj_t py_display_data_make_new(const mp_obj_type_t *type, size_t n_args, size
     mp_arg_val_t args[MP_ARRAY_SIZE(allowed_args)];
     mp_arg_parse_all_kw_array(n_args, n_kw, all_args, MP_ARRAY_SIZE(allowed_args), allowed_args, args);
 
-    py_display_data_obj_t *self = m_new_obj_with_finaliser(py_display_data_obj_t);
-    self->base.type = &py_display_data_type;
+    py_display_data_obj_t *self = mp_obj_malloc_with_finaliser(py_display_data_obj_t, &py_display_data_type);
 
     #if OMV_DISPLAY_CEC_ENABLE
     self->cec_enabled = args[ARG_cec].u_bool;

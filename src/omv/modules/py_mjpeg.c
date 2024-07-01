@@ -173,9 +173,12 @@ static mp_obj_t py_mjpeg_open(uint n_args, const mp_obj_t *pos_args, mp_map_t *k
     mp_arg_val_t args[MP_ARRAY_SIZE(allowed_args)];
     mp_arg_parse_all(n_args - 1, pos_args + 1, kw_args, MP_ARRAY_SIZE(allowed_args), allowed_args, args);
 
-    py_mjpeg_obj_t *mjpeg = m_new_obj_with_finaliser(py_mjpeg_obj_t);
-    memset(mjpeg, 0, sizeof(py_mjpeg_obj_t));
-    mjpeg->base.type = &py_mjpeg_type;
+    py_mjpeg_obj_t *mjpeg = mp_obj_malloc_with_finaliser(py_mjpeg_obj_t, &py_mjpeg_type);
+    mjpeg->frames = 0;
+    mjpeg->bytes = 0;
+    mjpeg->us_old = 0;
+    mjpeg->us_avg = 0;
+    mjpeg->closed = 0;
     mjpeg->width = (args[ARG_width].u_int == -1) ? framebuffer_get_width() : args[ARG_width].u_int;
     mjpeg->height = (args[ARG_height].u_int == -1) ? framebuffer_get_height() : args[ARG_height].u_int;
 

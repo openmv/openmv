@@ -476,8 +476,7 @@ static MP_DEFINE_CONST_FUN_OBJ_1(py_imageio_close_obj, py_imageio_close);
 
 static mp_obj_t py_imageio_make_new(const mp_obj_type_t *type, size_t n_args, size_t n_kw, const mp_obj_t *args) {
     mp_arg_check_num(n_args, n_kw, 2, 2, false);
-    py_imageio_obj_t *stream = m_new_obj_with_finaliser(py_imageio_obj_t);
-    stream->base.type = &py_imageio_type;
+    py_imageio_obj_t *stream = mp_obj_malloc_with_finaliser(py_imageio_obj_t, &py_imageio_type);
     stream->closed = false;
 
     if (0) {

@@ -577,11 +577,11 @@ mp_obj_t display_make_new(const mp_obj_type_t *type, size_t n_args, size_t n_kw,
         mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Invalid Refresh Rate!"));
     }
 
-    py_display_obj_t *self = (py_display_obj_t *) m_new_obj_with_finaliser(py_display_obj_t);
+    py_display_obj_t *self;
     #ifdef OMV_DSI_DISPLAY_CONTROLLER
-    self->base.type = &py_dsi_display_type;
+    self = mp_obj_malloc_with_finaliser(py_display_obj_t, &py_dsi_display_type);
     #else
-    self->base.type = &py_rgb_display_type;
+    self = mp_obj_malloc_with_finaliser(py_display_obj_t, &py_rgb_display_type);
     #endif
     self->vcid = args[ARG_channel].u_int;
     self->refresh = args[ARG_refresh].u_int;

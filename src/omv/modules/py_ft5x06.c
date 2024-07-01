@@ -219,8 +219,7 @@ mp_obj_t py_ft5x06_make_new(const mp_obj_type_t *type, size_t n_args, size_t n_k
     mp_arg_val_t args[MP_ARRAY_SIZE(allowed_args)];
     mp_arg_parse_all_kw_array(n_args, n_kw, all_args, MP_ARRAY_SIZE(allowed_args), allowed_args, args);
 
-    py_ft5x06_obj_t *self = m_new_obj_with_finaliser(py_ft5x06_obj_t);
-    self->base.type = &py_ft5x06_type;
+    py_ft5x06_obj_t *self = mp_obj_malloc_with_finaliser(py_ft5x06_obj_t, &py_ft5x06_type);
     self->i2c_addr = args[ARG_i2c_addr].u_int;
     self->i2c_bus = MP_OBJ_TYPE_GET_SLOT(
         &mp_machine_soft_i2c_type, make_new) (&mp_machine_soft_i2c_type, 2, 0, (const mp_obj_t []) {

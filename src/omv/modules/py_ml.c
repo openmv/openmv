@@ -399,8 +399,7 @@ mp_obj_t py_ml_model_make_new(const mp_obj_type_t *type, size_t n_args, size_t n
 
     const char *path = mp_obj_str_get_str(args[ARG_path].u_obj);
 
-    py_ml_model_obj_t *model = m_new_obj_with_finaliser(py_ml_model_obj_t);
-    model->base.type = &py_ml_model_type;
+    py_ml_model_obj_t *model = mp_obj_malloc_with_finaliser(py_ml_model_obj_t, &py_ml_model_type);
     model->data = NULL;
     model->fb_alloc = args[ARG_load_to_fb].u_int;
     mp_obj_list_t *labels = NULL;

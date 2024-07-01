@@ -16,7 +16,6 @@
 #include "py/obj.h"
 #include "py/objstr.h"
 #include "py/runtime.h"
-#include "pendsv.h"
 
 #include "imlib.h"
 #if MICROPY_PY_SENSOR
@@ -111,18 +110,17 @@ static void usbdbg_interrupt_vm(bool ready) {
     // Disable IDE IRQ (re-enabled by pyexec or main).
     usbdbg_set_irq_enabled(false);
 
-    // Clear interrupt traceback
-    mp_obj_exception_clear_traceback(&ide_exception);
-
     #if (__ARM_ARCH >= 7)
     // Remove the BASEPRI masking (if any)
     __set_BASEPRI(0);
     #endif
 
-    // Interrupt running REPL
-    // Note: setting pendsv explicitly here because the VM is probably
-    // waiting in REPL and the soft interrupt flag will not be checked.
-    pendsv_nlr_jump(&ide_exception);
+    // Clear interrupt traceback
+    mp_obj_exception_clear_traceback(&ide_exception);
+    mp_sched_exception(&ide_exception);
+
+    // Abort the VM.
+    mp_sched_vm_abort();
 }
 
 bool usbdbg_get_irq_enabled() {

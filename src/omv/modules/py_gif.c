@@ -114,8 +114,7 @@ static mp_obj_t py_gif_open(uint n_args, const mp_obj_t *pos_args, mp_map_t *kw_
     mp_arg_val_t args[MP_ARRAY_SIZE(allowed_args)];
     mp_arg_parse_all(n_args - 1, pos_args + 1, kw_args, MP_ARRAY_SIZE(allowed_args), allowed_args, args);
 
-    py_gif_obj_t *gif = m_new_obj_with_finaliser(py_gif_obj_t);
-    gif->base.type = &py_gif_type;
+    py_gif_obj_t *gif = mp_obj_malloc_with_finaliser(py_gif_obj_t, &py_gif_type);
     gif->width = (args[ARG_width].u_int == -1) ? framebuffer_get_width() : args[ARG_width].u_int;
     gif->height = (args[ARG_height].u_int == -1) ? framebuffer_get_height() : args[ARG_height].u_int;
     gif->color = (args[ARG_color].u_int == -1) ? (framebuffer_get_depth() >= 2) : args[ARG_color].u_bool;
