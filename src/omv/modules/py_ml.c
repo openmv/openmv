@@ -25,7 +25,7 @@
 #include "tflm_builtin_models.h"
 #include "ulab/code/ndarray.h"
 
-static size_t py_ml_tuple_sum(mp_obj_tuple_t *o) {
+static size_t py_ml_shape_len(mp_obj_tuple_t *o) {
     if (o->len < 1) {
         mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Unexpected tensor shape"));
     }
@@ -35,6 +35,38 @@ static size_t py_ml_tuple_sum(mp_obj_tuple_t *o) {
         size *= mp_obj_get_int(o->items[i]);
     }
     return size;
+}
+
+static void py_ml_array_input_callback(void *self, py_ml_model_obj_t *model, size_t index) {
+    size_t len;
+    mp_obj_t *items;
+    mp_obj_get_array(MP_OBJ_TO_PTR(self), &len, &items);
+
+    void *model_input = ml_backend_get_input(model, index);
+    float input_scale = 1.0f / mp_obj_get_float(model->input_scale->items[index]);
+    int input_zero_point = mp_obj_get_int(model->input_zero_point->items[index]);
+    int input_dtype = mp_obj_get_int(model->input_dtype->items[index]);
+
+    if (len != py_ml_shape_len(MP_OBJ_TO_PTR(model->input_shape->items[index]))) {
+        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Input shape does not match the model input shape"));
+    }
+
+    if (input_dtype == PY_ML_DTYPE_FLOAT) {
+        float *model_input_float = (float *) model_input;
+        for (size_t i = 0; i < len; i++) {
+            model_input_float[i] = mp_obj_get_float(items[i]);
+        }
+    } else if ((input_dtype == PY_ML_DTYPE_INT8) || (input_dtype == PY_ML_DTYPE_UINT8)) {
+        int8_t *model_input_8 = (int8_t *) model_input;
+        for (size_t i = 0; i < len; i++) {
+            model_input_8[i] = (int8_t) ((mp_obj_get_float(items[i]) * input_scale) + input_zero_point);
+        }
+    } else {
+        int16_t *model_input_16 = (int16_t *) model_input;
+        for (size_t i = 0; i < len; i++) {
+            model_input_16[i] = (int16_t) ((mp_obj_get_float(items[i]) * input_scale) + input_zero_point);
+        }
+    }
 }
 
 static void py_ml_ndarray_input_callback(void *self, py_ml_model_obj_t *model, size_t index) {
@@ -80,7 +112,7 @@ static mp_obj_t py_ml_output_callback(py_ml_model_obj_t *model) {
     mp_obj_list_t *output_list = MP_OBJ_TO_PTR(mp_obj_new_list(model->output_shape->len, NULL));
     for (size_t i = 0; i < model->output_shape->len; i++) {
         void *model_output = ml_backend_get_output(model, i);
-        size_t size = py_ml_tuple_sum(MP_OBJ_TO_PTR(model->output_shape->items[i]));
+        size_t size = py_ml_shape_len(MP_OBJ_TO_PTR(model->output_shape->items[i]));
         mp_obj_tuple_t *output = MP_OBJ_TO_PTR(mp_obj_new_tuple(size, NULL));
         float output_scale = mp_obj_get_float(model->output_scale->items[i]);
         int output_zero_point = mp_obj_get_int(model->output_zero_point->items[i]);
@@ -159,7 +191,9 @@ static mp_obj_t py_ml_model_predict(uint n_args, const mp_obj_t *pos_args, mp_ma
     }
 
     for (size_t i = 0; i < len; i++) {
-        if (MP_OBJ_IS_TYPE(items[i], &ulab_ndarray_type)) {
+        if (MP_OBJ_IS_TYPE(items[i], &mp_type_tuple) || MP_OBJ_IS_TYPE(items[i], &mp_type_list)) {
+            py_ml_array_input_callback(items[i], model, i);
+        } else if (MP_OBJ_IS_TYPE(items[i], &ulab_ndarray_type)) {
             py_ml_ndarray_input_callback(items[i], model, i);
         } else if (MP_OBJ_IS_TYPE(items[i], &py_ml_image_arg_type)) {
             py_image_arg_obj_t *image_arg = MP_OBJ_TO_PTR(items[i]);
