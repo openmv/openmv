@@ -29,7 +29,7 @@ extern "C" {
 #include "fb_alloc.h"
 
 using namespace tflite;
-#define TF_ARENA_ALIGNMENT   (16 - 1)
+#define TF_ARENA_ALIGNMENT  (16 - 1)
 typedef MicroMutableOpResolver<113> MicroOpsResolver;
 
 typedef struct ml_backend_state {
@@ -40,7 +40,7 @@ typedef struct ml_backend_state {
 } ml_backend_state_t;
 
 void abort(void) {
-  while (1);
+    while (1);
 }
 
 void ml_backend_log_handler(const char *s) {
@@ -323,14 +323,5 @@ void *ml_backend_get_output(py_ml_model_obj_t *model, size_t index) {
     }
     mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Invalid output tensor index"));
 }
-
-int ml_backend_generate_micro_features(const int16_t *input,
-                                       int input_size,
-                                       int output_size,
-                                       int8_t *output,
-                                       size_t *num_samples_read) {
-    return 0;
-}
-
 } // extern "C"
-#endif //IMLIB_ENABLE_TFLM
+#endif // IMLIB_ENABLE_TFLM
