@@ -129,6 +129,11 @@ void mp_init_gc_stack(void *sstack, void *estack, void *heap_start, void *heap_e
     // chance to recover from limit hit. (Limit is measured in bytes)
     mp_stack_set_limit(estack - sstack - stack_limit);
 
+    #if MICROPY_ENABLE_PYSTACK
+    static mp_obj_t pystack[384];
+    mp_pystack_init(pystack, &pystack[384]);
+    #endif
+
     // Initialize gc memory.
     gc_init(heap_start, heap_end);
 
