@@ -61,6 +61,7 @@ class MicroSpeech:
         self.audio_buffer = np.zeros((1, _SAMPLES_PER_STEP * 3), dtype=np.int16)
         self.spectrogram = np.zeros((1, _SLICE_COUNT * _SLICE_SIZE), dtype=np.int8)
         self.pred_history = np.zeros((_AVERAGE_WINDOW_SAMPLES, _CATEGORY_COUNT), dtype=np.float)
+        self.audio_started = False
         audio.init(channels=1, frequency=_AUDIO_FREQUENCY, gain_db=24, samples=_SAMPLES_PER_STEP * 2)
 
     def audio_callback(self, buf):
@@ -78,11 +79,19 @@ class MicroSpeech:
         self.pred_history = np.roll(self.pred_history, -1, axis=0)
         self.pred_history[-1] = self.micro_speech.predict(self.spectrogram)[0]
 
+    def start_audio_streaming(self):
+        if self.audio_started is False:
+            self.spectrogram[:] = 0
+            self.pred_history[:] = 0
+            audio.start_streaming(self.audio_callback)
+            self.audio_started = True
+
+    def stop_audio_streaming(self):
+        audio.stop_streaming()
+        self.audio_started = False
+
     def listen(self, timeout=0, callback=None, threshold=0.65, filter=["Yes", "No"]):
-        self.spectrogram[:] = 0
-        self.pred_history[:] = 0
-        # Start audio streaming
-        audio.start_streaming(self.audio_callback)
+        self.start_audio_streaming()
         stat_ms = time.ticks_ms()
         while True:
             average_scores = np.mean(self.pred_history, axis=0)
@@ -93,10 +102,12 @@ class MicroSpeech:
                 self.pred_history[:] = 0
                 self.spectrogram[:] = 0
                 if callback is None:
-                    audio.stop_streaming()
+                    if timeout != -1:  # non-blocking mode
+                        self.stop_audio_streaming()
                     return (label, average_scores)
                 callback(label, average_scores)
+            if timeout == -1:  # non-blocking mode
+                return (None, average_scores)
             if timeout != 0 and (time.ticks_ms() - stat_ms) > timeout:
-                audio.stop_streaming()
-                return (None, None)
+                self.stop_audio_streaming()
             time.sleep_ms(1)
