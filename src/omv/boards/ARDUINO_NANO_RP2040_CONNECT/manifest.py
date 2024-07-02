@@ -11,6 +11,7 @@ require("neopixel")
 freeze ("$(OMV_LIB_DIR)/", "machine.py")
 
 # Networking
+require("ssl")
 require("ntptime")
 require("webrepl")
 freeze ("$(OMV_LIB_DIR)/", "mqtt.py")

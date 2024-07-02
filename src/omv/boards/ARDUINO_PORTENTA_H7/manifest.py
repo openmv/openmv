@@ -17,6 +17,7 @@ freeze ("$(OMV_LIB_DIR)/", "display.py")
 freeze ("$(OMV_LIB_DIR)/", "ml.py")
 
 # Networking
+require("ssl")
 require("ntptime")
 require("webrepl")
 freeze ("$(OMV_LIB_DIR)/", "rpc.py")

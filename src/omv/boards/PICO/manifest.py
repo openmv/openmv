@@ -1,6 +1,7 @@
 include("$(MPY_DIR)/extmod/asyncio")
 
 # Networking
+require("ssl")
 require("ntptime")
 require("webrepl")
 
