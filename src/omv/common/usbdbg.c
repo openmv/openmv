@@ -36,17 +36,10 @@ static volatile bool script_running;
 static volatile bool irq_enabled;
 static vstr_t script_buf;
 
-static mp_obj_exception_t ide_exception;
-static const MP_DEFINE_STR_OBJ(ide_exception_msg, "IDE interrupt");
-static const mp_rom_obj_tuple_t ide_exception_args_obj = {
-    {&mp_type_tuple}, 1, {MP_ROM_PTR(&ide_exception_msg)}
-};
-
-extern void pendsv_nlr_jump(void *val);
-
 // These functions must be implemented in MicroPython CDC driver.
 extern uint32_t usb_cdc_buf_len();
 extern uint32_t usb_cdc_get_buf(uint8_t *buf, uint32_t len);
+
 void __attribute__((weak)) usb_cdc_reset_buffers() {
 
 }
@@ -58,20 +51,6 @@ void usbdbg_init() {
     irq_enabled = false;
 
     vstr_init(&script_buf, 32);
-
-    // Initialize the IDE exception object.
-    ide_exception.base.type = &mp_type_Exception;
-    ide_exception.traceback_alloc = 0;
-    ide_exception.traceback_len = 0;
-    ide_exception.traceback_data = NULL;
-    ide_exception.args = (mp_obj_tuple_t *) &ide_exception_args_obj;
-}
-
-void usbdbg_wait_for_command(uint32_t timeout) {
-    for (mp_uint_t ticks = mp_hal_ticks_ms();
-         irq_enabled && ((mp_hal_ticks_ms() - ticks) < timeout) && (cmd != USBDBG_NONE); ) {
-        ;
-    }
 }
 
 bool usbdbg_script_ready() {
@@ -107,20 +86,14 @@ static void usbdbg_interrupt_vm(bool ready) {
     // Set script running flag
     script_running = ready;
 
-    // Disable IDE IRQ (re-enabled by pyexec or main).
+    // Disable IDE IRQ (re-enabled by pyexec or in main).
     usbdbg_set_irq_enabled(false);
-
-    #if (__ARM_ARCH >= 7)
-    // Remove the BASEPRI masking (if any)
-    __set_BASEPRI(0);
-    #endif
-
-    // Clear interrupt traceback
-    mp_obj_exception_clear_traceback(&ide_exception);
-    mp_sched_exception(&ide_exception);
 
     // Abort the VM.
     mp_sched_vm_abort();
+
+    // When the VM runs again it will raise a KeyboardInterrupt.
+    mp_sched_keyboard_interrupt();
 }
 
 bool usbdbg_get_irq_enabled() {

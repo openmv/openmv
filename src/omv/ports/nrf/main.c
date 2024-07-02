@@ -315,16 +315,6 @@ soft_reset:
         } else {
             mp_obj_print_exception(&mp_plat_print, (mp_obj_t) nlr.ret_val);
         }
-
-        if (usbdbg_is_busy() && nlr_push(&nlr) == 0) {
-            // Enable IDE interrupt
-            usbdbg_set_irq_enabled(true);
-            // Wait for the current command to finish.
-            usbdbg_wait_for_command(1000);
-            // Disable IDE interrupts
-            usbdbg_set_irq_enabled(false);
-            nlr_pop();
-        }
     }
 
 soft_reset_exit:
