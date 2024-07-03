@@ -147,8 +147,6 @@
 #define OMV_AXI_SRAM_LENGTH                 512K
 #define OMV_DRAM_ORIGIN                     0xC0000000
 #define OMV_DRAM_LENGTH                     8M
-#define OMV_CM4_RAM_ORIGIN                  0x38000000 // Cortex-M4 memory @SRAM4.
-#define OMV_CM4_RAM_LENGTH                  16K
 
 // Flash configuration.
 #define OMV_FLASH_FFS_ORIGIN                0x08020000
@@ -157,8 +155,6 @@
 #define OMV_FLASH_TXT_LENGTH                1792K
 #define OMV_FLASH_EXT_ORIGIN                0x90000000
 #define OMV_FLASH_EXT_LENGTH                16M
-#define OMV_CM4_FLASH_ORIGIN                0x08020000
-#define OMV_CM4_FLASH_LENGTH                128K
 
 // MDMA configuration
 #define OMV_MDMA_CHANNEL_DCMI_0             (0)
