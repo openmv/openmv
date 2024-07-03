@@ -11,8 +11,7 @@
 #ifndef __ULAB_CONFIG_H__
 #define __ULAB_CONFIG_H__
 // Override ulab defaults here.
-#define NDARRAY_BINARY_USES_FUN_POINTER    (1)
-#define ULAB_VECTORISE_USES_FUN_POINTER    (1)
-#define ULAB_SCIPY_HAS_OPTIMIZE_MODULE     (1)
+#define ULAB_SUPPORTS_COMPLEX              (0)
 #define ULAB_SCIPY_HAS_SPECIAL_MODULE      (0)
+#define NDARRAY_BINARY_USES_FUN_POINTER    (1)
 #endif //__ULAB_CONFIG_H__

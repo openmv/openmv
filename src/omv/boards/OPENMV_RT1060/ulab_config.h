@@ -9,4 +9,7 @@
 #ifndef __ULAB_CONFIG_H__
 #define __ULAB_CONFIG_H__
 // Override ulab defaults here.
+#define ULAB_MAX_DIMS                      (4)
+#define ULAB_SUPPORTS_COMPLEX              (0)
+#define ULAB_SCIPY_HAS_OPTIMIZE_MODULE     (1)
 #endif //__ULAB_CONFIG_H__
