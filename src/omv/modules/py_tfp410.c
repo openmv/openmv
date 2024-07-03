@@ -63,7 +63,7 @@ static void dvi_extint_callback(mp_obj_t self_in) {
     }
 }
 
-STATIC mp_obj_t py_dvi_is_connected(mp_obj_t self_in) {
+static mp_obj_t py_dvi_is_connected(mp_obj_t self_in) {
     py_tfp410_obj_t *self = MP_OBJ_TO_PTR(self_in);
 
     bool connected;
@@ -72,9 +72,9 @@ STATIC mp_obj_t py_dvi_is_connected(mp_obj_t self_in) {
     }
     mp_raise_msg(&mp_type_OSError, MP_ERROR_TEXT("Display init failed!"));
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_dvi_is_connected_obj, py_dvi_is_connected);
+static MP_DEFINE_CONST_FUN_OBJ_1(py_dvi_is_connected_obj, py_dvi_is_connected);
 
-STATIC mp_obj_t py_dvi_hotplug_callback(mp_obj_t self_in, mp_obj_t cb) {
+static mp_obj_t py_dvi_hotplug_callback(mp_obj_t self_in, mp_obj_t cb) {
     py_tfp410_obj_t *self = MP_OBJ_TO_PTR(self_in);
 
     self->hotplug_callback = cb;
@@ -87,7 +87,7 @@ STATIC mp_obj_t py_dvi_hotplug_callback(mp_obj_t self_in, mp_obj_t cb) {
     }
     return mp_const_none;
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_dvi_hotplug_callback_obj, py_dvi_hotplug_callback);
+static MP_DEFINE_CONST_FUN_OBJ_2(py_dvi_hotplug_callback_obj, py_dvi_hotplug_callback);
 
 mp_obj_t py_tfp410_make_new(const mp_obj_type_t *type, size_t n_args, size_t n_kw, const mp_obj_t *all_args) {
     enum { ARG_i2c_addr };
@@ -99,8 +99,7 @@ mp_obj_t py_tfp410_make_new(const mp_obj_type_t *type, size_t n_args, size_t n_k
     mp_arg_val_t args[MP_ARRAY_SIZE(allowed_args)];
     mp_arg_parse_all_kw_array(n_args, n_kw, all_args, MP_ARRAY_SIZE(allowed_args), allowed_args, args);
 
-    py_tfp410_obj_t *self = m_new_obj_with_finaliser(py_tfp410_obj_t);
-    self->base.type = &py_tfp410_type;
+    py_tfp410_obj_t *self = mp_obj_malloc_with_finaliser(py_tfp410_obj_t, &py_tfp410_type);
     self->hotplug_callback = mp_const_none;
     self->i2c_addr = args[ARG_i2c_addr].u_int;
     self->i2c_bus = MP_OBJ_TYPE_GET_SLOT(
@@ -123,7 +122,7 @@ mp_obj_t py_tfp410_make_new(const mp_obj_type_t *type, size_t n_args, size_t n_k
     return MP_OBJ_FROM_PTR(self);
 }
 
-STATIC mp_obj_t py_tfp410_deinit(mp_obj_t self_in) {
+static mp_obj_t py_tfp410_deinit(mp_obj_t self_in) {
     omv_gpio_irq_enable(OMV_TFP410_INT_PIN, false);
 
     omv_gpio_write(OMV_TFP410_RESET_PIN, 0);
@@ -135,9 +134,9 @@ STATIC mp_obj_t py_tfp410_deinit(mp_obj_t self_in) {
     omv_gpio_deinit(OMV_TFP410_RESET_PIN);
     return mp_const_none;
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_tfp410_deinit_obj, py_tfp410_deinit);
+static MP_DEFINE_CONST_FUN_OBJ_1(py_tfp410_deinit_obj, py_tfp410_deinit);
 
-STATIC const mp_rom_map_elem_t py_tfp410_locals_dict_table[] = {
+static const mp_rom_map_elem_t py_tfp410_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR___name__),                MP_ROM_QSTR(MP_QSTR_tfp410)             },
     { MP_ROM_QSTR(MP_QSTR___del__),                 MP_ROM_PTR(&py_tfp410_deinit_obj)       },
     { MP_ROM_QSTR(MP_QSTR_isconnected),             MP_ROM_PTR(&py_dvi_is_connected_obj)    },
@@ -153,11 +152,11 @@ MP_DEFINE_CONST_OBJ_TYPE(
     locals_dict, &py_tfp410_locals_dict
     );
 
-STATIC const mp_rom_map_elem_t globals_dict_table[] = {
+static const mp_rom_map_elem_t globals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR___name__),    MP_ROM_QSTR(MP_QSTR_tfp410) },
     { MP_ROM_QSTR(MP_QSTR_TFP410),      MP_ROM_PTR(&py_tfp410_type) },
 };
-STATIC MP_DEFINE_CONST_DICT(globals_dict, globals_dict_table);
+static MP_DEFINE_CONST_DICT(globals_dict, globals_dict_table);
 
 const mp_obj_module_t tfp410_module = {
     .base = { &mp_type_module },

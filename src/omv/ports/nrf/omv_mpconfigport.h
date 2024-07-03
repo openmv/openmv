@@ -6,4 +6,5 @@
         fb_alloc_free_till_mark();             \
     } while (0);
 
+#define MICROPY_ENABLE_VM_ABORT             (1)
 #define MICROPY_BANNER_NAME_AND_VERSION "OpenMV " OPENMV_GIT_TAG "; MicroPython " MICROPY_GIT_TAG

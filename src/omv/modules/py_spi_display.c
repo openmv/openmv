@@ -342,8 +342,7 @@ mp_obj_t spi_display_make_new(const mp_obj_type_t *type, size_t n_args, size_t n
         mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Invalid Refresh Rate!"));
     }
 
-    py_display_obj_t *self = m_new_obj_with_finaliser(py_display_obj_t);
-    self->base.type = &py_spi_display_type;
+    py_display_obj_t *self = mp_obj_malloc_with_finaliser(py_display_obj_t, &py_spi_display_type);
     self->framebuffer_tail = 0;
     self->framebuffer_head = 0;
     self->width = args[ARG_width].u_int;
@@ -407,7 +406,7 @@ mp_obj_t spi_display_make_new(const mp_obj_type_t *type, size_t n_args, size_t n
     return MP_OBJ_FROM_PTR(self);
 }
 
-STATIC const py_display_p_t py_display_p = {
+static const py_display_p_t py_display_p = {
     .deinit = spi_display_deinit,
     .clear = spi_display_clear,
     .write = spi_display_write,

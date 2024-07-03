@@ -28,7 +28,7 @@
 #define PY_ML_GRAYSCALE_RANGE   ((COLOR_GRAYSCALE_MAX) -(COLOR_GRAYSCALE_MIN))
 #define PY_ML_GRAYSCALE_MID     (((PY_ML_GRAYSCALE_RANGE) +1) / 2)
 
-STATIC const char *py_ml_map_dtype(py_ml_dtype_t dtype) {
+static const char *py_ml_map_dtype(py_ml_dtype_t dtype) {
     if (dtype == PY_ML_DTYPE_UINT8) {
         return "uint8";
     } else if (dtype == PY_ML_DTYPE_INT8) {
@@ -73,7 +73,7 @@ static void py_ml_tuple_hwc(mp_obj_tuple_t *o, size_t *h, size_t *w, size_t *c) 
     *c = mp_obj_get_int(o->items[3]);
 }
 
-STATIC void py_ml_input_callback(py_ml_model_obj_t *model, void *arg) {
+static void py_ml_input_callback(py_ml_model_obj_t *model, void *arg) {
     // TODO we assume that there's a single input.
     void *model_input = ml_backend_get_input(model, 0);
     py_ml_input_data_t *input_data = (py_ml_input_data_t *) arg;
@@ -192,7 +192,7 @@ STATIC void py_ml_input_callback(py_ml_model_obj_t *model, void *arg) {
     }
 }
 
-STATIC void py_ml_input_callback_regression(py_ml_model_obj_t *model, void *arg) {
+static void py_ml_input_callback_regression(py_ml_model_obj_t *model, void *arg) {
     // TODO we assume that there's a single input.
     void *model_input = ml_backend_get_input(model, 0);
     py_ml_input_data_t *input_data = (py_ml_input_data_t *) arg;
@@ -236,7 +236,7 @@ STATIC void py_ml_input_callback_regression(py_ml_model_obj_t *model, void *arg)
     }
 }
 
-STATIC void py_ml_output_callback(py_ml_model_obj_t *model, void *arg) {
+static void py_ml_output_callback(py_ml_model_obj_t *model, void *arg) {
     mp_obj_list_t *output_list = MP_OBJ_TO_PTR(mp_obj_new_list(model->outputs_size, NULL));
     for (size_t i = 0; i < model->outputs_size; i++) {
         void *model_output = ml_backend_get_output(model, i);
@@ -271,7 +271,7 @@ STATIC void py_ml_output_callback(py_ml_model_obj_t *model, void *arg) {
 // TF Model Object.
 static const mp_obj_type_t py_ml_model_type;
 
-STATIC void py_ml_model_print(const mp_print_t *print, mp_obj_t self_in, mp_print_kind_t kind) {
+static void py_ml_model_print(const mp_print_t *print, mp_obj_t self_in, mp_print_kind_t kind) {
     py_ml_model_obj_t *self = MP_OBJ_TO_PTR(self_in);
     mp_printf(print,
               "{size: %d, ram: %d, inputs_size: %d, input_dtype: %s, input_scale: %f, input_zero_point: %d, "
@@ -281,7 +281,7 @@ STATIC void py_ml_model_print(const mp_print_t *print, mp_obj_t self_in, mp_prin
               (double) self->output_scale, self->output_zero_point);
 }
 
-STATIC mp_obj_t py_ml_model_predict(uint n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
+static mp_obj_t py_ml_model_predict(uint n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
     enum { ARG_roi, ARG_callback, ARG_scale, ARG_mean, ARG_stdev };
     static const mp_arg_t allowed_args[] = {
         { MP_QSTR_roi, MP_ARG_OBJ | MP_ARG_KW_ONLY, {.u_rom_obj = MP_ROM_NONE} },
@@ -336,9 +336,9 @@ STATIC mp_obj_t py_ml_model_predict(uint n_args, const mp_obj_t *pos_args, mp_ma
 
     return output_data;
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_ml_model_predict_obj, 2, py_ml_model_predict);
+static MP_DEFINE_CONST_FUN_OBJ_KW(py_ml_model_predict_obj, 2, py_ml_model_predict);
 
-STATIC void py_ml_model_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest) {
+static void py_ml_model_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest) {
     py_ml_model_obj_t *self = MP_OBJ_TO_PTR(self_in);
     const char *str;
     if (dest[0] == MP_OBJ_NULL) {
@@ -399,8 +399,7 @@ mp_obj_t py_ml_model_make_new(const mp_obj_type_t *type, size_t n_args, size_t n
 
     const char *path = mp_obj_str_get_str(args[ARG_path].u_obj);
 
-    py_ml_model_obj_t *model = m_new_obj_with_finaliser(py_ml_model_obj_t);
-    model->base.type = &py_ml_model_type;
+    py_ml_model_obj_t *model = mp_obj_malloc_with_finaliser(py_ml_model_obj_t, &py_ml_model_type);
     model->data = NULL;
     model->fb_alloc = args[ARG_load_to_fb].u_int;
     mp_obj_list_t *labels = NULL;
@@ -459,23 +458,23 @@ mp_obj_t py_ml_model_make_new(const mp_obj_type_t *type, size_t n_args, size_t n
     }
 }
 
-STATIC mp_obj_t py_ml_model_deinit(mp_obj_t self_in) {
+static mp_obj_t py_ml_model_deinit(mp_obj_t self_in) {
     py_ml_model_obj_t *model = MP_OBJ_TO_PTR(self_in);
     if (model->fb_alloc) {
         fb_alloc_free_till_mark_past_mark_permanent();
     }
     return mp_const_none;
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_ml_model_deinit_obj, py_ml_model_deinit);
+static MP_DEFINE_CONST_FUN_OBJ_1(py_ml_model_deinit_obj, py_ml_model_deinit);
 
-STATIC const mp_rom_map_elem_t py_ml_model_locals_dict_table[] = {
+static const mp_rom_map_elem_t py_ml_model_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR___del__),             MP_ROM_PTR(&py_ml_model_deinit_obj) },
     { MP_ROM_QSTR(MP_QSTR_predict),             MP_ROM_PTR(&py_ml_model_predict_obj) },
 };
 
-STATIC MP_DEFINE_CONST_DICT(py_ml_model_locals_dict, py_ml_model_locals_dict_table);
+static MP_DEFINE_CONST_DICT(py_ml_model_locals_dict, py_ml_model_locals_dict_table);
 
-STATIC MP_DEFINE_CONST_OBJ_TYPE(
+static MP_DEFINE_CONST_OBJ_TYPE(
     py_ml_model_type,
     MP_QSTR_ml_model,
     MP_TYPE_FLAG_NONE,
@@ -487,7 +486,7 @@ STATIC MP_DEFINE_CONST_OBJ_TYPE(
 
 extern const mp_obj_type_t py_ml_nms_type;
 
-STATIC const mp_rom_map_elem_t py_ml_globals_dict_table[] = {
+static const mp_rom_map_elem_t py_ml_globals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR___name__),            MP_OBJ_NEW_QSTR(MP_QSTR_ml) },
     { MP_ROM_QSTR(MP_QSTR_Model),               MP_ROM_PTR(&py_ml_model_type) },
     { MP_ROM_QSTR(MP_QSTR_NMS),                 MP_ROM_PTR(&py_ml_nms_type) },
@@ -497,7 +496,7 @@ STATIC const mp_rom_map_elem_t py_ml_globals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_SCALE_S128_127),      MP_ROM_INT(PY_ML_SCALE_S128_127) },
 };
 
-STATIC MP_DEFINE_CONST_DICT(py_ml_globals_dict, py_ml_globals_dict_table);
+static MP_DEFINE_CONST_DICT(py_ml_globals_dict, py_ml_globals_dict_table);
 
 const mp_obj_module_t ml_module = {
     .base = { &mp_type_module },

@@ -21,49 +21,49 @@
 #include "py_image.h"
 #include "py_display.h"
 
-STATIC mp_obj_t py_display_width(mp_obj_t self_in) {
+static mp_obj_t py_display_width(mp_obj_t self_in) {
     py_display_obj_t *self = MP_OBJ_TO_PTR(self_in);
     return mp_obj_new_int(self->width);
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_display_width_obj, py_display_width);
+static MP_DEFINE_CONST_FUN_OBJ_1(py_display_width_obj, py_display_width);
 
-STATIC mp_obj_t py_display_height(mp_obj_t self_in) {
+static mp_obj_t py_display_height(mp_obj_t self_in) {
     py_display_obj_t *self = MP_OBJ_TO_PTR(self_in);
     return mp_obj_new_int(self->height);
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_display_height_obj, py_display_height);
+static MP_DEFINE_CONST_FUN_OBJ_1(py_display_height_obj, py_display_height);
 
-STATIC mp_obj_t py_display_triple_buffer(mp_obj_t self_in) {
+static mp_obj_t py_display_triple_buffer(mp_obj_t self_in) {
     py_display_obj_t *self = MP_OBJ_TO_PTR(self_in);
     return mp_obj_new_int(self->triple_buffer);
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_display_triple_buffer_obj, py_display_triple_buffer);
+static MP_DEFINE_CONST_FUN_OBJ_1(py_display_triple_buffer_obj, py_display_triple_buffer);
 
-STATIC mp_obj_t py_display_bgr(mp_obj_t self_in) {
+static mp_obj_t py_display_bgr(mp_obj_t self_in) {
     py_display_obj_t *self = MP_OBJ_TO_PTR(self_in);
     return mp_obj_new_int(self->bgr);
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_display_bgr_obj, py_display_bgr);
+static MP_DEFINE_CONST_FUN_OBJ_1(py_display_bgr_obj, py_display_bgr);
 
-STATIC mp_obj_t py_display_byte_swap(mp_obj_t self_in) {
+static mp_obj_t py_display_byte_swap(mp_obj_t self_in) {
     py_display_obj_t *self = MP_OBJ_TO_PTR(self_in);
     return mp_obj_new_int(self->byte_swap);
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_display_byte_swap_obj, py_display_byte_swap);
+static MP_DEFINE_CONST_FUN_OBJ_1(py_display_byte_swap_obj, py_display_byte_swap);
 
-STATIC mp_obj_t py_display_framesize(mp_obj_t self_in) {
+static mp_obj_t py_display_framesize(mp_obj_t self_in) {
     py_display_obj_t *self = MP_OBJ_TO_PTR(self_in);
     return mp_obj_new_int(self->framesize);
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_display_framesize_obj, py_display_framesize);
+static MP_DEFINE_CONST_FUN_OBJ_1(py_display_framesize_obj, py_display_framesize);
 
-STATIC mp_obj_t py_display_refresh(mp_obj_t self_in) {
+static mp_obj_t py_display_refresh(mp_obj_t self_in) {
     py_display_obj_t *self = MP_OBJ_TO_PTR(self_in);
     return mp_obj_new_int(self->refresh);
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_display_refresh_obj, py_display_refresh);
+static MP_DEFINE_CONST_FUN_OBJ_1(py_display_refresh_obj, py_display_refresh);
 
-STATIC mp_obj_t py_display_deinit(mp_obj_t self_in) {
+static mp_obj_t py_display_deinit(mp_obj_t self_in) {
     py_display_obj_t *self = MP_OBJ_TO_PTR(self_in);
     py_display_p_t *display_p = (py_display_p_t *) MP_OBJ_TYPE_GET_SLOT(self->base.type, protocol);
     if (display_p->deinit != NULL) {
@@ -78,9 +78,9 @@ STATIC mp_obj_t py_display_deinit(mp_obj_t self_in) {
     }
     return mp_const_none;
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_display_deinit_obj, py_display_deinit);
+static MP_DEFINE_CONST_FUN_OBJ_1(py_display_deinit_obj, py_display_deinit);
 
-STATIC mp_obj_t py_display_clear(uint n_args, const mp_obj_t *args) {
+static mp_obj_t py_display_clear(uint n_args, const mp_obj_t *args) {
     py_display_obj_t *self = MP_OBJ_TO_PTR(args[0]);
     bool display_off = (n_args > 1 && mp_obj_get_int(args[1]));
     py_display_p_t *display_p = (py_display_p_t *) MP_OBJ_TYPE_GET_SLOT(self->base.type, protocol);
@@ -89,9 +89,9 @@ STATIC mp_obj_t py_display_clear(uint n_args, const mp_obj_t *args) {
     }
     return mp_const_none;
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(py_display_clear_obj, 1, 2, py_display_clear);
+static MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(py_display_clear_obj, 1, 2, py_display_clear);
 
-STATIC mp_obj_t py_display_backlight(uint n_args, const mp_obj_t *args) {
+static mp_obj_t py_display_backlight(uint n_args, const mp_obj_t *args) {
     py_display_obj_t *self = MP_OBJ_TO_PTR(args[0]);
     if (n_args > 1) {
         uint32_t intensity = mp_obj_get_int(args[1]);
@@ -119,9 +119,9 @@ STATIC mp_obj_t py_display_backlight(uint n_args, const mp_obj_t *args) {
     }
     return mp_const_none;
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(py_display_backlight_obj, 1, 2, py_display_backlight);
+static MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(py_display_backlight_obj, 1, 2, py_display_backlight);
 
-STATIC mp_obj_t py_display_write(uint n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
+static mp_obj_t py_display_write(uint n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
     enum {
         ARG_image, ARG_x, ARG_y, ARG_x_scale, ARG_y_scale, ARG_roi,
         ARG_channel, ARG_alpha, ARG_color_palette, ARG_alpha_palette, ARG_hint
@@ -175,9 +175,9 @@ STATIC mp_obj_t py_display_write(uint n_args, const mp_obj_t *pos_args, mp_map_t
 
     return mp_const_none;
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_display_write_obj, 2, py_display_write);
+static MP_DEFINE_CONST_FUN_OBJ_KW(py_display_write_obj, 2, py_display_write);
 
-STATIC mp_obj_t py_display_bus_write(uint n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
+static mp_obj_t py_display_bus_write(uint n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
     enum { ARG_cmd, ARG_args, ARG_dcs };
     static const mp_arg_t allowed_args[] = {
         { MP_QSTR_cmd,  MP_ARG_INT | MP_ARG_REQUIRED },
@@ -205,9 +205,9 @@ STATIC mp_obj_t py_display_bus_write(uint n_args, const mp_obj_t *pos_args, mp_m
     }
     return mp_const_none;
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_display_bus_write_obj, 1, py_display_bus_write);
+static MP_DEFINE_CONST_FUN_OBJ_KW(py_display_bus_write_obj, 1, py_display_bus_write);
 
-STATIC mp_obj_t py_display_bus_read(uint n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
+static mp_obj_t py_display_bus_read(uint n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
     enum { ARG_cmd, ARG_len, ARG_args, ARG_dcs };
     static const mp_arg_t allowed_args[] = {
         { MP_QSTR_cmd,  MP_ARG_INT | MP_ARG_REQUIRED },
@@ -239,9 +239,9 @@ STATIC mp_obj_t py_display_bus_read(uint n_args, const mp_obj_t *pos_args, mp_ma
     }
     return MP_OBJ_FROM_PTR(wbuf);
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_display_bus_read_obj, 1, py_display_bus_read);
+static MP_DEFINE_CONST_FUN_OBJ_KW(py_display_bus_read_obj, 1, py_display_bus_read);
 
-STATIC const mp_rom_map_elem_t py_display_locals_dict_table[] = {
+static const mp_rom_map_elem_t py_display_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR___name__),            MP_ROM_QSTR(MP_QSTR_display)              },
     { MP_ROM_QSTR(MP_QSTR___del__),             MP_ROM_PTR(&py_display_deinit_obj)        },
     { MP_ROM_QSTR(MP_QSTR_width),               MP_ROM_PTR(&py_display_width_obj)         },
@@ -259,7 +259,7 @@ STATIC const mp_rom_map_elem_t py_display_locals_dict_table[] = {
 };
 MP_DEFINE_CONST_DICT(py_display_locals_dict, py_display_locals_dict_table);
 
-STATIC const mp_rom_map_elem_t globals_dict_table[] = {
+static const mp_rom_map_elem_t globals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR___name__),            MP_ROM_QSTR(MP_QSTR_display)            },
     { MP_ROM_QSTR(MP_QSTR_QVGA),                MP_ROM_INT(DISPLAY_RESOLUTION_QVGA)     },
     { MP_ROM_QSTR(MP_QSTR_TQVGA),               MP_ROM_INT(DISPLAY_RESOLUTION_TQVGA)    },
@@ -293,7 +293,7 @@ STATIC const mp_rom_map_elem_t globals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_DisplayData),         MP_ROM_PTR(&py_display_data_type)       },
     #endif
 };
-STATIC MP_DEFINE_CONST_DICT(globals_dict, globals_dict_table);
+static MP_DEFINE_CONST_DICT(globals_dict, globals_dict_table);
 
 const mp_obj_module_t display_module = {
     .base = { &mp_type_module },

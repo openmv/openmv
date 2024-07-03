@@ -317,7 +317,7 @@ static mp_obj_t py_fir_deinit() {
     fir_transposed = false;
     return mp_const_none;
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_fir_deinit_obj, py_fir_deinit);
+static MP_DEFINE_CONST_FUN_OBJ_0(py_fir_deinit_obj, py_fir_deinit);
 
 mp_obj_t py_fir_init(uint n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
     enum { ARG_type, ARG_refresh, ARG_resolution };
@@ -585,7 +585,7 @@ mp_obj_t py_fir_init(uint n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
 
     return mp_const_none;
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_fir_init_obj, 0, py_fir_init);
+static MP_DEFINE_CONST_FUN_OBJ_KW(py_fir_init_obj, 0, py_fir_init);
 
 static mp_obj_t py_fir_type() {
     if (fir_sensor != FIR_NONE) {
@@ -593,7 +593,7 @@ static mp_obj_t py_fir_type() {
     }
     mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("FIR sensor is not initialized"));
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_fir_type_obj, py_fir_type);
+static MP_DEFINE_CONST_FUN_OBJ_0(py_fir_type_obj, py_fir_type);
 
 static mp_obj_t py_fir_width() {
     if (fir_sensor != FIR_NONE) {
@@ -601,7 +601,7 @@ static mp_obj_t py_fir_width() {
     }
     mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("FIR sensor is not initialized"));
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_fir_width_obj, py_fir_width);
+static MP_DEFINE_CONST_FUN_OBJ_0(py_fir_width_obj, py_fir_width);
 
 static mp_obj_t py_fir_height() {
     if (fir_sensor != FIR_NONE) {
@@ -609,7 +609,7 @@ static mp_obj_t py_fir_height() {
     }
     mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("FIR sensor is not initialized"));
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_fir_height_obj, py_fir_height);
+static MP_DEFINE_CONST_FUN_OBJ_0(py_fir_height_obj, py_fir_height);
 
 static mp_obj_t py_fir_refresh() {
     #if (OMV_FIR_MLX90621_ENABLE == 1)
@@ -643,7 +643,7 @@ static mp_obj_t py_fir_refresh() {
             mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("FIR sensor is not initialized"));
     }
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_fir_refresh_obj, py_fir_refresh);
+static MP_DEFINE_CONST_FUN_OBJ_0(py_fir_refresh_obj, py_fir_refresh);
 
 static mp_obj_t py_fir_resolution() {
     switch (fir_sensor) {
@@ -671,7 +671,7 @@ static mp_obj_t py_fir_resolution() {
             mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("FIR sensor is not initialized"));
     }
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_fir_resolution_obj, py_fir_resolution);
+static MP_DEFINE_CONST_FUN_OBJ_0(py_fir_resolution_obj, py_fir_resolution);
 
 #if (OMV_FIR_LEPTON_ENABLE == 1)
 static mp_obj_t py_fir_radiometric() {
@@ -681,7 +681,7 @@ static mp_obj_t py_fir_radiometric() {
         mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Operation not supported by this FIR sensor"));
     }
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_fir_radiometric_obj, py_fir_radiometric);
+static MP_DEFINE_CONST_FUN_OBJ_0(py_fir_radiometric_obj, py_fir_radiometric);
 
 #if defined(OMV_FIR_LEPTON_VSYNC_PRESENT)
 static mp_obj_t py_fir_register_vsync_cb(mp_obj_t cb) {
@@ -692,7 +692,7 @@ static mp_obj_t py_fir_register_vsync_cb(mp_obj_t cb) {
     }
     return mp_const_none;
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_fir_register_vsync_cb_obj, py_fir_register_vsync_cb);
+static MP_DEFINE_CONST_FUN_OBJ_1(py_fir_register_vsync_cb_obj, py_fir_register_vsync_cb);
 #endif
 
 static mp_obj_t py_fir_register_frame_cb(mp_obj_t cb) {
@@ -703,7 +703,7 @@ static mp_obj_t py_fir_register_frame_cb(mp_obj_t cb) {
     }
     return mp_const_none;
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_fir_register_frame_cb_obj, py_fir_register_frame_cb);
+static MP_DEFINE_CONST_FUN_OBJ_1(py_fir_register_frame_cb_obj, py_fir_register_frame_cb);
 
 static mp_obj_t py_fir_get_frame_available() {
     if (fir_sensor == FIR_LEPTON) {
@@ -712,7 +712,7 @@ static mp_obj_t py_fir_get_frame_available() {
         mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Operation not supported by this FIR sensor"));
     }
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_fir_get_frame_available_obj, py_fir_get_frame_available);
+static MP_DEFINE_CONST_FUN_OBJ_0(py_fir_get_frame_available_obj, py_fir_get_frame_available);
 
 static mp_obj_t py_fir_trigger_ffc(uint n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
     enum { ARG_timeout };
@@ -731,7 +731,7 @@ static mp_obj_t py_fir_trigger_ffc(uint n_args, const mp_obj_t *pos_args, mp_map
     }
     return mp_const_none;
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_fir_trigger_ffc_obj, 0, py_fir_trigger_ffc);
+static MP_DEFINE_CONST_FUN_OBJ_KW(py_fir_trigger_ffc_obj, 0, py_fir_trigger_ffc);
 #endif
 
 mp_obj_t py_fir_read_ta() {
@@ -795,7 +795,7 @@ mp_obj_t py_fir_read_ta() {
 
     return mp_const_none;
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_fir_read_ta_obj, py_fir_read_ta);
+static MP_DEFINE_CONST_FUN_OBJ_0(py_fir_read_ta_obj, py_fir_read_ta);
 
 mp_obj_t py_fir_read_ir(uint n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
     enum { ARG_hmirror, ARG_vflip, ARG_transpose, ARG_timeout };
@@ -870,7 +870,7 @@ mp_obj_t py_fir_read_ir(uint n_args, const mp_obj_t *pos_args, mp_map_t *kw_args
 
     return mp_const_none;
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_fir_read_ir_obj, 0, py_fir_read_ir);
+static MP_DEFINE_CONST_FUN_OBJ_KW(py_fir_read_ir_obj, 0, py_fir_read_ir);
 
 mp_obj_t py_fir_draw_ir(uint n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
     enum {
@@ -944,7 +944,7 @@ mp_obj_t py_fir_draw_ir(uint n_args, const mp_obj_t *pos_args, mp_map_t *kw_args
     fb_alloc_free_till_mark();
     return mp_const_none;
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_fir_draw_ir_obj, 2, py_fir_draw_ir);
+static MP_DEFINE_CONST_FUN_OBJ_KW(py_fir_draw_ir_obj, 2, py_fir_draw_ir);
 
 mp_obj_t py_fir_snapshot(uint n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
     enum {
@@ -1096,9 +1096,9 @@ mp_obj_t py_fir_snapshot(uint n_args, const mp_obj_t *pos_args, mp_map_t *kw_arg
     }
     return py_image_from_struct(&dst_img);
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_fir_snapshot_obj, 0, py_fir_snapshot);
+static MP_DEFINE_CONST_FUN_OBJ_KW(py_fir_snapshot_obj, 0, py_fir_snapshot);
 
-STATIC const mp_rom_map_elem_t globals_dict_table[] = {
+static const mp_rom_map_elem_t globals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR___name__),            MP_ROM_QSTR(MP_QSTR_fir)                    },
     #if (OMV_FIR_MLX90621_ENABLE == 1)
     { MP_ROM_QSTR(MP_QSTR_FIR_SHIELD),          MP_ROM_INT(FIR_MLX90621)                    },
@@ -1146,7 +1146,7 @@ STATIC const mp_rom_map_elem_t globals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_snapshot),            MP_ROM_PTR(&py_fir_snapshot_obj)            }
 };
 
-STATIC MP_DEFINE_CONST_DICT(globals_dict, globals_dict_table);
+static MP_DEFINE_CONST_DICT(globals_dict, globals_dict_table);
 
 const mp_obj_module_t fir_module = {
     .base = { &mp_type_module },

@@ -180,17 +180,9 @@ soft_reset:
     }
     #endif
 
+    // Execute _boot.py to set up the filesystem.
     #if MICROPY_VFS_FAT && MICROPY_HW_USB_MSC
-    // Mount or create a fresh filesystem.
-    mp_obj_t mount_point = MP_OBJ_NEW_QSTR(MP_QSTR__slash_);
-    mp_obj_t bdev = MP_OBJ_TYPE_GET_SLOT(&rp2_flash_type, make_new) (&rp2_flash_type, 0, 0, NULL);
-    if (mp_vfs_mount_and_chdir_protected(bdev, mount_point) == -MP_ENODEV) {
-        // Create a fresh filesystem.
-        fs_user_mount_t *vfs = MP_OBJ_TYPE_GET_SLOT(&mp_fat_vfs_type, make_new) (&mp_fat_vfs_type, 1, 0, &bdev);
-        if (mp_init_filesystem(vfs) == 0) {
-            mp_vfs_mount_and_chdir_protected(bdev, mount_point);
-        }
-    }
+    pyexec_frozen_module("_boot_fat.py", false);
     #else
     pyexec_frozen_module("_boot.py", false);
     #endif
@@ -252,16 +244,6 @@ soft_reset:
             nlr_pop();
         } else {
             mp_obj_print_exception(&mp_plat_print, (mp_obj_t) nlr.ret_val);
-        }
-
-        if (usbdbg_is_busy() && nlr_push(&nlr) == 0) {
-            // Enable IDE interrupt
-            usbdbg_set_irq_enabled(true);
-            // Wait for the current command to finish.
-            usbdbg_wait_for_command(1000);
-            // Disable IDE interrupts
-            usbdbg_set_irq_enabled(false);
-            nlr_pop();
         }
     }
 

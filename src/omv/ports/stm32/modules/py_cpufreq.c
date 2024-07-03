@@ -223,9 +223,9 @@ mp_obj_t py_cpufreq_set_frequency(mp_obj_t cpufreq_obj) {
     return mp_const_true;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_cpufreq_set_frequency_obj, py_cpufreq_set_frequency);
-STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_cpufreq_get_current_frequencies_obj, py_cpufreq_get_current_frequencies);
-STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_cpufreq_get_supported_frequencies_obj, py_cpufreq_get_supported_frequencies);
+static MP_DEFINE_CONST_FUN_OBJ_1(py_cpufreq_set_frequency_obj, py_cpufreq_set_frequency);
+static MP_DEFINE_CONST_FUN_OBJ_0(py_cpufreq_get_current_frequencies_obj, py_cpufreq_get_current_frequencies);
+static MP_DEFINE_CONST_FUN_OBJ_0(py_cpufreq_get_supported_frequencies_obj, py_cpufreq_get_supported_frequencies);
 #endif // defined(STM32F7) || defined(STM32H7)
 
 static const mp_map_elem_t globals_dict_table[] = {
@@ -241,7 +241,7 @@ static const mp_map_elem_t globals_dict_table[] = {
     #endif
     { NULL, NULL },
 };
-STATIC MP_DEFINE_CONST_DICT(globals_dict, globals_dict_table);
+static MP_DEFINE_CONST_DICT(globals_dict, globals_dict_table);
 
 const mp_obj_module_t cpufreq_module = {
     .base = { &mp_type_module },

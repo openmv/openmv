@@ -111,10 +111,12 @@
 #define OMV_DMA_MEMORY                        SRAM2     // DMA buffers memory.
 #define OMV_DMA_MEMORY_D1                     AXI_SRAM  // Domain 1 DMA buffers.
 #define OMV_DMA_MEMORY_D2                     SRAM2     // Domain 2 DMA buffers.
+#define OMV_CM4_BOOT_MEMORY                   SRAM4     // Use to boot CM4 for low-power mode.
+#define OMV_CM4_BOOT_SIZE                     1K
 #define OMV_GC_BLOCK0_MEMORY                  DTCM      // Main GC block 0.
 #define OMV_GC_BLOCK0_SIZE                    (32K)
 #define OMV_GC_BLOCK1_MEMORY                  SRAM4     // Extra GC block 1.
-#define OMV_GC_BLOCK1_SIZE                    (64K)
+#define OMV_GC_BLOCK1_SIZE                    (63K)
 #define OMV_GC_BLOCK2_MEMORY                  SRAM1     // Extra GC block 2.
 #define OMV_GC_BLOCK2_SIZE                    (276K)
 #define OMV_MSC_BUF_SIZE                      (2K)      // USB MSC bot data
@@ -136,8 +138,6 @@
 #define OMV_SRAM4_LENGTH                      64K
 #define OMV_AXI_SRAM_ORIGIN                   0x24000000
 #define OMV_AXI_SRAM_LENGTH                   512K
-#define OMV_CM4_RAM_ORIGIN                    0x38000000 // Cortex-M4 memory @SRAM4.
-#define OMV_CM4_RAM_LENGTH                    16K
 
 // Flash configuration.
 #define OMV_FLASH_FFS_ORIGIN                  0x08020000
@@ -146,8 +146,6 @@
 #define OMV_FLASH_TXT_LENGTH                  1792K
 #define OMV_FLASH_EXT_ORIGIN                  0x90000000
 #define OMV_FLASH_EXT_LENGTH                  16M
-#define OMV_CM4_FLASH_ORIGIN                  0x08020000
-#define OMV_CM4_FLASH_LENGTH                  128K
 
 // MDMA configuration
 #define OMV_MDMA_CHANNEL_DCMI_0               (0)

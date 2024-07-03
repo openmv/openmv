@@ -361,7 +361,7 @@ static mp_obj_t py_audio_init(uint n_args, const mp_obj_t *pos_args, mp_map_t *k
 
     return mp_const_none;
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_audio_init_obj, 0, py_audio_init);
+static MP_DEFINE_CONST_FUN_OBJ_KW(py_audio_init_obj, 0, py_audio_init);
 
 void py_audio_deinit() {
     #if defined(OMV_SAI)
@@ -472,7 +472,7 @@ static mp_obj_t py_audio_start_streaming(mp_obj_t callback_obj) {
 
     return mp_const_none;
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_audio_start_streaming_obj, py_audio_start_streaming);
+static MP_DEFINE_CONST_FUN_OBJ_1(py_audio_start_streaming_obj, py_audio_start_streaming);
 
 static mp_obj_t py_audio_stop_streaming() {
     #if defined(OMV_SAI)
@@ -488,7 +488,7 @@ static mp_obj_t py_audio_stop_streaming() {
     MP_STATE_PORT(audio_callback) = mp_const_none;
     return mp_const_none;
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_audio_stop_streaming_obj, py_audio_stop_streaming);
+static MP_DEFINE_CONST_FUN_OBJ_0(py_audio_stop_streaming_obj, py_audio_stop_streaming);
 
 #if defined(OMV_SAI)
 static mp_obj_t py_audio_read_pdm(mp_obj_t buf_in) {
@@ -542,7 +542,7 @@ static mp_obj_t py_audio_read_pdm(mp_obj_t buf_in) {
 
     return mp_const_none;
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_audio_read_pdm_obj, py_audio_read_pdm);
+static MP_DEFINE_CONST_FUN_OBJ_1(py_audio_read_pdm_obj, py_audio_read_pdm);
 #endif
 
 static const mp_rom_map_elem_t globals_dict_table[] = {
@@ -555,7 +555,7 @@ static const mp_rom_map_elem_t globals_dict_table[] = {
     #endif
 };
 
-STATIC MP_DEFINE_CONST_DICT(globals_dict, globals_dict_table);
+static MP_DEFINE_CONST_DICT(globals_dict, globals_dict_table);
 
 const mp_obj_module_t audio_module = {
     .base = { &mp_type_module },

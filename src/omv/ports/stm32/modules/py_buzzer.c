@@ -62,7 +62,7 @@ static void buzzer_setup(int freq, int duty) {
     buzzer_duty = duty;
 }
 
-STATIC mp_obj_t py_buzzer_freq(uint n_args, const mp_obj_t *args) {
+static mp_obj_t py_buzzer_freq(uint n_args, const mp_obj_t *args) {
     if (!n_args) {
         return mp_obj_new_int(buzzer_freq);
     } else {
@@ -70,9 +70,9 @@ STATIC mp_obj_t py_buzzer_freq(uint n_args, const mp_obj_t *args) {
         return mp_const_none;
     }
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(py_buzzer_freq_obj, 0, 1, py_buzzer_freq);
+static MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(py_buzzer_freq_obj, 0, 1, py_buzzer_freq);
 
-STATIC mp_obj_t py_buzzer_duty(uint n_args, const mp_obj_t *args) {
+static mp_obj_t py_buzzer_duty(uint n_args, const mp_obj_t *args) {
     if (!n_args) {
         return mp_obj_new_int(buzzer_duty);
     } else {
@@ -80,7 +80,7 @@ STATIC mp_obj_t py_buzzer_duty(uint n_args, const mp_obj_t *args) {
         return mp_const_none;
     }
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(py_buzzer_duty_obj, 0, 1, py_buzzer_duty);
+static MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(py_buzzer_duty_obj, 0, 1, py_buzzer_duty);
 
 static const mp_rom_map_elem_t globals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR___name__),        MP_ROM_QSTR(MP_QSTR_buzzer) },
@@ -89,7 +89,7 @@ static const mp_rom_map_elem_t globals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_duty),            MP_ROM_PTR(&py_buzzer_duty_obj) }
 };
 
-STATIC MP_DEFINE_CONST_DICT(globals_dict, globals_dict_table);
+static MP_DEFINE_CONST_DICT(globals_dict, globals_dict_table);
 
 const mp_obj_module_t buzzer_module = {
     .base = { &mp_type_module },

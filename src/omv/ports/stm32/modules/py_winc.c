@@ -583,7 +583,7 @@ static const mp_rom_map_elem_t winc_locals_dict_table[] = {
 
 static MP_DEFINE_CONST_DICT(winc_locals_dict, winc_locals_dict_table);
 
-STATIC const mod_network_nic_protocol_t mod_network_nic_protocol_winc = {
+static const mod_network_nic_protocol_t mod_network_nic_protocol_winc = {
     .gethostbyname = py_winc_gethostbyname,
     .socket = py_winc_socket_socket,
     .close = py_winc_socket_close,

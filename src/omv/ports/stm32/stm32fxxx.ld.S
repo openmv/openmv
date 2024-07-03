@@ -44,17 +44,10 @@ MEMORY
   #if defined(OMV_FLASH_EXT_ORIGIN)
   FLASH_EXT (rx)    : ORIGIN = OMV_FLASH_EXT_ORIGIN, LENGTH = OMV_FLASH_EXT_LENGTH
   #endif
-  #if defined(OMV_CM4_RAM_ORIGIN)
-  CM4_SRAM (xrw)    : ORIGIN = OMV_CM4_RAM_ORIGIN,     LENGTH = OMV_CM4_RAM_LENGTH
-  #endif
 }
 
 _ram_start  = ORIGIN(OMV_MAIN_MEMORY);
 _ram_end    = ORIGIN(OMV_MAIN_MEMORY) + LENGTH(OMV_MAIN_MEMORY);
-
-#if defined(OMV_CM4_RAM_ORIGIN)
-_cm4_ram_start = ORIGIN(CM4_SRAM);
-#endif
 
 // Location of filesystem flash storage
 _micropy_hw_internal_flash_storage_start = ORIGIN(FLASH_FFS);
@@ -112,6 +105,17 @@ SECTIONS
     . = ALIGN(4);
     _ebss = .;          // Define a global symbol at bss end
   } >OMV_MAIN_MEMORY
+
+  /* CM4 boot memory */
+  #if defined(OMV_CM4_BOOT_MEMORY)
+  .cm4_boot_memory (NOLOAD) : ALIGN(4)
+  {
+    _cm4_ram_start = .;
+    . = . + OMV_CM4_BOOT_SIZE;
+    . = ALIGN(4);
+    _cm4_ram_start = .;
+  } >OMV_CM4_BOOT_MEMORY
+  #endif
 
   #include "common.ld.S"
 

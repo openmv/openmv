@@ -284,17 +284,17 @@ static mp_obj_t py_audio_init(uint n_args, const mp_obj_t *pos_args, mp_map_t *k
     audio_initialized = true;
     return mp_const_none;
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_audio_init_obj, 0, py_audio_init);
+static MP_DEFINE_CONST_FUN_OBJ_KW(py_audio_init_obj, 0, py_audio_init);
 
 static mp_obj_t py_audio_samples() {
     return mp_obj_new_int(audio_data->t_samples);
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_audio_samples_obj, py_audio_samples);
+static MP_DEFINE_CONST_FUN_OBJ_0(py_audio_samples_obj, py_audio_samples);
 
 static mp_obj_t py_audio_overflow() {
     return mp_obj_new_bool(audio_data->overflow);
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_audio_overflow_obj, py_audio_overflow);
+static MP_DEFINE_CONST_FUN_OBJ_0(py_audio_overflow_obj, py_audio_overflow);
 
 static mp_obj_t py_audio_start_streaming(mp_obj_t callback_obj) {
     audio_data->head = 0;
@@ -321,7 +321,7 @@ static mp_obj_t py_audio_start_streaming(mp_obj_t callback_obj) {
     audio_data->streaming = true;
     return mp_const_none;
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_audio_start_streaming_obj, py_audio_start_streaming);
+static MP_DEFINE_CONST_FUN_OBJ_1(py_audio_start_streaming_obj, py_audio_start_streaming);
 
 static mp_obj_t py_audio_stop_streaming() {
     if (audio_data->streaming) {
@@ -354,7 +354,7 @@ static mp_obj_t py_audio_stop_streaming() {
 
     return mp_const_none;
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_audio_stop_streaming_obj, py_audio_stop_streaming);
+static MP_DEFINE_CONST_FUN_OBJ_0(py_audio_stop_streaming_obj, py_audio_stop_streaming);
 
 static mp_obj_t py_audio_get_buffer(uint n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
     enum {
@@ -395,7 +395,7 @@ static mp_obj_t py_audio_get_buffer(uint n_args, const mp_obj_t *pos_args, mp_ma
     // Return PCM buffer.
     return MP_OBJ_FROM_PTR(audio_data->pcm_buffer_user);
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_audio_get_buffer_obj, 0, py_audio_get_buffer);
+static MP_DEFINE_CONST_FUN_OBJ_KW(py_audio_get_buffer_obj, 0, py_audio_get_buffer);
 
 void py_audio_deinit() {
     if (audio_initialized) {
@@ -432,7 +432,7 @@ static const mp_rom_map_elem_t globals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_get_buffer),      MP_ROM_PTR(&py_audio_get_buffer_obj) },
 };
 
-STATIC MP_DEFINE_CONST_DICT(globals_dict, globals_dict_table);
+static MP_DEFINE_CONST_DICT(globals_dict, globals_dict_table);
 
 const mp_obj_module_t audio_module = {
     .base = { &mp_type_module },

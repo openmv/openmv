@@ -78,7 +78,7 @@ static mp_obj_t py_sensor__init__() {
     }
     return mp_const_none;
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_sensor__init__obj, py_sensor__init__);
+static MP_DEFINE_CONST_FUN_OBJ_0(py_sensor__init__obj, py_sensor__init__);
 
 static mp_obj_t py_sensor_reset() {
     int error = sensor_reset();
@@ -94,25 +94,25 @@ static mp_obj_t py_sensor_reset() {
     #endif // MICROPY_PY_IMU
     return mp_const_none;
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_sensor_reset_obj, py_sensor_reset);
+static MP_DEFINE_CONST_FUN_OBJ_0(py_sensor_reset_obj, py_sensor_reset);
 
 static mp_obj_t py_sensor_sleep(mp_obj_t enable) {
     PY_ASSERT_FALSE_MSG(sensor_sleep(mp_obj_is_true(enable)) != 0, "Sleep Failed");
     return mp_const_none;
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_sleep_obj, py_sensor_sleep);
+static MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_sleep_obj, py_sensor_sleep);
 
 static mp_obj_t py_sensor_shutdown(mp_obj_t enable) {
     PY_ASSERT_FALSE_MSG(sensor_shutdown(mp_obj_is_true(enable)) != 0, "Shutdown Failed");
     return mp_const_none;
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_shutdown_obj, py_sensor_shutdown);
+static MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_shutdown_obj, py_sensor_shutdown);
 
 static mp_obj_t py_sensor_flush() {
     framebuffer_update_jpeg_buffer();
     return mp_const_none;
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_sensor_flush_obj, py_sensor_flush);
+static MP_DEFINE_CONST_FUN_OBJ_0(py_sensor_flush_obj, py_sensor_flush);
 
 static mp_obj_t py_sensor_snapshot(uint n_args, const mp_obj_t *args, mp_map_t *kw_args) {
     #if MICROPY_PY_IMU
@@ -130,7 +130,7 @@ static mp_obj_t py_sensor_snapshot(uint n_args, const mp_obj_t *args, mp_map_t *
     }
     return image;
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_sensor_snapshot_obj, 0, py_sensor_snapshot);
+static MP_DEFINE_CONST_FUN_OBJ_KW(py_sensor_snapshot_obj, 0, py_sensor_snapshot);
 
 static mp_obj_t py_sensor_skip_frames(uint n_args, const mp_obj_t *args, mp_map_t *kw_args) {
     mp_map_elem_t *kw_arg = mp_map_lookup(kw_args, MP_ROM_QSTR(MP_QSTR_time), MP_MAP_LOOKUP);
@@ -159,17 +159,17 @@ static mp_obj_t py_sensor_skip_frames(uint n_args, const mp_obj_t *args, mp_map_
 
     return mp_const_none;
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_sensor_skip_frames_obj, 0, py_sensor_skip_frames);
+static MP_DEFINE_CONST_FUN_OBJ_KW(py_sensor_skip_frames_obj, 0, py_sensor_skip_frames);
 
 static mp_obj_t py_sensor_width() {
     return mp_obj_new_int(resolution[sensor.framesize][0]);
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_sensor_width_obj, py_sensor_width);
+static MP_DEFINE_CONST_FUN_OBJ_0(py_sensor_width_obj, py_sensor_width);
 
 static mp_obj_t py_sensor_height() {
     return mp_obj_new_int(resolution[sensor.framesize][1]);
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_sensor_height_obj, py_sensor_height);
+static MP_DEFINE_CONST_FUN_OBJ_0(py_sensor_height_obj, py_sensor_height);
 
 static mp_obj_t py_sensor_get_fb() {
     if (framebuffer_get_depth() < 0) {
@@ -180,17 +180,17 @@ static mp_obj_t py_sensor_get_fb() {
     framebuffer_init_image(&image);
     return py_image_from_struct(&image);
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_sensor_get_fb_obj, py_sensor_get_fb);
+static MP_DEFINE_CONST_FUN_OBJ_0(py_sensor_get_fb_obj, py_sensor_get_fb);
 
 static mp_obj_t py_sensor_get_id() {
     return mp_obj_new_int(sensor_get_id());
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_sensor_get_id_obj, py_sensor_get_id);
+static MP_DEFINE_CONST_FUN_OBJ_0(py_sensor_get_id_obj, py_sensor_get_id);
 
 static mp_obj_t py_sensor_get_frame_available() {
     return mp_obj_new_bool(framebuffer->tail != framebuffer->head);
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_sensor_get_frame_available_obj, py_sensor_get_frame_available);
+static MP_DEFINE_CONST_FUN_OBJ_0(py_sensor_get_frame_available_obj, py_sensor_get_frame_available);
 
 static mp_obj_t py_sensor_alloc_extra_fb(mp_obj_t w_obj, mp_obj_t h_obj, mp_obj_t pixfmt_obj) {
     int w = mp_obj_get_int(w_obj);
@@ -212,13 +212,13 @@ static mp_obj_t py_sensor_alloc_extra_fb(mp_obj_t w_obj, mp_obj_t h_obj, mp_obj_
     fb_alloc_mark_permanent(); // pixels will not be popped on exception
     return r;
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_3(py_sensor_alloc_extra_fb_obj, py_sensor_alloc_extra_fb);
+static MP_DEFINE_CONST_FUN_OBJ_3(py_sensor_alloc_extra_fb_obj, py_sensor_alloc_extra_fb);
 
 static mp_obj_t py_sensor_dealloc_extra_fb() {
     fb_alloc_free_till_mark_past_mark_permanent();
     return mp_const_none;
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_sensor_dealloc_extra_fb_obj, py_sensor_dealloc_extra_fb);
+static MP_DEFINE_CONST_FUN_OBJ_0(py_sensor_dealloc_extra_fb_obj, py_sensor_dealloc_extra_fb);
 
 static mp_obj_t py_sensor_set_pixformat(mp_obj_t pixformat) {
     int error = sensor_set_pixformat(mp_obj_get_int(pixformat));
@@ -227,7 +227,7 @@ static mp_obj_t py_sensor_set_pixformat(mp_obj_t pixformat) {
     }
     return mp_const_none;
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_set_pixformat_obj, py_sensor_set_pixformat);
+static MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_set_pixformat_obj, py_sensor_set_pixformat);
 
 static mp_obj_t py_sensor_get_pixformat() {
     if (sensor.pixformat == PIXFORMAT_INVALID) {
@@ -235,7 +235,7 @@ static mp_obj_t py_sensor_get_pixformat() {
     }
     return mp_obj_new_int(sensor.pixformat);
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_sensor_get_pixformat_obj, py_sensor_get_pixformat);
+static MP_DEFINE_CONST_FUN_OBJ_0(py_sensor_get_pixformat_obj, py_sensor_get_pixformat);
 
 static mp_obj_t py_sensor_set_framesize(mp_obj_t framesize) {
     int error = sensor_set_framesize(mp_obj_get_int(framesize));
@@ -244,7 +244,7 @@ static mp_obj_t py_sensor_set_framesize(mp_obj_t framesize) {
     }
     return mp_const_none;
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_set_framesize_obj, py_sensor_set_framesize);
+static MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_set_framesize_obj, py_sensor_set_framesize);
 
 static mp_obj_t py_sensor_get_framesize() {
     if (sensor.framesize == FRAMESIZE_INVALID) {
@@ -252,7 +252,7 @@ static mp_obj_t py_sensor_get_framesize() {
     }
     return mp_obj_new_int(sensor.framesize);
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_sensor_get_framesize_obj, py_sensor_get_framesize);
+static MP_DEFINE_CONST_FUN_OBJ_0(py_sensor_get_framesize_obj, py_sensor_get_framesize);
 
 static mp_obj_t py_sensor_set_framerate(mp_obj_t framerate) {
     int error = sensor_set_framerate(mp_obj_get_int(framerate));
@@ -261,7 +261,7 @@ static mp_obj_t py_sensor_set_framerate(mp_obj_t framerate) {
     }
     return mp_const_none;
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_set_framerate_obj, py_sensor_set_framerate);
+static MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_set_framerate_obj, py_sensor_set_framerate);
 
 static mp_obj_t py_sensor_get_framerate() {
     if (sensor.framerate == 0) {
@@ -269,7 +269,7 @@ static mp_obj_t py_sensor_get_framerate() {
     }
     return mp_obj_new_int(sensor.framerate);
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_sensor_get_framerate_obj, py_sensor_get_framerate);
+static MP_DEFINE_CONST_FUN_OBJ_0(py_sensor_get_framerate_obj, py_sensor_get_framerate);
 
 static mp_obj_t py_sensor_set_windowing(uint n_args, const mp_obj_t *args) {
     if (sensor.framesize == FRAMESIZE_INVALID) {
@@ -322,7 +322,7 @@ static mp_obj_t py_sensor_set_windowing(uint n_args, const mp_obj_t *args) {
 
     return mp_const_none;
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(py_sensor_set_windowing_obj, 1, 4, py_sensor_set_windowing);
+static MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(py_sensor_set_windowing_obj, 1, 4, py_sensor_set_windowing);
 
 static mp_obj_t py_sensor_get_windowing() {
     if (sensor.framesize == FRAMESIZE_INVALID) {
@@ -334,7 +334,7 @@ static mp_obj_t py_sensor_get_windowing() {
                                               mp_obj_new_int(framebuffer_get_u()),
                                               mp_obj_new_int(framebuffer_get_v())});
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_sensor_get_windowing_obj, py_sensor_get_windowing);
+static MP_DEFINE_CONST_FUN_OBJ_0(py_sensor_get_windowing_obj, py_sensor_get_windowing);
 
 static mp_obj_t py_sensor_set_gainceiling(mp_obj_t gainceiling) {
     gainceiling_t gain;
@@ -370,7 +370,7 @@ static mp_obj_t py_sensor_set_gainceiling(mp_obj_t gainceiling) {
     }
     return mp_const_true;
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_set_gainceiling_obj, py_sensor_set_gainceiling);
+static MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_set_gainceiling_obj, py_sensor_set_gainceiling);
 
 static mp_obj_t py_sensor_set_brightness(mp_obj_t brightness) {
     if (sensor_set_brightness(mp_obj_get_int(brightness)) != 0) {
@@ -378,7 +378,7 @@ static mp_obj_t py_sensor_set_brightness(mp_obj_t brightness) {
     }
     return mp_const_true;
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_set_brightness_obj, py_sensor_set_brightness);
+static MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_set_brightness_obj, py_sensor_set_brightness);
 
 static mp_obj_t py_sensor_set_contrast(mp_obj_t contrast) {
     if (sensor_set_contrast(mp_obj_get_int(contrast)) != 0) {
@@ -386,7 +386,7 @@ static mp_obj_t py_sensor_set_contrast(mp_obj_t contrast) {
     }
     return mp_const_true;
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_set_contrast_obj, py_sensor_set_contrast);
+static MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_set_contrast_obj, py_sensor_set_contrast);
 
 static mp_obj_t py_sensor_set_saturation(mp_obj_t saturation) {
     if (sensor_set_saturation(mp_obj_get_int(saturation)) != 0) {
@@ -394,7 +394,7 @@ static mp_obj_t py_sensor_set_saturation(mp_obj_t saturation) {
     }
     return mp_const_true;
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_set_saturation_obj, py_sensor_set_saturation);
+static MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_set_saturation_obj, py_sensor_set_saturation);
 
 static mp_obj_t py_sensor_set_quality(mp_obj_t qs) {
     int q = mp_obj_get_int(qs);
@@ -407,7 +407,7 @@ static mp_obj_t py_sensor_set_quality(mp_obj_t qs) {
     }
     return mp_const_true;
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_set_quality_obj, py_sensor_set_quality);
+static MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_set_quality_obj, py_sensor_set_quality);
 
 static mp_obj_t py_sensor_set_colorbar(mp_obj_t enable) {
     if (sensor_set_colorbar(mp_obj_is_true(enable)) != 0) {
@@ -415,7 +415,7 @@ static mp_obj_t py_sensor_set_colorbar(mp_obj_t enable) {
     }
     return mp_const_true;
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_set_colorbar_obj, py_sensor_set_colorbar);
+static MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_set_colorbar_obj, py_sensor_set_colorbar);
 
 static mp_obj_t py_sensor_set_auto_gain(uint n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
     enum { ARG_gain_db, ARG_gain_db_ceiling };
@@ -441,7 +441,7 @@ static mp_obj_t py_sensor_set_auto_gain(uint n_args, const mp_obj_t *pos_args, m
     }
     return mp_const_none;
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_sensor_set_auto_gain_obj, 1, py_sensor_set_auto_gain);
+static MP_DEFINE_CONST_FUN_OBJ_KW(py_sensor_set_auto_gain_obj, 1, py_sensor_set_auto_gain);
 
 static mp_obj_t py_sensor_get_gain_db() {
     float gain_db;
@@ -451,7 +451,7 @@ static mp_obj_t py_sensor_get_gain_db() {
     }
     return mp_obj_new_float(gain_db);
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_sensor_get_gain_db_obj, py_sensor_get_gain_db);
+static MP_DEFINE_CONST_FUN_OBJ_0(py_sensor_get_gain_db_obj, py_sensor_get_gain_db);
 
 static mp_obj_t py_sensor_set_auto_exposure(uint n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
     enum { ARG_exposure_us };
@@ -473,7 +473,7 @@ static mp_obj_t py_sensor_set_auto_exposure(uint n_args, const mp_obj_t *pos_arg
     }
     return mp_const_none;
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_sensor_set_auto_exposure_obj, 1, py_sensor_set_auto_exposure);
+static MP_DEFINE_CONST_FUN_OBJ_KW(py_sensor_set_auto_exposure_obj, 1, py_sensor_set_auto_exposure);
 
 static mp_obj_t py_sensor_get_exposure_us() {
     int exposure_us;
@@ -483,7 +483,7 @@ static mp_obj_t py_sensor_get_exposure_us() {
     }
     return mp_obj_new_int(exposure_us);
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_sensor_get_exposure_us_obj, py_sensor_get_exposure_us);
+static MP_DEFINE_CONST_FUN_OBJ_0(py_sensor_get_exposure_us_obj, py_sensor_get_exposure_us);
 
 static mp_obj_t py_sensor_set_auto_whitebal(uint n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
     enum { ARG_rgb_gain_db };
@@ -508,7 +508,7 @@ static mp_obj_t py_sensor_set_auto_whitebal(uint n_args, const mp_obj_t *pos_arg
     }
     return mp_const_none;
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_sensor_set_auto_whitebal_obj, 1, py_sensor_set_auto_whitebal);
+static MP_DEFINE_CONST_FUN_OBJ_KW(py_sensor_set_auto_whitebal_obj, 1, py_sensor_set_auto_whitebal);
 
 static mp_obj_t py_sensor_get_rgb_gain_db() {
     float r_gain_db = 0.0, g_gain_db = 0.0, b_gain_db = 0.0;
@@ -522,7 +522,7 @@ static mp_obj_t py_sensor_get_rgb_gain_db() {
         mp_obj_new_float(b_gain_db)
     });
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_sensor_get_rgb_gain_db_obj, py_sensor_get_rgb_gain_db);
+static MP_DEFINE_CONST_FUN_OBJ_0(py_sensor_get_rgb_gain_db_obj, py_sensor_get_rgb_gain_db);
 
 static mp_obj_t py_sensor_set_auto_blc(uint n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
     enum { ARG_enable, ARG_regs };
@@ -554,7 +554,7 @@ static mp_obj_t py_sensor_set_auto_blc(uint n_args, const mp_obj_t *pos_args, mp
     }
     return mp_const_none;
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_sensor_set_auto_blc_obj, 1,  py_sensor_set_auto_blc);
+static MP_DEFINE_CONST_FUN_OBJ_KW(py_sensor_set_auto_blc_obj, 1,  py_sensor_set_auto_blc);
 
 static mp_obj_t py_sensor_get_blc_regs() {
     int regs[sensor.hw_flags.blc_size];
@@ -569,7 +569,7 @@ static mp_obj_t py_sensor_get_blc_regs() {
     }
     return l;
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_sensor_get_blc_regs_obj, py_sensor_get_blc_regs);
+static MP_DEFINE_CONST_FUN_OBJ_0(py_sensor_get_blc_regs_obj, py_sensor_get_blc_regs);
 
 static mp_obj_t py_sensor_set_hmirror(mp_obj_t enable) {
     int error = sensor_set_hmirror(mp_obj_is_true(enable));
@@ -578,12 +578,12 @@ static mp_obj_t py_sensor_set_hmirror(mp_obj_t enable) {
     }
     return mp_const_none;
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_set_hmirror_obj, py_sensor_set_hmirror);
+static MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_set_hmirror_obj, py_sensor_set_hmirror);
 
 static mp_obj_t py_sensor_get_hmirror() {
     return mp_obj_new_bool(sensor_get_hmirror());
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_sensor_get_hmirror_obj, py_sensor_get_hmirror);
+static MP_DEFINE_CONST_FUN_OBJ_0(py_sensor_get_hmirror_obj, py_sensor_get_hmirror);
 
 static mp_obj_t py_sensor_set_vflip(mp_obj_t enable) {
     int error = sensor_set_vflip(mp_obj_is_true(enable));
@@ -592,12 +592,12 @@ static mp_obj_t py_sensor_set_vflip(mp_obj_t enable) {
     }
     return mp_const_none;
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_set_vflip_obj, py_sensor_set_vflip);
+static MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_set_vflip_obj, py_sensor_set_vflip);
 
 static mp_obj_t py_sensor_get_vflip() {
     return mp_obj_new_bool(sensor_get_vflip());
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_sensor_get_vflip_obj, py_sensor_get_vflip);
+static MP_DEFINE_CONST_FUN_OBJ_0(py_sensor_get_vflip_obj, py_sensor_get_vflip);
 
 static mp_obj_t py_sensor_set_transpose(mp_obj_t enable) {
     int error = sensor_set_transpose(mp_obj_is_true(enable));
@@ -606,12 +606,12 @@ static mp_obj_t py_sensor_set_transpose(mp_obj_t enable) {
     }
     return mp_const_none;
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_set_transpose_obj, py_sensor_set_transpose);
+static MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_set_transpose_obj, py_sensor_set_transpose);
 
 static mp_obj_t py_sensor_get_transpose() {
     return mp_obj_new_bool(sensor_get_transpose());
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_sensor_get_transpose_obj, py_sensor_get_transpose);
+static MP_DEFINE_CONST_FUN_OBJ_0(py_sensor_get_transpose_obj, py_sensor_get_transpose);
 
 static mp_obj_t py_sensor_set_auto_rotation(mp_obj_t enable) {
     int error = sensor_set_auto_rotation(mp_obj_is_true(enable));
@@ -620,12 +620,12 @@ static mp_obj_t py_sensor_set_auto_rotation(mp_obj_t enable) {
     }
     return mp_const_none;
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_set_auto_rotation_obj, py_sensor_set_auto_rotation);
+static MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_set_auto_rotation_obj, py_sensor_set_auto_rotation);
 
 static mp_obj_t py_sensor_get_auto_rotation() {
     return mp_obj_new_bool(sensor_get_auto_rotation());
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_sensor_get_auto_rotation_obj, py_sensor_get_auto_rotation);
+static MP_DEFINE_CONST_FUN_OBJ_0(py_sensor_get_auto_rotation_obj, py_sensor_get_auto_rotation);
 
 static mp_obj_t py_sensor_set_framebuffers(mp_obj_t count) {
     mp_int_t c = mp_obj_get_int(count);
@@ -645,12 +645,12 @@ static mp_obj_t py_sensor_set_framebuffers(mp_obj_t count) {
 
     return mp_const_none;
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_set_framebuffers_obj, py_sensor_set_framebuffers);
+static MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_set_framebuffers_obj, py_sensor_set_framebuffers);
 
 static mp_obj_t py_sensor_get_framebuffers() {
     return mp_obj_new_int(framebuffer->n_buffers);
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_sensor_get_framebuffers_obj, py_sensor_get_framebuffers);
+static MP_DEFINE_CONST_FUN_OBJ_0(py_sensor_get_framebuffers_obj, py_sensor_get_framebuffers);
 
 static mp_obj_t py_sensor_disable_delays(uint n_args, const mp_obj_t *args) {
     if (!n_args) {
@@ -660,7 +660,7 @@ static mp_obj_t py_sensor_disable_delays(uint n_args, const mp_obj_t *args) {
     sensor.disable_delays = mp_obj_get_int(args[0]);
     return mp_const_none;
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(py_sensor_disable_delays_obj, 0, 1, py_sensor_disable_delays);
+static MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(py_sensor_disable_delays_obj, 0, 1, py_sensor_disable_delays);
 
 static mp_obj_t py_sensor_disable_full_flush(uint n_args, const mp_obj_t *args) {
     if (!n_args) {
@@ -670,7 +670,7 @@ static mp_obj_t py_sensor_disable_full_flush(uint n_args, const mp_obj_t *args) 
     sensor.disable_full_flush = mp_obj_get_int(args[0]);
     return mp_const_none;
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(py_sensor_disable_full_flush_obj, 0, 1, py_sensor_disable_full_flush);
+static MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(py_sensor_disable_full_flush_obj, 0, 1, py_sensor_disable_full_flush);
 
 static mp_obj_t py_sensor_set_special_effect(mp_obj_t sde) {
     if (sensor_set_special_effect(mp_obj_get_int(sde)) != 0) {
@@ -678,7 +678,7 @@ static mp_obj_t py_sensor_set_special_effect(mp_obj_t sde) {
     }
     return mp_const_true;
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_set_special_effect_obj, py_sensor_set_special_effect);
+static MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_set_special_effect_obj, py_sensor_set_special_effect);
 
 static mp_obj_t py_sensor_set_lens_correction(mp_obj_t enable, mp_obj_t radi, mp_obj_t coef) {
     if (sensor_set_lens_correction(mp_obj_is_true(enable),
@@ -687,7 +687,7 @@ static mp_obj_t py_sensor_set_lens_correction(mp_obj_t enable, mp_obj_t radi, mp
     }
     return mp_const_true;
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_3(py_sensor_set_lens_correction_obj, py_sensor_set_lens_correction);
+static MP_DEFINE_CONST_FUN_OBJ_3(py_sensor_set_lens_correction_obj, py_sensor_set_lens_correction);
 
 static void sensor_vsync_callback(uint32_t vsync) {
     if (mp_obj_is_callable(vsync_callback)) {
@@ -706,7 +706,7 @@ static mp_obj_t py_sensor_set_vsync_callback(mp_obj_t vsync_callback_obj) {
 
     return mp_const_none;
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_set_vsync_callback_obj, py_sensor_set_vsync_callback);
+static MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_set_vsync_callback_obj, py_sensor_set_vsync_callback);
 
 static void sensor_frame_callback() {
     if (mp_obj_is_callable(frame_callback)) {
@@ -725,7 +725,7 @@ static mp_obj_t py_sensor_set_frame_callback(mp_obj_t frame_callback_obj) {
 
     return mp_const_none;
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_set_frame_callback_obj, py_sensor_set_frame_callback);
+static MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_set_frame_callback_obj, py_sensor_set_frame_callback);
 
 static mp_obj_t py_sensor_ioctl(uint n_args, const mp_obj_t *args) {
     mp_obj_t ret_obj = mp_const_none;
@@ -993,7 +993,7 @@ static mp_obj_t py_sensor_ioctl(uint n_args, const mp_obj_t *args) {
 
     return ret_obj;
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(py_sensor_ioctl_obj, 1, 5, py_sensor_ioctl);
+static MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(py_sensor_ioctl_obj, 1, 5, py_sensor_ioctl);
 
 static mp_obj_t py_sensor_set_color_palette(mp_obj_t palette_obj) {
     int palette = mp_obj_get_int(palette_obj);
@@ -1010,7 +1010,7 @@ static mp_obj_t py_sensor_set_color_palette(mp_obj_t palette_obj) {
     }
     return mp_const_none;
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_set_color_palette_obj, py_sensor_set_color_palette);
+static MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_set_color_palette_obj, py_sensor_set_color_palette);
 
 static mp_obj_t py_sensor_get_color_palette() {
     const uint16_t *palette = sensor_get_color_palette();
@@ -1021,20 +1021,20 @@ static mp_obj_t py_sensor_get_color_palette() {
     }
     return mp_const_none;
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_sensor_get_color_palette_obj, py_sensor_get_color_palette);
+static MP_DEFINE_CONST_FUN_OBJ_0(py_sensor_get_color_palette_obj, py_sensor_get_color_palette);
 
 static mp_obj_t py_sensor_write_reg(mp_obj_t addr, mp_obj_t val) {
     sensor_write_reg(mp_obj_get_int(addr), mp_obj_get_int(val));
     return mp_const_none;
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_sensor_write_reg_obj, py_sensor_write_reg);
+static MP_DEFINE_CONST_FUN_OBJ_2(py_sensor_write_reg_obj, py_sensor_write_reg);
 
 static mp_obj_t py_sensor_read_reg(mp_obj_t addr) {
     return mp_obj_new_int(sensor_read_reg(mp_obj_get_int(addr)));
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_read_reg_obj, py_sensor_read_reg);
+static MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_read_reg_obj, py_sensor_read_reg);
 
-STATIC const mp_rom_map_elem_t globals_dict_table[] = {
+static const mp_rom_map_elem_t globals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR___name__),            MP_ROM_QSTR(MP_QSTR_sensor)},
 
     // Pixel Formats
@@ -1213,7 +1213,7 @@ STATIC const mp_rom_map_elem_t globals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR___write_reg),         MP_ROM_PTR(&py_sensor_write_reg_obj) },
     { MP_ROM_QSTR(MP_QSTR___read_reg),          MP_ROM_PTR(&py_sensor_read_reg_obj) },
 };
-STATIC MP_DEFINE_CONST_DICT(globals_dict, globals_dict_table);
+static MP_DEFINE_CONST_DICT(globals_dict, globals_dict_table);
 
 const mp_obj_module_t sensor_module = {
     .base = { &mp_type_module },

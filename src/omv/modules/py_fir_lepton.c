@@ -69,7 +69,7 @@ static int fir_lepton_spi_rx_cb_expected_sid = 0;
 static uint16_t OMV_ATTR_SECTION(OMV_ATTR_ALIGNED_DMA(fir_lepton_buf[VOSPI_BUFFER_SIZE]), ".dma_buffer");
 static void fir_lepton_spi_callback(omv_spi_t *spi, void *userdata, void *buf);
 
-STATIC mp_obj_t fir_lepton_spi_resync_callback(mp_obj_t unused) {
+static mp_obj_t fir_lepton_spi_resync_callback(mp_obj_t unused) {
     // For triple buffering we are never drawing where tail or head
     // (which may instantly update to be equal to tail) is.
     fir_lepton_spi_rx_cb_tail = (framebuffer_tail + 1) % FRAMEBUFFER_COUNT;
@@ -88,7 +88,7 @@ STATIC mp_obj_t fir_lepton_spi_resync_callback(mp_obj_t unused) {
     omv_spi_transfer_start(&spi_bus, &spi_xfer);
     return mp_const_none;
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(fir_lepton_spi_resync_callback_obj, fir_lepton_spi_resync_callback);
+static MP_DEFINE_CONST_FUN_OBJ_1(fir_lepton_spi_resync_callback_obj, fir_lepton_spi_resync_callback);
 
 static void fir_lepton_spi_resync() {
     flir_lepton_spi_rx_timer.flags = SOFT_TIMER_FLAG_PY_CALLBACK;

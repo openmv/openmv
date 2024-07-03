@@ -26,7 +26,7 @@ typedef struct py_ml_nms_obj {
 const mp_obj_type_t py_ml_nms_type;
 
 // The use of mp_arg_parse_all() is deliberately avoided here to ensure this method remains fast.
-STATIC mp_obj_t py_ml_nms_add_bounding_box(uint n_args, const mp_obj_t *pos_args) {
+static mp_obj_t py_ml_nms_add_bounding_box(uint n_args, const mp_obj_t *pos_args) {
     enum { ARG_self, ARG_xmin, ARG_ymin, ARG_xmax, ARG_ymax, ARG_score, ARG_label_index };
     py_ml_nms_obj_t *self_in = MP_OBJ_TO_PTR(pos_args[ARG_self]);
 
@@ -52,9 +52,9 @@ STATIC mp_obj_t py_ml_nms_add_bounding_box(uint n_args, const mp_obj_t *pos_args
 
     return mp_const_none;
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(py_ml_nms_add_bounding_box_obj, 7, 7, py_ml_nms_add_bounding_box);
+static MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(py_ml_nms_add_bounding_box_obj, 7, 7, py_ml_nms_add_bounding_box);
 
-STATIC mp_obj_t py_ml_nms_get_bounding_boxes(uint n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
+static mp_obj_t py_ml_nms_get_bounding_boxes(uint n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
     enum { ARG_threshold, ARG_sigma };
     static const mp_arg_t allowed_args[] = {
         { MP_QSTR_threshold,  MP_ARG_OBJ | MP_ARG_KW_ONLY, {.u_rom_obj = MP_ROM_NONE } },
@@ -88,7 +88,7 @@ STATIC mp_obj_t py_ml_nms_get_bounding_boxes(uint n_args, const mp_obj_t *pos_ar
 
     return list;
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_ml_nms_get_bounding_boxes_obj, 1, py_ml_nms_get_bounding_boxes);
+static MP_DEFINE_CONST_FUN_OBJ_KW(py_ml_nms_get_bounding_boxes_obj, 1, py_ml_nms_get_bounding_boxes);
 
 mp_obj_t py_ml_nms_make_new(const mp_obj_type_t *type, size_t n_args, size_t n_kw, const mp_obj_t *all_args) {
     enum { ARG_window_w, ARG_window_h, ARG_roi };
@@ -125,12 +125,12 @@ mp_obj_t py_ml_nms_make_new(const mp_obj_type_t *type, size_t n_args, size_t n_k
     return MP_OBJ_FROM_PTR(model);
 }
 
-STATIC const mp_rom_map_elem_t py_ml_nms_locals_table[] = {
+static const mp_rom_map_elem_t py_ml_nms_locals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_add_bounding_box),    MP_ROM_PTR(&py_ml_nms_add_bounding_box_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_bounding_boxes),  MP_ROM_PTR(&py_ml_nms_get_bounding_boxes_obj) },
 };
 
-STATIC MP_DEFINE_CONST_DICT(py_ml_nms_locals_dict, py_ml_nms_locals_table);
+static MP_DEFINE_CONST_DICT(py_ml_nms_locals_dict, py_ml_nms_locals_table);
 
 MP_DEFINE_CONST_OBJ_TYPE(
     py_ml_nms_type,
