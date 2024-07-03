@@ -121,6 +121,27 @@ PROVIDE(__stack = __StackTop);
 } >OMV_VOSPI_MEMORY
 #endif
 
+/* Open-AMP Shared Memory Region */
+#if defined(OMV_OPENAMP_MEMORY)
+.openamp_memory (NOLOAD) : ALIGN(4)
+{
+  _openamp_shm_region_start = .;
+  . = . + OMV_OPENAMP_SIZE;
+  _openamp_shm_region_end = .;
+} >OMV_OPENAMP_MEMORY
+#endif
+
+/* Memory for the second core */
+#if defined(OMV_CORE1_MEMORY)
+.core1_memory (NOLOAD) : ALIGN(4)
+{
+  _core1_memory_start = .;
+  . = . + OMV_CORE1_SIZE;
+  _core1_memory_end = .;
+  _core1_memory_end = .;
+} >OMV_CORE1_MEMORY
+#endif
+
 /* Main framebuffer memory */
 #if defined(OMV_FB_MEMORY)
 .fb_memory (NOLOAD) :
