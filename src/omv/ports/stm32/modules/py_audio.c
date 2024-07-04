@@ -45,7 +45,8 @@ static DMA_HandleTypeDef hdma_filter[OMV_AUDIO_MAX_CHANNELS];
 // NOTE: placed in D2 memory.
 #define PDM_BUFFER_SIZE      (512 * 2)
 int32_t OMV_ATTR_SECTION(OMV_ATTR_ALIGNED(PDM_BUFFER[PDM_BUFFER_SIZE], 32), ".d2_dma_buffer");
-#define SaturaLH(N, L, H)    (((N) < (L))?(L):(((N) > (H))?(H):(N)))
+#define DFSDM_GAIN_FRAC_BITS (3)
+static int32_t dfsdm_gain = 1;
 #else
 #error "No audio driver defined for this board"
 #endif
@@ -133,8 +134,8 @@ static mp_obj_t py_audio_init(uint n_args, const mp_obj_t *pos_args, mp_map_t *k
     // Read Args.
     g_channels = args[ARG_channels].u_int;
     uint32_t frequency = args[ARG_frequency].u_int;
-    #if defined(OMV_SAI)
     int gain_db = args[ARG_gain_db].u_int;
+    #if defined(OMV_SAI)
     float highpass = py_helper_arg_to_float(args[ARG_highpass].u_obj, 0.9883f);
     #endif
 
@@ -152,6 +153,7 @@ static mp_obj_t py_audio_init(uint n_args, const mp_obj_t *pos_args, mp_map_t *k
 
     #if defined(OMV_DFSDM)
     uint32_t samples_per_channel = PDM_BUFFER_SIZE / 2; // Half a transfer
+    dfsdm_gain = __USAT(fast_roundf(expf((gain_db / 20.0f) * M_LN10) * (1 << DFSDM_GAIN_FRAC_BITS)), 15);
     #else
     uint32_t decimation_factor = OMV_SAI_FREQKHZ / (frequency / 1000);
     uint32_t decimation_factor_const = get_decimation_factor(decimation_factor);
@@ -423,7 +425,7 @@ static void audio_task_callback(mp_sched_node_t *node) {
         }
         #elif defined(OMV_DFSDM)
         for (int i = 0; i < g_pdm_buffer_size / 2; i++) {
-            pcmbuf[i] = SaturaLH((PDM_BUFFER[i] >> 8), -32768, 32767);
+            pcmbuf[i] = __SSAT_ASR((PDM_BUFFER[i] >> 8) * dfsdm_gain, 16, DFSDM_GAIN_FRAC_BITS);
         }
         #endif
     } else if ((xfer_status & DMA_XFER_FULL)) {
@@ -438,7 +440,7 @@ static void audio_task_callback(mp_sched_node_t *node) {
         }
         #elif defined(OMV_DFSDM)
         for (int i = 0; i < g_pdm_buffer_size / 2; i++) {
-            pcmbuf[i] = SaturaLH((PDM_BUFFER[g_pdm_buffer_size / 2 + i] >> 8), -32768, 32767);
+            pcmbuf[i] = __SSAT_ASR((PDM_BUFFER[g_pdm_buffer_size / 2 + i] >> 8) * dfsdm_gain, 16, DFSDM_GAIN_FRAC_BITS);
         }
         #endif
     }
