@@ -1,44 +1,19 @@
 # This file is part of the OpenMV project.
 #
-# Copyright (c) 2023 Ibrahim Abdelkader <iabdalkader@openmv.io>
-# Copyright (c) 2023 Kwabena W. Agyeman <kwagyeman@openmv.io>
+# Copyright (c) 2024 Ibrahim Abdelkader <iabdalkader@openmv.io>
+# Copyright (c) 2024 Kwabena W. Agyeman <kwagyeman@openmv.io>
 #
 # This work is licensed under the MIT license, see the file LICENSE for details.
-#
-# This is an extension to the display C user-module. Add or import any display-related
-# drivers here, and freeze this module in the board's manifest, and those drivers will
-# be importable from display.
 
 import time
-from uml import *  # noqa
+from ml import Model
 from micropython import const
 from ulab import numpy as np
+
 try:
     import audio
 except (ImportError, AttributeError):
     pass
-
-
-def draw_predictions(img, boxes, labels, colors, format="pascal_voc", text_color=(255, 255, 255)):
-    CHAR_W = 8
-    CHAR_H = 10
-    img_w = img.width()
-    img_h = img.height()
-    for i, (x, y, w, h) in enumerate(boxes):
-        label = labels[i]
-        box_color = colors[i]
-
-        if format == "pascal_voc":
-            x = int(x * img_w)
-            y = int(y * img_h)
-            w = int(w * img_w) - x
-            h = int(h * img_h) - y
-
-        img.draw_rectangle(x, y, w, h, color=box_color)
-        img.draw_rectangle(
-            x, y - CHAR_H, len(label) * CHAR_W, CHAR_H, fill=True, color=box_color
-        )
-        img.draw_string(x, y - CHAR_H, label.upper(), text_color)
 
 
 class MicroSpeech:
@@ -71,13 +46,11 @@ class MicroSpeech:
 
         # Roll the spectrogram to the left and add the new slice.
         self.spectrogram = np.roll(self.spectrogram, -_SLICE_SIZE, axis=1)
-        self.spectrogram[0, -_SLICE_SIZE:] = self.preprocessor.predict(
-            self.audio_buffer
-        )
+        self.spectrogram[0, -_SLICE_SIZE:] = self.preprocessor.predict([self.audio_buffer])
 
         # Roll the prediction history and add the new prediction.
         self.pred_history = np.roll(self.pred_history, -1, axis=0)
-        self.pred_history[-1] = self.micro_speech.predict(self.spectrogram)[0]
+        self.pred_history[-1] = self.micro_speech.predict([self.spectrogram])[0]
 
     def start_audio_streaming(self):
         if self.audio_started is False:
