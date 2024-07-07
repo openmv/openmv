@@ -6191,6 +6191,174 @@ static mp_obj_t py_image_stereo_disparity(uint n_args, const mp_obj_t *args, mp_
 static MP_DEFINE_CONST_FUN_OBJ_KW(py_image_stereo_disparity_obj, 1, py_image_stereo_disparity);
 #endif // IMLIB_ENABLE_STEREO_DISPARITY
 
+mp_obj_t py_image_make_new(const mp_obj_type_t *type, size_t n_args, size_t n_kw, const mp_obj_t *all_args) {
+    enum { ARG_arg, ARG_height, ARG_pixformat, ARG_buffer, ARG_copy_to_fb, ARG_shape, ARG_strides, ARG_scale};
+    static const mp_arg_t allowed_args[] = {
+        { MP_QSTR_arg,          MP_ARG_REQUIRED | MP_ARG_OBJ },
+        { MP_QSTR_height,       MP_ARG_INT, {.u_int = -1} },
+        { MP_QSTR_pixformat,    MP_ARG_INT, {.u_int = -1} },
+        { MP_QSTR_buffer,       MP_ARG_OBJ | MP_ARG_KW_ONLY, {.u_rom_obj = MP_ROM_NONE} },
+        { MP_QSTR_copy_to_fb,   MP_ARG_BOOL | MP_ARG_KW_ONLY, {.u_bool = false} },
+        { MP_QSTR_shape,        MP_ARG_OBJ | MP_ARG_KW_ONLY, {.u_rom_obj = MP_ROM_NONE} },
+        { MP_QSTR_strides,      MP_ARG_OBJ | MP_ARG_KW_ONLY, {.u_rom_obj = MP_ROM_NONE} },
+        { MP_QSTR_scale,        MP_ARG_OBJ | MP_ARG_KW_ONLY, {.u_rom_obj = MP_ROM_NONE} },
+    };
+
+    mp_arg_val_t args[MP_ARRAY_SIZE(allowed_args)];
+    mp_arg_parse_all_kw_array(n_args, n_kw, all_args, MP_ARRAY_SIZE(allowed_args), allowed_args, args);
+
+    image_t image = {0};
+
+    if (mp_obj_is_str(args[ARG_arg].u_obj)) {
+        #if defined(IMLIB_ENABLE_IMAGE_FILE_IO)
+        FIL fp;
+        img_read_settings_t rs;
+        const char *path = mp_obj_str_get_str(args[ARG_arg].u_obj);
+
+        fb_alloc_mark();
+        imlib_read_geometry(&fp, &image, path, &rs);
+        file_close(&fp);
+
+        if (args[ARG_copy_to_fb].u_bool) {
+            py_helper_set_to_framebuffer(&image);
+        } else {
+            image.data = xalloc(image_size(&image));
+        }
+
+        imlib_load_image(&image, path);
+        fb_alloc_free_till_mark();
+        #else
+        mp_raise_msg(&mp_type_OSError, MP_ERROR_TEXT("Image I/O is not supported"));
+        #endif // IMLIB_ENABLE_IMAGE_FILE_IO
+    } else if (MP_OBJ_IS_TYPE(args[ARG_arg].u_obj, &mp_type_tuple) ||
+               MP_OBJ_IS_TYPE(args[ARG_arg].u_obj, &mp_type_list)) {
+        mp_obj_t *shape;
+        mp_obj_get_array_fixed_n(args[ARG_shape].u_obj, 3, &shape);
+
+        image.h = mp_obj_get_int(shape[0]);
+        PY_ASSERT_TRUE_MSG(image.h > 0, "Image height must be > 0");
+
+        image.w = mp_obj_get_int(shape[1]);
+        PY_ASSERT_TRUE_MSG(image.w > 0, "Image width must be > 0");
+
+        int channels = mp_obj_get_int(shape[2]);
+
+        if (channels == 1) {
+            image.pixfmt = PIXFORMAT_GRAYSCALE;
+        } else if (channels == 3) {
+            image.pixfmt = PIXFORMAT_RGB565;
+        } else {
+            mp_raise_ValueError(MP_ERROR_TEXT("Channels must be 1 or 3"));
+        }
+
+        mp_obj_t *strides;
+        mp_obj_get_array_fixed_n(args[ARG_strides].u_obj, 2, &strides);
+
+        int start = 0;
+        int start_r = 0;
+        int start_g = 0;
+        int start_b = 0;
+
+        if (channels == 1) {
+            start = mp_obj_get_int(strides[0]);
+            PY_ASSERT_TRUE_MSG(start >= 0, "Start must be >= 0");
+        } else {
+            mp_obj_t *rgb_strides;
+            mp_obj_get_array_fixed_n(strides[0], 3, &rgb_strides);
+
+            start_r = mp_obj_get_int(rgb_strides[0]);
+            PY_ASSERT_TRUE_MSG(start_r >= 0, "R Start must be >= 0");
+
+            start_g = mp_obj_get_int(rgb_strides[1]);
+            PY_ASSERT_TRUE_MSG(start_g >= 0, "G Start must be >= 0");
+
+            start_b = mp_obj_get_int(rgb_strides[2]);
+            PY_ASSERT_TRUE_MSG(start_b >= 0, "B Start must be >= 0");
+        }
+
+        int step = mp_obj_get_int(strides[1]);
+        PY_ASSERT_TRUE_MSG(step > 0, "Step must be > 0");
+
+        mp_obj_t *items;
+        size_t items_len;
+        mp_obj_get_array(args[ARG_arg].u_obj, &items_len, &items);
+
+        int size = image.w * image.h;
+        int step_max = (size - 1) * step;
+
+        if (channels == 1) {
+            if (items_len <= (start + step_max)) {
+                mp_raise_ValueError(MP_ERROR_TEXT("Array too small"));
+            }
+        } else {
+            if ((items_len <= (start_r + step_max)) ||
+                (items_len <= (start_g + step_max)) ||
+                (items_len <= (start_b + step_max))) {
+                mp_raise_ValueError(MP_ERROR_TEXT("Array too small"));
+            }
+        }
+
+        mp_obj_t *scale;
+        mp_obj_get_array_fixed_n(args[ARG_scale].u_obj, 2, &scale);
+        float fscale = mp_obj_get_float(scale[0]);
+        float fadd = mp_obj_get_float(scale[1]);
+
+        if (args[ARG_copy_to_fb].u_bool) {
+            py_helper_set_to_framebuffer(&image);
+        } else {
+            image.data = xalloc(image_size(&image));
+        }
+
+        if (channels == 1) {
+            for (int i = 0; i < size; i++, start += step) {
+                ((uint8_t *) image.data)[i] = __USAT(fast_roundf((mp_obj_get_float(items[start]) * fscale) + fadd), 8);
+            }
+        } else {
+            for (int i = 0; i < size; i++, start_r += step, start_g += step, start_b += step) {
+                int r = __USAT(fast_roundf((mp_obj_get_float(items[start_r]) * fscale) + fadd), 8);
+                int g = __USAT(fast_roundf((mp_obj_get_float(items[start_g]) * fscale) + fadd), 8);
+                int b = __USAT(fast_roundf((mp_obj_get_float(items[start_b]) * fscale) + fadd), 8);
+                ((uint16_t *) image.data)[i] = COLOR_R8_G8_B8_TO_RGB565(r, g, b);
+            }
+        }
+    } else {
+        image.w = mp_obj_get_int(args[ARG_arg].u_obj);
+        PY_ASSERT_TRUE_MSG(image.w > 0, "Image width must be > 0");
+
+        image.h = args[ARG_height].u_int;
+        PY_ASSERT_TRUE_MSG(image.h > 0, "Image height must be > 0");
+
+        image.pixfmt = args[ARG_pixformat].u_int;
+        PY_ASSERT_TRUE_MSG(IMLIB_PIXFORMAT_IS_VALID(image.pixfmt), "Pixel format is not set or unsupported");
+
+        mp_buffer_info_t bufinfo = {0};
+        if (args[ARG_buffer].u_obj != mp_const_none) {
+            mp_get_buffer_raise(args[ARG_buffer].u_obj, &bufinfo, MP_BUFFER_READ);
+            image.size = bufinfo.len;
+        } else if (image.is_compressed) {
+            mp_raise_ValueError(MP_ERROR_TEXT("Expected an image buffer"));
+        }
+
+        if (args[ARG_copy_to_fb].u_bool) {
+            py_helper_set_to_framebuffer(&image);
+            if (bufinfo.buf != NULL) {
+                memcpy(image.data, bufinfo.buf, bufinfo.len);
+            } else {
+                memset(image.data, 0, image_size(&image));
+            }
+        } else if (bufinfo.buf != NULL) {
+            image.data = bufinfo.buf;
+        } else {
+            image.data = xalloc0(image_size(&image));
+        }
+    }
+
+    if (args[ARG_copy_to_fb].u_bool) {
+        framebuffer_update_jpeg_buffer();
+    }
+    return py_image_from_struct(&image);
+}
+
 static const mp_rom_map_elem_t locals_dict_table[] = {
     /* Basic Methods */
     {MP_ROM_QSTR(MP_QSTR_width),               MP_ROM_PTR(&py_image_width_obj)},
@@ -6497,6 +6665,7 @@ MP_DEFINE_CONST_OBJ_TYPE(
     MP_QSTR_Image,
     MP_TYPE_FLAG_ITER_IS_GETITER,
     print, py_image_print,
+    make_new, py_image_make_new,
     buffer, py_image_get_buffer,
     subscr, py_image_subscr,
     iter, py_image_getiter,
@@ -6743,173 +6912,6 @@ mp_obj_t py_image_from_struct(image_t *img) {
     o->_cobj = *img;
     return o;
 }
-
-mp_obj_t py_image_load_image(uint n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
-    enum { ARG_height, ARG_pixformat, ARG_buffer, ARG_copy_to_fb, ARG_shape, ARG_strides, ARG_scale};
-    static const mp_arg_t allowed_args[] = {
-        { MP_QSTR_height,       MP_ARG_INT, {.u_int = -1} },
-        { MP_QSTR_pixformat,    MP_ARG_INT, {.u_int = -1} },
-        { MP_QSTR_buffer,       MP_ARG_OBJ | MP_ARG_KW_ONLY, {.u_rom_obj = MP_ROM_NONE} },
-        { MP_QSTR_copy_to_fb,   MP_ARG_BOOL | MP_ARG_KW_ONLY, {.u_bool = false} },
-        { MP_QSTR_shape,        MP_ARG_OBJ | MP_ARG_KW_ONLY, {.u_rom_obj = MP_ROM_NONE} },
-        { MP_QSTR_strides,      MP_ARG_OBJ | MP_ARG_KW_ONLY, {.u_rom_obj = MP_ROM_NONE} },
-        { MP_QSTR_scale,        MP_ARG_OBJ | MP_ARG_KW_ONLY, {.u_rom_obj = MP_ROM_NONE} },
-    };
-
-    mp_arg_val_t args[MP_ARRAY_SIZE(allowed_args)];
-    mp_arg_parse_all(n_args - 1, pos_args + 1, kw_args, MP_ARRAY_SIZE(allowed_args), allowed_args, args);
-
-    image_t image = {0};
-
-    if (mp_obj_is_str(pos_args[0])) {
-        #if defined(IMLIB_ENABLE_IMAGE_FILE_IO)
-        FIL fp;
-        img_read_settings_t rs;
-        const char *path = mp_obj_str_get_str(pos_args[0]);
-
-        fb_alloc_mark();
-        imlib_read_geometry(&fp, &image, path, &rs);
-        file_close(&fp);
-
-        if (args[ARG_copy_to_fb].u_bool) {
-            py_helper_set_to_framebuffer(&image);
-        } else {
-            image.data = xalloc(image_size(&image));
-        }
-
-        imlib_load_image(&image, path);
-        fb_alloc_free_till_mark();
-        #else
-        mp_raise_msg(&mp_type_OSError, MP_ERROR_TEXT("Image I/O is not supported"));
-        #endif // IMLIB_ENABLE_IMAGE_FILE_IO
-    } else if (MP_OBJ_IS_TYPE(pos_args[0], &mp_type_tuple) || MP_OBJ_IS_TYPE(pos_args[0], &mp_type_list)) {
-        mp_obj_t *shape;
-        mp_obj_get_array_fixed_n(args[ARG_shape].u_obj, 3, &shape);
-
-        image.h = mp_obj_get_int(shape[0]);
-        PY_ASSERT_TRUE_MSG(image.h > 0, "Image height must be > 0");
-
-        image.w = mp_obj_get_int(shape[1]);
-        PY_ASSERT_TRUE_MSG(image.w > 0, "Image width must be > 0");
-
-        int channels = mp_obj_get_int(shape[2]);
-
-        if (channels == 1) {
-            image.pixfmt = PIXFORMAT_GRAYSCALE;
-        } else if (channels == 3) {
-            image.pixfmt = PIXFORMAT_RGB565;
-        } else {
-            mp_raise_ValueError(MP_ERROR_TEXT("Channels must be 1 or 3"));
-        }
-
-        mp_obj_t *strides;
-        mp_obj_get_array_fixed_n(args[ARG_strides].u_obj, 2, &strides);
-
-        int start = 0;
-        int start_r = 0;
-        int start_g = 0;
-        int start_b = 0;
-
-        if (channels == 1) {
-            start = mp_obj_get_int(strides[0]);
-            PY_ASSERT_TRUE_MSG(start >= 0, "Start must be >= 0");
-        } else {
-            mp_obj_t *rgb_strides;
-            mp_obj_get_array_fixed_n(strides[0], 3, &rgb_strides);
-
-            start_r = mp_obj_get_int(rgb_strides[0]);
-            PY_ASSERT_TRUE_MSG(start_r >= 0, "R Start must be >= 0");
-
-            start_g = mp_obj_get_int(rgb_strides[1]);
-            PY_ASSERT_TRUE_MSG(start_g >= 0, "G Start must be >= 0");
-
-            start_b = mp_obj_get_int(rgb_strides[2]);
-            PY_ASSERT_TRUE_MSG(start_b >= 0, "B Start must be >= 0");
-        }
-
-        int step = mp_obj_get_int(strides[1]);
-        PY_ASSERT_TRUE_MSG(step > 0, "Step must be > 0");
-
-        mp_obj_t *items;
-        size_t items_len;
-        mp_obj_get_array(pos_args[0], &items_len, &items);
-
-        int size = image.w * image.h;
-        int step_max = (size - 1) * step;
-
-        if (channels == 1) {
-            if (items_len <= (start + step_max)) {
-                mp_raise_ValueError(MP_ERROR_TEXT("Array too small"));
-            }
-        } else {
-            if ((items_len <= (start_r + step_max)) ||
-                (items_len <= (start_g + step_max)) ||
-                (items_len <= (start_b + step_max))) {
-                mp_raise_ValueError(MP_ERROR_TEXT("Array too small"));
-            }
-        }
-
-        mp_obj_t *scale;
-        mp_obj_get_array_fixed_n(args[ARG_scale].u_obj, 2, &scale);
-        float fscale = mp_obj_get_float(scale[0]);
-        float fadd = mp_obj_get_float(scale[1]);
-
-        if (args[ARG_copy_to_fb].u_bool) {
-            py_helper_set_to_framebuffer(&image);
-        } else {
-            image.data = xalloc(image_size(&image));
-        }
-
-        if (channels == 1) {
-            for (int i = 0; i < size; i++, start += step) {
-                ((uint8_t *) image.data)[i] = __USAT(fast_roundf((mp_obj_get_float(items[start]) * fscale) + fadd), 8);
-            }
-        } else {
-            for (int i = 0; i < size; i++, start_r += step, start_g += step, start_b += step) {
-                int r = __USAT(fast_roundf((mp_obj_get_float(items[start_r]) * fscale) + fadd), 8);
-                int g = __USAT(fast_roundf((mp_obj_get_float(items[start_g]) * fscale) + fadd), 8);
-                int b = __USAT(fast_roundf((mp_obj_get_float(items[start_b]) * fscale) + fadd), 8);
-                ((uint16_t *) image.data)[i] = COLOR_R8_G8_B8_TO_RGB565(r, g, b);
-            }
-        }
-    } else {
-        image.w = mp_obj_get_int(pos_args[0]);
-        PY_ASSERT_TRUE_MSG(image.w > 0, "Image width must be > 0");
-
-        image.h = args[ARG_height].u_int;
-        PY_ASSERT_TRUE_MSG(image.h > 0, "Image height must be > 0");
-
-        image.pixfmt = args[ARG_pixformat].u_int;
-        PY_ASSERT_TRUE_MSG(IMLIB_PIXFORMAT_IS_VALID(image.pixfmt), "Pixel format is not set or unsupported");
-
-        mp_buffer_info_t bufinfo = {0};
-        if (args[ARG_buffer].u_obj != mp_const_none) {
-            mp_get_buffer_raise(args[ARG_buffer].u_obj, &bufinfo, MP_BUFFER_READ);
-            image.size = bufinfo.len;
-        } else if (image.is_compressed) {
-            mp_raise_ValueError(MP_ERROR_TEXT("Expected an image buffer"));
-        }
-
-        if (args[ARG_copy_to_fb].u_bool) {
-            py_helper_set_to_framebuffer(&image);
-            if (bufinfo.buf != NULL) {
-                memcpy(image.data, bufinfo.buf, bufinfo.len);
-            } else {
-                memset(image.data, 0, image_size(&image));
-            }
-        } else if (bufinfo.buf != NULL) {
-            image.data = bufinfo.buf;
-        } else {
-            image.data = xalloc0(image_size(&image));
-        }
-    }
-
-    if (args[ARG_copy_to_fb].u_bool) {
-        framebuffer_update_jpeg_buffer();
-    }
-    return py_image_from_struct(&image);
-}
-static MP_DEFINE_CONST_FUN_OBJ_KW(py_image_load_image_obj, 1, py_image_load_image);
 
 #ifdef IMLIB_ENABLE_FEATURES
 mp_obj_t py_image_load_cascade(uint n_args, const mp_obj_t *args, mp_map_t *kw_args) {
@@ -7191,6 +7193,7 @@ static const mp_rom_map_elem_t globals_dict_table[] = {
     {MP_ROM_QSTR(MP_QSTR_SCALE_ASPECT_KEEP),   MP_ROM_INT(IMAGE_HINT_SCALE_ASPECT_KEEP)},
     {MP_ROM_QSTR(MP_QSTR_SCALE_ASPECT_EXPAND), MP_ROM_INT(IMAGE_HINT_SCALE_ASPECT_EXPAND)},
     {MP_ROM_QSTR(MP_QSTR_SCALE_ASPECT_IGNORE), MP_ROM_INT(IMAGE_HINT_SCALE_ASPECT_IGNORE)},
+    {MP_ROM_QSTR(MP_QSTR_BLACK_BACKGROUND),    MP_ROM_INT(IMAGE_HINT_BLACK_BACKGROUND)},
     {MP_ROM_QSTR(MP_QSTR_ROTATE_90),           MP_ROM_INT(IMAGE_HINT_VFLIP | IMAGE_HINT_TRANSPOSE)},
     {MP_ROM_QSTR(MP_QSTR_ROTATE_180),          MP_ROM_INT(IMAGE_HINT_HMIRROR | IMAGE_HINT_VFLIP)},
     {MP_ROM_QSTR(MP_QSTR_ROTATE_270),          MP_ROM_INT(IMAGE_HINT_HMIRROR | IMAGE_HINT_TRANSPOSE)},
@@ -7232,6 +7235,7 @@ static const mp_rom_map_elem_t globals_dict_table[] = {
     {MP_ROM_QSTR(MP_QSTR_CODE93),              MP_ROM_INT(BARCODE_CODE93)},
     {MP_ROM_QSTR(MP_QSTR_CODE128),             MP_ROM_INT(BARCODE_CODE128)},
     #endif
+    {MP_ROM_QSTR(MP_QSTR_Image),               MP_ROM_PTR(&py_image_type)},
     #if defined(IMLIB_ENABLE_IMAGE_IO)
     {MP_ROM_QSTR(MP_QSTR_ImageIO),             MP_ROM_PTR(&py_imageio_type) },
     #else
@@ -7257,7 +7261,6 @@ static const mp_rom_map_elem_t globals_dict_table[] = {
     {MP_ROM_QSTR(MP_QSTR_yuv_to_grayscale),    MP_ROM_PTR(&py_image_yuv_to_grayscale_obj)},
     {MP_ROM_QSTR(MP_QSTR_yuv_to_rgb),          MP_ROM_PTR(&py_image_yuv_to_rgb_obj)},
     {MP_ROM_QSTR(MP_QSTR_yuv_to_lab),          MP_ROM_PTR(&py_image_yuv_to_lab_obj)},
-    {MP_ROM_QSTR(MP_QSTR_Image),               MP_ROM_PTR(&py_image_load_image_obj)},
     #ifdef IMLIB_ENABLE_FEATURES
     {MP_ROM_QSTR(MP_QSTR_HaarCascade),         MP_ROM_PTR(&py_image_load_cascade_obj)},
     #endif
