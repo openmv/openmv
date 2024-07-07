@@ -13,7 +13,7 @@
 
 // Architecture info
 #define OMV_BOARD_ARCH                        "OMV4 H7 1024" // 33 chars max
-#define OMV_BOARD_TYPE                        "H7"
+#define OMV_BOARD_TYPE                        "M4"
 #define OMV_BOARD_UID_ADDR                    0x1FF1E800    // Unique ID address.
 #define OMV_BOARD_UID_SIZE                    3             // Unique ID size in words.
 #define OMV_BOARD_UID_OFFSET                  4             // Bytes offset for multi-word UIDs.
