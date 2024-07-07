@@ -56,15 +56,15 @@ static bool ml_backend_valid_dataype(TfLiteType type) {
             type == kTfLiteFloat32);
 }
 
-static py_ml_dtype_t ml_backend_map_dtype(TfLiteType type) {
+static char ml_backend_map_dtype(TfLiteType type) {
     if (type == kTfLiteUInt8) {
-        return PY_ML_DTYPE_UINT8;
+        return 'B';
     } else if (type == kTfLiteInt8) {
-        return PY_ML_DTYPE_INT8;
+        return 'b';
     } else if (type == kTfLiteInt16) {
-        return PY_ML_DTYPE_INT16;
+        return 'h';
     } else {
-        return PY_ML_DTYPE_FLOAT;
+        return 'f';
     }
 }
 

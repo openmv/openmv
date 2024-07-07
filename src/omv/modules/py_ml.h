@@ -10,20 +10,6 @@
  */
 #ifndef __PY_ML_H__
 #define __PY_ML_H__
-typedef enum {
-    PY_ML_SCALE_NONE,
-    PY_ML_SCALE_0_1,
-    PY_ML_SCALE_S1_1,
-    PY_ML_SCALE_S128_127
-} py_ml_scale_t;
-
-typedef enum py_ml_dtype {
-    PY_ML_DTYPE_INT8,
-    PY_ML_DTYPE_UINT8,
-    PY_ML_DTYPE_INT16,
-    PY_ML_DTYPE_FLOAT
-} py_ml_dtype_t;
-
 // TF Model Object.
 typedef struct py_ml_model_obj {
     mp_obj_base_t base;
@@ -35,12 +21,12 @@ typedef struct py_ml_model_obj {
     mp_obj_tuple_t *input_shape;
     float input_scale;
     int input_zero_point;
-    py_ml_dtype_t input_dtype;
+    char input_dtype;
     size_t outputs_size;
     mp_obj_tuple_t *output_shape;
     float output_scale;
     int output_zero_point;
-    py_ml_dtype_t output_dtype;
+    char output_dtype;
     void *state; // Private context for the backend.
 } py_ml_model_obj_t;
 
