@@ -7,5 +7,4 @@
 #
 # This is an extension package to the ml C user-module.
 
-from uml import NMS  # noqa
 from .model import *  # noqa

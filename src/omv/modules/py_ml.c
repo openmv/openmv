@@ -327,7 +327,6 @@ extern const mp_obj_type_t py_ml_nms_type;
 static const mp_rom_map_elem_t py_ml_globals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR___name__),            MP_OBJ_NEW_QSTR(MP_QSTR_ml) },
     { MP_ROM_QSTR(MP_QSTR_Model),               MP_ROM_PTR(&py_ml_model_type) },
-    { MP_ROM_QSTR(MP_QSTR_NMS),                 MP_ROM_PTR(&py_ml_nms_type) },
 };
 
 static MP_DEFINE_CONST_DICT(py_ml_globals_dict, py_ml_globals_dict_table);

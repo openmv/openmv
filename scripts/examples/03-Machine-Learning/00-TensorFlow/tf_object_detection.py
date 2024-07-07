@@ -9,6 +9,7 @@
 import sensor
 import time
 import ml
+from ml.nms import NMS
 import math
 import image
 
@@ -47,7 +48,7 @@ colors = [  # Add more colors if you are detecting more than 7 types of classes 
 # objects.
 def fomo_post_process(model, inputs, outputs):
     n, oh, ow, oc = model.output_shape[0]
-    nms = ml.NMS(ow, oh, inputs[0].roi)
+    nms = NMS(ow, oh, inputs[0].roi)
     for i in range(oc):
         img = image.Image(outputs[0], shape=(oh, ow, 1), strides=(i, oc), scale=(255, 0))
         blobs = img.find_blobs(
