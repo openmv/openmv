@@ -37,9 +37,8 @@ static size_t py_ml_tuple_sum(mp_obj_tuple_t *o) {
     return size;
 }
 
-// TF Input/Output callback functions.
-static void py_ml_input_callback(py_ml_model_obj_t *model, void *arg) {
-    mp_obj_list_t *input_list = MP_OBJ_TO_PTR(*((mp_obj_t *) arg));
+static void py_ml_process_input(py_ml_model_obj_t *model, mp_obj_t arg) {
+    mp_obj_list_t *input_list = MP_OBJ_TO_PTR(arg);
 
     for (size_t i = 0; i < model->inputs_size; i++) {
         void *input_buffer = ml_backend_get_input(model, i);
@@ -102,7 +101,7 @@ static void py_ml_input_callback(py_ml_model_obj_t *model, void *arg) {
     }
 }
 
-static void py_ml_output_callback(py_ml_model_obj_t *model, void *arg) {
+static mp_obj_t py_ml_process_output(py_ml_model_obj_t *model) {
     mp_obj_list_t *output_list = MP_OBJ_TO_PTR(mp_obj_new_list(model->outputs_size, NULL));
     for (size_t i = 0; i < model->outputs_size; i++) {
         void *model_output = ml_backend_get_output(model, i);
@@ -131,7 +130,7 @@ static void py_ml_output_callback(py_ml_model_obj_t *model, void *arg) {
         }
         output_list->items[i] = MP_OBJ_FROM_PTR(output);
     }
-    *((mp_obj_t *) arg) = MP_OBJ_FROM_PTR(output_list);
+    return MP_OBJ_FROM_PTR(output_list);
 }
 
 // TF Model Object.
@@ -160,25 +159,22 @@ static mp_obj_t py_ml_model_predict(uint n_args, const mp_obj_t *pos_args, mp_ma
 
     py_ml_model_obj_t *model = MP_OBJ_TO_PTR(pos_args[0]);
 
-    mp_obj_t input_data = pos_args[1];
-    ml_backend_input_callback_t input_callback = py_ml_input_callback;
-
-    mp_obj_t output_data;
-    ml_backend_output_callback_t output_callback = py_ml_output_callback;
-
-    if (!MP_OBJ_IS_TYPE(input_data, &mp_type_list)) {
+    if (!MP_OBJ_IS_TYPE(pos_args[1], &mp_type_list)) {
         mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Unsupported input type. Expected a list"));
     }
 
-    ml_backend_run_inference(model, input_callback, &input_data, output_callback, &output_data);
+    py_ml_process_input(model, pos_args[1]);
+    ml_backend_run_inference(model);
+
+    mp_obj_t output = py_ml_process_output(model);
 
     if (args[ARG_callback].u_obj != mp_const_none) {
         // Pass model, inputs, outputs to the post-processing callback.
-        mp_obj_t fargs[3] = { MP_OBJ_FROM_PTR(model), pos_args[1], output_data };
-        output_data = mp_call_function_n_kw(args[ARG_callback].u_obj, 3, 0, fargs);
+        mp_obj_t fargs[3] = { MP_OBJ_FROM_PTR(model), pos_args[1], output };
+        output = mp_call_function_n_kw(args[ARG_callback].u_obj, 3, 0, fargs);
     }
 
-    return output_data;
+    return output;
 }
 static MP_DEFINE_CONST_FUN_OBJ_KW(py_ml_model_predict_obj, 2, py_ml_model_predict);
 

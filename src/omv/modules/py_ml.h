@@ -33,22 +33,12 @@ typedef struct py_ml_model_obj {
 // Initialize a model.
 int ml_backend_init_model(py_ml_model_obj_t *model);
 
-// Callback to populate the model input data.
-typedef void (*ml_backend_input_callback_t) (py_ml_model_obj_t *model, void *arg);
-
-// Callback to get the model output data.
-typedef void (*ml_backend_output_callback_t) (py_ml_model_obj_t *model, void *arg);
+// Run inference.
+int ml_backend_run_inference(py_ml_model_obj_t *model);
 
 // Return an input tensor by index.
 void *ml_backend_get_input(py_ml_model_obj_t *model, size_t index);
 
 // Return an output tensor by index.
 void *ml_backend_get_output(py_ml_model_obj_t *model, size_t index);
-
-// Run inference.
-int ml_backend_run_inference(py_ml_model_obj_t *model,
-                             ml_backend_input_callback_t input_callback, // Callback to populate the model input data.
-                             void *input_data, // User data structure passed to input callback.
-                             ml_backend_output_callback_t output_callback, // Callback to use the model output data.
-                             void *output_data); // User data structure passed to output callback.
 #endif // __PY_ML_H__
