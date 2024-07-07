@@ -724,6 +724,79 @@ static mp_obj_t py_image_bytearray(mp_obj_t img_obj) {
 }
 static MP_DEFINE_CONST_FUN_OBJ_1(py_image_bytearray_obj, py_image_bytearray);
 
+static mp_obj_t py_image_unpack(uint n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
+    enum { ARG_buffer, ARG_dtype, ARG_scale, ARG_mean, ARG_stdev };
+    static const mp_arg_t allowed_args[] = {
+        { MP_QSTR_buffer, MP_ARG_OBJ | MP_ARG_REQUIRED, {.u_rom_obj = MP_ROM_NONE} },
+        { MP_QSTR_dtype, MP_ARG_OBJ | MP_ARG_REQUIRED, {.u_rom_obj = MP_ROM_NONE } },
+        { MP_QSTR_scale, MP_ARG_OBJ | MP_ARG_KW_ONLY, {.u_rom_obj = MP_ROM_NONE } },
+        { MP_QSTR_mean, MP_ARG_OBJ | MP_ARG_KW_ONLY, {.u_rom_obj = MP_ROM_NONE } },
+        { MP_QSTR_stdev, MP_ARG_OBJ | MP_ARG_KW_ONLY, {.u_rom_obj = MP_ROM_NONE } },
+    };
+
+    image_t *image = py_helper_arg_to_image(pos_args[0], ARG_IMAGE_ANY);
+    mp_arg_val_t args[MP_ARRAY_SIZE(allowed_args)];
+    mp_arg_parse_all(n_args - 1, pos_args + 1, kw_args, MP_ARRAY_SIZE(allowed_args), allowed_args, args);
+
+    mp_buffer_info_t bufinfo = {0};
+    mp_get_buffer_raise(args[ARG_buffer].u_obj, &bufinfo, MP_BUFFER_WRITE);
+
+    // The first character is either 0 or the typecode...
+    const char *dtype = mp_obj_str_get_str(args[ARG_dtype].u_obj);
+
+    int dtype_size;
+    switch (dtype[0]) {
+        case 'c':
+        case 'b':
+        case 'B': {
+            dtype_size = 1;
+            break;
+        }
+        case 'f': {
+            dtype_size = 4;
+            break;
+        }
+        default: {
+            mp_raise_ValueError(MP_ERROR_TEXT("Unsupported dtype"));
+            break;
+        }
+    }
+
+    int channels;
+    switch (image->pixfmt) {
+        case PIXFORMAT_GRAYSCALE: {
+            channels = 1;
+            break;
+        }
+        case PIXFORMAT_RGB565: {
+            channels = 3;
+            break;
+        }
+        default: {
+            mp_raise_ValueError(MP_ERROR_TEXT("Unsupported pixformat"));
+            break;
+        }
+    }
+
+    if ((image->w * image->h * dtype_size * channels) > bufinfo.len) {
+        mp_raise_ValueError(MP_ERROR_TEXT("Buffer size is too small"));
+    }
+
+    // scale, offset
+    float scale[2] = {0.0f, 1.0f};
+    py_helper_arg_to_float_array(args[ARG_scale].u_obj, scale, 2);
+
+    float mean[3] = {0.0f, 0.0f, 0.0f};
+    py_helper_arg_to_float_array(args[ARG_mean].u_obj, mean, 3);
+
+    float stdev[3] = {1.0f, 1.0f, 1.0f};
+    py_helper_arg_to_float_array(args[ARG_stdev].u_obj, stdev, 3);
+
+    imlib_unpack(bufinfo.buf, image, dtype[0], scale, mean, stdev);
+    return pos_args[0];
+}
+static MP_DEFINE_CONST_FUN_OBJ_KW(py_image_unpack_obj, 1, py_image_unpack);
+
 static mp_obj_t py_image_get_pixel(uint n_args, const mp_obj_t *args, mp_map_t *kw_args) {
     image_t *arg_img = py_helper_arg_to_image(args[0], ARG_IMAGE_UNCOMPRESSED);
 
@@ -6198,6 +6271,7 @@ static const mp_rom_map_elem_t locals_dict_table[] = {
     {MP_ROM_QSTR(MP_QSTR_format),              MP_ROM_PTR(&py_image_format_obj)},
     {MP_ROM_QSTR(MP_QSTR_size),                MP_ROM_PTR(&py_image_size_obj)},
     {MP_ROM_QSTR(MP_QSTR_bytearray),           MP_ROM_PTR(&py_image_bytearray_obj)},
+    {MP_ROM_QSTR(MP_QSTR_unpack),              MP_ROM_PTR(&py_image_unpack_obj)},
     {MP_ROM_QSTR(MP_QSTR_get_pixel),           MP_ROM_PTR(&py_image_get_pixel_obj)},
     {MP_ROM_QSTR(MP_QSTR_set_pixel),           MP_ROM_PTR(&py_image_set_pixel_obj)},
     {MP_ROM_QSTR(MP_QSTR_to_bitmap),           MP_ROM_PTR(&py_image_to_bitmap_obj)},

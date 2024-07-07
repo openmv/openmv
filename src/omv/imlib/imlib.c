@@ -423,6 +423,118 @@ void imlib_fill_image_from_float(image_t *img, int w, int h, float *data, float 
     }
 }
 
+// Unpacks src into dst. dst must be an array of src->w*src->h*dtype*channels bytes, where channels is
+// 1 for grayscale and 3 for RGB.
+void imlib_unpack(void *dst, image_t *src, const char dtype, float *scale, float *mean, float *stdev) {
+    // src will be unpacked into dst in reverse order so that we can handle in-place unpacking.
+    int size = (src->w * src->h) - 1; // must be int per countdown loop
+
+    float fscale = (scale[1] - scale[0]) / 255.0f, fadd = scale[0];
+    float fscale_r = fscale, fadd_r = fadd;
+    float fscale_g = fscale, fadd_g = fadd;
+    float fscale_b = fscale, fadd_b = fadd;
+
+    // To normalize the input image we need to subtract the mean and divide by the standard deviation.
+    // We can do this by applying the normalization to fscale and fadd outside the loop.
+
+    // Red
+    fadd_r = (fadd_r - mean[0]) / stdev[0];
+    fscale_r /= stdev[0];
+
+    // Green
+    fadd_g = (fadd_g - mean[1]) / stdev[1];
+    fscale_g /= stdev[1];
+
+    // Blue
+    fadd_b = (fadd_b - mean[2]) / stdev[2];
+    fscale_b /= stdev[2];
+
+    // Grayscale -> Y = 0.299R + 0.587G + 0.114B
+    float y_mean = (mean[0] * 0.299f) + (mean[1] * 0.587f) + (mean[2] * 0.114f);
+    float y_std = (stdev[0] * 0.299f) + (stdev[1] * 0.587f) + (stdev[2] * 0.114f);
+    fadd = (fadd - y_mean) / y_std;
+    fscale /= y_std;
+
+    switch (src->pixfmt) {
+        case PIXFORMAT_GRAYSCALE: {
+            uint8_t *pin = (uint8_t *) src->data;
+            int fscale_i = fast_roundf(fscale);
+            int fadd_i = fast_roundf(fadd);
+            switch (dtype) {
+                case 'c':
+                case 'b':
+                case 'B': {
+                    uint8_t *pout = dst;
+                    #if (__ARM_ARCH > 6)
+                    // Special case when converting uint8_t to int8_t or vice versa.
+                    if ((fscale_i == 1) && (fadd_i == 128)) {
+                        for (; size >= 3; size -= 4) {
+                            *((uint32_t *) (pout + size - 3)) = *((uint32_t *) (pin + size - 3)) ^ 0x80808080;
+                        }
+                    }
+                    #endif
+                    for (; size >= 0; size--) {
+                        pout[size] = (pin[size] * fscale_i) + fadd_i;
+                    }
+                    break;
+                }
+                case 'f': {
+                    float *pout = dst;
+                    for (; size >= 0; size--) {
+                        pout[size] = (pin[size] * fscale) + fadd;
+                    }
+                    break;
+                }
+                default: {
+                    break;
+                }
+            }
+            break;
+        }
+        case PIXFORMAT_RGB565: {
+            int rgb_size = size * 3; // must be int per countdown loop
+            uint16_t *pin = (uint16_t *) src->data;
+            int fscale_r_i = fast_roundf(fscale_r);
+            int fadd_r_i = fast_roundf(fadd_r);
+            int fscale_g_i = fast_roundf(fscale_g);
+            int fadd_g_i = fast_roundf(fadd_g);
+            int fscale_b_i = fast_roundf(fscale_b);
+            int fadd_b_i = fast_roundf(fadd_b);
+            switch (dtype) {
+                case 'c':
+                case 'b':
+                case 'B': {
+                    uint8_t *pout = dst;
+                    for (; size >= 0; size -= 1, rgb_size -= 3) {
+                        int pixel = pin[size];
+                        pout[rgb_size] = (COLOR_RGB565_TO_R8(pixel) * fscale_r_i) + fadd_r_i;
+                        pout[rgb_size + 1] = (COLOR_RGB565_TO_G8(pixel) * fscale_g_i) + fadd_g_i;
+                        pout[rgb_size + 2] = (COLOR_RGB565_TO_B8(pixel) * fscale_b_i) + fadd_b_i;
+                    }
+                    break;
+                }
+                case 'f': {
+                    float *pout = dst;
+                    for (; size >= 0; size -= 1, rgb_size -= 3) {
+                        int pixel = pin[size];
+                        pout[rgb_size] = (COLOR_RGB565_TO_R8(pixel) * fscale_r) + fadd_r;
+                        pout[rgb_size + 1] = (COLOR_RGB565_TO_G8(pixel) * fscale_g) + fadd_g;
+                        pout[rgb_size + 2] = (COLOR_RGB565_TO_B8(pixel) * fscale_b) + fadd_b;
+                    }
+                    break;
+                }
+                default: {
+                    break;
+                }
+            }
+            break;
+        }
+        default: {
+            break;
+        }
+    }
+}
+
 int8_t imlib_rgb565_to_l(uint16_t pixel) {
     float r_lin = xyz_table[COLOR_RGB565_TO_R8(pixel)];
     float g_lin = xyz_table[COLOR_RGB565_TO_G8(pixel)];
