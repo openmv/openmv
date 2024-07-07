@@ -5,8 +5,8 @@
 # The MicroSpeech module is designed for real-time audio processing and speech recognition
 # on microcontroller platforms. It leverages pre-trained models for audio preprocessing and
 # speech recognition, specifically optimized for detecting keywords such as "Yes" and "No".
-import ml
 import time
+from ml.apps import MicroSpeech
 
 
 def callback(label, scores):
@@ -17,7 +17,7 @@ def callback(label, scores):
 # micro speech module for audio preprocessing and speech recognition, respectively. The
 # user can override both by passing two models:
 # MicroSpeech(preprocessor=ml.Model(...), micro_speech=ml.Model(...), labels=["label",...])
-speech = ml.MicroSpeech()
+speech = MicroSpeech()
 
 # Starts the audio streaming and processes incoming audio to recognize speech commands.
 # If a callback is passed, listen() will loop forever and call the callback when a keyword

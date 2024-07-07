@@ -423,6 +423,95 @@ void imlib_fill_image_from_float(image_t *img, int w, int h, float *data, float 
     }
 }
 
+// Unpacks src into dst. dst must be an array of src->w*src->h*dtype*channels bytes, where channels is
+// 1 for grayscale and 3 for RGB.
+void imlib_unpack(void *dst, image_t *src, const char dtype, float *scale, float *mean, float *stdev) {
+    // src will be unpacked into dst in reverse order so that we can handle in-place unpacking.
+    int size = (src->w * src->h) - 1; // must be int per countdown loop
+    float fscale = 1.0f, fadd = 0.0f;
+
+    if (scale[0] == 0.0f && scale[1] == 1.0f) {
+        fscale = 1.0f / 255.0f;
+    } else if (scale[0] == -1.0f && scale[1] == 1.0f) {
+        fscale = 2.0f / 255.0f;
+        fadd = -1.0f;
+    } else if (scale[0] == -128.0f && scale[1] == 127.0f) {
+        fadd = -128.0f;
+    }
+
+    float fscale_r = fscale, fadd_r = fadd;
+    float fscale_g = fscale, fadd_g = fadd;
+    float fscale_b = fscale, fadd_b = fadd;
+
+    // To normalize the input image we need to subtract the mean and divide by the standard deviation.
+    // We can do this by applying the normalization to fscale and fadd outside the loop.
+    // Red
+    fadd_r = (fadd_r - mean[0]) / stdev[0];
+    fscale_r /= stdev[0];
+
+    // Green
+    fadd_g = (fadd_g - mean[1]) / stdev[1];
+    fscale_g /= stdev[1];
+
+    // Blue
+    fadd_b = (fadd_b - mean[2]) / stdev[2];
+    fscale_b /= stdev[2];
+
+    // Grayscale -> Y = 0.299R + 0.587G + 0.114B
+    float m = (mean[0] * 0.299f) + (mean[1] * 0.587f) + (mean[2] * 0.114f);
+    float s = (stdev[0] * 0.299f) + (stdev[1] * 0.587f) + (stdev[2] * 0.114f);
+    fadd = (fadd - m) / s;
+    fscale /= s;
+
+    if (src->pixfmt == PIXFORMAT_GRAYSCALE) {
+        uint8_t *input_u8 = (uint8_t *) src->data;
+        if (dtype == 'f') {
+            // convert u8 -> f32
+            float *output_f32 = (float *) dst;
+            for (; size >= 0; size -= 1) {
+                output_f32[size] = (input_u8[size] * fscale) + fadd;
+            }
+        } else {
+            // convert u8 -> s8
+            #if (__ARM_ARCH > 6)
+            uint32_t *input_u32 = (uint32_t *) src->data;
+            uint32_t *output_u32 = (uint32_t *) dst;
+            for (; size >= 3; size -= 4) {
+                output_u32[size / 4] = input_u32[size / 4] ^ 0x80808080;
+            }
+            #endif
+            uint8_t *input_u8 = (uint8_t *) src->data;
+            uint8_t *output_u8 = (uint8_t *) dst;
+            for (; size >= 0; size -= 1) {
+                output_u8[size] = input_u8[size] ^ 128;
+            }
+        }
+    } else if (src->pixfmt == PIXFORMAT_RGB565) {
+        int rgb_size = size * 3; // must be int per countdown loop
+        if (dtype == 'f') {
+            uint16_t *input_u16 = (uint16_t *) src->data;
+            float *output_f32 = (float *) dst;
+            for (; size >= 0; size -= 1, rgb_size -= 3) {
+                int pixel = input_u16[size];
+                output_f32[rgb_size + 0] = (COLOR_RGB565_TO_R8(pixel) * fscale_r) + fadd_r;
+                output_f32[rgb_size + 1] = (COLOR_RGB565_TO_G8(pixel) * fscale_g) + fadd_g;
+                output_f32[rgb_size + 2] = (COLOR_RGB565_TO_B8(pixel) * fscale_b) + fadd_b;
+            }
+        } else {
+            uint16_t *input_u16 = (uint16_t *) src->data;
+            uint8_t *output_u8 = (uint8_t *) dst;
+            for (; size >= 0; size -= 1, rgb_size -= 3) {
+                int pixel = input_u16[size];
+                output_u8[rgb_size + 0] = COLOR_RGB565_TO_R8(pixel) ^ 128;
+                output_u8[rgb_size + 1] = COLOR_RGB565_TO_G8(pixel) ^ 128;
+                output_u8[rgb_size + 2] = COLOR_RGB565_TO_B8(pixel) ^ 128;
+            }
+        }
+    } else {
+        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Expected input channels to be 1 or 3"));
+    }
+}
+
 int8_t imlib_rgb565_to_l(uint16_t pixel) {
     float r_lin = xyz_table[COLOR_RGB565_TO_R8(pixel)];
     float g_lin = xyz_table[COLOR_RGB565_TO_G8(pixel)];
