@@ -9,7 +9,7 @@
 import sensor
 import time
 import ml
-from ml.nms import NMS
+from ml.utils import NMS
 import math
 import image
 
