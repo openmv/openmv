@@ -16,6 +16,7 @@ class Model:
         if isinstance(retobj, tuple):
             labels, self.model = retobj
             return labels, self
+        self.model = retobj
         return self
 
     def __str__(self):

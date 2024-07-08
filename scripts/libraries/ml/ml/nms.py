@@ -1,0 +1,102 @@
+# This file is part of the OpenMV project.
+#
+# Copyright (c) 2024 Ibrahim Abdelkader <iabdalkader@openmv.io>
+# Copyright (c) 2024 Kwabena W. Agyeman <kwagyeman@openmv.io>
+#
+# This work is licensed under the MIT license, see the file LICENSE for details.
+
+import math
+
+
+class NMS:
+    def __init__(
+        self,
+        window_w,
+        window_h,
+        roi,
+    ):
+        self.window_w = window_w
+        self.window_h = window_h
+        self.roi = roi
+        if roi[2] < 1 or roi[3] < 1:
+            raise ValueError("Invalid ROI dimensions!")
+        self.boxes = []
+
+    @micropython.native
+    def add_bounding_box(self, xmin, ymin, xmax, ymax, score, label_index):
+        if score >= 0.0 and score <= 1.0:
+            xmin = max(0.0, min(xmin, self.window_w))
+            ymin = max(0.0, min(ymin, self.window_h))
+            xmax = max(0.0, min(xmax, self.window_w))
+            ymax = max(0.0, min(ymax, self.window_h))
+            w = int(xmax - xmin)
+            h = int(ymax - ymin)
+            if w > 0 and h > 0:
+                self.boxes.append([int(xmin), int(ymin), w, h, score, label_index])
+
+    @micropython.native
+    def get_bounding_boxes(self, threshold=0.1, sigma=0.1):
+        sorted_boxes = sorted(self.boxes, key=lambda x: x[4], reverse=True)
+        sigma_scale = (-1.0 / sigma) if (sigma > 0.0) else 0.0
+
+        @micropython.native
+        def iou(box1, box2):
+            x1 = max(box1[0], box2[0])
+            y1 = max(box1[1], box2[1])
+            x2 = min(box1[0] + box1[2], box2[0] + box2[2])
+            y2 = min(box1[1] + box1[3], box2[1] + box2[3])
+            w = max(0, x2 - x1)
+            h = max(0, y2 - y1)
+            intersection = w * h
+            union = (box1[2] * box1[3]) + (box2[2] * box2[3]) - intersection
+            return float(intersection) / float(union)
+
+        # Perform Non Max Supression.
+
+        max_index = 0
+        output_boxes = []
+        max_label_index = 0
+
+        while len(sorted_boxes):
+            box = sorted_boxes.pop(max_index)
+            output_boxes.append(box)
+            max_label_index = max(max_label_index, box[5])
+
+            # Compare and supress the remaining boxes in the list against the max.
+
+            for i in range(len(sorted_boxes)):
+                v = iou(box, sorted_boxes[i])
+                sorted_boxes[i][4] = sorted_boxes[i][4] * math.exp(sigma_scale * v * v)
+                if sorted_boxes[i][4] < threshold:
+                    sorted_boxes[i][4] = 0.0
+
+            # Filter out supressed boxes and find the next largest.
+
+            sorted_boxes = list(filter(lambda x: x[4] > 0.0, sorted_boxes))
+            if len(sorted_boxes):
+                max_index = max(enumerate(sorted_boxes), key=lambda x: x[1][4])[0]
+
+        # Map the output boxes back to the input image.
+
+        x_scale = self.roi[2] / float(self.window_w)
+        y_scale = self.roi[3] / float(self.window_h)
+        scale = min(x_scale, y_scale)
+        x_offset = ((self.roi[2] - (self.window_w * scale)) / 2) + self.roi[0]
+        y_offset = ((self.roi[3] - (self.window_h * scale)) / 2) + self.roi[1]
+
+        for i in range(len(output_boxes)):
+            output_boxes[i][0] = int((output_boxes[i][0] * scale) + x_offset)
+            output_boxes[i][1] = int((output_boxes[i][1] * scale) + y_offset)
+            output_boxes[i][2] = int(output_boxes[i][2] * scale)
+            output_boxes[i][3] = int(output_boxes[i][3] * scale)
+
+        # Create a list per class with (rect, score) tuples.
+
+        output_list = [[] for i in range(max_label_index + 1)]
+
+        for i in range(len(output_boxes)):
+            output_list[output_boxes[i][5]].append(
+                (output_boxes[i][0:4], output_boxes[i][4])
+            )
+
+        return output_list
