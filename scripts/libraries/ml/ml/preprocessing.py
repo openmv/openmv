@@ -11,17 +11,16 @@ import image
 class Normalization:
     def __init__(
         self,
-        image=None,
         scale=(0.0, 1.0),
         mean=(0.0, 0.0, 0.0),
         stdev=(1.0, 1.0, 1.0),
         roi=None,
     ):
-        self.image = image
         self.scale = scale
         self.mean = mean
         self.stdev = stdev
         self.roi = roi
+        self._image = None
 
     def __call__(self, *args):
         if len(args) == 1:
@@ -30,12 +29,18 @@ class Normalization:
                 raise ValueError("Expected an image input")
             if self.roi is None:
                 self.roi = (0, 0, img.width(), img.height())
-            return Normalization(img, self.scale, self.mean, self.stdev, self.roi)
+            n = Normalization(self.scale, self.mean, self.stdev, self.roi)
+            n._image = img
+            return n
+
         buffer, shape, dtype = args
         # Create an image using the input tensor as buffer.
-        img = image.Image(shape[2], shape[1], self.image.format(), buffer=buffer)
+        pixfmt = image.GRAYSCALE if shape[3] == 1 else image.RGB565
+        img = image.Image(shape[2], shape[1], pixfmt, buffer=buffer)
+
         # Copy and scale (if needed) the input image to the input buffer.
         hints = image.BILINEAR | image.CENTER | image.SCALE_ASPECT_EXPAND | image.BLACK_BACKGROUND
-        img.draw_image(self.image, 0, 0, roi=self.roi, hint=hints)
+        img.draw_image(self._image, 0, 0, roi=self.roi, hint=hints)
+
         # Scale and convert the image to input tensor data.
         img.unpack(buffer, dtype, scale=self.scale, mean=self.mean, stdev=self.stdev)
