@@ -82,7 +82,7 @@ OMV_GC_BLOCK_NEW(4)
   . = . + OMV_HEAP_SIZE;
   . = ALIGN(4);
   _heap_limit = .;
-} > OMV_MAIN_MEMORY
+} > OMV_HEAP_MEMORY
 #endif
 
 /* Stack memory */
