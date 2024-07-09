@@ -6379,8 +6379,8 @@ mp_obj_t py_image_make_new(const mp_obj_type_t *type, size_t n_args, size_t n_kw
 
         mp_obj_t *scale;
         mp_obj_get_array_fixed_n(args[ARG_scale].u_obj, 2, &scale);
-        float fscale = mp_obj_get_float(scale[0]);
-        float fadd = mp_obj_get_float(scale[1]);
+        float fscale = 255.0f / (mp_obj_get_float(scale[1]) - mp_obj_get_float(scale[0]));
+        float fadd = -mp_obj_get_float(scale[0]) * fscale;
 
         if (args[ARG_copy_to_fb].u_bool) {
             py_helper_set_to_framebuffer(&image);
