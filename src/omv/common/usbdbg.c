@@ -191,6 +191,49 @@ void usbdbg_data_in(void *buffer, int length) {
             cmd = USBDBG_NONE;
             break;
         }
+
+        case USBDBG_GET_STATE:
+            // Clear flags
+            ((uint32_t *) buffer)[0] = 0;
+
+            // Set script running flag
+            if (script_running) {
+                ((uint32_t *) buffer)[0] |= USBDBG_STATE_FLAGS_SCRIPT;
+            }
+
+            // Set text buf valid flag.
+            uint32_t tx_buf_len = usb_cdc_buf_len();
+            if (tx_buf_len) {
+                ((uint32_t *) buffer)[0] |= USBDBG_STATE_FLAGS_TEXT;
+            }
+
+            // Try to lock FB. If header size == 0 frame is not ready
+            if (mutex_try_lock_alternate(&JPEG_FB()->lock, MUTEX_TID_IDE)) {
+                // If header size == 0 frame is not ready
+                if (JPEG_FB()->size == 0) {
+                    // unlock FB
+                    mutex_unlock(&JPEG_FB()->lock, MUTEX_TID_IDE);
+                } else {
+                    // Set frame width, height and size/bpp
+                    ((uint32_t *) buffer)[1] = JPEG_FB()->w;
+                    ((uint32_t *) buffer)[2] = JPEG_FB()->h;
+                    ((uint32_t *) buffer)[3] = JPEG_FB()->size;
+
+                    // Set valid frame flag.
+                    ((uint32_t *) buffer)[0] |= USBDBG_STATE_FLAGS_FRAME;
+                }
+            }
+
+            // The rest of this packet is packed with text buffer.
+            if (tx_buf_len) {
+                tx_buf_len = OMV_MIN(tx_buf_len, (40 - 1));
+                usb_cdc_get_buf((uint8_t *) buffer + 24, tx_buf_len);
+                ((uint8_t *) buffer)[24 + tx_buf_len] = 0; // Null-terminate
+            }
+
+            cmd = USBDBG_NONE;
+            break;
+
         default: /* error */
             break;
     }
@@ -427,6 +470,11 @@ void usbdbg_control(void *buffer, uint8_t request, uint32_t length) {
             break;
 
         case USBDBG_TX_INPUT:
+            xfer_bytes = 0;
+            xfer_length = length;
+            break;
+
+        case USBDBG_GET_STATE:
             xfer_bytes = 0;
             xfer_length = length;
             break;
