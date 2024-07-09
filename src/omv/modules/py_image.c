@@ -6427,6 +6427,9 @@ mp_obj_t py_image_make_new(const mp_obj_type_t *type, size_t n_args, size_t n_kw
             }
         } else if (bufinfo.buf != NULL) {
             image.data = bufinfo.buf;
+            if (image_size(&image) > bufinfo.len) {
+                mp_raise_ValueError(MP_ERROR_TEXT("Buffer is too small"));
+            }
         } else {
             image.data = xalloc0(image_size(&image));
         }
