@@ -28,8 +28,10 @@ sensor.skip_frames(time = 2000)     # Wait for settings take effect.
 clock = time.clock()                # Create a clock object to track the FPS.
 
 while(True):
+    clock.tick()
     img = sensor.snapshot()         # Take a picture and return the image.
     sensor.flush()
+    print(clock.fps(), " FPS")
 """
 
 # init pygame
@@ -55,10 +57,10 @@ for i in range(10):
         sleep(0.100)
 
 if not connected:
-    print ( "Failed to connect to OpenMV's serial port.\n"
-            "Please install OpenMV's udev rules first:\n"
-            "sudo cp openmv/udev/50-openmv.rules /etc/udev/rules.d/\n"
-            "sudo udevadm control --reload-rules\n\n")
+    print("Failed to connect to OpenMV's serial port.\n"
+          "Please install OpenMV's udev rules first:\n"
+          "sudo cp openmv/udev/50-openmv.rules /etc/udev/rules.d/\n"
+          "sudo udevadm control --reload-rules\n\n")
     sys.exit(1)
 
 # Set higher timeout after connecting for lengthy transfers.
@@ -73,39 +75,42 @@ screen = None
 IMAGE_SCALE = 4
 
 Clock = pygame.time.Clock()
-font = pygame.font.SysFont("monospace", 15)
+font = pygame.font.SysFont("monospace", 25)
 
-while running:
-    Clock.tick(100)
+try:
+    while running:
+        Clock.tick(30)
+        # Read state
+        w, h, data, text = pyopenmv.read_state()
 
-    # read framebuffer
-    fb = pyopenmv.fb_dump()
-    if fb is not None:
-        fps = Clock.get_fps()
-        w, h, data = fb[0], fb[1], fb[2]
+        if text is not None:
+            print(text, end="")
 
-        # create image from RGB888
-        image = pygame.image.frombuffer(data.flat[0:], (w, h), 'RGB')
-        image = pygame.transform.scale(image, (w * IMAGE_SCALE, h * IMAGE_SCALE))
+        if data is not None:
+            fps = Clock.get_fps()
+            # Create image from RGB888
+            image = pygame.image.frombuffer(data.flat[0:], (w, h), 'RGB')
+            image = pygame.transform.scale(image, (w * IMAGE_SCALE, h * IMAGE_SCALE))
 
-        if screen is None:
-            screen = pygame.display.set_mode((w * IMAGE_SCALE, h * IMAGE_SCALE), pygame.DOUBLEBUF, 32)
+            if screen is None:
+                screen = pygame.display.set_mode((w * IMAGE_SCALE, h * IMAGE_SCALE), pygame.DOUBLEBUF, 32)
 
-        # blit stuff
-        screen.blit(image, (0, 0))
-        screen.blit(font.render("FPS %.2f"%(fps), 1, (255, 0, 0)), (0, 0))
+            # blit stuff
+            screen.blit(image, (0, 0))
+            screen.blit(font.render("FPS %.2f"%(fps), 1, (255, 0, 0)), (0, 0))
+            # update display
+            pygame.display.flip()
 
-        # update display
-        pygame.display.flip()
-
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-             running = False
-        elif event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_ESCAPE:
-                running = False
-            if event.key == pygame.K_c:
-                pygame.image.save(image, "capture.png")
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                 running = False
+            elif event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_ESCAPE:
+                    running = False
+                if event.key == pygame.K_c:
+                    pygame.image.save(image, "capture.png")
+except KeyboardInterrupt:
+    pass
 
 pygame.quit()
 pyopenmv.stop_script()

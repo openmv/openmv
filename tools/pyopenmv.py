@@ -37,6 +37,11 @@ __USBDBG_SYS_RESET_TO_BL= 0x0E
 __USBDBG_FB_ENABLE      = 0x0D
 __USBDBG_TX_BUF_LEN     = 0x8E
 __USBDBG_TX_BUF         = 0x8F
+__USBDBG_GET_STATE      = 0x93
+
+__USBDBG_STATE_FLAGS_SCRIPT = (1 << 0)
+__USBDBG_STATE_FLAGS_TEXT   = (1 << 1)
+__USBDBG_STATE_FLAGS_FRAME  = (1 << 2)
 
 ATTR_CONTRAST   =0
 ATTR_BRIGHTNESS =1
@@ -69,6 +74,44 @@ def fb_size():
     # read fb header
     __serial.write(struct.pack("<BBI", __USBDBG_CMD, __USBDBG_FRAME_SIZE, __FB_HDR_SIZE))
     return struct.unpack("III", __serial.read(12))
+
+def read_state():
+    __serial.write(struct.pack("<BBI", __USBDBG_CMD, __USBDBG_GET_STATE, 64))
+    flags, w, h, size, res0, res1, text_buf = struct.unpack("IIIIII40s", __serial.read(64))
+
+    text = None
+    if flags & __USBDBG_STATE_FLAGS_TEXT:
+        text = text_buf.split(b'\0', 1)[0].decode()
+
+    if flags & __USBDBG_STATE_FLAGS_FRAME == 0:
+        return 0, 0, None, text
+
+    num_bytes = size if size > 2 else (w * h * size)
+
+    # read fb data
+    __serial.write(struct.pack("<BBI", __USBDBG_CMD, __USBDBG_FRAME_DUMP, num_bytes))
+    buff = __serial.read(num_bytes)
+
+    if size == 1:  # Grayscale
+        y = np.fromstring(buff, dtype=np.uint8)
+        buff = np.column_stack((y, y, y))
+    elif size == 2: # RGB565
+        arr = np.fromstring(buff, dtype=np.uint16).newbyteorder('S')
+        r = (((arr & 0xF800) >>11)*255.0/31.0).astype(np.uint8)
+        g = (((arr & 0x07E0) >>5) *255.0/63.0).astype(np.uint8)
+        b = (((arr & 0x001F) >>0) *255.0/31.0).astype(np.uint8)
+        buff = np.column_stack((r,g,b))
+    else: # JPEG
+        try:
+            buff = np.asarray(Image.frombuffer("RGB", (w, h), buff, "jpeg", "RGB", ""))
+        except Exception as e:
+            raise ValueError(f"JPEG decode error (%e)")
+
+    if (buff.size != (w*h*3)):
+        raise ValueError(f"Unexpected frame size. Expected: {w*h*3} received: {buff.size}")
+
+    return w, h, buff.reshape((h, w, 3)), text
+
 
 def fb_dump():
     size = fb_size()
