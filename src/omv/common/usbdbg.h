@@ -49,6 +49,13 @@ enum usbdbg_cmd {
     USBDBG_SENSOR_ID       =0x90,
     USBDBG_TX_INPUT        =0x11,
     USBDBG_SET_TIME        =0x12,
+    USBDBG_GET_STATE       =0x93,
+};
+
+enum usbdbg_state_flags {
+    USBDBG_STATE_FLAGS_SCRIPT   = (1 << 0),
+    USBDBG_STATE_FLAGS_TEXT     = (1 << 1),
+    USBDBG_STATE_FLAGS_FRAME    = (1 << 2),
 };
 
 void usbdbg_init();
