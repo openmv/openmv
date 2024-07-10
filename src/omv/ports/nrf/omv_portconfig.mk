@@ -63,9 +63,21 @@ OMV_CFLAGS += -I$(TOP_DIR)/$(LIBPDM_DIR)/
 CFLAGS += $(HAL_CFLAGS) $(MPY_CFLAGS) $(OMV_CFLAGS)
 
 # Linker Flags
-LDFLAGS = -mcpu=$(CPU) -mabi=aapcs-linux -mthumb -mfpu=$(FPU) -mfloat-abi=hard\
-          -nostdlib -Wl,--gc-sections -Wl,-T$(BUILD)/$(LDSCRIPT).lds \
-          -Wl,--wrap=tud_cdc_rx_cb -Wl,--wrap=mp_hal_stdout_tx_strn
+LDFLAGS = -mcpu=$(CPU) \
+          -mabi=aapcs-linux \
+          -mthumb \
+          -mfpu=$(FPU) \
+          -mfloat-abi=hard \
+          -nostdlib \
+          -Wl,--gc-sections \
+          -Wl,--print-memory-usage \
+          -Wl,--wrap=mp_usbd_task \
+          -Wl,--wrap=tud_cdc_rx_cb \
+          -Wl,--wrap=mp_hal_stdio_poll \
+          -Wl,--wrap=mp_hal_stdout_tx_strn \
+          -Wl,--no-warn-rwx-segment \
+          -Wl,-Map=$(BUILD)/$(FIRMWARE).map \
+          -Wl,-T$(BUILD)/$(LDSCRIPT).lds
 
 #------------- Firmware Objects ----------------#
 FIRM_OBJ += $(wildcard $(BUILD)/$(CMSIS_DIR)/src/dsp/CommonTables/*.o)

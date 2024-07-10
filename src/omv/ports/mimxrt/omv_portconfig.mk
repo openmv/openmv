@@ -48,7 +48,9 @@ LDFLAGS = -mthumb \
           -mabi=aapcs-linux \
           -Wl,--print-memory-usage \
           -Wl,--gc-sections \
+          -Wl,--wrap=mp_usbd_task \
           -Wl,--wrap=tud_cdc_rx_cb \
+          -Wl,--wrap=mp_hal_stdio_poll \
           -Wl,--wrap=mp_hal_stdout_tx_strn \
           -Wl,-T$(BUILD)/$(LDSCRIPT).lds \
           -Wl,-Map=$(BUILD)/$(FIRMWARE).map

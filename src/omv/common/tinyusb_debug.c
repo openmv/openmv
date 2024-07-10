@@ -39,14 +39,24 @@ static volatile bool tinyusb_debug_mode = false;
 ringbuf_t debug_ringbuf = { debug_ringbuf_array, sizeof(debug_ringbuf_array) };
 
 uint32_t usb_cdc_buf_len() {
-    return ringbuf_avail((ringbuf_t *) &debug_ringbuf);
+    return ringbuf_avail(&debug_ringbuf);
 }
 
 uint32_t usb_cdc_get_buf(uint8_t *buf, uint32_t len) {
-    for (int i = 0; i < len; i++) {
-        buf[i] = ringbuf_get((ringbuf_t *) &debug_ringbuf);
+    // Read all of the request bytes.
+    if (ringbuf_get_bytes(&debug_ringbuf, buf, len) == 0) {
+        return len;
     }
-    return len;
+    // Try to read as much data as possible.
+    uint32_t bytes = 0;
+    for (; bytes < len; bytes++) {
+        int c = ringbuf_get(&debug_ringbuf);
+        if (c == -1) {
+            break;
+        }
+        buf[bytes] = c;
+    }
+    return bytes;
 }
 
 void tud_cdc_line_coding_cb(uint8_t itf, cdc_line_coding_t const *coding) {
@@ -70,24 +80,44 @@ bool tinyusb_debug_enabled(void) {
     return tinyusb_debug_mode;
 }
 
+extern void __real_mp_usbd_task(void);
+void __wrap_mp_usbd_task(void) {
+    if (!tinyusb_debug_enabled()) {
+        __real_mp_usbd_task();
+    }
+}
+
 extern void __real_tud_cdc_rx_cb(uint8_t itf);
 void __wrap_tud_cdc_rx_cb(uint8_t itf) {
-    if (tinyusb_debug_enabled()) {
-        return;
-    } else {
+    if (!tinyusb_debug_enabled()) {
         __real_tud_cdc_rx_cb(itf);
     }
+}
+
+extern uintptr_t __real_mp_hal_stdio_poll(uintptr_t poll_flags);
+uintptr_t __wrap_mp_hal_stdio_poll(uintptr_t poll_flags) {
+    if (!tinyusb_debug_enabled()) {
+        return __real_mp_hal_stdio_poll(poll_flags);
+    }
+    return 0;
 }
 
 extern mp_uint_t __real_mp_hal_stdout_tx_strn(const char *str, mp_uint_t len);
 mp_uint_t __wrap_mp_hal_stdout_tx_strn(const char *str, mp_uint_t len) {
     if (tinyusb_debug_enabled()) {
         if (tud_cdc_connected()) {
+            NVIC_DisableIRQ(PendSV_IRQn);
             for (int i = 0; i < len; i++) {
-                NVIC_DisableIRQ(PendSV_IRQn);
-                ringbuf_put((ringbuf_t *) &debug_ringbuf, str[i]);
-                NVIC_EnableIRQ(PendSV_IRQn);
+                // The ring buffer overflows occasionally, espcially when using a slow poll
+                // rate and fast print rate. When this happens, reset the buffer and start
+                // over, if this string fits entirely in the buffer. This helps the ring buffer
+                // self-recover from broken strings.
+                if (ringbuf_put(&debug_ringbuf, str[i]) == -1 && len <= debug_ringbuf.size) {
+                    debug_ringbuf.iget = 0;
+                    debug_ringbuf.iput = 0;
+                }
             }
+            NVIC_EnableIRQ(PendSV_IRQn);
         }
         return len;
     } else {
