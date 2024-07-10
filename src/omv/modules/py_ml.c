@@ -69,17 +69,21 @@ static void py_ml_process_input(py_ml_model_obj_t *model, mp_obj_t arg) {
             // Input is an ndarry. The input is converted and copied to the tensor buffer.
             ndarray_obj_t *input_array = MP_OBJ_TO_PTR(input_arg);
 
-            if (input_array->ndim != input_shape->len) {
-                mp_raise_msg(&mp_type_ValueError,
-                             MP_ERROR_TEXT("Input shape does not match the model input shape"));
-            }
-
-            for (size_t i = 0; i < input_array->ndim; i++) {
-                size_t ulab_offset = ULAB_MAX_DIMS - input_array->ndim;
-                if (input_array->shape[ulab_offset + i] != mp_obj_get_int(input_shape->items[i])) {
+            if (input_array->ndim > 1) {
+                if (input_array->ndim != input_shape->len) {
                     mp_raise_msg(&mp_type_ValueError,
                                  MP_ERROR_TEXT("Input shape does not match the model input shape"));
                 }
+
+                for (size_t i = 0; i < input_array->ndim; i++) {
+                    size_t ulab_offset = ULAB_MAX_DIMS - input_array->ndim;
+                    if (input_array->shape[ulab_offset + i] != mp_obj_get_int(input_shape->items[i])) {
+                        mp_raise_msg(&mp_type_ValueError,
+                                     MP_ERROR_TEXT("Input shape does not match the model input shape"));
+                    }
+                }
+            } else if (input_array->len != input_size) {
+                mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Input size does not match the model input size"));
             }
 
             if (model->input_dtype == 'f') {
