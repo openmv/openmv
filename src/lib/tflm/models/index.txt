@@ -5,3 +5,4 @@ fomo_face_detection.tflite
 micro_speech.tflite
 person_detect.tflite
 person_detect_vela.tflite
+force_int_quant.tflite
