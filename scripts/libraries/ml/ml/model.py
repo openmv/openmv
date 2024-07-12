@@ -9,19 +9,10 @@ import image
 from ml.preprocessing import Normalization
 
 
-class Model:
-    def __new__(cls, *args, **kwargs):
-        self = super().__new__(cls)
-        retobj = uml.Model(*args, **kwargs)
-        if isinstance(retobj, tuple):
-            labels, self.model = retobj
-            return labels, self
-        self.model = retobj
-        return self
-
-    def __str__(self):
-        return str(self.model)
+class Model(uml.Model):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
     def predict(self, args, **kwargs):
         args = [Normalization()(x) if isinstance(x, image.Image) else x for x in args]
-        return self.model.predict(args, **kwargs)
+        return super().predict(args, **kwargs)

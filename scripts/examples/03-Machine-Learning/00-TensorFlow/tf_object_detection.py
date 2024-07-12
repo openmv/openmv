@@ -22,7 +22,7 @@ min_confidence = 0.4
 threshold_list = [(math.ceil(min_confidence * 255), 255)]
 
 # Load built-in FOMO face detection model
-labels, model = ml.Model("fomo_face_detection")
+model = ml.Model("fomo_face_detection")
 
 # Alternatively, models can be loaded from the filesystem storage.
 # model = ml.Model('<object_detection_modelwork>.tflite', load_to_fb=True)
@@ -76,7 +76,7 @@ while True:
         if len(detection_list) == 0:
             continue  # no detections for this class?
 
-        print("********** %s **********" % labels[i])
+        print("********** %s **********" % model.labels[i])
         for (x, y, w, h), score in detection_list:
             center_x = math.floor(x + (w / 2))
             center_y = math.floor(y + (h / 2))
