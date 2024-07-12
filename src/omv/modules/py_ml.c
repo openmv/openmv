@@ -75,7 +75,8 @@ static void py_ml_process_input(py_ml_model_obj_t *model, mp_obj_t arg) {
             }
 
             for (size_t i = 0; i < input_array->ndim; i++) {
-                if (input_array->shape[i] != mp_obj_get_int(input_shape->items[i])) {
+                size_t ulab_offset = ULAB_MAX_DIMS - input_array->ndim;
+                if (input_array->shape[ulab_offset + i] != mp_obj_get_int(input_shape->items[i])) {
                     mp_raise_msg(&mp_type_ValueError,
                                  MP_ERROR_TEXT("Input shape does not match the model input shape"));
                 }
