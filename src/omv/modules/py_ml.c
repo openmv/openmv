@@ -226,6 +226,9 @@ static void py_ml_model_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest) {
             case MP_QSTR_output_zero_point:
                 dest[0] = mp_obj_new_int(self->output_zero_point);
                 break;
+            case MP_QSTR_labels:
+                dest[0] = self->labels;
+                break;
             default:
                 // Continue lookup in locals_dict.
                 dest[1] = MP_OBJ_SENTINEL;
@@ -252,7 +255,7 @@ mp_obj_t py_ml_model_make_new(const mp_obj_type_t *type, size_t n_args, size_t n
     py_ml_model_obj_t *model = mp_obj_malloc_with_finaliser(py_ml_model_obj_t, &py_ml_model_type);
     model->data = NULL;
     model->fb_alloc = args[ARG_load_to_fb].u_int;
-    mp_obj_list_t *labels = NULL;
+    model->labels = mp_const_none;
 
     for (const tflm_builtin_model_t *_model = &tflm_builtin_models[0]; _model->name != NULL; _model++) {
         if (!strcmp(path, _model->name)) {
@@ -260,8 +263,13 @@ mp_obj_t py_ml_model_make_new(const mp_obj_type_t *type, size_t n_args, size_t n
             model->size = _model->size;
             model->data = (unsigned char *) _model->data;
 
+            if (_model->n_labels == 0) {
+                break;
+            }
+
             // Load model labels
-            labels = MP_OBJ_TO_PTR(mp_obj_new_list(_model->n_labels, NULL));
+            model->labels = mp_obj_new_list(_model->n_labels, NULL);
+            mp_obj_list_t *labels = MP_OBJ_TO_PTR(model->labels);
             for (int l = 0; l < _model->n_labels; l++) {
                 const char *label = _model->labels[l];
                 labels->items[l] = mp_obj_new_str(label, strlen(label));
@@ -301,11 +309,7 @@ mp_obj_t py_ml_model_make_new(const mp_obj_type_t *type, size_t n_args, size_t n
         model->output_scale = 1.0;
     }
 
-    if (labels == NULL) {
-        return MP_OBJ_FROM_PTR(model);
-    } else {
-        return mp_obj_new_tuple(2, (mp_obj_t []) {MP_OBJ_FROM_PTR(labels), MP_OBJ_FROM_PTR(model)});
-    }
+    return MP_OBJ_FROM_PTR(model);
 }
 
 static mp_obj_t py_ml_model_deinit(mp_obj_t self_in) {
