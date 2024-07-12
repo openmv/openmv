@@ -1,6 +1,6 @@
-# Set startup and system files based on MCU.
-SYSTEM    ?= mimxrt/system_$(MCU_SERIES)
-STARTUP   ?= mimxrt/startup_$(MCU_SERIES)
+# Set startup and system files for CMSIS Makefile.
+SYSTEM  ?= mimxrt/system_$(MCU_SERIES)
+STARTUP ?= mimxrt/startup_$(MCU_SERIES)
 LDSCRIPT  ?= mimxrt
 
 # Compiler Flags
@@ -511,34 +511,6 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/,\
 	)
 endif
 
-###################################################
-#Export Variables
-export Q
-export CC
-export CXX
-export AS
-export LD
-export AR
-export SIZE
-export OBJCOPY
-export OBJDUMP
-export MKDIR
-export ECHO
-export CFLAGS
-export AFLAGS
-export LDFLAGS
-export TOP_DIR
-export BUILD
-export TOOLS
-export TARGET
-export STARTUP
-export SYSTEM
-export FROZEN_MANIFEST
-export PORT
-export HAL_DIR
-export CMSIS_DIR
-export PYTHON
-export TFLITE2C
 ###################################################
 all: $(OPENMV)
 

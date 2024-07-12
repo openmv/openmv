@@ -2,7 +2,7 @@
 SYSTEM    ?= nrf/system_nrf52840
 STARTUP   ?= nrf/startup_$(shell echo $(MCU) | tr '[:upper:]' '[:lower:]')
 LDSCRIPT  ?= nrf52xxx
-SD_DIR     = $(TOP_DIR)/drivers/nrf
+export SD_DIR = $(TOP_DIR)/drivers/nrf
 
 # Compiler Flags
 CFLAGS += -std=gnu99 -Wall -Werror -Warray-bounds -mthumb -nostartfiles -fdata-sections -ffunction-sections
@@ -369,28 +369,6 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/modules/ulab/code/,\
 	)
 endif
 
-###################################################
-#Export Variables
-export Q
-export CC
-export AS
-export LD
-export AR
-export SIZE
-export OBJCOPY
-export OBJDUMP
-export MKDIR
-export ECHO
-export CFLAGS
-export LDFLAGS
-export TOP_DIR
-export BUILD
-export TARGET
-export STARTUP
-export SYSTEM
-export FROZEN_MANIFEST
-export PORT
-export SD_DIR
 ###################################################
 all: $(OPENMV)
 

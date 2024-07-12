@@ -1,6 +1,7 @@
-# Set startup and system files based on MCU.
-SYSTEM    ?= st/system_stm32fxxx
-STARTUP   ?= st/startup_$(shell echo $(MCU) | tr '[:upper:]' '[:lower:]')
+# Set startup and system files for CMSIS Makefile.
+SYSTEM  ?= st/system_stm32fxxx
+STARTUP ?= st/startup_$(shell echo $(MCU) | tr '[:upper:]' '[:lower:]')
+
 LDSCRIPT  ?= stm32fxxx
 
 # Compiler Flags
@@ -645,32 +646,6 @@ UVC_OBJ += $(wildcard $(BUILD)/$(VL53L5CX_DIR)/src/*.o)
 UVC_OBJ += $(wildcard $(BUILD)/$(PIXART_DIR)/src/*.o)
 endif
 
-###################################################
-#Export Variables
-export Q
-export CC
-export AS
-export LD
-export AR
-export SIZE
-export OBJCOPY
-export OBJDUMP
-export MKDIR
-export ECHO
-export CFLAGS
-export LDFLAGS
-export TOP_DIR
-export BUILD
-export TOOLS
-export TARGET
-export STARTUP
-export SYSTEM
-export FROZEN_MANIFEST
-export PORT
-export HAL_DIR
-export CMSIS_DIR
-export PYTHON
-export TFLITE2C
 ###################################################
 all: $(OPENMV)
 

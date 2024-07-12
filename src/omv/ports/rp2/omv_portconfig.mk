@@ -8,9 +8,7 @@
 # RP2 Makefile.
 # This just invokes make in MicroPython RP2 port with OpenMV's cmake arg.
 
-export PORT
-export TARGET
-export TOP_DIR
+export Q=
 export CC=
 export CXX=
 
