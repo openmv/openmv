@@ -50,7 +50,7 @@ def fomo_post_process(model, inputs, outputs):
     n, oh, ow, oc = model.output_shape[0]
     nms = NMS(ow, oh, inputs[0].roi)
     for i in range(oc):
-        img = image.Image(outputs[0], shape=(oh, ow, 1), strides=(i, oc), scale=(255, 0))
+        img = image.Image(outputs[0], shape=(oh, ow, 1), strides=(i, oc), scale=(0, 1))
         blobs = img.find_blobs(
             threshold_list, x_stride=1, area_threshold=1, pixels_threshold=1
         )
