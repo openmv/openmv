@@ -266,7 +266,7 @@ mp_obj_t py_ml_model_make_new(const mp_obj_type_t *type, size_t n_args, size_t n
     enum { ARG_path, ARG_load_to_fb };
     static const mp_arg_t allowed_args[] = {
         { MP_QSTR_path, MP_ARG_REQUIRED | MP_ARG_OBJ },
-        { MP_QSTR_load_to_fb, MP_ARG_REQUIRED | MP_ARG_INT },
+        { MP_QSTR_load_to_fb, MP_ARG_REQUIRED | MP_ARG_BOOL },
     };
 
     // Parse args.
