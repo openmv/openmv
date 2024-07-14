@@ -468,24 +468,20 @@ class rpc_can_slave(rpc_slave):
 
 class rpc_i2c_master(rpc_master):
     def __init__(self, slave_addr=0x12, rate=100000, i2c_bus=2):  # private
-        import pyb
         self.__addr = slave_addr
         self.__freq = rate
-        self.__i2c = pyb.I2C(i2c_bus)
+        self.__i2c = machine.I2C(i2c_bus, freq=self.__freq)
         rpc_master.__init__(self)
         self._stream_writer_queue_depth_max = 1
 
     def get_bytes(self, buff, timeout_ms):  # protected
-        import pyb
         view = memoryview(buff)
         for i in range(0, len(view), 65535):
             time.sleep_us(100)  # Give slave time to get ready.
-            self.__i2c.init(pyb.I2C.MASTER, baudrate=self.__freq, dma=True)
             try:
-                self.__i2c.recv(view[i : i + 65535], self.__addr, timeout=timeout_ms)
+                self.__i2c.readfrom_into(self.__addr, view[i : i + 65535])
             except OSError:
                 view = None
-            self.__i2c.deinit()
             if view is None:
                 break
         if view is None or self._same(view, len(view)):
@@ -493,16 +489,13 @@ class rpc_i2c_master(rpc_master):
         return view
 
     def put_bytes(self, data, timeout_ms):  # protected
-        import pyb
         view = memoryview(data)
         for i in range(0, len(view), 65535):
             time.sleep_us(100)  # Give slave time to get ready.
-            self.__i2c.init(pyb.I2C.MASTER, baudrate=self.__freq, dma=True)
             try:
-                self.__i2c.send(view[i : i + 65535], self.__addr, timeout=timeout_ms)
+                self.__i2c.writeto(self.__addr, view[i : i + 65535])
             except OSError:
                 view = None
-            self.__i2c.deinit()
             if view is None:
                 break
 
