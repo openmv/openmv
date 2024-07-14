@@ -11,7 +11,7 @@ from ml.preprocessing import Normalization
 
 class Model(uml.Model):
     def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+        super().__init__(*args, kwargs.get("load_to_fb", False))
 
     def predict(self, args, **kwargs):
         args = [Normalization()(x) if isinstance(x, image.Image) else x for x in args]
