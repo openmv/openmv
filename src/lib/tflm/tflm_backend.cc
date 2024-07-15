@@ -227,9 +227,14 @@ int ml_backend_init_model(py_ml_model_obj_t *model) {
             mp_raise_msg_varg(&mp_type_ValueError, MP_ERROR_TEXT("Unsupported input data type %d"), input->type);
         }
 
-        mp_obj_tuple_t *o = (mp_obj_tuple_t *) MP_OBJ_TO_PTR(mp_obj_new_tuple(input->dims->size, NULL));
-        for (int j=0; j<input->dims->size; j++) {
-            o->items[j] = mp_obj_new_int(input->dims->data[j]);
+        // Check input data shape.
+        int skip_batch = input->dims->size > 1;
+        if (skip_batch && input->dims->data[0] != 1) {
+            mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Batch size must be 1"));
+        }
+        mp_obj_tuple_t *o = (mp_obj_tuple_t *) MP_OBJ_TO_PTR(mp_obj_new_tuple(input->dims->size - skip_batch, NULL));
+        for (int j=skip_batch; j<input->dims->size-skip_batch; j++) {
+            o->items[j-skip_batch] = mp_obj_new_int(input->dims->data[j + skip_batch]);
         }
 
         float input_scale = input->params.scale;
@@ -253,9 +258,14 @@ int ml_backend_init_model(py_ml_model_obj_t *model) {
             mp_raise_msg_varg(&mp_type_ValueError, MP_ERROR_TEXT("Unsupported output data type %d"), output->type);
         }
 
-        mp_obj_tuple_t *o = (mp_obj_tuple_t *) MP_OBJ_TO_PTR(mp_obj_new_tuple(output->dims->size, NULL));
-        for (int j=0; j<output->dims->size; j++) {
-            o->items[j] = mp_obj_new_int(output->dims->data[j]);
+        // Check output data shape.
+        int skip_batch = output->dims->size > 1;
+        if (skip_batch && output->dims->data[0] != 1) {
+            mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Batch size must be 1"));
+        }
+        mp_obj_tuple_t *o = (mp_obj_tuple_t *) MP_OBJ_TO_PTR(mp_obj_new_tuple(output->dims->size - skip_batch, NULL));
+        for (int j=skip_batch; j<output->dims->size-skip_batch; j++) {
+            o->items[j-skip_batch] = mp_obj_new_int(output->dims->data[j + skip_batch]);
         }
 
         float output_scale = output->params.scale;
