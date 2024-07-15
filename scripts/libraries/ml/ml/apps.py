@@ -34,20 +34,20 @@ class MicroSpeech:
             self.micro_speech = Model("micro_speech")
             self.labels = self.micro_speech.labels
         # 16 samples/1ms
-        self.audio_buffer = np.zeros((1, _SAMPLES_PER_STEP * 3), dtype=np.int16)
-        self.spectrogram = np.zeros((1, _SLICE_COUNT * _SLICE_SIZE), dtype=np.int8)
+        self.audio_buffer = np.zeros((_SAMPLES_PER_STEP * 3), dtype=np.int16)
+        self.spectrogram = np.zeros((_SLICE_COUNT * _SLICE_SIZE), dtype=np.int8)
         self.pred_history = np.zeros((_AVERAGE_WINDOW_SAMPLES, _CATEGORY_COUNT), dtype=np.float)
         self.audio_started = False
         audio.init(channels=1, frequency=_AUDIO_FREQUENCY, gain_db=24, samples=_SAMPLES_PER_STEP * 2)
 
     def audio_callback(self, buf):
         # Roll the audio buffer to the left, and add the new samples.
-        self.audio_buffer = np.roll(self.audio_buffer, -(_SAMPLES_PER_STEP * 2), axis=1)
-        self.audio_buffer[0, _SAMPLES_PER_STEP:] = np.frombuffer(buf, dtype=np.int16)
+        self.audio_buffer = np.roll(self.audio_buffer, -(_SAMPLES_PER_STEP * 2))
+        self.audio_buffer[_SAMPLES_PER_STEP:] = np.frombuffer(buf, dtype=np.int16)
 
         # Roll the spectrogram to the left and add the new slice.
-        self.spectrogram = np.roll(self.spectrogram, -_SLICE_SIZE, axis=1)
-        self.spectrogram[0, -_SLICE_SIZE:] = self.preprocessor.predict([self.audio_buffer])
+        self.spectrogram = np.roll(self.spectrogram, -_SLICE_SIZE)
+        self.spectrogram[-_SLICE_SIZE:] = self.preprocessor.predict([self.audio_buffer])
 
         # Roll the prediction history and add the new prediction.
         self.pred_history = np.roll(self.pred_history, -1, axis=0)
