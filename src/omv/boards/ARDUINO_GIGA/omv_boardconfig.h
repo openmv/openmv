@@ -40,6 +40,8 @@
 
 #define OMV_HM01B0_ENABLE                   (1)
 #define OMV_HM0360_ENABLE                   (1)
+#define OMV_HM0360_XCLK_FREQ                (24000000)
+#define OMV_HM0360_PLL1_CONFIG              (0x04)
 
 // FIR sensor drivers configuration.
 #define OMV_FIR_MLX90621_ENABLE             (1)

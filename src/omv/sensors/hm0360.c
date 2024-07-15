@@ -84,7 +84,7 @@ static const uint16_t default_regs[][2] = {
 
     {0x3112,            0x00},  // PCLKO_polarity falling
 
-    {PLL1_CONFIG,       0x08},  // Core = 24MHz PCLKO = 24MHz I2C = 12MHz
+    {PLL1_CONFIG,       OMV_HM0360_PLL1_CONFIG},  // Core = 24MHz PCLKO = 24MHz I2C = 12MHz
     {PLL2_CONFIG,       0x0A},  // MIPI pre-dev (default)
     {PLL3_CONFIG,       0x77},  // PMU/MIPI pre-dev (default)
 

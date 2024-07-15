@@ -37,6 +37,9 @@
 
 #define OMV_HM01B0_ENABLE                   (1)
 #define OMV_HM0360_ENABLE                   (1)
+// This sensor uses an internal oscillator on the Arduino Portenta H7.
+#define OMV_HM0360_XCLK_FREQ                (0)
+#define OMV_HM0360_PLL1_CONFIG              (0x08)
 
 // FIR sensor drivers configuration.
 #define OMV_FIR_MLX90621_ENABLE             (1)
