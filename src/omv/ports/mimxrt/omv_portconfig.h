@@ -127,4 +127,6 @@ struct {                                                \
     lpspi_transfer_t xfer_descr;                        \
 };
 
+#define OMV_I2C_MAX_8BIT_XFER   (1024U)
+#define OMV_I2C_MAX_16BIT_XFER  (512U)
 #endif // __OMV_PORTCONFIG_H__
