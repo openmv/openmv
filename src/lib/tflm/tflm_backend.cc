@@ -286,6 +286,7 @@ int ml_backend_init_model(py_ml_model_obj_t *model) {
     }
 
     model->state = state;
+    model->memory_addr = (uint32_t) state->arena;
     return 0;
 }
 
