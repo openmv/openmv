@@ -36,7 +36,7 @@ class Normalization:
         buffer, shape, dtype = args
         # Create an image using the input tensor as buffer.
         if len(shape) != 4:
-            raise ValueError("Expected 4D input tensor (batches, height, width, channels)")
+            raise ValueError("Expected input tensor with shape: (1, H, W, C)")
         b, h, w, c = shape
         if b != 1:
             raise ValueError("Expected batches to be 1")
