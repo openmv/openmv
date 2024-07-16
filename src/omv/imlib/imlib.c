@@ -424,27 +424,20 @@ void imlib_fill_image_from_float(image_t *img, int w, int h, float *data, float 
 }
 
 // Unpacks src into dst. dst must be an array of src->w*src->h*dtype*channels bytes, where channels is
-// 1 for grayscale and 3 for RGB.
+// 1 for grayscale and 3 for RGB. Note that scale/mean/stdev are only applied to the input image if dtype is 'f'.
 void imlib_unpack(void *dst, image_t *src, const char dtype, float *scale, float *mean, float *stdev) {
     // src will be unpacked into dst in reverse order so that we can handle in-place unpacking.
     int size = (src->w * src->h) - 1; // must be int per countdown loop
-    float fscale = 1.0f, fadd = 0.0f;
 
-    if (scale[0] == 0.0f && scale[1] == 1.0f) {
-        fscale = 1.0f / 255.0f;
-    } else if (scale[0] == -1.0f && scale[1] == 1.0f) {
-        fscale = 2.0f / 255.0f;
-        fadd = -1.0f;
-    } else if (scale[0] == -128.0f && scale[1] == 127.0f) {
-        fadd = -128.0f;
-    }
-
+    int shift = (dtype == 'B') ? 0x00000000 : 0x80808080;
+    float fscale = (scale[1] - scale[0]) / 255.0f, fadd = scale[0];
     float fscale_r = fscale, fadd_r = fadd;
     float fscale_g = fscale, fadd_g = fadd;
     float fscale_b = fscale, fadd_b = fadd;
 
     // To normalize the input image we need to subtract the mean and divide by the standard deviation.
     // We can do this by applying the normalization to fscale and fadd outside the loop.
+
     // Red
     fadd_r = (fadd_r - mean[0]) / stdev[0];
     fscale_r /= stdev[0];
@@ -473,23 +466,21 @@ void imlib_unpack(void *dst, image_t *src, const char dtype, float *scale, float
             }
         } else {
             // convert u8 -> s8
+            uint8_t *output_u8 = (uint8_t *) dst;
             #if (__ARM_ARCH > 6)
-            uint32_t *input_u32 = (uint32_t *) src->data;
-            uint32_t *output_u32 = (uint32_t *) dst;
+            // Unaligned access.
             for (; size >= 3; size -= 4) {
-                output_u32[size / 4] = input_u32[size / 4] ^ 0x80808080;
+                *((uint32_t *) (output_u8 + size - 3)) = *((uint32_t *) (input_u8 + size - 3)) ^ shift;
             }
             #endif
-            uint8_t *input_u8 = (uint8_t *) src->data;
-            uint8_t *output_u8 = (uint8_t *) dst;
             for (; size >= 0; size -= 1) {
-                output_u8[size] = input_u8[size] ^ 128;
+                output_u8[size] = input_u8[size] ^ shift;
             }
         }
     } else if (src->pixfmt == PIXFORMAT_RGB565) {
         int rgb_size = size * 3; // must be int per countdown loop
+        uint16_t *input_u16 = (uint16_t *) src->data;
         if (dtype == 'f') {
-            uint16_t *input_u16 = (uint16_t *) src->data;
             float *output_f32 = (float *) dst;
             for (; size >= 0; size -= 1, rgb_size -= 3) {
                 int pixel = input_u16[size];
@@ -498,17 +489,14 @@ void imlib_unpack(void *dst, image_t *src, const char dtype, float *scale, float
                 output_f32[rgb_size + 2] = (COLOR_RGB565_TO_B8(pixel) * fscale_b) + fadd_b;
             }
         } else {
-            uint16_t *input_u16 = (uint16_t *) src->data;
             uint8_t *output_u8 = (uint8_t *) dst;
             for (; size >= 0; size -= 1, rgb_size -= 3) {
                 int pixel = input_u16[size];
-                output_u8[rgb_size + 0] = COLOR_RGB565_TO_R8(pixel) ^ 128;
-                output_u8[rgb_size + 1] = COLOR_RGB565_TO_G8(pixel) ^ 128;
-                output_u8[rgb_size + 2] = COLOR_RGB565_TO_B8(pixel) ^ 128;
+                output_u8[rgb_size + 0] = COLOR_RGB565_TO_R8(pixel) ^ shift;
+                output_u8[rgb_size + 1] = COLOR_RGB565_TO_G8(pixel) ^ shift;
+                output_u8[rgb_size + 2] = COLOR_RGB565_TO_B8(pixel) ^ shift;
             }
         }
-    } else {
-        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Expected input channels to be 1 or 3"));
     }
 }
 
