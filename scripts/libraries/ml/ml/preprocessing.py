@@ -35,8 +35,15 @@ class Normalization:
 
         buffer, shape, dtype = args
         # Create an image using the input tensor as buffer.
-        pixfmt = image.GRAYSCALE if shape[3] == 1 else image.RGB565
-        img = image.Image(shape[2], shape[1], pixfmt, buffer=buffer)
+        if len(shape) != 4:
+            raise ValueError("Expected 4D input tensor (batches, height, width, channels)")
+        b, h, w, c = shape
+        if b != 1:
+            raise ValueError("Expected batches to be 1")
+        if c != 1 and c != 3:
+            raise ValueError("Expected channels to be 1 or 3")
+        pixfmt = image.GRAYSCALE if c == 1 else image.RGB565
+        img = image.Image(w, h, pixfmt, buffer=buffer)
 
         # Copy and scale (if needed) the input image to the input buffer.
         hints = image.BILINEAR | image.CENTER | image.SCALE_ASPECT_EXPAND | image.BLACK_BACKGROUND
