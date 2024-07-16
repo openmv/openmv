@@ -21,7 +21,7 @@
 
 /* Define a new DMA buffer region. */
 #define OMV_DMA_MEMORY_NEW(X) \
-    .dma.memory##X (NOLOAD) : ALIGN(16) \
+    .dma.memory##X (NOLOAD) : ALIGN(32) \
     { \
         *(.d##X##_dma_buffer) \
         . = OMV_ALIGN_DMA_SECTION(.dma.memory##X); \
@@ -171,7 +171,7 @@ PROVIDE(__stack = __StackTop);
 #endif
 
 /* Misc DMA buffers section */
-.dma.memory0 (NOLOAD) : ALIGN(16)
+.dma.memory0 (NOLOAD) : ALIGN(32)
 {
   /* Image line buffer. */
   #if defined(OMV_LINE_BUF_SIZE)
