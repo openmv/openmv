@@ -34,7 +34,7 @@ typedef struct __attribute__((packed)) {
 }
 usbdbg_cmd_t;
 
-static uint8_t debug_ringbuf_array[512];
+static uint8_t debug_ringbuf_array[OMV_TUSBDBG_BUFFER];
 static volatile bool tinyusb_debug_mode = false;
 ringbuf_t debug_ringbuf = { debug_ringbuf_array, sizeof(debug_ringbuf_array) };
 

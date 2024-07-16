@@ -77,7 +77,7 @@ def fb_size():
 
 def read_state():
     __serial.write(struct.pack("<BBI", __USBDBG_CMD, __USBDBG_GET_STATE, 64))
-    flags, w, h, size, res0, res1, text_buf = struct.unpack("IIIIII40s", __serial.read(64))
+    flags, w, h, size, text_buf = struct.unpack("IIII48s", __serial.read(64))
 
     text = None
     if flags & __USBDBG_STATE_FLAGS_TEXT:
