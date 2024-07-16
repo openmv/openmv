@@ -56,6 +56,7 @@
 // Debugging configuration.
 #define OMV_TUSBDBG_ENABLE              (1)
 #define OMV_TUSBDBG_PACKET              (512)
+#define OMV_TUSBDBG_BUFFER              (2048)
 
 // UMM heap block size
 #define OMV_UMM_BLOCK_SIZE              256
@@ -89,7 +90,7 @@
 #define OMV_GC_BLOCK0_MEMORY            OCRM2   // Extra GC block 0.
 #define OMV_GC_BLOCK0_SIZE              (26K)
 #define OMV_GC_BLOCK1_MEMORY            DTCM    // Main GC block
-#define OMV_GC_BLOCK1_SIZE              (293K)
+#define OMV_GC_BLOCK1_SIZE              (290K)
 #define OMV_GC_BLOCK2_MEMORY            DRAM    // Extra GC block 1.
 #define OMV_GC_BLOCK2_SIZE              (8M)
 #define OMV_RAMFUNC_MEMORY              ITCM2   // RAM code memory.

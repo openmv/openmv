@@ -38,6 +38,7 @@
 // Debugging configuration.
 #define OMV_TUSBDBG_ENABLE         (1)
 #define OMV_TUSBDBG_PACKET         (64)
+#define OMV_TUSBDBG_BUFFER         (512)
 
 // UMM heap block size
 #define OMV_UMM_BLOCK_SIZE         16
