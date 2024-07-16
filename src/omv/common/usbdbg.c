@@ -226,9 +226,10 @@ void usbdbg_data_in(void *buffer, int length) {
 
             // The rest of this packet is packed with text buffer.
             if (tx_buf_len) {
-                tx_buf_len = OMV_MIN(tx_buf_len, (40 - 1));
-                usb_cdc_get_buf((uint8_t *) buffer + 24, tx_buf_len);
-                ((uint8_t *) buffer)[24 + tx_buf_len] = 0; // Null-terminate
+                const uint32_t hdr = 16;
+                tx_buf_len = OMV_MIN(tx_buf_len, (64 - hdr - 1));
+                usb_cdc_get_buf((uint8_t *) buffer + hdr, tx_buf_len);
+                ((uint8_t *) buffer)[hdr + tx_buf_len] = 0; // Null-terminate
             }
 
             cmd = USBDBG_NONE;
