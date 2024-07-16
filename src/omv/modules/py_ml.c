@@ -165,7 +165,7 @@ static mp_obj_t py_ml_dtype_char_tuple(const mp_obj_tuple_t *dtype) {
 
 static void py_ml_model_print(const mp_print_t *print, mp_obj_t self_in, mp_print_kind_t kind) {
     py_ml_model_obj_t *self = MP_OBJ_TO_PTR(self_in);
-    mp_printf(print, "{size: %d, ram: %d", self->size, self->memory_size);
+    mp_printf(print, "{ size: %d, ram: %d, addr: 0x%x", self->size, self->memory_size, self->memory_addr);
     mp_printf(print, ", input_shape: ");
     mp_obj_print_helper(print, self->input_shape, kind);
     mp_printf(print, ", input_scale: ");
@@ -182,7 +182,7 @@ static void py_ml_model_print(const mp_print_t *print, mp_obj_t self_in, mp_prin
     mp_obj_print_helper(print, self->output_zero_point, kind);
     mp_printf(print, ", output_dtype: ");
     mp_obj_print_helper(print, py_ml_dtype_char_tuple(self->output_dtype), kind);
-    mp_printf(print, "}");
+    mp_printf(print, " }");
 }
 
 static mp_obj_t py_ml_model_predict(uint n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
