@@ -18,6 +18,7 @@ on:
       - 'master'
     paths:
       - 'src/**'
+      - 'scripts/libraries/**'
       - '.github/workflows/*.yml'
       - '.github/workflows/*.json'
       - '!**/README.md'
