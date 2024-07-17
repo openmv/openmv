@@ -112,7 +112,7 @@
 // Enable find_features() and built-in Haar cascades. (75KBs)
 #define IMLIB_ENABLE_FEATURES
 #define IMLIB_ENABLE_FEATURES_BUILTIN_FACE_CASCADE
-#define IMLIB_ENABLE_FEATURES_BUILTIN_EYES_CASCADE
+//#define IMLIB_ENABLE_FEATURES_BUILTIN_EYES_CASCADE
 
 // Enable Tensor Flow
 #if !defined(CUBEAI)

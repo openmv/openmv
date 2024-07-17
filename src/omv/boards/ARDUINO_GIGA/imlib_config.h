@@ -33,7 +33,7 @@
 #define IMLIB_ENABLE_MATH_OPS
 
 // Enable flood_fill()
-#define IMLIB_ENABLE_FLOOD_FILL
+// #define IMLIB_ENABLE_FLOOD_FILL
 
 // Enable mean()
 #define IMLIB_ENABLE_MEAN
@@ -42,10 +42,10 @@
 #define IMLIB_ENABLE_MEDIAN
 
 // Enable mode()
-#define IMLIB_ENABLE_MODE
+// #define IMLIB_ENABLE_MODE
 
 // Enable midpoint()
-#define IMLIB_ENABLE_MIDPOINT
+// #define IMLIB_ENABLE_MIDPOINT
 
 // Enable morph()
 #define IMLIB_ENABLE_MORPH
