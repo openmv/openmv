@@ -333,7 +333,7 @@ class rpc_slave(rpc):
                     self._get_packet(
                         self._RESULT_DATA_PACKET_MAGIC,
                         self.__in_response_data_buf,
-                        self._get_short_timeout,
+                        self._get_long_timeout,
                     )
                     is not None
                 ):
