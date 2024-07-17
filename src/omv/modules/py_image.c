@@ -725,22 +725,19 @@ static mp_obj_t py_image_bytearray(mp_obj_t img_obj) {
 }
 static MP_DEFINE_CONST_FUN_OBJ_1(py_image_bytearray_obj, py_image_bytearray);
 
-static mp_obj_t py_image_unpack(uint n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
-    enum { ARG_buffer, ARG_dtype, ARG_scale, ARG_mean, ARG_stdev };
+#if defined(MODULE_ULAB_ENABLED) && (ULAB_MAX_DIMS == 4)
+static mp_obj_t py_image_to_ndarray(uint n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
+    enum { ARG_dtype, ARG_buffer };
     static const mp_arg_t allowed_args[] = {
-        { MP_QSTR_buffer, MP_ARG_OBJ | MP_ARG_REQUIRED, {.u_rom_obj = MP_ROM_NONE} },
         { MP_QSTR_dtype, MP_ARG_OBJ | MP_ARG_REQUIRED, {.u_rom_obj = MP_ROM_NONE } },
-        { MP_QSTR_scale, MP_ARG_OBJ | MP_ARG_KW_ONLY, {.u_rom_obj = MP_ROM_NONE } },
-        { MP_QSTR_mean, MP_ARG_OBJ | MP_ARG_KW_ONLY, {.u_rom_obj = MP_ROM_NONE } },
-        { MP_QSTR_stdev, MP_ARG_OBJ | MP_ARG_KW_ONLY, {.u_rom_obj = MP_ROM_NONE } },
+        { MP_QSTR_buffer, MP_ARG_OBJ | MP_ARG_KW_ONLY, {.u_rom_obj = MP_ROM_NONE} },
     };
 
     image_t *image = py_helper_arg_to_image(pos_args[0], ARG_IMAGE_ANY);
     mp_arg_val_t args[MP_ARRAY_SIZE(allowed_args)];
     mp_arg_parse_all(n_args - 1, pos_args + 1, kw_args, MP_ARRAY_SIZE(allowed_args), allowed_args, args);
 
-    mp_buffer_info_t bufinfo = {0};
-    mp_get_buffer_raise(args[ARG_buffer].u_obj, &bufinfo, MP_BUFFER_WRITE);
+    int len = image->w * image->h;
 
     int dtype_code;
     int dtype_size;
@@ -753,7 +750,6 @@ static mp_obj_t py_image_unpack(uint n_args, const mp_obj_t *pos_args, mp_map_t 
     }
 
     switch (dtype_code) {
-        case 'c':
         case 'b':
         case 'B': {
             dtype_size = 1;
@@ -769,14 +765,24 @@ static mp_obj_t py_image_unpack(uint n_args, const mp_obj_t *pos_args, mp_map_t 
         }
     }
 
+    size_t shape[ULAB_MAX_DIMS];
+    size_t strides[ULAB_MAX_DIMS];
     int channels;
+    int ndim;
+
     switch (image->pixfmt) {
         case PIXFORMAT_GRAYSCALE: {
+            memcpy(shape, (size_t []) {0, 0, image->h, image->w}, sizeof(shape));
+            memcpy(strides, (size_t []) {0, 0, image->w * dtype_size, dtype_size}, sizeof(strides));
             channels = 1;
+            ndim = 2;
             break;
         }
         case PIXFORMAT_RGB565: {
+            memcpy(shape, (size_t []) {0, image->h, image->w, 3}, sizeof(shape));
+            memcpy(strides, (size_t []) {0, image->w * dtype_size * 3, dtype_size * 3, dtype_size}, sizeof(strides));
             channels = 3;
+            ndim = 3;
             break;
         }
         default: {
@@ -785,24 +791,78 @@ static mp_obj_t py_image_unpack(uint n_args, const mp_obj_t *pos_args, mp_map_t 
         }
     }
 
-    if ((image->w * image->h * dtype_size * channels) > bufinfo.len) {
-        mp_raise_ValueError(MP_ERROR_TEXT("Buffer size is too small"));
+    ndarray_obj_t *ndarray;
+
+    if (args[ARG_buffer].u_obj != mp_const_none) {
+        mp_buffer_info_t bufinfo = {0};
+        mp_get_buffer_raise(args[ARG_buffer].u_obj, &bufinfo, MP_BUFFER_WRITE);
+
+        if ((len * dtype_size * channels) > bufinfo.len) {
+            mp_raise_ValueError(MP_ERROR_TEXT("Buffer is too small"));
+        }
+
+        ndarray = m_new_obj(ndarray_obj_t);
+        ndarray->base.type = &ulab_ndarray_type;
+        ndarray->dtype = dtype_code;
+        ndarray->boolean = NDARRAY_NUMERIC;
+        ndarray->ndim = ndim;
+        ndarray->len = len * channels;
+        ndarray->itemsize = dtype_size;
+        memcpy(ndarray->shape, shape, sizeof(shape));
+        memcpy(ndarray->strides, strides, sizeof(strides));
+        ndarray->array = bufinfo.buf;
+        ndarray->origin = bufinfo.buf;
+    } else {
+        ndarray = ndarray_new_dense_ndarray(ndim, shape, dtype_code);
     }
 
-    // scale, offset
-    float scale[2] = {0.0f, 1.0f};
-    py_helper_arg_to_float_array(args[ARG_scale].u_obj, scale, 2);
+    int shift = (dtype_code == 'b') ? 0x80808080 : 0x00000000;
 
-    float mean[3] = {0.0f, 0.0f, 0.0f};
-    py_helper_arg_to_float_array(args[ARG_mean].u_obj, mean, 3);
+    if (image->pixfmt == PIXFORMAT_GRAYSCALE) {
+        uint8_t *input_u8 = (uint8_t *) image->data;
+        if (dtype_code == 'f') {
+            float *output_f32 = (float *) ndarray->array;
+            for (int i = 0; i < len; i++) {
+                output_f32[i] = input_u8[i];
+            }
+        } else {
+            uint8_t *output_u8 = (uint8_t *) ndarray->array;
 
-    float stdev[3] = {1.0f, 1.0f, 1.0f};
-    py_helper_arg_to_float_array(args[ARG_stdev].u_obj, stdev, 3);
+            int i = 0;
 
-    imlib_unpack(bufinfo.buf, image, dtype_code, scale, mean, stdev);
-    return pos_args[0];
+            for (; i < len; i += 4) {
+                *((uint32_t *) (output_u8 + i)) = *((uint32_t *) (input_u8 + i)) ^ shift;
+            }
+
+            for (; i < len; i++) {
+                output_u8[i] = input_u8[i] ^ shift;
+            }
+        }
+    } else {
+        uint16_t *input_u16 = (uint16_t *) image->data;
+        if (dtype_code == 'f') {
+            float *output_f32 = (float *) ndarray->array;
+            for (int i = 0, j = 0; i < len; i++, j += 3) {
+                int pixel = input_u16[i];
+                output_f32[j + 0] = COLOR_RGB565_TO_R8(pixel);
+                output_f32[j + 1] = COLOR_RGB565_TO_G8(pixel);
+                output_f32[j + 2] = COLOR_RGB565_TO_B8(pixel);
+            }
+        } else {
+            uint8_t *output_u8 = (uint8_t *) ndarray->array;
+            for (int i = 0, j = 0; i < len; i++, j += 3) {
+                int pixel = input_u16[i];
+                output_u8[j + 0] = COLOR_RGB565_TO_R8(pixel) ^ shift;
+                output_u8[j + 1] = COLOR_RGB565_TO_G8(pixel) ^ shift;
+                output_u8[j + 2] = COLOR_RGB565_TO_B8(pixel) ^ shift;
+            }
+        }
+    }
+
+    return MP_OBJ_FROM_PTR(ndarray);
 }
-static MP_DEFINE_CONST_FUN_OBJ_KW(py_image_unpack_obj, 1, py_image_unpack);
+static MP_DEFINE_CONST_FUN_OBJ_KW(py_image_to_ndarray_obj, 1, py_image_to_ndarray);
+#endif
 
 static mp_obj_t py_image_get_pixel(uint n_args, const mp_obj_t *args, mp_map_t *kw_args) {
     image_t *arg_img = py_helper_arg_to_image(args[0], ARG_IMAGE_UNCOMPRESSED);
@@ -6469,7 +6529,9 @@ static const mp_rom_map_elem_t locals_dict_table[] = {
     {MP_ROM_QSTR(MP_QSTR_format),              MP_ROM_PTR(&py_image_format_obj)},
     {MP_ROM_QSTR(MP_QSTR_size),                MP_ROM_PTR(&py_image_size_obj)},
     {MP_ROM_QSTR(MP_QSTR_bytearray),           MP_ROM_PTR(&py_image_bytearray_obj)},
-    {MP_ROM_QSTR(MP_QSTR_unpack),              MP_ROM_PTR(&py_image_unpack_obj)},
+    #if defined(MODULE_ULAB_ENABLED) && (ULAB_MAX_DIMS == 4)
+    {MP_ROM_QSTR(MP_QSTR_to_ndarray),          MP_ROM_PTR(&py_image_to_ndarray_obj)},
+    #endif
     {MP_ROM_QSTR(MP_QSTR_get_pixel),           MP_ROM_PTR(&py_image_get_pixel_obj)},
     {MP_ROM_QSTR(MP_QSTR_set_pixel),           MP_ROM_PTR(&py_image_set_pixel_obj)},
     {MP_ROM_QSTR(MP_QSTR_to_bitmap),           MP_ROM_PTR(&py_image_to_bitmap_obj)},
