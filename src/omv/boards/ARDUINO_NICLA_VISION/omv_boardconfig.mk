@@ -15,7 +15,9 @@ DFU_DEVICE=0x2341:0x035b
 OMV_BOARD_EXTRA_CFLAGS = -DCORE_CM7 \
                          -DUSE_USB_HS \
                          -DCYW43_FIRMWARE_ADDRESS=0x90F00000 \
-                         -DCYW43_CHIPSET_FIRMWARE_INCLUDE_FILE="\"$(TOP_DIR)/$(CYW4343_FW_DIR)/cyw4343_7_45_98_102.h\""
+                         -DCYW43_CHIPSET_FIRMWARE_INCLUDE_FILE="\"$(TOP_DIR)/$(CYW4343_FW_DIR)/cyw4343_7_45_98_102.h\"" \
+                         -DCYW43_BT_FIRMWARE_ADDRESS=0x90FC0000 \
+                         -DCYW43_BT_FIRMWARE_INCLUDE_FILE="\"$(TOP_DIR)/$(CYW4343_FW_DIR)/cyw4343_btfw.h\""
 OMV_ENABLE_BL = 0
 OMV_ENABLE_UVC = 1
 OMV_ENABLE_CM4 = 0
