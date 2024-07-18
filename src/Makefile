@@ -64,6 +64,7 @@ PIXART_DIR=drivers/pixart
 DISPLAY_DIR=drivers/display
 LIBPDM_DIR=lib/libpdm
 TENSORFLOW_DIR=lib/tflm
+CYW4343_FW_DIR=drivers/cyw4343/firmware/
 OMV_BOARD_CONFIG_DIR=$(TOP_DIR)/$(OMV_DIR)/boards/$(TARGET)/
 OMV_PORT_DIR=$(TOP_DIR)/$(OMV_DIR)/ports/$(PORT)
 MP_BOARD_CONFIG_DIR=$(TOP_DIR)/$(MICROPY_DIR)/ports/$(PORT)/boards/$(TARGET)/
