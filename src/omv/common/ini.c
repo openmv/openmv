@@ -1,13 +1,13 @@
-/*
- * This file is part of the OpenMV project.
- *
- * Copyright (c) 2013-2021 Ibrahim Abdelkader <iabdalkader@openmv.io>
- * Copyright (c) 2013-2021 Kwabena W. Agyeman <kwagyeman@openmv.io>
- *
- * This work is licensed under the MIT license, see the file LICENSE for details.
- *
- * Initialization file parser.
- */
+// Read an INI file into easy-to-access name/value pairs.
+
+// SPDX-License-Identifier: BSD-3-Clause
+
+// Copyright (C) 2009-2020, Ben Hoyt
+
+// inih and INIReader are released under the New BSD license (see LICENSE.txt).
+// Go to the project home page for more info:
+//
+// https://github.com/benhoyt/inih
 #include <stddef.h>
 #include <stdbool.h>
 #include <string.h>

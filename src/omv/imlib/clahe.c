@@ -1,17 +1,4 @@
 /*
- * This file is part of the OpenMV project.
- *
- * Copyright (c) 2013-2021 Ibrahim Abdelkader <iabdalkader@openmv.io>
- * Copyright (c) 2013-2021 Kwabena W. Agyeman <kwagyeman@openmv.io>
- *
- * This work is licensed under the MIT license, see the file LICENSE for details.
- *
- * Contrast Limited Adaptive Histogram Equalization.
- */
-#include "imlib.h"
-#define BYTE_IMAGE
-
-/*
  * ANSI C code from the article
  * "Contrast Limited Adaptive Histogram Equalization"
  * by Karel Zuiderveld, karel@cv.ruu.nl
@@ -36,6 +23,8 @@
  *  Author: Karel Zuiderveld, Computer Vision Research Group,
  *           Utrecht, The Netherlands (karel@cv.ruu.nl)
  */
+#include "imlib.h"
+#define BYTE_IMAGE
 
 #ifdef BYTE_IMAGE
 typedef unsigned char kz_pixel_t;        /* for 8 bit-per-pixel images */
