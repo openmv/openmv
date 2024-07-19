@@ -43,7 +43,7 @@ while True:
     # This combines the labels and confidence values into a list of tuples
     # and then sorts that list by the confidence values.
     sorted_list = sorted(
-        zip(labels, model.predict([img])[0]), key=lambda x: x[1], reverse=True
+        zip(labels, model.predict([img])[0].flatten().tolist()), key=lambda x: x[1], reverse=True
     )
     for i in range(5):
         print("%s = %f" % (sorted_list[i][0], sorted_list[i][1]))

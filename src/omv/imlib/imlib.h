@@ -1161,7 +1161,6 @@ void imlib_deinit_all();
 // Generic Helper Functions
 void imlib_fill_image_from_float(image_t *img, int w, int h, float *data, float min, float max,
                                  bool mirror, bool flip, bool dst_transpose, bool src_transpose);
-void imlib_unpack(void *dst, image_t *src, const char dtype, float *scale, float *mean, float *stdev);
 
 // Bayer Image Processing
 pixformat_t imlib_bayer_shift(pixformat_t pixfmt, int x, int y, bool transpose);

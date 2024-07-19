@@ -121,33 +121,45 @@ static mp_obj_t py_ml_process_output(py_ml_model_obj_t *model) {
     for (size_t i = 0; i < model->outputs_size; i++) {
         void *model_output = ml_backend_get_output(model, i);
         size_t size = py_ml_tuple_sum(MP_OBJ_TO_PTR(model->output_shape->items[i]));
-        mp_obj_tuple_t *output = MP_OBJ_TO_PTR(mp_obj_new_tuple(size, NULL));
+        mp_obj_tuple_t *output_shape = MP_OBJ_TO_PTR(model->output_shape->items[i]);
         float output_scale = mp_obj_get_float(model->output_scale->items[i]);
         int output_zero_point = mp_obj_get_int(model->output_zero_point->items[i]);
         int output_dtype = mp_obj_get_int(model->output_dtype->items[i]);
 
+        size_t shape[ULAB_MAX_DIMS] = {};
+
+        if (ULAB_MAX_DIMS < output_shape->len) {
+            mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Output shape has too many dimensions"));
+        }
+
+        for (size_t j = 0; j < output_shape->len; j++) {
+            size_t ulab_offset = ULAB_MAX_DIMS - output_shape->len;
+            shape[ulab_offset + j] = mp_obj_get_int(output_shape->items[j]);
+        }
+
+        ndarray_obj_t *ndarray = ndarray_new_dense_ndarray(output_shape->len, shape, NDARRAY_FLOAT);
+
         if (output_dtype == 'f') {
-            for (size_t j = 0; j < size; j++) {
-                output->items[j] = mp_obj_new_float(((float *) model_output)[j]);
-            }
+            memcpy(ndarray->array, model_output, size * sizeof(float));
         } else if (output_dtype == 'b') {
             for (size_t j = 0; j < size; j++) {
                 float v = (((int8_t *) model_output)[j] - output_zero_point);
-                output->items[j] = mp_obj_new_float(v * output_scale);
+                ((float *) ndarray->array)[j] = v * output_scale;
             }
         } else if (output_dtype == 'B') {
             for (size_t j = 0; j < size; j++) {
                 float v = (((uint8_t *) model_output)[j] - output_zero_point);
-                output->items[j] = mp_obj_new_float(v * output_scale);
+                ((float *) ndarray->array)[j] = v * output_scale;
             }
         } else {
             for (size_t j = 0; j < size; j++) {
                 float v = (((int8_t *) model_output)[j] - output_zero_point);
-                output->items[j] = mp_obj_new_float(v * output_scale);
+                ((float *) ndarray->array)[j] = v * output_scale;
             }
         }
-        output_list->items[i] = MP_OBJ_FROM_PTR(output);
+        output_list->items[i] = MP_OBJ_FROM_PTR(ndarray);
     }
+
     return MP_OBJ_FROM_PTR(output_list);
 }
 

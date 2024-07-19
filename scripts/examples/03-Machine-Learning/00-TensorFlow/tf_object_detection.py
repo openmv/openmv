@@ -23,6 +23,7 @@ threshold_list = [(math.ceil(min_confidence * 255), 255)]
 
 # Load built-in FOMO face detection model
 model = ml.Model("fomo_face_detection")
+print(model)
 
 # Alternatively, models can be loaded from the filesystem storage.
 # model = ml.Model('<object_detection_modelwork>.tflite', load_to_fb=True)
@@ -50,7 +51,7 @@ def fomo_post_process(model, inputs, outputs):
     n, oh, ow, oc = model.output_shape[0]
     nms = NMS(ow, oh, inputs[0].roi)
     for i in range(oc):
-        img = image.Image(outputs[0], shape=(oh, ow, 1), strides=(i, oc), scale=(0, 1))
+        img = image.Image(outputs[0][0, :, :, i] * 255)
         blobs = img.find_blobs(
             threshold_list, x_stride=1, area_threshold=1, pixels_threshold=1
         )
@@ -81,6 +82,6 @@ while True:
             center_x = math.floor(x + (w / 2))
             center_y = math.floor(y + (h / 2))
             print(f"x {center_x}\ty {center_y}\tscore {score}")
-            img.draw_circle((center_x, center_y, 12), color=colors[i], thickness=2)
+            img.draw_circle((center_x, center_y, 12), color=colors[i])
 
     print(clock.fps(), "fps", end="\n")
