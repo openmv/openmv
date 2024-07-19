@@ -22,7 +22,7 @@
  *------------------------------------------------------------------------*/
 #include <limits.h>
 #include "imlib.h"
-#ifdef IMLIB_ENABLE_BARCODES
+#if defined(IMLIB_ENABLE_BARCODES) && (!defined(OMV_NO_GPL))
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-variable"
 #pragma GCC diagnostic ignored "-Wunused-but-set-variable"
