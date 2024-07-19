@@ -111,12 +111,12 @@
 // Linker script constants (see the linker script template stm32fxxx.ld.S).
 // Note: fb_alloc is a stack-based, dynamically allocated memory on FB.
 // The maximum available fb_alloc memory = FB_ALLOC_SIZE + FB_SIZE - (w*h*bpp).
-#define OMV_MAIN_MEMORY                     SRAM1   // Data/BSS memory
+#define OMV_MAIN_MEMORY                     DTCM    // Data/BSS memory
 #define OMV_STACK_MEMORY                    DTCM    // stack memory
-#define OMV_STACK_SIZE                      (64K)
+#define OMV_STACK_SIZE                      (32K)
 #define OMV_FB_MEMORY                       DRAM    // Framebuffer, fb_alloc
 #define OMV_FB_SIZE                         (3M)    // FB memory: header + VGA/GS image
-#define OMV_FB_ALLOC_SIZE                   (2M)    // minimum fb alloc size
+#define OMV_FB_ALLOC_SIZE                   (1M)    // minimum fb alloc size
 #define OMV_FB_OVERLAY_MEMORY               AXI_SRAM    // Fast fb_alloc memory.
 #define OMV_FB_OVERLAY_SIZE                 (480K)  // Fast fb_alloc memory size.
 #define OMV_JPEG_MEMORY                     DRAM    // JPEG buffer memory buffer.
@@ -127,10 +127,14 @@
 #define OMV_DMA_MEMORY_D1                   AXI_SRAM // Domain 1 DMA buffers.
 #define OMV_DMA_MEMORY_D2                   SRAM3   // Domain 2 DMA buffers.
 #define OMV_DMA_MEMORY_D3                   SRAM4   // Domain 3 DMA buffers.
+#define OMV_OPENAMP_MEMORY                  SRAM1
+#define OMV_OPENAMP_SIZE                    (64K)
+#define OMV_CORE1_MEMORY                    DRAM
+#define OMV_CORE1_SIZE                      (512K)
 #define OMV_GC_BLOCK0_MEMORY                SRAM1   // Main GC block.
-#define OMV_GC_BLOCK0_SIZE                  (160K)
-#define OMV_GC_BLOCK1_MEMORY                DRAM    // Extra GC block 0.
-#define OMV_GC_BLOCK1_SIZE                  (2M)
+#define OMV_GC_BLOCK0_SIZE                  (192K)
+#define OMV_GC_BLOCK1_MEMORY                DRAM    // Extra GC block 1.
+#define OMV_GC_BLOCK1_SIZE                  (2560K)
 #define OMV_MSC_BUF_SIZE                    (2K)    // USB MSC bot data
 #define OMV_VFS_BUF_SIZE                    (1K)    // VFS struct + FATFS file buffer (624 bytes)
 #define OMV_SDRAM_SIZE                      (8 * 1024 * 1024)    // This needs to be here for UVC firmware.
@@ -142,7 +146,7 @@
 #define OMV_DTCM_ORIGIN                     0x20000000    // Note accessible by CPU and MDMA only.
 #define OMV_DTCM_LENGTH                     128K
 #define OMV_SRAM1_ORIGIN                    0x30000000
-#define OMV_SRAM1_LENGTH                    256K    // SRAM1 + SRAM2
+#define OMV_SRAM1_LENGTH                    256K          // SRAM1 + SRAM2
 #define OMV_SRAM3_ORIGIN                    0x30040000    // Second half of SRAM3 reserved for M4.
 #define OMV_SRAM3_LENGTH                    16K
 #define OMV_SRAM4_ORIGIN                    0x38000000
