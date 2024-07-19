@@ -81,6 +81,11 @@ static void jpeg_compress_get_data(JPEG_HandleTypeDef *hjpeg, uint32_t NbDecoded
 }
 
 static void jpeg_compress_data_ready(JPEG_HandleTypeDef *hjpeg, uint8_t *pDataOut, uint32_t OutDataLength) {
+    if ((!(((uint32_t) pDataOut) % __SCB_DCACHE_LINE_SIZE)) && (OutDataLength == JPEG_OUTPUT_CHUNK_SIZE)) {
+        // Ensure any cached reads are dropped.
+        SCB_InvalidateDCache_by_Addr((uint32_t *) pDataOut, JPEG_OUTPUT_CHUNK_SIZE);
+    }
+
     // We have received this much data.
     JPEG_state.out_data_len += OutDataLength;
 
@@ -96,7 +101,7 @@ static void jpeg_compress_data_ready(JPEG_HandleTypeDef *hjpeg, uint8_t *pDataOu
         // image in randomly aligned chunks. We only want to invalidate the cache of the output
         // buffer for the initial DMA chunks. So, this code below will do that and then only
         // invalidate aligned regions when the processor is moving the final parts of the image.
-        if (!(((uint32_t) new_pDataOut) % __SCB_DCACHE_LINE_SIZE)) {
+        if ((!(((uint32_t) new_pDataOut) % __SCB_DCACHE_LINE_SIZE)) && (OutDataLength == JPEG_OUTPUT_CHUNK_SIZE)) {
             SCB_InvalidateDCache_by_Addr((uint32_t *) new_pDataOut, JPEG_OUTPUT_CHUNK_SIZE);
         }
 
@@ -506,7 +511,7 @@ void jpeg_decompress(image_t *dst, image_t *src) {
             HAL_DMA2D_Init(&DMA2D_Handle);
             HAL_DMA2D_ConfigLayer(&DMA2D_Handle, 1);
 
-            // Invalidate the dst image for DMA2D.
+            // Ensure any cached writes are dropped.
             SCB_InvalidateDCache_by_Addr((uint32_t *) dst->data, image_size(dst));
         }
     } else if (JPEG_state.jpeg_descr.Conf.ColorSpace == JPEG_CMYK_COLORSPACE) {
@@ -564,6 +569,9 @@ void jpeg_decompress(image_t *dst, image_t *src) {
                                         next_mcu_row_buffer_ptr, IM_MIN(dst_w_mcus_bytes, JPEG_MAX_MDMA_BLOCK_SIZE));
             HAL_JPEG_Resume(&JPEG_state.jpeg_descr, JPEG_PAUSE_RESUME_OUTPUT);
         }
+
+        // Ensure any cached reads are dropped.
+        SCB_InvalidateDCache_by_Addr((uint32_t *) this_mcu_row_buffer_ptr, dst_w_mcus_bytes);
 
         if (JPEG_state.jpeg_descr.Conf.ColorSpace == JPEG_GRAYSCALE_COLORSPACE) {
             for (int x_offset = 0; x_offset < src->w; x_offset += JPEG_MCU_W) {
@@ -709,9 +717,21 @@ void jpeg_decompress(image_t *dst, image_t *src) {
                 }
                 case PIXFORMAT_RGB565: {
                     uint16_t *rp = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(dst, y_offset);
-                    SCB_InvalidateDCache_by_Addr((uint32_t *) rp, dst->w * dy * sizeof(uint16_t));
                     HAL_DMA2D_Start(&DMA2D_Handle, (uint32_t) this_mcu_row_buffer_ptr, (uint32_t) rp, dst->w, dy);
+
+                    // Invalidate any cached reads for the previous line that was just written.
+                    if ((y_offset - mcu_h) >= 0) {
+                        uint16_t *previous_rp = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(dst, (y_offset - mcu_h));
+                        SCB_InvalidateDCache_by_Addr((uint32_t *) previous_rp, dst->w * mcu_h * sizeof(uint16_t));
+                    }
+
                     HAL_DMA2D_PollForTransfer(&DMA2D_Handle, JPEG_CODEC_TIMEOUT);
+
+                    // For the last row invalidate any cached reads for the line that was just written.
+                    if ((y_offset + mcu_h) >= src->h) {
+                        SCB_InvalidateDCache_by_Addr((uint32_t *) rp, dst->w * mcu_h * sizeof(uint16_t));
+                    }
+
                     break;
                 }
             }
