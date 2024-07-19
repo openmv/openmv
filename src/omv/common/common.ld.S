@@ -123,22 +123,23 @@ PROVIDE(__stack = __StackTop);
 
 /* Open-AMP Shared Memory Region */
 #if defined(OMV_OPENAMP_MEMORY)
-.openamp_memory (NOLOAD) : ALIGN(4)
+.openamp_memory (NOLOAD) : ALIGN(32)
 {
   _openamp_shm_region_start = .;
   . = . + OMV_OPENAMP_SIZE;
   _openamp_shm_region_end = .;
+  . = OMV_ALIGN_DMA_SECTION(.openamp_memory);
 } >OMV_OPENAMP_MEMORY
 #endif
 
 /* Memory for the second core */
 #if defined(OMV_CORE1_MEMORY)
-.core1_memory (NOLOAD) : ALIGN(4)
+.core1_memory (NOLOAD) : ALIGN(32)
 {
   _core1_memory_start = .;
   . = . + OMV_CORE1_SIZE;
   _core1_memory_end = .;
-  _core1_memory_end = .;
+  . = OMV_ALIGN_DMA_SECTION(.core1_memory);
 } >OMV_CORE1_MEMORY
 #endif
 
