@@ -17,7 +17,7 @@
  */
 #define FIRMWARE_VERSION_MAJOR    (4)
 #define FIRMWARE_VERSION_MINOR    (5)
-#define FIRMWARE_VERSION_PATCH    (6)
+#define FIRMWARE_VERSION_PATCH    (7)
 
 /**
  * To add a new debugging command, increment the last command value used.
