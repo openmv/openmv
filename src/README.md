@@ -42,10 +42,10 @@ sudo apt-get install git build-essential
 ### Install GNU ARM toolchain
 This step can be skipped if your distro package manager provides an ARM toolchain, however this is the gcc toolchain currently in use by the developers. Note the following commands install the toolchain to `/usr/local/arm-none-eabi` and then add it to the PATH variable, for the current terminal session. The toolchain will need to be added to the PATH again if a new terminal session is started. Note the toolchain can be installed in any other location as long as it's added to the PATH.
 ```
-TOOLCHAIN_PATH=/usr/local/arm-none-eabi
-TOOLCHAIN_URL="https://armkeil.blob.core.windows.net/developer/Files/downloads/gnu-rm/10-2020q4/gcc-arm-none-eabi-10-2020-q4-major-x86_64-linux.tar.bz2"
+TOOLCHAIN_PATH=${HOME}/cache/gcc
+TOOLCHAIN_URL="https://developer.arm.com/-/media/Files/downloads/gnu/13.2.rel1/binrel/arm-gnu-toolchain-13.2.rel1-x86_64-arm-none-eabi.tar.xz"
 sudo mkdir ${TOOLCHAIN_PATH}
-wget --no-check-certificate -O - ${TOOLCHAIN_URL} | sudo tar --strip-components=1 -jx -C ${TOOLCHAIN_PATH}
+wget --no-check-certificate -O - ${TOOLCHAIN_URL} | tar --strip-components=1 -Jx -C ${TOOLCHAIN_PATH}
 export PATH=${TOOLCHAIN_PATH}/bin:${PATH}
 ```
 
