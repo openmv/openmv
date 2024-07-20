@@ -1,24 +1,4 @@
-/*
- * This file is part of the OpenMV project.
- *
- * Copyright (c) 2013-2021 Ibrahim Abdelkader <iabdalkader@openmv.io>
- * Copyright (c) 2013-2021 Kwabena W. Agyeman <kwagyeman@openmv.io>
- *
- * This work is licensed under the MIT license, see the file LICENSE for details.
- *
- * AprilTags library.
- */
-#include <float.h>
-#include <stdarg.h>
-#include <stdio.h>
-#include "imlib.h"
-
 // *INDENT-OFF*
-// Enable new code optimizations
-#define OPTIMIZED
-
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wunused-variable"
 
 /* Copyright (C) 2013-2016, The Regents of The University of Michigan.
 All rights reserved.
@@ -51,6 +31,17 @@ The views and conclusions contained in the software and documentation are those
 of the authors and should not be interpreted as representing official policies,
 either expressed or implied, of the Regents of The University of Michigan.
 */
+#include <float.h>
+#include <stdarg.h>
+#include <stdio.h>
+#include "imlib.h"
+
+// Enable new code optimizations
+#define OPTIMIZED
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-variable"
+
 #define fprintf(format, ...)
 #define free(ptr) ({ umm_free(ptr); })
 #define malloc(size) ({ void *_r = umm_malloc(size); if(!_r) umm_alloc_fail(); _r; })

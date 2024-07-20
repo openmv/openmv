@@ -30,7 +30,7 @@
 #include <limits.h>
 #include "imlib.h"
 
-#ifdef IMLIB_ENABLE_FIND_LINE_SEGMENTS
+#if defined(IMLIB_ENABLE_FIND_LINE_SEGMENTS) && (!defined(OMV_NO_GPL))
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-function"
 #pragma GCC diagnostic ignored "-Wunused-variable"
