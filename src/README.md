@@ -39,7 +39,7 @@ sudo apt-get update
 sudo apt-get install git build-essential
 ```
 
-### Install GNU ARM toolchain
+### Install GNU ARM toolchain 13.2
 This step can be skipped if your distro package manager provides an ARM toolchain, however this is the gcc toolchain currently in use by the developers. Note the following commands install the toolchain to `/usr/local/arm-none-eabi` and then add it to the PATH variable, for the current terminal session. The toolchain will need to be added to the PATH again if a new terminal session is started. Note the toolchain can be installed in any other location as long as it's added to the PATH.
 ```
 TOOLCHAIN_PATH=${HOME}/cache/gcc
