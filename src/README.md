@@ -45,7 +45,7 @@ This step can be skipped if your distro package manager provides an ARM toolchai
 TOOLCHAIN_PATH=${HOME}/cache/gcc
 TOOLCHAIN_URL="https://developer.arm.com/-/media/Files/downloads/gnu/13.2.rel1/binrel/arm-gnu-toolchain-13.2.rel1-x86_64-arm-none-eabi.tar.xz"
 sudo mkdir ${TOOLCHAIN_PATH}
-wget --no-check-certificate -O - ${TOOLCHAIN_URL} | tar --strip-components=1 -Jx -C ${TOOLCHAIN_PATH}
+wget --no-check-certificate -O - ${TOOLCHAIN_URL} | sudo tar --strip-components=1 -Jx -C ${TOOLCHAIN_PATH}
 export PATH=${TOOLCHAIN_PATH}/bin:${PATH}
 ```
 
