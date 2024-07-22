@@ -28,6 +28,7 @@ SRCS += $(addprefix common/,    \
 	file_utils.c                \
 	mp_utils.c                  \
 	sensor_utils.c              \
+	nosys_stubs.c               \
    )
 
 SRCS += $(addprefix sensors/,   \

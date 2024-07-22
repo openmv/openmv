@@ -195,7 +195,7 @@ PROVIDE(__stack = __StackTop);
   . = . + OMV_VFS_BUF_SIZE;
   #endif
 
-  #if !defined(OMV_JPEG_MEMORY)
+  #if defined(OMV_JPEG_SIZE) && !defined(OMV_JPEG_MEMORY)
   . = ALIGN(16);
   _jpeg_buf = .;      // IDE JPEG buffer
   . = . + OMV_JPEG_SIZE;
