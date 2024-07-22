@@ -468,24 +468,20 @@ class rpc_can_slave(rpc_slave):
 
 class rpc_i2c_master(rpc_master):
     def __init__(self, slave_addr=0x12, rate=100000, i2c_bus=2):  # private
-        import pyb
         self.__addr = slave_addr
         self.__freq = rate
-        self.__i2c = pyb.I2C(i2c_bus)
+        self.__i2c = machine.I2C(i2c_bus, freq=self.__freq)
         rpc_master.__init__(self)
         self._stream_writer_queue_depth_max = 1
 
     def get_bytes(self, buff, timeout_ms):  # protected
-        import pyb
         view = memoryview(buff)
         for i in range(0, len(view), 65535):
             time.sleep_us(100)  # Give slave time to get ready.
-            self.__i2c.init(pyb.I2C.MASTER, baudrate=self.__freq, dma=True)
             try:
-                self.__i2c.recv(view[i : i + 65535], self.__addr, timeout=timeout_ms)
+                self.__i2c.readfrom_into(self.__addr, view[i : i + 65535])
             except OSError:
                 view = None
-            self.__i2c.deinit()
             if view is None:
                 break
         if view is None or self._same(view, len(view)):
@@ -493,16 +489,13 @@ class rpc_i2c_master(rpc_master):
         return view
 
     def put_bytes(self, data, timeout_ms):  # protected
-        import pyb
         view = memoryview(data)
         for i in range(0, len(view), 65535):
             time.sleep_us(100)  # Give slave time to get ready.
-            self.__i2c.init(pyb.I2C.MASTER, baudrate=self.__freq, dma=True)
             try:
-                self.__i2c.send(view[i : i + 65535], self.__addr, timeout=timeout_ms)
+                self.__i2c.writeto(self.__addr, view[i : i + 65535])
             except OSError:
                 view = None
-            self.__i2c.deinit()
             if view is None:
                 break
 
@@ -547,24 +540,22 @@ class rpc_spi_master(rpc_master):
     def __init__(
         self, cs_pin="P3", freq=1000000, clk_polarity=1, clk_phase=0, spi_bus=2
     ):  # private
-        import pyb
-        self.__pin = pyb.Pin(cs_pin, pyb.Pin.OUT_PP)
+        self.__pin = machine.Pin(cs_pin, machine.Pin.OUT)
         self.__freq = freq
         self.__polarity = clk_polarity
         self.__clk_phase = clk_phase
-        self.__spi = pyb.SPI(spi_bus)
+        self.__spi = machine.SPI(spi_bus)
         rpc_master.__init__(self)
         self._stream_writer_queue_depth_max = 1
 
     def get_bytes(self, buff, timeout_ms):  # protected
-        import pyb
         self.__pin.value(False)
         time.sleep_us(100)  # Give slave time to get ready.
         self.__spi.init(
-            pyb.SPI.MASTER, self.__freq, polarity=self.__polarity, phase=self.__clk_phase
+            baudrate=self.__freq, polarity=self.__polarity, phase=self.__clk_phase
         )
         try:
-            self.__spi.send_recv(buff, buff, timeout=timeout_ms)  # SPI.recv() is broken.
+            self.__spi.write_readinto(buff, buff)  # SPI.readinto() is broken.
         except OSError:
             buff = None
         self.__spi.deinit()
@@ -574,14 +565,13 @@ class rpc_spi_master(rpc_master):
         return buff
 
     def put_bytes(self, data, timeout_ms):  # protected
-        import pyb
         self.__pin.value(False)
         time.sleep_us(100)  # Give slave time to get ready.
         self.__spi.init(
-            pyb.SPI.MASTER, self.__freq, polarity=self.__polarity, phase=self.__clk_phase
+            baudrate=self.__freq, polarity=self.__polarity, phase=self.__clk_phase
         )
         try:
-            self.__spi.send(data, timeout=timeout_ms)
+            self.__spi.write(data)
         except OSError:
             pass
         self.__spi.deinit()
