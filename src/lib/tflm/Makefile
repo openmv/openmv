@@ -12,6 +12,9 @@ GENERATED := $(BUILD)/tflm_builtin_models.h $(BUILD)/tflm_builtin_models.c
 HDR_OBJS = $(BUILD)/tflm_builtin_models.o
 LIB_OBJS = $(BUILD)/tflm_backend.o
 OBJ_DIRS = $(sort $(dir $(HDR_OBJS)))
+ifeq ($(strip $(VELA_ARGS)),)
+VELA_ARGS := ""
+endif
 
 # Extra module flags.
 CXXFLAGS += $(filter-out -std=gnu99,$(CFLAGS)) \
@@ -48,9 +51,11 @@ $(OBJ_DIRS):
 	$(MKDIR) -p $@
 
 $(GENERATED): $(wildcard models/*)
-	$(ECHO) "GEN $@"
-	$(PYTHON) $(TOOLS)/$(TFLITE2C) --input models > $(BUILD)/tflm_builtin_models.c
-	$(PYTHON) $(TOOLS)/$(TFLITE2C) --input models --header > $(BUILD)/tflm_builtin_models.h
+	$(ECHO) "GEN $(shell realpath --relative-to=pwd $@)"
+	$(PYTHON) $(TOOLS)/$(TFLITE2C) --input models --build-dir ${BUILD} \
+                                   --vela-args ${VELA_ARGS} > $(BUILD)/tflm_builtin_models.c
+	$(PYTHON) $(TOOLS)/$(TFLITE2C) --input models --build-dir ${BUILD} \
+                                   --vela-args ${VELA_ARGS} --header > $(BUILD)/tflm_builtin_models.h
 
 $(HDR_OBJS): $(GENERATED)
 

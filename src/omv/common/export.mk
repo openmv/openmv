@@ -40,6 +40,7 @@ export FIRMWARE
 export SYSTEM
 export STARTUP
 export MICROPY_ARGS
+export VELA_ARGS
 export FROZEN_MANIFEST
 
 # Export board config variables
