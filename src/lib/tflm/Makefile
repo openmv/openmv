@@ -7,13 +7,14 @@
 #
 # TFLM Makefile
 override CFLAGS := $(CFLAGS) -Wno-unused-variable
-GENERATED := $(BUILD)/tflm_builtin_models.h $(BUILD)/tflm_builtin_models.c
+GENERATED_H := $(BUILD)/tflm_builtin_models.h
+GENERATED_C := $(BUILD)/tflm_builtin_models.c
 
 HDR_OBJS = $(BUILD)/tflm_builtin_models.o
 LIB_OBJS = $(BUILD)/tflm_backend.o
 OBJ_DIRS = $(sort $(dir $(HDR_OBJS)))
 ifeq ($(strip $(VELA_ARGS)),)
-VELA_ARGS := ""
+override VELA_ARGS := ""
 endif
 
 # Extra module flags.
@@ -50,14 +51,17 @@ headers: | $(OBJ_DIRS) $(HDR_OBJS)
 $(OBJ_DIRS):
 	$(MKDIR) -p $@
 
-$(GENERATED): $(wildcard models/*)
+$(GENERATED_H): $(wildcard models/*)
+	$(ECHO) "GEN $(shell realpath --relative-to=pwd $@)"
+	$(PYTHON) $(TOOLS)/$(TFLITE2C) --input models --build-dir ${BUILD} \
+                                   --header > $(BUILD)/tflm_builtin_models.h
+
+$(GENERATED_C): $(wildcard models/*)
 	$(ECHO) "GEN $(shell realpath --relative-to=pwd $@)"
 	$(PYTHON) $(TOOLS)/$(TFLITE2C) --input models --build-dir ${BUILD} \
                                    --vela-args ${VELA_ARGS} > $(BUILD)/tflm_builtin_models.c
-	$(PYTHON) $(TOOLS)/$(TFLITE2C) --input models --build-dir ${BUILD} \
-                                   --vela-args ${VELA_ARGS} --header > $(BUILD)/tflm_builtin_models.h
 
-$(HDR_OBJS): $(GENERATED)
+$(HDR_OBJS): $(GENERATED_H) $(GENERATED_C)
 
 $(BUILD)/%.o : %.c
 	$(ECHO) "CC $<"
