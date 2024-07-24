@@ -65,12 +65,71 @@ jobs:
       run: source tools/ci.sh && ci_build_target ${{ matrix.target }}
 
     - name: '⬆ Upload artifacts'
-      if: github.event_name != 'pull_request'
       uses: actions/upload-artifact@v4
       with:
         name: ${{ matrix.target }}
         path: ${{ matrix.target }}
         if-no-files-found: error
+
+  post-stats:
+    needs: build-firmware
+    runs-on: ubuntu-22.04
+    if: github.event_name == 'pull_request'
+    steps:
+    - name: '⏳ Checkout repository'
+      uses: actions/checkout@v4
+      with:
+        submodules: false
+
+    - name: '♻ Caching dependencies'
+      uses: actions/cache@v4.0.2
+      id: cache
+      with:
+        path: ~/cache/gcc
+        key: 'arm-gnu-toolchain-13.2.rel1'
+
+    - name: '🐍 Install Python'
+      uses: actions/setup-python@v5
+      with:
+        cache: 'pip'
+        python-version: "3.12.4"
+
+    - name: '🛠 Install dependencies'
+      run: |
+        pip install tabulate==0.9.0
+
+    - name: '🤌 Download artifacts'
+      uses: actions/download-artifact@v4
+      with:
+        path: new_firmware
+        merge-multiple: false
+
+    - name: '🤌 Download release'
+      uses: robinraju/release-downloader@v1
+      with:
+        repository: 'openmv/openmv'
+        tag: 'development'
+        fileName: '*.zip'
+        extract: false
+        out-file-path: 'old_firmware'
+
+    - name: '📝 Generate report'
+      run: |
+        TOOLCHAIN_PATH=${HOME}/cache/gcc
+        export PATH=${TOOLCHAIN_PATH}/bin:${PATH}
+        python tools/gen_stats.py > ${GITHUB_WORKSPACE}/stats.txt
+        cat ${GITHUB_WORKSPACE}/stats.txt
+        if [ -s ./stats.txt ]; then
+          echo "report=true" >> $GITHUB_ENV
+        else
+          echo "report=false" >> $GITHUB_ENV
+        fi
+
+    - name: '📝 Post report'
+      if: env.report == 'true'
+      uses: thollander/actions-comment-pull-request@v2
+      with:
+        filePath: ./stats.txt
 
   stable-release:
     needs: build-firmware
