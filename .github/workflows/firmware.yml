@@ -74,6 +74,8 @@ jobs:
   post-stats:
     needs: build-firmware
     runs-on: ubuntu-22.04
+    permissions:
+      contents: write
     if: github.event_name == 'pull_request'
     steps:
     - name: '⏳ Checkout repository'
