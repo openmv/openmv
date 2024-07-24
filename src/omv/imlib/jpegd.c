@@ -2115,7 +2115,7 @@ static void JPEGPutMCU11(JPEGIMAGE *pJPEG, int x, int y) {
 static void JPEGPutMCU22(JPEGIMAGE *pJPEG, int x, int y) {
     uint32_t Cr, Cb;
     signed int Y1, Y2, Y3, Y4;
-    int iRow, iRowLimit, iCol, iXCount1, iXCount2, iYCount;
+    int iRow, iRowLimit, iCol, iXCount1, iXCount2;
     unsigned char *pY, *pCr, *pCb;
     const int iPitch = pJPEG->iWidth;
     int bUseOdd1, bUseOdd2; // special case where 24bpp odd sized image can clobber first column
@@ -2204,13 +2204,9 @@ static void JPEGPutMCU22(JPEGIMAGE *pJPEG, int x, int y) {
         return;
     }
     /* Convert YCC pixels into RGB pixels and store in output image */
-    iYCount = 4;
     iRowLimit = 16; // assume all rows possible to draw
     if ((y + 15) >= pJPEG->iHeight) {
         iRowLimit = pJPEG->iHeight & 15;
-        if (iRowLimit < 8) {
-            iYCount = iRowLimit >> 1;
-        }
     }
     bUseOdd1 = bUseOdd2 = 1; // assume odd column can be used
     if ((x + 15) >= pJPEG->iWidth) {
@@ -2231,7 +2227,8 @@ static void JPEGPutMCU22(JPEGIMAGE *pJPEG, int x, int y) {
     } else {
         iXCount1 = iXCount2 = 4;
     }
-    for (iRow = 0; iRow < iYCount; iRow++) {
+    // full size (16x16 pixels)
+    for (iRow = 0; iRow < 8; iRow+=2) {
         // up to 4 rows to do
         for (iCol = 0; iCol < iXCount1; iCol++) {
             // up to 4 cols to do
@@ -2248,11 +2245,19 @@ static void JPEGPutMCU22(JPEGIMAGE *pJPEG, int x, int y) {
             Cr = pCr[iCol];
             if (bUseOdd1 || iCol != (iXCount1 - 1)) {
                 // only render if it won't go off the right edge
-                JPEGPixel2LE(pOutput + (iCol << 1), Y1, Y2, Cb, Cr);
-                JPEGPixel2LE(pOutput + iPitch + (iCol << 1), Y3, Y4, Cb, Cr);
+                if (iRowLimit > iRow) {
+                    JPEGPixel2LE(pOutput + (iCol << 1), Y1, Y2, Cb, Cr);
+                }
+                if (iRowLimit > iRow+1) {
+                    JPEGPixel2LE(pOutput + iPitch + (iCol << 1), Y3, Y4, Cb, Cr);
+                }
             } else {
-                JPEGPixelLE(pOutput + (iCol << 1), Y1, Cb, Cr);
-                JPEGPixelLE(pOutput + iPitch + (iCol << 1), Y3, Cb, Cr);
+                if (iRowLimit > iRow) {
+                    JPEGPixelLE(pOutput + (iCol << 1), Y1, Cb, Cr);
+                }
+                if (iRowLimit > iRow+1) {
+                    JPEGPixelLE(pOutput + iPitch + (iCol << 1), Y3, Cb, Cr);
+                }
             }
             // for top right block
             if (iCol < iXCount2) {
@@ -2268,11 +2273,19 @@ static void JPEGPutMCU22(JPEGIMAGE *pJPEG, int x, int y) {
                 Cr = pCr[iCol + 4];
                 if (bUseOdd2 || iCol != (iXCount2 - 1)) {
                     // only render if it won't go off the right edge
-                    JPEGPixel2LE(pOutput + 8 + (iCol << 1), Y1, Y2, Cb, Cr);
-                    JPEGPixel2LE(pOutput + iPitch + 8 + (iCol << 1), Y3, Y4, Cb, Cr);
+                    if (iRowLimit > iRow) {
+                        JPEGPixel2LE(pOutput + 8 + (iCol << 1), Y1, Y2, Cb, Cr);
+                    }
+                    if (iRowLimit > iRow+1) {
+                        JPEGPixel2LE(pOutput + iPitch + 8 + (iCol << 1), Y3, Y4, Cb, Cr);
+                    }
                 } else {
-                    JPEGPixelLE(pOutput + 8 + (iCol << 1), Y1, Cb, Cr);
-                    JPEGPixelLE(pOutput + iPitch + 8 + (iCol << 1), Y3, Cb, Cr);
+                    if (iRowLimit > iRow) {
+                        JPEGPixelLE(pOutput + 8 + (iCol << 1), Y1, Cb, Cr);
+                    }
+                    if (iRowLimit > iRow+1) {
+                        JPEGPixelLE(pOutput + iPitch + 8 + (iCol << 1), Y3, Cb, Cr);
+                    }
                 }
             }
             if (iRowLimit > 8) {
@@ -2289,11 +2302,19 @@ static void JPEGPutMCU22(JPEGIMAGE *pJPEG, int x, int y) {
                 Cr = pCr[iCol + 32];
                 if (bUseOdd1 || iCol != (iXCount1 - 1)) {
                     // only render if it won't go off the right edge
-                    JPEGPixel2LE(pOutput + iPitch * 8 + (iCol << 1), Y1, Y2, Cb, Cr);
-                    JPEGPixel2LE(pOutput + iPitch * 9 + (iCol << 1), Y3, Y4, Cb, Cr);
+                    if (iRowLimit > iRow+8) {
+                        JPEGPixel2LE(pOutput + iPitch * 8 + (iCol << 1), Y1, Y2, Cb, Cr);
+                    }
+                    if (iRowLimit > iRow+9) {
+                        JPEGPixel2LE(pOutput + iPitch * 9 + (iCol << 1), Y3, Y4, Cb, Cr);
+                    }
                 } else {
-                    JPEGPixelLE(pOutput + iPitch * 8 + (iCol << 1), Y1, Cb, Cr);
-                    JPEGPixelLE(pOutput + iPitch * 9 + (iCol << 1), Y3, Cb, Cr);
+                    if (iRowLimit > iRow+8) {
+                        JPEGPixelLE(pOutput + iPitch * 8 + (iCol << 1), Y1, Cb, Cr);
+                    }
+                    if (iRowLimit > iRow+9) {
+                        JPEGPixelLE(pOutput + iPitch * 9 + (iCol << 1), Y3, Cb, Cr);
+                    }
                 }
                 // for bottom right block
                 if (iCol < iXCount2) {
@@ -2309,11 +2330,19 @@ static void JPEGPutMCU22(JPEGIMAGE *pJPEG, int x, int y) {
                     Cr = pCr[iCol + 36];
                     if (bUseOdd2 || iCol != (iXCount2 - 1)) {
                         // only render if it won't go off the right edge
-                        JPEGPixel2LE(pOutput + iPitch * 8 + 8 + (iCol << 1), Y1, Y2, Cb, Cr);
-                        JPEGPixel2LE(pOutput + iPitch * 9 + 8 + (iCol << 1), Y3, Y4, Cb, Cr);
+                        if (iRowLimit > iRow+8) {
+                            JPEGPixel2LE(pOutput + iPitch * 8 + 8 + (iCol << 1), Y1, Y2, Cb, Cr);
+                        }
+                        if (iRowLimit > iRow+9) {
+                            JPEGPixel2LE(pOutput + iPitch * 9 + 8 + (iCol << 1), Y3, Y4, Cb, Cr);
+                        }
                     } else {
-                        JPEGPixelLE(pOutput + iPitch * 8 + 8 + (iCol << 1), Y1, Cb, Cr);
-                        JPEGPixelLE(pOutput + iPitch * 9 + 8 + (iCol << 1), Y3, Cb, Cr);
+                        if (iRowLimit > iRow+8) {
+                            JPEGPixelLE(pOutput + iPitch * 8 + 8 + (iCol << 1), Y1, Cb, Cr);
+                        }
+                        if (iRowLimit > iRow+9) {
+                            JPEGPixelLE(pOutput + iPitch * 9 + 8 + (iCol << 1), Y3, Cb, Cr);
+                        }
                     }
                 }
             } // row limit > 8
@@ -2416,7 +2445,9 @@ static void JPEGPutMCU12(JPEGIMAGE *pJPEG, int x, int y) {
             Cb = pCb[iCol];
             Cr = pCr[iCol];
             JPEGPixelLE(pOutput + iCol, Y1, Cb, Cr);
-            JPEGPixelLE(pOutput + iPitch + iCol, Y2, Cb, Cr);
+            if (iRow < iYCount+1) {
+                JPEGPixelLE(pOutput + iPitch + iCol, Y2, Cb, Cr);
+            }
         }
         pY += 16; // skip to next 2 lines of source pixels
         if (iRow == 6) {
@@ -2433,7 +2464,7 @@ static void JPEGPutMCU21(JPEGIMAGE *pJPEG, int x, int y) {
     int iCr, iCb;
     signed int Y1, Y2;
     int iCol;
-    int iRow;
+    int iRow, iXCount, iYCount;
     uint8_t *pY, *pCr, *pCb;
     const int iPitch = pJPEG->iWidth;
     uint16_t *pOutput = (uint16_t *) &pJPEG->pImage[(y * iPitch * 2) + x * 2];
@@ -2504,22 +2535,34 @@ static void JPEGPutMCU21(JPEGIMAGE *pJPEG, int x, int y) {
         return;
     }
     /* Convert YCC pixels into RGB pixels and store in output image */
-    for (iRow = 0; iRow < 8; iRow++) {
+    iXCount = 16;
+    iYCount = 8;
+    if (y + 8 > pJPEG->iHeight) {
+        iYCount = pJPEG->iHeight - y;
+    }
+    if (x + 16 > pJPEG->iWidth) {
+        iXCount = pJPEG->iWidth - x;
+    }
+    for (iRow = 0; iRow < iYCount; iRow++) {
         // up to 8 rows to do
-        for (iCol = 0; iCol < 4; iCol++) {
+        for (iCol = 0; iCol < 8; iCol+=2) {
             // up to 4x2 cols to do
             // left block
             iCr = *pCr++;
             iCb = *pCb++;
             Y1 = (signed int) (*pY++) << 12;
             Y2 = (signed int) (*pY++) << 12;
-            JPEGPixel2LE(pOutput + iCol * 2, Y1, Y2, iCb, iCr);
+            if (iCol < iXCount) {
+                JPEGPixel2LE(pOutput + iCol, Y1, Y2, iCb, iCr);
+            }
             // right block
             iCr = pCr[3];
             iCb = pCb[3];
             Y1 = (signed int) pY[126] << 12;
             Y2 = (signed int) pY[127] << 12;
-            JPEGPixel2LE(pOutput + 8 + iCol * 2, Y1, Y2, iCb, iCr);
+            if (iCol+8 < iXCount) {
+                JPEGPixel2LE(pOutput + 8 + iCol, Y1, Y2, iCb, iCr);
+            }
         } // for col
         pCb += 4;
         pCr += 4;
