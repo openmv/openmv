@@ -463,6 +463,14 @@ else {
     led_state(LED_GREEN, 0);
     led_state(LED_BLUE, 0);
 
+    while (1) {
+        led_state(LED_RED, 0);
+        led_state(LED_GREEN, 0);
+        led_state(LED_BLUE, 0);
+        led_state(LED_RED, 1);
+        led_state(LED_GREEN, 1);
+        led_state(LED_BLUE, 1);
+    }
 
     // Run boot.py script.
     bool interrupted = mp_exec_bootscript("boot.py", true, false);
