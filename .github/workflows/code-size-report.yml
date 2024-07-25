@@ -1,4 +1,4 @@
-name: '📝 Code Report'
+name: '📝 Code Size Report'
 
 on:
   workflow_run:
@@ -30,7 +30,7 @@ jobs:
         PR_NUMBER=$(basename "${CODE_SIZE_REPORT}" .md)
         echo "Pull Request Number: $PR_NUMBER"
     
-        # If the report file is not empty set a flag for the next step.
+        # Set the outputs for the following step
         if [ -s "${CODE_SIZE_REPORT}" ]; then
           echo "pr_number=${PR_NUMBER}" >> $GITHUB_OUTPUT
           echo "code_size_report=${CODE_SIZE_REPORT}" >> $GITHUB_OUTPUT
