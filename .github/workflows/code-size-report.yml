@@ -1,0 +1,44 @@
+name: '📝 Code Report'
+
+on:
+  workflow_run:
+    workflows: ['🔥 Firmware Build']
+    types:
+      - completed
+
+jobs:
+  post-code-report:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    steps:
+    - name: '↓ Download code size report'
+      uses: actions/download-artifact@v4
+      with:
+        name: code-size-report
+        run-id: ${{ github.event.workflow_run.id }}
+        github-token: ${{ github.token }}
+
+    - name: '📝 Check report'
+      id: generate_report
+      run: |
+        # Get the filename matching the pattern *.md
+        CODE_SIZE_REPORT=$(ls ${GITHUB_WORKSPACE}/*.md)
+        echo "Code Size Report: ${CODE_SIZE_REPORT}"
+    
+        # Extract the PR number from the filename
+        # Assuming the filename format is <pr_number>.md
+        PR_NUMBER=$(basename "${CODE_SIZE_REPORT}" .md)
+        echo "Pull Request Number: $PR_NUMBER"
+    
+        # If the report file is not empty set a flag for the next step.
+        if [ -s "${CODE_SIZE_REPORT}" ]; then
+          echo "pr_number=${PR_NUMBER}" >> $GITHUB_OUTPUT
+          echo "code_size_report=${CODE_SIZE_REPORT}" >> $GITHUB_OUTPUT
+        fi
+
+    - name: '📝 Post report'
+      if: steps.generate_report.outputs.code_size_report != ''
+      uses: thollander/actions-comment-pull-request@v2
+      with:
+        pr_number: ${{ steps.generate_report.outputs.pr_number }}
+        filePath: ${{ steps.generate_report.outputs.code_size_report }}

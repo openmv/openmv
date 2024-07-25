@@ -28,7 +28,7 @@ jobs:
     runs-on: ubuntu-22.04
     strategy:
       matrix:
-        target: [OPENMV2, OPENMV3, OPENMV4, OPENMV4P, OPENMVPT, OPENMV_RT1060, ARDUINO_PORTENTA_H7, ARDUINO_GIGA, ARDUINO_NICLA_VISION, ARDUINO_NANO_RP2040_CONNECT, ARDUINO_NANO_33_BLE_SENSE]
+        target: [OPENMV3]
       fail-fast: false
     steps:
     - name: '⏳ Checkout repository'
@@ -71,11 +71,9 @@ jobs:
         path: ${{ matrix.target }}
         if-no-files-found: error
 
-  post-stats:
+  code-size-report:
     needs: build-firmware
     runs-on: ubuntu-22.04
-    permissions:
-      pull-requests: write
     if: github.event_name == 'pull_request'
     steps:
     - name: '⏳ Checkout repository'
@@ -100,13 +98,13 @@ jobs:
       run: |
         pip install tabulate==0.9.0
 
-    - name: '🤌 Download artifacts'
+    - name: '↓ Download artifacts'
       uses: actions/download-artifact@v4
       with:
         path: new_firmware
         merge-multiple: false
 
-    - name: '🤌 Download release'
+    - name: '↓ Download release'
       uses: robinraju/release-downloader@v1
       with:
         repository: 'openmv/openmv'
@@ -116,22 +114,21 @@ jobs:
         out-file-path: 'old_firmware'
 
     - name: '📝 Generate report'
-      run: |
-        TOOLCHAIN_PATH=${HOME}/cache/gcc
-        export PATH=${TOOLCHAIN_PATH}/bin:${PATH}
-        python tools/gen_stats.py > ${GITHUB_WORKSPACE}/stats.txt
-        cat ${GITHUB_WORKSPACE}/stats.txt
-        if [ -s ./stats.txt ]; then
-          echo "report=true" >> $GITHUB_ENV
-        else
-          echo "report=false" >> $GITHUB_ENV
+      id: generate_report
+        CODE_SIZE_REPORT=${{ github.event.pull_request.number }}.md
+        python tools/code_size.py > ${GITHUB_WORKSPACE}/${CODE_SIZE_REPORT}
+        if [ -s ${GITHUB_WORKSPACE}/${CODE_SIZE_REPORT} ]; then
+          echo "code_size_report=${CODE_SIZE_REPORT}" >> $GITHUB_OUTPUT
         fi
 
-    - name: '📝 Post report'
-      if: env.report == 'true'
-      uses: thollander/actions-comment-pull-request@v2
+    - name: '⬆ Upload report'
+      if: steps.generate_report.outputs.code_size_report != ''
+      uses: actions/upload-artifact@v4
       with:
-        filePath: ./stats.txt
+        overwrite: true
+        name: code-size-report
+        path: ${{ github.workspace }}/${{ steps.generate_report.outputs.code_size_report }}
+        if-no-files-found: error
 
   stable-release:
     needs: build-firmware
@@ -143,7 +140,7 @@ jobs:
       with:
         submodules: false
 
-    - name: '🤌 Download artifacts'
+    - name: '↓ Download artifacts'
       uses: actions/download-artifact@v4
       with:
         path: firmware
@@ -187,7 +184,7 @@ jobs:
       with:
         submodules: false
 
-    - name: '🤌 Download artifacts'
+    - name: '↓ Download artifacts'
       uses: actions/download-artifact@v4
       with:
         path: firmware
