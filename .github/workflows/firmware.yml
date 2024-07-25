@@ -28,7 +28,7 @@ jobs:
     runs-on: ubuntu-22.04
     strategy:
       matrix:
-        target: [OPENMV3]
+        target: [OPENMV2, OPENMV3, OPENMV4, OPENMV4P, OPENMVPT, OPENMV_RT1060, ARDUINO_PORTENTA_H7, ARDUINO_GIGA, ARDUINO_NICLA_VISION, ARDUINO_NANO_RP2040_CONNECT, ARDUINO_NANO_33_BLE_SENSE]
       fail-fast: false
     steps:
     - name: '⏳ Checkout repository'
@@ -114,20 +114,17 @@ jobs:
         out-file-path: 'old_firmware'
 
     - name: '📝 Generate report'
-      id: generate_report
-        CODE_SIZE_REPORT=${{ github.event.pull_request.number }}.md
-        python tools/code_size.py > ${GITHUB_WORKSPACE}/${CODE_SIZE_REPORT}
-        if [ -s ${GITHUB_WORKSPACE}/${CODE_SIZE_REPORT} ]; then
-          echo "code_size_report=${CODE_SIZE_REPORT}" >> $GITHUB_OUTPUT
-        fi
+      run: |
+        TOOLCHAIN_PATH=${HOME}/cache/gcc
+        export PATH=${TOOLCHAIN_PATH}/bin:${PATH}
+        python tools/code_size.py > ${GITHUB_WORKSPACE}/${{ github.event.pull_request.number }}.md
 
     - name: '⬆ Upload report'
-      if: steps.generate_report.outputs.code_size_report != ''
       uses: actions/upload-artifact@v4
       with:
         overwrite: true
         name: code-size-report
-        path: ${{ github.workspace }}/${{ steps.generate_report.outputs.code_size_report }}
+        path: ${{ github.event.pull_request.number }}.md
         if-no-files-found: error
 
   stable-release:
