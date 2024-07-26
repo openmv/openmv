@@ -43,5 +43,7 @@ jobs:
       if: steps.generate_report.outputs.code_size_report != ''
       uses: thollander/actions-comment-pull-request@v2
       with:
+        mode: upsert
+        comment_tag: codesize
         pr_number: ${{ steps.generate_report.outputs.pr_number }}
         filePath: ${{ steps.generate_report.outputs.code_size_report }}
