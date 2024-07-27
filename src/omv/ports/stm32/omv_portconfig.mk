@@ -24,7 +24,7 @@
 SYSTEM  ?= st/system_stm32fxxx
 STARTUP ?= st/startup_$(shell echo $(MCU) | tr '[:upper:]' '[:lower:]')
 UVC_DIR := $(OMV_DIR)/ports/$(PORT)/uvc
-BOOT_DIR := $(OMV_DIR)/ports/$(PORT)/boot
+BOOT_DIR := boot
 
 LDSCRIPT  ?= stm32fxxx
 
@@ -125,21 +125,6 @@ OMV_CFLAGS += -I$(TOP_DIR)/$(PIXART_DIR)/include/
 OMV_CFLAGS += -I$(TOP_DIR)/$(DISPLAY_DIR)/include/
 OMV_CFLAGS += -I$(TOP_DIR)/$(LIBPDM_DIR)/
 OMV_CFLAGS += -I$(BUILD)/$(TENSORFLOW_DIR)/
-
-ifeq ($(OMV_ENABLE_BL), 1)
-CFLAGS     += -DOMV_ENABLE_BOOTLOADER
-BL_CFLAGS  := $(CFLAGS) $(HAL_CFLAGS)
-BL_CFLAGS  += -I$(OMV_BOARD_CONFIG_DIR)
-BL_CFLAGS  += -I$(TOP_DIR)/$(BOOT_DIR)/include/
-# Linker Flags
-BL_LDFLAGS = -mcpu=$(CPU) \
-             -mabi=aapcs-linux \
-             -mthumb \
-             -mfpu=$(FPU) \
-             -mfloat-abi=hard \
-             -Wl,--gc-sections \
-             -Wl,-T$(BUILD)/$(BOOT_DIR)/stm32fxxx.lds
-endif
 
 ifeq ($(OMV_ENABLE_UVC), 1)
 UVC_CFLAGS := $(CFLAGS) $(HAL_CFLAGS)
@@ -583,17 +568,6 @@ ifeq ($(CUBEAI), 1)
 include $(TOP_DIR)/stm32cubeai/cube.mk
 endif
 
-ifeq ($(OMV_ENABLE_BL), 1)
-BOOTLOADER = bootloader
-# Bootloader object files
-BOOT_OBJ += $(wildcard $(BUILD)/$(BOOT_DIR)/src/*.o)
-BOOT_OBJ += $(wildcard $(BUILD)/$(HAL_DIR)/src/*.o)
-BOOT_OBJ += $(addprefix $(BUILD)/$(CMSIS_DIR)/src/,\
-	$(STARTUP).o                                \
-	$(SYSTEM).o                                 \
-	)
-endif
-
 ifeq ($(OMV_ENABLE_UVC), 1)
 UVC = uvc
 # UVC object files
@@ -710,13 +684,29 @@ endif
 ifeq ($(CUBEAI), 1)
 	$(MAKE)  -C $(CUBEAI_DIR)                BUILD=$(BUILD)/$(CUBEAI_DIR)       CFLAGS="$(CFLAGS) -fno-strict-aliasing -MMD"
 endif
+
 ifeq ($(OMV_ENABLE_UVC), 1)
 UVC_OBJS: FIRMWARE_OBJS
 	$(MAKE)  -C $(UVC_DIR)                   BUILD=$(BUILD)/$(UVC_DIR)          CFLAGS="$(UVC_CFLAGS) -MMD"
 endif
+
+# This target generates the bootloader.
 ifeq ($(OMV_ENABLE_BL), 1)
-BOOTLOADER_OBJS: FIRMWARE_OBJS
-	$(MAKE)  -C $(BOOT_DIR)                  BUILD=$(BUILD)/$(BOOT_DIR)      CFLAGS="$(BL_CFLAGS) -MMD"
+BOOTLOADER = bootloader
+$(BOOTLOADER): | $(BUILD) $(FW_DIR)
+	$(MAKE) -C $(TOP_DIR)/$(BOOT_DIR) BUILD=$(BUILD)/$(BOOT_DIR)
+	$(OBJCOPY) -Obinary $(FW_DIR)/$(BOOTLOADER).elf $(FW_DIR)/$(BOOTLOADER).bin
+	$(PYTHON) $(MKDFU) -D $(DFU_DEVICE) -b 0x08000000:$(FW_DIR)/$(BOOTLOADER).bin $(FW_DIR)/$(BOOTLOADER).dfu
+endif
+
+# This target generates the UVC firmware.
+ifeq ($(OMV_ENABLE_UVC), 1)
+$(UVC): FIRMWARE_OBJS UVC_OBJS
+	$(CPP) -P -E -I$(OMV_COMMON_DIR) -I$(OMV_BOARD_CONFIG_DIR) \
+                   $(UVC_DIR)/stm32fxxx.ld.S > $(BUILD)/$(UVC_DIR)/stm32fxxx.lds
+	$(CC) $(UVC_LDFLAGS) $(UVC_OBJ) -o $(FW_DIR)/$(UVC).elf -lgcc
+	$(OBJCOPY) -Obinary $(FW_DIR)/$(UVC).elf $(FW_DIR)/$(UVC).bin
+	$(PYTHON) $(MKDFU) -D $(DFU_DEVICE) -b $(MAIN_APP_ADDR):$(FW_DIR)/$(UVC).bin $(FW_DIR)/$(UVC).dfu
 endif
 
 # This target generates the main/app firmware image located at 0x08010000
@@ -726,26 +716,6 @@ $(FIRMWARE): FIRMWARE_OBJS
 	$(CC) $(LDFLAGS) $(FIRM_OBJ) -o $(FW_DIR)/$(FIRMWARE).elf $(LIBS) -lm
 	$(OBJCOPY) -Obinary $(FW_DIR)/$(FIRMWARE).elf $(FW_DIR)/$(FIRMWARE).bin
 	$(PYTHON) $(MKDFU) -D $(DFU_DEVICE) -b $(MAIN_APP_ADDR):$(FW_DIR)/$(FIRMWARE).bin $(FW_DIR)/$(FIRMWARE).dfu
-
-ifeq ($(OMV_ENABLE_BL), 1)
-# This target generates the bootloader.
-$(BOOTLOADER): FIRMWARE_OBJS BOOTLOADER_OBJS
-	$(CPP) -P -E -I$(OMV_COMMON_DIR) -I$(OMV_BOARD_CONFIG_DIR) \
-                   $(BOOT_DIR)/stm32fxxx.ld.S > $(BUILD)/$(BOOT_DIR)/stm32fxxx.lds
-	$(CC) $(BL_LDFLAGS) $(BOOT_OBJ) -o $(FW_DIR)/$(BOOTLOADER).elf
-	$(OBJCOPY) -Obinary $(FW_DIR)/$(BOOTLOADER).elf $(FW_DIR)/$(BOOTLOADER).bin
-	$(PYTHON) $(MKDFU) -D $(DFU_DEVICE) -b 0x08000000:$(FW_DIR)/$(BOOTLOADER).bin $(FW_DIR)/$(BOOTLOADER).dfu
-endif
-
-ifeq ($(OMV_ENABLE_UVC), 1)
-# This target generates the UVC firmware.
-$(UVC): FIRMWARE_OBJS UVC_OBJS
-	$(CPP) -P -E -I$(OMV_COMMON_DIR) -I$(OMV_BOARD_CONFIG_DIR) \
-                   $(UVC_DIR)/stm32fxxx.ld.S > $(BUILD)/$(UVC_DIR)/stm32fxxx.lds
-	$(CC) $(UVC_LDFLAGS) $(UVC_OBJ) -o $(FW_DIR)/$(UVC).elf -lgcc
-	$(OBJCOPY) -Obinary $(FW_DIR)/$(UVC).elf $(FW_DIR)/$(UVC).bin
-	$(PYTHON) $(MKDFU) -D $(DFU_DEVICE) -b $(MAIN_APP_ADDR):$(FW_DIR)/$(UVC).bin $(FW_DIR)/$(UVC).dfu
-endif
 
 # This target generates the uvc, bootloader and firmware images.
 $(OPENMV): $(BOOTLOADER) $(UVC) $(FIRMWARE)
