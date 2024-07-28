@@ -75,9 +75,6 @@
 // Enable Tensor Flow
 //#define IMLIB_ENABLE_TFLM
 
-// Enable STM32 DMA2D
-#define IMLIB_ENABLE_DMA2D
-
 // Stereo Imaging
 // #define IMLIB_ENABLE_STEREO_DISPARITY
 

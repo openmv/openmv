@@ -17,17 +17,21 @@
 #include "file_utils.h"
 #include "imlib.h"
 #include "omv_common.h"
+#include "omv_gpu.h"
 #include "omv_boardconfig.h"
 
 void imlib_init_all() {
+    #if (OMV_GPU_ENABLE == 1)
+    omv_gpu_init();
+    #endif
     #if (OMV_JPEG_CODEC_ENABLE == 1)
     imlib_hardware_jpeg_init();
     #endif
 }
 
 void imlib_deinit_all() {
-    #ifdef IMLIB_ENABLE_DMA2D
-    imlib_draw_row_deinit_all();
+    #if (OMV_GPU_ENABLE == 1)
+    omv_gpu_deinit();
     #endif
     #if (OMV_JPEG_CODEC_ENABLE == 1)
     imlib_hardware_jpeg_deinit();
