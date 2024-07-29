@@ -121,6 +121,18 @@ PROVIDE(__stack = __StackTop);
 } >OMV_VOSPI_MEMORY
 #endif
 
+/* GPU memory */
+#if defined(OMV_GPU_MEMORY)
+.gpu_memory (NOLOAD) :
+{
+  . = ALIGN(16);
+  _gpu_memory_start = .;
+  . = . + OMV_GPU_SIZE;
+  . = ALIGN(16);
+  _gpu_memory_end = .;
+} >OMV_GPU_MEMORY
+#endif
+
 /* Open-AMP Shared Memory Region */
 #if defined(OMV_OPENAMP_MEMORY)
 .openamp_memory (NOLOAD) : ALIGN(32)
