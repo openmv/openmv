@@ -52,6 +52,7 @@ void ml_backend_log_handler(const char *s) {
 static bool ml_backend_valid_dataype(TfLiteType type) {
     return (type == kTfLiteUInt8 ||
             type == kTfLiteInt8 ||
+            type == kTfLiteUInt16 ||
             type == kTfLiteInt16 ||
             type == kTfLiteFloat32);
 }
@@ -61,6 +62,8 @@ static char ml_backend_map_dtype(TfLiteType type) {
         return 'B';
     } else if (type == kTfLiteInt8) {
         return 'b';
+    } else if (type == kTfLiteUInt16) {
+        return 'H';
     } else if (type == kTfLiteInt16) {
         return 'h';
     } else {

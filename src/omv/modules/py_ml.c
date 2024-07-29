@@ -41,6 +41,7 @@ static size_t pl_ml_dtype_size(char dtype) {
     switch (dtype) {
         case 'f':
             return 4;
+        case 'H':
         case 'h':
             return 2;
         default:
@@ -103,11 +104,17 @@ static void py_ml_process_input(py_ml_model_obj_t *model, mp_obj_t arg) {
                     float value = ndarray_get_float_index(input_array->array, input_array->dtype, i);
                     model_input_8[i] = (uint8_t) ((value * input_scale) + input_zero_point);
                 }
-            } else {
+            } else if (input_dtype == 'h') {
                 int16_t *model_input_16 = (int16_t *) input_buffer;
                 for (size_t i = 0; i < input_array->len; i++) {
                     float value = ndarray_get_float_index(input_array->array, input_array->dtype, i);
                     model_input_16[i] = (int16_t) ((value * input_scale) + input_zero_point);
+                }
+            } else if (input_dtype == 'H') {
+                uint16_t *model_input_16 = (uint16_t *) input_buffer;
+                for (size_t i = 0; i < input_array->len; i++) {
+                    float value = ndarray_get_float_index(input_array->array, input_array->dtype, i);
+                    model_input_16[i] = (uint16_t) ((value * input_scale) + input_zero_point);
                 }
             }
         } else {
@@ -151,9 +158,14 @@ static mp_obj_t py_ml_process_output(py_ml_model_obj_t *model) {
                 float v = (((uint8_t *) model_output)[j] - output_zero_point);
                 ((float *) ndarray->array)[j] = v * output_scale;
             }
-        } else {
+        } else if (output_dtype == 'h') {
             for (size_t j = 0; j < size; j++) {
-                float v = (((int8_t *) model_output)[j] - output_zero_point);
+                float v = (((int16_t *) model_output)[j] - output_zero_point);
+                ((float *) ndarray->array)[j] = v * output_scale;
+            }
+        } else if (output_dtype == 'H') {
+            for (size_t j = 0; j < size; j++) {
+                float v = (((uint16_t *) model_output)[j] - output_zero_point);
                 ((float *) ndarray->array)[j] = v * output_scale;
             }
         }
