@@ -10,13 +10,8 @@
  */
 #include "font.h"
 #include "imlib.h"
+#include "omv_gpu.h"
 #include "unaligned_memcpy.h"
-
-#ifdef IMLIB_ENABLE_DMA2D
-#include STM32_HAL_H
-#include "dma.h"
-#include "omv_common.h"
-#endif
 
 void *imlib_compute_row_ptr(const image_t *img, int y) {
     switch (img->pixfmt) {
@@ -711,133 +706,7 @@ void imlib_draw_row_setup(imlib_draw_row_data_t *data) {
     // but with the bpp of the source image.
     size_t image_row_size = image_size(&temp) / data->dst_img->h;
 
-    data->toggle = 0;
-    data->row_buffer[0] = fb_alloc(image_row_size, FB_ALLOC_CACHE_ALIGN);
-
-    #ifdef IMLIB_ENABLE_DMA2D
-    data->dma2d_enabled = false;
-    data->dma2d_initialized = false;
-
-    void *dst_buff = data->dst_row_override ? data->dst_row_override : data->dst_img->data;
-
-    if (data->dma2d_request && (data->dst_img->pixfmt == PIXFORMAT_RGB565) && DMA_BUFFER(dst_buff) &&
-        ((data->src_img_pixfmt == PIXFORMAT_GRAYSCALE) ||
-         ((data->src_img_pixfmt == PIXFORMAT_RGB565) && (data->rgb_channel < 0)
-          && (data->alpha != 256) && (!data->color_palette) && (!data->alpha_palette)))) {
-        data->row_buffer[1] = fb_alloc(image_row_size, FB_ALLOC_CACHE_ALIGN);
-        data->dma2d_enabled = true;
-        data->dma2d_initialized = true;
-
-        memset(&data->dma2d, 0, sizeof(data->dma2d));
-
-        data->dma2d.Instance = DMA2D;
-        data->dma2d.Init.Mode = DMA2D_M2M;
-        if (data->dst_img->pixfmt != data->src_img_pixfmt) {
-            data->dma2d.Init.Mode = DMA2D_M2M_PFC;
-        }
-        if ((data->alpha != 256) || data->alpha_palette) {
-            data->dma2d.Init.Mode = DMA2D_M2M_BLEND;
-        }
-        data->dma2d.Init.ColorMode = DMA2D_OUTPUT_RGB565;
-        data->dma2d.Init.OutputOffset = 0;
-        #if defined(MCU_SERIES_F7) || defined(MCU_SERIES_H7)
-        data->dma2d.Init.AlphaInverted = DMA2D_REGULAR_ALPHA;
-        data->dma2d.Init.RedBlueSwap = DMA2D_RB_REGULAR;
-        #endif
-        HAL_DMA2D_Init(&data->dma2d);
-
-        data->dma2d.LayerCfg[0].InputOffset = 0;
-        data->dma2d.LayerCfg[0].InputColorMode = DMA2D_INPUT_RGB565;
-        data->dma2d.LayerCfg[0].AlphaMode = DMA2D_REPLACE_ALPHA;
-        data->dma2d.LayerCfg[0].InputAlpha = data->black_background ? 0x00 : 0xff;
-        #if defined(MCU_SERIES_F7) || defined(MCU_SERIES_H7)
-        data->dma2d.LayerCfg[0].AlphaInverted = DMA2D_REGULAR_ALPHA;
-        data->dma2d.LayerCfg[0].RedBlueSwap = DMA2D_RB_REGULAR;
-        #endif
-        #if defined(MCU_SERIES_H7)
-        data->dma2d.LayerCfg[0].ChromaSubSampling = DMA2D_NO_CSS;
-        #endif
-        HAL_DMA2D_ConfigLayer(&data->dma2d, 0);
-
-        switch (data->src_img_pixfmt) {
-            case PIXFORMAT_GRAYSCALE: {
-                data->dma2d.LayerCfg[1].InputColorMode = DMA2D_INPUT_L8;
-                data->dma2d.LayerCfg[1].AlphaMode = DMA2D_COMBINE_ALPHA;
-                uint32_t *clut = fb_alloc(256 * sizeof(uint32_t), FB_ALLOC_CACHE_ALIGN);
-
-                if (!data->alpha_palette) {
-                    if (!data->color_palette) {
-                        for (int i = 0; i < 256; i++) {
-                            clut[i] = (0xff << 24) | COLOR_Y_TO_RGB888(i);
-                        }
-                    } else {
-                        for (int i = 0; i < 256; i++) {
-                            int pixel = data->color_palette[i];
-                            clut[i] =
-                                (0xff <<
-                                    24) |
-                                (COLOR_RGB565_TO_R8(pixel) << 16) | (COLOR_RGB565_TO_G8(pixel) << 8) | COLOR_RGB565_TO_B8(
-                                    pixel);
-                        }
-                    }
-                } else {
-                    if (!data->color_palette) {
-                        for (int i = 0; i < 256; i++) {
-                            clut[i] = (data->alpha_palette[i] << 24) | COLOR_Y_TO_RGB888(i);
-                        }
-                    } else {
-                        for (int i = 0; i < 256; i++) {
-                            int pixel = data->color_palette[i];
-                            clut[i] =
-                                (data->alpha_palette[i] <<
-                                    24) |
-                                (COLOR_RGB565_TO_R8(pixel) << 16) | (COLOR_RGB565_TO_G8(pixel) << 8) | COLOR_RGB565_TO_B8(
-                                    pixel);
-                        }
-                    }
-                }
-
-                DMA2D_CLUTCfgTypeDef cfg;
-                cfg.pCLUT = clut;
-                cfg.CLUTColorMode = DMA2D_CCM_ARGB8888;
-                cfg.Size = 255;
-                #if __DCACHE_PRESENT
-                SCB_CleanDCache_by_Addr(clut, 256 * sizeof(uint32_t));
-                #endif
-                HAL_DMA2D_CLUTLoad(&data->dma2d, cfg, 1);
-                HAL_DMA2D_PollForTransfer(&data->dma2d, 1000);
-                break;
-            }
-            case PIXFORMAT_RGB565: {
-                data->dma2d.LayerCfg[1].InputColorMode = DMA2D_INPUT_RGB565;
-                data->dma2d.LayerCfg[1].AlphaMode = DMA2D_REPLACE_ALPHA;
-                break;
-            }
-            default: {
-                break;
-            }
-        }
-
-        data->dma2d.LayerCfg[1].InputOffset = 0;
-        data->dma2d.LayerCfg[1].InputAlpha = fast_roundf((data->alpha * 255) / 256.f);
-        #if defined(MCU_SERIES_F7) || defined(MCU_SERIES_H7)
-        data->dma2d.LayerCfg[1].AlphaInverted = DMA2D_REGULAR_ALPHA;
-        data->dma2d.LayerCfg[1].RedBlueSwap = DMA2D_RB_REGULAR;
-        #endif
-        #if defined(MCU_SERIES_H7)
-        data->dma2d.LayerCfg[1].ChromaSubSampling = DMA2D_NO_CSS;
-        #endif
-        HAL_DMA2D_ConfigLayer(&data->dma2d, 1);
-        #if __DCACHE_PRESENT
-        // SCB_InvalidateDCache_by_Addr does nothing if dsize is 0.
-        data->dma2d_invalidate_dsize = 0;
-        #endif
-    } else {
-        data->row_buffer[1] = data->row_buffer[0];
-    }
-    #else
-    data->row_buffer[1] = data->row_buffer[0];
-    #endif
+    data->row_buffer = fb_alloc(image_row_size, FB_ALLOC_CACHE_ALIGN);
 
     int alpha = data->alpha, max = 256;
 
@@ -846,8 +715,6 @@ void imlib_draw_row_setup(imlib_draw_row_data_t *data) {
         max = 32;
     }
 
-    // Set smuad_alpha and smuad_alpha_palette even if we don't use them with DMA2D as we may have
-    // to fallback to using them if the draw_image calls imlib_draw_row_put_row_buffer().
     data->smuad_alpha = data->black_background ? alpha : ((alpha << 16) | (max - alpha));
 
     if (data->alpha_palette) {
@@ -866,47 +733,7 @@ void imlib_draw_row_teardown(imlib_draw_row_data_t *data) {
     if (data->smuad_alpha_palette) {
         fb_free();
     }
-    #ifdef IMLIB_ENABLE_DMA2D
-    if (data->dma2d_initialized) {
-        if (!data->callback) {
-            HAL_DMA2D_PollForTransfer(&data->dma2d, 1000);
-            #if __DCACHE_PRESENT
-            // Ensures any cached reads to dst16 are dropped.
-            SCB_InvalidateDCache_by_Addr(data->dma2d_invalidate_addr, data->dma2d_invalidate_dsize);
-            #endif
-        }
-        HAL_DMA2D_DeInit(&data->dma2d);
-        if (data->src_img_pixfmt == PIXFORMAT_GRAYSCALE) {
-            fb_free();                                              // clut...
-        }
-        fb_free(); // data->row_buffer[1]
-    }
-    #endif
-    fb_free(); // data->row_buffer[0]
-}
-
-#ifdef IMLIB_ENABLE_DMA2D
-void imlib_draw_row_deinit_all() {
-    DMA2D_HandleTypeDef dma2d = {};
-    dma2d.Instance = DMA2D;
-    HAL_DMA2D_DeInit(&dma2d);
-}
-#endif
-
-void *imlib_draw_row_get_row_buffer(imlib_draw_row_data_t *data) {
-    void *result = data->row_buffer[data->toggle];
-    data->toggle = !data->toggle;
-    return result;
-}
-
-void imlib_draw_row_put_row_buffer(imlib_draw_row_data_t *data, void *row_buffer) {
-    data->row_buffer[data->toggle] = row_buffer;
-    data->toggle = !data->toggle;
-    #ifdef IMLIB_ENABLE_DMA2D
-    if (data->dma2d_enabled && (!DMA_BUFFER(row_buffer))) {
-        data->dma2d_enabled = false;
-    }
-    #endif
+    fb_free(); // data->row_buffer
 }
 
 // Draws (x_end - x_start) pixels.
@@ -944,7 +771,7 @@ void imlib_draw_row(int x_start, int x_end, int y_row, imlib_draw_row_data_t *da
                               ((uint32_t *) data->dst_row_override) : IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(data->dst_img, y_row);
             switch (data->src_img_pixfmt) {
                 case PIXFORMAT_BINARY: {
-                    uint32_t *src32 = (uint32_t *) data->row_buffer[!data->toggle];
+                    uint32_t *src32 = (uint32_t *) data->row_buffer;
                     if (data->smuad_alpha_palette) {
                         const uint32_t *smuad_alpha_palette = data->smuad_alpha_palette;
                         if (!data->color_palette) {
@@ -1129,7 +956,7 @@ void imlib_draw_row(int x_start, int x_end, int y_row, imlib_draw_row_data_t *da
                     break;
                 }
                 case PIXFORMAT_GRAYSCALE: {
-                    uint8_t *src8 = ((uint8_t *) data->row_buffer[!data->toggle]) + x_start;
+                    uint8_t *src8 = ((uint8_t *) data->row_buffer) + x_start;
                     if (data->smuad_alpha_palette) {
                         const uint32_t *smuad_alpha_palette = data->smuad_alpha_palette;
                         if (!data->color_palette) {
@@ -1244,7 +1071,7 @@ void imlib_draw_row(int x_start, int x_end, int y_row, imlib_draw_row_data_t *da
                     break;
                 }
                 case PIXFORMAT_RGB565: {
-                    uint16_t *src16 = ((uint16_t *) data->row_buffer[!data->toggle]) + x_start;
+                    uint16_t *src16 = ((uint16_t *) data->row_buffer) + x_start;
                     if (data->rgb_channel < 0) {
                         if (data->smuad_alpha_palette) {
                             const uint32_t *smuad_alpha_palette = data->smuad_alpha_palette;
@@ -1734,7 +1561,7 @@ void imlib_draw_row(int x_start, int x_end, int y_row, imlib_draw_row_data_t *da
                 x_start;
             switch (data->src_img_pixfmt) {
                 case PIXFORMAT_BINARY: {
-                    uint32_t *src32 = (uint32_t *) data->row_buffer[!data->toggle];
+                    uint32_t *src32 = (uint32_t *) data->row_buffer;
                     if (data->smuad_alpha_palette) {
                         const uint32_t *smuad_alpha_palette = data->smuad_alpha_palette;
                         if (!data->color_palette) {
@@ -1833,7 +1660,7 @@ void imlib_draw_row(int x_start, int x_end, int y_row, imlib_draw_row_data_t *da
                     break;
                 }
                 case PIXFORMAT_GRAYSCALE: {
-                    uint8_t *src8 = ((uint8_t *) data->row_buffer[!data->toggle]) + x_start;
+                    uint8_t *src8 = ((uint8_t *) data->row_buffer) + x_start;
                     if (data->smuad_alpha_palette) {
                         const uint32_t *smuad_alpha_palette = data->smuad_alpha_palette;
                         if (!data->color_palette) {
@@ -1912,7 +1739,7 @@ void imlib_draw_row(int x_start, int x_end, int y_row, imlib_draw_row_data_t *da
                     break;
                 }
                 case PIXFORMAT_RGB565: {
-                    uint16_t *src16 = ((uint16_t *) data->row_buffer[!data->toggle]) + x_start;
+                    uint16_t *src16 = ((uint16_t *) data->row_buffer) + x_start;
                     if (data->rgb_channel < 0) {
                         if (data->smuad_alpha_palette) {
                             const uint32_t *smuad_alpha_palette = data->smuad_alpha_palette;
@@ -2282,7 +2109,7 @@ void imlib_draw_row(int x_start, int x_end, int y_row, imlib_draw_row_data_t *da
                 x_start;
             switch (data->src_img_pixfmt) {
                 case PIXFORMAT_BINARY: {
-                    uint32_t *src32 = (uint32_t *) data->row_buffer[!data->toggle];
+                    uint32_t *src32 = (uint32_t *) data->row_buffer;
                     if (data->smuad_alpha_palette) {
                         const uint32_t *smuad_alpha_palette = data->smuad_alpha_palette;
                         if (!data->color_palette) {
@@ -2376,54 +2203,8 @@ void imlib_draw_row(int x_start, int x_end, int y_row, imlib_draw_row_data_t *da
                     break;
                 }
                 case PIXFORMAT_GRAYSCALE: {
-                    uint8_t *src8 = ((uint8_t *) data->row_buffer[!data->toggle]) + x_start;
-                    #ifdef IMLIB_ENABLE_DMA2D
-                    // Confirm destination row starts and end on a complete cache line.
-                    if (data->dma2d_enabled
-                        && ((((uint32_t) (dst16 + x_start)) % OMV_ALLOC_ALIGNMENT)
-                            || (((uint32_t) (dst16 + x_end)) % OMV_ALLOC_ALIGNMENT))) {
-                        data->dma2d_enabled = false;
-                    }
-                    if (data->dma2d_enabled) {
-                        if (!data->callback) {
-                            HAL_DMA2D_PollForTransfer(&data->dma2d, 1000);
-                            #if __DCACHE_PRESENT
-                            // Ensures any cached reads to dst16 are dropped.
-                            SCB_InvalidateDCache_by_Addr(data->dma2d_invalidate_addr,
-                                                         data->dma2d_invalidate_dsize);
-                            #endif
-                        }
-                        #if __DCACHE_PRESENT
-                        // Memory referenced by src8 between (x_end - x_start) may or may not be
-                        // cache algined. However, after being flushed it shouldn't change again
-                        // so DMA2D can safety read the line of pixels.
-                        SCB_CleanDCache_by_Addr((uint32_t *) src8, (x_end - x_start) * sizeof(uint8_t));
-                        // DMA2D will overwrite this area. dst16 (x_end - x_start) must be cache
-                        // aligned or the line of pixels will be corrutped.
-                        // Ensures any cached writes to dst16 are dropped.
-                        data->dma2d_invalidate_addr = (uint32_t *) dst16;
-                        data->dma2d_invalidate_dsize = (x_end - x_start) * sizeof(uint16_t);
-                        SCB_InvalidateDCache_by_Addr(data->dma2d_invalidate_addr,
-                                                     data->dma2d_invalidate_dsize);
-                        #endif
-                        HAL_DMA2D_BlendingStart(&data->dma2d,
-                                                (uint32_t) src8,
-                                                (uint32_t) dst16,
-                                                (uint32_t) dst16,
-                                                x_end - x_start,
-                                                1);
-                        if (data->callback) {
-                            HAL_DMA2D_PollForTransfer(&data->dma2d, 1000);
-                            #if __DCACHE_PRESENT
-                            // Ensures any cached reads to dst16 are dropped.
-                            SCB_InvalidateDCache_by_Addr(data->dma2d_invalidate_addr,
-                                                         data->dma2d_invalidate_dsize);
-                            #endif
-                        }
-                    } else if (data->smuad_alpha_palette) {
-                    #else
+                    uint8_t *src8 = ((uint8_t *) data->row_buffer) + x_start;
                     if (data->smuad_alpha_palette) {
-                    #endif
                         const uint32_t *smuad_alpha_palette = data->smuad_alpha_palette;
                         if (!data->color_palette) {
                             if (!data->black_background) {
@@ -2509,7 +2290,7 @@ void imlib_draw_row(int x_start, int x_end, int y_row, imlib_draw_row_data_t *da
                     break;
                 }
                 case PIXFORMAT_RGB565: {
-                    uint16_t *src16 = ((uint16_t *) data->row_buffer[!data->toggle]) + x_start;
+                    uint16_t *src16 = ((uint16_t *) data->row_buffer) + x_start;
                     if (data->rgb_channel < 0) {
                         if (data->smuad_alpha_palette) {
                             const uint32_t *smuad_alpha_palette = data->smuad_alpha_palette;
@@ -2562,53 +2343,7 @@ void imlib_draw_row(int x_start, int x_end, int y_row, imlib_draw_row_data_t *da
                         } else {
                             long smuad_alpha = data->smuad_alpha;
                             if (!data->color_palette) {
-                                #ifdef IMLIB_ENABLE_DMA2D
-                                // Confirm destination row starts and end on a complete cache line.
-                                if (data->dma2d_enabled
-                                    && ((((uint32_t) (dst16 + x_start)) % OMV_ALLOC_ALIGNMENT)
-                                        || (((uint32_t) (dst16 + x_end)) % OMV_ALLOC_ALIGNMENT))) {
-                                    data->dma2d_enabled = false;
-                                }
-                                if (data->dma2d_enabled) {
-                                    if (!data->callback) {
-                                        HAL_DMA2D_PollForTransfer(&data->dma2d, 1000);
-                                        #if __DCACHE_PRESENT
-                                        // Ensures any cached reads to dst16 are dropped.
-                                        SCB_InvalidateDCache_by_Addr(data->dma2d_invalidate_addr,
-                                                                     data->dma2d_invalidate_dsize);
-                                        #endif
-                                    }
-                                    #if __DCACHE_PRESENT
-                                    // Memory referenced by src16 between (x_end - x_start) may or may not be
-                                    // cache algined. However, after being flushed it shouldn't change again
-                                    // so DMA2D can safety read the line of pixels.
-                                    SCB_CleanDCache_by_Addr((uint32_t *) src16, (x_end - x_start) * sizeof(uint16_t));
-                                    // DMA2D will overwrite this area. dst16 (x_end - x_start) must be cache
-                                    // aligned or the line of pixels will be corrutped.
-                                    // Ensures any cached writes to dst16 are dropped.
-                                    data->dma2d_invalidate_addr = (uint32_t *) dst16;
-                                    data->dma2d_invalidate_dsize = (x_end - x_start) * sizeof(uint16_t);
-                                    SCB_InvalidateDCache_by_Addr(data->dma2d_invalidate_addr,
-                                                                 data->dma2d_invalidate_dsize);
-                                    #endif
-                                    HAL_DMA2D_BlendingStart(&data->dma2d,
-                                                            (uint32_t) src16,
-                                                            (uint32_t) dst16,
-                                                            (uint32_t) dst16,
-                                                            x_end - x_start,
-                                                            1);
-                                    if (data->callback) {
-                                        HAL_DMA2D_PollForTransfer(&data->dma2d, 1000);
-                                        #if __DCACHE_PRESENT
-                                        // Ensures any cached reads to dst16 are dropped.
-                                        SCB_InvalidateDCache_by_Addr(data->dma2d_invalidate_addr,
-                                                                     data->dma2d_invalidate_dsize);
-                                        #endif
-                                    }
-                                } else if (!data->black_background) {
-                                #else
                                 if (!data->black_background) {
-                                #endif
                                     for (int x = x_start; x < x_end; x++) {
                                         int src_pixel = *src16++;
                                         int dst_pixel = *dst16;
@@ -2934,7 +2669,7 @@ void imlib_draw_row(int x_start, int x_end, int y_row, imlib_draw_row_data_t *da
             uint8_t *dst8 = (data->dst_row_override
                 ? ((uint8_t *) data->dst_row_override)
                 : IMAGE_COMPUTE_BAYER_PIXEL_ROW_PTR(data->dst_img, y_row)) + x_start;
-            uint8_t *src8 = ((uint8_t *) data->row_buffer[!data->toggle]) + x_start;
+            uint8_t *src8 = ((uint8_t *) data->row_buffer) + x_start;
             unaligned_memcpy(dst8, src8, (x_end - x_start) * sizeof(uint8_t));
             break;
         }
@@ -2943,7 +2678,7 @@ void imlib_draw_row(int x_start, int x_end, int y_row, imlib_draw_row_data_t *da
             uint16_t *dst16 = (data->dst_row_override
                 ? ((uint16_t *) data->dst_row_override)
                 : IMAGE_COMPUTE_YUV_PIXEL_ROW_PTR(data->dst_img, y_row)) + x_start;
-            uint16_t *src16 = ((uint16_t *) data->row_buffer[!data->toggle]) + x_start;
+            uint16_t *src16 = ((uint16_t *) data->row_buffer) + x_start;
             unaligned_memcpy(dst16, src16, (x_end - x_start) * sizeof(uint16_t));
             break;
         }
@@ -3491,16 +3226,37 @@ void imlib_draw_image(image_t *dst_img,
             fb_free();
         }
 
-        if (&new_src_img == src_img) {
-            fb_free();
-        }
-
-        return;
+        goto exit_cleanup;
     }
+
+    #if (OMV_GPU_ENABLE == 1)
+    // Try to offload this to the GPU for processing.
+    if ((rgb_channel < 0) && (!(hint & (IMAGE_HINT_AREA | IMAGE_HINT_BICUBIC))) && (!callback)) {
+        rectangle_t dst_rect;
+        dst_rect.x = dst_x_start;
+        dst_rect.y = dst_y_start;
+        dst_rect.w = dst_x_end - dst_rect.x;
+        dst_rect.h = dst_y_end - dst_rect.y;
+
+        rectangle_t src_rect;
+        src_rect.x = src_x_accum_reset >> 16;
+        src_rect.y = src_y_accum_reset >> 16;
+        src_rect.w = ((src_x_accum_reset + (src_x_frac * dst_rect.w)) >> 16) - src_rect.x;
+        src_rect.h = ((src_y_accum_reset + (src_y_frac * dst_rect.h)) >> 16) - src_rect.y;
+
+        image_hint_t gpu_hint = hint & (IMAGE_HINT_BILINEAR | IMAGE_HINT_BLACK_BACKGROUND);
+        gpu_hint |= (dst_delta_x < 0) ? IMAGE_HINT_HMIRROR : 0;
+        gpu_hint |= (dst_delta_y < 0) ? IMAGE_HINT_VFLIP : 0;
+
+        if (!omv_gpu_draw_image(src_img, &src_rect, dst_img, &dst_rect, alpha, color_palette, alpha_palette, gpu_hint)) {
+            goto exit_cleanup;
+        }
+    }
+    #endif
 
     imlib_draw_row_data_t imlib_draw_row_data;
     imlib_draw_row_data.dst_img = dst_img;
-    imlib_draw_row_data.src_img_pixfmt = (!src_img->is_mutable) ? new_not_mutable_pixfmt : src_img->pixfmt;
+    imlib_draw_row_data.src_img_pixfmt = src_img->pixfmt;
     imlib_draw_row_data.rgb_channel = rgb_channel;
     imlib_draw_row_data.alpha = alpha;
     imlib_draw_row_data.color_palette = color_palette;
@@ -3509,11 +3265,6 @@ void imlib_draw_image(image_t *dst_img,
     imlib_draw_row_data.callback = callback;
     imlib_draw_row_data.callback_arg = callback_arg;
     imlib_draw_row_data.dst_row_override = dst_row_override;
-    #ifdef IMLIB_ENABLE_DMA2D
-    imlib_draw_row_data.dma2d_request = (alpha != 256) || alpha_palette ||
-                                        (hint & (IMAGE_HINT_AREA | IMAGE_HINT_BICUBIC | IMAGE_HINT_BILINEAR));
-    #endif
-
     imlib_draw_row_setup(&imlib_draw_row_data);
 
     // Y loop iteration variables
@@ -3545,8 +3296,7 @@ void imlib_draw_image(image_t *dst_img,
                         }
                         int height = src_y_index_end - src_y_index;
 
-                        // Must be called per loop to get the address of the temp buffer to blend with
-                        uint32_t *dst_row_ptr = (uint32_t *) imlib_draw_row_get_row_buffer(&imlib_draw_row_data);
+                        uint32_t *dst_row_ptr = (uint32_t *) imlib_draw_row_data.row_buffer;
 
                         // X loop iteration variables
                         int dst_x = dst_x_reset;
@@ -3603,8 +3353,7 @@ void imlib_draw_image(image_t *dst_img,
                         }
                         int height = src_y_index_end - src_y_index;
 
-                        // Must be called per loop to get the address of the temp buffer to blend with
-                        uint8_t *dst_row_ptr = (uint8_t *) imlib_draw_row_get_row_buffer(&imlib_draw_row_data);
+                        uint8_t *dst_row_ptr = (uint8_t *) imlib_draw_row_data.row_buffer;
 
                         // X loop iteration variables
                         int dst_x = dst_x_reset;
@@ -3692,8 +3441,7 @@ void imlib_draw_image(image_t *dst_img,
                         }
                         int height = src_y_index_end - src_y_index;
 
-                        // Must be called per loop to get the address of the temp buffer to blend with
-                        uint16_t *dst_row_ptr = (uint16_t *) imlib_draw_row_get_row_buffer(&imlib_draw_row_data);
+                        uint16_t *dst_row_ptr = (uint16_t *) imlib_draw_row_data.row_buffer;
 
                         // X loop iteration variables
                         int dst_x = dst_x_reset;
@@ -3815,8 +3563,7 @@ void imlib_draw_image(image_t *dst_img,
                         uint32_t *t_src_row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(src_img, src_y_index);
                         uint32_t *b_src_row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(src_img, src_y_index_end);
 
-                        // Must be called per loop to get the address of the temp buffer to blend with
-                        uint32_t *dst_row_ptr = (uint32_t *) imlib_draw_row_get_row_buffer(&imlib_draw_row_data);
+                        uint32_t *dst_row_ptr = (uint32_t *) imlib_draw_row_data.row_buffer;
 
                         // X loop iteration variables
                         int dst_x = dst_x_reset;
@@ -3973,8 +3720,7 @@ void imlib_draw_image(image_t *dst_img,
                         uint8_t *t_src_row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(src_img, src_y_index);
                         uint8_t *b_src_row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(src_img, src_y_index_end);
 
-                        // Must be called per loop to get the address of the temp buffer to blend with
-                        uint8_t *dst_row_ptr = (uint8_t *) imlib_draw_row_get_row_buffer(&imlib_draw_row_data);
+                        uint8_t *dst_row_ptr = (uint8_t *) imlib_draw_row_data.row_buffer;
 
                         // X loop iteration variables
                         int dst_x = dst_x_reset;
@@ -4167,8 +3913,7 @@ void imlib_draw_image(image_t *dst_img,
                         uint16_t *t_src_row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(src_img, src_y_index);
                         uint16_t *b_src_row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(src_img, src_y_index_end);
 
-                        // Must be called per loop to get the address of the temp buffer to blend with
-                        uint16_t *dst_row_ptr = (uint16_t *) imlib_draw_row_get_row_buffer(&imlib_draw_row_data);
+                        uint16_t *dst_row_ptr = (uint16_t *) imlib_draw_row_data.row_buffer;
 
                         // X loop iteration variables
                         int dst_x = dst_x_reset;
@@ -4424,8 +4169,7 @@ void imlib_draw_image(image_t *dst_img,
                         int dy3 = (dy2 * dy) >> 15;
                         long smuad_dy_dy2 = (dy << 16) | dy2;
 
-                        // Must be called per loop to get the address of the temp buffer to blend with
-                        uint32_t *dst_row_ptr = (uint32_t *) imlib_draw_row_get_row_buffer(&imlib_draw_row_data);
+                        uint32_t *dst_row_ptr = (uint32_t *) imlib_draw_row_data.row_buffer;
 
                         // X loop iteration variables
                         int dst_x = dst_x_reset;
@@ -4566,8 +4310,7 @@ void imlib_draw_image(image_t *dst_img,
                         int dy3 = (dy2 * dy) >> 15;
                         long smuad_dy_dy2 = (dy << 16) | dy2;
 
-                        // Must be called per loop to get the address of the temp buffer to blend with
-                        uint8_t *dst_row_ptr = (uint8_t *) imlib_draw_row_get_row_buffer(&imlib_draw_row_data);
+                        uint8_t *dst_row_ptr = (uint8_t *) imlib_draw_row_data.row_buffer;
 
                         // X loop iteration variables
                         int dst_x = dst_x_reset;
@@ -4826,8 +4569,7 @@ void imlib_draw_image(image_t *dst_img,
                         int dy3 = (dy2 * dy) >> 15;
                         long smuad_dy_dy2 = (dy << 16) | dy2;
 
-                        // Must be called per loop to get the address of the temp buffer to blend with
-                        uint16_t *dst_row_ptr = (uint16_t *) imlib_draw_row_get_row_buffer(&imlib_draw_row_data);
+                        uint16_t *dst_row_ptr = (uint16_t *) imlib_draw_row_data.row_buffer;
 
                         // X loop iteration variables
                         int dst_x = dst_x_reset;
@@ -5164,8 +4906,7 @@ void imlib_draw_image(image_t *dst_img,
                         // Cache the results of getting the source rows
                         uint32_t *src_row_ptr = ((src_y_accum >> 15) & 0x1) ? src_row_ptr_1 : src_row_ptr_0;
 
-                        // Must be called per loop to get the address of the temp buffer to blend with
-                        uint32_t *dst_row_ptr = (uint32_t *) imlib_draw_row_get_row_buffer(&imlib_draw_row_data);
+                        uint32_t *dst_row_ptr = (uint32_t *) imlib_draw_row_data.row_buffer;
 
                         // X loop iteration variables
                         int dst_x = dst_x_reset;
@@ -5238,8 +4979,7 @@ void imlib_draw_image(image_t *dst_img,
                         long smuad_y = (src_y_accum >> 8) & 0xff;
                         smuad_y |= (256 - smuad_y) << 16;
 
-                        // Must be called per loop to get the address of the temp buffer to blend with
-                        uint8_t *dst_row_ptr = (uint8_t *) imlib_draw_row_get_row_buffer(&imlib_draw_row_data);
+                        uint8_t *dst_row_ptr = (uint8_t *) imlib_draw_row_data.row_buffer;
 
                         // X loop iteration variables
                         int dst_x = dst_x_reset;
@@ -5326,8 +5066,7 @@ void imlib_draw_image(image_t *dst_img,
                         long smuad_y = (src_y_accum >> 11) & 0x1f;
                         smuad_y |= (32 - smuad_y) << 16;
 
-                        // Must be called per loop to get the address of the temp buffer to blend with
-                        uint16_t *dst_row_ptr = (uint16_t *) imlib_draw_row_get_row_buffer(&imlib_draw_row_data);
+                        uint16_t *dst_row_ptr = (uint16_t *) imlib_draw_row_data.row_buffer;
 
                         // X loop iteration variables
                         int dst_x = dst_x_reset;
@@ -5415,8 +5154,7 @@ void imlib_draw_image(image_t *dst_img,
                 case PIXFORMAT_BINARY: {
                     while (y_not_done) {
                         uint32_t *src_row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(src_img, next_src_y_index);
-                        // Must be called per loop to get the address of the temp buffer to blend with
-                        uint32_t *dst_row_ptr = (uint32_t *) imlib_draw_row_get_row_buffer(&imlib_draw_row_data);
+                        uint32_t *dst_row_ptr = (uint32_t *) imlib_draw_row_data.row_buffer;
 
                         // X loop iteration variables
                         int dst_x = dst_x_reset;
@@ -5451,8 +5189,7 @@ void imlib_draw_image(image_t *dst_img,
                 case PIXFORMAT_BAYER_ANY: {
                     while (y_not_done) {
                         uint8_t *src_row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(src_img, next_src_y_index);
-                        // Must be called per loop to get the address of the temp buffer to blend with
-                        uint8_t *dst_row_ptr = (uint8_t *) imlib_draw_row_get_row_buffer(&imlib_draw_row_data);
+                        uint8_t *dst_row_ptr = (uint8_t *) imlib_draw_row_data.row_buffer;
 
                         // X loop iteration variables
                         int dst_x = dst_x_reset;
@@ -5487,8 +5224,7 @@ void imlib_draw_image(image_t *dst_img,
                 case PIXFORMAT_YUV_ANY: {
                     while (y_not_done) {
                         uint16_t *src_row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(src_img, next_src_y_index);
-                        // Must be called per loop to get the address of the temp buffer to blend with
-                        uint16_t *dst_row_ptr = (uint16_t *) imlib_draw_row_get_row_buffer(&imlib_draw_row_data);
+                        uint16_t *dst_row_ptr = (uint16_t *) imlib_draw_row_data.row_buffer;
 
                         // X loop iteration variables
                         int dst_x = dst_x_reset;
@@ -5528,7 +5264,7 @@ void imlib_draw_image(image_t *dst_img,
                 case PIXFORMAT_BINARY: {
                     while (y_not_done) {
                         uint32_t *src_row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(src_img, next_src_y_index);
-                        imlib_draw_row_put_row_buffer(&imlib_draw_row_data, src_row_ptr);
+                        imlib_draw_row_data.row_buffer = src_row_ptr;
                         imlib_draw_row(dst_x_start, dst_x_end, dst_y, &imlib_draw_row_data);
 
                         // Increment offsets
@@ -5542,7 +5278,7 @@ void imlib_draw_image(image_t *dst_img,
                 case PIXFORMAT_GRAYSCALE: {
                     while (y_not_done) {
                         uint8_t *src_row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(src_img, next_src_y_index);
-                        imlib_draw_row_put_row_buffer(&imlib_draw_row_data, src_row_ptr);
+                        imlib_draw_row_data.row_buffer = src_row_ptr;
                         imlib_draw_row(dst_x_start, dst_x_end, dst_y, &imlib_draw_row_data);
 
                         // Increment offsets
@@ -5556,7 +5292,7 @@ void imlib_draw_image(image_t *dst_img,
                 case PIXFORMAT_RGB565: {
                     while (y_not_done) {
                         uint16_t *src_row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(src_img, next_src_y_index);
-                        imlib_draw_row_put_row_buffer(&imlib_draw_row_data, src_row_ptr);
+                        imlib_draw_row_data.row_buffer = src_row_ptr;
                         imlib_draw_row(dst_x_start, dst_x_end, dst_y, &imlib_draw_row_data);
 
                         // Increment offsets
@@ -5572,14 +5308,14 @@ void imlib_draw_image(image_t *dst_img,
                         switch (new_not_mutable_pixfmt) {
                             case PIXFORMAT_MUTABLE_ANY: {
                                 imlib_debayer_line(dst_x_start, dst_x_end, next_src_y_index,
-                                                   imlib_draw_row_get_row_buffer(&imlib_draw_row_data),
+                                                   imlib_draw_row_data.row_buffer,
                                                    new_not_mutable_pixfmt, src_img);
                                 break;
                             }
                             case PIXFORMAT_BAYER_ANY: {
                                 // Bayer images have the same shape as GRAYSCALE.
                                 uint8_t *src_row_ptr = IMAGE_COMPUTE_BAYER_PIXEL_ROW_PTR(src_img, next_src_y_index);
-                                imlib_draw_row_put_row_buffer(&imlib_draw_row_data, src_row_ptr);
+                                imlib_draw_row_data.row_buffer = src_row_ptr;
                                 break;
                             }
                             default: {
@@ -5602,14 +5338,14 @@ void imlib_draw_image(image_t *dst_img,
                         switch (new_not_mutable_pixfmt) {
                             case PIXFORMAT_MUTABLE_ANY: {
                                 imlib_deyuv_line(dst_x_start, dst_x_end, next_src_y_index,
-                                                 imlib_draw_row_get_row_buffer(&imlib_draw_row_data),
+                                                 imlib_draw_row_data.row_buffer,
                                                  new_not_mutable_pixfmt, src_img);
                                 break;
                             }
                             case PIXFORMAT_YUV_ANY: {
                                 // YUV images have the same shape as RGB565.
                                 uint16_t *src_row_ptr = IMAGE_COMPUTE_YUV_PIXEL_ROW_PTR(src_img, next_src_y_index);
-                                imlib_draw_row_put_row_buffer(&imlib_draw_row_data, src_row_ptr);
+                                imlib_draw_row_data.row_buffer = src_row_ptr;
                                 break;
                             }
                             default: {
@@ -5642,8 +5378,7 @@ void imlib_draw_image(image_t *dst_img,
 
                     do {
                         // Cache the results of getting the source row
-                        // Must be called per loop to get the address of the temp buffer to blend with
-                        uint32_t *dst_row_ptr = (uint32_t *) imlib_draw_row_get_row_buffer(&imlib_draw_row_data);
+                        uint32_t *dst_row_ptr = (uint32_t *) imlib_draw_row_data.row_buffer;
 
                         // X loop iteration variables
                         int dst_x = dst_x_reset;
@@ -5688,8 +5423,7 @@ void imlib_draw_image(image_t *dst_img,
 
                     do {
                         // Cache the results of getting the source row
-                        // Must be called per loop to get the address of the temp buffer to blend with
-                        uint8_t *dst_row_ptr = (uint8_t *) imlib_draw_row_get_row_buffer(&imlib_draw_row_data);
+                        uint8_t *dst_row_ptr = (uint8_t *) imlib_draw_row_data.row_buffer;
 
                         // X loop iteration variables
                         int dst_x = dst_x_reset;
@@ -5734,8 +5468,7 @@ void imlib_draw_image(image_t *dst_img,
 
                     do {
                         // Cache the results of getting the source row
-                        // Must be called per loop to get the address of the temp buffer to blend with
-                        uint16_t *dst_row_ptr = (uint16_t *) imlib_draw_row_get_row_buffer(&imlib_draw_row_data);
+                        uint16_t *dst_row_ptr = (uint16_t *) imlib_draw_row_data.row_buffer;
 
                         // X loop iteration variables
                         int dst_x = dst_x_reset;
@@ -5778,6 +5511,9 @@ void imlib_draw_image(image_t *dst_img,
     }
 
     imlib_draw_row_teardown(&imlib_draw_row_data);
+
+exit_cleanup:
+
     if (&new_src_img == src_img) {
         fb_free();
     }

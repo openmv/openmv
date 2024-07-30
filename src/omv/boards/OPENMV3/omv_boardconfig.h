@@ -24,6 +24,9 @@
 #define OMV_JPEG_QUALITY_HIGH                 (60)
 #define OMV_JPEG_QUALITY_THRESHOLD            (160 * 120 * 2)
 
+// GPU Configuration
+#define OMV_GPU_ENABLE                        (1)
+
 // Image sensor drivers configuration.
 #define OMV_OV7725_ENABLE                     (1)
 #define OMV_OV7725_PLL_CONFIG                 (0x81) // x6

@@ -141,9 +141,6 @@
 // Enable selective_search()
 //#define IMLIB_ENABLE_SELECTIVE_SEARCH
 
-// Enable STM32 DMA2D
-//#define IMLIB_ENABLE_DMA2D
-
 // Stereo Imaging
 // #define IMLIB_ENABLE_STEREO_DISPARITY
 
