@@ -25,11 +25,10 @@ int omv_gpu_init() {
     return 0;
 }
 
-int omv_gpu_deinit() {
+void omv_gpu_deinit() {
     DMA2D_HandleTypeDef dma2d = {};
     dma2d.Instance = DMA2D;
     HAL_DMA2D_DeInit(&dma2d);
-    return 0;
 }
 
 int omv_gpu_draw_image(image_t *src_img,

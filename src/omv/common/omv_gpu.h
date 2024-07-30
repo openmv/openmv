@@ -13,7 +13,7 @@
 #include "imlib.h"
 
 int omv_gpu_init();
-int omv_gpu_deinit();
+void omv_gpu_deinit();
 
 // Draws src_rect from src_img to dst_rect in dst_img.
 // If the sizes of src_rect and dst_rect are different then the image must be scaled.
