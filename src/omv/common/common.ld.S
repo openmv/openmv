@@ -5,7 +5,7 @@
 /* Adds a section to a table */
 #define OMV_ADD_SECTION(s) \
   LONG (ADDR(s)) \
-  LONG (SIZEOF(s) / 4)
+  LONG (SIZEOF(s))
 
 /* Aligns a section to the next power of 2. */
 #define OMV_ALIGN_DMA_SECTION(section) \
