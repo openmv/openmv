@@ -125,6 +125,7 @@
 #define OMV_CSI_TIM_CLK_ENABLE()              __TIM1_CLK_ENABLE()
 #define OMV_CSI_TIM_CLK_DISABLE()             __TIM1_CLK_DISABLE()
 #define OMV_CSI_TIM_PCLK_FREQ()               HAL_RCC_GetPCLK2Freq()
+#define OMV_CSI_HW_CROP_ENABLE                (1)
 
 #define OMV_CSI_D0_PIN                        (&omv_pin_C6_DCMI)
 #define OMV_CSI_D1_PIN                        (&omv_pin_C7_DCMI)
