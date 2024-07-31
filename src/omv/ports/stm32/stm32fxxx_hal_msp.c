@@ -53,7 +53,7 @@ void HAL_MspInit(void) {
     }
 
     typedef struct {
-        uint8_t *addr;
+        uint32_t addr;
         uint32_t size;
     } dma_memory_table_t;
 
@@ -65,7 +65,7 @@ void HAL_MspInit(void) {
         if (buf->size >= 32) {
             MPU_InitStruct.Number = region_number--;
             MPU_InitStruct.Enable = MPU_REGION_ENABLE;
-            MPU_InitStruct.BaseAddress = (uint32_t) buf->addr;
+            MPU_InitStruct.BaseAddress = buf->addr;
             MPU_InitStruct.Size = dma_utils_mpu_region_size(buf->size);
             HAL_MPU_ConfigRegion(&MPU_InitStruct);
         }
