@@ -204,6 +204,7 @@
 #define OMV_CSI_XCLK_FREQUENCY          (12000000)
 #define OMV_CSI_DMA_MEMCPY_ENABLE       (1)
 #define OMV_CSI_HW_SWAP_ENABLE          (1)
+#define OMV_CSI_HW_CROP_ENABLE          (1)
 
 #define OMV_CSI_D0_PIN                  (&omv_pin_DCMI_D0)
 #define OMV_CSI_D1_PIN                  (&omv_pin_DCMI_D1)

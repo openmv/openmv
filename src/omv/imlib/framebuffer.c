@@ -245,15 +245,18 @@ uint32_t framebuffer_get_buffer_size() {
         // With only 1 vbuffer it's fine to allow the frame buffer size to change given fb_alloc().
         size = framebuffer_raw_buffer_size();
     } else {
-        // Whatever the raw size was when the number of buffers were set is locked in...
+        // Whatever the raw size was when the number of buffers were set is locked in.
         size = framebuffer->raw_buffer_size;
     }
 
     // Remove the size of the state header plus alignment padding.
     size -= sizeof(vbuffer_t);
 
-    // Do we have an estimate on the frame size with multiple buffers? If so, we can reduce the
-    // RAM each buffer takes up giving some space back to fb_alloc().
+    #if (OMV_CSI_HW_CROP_ENABLE == 1)
+    // If the frame size is set, the memory for each buffer can be reduced,
+    // freeing up space for fb_alloc(). Note that this can only be done if
+    // the camera interface supports hardware cropping, i.e., the actual
+    // frame size will match the specified window size.
     if ((framebuffer->n_buffers != 1) && framebuffer->u && framebuffer->v) {
         // Typically a framebuffer will not need more than u*v*2 bytes.
         uint32_t size_guess = framebuffer->u * framebuffer->v * 2;
@@ -262,6 +265,7 @@ uint32_t framebuffer_get_buffer_size() {
         // Limit the frame buffer size.
         size = IM_MIN(size, size_guess);
     }
+    #endif
 
     // Needs to be a multiple of FRAMEBUFFER_ALIGNMENT for DMA transfers...
     return FB_ALIGN_SIZE_ROUND_DOWN(size);
