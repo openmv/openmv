@@ -84,4 +84,5 @@ class MicroSpeech:
                 return (None, average_scores)
             if timeout != 0 and (time.ticks_ms() - stat_ms) > timeout:
                 self.stop_audio_streaming()
+                return (None, average_scores)
             time.sleep_ms(1)
