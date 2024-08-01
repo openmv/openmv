@@ -1,6 +1,8 @@
 # Set startup and system files for CMSIS Makefile.
 SYSTEM  ?= st/system_stm32fxxx
 STARTUP ?= st/startup_$(shell echo $(MCU) | tr '[:upper:]' '[:lower:]')
+UVC_DIR := $(OMV_DIR)/ports/$(PORT)/uvc
+BOOT_DIR := $(OMV_DIR)/ports/$(PORT)/boot
 
 LDSCRIPT  ?= stm32fxxx
 
@@ -105,7 +107,7 @@ ifeq ($(OMV_ENABLE_BL), 1)
 CFLAGS     += -DOMV_ENABLE_BOOTLOADER
 BL_CFLAGS  := $(CFLAGS) $(HAL_CFLAGS)
 BL_CFLAGS  += -I$(OMV_BOARD_CONFIG_DIR)
-BL_CFLAGS  += -I$(TOP_DIR)/$(BOOTLDR_DIR)/include/
+BL_CFLAGS  += -I$(TOP_DIR)/$(BOOT_DIR)/include/
 # Linker Flags
 BL_LDFLAGS = -mcpu=$(CPU) \
              -mabi=aapcs-linux \
@@ -113,7 +115,7 @@ BL_LDFLAGS = -mcpu=$(CPU) \
              -mfpu=$(FPU) \
              -mfloat-abi=hard \
              -Wl,--gc-sections \
-             -Wl,-T$(BUILD)/$(BOOTLDR_DIR)/stm32fxxx.lds
+             -Wl,-T$(BUILD)/$(BOOT_DIR)/stm32fxxx.lds
 endif
 
 ifeq ($(OMV_ENABLE_UVC), 1)
@@ -559,7 +561,7 @@ endif
 ifeq ($(OMV_ENABLE_BL), 1)
 BOOTLOADER = bootloader
 # Bootloader object files
-BOOT_OBJ += $(wildcard $(BUILD)/$(BOOTLDR_DIR)/src/*.o)
+BOOT_OBJ += $(wildcard $(BUILD)/$(BOOT_DIR)/src/*.o)
 BOOT_OBJ += $(wildcard $(BUILD)/$(HAL_DIR)/src/*.o)
 BOOT_OBJ += $(addprefix $(BUILD)/$(CMSIS_DIR)/src/,\
 	$(STARTUP).o                                \
@@ -686,7 +688,7 @@ UVC_OBJS: FIRMWARE_OBJS
 endif
 ifeq ($(OMV_ENABLE_BL), 1)
 BOOTLOADER_OBJS: FIRMWARE_OBJS
-	$(MAKE)  -C $(BOOTLDR_DIR)               BUILD=$(BUILD)/$(BOOTLDR_DIR)      CFLAGS="$(BL_CFLAGS) -MMD"
+	$(MAKE)  -C $(BOOT_DIR)                  BUILD=$(BUILD)/$(BOOT_DIR)      CFLAGS="$(BL_CFLAGS) -MMD"
 endif
 
 # This target generates the main/app firmware image located at 0x08010000
@@ -701,7 +703,7 @@ ifeq ($(OMV_ENABLE_BL), 1)
 # This target generates the bootloader.
 $(BOOTLOADER): FIRMWARE_OBJS BOOTLOADER_OBJS
 	$(CPP) -P -E -I$(OMV_COMMON_DIR) -I$(OMV_BOARD_CONFIG_DIR) \
-                   $(BOOTLDR_DIR)/stm32fxxx.ld.S > $(BUILD)/$(BOOTLDR_DIR)/stm32fxxx.lds
+                   $(BOOT_DIR)/stm32fxxx.ld.S > $(BUILD)/$(BOOT_DIR)/stm32fxxx.lds
 	$(CC) $(BL_LDFLAGS) $(BOOT_OBJ) -o $(FW_DIR)/$(BOOTLOADER).elf
 	$(OBJCOPY) -Obinary $(FW_DIR)/$(BOOTLOADER).elf $(FW_DIR)/$(BOOTLOADER).bin
 	$(PYTHON) $(MKDFU) -D $(DFU_DEVICE) -b 0x08000000:$(FW_DIR)/$(BOOTLOADER).bin $(FW_DIR)/$(BOOTLOADER).dfu

@@ -47,11 +47,12 @@ jobs:
             src/**/*.c
             src/**/*.h
             !src/hal/**
-            !src/uvc/**
             !src/lib/**
             !src/drivers/**
             !src/micropython/**
             !src/stm32cubeai/**
+            !src/omv/ports/stm32/uvc/**
+            !src/omv/ports/stm32/boot/**
 
     - name: '📜 Show list of changed files'
       run: |
