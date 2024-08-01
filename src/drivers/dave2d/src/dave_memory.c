@@ -113,7 +113,7 @@ void *d2_getmem_d( const d2_device *handle, d2_u32 size )
 {
    d1_device *id = d2_level1interface(handle);
 
-   if(0 != (D2_DEV(handle)->hwmemarchitecture & d1_ma_unified))
+   if(0 != (D2_DEV(handle)->hwmemarchitecture & d1_ma_separated))
    {
       return d1_allocvidmem( id, d1_mem_dlist, size );
    }
@@ -134,7 +134,7 @@ void d2_freemem_d( const d2_device *handle, void *adr )
 {
    d1_device *id = d2_level1interface(handle);
 
-   if(0 != (D2_DEV(handle)->hwmemarchitecture & d1_ma_unified))
+   if(0 != (D2_DEV(handle)->hwmemarchitecture & d1_ma_separated))
    {
       d1_freevidmem( id, d1_mem_dlist, adr );
    }
