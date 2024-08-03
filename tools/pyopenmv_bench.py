@@ -14,24 +14,20 @@ import pygame
 import pyopenmv
 from time import sleep
 
-script = """
-# Hello World Example
-#
-# Welcome to the OpenMV IDE! Click on the green run arrow button below to run the script!
 
+script = """
 import sensor, image, time
 
-sensor.reset()                      # Reset and initialize the sensor.
-sensor.set_pixformat(sensor.RGB565) # Set pixel format to RGB565 (or GRAYSCALE)
-sensor.set_framesize(sensor.QVGA)   # Set frame size to QVGA (320x240)
-sensor.skip_frames(time = 2000)     # Wait for settings take effect.
-clock = time.clock()                # Create a clock object to track the FPS.
+
+sensor.reset()  # Reset and initialize the sensor.
+sensor.set_pixformat(sensor.RGB565)  # Set pixel format to RGB565 (or GRAYSCALE)
+sensor.set_framesize(sensor.VGA)  # Set frame size to QVGA (320x240)
+
+img = sensor.snapshot()         # Take a picture and return the image.
+img.compress()
 
 while(True):
-    clock.tick()
-    img = sensor.snapshot()         # Take a picture and return the image.
-    sensor.flush()
-    print(clock.fps(), " FPS")
+    img.flush()
 """
 
 # init pygame
@@ -65,21 +61,22 @@ if not connected:
 
 # Set higher timeout after connecting for lengthy transfers.
 pyopenmv.set_timeout(1*2) # SD Cards can cause big hicups.
-pyopenmv.stop_script()
 pyopenmv.enable_fb(True)
 pyopenmv.exec_script(script)
 
 # init screen
 running = True
 screen = None
-IMAGE_SCALE = 4
 
 clock = pygame.time.Clock()
 fps_clock = pygame.time.Clock()
+
 font = pygame.font.SysFont("monospace", 50)
+fb_size = 0
 
 try:
     while running:
+        data = None
         # Read state
         w, h, data, size, text = pyopenmv.read_state()
 
@@ -88,21 +85,16 @@ try:
 
         if data is not None:
             fps = fps_clock.get_fps()
-
-            # Create image from RGB888
-            image = pygame.image.frombuffer(data.flat[0:], (w, h), 'RGB')
-            image = pygame.transform.scale(image, (w * IMAGE_SCALE, h * IMAGE_SCALE))
+            fps_clock.tick(500)
 
             if screen is None:
-                screen = pygame.display.set_mode((w * IMAGE_SCALE, h * IMAGE_SCALE), pygame.DOUBLEBUF, 32)
+                screen = pygame.display.set_mode((640, 120), pygame.DOUBLEBUF, 32)
 
-            # blit stuff
-            screen.blit(image, (0, 0))
-            screen.blit(font.render("%.2f FPS %.2f MB/s"%(fps, fps * size / 1024**2), 5, (255, 0, 0)), (0, 0))
+            screen.fill((0, 0, 0))
+            screen.blit(font.render("FPS %.2f %.2f MB/s"%(fps, fps * size / 1024**2), 1, (255, 0, 0)), (0, 30))
 
             # update display
             pygame.display.flip()
-            fps_clock.tick(250)
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -110,10 +102,7 @@ try:
             elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
                     running = False
-                if event.key == pygame.K_c:
-                    pygame.image.save(image, "capture.png")
-
-        clock.tick(250)
+        clock.tick(500)
 except KeyboardInterrupt:
     pass
 
