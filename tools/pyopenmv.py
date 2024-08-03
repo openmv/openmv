@@ -216,7 +216,7 @@ def enable_fb(enable):
 
 def arch_str():
     __serial.write(struct.pack("<BBI", __USBDBG_CMD, __USBDBG_ARCH_STR, 64))
-    return __serial.read(64).split('\0', 1)[0]
+    return __serial.read(64).split(b'\0', 1)[0]
 
 if __name__ == '__main__':
     if len(sys.argv)!= 3:
