@@ -10,14 +10,8 @@
  * Ported from public domain JPEG writer by Jon Olick - http://jonolick.com
  * DCT implementation is based on Arai, Agui, and Nakajima's algorithm for scaled DCT.
  */
-#include "file_utils.h"
 #include "imlib.h"
-
-#define TIME_JPEG                  (0)
-#if (TIME_JPEG == 1)
-#include <stdio.h>
-#include "py/mphal.h"
-#endif
+#include "file_utils.h"
 
 // Expand 4 bits to 32 for binary to grayscale - process 4 pixels at a time
 #if (OMV_JPEG_CODEC_ENABLE == 1)
@@ -1615,9 +1609,7 @@ static void jpeg_write_headers(jpeg_buf_t *jpeg_buf, int w, int h, int bpp, jpeg
 }
 
 bool jpeg_compress(image_t *src, image_t *dst, int quality, bool realloc, jpeg_subsampling_t subsampling) {
-    #if (TIME_JPEG == 1)
-    mp_uint_t start = mp_hal_ticks_ms();
-    #endif
+    OMV_PROFILE_START
 
     if (!dst->data) {
         uint32_t size = 0;
@@ -1949,10 +1941,7 @@ bool jpeg_compress(image_t *src, image_t *dst, int quality, bool realloc, jpeg_s
     dst->size = jpeg_buf.idx;
     dst->data = jpeg_buf.buf;
 
-    #if (TIME_JPEG == 1)
-    printf("compress time: %u ms\n", mp_hal_ticks_ms() - start);
-    #endif
-
+    OMV_PROFILE_END
     return false;
 }
 

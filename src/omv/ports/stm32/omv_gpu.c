@@ -10,16 +10,9 @@
  */
 #include "omv_boardconfig.h"
 #if (OMV_GPU_ENABLE == 1)
-#include "imlib.h"
-
 #include STM32_HAL_H
+#include "imlib.h"
 #include "dma.h"
-
-#define TIME_GPU    (0)
-#if (TIME_GPU == 1)
-#include "py/mphal.h"
-#include <stdio.h>
-#endif
 
 int omv_gpu_init() {
     return 0;
@@ -39,6 +32,8 @@ int omv_gpu_draw_image(image_t *src_img,
                        const uint16_t *color_palette,
                        const uint8_t *alpha_palette,
                        image_hint_t hint) {
+    OMV_PROFILE_START
+
     // DMA2D can only draw on RGB565 buffers and the destination/source buffers must be accessible by DMA.
     if ((dst_img->pixfmt != PIXFORMAT_RGB565) || (!DMA_BUFFER(dst_img->data)) || (!DMA_BUFFER(src_img->data))) {
         return -1;
@@ -67,10 +62,6 @@ int omv_gpu_draw_image(image_t *src_img,
     if (hint & IMAGE_HINT_BLACK_BACKGROUND) {
         return -1;
     }
-    #endif
-
-    #if (TIME_GPU == 1)
-    mp_uint_t start = mp_hal_ticks_ms();
     #endif
 
     DMA2D_HandleTypeDef dma2d = {};
@@ -220,10 +211,7 @@ int omv_gpu_draw_image(image_t *src_img,
         fb_free(); // clut
     }
 
-    #if (TIME_GPU == 1)
-    printf("draw time: %u ms\n", mp_hal_ticks_ms() - start);
-    #endif
-
+    OMV_PROFILE_END
     return 0;
 }
 #endif // (OMV_GPU_ENABLE == 1)

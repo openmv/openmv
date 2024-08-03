@@ -19,11 +19,6 @@
 #include "irq.h"
 #include "dma_utils.h"
 
-#define TIME_JPEG                   (0)
-#if (TIME_JPEG == 1)
-#include <stdio.h>
-#endif
-
 #define JPEG_CODEC_TIMEOUT          (1000)
 #define JPEG_ALLOC_PADDING          ((__SCB_DCACHE_LINE_SIZE) * 4)
 #define JPEG_OUTPUT_CHUNK_SIZE      (512) // The minimum output buffer size is 2x this - so 1KB.
@@ -111,10 +106,7 @@ static void jpeg_compress_data_ready(JPEG_HandleTypeDef *hjpeg, uint8_t *pDataOu
 }
 
 bool jpeg_compress(image_t *src, image_t *dst, int quality, bool realloc, jpeg_subsampling_t subsampling) {
-    #if (TIME_JPEG == 1)
-    mp_uint_t start = mp_hal_ticks_ms();
-    #endif
-
+    OMV_PROFILE_START
     HAL_JPEG_RegisterGetDataCallback(&JPEG_state.jpeg_descr, jpeg_compress_get_data);
     HAL_JPEG_RegisterDataReadyCallback(&JPEG_state.jpeg_descr, jpeg_compress_data_ready);
 
@@ -365,12 +357,7 @@ bool jpeg_compress(image_t *src, image_t *dst, int quality, bool realloc, jpeg_s
     // Clean trailing data after 0xFFD9 at the end of the jpeg byte stream.
     dst->size = jpeg_clean_trailing_bytes(dst->size, dst->data);
 
-    #if (TIME_JPEG == 1)
-    printf("compress time: %u ms\n", mp_hal_ticks_ms() - start);
-    #endif
-
 exit_cleanup:
-
     // Cleanup jpeg state.
     HAL_JPEG_Abort(&JPEG_state.jpeg_descr);
     HAL_JPEG_UnRegisterDataReadyCallback(&JPEG_state.jpeg_descr);
@@ -378,6 +365,7 @@ exit_cleanup:
 
     fb_free(); // mcu_row_buffer (after DMA is aborted)
 
+    OMV_PROFILE_END
     return jpeg_overflow;
 }
 
@@ -409,9 +397,7 @@ static void jpeg_decompress_data_ready(JPEG_HandleTypeDef *hjpeg, uint8_t *pData
 }
 
 void jpeg_decompress(image_t *dst, image_t *src) {
-    #if (TIME_JPEG == 1)
-    mp_uint_t start = mp_hal_ticks_ms();
-    #endif
+    OMV_PROFILE_START
 
     // Verify the jpeg image is not a non-baseline jpeg image and check that is has
     // valid headers up to the start-of-scan header (which cannot be trivially walked).
@@ -749,10 +735,6 @@ void jpeg_decompress(image_t *dst, image_t *src) {
         }
     }
 
-    #if (TIME_JPEG == 1)
-    printf("decompress time: %u ms\n", mp_hal_ticks_ms() - start);
-    #endif
-
 exit_cleanup:
 
     // Cleanup jpeg state.
@@ -769,6 +751,8 @@ exit_cleanup:
     if (((uint32_t) src->data) % __SCB_DCACHE_LINE_SIZE) {
         fb_free(); // JPEG_state.jpeg_descr.pJpegInBuffPtr (after DMA is aborted)
     }
+
+    OMV_PROFILE_END
 }
 
 void imlib_hardware_jpeg_init() {
