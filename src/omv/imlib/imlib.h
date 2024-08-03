@@ -29,6 +29,7 @@
 #include "collections.h"
 #include "imlib_config.h"
 #include "omv_boardconfig.h"
+#include "omv_common.h"
 
 // Enables 38 TensorFlow Lite operators.
 #define IMLIB_TF_DEFAULT        (1)

@@ -16,12 +16,6 @@
 #include "py/nlr.h"
 #include "py/runtime.h"
 
-#define TIME_JPEG   (0)
-#if (TIME_JPEG == 1)
-#include "py/mphal.h"
-#include <stdio.h>
-#endif
-
 #if (OMV_JPEG_CODEC_ENABLE == 0)
 /* Software JPEG decoder */
 #define FILE_HIGHWATER         1536
@@ -2847,11 +2841,8 @@ static int DecodeJPEG(JPEGIMAGE *pJPEG) {
 }
 
 void jpeg_decompress(image_t *dst, image_t *src) {
+    OMV_PROFILE_START
     JPEGIMAGE jpg;
-
-    #if (TIME_JPEG == 1)
-    mp_uint_t start = mp_hal_ticks_ms();
-    #endif
 
     // Supports decoding baseline JPEGs only.
     if (!jpeg_is_valid(src)) {
@@ -2891,8 +2882,6 @@ void jpeg_decompress(image_t *dst, image_t *src) {
         mp_raise_msg(&mp_type_OSError, MP_ERROR_TEXT("JPEG decoder failed."));
     }
 
-    #if (TIME_JPEG == 1)
-    printf("time: %u ms\n", mp_hal_ticks_ms() - start);
-    #endif
+    OMV_PROFILE_END
 }
 #endif

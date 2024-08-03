@@ -97,6 +97,11 @@ ifeq ($(FB_ALLOC_STATS), 1)
 CFLAGS += -DFB_ALLOC_STATS
 endif
 
+# Enable timing for some functions.
+ifeq ($(PROFILE), 1)
+CFLAGS += -DOMV_PROFILE_ENABLE=1
+endif
+
 # Include OpenMV board config first to set the port.
 include $(OMV_BOARD_CONFIG_DIR)/omv_boardconfig.mk
 

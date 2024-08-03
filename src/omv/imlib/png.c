@@ -8,16 +8,12 @@
  *
  * PNG CODEC
  */
-#include <stdio.h>
 #include "imlib.h"
-#include "py/mphal.h"
 #include "py/runtime.h"
 #include "file_utils.h"
 #if defined(IMLIB_ENABLE_PNG_ENCODER) || defined(IMLIB_ENABLE_PNG_DECODER)
 #include "lodepng.h"
 #include "umm_malloc.h"
-
-#define TIME_PNG    (0)
 
 void *lodepng_malloc(size_t size) {
     return umm_malloc(size);
@@ -109,9 +105,7 @@ unsigned lodepng_convert_cb(unsigned char *out, const unsigned char *in,
 
 #if defined(IMLIB_ENABLE_PNG_ENCODER)
 bool png_compress(image_t *src, image_t *dst) {
-    #if (TIME_PNG == 1)
-    mp_uint_t start = mp_hal_ticks_ms();
-    #endif
+    OMV_PROFILE_START
 
     if (src->is_compressed) {
         return true;
@@ -183,21 +177,14 @@ bool png_compress(image_t *src, image_t *dst) {
         // free fb_alloc() memory used for umm_init_x().
         fb_free(); // umm_init_x();
     }
-
-    #if (TIME_PNG == 1)
-    printf("time: %u ms\n", mp_hal_ticks_ms() - start);
-    #endif
-
+    OMV_PROFILE_END
     return false;
 }
 #endif // IMLIB_ENABLE_PNG_ENCODER
 
 #if defined(IMLIB_ENABLE_PNG_DECODER)
 void png_decompress(image_t *dst, image_t *src) {
-    #if (TIME_PNG == 1)
-    mp_uint_t start = mp_hal_ticks_ms();
-    #endif
-
+    OMV_PROFILE_START
     umm_init_x(fb_avail());
 
     LodePNGState state;
@@ -239,10 +226,7 @@ void png_decompress(image_t *dst, image_t *src) {
 
     // free fb_alloc() memory used for umm_init_x().
     fb_free(); // umm_init_x();
-
-    #if (TIME_PNG == 1)
-    printf("time: %u ms\n", mp_hal_ticks_ms() - start);
-    #endif
+    OMV_PROFILE_END
 }
 #endif // IMLIB_ENABLE_PNG_DECODER
 #endif // IMLIB_ENABLE_PNG_ENCODER || IMLIB_ENABLE_PNG_DECODER
