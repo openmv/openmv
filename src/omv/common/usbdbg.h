@@ -58,6 +58,9 @@ enum usbdbg_state_flags {
     USBDBG_STATE_FLAGS_FRAME    = (1 << 2),
 };
 
+typedef uint32_t (*usbdbg_read_callback_t) (void *buf, uint32_t len);
+typedef uint32_t (*usbdbg_write_callback_t) (const void *buf, uint32_t len);
+
 void usbdbg_init();
 void usbdbg_wait_for_command(uint32_t timeout);
 bool usbdbg_script_ready();
@@ -66,8 +69,8 @@ bool usbdbg_is_busy();
 bool usbdbg_get_irq_enabled();
 void usbdbg_set_irq_enabled(bool enabled);
 void usbdbg_set_script_running(bool running);
-void usbdbg_data_in(void *buffer, int length);
-void usbdbg_data_out(void *buffer, int length);
+void usbdbg_data_in(uint32_t size, usbdbg_write_callback_t write_callback);
+void usbdbg_data_out(uint32_t size, usbdbg_read_callback_t read_callback);
 void usbdbg_control(void *buffer, uint8_t brequest, uint32_t wlength);
 
 #endif /* __USBDBG_H__ */
