@@ -36,7 +36,6 @@ extern unsigned char *OMV_BOARD_UID_ADDR;    // Unique address.
 
 // Debugging configuration.
 #define OMV_TUSBDBG_ENABLE         (1)
-#define OMV_TUSBDBG_PACKET         (64)
 #define OMV_TUSBDBG_BUFFER         (2048)
 
 // UMM heap block size
