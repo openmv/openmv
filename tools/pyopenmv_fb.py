@@ -12,110 +12,126 @@ import sys
 import numpy as np
 import pygame
 import pyopenmv
-from time import sleep
+import argparse
+import time
 
-script = """
-# Hello World Example
-#
-# Welcome to the OpenMV IDE! Click on the green run arrow button below to run the script!
-
+test_script = """
 import sensor, image, time
-
-sensor.reset()                      # Reset and initialize the sensor.
-sensor.set_pixformat(sensor.RGB565) # Set pixel format to RGB565 (or GRAYSCALE)
-sensor.set_framesize(sensor.QVGA)   # Set frame size to QVGA (320x240)
-sensor.skip_frames(time = 2000)     # Wait for settings take effect.
-clock = time.clock()                # Create a clock object to track the FPS.
+sensor.reset()
+sensor.set_pixformat(sensor.RGB565)
+sensor.set_framesize(sensor.QVGA)
+sensor.skip_frames(time = 2000)
+clock = time.clock()
 
 while(True):
     clock.tick()
-    img = sensor.snapshot()         # Take a picture and return the image.
+    img = sensor.snapshot()
     sensor.flush()
     print(clock.fps(), " FPS")
 """
 
-# init pygame
-pygame.init()
+bench_script = """
+import sensor, image, time
+sensor.reset()
+sensor.set_pixformat(sensor.RGB565)
+sensor.set_framesize(sensor.VGA)
+img = sensor.snapshot().compress()
+while(True):
+    img.flush()
+"""
 
-if len(sys.argv)!= 2:
-    print ('usage: pyopenmv_fb.py <serial port>')
-    sys.exit(1)
+def pygame_test(port, poll_rate, benchmark):
+    # init pygame
+    pygame.init()
+    pyopenmv.disconnect()
 
-connected = False
-portname = sys.argv[1]
+    connected = False
+    for i in range(10):
+        try:
+            # opens CDC port.
+            # Set small timeout when connecting
+            pyopenmv.init(port, baudrate=921600, timeout=0.050)
+            connected = True
+            break
+        except Exception as e:
+            connected = False
+            time.sleep(0.100)
+    
+    if not connected:
+        print("Failed to connect to OpenMV's serial port.\n"
+              "Please install OpenMV's udev rules first:\n"
+              "sudo cp openmv/udev/50-openmv.rules /etc/udev/rules.d/\n"
+              "sudo udevadm control --reload-rules\n\n")
+        sys.exit(1)
+    
+    # Set higher timeout after connecting for lengthy transfers.
+    pyopenmv.set_timeout(1*2) # SD Cards can cause big hicups.
+    pyopenmv.stop_script()
+    pyopenmv.enable_fb(True)
+    pyopenmv.exec_script(bench_script if benchmark else test_script)
+    
+    # init screen
+    running = True
+    screen = None
+    IMAGE_SCALE = 4
+    
+    clock = pygame.time.Clock()
+    fps_clock = pygame.time.Clock()
+    font = pygame.font.SysFont("monospace", 50)
 
-pyopenmv.disconnect()
-for i in range(10):
+    if benchmark:
+        screen = pygame.display.set_mode((640, 120), pygame.DOUBLEBUF, 32)
+
     try:
-        # opens CDC port.
-        # Set small timeout when connecting
-        pyopenmv.init(portname, baudrate=921600, timeout=0.050)
-        connected = True
-        break
-    except Exception as e:
-        connected = False
-        sleep(0.100)
+        while running:
+            # Read state
+            w, h, data, size, text = pyopenmv.read_state()
+    
+            if text is not None:
+                print(text, end="")
+    
+            if data is not None:
+                fps = fps_clock.get_fps()
+    
+                # Create image from RGB888
+                if not benchmark:
+                    image = pygame.image.frombuffer(data.flat[0:], (w, h), 'RGB')
+                    image = pygame.transform.scale(image, (w * IMAGE_SCALE, h * IMAGE_SCALE))
+    
+                if screen is None:
+                    screen = pygame.display.set_mode((w * IMAGE_SCALE, h * IMAGE_SCALE), pygame.DOUBLEBUF, 32)
+    
+                # blit stuff
+                if benchmark:
+                    screen.fill((0, 0, 0))
+                else:
+                    screen.blit(image, (0, 0))
+                screen.blit(font.render("%.2f FPS %.2f MB/s"%(fps, fps * size / 1024**2), 5, (255, 0, 0)), (0, 0))
+    
+                # update display
+                pygame.display.flip()
+                fps_clock.tick(1000//poll_rate)
+    
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                     running = False
+                elif event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_ESCAPE:
+                        running = False
+                    if event.key == pygame.K_c:
+                        pygame.image.save(image, "capture.png")
+    
+            clock.tick(1000//poll_rate)
+    except KeyboardInterrupt:
+        pass
+    
+    pygame.quit()
+    pyopenmv.stop_script()
 
-if not connected:
-    print("Failed to connect to OpenMV's serial port.\n"
-          "Please install OpenMV's udev rules first:\n"
-          "sudo cp openmv/udev/50-openmv.rules /etc/udev/rules.d/\n"
-          "sudo udevadm control --reload-rules\n\n")
-    sys.exit(1)
-
-# Set higher timeout after connecting for lengthy transfers.
-pyopenmv.set_timeout(1*2) # SD Cards can cause big hicups.
-pyopenmv.stop_script()
-pyopenmv.enable_fb(True)
-pyopenmv.exec_script(script)
-
-# init screen
-running = True
-screen = None
-IMAGE_SCALE = 4
-
-clock = pygame.time.Clock()
-fps_clock = pygame.time.Clock()
-font = pygame.font.SysFont("monospace", 50)
-
-try:
-    while running:
-        # Read state
-        w, h, data, size, text = pyopenmv.read_state()
-
-        if text is not None:
-            print(text, end="")
-
-        if data is not None:
-            fps = fps_clock.get_fps()
-
-            # Create image from RGB888
-            image = pygame.image.frombuffer(data.flat[0:], (w, h), 'RGB')
-            image = pygame.transform.scale(image, (w * IMAGE_SCALE, h * IMAGE_SCALE))
-
-            if screen is None:
-                screen = pygame.display.set_mode((w * IMAGE_SCALE, h * IMAGE_SCALE), pygame.DOUBLEBUF, 32)
-
-            # blit stuff
-            screen.blit(image, (0, 0))
-            screen.blit(font.render("%.2f FPS %.2f MB/s"%(fps, fps * size / 1024**2), 5, (255, 0, 0)), (0, 0))
-
-            # update display
-            pygame.display.flip()
-            fps_clock.tick(250)
-
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                 running = False
-            elif event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_ESCAPE:
-                    running = False
-                if event.key == pygame.K_c:
-                    pygame.image.save(image, "capture.png")
-
-        clock.tick(250)
-except KeyboardInterrupt:
-    pass
-
-pygame.quit()
-pyopenmv.stop_script()
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='pyopenmv module')
+    parser.add_argument('--port', action = 'store', help='OpenMV camera port (default /dev/ttyACM0)', default='/dev/ttyACM0', )
+    parser.add_argument('--poll', action = 'store', help='Poll rate in ms (default 4)', default=4)
+    parser.add_argument('--bench', action = 'store_true', help='Run throughput benchmark.', default=False)
+    args = parser.parse_args()
+    pygame_test(args.port, int(args.poll), args.bench)
