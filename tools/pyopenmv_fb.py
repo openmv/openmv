@@ -74,20 +74,21 @@ running = True
 screen = None
 IMAGE_SCALE = 4
 
-Clock = pygame.time.Clock()
-font = pygame.font.SysFont("monospace", 25)
+clock = pygame.time.Clock()
+fps_clock = pygame.time.Clock()
+font = pygame.font.SysFont("monospace", 50)
 
 try:
     while running:
-        Clock.tick(30)
         # Read state
-        w, h, data, text = pyopenmv.read_state()
+        w, h, data, size, text = pyopenmv.read_state()
 
         if text is not None:
             print(text, end="")
 
         if data is not None:
-            fps = Clock.get_fps()
+            fps = fps_clock.get_fps()
+
             # Create image from RGB888
             image = pygame.image.frombuffer(data.flat[0:], (w, h), 'RGB')
             image = pygame.transform.scale(image, (w * IMAGE_SCALE, h * IMAGE_SCALE))
@@ -97,9 +98,11 @@ try:
 
             # blit stuff
             screen.blit(image, (0, 0))
-            screen.blit(font.render("FPS %.2f"%(fps), 1, (255, 0, 0)), (0, 0))
+            screen.blit(font.render("%.2f FPS %.2f MB/s"%(fps, fps * size / 1024**2), 5, (255, 0, 0)), (0, 0))
+
             # update display
             pygame.display.flip()
+            fps_clock.tick(250)
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -109,6 +112,8 @@ try:
                     running = False
                 if event.key == pygame.K_c:
                     pygame.image.save(image, "capture.png")
+
+        clock.tick(250)
 except KeyboardInterrupt:
     pass
 
