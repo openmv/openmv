@@ -56,6 +56,7 @@ typedef struct wifidbg {
     uint8_t ipaddr[WINC_IPV4_ADDR_LEN];
     char bcast_packet[WIFIDBG_BCAST_STRING_SIZE];
     winc_socket_buf_t sockbuf;
+    uint8_t *buf;
 } wifidbg_t;
 
 static wifidbg_t wifidbg;
@@ -79,6 +80,16 @@ int wifidbg_broadcast(wifidbg_t *wifidbg) {
         wifidbg->last_bcast = systick_current_millis();
     }
     return 0;
+}
+
+static uint32_t dbg_write(const void *buf, uint32_t len) {
+    memcpy(wifidbg.buf, buf, len);
+    return len;
+}
+
+static uint32_t dbg_read(void *buf, uint32_t len) {
+    memcpy(buf, wifidbg.buf, len);
+    return len;
 }
 
 void wifidbg_pendsv_callback(void) {
@@ -150,24 +161,25 @@ void wifidbg_pendsv_callback(void) {
     request = cmdbuf[1];
     uint32_t xfer_length = *((uint32_t *) (cmdbuf + 2));
     usbdbg_control(NULL, request, xfer_length);
+    wifidbg.buf = buf;
 
     while (xfer_length) {
         if (request & 0x80) {
             // Device-to-host data phase
             int bytes = WIFIDBG_MIN(xfer_length, WIFIDBG_BUFFER_SIZE);
             xfer_length -= bytes;
-            usbdbg_data_in(buf, bytes);
-            if ((ret = winc_socket_send(wifidbg.client_fd, buf, bytes, 500)) < 0) {
+            usbdbg_data_in(bytes, dbg_write);
+            if ((ret = winc_socket_send(wifidbg.client_fd, wifidbg.buf, bytes, 500)) < 0) {
                 goto exit_dispatch_error;
             }
         } else {
             // Host-to-device data phase
             int bytes = WIFIDBG_MIN(xfer_length, WIFIDBG_BUFFER_SIZE);
-            if ((ret = winc_socket_recv(wifidbg.client_fd, buf, bytes, &wifidbg.sockbuf, 500)) < 0) {
+            if ((ret = winc_socket_recv(wifidbg.client_fd, wifidbg.buf, bytes, &wifidbg.sockbuf, 500)) < 0) {
                 goto exit_dispatch_error;
             }
             xfer_length -= ret;
-            usbdbg_data_out(buf, ret);
+            usbdbg_data_out(ret, dbg_read);
         }
     }
 
@@ -183,6 +195,7 @@ exit_dispatch:
 }
 
 void wifidbg_systick_callback(uint32_t ticks_ms) {
+    extern int usb_cdc_debug_mode_enabled();
     if (usb_cdc_debug_mode_enabled() == false &&
         (ticks_ms - wifidbg.last_dispatch) > WIFIDBG_POLL_INTERVAL_MS) {
         pendsv_schedule_dispatch(PENDSV_DISPATCH_WINC, wifidbg_pendsv_callback);
