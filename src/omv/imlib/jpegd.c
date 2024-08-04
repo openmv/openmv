@@ -2841,7 +2841,7 @@ static int DecodeJPEG(JPEGIMAGE *pJPEG) {
 }
 
 void jpeg_decompress(image_t *dst, image_t *src) {
-    OMV_PROFILE_START
+    OMV_PROFILE_START(__FUNCTION__);
     JPEGIMAGE jpg;
 
     // Supports decoding baseline JPEGs only.
@@ -2882,6 +2882,6 @@ void jpeg_decompress(image_t *dst, image_t *src) {
         mp_raise_msg(&mp_type_OSError, MP_ERROR_TEXT("JPEG decoder failed."));
     }
 
-    OMV_PROFILE_END
+    OMV_PROFILE_END(__FUNCTION__);
 }
 #endif

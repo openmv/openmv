@@ -50,12 +50,11 @@
 #if OMV_PROFILE_ENABLE
 #include <stdio.h>
 #include "py/mphal.h"
-
-#define OMV_PROFILE_START         mp_uint_t omv_profile_ticks_start = mp_hal_ticks_us();
-#define OMV_PROFILE_END           printf("%s %u us\n", __FUNCTION__, mp_hal_ticks_us() - omv_profile_ticks_start);
+#define OMV_PROFILE_START(F)      mp_uint_t F##_ticks_start_ = mp_hal_ticks_us()
+#define OMV_PROFILE_END(F)        printf("%s %u us\n", #F, mp_hal_ticks_us() - F##_ticks_start_)
 #else
-#define OMV_PROFILE_START
-#define OMV_PROFILE_END
+#define OMV_PROFILE_START(F)
+#define OMV_PROFILE_END(F)
 #endif
 
 #endif //__OMV_COMMON_H__

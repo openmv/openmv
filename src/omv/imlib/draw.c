@@ -2843,7 +2843,7 @@ void imlib_draw_image(image_t *dst_img,
                       imlib_draw_row_callback_t callback,
                       void *callback_arg,
                       void *dst_row_override) {
-    OMV_PROFILE_START
+    OMV_PROFILE_START(__FUNCTION__);
     int dst_delta_x = 1; // positive direction
     if (x_scale < 0.f) {
         // flip X
@@ -5518,7 +5518,7 @@ exit_cleanup:
     if (&new_src_img == src_img) {
         fb_free();
     }
-    OMV_PROFILE_END
+    OMV_PROFILE_END(__FUNCTION__);
 }
 
 #ifdef IMLIB_ENABLE_FLOOD_FILL
