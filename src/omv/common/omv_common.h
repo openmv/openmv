@@ -50,8 +50,11 @@
 #if OMV_PROFILE_ENABLE
 #include <stdio.h>
 #include "py/mphal.h"
-#define OMV_PROFILE_START(F)      mp_uint_t F##_ticks_start_ = mp_hal_ticks_us()
-#define OMV_PROFILE_END(F)        printf("%s %u us\n", #F, mp_hal_ticks_us() - F##_ticks_start_)
+#define OMV_CONCATENATE_DETAIL(x, y) x##y
+#define OMV_CONCATENATE(x, y)     OMV_CONCATENATE_DETAIL(x, y)
+
+#define OMV_PROFILE_START(F)      mp_uint_t OMV_CONCATENATE(F, _ticks_start_) = mp_hal_ticks_us()
+#define OMV_PROFILE_END(F)        printf("%s %u us\n", F, mp_hal_ticks_us() - OMV_CONCATENATE(F, _ticks_start_))
 #else
 #define OMV_PROFILE_START(F)
 #define OMV_PROFILE_END(F)
