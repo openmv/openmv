@@ -974,7 +974,8 @@ typedef struct {
     int idx;
     int length;
     uint8_t *buf;
-    int bitc, bitb;
+    uint32_t bitb;
+    uint32_t bitc;
     bool realloc;
     bool overflow;
 } jpeg_buf_t;
@@ -1217,54 +1218,20 @@ static const uint16_t UVAC_HT[256][2] = {
     {0x0000, 0x0000}, {0x0000, 0x0000}, {0x0000, 0x0000}, {0x0000, 0x0000},
 };
 
-// Macro to write variable length codes to the output stream more efficiently
-#define STORECODE(pOut, iLen, ulCode, ulAcc, iNewLen)                                         \
-    if (iLen + iNewLen > 32) { while (iLen >= 8)                                              \
-                               {unsigned char c = (unsigned char) (ulAcc >> 24); *pOut++ = c; \
-                                if (c == 0xff) { *pOut++ = 0;}                                \
-                                ulAcc <<= 8; iLen -= 8; }                                     \
-    }                                                                                         \
-    iLen += iNewLen; ulAcc |= (ulCode << (32 - iLen));
-
-//
-// See if we're close to filling up the output buffer
-// If so, allocate more space now so that we don't have
-// to check on every byte written
-//
-// If we're out of space and the realloc option is not available
-// return true to indicate that encoding has to halt
-//
+// Check if the output buffer is nearly full and allocate more space
+// if needed. If realloc is disabled, return true to halt the encoding.
 static int jpeg_check_highwater(jpeg_buf_t *jpeg_buf) {
     if ((jpeg_buf->idx + 1) >= jpeg_buf->length - 256) {
         if (jpeg_buf->realloc == false) {
             // Can't realloc buffer
             jpeg_buf->overflow = true;
-            return 1; // failure
+            return 1;
         }
         jpeg_buf->length += 1024;
         jpeg_buf->buf = xrealloc(jpeg_buf->buf, jpeg_buf->length);
     }
-    return 0; // ok
-} /* jpeg_check_highwater() */
-
-//
-// Restore buffer pointer variables from local copies
-//
-void jpeg_restore_buf(jpeg_buf_t *jpeg_buf, uint8_t *pOut, int iBitCount, uint32_t ulBits) {
-    uint8_t c;
-    while (iBitCount >= 8) {
-        c = (uint8_t) (ulBits >> 24);
-        *pOut++ = c;
-        if (c == 0xff) {
-            *pOut++ = 0;
-        }
-        ulBits <<= 8; iBitCount -= 8;
-    }
-    jpeg_buf->idx = (int) (pOut - jpeg_buf->buf);
-    jpeg_buf->bitb = ulBits >> 8;
-    jpeg_buf->bitc = iBitCount;
-
-} /* jpeg_restore_buf() */
+    return 0;
+}
 
 static void jpeg_put_char(jpeg_buf_t *jpeg_buf, char c) {
     if ((jpeg_buf->idx + 1) >= jpeg_buf->length) {
@@ -1295,7 +1262,7 @@ static void jpeg_put_bytes(jpeg_buf_t *jpeg_buf, const void *data, int size) {
     jpeg_buf->idx += size;
 }
 
-static void jpeg_writeBits(jpeg_buf_t *jpeg_buf, const uint16_t *bs) {
+static inline void jpeg_write_bits(jpeg_buf_t *jpeg_buf, const uint16_t *bs) {
     jpeg_buf->bitc += bs[1];
     jpeg_buf->bitb |= bs[0] << (24 - jpeg_buf->bitc);
 
@@ -1311,7 +1278,7 @@ static void jpeg_writeBits(jpeg_buf_t *jpeg_buf, const uint16_t *bs) {
 }
 
 //Huffman-encoded magnitude value
-static void jpeg_calcBits(int val, uint16_t bits[2]) {
+static inline void jpeg_calc_bits(int val, uint16_t bits[2]) {
     int t1 = val;
     if (val < 0) {
         t1 = -val;
@@ -1430,29 +1397,21 @@ static int jpeg_processDU(jpeg_buf_t *jpeg_buf, int8_t *CDU, float *fdtbl, int D
         // check if we're getting close to the end of the buffer
         return 0; // stop encoding, we've run out of space
     }
-    // Use local vars to speed up buffer access
-    // and a macro (STORECODE) to manipulate the local vars
-    uint8_t *pOut, iBitCount; // output pointer and bit count
-    uint32_t ulBits; // accumulated bits
-    pOut = &jpeg_buf->buf[jpeg_buf->idx];
-    iBitCount = jpeg_buf->bitc; // current stored bits
-    ulBits = (jpeg_buf->bitb << 8); // bit pattern shifted up to bit 31
 
     // Encode DC
     int diff = DUQ[0] - DC;
     if (diff == 0) {
-        STORECODE(pOut, iBitCount, HTDC[0][0], ulBits, HTDC[0][1])
+        jpeg_write_bits(jpeg_buf, HTDC[0]);
     } else {
         uint16_t bits[2];
-        jpeg_calcBits(diff, bits);
-        STORECODE(pOut, iBitCount, HTDC[bits[1]][0], ulBits, HTDC[bits[1]][1])
-        STORECODE(pOut, iBitCount, bits[0], ulBits, bits[1])
+        jpeg_calc_bits(diff, bits);
+        jpeg_write_bits(jpeg_buf, HTDC[bits[1]]);
+        jpeg_write_bits(jpeg_buf, bits);
     }
 
     // Encode ACs
     if (end0pos == 0) {
-        STORECODE(pOut, iBitCount, EOB[0], ulBits, EOB[1])
-        jpeg_restore_buf(jpeg_buf, pOut, iBitCount, ulBits);
+        jpeg_write_bits(jpeg_buf, EOB);
         return DUQ[0];
     }
 
@@ -1464,19 +1423,18 @@ static int jpeg_processDU(jpeg_buf_t *jpeg_buf, int8_t *CDU, float *fdtbl, int D
         if (nrzeroes >= 16) {
             int lng = nrzeroes >> 4;
             for (int nrmarker = 1; nrmarker <= lng; ++nrmarker) {
-                STORECODE(pOut, iBitCount, M16zeroes[0], ulBits, M16zeroes[1])
-            } // for
+                jpeg_write_bits(jpeg_buf, M16zeroes);
+            }
             nrzeroes &= 15;
         }
         uint16_t bits[2];
-        jpeg_calcBits(DUQ[i], bits);
-        STORECODE(pOut, iBitCount, HTAC[(nrzeroes << 4) + bits[1]][0], ulBits, HTAC[(nrzeroes << 4) + bits[1]][1])
-        STORECODE(pOut, iBitCount, bits[0], ulBits, bits[1])
+        jpeg_calc_bits(DUQ[i], bits);
+        jpeg_write_bits(jpeg_buf, HTAC[(nrzeroes << 4) + bits[1]]);
+        jpeg_write_bits(jpeg_buf, bits);
     }
     if (end0pos != 63) {
-        STORECODE(pOut, iBitCount, EOB[0], ulBits, EOB[1])
+        jpeg_write_bits(jpeg_buf, EOB);
     }
-    jpeg_restore_buf(jpeg_buf, pOut, iBitCount, ulBits);
     return DUQ[0];
 }
 
@@ -1931,8 +1889,7 @@ bool jpeg_compress(image_t *src, image_t *dst, int quality, bool realloc, jpeg_s
     }
 
     // Do the bit alignment of the EOI marker
-    static const uint16_t fillBits[] = {0x7F, 7};
-    jpeg_writeBits(&jpeg_buf, fillBits);
+    jpeg_write_bits(&jpeg_buf, (const uint16_t []) {0x7F, 7});
 
     // EOI
     jpeg_put_char(&jpeg_buf, 0xFF);
