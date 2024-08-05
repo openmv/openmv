@@ -97,7 +97,7 @@ def read_state():
         buff = np.column_stack((y, y, y))
         size = w * h
     elif size == 2: # RGB565
-        arr = np.fromstring(buff, dtype=np.uint16).newbyteorder('S')
+        arr = np.fromstring(buff, dtype=np.uint16)
         r = (((arr & 0xF800) >>11)*255.0/31.0).astype(np.uint8)
         g = (((arr & 0x07E0) >>5) *255.0/63.0).astype(np.uint8)
         b = (((arr & 0x001F) >>0) *255.0/31.0).astype(np.uint8)
@@ -135,7 +135,7 @@ def fb_dump():
         y = np.fromstring(buff, dtype=np.uint8)
         buff = np.column_stack((y, y, y))
     elif size[2] == 2: # RGB565
-        arr = np.fromstring(buff, dtype=np.uint16).newbyteorder('S')
+        arr = np.fromstring(buff, dtype=np.uint16)
         r = (((arr & 0xF800) >>11)*255.0/31.0).astype(np.uint8)
         g = (((arr & 0x07E0) >>5) *255.0/63.0).astype(np.uint8)
         b = (((arr & 0x001F) >>0) *255.0/31.0).astype(np.uint8)
