@@ -26,7 +26,6 @@ clock = time.clock()
 while(True):
     clock.tick()
     img = sensor.snapshot()
-    sensor.flush()
     print(clock.fps(), " FPS")
 """
 
@@ -40,7 +39,7 @@ while(True):
     img.flush()
 """
 
-def pygame_test(port, poll_rate, benchmark):
+def pygame_test(port, poll_rate, scale, benchmark):
     # init pygame
     pygame.init()
     pyopenmv.disconnect()
@@ -73,7 +72,6 @@ def pygame_test(port, poll_rate, benchmark):
     # init screen
     running = True
     screen = None
-    IMAGE_SCALE = 4
     
     clock = pygame.time.Clock()
     fps_clock = pygame.time.Clock()
@@ -96,10 +94,10 @@ def pygame_test(port, poll_rate, benchmark):
                 # Create image from RGB888
                 if not benchmark:
                     image = pygame.image.frombuffer(data.flat[0:], (w, h), 'RGB')
-                    image = pygame.transform.scale(image, (w * IMAGE_SCALE, h * IMAGE_SCALE))
+                    image = pygame.transform.smoothscale(image, (w * scale, h * scale))
     
                 if screen is None:
-                    screen = pygame.display.set_mode((w * IMAGE_SCALE, h * IMAGE_SCALE), pygame.DOUBLEBUF, 32)
+                    screen = pygame.display.set_mode((w * scale, h * scale), pygame.DOUBLEBUF, 32)
     
                 # blit stuff
                 if benchmark:
@@ -131,7 +129,8 @@ def pygame_test(port, poll_rate, benchmark):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='pyopenmv module')
     parser.add_argument('--port', action = 'store', help='OpenMV camera port (default /dev/ttyACM0)', default='/dev/ttyACM0', )
-    parser.add_argument('--poll', action = 'store', help='Poll rate in ms (default 4)', default=4)
+    parser.add_argument('--poll', action = 'store', help='Poll rate (default 4ms)', default=4, type=int)
     parser.add_argument('--bench', action = 'store_true', help='Run throughput benchmark.', default=False)
+    parser.add_argument('--scale', action = 'store', help='Set frame scaling factor (default 4x).', default=4, type=int)
     args = parser.parse_args()
-    pygame_test(args.port, int(args.poll), args.bench)
+    pygame_test(args.port, args.poll, args.scale, args.bench)
