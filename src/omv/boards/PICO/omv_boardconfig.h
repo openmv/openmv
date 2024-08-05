@@ -46,15 +46,15 @@ extern unsigned char *OMV_BOARD_UID_ADDR;   // Unique ID address.
 #define OMV_USB1_IRQ_HANDLER       (USBD_IRQHandler)
 
 // Linker script constants (see the linker script template port/x.ld.S).
-#define OMV_MAIN_MEMORY            RAM          // Data/BSS memory
-#define OMV_GC_BLOCK0_MEMORY       RAM          // Main GC block.
+#define OMV_MAIN_MEMORY            RAM    // Data/BSS memory
+#define OMV_GC_BLOCK0_MEMORY       RAM    // Main GC block.
 #define OMV_GC_BLOCK0_SIZE         (32 * 1024)
-#define OMV_STACK_MEMORY           RAM          // stack memory
+#define OMV_STACK_MEMORY           RAM    // stack memory
 #define OMV_STACK_SIZE             (8K)
-#define OMV_FB_MEMORY              RAM          // Framebuffer, fb_alloc
-#define OMV_FB_SIZE                (151K)       // FB memory: header + QVGA/GS image
-#define OMV_FB_ALLOC_SIZE          (12K)        // minimum fb alloc size
-#define OMV_JPEG_SIZE              (20 * 1024)  // IDE JPEG buffer (header + data).
+#define OMV_FB_MEMORY              RAM    // Framebuffer, fb_alloc
+#define OMV_FB_SIZE                (151K) // FB memory: header + QVGA/GS image
+#define OMV_FB_ALLOC_SIZE          (12K)  // minimum fb alloc size
+#define OMV_JPEG_SIZE              (20K)  // IDE JPEG buffer (header + data).
 
 // GP LED
 #define OMV_LED_PIN                (25)

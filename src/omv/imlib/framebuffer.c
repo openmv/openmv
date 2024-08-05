@@ -13,16 +13,17 @@
 #include "framebuffer.h"
 #include "omv_boardconfig.h"
 
-#define FB_ALIGN_SIZE_ROUND_DOWN(x)    (((x) / FRAMEBUFFER_ALIGNMENT) * FRAMEBUFFER_ALIGNMENT)
-#define FB_ALIGN_SIZE_ROUND_UP(x)      FB_ALIGN_SIZE_ROUND_DOWN(((x) + FRAMEBUFFER_ALIGNMENT - 1))
-#define CONSERVATIVE_JPEG_BUF_SIZE     (OMV_JPEG_SIZE - 64)
+#define FB_ALIGN_SIZE_ROUND_DOWN(x) (((x) / FRAMEBUFFER_ALIGNMENT) * FRAMEBUFFER_ALIGNMENT)
+#define FB_ALIGN_SIZE_ROUND_UP(x)   FB_ALIGN_SIZE_ROUND_DOWN(((x) + FRAMEBUFFER_ALIGNMENT - 1))
+#define OMV_JPEG_BUFFER_SIZE_MAX    ((&_jpeg_memory_end - &_jpeg_memory_start) - sizeof(jpegbuffer_t))
 
-extern char _fb_base;
-extern char _fb_end;
-framebuffer_t *framebuffer = (framebuffer_t *) &_fb_base;
+extern char _fb_memory_start;
+extern char _fb_memory_end;
+framebuffer_t *framebuffer = (framebuffer_t *) &_fb_memory_start;
 
-extern char _jpeg_buf;
-jpegbuffer_t *jpeg_framebuffer = (jpegbuffer_t *) &_jpeg_buf;
+extern char _jpeg_memory_start;
+extern char _jpeg_memory_end;
+jpegbuffer_t *jpeg_framebuffer = (jpegbuffer_t *) &_jpeg_memory_start;
 
 void fb_set_streaming_enabled(bool enable) {
     framebuffer->streaming_enabled = enable;
@@ -136,7 +137,7 @@ void framebuffer_update_jpeg_buffer() {
             bool does_not_fit = false;
 
             if (mutex_try_lock_alternate(&jpeg_framebuffer->lock, MUTEX_TID_OMV)) {
-                if (CONSERVATIVE_JPEG_BUF_SIZE < src->size) {
+                if (OMV_JPEG_BUFFER_SIZE_MAX < src->size) {
                     jpegbuffer_init_from_image(NULL);
                     does_not_fit = true;
                 } else {
@@ -162,7 +163,7 @@ void framebuffer_update_jpeg_buffer() {
                     .w = src->w,
                     .h = src->h,
                     .pixfmt = PIXFORMAT_JPEG,
-                    .size = CONSERVATIVE_JPEG_BUF_SIZE,
+                    .size = OMV_JPEG_BUFFER_SIZE_MAX,
                     .pixels = jpeg_framebuffer->pixels
                 };
                 // Note: lower quality saves USB bandwidth and results in a faster IDE FPS.
@@ -234,7 +235,7 @@ static uint32_t framebuffer_raw_buffer_size() {
     uint32_t size = (uint32_t) (fb_alloc_stack_pointer() - ((char *) framebuffer->data));
     // We don't want to give all of the frame buffer RAM to the frame buffer. So, we will limit
     // the maximum amount of RAM we return.
-    uint32_t raw_buf_size = (&_fb_end - &_fb_base);
+    uint32_t raw_buf_size = (&_fb_memory_end - &_fb_memory_start);
     return IM_MIN(size, raw_buf_size);
 }
 

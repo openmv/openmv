@@ -104,9 +104,10 @@ PROVIDE(__stack = __StackTop);
 .jpeg_memory (NOLOAD) :
 {
   . = ALIGN(4);
-  _jpeg_buf = .;
+  _jpeg_memory_start = .;
   . = . + OMV_JPEG_SIZE;
   . = ALIGN(4);
+  _jpeg_memory_end = .;
 } >OMV_JPEG_MEMORY
 #endif
 
@@ -160,14 +161,13 @@ PROVIDE(__stack = __StackTop);
 .fb_memory (NOLOAD) :
 {
   . = ALIGN(4);
-  _fb_base = .;
+  _fb_memory_start = .;
   . += OMV_FB_SIZE;
-
-  _fb_end = .;
-  . += OMV_FB_ALLOC_SIZE;
-
   . = ALIGN(4);
-  _fballoc = .;
+  _fb_memory_end = .;
+  . += OMV_FB_ALLOC_SIZE;
+  . = ALIGN(4);
+  _fb_alloc_end = .;
   . = ALIGN(4);
 } >OMV_FB_MEMORY
 #endif
@@ -209,8 +209,9 @@ PROVIDE(__stack = __StackTop);
 
   #if defined(OMV_JPEG_SIZE) && !defined(OMV_JPEG_MEMORY)
   . = ALIGN(16);
-  _jpeg_buf = .;      // IDE JPEG buffer
+  _jpeg_memory_start = .;
   . = . + OMV_JPEG_SIZE;
+  _jpeg_memory_end = .;
   #endif
 
   /* FFS (internal) filesystem buffer */

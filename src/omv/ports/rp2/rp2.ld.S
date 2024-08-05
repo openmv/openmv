@@ -187,21 +187,20 @@ SECTIONS
     .fb_memory (NOLOAD) :
     {
       . = ALIGN(4);
-      _fb_base = .;
+      _fb_memory_start = .;
       . += OMV_FB_SIZE;
+      . = ALIGN(4);
+      _fb_memory_end = .;
 
-      _fb_end = .;
       . += OMV_FB_ALLOC_SIZE;
+      . = ALIGN(4);
+      _fb_alloc_end = .;
 
       . = ALIGN(4);
-      _fballoc = .;
-      . = ALIGN(4);
-
-      #if !defined(OMV_JPEG_MEMORY)
-      _jpeg_buf = .;      // IDE JPEG buffer
+      _jpeg_memory_start = .;
       . = . + OMV_JPEG_SIZE;
       . = ALIGN(4);
-      #endif
+      _jpeg_memory_end = .;
     } >OMV_FB_MEMORY
 
     .heap (COPY):

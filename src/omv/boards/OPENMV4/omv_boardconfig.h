@@ -125,7 +125,7 @@
 #define OMV_FB_SIZE                           (400K)    // FB memory: header + VGA/GS image
 #define OMV_FB_ALLOC_SIZE                     (80K)     // minimum fb alloc size
 #define OMV_JPEG_MEMORY                       AXI_SRAM  // JPEG buffer memory.
-#define OMV_JPEG_SIZE                         (32 * 1024) // IDE JPEG buffer (header + data).
+#define OMV_JPEG_SIZE                         (32K) // IDE JPEG buffer (header + data).
 #define OMV_VOSPI_MEMORY                      SRAM4 // VoSPI buffer memory.
 #define OMV_VOSPI_SIZE                        (38K)
 #define OMV_DMA_MEMORY                        SRAM2 // Misc DMA buffers memory.
