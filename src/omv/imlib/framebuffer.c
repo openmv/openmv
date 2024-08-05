@@ -167,29 +167,36 @@ void framebuffer_update_jpeg_buffer() {
                     .size = OMV_JPEG_BUFFER_SIZE_MAX,
                     .pixels = jpeg_framebuffer->pixels
                 };
+
+                bool compress = true;
                 bool overflow = false;
-                if (0) {
+
                 #if OMV_RAW_PREVIEW_ENABLE
-                } else if (src->is_mutable &&
-                           image_size(src) <= OMV_JPEG_BUFFER_SIZE_MAX) {
+                if (src->is_mutable) {
                     // Down-scale the frame (if necessary) and send the raw frame.
                     dst.size = src->bpp;
                     dst.pixfmt = src->pixfmt;
                     if (src->w <= OMV_RAW_PREVIEW_WIDTH && src->h <= OMV_RAW_PREVIEW_HEIGHT) {
-                        memcpy(dst.pixels, src->pixels, image_size(src));
-                    } else {
-                        dst.w = OMV_RAW_PREVIEW_WIDTH;
-                        dst.h = OMV_RAW_PREVIEW_HEIGHT;
-                        if (src->w > src->h) {
-                            dst.h = fast_floorf(dst.h * (src->h / (float) src->w));
-                        } else if (src->h > src->w) {
-                            dst.w = fast_floorf(dst.w * (src->w / (float) src->h));
+                        if (image_size(&dst) <= OMV_JPEG_BUFFER_SIZE_MAX) {
+                            memcpy(dst.pixels, src->pixels, image_size(src));
+                            compress = false;
                         }
-                        imlib_draw_image(&dst, src, 0, 0, 1.0f, 1.0f, NULL, -1, 255,
-                                         NULL, NULL, IMAGE_HINT_BILINEAR, NULL, NULL, NULL);
+                    } else {
+                        float x_scale = OMV_RAW_PREVIEW_WIDTH / (float) src->w;
+                        float y_scale = OMV_RAW_PREVIEW_HEIGHT / (float) src->h;
+                        float scale = IM_MIN(x_scale, y_scale);
+                        dst.w = fast_floorf(src->w * scale);
+                        dst.h = fast_floorf(src->h * scale);
+                        if (image_size(&dst) <= OMV_JPEG_BUFFER_SIZE_MAX) {
+                            imlib_draw_image(&dst, src, 0, 0, scale, scale, NULL, -1, 255, NULL, NULL,
+                                             IMAGE_HINT_BILINEAR | IMAGE_HINT_BLACK_BACKGROUND, NULL, NULL, NULL);
+                            compress = false;
+                        }
                     }
+                }
                 #endif
-                } else {
+
+                if (compress) {
                     // For all other formats, send a compressed frame.
                     overflow = jpeg_compress(src, &dst, jpeg_framebuffer->quality, false, JPEG_SUBSAMPLING_AUTO);
                 }
