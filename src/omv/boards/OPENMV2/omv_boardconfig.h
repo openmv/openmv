@@ -74,7 +74,7 @@
 #define OMV_DMA_MEMORY                        SRAM2 // Misc DMA buffers
 #define OMV_GC_BLOCK0_MEMORY                  DTCM  // Main GC block
 #define OMV_GC_BLOCK0_SIZE                    (46K)
-#define OMV_JPEG_SIZE                         (8 * 1024) // IDE JPEG buffer size (header + data).
+#define OMV_JPEG_SIZE                         (8K)  // IDE JPEG buffer size (header + data).
 #define OMV_MSC_BUF_SIZE                      (2K)  // USB MSC bot data
 #define OMV_VFS_BUF_SIZE                      (1K)  // VFS struct + FATFS file buffer (624 bytes)
 #define OMV_FFS_BUF_SIZE                      (16K) // Flash filesystem cache
