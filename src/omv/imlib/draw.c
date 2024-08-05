@@ -3009,12 +3009,6 @@ void imlib_draw_image(image_t *dst_img,
         hint &= ~(IMAGE_HINT_AREA | IMAGE_HINT_BILINEAR);
     }
 
-    // Bicbuic and bilinear both shift the image right by (0.5, 0.5) so we have to undo that.
-    if (hint & (IMAGE_HINT_BICUBIC | IMAGE_HINT_BILINEAR)) {
-        src_x_accum_reset -= 0x8000;
-        src_y_accum_reset -= 0x8000;
-    }
-
     // rgb_channel extracted / color_palette applied image
     image_t new_src_img;
 
@@ -3254,6 +3248,12 @@ void imlib_draw_image(image_t *dst_img,
         }
     }
     #endif
+
+    // Bicbuic and bilinear both shift the image right by (0.5, 0.5) so we have to undo that.
+    if (hint & (IMAGE_HINT_BICUBIC | IMAGE_HINT_BILINEAR)) {
+        src_x_accum_reset -= 0x8000;
+        src_y_accum_reset -= 0x8000;
+    }
 
     imlib_draw_row_data_t imlib_draw_row_data;
     imlib_draw_row_data.dst_img = dst_img;
