@@ -86,6 +86,9 @@ void framebuffer_init0() {
     // Enable streaming.
     MAIN_FB()->streaming_enabled = true; // controlled by the OpenMV Cam.
 
+    // Set invalid size.
+    JPEG_FB()->size = -1;
+
     // Set default quality
     JPEG_FB()->quality = ((OMV_JPEG_QUALITY_HIGH - OMV_JPEG_QUALITY_LOW) / 2) + OMV_JPEG_QUALITY_LOW;
 
@@ -117,7 +120,7 @@ static void jpegbuffer_init_from_image(image_t *img) {
     if (img == NULL) {
         jpeg_framebuffer->w = 0;
         jpeg_framebuffer->h = 0;
-        jpeg_framebuffer->size = 0;
+        jpeg_framebuffer->size = -1;
     } else {
         jpeg_framebuffer->w = img->w;
         jpeg_framebuffer->h = img->h;
