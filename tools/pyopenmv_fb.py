@@ -75,7 +75,7 @@ def pygame_test(port, poll_rate, scale, benchmark):
     
     clock = pygame.time.Clock()
     fps_clock = pygame.time.Clock()
-    font = pygame.font.SysFont("monospace", 50)
+    font = pygame.font.SysFont("monospace", 30)
 
     if benchmark:
         screen = pygame.display.set_mode((640, 120), pygame.DOUBLEBUF, 32)
@@ -83,7 +83,7 @@ def pygame_test(port, poll_rate, scale, benchmark):
     try:
         while running:
             # Read state
-            w, h, data, size, text = pyopenmv.read_state()
+            w, h, data, size, text, fmt = pyopenmv.read_state()
     
             if text is not None:
                 print(text, end="")
@@ -104,7 +104,7 @@ def pygame_test(port, poll_rate, scale, benchmark):
                     screen.fill((0, 0, 0))
                 else:
                     screen.blit(image, (0, 0))
-                screen.blit(font.render("%.2f FPS %.2f MB/s"%(fps, fps * size / 1024**2), 5, (255, 0, 0)), (0, 0))
+                screen.blit(font.render(f"{fps:.2f} FPS {fps * size / 1024**2:.2f} MB/s {w}x{h} {fmt}", 5, (255, 0, 0)), (0, 0))
     
                 # update display
                 pygame.display.flip()
