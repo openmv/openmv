@@ -727,6 +727,9 @@ __weak bool sensor_get_cropped() {
 }
 
 __weak uint32_t sensor_get_src_bpp() {
+    if (sensor.hw_flags.raw) {
+        return 1;
+    }
     switch (sensor.pixformat) {
         case PIXFORMAT_GRAYSCALE:
             return sensor.hw_flags.gs_bpp;
