@@ -270,7 +270,7 @@ static uint32_t framebuffer_raw_buffer_size() {
     uint32_t size = (uint32_t) (fb_alloc_stack_pointer() - ((char *) framebuffer->data));
     // We don't want to give all of the frame buffer RAM to the frame buffer. So, we will limit
     // the maximum amount of RAM we return.
-    uint32_t raw_buf_size = (&_fb_memory_end - &_fb_memory_start);
+    uint32_t raw_buf_size = (&_fb_memory_end - &_fb_memory_start - sizeof(framebuffer_t));
     return IM_MIN(size, raw_buf_size);
 }
 

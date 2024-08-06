@@ -261,6 +261,7 @@ typedef struct _sensor {
         uint32_t bayer : 3;       // Bayer/CFA pattern.
         uint32_t yuv_order : 1;   // YUV/YVU order.
         uint32_t blc_size : 4;    // Number of black level calibration registers.
+        uint32_t raw : 1;         // The sensor supports raw/Bayer output only.
     } hw_flags;
 
     const uint16_t *color_palette;    // Color palette used for color lookup.
