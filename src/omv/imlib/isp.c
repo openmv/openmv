@@ -9,6 +9,7 @@
  * AWB Functions
  */
 #include "imlib.h"
+#include "simd.h"
 
 #ifdef IMLIB_ENABLE_ISP_OPS
 
@@ -18,35 +19,25 @@ void imlib_awb_rgb_avg(image_t *img, uint32_t *r_out, uint32_t *g_out, uint32_t 
 
     switch (img->pixfmt) {
         case PIXFORMAT_RGB565: {
-            uint16_t *ptr = (uint16_t *) img->data;
-            long n = area; // must be signed for count down loop
+            size_t i = 0;
+            v128_t *vec = (v128_t *) img->data;
 
-            #if defined(ARM_MATH_DSP)
-            uint32_t *ptr32 = (uint32_t *) ptr;
+            for (size_t s = (sizeof(v128_t) / 2); i < area / s; i += s, vec++) {
+                v128_t r = { .u32 = vec[i].u32 & 0xF800F800 };
+                r_acc = simd_vsada_u8(r, (v128_t) { 0 }, r_acc);
 
-            for (; n > 1; n -= 2) {
-                uint32_t pixels = *ptr32++;
+                v128_t g = { .u32 = (vec[i].u32 >> 5) & 0x003F003F };
+                g_acc = simd_vsada_u8(g, (v128_t) { 0 }, g_acc);
 
-                long r = (pixels >> 11) & 0x1F001F;
-                r_acc = __USADA8(r, 0, r_acc);
-
-                long g = (pixels >> 5) & 0x3F003F;
-                g_acc = __USADA8(g, 0, g_acc);
-
-                long b = pixels & 0x1F001F;
-                b_acc = __USADA8(b, 0, b_acc);
+                v128_t b = { .u32 = vec[i].u32 & 0x001F001F };
+                b_acc = simd_vsada_u8(b, (v128_t) { 0 }, b_acc);
             }
 
-            ptr = (uint16_t *) ptr32;
-            #endif
-
-            for (; n > 0; n -= 1) {
-                int pixel = *ptr++;
-                r_acc += COLOR_RGB565_TO_R5(pixel);
-                g_acc += COLOR_RGB565_TO_G6(pixel);
-                b_acc += COLOR_RGB565_TO_B5(pixel);
+            for (; i < area; i++) {
+                r_acc += COLOR_RGB565_TO_R5(((uint16_t *) img->data)[i]);
+                g_acc += COLOR_RGB565_TO_G6(((uint16_t *) img->data)[i]);
+                b_acc += COLOR_RGB565_TO_B5(((uint16_t *) img->data)[i]);
             }
-
             break;
         }
         case PIXFORMAT_BAYER_BGGR: {
