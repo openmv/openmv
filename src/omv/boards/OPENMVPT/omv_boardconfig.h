@@ -114,8 +114,8 @@
 #define OMV_STACK_MEMORY                        ITCM    // stack memory
 #define OMV_STACK_SIZE                          (64K)
 #define OMV_FB_MEMORY                           DRAM    // Framebuffer, fb_alloc
-#define OMV_FB_SIZE                             (32M)   // FB memory: header + VGA/GS image
-#define OMV_FB_ALLOC_SIZE                       (23M)   // minimum fb alloc size
+#define OMV_FB_SIZE                             (10M)   // FB memory: header + VGA/GS image
+#define OMV_FB_ALLOC_SIZE                       (21M)   // minimum fb alloc size
 #define OMV_FB_OVERLAY_MEMORY                   AXI_SRAM // Fast fb_alloc memory.
 #define OMV_FB_OVERLAY_SIZE                     (496K)  // Fast fb_alloc memory size.
 #define OMV_JPEG_MEMORY                         DRAM    // JPEG buffer memory buffer.
@@ -129,7 +129,7 @@
 #define OMV_GC_BLOCK0_MEMORY                    SRAM1   // Main GC block.
 #define OMV_GC_BLOCK0_SIZE                      (250K)
 #define OMV_GC_BLOCK1_MEMORY                    DRAM    // Extra GC block 0.
-#define OMV_GC_BLOCK1_SIZE                      (8M)
+#define OMV_GC_BLOCK1_SIZE                      (32M)
 #define OMV_SDRAM_SIZE                          (64 * 1024 * 1024)  // This needs to be here for UVC firmware.
 #define OMV_MSC_BUF_SIZE                        (2K)    // USB MSC bot data
 #define OMV_VFS_BUF_SIZE                        (1K)    // VFS struct + FATFS file buffer (624 bytes)
