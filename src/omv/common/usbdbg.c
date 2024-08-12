@@ -39,7 +39,7 @@ static vstr_t script_buf;
 // These functions must be implemented by the stack.
 extern uint32_t usb_cdc_buf_len();
 extern uint32_t usb_cdc_get_buf(uint8_t *buf, uint32_t len);
-extern void usb_cdc_reset_buffers();
+extern void usb_cdc_reset_buffers(void);
 
 
 void usbdbg_init() {
@@ -146,11 +146,10 @@ void usbdbg_data_in(uint32_t size, usbdbg_write_callback_t write_callback) {
         case USBDBG_FRAME_SIZE: {
             // Return 0 if FB is locked or not ready.
             uint32_t buffer[3] = { 0 };
-            buffer[2] = -1; // size < 0
-            // Try to lock FB. If header size < 0 frame is not ready
+            // Try to lock FB. If header size == 0 frame is not ready
             if (mutex_try_lock_alternate(&JPEG_FB()->lock, MUTEX_TID_IDE)) {
-                // If header size < 0 frame is not ready
-                if (JPEG_FB()->size < 0) {
+                // If header size == 0 frame is not ready
+                if (JPEG_FB()->size == 0) {
                     // unlock FB
                     mutex_unlock(&JPEG_FB()->lock, MUTEX_TID_IDE);
                 } else {
@@ -171,7 +170,7 @@ void usbdbg_data_in(uint32_t size, usbdbg_write_callback_t write_callback) {
                 xfer_offs += size;
                 if (xfer_offs == xfer_size) {
                     cmd = USBDBG_NONE;
-                    JPEG_FB()->w = 0; JPEG_FB()->h = 0; JPEG_FB()->size = -1;
+                    JPEG_FB()->w = 0; JPEG_FB()->h = 0; JPEG_FB()->size = 0;
                     mutex_unlock(&JPEG_FB()->lock, MUTEX_TID_IDE);
                 }
             }
@@ -204,7 +203,6 @@ void usbdbg_data_in(uint32_t size, usbdbg_write_callback_t write_callback) {
 
         case USBDBG_GET_STATE: {
             uint32_t buffer[16] = { 0 };
-            buffer[3] = -1; // size < 0
 
             // Set script running flag
             if (script_running) {
@@ -217,10 +215,10 @@ void usbdbg_data_in(uint32_t size, usbdbg_write_callback_t write_callback) {
                 buffer[0] |= USBDBG_STATE_FLAGS_TEXT;
             }
 
-            // Try to lock FB. If header size < 0 frame is not ready
+            // Try to lock FB. If header size == 0 frame is not ready
             if (mutex_try_lock_alternate(&JPEG_FB()->lock, MUTEX_TID_IDE)) {
-                // If header size < 0 frame is not ready
-                if (JPEG_FB()->size < 0) {
+                // If header size == 0 frame is not ready
+                if (JPEG_FB()->size == 0) {
                     // unlock FB
                     mutex_unlock(&JPEG_FB()->lock, MUTEX_TID_IDE);
                 } else {
