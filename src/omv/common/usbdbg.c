@@ -39,7 +39,7 @@ static vstr_t script_buf;
 // These functions must be implemented by the stack.
 extern uint32_t usb_cdc_buf_len();
 extern uint32_t usb_cdc_get_buf(uint8_t *buf, uint32_t len);
-extern void usb_cdc_reset_buffers();
+extern void usb_cdc_reset_buffers(void);
 
 
 void usbdbg_init() {

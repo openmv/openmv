@@ -60,8 +60,9 @@ uint32_t usb_cdc_get_buf(uint8_t *buf, uint32_t len) {
     return bytes;
 }
 
-void usb_cdc_reset_buffers() {
-
+void usb_cdc_reset_buffers(void) {
+    tx_ringbuf.iget = 0;
+    tx_ringbuf.iput = 0;
 }
 
 void tud_cdc_line_coding_cb(uint8_t itf, cdc_line_coding_t const *coding) {
