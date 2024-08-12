@@ -1254,6 +1254,16 @@ static const uint8_t s_jpeg_ZigZag[] = {
     35, 36, 48, 49, 57, 58, 62, 63
 };
 
+static const uint8_t s_jpeg_ZigZag2[64] = {
+    0,1,8,16,9,2,3,10,
+    17,24,32,25,18,11,4,5,
+    12,19,26,33,40,48,41,34,
+    27,20,13,6,7,14,21,28,
+    35,42,49,56,57,50,43,36,
+    29,22,15,23,30,37,44,51,
+    58,59,52,45,38,31,39,46,
+    53,60,61,54,47,55,62,63};
+
 static const uint8_t YQT[] = {
     16, 11, 10, 16, 24,  40,  51,  61,
     12, 12, 14, 19, 26,  58,  60,  55,
@@ -1536,17 +1546,6 @@ static inline void jpeg_write_bits(jpeg_buf_t *jpeg_buf, const uint16_t *bs) {
     }
 }
 
-//Huffman-encoded magnitude value
-static inline void jpeg_calc_bits(int val, uint16_t bits[2]) {
-    int t1 = val;
-    if (val < 0) {
-        t1 = -val;
-        val = val - 1;
-    }
-    bits[1] = 32 - __CLZ(t1);
-    bits[0] = val & ((1 << bits[1]) - 1);
-}
-
 #define STORECODE(ulCode, iNewLen) \
         u32bc += iNewLen; u32bb |= (ulCode << (32-u32bc)); \
         while (u32bc >= 8) { \
@@ -1557,7 +1556,6 @@ static inline void jpeg_calc_bits(int val, uint16_t bits[2]) {
 static int jpeg_processDU(jpeg_buf_t *jpeg_buf, int8_t *CDU, float *fdtbl, int DC, const uint16_t (*HTDC)[2],
                           const uint16_t (*HTAC)[2]) {
     int DU[64];
-    int DUQ[64];
     int z1, z2, z3, z4, z5, z11, z13;
     int t0, t1, t2, t3, t4, t5, t6, t7, t10, t11, t12, t13;
     const uint16_t EOB[2] = { HTAC[0x00][0], HTAC[0x00][1] };
@@ -1565,9 +1563,10 @@ static int jpeg_processDU(jpeg_buf_t *jpeg_buf, int8_t *CDU, float *fdtbl, int D
     uint32_t u32bb, u32bc; // bit buffer and bit count for output data stream
     uint8_t *pOut; // output data pointer
     uint32_t ulMagVal, ulCode;
-    int iLen;
+    int i, iLen, *p;
     const uint32_t *pMagFix = &ulMagnitudeFix[1024]; // allows indexing positive and negative values - speeds up total encode time by 15%
     uint8_t cMagnitude;
+    float *pfd;
 
     if (jpeg_check_highwater(jpeg_buf)) {
         // check if we're getting close to the end of the buffer
@@ -1579,7 +1578,7 @@ static int jpeg_processDU(jpeg_buf_t *jpeg_buf, int8_t *CDU, float *fdtbl, int D
     u32bc = jpeg_buf->bitc;
 
     // DCT rows
-    for (int i = 8, *p = DU; i > 0; i--, p += 8, CDU += 8) {
+    for (i = 8, p = DU; i > 0; i--, p += 8, CDU += 8) {
         t0 = CDU[0] + CDU[7];
         t1 = CDU[1] + CDU[6];
         t2 = CDU[2] + CDU[5];
@@ -1622,7 +1621,7 @@ static int jpeg_processDU(jpeg_buf_t *jpeg_buf, int8_t *CDU, float *fdtbl, int D
     }
 
     // DCT columns
-    for (int i = 8, *p = DU; i > 0; i--, p++) {
+    for (i = 8, p = DU, pfd = fdtbl; i > 0; i--, p++, pfd++) {
         t0 = p[0] + p[56];
         t1 = p[8] + p[48];
         t2 = p[16] + p[40];
@@ -1640,10 +1639,10 @@ static int jpeg_processDU(jpeg_buf_t *jpeg_buf, int8_t *CDU, float *fdtbl, int D
         t12 = t1 - t2;
         z1 = MULTIPLY(t12 + t13, FIX_0_707106781); // c4
 
-        p[0] = t10 + t11;               // phase 3
-        p[32] = t10 - t11;
-        p[16] = t13 + z1;               // phase 5
-        p[48] = t13 - z1;
+        p[0] = fast_roundf((t10 + t11) * pfd[0]);               // phase 3
+        p[32] = fast_roundf((t10 - t11) * pfd[32]);
+        p[16] = fast_roundf((t13 + z1) * pfd[16]);               // phase 5
+        p[48] = fast_roundf((t13 - z1) * pfd[48]);
 
         // Odd part
         t10 = t4 + t5;          // phase 2
@@ -1658,29 +1657,14 @@ static int jpeg_processDU(jpeg_buf_t *jpeg_buf, int8_t *CDU, float *fdtbl, int D
         z11 = t7 + z3;          // phase 5
         z13 = t7 - z3;
 
-        p[40] = z13 + z2;// phase 6
-        p[24] = z13 - z2;
-        p[8] = z11 + z4;
-        p[56] = z11 - z4;
-    }
-
-    // first non-zero element in reverse order
-    int end0pos = 0;
-    // Quantize/descale/zigzag the coefficients
-    const uint8_t *pZig = s_jpeg_ZigZag;
-    for (int i = 0; i < 64; ++i) {
-	    uint8_t u8Zig = *pZig++;
-	    int val = fast_roundf(DU[i] * fdtbl[i]);
-	    if (val) {
-	    	DUQ[u8Zig] = val;
-		if (u8Zig > end0pos) end0pos = u8Zig;
-	    } else {
-	    	DUQ[u8Zig] = 0;
-	    }
+        p[40] = fast_roundf((z13 + z2) * pfd[40]);// phase 6
+        p[24] = fast_roundf((z13 - z2) * pfd[24]);
+        p[8] = fast_roundf((z11 + z4) * pfd[8]);
+        p[56] = fast_roundf((z11 - z4) * pfd[56]);
     }
 
     // Encode DC
-    int diff = DUQ[0] - DC;
+    int diff = DU[0] - DC;
     if (diff == 0) {
         STORECODE(HTDC[0][0], HTDC[0][1])
     } else {
@@ -1695,49 +1679,40 @@ static int jpeg_processDU(jpeg_buf_t *jpeg_buf, int8_t *CDU, float *fdtbl, int D
     }
 
     // Encode ACs
-    if (end0pos == 0) {
-        STORECODE(EOB[0], EOB[1])
-    // Restore the 'bits' structure values
-        jpeg_buf->idx = (int)(pOut - jpeg_buf->buf);
-        jpeg_buf->bitb = u32bb;
-        jpeg_buf->bitc = u32bc;
-        return DUQ[0];
-    }
-
-    for (int i = 1; i <= end0pos; ++i) {
-        int startpos = i;
-        for (; DUQ[i] == 0 && i <= end0pos ; ++i) {
+    uint8_t *pZig, *pZigEnd, *pZigStart;
+    int nrzeroes;
+    pZig = (uint8_t *)&s_jpeg_ZigZag2[1];
+    pZigEnd = (uint8_t *)&s_jpeg_ZigZag2[64];
+    while (pZig < pZigEnd) {
+        pZigStart = pZig;
+        while (pZig < pZigEnd && (diff = DU[pZig[0]]) == 0) {
+            pZig++;
         }
-        int nrzeroes = i - startpos;
-        if (nrzeroes >= 16) {
-            int lng = nrzeroes >> 4;
-            for (int nrmarker = 1; nrmarker <= lng; ++nrmarker) {
+        if (pZig == pZigEnd) {
+            STORECODE(EOB[0], EOB[1])
+        } else {
+            nrzeroes = (int)(pZig - pZigStart);
+            while (nrzeroes >= 16) {
                 STORECODE(M16zeroes[0], M16zeroes[1])
+                nrzeroes -= 16;
             }
-            nrzeroes &= 15;
+            ulMagVal = pMagFix[diff];
+            diff = (ulMagVal >> 16);
+            cMagnitude = ulMagVal & 0xf;
+            ulCode = HTAC[(nrzeroes<<4) | cMagnitude][0];
+            iLen = HTAC[(nrzeroes<<4)| cMagnitude][1];
+            ulCode = (ulCode << cMagnitude) | diff; // combine into one code
+            pZig++; // next coefficient
+            iLen += cMagnitude;
+            STORECODE(ulCode, iLen)
         }
-        //uint16_t bits[2];
-        //jpeg_calc_bits(DUQ[i], bits);
-        ulMagVal = pMagFix[DUQ[i]];
-        diff = (ulMagVal >> 16);
-        cMagnitude = ulMagVal & 0xf;
-        ulCode = HTAC[(nrzeroes<<4) | cMagnitude][0];
-        iLen = HTAC[(nrzeroes<<4)| cMagnitude][1];
-        ulCode = (ulCode << cMagnitude) | diff; // combine into one code
-        iLen += cMagnitude;
-        STORECODE(ulCode, iLen)
-//        STORECODE(HTAC[(nrzeroes<<4)+bits[1]][0], HTAC[(nrzeroes<<4)+bits[1]][1])
-//        STORECODE(bits[0], bits[1])
-    }
-    if (end0pos != 63) {
-        STORECODE(EOB[0], EOB[1])
-    }
+    } // while (pZig < pZigEnd)
     // Restore the 'bits' structure values
     jpeg_buf->idx = (int)(pOut - jpeg_buf->buf);
     jpeg_buf->bitb = u32bb;
     jpeg_buf->bitc = u32bc;
 
-    return DUQ[0];
+    return DU[0];
 }
 
 static void jpeg_init(int quality) {
@@ -1897,13 +1872,7 @@ bool jpeg_compress(image_t *src, image_t *dst, int quality, bool realloc, jpeg_s
 
     if (src->is_color) {
         if (subsampling == JPEG_SUBSAMPLING_AUTO) {
-            if (quality <= 35) {
                 subsampling = JPEG_SUBSAMPLING_420;
-            } else if (quality < 60) {
-                subsampling = JPEG_SUBSAMPLING_422;
-            } else {
-                subsampling = JPEG_SUBSAMPLING_444;
-            }
         }
     } else {
         subsampling = JPEG_SUBSAMPLING_444;
