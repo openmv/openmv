@@ -367,14 +367,29 @@ void framebuffer_auto_adjust_buffers() {
         return;
     }
 
-    for (int i = 3; i > 0; i--) {
-        framebuffer_set_buffers(i);
+    #if (OMV_CSI_HW_CROP_ENABLE == 1)
+    if (framebuffer->u && framebuffer->v) {
+        // Typically a framebuffer will not need more than u*v*2 bytes.
+        uint32_t size_guess = sizeof(vbuffer_t) + (framebuffer->u * framebuffer->v * 2);
+        // Add in extra bytes to prevent round down from shrinking buffer too small.
+        size_guess += FRAMEBUFFER_ALIGNMENT - 1;
+        // Limit the frame buffer size guess.
+        size_guess = FB_ALIGN_SIZE_ROUND_DOWN(size_guess);
 
-        // Find a buffering size automatically that doesn't use more than half.
-        if (fb_avail() >= framebuffer_total_buffer_size()) {
-            return;
+        for (int i = 3; i > 0; i--) {
+            framebuffer_set_buffers(i);
+
+            // When we start to run out of memory this will stop being true.
+            if ((size_guess * i) <= framebuffer_total_buffer_size()) {
+                return;
+            }
         }
+    } else {
+        framebuffer_set_buffers(3);
     }
+    #else
+    framebuffer_set_buffers(3);
+    #endif
 }
 
 void framebuffer_free_current_buffer() {
