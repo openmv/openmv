@@ -622,11 +622,11 @@ __weak int sensor_set_pixformat(pixformat_t pixformat) {
     // Set pixel format
     sensor.pixformat = pixformat;
 
-    // Skip the first frame.
+    // Reset pixel format to skip the first frame.
     MAIN_FB()->pixfmt = PIXFORMAT_INVALID;
 
-    // Pickout a good buffer count for the user.
-    framebuffer_auto_adjust_buffers();
+    // Auto-adjust the number of frame buffers.
+    sensor_set_framebuffers(-1);
 
     // Reconfigure the hardware if needed.
     return sensor_config(SENSOR_CONFIG_PIXFORMAT);
@@ -660,17 +660,20 @@ __weak int sensor_set_framesize(framesize_t framesize) {
     // Set framebuffer size
     sensor.framesize = framesize;
 
-    // Skip the first frame.
-    MAIN_FB()->pixfmt = PIXFORMAT_INVALID;
-
-    // Set MAIN FB x offset, y offset, width, height, backup width, and backup height.
+    // Set x and y offsets.
     MAIN_FB()->x = 0;
     MAIN_FB()->y = 0;
-    MAIN_FB()->w = MAIN_FB()->u = resolution[framesize][0];
-    MAIN_FB()->h = MAIN_FB()->v = resolution[framesize][1];
+    // Set width and height.
+    MAIN_FB()->w = resolution[framesize][0];
+    MAIN_FB()->h = resolution[framesize][1];
+    // Set backup width and height.
+    MAIN_FB()->u = resolution[framesize][0];
+    MAIN_FB()->v = resolution[framesize][1];
+    // Reset pixel format to skip the first frame.
+    MAIN_FB()->pixfmt = PIXFORMAT_INVALID;
 
-    // Pickout a good buffer count for the user.
-    framebuffer_auto_adjust_buffers();
+    // Auto-adjust the number of frame buffers.
+    sensor_set_framebuffers(-1);
 
     // Reconfigure the hardware if needed.
     return sensor_config(SENSOR_CONFIG_FRAMESIZE);
@@ -731,14 +734,14 @@ __weak uint32_t sensor_get_src_bpp() {
         return 1;
     }
     switch (sensor.pixformat) {
-        case PIXFORMAT_GRAYSCALE:
-            return sensor.hw_flags.gs_bpp;
-        case PIXFORMAT_RGB565:
-        case PIXFORMAT_YUV422:
-            return 2;
         case PIXFORMAT_BAYER:
         case PIXFORMAT_JPEG:
             return 1;
+        case PIXFORMAT_RGB565:
+        case PIXFORMAT_YUV422:
+            return 2;
+        case PIXFORMAT_GRAYSCALE:
+            return sensor.hw_flags.gs_bpp;
         default:
             return 0;
     }
@@ -774,16 +777,20 @@ __weak int sensor_set_windowing(int x, int y, int w, int h) {
     // Flush previous frame.
     framebuffer_update_jpeg_buffer();
 
-    // Skip the first frame.
-    MAIN_FB()->pixfmt = PIXFORMAT_INVALID;
-
+    // Set x and y offsets.
     MAIN_FB()->x = x;
     MAIN_FB()->y = y;
-    MAIN_FB()->w = MAIN_FB()->u = w;
-    MAIN_FB()->h = MAIN_FB()->v = h;
+    // Set width and height.
+    MAIN_FB()->w = w;
+    MAIN_FB()->h = h;
+    // Set backup width and height.
+    MAIN_FB()->u = w;
+    MAIN_FB()->v = h;
+    // Reset pixel format to skip the first frame.
+    MAIN_FB()->pixfmt = PIXFORMAT_INVALID;
 
-    // Pickout a good buffer count for the user.
-    framebuffer_auto_adjust_buffers();
+    // Auto-adjust the number of frame buffers.
+    sensor_set_framebuffers(-1);
 
     // Reconfigure the hardware if needed.
     return sensor_config(SENSOR_CONFIG_WINDOWING);
@@ -1114,6 +1121,22 @@ __weak int sensor_set_framebuffers(int count) {
     // Flush previous frame.
     framebuffer_update_jpeg_buffer();
 
+    if (sensor.pixformat == PIXFORMAT_INVALID) {
+        return SENSOR_ERROR_INVALID_PIXFORMAT;
+    }
+
+    if (sensor.framesize == FRAMESIZE_INVALID) {
+        return SENSOR_ERROR_INVALID_FRAMESIZE;
+    }
+
+    uint32_t bpp = IM_MAX(sensor_get_src_bpp(), sensor_get_dst_bpp());
+    #if OMV_CSI_HW_CROP_ENABLE
+    // If hardware cropping is supported, use window size.
+    MAIN_FB()->frame_size = MAIN_FB()->u * MAIN_FB()->v * bpp;
+    #else
+    // Otherwise, use the real frame size.
+    MAIN_FB()->frame_size = resolution[sensor.framesize][0] * resolution[sensor.framesize][1] * bpp;
+    #endif
     return framebuffer_set_buffers(count);
 }
 
@@ -1279,8 +1302,8 @@ __weak int sensor_auto_crop_framebuffer() {
         MAIN_FB()->y -= 1;
     }
 
-    // Pickout a good buffer count for the user.
-    framebuffer_auto_adjust_buffers();
+    // Auto-adjust the number of frame buffers.
+    sensor_set_framebuffers(-1);
     return 0;
 }
 
