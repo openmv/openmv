@@ -38,23 +38,33 @@ def run_vela(model_path, model_name, args):
         print(e.stderr, file=sys.stderr)
         print(args.vela_args, file=sys.stderr)
 
+    C_GREEN = '\033[92m'
+    C_RED = '\033[91m'
+    C_BLUE = '\033[94m'
+    C_RESET = '\033[0m'
+
     csv_file_path = glob.glob(os.path.join(vela_dir, "*.csv"))[0]
     with open(csv_file_path, mode='r') as file:
         row = next(csv.DictReader(file))
+        stoi = lambda x, d=1: str(int(float(x) / d))
+        color = lambda c,x: c + x + C_RESET
+
         summary = {
-            "Network:": row["network"],
-            "Accelerator Configuration:": row["accelerator_configuration"],
-            "System Configuration:": row["system_config"],
-            "Memory Mode:": row["memory_mode"],
-            "Compiler Mode: ": vela_args[-1],
-            "Accelerator Clock:": str(int(float(row["core_clock"]) / 1000000))+" MHz",
-            "Arena Size:": row["arena_cache_size"].split(".")[0],
-            "Inference Time:": "%.2f ms, %.2f inferences/s"%
+            C_BLUE + "Network:": row["network"],
+            C_BLUE + "Accelerator Configuration:": C_GREEN + row["accelerator_configuration"],
+            C_BLUE + "System Configuration:": row["system_config"],
+            C_BLUE + "Memory Mode:": row["memory_mode"],
+            C_BLUE + "Compiler Mode: ": C_RED + vela_args[-1],
+            C_BLUE + "Accelerator Clock:": stoi(row["core_clock"], 10**6) + " MHz",
+            C_BLUE + "SRAM Usage:": C_RED + stoi(row["sram_memory_used"]) + " KiB",
+            C_BLUE + "Flash Usage:": C_RED + stoi(row["off_chip_flash_memory_used"]) + " KiB",
+            C_BLUE + "Inference Time:": "%.2f ms, %.2f inferences/s"%
                 (float(row["inference_time"]) * 1000, float(row["inferences_per_second"])),
         }
         print("", file=sys.stderr)
         for key, value in summary.items():
-            print(f"{key:<{30}} {value:<{50}}", file=sys.stderr)
+            print(f"{key:<{35}} {value:<{50}}", file=sys.stderr)
+        print(C_RESET, file=sys.stderr, end="")
     return f'{vela_dir}/{model_name}_vela.tflite'
 
 
@@ -67,7 +77,7 @@ def main():
     args = parser.parse_args()
 
     tflm_builtin_models = []
-    tflm_builtin_models_index = {}
+    tflm_builtin_index = {}
 
     print('/* NOTE: This file is auto-generated. */\n')
 
@@ -76,7 +86,7 @@ def main():
     with open(os.path.join(args.input, "index.csv"), 'r') as file:
         for row in csv.reader((line for line in file if not line.startswith('#'))):
             model = os.path.splitext(row[0])[0]
-            tflm_builtin_models_index[model] = dict(zip(index_headers[1:], row[1:]))
+            tflm_builtin_index[model] = dict(zip(index_headers[1:], row[1:]))
 
     models_list = glob.glob(os.path.join(args.input, "*tflite"))
     if (args.header):
@@ -100,7 +110,11 @@ def main():
             labels_file = os.path.splitext(model_path)[0]+'.txt'
 
             if (args.vela_args):
-                args.vela_args += " --optimise %s"%tflm_builtin_models_index[model_name]["optimise"]
+                # Add model-specific Vela args.
+                if model_name not in tflm_builtin_index:
+                    args.vela_args += " --optimise Performance"
+                else:
+                    args.vela_args += " --optimise " + tflm_builtin_index[model_name]["optimise"]
                 # Compile the model using Vela and switch path to the new model.
                 model_path = run_vela(model_path, model_name, args)
                 model_size = os.path.getsize(model_path)
@@ -134,10 +148,10 @@ def main():
         # Generate built-in models table.
         print('const tflm_builtin_model_t tflm_builtin_models[] = {')
         for model in tflm_builtin_models:
-            if model[0] in tflm_builtin_models_index:
+            if model[0] in tflm_builtin_index:
                 print('    #if defined(IMLIB_ENABLE_TFLM_BUILTIN_{:s})'.format(model[0].upper()))
             print('    {{ "{:s}", {:d}, {:s}, {:d}, {:s} }},'.format(*model))
-            if model[0] in tflm_builtin_models_index:
+            if model[0] in tflm_builtin_index:
                 print('    #endif')
         print('    {0, 0, 0, 0, 0}')
         print('};')
