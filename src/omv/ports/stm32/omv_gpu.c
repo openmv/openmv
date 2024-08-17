@@ -32,7 +32,7 @@ int omv_gpu_draw_image(image_t *src_img,
                        const uint16_t *color_palette,
                        const uint8_t *alpha_palette,
                        image_hint_t hint) {
-    OMV_PROFILE_START(__FUNCTION__);
+    OMV_PROFILE_START();
 
     // DMA2D can only draw on RGB565 buffers and the destination/source buffers must be accessible by DMA.
     if ((dst_img->pixfmt != PIXFORMAT_RGB565) || (!DMA_BUFFER(dst_img->data)) || (!DMA_BUFFER(src_img->data))) {
@@ -211,7 +211,7 @@ int omv_gpu_draw_image(image_t *src_img,
         fb_free(); // clut
     }
 
-    OMV_PROFILE_END(__FUNCTION__);
+    OMV_PROFILE_PRINT();
     return 0;
 }
 #endif // (OMV_GPU_ENABLE == 1)

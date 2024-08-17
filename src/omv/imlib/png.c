@@ -105,7 +105,7 @@ unsigned lodepng_convert_cb(unsigned char *out, const unsigned char *in,
 
 #if defined(IMLIB_ENABLE_PNG_ENCODER)
 bool png_compress(image_t *src, image_t *dst) {
-    OMV_PROFILE_START(__FUNCTION__);
+    OMV_PROFILE_START();
 
     if (src->is_compressed) {
         return true;
@@ -177,14 +177,14 @@ bool png_compress(image_t *src, image_t *dst) {
         // free fb_alloc() memory used for umm_init_x().
         fb_free(); // umm_init_x();
     }
-    OMV_PROFILE_END(__FUNCTION__);
+    OMV_PROFILE_PRINT();
     return false;
 }
 #endif // IMLIB_ENABLE_PNG_ENCODER
 
 #if defined(IMLIB_ENABLE_PNG_DECODER)
 void png_decompress(image_t *dst, image_t *src) {
-    OMV_PROFILE_START(__FUNCTION__);
+    OMV_PROFILE_START();
     umm_init_x(fb_avail());
 
     LodePNGState state;
@@ -226,7 +226,7 @@ void png_decompress(image_t *dst, image_t *src) {
 
     // free fb_alloc() memory used for umm_init_x().
     fb_free(); // umm_init_x();
-    OMV_PROFILE_END(__FUNCTION__);
+    OMV_PROFILE_PRINT();
 }
 #endif // IMLIB_ENABLE_PNG_DECODER
 #endif // IMLIB_ENABLE_PNG_ENCODER || IMLIB_ENABLE_PNG_DECODER
