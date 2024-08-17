@@ -1567,7 +1567,7 @@ static void jpeg_write_headers(jpeg_buf_t *jpeg_buf, int w, int h, int bpp, jpeg
 }
 
 bool jpeg_compress(image_t *src, image_t *dst, int quality, bool realloc, jpeg_subsampling_t subsampling) {
-    OMV_PROFILE_START(__FUNCTION__);
+    OMV_PROFILE_START();
 
     if (!dst->data) {
         uint32_t size = 0;
@@ -1898,7 +1898,7 @@ bool jpeg_compress(image_t *src, image_t *dst, int quality, bool realloc, jpeg_s
     dst->size = jpeg_buf.idx;
     dst->data = jpeg_buf.buf;
 
-    OMV_PROFILE_END(__FUNCTION__);
+    OMV_PROFILE_PRINT();
     return false;
 }
 
