@@ -8,7 +8,9 @@
 #
 # This script converts tflite models and labels to C structs.
 
-import sys, os
+import sys
+import os
+import csv
 import glob
 import argparse
 import binascii
@@ -18,11 +20,12 @@ import subprocess
 def run_vela(model_path, model_name, args):
     vela_dir = f'{args.build_dir}/{model_name}'
     vela_ini = os.path.dirname(os.path.abspath(__file__))
+    vela_args = args.vela_args.split()
 
     # Construct the command
     command = [
         'vela',
-        *args.vela_args.split(),
+        *vela_args,
         '--output-dir', vela_dir,
         '--config', f'{vela_ini}/vela.ini',
         model_path
@@ -31,22 +34,27 @@ def run_vela(model_path, model_name, args):
     # Call the command and capture the output
     try:
         result = subprocess.run(command, check=True, text=True, capture_output=True)
-        keywords = [
-            "Network summary for",
-            "Accelerator configuration",
-            "System configuration",
-            "Memory mode",
-            "Accelerator clock",
-            "CPU operators",
-            "NPU operators",
-            "Batch Inference time"
-        ]
-        output = result.stdout.split("\n")
-        output = [line for line in output if any(keyword in line for keyword in keywords)]
-        print(f'VELA {model_name}.tflite\n{"\n".join(output)}\n', file=sys.stderr)
     except subprocess.CalledProcessError as e:
         print(e.stderr, file=sys.stderr)
+        print(args.vela_args, file=sys.stderr)
 
+    csv_file_path = glob.glob(os.path.join(vela_dir, "*.csv"))[0]
+    with open(csv_file_path, mode='r') as file:
+        row = next(csv.DictReader(file))
+        summary = {
+            "Network:": row["network"],
+            "Accelerator Configuration:": row["accelerator_configuration"],
+            "System Configuration:": row["system_config"],
+            "Memory Mode:": row["memory_mode"],
+            "Compiler Mode: ": vela_args[-1],
+            "Accelerator Clock:": str(int(float(row["core_clock"]) / 1000000))+" MHz",
+            "Arena Size:": row["arena_cache_size"].split(".")[0],
+            "Inference Time:": "%.2f ms, %.2f inferences/s"%
+                (float(row["inference_time"]) * 1000, float(row["inferences_per_second"])),
+        }
+        print("", file=sys.stderr)
+        for key, value in summary.items():
+            print(f"{key:<{30}} {value:<{50}}", file=sys.stderr)
     return f'{vela_dir}/{model_name}_vela.tflite'
 
 
@@ -59,14 +67,16 @@ def main():
     args = parser.parse_args()
 
     tflm_builtin_models = []
-    tflm_builtin_models_index = []
+    tflm_builtin_models_index = {}
 
     print('/* NOTE: This file is auto-generated. */\n')
 
-    with open(os.path.join(args.input, "index.txt"), 'r') as f:
-        for l in f.readlines():
-            if not l.startswith("#"):
-                tflm_builtin_models_index.append(os.path.basename(os.path.splitext(l.strip())[0]))
+    index_headers = ['model', 'optimise']
+    # Open the file and parse it using DictReader
+    with open(os.path.join(args.input, "index.csv"), 'r') as file:
+        for row in csv.reader((line for line in file if not line.startswith('#'))):
+            model = os.path.splitext(row[0])[0]
+            tflm_builtin_models_index[model] = dict(zip(index_headers[1:], row[1:]))
 
     models_list = glob.glob(os.path.join(args.input, "*tflite"))
     if (args.header):
@@ -90,6 +100,7 @@ def main():
             labels_file = os.path.splitext(model_path)[0]+'.txt'
 
             if (args.vela_args):
+                args.vela_args += " --optimise %s"%tflm_builtin_models_index[model_name]["optimise"]
                 # Compile the model using Vela and switch path to the new model.
                 model_path = run_vela(model_path, model_name, args)
                 model_size = os.path.getsize(model_path)

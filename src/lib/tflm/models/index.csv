@@ -1,0 +1,8 @@
+# Models listed here are embedded into the firmware image only if they are enabled
+# by the board config. Other models in this directoy, not listed in this file, are
+# enabled by default.
+audio_preprocessor.tflite,Performance
+fomo_face_detection.tflite,Performance
+force_int_quant.tflite,Performance
+micro_speech.tflite,Performance
+person_detect.tflite,Performance
