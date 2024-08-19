@@ -292,7 +292,7 @@ const uint32_t ulMagnitudeFix[2048] = {
     0x03e8000a, 0x03e9000a, 0x03ea000a, 0x03eb000a, 0x03ec000a, 0x03ed000a, 0x03ee000a, 0x03ef000a,
     0x03f0000a, 0x03f1000a, 0x03f2000a, 0x03f3000a, 0x03f4000a, 0x03f5000a, 0x03f6000a, 0x03f7000a,
     0x03f8000a, 0x03f9000a, 0x03fa000a, 0x03fb000a, 0x03fc000a, 0x03fd000a, 0x03fe000a, 0x03ff000a
-    };
+};
 
 void jpeg_get_mcu(image_t *src, int x_offset, int y_offset, int dx, int dy,
                   int8_t *Y0, int8_t *CB, int8_t *CR) {
@@ -1548,12 +1548,12 @@ static inline void jpeg_write_bits(jpeg_buf_t *jpeg_buf, const uint16_t *bs) {
     }
 }
 
-#define STORECODE(ulCode, iNewLen)                                   \
-    u32bc += iNewLen; u32bb |= (ulCode << (32-u32bc));               \
-    while (u32bc >= 8) {                                             \
-        unsigned char c = (unsigned char)(u32bb >> 24); *pOut++ = c; \
-        if (c == 0xff) { *pOut++ = 0;}                               \
-        u32bb <<= 8; u32bc -= 8; }                                   \
+#define STORECODE(ulCode, iNewLen)                                    \
+    u32bc += iNewLen; u32bb |= (ulCode << (32 - u32bc));              \
+    while (u32bc >= 8) {                                              \
+        unsigned char c = (unsigned char) (u32bb >> 24); *pOut++ = c; \
+        if (c == 0xff) { *pOut++ = 0;}                                \
+        u32bb <<= 8; u32bc -= 8; }                                    \
         
 
 static int jpeg_processDU(jpeg_buf_t *jpeg_buf, int8_t *CDU, float *fdtbl, int DC, const uint16_t (*HTDC)[2],
@@ -1703,7 +1703,7 @@ static int jpeg_processDU(jpeg_buf_t *jpeg_buf, int8_t *CDU, float *fdtbl, int D
             diff = (ulMagVal >> 16);
             cMagnitude = ulMagVal & 0xf;
             ulCode = HTAC[(nrzeroes << 4) | cMagnitude][0];
-            iLen = HTAC[(nrzeroes << 4)| cMagnitude][1];
+            iLen = HTAC[(nrzeroes << 4) | cMagnitude][1];
             ulCode = (ulCode << cMagnitude) | diff; // combine into one code
             pZig++; // next coefficient
             iLen += cMagnitude;
