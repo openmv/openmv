@@ -291,7 +291,8 @@ const uint32_t ulMagnitudeFix[2048] = {
     0x03e0000a, 0x03e1000a, 0x03e2000a, 0x03e3000a, 0x03e4000a, 0x03e5000a, 0x03e6000a, 0x03e7000a,
     0x03e8000a, 0x03e9000a, 0x03ea000a, 0x03eb000a, 0x03ec000a, 0x03ed000a, 0x03ee000a, 0x03ef000a,
     0x03f0000a, 0x03f1000a, 0x03f2000a, 0x03f3000a, 0x03f4000a, 0x03f5000a, 0x03f6000a, 0x03f7000a,
-    0x03f8000a, 0x03f9000a, 0x03fa000a, 0x03fb000a, 0x03fc000a, 0x03fd000a, 0x03fe000a, 0x03ff000a};
+    0x03f8000a, 0x03f9000a, 0x03fa000a, 0x03fb000a, 0x03fc000a, 0x03fd000a, 0x03fe000a, 0x03ff000a
+    };
 
 void jpeg_get_mcu(image_t *src, int x_offset, int y_offset, int dx, int dy,
                   int8_t *Y0, int8_t *CB, int8_t *CR) {
@@ -1255,14 +1256,15 @@ static const uint8_t s_jpeg_ZigZag[] = {
 };
 
 static const uint8_t s_jpeg_ZigZag2[64] = {
-    0,1,8,16,9,2,3,10,
-    17,24,32,25,18,11,4,5,
-    12,19,26,33,40,48,41,34,
-    27,20,13,6,7,14,21,28,
-    35,42,49,56,57,50,43,36,
-    29,22,15,23,30,37,44,51,
-    58,59,52,45,38,31,39,46,
-    53,60,61,54,47,55,62,63};
+    0,   1,  8, 16,  9,  2,  3, 10,
+    17, 24, 32, 25, 18, 11,  4,  5,
+    12, 19, 26, 33, 40, 48, 41, 34,
+    27, 20, 13,  6,  7, 14, 21, 28,
+    35, 42, 49, 56, 57, 50, 43, 36,
+    29, 22, 15, 23, 30, 37, 44, 51,
+    58, 59, 52, 45, 38, 31, 39, 46,
+    53, 60, 61, 54, 47, 55, 62, 63
+};
 
 static const uint8_t YQT[] = {
     16, 11, 10, 16, 24,  40,  51,  61,
@@ -1546,11 +1548,12 @@ static inline void jpeg_write_bits(jpeg_buf_t *jpeg_buf, const uint16_t *bs) {
     }
 }
 
-#define STORECODE(ulCode, iNewLen) \
-        u32bc += iNewLen; u32bb |= (ulCode << (32-u32bc)); \
-        while (u32bc >= 8) { \
-            unsigned char c = (unsigned char)(u32bb >> 24); *pOut++ = c; \
-            if (c == 0xff) { *pOut++ = 0;} u32bb <<= 8; u32bc -= 8; } \
+#define STORECODE(ulCode, iNewLen)                                   \
+    u32bc += iNewLen; u32bb |= (ulCode << (32-u32bc));               \
+    while (u32bc >= 8) {                                             \
+        unsigned char c = (unsigned char)(u32bb >> 24); *pOut++ = c; \
+        if (c == 0xff) { *pOut++ = 0;}                               \
+        u32bb <<= 8; u32bc -= 8; }                                   \
         
 
 static int jpeg_processDU(jpeg_buf_t *jpeg_buf, int8_t *CDU, float *fdtbl, int DC, const uint16_t (*HTDC)[2],
@@ -1681,8 +1684,8 @@ static int jpeg_processDU(jpeg_buf_t *jpeg_buf, int8_t *CDU, float *fdtbl, int D
     // Encode ACs
     uint8_t *pZig, *pZigEnd, *pZigStart;
     int nrzeroes;
-    pZig = (uint8_t *)&s_jpeg_ZigZag2[1];
-    pZigEnd = (uint8_t *)&s_jpeg_ZigZag2[64];
+    pZig = (uint8_t *) &s_jpeg_ZigZag2[1];
+    pZigEnd = (uint8_t *) &s_jpeg_ZigZag2[64];
     while (pZig < pZigEnd) {
         pZigStart = pZig;
         while (pZig < pZigEnd && (diff = DU[pZig[0]]) == 0) {
@@ -1691,7 +1694,7 @@ static int jpeg_processDU(jpeg_buf_t *jpeg_buf, int8_t *CDU, float *fdtbl, int D
         if (pZig == pZigEnd) {
             STORECODE(EOB[0], EOB[1])
         } else {
-            nrzeroes = (int)(pZig - pZigStart);
+            nrzeroes = (int) (pZig - pZigStart);
             while (nrzeroes >= 16) {
                 STORECODE(M16zeroes[0], M16zeroes[1])
                 nrzeroes -= 16;
@@ -1699,8 +1702,8 @@ static int jpeg_processDU(jpeg_buf_t *jpeg_buf, int8_t *CDU, float *fdtbl, int D
             ulMagVal = pMagFix[diff];
             diff = (ulMagVal >> 16);
             cMagnitude = ulMagVal & 0xf;
-            ulCode = HTAC[(nrzeroes<<4) | cMagnitude][0];
-            iLen = HTAC[(nrzeroes<<4)| cMagnitude][1];
+            ulCode = HTAC[(nrzeroes << 4) | cMagnitude][0];
+            iLen = HTAC[(nrzeroes << 4)| cMagnitude][1];
             ulCode = (ulCode << cMagnitude) | diff; // combine into one code
             pZig++; // next coefficient
             iLen += cMagnitude;
@@ -1708,7 +1711,7 @@ static int jpeg_processDU(jpeg_buf_t *jpeg_buf, int8_t *CDU, float *fdtbl, int D
         }
     } // while (pZig < pZigEnd)
     // Restore the 'bits' structure values
-    jpeg_buf->idx = (int)(pOut - jpeg_buf->buf);
+    jpeg_buf->idx = (int) (pOut - jpeg_buf->buf);
     jpeg_buf->bitb = u32bb;
     jpeg_buf->bitc = u32bc;
 
@@ -1872,7 +1875,7 @@ bool jpeg_compress(image_t *src, image_t *dst, int quality, bool realloc, jpeg_s
 
     if (src->is_color) {
         if (subsampling == JPEG_SUBSAMPLING_AUTO) {
-                subsampling = JPEG_SUBSAMPLING_420;
+            subsampling = JPEG_SUBSAMPLING_420;
         }
     } else {
         subsampling = JPEG_SUBSAMPLING_444;
