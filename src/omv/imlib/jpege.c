@@ -1554,7 +1554,6 @@ static inline void jpeg_write_bits(jpeg_buf_t *jpeg_buf, const uint16_t *bs) {
         unsigned char c = (unsigned char) (u32bb >> 24); *pOut++ = c; \
         if (c == 0xff) { *pOut++ = 0;}                                \
         u32bb <<= 8; u32bc -= 8; }                                    \
-        
 
 static int jpeg_processDU(jpeg_buf_t *jpeg_buf, int8_t *CDU, float *fdtbl, int DC, const uint16_t (*HTDC)[2],
                           const uint16_t (*HTAC)[2]) {
