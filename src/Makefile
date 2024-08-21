@@ -17,6 +17,7 @@ endif
 
 # Commands
 CC      = $(Q)arm-none-eabi-gcc
+CLANG   = $(Q)clang
 CXX     = $(Q)arm-none-eabi-g++
 AS      = $(Q)arm-none-eabi-as
 LD      = $(Q)arm-none-eabi-ld

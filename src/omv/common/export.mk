@@ -11,6 +11,7 @@
 # Export Commands
 export Q
 export CC
+export CLANG
 export CXX
 export AS
 export LD
