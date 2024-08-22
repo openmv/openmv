@@ -43,8 +43,10 @@ jobs:
       uses: actions/cache@v4.0.2
       id: cache
       with:
-        path: ~/cache/gcc
-        key: 'arm-gnu-toolchain-13.2.rel1'
+        path: |
+          ~/cache/gcc
+          ~/cache/llvm
+        key: 'toolchain'
 
     - name: '🐍 Install Python'
       uses: actions/setup-python@v5
@@ -57,9 +59,13 @@ jobs:
         pip install ethos-u-vela==3.12.0
         vela --version
 
-    - name: '🛠 Install toolchain '
+    - name: '🛠 Install GCC toolchain '
       if: steps.cache.outputs.cache-hit != 'true'
       run: source tools/ci.sh && ci_install_arm_gcc
+
+    - name: '🛠 Install LLVM toolchain '
+      if: steps.cache.outputs.cache-hit != 'true'
+      run: source tools/ci.sh && ci_install_arm_llvm
 
     - name: '🏗 Build firmware'
       run: source tools/ci.sh && ci_build_target ${{ matrix.target }}
