@@ -46,7 +46,7 @@ jobs:
         path: |
           ~/cache/gcc
           ~/cache/llvm
-        key: 'toolchain'
+        key: 'toolchain_gcc-13.2.rel1_llvm-18.1.3'
 
     - name: '🐍 Install Python'
       uses: actions/setup-python@v5
@@ -91,8 +91,10 @@ jobs:
       uses: actions/cache@v4.0.2
       id: cache
       with:
-        path: ~/cache/gcc
-        key: 'arm-gnu-toolchain-13.2.rel1'
+        path: |
+          ~/cache/gcc
+          ~/cache/llvm
+        key: 'toolchain_gcc-13.2.rel1_llvm-18.1.3'
 
     - name: '🐍 Install Python'
       uses: actions/setup-python@v5
