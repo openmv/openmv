@@ -2,19 +2,24 @@
 
 ########################################################################################
 # Install ARM GCC.
-TOOLCHAIN_PATH=${HOME}/cache/gcc
-TOOLCHAIN_URL="https://developer.arm.com/-/media/Files/downloads/gnu/13.2.rel1/binrel/arm-gnu-toolchain-13.2.rel1-x86_64-arm-none-eabi.tar.xz"
+GCC_TOOLCHAIN_PATH=${HOME}/cache/gcc
+GCC_TOOLCHAIN_URL="https://developer.arm.com/-/media/Files/downloads/gnu/13.2.rel1/binrel/arm-gnu-toolchain-13.2.rel1-x86_64-arm-none-eabi.tar.xz"
 
-ci_install_arm_gcc_apt() {
-    sudo apt-get install gcc-arm-none-eabi libnewlib-arm-none-eabi
+LLVM_TOOLCHAIN_PATH=${HOME}/cache/llvm
+LLVM_TOOLCHAIN_URL="https://github.com/ARM-software/LLVM-embedded-toolchain-for-Arm/releases/download/release-18.1.3/LLVM-ET-Arm-18.1.3-Linux-x86_64.tar.xz"
+
+ci_install_arm_gcc() {
+    mkdir -p ${GCC_TOOLCHAIN_PATH}
+    wget --no-check-certificate -O - ${GCC_TOOLCHAIN_URL} | tar --strip-components=1 -Jx -C ${GCC_TOOLCHAIN_PATH}
+    export PATH=${GCC_TOOLCHAIN_PATH}/bin:${PATH}
     arm-none-eabi-gcc --version
 }
 
-ci_install_arm_gcc() {
-    mkdir -p ${TOOLCHAIN_PATH}
-    wget --no-check-certificate -O - ${TOOLCHAIN_URL} | tar --strip-components=1 -Jx -C ${TOOLCHAIN_PATH}
-    export PATH=${TOOLCHAIN_PATH}/bin:${PATH}
-    arm-none-eabi-gcc --version
+ci_install_arm_llvm() {
+    mkdir -p ${LLVM_TOOLCHAIN_PATH}
+    wget --no-check-certificate -O - ${LLVM_TOOLCHAIN_URL} | tar --strip-components=1 -Jx -C ${LLVM_TOOLCHAIN_PATH}
+    export PATH=${LLVM_TOOLCHAIN_PATH}/bin:${PATH}
+    clang --version
 }
 
 ########################################################################################
@@ -30,7 +35,7 @@ ci_update_submodules() {
 # Build Targets.
 
 ci_build_target() {
-    export PATH=${TOOLCHAIN_PATH}/bin:${PATH}
+    export PATH=${GCC_TOOLCHAIN_PATH}/bin:${PATH}
     make -j$(nproc) -C src/micropython/mpy-cross
     make -j$(nproc) TARGET=${1} -C src
     mv src/build/bin ${1}
