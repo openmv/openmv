@@ -237,8 +237,8 @@ int sensor_snapshot(sensor_t *sensor, image_t *image, uint32_t flags) {
     MAIN_FB()->pixfmt = sensor->pixformat;
 
     // Swap bytes if set.
-    if ((MAIN_FB()->pixfmt == PIXFORMAT_RGB565 && sensor->hw_flags.rgb_swap) ||
-        (MAIN_FB()->pixfmt == PIXFORMAT_YUV422 && sensor->hw_flags.yuv_swap)) {
+    if ((MAIN_FB()->pixfmt == PIXFORMAT_RGB565 && sensor->rgb_swap) ||
+        (MAIN_FB()->pixfmt == PIXFORMAT_YUV422 && sensor->yuv_swap)) {
         unaligned_memcpy_rev16(buffer->data, buffer->data, _width * _height);
     }
 

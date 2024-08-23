@@ -128,9 +128,9 @@ int sensor_config(sensor_config_t config) {
 
         // Configure VSYNC, HSYNC and PIXCLK signals.
         CSI_REG_CR1(CSI) |= CSI_CR1_EXT_VSYNC_MASK;
-        CSI_REG_CR1(CSI) |= !sensor.hw_flags.vsync ? CSI_CR1_SOF_POL_MASK    : 0;
-        CSI_REG_CR1(CSI) |= !sensor.hw_flags.hsync ? CSI_CR1_HSYNC_POL_MASK  : 0;
-        CSI_REG_CR1(CSI) |= sensor.hw_flags.pixck ? CSI_CR1_REDGE_MASK      : 0;
+        CSI_REG_CR1(CSI) |= !sensor.vsync_pol ? CSI_CR1_SOF_POL_MASK    : 0;
+        CSI_REG_CR1(CSI) |= !sensor.hsync_pol ? CSI_CR1_HSYNC_POL_MASK  : 0;
+        CSI_REG_CR1(CSI) |= sensor.pixck_pol ? CSI_CR1_REDGE_MASK      : 0;
 
         // Stride config: No stride.
         CSI_REG_FBUF_PARA(CSI) = 0;
@@ -257,7 +257,7 @@ void sensor_line_callback(uint32_t addr) {
             return;
         }
         bool jpeg_end = false;
-        if (sensor.hw_flags.jpeg_mode == 4) {
+        if (sensor.jpg_format == 4) {
             // JPEG MODE 4:
             //
             // The width and height are fixed in each frame. The first two bytes are valid data
@@ -287,7 +287,7 @@ void sensor_line_callback(uint32_t addr) {
                 }
                 buffer->offset += size;
             }
-        } else if (sensor.hw_flags.jpeg_mode == 3) {
+        } else if (sensor.jpg_format == 3) {
             // OV2640 JPEG TODO
         }
         // In JPEG mode the camera sensor will output some number of lines that doesn't match the
@@ -356,7 +356,7 @@ static void edma_config(sensor_t *sensor, uint32_t bytes_per_pixel) {
     uint32_t line_width_bytes = MAIN_FB()->u * bytes_per_pixel;
 
     // YUV422 Source -> Y Destination
-    if ((sensor->pixformat == PIXFORMAT_GRAYSCALE) && (sensor->hw_flags.gs_bpp == 2)) {
+    if ((sensor->pixformat == PIXFORMAT_GRAYSCALE) && (sensor->mono_bpp == 2)) {
         line_width_bytes /= 2;
     }
 
@@ -383,7 +383,7 @@ static void edma_config(sensor_t *sensor, uint32_t bytes_per_pixel) {
     }
 
     // YUV422 Source -> Y Destination
-    if ((sensor->pixformat == PIXFORMAT_GRAYSCALE) && (sensor->hw_flags.gs_bpp == 2)) {
+    if ((sensor->pixformat == PIXFORMAT_GRAYSCALE) && (sensor->mono_bpp == 2)) {
         src_inc = 2;
         src_size = 1;
     }
@@ -444,8 +444,8 @@ int sensor_snapshot(sensor_t *sensor, image_t *image, uint32_t flags) {
         }
         #endif
 
-        if ((sensor->pixformat == PIXFORMAT_RGB565 && sensor->hw_flags.rgb_swap)
-            || (sensor->pixformat == PIXFORMAT_YUV422 && sensor->hw_flags.yuv_swap)) {
+        if ((sensor->pixformat == PIXFORMAT_RGB565 && sensor->rgb_swap) ||
+            (sensor->pixformat == PIXFORMAT_YUV422 && sensor->yuv_swap)) {
             CSI_REG_CR1(CSI) |= CSI_CR1_SWAP16_EN_MASK | CSI_CR1_PACK_DIR_MASK;
         } else {
             CSI_REG_CR1(CSI) &= ~(CSI_CR1_SWAP16_EN_MASK | CSI_CR1_PACK_DIR_MASK);
@@ -465,7 +465,7 @@ int sensor_snapshot(sensor_t *sensor, image_t *image, uint32_t flags) {
 
     // Let the camera know we want to trigger it now.
     #if defined(OMV_CSI_FSYNC_PIN)
-    if (sensor->hw_flags.fsync) {
+    if (sensor->frame_sync) {
         omv_gpio_write(OMV_CSI_FSYNC_PIN, 1);
     }
     #endif
@@ -487,7 +487,7 @@ int sensor_snapshot(sensor_t *sensor, image_t *image, uint32_t flags) {
             sensor_abort(true, false);
 
             #if defined(OMV_CSI_FSYNC_PIN)
-            if (sensor->hw_flags.fsync) {
+            if (sensor->frame_sync) {
                 omv_gpio_write(OMV_CSI_FSYNC_PIN, 0);
             }
             #endif
@@ -499,7 +499,7 @@ int sensor_snapshot(sensor_t *sensor, image_t *image, uint32_t flags) {
 
     // We're done receiving data.
     #if defined(OMV_CSI_FSYNC_PIN)
-    if (sensor->hw_flags.fsync) {
+    if (sensor->frame_sync) {
         omv_gpio_write(OMV_CSI_FSYNC_PIN, 0);
     }
     #endif
@@ -527,12 +527,12 @@ int sensor_snapshot(sensor_t *sensor, image_t *image, uint32_t flags) {
             break;
         case PIXFORMAT_BAYER:
             MAIN_FB()->pixfmt = PIXFORMAT_BAYER;
-            MAIN_FB()->subfmt_id = sensor->hw_flags.bayer;
+            MAIN_FB()->subfmt_id = sensor->cfa_format;
             MAIN_FB()->pixfmt = imlib_bayer_shift(MAIN_FB()->pixfmt, MAIN_FB()->x, MAIN_FB()->y, sensor->transpose);
             break;
         case PIXFORMAT_YUV422: {
             MAIN_FB()->pixfmt = PIXFORMAT_YUV;
-            MAIN_FB()->subfmt_id = sensor->hw_flags.yuv_order;
+            MAIN_FB()->subfmt_id = sensor->yuv_format;
             MAIN_FB()->pixfmt = imlib_yuv_shift(MAIN_FB()->pixfmt, MAIN_FB()->x);
             break;
         }

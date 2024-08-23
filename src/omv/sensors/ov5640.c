@@ -1253,7 +1253,7 @@ static int set_auto_blc(sensor_t *sensor, int enable, int *regs) {
     ret |= omv_i2c_writeb2(&sensor->i2c_bus, sensor->slv_addr, BLC_CTRL_00, (reg & 0xFE) | (enable != 0));
 
     if ((enable == 0) && (regs != NULL)) {
-        for (uint32_t i = 0; i < sensor->hw_flags.blc_size; i++) {
+        for (uint32_t i = 0; i < sensor->blc_size; i++) {
             ret |= omv_i2c_writeb2(&sensor->i2c_bus, sensor->slv_addr, BLACK_LEVEL_00_H + i, regs[i]);
         }
     }
@@ -1264,7 +1264,7 @@ static int set_auto_blc(sensor_t *sensor, int enable, int *regs) {
 static int get_blc_regs(sensor_t *sensor, int *regs) {
     int ret = 0;
 
-    for (uint32_t i = 0; i < sensor->hw_flags.blc_size; i++) {
+    for (uint32_t i = 0; i < sensor->blc_size; i++) {
         uint8_t reg;
         ret |= omv_i2c_readb2(&sensor->i2c_bus, sensor->slv_addr, BLACK_LEVEL_00_H + i, &reg);
         regs[i] = reg;
@@ -1443,16 +1443,15 @@ int ov5640_init(sensor_t *sensor) {
     sensor->ioctl = ioctl;
 
     // Set sensor flags
-    sensor->hw_flags.vsync = 1;
-    sensor->hw_flags.hsync = 0;
-    sensor->hw_flags.pixck = 1;
-    sensor->hw_flags.fsync = 0;
-    sensor->hw_flags.jpege = 1;
-    sensor->hw_flags.jpeg_mode = 4;
-    sensor->hw_flags.gs_bpp = 1;
-    sensor->hw_flags.rgb_swap = 0;
-    sensor->hw_flags.yuv_order = SENSOR_HW_FLAGS_YVU422;
-    sensor->hw_flags.blc_size = 8;
+    sensor->vsync_pol = 1;
+    sensor->hsync_pol = 0;
+    sensor->pixck_pol = 1;
+    sensor->frame_sync = 0;
+    sensor->mono_bpp = 1;
+    sensor->rgb_swap = 0;
+    sensor->blc_size = 8;
+    sensor->jpg_format = 4;
+    sensor->yuv_format = SUBFORMAT_ID_YVU422;
 
     return 0;
 }

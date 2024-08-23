@@ -762,12 +762,11 @@ int hm0360_init(sensor_t *sensor) {
     sensor->ioctl = ioctl;
 
     // Set sensor flags
-    sensor->hw_flags.vsync = 0;
-    sensor->hw_flags.hsync = 0;
-    sensor->hw_flags.pixck = 0;
-    sensor->hw_flags.fsync = 0;
-    sensor->hw_flags.jpege = 0;
-    sensor->hw_flags.gs_bpp = 1;
+    sensor->vsync_pol = 0;
+    sensor->hsync_pol = 0;
+    sensor->pixck_pol = 0;
+    sensor->frame_sync = 0;
+    sensor->mono_bpp = 1;
 
     return 0;
 }
