@@ -513,13 +513,12 @@ int mt9v0xx_init(sensor_t *sensor) {
     sensor->ioctl = ioctl;
 
     // Set sensor flags
-    sensor->hw_flags.vsync = 0;
-    sensor->hw_flags.hsync = 0;
-    sensor->hw_flags.pixck = 0;
-    sensor->hw_flags.fsync = 1;
-    sensor->hw_flags.jpege = 0;
-    sensor->hw_flags.gs_bpp = 1;
-    sensor->hw_flags.bayer = SENSOR_HW_FLAGS_BAYER_BGGR;
+    sensor->vsync_pol = 0;
+    sensor->hsync_pol = 0;
+    sensor->pixck_pol = 0;
+    sensor->frame_sync = 1;
+    sensor->mono_bpp = 1;
+    sensor->cfa_format = SUBFORMAT_ID_BGGR;
 
     uint16_t cfa_type_reg;
     int ret = omv_i2c_readw(&sensor->i2c_bus, sensor->slv_addr, MT9V0XX_CFA_ID_REG, &cfa_type_reg);

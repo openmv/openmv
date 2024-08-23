@@ -999,14 +999,13 @@ int gc2145_init(sensor_t *sensor) {
     sensor->ioctl = ioctl;
 
     // Set sensor flags
-    sensor->hw_flags.vsync = 0;
-    sensor->hw_flags.hsync = 0;
-    sensor->hw_flags.pixck = 1;
-    sensor->hw_flags.fsync = 0;
-    sensor->hw_flags.jpege = 0;
-    sensor->hw_flags.gs_bpp = 2;
-    sensor->hw_flags.rgb_swap = 1;
-    sensor->hw_flags.bayer = SENSOR_HW_FLAGS_BAYER_GBRG;
+    sensor->vsync_pol = 0;
+    sensor->hsync_pol = 0;
+    sensor->pixck_pol = 1;
+    sensor->frame_sync = 0;
+    sensor->mono_bpp = 2;
+    sensor->rgb_swap = 1;
+    sensor->cfa_format = SUBFORMAT_ID_GBRG;
 
     return 0;
 }

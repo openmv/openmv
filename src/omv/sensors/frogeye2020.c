@@ -24,8 +24,8 @@ static int set_framesize(sensor_t *sensor, framesize_t framesize) {
 int frogeye2020_init(sensor_t *sensor) {
     sensor->set_pixformat = set_pixformat;
     sensor->set_framesize = set_framesize;
-    sensor->hw_flags.pixck = 1;
-    sensor->hw_flags.gs_bpp = 1;
+    sensor->pixck_pol = 1;
+    sensor->mono_bpp = 1;
     return 0;
 }
 

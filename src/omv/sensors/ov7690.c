@@ -610,13 +610,12 @@ int ov7690_init(sensor_t *sensor) {
     sensor->set_lens_correction = set_lens_correction;
 
     // Set sensor flags
-    sensor->hw_flags.vsync = 1;
-    sensor->hw_flags.hsync = 0;
-    sensor->hw_flags.pixck = 1;
-    sensor->hw_flags.fsync = 0;
-    sensor->hw_flags.jpege = 0;
-    sensor->hw_flags.gs_bpp = 2;
-    sensor->hw_flags.rgb_swap = 1;
+    sensor->vsync_pol = 1;
+    sensor->hsync_pol = 0;
+    sensor->pixck_pol = 1;
+    sensor->frame_sync = 0;
+    sensor->mono_bpp = 2;
+    sensor->rgb_swap = 1;
 
     return 0;
 }

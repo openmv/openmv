@@ -603,6 +603,7 @@ static int set_hmirror(sensor_t *sensor, int enable) {
     }
     return ret;
 }
+
 static int set_vflip(sensor_t *sensor, int enable) {
     int ret;
     uint8_t val;
@@ -621,9 +622,11 @@ static int set_vflip(sensor_t *sensor, int enable) {
     }
     return ret;
 }
+
 static int set_lens_correction(sensor_t *sensor, int enable, int radi, int coef) {
     return 0;
 }
+
 static int reset(sensor_t *sensor) {
     int ret;
     bank_cache = -1;
@@ -709,15 +712,13 @@ int paj6100_init(sensor_t *sensor) {
     sensor->snapshot = paj6100_snapshot;
 
     // Set sensor flags
-    sensor->hw_flags.vsync = 1;
-    sensor->hw_flags.hsync = 1;
-    sensor->hw_flags.pixck = 1;
-    sensor->hw_flags.fsync = 0;
-    sensor->hw_flags.jpege = 0;
-    sensor->hw_flags.gs_bpp = 1;
+    sensor->vsync_pol = 1;
+    sensor->hsync_pol = 1;
+    sensor->pixck_pol = 1;
+    sensor->frame_sync = 0;
+    sensor->mono_bpp = 1;
 
     init_sensor(sensor);
-
     return 0;
 }
 

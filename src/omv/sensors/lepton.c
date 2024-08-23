@@ -503,12 +503,11 @@ int lepton_init(sensor_t *sensor) {
     sensor->set_lens_correction = set_lens_correction;
     sensor->ioctl = ioctl;
 
-    sensor->hw_flags.vsync = 1;
-    sensor->hw_flags.hsync = 0;
-    sensor->hw_flags.pixck = 0;
-    sensor->hw_flags.fsync = 0;
-    sensor->hw_flags.jpege = 0;
-    sensor->hw_flags.gs_bpp = 1;
+    sensor->vsync_pol = 1;
+    sensor->hsync_pol = 0;
+    sensor->pixck_pol = 0;
+    sensor->frame_sync = 0;
+    sensor->mono_bpp = 1;
 
     if (reset(sensor) != 0) {
         return -1;

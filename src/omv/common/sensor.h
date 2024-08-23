@@ -131,8 +131,8 @@ typedef enum {
 } sensor_attr_t;
 
 typedef enum {
-    ACTIVE_LOW,
-    ACTIVE_HIGH
+    ACTIVE_LOW  = 0,
+    ACTIVE_HIGH = 1
 } polarity_t;
 
 typedef enum {
@@ -206,36 +206,6 @@ typedef enum {
     SENSOR_CONFIG_WINDOWING = (1 << 3),
 } sensor_config_t;
 
-// Bayer patterns.
-// NOTE: These must match the Bayer subformats in imlib.h
-//
-// BGGR matches the bayer pattern of BGBG...
-//                                   GRGR...
-//
-// GBRG matches the bayer pattern of GBGB...
-//                                   RGRG...
-//
-// GRBG matches the bayer pattern of GRGR...
-//                                   BGBG...
-//
-// RGGB matches the bayer pattern of RGRG...
-//                                   GBGB...
-//
-#define SENSOR_HW_FLAGS_BAYER_BGGR    (SUBFORMAT_ID_BGGR)
-#define SENSOR_HW_FLAGS_BAYER_GBRG    (SUBFORMAT_ID_GBRG)
-#define SENSOR_HW_FLAGS_BAYER_GRBG    (SUBFORMAT_ID_GRBG)
-#define SENSOR_HW_FLAGS_BAYER_RGGB    (SUBFORMAT_ID_RGGB)
-
-// YUV patterns.
-// NOTE: These must match the YUV subformats in imlib.h
-//
-// YUV422 matches the YUV pattern of YUYV... etc. coming out of the sensor.
-//
-// YVU422 matches the YUV pattern of YVYU... etc. coming out of the sensor.
-//
-#define SENSOR_HW_FLAGS_YUV422        (SUBFORMAT_ID_YUV422)
-#define SENSOR_HW_FLAGS_YVU422        (SUBFORMAT_ID_YVU422)
-
 typedef void (*vsync_cb_t) (uint32_t vsync);
 typedef void (*frame_cb_t) ();
 
@@ -249,20 +219,21 @@ typedef struct _sensor {
 
     // Hardware flags (clock polarities, hw capabilities etc..)
     struct {
-        uint32_t vsync : 1;       // Vertical sync polarity.
-        uint32_t hsync : 1;       // Horizontal sync polarity.
-        uint32_t pixck : 1;       // Pixel clock edge.
-        uint32_t fsync : 1;       // Hardware frame sync.
-        uint32_t jpege : 1;       // Hardware jpeg encoder.
-        uint32_t jpeg_mode : 3;   // JPEG mode.
-        uint32_t gs_bpp : 2;      // Grayscale bytes per pixel output.
-        uint32_t rgb_swap : 1;    // Byte-swap 2BPP RGB formats after capture.
-        uint32_t yuv_swap : 1;    // Byte-swap 2BPP YUV formats after capture.
-        uint32_t bayer : 3;       // Bayer/CFA pattern.
-        uint32_t yuv_order : 1;   // YUV/YVU order.
-        uint32_t blc_size : 4;    // Number of black level calibration registers.
-        uint32_t raw : 1;         // The sensor supports raw/Bayer output only.
-    } hw_flags;
+        uint32_t reset_pol  : 1;  // Reset polarity.
+        uint32_t power_pol  : 1;  // Power-down polarity.
+        uint32_t vsync_pol  : 1;  // Vertical sync polarity.
+        uint32_t hsync_pol  : 1;  // Horizontal sync polarity.
+        uint32_t pixck_pol  : 1;  // Pixel clock edge.
+        uint32_t frame_sync : 1;  // Hardware frame sync.
+        uint32_t mono_bpp   : 2;  // Grayscale bytes per pixel output.
+        uint32_t rgb_swap   : 1;  // Byte-swap 2BPP RGB formats after capture.
+        uint32_t yuv_swap   : 1;  // Byte-swap 2BPP YUV formats after capture.
+        uint32_t blc_size   : 4;  // Number of black level calibration registers.
+        uint32_t raw_output : 1;  // The sensor supports raw output only.
+        uint32_t yuv_format : 1;  // YUV/YVU output format.
+        uint32_t jpg_format : 3;  // JPEG output format/mode.
+        uint32_t cfa_format : 3;  // CFA format/pattern.
+    };
 
     const uint16_t *color_palette;    // Color palette used for color lookup.
     bool disable_delays;        // Set to true to disable all sensor settling time delays.
@@ -270,8 +241,6 @@ typedef struct _sensor {
 
     vsync_cb_t vsync_callback;  // VSYNC callback.
     frame_cb_t frame_callback;  // Frame callback.
-    polarity_t pwdn_pol;        // PWDN polarity (TODO move to hw_flags)
-    polarity_t reset_pol;       // Reset polarity (TODO move to hw_flags)
 
     // Sensor state
     sde_t sde;                  // Special digital effects

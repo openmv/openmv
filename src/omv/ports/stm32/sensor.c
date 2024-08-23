@@ -182,11 +182,11 @@ int sensor_config(sensor_config_t config) {
     if (config == SENSOR_CONFIG_INIT) {
         DCMIHandle.Instance = DCMI;
         // VSYNC clock polarity
-        DCMIHandle.Init.VSPolarity = sensor.hw_flags.vsync ? DCMI_VSPOLARITY_HIGH : DCMI_VSPOLARITY_LOW;
+        DCMIHandle.Init.VSPolarity = sensor.vsync_pol ? DCMI_VSPOLARITY_HIGH : DCMI_VSPOLARITY_LOW;
         // HSYNC clock polarity
-        DCMIHandle.Init.HSPolarity = sensor.hw_flags.hsync ? DCMI_HSPOLARITY_HIGH : DCMI_HSPOLARITY_LOW;
+        DCMIHandle.Init.HSPolarity = sensor.hsync_pol ? DCMI_HSPOLARITY_HIGH : DCMI_HSPOLARITY_LOW;
         // PXCLK clock polarity
-        DCMIHandle.Init.PCKPolarity = sensor.hw_flags.pixck ? DCMI_PCKPOLARITY_RISING : DCMI_PCKPOLARITY_FALLING;
+        DCMIHandle.Init.PCKPolarity = sensor.pixck_pol ? DCMI_PCKPOLARITY_RISING : DCMI_PCKPOLARITY_FALLING;
 
         // Setup capture parameters.
         DCMIHandle.Init.SynchroMode = DCMI_SYNCHRO_HARDWARE;    // Enable Hardware synchronization
@@ -329,7 +329,7 @@ int sensor_shutdown(int enable) {
 
     if (enable) {
         #if defined(OMV_CSI_POWER_PIN)
-        if (sensor.pwdn_pol == ACTIVE_HIGH) {
+        if (sensor.power_pol == ACTIVE_HIGH) {
             omv_gpio_write(OMV_CSI_POWER_PIN, 1);
         } else {
             omv_gpio_write(OMV_CSI_POWER_PIN, 0);
@@ -339,7 +339,7 @@ int sensor_shutdown(int enable) {
         HAL_DCMI_DeInit(&DCMIHandle);
     } else {
         #if defined(OMV_CSI_POWER_PIN)
-        if (sensor.pwdn_pol == ACTIVE_HIGH) {
+        if (sensor.power_pol == ACTIVE_HIGH) {
             omv_gpio_write(OMV_CSI_POWER_PIN, 0);
         } else {
             omv_gpio_write(OMV_CSI_POWER_PIN, 1);
@@ -479,7 +479,7 @@ void DCMI_DMAConvCpltUser(uint32_t addr) {
     // depth on the DCMI hardware and DMA hardware is not enough to prevent data loss.
 
     if (sensor.pixformat == PIXFORMAT_JPEG) {
-        if (sensor.hw_flags.jpeg_mode == 4) {
+        if (sensor.jpg_format == 4) {
             // JPEG MODE 4:
             //
             // The width and height are fixed in each frame. The first two bytes are valid data
@@ -500,7 +500,7 @@ void DCMI_DMAConvCpltUser(uint32_t addr) {
             }
             unaligned_memcpy(buffer->data + buffer->offset, ((uint16_t *) addr) + 1, size);
             buffer->offset += size;
-        } else if (sensor.hw_flags.jpeg_mode == 3) {
+        } else if (sensor.jpg_format == 3) {
             // JPEG MODE 3:
             //
             // Compression data is transmitted with programmable width. The last line width maybe
@@ -590,8 +590,8 @@ static void mdma_config(MDMA_InitTypeDef *init, sensor_t *sensor, uint32_t bytes
     init->SourceBlockAddressOffset = 0;
     init->DestBlockAddressOffset = 0;
 
-    if ((sensor->pixformat == PIXFORMAT_RGB565 && sensor->hw_flags.rgb_swap)
-        || (sensor->pixformat == PIXFORMAT_YUV422 && sensor->hw_flags.yuv_swap)) {
+    if ((sensor->pixformat == PIXFORMAT_RGB565 && sensor->rgb_swap) ||
+        (sensor->pixformat == PIXFORMAT_YUV422 && sensor->yuv_swap)) {
         init->Endianness = MDMA_LITTLE_BYTE_ENDIANNESS_EXCHANGE;
     } else {
         init->Endianness = MDMA_LITTLE_ENDIANNESS_PRESERVE;
@@ -606,7 +606,7 @@ static void mdma_config(MDMA_InitTypeDef *init, sensor_t *sensor, uint32_t bytes
     }
 
     // YUV422 Source -> Y Destination
-    if ((sensor->pixformat == PIXFORMAT_GRAYSCALE) && (sensor->hw_flags.gs_bpp == 2)) {
+    if ((sensor->pixformat == PIXFORMAT_GRAYSCALE) && (sensor->mono_bpp == 2)) {
         line_width_bytes /= 2;
         if (sensor->transpose) {
             init->DestBlockAddressOffset /= 2;
@@ -643,7 +643,7 @@ static void mdma_config(MDMA_InitTypeDef *init, sensor_t *sensor, uint32_t bytes
     }
 
     // YUV422 Source -> Y Destination
-    if ((sensor->pixformat == PIXFORMAT_GRAYSCALE) && (sensor->hw_flags.gs_bpp == 2)) {
+    if ((sensor->pixformat == PIXFORMAT_GRAYSCALE) && (sensor->mono_bpp == 2)) {
         init->SourceInc = MDMA_SRC_INC_HALFWORD;
         init->SourceDataSize = MDMA_SRC_DATASIZE_BYTE;
     }
@@ -810,7 +810,7 @@ int sensor_snapshot(sensor_t *sensor, image_t *image, uint32_t flags) {
 
     // Let the camera know we want to trigger it now.
     #if defined(OMV_CSI_FSYNC_PIN)
-    if (sensor->hw_flags.fsync) {
+    if (sensor->frame_sync) {
         omv_gpio_write(OMV_CSI_FSYNC_PIN, 1);
     }
     #endif
@@ -845,7 +845,7 @@ int sensor_snapshot(sensor_t *sensor, image_t *image, uint32_t flags) {
             sensor_abort(true, false);
 
             #if defined(OMV_CSI_FSYNC_PIN)
-            if (sensor->hw_flags.fsync) {
+            if (sensor->frame_sync) {
                 omv_gpio_write(OMV_CSI_FSYNC_PIN, 0);
             }
             #endif
@@ -863,7 +863,7 @@ int sensor_snapshot(sensor_t *sensor, image_t *image, uint32_t flags) {
 
     // We're done receiving data.
     #if defined(OMV_CSI_FSYNC_PIN)
-    if (sensor->hw_flags.fsync) {
+    if (sensor->frame_sync) {
         omv_gpio_write(OMV_CSI_FSYNC_PIN, 0);
     }
     #endif
@@ -893,12 +893,12 @@ int sensor_snapshot(sensor_t *sensor, image_t *image, uint32_t flags) {
             break;
         case PIXFORMAT_BAYER:
             MAIN_FB()->pixfmt = PIXFORMAT_BAYER;
-            MAIN_FB()->subfmt_id = sensor->hw_flags.bayer;
+            MAIN_FB()->subfmt_id = sensor->cfa_format;
             MAIN_FB()->pixfmt = imlib_bayer_shift(MAIN_FB()->pixfmt, MAIN_FB()->x, MAIN_FB()->y, sensor->transpose);
             break;
         case PIXFORMAT_YUV422: {
             MAIN_FB()->pixfmt = PIXFORMAT_YUV;
-            MAIN_FB()->subfmt_id = sensor->hw_flags.yuv_order;
+            MAIN_FB()->subfmt_id = sensor->yuv_format;
             MAIN_FB()->pixfmt = imlib_yuv_shift(MAIN_FB()->pixfmt, MAIN_FB()->x);
             break;
         }

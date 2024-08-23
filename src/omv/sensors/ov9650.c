@@ -557,14 +557,13 @@ int ov9650_init(sensor_t *sensor) {
     sensor->set_vflip = set_vflip;
 
     // Set sensor flags
-    sensor->hw_flags.vsync = 1;
-    sensor->hw_flags.hsync = 0;
-    sensor->hw_flags.pixck = 1;
-    sensor->hw_flags.fsync = 0;
-    sensor->hw_flags.jpege = 0;
-    sensor->hw_flags.gs_bpp = 2;
-    sensor->hw_flags.rgb_swap = 1;
-    sensor->hw_flags.yuv_order = SENSOR_HW_FLAGS_YVU422;
+    sensor->vsync_pol = 1;
+    sensor->hsync_pol = 0;
+    sensor->pixck_pol = 1;
+    sensor->frame_sync = 0;
+    sensor->mono_bpp = 2;
+    sensor->rgb_swap = 1;
+    sensor->yuv_format = SUBFORMAT_ID_YVU422;
 
     return 0;
 }

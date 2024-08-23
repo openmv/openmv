@@ -258,7 +258,7 @@ int sensor_probe_init(uint32_t bus_id, uint32_t bus_speed) {
     int init_ret = 0;
 
     #if defined(OMV_CSI_POWER_PIN)
-    sensor.pwdn_pol = ACTIVE_HIGH;
+    sensor.power_pol = ACTIVE_HIGH;
     // Do a power cycle
     omv_gpio_write(OMV_CSI_POWER_PIN, 1);
     mp_hal_delay_ms(10);
@@ -294,7 +294,7 @@ int sensor_probe_init(uint32_t bus_id, uint32_t bus_speed) {
 
         if ((sensor.slv_addr = sensor_detect()) == 0) {
             #if defined(OMV_CSI_POWER_PIN)
-            sensor.pwdn_pol = ACTIVE_LOW;
+            sensor.power_pol = ACTIVE_LOW;
             omv_gpio_write(OMV_CSI_POWER_PIN, 1);
             mp_hal_delay_ms(OMV_CSI_POWER_DELAY);
             #endif
@@ -316,7 +316,7 @@ int sensor_probe_init(uint32_t bus_id, uint32_t bus_speed) {
             } else if (paj6100_detect(&sensor)) {
                 // Found PixArt PAJ6100
                 sensor.chip_id_w = PAJ6100_ID;
-                sensor.pwdn_pol = ACTIVE_LOW;
+                sensor.power_pol = ACTIVE_LOW;
                 sensor.reset_pol = ACTIVE_LOW;
             #endif
             } else {
@@ -527,13 +527,13 @@ __weak int sensor_shutdown(int enable) {
 
     #if defined(OMV_CSI_POWER_PIN)
     if (enable) {
-        if (sensor.pwdn_pol == ACTIVE_HIGH) {
+        if (sensor.power_pol == ACTIVE_HIGH) {
             omv_gpio_write(OMV_CSI_POWER_PIN, 1);
         } else {
             omv_gpio_write(OMV_CSI_POWER_PIN, 0);
         }
     } else {
-        if (sensor.pwdn_pol == ACTIVE_HIGH) {
+        if (sensor.power_pol == ACTIVE_HIGH) {
             omv_gpio_write(OMV_CSI_POWER_PIN, 0);
         } else {
             omv_gpio_write(OMV_CSI_POWER_PIN, 1);
@@ -586,10 +586,10 @@ __weak int sensor_set_pixformat(pixformat_t pixformat) {
     // If the current format is BAYER (1BPP), and the target format is color and (2BPP), and the frame does not
     // fit in RAM it will just be switched back again to BAYER, so we keep the current format unchanged.
     uint32_t size = framebuffer_get_buffer_size();
-    if ((sensor.pixformat == PIXFORMAT_BAYER)
-        && ((pixformat == PIXFORMAT_RGB565) || (pixformat == PIXFORMAT_YUV422))
-        && (MAIN_FB()->u * MAIN_FB()->v * 2 > size)
-        && (MAIN_FB()->u * MAIN_FB()->v * 1 <= size)) {
+    if ((sensor.pixformat == PIXFORMAT_BAYER) &&
+        ((pixformat == PIXFORMAT_RGB565) || (pixformat == PIXFORMAT_YUV422)) &&
+        (MAIN_FB()->u * MAIN_FB()->v * 2 > size) &&
+        (MAIN_FB()->u * MAIN_FB()->v * 1 <= size)) {
         return 0;
     }
 
@@ -721,16 +721,16 @@ __weak void sensor_throttle_framerate() {
 
 __weak bool sensor_get_cropped() {
     if (sensor.framesize != FRAMESIZE_INVALID) {
-        return (MAIN_FB()->x != 0)                                  // should be zero if not cropped.
-               || (MAIN_FB()->y != 0)                               // should be zero if not cropped.
-               || (MAIN_FB()->u != resolution[sensor.framesize][0]) // should be equal to the resolution if not cropped.
-               || (MAIN_FB()->v != resolution[sensor.framesize][1]); // should be equal to the resolution if not cropped.
+        return (MAIN_FB()->x != 0) ||
+               (MAIN_FB()->y != 0) ||
+               (MAIN_FB()->u != resolution[sensor.framesize][0]) ||
+               (MAIN_FB()->v != resolution[sensor.framesize][1]);
     }
     return false;
 }
 
 __weak uint32_t sensor_get_src_bpp() {
-    if (sensor.hw_flags.raw) {
+    if (sensor.raw_output) {
         return 1;
     }
     switch (sensor.pixformat) {
@@ -741,7 +741,7 @@ __weak uint32_t sensor_get_src_bpp() {
         case PIXFORMAT_YUV422:
             return 2;
         case PIXFORMAT_GRAYSCALE:
-            return sensor.hw_flags.gs_bpp;
+            return sensor.mono_bpp;
         default:
             return 0;
     }
@@ -1345,7 +1345,7 @@ __weak int sensor_copy_line(void *dma, uint8_t *src, uint8_t *dst) {
                 break;
             }
             #endif
-            if (sensor.hw_flags.gs_bpp == 1) {
+            if (sensor.mono_bpp == 1) {
                 // 1BPP GRAYSCALE.
                 if (!sensor.transpose) {
                     unaligned_memcpy(dst, src, MAIN_FB()->u);
@@ -1370,8 +1370,8 @@ __weak int sensor_copy_line(void *dma, uint8_t *src, uint8_t *dst) {
             #endif
             if (0) {
             #if !OMV_CSI_HW_SWAP_ENABLE
-            } else if ((sensor.pixformat == PIXFORMAT_RGB565 && sensor.hw_flags.rgb_swap)
-                       || (sensor.pixformat == PIXFORMAT_YUV422 && sensor.hw_flags.yuv_swap)) {
+            } else if ((sensor.pixformat == PIXFORMAT_RGB565 && sensor.rgb_swap) ||
+                       (sensor.pixformat == PIXFORMAT_YUV422 && sensor.yuv_swap)) {
                 if (!sensor.transpose) {
                     unaligned_memcpy_rev16(dst16, src16, MAIN_FB()->u);
                 } else {
