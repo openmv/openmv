@@ -15,9 +15,12 @@ Q = @
 MAKEFLAGS += --silent
 endif
 
+# Default path to LLVM toolchain.
+LLVM_PATH ?=/opt/LLVM-ET-Arm-18.1.3-Linux-x86_64/bin/
+
 # Commands
 CC      = $(Q)arm-none-eabi-gcc
-CLANG   = $(Q)clang
+CLANG   = $(Q)$(LLVM_PATH)/clang
 CXX     = $(Q)arm-none-eabi-g++
 AS      = $(Q)arm-none-eabi-as
 LD      = $(Q)arm-none-eabi-ld
