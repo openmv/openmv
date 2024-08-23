@@ -37,7 +37,7 @@ ci_update_submodules() {
 ci_build_target() {
     export PATH=${GCC_TOOLCHAIN_PATH}/bin:${PATH}
     make -j$(nproc) -C src/micropython/mpy-cross
-    make -j$(nproc) TARGET=${1} -C src
+    make -j$(nproc) TARGET=${1} LLVM_PATH=${LLVM_TOOLCHAIN_PATH}/bin -C src
     mv src/build/bin ${1}
 }
 
