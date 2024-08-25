@@ -684,7 +684,7 @@ int ov7725_init(sensor_t *sensor) {
     sensor->rgb_swap = 1;
     sensor->blc_size = 8;
     sensor->yuv_format = SUBFORMAT_ID_YVU422;
-    sensor->cfa_format = SUBFORMAT_ID_GBRG;
+    sensor->cfa_format = SUBFORMAT_ID_BGGR;
 
     return 0;
 }

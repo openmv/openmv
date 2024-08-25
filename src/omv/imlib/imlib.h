@@ -1165,8 +1165,10 @@ void imlib_fill_image_from_float(image_t *img, int w, int h, float *data, float 
 
 // Bayer Image Processing
 pixformat_t imlib_bayer_shift(pixformat_t pixfmt, int x, int y, bool transpose);
+void imlib_debayer_ycbcr(image_t *src, rectangle_t *roi, int8_t *Y0, int8_t *CB, int8_t *CR);
 void imlib_debayer_line(int x_start, int x_end, int y_row, void *dst_row_ptr, pixformat_t pixfmt, image_t *src);
 void imlib_debayer_image(image_t *dst, image_t *src);
+void imlib_debayer_image_awb(image_t *dst, image_t *src, bool fast, uint32_t r_out, uint32_t g_out, uint32_t b_out);
 
 // YUV Image Processing
 pixformat_t imlib_yuv_shift(pixformat_t pixfmt, int x);

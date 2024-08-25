@@ -148,4 +148,8 @@
 
 // Stereo Imaging
 // #define IMLIB_ENABLE_STEREO_DISPARITY
+
+// Bayer
+#define IMLIB_ENABLE_DEBAYER_OPTIMIZATION
+
 #endif //__IMLIB_CONFIG_H__
