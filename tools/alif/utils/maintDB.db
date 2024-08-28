@@ -1,0 +1,50 @@
+{
+    "groups" : {
+        "Device Control" : "control",
+        "Device Information" : "info",
+        "MRAM" : "mram",
+        "Utilities" : "utils",
+        "Setting capabilities" : "setting",
+        "ROM" : "rom"
+    },
+    "control" : {
+        "Hard maintenance mode" : "maintenance_mode",
+        "Soft maintenance mode" : "soft_maintenance_mode",
+        "Device reset" : "reset_action"
+    },
+    "info" : {
+        "Get TOC info" : "get_toc_action",
+        "Get SES Banner" : "get_banner_action",
+        "Get CPU boot info" : "get_cpu_status_action",
+        "Device enquiry" : "get_enquiry_action",
+        "Get revision info" : "get_revision_action", 
+        "Get OTP data" : "get_otp_read",
+        "Get MRAM data" : "get_mram_read_action",
+        "Get log data" : "get_log_data_action",
+        "Get SEROM trace data": "get_trace_buffer",
+        "Get SERAM trace data": "get_seram_trace_buffer",
+        "Get power data": "get_power_action",
+        "Get clock data": "get_clock_action"
+    },
+    "mram" : {
+        "Erase Application Mram" : "full_erase_application_mram_action",
+        "Fast Erase Application Mram" : "fast_erase_application_mram_action",
+        "Fast Erase App. Mram (include NTOC)" : "fast_erase_app_include_start_mram_action",
+        "Get MRAM info" : "get_mram_info_action"
+    },
+    "utils" : {
+        "Terminal mode" : "terminal_mode",
+        "Get SERAM metrics" : "get_seram_info_action",
+        "Get ECC key" : "get_ecc_key",
+        "Get Firewall configuration" : "get_firewall_config"
+    },
+    "rom" : {
+     "Recovery" : "recovery_action"
+    },
+    "setting" : {
+      "Enable LOGGING" : "set_logger_enable_action",
+      "Disable LOGGING" : "set_logger_disable_action",
+      "Enable PRINTING" : "set_print_enable_action",
+      "Disable PRINTING" : "set_print_disable_action"
+    }
+}
