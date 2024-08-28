@@ -1513,8 +1513,8 @@ static mp_obj_t py_image_draw_keypoints(uint n_args, const mp_obj_t *args, mp_ma
             int cx = mp_obj_get_int(tuple[0]);
             int cy = mp_obj_get_int(tuple[1]);
             int angle = mp_obj_get_int(tuple[2]) % 360;
-            int si = sin_table[angle] * arg_s;
-            int co = cos_table[angle] * arg_s;
+            int si = (int) (sin_table[angle] * arg_s);
+            int co = (int) (cos_table[angle] * arg_s);
             imlib_draw_line(arg_img, cx, cy, cx + co, cy + si, arg_c, arg_thickness);
             imlib_draw_circle(arg_img, cx, cy, (arg_s - 2) / 2, arg_c, arg_thickness, arg_fill);
         }
@@ -1526,8 +1526,8 @@ static mp_obj_t py_image_draw_keypoints(uint n_args, const mp_obj_t *args, mp_ma
             int cx = kp->x;
             int cy = kp->y;
             int angle = kp->angle % 360;
-            int si = sin_table[angle] * arg_s;
-            int co = cos_table[angle] * arg_s;
+            int si = (int) (sin_table[angle] * arg_s);
+            int co = (int) (cos_table[angle] * arg_s);
             imlib_draw_line(arg_img, cx, cy, cx + co, cy + si, arg_c, arg_thickness);
             imlib_draw_circle(arg_img, cx, cy, (arg_s - 2) / 2, arg_c, arg_thickness, arg_fill);
         }
@@ -3984,7 +3984,7 @@ mp_obj_t py_blob_rotation(mp_obj_t self_in) {
 static MP_DEFINE_CONST_FUN_OBJ_1(py_blob_rotation_obj, py_blob_rotation);
 
 mp_obj_t py_blob_rotation_deg(mp_obj_t self_in) {
-    return mp_obj_new_int(IM_RAD2DEG(mp_obj_get_float(((py_blob_obj_t *) self_in)->rotation)));
+    return mp_obj_new_int((mp_int_t) IM_RAD2DEG(mp_obj_get_float(((py_blob_obj_t *) self_in)->rotation)));
 }
 static MP_DEFINE_CONST_FUN_OBJ_1(py_blob_rotation_deg_obj, py_blob_rotation_deg);
 
@@ -4278,9 +4278,9 @@ mp_obj_t py_blob_enclosed_ellipse(mp_obj_t self_in) {
 
     return mp_obj_new_tuple(5, (mp_obj_t []) {mp_obj_new_int(cx),
                                               mp_obj_new_int(cy),
-                                              mp_obj_new_int(a),
-                                              mp_obj_new_int(b),
-                                              mp_obj_new_int(r)});
+                                              mp_obj_new_int((int) a),
+                                              mp_obj_new_int((int) b),
+                                              mp_obj_new_int((int) r)});
 }
 static MP_DEFINE_CONST_FUN_OBJ_1(py_blob_enclosed_ellipse_obj, py_blob_enclosed_ellipse);
 
@@ -5335,8 +5335,8 @@ static mp_obj_t py_image_find_apriltags(uint n_args, const mp_obj_t *args, mp_ma
         o->h = mp_obj_new_int(lnk_data.rect.h);
         o->id = mp_obj_new_int(lnk_data.id);
         o->family = mp_obj_new_int(lnk_data.family);
-        o->cx = mp_obj_new_int(lnk_data.centroid_x);
-        o->cy = mp_obj_new_int(lnk_data.centroid_y);
+        o->cx = mp_obj_new_int((int) lnk_data.centroid_x);
+        o->cy = mp_obj_new_int((int) lnk_data.centroid_y);
         o->rotation = mp_obj_new_float(lnk_data.z_rotation);
         o->decision_margin = mp_obj_new_float(lnk_data.decision_margin);
         o->hamming = mp_obj_new_int(lnk_data.hamming);
