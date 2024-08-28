@@ -78,7 +78,7 @@ OMV_COMMON_DIR=$(TOP_DIR)/$(OMV_DIR)/common
 # Debugging/Optimization
 ifeq ($(DEBUG), 1)
 ROM_TEXT_COMPRESSION = 0
-CFLAGS += -Og -ggdb3 -Wno-maybe-uninitialized
+CFLAGS += -Og -ggdb3
 else
 DEBUG=0
 ROM_TEXT_COMPRESSION = 1
