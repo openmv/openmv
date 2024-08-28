@@ -47,3 +47,11 @@ openmv.creator
 openmv.creator.user
 openmv.files
 openmv.includes
+
+# Alif tools temp files
+######################
+tools/alif/**/*.cfg
+tools/alif/**/*.crt
+tools/alif/**/*.ds
+tools/alif/**/*.bin.sign
+tools/alif/**/*map.txt
