@@ -137,4 +137,28 @@ void HAL_QSPI_MspDeInit(QSPI_HandleTypeDef *hqspi) {
     /* Disable the QuadSPI memory interface clock */
     OMV_BOOT_QSPIF_CLK_DISABLE();
 }
+void MX_GPIO_Init(void)
+{
+    GPIO_InitTypeDef GPIO_InitStruct = {0};
+
+    // Enable GPIOC Clock (Enable the peripheral clock if not already done)
+    __HAL_RCC_GPIOC_CLK_ENABLE();
+
+    // Configure C8
+    GPIO_InitStruct.Pin = GPIO_PIN_8;
+    GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+    GPIO_InitStruct.Pull = GPIO_NOPULL;
+    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+    HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
+
+    // Configure C9
+    GPIO_InitStruct.Pin = GPIO_PIN_9;
+    HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
+
+    // Configure C10
+    GPIO_InitStruct.Pin = GPIO_PIN_10;
+    HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
+}
+
+
 #endif // OMV_BOOT_QSPIF_LAYOUT

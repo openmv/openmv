@@ -54,7 +54,7 @@ OMV_GC_BLOCK_NEW(4)
 
 /* Additional GC heap blocks table */
 #if defined(OMV_GC_BLOCK1_MEMORY)
-.gc.blocks.table (READONLY) :
+.gc.blocks.table :
 {
   . = ALIGN(4);
   _gc_blocks_table_start = .;
@@ -212,7 +212,7 @@ OMV_DMA_MEMORY_NEW(3)
 #endif
 
 /* Additional DMA memory tables */
-.dma.memory.table (READONLY) :
+.dma.memory.table :
 {
   . = ALIGN(4);
   _dma_memory_table_start = .;

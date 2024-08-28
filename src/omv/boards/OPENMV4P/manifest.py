@@ -27,3 +27,6 @@ freeze ("$(OMV_LIB_DIR)/", "urequests.py")
 require("time")
 require("logging")
 freeze ("$(OMV_LIB_DIR)/", "mutex.py")
+
+freeze ("$(OMV_LIB_DIR)/", "boot.py")
+
