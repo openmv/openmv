@@ -6,14 +6,18 @@ ENV DAPPER_OUTPUT ./docker/build
 ENV DAPPER_DOCKER_SOCKET true
 ENV DAPPER_TARGET dapper
 RUN apt update && apt install -y build-essential wget git python3 python-is-python3
-ENV GCC_URL="https://armkeil.blob.core.windows.net/developer/Files/downloads/gnu-rm/10-2020q4/gcc-arm-none-eabi-10-2020-q4-major-x86_64-linux.tar.bz2" 
-RUN mkdir ./gcc
-RUN wget --no-check-certificate -O - ${GCC_URL} | tar --strip-components=1 -jx -C ./gcc
-RUN mkdir ./cmake && \
-    CMAKE_URL="https://cmake.org/files/v3.20/cmake-3.20.0-linux-x86_64.tar.gz" && \
-    wget --no-check-certificate -O - ${CMAKE_URL} | tar --strip-components=1 -xz -C ./cmake
 
+RUN mkdir -p /source/gcc
+ENV GCC_URL="https://developer.arm.com/-/media/Files/downloads/gnu/13.2.rel1/binrel/arm-gnu-toolchain-13.2.rel1-x86_64-arm-none-eabi.tar.xz" 
+RUN wget --no-check-certificate -O - ${GCC_URL} | tar --strip-components=1 -Jx -C /source/gcc
 
-RUN mkdir -p /source/gcc && mkdir -p /source/cmake && cp -r ./gcc /source/gcc && cp -r ./cmake /source/cmake
+RUN mkdir -p /source/llvm
+ENV LLVM_URL="https://github.com/ARM-software/LLVM-embedded-toolchain-for-Arm/releases/download/release-18.1.3/LLVM-ET-Arm-18.1.3-Linux-x86_64.tar.xz"
+RUN wget --no-check-certificate -O - ${LLVM_URL} | tar --strip-components=1 -Jx -C /source/llvm
+
+RUN mkdir -p /source/cmake
+ENV CMAKE_URL="https://github.com/Kitware/CMake/releases/download/v3.30.2/cmake-3.30.2.tar.gz"
+RUN wget --no-check-certificate -O - ${CMAKE_URL} | tar --strip-components=1 -xz -C /source/cmake
+
 WORKDIR /source
 ENTRYPOINT ["./docker/build.sh"]
