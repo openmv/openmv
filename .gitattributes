@@ -1,0 +1,10 @@
+# Define binary files
+*.a binary
+*.ico binary
+*.png binary
+*.jpg binary
+*.dxf binary
+*.mpy binary
+*.der binary
+*.bin binary
+*.bin.sign binary
