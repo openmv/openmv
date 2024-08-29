@@ -351,6 +351,7 @@ def createOemTocPackage(fwsections, metadata_flags, outputFile):
     # generate debug script file
     dsFile = 'bin/application_package.ds'    # Was bin/oempackage.ds
     try:
+        os.makedirs(os.path.dirname(dsFile), exist_ok=True)
         ds = open(dsFile, 'w')
         #f.write('reset system\n')
         ds.write('set semihosting args ' + debugScript + '\n' )
