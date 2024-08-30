@@ -6,6 +6,8 @@
 # This work is licensed under the MIT license, see the file LICENSE for details.
 #
 # VL53L5CX Makefile
+override CFLAGS += -Os
+
 SRCS = $(wildcard src/*.c)
 OBJS = $(addprefix $(BUILD)/, $(SRCS:.c=.o))
 OBJ_DIRS = $(sort $(dir $(OBJS)))
