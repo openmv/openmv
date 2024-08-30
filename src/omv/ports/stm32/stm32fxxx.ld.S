@@ -108,12 +108,12 @@ SECTIONS
 
   /* CM4 boot memory */
   #if defined(OMV_CM4_BOOT_MEMORY)
-  .cm4_boot_memory (NOLOAD) : ALIGN(4)
+  .cm4_boot_memory (NOLOAD) : ALIGN(32)
   {
     _cm4_ram_start = .;
     . = . + OMV_CM4_BOOT_SIZE;
-    . = ALIGN(4);
-    _cm4_ram_start = .;
+    . = ALIGN(32);
+    _cm4_ram_end = .;
   } >OMV_CM4_BOOT_MEMORY
   #endif
 
