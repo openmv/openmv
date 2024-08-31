@@ -25,15 +25,16 @@ extern "C" {
 #include "py/objlist.h"
 #include "py/objtuple.h"
 #include "py/binary.h"
+#include "py/gc.h"
 #include "py_ml.h"
-#include "fb_alloc.h"
 
 using namespace tflite;
-#define TF_ARENA_ALIGNMENT  (16 - 1)
+#define TF_ARENA_ALIGN      (16 - 1)
+#define TF_ARENA_ROUND(x)   (((x) + TF_ARENA_ALIGN) & ~(TF_ARENA_ALIGN))
 typedef MicroMutableOpResolver<113> MicroOpsResolver;
 
 typedef struct ml_backend_state {
-    void *arena;
+    uint8_t *arena;
     const Model *model;
     MicroOpsResolver *resolver;
     MicroInterpreter *interpreter;
@@ -192,38 +193,57 @@ static void ml_backend_init_ops_resolver(MicroOpsResolver *resolver) {
 int ml_backend_init_model(py_ml_model_obj_t *model) {
     RegisterDebugLogCallback(ml_backend_log_handler);
 
-    // Parse model's data.
+    // Parse the model's data.
     const Model *tflite_model = GetModel(model->data);
     if (tflite_model->version() != TFLITE_SCHEMA_VERSION) {
         mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Unsupported model schema"));
     }
 
-    // Initialize the op resolver.
+    // Initialize a temporary op resolver.
     MicroOpsResolver resolver;
     ml_backend_init_ops_resolver(&resolver);
 
-    // Allocate the interpreter and tensors once to initialize the model, check input
-    // and output data types and to get the optimal tensor arena size.
-    fb_alloc_mark();
-    uint32_t tensor_arena_size;
-    uint8_t *tensor_arena = (uint8_t *) fb_alloc_all(&tensor_arena_size, FB_ALLOC_PREFER_SIZE | FB_ALLOC_CACHE_ALIGN);
-
-    MicroInterpreter interpreter(tflite_model,
-                                 resolver,
-                                 tensor_arena,
-                                 tensor_arena_size);
+    gc_info_t info;
+    gc_info(&info);
+    // Allocate a temporary interpreter to get the optimal arena size.
+    size_t arena_size = info.max_free * MICROPY_BYTES_PER_GC_BLOCK;
+    uint8_t *arena_memory = m_new(uint8_t, arena_size);
+    MicroInterpreter interpreter(tflite_model, resolver, arena_memory, arena_size);
     if (interpreter.AllocateTensors() != kTfLiteOk) {
         mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Failed to allocate tensors"));
     }
+    // Round up the optimal arena size to a multiple of the alignment.
+    arena_size = TF_ARENA_ROUND(interpreter.arena_used_bytes());
+    m_free(arena_memory);
 
-    model->inputs_size = interpreter.inputs_size();
+    // Allocate the persistent model state and interpreter.
+    ml_backend_state_t *state = m_new0(ml_backend_state_t, 1);
+    state->model = GetModel(model->data);
+    state->arena = m_new(uint8_t, arena_size);
+    state->resolver = new(m_new0(MicroOpsResolver, 1)) MicroOpsResolver();
+    ml_backend_init_ops_resolver(state->resolver);
+    state->interpreter = new(m_new0(MicroInterpreter, 1)) MicroInterpreter(state->model,
+                                                                           *state->resolver,
+                                                                           state->arena,
+                                                                           arena_size);
+    if (state->interpreter->AllocateTensors() != kTfLiteOk) {
+        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Failed to allocate tensors"));
+    }
+
+    // Initialize the model's state.
+    model->state = state;
+    model->memory_addr = (uint32_t) state->arena;
+    model->memory_size = arena_size;
+
+    // Initialize the model's inputs.
+    model->inputs_size = state->interpreter->inputs_size();
     model->input_shape = (mp_obj_tuple_t *) MP_OBJ_TO_PTR(mp_obj_new_tuple(model->inputs_size, NULL));
     model->input_scale = (mp_obj_tuple_t *) MP_OBJ_TO_PTR(mp_obj_new_tuple(model->inputs_size, NULL));
     model->input_zero_point = (mp_obj_tuple_t *) MP_OBJ_TO_PTR(mp_obj_new_tuple(model->inputs_size, NULL));
     model->input_dtype = (mp_obj_tuple_t *) MP_OBJ_TO_PTR(mp_obj_new_tuple(model->inputs_size, NULL));
 
     for (size_t i=0; i<model->inputs_size; i++) {
-        TfLiteTensor *input = interpreter.input(i);
+        TfLiteTensor *input = state->interpreter->input(i);
 
         // Check input data type.
         if (!ml_backend_valid_dataype(input->type)) {
@@ -242,14 +262,15 @@ int ml_backend_init_model(py_ml_model_obj_t *model) {
         model->input_dtype->items[i] = mp_obj_new_int(ml_backend_map_dtype(input->type));
     }
 
-    model->outputs_size = interpreter.outputs_size();
+    // Initialize the model's outputs.
+    model->outputs_size = state->interpreter->outputs_size();
     model->output_shape = (mp_obj_tuple_t *) MP_OBJ_TO_PTR(mp_obj_new_tuple(model->outputs_size, NULL));
     model->output_scale = (mp_obj_tuple_t *) MP_OBJ_TO_PTR(mp_obj_new_tuple(model->outputs_size, NULL));
     model->output_zero_point = (mp_obj_tuple_t *) MP_OBJ_TO_PTR(mp_obj_new_tuple(model->outputs_size, NULL));
     model->output_dtype = (mp_obj_tuple_t *) MP_OBJ_TO_PTR(mp_obj_new_tuple(model->outputs_size, NULL));
 
     for (size_t i=0; i<model->outputs_size; i++) {
-        TfLiteTensor *output = interpreter.output(i);
+        TfLiteTensor *output = state->interpreter->output(i);
 
         // Check output data type.
         if (!ml_backend_valid_dataype(output->type)) {
@@ -268,28 +289,6 @@ int ml_backend_init_model(py_ml_model_obj_t *model) {
         model->output_dtype->items[i] = mp_obj_new_int(ml_backend_map_dtype(output->type));
     }
 
-    model->memory_size = interpreter.arena_used_bytes() + 1024;
-
-    // Free the temporary arena.
-    fb_alloc_free_till_mark();
-
-    // Allocate the persistent state.
-    ml_backend_state_t *state = m_new0(ml_backend_state_t, 1);
-    state->model = GetModel(model->data);
-    state->arena = m_new(char, model->memory_size + TF_ARENA_ALIGNMENT);
-    state->resolver = new(m_new0(MicroOpsResolver, 1)) MicroOpsResolver();
-    ml_backend_init_ops_resolver(state->resolver);
-    uint8_t *aligned_arena = (uint8_t *) (((uintptr_t) state->arena + TF_ARENA_ALIGNMENT) & ~(TF_ARENA_ALIGNMENT));
-    state->interpreter = new(m_new0(MicroInterpreter, 1)) MicroInterpreter(state->model,
-                                                                           *state->resolver,
-                                                                           aligned_arena,
-                                                                           model->memory_size);
-    if (state->interpreter->AllocateTensors() != kTfLiteOk) {
-        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Failed to allocate tensors"));
-    }
-
-    model->state = state;
-    model->memory_addr = (uint32_t) state->arena;
     return 0;
 }
 
