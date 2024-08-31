@@ -24,4 +24,3 @@ require("logging")
 
 # Bluetooth
 require("aioble")
-freeze ("$(OMV_LIB_DIR)/", "ble_advertising.py")
