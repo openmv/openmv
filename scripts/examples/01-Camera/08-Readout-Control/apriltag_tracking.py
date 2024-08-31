@@ -45,8 +45,8 @@ while True:
     tags = img.find_apriltags()
 
     if len(tags):
-        best_tag = max(tags, key=lambda x: x.decision_margin())
-        img.draw_rectangle(best_tag.rect())
+        best_tag = max(tags, key=lambda x: x.decision_margin)
+        img.draw_rectangle(best_tag.rect)
 
         # This needs to be less than the sensor output at default so we can move it around.
         readout_window_w = ((sensor_w // sensor.width()) * sensor.width()) / 2
@@ -63,14 +63,14 @@ while True:
             ratio = min(w / float(sensor.width()), h / float(sensor.height()))
 
             # Reference cx() to the center of the viewport and then scale to the readout.
-            mapped_cx = (t.cx() - (sensor.width() / 2.0)) * ratio
+            mapped_cx = (t.cx - (sensor.width() / 2.0)) * ratio
             # Since we are keeping the aspect ratio there might be an offset in x.
             mapped_cx += (w - (sensor.width() * ratio)) / 2.0
             # Add in our displacement from the sensor center
             mapped_cx += x + (sensor_w / 2.0)
 
             # Reference cy() to the center of the viewport and then scale to the readout.
-            mapped_cy = (t.cy() - (sensor.height() / 2.0)) * ratio
+            mapped_cy = (t.cy - (sensor.height() / 2.0)) * ratio
             # Since we are keeping the aspect ratio there might be an offset in y.
             mapped_cy += (h - (sensor.height() * ratio)) / 2.0
             # Add in our displacement from the sensor center
@@ -137,13 +137,13 @@ while True:
             loss_count = 0
 
             # Narrow down the blob list and highlight the blob.
-            best_tag = max(tags, key=lambda x: x.decision_margin())
-            img.draw_rectangle(best_tag.rect())
+            best_tag = max(tags, key=lambda x: x.decision_margin)
+            img.draw_rectangle(best_tag.rect)
 
             print(clock.fps(), "TAG cx:%d, cy:%d" % get_mapped_centroid(best_tag))
 
-            w_ratio = best_tag.w() / sensor.width()
-            h_ratio = best_tag.h() / sensor.height()
+            w_ratio = best_tag.w / sensor.width()
+            h_ratio = best_tag.h / sensor.height()
 
             # Shrink the tracking window until the tag fits.
             while (w_ratio < TRACKING_LOW_RATIO_THRESHOLD) or (

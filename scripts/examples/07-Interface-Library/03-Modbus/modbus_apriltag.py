@@ -30,14 +30,14 @@ while True:
             print(tags)
             i = 1
             for tag in tags:
-                img.draw_rectangle(tag.rect(), color=127)
-                modbus.REGISTER[i] = tag.family()
+                img.draw_rectangle(tag.rect, color=127)
+                modbus.REGISTER[i] = tag.family
                 i += 1
-                modbus.REGISTER[i] = tag.id()
+                modbus.REGISTER[i] = tag.id
                 i += 1
-                modbus.REGISTER[i] = tag.cx()
+                modbus.REGISTER[i] = tag.cx
                 i += 1
-                modbus.REGISTER[i] = tag.cy()
+                modbus.REGISTER[i] = tag.cy
                 i += 1
         # print(modbus.REGISTER[0:15])
         # print(clock.fps())

@@ -37,8 +37,8 @@ while True:
     clock.tick()
     img = sensor.snapshot()
     for tag in img.find_apriltags():
-        img.draw_rectangle(tag.rect(), color=127)
-        img.draw_cross(tag.cx(), tag.cy(), color=127)
-        print_args = ("TAG36H11", tag.id(), (180 * tag.rotation()) / math.pi)
+        img.draw_rectangle(tag.rect, color=127)
+        img.draw_cross(tag.cx, tag.cy, color=127)
+        print_args = (tag.name, tag.id, (180 * tag.rotation) / math.pi)
         print("Tag Family %s, Tag ID %d, rotation %f (degrees)" % print_args)
     print(clock.fps())

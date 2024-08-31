@@ -69,8 +69,8 @@ while True:
         img.draw_rectangle(b)
     # Now print out the found tags
     for tag in tag_list:
-        img.draw_rectangle(tag.rect())
-        img.draw_cross(tag.cx(), tag.cy())
-        for c in tag.corners():
+        img.draw_rectangle(tag.rect)
+        img.draw_cross(tag.cx, tag.cy)
+        for c in tag.corners:
             img.draw_circle(c[0], c[1], 5)
-        print("Tag:", tag.cx(), tag.cy(), tag.rotation(), tag.id())
+        print("Tag:", tag.cx, tag.cy, tag.rotation, tag.id)
