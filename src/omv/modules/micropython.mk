@@ -38,3 +38,8 @@ ifeq ($(MICROPY_PY_ULAB), 1)
 USERMOD_DIR := $(USERMOD_DIR)/ulab/code
 include $(USERMOD_DIR)/micropython.mk
 endif
+
+ifeq ($(DEBUG), 0)
+# Use a higher optimization level for user C modules.
+$(BUILD)/modules/%.o: override CFLAGS += $(USERMOD_OPT)
+endif
