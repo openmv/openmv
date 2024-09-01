@@ -13,8 +13,9 @@
 # pass the thresholding test... otherwise, you don't get a distance
 # benefit.
 
+# Please use the TAG36H11 tag family for this script - it's the recommended tag family to use.
+
 import sensor
-import image
 import time
 import omv
 
@@ -33,16 +34,6 @@ sensor.skip_frames(time=200)  # increase this to let the auto methods run for lo
 sensor.set_auto_gain(False)  # must be turned off for color tracking
 sensor.set_auto_whitebal(False)  # must be turned off for color tracking
 clock = time.clock()
-
-# The apriltag code supports up to 6 tag families which can be processed at the same time.
-# Returned tag objects will have their tag family and id within the tag family.
-tag_families = 0
-tag_families |= image.TAG16H5  # comment out to disable this family
-tag_families |= image.TAG25H7  # comment out to disable this family
-tag_families |= image.TAG25H9  # comment out to disable this family
-tag_families |= image.TAG36H10  # comment out to disable this family
-tag_families |= image.TAG36H11  # comment out to disable this family (default family)
-tag_families |= image.ARTOOLKIT  # comment out to disable this family
 
 while True:
     clock.tick()
@@ -68,7 +59,7 @@ while True:
         # Since we constrict the roi size apriltags shouldn't run out of ram.
         # But, if it does we handle it...
         try:
-            tag_list.extend(img.find_apriltags(roi=(x, y, w, h), families=tag_families))
+            tag_list.extend(img.find_apriltags(roi=(x, y, w, h)))
         except (
             MemoryError
         ):  # Don't catch all exceptions otherwise you can't stop the script.
@@ -78,8 +69,8 @@ while True:
         img.draw_rectangle(b)
     # Now print out the found tags
     for tag in tag_list:
-        img.draw_rectangle(tag.rect())
-        img.draw_cross(tag.cx(), tag.cy())
-        for c in tag.corners():
+        img.draw_rectangle(tag.rect)
+        img.draw_cross(tag.cx, tag.cy)
+        for c in tag.corners:
             img.draw_circle(c[0], c[1], 5)
-        print("Tag:", tag.cx(), tag.cy(), tag.rotation(), tag.id())
+        print("Tag:", tag.cx, tag.cy, tag.rotation, tag.id)

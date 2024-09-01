@@ -173,13 +173,13 @@ def apriltag_detection(data):
     if not tags:
         return bytes()  # No detections.
     draw_detections(sensor.get_fb(), tags)
-    output_tag = max(tags, key=lambda t: t.w() * t.h())
+    output_tag = max(tags, key=lambda t: t.w * t.h)
     return struct.pack(
         "<HHHH",
-        output_tag.cx(),
-        output_tag.cy(),
-        output_tag.id(),
-        int(math.degrees(output_tag.rotation())),
+        output_tag.cx,
+        output_tag.cy,
+        output_tag.id,
+        int(math.degrees(output_tag.rotation)),
     )
 
 

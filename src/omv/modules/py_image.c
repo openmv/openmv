@@ -5070,7 +5070,7 @@ typedef struct py_apriltag_obj {
 } py_apriltag_obj_t;
 
 static void py_apriltag_print(const mp_print_t *print, mp_obj_t self_in, mp_print_kind_t kind) {
-    py_apriltag_obj_t *self = self_in;
+    py_apriltag_obj_t *self = MP_OBJ_TO_PTR(self_in);
     mp_printf(print,
               "{\"x\":%d, \"y\":%d, \"w\":%d, \"h\":%d, \"id\":%d,"
               " \"family\":%d, \"cx\":%d, \"cy\":%d, \"rotation\":%f, \"decision_margin\":%f, \"hamming\":%d, \"goodness\":%f,"
@@ -5096,190 +5096,128 @@ static void py_apriltag_print(const mp_print_t *print, mp_obj_t self_in, mp_prin
               (double) mp_obj_get_float(self->z_rotation));
 }
 
-static mp_obj_t py_apriltag_subscr(mp_obj_t self_in, mp_obj_t index, mp_obj_t value) {
-    if (value == MP_OBJ_SENTINEL) {
-        // load
-        py_apriltag_obj_t *self = self_in;
-        if (MP_OBJ_IS_TYPE(index, &mp_type_slice)) {
-            mp_bound_slice_t slice;
-            if (!mp_seq_get_fast_slice_indexes(py_apriltag_obj_size, index, &slice)) {
-                mp_raise_msg(&mp_type_OSError, MP_ERROR_TEXT("only slices with step=1 (aka None) are supported"));
-            }
-            mp_obj_tuple_t *result = mp_obj_new_tuple(slice.stop - slice.start, NULL);
-            mp_seq_copy(result->items, &(self->x) + slice.start, result->len, mp_obj_t);
-            return result;
-        }
-        switch (mp_get_index(self->base.type, py_apriltag_obj_size, index, false)) {
-            case 0: return self->x;
-            case 1: return self->y;
-            case 2: return self->w;
-            case 3: return self->h;
-            case 4: return self->id;
-            case 5: return self->family;
-            case 6: return self->cx;
-            case 7: return self->cy;
-            case 8: return self->rotation;
-            case 9: return self->decision_margin;
-            case 10: return self->hamming;
-            case 11: return self->goodness;
-            case 12: return self->x_translation;
-            case 13: return self->y_translation;
-            case 14: return self->z_translation;
-            case 15: return self->x_rotation;
-            case 16: return self->y_rotation;
-            case 17: return self->z_rotation;
+static void py_apriltag_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest) {
+    py_apriltag_obj_t *self = MP_OBJ_TO_PTR(self_in);
+    if (dest[0] == MP_OBJ_NULL) {
+        // Load attribute.
+        switch (attr) {
+            case MP_QSTR_corners:
+                dest[0] = self->corners;
+                break;
+            case MP_QSTR_rect:
+                dest[0] = mp_obj_new_tuple(4, (mp_obj_t []) { self->x, self->y, self->w, self->h });
+                break;
+            case MP_QSTR_x:
+                dest[0] = self->x;
+                break;
+            case MP_QSTR_y:
+                dest[0] = self->y;
+                break;
+            case MP_QSTR_w:
+                dest[0] = self->w;
+                break;
+            case MP_QSTR_h:
+                dest[0] = self->h;
+                break;
+            case MP_QSTR_area:
+                dest[0] = mp_obj_new_int(mp_obj_get_int(self->w) * mp_obj_get_int(self->h));
+                break;
+            case MP_QSTR_id:
+                dest[0] = self->id;
+                break;
+            case MP_QSTR_family:
+                dest[0] = self->family;
+                break;
+            case MP_QSTR_name:
+                switch (mp_obj_get_int(self->family)) {
+                    #ifdef IMLIB_ENABLE_APRILTAGS_TAG16H5
+                    case TAG16H5:
+                        dest[0] = MP_OBJ_NEW_QSTR(MP_QSTR_TAG16H5);
+                        break;
+                    #endif
+                    #ifdef IMLIB_ENABLE_APRILTAGS_TAG25H7
+                    case TAG25H7:
+                        dest[0] = MP_OBJ_NEW_QSTR(MP_QSTR_TAG25H7);
+                        break;
+                    #endif
+                    #ifdef IMLIB_ENABLE_APRILTAGS_TAG25H9
+                    case TAG25H9:
+                        dest[0] = MP_OBJ_NEW_QSTR(MP_QSTR_TAG25H9);
+                        break;
+                    #endif
+                    #ifdef IMLIB_ENABLE_APRILTAGS_TAG36H10
+                    case TAG36H10:
+                        dest[0] = MP_OBJ_NEW_QSTR(MP_QSTR_TAG36H10);
+                        break;
+                    #endif
+                    #ifdef IMLIB_ENABLE_APRILTAGS_TAG36H11
+                    case TAG36H11:
+                        dest[0] = MP_OBJ_NEW_QSTR(MP_QSTR_TAG36H11);
+                        break;
+                    #endif
+                    #ifdef IMLIB_ENABLE_APRILTAGS_ARTOOLKIT
+                    case ARTOOLKIT:
+                        dest[0] = MP_OBJ_NEW_QSTR(MP_QSTR_ARTOOLKIT);
+                        break;
+                    #endif
+                }
+                break;
+            case MP_QSTR_cx:
+                dest[0] = mp_obj_new_int(fast_roundf(mp_obj_get_float(self->cx)));
+                break;
+            case MP_QSTR_cxf:
+                dest[0] = self->cx;
+                break;
+            case MP_QSTR_cy:
+                dest[0] = mp_obj_new_int(fast_roundf(mp_obj_get_float(self->cy)));
+                break;
+            case MP_QSTR_cyf:
+                dest[0] = self->cy;
+                break;
+            case MP_QSTR_rotation:
+                dest[0] = self->rotation;
+                break;
+            case MP_QSTR_decision_margin:
+                dest[0] = self->decision_margin;
+                break;
+            case MP_QSTR_hamming:
+                dest[0] = self->hamming;
+                break;
+            case MP_QSTR_goodness:
+                dest[0] = self->goodness;
+                break;
+            case MP_QSTR_x_translation:
+                dest[0] = self->x_translation;
+                break;
+            case MP_QSTR_y_translation:
+                dest[0] = self->y_translation;
+                break;
+            case MP_QSTR_z_translation:
+                dest[0] = self->z_translation;
+                break;
+            case MP_QSTR_x_rotation:
+                dest[0] = self->x_rotation;
+                break;
+            case MP_QSTR_y_rotation:
+                dest[0] = self->y_rotation;
+                break;
+            case MP_QSTR_z_rotation:
+                dest[0] = self->z_rotation;
+                break;
+            default:
+                // Continue lookup in locals_dict.
+                dest[1] = MP_OBJ_SENTINEL;
+                break;
         }
     }
-    return MP_OBJ_NULL; // op not supported
 }
-
-mp_obj_t py_apriltag_corners(mp_obj_t self_in) {
-    return ((py_apriltag_obj_t *) self_in)->corners;
-}
-static MP_DEFINE_CONST_FUN_OBJ_1(py_apriltag_corners_obj, py_apriltag_corners);
-
-mp_obj_t py_apriltag_rect(mp_obj_t self_in) {
-    return mp_obj_new_tuple(4, (mp_obj_t []) {((py_apriltag_obj_t *) self_in)->x,
-                                              ((py_apriltag_obj_t *) self_in)->y,
-                                              ((py_apriltag_obj_t *) self_in)->w,
-                                              ((py_apriltag_obj_t *) self_in)->h});
-}
-static MP_DEFINE_CONST_FUN_OBJ_1(py_apriltag_rect_obj, py_apriltag_rect);
-
-mp_obj_t py_apriltag_x(mp_obj_t self_in) {
-    return ((py_apriltag_obj_t *) self_in)->x;
-}
-static MP_DEFINE_CONST_FUN_OBJ_1(py_apriltag_x_obj, py_apriltag_x);
-
-mp_obj_t py_apriltag_y(mp_obj_t self_in) {
-    return ((py_apriltag_obj_t *) self_in)->y;
-}
-static MP_DEFINE_CONST_FUN_OBJ_1(py_apriltag_y_obj, py_apriltag_y);
-
-mp_obj_t py_apriltag_w(mp_obj_t self_in) {
-    return ((py_apriltag_obj_t *) self_in)->w;
-}
-static MP_DEFINE_CONST_FUN_OBJ_1(py_apriltag_w_obj, py_apriltag_w);
-
-mp_obj_t py_apriltag_h(mp_obj_t self_in) {
-    return ((py_apriltag_obj_t *) self_in)->h;
-}
-static MP_DEFINE_CONST_FUN_OBJ_1(py_apriltag_h_obj, py_apriltag_h);
-
-mp_obj_t py_apriltag_id(mp_obj_t self_in) {
-    return ((py_apriltag_obj_t *) self_in)->id;
-}
-static MP_DEFINE_CONST_FUN_OBJ_1(py_apriltag_id_obj, py_apriltag_id);
-
-mp_obj_t py_apriltag_family(mp_obj_t self_in) {
-    return ((py_apriltag_obj_t *) self_in)->family;
-}
-static MP_DEFINE_CONST_FUN_OBJ_1(py_apriltag_family_obj, py_apriltag_family);
-
-mp_obj_t py_apriltag_cx(mp_obj_t self_in) {
-    return mp_obj_new_int(fast_roundf(mp_obj_get_float(((py_apriltag_obj_t *) self_in)->cx)));
-}
-static MP_DEFINE_CONST_FUN_OBJ_1(py_apriltag_cx_obj, py_apriltag_cx);
-
-mp_obj_t py_apriltag_cxf(mp_obj_t self_in) {
-    return ((py_apriltag_obj_t *) self_in)->cx;
-}
-static MP_DEFINE_CONST_FUN_OBJ_1(py_apriltag_cxf_obj, py_apriltag_cxf);
-
-mp_obj_t py_apriltag_cy(mp_obj_t self_in) {
-    return mp_obj_new_int(fast_roundf(mp_obj_get_float(((py_apriltag_obj_t *) self_in)->cy)));
-}
-static MP_DEFINE_CONST_FUN_OBJ_1(py_apriltag_cy_obj, py_apriltag_cy);
-
-mp_obj_t py_apriltag_cyf(mp_obj_t self_in) {
-    return ((py_apriltag_obj_t *) self_in)->cy;
-}
-static MP_DEFINE_CONST_FUN_OBJ_1(py_apriltag_cyf_obj, py_apriltag_cyf);
-
-mp_obj_t py_apriltag_rotation(mp_obj_t self_in) {
-    return ((py_apriltag_obj_t *) self_in)->rotation;
-}
-static MP_DEFINE_CONST_FUN_OBJ_1(py_apriltag_rotation_obj, py_apriltag_rotation);
-
-mp_obj_t py_apriltag_decision_margin(mp_obj_t self_in) {
-    return ((py_apriltag_obj_t *) self_in)->decision_margin;
-}
-static MP_DEFINE_CONST_FUN_OBJ_1(py_apriltag_decision_margin_obj, py_apriltag_decision_margin);
-
-mp_obj_t py_apriltag_hamming(mp_obj_t self_in) {
-    return ((py_apriltag_obj_t *) self_in)->hamming;
-}
-static MP_DEFINE_CONST_FUN_OBJ_1(py_apriltag_hamming_obj, py_apriltag_hamming);
-
-mp_obj_t py_apriltag_goodness(mp_obj_t self_in) {
-    return ((py_apriltag_obj_t *) self_in)->goodness;
-}
-static MP_DEFINE_CONST_FUN_OBJ_1(py_apriltag_goodness_obj, py_apriltag_goodness);
-
-mp_obj_t py_apriltag_x_translation(mp_obj_t self_in) {
-    return ((py_apriltag_obj_t *) self_in)->x_translation;
-}
-static MP_DEFINE_CONST_FUN_OBJ_1(py_apriltag_x_translation_obj, py_apriltag_x_translation);
-
-mp_obj_t py_apriltag_y_translation(mp_obj_t self_in) {
-    return ((py_apriltag_obj_t *) self_in)->y_translation;
-}
-static MP_DEFINE_CONST_FUN_OBJ_1(py_apriltag_y_translation_obj, py_apriltag_y_translation);
-
-mp_obj_t py_apriltag_z_translation(mp_obj_t self_in) {
-    return ((py_apriltag_obj_t *) self_in)->z_translation;
-}
-static MP_DEFINE_CONST_FUN_OBJ_1(py_apriltag_z_translation_obj, py_apriltag_z_translation);
-
-mp_obj_t py_apriltag_x_rotation(mp_obj_t self_in) {
-    return ((py_apriltag_obj_t *) self_in)->x_rotation;
-}
-static MP_DEFINE_CONST_FUN_OBJ_1(py_apriltag_x_rotation_obj, py_apriltag_x_rotation);
-
-mp_obj_t py_apriltag_y_rotation(mp_obj_t self_in) {
-    return ((py_apriltag_obj_t *) self_in)->y_rotation;
-}
-static MP_DEFINE_CONST_FUN_OBJ_1(py_apriltag_y_rotation_obj, py_apriltag_y_rotation);
-
-mp_obj_t py_apriltag_z_rotation(mp_obj_t self_in) {
-    return ((py_apriltag_obj_t *) self_in)->z_rotation;
-}
-static MP_DEFINE_CONST_FUN_OBJ_1(py_apriltag_z_rotation_obj, py_apriltag_z_rotation);
-
-static const mp_rom_map_elem_t py_apriltag_locals_dict_table[] = {
-    { MP_ROM_QSTR(MP_QSTR_corners), MP_ROM_PTR(&py_apriltag_corners_obj) },
-    { MP_ROM_QSTR(MP_QSTR_rect), MP_ROM_PTR(&py_apriltag_rect_obj) },
-    { MP_ROM_QSTR(MP_QSTR_x), MP_ROM_PTR(&py_apriltag_x_obj) },
-    { MP_ROM_QSTR(MP_QSTR_y), MP_ROM_PTR(&py_apriltag_y_obj) },
-    { MP_ROM_QSTR(MP_QSTR_w), MP_ROM_PTR(&py_apriltag_w_obj) },
-    { MP_ROM_QSTR(MP_QSTR_h), MP_ROM_PTR(&py_apriltag_h_obj) },
-    { MP_ROM_QSTR(MP_QSTR_id), MP_ROM_PTR(&py_apriltag_id_obj) },
-    { MP_ROM_QSTR(MP_QSTR_family), MP_ROM_PTR(&py_apriltag_family_obj) },
-    { MP_ROM_QSTR(MP_QSTR_cx), MP_ROM_PTR(&py_apriltag_cx_obj) },
-    { MP_ROM_QSTR(MP_QSTR_cxf), MP_ROM_PTR(&py_apriltag_cxf_obj) },
-    { MP_ROM_QSTR(MP_QSTR_cy), MP_ROM_PTR(&py_apriltag_cy_obj) },
-    { MP_ROM_QSTR(MP_QSTR_cyf), MP_ROM_PTR(&py_apriltag_cyf_obj) },
-    { MP_ROM_QSTR(MP_QSTR_rotation), MP_ROM_PTR(&py_apriltag_rotation_obj) },
-    { MP_ROM_QSTR(MP_QSTR_decision_margin), MP_ROM_PTR(&py_apriltag_decision_margin_obj) },
-    { MP_ROM_QSTR(MP_QSTR_hamming), MP_ROM_PTR(&py_apriltag_hamming_obj) },
-    { MP_ROM_QSTR(MP_QSTR_goodness), MP_ROM_PTR(&py_apriltag_goodness_obj) },
-    { MP_ROM_QSTR(MP_QSTR_x_translation), MP_ROM_PTR(&py_apriltag_x_translation_obj) },
-    { MP_ROM_QSTR(MP_QSTR_y_translation), MP_ROM_PTR(&py_apriltag_y_translation_obj) },
-    { MP_ROM_QSTR(MP_QSTR_z_translation), MP_ROM_PTR(&py_apriltag_z_translation_obj) },
-    { MP_ROM_QSTR(MP_QSTR_x_rotation), MP_ROM_PTR(&py_apriltag_x_rotation_obj) },
-    { MP_ROM_QSTR(MP_QSTR_y_rotation), MP_ROM_PTR(&py_apriltag_y_rotation_obj) },
-    { MP_ROM_QSTR(MP_QSTR_z_rotation), MP_ROM_PTR(&py_apriltag_z_rotation_obj) }
-};
-
-static MP_DEFINE_CONST_DICT(py_apriltag_locals_dict, py_apriltag_locals_dict_table);
 
 static MP_DEFINE_CONST_OBJ_TYPE(
     py_apriltag_type,
     MP_QSTR_apriltag,
     MP_TYPE_FLAG_NONE,
-    print, py_apriltag_print,
-    subscr, py_apriltag_subscr,
-    locals_dict, &py_apriltag_locals_dict
+    attr, py_apriltag_attr,
+    print, py_apriltag_print
     );
 
 static mp_obj_t py_image_find_apriltags(uint n_args, const mp_obj_t *args, mp_map_t *kw_args) {
@@ -7118,12 +7056,24 @@ static const mp_rom_map_elem_t globals_dict_table[] = {
     {MP_ROM_QSTR(MP_QSTR_CORNER_FAST),         MP_ROM_INT(CORNER_FAST)},
     {MP_ROM_QSTR(MP_QSTR_CORNER_AGAST),        MP_ROM_INT(CORNER_AGAST)},
     #ifdef IMLIB_ENABLE_APRILTAGS
+    #ifdef IMLIB_ENABLE_APRILTAGS_TAG16H5
     {MP_ROM_QSTR(MP_QSTR_TAG16H5),             MP_ROM_INT(TAG16H5)},
+    #endif
+    #ifdef IMLIB_ENABLE_APRILTAGS_TAG25H7
     {MP_ROM_QSTR(MP_QSTR_TAG25H7),             MP_ROM_INT(TAG25H7)},
+    #endif
+    #ifdef IMLIB_ENABLE_APRILTAGS_TAG25H9
     {MP_ROM_QSTR(MP_QSTR_TAG25H9),             MP_ROM_INT(TAG25H9)},
+    #endif
+    #ifdef IMLIB_ENABLE_APRILTAGS_TAG36H10
     {MP_ROM_QSTR(MP_QSTR_TAG36H10),            MP_ROM_INT(TAG36H10)},
+    #endif
+    #ifdef IMLIB_ENABLE_APRILTAGS_TAG36H11
     {MP_ROM_QSTR(MP_QSTR_TAG36H11),            MP_ROM_INT(TAG36H11)},
+    #endif
+    #ifdef IMLIB_ENABLE_APRILTAGS_TAG36ARTOOLKIT
     {MP_ROM_QSTR(MP_QSTR_ARTOOLKIT),           MP_ROM_INT(ARTOOLKIT)},
+    #endif
     #endif
     #ifdef IMLIB_ENABLE_BARCODES
     {MP_ROM_QSTR(MP_QSTR_EAN2),                MP_ROM_INT(BARCODE_EAN2)},

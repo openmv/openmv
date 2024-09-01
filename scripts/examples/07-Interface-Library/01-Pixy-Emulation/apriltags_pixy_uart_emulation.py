@@ -117,9 +117,9 @@ def checksum(data):
 
 
 def to_object_block_format(tag):
-    angle = int((tag.rotation() * 180) // math.pi)
+    angle = int((tag.rotation * 180) // math.pi)
     temp = struct.pack(
-        "<hhhhhh", tag.id() + 8, tag.cx(), tag.cy(), tag.w(), tag.h(), angle
+        "<hhhhhh", tag.id + 8, tag.cx, tag.cy, tag.w, tag.h, angle
     )
     return struct.pack("<hh12s", 0xAA56, checksum(temp), temp)
 
@@ -215,23 +215,23 @@ while True:
         id_map = {}
         first_b = False
 
-        for tag in sorted(tags, key=lambda x: x.area(), reverse=True)[0:max_blocks]:
-            if not tag.id() in id_map:
-                id_map[tag.id()] = 1
+        for tag in sorted(tags, key=lambda x: x.area, reverse=True)[0:max_blocks]:
+            if not tag.id in id_map:
+                id_map[tag.id] = 1
             else:
-                id_map[tag.id()] += 1
+                id_map[tag.id] += 1
 
-            if id_map[tag.id()] <= max_blocks_per_id:
+            if id_map[tag.id] <= max_blocks_per_id:
                 dat_buf += to_object_block_format(tag)
-                img.draw_rectangle(tag.rect())
-                img.draw_cross(tag.cx(), tag.cy())
+                img.draw_rectangle(tag.rect)
+                img.draw_cross(tag.cx, tag.cy)
 
             if dac and not first_b:
                 x_scale = 255 / (img.width() - 1)
                 y_scale = 255 / (img.height() - 1)
                 dac.write(
                     round(
-                        (tag.y() * y_scale) if analog_out_mode else (tag.x() * x_scale)
+                        (tag.y * y_scale) if analog_out_mode else (tag.x * x_scale)
                     )
                 )
                 first_b = True

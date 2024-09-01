@@ -5311,6 +5311,7 @@ void apriltag_detections_destroy(zarray_t *detections);
 //////// "tag16h5"
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
+#ifdef IMLIB_ENABLE_APRILTAGS_TAG16H5
 const apriltag_family_t tag16h5 = {
     .ncodes = 30,
     .black_border = 1,
@@ -5349,11 +5350,13 @@ const apriltag_family_t tag16h5 = {
         0x000000000000af2eUL
     }
 };
+#endif // IMLIB_ENABLE_APRILTAGS_TAG16H5
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 //////// "tag25h7"
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
+#ifdef IMLIB_ENABLE_APRILTAGS_TAG25H7
 const apriltag_family_t tag25h7 = {
     .ncodes = 242,
     .black_border = 1,
@@ -5604,11 +5607,13 @@ const apriltag_family_t tag25h7 = {
         0x0000000001233a70UL
     }
 };
+#endif // IMLIB_ENABLE_APRILTAGS_TAG25H7
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 //////// "tag25h9"
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
+#ifdef IMLIB_ENABLE_APRILTAGS_TAG25H9
 const apriltag_family_t tag25h9 = {
     .ncodes = 35,
     .black_border = 1,
@@ -5652,11 +5657,13 @@ const apriltag_family_t tag25h9 = {
         0x0000000000b991ceUL
     }
 };
+#endif // IMLIB_ENABLE_APRILTAGS_TAG25H9
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 //////// "tag36h10"
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
+#ifdef IMLIB_ENABLE_APRILTAGS_TAG36H10
 const apriltag_family_t tag36h10 = {
     .ncodes = 2320,
     .black_border = 1,
@@ -7985,12 +7992,13 @@ const apriltag_family_t tag36h10 = {
         0x0000000de5bc4369UL
     }
 };
-
+#endif // IMLIB_ENABLE_APRILTAGS_TAG36H10
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 //////// "tag36h11"
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
+#ifdef IMLIB_ENABLE_APRILTAGS_TAG36H11
 const apriltag_family_t tag36h11 = {
     .ncodes = 587,
     .black_border = 1,
@@ -8586,11 +8594,13 @@ const apriltag_family_t tag36h11 = {
         0x0000000e83be4b73UL
     }
 };
+#endif // IMLIB_ENABLE_APRILTAGS_TAG36H11
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 //////// "artoolkit"
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
+#ifdef IMLIB_ENABLE_APRILTAGS_ARTOOLKIT
 const apriltag_family_t artoolkit = {
     .ncodes = 512,
     .black_border = 1,
@@ -9111,6 +9121,7 @@ const apriltag_family_t artoolkit = {
         0x000923d963d8UL
     }
 };
+#endif // IMLIB_ENABLE_APRILTAGS_ARTOOLKIT
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 //////// "union_find.h"
@@ -11947,29 +11958,41 @@ void imlib_find_apriltags(list_t *out, image_t *ptr, rectangle_t *roi, apriltag_
     umm_init_x(((fb_avail() - fb_alloc_need) / resolution) * resolution);
     apriltag_detector_t *td = apriltag_detector_create();
 
+    #ifdef IMLIB_ENABLE_APRILTAGS_TAG16H5
     if (families & TAG16H5) {
         apriltag_detector_add_family(td, (apriltag_family_t *) &tag16h5);
     }
+    #endif
 
+    #ifdef IMLIB_ENABLE_APRILTAGS_TAG25H7
     if (families & TAG25H7) {
         apriltag_detector_add_family(td, (apriltag_family_t *) &tag25h7);
     }
+    #endif
 
+    #ifdef IMLIB_ENABLE_APRILTAGS_TAG25H9
     if (families & TAG25H9) {
         apriltag_detector_add_family(td, (apriltag_family_t *) &tag25h9);
     }
+    #endif
 
+    #ifdef IMLIB_ENABLE_APRILTAGS_TAG36H10
     if (families & TAG36H10) {
         apriltag_detector_add_family(td, (apriltag_family_t *) &tag36h10);
     }
+    #endif
 
+    #ifdef IMLIB_ENABLE_APRILTAGS_TAG36H11
     if (families & TAG36H11) {
         apriltag_detector_add_family(td, (apriltag_family_t *) &tag36h11);
     }
+    #endif
 
+    #ifdef IMLIB_ENABLE_APRILTAGS_ARTOOLKIT
     if (families & ARTOOLKIT) {
         apriltag_detector_add_family(td, (apriltag_family_t *) &artoolkit);
     }
+    #endif
 
     image_t img;
     img.w = roi->w;
@@ -12013,29 +12036,41 @@ void imlib_find_apriltags(list_t *out, image_t *ptr, rectangle_t *roi, apriltag_
         lnk_data.id = det->id;
         lnk_data.family = 0;
 
+        #ifdef IMLIB_ENABLE_APRILTAGS_TAG16H5
         if(det->family == &tag16h5) {
             lnk_data.family |= TAG16H5;
         }
+        #endif
 
+        #ifdef IMLIB_ENABLE_APRILTAGS_TAG25H7
         if(det->family == &tag25h7) {
             lnk_data.family |= TAG25H7;
         }
+        #endif
 
+        #ifdef IMLIB_ENABLE_APRILTAGS_TAG25H9
         if(det->family == &tag25h9) {
             lnk_data.family |= TAG25H9;
         }
+        #endif
 
+        #ifdef IMLIB_ENABLE_APRILTAGS_TAG36H10
         if(det->family == &tag36h10) {
             lnk_data.family |= TAG36H10;
         }
+        #endif
 
+        #ifdef IMLIB_ENABLE_APRILTAGS_TAG36H11
         if(det->family == &tag36h11) {
             lnk_data.family |= TAG36H11;
         }
+        #endif
 
+        #ifdef IMLIB_ENABLE_APRILTAGS_ARTOOLKIT
         if(det->family == &artoolkit) {
             lnk_data.family |= ARTOOLKIT;
         }
+        #endif
 
         lnk_data.hamming = det->hamming;
         lnk_data.centroid_x = det->c[0] + roi->x;
