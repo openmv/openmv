@@ -8,19 +8,35 @@
 #
 # Haar Cascade binary converter.
 
-import sys,os
+import sys
+import os
 import struct
 import argparse
 from xml.dom import minidom
+
+def print_cascade_info(path, size, stages, n_features, n_rectangles, c_format):
+    C_GREEN = '\033[92m'
+    C_RED = '\033[91m'
+    C_BLUE = '\033[94m'
+    C_RESET = '\033[0m'
+
+    c_format = "New" if c_format else "Old"
+    c_name = os.path.basename(os.path.splitext(path)[0])
+    c_size = f'{size[0]}x{size[1]}'
+    print(C_BLUE + f"{'Cascade:':<30} " + f"{c_name:<50}")
+    print(C_BLUE + f"{'Format:':<30} " + f"{c_format:<50}")
+    print(C_BLUE + f"{'Size:':<30} " + C_RED + f"{c_size:<50}")
+    print(C_BLUE + f"{'Number of Stages:':<30} " + C_RED + f"{len(stages):<50}")
+    print(C_BLUE + f"{'Number of Features:':<30} " + C_GREEN + f"{n_features:<50}")
+    print(C_BLUE + f"{'Number of Rectangles:':<30} "+ C_GREEN + f"{n_rectangles:<50}")
+    print(C_RESET)
 
 def cascade_info_universal(path):
     xmldoc = minidom.parse(path)
     old_format = xmldoc.getElementsByTagName('stageNum').length == 0
     if old_format:
-        print("Parsing old XML format..")
         cascade_info_old(path)
     else:
-        print("Parsing new XML format..")
         cascade_info(path)
 
 def cascade_info(path):
@@ -51,11 +67,7 @@ def cascade_info(path):
         rects = f.getElementsByTagName('_')
         n_rectangles = n_rectangles + len(rects)
 
-    #print some cascade info
-    print("size:%dx%d"%(size[0], size[1]))
-    print("stages:%d"%len(stages))
-    print("features:%d"%n_features)
-    print("rectangles:%d"%n_rectangles)
+    print_cascade_info(path, size, stages, n_features, n_rectangles, True)
 
 def cascade_info_old(path):
     #parse xml file
@@ -87,20 +99,14 @@ def cascade_info_old(path):
         rects = f.getElementsByTagName('_')
         n_rectangles = n_rectangles + len(rects)
 
-    #print some cascade info
-    print("size:%dx%d"%(size[0], size[1]))
-    print("stages:%d"%len(stages))
-    print("features:%d"%n_features)
-    print("rectangles:%d"%n_rectangles)
+    print_cascade_info(path, size, stages, n_features, n_rectangles, False)
 
 def cascade_binary_universal(path, n_stages, name):
     xmldoc = minidom.parse(path)
     old_format = xmldoc.getElementsByTagName('stageNum').length == 0
     if old_format:
-        print("Converting old XML format..")
         cascade_binary_old(path, n_stages, name)
     else:
-        print("Converting new XML format..")
         cascade_binary(path, n_stages, name)
 
 def cascade_binary(path, n_stages, name):
@@ -202,12 +208,8 @@ def cascade_binary(path, n_stages, name):
             l = list(map(int, r.childNodes[0].nodeValue[:-1].split()))
             fout.write(struct.pack('BBBB', l[0], l[1], l[2], l[3])) #uint8_t
 
-    # print cascade info
-    print("size:%dx%d"%(size[0], size[1]))
-    print("stages:%d"%len(stages))
-    print("features:%d"%n_features)
-    print("rectangles:%d"%n_rectangles)
-    print("binary cascade generated")
+
+    print_cascade_info(path, size, stages, n_features, n_rectangles, True)
 
 
 def cascade_binary_old(path, n_stages, name):
@@ -299,12 +301,8 @@ def cascade_binary_old(path, n_stages, name):
             l = list(map(int, r.childNodes[0].nodeValue[:-1].split()))
             fout.write(struct.pack('BBBB',l[0], l[1], l[2], l[3])) #uint8_t
 
-    # print cascade info
-    print("size:%dx%d"%(size[0], size[1]))
-    print("stages:%d"%len(stages))
-    print("features:%d"%n_features)
-    print("rectangles:%d"%n_rectangles)
-    print("binary cascade generated")
+    print_cascade_info(path, size, stages, n_features, n_rectangles, False)
+
 
 def cascade_header(path, n_stages, name):
     #parse xml file
@@ -390,12 +388,8 @@ def cascade_header(path, n_stages, name):
     fout.write("const int8_t %s_rectangles_array[]={%s};\n"
             %(name, ", ".join(rect(f.getElementsByTagName('_')) for f in feature)))
 
-    # print cascade info
-    print("size:%dx%d"%(size[0], size[1]))
-    print("stages:%d"%len(stages))
-    print("features:%d"%n_features)
-    print("rectangles:%d"%n_rectangles)
-    print("C header cascade generated")
+    print_cascade_info(path, size, stages, n_features, n_rectangles, False)
+
 
 def main():
     # CMD args parser
