@@ -17,16 +17,15 @@ import binascii
 import subprocess
 
 
-def run_vela(model_path, model_name, args):
-    vela_dir = f'{args.build_dir}/{model_name}'
+def vela_compile(model_path, build_dir, vela_args):
     vela_ini = os.path.dirname(os.path.abspath(__file__))
-    vela_args = args.vela_args.split()
+    model = os.path.basename(os.path.splitext(model_path)[0])
 
     # Construct the command
     command = [
         'vela',
         *vela_args,
-        '--output-dir', vela_dir,
+        '--output-dir', build_dir,
         '--config', f'{vela_ini}/vela.ini',
         model_path
     ]
@@ -36,36 +35,35 @@ def run_vela(model_path, model_name, args):
         result = subprocess.run(command, check=True, text=True, capture_output=True)
     except subprocess.CalledProcessError as e:
         print(e.stderr, file=sys.stderr)
-        print(args.vela_args, file=sys.stderr)
+        print(vela_args, file=sys.stderr)
 
     C_GREEN = '\033[92m'
     C_RED = '\033[91m'
     C_BLUE = '\033[94m'
     C_RESET = '\033[0m'
 
-    csv_file_path = glob.glob(os.path.join(vela_dir, "*.csv"))[0]
+    csv_file_path = glob.glob(os.path.join(build_dir, "*.csv"))[0]
     with open(csv_file_path, mode='r') as file:
         row = next(csv.DictReader(file))
         stoi = lambda x, d=1: str(int(float(x) / d))
         color = lambda c,x: c + x + C_RESET
 
         summary = {
-            C_BLUE + "Network:": row["network"],
+            C_BLUE + "Network:": C_BLUE + row["network"],
             C_BLUE + "Accelerator Configuration:": C_GREEN + row["accelerator_configuration"],
-            C_BLUE + "System Configuration:": row["system_config"],
-            C_BLUE + "Memory Mode:": row["memory_mode"],
+            C_BLUE + "System Configuration:": C_BLUE + row["system_config"],
+            C_BLUE + "Memory Mode:": C_BLUE + row["memory_mode"],
             C_BLUE + "Compiler Mode: ": C_RED + vela_args[-1],
-            C_BLUE + "Accelerator Clock:": stoi(row["core_clock"], 10**6) + " MHz",
+            C_BLUE + "Accelerator Clock:": C_BLUE + stoi(row["core_clock"], 10**6) + " MHz",
             C_BLUE + "SRAM Usage:": C_RED + stoi(row["sram_memory_used"]) + " KiB",
             C_BLUE + "Flash Usage:": C_RED + stoi(row["off_chip_flash_memory_used"]) + " KiB",
-            C_BLUE + "Inference Time:": "%.2f ms, %.2f inferences/s"%
+            C_BLUE + "Inference Time:": C_GREEN + "%.2f ms, %.2f inferences/s"%
                 (float(row["inference_time"]) * 1000, float(row["inferences_per_second"])),
         }
-        print("", file=sys.stderr)
         for key, value in summary.items():
             print(f"{key:<{35}} {value:<{50}}", file=sys.stderr)
-        print(C_RESET, file=sys.stderr, end="")
-    return f'{vela_dir}/{model_name}_vela.tflite'
+        print(C_RESET, file=sys.stderr)
+    os.rename(f"{build_dir}/{model}_vela.tflite", f"{build_dir}/{model}.tflite")
 
 
 def main():
@@ -116,7 +114,8 @@ def main():
                 else:
                     args.vela_args += " --optimise " + tflm_builtin_index[model_name]["optimise"]
                 # Compile the model using Vela and switch path to the new model.
-                model_path = run_vela(model_path, model_name, args)
+                vela_compile(model_path, args.build_dir, args.vela_args.split())
+                model_path = os.path.join(args.build_dir, model_name + ".tflite")
                 model_size = os.path.getsize(model_path)
 
             # Generate model labels.
