@@ -34,6 +34,7 @@ export CFLAGS
 export AFLAGS
 export LDFLAGS
 export MPY_CFLAGS
+export USERMOD_OPT
 
 # Export variables
 export TARGET
