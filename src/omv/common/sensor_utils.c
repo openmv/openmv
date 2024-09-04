@@ -53,7 +53,7 @@
 #endif
 
 // Sensor frame size/resolution table.
-const int resolution[][2] = {
+uint16_t resolution[][2] = {
     {0,    0   },
     // C/SIF Resolutions
     {88,   72  },    /* QQCIF     */

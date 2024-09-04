@@ -293,7 +293,7 @@ typedef struct _sensor {
 extern sensor_t sensor;
 
 // Resolution table
-extern const int resolution[][2];
+extern uint16_t resolution[][2];
 
 // Initialize the sensor state.
 void sensor_init0();
