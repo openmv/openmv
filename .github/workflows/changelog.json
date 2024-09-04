@@ -5,6 +5,10 @@
        "labels": ["github"]
      },
      {
+       "title": "## ⚠️  Breaking Changes",
+       "labels": ["breaking"]
+     },
+     {
        "title": "## 🪄 Image",
        "labels": ["imlib"]
      },
@@ -51,10 +55,6 @@
      {
        "title": "## 🥾 Bootloader",
        "labels": ["bootloader"]
-     },
-     {
-       "title": "## ⚠️  Breaking Changes",
-       "labels": ["breaking"]
      }
     ],
     "ignore_labels": [
