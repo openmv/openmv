@@ -51,6 +51,10 @@
      {
        "title": "## 🥾 Bootloader",
        "labels": ["bootloader"]
+     },
+     {
+       "title": "## ⚠️  Breaking Changes",
+       "labels": ["breaking"]
      }
     ],
     "ignore_labels": [
@@ -138,6 +142,12 @@
         "method": "replace",
         "target": "bootloader",
         "on_property": "title"
+      },
+      {
+        "pattern": "(^breaking)",
+        "method": "replace",
+        "target": "$1",
+        "on_property": "labels"
       }
     ],
     "transformers": [
