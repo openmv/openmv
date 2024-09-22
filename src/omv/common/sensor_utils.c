@@ -1129,13 +1129,12 @@ __weak int sensor_set_framebuffers(int count) {
         return SENSOR_ERROR_INVALID_FRAMESIZE;
     }
 
-    uint32_t bpp = IM_MAX(sensor_get_src_bpp(), sensor_get_dst_bpp());
     #if OMV_CSI_HW_CROP_ENABLE
     // If hardware cropping is supported, use window size.
-    MAIN_FB()->frame_size = MAIN_FB()->u * MAIN_FB()->v * bpp;
+    MAIN_FB()->frame_size = MAIN_FB()->u * MAIN_FB()->v * 2;
     #else
     // Otherwise, use the real frame size.
-    MAIN_FB()->frame_size = resolution[sensor.framesize][0] * resolution[sensor.framesize][1] * bpp;
+    MAIN_FB()->frame_size = resolution[sensor.framesize][0] * resolution[sensor.framesize][1] * 2;
     #endif
     return framebuffer_set_buffers(count);
 }
