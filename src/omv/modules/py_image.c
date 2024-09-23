@@ -1195,6 +1195,18 @@ static mp_obj_t py_image_to_ironbow(uint n_args, const mp_obj_t *args, mp_map_t 
 }
 static MP_DEFINE_CONST_FUN_OBJ_KW(py_image_to_ironbow_obj, 1, py_image_to_ironbow);
 
+#if (OMV_GENX320_ENABLE == 1)
+static mp_obj_t py_image_to_evt_dark(uint n_args, const mp_obj_t *args, mp_map_t *kw_args) {
+    return py_image_to(PIXFORMAT_RGB565, MP_ROM_INT(COLOR_PALETTE_EVT_DARK), false, n_args, args, kw_args);
+}
+static MP_DEFINE_CONST_FUN_OBJ_KW(py_image_to_evt_dark_obj, 1, py_image_to_evt_dark);
+
+static mp_obj_t py_image_to_evt_light(uint n_args, const mp_obj_t *args, mp_map_t *kw_args) {
+    return py_image_to(PIXFORMAT_RGB565, MP_ROM_INT(COLOR_PALETTE_EVT_LIGHT), false, n_args, args, kw_args);
+}
+static MP_DEFINE_CONST_FUN_OBJ_KW(py_image_to_evt_light_obj, 1, py_image_to_evt_light);
+#endif // OMV_GENX320_ENABLE == 1
+
 static mp_obj_t py_image_to_jpeg(uint n_args, const mp_obj_t *args, mp_map_t *kw_args) {
     return py_image_to(PIXFORMAT_JPEG, MP_ROM_NONE, false, n_args, args, kw_args);
 }
@@ -6218,6 +6230,10 @@ static const mp_rom_map_elem_t locals_dict_table[] = {
     {MP_ROM_QSTR(MP_QSTR_to_rgb565),           MP_ROM_PTR(&py_image_to_rgb565_obj)},
     {MP_ROM_QSTR(MP_QSTR_to_rainbow),          MP_ROM_PTR(&py_image_to_rainbow_obj)},
     {MP_ROM_QSTR(MP_QSTR_to_ironbow),          MP_ROM_PTR(&py_image_to_ironbow_obj)},
+    #if (OMV_GENX320_ENABLE == 1)
+    {MP_ROM_QSTR(MP_QSTR_to_evt_dark),         MP_ROM_PTR(&py_image_to_evt_dark_obj)},
+    {MP_ROM_QSTR(MP_QSTR_to_evt_light),        MP_ROM_PTR(&py_image_to_evt_light_obj)},
+    #endif // OMV_GENX320_ENABLE == 1
     {MP_ROM_QSTR(MP_QSTR_to_jpeg),             MP_ROM_PTR(&py_image_to_jpeg_obj)},
     {MP_ROM_QSTR(MP_QSTR_to_png),              MP_ROM_PTR(&py_image_to_png_obj)},
     {MP_ROM_QSTR(MP_QSTR_compress),            MP_ROM_PTR(&py_image_to_jpeg_obj)},
@@ -7027,6 +7043,10 @@ static const mp_rom_map_elem_t globals_dict_table[] = {
     {MP_ROM_QSTR(MP_QSTR_PNG),                 MP_ROM_INT(PIXFORMAT_PNG)},      /* PNG/COMPRESSED*/
     {MP_ROM_QSTR(MP_QSTR_PALETTE_RAINBOW),     MP_ROM_INT(COLOR_PALETTE_RAINBOW)},
     {MP_ROM_QSTR(MP_QSTR_PALETTE_IRONBOW),     MP_ROM_INT(COLOR_PALETTE_IRONBOW)},
+    #if (OMV_GENX320_ENABLE == 1)
+    {MP_ROM_QSTR(MP_QSTR_PALETTE_EVT_DARK),    MP_ROM_INT(COLOR_PALETTE_EVT_DARK)},
+    {MP_ROM_QSTR(MP_QSTR_PALETTE_EVT_LIGHT),   MP_ROM_INT(COLOR_PALETTE_EVT_LIGHT)},
+    #endif // OMV_GENX320_ENABLE == 1
     {MP_ROM_QSTR(MP_QSTR_AREA),                MP_ROM_INT(IMAGE_HINT_AREA)},
     {MP_ROM_QSTR(MP_QSTR_BILINEAR),            MP_ROM_INT(IMAGE_HINT_BILINEAR)},
     {MP_ROM_QSTR(MP_QSTR_BICUBIC),             MP_ROM_INT(IMAGE_HINT_BICUBIC)},
