@@ -56,7 +56,10 @@
   * @param	buf Pointer to the variable where the data needs to be stored
   */
 void psee_sensor_read(uint16_t register_address, uint32_t *buf) {
-	omv_i2c_readw4(&sensor.i2c_bus, sensor.slv_addr, register_address, buf);
+	uint8_t addr[] = {(register_address >> 8), register_address};
+	omv_i2c_write_bytes(&sensor.i2c_bus, sensor.slv_addr, addr, 2, OMV_I2C_XFER_NO_STOP);
+	omv_i2c_read_bytes(&sensor.i2c_bus, sensor.slv_addr, (uint8_t *) buf, 4, OMV_I2C_XFER_NO_FLAGS);
+	*buf = __REV(*buf);
 };
 
 /**
@@ -65,7 +68,9 @@ void psee_sensor_read(uint16_t register_address, uint32_t *buf) {
   * @param  register_data Data to be written
   */
 void psee_sensor_write(uint16_t register_address, uint32_t register_data) {
-	omv_i2c_writew4(&sensor.i2c_bus, sensor.slv_addr, register_address, register_data);
+	uint8_t buf[] = {(register_address >> 8), register_address,
+					 (register_data >> 24), (register_data >> 16), (register_data >> 8), register_data};
+	omv_i2c_write_bytes(&sensor.i2c_bus, sensor.slv_addr, buf, 6, OMV_I2C_XFER_NO_FLAGS);
 };
 
 /**

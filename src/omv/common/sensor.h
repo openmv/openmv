@@ -22,6 +22,7 @@
 #define LEPTON_SLV_ADDR         (0x54)
 #define HM0XX0_SLV_ADDR         (0x48)
 #define GC2145_SLV_ADDR         (0x78)
+#define GENX320_SLV_ADDR        (0x78)
 #define FROGEYE2020_SLV_ADDR    (0x6E)
 #define PAG7920_SLV_ADDR        (0x80)
 
@@ -31,6 +32,7 @@
 #define ON_CHIP_ID              (0x00)
 #define HIMAX_CHIP_ID           (0x0001)
 #define GC_CHIP_ID              (0xF0)
+#define GENX320_CHIP_ID         (0x0014)
 #define PIXART_CHIP_ID          (0x00)
 
 // Chip ID Values
@@ -57,6 +59,8 @@
 #define HM01B0_ID               (0xB0)
 #define HM0360_ID               (0x60)
 #define GC2145_ID               (0x21)
+#define GENX320_ID_ES           (0x30501C01)
+#define GENX320_ID_MP           (0xB0602003)
 #define PAG7920_ID              (0x7920)
 #define PAJ6100_ID              (0x6100)
 #define FROGEYE2020_ID          (0x2020)

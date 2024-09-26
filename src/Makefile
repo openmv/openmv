@@ -54,6 +54,7 @@ OMV_DIR=omv
 CUBEAI_DIR=stm32cubeai
 CMSIS_DIR=hal/cmsis
 MICROPY_DIR=micropython
+GENX320_DIR=drivers/genx320
 LEPTON_DIR=drivers/lepton
 LSM6DS3_DIR=drivers/lsm6ds3
 LSM6DSOX_DIR=drivers/lsm6dsox

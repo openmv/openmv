@@ -30,6 +30,7 @@
 #include "paj6100.h"
 #include "frogeye2020.h"
 #include "gc2145.h"
+#include "genx320.h"
 #include "framebuffer.h"
 #include "unaligned_memcpy.h"
 #include "omv_boardconfig.h"
@@ -194,17 +195,27 @@ static int sensor_detect() {
                 return slv_addr;
             #endif // (OMV_OV2640_ENABLE == 1)
 
-            #if (OMV_OV5640_ENABLE == 1) || (OMV_GC2145_ENABLE == 1)
-            // OV5640 and GC2145 share the same I2C address
-            case OV5640_SLV_ADDR:   // Or GC2145
+            #if (OMV_OV5640_ENABLE == 1) || (OMV_GC2145_ENABLE == 1) || (OMV_GENX320_ENABLE == 1)
+            // OV5640, GC2145, and GENX320 share the same I2C address
+            case OV5640_SLV_ADDR:   // Or GC2145, or GENX320.
                 // Try to read GC2145 chip ID first
                 omv_i2c_readb(&sensor.i2c_bus, slv_addr, GC_CHIP_ID, (uint8_t *) &sensor.chip_id);
                 if (sensor.chip_id != GC2145_ID) {
                     // If it fails, try reading OV5640 chip ID.
                     omv_i2c_readb2(&sensor.i2c_bus, slv_addr, OV5640_CHIP_ID, (uint8_t *) &sensor.chip_id);
+
+                    #if (OMV_GENX320_ENABLE == 1)
+                    if (sensor.chip_id != OV5640_ID) {
+                        // If it fails, try reading GENX320 chip ID.
+                        uint8_t buf[] = {(GENX320_CHIP_ID >> 8), GENX320_CHIP_ID};
+                        omv_i2c_write_bytes(&sensor.i2c_bus, slv_addr, buf, 2, OMV_I2C_XFER_NO_STOP);
+                        omv_i2c_read_bytes(&sensor.i2c_bus, slv_addr, (uint8_t *) &sensor.chip_id, 4, OMV_I2C_XFER_NO_FLAGS);
+                        sensor.chip_id = __REV(sensor.chip_id);
+                    }
+                    #endif // (OMV_GENX320_ENABLE == 1)
                 }
                 return slv_addr;
-            #endif // (OMV_OV5640_ENABLE == 1) || (OMV_GC2145_ENABLE == 1)
+            #endif // (OMV_OV5640_ENABLE == 1) || (OMV_GC2145_ENABLE == 1) || (OMV_GENX320_ENABLE == 1)
 
             #if (OMV_OV7725_ENABLE == 1) || (OMV_OV7670_ENABLE == 1) || (OMV_OV7690_ENABLE == 1)
             case OV7725_SLV_ADDR: // Or OV7690 or OV7670.
@@ -441,6 +452,16 @@ int sensor_probe_init(uint32_t bus_id, uint32_t bus_speed) {
             init_ret = gc2145_init(&sensor);
             break;
         #endif //(OMV_GC2145_ENABLE == 1)
+
+        #if (OMV_GENX320_ENABLE == 1)
+        case GENX320_ID_ES:
+        case GENX320_ID_MP:
+            if (sensor_set_xclk_frequency(OMV_GENX320_XCLK_FREQ) != 0) {
+                return SENSOR_ERROR_TIM_INIT_FAILED;
+            }
+            init_ret = genx320_init(&sensor);
+            break;
+        #endif // (OMV_GENX320_ENABLE == 1)
 
         #if (OMV_PAG7920_ENABLE == 1)
         case PAG7920_ID:
