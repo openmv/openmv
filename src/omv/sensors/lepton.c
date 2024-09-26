@@ -522,17 +522,17 @@ int lepton_init(sensor_t *sensor) {
     // xxxx == Version
     // 01/00 == Shutter/NoShutter
     if (!strncmp(part.value, "500-0771", 8)) {
-        sensor->chip_id_w = LEPTON_3_5;
+        sensor->chip_id = LEPTON_3_5;
     } else if (!strncmp(part.value, "500-0726", 8)) {
-        sensor->chip_id_w = LEPTON_3_0;
+        sensor->chip_id = LEPTON_3_0;
     } else if (!strncmp(part.value, "500-0763", 8)) {
-        sensor->chip_id_w = LEPTON_2_5;
+        sensor->chip_id = LEPTON_2_5;
     } else if (!strncmp(part.value, "500-0659", 8)) {
-        sensor->chip_id_w = LEPTON_2_0;
+        sensor->chip_id = LEPTON_2_0;
     } else if (!strncmp(part.value, "500-0690", 8)) {
-        sensor->chip_id_w = LEPTON_1_6;
+        sensor->chip_id = LEPTON_1_6;
     } else if (!strncmp(part.value, "500-0643", 8)) {
-        sensor->chip_id_w = LEPTON_1_5;
+        sensor->chip_id = LEPTON_1_5;
     }
     return 0;
 }

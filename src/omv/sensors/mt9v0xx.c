@@ -37,11 +37,11 @@ static enum {
 cfa_type = MONO_CFA;
 
 static bool is_mt9v0x2(sensor_t *sensor) {
-    return (sensor->chip_id_w == MT9V0X2_ID) || (sensor->chip_id_w == MT9V0X2_C_ID);
+    return (sensor->chip_id == MT9V0X2_ID) || (sensor->chip_id == MT9V0X2_C_ID);
 }
 
 static bool is_mt9v0x4(sensor_t *sensor) {
-    return (sensor->chip_id_w == MT9V0X4_ID) || (sensor->chip_id_w == MT9V0X4_C_ID);
+    return (sensor->chip_id == MT9V0X4_ID) || (sensor->chip_id == MT9V0X4_C_ID);
 }
 
 static int reset(sensor_t *sensor) {
@@ -525,13 +525,13 @@ int mt9v0xx_init(sensor_t *sensor) {
     switch ((cfa_type_reg >> 9) & 0x7) {
         case BAYER_CFA_ID: {
             cfa_type = BAYER_CFA;
-            switch (sensor->chip_id_w) {
+            switch (sensor->chip_id) {
                 case MT9V0X2_ID: {
-                    sensor->chip_id_w = MT9V0X2_C_ID;
+                    sensor->chip_id = MT9V0X2_C_ID;
                     break;
                 }
                 case MT9V0X4_ID: {
-                    sensor->chip_id_w = MT9V0X4_C_ID;
+                    sensor->chip_id = MT9V0X4_C_ID;
                     break;
                 }
                 default: {

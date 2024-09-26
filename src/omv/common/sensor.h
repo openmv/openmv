@@ -211,10 +211,7 @@ typedef void (*frame_cb_t) ();
 
 typedef struct _sensor sensor_t;
 typedef struct _sensor {
-    union {
-        uint8_t chip_id;        // Sensor ID.
-        uint16_t chip_id_w;     // Sensor ID 16 bits.
-    };
+    uint32_t chip_id;           // Sensor ID 32 bits.
     uint8_t slv_addr;           // Sensor I2C slave address.
 
     // Hardware flags (clock polarities, hw capabilities etc..)
