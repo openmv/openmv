@@ -80,8 +80,8 @@
 #define OMV_JPEG_MEMORY                 DRAM    // JPEG buffer memory buffer.
 #define OMV_JPEG_SIZE                   (1M)    // IDE JPEG buffer (header + data).
 #define OMV_FB_MEMORY                   DRAM    // Framebuffer, fb_alloc
-#define OMV_FB_SIZE                     (13M)   // FB memory: header + VGA/GS image
-#define OMV_FB_ALLOC_SIZE               (10M)   // minimum fb alloc size
+#define OMV_FB_SIZE                     (10M)   // FB memory: header + VGA/GS image
+#define OMV_FB_ALLOC_SIZE               (5M)    // minimum fb alloc size
 #define OMV_FB_OVERLAY_MEMORY           OCRM1   // Fast fb_alloc memory.
 #define OMV_FB_OVERLAY_SIZE             (512K)
 #define OMV_VOSPI_MEMORY                OCRM2   // VoSPI buffer memory.
@@ -92,7 +92,7 @@
 #define OMV_GC_BLOCK1_MEMORY            DTCM    // Main GC block
 #define OMV_GC_BLOCK1_SIZE              (290K)
 #define OMV_GC_BLOCK2_MEMORY            DRAM    // Extra GC block 1.
-#define OMV_GC_BLOCK2_SIZE              (8M)
+#define OMV_GC_BLOCK2_SIZE              (16M)
 #define OMV_RAMFUNC_MEMORY              ITCM2   // RAM code memory.
 #define OMV_LINE_BUF_SIZE               (11 * 1024)  // Image line buffer.
 
