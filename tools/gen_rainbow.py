@@ -2,12 +2,38 @@
 # -*- coding: utf-8 -*-
 # This file is part of the OpenMV project.
 #
-# Copyright (c) 2013-2021 Ibrahim Abdelkader <iabdalkader@openmv.io>
-# Copyright (c) 2013-2021 Kwabena W. Agyeman <kwagyeman@openmv.io>
+# Copyright (c) 2013-2024 Ibrahim Abdelkader <iabdalkader@openmv.io>
+# Copyright (c) 2013-2024 Kwabena W. Agyeman <kwagyeman@openmv.io>
 #
 # This work is licensed under the MIT license, see the file LICENSE for details.
 #
 # This script generates the rainbow lookup table.
+
+def interpolate_color(color1, color2, factor):
+    return (
+        int(color1[0] + (color2[0] - color1[0]) * factor),
+        int(color1[1] + (color2[1] - color1[1]) * factor),
+        int(color1[2] + (color2[2] - color1[2]) * factor)
+    )
+
+def generate_lookup_table(lo_color, mid_color, hi_color):
+    lookup_table = []
+
+    for i in range(256):
+        if i < 128:
+            factor = i / 128.0
+            color = interpolate_color(lo_color, mid_color, factor)
+        else:
+            factor = (i - 128) / 128.0
+            color = interpolate_color(mid_color, hi_color, factor)
+        lookup_table.append(color)
+
+    return lookup_table
+
+def rgb888_to_rgb565(tup):
+    return [(int(((r * 31) + 127.5) / 255) & 0x1F) << 11 |
+            (int(((g * 63) + 127.5) / 255) & 0x3F) << 5 |
+            (int(((b * 31) + 127.5) / 255) & 0x1F) for r,g,b in tup]
 
 NUM_COL=256
 SAT=1.0
@@ -299,6 +325,40 @@ col = [(int(((r*31)+127.5)/255)&0x1F)<<11 |
        (int(((b*31)+127.5)/255)&0x1F) for r,g,b in tup]
 
 sys.stdout.write("const uint16_t ironbow_table[%d] = {\n" % NUM_COL)
+for i in range(NUM_COL):
+    if not (i % 8):
+        sys.stdout.write("    ")
+    sys.stdout.write("0x%04X" % col[i])
+    if (i + 1) % 8:
+        sys.stdout.write(", ")
+    elif i != (NUM_COL-1):
+        sys.stdout.write(",\n")
+    else:
+        sys.stdout.write("\n};\n")
+
+on_event = (216, 223, 236)
+background = (30, 37, 52)
+off_event = (64, 126, 201)
+col = rgb888_to_rgb565(generate_lookup_table(on_event, background, off_event))
+
+sys.stdout.write("const uint16_t evt_dark_table[%d] = {\n" % NUM_COL)
+for i in range(NUM_COL):
+    if not (i % 8):
+        sys.stdout.write("    ")
+    sys.stdout.write("0x%04X" % col[i])
+    if (i + 1) % 8:
+        sys.stdout.write(", ")
+    elif i != (NUM_COL-1):
+        sys.stdout.write(",\n")
+    else:
+        sys.stdout.write("\n};\n")
+
+on_event = (64, 126, 201)
+background = (216, 223, 236)
+off_event = (30, 37, 52)
+col = rgb888_to_rgb565(generate_lookup_table(on_event, background, off_event))
+
+sys.stdout.write("const uint16_t evt_light_table[%d] = {\n" % NUM_COL)
 for i in range(NUM_COL):
     if not (i % 8):
         sys.stdout.write("    ")

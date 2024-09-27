@@ -90,6 +90,7 @@ OMV_CFLAGS += -I$(TOP_DIR)/$(OMV_DIR)/templates/
 OMV_CFLAGS += -I$(TOP_DIR)/$(OMV_DIR)/ports/$(PORT)/
 OMV_CFLAGS += -I$(TOP_DIR)/$(OMV_DIR)/ports/$(PORT)/modules/
 
+OMV_CFLAGS += -I$(TOP_DIR)/$(GENX320_DIR)/include/
 OMV_CFLAGS += -I$(TOP_DIR)/$(LEPTON_DIR)/include/
 OMV_CFLAGS += -I$(TOP_DIR)/$(LSM6DS3_DIR)/include/
 OMV_CFLAGS += -I$(TOP_DIR)/$(LSM6DSOX_DIR)/include/
@@ -145,6 +146,7 @@ LIBS += $(TOP_DIR)/$(TENSORFLOW_DIR)/libtflm/lib/libtflm-$(CPU)+fp-release.a
 FIRM_OBJ += $(wildcard $(BUILD)/$(CMSIS_DIR)/src/dsp/*/*.o)
 
 FIRM_OBJ += $(wildcard $(BUILD)/$(HAL_DIR)/src/*.o)
+FIRM_OBJ += $(wildcard $(BUILD)/$(GENX320_DIR)/src/*.o)
 FIRM_OBJ += $(wildcard $(BUILD)/$(LEPTON_DIR)/src/*.o)
 ifeq ($(MICROPY_PY_IMU), 1)
 FIRM_OBJ += $(wildcard $(BUILD)/$(LSM6DS3_DIR)/src/*.o)
@@ -201,6 +203,7 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/sensors/,   \
 	hm01b0.o                    \
 	hm0360.o                    \
 	gc2145.o                    \
+	genx320.o                   \
 	pag7920.o                   \
 	paj6100.o                   \
 	frogeye2020.o               \
@@ -607,6 +610,7 @@ UVC_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/sensors/, \
 	hm01b0.o                                \
 	hm0360.o                                \
 	gc2145.o                                \
+	genx320.o                               \
 	pag7920.o                               \
 	paj6100.o                               \
 	frogeye2020.o                           \
@@ -637,6 +641,7 @@ UVC_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/ports/stm32/,\
 	omv_spi.o                               \
 	)
 
+UVC_OBJ += $(wildcard $(BUILD)/$(GENX320_DIR)/src/*.o)
 UVC_OBJ += $(wildcard $(BUILD)/$(LEPTON_DIR)/src/*.o)
 ifeq ($(MICROPY_PY_IMU), 1)
 UVC_OBJ += $(wildcard $(BUILD)/$(LSM6DS3_DIR)/src/*.o)
@@ -663,6 +668,7 @@ FIRMWARE_OBJS: | $(BUILD) $(FW_DIR)
 	$(MAKE)  -C $(HAL_DIR)                   BUILD=$(BUILD)/$(HAL_DIR)          CFLAGS="$(CFLAGS) -MMD"
 	$(MAKE)  -C $(TENSORFLOW_DIR)            BUILD=$(BUILD)/$(TENSORFLOW_DIR)   CFLAGS="$(CFLAGS) -MMD" headers
 	$(MAKE)  -C $(MICROPY_DIR)/ports/$(PORT) BUILD=$(BUILD)/$(MICROPY_DIR)      $(MICROPY_ARGS)
+	$(MAKE)  -C $(GENX320_DIR)               BUILD=$(BUILD)/$(GENX320_DIR)      CFLAGS="$(CFLAGS) -MMD"
 	$(MAKE)  -C $(LEPTON_DIR)                BUILD=$(BUILD)/$(LEPTON_DIR)       CFLAGS="$(CFLAGS) -MMD"
 ifeq ($(MICROPY_PY_IMU), 1)
 	$(MAKE)  -C $(LSM6DS3_DIR)               BUILD=$(BUILD)/$(LSM6DS3_DIR)      CFLAGS="$(CFLAGS) -MMD"

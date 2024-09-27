@@ -1004,6 +1004,14 @@ static mp_obj_t py_sensor_set_color_palette(mp_obj_t palette_obj) {
         case COLOR_PALETTE_IRONBOW:
             sensor_set_color_palette(ironbow_table);
             break;
+        #if (OMV_GENX320_ENABLE == 1)
+        case COLOR_PALETTE_EVT_DARK:
+            sensor_set_color_palette(evt_dark_table);
+            break;
+        case COLOR_PALETTE_EVT_LIGHT:
+            sensor_set_color_palette(evt_light_table);
+            break;
+        #endif // OMV_GENX320_ENABLE == 1
         default:
             sensor_raise_error(SENSOR_ERROR_INVALID_ARGUMENT);
             break;
@@ -1018,6 +1026,12 @@ static mp_obj_t py_sensor_get_color_palette() {
         return mp_obj_new_int(COLOR_PALETTE_RAINBOW);
     } else if (palette == ironbow_table) {
         return mp_obj_new_int(COLOR_PALETTE_IRONBOW);
+    #if (OMV_GENX320_ENABLE == 1)
+    } else if (palette == evt_dark_table) {
+        return mp_obj_new_int(COLOR_PALETTE_EVT_DARK);
+    } else if (palette == evt_light_table) {
+        return mp_obj_new_int(COLOR_PALETTE_EVT_LIGHT);
+    #endif // OMV_GENX320_ENABLE == 1
     }
     return mp_const_none;
 }

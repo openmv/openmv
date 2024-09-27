@@ -63,6 +63,12 @@ const void *py_helper_arg_to_palette(const mp_obj_t arg, uint32_t pixfmt) {
             palette = rainbow_table;
         } else if (type == COLOR_PALETTE_IRONBOW) {
             palette = ironbow_table;
+        #if (OMV_GENX320_ENABLE == 1)
+        } else if (type == COLOR_PALETTE_EVT_DARK) {
+            palette = evt_dark_table;
+        } else if (type == COLOR_PALETTE_EVT_LIGHT) {
+            palette = evt_light_table;
+        #endif // OMV_GENX320_ENABLE == 1
         } else {
             mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Invalid color palette"));
         }
@@ -463,6 +469,12 @@ const uint16_t *py_helper_keyword_color_palette(uint n_args, const mp_obj_t *arg
             default_color_palette = rainbow_table;
         } else if (palette == COLOR_PALETTE_IRONBOW) {
             default_color_palette = ironbow_table;
+        #if (OMV_GENX320_ENABLE == 1)
+        } else if (palette == COLOR_PALETTE_EVT_DARK) {
+            default_color_palette = evt_dark_table;
+        } else if (palette == COLOR_PALETTE_EVT_LIGHT) {
+            default_color_palette = evt_light_table;
+        #endif // OMV_GENX320_ENABLE == 1
         } else {
             mp_raise_msg(&mp_type_ValueError,
                          MP_ERROR_TEXT("Invalid pre-defined color palette!"));
