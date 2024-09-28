@@ -91,34 +91,31 @@ static void imlib_set_pixel_aa(image_t *img, int x, int y, int err, int c) {
     switch (img->pixfmt) {
         case PIXFORMAT_BINARY: {
             uint32_t *ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(img, y);
-            int old_c = IMAGE_GET_BINARY_PIXEL_FAST(ptr, x);
-            int new_c = (((old_c - c) * err) >> 8) + c;
+            int old_c = IMAGE_GET_BINARY_PIXEL_FAST(ptr, x) * 255;
+            int new_c = (((old_c * err) + ((c ? 255 : 0) * (256 - err))) >> 8) > 127;
             IMAGE_PUT_BINARY_PIXEL_FAST(ptr, x, new_c);
             break;
         }
         case PIXFORMAT_GRAYSCALE: {
             uint8_t *ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(img, y);
             int old_c = IMAGE_GET_GRAYSCALE_PIXEL_FAST(ptr, x);
-            int new_c = (((old_c - c) * err) >> 8) + c;
+            int new_c = ((old_c * err) + ((c & 0xff) * (256 - err))) >> 8;
             IMAGE_PUT_GRAYSCALE_PIXEL_FAST(ptr, x, new_c);
             break;
         }
         case PIXFORMAT_RGB565: {
             uint16_t *ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(img, y);
             int old_c = IMAGE_GET_RGB565_PIXEL_FAST(ptr, x);
-            int old_r8 = COLOR_RGB565_TO_R8(old_c);
-            int old_g8 = COLOR_RGB565_TO_G8(old_c);
-            int old_b8 = COLOR_RGB565_TO_B8(old_c);
-
-            int r8 = COLOR_RGB565_TO_R8(c);
-            int g8 = COLOR_RGB565_TO_G8(c);
-            int b8 = COLOR_RGB565_TO_B8(c);
-
-            int new_r8 = (((old_r8 - r8) * err) >> 8) + r8;
-            int new_g8 = (((old_g8 - g8) * err) >> 8) + g8;
-            int new_b8 = (((old_b8 - b8) * err) >> 8) + b8;
-
-            int new_c = COLOR_R8_G8_B8_TO_RGB565(new_r8, new_g8, new_b8);
+            int old_c_r5 = COLOR_RGB565_TO_R5(old_c);
+            int old_c_g6 = COLOR_RGB565_TO_G6(old_c);
+            int old_c_b5 = COLOR_RGB565_TO_B5(old_c);
+            int c_r5 = COLOR_RGB565_TO_R5(c);
+            int c_g6 = COLOR_RGB565_TO_G6(c);
+            int c_b5 = COLOR_RGB565_TO_B5(c);
+            int new_c_r5 = ((old_c_r5 * err) + (c_r5 * (256 - err))) >> 8;
+            int new_c_g6 = ((old_c_g6 * err) + (c_g6 * (256 - err))) >> 8;
+            int new_c_b5 = ((old_c_b5 * err) + (c_b5 * (256 - err))) >> 8;
+            int new_c = COLOR_R5_G6_B5_TO_RGB565(new_c_r5, new_c_g6, new_c_b5);
             IMAGE_PUT_RGB565_PIXEL_FAST(ptr, x, new_c);
             break;
         }
