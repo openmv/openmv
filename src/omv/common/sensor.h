@@ -177,6 +177,7 @@ typedef enum {
     IOCTL_HIMAX_MD_WINDOW,
     IOCTL_HIMAX_MD_THRESHOLD,
     IOCTL_HIMAX_OSC_ENABLE,
+    IOCTL_GET_RGB_STATS,
 } ioctl_t;
 
 typedef enum {

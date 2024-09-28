@@ -981,6 +981,18 @@ static mp_obj_t py_sensor_ioctl(uint n_args, const mp_obj_t *args) {
         }
         #endif // (OMV_HM01B0_ENABLE == 1)
 
+        case IOCTL_GET_RGB_STATS: {
+            uint32_t r, gb, gr, b;
+            error = sensor_ioctl(request, &r, &gb, &gr, &b);
+            if (error == 0) {
+                ret_obj = mp_obj_new_tuple(4, (mp_obj_t []) {mp_obj_new_int(r),
+                                                             mp_obj_new_int(gb),
+                                                             mp_obj_new_int(gr),
+                                                             mp_obj_new_int(b)});
+            }
+            break;
+        }
+
         default: {
             sensor_raise_error(SENSOR_ERROR_CTL_UNSUPPORTED);
             break;
@@ -1168,6 +1180,7 @@ static const mp_rom_map_elem_t globals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_IOCTL_HIMAX_MD_CLEAR),        MP_ROM_INT(IOCTL_HIMAX_MD_CLEAR)},
     { MP_ROM_QSTR(MP_QSTR_IOCTL_HIMAX_OSC_ENABLE),      MP_ROM_INT(IOCTL_HIMAX_OSC_ENABLE)},
     #endif
+    { MP_ROM_QSTR(MP_QSTR_IOCTL_GET_RGB_STATS),  MP_ROM_INT(IOCTL_GET_RGB_STATS)},
 
     // Sensor functions
     { MP_ROM_QSTR(MP_QSTR___init__),            MP_ROM_PTR(&py_sensor__init__obj) },
