@@ -25,6 +25,7 @@
 #define GENX320_SLV_ADDR        (0x78)
 #define FROGEYE2020_SLV_ADDR    (0x6E)
 #define PAG7920_SLV_ADDR        (0x80)
+#define PAG7936_SLV_ADDR        (0x80)
 
 // Chip ID Registers
 #define OV5640_CHIP_ID          (0x300A)
@@ -33,7 +34,7 @@
 #define HIMAX_CHIP_ID           (0x0001)
 #define GC_CHIP_ID              (0xF0)
 #define GENX320_CHIP_ID         (0x0014)
-#define PIXART_CHIP_ID          (0x00)
+#define PIXART_CHIP_ID          (0x0000)
 
 // Chip ID Values
 #define OV2640_ID               (0x26)
@@ -62,6 +63,7 @@
 #define GENX320_ID_ES           (0x30501C01)
 #define GENX320_ID_MP           (0xB0602003)
 #define PAG7920_ID              (0x7920)
+#define PAG7936_ID              (0x7936)
 #define PAJ6100_ID              (0x6100)
 #define FROGEYE2020_ID          (0x2020)
 
