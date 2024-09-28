@@ -42,7 +42,7 @@ def vela_compile(model_path, build_dir, vela_args):
     C_BLUE = '\033[94m'
     C_RESET = '\033[0m'
 
-    csv_file_path = glob.glob(os.path.join(build_dir, "*.csv"))[0]
+    csv_file_path = glob.glob(f"{build_dir}/{model}_summary_*.csv")[0]
     with open(csv_file_path, mode='r') as file:
         row = next(csv.DictReader(file))
         stoi = lambda x, d=1: str(int(float(x) / d))
