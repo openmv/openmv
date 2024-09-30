@@ -15,7 +15,7 @@ require("ssl")
 require("ntptime")
 require("webrepl")
 freeze ("$(OMV_LIB_DIR)/", "mqtt.py")
-freeze ("$(OMV_LIB_DIR)/", "urequests.py")
+freeze ("$(OMV_LIB_DIR)/", "requests.py")
 
 # Utils
 require("time")
