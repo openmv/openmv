@@ -3,9 +3,9 @@
 
 import socket
 import network
-import uos
+import os
 import errno
-from uio import IOBase
+from io import IOBase
 
 last_client_socket = None
 server_socket = None
@@ -73,24 +73,24 @@ def accept_telnet_connect(telnet_server):
 
     if last_client_socket:
         # close any previous clients
-        uos.dupterm(None)
+        os.dupterm(None)
         last_client_socket.close()
 
     last_client_socket, remote_addr = telnet_server.accept()
     print("Telnet connection from:", remote_addr)
     last_client_socket.setblocking(False)
     # dupterm_notify() not available under MicroPython v1.1
-    # last_client_socket.setsockopt(socket.SOL_SOCKET, 20, uos.dupterm_notify)
+    # last_client_socket.setsockopt(socket.SOL_SOCKET, 20, os.dupterm_notify)
 
     last_client_socket.sendall(bytes([255, 252, 34]))  # dont allow line mode
     last_client_socket.sendall(bytes([255, 251, 1]))  # turn off local echo
 
-    uos.dupterm(TelnetWrapper(last_client_socket))
+    os.dupterm(TelnetWrapper(last_client_socket))
 
 
 def stop():
     global server_socket, last_client_socket
-    uos.dupterm(None)
+    os.dupterm(None)
     if server_socket:
         server_socket.close()
     if last_client_socket:

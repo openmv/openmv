@@ -29,7 +29,7 @@ user: admin
 password: testadmin
 ```
 
-Examples for post requests can be found at `scripts/examples/OpenMV/14-WiFi-Shield/http_post.py`.
+Examples for post requests can be found at `scripts/examples/09-WiFi/http_post.py`.
 
 ## GET Requests
 

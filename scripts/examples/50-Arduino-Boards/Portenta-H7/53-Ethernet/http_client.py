@@ -4,7 +4,7 @@
 #
 # Ethernet LAN HTTP client example.
 import network
-import usocket
+import socket
 
 PORT = 80
 HOST = "www.google.com"
@@ -17,11 +17,11 @@ lan.ifconfig("dhcp")
 print(lan.ifconfig())
 
 # Get addr info via DNS
-addr = usocket.getaddrinfo(HOST, PORT)[0][4]
+addr = socket.getaddrinfo(HOST, PORT)[0][4]
 print(addr)
 
 # Create a new socket and connect to addr
-client = usocket.socket(usocket.AF_INET, usocket.SOCK_STREAM)
+client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 client.connect(addr)
 
 # Set timeout

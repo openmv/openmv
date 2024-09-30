@@ -20,7 +20,7 @@
 #
 import socket
 import network
-import uos
+import os
 import gc
 import sys
 import errno
@@ -79,12 +79,12 @@ class FTP_client:
 
     def send_list_data(self, path, data_client, full):
         try:
-            for fname in uos.listdir(path):
+            for fname in os.listdir(path):
                 data_client.sendall(self.make_description(path, fname, full))
         except Exception:  # path may be a file name or pattern
             path, pattern = self.split_path(path)
             try:
-                for fname in uos.listdir(path):
+                for fname in os.listdir(path):
                     if self.fncmp(fname, pattern):
                         data_client.sendall(self.make_description(path, fname, full))
             except:
@@ -93,7 +93,7 @@ class FTP_client:
     def make_description(self, path, fname, full):
         global _month_name
         if full:
-            stat = uos.stat(self.get_absolute_path(path, fname))
+            stat = os.stat(self.get_absolute_path(path, fname))
             file_permissions = "drwxr-xr-x" if (stat[0] & 0o170000 == 0o040000) else "-rw-r--r--"
             file_size = stat[6]
             tm = stat[7] & 0xFFFFFFFF
@@ -246,7 +246,7 @@ class FTP_client:
                 cl.sendall('257 "{}"\r\n'.format(self.cwd))
             elif command == "CWD" or command == "XCWD":
                 try:
-                    if (uos.stat(path)[0] & 0o170000) == 0o040000:
+                    if (os.stat(path)[0] & 0o170000) == 0o040000:
                         self.cwd = path
                         cl.sendall("250 OK\r\n")
                     else:
@@ -316,12 +316,12 @@ class FTP_client:
                         data_client.close()
             elif command == "SIZE":
                 try:
-                    cl.sendall("213 {}\r\n".format(uos.stat(path)[6]))
+                    cl.sendall("213 {}\r\n".format(os.stat(path)[6]))
                 except:
                     cl.sendall("550 Fail\r\n")
             elif command == "MDTM":
                 try:
-                    tm = localtime(uos.stat(path)[8])
+                    tm = localtime(os.stat(path)[8])
                     cl.sendall("213 {:04d}{:02d}{:02d}{:02d}{:02d}{:02d}\r\n".format(*tm[0:6]))
                 except:
                     cl.sendall("550 Fail\r\n")
@@ -345,21 +345,21 @@ class FTP_client:
                     cl.sendall("213 Done.\r\n")
             elif command == "DELE":
                 try:
-                    uos.remove(path)
+                    os.remove(path)
                     cl.sendall("250 OK\r\n")
                 except:
                     cl.sendall("550 Fail\r\n")
             elif command == "RNFR":
                 try:
                     # just test if the name exists, exception if not
-                    uos.stat(path)
+                    os.stat(path)
                     self.fromname = path
                     cl.sendall("350 Rename from\r\n")
                 except:
                     cl.sendall("550 Fail\r\n")
             elif command == "RNTO":
                 try:
-                    uos.rename(self.fromname, path)
+                    os.rename(self.fromname, path)
                     cl.sendall("250 OK\r\n")
                 except:
                     cl.sendall("550 Fail\r\n")
@@ -369,13 +369,13 @@ class FTP_client:
                 cl.sendall("250 OK\r\n")
             elif command == "RMD" or command == "XRMD":
                 try:
-                    uos.rmdir(path)
+                    os.rmdir(path)
                     cl.sendall("250 OK\r\n")
                 except:
                     cl.sendall("550 Fail\r\n")
             elif command == "MKD" or command == "XMKD":
                 try:
-                    uos.mkdir(path)
+                    os.mkdir(path)
                     cl.sendall("250 OK\r\n")
                 except:
                     cl.sendall("550 Fail\r\n")

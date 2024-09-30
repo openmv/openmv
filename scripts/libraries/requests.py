@@ -20,14 +20,13 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-# Source: improved version of:
-# https://github.com/micropython/micropython-lib/blob/master/python-ecosys/urequests/urequests.py
+# Source: improved version of micropython-lib's requests.
 # Some useful links for future updates:
 # https://www.w3.org/TR/html401/interact/forms.html#h-17.13.4
 # https://docs.python-requests.org/en/master/
 
-import usocket
-import ubinascii
+import socket
+import binascii
 
 
 class Response:
@@ -47,9 +46,9 @@ class Response:
         return str(self._content, self.encoding)
 
     def json(self):
-        import ujson
+        import json
 
-        return ujson.loads(self._content)
+        return json.loads(self._content)
 
 
 def readline(s):
@@ -87,7 +86,7 @@ def request(method, url, data=None, json=None, files=None, headers={}, auth=None
     if proto == "http:":
         port = 80
     elif proto == "https:":
-        import ussl
+        import ssl
 
         port = 443
     else:
@@ -99,20 +98,20 @@ def request(method, url, data=None, json=None, files=None, headers={}, auth=None
 
     if auth:
         headers["Authorization"] = b"Basic %s" % (
-            ubinascii.b2a_base64("%s:%s" % (auth[0], auth[1]))[0:-1]
+            binascii.b2a_base64("%s:%s" % (auth[0], auth[1]))[0:-1]
         )
 
     resp_code = 0
     resp_reason = None
     resp_headers = []
 
-    ai = usocket.getaddrinfo(host, port)[0]
-    s = usocket.socket(ai[0], ai[1], ai[2])
+    ai = socket.getaddrinfo(host, port)[0]
+    s = socket.socket(ai[0], ai[1], ai[2])
     try:
         s.connect(ai[-1])
         s.settimeout(5.0)
         if proto == "https:":
-            s = ussl.wrap_socket(s, server_hostname=host)
+            s = ssl.wrap_socket(s, server_hostname=host)
 
         s.write(b"%s /%s HTTP/1.0\r\n" % (method, path))
 
@@ -127,9 +126,9 @@ def request(method, url, data=None, json=None, files=None, headers={}, auth=None
             s.write(b"\r\n")
 
         if json is not None:
-            import ujson
+            import json
 
-            data = ujson.dumps(json)
+            data = json.dumps(json)
             s.write(b"Content-Type: application/json\r\n")
 
         if files is not None:
