@@ -2,6 +2,7 @@ import micropython
 import array
 import uctypes
 
+
 micropython.alloc_emergency_exception_buf(100)
 
 

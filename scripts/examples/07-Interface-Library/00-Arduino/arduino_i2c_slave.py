@@ -11,11 +11,11 @@
 # OpenMV Cam Ground                - Arduino Ground
 
 import pyb
-import ustruct
+import struct
 
 text = "Hello World!\n"
-data = ustruct.pack("<%ds" % len(text), text)
-# Use "ustruct" to build data packets to send.
+data = struct.pack("<%ds" % len(text), text)
+# Use "struct" to build data packets to send.
 # "<" puts the data in the struct in little endian order.
 # "%ds" puts a string in the data stream. E.g. "13s" for "Hello World!\n" (13 chars).
 # See https://docs.python.org/3/library/struct.html
@@ -42,7 +42,7 @@ print("Waiting for Arduino...")
 while True:
     try:
         bus.send(
-            ustruct.pack("<h", len(data)), timeout=10000
+            struct.pack("<h", len(data)), timeout=10000
         )  # Send the len first (16-bits).
         try:
             bus.send(data, timeout=10000)  # Send the data second.

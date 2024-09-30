@@ -13,12 +13,12 @@
 # OpenMV Cam Ground                   - Arduino Ground
 
 import pyb
-import ustruct
+import struct
 import time
 
 text = "Hello World!\n"
-data = ustruct.pack("<bi%ds" % len(text), 85, len(text), text)  # 85 is a sync char.
-# Use "ustruct" to build data packets to send.
+data = struct.pack("<bi%ds" % len(text), 85, len(text), text)  # 85 is a sync char.
+# Use "struct" to build data packets to send.
 # "<" puts the data in the struct in little endian order.
 # "b" puts a signed char in the data stream.
 # "i" puts a signed integer in the data stream.

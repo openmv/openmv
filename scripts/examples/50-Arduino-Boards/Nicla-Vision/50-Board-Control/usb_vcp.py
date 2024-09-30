@@ -25,7 +25,7 @@
 #     f.write(img)
 
 import sensor
-import ustruct
+import struct
 from pyb import USB_VCP
 
 usb = USB_VCP()
@@ -38,5 +38,5 @@ while True:
     cmd = usb.recv(4, timeout=5000)
     if cmd == b"snap":
         img = sensor.snapshot().to_jpeg()
-        usb.send(ustruct.pack("<L", img.size()))
+        usb.send(struct.pack("<L", img.size()))
         usb.send(img)

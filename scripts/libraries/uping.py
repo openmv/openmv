@@ -1,6 +1,12 @@
 # µPing (MicroPing) for MicroPython
 # copyright (c) 2018 Shawwwn <shawwwn1@gmail.com>
 # License: MIT
+import time
+import select
+import socket
+import struct
+import random
+import uctypes
 
 
 # Internet Checksum Algorithm
@@ -22,13 +28,6 @@ def checksum(data):
 
 
 def ping(host, count=4, timeout=5000, interval=10, quiet=False, size=64):
-    import utime
-    import uselect
-    import uctypes
-    import usocket
-    import ustruct
-    import urandom
-
     # prepare packet
     assert size >= 16, "pkt size too small"
     pkt = b"Q" * size
@@ -44,14 +43,14 @@ def ping(host, count=4, timeout=5000, interval=10, quiet=False, size=64):
     h.type = 8  # ICMP_ECHO_REQUEST
     h.code = 0
     h.checksum = 0
-    h.id = urandom.randint(0, 65535)
+    h.id = random.randint(0, 65535)
     h.seq = 1
 
     # init socket
-    sock = usocket.socket(usocket.AF_INET, usocket.SOCK_RAW, 1)
+    sock = socket.socket(socket.AF_INET, socket.SOCK_RAW, 1)
     sock.setblocking(0)
     sock.settimeout(timeout / 1000)
-    addr = usocket.getaddrinfo(host, 1)[0][-1][0]  # ip address
+    addr = socket.getaddrinfo(host, 1)[0][-1][0]  # ip address
     sock.connect((addr, 1))
     not quiet and print("PING %s (%s): %u data bytes" % (host, addr, len(pkt)))
 
@@ -66,7 +65,7 @@ def ping(host, count=4, timeout=5000, interval=10, quiet=False, size=64):
             # send packet
             h.checksum = 0
             h.seq = c
-            h.timestamp = utime.ticks_us()
+            h.timestamp = time.ticks_us()
             h.checksum = checksum(pkt)
             if sock.send(pkt) == size:
                 n_trans += 1
@@ -77,7 +76,7 @@ def ping(host, count=4, timeout=5000, interval=10, quiet=False, size=64):
 
         # recv packet
         while 1:
-            socks, _, _ = uselect.select([sock], [], [], 0)
+            socks, _, _ = select.select([sock], [], [], 0)
             if socks:
                 resp = socks[0].recv(4096)
                 resp_mv = memoryview(resp)
@@ -85,8 +84,8 @@ def ping(host, count=4, timeout=5000, interval=10, quiet=False, size=64):
                 # TODO: validate checksum (optional)
                 seq = h2.seq
                 if h2.type == 0 and h2.id == h.id and (seq in seqs):  # 0: ICMP_ECHO_REPLY
-                    t_elasped = (utime.ticks_us() - h2.timestamp) / 1000
-                    ttl = ustruct.unpack("!B", resp_mv[8:9])[0]  # time-to-live
+                    t_elasped = (time.ticks_us() - h2.timestamp) / 1000
+                    ttl = struct.unpack("!B", resp_mv[8:9])[0]  # time-to-live
                     n_recv += 1
                     not quiet and print(
                         "%u bytes from %s: icmp_seq=%u, ttl=%u, time=%f ms"
@@ -102,7 +101,7 @@ def ping(host, count=4, timeout=5000, interval=10, quiet=False, size=64):
         if finish:
             break
 
-        utime.sleep_ms(1)
+        time.sleep_ms(1)
         t += 1
 
     # close

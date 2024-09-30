@@ -2,8 +2,8 @@
 # Copyright (c) 2013-2023 OpenMV LLC. All rights reserved.
 # https://github.com/openmv/openmv/blob/master/LICENSE
 #
-import utime
-import ustruct
+import time
+import struct
 
 
 class PCA9685:
@@ -29,14 +29,14 @@ class PCA9685:
         self._write(0x00, (old_mode & 0x7F) | 0x10)  # Mode 1, sleep
         self._write(0xFE, prescale)  # Prescale
         self._write(0x00, old_mode)  # Mode 1
-        utime.sleep_us(5)
+        time.sleep_us(5)
         self._write(0x00, old_mode | 0xA1)  # Mode 1, autoincrement on
 
     def pwm(self, index, on=None, off=None):
         if on is None or off is None:
             data = self.i2c.readfrom_mem(self.address, 0x06 + 4 * index, 4)
-            return ustruct.unpack("<HH", data)
-        data = ustruct.pack("<HH", on, off)
+            return struct.unpack("<HH", data)
+        data = struct.pack("<HH", on, off)
         self.i2c.writeto_mem(self.address, 0x06 + 4 * index, data)
 
     def duty(self, index, value=None, invert=False):

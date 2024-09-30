@@ -12,7 +12,7 @@
 #
 # LoRa library for Arduino Portenta.
 
-from utime import sleep_ms, ticks_ms
+from time import sleep_ms, ticks_ms
 from pyb import UART, Pin
 
 MODE_ABP = 0
