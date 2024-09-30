@@ -11,9 +11,9 @@ import sensor
 import time
 from pyb import Pin, SPI
 
-cs = Pin("GPIO1", Pin.OUT_OD)
-rst = Pin("GPIO2", Pin.OUT_PP)
-rs = Pin("GPIO3", Pin.OUT_PP)
+cs = Pin("CS", Pin.OUT_OD)
+rst = Pin("D0", Pin.OUT_PP)
+rs = Pin("D1", Pin.OUT_PP)
 
 # NOTE: The SPI clock frequency will not always be the requested frequency. The hardware only supports
 # frequencies that are the bus frequency divided by a prescaler (which can be 2, 4, 8, 16, 32, 64, 128 or 256).
