@@ -4,62 +4,51 @@
 #
 # Bluetooth Blinky Example
 #
-# Use nRFConnect app from the App store, connect to the Nano and write 1/0 to control the LED.
+# Use nRFConnect app from the App store, connect to the board
+# "mpy-blinky", and write bool (True/False) to control the LED.
 
+import struct
+import asyncio
+import aioble
 import bluetooth
-import time
-from ble_advertising import advertising_payload
 from machine import LED
 from micropython import const
 
-_IRQ_CENTRAL_CONNECT = const(1)
-_IRQ_CENTRAL_DISCONNECT = const(2)
-_IRQ_GATTS_WRITE = const(3)
+# UUIDs
+_LED_CONTROL_UUID = bluetooth.UUID(0x1815)
+_LED_CONTROL_CHAR_UUID = bluetooth.UUID(0x2A56)
+_ADV_APPEARANCE_GENERIC_TAG = const(512)
+_ADV_INTERVAL_MS = 250_000
 
-_FLAG_READ = const(0x0002)
-_FLAG_WRITE = const(0x0008)
-_FLAG_NOTIFY = const(0x0010)
-_FLAG_INDICATE = const(0x0020)
+# LED setup
+led = LED("LED_BLUE")
 
-_SERVICE_UUID = bluetooth.UUID(0x1523)
-_LED_CHAR_UUID = (bluetooth.UUID(0x1525), _FLAG_WRITE)
-_LED_SERVICE = (
-    _SERVICE_UUID,
-    (_LED_CHAR_UUID,),
-)
+# GATT server
+led_service = aioble.Service(_LED_CONTROL_UUID)
+led_characteristic = aioble.Characteristic(led_service, _LED_CONTROL_CHAR_UUID, write=True, capture=True)
+aioble.register_services(led_service)
 
 
-class BLEBlinky:
-    def __init__(self, ble, name="mpy-blinky"):
-        self._ble = ble
-        self._ble.active(True)
-        self._ble.irq(self._irq)
-        ((self._handle,),) = self._ble.gatts_register_services((_LED_SERVICE,))
-        self._connections = set()
-        self._payload = advertising_payload(name=name, services=[_SERVICE_UUID])
-        self._advertise()
-        self.led = LED("LED_BLUE")
-
-    def _irq(self, event, data):
-        # Track connections so we can send notifications.
-        if event == _IRQ_CENTRAL_CONNECT:
-            conn_handle, _, _ = data
-            self._connections.add(conn_handle)
-        elif event == _IRQ_CENTRAL_DISCONNECT:
-            conn_handle, _, _ = data
-            self._connections.remove(conn_handle)
-            # Start advertising again to allow a new connection.
-            self._advertise()
-        elif event == _IRQ_GATTS_WRITE:
-            self.led.value(self._ble.gatts_read(data[-1])[0])
-
-    def _advertise(self, interval_us=500000):
-        self._ble.gap_advertise(interval_us, adv_data=self._payload)
-
-
-if __name__ == "__main__":
-    ble = bluetooth.BLE()
-    temp = BLEBlinky(ble)
-
+async def led_control_task():
     while True:
-        time.sleep_ms(1000)
+        conn, data = await led_characteristic.written()
+        led.value(struct.unpack("<B", data)[0])
+
+
+async def peripheral_task():
+    while True:
+        async with await aioble.advertise(
+            _ADV_INTERVAL_MS,
+            name="mpy-blinky",
+            services=[_LED_CONTROL_UUID],
+            appearance=_ADV_APPEARANCE_GENERIC_TAG,
+        ) as connection:
+            print("Connection from", connection.device)
+            await connection.disconnected()
+
+
+async def main():
+    await asyncio.gather(led_control_task(), peripheral_task())
+
+
+asyncio.run(main())
