@@ -1198,7 +1198,9 @@ __weak int sensor_set_lens_correction(int enable, int radi, int coef) {
 
 __weak int sensor_ioctl(int request, ... /* arg */) {
     // Disable any ongoing frame capture.
-    sensor_abort(true, false);
+    if (request & SENSOR_IOCTL_ABORT) {
+        sensor_abort(true, false);
+    }
 
     // Check if the control is supported.
     if (sensor.ioctl == NULL) {
