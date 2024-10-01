@@ -14,102 +14,47 @@
 
 #include "py/mphal.h"
 #include "omv_i2c.h"
-#include "platform.h"
+#include "omv_gpio.h"
+#include "vl53l5cx_api.h"
 
-uint8_t RdByte(VL53L5CX_Platform *platform, uint16_t regaddr, uint8_t *data)
-{
-    regaddr = __REVSH(regaddr);
+void vl53l5cx_reset(VL53L5CX_Platform *platform) {
+    omv_gpio_config(OMV_TOF_RESET_PIN, OMV_GPIO_MODE_OUTPUT, OMV_GPIO_PULL_NONE, OMV_GPIO_SPEED_LOW, -1);
+    omv_gpio_write(OMV_TOF_RESET_PIN, 1);
+    mp_hal_delay_ms(10);
+    omv_gpio_write(OMV_TOF_RESET_PIN, 0);
+    mp_hal_delay_ms(10);
+}
 
-    if (omv_i2c_write_bytes(platform->bus, platform->address, (uint8_t *) &regaddr, 2, OMV_I2C_XFER_NO_STOP) != 0) {
-        return -1;
+void vl53l5cx_swap(uint8_t *buf, uint16_t size) {
+    for (size_t i=0; i<size; i++) {
+        ((uint32_t *) buf)[i] = __REV(((uint32_t *) buf)[i]);
+    }
+}
+
+uint8_t vl53l5cx_read(VL53L5CX_Platform *platform, uint16_t addr, uint8_t *buf, uint32_t size) {
+    addr = __REVSH(addr);
+
+    if (omv_i2c_write_bytes(platform->bus, platform->address, (uint8_t *) &addr, 2, OMV_I2C_XFER_NO_STOP) != 0) {
+        return VL53L5CX_STATUS_ERROR;
     }
 
-    if (omv_i2c_read_bytes(platform->bus, platform->address, data, 1, OMV_I2C_XFER_NO_FLAGS) != 0) {
-        return -1;
+    if (omv_i2c_read_bytes(platform->bus, platform->address, buf, size, OMV_I2C_XFER_NO_FLAGS) != 0) {
+        return VL53L5CX_STATUS_ERROR;
     }
     return 0;
 }
 
-uint8_t WrByte(VL53L5CX_Platform *platform, uint16_t regaddr, uint8_t data)
-{
-    regaddr = __REVSH(regaddr);
+uint8_t vl53l5cx_write(VL53L5CX_Platform *platform, uint16_t addr, uint8_t *buf, uint32_t size) {
+    addr = __REVSH(addr);
 
-    if (omv_i2c_write_bytes(platform->bus, platform->address, (uint8_t*) &regaddr, 2, OMV_I2C_XFER_SUSPEND) != 0) {
-        return -1;
+    if (omv_i2c_write_bytes(platform->bus, platform->address, (uint8_t*) &addr, 2, OMV_I2C_XFER_SUSPEND) != 0) {
+        return VL53L5CX_STATUS_ERROR;
     }
 
-    if (omv_i2c_write_bytes(platform->bus, platform->address, &data, 1, OMV_I2C_XFER_NO_FLAGS) != 0) {
-        return -1;
+    if (omv_i2c_write_bytes(platform->bus, platform->address, buf, size, OMV_I2C_XFER_NO_FLAGS) != 0) {
+        return VL53L5CX_STATUS_ERROR;
     }
 
-    return 0;
-}
-
-uint8_t RdMulti(VL53L5CX_Platform *platform, uint16_t regaddr, uint8_t *data, uint32_t size)
-{
-    regaddr = __REVSH(regaddr);
-
-    if (omv_i2c_write_bytes(platform->bus, platform->address, (uint8_t *) &regaddr, 2, OMV_I2C_XFER_NO_STOP) != 0) {
-        return -1;
-    }
-
-    if (omv_i2c_read_bytes(platform->bus, platform->address, data, size, OMV_I2C_XFER_NO_FLAGS) != 0) {
-        return -1;
-    }
-    return 0;
-}
-
-uint8_t WrMulti(VL53L5CX_Platform *platform, uint16_t regaddr, uint8_t *data, uint32_t size)
-{
-    regaddr = __REVSH(regaddr);
-
-    if (omv_i2c_write_bytes(platform->bus, platform->address, (uint8_t*) &regaddr, 2, OMV_I2C_XFER_SUSPEND) != 0) {
-        return -1;
-    }
-
-    if (omv_i2c_write_bytes(platform->bus, platform->address, data, size, OMV_I2C_XFER_NO_FLAGS) != 0) {
-        return -1;
-    }
-
-    return 0;
-}
-
-
-uint8_t Reset_Sensor( VL53L5CX_Platform *platform)
-{
-    uint8_t status = 0;
-    /* (Optional) Need to be implemented by customer. This function returns 0 if OK */
-    /* Set pin LPN to LOW */
-    /* Set pin AVDD to LOW */
-    /* Set pin VDDIO  to LOW */
-    WaitMs(platform, 100);
-
-    /* Set pin LPN of to HIGH */
-    /* Set pin AVDD of to HIGH */
-    /* Set pin VDDIO of  to HIGH */
-    WaitMs(platform, 100);
-
-    return status;
-}
-
-void SwapBuffer(uint8_t *buffer, uint16_t size)
-{
-    uint32_t i, tmp;
-    /* Example of possible implementation using <string.h> */
-    for(i = 0; i < size; i = i + 4) {
-        tmp = (
-                buffer[i]<<24)
-            |(buffer[i+1]<<16)
-            |(buffer[i+2]<<8)
-            |(buffer[i+3]);
-
-        memcpy(&(buffer[i]), &tmp, 4);
-    }
-}
-
-uint8_t WaitMs(VL53L5CX_Platform *platform, uint32_t ms)
-{
-    mp_hal_delay_ms(ms);
     return 0;
 }
 #endif // #if (OMV_TOF_VL53L5CX_ENABLE == 1)
