@@ -2,17 +2,13 @@
 # Copyright (c) 2013-2023 OpenMV LLC. All rights reserved.
 # https://github.com/openmv/openmv/blob/master/LICENSE
 #
-# Time of Flight overlay Demo
-#
-# This example shows off how to overlay a depth map onto
-# OpenMV Cam's live video output from the main camera.
+# Time of flight camera Demo.
 
 import image
 import time
 import tof
 
 IMAGE_SCALE = 10  # Scale image to 10x.
-drawing_hint = image.BILINEAR  # or image.BILINEAR or 0 (nearest neighbor)
 
 # Initialize the ToF sensor
 tof.init()  # Auto-detects the connected sensor.
@@ -25,15 +21,17 @@ while True:
 
     try:
         img = tof.snapshot(
+            vflip=True,
+            hmirror=True,
             x_scale=IMAGE_SCALE,
             y_scale=IMAGE_SCALE,
-            color_palette=tof.PALETTE_IRONBOW,
-            hint=drawing_hint,
-            copy_to_fb=True,
+            hint=image.BILINEAR,
             scale=(0, 4000),
+            copy_to_fb=True,
+            color_palette=tof.PALETTE_IRONBOW,
         )
-    except OSError:
-        continue
+        img.flush()
+    except RuntimeError as e:
+        tof.reset()
 
-    # Print FPS.
     print(clock.fps())
