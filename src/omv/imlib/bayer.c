@@ -316,8 +316,8 @@ static inline v2x_row_ptrs_t vdebayer_quarter_rowptrs_init(const image_t *src, i
 }
 
 static inline v128_predicate_t vdebayer_load_pred(const image_t *src, int32_t x) {
-    // Load 1x to 4x 32-bit rows overlapping by 2 pixels. This creates a 6 pixel overlap.
-    return vpredicate_8(src->w - x + 6);
+    // Load 1x to 4x 32-bit rows overlapping by 2 pixels.
+    return vpredicate_8(src->w - x + (VBAYER_X_STRIDE - 2));
 }
 
 static inline v128_predicate_t vdebayer_store_pred(int32_t width, int32_t x) {
