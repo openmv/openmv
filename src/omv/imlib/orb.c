@@ -1,52 +1,45 @@
 /*
- * This file is part of the OpenMV project.
+ * SPDX-License-Identifier: BSD-3-Clause
  *
- * Copyright (c) 2013-2021 Ibrahim Abdelkader <iabdalkader@openmv.io>
- * Copyright (c) 2013-2021 Kwabena W. Agyeman <kwagyeman@openmv.io>
+ * Copyright (c) 2009, Willow Garage, Inc.
+ * Copyright (C) 2013-2024 OpenMV, LLC.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ *
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above
+ *    copyright notice, this list of conditions and the following
+ *    disclaimer in the documentation and/or other materials provided
+ *    with the distribution.
+ * 3. Neither the name of the Willow Garage nor the names of its
+ *    contributors may be used to endorse or promote products derived
+ *    from this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+ * FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+ * COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+ * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+ * BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+ * LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+ * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+ * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
  *
  * ORB keypoints descriptor based on OpenCV ORB detector.
- * Software License Agreement (BSD License)
- *
- *  Copyright (c) 2009, Willow Garage, Inc. All rights reserved.
- *
- *  Redistribution and use in source and binary forms, with or without
- *  modification, are permitted provided that the following conditions
- *  are met:
- *
- *   * Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer.
- *   * Redistributions in binary form must reproduce the above
- *     copyright notice, this list of conditions and the following
- *     disclaimer in the documentation and/or other materials provided
- *     with the distribution.
- *   * Neither the name of the Willow Garage nor the names of its
- *     contributors may be used to endorse or promote products derived
- *     from this software without specific prior written permission.
- *
- *  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- *  "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- *  LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
- *  FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
- *  COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
- *  INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
- *  BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
- *  LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
- *  CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
- *  LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
- *  ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- *  POSSIBILITY OF SUCH DAMAGE.
  */
-#include <stdio.h>
-#include <string.h>
-#include <stdint.h>
-#include <stdbool.h>
+#include "imlib.h"
+#if defined(IMLIB_ENABLE_FIND_KEYPOINTS)
 #include "fmath.h"
 #include "arm_math.h"
-#include "imlib.h"
 #include "xalloc.h"
 #include "fb_alloc.h"
 #include "file_utils.h"
-#ifdef IMLIB_ENABLE_FIND_KEYPOINTS
 
 #define PATCH_SIZE     (31) // 31x31 pixels
 #define KDESC_SIZE     (32) // 32 bytes
@@ -415,11 +408,13 @@ array_t *orb_find_keypoints(image_t *img, bool normalized, int threshold,
         #ifdef IMLIB_ENABLE_FAST
         if (corner_detector == CORNER_FAST) {
             fast_detect(&img_scaled, kpts, threshold, &roi_scaled);
-        } else
+        }
         #endif
-        {
+        #ifdef IMLIB_ENABLE_AGAST
+        if (corner_detector == CORNER_AGAST) {
             agast_detect(&img_scaled, kpts, threshold, &roi_scaled);
         }
+        #endif
 
         for (int k = kpts_index; k < array_length(kpts); k++, kpts_index++) {
             // Set keypoint octave/scale
@@ -839,4 +834,4 @@ float orb_cluster_dist(int cx, int cy, void *kp_in) {
     return fast_sqrtf(sum);
 
 }
-#endif //IMLIB_ENABLE_FIND_KEYPOINTS
+#endif // IMLIB_ENABLE_FIND_KEYPOINTS
