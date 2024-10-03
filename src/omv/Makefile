@@ -46,6 +46,7 @@ SRCS += $(addprefix sensors/,   \
 	gc2145.c                    \
 	genx320.c                   \
 	pag7920.c                   \
+	pag7936.c                   \
 	paj6100.c                   \
 	frogeye2020.c               \
    )

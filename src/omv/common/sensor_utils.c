@@ -27,6 +27,7 @@
 #include "hm01b0.h"
 #include "hm0360.h"
 #include "pag7920.h"
+#include "pag7936.h"
 #include "paj6100.h"
 #include "frogeye2020.h"
 #include "gc2145.h"
@@ -255,10 +256,17 @@ static int sensor_detect() {
 
             #if (OMV_PAG7920_ENABLE == 1)
             case PAG7920_SLV_ADDR:
-                omv_i2c_readw(&sensor.i2c_bus, slv_addr, ON_CHIP_ID, (uint16_t *) &sensor.chip_id);
-                sensor.chip_id = (sensor.chip_id << 8) | (sensor.chip_id >> 8);
+                omv_i2c_readw2(&sensor.i2c_bus, slv_addr, PIXART_CHIP_ID, (uint16_t *) &sensor.chip_id);
+                sensor.chip_id = ((sensor.chip_id << 8) | (sensor.chip_id >> 8)) & 0xFFFF;
                 return slv_addr;
             #endif // (OMV_PAG7920_ENABLE == 1)
+
+            #if (OMV_PAG7936_ENABLE == 1)
+            case PAG7936_SLV_ADDR:
+                omv_i2c_readw2(&sensor.i2c_bus, slv_addr, PIXART_CHIP_ID, (uint16_t *) &sensor.chip_id);
+                sensor.chip_id = ((sensor.chip_id << 8) | (sensor.chip_id >> 8)) & 0xFFFF;
+                return slv_addr;
+            #endif // (OMV_PAG7936_ENABLE == 1)
         }
     }
 
@@ -471,6 +479,15 @@ int sensor_probe_init(uint32_t bus_id, uint32_t bus_speed) {
             init_ret = pag7920_init(&sensor);
             break;
         #endif // (OMV_PAG7920_ENABLE == 1)
+
+        #if (OMV_PAG7936_ENABLE == 1)
+        case PAG7936_ID:
+            if (sensor_set_xclk_frequency(OMV_PAG7936_XCLK_FREQ) != 0) {
+                return SENSOR_ERROR_TIM_INIT_FAILED;
+            }
+            init_ret = pag7936_init(&sensor);
+            break;
+        #endif // (OMV_PAG7936_ENABLE == 1)
 
         #if (OMV_PAJ6100_ENABLE == 1)
         case PAJ6100_ID:
