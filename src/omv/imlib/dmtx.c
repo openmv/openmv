@@ -1,41 +1,43 @@
+/*
+ * Copyright 2005-2016 Mike Laughton, Vadim A. Misbakh-Soloviov and others.
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ *
+ * 1. Redistributions of source code must retain the above copyright notice,
+ *    this list of conditions and the following disclaimer.
+ *
+ * 2. Redistributions in binary form must reproduce the above copyright notice,
+ *    this list of conditions and the following disclaimer in the documentation
+ *    and/or other materials provided with the distribution.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
+ *
+ * The views and conclusions contained in the software and documentation are
+ * those of the authors and should not be interpreted as representing official
+ * policies, either expressed or implied, of the libdmtx project.
+ *
+ * --------------------------------------------------------------------------------
+ *
+ * ALTERNATE TERMS
+ *
+ * Redistributions in binary form, with or without modification, are permitted
+ * without including the above copyright notice, list of conditions, and
+ * disclaimer if express written permission has been obtained from Dragonfly
+ * Logic, Inc.
+ */
 // *INDENT-OFF*
-
-/* Copyright 2005-2016 Mike Laughton, Vadim A. Misbakh-Soloviov and others.
-All rights reserved.
-
-Redistribution and use in source and binary forms, with or without modification,
-are permitted provided that the following conditions are met:
-
-  1. Redistributions of source code must retain the above copyright notice,
-     this list of conditions and the following disclaimer.
-
-  2. Redistributions in binary form must reproduce the above copyright notice,
-     this list of conditions and the following disclaimer in the documentation
-     and/or other materials provided with the distribution.
-
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
-ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
-ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
-(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
-LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
-ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
-The views and conclusions contained in the software and documentation are those
-of the authors and should not be interpreted as representing official policies,
-either expressed or implied, of the libdmtx project.
-
---------------------------------------------------------------------------------
-
-ALTERNATE TERMS
-
-Redistributions in binary form, with or without modification, are permitted
-without including the above copyright notice, list of conditions, and disclaimer
-if express written permission has been obtained from Dragonfly Logic, Inc.
-*/
 #include <float.h>
 #include <stdio.h>
 #include "imlib.h"
@@ -84,20 +86,6 @@ if express written permission has been obtained from Dragonfly Logic, Inc.
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 //////// "dmtx.h"
 ////////////////////////////////////////////////////////////////////////////////////////////////////
-
-/**
- * libdmtx - Data Matrix Encoding/Decoding Library
- * Copyright 2008, 2009 Mike Laughton. All rights reserved.
- *
- * See LICENSE file in the main project directory for full
- * terms of use and distribution.
- *
- * Contact: Mike Laughton <mike@dragonflylogic.com>
- *
- * \file dmtx.h
- * \brief Main libdmtx header
- */
-
 #ifndef M_PI
 #define M_PI      3.14159265358979323846
 #endif
@@ -584,20 +572,6 @@ extern char *dmtxVersion(void);
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 //////// "dmtxstatic.h"
 ////////////////////////////////////////////////////////////////////////////////////////////////////
-
-/**
- * libdmtx - Data Matrix Encoding/Decoding Library
- * Copyright 2008, 2009 Mike Laughton. All rights reserved.
- *
- * See LICENSE file in the main project directory for full
- * terms of use and distribution.
- *
- * Contact: Mike Laughton <mike@dragonflylogic.com>
- *
- * \file dmtxstatic.h
- * \brief Static header
- */
-
 #define DmtxAlmostZero          0.000001
 #define DmtxAlmostInfinity            -1
 
@@ -807,25 +781,9 @@ static int rHvY[] =
        128,  124,  120,  116,  112,  108,  104,  100,   96,   92,   88,   83,   79,   75,   71,
         66,   62,   58,   53,   49,   44,   40,   36,   31,   27,   22,   18,   13,    9,    4 };
 
-/*@ -charint @*/
-
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 //////// "dmtx.c"
 ////////////////////////////////////////////////////////////////////////////////////////////////////
-
-/**
- * libdmtx - Data Matrix Encoding/Decoding Library
- * Copyright 2008, 2009 Mike Laughton. All rights reserved.
- *
- * See LICENSE file in the main project directory for full
- * terms of use and distribution.
- *
- * Contact: Mike Laughton <mike@dragonflylogic.com>
- *
- * \file dmtx.c
- * \brief Main libdmtx source file
- */
-
 #ifndef CALLBACK_POINT_PLOT
 #define CALLBACK_POINT_PLOT(a,b,c,d)
 #endif
@@ -855,20 +813,6 @@ dmtxVersion(void)
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 //////// "dmtxencodebase256.c"
 ////////////////////////////////////////////////////////////////////////////////////////////////////
-
-/**
- * libdmtx - Data Matrix Encoding/Decoding Library
- * Copyright 2011 Mike Laughton. All rights reserved.
- *
- * See LICENSE file in the main project directory for full
- * terms of use and distribution.
- *
- * Contact: Mike Laughton <mike@dragonflylogic.com>
- *
- * \file dmtxencodebase256.c
- * \brief Base 256 encoding rules
- */
-
 /**
  * \brief  Unrandomize 255 state
  * \param  value
@@ -894,21 +838,6 @@ UnRandomize255State(unsigned char value, int idx)
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 //////// "dmtxdecode.c"
 ////////////////////////////////////////////////////////////////////////////////////////////////////
-
-/**
- * libdmtx - Data Matrix Encoding/Decoding Library
- * Copyright 2008, 2009 Mike Laughton. All rights reserved.
- * Copyright 2009 Mackenzie Straight. All rights reserved.
- *
- * See LICENSE file in the main project directory for full
- * terms of use and distribution.
- *
- * Contact: Mike Laughton <mike@dragonflylogic.com>
- *
- * \file dmtxdecode.c
- * \brief Decode regions
- */
-
 /**
  * \brief  Initialize decode struct with default values
  * \param  img
@@ -1603,19 +1532,6 @@ PopulateArrayFromMatrix(DmtxDecode *dec, DmtxRegion *reg, DmtxMessage *msg)
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 //////// "dmtxdecodescheme.c"
 ////////////////////////////////////////////////////////////////////////////////////////////////////
-
-/**
- * libdmtx - Data Matrix Encoding/Decoding Library
- * Copyright 2008, 2009 Mike Laughton. All rights reserved.
- *
- * See LICENSE file in the main project directory for full
- * terms of use and distribution.
- *
- * Contact: Mike Laughton <mike@dragonflylogic.com>
- *
- * \file dmtxdecodescheme.c
- */
-
 /**
  * \brief  Translate encoded data stream into final output
  * \param  msg
@@ -1745,10 +1661,6 @@ PushOutputC40TextWord(DmtxMessage *msg, C40TextState *state, int value)
    state->upperShift = DmtxFalse;
 }
 
-/**
- *
- *
- */
 static void
 PushOutputMacroHeader(DmtxMessage *msg, int macroType)
 {
@@ -1767,10 +1679,6 @@ PushOutputMacroHeader(DmtxMessage *msg, int macroType)
    PushOutputWord(msg, 29); /* ASCII GS */
 }
 
-/**
- *
- *
- */
 static void
 PushOutputMacroTrailer(DmtxMessage *msg)
 {
@@ -2109,20 +2017,6 @@ DecodeSchemeBase256(DmtxMessage *msg, unsigned char *ptr, unsigned char *dataEnd
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 //////// "dmtxmessage.c"
 ////////////////////////////////////////////////////////////////////////////////////////////////////
-
-/**
- * libdmtx - Data Matrix Encoding/Decoding Library
- * Copyright 2008, 2009 Mike Laughton. All rights reserved.
- *
- * See LICENSE file in the main project directory for full
- * terms of use and distribution.
- *
- * Contact: Mike Laughton <mike@dragonflylogic.com>
- *
- * \file dmtxmessage.c
- * \brief Data message handling
- */
-
 /**
  * \brief  Allocate memory for message
  * \param  sizeIdx
@@ -2211,20 +2105,6 @@ dmtxMessageDestroy(DmtxMessage **msg)
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 //////// "dmtxregion.c"
 ////////////////////////////////////////////////////////////////////////////////////////////////////
-
-/**
- * libdmtx - Data Matrix Encoding/Decoding Library
- * Copyright 2008, 2009 Mike Laughton. All rights reserved.
- *
- * See LICENSE file in the main project directory for full
- * terms of use and distribution.
- *
- * Contact: Mike Laughton <mike@dragonflylogic.com>
- *
- * \file dmtxregion.c
- * \brief Detect barcode regions
- */
-
 #define DMTX_HOUGH_RES 180
 
 /**
@@ -2350,10 +2230,6 @@ dmtxRegionScanPixel(DmtxDecode *dec, int x, int y)
    return dmtxRegionCreate(&reg);
 }
 
-/**
- *
- *
- */
 static DmtxPointFlow
 MatrixRegionSeekEdge(DmtxDecode *dec, DmtxPixelLoc loc)
 {
@@ -2395,10 +2271,6 @@ MatrixRegionSeekEdge(DmtxDecode *dec, DmtxPixelLoc loc)
    return dmtxBlankEdge;
 }
 
-/**
- *
- *
- */
 static DmtxPassFail
 MatrixRegionOrientation(DmtxDecode *dec, DmtxRegion *reg, DmtxPointFlow begin)
 {
@@ -2558,10 +2430,6 @@ MatrixRegionOrientation(DmtxDecode *dec, DmtxRegion *reg, DmtxPointFlow begin)
    return DmtxPass;
 }
 
-/**
- *
- *
- */
 static long
 DistanceSquared(DmtxPixelLoc a, DmtxPixelLoc b)
 {
@@ -2573,10 +2441,6 @@ DistanceSquared(DmtxPixelLoc a, DmtxPixelLoc b)
    return (xDelta * xDelta) + (yDelta * yDelta);
 }
 
-/**
- *
- *
- */
 extern DmtxPassFail
 dmtxRegionUpdateCorners(DmtxDecode *dec, DmtxRegion *reg, DmtxVector2 p00,
       DmtxVector2 p10, DmtxVector2 p11, DmtxVector2 p01)
@@ -2676,10 +2540,6 @@ dmtxRegionUpdateCorners(DmtxDecode *dec, DmtxRegion *reg, DmtxVector2 p00,
    return DmtxPass;
 }
 
-/**
- *
- *
- */
 extern DmtxPassFail
 dmtxRegionUpdateXfrms(DmtxDecode *dec, DmtxRegion *reg)
 {
@@ -2766,10 +2626,6 @@ dmtxRegionUpdateXfrms(DmtxDecode *dec, DmtxRegion *reg)
    return DmtxPass;
 }
 
-/**
- *
- *
- */
 static float
 RightAngleTrueness(DmtxVector2 c0, DmtxVector2 c1, DmtxVector2 c2, float angle)
 {
@@ -3068,10 +2924,6 @@ CountJumpTally(DmtxDecode *dec, DmtxRegion *reg, int xStart, int yStart, DmtxDir
    return jumpCount;
 }
 
-/**
- *
- *
- */
 static DmtxPointFlow
 GetPointFlow(DmtxDecode *dec, int colorPlane, DmtxPixelLoc loc, int arrive)
 {
@@ -3190,10 +3042,6 @@ FindStrongestNeighbor(DmtxDecode *dec, DmtxPointFlow center, int sign)
    return (strongIdx == DmtxUndefined) ? dmtxBlankEdge : flow[strongIdx];
 }
 
-/**
- *
- *
- */
 static DmtxFollow
 FollowSeek(DmtxDecode *dec, DmtxRegion *reg, int seek)
 {
@@ -3217,10 +3065,6 @@ FollowSeek(DmtxDecode *dec, DmtxRegion *reg, int seek)
    return follow;
 }
 
-/**
- *
- *
- */
 static DmtxFollow
 FollowSeekLoc(DmtxDecode *dec, DmtxPixelLoc loc)
 {
@@ -3235,11 +3079,6 @@ FollowSeekLoc(DmtxDecode *dec, DmtxPixelLoc loc)
    return follow;
 }
 
-
-/**
- *
- *
- */
 static DmtxFollow
 FollowStep(DmtxDecode *dec, DmtxRegion *reg, DmtxFollow followBeg, int sign)
 {
@@ -3280,10 +3119,6 @@ FollowStep(DmtxDecode *dec, DmtxRegion *reg, DmtxFollow followBeg, int sign)
    return follow;
 }
 
-/**
- *
- *
- */
 static DmtxFollow
 FollowStep2(DmtxDecode *dec, DmtxFollow followBeg, int sign)
 {
@@ -3500,10 +3335,6 @@ TrailBlazeGapped(DmtxDecode *dec, DmtxRegion *reg, DmtxBresLine line, int stream
    return steps;
 }
 
-/**
- *
- *
- */
 static int
 TrailClear(DmtxDecode *dec, DmtxRegion *reg, int clearMask)
 {
@@ -3525,10 +3356,6 @@ TrailClear(DmtxDecode *dec, DmtxRegion *reg, int clearMask)
    return clears;
 }
 
-/**
- *
- *
- */
 static DmtxBestLine
 FindBestSolidLine(DmtxDecode *dec, DmtxRegion *reg, int step0, int step1, int streamDir, int houghAvoid)
 {
@@ -3646,10 +3473,6 @@ FindBestSolidLine(DmtxDecode *dec, DmtxRegion *reg, int step0, int step1, int st
    return line;
 }
 
-/**
- *
- *
- */
 static DmtxBestLine
 FindBestSolidLine2(DmtxDecode *dec, DmtxPixelLoc loc0, int tripSteps, int sign, int houghAvoid)
 {
@@ -3737,10 +3560,6 @@ FindBestSolidLine2(DmtxDecode *dec, DmtxPixelLoc loc0, int tripSteps, int sign, 
    return line;
 }
 
-/**
- *
- *
- */
 static DmtxPassFail
 FindTravelLimits(DmtxDecode *dec, DmtxRegion *reg, DmtxBestLine *line)
 {
@@ -3841,10 +3660,6 @@ FindTravelLimits(DmtxDecode *dec, DmtxRegion *reg, DmtxBestLine *line)
    return DmtxPass;
 }
 
-/**
- *
- *
- */
 static DmtxPassFail
 MatrixRegionAlignCalibEdge(DmtxDecode *dec, DmtxRegion *reg, int edgeLoc)
 {
@@ -3920,10 +3735,6 @@ MatrixRegionAlignCalibEdge(DmtxDecode *dec, DmtxRegion *reg, int edgeLoc)
    return DmtxPass;
 }
 
-/**
- *
- *
- */
 static DmtxBresLine
 BresLineInit(DmtxPixelLoc loc0, DmtxPixelLoc loc1, DmtxPixelLoc locInside)
 {
@@ -3988,10 +3799,6 @@ BresLineInit(DmtxPixelLoc loc0, DmtxPixelLoc loc1, DmtxPixelLoc locInside)
    return line;
 }
 
-/**
- *
- *
- */
 static DmtxPassFail
 BresLineGetStep(DmtxBresLine line, DmtxPixelLoc target, int *travel, int *outward)
 {
@@ -4012,10 +3819,6 @@ BresLineGetStep(DmtxBresLine line, DmtxPixelLoc target, int *travel, int *outwar
    return DmtxPass;
 }
 
-/**
- *
- *
- */
 static DmtxPassFail
 BresLineStep(DmtxBresLine *line, int travel, int outward)
 {
@@ -4079,10 +3882,6 @@ BresLineStep(DmtxBresLine *line, int travel, int outward)
    return DmtxPass;
 }
 
-/**
- *
- *
- */
 #ifdef NOTDEFINED
 static void
 WriteDiagnosticImage(DmtxDecode *dec, DmtxRegion *reg, char *imagePath)
@@ -4167,20 +3966,6 @@ WriteDiagnosticImage(DmtxDecode *dec, DmtxRegion *reg, char *imagePath)
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 //////// "dmtxsymbol.c"
 ////////////////////////////////////////////////////////////////////////////////////////////////////
-
-/**
- * libdmtx - Data Matrix Encoding/Decoding Library
- * Copyright 2008, 2009 Mike Laughton. All rights reserved.
- *
- * See LICENSE file in the main project directory for full
- * terms of use and distribution.
- *
- * Contact: Mike Laughton <mike@dragonflylogic.com>
- *
- * \file dmtxsymbol.c
- * \brief Data Matrix symbol attributes
- */
-
 /**
  * \brief  Retrieve property based on symbol size
  * \param  attribute
@@ -4309,20 +4094,6 @@ dmtxGetBlockDataSize(int sizeIdx, int blockIdx)
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 //////// "dmtxplacemod.c"
 ////////////////////////////////////////////////////////////////////////////////////////////////////
-
-/**
- * libdmtx - Data Matrix Encoding/Decoding Library
- * Copyright 2008, 2009 Mike Laughton. All rights reserved.
- *
- * See LICENSE file in the main project directory for full
- * terms of use and distribution.
- *
- * Contact: Mike Laughton <mike@dragonflylogic.com>
- *
- * \file dmtxplacemod.c
- * \brief Data Matrix module placement
- */
-
 /**
  * receives symbol row and col and returns status
  * DmtxModuleOn / !DmtxModuleOn (DmtxModuleOff)
@@ -4593,30 +4364,6 @@ PlaceModule(unsigned char *modules, int mappingRows, int mappingCols, int row, i
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 //////// "dmtxreedsol.c"
 ////////////////////////////////////////////////////////////////////////////////////////////////////
-
-/**
- * libdmtx - Data Matrix Encoding/Decoding Library
- * Copyright 2011 Mike Laughton. All rights reserved.
- *
- * See LICENSE file in the main project directory for full
- * terms of use and distribution.
- *
- * ---------------------------------------------------------
- * Portions of this file were derived from the Reed-Solomon
- * encoder/decoder released by Simon Rockliff in June 1991.
- * ---------------------------------------------------------
- *
- * Contact: Mike Laughton <mike@dragonflylogic.com>
- *
- * \file dmtxreedsol.c
- */
-
-/**
- * TODO:
- *   o try doxygen using using the JavaDoc style and JAVADOC_AUTOBRIEF = YES
- *   o switch doxygen to simplified syntax, and using "\file" instead of "@file"
- */
-
 #define NN                      255
 #define MAX_ERROR_WORD_COUNT     68
 
@@ -5003,20 +4750,6 @@ RsRepairErrors(DmtxByteList *rec, const DmtxByteList *loc, const DmtxByteList *e
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 //////// "dmtxscangrid.c"
 ////////////////////////////////////////////////////////////////////////////////////////////////////
-
-/**
- * libdmtx - Data Matrix Encoding/Decoding Library
- * Copyright 2008, 2009 Mike Laughton. All rights reserved.
- *
- * See LICENSE file in the main project directory for full
- * terms of use and distribution.
- *
- * Contact: Mike Laughton <mike@dragonflylogic.com>
- *
- * \file dmtxscangrid.c
- * \brief Scan grid tracking
- */
-
 /**
  * \brief  Initialize scan grid pattern
  * \param  dec
@@ -5183,20 +4916,6 @@ SetDerivedFields(DmtxScanGrid *grid)
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 //////// "dmtximage.c"
 ////////////////////////////////////////////////////////////////////////////////////////////////////
-
-/**
- * libdmtx - Data Matrix Encoding/Decoding Library
- * Copyright 2008, 2009 Mike Laughton. All rights reserved.
- *
- * See LICENSE file in the main project directory for full
- * terms of use and distribution.
- *
- * Contact: Mike Laughton <mike@dragonflylogic.com>
- *
- * \file dmtximage.c
- * \brief Image handling
- */
-
 /**
  * libdmtx stores image data as a large one-dimensional array of packed pixels,
  * reading from the array when scanning barcodes and writing to it when creating
@@ -5617,23 +5336,6 @@ GetBitsPerPixel(int pack)
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 //////// "dmtxbytelist.c"
 ////////////////////////////////////////////////////////////////////////////////////////////////////
-
-/**
- * libdmtx - Data Matrix Encoding/Decoding Library
- * Copyright 2010 Mike Laughton. All rights reserved.
- *
- * See LICENSE file in the main project directory for full
- * terms of use and distribution.
- *
- * Contact: Mike Laughton <mike@dragonflylogic.com>
- *
- * \file file.c
- */
-
-/**
- *
- *
- */
 extern DmtxByteList
 dmtxByteListBuild(DmtxByte *storage, int capacity)
 {
@@ -5761,20 +5463,6 @@ dmtxByteListPrint(DmtxByteList *list, char *prefix)
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 //////// "dmtxvector2.c"
 ////////////////////////////////////////////////////////////////////////////////////////////////////
-
-/**
-* libdmtx - Data Matrix Encoding/Decoding Library
-* Copyright 2008, 2009 Mike Laughton. All rights reserved.
-*
-* See LICENSE file in the main project directory for full
-* terms of use and distribution.
-*
-* Contact: Mike Laughton <mike@dragonflylogic.com>
-*
-* \file dmtxvector2.c
-* \brief 2D Vector math
-*/
-
 /**
 *
 *
@@ -5974,20 +5662,6 @@ dmtxPointAlongRay2(DmtxVector2 *point, const DmtxRay2 *r, float t)
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 //////// "dmtxmatrix3.c"
 ////////////////////////////////////////////////////////////////////////////////////////////////////
-
-/**
- * libdmtx - Data Matrix Encoding/Decoding Library
- * Copyright 2008, 2009 Mike Laughton. All rights reserved.
- *
- * See LICENSE file in the main project directory for full
- * terms of use and distribution.
- *
- * Contact: Mike Laughton <mike@dragonflylogic.com>
- *
- * \file dmtxmatrix3.c
- * \brief 2D Matrix (3x3) math
- */
-
 /**
  * \brief  Copy matrix contents
  * \param  m0 Copy target

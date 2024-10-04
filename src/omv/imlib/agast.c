@@ -11,9 +11,8 @@
  * See the GNU General Public License for more details. You should have received a copy of the
  * GNU General Public License along with this program. If not, see http://www.gnu.org/licenses/.
  */
-#include <stdio.h>
-#include <stdint.h>
 #include "imlib.h"
+#if defined(IMLIB_ENABLE_AGAST) && !defined(OMV_NO_GPL)
 #include "xalloc.h"
 #include "fb_alloc.h"
 #include "gc.h"
@@ -1291,3 +1290,5 @@ static int agast58_score(const unsigned char* p, int bstart)
 	}
 }
 // *INDENT-ON*
+#endif // defined(IMLIB_ENABLE_AGAST) && !defined(OMV_NO_GPL)
+
