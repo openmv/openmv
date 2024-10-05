@@ -191,7 +191,6 @@ TRACE_BOOT_BANK_A                                  = 0x96
 TRACE_BOOT_BANK_B                                  = 0x97
 TRACE_BANK_A_BOOTED                                = 0x98
 TRACE_BANK_B_BOOTED                                = 0x99
-
 TRACE_PARTIAL_TRIMMING                             = 0x9A
 TRACE_FULL_TRIMMING                                = 0x9B
 TRACE_TRIM55                                       = 0x9C
@@ -210,6 +209,8 @@ TRACE_BISR_ENABLE                                  = 0xA7
 TRACE_BISR_FINISHED                                = 0xA8
 TRACE_BISR_REPAIR_FAILED                           = 0xA9
 
+TRACE_RESUME_FROM_STANDBY                          = 0xAA
+
 TRACE_STOP_ENABLE_END                              = 0xB0
 TRACE_OFF_HANDLER                                  = 0xB1
 TRACE_STOP_VOTES_OK                                = 0xB2
@@ -217,6 +218,25 @@ TRACE_SE_PPU_INTR                                  = 0xB3
 TRACE_ES0_PPU_INTR                                 = 0xB4
 TRACE_ES1_PPU_INTR                                 = 0xB5
 TRACE_STOP_BEGIN                                   = 0xB6
+TRACE_STOP_0                                       = 0xB7
+TRACE_STOP_1                                       = 0xB8
+TRACE_STOP_2                                       = 0xB9
+TRACE_STOP_3                                       = 0xBA
+TRACE_STOP_4                                       = 0xBB
+TRACE_STOP_5                                       = 0xBC
+TRACE_STOP_6                                       = 0xBD
+TRACE_STOP_7                                       = 0xBE
+TRACE_STOP_8                                       = 0xBF
+
+TRACE_STOP_9                                       = 0xD0
+TRACE_STOP_10                                      = 0xD1
+TRACE_STOP_11                                      = 0xD2
+TRACE_STOP_12                                      = 0xD3
+TRACE_STOP_13                                      = 0xD4
+TRACE_STOP_14                                      = 0xD5
+TRACE_STOP_15                                      = 0xD6
+
+
 
 # Marker trace translation
 marker_lookup = {
@@ -381,13 +401,31 @@ marker_lookup = {
     TRACE_BISR_ENABLE                              : 'BISR enable',
     TRACE_BISR_FINISHED                            : 'BISR finished',
     TRACE_BISR_REPAIR_FAILED                       : 'BISR repair failed',
+    TRACE_RESUME_FROM_STANDBY                      : 'Resume from STANDBY mode',
+    TRACE_BISR_REPAIR_FAILED                       : 'BISR repair failed',
     TRACE_STOP_ENABLE_END                          : 'Stop mode enable END',
     TRACE_OFF_HANDLER                              : 'OFF mode handler',
     TRACE_STOP_VOTES_OK                            : 'STOP votes OK',
     TRACE_SE_PPU_INTR                              : 'SE PPU interrupt',
     TRACE_ES0_PPU_INTR                             : 'ES0 PPU interrupt',
     TRACE_ES1_PPU_INTR                             : 'ES1 PPU interrupt',
-    TRACE_STOP_BEGIN                               : 'STOP mode settings begin'
+    TRACE_STOP_BEGIN                               : 'STOP mode settings begin',
+    TRACE_STOP_0                                   : 'STOP_0',
+    TRACE_STOP_1                                   : 'STOP_1',
+    TRACE_STOP_2                                   : 'STOP_2',
+    TRACE_STOP_3                                   : 'STOP_3',
+    TRACE_STOP_4                                   : 'STOP_4',
+    TRACE_STOP_5                                   : 'STOP_5',
+    TRACE_STOP_6                                   : 'STOP_6',
+    TRACE_STOP_7                                   : 'STOP_7',
+    TRACE_STOP_8                                   : 'STOP_8',
+    TRACE_STOP_9                                   : 'STOP_9',
+    TRACE_STOP_10                                  : 'STOP_10',
+    TRACE_STOP_11                                  : 'STOP_11',
+    TRACE_STOP_12                                  : 'STOP_12',
+    TRACE_STOP_13                                  : 'STOP_13',
+    TRACE_STOP_14                                  : 'STOP_14',
+    TRACE_STOP_15                                  : 'STOP_15'
 }
 
 service_id_lut = {

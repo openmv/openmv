@@ -1,4 +1,4 @@
-{
+{  
   "E7 (AE722F80F55D5LS) - 5.5 MRAM / 13.5 SRAM":{
     "featureSet" : "Fusion",
     "family" : "Ensemble",
@@ -31,7 +31,18 @@
     "wounding"  : "0x00D07FFB",
     "package"   : "SP-AE512F80F55D5LS",
     "offset"    : "offset-58"
-  },  
+  },
+  "E5 (AE512F80F5582AS) - 5.5 MRAM / 8.25 SRAM":{
+    "featureSet" : "Fusion",
+    "family" : "Ensemble",
+    "alif_offset" : "0x580000",
+    "app_size"  : "0x580000",
+    "mram_size" : "5.5", 
+    "sram_size" : "8.25",
+    "wounding"  : "0x00D07FFB",
+    "package"   : "SP-AE512F80F5582AS",
+    "offset"    : "offset-58"
+  },
   "E5 (AE512F80F55D5AS) - 5.5 MRAM / 13.5 SRAM":{
     "featureSet" : "Fusion",
     "family" : "Ensemble",
@@ -41,6 +52,17 @@
     "sram_size" : "13.5",
     "wounding"  : "0x00D07FFB",
     "package"   : "SP-AE512F80F55D5AS",
+    "offset"    : "offset-58"
+  },
+  "E5 (AE512F80F5582LS) - 5.5 MRAM / 8.25 SRAM":{
+    "featureSet" : "Fusion",
+    "family" : "Ensemble",
+    "alif_offset" : "0x580000",
+    "app_size"  : "0x580000",
+    "mram_size" : "5.5", 
+    "sram_size" : "8.25",
+    "wounding"  : "0x00D07FFB",
+    "package"   : "SP-AE512F80F5582LS",
     "offset"    : "offset-58"
   },
   "E3 (AE302F80F55D5LE) - 5.5 MRAM / 13.5 SRAM":{
@@ -53,7 +75,18 @@
     "wounding"  : "0x00D83FFB",
     "package"   : "SP-AE302F80F55D5LE",
     "offset"    : "offset-58"
-  },  
+  },
+  "E3 (AE302F80F5582LE) - 5.5 MRAM / 8.25 SRAM":{
+    "featureSet" : "Fusion",
+    "family" : "Ensemble",
+    "alif_offset" : "0x580000",
+    "app_size"  : "0x580000",
+    "mram_size" : "5.5", 
+    "sram_size" : "8.25",
+    "wounding"  : "0x00D83FFB",
+    "package"   : "SP-AE302F80F5582LE",
+    "offset"    : "offset-58"
+  },
   "E3 (AE302F80F55D5AE) - 5.5 MRAM / 13.5 SRAM":{
     "featureSet" : "Fusion",
     "family" : "Ensemble",
@@ -65,7 +98,18 @@
     "package"   : "SP-AE302F80F55D5AE",
     "offset"    : "offset-58"
   },
-    "E3 (AE302F80C1557LE) - 1.5 MRAM / 5.75 SRAM":{
+  "E3 (AE302F80F5582AE) - 5.5 MRAM / 8.25 SRAM":{
+    "featureSet" : "Fusion",
+    "family" : "Ensemble",
+    "alif_offset" : "0x580000",
+    "app_size"  : "0x580000",
+    "mram_size" : "5.5", 
+    "sram_size" : "8.25",
+    "wounding"  : "0x00D83FFB",
+    "package"   : "SP-AE302F80F5582AE",
+    "offset"    : "offset-58"
+  },
+  "E3 (AE302F80C1557LE) - 1.5 MRAM / 5.75 SRAM":{
     "featureSet" : "Fusion",
     "family" : "Ensemble",
     "alif_offset" : "0x180000",
@@ -86,7 +130,7 @@
     "wounding"  : "0x00D83FEA",
     "package"   : "SP-AE302F40C1537LE",
     "offset"    : "offset-18"
-  },
+  },  
   "E1 (AE101F4071542LH) - 1.5 MRAM / 4.5 SRAM":{
     "featureSet" : "Fusion",
     "family" : "Ensemble",

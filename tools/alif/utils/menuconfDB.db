@@ -1,5 +1,5 @@
 {
-    "get_mram_read" : {
+    "get_mram_read_action" : {
         "DEVICE_FEATURE_SET_REVISION": [
              "Fusion_A0"
         ]

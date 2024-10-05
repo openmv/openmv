@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+#pylint: disable=invalid-name,superfluous-parens,anomalous-unicode-escape-in-string
+#pylint: disable=import-error,wrong-import-position,wildcard-import,undefined-variable
 """
     updateSystemPackage.py
     
@@ -8,7 +10,6 @@
 
 import os
 import sys
-import signal
 import argparse
 sys.path.append("./isp")
 from serialport import serialPort
@@ -16,10 +17,9 @@ from serialport import COM_BAUD_RATE_MAXIMUM
 #import ispcommands
 from isp_core import *
 from isp_util import *
-
+import device_probe
 import utils.config
 from utils.config import *
-import device_probe
 
 # Define Version constant for each separate tool
 #  Version                  Feature
@@ -39,6 +39,9 @@ TOOL_VERSION ="0.26.000"
 EXIT_WITH_ERROR = 1
 
 def checkTargetWithSelection(targetDescription, targetRevision):
+    """
+        Check Target Device matches 
+    """
     partIsDifferent = False
     if targetDescription != DEVICE_PART_NUMBER:
         print('Connected target is not the default Part#')
@@ -58,8 +61,10 @@ def checkTargetWithSelection(targetDescription, targetRevision):
         if answer.lower() == 'y' or answer.lower() == 'yes':
             save_global_config(targetDescription, targetRevision)
 
-
 def main():
+    """
+        Start of it all...
+    """
     global DEVICE_PART_NUMBER
     global DEVICE_REVISION
 
@@ -103,7 +108,6 @@ def main():
     print('Selected Device:')
     print('Part# ' + DEVICE_PART_NUMBER + ' - Rev: ' + DEVICE_REVISION)
 
-
     baud_rate = DEVICE_REV_BAUD_RATE[DEVICE_REVISION]
     if args.baudrate is not None:
         baud_rate = args.baudrate
@@ -146,11 +150,17 @@ def main():
     print('[INFO] Detected Device:')
     partDetected = device.part_number
 
-    # Check for Blank devices
+    # Check for Blank devices 
+    # These should not exist! but initial devices for bring up are always Blank
     if bytes(partDetected, 'utf-8') == b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00':
-        if device.revision == 'A0':      # SPARK Device default
+        if device.revision == 'A0':     # SPARK Device default
             partDetected = 'AB1C1F4M51920PH'
-        else:                               # ENSEMBLE Device default
+# For the inevitable moaning that E1C is not the default on a Blank device
+#            partDetected = 'AE1C1F4051920PH'
+        elif device.revision == 'EG':   # Eagle A0
+            partDetected = 'AE722F80F55D5EG'
+            device.revision = 'A0'
+        else:                           # ENSEMBLE Device default
             partDetected = 'AE722F80F55D5LS'
         print('[WARN] No Part# was detected! Defaulting to ' + partDetected)
 
@@ -189,10 +199,9 @@ def main():
     alif_image = 'alif/' + DEVICE_PACKAGE + '-' + rev_ext + env_ext + '.bin'
     alif_offset = 'alif/' + DEVICE_OFFSET + '-' + rev_ext + env_ext + '.bin'
 
-    if sys.platform == "linux" or sys.platform == "darwin":
+    if sys.platform in ["linux","darwin"]:
         imageList = alif_image + ' ' + hex(ALIF_BASE_ADDRESS) + \
-            ' ' + alif_offset + ' ' + hex(MRAM_BASE_ADDRESS + MRAM_SIZE - 16)
-
+        ' ' + alif_offset + ' ' + hex(MRAM_BASE_ADDRESS + MRAM_SIZE - 16)
     else:
         imageList = '../' + alif_image + ' ' + hex(ALIF_BASE_ADDRESS) + \
             ' ../' + alif_offset + ' ' + hex(MRAM_BASE_ADDRESS + MRAM_SIZE - 16)
@@ -208,7 +217,7 @@ def main():
 
     isp_start(isp)                         # Start ISP Sequence
 
-    if sys.platform == "linux" or sys.platform == "darwin":
+    if sys.platform in ["linux","darwin"]:
         imageList = imageList.replace('\\','/')
     else:
         imageList = imageList.replace('/','\\')
