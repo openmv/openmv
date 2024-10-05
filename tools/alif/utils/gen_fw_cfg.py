@@ -22,7 +22,9 @@ FW_CFG_FILE = "build/fw_cfg.json"
 def mram_size_to_address(mram_size):
     mram_size_int = 0
     if mram_size == '1.8':       # @todo this should be improved
-       mram_size_int = 1888256   # 0x001CD000 - manual mapping, since 1.8MB is not exactly 0x001CC800
+       mram_size_int = int("0x001CD000", 16)
+    elif mram_size == '1.86':
+       mram_size_int = int("0x001DD000", 16)
     else:
         mram_size_int = int(float(mram_size) * 1024 * 1024)
     mram_base_int = int("0x80000000", 16)
@@ -100,12 +102,17 @@ def gen_fw_cfg_icv(family, mram_size, sram_size, device_revision):
 
     atoc_end_address, stoc_start_address = mram_size_to_address(mram_size)
     print(family)
-    if family == "Balletto-B1-Series":
+    if family == "Balletto-B1-Series" or family == "Balletto-E1C-Series":
         print("*** generate FW cfg for Spark")
         with open('firewall/fw_cfg_spark.json', "r") as json_file:
             spark_json = json.load(json_file)
             spark_json["firewall_components"][1]["configured_regions"][0]["end_address"] = atoc_end_address
             spark_json["protected_areas"][2]["start_address"] = stoc_start_address
+
+            if family == "Balletto-E1C-Series":
+                # Delete the sections for the BLE protected areas
+                spark_json["protected_areas"].pop(0)
+                spark_json["protected_areas"].pop(0)
             write_json(spark_json)
         return
 

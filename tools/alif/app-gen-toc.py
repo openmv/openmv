@@ -51,9 +51,6 @@ TOC_HEADER_SIZE    = 32
 TOC_TAIL_SIZE      = 16
 TOC_HEADER_VERSION = 1
 
-# Default metadata flags when there is no OEM
-METADATA_FLAGS_DEFAULT = 0x3
-
 # Supported CPU_ID for IMAGE object type
 SUPPORTED_CPU_ID = ['A32_0',
                     'A32_1',
@@ -114,7 +111,7 @@ otocStartAddress = 0
 unmanaged = []
 
 
-def createOemTocPackage(fwsections, metadata_flags, outputFile):
+def createOemTocPackage(fwsections, outputFile):
     global oemManagedAreaStartAddress
     global oemManagedAreaSize
     global otocStartAddress
@@ -260,10 +257,8 @@ def createOemTocPackage(fwsections, metadata_flags, outputFile):
     outf.write(struct.pack("H", TOC_ENTRY_SIZE))
     # TOC version
     outf.write(struct.pack("H", TOC_HEADER_VERSION))
-    # HFXO/LFXO presence flags
-    outf.write(struct.pack("I", metadata_flags))
-    # pad to 16 bytes with 00s
-    outf.write(('\0' * 12).encode('utf8'))
+    # pad 16 bytes with 00s
+    outf.write(('\0' * 16).encode('utf8'))
 
     #mapf.write(f"{hostAddress(mPointer)}\t{hex(TOC_HEADER_SIZE)}\t{TOC_HEADER_SIZE}\tAPP TOC Header\n")
     mapf.write(f"{hex(mPointer)}\t{hex(TOC_HEADER_SIZE)}\t{TOC_HEADER_SIZE}\tAPP TOC Header\n")
@@ -637,7 +632,6 @@ def main():
   
     validateOptions(fwsections)
 
-    metadata_flags = METADATA_FLAGS_DEFAULT
     for sec in fwsections:
         # check if entry is disabled
         if sec['disabled'] is True:
@@ -653,11 +647,8 @@ def main():
 
         print('Generating Device Configuration for: ' + sec['binary'])
         updateDeviceConfig(sec['binary'])
-        metadata_flags = gen_device_config(sec['binary'], False)
+        gen_device_config(sec['binary'], False)
         sec['binary'] = sec['binary'][:-5] + '.bin'
-
-    if metadata_flags == None:
-        metadata_flags = METADATA_FLAGS_DEFAULT
 
     #     also check unmanaged images (mramAddress != 0) are between boundaries (OEM_BASE_ADDRESS - only in Rev_A as in Rev_B will be 0)
     #     and images don't overlap... Also, advice is GAPs (big ones) exist - especially if tool can't create the layout...
@@ -670,7 +661,7 @@ def main():
 
     createContentCerts(fwsections, 'OEM')
 
-    createOemTocPackage(fwsections, metadata_flags, args.output)
+    createOemTocPackage(fwsections, args.output)
 
     # checking the OEM TOC Package size
     try:

@@ -25,9 +25,6 @@ DEVICE_CONFIG_END_OF_LIST       = 0xFE
 
 HEADER_SIZE_MASK                = 0x00FFFFFF
 
-LFXO_PRESENT_FLAG = 0x1
-HFXO_PRESENT_FLAG = 0x2
-
 VALID_SECTIONS = [
     "metadata",
     "firewall",
@@ -44,11 +41,11 @@ misc_settings_headers = {
   'HFXO_CAP_CTRL'           : '0x00020001',
   'HFXO_PFET_GM_CTRL'       : '0x00030001',
   'HFXO_NFET_GM_CTRL'       : '0x00040001',
-  'SE_BOOT_INFO'            : '0x00050001',
-  'ISP_MAINTENANCE_SUPPORT' : '0x00060001',
-  'FW_RUNTIME_CFG'          : '0x00070001',
-  'PINMUX_RUNTIME_CFG'      : '0x00080001',
-  'CLOCK_RUNTIME_CFG'       : '0x00090001'
+  'SE_BOOT_INFO'            : '0x00050001'
+#  'ISP_MAINTENANCE_SUPPORT' : '0x00060001',
+#  'FW_RUNTIME_CFG'          : '0x00070001',
+#  'PINMUX_RUNTIME_CFG'      : '0x00080001',
+#  'CLOCK_RUNTIME_CFG'       : '0x00090001'
 }
 
 metadata_settings_headers = {
@@ -70,6 +67,10 @@ hfxo_frequency_cfg = {
   32000000 : '0x04B00000',
   25000000 : '0x06000000',
   24000000 : '0x06400000',
+}
+
+hfxo_frequency_cfg_spark = {
+  38400000 : '0x11900000',
 }
 
 lfxo_frequency = {
@@ -102,27 +103,6 @@ def closeBinary(f):
 def writeBinary(f, data):
     f.write(data)
 
-def processMetadataXOFlags(configuration):
-    """
-       Generate XO presence word to write to the ATOC header
-    """
-
-    data = HFXO_PRESENT_FLAG | LFXO_PRESENT_FLAG
-    for sec in configuration:
-        if sec != "external_clock_sources":
-            continue
-
-        for setting in configuration[sec]:
-            if "id" not in setting or "enabled" not in setting:
-                continue
-            if setting["id"] == "OSC_HFXO" and setting["enabled"] == False:
-                data = data & ~HFXO_PRESENT_FLAG
-            elif setting["id"] == "OSC_LFXO" and setting["enabled"] == False:
-                data = data & ~LFXO_PRESENT_FLAG
-
-    printInfo("XTAL presence flags:", hex(data))
-    return data
-    
 def processMetadata(configuration):
 
     data = bytearray()
@@ -143,7 +123,10 @@ def processMetadata(configuration):
                     data += bytes(enabled.to_bytes(4, 'little'))
 
                 if "frequency" in setting:
-                    frequency_cfg = hfxo_frequency_cfg.get(setting['frequency'])
+                    if utils.config.DEVICE_FEATURE_SET == 'Spark':
+                        frequency_cfg = hfxo_frequency_cfg_spark.get(setting['frequency'])
+                    else:
+                        frequency_cfg = hfxo_frequency_cfg.get(setting['frequency'])
                     if frequency_cfg is None:
                         print("[ERROR] Unsupported HFXO frequency:", setting['frequency'])
                         sys.exit(EXIT_WITH_ERROR)
@@ -233,6 +216,7 @@ def processMiscellaneous(configuration):
         if ('id' not in sec) or ('value' not in sec):
             continue
         if not sec['id'] in misc_settings_headers:
+            printInfo("[WARN] SE not supported: ", sec['id'])
             continue
         header = misc_settings_headers.get(sec['id'])
         data += bytes(int(header, 16).to_bytes(4, 'little'))
@@ -246,12 +230,10 @@ def gen_device_config(file, is_icv):
     validateSections(cfg, file)   #request from SE-1938
     binFile = file[:-5] + '.bin'
     f = createBinary('build/images/' + binFile)
-    metadata_flags = None
     for sec in cfg:
         printInfo("Create area for: " + sec)
 
         if sec == "metadata":
-            metadata_flags = processMetadataXOFlags(cfg[sec])
             obj = processMetadata(cfg[sec])
             header = (DEVICE_CONFIG_METADATA<<24) | (len(obj) & HEADER_SIZE_MASK)
             writeBinary(f, struct.pack("I", header))
@@ -309,5 +291,3 @@ def gen_device_config(file, is_icv):
     tail = DEVICE_CONFIG_END_OF_LIST<<24
     writeBinary(f, struct.pack("I", tail))
     closeBinary(f)
-
-    return metadata_flags # 'flags' generated from fields in the 'metadata' section (TODO)

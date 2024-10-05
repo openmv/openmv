@@ -11,7 +11,8 @@ from utils.gen_fw_cfg import *
 # Define Version constant for each separate tool
 # 0.05.000 - add cmd line options and multiple key directories 
 # 0.06.000 - add new DEV key for SPARK
-TOOL_VERSION = "0.06.000"
+# 0.07.000 - fixed SE-2761 (keyEnv is not being updated in Azure)
+TOOL_VERSION = "0.07.000"
 
 EXIT_WITH_ERROR = 1
 
@@ -29,6 +30,7 @@ CERT_PATH = 'cert/'
 # DEV key environments
 FUSION_REV_A1 = 'fusion_rev_a1'
 FUSION_REV_B0 = 'fusion_rev_b0'
+FUSION_REV_B4 = 'fusion_rev_b4'
 SPARK_REV_A0  = 'spark_rev_a0'
 EAGLE_REV_A0  = 'eagle_rev_a0'
 # future: Spark, etc
@@ -164,6 +166,10 @@ def clean_directory_rot():
 
 
 def copy_content_rot(rot_dir):
+    # this only applies to ICV DEV key release... (local, no Azure)
+    if isThisPROD():
+        return
+    
     # copy key env from the selected RoT
     path = KEY_PATH + rot_dir
     for file in os.listdir(path):
@@ -192,9 +198,6 @@ def isThisPROD():
     return True
 
 def setKeyEnvironment(cfg):
-    # this only applies to ICV DEV key release... (local, no Azure)
-    if isThisPROD():
-        return
 
     # do not apply for APP tools
     if isThisAPP():
@@ -207,6 +210,8 @@ def setKeyEnvironment(cfg):
     keyEnv = FUSION_REV_B0   # default key env for REV_B0 FUSION
     if feature == 'Fusion' and revision == 'A1':   # backward compatibility
         keyEnv = FUSION_REV_A1
+    if feature == 'Fusion' and revision == 'B4':   # Rev B4 has a new RoT
+        keyEnv = FUSION_REV_B4        
     if feature == 'Spark' and revision == 'A0':
         keyEnv = SPARK_REV_A0
     if feature == 'Eagle' and revision == 'A0':
@@ -311,4 +316,3 @@ def main():
 if __name__ == "__main__":
     main()
 
-    # Check if ICV or APP... (No directories in key/ for APP)

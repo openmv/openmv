@@ -28,7 +28,7 @@ from toc_decode import *                 # ISP TOC support
 from power_decode import *               # ISP POWER support
 from utils.config import *
 from utils.user_validations import validateArgList
-from recovery import recovery_action
+from recovery import recovery_action, recovery_action_no_reset
 
 MENU_DB  = 'utils/maintDB.db'
 MENU_CFG = 'utils/menuconfDB.db'

@@ -83,7 +83,11 @@ def write_mram(isp, fileName, destAddress, verbose_display):
 
     f.close()
 
-def checkTargetWithSelection(targetDescription, targetRevision, selectedDescription, selectedRevision):
+def checkTargetWithSelection(targetDescription, targetRevision,
+                             selectedDescription, selectedRevision):
+    """
+        Check target selection
+    """
     partIsDifferent = False
     if targetDescription != selectedDescription:
         print('Connected target is not the default Part#')
@@ -103,9 +107,9 @@ def checkTargetWithSelection(targetDescription, targetRevision, selectedDescript
         if answer.lower() == 'y' or answer.lower() == 'yes':
             save_global_config(targetDescription, targetRevision)
 
-def recovery_action(isp):
+def recovery_action_no_reset(isp):
     """
-        Recover MRAM via SEROM
+        Recover MRAM via SEROM. Do not reset the device at the end.
     """
     # probe the device before update
     device = device_probe.device_get_attributes(isp)
@@ -113,27 +117,29 @@ def recovery_action(isp):
     print('Bootloader stage: ' + device_probe.STAGE_TEXT[device.stage])
     if device.stage == device_probe.STAGE_SERAM:
         print('[ERROR] Device not in Recovery mode, use systemUpdatePackage Tool')
-        return
+        sys.exit(EXIT_WITH_ERROR)
 
     if device.revision == 'B2':  #Device Part# is not retrieved by SEROM in B2
         # load parameters based on Part# selected in tools-config
         load_global_config()
         print('Device Revision: ' + device.revision)
-    
     else:
         if ord(device.part_number[:1]) == 0:  # blank Part#
             if BRING_UP_MODE:
                 print('Bring Up mode - Blank part detected!')
-                if device.revision in ['B0','B2', 'B4']:  # Ensemble 
+                if device.revision in ['B0','B2','B3','B4']:  # Ensemble 
                     device.part_number = 'AE722F80F55D5LS'
-                elif device.revision in ['B1', 'A0']:     # Balletto  B1 ?
+                elif device.revision in ['EG']:          # Eagle A0
+                    device.part_number = 'AE722F80F55D5EG'
+                    device.revision = 'A0'
+                elif device.revision in ['B1','A0']:     # Balletto B1C / E1C
                     device.part_number = 'AB1C1F4M51920PH'
+#                    device.part_number = 'AE1C1F4051920PH'
                 else:
                     print('[ERROR] Revision is not reconginzed', device.revision)
-                    sys.exit(EXIT_WITH_ERROR)        
-
+                    sys.exit(EXIT_WITH_ERROR)
             else:
-                print('[ERROR] There is no Part# in the device!')  
+                print('[ERROR] There is no Part# in the device!')
                 sys.exit(EXIT_WITH_ERROR)
 
         # selected device from global-cfg.db
@@ -147,15 +153,15 @@ def recovery_action(isp):
         # load configuration from detected device
         load_device_config(partDescription, device.revision)
         # check the default Part#/Rev in tools-config and offer to switch
-        checkTargetWithSelection(partDescription, device.revision, selectedDescription, selectedRevision)
-
+        checkTargetWithSelection(partDescription, device.revision,
+                                 selectedDescription, selectedRevision)
 
     # update params from either selected part (B2) or detected part (B3/B4, etc)
     DEVICE_PART_NUMBER = utils.config.DEVICE_PART_NUMBER
     DEVICE_REVISION = utils.config.DEVICE_REVISION
     DEVICE_PACKAGE = utils.config.DEVICE_PACKAGE
     DEVICE_REV_PACKAGE_EXT = utils.config.DEVICE_REV_PACKAGE_EXT
-    DEVICE_OFFSET  = utils.config.DEVICE_OFFSET    
+    DEVICE_OFFSET  = utils.config.DEVICE_OFFSET
     MRAM_BASE_ADDRESS = utils.config.MRAM_BASE_ADDRESS
     ALIF_BASE_ADDRESS = utils.config.ALIF_BASE_ADDRESS
     MRAM_SIZE = utils.config.MRAM_SIZE
@@ -170,7 +176,7 @@ def recovery_action(isp):
     env_ext = ''
     if device.env.lower() in HASHES_DB:
         if HASHES_DB[device.env] == 'DEV':
-           env_ext = '-dev' 
+            env_ext = '-dev'
 
     # for devices in CM LCS, we use the DEV package
     if device.env == '00000000000000000000000000000000':
@@ -216,6 +222,13 @@ def recovery_action(isp):
         fileName = fileName.replace('..\\','')
 
         write_mram(isp, fileName, addr, False)
+
+def recovery_action(isp):
+    """
+        Recover MRAM via SEROM. Reset the device at the end.
+    """
+
+    recovery_action_no_reset(isp)
 
     print("[INFO] Target reset")
     isp_reset(isp)      # Reset the target

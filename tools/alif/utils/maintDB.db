@@ -39,7 +39,8 @@
         "Get Firewall configuration" : "get_firewall_config"
     },
     "rom" : {
-     "Recovery" : "recovery_action"
+     "Recovery" : "recovery_action",
+     "Recovery (No Reset)" : "recovery_action_no_reset"
     },
     "setting" : {
       "Enable LOGGING" : "set_logger_enable_action",
