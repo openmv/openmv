@@ -51,6 +51,7 @@ extern "C" {
 #include "py_ml.h"
 
 using namespace tflite;
+#define TF_ARENA_EXTRA      (512)
 #define TF_ARENA_ALIGN      (16 - 1)
 #define TF_ARENA_ROUND(x)   (((x) + TF_ARENA_ALIGN) & ~(TF_ARENA_ALIGN))
 typedef MicroMutableOpResolver<113> MicroOpsResolver;
@@ -235,7 +236,7 @@ int ml_backend_init_model(py_ml_model_obj_t *model) {
         mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Failed to allocate tensors"));
     }
     // Round up the optimal arena size to a multiple of the alignment.
-    arena_size = TF_ARENA_ROUND(interpreter.arena_used_bytes());
+    arena_size = TF_ARENA_ROUND(interpreter.arena_used_bytes()) + TF_ARENA_EXTRA;
     m_free(arena_memory);
 
     // Allocate the persistent model state and interpreter.
