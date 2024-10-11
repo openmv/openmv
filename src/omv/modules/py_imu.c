@@ -26,8 +26,6 @@
 #include "omv_boardconfig.h"
 
 #if MICROPY_PY_IMU
-#include STM32_HAL_H
-
 #include "py/obj.h"
 #include "py/mphal.h"
 #include "py/runtime.h"
