@@ -36,8 +36,9 @@
 #include "py_imu.h"
 #include "omv_gpio.h"
 #include "omv_spi.h"
+#include "omv_i2c.h"
 
-#if defined(IMU_CHIP_LSM6DS3)
+#if defined(OMV_IMU_CHIP_LSM6DS3)
 #include "lsm6ds3tr_c_reg.h"
 
 typedef union {
@@ -59,7 +60,7 @@ typedef union {
 #define lsm_from_fs2000_to_mdps    lsm6ds3tr_c_from_fs2000dps_to_mdps
 #define lsm_from_lsb_to_celsius    lsm6ds3tr_c_from_lsb_to_celsius
 
-#elif defined(IMU_CHIP_LSM6DSOX)
+#elif defined(OMV_IMU_CHIP_LSM6DSOX)
 #include "lsm6dsox_reg.h"
 
 typedef union {
@@ -85,7 +86,7 @@ typedef union {
 
 static bool imu_initialized = false;
 
-#if defined(IMU_SPI_ID)
+#if defined(OMV_IMU_SPI_ID)
 
 #if !defined(IMU_SPI_BUS_TIMEOUT)
 #define IMU_SPI_BUS_TIMEOUT    (5000)
@@ -95,9 +96,9 @@ static omv_spi_t imubus;
 
 static void platform_init(void *imubus) {
     omv_spi_config_t spi_config;
-    omv_spi_default_config(&spi_config, IMU_SPI_ID);
+    omv_spi_default_config(&spi_config, OMV_IMU_SPI_ID);
 
-    spi_config.baudrate = IMU_SPI_BAUDRATE;
+    spi_config.baudrate = OMV_IMU_SPI_BAUDRATE;
     spi_config.clk_pol = OMV_SPI_CPOL_HIGH;
     spi_config.clk_pha = OMV_SPI_CPHA_2EDGE;
     spi_config.nss_enable = false; // Soft NSS
@@ -162,35 +163,35 @@ static int32_t platform_read(void *imubus, uint8_t Reg, uint8_t *Bufp, uint16_t 
     return 0;
 }
 #elif defined(IMU_I2C)
-static I2C_HandleTypeDef imubus = {
-    .Instance = IMU_I2C,
-    .Init.Timing = IMU_I2C_SPEED,
-    .Init.DualAddressMode = I2C_DUALADDRESS_DISABLED,
-    .Init.GeneralCallMode = I2C_GENERALCALL_DISABLED,
-    .Init.NoStretchMode = I2C_NOSTRETCH_DISABLED,
-    .Init.OwnAddress1 = 0xFE,
-    .Init.OwnAddress2 = 0xFE,
-    .Init.OwnAddress2Masks = 0,
-    .Init.AddressingMode = I2C_ADDRESSINGMODE_7BIT,
-};
+static omv_i2c_t imu_bus = {};
 
 static void platform_init(void *imubus) {
-    HAL_I2C_DeInit(imubus);
-    HAL_I2C_Init(imubus);
+    omv_i2c_init(&imu_bus, OMV_IMU_I2C_ID, OMV_I2C_SPEED_FULL);
 }
 
 static void platform_deinit(void *imubus) {
-    HAL_I2C_DeInit(imubus);
+    omv_i2c_deinit(&imu_bus);
     imu_initialized = false;
 }
 
 static int32_t platform_write(void *imubus, uint8_t reg, uint8_t *bufp, uint16_t len) {
-    HAL_I2C_Mem_Write(imubus, LSM6DS3TR_C_I2C_ADD_L, reg, I2C_MEMADD_SIZE_8BIT, bufp, len, 1000);
+    if (omv_i2c_write_bytes(&imu_bus, LSM6DS3TR_C_I2C_ADD_L, (uint8_t *) &reg, 1, OMV_I2C_XFER_SUSPEND) != 0) {
+        return -1;
+    }
+    if (omv_i2c_write_bytes(&imu_bus, LSM6DS3TR_C_I2C_ADD_L, bufp, len, OMV_I2C_XFER_NO_FLAGS) != 0) {
+        return -1;
+    }
     return 0;
 }
 
 static int32_t platform_read(void *imubus, uint8_t reg, uint8_t *bufp, uint16_t len) {
     HAL_I2C_Mem_Read(imubus, LSM6DS3TR_C_I2C_ADD_L, reg, I2C_MEMADD_SIZE_8BIT, bufp, len, 1000);
+    if (omv_i2c_write_bytes(&imu_bus, LSM6DS3TR_C_I2C_ADD_L, (uint8_t *) &reg, 1, OMV_I2C_XFER_NO_STOP) != 0) {
+        return -1;
+    }
+    if (omv_i2c_read_bytes(&imu_bus, LSM6DS3TR_C_I2C_ADD_L, bufp, len, OMV_I2C_XFER_NO_FLAGS) != 0) {
+        return -1;
+    }
     return 0;
 }
 #else
