@@ -182,9 +182,9 @@
 #define OMV_SOFT_I2C_SPIN_DELAY               64
 
 // IMU SPI bus
-#define IMU_SPI_ID                            (5)
-#define IMU_SPI_BAUDRATE                      (500000)
-#define IMU_CHIP_LSM6DSOX                     (1)
+#define OMV_IMU_SPI_ID                        (5)
+#define OMV_IMU_SPI_BAUDRATE                  (500000)
+#define OMV_IMU_CHIP_LSM6DSOX                 (1)
 #define OMV_IMU_X_Y_ROTATION_DEGREES          90
 #define OMV_IMU_MOUNTING_Z_DIRECTION          -1
 
