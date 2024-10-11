@@ -10,7 +10,7 @@
       },
       {
         "id": "OSC_LFXO",
-        "enabled": false,
+        "enabled": true,
         "frequency": 32768
       }
     ]
