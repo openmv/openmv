@@ -179,7 +179,7 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/common/, \
 	tinyusb_debug.o             \
 	file_utils.o                \
 	mp_utils.o                  \
-	sensor_utils.o              \
+	omv_csi.o                   \
    )
 
 FIRM_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/sensors/,   \

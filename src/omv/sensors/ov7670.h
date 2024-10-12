@@ -25,6 +25,6 @@
  */
 #ifndef __OV7670_H__
 #define __OV7670_H__
-#define OMV_OV7670_XCLK_FREQ    24000000
-int ov7670_init(sensor_t *sensor);
+#define OMV_OV7670_CLK_FREQ     24000000
+int ov7670_init(omv_csi_t *csi);
 #endif // __OV7725_H__

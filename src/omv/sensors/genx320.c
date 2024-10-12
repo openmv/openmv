@@ -30,11 +30,12 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "omv_i2c.h"
-#include "sensor.h"
-#include "framebuffer.h"
-#include "genx320.h"
 #include "py/mphal.h"
+#include "framebuffer.h"
+#include "omv_i2c.h"
+#include "omv_csi.h"
+
+#include "genx320.h"
 #include "evt_2_0.h"
 #include "psee_genx320.h"
 
@@ -72,8 +73,8 @@ static bool hot_pixels_disabled = false;
 static int32_t contrast = CONTRAST_DEFAULT;
 static int32_t brightness = BRIGHTNESS_DEFAULT;
 
-static int reset(sensor_t *sensor) {
-    sensor->color_palette = NULL;
+static int reset(omv_csi_t *csi) {
+    csi->color_palette = NULL;
 
     #if (OMV_GENX320_CAL_ENABLE == 1)
     hot_pixels_disabled = false;
@@ -81,7 +82,7 @@ static int reset(sensor_t *sensor) {
     contrast = CONTRAST_DEFAULT;
     brightness = BRIGHTNESS_DEFAULT;
 
-    BIAS_Params_t biases = (sensor->chip_id == SAPHIR_ES_ID) ? genx320es_default_biases : genx320mp_default_biases;
+    BIAS_Params_t biases = (csi->chip_id == SAPHIR_ES_ID) ? genx320es_default_biases : genx320mp_default_biases;
 
     // Force CPI with chicken bits
     psee_sensor_write(TOP_CHICKEN, TOP_CHICKEN_OVERRIDE_MIPI_MODE_EN |
@@ -127,7 +128,7 @@ static int reset(sensor_t *sensor) {
     // Set Standard biases
     psee_sensor_set_biases(&biases);
 
-    // Start the sensor
+    // Start the csi
     psee_sensor_start(&dcmi_evt);
 
     #if (OMV_GENX320_EHC_ENABLE == 1)
@@ -171,7 +172,7 @@ static int reset(sensor_t *sensor) {
     return 0;
 }
 
-static int sleep(sensor_t *sensor, int enable) {
+static int sleep(omv_csi_t *csi, int enable) {
     if (enable) {
         psee_PM2_config();
     } else {
@@ -180,33 +181,33 @@ static int sleep(sensor_t *sensor, int enable) {
     return 0;
 }
 
-static int read_reg(sensor_t *sensor, uint16_t reg_addr) {
+static int read_reg(omv_csi_t *csi, uint16_t reg_addr) {
     uint32_t reg_data;
     uint8_t addr[] = {(reg_addr >> 8), reg_addr};
-    if (omv_i2c_write_bytes(&sensor->i2c_bus, sensor->slv_addr, addr, 2, OMV_I2C_XFER_NO_STOP) != 0) {
+    if (omv_i2c_write_bytes(&csi->i2c_bus, csi->slv_addr, addr, 2, OMV_I2C_XFER_NO_STOP) != 0) {
         return -1;
     }
-    if (omv_i2c_read_bytes(&sensor->i2c_bus, sensor->slv_addr, (uint8_t *) &reg_data, 4, OMV_I2C_XFER_NO_FLAGS) != 0) {
+    if (omv_i2c_read_bytes(&csi->i2c_bus, csi->slv_addr, (uint8_t *) &reg_data, 4, OMV_I2C_XFER_NO_FLAGS) != 0) {
         return -1;
     }
     reg_data = __REV(reg_data);
     return reg_data;
 }
 
-static int write_reg(sensor_t *sensor, uint16_t reg_addr, uint16_t reg_data) {
+static int write_reg(omv_csi_t *csi, uint16_t reg_addr, uint16_t reg_data) {
     uint8_t buf[] = {(reg_addr >> 8), reg_addr, (reg_data >> 24), (reg_data >> 16), (reg_data >> 8), reg_data};
-    return omv_i2c_write_bytes(&sensor->i2c_bus, sensor->slv_addr, buf, 6, OMV_I2C_XFER_NO_FLAGS);
+    return omv_i2c_write_bytes(&csi->i2c_bus, csi->slv_addr, buf, 6, OMV_I2C_XFER_NO_FLAGS);
 }
 
-static int set_pixformat(sensor_t *sensor, pixformat_t pixformat) {
+static int set_pixformat(omv_csi_t *csi, pixformat_t pixformat) {
     return (pixformat == PIXFORMAT_GRAYSCALE) ? 0 : -1;
 }
 
-static int set_framesize(sensor_t *sensor, framesize_t framesize) {
-    return (framesize == FRAMESIZE_320X320) ? 0 : -1;
+static int set_framesize(omv_csi_t *csi, omv_csi_framesize_t framesize) {
+    return (framesize == OMV_CSI_FRAMESIZE_320X320) ? 0 : -1;
 }
 
-static int set_framerate(sensor_t *sensor, int framerate) {
+static int set_framerate(omv_csi_t *csi, int framerate) {
     #if (OMV_GENX320_EHC_ENABLE == 1)
     int us = FPS_TO_US(framerate);
 
@@ -223,17 +224,17 @@ static int set_framerate(sensor_t *sensor, int framerate) {
     return 0;
 }
 
-static int set_contrast(sensor_t *sensor, int level) {
+static int set_contrast(omv_csi_t *csi, int level) {
     contrast = __USAT(level, UINT8_T_BITS);
     return 0;
 }
 
-static int set_brightness(sensor_t *sensor, int level) {
+static int set_brightness(omv_csi_t *csi, int level) {
     brightness = __USAT(level, UINT8_T_BITS);
     return 0;
 }
 
-static int set_colorbar(sensor_t *sensor, int enable) {
+static int set_colorbar(omv_csi_t *csi, int enable) {
     uint32_t reg;
     psee_sensor_read(RO_READOUT_CTRL, &reg);
     reg = (reg & ~RO_READOUT_CTRL_ERC_SELF_TEST_EN) | (enable ? RO_READOUT_CTRL_ERC_SELF_TEST_EN : 0);
@@ -241,13 +242,13 @@ static int set_colorbar(sensor_t *sensor, int enable) {
     return 0;
 }
 
-static int set_hmirror(sensor_t *sensor, int enable) {
-    psee_sensor_set_flip(enable, sensor->vflip);
+static int set_hmirror(omv_csi_t *csi, int enable) {
+    psee_sensor_set_flip(enable, csi->vflip);
     return 0;
 }
 
-static int set_vflip(sensor_t *sensor, int enable) {
-    psee_sensor_set_flip(sensor->hmirror, enable);
+static int set_vflip(omv_csi_t *csi, int enable) {
+    psee_sensor_set_flip(csi->hmirror, enable);
     return 0;
 }
 
@@ -347,23 +348,23 @@ static void snapshot_post_process(image_t *image) {
     fb_free();
     #endif // (OMV_GENX320_EHC_ENABLE == 1)
 
-    if (sensor.color_palette && (framebuffer_get_buffer_size() >= (ACTIVE_SENSOR_SIZE * sizeof(uint16_t)))) {
+    if (csi.color_palette && (framebuffer_get_buffer_size() >= (ACTIVE_SENSOR_SIZE * sizeof(uint16_t)))) {
         for (int32_t i = ACTIVE_SENSOR_SIZE - 1; i >= 0; i--) {
-            ((uint16_t *) image->data)[i] = sensor.color_palette[image->data[i]];
+            ((uint16_t *) image->data)[i] = csi.color_palette[image->data[i]];
         }
         image->pixfmt = PIXFORMAT_RGB565;
         MAIN_FB()->pixfmt = PIXFORMAT_RGB565;
     }
 }
 
-static int snapshot(sensor_t *sensor, image_t *image, uint32_t flags) {
+static int snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
     #if (OMV_GENX320_CAL_ENABLE == 1)
     if (!hot_pixels_disabled) {
         uint8_t *histogram = fb_alloc0(ACTIVE_SENSOR_SIZE, FB_ALLOC_NO_HINT);
 
         // Collect events to calibrate hot pixels.
         for (uint32_t i = 0; i < EVENT_THRESHOLD_TO_CALIBRATE; ) {
-            int ret = sensor_snapshot(sensor, image, flags);
+            int ret = omv_csi_snapshot(csi, image, flags);
 
             if (ret < 0) {
                 return ret;
@@ -408,7 +409,7 @@ static int snapshot(sensor_t *sensor, image_t *image, uint32_t flags) {
     }
     #endif // (OMV_GENX320_CAL_ENABLE == 1)
 
-    int ret = sensor_snapshot(sensor, image, flags);
+    int ret = omv_csi_snapshot(csi, image, flags);
 
     if (ret < 0) {
         return ret;
@@ -418,24 +419,24 @@ static int snapshot(sensor_t *sensor, image_t *image, uint32_t flags) {
     return ret;
 }
 
-int genx320_init(sensor_t *sensor) {
-    // Initialize sensor structure
-    sensor->reset = reset;
-    sensor->sleep = sleep;
-    sensor->read_reg = read_reg;
-    sensor->write_reg = write_reg;
-    sensor->set_pixformat = set_pixformat;
-    sensor->set_framesize = set_framesize;
-    sensor->set_framerate = set_framerate;
-    sensor->set_contrast = set_contrast;
-    sensor->set_brightness = set_brightness;
-    sensor->set_colorbar = set_colorbar;
-    sensor->set_hmirror = set_hmirror;
-    sensor->set_vflip = set_vflip;
-    sensor->snapshot = snapshot;
+int genx320_init(omv_csi_t *csi) {
+    // Initialize csi structure
+    csi->reset = reset;
+    csi->sleep = sleep;
+    csi->read_reg = read_reg;
+    csi->write_reg = write_reg;
+    csi->set_pixformat = set_pixformat;
+    csi->set_framesize = set_framesize;
+    csi->set_framerate = set_framerate;
+    csi->set_contrast = set_contrast;
+    csi->set_brightness = set_brightness;
+    csi->set_colorbar = set_colorbar;
+    csi->set_hmirror = set_hmirror;
+    csi->set_vflip = set_vflip;
+    csi->snapshot = snapshot;
 
-    // Set sensor flags
-    sensor->mono_bpp = sizeof(uint8_t);
+    // Set csi flags
+    csi->mono_bpp = sizeof(uint8_t);
 
     return 0;
 }

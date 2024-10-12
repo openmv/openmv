@@ -1,35 +1,47 @@
 /*
- * SPDX-License-Identifier: MIT
+ * Copyright (C) 2023-2024 OpenMV, LLC.
  *
- * Copyright (C) 2013-2024 OpenMV, LLC.
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
  *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in
+ *    the documentation and/or other materials provided with the
+ *    distribution.
+ * 3. Any redistribution, use, or modification in source or binary form
+ *    is done solely for personal benefit and not for any commercial
+ *    purpose or for monetary gain. For commercial licensing options,
+ *    please contact openmv@openmv.io
  *
- * The above copyright notice and this permission notice shall be included in
- * all copies or substantial portions of the Software.
+ * THIS SOFTWARE IS PROVIDED BY THE LICENSOR AND COPYRIGHT OWNER "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
+ * THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+ * PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE LICENSOR OR COPYRIGHT
+ * OWNER BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+ * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+ * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+ * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
+ * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
- * THE SOFTWARE.
- *
- * This file contains image sensor driver utility functions and some default (weak)
- * implementations of common functions that can be replaced by port-specific drivers.
+ * CMOS sensor interface abstraction layer.
+ * This file provides default functions that can be overriden by ports.
  */
-#if MICROPY_PY_SENSOR
+#if MICROPY_PY_CSI
 #include <string.h>
 #include <stdint.h>
 #include <stdbool.h>
+
 #include "py/mphal.h"
-#include "sensor.h"
+#include "omv_gpio.h"
+#include "omv_i2c.h"
+#include "omv_csi.h"
+#include "omv_boardconfig.h"
+
 #include "ov2640.h"
 #include "ov5640.h"
 #include "ov7725.h"
@@ -49,9 +61,6 @@
 #include "genx320.h"
 #include "framebuffer.h"
 #include "unaligned_memcpy.h"
-#include "omv_boardconfig.h"
-#include "omv_gpio.h"
-#include "omv_i2c.h"
 
 #ifndef OMV_CSI_MAX_DEVICES
 #define OMV_CSI_MAX_DEVICES (5)
@@ -117,60 +126,60 @@ uint16_t resolution[][2] = {
     {2592, 1944},    /* WQXGA2    */
 };
 
-__weak void sensor_init0() {
-    // Reset the sensor state
-    memset(&sensor, 0, sizeof(sensor_t));
+__weak void omv_csi_init0() {
+    // Reset the csi state
+    memset(&csi, 0, sizeof(omv_csi_t));
 }
 
-__weak int sensor_init() {
-    // Reset the sensor state
-    memset(&sensor, 0, sizeof(sensor_t));
-    return SENSOR_ERROR_CTL_UNSUPPORTED;
+__weak int omv_csi_init() {
+    // Reset the csi state
+    memset(&csi, 0, sizeof(omv_csi_t));
+    return OMV_CSI_ERROR_CTL_UNSUPPORTED;
 }
 
-__weak int sensor_abort(bool fifo_flush, bool in_irq) {
-    return SENSOR_ERROR_CTL_UNSUPPORTED;
+__weak int omv_csi_abort(bool fifo_flush, bool in_irq) {
+    return OMV_CSI_ERROR_CTL_UNSUPPORTED;
 }
 
-__weak int sensor_reset() {
+__weak int omv_csi_reset() {
     // Disable any ongoing frame capture.
-    sensor_abort(true, false);
+    omv_csi_abort(true, false);
 
-    // Reset the sensor state
-    sensor.sde = 0;
-    sensor.pixformat = 0;
-    sensor.framesize = 0;
-    sensor.framerate = 0;
-    sensor.first_line = false;
-    sensor.drop_frame = false;
-    sensor.last_frame_ms = 0;
-    sensor.last_frame_ms_valid = false;
-    sensor.gainceiling = 0;
-    sensor.hmirror = false;
-    sensor.vflip = false;
-    sensor.transpose = false;
+    // Reset the csi state
+    csi.sde = 0;
+    csi.pixformat = 0;
+    csi.framesize = 0;
+    csi.framerate = 0;
+    csi.first_line = false;
+    csi.drop_frame = false;
+    csi.last_frame_ms = 0;
+    csi.last_frame_ms_valid = false;
+    csi.gainceiling = 0;
+    csi.hmirror = false;
+    csi.vflip = false;
+    csi.transpose = false;
     #if MICROPY_PY_IMU
-    sensor.auto_rotation = (sensor.chip_id == OV7690_ID);
+    csi.auto_rotation = (csi.chip_id == OV7690_ID);
     #else
-    sensor.auto_rotation = false;
+    csi.auto_rotation = false;
     #endif // MICROPY_PY_IMU
-    sensor.vsync_callback = NULL;
-    sensor.frame_callback = NULL;
+    csi.vsync_callback = NULL;
+    csi.frame_callback = NULL;
 
     // Reset default color palette.
-    sensor.color_palette = rainbow_table;
+    csi.color_palette = rainbow_table;
 
-    sensor.disable_full_flush = false;
+    csi.disable_full_flush = false;
 
     // Restore shutdown state on reset.
-    sensor_shutdown(false);
+    omv_csi_shutdown(false);
 
     // Disable the bus before reset.
-    omv_i2c_enable(&sensor.i2c_bus, false);
+    omv_i2c_enable(&csi.i2c_bus, false);
 
     #if defined(OMV_CSI_RESET_PIN)
-    // Hard-reset the sensor
-    if (sensor.reset_pol == ACTIVE_HIGH) {
+    // Hard-reset the csi
+    if (csi.reset_pol == OMV_CSI_ACTIVE_HIGH) {
         omv_gpio_write(OMV_CSI_RESET_PIN, 1);
         mp_hal_delay_ms(10);
         omv_gpio_write(OMV_CSI_RESET_PIN, 0);
@@ -184,12 +193,12 @@ __weak int sensor_reset() {
     mp_hal_delay_ms(OMV_CSI_RESET_DELAY);
 
     // Re-enable the bus.
-    omv_i2c_enable(&sensor.i2c_bus, true);
+    omv_i2c_enable(&csi.i2c_bus, true);
 
-    // Call sensor-specific reset function
-    if (sensor.reset != NULL
-        && sensor.reset(&sensor) != 0) {
-        return SENSOR_ERROR_CTL_FAILED;
+    // Call csi-specific reset function
+    if (csi.reset != NULL
+        && csi.reset(&csi) != 0) {
+        return OMV_CSI_ERROR_CTL_FAILED;
     }
 
     // Reset framebuffers
@@ -198,16 +207,16 @@ __weak int sensor_reset() {
     return 0;
 }
 
-static int sensor_detect() {
+static int omv_csi_detect() {
     uint8_t devs_list[OMV_CSI_MAX_DEVICES];
-    int n_devs = omv_i2c_scan(&sensor.i2c_bus, devs_list, OMV_ARRAY_SIZE(devs_list));
+    int n_devs = omv_i2c_scan(&csi.i2c_bus, devs_list, OMV_ARRAY_SIZE(devs_list));
 
     for (int i = 0; i < OMV_MIN(n_devs, OMV_CSI_MAX_DEVICES); i++) {
         uint8_t slv_addr = devs_list[i];
         switch (slv_addr) {
             #if (OMV_OV2640_ENABLE == 1)
             case OV2640_SLV_ADDR: // Or OV9650.
-                omv_i2c_readb(&sensor.i2c_bus, slv_addr, OV_CHIP_ID, (uint8_t *) &sensor.chip_id);
+                omv_i2c_readb(&csi.i2c_bus, slv_addr, OV_CHIP_ID, (uint8_t *) &csi.chip_id);
                 return slv_addr;
             #endif // (OMV_OV2640_ENABLE == 1)
 
@@ -215,18 +224,18 @@ static int sensor_detect() {
             // OV5640, GC2145, and GENX320 share the same I2C address
             case OV5640_SLV_ADDR:   // Or GC2145, or GENX320.
                 // Try to read GC2145 chip ID first
-                omv_i2c_readb(&sensor.i2c_bus, slv_addr, GC_CHIP_ID, (uint8_t *) &sensor.chip_id);
-                if (sensor.chip_id != GC2145_ID) {
+                omv_i2c_readb(&csi.i2c_bus, slv_addr, GC_CHIP_ID, (uint8_t *) &csi.chip_id);
+                if (csi.chip_id != GC2145_ID) {
                     // If it fails, try reading OV5640 chip ID.
-                    omv_i2c_readb2(&sensor.i2c_bus, slv_addr, OV5640_CHIP_ID, (uint8_t *) &sensor.chip_id);
+                    omv_i2c_readb2(&csi.i2c_bus, slv_addr, OV5640_CHIP_ID, (uint8_t *) &csi.chip_id);
 
                     #if (OMV_GENX320_ENABLE == 1)
-                    if (sensor.chip_id != OV5640_ID) {
+                    if (csi.chip_id != OV5640_ID) {
                         // If it fails, try reading GENX320 chip ID.
                         uint8_t buf[] = {(GENX320_CHIP_ID >> 8), GENX320_CHIP_ID};
-                        omv_i2c_write_bytes(&sensor.i2c_bus, slv_addr, buf, 2, OMV_I2C_XFER_NO_STOP);
-                        omv_i2c_read_bytes(&sensor.i2c_bus, slv_addr, (uint8_t *) &sensor.chip_id, 4, OMV_I2C_XFER_NO_FLAGS);
-                        sensor.chip_id = __REV(sensor.chip_id);
+                        omv_i2c_write_bytes(&csi.i2c_bus, slv_addr, buf, 2, OMV_I2C_XFER_NO_STOP);
+                        omv_i2c_read_bytes(&csi.i2c_bus, slv_addr, (uint8_t *) &csi.chip_id, 4, OMV_I2C_XFER_NO_FLAGS);
+                        csi.chip_id = __REV(csi.chip_id);
                     }
                     #endif // (OMV_GENX320_ENABLE == 1)
                 }
@@ -235,51 +244,51 @@ static int sensor_detect() {
 
             #if (OMV_OV7725_ENABLE == 1) || (OMV_OV7670_ENABLE == 1) || (OMV_OV7690_ENABLE == 1)
             case OV7725_SLV_ADDR: // Or OV7690 or OV7670.
-                omv_i2c_readb(&sensor.i2c_bus, slv_addr, OV_CHIP_ID, (uint8_t *) &sensor.chip_id);
+                omv_i2c_readb(&csi.i2c_bus, slv_addr, OV_CHIP_ID, (uint8_t *) &csi.chip_id);
                 return slv_addr;
             #endif //(OMV_OV7725_ENABLE == 1) || (OMV_OV7670_ENABLE == 1) || (OMV_OV7690_ENABLE == 1)
 
             #if (OMV_MT9V0XX_ENABLE == 1)
             case MT9V0XX_SLV_ADDR:
-                omv_i2c_readw(&sensor.i2c_bus, slv_addr, ON_CHIP_ID, (uint16_t *) &sensor.chip_id);
+                omv_i2c_readw(&csi.i2c_bus, slv_addr, ON_CHIP_ID, (uint16_t *) &csi.chip_id);
                 return slv_addr;
             #endif //(OMV_MT9V0XX_ENABLE == 1)
 
             #if (OMV_MT9M114_ENABLE == 1)
             case MT9M114_SLV_ADDR:
-                omv_i2c_readw2(&sensor.i2c_bus, slv_addr, ON_CHIP_ID, (uint16_t *) &sensor.chip_id);
+                omv_i2c_readw2(&csi.i2c_bus, slv_addr, ON_CHIP_ID, (uint16_t *) &csi.chip_id);
                 return slv_addr;
             #endif // (OMV_MT9M114_ENABLE == 1)
 
             #if (OMV_LEPTON_ENABLE == 1)
             case LEPTON_SLV_ADDR:
-                sensor.chip_id = LEPTON_ID;
+                csi.chip_id = LEPTON_ID;
                 return slv_addr;
             #endif // (OMV_LEPTON_ENABLE == 1)
 
             #if (OMV_HM01B0_ENABLE == 1) || (OMV_HM0360_ENABLE == 1)
             case HM0XX0_SLV_ADDR:
-                omv_i2c_readb2(&sensor.i2c_bus, slv_addr, HIMAX_CHIP_ID, (uint8_t *) &sensor.chip_id);
+                omv_i2c_readb2(&csi.i2c_bus, slv_addr, HIMAX_CHIP_ID, (uint8_t *) &csi.chip_id);
                 return slv_addr;
             #endif // (OMV_HM01B0_ENABLE == 1) || (OMV_HM0360_ENABLE == 1)
 
             #if (OMV_FROGEYE2020_ENABLE == 1)
             case FROGEYE2020_SLV_ADDR:
-                sensor.chip_id = FROGEYE2020_ID;
+                csi.chip_id = FROGEYE2020_ID;
                 return slv_addr;
             #endif // (OMV_FROGEYE2020_ENABLE == 1)
 
             #if (OMV_PAG7920_ENABLE == 1)
             case PAG7920_SLV_ADDR:
-                omv_i2c_readw2(&sensor.i2c_bus, slv_addr, PIXART_CHIP_ID, (uint16_t *) &sensor.chip_id);
-                sensor.chip_id = ((sensor.chip_id << 8) | (sensor.chip_id >> 8)) & 0xFFFF;
+                omv_i2c_readw2(&csi.i2c_bus, slv_addr, PIXART_CHIP_ID, (uint16_t *) &csi.chip_id);
+                csi.chip_id = ((csi.chip_id << 8) | (csi.chip_id >> 8)) & 0xFFFF;
                 return slv_addr;
             #endif // (OMV_PAG7920_ENABLE == 1)
 
             #if (OMV_PAG7936_ENABLE == 1)
             case PAG7936_SLV_ADDR:
-                omv_i2c_readw2(&sensor.i2c_bus, slv_addr, PIXART_CHIP_ID, (uint16_t *) &sensor.chip_id);
-                sensor.chip_id = ((sensor.chip_id << 8) | (sensor.chip_id >> 8)) & 0xFFFF;
+                omv_i2c_readw2(&csi.i2c_bus, slv_addr, PIXART_CHIP_ID, (uint16_t *) &csi.chip_id);
+                csi.chip_id = ((csi.chip_id << 8) | (csi.chip_id >> 8)) & 0xFFFF;
                 return slv_addr;
             #endif // (OMV_PAG7936_ENABLE == 1)
         }
@@ -288,11 +297,11 @@ static int sensor_detect() {
     return 0;
 }
 
-int sensor_probe_init(uint32_t bus_id, uint32_t bus_speed) {
+int omv_csi_probe_init(uint32_t bus_id, uint32_t bus_speed) {
     int init_ret = 0;
 
     #if defined(OMV_CSI_POWER_PIN)
-    sensor.power_pol = ACTIVE_HIGH;
+    csi.power_pol = OMV_CSI_ACTIVE_HIGH;
     // Do a power cycle
     omv_gpio_write(OMV_CSI_POWER_PIN, 1);
     mp_hal_delay_ms(10);
@@ -302,8 +311,8 @@ int sensor_probe_init(uint32_t bus_id, uint32_t bus_speed) {
     #endif
 
     #if defined(OMV_CSI_RESET_PIN)
-    sensor.reset_pol = ACTIVE_HIGH;
-    // Reset the sensor
+    csi.reset_pol = OMV_CSI_ACTIVE_HIGH;
+    // Reset the csi
     omv_gpio_write(OMV_CSI_RESET_PIN, 1);
     mp_hal_delay_ms(10);
 
@@ -312,108 +321,108 @@ int sensor_probe_init(uint32_t bus_id, uint32_t bus_speed) {
     #endif
 
     // Initialize the camera bus.
-    omv_i2c_init(&sensor.i2c_bus, bus_id, bus_speed);
+    omv_i2c_init(&csi.i2c_bus, bus_id, bus_speed);
     mp_hal_delay_ms(10);
 
     // Scan the bus multiple times using different reset and power-down
     // polarities, until a supported sensor is detected.
-    if ((sensor.slv_addr = sensor_detect()) == 0) {
+    if ((csi.slv_addr = omv_csi_detect()) == 0) {
         // No devices were detected, try scanning the bus
         // again with different reset/power-down polarities.
         #if defined(OMV_CSI_RESET_PIN)
-        sensor.reset_pol = ACTIVE_LOW;
+        csi.reset_pol = OMV_CSI_ACTIVE_LOW;
         omv_gpio_write(OMV_CSI_RESET_PIN, 1);
         mp_hal_delay_ms(OMV_CSI_RESET_DELAY);
         #endif
 
-        if ((sensor.slv_addr = sensor_detect()) == 0) {
+        if ((csi.slv_addr = omv_csi_detect()) == 0) {
             #if defined(OMV_CSI_POWER_PIN)
-            sensor.power_pol = ACTIVE_LOW;
+            csi.power_pol = OMV_CSI_ACTIVE_LOW;
             omv_gpio_write(OMV_CSI_POWER_PIN, 1);
             mp_hal_delay_ms(OMV_CSI_POWER_DELAY);
             #endif
 
-            if ((sensor.slv_addr = sensor_detect()) == 0) {
+            if ((csi.slv_addr = omv_csi_detect()) == 0) {
                 #if defined(OMV_CSI_RESET_PIN)
-                sensor.reset_pol = ACTIVE_HIGH;
+                csi.reset_pol = OMV_CSI_ACTIVE_HIGH;
                 omv_gpio_write(OMV_CSI_RESET_PIN, 0);
                 mp_hal_delay_ms(OMV_CSI_RESET_DELAY);
                 #endif
-                sensor.slv_addr = sensor_detect();
+                csi.slv_addr = omv_csi_detect();
             }
         }
 
         // If no devices were detected on the I2C bus, try the SPI bus.
-        if (sensor.slv_addr == 0) {
+        if (csi.slv_addr == 0) {
             if (0) {
             #if (OMV_PAJ6100_ENABLE == 1)
-            } else if (paj6100_detect(&sensor)) {
+            } else if (paj6100_detect(&csi)) {
                 // Found PixArt PAJ6100
-                sensor.chip_id = PAJ6100_ID;
-                sensor.power_pol = ACTIVE_LOW;
-                sensor.reset_pol = ACTIVE_LOW;
+                csi.chip_id = PAJ6100_ID;
+                csi.power_pol = OMV_CSI_ACTIVE_LOW;
+                csi.reset_pol = OMV_CSI_ACTIVE_LOW;
             #endif
             } else {
-                return SENSOR_ERROR_ISC_UNDETECTED;
+                return OMV_CSI_ERROR_ISC_UNDETECTED;
             }
         }
     }
 
     // A supported sensor was detected, try to initialize it.
-    switch (sensor.chip_id) {
+    switch (csi.chip_id) {
         #if (OMV_OV2640_ENABLE == 1)
         case OV2640_ID:
-            if (sensor_set_xclk_frequency(OMV_OV2640_XCLK_FREQ) != 0) {
-                return SENSOR_ERROR_TIM_INIT_FAILED;
+            if (omv_csi_set_clk_frequency(OMV_OV2640_CLK_FREQ) != 0) {
+                return OMV_CSI_ERROR_TIM_INIT_FAILED;
             }
-            init_ret = ov2640_init(&sensor);
+            init_ret = ov2640_init(&csi);
             break;
         #endif // (OMV_OV2640_ENABLE == 1)
 
         #if (OMV_OV5640_ENABLE == 1)
         case OV5640_ID: {
-            int freq = OMV_OV5640_XCLK_FREQ;
+            int freq = OMV_OV5640_CLK_FREQ;
             #if (OMV_OV5640_REV_Y_CHECK == 1)
             if (HAL_GetREVID() < 0x2003) {
                 // Is this REV Y?
                 freq = OMV_OV5640_REV_Y_FREQ;
             }
             #endif
-            if (sensor_set_xclk_frequency(freq) != 0) {
-                return SENSOR_ERROR_TIM_INIT_FAILED;
+            if (omv_csi_set_clk_frequency(freq) != 0) {
+                return OMV_CSI_ERROR_TIM_INIT_FAILED;
             }
-            init_ret = ov5640_init(&sensor);
+            init_ret = ov5640_init(&csi);
             break;
         }
         #endif // (OMV_OV5640_ENABLE == 1)
 
         #if (OMV_OV7670_ENABLE == 1)
         case OV7670_ID:
-            if (sensor_set_xclk_frequency(OMV_OV7670_XCLK_FREQ) != 0) {
-                return SENSOR_ERROR_TIM_INIT_FAILED;
+            if (omv_csi_set_clk_frequency(OMV_OV7670_CLK_FREQ) != 0) {
+                return OMV_CSI_ERROR_TIM_INIT_FAILED;
             }
-            init_ret = ov7670_init(&sensor);
+            init_ret = ov7670_init(&csi);
             break;
         #endif // (OMV_OV7670_ENABLE == 1)
 
         #if (OMV_OV7690_ENABLE == 1)
         case OV7690_ID:
-            if (sensor_set_xclk_frequency(OMV_OV7690_XCLK_FREQ) != 0) {
-                return SENSOR_ERROR_TIM_INIT_FAILED;
+            if (omv_csi_set_clk_frequency(OMV_OV7690_CLK_FREQ) != 0) {
+                return OMV_CSI_ERROR_TIM_INIT_FAILED;
             }
-            init_ret = ov7690_init(&sensor);
+            init_ret = ov7690_init(&csi);
             break;
         #endif // (OMV_OV7690_ENABLE == 1)
 
         #if (OMV_OV7725_ENABLE == 1)
         case OV7725_ID:
-            init_ret = ov7725_init(&sensor);
+            init_ret = ov7725_init(&csi);
             break;
         #endif // (OMV_OV7725_ENABLE == 1)
 
         #if (OMV_OV9650_ENABLE == 1)
         case OV9650_ID:
-            init_ret = ov9650_init(&sensor);
+            init_ret = ov9650_init(&csi);
             break;
         #endif // (OMV_OV9650_ENABLE == 1)
 
@@ -421,172 +430,172 @@ int sensor_probe_init(uint32_t bus_id, uint32_t bus_speed) {
         case MT9V0X2_ID_V_1:
         case MT9V0X2_ID_V_2:
             // Force old versions to the newest.
-            sensor.chip_id = MT9V0X2_ID;
+            csi.chip_id = MT9V0X2_ID;
         case MT9V0X2_ID:
         case MT9V0X4_ID:
-            if (sensor_set_xclk_frequency(OMV_MT9V0XX_XCLK_FREQ) != 0) {
-                return SENSOR_ERROR_TIM_INIT_FAILED;
+            if (omv_csi_set_clk_frequency(OMV_MT9V0XX_CLK_FREQ) != 0) {
+                return OMV_CSI_ERROR_TIM_INIT_FAILED;
             }
-            init_ret = mt9v0xx_init(&sensor);
+            init_ret = mt9v0xx_init(&csi);
             break;
         #endif //(OMV_MT9V0XX_ENABLE == 1)
 
         #if (OMV_MT9M114_ENABLE == 1)
         case MT9M114_ID:
-            if (sensor_set_xclk_frequency(OMV_MT9M114_XCLK_FREQ) != 0) {
-                return SENSOR_ERROR_TIM_INIT_FAILED;
+            if (omv_csi_set_clk_frequency(OMV_MT9M114_CLK_FREQ) != 0) {
+                return OMV_CSI_ERROR_TIM_INIT_FAILED;
             }
-            init_ret = mt9m114_init(&sensor);
+            init_ret = mt9m114_init(&csi);
             break;
         #endif //(OMV_MT9M114_ENABLE == 1)
 
         #if (OMV_LEPTON_ENABLE == 1)
         case LEPTON_ID:
-            if (sensor_set_xclk_frequency(OMV_LEPTON_XCLK_FREQ) != 0) {
-                return SENSOR_ERROR_TIM_INIT_FAILED;
+            if (omv_csi_set_clk_frequency(OMV_LEPTON_CLK_FREQ) != 0) {
+                return OMV_CSI_ERROR_TIM_INIT_FAILED;
             }
-            init_ret = lepton_init(&sensor);
+            init_ret = lepton_init(&csi);
             break;
         #endif // (OMV_LEPTON_ENABLE == 1)
 
         #if (OMV_HM01B0_ENABLE == 1)
         case HM01B0_ID:
-            if (sensor_set_xclk_frequency(OMV_HM01B0_XCLK_FREQ) != 0) {
-                return SENSOR_ERROR_TIM_INIT_FAILED;
+            if (omv_csi_set_clk_frequency(OMV_HM01B0_CLK_FREQ) != 0) {
+                return OMV_CSI_ERROR_TIM_INIT_FAILED;
             }
-            init_ret = hm01b0_init(&sensor);
+            init_ret = hm01b0_init(&csi);
             break;
         #endif //(OMV_HM01B0_ENABLE == 1)
 
         #if (OMV_HM0360_ENABLE == 1)
         case HM0360_ID:
-            if (sensor_set_xclk_frequency(OMV_HM0360_XCLK_FREQ) != 0) {
-                return SENSOR_ERROR_TIM_INIT_FAILED;
+            if (omv_csi_set_clk_frequency(OMV_HM0360_CLK_FREQ) != 0) {
+                return OMV_CSI_ERROR_TIM_INIT_FAILED;
             }
-            init_ret = hm0360_init(&sensor);
+            init_ret = hm0360_init(&csi);
             break;
         #endif //(OMV_HM0360_ENABLE == 1)
 
         #if (OMV_GC2145_ENABLE == 1)
         case GC2145_ID:
-            if (sensor_set_xclk_frequency(OMV_GC2145_XCLK_FREQ) != 0) {
-                return SENSOR_ERROR_TIM_INIT_FAILED;
+            if (omv_csi_set_clk_frequency(OMV_GC2145_CLK_FREQ) != 0) {
+                return OMV_CSI_ERROR_TIM_INIT_FAILED;
             }
-            init_ret = gc2145_init(&sensor);
+            init_ret = gc2145_init(&csi);
             break;
         #endif //(OMV_GC2145_ENABLE == 1)
 
         #if (OMV_GENX320_ENABLE == 1)
         case GENX320_ID_ES:
         case GENX320_ID_MP:
-            if (sensor_set_xclk_frequency(OMV_GENX320_XCLK_FREQ) != 0) {
-                return SENSOR_ERROR_TIM_INIT_FAILED;
+            if (omv_csi_set_clk_frequency(OMV_GENX320_CLK_FREQ) != 0) {
+                return OMV_CSI_ERROR_TIM_INIT_FAILED;
             }
-            init_ret = genx320_init(&sensor);
+            init_ret = genx320_init(&csi);
             break;
         #endif // (OMV_GENX320_ENABLE == 1)
 
         #if (OMV_PAG7920_ENABLE == 1)
         case PAG7920_ID:
-            if (sensor_set_xclk_frequency(OMV_PAG7920_XCLK_FREQ) != 0) {
-                return SENSOR_ERROR_TIM_INIT_FAILED;
+            if (omv_csi_set_clk_frequency(OMV_PAG7920_CLK_FREQ) != 0) {
+                return OMV_CSI_ERROR_TIM_INIT_FAILED;
             }
-            init_ret = pag7920_init(&sensor);
+            init_ret = pag7920_init(&csi);
             break;
         #endif // (OMV_PAG7920_ENABLE == 1)
 
         #if (OMV_PAG7936_ENABLE == 1)
         case PAG7936_ID:
-            if (sensor_set_xclk_frequency(OMV_PAG7936_XCLK_FREQ) != 0) {
-                return SENSOR_ERROR_TIM_INIT_FAILED;
+            if (omv_csi_set_clk_frequency(OMV_PAG7936_CLK_FREQ) != 0) {
+                return OMV_CSI_ERROR_TIM_INIT_FAILED;
             }
-            init_ret = pag7936_init(&sensor);
+            init_ret = pag7936_init(&csi);
             break;
         #endif // (OMV_PAG7936_ENABLE == 1)
 
         #if (OMV_PAJ6100_ENABLE == 1)
         case PAJ6100_ID:
-            if (sensor_set_xclk_frequency(OMV_PAJ6100_XCLK_FREQ) != 0) {
-                return SENSOR_ERROR_TIM_INIT_FAILED;
+            if (omv_csi_set_clk_frequency(OMV_PAJ6100_CLK_FREQ) != 0) {
+                return OMV_CSI_ERROR_TIM_INIT_FAILED;
             }
-            init_ret = paj6100_init(&sensor);
+            init_ret = paj6100_init(&csi);
             break;
         #endif // (OMV_PAJ6100_ENABLE == 1)
 
         #if (OMV_FROGEYE2020_ENABLE == 1)
         case FROGEYE2020_ID:
-            if (sensor_set_xclk_frequency(OMV_FROGEYE2020_XCLK_FREQ) != 0) {
-                return SENSOR_ERROR_TIM_INIT_FAILED;
+            if (omv_csi_set_clk_frequency(OMV_FROGEYE2020_CLK_FREQ) != 0) {
+                return OMV_CSI_ERROR_TIM_INIT_FAILED;
             }
-            init_ret = frogeye2020_init(&sensor);
+            init_ret = frogeye2020_init(&csi);
             break;
         #endif // (OMV_FROGEYE2020_ENABLE == 1)
 
         default:
-            return SENSOR_ERROR_ISC_UNSUPPORTED;
+            return OMV_CSI_ERROR_ISC_UNSUPPORTED;
             break;
     }
 
     if (init_ret != 0) {
         // Sensor init failed.
-        return SENSOR_ERROR_ISC_INIT_FAILED;
+        return OMV_CSI_ERROR_ISC_INIT_FAILED;
     }
 
     return 0;
 }
 
-__weak int sensor_config(sensor_config_t config) {
+__weak int omv_csi_config(omv_csi_config_t config) {
     return 0;
 }
 
-__weak int sensor_get_id() {
-    return sensor.chip_id;
+__weak int omv_csi_get_id() {
+    return csi.chip_id;
 }
 
-__weak uint32_t sensor_get_xclk_frequency() {
-    return SENSOR_ERROR_CTL_UNSUPPORTED;
+__weak uint32_t omv_csi_get_xclk_frequency() {
+    return OMV_CSI_ERROR_CTL_UNSUPPORTED;
 }
 
-__weak int sensor_set_xclk_frequency(uint32_t frequency) {
-    return SENSOR_ERROR_CTL_UNSUPPORTED;
+__weak int omv_csi_set_clk_frequency(uint32_t frequency) {
+    return OMV_CSI_ERROR_CTL_UNSUPPORTED;
 }
 
-__weak bool sensor_is_detected() {
-    return sensor.detected;
+__weak bool omv_csi_is_detected() {
+    return csi.detected;
 }
 
-__weak int sensor_sleep(int enable) {
+__weak int omv_csi_sleep(int enable) {
     // Disable any ongoing frame capture.
-    sensor_abort(true, false);
+    omv_csi_abort(true, false);
 
     // Check if the control is supported.
-    if (sensor.sleep == NULL) {
-        return SENSOR_ERROR_CTL_UNSUPPORTED;
+    if (csi.sleep == NULL) {
+        return OMV_CSI_ERROR_CTL_UNSUPPORTED;
     }
 
     // Call the sensor specific function.
-    if (sensor.sleep(&sensor, enable) != 0) {
-        return SENSOR_ERROR_CTL_FAILED;
+    if (csi.sleep(&csi, enable) != 0) {
+        return OMV_CSI_ERROR_CTL_FAILED;
     }
 
     return 0;
 }
 
-__weak int sensor_shutdown(int enable) {
+__weak int omv_csi_shutdown(int enable) {
     int ret = 0;
 
     // Disable any ongoing frame capture.
-    sensor_abort(true, false);
+    omv_csi_abort(true, false);
 
     #if defined(OMV_CSI_POWER_PIN)
     if (enable) {
-        if (sensor.power_pol == ACTIVE_HIGH) {
+        if (csi.power_pol == OMV_CSI_ACTIVE_HIGH) {
             omv_gpio_write(OMV_CSI_POWER_PIN, 1);
         } else {
             omv_gpio_write(OMV_CSI_POWER_PIN, 0);
         }
     } else {
-        if (sensor.power_pol == ACTIVE_HIGH) {
+        if (csi.power_pol == OMV_CSI_ACTIVE_HIGH) {
             omv_gpio_write(OMV_CSI_POWER_PIN, 0);
         } else {
             omv_gpio_write(OMV_CSI_POWER_PIN, 1);
@@ -599,39 +608,39 @@ __weak int sensor_shutdown(int enable) {
     return ret;
 }
 
-__weak int sensor_read_reg(uint16_t reg_addr) {
+__weak int omv_csi_read_reg(uint16_t reg_addr) {
     int ret;
 
     // Check if the control is supported.
-    if (sensor.read_reg == NULL) {
-        return SENSOR_ERROR_CTL_UNSUPPORTED;
+    if (csi.read_reg == NULL) {
+        return OMV_CSI_ERROR_CTL_UNSUPPORTED;
     }
 
     // Call the sensor specific function.
-    if ((ret = sensor.read_reg(&sensor, reg_addr)) == -1) {
-        return SENSOR_ERROR_IO_ERROR;
+    if ((ret = csi.read_reg(&csi, reg_addr)) == -1) {
+        return OMV_CSI_ERROR_IO_ERROR;
     }
 
     return ret;
 }
 
-__weak int sensor_write_reg(uint16_t reg_addr, uint16_t reg_data) {
+__weak int omv_csi_write_reg(uint16_t reg_addr, uint16_t reg_data) {
     // Check if the control is supported.
-    if (sensor.write_reg == NULL) {
-        return SENSOR_ERROR_CTL_UNSUPPORTED;
+    if (csi.write_reg == NULL) {
+        return OMV_CSI_ERROR_CTL_UNSUPPORTED;
     }
 
     // Call the sensor specific function.
-    if (sensor.write_reg(&sensor, reg_addr, reg_data) == -1) {
-        return SENSOR_ERROR_IO_ERROR;
+    if (csi.write_reg(&csi, reg_addr, reg_data) == -1) {
+        return OMV_CSI_ERROR_IO_ERROR;
     }
 
     return 0;
 }
 
-__weak int sensor_set_pixformat(pixformat_t pixformat) {
+__weak int omv_csi_set_pixformat(pixformat_t pixformat) {
     // Check if the value has changed.
-    if (sensor.pixformat == pixformat) {
+    if (csi.pixformat == pixformat) {
         return 0;
     }
 
@@ -639,7 +648,7 @@ __weak int sensor_set_pixformat(pixformat_t pixformat) {
     // If the current format is BAYER (1BPP), and the target format is color and (2BPP), and the frame does not
     // fit in RAM it will just be switched back again to BAYER, so we keep the current format unchanged.
     uint32_t size = framebuffer_get_buffer_size();
-    if ((sensor.pixformat == PIXFORMAT_BAYER) &&
+    if ((csi.pixformat == PIXFORMAT_BAYER) &&
         ((pixformat == PIXFORMAT_RGB565) || (pixformat == PIXFORMAT_YUV422)) &&
         (MAIN_FB()->u * MAIN_FB()->v * 2 > size) &&
         (MAIN_FB()->u * MAIN_FB()->v * 1 <= size)) {
@@ -647,71 +656,71 @@ __weak int sensor_set_pixformat(pixformat_t pixformat) {
     }
 
     // Cropping and transposing (and thus auto rotation) don't work in JPEG mode.
-    if (((pixformat == PIXFORMAT_YUV422) && (sensor.transpose || sensor.auto_rotation)) ||
-        ((pixformat == PIXFORMAT_JPEG) && (sensor_get_cropped() || sensor.transpose || sensor.auto_rotation))) {
-        return SENSOR_ERROR_PIXFORMAT_UNSUPPORTED;
+    if (((pixformat == PIXFORMAT_YUV422) && (csi.transpose || csi.auto_rotation)) ||
+        ((pixformat == PIXFORMAT_JPEG) && (omv_csi_get_cropped() || csi.transpose || csi.auto_rotation))) {
+        return OMV_CSI_ERROR_PIXFORMAT_UNSUPPORTED;
     }
 
     // Disable any ongoing frame capture.
-    sensor_abort(true, false);
+    omv_csi_abort(true, false);
 
     // Flush previous frame.
     framebuffer_update_jpeg_buffer();
 
     // Check if the control is supported.
-    if (sensor.set_pixformat == NULL) {
-        return SENSOR_ERROR_CTL_UNSUPPORTED;
+    if (csi.set_pixformat == NULL) {
+        return OMV_CSI_ERROR_CTL_UNSUPPORTED;
     }
 
     // Call the sensor specific function.
-    if (sensor.set_pixformat(&sensor, pixformat) != 0) {
-        return SENSOR_ERROR_CTL_FAILED;
+    if (csi.set_pixformat(&csi, pixformat) != 0) {
+        return OMV_CSI_ERROR_CTL_FAILED;
     }
 
-    if (!sensor.disable_delays) {
+    if (!csi.disable_delays) {
         mp_hal_delay_ms(100); // wait for the camera to settle
     }
 
     // Set pixel format
-    sensor.pixformat = pixformat;
+    csi.pixformat = pixformat;
 
     // Reset pixel format to skip the first frame.
     MAIN_FB()->pixfmt = PIXFORMAT_INVALID;
 
     // Auto-adjust the number of frame buffers.
-    sensor_set_framebuffers(-1);
+    omv_csi_set_framebuffers(-1);
 
     // Reconfigure the hardware if needed.
-    return sensor_config(SENSOR_CONFIG_PIXFORMAT);
+    return omv_csi_config(OMV_CSI_CONFIG_PIXFORMAT);
 }
 
-__weak int sensor_set_framesize(framesize_t framesize) {
-    if (sensor.framesize == framesize) {
+__weak int omv_csi_set_framesize(omv_csi_framesize_t framesize) {
+    if (csi.framesize == framesize) {
         // No change
         return 0;
     }
 
     // Disable any ongoing frame capture.
-    sensor_abort(true, false);
+    omv_csi_abort(true, false);
 
     // Flush previous frame.
     framebuffer_update_jpeg_buffer();
 
     // Call the sensor specific function
-    if (sensor.set_framesize == NULL) {
-        return SENSOR_ERROR_CTL_UNSUPPORTED;
+    if (csi.set_framesize == NULL) {
+        return OMV_CSI_ERROR_CTL_UNSUPPORTED;
     }
 
-    if (sensor.set_framesize(&sensor, framesize) != 0) {
-        return SENSOR_ERROR_CTL_FAILED;
+    if (csi.set_framesize(&csi, framesize) != 0) {
+        return OMV_CSI_ERROR_CTL_FAILED;
     }
 
-    if (!sensor.disable_delays) {
+    if (!csi.disable_delays) {
         mp_hal_delay_ms(100); // wait for the camera to settle
     }
 
     // Set framebuffer size
-    sensor.framesize = framesize;
+    csi.framesize = framesize;
 
     // Set x and y offsets.
     MAIN_FB()->x = 0;
@@ -726,67 +735,67 @@ __weak int sensor_set_framesize(framesize_t framesize) {
     MAIN_FB()->pixfmt = PIXFORMAT_INVALID;
 
     // Auto-adjust the number of frame buffers.
-    sensor_set_framebuffers(-1);
+    omv_csi_set_framebuffers(-1);
 
     // Reconfigure the hardware if needed.
-    return sensor_config(SENSOR_CONFIG_FRAMESIZE);
+    return omv_csi_config(OMV_CSI_CONFIG_FRAMESIZE);
 }
 
-__weak int sensor_set_framerate(int framerate) {
-    if (sensor.framerate == framerate) {
+__weak int omv_csi_set_framerate(int framerate) {
+    if (csi.framerate == framerate) {
         // No change
         return 0;
     }
 
     if (framerate < 0) {
-        return SENSOR_ERROR_INVALID_ARGUMENT;
+        return OMV_CSI_ERROR_INVALID_ARGUMENT;
     }
 
-    // If the sensor implements framerate control use it.
-    if (sensor.set_framerate != NULL
-        && sensor.set_framerate(&sensor, framerate) != 0) {
-        return SENSOR_ERROR_CTL_FAILED;
+    // If the csi implements framerate control use it.
+    if (csi.set_framerate != NULL
+        && csi.set_framerate(&csi, framerate) != 0) {
+        return OMV_CSI_ERROR_CTL_FAILED;
     } else {
         // Otherwise use software framerate control.
-        sensor.framerate = framerate;
+        csi.framerate = framerate;
     }
     return 0;
 }
 
-__weak void sensor_throttle_framerate() {
-    if (!sensor.first_line) {
-        sensor.first_line = true;
+__weak void omv_csi_throttle_framerate() {
+    if (!csi.first_line) {
+        csi.first_line = true;
         uint32_t tick = mp_hal_ticks_ms();
-        uint32_t framerate_ms = IM_DIV(1000, sensor.framerate);
+        uint32_t framerate_ms = IM_DIV(1000, csi.framerate);
 
-        if (sensor.last_frame_ms_valid && ((tick - sensor.last_frame_ms) < framerate_ms)) {
+        if (csi.last_frame_ms_valid && ((tick - csi.last_frame_ms) < framerate_ms)) {
             // Drop the current frame to match the requested frame rate. Note that if the frame
             // is marked to be dropped, it should not be copied to SRAM/SDRAM to save CPU time.
-            sensor.drop_frame = true;
-        } else if (sensor.last_frame_ms_valid) {
-            sensor.last_frame_ms += framerate_ms;
+            csi.drop_frame = true;
+        } else if (csi.last_frame_ms_valid) {
+            csi.last_frame_ms += framerate_ms;
         } else {
-            sensor.last_frame_ms = tick;
-            sensor.last_frame_ms_valid = true;
+            csi.last_frame_ms = tick;
+            csi.last_frame_ms_valid = true;
         }
     }
 }
 
-__weak bool sensor_get_cropped() {
-    if (sensor.framesize != FRAMESIZE_INVALID) {
+__weak bool omv_csi_get_cropped() {
+    if (csi.framesize != OMV_CSI_FRAMESIZE_INVALID) {
         return (MAIN_FB()->x != 0) ||
                (MAIN_FB()->y != 0) ||
-               (MAIN_FB()->u != resolution[sensor.framesize][0]) ||
-               (MAIN_FB()->v != resolution[sensor.framesize][1]);
+               (MAIN_FB()->u != resolution[csi.framesize][0]) ||
+               (MAIN_FB()->v != resolution[csi.framesize][1]);
     }
     return false;
 }
 
-__weak uint32_t sensor_get_src_bpp() {
-    if (sensor.raw_output) {
+__weak uint32_t omv_csi_get_src_bpp() {
+    if (csi.raw_output) {
         return 1;
     }
-    switch (sensor.pixformat) {
+    switch (csi.pixformat) {
         case PIXFORMAT_BAYER:
         case PIXFORMAT_JPEG:
             return 1;
@@ -794,14 +803,14 @@ __weak uint32_t sensor_get_src_bpp() {
         case PIXFORMAT_YUV422:
             return 2;
         case PIXFORMAT_GRAYSCALE:
-            return sensor.mono_bpp;
+            return csi.mono_bpp;
         default:
             return 0;
     }
 }
 
-__weak uint32_t sensor_get_dst_bpp() {
-    switch (sensor.pixformat) {
+__weak uint32_t omv_csi_get_dst_bpp() {
+    switch (csi.pixformat) {
         case PIXFORMAT_GRAYSCALE:
         case PIXFORMAT_BAYER:
             return 1;
@@ -813,19 +822,19 @@ __weak uint32_t sensor_get_dst_bpp() {
     }
 }
 
-__weak int sensor_set_windowing(int x, int y, int w, int h) {
+__weak int omv_csi_set_windowing(int x, int y, int w, int h) {
     // Check if the value has changed.
     if ((MAIN_FB()->x == x) && (MAIN_FB()->y == y) &&
         (MAIN_FB()->u == w) && (MAIN_FB()->v == h)) {
         return 0;
     }
 
-    if (sensor.pixformat == PIXFORMAT_JPEG) {
-        return SENSOR_ERROR_PIXFORMAT_UNSUPPORTED;
+    if (csi.pixformat == PIXFORMAT_JPEG) {
+        return OMV_CSI_ERROR_PIXFORMAT_UNSUPPORTED;
     }
 
     // Disable any ongoing frame capture.
-    sensor_abort(true, false);
+    omv_csi_abort(true, false);
 
     // Flush previous frame.
     framebuffer_update_jpeg_buffer();
@@ -843,343 +852,343 @@ __weak int sensor_set_windowing(int x, int y, int w, int h) {
     MAIN_FB()->pixfmt = PIXFORMAT_INVALID;
 
     // Auto-adjust the number of frame buffers.
-    sensor_set_framebuffers(-1);
+    omv_csi_set_framebuffers(-1);
 
     // Reconfigure the hardware if needed.
-    return sensor_config(SENSOR_CONFIG_WINDOWING);
+    return omv_csi_config(OMV_CSI_CONFIG_WINDOWING);
 }
 
-__weak int sensor_set_contrast(int level) {
+__weak int omv_csi_set_contrast(int level) {
     // Check if the control is supported.
-    if (sensor.set_contrast == NULL) {
-        return SENSOR_ERROR_CTL_UNSUPPORTED;
+    if (csi.set_contrast == NULL) {
+        return OMV_CSI_ERROR_CTL_UNSUPPORTED;
     }
 
     // Call the sensor specific function.
-    if (sensor.set_contrast(&sensor, level) != 0) {
-        return SENSOR_ERROR_CTL_FAILED;
+    if (csi.set_contrast(&csi, level) != 0) {
+        return OMV_CSI_ERROR_CTL_FAILED;
     }
 
     return 0;
 }
 
-__weak int sensor_set_brightness(int level) {
+__weak int omv_csi_set_brightness(int level) {
     // Check if the control is supported.
-    if (sensor.set_brightness == NULL) {
-        return SENSOR_ERROR_CTL_UNSUPPORTED;
+    if (csi.set_brightness == NULL) {
+        return OMV_CSI_ERROR_CTL_UNSUPPORTED;
     }
 
     // Call the sensor specific function.
-    if (sensor.set_brightness(&sensor, level) != 0) {
-        return SENSOR_ERROR_CTL_FAILED;
+    if (csi.set_brightness(&csi, level) != 0) {
+        return OMV_CSI_ERROR_CTL_FAILED;
     }
 
     return 0;
 }
 
-__weak int sensor_set_saturation(int level) {
+__weak int omv_csi_set_saturation(int level) {
     // Check if the control is supported.
-    if (sensor.set_saturation == NULL) {
-        return SENSOR_ERROR_CTL_UNSUPPORTED;
+    if (csi.set_saturation == NULL) {
+        return OMV_CSI_ERROR_CTL_UNSUPPORTED;
     }
 
     // Call the sensor specific function.
-    if (sensor.set_saturation(&sensor, level) != 0) {
-        return SENSOR_ERROR_CTL_FAILED;
+    if (csi.set_saturation(&csi, level) != 0) {
+        return OMV_CSI_ERROR_CTL_FAILED;
     }
 
     return 0;
 }
 
-__weak int sensor_set_gainceiling(gainceiling_t gainceiling) {
+__weak int omv_csi_set_gainceiling(omv_csi_gainceiling_t gainceiling) {
     // Check if the value has changed.
-    if (sensor.gainceiling == gainceiling) {
+    if (csi.gainceiling == gainceiling) {
         return 0;
     }
 
     // Check if the control is supported.
-    if (sensor.set_gainceiling == NULL) {
-        return SENSOR_ERROR_CTL_UNSUPPORTED;
+    if (csi.set_gainceiling == NULL) {
+        return OMV_CSI_ERROR_CTL_UNSUPPORTED;
     }
 
     // Call the sensor specific function.
-    if (sensor.set_gainceiling(&sensor, gainceiling) != 0) {
-        return SENSOR_ERROR_CTL_FAILED;
+    if (csi.set_gainceiling(&csi, gainceiling) != 0) {
+        return OMV_CSI_ERROR_CTL_FAILED;
     }
 
     // Set the new control value.
-    sensor.gainceiling = gainceiling;
+    csi.gainceiling = gainceiling;
 
     return 0;
 }
 
-__weak int sensor_set_quality(int qs) {
+__weak int omv_csi_set_quality(int qs) {
     // Check if the control is supported.
-    if (sensor.set_quality == NULL) {
-        return SENSOR_ERROR_CTL_UNSUPPORTED;
+    if (csi.set_quality == NULL) {
+        return OMV_CSI_ERROR_CTL_UNSUPPORTED;
     }
 
     // Call the sensor specific function.
-    if (sensor.set_quality(&sensor, qs) != 0) {
-        return SENSOR_ERROR_CTL_FAILED;
+    if (csi.set_quality(&csi, qs) != 0) {
+        return OMV_CSI_ERROR_CTL_FAILED;
     }
 
     return 0;
 }
 
-__weak int sensor_set_colorbar(int enable) {
+__weak int omv_csi_set_colorbar(int enable) {
     // Check if the control is supported.
-    if (sensor.set_colorbar == NULL) {
-        return SENSOR_ERROR_CTL_UNSUPPORTED;
+    if (csi.set_colorbar == NULL) {
+        return OMV_CSI_ERROR_CTL_UNSUPPORTED;
     }
 
     // Call the sensor specific function.
-    if (sensor.set_colorbar(&sensor, enable) != 0) {
-        return SENSOR_ERROR_CTL_FAILED;
+    if (csi.set_colorbar(&csi, enable) != 0) {
+        return OMV_CSI_ERROR_CTL_FAILED;
     }
 
     return 0;
 }
 
-__weak int sensor_set_auto_gain(int enable, float gain_db, float gain_db_ceiling) {
+__weak int omv_csi_set_auto_gain(int enable, float gain_db, float gain_db_ceiling) {
     // Check if the control is supported.
-    if (sensor.set_auto_gain == NULL) {
-        return SENSOR_ERROR_CTL_UNSUPPORTED;
+    if (csi.set_auto_gain == NULL) {
+        return OMV_CSI_ERROR_CTL_UNSUPPORTED;
     }
 
     // Call the sensor specific function.
-    if (sensor.set_auto_gain(&sensor, enable, gain_db, gain_db_ceiling) != 0) {
-        return SENSOR_ERROR_CTL_FAILED;
+    if (csi.set_auto_gain(&csi, enable, gain_db, gain_db_ceiling) != 0) {
+        return OMV_CSI_ERROR_CTL_FAILED;
     }
 
     return 0;
 }
 
-__weak int sensor_get_gain_db(float *gain_db) {
+__weak int omv_csi_get_gain_db(float *gain_db) {
     // Check if the control is supported.
-    if (sensor.get_gain_db == NULL) {
-        return SENSOR_ERROR_CTL_UNSUPPORTED;
+    if (csi.get_gain_db == NULL) {
+        return OMV_CSI_ERROR_CTL_UNSUPPORTED;
     }
 
     // Call the sensor specific function.
-    if (sensor.get_gain_db(&sensor, gain_db) != 0) {
-        return SENSOR_ERROR_CTL_FAILED;
+    if (csi.get_gain_db(&csi, gain_db) != 0) {
+        return OMV_CSI_ERROR_CTL_FAILED;
     }
 
     return 0;
 }
 
-__weak int sensor_set_auto_exposure(int enable, int exposure_us) {
+__weak int omv_csi_set_auto_exposure(int enable, int exposure_us) {
     // Check if the control is supported.
-    if (sensor.set_auto_exposure == NULL) {
-        return SENSOR_ERROR_CTL_UNSUPPORTED;
+    if (csi.set_auto_exposure == NULL) {
+        return OMV_CSI_ERROR_CTL_UNSUPPORTED;
     }
 
     // Call the sensor specific function.
-    if (sensor.set_auto_exposure(&sensor, enable, exposure_us) != 0) {
-        return SENSOR_ERROR_CTL_FAILED;
+    if (csi.set_auto_exposure(&csi, enable, exposure_us) != 0) {
+        return OMV_CSI_ERROR_CTL_FAILED;
     }
 
     return 0;
 }
 
-__weak int sensor_get_exposure_us(int *exposure_us) {
+__weak int omv_csi_get_exposure_us(int *exposure_us) {
     // Check if the control is supported.
-    if (sensor.get_exposure_us == NULL) {
-        return SENSOR_ERROR_CTL_UNSUPPORTED;
+    if (csi.get_exposure_us == NULL) {
+        return OMV_CSI_ERROR_CTL_UNSUPPORTED;
     }
 
     // Call the sensor specific function.
-    if (sensor.get_exposure_us(&sensor, exposure_us) != 0) {
-        return SENSOR_ERROR_CTL_FAILED;
+    if (csi.get_exposure_us(&csi, exposure_us) != 0) {
+        return OMV_CSI_ERROR_CTL_FAILED;
     }
 
     return 0;
 }
 
-__weak int sensor_set_auto_whitebal(int enable, float r_gain_db, float g_gain_db, float b_gain_db) {
+__weak int omv_csi_set_auto_whitebal(int enable, float r_gain_db, float g_gain_db, float b_gain_db) {
     // Check if the control is supported.
-    if (sensor.set_auto_whitebal == NULL) {
-        return SENSOR_ERROR_CTL_UNSUPPORTED;
+    if (csi.set_auto_whitebal == NULL) {
+        return OMV_CSI_ERROR_CTL_UNSUPPORTED;
     }
 
     // Call the sensor specific function.
-    if (sensor.set_auto_whitebal(&sensor, enable, r_gain_db, g_gain_db, b_gain_db) != 0) {
-        return SENSOR_ERROR_CTL_FAILED;
+    if (csi.set_auto_whitebal(&csi, enable, r_gain_db, g_gain_db, b_gain_db) != 0) {
+        return OMV_CSI_ERROR_CTL_FAILED;
     }
 
     return 0;
 }
 
-__weak int sensor_get_rgb_gain_db(float *r_gain_db, float *g_gain_db, float *b_gain_db) {
+__weak int omv_csi_get_rgb_gain_db(float *r_gain_db, float *g_gain_db, float *b_gain_db) {
     // Check if the control is supported.
-    if (sensor.get_rgb_gain_db == NULL) {
-        return SENSOR_ERROR_CTL_UNSUPPORTED;
+    if (csi.get_rgb_gain_db == NULL) {
+        return OMV_CSI_ERROR_CTL_UNSUPPORTED;
     }
 
     // Call the sensor specific function.
-    if (sensor.get_rgb_gain_db(&sensor, r_gain_db, g_gain_db, b_gain_db) != 0) {
-        return SENSOR_ERROR_CTL_FAILED;
+    if (csi.get_rgb_gain_db(&csi, r_gain_db, g_gain_db, b_gain_db) != 0) {
+        return OMV_CSI_ERROR_CTL_FAILED;
     }
 
     return 0;
 }
 
-__weak int sensor_set_auto_blc(int enable, int *regs) {
+__weak int omv_csi_set_auto_blc(int enable, int *regs) {
     // Check if the control is supported.
-    if (sensor.set_auto_blc == NULL) {
-        return SENSOR_ERROR_CTL_UNSUPPORTED;
+    if (csi.set_auto_blc == NULL) {
+        return OMV_CSI_ERROR_CTL_UNSUPPORTED;
     }
 
     // Call the sensor specific function.
-    if (sensor.set_auto_blc(&sensor, enable, regs) != 0) {
-        return SENSOR_ERROR_CTL_FAILED;
+    if (csi.set_auto_blc(&csi, enable, regs) != 0) {
+        return OMV_CSI_ERROR_CTL_FAILED;
     }
 
     return 0;
 }
 
-__weak int sensor_get_blc_regs(int *regs) {
+__weak int omv_csi_get_blc_regs(int *regs) {
     // Check if the control is supported.
-    if (sensor.get_blc_regs == NULL) {
-        return SENSOR_ERROR_CTL_UNSUPPORTED;
+    if (csi.get_blc_regs == NULL) {
+        return OMV_CSI_ERROR_CTL_UNSUPPORTED;
     }
 
     // Call the sensor specific function.
-    if (sensor.get_blc_regs(&sensor, regs) != 0) {
-        return SENSOR_ERROR_CTL_FAILED;
+    if (csi.get_blc_regs(&csi, regs) != 0) {
+        return OMV_CSI_ERROR_CTL_FAILED;
     }
 
     return 0;
 }
 
-__weak int sensor_set_hmirror(int enable) {
+__weak int omv_csi_set_hmirror(int enable) {
     // Check if the value has changed.
-    if (sensor.hmirror == ((bool) enable)) {
+    if (csi.hmirror == ((bool) enable)) {
         return 0;
     }
 
     // Disable any ongoing frame capture.
-    sensor_abort(true, false);
+    omv_csi_abort(true, false);
 
     // Check if the control is supported.
-    if (sensor.set_hmirror == NULL) {
-        return SENSOR_ERROR_CTL_UNSUPPORTED;
+    if (csi.set_hmirror == NULL) {
+        return OMV_CSI_ERROR_CTL_UNSUPPORTED;
     }
 
     // Call the sensor specific function.
-    if (sensor.set_hmirror(&sensor, enable) != 0) {
-        return SENSOR_ERROR_CTL_FAILED;
+    if (csi.set_hmirror(&csi, enable) != 0) {
+        return OMV_CSI_ERROR_CTL_FAILED;
     }
 
     // Set the new control value.
-    sensor.hmirror = enable;
+    csi.hmirror = enable;
 
     // Wait for the camera to settle
-    if (!sensor.disable_delays) {
+    if (!csi.disable_delays) {
         mp_hal_delay_ms(100);
     }
 
     return 0;
 }
 
-__weak bool sensor_get_hmirror() {
-    return sensor.hmirror;
+__weak bool omv_csi_get_hmirror() {
+    return csi.hmirror;
 }
 
-__weak int sensor_set_vflip(int enable) {
+__weak int omv_csi_set_vflip(int enable) {
     // Check if the value has changed.
-    if (sensor.vflip == ((bool) enable)) {
+    if (csi.vflip == ((bool) enable)) {
         return 0;
     }
 
     // Disable any ongoing frame capture.
-    sensor_abort(true, false);
+    omv_csi_abort(true, false);
 
     // Check if the control is supported.
-    if (sensor.set_vflip == NULL) {
-        return SENSOR_ERROR_CTL_UNSUPPORTED;
+    if (csi.set_vflip == NULL) {
+        return OMV_CSI_ERROR_CTL_UNSUPPORTED;
     }
 
     // Call the sensor specific function.
-    if (sensor.set_vflip(&sensor, enable) != 0) {
-        return SENSOR_ERROR_CTL_FAILED;
+    if (csi.set_vflip(&csi, enable) != 0) {
+        return OMV_CSI_ERROR_CTL_FAILED;
     }
 
     // Set the new control value.
-    sensor.vflip = enable;
+    csi.vflip = enable;
 
     // Wait for the camera to settle
-    if (!sensor.disable_delays) {
+    if (!csi.disable_delays) {
         mp_hal_delay_ms(100);
     }
 
     return 0;
 }
 
-__weak bool sensor_get_vflip() {
-    return sensor.vflip;
+__weak bool omv_csi_get_vflip() {
+    return csi.vflip;
 }
 
-__weak int sensor_set_transpose(bool enable) {
+__weak int omv_csi_set_transpose(bool enable) {
     // Check if the value has changed.
-    if (sensor.transpose == enable) {
+    if (csi.transpose == enable) {
         return 0;
     }
 
     // Disable any ongoing frame capture.
-    sensor_abort(true, false);
+    omv_csi_abort(true, false);
 
-    if ((sensor.pixformat == PIXFORMAT_YUV422) || (sensor.pixformat == PIXFORMAT_JPEG)) {
-        return SENSOR_ERROR_PIXFORMAT_UNSUPPORTED;
+    if ((csi.pixformat == PIXFORMAT_YUV422) || (csi.pixformat == PIXFORMAT_JPEG)) {
+        return OMV_CSI_ERROR_PIXFORMAT_UNSUPPORTED;
     }
 
     // Set the new control value.
-    sensor.transpose = enable;
+    csi.transpose = enable;
 
     return 0;
 }
 
-__weak bool sensor_get_transpose() {
-    return sensor.transpose;
+__weak bool omv_csi_get_transpose() {
+    return csi.transpose;
 }
 
-__weak int sensor_set_auto_rotation(bool enable) {
+__weak int omv_csi_set_auto_rotation(bool enable) {
     // Check if the value has changed.
-    if (sensor.auto_rotation == enable) {
+    if (csi.auto_rotation == enable) {
         return 0;
     }
 
     // Disable any ongoing frame capture.
-    sensor_abort(true, false);
+    omv_csi_abort(true, false);
 
     // Operation not supported on JPEG images.
-    if ((sensor.pixformat == PIXFORMAT_YUV422) || (sensor.pixformat == PIXFORMAT_JPEG)) {
-        return SENSOR_ERROR_PIXFORMAT_UNSUPPORTED;
+    if ((csi.pixformat == PIXFORMAT_YUV422) || (csi.pixformat == PIXFORMAT_JPEG)) {
+        return OMV_CSI_ERROR_PIXFORMAT_UNSUPPORTED;
     }
 
     // Set the new control value.
-    sensor.auto_rotation = enable;
+    csi.auto_rotation = enable;
     return 0;
 }
 
-__weak bool sensor_get_auto_rotation() {
-    return sensor.auto_rotation;
+__weak bool omv_csi_get_auto_rotation() {
+    return csi.auto_rotation;
 }
 
-__weak int sensor_set_framebuffers(int count) {
+__weak int omv_csi_set_framebuffers(int count) {
     // Disable any ongoing frame capture.
-    sensor_abort(true, false);
+    omv_csi_abort(true, false);
 
     // Flush previous frame.
     framebuffer_update_jpeg_buffer();
 
-    if (sensor.pixformat == PIXFORMAT_INVALID) {
-        return SENSOR_ERROR_INVALID_PIXFORMAT;
+    if (csi.pixformat == PIXFORMAT_INVALID) {
+        return OMV_CSI_ERROR_INVALID_PIXFORMAT;
     }
 
-    if (sensor.framesize == FRAMESIZE_INVALID) {
-        return SENSOR_ERROR_INVALID_FRAMESIZE;
+    if (csi.framesize == OMV_CSI_FRAMESIZE_INVALID) {
+        return OMV_CSI_ERROR_INVALID_FRAMESIZE;
     }
 
     #if OMV_CSI_HW_CROP_ENABLE
@@ -1187,94 +1196,94 @@ __weak int sensor_set_framebuffers(int count) {
     MAIN_FB()->frame_size = MAIN_FB()->u * MAIN_FB()->v * 2;
     #else
     // Otherwise, use the real frame size.
-    MAIN_FB()->frame_size = resolution[sensor.framesize][0] * resolution[sensor.framesize][1] * 2;
+    MAIN_FB()->frame_size = resolution[csi.framesize][0] * resolution[csi.framesize][1] * 2;
     #endif
     return framebuffer_set_buffers(count);
 }
 
-__weak int sensor_set_special_effect(sde_t sde) {
+__weak int omv_csi_set_special_effect(omv_csi_sde_t sde) {
     // Check if the value has changed.
-    if (sensor.sde == sde) {
+    if (csi.sde == sde) {
         return 0;
     }
 
     // Check if the control is supported.
-    if (sensor.set_special_effect == NULL) {
-        return SENSOR_ERROR_CTL_UNSUPPORTED;
+    if (csi.set_special_effect == NULL) {
+        return OMV_CSI_ERROR_CTL_UNSUPPORTED;
     }
 
     // Call the sensor specific function.
-    if (sensor.set_special_effect(&sensor, sde) != 0) {
-        return SENSOR_ERROR_CTL_FAILED;
+    if (csi.set_special_effect(&csi, sde) != 0) {
+        return OMV_CSI_ERROR_CTL_FAILED;
     }
 
     // Set the new control value.
-    sensor.sde = sde;
+    csi.sde = sde;
 
     return 0;
 }
 
-__weak int sensor_set_lens_correction(int enable, int radi, int coef) {
+__weak int omv_csi_set_lens_correction(int enable, int radi, int coef) {
     // Check if the control is supported.
-    if (sensor.set_lens_correction == NULL) {
-        return SENSOR_ERROR_CTL_UNSUPPORTED;
+    if (csi.set_lens_correction == NULL) {
+        return OMV_CSI_ERROR_CTL_UNSUPPORTED;
     }
 
     // Call the sensor specific function.
-    if (sensor.set_lens_correction(&sensor, enable, radi, coef) != 0) {
-        return SENSOR_ERROR_CTL_FAILED;
+    if (csi.set_lens_correction(&csi, enable, radi, coef) != 0) {
+        return OMV_CSI_ERROR_CTL_FAILED;
     }
 
     return 0;
 }
 
-__weak int sensor_ioctl(int request, ... /* arg */) {
+__weak int omv_csi_ioctl(int request, ... /* arg */) {
     // Disable any ongoing frame capture.
-    if (request & SENSOR_IOCTL_ABORT) {
-        sensor_abort(true, false);
+    if (request & OMV_CSI_IOCTL_FLAGS_ABORT) {
+        omv_csi_abort(true, false);
     }
 
     // Check if the control is supported.
-    if (sensor.ioctl == NULL) {
-        return SENSOR_ERROR_CTL_UNSUPPORTED;
+    if (csi.ioctl == NULL) {
+        return OMV_CSI_ERROR_CTL_UNSUPPORTED;
     }
 
     va_list ap;
     va_start(ap, request);
     // Call the sensor specific function.
-    int ret = sensor.ioctl(&sensor, request, ap);
+    int ret = csi.ioctl(&csi, request, ap);
     va_end(ap);
 
-    return ((ret != 0) ? SENSOR_ERROR_CTL_FAILED : 0);
+    return ((ret != 0) ? OMV_CSI_ERROR_CTL_FAILED : 0);
 }
 
-__weak int sensor_set_vsync_callback(vsync_cb_t vsync_cb) {
-    sensor.vsync_callback = vsync_cb;
+__weak int omv_csi_set_vsync_callback(vsync_cb_t vsync_cb) {
+    csi.vsync_callback = vsync_cb;
     return 0;
 }
 
-__weak int sensor_set_frame_callback(frame_cb_t vsync_cb) {
-    sensor.frame_callback = vsync_cb;
+__weak int omv_csi_set_frame_callback(frame_cb_t vsync_cb) {
+    csi.frame_callback = vsync_cb;
     return 0;
 }
 
-__weak int sensor_set_color_palette(const uint16_t *color_palette) {
-    sensor.color_palette = color_palette;
+__weak int omv_csi_set_color_palette(const uint16_t *color_palette) {
+    csi.color_palette = color_palette;
     return 0;
 }
 
-__weak const uint16_t *sensor_get_color_palette() {
-    return sensor.color_palette;
+__weak const uint16_t *omv_csi_get_color_palette() {
+    return csi.color_palette;
 }
 
-__weak int sensor_check_framebuffer_size() {
-    uint32_t bpp = sensor_get_dst_bpp();
+__weak int omv_csi_check_framebuffer_size() {
+    uint32_t bpp = omv_csi_get_dst_bpp();
     uint32_t size = framebuffer_get_buffer_size();
     return (((MAIN_FB()->u * MAIN_FB()->v * bpp) <= size) ? 0 : -1);
 }
 
-__weak int sensor_auto_crop_framebuffer() {
-    uint32_t bpp = sensor_get_dst_bpp();
+__weak int omv_csi_auto_crop_framebuffer() {
+    uint32_t bpp = omv_csi_get_dst_bpp();
     uint32_t size = framebuffer_get_buffer_size();
 
     // If the pixformat is NULL/JPEG there we can't do anything to check if it fits before hand.
@@ -1287,9 +1296,9 @@ __weak int sensor_auto_crop_framebuffer() {
         return 0;
     }
 
-    if ((sensor.pixformat == PIXFORMAT_RGB565) || (sensor.pixformat == PIXFORMAT_YUV422)) {
+    if ((csi.pixformat == PIXFORMAT_RGB565) || (csi.pixformat == PIXFORMAT_YUV422)) {
         // Switch to bayer for the quick 2x savings.
-        sensor_set_pixformat(PIXFORMAT_BAYER);
+        omv_csi_set_pixformat(PIXFORMAT_BAYER);
         bpp = 1;
 
         // MAIN_FB() fits, we are done (bpp is 1).
@@ -1357,7 +1366,7 @@ __weak int sensor_auto_crop_framebuffer() {
     }
 
     // Auto-adjust the number of frame buffers.
-    sensor_set_framebuffers(-1);
+    omv_csi_set_framebuffers(-1);
     return 0;
 }
 
@@ -1373,21 +1382,21 @@ __weak int sensor_auto_crop_framebuffer() {
         dstp += h;                                         \
     }
 
-__weak int sensor_copy_line(void *dma, uint8_t *src, uint8_t *dst) {
+__weak int omv_csi_copy_line(void *dma, uint8_t *src, uint8_t *dst) {
     uint16_t *src16 = (uint16_t *) src;
     uint16_t *dst16 = (uint16_t *) dst;
     #if OMV_CSI_DMA_MEMCPY_ENABLE
-    extern int sensor_dma_memcpy(void *dma, void *dst, void *src, int bpp, bool transposed);
+    extern int omv_csi_dma_memcpy(void *dma, void *dst, void *src, int bpp, bool transposed);
     #endif
 
-    switch (sensor.pixformat) {
+    switch (csi.pixformat) {
         case PIXFORMAT_BAYER:
             #if OMV_CSI_DMA_MEMCPY_ENABLE
-            if (!sensor_dma_memcpy(dma, dst, src, sizeof(uint8_t), sensor.transpose)) {
+            if (!omv_csi_dma_memcpy(dma, dst, src, sizeof(uint8_t), csi.transpose)) {
                 break;
             }
             #endif
-            if (!sensor.transpose) {
+            if (!csi.transpose) {
                 unaligned_memcpy(dst, src, MAIN_FB()->u);
             } else {
                 copy_transposed_line(dst, src);
@@ -1395,20 +1404,20 @@ __weak int sensor_copy_line(void *dma, uint8_t *src, uint8_t *dst) {
             break;
         case PIXFORMAT_GRAYSCALE:
             #if OMV_CSI_DMA_MEMCPY_ENABLE
-            if (!sensor_dma_memcpy(dma, dst, src, sizeof(uint8_t), sensor.transpose)) {
+            if (!omv_csi_dma_memcpy(dma, dst, src, sizeof(uint8_t), csi.transpose)) {
                 break;
             }
             #endif
-            if (sensor.mono_bpp == 1) {
+            if (csi.mono_bpp == 1) {
                 // 1BPP GRAYSCALE.
-                if (!sensor.transpose) {
+                if (!csi.transpose) {
                     unaligned_memcpy(dst, src, MAIN_FB()->u);
                 } else {
                     copy_transposed_line(dst, src);
                 }
             } else {
                 // Extract Y channel from YUV.
-                if (!sensor.transpose) {
+                if (!csi.transpose) {
                     unaligned_2_to_1_memcpy(dst, src16, MAIN_FB()->u);
                 } else {
                     copy_transposed_line(dst, src16);
@@ -1418,22 +1427,22 @@ __weak int sensor_copy_line(void *dma, uint8_t *src, uint8_t *dst) {
         case PIXFORMAT_RGB565:
         case PIXFORMAT_YUV422:
             #if OMV_CSI_DMA_MEMCPY_ENABLE
-            if (!sensor_dma_memcpy(dma, dst16, src16, sizeof(uint16_t), sensor.transpose)) {
+            if (!omv_csi_dma_memcpy(dma, dst16, src16, sizeof(uint16_t), csi.transpose)) {
                 break;
             }
             #endif
             if (0) {
             #if !OMV_CSI_HW_SWAP_ENABLE
-            } else if ((sensor.pixformat == PIXFORMAT_RGB565 && sensor.rgb_swap) ||
-                       (sensor.pixformat == PIXFORMAT_YUV422 && sensor.yuv_swap)) {
-                if (!sensor.transpose) {
+            } else if ((csi.pixformat == PIXFORMAT_RGB565 && csi.rgb_swap) ||
+                       (csi.pixformat == PIXFORMAT_YUV422 && csi.yuv_swap)) {
+                if (!csi.transpose) {
                     unaligned_memcpy_rev16(dst16, src16, MAIN_FB()->u);
                 } else {
                     copy_transposed_line_rev16(dst16, src16);
                 }
             #endif
             } else {
-                if (!sensor.transpose) {
+                if (!csi.transpose) {
                     unaligned_memcpy(dst16, src16, MAIN_FB()->u * sizeof(uint16_t));
                 } else {
                     copy_transposed_line(dst16, src16);
@@ -1446,12 +1455,12 @@ __weak int sensor_copy_line(void *dma, uint8_t *src, uint8_t *dst) {
     return 0;
 }
 
-__weak int sensor_snapshot(sensor_t *sensor, image_t *image, uint32_t flags) {
+__weak int omv_csi_snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
     return -1;
 }
 
-const char *sensor_strerror(int error) {
-    static const char *sensor_errors[] = {
+const char *omv_csi_strerror(int error) {
+    static const char *omv_csi_errors[] = {
         "No error.",
         "Sensor control failed.",
         "The requested operation is not supported by the image sensor.",
@@ -1478,10 +1487,10 @@ const char *sensor_strerror(int error) {
     // Sensor errors are negative.
     error = ((error < 0) ? (error * -1) : error);
 
-    if (error > (sizeof(sensor_errors) / sizeof(sensor_errors[0]))) {
+    if (error > (sizeof(omv_csi_errors) / sizeof(omv_csi_errors[0]))) {
         return "Unknown error.";
     } else {
-        return sensor_errors[error];
+        return omv_csi_errors[error];
     }
 }
-#endif //MICROPY_PY_SENSOR
+#endif //MICROPY_PY_CSI

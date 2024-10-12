@@ -313,8 +313,8 @@ int mimxrt_hal_spi_deinit(uint32_t bus_id) {
 
 void CSI_IRQHandler(void) {
     uint32_t csisr = CSI_REG_SR(CSI);
-    extern void sensor_sof_callback();
-    extern void sensor_line_callback(uint32_t);
+    extern void omv_csi_sof_callback();
+    extern void omv_csi_line_callback(uint32_t);
 
     // Clear interrupt flags.
     CSI_REG_SR(CSI) = csisr;
@@ -322,11 +322,11 @@ void CSI_IRQHandler(void) {
     if (csisr & CSI_SR_SOF_INT_MASK) {
         // Clear the FIFO and re/enable DMA.
         CSI_REG_CR3(CSI) |= (CSI_CR3_DMA_REFLASH_RFF_MASK | CSI_CR3_DMA_REQ_EN_RFF_MASK);
-        sensor_sof_callback();
+        omv_csi_sof_callback();
     } else if (csisr & CSI_SR_DMA_TSF_DONE_FB1_MASK) {
-        sensor_line_callback(CSI_REG_DMASA_FB1(CSI));
+        omv_csi_line_callback(CSI_REG_DMASA_FB1(CSI));
     } else if (csisr & CSI_SR_DMA_TSF_DONE_FB2_MASK) {
-        sensor_line_callback(CSI_REG_DMASA_FB2(CSI));
+        omv_csi_line_callback(CSI_REG_DMASA_FB2(CSI));
     }
 
     // Add for ARM errata 838869, affects Cortex-M4, Cortex-M4F Store immediate

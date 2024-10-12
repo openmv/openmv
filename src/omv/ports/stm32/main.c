@@ -68,7 +68,6 @@
 #include "extint.h"
 #include "servo.h"
 
-#include "sensor.h"
 #include "usbdbg.h"
 #include "wifidbg.h"
 #include "sdram.h"
@@ -94,6 +93,7 @@
 #include "omv_boardconfig.h"
 #include "omv_gpio.h"
 #include "omv_i2c.h"
+#include "omv_csi.h"
 
 #if MICROPY_PY_LWIP
 #include "lwip/init.h"
@@ -317,7 +317,7 @@ soft_reset:
     fb_alloc_init0();
     omv_gpio_init0();
     framebuffer_init0();
-    sensor_init0();
+    omv_csi_init0();
     dma_alloc_init0();
     #ifdef IMLIB_ENABLE_IMAGE_FILE_IO
     file_buffer_init0();
@@ -359,10 +359,10 @@ soft_reset:
     pyb_usb_init0();
     MP_STATE_PORT(pyb_stdio_uart) = NULL;
 
-    // Initialize the sensor and check the result after
+    // Initialize the csi and check the result after
     // mounting the file-system to log errors (if any).
     if (first_soft_reset) {
-        sensor_init();
+        omv_csi_init();
     }
 
     #if MICROPY_PY_IMU

@@ -27,8 +27,8 @@
 #ifndef __PAJ6100_H__
 #define __PAJ6100_H__
 
-#define OMV_PAJ6100_XCLK_FREQ    6000000
+#define OMV_PAJ6100_CLK_FREQ    6000000
 
-bool paj6100_detect(sensor_t *sensor);
-int paj6100_init(sensor_t *sensor);
+bool paj6100_detect(omv_csi_t *csi);
+int paj6100_init(omv_csi_t *csi);
 #endif

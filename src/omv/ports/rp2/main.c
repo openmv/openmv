@@ -57,7 +57,7 @@
 #include "omv_boardconfig.h"
 #include "framebuffer.h"
 #include "omv_i2c.h"
-#include "sensor.h"
+#include "omv_csi.h"
 #include "usbdbg.h"
 #include "tinyusb_debug.h"
 #include "py_fir.h"
@@ -174,9 +174,9 @@ soft_reset:
 
     py_fir_init0();
 
-    #if MICROPY_PY_SENSOR
-    if (sensor_init() != 0) {
-        printf("sensor init failed!\n");
+    #if MICROPY_PY_CSI
+    if (omv_csi_init() != 0) {
+        printf("csi init failed!\n");
     }
     #endif
 

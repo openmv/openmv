@@ -26,12 +26,12 @@ extern unsigned char *OMV_BOARD_UID_ADDR;   // Unique ID address.
 #define OMV_JPEG_QUALITY_HIGH      (60)
 #define OMV_JPEG_QUALITY_THRESHOLD (160 * 120)
 
-// Image sensor drivers configuration.
+// CSI drivers configuration.
 #define OMV_OV7670_ENABLE          (1)
 #define OMV_OV7670_VERSION         (70)
 #define OMV_OV7670_CLKRC           (0x00)
 
-// FIR sensor drivers configuration.
+// FIR drivers configuration.
 #define OMV_FIR_MLX90621_ENABLE    (0)
 #define OMV_FIR_MLX90640_ENABLE    (0)
 #define OMV_FIR_MLX90641_ENABLE    (0)
@@ -90,8 +90,8 @@ extern unsigned char *OMV_BOARD_UID_ADDR;   // Unique ID address.
 #define OMV_CSI_DMA                (0)
 #define OMV_CSI_DMA_IRQ            (DMA_IRQ_0)
 #define OMV_CSI_DMA_CHANNEL        (0)
-#define OMV_CSI_XCLK_SOURCE        (XCLK_SOURCE_TIM)
-#define OMV_CSI_XCLK_FREQUENCY     (12500000)
+#define OMV_CSI_CLK_SOURCE         (OMV_CSI_CLK_SOURCE_TIM)
+#define OMV_CSI_CLK_FREQUENCY      (12500000)
 
 #define OMV_CSI_D0_PIN             (2)
 #define OMV_CSI_D1_PIN             (3)

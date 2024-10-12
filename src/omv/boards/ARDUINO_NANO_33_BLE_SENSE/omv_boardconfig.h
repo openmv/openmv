@@ -1,10 +1,25 @@
 /*
- * This file is part of the OpenMV project.
+ * SPDX-License-Identifier: MIT
  *
- * Copyright (c) 2013-2024 Ibrahim Abdelkader <iabdalkader@openmv.io>
- * Copyright (c) 2013-2024 Kwabena W. Agyeman <kwagyeman@openmv.io>
+ * Copyright (C) 2013-2024 OpenMV, LLC.
  *
- * This work is licensed under the MIT license, see the file LICENSE for details.
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
  *
  * Board configuration and pin definitions.
  */
@@ -24,12 +39,12 @@
 #define OMV_JPEG_QUALITY_HIGH      90
 #define OMV_JPEG_QUALITY_THRESHOLD (320 * 240)
 
-// Image sensor drivers configuration.
+// CSI drivers configuration.
 #define OMV_OV7670_ENABLE          (1)
 #define OMV_OV7670_VERSION         (75)
 #define OMV_OV7670_CLKRC           (2)
 
-// FIR sensor drivers configuration.
+// FIR drivers configuration.
 #define OMV_FIR_MLX90621_ENABLE    (1)
 #define OMV_FIR_MLX90640_ENABLE    (1)
 #define OMV_FIR_MLX90641_ENABLE    (1)
@@ -90,8 +105,8 @@
 #define OMV_PDM_PWR_PIN            (17)
 
 // Camera interface.
-#define OMV_CSI_XCLK_SOURCE        (XCLK_SOURCE_TIM)
-#define OMV_CSI_XCLK_FREQUENCY     (12000000)
+#define OMV_CSI_CLK_SOURCE         (OMV_CSI_CLK_SOURCE_TIM)
+#define OMV_CSI_CLK_FREQUENCY      (12000000)
 
 #define OMV_CSI_D0_PIN             (32 + 2)
 #define OMV_CSI_D1_PIN             (32 + 3)

@@ -25,6 +25,6 @@
  */
 #ifndef __LEPTON_H__
 #define __LEPTON_H__
-#define OMV_LEPTON_XCLK_FREQ    24000000
-int lepton_init(sensor_t *sensor);
+#define OMV_LEPTON_CLK_FREQ     24000000
+int lepton_init(omv_csi_t *csi);
 #endif // __LEPTON_H__

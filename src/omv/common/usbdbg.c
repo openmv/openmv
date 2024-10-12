@@ -33,9 +33,9 @@
 #include "py/runtime.h"
 
 #include "imlib.h"
-#if MICROPY_PY_SENSOR
+#if MICROPY_PY_CSI
 #include "omv_i2c.h"
-#include "sensor.h"
+#include "omv_csi.h"
 #endif
 #include "framebuffer.h"
 #include "usbdbg.h"
@@ -135,9 +135,9 @@ void usbdbg_data_in(uint32_t size, usbdbg_write_callback_t write_callback) {
 
         case USBDBG_SENSOR_ID: {
             uint32_t buffer = 0xFF;
-            #if MICROPY_PY_SENSOR
-            if (sensor_is_detected() == true) {
-                buffer = sensor_get_id();
+            #if MICROPY_PY_CSI
+            if (omv_csi_is_detected() == true) {
+                buffer = omv_csi_get_id();
             }
             #endif
             cmd = USBDBG_NONE;
@@ -337,7 +337,7 @@ void usbdbg_data_out(uint32_t size, usbdbg_read_callback_t read_callback) {
         }
 
         case USBDBG_ATTR_WRITE: {
-            #if MICROPY_PY_SENSOR
+            #if MICROPY_PY_CSI
             struct {
                 int32_t name;
                 int32_t value;
@@ -345,17 +345,17 @@ void usbdbg_data_out(uint32_t size, usbdbg_read_callback_t read_callback) {
             attr;
             read_callback(&attr, sizeof(attr));
             switch (attr.name) {
-                case ATTR_CONTRAST:
-                    sensor_set_contrast(attr.value);
+                case OMV_CSI_ATTR_CONTRAST:
+                    omv_csi_set_contrast(attr.value);
                     break;
-                case ATTR_BRIGHTNESS:
-                    sensor_set_brightness(attr.value);
+                case OMV_CSI_ATTR_BRIGHTNESS:
+                    omv_csi_set_brightness(attr.value);
                     break;
-                case ATTR_SATURATION:
-                    sensor_set_saturation(attr.value);
+                case OMV_CSI_ATTR_SATURATION:
+                    omv_csi_set_saturation(attr.value);
                     break;
-                case ATTR_GAINCEILING:
-                    sensor_set_gainceiling(attr.value);
+                case OMV_CSI_ATTR_GAINCEILING:
+                    omv_csi_set_gainceiling(attr.value);
                     break;
                 default:
                     break;

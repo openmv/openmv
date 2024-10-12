@@ -39,7 +39,7 @@
 #include <stdio.h>
 
 #include "omv_i2c.h"
-#include "sensor.h"
+#include "omv_csi.h"
 #include "pag7936.h"
 #include "py/mphal.h"
 
@@ -94,9 +94,9 @@
 #define RGB_STAT_GR_VS              (0x04D5)
 
 #define FT_CLK                      (1000000)
-#define FPS_MAX                     (120)       // by sensor setting!!
+#define FPS_MAX                     (120)
 
-#define FMAX_720P_120_LINEAR        (1041)      // by sensor setting!!
+#define FMAX_720P_120_LINEAR        (1041)
 #define LT_T_RATIO                  (1000000 / FPS_MAX / FMAX_720P_120_LINEAR / 8)    // around ~1.0 with current setting
 #define ConvertL2T(line)            (line * LT_T_RATIO)   // 1-Line time = 8usec = 1T, return T
 #define ConvertT2L(t)               ((t + (LT_T_RATIO / 2)) / LT_T_RATIO) // 1-Line time = 8usec = 1T, return Lines
@@ -270,40 +270,40 @@ static const uint16_t hd_regs[][2] = {
     { 0x0000,               0x00 },
 };
 
-static int reset(sensor_t *sensor) {
+static int reset(omv_csi_t *csi) {
     int ret = 0;
     // Write default registers
     for (int i = 0; default_regs[i][0] && ret == 0; i++) {
-        ret |= omv_i2c_writeb2(&sensor->i2c_bus, sensor->slv_addr, default_regs[i][0], default_regs[i][1]);
+        ret |= omv_i2c_writeb2(&csi->i2c_bus, csi->slv_addr, default_regs[i][0], default_regs[i][1]);
     }
     return ret;
 }
 
-static int sleep(sensor_t *sensor, int enable) {
+static int sleep(omv_csi_t *csi, int enable) {
     return 0;
 }
 
-static int read_reg(sensor_t *sensor, uint16_t reg) {
+static int read_reg(omv_csi_t *csi, uint16_t reg) {
     uint8_t reg_data;
-    if (omv_i2c_readb2(&sensor->i2c_bus, sensor->slv_addr, reg, &reg_data) != 0) {
+    if (omv_i2c_readb2(&csi->i2c_bus, csi->slv_addr, reg, &reg_data) != 0) {
         return -1;
     }
     return reg_data;
 }
 
-static int write_reg(sensor_t *sensor, uint16_t reg, uint16_t reg_data) {
-    return omv_i2c_writeb2(&sensor->i2c_bus, sensor->slv_addr, reg, reg_data);
+static int write_reg(omv_csi_t *csi, uint16_t reg, uint16_t reg_data) {
+    return omv_i2c_writeb2(&csi->i2c_bus, csi->slv_addr, reg, reg_data);
 }
 
-static int read_reg_seq(sensor_t *sensor, uint16_t addr, size_t size, uint8_t *buf) {
+static int read_reg_seq(omv_csi_t *csi, uint16_t addr, size_t size, uint8_t *buf) {
     int ret = 0;
     for (size_t i = 0; i < size; i++) {
-        ret |= omv_i2c_readb2(&sensor->i2c_bus, sensor->slv_addr, addr + i, &buf[i]);
+        ret |= omv_i2c_readb2(&csi->i2c_bus, csi->slv_addr, addr + i, &buf[i]);
     }
     return ret;
 }
 
-static int set_pixformat(sensor_t *sensor, pixformat_t pixformat) {
+static int set_pixformat(omv_csi_t *csi, pixformat_t pixformat) {
     switch (pixformat) {
         case PIXFORMAT_RGB565:
         case PIXFORMAT_BAYER:
@@ -314,18 +314,18 @@ static int set_pixformat(sensor_t *sensor, pixformat_t pixformat) {
     }
 }
 
-static int set_framesize(sensor_t *sensor, framesize_t framesize) {
+static int set_framesize(omv_csi_t *csi, omv_csi_framesize_t framesize) {
     int ret = 0;
     const uint16_t(*regs)[2];
 
     switch (framesize) {
-        case FRAMESIZE_HD:
+        case OMV_CSI_FRAMESIZE_HD:
             regs = hd_regs;
             break;
-        case FRAMESIZE_VGA:
+        case OMV_CSI_FRAMESIZE_VGA:
             regs = vga_regs;
             break;
-        case FRAMESIZE_QVGA:
+        case OMV_CSI_FRAMESIZE_QVGA:
             regs = qvga_regs;
             break;
         default:
@@ -333,58 +333,58 @@ static int set_framesize(sensor_t *sensor, framesize_t framesize) {
     }
 
     for (int i = 0; regs[i][0] && ret == 0; i++) {
-        ret |= omv_i2c_writeb2(&sensor->i2c_bus, sensor->slv_addr, regs[i][0], regs[i][1]);
+        ret |= omv_i2c_writeb2(&csi->i2c_bus, csi->slv_addr, regs[i][0], regs[i][1]);
     }
 
     return ret;
 }
 
-static int set_framerate(sensor_t *sensor, int framerate) {
+static int set_framerate(omv_csi_t *csi, int framerate) {
     int ret = 0;
     int32_t frame_time = FT_CLK / framerate;
     int32_t integ_time = IM_CLAMP((frame_time - 11), PAG7936_MIN_INT, PAG7936_MAX_INT);
-    ret |= omv_i2c_writeb2(&sensor->i2c_bus, sensor->slv_addr, FRAME_TIME_20_16, ((frame_time >> 16) & 0x1F));
-    ret |= omv_i2c_writeb2(&sensor->i2c_bus, sensor->slv_addr, FRAME_TIME_15_8, ((frame_time >> 8) & 0xFF));
-    ret |= omv_i2c_writeb2(&sensor->i2c_bus, sensor->slv_addr, FRAME_TIME_7_0, (frame_time & 0xFF));
+    ret |= omv_i2c_writeb2(&csi->i2c_bus, csi->slv_addr, FRAME_TIME_20_16, ((frame_time >> 16) & 0x1F));
+    ret |= omv_i2c_writeb2(&csi->i2c_bus, csi->slv_addr, FRAME_TIME_15_8, ((frame_time >> 8) & 0xFF));
+    ret |= omv_i2c_writeb2(&csi->i2c_bus, csi->slv_addr, FRAME_TIME_7_0, (frame_time & 0xFF));
 
-    ret |= omv_i2c_writeb2(&sensor->i2c_bus, sensor->slv_addr, AE_EXPO_MANUAL_17_16, ((integ_time >> 16) & 0x03));
-    ret |= omv_i2c_writeb2(&sensor->i2c_bus, sensor->slv_addr, AE_EXPO_MANUAL_15_8, ((integ_time >> 8) & 0xFF));
-    ret |= omv_i2c_writeb2(&sensor->i2c_bus, sensor->slv_addr, AE_EXPO_MANUAL_7_0, (integ_time & 0xFF));
-    ret |= omv_i2c_writeb2(&sensor->i2c_bus, sensor->slv_addr, SENSOR_UPDATE, 0x80);
+    ret |= omv_i2c_writeb2(&csi->i2c_bus, csi->slv_addr, AE_EXPO_MANUAL_17_16, ((integ_time >> 16) & 0x03));
+    ret |= omv_i2c_writeb2(&csi->i2c_bus, csi->slv_addr, AE_EXPO_MANUAL_15_8, ((integ_time >> 8) & 0xFF));
+    ret |= omv_i2c_writeb2(&csi->i2c_bus, csi->slv_addr, AE_EXPO_MANUAL_7_0, (integ_time & 0xFF));
+    ret |= omv_i2c_writeb2(&csi->i2c_bus, csi->slv_addr, SENSOR_UPDATE, 0x80);
     return ret;
 }
 
-static int set_colorbar(sensor_t *sensor, int enable) {
+static int set_colorbar(omv_csi_t *csi, int enable) {
     return 0;
 }
 
-static int set_hmirror(sensor_t *sensor, int enable) {
+static int set_hmirror(omv_csi_t *csi, int enable) {
     uint8_t reg;
-    int ret = omv_i2c_readb2(&sensor->i2c_bus, sensor->slv_addr, TG_FLIP, &reg);
-    ret |= omv_i2c_writeb2(&sensor->i2c_bus, sensor->slv_addr, TG_FLIP, TG_FLIP_SET_HFLIP(reg, enable));
-    ret |= omv_i2c_writeb2(&sensor->i2c_bus, sensor->slv_addr, SENSOR_UPDATE, 0x80);
+    int ret = omv_i2c_readb2(&csi->i2c_bus, csi->slv_addr, TG_FLIP, &reg);
+    ret |= omv_i2c_writeb2(&csi->i2c_bus, csi->slv_addr, TG_FLIP, TG_FLIP_SET_HFLIP(reg, enable));
+    ret |= omv_i2c_writeb2(&csi->i2c_bus, csi->slv_addr, SENSOR_UPDATE, 0x80);
     return ret;
 }
 
-static int set_vflip(sensor_t *sensor, int enable) {
+static int set_vflip(omv_csi_t *csi, int enable) {
     uint8_t reg;
-    int ret = omv_i2c_readb2(&sensor->i2c_bus, sensor->slv_addr, TG_FLIP, &reg);
-    ret |= omv_i2c_writeb2(&sensor->i2c_bus, sensor->slv_addr, TG_FLIP, TG_FLIP_SET_VFLIP(reg, enable));
-    ret |= omv_i2c_writeb2(&sensor->i2c_bus, sensor->slv_addr, SENSOR_UPDATE, 0x80);
+    int ret = omv_i2c_readb2(&csi->i2c_bus, csi->slv_addr, TG_FLIP, &reg);
+    ret |= omv_i2c_writeb2(&csi->i2c_bus, csi->slv_addr, TG_FLIP, TG_FLIP_SET_VFLIP(reg, enable));
+    ret |= omv_i2c_writeb2(&csi->i2c_bus, csi->slv_addr, SENSOR_UPDATE, 0x80);
     return ret;
 }
 
-static int ioctl(sensor_t *sensor, int request, va_list ap) {
+static int ioctl(omv_csi_t *csi, int request, va_list ap) {
     int ret = 0;
 
     (void) read_reg_seq;
 
     switch (request) {
-        case IOCTL_GET_RGB_STATS: {
+        case OMV_CSI_IOCTL_GET_RGB_STATS: {
             uint32_t rgb_stats[4];
             uint8_t buf[] = {(RGB_STAT_B_VS >> 8), RGB_STAT_B_VS & 0xFF };
-            ret |= omv_i2c_write_bytes(&sensor->i2c_bus, sensor->slv_addr, buf, 2, OMV_I2C_XFER_NO_STOP);
-            ret |= omv_i2c_read_bytes(&sensor->i2c_bus, sensor->slv_addr, (uint8_t *) rgb_stats, sizeof(rgb_stats), 0);
+            ret |= omv_i2c_write_bytes(&csi->i2c_bus, csi->slv_addr, buf, 2, OMV_I2C_XFER_NO_STOP);
+            ret |= omv_i2c_read_bytes(&csi->i2c_bus, csi->slv_addr, (uint8_t *) rgb_stats, sizeof(rgb_stats), 0);
 
             *va_arg(ap, uint32_t *) = rgb_stats[2];
             *va_arg(ap, uint32_t *) = rgb_stats[1];
@@ -401,37 +401,37 @@ static int ioctl(sensor_t *sensor, int request, va_list ap) {
     return ret;
 }
 
-int pag7936_init(sensor_t *sensor) {
-    // Initialize sensor flags.
-    sensor->vsync_pol = 0;
-    sensor->hsync_pol = 0;
-    sensor->pixck_pol = 1;
-    sensor->mono_bpp = 1;
-    sensor->raw_output = 1;
-    sensor->cfa_format = SUBFORMAT_ID_BGGR;
+int pag7936_init(omv_csi_t *csi) {
+    // Initialize csi flags.
+    csi->vsync_pol = 0;
+    csi->hsync_pol = 0;
+    csi->pixck_pol = 1;
+    csi->mono_bpp = 1;
+    csi->raw_output = 1;
+    csi->cfa_format = SUBFORMAT_ID_BGGR;
 
-    // Initialize sensor ops.
-    sensor->reset = reset;
-    sensor->sleep = sleep;
-    sensor->ioctl = ioctl;
-    sensor->read_reg = read_reg;
-    sensor->write_reg = write_reg;
-    sensor->set_pixformat = set_pixformat;
-    sensor->set_framesize = set_framesize;
-    sensor->set_framerate = set_framerate;
-    sensor->set_colorbar = set_colorbar;
-    sensor->set_hmirror = set_hmirror;
-    sensor->set_vflip = set_vflip;
+    // Initialize csi ops.
+    csi->reset = reset;
+    csi->sleep = sleep;
+    csi->ioctl = ioctl;
+    csi->read_reg = read_reg;
+    csi->write_reg = write_reg;
+    csi->set_pixformat = set_pixformat;
+    csi->set_framesize = set_framesize;
+    csi->set_framerate = set_framerate;
+    csi->set_colorbar = set_colorbar;
+    csi->set_hmirror = set_hmirror;
+    csi->set_vflip = set_vflip;
 
     // Override standard resolutions
-    resolution[FRAMESIZE_HD][0] = 1280;
-    resolution[FRAMESIZE_HD][1] = 800;
+    resolution[OMV_CSI_FRAMESIZE_HD][0] = 1280;
+    resolution[OMV_CSI_FRAMESIZE_HD][1] = 800;
 
-    resolution[FRAMESIZE_VGA][0] = 640;
-    resolution[FRAMESIZE_VGA][1] = 400;
+    resolution[OMV_CSI_FRAMESIZE_VGA][0] = 640;
+    resolution[OMV_CSI_FRAMESIZE_VGA][1] = 400;
 
-    resolution[FRAMESIZE_QVGA][0] = 320;
-    resolution[FRAMESIZE_QVGA][1] = 200;
+    resolution[OMV_CSI_FRAMESIZE_QVGA][0] = 320;
+    resolution[OMV_CSI_FRAMESIZE_QVGA][1] = 200;
     return 0;
 }
 #endif // (OMV_PAG7936_ENABLE == 1)

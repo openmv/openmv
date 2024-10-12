@@ -1,49 +1,56 @@
 /*
- * SPDX-License-Identifier: MIT
+ * Copyright (C) 2023-2024 OpenMV, LLC.
  *
- * Copyright (C) 2013-2024 OpenMV, LLC.
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
  *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in
+ *    the documentation and/or other materials provided with the
+ *    distribution.
+ * 3. Any redistribution, use, or modification in source or binary form
+ *    is done solely for personal benefit and not for any commercial
+ *    purpose or for monetary gain. For commercial licensing options,
+ *    please contact openmv@openmv.io
  *
- * The above copyright notice and this permission notice shall be included in
- * all copies or substantial portions of the Software.
+ * THIS SOFTWARE IS PROVIDED BY THE LICENSOR AND COPYRIGHT OWNER "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
+ * THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+ * PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE LICENSOR OR COPYRIGHT
+ * OWNER BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+ * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+ * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+ * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
+ * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
- * THE SOFTWARE.
- *
- * Sensor driver for stm32 port.
+ * STM32 CSI driver.
  */
 #include <string.h>
 #include <stdint.h>
 #include <stdbool.h>
 #include "py/mphal.h"
 #include "irq.h"
-#include "sensor.h"
 #include "framebuffer.h"
 #include "omv_boardconfig.h"
 #include "unaligned_memcpy.h"
 #include "omv_gpio.h"
 #include "omv_i2c.h"
+#include "omv_csi.h"
 #include "dma_utils.h"
 
-#define MDMA_BUFFER_SIZE         (64)
-#define DMA_MAX_XFER_SIZE        (0xFFFF * 4)
-#define DMA_MAX_XFER_SIZE_DBL    ((DMA_MAX_XFER_SIZE) * 2)
-#define DMA_LENGTH_ALIGNMENT     (16)
-#define SENSOR_TIMEOUT_MS        (3000)
-#define ARRAY_SIZE(a)            (sizeof(a) / sizeof((a)[0]))
+#define MDMA_BUFFER_SIZE        (64)
+#define DMA_MAX_XFER_SIZE       (0xFFFF * 4)
+#define DMA_MAX_XFER_SIZE_DBL   ((DMA_MAX_XFER_SIZE) * 2)
+#define DMA_LENGTH_ALIGNMENT    (16)
+#define CSI_TIMEOUT_MS          (3000)
+#define ARRAY_SIZE(a)           (sizeof(a) / sizeof((a)[0]))
 
-sensor_t sensor = {};
+omv_csi_t csi = {};
 static TIM_HandleTypeDef TIMHandle = {};
 static DMA_HandleTypeDef DMAHandle = {};
 static DCMI_HandleTypeDef DCMIHandle = {};
@@ -60,7 +67,7 @@ void DCMI_IRQHandler(void) {
 }
 
 #if defined(OMV_MDMA_CHANNEL_DCMI_0)
-void sensor_mdma_irq_handler(void) {
+void omv_csi_mdma_irq_handler(void) {
     if (MDMA->GISR0 & (1 << OMV_MDMA_CHANNEL_DCMI_0)) {
         HAL_MDMA_IRQHandler(&DCMI_MDMA_Handle0);
     }
@@ -70,7 +77,7 @@ void sensor_mdma_irq_handler(void) {
 }
 #endif
 
-static int sensor_dma_config() {
+static int omv_csi_dma_config() {
     // DMA Stream configuration
     DMAHandle.Instance = DMA2_Stream1;
     #if defined(MCU_SERIES_H7)
@@ -105,31 +112,31 @@ static int sensor_dma_config() {
     return 0;
 }
 
-void sensor_init0() {
+void omv_csi_init0() {
     #if defined(OMV_MDMA_CHANNEL_DCMI_0)
     DCMI_MDMA_Handle0.Instance = MDMA_CHAN_TO_INSTANCE(OMV_MDMA_CHANNEL_DCMI_0);
     DCMI_MDMA_Handle1.Instance = MDMA_CHAN_TO_INSTANCE(OMV_MDMA_CHANNEL_DCMI_1);
     #endif
 
-    sensor_abort(true, false);
+    omv_csi_abort(true, false);
 
     // Re-init i2c bus to reset the bus state after soft reset, which
     // could have interrupted the bus in the middle of a transfer.
-    if (sensor.i2c_bus.initialized) {
+    if (csi.i2c_bus.initialized) {
         // Reinitialize the bus using the last used id and speed.
-        omv_i2c_init(&sensor.i2c_bus, sensor.i2c_bus.id, sensor.i2c_bus.speed);
+        omv_i2c_init(&csi.i2c_bus, csi.i2c_bus.id, csi.i2c_bus.speed);
     }
 
-    sensor.disable_delays = false;
+    csi.disable_delays = false;
 
     // Disable VSYNC IRQ and callback
-    sensor_set_vsync_callback(NULL);
+    omv_csi_set_vsync_callback(NULL);
 
     // Disable Frame callback.
-    sensor_set_frame_callback(NULL);
+    omv_csi_set_frame_callback(NULL);
 }
 
-int sensor_init() {
+int omv_csi_init() {
     int init_ret = 0;
 
     // List of I2C buses to scan.
@@ -140,27 +147,27 @@ int sensor_init() {
         #endif
     };
 
-    // Reset the sensor state
-    memset(&sensor, 0, sizeof(sensor_t));
+    // Reset the csi state
+    memset(&csi, 0, sizeof(omv_csi_t));
 
     // Set default snapshot function.
     // Some sensors need to call snapshot from init.
-    sensor.snapshot = sensor_snapshot;
+    csi.snapshot = omv_csi_snapshot;
 
-    // Configure the sensor external clock (XCLK).
-    if (sensor_set_xclk_frequency(OMV_CSI_XCLK_FREQUENCY) != 0) {
-        // Failed to initialize the sensor clock.
-        return SENSOR_ERROR_TIM_INIT_FAILED;
+    // Configure the csi external clock (XCLK).
+    if (omv_csi_set_clk_frequency(OMV_CSI_CLK_FREQUENCY) != 0) {
+        // Failed to initialize the csi clock.
+        return OMV_CSI_ERROR_TIM_INIT_FAILED;
     }
 
     // Detect and initialize the image sensor.
     for (uint32_t i = 0, n_buses = ARRAY_SIZE(buses); i < n_buses; i++) {
         uint32_t id = buses[i][0], speed = buses[i][1];
-        if ((init_ret = sensor_probe_init(id, speed)) == 0) {
+        if ((init_ret = omv_csi_probe_init(id, speed)) == 0) {
             // Sensor was detected on the current bus.
             break;
         }
-        omv_i2c_deinit(&sensor.i2c_bus);
+        omv_i2c_deinit(&csi.i2c_bus);
         // Scan the next bus or fail if this is the last one.
         if ((i + 1) == n_buses) {
             // Sensor probe/init failed.
@@ -169,15 +176,15 @@ int sensor_init() {
     }
 
     // Configure the DCMI DMA Stream
-    if (sensor_dma_config() != 0) {
+    if (omv_csi_dma_config() != 0) {
         // DMA problem
-        return SENSOR_ERROR_DMA_INIT_FAILED;
+        return OMV_CSI_ERROR_DMA_INIT_FAILED;
     }
 
     // Configure the DCMI interface.
-    if (sensor_config(SENSOR_CONFIG_INIT) != 0) {
+    if (omv_csi_config(OMV_CSI_CONFIG_INIT) != 0) {
         // DCMI config failed
-        return SENSOR_ERROR_CSI_INIT_FAILED;
+        return OMV_CSI_ERROR_CSI_INIT_FAILED;
     }
 
     // Clear fb_enabled flag
@@ -185,23 +192,23 @@ int sensor_init() {
     JPEG_FB()->enabled = 0;
 
     // Set default color palette.
-    sensor.color_palette = rainbow_table;
+    csi.color_palette = rainbow_table;
 
-    sensor.detected = true;
+    csi.detected = true;
 
     /* All good! */
     return 0;
 }
 
-int sensor_config(sensor_config_t config) {
-    if (config == SENSOR_CONFIG_INIT) {
+int omv_csi_config(omv_csi_config_t config) {
+    if (config == OMV_CSI_CONFIG_INIT) {
         DCMIHandle.Instance = DCMI;
         // VSYNC clock polarity
-        DCMIHandle.Init.VSPolarity = sensor.vsync_pol ? DCMI_VSPOLARITY_HIGH : DCMI_VSPOLARITY_LOW;
+        DCMIHandle.Init.VSPolarity = csi.vsync_pol ? DCMI_VSPOLARITY_HIGH : DCMI_VSPOLARITY_LOW;
         // HSYNC clock polarity
-        DCMIHandle.Init.HSPolarity = sensor.hsync_pol ? DCMI_HSPOLARITY_HIGH : DCMI_HSPOLARITY_LOW;
+        DCMIHandle.Init.HSPolarity = csi.hsync_pol ? DCMI_HSPOLARITY_HIGH : DCMI_HSPOLARITY_LOW;
         // PXCLK clock polarity
-        DCMIHandle.Init.PCKPolarity = sensor.pixck_pol ? DCMI_PCKPOLARITY_RISING : DCMI_PCKPOLARITY_FALLING;
+        DCMIHandle.Init.PCKPolarity = csi.pixck_pol ? DCMI_PCKPOLARITY_RISING : DCMI_PCKPOLARITY_FALLING;
 
         // Setup capture parameters.
         DCMIHandle.Init.SynchroMode = DCMI_SYNCHRO_HARDWARE;    // Enable Hardware synchronization
@@ -228,14 +235,14 @@ int sensor_config(sensor_config_t config) {
         // Configure and enable DCMI IRQ Channel
         NVIC_SetPriority(DCMI_IRQn, IRQ_PRI_DCMI);
         HAL_NVIC_EnableIRQ(DCMI_IRQn);
-    } else if (config == SENSOR_CONFIG_PIXFORMAT) {
+    } else if (config == OMV_CSI_CONFIG_PIXFORMAT) {
         DCMI->CR &= ~(DCMI_CR_JPEG_Msk << DCMI_CR_JPEG_Pos);
-        DCMI->CR |= (sensor.pixformat == PIXFORMAT_JPEG) ? DCMI_JPEG_ENABLE : DCMI_JPEG_DISABLE;
+        DCMI->CR |= (csi.pixformat == PIXFORMAT_JPEG) ? DCMI_JPEG_ENABLE : DCMI_JPEG_DISABLE;
     }
     return 0;
 }
 
-int sensor_abort(bool fifo_flush, bool in_irq) {
+int omv_csi_abort(bool fifo_flush, bool in_irq) {
     // This stops the DCMI hardware from generating DMA requests immediately and then stops the DMA
     // hardware. Note that HAL_DMA_Abort is a blocking operation. Do not use this in an interrupt.
     if (DCMI->CR & DCMI_CR_ENABLE) {
@@ -256,27 +263,27 @@ int sensor_abort(bool fifo_flush, bool in_irq) {
         #endif
         __HAL_DCMI_DISABLE_IT(&DCMIHandle, DCMI_IT_FRAME);
         __HAL_DCMI_CLEAR_FLAG(&DCMIHandle, DCMI_FLAG_FRAMERI);
-        sensor.first_line = false;
-        sensor.drop_frame = false;
-        sensor.last_frame_ms = 0;
-        sensor.last_frame_ms_valid = false;
+        csi.first_line = false;
+        csi.drop_frame = false;
+        csi.last_frame_ms = 0;
+        csi.last_frame_ms_valid = false;
     }
 
     if (fifo_flush) {
         framebuffer_flush_buffers(true);
-    } else if (!sensor.disable_full_flush) {
+    } else if (!csi.disable_full_flush) {
         framebuffer_flush_buffers(false);
     }
 
     return 0;
 }
 
-uint32_t sensor_get_xclk_frequency() {
+uint32_t omv_csi_get_xclk_frequency() {
     return (OMV_CSI_TIM_PCLK_FREQ() * 2) / (TIMHandle.Init.Period + 1);
 }
 
-int sensor_set_xclk_frequency(uint32_t frequency) {
-    #if (OMV_CSI_XCLK_SOURCE == XCLK_SOURCE_TIM)
+int omv_csi_set_clk_frequency(uint32_t frequency) {
+    #if (OMV_CSI_CLK_SOURCE == OMV_CSI_CLK_SOURCE_TIM)
     if (frequency == 0) {
         if (TIMHandle.Init.Period) {
             HAL_TIM_PWM_Stop(&TIMHandle, OMV_CSI_TIM_CHANNEL);
@@ -325,26 +332,26 @@ int sensor_set_xclk_frequency(uint32_t frequency) {
         || (HAL_TIM_PWM_Start(&TIMHandle, OMV_CSI_TIM_CHANNEL) != HAL_OK)) {
         return -1;
     }
-    #elif (OMV_CSI_XCLK_SOURCE == XCLK_SOURCE_MCO)
+    #elif (OMV_CSI_CLK_SOURCE == OMV_CSI_CLK_SOURCE_MCO)
     // Pass through the MCO1 clock with source input set to HSE (12MHz).
     // Note MCO1 is multiplexed on OPENMV2/TIM1 only.
     HAL_RCC_MCOConfig(RCC_MCO1, RCC_MCO1SOURCE_HSE, RCC_MCODIV_1);
-    #elif (OMV_CSI_XCLK_SOURCE == XCLK_SOURCE_OSC)
-    // An external oscillator is used for the sensor clock.
+    #elif (OMV_CSI_CLK_SOURCE == OMV_CSI_CLK_SOURCE_OSC)
+    // An external oscillator is used for the csi clock.
     // Configure and enable external oscillator if needed.
     #else
-    #error "OMV_CSI_XCLK_SOURCE is not set!"
-    #endif // (OMV_CSI_XCLK_SOURCE == XCLK_SOURCE_TIM)
+    #error "OMV_CSI_CLK_SOURCE is not set!"
+    #endif // (OMV_CSI_CLK_SOURCE == OMV_CSI_CLK_SOURCE_TIM)
     return 0;
 }
 
-int sensor_shutdown(int enable) {
+int omv_csi_shutdown(int enable) {
     int ret = 0;
-    sensor_abort(true, false);
+    omv_csi_abort(true, false);
 
     if (enable) {
         #if defined(OMV_CSI_POWER_PIN)
-        if (sensor.power_pol == ACTIVE_HIGH) {
+        if (csi.power_pol == OMV_CSI_ACTIVE_HIGH) {
             omv_gpio_write(OMV_CSI_POWER_PIN, 1);
         } else {
             omv_gpio_write(OMV_CSI_POWER_PIN, 0);
@@ -354,35 +361,35 @@ int sensor_shutdown(int enable) {
         HAL_DCMI_DeInit(&DCMIHandle);
     } else {
         #if defined(OMV_CSI_POWER_PIN)
-        if (sensor.power_pol == ACTIVE_HIGH) {
+        if (csi.power_pol == OMV_CSI_ACTIVE_HIGH) {
             omv_gpio_write(OMV_CSI_POWER_PIN, 0);
         } else {
             omv_gpio_write(OMV_CSI_POWER_PIN, 1);
         }
         #endif
-        ret = sensor_config(SENSOR_CONFIG_INIT);
+        ret = omv_csi_config(OMV_CSI_CONFIG_INIT);
     }
 
     mp_hal_delay_ms(10);
     return ret;
 }
 
-static void sensor_vsync_callback(void *data) {
-    if (sensor.vsync_callback != NULL) {
-        sensor.vsync_callback(omv_gpio_read(OMV_CSI_VSYNC_PIN));
+static void omv_csi_vsync_callback(void *data) {
+    if (csi.vsync_callback != NULL) {
+        csi.vsync_callback(omv_gpio_read(OMV_CSI_VSYNC_PIN));
     }
 }
 
-int sensor_set_vsync_callback(vsync_cb_t vsync_cb) {
-    sensor.vsync_callback = vsync_cb;
-    if (sensor.vsync_callback == NULL) {
+int omv_csi_set_vsync_callback(vsync_cb_t vsync_cb) {
+    csi.vsync_callback = vsync_cb;
+    if (csi.vsync_callback == NULL) {
         #if (DCMI_VSYNC_EXTI_SHARED == 0)
         // Disable VSYNC EXTI IRQ
         omv_gpio_irq_enable(OMV_CSI_VSYNC_PIN, false);
         #endif
     } else {
         // Enable VSYNC EXTI IRQ
-        omv_gpio_irq_register(OMV_CSI_VSYNC_PIN, sensor_vsync_callback, NULL);
+        omv_gpio_irq_register(OMV_CSI_VSYNC_PIN, omv_csi_vsync_callback, NULL);
         omv_gpio_irq_enable(OMV_CSI_VSYNC_PIN, true);
     }
     return 0;
@@ -393,7 +400,7 @@ int sensor_set_vsync_callback(vsync_cb_t vsync_cb) {
 // result in less time between DMA transfers complete interrupts on 16-byte boundaries.
 static uint32_t get_dcmi_hw_crop(uint32_t bytes_per_pixel) {
     uint32_t byte_x_offset = (MAIN_FB()->x * bytes_per_pixel) % sizeof(uint32_t);
-    uint32_t width_remainder = (resolution[sensor.framesize][0] - (MAIN_FB()->x + MAIN_FB()->u)) * bytes_per_pixel;
+    uint32_t width_remainder = (resolution[csi.framesize][0] - (MAIN_FB()->x + MAIN_FB()->u)) * bytes_per_pixel;
     uint32_t x_crop = 0;
 
     if (byte_x_offset && (width_remainder >= (sizeof(uint32_t) - byte_x_offset))) {
@@ -417,9 +424,9 @@ void HAL_DCMI_FrameEventCallback(DCMI_HandleTypeDef *hdcmi) {
     #endif
 
     // Reset DCMI_DMAConvCpltUser frame drop state.
-    sensor.first_line = false;
-    if (sensor.drop_frame) {
-        sensor.drop_frame = false;
+    csi.first_line = false;
+    if (csi.drop_frame) {
+        csi.drop_frame = false;
         // If the frame was dropped, the buffer will not change, so its state
         // must be reset.
         vbuffer_t *buffer = framebuffer_get_tail(FB_PEEK);
@@ -431,18 +438,18 @@ void HAL_DCMI_FrameEventCallback(DCMI_HandleTypeDef *hdcmi) {
 
     framebuffer_get_tail(FB_NO_FLAGS);
 
-    if (sensor.frame_callback) {
-        sensor.frame_callback();
+    if (csi.frame_callback) {
+        csi.frame_callback();
     }
 }
 
 #if defined(OMV_MDMA_CHANNEL_DCMI_0)
-int sensor_dma_memcpy(void *dma, void *dst, void *src, int bpp, bool transposed) {
+int omv_csi_dma_memcpy(void *dma, void *dst, void *src, int bpp, bool transposed) {
     MDMA_HandleTypeDef *handle = dma;
 
     // Drop the frame if MDMA is not keeping up as the image will be corrupt.
     if (handle->Instance->CCR & MDMA_CCR_EN) {
-        sensor.drop_frame = true;
+        csi.drop_frame = true;
         return 0;
     }
 
@@ -463,13 +470,13 @@ int sensor_dma_memcpy(void *dma, void *dst, void *src, int bpp, bool transposed)
 // buffer that was used. At this point the DMA transfers the next line to the next buffer.
 void DCMI_DMAConvCpltUser(uint32_t addr) {
     // Throttle frames to match the current frame rate.
-    sensor_throttle_framerate();
+    omv_csi_throttle_framerate();
 
-    if (sensor.drop_frame) {
+    if (csi.drop_frame) {
         // If we're dropping a frame in full offload mode it's safe to disable this interrupt saving
         // ourselves from having to service the DMA complete callback.
         #if defined(OMV_MDMA_CHANNEL_DCMI_0)
-        if (!sensor.transpose) {
+        if (!csi.transpose) {
             HAL_NVIC_DisableIRQ(DMA2_Stream1_IRQn);
         }
         #endif
@@ -481,7 +488,7 @@ void DCMI_DMAConvCpltUser(uint32_t addr) {
     // If snapshot was not already waiting to receive data then we have missed this frame and have
     // to drop it. So, abort this and future transfers. Snapshot will restart the process.
     if (!buffer) {
-        sensor_abort(false, true);
+        omv_csi_abort(false, true);
         return;
     }
 
@@ -493,8 +500,8 @@ void DCMI_DMAConvCpltUser(uint32_t addr) {
     // on the OpenMV Cam H7 Plus. When SDRAM refreshes the row you are trying to write to the fifo
     // depth on the DCMI hardware and DMA hardware is not enough to prevent data loss.
 
-    if (sensor.pixformat == PIXFORMAT_JPEG) {
-        if (sensor.jpg_format == 4) {
+    if (csi.pixformat == PIXFORMAT_JPEG) {
+        if (csi.jpg_format == 4) {
             // JPEG MODE 4:
             //
             // The width and height are fixed in each frame. The first two bytes are valid data
@@ -515,7 +522,7 @@ void DCMI_DMAConvCpltUser(uint32_t addr) {
             }
             unaligned_memcpy(buffer->data + buffer->offset, ((uint16_t *) addr) + 1, size);
             buffer->offset += size;
-        } else if (sensor.jpg_format == 3) {
+        } else if (csi.jpg_format == 3) {
             // JPEG MODE 3:
             //
             // Compression data is transmitted with programmable width. The last line width maybe
@@ -538,23 +545,23 @@ void DCMI_DMAConvCpltUser(uint32_t addr) {
     // DCMI_DMAXferCplt in the HAL DCMI driver always calls DCMI_DMAConvCpltUser with the other
     // MAR register. So, we have to fix the address in full MDMA offload mode...
     #if defined(OMV_MDMA_CHANNEL_DCMI_0)
-    if (!sensor.transpose) {
+    if (!csi.transpose) {
         addr = (uint32_t) &_line_buf;
     }
     #endif
 
-    uint32_t bytes_per_pixel = sensor_get_src_bpp();
+    uint32_t bytes_per_pixel = omv_csi_get_src_bpp();
     uint8_t *src = ((uint8_t *) addr) + (MAIN_FB()->x * bytes_per_pixel) - get_dcmi_hw_crop(bytes_per_pixel);
     uint8_t *dst = buffer->data;
 
-    if (sensor.pixformat == PIXFORMAT_GRAYSCALE) {
+    if (csi.pixformat == PIXFORMAT_GRAYSCALE) {
         bytes_per_pixel = sizeof(uint8_t);
     }
 
     // For all non-JPEG and non-transposed modes we can completely offload image capture to MDMA
     // and we do not need to receive any line interrupts for the rest of the frame until it ends.
     #if defined(OMV_MDMA_CHANNEL_DCMI_0)
-    if (!sensor.transpose) {
+    if (!csi.transpose) {
         // NOTE: We're starting MDMA here because it gives the maximum amount of time before we
         // have to drop the frame if there's no space. If you use the FRAME/VSYNC callbacks then
         // you will have to drop the frame earlier than necessary if there's no space resulting
@@ -575,7 +582,7 @@ void DCMI_DMAConvCpltUser(uint32_t addr) {
     }
     #endif
 
-    if (!sensor.transpose) {
+    if (!csi.transpose) {
         dst += MAIN_FB()->u * bytes_per_pixel * buffer->offset++;
     } else {
         dst += bytes_per_pixel * buffer->offset++;
@@ -585,15 +592,15 @@ void DCMI_DMAConvCpltUser(uint32_t addr) {
     // We're using two handles to give each channel the maximum amount of time possible to do the line
     // transfer. In most situations only one channel will be running at a time. However, if SDRAM is
     // backedup we don't have to disable the channel if it is flushing trailing data to SDRAM.
-    sensor_copy_line((buffer->offset % 2) ? &DCMI_MDMA_Handle1 : &DCMI_MDMA_Handle0, src, dst);
+    omv_csi_copy_line((buffer->offset % 2) ? &DCMI_MDMA_Handle1 : &DCMI_MDMA_Handle0, src, dst);
     #else
-    sensor_copy_line(NULL, src, dst);
+    omv_csi_copy_line(NULL, src, dst);
     #endif
 }
 
 #if defined(OMV_MDMA_CHANNEL_DCMI_0)
 // Configures an MDMA channel to completely offload the CPU in copying one line of pixels.
-static void mdma_config(MDMA_InitTypeDef *init, sensor_t *sensor, uint32_t bytes_per_pixel) {
+static void mdma_config(MDMA_InitTypeDef *init, omv_csi_t *csi, uint32_t bytes_per_pixel) {
     init->Request = MDMA_REQUEST_SW;
     init->TransferTriggerMode = MDMA_REPEAT_BLOCK_TRANSFER;
     init->Priority = MDMA_PRIORITY_VERY_HIGH;
@@ -605,8 +612,8 @@ static void mdma_config(MDMA_InitTypeDef *init, sensor_t *sensor, uint32_t bytes
     init->SourceBlockAddressOffset = 0;
     init->DestBlockAddressOffset = 0;
 
-    if ((sensor->pixformat == PIXFORMAT_RGB565 && sensor->rgb_swap) ||
-        (sensor->pixformat == PIXFORMAT_YUV422 && sensor->yuv_swap)) {
+    if ((csi->pixformat == PIXFORMAT_RGB565 && csi->rgb_swap) ||
+        (csi->pixformat == PIXFORMAT_YUV422 && csi->yuv_swap)) {
         init->Endianness = MDMA_LITTLE_BYTE_ENDIANNESS_EXCHANGE;
     } else {
         init->Endianness = MDMA_LITTLE_ENDIANNESS_PRESERVE;
@@ -615,15 +622,15 @@ static void mdma_config(MDMA_InitTypeDef *init, sensor_t *sensor, uint32_t bytes
     uint32_t line_offset_bytes = (MAIN_FB()->x * bytes_per_pixel) - get_dcmi_hw_crop(bytes_per_pixel);
     uint32_t line_width_bytes = MAIN_FB()->u * bytes_per_pixel;
 
-    if (sensor->transpose) {
+    if (csi->transpose) {
         line_width_bytes = bytes_per_pixel;
         init->DestBlockAddressOffset = (MAIN_FB()->v - 1) * bytes_per_pixel;
     }
 
     // YUV422 Source -> Y Destination
-    if ((sensor->pixformat == PIXFORMAT_GRAYSCALE) && (sensor->mono_bpp == 2)) {
+    if ((csi->pixformat == PIXFORMAT_GRAYSCALE) && (csi->mono_bpp == 2)) {
         line_width_bytes /= 2;
-        if (sensor->transpose) {
+        if (csi->transpose) {
             init->DestBlockAddressOffset /= 2;
         }
     }
@@ -658,16 +665,16 @@ static void mdma_config(MDMA_InitTypeDef *init, sensor_t *sensor, uint32_t bytes
     }
 
     // YUV422 Source -> Y Destination
-    if ((sensor->pixformat == PIXFORMAT_GRAYSCALE) && (sensor->mono_bpp == 2)) {
+    if ((csi->pixformat == PIXFORMAT_GRAYSCALE) && (csi->mono_bpp == 2)) {
         init->SourceInc = MDMA_SRC_INC_HALFWORD;
         init->SourceDataSize = MDMA_SRC_DATASIZE_BYTE;
     }
 }
 #endif
 
-// This is the default snapshot function, which can be replaced in sensor_init functions. This function
+// This is the default snapshot function, which can be replaced in omv_csi_init functions. This function
 // uses the DCMI and DMA to capture frames and each line is processed in the DCMI_DMAConvCpltUser function.
-int sensor_snapshot(sensor_t *sensor, image_t *image, uint32_t flags) {
+int omv_csi_snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
     uint32_t length = 0;
 
     // Compress the framebuffer for the IDE preview, only if it's not the first frame,
@@ -677,7 +684,7 @@ int sensor_snapshot(sensor_t *sensor, image_t *image, uint32_t flags) {
 
     // Make sure the raw frame fits into the FB. It will be switched from RGB565 to BAYER
     // first to save space before being cropped until it fits.
-    sensor_auto_crop_framebuffer();
+    omv_csi_auto_crop_framebuffer();
 
     // The user may have changed the MAIN_FB width or height on the last image so we need
     // to restore that here. We don't have to restore bpp because that's taken care of
@@ -706,15 +713,15 @@ int sensor_snapshot(sensor_t *sensor, image_t *image, uint32_t flags) {
         framebuffer_setup_buffers();
 
         // Setup the size and address of the transfer
-        uint32_t bytes_per_pixel = sensor_get_src_bpp();
+        uint32_t bytes_per_pixel = omv_csi_get_src_bpp();
 
         // Error out if the pixformat is not set.
         if (!bytes_per_pixel) {
-            return SENSOR_ERROR_INVALID_PIXFORMAT;
+            return OMV_CSI_ERROR_INVALID_PIXFORMAT;
         }
 
         uint32_t x_crop = get_dcmi_hw_crop(bytes_per_pixel);
-        uint32_t dma_line_width_bytes = resolution[sensor->framesize][0] * bytes_per_pixel;
+        uint32_t dma_line_width_bytes = resolution[csi->framesize][0] * bytes_per_pixel;
 
         // Shrink the captured pixel count by one word to allow cropping to fix alignment.
         if (x_crop) {
@@ -729,25 +736,25 @@ int sensor_snapshot(sensor_t *sensor, image_t *image, uint32_t flags) {
             || (dma_line_width_bytes > (OMV_LINE_BUF_SIZE / 2))
             || (!length)
             || (length % DMA_LENGTH_ALIGNMENT)) {
-            return SENSOR_ERROR_INVALID_FRAMESIZE;
+            return OMV_CSI_ERROR_INVALID_FRAMESIZE;
         }
 
         // Get the destination buffer address.
         vbuffer_t *buffer = framebuffer_get_tail(FB_PEEK);
 
-        if ((sensor->pixformat == PIXFORMAT_JPEG) && (sensor->chip_id == OV2640_ID) && (!buffer)) {
-            return SENSOR_ERROR_FRAMEBUFFER_ERROR;
+        if ((csi->pixformat == PIXFORMAT_JPEG) && (csi->chip_id == OV2640_ID) && (!buffer)) {
+            return OMV_CSI_ERROR_FRAMEBUFFER_ERROR;
         }
 
         #if defined(OMV_MDMA_CHANNEL_DCMI_0)
         // The code below will enable MDMA data transfer from the DCMI line buffer for non-JPEG modes.
-        if (sensor->pixformat != PIXFORMAT_JPEG) {
-            mdma_config(&DCMI_MDMA_Handle0.Init, sensor, bytes_per_pixel);
+        if (csi->pixformat != PIXFORMAT_JPEG) {
+            mdma_config(&DCMI_MDMA_Handle0.Init, csi, bytes_per_pixel);
             memcpy(&DCMI_MDMA_Handle1.Init, &DCMI_MDMA_Handle0.Init, sizeof(MDMA_InitTypeDef));
             HAL_MDMA_Init(&DCMI_MDMA_Handle0);
 
             // If we are not transposing the image we can fully offload image capture from the CPU.
-            if (!sensor->transpose) {
+            if (!csi->transpose) {
                 // MDMA will trigger on each TC from DMA and transfer one line to the frame buffer.
                 DCMI_MDMA_Handle1.Init.Request = MDMA_REQUEST_DMA2_Stream1_TC;
                 DCMI_MDMA_Handle1.Init.TransferTriggerMode = MDMA_BLOCK_TRANSFER;
@@ -763,7 +770,7 @@ int sensor_snapshot(sensor_t *sensor, image_t *image, uint32_t flags) {
         #endif
 
         HAL_DCMI_DisableCrop(&DCMIHandle);
-        if (sensor->pixformat != PIXFORMAT_JPEG) {
+        if (csi->pixformat != PIXFORMAT_JPEG) {
             // Vertically crop the image. Horizontal cropping is done in software.
             HAL_DCMI_ConfigCrop(&DCMIHandle, x_crop, MAIN_FB()->y, dma_line_width_bytes - 1, h - 1);
             HAL_DCMI_EnableCrop(&DCMIHandle);
@@ -780,7 +787,7 @@ int sensor_snapshot(sensor_t *sensor, image_t *image, uint32_t flags) {
         // the next address and transfer X bytes again. Both of these methods set the addresses
         // right after each other. So, effectively DMA is just writing data to a circular buffer
         // with an interrupt every time 1/2 of it is written.
-        if ((sensor->pixformat == PIXFORMAT_JPEG) && (sensor->chip_id == OV2640_ID)) {
+        if ((csi->pixformat == PIXFORMAT_JPEG) && (csi->chip_id == OV2640_ID)) {
             // The JPEG image will be directly transferred to the frame buffer.
             // The DCMI hardware can transfer up to 524,280 bytes.
             length = DMA_MAX_XFER_SIZE_DBL;
@@ -806,7 +813,7 @@ int sensor_snapshot(sensor_t *sensor, image_t *image, uint32_t flags) {
             }
         #if defined(OMV_MDMA_CHANNEL_DCMI_0)
             // Special transfer mode with MDMA that completely offloads the line capture load.
-        } else if ((sensor->pixformat != PIXFORMAT_JPEG) && (!sensor->transpose)) {
+        } else if ((csi->pixformat != PIXFORMAT_JPEG) && (!csi->transpose)) {
             // DMA to circular mode writing the same line over and over again.
             ((DMA_Stream_TypeDef *) DMAHandle.Instance)->CR |= DMA_SxCR_CIRC;
             // DCMI will transfer to same line and MDMA will move to final location.
@@ -825,17 +832,16 @@ int sensor_snapshot(sensor_t *sensor, image_t *image, uint32_t flags) {
 
     // Let the camera know we want to trigger it now.
     #if defined(OMV_CSI_FSYNC_PIN)
-    if (sensor->frame_sync) {
+    if (csi->frame_sync) {
         omv_gpio_write(OMV_CSI_FSYNC_PIN, 1);
     }
     #endif
 
-    // In camera sensor JPEG mode 4 we will not necessarily see every line in the frame and
-    // in camera sensor JPEG mode 3 we will definitely not see every line in the frame. Given
-    // this, we need to enable the end of frame interrupt before we have necessarily
-    // finished transferring all JEPG data. This works as long as the end of the frame comes
-    // much later after all JPEG data has been transferred. If this is violated the JPEG image
-    // will be corrupted.
+    // In JPEG mode 4 we will not necessarily see every line in the frame and in JPEG mode 3
+    // we will definitely not see every line in the frame. Given this, we need to enable the
+    // end of frame interrupt before we have necessarily finished transferring all JEPG data.
+    // This works as long as the end of the frame comes much later after all JPEG data has
+    // been transferred. If this is violated the JPEG image will be corrupted.
     if (DCMI->CR & DCMI_JPEG_ENABLE) {
         __HAL_DCMI_ENABLE_IT(&DCMIHandle, DCMI_IT_FRAME);
     }
@@ -856,41 +862,41 @@ int sensor_snapshot(sensor_t *sensor, image_t *image, uint32_t flags) {
         __WFI();
 
         // If we haven't exited this loop before the timeout then we need to abort the transfer.
-        if ((HAL_GetTick() - tick_start) > SENSOR_TIMEOUT_MS) {
-            sensor_abort(true, false);
+        if ((HAL_GetTick() - tick_start) > CSI_TIMEOUT_MS) {
+            omv_csi_abort(true, false);
 
             #if defined(OMV_CSI_FSYNC_PIN)
-            if (sensor->frame_sync) {
+            if (csi->frame_sync) {
                 omv_gpio_write(OMV_CSI_FSYNC_PIN, 0);
             }
             #endif
 
-            return SENSOR_ERROR_CAPTURE_TIMEOUT;
+            return OMV_CSI_ERROR_CAPTURE_TIMEOUT;
         }
     }
 
     // We have to abort the JPEG data transfer since it will be stuck waiting for data.
     // line will contain how many transfers we completed.
     // The DMA counter must be used to get the number of remaining words to be transferred.
-    if ((sensor->pixformat == PIXFORMAT_JPEG) && (sensor->chip_id == OV2640_ID)) {
-        sensor_abort(true, false);
+    if ((csi->pixformat == PIXFORMAT_JPEG) && (csi->chip_id == OV2640_ID)) {
+        omv_csi_abort(true, false);
     }
 
     // We're done receiving data.
     #if defined(OMV_CSI_FSYNC_PIN)
-    if (sensor->frame_sync) {
+    if (csi->frame_sync) {
         omv_gpio_write(OMV_CSI_FSYNC_PIN, 0);
     }
     #endif
 
     // The JPEG in the frame buffer is actually invalid.
     if (buffer->jpeg_buffer_overflow) {
-        return SENSOR_ERROR_JPEG_OVERFLOW;
+        return OMV_CSI_ERROR_JPEG_OVERFLOW;
     }
 
     // Prepare the frame buffer w/h/bpp values given the image type.
 
-    if (!sensor->transpose) {
+    if (!csi->transpose) {
         MAIN_FB()->w = w;
         MAIN_FB()->h = h;
     } else {
@@ -899,7 +905,7 @@ int sensor_snapshot(sensor_t *sensor, image_t *image, uint32_t flags) {
     }
 
     // Fix the BPP.
-    switch (sensor->pixformat) {
+    switch (csi->pixformat) {
         case PIXFORMAT_GRAYSCALE:
             MAIN_FB()->pixfmt = PIXFORMAT_GRAYSCALE;
             break;
@@ -908,18 +914,18 @@ int sensor_snapshot(sensor_t *sensor, image_t *image, uint32_t flags) {
             break;
         case PIXFORMAT_BAYER:
             MAIN_FB()->pixfmt = PIXFORMAT_BAYER;
-            MAIN_FB()->subfmt_id = sensor->cfa_format;
-            MAIN_FB()->pixfmt = imlib_bayer_shift(MAIN_FB()->pixfmt, MAIN_FB()->x, MAIN_FB()->y, sensor->transpose);
+            MAIN_FB()->subfmt_id = csi->cfa_format;
+            MAIN_FB()->pixfmt = imlib_bayer_shift(MAIN_FB()->pixfmt, MAIN_FB()->x, MAIN_FB()->y, csi->transpose);
             break;
         case PIXFORMAT_YUV422: {
             MAIN_FB()->pixfmt = PIXFORMAT_YUV;
-            MAIN_FB()->subfmt_id = sensor->yuv_format;
+            MAIN_FB()->subfmt_id = csi->yuv_format;
             MAIN_FB()->pixfmt = imlib_yuv_shift(MAIN_FB()->pixfmt, MAIN_FB()->x);
             break;
         }
         case PIXFORMAT_JPEG: {
             int32_t size = 0;
-            if (sensor->chip_id == OV5640_ID) {
+            if (csi->chip_id == OV5640_ID) {
                 // Offset contains the sum of all the bytes transferred from the offset buffers
                 // while in DCMI_DMAConvCpltUser().
                 size = buffer->offset;

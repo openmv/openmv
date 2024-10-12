@@ -25,6 +25,6 @@
  */
 #ifndef __OV2640_H__
 #define __OV2640_H__
-#define OMV_OV2640_XCLK_FREQ    24000000
-int ov2640_init(sensor_t *sensor);
+#define OMV_OV2640_CLK_FREQ     24000000
+int ov2640_init(omv_csi_t *csi);
 #endif // __OV2640_H__

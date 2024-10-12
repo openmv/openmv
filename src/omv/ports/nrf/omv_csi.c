@@ -28,7 +28,7 @@
 #include <stdbool.h>
 #include "py/mphal.h"
 #include "omv_i2c.h"
-#include "sensor.h"
+#include "omv_csi.h"
 #include "framebuffer.h"
 #include "omv_boardconfig.h"
 #include "unaligned_memcpy.h"
@@ -36,7 +36,7 @@
 #include "hal/nrf_gpio.h"
 
 // Sensor struct.
-sensor_t sensor = {};
+omv_csi_t csi = {};
 
 static uint32_t _vsyncMask;
 static uint32_t _hrefMask;
@@ -65,7 +65,7 @@ static const volatile uint32_t *_pclkPort;
 
 extern void __fatal_error(const char *msg);
 
-int sensor_init() {
+int omv_csi_init() {
     int init_ret = 0;
 
     #if defined(OMV_CSI_POWER_PIN)
@@ -78,29 +78,29 @@ int sensor_init() {
     nrf_gpio_pin_write(OMV_CSI_RESET_PIN, 1);
     #endif
 
-    // Reset the sensor state
-    memset(&sensor, 0, sizeof(sensor_t));
+    // Reset the csi state
+    memset(&csi, 0, sizeof(omv_csi_t));
 
     // Set default snapshot function.
     // Some sensors need to call snapshot from init.
-    sensor.snapshot = sensor_snapshot;
+    csi.snapshot = omv_csi_snapshot;
 
-    // Configure the sensor external clock (XCLK).
-    if (sensor_set_xclk_frequency(OMV_CSI_XCLK_FREQUENCY) != 0) {
-        // Failed to initialize the sensor clock.
-        return SENSOR_ERROR_TIM_INIT_FAILED;
+    // Configure the csi external clock (XCLK).
+    if (omv_csi_set_clk_frequency(OMV_CSI_CLK_FREQUENCY) != 0) {
+        // Failed to initialize the csi clock.
+        return OMV_CSI_ERROR_TIM_INIT_FAILED;
     }
 
     // Detect and initialize the image sensor.
-    if ((init_ret = sensor_probe_init(OMV_CSI_I2C_ID, OMV_CSI_I2C_SPEED)) != 0) {
+    if ((init_ret = omv_csi_probe_init(OMV_CSI_I2C_ID, OMV_CSI_I2C_SPEED)) != 0) {
         // Sensor probe/init failed.
         return init_ret;
     }
 
     // Configure the CSI interface.
-    if (sensor_config(SENSOR_CONFIG_INIT) != 0) {
+    if (omv_csi_config(OMV_CSI_CONFIG_INIT) != 0) {
         // CSI config failed
-        return SENSOR_ERROR_CSI_INIT_FAILED;
+        return OMV_CSI_ERROR_CSI_INIT_FAILED;
     }
 
     // Clear fb_enabled flag
@@ -108,19 +108,19 @@ int sensor_init() {
     //JPEG_FB()->enabled = 0;
 
     // Set default color palette.
-    sensor.color_palette = rainbow_table;
+    csi.color_palette = rainbow_table;
 
-    sensor.detected = true;
+    csi.detected = true;
 
     // Disable VSYNC IRQ and callback
-    sensor_set_vsync_callback(NULL);
+    omv_csi_set_vsync_callback(NULL);
 
     /* All good! */
     return 0;
 }
 
-int sensor_config(sensor_config_t config) {
-    if (config == SENSOR_CONFIG_INIT) {
+int omv_csi_config(omv_csi_config_t config) {
+    if (config == OMV_CSI_CONFIG_INIT) {
         uint32_t csi_pins[] = {
             OMV_CSI_D0_PIN,
             OMV_CSI_D1_PIN,
@@ -152,11 +152,11 @@ int sensor_config(sensor_config_t config) {
     return 0;
 }
 
-uint32_t sensor_get_xclk_frequency() {
-    return OMV_CSI_XCLK_FREQUENCY;
+uint32_t omv_csi_get_xclk_frequency() {
+    return OMV_CSI_CLK_FREQUENCY;
 }
 
-int sensor_set_xclk_frequency(uint32_t frequency) {
+int omv_csi_set_clk_frequency(uint32_t frequency) {
     nrf_gpio_cfg_output(OMV_CSI_MXCLK_PIN);
 
     // Generates 16 MHz signal using I2S peripheral
@@ -172,12 +172,12 @@ int sensor_set_xclk_frequency(uint32_t frequency) {
     return 0;
 }
 
-int sensor_set_windowing(int x, int y, int w, int h) {
-    return SENSOR_ERROR_CTL_UNSUPPORTED;
+int omv_csi_set_windowing(int x, int y, int w, int h) {
+    return OMV_CSI_ERROR_CTL_UNSUPPORTED;
 }
 
-// This is the default snapshot function, which can be replaced in sensor_init functions.
-int sensor_snapshot(sensor_t *sensor, image_t *image, uint32_t flags) {
+// This is the default snapshot function, which can be replaced in omv_csi_init functions.
+int omv_csi_snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
     // Compress the framebuffer for the IDE preview, only if it's not the first frame,
     // the framebuffer is enabled and the image sensor does not support JPEG encoding.
     // Note: This doesn't run unless the IDE is connected and the framebuffer is enabled.
@@ -188,8 +188,8 @@ int sensor_snapshot(sensor_t *sensor, image_t *image, uint32_t flags) {
         framebuffer_set_buffers(1);
     }
 
-    if (sensor_check_framebuffer_size() != 0) {
-        return SENSOR_ERROR_FRAMEBUFFER_OVERFLOW;
+    if (omv_csi_check_framebuffer_size() != 0) {
+        return OMV_CSI_ERROR_FRAMEBUFFER_OVERFLOW;
     }
 
     framebuffer_free_current_buffer();
@@ -197,14 +197,14 @@ int sensor_snapshot(sensor_t *sensor, image_t *image, uint32_t flags) {
     vbuffer_t *buffer = framebuffer_get_tail(FB_NO_FLAGS);
 
     if (!buffer) {
-        return SENSOR_ERROR_FRAMEBUFFER_ERROR;
+        return OMV_CSI_ERROR_FRAMEBUFFER_ERROR;
     }
 
     uint8_t *b = buffer->data;
     uint32_t _width = MAIN_FB()->w;
     uint32_t _height = MAIN_FB()->h;
     int bytesPerRow = _width * 2;  // Always read 2 BPP
-    bool _grayscale = (sensor->pixformat == PIXFORMAT_GRAYSCALE);
+    bool _grayscale = (csi->pixformat == PIXFORMAT_GRAYSCALE);
 
     uint32_t ulPin = 32; // P1.xx set of GPIO is in 'pin' 32 and above
     NRF_GPIO_Type *port = nrf_gpio_pin_port_decode(&ulPin);
@@ -244,16 +244,16 @@ int sensor_snapshot(sensor_t *sensor, image_t *image, uint32_t flags) {
     interrupts();
 
     // Not useful for the NRF but must call to keep API the same.
-    if (sensor->frame_callback) {
-        sensor->frame_callback();
+    if (csi->frame_callback) {
+        csi->frame_callback();
     }
 
     // Set framebuffer pixel format.
-    MAIN_FB()->pixfmt = sensor->pixformat;
+    MAIN_FB()->pixfmt = csi->pixformat;
 
     // Swap bytes if set.
-    if ((MAIN_FB()->pixfmt == PIXFORMAT_RGB565 && sensor->rgb_swap) ||
-        (MAIN_FB()->pixfmt == PIXFORMAT_YUV422 && sensor->yuv_swap)) {
+    if ((MAIN_FB()->pixfmt == PIXFORMAT_RGB565 && csi->rgb_swap) ||
+        (MAIN_FB()->pixfmt == PIXFORMAT_YUV422 && csi->yuv_swap)) {
         unaligned_memcpy_rev16(buffer->data, buffer->data, _width * _height);
     }
 

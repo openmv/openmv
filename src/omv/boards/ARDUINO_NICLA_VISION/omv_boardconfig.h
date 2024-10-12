@@ -1,10 +1,25 @@
 /*
- * This file is part of the OpenMV project.
+ * SPDX-License-Identifier: MIT
  *
- * Copyright (c) 2013-2021 Ibrahim Abdelkader <iabdalkader@openmv.io>
- * Copyright (c) 2013-2021 Kwabena W. Agyeman <kwagyeman@openmv.io>
+ * Copyright (C) 2013-2024 OpenMV, LLC.
  *
- * This work is licensed under the MIT license, see the file LICENSE for details.
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
  *
  * Board configuration and pin definitions.
  */
@@ -27,11 +42,11 @@
 // GPU Configuration
 #define OMV_GPU_ENABLE                        (1)
 
-// Image sensor drivers configuration.
+// CSI drivers configuration.
 #define OMV_GC2145_ENABLE                     (1)
 #define OMV_GC2145_ROTATE                     (1)
 
-// FIR sensor drivers configuration.
+// FIR drivers configuration.
 #define OMV_FIR_MLX90621_ENABLE               (1)
 #define OMV_FIR_MLX90640_ENABLE               (1)
 #define OMV_FIR_MLX90641_ENABLE               (1)
@@ -168,11 +183,11 @@
 #define OMV_GPIO_PORT_J_ENABLE                (1)
 #define OMV_GPIO_PORT_K_ENABLE                (1)
 
-// Main image sensor I2C bus
+// CSI I2C bus
 #define OMV_CSI_I2C_ID                        (3)
 #define OMV_CSI_I2C_SPEED                     (OMV_I2C_SPEED_STANDARD)
 
-// Thermal image sensor I2C bus
+// FIR I2C bus
 #define OMV_FIR_I2C_ID                        (1)
 #define OMV_FIR_I2C_SPEED                     (OMV_I2C_SPEED_FULL)
 
@@ -189,8 +204,8 @@
 #define OMV_IMU_MOUNTING_Z_DIRECTION          -1
 
 // Camera Interface
-#define OMV_CSI_XCLK_SOURCE                   (XCLK_SOURCE_TIM)
-#define OMV_CSI_XCLK_FREQUENCY                (12000000)
+#define OMV_CSI_CLK_SOURCE                    (OMV_CSI_CLK_SOURCE_TIM)
+#define OMV_CSI_CLK_FREQUENCY                 (12000000)
 #define OMV_CSI_TIM                           (TIM3)
 #define OMV_CSI_TIM_PIN                       (&omv_pin_A7_TIM3)
 #define OMV_CSI_TIM_CHANNEL                   (TIM_CHANNEL_2)

@@ -16,7 +16,7 @@
 #include "usbd_uvc.h"
 #include "usbd_uvc_if.h"
 #include "omv_i2c.h"
-#include "sensor.h"
+#include "omv_csi.h"
 #include "framebuffer.h"
 #include "omv_boardconfig.h"
 #if OMV_ENABLE_BOOTLOADER
@@ -57,7 +57,7 @@ SPI_HandleTypeDef SPIHandle6;
 
 DMA_HandleTypeDef *dma_handle[16];
 
-extern sensor_t sensor;
+extern omv_csi_t csi;
 USBD_HandleTypeDef hUsbDeviceFS;
 extern volatile uint8_t g_uvc_stream_status;
 extern struct uvc_streaming_control videoCommitControl;
@@ -216,14 +216,14 @@ int main()
 
     fb_alloc_init0();
     framebuffer_init0();
-    sensor_init0();
+    omv_csi_init0();
 
-    // Initialize the sensor
-    if (sensor_init() != 0) {
+    // Initialize the csi
+    if (omv_csi_init() != 0) {
         __fatal_error();
     }
 
-    sensor_reset();
+    omv_csi_reset();
 
     /* Init Device Library */
     USBD_Init(&hUsbDeviceFS, &FS_Desc, DEVICE_FS);
@@ -242,13 +242,13 @@ int main()
                 format_index != videoCommitControl.bFormatIndex) {
                 switch (videoCommitControl.bFormatIndex) {
                     case VS_FMT_INDEX(YUYV):
-                        sensor_set_pixformat(PIXFORMAT_YUV422);
+                        omv_csi_set_pixformat(PIXFORMAT_YUV422);
                         break;
                     case VS_FMT_INDEX(GREY):
-                        sensor_set_pixformat(PIXFORMAT_GRAYSCALE);
+                        omv_csi_set_pixformat(PIXFORMAT_GRAYSCALE);
                         break;
                     case VS_FMT_INDEX(RGB565):
-                        sensor_set_pixformat(PIXFORMAT_RGB565);
+                        omv_csi_set_pixformat(PIXFORMAT_RGB565);
                         break;
                     default:
                         break;
@@ -256,16 +256,16 @@ int main()
 
                 switch (videoCommitControl.bFrameIndex) {
                     case VS_FRAME_INDEX_1:
-                        sensor_set_framesize(FRAMESIZE_QQQVGA);
+                        omv_csi_set_framesize(OMV_CSI_FRAMESIZE_QQQVGA);
                         break;
                     case VS_FRAME_INDEX_2:
-                        sensor_set_framesize(FRAMESIZE_QQVGA);
+                        omv_csi_set_framesize(OMV_CSI_FRAMESIZE_QQVGA);
                         break;
                     case VS_FRAME_INDEX_3:
-                        sensor_set_framesize(FRAMESIZE_QVGA);
+                        omv_csi_set_framesize(OMV_CSI_FRAMESIZE_QVGA);
                         break;
                     case VS_FRAME_INDEX_4:
-                        sensor_set_framesize(FRAMESIZE_VGA);
+                        omv_csi_set_framesize(OMV_CSI_FRAMESIZE_VGA);
                         break;
                     default:
                         break;
@@ -277,7 +277,7 @@ int main()
 
             image_t image = {0};
             do {
-                sensor.snapshot(&sensor, &image, 0);
+                csi.snapshot(&csi, &image, 0);
             } while (process_frame(&image));
         }
     }

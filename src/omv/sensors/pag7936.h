@@ -32,6 +32,6 @@
  */
 #ifndef __PAG7936_H__
 #define __PAG7936_H__
-#define OMV_PAG7936_XCLK_FREQ    (24000000)
-int pag7936_init(sensor_t *sensor);
+#define OMV_PAG7936_CLK_FREQ    (24000000)
+int pag7936_init(omv_csi_t *csi);
 #endif // __PAG7936_H__

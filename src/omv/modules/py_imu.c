@@ -216,9 +216,9 @@ static mp_obj_t py_imu_tuple(float x, float y, float z) {
 
 // For when the camera board is lying on a table face up.
 
-// X points to the right of the camera sensor
-// Y points down below the camera sensor
-// Z points in the reverse direction of the camera sensor
+// X points to the right of the camera
+// Y points down below the camera
+// Z points in the reverse direction of the camera
 
 // Thus (https://www.nxp.com/docs/en/application-note/AN3461.pdf):
 //
@@ -227,9 +227,9 @@ static mp_obj_t py_imu_tuple(float x, float y, float z) {
 
 // For when the camera board is standing right-side up.
 
-// X points to the right of the camera sensor (still X)
-// Y points down below the camera sensor (now Z)
-// Z points in the reverse direction of the camera sensor (now -Y)
+// X points to the right of the camera (still X)
+// Y points down below the camera (now Z)
+// Z points in the reverse direction of the camera (now -Y)
 
 // So:
 //

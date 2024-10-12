@@ -67,7 +67,7 @@
 
 #include "omv_boardconfig.h"
 #include "framebuffer.h"
-#include "sensor.h"
+#include "omv_csi.h"
 #include "usbdbg.h"
 #include "tinyusb_debug.h"
 #include "fb_alloc.h"
@@ -108,7 +108,7 @@ soft_reset:
     readline_init0();
     fb_alloc_init0();
     framebuffer_init0();
-    sensor_init0();
+    omv_csi_init0();
     //dma_alloc_init0();
     #ifdef IMLIB_ENABLE_IMAGE_FILE_IO
     file_buffer_init0();
@@ -153,9 +153,9 @@ soft_reset:
     mod_network_init();
     #endif
 
-    #if MICROPY_PY_SENSOR
+    #if MICROPY_PY_CSI
     if (first_soft_reset) {
-        sensor_init();
+        omv_csi_init();
     }
     #endif
 

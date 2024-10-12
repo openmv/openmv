@@ -25,6 +25,6 @@
  */
 #ifndef __GENX320_H__
 #define __GENX320_H__
-#define OMV_GENX320_XCLK_FREQ    (24000000)
-int genx320_init(sensor_t *sensor);
+#define OMV_GENX320_CLK_FREQ     (24000000)
+int genx320_init(omv_csi_t *csi);
 #endif // __GENX320_H__

@@ -25,5 +25,5 @@
  */
 #ifndef __HM0360_H__
 #define __HM0360_H__
-int hm0360_init(sensor_t *sensor);
+int hm0360_init(omv_csi_t *csi);
 #endif // __HM0360_H__
