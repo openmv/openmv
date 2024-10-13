@@ -26,7 +26,7 @@
 #ifndef __PAG7920_H__
 #define __PAG7920_H__
 
-#define OMV_PAG7920_XCLK_FREQ 24000000
+#define OMV_PAG7920_CLK_FREQ    24000000
 
-int pag7920_init(sensor_t *sensor);
+int pag7920_init(omv_csi_t *csi);
 #endif

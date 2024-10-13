@@ -88,7 +88,7 @@
 #include "framebuffer.h"
 #include "omv_boardconfig.h"
 #include "omv_i2c.h"
-#include "sensor.h"
+#include "omv_csi.h"
 #include "mp_utils.h"
 
 uint32_t HAL_GetHalVersion() {
@@ -168,8 +168,8 @@ soft_reset:
     fb_alloc_init0();
     framebuffer_init0();
 
-    #if MICROPY_PY_SENSOR
-    sensor_init();
+    #if MICROPY_PY_CSI
+    omv_csi_init();
     #endif
 
     #if (MICROPY_PY_BLE_NUS == 0) && (MICROPY_HW_USB_CDC == 0)

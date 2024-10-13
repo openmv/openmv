@@ -25,6 +25,6 @@
  */
 #ifndef __FROGEYE2020_H__
 #define __FROGEYE2020_H__
-#define OMV_FROGEYE2020_XCLK_FREQ    (5000000)
-int frogeye2020_init(sensor_t *sensor);
+#define OMV_FROGEYE2020_CLK_FREQ    (5000000)
+int frogeye2020_init(omv_csi_t *csi);
 #endif // __FROGEYE2020_H__

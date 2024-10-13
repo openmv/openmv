@@ -28,8 +28,8 @@
 #include "framebuffer.h"
 #include "py_helper.h"
 #include "py_assert.h"
-#if MICROPY_PY_SENSOR
-#include "sensor.h"
+#if MICROPY_PY_CSI
+#include "omv_csi.h"
 #endif
 
 extern void *py_image_cobj(mp_obj_t img_obj);
@@ -549,8 +549,8 @@ void py_helper_update_framebuffer(image_t *img) {
 }
 
 void py_helper_set_to_framebuffer(image_t *img) {
-    #if MICROPY_PY_SENSOR
-    sensor_set_framebuffers(1);
+    #if MICROPY_PY_CSI
+    omv_csi_set_framebuffers(1);
     #else
     framebuffer_set_buffers(1);
     #endif

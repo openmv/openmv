@@ -31,7 +31,7 @@
 #include <string.h>
 
 #include "omv_i2c.h"
-#include "sensor.h"
+#include "omv_csi.h"
 #include "ov7670.h"
 #include "ov7670_regs.h"
 #include "py/mphal.h"
@@ -244,7 +244,7 @@ static const uint8_t rgb565_regs[][2] = {
     { 0xFF,     0xFF }
 };
 #else
-#error "OV767x sensor is Not defined."
+#error "OV767x variant is Not defined."
 #endif
 
 // TODO: These registers probably need to be fixed too.
@@ -338,29 +338,29 @@ static const uint8_t qqvga_regs[][2] = {
 };
 #endif
 
-static int reset(sensor_t *sensor) {
+static int reset(omv_csi_t *csi) {
     // Reset all registers
-    int ret = omv_i2c_writeb(&sensor->i2c_bus, sensor->slv_addr, COM7, COM7_RESET);
+    int ret = omv_i2c_writeb(&csi->i2c_bus, csi->slv_addr, COM7, COM7_RESET);
 
     // Delay 2 ms
     mp_hal_delay_ms(2);
 
     // Write default registers
     for (int i = 0; default_regs[i][0] != 0xff; i++) {
-        ret |= omv_i2c_writeb(&sensor->i2c_bus, sensor->slv_addr, default_regs[i][0], default_regs[i][1]);
+        ret |= omv_i2c_writeb(&csi->i2c_bus, csi->slv_addr, default_regs[i][0], default_regs[i][1]);
     }
 
     // Delay 300 ms
-    if (!sensor->disable_delays) {
+    if (!csi->disable_delays) {
         mp_hal_delay_ms(300);
     }
 
     return ret;
 }
 
-static int sleep(sensor_t *sensor, int enable) {
+static int sleep(omv_csi_t *csi, int enable) {
     uint8_t reg;
-    int ret = omv_i2c_readb(&sensor->i2c_bus, sensor->slv_addr, COM2, &reg);
+    int ret = omv_i2c_readb(&csi->i2c_bus, csi->slv_addr, COM2, &reg);
 
     if (enable) {
         reg |= COM2_SOFT_SLEEP;
@@ -369,22 +369,22 @@ static int sleep(sensor_t *sensor, int enable) {
     }
 
     // Write back register
-    return omv_i2c_writeb(&sensor->i2c_bus, sensor->slv_addr, COM2, reg) | ret;
+    return omv_i2c_writeb(&csi->i2c_bus, csi->slv_addr, COM2, reg) | ret;
 }
 
-static int read_reg(sensor_t *sensor, uint16_t reg_addr) {
+static int read_reg(omv_csi_t *csi, uint16_t reg_addr) {
     uint8_t reg_data;
-    if (omv_i2c_readb(&sensor->i2c_bus, sensor->slv_addr, reg_addr, &reg_data) != 0) {
+    if (omv_i2c_readb(&csi->i2c_bus, csi->slv_addr, reg_addr, &reg_data) != 0) {
         return -1;
     }
     return reg_data;
 }
 
-static int write_reg(sensor_t *sensor, uint16_t reg_addr, uint16_t reg_data) {
-    return omv_i2c_writeb(&sensor->i2c_bus, sensor->slv_addr, reg_addr, reg_data);
+static int write_reg(omv_csi_t *csi, uint16_t reg_addr, uint16_t reg_data) {
+    return omv_i2c_writeb(&csi->i2c_bus, csi->slv_addr, reg_addr, reg_data);
 }
 
-static int set_pixformat(sensor_t *sensor, pixformat_t pixformat) {
+static int set_pixformat(omv_csi_t *csi, pixformat_t pixformat) {
     int ret = 0;
     const uint8_t(*regs)[2];
 
@@ -402,24 +402,24 @@ static int set_pixformat(sensor_t *sensor, pixformat_t pixformat) {
 
     // Write pixel format registers
     for (int i = 0; regs[i][0] != 0xff; i++) {
-        ret |= omv_i2c_writeb(&sensor->i2c_bus, sensor->slv_addr, regs[i][0], regs[i][1]);
+        ret |= omv_i2c_writeb(&csi->i2c_bus, csi->slv_addr, regs[i][0], regs[i][1]);
     }
 
     return ret;
 }
 
-static int set_framesize(sensor_t *sensor, framesize_t framesize) {
+static int set_framesize(omv_csi_t *csi, omv_csi_framesize_t framesize) {
     int ret = 0;
     const uint8_t(*regs)[2];
 
     switch (framesize) {
-        case FRAMESIZE_VGA:
+        case OMV_CSI_FRAMESIZE_VGA:
             regs = vga_regs;
             break;
-        case FRAMESIZE_QVGA:
+        case OMV_CSI_FRAMESIZE_QVGA:
             regs = qvga_regs;
             break;
-        case FRAMESIZE_QQVGA:
+        case OMV_CSI_FRAMESIZE_QQVGA:
             regs = qqvga_regs;
             break;
         default:
@@ -428,49 +428,49 @@ static int set_framesize(sensor_t *sensor, framesize_t framesize) {
 
     // Write pixel format registers
     for (int i = 0; regs[i][0] != 0xFF; i++) {
-        ret |= omv_i2c_writeb(&sensor->i2c_bus, sensor->slv_addr, regs[i][0], regs[i][1]);
+        ret |= omv_i2c_writeb(&csi->i2c_bus, csi->slv_addr, regs[i][0], regs[i][1]);
     }
     return ret;
 }
 
-static int set_hmirror(sensor_t *sensor, int enable) {
+static int set_hmirror(omv_csi_t *csi, int enable) {
     uint8_t val;
-    int ret = omv_i2c_readb(&sensor->i2c_bus, sensor->slv_addr, MVFP, &val);
+    int ret = omv_i2c_readb(&csi->i2c_bus, csi->slv_addr, MVFP, &val);
     ret |=
-        omv_i2c_writeb(&sensor->i2c_bus, sensor->slv_addr, MVFP,
+        omv_i2c_writeb(&csi->i2c_bus, csi->slv_addr, MVFP,
                        enable ? (val | MVFP_MIRROR) : (val & (~MVFP_MIRROR)));
 
     return ret;
 }
 
-static int set_vflip(sensor_t *sensor, int enable) {
+static int set_vflip(omv_csi_t *csi, int enable) {
     uint8_t val;
-    int ret = omv_i2c_readb(&sensor->i2c_bus, sensor->slv_addr, MVFP, &val);
+    int ret = omv_i2c_readb(&csi->i2c_bus, csi->slv_addr, MVFP, &val);
     ret |=
-        omv_i2c_writeb(&sensor->i2c_bus, sensor->slv_addr, MVFP,
+        omv_i2c_writeb(&csi->i2c_bus, csi->slv_addr, MVFP,
                        enable ? (val | MVFP_VFLIP) : (val & (~MVFP_VFLIP)));
 
     return ret;
 }
-int ov7670_init(sensor_t *sensor) {
-    // Initialize sensor structure.
-    sensor->reset = reset;
-    sensor->sleep = sleep;
-    sensor->read_reg = read_reg;
-    sensor->write_reg = write_reg;
-    sensor->set_pixformat = set_pixformat;
-    sensor->set_framesize = set_framesize;
-    sensor->set_hmirror = set_hmirror;
-    sensor->set_vflip = set_vflip;
+int ov7670_init(omv_csi_t *csi) {
+    // Initialize csi structure.
+    csi->reset = reset;
+    csi->sleep = sleep;
+    csi->read_reg = read_reg;
+    csi->write_reg = write_reg;
+    csi->set_pixformat = set_pixformat;
+    csi->set_framesize = set_framesize;
+    csi->set_hmirror = set_hmirror;
+    csi->set_vflip = set_vflip;
 
-    // Set sensor flags
-    sensor->vsync_pol = 1;
-    sensor->hsync_pol = 0;
-    sensor->pixck_pol = 1;
-    sensor->frame_sync = 0;
-    sensor->mono_bpp = 2;
-    sensor->rgb_swap = 1;
-    sensor->yuv_format = SUBFORMAT_ID_YVU422;
+    // Set csi flags
+    csi->vsync_pol = 1;
+    csi->hsync_pol = 0;
+    csi->pixck_pol = 1;
+    csi->frame_sync = 0;
+    csi->mono_bpp = 2;
+    csi->rgb_swap = 1;
+    csi->yuv_format = SUBFORMAT_ID_YVU422;
 
     return 0;
 }

@@ -1,10 +1,25 @@
 /*
- * This file is part of the OpenMV project.
+ * SPDX-License-Identifier: MIT
  *
- * Copyright (c) 2013-2024 Ibrahim Abdelkader <iabdalkader@openmv.io>
- * Copyright (c) 2013-2024 Kwabena W. Agyeman <kwagyeman@openmv.io>
+ * Copyright (C) 2013-2024 OpenMV, LLC.
  *
- * This work is licensed under the MIT license, see the file LICENSE for details.
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
  *
  * Board configuration and pin definitions.
  */
@@ -12,13 +27,13 @@
 #define __OMV_BOARDCONFIG_H__
 
 // Max integral image.
-#define OMV_MAX_INT_FRAME         FRAMESIZE_QCIF
+#define OMV_MAX_INT_FRAME         OMV_CSI_FRAMESIZE_QCIF
 #define OMV_MAX_INT_FRAME_STR     "QCIF"
 // Max GS/RGB565/YUV422/Binary image.
-#define OMV_MAX_RAW_FRAME         FRAMESIZE_QCIF
+#define OMV_MAX_RAW_FRAME         OMV_CSI_FRAMESIZE_QCIF
 #define OMV_MAX_RAW_FRAME_STR     "QCIF"
 // Max raw (RGB565/YUV422) image for blob detection.
-#define OMV_MAX_BLOB_FRAME        FRAMESIZE_QCIF
+#define OMV_MAX_BLOB_FRAME        OMV_CSI_FRAMESIZE_QCIF
 #define OMV_MAX_BLOB_FRAME_STR    "QCIF"
 
 // USB IRQn.
@@ -63,7 +78,7 @@
 #define SCCB_SDA_PIN              (GPIO_PIN_9)
 
 // Camera interface
-#define OMV_CSI_XCLK_FREQUENCY    (12000000)
+#define OMV_CSI_CLK_FREQUENCY     (12000000)
 #define OMV_CSI_TIM               (TIM1)
 #define OMV_CSI_TIM_PIN           (GPIO_PIN_9)
 #define OMV_CSI_TIM_PORT          (GPIOE)

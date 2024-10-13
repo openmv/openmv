@@ -293,7 +293,7 @@ void HAL_I2C_MspDeInit(I2C_HandleTypeDef *hi2c) {
 }
 
 void HAL_TIM_PWM_MspInit(TIM_HandleTypeDef *htim) {
-    #if (OMV_CSI_XCLK_SOURCE == XCLK_SOURCE_TIM)
+    #if (OMV_CSI_CLK_SOURCE == OMV_CSI_CLK_SOURCE_TIM)
     if (htim->Instance == OMV_CSI_TIM) {
         // Enable DCMI timer clock.
         OMV_CSI_TIM_CLK_ENABLE();
@@ -303,7 +303,7 @@ void HAL_TIM_PWM_MspInit(TIM_HandleTypeDef *htim) {
         omv_gpio_config(OMV_CSI_TIM_EXT_PIN, OMV_GPIO_MODE_ALT, OMV_GPIO_PULL_UP, OMV_GPIO_SPEED_HIGH, -1);
         #endif
     }
-    #endif // (OMV_CSI_XCLK_SOURCE == XCLK_SOURCE_TIM)
+    #endif // (OMV_CSI_CLK_SOURCE == OMV_CSI_CLK_SOURCE_TIM)
 
     #if defined(OMV_BUZZER_TIM)
     if (htim->Instance == OMV_BUZZER_TIM) {
@@ -731,8 +731,8 @@ void MDMA_IRQHandler() {
     jpeg_mdma_irq_handler();
     #endif
     #if defined(OMV_MDMA_CHANNEL_DCMI_0)
-    extern void sensor_mdma_irq_handler(void);
-    sensor_mdma_irq_handler();
+    extern void omv_csi_mdma_irq_handler(void);
+    omv_csi_mdma_irq_handler();
     #endif
     IRQ_EXIT(MDMA_IRQn);
 }

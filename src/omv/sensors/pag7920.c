@@ -31,7 +31,7 @@
 #include <math.h>
 #include "py/mphal.h"
 
-#include "sensor.h"
+#include "omv_csi.h"
 #include "framebuffer.h"
 #include "omv_i2c.h"
 
@@ -208,10 +208,10 @@ static int8_t g_bank_cache = -1;
 static bool g_f_hflip = false;
 static bool g_f_vflip = false;
 
-static int switch_bank(sensor_t *sensor, uint8_t bank) {
+static int switch_bank(omv_csi_t *csi, uint8_t bank) {
     if (g_bank_cache != bank) {
         debug_printf("W Reg: 0x%02X 0x%02X\r\n", REG_BANK, bank);
-        int res = omv_i2c_writeb(&sensor->i2c_bus, sensor->slv_addr, REG_BANK, bank);
+        int res = omv_i2c_writeb(&csi->i2c_bus, csi->slv_addr, REG_BANK, bank);
         if (res) {
             g_bank_cache = -1;  // Encountered an unknown error, clear cache.
             printf("switch bank failed, res = %d\n", res);
@@ -223,9 +223,9 @@ static int switch_bank(sensor_t *sensor, uint8_t bank) {
     return 0;
 }
 
-static int write_reg_w_bank(sensor_t *sensor, uint8_t bank, uint8_t addr,
+static int write_reg_w_bank(omv_csi_t *csi, uint8_t bank, uint8_t addr,
                             uint8_t val) {
-    if (switch_bank(sensor, bank)) {
+    if (switch_bank(csi, bank)) {
         printf("write_reg failed.\n");
         return -1;
     }
@@ -234,27 +234,27 @@ static int write_reg_w_bank(sensor_t *sensor, uint8_t bank, uint8_t addr,
     }
 
     debug_printf("W Reg: 0x%02X 0x%02X\r\n", addr, val);
-    return omv_i2c_writeb(&sensor->i2c_bus, sensor->slv_addr, addr, val);
+    return omv_i2c_writeb(&csi->i2c_bus, csi->slv_addr, addr, val);
 }
 
-static int read_reg_w_bank(sensor_t *sensor, uint8_t bank, uint8_t addr,
+static int read_reg_w_bank(omv_csi_t *csi, uint8_t bank, uint8_t addr,
                            uint8_t *p_val) {
-    if (switch_bank(sensor, bank)) {
+    if (switch_bank(csi, bank)) {
         printf("read_reg_w_bank() failed.\n");
         return -1;
     }
 
     debug_printf("R Reg: 0x%02X\r\n", addr);
-    return omv_i2c_readb(&sensor->i2c_bus, sensor->slv_addr, addr, p_val);
+    return omv_i2c_readb(&csi->i2c_bus, csi->slv_addr, addr, p_val);
 }
 
-static int init_sensor(sensor_t *sensor) {
-    write_reg_w_bank(sensor, BANK_0, R_GLOBAL_RESET, V_GLOBAL_RESET);
+static int init_csi(omv_csi_t *csi) {
+    write_reg_w_bank(csi, BANK_0, R_GLOBAL_RESET, V_GLOBAL_RESET);
     mp_hal_delay_ms(50);
 #define ta_seq default_regs
     for (int i = 0; ta_seq[i][0]; i++) {
         debug_printf("W Reg: 0x%02X 0x%02X\r\n", ta_seq[i][0], ta_seq[i][1]);
-        int res = omv_i2c_writeb(&sensor->i2c_bus, sensor->slv_addr, ta_seq[i][0],
+        int res = omv_i2c_writeb(&csi->i2c_bus, csi->slv_addr, ta_seq[i][0],
                                  ta_seq[i][1]);
         if (res) {
             return res;
@@ -264,15 +264,15 @@ static int init_sensor(sensor_t *sensor) {
     return 0;
 }
 
-static int reset(sensor_t *sensor) {
+static int reset(omv_csi_t *csi) {
     // Reset internal flag.
     g_f_hflip = g_f_vflip = false;
     g_bank_cache = -1;
-    return init_sensor(sensor);
+    return init_csi(csi);
 }
 
-static int sleep(sensor_t *sensor, int enable) {
-    int ret = write_reg_w_bank(sensor, 0, TG_En,
+static int sleep(omv_csi_t *csi, int enable) {
+    int ret = write_reg_w_bank(csi, 0, TG_En,
                                enable == 1 ? TG_En_V2 : TG_En_V1);
     if (ret) {
         printf("sleep() failed.\n");
@@ -280,17 +280,17 @@ static int sleep(sensor_t *sensor, int enable) {
     return ret;
 }
 
-static int read_reg(sensor_t *sensor, uint16_t reg_addr) {
+static int read_reg(omv_csi_t *csi, uint16_t reg_addr) {
     uint8_t val = 0;
-    if (omv_i2c_readb(&sensor->i2c_bus, sensor->slv_addr, (uint8_t) reg_addr, &val)) {
+    if (omv_i2c_readb(&csi->i2c_bus, csi->slv_addr, (uint8_t) reg_addr, &val)) {
         return -1;
     }
     return val;
 }
 
-static int write_reg(sensor_t *sensor, uint16_t reg_addr, uint16_t reg_data) {
+static int write_reg(omv_csi_t *csi, uint16_t reg_addr, uint16_t reg_data) {
     int ret;
-    ret = omv_i2c_writeb(&sensor->i2c_bus, sensor->slv_addr, (uint8_t) reg_addr,
+    ret = omv_i2c_writeb(&csi->i2c_bus, csi->slv_addr, (uint8_t) reg_addr,
                          (uint8_t) reg_data);
     if (ret == 0 && reg_addr == REG_BANK) {
         g_bank_cache = (uint8_t) reg_data;
@@ -299,7 +299,7 @@ static int write_reg(sensor_t *sensor, uint16_t reg_addr, uint16_t reg_data) {
     return ret;
 }
 
-static int set_pixformat(sensor_t *sensor, pixformat_t pixformat) {
+static int set_pixformat(omv_csi_t *csi, pixformat_t pixformat) {
     switch (pixformat) {
         case PIXFORMAT_GRAYSCALE:
             break;
@@ -309,7 +309,7 @@ static int set_pixformat(sensor_t *sensor, pixformat_t pixformat) {
     return 0;
 }
 
-static int set_framesize(sensor_t *sensor, framesize_t framesize) {
+static int set_framesize(omv_csi_t *csi, omv_csi_framesize_t framesize) {
     int res = 0;
     uint8_t val_R0_15, val_R0_16, val_R0_1C,
             val_R0_3E_B2, val_R1_4B_B0,
@@ -318,7 +318,7 @@ static int set_framesize(sensor_t *sensor, framesize_t framesize) {
             val_R_WOI_VStart, val_R_ABC_grad1, val_R2_D9_B0, val_R2_D9_B1,
             val_R_AE_Size__div4_X, val_R_AE_Size__div4_Y, val_R009_H;
     switch (framesize) {
-        case FRAMESIZE_QVGA:
+        case OMV_CSI_FRAMESIZE_QVGA:
             val_R0_15 = 0;
             val_R0_16 = 0;
             val_R0_1C = 0;
@@ -338,7 +338,7 @@ static int set_framesize(sensor_t *sensor, framesize_t framesize) {
             val_R_AE_Size__div4_X = 80;
             val_R_AE_Size__div4_Y = 60;
             break;
-        case FRAMESIZE_QQVGA:
+        case OMV_CSI_FRAMESIZE_QQVGA:
             val_R0_15 = 1;
             val_R0_16 = 1;
             val_R0_1C = 1;
@@ -362,132 +362,132 @@ static int set_framesize(sensor_t *sensor, framesize_t framesize) {
             return -1;
     }
     bitplane tmp = {.byte_val = 0};
-    res |= read_reg_w_bank(sensor, BANK_0, R0_15, &tmp.byte_val);
+    res |= read_reg_w_bank(csi, BANK_0, R0_15, &tmp.byte_val);
     tmp.bits.b5 = val_R0_15;
-    res |= write_reg_w_bank(sensor, BANK_0, R0_15, tmp.byte_val);
+    res |= write_reg_w_bank(csi, BANK_0, R0_15, tmp.byte_val);
 
-    res |= read_reg_w_bank(sensor, BANK_0, R0_16, &tmp.byte_val);
+    res |= read_reg_w_bank(csi, BANK_0, R0_16, &tmp.byte_val);
     tmp.bits.b0 = val_R0_16;
-    res |= write_reg_w_bank(sensor, BANK_0, R0_16, tmp.byte_val);
+    res |= write_reg_w_bank(csi, BANK_0, R0_16, tmp.byte_val);
 
-    res |= read_reg_w_bank(sensor, BANK_0, R0_1C, &tmp.byte_val);
+    res |= read_reg_w_bank(csi, BANK_0, R0_1C, &tmp.byte_val);
     tmp.bits.b1 = val_R0_1C;
-    res |= write_reg_w_bank(sensor, BANK_0, R0_1C, tmp.byte_val);
+    res |= write_reg_w_bank(csi, BANK_0, R0_1C, tmp.byte_val);
 
-    res |= read_reg_w_bank(sensor, BANK_0, R0_3E_B2, &tmp.byte_val);
+    res |= read_reg_w_bank(csi, BANK_0, R0_3E_B2, &tmp.byte_val);
     tmp.bits.b2 = val_R0_3E_B2;
     //tmp.bits.b5 = val_R0_3E_B5;
-    res |= write_reg_w_bank(sensor, BANK_0, R0_3E_B2, tmp.byte_val);
+    res |= write_reg_w_bank(csi, BANK_0, R0_3E_B2, tmp.byte_val);
 
-    res |= write_reg_w_bank(sensor, BANK_0, R0_09_B1, val_R009_H);
+    res |= write_reg_w_bank(csi, BANK_0, R0_09_B1, val_R009_H);
 
-    res |= read_reg_w_bank(sensor, BANK_1, R1_4B_B0, &tmp.byte_val);
+    res |= read_reg_w_bank(csi, BANK_1, R1_4B_B0, &tmp.byte_val);
     tmp.bits.b0 = val_R1_4B_B0;
     tmp.bits.b4 = val_R1_4B_B4 & 0x01;
     tmp.bits.b5 = (val_R1_4B_B4 >> 1) & 0x01;
-    res |= write_reg_w_bank(sensor, BANK_1, R1_4B_B0, tmp.byte_val);
+    res |= write_reg_w_bank(csi, BANK_1, R1_4B_B0, tmp.byte_val);
 
-    res |= read_reg_w_bank(sensor, BANK_1, R1_70, &tmp.byte_val);
+    res |= read_reg_w_bank(csi, BANK_1, R1_70, &tmp.byte_val);
     tmp.bits.b4 = val_R1_70;
-    res |= write_reg_w_bank(sensor, BANK_1, R1_70, tmp.byte_val);
+    res |= write_reg_w_bank(csi, BANK_1, R1_70, tmp.byte_val);
 
     tmp.byte_val = val_R1_C2;
-    res |= write_reg_w_bank(sensor, BANK_1, R1_C2, tmp.byte_val);
+    res |= write_reg_w_bank(csi, BANK_1, R1_C2, tmp.byte_val);
 
     tmp.byte_val = val_R_VSize;
-    res |= write_reg_w_bank(sensor, BANK_1, R1_C8, tmp.byte_val);
+    res |= write_reg_w_bank(csi, BANK_1, R1_C8, tmp.byte_val);
 
     tmp.byte_val = val_R_ABC_2_Start;
-    res |= write_reg_w_bank(sensor, BANK_2, R2_19, tmp.byte_val);
+    res |= write_reg_w_bank(csi, BANK_2, R2_19, tmp.byte_val);
 
     tmp.byte_val = val_R_WOI_VSize;
-    res |= write_reg_w_bank(sensor, BANK_2, R2_23, tmp.byte_val);
+    res |= write_reg_w_bank(csi, BANK_2, R2_23, tmp.byte_val);
 
     tmp.byte_val = val_R_WOI_VStart;
-    res |= write_reg_w_bank(sensor, BANK_2, R2_27, tmp.byte_val);
+    res |= write_reg_w_bank(csi, BANK_2, R2_27, tmp.byte_val);
 
     tmp.byte_val = val_R_ABC_grad1;
-    res |= write_reg_w_bank(sensor, BANK_2, R2_2D, tmp.byte_val);
+    res |= write_reg_w_bank(csi, BANK_2, R2_2D, tmp.byte_val);
 
-    res |= read_reg_w_bank(sensor, BANK_2, R2_D9_B0, &tmp.byte_val);
+    res |= read_reg_w_bank(csi, BANK_2, R2_D9_B0, &tmp.byte_val);
     tmp.bits.b0 = val_R2_D9_B0;
     tmp.bits.b1 = val_R2_D9_B1;
-    res |= write_reg_w_bank(sensor, BANK_2, R2_D9_B0, tmp.byte_val);
+    res |= write_reg_w_bank(csi, BANK_2, R2_D9_B0, tmp.byte_val);
 
     res |=
-        write_reg_w_bank(sensor, BANK_4, R_AE_Size__div4_X, val_R_AE_Size__div4_X);
+        write_reg_w_bank(csi, BANK_4, R_AE_Size__div4_X, val_R_AE_Size__div4_X);
 
     res |=
-        write_reg_w_bank(sensor, BANK_4, R_AE_Size__div4_Y, val_R_AE_Size__div4_Y);
+        write_reg_w_bank(csi, BANK_4, R_AE_Size__div4_Y, val_R_AE_Size__div4_Y);
 
-    res |= write_reg_w_bank(sensor, BANK_0, R_UPDATE_FLAG, V_UPDATE_VALUE);
-    res |= write_reg_w_bank(sensor, BANK_0, TG_En, 1);
+    res |= write_reg_w_bank(csi, BANK_0, R_UPDATE_FLAG, V_UPDATE_VALUE);
+    res |= write_reg_w_bank(csi, BANK_0, TG_En, 1);
 
     return res;
 }
 
-static int set_gainceiling(sensor_t *sensor, gainceiling_t gainceiling) {
+static int set_gainceiling(omv_csi_t *csi, omv_csi_gainceiling_t gainceiling) {
     return 0;
 }
 
-static int set_auto_gain(sensor_t *sensor, int enable, float gain_db,
+static int set_auto_gain(omv_csi_t *csi, int enable, float gain_db,
                          float gain_db_ceiling) {
-    static const uint32_t digital = (OMV_PAG7920_XCLK_FREQ / US) / 2;
+    static const uint32_t digital = (OMV_PAG7920_CLK_FREQ / US) / 2;
     uint32_t frame_time;
-    read_reg_w_bank(sensor, BANK_0, R_Frame_Time_0, (uint8_t *) &frame_time);
-    read_reg_w_bank(sensor, BANK_0, R_Frame_Time_1, (uint8_t *) (&frame_time) + 1);
-    read_reg_w_bank(sensor, BANK_0, R_Frame_Time_2, (uint8_t *) (&frame_time) + 2);
-    read_reg_w_bank(sensor, BANK_0, R_Frame_Time_3, (uint8_t *) (&frame_time) + 3);
+    read_reg_w_bank(csi, BANK_0, R_Frame_Time_0, (uint8_t *) &frame_time);
+    read_reg_w_bank(csi, BANK_0, R_Frame_Time_1, (uint8_t *) (&frame_time) + 1);
+    read_reg_w_bank(csi, BANK_0, R_Frame_Time_2, (uint8_t *) (&frame_time) + 2);
+    read_reg_w_bank(csi, BANK_0, R_Frame_Time_3, (uint8_t *) (&frame_time) + 3);
     uint16_t gain_code;
     if (!enable && (!isnanf(gain_db)) && (!isinff(gain_db))) {
         float exponent = gain_db / 20.0f;
         gain_code = IM_MIN(fast_roundf(expf(M_LN29 + (exponent * M_LN10))), 464);
-        write_reg_w_bank(sensor, BANK_4, R_AE_Gain_manual_L,
+        write_reg_w_bank(csi, BANK_4, R_AE_Gain_manual_L,
                          *((uint8_t *) &gain_code));
-        write_reg_w_bank(sensor, BANK_4, R_AE_Gain_manual_H,
+        write_reg_w_bank(csi, BANK_4, R_AE_Gain_manual_H,
                          *((uint8_t *) &gain_code + 1));
-        write_reg_w_bank(sensor, BANK_0, R_UPDATE_FLAG, V_UPDATE_VALUE);
+        write_reg_w_bank(csi, BANK_0, R_UPDATE_FLAG, V_UPDATE_VALUE);
 
         // AE disable.
-        write_reg_w_bank(sensor, BANK_4, R_AE_EnH, 0x32);
+        write_reg_w_bank(csi, BANK_4, R_AE_EnH, 0x32);
         // Delay a frame time.
         mp_hal_delay_ms((frame_time / digital) / 1000);
-        write_reg_w_bank(sensor, BANK_4, R_AE_MinGain_L, *((uint8_t *) &gain_code));
-        write_reg_w_bank(sensor, BANK_4, R_AE_MinGain_H, *((uint8_t *) &gain_code + 1));
-        write_reg_w_bank(sensor, BANK_4, R_AE_MaxGain_L, *((uint8_t *) &gain_code));
-        write_reg_w_bank(sensor, BANK_4, R_AE_MaxGain_H, *((uint8_t *) &gain_code + 1));
+        write_reg_w_bank(csi, BANK_4, R_AE_MinGain_L, *((uint8_t *) &gain_code));
+        write_reg_w_bank(csi, BANK_4, R_AE_MinGain_H, *((uint8_t *) &gain_code + 1));
+        write_reg_w_bank(csi, BANK_4, R_AE_MaxGain_L, *((uint8_t *) &gain_code));
+        write_reg_w_bank(csi, BANK_4, R_AE_MaxGain_H, *((uint8_t *) &gain_code + 1));
     } else if (enable && (!isnanf(gain_db_ceiling)) && (!isinff(gain_db_ceiling))) {
         float exponent = gain_db_ceiling / 20.0f;
         gain_code = IM_MIN(fast_roundf(expf(M_LN29 + (exponent * M_LN10))), 464);
         // Min gain code = 29
-        write_reg_w_bank(sensor, BANK_4, R_AE_MinGain_L, 0x1D);
-        write_reg_w_bank(sensor, BANK_4, R_AE_MinGain_H, 0);
-        write_reg_w_bank(sensor, BANK_4, R_AE_MaxGain_L, *((uint8_t *) &gain_code));
-        write_reg_w_bank(sensor, BANK_4, R_AE_MaxGain_H, *((uint8_t *) &gain_code + 1));
+        write_reg_w_bank(csi, BANK_4, R_AE_MinGain_L, 0x1D);
+        write_reg_w_bank(csi, BANK_4, R_AE_MinGain_H, 0);
+        write_reg_w_bank(csi, BANK_4, R_AE_MaxGain_L, *((uint8_t *) &gain_code));
+        write_reg_w_bank(csi, BANK_4, R_AE_MaxGain_H, *((uint8_t *) &gain_code + 1));
     }
 
     // AE enable.
-    write_reg_w_bank(sensor, BANK_4, R_AE_EnH, 0x31);
+    write_reg_w_bank(csi, BANK_4, R_AE_EnH, 0x31);
 
     return 0;
 }
 
-static int get_gain_db(sensor_t *sensor, float *gain_db) {
+static int get_gain_db(omv_csi_t *csi, float *gain_db) {
     uint16_t gain_code;
-    read_reg_w_bank(sensor, BANK_4, AE_Total_Gain_L, (uint8_t *) &gain_code);
-    read_reg_w_bank(sensor, BANK_4, AE_Total_Gain_H, (uint8_t *) &gain_code + 1);
+    read_reg_w_bank(csi, BANK_4, AE_Total_Gain_L, (uint8_t *) &gain_code);
+    read_reg_w_bank(csi, BANK_4, AE_Total_Gain_H, (uint8_t *) &gain_code + 1);
     gain_code &= 0x07ff;
     *gain_db = 20.0f * log10f(gain_code / 29.0f);
     return 0;
 }
 
-static int set_auto_exposure(sensor_t *sensor, int enable, int expo_us) {
-    const uint32_t digital = (OMV_PAG7920_XCLK_FREQ / US) / 2;
+static int set_auto_exposure(omv_csi_t *csi, int enable, int expo_us) {
+    const uint32_t digital = (OMV_PAG7920_CLK_FREQ / US) / 2;
     uint32_t frame_time, expo_max_us, expo_min_us;
-    read_reg_w_bank(sensor, BANK_0, R_Frame_Time_0, (uint8_t *) &frame_time);
-    read_reg_w_bank(sensor, BANK_0, R_Frame_Time_1, (uint8_t *) (&frame_time) + 1);
-    read_reg_w_bank(sensor, BANK_0, R_Frame_Time_2, (uint8_t *) (&frame_time) + 2);
-    read_reg_w_bank(sensor, BANK_0, R_Frame_Time_3, (uint8_t *) (&frame_time) + 3);
+    read_reg_w_bank(csi, BANK_0, R_Frame_Time_0, (uint8_t *) &frame_time);
+    read_reg_w_bank(csi, BANK_0, R_Frame_Time_1, (uint8_t *) (&frame_time) + 1);
+    read_reg_w_bank(csi, BANK_0, R_Frame_Time_2, (uint8_t *) (&frame_time) + 2);
+    read_reg_w_bank(csi, BANK_0, R_Frame_Time_3, (uint8_t *) (&frame_time) + 3);
     uint32_t expo_max_factor = (frame_time - 10000);
     const uint32_t expo_min_factor = 240;
     expo_max_us = expo_max_factor / digital;
@@ -502,101 +502,101 @@ static int set_auto_exposure(sensor_t *sensor, int enable, int expo_us) {
         } else {
             expo_manual_factor = expo_us * digital;
         }
-        write_reg_w_bank(sensor, BANK_4, R_AE_Expo_manual_0,
+        write_reg_w_bank(csi, BANK_4, R_AE_Expo_manual_0,
                          *((uint8_t *) &expo_manual_factor));
-        write_reg_w_bank(sensor, BANK_4, R_AE_Expo_manual_1,
+        write_reg_w_bank(csi, BANK_4, R_AE_Expo_manual_1,
                          *((uint8_t *) &expo_manual_factor + 1));
-        write_reg_w_bank(sensor, BANK_4, R_AE_Expo_manual_2,
+        write_reg_w_bank(csi, BANK_4, R_AE_Expo_manual_2,
                          *((uint8_t *) &expo_manual_factor + 2));
-        write_reg_w_bank(sensor, BANK_4, R_AE_Expo_manual_3,
+        write_reg_w_bank(csi, BANK_4, R_AE_Expo_manual_3,
                          *((uint8_t *) &expo_manual_factor + 3));
 
-        write_reg_w_bank(sensor, BANK_0, R_UPDATE_FLAG, V_UPDATE_VALUE);
+        write_reg_w_bank(csi, BANK_0, R_UPDATE_FLAG, V_UPDATE_VALUE);
         // AE disable.
-        write_reg_w_bank(sensor, BANK_4, R_AE_EnH, 0x32);
+        write_reg_w_bank(csi, BANK_4, R_AE_EnH, 0x32);
         // Delay a frame time.
         mp_hal_delay_ms(((frame_time / digital) / 1000));
 
         // Bundle AE upbound and lowbound.
-        write_reg_w_bank(sensor, BANK_4, R_AE_MinExpo_0, *((uint8_t *) &expo_manual_factor));
-        write_reg_w_bank(sensor, BANK_4, R_AE_MinExpo_1,
+        write_reg_w_bank(csi, BANK_4, R_AE_MinExpo_0, *((uint8_t *) &expo_manual_factor));
+        write_reg_w_bank(csi, BANK_4, R_AE_MinExpo_1,
                          *((uint8_t *) &expo_manual_factor + 1));
-        write_reg_w_bank(sensor, BANK_4, R_AE_MinExpo_2,
+        write_reg_w_bank(csi, BANK_4, R_AE_MinExpo_2,
                          *((uint8_t *) &expo_manual_factor + 2));
-        write_reg_w_bank(sensor, BANK_4, R_AE_MinExpo_3,
+        write_reg_w_bank(csi, BANK_4, R_AE_MinExpo_3,
                          *((uint8_t *) &expo_manual_factor + 3));
-        write_reg_w_bank(sensor, BANK_4, R_AE_MaxExpo_0, *((uint8_t *) &expo_manual_factor));
-        write_reg_w_bank(sensor, BANK_4, R_AE_MaxExpo_1,
+        write_reg_w_bank(csi, BANK_4, R_AE_MaxExpo_0, *((uint8_t *) &expo_manual_factor));
+        write_reg_w_bank(csi, BANK_4, R_AE_MaxExpo_1,
                          *((uint8_t *) &expo_manual_factor + 1));
-        write_reg_w_bank(sensor, BANK_4, R_AE_MaxExpo_2,
+        write_reg_w_bank(csi, BANK_4, R_AE_MaxExpo_2,
                          *((uint8_t *) &expo_manual_factor + 2));
-        write_reg_w_bank(sensor, BANK_4, R_AE_MaxExpo_3,
+        write_reg_w_bank(csi, BANK_4, R_AE_MaxExpo_3,
                          *((uint8_t *) &expo_manual_factor + 3));
         // AE enable.
-        write_reg_w_bank(sensor, BANK_4, R_AE_EnH, 0x31);
+        write_reg_w_bank(csi, BANK_4, R_AE_EnH, 0x31);
     } else {
-        write_reg_w_bank(sensor, BANK_4, R_AE_MinExpo_0, *((uint8_t *) &expo_min_factor));
-        write_reg_w_bank(sensor, BANK_4, R_AE_MinExpo_1,
+        write_reg_w_bank(csi, BANK_4, R_AE_MinExpo_0, *((uint8_t *) &expo_min_factor));
+        write_reg_w_bank(csi, BANK_4, R_AE_MinExpo_1,
                          *((uint8_t *) &expo_min_factor + 1));
-        write_reg_w_bank(sensor, BANK_4, R_AE_MinExpo_2,
+        write_reg_w_bank(csi, BANK_4, R_AE_MinExpo_2,
                          *((uint8_t *) &expo_min_factor + 2));
-        write_reg_w_bank(sensor, BANK_4, R_AE_MinExpo_3,
+        write_reg_w_bank(csi, BANK_4, R_AE_MinExpo_3,
                          *((uint8_t *) &expo_min_factor + 3));
-        write_reg_w_bank(sensor, BANK_4, R_AE_MaxExpo_0, *((uint8_t *) &expo_max_factor));
-        write_reg_w_bank(sensor, BANK_4, R_AE_MaxExpo_1,
+        write_reg_w_bank(csi, BANK_4, R_AE_MaxExpo_0, *((uint8_t *) &expo_max_factor));
+        write_reg_w_bank(csi, BANK_4, R_AE_MaxExpo_1,
                          *((uint8_t *) &expo_max_factor + 1));
-        write_reg_w_bank(sensor, BANK_4, R_AE_MaxExpo_2,
+        write_reg_w_bank(csi, BANK_4, R_AE_MaxExpo_2,
                          *((uint8_t *) &expo_max_factor + 2));
-        write_reg_w_bank(sensor, BANK_4, R_AE_MaxExpo_3,
+        write_reg_w_bank(csi, BANK_4, R_AE_MaxExpo_3,
                          *((uint8_t *) &expo_max_factor + 3));
     }
     return 0;
 }
 
-static int get_exposure_us(sensor_t *sensor, int *exposure_us) {
-    static const uint32_t digital = (OMV_PAG7920_XCLK_FREQ / US) / 2;
+static int get_exposure_us(omv_csi_t *csi, int *exposure_us) {
+    static const uint32_t digital = (OMV_PAG7920_CLK_FREQ / US) / 2;
     uint32_t clk_num;
 
-    read_reg_w_bank(sensor, BANK_4, Reg_ExpPxclkNum_0, (uint8_t *) &clk_num);
-    read_reg_w_bank(sensor, BANK_4, Reg_ExpPxclkNum_1, (uint8_t *) (&clk_num) + 1);
-    read_reg_w_bank(sensor, BANK_4, Reg_ExpPxclkNum_2, (uint8_t *) (&clk_num) + 2);
-    read_reg_w_bank(sensor, BANK_4, Reg_ExpPxclkNum_3, (uint8_t *) (&clk_num) + 3);
+    read_reg_w_bank(csi, BANK_4, Reg_ExpPxclkNum_0, (uint8_t *) &clk_num);
+    read_reg_w_bank(csi, BANK_4, Reg_ExpPxclkNum_1, (uint8_t *) (&clk_num) + 1);
+    read_reg_w_bank(csi, BANK_4, Reg_ExpPxclkNum_2, (uint8_t *) (&clk_num) + 2);
+    read_reg_w_bank(csi, BANK_4, Reg_ExpPxclkNum_3, (uint8_t *) (&clk_num) + 3);
     clk_num &= 0x0fffffff;
     debug_printf("Reg_ExpPxclkNum = %ld\n", clk_num);
     *exposure_us = (int) clk_num / digital;
     return 0;
 }
 
-static int set_auto_whitebal(sensor_t *sensor, int enable, float r_gain_db,
+static int set_auto_whitebal(omv_csi_t *csi, int enable, float r_gain_db,
                              float g_gain_db, float b_gain_db) {
     return 0;
 }
 
-static int get_rgb_gain_db(sensor_t *sensor, float *r_gain_db, float *g_gain_db,
+static int get_rgb_gain_db(omv_csi_t *csi, float *r_gain_db, float *g_gain_db,
                            float *b_gain_db) {
     return 0;
 }
 
-static int set_hmirror(sensor_t *sensor, int enable) {
+static int set_hmirror(omv_csi_t *csi, int enable) {
     int res = 0;
 
-    switch (sensor->framesize) {
-        case FRAMESIZE_QVGA:
-            res |= write_reg_w_bank(sensor, BANK_0, R0_09_B1,
+    switch (csi->framesize) {
+        case OMV_CSI_FRAMESIZE_QVGA:
+            res |= write_reg_w_bank(csi, BANK_0, R0_09_B1,
                                     enable?V_R009_Q_H_ON:V_R009_Q_H_OFF);
-            res |= write_reg_w_bank(sensor, BANK_2, R2_D9_B1,
+            res |= write_reg_w_bank(csi, BANK_2, R2_D9_B1,
                                     enable?V_R2D9_Q_H_ON:V_R2D9_Q_H_OFF);
             break;
-        case FRAMESIZE_QQVGA:
-            res |= write_reg_w_bank(sensor, BANK_0, R0_09_B1,
+        case OMV_CSI_FRAMESIZE_QQVGA:
+            res |= write_reg_w_bank(csi, BANK_0, R0_09_B1,
                                     enable?V_R009_QQ_H_ON:V_R009_QQ_H_OFF);
             break;
         default:
             return -1;
     }
 
-    res |= write_reg_w_bank(sensor, BANK_0, R_UPDATE_FLAG, V_UPDATE_VALUE);
-    res |= write_reg_w_bank(sensor, BANK_0, TG_En, 1);
+    res |= write_reg_w_bank(csi, BANK_0, R_UPDATE_FLAG, V_UPDATE_VALUE);
+    res |= write_reg_w_bank(csi, BANK_0, TG_En, 1);
 
     if (res == 0) {
         g_f_hflip = enable ? true : false;
@@ -604,30 +604,30 @@ static int set_hmirror(sensor_t *sensor, int enable) {
     return res;
 }
 
-static int set_vflip(sensor_t *sensor, int enable) {
+static int set_vflip(omv_csi_t *csi, int enable) {
     int res = 0;
 
-    switch (sensor->framesize) {
-        case FRAMESIZE_QVGA:
-            res |= write_reg_w_bank(sensor, BANK_1, R1_C2,
+    switch (csi->framesize) {
+        case OMV_CSI_FRAMESIZE_QVGA:
+            res |= write_reg_w_bank(csi, BANK_1, R1_C2,
                                     enable?V_R1C2_Q_V_ON:V_R1C2_Q_V_OFF);
             break;
-        case FRAMESIZE_QQVGA:
-            res |= write_reg_w_bank(sensor, BANK_1, R1_C2,
+        case OMV_CSI_FRAMESIZE_QQVGA:
+            res |= write_reg_w_bank(csi, BANK_1, R1_C2,
                                     enable?V_R1C2_QQ_V_ON:V_R1C2_QQ_V_OFF);
             break;
         default:
             return -1;
     }
 
-    res |= write_reg_w_bank(sensor, BANK_1, R1_CB, enable?0xF3:0x04);
+    res |= write_reg_w_bank(csi, BANK_1, R1_CB, enable?0xF3:0x04);
     bitplane tmp = {.byte_val = 0};
-    res |= read_reg_w_bank(sensor, BANK_1, R1_CE_B2, &tmp.byte_val);
+    res |= read_reg_w_bank(csi, BANK_1, R1_CE_B2, &tmp.byte_val);
     tmp.bits.b2 = enable ? 1 : 0;
-    res |= write_reg_w_bank(sensor, BANK_1, R1_CE_B2, tmp.byte_val);
+    res |= write_reg_w_bank(csi, BANK_1, R1_CE_B2, tmp.byte_val);
 
-    res |= write_reg_w_bank(sensor, BANK_0, R_UPDATE_FLAG, V_UPDATE_VALUE);
-    res |= write_reg_w_bank(sensor, BANK_0, TG_En, 1);
+    res |= write_reg_w_bank(csi, BANK_0, R_UPDATE_FLAG, V_UPDATE_VALUE);
+    res |= write_reg_w_bank(csi, BANK_0, TG_En, 1);
 
     if (res == 0) {
         g_f_vflip = enable ? true : false;
@@ -635,33 +635,33 @@ static int set_vflip(sensor_t *sensor, int enable) {
     return res;
 }
 
-int pag7920_init(sensor_t *sensor) {
-    // Initialize sensor structure.
-    sensor->reset = reset;
-    sensor->sleep = sleep;
-    sensor->read_reg = read_reg;
-    sensor->write_reg = write_reg;
-    sensor->set_pixformat = set_pixformat;
-    sensor->set_framesize = set_framesize;
-    sensor->set_gainceiling = set_gainceiling;
-    sensor->set_auto_gain = set_auto_gain;
-    sensor->get_gain_db = get_gain_db;
-    sensor->set_auto_exposure = set_auto_exposure;
-    sensor->get_exposure_us = get_exposure_us;
-    sensor->set_auto_whitebal = set_auto_whitebal;
+int pag7920_init(omv_csi_t *csi) {
+    // Initialize csi structure.
+    csi->reset = reset;
+    csi->sleep = sleep;
+    csi->read_reg = read_reg;
+    csi->write_reg = write_reg;
+    csi->set_pixformat = set_pixformat;
+    csi->set_framesize = set_framesize;
+    csi->set_gainceiling = set_gainceiling;
+    csi->set_auto_gain = set_auto_gain;
+    csi->get_gain_db = get_gain_db;
+    csi->set_auto_exposure = set_auto_exposure;
+    csi->get_exposure_us = get_exposure_us;
+    csi->set_auto_whitebal = set_auto_whitebal;
 
-    sensor->get_rgb_gain_db = get_rgb_gain_db;
-    sensor->set_hmirror = set_hmirror;
-    sensor->set_vflip = set_vflip;
+    csi->get_rgb_gain_db = get_rgb_gain_db;
+    csi->set_hmirror = set_hmirror;
+    csi->set_vflip = set_vflip;
 
-    // Set sensor flags
-    sensor->vsync_pol = 0;
-    sensor->hsync_pol = 0;
-    sensor->pixck_pol = 1;
-    sensor->frame_sync = 1;
-    sensor->mono_bpp = 1;
+    // Set csi flags
+    csi->vsync_pol = 0;
+    csi->hsync_pol = 0;
+    csi->pixck_pol = 1;
+    csi->frame_sync = 1;
+    csi->mono_bpp = 1;
 
-    init_sensor(sensor);
+    init_csi(csi);
 
     return 0;
 }

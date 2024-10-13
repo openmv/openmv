@@ -25,6 +25,6 @@
  */
 #ifndef __GC2145_H__
 #define __GC2145_H__
-#define OMV_GC2145_XCLK_FREQ    (12000000)
-int gc2145_init(sensor_t *sensor);
+#define OMV_GC2145_CLK_FREQ     (12000000)
+int gc2145_init(omv_csi_t *csi);
 #endif // __GC2145_H__

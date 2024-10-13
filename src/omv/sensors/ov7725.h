@@ -25,5 +25,5 @@
  */
 #ifndef __OV7725_H__
 #define __OV7725_H__
-int ov7725_init(sensor_t *sensor);
+int ov7725_init(omv_csi_t *csi);
 #endif // __OV7725_H__

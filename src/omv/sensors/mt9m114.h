@@ -25,6 +25,6 @@
  */
 #ifndef __MT9M114_H__
 #define __MT9M114_H__
-#define OMV_MT9M114_XCLK_FREQ    (24000000)
-int mt9m114_init(sensor_t *sensor);
+#define OMV_MT9M114_CLK_FREQ     (24000000)
+int mt9m114_init(omv_csi_t *csi);
 #endif // __MT9M114_H__

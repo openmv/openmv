@@ -29,7 +29,7 @@
 #include <stdbool.h>
 #include "py/mphal.h"
 
-#include "sensor.h"
+#include "omv_csi.h"
 #include "framebuffer.h"
 #include "omv_gpio.h"
 
@@ -76,9 +76,9 @@ static bool is_ae_enabled = true;
 static int exp_us_cache = -1;
 // Exposure time related parameters -
 
-static int set_auto_gain(sensor_t *sensor, int enable,
+static int set_auto_gain(omv_csi_t *csi, int enable,
                          float gain_db, float gain_db_ceiling);
-static int get_gain_db(sensor_t *sensor, float *gain_db);
+static int get_gain_db(omv_csi_t *csi, float *gain_db);
 
 static int bank_switch(uint8_t bank) {
     #ifdef CACHE_BANK
@@ -109,7 +109,7 @@ static int write_regs_w_bank(uint8_t bank, uint8_t addr, uint8_t *buff, uint16_t
     return pixspi_regs_write(addr, buff, len);
 }
 
-static int init_sensor(sensor_t *sensor) {
+static int init_sensor(omv_csi_t *csi) {
 #define ta_seq    low_active_R_ABC_Avg_UBx50_T_BLACINV_EnHx1_T_SIG_REFx1
 
     int arr_size = sizeof(ta_seq) / sizeof(ta_seq[0]);
@@ -128,9 +128,9 @@ static int init_sensor(sensor_t *sensor) {
     return 0;
 }
 //-----------------------------------------------------------------
-static int set_exposure(sensor_t *sensor, int exp_us, bool protected) {
+static int set_exposure(omv_csi_t *csi, int exp_us, bool protected) {
     // 3642T
-    static const uint32_t EXPOSURE_BASE = 3642 / (OMV_PAJ6100_XCLK_FREQ / 1000000.0f) + 0.5f;
+    static const uint32_t EXPOSURE_BASE = 3642 / (OMV_PAJ6100_CLK_FREQ / 1000000.0f) + 0.5f;
     int ret;
     uint32_t cmd_expo /* 24-bit available */;
     uint16_t exp_offset;
@@ -144,27 +144,27 @@ static int set_exposure(sensor_t *sensor, int exp_us, bool protected) {
 
     if (exp_us >= EXPOSURE_BASE) {
         int param;
-        if (sensor->framesize == FRAMESIZE_QVGA) {
+        if (csi->framesize == OMV_CSI_FRAMESIZE_QVGA) {
             param = 88803;
-        } else if (sensor->framesize == FRAMESIZE_QQVGA) {
+        } else if (csi->framesize == OMV_CSI_FRAMESIZE_QQVGA) {
             param = 29139; // QQVGA
         } else {
             param = 88803;
         }
 
         int max_cmd_expo = R_FrameTime - param;
-        cmd_expo = (exp_us - EXPOSURE_BASE) * ((float) OMV_PAJ6100_XCLK_FREQ / 1000000) + 0.5f;
+        cmd_expo = (exp_us - EXPOSURE_BASE) * ((float) OMV_PAJ6100_CLK_FREQ / 1000000) + 0.5f;
         if (protected) {
             if (cmd_expo > max_cmd_expo) {
                 cmd_expo = max_cmd_expo;
-                exp_us = (cmd_expo + 3642) / ((float) OMV_PAJ6100_XCLK_FREQ / 1000000) + 0.5f;
+                exp_us = (cmd_expo + 3642) / ((float) OMV_PAJ6100_CLK_FREQ / 1000000) + 0.5f;
                 printf("Exposure time overflow, reset to %dus.\n", exp_us);
             }
         }
         exp_offset = 0;
     } else {
         cmd_expo = 0;
-        exp_offset = (EXPOSURE_BASE - exp_us) * ((float) OMV_PAJ6100_XCLK_FREQ / 1000000) + 0.5;
+        exp_offset = (EXPOSURE_BASE - exp_us) * ((float) OMV_PAJ6100_CLK_FREQ / 1000000) + 0.5;
     }
     #ifdef DEBUG_AE
     printf("target - cmd_exp: %ld, exp_offset: %d\n", cmd_expo, exp_offset);
@@ -190,7 +190,7 @@ static int set_exposure(sensor_t *sensor, int exp_us, bool protected) {
     return ret;
 }
 
-static int get_exposure(sensor_t *sensor) {
+static int get_exposure(omv_csi_t *csi) {
     int ret;
     uint8_t buff[3] = {};
     uint32_t cmd_expo /* 24-bit available */;
@@ -219,9 +219,9 @@ static int get_exposure(sensor_t *sensor) {
     #endif
 
     if (exp_offset == 0) {
-        exp_us_cache = (cmd_expo + 3642) / (OMV_PAJ6100_XCLK_FREQ / 1000000);
+        exp_us_cache = (cmd_expo + 3642) / (OMV_PAJ6100_CLK_FREQ / 1000000);
     } else {
-        exp_us_cache = (3642 - exp_offset) / (OMV_PAJ6100_XCLK_FREQ / 1000000);
+        exp_us_cache = (3642 - exp_offset) / (OMV_PAJ6100_CLK_FREQ / 1000000);
     }
 
     return exp_us_cache;
@@ -235,7 +235,7 @@ static void blc_freeze(bool enable) {
     write_regs_w_bank(1, 0x00, &tmp, 1); // Update flag
 }
 
-static void auto_exposure(sensor_t *sensor) {
+static void auto_exposure(omv_csi_t *csi) {
     if (!is_ae_enabled) {
         return;
     }
@@ -254,7 +254,7 @@ static void auto_exposure(sensor_t *sensor) {
 
     if (ae_converged_flag == false) {
         float gain_db = 0;
-        if (get_gain_db(sensor, &gain_db)) {
+        if (get_gain_db(csi, &gain_db)) {
             printf("Get Gain DB failed.\n");
             return;
         }
@@ -273,7 +273,7 @@ static void auto_exposure(sensor_t *sensor) {
             gain = 8;
         }
 
-        int expo = get_exposure(sensor);
+        int expo = get_exposure(csi);
         if (expo < 0) {
             printf("Get exposure failed.\n");
             return;
@@ -311,13 +311,13 @@ static void auto_exposure(sensor_t *sensor) {
         printf("Gain Target: %ld (%d DB (x1000))\n", gain_target, (int) (gain_db * 1000));
         printf("Final Expo Target: %ld (max: %ld) \n", expo_target, R_AE_MaxExpoTime);
         #endif
-        set_exposure(sensor, expo_target, false);
-        set_auto_gain(sensor, false, gain_db, 0);
+        set_exposure(csi, expo_target, false);
+        set_auto_gain(csi, false, gain_db, 0);
         skip_frame = 0;
     }
 }
 //-----------------------------------------------------------------
-static int sleep(sensor_t *sensor, int enable) {
+static int sleep(omv_csi_t *csi, int enable) {
     int ret;
     uint8_t val;
 
@@ -367,7 +367,7 @@ static int sleep(sensor_t *sensor, int enable) {
     return 0;
 }
 
-static int read_reg(sensor_t *sensor, uint16_t reg_addr) {
+static int read_reg(omv_csi_t *csi, uint16_t reg_addr) {
     uint8_t data;
 
     if (pixspi_regs_read((uint8_t) reg_addr, &data, 1)) {
@@ -376,7 +376,7 @@ static int read_reg(sensor_t *sensor, uint16_t reg_addr) {
     return data;
 }
 
-static int write_reg(sensor_t *sensor, uint16_t reg_addr, uint16_t reg_data) {
+static int write_reg(omv_csi_t *csi, uint16_t reg_addr, uint16_t reg_data) {
     uint8_t data = reg_data;
 
     // Clear bank cache.
@@ -385,14 +385,14 @@ static int write_reg(sensor_t *sensor, uint16_t reg_addr, uint16_t reg_data) {
     return pixspi_regs_write((uint8_t) reg_addr, &data, 1);
 }
 
-static int set_pixformat(sensor_t *sensor, pixformat_t pixformat) {
+static int set_pixformat(omv_csi_t *csi, pixformat_t pixformat) {
     if (pixformat != PIXFORMAT_GRAYSCALE) {
         return -1;
     }
     return 0;
 }
 
-static int set_framesize(sensor_t *sensor, framesize_t framesize) {
+static int set_framesize(omv_csi_t *csi, omv_csi_framesize_t framesize) {
     int ret = 0;
 
     uint16_t w = resolution[framesize][0];
@@ -409,7 +409,7 @@ static int set_framesize(sensor_t *sensor, framesize_t framesize) {
     }
 
     switch (framesize) {
-        case FRAMESIZE_QVGA:
+        case OMV_CSI_FRAMESIZE_QVGA:
             aavg_VnH &= ~((1 << 3) | (1 << 2));
             abc_start_line = (abc_start_line & ~(0x07 << 1)) | (2 << 1);
             voffset = 2;
@@ -417,7 +417,7 @@ static int set_framesize(sensor_t *sensor, framesize_t framesize) {
 
             R_AE_MaxExpoTime = CAL_MAX_EXPO_TIME(QVGA_MAX_EXPO_PA);
             break;
-        case FRAMESIZE_QQVGA:
+        case OMV_CSI_FRAMESIZE_QQVGA:
             aavg_VnH |= (1 << 3) | (1 << 2);
             abc_start_line = (abc_start_line & ~(0x07 << 1)) | (1 << 1);
             voffset = 1;
@@ -449,27 +449,27 @@ static int set_framesize(sensor_t *sensor, framesize_t framesize) {
     return 0;
 }
 
-static int set_contrast(sensor_t *sensor, int level) {
+static int set_contrast(omv_csi_t *csi, int level) {
     return 0;
 }
 
-static int set_brightness(sensor_t *sensor, int level) {
+static int set_brightness(omv_csi_t *csi, int level) {
     return 0;
 }
 
-static int set_saturation(sensor_t *sensor, int level) {
+static int set_saturation(omv_csi_t *csi, int level) {
     return 0;
 }
 
-static int set_gainceiling(sensor_t *sensor, gainceiling_t gainceiling) {
+static int set_gainceiling(omv_csi_t *csi, omv_csi_gainceiling_t gainceiling) {
     return 0;
 }
 
-static int set_special_effect(sensor_t *sensor, sde_t sde) {
+static int set_special_effect(omv_csi_t *csi, omv_csi_sde_t sde) {
     return 0;
 }
 
-static int set_auto_gain(sensor_t *sensor, int enable,
+static int set_auto_gain(omv_csi_t *csi, int enable,
                          float gain_db, float gain_db_ceiling) {
     if (enable) {
         return 0;
@@ -511,7 +511,7 @@ static int set_auto_gain(sensor_t *sensor, int enable,
     return 0;
 }
 
-static int get_gain_db(sensor_t *sensor, float *gain_db) {
+static int get_gain_db(omv_csi_t *csi, float *gain_db) {
     int ret = 0;
     uint8_t val;
     uint8_t fgh, ggh;
@@ -549,18 +549,18 @@ static int get_gain_db(sensor_t *sensor, float *gain_db) {
     return 0;
 }
 
-static int set_auto_exposure(sensor_t *sensor, int enable, int exposure_us) {
+static int set_auto_exposure(omv_csi_t *csi, int enable, int exposure_us) {
     if (enable) {
         is_ae_enabled = true;
         return 0;
     } else {
         is_ae_enabled = false;
-        return set_exposure(sensor, exposure_us, false);
+        return set_exposure(csi, exposure_us, false);
     }
 }
 
-static int get_exposure_us(sensor_t *sensor, int *exposure_us) {
-    int ret = get_exposure(sensor);
+static int get_exposure_us(omv_csi_t *csi, int *exposure_us) {
+    int ret = get_exposure(csi);
     if (ret >= 0) {
         *exposure_us = ret;
         return 0;
@@ -568,15 +568,15 @@ static int get_exposure_us(sensor_t *sensor, int *exposure_us) {
     return ret;
 }
 
-static int set_auto_whitebal(sensor_t *sensor, int enable, float r_gain_db, float g_gain_db, float b_gain_db) {
+static int set_auto_whitebal(omv_csi_t *csi, int enable, float r_gain_db, float g_gain_db, float b_gain_db) {
     return 0;
 }
 
-static int get_rgb_gain_db(sensor_t *sensor, float *r_gain_db, float *g_gain_db, float *b_gain_db) {
+static int get_rgb_gain_db(omv_csi_t *csi, float *r_gain_db, float *g_gain_db, float *b_gain_db) {
     return 0;
 }
 
-static int set_hmirror(sensor_t *sensor, int enable) {
+static int set_hmirror(omv_csi_t *csi, int enable) {
     int ret;
     uint8_t val;
     ret = read_regs_w_bank(BANK_0, REG_CMD_HSYNC_INV, &val, 1);
@@ -595,7 +595,7 @@ static int set_hmirror(sensor_t *sensor, int enable) {
     return ret;
 }
 
-static int set_vflip(sensor_t *sensor, int enable) {
+static int set_vflip(omv_csi_t *csi, int enable) {
     int ret;
     uint8_t val;
     ret = read_regs_w_bank(BANK_0, REG_CMD_VSYNC_INV, &val, 1);
@@ -614,11 +614,11 @@ static int set_vflip(sensor_t *sensor, int enable) {
     return ret;
 }
 
-static int set_lens_correction(sensor_t *sensor, int enable, int radi, int coef) {
+static int set_lens_correction(omv_csi_t *csi, int enable, int radi, int coef) {
     return 0;
 }
 
-static int reset(sensor_t *sensor) {
+static int reset(omv_csi_t *csi) {
     int ret;
     bank_cache = -1;
     exp_us_cache = -1;
@@ -631,8 +631,8 @@ static int reset(sensor_t *sensor) {
     printf("init_res: %d\n", init_res);
     #endif
 
-    // Re-init sensor every time.
-    init_sensor(sensor);
+    // Re-init csi every time.
+    init_sensor(csi);
 
     // Fetch default R_Frame_Time
     uint8_t buff[3] = {};
@@ -660,8 +660,8 @@ static int reset(sensor_t *sensor) {
     return 0;
 }
 
-static int paj6100_snapshot(sensor_t *sensor, image_t *image, uint32_t flags) {
-    int res = sensor_snapshot(sensor, image, flags);
+static int paj6100_snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
+    int res = omv_csi_snapshot(csi, image, flags);
     if (res == 0) {
         l_total = 0;
         int iml = image->h * image->w;
@@ -670,50 +670,50 @@ static int paj6100_snapshot(sensor_t *sensor, image_t *image, uint32_t flags) {
         }
         // PAJ6100 doesn't support HW auto-exposure,
         // we provide a software implementation.
-        auto_exposure(sensor);
+        auto_exposure(csi);
     }
 
     return res;
 }
 
-int paj6100_init(sensor_t *sensor) {
-    // Initialize sensor structure.
-    sensor->reset = reset;
-    sensor->sleep = sleep;
-    sensor->read_reg = read_reg;
-    sensor->write_reg = write_reg;
-    sensor->set_pixformat = set_pixformat;
-    sensor->set_framesize = set_framesize;
-    sensor->set_contrast = set_contrast;
-    sensor->set_brightness = set_brightness;
-    sensor->set_saturation = set_saturation;
-    sensor->set_gainceiling = set_gainceiling;
-    sensor->set_auto_gain = set_auto_gain;
-    sensor->get_gain_db = get_gain_db;
-    sensor->set_auto_exposure = set_auto_exposure;
-    sensor->get_exposure_us = get_exposure_us;
-    sensor->set_auto_whitebal = set_auto_whitebal;
+int paj6100_init(omv_csi_t *csi) {
+    // Initialize csi structure.
+    csi->reset = reset;
+    csi->sleep = sleep;
+    csi->read_reg = read_reg;
+    csi->write_reg = write_reg;
+    csi->set_pixformat = set_pixformat;
+    csi->set_framesize = set_framesize;
+    csi->set_contrast = set_contrast;
+    csi->set_brightness = set_brightness;
+    csi->set_saturation = set_saturation;
+    csi->set_gainceiling = set_gainceiling;
+    csi->set_auto_gain = set_auto_gain;
+    csi->get_gain_db = get_gain_db;
+    csi->set_auto_exposure = set_auto_exposure;
+    csi->get_exposure_us = get_exposure_us;
+    csi->set_auto_whitebal = set_auto_whitebal;
 
-    sensor->get_rgb_gain_db = get_rgb_gain_db;
-    sensor->set_hmirror = set_hmirror;
-    sensor->set_vflip = set_vflip;
-    sensor->set_special_effect = set_special_effect;
-    sensor->set_lens_correction = set_lens_correction;
+    csi->get_rgb_gain_db = get_rgb_gain_db;
+    csi->set_hmirror = set_hmirror;
+    csi->set_vflip = set_vflip;
+    csi->set_special_effect = set_special_effect;
+    csi->set_lens_correction = set_lens_correction;
 
-    sensor->snapshot = paj6100_snapshot;
+    csi->snapshot = paj6100_snapshot;
 
-    // Set sensor flags
-    sensor->vsync_pol = 1;
-    sensor->hsync_pol = 1;
-    sensor->pixck_pol = 1;
-    sensor->frame_sync = 0;
-    sensor->mono_bpp = 1;
+    // Set csi flags
+    csi->vsync_pol = 1;
+    csi->hsync_pol = 1;
+    csi->pixck_pol = 1;
+    csi->frame_sync = 0;
+    csi->mono_bpp = 1;
 
-    init_sensor(sensor);
+    init_sensor(csi);
     return 0;
 }
 
-bool paj6100_detect(sensor_t *sensor) {
+bool paj6100_detect(omv_csi_t *csi) {
     int ret = 0;
     uint8_t part_id_l, part_id_h;
 

@@ -132,7 +132,7 @@ target_sources(${MICROPY_TARGET} PRIVATE
     ${TOP_DIR}/${OMV_DIR}/common/tinyusb_debug.c
     ${TOP_DIR}/${OMV_DIR}/common/file_utils.c
     ${TOP_DIR}/${OMV_DIR}/common/mp_utils.c
-    ${TOP_DIR}/${OMV_DIR}/common/sensor_utils.c
+    ${TOP_DIR}/${OMV_DIR}/common/omv_csi.c
 
     ${TOP_DIR}/${OMV_DIR}/sensors/ov2640.c
     ${TOP_DIR}/${OMV_DIR}/sensors/ov5640.c
@@ -202,9 +202,9 @@ target_sources(${MICROPY_TARGET} PRIVATE
     ${TOP_DIR}/${OMV_DIR}/imlib/zbar.c
 
     ${TOP_DIR}/${OMV_DIR}/ports/${PORT}/main.c
-    ${TOP_DIR}/${OMV_DIR}/ports/${PORT}/sensor.c
     ${TOP_DIR}/${OMV_DIR}/ports/${PORT}/omv_gpio.c
     ${TOP_DIR}/${OMV_DIR}/ports/${PORT}/omv_i2c.c
+    ${TOP_DIR}/${OMV_DIR}/ports/${PORT}/omv_csi.c
 
     ${OMV_USER_MODULES}
 )
@@ -214,9 +214,9 @@ set_source_files_properties(
     COMPILE_OPTIONS "-fno-strict-aliasing"
 )
 
-if(MICROPY_PY_SENSOR)
+if(MICROPY_PY_CSI)
     target_compile_definitions(${MICROPY_TARGET} PRIVATE
-        MICROPY_PY_SENSOR=1
+        MICROPY_PY_CSI=1
     )
 
     # Generate DCMI PIO header

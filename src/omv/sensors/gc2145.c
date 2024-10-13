@@ -31,7 +31,7 @@
 #include <string.h>
 
 #include "omv_i2c.h"
-#include "sensor.h"
+#include "omv_csi.h"
 #include "gc2145.h"
 #include "gc2145_regs.h"
 #include "py/mphal.h"
@@ -94,11 +94,11 @@ static const uint8_t default_regs[][2] = {
     {0x9a, 0x0E},   // Subsample mode
 
     {0x12, 0x2e},   //
-#if (OMV_GC2145_ROTATE == 1)
+    #if (OMV_GC2145_ROTATE == 1)
     {0x17, 0x17},   // Analog Mode 1 (vflip/mirror[1:0])
-#else
+    #else
     {0x17, 0x14},   // Analog Mode 1 (vflip/mirror[1:0])
-#endif
+    #endif
     {0x18, 0x22},   // Analog Mode 2
     {0x19, 0x0e},
     {0x1a, 0x01},
@@ -734,7 +734,7 @@ static const uint8_t default_regs[][2] = {
     {0x00, 0x00},
 };
 
-static int reset(sensor_t *sensor) {
+static int reset(omv_csi_t *csi) {
     int ret = 0;
 
     readout_x = 0;
@@ -747,7 +747,7 @@ static int reset(sensor_t *sensor) {
 
     // Write default registers
     for (int i = 0; default_regs[i][0]; i++) {
-        ret |= omv_i2c_writeb(&sensor->i2c_bus, sensor->slv_addr, default_regs[i][0], default_regs[i][1]);
+        ret |= omv_i2c_writeb(&csi->i2c_bus, csi->slv_addr, default_regs[i][0], default_regs[i][1]);
     }
 
     // Delay 10 ms
@@ -756,56 +756,56 @@ static int reset(sensor_t *sensor) {
     return ret;
 }
 
-static int sleep(sensor_t *sensor, int enable) {
+static int sleep(omv_csi_t *csi, int enable) {
     int ret = 0;
 
     if (enable) {
-        ret |= omv_i2c_writeb(&sensor->i2c_bus, sensor->slv_addr, 0xF2, 0x0);
-        ret |= omv_i2c_writeb(&sensor->i2c_bus, sensor->slv_addr, 0xF7, 0x10);
-        ret |= omv_i2c_writeb(&sensor->i2c_bus, sensor->slv_addr, 0xFC, 0x01);
+        ret |= omv_i2c_writeb(&csi->i2c_bus, csi->slv_addr, 0xF2, 0x0);
+        ret |= omv_i2c_writeb(&csi->i2c_bus, csi->slv_addr, 0xF7, 0x10);
+        ret |= omv_i2c_writeb(&csi->i2c_bus, csi->slv_addr, 0xFC, 0x01);
     } else {
-        ret |= omv_i2c_writeb(&sensor->i2c_bus, sensor->slv_addr, 0xF2, 0x0F);
-        ret |= omv_i2c_writeb(&sensor->i2c_bus, sensor->slv_addr, 0xF7, 0x1d);
-        ret |= omv_i2c_writeb(&sensor->i2c_bus, sensor->slv_addr, 0xFC, 0x06);
+        ret |= omv_i2c_writeb(&csi->i2c_bus, csi->slv_addr, 0xF2, 0x0F);
+        ret |= omv_i2c_writeb(&csi->i2c_bus, csi->slv_addr, 0xF7, 0x1d);
+        ret |= omv_i2c_writeb(&csi->i2c_bus, csi->slv_addr, 0xFC, 0x06);
     }
 
     return ret;
 }
 
-static int read_reg(sensor_t *sensor, uint16_t reg_addr) {
+static int read_reg(omv_csi_t *csi, uint16_t reg_addr) {
     uint8_t reg_data;
-    if (omv_i2c_readb(&sensor->i2c_bus, sensor->slv_addr, reg_addr, &reg_data) != 0) {
+    if (omv_i2c_readb(&csi->i2c_bus, csi->slv_addr, reg_addr, &reg_data) != 0) {
         return -1;
     }
     return reg_data;
 }
 
-static int write_reg(sensor_t *sensor, uint16_t reg_addr, uint16_t reg_data) {
-    return omv_i2c_writeb(&sensor->i2c_bus, sensor->slv_addr, reg_addr, reg_data);
+static int write_reg(omv_csi_t *csi, uint16_t reg_addr, uint16_t reg_data) {
+    return omv_i2c_writeb(&csi->i2c_bus, csi->slv_addr, reg_addr, reg_data);
 }
 
-static int set_pixformat(sensor_t *sensor, pixformat_t pixformat) {
+static int set_pixformat(omv_csi_t *csi, pixformat_t pixformat) {
     int ret = 0;
     uint8_t reg;
 
     // P0 regs
-    ret |= omv_i2c_writeb(&sensor->i2c_bus, sensor->slv_addr, 0xFE, 0x00);
+    ret |= omv_i2c_writeb(&csi->i2c_bus, csi->slv_addr, 0xFE, 0x00);
 
     // Read current output format reg
-    ret |= omv_i2c_readb(&sensor->i2c_bus, sensor->slv_addr, REG_OUTPUT_FMT, &reg);
+    ret |= omv_i2c_readb(&csi->i2c_bus, csi->slv_addr, REG_OUTPUT_FMT, &reg);
 
     switch (pixformat) {
         case PIXFORMAT_RGB565:
-            ret |= omv_i2c_writeb(&sensor->i2c_bus, sensor->slv_addr,
+            ret |= omv_i2c_writeb(&csi->i2c_bus, csi->slv_addr,
                                   REG_OUTPUT_FMT, REG_OUTPUT_SET_FMT(reg, REG_OUTPUT_FMT_RGB565));
             break;
         case PIXFORMAT_YUV422:
         case PIXFORMAT_GRAYSCALE:
-            ret |= omv_i2c_writeb(&sensor->i2c_bus, sensor->slv_addr,
+            ret |= omv_i2c_writeb(&csi->i2c_bus, csi->slv_addr,
                                   REG_OUTPUT_FMT, REG_OUTPUT_SET_FMT(reg, REG_OUTPUT_FMT_YCBYCR));
             break;
         case PIXFORMAT_BAYER:
-            ret |= omv_i2c_writeb(&sensor->i2c_bus, sensor->slv_addr,
+            ret |= omv_i2c_writeb(&csi->i2c_bus, csi->slv_addr,
                                   REG_OUTPUT_FMT, REG_OUTPUT_SET_FMT(reg, REG_OUTPUT_FMT_BAYER));
             break;
         default:
@@ -815,32 +815,32 @@ static int set_pixformat(sensor_t *sensor, pixformat_t pixformat) {
     return ret;
 }
 
-static int set_window(sensor_t *sensor, uint16_t reg, uint16_t x, uint16_t y, uint16_t w, uint16_t h) {
+static int set_window(omv_csi_t *csi, uint16_t reg, uint16_t x, uint16_t y, uint16_t w, uint16_t h) {
     int ret = 0;
 
     // P0 regs
-    ret |= omv_i2c_writeb(&sensor->i2c_bus, sensor->slv_addr, 0xFE, 0x00);
+    ret |= omv_i2c_writeb(&csi->i2c_bus, csi->slv_addr, 0xFE, 0x00);
 
     // Y/row offset
-    ret |= omv_i2c_writeb(&sensor->i2c_bus, sensor->slv_addr, reg++, y >> 8);
-    ret |= omv_i2c_writeb(&sensor->i2c_bus, sensor->slv_addr, reg++, y & 0xff);
+    ret |= omv_i2c_writeb(&csi->i2c_bus, csi->slv_addr, reg++, y >> 8);
+    ret |= omv_i2c_writeb(&csi->i2c_bus, csi->slv_addr, reg++, y & 0xff);
 
     // X/col offset
-    ret |= omv_i2c_writeb(&sensor->i2c_bus, sensor->slv_addr, reg++, x >> 8);
-    ret |= omv_i2c_writeb(&sensor->i2c_bus, sensor->slv_addr, reg++, x & 0xff);
+    ret |= omv_i2c_writeb(&csi->i2c_bus, csi->slv_addr, reg++, x >> 8);
+    ret |= omv_i2c_writeb(&csi->i2c_bus, csi->slv_addr, reg++, x & 0xff);
 
     // Window height
-    ret |= omv_i2c_writeb(&sensor->i2c_bus, sensor->slv_addr, reg++, h >> 8);
-    ret |= omv_i2c_writeb(&sensor->i2c_bus, sensor->slv_addr, reg++, h & 0xff);
+    ret |= omv_i2c_writeb(&csi->i2c_bus, csi->slv_addr, reg++, h >> 8);
+    ret |= omv_i2c_writeb(&csi->i2c_bus, csi->slv_addr, reg++, h & 0xff);
 
     // Window width
-    ret |= omv_i2c_writeb(&sensor->i2c_bus, sensor->slv_addr, reg++, w >> 8);
-    ret |= omv_i2c_writeb(&sensor->i2c_bus, sensor->slv_addr, reg++, w & 0xff);
+    ret |= omv_i2c_writeb(&csi->i2c_bus, csi->slv_addr, reg++, w >> 8);
+    ret |= omv_i2c_writeb(&csi->i2c_bus, csi->slv_addr, reg++, w & 0xff);
 
     return ret;
 }
 
-static int set_framesize(sensor_t *sensor, framesize_t framesize) {
+static int set_framesize(omv_csi_t *csi, omv_csi_framesize_t framesize) {
     int ret = 0;
 
     uint16_t w = resolution[framesize][0];
@@ -890,22 +890,22 @@ static int set_framesize(sensor_t *sensor, framesize_t framesize) {
     // Step 3: Write regs.
 
     // Set Readout window first.
-    ret |= set_window(sensor, 0x09, sensor_x, sensor_y, sensor_w, sensor_h);
+    ret |= set_window(csi, 0x09, sensor_x, sensor_y, sensor_w, sensor_h);
 
     // Set cropping window next.
-    ret |= set_window(sensor, 0x91, 0, 0, w, h);
+    ret |= set_window(csi, 0x91, 0, 0, w, h);
 
     // Enable crop
-    ret |= omv_i2c_writeb(&sensor->i2c_bus, sensor->slv_addr, 0x90, 0x01);
+    ret |= omv_i2c_writeb(&csi->i2c_bus, csi->slv_addr, 0x90, 0x01);
 
     // Set Sub-sampling ratio and mode
-    ret |= omv_i2c_writeb(&sensor->i2c_bus, sensor->slv_addr, 0x99, ((ratio << 4) | (ratio)));
-    ret |= omv_i2c_writeb(&sensor->i2c_bus, sensor->slv_addr, 0x9A, 0x0E);
+    ret |= omv_i2c_writeb(&csi->i2c_bus, csi->slv_addr, 0x99, ((ratio << 4) | (ratio)));
+    ret |= omv_i2c_writeb(&csi->i2c_bus, csi->slv_addr, 0x9A, 0x0E);
 
     return ret;
 }
 
-static int set_hmirror(sensor_t *sensor, int enable) {
+static int set_hmirror(omv_csi_t *csi, int enable) {
     int ret = 0;
     uint8_t reg;
     #if (OMV_GC2145_ROTATE == 1)
@@ -913,13 +913,13 @@ static int set_hmirror(sensor_t *sensor, int enable) {
     #endif
 
     // P0 regs
-    ret |= omv_i2c_writeb(&sensor->i2c_bus, sensor->slv_addr, 0xFE, 0x00);
-    ret |= omv_i2c_readb(&sensor->i2c_bus, sensor->slv_addr, REG_AMODE1, &reg);
-    ret |= omv_i2c_writeb(&sensor->i2c_bus, sensor->slv_addr, REG_AMODE1, REG_AMODE1_SET_HMIRROR(reg, enable));
+    ret |= omv_i2c_writeb(&csi->i2c_bus, csi->slv_addr, 0xFE, 0x00);
+    ret |= omv_i2c_readb(&csi->i2c_bus, csi->slv_addr, REG_AMODE1, &reg);
+    ret |= omv_i2c_writeb(&csi->i2c_bus, csi->slv_addr, REG_AMODE1, REG_AMODE1_SET_HMIRROR(reg, enable));
     return ret;
 }
 
-static int set_vflip(sensor_t *sensor, int enable) {
+static int set_vflip(omv_csi_t *csi, int enable) {
     int ret = 0;
     uint8_t reg;
     #if (OMV_GC2145_ROTATE == 1)
@@ -927,39 +927,39 @@ static int set_vflip(sensor_t *sensor, int enable) {
     #endif
 
     // P0 regs
-    ret |= omv_i2c_writeb(&sensor->i2c_bus, sensor->slv_addr, 0xFE, 0x00);
-    ret |= omv_i2c_readb(&sensor->i2c_bus, sensor->slv_addr, REG_AMODE1, &reg);
-    ret |= omv_i2c_writeb(&sensor->i2c_bus, sensor->slv_addr, REG_AMODE1, REG_AMODE1_SET_VMIRROR(reg, enable));
+    ret |= omv_i2c_writeb(&csi->i2c_bus, csi->slv_addr, 0xFE, 0x00);
+    ret |= omv_i2c_readb(&csi->i2c_bus, csi->slv_addr, REG_AMODE1, &reg);
+    ret |= omv_i2c_writeb(&csi->i2c_bus, csi->slv_addr, REG_AMODE1, REG_AMODE1_SET_VMIRROR(reg, enable));
     return ret;
 }
 
-static int set_auto_exposure(sensor_t *sensor, int enable, int exposure_us) {
+static int set_auto_exposure(omv_csi_t *csi, int enable, int exposure_us) {
     int ret = 0;
     uint8_t reg;
-    ret |= omv_i2c_writeb(&sensor->i2c_bus, sensor->slv_addr, 0xFE, 0x00);
-    ret |= omv_i2c_readb(&sensor->i2c_bus, sensor->slv_addr, 0xb6, &reg);
-    ret |= omv_i2c_writeb(&sensor->i2c_bus, sensor->slv_addr, 0xb6, (reg & 0xFE) | (enable & 0x01));
+    ret |= omv_i2c_writeb(&csi->i2c_bus, csi->slv_addr, 0xFE, 0x00);
+    ret |= omv_i2c_readb(&csi->i2c_bus, csi->slv_addr, 0xb6, &reg);
+    ret |= omv_i2c_writeb(&csi->i2c_bus, csi->slv_addr, 0xb6, (reg & 0xFE) | (enable & 0x01));
     return ret;
 }
 
-static int set_auto_whitebal(sensor_t *sensor, int enable, float r_gain_db, float g_gain_db, float b_gain_db) {
+static int set_auto_whitebal(omv_csi_t *csi, int enable, float r_gain_db, float g_gain_db, float b_gain_db) {
     int ret = 0;
     uint8_t reg;
-    ret |= omv_i2c_writeb(&sensor->i2c_bus, sensor->slv_addr, 0xFE, 0x00);
-    ret |= omv_i2c_readb(&sensor->i2c_bus, sensor->slv_addr, 0x82, &reg);
-    ret |= omv_i2c_writeb(&sensor->i2c_bus, sensor->slv_addr, 0x82, (reg & 0xFD) | ((enable & 0x01) << 1));
+    ret |= omv_i2c_writeb(&csi->i2c_bus, csi->slv_addr, 0xFE, 0x00);
+    ret |= omv_i2c_readb(&csi->i2c_bus, csi->slv_addr, 0x82, &reg);
+    ret |= omv_i2c_writeb(&csi->i2c_bus, csi->slv_addr, 0x82, (reg & 0xFD) | ((enable & 0x01) << 1));
     return ret;
 }
 
-static int ioctl(sensor_t *sensor, int request, va_list ap) {
+static int ioctl(omv_csi_t *csi, int request, va_list ap) {
     int ret = 0;
 
     switch (request) {
-        case IOCTL_SET_READOUT_WINDOW: {
+        case OMV_CSI_IOCTL_SET_READOUT_WINDOW: {
             int tmp_readout_x = va_arg(ap, int);
             int tmp_readout_y = va_arg(ap, int);
-            int tmp_readout_w = IM_CLAMP(va_arg(ap, int), resolution[sensor->framesize][0], ACTIVE_SENSOR_WIDTH);
-            int tmp_readout_h = IM_CLAMP(va_arg(ap, int), resolution[sensor->framesize][1], ACTIVE_SENSOR_HEIGHT);
+            int tmp_readout_w = IM_CLAMP(va_arg(ap, int), resolution[csi->framesize][0], ACTIVE_SENSOR_WIDTH);
+            int tmp_readout_h = IM_CLAMP(va_arg(ap, int), resolution[csi->framesize][1], ACTIVE_SENSOR_HEIGHT);
             int readout_x_max = (ACTIVE_SENSOR_WIDTH - tmp_readout_w) / 2;
             int readout_y_max = (ACTIVE_SENSOR_HEIGHT - tmp_readout_h) / 2;
             tmp_readout_x = IM_CLAMP(tmp_readout_x, -readout_x_max, readout_x_max);
@@ -970,23 +970,23 @@ static int ioctl(sensor_t *sensor, int request, va_list ap) {
             readout_y = tmp_readout_y;
             readout_w = tmp_readout_w;
             readout_h = tmp_readout_h;
-            if (changed && (sensor->framesize != FRAMESIZE_INVALID)) {
-                set_framesize(sensor, sensor->framesize);
+            if (changed && (csi->framesize != OMV_CSI_FRAMESIZE_INVALID)) {
+                set_framesize(csi, csi->framesize);
             }
             break;
         }
-        case IOCTL_GET_READOUT_WINDOW: {
+        case OMV_CSI_IOCTL_GET_READOUT_WINDOW: {
             *va_arg(ap, int *) = readout_x;
             *va_arg(ap, int *) = readout_y;
             *va_arg(ap, int *) = readout_w;
             *va_arg(ap, int *) = readout_h;
             break;
         }
-        case IOCTL_SET_FOV_WIDE: {
+        case OMV_CSI_IOCTL_SET_FOV_WIDE: {
             fov_wide = va_arg(ap, int);
             break;
         }
-        case IOCTL_GET_FOV_WIDE: {
+        case OMV_CSI_IOCTL_GET_FOV_WIDE: {
             *va_arg(ap, int *) = fov_wide;
             break;
         }
@@ -999,28 +999,28 @@ static int ioctl(sensor_t *sensor, int request, va_list ap) {
     return ret;
 }
 
-int gc2145_init(sensor_t *sensor) {
-    // Initialize sensor structure.
-    sensor->reset = reset;
-    sensor->sleep = sleep;
-    sensor->read_reg = read_reg;
-    sensor->write_reg = write_reg;
-    sensor->set_pixformat = set_pixformat;
-    sensor->set_framesize = set_framesize;
-    sensor->set_hmirror = set_hmirror;
-    sensor->set_vflip = set_vflip;
-    sensor->set_auto_exposure = set_auto_exposure;
-    sensor->set_auto_whitebal = set_auto_whitebal;
-    sensor->ioctl = ioctl;
+int gc2145_init(omv_csi_t *csi) {
+    // Initialize csi structure.
+    csi->reset = reset;
+    csi->sleep = sleep;
+    csi->read_reg = read_reg;
+    csi->write_reg = write_reg;
+    csi->set_pixformat = set_pixformat;
+    csi->set_framesize = set_framesize;
+    csi->set_hmirror = set_hmirror;
+    csi->set_vflip = set_vflip;
+    csi->set_auto_exposure = set_auto_exposure;
+    csi->set_auto_whitebal = set_auto_whitebal;
+    csi->ioctl = ioctl;
 
-    // Set sensor flags
-    sensor->vsync_pol = 0;
-    sensor->hsync_pol = 0;
-    sensor->pixck_pol = 1;
-    sensor->frame_sync = 0;
-    sensor->mono_bpp = 2;
-    sensor->rgb_swap = 1;
-    sensor->cfa_format = SUBFORMAT_ID_GBRG;
+    // Set csi flags
+    csi->vsync_pol = 0;
+    csi->hsync_pol = 0;
+    csi->pixck_pol = 1;
+    csi->frame_sync = 0;
+    csi->mono_bpp = 2;
+    csi->rgb_swap = 1;
+    csi->cfa_format = SUBFORMAT_ID_GBRG;
 
     return 0;
 }

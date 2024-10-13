@@ -209,7 +209,7 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/common/, \
 	usbdbg.o                    \
 	file_utils.o                \
 	mp_utils.o                  \
-	sensor_utils.o              \
+	omv_csi.o                   \
    )
 
 FIRM_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/sensors/,   \
@@ -615,8 +615,8 @@ UVC_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/common/, \
 	array.o                                 \
 	trace.o                                 \
 	mutex.o                                 \
-	sensor_utils.o                          \
 	vospi.o                                 \
+	omv_csi.o                               \
 	)
 
 UVC_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/sensors/, \
@@ -652,7 +652,6 @@ UVC_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/imlib/,\
 
 UVC_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/ports/stm32/,\
 	jpeg.o                                  \
-	sensor.o                                \
 	stm32fxxx_hal_msp.o                     \
 	soft_i2c.o                              \
 	ulpi.o                                  \
@@ -661,6 +660,7 @@ UVC_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/ports/stm32/,\
 	omv_gpu.o                               \
 	omv_i2c.o                               \
 	omv_spi.o                               \
+	omv_csi.o                               \
 	)
 
 UVC_OBJ += $(wildcard $(BUILD)/$(GENX320_DIR)/src/*.o)

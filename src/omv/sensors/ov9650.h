@@ -25,5 +25,5 @@
  */
 #ifndef __OV9650_H__
 #define __OV9650_H__
-int ov9650_init(sensor_t *sensor);
+int ov9650_init(omv_csi_t *csi);
 #endif // __OV9650_H__

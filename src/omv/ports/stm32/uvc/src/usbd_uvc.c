@@ -65,8 +65,8 @@
 #include "usbd_types.h"
 #include "uvc_desc.h"
 #include "omv_i2c.h"
-#include "sensor.h"
-extern sensor_t sensor;
+#include "omv_csi.h"
+extern omv_csi_t csi;
 
 static USBD_UVC_HandleTypeDef USBD_UVC_Handle;
 volatile uint8_t g_uvc_stream_status = 0;
@@ -767,7 +767,7 @@ static uint8_t  USBD_UVC_EP0_RxReady (USBD_HandleTypeDef *pdev)
   */
 static uint8_t  *USBD_UVC_GetFSCfgDesc (uint16_t *length)
 {
-  int id = sensor_get_id(&sensor);
+  int id = omv_csi_get_id(&csi);
 
   if ((id != MT9V0X2_ID) && (id != MT9V0X4_ID) && (id != HM01B0_ID) && (id != PAJ6100_ID)) {
       USBD_UVC_CfgFSDesc.uvc_vs_frames_formats_desc = uvc_vs_frames_formats_desc;

@@ -25,8 +25,8 @@
  */
 #ifndef __MT9V0XX_H__
 #define __MT9V0XX_H__
-#ifndef OMV_MT9V0XX_XCLK_FREQ
-#define OMV_MT9V0XX_XCLK_FREQ    26666666
+#ifndef OMV_MT9V0XX_CLK_FREQ
+#define OMV_MT9V0XX_CLK_FREQ     26666666
 #endif
-int mt9v0xx_init(sensor_t *sensor);
+int mt9v0xx_init(omv_csi_t *csi);
 #endif // __MT9V0XX_H__

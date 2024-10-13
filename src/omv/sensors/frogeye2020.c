@@ -26,21 +26,21 @@
 #include "omv_boardconfig.h"
 #if (OMV_FROGEYE2020_ENABLE == 1)
 
-#include "sensor.h"
+#include "omv_csi.h"
 
-static int set_pixformat(sensor_t *sensor, pixformat_t pixformat) {
+static int set_pixformat(omv_csi_t *csi, pixformat_t pixformat) {
     return (pixformat == PIXFORMAT_GRAYSCALE) ? 0 : -1;
 }
 
-static int set_framesize(sensor_t *sensor, framesize_t framesize) {
-    return (framesize == FRAMESIZE_QVGA) ? 0 : -1;
+static int set_framesize(omv_csi_t *csi, omv_csi_framesize_t framesize) {
+    return (framesize == OMV_CSI_FRAMESIZE_QVGA) ? 0 : -1;
 }
 
-int frogeye2020_init(sensor_t *sensor) {
-    sensor->set_pixformat = set_pixformat;
-    sensor->set_framesize = set_framesize;
-    sensor->pixck_pol = 1;
-    sensor->mono_bpp = 1;
+int frogeye2020_init(omv_csi_t *csi) {
+    csi->set_pixformat = set_pixformat;
+    csi->set_framesize = set_framesize;
+    csi->pixck_pol = 1;
+    csi->mono_bpp = 1;
     return 0;
 }
 

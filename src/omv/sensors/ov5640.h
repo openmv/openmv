@@ -25,5 +25,5 @@
  */
 #ifndef __OV5640_H__
 #define __OV5640_H__
-int ov5640_init(sensor_t *sensor);
+int ov5640_init(omv_csi_t *csi);
 #endif // __OV5640_H__

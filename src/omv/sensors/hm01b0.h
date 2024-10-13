@@ -25,6 +25,6 @@
  */
 #ifndef __HM01B0_H__
 #define __HM01B0_H__
-#define OMV_HM01B0_XCLK_FREQ    (6000000)
-int hm01b0_init(sensor_t *sensor);
+#define OMV_HM01B0_CLK_FREQ     (6000000)
+int hm01b0_init(omv_csi_t *csi);
 #endif // __HM01B0_H__

@@ -23,13 +23,13 @@
  *
  * Sensor driver for rp2 port.
  */
-#if MICROPY_PY_SENSOR
+#if MICROPY_PY_CSI
 #include <string.h>
 #include <stdint.h>
 #include <stdbool.h>
 #include "py/mphal.h"
 #include "omv_i2c.h"
-#include "sensor.h"
+#include "omv_csi.h"
 #include "framebuffer.h"
 
 #include "pico/time.h"
@@ -43,12 +43,12 @@
 #include "dcmi.pio.h"
 
 // Sensor struct.
-sensor_t sensor = {};
+omv_csi_t csi = {};
 
 static void dma_irq_handler();
 extern void __fatal_error(const char *msg);
 
-static void sensor_dma_config(int w, int h, int bpp, uint32_t *capture_buf, bool rev_bytes) {
+static void omv_csi_dma_config(int w, int h, int bpp, uint32_t *capture_buf, bool rev_bytes) {
     dma_channel_abort(OMV_CSI_DMA_CHANNEL);
     dma_irqn_set_channel_enabled(OMV_CSI_DMA, OMV_CSI_DMA_CHANNEL, false);
 
@@ -69,7 +69,7 @@ static void sensor_dma_config(int w, int h, int bpp, uint32_t *capture_buf, bool
     dma_irqn_set_channel_enabled(OMV_CSI_DMA, OMV_CSI_DMA_CHANNEL, true);
 }
 
-int sensor_init() {
+int omv_csi_init() {
     int init_ret = 0;
 
     // PIXCLK
@@ -98,27 +98,27 @@ int sensor_init() {
     gpio_put(OMV_CSI_RESET_PIN, 1);
     #endif
 
-    // Reset the sensor state
-    memset(&sensor, 0, sizeof(sensor_t));
+    // Reset the csi state
+    memset(&csi, 0, sizeof(omv_csi_t));
 
     // Set default snapshot function.
     // Some sensors need to call snapshot from init.
-    sensor.snapshot = sensor_snapshot;
+    csi.snapshot = omv_csi_snapshot;
 
-    // Configure the sensor external clock (XCLK).
-    if (sensor_set_xclk_frequency(OMV_CSI_XCLK_FREQUENCY) != 0) {
-        // Failed to initialize the sensor clock.
-        return SENSOR_ERROR_TIM_INIT_FAILED;
+    // Configure the csi external clock (XCLK).
+    if (omv_csi_set_clk_frequency(OMV_CSI_CLK_FREQUENCY) != 0) {
+        // Failed to initialize the csi clock.
+        return OMV_CSI_ERROR_TIM_INIT_FAILED;
     }
 
     // Detect and initialize the image sensor.
-    if ((init_ret = sensor_probe_init(OMV_CSI_I2C_ID, OMV_CSI_I2C_SPEED)) != 0) {
+    if ((init_ret = omv_csi_probe_init(OMV_CSI_I2C_ID, OMV_CSI_I2C_SPEED)) != 0) {
         // Sensor probe/init failed.
         return init_ret;
     }
 
     // Set default color palette.
-    sensor.color_palette = rainbow_table;
+    csi.color_palette = rainbow_table;
 
     // Set new DMA IRQ handler.
     // Disable IRQs.
@@ -141,18 +141,18 @@ int sensor_init() {
     irq_set_enabled(OMV_CSI_DMA_IRQ, true);
 
     // Disable VSYNC IRQ and callback
-    sensor_set_vsync_callback(NULL);
+    omv_csi_set_vsync_callback(NULL);
 
     // Disable Frame callback.
-    sensor_set_frame_callback(NULL);
+    omv_csi_set_frame_callback(NULL);
 
     /* All good! */
-    sensor.detected = true;
+    csi.detected = true;
 
     return 0;
 }
 
-int sensor_abort(bool fifo_flush, bool in_irq) {
+int omv_csi_abort(bool fifo_flush, bool in_irq) {
     // Disable DMA channel
     dma_channel_abort(OMV_CSI_DMA_CHANNEL);
     dma_irqn_set_channel_enabled(OMV_CSI_DMA, OMV_CSI_DMA_CHANNEL, false);
@@ -167,7 +167,7 @@ int sensor_abort(bool fifo_flush, bool in_irq) {
     return 0;
 }
 
-int sensor_set_xclk_frequency(uint32_t frequency) {
+int omv_csi_set_clk_frequency(uint32_t frequency) {
     uint32_t p = 4;
 
     // Allocate pin to the PWM
@@ -192,8 +192,8 @@ int sensor_set_xclk_frequency(uint32_t frequency) {
     return 0;
 }
 
-int sensor_set_windowing(int x, int y, int w, int h) {
-    return SENSOR_ERROR_CTL_UNSUPPORTED;
+int omv_csi_set_windowing(int x, int y, int w, int h) {
+    return OMV_CSI_ERROR_CTL_UNSUPPORTED;
 }
 
 static void dma_irq_handler() {
@@ -216,23 +216,22 @@ static void dma_irq_handler() {
     }
 }
 
-// This is the default snapshot function, which can be replaced in sensor_init functions.
-int sensor_snapshot(sensor_t *sensor, image_t *image, uint32_t flags) {
+int omv_csi_snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
     // Compress the framebuffer for the IDE preview.
     framebuffer_update_jpeg_buffer();
 
-    if (sensor_check_framebuffer_size() != 0) {
-        return SENSOR_ERROR_FRAMEBUFFER_OVERFLOW;
+    if (omv_csi_check_framebuffer_size() != 0) {
+        return OMV_CSI_ERROR_FRAMEBUFFER_OVERFLOW;
     }
 
     // Free the current FB head.
     framebuffer_free_current_buffer();
 
     // Set framebuffer pixel format.
-    if (sensor->pixformat == PIXFORMAT_INVALID) {
-        return SENSOR_ERROR_INVALID_PIXFORMAT;
+    if (csi->pixformat == PIXFORMAT_INVALID) {
+        return OMV_CSI_ERROR_INVALID_PIXFORMAT;
     }
-    MAIN_FB()->pixfmt = sensor->pixformat;
+    MAIN_FB()->pixfmt = csi->pixformat;
 
     vbuffer_t *buffer = framebuffer_get_head(FB_NO_FLAGS);
 
@@ -243,12 +242,12 @@ int sensor_snapshot(sensor_t *sensor, image_t *image, uint32_t flags) {
 
         buffer = framebuffer_get_tail(FB_PEEK);
         if (buffer == NULL) {
-            return SENSOR_ERROR_FRAMEBUFFER_ERROR;
+            return OMV_CSI_ERROR_FRAMEBUFFER_ERROR;
         }
 
         // Configure the DMA on the first frame, for later frames only the write is changed.
-        sensor_dma_config(MAIN_FB()->u, MAIN_FB()->v, MAIN_FB()->bpp,
-                          (void *) buffer->data, (sensor->rgb_swap && MAIN_FB()->bpp == 2));
+        omv_csi_dma_config(MAIN_FB()->u, MAIN_FB()->v, MAIN_FB()->bpp,
+                           (void *) buffer->data, (csi->rgb_swap && MAIN_FB()->bpp == 2));
 
 
         // Re-enable the state machine.
@@ -264,8 +263,8 @@ int sensor_snapshot(sensor_t *sensor, image_t *image, uint32_t flags) {
     for (mp_uint_t ticks = mp_hal_ticks_ms(); buffer == NULL;) {
         buffer = framebuffer_get_head(FB_NO_FLAGS);
         if ((mp_hal_ticks_ms() - ticks) > 3000) {
-            sensor_abort(true, false);
-            return SENSOR_ERROR_CAPTURE_TIMEOUT;
+            omv_csi_abort(true, false);
+            return OMV_CSI_ERROR_CAPTURE_TIMEOUT;
         }
     }
 
