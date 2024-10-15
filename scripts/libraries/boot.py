@@ -98,26 +98,26 @@ def send_image_via_uart(image_path, indicator):
             uart.write(img_data)
             print(f"{image_path} sent via UART with indicator {indicator}")
 while True:
-    img = capture_image()
-    classify_image(img)  
-    time.sleep(3)
+    # img = capture_image()
+    # classify_image(img)  
+    # time.sleep(3)
 
 #     break
-#    command = uart.read(5)
+   command = uart.read(5)
 
-#    if command is None:
-#        continue
+   if command is None:
+       continue
 
-#    print("Received command:", command)
+   print("Received command:", command)
 
-#    if command == b"CAMON":
-#        clear_uart_buffer(uart)
-#        print("Camera ON, starting image capture.")
-#        img = capture_image()
-#        classify_image(img)
+   if command == b"CAMON":
+       clear_uart_buffer(uart)
+       print("Camera ON, starting image capture.")
+       img = capture_image()
+       classify_image(img)
 
-##        pyb.delay(20000)
-#        print("Image transmission completed")
+       pyb.delay(1000)
+       print("Image transmission completed")
 #    time.sleep(1)
 
 
