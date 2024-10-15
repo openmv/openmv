@@ -9,7 +9,9 @@ good_image = 0
 # Initialize UART
 uart = UART(3, 115200)
 uart.init(115200, bits=8, parity=None, stop=1)
-
+pyb.LED(RED_LED_PIN).on()
+time.sleep(1)
+pyb.LED(RED_LED_PIN).off()
 # Initialize sensor
 sensor.reset()
 sensor.set_pixformat(sensor.RGB565)
@@ -42,6 +44,7 @@ def capture_image():
     pyb.LED(BLUE_LED_PIN).off()
     return img
 def classify_image(img):
+    pyb.LED(GREEN_LED_PIN).on()
     global good_image
     global bad_image
     net = None
@@ -85,6 +88,7 @@ def classify_image(img):
             print(f"{classified_image} sent via UART with indicator 'good'")
     except Exception as e:
         print("Error in prediction:", e)
+    pyb.LED(GREEN_LED_PIN).off()
 
 def send_image_via_uart(image_path, indicator):
     with open(image_path, "rb") as f:
