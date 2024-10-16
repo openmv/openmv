@@ -58,6 +58,27 @@ typedef union {
 #define lsm_from_fs2000_to_mdps    lsm6ds3tr_c_from_fs2000dps_to_mdps
 #define lsm_from_lsb_to_celsius    lsm6ds3tr_c_from_lsb_to_celsius
 
+#elif defined(OMV_IMU_CHIP_LSM6DSM)
+#include "lsm6dsm_reg.h"
+
+typedef union {
+    int16_t i16bit[3];
+    int16_t u8bit[3];
+} axis3bit16_t;
+
+typedef union {
+    int16_t i16bit;
+    int16_t u8bit[1];
+} axis1bit16_t;
+
+#define LSM_FUNC(f)                lsm6dsm_##f
+#define LSM_CONST(c)               LSM6DSM_##c
+
+#define lsm_from_fs8_to_mg         lsm6dsm_from_fs8g_to_mg
+#define lsm_from_fs8_to_mg         lsm6dsm_from_fs8g_to_mg
+#define lsm_from_fs2000_to_mdps    lsm6dsm_from_fs2000dps_to_mdps
+#define lsm_from_lsb_to_celsius    lsm6dsm_from_lsb_to_celsius
+
 #elif defined(OMV_IMU_CHIP_LSM6DSOX)
 #include "lsm6dsox_reg.h"
 
@@ -109,7 +130,7 @@ static void platform_deinit(void *imubus) {
     imu_initialized = false;
 }
 
-static int32_t platform_write(void *imubus, uint8_t Reg, uint8_t *Bufp, uint16_t len) {
+static int32_t platform_write(void *imubus, uint8_t Reg, const uint8_t *Bufp, uint16_t len) {
     omv_spi_t *spi_bus = imubus;
 
     omv_spi_transfer_t spi_xfer = {
@@ -120,14 +141,13 @@ static int32_t platform_write(void *imubus, uint8_t Reg, uint8_t *Bufp, uint16_t
     };
 
     omv_gpio_write(spi_bus->cs, 0);
-
     spi_xfer.size = 1;
     spi_xfer.txbuf = &Reg;
     spi_xfer.rxbuf = NULL;
     omv_spi_transfer_start(spi_bus, &spi_xfer);
 
     spi_xfer.size = len;
-    spi_xfer.txbuf = Bufp;
+    spi_xfer.txbuf = (uint8_t *) Bufp;
     spi_xfer.rxbuf = NULL;
     omv_spi_transfer_start(spi_bus, &spi_xfer);
 
@@ -172,11 +192,11 @@ static void platform_deinit(void *imubus) {
     imu_initialized = false;
 }
 
-static int32_t platform_write(void *imubus, uint8_t reg, uint8_t *bufp, uint16_t len) {
+static int32_t platform_write(void *imubus, uint8_t reg, const uint8_t *bufp, uint16_t len) {
     if (omv_i2c_write_bytes(&imu_bus, LSM6DS3TR_C_I2C_ADD_L, (uint8_t *) &reg, 1, OMV_I2C_XFER_SUSPEND) != 0) {
         return -1;
     }
-    if (omv_i2c_write_bytes(&imu_bus, LSM6DS3TR_C_I2C_ADD_L, bufp, len, OMV_I2C_XFER_NO_FLAGS) != 0) {
+    if (omv_i2c_write_bytes(&imu_bus, LSM6DS3TR_C_I2C_ADD_L, (uint8_t *) bufp, len, OMV_I2C_XFER_NO_FLAGS) != 0) {
         return -1;
     }
     return 0;
@@ -293,6 +313,7 @@ static float py_imu_get_pitch() {
     #endif
     return IM_RAD2DEG(fast_atan2f(zr, -yr));
 }
+void py_imu_init();
 
 static mp_obj_t py_imu_acceleration_mg() {
     error_on_not_ready();
@@ -395,6 +416,7 @@ void py_imu_init() {
     // Try to read device id...
     for (int i = 0; (i < 10) && (whoamI != LSM_CONST(ID)); i++) {
         LSM_FUNC(device_id_get) (&dev_ctx, &whoamI);
+        mp_event_wait_ms(1);
     }
 
     if (whoamI != LSM_CONST(ID)) {
