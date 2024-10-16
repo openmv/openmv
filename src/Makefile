@@ -57,6 +57,7 @@ MICROPY_DIR=micropython
 GENX320_DIR=drivers/genx320
 LEPTON_DIR=drivers/lepton
 LSM6DS3_DIR=drivers/lsm6ds3
+LSM6DSM_DIR=drivers/lsm6dsm
 LSM6DSOX_DIR=drivers/lsm6dsox
 WINC1500_DIR=drivers/winc1500
 MLX90621_DIR=drivers/mlx90621
