@@ -78,6 +78,7 @@ export CMSIS_DIR
 export MICROPY_DIR
 export LEPTON_DIR
 export LSM6DS3_DIR
+export LSM6DSM_DIR
 export LSM6DSOX_DIR
 export WINC1500_DIR
 export MLX90621_DIR
