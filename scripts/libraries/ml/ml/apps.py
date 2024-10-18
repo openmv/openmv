@@ -46,7 +46,7 @@ class MicroSpeech:
     _CATEGORY_COUNT = const(4)
     _AVERAGE_WINDOW_SAMPLES = const(1020 // _SLICE_TIME_MS)
 
-    def __init__(self, preprocessor=None, micro_speech=None, labels=None, gain_db=24):
+    def __init__(self, preprocessor=None, micro_speech=None, labels=None, **kwargs):
         self.preprocessor = preprocessor
         if preprocessor is None:
             self.preprocessor = Model("audio_preprocessor")
@@ -59,7 +59,7 @@ class MicroSpeech:
         self.spectrogram = np.zeros((1, _SLICE_COUNT * _SLICE_SIZE), dtype=np.int8)
         self.pred_history = np.zeros((_AVERAGE_WINDOW_SAMPLES, _CATEGORY_COUNT), dtype=np.float)
         self.audio_started = False
-        audio.init(channels=1, frequency=_AUDIO_FREQUENCY, gain_db=gain_db, samples=_SAMPLES_PER_STEP * 2)
+        audio.init(channels=1, frequency=_AUDIO_FREQUENCY, samples=_SAMPLES_PER_STEP * 2, **kwargs)
 
     def audio_callback(self, buf):
         # Roll the audio buffer to the left, and add the new samples.
