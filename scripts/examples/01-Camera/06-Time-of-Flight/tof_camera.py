@@ -28,7 +28,7 @@ while True:
             hint=image.BILINEAR,
             scale=(0, 4000),
             copy_to_fb=True,
-            color_palette=tof.PALETTE_IRONBOW,
+            color_palette=image.PALETTE_DEPTH,
         )
         img.flush()
     except RuntimeError as e:

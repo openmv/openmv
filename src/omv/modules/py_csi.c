@@ -1038,6 +1038,11 @@ static mp_obj_t py_omv_csi_set_color_palette(mp_obj_t palette_obj) {
         case COLOR_PALETTE_IRONBOW:
             omv_csi_set_color_palette(ironbow_table);
             break;
+        #if (MICROPY_PY_TOF == 1)
+        case COLOR_PALETTE_DEPTH:
+            omv_csi_set_color_palette(depth_table);
+            break;
+        #endif // MICROPY_PY_TOF == 1
         #if (OMV_GENX320_ENABLE == 1)
         case COLOR_PALETTE_EVT_DARK:
             omv_csi_set_color_palette(evt_dark_table);
@@ -1060,6 +1065,10 @@ static mp_obj_t py_omv_csi_get_color_palette() {
         return mp_obj_new_int(COLOR_PALETTE_RAINBOW);
     } else if (palette == ironbow_table) {
         return mp_obj_new_int(COLOR_PALETTE_IRONBOW);
+    #if (MICROPY_PY_TOF == 1)
+    } else if (palette == depth_table) {
+        return mp_obj_new_int(COLOR_PALETTE_DEPTH);
+    #endif // MICROPY_PY_TOF == 1
     #if (OMV_GENX320_ENABLE == 1)
     } else if (palette == evt_dark_table) {
         return mp_obj_new_int(COLOR_PALETTE_EVT_DARK);

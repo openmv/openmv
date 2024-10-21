@@ -48,6 +48,18 @@ col = [(int((((r*255)*31)+127.5)/255)&0x1F)<<11 |
        (int((((g*255)*63)+127.5)/255)&0x3F)<<5 |
        (int((((b*255)*31)+127.5)/255)&0x1F) for r,g,b in tup]
 
+sys.stdout.write("const uint16_t depth_table[%d] = {\n" % NUM_COL)
+for i in range(NUM_COL):
+    if not (i % 8):
+        sys.stdout.write("    ")
+    sys.stdout.write("0x%04X" % col[255-i])
+    if (i + 1) % 8:
+        sys.stdout.write(", ")
+    elif i != (NUM_COL-1):
+        sys.stdout.write(",\n")
+    else:
+        sys.stdout.write("\n};\n")
+
 sys.stdout.write("const uint16_t rainbow_table[%d] = {\n" % NUM_COL)
 for i in range(NUM_COL):
     if not (i % 8):

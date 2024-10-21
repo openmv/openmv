@@ -41,7 +41,7 @@ while True:
         hint=image.BILINEAR,
         alpha=100,
         scale=(0, 4000),
-        color_palette=tof.PALETTE_RAINBOW,
+        color_palette=image.PALETTE_DEPTH,
     )
 
     # Draw min and max distance.
