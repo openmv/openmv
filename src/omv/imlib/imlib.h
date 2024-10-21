@@ -1153,6 +1153,8 @@ typedef enum image_hint {
     IMAGE_HINT_SCALE_ASPECT_KEEP         = (1 << 10),
     IMAGE_HINT_SCALE_ASPECT_EXPAND       = (1 << 11),
     IMAGE_HINT_SCALE_ASPECT_IGNORE       = (1 << 12),
+    IMAGE_HINT_REVERSE_COLOR_PALETTE     = (1 << 13),
+    IMAGE_HINT_REVERSE_ALPHA_PALETTE     = (1 << 14),
     IMAGE_HINT_BLACK_BACKGROUND = (1 << 31)
 } image_hint_t;
 

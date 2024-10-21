@@ -2981,6 +2981,22 @@ void imlib_draw_image(image_t *dst_img,
         src_y_start += fast_floorf(roi->y * y_scale);
     }
 
+    if (hint & IMAGE_HINT_REVERSE_COLOR_PALETTE) {
+        uint16_t *temp = fb_alloc(256 * sizeof(uint16_t), FB_ALLOC_CACHE_ALIGN);
+        for (uint32_t i = 0; i < 256; i++) {
+            temp[i] = color_palette[255 - i];
+        }
+        color_palette = (const uint16_t *) temp;
+    }
+
+    if (hint & IMAGE_HINT_REVERSE_ALPHA_PALETTE) {
+        uint8_t *temp = fb_alloc(256 * sizeof(uint8_t), FB_ALLOC_CACHE_ALIGN);
+        for (uint32_t i = 0; i < 256; i++) {
+            temp[i] = alpha_palette[255 - i];
+        }
+        alpha_palette = (const uint8_t *) temp;
+    }
+
     // For all of the scaling algorithms (nearest neighbor, bilinear, bicubic, and area)
     // we use a 32-bit fraction instead of a floating point value for iteration. Below,
     // we calculate an increment which fits in 32-bits. We can then add this value
@@ -5530,6 +5546,15 @@ exit_cleanup:
     if (&new_src_img == src_img) {
         fb_free();
     }
+
+    if (hint & IMAGE_HINT_REVERSE_ALPHA_PALETTE) {
+        fb_free();
+    }
+
+    if (hint & IMAGE_HINT_REVERSE_COLOR_PALETTE) {
+        fb_free();
+    }
+
     OMV_PROFILE_PRINT();
 }
 
