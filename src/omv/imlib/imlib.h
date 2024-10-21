@@ -375,6 +375,7 @@ extern const int8_t lab_table[196608 / 2];
 typedef enum {
     COLOR_PALETTE_RAINBOW,
     COLOR_PALETTE_IRONBOW,
+    COLOR_PALETTE_DEPTH,
     COLOR_PALETTE_EVT_DARK,
     COLOR_PALETTE_EVT_LIGHT
 } color_palette_t;
@@ -382,6 +383,7 @@ typedef enum {
 // Color palette LUTs
 extern const uint16_t rainbow_table[256];
 extern const uint16_t ironbow_table[256];
+extern const uint16_t depth_table[256];
 extern const uint16_t evt_dark_table[256];
 extern const uint16_t evt_light_table[256];
 
