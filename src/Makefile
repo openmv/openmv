@@ -123,9 +123,6 @@ MICROPY_ARGS = PORT=$(PORT) BOARD=$(TARGET) DEBUG=$(DEBUG) MICROPY_MANIFEST_OMV_
                FROZEN_MANIFEST=$(FROZEN_MANIFEST) OMV_SRC_QSTR="$(OMV_SRC_QSTR)"\
                MICROPY_ROM_TEXT_COMPRESSION=$(ROM_TEXT_COMPRESSION) USER_C_MODULES=$(TOP_DIR)/$(OMV_DIR)
 
-# TinyUSB CDC debugger PendSV dispatch entry
-MPY_PENDSV_ENTRIES += PENDSV_DISPATCH_CDC,
-
 # Configure additional built-in modules. Note must define both the CFLAGS and the Make command line args.
 ifeq ($(MICROPY_PY_CSI), 1)
 MPY_CFLAGS += -DMICROPY_PY_CSI=1

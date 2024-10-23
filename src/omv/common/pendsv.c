@@ -38,7 +38,6 @@
 void *pendsv_object;
 static int pendsv_lock;
 
-
 #if defined(PENDSV_DISPATCH_NUM_SLOTS)
 uint32_t pendsv_dispatch_active;
 pendsv_dispatch_t pendsv_dispatch_table[PENDSV_DISPATCH_NUM_SLOTS];
@@ -79,6 +78,7 @@ void pendsv_suspend(void) {
 void pendsv_resume(void) {
     pendsv_lock--;
     assert(pendsv_lock >= 0);
+    #if defined(PENDSV_DISPATCH_NUM_SLOTS)
     // Run pendsv if needed.  Find an entry with a dispatch and call pendsv dispatch
     // with it.  If pendsv runs it will service all slots.
     int count = PENDSV_DISPATCH_NUM_SLOTS;
@@ -88,21 +88,16 @@ void pendsv_resume(void) {
             break;
         }
     }
-}
-
-// This will always force the exception by using the hardware PENDSV
-void pendsv_nlr_jump(void *o) {
-    MP_STATE_MAIN_THREAD(mp_pending_exception) = MP_OBJ_NULL;
-    pendsv_dispatch_active = false;
-    pendsv_object = o;
-    SCB->ICSR = SCB_ICSR_PENDSVSET_Msk;
+    #endif
 }
 
 #if defined(PENDSV_DISPATCH_NUM_SLOTS)
 void pendsv_schedule_dispatch(size_t slot, pendsv_dispatch_t f) {
-    pendsv_dispatch_table[slot] = f;
-    pendsv_dispatch_active = true;
-    SCB->ICSR = SCB_ICSR_PENDSVSET_Msk;
+    if (slot < PENDSV_DISPATCH_NUM_SLOTS) {
+        pendsv_dispatch_table[slot] = f;
+        pendsv_dispatch_active = true;
+        SCB->ICSR = SCB_ICSR_PENDSVSET_Msk;
+    }
 }
 
 void pendsv_dispatch_handler(void) {
