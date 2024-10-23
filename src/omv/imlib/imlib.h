@@ -375,17 +375,25 @@ extern const int8_t lab_table[196608 / 2];
 typedef enum {
     COLOR_PALETTE_RAINBOW,
     COLOR_PALETTE_IRONBOW,
+    #if (MICROPY_PY_TOF == 1)
     COLOR_PALETTE_DEPTH,
+    #endif // MICROPY_PY_TOF == 1
+    #if (OMV_GENX320_ENABLE == 1)
     COLOR_PALETTE_EVT_DARK,
     COLOR_PALETTE_EVT_LIGHT
+    #endif // OMV_GENX320_ENABLE == 1
 } color_palette_t;
 
 // Color palette LUTs
 extern const uint16_t rainbow_table[256];
 extern const uint16_t ironbow_table[256];
+#if (MICROPY_PY_TOF == 1)
 extern const uint16_t depth_table[256];
+#endif // MICROPY_PY_TOF == 1
+#if (OMV_GENX320_ENABLE == 1)
 extern const uint16_t evt_dark_table[256];
 extern const uint16_t evt_light_table[256];
+#endif // OMV_GENX320_ENABLE == 1
 
 /////////////////
 // Image Stuff //
