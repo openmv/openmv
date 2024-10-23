@@ -42,6 +42,7 @@
 #define DEBUG_EP_SIZE           (TUD_OPT_HIGH_SPEED ? 512 : 64)
 
 void NORETURN __fatal_error(const char *msg);
+static mp_sched_node_t tusb_debug_node;
 
 typedef struct __attribute__((packed)) {
     uint8_t cmd;
@@ -127,7 +128,6 @@ extern mp_uint_t __real_mp_hal_stdout_tx_strn(const char *str, mp_uint_t len);
 mp_uint_t __wrap_mp_hal_stdout_tx_strn(const char *str, mp_uint_t len) {
     if (tinyusb_debug_enabled()) {
         if (tud_cdc_connected()) {
-            NVIC_DisableIRQ(PendSV_IRQn);
             for (int i = 0; i < len; i++) {
                 // The ring buffer overflows occasionally, espcially when using a slow poll
                 // rate and fast print rate. When this happens, reset the buffer and start
@@ -138,7 +138,6 @@ mp_uint_t __wrap_mp_hal_stdout_tx_strn(const char *str, mp_uint_t len) {
                     tx_ringbuf.iput = 0;
                 }
             }
-            NVIC_EnableIRQ(PendSV_IRQn);
         }
         return len;
     } else {
@@ -146,7 +145,7 @@ mp_uint_t __wrap_mp_hal_stdout_tx_strn(const char *str, mp_uint_t len) {
     }
 }
 
-static void tinyusb_debug_task(void) {
+void tinyusb_debug_task(mp_sched_node_t *node) {
     tud_task_ext(0, false);
 
     if (!tinyusb_debug_enabled() || !tud_cdc_connected() || tud_cdc_available() < 6) {
@@ -197,7 +196,7 @@ void OMV_USB1_IRQ_HANDLER(void) {
     dcd_int_handler(0);
     // If there are any event to process, schedule a call to cdc loop.
     if (tud_task_event_ready()) {
-        pendsv_schedule_dispatch(PENDSV_DISPATCH_CDC, tinyusb_debug_task);
+        mp_sched_schedule_node(&tusb_debug_node, tinyusb_debug_task);
     }
 }
 
@@ -206,7 +205,7 @@ void OMV_USB2_IRQ_HANDLER(void) {
     dcd_int_handler(1);
     // If there are any event to process, schedule a call to cdc loop.
     if (tud_task_event_ready()) {
-        pendsv_schedule_dispatch(PENDSV_DISPATCH_CDC, tinyusb_debug_task);
+        mp_sched_schedule_node(&tusb_debug_node, tinyusb_debug_task);
     }
 }
 #endif
