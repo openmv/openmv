@@ -1128,14 +1128,14 @@ static int calc_pclk_freq(uint8_t sc_pll_ctrl_0,
                           uint8_t sys_root_div) {
     uint32_t pclk_freq = omv_csi_get_xclk_frequency();
     pclk_freq /= ((sc_pll_ctrl_3 & 0x10) != 0x00) ? 2 : 1;
-    pclk_freq /= ((sc_pll_ctrl_0 & 0x0F) == 0x0A) ? 10 : 8;
+    pclk_freq /= ((sc_pll_ctrl_0 & 0x0F) == 0x0A) ? 5 : 4; //camera has two MIPI lanes
     switch (sc_pll_ctrl_3 & 0x0F) {
-        case  0: pclk_freq /= 1; break;
-        case  1: pclk_freq /= 2; break;
-        case  2: pclk_freq /= 3; break;
-        case  3: pclk_freq /= 4; break;
-        case  4: pclk_freq /= 6; break;
-        case  5: pclk_freq /= 8; break;
+        case  1: pclk_freq /= 1; break;
+        case  2: pclk_freq /= 2; break;
+        case  3: pclk_freq /= 3; break;
+        case  4: pclk_freq /= 4; break;
+        case  6: pclk_freq /= 6; break;
+        case  8: pclk_freq /= 8; break;
         default: pclk_freq /= 3; break;
     }
     pclk_freq *= sc_pll_ctrl_2;
