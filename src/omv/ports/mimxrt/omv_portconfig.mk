@@ -333,6 +333,8 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/shared/,\
 	runtime/softtimer.o         \
 	timeutils/timeutils.o       \
 	readline/readline.o         \
+	tinyusb/mp_usbd.o           \
+	tinyusb/mp_usbd_cdc.o       \
 	)
 
 FIRM_OBJ += $(wildcard $(BUILD)/$(MICROPY_DIR)/lib/mbedtls/library/*.o)
