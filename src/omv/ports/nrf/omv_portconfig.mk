@@ -238,7 +238,6 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/,\
 	drivers/bluetooth/ble_drv.o     \
 	drivers/bluetooth/ble_uart.o    \
 	drivers/usb/usb_cdc.o           \
-	drivers/usb/usb_descriptors.o   \
 	frozen_content.o                \
 	)
 
@@ -292,11 +291,15 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/shared/,\
 	libc/printf.o               \
 	libc/string0.o              \
 	runtime/pyexec.o            \
+	runtime/mpirq.o             \
 	runtime/interrupt_char.o    \
 	runtime/sys_stdio_mphal.o   \
 	runtime/stdout_helpers.o    \
 	timeutils/timeutils.o       \
 	readline/readline.o         \
+	tinyusb/mp_usbd.o           \
+	tinyusb/mp_usbd_cdc.o       \
+	tinyusb/mp_usbd_descriptor.o \
 	)
 
 FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/lib/libm/,\
