@@ -1,29 +1,57 @@
 /*
- * This file is part of the OpenMV project.
+ * SPDX-License-Identifier: MIT
  *
- * Copyright (c) 2013-2022 Ibrahim Abdelkader <iabdalkader@openmv.io>
- * Copyright (c) 2013-2022 Kwabena W. Agyeman <kwagyeman@openmv.io>
+ * Copyright (C) 2013-2024 OpenMV, LLC.
  *
- * This work is licensed under the MIT license, see the file LICENSE for details.
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
  *
  * Board configuration and pin definitions.
  */
+// *INDENT-OFF*
 #ifndef __OMV_BOOTCONFIG_H__
 #define __OMV_BOOTCONFIG_H__
+#include STM32_HAL_H
+#include "port.h"
 
-// Bootloader version.
-#define OMV_BOOT_VERSION         (0xABCD0003)
+// Misc config.
+#define OMV_BOOT_VID                (0x37C5)
+#define OMV_BOOT_PID                (0x9204)
+#define OMV_BOOT_DFU_TIMEOUT        (1500)
+#define OMV_BOOT_LED_PIN            (0) // index in omv_boot_pins
 
-// Bootloader LED GPIO config.
-#define OMV_BOOT_LED_PIN         (GPIO_PIN_1)
-#define OMV_BOOT_LED_PORT        (GPIOC)
+// Flash config.
+#define OMV_BOOT_AXI_FLASH_ENABLE   (1)
 
-// Flash layout for the bootloader.
-// Flash FS sector, main FW sector, max sector.
-#define OMV_BOOT_FLASH_LAYOUT    {1, 2, 15}
+// Boot I/O pins.
+static const pin_t omv_boot_pins[] = {
+  { .gpio = GPIOC, .pin = GPIO_PIN_1,  .speed = GPIO_SPEED_LOW,  .mode = GPIO_MODE_OUTPUT_PP, .pull = GPIO_PULLUP  }, // LED
+  { .gpio = GPIOA, .pin = GPIO_PIN_9,  .speed = GPIO_SPEED_HIGH, .mode = GPIO_MODE_INPUT,  .pull = GPIO_NOPULL     }, // VBUS
+  { .gpio = GPIOA, .pin = GPIO_PIN_11, .speed = GPIO_SPEED_HIGH, .mode = GPIO_MODE_AF_PP, .alt = GPIO_AF10_OTG_FS  }, // DM
+  { .gpio = GPIOA, .pin = GPIO_PIN_12, .speed = GPIO_SPEED_HIGH, .mode = GPIO_MODE_AF_PP, .alt = GPIO_AF10_OTG_FS  }, // DP
+};
+#define OMV_BOOT_PINS_COUNT         (sizeof(omv_boot_pins) / sizeof(omv_boot_pins[0]))
 
-// Flash configuration.
-#define OMV_BOOT_FLASH_ORIGIN    0x08000000
-#define OMV_BOOT_FLASH_LENGTH    128K
-
+// Boot partitions.
+static const partition_t OMV_BOOT_PARTITIONS[] = {
+  { .type = PTYPE_AXI_FLASH, .region =  -1, .rdonly = 0, .start = 0x08020000, .limit = 0x08040000, .attr = 0 }, // FFS
+  { .type = PTYPE_AXI_FLASH, .region =  -1, .rdonly = 0, .start = 0x08040000, .limit = 0x08200000, .attr = 0 }, // FIRMWARE
+};
+#define OMV_BOOT_PARTITIONS_COUNT   2 // Must be a literal
+#define OMV_BOOT_PARTITIONS_STR     "FILESYSTEM", "FIRMWARE"
 #endif //__OMV_BOOTCONFIG_H__
