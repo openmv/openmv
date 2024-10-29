@@ -105,6 +105,8 @@
 #define OMV_SRAM1_LENGTH                      384K
 
 // Flash configuration.
+#define OMV_FLASH_BOOT_ORIGIN                 0x08000000
+#define OMV_FLASH_BOOT_LENGTH                 32K
 #define OMV_FLASH_FFS_ORIGIN                  0x08008000
 #define OMV_FLASH_FFS_LENGTH                  96K
 #define OMV_FLASH_TXT_ORIGIN                  0x08020000

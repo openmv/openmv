@@ -51,6 +51,7 @@ BUILD=$(TOP_DIR)/build
 TOOLS=$(TOP_DIR)/../tools
 FW_DIR=$(BUILD)/bin
 OMV_DIR=omv
+BOOT_DIR=boot
 CUBEAI_DIR=stm32cubeai
 CMSIS_DIR=hal/cmsis
 MICROPY_DIR=micropython

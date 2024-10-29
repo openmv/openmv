@@ -13,19 +13,16 @@
 ENTRY(Reset_Handler)
 
 #include "omv_boardconfig.h"
-#include "omv_bootconfig.h"
 
 /* Specify the memory areas */
 MEMORY
 {
-  DTCM (xrw)      : ORIGIN = OMV_DTCM_ORIGIN,       LENGTH = OMV_DTCM_LENGTH
-  RAM (xrw)       : ORIGIN = OMV_SRAM1_ORIGIN,      LENGTH = OMV_SRAM1_LENGTH
-  FLASH_TEXT (rx) : ORIGIN = OMV_BOOT_FLASH_ORIGIN, LENGTH = OMV_BOOT_FLASH_LENGTH
+  RAM (rwx): ORIGIN = OMV_DTCM_ORIGIN,       LENGTH = OMV_DTCM_LENGTH
+  ROM (rx) : ORIGIN = OMV_FLASH_BOOT_ORIGIN, LENGTH = OMV_FLASH_BOOT_LENGTH
 }
 
-_estack     = ORIGIN(DTCM) + LENGTH(DTCM);
-_ram_end    = ORIGIN(DTCM) + LENGTH(DTCM);
-_stack_size = (4K);       /* minimum amount of stack */
+_ram_end    = ORIGIN(RAM) + LENGTH(RAM);
+_stack_size = 16K;
 
 /* Define output sections */
 SECTIONS
@@ -43,7 +40,7 @@ SECTIONS
     . = ALIGN(4);
     _etext = .;        /* define a global symbols at end of code */
     _exit = .;
-  } >FLASH_TEXT
+  } >ROM
 
   /* used by the startup to initialize data */
   _sidata = LOADADDR(.data);
@@ -59,7 +56,7 @@ SECTIONS
 
     . = ALIGN(4);
     _edata = .;        /* define a global symbol at data end */
-  } >DTCM AT> FLASH_TEXT
+  } >RAM AT> ROM
 
   /* Uninitialized data section */
   . = ALIGN(4);
@@ -72,7 +69,7 @@ SECTIONS
     *(COMMON)
     . = ALIGN(4);
     _ebss = .;          // define a global symbol at bss end
-  } >DTCM
+  } >RAM
 
   /* Make sure there is enough RAM the stack and FS cache */
   .stack :
@@ -80,7 +77,8 @@ SECTIONS
     . = ALIGN(4);
     . = . + _stack_size;
     . = ALIGN(4);
-  } >DTCM
+    _estack = .;
+  } >RAM
 
   .ARM.attributes 0 : { *(.ARM.attributes) }
 }

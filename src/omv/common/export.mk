@@ -62,7 +62,6 @@ export FROZEN_MANIFEST
 
 # Export board config variables
 export PORT
-export HAL_DIR
 export MCU
 export MCU_SERIES
 export MCU_VARIANT
@@ -73,6 +72,8 @@ export TOP_DIR
 export BUILD
 export TOOLS
 export FW_DIR
+export HAL_DIR
+export BOOT_DIR
 export OMV_DIR
 export CMSIS_DIR
 export MICROPY_DIR

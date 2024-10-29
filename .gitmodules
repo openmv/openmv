@@ -8,3 +8,6 @@
 [submodule "src/lib/tflm/libtflm"]
 	path = src/lib/tflm/libtflm
 	url = https://github.com/openmv/libtflm.git
+[submodule "src/lib/tinyusb"]
+	path = src/lib/tinyusb
+	url = https://github.com/hathach/tinyusb
