@@ -37,6 +37,16 @@
 
 bool tud_dfu_detached = true;
 
+uint32_t ticks_diff_ms(uint32_t start_ms) {
+    uint32_t current_ms = port_ticks_ms();
+    if (current_ms >= start_ms) {
+        return current_ms - start_ms;
+    } else {
+        // Handle wraparound
+        return (UINT32_MAX - start_ms) + current_ms + 1;
+    }
+}
+
 int main(void) {
     // Initialize low-level sub-systems.
     port_init();
@@ -50,10 +60,10 @@ int main(void) {
         // Poll TinyUSB.
         tud_task();
         // Wait for the device to be connected and configured.
-        if (tud_mounted() || (port_ticks_ms() - start_ms) > 500) {
+        if (tud_mounted() || ticks_diff_ms(start_ms) > 1000) {
             break;
         }
-        port_led_blink(150);
+        port_led_blink(100);
     }
 
     // Restart timeout.
@@ -63,14 +73,14 @@ int main(void) {
         // Poll TinyUSB.
         tud_task();
         // Wait for first DFU command.
-        if (tud_dfu_detached && ((port_ticks_ms() - start_ms) > OMV_BOOT_DFU_TIMEOUT)) {
+        if (tud_dfu_detached && ticks_diff_ms(start_ms) > OMV_BOOT_DFU_TIMEOUT) {
             // Timeout, jump to main app.
             break;
         }
-        if (!tud_dfu_detached) {
-            port_led_blink(150);
+        if (tud_dfu_detached) {
+            port_led_blink(100);
         } else {
-            port_led_blink(250);
+            port_led_blink(200);
         }
     }
 
@@ -79,6 +89,9 @@ int main(void) {
 
     // Deinitialize low-level sub-systems.
     port_deinit();
+
+    // Deinitialize TinyUSB.
+    tud_deinit(TUD_OPT_RHPORT);
 
     // JUMP!
     ((void (*) (void)) (*((uint32_t *) (OMV_BOOT_JUMP_ADDR + 4)))) ();
