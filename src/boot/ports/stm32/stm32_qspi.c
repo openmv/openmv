@@ -34,7 +34,6 @@
 #include STM32_HAL_H
 #include "omv_boardconfig.h"
 #include "omv_bootconfig.h"
-#include "stm32_flash.h"
 
 #if OMV_BOOT_QSPI_FLASH_SIZE
 
@@ -291,50 +290,6 @@ static int qspi_flash_erase_block(uint32_t addr) {
     return 0;
 }
 
-int __attribute__((optimize("O0"))) qspi_flash_memory_test() {
-    uint8_t buf[QSPI_PAGE_SIZE];
-    uint8_t pat[QSPI_PAGE_SIZE];
-
-    uint32_t n_pages = OMV_BOOT_QSPI_FLASH_SIZE / QSPI_PAGE_SIZE;
-    uint32_t n_blocks = OMV_BOOT_QSPI_FLASH_SIZE / QSPI_BLOCK_SIZE;
-
-    if (qspi.Instance == NULL || qspi_flash_init() != 0) {
-        return -1;
-    }
-
-    for (int i = 0; i < QSPI_PAGE_SIZE; i++) {
-        pat[i] = ((i % 2) == 0) ? 0xaa : 0x55;
-    }
-
-    for (uint32_t i = 0, addr = 0; i < n_blocks; i++, addr += QSPI_BLOCK_SIZE) {
-        if (qspi_flash_erase_block(addr) != 0) {
-            return -2;
-        }
-    }
-
-    for (uint32_t i = 0, addr = 0; i < n_pages; i++, addr += QSPI_PAGE_SIZE) {
-        if (spi_flash_write(addr, pat, QSPI_PAGE_SIZE) != 0) {
-            return -3;
-        }
-    }
-
-    for (uint32_t i = 0, addr = 0; i < n_pages; i++, addr += QSPI_PAGE_SIZE) {
-        memset(buf, 0, QSPI_PAGE_SIZE);
-        if (spi_flash_read(addr, buf, QSPI_PAGE_SIZE) != 0) {
-            return -4;
-        }
-        if (memcmp(buf, pat, QSPI_PAGE_SIZE) != 0) {
-            return -5;
-        }
-    }
-
-    if (qspi_flash_erase_chip() != 0) {
-        return -6;
-    }
-
-    return 0;
-}
-
 static int qspi_flash_read_page(uint32_t addr, uint8_t *buf, uint32_t size) {
     QSPI_CommandTypeDef command = {
         .InstructionMode = QSPI_INSTRUCTION_1_LINE,
@@ -415,6 +370,66 @@ static int qspi_flash_write_page(uint32_t addr, const uint8_t *buf, uint32_t siz
     return 0;
 }
 
+int __attribute__((optimize("O0"))) qspi_flash_memory_test() {
+    uint8_t buf[QSPI_PAGE_SIZE];
+    uint8_t pat[QSPI_PAGE_SIZE];
+
+    uint32_t n_pages = OMV_BOOT_QSPI_FLASH_SIZE / QSPI_PAGE_SIZE;
+    uint32_t n_blocks = OMV_BOOT_QSPI_FLASH_SIZE / QSPI_BLOCK_SIZE;
+
+    if (qspi.Instance == NULL || qspi_flash_init() != 0) {
+        return -1;
+    }
+
+    for (int i = 0; i < QSPI_PAGE_SIZE; i++) {
+        pat[i] = ((i % 2) == 0) ? 0xaa : 0x55;
+    }
+
+    for (uint32_t i = 0, addr = 0; i < n_blocks; i++, addr += QSPI_BLOCK_SIZE) {
+        if (qspi_flash_erase_block(addr) != 0) {
+            return -2;
+        }
+    }
+
+    for (uint32_t i = 0, addr = 0; i < n_pages; i++, addr += QSPI_PAGE_SIZE) {
+        if (qspi_flash_write_page(addr, pat, QSPI_PAGE_SIZE) != 0) {
+            return -3;
+        }
+    }
+
+    for (uint32_t i = 0, addr = 0; i < n_pages; i++, addr += QSPI_PAGE_SIZE) {
+        memset(buf, 0, QSPI_PAGE_SIZE);
+        if (qspi_flash_read_page(addr, buf, QSPI_PAGE_SIZE) != 0) {
+            return -4;
+        }
+        if (memcmp(buf, pat, QSPI_PAGE_SIZE) != 0) {
+            return -5;
+        }
+    }
+
+    if (qspi_flash_erase_chip() != 0) {
+        return -6;
+    }
+
+    return 0;
+}
+
+int spi_flash_deinit() {
+    if (qspi.Instance != NULL) {
+        HAL_QSPI_DeInit(&qspi);
+        qspi.Instance = NULL;
+    }
+
+    // Reset QSPI.
+    __HAL_RCC_QSPI_FORCE_RESET();
+    __HAL_RCC_QSPI_RELEASE_RESET();
+
+    // Disable QSPI clock.
+    __HAL_RCC_QSPI_CLK_DISABLE();
+    memset(&qspi, 0, sizeof(QSPI_HandleTypeDef));
+    return 0;
+}
+
 int spi_flash_read(uint32_t addr, uint8_t *buf, uint32_t size) {
     for (size_t i = 0; i < size / QSPI_PAGE_SIZE; i++) {
         if (qspi_flash_read_page(addr, buf, QSPI_PAGE_SIZE) != 0) {
@@ -453,23 +468,6 @@ int spi_flash_write(uint32_t addr, const uint8_t *buf, uint32_t size) {
             return -1;
         }
     }
-    return 0;
-}
-
-
-int spi_flash_deinit() {
-    if (qspi.Instance != NULL) {
-        HAL_QSPI_DeInit(&qspi);
-        qspi.Instance = NULL;
-    }
-
-    // Reset QSPI.
-    __HAL_RCC_QSPI_FORCE_RESET();
-    __HAL_RCC_QSPI_RELEASE_RESET();
-
-    // Disable QSPI clock.
-    __HAL_RCC_QSPI_CLK_DISABLE();
-    memset(&qspi, 0, sizeof(QSPI_HandleTypeDef));
     return 0;
 }
 #endif // OMV_BOOT_QSPI_FLASH_SIZE

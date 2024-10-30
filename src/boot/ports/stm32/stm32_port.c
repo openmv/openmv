@@ -36,7 +36,7 @@
 #include STM32_HAL_H
 #include "omv_boardconfig.h"
 #include "omv_bootconfig.h"
-#include "stm32_flash.h"
+#include "flash.h"
 
 #ifdef USE_USB_FS
 #define USB_IRQ_Handler OTG_FS_IRQHandler
@@ -224,34 +224,6 @@ void port_led_blink(uint32_t interval_ms) {
     led_state ^= 1;
     port_pin_write(OMV_BOOT_LED_PIN, led_state);
     start_ms += interval_ms;
-}
-
-int port_flash_read(uint32_t ptype, uint32_t addr, uint8_t *buf, uint32_t size) {
-    #if OMV_BOOT_AXI_FLASH_ENABLE
-    if (ptype == PTYPE_AXI_FLASH) {
-        return axi_flash_read(addr, buf, size);
-    }
-    #endif
-    #if OMV_BOOT_SPI_FLASH_ENABLE
-    if (ptype == PTYPE_SPI_FLASH) {
-        return spi_flash_read(addr, buf, size);
-    }
-    #endif
-    return -1;
-}
-
-int port_flash_write(uint32_t ptype, uint32_t addr, const uint8_t *buf, uint32_t size) {
-    #if OMV_BOOT_AXI_FLASH_ENABLE
-    if (ptype == PTYPE_AXI_FLASH) {
-        return axi_flash_write(addr, buf, size);
-    }
-    #endif
-    #if OMV_BOOT_SPI_FLASH_ENABLE
-    if (ptype == PTYPE_SPI_FLASH) {
-        return spi_flash_write(addr, buf, size);
-    }
-    #endif
-    return -1;
 }
 
 void __attribute__((noreturn)) __fatal_error() {

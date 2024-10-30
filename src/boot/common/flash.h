@@ -28,13 +28,42 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * STM32 Flash driver.
+ * Bootloader flash interface.
  */
-#ifndef __STM32_FLASH_H__
-#define __STM32_FLASH_H__
+#ifndef __BOOT_FLASH_H__
+#define __BOOT_FLASH_H__
 int axi_flash_read(uint32_t addr, uint8_t *buf, size_t size);
 int axi_flash_write(uint32_t addr, const uint8_t *buf, size_t size);
+
+int spi_flash_deinit();
 int spi_flash_read(uint32_t addr, uint8_t *buf, uint32_t size);
 int spi_flash_write(uint32_t addr, const uint8_t *buf, uint32_t size);
-int spi_flash_deinit();
-#endif //__STM32_FLASH_H__
+
+static inline int flash_read(uint32_t ptype, uint32_t addr, uint8_t *buf, uint32_t size) {
+    #if OMV_BOOT_AXI_FLASH_ENABLE
+    if (ptype == PTYPE_AXI_FLASH) {
+        return axi_flash_read(addr, buf, size);
+    }
+    #endif
+    #if OMV_BOOT_SPI_FLASH_ENABLE
+    if (ptype == PTYPE_SPI_FLASH) {
+        return spi_flash_read(addr, buf, size);
+    }
+    #endif
+    return -1;
+}
+
+static inline int flash_write(uint32_t ptype, uint32_t addr, const uint8_t *buf, uint32_t size) {
+    #if OMV_BOOT_AXI_FLASH_ENABLE
+    if (ptype == PTYPE_AXI_FLASH) {
+        return axi_flash_write(addr, buf, size);
+    }
+    #endif
+    #if OMV_BOOT_SPI_FLASH_ENABLE
+    if (ptype == PTYPE_SPI_FLASH) {
+        return spi_flash_write(addr, buf, size);
+    }
+    #endif
+    return -1;
+}
+#endif //__BOOT_FLASH_H__
