@@ -35,7 +35,6 @@
 
 #include "omv_boardconfig.h"
 #include "omv_bootconfig.h"
-#include "stm32_flash.h"
 
 #if OMV_BOOT_AXI_FLASH_ENABLE
 

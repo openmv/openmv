@@ -33,6 +33,7 @@
 #include <stdint.h>
 #include <string.h>
 #include "omv_bootconfig.h"
+#include "flash.h"
 
 extern bool tud_dfu_detached;
 
@@ -59,9 +60,9 @@ uint32_t tud_dfu_get_timeout_cb(uint8_t itf, uint8_t state) {
 }
 
 // Invoked when DFU_DNLOAD is received followed by DFU_GETSTATUS (state=DFU_DNBUSY).
-void tud_dfu_download_cb(uint8_t itf, uint16_t block, uint8_t const *src, uint16_t size) {
+void tud_dfu_download_cb(uint8_t itf, uint16_t block, uint8_t const *buf, uint16_t size) {
     const partition_t *p = &OMV_BOOT_PARTITIONS[itf];
-    uint8_t *dst = (uint8_t *) (p->start + (block * CFG_TUD_DFU_XFER_BUFSIZE));
+    uint32_t addr = p->start + (block * CFG_TUD_DFU_XFER_BUFSIZE);
 
     // Check if partition is writable.
     if (p->rdonly) {
@@ -73,11 +74,11 @@ void tud_dfu_download_cb(uint8_t itf, uint16_t block, uint8_t const *src, uint16
         port_mpu_protect(p, false);
     }
 
-    if ((uint32_t) dst + size > p->limit) {
+    if (addr + size > p->limit) {
         return tud_dfu_finish_flashing(DFU_STATUS_ERR_ADDRESS);
     }
 
-    if (port_flash_write(p->type, (uint32_t) dst, src, size) == 0) {
+    if (flash_write(p->type, addr, buf, size) == 0) {
         tud_dfu_finish_flashing(DFU_STATUS_OK);
     } else {
         tud_dfu_finish_flashing(DFU_STATUS_ERR_WRITE);
@@ -92,23 +93,22 @@ void tud_dfu_manifest_cb(uint8_t itf) {
 }
 
 // Invoked when DFU_UPLOAD request is received.
-uint16_t tud_dfu_upload_cb(uint8_t itf, uint16_t block, uint8_t *dst, uint16_t size) {
+uint16_t tud_dfu_upload_cb(uint8_t itf, uint16_t block, uint8_t *buf, uint16_t size) {
     const partition_t *p = &OMV_BOOT_PARTITIONS[itf];
-    uint8_t *src = (uint8_t *) (p->start + (block * CFG_TUD_DFU_XFER_BUFSIZE));
+    uint32_t addr = p->start + (block * CFG_TUD_DFU_XFER_BUFSIZE);
 
-    if ((uint32_t) src + size > p->limit) {
+    if (addr + size > p->limit) {
         // Respond with a short frame to indicate EOF to the host.
         size = 4;
-        memset(dst, 0, size);
-    } else if (port_flash_read(p->type, (uint32_t) src, dst, size) != 0) {
+        memset(buf, 0, size);
+        tud_dfu_finish_flashing(DFU_STATUS_OK);
+    } else if (flash_read(p->type, addr, buf, size) != 0) {
         size = 0;
+        tud_dfu_finish_flashing(DFU_STATUS_ERR_FILE);
+    } else {
+        tud_dfu_finish_flashing(DFU_STATUS_OK);
     }
 
-    if (size) {
-        tud_dfu_finish_flashing(DFU_STATUS_OK);
-    } else {
-        tud_dfu_finish_flashing(DFU_STATUS_ERR_FILE);
-    }
     tud_dfu_detached = false;
     return size;
 }
