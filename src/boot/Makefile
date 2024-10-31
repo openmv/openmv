@@ -34,7 +34,7 @@ TOP_DIR ?= $(shell pwd)
 BUILD ?= $(TOP_DIR)/build
 
 BOOT_DIR=boot
-PORT_DIR=ports/$(PORT)
+PORT_DIR=src/ports/$(PORT)
 TINYUSB_DIR=lib/tinyusb
 PORT_LOWER:= $(shell echo $(PORT) | tr '[:upper:]' '[:lower:]')
 
