@@ -80,7 +80,7 @@ CFLAGS += -D$(MCU) \
           $(OMV_BOARD_EXTRA_CFLAGS)
 
 CFLAGS += -I$(OMV_BOARD_CONFIG_DIR) \
-          -I$(TOP_DIR)/$(BOOT_DIR)/common \
+          -I$(TOP_DIR)/$(BOOT_DIR)/include \
           -I$(TOP_DIR)/$(BOOT_DIR)/$(PORT_DIR) \
           -I$(TOP_DIR)/$(CMSIS_DIR)/include \
           -I$(TOP_DIR)/$(CMSIS_DIR)/include/ \
@@ -89,7 +89,7 @@ CFLAGS += -I$(OMV_BOARD_CONFIG_DIR) \
           -I$(TOP_DIR)/$(HAL_DIR)/include/Legacy/ \
           -I$(TOP_DIR)/$(TINYUSB_DIR)/src
 
-SRC_C += $(addprefix common/, \
+SRC_C += $(addprefix src/common/, \
 	desc.c \
 	dfu.c \
 	main.c \
