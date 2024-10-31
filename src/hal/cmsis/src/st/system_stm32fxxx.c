@@ -435,9 +435,4 @@ void SystemClock_Config(void)
     // Enable the USB voltage level detector
     HAL_PWREx_EnableUSBVoltageDetector();
     #endif
-
-    #if defined(CORE_CM7) && defined(M4_APP_ADDR)
-    HAL_SYSCFG_CM4BootAddConfig(SYSCFG_BOOT_ADDR0, M4_APP_ADDR);
-    HAL_RCCEx_EnableBootCore(RCC_BOOT_C2);
-    #endif
 }
