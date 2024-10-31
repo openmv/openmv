@@ -95,7 +95,7 @@ void SystemInit(void)
 {
     /* FPU settings ------------------------------------------------------------*/
     #if (__FPU_PRESENT == 1) && (__FPU_USED == 1)
-      SCB->CPACR |= ((3UL << 10*2)|(3UL << 11*2));  /* set CP10 and CP11 Full Access */
+    SCB->CPACR |= ((3UL << 10*2)|(3UL << 11*2));  /* set CP10 and CP11 Full Access */
     #endif
 
     /*SEVONPEND enabled so that an interrupt coming from the CPU(n) interrupt
@@ -180,11 +180,7 @@ void SystemInit(void)
     #endif // !defined(CORE_CM4)
 
     /* Configure the Vector Table location add offset address ------------------*/
-    #ifdef VECT_TAB_SRAM
-    SCB->VTOR = SRAM_BASE | VECT_TAB_OFFSET; /* Vector Table Relocation in Internal SRAM */
-    #else
-    SCB->VTOR = FLASH_BASE | VECT_TAB_OFFSET; /* Vector Table Relocation in Internal FLASH */
-    #endif
+    SCB->VTOR = OMV_VTOR_BASE;
 }
 
 void SystemClock_Config(void)
