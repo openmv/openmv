@@ -60,7 +60,7 @@ CFLAGS += -DCPU_$(MCU_VARIANT) \
           -D__START=main \
           -D__STARTUP_CLEAR_BSS \
           -D__STARTUP_INITIALIZE_RAMFUNCTION \
-          $(OMV_BOARD_EXTRA_CFLAGS)
+          $(OMV_BOARD_CFLAGS)
 
 # Linker Flags
 LDFLAGS = -mthumb \
