@@ -69,28 +69,43 @@ int port_init(void) {
     HAL_NVIC_SetPriority(SysTick_IRQn, 0, 0);
 
     // Enable GPIO clocks
-    __GPIOA_CLK_ENABLE();
-    __GPIOB_CLK_ENABLE();
-    __GPIOC_CLK_ENABLE();
-    __GPIOD_CLK_ENABLE();
-    __GPIOE_CLK_ENABLE();
+    __HAL_RCC_GPIOA_CLK_ENABLE();
+    __HAL_RCC_GPIOB_CLK_ENABLE();
+    __HAL_RCC_GPIOC_CLK_ENABLE();
+    __HAL_RCC_GPIOD_CLK_ENABLE();
+    __HAL_RCC_GPIOE_CLK_ENABLE();
     #ifdef OMV_GPIO_PORT_F_ENABLE
-    __GPIOF_CLK_ENABLE();
+    __HAL_RCC_GPIOF_CLK_ENABLE();
     #endif
     #ifdef OMV_GPIO_PORT_G_ENABLE
-    __GPIOG_CLK_ENABLE();
+    __HAL_RCC_GPIOG_CLK_ENABLE();
     #endif
     #ifdef OMV_GPIO_PORT_H_ENABLE
-    __GPIOH_CLK_ENABLE();
+    __HAL_RCC_GPIOH_CLK_ENABLE();
     #endif
     #ifdef OMV_GPIO_PORT_I_ENABLE
-    __GPIOI_CLK_ENABLE();
+    __HAL_RCC_GPIOI_CLK_ENABLE();
     #endif
     #ifdef OMV_GPIO_PORT_J_ENABLE
-    __GPIOJ_CLK_ENABLE();
+    __HAL_RCC_GPIOJ_CLK_ENABLE();
     #endif
     #ifdef OMV_GPIO_PORT_K_ENABLE
-    __GPIOK_CLK_ENABLE();
+    __HAL_RCC_GPIOK_CLK_ENABLE();
+    #endif
+    #ifdef OMV_GPIO_PORT_H_ENABLE
+    __HAL_RCC_GPIOH_CLK_ENABLE();
+    #endif
+    #ifdef OMV_GPIO_PORT_N_ENABLE
+    __HAL_RCC_GPION_CLK_ENABLE();
+    #endif
+    #ifdef OMV_GPIO_PORT_O_ENABLE
+    __HAL_RCC_GPIOO_CLK_ENABLE();
+    #endif
+    #ifdef OMV_GPIO_PORT_P_ENABLE
+    __HAL_RCC_GPIOP_CLK_ENABLE();
+    #endif
+    #ifdef OMV_GPIO_PORT_Q_ENABLE
+    __HAL_RCC_GPIOQ_CLK_ENABLE();
     #endif
 
     // Configure I/O pins.
@@ -114,17 +129,16 @@ int port_init(void) {
     __HAL_RCC_USB_OTG_FS_CLK_SLEEP_ENABLE();
 
     // Configure and enable USB IRQ.
-    HAL_NVIC_SetPriority(OTG_FS_IRQn, 6, 0);
-    NVIC_ClearPendingIRQ(OTG_FS_IRQn);
-    HAL_NVIC_EnableIRQ(OTG_FS_IRQn);
-
+    HAL_NVIC_SetPriority(OMV_USB_IRQN, 6, 0);
+    NVIC_ClearPendingIRQ(OMV_USB_IRQN);
+    HAL_NVIC_EnableIRQ(OMV_USB_IRQN);
     return 0;
 }
 
 int port_deinit(void) {
     // Disable USB IRQ.
-    HAL_NVIC_DisableIRQ(OTG_FS_IRQn);
-    NVIC_ClearPendingIRQ(OTG_FS_IRQn);
+    HAL_NVIC_DisableIRQ(OMV_USB_IRQN);
+    NVIC_ClearPendingIRQ(OMV_USB_IRQN);
 
     // Deinitialize SPI Flash.
     #if OMV_BOOT_SPI_FLASH_ENABLE
@@ -142,28 +156,43 @@ int port_deinit(void) {
     __HAL_RCC_USB_OTG_FS_CLK_SLEEP_DISABLE();
 
     // Disable GPIO clocks.
-    __GPIOA_CLK_DISABLE();
-    __GPIOB_CLK_DISABLE();
-    __GPIOC_CLK_DISABLE();
-    __GPIOD_CLK_DISABLE();
-    __GPIOE_CLK_DISABLE();
+    __HAL_RCC_GPIOA_CLK_DISABLE();
+    __HAL_RCC_GPIOB_CLK_DISABLE();
+    __HAL_RCC_GPIOC_CLK_DISABLE();
+    __HAL_RCC_GPIOD_CLK_DISABLE();
+    __HAL_RCC_GPIOE_CLK_DISABLE();
     #ifdef OMV_GPIO_PORT_F_ENABLE
-    __GPIOF_CLK_DISABLE();
+    __HAL_RCC_GPIOF_CLK_DISABLE();
     #endif
     #ifdef OMV_GPIO_PORT_G_ENABLE
-    __GPIOG_CLK_DISABLE();
+    __HAL_RCC_GPIOG_CLK_DISABLE();
     #endif
     #ifdef OMV_GPIO_PORT_H_ENABLE
-    __GPIOH_CLK_DISABLE();
+    __HAL_RCC_GPIOH_CLK_DISABLE();
     #endif
     #ifdef OMV_GPIO_PORT_I_ENABLE
-    __GPIOI_CLK_DISABLE();
+    __HAL_RCC_GPIOI_CLK_DISABLE();
     #endif
     #ifdef OMV_GPIO_PORT_J_ENABLE
-    __GPIOJ_CLK_DISABLE();
+    __HAL_RCC_GPIOJ_CLK_DISABLE();
     #endif
     #ifdef OMV_GPIO_PORT_K_ENABLE
-    __GPIOK_CLK_DISABLE();
+    __HAL_RCC_GPIOK_CLK_DISABLE();
+    #endif
+    #ifdef OMV_GPIO_PORT_H_ENABLE
+    __HAL_RCC_GPIOH_CLK_DISABLE();
+    #endif
+    #ifdef OMV_GPIO_PORT_N_ENABLE
+    __HAL_RCC_GPION_CLK_DISABLE();
+    #endif
+    #ifdef OMV_GPIO_PORT_O_ENABLE
+    __HAL_RCC_GPIOO_CLK_DISABLE();
+    #endif
+    #ifdef OMV_GPIO_PORT_P_ENABLE
+    __HAL_RCC_GPIOP_CLK_DISABLE();
+    #endif
+    #ifdef OMV_GPIO_PORT_Q_ENABLE
+    __HAL_RCC_GPIOQ_CLK_DISABLE();
     #endif
     return 0;
 }
@@ -195,7 +224,7 @@ void port_pin_mode(uint32_t pin, uint32_t mode) {
     GPIO_InitTypeDef pin_config;
     pin_config.Pin = p->pin;
     pin_config.Pull = GPIO_PULLUP;
-    pin_config.Speed = GPIO_SPEED_LOW;
+    pin_config.Speed = GPIO_SPEED_FREQ_LOW;
     if (mode == PIN_MODE_OUTPUT) {
         pin_config.Mode = GPIO_MODE_OUTPUT_PP;
     } else {

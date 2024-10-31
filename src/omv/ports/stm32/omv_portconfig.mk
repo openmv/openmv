@@ -51,14 +51,12 @@ CFLAGS += -D$(MCU) \
           -DARM_NN_TRUNCATE \
           -D__FPU_PRESENT=1 \
           -D__VFP_FP__ \
-          -DUSE_DEVICE_MODE \
           -DHSE_VALUE=$(OMV_HSE_VALUE)\
-          -DVECT_TAB_OFFSET=$(VECT_TAB_OFFSET) \
-          -DMAIN_APP_ADDR=$(MAIN_APP_ADDR) \
+          -DOMV_VTOR_BASE=$(OMV_FIRM_BASE) \
           -DSTM32_HAL_H=$(HAL_INC) \
           -DCMSIS_MCU_H=$(CMSIS_MCU_H) \
           -DUSE_FULL_LL_DRIVER \
-          $(OMV_BOARD_EXTRA_CFLAGS)
+          $(OMV_BOARD_CFLAGS)
 
 # Linker Flags
 LDFLAGS = -mthumb \
@@ -696,7 +694,7 @@ BOOTLOADER = bootloader
 $(BOOTLOADER): | $(BUILD) $(FW_DIR)
 	$(MAKE) -C $(TOP_DIR)/$(BOOT_DIR) BUILD=$(BUILD)/$(BOOT_DIR)
 	$(OBJCOPY) -Obinary $(FW_DIR)/$(BOOTLOADER).elf $(FW_DIR)/$(BOOTLOADER).bin
-	$(PYTHON) $(MKDFU) -D $(DFU_DEVICE) -b 0x08000000:$(FW_DIR)/$(BOOTLOADER).bin $(FW_DIR)/$(BOOTLOADER).dfu
+	$(PYTHON) $(MKDFU) -D $(DFU_DEVICE) -b $(OMV_BOOT_BASE):$(FW_DIR)/$(BOOTLOADER).bin $(FW_DIR)/$(BOOTLOADER).dfu
 endif
 
 # This target generates the UVC firmware.
@@ -706,7 +704,7 @@ $(UVC): FIRMWARE_OBJS UVC_OBJS
                    $(UVC_DIR)/stm32fxxx.ld.S > $(BUILD)/$(UVC_DIR)/stm32fxxx.lds
 	$(CC) $(UVC_LDFLAGS) $(UVC_OBJ) -o $(FW_DIR)/$(UVC).elf -lgcc
 	$(OBJCOPY) -Obinary $(FW_DIR)/$(UVC).elf $(FW_DIR)/$(UVC).bin
-	$(PYTHON) $(MKDFU) -D $(DFU_DEVICE) -b $(MAIN_APP_ADDR):$(FW_DIR)/$(UVC).bin $(FW_DIR)/$(UVC).dfu
+	$(PYTHON) $(MKDFU) -D $(DFU_DEVICE) -b $(OMV_FIRM_BASE):$(FW_DIR)/$(UVC).bin $(FW_DIR)/$(UVC).dfu
 endif
 
 # This target generates the main/app firmware image located at 0x08010000
@@ -715,13 +713,13 @@ $(FIRMWARE): FIRMWARE_OBJS
                     $(OMV_DIR)/ports/$(PORT)/$(LDSCRIPT).ld.S > $(BUILD)/$(LDSCRIPT).lds
 	$(CC) $(LDFLAGS) $(FIRM_OBJ) -o $(FW_DIR)/$(FIRMWARE).elf $(LIBS) -lm
 	$(OBJCOPY) -Obinary $(FW_DIR)/$(FIRMWARE).elf $(FW_DIR)/$(FIRMWARE).bin
-	$(PYTHON) $(MKDFU) -D $(DFU_DEVICE) -b $(MAIN_APP_ADDR):$(FW_DIR)/$(FIRMWARE).bin $(FW_DIR)/$(FIRMWARE).dfu
+	$(PYTHON) $(MKDFU) -D $(DFU_DEVICE) -b $(OMV_FIRM_BASE):$(FW_DIR)/$(FIRMWARE).bin $(FW_DIR)/$(FIRMWARE).dfu
 
 # This target generates the uvc, bootloader and firmware images.
 $(OPENMV): $(BOOTLOADER) $(UVC) $(FIRMWARE)
 ifeq ($(OMV_ENABLE_BL), 1)
 	# Generate a contiguous firmware image for factory programming
-	$(OBJCOPY) -Obinary --pad-to=$(MAIN_APP_ADDR) --gap-fill=0xFF $(FW_DIR)/$(BOOTLOADER).elf $(FW_DIR)/$(BOOTLOADER)_padded.bin
+	$(OBJCOPY) -Obinary --pad-to=$(OMV_FIRM_BASE) --gap-fill=0xFF $(FW_DIR)/$(BOOTLOADER).elf $(FW_DIR)/$(BOOTLOADER)_padded.bin
 	$(CAT) $(FW_DIR)/$(BOOTLOADER)_padded.bin $(FW_DIR)/$(FIRMWARE).bin > $(FW_DIR)/$(OPENMV).bin
 	$(RM) $(FW_DIR)/$(BOOTLOADER)_padded.bin
 	$(SIZE) $(FW_DIR)/$(BOOTLOADER).elf

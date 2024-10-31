@@ -42,6 +42,15 @@ SECTIONS
     _exit = .;
   } >ROM
 
+  .gnu.sgstubs :
+  {
+    . = ALIGN(4);
+    _start_sg = .;
+    *(.gnu*)
+    . = ALIGN(4);
+    _end_sg = .;
+  } >ROM
+
   /* used by the startup to initialize data */
   _sidata = LOADADDR(.data);
 
@@ -75,6 +84,7 @@ SECTIONS
   .stack :
   {
     . = ALIGN(4);
+    _sstack  = .;
     . = . + _stack_size;
     . = ALIGN(4);
     _estack = .;
