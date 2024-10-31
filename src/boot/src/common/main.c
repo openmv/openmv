@@ -94,5 +94,5 @@ int main(void) {
     tud_deinit(TUD_OPT_RHPORT);
 
     // JUMP!
-    ((void (*) (void)) (*((uint32_t *) (OMV_BOOT_JUMP_ADDR + 4)))) ();
+    ((void (*) (void)) (*((uint32_t *) (OMV_BOOT_JUMP + 4)))) ();
 }

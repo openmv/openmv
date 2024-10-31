@@ -68,16 +68,15 @@ LDFLAGS = -mthumb \
 CFLAGS += -D$(MCU) \
           -D$(TARGET) \
           -DARM_NN_TRUNCATE \
-          -D__FPU_PRESENT=1 \
           -D__VFP_FP__ \
           -DUSE_DEVICE_MODE \
           -DHSE_VALUE=$(OMV_HSE_VALUE)\
-          -DVECT_TAB_OFFSET=0 \
-          -DOMV_BOOT_JUMP_ADDR=$(MAIN_APP_ADDR) \
+          -DOMV_VTOR_BASE=$(OMV_BOOT_BASE) \
+          -DOMV_BOOT_JUMP=$(OMV_FIRM_BASE) \
           -DSTM32_HAL_H=$(HAL_INC) \
           -DCMSIS_MCU_H=$(CMSIS_MCU_H) \
           -DUSE_FULL_LL_DRIVER \
-          $(OMV_BOARD_EXTRA_CFLAGS)
+          $(OMV_BOARD_CFLAGS)
 
 CFLAGS += -I$(OMV_BOARD_CONFIG_DIR) \
           -I$(TOP_DIR)/$(BOOT_DIR)/include \
@@ -118,18 +117,23 @@ SRC_C += $(addprefix $(CMSIS_DIR)/src/,\
 SRC_C += $(addprefix $(HAL_DIR)/src/,\
 	$(MCU_SERIES_LOWER)_hal.c \
 	$(MCU_SERIES_LOWER)_hal_cortex.c \
-	$(MCU_SERIES_LOWER)_hal_flash.c \
-	$(MCU_SERIES_LOWER)_hal_flash_ex.c \
 	$(MCU_SERIES_LOWER)_hal_gpio.c \
 	$(MCU_SERIES_LOWER)_hal_pwr.c \
 	$(MCU_SERIES_LOWER)_hal_pwr_ex.c \
 	$(MCU_SERIES_LOWER)_hal_rcc.c \
 	$(MCU_SERIES_LOWER)_hal_rcc_ex.c \
 	$(MCU_SERIES_LOWER)_hal_rng.c \
-	$(MCU_SERIES_LOWER)_hal_qspi.c \
 	$(MCU_SERIES_LOWER)_ll_rcc.c \
 	$(MCU_SERIES_LOWER)_ll_usb.c \
 )
+
+ifeq ($(MCU_SERIES),$(filter $(MCU_SERIES),STM32F4xx STM32F7xx STM32H7xx))
+SRC_C += $(addprefix $(HAL_DIR)/src/,\
+	$(MCU_SERIES_LOWER)_hal_qspi.c \
+	$(MCU_SERIES_LOWER)_hal_flash.c \
+	$(MCU_SERIES_LOWER)_hal_flash_ex.c \
+)
+endif
 
 # Firmware objects
 OBJS += $(addprefix $(BUILD)/, $(SRC_C:.c=.o))
