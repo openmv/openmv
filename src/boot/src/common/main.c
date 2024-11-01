@@ -52,7 +52,7 @@ int main(void) {
     port_init();
 
     // Initialize TinyUSB.
-    tusb_init();
+    tud_init(TUD_OPT_RHPORT);
 
     uint32_t start_ms = port_ticks_ms();
 

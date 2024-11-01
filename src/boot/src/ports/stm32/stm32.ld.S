@@ -83,10 +83,10 @@ SECTIONS
   /* Make sure there is enough RAM the stack and FS cache */
   .stack :
   {
-    . = ALIGN(4);
+    . = ALIGN(8);
     _sstack  = .;
     . = . + _stack_size;
-    . = ALIGN(4);
+    . = ALIGN(8);
     _estack = .;
   } >RAM
 

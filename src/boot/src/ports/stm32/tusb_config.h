@@ -34,7 +34,22 @@
 #define __STM32_TUSB_CONFIG_H__
 // Common configuration
 #define CFG_TUSB_OS                 OPT_OS_NONE
-#define CFG_TUSB_RHPORT0_MODE       (OPT_MODE_DEVICE | OPT_MODE_FULL_SPEED)
+
+// MCU
+#ifndef CFG_TUSB_MCU
+#define CFG_TUSB_MCU                OPT_MCU_NONE
+#endif
+
+// USB speed
+#ifndef CFG_TUD_MAX_SPEED
+#define CFG_TUD_MAX_SPEED           (OPT_MODE_FULL_SPEED)
+#endif
+
+// USB port.
+#if !defined(CFG_TUSB_RHPORT0_MODE) && \
+    !defined(CFG_TUSB_RHPORT1_MODE)
+#define CFG_TUSB_RHPORT0_MODE       (OPT_MODE_DEVICE)
+#endif
 
 // Device stack configuration.
 #define CFG_TUD_ENABLED             (1)
