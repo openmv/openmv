@@ -45,9 +45,10 @@
 #define CFG_DESC_TOTAL_SIZE     (TUD_CONFIG_DESC_LEN + TUD_DFU_DESC_LEN(DFU_DESC_ALT_COUNT))
 
 static char const *desc_string[] = {
-    "\x09\x04",                 // 0: English (0x0409)
+    "\x04\x03\x09\x04",         // 0: English (0x0409)
     "OpenMV",                   // 1: Manufacturer
     "OpenMV Camera (DFU Mode)", // 2: Product
+    "0123456789ABCDEF",         // 3: Default Serial.
     OMV_BOOT_PARTITIONS_STR,
 };
 
@@ -107,34 +108,43 @@ uint8_t const *tud_descriptor_configuration_cb(uint8_t index) {
 
 uint16_t const *tud_descriptor_string_cb(uint8_t index, uint16_t langid) {
     size_t desc_len = 0;
-    static uint16_t desc_str[STR_DESC_MAX_LEN + 1]; // + 1 for string type
+    const char *desc_str = NULL;
+    static uint16_t desc_wstr[STR_DESC_MAX_LEN + 1] = {0};
 
+    // For serial number.
     uint8_t uid[12] = {0};
     char hex_buf[sizeof(uid) * 2] = {0};
     const char hex_chars[] = "0123456789ABCDEF";
-    const char *str = NULL;
 
-    if (index == 0) {
-        // Language ID
-        desc_len = 1;
-        memcpy(&desc_str[1], desc_string[0], 2);
-    } else if (index == 3) {
-        // Serial number
-        if (port_get_uid(uid) != 0) {
-            return NULL;
+    switch (index) {
+        case 0:
+            // Language ID
+            memcpy(desc_wstr, desc_string[0], 4);
+            return desc_wstr;
+        case 1: {
+            // Serial number
+            if (port_get_uid(uid) != 0) {
+                // No UID support.
+                desc_str = desc_string[3];
+                desc_len = strlen(desc_str);
+                break;
+            }
+            // UID supported.
+            for (size_t i = 0; i < sizeof(uid); i++) {
+                hex_buf[i * 2 + 0] = hex_chars[(uid[i] & 0xF0) >> 4];
+                hex_buf[i * 2 + 1] = hex_chars[uid[i] & 0x0F];
+            }
+            desc_str = hex_buf;
+            desc_len = sizeof(uid) * 2;
+            break;
         }
-        for (size_t i = 0; i < sizeof(uid); i++) {
-            hex_buf[i * 2] = hex_chars[(uid[i] & 0xF0) >> 4];
-            hex_buf[i * 2 + 1] = hex_chars[uid[i] & 0x0F];
-        }
-        str = hex_buf;
-        desc_len = sizeof(uid) * 2;
-    } else if (index < STR_DESC_COUNT) {
-        // Other.
-        str = desc_string[index];
-        desc_len = strlen(str);
-    } else {
-        return NULL;
+        default:
+            if (index < STR_DESC_COUNT) {
+                desc_str = desc_string[index];
+                desc_len = strlen(desc_str);
+            } else {
+                return NULL;
+            }
     }
 
     // Check max string descriptor length.
@@ -144,10 +154,10 @@ uint16_t const *tud_descriptor_string_cb(uint8_t index, uint16_t langid) {
 
     // Convert to UTF-16
     for (size_t i = 0; i < desc_len; i++) {
-        desc_str[1 + i] = str[i];
+        desc_wstr[1 + i] = desc_str[i];
     }
 
     // First byte is the length (including the header), the second byte is string type.
-    desc_str[0] = (uint16_t) ((TUSB_DESC_STRING << 8) | (2 * desc_len + 2));
-    return desc_str;
+    desc_wstr[0] = (uint16_t) ((TUSB_DESC_STRING << 8) | (2 * desc_len + 2));
+    return desc_wstr;
 }

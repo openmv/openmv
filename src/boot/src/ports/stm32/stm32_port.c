@@ -45,7 +45,9 @@
 #endif
 
 static volatile uint32_t ticks_ms;
+
 extern void SystemClock_Config(void);
+static void enable_gpio_clocks(bool enable);
 
 void SysTick_Handler(void) {
     ticks_ms += 1;
@@ -68,45 +70,8 @@ int port_init(void) {
     // Config Systick
     HAL_NVIC_SetPriority(SysTick_IRQn, 0, 0);
 
-    // Enable GPIO clocks
-    __HAL_RCC_GPIOA_CLK_ENABLE();
-    __HAL_RCC_GPIOB_CLK_ENABLE();
-    __HAL_RCC_GPIOC_CLK_ENABLE();
-    __HAL_RCC_GPIOD_CLK_ENABLE();
-    __HAL_RCC_GPIOE_CLK_ENABLE();
-    #ifdef OMV_GPIO_PORT_F_ENABLE
-    __HAL_RCC_GPIOF_CLK_ENABLE();
-    #endif
-    #ifdef OMV_GPIO_PORT_G_ENABLE
-    __HAL_RCC_GPIOG_CLK_ENABLE();
-    #endif
-    #ifdef OMV_GPIO_PORT_H_ENABLE
-    __HAL_RCC_GPIOH_CLK_ENABLE();
-    #endif
-    #ifdef OMV_GPIO_PORT_I_ENABLE
-    __HAL_RCC_GPIOI_CLK_ENABLE();
-    #endif
-    #ifdef OMV_GPIO_PORT_J_ENABLE
-    __HAL_RCC_GPIOJ_CLK_ENABLE();
-    #endif
-    #ifdef OMV_GPIO_PORT_K_ENABLE
-    __HAL_RCC_GPIOK_CLK_ENABLE();
-    #endif
-    #ifdef OMV_GPIO_PORT_H_ENABLE
-    __HAL_RCC_GPIOH_CLK_ENABLE();
-    #endif
-    #ifdef OMV_GPIO_PORT_N_ENABLE
-    __HAL_RCC_GPION_CLK_ENABLE();
-    #endif
-    #ifdef OMV_GPIO_PORT_O_ENABLE
-    __HAL_RCC_GPIOO_CLK_ENABLE();
-    #endif
-    #ifdef OMV_GPIO_PORT_P_ENABLE
-    __HAL_RCC_GPIOP_CLK_ENABLE();
-    #endif
-    #ifdef OMV_GPIO_PORT_Q_ENABLE
-    __HAL_RCC_GPIOQ_CLK_ENABLE();
-    #endif
+    // Enable GPIO clocks.
+    enable_gpio_clocks(true);
 
     // Configure I/O pins.
     for (size_t i = 0; i < OMV_BOOT_PINS_COUNT; i++) {
@@ -156,44 +121,7 @@ int port_deinit(void) {
     __HAL_RCC_USB_OTG_FS_CLK_SLEEP_DISABLE();
 
     // Disable GPIO clocks.
-    __HAL_RCC_GPIOA_CLK_DISABLE();
-    __HAL_RCC_GPIOB_CLK_DISABLE();
-    __HAL_RCC_GPIOC_CLK_DISABLE();
-    __HAL_RCC_GPIOD_CLK_DISABLE();
-    __HAL_RCC_GPIOE_CLK_DISABLE();
-    #ifdef OMV_GPIO_PORT_F_ENABLE
-    __HAL_RCC_GPIOF_CLK_DISABLE();
-    #endif
-    #ifdef OMV_GPIO_PORT_G_ENABLE
-    __HAL_RCC_GPIOG_CLK_DISABLE();
-    #endif
-    #ifdef OMV_GPIO_PORT_H_ENABLE
-    __HAL_RCC_GPIOH_CLK_DISABLE();
-    #endif
-    #ifdef OMV_GPIO_PORT_I_ENABLE
-    __HAL_RCC_GPIOI_CLK_DISABLE();
-    #endif
-    #ifdef OMV_GPIO_PORT_J_ENABLE
-    __HAL_RCC_GPIOJ_CLK_DISABLE();
-    #endif
-    #ifdef OMV_GPIO_PORT_K_ENABLE
-    __HAL_RCC_GPIOK_CLK_DISABLE();
-    #endif
-    #ifdef OMV_GPIO_PORT_H_ENABLE
-    __HAL_RCC_GPIOH_CLK_DISABLE();
-    #endif
-    #ifdef OMV_GPIO_PORT_N_ENABLE
-    __HAL_RCC_GPION_CLK_DISABLE();
-    #endif
-    #ifdef OMV_GPIO_PORT_O_ENABLE
-    __HAL_RCC_GPIOO_CLK_DISABLE();
-    #endif
-    #ifdef OMV_GPIO_PORT_P_ENABLE
-    __HAL_RCC_GPIOP_CLK_DISABLE();
-    #endif
-    #ifdef OMV_GPIO_PORT_Q_ENABLE
-    __HAL_RCC_GPIOQ_CLK_DISABLE();
-    #endif
+    enable_gpio_clocks(false);
     return 0;
 }
 
@@ -258,5 +186,88 @@ void port_led_blink(uint32_t interval_ms) {
 void __attribute__((noreturn)) __fatal_error() {
     while (1) {
         port_led_blink(50);
+    }
+}
+
+static void enable_gpio_clocks(bool enable) {
+    // Enable GPIO clocks
+    if (enable) {
+        __HAL_RCC_GPIOA_CLK_ENABLE();
+        __HAL_RCC_GPIOB_CLK_ENABLE();
+        __HAL_RCC_GPIOC_CLK_ENABLE();
+        __HAL_RCC_GPIOD_CLK_ENABLE();
+        __HAL_RCC_GPIOE_CLK_ENABLE();
+        #ifdef OMV_GPIO_PORT_F_ENABLE
+        __HAL_RCC_GPIOF_CLK_ENABLE();
+        #endif
+        #ifdef OMV_GPIO_PORT_G_ENABLE
+        __HAL_RCC_GPIOG_CLK_ENABLE();
+        #endif
+        #ifdef OMV_GPIO_PORT_H_ENABLE
+        __HAL_RCC_GPIOH_CLK_ENABLE();
+        #endif
+        #ifdef OMV_GPIO_PORT_I_ENABLE
+        __HAL_RCC_GPIOI_CLK_ENABLE();
+        #endif
+        #ifdef OMV_GPIO_PORT_J_ENABLE
+        __HAL_RCC_GPIOJ_CLK_ENABLE();
+        #endif
+        #ifdef OMV_GPIO_PORT_K_ENABLE
+        __HAL_RCC_GPIOK_CLK_ENABLE();
+        #endif
+        #ifdef OMV_GPIO_PORT_H_ENABLE
+        __HAL_RCC_GPIOH_CLK_ENABLE();
+        #endif
+        #ifdef OMV_GPIO_PORT_N_ENABLE
+        __HAL_RCC_GPION_CLK_ENABLE();
+        #endif
+        #ifdef OMV_GPIO_PORT_O_ENABLE
+        __HAL_RCC_GPIOO_CLK_ENABLE();
+        #endif
+        #ifdef OMV_GPIO_PORT_P_ENABLE
+        __HAL_RCC_GPIOP_CLK_ENABLE();
+        #endif
+        #ifdef OMV_GPIO_PORT_Q_ENABLE
+        __HAL_RCC_GPIOQ_CLK_ENABLE();
+        #endif
+    } else {
+        __HAL_RCC_GPIOA_CLK_DISABLE();
+        __HAL_RCC_GPIOB_CLK_DISABLE();
+        __HAL_RCC_GPIOC_CLK_DISABLE();
+        __HAL_RCC_GPIOD_CLK_DISABLE();
+        __HAL_RCC_GPIOE_CLK_DISABLE();
+        #ifdef OMV_GPIO_PORT_F_ENABLE
+        __HAL_RCC_GPIOF_CLK_DISABLE();
+        #endif
+        #ifdef OMV_GPIO_PORT_G_ENABLE
+        __HAL_RCC_GPIOG_CLK_DISABLE();
+        #endif
+        #ifdef OMV_GPIO_PORT_H_ENABLE
+        __HAL_RCC_GPIOH_CLK_DISABLE();
+        #endif
+        #ifdef OMV_GPIO_PORT_I_ENABLE
+        __HAL_RCC_GPIOI_CLK_DISABLE();
+        #endif
+        #ifdef OMV_GPIO_PORT_J_ENABLE
+        __HAL_RCC_GPIOJ_CLK_DISABLE();
+        #endif
+        #ifdef OMV_GPIO_PORT_K_ENABLE
+        __HAL_RCC_GPIOK_CLK_DISABLE();
+        #endif
+        #ifdef OMV_GPIO_PORT_H_ENABLE
+        __HAL_RCC_GPIOH_CLK_DISABLE();
+        #endif
+        #ifdef OMV_GPIO_PORT_N_ENABLE
+        __HAL_RCC_GPION_CLK_DISABLE();
+        #endif
+        #ifdef OMV_GPIO_PORT_O_ENABLE
+        __HAL_RCC_GPIOO_CLK_DISABLE();
+        #endif
+        #ifdef OMV_GPIO_PORT_P_ENABLE
+        __HAL_RCC_GPIOP_CLK_DISABLE();
+        #endif
+        #ifdef OMV_GPIO_PORT_Q_ENABLE
+        __HAL_RCC_GPIOQ_CLK_DISABLE();
+        #endif
     }
 }
