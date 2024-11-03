@@ -21,8 +21,8 @@
 # THE SOFTWARE.
 
 # Set startup and system files for CMSIS Makefile.
-SYSTEM      ?= st/system_stm32fxxx
-LDSCRIPT    ?= stm32fxxx
+SYSTEM      ?= st/system_stm32
+LDSCRIPT    ?= stm32
 STARTUP     ?= st/startup_$(shell echo $(MCU) | tr '[:upper:]' '[:lower:]')
 UVC_DIR     := $(OMV_DIR)/ports/$(PORT)/uvc
 MCU_SERIES  := $(shell echo $(MCU) | cut -c6-7 | tr '[:upper:]' '[:lower:]')
@@ -136,7 +136,7 @@ UVC_LDFLAGS = -mcpu=$(CPU) \
               -mfpu=$(FPU) \
               -mfloat-abi=hard\
               -Wl,--gc-sections \
-              -Wl,-T$(BUILD)/$(UVC_DIR)/stm32fxxx.lds
+              -Wl,-T$(BUILD)/$(UVC_DIR)/stm32.lds
 endif
 
 CFLAGS += $(HAL_CFLAGS) $(MPY_CFLAGS) $(OMV_CFLAGS)
@@ -624,7 +624,7 @@ UVC_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/imlib/,\
 
 UVC_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/ports/stm32/,\
 	jpeg.o                                  \
-	stm32fxxx_hal_msp.o                     \
+	stm32_hal_msp.o                     \
 	soft_i2c.o                              \
 	ulpi.o                                  \
 	dma_utils.o                             \
@@ -701,7 +701,7 @@ endif
 ifeq ($(OMV_ENABLE_UVC), 1)
 $(UVC): FIRMWARE_OBJS UVC_OBJS
 	$(CPP) -P -E -I$(OMV_COMMON_DIR) -I$(OMV_BOARD_CONFIG_DIR) \
-                   $(UVC_DIR)/stm32fxxx.ld.S > $(BUILD)/$(UVC_DIR)/stm32fxxx.lds
+                   $(UVC_DIR)/stm32.ld.S > $(BUILD)/$(UVC_DIR)/stm32.lds
 	$(CC) $(UVC_LDFLAGS) $(UVC_OBJ) -o $(FW_DIR)/$(UVC).elf -lgcc
 	$(OBJCOPY) -Obinary $(FW_DIR)/$(UVC).elf $(FW_DIR)/$(UVC).bin
 	$(PYTHON) $(MKDFU) -D $(DFU_DEVICE) -b $(OMV_FIRM_BASE):$(FW_DIR)/$(UVC).bin $(FW_DIR)/$(UVC).dfu

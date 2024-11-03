@@ -79,7 +79,7 @@ typedef const stm32_gpio_t *omv_gpio_t;
 #include "omv_pins.h"
 
 // This pointer will be set to its respective I2C handle which is defined in MicroPython along with
-// IRQ handlers, if this I2C is enabled in Micropython, or defined and handled in stm32fxxx_hal_msp.c.
+// IRQ handlers, if this I2C is enabled in Micropython, or defined and handled in stm32_hal_msp.c.
 typedef I2C_HandleTypeDef *omv_i2c_dev_t;
 
 #define OMV_SPI_MODE_SLAVE     (SPI_MODE_SLAVE)
