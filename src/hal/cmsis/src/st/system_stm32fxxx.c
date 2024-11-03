@@ -61,7 +61,7 @@
 uint32_t SystemCoreClock = 16000000;
 extern void __fatal_error(const char *msg);
 
-#if defined(MCU_SERIES_H7)
+#if defined(STM32H7)
 
 #define SRAM_BASE           D1_AXISRAM_BASE
 #define FLASH_BASE          FLASH_BANK1_BASE
@@ -73,7 +73,7 @@ extern void __fatal_error(const char *msg);
 uint32_t SystemD2Clock = 64000000;
 const uint8_t D1CorePrescTable[16] = {0, 0, 0, 0, 1, 2, 3, 4, 1, 2, 3, 4, 6, 7, 8, 9};
 
-#elif defined(MCU_SERIES_F4) || defined(MCU_SERIES_F7)
+#elif defined(STM32F4) || defined(STM32F7)
 
 #define CONFIG_RCC_CR_1ST   (RCC_CR_HSION)
 #define CONFIG_RCC_CR_2ND   (0xFEF6FFFF)
@@ -102,7 +102,6 @@ void SystemInit(void)
       signal is detectable by the CPU after a WFI/WFE instruction. */
     //SCB->SCR |= SCB_SCR_SEVONPEND_Msk;
 
-    #if !defined(CORE_CM4)
     /* Reset the RCC clock configuration to the default reset state ------------*/
     /* Set HSION bit */
     RCC->CR |= CONFIG_RCC_CR_1ST;
@@ -116,7 +115,7 @@ void SystemInit(void)
     /* Reset PLLCFGR register */
     RCC->PLLCFGR = CONFIG_RCC_PLLCFGR;
 
-    #if defined(MCU_SERIES_H7)
+    #if defined(STM32H7)
     /* Reset D1CFGR register */
     RCC->D1CFGR = 0x00000000;
 
@@ -146,38 +145,36 @@ void SystemInit(void)
 
     /* Reset PLL3FRACR register */
     RCC->PLL3FRACR = 0x00000000;
-    #endif // defined(MCU_SERIES_H7)
+    #endif // defined(STM32H7)
 
     /* Reset HSEBYP bit */
     RCC->CR &= (uint32_t)0xFFFBFFFF;
 
     /* Disable all interrupts */
-    #if defined(MCU_SERIES_F4) || defined(MCU_SERIES_F7)
+    #if defined(STM32F4) || defined(STM32F7)
     RCC->CIR = 0x00000000;
-    #elif defined(MCU_SERIES_L4) || defined(MCU_SERIES_H7)
+    #elif defined(STM32L4) || defined(STM32H7)
     RCC->CIER = 0x00000000;
     #endif
 
-    #if defined(MCU_SERIES_H7)
+    #if defined(STM32H7)
     /* Change  the switch matrix read issuing capability to 1 for the AXI SRAM target (Target 7) */
     // See Errata 2.2.9 "Reading from AXI SRAM may lead to data read corruption"
     *((__IO uint32_t*)0x51008108) = 0x00000001;
-    #endif // defined(MCU_SERIES_H7)
+    #endif // defined(STM32H7)
 
     /* dpgeorge: enable 8-byte stack alignment for IRQ handlers, in accord with EABI */
     SCB->CCR |= SCB_CCR_STKALIGN_Msk;
 
     #if !defined(NDEBUG)
-    #if defined(MCU_SERIES_F4) ||  defined(MCU_SERIES_F7)
+    #if defined(STM32F4) ||  defined(STM32F7)
     DBGMCU->CR |= DBGMCU_CR_DBG_SLEEP;
-    #elif defined(MCU_SERIES_H7)
+    #elif defined(STM32H7)
     DBGMCU->CR |= DBGMCU_CR_DBG_SLEEPD1;
     DBGMCU->CR |= DBGMCU_CR_DBG_STOPD1;
     DBGMCU->CR |= DBGMCU_CR_DBG_STANDBYD1;
     #endif
     #endif
-
-    #endif // !defined(CORE_CM4)
 
     /* Configure the Vector Table location add offset address ------------------*/
     SCB->VTOR = OMV_VTOR_BASE;
@@ -187,11 +184,11 @@ void SystemClock_Config(void)
 {
     RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
     RCC_OscInitTypeDef RCC_OscInitStruct = {0};
-    #if defined(MCU_SERIES_H7)
+    #if defined(STM32H7)
     RCC_PeriphCLKInitTypeDef PeriphClkInitStruct = {0};
     #endif
 
-    #if defined(MCU_SERIES_H7)
+    #if defined(STM32H7)
     /* Supply configuration update enable */
     HAL_PWREx_ConfigSupply(OMV_PWR_SUPPLY);
     #else
@@ -202,7 +199,7 @@ void SystemClock_Config(void)
     /* The voltage scaling allows optimizing the power consumption when the device is
        clocked below the maximum system frequency, to update the voltage scaling value
        regarding system frequency refer to product datasheet.  */
-    #if defined(MCU_SERIES_H7)
+    #if defined(STM32H7)
     // Enable VSCALE0 for revision V devices.
     if (HAL_GetREVID() >= 0x2003) {
         __HAL_RCC_SYSCFG_CLK_ENABLE();
@@ -215,7 +212,7 @@ void SystemClock_Config(void)
     }
 
     // Wait for PWR_FLAG_VOSRDY
-    #if defined(MCU_SERIES_H7)
+    #if defined(STM32H7)
     while (__HAL_PWR_GET_FLAG(PWR_FLAG_VOSRDY) == RESET) {
     }
     #endif
@@ -264,7 +261,7 @@ void SystemClock_Config(void)
     RCC_OscInitStruct.PLL.PLLQ = OMV_OSC_PLL1Q;
     RCC_OscInitStruct.PLL.PLLP = OMV_OSC_PLL1P;
 
-    #if defined(MCU_SERIES_H7)
+    #if defined(STM32H7)
     // Override PLL1 frequency for revision Y devices,
     // with maximum frequency of 400MHz CPU 200MHz Bus.
     if (HAL_GetREVID() < 0x2003) {
@@ -314,7 +311,7 @@ void SystemClock_Config(void)
     PeriphClkInitStruct.PLL3.PLL3FRACN = OMV_OSC_PLL3FRAC;
     #endif
 
-    #if defined(MCU_SERIES_H7)
+    #if defined(STM32H7)
 
     #if !defined(OMV_OMVPT_ERRATA_RTC)
     PeriphClkInitStruct.PeriphClockSelection |= RCC_PERIPHCLK_RTC;
@@ -385,9 +382,9 @@ void SystemClock_Config(void)
         // Initialization Error
         __fatal_error("HAL_RCCEx_PeriphCLKConfig");
     }
-    #endif // defined(MCU_SERIES_H7)
+    #endif // defined(STM32H7)
 
-    #if defined(MCU_SERIES_F4) || defined(MCU_SERIES_F7)
+    #if defined(STM32F4) || defined(STM32F7)
     if (HAL_PWREx_EnableOverDrive() != HAL_OK) {
         // Initialization Error
         __fatal_error("HAL_PWREx_EnableOverDrive");
@@ -395,7 +392,7 @@ void SystemClock_Config(void)
     #endif
 
     /* Select PLL as system clock source and configure the HCLK, PCLK clocks dividers */
-    #if defined(MCU_SERIES_H7)
+    #if defined(STM32H7)
     RCC_ClkInitStruct.ClockType = (RCC_CLOCKTYPE_SYSCLK | RCC_CLOCKTYPE_HCLK | RCC_CLOCKTYPE_D1PCLK1 |
                                    RCC_CLOCKTYPE_PCLK1 | RCC_CLOCKTYPE_PCLK2  | RCC_CLOCKTYPE_D3PCLK1);
     RCC_ClkInitStruct.SYSCLKSource   = RCC_SYSCLKSOURCE_PLLCLK;
@@ -418,7 +415,7 @@ void SystemClock_Config(void)
         __fatal_error("HAL_RCC_ClockConfig");
     }
 
-    #if defined(MCU_SERIES_H7)
+    #if defined(STM32H7)
     // Activate CSI clock mondatory for I/O Compensation Cell
     __HAL_RCC_CSI_ENABLE() ;
 

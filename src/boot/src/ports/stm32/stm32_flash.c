@@ -38,7 +38,7 @@
 
 #if OMV_BOOT_AXI_FLASH_ENABLE
 
-#if defined(MCU_SERIES_H7)
+#if defined(STM32H7)
 #define FLASH_WORD_SIZE 32
 #define FLASH_WORD_GET(x)   ((uint32_t) x)
 #else
@@ -46,23 +46,23 @@
 #define FLASH_WORD_GET(x)   *((uint32_t *) x)
 #endif
 
-#if defined(MCU_SERIES_F7)
+#if defined(STM32F7)
 #define FLASH_FLAG_PGSERR   (FLASH_FLAG_ERSERR)
 #endif
 
-#if defined(MCU_SERIES_F4)
+#if defined(STM32F4)
 static const uint32_t flash_sectors[] = {
     0x08000000, 0x08004000, 0x08008000, 0x0800C000,
     0x08010000, 0x08020000, 0x08040000, 0x08060000,
     0x08080000, 0x080A0000, 0x080C0000, 0x080E0000
 };
-#elif defined(MCU_SERIES_F7)
+#elif defined(STM32F7)
 static const uint32_t flash_sectors[] = {
     0x08000000, 0x08008000, 0x08010000, 0x08018000,
     0x08020000, 0x08040000, 0x08080000, 0x080C0000,
     0x08100000, 0x08140000, 0x08180000, 0x081C0000
 };
-#elif defined(MCU_SERIES_H7)
+#elif defined(STM32H7)
 static const uint32_t flash_sectors[] = {
     0x08000000, 0x08020000, 0x08040000, 0x08060000,
     0x08080000, 0x080A0000, 0x080C0000, 0x080E0000,
@@ -82,9 +82,9 @@ static int axi_flash_erase(uint32_t sector) {
     EraseInitStruct.NbSectors = 1;
     EraseInitStruct.TypeErase = TYPEERASE_SECTORS;
     EraseInitStruct.VoltageRange = VOLTAGE_RANGE_3;
-    #if defined(MCU_SERIES_F4) || defined(MCU_SERIES_F7)
+    #if defined(STM32F4) || defined(STM32F7)
     EraseInitStruct.Sector = sector;
-    #elif defined(MCU_SERIES_H7)
+    #elif defined(STM32H7)
     EraseInitStruct.Sector = (sector % 8);
     EraseInitStruct.Banks = (sector < 8) ? FLASH_BANK_1 : FLASH_BANK_2;
     #endif
@@ -92,7 +92,7 @@ static int axi_flash_erase(uint32_t sector) {
     // Unlock flash
     HAL_FLASH_Unlock();
 
-    #if defined(MCU_SERIES_H7)
+    #if defined(STM32H7)
     __HAL_FLASH_CLEAR_FLAG(FLASH_FLAG_ALL_ERRORS_BANK1 | FLASH_FLAG_ALL_ERRORS_BANK2);
     #else
     __HAL_FLASH_CLEAR_FLAG(FLASH_FLAG_EOP | FLASH_FLAG_OPERR | FLASH_FLAG_WRPERR |

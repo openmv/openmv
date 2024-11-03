@@ -30,11 +30,14 @@
 # Include OpenMV board config first to set the port.
 include $(OMV_BOARD_CONFIG_DIR)/omv_boardconfig.mk
 
-LDSCRIPT ?= stm32
-SYSTEM   ?= st/system_stm32fxxx
-STARTUP  ?= st/startup_$(shell echo $(MCU) | tr '[:upper:]' '[:lower:]')
-FIRMWARE := bootloader
-MCU_SERIES_LOWER := $(shell echo $(MCU_SERIES) | tr '[:upper:]' '[:lower:]')
+FIRMWARE   := bootloader
+LDSCRIPT   ?= stm32
+SYSTEM     ?= st/system_stm32fxxx
+STARTUP    ?= st/startup_$(shell echo $(MCU) | tr '[:upper:]' '[:lower:]')
+MCU_LOWER   = $(shell echo $(MCU) | tr '[:upper:]' '[:lower:]')
+MCU_SERIES := $(shell echo $(MCU) | cut -c6-7 | tr '[:upper:]' '[:lower:]')
+MCU_SERIES_UPPER := $(shell echo $(MCU_SERIES) | tr '[:lower:]' '[:upper:]')
+HAL_DIR     = hal/stm32/$(MCU_SERIES)
 
 # Compiler Flags
 CFLAGS += -std=gnu99 \
@@ -51,8 +54,7 @@ CFLAGS += -std=gnu99 \
           -mcpu=$(CPU) \
           -mtune=$(CPU) \
           -mfpu=$(FPU) \
-          -mfloat-abi=hard \
-          -D$(CFLAGS_MCU)
+          -mfloat-abi=hard
 
 # Linker Flags
 LDFLAGS = -mthumb \
@@ -73,9 +75,10 @@ CFLAGS += -D$(MCU) \
           -DHSE_VALUE=$(OMV_HSE_VALUE)\
           -DOMV_VTOR_BASE=$(OMV_BOOT_BASE) \
           -DOMV_BOOT_JUMP=$(OMV_FIRM_BASE) \
-          -DSTM32_HAL_H=$(HAL_INC) \
-          -DCMSIS_MCU_H=$(CMSIS_MCU_H) \
+          -DCMSIS_MCU_H='<$(MCU_LOWER).h>' \
+          -DSTM32_HAL_H='<stm32$(MCU_SERIES)xx_hal.h>' \
           -DUSE_FULL_LL_DRIVER \
+          -DCFG_TUSB_MCU=OPT_MCU_STM32$(MCU_SERIES_UPPER) \
           $(OMV_BOARD_CFLAGS)
 
 CFLAGS += -I$(OMV_BOARD_CONFIG_DIR) \
@@ -115,23 +118,23 @@ SRC_C += $(addprefix $(CMSIS_DIR)/src/,\
 )
 
 SRC_C += $(addprefix $(HAL_DIR)/src/,\
-	$(MCU_SERIES_LOWER)_hal.c \
-	$(MCU_SERIES_LOWER)_hal_cortex.c \
-	$(MCU_SERIES_LOWER)_hal_gpio.c \
-	$(MCU_SERIES_LOWER)_hal_pwr.c \
-	$(MCU_SERIES_LOWER)_hal_pwr_ex.c \
-	$(MCU_SERIES_LOWER)_hal_rcc.c \
-	$(MCU_SERIES_LOWER)_hal_rcc_ex.c \
-	$(MCU_SERIES_LOWER)_hal_rng.c \
-	$(MCU_SERIES_LOWER)_ll_rcc.c \
-	$(MCU_SERIES_LOWER)_ll_usb.c \
+	stm32$(MCU_SERIES)xx_hal.c \
+	stm32$(MCU_SERIES)xx_hal_cortex.c \
+	stm32$(MCU_SERIES)xx_hal_gpio.c \
+	stm32$(MCU_SERIES)xx_hal_pwr.c \
+	stm32$(MCU_SERIES)xx_hal_pwr_ex.c \
+	stm32$(MCU_SERIES)xx_hal_rcc.c \
+	stm32$(MCU_SERIES)xx_hal_rcc_ex.c \
+	stm32$(MCU_SERIES)xx_hal_rng.c \
+	stm32$(MCU_SERIES)xx_ll_rcc.c \
+	stm32$(MCU_SERIES)xx_ll_usb.c \
 )
 
-ifeq ($(MCU_SERIES),$(filter $(MCU_SERIES),STM32F4xx STM32F7xx STM32H7xx))
+ifeq ($(MCU_SERIES),$(filter $(MCU_SERIES),f4 f7 h7))
 SRC_C += $(addprefix $(HAL_DIR)/src/,\
-	$(MCU_SERIES_LOWER)_hal_qspi.c \
-	$(MCU_SERIES_LOWER)_hal_flash.c \
-	$(MCU_SERIES_LOWER)_hal_flash_ex.c \
+	stm32$(MCU_SERIES)xx_hal_qspi.c \
+	stm32$(MCU_SERIES)xx_hal_flash.c \
+	stm32$(MCU_SERIES)xx_hal_flash_ex.c \
 )
 endif
 

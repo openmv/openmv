@@ -73,7 +73,7 @@ int omv_gpu_draw_image(image_t *src_img,
     }
 
     // DMA2D must always fetch the background on the F4 and F7 series so do this in software.
-    #if defined(MCU_SERIES_F4) || defined(MCU_SERIES_F7)
+    #if defined(STM32F4) || defined(STM32F7)
     if (hint & IMAGE_HINT_BLACK_BACKGROUND) {
         return -1;
     }
@@ -91,7 +91,7 @@ int omv_gpu_draw_image(image_t *src_img,
         dma2d.Init.Mode = DMA2D_M2M_BLEND;
     }
 
-    #if defined(MCU_SERIES_H7)
+    #if defined(STM32H7)
     if (hint & IMAGE_HINT_BLACK_BACKGROUND) {
         dma2d.Init.Mode = DMA2D_M2M_BLEND_BG;
     }
@@ -202,7 +202,7 @@ int omv_gpu_draw_image(image_t *src_img,
 
     uint32_t dst = (uint32_t) dst16;
 
-    #if defined(MCU_SERIES_H7)
+    #if defined(STM32H7)
     if (hint & IMAGE_HINT_BLACK_BACKGROUND) {
         dst = 0;
     }

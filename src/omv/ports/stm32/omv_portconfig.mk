@@ -21,12 +21,13 @@
 # THE SOFTWARE.
 
 # Set startup and system files for CMSIS Makefile.
-SYSTEM  ?= st/system_stm32fxxx
-STARTUP ?= st/startup_$(shell echo $(MCU) | tr '[:upper:]' '[:lower:]')
-UVC_DIR := $(OMV_DIR)/ports/$(PORT)/uvc
-BOOT_DIR := boot
-
-LDSCRIPT  ?= stm32fxxx
+SYSTEM      ?= st/system_stm32fxxx
+LDSCRIPT    ?= stm32fxxx
+STARTUP     ?= st/startup_$(shell echo $(MCU) | tr '[:upper:]' '[:lower:]')
+UVC_DIR     := $(OMV_DIR)/ports/$(PORT)/uvc
+MCU_SERIES  := $(shell echo $(MCU) | cut -c6-7 | tr '[:upper:]' '[:lower:]')
+MCU_LOWER   := $(shell echo $(MCU) | tr '[:upper:]' '[:lower:]')
+HAL_DIR      = hal/stm32/$(MCU_SERIES)
 
 # Compiler Flags
 CFLAGS += -std=gnu99 \
@@ -43,19 +44,18 @@ CFLAGS += -std=gnu99 \
           -mcpu=$(CPU) \
           -mtune=$(CPU) \
           -mfpu=$(FPU) \
-          -mfloat-abi=hard \
-          -D$(CFLAGS_MCU)
+          -mfloat-abi=hard
 
 CFLAGS += -D$(MCU) \
           -D$(TARGET) \
           -DARM_NN_TRUNCATE \
           -D__FPU_PRESENT=1 \
           -D__VFP_FP__ \
+          -DUSE_FULL_LL_DRIVER \
           -DHSE_VALUE=$(OMV_HSE_VALUE)\
           -DOMV_VTOR_BASE=$(OMV_FIRM_BASE) \
-          -DSTM32_HAL_H=$(HAL_INC) \
-          -DCMSIS_MCU_H=$(CMSIS_MCU_H) \
-          -DUSE_FULL_LL_DRIVER \
+          -DCMSIS_MCU_H='<$(MCU_LOWER).h>' \
+          -DSTM32_HAL_H='<stm32$(MCU_SERIES)xx_hal.h>' \
           $(OMV_BOARD_CFLAGS)
 
 # Linker Flags

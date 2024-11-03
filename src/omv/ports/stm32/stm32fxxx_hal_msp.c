@@ -92,7 +92,7 @@ void HAL_MspInit(void) {
     #endif // defined(OMV_DMA_MEMORY)
 
     // Enable I/D cache.
-    #if defined(MCU_SERIES_F7) || defined(MCU_SERIES_H7)
+    #if defined(STM32F7) || defined(STM32H7)
     #ifdef OMV_DISABLE_CACHE
     // Disable caches for testing.
     SCB_DisableICache();
@@ -147,7 +147,7 @@ void HAL_MspInit(void) {
     __DMA1_CLK_ENABLE();
     __DMA2_CLK_ENABLE();
 
-    #if defined(MCU_SERIES_H7)
+    #if defined(STM32H7)
     // MDMA clock.
     __HAL_RCC_MDMA_CLK_ENABLE();
     NVIC_SetPriority(MDMA_IRQn, IRQ_PRI_MDMA);
@@ -212,7 +212,7 @@ void HAL_MspInit(void) {
     omv_gpio_write(OMV_FIR_LEPTON_POWER_PIN, 0);
     #endif
 
-    #if defined(MCU_SERIES_H7)
+    #if defined(STM32H7)
     // This disconnects PA0/PA1 from PA0_C/PA1_C.
     // PA0_C/PA1_C connect to ADC1/2 Channels P0/P1
     HAL_SYSCFG_AnalogSwitchConfig(SYSCFG_SWITCH_PA0, SYSCFG_SWITCH_PA0_OPEN);
@@ -435,7 +435,7 @@ void HAL_SPI_MspInit(SPI_HandleTypeDef *hspi) {
         return;
     }
 
-    #if defined(MCU_SERIES_H7)
+    #if defined(STM32H7)
     omv_gpio_config(spi_pins.sclk_pin, OMV_GPIO_MODE_ALT, OMV_GPIO_PULL_NONE, OMV_GPIO_SPEED_HIGH, -1);
     #else
     // The STM32F4 and STM32F7 don't set the initial state of the clock line until transmitting the
@@ -453,7 +453,7 @@ void HAL_SPI_MspInit(SPI_HandleTypeDef *hspi) {
     } else {
         if (hspi->Init.Mode == SPI_MODE_MASTER) {
             omv_gpio_config(spi_pins.ssel_pin, OMV_GPIO_MODE_OUTPUT, OMV_GPIO_PULL_UP, OMV_GPIO_SPEED_HIGH, -1);
-            #if defined(MCU_SERIES_H7)
+            #if defined(STM32H7)
             if (hspi->Init.NSSPolarity == SPI_NSS_POLARITY_LOW) {
                 omv_gpio_write(spi_pins.ssel_pin, 1);
             } else {
