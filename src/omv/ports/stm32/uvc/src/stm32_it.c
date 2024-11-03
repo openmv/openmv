@@ -39,7 +39,7 @@
   */
 
 #include STM32_HAL_H 
-#include <stm32fxxx_it.h>
+#include <stm32_it.h>
 
 extern PCD_HandleTypeDef hpcd;
 extern void DCMI_VsyncExtiCallback();

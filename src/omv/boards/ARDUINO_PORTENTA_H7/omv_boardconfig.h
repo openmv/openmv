@@ -126,7 +126,7 @@
 // Power supply configuration
 #define OMV_PWR_SUPPLY                      (PWR_SMPS_1V8_SUPPLIES_LDO)
 
-// Linker script constants (see the linker script template stm32fxxx.ld.S).
+// Linker script constants (see the linker script template stm32.ld.S).
 // Note: fb_alloc is a stack-based, dynamically allocated memory on FB.
 // The maximum available fb_alloc memory = FB_ALLOC_SIZE + FB_SIZE - (w*h*bpp).
 #define OMV_MAIN_MEMORY                     DTCM    // Data/BSS memory
