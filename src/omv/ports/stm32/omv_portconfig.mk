@@ -624,7 +624,6 @@ UVC_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/imlib/,\
 
 UVC_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/ports/stm32/,\
 	jpeg.o                                  \
-	stm32_hal_msp.o                     \
 	soft_i2c.o                              \
 	ulpi.o                                  \
 	dma_utils.o                             \
@@ -633,6 +632,7 @@ UVC_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/ports/stm32/,\
 	omv_i2c.o                               \
 	omv_spi.o                               \
 	omv_csi.o                               \
+	stm32_hal_msp.o                         \
 	)
 
 UVC_OBJ += $(wildcard $(BUILD)/$(GENX320_DIR)/src/*.o)
