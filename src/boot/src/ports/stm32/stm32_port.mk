@@ -32,7 +32,7 @@ include $(OMV_BOARD_CONFIG_DIR)/omv_boardconfig.mk
 
 FIRMWARE   := bootloader
 LDSCRIPT   ?= stm32
-SYSTEM     ?= st/system_stm32fxxx
+SYSTEM     ?= st/system_stm32
 STARTUP    ?= st/startup_$(shell echo $(MCU) | tr '[:upper:]' '[:lower:]')
 MCU_LOWER   = $(shell echo $(MCU) | tr '[:upper:]' '[:lower:]')
 MCU_SERIES := $(shell echo $(MCU) | cut -c6-7 | tr '[:upper:]' '[:lower:]')
