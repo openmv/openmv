@@ -21,9 +21,11 @@
 # THE SOFTWARE.
 
 # Set startup and system files for CMSIS Makefile.
-SYSTEM  ?= mimxrt/system_$(MCU_SERIES)
-STARTUP ?= mimxrt/startup_$(MCU_SERIES)
-LDSCRIPT  ?= mimxrt
+MCU_SERIES := $(shell echo $(MCU) | cut -c1-10)
+LDSCRIPT ?= mimxrt
+SYSTEM   ?= mimxrt/system_$(MCU_SERIES)
+STARTUP  ?= mimxrt/startup_$(MCU_SERIES)
+HAL_DIR  ?= hal/mimxrt/$(MCU_SERIES)
 
 # Compiler Flags
 # TODO: -Wdouble-promotion
@@ -42,7 +44,7 @@ CFLAGS += -std=gnu99 \
           -mfpu=$(FPU)
 
 # TODO: FIX HSE
-CFLAGS += -DCPU_$(MCU_VARIANT) \
+CFLAGS += -DCPU_$(MCU) \
           -D$(TARGET) \
           -DARM_NN_TRUNCATE \
           -D__FPU_PRESENT=1 \
@@ -54,7 +56,7 @@ CFLAGS += -DCPU_$(MCU_VARIANT) \
 	      -DFSL_SDK_ENABLE_DRIVER_CACHE_CONTROL=1 \
 	      -DCFG_TUSB_MCU=OPT_MCU_MIMXRT1XXX \
 	      -DCPU_HEADER_H='<$(MCU_SERIES).h>' \
-	      -DCMSIS_MCU_H=$(CMSIS_MCU_H) \
+	      -DCMSIS_MCU_H='<$(MCU_SERIES).h>' \
 	      -DCLOCK_CONFIG_H='<boards/$(MCU_SERIES)_clock_config.h>' \
           -DCSI_DRIVER_FRAG_MODE=1 \
           -D__START=main \
