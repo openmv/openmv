@@ -21,17 +21,38 @@
 # THE SOFTWARE.
 
 # Set startup and system files based on MCU.
+LDSCRIPT  ?= nrf52xxx
+HAL_DIR   ?= hal/nrfx
 SYSTEM    ?= nrf/system_nrf52840
 STARTUP   ?= nrf/startup_$(shell echo $(MCU) | tr '[:upper:]' '[:lower:]')
-LDSCRIPT  ?= nrf52xxx
+MCU_LOWER := $(shell echo $(MCU) | tr '[:upper:]' '[:lower:]')
+
 export SD_DIR = $(TOP_DIR)/drivers/nrf
 
 # Compiler Flags
-CFLAGS += -std=gnu99 -Wall -Werror -Warray-bounds -mthumb -nostartfiles -fdata-sections -ffunction-sections
-CFLAGS += -D$(MCU) -D$(CFLAGS_MCU) -DARM_NN_TRUNCATE -D__FPU_PRESENT=1 -D__VFP_FP__ -D$(TARGET)\
-          -fsingle-precision-constant -Wdouble-promotion -mcpu=$(CPU) -mtune=$(CPU) -mfpu=$(FPU) -mfloat-abi=hard\
-          -DCMSIS_MCU_H=$(CMSIS_MCU_H) -DMP_PORT_NO_SOFTTIMER
-CFLAGS += $(OMV_BOARD_CFLAGS)
+CFLAGS += -std=gnu99 \
+          -Wall \
+          -Werror \
+          -Warray-bounds \
+          -mthumb \
+          -nostartfiles \
+          -fdata-sections \
+          -ffunction-sections
+
+CFLAGS += -D$(MCU) \
+          -DARM_NN_TRUNCATE \
+          -D__FPU_PRESENT=1 \
+          -D__VFP_FP__ \
+          -D$(TARGET) \
+          -fsingle-precision-constant \
+          -Wdouble-promotion \
+          -mcpu=$(CPU) \
+          -mtune=$(CPU) \
+          -mfpu=$(FPU) \
+          -mfloat-abi=hard \
+          -DCMSIS_MCU_H='<$(MCU_LOWER).h>' \
+          -DMP_PORT_NO_SOFTTIMER \
+          $(OMV_BOARD_CFLAGS)
 
 # Disable LTO and set the SD
 MICROPY_ARGS += LTO=0 SD=$(SD)
