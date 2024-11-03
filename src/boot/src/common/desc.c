@@ -121,7 +121,7 @@ uint16_t const *tud_descriptor_string_cb(uint8_t index, uint16_t langid) {
             // Language ID
             memcpy(desc_wstr, desc_string[0], 4);
             return desc_wstr;
-        case 1: {
+        case 3: {
             // Serial number
             if (port_get_uid(uid) != 0) {
                 // No UID support.
