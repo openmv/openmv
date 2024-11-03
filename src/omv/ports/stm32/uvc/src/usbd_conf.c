@@ -80,7 +80,7 @@ void HAL_PCD_MspInit(PCD_HandleTypeDef *hpcd)
     HAL_GPIO_Init(GPIOA, &GPIO_InitStruct); 
 #endif
 
-    #if defined(MCU_SERIES_H7)
+    #if defined(STM32H7)
     // Keep USB clock running during sleep or else __WFI() will disable the USB
     __HAL_RCC_USB2_OTG_FS_CLK_SLEEP_ENABLE();
     __HAL_RCC_USB2_OTG_FS_ULPI_CLK_SLEEP_DISABLE();

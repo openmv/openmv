@@ -80,7 +80,7 @@ void omv_csi_mdma_irq_handler(void) {
 static int omv_csi_dma_config() {
     // DMA Stream configuration
     DMAHandle.Instance = DMA2_Stream1;
-    #if defined(MCU_SERIES_H7)
+    #if defined(STM32H7)
     DMAHandle.Init.Request = DMA_REQUEST_DCMI;                      /* DMA Channel                      */
     #else
     DMAHandle.Init.Channel = DMA_CHANNEL_1;                         /* DMA Channel                      */
@@ -215,7 +215,7 @@ int omv_csi_config(omv_csi_config_t config) {
         DCMIHandle.Init.CaptureRate = DCMI_CR_ALL_FRAME;        // Capture rate all frames
         DCMIHandle.Init.ExtendedDataMode = DCMI_EXTEND_DATA_8B; // Capture 8 bits on every pixel clock
         DCMIHandle.Init.JPEGMode = DCMI_JPEG_DISABLE;
-        #if defined(MCU_SERIES_F7) || defined(MCU_SERIES_H7)
+        #if defined(STM32F7) || defined(STM32H7)
         DCMIHandle.Init.ByteSelectMode = DCMI_BSM_ALL;          // Capture all received bytes
         DCMIHandle.Init.ByteSelectStart = DCMI_OEBS_ODD;        // Ignored
         DCMIHandle.Init.LineSelectMode = DCMI_LSM_ALL;          // Capture all received lines

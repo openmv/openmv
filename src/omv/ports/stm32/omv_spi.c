@@ -95,7 +95,7 @@ DEFINE_SPI_INSTANCE(6)
 static omv_spi_t *omv_spi_descr_all[6] = { NULL };
 
 static uint32_t omv_spi_clocksource(SPI_TypeDef *spi) {
-    #if defined(MCU_SERIES_H7)
+    #if defined(STM32H7)
     if (spi == SPI1 || spi == SPI2 || spi == SPI3) {
         return HAL_RCCEx_GetPeriphCLKFreq(RCC_PERIPHCLK_SPI123);
     } else if (spi == SPI4 || spi == SPI5) {
@@ -290,7 +290,7 @@ static int omv_spi_dma_init(omv_spi_t *spi, uint32_t direction, omv_spi_config_t
     dma_descr->Init.MemBurst = DMA_MBURST_SINGLE;
     dma_descr->Init.PeriphBurst = DMA_PBURST_SINGLE;
     dma_descr->Init.MemDataAlignment = DMA_MDATAALIGN_WORD;
-    #if defined(MCU_SERIES_H7)
+    #if defined(STM32H7)
     dma_descr->Init.PeriphDataAlignment = DMA_PDATAALIGN_WORD;
     #else
     dma_descr->Init.PeriphDataAlignment = (config->datasize == 8) ? DMA_PDATAALIGN_BYTE : DMA_PDATAALIGN_HALFWORD;
@@ -336,9 +336,9 @@ static int omv_spi_bus_init(omv_spi_t *spi, omv_spi_config_t *config) {
     spi_descr->Init.CLKPhase = config->clk_pha;
     spi_descr->Init.CLKPolarity = config->clk_pol;
     spi_descr->Init.BaudRatePrescaler = omv_spi_prescaler(spi_descr->Instance, config->baudrate);
-    #if defined(MCU_SERIES_F7) || defined(MCU_SERIES_H7)
+    #if defined(STM32F7) || defined(STM32H7)
     spi_descr->Init.NSSPMode = SPI_NSS_PULSE_DISABLE;
-    #if defined(MCU_SERIES_H7)
+    #if defined(STM32H7)
     spi_descr->Init.NSSPolarity = (config->nss_pol == 0) ? SPI_NSS_POLARITY_LOW : SPI_NSS_POLARITY_HIGH;
     spi_descr->Init.FifoThreshold = SPI_FIFO_THRESHOLD_04DATA;
     spi_descr->Init.MasterSSIdleness = SPI_MASTER_SS_IDLENESS_00CYCLE;
@@ -356,7 +356,7 @@ static int omv_spi_bus_init(omv_spi_t *spi, omv_spi_config_t *config) {
     } else if (config->bus_mode == OMV_SPI_BUS_RX) {
         spi_descr->Init.Direction = SPI_DIRECTION_2LINES_RXONLY;
     } else {
-        #if defined(MCU_SERIES_H7)
+        #if defined(STM32H7)
         spi_descr->Init.Direction = SPI_DIRECTION_2LINES_TXONLY;
         #else
         spi_descr->Init.Direction = SPI_DIRECTION_1LINE;
