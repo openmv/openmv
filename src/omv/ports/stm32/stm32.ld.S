@@ -64,9 +64,11 @@ MEMORY
 _ram_start  = ORIGIN(OMV_MAIN_MEMORY);
 _ram_end    = ORIGIN(OMV_MAIN_MEMORY) + LENGTH(OMV_MAIN_MEMORY);
 
+#if defined(OMV_FLASH_FFS_ORIGIN)
 // Location of filesystem flash storage
 _micropy_hw_internal_flash_storage_start = ORIGIN(FLASH_FFS);
 _micropy_hw_internal_flash_storage_end = ORIGIN(FLASH_FFS) + LENGTH(FLASH_FFS);
+#endif
 
 #if defined(OMV_FFS_MEMORY)
 #if !defined(OMV_FFS_MEMORY_OFFSET)
