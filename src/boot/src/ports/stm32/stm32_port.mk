@@ -79,6 +79,7 @@ CFLAGS += -D$(MCU) \
           -DSTM32_HAL_H='<stm32$(MCU_SERIES)xx_hal.h>' \
           -DUSE_FULL_LL_DRIVER \
           -DCFG_TUSB_MCU=OPT_MCU_STM32$(MCU_SERIES_UPPER) \
+          $(OMV_BOOT_CFLAGS) \
           $(OMV_BOARD_CFLAGS)
 
 CFLAGS += -I$(OMV_BOARD_CONFIG_DIR) \
@@ -92,14 +93,16 @@ CFLAGS += -I$(OMV_BOARD_CONFIG_DIR) \
           -I$(TOP_DIR)/$(TINYUSB_DIR)/src
 
 SRC_C += $(addprefix src/common/, \
-	desc.c \
 	dfu.c \
+	mpu.c \
+	desc.c \
 	main.c \
 )
 
 SRC_C += $(addprefix $(PORT_DIR)/, \
 	stm32_port.c \
 	stm32_qspi.c \
+	stm32_xspi.c \
 	stm32_flash.c \
 )
 
@@ -129,6 +132,13 @@ SRC_C += $(addprefix $(HAL_DIR)/src/,\
 	stm32$(MCU_SERIES)xx_ll_rcc.c \
 	stm32$(MCU_SERIES)xx_ll_usb.c \
 )
+
+ifeq ($(MCU_SERIES),$(filter $(MCU_SERIES),n6))
+SRC_C += $(addprefix $(HAL_DIR)/src/,\
+	stm32$(MCU_SERIES)xx_hal_xspi.c \
+	stm32$(MCU_SERIES)xx_hal_bsec.c \
+)
+endif
 
 ifeq ($(MCU_SERIES),$(filter $(MCU_SERIES),f4 f7 h7))
 SRC_C += $(addprefix $(HAL_DIR)/src/,\

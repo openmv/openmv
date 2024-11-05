@@ -87,11 +87,11 @@ int main(void) {
     // Disconnect USB device.
     tud_disconnect();
 
-    // Deinitialize low-level sub-systems.
-    port_deinit();
-
     // Deinitialize TinyUSB.
     tud_deinit(TUD_OPT_RHPORT);
+
+    // Deinitialize low-level sub-systems.
+    port_deinit();
 
     // JUMP!
     ((void (*) (void)) (*((uint32_t *) (OMV_BOOT_JUMP + 4)))) ();

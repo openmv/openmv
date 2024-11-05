@@ -71,7 +71,7 @@ void tud_dfu_download_cb(uint8_t itf, uint16_t block, uint8_t const *buf, uint16
 
     // Allow writes to this region.
     if (block == 0) {
-        port_mpu_protect(p, false);
+        port_mpu_config(p, 0, 1, 1);
     }
 
     if (addr + size > p->limit) {
@@ -88,7 +88,7 @@ void tud_dfu_download_cb(uint8_t itf, uint16_t block, uint8_t const *buf, uint16
 // Invoked when the download process is complete, i.e.,
 // DFU_DNLOAD followed by DFU_GETSTATUS (state=Manifest).
 void tud_dfu_manifest_cb(uint8_t itf) {
-    port_mpu_protect(&OMV_BOOT_PARTITIONS[itf], true);
+    port_mpu_config(&OMV_BOOT_PARTITIONS[itf], 1, 1, 1);
     return tud_dfu_finish_flashing(DFU_STATUS_OK);
 }
 

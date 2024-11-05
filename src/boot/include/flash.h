@@ -38,6 +38,7 @@ int axi_flash_write(uint32_t addr, const uint8_t *buf, size_t size);
 int spi_flash_deinit();
 int spi_flash_read(uint32_t addr, uint8_t *buf, uint32_t size);
 int spi_flash_write(uint32_t addr, const uint8_t *buf, uint32_t size);
+int spi_flash_memory_map();
 
 static inline int flash_read(uint32_t ptype, uint32_t addr, uint8_t *buf, uint32_t size) {
     #if OMV_BOOT_AXI_FLASH_ENABLE
