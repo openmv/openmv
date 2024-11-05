@@ -58,23 +58,33 @@ typedef enum {
 
 // DFU partition entry.
 typedef struct {
+    uint32_t type;
     int32_t region;
     uint32_t rdonly;
     uintptr_t start;
     uintptr_t limit;
     uint32_t attr;
-    uint32_t type;
 } partition_t;
 
 typedef enum {
     PTYPE_AXI_FLASH,
     PTYPE_SPI_FLASH,
+    PTYPE_XIP_FLASH,
 } partition_type_t;
+
+// Common MPU memory attributes.
+typedef enum {
+    MEMATTR_DEVICE_nGnRE,
+    MEMATTR_NORMAL_RA,
+    MEMATTR_NORMAL_WB_RA_WA,
+    MEMATTR_NORMAL_NT_RA,
+    MEMATTR_NORMAL_NCACHE,
+    MEMATTR_COUNT
+} mpu_mem_attr_t;
 
 int port_init(void);
 int port_deinit(void);
 int port_get_uid(uint8_t *buf);
-void port_mpu_protect(const partition_t *p, bool enable);
 uint32_t port_ticks_ms();
 void port_delay_ms(uint32_t ms);
 void port_pin_mode(uint32_t pin, uint32_t mode);
@@ -83,4 +93,8 @@ void port_pin_write(uint32_t pin, uint32_t state);
 void port_led_blink(uint32_t interval_ms);
 int port_flash_read(uint32_t ptype, uint32_t addr, uint8_t *buf, uint32_t size);
 int port_flash_write(uint32_t ptype, uint32_t addr, const uint8_t *buf, uint32_t size);
+void port_mpu_init(void);
+void port_mpu_deinit(void);
+void port_mpu_load_defaults();
+void port_mpu_config(const partition_t *p, bool ro, bool np, bool xn);
 #endif  // __OMV_BOOT_PORT_H__

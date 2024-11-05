@@ -37,43 +37,36 @@
 #include "omv_boardconfig.h"
 #include "omv_bootconfig.h"
 #include "flash.h"
-
-#ifdef USE_USB_FS
-#define USB_IRQ_Handler OTG_FS_IRQHandler
-#else
-#define USB_IRQ_Handler OTG_HS_IRQHandler
-#endif
-
-static volatile uint32_t ticks_ms;
+#include "stm32_usb.h"
 
 extern void SystemClock_Config(void);
-static void enable_gpio_clocks(bool enable);
+static void port_gpio_clock(GPIO_TypeDef *gpio, bool enable);
 
 void SysTick_Handler(void) {
-    ticks_ms += 1;
+    HAL_IncTick();
 }
 
-void OTG_FS_IRQHandler(void) {
+void USB1_IRQ_Handler(void) {
     tud_int_handler(0);
 }
 
-void OTG_HS_IRQHandler(void) {
+void USB2_IRQ_Handler(void) {
     tud_int_handler(1);
 }
 
 int port_init(void) {
     HAL_Init();
 
-    // Set the system clock
+    // Configure the system clocks.
     SystemClock_Config();
 
-    // Config Systick
+    // Configure default MPU regions.
+    port_mpu_init();
+
+    // Configure Systick
     HAL_NVIC_SetPriority(SysTick_IRQn, 0, 0);
 
-    // Enable GPIO clocks.
-    enable_gpio_clocks(true);
-
-    // Configure I/O pins.
+    // Configure GPIO pins.
     for (size_t i = 0; i < OMV_BOOT_PINS_COUNT; i++) {
         const pin_t *pin = &omv_boot_pins[i];
         GPIO_InitTypeDef pin_config = {
@@ -83,6 +76,9 @@ int port_init(void) {
             .Mode = pin->mode,
             .Alternate = pin->alt,
         };
+        // Enable GPIO clock.
+        port_gpio_clock(pin->gpio, true);
+        // Configure GPIO pin.
         HAL_GPIO_Init(pin->gpio, &pin_config);
     }
 
@@ -90,8 +86,11 @@ int port_init(void) {
     port_pin_write(OMV_BOOT_LED_PIN, false);
 
     // Enable USB clocks.
-    __HAL_RCC_USB_OTG_FS_CLK_ENABLE();
-    __HAL_RCC_USB_OTG_FS_CLK_SLEEP_ENABLE();
+    USB_OTG_CLK_ENABLE();
+    USB_OTG_PHY_CLK_ENABLE(0x2U);
+
+    // Enable USB core.
+    USB_OTG_ENABLE();
 
     // Configure and enable USB IRQ.
     HAL_NVIC_SetPriority(OMV_USB_IRQN, 6, 0);
@@ -101,27 +100,50 @@ int port_init(void) {
 }
 
 int port_deinit(void) {
+    // Disable SysTick and its IRQ.
+    NVIC_DisableIRQ(SysTick_IRQn);
+    NVIC_ClearPendingIRQ(SysTick_IRQn);
+    SysTick->CTRL &= ~(SysTick_CTRL_ENABLE_Msk);
+
     // Disable USB IRQ.
     HAL_NVIC_DisableIRQ(OMV_USB_IRQN);
     NVIC_ClearPendingIRQ(OMV_USB_IRQN);
 
+    // Disable USB clocks.
+    USB_OTG_CLK_DISABLE();
+    USB_OTG_PHY_CLK_DISABLE();
+
+    #ifdef __DCACHE_PRESENT
+    // Clean/invalidate any cached lines.
+    SCB_CleanInvalidateDCache();
+    #endif
+
+    // Clear default regions and configure XIP regions (if any).
+    port_mpu_deinit();
+
     // Deinitialize SPI Flash.
-    #if OMV_BOOT_SPI_FLASH_ENABLE
+    #if OMV_BOOT_SPI_FLASH_MMAP
+    spi_flash_memory_map();
+    #elif OMV_BOOT_SPI_FLASH_ENABLE
     spi_flash_deinit();
     #endif
 
-    // Deinit all I/O pins.
+    // Turn off LED.
+    port_pin_write(OMV_BOOT_LED_PIN, false);
+
+    #if !OMV_BOOT_SPI_FLASH_MMAP
+    // Deinit GPIO pins.
     for (size_t i = 0; i < OMV_BOOT_PINS_COUNT; i++) {
         const pin_t *pin = &omv_boot_pins[i];
         HAL_GPIO_DeInit(pin->gpio, pin->pin);
     }
 
-    // Disable USB clocks.
-    __HAL_RCC_USB_OTG_FS_CLK_ENABLE();
-    __HAL_RCC_USB_OTG_FS_CLK_SLEEP_DISABLE();
-
     // Disable GPIO clocks.
-    enable_gpio_clocks(false);
+    for (size_t i = 0; i < OMV_BOOT_PINS_COUNT; i++) {
+        const pin_t *pin = &omv_boot_pins[i];
+        port_gpio_clock(pin->gpio, false);
+    }
+    #endif
     return 0;
 }
 
@@ -132,12 +154,8 @@ int port_get_uid(uint8_t *buf) {
     return 0;
 }
 
-void port_mpu_protect(const partition_t *p, bool enable) {
-
-}
-
 uint32_t port_ticks_ms() {
-    return ticks_ms;
+    return HAL_GetTick();
 }
 
 void port_delay_ms(uint32_t ms) {
@@ -189,85 +207,112 @@ void __attribute__((noreturn)) __fatal_error() {
     }
 }
 
-static void enable_gpio_clocks(bool enable) {
-    // Enable GPIO clocks
-    if (enable) {
-        __HAL_RCC_GPIOA_CLK_ENABLE();
-        __HAL_RCC_GPIOB_CLK_ENABLE();
-        __HAL_RCC_GPIOC_CLK_ENABLE();
-        __HAL_RCC_GPIOD_CLK_ENABLE();
-        __HAL_RCC_GPIOE_CLK_ENABLE();
-        #ifdef OMV_GPIO_PORT_F_ENABLE
-        __HAL_RCC_GPIOF_CLK_ENABLE();
-        #endif
-        #ifdef OMV_GPIO_PORT_G_ENABLE
-        __HAL_RCC_GPIOG_CLK_ENABLE();
-        #endif
-        #ifdef OMV_GPIO_PORT_H_ENABLE
-        __HAL_RCC_GPIOH_CLK_ENABLE();
-        #endif
-        #ifdef OMV_GPIO_PORT_I_ENABLE
-        __HAL_RCC_GPIOI_CLK_ENABLE();
-        #endif
-        #ifdef OMV_GPIO_PORT_J_ENABLE
-        __HAL_RCC_GPIOJ_CLK_ENABLE();
-        #endif
-        #ifdef OMV_GPIO_PORT_K_ENABLE
-        __HAL_RCC_GPIOK_CLK_ENABLE();
-        #endif
-        #ifdef OMV_GPIO_PORT_H_ENABLE
-        __HAL_RCC_GPIOH_CLK_ENABLE();
-        #endif
-        #ifdef OMV_GPIO_PORT_N_ENABLE
-        __HAL_RCC_GPION_CLK_ENABLE();
-        #endif
-        #ifdef OMV_GPIO_PORT_O_ENABLE
-        __HAL_RCC_GPIOO_CLK_ENABLE();
-        #endif
-        #ifdef OMV_GPIO_PORT_P_ENABLE
-        __HAL_RCC_GPIOP_CLK_ENABLE();
-        #endif
-        #ifdef OMV_GPIO_PORT_Q_ENABLE
-        __HAL_RCC_GPIOQ_CLK_ENABLE();
-        #endif
-    } else {
-        __HAL_RCC_GPIOA_CLK_DISABLE();
-        __HAL_RCC_GPIOB_CLK_DISABLE();
-        __HAL_RCC_GPIOC_CLK_DISABLE();
-        __HAL_RCC_GPIOD_CLK_DISABLE();
-        __HAL_RCC_GPIOE_CLK_DISABLE();
-        #ifdef OMV_GPIO_PORT_F_ENABLE
-        __HAL_RCC_GPIOF_CLK_DISABLE();
-        #endif
-        #ifdef OMV_GPIO_PORT_G_ENABLE
-        __HAL_RCC_GPIOG_CLK_DISABLE();
-        #endif
-        #ifdef OMV_GPIO_PORT_H_ENABLE
-        __HAL_RCC_GPIOH_CLK_DISABLE();
-        #endif
-        #ifdef OMV_GPIO_PORT_I_ENABLE
-        __HAL_RCC_GPIOI_CLK_DISABLE();
-        #endif
-        #ifdef OMV_GPIO_PORT_J_ENABLE
-        __HAL_RCC_GPIOJ_CLK_DISABLE();
-        #endif
-        #ifdef OMV_GPIO_PORT_K_ENABLE
-        __HAL_RCC_GPIOK_CLK_DISABLE();
-        #endif
-        #ifdef OMV_GPIO_PORT_H_ENABLE
-        __HAL_RCC_GPIOH_CLK_DISABLE();
-        #endif
-        #ifdef OMV_GPIO_PORT_N_ENABLE
-        __HAL_RCC_GPION_CLK_DISABLE();
-        #endif
-        #ifdef OMV_GPIO_PORT_O_ENABLE
-        __HAL_RCC_GPIOO_CLK_DISABLE();
-        #endif
-        #ifdef OMV_GPIO_PORT_P_ENABLE
-        __HAL_RCC_GPIOP_CLK_DISABLE();
-        #endif
-        #ifdef OMV_GPIO_PORT_Q_ENABLE
-        __HAL_RCC_GPIOQ_CLK_DISABLE();
-        #endif
+static void port_gpio_clock(GPIO_TypeDef *gpio, bool enable) {
+    if (gpio == GPIOA) {
+        if (enable) {
+            __HAL_RCC_GPIOA_CLK_ENABLE();
+        } else {
+            __HAL_RCC_GPIOA_CLK_DISABLE();
+        }
+    } else if (gpio == GPIOB) {
+        if (enable) {
+            __HAL_RCC_GPIOB_CLK_ENABLE();
+        } else {
+            __HAL_RCC_GPIOB_CLK_DISABLE();
+        }
+    } else if (gpio == GPIOC) {
+        if (enable) {
+            __HAL_RCC_GPIOC_CLK_ENABLE();
+        } else {
+            __HAL_RCC_GPIOC_CLK_DISABLE();
+        }
+    } else if (gpio == GPIOD) {
+        if (enable) {
+            __HAL_RCC_GPIOD_CLK_ENABLE();
+        } else {
+            __HAL_RCC_GPIOD_CLK_DISABLE();
+        }
+    } else if (gpio == GPIOE) {
+        if (enable) {
+            __HAL_RCC_GPIOE_CLK_ENABLE();
+        } else {
+            __HAL_RCC_GPIOE_CLK_DISABLE();
+        }
+    } else if (gpio == GPIOF) {
+        if (enable) {
+            __HAL_RCC_GPIOF_CLK_ENABLE();
+        } else {
+            __HAL_RCC_GPIOF_CLK_DISABLE();
+        }
+    } else if (gpio == GPIOG) {
+        if (enable) {
+            __HAL_RCC_GPIOG_CLK_ENABLE();
+        } else {
+            __HAL_RCC_GPIOG_CLK_DISABLE();
+        }
+    #if defined(__HAL_RCC_GPIOH_CLK_ENABLE)
+    } else if (gpio == GPIOH) {
+        if (enable) {
+            __HAL_RCC_GPIOH_CLK_ENABLE();
+        } else {
+            __HAL_RCC_GPIOH_CLK_DISABLE();
+        }
+    #endif
+    #if defined(__HAL_RCC_GPIOI_CLK_ENABLE)
+    } else if (gpio == GPIOI) {
+        if (enable) {
+            __HAL_RCC_GPIOI_CLK_ENABLE();
+        } else {
+            __HAL_RCC_GPIOI_CLK_DISABLE();
+        }
+    #endif
+    #if defined(__HAL_RCC_GPIOJ_CLK_ENABLE)
+    } else if (gpio == GPIOJ) {
+        if (enable) {
+            __HAL_RCC_GPIOJ_CLK_ENABLE();
+        } else {
+            __HAL_RCC_GPIOJ_CLK_DISABLE();
+        }
+    #endif
+    #if defined(__HAL_RCC_GPIOK_CLK_ENABLE)
+    } else if (gpio == GPIOK) {
+        if (enable) {
+            __HAL_RCC_GPIOK_CLK_ENABLE();
+        } else {
+            __HAL_RCC_GPIOK_CLK_DISABLE();
+        }
+    #endif
+    #if defined(__HAL_RCC_GPION_CLK_ENABLE)
+    } else if (gpio == GPION) {
+        if (enable) {
+            __HAL_RCC_GPION_CLK_ENABLE();
+        } else {
+            __HAL_RCC_GPION_CLK_DISABLE();
+        }
+    #endif
+    #if defined(__HAL_RCC_GPIOO_CLK_ENABLE)
+    } else if (gpio == GPIOO) {
+        if (enable) {
+            __HAL_RCC_GPIOO_CLK_ENABLE();
+        } else {
+            __HAL_RCC_GPIOO_CLK_DISABLE();
+        }
+    #endif
+    #if defined(__HAL_RCC_GPIOP_CLK_ENABLE)
+    } else if (gpio == GPIOP) {
+        if (enable) {
+            __HAL_RCC_GPIOP_CLK_ENABLE();
+        } else {
+            __HAL_RCC_GPIOP_CLK_DISABLE();
+        }
+    #endif
+    #if defined(__HAL_RCC_GPIOQ_CLK_ENABLE)
+    } else if (gpio == GPIOQ) {
+        if (enable) {
+            __HAL_RCC_GPIOQ_CLK_ENABLE();
+        } else {
+            __HAL_RCC_GPIOQ_CLK_DISABLE();
+        }
+    #endif
     }
 }
