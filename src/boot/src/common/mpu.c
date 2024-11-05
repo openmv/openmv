@@ -100,7 +100,9 @@ __weak void port_mpu_init(void) {
 
     // Configure read-only MPU regions for boot partitions.
     for (size_t i = 0; i < OMV_BOOT_PARTITIONS_COUNT; i++) {
-        port_mpu_config(&OMV_BOOT_PARTITIONS[i], 1, 1, 1);
+        // Note first region is the bootloader's partition,
+        // which normally needs to be executable.
+        port_mpu_config(&OMV_BOOT_PARTITIONS[i], 1, 1, (i == 0));
     }
 }
 
