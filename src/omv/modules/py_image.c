@@ -845,7 +845,7 @@ static mp_obj_t py_image_to_ndarray(uint n_args, const mp_obj_t *pos_args, mp_ma
 
             int i = 0;
 
-            for (; i < len; i += 4) {
+            for (; i < (len - 3); i += 4) {
                 *((uint32_t *) (output_u8 + i)) = *((uint32_t *) (input_u8 + i)) ^ shift;
             }
 
