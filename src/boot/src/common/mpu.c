@@ -102,7 +102,7 @@ __weak void port_mpu_init(void) {
     for (size_t i = 0; i < OMV_BOOT_PARTITIONS_COUNT; i++) {
         // Note first region is the bootloader's partition,
         // which normally needs to be executable.
-        port_mpu_config(&OMV_BOOT_PARTITIONS[i], 1, 1, (i == 0));
+        port_mpu_config(&OMV_BOOT_PARTITIONS[i], 1, 1, (i != 0));
     }
 }
 
