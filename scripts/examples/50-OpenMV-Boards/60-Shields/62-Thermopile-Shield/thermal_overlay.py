@@ -53,7 +53,7 @@ while True:
     else:
         # Create a secondary image and then blend into the frame buffer.
         extra_fb.clear()
-        fir.draw_ir(extra_fb, ir, alpha=256, hint=drawing_hint)
+        fir.draw_ir(extra_fb, ir, hint=drawing_hint)
         img.blend(extra_fb, alpha=128)
 
     # Draw ambient, min and max temperatures.

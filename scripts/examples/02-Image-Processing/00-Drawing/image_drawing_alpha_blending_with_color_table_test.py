@@ -56,7 +56,7 @@ big_img.draw_image(small_img, 0, 0, x_scale=32, y_scale=32, hint=hint)
 
 alpha_div = 1
 alpha_value = 0
-alpha_step = 2
+alpha_step = 3
 
 x_bounce = sensor.width() // 2
 x_bounce_toggle = 1
@@ -90,7 +90,7 @@ while True:
         y_bounce_toggle = -y_bounce_toggle
 
     alpha_value += alpha_step
-    if not alpha_value or alpha_value // alpha_div == 256:
+    if not alpha_value or alpha_value // alpha_div >= 255:
         alpha_step = -alpha_step
 
     print(clock.fps())

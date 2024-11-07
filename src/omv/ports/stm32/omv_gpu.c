@@ -87,7 +87,7 @@ int omv_gpu_draw_image(image_t *src_img,
         dma2d.Init.Mode = DMA2D_M2M_PFC;
     }
 
-    if ((alpha != 256) || alpha_palette) {
+    if ((alpha != 255) || alpha_palette) {
         dma2d.Init.Mode = DMA2D_M2M_BLEND;
     }
 
@@ -159,7 +159,7 @@ int omv_gpu_draw_image(image_t *src_img,
     }
 
     dma2d.LayerCfg[1].InputOffset = src_img->w - src_rect->w;
-    dma2d.LayerCfg[1].InputAlpha = (alpha * 255) / 256;
+    dma2d.LayerCfg[1].InputAlpha = alpha;
 
     HAL_DMA2D_ConfigLayer(&dma2d, 1);
 

@@ -131,7 +131,7 @@ void mjpeg_write(FIL *fp, int width, int height, uint32_t *frames, uint32_t *byt
                   (roi->w == img->w) &&
                   (roi->h == img->h) &&
                   (rgb_channel == -1) &&
-                  (alpha == 256) &&
+                  (alpha == 255) &&
                   (color_palette == NULL) &&
                   (alpha_palette == NULL);
 

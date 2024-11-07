@@ -17,7 +17,7 @@ import time
 TRIGGER_THRESHOLD = 5
 
 BG_UPDATE_FRAMES = 50  # How many frames before blending.
-BG_UPDATE_BLEND = 128  # How much to blend by... ([0-256]==[0.0-1.0]).
+BG_UPDATE_BLEND = 128  # How much to blend by... ([0-255]==[0.0-1.0]).
 
 sensor.reset()  # Initialize the camera sensor.
 sensor.set_pixformat(sensor.RGB565)  # or sensor.RGB565
@@ -42,15 +42,15 @@ while True:
     img = sensor.snapshot()  # Take a picture and return the image.
 
     frame_count += 1
-    if frame_count > BG_UPDATE_FRAMES and not triggered:
+    if frame_count > BG_UPDATE_FRAMES:
         frame_count = 0
-        # Blend in new frame. We're doing 256-alpha here because we want to
+        # Blend in new frame. We're doing 255-alpha here because we want to
         # blend the new frame into the background. Not the background into the
         # new frame which would be just alpha. Blend replaces each pixel by
-        # ((NEW*(alpha))+(OLD*(256-alpha)))/256. So, a low alpha results in
+        # ((NEW*(alpha))+(OLD*(255-alpha)))/255. So, a low alpha results in
         # low blending of the new image while a high alpha results in high
         # blending of the new image. We need to reverse that for this update.
-        img.blend("temp/bg.bmp", alpha=(256 - BG_UPDATE_BLEND))
+        img.blend("temp/bg.bmp", alpha=(255 - BG_UPDATE_BLEND))
         img.save("temp/bg.bmp")
 
     # Replace the image with the "abs(NEW-OLD)" frame difference.
