@@ -136,6 +136,7 @@ mp_uint_t __wrap_mp_hal_stdout_tx_strn(const char *str, mp_uint_t len) {
                 if (ringbuf_put(&tx_ringbuf, str[i]) == -1 && len <= tx_ringbuf.size) {
                     tx_ringbuf.iget = 0;
                     tx_ringbuf.iput = 0;
+                    ringbuf_put(&tx_ringbuf, str[i]);
                 }
             }
         }
