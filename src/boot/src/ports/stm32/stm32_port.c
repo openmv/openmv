@@ -55,6 +55,18 @@ void USB2_IRQ_Handler(void) {
 }
 
 int port_init(void) {
+    #ifdef __DCACHE_PRESENT
+    // Clean I-Cache if enabled.
+    if ((SCB->CCR & (uint32_t) SCB_CCR_IC_Msk)) {
+        SCB_InvalidateICache();
+    }
+
+    // Clean D-Cache if enabled.
+    if ((SCB->CCR & (uint32_t) SCB_CCR_DC_Msk)) {
+        SCB_CleanInvalidateDCache();
+    }
+    #endif
+
     HAL_Init();
 
     // Configure the system clocks.
@@ -114,8 +126,15 @@ int port_deinit(void) {
     USB_OTG_PHY_CLK_DISABLE();
 
     #ifdef __DCACHE_PRESENT
-    // Clean/invalidate any cached lines.
-    SCB_CleanInvalidateDCache();
+    // Disable I-Cache if enabled.
+    if ((SCB->CCR & (uint32_t) SCB_CCR_IC_Msk)) {
+        SCB_DisableICache();
+    }
+
+    // Disable D-Cache if enabled.
+    if ((SCB->CCR & (uint32_t) SCB_CCR_DC_Msk)) {
+        SCB_DisableDCache();
+    }
     #endif
 
     // Clear default regions and configure XIP regions (if any).
