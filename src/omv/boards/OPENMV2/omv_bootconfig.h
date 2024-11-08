@@ -48,11 +48,11 @@ static const pin_t omv_boot_pins[] = {
 #define OMV_BOOT_PINS_COUNT         (sizeof(omv_boot_pins) / sizeof(omv_boot_pins[0]))
 
 // Boot partitions.
-static const partition_t OMV_BOOT_PARTITIONS[] = {
+static const partition_t OMV_BOOT_DFU_PARTITIONS[] = {
   { .type = PTYPE_AXI_FLASH, .region =  -1, .rdonly = 1, .start = 0x08000000, .limit = 0x08008000, .attr = 0 }, // Boot
   { .type = PTYPE_AXI_FLASH, .region =  -1, .rdonly = 0, .start = 0x08008000, .limit = 0x08010000, .attr = 0 }, // FFS
   { .type = PTYPE_AXI_FLASH, .region =  -1, .rdonly = 0, .start = 0x08010000, .limit = 0x08100000, .attr = 0 }, // Firmware
 };
-#define OMV_BOOT_PARTITIONS_COUNT   3 // Must be a literal
-#define OMV_BOOT_PARTITIONS_STR    "BOOTLOADER", "FILESYSTEM", "FIRMWARE"
+#define OMV_BOOT_DFU_PARTITIONS_COUNT   3 // Must be a literal
+#define OMV_BOOT_DFU_PARTITIONS_STR    "BOOTLOADER", "FILESYSTEM", "FIRMWARE"
 #endif //__OMV_BOOTCONFIG_H__
