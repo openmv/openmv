@@ -99,31 +99,36 @@ __weak void port_mpu_init(void) {
     #endif
 
     // Configure read-only MPU regions for boot partitions.
-    for (size_t i = 0; i < OMV_BOOT_PARTITIONS_COUNT; i++) {
-        // Note first region is the bootloader's partition,
-        // which normally needs to be executable.
-        port_mpu_config(&OMV_BOOT_PARTITIONS[i], 1, 1, (i != 0));
+    for (size_t i = 0; i < OMV_BOOT_DFU_PARTITIONS_COUNT; i++) {
+        // Note first region is the bootloader's partition, which normally
+        // needs to be executable. If more executable partitions are needed
+        // a XN flag can be added to partition_t.
+        port_mpu_config(&OMV_BOOT_DFU_PARTITIONS[i], 1, 1, (i != 0));
     }
 }
 
 __weak void port_mpu_deinit() {
     #if (__ARM_ARCH >= 8)
     ARM_MPU_Disable();
+
     // Disable all regions.
-    for (size_t i = 0; i < OMV_BOOT_PARTITIONS_COUNT; i++) {
-        if (OMV_BOOT_PARTITIONS[i].region != -1) {
-            ARM_MPU_ClrRegion(OMV_BOOT_PARTITIONS[i].region);
+    for (size_t i = 0; i < OMV_BOOT_DFU_PARTITIONS_COUNT; i++) {
+        if (OMV_BOOT_DFU_PARTITIONS[i].region != -1) {
+            ARM_MPU_ClrRegion(OMV_BOOT_DFU_PARTITIONS[i].region);
         }
     }
 
-    // Configure XIP MPU regions (if any).
-    for (size_t i = 0; i < OMV_BOOT_PARTITIONS_COUNT; i++) {
-        if (OMV_BOOT_PARTITIONS[i].type == PTYPE_XIP_FLASH) {
-            port_mpu_config(&OMV_BOOT_PARTITIONS[i], 1, 1, 0);
+    #ifdef OMV_BOOT_XIP_PARTITIONS_COUNT
+    // Configure MPU regions for XIP partitions.
+    for (size_t i = 0; i < OMV_BOOT_XIP_PARTITIONS_COUNT; i++) {
+        if (OMV_BOOT_XIP_PARTITIONS[i].type == PTYPE_XIP_FLASH) {
+            port_mpu_config(&OMV_BOOT_XIP_PARTITIONS[i], 1, 1, 0);
         }
     }
+    #endif  // OMV_BOOT_XIP_PARTITIONS_COUNT
+
     ARM_MPU_Enable(MPU_CTRL_PRIVDEFENA_Msk | MPU_CTRL_HFNMIENA_Msk);
-    #endif
+    #endif  // __ARM_ARCH >= 8
 }
 
 __weak void port_mpu_load_defaults() {
