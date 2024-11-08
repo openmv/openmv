@@ -61,7 +61,7 @@ uint32_t tud_dfu_get_timeout_cb(uint8_t itf, uint8_t state) {
 
 // Invoked when DFU_DNLOAD is received followed by DFU_GETSTATUS (state=DFU_DNBUSY).
 void tud_dfu_download_cb(uint8_t itf, uint16_t block, uint8_t const *buf, uint16_t size) {
-    const partition_t *p = &OMV_BOOT_PARTITIONS[itf];
+    const partition_t *p = &OMV_BOOT_DFU_PARTITIONS[itf];
     uint32_t addr = p->start + (block * CFG_TUD_DFU_XFER_BUFSIZE);
 
     // Check if partition is writable.
@@ -88,13 +88,13 @@ void tud_dfu_download_cb(uint8_t itf, uint16_t block, uint8_t const *buf, uint16
 // Invoked when the download process is complete, i.e.,
 // DFU_DNLOAD followed by DFU_GETSTATUS (state=Manifest).
 void tud_dfu_manifest_cb(uint8_t itf) {
-    port_mpu_config(&OMV_BOOT_PARTITIONS[itf], 1, 1, 1);
+    port_mpu_config(&OMV_BOOT_DFU_PARTITIONS[itf], 1, 1, 1);
     return tud_dfu_finish_flashing(DFU_STATUS_OK);
 }
 
 // Invoked when DFU_UPLOAD request is received.
 uint16_t tud_dfu_upload_cb(uint8_t itf, uint16_t block, uint8_t *buf, uint16_t size) {
-    const partition_t *p = &OMV_BOOT_PARTITIONS[itf];
+    const partition_t *p = &OMV_BOOT_DFU_PARTITIONS[itf];
     uint32_t addr = p->start + (block * CFG_TUD_DFU_XFER_BUFSIZE);
 
     if (addr + size > p->limit) {

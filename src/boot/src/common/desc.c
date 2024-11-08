@@ -37,7 +37,7 @@
 #define STR_DESC_MAX_LEN        (32)
 #define STR_DESC_COUNT          (sizeof(desc_string) / sizeof(desc_string[0]))
 
-#define DFU_DESC_ALT_COUNT      OMV_BOOT_PARTITIONS_COUNT
+#define DFU_DESC_ALT_COUNT      OMV_BOOT_DFU_PARTITIONS_COUNT
 #define DFU_DESC_FUNC_ATTR      (DFU_ATTR_CAN_UPLOAD | DFU_ATTR_CAN_DOWNLOAD | DFU_ATTR_MANIFESTATION_TOLERANT)
 
 #define CFG_DESC_ITF_DFU        (0)
@@ -49,7 +49,7 @@ static char const *desc_string[] = {
     "OpenMV",                   // 1: Manufacturer
     "OpenMV Camera (DFU Mode)", // 2: Product
     "0123456789ABCDEF",         // 3: Default Serial.
-    OMV_BOOT_PARTITIONS_STR,
+    OMV_BOOT_DFU_PARTITIONS_STR,
 };
 
 static tusb_desc_device_t const desc_device = {
