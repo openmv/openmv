@@ -36,7 +36,12 @@ MEMORY
   #if defined(OMV_ITCM_ORIGIN)
   ITCM (xrw)        : ORIGIN = OMV_ITCM_ORIGIN,      LENGTH = OMV_ITCM_LENGTH
   #endif
+  #if defined(OMV_SRAM0_ORIGIN)
+  SRAM0 (xrw)       : ORIGIN = OMV_SRAM0_ORIGIN,     LENGTH = OMV_SRAM0_LENGTH
+  #endif
+  #if defined(OMV_SRAM1_ORIGIN)
   SRAM1 (xrw)       : ORIGIN = OMV_SRAM1_ORIGIN,     LENGTH = OMV_SRAM1_LENGTH
+  #endif
   #if defined(OMV_SRAM2_ORIGIN)
   SRAM2 (xrw)       : ORIGIN = OMV_SRAM2_ORIGIN,     LENGTH = OMV_SRAM2_LENGTH
   #endif
@@ -46,8 +51,11 @@ MEMORY
   #if defined(OMV_SRAM4_ORIGIN)
   SRAM4 (xrw)       : ORIGIN = OMV_SRAM4_ORIGIN,     LENGTH = OMV_SRAM4_LENGTH
   #endif
-  #if defined(OMV_AXI_SRAM_ORIGIN)
-  AXI_SRAM (xrw)    : ORIGIN = OMV_AXI_SRAM_ORIGIN,  LENGTH = OMV_AXI_SRAM_LENGTH
+  #if defined(OMV_SRAM5_ORIGIN)
+  SRAM5 (xrw)       : ORIGIN = OMV_SRAM5_ORIGIN,     LENGTH = OMV_SRAM5_LENGTH
+  #endif
+  #if defined(OMV_SRAM6_ORIGIN)
+  SRAM6 (xrw)       : ORIGIN = OMV_SRAM6_ORIGIN,     LENGTH = OMV_SRAM6_LENGTH
   #endif
   #if defined(OMV_DRAM_ORIGIN)
   DRAM (xrw)        : ORIGIN = OMV_DRAM_ORIGIN,      LENGTH = OMV_DRAM_LENGTH
