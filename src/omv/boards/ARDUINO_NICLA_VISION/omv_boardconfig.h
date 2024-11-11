@@ -121,13 +121,13 @@
 #define OMV_MAIN_MEMORY                       DTCM      // Data/BSS memory.
 #define OMV_STACK_MEMORY                      DTCM      // stack memory
 #define OMV_STACK_SIZE                        (32K)
-#define OMV_FB_MEMORY                         AXI_SRAM  // Framebuffer, fb_alloc
+#define OMV_FB_MEMORY                         SRAM0     // Framebuffer, fb_alloc
 #define OMV_FB_SIZE                           (400K)    // FB memory: header + VGA/GS image
 #define OMV_FB_ALLOC_SIZE                     (76K)     // minimum fb alloc size
-#define OMV_JPEG_MEMORY                       AXI_SRAM  // JPEG buffer memory buffer.
+#define OMV_JPEG_MEMORY                       SRAM0     // JPEG buffer memory buffer.
 #define OMV_JPEG_SIZE                         (32K)     // IDE JPEG buffer (header + data).
 #define OMV_DMA_MEMORY                        SRAM2     // DMA buffers memory.
-#define OMV_DMA_MEMORY_D1                     AXI_SRAM  // Domain 1 DMA buffers.
+#define OMV_DMA_MEMORY_D1                     SRAM0     // Domain 1 DMA buffers.
 #define OMV_DMA_MEMORY_D2                     SRAM2     // Domain 2 DMA buffers.
 #define OMV_CM4_BOOT_MEMORY                   SRAM4     // Use to boot CM4 for low-power mode.
 #define OMV_CM4_BOOT_SIZE                     1K
@@ -148,14 +148,14 @@
 #define OMV_DTCM_LENGTH                       128K
 #define OMV_ITCM_ORIGIN                       0x00000000
 #define OMV_ITCM_LENGTH                       64K
+#define OMV_SRAM0_ORIGIN                      0x24000000
+#define OMV_SRAM0_LENGTH                      512K
 #define OMV_SRAM1_ORIGIN                      0x30000000
 #define OMV_SRAM1_LENGTH                      276K
 #define OMV_SRAM2_ORIGIN                      0x30045000
 #define OMV_SRAM2_LENGTH                      12K
 #define OMV_SRAM4_ORIGIN                      0x38000000
 #define OMV_SRAM4_LENGTH                      64K
-#define OMV_AXI_SRAM_ORIGIN                   0x24000000
-#define OMV_AXI_SRAM_LENGTH                   512K
 
 // Flash configuration.
 #define OMV_FLASH_FFS_ORIGIN                  0x08020000
