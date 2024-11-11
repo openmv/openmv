@@ -73,8 +73,8 @@ CFLAGS += -D$(MCU) \
           -D__VFP_FP__ \
           -DUSE_DEVICE_MODE \
           -DHSE_VALUE=$(OMV_HSE_VALUE)\
-          -DOMV_VTOR_BASE=$(OMV_BOOT_BASE) \
-          -DOMV_BOOT_JUMP=$(OMV_FIRM_BASE) \
+          -DOMV_VTOR_BASE=$(OMV_BOOT_ADDR) \
+          -DOMV_BOOT_JUMP=$(OMV_FIRM_ADDR) \
           -DCMSIS_MCU_H='<$(MCU_LOWER).h>' \
           -DSTM32_HAL_H='<stm32$(MCU_SERIES)xx_hal.h>' \
           -DUSE_FULL_LL_DRIVER \
