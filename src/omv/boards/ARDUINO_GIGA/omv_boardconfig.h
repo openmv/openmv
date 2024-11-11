@@ -127,20 +127,20 @@
 // Linker script constants (see the linker script template stm32.ld.S).
 // Note: fb_alloc is a stack-based, dynamically allocated memory on FB.
 // The maximum available fb_alloc memory = FB_ALLOC_SIZE + FB_SIZE - (w*h*bpp).
-#define OMV_MAIN_MEMORY                     AXI_SRAM // Data, BSS memory.
+#define OMV_MAIN_MEMORY                     SRAM0   // Data, BSS memory.
 #define OMV_STACK_MEMORY                    DTCM    // stack memory
 #define OMV_STACK_SIZE                      (64K)
 #define OMV_FB_MEMORY                       DRAM    // Framebuffer, fb_alloc
 #define OMV_FB_SIZE                         (3M)    // FB memory: header + VGA/GS image
 #define OMV_FB_ALLOC_SIZE                   (1M)    // minimum fb alloc size
-#define OMV_FB_OVERLAY_MEMORY               AXI_SRAM    // Fast fb_alloc memory.
+#define OMV_FB_OVERLAY_MEMORY               SRAM0   // Fast fb_alloc memory.
 #define OMV_FB_OVERLAY_SIZE                 (448K)  // Fast fb_alloc memory size.
 #define OMV_JPEG_MEMORY                     DRAM    // JPEG buffer memory buffer.
 #define OMV_JPEG_SIZE                       (1M)    // IDE JPEG buffer (header + data).
 #define OMV_VOSPI_MEMORY                    DTCM    // VoSPI buffer memory.
 #define OMV_VOSPI_SIZE                      (38K)
 #define OMV_DMA_MEMORY                      SRAM3   // Misc DMA buffers memory.
-#define OMV_DMA_MEMORY_D1                   AXI_SRAM // Domain 1 DMA buffers.
+#define OMV_DMA_MEMORY_D1                   SRAM0   // Domain 1 DMA buffers.
 #define OMV_DMA_MEMORY_D2                   SRAM3   // Domain 2 DMA buffers.
 #define OMV_OPENAMP_MEMORY                  SRAM4
 #define OMV_OPENAMP_SIZE                    (64K)
@@ -160,14 +160,14 @@
 #define OMV_FLASH_LENGTH                    2048K
 #define OMV_DTCM_ORIGIN                     0x20000000    // Note accessible by CPU and MDMA only.
 #define OMV_DTCM_LENGTH                     128K
+#define OMV_SRAM0_ORIGIN                    0x24000000
+#define OMV_SRAM0_LENGTH                    512K
 #define OMV_SRAM1_ORIGIN                    0x30000000
 #define OMV_SRAM1_LENGTH                    256K
 #define OMV_SRAM3_ORIGIN                    0x30040000
 #define OMV_SRAM3_LENGTH                    32K
 #define OMV_SRAM4_ORIGIN                    0x38000000
 #define OMV_SRAM4_LENGTH                    64K
-#define OMV_AXI_SRAM_ORIGIN                 0x24000000
-#define OMV_AXI_SRAM_LENGTH                 512K
 #define OMV_DRAM_ORIGIN                     0xC0000000
 #define OMV_DRAM_LENGTH                     8M
 

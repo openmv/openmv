@@ -27,7 +27,15 @@ STARTUP     ?= st/startup_$(shell echo $(MCU) | tr '[:upper:]' '[:lower:]')
 UVC_DIR     := $(OMV_DIR)/ports/$(PORT)/uvc
 MCU_SERIES  := $(shell echo $(MCU) | cut -c6-7 | tr '[:upper:]' '[:lower:]')
 MCU_LOWER   := $(shell echo $(MCU) | tr '[:upper:]' '[:lower:]')
-HAL_DIR      = hal/stm32/$(MCU_SERIES)
+HAL_DIR     := hal/stm32/$(MCU_SERIES)
+TFLM_CORE   := $(CPU)
+ifeq ($(CPU),$(filter $(CPU),cortex-m4 cortex-m7))
+TFLM_CORE   := $(CPU)+fp
+endif
+
+SIGN_TOOL = $(TOOLS)/st/cubeprog/bin/STM32MP_SigningTool_CLI
+PROG_TOOL = $(TOOLS)/st/cubeprog/bin/STM32_Programmer.sh
+STLDR_DIR = $(TOOLS)/st/cubeprog/bin/ExternalLoader/
 
 # Compiler Flags
 CFLAGS += -std=gnu99 \
@@ -49,11 +57,10 @@ CFLAGS += -std=gnu99 \
 CFLAGS += -D$(MCU) \
           -D$(TARGET) \
           -DARM_NN_TRUNCATE \
-          -D__FPU_PRESENT=1 \
           -D__VFP_FP__ \
           -DUSE_FULL_LL_DRIVER \
           -DHSE_VALUE=$(OMV_HSE_VALUE)\
-          -DOMV_VTOR_BASE=$(OMV_FIRM_BASE) \
+          -DOMV_VTOR_BASE=$(OMV_FIRM_ADDR) \
           -DCMSIS_MCU_H='<$(MCU_LOWER).h>' \
           -DSTM32_HAL_H='<stm32$(MCU_SERIES)xx_hal.h>' \
           $(OMV_BOARD_CFLAGS)
@@ -145,7 +152,7 @@ CFLAGS += $(HAL_CFLAGS) $(MPY_CFLAGS) $(OMV_CFLAGS)
 ifeq ($(MICROPY_PY_AUDIO), 1)
 LIBS += $(TOP_DIR)/$(LIBPDM_DIR)/libPDMFilter_CM7_GCC_wc32.a
 endif
-LIBS += $(TOP_DIR)/$(TENSORFLOW_DIR)/libtflm/lib/libtflm-$(CPU)+fp-release.a
+LIBS += $(TOP_DIR)/$(TENSORFLOW_DIR)/libtflm/lib/libtflm-$(TFLM_CORE)-release.a
 
 #------------- Firmware Objects ----------------#
 FIRM_OBJ += $(wildcard $(BUILD)/$(CMSIS_DIR)/src/dsp/*/*.o)
@@ -688,40 +695,45 @@ UVC_OBJS: FIRMWARE_OBJS
 	$(MAKE)  -C $(UVC_DIR)                   BUILD=$(BUILD)/$(UVC_DIR)          CFLAGS="$(UVC_CFLAGS) -MMD"
 endif
 
-# This target generates the bootloader.
-ifeq ($(OMV_ENABLE_BL), 1)
-BOOTLOADER = bootloader
-$(BOOTLOADER): | $(BUILD) $(FW_DIR)
-	$(MAKE) -C $(TOP_DIR)/$(BOOT_DIR) BUILD=$(BUILD)/$(BOOT_DIR)
-	$(OBJCOPY) -Obinary $(FW_DIR)/$(BOOTLOADER).elf $(FW_DIR)/$(BOOTLOADER).bin
-	$(PYTHON) $(MKDFU) -D $(DFU_DEVICE) -b $(OMV_BOOT_BASE):$(FW_DIR)/$(BOOTLOADER).bin $(FW_DIR)/$(BOOTLOADER).dfu
-endif
-
-# This target generates the UVC firmware.
+# This target builds the UVC firmware.
 ifeq ($(OMV_ENABLE_UVC), 1)
 $(UVC): FIRMWARE_OBJS UVC_OBJS
 	$(CPP) -P -E -I$(OMV_COMMON_DIR) -I$(OMV_BOARD_CONFIG_DIR) \
                    $(UVC_DIR)/stm32.ld.S > $(BUILD)/$(UVC_DIR)/stm32.lds
 	$(CC) $(UVC_LDFLAGS) $(UVC_OBJ) -o $(FW_DIR)/$(UVC).elf -lgcc
 	$(OBJCOPY) -Obinary $(FW_DIR)/$(UVC).elf $(FW_DIR)/$(UVC).bin
-	$(PYTHON) $(MKDFU) -D $(DFU_DEVICE) -b $(OMV_FIRM_BASE):$(FW_DIR)/$(UVC).bin $(FW_DIR)/$(UVC).dfu
+	$(PYTHON) $(MKDFU) -D $(DFU_DEVICE) -b $(OMV_FIRM_ADDR):$(FW_DIR)/$(UVC).bin $(FW_DIR)/$(UVC).dfu
 endif
 
-# This target generates the main/app firmware image located at 0x08010000
+# This target builds the bootloader.
+ifeq ($(OMV_ENABLE_BL), 1)
+BOOTLOADER = bootloader
+$(BOOTLOADER): | $(BUILD) $(FW_DIR)
+	$(MAKE) -C $(TOP_DIR)/$(BOOT_DIR) BUILD=$(BUILD)/$(BOOT_DIR)
+	$(OBJCOPY) -Obinary $(FW_DIR)/$(BOOTLOADER).elf $(FW_DIR)/$(BOOTLOADER).bin
+ifeq ($(OMV_SIGN_BOOT), 1)
+	$(SIGN_TOOL) -bin $(FW_DIR)/$(BOOTLOADER).bin -s -nk -t fsbl \
+        -of $(OMV_SIGN_FLAGS) -hv $(OMV_SIGN_HDRV) -o $(FW_DIR)/$(BOOTLOADER).bin
+	chmod +rw $(FW_DIR)/$(BOOTLOADER).bin
+endif
+	$(PYTHON) $(MKDFU) -D $(DFU_DEVICE) -b $(OMV_BOOT_ADDR):$(FW_DIR)/$(BOOTLOADER).bin $(FW_DIR)/$(BOOTLOADER).dfu
+endif
+
+# This target builds the main/app firmware image.
 $(FIRMWARE): FIRMWARE_OBJS
 	$(CPP) -P -E  -I$(OMV_COMMON_DIR) -I$(OMV_BOARD_CONFIG_DIR) \
-                    $(OMV_DIR)/ports/$(PORT)/$(LDSCRIPT).ld.S > $(BUILD)/$(LDSCRIPT).lds
+        $(OMV_DIR)/ports/$(PORT)/$(LDSCRIPT).ld.S > $(BUILD)/$(LDSCRIPT).lds
 	$(CC) $(LDFLAGS) $(FIRM_OBJ) -o $(FW_DIR)/$(FIRMWARE).elf $(LIBS) -lm
 	$(OBJCOPY) -Obinary $(FW_DIR)/$(FIRMWARE).elf $(FW_DIR)/$(FIRMWARE).bin
-	$(PYTHON) $(MKDFU) -D $(DFU_DEVICE) -b $(OMV_FIRM_BASE):$(FW_DIR)/$(FIRMWARE).bin $(FW_DIR)/$(FIRMWARE).dfu
+	$(PYTHON) $(MKDFU) -D $(DFU_DEVICE) -b $(OMV_FIRM_ADDR):$(FW_DIR)/$(FIRMWARE).bin $(FW_DIR)/$(FIRMWARE).dfu
 
-# This target generates the uvc, bootloader and firmware images.
+# This target builds a contiguous firmware image.
 $(OPENMV): $(BOOTLOADER) $(UVC) $(FIRMWARE)
 ifeq ($(OMV_ENABLE_BL), 1)
-	# Generate a contiguous firmware image for factory programming
-	$(OBJCOPY) -Obinary --pad-to=$(OMV_FIRM_BASE) --gap-fill=0xFF $(FW_DIR)/$(BOOTLOADER).elf $(FW_DIR)/$(BOOTLOADER)_padded.bin
-	$(CAT) $(FW_DIR)/$(BOOTLOADER)_padded.bin $(FW_DIR)/$(FIRMWARE).bin > $(FW_DIR)/$(OPENMV).bin
-	$(RM) $(FW_DIR)/$(BOOTLOADER)_padded.bin
+	# Pad the bootloader binary with 0xFF up to the firmware start.
+	$(OBJCOPY) -I binary -O binary --pad-to $$(($(OMV_FIRM_ADDR) - $(OMV_FIRM_BASE))) \
+        --gap-fill 0xFF $(FW_DIR)/$(BOOTLOADER).bin $(FW_DIR)/$(BOOTLOADER).bin
+	$(CAT) $(FW_DIR)/$(BOOTLOADER).bin $(FW_DIR)/$(FIRMWARE).bin > $(FW_DIR)/$(OPENMV).bin
 	$(SIZE) $(FW_DIR)/$(BOOTLOADER).elf
 endif
 	$(SIZE) $(FW_DIR)/$(FIRMWARE).elf
@@ -747,3 +759,7 @@ flash_boot_dfu_util::
 # Flash the main firmware image using dfu_util
 flash_image_dfu_util::
 	dfu-util -a 0 -d $(DFU_DEVICE) -D $(FW_DIR)/$(FIRMWARE).dfu
+
+deploy: $(OPENMV)
+	$(PROG_TOOL) -c port=SWD mode=HOTPLUG ap=1 \
+        -el $(STLDR_DIR)/$(OMV_PROG_STLDR) -w $(FW_DIR)/$(OPENMV).bin $(OMV_FIRM_BASE) -hardRst

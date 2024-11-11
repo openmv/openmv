@@ -136,10 +136,10 @@
 #define OMV_FFS_MEMORY                        DTCM  // Flash filesystem cache memory
 #define OMV_STACK_MEMORY                      ITCM  // stack memory
 #define OMV_STACK_SIZE                        (64K)
-#define OMV_FB_MEMORY                         AXI_SRAM  // Framebuffer, fb_alloc
-#define OMV_FB_SIZE                           (400K)    // FB memory: header + VGA/GS image
-#define OMV_FB_ALLOC_SIZE                     (80K)     // minimum fb alloc size
-#define OMV_JPEG_MEMORY                       AXI_SRAM  // JPEG buffer memory.
+#define OMV_FB_MEMORY                         SRAM0  // Framebuffer, fb_alloc
+#define OMV_FB_SIZE                           (400K) // FB memory: header + VGA/GS image
+#define OMV_FB_ALLOC_SIZE                     (80K) // minimum fb alloc size
+#define OMV_JPEG_MEMORY                       SRAM0 // JPEG buffer memory.
 #define OMV_JPEG_SIZE                         (32K) // IDE JPEG buffer (header + data).
 #define OMV_VOSPI_MEMORY                      SRAM4 // VoSPI buffer memory.
 #define OMV_VOSPI_SIZE                        (38K)
@@ -159,14 +159,14 @@
 #define OMV_DTCM_LENGTH                       128K
 #define OMV_ITCM_ORIGIN                       0x00000000
 #define OMV_ITCM_LENGTH                       64K
+#define OMV_SRAM0_ORIGIN                      0x24000000
+#define OMV_SRAM0_LENGTH                      512K
 #define OMV_SRAM1_ORIGIN                      0x30000000
 #define OMV_SRAM1_LENGTH                      280K
 #define OMV_SRAM2_ORIGIN                      0x30046000
 #define OMV_SRAM2_LENGTH                      8K
 #define OMV_SRAM4_ORIGIN                      0x38000000
 #define OMV_SRAM4_LENGTH                      64K
-#define OMV_AXI_SRAM_ORIGIN                   0x24000000
-#define OMV_AXI_SRAM_LENGTH                   512K
 
 // Flash configuration.
 #define OMV_FLASH_BOOT_ORIGIN                 0x08000000
