@@ -1,4 +1,4 @@
-# Building the Firmware From Source (minor change by Chang)
+# Building the Firmware From Source (minor copy change by Chang)
 
 This guide covers installing a development environment and building the OpenMV firmware from source on Linux.
 For information on OpenMV Camera general usage, please see the [forums](http://openmv.io/forums) or [docs](http://openmv.io/docs).
