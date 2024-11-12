@@ -90,7 +90,6 @@
 #define OMV_GC_BLOCK0_SIZE                    (53K)
 #define OMV_JPEG_SIZE                         (22K) // IDE JPEG buffer (header + data).
 #define OMV_MSC_BUF_SIZE                      (2K) // USB MSC bot data
-#define OMV_VFS_BUF_SIZE                      (1K) // VFS struct + FATFS file buffer (624 bytes)
 #define OMV_FFS_BUF_SIZE                      (32K) // Flash filesystem cache
 #define OMV_LINE_BUF_SIZE                     (3 * 1024) // Image line buffer round(640 * 2BPP * 2 buffers).
 
