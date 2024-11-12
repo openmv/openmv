@@ -77,8 +77,6 @@
 #include "mimxrt_hal.h"
 
 int main(void) {
-    bool sdcard_detected = false;
-    bool sdcard_mounted = false;
     bool first_soft_reset = true;
 
     mimxrt_hal_init();
@@ -159,43 +157,17 @@ soft_reset:
     }
     #endif
 
-    // Mount or create a fresh filesystem.
-    mp_obj_t mount_point = MP_OBJ_NEW_QSTR(MP_QSTR__slash_);
-    #if MICROPY_PY_MACHINE_SDCARD
-    mimxrt_sdcard_obj_t *sdcard = &mimxrt_sdcard_objs[MICROPY_HW_SDCARD_SDMMC - 1];
-    if (!sdcard->state->initialized) {
-        mp_hal_pin_input(sdcard->pins->cd_b.pin);
-        sdcard_detected = !mp_hal_pin_read(sdcard->pins->cd_b.pin);
-    } else {
-        sdcard_detected = sdcard_detect(sdcard);
-    }
-    if (sdcard_detected) {
-        mp_obj_t args[] = { MP_OBJ_NEW_SMALL_INT(MICROPY_HW_SDCARD_SDMMC) };
-        mp_obj_t bdev = MP_OBJ_TYPE_GET_SLOT(&machine_sdcard_type, make_new) (&machine_sdcard_type, 1, 0, args);
-        if (mp_vfs_mount_and_chdir_protected(bdev, mount_point) == 0) {
-            mimxrt_msc_medium = &machine_sdcard_type;
-            sdcard_mounted = true;
-        }
-    }
-    #endif
+    // Execute _boot.py to set up the filesystem.
+    pyexec_frozen_module("_boot.py", false);
 
-    if (sdcard_mounted == false) {
-        mp_obj_t bdev = MP_OBJ_TYPE_GET_SLOT(&mimxrt_flash_type, make_new) (&mimxrt_flash_type, 0, 0, NULL);
-        if (mp_vfs_mount_and_chdir_protected(bdev, mount_point) == 0) {
-            mimxrt_msc_medium = &mimxrt_flash_type;
-        } else {
-            // Create a fresh filesystem.
-            fs_user_mount_t *vfs = MP_OBJ_TYPE_GET_SLOT(&mp_fat_vfs_type, make_new) (&mp_fat_vfs_type, 1, 0, &bdev);
-            if (mp_init_filesystem(vfs) == 0) {
-                if (mp_vfs_mount_and_chdir_protected(bdev, mount_point) == 0) {
-                    mimxrt_msc_medium = &mimxrt_flash_type;
-                }
-            }
-        }
-    }
+    // Set the USB medium to flash block device.
+    mimxrt_msc_medium = &mimxrt_flash_type;
 
-    // Mark the filesystem as an OpenMV storage.
-    file_ll_touch(".openmv_disk");
+    const char *path = "/sdcard";
+    // If SD is mounted, set the USB medium to SD.
+    if (mp_vfs_lookup_path(path, &path) != MP_VFS_NONE) {
+        mimxrt_msc_medium = &machine_sdcard_type;
+    }
 
     // Initialize TinyUSB after the filesystem is mounted.
     if (!tusb_inited()) {
