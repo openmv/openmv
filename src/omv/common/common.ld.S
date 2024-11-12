@@ -222,13 +222,6 @@ PROVIDE(__stack = __StackTop);
   . = . + OMV_MSC_BUF_SIZE;
   #endif
 
-  /* VFS + FATFS buffer */
-  #if defined(OMV_VFS_BUF_SIZE)
-  . = ALIGN(16);
-  _vfs_buf  = .;
-  . = . + OMV_VFS_BUF_SIZE;
-  #endif
-
   #if defined(OMV_JPEG_SIZE) && !defined(OMV_JPEG_MEMORY)
   . = ALIGN(16);
   _jpeg_memory_start = .;

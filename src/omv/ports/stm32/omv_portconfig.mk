@@ -113,7 +113,6 @@ OMV_CFLAGS += -I$(TOP_DIR)/$(OMV_DIR)/common/
 OMV_CFLAGS += -I$(TOP_DIR)/$(OMV_DIR)/imlib/
 OMV_CFLAGS += -I$(TOP_DIR)/$(OMV_DIR)/modules/
 OMV_CFLAGS += -I$(TOP_DIR)/$(OMV_DIR)/sensors/
-OMV_CFLAGS += -I$(TOP_DIR)/$(OMV_DIR)/templates/
 OMV_CFLAGS += -I$(TOP_DIR)/$(OMV_DIR)/ports/$(PORT)/
 OMV_CFLAGS += -I$(TOP_DIR)/$(OMV_DIR)/ports/$(PORT)/modules/
 
@@ -190,7 +189,6 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/alloc/, \
 
 FIRM_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/common/, \
 	array.o                     \
-	ini.o                       \
 	ringbuf.o                   \
 	trace.o                     \
 	mutex.o                     \

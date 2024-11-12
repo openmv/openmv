@@ -60,9 +60,6 @@
 #define OMV_FIR_AMG8833_ENABLE                (1)
 #define OMV_FIR_LEPTON_ENABLE                 (1)
 
-// Debugging configuration.
-#define OMV_WIFIDBG_ENABLE                    (1)
-
 // UMM heap block size
 #define OMV_UMM_BLOCK_SIZE                    256
 
@@ -140,7 +137,6 @@
 #define OMV_GC_BLOCK1_MEMORY                  DRAM   // Extra GC block 0.
 #define OMV_GC_BLOCK1_SIZE                    (4M)
 #define OMV_MSC_BUF_SIZE                      (2K)   // USB MSC bot data
-#define OMV_VFS_BUF_SIZE                      (1K)   // VFS struct + FATFS file buffer (624 bytes)
 #define OMV_SDRAM_SIZE                        (32 * 1024 * 1024) // This needs to be here for UVC firmware.
 #define OMV_LINE_BUF_SIZE                     (11 * 1024) // Image line buffer round(2592 * 2BPP * 2 buffers).
 

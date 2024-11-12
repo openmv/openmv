@@ -1,4 +1,5 @@
 include("$(MPY_DIR)/extmod/asyncio")
+freeze ("$(OMV_LIB_DIR)/", "_boot.py")
 freeze ("$(OMV_LIB_DIR)/", "bno055.py")
 freeze ("$(OMV_LIB_DIR)/", "modbus.py")
 freeze ("$(OMV_LIB_DIR)/", "mqtt.py")

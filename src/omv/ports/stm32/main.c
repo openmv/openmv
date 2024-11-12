@@ -21,24 +21,19 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  *
- * main function.
+ * STM32 main function.
  */
 #include <stdio.h>
 #include <stdbool.h>
 #include <string.h>
 #include STM32_HAL_H
+
 #include "mpconfig.h"
 #include "systick.h"
 #include "pendsv.h"
-#include "qstr.h"
 #include "nlr.h"
-#include "lexer.h"
-#include "parse.h"
-#include "compile.h"
 #include "runtime.h"
 #include "obj.h"
-#include "objmodule.h"
-#include "objstr.h"
 #include "gc.h"
 #include "stackctrl.h"
 #include "gccollect.h"
@@ -46,17 +41,6 @@
 #include "pin.h"
 #include "usb.h"
 #include "rtc.h"
-#include "storage.h"
-#include "sdcard.h"
-#include "modmachine.h"
-#include "extmod/modnetwork.h"
-#include "extmod/modmachine.h"
-
-#include "extmod/vfs.h"
-#include "extmod/vfs_fat.h"
-#include "shared/runtime/pyexec.h"
-#include "shared/readline/readline.h"
-
 #include "irq.h"
 #include "rng.h"
 #include "led.h"
@@ -67,18 +51,40 @@
 #include "can.h"
 #include "extint.h"
 #include "servo.h"
+#include "sdcard.h"
+#include "modmachine.h"
+#include "extmod/modmachine.h"
+#if MICROPY_PY_NETWORK
+#include "extmod/modnetwork.h"
+#endif
+#if MICROPY_PY_BLUETOOTH
+#include "mpbthciport.h"
+#include "extmod/modbluetooth.h"
+#endif
+#if MICROPY_PY_LWIP
+#include "lwip/init.h"
+#include "lwip/apps/mdns.h"
+#if MICROPY_PY_NETWORK_CYW43
+#include "lib/cyw43-driver/src/cyw43.h"
+#endif
+#endif
+#include "extmod/vfs.h"
+#include "extmod/vfs_fat.h"
+#include "shared/runtime/pyexec.h"
+#include "shared/readline/readline.h"
+
+#include "omv_boardconfig.h"
+#include "omv_gpio.h"
+#include "omv_i2c.h"
+#include "omv_csi.h"
+#include "mp_utils.h"
+#include "framebuffer.h"
 
 #include "usbdbg.h"
-#include "wifidbg.h"
 #include "sdram.h"
 #include "fb_alloc.h"
 #include "dma_alloc.h"
 #include "file_utils.h"
-
-#include "usbd_core.h"
-#include "usbd_desc.h"
-#include "usbd_cdc_msc_hid.h"
-#include "usbd_cdc_interface.h"
 
 #include "py_image.h"
 #include "py_fir.h"
@@ -87,32 +93,7 @@
 #include "py_imu.h"
 #include "py_audio.h"
 
-#include "framebuffer.h"
-
-#include "ini.h"
-#include "omv_boardconfig.h"
-#include "omv_gpio.h"
-#include "omv_i2c.h"
-#include "omv_csi.h"
-
-#if MICROPY_PY_LWIP
-#include "lwip/init.h"
-#include "lwip/apps/mdns.h"
-#include "lib/cyw43-driver/src/cyw43.h"
-#endif
-
-#if MICROPY_PY_BLUETOOTH
-#include "extmod/modbluetooth.h"
-#include "mpbthciport.h"
-#endif
-
-#include "extmod/vfs.h"
-#include "extmod/vfs_fat.h"
-#include "mp_utils.h"
-
 int errno;
-extern char _vfs_buf[];
-static fs_user_mount_t *vfs_fat = (fs_user_mount_t *) &_vfs_buf;
 #if MICROPY_PY_THREAD
 pyb_thread_t pyb_thread_main;
 #endif
@@ -131,24 +112,6 @@ void flash_error(int n) {
 }
 
 void NORETURN __fatal_error(const char *msg) {
-    // Check if any storage has been initialized
-    // before attempting to create the error log.
-    if (pyb_usb_storage_medium) {
-        FIL fp;
-        if (f_open(&vfs_fat->fatfs, &fp, "ERROR.LOG",
-                   FA_WRITE | FA_CREATE_ALWAYS) == FR_OK) {
-            UINT bytes;
-            const char *hdr = "FATAL ERROR:\n";
-            file_ll_write(&fp, hdr, strlen(hdr), &bytes);
-            file_ll_write(&fp, msg, strlen(msg), &bytes);
-            file_ll_close(&fp);
-            storage_flush();
-            // Initialize the USB device if it's not already initialize to allow
-            // the host to mount the filesystem and access the error log.
-            pyb_usb_dev_init(pyb_usb_dev_detect(), MICROPY_HW_USB_VID,
-                             MICROPY_HW_USB_PID_CDC_MSC, USBD_MODE_CDC_MSC, 0, NULL, NULL);
-        }
-    }
     for (uint i = 0;;) {
         led_toggle(((i++) & 3));
         for (volatile uint delay = 0; delay < 500000; delay++) {
@@ -179,64 +142,9 @@ void NORETURN __stack_chk_fail(void) {
 }
 #endif
 
-typedef struct openmv_config {
-    bool wifidbg;
-    wifidbg_config_t wifidbg_config;
-} openmv_config_t;
-
-int ini_handler_callback(void *user, const char *section, const char *name, const char *value) {
-    openmv_config_t *openmv_config = (openmv_config_t *) user;
-
-#define MATCH(s, n)    ((strcmp(section, (s)) == 0) && (strcmp(name, (n)) == 0))
-
-    if (MATCH("BoardConfig", "REPLUart")) {
-        if (ini_is_true(value)) {
-            mp_obj_t args[2] = {
-                MP_OBJ_NEW_SMALL_INT(3), // UART Port
-                MP_OBJ_NEW_SMALL_INT(115200) // Baud Rate
-            };
-
-            MP_STATE_PORT(pyb_stdio_uart) = MP_OBJ_TYPE_GET_SLOT(&machine_uart_type, make_new) (
-                (mp_obj_t) &machine_uart_type, MP_ARRAY_SIZE(args), 0, args);
-            uart_attach_to_repl(MP_STATE_PORT(pyb_stdio_uart), true);
-        }
-    } else if (MATCH("BoardConfig", "WiFiDebug")) {
-        openmv_config->wifidbg = ini_is_true(value);
-    } else if (MATCH("WiFiConfig", "Mode")) {
-        openmv_config->wifidbg_config.mode = ini_atoi(value);
-    } else if (MATCH("WiFiConfig", "ClientSSID")) {
-        strncpy(openmv_config->wifidbg_config.client_ssid, value, WINC_MAX_SSID_LEN);
-    } else if (MATCH("WiFiConfig", "ClientKey")) {
-        strncpy(openmv_config->wifidbg_config.client_key,  value, WINC_MAX_PSK_LEN);
-    } else if (MATCH("WiFiConfig", "ClientSecurity")) {
-        openmv_config->wifidbg_config.client_security = ini_atoi(value);
-    } else if (MATCH("WiFiConfig", "ClientChannel")) {
-        openmv_config->wifidbg_config.client_channel = ini_atoi(value);
-    } else if (MATCH("WiFiConfig", "AccessPointSSID")) {
-        strncpy(openmv_config->wifidbg_config.access_point_ssid, value, WINC_MAX_SSID_LEN);
-    } else if (MATCH("WiFiConfig", "AccessPointKey")) {
-        strncpy(openmv_config->wifidbg_config.access_point_key,  value, WINC_MAX_PSK_LEN);
-    } else if (MATCH("WiFiConfig", "AccessPointSecurity")) {
-        openmv_config->wifidbg_config.access_point_security = ini_atoi(value);
-    } else if (MATCH("WiFiConfig", "AccessPointChannel")) {
-        openmv_config->wifidbg_config.access_point_channel = ini_atoi(value);
-    } else if (MATCH("WiFiConfig", "BoardName")) {
-        strncpy(openmv_config->wifidbg_config.board_name,  value, WINC_MAX_BOARD_NAME_LEN);
-    } else {
-        return 0;
-    }
-
-    return 1;
-
-    #undef MATCH
-}
-
 int main(void) {
     #if MICROPY_HW_SDRAM_SIZE
     bool sdram_ok = false;
-    #endif
-    #if MICROPY_HW_ENABLE_SDCARD
-    bool sdcard_mounted = false;
     #endif
     bool first_soft_reset = true;
 
@@ -274,12 +182,9 @@ int main(void) {
     __enable_irq();
 
 soft_reset:
-    #if defined(MICROPY_HW_LED4)
-    led_state(LED_IR, 0);
-    #endif
-    led_state(LED_RED, 1);
-    led_state(LED_GREEN, 1);
-    led_state(LED_BLUE, 1);
+    for (size_t i = 0; i < 4; i++) {
+        led_state(i + 1, 0);
+    }
 
     machine_init();
 
@@ -294,8 +199,7 @@ soft_reset:
     // Micro Python init
     mp_init();
 
-    // Initialise low-level sub-systems. Here we need to do the very basic
-    // things like zeroing out memory and resetting any of the sub-systems.
+    // Initialise low-level sub-systems.
     py_fir_init0();
     #if MICROPY_PY_TV
     py_tv_init0();
@@ -317,7 +221,9 @@ soft_reset:
     fb_alloc_init0();
     omv_gpio_init0();
     framebuffer_init0();
+    #if MICROPY_PY_CSI
     omv_csi_init0();
+    #endif
     dma_alloc_init0();
     #ifdef IMLIB_ENABLE_IMAGE_FILE_IO
     file_buffer_init0();
@@ -359,11 +265,12 @@ soft_reset:
     pyb_usb_init0();
     MP_STATE_PORT(pyb_stdio_uart) = NULL;
 
-    // Initialize the csi and check the result after
-    // mounting the file-system to log errors (if any).
+    #if MICROPY_PY_CSI
+    // Initialize the csi.
     if (first_soft_reset) {
         omv_csi_init();
     }
+    #endif
 
     #if MICROPY_PY_IMU
     py_imu_init();
@@ -373,92 +280,17 @@ soft_reset:
     mod_network_init();
     #endif
 
-    #if MICROPY_HW_ENABLE_SDCARD
-    // Initialize storage
-    if (sdcard_is_present()) {
-        // Init the vfs object
-        vfs_fat->blockdev.flags = 0;
-        sdcard_init_vfs(vfs_fat, 0);
+    // Execute _boot.py to set up the filesystem.
+    pyexec_frozen_module("_boot.py", false);
 
-        // Try to mount the SD card
-        FRESULT res = f_mount(&vfs_fat->fatfs);
-        if (res != FR_OK) {
-            sdcard_mounted = false;
-        } else {
-            sdcard_mounted = true;
-            // Set USB medium to SD
-            pyb_usb_storage_medium = PYB_USB_STORAGE_MEDIUM_SDCARD;
-        }
-    }
-    #endif
-
-    #if MICROPY_HW_ENABLE_SDCARD
-    if (sdcard_mounted == false) {
-    #endif
-    storage_init();
-
-    // init the vfs object
-    vfs_fat->blockdev.flags = 0;
-    pyb_flash_init_vfs(vfs_fat);
-
-    // Try to mount the flash
-    FRESULT res = f_mount(&vfs_fat->fatfs);
-
-    if (res == FR_NO_FILESYSTEM) {
-        // Create a fresh filesystem.
-        led_state(LED_RED, 1);
-        mp_init_filesystem(vfs_fat);
-        led_state(LED_RED, 0);
-        // Flush storage
-        storage_flush();
-    } else if (res != FR_OK) {
-        __fatal_error("Could not access LFS\n");
-    }
-
-    // Set USB medium to flash
+    // Set the USB medium to flash block device.
     pyb_usb_storage_medium = PYB_USB_STORAGE_MEDIUM_FLASH;
-    #if MICROPY_HW_ENABLE_SDCARD
-}
-#if MICROPY_HW_HAS_FLASH
-else {
-    // The storage should always be initialized on boards that have
-    // an external flash, to make sure the flash is memory-mapped.
-    storage_init();
-}
-#endif
-    #endif
 
-    // Mount the storage device (there should be no other devices mounted at this point)
-    // we allocate this structure on the heap because vfs->next is a root pointer.
-    mp_vfs_mount_t *vfs = m_new_obj_maybe(mp_vfs_mount_t);
-    if (vfs == NULL) {
-        __fatal_error("Failed to alloc memory for vfs mount\n");
+    const char *path = "/sdcard";
+    // If SD is mounted, set the USB medium to SD.
+    if (mp_vfs_lookup_path(path, &path) != MP_VFS_NONE) {
+        pyb_usb_storage_medium = PYB_USB_STORAGE_MEDIUM_SDCARD;
     }
-
-    vfs->str = "/";
-    vfs->len = 1;
-    vfs->obj = MP_OBJ_FROM_PTR(vfs_fat);
-    vfs->next = NULL;
-    MP_STATE_VM(vfs_mount_table) = vfs;
-    MP_STATE_PORT(vfs_cur) = vfs;
-
-    // Mark the filesystem as an OpenMV storage.
-    file_ll_touch("/.openmv_disk");
-
-    // Parse OpenMV configuration file.
-    openmv_config_t openmv_config;
-    memset(&openmv_config, 0, sizeof(openmv_config));
-    ini_parse(&vfs_fat->fatfs, "/openmv.config", ini_handler_callback, &openmv_config);
-
-    // Init wifi debugging if enabled and on first soft-reset only.
-    #if OMV_WIFIDBG_ENABLE && MICROPY_PY_WINC1500
-    if (openmv_config.wifidbg == true &&
-        wifidbg_init(&openmv_config.wifidbg_config) != 0) {
-        openmv_config.wifidbg = false;
-    }
-    #else
-    openmv_config.wifidbg = false;
-    #endif
 
     // Init USB device to default setting if it was not already configured
     if (!(pyb_usb_flags & PYB_USB_FLAG_USB_MODE_CALLED)) {
@@ -473,82 +305,56 @@ else {
     }
     #endif
 
-    // Turn boot-up LEDs off
-    led_state(LED_RED, 0);
-    led_state(LED_GREEN, 0);
-    led_state(LED_BLUE, 0);
-
-
     // Run boot.py script.
-    bool interrupted = mp_exec_bootscript("boot.py", true, false);
+    bool interrupted = mp_exec_bootscript("boot.py", true);
 
     // Run main.py script on first soft-reset.
     if (first_soft_reset && !interrupted && mp_vfs_import_stat("main.py")) {
-        mp_exec_bootscript("main.py", true, openmv_config.wifidbg);
+        mp_exec_bootscript("main.py", true);
         goto soft_reset_exit;
     }
 
-    do {
-        usbdbg_init();
+    // If there's no script ready, just re-exec REPL
+    while (!usbdbg_script_ready()) {
+        nlr_buf_t nlr;
 
-        if (openmv_config.wifidbg == true) {
-            // Need to reinit imlib in WiFi debug mode.
-            imlib_deinit_all();
-            imlib_init_all();
-        }
+        if (nlr_push(&nlr) == 0) {
+            // enable IDE interrupt
+            usbdbg_set_irq_enabled(true);
 
-        // If there's no script ready, just re-exec REPL
-        while (!usbdbg_script_ready()) {
-            nlr_buf_t nlr;
-
-            if (nlr_push(&nlr) == 0) {
-                // enable IDE interrupt
-                usbdbg_set_irq_enabled(true);
-                #if OMV_WIFIDBG_ENABLE && MICROPY_PY_WINC1500
-                wifidbg_set_irq_enabled(openmv_config.wifidbg);
-                #endif
-
-                // run REPL
-                if (pyexec_mode_kind == PYEXEC_MODE_RAW_REPL) {
-                    if (pyexec_raw_repl() != 0) {
-                        break;
-                    }
-                } else {
-                    if (pyexec_friendly_repl() != 0) {
-                        break;
-                    }
+            // run REPL
+            if (pyexec_mode_kind == PYEXEC_MODE_RAW_REPL) {
+                if (pyexec_raw_repl() != 0) {
+                    break;
                 }
-
-                nlr_pop();
-            }
-        }
-
-        if (usbdbg_script_ready()) {
-            nlr_buf_t nlr;
-            if (nlr_push(&nlr) == 0) {
-                // Enable IDE interrupts
-                usbdbg_set_irq_enabled(true);
-                #if OMV_WIFIDBG_ENABLE && MICROPY_PY_WINC1500
-                wifidbg_set_irq_enabled(openmv_config.wifidbg);
-                #endif
-                // Execute the script.
-                pyexec_str(usbdbg_get_script(), true);
-                // Disable IDE interrupts
-                usbdbg_set_irq_enabled(false);
-                nlr_pop();
             } else {
-                mp_obj_print_exception(MP_PYTHON_PRINTER, (mp_obj_t) nlr.ret_val);
+                if (pyexec_friendly_repl() != 0) {
+                    break;
+                }
             }
-        }
 
-    } while (openmv_config.wifidbg == true);
+            nlr_pop();
+        }
+    }
+
+    if (usbdbg_script_ready()) {
+        nlr_buf_t nlr;
+        if (nlr_push(&nlr) == 0) {
+            // Enable IDE interrupts
+            usbdbg_set_irq_enabled(true);
+            // Execute the script.
+            pyexec_str(usbdbg_get_script(), true);
+            // Disable IDE interrupts
+            usbdbg_set_irq_enabled(false);
+            nlr_pop();
+        } else {
+            mp_obj_print_exception(MP_PYTHON_PRINTER, (mp_obj_t) nlr.ret_val);
+        }
+    }
 
 soft_reset_exit:
     // soft reset
     mp_printf(MP_PYTHON_PRINTER, "MPY: soft reboot\n");
-
-    // Flush filesystem storage.
-    storage_flush();
 
     #if MICROPY_PY_LWIP
     systick_disable_dispatch(SYSTICK_DISPATCH_LWIP);

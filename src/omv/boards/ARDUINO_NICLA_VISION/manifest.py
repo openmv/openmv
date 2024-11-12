@@ -1,5 +1,8 @@
 include("$(MPY_DIR)/extmod/asyncio")
 
+# Filesystem
+freeze ("$(OMV_LIB_DIR)/", "_boot.py")
+
 # Drivers
 require("lsm6dsox")
 require("onewire")
