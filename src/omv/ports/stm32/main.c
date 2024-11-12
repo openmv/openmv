@@ -73,7 +73,6 @@
 #include "shared/runtime/pyexec.h"
 #include "shared/readline/readline.h"
 
-#include "ini.h"
 #include "omv_boardconfig.h"
 #include "omv_gpio.h"
 #include "omv_i2c.h"
@@ -82,7 +81,6 @@
 #include "framebuffer.h"
 
 #include "usbdbg.h"
-#include "wifidbg.h"
 #include "sdram.h"
 #include "fb_alloc.h"
 #include "dma_alloc.h"
@@ -143,58 +141,6 @@ void NORETURN __stack_chk_fail(void) {
     }
 }
 #endif
-
-typedef struct openmv_config {
-    bool wifidbg;
-    wifidbg_config_t wifidbg_config;
-} openmv_config_t;
-
-int ini_handler_callback(void *user, const char *section, const char *name, const char *value) {
-    openmv_config_t *openmv_config = (openmv_config_t *) user;
-
-#define MATCH(s, n)    ((strcmp(section, (s)) == 0) && (strcmp(name, (n)) == 0))
-
-    if (MATCH("BoardConfig", "REPLUart")) {
-        if (ini_is_true(value)) {
-            mp_obj_t args[2] = {
-                MP_OBJ_NEW_SMALL_INT(3), // UART Port
-                MP_OBJ_NEW_SMALL_INT(115200) // Baud Rate
-            };
-
-            MP_STATE_PORT(pyb_stdio_uart) = MP_OBJ_TYPE_GET_SLOT(&machine_uart_type, make_new) (
-                (mp_obj_t) &machine_uart_type, MP_ARRAY_SIZE(args), 0, args);
-            uart_attach_to_repl(MP_STATE_PORT(pyb_stdio_uart), true);
-        }
-    } else if (MATCH("BoardConfig", "WiFiDebug")) {
-        openmv_config->wifidbg = ini_is_true(value);
-    } else if (MATCH("WiFiConfig", "Mode")) {
-        openmv_config->wifidbg_config.mode = ini_atoi(value);
-    } else if (MATCH("WiFiConfig", "ClientSSID")) {
-        strncpy(openmv_config->wifidbg_config.client_ssid, value, WINC_MAX_SSID_LEN);
-    } else if (MATCH("WiFiConfig", "ClientKey")) {
-        strncpy(openmv_config->wifidbg_config.client_key,  value, WINC_MAX_PSK_LEN);
-    } else if (MATCH("WiFiConfig", "ClientSecurity")) {
-        openmv_config->wifidbg_config.client_security = ini_atoi(value);
-    } else if (MATCH("WiFiConfig", "ClientChannel")) {
-        openmv_config->wifidbg_config.client_channel = ini_atoi(value);
-    } else if (MATCH("WiFiConfig", "AccessPointSSID")) {
-        strncpy(openmv_config->wifidbg_config.access_point_ssid, value, WINC_MAX_SSID_LEN);
-    } else if (MATCH("WiFiConfig", "AccessPointKey")) {
-        strncpy(openmv_config->wifidbg_config.access_point_key,  value, WINC_MAX_PSK_LEN);
-    } else if (MATCH("WiFiConfig", "AccessPointSecurity")) {
-        openmv_config->wifidbg_config.access_point_security = ini_atoi(value);
-    } else if (MATCH("WiFiConfig", "AccessPointChannel")) {
-        openmv_config->wifidbg_config.access_point_channel = ini_atoi(value);
-    } else if (MATCH("WiFiConfig", "BoardName")) {
-        strncpy(openmv_config->wifidbg_config.board_name,  value, WINC_MAX_BOARD_NAME_LEN);
-    } else {
-        return 0;
-    }
-
-    return 1;
-
-    #undef MATCH
-}
 
 int main(void) {
     #if MICROPY_HW_SDRAM_SIZE
@@ -346,21 +292,6 @@ soft_reset:
         pyb_usb_storage_medium = PYB_USB_STORAGE_MEDIUM_SDCARD;
     }
 
-    // Parse OpenMV configuration file.
-    openmv_config_t openmv_config;
-    memset(&openmv_config, 0, sizeof(openmv_config));
-    //ini_parse(&vfs_fat->fatfs, "/openmv.config", ini_handler_callback, &openmv_config);
-
-    // Init wifi debugging if enabled and on first soft-reset only.
-    #if OMV_WIFIDBG_ENABLE && MICROPY_PY_WINC1500
-    if (openmv_config.wifidbg == true &&
-        wifidbg_init(&openmv_config.wifidbg_config) != 0) {
-        openmv_config.wifidbg = false;
-    }
-    #else
-    openmv_config.wifidbg = false;
-    #endif
-
     // Init USB device to default setting if it was not already configured
     if (!(pyb_usb_flags & PYB_USB_FLAG_USB_MODE_CALLED)) {
         pyb_usb_dev_init(pyb_usb_dev_detect(), MICROPY_HW_USB_VID,
@@ -375,68 +306,51 @@ soft_reset:
     #endif
 
     // Run boot.py script.
-    bool interrupted = mp_exec_bootscript("boot.py", true, false);
+    bool interrupted = mp_exec_bootscript("boot.py", true);
 
     // Run main.py script on first soft-reset.
     if (first_soft_reset && !interrupted && mp_vfs_import_stat("main.py")) {
-        mp_exec_bootscript("main.py", true, openmv_config.wifidbg);
+        mp_exec_bootscript("main.py", true);
         goto soft_reset_exit;
     }
 
-    do {
-        usbdbg_init();
+    // If there's no script ready, just re-exec REPL
+    while (!usbdbg_script_ready()) {
+        nlr_buf_t nlr;
 
-        if (openmv_config.wifidbg == true) {
-            // Need to reinit imlib in WiFi debug mode.
-            imlib_deinit_all();
-            imlib_init_all();
-        }
+        if (nlr_push(&nlr) == 0) {
+            // enable IDE interrupt
+            usbdbg_set_irq_enabled(true);
 
-        // If there's no script ready, just re-exec REPL
-        while (!usbdbg_script_ready()) {
-            nlr_buf_t nlr;
-
-            if (nlr_push(&nlr) == 0) {
-                // enable IDE interrupt
-                usbdbg_set_irq_enabled(true);
-                #if OMV_WIFIDBG_ENABLE && MICROPY_PY_WINC1500
-                wifidbg_set_irq_enabled(openmv_config.wifidbg);
-                #endif
-
-                // run REPL
-                if (pyexec_mode_kind == PYEXEC_MODE_RAW_REPL) {
-                    if (pyexec_raw_repl() != 0) {
-                        break;
-                    }
-                } else {
-                    if (pyexec_friendly_repl() != 0) {
-                        break;
-                    }
+            // run REPL
+            if (pyexec_mode_kind == PYEXEC_MODE_RAW_REPL) {
+                if (pyexec_raw_repl() != 0) {
+                    break;
                 }
-
-                nlr_pop();
-            }
-        }
-
-        if (usbdbg_script_ready()) {
-            nlr_buf_t nlr;
-            if (nlr_push(&nlr) == 0) {
-                // Enable IDE interrupts
-                usbdbg_set_irq_enabled(true);
-                #if OMV_WIFIDBG_ENABLE && MICROPY_PY_WINC1500
-                wifidbg_set_irq_enabled(openmv_config.wifidbg);
-                #endif
-                // Execute the script.
-                pyexec_str(usbdbg_get_script(), true);
-                // Disable IDE interrupts
-                usbdbg_set_irq_enabled(false);
-                nlr_pop();
             } else {
-                mp_obj_print_exception(MP_PYTHON_PRINTER, (mp_obj_t) nlr.ret_val);
+                if (pyexec_friendly_repl() != 0) {
+                    break;
+                }
             }
-        }
 
-    } while (openmv_config.wifidbg == true);
+            nlr_pop();
+        }
+    }
+
+    if (usbdbg_script_ready()) {
+        nlr_buf_t nlr;
+        if (nlr_push(&nlr) == 0) {
+            // Enable IDE interrupts
+            usbdbg_set_irq_enabled(true);
+            // Execute the script.
+            pyexec_str(usbdbg_get_script(), true);
+            // Disable IDE interrupts
+            usbdbg_set_irq_enabled(false);
+            nlr_pop();
+        } else {
+            mp_obj_print_exception(MP_PYTHON_PRINTER, (mp_obj_t) nlr.ret_val);
+        }
+    }
 
 soft_reset_exit:
     // soft reset

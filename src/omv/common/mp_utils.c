@@ -36,9 +36,6 @@
 #include "shared/runtime/pyexec.h"
 #include "omv_boardconfig.h"
 #include "usbdbg.h"
-#if OMV_WIFIDBG_ENABLE
-#include "wifidbg.h"
-#endif
 #include "mp_utils.h"
 
 void __attribute__((weak)) gc_collect(void) {
@@ -62,7 +59,7 @@ void __attribute__((weak)) gc_collect(void) {
     gc_collect_end();
 }
 
-bool mp_exec_bootscript(const char *path, bool interruptible, bool wifidbg_enabled) {
+bool mp_exec_bootscript(const char *path, bool interruptible) {
     nlr_buf_t nlr;
     bool interrupted = false;
 
@@ -71,9 +68,6 @@ bool mp_exec_bootscript(const char *path, bool interruptible, bool wifidbg_enabl
         if (interruptible) {
             usbdbg_set_irq_enabled(true);
             usbdbg_set_script_running(true);
-            #if OMV_WIFIDBG_ENABLE
-            wifidbg_set_irq_enabled(wifidbg_enabled);
-            #endif
         }
 
         // Parse, compile and execute the script.
@@ -86,9 +80,6 @@ bool mp_exec_bootscript(const char *path, bool interruptible, bool wifidbg_enabl
     // Disable IDE interrupts
     usbdbg_set_irq_enabled(false);
     usbdbg_set_script_running(false);
-    #if OMV_WIFIDBG_ENABLE
-    wifidbg_set_irq_enabled(false);
-    #endif
 
     if (interrupted) {
         mp_obj_print_exception(&mp_plat_print, (mp_obj_t) nlr.ret_val);

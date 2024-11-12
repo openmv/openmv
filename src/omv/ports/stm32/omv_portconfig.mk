@@ -189,7 +189,6 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/alloc/, \
 
 FIRM_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/common/, \
 	array.o                     \
-	ini.o                       \
 	ringbuf.o                   \
 	trace.o                     \
 	mutex.o                     \

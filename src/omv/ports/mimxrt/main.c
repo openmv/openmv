@@ -175,11 +175,11 @@ soft_reset:
     }
 
     // Run boot.py script.
-    bool interrupted = mp_exec_bootscript("boot.py", true, false);
+    bool interrupted = mp_exec_bootscript("boot.py", true);
 
     // Run main.py script on first soft-reset.
     if (first_soft_reset && !interrupted && mp_vfs_import_stat("main.py")) {
-        mp_exec_bootscript("main.py", true, false);
+        mp_exec_bootscript("main.py", true);
         goto soft_reset_exit;
     }
 
