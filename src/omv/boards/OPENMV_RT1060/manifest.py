@@ -23,7 +23,7 @@ freeze ("$(OMV_LIB_DIR)/", "rpc.py")
 freeze ("$(OMV_LIB_DIR)/", "rtsp.py")
 freeze ("$(OMV_LIB_DIR)/", "mqtt.py")
 freeze ("$(OMV_LIB_DIR)/", "requests.py")
-
+freeze ("$(OMV_LIB_DIR)/", "urequest.py")
 # Utils
 require("time")
 require("senml")
