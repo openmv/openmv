@@ -189,14 +189,7 @@ soft_reset:
     #endif
 
     // Execute _boot.py to set up the filesystem.
-    #if MICROPY_VFS_FAT && MICROPY_HW_USB_MSC
-    pyexec_frozen_module("_boot_fat.py", false);
-    #else
     pyexec_frozen_module("_boot.py", false);
-    #endif
-
-    // Mark the filesystem as an OpenMV storage.
-    file_ll_touch(".openmv_disk");
 
     // Initialize TinyUSB after the filesystem has been mounted.
     if (!tusb_inited()) {
