@@ -24,81 +24,38 @@
  * STM32 DMA helper functions.
  */
 #include <stdbool.h>
+#include STM32_HAL_H
 #include "py/mphal.h"
 
 #include "omv_boardconfig.h"
 #include "omv_common.h"
 #include "dma_utils.h"
 
-// Defined in micropython/ports/stm32/dma.c
-// or in uvc/src/main.c
+#if defined(GPDMA1)
+DMA_HandleTypeDef *dma_handle[32];
+#else
+// Defined in micropython/ports/stm32/dma.c or in uvc/src/main.c
 extern DMA_HandleTypeDef *dma_handle[16];
+#endif
 
-uint8_t dma_utils_channel_to_irqn(DMA_Stream_TypeDef *dma_channel) {
+uint8_t dma_utils_channel_to_irqn(void *dma_channel) {
+    uint32_t dma_base = ((uint32_t) dma_channel) & 0xFFFFF000;
     if (0) {
     #if defined(DMA1_Stream0)
-    } else if (dma_channel == DMA1_Stream0) {
-        return DMA1_Stream0_IRQn;
-    #endif
-    #if defined(DMA1_Stream1)
-    } else if (dma_channel == DMA1_Stream1) {
-        return DMA1_Stream1_IRQn;
-    #endif
-    #if defined(DMA1_Stream2)
-    } else if (dma_channel == DMA1_Stream2) {
-        return DMA1_Stream2_IRQn;
-    #endif
-    #if defined(DMA1_Stream3)
-    } else if (dma_channel == DMA1_Stream3) {
-        return DMA1_Stream3_IRQn;
-    #endif
-    #if defined(DMA1_Stream4)
-    } else if (dma_channel == DMA1_Stream4) {
-        return DMA1_Stream4_IRQn;
-    #endif
-    #if defined(DMA1_Stream5)
-    } else if (dma_channel == DMA1_Stream5) {
-        return DMA1_Stream5_IRQn;
-    #endif
-    #if defined(DMA1_Stream6)
-    } else if (dma_channel == DMA1_Stream6) {
-        return DMA1_Stream6_IRQn;
-    #endif
-    #if defined(DMA1_Stream7)
-    } else if (dma_channel == DMA1_Stream7) {
-        return DMA1_Stream7_IRQn;
+    } else if (dma_base == DMA1_BASE) {
+        return ((DMA_Stream_TypeDef *) dma_channel - DMA1_Stream0) + DMA1_Stream0_IRQn;
     #endif
     #if defined(DMA2_Stream0)
-    } else if (dma_channel == DMA2_Stream0) {
-        return DMA2_Stream0_IRQn;
+    } else if (dma_base == DMA2_BASE) {
+        return ((DMA_Stream_TypeDef *) dma_channel - DMA2_Stream0) + DMA2_Stream0_IRQn;
     #endif
-    #if defined(DMA2_Stream1)
-    } else if (dma_channel == DMA2_Stream1) {
-        return DMA2_Stream1_IRQn;
+    #if defined(GPDMA1_Channel0)
+    } else if (dma_base == GPDMA1_BASE) {
+        return ((DMA_Channel_TypeDef *) dma_channel - GPDMA1_Channel0) + GPDMA1_Channel0_IRQn;
     #endif
-    #if defined(DMA2_Stream2)
-    } else if (dma_channel == DMA2_Stream2) {
-        return DMA2_Stream2_IRQn;
-    #endif
-    #if defined(DMA2_Stream3)
-    } else if (dma_channel == DMA2_Stream3) {
-        return DMA2_Stream3_IRQn;
-    #endif
-    #if defined(DMA2_Stream4)
-    } else if (dma_channel == DMA2_Stream4) {
-        return DMA2_Stream4_IRQn;
-    #endif
-    #if defined(DMA2_Stream5)
-    } else if (dma_channel == DMA2_Stream5) {
-        return DMA2_Stream5_IRQn;
-    #endif
-    #if defined(DMA2_Stream6)
-    } else if (dma_channel == DMA2_Stream6) {
-        return DMA2_Stream6_IRQn;
-    #endif
-    #if defined(DMA2_Stream7)
-    } else if (dma_channel == DMA2_Stream7) {
-        return DMA2_Stream7_IRQn;
+    #if defined(HPDMA1_Channel0)
+    } else if (dma_base == HPDMA1_BASE) {
+        return ((DMA_Channel_TypeDef *) dma_channel - HPDMA1_Channel0) + HPDMA1_Channel0_IRQn;
     #endif
     }
     return 0;
@@ -107,80 +64,30 @@ uint8_t dma_utils_channel_to_irqn(DMA_Stream_TypeDef *dma_channel) {
 // This returns a DMA ID that can be used to index into the dma_handle
 // array defined in micropython. Setting a DMA handle in that array allows
 // DMA IRQ handlers (which are all defined in micropython) to use it.
-uint8_t dma_utils_channel_to_id(DMA_Stream_TypeDef *dma_channel) {
-    uint8_t dma_id = -1;
-
+uint8_t dma_utils_channel_to_id(void *dma_channel) {
+    uint32_t dma_base = ((uint32_t) dma_channel) & 0xFFFFF000;
     if (0) {
     #if defined(DMA1_Stream0)
-    } else if (dma_channel == DMA1_Stream0) {
-        dma_id = 0;
-    #endif
-    #if defined(DMA1_Stream1)
-    } else if (dma_channel == DMA1_Stream1) {
-        dma_id = 1;
-    #endif
-    #if defined(DMA1_Stream2)
-    } else if (dma_channel == DMA1_Stream2) {
-        dma_id = 2;
-    #endif
-    #if defined(DMA1_Stream3)
-    } else if (dma_channel == DMA1_Stream3) {
-        dma_id = 3;
-    #endif
-    #if defined(DMA1_Stream4)
-    } else if (dma_channel == DMA1_Stream4) {
-        dma_id = 4;
-    #endif
-    #if defined(DMA1_Stream5)
-    } else if (dma_channel == DMA1_Stream5) {
-        dma_id = 5;
-    #endif
-    #if defined(DMA1_Stream6)
-    } else if (dma_channel == DMA1_Stream6) {
-        dma_id = 6;
-    #endif
-    #if defined(DMA1_Stream7)
-    } else if (dma_channel == DMA1_Stream7) {
-        dma_id = 7;
+    } else if (dma_base == DMA1_BASE) {
+        return ((DMA_Stream_TypeDef *) dma_channel - DMA1_Stream0);
     #endif
     #if defined(DMA2_Stream0)
-    } else if (dma_channel == DMA2_Stream0) {
-        dma_id = 8;
+    } else if (dma_base == DMA2_BASE) {
+        return ((DMA_Stream_TypeDef *) dma_channel - DMA2_Stream0) + 8;
     #endif
-    #if defined(DMA2_Stream1)
-    } else if (dma_channel == DMA2_Stream1) {
-        dma_id = 9;
+    #if defined(GPDMA1_Channel0)
+    } else if (dma_base == GPDMA1_BASE) {
+        return ((DMA_Channel_TypeDef *) dma_channel - GPDMA1_Channel0);
     #endif
-    #if defined(DMA2_Stream2)
-    } else if (dma_channel == DMA2_Stream2) {
-        dma_id = 10;
-    #endif
-    #if defined(DMA2_Stream3)
-    } else if (dma_channel == DMA2_Stream3) {
-        dma_id = 11;
-    #endif
-    #if defined(DMA2_Stream4)
-    } else if (dma_channel == DMA2_Stream4) {
-        dma_id = 12;
-    #endif
-    #if defined(DMA2_Stream5)
-    } else if (dma_channel == DMA2_Stream5) {
-        dma_id = 13;
-    #endif
-    #if defined(DMA2_Stream6)
-    } else if (dma_channel == DMA2_Stream6) {
-        dma_id = 14;
-    #endif
-    #if defined(DMA2_Stream7)
-    } else if (dma_channel == DMA2_Stream7) {
-        dma_id = 15;
+    #if defined(HPDMA1_Channel0)
+    } else if (dma_base == HPDMA1_BASE) {
+        return ((DMA_Channel_TypeDef *) dma_channel - HPDMA1_Channel0) + 16;
     #endif
     }
-
-    return dma_id;
+    return -1;
 }
 
-int dma_utils_set_irq_descr(DMA_Stream_TypeDef *dma_channel, DMA_HandleTypeDef *dma_descr) {
+int dma_utils_set_irq_descr(void *dma_channel, DMA_HandleTypeDef *dma_descr) {
     uint8_t dma_id = dma_utils_channel_to_id(dma_channel);
     if (dma_id != -1) {
         dma_handle[dma_id] = dma_descr;
@@ -190,6 +97,7 @@ int dma_utils_set_irq_descr(DMA_Stream_TypeDef *dma_channel, DMA_HandleTypeDef *
 }
 
 uint8_t dma_utils_mpu_region_size(uint32_t size) {
+    #if (__ARM_ARCH <= 7)
     switch (size) {
         case 0x00000020U: {
             return MPU_REGION_SIZE_32B;
@@ -276,4 +184,142 @@ uint8_t dma_utils_mpu_region_size(uint32_t size) {
             return MPU_REGION_SIZE_4GB;
         }
     }
+    #endif
+    return -1;
 }
+
+#if defined(GPDMA1)
+static inline void dma_utils_irq_handler(size_t irqn) {
+    if (dma_handle[irqn] != NULL) {
+        HAL_DMA_IRQHandler(dma_handle[irqn]);
+    }
+}
+
+void GPDMA1_Channel0_IRQHandler(void) {
+    dma_utils_irq_handler(0);
+}
+
+void GPDMA1_Channel1_IRQHandler(void) {
+    dma_utils_irq_handler(1);
+}
+
+void GPDMA1_Channel2_IRQHandler(void) {
+    dma_utils_irq_handler(2);
+}
+
+void GPDMA1_Channel3_IRQHandler(void) {
+    dma_utils_irq_handler(3);
+}
+
+void GPDMA1_Channel4_IRQHandler(void) {
+    dma_utils_irq_handler(4);
+}
+
+void GPDMA1_Channel5_IRQHandler(void) {
+    dma_utils_irq_handler(5);
+}
+
+void GPDMA1_Channel6_IRQHandler(void) {
+    dma_utils_irq_handler(6);
+}
+
+void GPDMA1_Channel7_IRQHandler(void) {
+    dma_utils_irq_handler(7);
+}
+
+void GPDMA1_Channel8_IRQHandler(void) {
+    dma_utils_irq_handler(8);
+}
+
+void GPDMA1_Channel9_IRQHandler(void) {
+    dma_utils_irq_handler(9);
+}
+
+void GPDMA1_Channel10_IRQHandler(void) {
+    dma_utils_irq_handler(10);
+}
+
+void GPDMA1_Channel11_IRQHandler(void) {
+    dma_utils_irq_handler(11);
+}
+
+void GPDMA1_Channel12_IRQHandler(void) {
+    dma_utils_irq_handler(12);
+}
+
+void GPDMA1_Channel13_IRQHandler(void) {
+    dma_utils_irq_handler(13);
+}
+
+void GPDMA1_Channel14_IRQHandler(void) {
+    dma_utils_irq_handler(14);
+}
+
+void GPDMA1_Channel15_IRQHandler(void) {
+    dma_utils_irq_handler(15);
+}
+
+void HPDMA1_Channel0_IRQHandler(void) {
+    dma_utils_irq_handler(16);
+}
+
+void HPDMA1_Channel1_IRQHandler(void) {
+    dma_utils_irq_handler(17);
+}
+
+void HPDMA1_Channel2_IRQHandler(void) {
+    dma_utils_irq_handler(18);
+}
+
+void HPDMA1_Channel3_IRQHandler(void) {
+    dma_utils_irq_handler(19);
+}
+
+void HPDMA1_Channel4_IRQHandler(void) {
+    dma_utils_irq_handler(20);
+}
+
+void HPDMA1_Channel5_IRQHandler(void) {
+    dma_utils_irq_handler(21);
+}
+
+void HPDMA1_Channel6_IRQHandler(void) {
+    dma_utils_irq_handler(22);
+}
+
+void HPDMA1_Channel7_IRQHandler(void) {
+    dma_utils_irq_handler(23);
+}
+
+void HPDMA1_Channel8_IRQHandler(void) {
+    dma_utils_irq_handler(24);
+}
+
+void HPDMA1_Channel9_IRQHandler(void) {
+    dma_utils_irq_handler(25);
+}
+
+void HPDMA1_Channel10_IRQHandler(void) {
+    dma_utils_irq_handler(26);
+}
+
+void HPDMA1_Channel11_IRQHandler(void) {
+    dma_utils_irq_handler(27);
+}
+
+void HPDMA1_Channel12_IRQHandler(void) {
+    dma_utils_irq_handler(28);
+}
+
+void HPDMA1_Channel13_IRQHandler(void) {
+    dma_utils_irq_handler(29);
+}
+
+void HPDMA1_Channel14_IRQHandler(void) {
+    dma_utils_irq_handler(30);
+}
+
+void HPDMA1_Channel15_IRQHandler(void) {
+    dma_utils_irq_handler(31);
+}
+#endif

@@ -40,14 +40,49 @@
 #define MPU_REGION_NUMBER_MAX   (MPU_REGION_NUMBER7)
 #endif
 
+#define MEM_ATTR_NORMAL_NON_CACHEABLE      0
+
 extern void SystemClock_Config(void);
 extern uint32_t omv_exti_get_gpio(uint32_t line);
 
 void HAL_MspInit(void) {
-    /* Set the system clock */
+    // Set the system clock
     SystemClock_Config();
 
-    #if (__DCACHE_PRESENT == 1) && defined(OMV_DMA_MEMORY)
+    #if __DCACHE_PRESENT && defined(OMV_DMA_MEMORY)
+    // Configure MPU regions.
+    typedef struct {
+        uint32_t addr;
+        uint32_t size;
+    } dma_memory_table_t;
+
+    // Start from the last region.
+    uint8_t region_number = (MPU->TYPE >> 8) - 1;
+    extern const dma_memory_table_t _dma_memory_table_start;
+    extern const dma_memory_table_t _dma_memory_table_end;
+
+    #if (__ARM_ARCH == 8)
+    ARM_MPU_Disable();
+    // Clear all regions.
+    for (size_t i = 0; i < (MPU->TYPE >> 8); i++) {
+        ARM_MPU_ClrRegion(i);
+    }
+
+    ARM_MPU_SetMemAttr(MEM_ATTR_NORMAL_NON_CACHEABLE, ARM_MPU_ATTR(
+                           ARM_MPU_ATTR_NON_CACHEABLE,
+                           ARM_MPU_ATTR_NON_CACHEABLE));
+
+    for (dma_memory_table_t const *buf = &_dma_memory_table_start; buf < &_dma_memory_table_end; buf++) {
+        uint32_t region_base = buf->addr;
+        uint32_t region_size = buf->size;
+        if (region_size) {
+            MPU->RNR = region_number--;
+            MPU->RBAR = ARM_MPU_RBAR(region_base, ARM_MPU_SH_NON, 0, 1, 0); // RO-0, NP-1, XN-0
+            MPU->RLAR = ARM_MPU_RLAR(region_base + region_size - 1, MEM_ATTR_NORMAL_NON_CACHEABLE);
+        }
+    }
+    ARM_MPU_Enable(MPU_CTRL_PRIVDEFENA_Msk | MPU_CTRL_HFNMIENA_Msk);
+    #elif (__ARM_ARCH == 7)
     HAL_MPU_Disable();
 
     // Configure the MPU attributes to disable caching DMA buffers.
@@ -61,20 +96,11 @@ void HAL_MspInit(void) {
     MPU_InitStruct.DisableExec = MPU_INSTRUCTION_ACCESS_ENABLE;
 
     // Disable all regions.
-    for (int i = MPU_REGION_NUMBER0; i <= MPU_REGION_NUMBER_MAX; i++) {
+    for (int i = 0; i < (MPU->TYPE >> 8); i++) {
         MPU_InitStruct.Number = i;
         MPU_InitStruct.Enable = MPU_REGION_DISABLE;
         HAL_MPU_ConfigRegion(&MPU_InitStruct);
     }
-
-    typedef struct {
-        uint32_t addr;
-        uint32_t size;
-    } dma_memory_table_t;
-
-    uint8_t region_number = MPU_REGION_NUMBER_MAX;
-    extern const dma_memory_table_t _dma_memory_table_start;
-    extern const dma_memory_table_t _dma_memory_table_end;
 
     for (dma_memory_table_t const *buf = &_dma_memory_table_start; buf < &_dma_memory_table_end; buf++) {
         if (buf->size >= 32) {
@@ -89,15 +115,13 @@ void HAL_MspInit(void) {
     // Enable the MPU.
     HAL_MPU_Enable(MPU_PRIVILEGED_DEFAULT);
     __DSB(); __ISB();
-    #endif // defined(OMV_DMA_MEMORY)
+    #else
+    #error Unsupported ARM architecture
+    #endif  // __ARM_ARCH
+    #endif  // defined(OMV_DMA_MEMORY)
 
     // Enable I/D cache.
-    #if defined(STM32F7) || defined(STM32H7)
-    #ifdef OMV_DISABLE_CACHE
-    // Disable caches for testing.
-    SCB_DisableICache();
-    SCB_DisableDCache();
-    #else
+    #ifdef __DCACHE_PRESENT
     // Enable caches if not enabled, or clean and invalidate.
     if (!(SCB->CCR & (uint32_t) SCB_CCR_IC_Msk)) {
         SCB_EnableICache();
@@ -113,42 +137,63 @@ void HAL_MspInit(void) {
         __ISB(); __DSB(); __DMB();
     }
     #endif
-    #endif
 
     // Config Systick.
     HAL_NVIC_SetPriority(SysTick_IRQn, 0, 0);
 
     // Enable GPIO clocks.
-    __GPIOA_CLK_ENABLE();
-    __GPIOB_CLK_ENABLE();
-    __GPIOC_CLK_ENABLE();
-    __GPIOD_CLK_ENABLE();
-    __GPIOE_CLK_ENABLE();
+    __HAL_RCC_GPIOA_CLK_ENABLE();
+    __HAL_RCC_GPIOB_CLK_ENABLE();
+    __HAL_RCC_GPIOC_CLK_ENABLE();
+    __HAL_RCC_GPIOD_CLK_ENABLE();
+    __HAL_RCC_GPIOE_CLK_ENABLE();
     #if OMV_GPIO_PORT_F_ENABLE
-    __GPIOF_CLK_ENABLE();
+    __HAL_RCC_GPIOF_CLK_ENABLE();
     #endif
     #if OMV_GPIO_PORT_G_ENABLE
-    __GPIOG_CLK_ENABLE();
+    __HAL_RCC_GPIOG_CLK_ENABLE();
     #endif
     #if OMV_GPIO_PORT_H_ENABLE
-    __GPIOH_CLK_ENABLE();
+    __HAL_RCC_GPIOH_CLK_ENABLE();
     #endif
     #if OMV_GPIO_PORT_I_ENABLE
-    __GPIOI_CLK_ENABLE();
+    __HAL_RCC_GPIOI_CLK_ENABLE();
     #endif
     #if OMV_GPIO_PORT_J_ENABLE
-    __GPIOJ_CLK_ENABLE();
+    __HAL_RCC_GPIOJ_CLK_ENABLE();
     #endif
     #if OMV_GPIO_PORT_K_ENABLE
-    __GPIOK_CLK_ENABLE();
+    __HAL_RCC_GPIOK_CLK_ENABLE();
+    #endif
+    #if OMV_GPIO_PORT_N_ENABLE
+    __HAL_RCC_GPION_CLK_ENABLE();
+    #endif
+    #if OMV_GPIO_PORT_O_ENABLE
+    __HAL_RCC_GPIOO_CLK_ENABLE();
+    #endif
+    #if OMV_GPIO_PORT_P_ENABLE
+    __HAL_RCC_GPIOP_CLK_ENABLE();
+    #endif
+    #if OMV_GPIO_PORT_Q_ENABLE
+    __HAL_RCC_GPIOQ_CLK_ENABLE();
     #endif
 
     // Enable DMA clocks.
-    __DMA1_CLK_ENABLE();
-    __DMA2_CLK_ENABLE();
-
-    #if defined(STM32H7)
-    // MDMA clock.
+    #if defined(__HAL_RCC_DMA1_CLK_ENABLE)
+    __HAL_RCC_DMA1_CLK_ENABLE();
+    #endif
+    #if defined(__HAL_RCC_DMA2_CLK_ENABLE)
+    __HAL_RCC_DMA2_CLK_ENABLE();
+    #endif
+    #if defined(__HAL_RCC_GPDMA1_CLK_ENABLE)
+    __HAL_RCC_GPDMA1_CLK_ENABLE();
+    __HAL_RCC_GPDMA1_CLK_SLEEP_ENABLE();
+    #endif
+    #if defined(__HAL_RCC_HPDMA1_CLK_ENABLE)
+    __HAL_RCC_HPDMA1_CLK_ENABLE();
+    __HAL_RCC_HPDMA1_CLK_SLEEP_ENABLE();
+    #endif
+    #if defined(__HAL_RCC_MDMA_CLK_ENABLE)
     __HAL_RCC_MDMA_CLK_ENABLE();
     NVIC_SetPriority(MDMA_IRQn, IRQ_PRI_MDMA);
     HAL_NVIC_EnableIRQ(MDMA_IRQn);
@@ -293,7 +338,7 @@ void HAL_I2C_MspDeInit(I2C_HandleTypeDef *hi2c) {
 }
 
 void HAL_TIM_PWM_MspInit(TIM_HandleTypeDef *htim) {
-    #if (OMV_CSI_CLK_SOURCE == OMV_CSI_CLK_SOURCE_TIM)
+    #if defined(OMV_CSI_TIM)
     if (htim->Instance == OMV_CSI_TIM) {
         // Enable DCMI timer clock.
         OMV_CSI_TIM_CLK_ENABLE();
@@ -303,7 +348,7 @@ void HAL_TIM_PWM_MspInit(TIM_HandleTypeDef *htim) {
         omv_gpio_config(OMV_CSI_TIM_EXT_PIN, OMV_GPIO_MODE_ALT, OMV_GPIO_PULL_UP, OMV_GPIO_SPEED_HIGH, -1);
         #endif
     }
-    #endif // (OMV_CSI_CLK_SOURCE == OMV_CSI_CLK_SOURCE_TIM)
+    #endif // (OMV_CSI_TIM)
 
     #if defined(OMV_BUZZER_TIM)
     if (htim->Instance == OMV_BUZZER_TIM) {

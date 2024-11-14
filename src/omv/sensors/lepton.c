@@ -366,12 +366,12 @@ static int reset(omv_csi_t *csi) {
     lepton.max_temp = LEPTON_MAX_TEMP_DEFAULT;
 
     if (lepton_reset(csi, false, false) != 0) {
-        return -1;
+        return OMV_CSI_ERROR_CTL_FAILED;
     }
 
     if (vospi_initialized == false) {
         if (vospi_init(lepton.v_res, _vospi_buf) != 0) {
-            return -1;
+            return OMV_CSI_ERROR_CTL_FAILED;
         }
         vospi_initialized = true;
     }
@@ -386,19 +386,27 @@ static int snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
         framebuffer_set_buffers(1);
     }
 
-    if (omv_csi_check_framebuffer_size(csi) == -1) {
-        return -1;
+    if (csi->pixformat == PIXFORMAT_INVALID) {
+        return OMV_CSI_ERROR_INVALID_PIXFORMAT;
     }
 
-    if ((!lepton.h_res) || (!lepton.v_res) || (!csi->framesize) || (!csi->pixformat)) {
-        return -1;
+    if (csi->framesize == OMV_CSI_FRAMESIZE_INVALID) {
+        return OMV_CSI_ERROR_INVALID_FRAMESIZE;
+    }
+
+    if (!lepton.h_res || !lepton.v_res) {
+        return OMV_CSI_ERROR_INVALID_FRAMESIZE;
+    }
+
+    if (omv_csi_check_framebuffer_size(csi) == -1) {
+        return OMV_CSI_ERROR_FRAMEBUFFER_OVERFLOW;
     }
 
     framebuffer_free_current_buffer();
     vbuffer_t *buffer = framebuffer_get_tail(FB_NO_FLAGS);
 
     if (!buffer) {
-        return -1;
+        return OMV_CSI_ERROR_FRAMEBUFFER_ERROR;
     }
 
     for (int i = 0; i < LEPTON_SNAPSHOT_RETRY; i++) {
@@ -406,11 +414,11 @@ static int snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
             break;
         }
         if (i + 1 == LEPTON_SNAPSHOT_RETRY) {
-            return -1;
+            return OMV_CSI_ERROR_CAPTURE_TIMEOUT;
         }
         // The FLIR lepton might have crashed so reset it (it does this).
         if (lepton_reset(csi, lepton.measurement_mode, lepton.high_temp_mode) != 0) {
-            return -1;
+            return OMV_CSI_ERROR_CTL_FAILED;
         }
     }
 
@@ -432,7 +440,7 @@ static int snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
     LEP_SYS_FPA_TEMPERATURE_KELVIN_T kelvin;
     if (lepton.measurement_mode && (!lepton.radiometry)) {
         if (LEP_GetSysFpaTemperatureKelvin(&lepton.port, &kelvin) != LEP_OK) {
-            return -1;
+            return OMV_CSI_ERROR_IO_ERROR;
         }
     }
 
@@ -530,7 +538,7 @@ int lepton_init(omv_csi_t *csi) {
 
     LEP_OEM_PART_NUMBER_T part;
     if (LEP_GetOemFlirPartNumber(&lepton.port, &part) != LEP_OK) {
-        return -1;
+        return OMV_CSI_ERROR_CSI_INIT_FAILED;
     }
 
     // 500 == Lepton
