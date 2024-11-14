@@ -92,18 +92,14 @@ DEFINE_SPI_INSTANCE(6)
         { OMV_SPI##spi_number##_DMA_RX_CHANNEL, { OMV_SPI##spi_number##_DMA_RX_REQUEST } }; \
     } while (0)
 
+
 static omv_spi_t *omv_spi_descr_all[6] = { NULL };
+#if defined(STM32N6)
+static DMA_NodeTypeDef OMV_ATTR_SECTION(OMV_ATTR_ALIGNED(omv_dma_nodes_all[6 * 2], 32), ".dma_buffer");
+#endif
 
 static uint32_t omv_spi_clocksource(SPI_TypeDef *spi) {
-    #if defined(STM32H7)
-    if (spi == SPI1 || spi == SPI2 || spi == SPI3) {
-        return HAL_RCCEx_GetPeriphCLKFreq(RCC_PERIPHCLK_SPI123);
-    } else if (spi == SPI4 || spi == SPI5) {
-        return HAL_RCCEx_GetPeriphCLKFreq(RCC_PERIPHCLK_SPI45);
-    } else {
-        return HAL_RCCEx_GetPeriphCLKFreq(RCC_PERIPHCLK_SPI6);
-    }
-    #else
+    #if defined(STM32F4) || defined(STM32F7)
     if (spi == SPI2) {
         // SPI2 is on APB1
         return HAL_RCC_GetPCLK1Freq();
@@ -113,6 +109,28 @@ static uint32_t omv_spi_clocksource(SPI_TypeDef *spi) {
     } else {
         // SPI1, SPI4, SPI5 and SPI6 are on APB2
         return HAL_RCC_GetPCLK2Freq();
+    }
+    #elif defined(STM32H7)
+    if (spi == SPI1 || spi == SPI2 || spi == SPI3) {
+        return HAL_RCCEx_GetPeriphCLKFreq(RCC_PERIPHCLK_SPI123);
+    } else if (spi == SPI4 || spi == SPI5) {
+        return HAL_RCCEx_GetPeriphCLKFreq(RCC_PERIPHCLK_SPI45);
+    } else {
+        return HAL_RCCEx_GetPeriphCLKFreq(RCC_PERIPHCLK_SPI6);
+    }
+    #elif defined(STM32N6)
+    if (spi == SPI1) {
+        return HAL_RCCEx_GetPeriphCLKFreq(RCC_PERIPHCLK_SPI1);
+    } else if (spi == SPI2) {
+        return HAL_RCCEx_GetPeriphCLKFreq(RCC_PERIPHCLK_SPI2);
+    } else if (spi == SPI3) {
+        return HAL_RCCEx_GetPeriphCLKFreq(RCC_PERIPHCLK_SPI3);
+    } else if (spi == SPI4) {
+        return HAL_RCCEx_GetPeriphCLKFreq(RCC_PERIPHCLK_SPI4);
+    } else if (spi == SPI5) {
+        return HAL_RCCEx_GetPeriphCLKFreq(RCC_PERIPHCLK_SPI5);
+    } else {
+        return HAL_RCCEx_GetPeriphCLKFreq(RCC_PERIPHCLK_SPI6);
     }
     #endif
 }
@@ -183,7 +201,7 @@ static void omv_spi_callback(SPI_HandleTypeDef *hspi) {
     }
 
     if (spi->callback) {
-        uint8_t *buf = spi->descr->pRxBuffPtr ? spi->descr->pRxBuffPtr : spi->descr->pTxBuffPtr;
+        uint8_t *buf = (uint8_t *) (spi->descr->pRxBuffPtr ? spi->descr->pRxBuffPtr : spi->descr->pTxBuffPtr);
         if (spi->dma_flags & OMV_SPI_DMA_DOUBLE) {
             if (spi->xfer_flags & OMV_SPI_XFER_HALF) {
                 uint32_t size = spi->descr->RxXferSize ? spi->descr->RxXferSize : spi->descr->TxXferSize;
@@ -197,7 +215,7 @@ static void omv_spi_callback(SPI_HandleTypeDef *hspi) {
 
 int omv_spi_transfer_start(omv_spi_t *spi, omv_spi_transfer_t *xfer) {
     // No TX transfers in circular or double buffer mode.
-    if ((spi->dma_flags & (OMV_SPI_DMA_CIRCULAR | OMV_SPI_DMA_DOUBLE)) && xfer->txbuf) {
+    if (xfer->txbuf && (spi->dma_flags & (OMV_SPI_DMA_CIRCULAR | OMV_SPI_DMA_DOUBLE))) {
         return -1;
     }
 
@@ -270,40 +288,104 @@ int omv_spi_transfer_abort(omv_spi_t *spi) {
 
 static int omv_spi_dma_init(omv_spi_t *spi, uint32_t direction, omv_spi_config_t *config) {
     DMA_HandleTypeDef *dma_descr;
-
     if (direction == DMA_MEMORY_TO_PERIPH) {
         dma_descr = &spi->dma_descr_tx;
     } else {
         dma_descr = &spi->dma_descr_rx;
     }
 
+    DMA_InitTypeDef *dma_init = &dma_descr->Init;
+    #if defined(STM32F4) || defined(STM32F7) || defined(STM32H7)
     // Configure the SPI DMA steam.
-    dma_descr->Init.Mode = (config->dma_flags & OMV_SPI_DMA_CIRCULAR) ? DMA_CIRCULAR : DMA_NORMAL;
-    dma_descr->Init.Priority = DMA_PRIORITY_HIGH;
-    dma_descr->Init.Direction = direction;
+    dma_init->Mode = (config->dma_flags & OMV_SPI_DMA_CIRCULAR) ? DMA_CIRCULAR : DMA_NORMAL;
+    dma_init->Priority = DMA_PRIORITY_HIGH;
+    dma_init->Direction = direction;
     // When the DMA is configured in direct mode (the FIFO is disabled), the source and
     // destination transfer widths are equal, and both defined by PSIZE (MSIZE is ignored).
     // Additionally, burst transfers are not possible (MBURST and PBURST are both ignored).
-    dma_descr->Init.FIFOMode = DMA_FIFOMODE_DISABLE;
-    dma_descr->Init.FIFOThreshold = DMA_FIFO_THRESHOLD_1QUARTERFULL;
+    dma_init->FIFOMode = DMA_FIFOMODE_DISABLE;
+    dma_init->FIFOThreshold = DMA_FIFO_THRESHOLD_1QUARTERFULL;
     // Note MBURST and PBURST are ignored.
-    dma_descr->Init.MemBurst = DMA_MBURST_SINGLE;
-    dma_descr->Init.PeriphBurst = DMA_PBURST_SINGLE;
-    dma_descr->Init.MemDataAlignment = DMA_MDATAALIGN_WORD;
+    dma_init->MemBurst = DMA_MBURST_SINGLE;
+    dma_init->PeriphBurst = DMA_PBURST_SINGLE;
+    dma_init->MemDataAlignment = DMA_MDATAALIGN_WORD;
     #if defined(STM32H7)
-    dma_descr->Init.PeriphDataAlignment = DMA_PDATAALIGN_WORD;
+    dma_init->PeriphDataAlignment = DMA_PDATAALIGN_WORD;
     #else
-    dma_descr->Init.PeriphDataAlignment = (config->datasize == 8) ? DMA_PDATAALIGN_BYTE : DMA_PDATAALIGN_HALFWORD;
+    dma_init->PeriphDataAlignment = (config->datasize == 8) ? DMA_PDATAALIGN_BYTE : DMA_PDATAALIGN_HALFWORD;
     #endif
-    dma_descr->Init.MemInc = DMA_MINC_ENABLE;
-    dma_descr->Init.PeriphInc = DMA_PINC_DISABLE;
+    dma_init->MemInc = DMA_MINC_ENABLE;
+    dma_init->PeriphInc = DMA_PINC_DISABLE;
 
     // Initialize the DMA stream
     HAL_DMA_DeInit(dma_descr);
     if (HAL_DMA_Init(dma_descr) != HAL_OK) {
-        // Initialization Error
         return -1;
     }
+    #elif defined(STM32N6)
+    // Configure the SPI DMA steam.
+    dma_init->Mode = DMA_NORMAL;
+    dma_init->Priority = DMA_HIGH_PRIORITY;
+    dma_init->BlkHWRequest = DMA_BREQ_SINGLE_BURST;
+    dma_init->Direction = direction;
+    dma_init->SrcInc = (direction == DMA_PERIPH_TO_MEMORY) ? DMA_SINC_FIXED : DMA_SINC_INCREMENTED;
+    dma_init->DestInc = (direction == DMA_MEMORY_TO_PERIPH) ? DMA_DINC_FIXED : DMA_DINC_INCREMENTED;
+    dma_init->SrcDataWidth = (config->datasize == 8) ?  DMA_SRC_DATAWIDTH_BYTE : DMA_SRC_DATAWIDTH_WORD;
+    dma_init->DestDataWidth = (config->datasize == 8) ?  DMA_DEST_DATAWIDTH_BYTE : DMA_DEST_DATAWIDTH_WORD;
+    dma_init->SrcBurstLength = 1;
+    dma_init->DestBurstLength = 1;
+    dma_init->TransferEventMode = DMA_TCEM_BLOCK_TRANSFER;
+    dma_init->TransferAllocatedPort = DMA_SRC_ALLOCATED_PORT0 | DMA_DEST_ALLOCATED_PORT1;
+
+    // Initialize the DMA stream
+    if (!(config->dma_flags & OMV_SPI_DMA_CIRCULAR)) {
+        HAL_DMA_DeInit(dma_descr);
+        if (HAL_DMA_Init(dma_descr) != HAL_OK) {
+            return -1;
+        }
+    } else {
+        DMA_NodeTypeDef *dma_node;
+        DMA_QListTypeDef *dma_queue;
+
+        DMA_NodeConfTypeDef dma_ncfg = {
+            .Init = *dma_init,
+            .NodeType = DMA_GPDMA_LINEAR_NODE,
+            .SrcSecure = DMA_CHANNEL_SRC_SEC,
+            .DestSecure = DMA_CHANNEL_DEST_SEC,
+        };
+
+        if (direction == DMA_MEMORY_TO_PERIPH) {
+            dma_queue = &spi->dma_queue_tx;
+            dma_node = &omv_dma_nodes_all[(spi->id - 1) * 2 + 0];
+        } else {
+            dma_queue = &spi->dma_queue_rx;
+            dma_node = &omv_dma_nodes_all[(spi->id - 1) * 2 + 1];
+        }
+
+        if (HAL_DMAEx_List_BuildNode(&dma_ncfg, dma_node) != HAL_OK ||
+            HAL_DMAEx_List_InsertNode(dma_queue, NULL, dma_node) != HAL_OK ||
+            HAL_DMAEx_List_SetCircularMode(dma_queue) != HAL_OK) {
+            return -1;
+        }
+
+        dma_descr->InitLinkedList.Priority = DMA_LOW_PRIORITY_LOW_WEIGHT;
+        dma_descr->InitLinkedList.LinkStepMode = DMA_LSM_FULL_EXECUTION;
+        dma_descr->InitLinkedList.LinkedListMode = DMA_LINKEDLIST_CIRCULAR;
+        dma_descr->InitLinkedList.LinkAllocatedPort = DMA_LINK_ALLOCATED_PORT0;
+        dma_descr->InitLinkedList.TransferEventMode = DMA_TCEM_BLOCK_TRANSFER;
+
+        if (HAL_DMAEx_List_Init(dma_descr) != HAL_OK ||
+            HAL_DMAEx_List_LinkQ(dma_descr, dma_queue) != HAL_OK) {
+            return -1;
+        }
+    }
+
+    if (HAL_DMA_ConfigChannelAttributes(dma_descr,
+                                        DMA_CHANNEL_PRIV | DMA_CHANNEL_SEC |
+                                        DMA_CHANNEL_SRC_SEC | DMA_CHANNEL_DEST_SEC) != HAL_OK) {
+        return -1;
+    }
+    #endif  // STM32N6
 
     // Link the DMA handle to SPI handle.
     if (direction == DMA_MEMORY_TO_PERIPH) {
@@ -311,6 +393,7 @@ static int omv_spi_dma_init(omv_spi_t *spi, uint32_t direction, omv_spi_config_t
     } else {
         __HAL_LINKDMA(spi->descr, hdmarx, spi->dma_descr_rx);
     }
+
     // Set the SPI handle used by the DMA channel's IRQ handler.
     dma_utils_set_irq_descr(dma_descr->Instance, dma_descr);
 
@@ -336,9 +419,9 @@ static int omv_spi_bus_init(omv_spi_t *spi, omv_spi_config_t *config) {
     spi_descr->Init.CLKPhase = config->clk_pha;
     spi_descr->Init.CLKPolarity = config->clk_pol;
     spi_descr->Init.BaudRatePrescaler = omv_spi_prescaler(spi_descr->Instance, config->baudrate);
-    #if defined(STM32F7) || defined(STM32H7)
+    #if defined(STM32F7) || defined(STM32H7) || defined(STM32N6)
     spi_descr->Init.NSSPMode = SPI_NSS_PULSE_DISABLE;
-    #if defined(STM32H7)
+    #if defined(STM32H7) || defined(STM32N6)
     spi_descr->Init.NSSPolarity = (config->nss_pol == 0) ? SPI_NSS_POLARITY_LOW : SPI_NSS_POLARITY_HIGH;
     spi_descr->Init.FifoThreshold = SPI_FIFO_THRESHOLD_04DATA;
     spi_descr->Init.MasterSSIdleness = SPI_MASTER_SS_IDLENESS_00CYCLE;
@@ -356,7 +439,7 @@ static int omv_spi_bus_init(omv_spi_t *spi, omv_spi_config_t *config) {
     } else if (config->bus_mode == OMV_SPI_BUS_RX) {
         spi_descr->Init.Direction = SPI_DIRECTION_2LINES_RXONLY;
     } else {
-        #if defined(STM32H7)
+        #if defined(STM32H7) || defined(STM32N6)
         spi_descr->Init.Direction = SPI_DIRECTION_2LINES_TXONLY;
         #else
         spi_descr->Init.Direction = SPI_DIRECTION_1LINE;
@@ -407,11 +490,15 @@ int omv_spi_init(omv_spi_t *spi, omv_spi_config_t *config) {
     }
 
     if (config->dma_flags & (OMV_SPI_DMA_NORMAL | OMV_SPI_DMA_CIRCULAR)) {
+        int ret = 0;
         if (config->bus_mode & OMV_SPI_BUS_TX) {
-            omv_spi_dma_init(spi, DMA_MEMORY_TO_PERIPH, config);
+            ret |= omv_spi_dma_init(spi, DMA_MEMORY_TO_PERIPH, config);
         }
         if (config->bus_mode & OMV_SPI_BUS_RX) {
-            omv_spi_dma_init(spi, DMA_PERIPH_TO_MEMORY, config);
+            ret |= omv_spi_dma_init(spi, DMA_PERIPH_TO_MEMORY, config);
+        }
+        if (ret != 0) {
+            return -1;
         }
     }
     // Configure and enable SPI IRQ channel.
