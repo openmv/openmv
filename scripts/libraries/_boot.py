@@ -64,6 +64,7 @@ if bdev is None:
 
         bdev = pyb.Flash(start=0)
         sdcard = pyb.SDCard()
+        del pyb
     except Exception:
         pass
 
@@ -74,6 +75,7 @@ if bdev is None:
 
         bdev = mimxrt.Flash()
         sdcard = machine.SDCard(1)
+        del mimxrt, machine
     except Exception:
         pass
 
@@ -82,6 +84,7 @@ if bdev is None:
         import rp2
 
         bdev = rp2.Flash()
+        del rp2
     except Exception:
         pass
 
@@ -127,4 +130,4 @@ try:
 except Exception:
     create_file(".openmv_disk")
 
-del fat, bdev, sdcard
+del os, sys, vfs, fat, bdev, sdcard
