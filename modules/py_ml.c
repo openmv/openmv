@@ -337,7 +337,13 @@ mp_obj_t py_ml_model_make_new(const mp_obj_type_t *type, size_t n_args, size_t n
     //const char *path = mp_obj_str_get_str(args[ARG_path].u_obj);
     py_ml_model_obj_t *model = mp_obj_malloc_with_finaliser(py_ml_model_obj_t, &py_ml_model_type);
 
-    #if MICROPY_VFS
+    #if defined(STM32N6)
+    extern int ml_backend_load_model(py_ml_model_obj_t *model, const char *path);
+    const char *path = mp_obj_str_get_str(args[ARG_path].u_obj);
+    if (ml_backend_load_model(model, path) != 0) {
+        mp_raise_msg(&mp_type_OSError, MP_ERROR_TEXT("Failed to load builtin model"));
+    }
+    #elif MICROPY_VFS
     mp_obj_t file_args[2] = {
         args[ARG_path].u_obj,
         MP_OBJ_NEW_QSTR(MP_QSTR_rb),

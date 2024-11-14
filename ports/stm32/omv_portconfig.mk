@@ -27,17 +27,18 @@ STARTUP     ?= st/startup_$(shell echo $(MCU) | tr '[:upper:]' '[:lower:]')
 MCU_SERIES  := $(shell echo $(MCU) | cut -c6-7 | tr '[:upper:]' '[:lower:]')
 MCU_LOWER   := $(shell echo $(MCU) | tr '[:upper:]' '[:lower:]')
 HAL_DIR     := lib/stm32/$(MCU_SERIES)
+STAI_DIR    := lib/stai
 CMSIS_INC   := st
 
 SIGN_TOOL = $(TOOLS_DIR)/st/cubeprog/bin/STM32MP_SigningTool_CLI
-PROG_TOOL = $(TOOLS_DIR)/st/cubeprog/bin/STM32_Programmer.sh
+PROG_TOOL = $(TOOLS_DIR)/st/cubeprog/bin/STM32_Programmer_CLI
 STLDR_DIR = $(TOOLS_DIR)/st/cubeprog/bin/ExternalLoader/
 
 ROMFS_IMAGE := $(FW_DIR)/romfs.stamp
 ROMFS_CONFIG := $(OMV_BOARD_CONFIG_DIR)/romfs.json
 
 # Compiler Flags
-CFLAGS += -std=gnu99 \
+CFLAGS += -std=gnu11 \
           -Wall \
           -Werror \
           -Warray-bounds \
@@ -125,12 +126,13 @@ include common/common.mk
 include drivers/drivers.mk
 include lib/imlib/imlib.mk
 include lib/tflm/tflm.mk
+include lib/stai/stai.mk
 include ports/ports.mk
 include common/micropy.mk
 
 # Firmware objects from port.
 MPY_FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/,\
-	stm32_it.o              \
+	stm32_it.o             \
 	usbd_conf.o             \
 	usbd_desc.o             \
 	usbd_cdc_interface.o    \
@@ -189,11 +191,6 @@ MPY_FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/,\
 	usbdev/**/src/*.o       \
 )
 
-# CubeAI objects
-ifeq ($(CUBEAI), 1)
-include $(TOP_DIR)/$(CUBEAI_DIR)/cube.mk
-endif
-
 # Libraries
 ifeq ($(MICROPY_PY_AUDIO), 1)
 LIBS += $(TOP_DIR)/$(LIBPDM_DIR)/libPDMFilter_CM7_GCC_wc32.a
@@ -205,6 +202,10 @@ endif
 
 ifeq ($(MICROPY_PY_ML_TFLM), 1)
 LIBS += $(TOP_DIR)/$(TENSORFLOW_DIR)/libtflm/lib/libtflm-$(CPU)+fp-release.a
+endif
+
+ifeq ($(CUBEAI), 1)
+include $(TOP_DIR)/$(CUBEAI_DIR)/cube.mk
 endif
 
 ###################################################
