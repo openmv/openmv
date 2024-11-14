@@ -83,6 +83,7 @@
 
 #include "usbdbg.h"
 #include "sdram.h"
+#include "xspi_psram.h"
 #include "fb_alloc.h"
 #include "dma_alloc.h"
 #include "file_utils.h"
@@ -100,9 +101,9 @@ pyb_thread_t pyb_thread_main;
 #endif
 
 void NORETURN __fatal_error(const char *msg) {
-    for (uint i = 0;;) {
+    for (uint i = 1;;) {
         led_toggle(((i++) & 3));
-        for (volatile uint delay = 0; delay < 500000; delay++) {
+        for (volatile uint delay = 0; delay < 10000; delay++) {
         }
     }
 }
@@ -157,6 +158,18 @@ int main(void) {
     sdram_test(false);
     #endif
 
+    #if OMV_XSPI_PSRAM_SIZE
+    if (xspi_psram_init() != 0) {
+        __fatal_error("Failed to init XSPI PSRAM!");
+    }
+    #endif
+
+    #if OMV_XSPI_PSRAM_STARTUP_TEST
+    if (xspi_psram_test(true) == 0) {
+        __fatal_error("XSPI PSRAM test failed");
+    }
+    #endif
+
     // Basic sub-system init
     led_init();
     pendsv_init();
@@ -186,7 +199,7 @@ soft_reset:
     mp_init();
 
     // Initialise low-level sub-systems.
-    py_fir_init0();
+    //py_fir_init0();
     #if MICROPY_PY_TV
     py_tv_init0();
     #endif
@@ -201,8 +214,10 @@ soft_reset:
     #if MICROPY_HW_ENABLE_CAN
     can_init0();
     #endif
+    #if MICROPY_HW_ENABLE_HW_I2C
     i2c_init0();
-    spi_init0();
+    #endif
+    //spi_init0();
     uart_init0();
     fb_alloc_init0();
     omv_gpio_init0();
@@ -254,7 +269,10 @@ soft_reset:
     #if MICROPY_PY_CSI
     // Initialize the csi.
     if (first_soft_reset) {
-        omv_csi_init();
+        int ret = omv_csi_init();
+        if (ret != 0 && ret != OMV_CSI_ERROR_ISC_UNDETECTED) {
+            __fatal_error("Failed to init the CSI");
+        }
     }
     #endif
 
@@ -281,12 +299,12 @@ soft_reset:
     // Init USB device to default setting if it was not already configured
     if (!(pyb_usb_flags & PYB_USB_FLAG_USB_MODE_CALLED)) {
         pyb_usb_dev_init(pyb_usb_dev_detect(), MICROPY_HW_USB_VID,
-                         MICROPY_HW_USB_PID_CDC_MSC, USBD_MODE_CDC_MSC, 0, NULL, NULL);
+                         MICROPY_HW_USB_PID_CDC_MSC, USBD_MODE_CDC | USBD_MODE_HIGH_SPEED, 0, NULL, NULL);
     }
 
     // report if SDRAM failed
     #if MICROPY_HW_SDRAM_SIZE
-    if (first_soft_reset && (!sdram_ok)) {
+    if (first_soft_reset && !sdram_ok) {
         __fatal_error("Failed to init sdram!");
     }
     #endif
@@ -355,8 +373,10 @@ soft_reset_exit:
     cyw43_deinit(&cyw43_state);
     #endif
     timer_deinit();
+    #if MICROPY_HW_ENABLE_HW_I2C
     i2c_deinit_all();
-    spi_deinit_all();
+    #endif
+    //spi_deinit_all();
     uart_deinit_all();
     #if MICROPY_HW_ENABLE_CAN
     can_deinit_all();
