@@ -39,7 +39,7 @@
 // If an I2C handle is already defined in MicroPython, reuse that handle to allow
 // MicroPython to process I2C IRQs, otherwise define a new handle and handle IRQs here.
 #if defined(I2C1)
-#if defined(MICROPY_HW_I2C1_SCL)
+#if MICROPY_PY_PYB_LEGACY && defined(MICROPY_HW_I2C1_SCL)
 extern I2C_HandleTypeDef I2CHandle1;
 #else
 static I2C_HandleTypeDef I2CHandle1;
@@ -53,7 +53,7 @@ void I2C1_ER_IRQHandler(void) {
 #endif // I2C1
 
 #if defined(I2C2)
-#if defined(MICROPY_HW_I2C2_SCL)
+#if MICROPY_PY_PYB_LEGACY && defined(MICROPY_HW_I2C2_SCL)
 extern I2C_HandleTypeDef I2CHandle2;
 #else
 static I2C_HandleTypeDef I2CHandle2;
@@ -67,7 +67,7 @@ void I2C2_ER_IRQHandler(void) {
 #endif // I2C2
 
 #if defined(I2C3)
-#if defined(MICROPY_HW_I2C3_SCL)
+#if MICROPY_PY_PYB_LEGACY && defined(MICROPY_HW_I2C3_SCL)
 extern I2C_HandleTypeDef I2CHandle3;
 #else
 static I2C_HandleTypeDef I2CHandle3;
@@ -81,7 +81,7 @@ void I2C3_ER_IRQHandler(void) {
 #endif // I2C3
 
 #if defined(I2C4)
-#if defined(MICROPY_HW_I2C4_SCL)
+#if MICROPY_PY_PYB_LEGACY && defined(MICROPY_HW_I2C4_SCL)
 extern I2C_HandleTypeDef I2CHandle4;
 #else
 static I2C_HandleTypeDef I2CHandle4;
@@ -101,6 +101,8 @@ static const uint32_t omv_i2c_timing[OMV_I2C_SPEED_MAX] = {
     0x1090699B, 0x70330309, 0x50100103,
 #elif defined(STM32H7)
     0x20D09DE7, 0x40900C22, 0x4030040B,
+#elif defined(STM32N6)
+    0x10C0ECFF, 0x00602173, 0x00300B29,
 #else
 #error "no I2C timings for this MCU"
 #endif
@@ -188,6 +190,9 @@ int omv_i2c_init(omv_i2c_t *i2c, uint32_t bus_id, uint32_t speed) {
     assert_param(speed != OMV_I2C_SPEED_FAST);
     #else
     if (speed == OMV_I2C_SPEED_FAST) {
+        #if defined(STM32N6)
+        HAL_I2CEx_ConfigFastModePlus(i2c->inst, I2C_FASTMODEPLUS_ENABLE);
+        #else
         // Enable FAST mode plus.
         switch (bus_id) {
             #if defined(I2C_FASTMODEPLUS_I2C1)
@@ -211,6 +216,7 @@ int omv_i2c_init(omv_i2c_t *i2c, uint32_t bus_id, uint32_t speed) {
                 break;
             #endif
         }
+        #endif  // defined(STM32N6)
     }
     #endif // !defined(IS_I2C_FASTMODEPLUS)
 
@@ -301,7 +307,8 @@ int omv_i2c_scan(omv_i2c_t *i2c, uint8_t *list, uint8_t size) {
             }
         }
     }
-    #if defined(STM32H7)
+
+    #if defined(STM32H7) || defined(STM32N6)
     // After a failed scan the bus can get stuck. Re-initializing the bus fixes
     // it, but it seems disabling and re-enabling the bus is all that's needed.
     if (idx == 0) {
