@@ -57,6 +57,12 @@ MEMORY
   #if defined(OMV_SRAM6_ORIGIN)
   SRAM6 (xrw)       : ORIGIN = OMV_SRAM6_ORIGIN,     LENGTH = OMV_SRAM6_LENGTH
   #endif
+  #if defined(OMV_SRAM7_ORIGIN)
+  SRAM7 (xrw)       : ORIGIN = OMV_SRAM7_ORIGIN,     LENGTH = OMV_SRAM7_LENGTH
+  #endif
+  #if defined(OMV_SRAM8_ORIGIN)
+  SRAM8 (xrw)       : ORIGIN = OMV_SRAM8_ORIGIN,     LENGTH = OMV_SRAM8_LENGTH
+  #endif
   #if defined(OMV_DRAM_ORIGIN)
   DRAM (xrw)        : ORIGIN = OMV_DRAM_ORIGIN,      LENGTH = OMV_DRAM_LENGTH
   #endif
