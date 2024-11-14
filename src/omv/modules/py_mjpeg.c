@@ -98,7 +98,7 @@ static mp_obj_t py_mjpeg_write(uint n_args, const mp_obj_t *pos_args, mp_map_t *
     static const mp_arg_t allowed_args[] = {
         { MP_QSTR_roi, MP_ARG_OBJ | MP_ARG_KW_ONLY, {.u_rom_obj = MP_ROM_NONE} },
         { MP_QSTR_rgb_channel, MP_ARG_INT | MP_ARG_KW_ONLY,  {.u_int = -1 } },
-        { MP_QSTR_alpha, MP_ARG_INT | MP_ARG_KW_ONLY,  {.u_int = 256 } },
+        { MP_QSTR_alpha, MP_ARG_INT | MP_ARG_KW_ONLY,  {.u_int = 255 } },
         { MP_QSTR_color_palette, MP_ARG_OBJ | MP_ARG_KW_ONLY, {.u_rom_obj = MP_ROM_NONE} },
         { MP_QSTR_alpha_palette, MP_ARG_OBJ | MP_ARG_KW_ONLY, {.u_rom_obj = MP_ROM_NONE} },
         { MP_QSTR_hint, MP_ARG_INT | MP_ARG_KW_ONLY,  {.u_int = 0 } },
@@ -119,8 +119,8 @@ static mp_obj_t py_mjpeg_write(uint n_args, const mp_obj_t *pos_args, mp_map_t *
         mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("RGB channel can be 0, 1, or 2"));
     }
 
-    if (args[ARG_alpha].u_int < 0 || args[ARG_alpha].u_int > 256) {
-        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Alpha ranges between 0 and 256"));
+    if (args[ARG_alpha].u_int < 0 || args[ARG_alpha].u_int > 255) {
+        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Alpha ranges between 0 and 255"));
     }
 
     if (args[ARG_quality].u_int < 0 || args[ARG_quality].u_int > 100) {

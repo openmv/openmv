@@ -442,7 +442,7 @@ static void display_write(py_display_obj_t *self, image_t *src_img, int dst_x_st
     display.framebuffer_layers[tail].WindowX1 = black ? self->width : p1.x;
     display.framebuffer_layers[tail].WindowY0 = black ? 0 : p0.y;
     display.framebuffer_layers[tail].WindowY1 = black ? self->height : p1.y;
-    display.framebuffer_layers[tail].Alpha = black ? 0 : fast_roundf((alpha * 255) / 256.f);
+    display.framebuffer_layers[tail].Alpha = black ? 0 : alpha;
     display.framebuffer_layers[tail].FBStartAdress =
         black ? ((uint32_t) dst_img.data) : ((uint32_t) (IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(&dst_img, p0.y) + p0.x));
     display.framebuffer_layers[tail].ImageWidth = black ? self->width : dst_img.w;
@@ -451,7 +451,7 @@ static void display_write(py_display_obj_t *self, image_t *src_img, int dst_x_st
     // Set alpha to 256 here as we will use the layer alpha to blend the image into the background color of black for free.
     if (!black) {
         imlib_draw_image(&dst_img, src_img, dst_x_start, dst_y_start,
-                         x_scale, y_scale, roi, rgb_channel, 256, color_palette,
+                         x_scale, y_scale, roi, rgb_channel, 255, color_palette,
                          alpha_palette, hint | IMAGE_HINT_BLACK_BACKGROUND, NULL, NULL, NULL);
     }
 

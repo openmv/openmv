@@ -722,6 +722,9 @@ void imlib_draw_row_setup(imlib_draw_row_data_t *data) {
 
     int alpha = data->alpha, max = 256;
 
+    // To avoid having to divide by 255 scale alpha to 0-256 so we can right shift by 8.
+    alpha = fast_roundf((alpha * 256) / 255.0f);
+
     if (data->dst_img->pixfmt == PIXFORMAT_RGB565) {
         alpha >>= 3; // 5-bit alpha for RGB565
         max = 32;
@@ -733,7 +736,7 @@ void imlib_draw_row_setup(imlib_draw_row_data_t *data) {
         data->smuad_alpha_palette = fb_alloc(256 * sizeof(uint32_t), FB_ALLOC_NO_HINT);
 
         for (int i = 0, a = alpha; i < 256; i++) {
-            int new_alpha = fast_roundf((a * data->alpha_palette[i]) / 255.f);
+            int new_alpha = fast_roundf((a * data->alpha_palette[i]) / 255.0f);
             data->smuad_alpha_palette[i] = data->black_background ? new_alpha : ((new_alpha << 16) | (max - new_alpha));
         }
     } else {
@@ -836,7 +839,7 @@ void imlib_draw_row(int x_start, int x_end, int y_row, imlib_draw_row_data_t *da
                                 }
                             }
                         }
-                    } else if (data->alpha == 256) {
+                    } else if (data->alpha == 255) {
                         if (!data->color_palette) {
                             for (int x = x_start; x < x_end; x++) {
                                 int pixel = IMAGE_GET_BINARY_PIXEL_FAST(src32, x);
@@ -1021,7 +1024,7 @@ void imlib_draw_row(int x_start, int x_end, int y_row, imlib_draw_row_data_t *da
                                 }
                             }
                         }
-                    } else if (data->alpha == 256) {
+                    } else if (data->alpha == 255) {
                         if (!data->color_palette) {
                             for (int x = x_start; x < x_end; x++) {
                                 int pixel = *src8++ > 127;
@@ -1139,7 +1142,7 @@ void imlib_draw_row(int x_start, int x_end, int y_row, imlib_draw_row_data_t *da
                                     }
                                 }
                             }
-                        } else if (data->alpha == 256) {
+                        } else if (data->alpha == 255) {
                             if (!data->color_palette) {
                                 for (int x = x_start; x < x_end; x++) {
                                     int pixel = *src16++;
@@ -1257,7 +1260,7 @@ void imlib_draw_row(int x_start, int x_end, int y_row, imlib_draw_row_data_t *da
                                     }
                                 }
                             }
-                        } else if (data->alpha == 256) {
+                        } else if (data->alpha == 255) {
                             if (!data->color_palette) {
                                 for (int x = x_start; x < x_end; x++) {
                                     int pixel = *src16++;
@@ -1375,7 +1378,7 @@ void imlib_draw_row(int x_start, int x_end, int y_row, imlib_draw_row_data_t *da
                                     }
                                 }
                             }
-                        } else if (data->alpha == 256) {
+                        } else if (data->alpha == 255) {
                             if (!data->color_palette) {
                                 for (int x = x_start; x < x_end; x++) {
                                     int pixel = *src16++;
@@ -1493,7 +1496,7 @@ void imlib_draw_row(int x_start, int x_end, int y_row, imlib_draw_row_data_t *da
                                     }
                                 }
                             }
-                        } else if (data->alpha == 256) {
+                        } else if (data->alpha == 255) {
                             if (!data->color_palette) {
                                 for (int x = x_start; x < x_end; x++) {
                                     int pixel = *src16++;
@@ -1616,7 +1619,7 @@ void imlib_draw_row(int x_start, int x_end, int y_row, imlib_draw_row_data_t *da
                                 }
                             }
                         }
-                    } else if (data->alpha == 256) {
+                    } else if (data->alpha == 255) {
                         if (!data->color_palette) {
                             for (int x = x_start; x < x_end; x++) {
                                 *dst8++ =
@@ -1709,7 +1712,7 @@ void imlib_draw_row(int x_start, int x_end, int y_row, imlib_draw_row_data_t *da
                                 }
                             }
                         }
-                    } else if (data->alpha == 256) {
+                    } else if (data->alpha == 255) {
                         if (!data->color_palette) {
                             unaligned_memcpy(dst8, src8, (x_end - x_start) * sizeof(uint8_t));
                         } else {
@@ -1793,7 +1796,7 @@ void imlib_draw_row(int x_start, int x_end, int y_row, imlib_draw_row_data_t *da
                                     }
                                 }
                             }
-                        } else if (data->alpha == 256) {
+                        } else if (data->alpha == 255) {
                             if (!data->color_palette) {
                                 for (int x = x_start; x < x_end; x++) {
                                     int pixel = *src16++;
@@ -1881,7 +1884,7 @@ void imlib_draw_row(int x_start, int x_end, int y_row, imlib_draw_row_data_t *da
                                     }
                                 }
                             }
-                        } else if (data->alpha == 256) {
+                        } else if (data->alpha == 255) {
                             if (!data->color_palette) {
                                 for (int x = x_start; x < x_end; x++) {
                                     int pixel = *src16++;
@@ -1969,7 +1972,7 @@ void imlib_draw_row(int x_start, int x_end, int y_row, imlib_draw_row_data_t *da
                                     }
                                 }
                             }
-                        } else if (data->alpha == 256) {
+                        } else if (data->alpha == 255) {
                             if (!data->color_palette) {
                                 for (int x = x_start; x < x_end; x++) {
                                     int pixel = *src16++;
@@ -2057,7 +2060,7 @@ void imlib_draw_row(int x_start, int x_end, int y_row, imlib_draw_row_data_t *da
                                     }
                                 }
                             }
-                        } else if (data->alpha == 256) {
+                        } else if (data->alpha == 255) {
                             if (!data->color_palette) {
                                 for (int x = x_start; x < x_end; x++) {
                                     int pixel = *src16++;
@@ -2163,7 +2166,7 @@ void imlib_draw_row(int x_start, int x_end, int y_row, imlib_draw_row_data_t *da
                                 }
                             }
                         }
-                    } else if (data->alpha == 256) {
+                    } else if (data->alpha == 255) {
                         if (!data->color_palette) {
                             for (int x = x_start; x < x_end; x++) {
                                 *dst16++ =
@@ -2254,7 +2257,7 @@ void imlib_draw_row(int x_start, int x_end, int y_row, imlib_draw_row_data_t *da
                                 }
                             }
                         }
-                    } else if (data->alpha == 256) {
+                    } else if (data->alpha == 255) {
                         if (!data->color_palette) {
                             for (int x = x_start; x < x_end; x++) {
                                 int pixel = *src8++;
@@ -2342,7 +2345,7 @@ void imlib_draw_row(int x_start, int x_end, int y_row, imlib_draw_row_data_t *da
                                     }
                                 }
                             }
-                        } else if (data->alpha == 256) {
+                        } else if (data->alpha == 255) {
                             if (!data->color_palette) {
                                 unaligned_memcpy(dst16, src16, (x_end - x_start) * sizeof(uint16_t));
                             } else {
@@ -2428,7 +2431,7 @@ void imlib_draw_row(int x_start, int x_end, int y_row, imlib_draw_row_data_t *da
                                     }
                                 }
                             }
-                        } else if (data->alpha == 256) {
+                        } else if (data->alpha == 255) {
                             if (!data->color_palette) {
                                 for (int x = x_start; x < x_end; x++) {
                                     int pixel = *src16++;
@@ -2522,7 +2525,7 @@ void imlib_draw_row(int x_start, int x_end, int y_row, imlib_draw_row_data_t *da
                                     }
                                 }
                             }
-                        } else if (data->alpha == 256) {
+                        } else if (data->alpha == 255) {
                             if (!data->color_palette) {
                                 for (int x = x_start; x < x_end; x++) {
                                     int pixel = *src16++;
@@ -2616,7 +2619,7 @@ void imlib_draw_row(int x_start, int x_end, int y_row, imlib_draw_row_data_t *da
                                     }
                                 }
                             }
-                        } else if (data->alpha == 256) {
+                        } else if (data->alpha == 255) {
                             if (!data->color_palette) {
                                 for (int x = x_start; x < x_end; x++) {
                                     int pixel = *src16++;
@@ -3031,7 +3034,7 @@ void imlib_draw_image(image_t *dst_img,
         new_src_img.pixfmt = color_palette ? PIXFORMAT_RGB565 : PIXFORMAT_GRAYSCALE;
         new_src_img.data = fb_alloc(image_size(&new_src_img), FB_ALLOC_CACHE_ALIGN);
         imlib_draw_image(&new_src_img, src_img, 0, 0, 1.f, 1.f, NULL,
-                         rgb_channel, 256, color_palette, NULL, 0, NULL, NULL, NULL);
+                         rgb_channel, 255, color_palette, NULL, 0, NULL, NULL, NULL);
         src_img = &new_src_img;
         rgb_channel = -1;
         color_palette = NULL;
@@ -3131,7 +3134,7 @@ void imlib_draw_image(image_t *dst_img,
             t_src_img.h = t_roi.h = src_width_scaled; // was transposed
             t_src_img.data = fb_alloc(image_size(&t_src_img), FB_ALLOC_CACHE_ALIGN);
             imlib_draw_image(&t_src_img, src_img, 0, 0, x_scale, y_scale, roi,
-                             -1, 256, NULL, NULL,
+                             -1, 255, NULL, NULL,
                              hint & (IMAGE_HINT_AREA | IMAGE_HINT_BILINEAR | IMAGE_HINT_BICUBIC),
                              NULL, NULL, NULL);
         } else {

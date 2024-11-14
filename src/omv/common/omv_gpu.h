@@ -32,7 +32,7 @@ void omv_gpu_deinit();
 
 // Draws src_rect from src_img to dst_rect in dst_img.
 // If the sizes of src_rect and dst_rect are different then the image must be scaled.
-// Alpha is the alpha value (0-256) to use when blending the source image with the destination image.
+// Alpha is the alpha value (0-255) to use when blending the source image with the destination image.
 // If color_palette is not NULL, it is used to map the source image's 8-bit Y to an 16-bit RGB565 color.
 // If alpha_palette is not NULL, it is used to map the source image's 8-bit Y to an 8-bit alpha value.
 //
