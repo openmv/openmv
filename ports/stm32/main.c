@@ -84,6 +84,7 @@
 
 #include "usbdbg.h"
 #include "sdram.h"
+#include "xspi_psram.h"
 #include "fb_alloc.h"
 #include "dma_alloc.h"
 #include "file_utils.h"
@@ -162,6 +163,18 @@ int main(void) {
     storage_init();
     #endif
 
+    #if OMV_XSPI_PSRAM_SIZE
+    if (xspi_psram_init() != 0) {
+        __fatal_error("Failed to init XSPI PSRAM!");
+    }
+    #endif
+
+    #if OMV_XSPI_PSRAM_STARTUP_TEST
+    if (xspi_psram_test(true) == 0) {
+        __fatal_error("XSPI PSRAM test failed");
+    }
+    #endif
+
     // Basic sub-system init
     led_init();
     pendsv_init();
@@ -208,7 +221,9 @@ soft_reset:
     #if MICROPY_HW_ENABLE_CAN
     pyb_can_init0();
     #endif
+    #if MICROPY_PY_PYB_LEGACY  && MICROPY_HW_ENABLE_HW_I2C
     i2c_init0();
+    #endif
     spi_init0();
     uart_init0();
     fb_alloc_init0();
@@ -263,7 +278,10 @@ soft_reset:
     #if MICROPY_PY_CSI
     // Initialize the csi.
     if (first_soft_reset) {
-        omv_csi_init();
+        int ret = omv_csi_init();
+        if (ret != 0 && ret != OMV_CSI_ERROR_ISC_UNDETECTED) {
+            __fatal_error("Failed to init the CSI");
+        }
     }
     #endif
 
@@ -289,13 +307,17 @@ soft_reset:
 
     // Init USB device to default setting if it was not already configured
     if (!(pyb_usb_flags & PYB_USB_FLAG_USB_MODE_CALLED)) {
+        uint8_t usb_mode = USBD_MODE_CDC_MSC;
+        #if MICROPY_HW_USB_HS
+        usb_mode |= USBD_MODE_HIGH_SPEED;
+        #endif
         pyb_usb_dev_init(pyb_usb_dev_detect(), MICROPY_HW_USB_VID,
-                         MICROPY_HW_USB_PID_CDC_MSC, USBD_MODE_CDC_MSC, 0, NULL, NULL);
+                         MICROPY_HW_USB_PID, usb_mode, 0, NULL, NULL);
     }
 
     // report if SDRAM failed
     #if MICROPY_HW_SDRAM_SIZE
-    if (first_soft_reset && (!sdram_ok)) {
+    if (first_soft_reset && !sdram_ok) {
         __fatal_error("Failed to init sdram!");
     }
     #endif
@@ -364,7 +386,9 @@ soft_reset_exit:
     cyw43_deinit(&cyw43_state);
     #endif
     timer_deinit();
+    #if MICROPY_PY_PYB_LEGACY && MICROPY_HW_ENABLE_HW_I2C
     pyb_i2c_deinit_all();
+    #endif
     spi_deinit_all();
     uart_deinit_all();
     #if MICROPY_HW_ENABLE_CAN
