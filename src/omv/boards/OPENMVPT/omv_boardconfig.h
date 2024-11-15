@@ -246,7 +246,9 @@
 #define OMV_SPI2_MOSI_PIN                       (&omv_pin_B15_SPI2)
 #define OMV_SPI2_SSEL_PIN                       (&omv_pin_B12_GPIO)
 #define OMV_SPI2_DMA_TX_CHANNEL                 (DMA1_Stream4)
+#define OMV_SPI2_DMA_TX_REQUEST                 (DMA_REQUEST_SPI2_TX)
 #define OMV_SPI2_DMA_RX_CHANNEL                 (DMA1_Stream3)
+#define OMV_SPI2_DMA_RX_REQUEST                 (DMA_REQUEST_SPI2_RX)
 
 // SPI bus 3
 #define OMV_SPI3_ID                             (3)
@@ -255,7 +257,9 @@
 #define OMV_SPI3_MOSI_PIN                       (&omv_pin_B5_SPI3)
 #define OMV_SPI3_SSEL_PIN                       (&omv_pin_A15_GPIO)
 #define OMV_SPI3_DMA_TX_CHANNEL                 (DMA1_Stream7)
+#define OMV_SPI3_DMA_TX_REQUEST                 (DMA_REQUEST_SPI3_TX)
 #define OMV_SPI3_DMA_RX_CHANNEL                 (DMA1_Stream2)
+#define OMV_SPI3_DMA_RX_REQUEST                 (DMA_REQUEST_SPI3_RX)
 
 // SPI bus 5
 #define OMV_SPI5_ID                             (5)
@@ -264,7 +268,9 @@
 #define OMV_SPI5_MOSI_PIN                       (&omv_pin_J10_SPI5)
 #define OMV_SPI5_SSEL_PIN                       (&omv_pin_K1_GPIO)
 #define OMV_SPI5_DMA_TX_CHANNEL                 (DMA2_Stream4)
+#define OMV_SPI5_DMA_TX_REQUEST                 (DMA_REQUEST_SPI5_TX)
 #define OMV_SPI5_DMA_RX_CHANNEL                 (DMA2_Stream3)
+#define OMV_SPI5_DMA_RX_REQUEST                 (DMA_REQUEST_SPI5_RX)
 
 // LCD Interface
 #define OMV_RGB_DISPLAY_CONTROLLER              (LTDC)

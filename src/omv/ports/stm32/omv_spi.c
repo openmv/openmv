@@ -73,23 +73,23 @@ extern SPI_HandleTypeDef SPIHandle5;
 DEFINE_SPI_INSTANCE(5)
 #endif
 
-#if defined(SPI6_ID) && defined(MICROPY_HW_SPI6_SCK)
+#if defined(OMV_SPI6_ID) && defined(MICROPY_HW_SPI6_SCK)
 extern SPI_HandleTypeDef SPIHandle6;
-#elif defined(SPI6_ID)
+#elif defined(OMV_SPI6_ID)
 DEFINE_SPI_INSTANCE(6)
 #endif
 
-#define INITIALIZE_SPI_DESCR(spi, spi_number)                                       \
-    do {                                                                            \
-        (spi)->id = spi_number;                                                     \
-        (spi)->irqn = SPI##spi_number##_IRQn;                                       \
-        (spi)->cs = OMV_SPI##spi_number##_SSEL_PIN;                                 \
-        (spi)->descr = &SPIHandle##spi_number;                                      \
-        (spi)->descr->Instance = SPI##spi_number;                                   \
-        (spi)->dma_descr_tx = (DMA_HandleTypeDef)                                   \
-        {OMV_SPI##spi_number##_DMA_TX_CHANNEL, {DMA_REQUEST_SPI##spi_number##_TX}}; \
-        (spi)->dma_descr_rx = (DMA_HandleTypeDef)                                   \
-        {OMV_SPI##spi_number##_DMA_RX_CHANNEL, {DMA_REQUEST_SPI##spi_number##_RX}}; \
+#define INITIALIZE_SPI_DESCR(spi, spi_number)                                               \
+    do {                                                                                    \
+        (spi)->id = spi_number;                                                             \
+        (spi)->irqn = SPI##spi_number##_IRQn;                                               \
+        (spi)->cs = OMV_SPI##spi_number##_SSEL_PIN;                                         \
+        (spi)->descr = &SPIHandle##spi_number;                                              \
+        (spi)->descr->Instance = SPI##spi_number;                                           \
+        (spi)->dma_descr_tx = (DMA_HandleTypeDef)                                           \
+        { OMV_SPI##spi_number##_DMA_TX_CHANNEL, { OMV_SPI##spi_number##_DMA_TX_REQUEST } }; \
+        (spi)->dma_descr_rx = (DMA_HandleTypeDef)                                           \
+        { OMV_SPI##spi_number##_DMA_RX_CHANNEL, { OMV_SPI##spi_number##_DMA_RX_REQUEST } }; \
     } while (0)
 
 static omv_spi_t *omv_spi_descr_all[6] = { NULL };
@@ -164,7 +164,7 @@ static void omv_spi_callback(SPI_HandleTypeDef *hspi) {
     } else if (hspi->Instance == SPI5) {
         spi = omv_spi_descr_all[4];
     #endif
-    #if defined(SPI6_ID)
+    #if defined(OMV_SPI6_ID)
     } else if (hspi->Instance == SPI6) {
         spi = omv_spi_descr_all[5];
     #endif
@@ -394,7 +394,7 @@ int omv_spi_init(omv_spi_t *spi, omv_spi_config_t *config) {
     } else if (config->id == 5) {
         INITIALIZE_SPI_DESCR(spi, 5);
     #endif
-    #if defined(SPI6_ID)
+    #if defined(OMV_SPI6_ID)
     } else if (config->id == 6) {
         INITIALIZE_SPI_DESCR(spi, 6);
     #endif

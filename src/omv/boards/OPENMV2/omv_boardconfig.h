@@ -179,9 +179,9 @@
 #define OMV_SPI2_MOSI_PIN                     (&omv_pin_B15_SPI2)
 #define OMV_SPI2_SSEL_PIN                     (&omv_pin_B12_SPI2)
 #define OMV_SPI2_DMA_TX_CHANNEL               (DMA1_Stream4)
+#define OMV_SPI2_DMA_TX_REQUEST               (DMA_CHANNEL_0)
 #define OMV_SPI2_DMA_RX_CHANNEL               (DMA1_Stream3)
-#define DMA_REQUEST_SPI2_TX                   (DMA_CHANNEL_0)
-#define DMA_REQUEST_SPI2_RX                   (DMA_CHANNEL_0)
+#define OMV_SPI2_DMA_RX_REQUEST               (DMA_CHANNEL_0)
 
 // SPI LCD Interface
 #define OMV_SPI_DISPLAY_CONTROLLER            (OMV_SPI2_ID)

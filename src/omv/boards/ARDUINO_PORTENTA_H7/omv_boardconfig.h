@@ -277,7 +277,9 @@
 #define OMV_SPI2_MOSI_PIN                   (&omv_pin_C3_SPI2)
 #define OMV_SPI2_SSEL_PIN                   (&omv_pin_I0_SPI2)
 #define OMV_SPI2_DMA_TX_CHANNEL             (DMA1_Stream4)
+#define OMV_SPI2_DMA_TX_REQUEST             (DMA_REQUEST_SPI2_TX)
 #define OMV_SPI2_DMA_RX_CHANNEL             (DMA1_Stream3)
+#define OMV_SPI2_DMA_RX_REQUEST             (DMA_REQUEST_SPI2_RX)
 
 // SAI4
 #define OMV_SAI                             (SAI4_Block_A)
