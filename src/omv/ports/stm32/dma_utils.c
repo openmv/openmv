@@ -39,22 +39,21 @@ extern DMA_HandleTypeDef *dma_handle[16];
 #endif
 
 uint8_t dma_utils_channel_to_irqn(void *dma_channel) {
-    uint32_t dma_base = ((uint32_t) dma_channel) & 0xFFFFF000;
     if (0) {
     #if defined(DMA1_Stream0)
-    } else if (dma_base == DMA1_BASE) {
+    } else if ((((uint32_t) dma_channel) & 0xFFFFFF00) == DMA1_BASE) {
         return ((DMA_Stream_TypeDef *) dma_channel - DMA1_Stream0) + DMA1_Stream0_IRQn;
     #endif
     #if defined(DMA2_Stream0)
-    } else if (dma_base == DMA2_BASE) {
+    } else if ((((uint32_t) dma_channel) & 0xFFFFFF00) == DMA2_BASE) {
         return ((DMA_Stream_TypeDef *) dma_channel - DMA2_Stream0) + DMA2_Stream0_IRQn;
     #endif
     #if defined(GPDMA1_Channel0)
-    } else if (dma_base == GPDMA1_BASE) {
+    } else if ((((uint32_t) dma_channel) & 0xFFFFF000) == GPDMA1_BASE) {
         return ((DMA_Channel_TypeDef *) dma_channel - GPDMA1_Channel0) + GPDMA1_Channel0_IRQn;
     #endif
     #if defined(HPDMA1_Channel0)
-    } else if (dma_base == HPDMA1_BASE) {
+    } else if ((((uint32_t) dma_channel) & 0xFFFFF000) == HPDMA1_BASE) {
         return ((DMA_Channel_TypeDef *) dma_channel - HPDMA1_Channel0) + HPDMA1_Channel0_IRQn;
     #endif
     }
@@ -65,22 +64,21 @@ uint8_t dma_utils_channel_to_irqn(void *dma_channel) {
 // array defined in micropython. Setting a DMA handle in that array allows
 // DMA IRQ handlers (which are all defined in micropython) to use it.
 uint8_t dma_utils_channel_to_id(void *dma_channel) {
-    uint32_t dma_base = ((uint32_t) dma_channel) & 0xFFFFF000;
     if (0) {
     #if defined(DMA1_Stream0)
-    } else if (dma_base == DMA1_BASE) {
+    } else if ((((uint32_t) dma_channel) & 0xFFFFFF00) == DMA1_BASE) {
         return ((DMA_Stream_TypeDef *) dma_channel - DMA1_Stream0);
     #endif
     #if defined(DMA2_Stream0)
-    } else if (dma_base == DMA2_BASE) {
+    } else if ((((uint32_t) dma_channel) & 0xFFFFFF00) == DMA2_BASE) {
         return ((DMA_Stream_TypeDef *) dma_channel - DMA2_Stream0) + 8;
     #endif
     #if defined(GPDMA1_Channel0)
-    } else if (dma_base == GPDMA1_BASE) {
+    } else if ((((uint32_t) dma_channel) & 0xFFFFF000) == GPDMA1_BASE) {
         return ((DMA_Channel_TypeDef *) dma_channel - GPDMA1_Channel0);
     #endif
     #if defined(HPDMA1_Channel0)
-    } else if (dma_base == HPDMA1_BASE) {
+    } else if ((((uint32_t) dma_channel) & 0xFFFFF000) == HPDMA1_BASE) {
         return ((DMA_Channel_TypeDef *) dma_channel - HPDMA1_Channel0) + 16;
     #endif
     }
