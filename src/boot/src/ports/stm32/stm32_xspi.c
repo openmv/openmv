@@ -81,22 +81,28 @@ int xspi_flash_init() {
         return 0;
     }
 
+    uint32_t xspi_kclk = 0;
+
     if (OMV_BOOT_XSPI_INSTANCE == 1) {
         xspi.Instance = XSPI1;
+        xspi_kclk = HAL_RCCEx_GetPeriphCLKFreq(RCC_PERIPHCLK_XSPI1);
     } else if (OMV_BOOT_XSPI_INSTANCE == 2) {
         xspi.Instance = XSPI2;
+        xspi_kclk = HAL_RCCEx_GetPeriphCLKFreq(RCC_PERIPHCLK_XSPI2);
     } else if (OMV_BOOT_XSPI_INSTANCE == 3) {
         xspi.Instance = XSPI3;
+        xspi_kclk = HAL_RCCEx_GetPeriphCLKFreq(RCC_PERIPHCLK_XSPI3);
     }
+
     xspi.Init.FifoThresholdByte = 4U;
     xspi.Init.MemoryMode = HAL_XSPI_SINGLE_MEM;
     xspi.Init.MemoryType = HAL_XSPI_MEMTYPE_MACRONIX;
     xspi.Init.MemorySize = __builtin_ctz(OMV_BOOT_XSPI_FLASH_SIZE) - 1;
     xspi.Init.ChipSelectHighTimeCycle = 2U;
     xspi.Init.FreeRunningClock = HAL_XSPI_FREERUNCLK_DISABLE;
-    xspi.Init.ClockMode = HAL_XSPI_CLOCK_MODE_0;
     xspi.Init.WrapSize = HAL_XSPI_WRAP_NOT_SUPPORTED;
-    xspi.Init.ClockPrescaler = 0U;
+    xspi.Init.ClockMode = HAL_XSPI_CLOCK_MODE_0;
+    xspi.Init.ClockPrescaler = (xspi_kclk / OMV_BOOT_XSPI_FREQUENCY) - 1;
     xspi.Init.SampleShifting = HAL_XSPI_SAMPLE_SHIFT_NONE;
     xspi.Init.DelayHoldQuarterCycle = HAL_XSPI_DHQC_DISABLE;
     xspi.Init.ChipSelectBoundary = HAL_XSPI_BONDARYOF_NONE;
