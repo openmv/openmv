@@ -50,7 +50,9 @@ typedef struct jpeg_state {
     volatile bool input_paused;
     volatile bool output_paused;
     JPEG_HandleTypeDef jpeg_descr;
+    #if defined(OMV_MDMA_CHANNEL_JPEG_IN)
     MDMA_HandleTypeDef mdma_descr[2];
+    #endif
 } jpeg_state_t;
 
 static jpeg_state_t JPEG_state = {};
@@ -76,6 +78,7 @@ void JPEG_IRQHandler() {
     IRQ_EXIT(JPEG_IRQn);
 }
 
+#if defined(OMV_MDMA_CHANNEL_JPEG_IN)
 void jpeg_mdma_irq_handler(void) {
     if (MDMA->GISR0 & (1 << OMV_MDMA_CHANNEL_JPEG_IN)) {
         HAL_MDMA_IRQHandler(&JPEG_state.mdma_descr[JPEG_MDMA_IN]);
@@ -84,6 +87,7 @@ void jpeg_mdma_irq_handler(void) {
         HAL_MDMA_IRQHandler(&JPEG_state.mdma_descr[JPEG_MDMA_OUT]);
     }
 }
+#endif
 
 static void jpeg_compress_get_data(JPEG_HandleTypeDef *hjpeg, uint32_t NbDecodedData) {
     HAL_JPEG_Pause(hjpeg, JPEG_PAUSE_RESUME_INPUT);
@@ -91,10 +95,12 @@ static void jpeg_compress_get_data(JPEG_HandleTypeDef *hjpeg, uint32_t NbDecoded
 }
 
 static void jpeg_compress_data_ready(JPEG_HandleTypeDef *hjpeg, uint8_t *pDataOut, uint32_t OutDataLength) {
+    #if defined(OMV_MDMA_CHANNEL_JPEG_IN)
     if ((!(((uint32_t) pDataOut) % __SCB_DCACHE_LINE_SIZE)) && (OutDataLength == JPEG_OUTPUT_CHUNK_SIZE)) {
         // Ensure any cached reads are dropped.
         SCB_InvalidateDCache_by_Addr((uint32_t *) pDataOut, JPEG_OUTPUT_CHUNK_SIZE);
     }
+    #endif
 
     // We have received this much data.
     JPEG_state.out_data_len += OutDataLength;
@@ -106,6 +112,7 @@ static void jpeg_compress_data_ready(JPEG_HandleTypeDef *hjpeg, uint8_t *pDataOu
     } else {
         uint8_t *new_pDataOut = pDataOut + OutDataLength;
 
+        #if defined(OMV_MDMA_CHANNEL_JPEG_IN)
         // DMA will write data to the output buffer in __SCB_DCACHE_LINE_SIZE aligned chunks. At the
         // end of JPEG compression the processor will manually transfer the remaining parts of the
         // image in randomly aligned chunks. We only want to invalidate the cache of the output
@@ -114,6 +121,7 @@ static void jpeg_compress_data_ready(JPEG_HandleTypeDef *hjpeg, uint8_t *pDataOu
         if ((!(((uint32_t) new_pDataOut) % __SCB_DCACHE_LINE_SIZE)) && (OutDataLength == JPEG_OUTPUT_CHUNK_SIZE)) {
             SCB_InvalidateDCache_by_Addr((uint32_t *) new_pDataOut, JPEG_OUTPUT_CHUNK_SIZE);
         }
+        #endif
 
         // We are ok to receive more data.
         HAL_JPEG_ConfigOutputBuffer(hjpeg, new_pDataOut, JPEG_OUTPUT_CHUNK_SIZE);
@@ -305,15 +313,22 @@ bool jpeg_compress(image_t *src, image_t *dst, int quality, bool realloc, jpeg_s
             }
         }
 
+        #if defined(OMV_MDMA_CHANNEL_JPEG_IN)
         // Flush the MCU row for DMA...
         SCB_CleanDCache_by_Addr((uint32_t *) mcu_row_buffer_ptr, src_w_mcus_bytes);
+        #endif
 
         if (!y_offset) {
+            #if defined(OMV_MDMA_CHANNEL_JPEG_IN)
             // Invalidate the output buffer.
             SCB_InvalidateDCache_by_Addr(dma_buffer, JPEG_OUTPUT_CHUNK_SIZE);
             // Start the DMA process off on the first row of MCUs.
             HAL_JPEG_Encode_DMA(&JPEG_state.jpeg_descr, mcu_row_buffer_ptr, src_w_mcus_bytes, dma_buffer,
                                 JPEG_OUTPUT_CHUNK_SIZE);
+            #else
+            HAL_JPEG_Encode_IT(&JPEG_state.jpeg_descr, mcu_row_buffer_ptr, src_w_mcus_bytes, dma_buffer,
+                               JPEG_OUTPUT_CHUNK_SIZE);
+            #endif
         } else {
 
             // Wait for the last row MCUs to be processed before starting the next row.
@@ -532,6 +547,7 @@ void jpeg_decompress(image_t *dst, image_t *src) {
 
     uint8_t *mcu_row_buffer = fb_alloc(dst_w_mcus_bytes_2, FB_ALLOC_PREFER_SPEED | FB_ALLOC_CACHE_ALIGN);
 
+    #if defined(OMV_MDMA_CHANNEL_JPEG_IN)
     // Flush input.
     SCB_CleanDCache_by_Addr((uint32_t *) JPEG_state.jpeg_descr.pJpegInBuffPtr, JPEG_state.in_data_len);
     // Invalidate the MCU row for DMA.
@@ -540,6 +556,11 @@ void jpeg_decompress(image_t *dst, image_t *src) {
     HAL_JPEG_Decode_DMA(&JPEG_state.jpeg_descr,
                         JPEG_state.jpeg_descr.pJpegInBuffPtr, IM_MIN(JPEG_state.in_data_len, JPEG_MAX_MDMA_BLOCK_SIZE),
                         mcu_row_buffer, IM_MIN(dst_w_mcus_bytes, JPEG_MAX_MDMA_BLOCK_SIZE));
+    #else
+    HAL_JPEG_Decode_IT(&JPEG_state.jpeg_descr,
+                       JPEG_state.jpeg_descr.pJpegInBuffPtr, IM_MIN(JPEG_state.in_data_len, JPEG_MAX_MDMA_BLOCK_SIZE),
+                       mcu_row_buffer, IM_MIN(dst_w_mcus_bytes, JPEG_MAX_MDMA_BLOCK_SIZE));
+    #endif
 
     for (int y_offset = 0; y_offset < src->h; y_offset += mcu_h) {
         int h = y_offset / mcu_h;
@@ -547,11 +568,13 @@ void jpeg_decompress(image_t *dst, image_t *src) {
         uint8_t *next_mcu_row_buffer_ptr = mcu_row_buffer + (dst_w_mcus_bytes * ((h + 1) % 2));
         int dy = IM_MIN(mcu_h, src->h - y_offset);
 
+        #if defined(OMV_MDMA_CHANNEL_JPEG_IN)
         if ((y_offset + mcu_h) < src->h) {
             // not last row
             // Invalidate the MCU row for DMA.
             SCB_InvalidateDCache_by_Addr((uint32_t *) next_mcu_row_buffer_ptr, dst_w_mcus_bytes);
         }
+        #endif
 
         // Wait for the MCUs to be processed.
         for (mp_uint_t tick_start = mp_hal_ticks_ms(); !JPEG_state.output_paused; ) {
@@ -571,8 +594,10 @@ void jpeg_decompress(image_t *dst, image_t *src) {
             HAL_JPEG_Resume(&JPEG_state.jpeg_descr, JPEG_PAUSE_RESUME_OUTPUT);
         }
 
+        #if defined(OMV_MDMA_CHANNEL_JPEG_IN)
         // Ensure any cached reads are dropped.
         SCB_InvalidateDCache_by_Addr((uint32_t *) this_mcu_row_buffer_ptr, dst_w_mcus_bytes);
+        #endif
 
         if (JPEG_state.jpeg_descr.Conf.ColorSpace == JPEG_GRAYSCALE_COLORSPACE) {
             for (int x_offset = 0; x_offset < src->w; x_offset += JPEG_MCU_W) {
@@ -717,6 +742,10 @@ void jpeg_decompress(image_t *dst, image_t *src) {
                     break;
                 }
                 case PIXFORMAT_RGB565: {
+                    #if !defined(OMV_MDMA_CHANNEL_JPEG_IN)
+                    // Ensure any cached writes are written.
+                    SCB_CleanDCache_by_Addr((uint32_t *) this_mcu_row_buffer_ptr, dst_w_mcus_bytes);
+                    #endif
                     uint16_t *rp = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(dst, y_offset);
                     HAL_DMA2D_Start(&DMA2D_Handle, (uint32_t) this_mcu_row_buffer_ptr, (uint32_t) rp, dst->w, dy);
 
@@ -776,6 +805,7 @@ void imlib_hardware_jpeg_init() {
     NVIC_SetPriority(JPEG_IRQn, IRQ_PRI_JPEG);
     HAL_NVIC_EnableIRQ(JPEG_IRQn);
 
+    #if defined(OMV_MDMA_CHANNEL_JPEG_IN)
     JPEG_state.mdma_descr[JPEG_MDMA_IN].Instance = MDMA_CHAN_TO_INSTANCE(OMV_MDMA_CHANNEL_JPEG_IN);
     JPEG_state.mdma_descr[JPEG_MDMA_IN].Init.Request = MDMA_REQUEST_JPEG_INFIFO_TH;
     JPEG_state.mdma_descr[JPEG_MDMA_IN].Init.TransferTriggerMode = MDMA_BUFFER_TRANSFER;
@@ -813,13 +843,16 @@ void imlib_hardware_jpeg_init() {
 
     HAL_MDMA_Init(&JPEG_state.mdma_descr[JPEG_MDMA_OUT]);
     __HAL_LINKDMA(&JPEG_state.jpeg_descr, hdmaout, JPEG_state.mdma_descr[JPEG_MDMA_OUT]);
+    #endif
 }
 
 void imlib_hardware_jpeg_deinit() {
     memset(&JPEG_state.jpeg_descr.Conf, 0, sizeof(JPEG_ConfTypeDef));
     HAL_JPEG_Abort(&JPEG_state.jpeg_descr);
+    #if defined(OMV_MDMA_CHANNEL_JPEG_IN)
     HAL_MDMA_DeInit(&JPEG_state.mdma_descr[JPEG_MDMA_OUT]);
     HAL_MDMA_DeInit(&JPEG_state.mdma_descr[JPEG_MDMA_IN]);
+    #endif
     HAL_NVIC_DisableIRQ(JPEG_IRQn);
     HAL_JPEG_DeInit(&JPEG_state.jpeg_descr);
 }
