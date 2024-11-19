@@ -130,4 +130,8 @@ try:
 except Exception:
     create_file(".openmv_disk")
 
-del os, sys, vfs, fat, bdev, sdcard
+with open(".openmv_disk", "w") as f:
+    import machine
+    f.write("".join(f'{byte:02X}' for byte in machine.unique_id()))
+
+del os, sys, vfs, fat, bdev, sdcard, machine
