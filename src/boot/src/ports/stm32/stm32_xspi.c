@@ -115,14 +115,17 @@ int xspi_flash_init() {
         __HAL_RCC_XSPI1_FORCE_RESET();
         __HAL_RCC_XSPI1_RELEASE_RESET();
         __HAL_RCC_XSPI1_CLK_ENABLE();
+        __HAL_RCC_XSPI1_CLK_SLEEP_ENABLE();
     } else if (OMV_BOOT_XSPI_INSTANCE == 2) {
         __HAL_RCC_XSPI2_FORCE_RESET();
         __HAL_RCC_XSPI2_RELEASE_RESET();
         __HAL_RCC_XSPI2_CLK_ENABLE();
+        __HAL_RCC_XSPI2_CLK_SLEEP_ENABLE();
     } else if (OMV_BOOT_XSPI_INSTANCE == 3) {
         __HAL_RCC_XSPI3_FORCE_RESET();
         __HAL_RCC_XSPI3_RELEASE_RESET();
         __HAL_RCC_XSPI3_CLK_ENABLE();
+        __HAL_RCC_XSPI3_CLK_SLEEP_ENABLE();
     }
 
     // Initialize the XSPI
@@ -540,14 +543,17 @@ int spi_flash_deinit() {
         __HAL_RCC_XSPI1_FORCE_RESET();
         __HAL_RCC_XSPI1_RELEASE_RESET();
         __HAL_RCC_XSPI1_CLK_DISABLE();
+        __HAL_RCC_XSPI1_CLK_SLEEP_DISABLE();
     } else if (OMV_BOOT_XSPI_INSTANCE == 2) {
         __HAL_RCC_XSPI2_FORCE_RESET();
         __HAL_RCC_XSPI2_RELEASE_RESET();
         __HAL_RCC_XSPI2_CLK_DISABLE();
+        __HAL_RCC_XSPI2_CLK_SLEEP_DISABLE();
     } else if (OMV_BOOT_XSPI_INSTANCE == 3) {
         __HAL_RCC_XSPI3_FORCE_RESET();
         __HAL_RCC_XSPI3_RELEASE_RESET();
         __HAL_RCC_XSPI3_CLK_DISABLE();
+        __HAL_RCC_XSPI3_CLK_SLEEP_DISABLE();
     }
     memset(&xspi, 0, sizeof(XSPI_HandleTypeDef));
     return 0;
