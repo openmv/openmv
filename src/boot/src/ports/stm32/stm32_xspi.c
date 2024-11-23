@@ -51,13 +51,23 @@
 #define XSPI_CMD_RESET_ENABLE       (0x66)
 #define XSPI_CMD_RESET_MEMORY       (0x99)
 
-#define XSPI_CMD_PAGE_PROG          (0x12)
+#define XSPI_CMD_WRITE              (0x12)
+#define XSPI_CMD_WRITE_DUMMY        (0)
 
-#define XSPI_CMD_READ               (0x13)
-#define XSPI_CMD_READ_DUMMY         (0)
+#define XSPI_CMD_WRITE_DTR          (0x12EDU)
+#define XSPI_CMD_WRITE_DTR_DUMMY    (0)
 
-#define XSPI_CMD_FAST_READ          (0x0C)
-#define XSPI_CMD_FAST_READ_DUMMY    (8)
+#define XSPI_CMD_WRITE_STR          (0x12EDU)
+#define XSPI_CMD_WRITE_STR_DUMMY    (0)
+
+#define XSPI_CMD_READ               (0x0C)
+#define XSPI_CMD_READ_DUMMY         (8)
+
+#define XSPI_CMD_READ_DTR           (0xEE11U)
+#define XSPI_CMD_READ_DTR_DUMMY     (20)
+
+#define XSPI_CMD_READ_STR           (0xEC13U)
+#define XSPI_CMD_READ_STR_DUMMY     (20)
 
 #define XSPI_CMD_ERASE_BLOCK        (0xDC)
 #define XSPI_CMD_ERASE_CHIP         (0xC7)
@@ -70,6 +80,7 @@
 
 #define XSPI_SR_WIP_MASK            (1 << 0)
 #define XSPI_SR_WEL_MASK            (1 << 1)
+
 
 static XSPI_HandleTypeDef xspi = {0};
 
@@ -98,6 +109,7 @@ int xspi_flash_init() {
     xspi.Init.MemoryMode = HAL_XSPI_SINGLE_MEM;
     xspi.Init.MemoryType = HAL_XSPI_MEMTYPE_MACRONIX;
     xspi.Init.MemorySize = __builtin_ctz(OMV_BOOT_XSPI_FLASH_SIZE) - 1;
+    xspi.Init.MemorySelect = HAL_XSPI_CSSEL_NCS1;
     xspi.Init.ChipSelectHighTimeCycle = 2U;
     xspi.Init.FreeRunningClock = HAL_XSPI_FREERUNCLK_DISABLE;
     xspi.Init.WrapSize = HAL_XSPI_WRAP_NOT_SUPPORTED;
@@ -106,9 +118,6 @@ int xspi_flash_init() {
     xspi.Init.SampleShifting = HAL_XSPI_SAMPLE_SHIFT_NONE;
     xspi.Init.DelayHoldQuarterCycle = HAL_XSPI_DHQC_DISABLE;
     xspi.Init.ChipSelectBoundary = HAL_XSPI_BONDARYOF_NONE;
-    xspi.Init.MaxTran = 0U;
-    xspi.Init.Refresh = 0U;
-    xspi.Init.MemorySelect = HAL_XSPI_CSSEL_NCS1;
 
     // Reset and enable XSPI clock.
     if (OMV_BOOT_XSPI_INSTANCE == 1) {
@@ -396,7 +405,7 @@ static int xspi_flash_read_page(uint32_t addr, uint8_t *buf, uint32_t size) {
 
 static int xspi_flash_write_page(uint32_t addr, const uint8_t *buf, uint32_t size) {
     XSPI_RegularCmdTypeDef command = {
-        .Instruction = XSPI_CMD_PAGE_PROG,
+        .Instruction = XSPI_CMD_WRITE,
         .InstructionMode = HAL_XSPI_INSTRUCTION_1_LINE,
         .InstructionWidth = HAL_XSPI_INSTRUCTION_8_BITS,
         .InstructionDTRMode = HAL_XSPI_INSTRUCTION_DTR_DISABLE,
@@ -456,8 +465,6 @@ int spi_flash_memory_map() {
         .AddressDTRMode = HAL_XSPI_ADDRESS_DTR_DISABLE,
         .DataMode = HAL_XSPI_DATA_1_LINE,
         .DataDTRMode = HAL_XSPI_DATA_DTR_DISABLE,
-        .IOSelect = HAL_XSPI_SELECT_IO_7_0,
-        .DQSMode = HAL_XSPI_DQS_DISABLE,
         .AlternateBytesMode = HAL_XSPI_ALT_BYTES_NONE,
     };
 
@@ -465,25 +472,27 @@ int spi_flash_memory_map() {
         return -1;
     }
 
-    command.Instruction = XSPI_CMD_FAST_READ;
-    command.DummyCycles = XSPI_CMD_FAST_READ_DUMMY;
-    command.OperationType = HAL_XSPI_OPTYPE_READ_CFG;
-
-    if (HAL_XSPI_Command(&xspi, &command, XSPI_COMMAND_TIMEOUT) != HAL_OK) {
-        return -1;
-    }
-
-    command.Instruction = XSPI_CMD_PAGE_PROG;
-    command.DummyCycles = 0U;
+    // Initialize the write command
+    command.Instruction = XSPI_CMD_WRITE;
+    command.DummyCycles = XSPI_CMD_WRITE_DUMMY;
     command.OperationType = HAL_XSPI_OPTYPE_WRITE_CFG;
-
+    command.DQSMode = HAL_XSPI_DQS_DISABLE;
     if (HAL_XSPI_Command(&xspi, &command, XSPI_COMMAND_TIMEOUT) != HAL_OK) {
         return -1;
     }
 
-    XSPI_MemoryMappedTypeDef s_mem_mapped_cfg = {0};
-    s_mem_mapped_cfg.TimeOutActivation = HAL_XSPI_TIMEOUT_COUNTER_DISABLE;
+    // Initialize the read command
+    command.Instruction = XSPI_CMD_READ;
+    command.DummyCycles = XSPI_CMD_READ_DUMMY;
+    command.OperationType = HAL_XSPI_OPTYPE_READ_CFG;
+    command.DQSMode = HAL_XSPI_DQS_DISABLE; // Enable for DTR HAL_XSPI_DQS_ENABLE
+    if (HAL_XSPI_Command(&xspi, &command, XSPI_COMMAND_TIMEOUT) != HAL_OK) {
+        return -1;
+    }
 
+    XSPI_MemoryMappedTypeDef s_mem_mapped_cfg = {
+        .TimeOutActivation = HAL_XSPI_TIMEOUT_COUNTER_DISABLE
+    };
     if (HAL_XSPI_MemoryMapped(&xspi, &s_mem_mapped_cfg) != HAL_OK) {
         return -1;
     }
