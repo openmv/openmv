@@ -115,11 +115,6 @@
 //#define IMLIB_ENABLE_FEATURES_BUILTIN_FACE_CASCADE
 //#define IMLIB_ENABLE_FEATURES_BUILTIN_EYES_CASCADE
 
-// Enable Tensor Flow
-#if !defined(CUBEAI)
-//#define IMLIB_ENABLE_TFLM
-#endif
-
 // Enable AGAST.
 // #define IMLIB_ENABLE_AGAST
 

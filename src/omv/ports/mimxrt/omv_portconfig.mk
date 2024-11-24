@@ -130,15 +130,8 @@ OMV_CFLAGS += -I$(TOP_DIR)/$(MLX90621_DIR)/include/
 OMV_CFLAGS += -I$(TOP_DIR)/$(MLX90640_DIR)/include/
 OMV_CFLAGS += -I$(TOP_DIR)/$(MLX90641_DIR)/include/
 OMV_CFLAGS += -I$(TOP_DIR)/$(PIXART_DIR)/include/
-OMV_CFLAGS += -I$(BUILD)/$(TENSORFLOW_DIR)/
 
 CFLAGS += $(HAL_CFLAGS) $(MPY_CFLAGS) $(OMV_CFLAGS)
-
-#------------- Libraries ----------------#
-ifeq ($(MICROPY_PY_AUDIO), 1)
-LIBS += $(TOP_DIR)/$(LIBPDM_DIR)/libPDMFilter_CM7_GCC_wc32.a
-endif
-LIBS += $(TOP_DIR)/$(TENSORFLOW_DIR)/libtflm/lib/libtflm-$(CPU)+fp-release.a
 
 #------------- Firmware Objects ----------------#
 FIRM_OBJ += $(wildcard $(BUILD)/$(CMSIS_DIR)/src/dsp/*/*.o)
@@ -154,7 +147,6 @@ FIRM_OBJ += $(wildcard $(BUILD)/$(MLX90640_DIR)/src/*.o)
 FIRM_OBJ += $(wildcard $(BUILD)/$(MLX90641_DIR)/src/*.o)
 FIRM_OBJ += $(wildcard $(BUILD)/$(VL53L5CX_DIR)/src/*.o)
 FIRM_OBJ += $(wildcard $(BUILD)/$(PIXART_DIR)/src/*.o)
-FIRM_OBJ += $(wildcard $(BUILD)/$(TENSORFLOW_DIR)/*.o)
 
 #------------- OpenMV Objects ----------------#
 FIRM_OBJ += $(addprefix $(BUILD)/$(CMSIS_DIR)/src/, \
@@ -539,6 +531,21 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/,\
 	)
 endif
 
+#------------- Libraries ----------------#
+ifeq ($(MICROPY_PY_AUDIO), 1)
+LIBS += $(TOP_DIR)/$(LIBPDM_DIR)/libPDMFilter_CM7_GCC_wc32.a
+endif
+
+#------------- ML libraries ----------------#
+ifeq ($(MICROPY_PY_ML_TFLM), 1)
+OMV_CFLAGS += -I$(BUILD)/$(TENSORFLOW_DIR)/
+FIRM_OBJ += $(addprefix $(BUILD)/$(TENSORFLOW_DIR)/, \
+	tflm_backend.o \
+	tflm_builtin_models.o \
+	)
+LIBS += $(TOP_DIR)/$(TENSORFLOW_DIR)/libtflm/lib/libtflm-$(CPU)+fp-release.a
+endif
+
 ###################################################
 all: $(OPENMV)
 
@@ -551,7 +558,9 @@ $(FW_DIR):
 FIRMWARE_OBJS: | $(BUILD) $(FW_DIR)
 	$(MAKE)  -C $(CMSIS_DIR)                 BUILD=$(BUILD)/$(CMSIS_DIR)        CFLAGS="$(CFLAGS) -MMD"
 	$(MAKE)  -C $(HAL_DIR)                   BUILD=$(BUILD)/$(HAL_DIR)          CFLAGS="$(CFLAGS) -MMD"
+ifeq ($(MICROPY_PY_ML_TFLM), 1)
 	$(MAKE)  -C $(TENSORFLOW_DIR)            BUILD=$(BUILD)/$(TENSORFLOW_DIR)   CFLAGS="$(CFLAGS) -MMD" headers
+endif
 	$(MAKE)  -C $(MICROPY_DIR)/ports/$(PORT) BUILD=$(BUILD)/$(MICROPY_DIR)      $(MICROPY_ARGS)
 	$(MAKE)  -C $(GENX320_DIR)               BUILD=$(BUILD)/$(GENX320_DIR)      CFLAGS="$(CFLAGS) -MMD"
 	$(MAKE)  -C $(LEPTON_DIR)                BUILD=$(BUILD)/$(LEPTON_DIR)       CFLAGS="$(CFLAGS) -MMD"
@@ -564,7 +573,9 @@ endif
 	$(MAKE)  -C $(MLX90641_DIR)              BUILD=$(BUILD)/$(MLX90641_DIR)     CFLAGS="$(CFLAGS) -MMD"
 	$(MAKE)  -C $(VL53L5CX_DIR)              BUILD=$(BUILD)/$(VL53L5CX_DIR)     CFLAGS="$(CFLAGS) -MMD"
 	$(MAKE)  -C $(PIXART_DIR)                BUILD=$(BUILD)/$(PIXART_DIR)       CFLAGS="$(CFLAGS) -MMD"
+ifeq ($(MICROPY_PY_ML_TFLM), 1)
 	$(MAKE)  -C $(TENSORFLOW_DIR)            BUILD=$(BUILD)/$(TENSORFLOW_DIR)   CFLAGS="$(CFLAGS) -MMD" all
+endif
 	$(MAKE)  -C $(OMV_DIR)                   BUILD=$(BUILD)/$(OMV_DIR)          CFLAGS="$(CFLAGS) -MMD"
 
 # This target generates the main/app firmware image located at 0x08010000

@@ -28,10 +28,6 @@ UVC_DIR     := $(OMV_DIR)/ports/$(PORT)/uvc
 MCU_SERIES  := $(shell echo $(MCU) | cut -c6-7 | tr '[:upper:]' '[:lower:]')
 MCU_LOWER   := $(shell echo $(MCU) | tr '[:upper:]' '[:lower:]')
 HAL_DIR     := hal/stm32/$(MCU_SERIES)
-TFLM_CORE   := $(CPU)
-ifeq ($(CPU),$(filter $(CPU),cortex-m4 cortex-m7))
-TFLM_CORE   := $(CPU)+fp
-endif
 
 SIGN_TOOL = $(TOOLS)/st/cubeprog/bin/STM32MP_SigningTool_CLI
 PROG_TOOL = $(TOOLS)/st/cubeprog/bin/STM32_Programmer.sh
@@ -128,7 +124,6 @@ OMV_CFLAGS += -I$(TOP_DIR)/$(MLX90641_DIR)/include/
 OMV_CFLAGS += -I$(TOP_DIR)/$(PIXART_DIR)/include/
 OMV_CFLAGS += -I$(TOP_DIR)/$(DISPLAY_DIR)/include/
 OMV_CFLAGS += -I$(TOP_DIR)/$(LIBPDM_DIR)/
-OMV_CFLAGS += -I$(BUILD)/$(TENSORFLOW_DIR)/
 
 ifeq ($(OMV_ENABLE_UVC), 1)
 UVC_CFLAGS := $(CFLAGS) $(HAL_CFLAGS)
@@ -146,12 +141,6 @@ UVC_LDFLAGS = -mcpu=$(CPU) \
 endif
 
 CFLAGS += $(HAL_CFLAGS) $(MPY_CFLAGS) $(OMV_CFLAGS)
-
-#------------- Libraries ----------------#
-ifeq ($(MICROPY_PY_AUDIO), 1)
-LIBS += $(TOP_DIR)/$(LIBPDM_DIR)/libPDMFilter_CM7_GCC_wc32.a
-endif
-LIBS += $(TOP_DIR)/$(TENSORFLOW_DIR)/libtflm/lib/libtflm-$(TFLM_CORE)-release.a
 
 #------------- Firmware Objects ----------------#
 FIRM_OBJ += $(wildcard $(BUILD)/$(CMSIS_DIR)/src/dsp/*/*.o)
@@ -276,7 +265,6 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/imlib/, \
 	zbar.o                      \
    )
 
-FIRM_OBJ += $(wildcard $(BUILD)/$(TENSORFLOW_DIR)/*.o)
 FIRM_OBJ += $(wildcard $(BUILD)/$(OMV_DIR)/ports/$(PORT)/*.o)
 
 #------------- MicroPy Objects -------------------#
@@ -653,6 +641,21 @@ UVC_OBJ += $(wildcard $(BUILD)/$(VL53L5CX_DIR)/src/*.o)
 UVC_OBJ += $(wildcard $(BUILD)/$(PIXART_DIR)/src/*.o)
 endif
 
+#------------- Libraries ----------------#
+ifeq ($(MICROPY_PY_AUDIO), 1)
+LIBS += $(TOP_DIR)/$(LIBPDM_DIR)/libPDMFilter_CM7_GCC_wc32.a
+endif
+
+#------------- ML libraries ----------------#
+ifeq ($(MICROPY_PY_ML_TFLM), 1)
+OMV_CFLAGS += -I$(BUILD)/$(TENSORFLOW_DIR)/
+FIRM_OBJ += $(addprefix $(BUILD)/$(TENSORFLOW_DIR)/, \
+	tflm_backend.o \
+	tflm_builtin_models.o \
+	)
+LIBS += $(TOP_DIR)/$(TENSORFLOW_DIR)/libtflm/lib/libtflm-$(CPU)+fp-release.a
+endif
+
 ###################################################
 all: $(OPENMV)
 
@@ -665,7 +668,9 @@ $(FW_DIR):
 FIRMWARE_OBJS: | $(BUILD) $(FW_DIR)
 	$(MAKE)  -C $(CMSIS_DIR)                 BUILD=$(BUILD)/$(CMSIS_DIR)        CFLAGS="$(CFLAGS) -fno-strict-aliasing -MMD"
 	$(MAKE)  -C $(HAL_DIR)                   BUILD=$(BUILD)/$(HAL_DIR)          CFLAGS="$(CFLAGS) -MMD"
+ifeq ($(MICROPY_PY_ML_TFLM), 1)
 	$(MAKE)  -C $(TENSORFLOW_DIR)            BUILD=$(BUILD)/$(TENSORFLOW_DIR)   CFLAGS="$(CFLAGS) -MMD" headers
+endif
 	$(MAKE)  -C $(MICROPY_DIR)/ports/$(PORT) BUILD=$(BUILD)/$(MICROPY_DIR)      $(MICROPY_ARGS)
 	$(MAKE)  -C $(GENX320_DIR)               BUILD=$(BUILD)/$(GENX320_DIR)      CFLAGS="$(CFLAGS) -MMD"
 	$(MAKE)  -C $(LEPTON_DIR)                BUILD=$(BUILD)/$(LEPTON_DIR)       CFLAGS="$(CFLAGS) -MMD"
@@ -682,7 +687,9 @@ endif
 	$(MAKE)  -C $(VL53L5CX_DIR)              BUILD=$(BUILD)/$(VL53L5CX_DIR)     CFLAGS="$(CFLAGS) -MMD"
 	$(MAKE)  -C $(PIXART_DIR)                BUILD=$(BUILD)/$(PIXART_DIR)       CFLAGS="$(CFLAGS) -MMD"
 	$(MAKE)  -C $(DISPLAY_DIR)               BUILD=$(BUILD)/$(DISPLAY_DIR)      CFLAGS="$(CFLAGS) -MMD"
+ifeq ($(MICROPY_PY_ML_TFLM), 1)
 	$(MAKE)  -C $(TENSORFLOW_DIR)            BUILD=$(BUILD)/$(TENSORFLOW_DIR)   CFLAGS="$(CFLAGS) -MMD"
+endif
 	$(MAKE)  -C $(OMV_DIR)                   BUILD=$(BUILD)/$(OMV_DIR)          CFLAGS="$(CFLAGS) -MMD"
 ifeq ($(CUBEAI), 1)
 	$(MAKE)  -C $(CUBEAI_DIR)                BUILD=$(BUILD)/$(CUBEAI_DIR)       CFLAGS="$(CFLAGS) -fno-strict-aliasing -MMD"

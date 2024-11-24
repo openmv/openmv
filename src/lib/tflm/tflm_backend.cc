@@ -30,11 +30,11 @@
  *
  * TensorFlow Lite Micro ML backend.
  */
+#if MICROPY_PY_ML_TFLM
 #include <string.h>
 #include <stdint.h>
-#include "imlib_config.h"
-#ifdef IMLIB_ENABLE_TFLM
 
+#include "imlib_config.h"
 #include "tensorflow/lite/micro/micro_op_resolver.h"
 #include "tensorflow/lite/micro/micro_mutable_op_resolver.h"
 #include "tensorflow/lite/micro/cortex_m_generic/debug_log_callback.h"
@@ -342,4 +342,5 @@ void *ml_backend_get_output(py_ml_model_obj_t *model, size_t index) {
     mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Invalid output tensor index"));
 }
 } // extern "C"
-#endif // IMLIB_ENABLE_TFLM
+#endif // MICROPY_PY_ML_TFLM
+
