@@ -117,7 +117,6 @@
 
 // Enable Tensor Flow
 #if !defined(CUBEAI)
-#define IMLIB_ENABLE_TFLM
 #define IMLIB_ENABLE_TFLM_BUILTIN_FOMO_FACE_DETECTION
 #endif
 
