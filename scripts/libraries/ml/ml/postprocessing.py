@@ -29,6 +29,8 @@
 import math
 import image
 from ml.utils import NMS
+from micropython import const
+from ulab import numpy as np
 
 
 # FOMO generates an image per class, where each pixel represents the centroid
@@ -56,4 +58,95 @@ class fomo_postprocess:
                     img.get_statistics(thresholds=self.threshold_list, roi=rect).l_mean() / 255.0
                 )
                 nms.add_bounding_box(x, y, x + w, y + h, score, i)
+        return nms.get_bounding_boxes()
+
+
+class yolo_v2_postprocess:
+    _YOLO_V2_TX = const(0)
+    _YOLO_V2_TY = const(1)
+    _YOLO_V2_TW = const(2)
+    _YOLO_V2_TH = const(3)
+    _YOLO_V2_SCORE = const(4)
+    _YOLO_V2_CLASSES = const(5)
+
+    def __init__(self, score_threshold=0.6, anchors=None):
+        self.score_threshold = score_threshold
+        if anchors is not None:
+            self.anchors = anchors
+        else:
+            self.anchors = np.array([[0.98830, 3.36060],
+                                     [2.11940, 5.37590],
+                                     [3.05200, 9.13360],
+                                     [5.55170, 9.30660],
+                                     [9.72600, 11.1422]], dtype=np.float)
+        self.anchors_len = len(self.anchors)
+
+    def __call__(self, model, inputs, outputs):
+        ob, oh, ow, oc = model.output_shape[0]
+        class_count = (oc // self.anchors_len) - _YOLO_V2_CLASSES
+
+        def sigmoid(x):
+            return 1.0 / (1.0 + np.exp(-x))
+
+        def mod(a, b):
+            return a - (b * (a // b))
+
+        def softmax(x):
+            e_x = np.exp(x - np.max(x))
+            return e_x / np.sum(e_x)
+
+        # Reshape the output to a 2D array
+        colum_outputs = outputs[0].reshape((oh * ow * self.anchors_len,
+                                            _YOLO_V2_CLASSES + class_count))
+
+        # Threshold all the scores
+        score_indices = sigmoid(colum_outputs[:, _YOLO_V2_SCORE])
+        score_indices = np.nonzero(score_indices > self.score_threshold)
+        if isinstance(score_indices, tuple):
+            score_indices = score_indices[0]
+        if not len(score_indices):
+            return []
+
+        # Get the bounding boxes that have a valid score
+        bb = np.take(colum_outputs, score_indices, axis=0)
+
+        # Extract rows, columns, and anchor indices
+        bb_rows = score_indices // (ow * self.anchors_len)
+        bb_cols = mod(score_indices // self.anchors_len, ow)
+        bb_anchors = mod(score_indices, self.anchors_len)
+
+        # Get the anchor box information
+        bb_a_array = [self.anchors[i] for i in bb_anchors.tolist()]
+        bb_a_array = np.array(bb_a_array)
+
+        # Get the score information
+        bb_scores = sigmoid(bb[:, _YOLO_V2_SCORE])
+
+        # Get the class information
+        bb_classes = []
+        for i in range(len(score_indices)):
+            s = softmax(bb[i, _YOLO_V2_CLASSES:])
+            bb_classes.append(np.argmax(s))
+        bb_classes = np.array(bb_classes, dtype=np.uint16)
+
+        # Compute the bounding box information
+        x_center = (bb_cols + sigmoid(bb[:, _YOLO_V2_TX])) / ow
+        y_center = (bb_rows + sigmoid(bb[:, _YOLO_V2_TY])) / oh
+        w_rel = (bb_a_array[:, 0] * np.exp(bb[:, _YOLO_V2_TW])) / ow
+        h_rel = (bb_a_array[:, 1] * np.exp(bb[:, _YOLO_V2_TH])) / oh
+
+        # Scale the bounding boxes to have enough integer precision for NMS
+        ib, ih, iw, ic = model.input_shape[0]
+        x_center = x_center * iw
+        y_center = y_center * ih
+        w_rel = w_rel * iw
+        h_rel = h_rel * ih
+
+        nms = NMS(iw, ih, inputs[0].roi)
+        for i in range(len(bb)):
+            nms.add_bounding_box(x_center[i] - (w_rel[i] / 2),
+                                 y_center[i] - (h_rel[i] / 2),
+                                 x_center[i] + (w_rel[i] / 2),
+                                 y_center[i] + (h_rel[i] / 2),
+                                 bb_scores[i], bb_classes[i])
         return nms.get_bounding_boxes()
