@@ -75,12 +75,12 @@
 #define XSPI_CMD_WRITE_ENABLE       (0x06)
 #define XSPI_CMD_WRITE_DISABLE      (0x04)
 
-#define XSPI_CMD_READ_STATUS        (0x05)
-#define XSPI_CMD_WRITE_STATUS       (0x01)
+#define XSPI_CMD_READ_SR            (0x05)
+#define XSPI_CMD_READ_SR_DUMMY      (0)
+#define XSPI_CMD_WRITE_CR2          (0x72)
 
 #define XSPI_SR_WIP_MASK            (1 << 0)
 #define XSPI_SR_WEL_MASK            (1 << 1)
-
 
 static XSPI_HandleTypeDef xspi = {0};
 
@@ -170,7 +170,7 @@ static int xspi_flash_poll_status_flag(uint32_t mask, uint32_t match, uint32_t t
     };
 
     XSPI_RegularCmdTypeDef command = {
-        .Instruction = XSPI_CMD_READ_STATUS,
+        .Instruction = XSPI_CMD_READ_SR,
         .InstructionMode = HAL_XSPI_INSTRUCTION_1_LINE,
         .InstructionWidth = HAL_XSPI_INSTRUCTION_8_BITS,
         .InstructionDTRMode = HAL_XSPI_INSTRUCTION_DTR_DISABLE,
@@ -181,7 +181,7 @@ static int xspi_flash_poll_status_flag(uint32_t mask, uint32_t match, uint32_t t
         .DataMode = HAL_XSPI_DATA_1_LINE,
         .DataLength = 1,
         .DataDTRMode = HAL_XSPI_DATA_DTR_DISABLE,
-        .DummyCycles = 0,
+        .DummyCycles = XSPI_CMD_READ_SR_DUMMY,
         .IOSelect = HAL_XSPI_SELECT_IO_7_0,
         .AlternateBytesMode = HAL_XSPI_ALT_BYTES_NONE,
         .DQSMode = HAL_XSPI_DQS_DISABLE,
@@ -195,6 +195,72 @@ static int xspi_flash_poll_status_flag(uint32_t mask, uint32_t match, uint32_t t
     if (HAL_XSPI_AutoPolling(&xspi, &config, timeout) != HAL_OK) {
         return -1;
     }
+    return 0;
+}
+
+static int xspi_flash_write_enable() {
+    XSPI_RegularCmdTypeDef command = {
+        .Instruction = XSPI_CMD_WRITE_ENABLE,
+        .InstructionMode = HAL_XSPI_INSTRUCTION_1_LINE,
+        .InstructionWidth = HAL_XSPI_INSTRUCTION_8_BITS,
+        .InstructionDTRMode = HAL_XSPI_INSTRUCTION_DTR_DISABLE,
+        .Address = 0U,
+        .AddressMode = HAL_XSPI_ADDRESS_NONE,
+        .AddressWidth = HAL_XSPI_ADDRESS_32_BITS,
+        .AddressDTRMode = HAL_XSPI_ADDRESS_DTR_DISABLE,
+        .DataMode = HAL_XSPI_DATA_NONE,
+        .DataLength = 0,
+        .DataDTRMode = HAL_XSPI_DATA_DTR_DISABLE,
+        .DummyCycles = 0,
+        .IOSelect = HAL_XSPI_SELECT_IO_7_0,
+        .AlternateBytesMode = HAL_XSPI_ALT_BYTES_NONE,
+        .DQSMode = HAL_XSPI_DQS_DISABLE,
+        .OperationType = HAL_XSPI_OPTYPE_COMMON_CFG,
+    };
+
+    if (HAL_XSPI_Command(&xspi, &command, XSPI_COMMAND_TIMEOUT) != HAL_OK) {
+        return -1;
+    }
+
+    if (xspi_flash_poll_status_flag(XSPI_SR_WEL_MASK, XSPI_SR_WEL_MASK, XSPI_COMMAND_TIMEOUT) != 0) {
+        return -1;
+    }
+    return 0;
+}
+
+static int spi_flash_write_cr2(uint8_t addr, uint8_t data) {
+    XSPI_RegularCmdTypeDef command = {
+        .OperationType = HAL_XSPI_OPTYPE_COMMON_CFG,
+        .Instruction = XSPI_CMD_WRITE_CR2,
+        .InstructionMode = HAL_XSPI_INSTRUCTION_1_LINE,
+        .InstructionDTRMode = HAL_XSPI_INSTRUCTION_DTR_DISABLE,
+        .InstructionWidth = HAL_XSPI_INSTRUCTION_8_BITS,
+        .Address = addr,
+        .AddressMode = HAL_XSPI_ADDRESS_1_LINE,
+        .AddressDTRMode = HAL_XSPI_ADDRESS_DTR_DISABLE,
+        .AddressWidth = HAL_XSPI_ADDRESS_32_BITS,
+        .AlternateBytesMode = HAL_XSPI_ALT_BYTES_NONE,
+        .DataLength = 1,
+        .DataMode = HAL_XSPI_DATA_1_LINE,
+        .DataDTRMode = HAL_XSPI_DATA_DTR_DISABLE,
+        .IOSelect = HAL_XSPI_SELECT_IO_7_0,
+        .DummyCycles = 0,
+        .DQSMode = HAL_XSPI_DQS_DISABLE,
+    };
+
+    // Enable write operations
+    if (xspi_flash_write_enable(&xspi) != 0) {
+        return -1;
+    }
+
+    if (HAL_XSPI_Command(&xspi, &command, XSPI_COMMAND_TIMEOUT) != HAL_OK) {
+        return -1;
+    }
+
+    if (HAL_XSPI_Transmit(&xspi, &data, XSPI_COMMAND_TIMEOUT) != HAL_OK) {
+        return -1;
+    }
+
     return 0;
 }
 
@@ -228,36 +294,6 @@ static int xspi_flash_reset() {
     }
 
     if (xspi_flash_poll_status_flag(XSPI_SR_WIP_MASK, 0, XSPI_COMMAND_TIMEOUT) != 0) {
-        return -1;
-    }
-    return 0;
-}
-
-static int xspi_flash_write_enable() {
-    XSPI_RegularCmdTypeDef command = {
-        .Instruction = XSPI_CMD_WRITE_ENABLE,
-        .InstructionMode = HAL_XSPI_INSTRUCTION_1_LINE,
-        .InstructionWidth = HAL_XSPI_INSTRUCTION_8_BITS,
-        .InstructionDTRMode = HAL_XSPI_INSTRUCTION_DTR_DISABLE,
-        .Address = 0U,
-        .AddressMode = HAL_XSPI_ADDRESS_NONE,
-        .AddressWidth = HAL_XSPI_ADDRESS_32_BITS,
-        .AddressDTRMode = HAL_XSPI_ADDRESS_DTR_DISABLE,
-        .DataMode = HAL_XSPI_DATA_NONE,
-        .DataLength = 0,
-        .DataDTRMode = HAL_XSPI_DATA_DTR_DISABLE,
-        .DummyCycles = 0,
-        .IOSelect = HAL_XSPI_SELECT_IO_7_0,
-        .AlternateBytesMode = HAL_XSPI_ALT_BYTES_NONE,
-        .DQSMode = HAL_XSPI_DQS_DISABLE,
-        .OperationType = HAL_XSPI_OPTYPE_COMMON_CFG,
-    };
-
-    if (HAL_XSPI_Command(&xspi, &command, XSPI_COMMAND_TIMEOUT) != HAL_OK) {
-        return -1;
-    }
-
-    if (xspi_flash_poll_status_flag(XSPI_SR_WEL_MASK, XSPI_SR_WEL_MASK, XSPI_COMMAND_TIMEOUT) != 0) {
         return -1;
     }
     return 0;
@@ -455,26 +491,29 @@ static int xspi_flash_write_page(uint32_t addr, const uint8_t *buf, uint32_t siz
     return 0;
 }
 
-int spi_flash_memory_map() {
+int spi_flash_memory_map(bool dtr) {
     XSPI_RegularCmdTypeDef command = {
-        .InstructionMode = HAL_XSPI_INSTRUCTION_1_LINE,
+        .InstructionMode = (dtr) ? HAL_XSPI_INSTRUCTION_8_LINES : HAL_XSPI_INSTRUCTION_1_LINE,
         .InstructionWidth = HAL_XSPI_INSTRUCTION_8_BITS,
-        .InstructionDTRMode = HAL_XSPI_INSTRUCTION_DTR_DISABLE,
-        .AddressMode = HAL_XSPI_ADDRESS_1_LINE,
+        .InstructionDTRMode = (dtr) ? HAL_XSPI_INSTRUCTION_DTR_ENABLE : HAL_XSPI_INSTRUCTION_DTR_DISABLE,
+        .AddressMode = (dtr) ? HAL_XSPI_ADDRESS_8_LINES : HAL_XSPI_ADDRESS_1_LINE,
         .AddressWidth = HAL_XSPI_ADDRESS_32_BITS,
-        .AddressDTRMode = HAL_XSPI_ADDRESS_DTR_DISABLE,
-        .DataMode = HAL_XSPI_DATA_1_LINE,
-        .DataDTRMode = HAL_XSPI_DATA_DTR_DISABLE,
-        .AlternateBytesMode = HAL_XSPI_ALT_BYTES_NONE,
+        .AddressDTRMode = (dtr) ? HAL_XSPI_ADDRESS_DTR_ENABLE : HAL_XSPI_ADDRESS_DTR_DISABLE,
+        .DataMode = (dtr) ? HAL_XSPI_DATA_8_LINES : HAL_XSPI_DATA_1_LINE,
+        .DataDTRMode = (dtr) ? HAL_XSPI_DATA_DTR_ENABLE : HAL_XSPI_DATA_DTR_DISABLE,
     };
 
     if (xspi_flash_init() != 0) {
         return -1;
     }
 
+    if (dtr && spi_flash_write_cr2(0x0, 0x02) != 0) {
+        return -1;
+    }
+
     // Initialize the write command
-    command.Instruction = XSPI_CMD_WRITE;
-    command.DummyCycles = XSPI_CMD_WRITE_DUMMY;
+    command.Instruction = (dtr) ? XSPI_CMD_WRITE_DTR : XSPI_CMD_WRITE;
+    command.DummyCycles = (dtr) ? XSPI_CMD_WRITE_DTR_DUMMY : XSPI_CMD_WRITE_DUMMY;
     command.OperationType = HAL_XSPI_OPTYPE_WRITE_CFG;
     command.DQSMode = HAL_XSPI_DQS_DISABLE;
     if (HAL_XSPI_Command(&xspi, &command, XSPI_COMMAND_TIMEOUT) != HAL_OK) {
@@ -482,10 +521,10 @@ int spi_flash_memory_map() {
     }
 
     // Initialize the read command
-    command.Instruction = XSPI_CMD_READ;
-    command.DummyCycles = XSPI_CMD_READ_DUMMY;
+    command.Instruction = (dtr) ? XSPI_CMD_READ_DTR : XSPI_CMD_READ;
+    command.DummyCycles = (dtr) ? XSPI_CMD_READ_DTR_DUMMY : XSPI_CMD_READ_DUMMY;
     command.OperationType = HAL_XSPI_OPTYPE_READ_CFG;
-    command.DQSMode = HAL_XSPI_DQS_DISABLE; // Enable for DTR HAL_XSPI_DQS_ENABLE
+    command.DQSMode = (dtr) ? HAL_XSPI_DQS_ENABLE : HAL_XSPI_DQS_DISABLE;
     if (HAL_XSPI_Command(&xspi, &command, XSPI_COMMAND_TIMEOUT) != HAL_OK) {
         return -1;
     }
