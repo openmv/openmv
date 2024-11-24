@@ -40,12 +40,14 @@
 #include "py_helper.h"
 #include "imlib_config.h"
 
-#ifdef IMLIB_ENABLE_TFLM
+#if MICROPY_PY_ML
 #include "py_image.h"
 #include "file_utils.h"
 #include "py_ml.h"
-#include "tflm_builtin_models.h"
 #include "ulab/code/ndarray.h"
+#if MICROPY_PY_ML_TFLM
+#include "tflm_builtin_models.h"
+#endif
 
 static size_t py_ml_tuple_sum(mp_obj_tuple_t *o) {
     if (o->len < 1) {
@@ -328,12 +330,15 @@ mp_obj_t py_ml_model_make_new(const mp_obj_type_t *type, size_t n_args, size_t n
     fb_alloc_mark();
 
     const char *path = mp_obj_str_get_str(args[ARG_path].u_obj);
+    (void) path;
 
     py_ml_model_obj_t *model = mp_obj_malloc_with_finaliser(py_ml_model_obj_t, &py_ml_model_type);
     model->data = NULL;
     model->fb_alloc = args[ARG_load_to_fb].u_int;
     model->labels = mp_const_none;
 
+    #if MICROPY_PY_ML_TFLM
+    // Model loading will use ROMFS eventually, so need to move to the backend.
     for (const tflm_builtin_model_t *_model = &tflm_builtin_models[0]; _model->name != NULL; _model++) {
         if (!strcmp(path, _model->name)) {
             // Load model data.
@@ -354,6 +359,7 @@ mp_obj_t py_ml_model_make_new(const mp_obj_type_t *type, size_t n_args, size_t n
             break;
         }
     }
+    #endif
 
     if (model->data == NULL) {
         #if defined(IMLIB_ENABLE_IMAGE_FILE_IO)
@@ -422,4 +428,4 @@ const mp_obj_module_t ml_module = {
 // Alias for backwards compatibility
 MP_REGISTER_EXTENSIBLE_MODULE(MP_QSTR_tf, ml_module);
 MP_REGISTER_EXTENSIBLE_MODULE(MP_QSTR_ml, ml_module);
-#endif // IMLIB_ENABLE_TFLM
+#endif // MICROPY_PY_ML
