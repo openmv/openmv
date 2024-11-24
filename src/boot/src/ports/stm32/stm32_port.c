@@ -142,7 +142,7 @@ int port_deinit(void) {
 
     // Deinitialize SPI Flash.
     #if OMV_BOOT_SPI_FLASH_MMAP
-    spi_flash_memory_map();
+    spi_flash_memory_map(OMV_BOOT_SPI_FLASH_MMAP_DTR);
     #elif OMV_BOOT_SPI_FLASH_ENABLE
     spi_flash_deinit();
     #endif
