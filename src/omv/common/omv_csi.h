@@ -89,6 +89,8 @@
 #define PAJ6100_ID              (0x6100)
 #define FROGEYE2020_ID          (0x2020)
 
+#define OMV_CSI_TIMEOUT_MS      (3000)
+
 typedef enum {
     OMV_CSI_ACTIVE_LOW  = 0,
     OMV_CSI_ACTIVE_HIGH = 1
@@ -289,6 +291,13 @@ typedef struct _omv_csi {
     bool detected;              // Set to true when the sensor is initialized.
 
     omv_i2c_t i2c_bus;          // SCCB/I2C bus.
+
+    #ifdef OMV_CSI_PORT_BITS
+    // Additional port-specific members like device base pointer,
+    // dma handles, more I/Os etc... are included directly here,
+    // so that they can be accessible from this struct.
+    OMV_CSI_PORT_BITS
+    #endif
 
     // Sensor function pointers
     int (*reset) (omv_csi_t *csi);
