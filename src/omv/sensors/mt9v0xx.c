@@ -153,10 +153,12 @@ static int write_reg(omv_csi_t *csi, uint16_t reg_addr, uint16_t reg_data) {
 static int set_pixformat(omv_csi_t *csi, pixformat_t pixformat) {
     switch (cfa_type) {
         case BAYER_CFA: {
-            if (pixformat != PIXFORMAT_BAYER) {
-                return -1;
+            if (pixformat == PIXFORMAT_RGB565 ||
+                pixformat == PIXFORMAT_BAYER ||
+                pixformat == PIXFORMAT_GRAYSCALE) {
+                return 0;
             }
-            return 0;
+            return -1;
         }
         default: {
             if (pixformat != PIXFORMAT_GRAYSCALE) {
@@ -553,6 +555,7 @@ int mt9v0xx_init(omv_csi_t *csi) {
                     break;
                 }
             }
+            csi->raw_output = 1;
             break;
         }
         default: {
@@ -560,7 +563,6 @@ int mt9v0xx_init(omv_csi_t *csi) {
             break;
         }
     }
-
     return ret;
 }
 
