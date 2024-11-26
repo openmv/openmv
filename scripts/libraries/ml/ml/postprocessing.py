@@ -95,8 +95,12 @@ class yolo_v2_postprocess:
 
         def softmax(x):
             max_x = np.max(x, axis=1)
+            if not isinstance(max_x, np.ndarray):
+                max_x = np.array([max_x])
             e_x = np.exp(x - max_x.reshape((x.shape[0], 1)))
             sum_e_x = np.sum(e_x, axis=1)
+            if not isinstance(sum_e_x, np.ndarray):
+                sum_e_x = np.array([sum_e_x])
             return e_x / sum_e_x.reshape((x.shape[0], 1))
 
         # Reshape the output to a 2D array
@@ -127,6 +131,8 @@ class yolo_v2_postprocess:
 
         # Get the class information
         bb_classes = np.argmax(softmax(bb[:, _YOLO_V2_CLASSES:]), axis=1)
+        if not isinstance(bb_classes, np.ndarray):
+            bb_classes = np.array([bb_classes], dtype=np.int16)
 
         # Compute the bounding box information
         x_center = (bb_cols + sigmoid(bb[:, _YOLO_V2_TX])) / ow
