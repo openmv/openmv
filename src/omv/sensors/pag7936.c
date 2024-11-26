@@ -106,7 +106,7 @@
 #define PAG7936_MIN_AGAIN           (1472)  // AGain min value, unit is 1/1024x
 #define PAG7936_MAX_AGAIN           (16384) // AGain max value, unit is 1/1024x
 
-#if OMV_PAG7936_MIPI
+#if OMV_PAG7936_MIPI_CSI2
 #define PAG7936_WIDTH_ALIGN (8)
 #else
 #define PAG7936_WIDTH_ALIGN (4)
@@ -409,6 +409,9 @@ int pag7936_init(omv_csi_t *csi) {
     csi->mono_bpp = 1;
     csi->raw_output = 1;
     csi->cfa_format = SUBFORMAT_ID_BGGR;
+    #if OMV_PAG7936_MIPI_CSI2
+    csi->mipi_if = 1;
+    #endif
 
     // Initialize csi ops.
     csi->reset = reset;
