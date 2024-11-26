@@ -265,6 +265,7 @@ typedef struct _omv_csi {
         uint32_t yuv_format : 1;  // YUV/YVU output format.
         uint32_t jpg_format : 3;  // JPEG output format/mode.
         uint32_t cfa_format : 3;  // CFA format/pattern.
+        uint32_t mipi_if    : 1;  // CSI-2 interface.
     };
 
     const uint16_t *color_palette;    // Color palette used for color lookup.
