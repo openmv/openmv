@@ -82,6 +82,9 @@ typedef const stm32_gpio_t *omv_gpio_t;
 // IRQ handlers, if this I2C is enabled in Micropython, or defined and handled in stm32_hal_msp.c.
 typedef I2C_HandleTypeDef *omv_i2c_dev_t;
 
+#define OMV_I2C_MAX_8BIT_XFER   (65536U - 16U)
+#define OMV_I2C_MAX_16BIT_XFER  (65536U - 8U)
+
 #define OMV_SPI_MODE_SLAVE     (SPI_MODE_SLAVE)
 #define OMV_SPI_MODE_MASTER    (SPI_MODE_MASTER)
 
@@ -113,6 +116,21 @@ typedef I2C_HandleTypeDef *omv_i2c_dev_t;
         DMA_HandleTypeDef dma_descr_rx; \
     };
 
-#define OMV_I2C_MAX_8BIT_XFER   (65536U - 16U)
-#define OMV_I2C_MAX_16BIT_XFER  (65536U - 8U)
+// omv_csi_t port-specific fields.
+#if defined(STM32F4) || defined(STM32F7) || defined(STM32H7)
+#if defined(STM32H7)
+#define OMV_CSI_PORT_BITS_MDMA \
+    MDMA_HandleTypeDef mdma0;  \
+    MDMA_HandleTypeDef mdma1;
+#else
+#define OMV_CSI_PORT_BITS_MDMA
+#endif
+#define OMV_CSI_PORT_BITS        \
+    struct {                     \
+        TIM_HandleTypeDef tim;   \
+        DMA_HandleTypeDef dma;   \
+        DCMI_HandleTypeDef dcmi; \
+        OMV_CSI_PORT_BITS_MDMA   \
+    };
+#endif
 #endif // __OMV_PORTCONFIG_H__

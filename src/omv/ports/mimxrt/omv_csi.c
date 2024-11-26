@@ -47,17 +47,11 @@
 #include "unaligned_memcpy.h"
 
 #define DMA_LENGTH_ALIGNMENT    (8)
-#define CSI_TIMEOUT_MS          (3000)
 #define MIN_EDMA_DST_INC        (4)
 
 // Sensor struct.
 omv_csi_t csi = {};
 extern uint8_t _line_buf[OMV_LINE_BUF_SIZE];
-
-#if defined(OMV_CSI_DMA)
-static edma_handle_t CSI_EDMA_Handle[OMV_CSI_DMA_CHANNEL_COUNT];
-static int src_inc, src_size, dest_inc_size;
-#endif
 
 #define CSI_IRQ_FLAGS    (CSI_CR1_SOF_INTEN_MASK            \
                           | CSI_CR1_FB2_DMA_DONE_INTEN_MASK \
@@ -179,7 +173,7 @@ int omv_csi_abort(bool fifo_flush, bool in_irq) {
     CSI_DisableInterrupts(CSI, CSI_IRQ_FLAGS);
     CSI_REG_CR3(CSI) &= ~CSI_CR3_DMA_REQ_EN_RFF_MASK;
     CSI_REG_CR18(CSI) &= ~CSI_CR18_CSI_ENABLE_MASK;
-    dest_inc_size = 0;
+    csi.dest_inc = 0;
     csi.first_line = false;
     csi.drop_frame = false;
     csi.last_frame_ms = 0;
@@ -232,7 +226,7 @@ int omv_csi_dma_memcpy(void *dma, void *dst, void *src, int bpp, bool transposed
     // beats. Additionally, the CSI hardware lacks cropping so we cannot align the source address.
     // Given this, performance will be lacking on cropped images. So much so that we do not use
     // the EDMA for anything less than 4-byte transfers otherwise you get sensor timeout errors.
-    if (dest_inc_size < MIN_EDMA_DST_INC) {
+    if (csi.dest_inc < MIN_EDMA_DST_INC) {
         return -1;
     }
 
@@ -240,11 +234,11 @@ int omv_csi_dma_memcpy(void *dma, void *dst, void *src, int bpp, bool transposed
     edma_transfer_config_t config;
     EDMA_PrepareTransferConfig(&config,
                                src, // srcAddr
-                               src_size, // srcWidth
-                               src_inc, // srcOffset
+                               csi.src_size, // srcWidth
+                               csi.src_inc, // srcOffset
                                dst, // destAddr
-                               transposed ? bpp : dest_inc_size, // destWidth
-                               transposed ? (MAIN_FB()->v * bpp) : dest_inc_size, // destOffset
+                               transposed ? bpp : csi.dest_inc, // destWidth
+                               transposed ? (MAIN_FB()->v * bpp) : csi.dest_inc, // destOffset
                                MAIN_FB()->u * bpp, // bytesEachRequest
                                MAIN_FB()->u * bpp); // transferBytes
 
@@ -356,7 +350,7 @@ void omv_csi_line_callback(uint32_t addr) {
         // We're using multiple handles to give each channel the maximum amount of time possible to do the line
         // transfer. In most situations only one channel will be running at a time. However, if SDRAM is
         // backedup we don't have to disable the channel if it is flushing trailing data to SDRAM.
-        omv_csi_copy_line(&CSI_EDMA_Handle[buffer->offset % OMV_CSI_DMA_CHANNEL_COUNT], src, dst);
+        omv_csi_copy_line(&csi.dma_channels[buffer->offset % OMV_CSI_DMA_CHANNEL_COUNT], src, dst);
         #else
         omv_csi_copy_line(NULL, src, dst);
         #endif
@@ -390,24 +384,24 @@ static void edma_config(omv_csi_t *csi, uint32_t bytes_per_pixel) {
             for (int j = i; j >= 0; j--) {
                 // 16-byte burst is not supported.
                 if ((j != 4) && (!(line_offset_bytes % (1 << j)))) {
-                    src_inc = src_size = 1 << j;
+                    csi->src_inc = csi->src_size = 1 << j;
                     break;
                 }
             }
 
-            dest_inc_size = 1 << i;
+            csi->dest_inc = 1 << i;
             break;
         }
     }
 
     if (csi->transpose) {
-        dest_inc_size = bytes_per_pixel;
+        csi->dest_inc = bytes_per_pixel;
     }
 
     // YUV422 Source -> Y Destination
     if ((csi->pixformat == PIXFORMAT_GRAYSCALE) && (csi->mono_bpp == 2)) {
-        src_inc = 2;
-        src_size = 1;
+        csi->src_inc = 2;
+        csi->src_size = 1;
     }
 }
 #endif
@@ -435,12 +429,10 @@ int omv_csi_snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
     // Free the current FB head.
     framebuffer_free_current_buffer();
 
-    // If the DMA is Not currently transferring a new buffer,
-    // reconfigure and restart the CSI transfer.
+    // If the DMA is not active, reconfigure and restart the CSI transfer.
     if (!(CSI->CR18 & CSI_CR18_CSI_ENABLE_MASK)) {
         framebuffer_setup_buffers();
 
-        // Re/configure and re/start the CSI.
         uint32_t bytes_per_pixel = omv_csi_get_src_bpp();
         uint32_t dma_line_bytes = resolution[csi->framesize][0] * bytes_per_pixel;
         uint32_t length = dma_line_bytes * h;
@@ -459,7 +451,7 @@ int omv_csi_snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
         if (csi->pixformat != PIXFORMAT_JPEG) {
             edma_config(csi, bytes_per_pixel);
             for (int i = 0; i < OMV_CSI_DMA_CHANNEL_COUNT; i++) {
-                EDMA_CreateHandle(&CSI_EDMA_Handle[i], OMV_CSI_DMA, OMV_CSI_DMA_CHANNEL_START + i);
+                EDMA_CreateHandle(&csi->dma_channels[i], OMV_CSI_DMA, OMV_CSI_DMA_CHANNEL_START + i);
                 EDMA_DisableChannelInterrupts(OMV_CSI_DMA, OMV_CSI_DMA_CHANNEL_START + i, kEDMA_MajorInterruptEnable);
             }
         }
@@ -494,8 +486,8 @@ int omv_csi_snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
     framebuffer_flags_t fb_flags = FB_NO_FLAGS;
 
     #if defined(OMV_CSI_DMA)
-    // dest_inc_size will be less than MIN_EDMA_DST_INC if the EDMA is not initialized or unusable.
-    if (dest_inc_size >= MIN_EDMA_DST_INC) {
+    // dest_inc will be less than MIN_EDMA_DST_INC if the EDMA is not initialized or unusable.
+    if (csi->dest_inc >= MIN_EDMA_DST_INC) {
         fb_flags = FB_INVALIDATE;
     }
     #endif
@@ -504,7 +496,7 @@ int omv_csi_snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
     // Wait for the DMA to finish the transfer.
     for (mp_uint_t ticks = mp_hal_ticks_ms(); buffer == NULL;) {
         MICROPY_EVENT_POLL_HOOK
-        if ((mp_hal_ticks_ms() - ticks) > CSI_TIMEOUT_MS) {
+        if ((mp_hal_ticks_ms() - ticks) > OMV_CSI_TIMEOUT_MS) {
             omv_csi_abort(true, false);
 
             #if defined(OMV_CSI_FSYNC_PIN)

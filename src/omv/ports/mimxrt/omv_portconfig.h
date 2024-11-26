@@ -100,6 +100,8 @@ typedef const imxrt_gpio_t *omv_gpio_t;
 
 // omv_i2c_t definitions
 typedef LPI2C_Type *omv_i2c_dev_t;
+#define OMV_I2C_MAX_8BIT_XFER   (1024U)
+#define OMV_I2C_MAX_16BIT_XFER  (512U)
 
 // omv_spi_t definitions
 #define OMV_SPI_MODE_SLAVE      (0)
@@ -142,6 +144,12 @@ struct {                                                \
     lpspi_transfer_t xfer_descr;                        \
 };
 
-#define OMV_I2C_MAX_8BIT_XFER   (1024U)
-#define OMV_I2C_MAX_16BIT_XFER  (512U)
+// omv_csi_t port-specific fields.
+#define OMV_CSI_PORT_BITS       \
+    struct {                    \
+        int src_inc;            \
+        int src_size;           \
+        int dest_inc;           \
+        edma_handle_t dma_channels[OMV_CSI_DMA_CHANNEL_COUNT];  \
+    };
 #endif // __OMV_PORTCONFIG_H__
