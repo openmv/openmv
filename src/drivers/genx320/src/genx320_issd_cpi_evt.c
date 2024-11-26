@@ -11,8 +11,8 @@
  * This is an automatically generated file                                                                            *
  **********************************************************************************************************************/
 
-#ifndef __ISSD_CPI_H
-#define __ISSD_CPI_H
+#ifndef __ISSD_CPI_EVT_H
+#define __ISSD_CPI_EVT_H
 
 #include "psee_issd.h"
 
