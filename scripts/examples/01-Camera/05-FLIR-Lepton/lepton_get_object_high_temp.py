@@ -37,9 +37,9 @@ print("Resetting Lepton...")
 # These settings are applied on reset
 sensor.reset()
 # Enable measurement mode with high temp
-sensor.ioctl(sensor.IOCTL_LEPTON_SET_MEASUREMENT_MODE, True, True)
+sensor.ioctl(sensor.IOCTL_LEPTON_SET_MODE, True, True)
 sensor.ioctl(
-    sensor.IOCTL_LEPTON_SET_MEASUREMENT_RANGE, min_temp_in_celsius, max_temp_in_celsius
+    sensor.IOCTL_LEPTON_SET_RANGE, min_temp_in_celsius, max_temp_in_celsius
 )
 print(
     "Lepton Res (%dx%d)"
@@ -86,5 +86,5 @@ while True:
         )
     print(
         "FPS %f - Lepton Temp: %f C"
-        % (clock.fps(), sensor.ioctl(sensor.IOCTL_LEPTON_GET_FPA_TEMPERATURE))
+        % (clock.fps(), sensor.ioctl(sensor.IOCTL_LEPTON_GET_FPA_TEMP))
     )
