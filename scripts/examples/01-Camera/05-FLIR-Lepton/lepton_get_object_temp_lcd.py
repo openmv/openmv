@@ -35,9 +35,9 @@ max_temp_in_celsius = 35.0
 print("Resetting Lepton...")
 # These settings are applied on reset
 sensor.reset()
-sensor.ioctl(sensor.IOCTL_LEPTON_SET_MEASUREMENT_MODE, True)
+sensor.ioctl(sensor.IOCTL_LEPTON_SET_MODE, True)
 sensor.ioctl(
-    sensor.IOCTL_LEPTON_SET_MEASUREMENT_RANGE, min_temp_in_celsius, max_temp_in_celsius
+    sensor.IOCTL_LEPTON_SET_RANGE, min_temp_in_celsius, max_temp_in_celsius
 )
 print(
     "Lepton Res (%dx%d)"
@@ -86,5 +86,5 @@ while True:
     lcd.write(img)
     print(
         "FPS %f - Lepton Temp: %f C"
-        % (clock.fps(), sensor.ioctl(sensor.IOCTL_LEPTON_GET_FPA_TEMPERATURE))
+        % (clock.fps(), sensor.ioctl(sensor.IOCTL_LEPTON_GET_FPA_TEMP))
     )
