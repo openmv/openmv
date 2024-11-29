@@ -137,6 +137,36 @@ static const uint16_t default_regs[][2] = {
     { 0x098B,   0x90 },
     { 0x098E,   0x06 },
     { 0x0810,   0x01 },
+    { 0x0814,   0xB3 }, //R_center_rx[10:0]=691
+    { 0x0815,   0x02 }, //R_center_rx[10:0]=691
+    { 0x0816,   0xBB }, //R_center_ry[9:0]=443
+    { 0x0817,   0x01 }, //R_center_ry[9:0]=443
+    { 0x0818,   0xA9 }, //R_center_gx[10:0]=681
+    { 0x0819,   0x02 }, //R_center_gx[10:0]=681
+    { 0x081A,   0xBB }, //R_center_gy[9:0]=443
+    { 0x081B,   0x01 }, //R_center_gy[9:0]=443
+    { 0x081C,   0xB0 }, //R_center_bx[10:0]=688
+    { 0x081D,   0x02 }, //R_center_bx[10:0]=688
+    { 0x081E,   0xBD }, //R_center_by[9:0]=445
+    { 0x081F,   0x01 }, //R_center_by[9:0]=445
+    { 0x0820,   0x61 }, //R_LSC_RS[7:0]=97
+    { 0x0821,   0x5B }, //R_LSC_GS[7:0]=91
+    { 0x0822,   0x5F }, //R_LSC_BS[7:0]=95
+    { 0x0823,   0x41 }, //R_LSC_RQ[7:0]=65
+    { 0x0824,   0x50 }, //R_LSC_GQ[7:0]=80
+    { 0x0825,   0x7F }, //R_LSC_BQ[7:0]=127
+    { 0x0826,   0x07 }, //R_LSC_SftRS[3:0]=7
+    { 0x0827,   0x07 }, //R_LSC_SftGS[3:0]=7
+    { 0x0828,   0x07 }, //R_LSC_SftBS[3:0]=7
+    { 0x0829,   0x09 }, //R_LSC_SftRQ[3:0]=9
+    { 0x082A,   0x09 }, //R_LSC_SftGQ[3:0]=9
+    { 0x082B,   0x09 }, //R_LSC_SftBQ[3:0]=9
+    { 0x082E,   0xD8 }, //R_LSC_LMaxR2R[15:0]=39640
+    { 0x082F,   0x9A }, //R_LSC_LMaxR2R[15:0]=39640
+    { 0x0830,   0xD8 }, //R_LSC_LMaxR2G[15:0]=39640
+    { 0x0831,   0x9A }, //R_LSC_LMaxR2G[15:0]=39640
+    { 0x0832,   0xD8 }, //R_LSC_LMaxR2B[15:0]=39640
+    { 0x0833,   0x9A }, //R_LSC_LMaxR2B[15:0]=39640
     { 0x0850,   0x00 },
     { 0x094A,   0x43 },
     { 0x09A0,   0x08 },
