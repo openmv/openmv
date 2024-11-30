@@ -286,7 +286,7 @@ static mp_obj_t py_audio_init(uint n_args, const mp_obj_t *pos_args, mp_map_t *k
     for (int i = 0; i < g_channels; i++) {
         PDM_FilterHandler[i].bit_order = PDM_FILTER_BIT_ORDER_MSB;
         PDM_FilterHandler[i].endianness = PDM_FILTER_ENDIANNESS_LE;
-        PDM_FilterHandler[i].high_pass_tap = (uint32_t) (highpass * 2147483647U); // coff * (2^31-1)
+        PDM_FilterHandler[i].high_pass_tap = (uint32_t) (highpass * (float) 2147483647U); // coff * (2^31-1)
         PDM_FilterHandler[i].out_ptr_channels = g_channels;
         PDM_FilterHandler[i].in_ptr_channels = g_channels;
         PDM_Filter_Init(&PDM_FilterHandler[i]);
