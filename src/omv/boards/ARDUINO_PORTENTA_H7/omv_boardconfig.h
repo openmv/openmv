@@ -170,7 +170,7 @@
 #define OMV_SRAM3_LENGTH                    16K
 #define OMV_SRAM4_ORIGIN                    0x38000000
 #define OMV_SRAM4_LENGTH                    64K
-#define OMV_DRAM_ORIGIN                     0xC0000000
+#define OMV_DRAM_ORIGIN                     0x60000000
 #define OMV_DRAM_LENGTH                     8M
 
 // Flash configuration.
