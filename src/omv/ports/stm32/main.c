@@ -26,6 +26,7 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include <string.h>
+#include <errno.h>
 #include STM32_HAL_H
 
 #include "mpconfig.h"
@@ -98,19 +99,6 @@ int errno;
 pyb_thread_t pyb_thread_main;
 #endif
 
-void flash_error(int n) {
-    led_state(LED_RED, 0);
-    led_state(LED_GREEN, 0);
-    led_state(LED_BLUE, 0);
-    for (int i = 0; i < n; i++) {
-        led_state(LED_RED, 0);
-        HAL_Delay(100);
-        led_state(LED_RED, 1);
-        HAL_Delay(100);
-    }
-    led_state(LED_RED, 0);
-}
-
 void NORETURN __fatal_error(const char *msg) {
     for (uint i = 0;;) {
         led_toggle(((i++) & 3));
@@ -136,9 +124,7 @@ void __attribute__((weak)) __assert_func(const char *file, int line, const char 
 uint32_t __stack_chk_guard = 0xDEADBEEF;
 
 void NORETURN __stack_chk_fail(void) {
-    while (1) {
-        flash_error(100);
-    }
+    __fatal_error("stack check failed");
 }
 #endif
 
@@ -387,3 +373,35 @@ soft_reset_exit:
     first_soft_reset = false;
     goto soft_reset;
 }
+
+#if MICROPY_PY_BTREE
+void *malloc(size_t size) {
+    void *p = gc_alloc(size, false);
+    if (p == NULL) {
+        errno = ENOMEM;
+    }
+    return p;
+}
+
+void free(void *ptr) {
+    gc_free(ptr);
+}
+
+void *calloc(size_t nmemb, size_t size) {
+    return malloc(nmemb * size);
+}
+
+void *realloc(void *ptr, size_t size) {
+    void *p = gc_realloc(ptr, size, true);
+    if (p == NULL) {
+        errno = ENOMEM;
+    }
+    return p;
+}
+#endif
+
+static mp_obj_t pyb_main(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
+    // Unused.
+    return mp_const_none;
+}
+MP_DEFINE_CONST_FUN_OBJ_KW(pyb_main_obj, 1, pyb_main);

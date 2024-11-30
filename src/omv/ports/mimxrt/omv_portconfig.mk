@@ -91,6 +91,7 @@ MPY_CFLAGS += -I$(TOP_DIR)/$(MICROPY_DIR)/py/
 MPY_CFLAGS += -I$(TOP_DIR)/$(MICROPY_DIR)/lib/oofatfs
 MPY_CFLAGS += -I$(TOP_DIR)/$(MICROPY_DIR)/lib/tinyusb/src
 MPY_CFLAGS += -I$(TOP_DIR)/$(MICROPY_DIR)/lib/lwip/src/include/
+MPY_CFLAGS += -I$(TOP_DIR)/$(MICROPY_DIR)/shared/tinyusb
 MPY_CFLAGS += -I$(TOP_DIR)/$(MICROPY_DIR)/ports/mimxrt/
 MPY_CFLAGS += -I$(TOP_DIR)/$(MICROPY_DIR)/ports/mimxrt/lwip_inc/
 MPY_CFLAGS += -I$(TOP_DIR)/$(MICROPY_DIR)/shared/runtime/
@@ -289,7 +290,7 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/,\
 	sdio.o                              \
 	systick.o                           \
 	ticks.o                             \
-	tusb_port.o                         \
+	usbd.o                              \
 	)
 
 FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/hal/,\
@@ -328,6 +329,7 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/shared/,\
 	readline/readline.o         \
 	tinyusb/mp_usbd.o           \
 	tinyusb/mp_usbd_cdc.o       \
+	tinyusb/mp_usbd_descriptor.o \
 	)
 
 FIRM_OBJ += $(wildcard $(BUILD)/$(MICROPY_DIR)/lib/mbedtls/library/*.o)

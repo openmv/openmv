@@ -347,7 +347,7 @@ static mp_obj_t py_winc_fw_update(mp_obj_t self_in, mp_obj_t path_in) {
     const char *path = mp_obj_str_get_str(path_in);
 
     if ((res = file_ll_stat(path, &fno)) != FR_OK) {
-        mp_raise_msg(&mp_type_OSError, (mp_rom_error_text_t) ffs_strerror(res));
+        mp_raise_msg(&mp_type_OSError, (mp_rom_error_text_t) file_strerror(res));
     }
 
     // Erase the WINC1500 flash.

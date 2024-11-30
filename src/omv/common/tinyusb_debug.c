@@ -37,8 +37,8 @@
 #include "tinyusb_debug.h"
 #include "omv_common.h"
 
-#define DEBUG_BAUDRATE_SLOW     (921600)
-#define DEBUG_BAUDRATE_FAST     (12000000)
+#define USBDBG_BAUDRATE_SLOW     (921600)
+#define USBDBG_BAUDRATE_FAST     (12000000)
 #define DEBUG_EP_SIZE           (TUD_OPT_HIGH_SPEED ? 512 : 64)
 
 void NORETURN __fatal_error(const char *msg);
@@ -90,8 +90,8 @@ void tud_cdc_line_coding_cb(uint8_t itf, cdc_line_coding_t const *coding) {
     } else if (coding->bit_rate == 1200) {
         MICROPY_BOARD_ENTER_BOOTLOADER(0, 0);
         #endif
-    } else if (coding->bit_rate == DEBUG_BAUDRATE_SLOW
-               || coding->bit_rate == DEBUG_BAUDRATE_FAST) {
+    } else if (coding->bit_rate == USBDBG_BAUDRATE_SLOW ||
+               coding->bit_rate == USBDBG_BAUDRATE_FAST) {
         tinyusb_debug_mode = true;
     } else {
         tinyusb_debug_mode = false;

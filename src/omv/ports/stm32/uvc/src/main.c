@@ -72,7 +72,7 @@ mp_uint_t mp_hal_ticks_ms(void)
     return HAL_GetTick();
 }
 
-void __attribute__((noreturn)) __fatal_error()
+void __attribute__((noreturn)) __fatal_error(const char *error)
 {
     while (1) {
     }
@@ -98,13 +98,13 @@ void __attribute__((noreturn)) __stack_chk_fail(void)
 void *xrealloc(void *mem, uint32_t size)
 {
     // Will never be called.
-    __fatal_error();
+    __fatal_error("");
     return NULL;
 }
 
 NORETURN void fb_alloc_fail()
 {
-    __fatal_error();
+    __fatal_error("");
 }
 
 int puts(const char *s) {
@@ -118,7 +118,7 @@ int printf(const char *fmt, ...)
 
 NORETURN void nlr_jump(void *val)
 {
-    __fatal_error();
+    __fatal_error("");
 }
 
 void *mp_obj_new_exception_msg(const void *exc_type, const char *msg)
@@ -210,7 +210,7 @@ int main()
 
     #ifdef OMV_SDRAM_SIZE
     if (!sdram_init()) {
-        __fatal_error();
+        __fatal_error("");
     }
     #endif
 
@@ -220,7 +220,7 @@ int main()
 
     // Initialize the csi
     if (omv_csi_init() != 0) {
-        __fatal_error();
+        __fatal_error("");
     }
 
     omv_csi_reset();

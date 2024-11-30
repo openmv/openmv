@@ -92,7 +92,9 @@ MPY_CFLAGS += -I$(TOP_DIR)/$(MICROPY_DIR)/shared/runtime/
 MPY_CFLAGS += -DMICROPY_PY_SSL=1 \
               -DMICROPY_SSL_MBEDTLS=1 \
               -DMICROPY_STREAMS_POSIX_API=1 \
-              -DMICROPY_VFS_FAT=1
+              -DMICROPY_VFS_FAT=1 \
+              -DMICROPY_PY_BTREE=1
+
 
 MICROPY_ARGS += STM32LIB_CMSIS_DIR=$(TOP_DIR)/$(CMSIS_DIR) \
                 STM32LIB_HAL_DIR=$(TOP_DIR)/$(HAL_DIR) \
@@ -327,7 +329,6 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/,\
 	machine_bitstream.o     \
 	pybthread.o             \
 	mpthreadport.o          \
-	posix_helpers.o         \
 	mbedtls/mbedtls_port.o  \
 	frozen_content.o        \
 	)

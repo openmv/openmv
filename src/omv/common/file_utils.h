@@ -28,8 +28,6 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <ff.h>
-extern const char *ffs_strerror(FRESULT res);
-
 void file_raise_format(FIL *fp);
 void file_raise_corrupted(FIL *fp);
 void file_raise_error(FIL *fp, FRESULT res);
@@ -66,4 +64,5 @@ void file_write_byte(FIL *fp, uint8_t value);
 void file_write_short(FIL *fp, uint16_t value);
 void file_write_long(FIL *fp, uint32_t value);
 void file_read_check(FIL *fp, const void *data, size_t size);
+const char *file_strerror(FRESULT res);
 #endif /* __FILE_UTILS_H__ */
