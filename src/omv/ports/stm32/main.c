@@ -99,19 +99,6 @@ int errno;
 pyb_thread_t pyb_thread_main;
 #endif
 
-void flash_error(int n) {
-    led_state(LED_RED, 0);
-    led_state(LED_GREEN, 0);
-    led_state(LED_BLUE, 0);
-    for (int i = 0; i < n; i++) {
-        led_state(LED_RED, 0);
-        HAL_Delay(100);
-        led_state(LED_RED, 1);
-        HAL_Delay(100);
-    }
-    led_state(LED_RED, 0);
-}
-
 void NORETURN __fatal_error(const char *msg) {
     for (uint i = 0;;) {
         led_toggle(((i++) & 3));
@@ -137,9 +124,7 @@ void __attribute__((weak)) __assert_func(const char *file, int line, const char 
 uint32_t __stack_chk_guard = 0xDEADBEEF;
 
 void NORETURN __stack_chk_fail(void) {
-    while (1) {
-        flash_error(100);
-    }
+    __fatal_error("stack check failed");
 }
 #endif
 
