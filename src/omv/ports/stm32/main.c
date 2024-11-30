@@ -26,6 +26,7 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include <string.h>
+#include <errno.h>
 #include STM32_HAL_H
 
 #include "mpconfig.h"
@@ -387,3 +388,29 @@ soft_reset_exit:
     first_soft_reset = false;
     goto soft_reset;
 }
+
+#if MICROPY_PY_BTREE
+void *malloc(size_t size) {
+    void *p = gc_alloc(size, false);
+    if (p == NULL) {
+        errno = ENOMEM;
+    }
+    return p;
+}
+
+void free(void *ptr) {
+    gc_free(ptr);
+}
+
+void *calloc(size_t nmemb, size_t size) {
+    return malloc(nmemb * size);
+}
+
+void *realloc(void *ptr, size_t size) {
+    void *p = gc_realloc(ptr, size, true);
+    if (p == NULL) {
+        errno = ENOMEM;
+    }
+    return p;
+}
+#endif
