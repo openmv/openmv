@@ -666,7 +666,7 @@ class rpc_usb_vcp_master(rpc_master):
     def __init__(self):  # private
         import pyb
         self.__usb_vcp = pyb.USB_VCP()
-        if self.__usb_vcp.debug_mode_enabled():
+        if omv.debug_mode():
             raise OSError("You cannot use the USB VCP while the IDE is connected!")
         self.__usb_vcp.setinterrupt(-1)
         rpc_master.__init__(self)
@@ -687,7 +687,7 @@ class rpc_usb_vcp_slave(rpc_slave):
     def __init__(self):  # private
         import pyb
         self.__usb_vcp = pyb.USB_VCP()
-        if self.__usb_vcp.debug_mode_enabled():
+        if omv.debug_mode():
             raise OSError("You cannot use the USB VCP while the IDE is connected!")
         self.__usb_vcp.setinterrupt(-1)
         rpc_slave.__init__(self)
