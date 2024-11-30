@@ -414,3 +414,9 @@ void *realloc(void *ptr, size_t size) {
     return p;
 }
 #endif
+
+static mp_obj_t pyb_main(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
+    // Unused.
+    return mp_const_none;
+}
+MP_DEFINE_CONST_FUN_OBJ_KW(pyb_main_obj, 1, pyb_main);
