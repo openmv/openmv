@@ -313,7 +313,7 @@ int omv_spi_default_config(omv_spi_config_t *config, uint32_t bus_id) {
     config->spi_mode = OMV_SPI_MODE_MASTER;
     config->bus_mode = OMV_SPI_BUS_TX_RX;
     config->bit_order = OMV_SPI_MSB_FIRST;
-    config->clk_pol = OMV_SPI_CPOL_HIGH;
+    config->clk_pol = OMV_SPI_CPOL_LOW;
     config->clk_pha = OMV_SPI_CPHA_1EDGE;
     config->nss_pol = OMV_SPI_NSS_LOW;
     config->nss_enable = true;

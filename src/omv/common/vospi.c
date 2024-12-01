@@ -179,6 +179,8 @@ int vospi_init(uint32_t n_packets, void *buffer) {
     spi_config.bus_mode = OMV_SPI_BUS_RX;
     spi_config.datasize = 16;
     spi_config.baudrate = VOSPI_CLOCK_SPEED;
+    spi_config.clk_pol = OMV_SPI_CPOL_HIGH;
+    spi_config.clk_pha = OMV_SPI_CPHA_2EDGE;
     spi_config.dma_flags = OMV_SPI_DMA_CIRCULAR | OMV_SPI_DMA_DOUBLE;
 
     if (omv_spi_init(&vospi.spi_bus, &spi_config) != 0) {

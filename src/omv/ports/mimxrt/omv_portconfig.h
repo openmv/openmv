@@ -114,8 +114,8 @@ typedef LPI2C_Type *omv_i2c_dev_t;
 #define OMV_SPI_BUS_RX          (1 << 1)
 #define OMV_SPI_BUS_TX_RX       (OMV_SPI_BUS_TX | OMV_SPI_BUS_RX)
 
-#define OMV_SPI_CPOL_LOW        (kLPSPI_ClockPolarityActiveLow)
-#define OMV_SPI_CPOL_HIGH       (kLPSPI_ClockPolarityActiveHigh)
+#define OMV_SPI_CPOL_LOW        (kLPSPI_ClockPolarityActiveHigh)
+#define OMV_SPI_CPOL_HIGH       (kLPSPI_ClockPolarityActiveLow)
 
 #define OMV_SPI_CPHA_1EDGE      (kLPSPI_ClockPhaseFirstEdge)
 #define OMV_SPI_CPHA_2EDGE      (kLPSPI_ClockPhaseSecondEdge)

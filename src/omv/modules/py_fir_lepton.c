@@ -254,15 +254,13 @@ int fir_lepton_init(omv_i2c_t *bus, int *w, int *h, int *refresh, int *resolutio
     omv_spi_config_t spi_config;
     omv_spi_default_config(&spi_config, OMV_FIR_LEPTON_SPI_BUS);
 
-    #if OMV_FIR_LEPTON_RX_CLK_DIV
-    spi_config.baudrate = VOSPI_CLOCK_SPEED / OMV_FIR_LEPTON_RX_CLK_DIV;
-    #else
     spi_config.baudrate = VOSPI_CLOCK_SPEED;
-    #endif
 
     spi_config.datasize = 16;
     spi_config.bus_mode = OMV_SPI_BUS_RX;
     spi_config.nss_enable = false;
+    spi_config.clk_pol = OMV_SPI_CPOL_HIGH;
+    spi_config.clk_pha = OMV_SPI_CPHA_2EDGE;
     spi_config.dma_flags = OMV_SPI_DMA_CIRCULAR | OMV_SPI_DMA_DOUBLE;
     omv_spi_init(&spi_bus, &spi_config);
 
