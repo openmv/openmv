@@ -34,7 +34,41 @@
 #define __OMV_BOOT_STM32_USB_H__
 #include STM32_HAL_H
 
-#if defined(STM32F4) || defined(STM32F7) || defined(STM32H7)
+#if defined(STM32F4)
+#define USB1_IRQ_Handler    OTG_FS_IRQHandler
+#define USB2_IRQ_Handler    OTG_HS_IRQHandler
+
+#define USB_OTG_ENABLE() do {                           \
+        USB_OTG_FS->GCCFG &= ~USB_OTG_GCCFG_NOVBUSSENS; \
+        USB_OTG_FS->GCCFG |= USB_OTG_GCCFG_VBUSBSEN;    \
+} while (0)
+
+#define USB_OTG_PHY_CLK_DISABLE()
+#define USB_OTG_PHY_CLK_ENABLE(clkdiv)
+
+#define USB_OTG_CLK_ENABLE() do {                \
+        __HAL_RCC_USB_OTG_FS_CLK_ENABLE();       \
+        __HAL_RCC_USB_OTG_FS_CLK_SLEEP_ENABLE(); \
+} while (0)
+
+#define USB_OTG_CLK_DISABLE()
+
+#elif defined(STM32F7)
+#define USB1_IRQ_Handler    OTG_FS_IRQHandler
+#define USB2_IRQ_Handler    OTG_HS_IRQHandler
+
+#define USB_OTG_ENABLE()
+#define USB_OTG_PHY_CLK_DISABLE()
+#define USB_OTG_PHY_CLK_ENABLE(clkdiv)
+
+#define USB_OTG_CLK_ENABLE() do {                \
+        __HAL_RCC_USB_OTG_FS_CLK_ENABLE();       \
+        __HAL_RCC_USB_OTG_FS_CLK_SLEEP_ENABLE(); \
+} while (0)
+
+#define USB_OTG_CLK_DISABLE()
+
+#elif defined(STM32H7)
 #define USB1_IRQ_Handler    OTG_FS_IRQHandler
 #define USB2_IRQ_Handler    OTG_HS_IRQHandler
 
