@@ -56,9 +56,8 @@
 #define BRIGHTNESS_DEFAULT              128
 
 #define I2C_TIMEOUT                     1000
-#define SRAM_INIT_TIMEOUT               100
 
-#define INTEGRATION_DEF_PREIOD          10000 // 10ms (100 FPS)
+#define INTEGRATION_DEF_PREIOD          20000 // 20ms (50 FPS)
 #define INTEGRATION_MIN_PREIOD          0x10 // 16us
 #define INTEGRATION_MAX_PREIOD          0x1FFF0 // 131056us
 
@@ -66,6 +65,18 @@
 
 #define EVENT_THRESHOLD_TO_CALIBRATE    100000
 #define EVENT_THRESHOLD_SIGMA           10
+
+#define EVT_CLK_FREQ                    (omv_csi_get_xclk_frequency() / 1000000)
+#define EVT_SCALE_PERIOD(period)        (((period) * EVT_CLK_FREQ) / 10)
+
+#define AFK_50_HZ                       (50)
+#define AFK_60_HZ                       (60)
+#define AFK_LOW_FREQ                    IM_MIN(AFK_50_HZ, AFK_60_HZ)
+#define AFK_HIGH_FREQ                   IM_MAX(AFK_50_HZ, AFK_60_HZ)
+#define AFK_LOW_BAND                    ((AFK_LOW_FREQ * 2) - 10)
+#define AFK_HIGH_BAND                   ((AFK_HIGH_FREQ * 2) + 10)
+
+#define EHC_DIFF3D_N_BITS_SIZE          (7) // signed 8-bit value
 
 #if (OMV_GENX320_CAL_ENABLE == 1)
 static bool hot_pixels_disabled = false;
@@ -95,6 +106,9 @@ static int reset(omv_csi_t *csi) {
                       I2C_TIMEOUT << TOP_CHICKEN_I2C_TIMEOUT_Pos);
 
     // Start the Init sequence
+    #if (OMV_GENX320_EHC_ENABLE == 1)
+    psee_sensor_init(&dcmi_histo);
+    #else
     psee_sensor_init(&dcmi_evt);
 
     // Set EVT20 mode
@@ -106,6 +120,7 @@ static int reset(omv_csi_t *csi) {
                       HSYNC_CLOCK_CYCLES << CPI_PACKET_TIME_CONTROL_BLANKING_Pos);
     psee_sensor_write(CPI_FRAME_SIZE_CONTROL, ACTIVE_SENSOR_HEIGHT);
     psee_sensor_write(CPI_FRAME_TIME_CONTROL, VSYNC_CLOCK_CYCLES);
+    #endif // (OMV_GENX320_EHC_ENABLE == 1)
 
     // Enable dropping
     psee_sensor_write(RO_READOUT_CTRL, RO_READOUT_CTRL_DIGITAL_PIPE_EN |
@@ -113,11 +128,23 @@ static int reset(omv_csi_t *csi) {
                       RO_READOUT_CTRL_DROP_EN |
                       RO_READOUT_CTRL_DROP_ON_FULL_EN);
 
-    // Disable the Anti-FlicKering filter
-    psee_disable_afk();
+    // Enable the Anti-FlicKering filter
+    AFK_HandleTypeDef psee_afk;
+
+    if (psee_afk_init(&psee_afk) != AFK_OK) {
+        return -1;
+    }
+
+    if (psee_afk_activate(&psee_afk, AFK_LOW_BAND, AFK_HIGH_BAND, EVT_CLK_FREQ) != AFK_OK) {
+        return -1;
+    }
 
     // Operation Mode Configuration
+    #if (OMV_GENX320_EHC_ENABLE == 1)
+    psee_PM3C_Histo_config();
+    #else
     psee_PM3C_config();
+    #endif // (OMV_GENX320_EHC_ENABLE == 1)
 
     // Set the default border for the Activity map
     psee_set_default_XY_borders(&genx320mp_default_am_borders);
@@ -129,54 +156,39 @@ static int reset(omv_csi_t *csi) {
     psee_sensor_set_biases(&biases);
 
     // Start the csi
-    psee_sensor_start(&dcmi_evt);
-
     #if (OMV_GENX320_EHC_ENABLE == 1)
-    // Bypass Filter
-    psee_sensor_write(EHC_PIPELINE_CONTROL, 0);
+    psee_sensor_start(&dcmi_histo);
 
-    // Start sram init
-    psee_sensor_write(SRAM_INITN, SRAM_INITN_EHC_STC);
-    uint32_t reg;
-    psee_sensor_read(SRAM_PD0, &reg);
-    psee_sensor_write(SRAM_PD0, reg & ~(SRAM_PD0_EHC_PD | SRAM_PD0_STC0_PD | SRAM_PD0_STC1_PD));
-    psee_sensor_write(EHC_INITIALISATION, EHC_INITIALISATION_REQ_INIT);
+    EHC_HandleTypeDef psee_ehc;
 
-    // Configure the block
-    psee_sensor_write(EHC_EHC_CONTROL, 0 << EHC_CONTROL_ALGO_SEL_Pos | // diff3
-                      1 << EHC_CONTROL_TRIG_SEL_Pos); // integration period
-    psee_sensor_write(EHC_BITS_SPLITTING, INT8_T_BITS << EHC_BITS_SPLITTING_NEGATIVE_BIT_LENGTH_Pos |
-                      0 << EHC_BITS_SPLITTING_POSITIVE_BIT_LENGTH_Pos |
-                      0 << EHC_BITS_SPLITTING_OUT_16BITS_PADDING_MODE_Pos);
-    psee_sensor_write(EHC_INTEGRATION_PERIOD, INTEGRATION_DEF_PREIOD);
-
-    // Check SRAM INIT done
-    for (mp_uint_t start = mp_hal_ticks_ms();; mp_hal_delay_ms(1)) {
-        uint32_t reg;
-        psee_sensor_read(EHC_INITIALISATION, &reg);
-
-        if (reg & EHC_INITIALISATION_FLAG_INIT_DONE) {
-            psee_sensor_write(EHC_INITIALISATION, EHC_INITIALISATION_FLAG_INIT_DONE);
-            break;
-        }
-
-        if ((mp_hal_ticks_ms() - start) >= SRAM_INIT_TIMEOUT) {
-            return -1;
-        }
+    if (psee_ehc_init(&psee_ehc) != EHC_OK) {
+        return -1;
     }
 
-    // Re-enable filter
-    psee_sensor_write(EHC_PIPELINE_CONTROL, EHC_PIPELINE_CONTROL_ENABLE);
-    #endif // (OMV_GENX320_EHC_ENABLE == 1)
+    if (psee_ehc_activate(&psee_ehc, EHC_ALGO_DIFF3D, 0, EHC_DIFF3D_N_BITS_SIZE,
+                          EVT_SCALE_PERIOD(INTEGRATION_DEF_PREIOD), EHC_WITHOUT_PADDING) != EHC_OK) {
+        return -1;
+    }
+    #else
+    psee_sensor_start(&dcmi_evt);
+    #endif //  (OMV_GENX320_EHC_ENABLE == 1)
 
     return 0;
 }
 
 static int sleep(omv_csi_t *csi, int enable) {
     if (enable) {
+        #if (OMV_GENX320_EHC_ENABLE == 1)
+        psee_PM2_Histo_config();
+        #else
         psee_PM2_config();
+        #endif // (OMV_GENX320_EHC_ENABLE == 1)
     } else {
+        #if (OMV_GENX320_EHC_ENABLE == 1)
+        psee_PM3C_Histo_config();
+        #else
         psee_PM3C_config();
+        #endif // (OMV_GENX320_EHC_ENABLE == 1)
     }
     return 0;
 }
@@ -219,7 +231,7 @@ static int set_framerate(omv_csi_t *csi, int framerate) {
         return -1;
     }
 
-    psee_sensor_write(EHC_INTEGRATION_PERIOD, us);
+    psee_sensor_write(EHC_INTEGRATION_PERIOD, EVT_SCALE_PERIOD(us));
     #endif // (OMV_GENX320_EHC_ENABLE == 1)
     return 0;
 }
