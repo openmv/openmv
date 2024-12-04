@@ -142,7 +142,7 @@ soft_reset:
     machine_init();
     mp_init();
     readline_init0();
-    #if MICROPY_PY_MACHINE_HW_SPI
+    #if MICROPY_PY_MACHINE_SPI
     spi_init0();
     #endif
     #if MICROPY_PY_MACHINE_I2C
@@ -157,7 +157,7 @@ soft_reset:
     #if MICROPY_PY_MACHINE_RTCOUNTER
     rtc_init0();
     #endif
-    #if MICROPY_PY_MACHINE_TIMER
+    #if MICROPY_PY_MACHINE_TIMER_NRF
     timer_init0();
     #endif
     #if MICROPY_PY_MACHINE_UART
