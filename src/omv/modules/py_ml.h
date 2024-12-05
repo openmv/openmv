@@ -36,6 +36,7 @@
 typedef struct py_ml_model_obj {
     mp_obj_base_t base;
     unsigned int size;
+    unsigned char *_raw;
     unsigned char *data;
     size_t memory_size;
     uint32_t memory_addr;

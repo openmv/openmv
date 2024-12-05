@@ -49,6 +49,14 @@
 #include "tflm_builtin_models.h"
 #endif
 
+#ifndef IMLIB_ML_MODEL_ALIGN
+#ifndef __DCACHE_PRESENT
+#define IMLIB_ML_MODEL_ALIGN    (32 - 1)
+#else
+#define IMLIB_ML_MODEL_ALIGN    (__SCB_DCACHE_LINE_SIZE - 1)
+#endif
+#endif
+
 static size_t py_ml_tuple_sum(mp_obj_tuple_t *o) {
     if (o->len < 1) {
         mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Unexpected tensor shape"));
@@ -366,7 +374,13 @@ mp_obj_t py_ml_model_make_new(const mp_obj_type_t *type, size_t n_args, size_t n
         FIL fp;
         file_open(&fp, path, false, FA_READ | FA_OPEN_EXISTING);
         model->size = f_size(&fp);
-        model->data = model->fb_alloc ? fb_alloc(model->size, FB_ALLOC_PREFER_SIZE) : xalloc(model->size);
+        if (model->fb_alloc) {
+            model->data = fb_alloc(model->size, FB_ALLOC_PREFER_SPEED | FB_ALLOC_CACHE_ALIGN);
+        } else {
+            // Keeps a reference to the GC block.
+            model->_raw = xalloc(model->size + IMLIB_ML_MODEL_ALIGN);
+            model->data = (void *) (((uintptr_t) model->_raw + IMLIB_ML_MODEL_ALIGN) & ~IMLIB_ML_MODEL_ALIGN);
+        }
         file_read(&fp, model->data, model->size);
         file_close(&fp);
         #else
