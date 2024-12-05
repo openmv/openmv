@@ -65,11 +65,13 @@ static mp_obj_t py_omv_board_id() {
 static MP_DEFINE_CONST_FUN_OBJ_0(py_omv_board_id_obj, py_omv_board_id);
 
 static mp_obj_t py_omv_debug_mode() {
-    #if (OMV_TUSBDBG_ENABLE == 1)
+    #if OMV_TUSBDBG_ENABLE
     return mp_obj_new_bool(tinyusb_debug_enabled());
-    #else
+    #elif MICROPY_HW_ENABLE_USB
     extern int usb_cdc_debug_mode_enabled();
     return mp_obj_new_bool(usb_cdc_debug_mode_enabled());
+    #else
+    return mp_const_none;
     #endif
 }
 static MP_DEFINE_CONST_FUN_OBJ_0(py_omv_debug_mode_obj, py_omv_debug_mode);
