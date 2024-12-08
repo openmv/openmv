@@ -8,20 +8,21 @@
 # pylint: disable=unused-argument, invalid-name
 import struct
 from isp_print import isp_print_color
+from isp_print import isp_print_response
 from otp_mfgr_decode import decode_otp_manufacture
 
-# Wounding bits 
-OTP_WOUNDING_ALIF_DFT       = (1 << 0)
-OTP_WOUNDING_RESERVED_0     = (1 << 1)
-OTP_WOUNDING_RESERVED_1     = (1 << 2)
-OTP_WOUNDING_DISABLE_A32_0  = (1 << 3)
-OTP_WOUNDING_DISABLE_A32_1  = (1 << 4)
-OTP_WOUNDING_DISABLE_M55_HP = (1 << 5)
-OTP_WOUNDING_DISABLE_MODEM  = (1 << 6)
-OTP_WOUNDING_DISABLE_GNSS   = (1 << 7)
+# Wounding bits
+OTP_WOUNDING_ALIF_DFT       = 1 << 0
+OTP_WOUNDING_RESERVED_0     = 1 << 1
+OTP_WOUNDING_RESERVED_1     = 1 << 2
+OTP_WOUNDING_DISABLE_A32_0  = 1 << 3
+OTP_WOUNDING_DISABLE_A32_1  = 1 << 4
+OTP_WOUNDING_DISABLE_M55_HP = 1 << 5
+OTP_WOUNDING_DISABLE_MODEM  = 1 << 6
+OTP_WOUNDING_DISABLE_GNSS   = 1 << 7
 
-# Wounding bit meanings
-WOUNDING_lut = {
+# Wounding bit meanings ENSEMBLE Series
+WOUNDING_lut_ensemble = {
     0 : "DFT    Disable",
     1 : "Reserved",
     2 : "Reserved",
@@ -30,6 +31,18 @@ WOUNDING_lut = {
     5 : "M55_HP Disable",
     6 : "Modem  Disable",
     7 : "GNSS   Disable"
+}
+
+# Wounding bit meanings for BALLETTO Series
+WOUNDING_lut_balletto = {
+    0 : "DFT    Disable",        # Bit 16
+    1 : "JTAG0  Disable",        # Bit 17
+    2 : "JTAG1  Disable",        # Bit 18
+    3 : "BLE    Disable",        # Bit 19
+    4 : "Unused Disable",        # Bit 20
+    5 : "Unused Disable",        # Bit 21
+    6 : "Unused Disable",        # Bit 22
+    7 : "Unused Disable",        # Bit 23
 }
 
 # Life Cycle State
@@ -47,12 +60,15 @@ def display_version_info(message):
     """
 
 def display_string(field):
+    """
+        display_string
+    """
     #isp_print_color("blue"," " + str(field) + "\t\t=  ")
     for ch in field:
         l = hex(ch)[2:]
         if len(l) == 1:
             l = '0' + l
-        isp_print_color("blue", l) 
+        isp_print_color("blue", l)
     print("")
 
 def version_decode(isp, message):
@@ -78,35 +94,41 @@ def version_decode(isp, message):
             ascii_list = [chr(ch) for ch in ALIF_PN]
         isp_print_color("blue", "%s\n" % (''.join(ascii_list)))
 
-        HBK0 = (message[22:38]) #bytes 22-37 (limit 38)
+        HBK0 = message[22:38] #bytes 22-37 (limit 38)
         isp_print_color("blue"," HBK0\t\t=  ")
         display_string(HBK0)
 
-        HBK1 = (message[38:54]) #bytes 38-53 (limit 54)
+        HBK1 = message[38:54] #bytes 38-53 (limit 54)
         isp_print_color("blue"," HBK1\t\t=  ")
         display_string(HBK1)
 
-        HBK_FW = (message[54:74]) #bytes 54-73 (limit 74)
+        HBK_FW = message[54:74] #bytes 54-73 (limit 74)
         isp_print_color("blue"," HBK_FW\t\t=  ")
         #isp_print_color("blue",hex(int.from_bytes(HBK_FW,"little")))
         display_string(HBK_FW)
 
-        config = (message[74:78]) #bytes 74-77 (limit 78)
+        config = message[74:78] #bytes 74-77 (limit 78)
         wounding_bits = int.from_bytes(config,"little")
         isp_print_color("blue"," Wounding\t=  ")
         isp_print_color("blue",hex(int.from_bytes(config,"little")))
+
         for each_bit in range(8):
             if (wounding_bits >> each_bit) & 0x1 == 0x1:
                 isp_print_color("blue","\n\t")
-                isp_print_color("blue",WOUNDING_lut.get(each_bit))
+
+                # Check the device version as wounding is different
+                if version in [0xA001]:
+                    isp_print_color("blue",WOUNDING_lut_balletto.get(each_bit))
+                else:
+                    isp_print_color("blue",WOUNDING_lut_ensemble.get(each_bit))
         print("")
 
-        DCU = (message[78:94]) #bytes 78-93 (limit 94)
+        DCU = message[78:94] #bytes 78-93 (limit 94)
         isp_print_color("blue"," DCU\t\t=  ")
         isp_print_color("blue",hex(int.from_bytes(DCU,"little")))
         print("")
 
-        MfgData = (message[94:126]) #bytes 94-125 (limit 126)
+        MfgData = message[94:126] #bytes 94-125 (limit 126)
         MfgDatatInt = int.from_bytes(MfgData,"little")
         isp_print_color("blue"," MfgData\t=  ")
         #isp_print_color("blue",hex(MfgDatatInt))
@@ -114,10 +136,10 @@ def version_decode(isp, message):
         if  MfgDatatInt != 0:
             decode_otp_manufacture(MfgData)
 
-        SerialN = (message[127:134]) #bytes 127-133 (limit 134)
-        isp_print_color("blue"," SerialN\t=  ")
-        isp_print_color("blue",hex(int.from_bytes(SerialN,"little")))
-        print("")
+        #SerialN = (message[127:134]) #bytes 127-133 (limit 134)
+        #isp_print_color("blue"," SerialN\t=  ")
+        #isp_print_color("blue",hex(int.from_bytes(SerialN,"little")))
+        #print("")
 
         LCS = message[134]
         isp_print_color("blue"," LCS\t\t=  0x%x (%s)" % (

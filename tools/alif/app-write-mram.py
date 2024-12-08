@@ -19,9 +19,6 @@ from utils.discover import getValues, getJlinkSN
 import utils.config
 from utils.config import *
 from utils.user_validations import validateArgList
-from _ast import Or
-from _operator import or_
-from cgitb import handler
 sys.path.append("./isp")
 from serialport import serialPort
 from serialport import COM_BAUD_RATE_MAXIMUM

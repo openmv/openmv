@@ -116,7 +116,7 @@ def recovery_action_no_reset(isp):
     # check SERAM is the bootloader stage
     print('Bootloader stage: ' + device_probe.STAGE_TEXT[device.stage])
     if device.stage == device_probe.STAGE_SERAM:
-        print('[ERROR] Device not in Recovery mode, use systemUpdatePackage Tool')
+        print('[ERROR] Device not in Recovery mode, use updateSystemPackage Tool')
         sys.exit(EXIT_WITH_ERROR)
 
     if device.revision == 'B2':  #Device Part# is not retrieved by SEROM in B2
@@ -133,8 +133,7 @@ def recovery_action_no_reset(isp):
                     device.part_number = 'AE722F80F55D5EG'
                     device.revision = 'A0'
                 elif device.revision in ['B1','A0']:     # Balletto B1C / E1C
-                    device.part_number = 'AB1C1F4M51920PH'
-#                    device.part_number = 'AE1C1F4051920PH'
+                    device.part_number = 'AB1C1F4M51820PH'
                 else:
                     print('[ERROR] Revision is not reconginzed', device.revision)
                     sys.exit(EXIT_WITH_ERROR)

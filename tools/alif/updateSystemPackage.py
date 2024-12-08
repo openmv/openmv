@@ -154,9 +154,7 @@ def main():
     # These should not exist! but initial devices for bring up are always Blank
     if bytes(partDetected, 'utf-8') == b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00':
         if device.revision == 'A0':     # SPARK Device default
-            partDetected = 'AB1C1F4M51920PH'
-# For the inevitable moaning that E1C is not the default on a Blank device
-#            partDetected = 'AE1C1F4051920PH'
+            partDetected = 'AB1C1F4M51820PH'
         elif device.revision == 'EG':   # Eagle A0
             partDetected = 'AE722F80F55D5EG'
             device.revision = 'A0'
