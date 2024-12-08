@@ -35,7 +35,8 @@ from utils.gen_fw_cfg import *
 # 0.30.000      includes image signing
 # 0.31.000      strip console output to a minimum (includes printInfo)
 # 0.32.000      split image signature
-TOOL_VERSION = "0.32.000"
+# 0.33.000      add mramAddress as sufix in content certificate name (to differentiate when using the same image name...)
+TOOL_VERSION = "0.33.000"
 
 EXIT_WITH_ERROR = 1
 
@@ -175,7 +176,7 @@ def createOemTocPackage(fwsections, outputFile):
             mPointer += (CERT_CHAIN_SIZE - CONT_CERT_SIZE)
             #print(f'mPointer KC un: {mPointer - oemManagedAreaStartAddress}')
         # copy the Content Certificate (for signed or unsigned images)
-        addContentCertificate(outf, sec['binary'])
+        addContentCertificate(outf, sec['binary'] + "_" + str(sec['mramAddress']))
         #mapf.write(f"{hostAddress(mPointer)}\t{hex(CONT_CERT_SIZE)}\t{(CONT_CERT_SIZE)}\tSB" + sec['binary'] + ".crt\n")
         mapf.write(f"{hex(mPointer)}\t{hex(CONT_CERT_SIZE)}\t{(CONT_CERT_SIZE)}\tSB" + sec['binary'] + ".crt\n")
         mPointer += CONT_CERT_SIZE
@@ -206,7 +207,7 @@ def createOemTocPackage(fwsections, outputFile):
             mPointer += (CERT_CHAIN_SIZE - CONT_CERT_SIZE)
             #print(f'mPointer - KCs: {mPointer - oemManagedAreaStartAddress}')
         # copy the Content Certificate (for signed or unsigned images)
-        addContentCertificate(outf, sec['binary'])
+        addContentCertificate(outf, sec['binary'] + "_" + str(sec['mramAddress']))
         #mapf.write(f"{hostAddress(mPointer)}\t{hex(CONT_CERT_SIZE)}\t{(CONT_CERT_SIZE)}\tSB" + sec['binary'] + ".crt\n")
         mapf.write(f"{hex(mPointer)}\t{hex(CONT_CERT_SIZE)}\t{(CONT_CERT_SIZE)}\tSB" + sec['binary'] + ".crt\n")
         mPointer += CONT_CERT_SIZE

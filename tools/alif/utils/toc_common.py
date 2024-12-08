@@ -469,8 +469,8 @@ def createContentCerts(fwsections, prefix):
         os.chdir(os.getcwd() + '/../')
 
         # check if file exists (and remove it) before renaming it
-        #certFile = "SB" + sec['binary'][:-4] + ".crt"
-        certFile = "SB" + sec['binary'] + ".crt"
+        #certFile = "SB" + sec['binary'] + ".crt"
+        certFile = "SB" + sec['binary'] + "_" + str(sec['mramAddress']) + ".crt"
         printInfo(certFile)
         if (os.path.exists(certPath / certFile)):
             os.remove(certPath / certFile)
@@ -484,6 +484,7 @@ def createContentCerts(fwsections, prefix):
         textFile = prefix + "SBContent_Cert.txt"
         if (os.path.exists(certPath / textFile)):
             os.remove(certPath / textFile)
+    
         # remove images.txt - temporal template file (not used)
         textFile = "images.txt"
         if (os.path.exists(imagePath / textFile)):

@@ -28,10 +28,6 @@ MRAM_SIZE_lut = {
         3 : "1.5"
     }
 
-fab_id_lut = {
-        0x0 : "UAS"
-    }
-
 class CP_data_t:
     """
         OTP manufactoring data
@@ -44,6 +40,7 @@ class CP_data_t:
         """
         self.cp_mfgr_id_x_loc = 0
         self.cp_mfgr_id_y_loc = 0
+        self.cp_mfgr_id_fab = ''
         self.cp_mfgr_id_wfr_id = 0
         self.cp_mfgr_id_lot_id = 0
         self.cp_mfgr_id_lot_id_year = 0
@@ -71,80 +68,38 @@ class CP_data_t:
         if len(message) == 0:
             return
 
-        """
-         CP1 decode 72 Bits / 9 BYTES
-         Byte         Field description
-           0        x-loc
-           1        y-loc
-           2        lot _id - 32 bits
-             3      year
-             4      FabId:2 Work Week: 6
-             5      Serial No
-             6        RAM Sizes SRAM0:1 SRAM1:1 MRAM:2 CP1 Bin#:4
-           7        Test ProgramRev:4 Temperature:4
-           8        SRAM repaired:1 FUTURE:6
-           
-              0        1      2      3       4      5      6      7 
-           ['0x97', '0x68', '0x2', '0x59', '0x4', '0x1', '0x0', '0x0',
-        """
-#        hexized = [hex(x) for x in message]
-#        print(hexized)
-        (self.cp_mfgr_id_x_loc,) = struct.unpack("<B",bytes(message[0:1]))
-        (self.cp_mfgr_id_y_loc,) = struct.unpack("<B",bytes(message[1:2]))
-        (self.cp_mfgr_id_wfr_id,) = struct.unpack("<B",bytes(message[2:3]))
-        (self.cp_mfgr_id_lot_id_year,) = struct.unpack("<B",bytes(message[3:4]))
-#        print("Year ", hex(self.cp_mfgr_id_lot_id_year))
-        (self.cp_mfgr_id_lot_id_serialno,) = struct.unpack("<B",bytes(message[5:6]))
+        (self.cp_mfgr_id_x_loc,) = struct.unpack("<B",bytes(message[3:4]))
+        (self.cp_mfgr_id_y_loc,) = struct.unpack("<B",bytes(message[2:3]))
+        (self.cp_mfgr_id_wfr_id,) = struct.unpack("<B",bytes(message[1:2])) 
+        self.cp_mfgr_id_fab = 'UAS Global'
+        if self.cp_mfgr_id_wfr_id & 0x80:
+            fab = 'Other'
+        self.cp_mfgr_id_wfr_id &= 0x1F
 
-        (byte0,) = struct.unpack("<B",bytes(message[4:5]))
-#        (self.cp_mfgr_id_x_loc,) = struct.unpack("<B",bytes(message[3:4]))
-#        (self.cp_mfgr_id_y_loc,) = struct.unpack("<B",bytes(message[2:3]))
-#        (self.cp_mfgr_id_wfr_id,) = struct.unpack("<B",bytes(message[1:2]))
-#        (self.cp_mfgr_id_lot_id_year,) = struct.unpack("<B",bytes(message[0:1]))
-#        (byte0,) = struct.unpack("<B",bytes(message[7:8]))
-#        (self.cp_mfgr_id_lot_id_serialno,) = struct.unpack("<B",bytes(message[6:7]))
+        (self.cp_mfgr_id_lot_id_year,) = struct.unpack("<B",bytes(message[0:1])) 
+        self.cp_mfgr_id_lot_id_year += 2020
 
-#        print("Byte0 ", bin(byte0))
-#        print("Type  ", type(byte0))
-        self.cp_mfgr_id_lot_id_FABID = (byte0 & 0x3)
-        self.cp_mfgr_id_lot_id_workweek = (byte0 & 0xC)
-#        print("WW    ", hex(self.cp_mfgr_id_lot_id_workweek))
-#        print("FABID ", hex(self.cp_mfgr_id_lot_id_FABID))
+        (self.cp_mfgr_id_lot_id_workweek,) = struct.unpack("<B",bytes(message[7:8]))
 
     def display_manufacture_otp_info(self):
         """
             display_display_manufacture_otp_info
                 display otp data sent back from Target
         """
-
         isp_print_color('blue', "\t+ x-loc    %d\n" %
                         (self.cp_mfgr_id_x_loc))
-        isp_print_color('blue', "\t+ y-loc    %d\n" %
+        isp_print_color('blue', "\t+ y-loc    %d\n" % 
                         (self.cp_mfgr_id_y_loc))
+        isp_print_color('blue', "\t+ Fab      %s\n" %
+                        (self.cp_mfgr_id_fab))
         isp_print_color('blue', "\t+ Wafer ID %d\n" %
                         (self.cp_mfgr_id_wfr_id))
-#        isp_print_color('blue', "\t+ lot_id   %d\n" %
-#                        (self.cp_mfgr_id_lot_id))
-        size_bit = self.cp_mfgr_id_lot_id & 0x1
-        isp_print_color('blue', "\t+ lot ID   %s%c%02X%03X\n" %
-                        (
-                         fab_id_lut.get(self.cp_mfgr_id_lot_id_FABID),
-                         chr(self.cp_mfgr_id_lot_id_year),
-                         self.cp_mfgr_id_lot_id_workweek,
-                         self.cp_mfgr_id_lot_id_serialno
-                        ))
-#        isp_print_color('blue', "\t+ Week#    %d\n" %
-#                        (self.cp_mfgr_id_lot_id_workweek))
-#        isp_print_color('blue', "\t+ Seriall#  %d\n" %
-#                        (self.cp_mfgr_id_lot_id_serialno))
-#        isp_print_color('blue', "\t+ SRAM0 Size      %s MB\n" % (
-#                        SRAM0_SIZE_lut.get(size_bit)))
-#        size_bit = self.cp_mfgr_id_lot_id & 0x2
-#        isp_print_color('blue', "\t+ SRAM1 Size      %s MB\n" % (
-#                        SRAM1_SIZE_lut.get(size_bit)))
-#        size_bit = (self.cp_mfgr_id_lot_id & 0xC) >> 2
-#        isp_print_color('blue', "\t+ MRAM  Size      %s MB\n" % (
-#                        MRAM_SIZE_lut.get(size_bit)))
+        isp_print_color('blue', "\t+ Year#    %d\n" %
+                        (self.cp_mfgr_id_lot_id_year)) 
+        isp_print_color('blue', "\t+ Week#    %d\n" %
+                        (self.cp_mfgr_id_lot_id_workweek))
+        isp_print_color('blue', "\t+ Lot#     %d\n" %
+                        (self.cp_mfgr_id_lot_id))                        
 
 def swap32(x):
     return (((x << 24) & 0xFF000000) |
