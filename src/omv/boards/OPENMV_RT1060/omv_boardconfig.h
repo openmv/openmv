@@ -41,6 +41,7 @@
 
 #define OMV_MT9M114_ENABLE              (1)
 #define OMV_MT9V0XX_ENABLE              (1)
+#define OMV_BOSON_ENABLE                (1)
 #define OMV_LEPTON_ENABLE               (1)
 #define OMV_GENX320_ENABLE              (1)
 #define OMV_GENX320_EHC_ENABLE          (1)

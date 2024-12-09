@@ -39,6 +39,7 @@ SRCS += $(addprefix sensors/,   \
 	ov9650.c                    \
 	mt9v0xx.c                   \
 	mt9m114.c                   \
+	boson.c                     \
 	lepton.c                    \
 	hm01b0.c                    \
 	hm0360.c                    \
