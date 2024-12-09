@@ -33,3 +33,4 @@ while True:
         print_args = (tag.name, tag.id, (180 * tag.rotation) / math.pi)
         print("Tag Family %s, Tag ID %d, rotation %f (degrees)" % print_args)
     print(clock.fps())
+    print("OK")
