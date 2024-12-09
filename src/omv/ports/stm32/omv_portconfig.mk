@@ -115,6 +115,7 @@ OMV_CFLAGS += -I$(TOP_DIR)/$(OMV_DIR)/ports/$(PORT)/
 OMV_CFLAGS += -I$(TOP_DIR)/$(OMV_DIR)/ports/$(PORT)/modules/
 
 OMV_CFLAGS += -I$(TOP_DIR)/$(GENX320_DIR)/include/
+OMV_CFLAGS += -I$(TOP_DIR)/$(BOSON_DIR)/include/
 OMV_CFLAGS += -I$(TOP_DIR)/$(LEPTON_DIR)/include/
 OMV_CFLAGS += -I$(TOP_DIR)/$(LSM6DS3_DIR)/include/
 OMV_CFLAGS += -I$(TOP_DIR)/$(LSM6DSOX_DIR)/include/
@@ -149,6 +150,7 @@ FIRM_OBJ += $(wildcard $(BUILD)/$(CMSIS_DIR)/src/dsp/*/*.o)
 
 FIRM_OBJ += $(wildcard $(BUILD)/$(HAL_DIR)/src/*.o)
 FIRM_OBJ += $(wildcard $(BUILD)/$(GENX320_DIR)/src/*.o)
+FIRM_OBJ += $(wildcard $(BUILD)/$(BOSON_DIR)/src/*.o)
 FIRM_OBJ += $(wildcard $(BUILD)/$(LEPTON_DIR)/src/*.o)
 ifeq ($(MICROPY_PY_IMU), 1)
 FIRM_OBJ += $(wildcard $(BUILD)/$(LSM6DS3_DIR)/src/*.o)
@@ -200,6 +202,7 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/sensors/,   \
 	ov9650.o                    \
 	mt9v0xx.o                   \
 	mt9m114.o                   \
+	boson.o                     \
 	lepton.o                    \
 	hm01b0.o                    \
 	hm0360.o                    \
@@ -594,6 +597,7 @@ UVC_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/sensors/, \
 	ov9650.o                                \
 	mt9v0xx.o                               \
 	mt9m114.o                               \
+	boson.o                                 \
 	lepton.o                                \
 	hm01b0.o                                \
 	hm0360.o                                \
@@ -630,6 +634,7 @@ UVC_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/ports/stm32/,\
 	)
 
 UVC_OBJ += $(wildcard $(BUILD)/$(GENX320_DIR)/src/*.o)
+UVC_OBJ += $(wildcard $(BUILD)/$(BOSON_DIR)/src/*.o)
 UVC_OBJ += $(wildcard $(BUILD)/$(LEPTON_DIR)/src/*.o)
 ifeq ($(MICROPY_PY_IMU), 1)
 UVC_OBJ += $(wildcard $(BUILD)/$(LSM6DS3_DIR)/src/*.o)
@@ -674,6 +679,7 @@ ifeq ($(MICROPY_PY_ML_TFLM), 1)
 endif
 	$(MAKE)  -C $(MICROPY_DIR)/ports/$(PORT) BUILD=$(BUILD)/$(MICROPY_DIR)      $(MICROPY_ARGS)
 	$(MAKE)  -C $(GENX320_DIR)               BUILD=$(BUILD)/$(GENX320_DIR)      CFLAGS="$(CFLAGS) -MMD"
+	$(MAKE)  -C $(BOSON_DIR)                 BUILD=$(BUILD)/$(BOSON_DIR)        CFLAGS="$(CFLAGS) -MMD"
 	$(MAKE)  -C $(LEPTON_DIR)                BUILD=$(BUILD)/$(LEPTON_DIR)       CFLAGS="$(CFLAGS) -MMD"
 ifeq ($(MICROPY_PY_IMU), 1)
 	$(MAKE)  -C $(LSM6DS3_DIR)               BUILD=$(BUILD)/$(LSM6DS3_DIR)      CFLAGS="$(CFLAGS) -MMD"

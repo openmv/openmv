@@ -73,6 +73,7 @@ export BOOT_DIR
 export OMV_DIR
 export CMSIS_DIR
 export MICROPY_DIR
+export BOSON_DIR
 export LEPTON_DIR
 export LSM6DS3_DIR
 export LSM6DSM_DIR

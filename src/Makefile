@@ -56,6 +56,7 @@ CUBEAI_DIR=stm32cubeai
 CMSIS_DIR=hal/cmsis
 MICROPY_DIR=micropython
 GENX320_DIR=drivers/genx320
+BOSON_DIR=drivers/boson
 LEPTON_DIR=drivers/lepton
 LSM6DS3_DIR=drivers/lsm6ds3
 LSM6DSM_DIR=drivers/lsm6dsm

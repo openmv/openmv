@@ -51,6 +51,7 @@
 #include "mt9v0xx.h"
 #include "mt9m114.h"
 #include "lepton.h"
+#include "boson.h"
 #include "hm01b0.h"
 #include "hm0360.h"
 #include "pag7920.h"
@@ -260,6 +261,12 @@ static int omv_csi_detect() {
                 return slv_addr;
             #endif // (OMV_MT9M114_ENABLE == 1)
 
+            #if (OMV_BOSON_ENABLE == 1)
+            case BOSON_SLV_ADDR:
+                csi.chip_id = BOSON_ID;
+                return slv_addr;
+            #endif // (OMV_BOSON_ENABLE == 1)
+
             #if (OMV_LEPTON_ENABLE == 1)
             case LEPTON_SLV_ADDR:
                 csi.chip_id = LEPTON_ID;
@@ -448,6 +455,15 @@ int omv_csi_probe_init(uint32_t bus_id, uint32_t bus_speed) {
             init_ret = mt9m114_init(&csi);
             break;
         #endif //(OMV_MT9M114_ENABLE == 1)
+
+        #if (OMV_BOSON_ENABLE == 1)
+        case BOSON_ID:
+            if (omv_csi_set_clk_frequency(OMV_BOSON_CLK_FREQ) != 0) {
+                return OMV_CSI_ERROR_TIM_INIT_FAILED;
+            }
+            init_ret = boson_init(&csi);
+            break;
+        #endif // (OMV_BOSON_ENABLE == 1)
 
         #if (OMV_LEPTON_ENABLE == 1)
         case LEPTON_ID:
