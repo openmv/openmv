@@ -32,11 +32,19 @@
 #include "vl53l5cx_api.h"
 
 void vl53l5cx_reset(VL53L5CX_Platform *platform) {
+    #if defined(OMV_TOF_RESET_PIN)
     omv_gpio_config(OMV_TOF_RESET_PIN, OMV_GPIO_MODE_OUTPUT, OMV_GPIO_PULL_NONE, OMV_GPIO_SPEED_LOW, -1);
     omv_gpio_write(OMV_TOF_RESET_PIN, 1);
     mp_hal_delay_ms(10);
     omv_gpio_write(OMV_TOF_RESET_PIN, 0);
     mp_hal_delay_ms(10);
+    #elif defined(OMV_TOF_POWER_PIN)
+    omv_gpio_config(OMV_TOF_POWER_PIN, OMV_GPIO_MODE_OUTPUT, OMV_GPIO_PULL_NONE, OMV_GPIO_SPEED_LOW, -1);
+    omv_gpio_write(OMV_TOF_POWER_PIN, 0);
+    mp_hal_delay_ms(10);
+    omv_gpio_write(OMV_TOF_POWER_PIN, 1);
+    mp_hal_delay_ms(10);
+    #endif
 }
 
 void vl53l5cx_swap(uint8_t *buf, uint16_t size) {
