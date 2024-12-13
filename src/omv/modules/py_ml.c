@@ -335,14 +335,12 @@ mp_obj_t py_ml_model_make_new(const mp_obj_type_t *type, size_t n_args, size_t n
     mp_arg_val_t args[MP_ARRAY_SIZE(allowed_args)];
     mp_arg_parse_all_kw_array(n_args, n_kw, all_args, MP_ARRAY_SIZE(allowed_args), allowed_args, args);
 
-    fb_alloc_mark();
-
     const char *path = mp_obj_str_get_str(args[ARG_path].u_obj);
     (void) path;
 
     py_ml_model_obj_t *model = mp_obj_malloc_with_finaliser(py_ml_model_obj_t, &py_ml_model_type);
     model->data = NULL;
-    model->fb_alloc = args[ARG_load_to_fb].u_int;
+    model->fb_alloc = false;
     model->labels = mp_const_none;
 
     #if MICROPY_PY_ML_TFLM
@@ -374,8 +372,12 @@ mp_obj_t py_ml_model_make_new(const mp_obj_type_t *type, size_t n_args, size_t n
         FIL fp;
         file_open(&fp, path, false, FA_READ | FA_OPEN_EXISTING);
         model->size = f_size(&fp);
+        model->fb_alloc = args[ARG_load_to_fb].u_int;
         if (model->fb_alloc) {
+            fb_alloc_mark();
             model->data = fb_alloc(model->size, FB_ALLOC_PREFER_SPEED | FB_ALLOC_CACHE_ALIGN);
+            // The model's data will Not be free'd on exceptions.
+            fb_alloc_mark_permanent();
         } else {
             // Keeps a reference to the GC block.
             model->_raw = xalloc(model->size + IMLIB_ML_MODEL_ALIGN);
@@ -386,13 +388,6 @@ mp_obj_t py_ml_model_make_new(const mp_obj_type_t *type, size_t n_args, size_t n
         #else
         mp_raise_msg(&mp_type_OSError, MP_ERROR_TEXT("Image I/O is not supported"));
         #endif
-    }
-
-    if (model->fb_alloc) {
-        // The model's data will Not be free'd on exceptions.
-        fb_alloc_mark_permanent();
-    } else {
-        fb_alloc_free_till_mark();
     }
 
     ml_backend_init_model(model);
