@@ -1015,6 +1015,15 @@ static mp_obj_t py_omv_csi_ioctl(uint n_args, const mp_obj_t *args) {
             break;
         }
 
+        #if (OMV_GENX320_ENABLE == 1)
+        case OMV_CSI_IOCTL_GENX320_SET_BIASES: {
+            if (n_args == 2) {
+                error = omv_csi_ioctl(request, mp_obj_get_int(args[1]));
+            }
+            break;
+        }
+        #endif // (OMV_GENX320_ENABLE == 1)
+
         default: {
             omv_csi_raise_error(OMV_CSI_ERROR_CTL_UNSUPPORTED);
             break;
@@ -1206,6 +1215,15 @@ static const mp_rom_map_elem_t globals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_IOCTL_HIMAX_OSC_ENABLE),      MP_ROM_INT(OMV_CSI_IOCTL_HIMAX_OSC_ENABLE)},
     #endif
     { MP_ROM_QSTR(MP_QSTR_IOCTL_GET_RGB_STATS),         MP_ROM_INT(OMV_CSI_IOCTL_GET_RGB_STATS)},
+
+    #if (OMV_GENX320_ENABLE == 1)
+    { MP_ROM_QSTR(MP_QSTR_IOCTL_GENX320_SET_BIASES),     MP_ROM_INT(OMV_CSI_IOCTL_GENX320_SET_BIASES)},
+    { MP_ROM_QSTR(MP_QSTR_GENX320_BIASES_DEFAULT),       MP_ROM_INT(OMV_CSI_GENX320_BIASES_DEFAULT)},
+    { MP_ROM_QSTR(MP_QSTR_GENX320_BIASES_LOW_LIGHT),     MP_ROM_INT(OMV_CSI_GENX320_BIASES_LOW_LIGHT)},
+    { MP_ROM_QSTR(MP_QSTR_GENX320_BIASES_ACTIVE_MARKER), MP_ROM_INT(OMV_CSI_GENX320_BIASES_ACTIVE_MARKER)},
+    { MP_ROM_QSTR(MP_QSTR_GENX320_BIASES_LOW_NOISE),     MP_ROM_INT(OMV_CSI_GENX320_BIASES_LOW_NOISE)},
+    { MP_ROM_QSTR(MP_QSTR_GENX320_BIASES_HIGH_SPEED),    MP_ROM_INT(OMV_CSI_GENX320_BIASES_HIGH_SPEED)},
+    #endif
 
     // Sensor functions
     { MP_ROM_QSTR(MP_QSTR___init__),                    MP_ROM_PTR(&py_omv_csi__init__obj) },

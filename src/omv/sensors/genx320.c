@@ -431,6 +431,80 @@ static int snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
     return ret;
 }
 
+static int ioctl(omv_csi_t *csi, int request, va_list ap) {
+    int ret = 0;
+
+    switch (request) {
+        // Setting a preset of biases tuned for a particular application/condition
+        case OMV_CSI_IOCTL_GENX320_SET_BIASES: {
+            int mode = va_arg(ap, int);
+            switch (mode) {
+                case OMV_CSI_GENX320_BIASES_DEFAULT: {
+                    // Set default biases V2.0.0
+                    psee_sensor_set_bias(DIFF, 51);
+                    psee_sensor_set_bias(DIFF_OFF, 28);
+                    psee_sensor_set_bias(DIFF_ON, 25);
+                    psee_sensor_set_bias(FO, 34);
+                    psee_sensor_set_bias(HPF, 40);
+                    psee_sensor_set_bias(REFR, 10);
+                    break;
+                }
+                case OMV_CSI_GENX320_BIASES_LOW_LIGHT: {
+                    // Set biases tuned for low light
+                    psee_sensor_set_bias(DIFF, 51);
+                    psee_sensor_set_bias(DIFF_OFF, 19);
+                    psee_sensor_set_bias(DIFF_ON, 24);
+                    psee_sensor_set_bias(FO, 19);
+                    psee_sensor_set_bias(HPF, 0);
+                    psee_sensor_set_bias(REFR, 10);
+                    break;
+                }
+                case OMV_CSI_GENX320_BIASES_ACTIVE_MARKER: {
+                    // Set biases tuned for active marker
+                    psee_sensor_set_bias(DIFF, 51);
+                    psee_sensor_set_bias(DIFF_OFF, 45); //127
+                    psee_sensor_set_bias(DIFF_ON, 55); //78
+                    psee_sensor_set_bias(FO, 50);
+                    psee_sensor_set_bias(HPF, 127);
+                    psee_sensor_set_bias(REFR, 0);
+                    break;
+                }
+                case OMV_CSI_GENX320_BIASES_LOW_NOISE: {
+                    // Set low sensitivity low noise biases
+                    psee_sensor_set_bias(DIFF, 51);
+                    psee_sensor_set_bias(DIFF_OFF, 38);
+                    psee_sensor_set_bias(DIFF_ON, 35);
+                    psee_sensor_set_bias(FO, 24);
+                    psee_sensor_set_bias(HPF, 40);
+                    psee_sensor_set_bias(REFR, 10);
+                    break;
+                }
+                case OMV_CSI_GENX320_BIASES_HIGH_SPEED: {
+                    // Set biases tuned for high speed motion
+                    psee_sensor_set_bias(DIFF, 51);
+                    psee_sensor_set_bias(DIFF_OFF, 26);
+                    psee_sensor_set_bias(DIFF_ON, 37);
+                    psee_sensor_set_bias(FO, 38);
+                    psee_sensor_set_bias(HPF, 74);
+                    psee_sensor_set_bias(REFR, 25);
+                    break;
+                }
+                default: {
+                    ret = -1;
+                    break;
+                }
+            }
+            break;
+        }
+        default: {
+            ret = -1;
+            break;
+        }
+    }
+
+    return ret;
+}
+
 int genx320_init(omv_csi_t *csi) {
     // Initialize csi structure
     csi->reset = reset;
@@ -446,6 +520,7 @@ int genx320_init(omv_csi_t *csi) {
     csi->set_hmirror = set_hmirror;
     csi->set_vflip = set_vflip;
     csi->snapshot = snapshot;
+    csi->ioctl = ioctl;
 
     // Set csi flags
     csi->mono_bpp = sizeof(uint8_t);
