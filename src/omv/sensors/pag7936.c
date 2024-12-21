@@ -85,9 +85,12 @@
 #define SENSOR_UPDATE_FLAG          (0x80)
 #define INTERFACE_POLARITY          (0x0EAF)
 #define SENSOR_OPMODE               (0x0008)
+#define SENSOR_OPMODE_RUN           (0x83)
+#define SENSOR_OPMODE_SUSPEND       (0x85)
 #define SENSOR_TRIGGER_FRAMENUM     (0x002E)
 #define SENSOR_TRIGGER_EN           (0x002F)
 #define SENSOR_TG_EN                (0x0030)
+#define SENSOR_TG_EN_FLAG           (0x01)
 #define SENSOR_TRIGGER_MODE         (0x0031)
 #define SENSOR_SOFTWARE_TRIGGER     (0x00EA)
 #define ISP_EN_H                    (0x0800)
@@ -413,6 +416,9 @@ static int reset(omv_csi_t *csi) {
 }
 
 static int sleep(omv_csi_t *csi, int enable) {
+    int ret = omv_i2c_writeb2(&csi->i2c_bus, csi->slv_addr, SENSOR_TG_EN, SENSOR_TG_EN_FLAG);
+    ret |= omv_i2c_writeb2(&csi->i2c_bus, csi->slv_addr, SENSOR_OPMODE,
+                           enable ? SENSOR_OPMODE_SUSPEND : SENSOR_OPMODE_RUN);
     return 0;
 }
 
