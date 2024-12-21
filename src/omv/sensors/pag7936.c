@@ -59,6 +59,10 @@
 #define SENSOR_TG_EN                (0x0030)
 #define SENSOR_TRIGGER_MODE         (0x0031)
 #define SENSOR_SOFTWARE_TRIGGER     (0x00EA)
+#define ISP_EN_H                    (0x0800)
+#define ISP_EN_H_EN                 (0x01)
+#define ISP_TEST_MODE               (0x0801)
+#define ISP_TEST_MODE_RAMP          (0x04)
 #define ISP_WOI_EN                  (0x0E10)
 #define ISP_WOI_HSIZE_L             (0x0E11)
 #define ISP_WOI_HSIZE_H             (0x0E12)
@@ -430,7 +434,15 @@ static int set_framerate(omv_csi_t *csi, int framerate) {
 }
 
 static int set_colorbar(omv_csi_t *csi, int enable) {
-    return 0;
+    uint8_t reg;
+    int ret = omv_i2c_readb2(&csi->i2c_bus, csi->slv_addr, ISP_EN_H, &reg);
+    ret |= omv_i2c_writeb2(&csi->i2c_bus, csi->slv_addr, ISP_EN_H,
+                           (reg & ~ISP_EN_H_EN) | (enable ? ISP_EN_H_EN : 0));
+    ret |= omv_i2c_readb2(&csi->i2c_bus, csi->slv_addr, ISP_TEST_MODE, &reg);
+    ret |= omv_i2c_writeb2(&csi->i2c_bus, csi->slv_addr, ISP_TEST_MODE,
+                           (reg & ~ISP_TEST_MODE_RAMP) | (enable ? ISP_TEST_MODE_RAMP : 0));
+    ret |= omv_i2c_writeb2(&csi->i2c_bus, csi->slv_addr, SENSOR_UPDATE, SENSOR_UPDATE_FLAG);
+    return ret;
 }
 
 static int set_hmirror(omv_csi_t *csi, int enable) {
