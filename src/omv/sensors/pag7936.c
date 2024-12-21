@@ -168,9 +168,15 @@
 #define PAG7936_EXPOSURE_L(exp)     ((exp) & 0xff)
 
 #if OMV_PAG7936_MIPI_CSI2
-#define PAG7936_WIDTH_ALIGN (8)
+#define PAG7936_WIDTH_ALIGN         (8)
+#define PAG7936_QVGA_FPS_MAX        (480)
+#define PAG7936_VGA_FPS_MAX         (240)
+#define PAG7936_HD_FPS_MAX          (120)
 #else
-#define PAG7936_WIDTH_ALIGN (4)
+#define PAG7936_WIDTH_ALIGN         (4)
+#define PAG7936_QVGA_FPS_MAX        (240)
+#define PAG7936_VGA_FPS_MAX         (120)
+#define PAG7936_HD_FPS_MAX          (60)
 #endif
 
 static const uint16_t default_regs[][2] = {
@@ -473,6 +479,21 @@ static int set_framesize(omv_csi_t *csi, omv_csi_framesize_t framesize) {
 static int set_framerate(omv_csi_t *csi, int framerate) {
     uint8_t reg, exposure_us_17_16, exposure_us_15_8, exposure_us_7_0;
     int ret = 0;
+
+    switch (csi->framesize) {
+        case OMV_CSI_FRAMESIZE_HD:
+            framerate = IM_MIN(framerate, PAG7936_HD_FPS_MAX);
+            break;
+        case OMV_CSI_FRAMESIZE_VGA:
+            framerate = IM_MIN(framerate, PAG7936_VGA_FPS_MAX);
+            break;
+        case OMV_CSI_FRAMESIZE_QVGA:
+            framerate = IM_MIN(framerate, PAG7936_QVGA_FPS_MAX);
+            break;
+        default:
+            return -1;
+    }
+
     int32_t frame_time = FT_CLK / framerate;
 
     ret |= omv_i2c_readb2(&csi->i2c_bus, csi->slv_addr, FRAME_TIME_20_16, &reg);
