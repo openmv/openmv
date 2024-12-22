@@ -640,7 +640,35 @@ void HAL_DMA2D_MspDeInit(DMA2D_HandleTypeDef *hdma2d) {
     __HAL_RCC_DMA2D_FORCE_RESET();
     __HAL_RCC_DMA2D_RELEASE_RESET();
     __HAL_RCC_DMA2D_CLK_DISABLE();
+    __HAL_RCC_DMA2D_CLK_SLEEP_DISABLE();
 }
+
+#if defined(GPU2D)
+void HAL_GPU2D_MspInit(GPU2D_HandleTypeDef *hgpu2d) {
+    __HAL_RCC_GPU2D_FORCE_RESET();
+    __HAL_RCC_GPU2D_RELEASE_RESET();
+
+    __HAL_RCC_GPU2D_CLK_ENABLE();
+    __HAL_RCC_GPU2D_CLK_SLEEP_ENABLE();
+}
+
+void HAL_GPU2D_MspDeInit(GPU2D_HandleTypeDef *hgpu2d) {
+    __HAL_RCC_GPU2D_CLK_DISABLE();
+    __HAL_RCC_GPU2D_CLK_SLEEP_DISABLE();
+}
+#endif
+
+#if defined(GFXMMU)
+void HAL_GFXMMU_MspInit(GFXMMU_HandleTypeDef *hgfxmmu) {
+    __HAL_RCC_GFXMMU_CLK_ENABLE();
+    __HAL_RCC_GFXMMU_CLK_SLEEP_ENABLE();
+}
+
+void HAL_GFXMMU_MspDeInit(GFXMMU_HandleTypeDef *hgfxmmu) {
+    __HAL_RCC_GFXMMU_CLK_DISABLE();
+    __HAL_RCC_GFXMMU_CLK_SLEEP_DISABLE();
+}
+#endif
 
 #if (OMV_JPEG_CODEC_ENABLE == 1)
 void HAL_JPEG_MspInit(JPEG_HandleTypeDef *hjpeg) {

@@ -58,6 +58,7 @@ CFLAGS += -D$(MCU) \
           -DHSE_VALUE=$(OMV_HSE_VALUE)\
           -DOMV_VTOR_BASE=$(OMV_FIRM_ADDR) \
           -DCMSIS_MCU_H='<$(MCU_LOWER).h>' \
+          -DOMV_NOSYS_STUBS_ENABLE=1 \
           -DSTM32_HAL_H='<stm32$(MCU_SERIES)xx_hal.h>' \
           $(OMV_BOARD_CFLAGS)
 
@@ -125,6 +126,7 @@ OMV_CFLAGS += -I$(TOP_DIR)/$(MLX90641_DIR)/include/
 OMV_CFLAGS += -I$(TOP_DIR)/$(PIXART_DIR)/include/
 OMV_CFLAGS += -I$(TOP_DIR)/$(DISPLAY_DIR)/include/
 OMV_CFLAGS += -I$(TOP_DIR)/$(LIBPDM_DIR)/
+OMV_CFLAGS += -I$(TOP_DIR)/$(NEMA_DIR)/include
 
 ifeq ($(OMV_ENABLE_UVC), 1)
 UVC_CFLAGS := $(CFLAGS) $(HAL_CFLAGS)
@@ -189,6 +191,7 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/common/, \
 	file_utils.o                \
 	mp_utils.o                  \
 	omv_csi.o                   \
+	nosys_stubs.o               \
    )
 
 FIRM_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/sensors/,   \
@@ -650,6 +653,10 @@ endif
 #------------- Libraries ----------------#
 ifeq ($(MICROPY_PY_AUDIO), 1)
 LIBS += $(TOP_DIR)/$(LIBPDM_DIR)/libPDMFilter_CM7_GCC_wc32.a
+endif
+
+ifeq ($(MCU_SERIES),$(filter $(MCU_SERIES),n6))
+LIBS += $(TOP_DIR)/$(NEMA_DIR)/lib/libnemagfx-$(CPU)+fp.a
 endif
 
 #------------- ML libraries ----------------#
