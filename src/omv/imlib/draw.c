@@ -2954,11 +2954,13 @@ void imlib_draw_image(image_t *dst_img,
     // top 16-bits = whole part, bottom 16-bits = fractional part.
 
     int dst_x_reset = (dst_delta_x < 0) ? (dst_x_end - 1) : dst_x_start;
-    long src_x_frac = fast_floorf(65536.0f / x_scale), src_x_frac_size = (src_x_frac + 0xFFFF) >> 16;
+    long src_x_frac = fast_floorf(65536.0f / x_scale);
+    long src_x_frac_size = (src_x_frac + 0xFFFF) >> 16;
     long src_x_accum_reset = fast_floorf((src_x_start << 16) / x_scale);
 
     int dst_y_reset = (dst_delta_y < 0) ? (dst_y_end - 1) : dst_y_start;
-    long src_y_frac = fast_floorf(65536.0f / y_scale), src_y_frac_size = (src_y_frac + 0xFFFF) >> 16;
+    long src_y_frac = fast_floorf(65536.0f / y_scale);
+    long src_y_frac_size = (src_y_frac + 0xFFFF) >> 16;
     long src_y_accum_reset = fast_floorf((src_y_start << 16) / y_scale);
 
     // Nearest Neighbor
