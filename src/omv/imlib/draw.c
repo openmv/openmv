@@ -3065,12 +3065,48 @@ void imlib_draw_image(image_t *dst_img,
     bool is_yuv_conversion = src_img->is_yuv && !dst_img->is_yuv;
     bool is_bayer_yuv_conversion = is_bayer_conversion || is_yuv_conversion;
 
+    // Is the line length growing which will prevent us from working in-place?
+    bool is_upscaling = src_img_row_bytes < dst_img_row_bytes;
+
     // Force a deep copy if we cannot use the image in-place.
     bool need_deep_copy = (dst_img->data == src_img->data)
-                          && (is_scaling || (src_img_row_bytes < dst_img_row_bytes) || is_bayer_yuv_conversion);
+                          && (is_scaling || is_upscaling || is_bayer_yuv_conversion);
 
     // Force a deep copy if we are scaling.
     bool is_bayer_yuv_conversion_scaling = is_bayer_yuv_conversion && is_scaling;
+
+    #if (OMV_GPU_ENABLE == 1)
+    if (!callback &&
+        !is_bayer_yuv_conversion &&
+        !src_img->is_compressed &&
+        (rgb_channel < 0) &&
+        ((dst_img->data != src_img->data) || (!is_upscaling)) &&
+        !(hint & (IMAGE_HINT_AREA | IMAGE_HINT_BICUBIC | IMAGE_HINT_TRANSPOSE))) {
+
+        rectangle_t dst_rect = {
+            .x = dst_x_start,
+            .y = dst_y_start,
+            .w = dst_x_end - dst_rect.x,
+            .h = dst_y_end - dst_rect.y,
+        };
+
+        rectangle_t src_rect = {
+            .x = src_x_accum_reset >> 16,
+            .y = src_y_accum_reset >> 16,
+            .w = ((src_x_accum_reset + (src_x_frac * dst_rect.w)) >> 16) - src_rect.x,
+            .h = ((src_y_accum_reset + (src_y_frac * dst_rect.h)) >> 16) - src_rect.y,
+        };
+
+        image_hint_t gpu_hints = ((dst_delta_x < 0) ? IMAGE_HINT_HMIRROR : 0) |
+                                 ((dst_delta_y < 0) ? IMAGE_HINT_VFLIP : 0) |
+                                 (hint & (IMAGE_HINT_BILINEAR | IMAGE_HINT_BLACK_BACKGROUND));
+
+        if (!omv_gpu_draw_image(src_img, &src_rect, dst_img, &dst_rect,
+                                alpha, color_palette, alpha_palette, gpu_hints)) {
+            goto exit_cleanup;
+        }
+    }
+    #endif
 
     // Make a deep copy of the source image.
     if (need_deep_copy || is_bayer_yuv_conversion_scaling || is_jpeg || is_png) {
@@ -3244,31 +3280,6 @@ void imlib_draw_image(image_t *dst_img,
 
         goto exit_cleanup;
     }
-
-    #if (OMV_GPU_ENABLE == 1)
-    // Try to offload this to the GPU for processing.
-    if ((rgb_channel < 0) && (!(hint & (IMAGE_HINT_AREA | IMAGE_HINT_BICUBIC))) && (!callback)) {
-        rectangle_t dst_rect;
-        dst_rect.x = dst_x_start;
-        dst_rect.y = dst_y_start;
-        dst_rect.w = dst_x_end - dst_rect.x;
-        dst_rect.h = dst_y_end - dst_rect.y;
-
-        rectangle_t src_rect;
-        src_rect.x = src_x_accum_reset >> 16;
-        src_rect.y = src_y_accum_reset >> 16;
-        src_rect.w = ((src_x_accum_reset + (src_x_frac * dst_rect.w)) >> 16) - src_rect.x;
-        src_rect.h = ((src_y_accum_reset + (src_y_frac * dst_rect.h)) >> 16) - src_rect.y;
-
-        image_hint_t gpu_hint = hint & (IMAGE_HINT_BILINEAR | IMAGE_HINT_BLACK_BACKGROUND);
-        gpu_hint |= (dst_delta_x < 0) ? IMAGE_HINT_HMIRROR : 0;
-        gpu_hint |= (dst_delta_y < 0) ? IMAGE_HINT_VFLIP : 0;
-
-        if (!omv_gpu_draw_image(src_img, &src_rect, dst_img, &dst_rect, alpha, color_palette, alpha_palette, gpu_hint)) {
-            goto exit_cleanup;
-        }
-    }
-    #endif
 
     // Bicbuic and bilinear both shift the image right by (0.5, 0.5) so we have to undo that.
     if (hint & (IMAGE_HINT_BICUBIC | IMAGE_HINT_BILINEAR)) {
