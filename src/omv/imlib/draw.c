@@ -3040,9 +3040,6 @@ void imlib_draw_image(image_t *dst_img,
         color_palette = NULL;
     }
 
-    // Special destination?
-    bool is_jpeg = src_img->pixfmt == PIXFORMAT_JPEG;
-    bool is_png = src_img->pixfmt == PIXFORMAT_PNG;
     // Best format to convert yuv/bayer/jpeg image to.
     int new_not_mutable_pixfmt = (rgb_channel != -1) ? PIXFORMAT_RGB565 :
                                  (color_palette ? PIXFORMAT_GRAYSCALE :
@@ -3067,13 +3064,6 @@ void imlib_draw_image(image_t *dst_img,
 
     // Is the line length growing which will prevent us from working in-place?
     bool is_upscaling = src_img_row_bytes < dst_img_row_bytes;
-
-    // Force a deep copy if we cannot use the image in-place.
-    bool need_deep_copy = (dst_img->data == src_img->data)
-                          && (is_scaling || is_upscaling || is_bayer_yuv_conversion);
-
-    // Force a deep copy if we are scaling.
-    bool is_bayer_yuv_conversion_scaling = is_bayer_yuv_conversion && is_scaling;
 
     #if (OMV_GPU_ENABLE == 1)
     if (!callback &&
@@ -3109,7 +3099,10 @@ void imlib_draw_image(image_t *dst_img,
     #endif
 
     // Make a deep copy of the source image.
-    if (need_deep_copy || is_bayer_yuv_conversion_scaling || is_jpeg || is_png) {
+    if (((dst_img->data == src_img->data) &&
+         (is_scaling || is_upscaling || is_bayer_yuv_conversion)) ||
+        (is_bayer_yuv_conversion && is_scaling) ||
+        src_img->is_compressed) {
         new_src_img.w = src_img->w; // same width as source image
         new_src_img.h = src_img->h; // same height as source image
 
@@ -3126,9 +3119,9 @@ void imlib_draw_image(image_t *dst_img,
                         imlib_debayer_image(&new_src_img, src_img);
                     } else if (src_img->is_yuv) {
                         imlib_deyuv_image(&new_src_img, src_img);
-                    } else if (is_jpeg) {
+                    } else if (src_img->pixfmt == PIXFORMAT_JPEG) {
                         jpeg_decompress(&new_src_img, src_img);
-                    } else if (is_png) {
+                    } else if (src_img->pixfmt == PIXFORMAT_PNG) {
                         png_decompress(&new_src_img, src_img);
                     }
                     break;
@@ -3139,7 +3132,7 @@ void imlib_draw_image(image_t *dst_img,
                     break;
                 }
                 default: {
-                    if (is_png) {
+                    if (src_img->pixfmt == PIXFORMAT_PNG) {
                         png_decompress(&new_src_img, src_img);
                     }
                     break;
