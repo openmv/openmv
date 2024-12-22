@@ -3061,19 +3061,19 @@ void imlib_draw_image(image_t *dst_img,
     size_t dst_img_row_bytes = image_size(dst_img) / dst_img->h;
 
     // Do we need to convert the image?
-    bool is_bayer_color_conversion = src_img->is_bayer && !dst_img->is_bayer;
-    bool is_yuv_color_conversion = src_img->is_yuv && !dst_img->is_yuv;
-    bool is_color_conversion = is_bayer_color_conversion || is_yuv_color_conversion;
+    bool is_bayer_conversion = src_img->is_bayer && !dst_img->is_bayer;
+    bool is_yuv_conversion = src_img->is_yuv && !dst_img->is_yuv;
+    bool is_bayer_yuv_conversion = is_bayer_conversion || is_yuv_conversion;
 
     // Force a deep copy if we cannot use the image in-place.
     bool need_deep_copy = (dst_img->data == src_img->data)
-                          && (is_scaling || (src_img_row_bytes < dst_img_row_bytes) || is_color_conversion);
+                          && (is_scaling || (src_img_row_bytes < dst_img_row_bytes) || is_bayer_yuv_conversion);
 
     // Force a deep copy if we are scaling.
-    bool is_color_conversion_scaling = is_color_conversion && is_scaling;
+    bool is_bayer_yuv_conversion_scaling = is_bayer_yuv_conversion && is_scaling;
 
     // Make a deep copy of the source image.
-    if (need_deep_copy || is_color_conversion_scaling || is_jpeg || is_png) {
+    if (need_deep_copy || is_bayer_yuv_conversion_scaling || is_jpeg || is_png) {
         new_src_img.w = src_img->w; // same width as source image
         new_src_img.h = src_img->h; // same height as source image
 
