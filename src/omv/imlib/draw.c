@@ -927,46 +927,6 @@ void imlib_draw_row(int x_start, int x_end, int y_row, imlib_draw_row_data_t *da
                                 }
                             }
                         }
-                        // More desirable results are produced by alpha blending with 8-bits.
-                        // if (!data->color_palette) {
-                        //     for (int x = x_start; x < x_end; x++) {
-                        //         int pixel = IMAGE_GET_BINARY_PIXEL_FAST(src32, x) & IMAGE_GET_BINARY_PIXEL_FAST(dst32, x);
-                        //         IMAGE_PUT_BINARY_PIXEL_FAST(dst32, x, pixel);
-                        //     }
-                        // } else {
-                        //     const uint16_t *color_palette = data->color_palette;
-                        //     uint16_t pal0 = color_palette[0], pal255 = color_palette[255];
-                        //     pal0 = COLOR_RGB565_TO_Y(pal0) > 127;
-                        //     pal255 = COLOR_RGB565_TO_Y(pal255) > 127;
-                        //     switch ((pal0 << 1) | (pal255 << 0)) {
-                        //         case 0: {
-                        //             for (int x = x_start; x < x_end; x++) {
-                        //                 IMAGE_PUT_BINARY_PIXEL_FAST(dst32, x, 0);
-                        //             }
-                        //             break;
-                        //         }
-                        //         case 1: {
-                        //             for (int x = x_start; x < x_end; x++) {
-                        //                 int pixel = IMAGE_GET_BINARY_PIXEL_FAST(src32, x) & IMAGE_GET_BINARY_PIXEL_FAST(dst32, x);
-                        //                 IMAGE_PUT_BINARY_PIXEL_FAST(dst32, x, pixel);
-                        //             }
-                        //             break;
-                        //         }
-                        //         case 2: {
-                        //             for (int x = x_start; x < x_end; x++) {
-                        //                 int pixel = !(IMAGE_GET_BINARY_PIXEL_FAST(src32, x) | IMAGE_GET_BINARY_PIXEL_FAST(dst32, x));
-                        //                 IMAGE_PUT_BINARY_PIXEL_FAST(dst32, x, pixel);
-                        //             }
-                        //             break;
-                        //         }
-                        //         case 3: {
-                        //             for (int x = x_start; x < x_end; x++) {
-                        //                 IMAGE_PUT_BINARY_PIXEL_FAST(dst32, x, 1);
-                        //             }
-                        //             break;
-                        //         }
-                        //     }
-                        // }
                     }
                     break;
                 }
@@ -4348,123 +4308,6 @@ void imlib_draw_image(image_t *dst_img,
                         while (x_not_done) {
                             int src_x_index = next_src_x_index;
                             int src_x_index_m_1 = src_x_index - 1;
-// Concept code showing off how to do 4 operations in parallel. Not useful however because of overflows
-// in the 8-bit accumulators - the final image looks bad. Might be workable for lower bit-depth images.
-#if 0
-                            int pixel_row_0, pixel_row_1, pixel_row_2, pixel_row_3;
-                            // Column 0 = Bits[7:0]
-                            // Column 1 = Bits[15:8]
-                            // Column 2 = Bits[23:16]
-                            // Column 3 = Bits[31:24]
-
-                            if (src_x_index < w_start) {
-                                pixel_row_0 = ((*(src_row_ptr_0 + w_start)) * 0x010101) |
-                                              ((*(src_row_ptr_0 + w_start_p_1)) << 24);
-                                pixel_row_1 = ((*(src_row_ptr_1 + w_start)) * 0x010101) |
-                                              ((*(src_row_ptr_1 + w_start_p_1)) << 24);
-                                pixel_row_2 = ((*(src_row_ptr_2 + w_start)) * 0x010101) |
-                                              ((*(src_row_ptr_2 + w_start_p_1)) << 24);
-                                pixel_row_3 = ((*(src_row_ptr_3 + w_start)) * 0x010101) |
-                                              ((*(src_row_ptr_3 + w_start_p_1)) << 24);
-                            } else if (src_x_index == w_start) {
-                                pixel_row_0 = ((*(src_row_ptr_0 + w_start)) * 0x0101) |
-                                              ((*((uint16_t *) (src_row_ptr_0 + w_start_p_1))) << 16);
-                                pixel_row_1 = ((*(src_row_ptr_1 + w_start)) * 0x0101) |
-                                              ((*((uint16_t *) (src_row_ptr_1 + w_start_p_1))) << 16);
-                                pixel_row_2 = ((*(src_row_ptr_2 + w_start)) * 0x0101) |
-                                              ((*((uint16_t *) (src_row_ptr_2 + w_start_p_1))) << 16);
-                                pixel_row_3 = ((*(src_row_ptr_3 + w_start)) * 0x0101) |
-                                              ((*((uint16_t *) (src_row_ptr_3 + w_start_p_1))) << 16);
-                            } else if (src_x_index == w_limit_m_1) {
-                                pixel_row_0 = (*((uint16_t *) (src_row_ptr_0 + src_x_index_m_1))) |
-                                              ((*(src_row_ptr_0 + w_limit)) * 0x01010000);
-                                pixel_row_1 = (*((uint16_t *) (src_row_ptr_1 + src_x_index_m_1))) |
-                                              ((*(src_row_ptr_1 + w_limit)) * 0x01010000);
-                                pixel_row_2 = (*((uint16_t *) (src_row_ptr_2 + src_x_index_m_1))) |
-                                              ((*(src_row_ptr_2 + w_limit)) * 0x01010000);
-                                pixel_row_3 = (*((uint16_t *) (src_row_ptr_3 + src_x_index_m_1))) |
-                                              ((*(src_row_ptr_3 + w_limit)) * 0x01010000);
-                            } else if (src_x_index >= w_limit) {
-                                pixel_row_0 = (*(src_row_ptr_0 + src_x_index_m_1)) |
-                                              ((*(src_row_ptr_0 + w_limit)) * 0x01010100);
-                                pixel_row_1 = (*(src_row_ptr_1 + src_x_index_m_1)) |
-                                              ((*(src_row_ptr_1 + w_limit)) * 0x01010100);
-                                pixel_row_2 = (*(src_row_ptr_2 + src_x_index_m_1)) |
-                                              ((*(src_row_ptr_2 + w_limit)) * 0x01010100);
-                                pixel_row_3 = (*(src_row_ptr_3 + src_x_index_m_1)) |
-                                              ((*(src_row_ptr_3 + w_limit)) * 0x01010100);
-                            } else {
-                                // get 4 neighboring rows
-                                pixel_row_0 = *((uint32_t *) (src_row_ptr_0 + src_x_index_m_1));
-                                pixel_row_1 = *((uint32_t *) (src_row_ptr_1 + src_x_index_m_1));
-                                pixel_row_2 = *((uint32_t *) (src_row_ptr_2 + src_x_index_m_1));
-                                pixel_row_3 = *((uint32_t *) (src_row_ptr_3 + src_x_index_m_1));
-                            }
-
-                            // Need 8-bit signed (0x7F max).
-                            pixel_row_0 = __UHADD8(pixel_row_0, 0);
-                            pixel_row_1 = __UHADD8(pixel_row_1, 0);
-                            pixel_row_2 = __UHADD8(pixel_row_2, 0);
-                            pixel_row_3 = __UHADD8(pixel_row_3, 0);
-
-                            // Need 1/3 guard bits.
-                            pixel_row_0 = __UHADD8(pixel_row_0, 0);
-                            pixel_row_1 = __UHADD8(pixel_row_1, 0);
-                            pixel_row_2 = __UHADD8(pixel_row_2, 0);
-                            pixel_row_3 = __UHADD8(pixel_row_3, 0);
-
-                            // Need 2/3 guard bits.
-                            pixel_row_0 = __UHADD8(pixel_row_0, 0);
-                            pixel_row_1 = __UHADD8(pixel_row_1, 0);
-                            pixel_row_2 = __UHADD8(pixel_row_2, 0);
-                            pixel_row_3 = __UHADD8(pixel_row_3, 0);
-
-                            // Need 3/3 guard bits.
-                            pixel_row_0 = __UHADD8(pixel_row_0, 0);
-                            pixel_row_1 = __UHADD8(pixel_row_1, 0);
-                            pixel_row_2 = __UHADD8(pixel_row_2, 0);
-                            pixel_row_3 = __UHADD8(pixel_row_3, 0);
-
-                            long temp0 = __QADD8(pixel_row_2, pixel_row_2);
-                            long temp1 = __QADD8(pixel_row_1, pixel_row_1);
-                            long temp2 = __QSUB8(pixel_row_1, pixel_row_2);
-
-                            long a0_col = __QSUB8(pixel_row_2, pixel_row_0);
-                            long a1_col =
-                                __QSUB8(__QSUB8(__QADD8(__QADD8(pixel_row_0, pixel_row_0), __QADD8(temp0, temp0)),
-                                                __QADD8(__QADD8(temp1, temp1), pixel_row_1)), pixel_row_3);
-                            long a2_col = __QSUB8(__QADD8(__QADD8(__QADD8(temp2, temp2), temp2), pixel_row_3), pixel_row_0);
-
-                            long a0_col_2_0 = __SXTB16(a0_col);
-                            long a1_col_2_0 = __SXTB16(a1_col);
-                            long a2_col_2_0 = __SXTB16(a2_col);
-
-                            long smuad_a0_a1_0 = __PKHBT(a1_col_2_0, a0_col_2_0, 16);
-                            long pixel_1_avg_0 = ((pixel_row_1 & 0xff) << 16) | 0x8000;
-                            int d0 =
-                                ((int32_t) __SMLAD(smuad_dy_dy2, smuad_a0_a1_0, __SMLAD(dy3, a2_col_2_0, pixel_1_avg_0))) >> 16;
-
-                            long smuad_a0_a1_2 = __PKHTB(a0_col_2_0, a1_col_2_0, 16);
-                            long pixel_1_avg_2 = (pixel_row_1 & 0xff0000) | 0x8000;
-                            int d2 =
-                                ((int32_t) __SMLAD(smuad_dy_dy2, smuad_a0_a1_2,
-                                                   __SMLADX(dy3, a2_col_2_0, pixel_1_avg_2))) >> 16;
-
-                            long a0_col_3_1 = __SXTB16_RORn(a0_col, 8);
-                            long a1_col_3_1 = __SXTB16_RORn(a1_col, 8);
-                            long a2_col_3_1 = __SXTB16_RORn(a2_col, 8);
-
-                            long smuad_a0_a1_1 = __PKHBT(a1_col_3_1, a0_col_3_1, 16);
-                            long pixel_1_avg_1 = ((pixel_row_1 << 8) & 0xff0000) | 0x8000;
-                            int d1 =
-                                ((int32_t) __SMLAD(smuad_dy_dy2, smuad_a0_a1_1, __SMLAD(dy3, a2_col_3_1, pixel_1_avg_1))) >> 16;
-
-                            long smuad_a0_a1_3 = __PKHTB(a0_col_3_1, a1_col_3_1, 16);
-                            long pixel_1_avg_3 = ((pixel_row_1 >> 8) & 0xff0000) | 0x8000;
-                            int d3 =
-                                ((int32_t) __SMLAD(smuad_dy_dy2, smuad_a0_a1_3,
-                                                   __SMLADX(dy3, a2_col_3_1, pixel_1_avg_3))) >> 16;
-#else
                             int src_x_index_p_1 = src_x_index + 1;
                             int src_x_index_p_2 = src_x_index + 2;
                             int pixel_x_offests[4];
@@ -4511,7 +4354,6 @@ void imlib_draw_image(image_t *dst_img,
                             } // for z
 
                             int d0 = d[0], d1 = d[1], d2 = d[2], d3 = d[3];
-#endif
                             int a0 = d2 - d0;
                             int a1 = (d0 << 1) + (d2 << 2) - (5 * d1) - d3;
                             int a2 = (3 * (d1 - d2)) + d3 - d0;
