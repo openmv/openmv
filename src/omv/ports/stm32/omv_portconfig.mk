@@ -92,15 +92,13 @@ MPY_CFLAGS += -I$(TOP_DIR)/$(MICROPY_DIR)/shared/runtime/
 MPY_CFLAGS += -DMICROPY_PY_SSL=1 \
               -DMICROPY_SSL_MBEDTLS=1 \
               -DMICROPY_STREAMS_POSIX_API=1 \
-              -DMICROPY_VFS_FAT=1 \
-              -DMICROPY_PY_BTREE=1
+              -DMICROPY_VFS_FAT=1
 
 
 MICROPY_ARGS += STM32LIB_CMSIS_DIR=$(TOP_DIR)/$(CMSIS_DIR) \
                 STM32LIB_HAL_DIR=$(TOP_DIR)/$(HAL_DIR) \
                 MICROPY_PY_SSL=1 \
                 MICROPY_SSL_MBEDTLS=1 \
-                MICROPY_PY_BTREE=1\
                 MICROPY_PY_OPENAMP=$(MICROPY_PY_OPENAMP)\
                 MICROPY_PY_OPENAMP_REMOTEPROC=$(MICROPY_PY_OPENAMP_REMOTEPROC)
 
@@ -354,10 +352,12 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/shared/,\
 	readline/readline.o         \
 	)
 
+ifeq ($(MICROPY_PY_BTREE), 1)
 FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/lib/,\
 	berkeley-db-1.xx/btree/*.o  \
 	berkeley-db-1.xx/mpool/*.o  \
 	)
+endif
 
 #------------- mbedtls -------------------#
 FIRM_OBJ += $(wildcard $(BUILD)/$(MICROPY_DIR)/lib/mbedtls/library/*.o)
