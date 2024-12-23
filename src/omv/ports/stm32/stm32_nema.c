@@ -29,6 +29,9 @@
 #include "omv_boardconfig.h"
 
 #if (OMV_GPU_NEMA == 1)
+#include "py/mphal.h"
+#include "irq.h"
+
 #include "omv_common.h"
 #include "nema_core.h"
 #include "nema_sys_defs.h"
