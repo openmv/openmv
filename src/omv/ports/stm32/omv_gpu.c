@@ -26,19 +26,114 @@
 #include "omv_boardconfig.h"
 #if (OMV_GPU_ENABLE == 1)
 #include STM32_HAL_H
+
+#include "py/mphal.h"
+#include "py/runtime.h"
+
 #include "imlib.h"
 #include "dma.h"
 
+#if OMV_GPU_NEMA
+#include "nema_core.h"
+#include "nema_vg.h"
+#include "nema_error.h"
+#endif
+
+#if OMV_GPU_NEMA_MM_STATIC
+uint8_t OMV_ATTR_SECTION(OMV_ATTR_ALIGNED(NEMA_BUFFER[OMV_GPU_NEMA_BUFFER_SIZE], 32), ".dma_buffer");
+#endif
+
 int omv_gpu_init() {
-    return 0;
+    int error = 0;
+    #if OMV_GPU_NEMA
+    nema_init();
+    error = nema_get_error();
+    #endif
+    return error;
 }
 
 void omv_gpu_deinit() {
-    DMA2D_HandleTypeDef dma2d = {};
-    dma2d.Instance = DMA2D;
-    HAL_DMA2D_DeInit(&dma2d);
+
 }
 
+#if OMV_GPU_NEMA
+static nema_tex_format_t omv_gpu_pixfmt(uint32_t omv_pixfmt) {
+    switch (omv_pixfmt) {
+        case PIXFORMAT_BINARY:
+            return NEMA_L1;     // source only
+        case PIXFORMAT_BAYER_ANY:
+        case PIXFORMAT_GRAYSCALE:
+            return NEMA_L8;
+        case PIXFORMAT_RGB565:
+            return NEMA_RGB565;
+    }
+    mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Pixel format is not supported"));
+}
+
+int omv_gpu_draw_image(image_t *src_img,
+                       rectangle_t *src_rect,
+                       image_t *dst_img,
+                       rectangle_t *dst_rect,
+                       int alpha,
+                       const uint16_t *color_palette,
+                       const uint8_t *alpha_palette,
+                       image_hint_t hint) {
+    OMV_PROFILE_START();
+
+    if ((dst_rect->w != src_rect->w) || (dst_rect->h != src_rect->h)) {
+        // Create command list.
+        #if OMV_GPU_NEMA_MM_STATIC
+        nema_buffer_t bo = {
+            .size = sizeof(NEMA_BUFFER),
+            .base_virt = NEMA_BUFFER,
+            .base_phys = (uint32_t) NEMA_BUFFER,
+        };
+        nema_cmdlist_t cl = nema_cl_create_prealloc(&bo);
+        #else
+        nema_cmdlist_t cl = nema_cl_create_sized(OMV_GPU_NEMA_BUFFER_SIZE);
+        #endif
+        // Bind command list.
+        nema_cl_bind_circular(&cl);
+
+        nema_tex_mode_t blit_mode;
+        if (hint & IMAGE_HINT_BILINEAR) {
+            blit_mode = NEMA_FILTER_BL;
+        } else {
+            blit_mode = NEMA_FILTER_PS;
+        }
+        // Set up destination texture.
+        nema_tex_format_t dst_pixfmt = omv_gpu_pixfmt(dst_img->pixfmt);
+        nema_bind_dst_tex((uintptr_t) dst_img->data, dst_rect->w, dst_rect->h, dst_pixfmt, -1);
+
+        // Set up source texture.
+        nema_tex_format_t src_pixfmt = omv_gpu_pixfmt(src_img->pixfmt);
+        nema_bind_src_tex((uintptr_t) src_img->data, src_rect->w, src_rect->h, src_pixfmt, -1, blit_mode);
+
+        // Configure operations.
+        nema_set_blend_blit(NEMA_BL_SRC);
+        nema_set_clip(0, 0, dst_rect->w, dst_rect->h);
+        nema_blit_rect_fit(0, 0, dst_rect->w, dst_rect->h);
+
+        // Flush source image
+        SCB_CleanDCache_by_Addr(src_img->data, image_size(src_img));
+
+        nema_cl_submit(&cl);
+        nema_cl_wait(&cl);
+        #if !OMV_GPU_NEMA_MM_STATIC
+        nema_cl_destroy(&cl);
+        #endif
+
+        // Invalidate the destination image.
+        SCB_InvalidateDCache_by_Addr(dst_img->data, image_size(dst_img));
+
+    } else {
+        return -1;
+    }
+
+    OMV_PROFILE_PRINT();
+    return 0;
+}
+#else
 int omv_gpu_draw_image(image_t *src_img,
                        rectangle_t *src_rect,
                        image_t *dst_img,
@@ -79,9 +174,11 @@ int omv_gpu_draw_image(image_t *src_img,
     }
     #endif
 
-    DMA2D_HandleTypeDef dma2d = {};
-
-    dma2d.Instance = DMA2D;
+    DMA2D_HandleTypeDef dma2d = {
+        .Instance = DMA2D,
+        .Init.ColorMode = DMA2D_OUTPUT_RGB565,
+        .Init.OutputOffset = dst_img->w - dst_rect->w,
+    };
 
     if (dst_img->pixfmt != src_img->pixfmt) {
         dma2d.Init.Mode = DMA2D_M2M_PFC;
@@ -96,9 +193,6 @@ int omv_gpu_draw_image(image_t *src_img,
         dma2d.Init.Mode = DMA2D_M2M_BLEND_BG;
     }
     #endif
-
-    dma2d.Init.ColorMode = DMA2D_OUTPUT_RGB565;
-    dma2d.Init.OutputOffset = dst_img->w - dst_rect->w;
 
     HAL_DMA2D_Init(&dma2d);
 
@@ -245,4 +339,5 @@ int omv_gpu_draw_image(image_t *src_img,
     OMV_PROFILE_PRINT();
     return 0;
 }
-#endif // (OMV_GPU_ENABLE == 1)
+#endif // OMV_GPU_NEMA
+#endif // OMV_GPU_ENABLE

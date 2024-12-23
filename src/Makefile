@@ -69,6 +69,7 @@ VL53L5CX_DIR=drivers/vl53l5cx
 PIXART_DIR=drivers/pixart
 DISPLAY_DIR=drivers/display
 DAVE2D_DIR=drivers/dave2d
+NEMA_DIR=drivers/nema
 LIBPDM_DIR=lib/libpdm
 TENSORFLOW_DIR=lib/tflm
 CYW4343_FW_DIR=drivers/cyw4343/firmware/
