@@ -374,32 +374,6 @@ soft_reset_exit:
     goto soft_reset;
 }
 
-#if MICROPY_PY_BTREE
-void *malloc(size_t size) {
-    void *p = gc_alloc(size, false);
-    if (p == NULL) {
-        errno = ENOMEM;
-    }
-    return p;
-}
-
-void free(void *ptr) {
-    gc_free(ptr);
-}
-
-void *calloc(size_t nmemb, size_t size) {
-    return malloc(nmemb * size);
-}
-
-void *realloc(void *ptr, size_t size) {
-    void *p = gc_realloc(ptr, size, true);
-    if (p == NULL) {
-        errno = ENOMEM;
-    }
-    return p;
-}
-#endif
-
 static mp_obj_t pyb_main(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
     // Unused.
     return mp_const_none;
