@@ -927,46 +927,6 @@ void imlib_draw_row(int x_start, int x_end, int y_row, imlib_draw_row_data_t *da
                                 }
                             }
                         }
-                        // More desirable results are produced by alpha blending with 8-bits.
-                        // if (!data->color_palette) {
-                        //     for (int x = x_start; x < x_end; x++) {
-                        //         int pixel = IMAGE_GET_BINARY_PIXEL_FAST(src32, x) & IMAGE_GET_BINARY_PIXEL_FAST(dst32, x);
-                        //         IMAGE_PUT_BINARY_PIXEL_FAST(dst32, x, pixel);
-                        //     }
-                        // } else {
-                        //     const uint16_t *color_palette = data->color_palette;
-                        //     uint16_t pal0 = color_palette[0], pal255 = color_palette[255];
-                        //     pal0 = COLOR_RGB565_TO_Y(pal0) > 127;
-                        //     pal255 = COLOR_RGB565_TO_Y(pal255) > 127;
-                        //     switch ((pal0 << 1) | (pal255 << 0)) {
-                        //         case 0: {
-                        //             for (int x = x_start; x < x_end; x++) {
-                        //                 IMAGE_PUT_BINARY_PIXEL_FAST(dst32, x, 0);
-                        //             }
-                        //             break;
-                        //         }
-                        //         case 1: {
-                        //             for (int x = x_start; x < x_end; x++) {
-                        //                 int pixel = IMAGE_GET_BINARY_PIXEL_FAST(src32, x) & IMAGE_GET_BINARY_PIXEL_FAST(dst32, x);
-                        //                 IMAGE_PUT_BINARY_PIXEL_FAST(dst32, x, pixel);
-                        //             }
-                        //             break;
-                        //         }
-                        //         case 2: {
-                        //             for (int x = x_start; x < x_end; x++) {
-                        //                 int pixel = !(IMAGE_GET_BINARY_PIXEL_FAST(src32, x) | IMAGE_GET_BINARY_PIXEL_FAST(dst32, x));
-                        //                 IMAGE_PUT_BINARY_PIXEL_FAST(dst32, x, pixel);
-                        //             }
-                        //             break;
-                        //         }
-                        //         case 3: {
-                        //             for (int x = x_start; x < x_end; x++) {
-                        //                 IMAGE_PUT_BINARY_PIXEL_FAST(dst32, x, 1);
-                        //             }
-                        //             break;
-                        //         }
-                        //     }
-                        // }
                     }
                     break;
                 }
@@ -2994,11 +2954,13 @@ void imlib_draw_image(image_t *dst_img,
     // top 16-bits = whole part, bottom 16-bits = fractional part.
 
     int dst_x_reset = (dst_delta_x < 0) ? (dst_x_end - 1) : dst_x_start;
-    long src_x_frac = fast_floorf(65536.0f / x_scale), src_x_frac_size = (src_x_frac + 0xFFFF) >> 16;
+    long src_x_frac = fast_floorf(65536.0f / x_scale);
+    long src_x_frac_size = (src_x_frac + 0xFFFF) >> 16;
     long src_x_accum_reset = fast_floorf((src_x_start << 16) / x_scale);
 
     int dst_y_reset = (dst_delta_y < 0) ? (dst_y_end - 1) : dst_y_start;
-    long src_y_frac = fast_floorf(65536.0f / y_scale), src_y_frac_size = (src_y_frac + 0xFFFF) >> 16;
+    long src_y_frac = fast_floorf(65536.0f / y_scale);
+    long src_y_frac_size = (src_y_frac + 0xFFFF) >> 16;
     long src_y_accum_reset = fast_floorf((src_y_start << 16) / y_scale);
 
     // Nearest Neighbor
@@ -3040,9 +3002,6 @@ void imlib_draw_image(image_t *dst_img,
         color_palette = NULL;
     }
 
-    // Special destination?
-    bool is_jpeg = src_img->pixfmt == PIXFORMAT_JPEG;
-    bool is_png = src_img->pixfmt == PIXFORMAT_PNG;
     // Best format to convert yuv/bayer/jpeg image to.
     int new_not_mutable_pixfmt = (rgb_channel != -1) ? PIXFORMAT_RGB565 :
                                  (color_palette ? PIXFORMAT_GRAYSCALE :
@@ -3061,19 +3020,51 @@ void imlib_draw_image(image_t *dst_img,
     size_t dst_img_row_bytes = image_size(dst_img) / dst_img->h;
 
     // Do we need to convert the image?
-    bool is_bayer_color_conversion = src_img->is_bayer && !dst_img->is_bayer;
-    bool is_yuv_color_conversion = src_img->is_yuv && !dst_img->is_yuv;
-    bool is_color_conversion = is_bayer_color_conversion || is_yuv_color_conversion;
+    bool is_bayer_conversion = src_img->is_bayer && !dst_img->is_bayer;
+    bool is_yuv_conversion = src_img->is_yuv && !dst_img->is_yuv;
+    bool is_bayer_yuv_conversion = is_bayer_conversion || is_yuv_conversion;
 
-    // Force a deep copy if we cannot use the image in-place.
-    bool need_deep_copy = (dst_img->data == src_img->data)
-                          && (is_scaling || (src_img_row_bytes < dst_img_row_bytes) || is_color_conversion);
+    // Is the line length growing which will prevent us from working in-place?
+    bool is_upscaling = src_img_row_bytes < dst_img_row_bytes;
 
-    // Force a deep copy if we are scaling.
-    bool is_color_conversion_scaling = is_color_conversion && is_scaling;
+    #if (OMV_GPU_ENABLE == 1)
+    if (!callback &&
+        !is_bayer_yuv_conversion &&
+        !src_img->is_compressed &&
+        (rgb_channel < 0) &&
+        ((dst_img->data != src_img->data) || (!is_upscaling)) &&
+        !(hint & (IMAGE_HINT_AREA | IMAGE_HINT_BICUBIC | IMAGE_HINT_TRANSPOSE))) {
+
+        rectangle_t dst_rect = {
+            .x = dst_x_start,
+            .y = dst_y_start,
+            .w = dst_x_end - dst_rect.x,
+            .h = dst_y_end - dst_rect.y,
+        };
+
+        rectangle_t src_rect = {
+            .x = src_x_accum_reset >> 16,
+            .y = src_y_accum_reset >> 16,
+            .w = ((src_x_accum_reset + (src_x_frac * dst_rect.w)) >> 16) - src_rect.x,
+            .h = ((src_y_accum_reset + (src_y_frac * dst_rect.h)) >> 16) - src_rect.y,
+        };
+
+        image_hint_t gpu_hints = ((dst_delta_x < 0) ? IMAGE_HINT_HMIRROR : 0) |
+                                 ((dst_delta_y < 0) ? IMAGE_HINT_VFLIP : 0) |
+                                 (hint & (IMAGE_HINT_BILINEAR | IMAGE_HINT_BLACK_BACKGROUND));
+
+        if (!omv_gpu_draw_image(src_img, &src_rect, dst_img, &dst_rect,
+                                alpha, color_palette, alpha_palette, gpu_hints)) {
+            goto exit_cleanup;
+        }
+    }
+    #endif
 
     // Make a deep copy of the source image.
-    if (need_deep_copy || is_color_conversion_scaling || is_jpeg || is_png) {
+    if (((dst_img->data == src_img->data) &&
+         (is_scaling || is_upscaling || is_bayer_yuv_conversion)) ||
+        (is_bayer_yuv_conversion && is_scaling) ||
+        src_img->is_compressed) {
         new_src_img.w = src_img->w; // same width as source image
         new_src_img.h = src_img->h; // same height as source image
 
@@ -3090,9 +3081,9 @@ void imlib_draw_image(image_t *dst_img,
                         imlib_debayer_image(&new_src_img, src_img);
                     } else if (src_img->is_yuv) {
                         imlib_deyuv_image(&new_src_img, src_img);
-                    } else if (is_jpeg) {
+                    } else if (src_img->pixfmt == PIXFORMAT_JPEG) {
                         jpeg_decompress(&new_src_img, src_img);
-                    } else if (is_png) {
+                    } else if (src_img->pixfmt == PIXFORMAT_PNG) {
                         png_decompress(&new_src_img, src_img);
                     }
                     break;
@@ -3103,7 +3094,7 @@ void imlib_draw_image(image_t *dst_img,
                     break;
                 }
                 default: {
-                    if (is_png) {
+                    if (src_img->pixfmt == PIXFORMAT_PNG) {
                         png_decompress(&new_src_img, src_img);
                     }
                     break;
@@ -3244,31 +3235,6 @@ void imlib_draw_image(image_t *dst_img,
 
         goto exit_cleanup;
     }
-
-    #if (OMV_GPU_ENABLE == 1)
-    // Try to offload this to the GPU for processing.
-    if ((rgb_channel < 0) && (!(hint & (IMAGE_HINT_AREA | IMAGE_HINT_BICUBIC))) && (!callback)) {
-        rectangle_t dst_rect;
-        dst_rect.x = dst_x_start;
-        dst_rect.y = dst_y_start;
-        dst_rect.w = dst_x_end - dst_rect.x;
-        dst_rect.h = dst_y_end - dst_rect.y;
-
-        rectangle_t src_rect;
-        src_rect.x = src_x_accum_reset >> 16;
-        src_rect.y = src_y_accum_reset >> 16;
-        src_rect.w = ((src_x_accum_reset + (src_x_frac * dst_rect.w)) >> 16) - src_rect.x;
-        src_rect.h = ((src_y_accum_reset + (src_y_frac * dst_rect.h)) >> 16) - src_rect.y;
-
-        image_hint_t gpu_hint = hint & (IMAGE_HINT_BILINEAR | IMAGE_HINT_BLACK_BACKGROUND);
-        gpu_hint |= (dst_delta_x < 0) ? IMAGE_HINT_HMIRROR : 0;
-        gpu_hint |= (dst_delta_y < 0) ? IMAGE_HINT_VFLIP : 0;
-
-        if (!omv_gpu_draw_image(src_img, &src_rect, dst_img, &dst_rect, alpha, color_palette, alpha_palette, gpu_hint)) {
-            goto exit_cleanup;
-        }
-    }
-    #endif
 
     // Bicbuic and bilinear both shift the image right by (0.5, 0.5) so we have to undo that.
     if (hint & (IMAGE_HINT_BICUBIC | IMAGE_HINT_BILINEAR)) {
@@ -4344,123 +4310,6 @@ void imlib_draw_image(image_t *dst_img,
                         while (x_not_done) {
                             int src_x_index = next_src_x_index;
                             int src_x_index_m_1 = src_x_index - 1;
-// Concept code showing off how to do 4 operations in parallel. Not useful however because of overflows
-// in the 8-bit accumulators - the final image looks bad. Might be workable for lower bit-depth images.
-#if 0
-                            int pixel_row_0, pixel_row_1, pixel_row_2, pixel_row_3;
-                            // Column 0 = Bits[7:0]
-                            // Column 1 = Bits[15:8]
-                            // Column 2 = Bits[23:16]
-                            // Column 3 = Bits[31:24]
-
-                            if (src_x_index < w_start) {
-                                pixel_row_0 = ((*(src_row_ptr_0 + w_start)) * 0x010101) |
-                                              ((*(src_row_ptr_0 + w_start_p_1)) << 24);
-                                pixel_row_1 = ((*(src_row_ptr_1 + w_start)) * 0x010101) |
-                                              ((*(src_row_ptr_1 + w_start_p_1)) << 24);
-                                pixel_row_2 = ((*(src_row_ptr_2 + w_start)) * 0x010101) |
-                                              ((*(src_row_ptr_2 + w_start_p_1)) << 24);
-                                pixel_row_3 = ((*(src_row_ptr_3 + w_start)) * 0x010101) |
-                                              ((*(src_row_ptr_3 + w_start_p_1)) << 24);
-                            } else if (src_x_index == w_start) {
-                                pixel_row_0 = ((*(src_row_ptr_0 + w_start)) * 0x0101) |
-                                              ((*((uint16_t *) (src_row_ptr_0 + w_start_p_1))) << 16);
-                                pixel_row_1 = ((*(src_row_ptr_1 + w_start)) * 0x0101) |
-                                              ((*((uint16_t *) (src_row_ptr_1 + w_start_p_1))) << 16);
-                                pixel_row_2 = ((*(src_row_ptr_2 + w_start)) * 0x0101) |
-                                              ((*((uint16_t *) (src_row_ptr_2 + w_start_p_1))) << 16);
-                                pixel_row_3 = ((*(src_row_ptr_3 + w_start)) * 0x0101) |
-                                              ((*((uint16_t *) (src_row_ptr_3 + w_start_p_1))) << 16);
-                            } else if (src_x_index == w_limit_m_1) {
-                                pixel_row_0 = (*((uint16_t *) (src_row_ptr_0 + src_x_index_m_1))) |
-                                              ((*(src_row_ptr_0 + w_limit)) * 0x01010000);
-                                pixel_row_1 = (*((uint16_t *) (src_row_ptr_1 + src_x_index_m_1))) |
-                                              ((*(src_row_ptr_1 + w_limit)) * 0x01010000);
-                                pixel_row_2 = (*((uint16_t *) (src_row_ptr_2 + src_x_index_m_1))) |
-                                              ((*(src_row_ptr_2 + w_limit)) * 0x01010000);
-                                pixel_row_3 = (*((uint16_t *) (src_row_ptr_3 + src_x_index_m_1))) |
-                                              ((*(src_row_ptr_3 + w_limit)) * 0x01010000);
-                            } else if (src_x_index >= w_limit) {
-                                pixel_row_0 = (*(src_row_ptr_0 + src_x_index_m_1)) |
-                                              ((*(src_row_ptr_0 + w_limit)) * 0x01010100);
-                                pixel_row_1 = (*(src_row_ptr_1 + src_x_index_m_1)) |
-                                              ((*(src_row_ptr_1 + w_limit)) * 0x01010100);
-                                pixel_row_2 = (*(src_row_ptr_2 + src_x_index_m_1)) |
-                                              ((*(src_row_ptr_2 + w_limit)) * 0x01010100);
-                                pixel_row_3 = (*(src_row_ptr_3 + src_x_index_m_1)) |
-                                              ((*(src_row_ptr_3 + w_limit)) * 0x01010100);
-                            } else {
-                                // get 4 neighboring rows
-                                pixel_row_0 = *((uint32_t *) (src_row_ptr_0 + src_x_index_m_1));
-                                pixel_row_1 = *((uint32_t *) (src_row_ptr_1 + src_x_index_m_1));
-                                pixel_row_2 = *((uint32_t *) (src_row_ptr_2 + src_x_index_m_1));
-                                pixel_row_3 = *((uint32_t *) (src_row_ptr_3 + src_x_index_m_1));
-                            }
-
-                            // Need 8-bit signed (0x7F max).
-                            pixel_row_0 = __UHADD8(pixel_row_0, 0);
-                            pixel_row_1 = __UHADD8(pixel_row_1, 0);
-                            pixel_row_2 = __UHADD8(pixel_row_2, 0);
-                            pixel_row_3 = __UHADD8(pixel_row_3, 0);
-
-                            // Need 1/3 guard bits.
-                            pixel_row_0 = __UHADD8(pixel_row_0, 0);
-                            pixel_row_1 = __UHADD8(pixel_row_1, 0);
-                            pixel_row_2 = __UHADD8(pixel_row_2, 0);
-                            pixel_row_3 = __UHADD8(pixel_row_3, 0);
-
-                            // Need 2/3 guard bits.
-                            pixel_row_0 = __UHADD8(pixel_row_0, 0);
-                            pixel_row_1 = __UHADD8(pixel_row_1, 0);
-                            pixel_row_2 = __UHADD8(pixel_row_2, 0);
-                            pixel_row_3 = __UHADD8(pixel_row_3, 0);
-
-                            // Need 3/3 guard bits.
-                            pixel_row_0 = __UHADD8(pixel_row_0, 0);
-                            pixel_row_1 = __UHADD8(pixel_row_1, 0);
-                            pixel_row_2 = __UHADD8(pixel_row_2, 0);
-                            pixel_row_3 = __UHADD8(pixel_row_3, 0);
-
-                            long temp0 = __QADD8(pixel_row_2, pixel_row_2);
-                            long temp1 = __QADD8(pixel_row_1, pixel_row_1);
-                            long temp2 = __QSUB8(pixel_row_1, pixel_row_2);
-
-                            long a0_col = __QSUB8(pixel_row_2, pixel_row_0);
-                            long a1_col =
-                                __QSUB8(__QSUB8(__QADD8(__QADD8(pixel_row_0, pixel_row_0), __QADD8(temp0, temp0)),
-                                                __QADD8(__QADD8(temp1, temp1), pixel_row_1)), pixel_row_3);
-                            long a2_col = __QSUB8(__QADD8(__QADD8(__QADD8(temp2, temp2), temp2), pixel_row_3), pixel_row_0);
-
-                            long a0_col_2_0 = __SXTB16(a0_col);
-                            long a1_col_2_0 = __SXTB16(a1_col);
-                            long a2_col_2_0 = __SXTB16(a2_col);
-
-                            long smuad_a0_a1_0 = __PKHBT(a1_col_2_0, a0_col_2_0, 16);
-                            long pixel_1_avg_0 = ((pixel_row_1 & 0xff) << 16) | 0x8000;
-                            int d0 =
-                                ((int32_t) __SMLAD(smuad_dy_dy2, smuad_a0_a1_0, __SMLAD(dy3, a2_col_2_0, pixel_1_avg_0))) >> 16;
-
-                            long smuad_a0_a1_2 = __PKHTB(a0_col_2_0, a1_col_2_0, 16);
-                            long pixel_1_avg_2 = (pixel_row_1 & 0xff0000) | 0x8000;
-                            int d2 =
-                                ((int32_t) __SMLAD(smuad_dy_dy2, smuad_a0_a1_2,
-                                                   __SMLADX(dy3, a2_col_2_0, pixel_1_avg_2))) >> 16;
-
-                            long a0_col_3_1 = __SXTB16_RORn(a0_col, 8);
-                            long a1_col_3_1 = __SXTB16_RORn(a1_col, 8);
-                            long a2_col_3_1 = __SXTB16_RORn(a2_col, 8);
-
-                            long smuad_a0_a1_1 = __PKHBT(a1_col_3_1, a0_col_3_1, 16);
-                            long pixel_1_avg_1 = ((pixel_row_1 << 8) & 0xff0000) | 0x8000;
-                            int d1 =
-                                ((int32_t) __SMLAD(smuad_dy_dy2, smuad_a0_a1_1, __SMLAD(dy3, a2_col_3_1, pixel_1_avg_1))) >> 16;
-
-                            long smuad_a0_a1_3 = __PKHTB(a0_col_3_1, a1_col_3_1, 16);
-                            long pixel_1_avg_3 = ((pixel_row_1 >> 8) & 0xff0000) | 0x8000;
-                            int d3 =
-                                ((int32_t) __SMLAD(smuad_dy_dy2, smuad_a0_a1_3,
-                                                   __SMLADX(dy3, a2_col_3_1, pixel_1_avg_3))) >> 16;
-#else
                             int src_x_index_p_1 = src_x_index + 1;
                             int src_x_index_p_2 = src_x_index + 2;
                             int pixel_x_offests[4];
@@ -4507,7 +4356,6 @@ void imlib_draw_image(image_t *dst_img,
                             } // for z
 
                             int d0 = d[0], d1 = d[1], d2 = d[2], d3 = d[3];
-#endif
                             int a0 = d2 - d0;
                             int a1 = (d0 << 1) + (d2 << 2) - (5 * d1) - d3;
                             int a2 = (3 * (d1 - d2)) + d3 - d0;

@@ -167,10 +167,14 @@ int omv_gpu_draw_image(image_t *src_img,
 
     #if __DCACHE_PRESENT
     // Ensures any cached writes to dst16 are flushed.
-    uint16_t *dst16_tmp = dst16;
-    for (int i = 0; i < dst_rect->h; i++) {
-        SCB_CleanInvalidateDCache_by_Addr(dst16_tmp, dst_rect->w * sizeof(uint16_t));
-        dst16_tmp += dst_img->w;
+    if (dst_img->w == dst_rect->w) {
+        SCB_CleanInvalidateDCache_by_Addr(dst16, dst_rect->w * dst_rect->h * sizeof(uint16_t));
+    } else {
+        uint16_t *dst16_tmp = dst16;
+        for (int i = 0; i < dst_rect->h; i++) {
+            SCB_CleanInvalidateDCache_by_Addr(dst16_tmp, dst_rect->w * sizeof(uint16_t));
+            dst16_tmp += dst_img->w;
+        }
     }
     #endif
 
@@ -181,10 +185,14 @@ int omv_gpu_draw_image(image_t *src_img,
         src = (uint32_t) src8;
 
         #if __DCACHE_PRESENT
-        uint8_t *src8_tmp = src8;
-        for (int i = 0; i < src_rect->h; i++) {
-            SCB_CleanDCache_by_Addr(src8_tmp, src_rect->w);
-            src8_tmp += src_img->w;
+        if (src_img->w == src_rect->w) {
+            SCB_CleanDCache_by_Addr(src8, src_rect->w * src_rect->h);
+        } else {
+            uint8_t *src8_tmp = src8;
+            for (int i = 0; i < src_rect->h; i++) {
+                SCB_CleanDCache_by_Addr(src8_tmp, src_rect->w);
+                src8_tmp += src_img->w;
+            }
         }
         #endif
     } else {
@@ -192,10 +200,14 @@ int omv_gpu_draw_image(image_t *src_img,
         src = (uint32_t) src16;
 
         #if __DCACHE_PRESENT
-        uint16_t *src16_tmp = src16;
-        for (int i = 0; i < src_rect->h; i++) {
-            SCB_CleanDCache_by_Addr(src16_tmp, src_rect->w * sizeof(uint16_t));
-            src16_tmp += src_img->w;
+        if (src_img->w == src_rect->w) {
+            SCB_CleanDCache_by_Addr(src16, src_rect->w * src_rect->h);
+        } else {
+            uint16_t *src16_tmp = src16;
+            for (int i = 0; i < src_rect->h; i++) {
+                SCB_CleanDCache_by_Addr(src16_tmp, src_rect->w * sizeof(uint16_t));
+                src16_tmp += src_img->w;
+            }
         }
         #endif
     }
@@ -213,10 +225,14 @@ int omv_gpu_draw_image(image_t *src_img,
 
     #if __DCACHE_PRESENT
     // Ensures any cached reads to dst16 are dropped.
-    dst16_tmp = dst16;
-    for (int i = 0; i < dst_rect->h; i++) {
-        SCB_InvalidateDCache_by_Addr(dst16_tmp, dst_rect->w * sizeof(uint16_t));
-        dst16_tmp += dst_img->w;
+    if (dst_img->w == dst_rect->w) {
+        SCB_InvalidateDCache_by_Addr(dst16, dst_rect->w * dst_rect->h * sizeof(uint16_t));
+    } else {
+        uint16_t *dst16_tmp = dst16;
+        for (int i = 0; i < dst_rect->h; i++) {
+            SCB_InvalidateDCache_by_Addr(dst16_tmp, dst_rect->w * sizeof(uint16_t));
+            dst16_tmp += dst_img->w;
+        }
     }
     #endif
 
