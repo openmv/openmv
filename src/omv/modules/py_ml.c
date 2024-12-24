@@ -372,7 +372,7 @@ mp_obj_t py_ml_model_make_new(const mp_obj_type_t *type, size_t n_args, size_t n
         FIL fp;
         file_open(&fp, path, false, FA_READ | FA_OPEN_EXISTING);
         model->size = f_size(&fp);
-        model->fb_alloc = args[ARG_load_to_fb].u_int;
+        model->fb_alloc = args[ARG_load_to_fb].u_bool;
         if (model->fb_alloc) {
             fb_alloc_mark();
             model->data = fb_alloc(model->size, FB_ALLOC_PREFER_SPEED | FB_ALLOC_CACHE_ALIGN);

@@ -1951,12 +1951,12 @@ static mp_obj_t py_image_binary(uint n_args, const mp_obj_t *pos_args, mp_map_t 
     mp_arg_val_t args[MP_ARRAY_SIZE(allowed_args)];
     mp_arg_parse_all(n_args - 1, pos_args + 1, kw_args, MP_ARRAY_SIZE(allowed_args), allowed_args, args);
 
-    if (args[ARG_to_bitmap].u_int && (image->pixfmt != PIXFORMAT_BINARY) &&
-        (args[ARG_zero].u_int || (args[ARG_mask].u_obj != mp_const_none))) {
+    if (args[ARG_to_bitmap].u_bool && (image->pixfmt != PIXFORMAT_BINARY) &&
+        (args[ARG_zero].u_bool || (args[ARG_mask].u_obj != mp_const_none))) {
         mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Incompatible arguments!"));
     }
 
-    if (args[ARG_to_bitmap].u_int && (!args[ARG_copy].u_int)) {
+    if (args[ARG_to_bitmap].u_bool && (!args[ARG_copy].u_bool)) {
         switch (image->pixfmt) {
             case PIXFORMAT_GRAYSCALE: {
                 PY_ASSERT_TRUE_MSG((image->w >= 4), "Can't convert to bitmap in place!");
@@ -1979,8 +1979,8 @@ static mp_obj_t py_image_binary(uint n_args, const mp_obj_t *pos_args, mp_map_t 
     image_t out;
     out.w = image->w;
     out.h = image->h;
-    out.pixfmt = args[ARG_to_bitmap].u_int ? PIXFORMAT_BINARY : image->pixfmt;
-    out.data = args[ARG_copy].u_int ? xalloc(image_size(&out)) : image->pixels;
+    out.pixfmt = args[ARG_to_bitmap].u_bool ? PIXFORMAT_BINARY : image->pixfmt;
+    out.data = args[ARG_copy].u_bool ? xalloc(image_size(&out)) : image->pixels;
 
     fb_alloc_mark();
     image_t *mask = NULL;
@@ -1988,12 +1988,12 @@ static mp_obj_t py_image_binary(uint n_args, const mp_obj_t *pos_args, mp_map_t 
         mask = py_helper_arg_to_image(args[ARG_mask].u_obj, ARG_IMAGE_MUTABLE | ARG_IMAGE_ALLOC);
     }
 
-    imlib_binary(&out, image, &thresholds, args[ARG_invert].u_int, args[ARG_zero].u_int, mask);
+    imlib_binary(&out, image, &thresholds, args[ARG_invert].u_bool, args[ARG_zero].u_bool, mask);
     fb_alloc_free_till_mark();
 
     list_free(&thresholds);
 
-    if (args[ARG_to_bitmap].u_int && (!args[ARG_copy].u_int)) {
+    if (args[ARG_to_bitmap].u_bool && (!args[ARG_copy].u_bool)) {
         image->pixfmt = PIXFORMAT_BINARY;
         py_helper_update_framebuffer(&out);
     }
