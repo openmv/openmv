@@ -6,3 +6,4 @@ fomo_face_detection.tflite,Performance
 force_int_quant.tflite,Performance
 micro_speech.tflite,Performance
 person_detect.tflite,Performance
+yolov5_rgb_person.tflite,Performance
