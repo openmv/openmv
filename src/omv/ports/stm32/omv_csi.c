@@ -97,15 +97,16 @@ static int omv_csi_dma_config() {
 
     // Configure the DMA IRQ Channel
     NVIC_SetPriority(DMA2_Stream1_IRQn, IRQ_PRI_DMA21);
-    return 0;
-}
 
-void omv_csi_init0() {
     #if defined(OMV_MDMA_CHANNEL_DCMI_0)
     csi.mdma0.Instance = MDMA_CHAN_TO_INSTANCE(OMV_MDMA_CHANNEL_DCMI_0);
     csi.mdma1.Instance = MDMA_CHAN_TO_INSTANCE(OMV_MDMA_CHANNEL_DCMI_1);
     #endif
 
+    return 0;
+}
+
+void omv_csi_init0() {
     omv_csi_abort(true, false);
 
     // Re-init i2c bus to reset the bus state after soft reset, which
