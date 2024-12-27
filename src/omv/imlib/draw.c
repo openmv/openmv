@@ -3043,10 +3043,10 @@ void imlib_draw_image(image_t *dst_img,
         };
 
         rectangle_t src_rect = {
-            .x = src_x_accum_reset >> 16,
-            .y = src_y_accum_reset >> 16,
-            .w = ((src_x_accum_reset + (src_x_frac * dst_rect.w)) >> 16) - src_rect.x,
-            .h = ((src_y_accum_reset + (src_y_frac * dst_rect.h)) >> 16) - src_rect.y,
+            .x = fast_roundf(src_x_start / x_scale),
+            .y = fast_roundf(src_y_start / y_scale),
+            .w = fast_floorf(dst_rect.w / x_scale),
+            .h = fast_floorf(dst_rect.h / y_scale),
         };
 
         image_hint_t gpu_hints = ((dst_delta_x < 0) ? IMAGE_HINT_HMIRROR : 0) |
