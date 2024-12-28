@@ -280,4 +280,18 @@ OMV_DMA_MEMORY_NEW(3)
   . = ALIGN(4);
 } > FLASH_TEXT
 
+// ROMFS partitions.
+#if defined(OMV_ROMFS_PART0_ORIGIN)
+_micropy_hw_romfs_start = OMV_ROMFS_PART0_ORIGIN;
+_micropy_hw_romfs_size = OMV_ROMFS_PART0_LENGTH;
+
+_micropy_hw_romfs_part0_start = OMV_ROMFS_PART0_ORIGIN;
+_micropy_hw_romfs_part0_size = OMV_ROMFS_PART0_LENGTH;
+#endif
+
+#if defined(OMV_ROMFS_PART1_ORIGIN)
+_micropy_hw_romfs_part1_start = OMV_ROMFS_PART1_ORIGIN;
+_micropy_hw_romfs_part1_size = OMV_ROMFS_PART1_LENGTH;
+#endif
+
 .ARM.attributes 0 : { *(.ARM.attributes) }
