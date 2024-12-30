@@ -33,6 +33,9 @@ from micropython import const
 from ulab import numpy as np
 
 
+_NO_DETECTION = const(())
+
+
 # FOMO generates an image per class, where each pixel represents the centroid
 # of the trained object. These images are processed with `find_blobs()` to
 # extract centroids, and `get_stats()` is used to get their scores. Overlapping
@@ -69,8 +72,8 @@ class yolo_v2_postprocess:
     _YOLO_V2_SCORE = const(4)
     _YOLO_V2_CLASSES = const(5)
 
-    def __init__(self, score_threshold=0.6, anchors=None):
-        self.score_threshold = score_threshold
+    def __init__(self, threshold=0.6, anchors=None):
+        self.threshold = threshold
         if anchors is not None:
             self.anchors = anchors
         else:
@@ -101,11 +104,11 @@ class yolo_v2_postprocess:
 
         # Threshold all the scores
         score_indices = sigmoid(colum_outputs[:, _YOLO_V2_SCORE])
-        score_indices = np.nonzero(score_indices > self.score_threshold)
+        score_indices = np.nonzero(score_indices > self.threshold)
         if isinstance(score_indices, tuple):
             score_indices = score_indices[0]
         if not len(score_indices):
-            return []
+            return _NO_DETECTION
 
         # Get the bounding boxes that have a valid score
         bb = np.take(colum_outputs, score_indices, axis=0)
@@ -148,5 +151,61 @@ class yolo_v2_postprocess:
                                  y_center[i] - (h_rel[i] / 2),
                                  x_center[i] + (w_rel[i] / 2),
                                  y_center[i] + (h_rel[i] / 2),
+                                 bb_scores[i], bb_classes[i])
+        return nms.get_bounding_boxes()
+
+
+class yolo_v5_postprocess:
+    _YOLO_V5_CX = const(0)
+    _YOLO_V5_CY = const(1)
+    _YOLO_V5_CW = const(2)
+    _YOLO_V5_CH = const(3)
+    _YOLO_V5_SCORE = const(4)
+    _YOLO_V5_CLASSES = const(5)
+
+    def __init__(self, threshold=0.6):
+        self.threshold = threshold
+
+    def __call__(self, model, inputs, outputs):
+        oh, ow, oc = model.output_shape[0]
+        class_count = oc - _YOLO_V5_CLASSES
+
+        # Reshape the output to a 2D array
+        colum_outputs = outputs[0].reshape((oh * ow, _YOLO_V5_CLASSES + class_count))
+
+        # Threshold all the scores
+        score_indices = colum_outputs[:, _YOLO_V5_SCORE]
+        score_indices = np.nonzero(score_indices > self.threshold)
+        if isinstance(score_indices, tuple):
+            score_indices = score_indices[0]
+        if not len(score_indices):
+            return _NO_DETECTION
+
+        # Get the bounding boxes that have a valid score
+        bb = np.take(colum_outputs, score_indices, axis=0)
+
+        # Get the score information
+        bb_scores = bb[:, _YOLO_V5_SCORE]
+
+        # Get the class information
+        bb_classes = [np.argmax(bb[x, _YOLO_V5_CLASSES:]) for x in range(bb.shape[0])]
+        bb_classes = np.array(bb_classes, dtype=np.uint16)
+
+        # Compute the bounding box information
+        x_center = bb[:, _YOLO_V5_CX]
+        y_center = bb[:, _YOLO_V5_CY]
+        w_rel = bb[:, _YOLO_V5_CW] * 0.5
+        h_rel = bb[:, _YOLO_V5_CH] * 0.5
+
+        # Scale the bounding boxes to have enough integer precision for NMS
+        ib, ih, iw, ic = model.input_shape[0]
+        xmin = (x_center - w_rel) * iw
+        ymin = (y_center - h_rel) * ih
+        xmax = (x_center + w_rel) * iw
+        ymax = (y_center + h_rel) * ih
+
+        nms = NMS(iw, ih, inputs[0].roi)
+        for i in range(len(bb)):
+            nms.add_bounding_box(xmin[i], ymin[i], xmax[i], ymax[i],
                                  bb_scores[i], bb_classes[i])
         return nms.get_bounding_boxes()
