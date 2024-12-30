@@ -270,7 +270,7 @@ void bmp_read(image_t *img, const char *path) {
     file_open(&fp, path, true, FA_READ | FA_OPEN_EXISTING);
     bmp_read_geometry(&fp, img, path, &rs);
     if (!img->pixels) {
-        img->pixels = xalloc(img->w * img->h * img->bpp);
+        image_xalloc(img, img->w * img->h * img->bpp);
     }
     bmp_read_pixels(&fp, img, img->h, &rs);
     file_close(&fp);

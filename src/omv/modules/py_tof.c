@@ -527,7 +527,7 @@ mp_obj_t py_tof_snapshot(uint n_args, const mp_obj_t *pos_args, mp_map_t *kw_arg
     if (args[ARG_copy_to_fb].u_bool) {
         py_helper_set_to_framebuffer(&dst_img);
     } else {
-        dst_img.data = xalloc(image_size(&dst_img));
+        image_xalloc(&dst_img, image_size(&dst_img));
     }
 
     float min = FLT_MAX;

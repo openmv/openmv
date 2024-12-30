@@ -1149,7 +1149,7 @@ static mp_obj_t py_image_to(pixformat_t pixfmt, mp_rom_obj_t default_color_palet
         py_helper_set_to_framebuffer(&dst_img);
     } else if (args[ARG_copy].u_bool) {
         // Create dynamic copy.
-        dst_img.data = xalloc(size);
+        image_xalloc(&dst_img, size);
     } else {
         // Convert in place.
         bool fb = py_helper_is_equal_to_framebuffer(src_img);
@@ -1980,7 +1980,12 @@ static mp_obj_t py_image_binary(uint n_args, const mp_obj_t *pos_args, mp_map_t 
     out.w = image->w;
     out.h = image->h;
     out.pixfmt = args[ARG_to_bitmap].u_bool ? PIXFORMAT_BINARY : image->pixfmt;
-    out.data = args[ARG_copy].u_bool ? xalloc(image_size(&out)) : image->pixels;
+
+    if (args[ARG_copy].u_bool) {
+        image_xalloc(&out, image_size(&out));
+    } else {
+        out.data = image->data;
+    }
 
     fb_alloc_mark();
     image_t *mask = NULL;
@@ -6120,7 +6125,7 @@ mp_obj_t py_image_make_new(const mp_obj_type_t *type, size_t n_args, size_t n_kw
         if (args[ARG_copy_to_fb].u_bool) {
             py_helper_set_to_framebuffer(&image);
         } else {
-            image.data = xalloc(image_size(&image));
+            image_xalloc(&image, image_size(&image));
         }
 
         imlib_load_image(&image, path);
@@ -6161,7 +6166,7 @@ mp_obj_t py_image_make_new(const mp_obj_type_t *type, size_t n_args, size_t n_kw
                 mp_raise_ValueError(MP_ERROR_TEXT("Buffer is too small"));
             }
         } else {
-            image.data = xalloc(image_size(&image));
+            image_xalloc(&image, image_size(&image));
         }
 
         mp_float_t *farray = (mp_float_t *) array->array;
@@ -6221,7 +6226,7 @@ mp_obj_t py_image_make_new(const mp_obj_type_t *type, size_t n_args, size_t n_kw
                 mp_raise_ValueError(MP_ERROR_TEXT("Buffer is too small"));
             }
         } else {
-            image.data = xalloc0(image_size(&image));
+            image_xalloc0(&image, image_size(&image));
         }
     }
 
