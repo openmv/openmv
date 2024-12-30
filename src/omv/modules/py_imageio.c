@@ -374,7 +374,7 @@ static mp_obj_t py_imageio_read(uint n_args, const mp_obj_t *pos_args, mp_map_t 
     if (args[ARG_copy_to_fb].u_bool) {
         py_helper_set_to_framebuffer(&image);
     } else {
-        image.data = xalloc(size);
+        image_xalloc(&image, size);
     }
 
     if (0) {

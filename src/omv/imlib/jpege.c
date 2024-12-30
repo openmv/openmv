@@ -1371,7 +1371,7 @@ void jpeg_read(image_t *img, const char *path) {
     jpeg_read_geometry(&fp, img, path, &rs);
 
     if (!img->pixels) {
-        img->pixels = xalloc(img->size);
+        image_xalloc(img, img->size);
     }
 
     jpeg_read_pixels(&fp, img);

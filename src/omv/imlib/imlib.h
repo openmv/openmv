@@ -559,12 +559,16 @@ typedef struct image {
     int32_t w;
     int32_t h;
     PIXFORMAT_STRUCT;
+    // Keeps a reference to the GC block when used with image_xalloc/image_xalloc0.
+    uint8_t *_raw;
     union {
         uint8_t *pixels;
         uint8_t *data;
     };
 } image_t;
 
+void image_xalloc(image_t *img, size_t size);
+void image_xalloc0(image_t *img, size_t size);
 void image_init(image_t *ptr, int w, int h, pixformat_t pixfmt, uint32_t size, void *pixels);
 void image_copy(image_t *dst, image_t *src);
 size_t image_line_size(image_t *ptr);
