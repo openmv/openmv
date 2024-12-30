@@ -33,6 +33,9 @@ from micropython import const
 from ulab import numpy as np
 
 
+_NO_DETECTION = const(())
+
+
 # FOMO generates an image per class, where each pixel represents the centroid
 # of the trained object. These images are processed with `find_blobs()` to
 # extract centroids, and `get_stats()` is used to get their scores. Overlapping
@@ -69,8 +72,8 @@ class yolo_v2_postprocess:
     _YOLO_V2_SCORE = const(4)
     _YOLO_V2_CLASSES = const(5)
 
-    def __init__(self, score_threshold=0.6, anchors=None):
-        self.score_threshold = score_threshold
+    def __init__(self, threshold=0.6, anchors=None):
+        self.threshold = threshold
         if anchors is not None:
             self.anchors = anchors
         else:
@@ -101,11 +104,11 @@ class yolo_v2_postprocess:
 
         # Threshold all the scores
         score_indices = sigmoid(colum_outputs[:, _YOLO_V2_SCORE])
-        score_indices = np.nonzero(score_indices > self.score_threshold)
+        score_indices = np.nonzero(score_indices > self.threshold)
         if isinstance(score_indices, tuple):
             score_indices = score_indices[0]
         if not len(score_indices):
-            return []
+            return _NO_DETECTION
 
         # Get the bounding boxes that have a valid score
         bb = np.take(colum_outputs, score_indices, axis=0)
@@ -159,7 +162,6 @@ class yolo_v5_postprocess:
     _YOLO_V5_CH = const(3)
     _YOLO_V5_SCORE = const(4)
     _YOLO_V5_CLASSES = const(5)
-    _NO_DETECTION = const(())
 
     def __init__(self, threshold=0.6):
         self.threshold = threshold
