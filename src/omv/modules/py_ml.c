@@ -379,8 +379,9 @@ mp_obj_t py_ml_model_make_new(const mp_obj_type_t *type, size_t n_args, size_t n
             // The model's data will Not be free'd on exceptions.
             fb_alloc_mark_permanent();
         } else {
-            // Keeps a reference to the GC block.
-            model->_raw = xalloc(model->size + IMLIB_ML_MODEL_ALIGN);
+            // Align size and memory and keep a reference to the GC block.
+            size_t size = (model->size + IMLIB_ML_MODEL_ALIGN) & ~IMLIB_ML_MODEL_ALIGN;
+            model->_raw = xalloc(size + IMLIB_ML_MODEL_ALIGN);
             model->data = (void *) (((uintptr_t) model->_raw + IMLIB_ML_MODEL_ALIGN) & ~IMLIB_ML_MODEL_ALIGN);
         }
         file_read(&fp, model->data, model->size);
