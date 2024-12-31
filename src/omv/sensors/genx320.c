@@ -66,7 +66,7 @@
 #define EVENT_THRESHOLD_TO_CALIBRATE    100000
 #define EVENT_THRESHOLD_SIGMA           10
 
-#define EVT_CLK_FREQ                    (omv_csi_get_xclk_frequency() / 1000000)
+#define EVT_CLK_FREQ                    ((omv_csi_get_xclk_frequency() + 500000) / 1000000)
 #define EVT_SCALE_PERIOD(period)        (((period) * EVT_CLK_FREQ) / 10)
 
 #define AFK_50_HZ                       (50)
