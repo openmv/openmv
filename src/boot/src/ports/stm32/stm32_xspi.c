@@ -142,6 +142,14 @@ int xspi_flash_init() {
         return -1;
     }
 
+    // Hardware reset the flash
+    #if defined(OMV_BOOT_XSPI_FLASH_RST_PIN)
+    port_pin_write(OMV_BOOT_XSPI_FLASH_RST_PIN, 0);
+    port_delay_ms(1);
+    port_pin_write(OMV_BOOT_XSPI_FLASH_RST_PIN, 1);
+    port_delay_ms(10);
+    #endif
+
     // Reset the XSPI
     if (xspi_flash_reset() != 0) {
         return -1;
