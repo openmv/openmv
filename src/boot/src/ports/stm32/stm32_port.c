@@ -95,7 +95,7 @@ int port_init(void) {
     }
 
     // Turn off LED.
-    port_pin_write(OMV_BOOT_LED_PIN, false);
+    port_pin_write(OMV_BOOT_LED_PIN, true);
 
     // Enable USB clocks.
     USB_OTG_CLK_ENABLE();
@@ -148,7 +148,7 @@ int port_deinit(void) {
     #endif
 
     // Turn off LED.
-    port_pin_write(OMV_BOOT_LED_PIN, false);
+    port_pin_write(OMV_BOOT_LED_PIN, true);
 
     #if !OMV_BOOT_SPI_FLASH_MMAP
     // Deinit GPIO pins.
@@ -201,9 +201,9 @@ void port_pin_mode(uint32_t pin, uint32_t mode) {
 void port_pin_write(uint32_t pin, uint32_t state) {
     const pin_t *p = &omv_boot_pins[pin];
     if (state) {
-        HAL_GPIO_WritePin(p->gpio, p->pin, GPIO_PIN_RESET);
-    } else {
         HAL_GPIO_WritePin(p->gpio, p->pin, GPIO_PIN_SET);
+    } else {
+        HAL_GPIO_WritePin(p->gpio, p->pin, GPIO_PIN_RESET);
     }
 }
 
