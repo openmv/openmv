@@ -112,11 +112,6 @@ int port_init(void) {
 }
 
 int port_deinit(void) {
-    // Disable SysTick and its IRQ.
-    NVIC_DisableIRQ(SysTick_IRQn);
-    NVIC_ClearPendingIRQ(SysTick_IRQn);
-    SysTick->CTRL &= ~(SysTick_CTRL_ENABLE_Msk);
-
     // Disable USB IRQ.
     HAL_NVIC_DisableIRQ(OMV_USB_IRQN);
     NVIC_ClearPendingIRQ(OMV_USB_IRQN);
@@ -146,6 +141,11 @@ int port_deinit(void) {
     #elif OMV_BOOT_SPI_FLASH_ENABLE
     spi_flash_deinit();
     #endif
+
+    // Disable SysTick and its IRQ.
+    NVIC_DisableIRQ(SysTick_IRQn);
+    NVIC_ClearPendingIRQ(SysTick_IRQn);
+    SysTick->CTRL &= ~(SysTick_CTRL_ENABLE_Msk);
 
     // Turn off LED.
     port_pin_write(OMV_BOOT_LED_PIN, true);
