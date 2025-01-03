@@ -40,6 +40,10 @@
 #include "class/dfu/dfu.h"
 #include "class/dfu/dfu_device.h"
 
+#ifndef OMV_BOOT_MAGIC_VALUE
+#define OMV_BOOT_MAGIC_VALUE  (0xB00710AD)
+#endif
+
 typedef struct pin {
     void *gpio;
     uint16_t port;

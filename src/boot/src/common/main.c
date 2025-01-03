@@ -54,6 +54,12 @@ int main(void) {
     // Initialize TinyUSB.
     tud_init(TUD_OPT_RHPORT);
 
+    bool forced = false;
+    #ifdef OMV_BOOT_MAGIC_ADDR
+    forced = OMV_BOOT_MAGIC_VALUE == *((uint32_t *) OMV_BOOT_MAGIC_ADDR);
+    *((uint32_t *) OMV_BOOT_MAGIC_ADDR) = 0;
+    #endif
+
     uint32_t start_ms = port_ticks_ms();
 
     while (true) {
@@ -75,7 +81,9 @@ int main(void) {
         // Wait for first DFU command.
         if (tud_dfu_detached && ticks_diff_ms(start_ms) > OMV_BOOT_DFU_TIMEOUT) {
             // Timeout, jump to main app.
-            break;
+            if (!forced) {
+                break;
+            }
         }
         if (tud_dfu_detached) {
             port_led_blink(100);
