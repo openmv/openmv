@@ -8,6 +8,9 @@ GCC_TOOLCHAIN_URL="https://developer.arm.com/-/media/Files/downloads/gnu/13.2.re
 LLVM_TOOLCHAIN_PATH=${HOME}/cache/llvm
 LLVM_TOOLCHAIN_URL="https://github.com/ARM-software/LLVM-embedded-toolchain-for-Arm/releases/download/release-18.1.3/LLVM-ET-Arm-18.1.3-Linux-x86_64.tar.xz"
 
+GNU_MAKE_PATH=${HOME}/cache/make
+GNU_MAKE_URL="https://ftp.gnu.org/gnu/make/make-4.4.1.tar.gz"
+
 ci_install_arm_gcc() {
     mkdir -p ${GCC_TOOLCHAIN_PATH}
     wget --no-check-certificate -O - ${GCC_TOOLCHAIN_URL} | tar --strip-components=1 -Jx -C ${GCC_TOOLCHAIN_PATH}
@@ -20,6 +23,14 @@ ci_install_arm_llvm() {
     wget --no-check-certificate -O - ${LLVM_TOOLCHAIN_URL} | tar --strip-components=1 -Jx -C ${LLVM_TOOLCHAIN_PATH}
     export PATH=${LLVM_TOOLCHAIN_PATH}/bin:${PATH}
     clang --version
+}
+
+ci_install_gnu_make() {
+    mkdir -p ${GNU_MAKE_PATH}
+    wget --no-check-certificate -O - ${GNU_MAKE_URL} | tar --strip-components=1 -zx -C ${GNU_MAKE_PATH}
+    cd ${GNU_MAKE_PATH} && ./configure && make -j$(nproc)
+    export PATH=${GNU_MAKE_PATH}:${PATH}
+    make --version
 }
 
 ########################################################################################
@@ -35,7 +46,7 @@ ci_update_submodules() {
 # Build Targets.
 
 ci_build_target() {
-    export PATH=${GCC_TOOLCHAIN_PATH}/bin:${PATH}
+    export PATH=${GNU_MAKE_PATH}:${GCC_TOOLCHAIN_PATH}/bin:${PATH}
     make -j$(nproc) -C src/micropython/mpy-cross
     make -j$(nproc) TARGET=${1} LLVM_PATH=${LLVM_TOOLCHAIN_PATH}/bin -C src
     mv src/build/bin ${1}
