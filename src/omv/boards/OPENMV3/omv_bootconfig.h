@@ -34,6 +34,7 @@
 #define OMV_BOOT_PID                (0x9203)
 #define OMV_BOOT_DFU_TIMEOUT        (1500)
 #define OMV_BOOT_LED_PIN            (0) // index in omv_boot_pins
+#define OMV_BOOT_MAGIC_ADDR         (0x2001FFFCU)
 
 // Flash config.
 #define OMV_BOOT_AXI_FLASH_ENABLE   (1)
