@@ -78,28 +78,36 @@ HAL_CFLAGS += -I$(TOP_DIR)/$(CMSIS_DIR)/include/st
 HAL_CFLAGS += -I$(TOP_DIR)/$(HAL_DIR)/include/
 HAL_CFLAGS += -I$(TOP_DIR)/$(HAL_DIR)/include/Legacy/
 
-MPY_CFLAGS += -I$(MP_BOARD_CONFIG_DIR)
-MPY_CFLAGS += -I$(BUILD)/$(MICROPY_DIR)/
-MPY_CFLAGS += -I$(TOP_DIR)/$(MICROPY_DIR)/
-MPY_CFLAGS += -I$(TOP_DIR)/$(MICROPY_DIR)/py/
-MPY_CFLAGS += -I$(TOP_DIR)/$(MICROPY_DIR)/lib/oofatfs
-MPY_CFLAGS += -I$(TOP_DIR)/$(MICROPY_DIR)/lib/lwip/src/include/
-MPY_CFLAGS += -I$(TOP_DIR)/$(MICROPY_DIR)/lib/mbedtls/include
-MPY_CFLAGS += -I$(TOP_DIR)/$(MICROPY_DIR)/ports/stm32/
-MPY_CFLAGS += -I$(TOP_DIR)/$(MICROPY_DIR)/ports/stm32/usbdev/core/inc/
-MPY_CFLAGS += -I$(TOP_DIR)/$(MICROPY_DIR)/ports/stm32/usbdev/class/inc/
-MPY_CFLAGS += -I$(TOP_DIR)/$(MICROPY_DIR)/ports/stm32/lwip_inc/
-MPY_CFLAGS += -I$(TOP_DIR)/$(MICROPY_DIR)/shared/runtime/
-MPY_CFLAGS += -DMICROPY_PY_SSL=1 \
-              -DMICROPY_SSL_MBEDTLS=1 \
-              -DMICROPY_STREAMS_POSIX_API=1 \
-              -DMICROPY_VFS_FAT=1
-
+MPY_CFLAGS += -I$(MP_BOARD_CONFIG_DIR) \
+              -I$(BUILD)/$(MICROPY_DIR)/ \
+              -I$(TOP_DIR)/$(MICROPY_DIR)/ \
+              -I$(TOP_DIR)/$(MICROPY_DIR)/py/ \
+              -I$(TOP_DIR)/$(MICROPY_DIR)/lib/oofatfs \
+              -I$(TOP_DIR)/$(MICROPY_DIR)/lib/lwip/src/include/ \
+              -I$(TOP_DIR)/$(MICROPY_DIR)/lib/mbedtls/include \
+              -I$(TOP_DIR)/$(MICROPY_DIR)/ports/stm32/ \
+              -I$(TOP_DIR)/$(MICROPY_DIR)/ports/stm32/usbdev/core/inc/ \
+              -I$(TOP_DIR)/$(MICROPY_DIR)/ports/stm32/usbdev/class/inc/ \
+              -I$(TOP_DIR)/$(MICROPY_DIR)/ports/stm32/lwip_inc/ \
+              -I$(TOP_DIR)/$(MICROPY_DIR)/shared/runtime/ \
+              -DMICROPY_PY_LWIP=$(MICROPY_PY_LWIP) \
+              -DMICROPY_PY_SSL=$(MICROPY_PY_SSL) \
+              -DMICROPY_SSL_MBEDTLS=$(MICROPY_SSL_MBEDTLS) \
+              -DMICROPY_PY_NETWORK_CYW43=$(MICROPY_PY_NETWORK_CYW43) \
+              -DMICROPY_PY_BLUETOOTH=$(MICROPY_PY_BLUETOOTH) \
+              -DMICROPY_BLUETOOTH_NIMBLE=$(MICROPY_BLUETOOTH_NIMBLE) \
+              -DMICROPY_PY_BLUETOOTH_USE_SYNC_EVENTS=1 \
+              -DMICROPY_STREAMS_POSIX_API=1
+              -DMICROPY_VFS_FAT=1 \
 
 MICROPY_ARGS += STM32LIB_CMSIS_DIR=$(TOP_DIR)/$(CMSIS_DIR) \
                 STM32LIB_HAL_DIR=$(TOP_DIR)/$(HAL_DIR) \
-                MICROPY_PY_SSL=1 \
-                MICROPY_SSL_MBEDTLS=1 \
+                MICROPY_PY_LWIP=$(MICROPY_PY_LWIP) \
+                MICROPY_PY_SSL=$(MICROPY_PY_SSL) \
+                MICROPY_SSL_MBEDTLS=$(MICROPY_SSL_MBEDTLS) \
+                MICROPY_PY_NETWORK_CYW43=$(MICROPY_PY_NETWORK_CYW43) \
+                MICROPY_PY_BLUETOOTH=$(MICROPY_PY_BLUETOOTH) \
+                MICROPY_BLUETOOTH_NIMBLE=$(MICROPY_BLUETOOTH_NIMBLE)\
                 MICROPY_PY_OPENAMP=$(MICROPY_PY_OPENAMP)\
                 MICROPY_PY_OPENAMP_REMOTEPROC=$(MICROPY_PY_OPENAMP_REMOTEPROC)
 
