@@ -27,14 +27,14 @@ export CC=
 export CXX=
 
 # Note this overrides USER_C_MODULES.
-MICROPY_ARGS += BOARD=$(TARGET) BUILD=$(BUILD)/rp2 USER_C_MODULES="" \
-                OMV_CMAKE=$(TOP_DIR)/$(OMV_DIR)/ports/$(PORT)/omv_portconfig.cmake
+MPY_MKARGS += BOARD=$(TARGET) BUILD=$(BUILD)/rp2 USER_C_MODULES="" \
+              OMV_CMAKE=$(TOP_DIR)/$(OMV_DIR)/ports/$(PORT)/omv_portconfig.cmake
 
 ###################################################
 all: $(OPENMV)
 
 $(FIRMWARE):
-	$(MAKE)  -C $(MICROPY_DIR)/ports/$(PORT) $(MICROPY_ARGS)
+	$(MAKE)  -C $(MICROPY_DIR)/ports/$(PORT) $(MPY_MKARGS)
 
 # This target generates the firmware image.
 $(OPENMV): $(FIRMWARE)

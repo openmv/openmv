@@ -55,7 +55,7 @@ CFLAGS += -D$(MCU) \
           $(OMV_BOARD_CFLAGS)
 
 # Disable LTO and set the SD
-MICROPY_ARGS += LTO=0 SD=$(SD)
+MPY_MKARGS += LTO=0 SD=$(SD)
 
 HAL_CFLAGS += -I$(TOP_DIR)/$(CMSIS_DIR)/include/
 HAL_CFLAGS += -I$(TOP_DIR)/$(CMSIS_DIR)/include/nrf
@@ -425,7 +425,7 @@ $(FW_DIR):
 
 FIRMWARE_OBJS: | $(BUILD) $(FW_DIR)
 	$(MAKE)  -C $(CMSIS_DIR)                 BUILD=$(BUILD)/$(CMSIS_DIR)    CFLAGS="$(CFLAGS) -fno-strict-aliasing -MMD"
-	$(MAKE)  -C $(MICROPY_DIR)/ports/$(PORT) BUILD=$(BUILD)/$(MICROPY_DIR)  $(MICROPY_ARGS)
+	$(MAKE)  -C $(MICROPY_DIR)/ports/$(PORT) BUILD=$(BUILD)/$(MICROPY_DIR)  $(MPY_MKARGS)
 	$(MAKE)  -C $(HAL_DIR)                   BUILD=$(BUILD)/$(HAL_DIR)      CFLAGS="$(CFLAGS) -MMD"
 	$(MAKE)  -C $(MLX90621_DIR)              BUILD=$(BUILD)/$(MLX90621_DIR) CFLAGS="$(CFLAGS) -MMD"
 	$(MAKE)  -C $(MLX90640_DIR)              BUILD=$(BUILD)/$(MLX90640_DIR) CFLAGS="$(CFLAGS) -MMD"
