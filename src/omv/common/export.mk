@@ -56,7 +56,7 @@ export TARGET
 export FIRMWARE
 export SYSTEM
 export STARTUP
-export MICROPY_ARGS
+export MPY_MKARGS
 export VELA_ARGS
 export FROZEN_MANIFEST
 
