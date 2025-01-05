@@ -20,114 +20,43 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-import os
-import sys
-import vfs
 
-main_py = """import time
-from machine import LED
+import sensor,pyb,time
+from machine import UART
 
-led = LED("LED_BLUE")
+sensor.reset()
+sensor.set_pixformat(sensor.RGB565)
+sensor.set_framesize(sensor.QVGA)
+sensor.skip_frames(time=2000)
+# Configuration
+pyb.freq(400000000)
+GREEN_LED_PIN = 2
+BLUE_LED_PIN = 3
+uart = UART(3, 115200)
+uart.init(115200, bits=8, parity=None, stop=1)
+counter = 1
+
+def capture_image(counter):
+    pyb.LED(BLUE_LED_PIN).on()
+    img = sensor.snapshot()
+    picture = f"IMG_{counter}.jpg"
+    img.save(picture)
+    print(f"Captured and saved image as: {picture}")
+    pyb.LED(BLUE_LED_PIN).off()
+    return img, picture
 
 while True:
-    led.on()
-    time.sleep_ms(150)
-    led.off()
-    time.sleep_ms(100)
-    led.on()
-    time.sleep_ms(150)
-    led.off()
-    time.sleep_ms(600)
-"""
-
-readme_txt = """Thank you for supporting the OpenMV project!
-
-To download the IDE, please visit:
-https://openmv.io/pages/download
-
-For tutorials and documentation, please visit:
-http://docs.openmv.io/
-
-For technical support and projects, please visit the forums:
-http://forums.openmv.io/
-
-Please use github to report bugs and issues:
-https://github.com/openmv/openmv
-"""
-
-bdev = None
-sdcard = None
-
-if bdev is None:
-    try:
-        import pyb
-
-        bdev = pyb.Flash(start=0)
-        sdcard = pyb.SDCard()
-        del pyb
-    except Exception:
-        pass
-
-if bdev is None:
-    try:
-        import mimxrt
-        import machine
-
-        bdev = mimxrt.Flash()
-        sdcard = machine.SDCard(1)
-        del mimxrt, machine
-    except Exception:
-        pass
-
-if bdev is None:
-    try:
-        import rp2
-
-        bdev = rp2.Flash()
-        del rp2
-    except Exception:
-        pass
+    pyb.LED(GREEN_LED_PIN).on()
+    if uart.any():
+     command=uart.read(1)
+     print(command)
+     while (command == None):
+        command=uart.read(1)
+        if(command != None):
+            print(command)
+            pyb.LED(GREEN_LED_PIN).off()
+            img, picture = capture_image(counter)
+            break
 
 
-def create_file(path, data=None):
-    with open(path, "w") as f:
-        if data is not None:
-            f.write(data)
 
-
-try:
-    fat = vfs.VfsFat(bdev)
-    vfs.mount(fat, "/flash")
-except Exception:
-    vfs.VfsFat.mkfs(bdev)
-    fat = vfs.VfsFat(bdev)
-    vfs.mount(fat, "/flash")
-    create_file("/flash/main.py", main_py)
-    create_file("/flash/README.txt", readme_txt)
-
-os.chdir("/flash")
-sys.path.append("/flash")
-sys.path.append("/flash/lib")
-
-try:
-    os.stat("SKIPSD")
-    sdcard = None  # Skip SD mount
-except Exception:
-    pass
-
-if sdcard is not None:
-    try:
-        fat = vfs.VfsFat(sdcard)
-        vfs.mount(fat, "/sdcard")
-        os.chdir("/sdcard")
-        sys.path.append("/sdcard")
-        sys.path.append("/sdcard/lib")
-    except Exception:
-        pass  # Fail silently
-
-try:
-    os.stat(".openmv_disk")
-except Exception:
-    create_file(".openmv_disk")
-
-del os, sys, vfs, fat, bdev, sdcard
