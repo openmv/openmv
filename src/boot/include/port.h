@@ -74,6 +74,7 @@ typedef enum {
     PTYPE_AXI_FLASH,
     PTYPE_SPI_FLASH,
     PTYPE_XIP_FLASH,
+    PTYPE_REC_FLASH,
 } partition_type_t;
 
 // Common MPU memory attributes.
@@ -95,8 +96,6 @@ void port_pin_mode(uint32_t pin, uint32_t mode);
 uint32_t port_pin_read(uint32_t pin);
 void port_pin_write(uint32_t pin, uint32_t state);
 void port_led_blink(uint32_t interval_ms);
-int port_flash_read(uint32_t ptype, uint32_t addr, uint8_t *buf, uint32_t size);
-int port_flash_write(uint32_t ptype, uint32_t addr, const uint8_t *buf, uint32_t size);
 void port_mpu_init(void);
 void port_mpu_deinit(void);
 void port_mpu_load_defaults();

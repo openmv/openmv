@@ -35,10 +35,11 @@
 int axi_flash_read(uint32_t addr, uint8_t *buf, size_t size);
 int axi_flash_write(uint32_t addr, const uint8_t *buf, size_t size);
 
-int spi_flash_deinit();
+int spi_flash_memory_map(bool dtr);
 int spi_flash_read(uint32_t addr, uint8_t *buf, uint32_t size);
 int spi_flash_write(uint32_t addr, const uint8_t *buf, uint32_t size);
-int spi_flash_memory_map(bool dtr);
+int spi_flash_recovery(uint32_t addr, const uint8_t *buf, uint32_t size);
+int spi_flash_deinit();
 
 static inline int flash_read(uint32_t ptype, uint32_t addr, uint8_t *buf, uint32_t size) {
     #if OMV_BOOT_AXI_FLASH_ENABLE
@@ -63,6 +64,11 @@ static inline int flash_write(uint32_t ptype, uint32_t addr, const uint8_t *buf,
     #if OMV_BOOT_SPI_FLASH_ENABLE
     if (ptype == PTYPE_SPI_FLASH) {
         return spi_flash_write(addr, buf, size);
+    }
+    #endif
+    #if OMV_BOOT_REC_FLASH_ENABLE
+    if (ptype == PTYPE_REC_FLASH) {
+        return spi_flash_recovery(addr, buf, size);
     }
     #endif
     return -1;
