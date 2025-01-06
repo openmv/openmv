@@ -74,6 +74,7 @@ typedef enum {
     PTYPE_AXI_FLASH,
     PTYPE_SPI_FLASH,
     PTYPE_XIP_FLASH,
+    PTYPE_REC_FLASH,
 } partition_type_t;
 
 // Common MPU memory attributes.
