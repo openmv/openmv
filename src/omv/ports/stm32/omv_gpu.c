@@ -79,57 +79,55 @@ int omv_gpu_draw_image(image_t *src_img,
                        const uint8_t *alpha_palette,
                        image_hint_t hint) {
     OMV_PROFILE_START();
-
-    if ((dst_rect->w != src_rect->w) || (dst_rect->h != src_rect->h)) {
-        // Create command list.
-        #if OMV_GPU_NEMA_MM_STATIC
-        nema_buffer_t bo = {
-            .size = sizeof(NEMA_BUFFER),
-            .base_virt = NEMA_BUFFER,
-            .base_phys = (uint32_t) NEMA_BUFFER,
-        };
-        nema_cmdlist_t cl = nema_cl_create_prealloc(&bo);
-        #else
-        nema_cmdlist_t cl = nema_cl_create_sized(OMV_GPU_NEMA_BUFFER_SIZE);
-        #endif
-        // Bind command list.
-        nema_cl_bind_circular(&cl);
-
-        nema_tex_mode_t blit_mode;
-        if (hint & IMAGE_HINT_BILINEAR) {
-            blit_mode = NEMA_FILTER_BL;
-        } else {
-            blit_mode = NEMA_FILTER_PS;
-        }
-        // Set up destination texture.
-        nema_tex_format_t dst_pixfmt = omv_gpu_pixfmt(dst_img->pixfmt);
-        nema_bind_dst_tex((uintptr_t) dst_img->data, dst_rect->w, dst_rect->h, dst_pixfmt, -1);
-
-        // Set up source texture.
-        nema_tex_format_t src_pixfmt = omv_gpu_pixfmt(src_img->pixfmt);
-        nema_bind_src_tex((uintptr_t) src_img->data, src_rect->w, src_rect->h, src_pixfmt, -1, blit_mode);
-
-        // Configure operations.
-        nema_set_blend_blit(NEMA_BL_SRC);
-        nema_set_clip(0, 0, dst_rect->w, dst_rect->h);
-        nema_blit_rect_fit(0, 0, dst_rect->w, dst_rect->h);
-
-        // Flush source image
-        SCB_CleanDCache_by_Addr(src_img->data, image_size(src_img));
-
-        nema_cl_submit(&cl);
-        nema_cl_wait(&cl);
-        #if !OMV_GPU_NEMA_MM_STATIC
-        nema_cl_destroy(&cl);
-        #endif
-
-        // Invalidate the destination image.
-        SCB_InvalidateDCache_by_Addr(dst_img->data, image_size(dst_img));
-
-    } else {
+    if (color_palette || alpha_palette) {
         return -1;
     }
 
+    // Create command list.
+    #if OMV_GPU_NEMA_MM_STATIC
+    nema_buffer_t bo = {
+        .size = sizeof(NEMA_BUFFER),
+        .base_virt = NEMA_BUFFER,
+        .base_phys = (uint32_t) NEMA_BUFFER,
+    };
+    nema_cmdlist_t cl = nema_cl_create_prealloc(&bo);
+    #else
+    nema_cmdlist_t cl = nema_cl_create_sized(OMV_GPU_NEMA_BUFFER_SIZE);
+    #endif
+    // Bind command list.
+    nema_cl_bind_circular(&cl);
+
+    nema_tex_mode_t blit_mode;
+    if (hint & IMAGE_HINT_BILINEAR) {
+        blit_mode = NEMA_FILTER_BL;
+    } else {
+        blit_mode = NEMA_FILTER_PS;
+    }
+    // Set up destination texture.
+    nema_tex_format_t dst_pixfmt = omv_gpu_pixfmt(dst_img->pixfmt);
+    nema_bind_dst_tex((uintptr_t) dst_img->data, dst_img->w, dst_img->h, dst_pixfmt, -1);
+
+    // Set up source texture.
+    nema_tex_format_t src_pixfmt = omv_gpu_pixfmt(src_img->pixfmt);
+    nema_bind_src_tex((uintptr_t) src_img->data, src_img->w, src_img->h, src_pixfmt, -1, blit_mode);
+
+    // Configure operations.
+    nema_set_blend_blit(NEMA_BL_SRC);
+    nema_set_clip(0, 0, dst_rect->w, dst_rect->h);
+    nema_blit_subrect_fit(dst_rect->x, dst_rect->y, dst_rect->w, dst_rect->h,
+                          src_rect->x, src_rect->y, src_rect->w, src_rect->h);
+
+    // Flush source image
+    SCB_CleanDCache_by_Addr(src_img->data, image_size(src_img));
+
+    nema_cl_submit(&cl);
+    nema_cl_wait(&cl);
+    #if !OMV_GPU_NEMA_MM_STATIC
+    nema_cl_destroy(&cl);
+    #endif
+
+    // Invalidate the destination image.
+    SCB_InvalidateDCache_by_Addr(dst_img->data, image_size(dst_img));
     OMV_PROFILE_PRINT();
     return 0;
 }

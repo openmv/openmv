@@ -145,7 +145,7 @@ void nema_host_free(void *ptr) {
 }
 
 void *nema_host_malloc(unsigned size) {
-    return malloc(size);
+    return aligned_alloc(__SCB_DCACHE_LINE_SIZE, (size + (__SCB_DCACHE_LINE_SIZE - 1)) & ~(__SCB_DCACHE_LINE_SIZE - 1));
 }
 
 int nema_mutex_lock(int mutex_id) {
