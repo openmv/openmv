@@ -29,6 +29,6 @@ void mimxrt_hal_init();
 void mimxrt_hal_bootloader();
 int mimxrt_hal_csi_init(CSI_Type *inst);
 int mimxrt_hal_i2c_init(uint32_t bus_id);
-int mimxrt_hal_spi_init(uint32_t bus_id, bool nss_enable, uint32_t nss_pol);
-int mimxrt_hal_spi_deinit(uint32_t bus_id);
+int mimxrt_hal_spi_init(uint32_t bus_id, bool nss_enable, uint32_t nss_pol, uint32_t bus_mode);
+int mimxrt_hal_spi_deinit(uint32_t bus_id, uint32_t bus_mode);
 #endif //__MIMXRT_HAL_H__

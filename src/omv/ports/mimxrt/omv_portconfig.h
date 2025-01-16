@@ -142,6 +142,7 @@ struct {                                                \
         lpspi_master_edma_handle_t descr_master_edma;   \
     };                                                  \
     lpspi_transfer_t xfer_descr;                        \
+    uint32_t bus_mode;                                  \
 };
 
 // omv_csi_t port-specific fields.
