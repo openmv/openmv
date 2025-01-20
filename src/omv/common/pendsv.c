@@ -29,6 +29,7 @@
 #include "py/runtime.h"
 #include "shared/runtime/interrupt_char.h"
 #include "pendsv.h"
+#include CMSIS_MCU_H
 
 // This variable is used to save the exception object between a ctrl-C and the
 // PENDSV call that actually raises the exception.  It must be non-static
