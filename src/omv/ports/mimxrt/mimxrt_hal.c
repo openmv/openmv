@@ -194,7 +194,7 @@ int mimxrt_hal_i2c_init(uint32_t bus_id) {
     return 0;
 }
 
-int mimxrt_hal_spi_init(uint32_t bus_id, bool nss_enable, uint32_t nss_pol) {
+int mimxrt_hal_spi_init(uint32_t bus_id, bool nss_enable, uint32_t nss_pol, uint32_t bus_mode) {
     typedef struct {
         omv_gpio_t sclk_pin;
         omv_gpio_t miso_pin;
@@ -242,8 +242,12 @@ int mimxrt_hal_spi_init(uint32_t bus_id, bool nss_enable, uint32_t nss_pol) {
     }
 
     omv_gpio_config(spi_pins.sclk_pin, OMV_GPIO_MODE_ALT, OMV_GPIO_PULL_NONE, OMV_GPIO_SPEED_MED, -1);
-    omv_gpio_config(spi_pins.miso_pin, OMV_GPIO_MODE_ALT, OMV_GPIO_PULL_NONE, OMV_GPIO_SPEED_MED, -1);
-    omv_gpio_config(spi_pins.mosi_pin, OMV_GPIO_MODE_ALT, OMV_GPIO_PULL_NONE, OMV_GPIO_SPEED_MED, -1);
+    if (bus_mode & OMV_SPI_BUS_RX) {
+        omv_gpio_config(spi_pins.miso_pin, OMV_GPIO_MODE_ALT, OMV_GPIO_PULL_NONE, OMV_GPIO_SPEED_MED, -1);
+    }
+    if (bus_mode & OMV_SPI_BUS_TX) {
+        omv_gpio_config(spi_pins.mosi_pin, OMV_GPIO_MODE_ALT, OMV_GPIO_PULL_NONE, OMV_GPIO_SPEED_MED, -1);
+    }
     if (nss_enable) {
         omv_gpio_config(spi_pins.ssel_pin, OMV_GPIO_MODE_ALT, OMV_GPIO_PULL_UP, OMV_GPIO_SPEED_MED, -1);
     } else {
@@ -257,7 +261,7 @@ int mimxrt_hal_spi_init(uint32_t bus_id, bool nss_enable, uint32_t nss_pol) {
     return 0;
 }
 
-int mimxrt_hal_spi_deinit(uint32_t bus_id) {
+int mimxrt_hal_spi_deinit(uint32_t bus_id, uint32_t bus_mode) {
     typedef struct {
         omv_gpio_t sclk_pin;
         omv_gpio_t miso_pin;
@@ -305,8 +309,12 @@ int mimxrt_hal_spi_deinit(uint32_t bus_id) {
     }
 
     omv_gpio_deinit(spi_pins.sclk_pin);
-    omv_gpio_deinit(spi_pins.miso_pin);
-    omv_gpio_deinit(spi_pins.mosi_pin);
+    if (bus_mode & OMV_SPI_BUS_RX) {
+        omv_gpio_deinit(spi_pins.miso_pin);
+    }
+    if (bus_mode & OMV_SPI_BUS_TX) {
+        omv_gpio_deinit(spi_pins.mosi_pin);
+    }
     omv_gpio_deinit(spi_pins.ssel_pin);
     return 0;
 }

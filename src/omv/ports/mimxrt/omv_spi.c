@@ -234,6 +234,7 @@ int omv_spi_init(omv_spi_t *spi, omv_spi_config_t *config) {
     spi->inst = spi_descr->inst;
     spi->cs = spi_descr->cs;
     spi->dma_flags = config->dma_flags;
+    spi->bus_mode = config->bus_mode;
 
     lpspi_master_config_t spi_config;
     LPSPI_MasterGetDefaultConfig(&spi_config);
@@ -255,7 +256,7 @@ int omv_spi_init(omv_spi_t *spi, omv_spi_config_t *config) {
     spi->config_backup = spi_config;
 
     // Configure pins.
-    mimxrt_hal_spi_init(config->id, config->nss_enable, config->nss_pol);
+    mimxrt_hal_spi_init(config->id, config->nss_enable, config->nss_pol, config->bus_mode);
 
     LPSPI_MasterTransferCreateHandle(
         spi->inst,
@@ -294,7 +295,7 @@ int omv_spi_deinit(omv_spi_t *spi) {
             DMAMUX_DisableChannel(spi_descr->dma_descr_rx.dma_mux, spi->dma_descr_rx.channel);
         }
         LPSPI_Deinit(spi->inst);
-        mimxrt_hal_spi_deinit(spi->id);
+        mimxrt_hal_spi_deinit(spi->id, spi->bus_mode);
     }
     return 0;
 }

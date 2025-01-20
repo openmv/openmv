@@ -491,8 +491,16 @@ void HAL_SPI_MspInit(SPI_HandleTypeDef *hspi) {
         omv_gpio_config(spi_pins.sclk_pin, OMV_GPIO_MODE_ALT, OMV_GPIO_PULL_DOWN, OMV_GPIO_SPEED_HIGH, -1);
     }
     #endif
-    omv_gpio_config(spi_pins.miso_pin, OMV_GPIO_MODE_ALT, OMV_GPIO_PULL_NONE, OMV_GPIO_SPEED_HIGH, -1);
-    omv_gpio_config(spi_pins.mosi_pin, OMV_GPIO_MODE_ALT, OMV_GPIO_PULL_NONE, OMV_GPIO_SPEED_HIGH, -1);
+    if (hspi->Init.Direction == SPI_DIRECTION_2LINES || hspi->Init.Direction == SPI_DIRECTION_2LINES_RXONLY) {
+        omv_gpio_config(spi_pins.miso_pin, OMV_GPIO_MODE_ALT, OMV_GPIO_PULL_NONE, OMV_GPIO_SPEED_HIGH, -1);
+    }
+    #if defined(STM32H7)
+    if (hspi->Init.Direction == SPI_DIRECTION_2LINES || hspi->Init.Direction == SPI_DIRECTION_2LINES_TXONLY) {
+    #else
+    if (hspi->Init.Direction == SPI_DIRECTION_2LINES || hspi->Init.Direction == SPI_DIRECTION_1LINE) {
+    #endif
+        omv_gpio_config(spi_pins.mosi_pin, OMV_GPIO_MODE_ALT, OMV_GPIO_PULL_NONE, OMV_GPIO_SPEED_HIGH, -1);
+    }
     if (hspi->Init.NSS != SPI_NSS_SOFT) {
         omv_gpio_config(spi_pins.ssel_pin, OMV_GPIO_MODE_ALT, OMV_GPIO_PULL_UP, OMV_GPIO_SPEED_HIGH, -1);
     } else {
@@ -583,8 +591,16 @@ void HAL_SPI_MspDeInit(SPI_HandleTypeDef *hspi) {
     }
 
     omv_gpio_deinit(spi_pins.sclk_pin);
-    omv_gpio_deinit(spi_pins.miso_pin);
-    omv_gpio_deinit(spi_pins.mosi_pin);
+    if (hspi->Init.Direction == SPI_DIRECTION_2LINES || hspi->Init.Direction == SPI_DIRECTION_2LINES_RXONLY) {
+        omv_gpio_deinit(spi_pins.miso_pin);
+    }
+    #if defined(STM32H7)
+    if (hspi->Init.Direction == SPI_DIRECTION_2LINES || hspi->Init.Direction == SPI_DIRECTION_2LINES_TXONLY) {
+    #else
+    if (hspi->Init.Direction == SPI_DIRECTION_2LINES || hspi->Init.Direction == SPI_DIRECTION_1LINE) {
+    #endif
+        omv_gpio_deinit(spi_pins.mosi_pin);
+    }
     // Deinited by omv_spi.c so as to not deinit the pin when HAL_SPI_MspDeInit is called
     // from deiniting the SPI bus from the machine or pyb module.
     // omv_gpio_deinit(spi_pins.ssel_pin);
