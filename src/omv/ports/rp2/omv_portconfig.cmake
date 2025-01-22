@@ -276,6 +276,7 @@ if(MICROPY_PY_ULAB)
         ${MICROPY_ULAB_DIR}/code/numpy/stats.c
         ${MICROPY_ULAB_DIR}/code/numpy/transform.c
         ${MICROPY_ULAB_DIR}/code/numpy/vector.c
+        ${MICROPY_ULAB_DIR}/code/scipy/integrate/integrate.c
         ${MICROPY_ULAB_DIR}/code/scipy/linalg/linalg.c
         ${MICROPY_ULAB_DIR}/code/scipy/optimize/optimize.c
         ${MICROPY_ULAB_DIR}/code/scipy/scipy.c
