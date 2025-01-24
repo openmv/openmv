@@ -40,4 +40,6 @@
 #define MICROPY_BOARD_FATAL_ERROR           __fatal_error
 #define MICROPY_HW_DMA_ENABLE_AUTO_TURN_OFF (0)
 
+#define MICROPY_HW_ETH_ATTRIBUTE __attribute__((aligned(16384), section(".dma_buffer")));
+
 void __fatal_error(const char *);
