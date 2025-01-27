@@ -72,17 +72,18 @@ class yolo_v2_postprocess:
     _YOLO_V2_SCORE = const(4)
     _YOLO_V2_CLASSES = const(5)
 
-    def __init__(self, threshold=0.6, anchors=None):
+    def __init__(self, threshold=0.6, anchors=None, nms_threshold=0.1, nms_sigma=0.1):
         self.threshold = threshold
-        if anchors is not None:
-            self.anchors = anchors
-        else:
+        self.anchors = anchors
+        if self.anchors is None:
             self.anchors = np.array([[0.98830, 3.36060],
                                      [2.11940, 5.37590],
                                      [3.05200, 9.13360],
                                      [5.55170, 9.30660],
-                                     [9.72600, 11.1422]], dtype=np.float)
+                                     [9.72600, 11.1422]])
         self.anchors_len = len(self.anchors)
+        self.nms_threshold = nms_threshold
+        self.nms_sigma = nms_sigma
 
     def __call__(self, model, inputs, outputs):
         ob, oh, ow, oc = model.output_shape[0]
@@ -95,8 +96,8 @@ class yolo_v2_postprocess:
             return a - (b * (a // b))
 
         def softmax(x):
-            e_x = np.exp(x - np.max(x))
-            return e_x / np.sum(e_x)
+            e_x = np.exp(x - np.max(x, axis=1, keepdims=True))
+            return e_x / np.sum(e_x, axis=1, keepdims=True)
 
         # Reshape the output to a 2D array
         colum_outputs = outputs[0].reshape((oh * ow * self.anchors_len,
@@ -119,18 +120,13 @@ class yolo_v2_postprocess:
         bb_anchors = mod(score_indices, self.anchors_len)
 
         # Get the anchor box information
-        bb_a_array = [self.anchors[i] for i in bb_anchors.tolist()]
-        bb_a_array = np.array(bb_a_array)
+        bb_a_array = np.take(self.anchors, bb_anchors, axis=0)
 
         # Get the score information
         bb_scores = sigmoid(bb[:, _YOLO_V2_SCORE])
 
         # Get the class information
-        bb_classes = []
-        for i in range(len(score_indices)):
-            s = softmax(bb[i, _YOLO_V2_CLASSES:])
-            bb_classes.append(np.argmax(s))
-        bb_classes = np.array(bb_classes, dtype=np.uint16)
+        bb_classes = np.argmax(softmax(bb[:, _YOLO_V2_CLASSES:]), axis=1)
 
         # Compute the bounding box information
         x_center = (bb_cols + sigmoid(bb[:, _YOLO_V2_TX])) / ow
@@ -152,7 +148,7 @@ class yolo_v2_postprocess:
                                  x_center[i] + (w_rel[i] / 2),
                                  y_center[i] + (h_rel[i] / 2),
                                  bb_scores[i], bb_classes[i])
-        return nms.get_bounding_boxes()
+        return nms.get_bounding_boxes(threshold=self.nms_threshold, sigma=self.nms_sigma)
 
 
 class yolo_v5_postprocess:
@@ -163,8 +159,10 @@ class yolo_v5_postprocess:
     _YOLO_V5_SCORE = const(4)
     _YOLO_V5_CLASSES = const(5)
 
-    def __init__(self, threshold=0.6):
+    def __init__(self, threshold=0.6, nms_threshold=0.1, nms_sigma=0.1):
         self.threshold = threshold
+        self.nms_threshold = nms_threshold
+        self.nms_sigma = nms_sigma
 
     def __call__(self, model, inputs, outputs):
         oh, ow, oc = model.output_shape[0]
@@ -188,8 +186,7 @@ class yolo_v5_postprocess:
         bb_scores = bb[:, _YOLO_V5_SCORE]
 
         # Get the class information
-        bb_classes = [np.argmax(bb[x, _YOLO_V5_CLASSES:]) for x in range(bb.shape[0])]
-        bb_classes = np.array(bb_classes, dtype=np.uint16)
+        bb_classes = np.argmax(bb[:, _YOLO_V5_CLASSES:], axis=1)
 
         # Compute the bounding box information
         x_center = bb[:, _YOLO_V5_CX]
@@ -208,4 +205,4 @@ class yolo_v5_postprocess:
         for i in range(len(bb)):
             nms.add_bounding_box(xmin[i], ymin[i], xmax[i], ymax[i],
                                  bb_scores[i], bb_classes[i])
-        return nms.get_bounding_boxes()
+        return nms.get_bounding_boxes(threshold=self.nms_threshold, sigma=self.nms_sigma)

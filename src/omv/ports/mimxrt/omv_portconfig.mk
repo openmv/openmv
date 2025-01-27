@@ -454,6 +454,7 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/modules/ulab/code/,\
 	numpy/stats.o                   \
 	numpy/transform.o               \
 	numpy/vector.o                  \
+	scipy/integrate/integrate.o     \
 	scipy/linalg/linalg.o           \
 	scipy/optimize/optimize.o       \
 	scipy/scipy.o                   \
