@@ -150,7 +150,7 @@
 #define OMV_CORE1_MEMORY                    DRAM
 #define OMV_CORE1_SIZE                      (512K)
 #define OMV_GC_BLOCK0_MEMORY                SRAM1   // Main GC block.
-#define OMV_GC_BLOCK0_SIZE                  (192K)
+#define OMV_GC_BLOCK0_SIZE                  (176K)
 #define OMV_GC_BLOCK1_MEMORY                DRAM    // Extra GC block 1.
 #define OMV_GC_BLOCK1_SIZE                  (2560K)
 #define OMV_MSC_BUF_SIZE                    (2K)    // USB MSC bot data
@@ -165,9 +165,9 @@
 #define OMV_SRAM0_ORIGIN                    0x24000000
 #define OMV_SRAM0_LENGTH                    512K
 #define OMV_SRAM1_ORIGIN                    0x30000000
-#define OMV_SRAM1_LENGTH                    256K          // SRAM1 + SRAM2
+#define OMV_SRAM1_LENGTH                    240K          // SRAM1 + SRAM2
 #define OMV_SRAM3_ORIGIN                    0x30040000    // Second half of SRAM3 reserved for M4.
-#define OMV_SRAM3_LENGTH                    16K
+#define OMV_SRAM3_LENGTH                    32K
 #define OMV_SRAM4_ORIGIN                    0x38000000
 #define OMV_SRAM4_LENGTH                    64K
 #define OMV_DRAM_ORIGIN                     0x60000000
