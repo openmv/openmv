@@ -34,7 +34,7 @@ sensor.shutdown(True)
 
 # Enable RTC interrupts every 30 seconds.
 # Note the camera will RESET after wakeup from Deepsleep Mode.
-rtc.wakeup(30000)
+rtc.alarm(rtc.ALARM0, 30000)
 
 # Enter Deepsleep Mode.
 machine.deepsleep()
