@@ -118,6 +118,7 @@ TRACE_ATOC_MISC_END                                = 0x4B
 TRACE_STOC_DEVICE_BEGIN                            = 0x4C
 TRACE_STOC_DEVICE_END                              = 0x4D
 TRACE_STOC_PART_NUMBER                             = 0x4E
+TRACE_START_MAIN                                   = 0x4F
 
 TRACE_STOC_PROCESS_BEGIN                           = 0x50
 TRACE_ATOC_PROCESS_BEGIN                           = 0x51
@@ -134,12 +135,12 @@ TRACE_M55_FASTBOOT_SERAM                           = 0x5B
 TRACE_M55_TCM_RETAINED                             = 0x5C
 TRACE_M55_VTOR_SENTINEL                            = 0x5D
 TRACE_STOP_MODE_ENABLE_BEGIN                       = 0x5E
+TRACE_1_MAIN                                       = 0x5F
 
 TRACE_RTOS_WFI_BEGIN                               = 0x60
 TRACE_RTOS_WFI_END                                 = 0x61
-
-TRACE_DEBUG_0                                      = 0x62
-TRACE_DEBUG_1                                      = 0x63
+TRACE_2_MAIN                                       = 0x62
+TRACE_3_MAIN                                       = 0x63
 TRACE_ENTER_MAINTENANCE_MODE                       = 0x64
 TRACE_DCU_CONFIG_BEGIN                             = 0x65
 TRACE_DCU_CONFIG_END                               = 0x66
@@ -180,6 +181,11 @@ TRACE_EWIC_STATUS                                  = 0x86
 TRACE_SOC_ID                                       = 0x87
 TRACE_OVERRIDE_SOC_ID                              = 0x88
 TRACE_ACTIVE_SW_VERSION                            = 0x89
+TRACE_TOGGLE_EXTSYS0_WAKEUP                        = 0x8A
+TRACE_TOGGLE_EXTSYS1_WAKEUP                        = 0x8B
+
+TRACE_SERAM_RESET_HANDLER                          = 0x8E
+TRACE_FAST_BOOT                                    = 0x8B
 
 TRACE_BANK_A_VALID                                 = 0x90
 TRACE_BANK_B_VALID                                 = 0x91
@@ -208,8 +214,10 @@ TRACE_BISR_NOT_NEEDED                              = 0xA6
 TRACE_BISR_ENABLE                                  = 0xA7
 TRACE_BISR_FINISHED                                = 0xA8
 TRACE_BISR_REPAIR_FAILED                           = 0xA9
-
 TRACE_RESUME_FROM_STANDBY                          = 0xAA
+TRACE_BOOT_TIME_US                                 = 0xAB
+TRACE_TURN_OFF_SE_POWER                            = 0xAC
+TRACE_TURN_ON_HOST_POWER                           = 0xAD
 
 TRACE_STOP_ENABLE_END                              = 0xB0
 TRACE_OFF_HANDLER                                  = 0xB1
@@ -235,6 +243,13 @@ TRACE_STOP_12                                      = 0xD3
 TRACE_STOP_13                                      = 0xD4
 TRACE_STOP_14                                      = 0xD5
 TRACE_STOP_15                                      = 0xD6
+
+TRACE_PINMUX                                       = 0xD7
+TRACE_BOOT_INIT                                    = 0xD8
+TRACE_POWER_INIT                                   = 0xD9
+TRACE_SES_INIT                                     = 0xDA
+TRACE_MRAM_CFG                                     = 0xDB
+TRACE_MRAM_PWR_EN                                  = 0xDC
 
 
 
@@ -301,7 +316,7 @@ marker_lookup = {
     TRACE_MRAM_SET_ERROR_BYPASS                    : 'Disable MRAM ECC Error Interrupts',
     TRACE_BAD_SERAM_JUMP_ADDRESS                   : 'Bad SERAM Jump Address',
     TRACE_BOOT_LOADER_JUMP_RETURNED                : 'Boot Loader Jump Returned',
-    TRACE_TURN_ON_SYSTEM_POWER                     : 'Turn On System Power',
+    TRACE_TURN_ON_SYSTEM_POWER                     : 'Turn On SE System POWER Register',
     TRACE_SERAM_RETENTION_PATTERN                  : 'SERAM retention pattern detected',
     TRACE_FIREWALL_STATIC_CONFIG_BEGIN             : 'Firewall Static BEGIN',
     TRACE_FIREWALL_STATIC_CONFIG_END               : 'Firewall Static END  ',
@@ -318,6 +333,7 @@ marker_lookup = {
     TRACE_STOC_DEVICE_BEGIN                        : 'STOC DEVICE BEGIN',
     TRACE_STOC_DEVICE_END                          : 'STOC DEVICE END',
     TRACE_STOC_PART_NUMBER                         : 'STOC Part#',
+    TRACE_START_MAIN                               : 'main() start',
 
     TRACE_STOC_PROCESS_BEGIN                       : 'STOC Process BEGIN',
     TRACE_ATOC_PROCESS_BEGIN                       : 'ATOC Process BEGIN',
@@ -334,10 +350,12 @@ marker_lookup = {
     TRACE_M55_TCM_RETAINED                         : 'M55 TCM was retained',
     TRACE_M55_VTOR_SENTINEL                        : 'M55 VTOR SENTINEL detected',
     TRACE_STOP_MODE_ENABLE_BEGIN                   : 'Stop mode enable BEGIN',
+    TRACE_1_MAIN                                   : 'main() 1',
+    
     TRACE_RTOS_WFI_BEGIN                           : 'RTOS Wfi BEGIN',
     TRACE_RTOS_WFI_END                             : 'RTOS Wfi END',
-    TRACE_DEBUG_0                                  : 'Debug 0',
-    TRACE_DEBUG_1                                  : 'Debug 1',
+    TRACE_2_MAIN                                   : 'main() 2',
+    TRACE_3_MAIN                                   : 'main() 3',
     TRACE_ENTER_MAINTENANCE_MODE                   : 'Enter maintenance mode',
     TRACE_DCU_CONFIG_BEGIN                         : 'Begin DCU configuration',
     TRACE_DCU_CONFIG_END                           : 'Finish DCU configuration',
@@ -391,6 +409,10 @@ marker_lookup = {
     TRACE_SOC_ID                                   : 'Read SOC_ID',
     TRACE_OVERRIDE_SOC_ID                          : 'Override SOC_ID',
     TRACE_ACTIVE_SW_VERSION                        : 'Certificate Active Software Version',
+    TRACE_TOGGLE_EXTSYS0_WAKEUP                    : 'Toggle EXTSYS0 Wakeup',
+    TRACE_TOGGLE_EXTSYS1_WAKEUP                    : 'Toggle EXTSYS1 Wakeup',
+    TRACE_SERAM_RESET_HANDLER                      : 'SERAM reset handler',
+    TRACE_FAST_BOOT                                : 'FAST BOOT',
     TRACE_RISC_V_RELEASED                          : 'RISC-V released',
     TRACE_RISC_V_EXTSYS0_RESET                     : 'EXTSYS0 Reset',
     TRACE_RISC_V_EXTSYS0_SHUTDOWN                  : 'EXTSYS0 Shutdown',
@@ -402,6 +424,9 @@ marker_lookup = {
     TRACE_BISR_FINISHED                            : 'BISR finished',
     TRACE_BISR_REPAIR_FAILED                       : 'BISR repair failed',
     TRACE_RESUME_FROM_STANDBY                      : 'Resume from STANDBY mode',
+    TRACE_BOOT_TIME_US                             : 'Boot time in us',
+    TRACE_TURN_OFF_SE_POWER                        : 'Turn off SE POWER register',
+    TRACE_TURN_ON_HOST_POWER                       : 'Turn on HOST POWER register',
     TRACE_BISR_REPAIR_FAILED                       : 'BISR repair failed',
     TRACE_STOP_ENABLE_END                          : 'Stop mode enable END',
     TRACE_OFF_HANDLER                              : 'OFF mode handler',
@@ -425,7 +450,13 @@ marker_lookup = {
     TRACE_STOP_12                                  : 'STOP_12',
     TRACE_STOP_13                                  : 'STOP_13',
     TRACE_STOP_14                                  : 'STOP_14',
-    TRACE_STOP_15                                  : 'STOP_15'
+    TRACE_STOP_15                                  : 'STOP_15',
+    TRACE_PINMUX                                   : 'PinMux',
+    TRACE_BOOT_INIT                                : 'Boot Init',
+    TRACE_POWER_INIT                               : 'Power Init',
+    TRACE_SES_INIT                                 : 'Ses Init',
+    TRACE_MRAM_CFG                                 : 'MRAM config',
+    TRACE_MRAM_PWR_EN                              : 'MRAM power enable'
 }
 
 service_id_lut = {

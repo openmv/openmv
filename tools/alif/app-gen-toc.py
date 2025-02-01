@@ -559,7 +559,7 @@ def validateVersAttr(version):
 def updateDeviceConfig(file):
     #print('*** updateDeviceConfig: ', file)
     # Update the firewall configuration in the OEM DEVICE config file
-    update_fw_cfg_oem()
+    update_fw_cfg_oem(file)
 
     cfg = read_global_config('build/config/' + file)
     if 'miscellaneous' in cfg:

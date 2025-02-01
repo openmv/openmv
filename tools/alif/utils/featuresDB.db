@@ -2,9 +2,17 @@
   "Fusion":{
     "mram_total" : "0x600000",
     "mram_base"  : "0x80000000",
-    "revisions": ["B2","B3","B4"],
+    "revisions": ["B4","B3","B2"],
     "rev_package_ext": {"B2":"rev-b2","B3":"rev-b3","B4":"rev-b4"},
     "rev_baud_rate": {"B2":55000,"B3":55000,"B4":55000},
+    "seram_banks" : 2
+  },
+  "Spark":{
+    "mram_total" : "0x200000",
+    "mram_base"  : "0x80000000",
+    "revisions": ["A0"],
+    "rev_package_ext": {"A0":"rev-a0"},    
+    "rev_baud_rate": {"A0":56500},
     "seram_banks" : 2
   }
 }
