@@ -118,7 +118,8 @@ error_lookup = {
             ISP_CODE_VERIFY_FAILURE         : "ISP_CODE_VERIFY_FAILURE",
             ISP_INVALID_CODE_SIZE           : "ISP_INVALID_CODE_SIZE",
             ISP_MFG_DATA_MISCOMPARE         : "ISP_MFG_DATA_MISCOMPARE",
-            ISP_SERAM_JUMP_FAILED           : "ISP_SERAM_JUMP_FAILED"
+            ISP_SERAM_JUMP_FAILED           : "ISP_SERAM_JUMP_FAILED",
+            ISP_MRAM_CONTROLLER_ERROR       : "ISP_MRAM_CONTROLLER_ERROR"
 }
 
 cpu_name_lut = {
@@ -286,8 +287,9 @@ def isp_decode_packet(isp, prompt_str, packet):
 #            hexized = [hex(x) for x in packet]
 #            print(hexized)
             errstr = error_lookup.get(packet[ISP_PACKET_DATA_FIELD])
+
             if not errstr:
-                errstr = ">> ERROR UNKNOWN <<"
+                errstr = ">> ERROR UNKNOWN (" + hex(packet[ISP_PACKET_DATA_FIELD]) + ") <<"
             if isp.getVerbose() is False:
                 print("%s" %prompt_str, end='')
                 print(" length= %3d" %len(packet), end='')
@@ -296,6 +298,16 @@ def isp_decode_packet(isp, prompt_str, packet):
                 print(" error=", errstr)
             else:
                 print(" error=", errstr, end='')
+
+            # print the extended error code, if it exist
+            payload_begin = ISP_PACKET_DATA_FIELD + 1   # skip the NACK error code
+            payload_end = len(packet) - 1               # skip the checksum
+
+            payload = packet[payload_begin:payload_end]
+            if len(payload) > 0:
+                hexized = [hex(x) for x in payload]
+                print(" extended error=", hexized)
+
         if command == ISP_COMMAND_DATA_RESPONSE:
             payload = packet[ISP_PACKET_DATA_FIELD:len(packet)-1]
             if isp.getVerbose() is True:
@@ -329,42 +341,27 @@ def isp_readmessage(isp):
 
         Length; Command; [<payload>]; Checksum
     """
-    packet_contents = []
 
     packet_header = isp.readSerial(ISP_PACKET_HEADER_LENGTH)
-
-    if len(packet_header) == 0:
-        return []
-
     if len(packet_header) != ISP_PACKET_HEADER_LENGTH:
         return []
 
     packet_length = packet_header[ISP_PACKET_LENGTH_FIELD]
-    packet_command= packet_header[ISP_PACKET_COMMAND_FIELD]
-
-    if packet_command == ISP_COMMAND_DATA_RESPONSE:
-        packet_contents = list(bytearray(isp.readSerial(packet_length - 3)))
-        if packet_contents == []:
-            return []
-
-    if packet_command == ISP_COMMAND_PRINT_DATA:
-        packet_contents = list(bytearray(isp.readSerial(packet_length - 3)))
-        if packet_contents == []:
-            return []
-
-    if packet_command == ISP_COMMAND_NAK:   # NACK packet or
-        packet_contents = list(bytearray(isp.readSerial(1))) # Error code
-
-    # read the checksum
-    packet_checksum = list(bytearray(isp.readSerial(1)))
-    if packet_checksum == []:
+    if packet_length < ISP_PACKET_HEADER_LENGTH + 1:
         return []
 
-    if packet_command == ISP_COMMAND_NAK or packet_command != ISP_COMMAND_ACK:
-        packet = packet_header + packet_contents + packet_checksum
-    else:
-        packet = packet_header + packet_checksum
+# Uncomment to test NAK packages with payload (also indent the lines after 'else:' so that Python doesn't complain
+    #if packet_header[ISP_PACKET_COMMAND_FIELD] == ISP_COMMAND_NAK:
+    #    packet_contents = list(bytearray(isp.readSerial(packet_length - 3)))
+    #    packet_contents += [0x1, 0x2, 0x3, 0x4]
+    #    packet_contents += list(bytearray(isp.readSerial(1)))
+    #else:
+    # read the rest of the packet (including the checksum)
+    packet_contents = list(bytearray(isp.readSerial(packet_length - ISP_PACKET_HEADER_LENGTH)))
+    if packet_contents == []:
+        return []
 
+    packet = packet_header + packet_contents
 #    print("message = ", packet)
 
     return packet
@@ -652,6 +649,25 @@ def isp_get_maintenance_status(isp):
     return MaintenanceMode
 
 def isp_get_revision(isp):
+    # we will add the source (SEROM or SERAM)
+
+    """
+        isp_enquiry
+    """
+    message = isp_build_packet(isp, ISP_COMMAND_ENQUIRY)
+    if len(message) == 0:
+        return
+    cmd = message[ISP_PACKET_COMMAND_FIELD]
+    if cmd == ISP_COMMAND_DATA_RESPONSE:
+        state  = message[ISP_PACKET_DATA_FIELD]
+        isp_print_color("blue"," Source\t\t=  ")
+        if state & ISP_SOURCE_SEROM:
+            isp_print_color("blue","SEROM\n")
+        if state & ISP_SOURCE_SERAM:
+            isp_print_color("blue","SERAM\n")
+
+
+
     """
         isp_get_revision handler
     """

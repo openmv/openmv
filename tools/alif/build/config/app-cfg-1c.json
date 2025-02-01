@@ -1,0 +1,17 @@
+{
+    "DEVICE": {
+        "disabled": false,
+        "binary": "app-device-config-1c.json",
+        "version" : "0.5.00",
+        "signed": true
+    },
+    "BLINK-HE": {
+        "disabled": false,
+        "binary": "m55_blink_he_1c.bin",
+        "version" : "1.0.0",
+        "signed": true,
+        "cpu_id": "M55_HE",
+        "loadAddress": "0x58000000",
+        "flags": ["load", "boot"]
+    }
+}

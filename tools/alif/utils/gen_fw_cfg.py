@@ -34,7 +34,7 @@ def mram_size_to_address(mram_size):
     stoc_start_str = "0x" + hex(stoc_start).lstrip("0x").upper()
     return atoc_end_str, stoc_start_str
 
-def handle_sram_rev_b(sram_size, firewall_components, protected_areas):
+def handle_sram(sram_size, firewall_components, protected_areas):
 
     if "13.5" == sram_size: # no SRAM wounding
         #print("**** no SRAM wounding")
@@ -98,21 +98,30 @@ def write_json(json_content):
     with open(out_file, 'w') as f:
         json.dump(json_content, f, indent=2)
 
-def gen_fw_cfg_icv(family, mram_size, sram_size, device_revision):
+def gen_fw_cfg_icv(family, mram_size, sram_size, device_revision, featureSet):
 
     atoc_end_address, stoc_start_address = mram_size_to_address(mram_size)
     print(family)
-    if family == "Balletto-B1-Series" or family == "Balletto-E1C-Series":
-        print("*** generate FW cfg for Spark")
+    if family == "Ensemble" and featureSet == "Spark":
+        # Ensemble E1C
         with open('firewall/fw_cfg_spark.json', "r") as json_file:
             spark_json = json.load(json_file)
             spark_json["firewall_components"][1]["configured_regions"][0]["end_address"] = atoc_end_address
             spark_json["protected_areas"][2]["start_address"] = stoc_start_address
 
-            if family == "Balletto-E1C-Series":
-                # Delete the sections for the BLE protected areas
-                spark_json["protected_areas"].pop(0)
-                spark_json["protected_areas"].pop(0)
+            # Delete the sections for the BLE protected areas
+            spark_json["firewall_components"].pop(0)
+            spark_json["protected_areas"].pop(0)
+            spark_json["protected_areas"].pop(0)
+            write_json(spark_json)
+            return;
+
+    if family == "Balletto":
+        # Balletto B1
+        with open('firewall/fw_cfg_spark.json', "r") as json_file:
+            spark_json = json.load(json_file)
+            spark_json["firewall_components"][1]["configured_regions"][0]["end_address"] = atoc_end_address
+            spark_json["protected_areas"][2]["start_address"] = stoc_start_address
             write_json(spark_json)
         return
 
@@ -125,23 +134,12 @@ def gen_fw_cfg_icv(family, mram_size, sram_size, device_revision):
     mram_json["firewall_components"][0]["configured_regions"][0]["end_address"] = atoc_end_address
     mram_json["protected_areas"][0]["start_address"] = stoc_start_address
 
-    is_rev_a = device_revision == 'A0' or device_revision == 'A1'
-    # generate Master FC configuration
-    if is_rev_a:
-        extra_cfg = "firewall/fw_cfg_rev_a.json"
-        with open(extra_cfg, "r") as extra_cfg_file:
-            extra_cfg_json = json.load(extra_cfg_file)
-            firewall_components = extra_cfg_json['firewall_components']
-    else:
-        firewall_components = []
-
     # generate Slave FC configuration
-    firewall_components.append(mram_json['firewall_components'][0])
+    firewall_components = mram_json['firewall_components']
     protected_areas = mram_json['protected_areas']
 
     # SRAM
-    if not is_rev_a: # rev B
-        handle_sram_rev_b(sram_size, firewall_components, protected_areas)
+    handle_sram(sram_size, firewall_components, protected_areas)
 
     out_json = {}
     out_json['firewall_components'] = firewall_components
@@ -149,10 +147,11 @@ def gen_fw_cfg_icv(family, mram_size, sram_size, device_revision):
 
     write_json(out_json)
 
-def update_fw_cfg_oem():
-    with open('build/config/app-device-config.json', "r") as json_file:
+def update_fw_cfg_oem(file):
+    filename = 'build/config/' + file
+    with open(filename, "r") as json_file:
         json_text = json.load(json_file)
-    with open('build/config/app-device-config.json', "w") as json_file:
+    with open(filename, "w") as json_file:
         json.dump(json_text, json_file, indent=2)
 
         # TODO: update/generate the Master FC sections
@@ -182,7 +181,7 @@ def main():
     mram_size = args.mram.rstrip('0').rstrip('.')
     sram_size = args.sram.rstrip('0').rstrip('.')
 
-    gen_fw_cfg_icv("", mram_size, sram_size)
+    gen_fw_cfg_icv("", mram_size, sram_size, "")
 
 if __name__ == "__main__":
     main()

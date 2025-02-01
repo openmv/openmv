@@ -213,13 +213,4 @@ def put_target_in_maintenance_mode(isp, baud_rate, Info=True):
         print("--> Reset Target")
     isp_reset(isp)
     if Info:
-        print("--> Close Serial Port")
-    isp.closeSerial()
-    if Info:
-        print("--> Open Serial Port")
-    isp.openSerial()
-    if Info:
-        print("--> Set Baud Rate")
-    isp.setBaudRate(baud_rate)
-    if Info:
         print("[INFO] Done. Target is in Maintenance Mode")
