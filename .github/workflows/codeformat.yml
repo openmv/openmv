@@ -49,7 +49,7 @@ jobs:
             !src/hal/**
             !src/lib/**
             !src/drivers/**
-            !src/micropython/**
+            !src/lib/micropython/**
             !src/stm32cubeai/**
             !src/omv/ports/stm32/uvc/**
             !src/omv/ports/stm32/boot/**
