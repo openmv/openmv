@@ -496,6 +496,38 @@ static int ioctl(omv_csi_t *csi, int request, va_list ap) {
             }
             break;
         }
+        // Setting biases one by one
+        case OMV_CSI_IOCTL_GENX320_SET_BIAS: {
+            int bias_name = va_arg(ap, int);
+            int bias_value = va_arg(ap, int);
+            switch (bias_name) {
+                case OMV_CSI_GENX320_BIAS_DIFF_OFF: {
+                    psee_sensor_set_bias(DIFF_OFF, bias_value);
+                    break;
+                }
+                case OMV_CSI_GENX320_BIAS_DIFF_ON: {
+                    psee_sensor_set_bias(DIFF_ON, bias_value);
+                    break;
+                }
+                case OMV_CSI_GENX320_BIAS_FO: {
+                    psee_sensor_set_bias(FO, bias_value);
+                    break;
+                }
+                case OMV_CSI_GENX320_BIAS_HPF: {
+                    psee_sensor_set_bias(HPF, bias_value);
+                    break;
+                }
+                case OMV_CSI_GENX320_BIAS_REFR: {
+                    psee_sensor_set_bias(REFR, bias_value);
+                    break;
+                }
+                default: {
+                    ret = -1;
+                    break;
+                }
+            }
+            break;
+        }
         default: {
             ret = -1;
             break;
