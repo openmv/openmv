@@ -61,14 +61,14 @@ The above command will clone this repository along with all of its submodules re
 git clone --depth=1 https://github.com/openmv/openmv.git
 cd openmv
 git submodule update --init --depth=1 --no-single-branch
-git -C src/micropython/ submodule update --init --depth=1
+git -C src/lib/micropython/ submodule update --init --depth=1
 ```
 
 ### Build the firmware
 To build the firmware, run the following commands inside the openmv repository:
 ```bash
 cd openmv
-make -j$(nproc) -C src/micropython/mpy-cross   # Builds Micropython mpy cross-compiler
+make -j$(nproc) -C src/lib/micropython/mpy-cross   # Builds Micropython mpy cross-compiler
 make -j$(nproc) TARGET=<TRAGET_NAME> -C src    # Builds the OpenMV firmware
 ```
 
