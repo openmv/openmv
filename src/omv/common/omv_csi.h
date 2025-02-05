@@ -219,7 +219,8 @@ typedef enum {
     OMV_CSI_IOCTL_HIMAX_MD_THRESHOLD    = 0x1D,
     OMV_CSI_IOCTL_HIMAX_OSC_ENABLE      = 0x1E | OMV_CSI_IOCTL_FLAGS_ABORT,
     OMV_CSI_IOCTL_GET_RGB_STATS         = 0x1F,
-    OMV_CSI_IOCTL_GENX320_SET_BIASES    = 0x20
+    OMV_CSI_IOCTL_GENX320_SET_BIASES    = 0x20,
+    OMV_CSI_IOCTL_GENX320_SET_BIAS      = 0x21
 } omv_csi_ioctl_t;
 
 typedef enum {
@@ -254,6 +255,14 @@ typedef enum {
     OMV_CSI_GENX320_BIASES_LOW_NOISE,
     OMV_CSI_GENX320_BIASES_HIGH_SPEED
 } omv_csi_genx320_biases_preset_t;
+
+typedef enum {
+    OMV_CSI_GENX320_BIAS_DIFF_OFF,
+    OMV_CSI_GENX320_BIAS_DIFF_ON,
+    OMV_CSI_GENX320_BIAS_FO,
+    OMV_CSI_GENX320_BIAS_HPF,
+    OMV_CSI_GENX320_BIAS_REFR
+} omv_csi_genx320_bias_t;
 #endif
 
 typedef void (*vsync_cb_t) (uint32_t vsync);

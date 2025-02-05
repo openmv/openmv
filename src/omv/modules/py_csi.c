@@ -1022,6 +1022,12 @@ static mp_obj_t py_omv_csi_ioctl(uint n_args, const mp_obj_t *args) {
             }
             break;
         }
+        case OMV_CSI_IOCTL_GENX320_SET_BIAS: {
+            if (n_args == 3) {
+                error = omv_csi_ioctl(request, mp_obj_get_int(args[1]), mp_obj_get_int(args[2]));
+            }
+            break;
+        }
         #endif // (OMV_GENX320_ENABLE == 1)
 
         default: {
@@ -1229,6 +1235,12 @@ static const mp_rom_map_elem_t globals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_GENX320_BIASES_ACTIVE_MARKER), MP_ROM_INT(OMV_CSI_GENX320_BIASES_ACTIVE_MARKER)},
     { MP_ROM_QSTR(MP_QSTR_GENX320_BIASES_LOW_NOISE),     MP_ROM_INT(OMV_CSI_GENX320_BIASES_LOW_NOISE)},
     { MP_ROM_QSTR(MP_QSTR_GENX320_BIASES_HIGH_SPEED),    MP_ROM_INT(OMV_CSI_GENX320_BIASES_HIGH_SPEED)},
+    { MP_ROM_QSTR(MP_QSTR_IOCTL_GENX320_SET_BIAS),       MP_ROM_INT(OMV_CSI_IOCTL_GENX320_SET_BIAS)},
+    { MP_ROM_QSTR(MP_QSTR_GENX320_BIAS_DIFF_OFF),        MP_ROM_INT(OMV_CSI_GENX320_BIAS_DIFF_OFF)},
+    { MP_ROM_QSTR(MP_QSTR_GENX320_BIAS_DIFF_ON),         MP_ROM_INT(OMV_CSI_GENX320_BIAS_DIFF_ON)},
+    { MP_ROM_QSTR(MP_QSTR_GENX320_BIAS_FO),              MP_ROM_INT(OMV_CSI_GENX320_BIAS_FO)},
+    { MP_ROM_QSTR(MP_QSTR_GENX320_BIAS_HPF),             MP_ROM_INT(OMV_CSI_GENX320_BIAS_HPF)},
+    { MP_ROM_QSTR(MP_QSTR_GENX320_BIAS_REFR),            MP_ROM_INT(OMV_CSI_GENX320_BIAS_REFR)},
     #endif
 
     // Sensor functions
