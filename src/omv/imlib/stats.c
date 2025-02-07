@@ -168,7 +168,7 @@ void imlib_get_similarity(image_t *img,
     int int_h_blocks = h_blocks * sizeof(int);
     imlib_similarity_line_op_state_t state;
     state.dssim = dssim;
-    state.sumBucketsOfX = fb_alloc0(int_h_blocks * 5, FB_ALLOC_NO_HINT);
+    state.sumBucketsOfX = fb_alloc0(int_h_blocks * 5, 0);
     state.sumBucketsOfY = state.sumBucketsOfX + int_h_blocks;
     state.sum2BucketsOfX = state.sumBucketsOfY + int_h_blocks;
     state.sum2BucketsOfY = state.sum2BucketsOfX + int_h_blocks;
@@ -1038,13 +1038,13 @@ bool imlib_get_regression(find_lines_list_lnk_data_t *out,
         }
     } else {
         // Theil-Sen Estimator
-        int *x_histogram = fb_alloc0(ptr->w * sizeof(int), FB_ALLOC_NO_HINT);
-        int *y_histogram = fb_alloc0(ptr->h * sizeof(int), FB_ALLOC_NO_HINT);
-        long long *x_delta_histogram = fb_alloc0((2 * ptr->w) * sizeof(long long), FB_ALLOC_NO_HINT);
-        long long *y_delta_histogram = fb_alloc0((2 * ptr->h) * sizeof(long long), FB_ALLOC_NO_HINT);
+        int *x_histogram = fb_alloc0(ptr->w * sizeof(int), 0);
+        int *y_histogram = fb_alloc0(ptr->h * sizeof(int), 0);
+        long long *x_delta_histogram = fb_alloc0((2 * ptr->w) * sizeof(long long), 0);
+        long long *y_delta_histogram = fb_alloc0((2 * ptr->h) * sizeof(long long), 0);
 
         uint32_t size;
-        point_t *points = (point_t *) fb_alloc_all(&size, FB_ALLOC_NO_HINT);
+        point_t *points = (point_t *) fb_alloc_all(&size, 0);
         size_t points_max = size / sizeof(point_t);
         size_t points_count = 0;
 

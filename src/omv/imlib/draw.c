@@ -733,7 +733,7 @@ void imlib_draw_row_setup(imlib_draw_row_data_t *data) {
     data->smuad_alpha = data->black_background ? alpha : ((alpha << 16) | (max - alpha));
 
     if (data->alpha_palette) {
-        data->smuad_alpha_palette = fb_alloc(256 * sizeof(uint32_t), FB_ALLOC_NO_HINT);
+        data->smuad_alpha_palette = fb_alloc(256 * sizeof(uint32_t), 0);
 
         for (int i = 0, a = alpha; i < 256; i++) {
             int new_alpha = fast_roundf((a * data->alpha_palette[i]) / 255.0f);
@@ -5397,7 +5397,7 @@ void imlib_flood_fill(image_t *img, int x, int y,
         out.w = img->w;
         out.h = img->h;
         out.pixfmt = PIXFORMAT_BINARY;
-        out.data = fb_alloc0(image_size(&out), FB_ALLOC_NO_HINT);
+        out.data = fb_alloc0(image_size(&out), 0);
 
         if (mask) {
             for (int y = 0, yy = out.h; y < yy; y++) {

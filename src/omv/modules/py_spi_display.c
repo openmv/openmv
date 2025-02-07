@@ -196,7 +196,7 @@ static void spi_display_write(py_display_obj_t *self, image_t *src_img, int dst_
     bool black = p0.x == -1;
 
     if (!self->triple_buffer) {
-        dst_img.data = fb_alloc0(self->width * sizeof(uint16_t), FB_ALLOC_NO_HINT);
+        dst_img.data = fb_alloc0(self->width * sizeof(uint16_t), 0);
 
         spi_display_command(self, LCD_COMMAND_RAMWR, 0);
         spi_switch_mode(self, (!self->byte_swap) ? 16 : 8, true);
