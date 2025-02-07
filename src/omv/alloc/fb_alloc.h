@@ -26,8 +26,15 @@
 #ifndef __FB_ALLOC_H__
 #define __FB_ALLOC_H__
 #include <stdint.h>
-#define FB_ALLOC_PREFER_SIZE     2
-#define FB_ALLOC_CACHE_ALIGN     4
+
+typedef enum fb_alloc_flags {
+    // Cache aligns the allocation so you can use cache maintenance instructions on it.
+    // Use this with DMA peripherals.
+    FB_ALLOC_FLAGS_ALIGNED = (1 << 0),
+    // Force the allocation to be external to save the faster internal memory.
+    FB_ALLOC_FLAGS_EXTERNAL = (1 << 1),
+} fb_alloc_flags_t;
+
 char *fb_alloc_stack_pointer();
 void fb_alloc_fail();
 void fb_alloc_init0();
@@ -36,10 +43,11 @@ void fb_alloc_mark();
 void fb_alloc_free_till_mark();
 void fb_alloc_mark_permanent(); // tag memory that should not be popped on exception
 void fb_alloc_free_till_mark_past_mark_permanent(); // frees past marked permanent allocations
-void *fb_alloc(uint32_t size, int hints);
-void *fb_alloc0(uint32_t size, int hints);
-void *fb_alloc_all(uint32_t *size, int hints); // returns pointer and sets size
-void *fb_alloc0_all(uint32_t *size, int hints); // returns pointer and sets size
+void *fb_alloc(uint32_t size, int flags);
+void *fb_alloc0(uint32_t size, int flags);
+void *fb_alloc_all(uint32_t *size, int flags); // returns pointer and sets size
+void *fb_alloc0_all(uint32_t *size, int flags); // returns pointer and sets size
 void fb_free();
 void fb_free_all();
+
 #endif /* __FF_ALLOC_H__ */

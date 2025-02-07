@@ -66,11 +66,11 @@ void fb_alloc_init0() {
 uint32_t fb_alloc_avail(int flags) {
     int32_t temp = pointer - framebuffer_get_buffers_end() - sizeof(uint32_t);
     #if defined(OMV_FB_OVERLAY_MEMORY)
-    if (!(flags & FB_ALLOC_PREFER_SIZE)) {
+    if (!(flags & FB_ALLOC_FLAGS_EXTERNAL)) {
         temp = pointer_overlay - &_fballoc_overlay_start - sizeof(uint32_t);
     }
     #endif
-    if (flags & FB_ALLOC_CACHE_ALIGN) {
+    if (flags & FB_ALLOC_FLAGS_ALIGNED) {
         temp -= OMV_ALLOC_ALIGNMENT - sizeof(uint32_t);
         temp = (temp / OMV_ALLOC_ALIGNMENT) * OMV_ALLOC_ALIGNMENT;
     }
@@ -143,14 +143,14 @@ void fb_alloc_free_till_mark_past_mark_permanent() {
 }
 
 // returns null pointer without error if size==0
-void *fb_alloc(uint32_t size, int hints) {
+void *fb_alloc(uint32_t size, int flags) {
     if (!size) {
         return NULL;
     }
 
     size = ((size + sizeof(uint32_t) - 1) / sizeof(uint32_t)) * sizeof(uint32_t); // Round Up
 
-    if (hints & FB_ALLOC_CACHE_ALIGN) {
+    if (flags & FB_ALLOC_FLAGS_ALIGNED) {
         size = ((size + OMV_ALLOC_ALIGNMENT - 1) / OMV_ALLOC_ALIGNMENT) * OMV_ALLOC_ALIGNMENT;
         size += OMV_ALLOC_ALIGNMENT - sizeof(uint32_t);
     }
@@ -176,7 +176,7 @@ void *fb_alloc(uint32_t size, int hints) {
     #endif
 
     #if defined(OMV_FB_OVERLAY_MEMORY)
-    if ((!(hints & FB_ALLOC_PREFER_SIZE))
+    if ((!(flags & FB_ALLOC_FLAGS_EXTERNAL))
         && (((uint32_t) (pointer_overlay - &_fballoc_overlay_start)) >= size)) {
         // Return overlay memory instead.
         pointer_overlay -= size;
@@ -185,7 +185,7 @@ void *fb_alloc(uint32_t size, int hints) {
     }
     #endif
 
-    if (hints & FB_ALLOC_CACHE_ALIGN) {
+    if (flags & FB_ALLOC_FLAGS_ALIGNED) {
         int offset = ((uint32_t) result) % OMV_ALLOC_ALIGNMENT;
         if (offset) {
             result += OMV_ALLOC_ALIGNMENT - offset;
@@ -196,13 +196,13 @@ void *fb_alloc(uint32_t size, int hints) {
 }
 
 // returns null pointer without error if passed size==0
-void *fb_alloc0(uint32_t size, int hints) {
-    void *mem = fb_alloc(size, hints);
+void *fb_alloc0(uint32_t size, int flags) {
+    void *mem = fb_alloc(size, flags);
     memset(mem, 0, size); // does nothing if size is zero.
     return mem;
 }
 
-void *fb_alloc_all(uint32_t *size, int hints) {
+void *fb_alloc_all(uint32_t *size, int flags) {
     uint32_t temp = pointer - framebuffer_get_buffers_end() - sizeof(uint32_t);
 
     if (temp < sizeof(uint32_t)) {
@@ -211,7 +211,7 @@ void *fb_alloc_all(uint32_t *size, int hints) {
     }
 
     #if defined(OMV_FB_OVERLAY_MEMORY)
-    if (!(hints & FB_ALLOC_PREFER_SIZE)) {
+    if (!(flags & FB_ALLOC_FLAGS_EXTERNAL)) {
         *size = (uint32_t) (pointer_overlay - &_fballoc_overlay_start);
         temp = IM_MIN(temp, *size);
     }
@@ -235,7 +235,7 @@ void *fb_alloc_all(uint32_t *size, int hints) {
     #endif
 
     #if defined(OMV_FB_OVERLAY_MEMORY)
-    if (!(hints & FB_ALLOC_PREFER_SIZE)) {
+    if (!(flags & FB_ALLOC_FLAGS_EXTERNAL)) {
         // Return overlay memory instead.
         pointer_overlay -= *size;
         result = pointer_overlay;
@@ -243,7 +243,7 @@ void *fb_alloc_all(uint32_t *size, int hints) {
     }
     #endif
 
-    if (hints & FB_ALLOC_CACHE_ALIGN) {
+    if (flags & FB_ALLOC_FLAGS_ALIGNED) {
         int offset = ((uint32_t) result) % OMV_ALLOC_ALIGNMENT;
         if (offset) {
             int inc = OMV_ALLOC_ALIGNMENT - offset;
@@ -258,8 +258,8 @@ void *fb_alloc_all(uint32_t *size, int hints) {
 }
 
 // returns null pointer without error if returned size==0
-void *fb_alloc0_all(uint32_t *size, int hints) {
-    void *mem = fb_alloc_all(size, hints);
+void *fb_alloc0_all(uint32_t *size, int flags) {
+    void *mem = fb_alloc_all(size, flags);
     memset(mem, 0, *size); // does nothing if size is zero.
     return mem;
 }

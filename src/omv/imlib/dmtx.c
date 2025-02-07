@@ -6019,7 +6019,7 @@ void imlib_find_datamatrices(list_t *out, image_t *ptr, rectangle_t *roi, int ef
         imlib_draw_image(&img, ptr, 0, 0, 1.f, 1.f, roi, -1, 255, NULL, NULL, 0, NULL, NULL, NULL);
     }
 
-    umm_init_x(fb_alloc_avail(FB_ALLOC_PREFER_SIZE));
+    umm_init_x(fb_alloc_avail(FB_ALLOC_FLAGS_EXTERNAL));
 
     DmtxImage *image = dmtxImageCreate(grayscale_image,
                                        (ptr->pixfmt == PIXFORMAT_GRAYSCALE) ? ptr->w : roi->w,

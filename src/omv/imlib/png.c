@@ -126,7 +126,7 @@ bool png_compress(image_t *src, image_t *dst) {
         return true;
     }
 
-    umm_init_x(fb_alloc_avail(FB_ALLOC_PREFER_SIZE));
+    umm_init_x(fb_alloc_avail(FB_ALLOC_FLAGS_EXTERNAL));
 
     LodePNGState state;
     lodepng_state_init(&state);
@@ -200,7 +200,7 @@ bool png_compress(image_t *src, image_t *dst) {
 #if defined(IMLIB_ENABLE_PNG_DECODER)
 void png_decompress(image_t *dst, image_t *src) {
     OMV_PROFILE_START();
-    umm_init_x(fb_alloc_avail(FB_ALLOC_PREFER_SIZE));
+    umm_init_x(fb_alloc_avail(FB_ALLOC_FLAGS_EXTERNAL));
 
     LodePNGState state;
     lodepng_state_init(&state);
