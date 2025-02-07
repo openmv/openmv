@@ -132,6 +132,8 @@ int omv_gpu_draw_image(image_t *src_img,
     return 0;
 }
 #else
+uint32_t OMV_ATTR_SECTION(OMV_ATTR_ALIGNED(CLUT_BUFFER[256], 32), ".dma_buffer");
+
 int omv_gpu_draw_image(image_t *src_img,
                        rectangle_t *src_rect,
                        image_t *dst_img,
@@ -204,45 +206,41 @@ int omv_gpu_draw_image(image_t *src_img,
     if (src_img->pixfmt == PIXFORMAT_GRAYSCALE) {
         dma2d.LayerCfg[1].InputColorMode = DMA2D_INPUT_L8;
         dma2d.LayerCfg[1].AlphaMode = DMA2D_COMBINE_ALPHA;
-        uint32_t *clut = fb_alloc(256 * sizeof(uint32_t), FB_ALLOC_CACHE_ALIGN);
 
         if (!alpha_palette) {
             if (!color_palette) {
                 for (int i = 0; i < 256; i++) {
-                    clut[i] = (0xff << 24) | COLOR_Y_TO_RGB888(i);
+                    CLUT_BUFFER[i] = (0xff << 24) | COLOR_Y_TO_RGB888(i);
                 }
             } else {
                 for (int i = 0; i < 256; i++) {
                     int pixel = color_palette[i];
-                    clut[i] = (0xff << 24) |
-                              (COLOR_RGB565_TO_R8(pixel) << 16) |
-                              (COLOR_RGB565_TO_G8(pixel) << 8) |
-                              COLOR_RGB565_TO_B8(pixel);
+                    CLUT_BUFFER[i] = (0xff << 24) |
+                                     (COLOR_RGB565_TO_R8(pixel) << 16) |
+                                     (COLOR_RGB565_TO_G8(pixel) << 8) |
+                                     COLOR_RGB565_TO_B8(pixel);
                 }
             }
         } else {
             if (!color_palette) {
                 for (int i = 0; i < 256; i++) {
-                    clut[i] = (alpha_palette[i] << 24) | COLOR_Y_TO_RGB888(i);
+                    CLUT_BUFFER[i] = (alpha_palette[i] << 24) | COLOR_Y_TO_RGB888(i);
                 }
             } else {
                 for (int i = 0; i < 256; i++) {
                     int pixel = color_palette[i];
-                    clut[i] = (alpha_palette[i] << 24) |
-                              (COLOR_RGB565_TO_R8(pixel) << 16) |
-                              (COLOR_RGB565_TO_G8(pixel) << 8) |
-                              COLOR_RGB565_TO_B8(pixel);
+                    CLUT_BUFFER[i] = (alpha_palette[i] << 24) |
+                                     (COLOR_RGB565_TO_R8(pixel) << 16) |
+                                     (COLOR_RGB565_TO_G8(pixel) << 8) |
+                                     COLOR_RGB565_TO_B8(pixel);
                 }
             }
         }
 
         DMA2D_CLUTCfgTypeDef cfg;
-        cfg.pCLUT = clut;
+        cfg.pCLUT = CLUT_BUFFER;
         cfg.CLUTColorMode = DMA2D_CCM_ARGB8888;
         cfg.Size = 255;
-        #if __DCACHE_PRESENT
-        SCB_CleanDCache_by_Addr(clut, 256 * sizeof(uint32_t));
-        #endif
         HAL_DMA2D_CLUTLoad(&dma2d, cfg, 1);
         HAL_DMA2D_PollForTransfer(&dma2d, 1000);
     } else {
@@ -329,10 +327,6 @@ int omv_gpu_draw_image(image_t *src_img,
     #endif
 
     HAL_DMA2D_DeInit(&dma2d);
-
-    if (src_img->pixfmt == PIXFORMAT_GRAYSCALE) {
-        fb_free(); // clut
-    }
 
     OMV_PROFILE_PRINT();
     return 0;
