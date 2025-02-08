@@ -76,7 +76,7 @@ static mp_obj_t py_omv_debug_mode() {
 }
 static MP_DEFINE_CONST_FUN_OBJ_0(py_omv_debug_mode_obj, py_omv_debug_mode);
 
-static mp_obj_t py_omv_disable_fb(uint n_args, const mp_obj_t *args) {
+static mp_obj_t py_omv_disable_fb(size_t n_args, const mp_obj_t *args) {
     if (!n_args) {
         return mp_obj_new_bool(!fb_get_streaming_enabled());
     }

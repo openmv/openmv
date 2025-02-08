@@ -93,7 +93,7 @@ static mp_obj_t py_mjpeg_size(mp_obj_t self_in) {
 }
 static MP_DEFINE_CONST_FUN_OBJ_1(py_mjpeg_size_obj, py_mjpeg_size);
 
-static mp_obj_t py_mjpeg_write(uint n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
+static mp_obj_t py_mjpeg_write(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
     enum { ARG_roi, ARG_channel, ARG_alpha, ARG_color_palette, ARG_alpha_palette, ARG_hint, ARG_quality };
     static const mp_arg_t allowed_args[] = {
         { MP_QSTR_roi, MP_ARG_OBJ | MP_ARG_KW_ONLY, {.u_rom_obj = MP_ROM_NONE} },
@@ -176,7 +176,7 @@ static mp_obj_t py_mjpeg_close(mp_obj_t self_in) {
 }
 static MP_DEFINE_CONST_FUN_OBJ_1(py_mjpeg_close_obj, py_mjpeg_close);
 
-static mp_obj_t py_mjpeg_open(uint n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
+static mp_obj_t py_mjpeg_open(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
     enum { ARG_width, ARG_height };
     static const mp_arg_t allowed_args[] = {
         { MP_QSTR_width, MP_ARG_INT,  {.u_int = -1 } },

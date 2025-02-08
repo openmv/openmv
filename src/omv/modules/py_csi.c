@@ -136,7 +136,7 @@ static mp_obj_t py_omv_csi_flush() {
 }
 static MP_DEFINE_CONST_FUN_OBJ_0(py_omv_csi_flush_obj, py_omv_csi_flush);
 
-static mp_obj_t py_omv_csi_snapshot(uint n_args, const mp_obj_t *args, mp_map_t *kw_args) {
+static mp_obj_t py_omv_csi_snapshot(size_t n_args, const mp_obj_t *args, mp_map_t *kw_args) {
     #if MICROPY_PY_IMU
     // +-10 degree dead-zone around pitch 90/270.
     // +-35 degree active-zone around roll 0/90/180/270/360.
@@ -154,7 +154,7 @@ static mp_obj_t py_omv_csi_snapshot(uint n_args, const mp_obj_t *args, mp_map_t 
 }
 static MP_DEFINE_CONST_FUN_OBJ_KW(py_omv_csi_snapshot_obj, 0, py_omv_csi_snapshot);
 
-static mp_obj_t py_omv_csi_skip_frames(uint n_args, const mp_obj_t *args, mp_map_t *kw_args) {
+static mp_obj_t py_omv_csi_skip_frames(size_t n_args, const mp_obj_t *args, mp_map_t *kw_args) {
     mp_map_elem_t *kw_arg = mp_map_lookup(kw_args, MP_ROM_QSTR(MP_QSTR_time), MP_MAP_LOOKUP);
     mp_int_t time = 300; // OV Recommended.
 
@@ -293,7 +293,7 @@ static mp_obj_t py_omv_csi_get_framerate() {
 }
 static MP_DEFINE_CONST_FUN_OBJ_0(py_omv_csi_get_framerate_obj, py_omv_csi_get_framerate);
 
-static mp_obj_t py_omv_csi_set_windowing(uint n_args, const mp_obj_t *args) {
+static mp_obj_t py_omv_csi_set_windowing(size_t n_args, const mp_obj_t *args) {
     if (csi.framesize == OMV_CSI_FRAMESIZE_INVALID) {
         omv_csi_raise_error(OMV_CSI_ERROR_INVALID_FRAMESIZE);
     }
@@ -439,7 +439,7 @@ static mp_obj_t py_omv_csi_set_colorbar(mp_obj_t enable) {
 }
 static MP_DEFINE_CONST_FUN_OBJ_1(py_omv_csi_set_colorbar_obj, py_omv_csi_set_colorbar);
 
-static mp_obj_t py_omv_csi_set_auto_gain(uint n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
+static mp_obj_t py_omv_csi_set_auto_gain(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
     enum { ARG_gain_db, ARG_gain_db_ceiling };
     static const mp_arg_t allowed_args[] = {
         { MP_QSTR_gain_db, MP_ARG_OBJ | MP_ARG_KW_ONLY, {.u_rom_obj = MP_ROM_NONE} },
@@ -475,7 +475,7 @@ static mp_obj_t py_omv_csi_get_gain_db() {
 }
 static MP_DEFINE_CONST_FUN_OBJ_0(py_omv_csi_get_gain_db_obj, py_omv_csi_get_gain_db);
 
-static mp_obj_t py_omv_csi_set_auto_exposure(uint n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
+static mp_obj_t py_omv_csi_set_auto_exposure(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
     enum { ARG_exposure_us };
     static const mp_arg_t allowed_args[] = {
         { MP_QSTR_exposure_us, MP_ARG_INT | MP_ARG_KW_ONLY, {.u_int = -1} },
@@ -507,7 +507,7 @@ static mp_obj_t py_omv_csi_get_exposure_us() {
 }
 static MP_DEFINE_CONST_FUN_OBJ_0(py_omv_csi_get_exposure_us_obj, py_omv_csi_get_exposure_us);
 
-static mp_obj_t py_omv_csi_set_auto_whitebal(uint n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
+static mp_obj_t py_omv_csi_set_auto_whitebal(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
     enum { ARG_rgb_gain_db };
     static const mp_arg_t allowed_args[] = {
         { MP_QSTR_rgb_gain_db, MP_ARG_OBJ | MP_ARG_KW_ONLY, {.u_rom_obj = MP_ROM_NONE} },
@@ -546,7 +546,7 @@ static mp_obj_t py_omv_csi_get_rgb_gain_db() {
 }
 static MP_DEFINE_CONST_FUN_OBJ_0(py_omv_csi_get_rgb_gain_db_obj, py_omv_csi_get_rgb_gain_db);
 
-static mp_obj_t py_omv_csi_set_auto_blc(uint n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
+static mp_obj_t py_omv_csi_set_auto_blc(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
     enum { ARG_enable, ARG_regs };
     static const mp_arg_t allowed_args[] = {
         { MP_QSTR_enable, MP_ARG_REQUIRED | MP_ARG_INT },
@@ -674,7 +674,7 @@ static mp_obj_t py_omv_csi_get_framebuffers() {
 }
 static MP_DEFINE_CONST_FUN_OBJ_0(py_omv_csi_get_framebuffers_obj, py_omv_csi_get_framebuffers);
 
-static mp_obj_t py_omv_csi_disable_delays(uint n_args, const mp_obj_t *args) {
+static mp_obj_t py_omv_csi_disable_delays(size_t n_args, const mp_obj_t *args) {
     if (!n_args) {
         return mp_obj_new_bool(csi.disable_delays);
     }
@@ -684,7 +684,7 @@ static mp_obj_t py_omv_csi_disable_delays(uint n_args, const mp_obj_t *args) {
 }
 static MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(py_omv_csi_disable_delays_obj, 0, 1, py_omv_csi_disable_delays);
 
-static mp_obj_t py_omv_csi_disable_full_flush(uint n_args, const mp_obj_t *args) {
+static mp_obj_t py_omv_csi_disable_full_flush(size_t n_args, const mp_obj_t *args) {
     if (!n_args) {
         return mp_obj_new_bool(csi.disable_full_flush);
     }
@@ -749,7 +749,7 @@ static mp_obj_t py_omv_csi_set_frame_callback(mp_obj_t frame_callback_obj) {
 }
 static MP_DEFINE_CONST_FUN_OBJ_1(py_omv_csi_set_frame_callback_obj, py_omv_csi_set_frame_callback);
 
-static mp_obj_t py_omv_csi_ioctl(uint n_args, const mp_obj_t *args) {
+static mp_obj_t py_omv_csi_ioctl(size_t n_args, const mp_obj_t *args) {
     mp_obj_t ret_obj = mp_const_none;
     int request = mp_obj_get_int(args[0]);
     int error = OMV_CSI_ERROR_INVALID_ARGUMENT;
