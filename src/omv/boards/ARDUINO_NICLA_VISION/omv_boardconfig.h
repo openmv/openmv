@@ -210,6 +210,7 @@
 #define OMV_CSI_TIM_CHANNEL                   (TIM_CHANNEL_2)
 #define OMV_CSI_TIM_CLK_ENABLE()              __TIM3_CLK_ENABLE()
 #define OMV_CSI_TIM_CLK_DISABLE()             __TIM3_CLK_DISABLE()
+#define OMV_CSI_TIM_CLK_SLEEP_ENABLE()        __TIM3_CLK_SLEEP_ENABLE()
 #define OMV_CSI_TIM_PCLK_FREQ()               HAL_RCC_GetPCLK1Freq()
 #define OMV_CSI_DMA_MEMCPY_ENABLE             (1)
 #define OMV_CSI_HW_CROP_ENABLE                (1)
