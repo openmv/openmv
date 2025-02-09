@@ -47,7 +47,7 @@ CXXFLAGS_USERMOD += \
         -fpermissive \
         -fno-threadsafe-statics \
         -fmessage-length=0 \
-        $(filter-out -std=gnu99,$(CFLAGS))
+        $(filter-out -std=gnu99 -std=gnu11,$(CFLAGS))
 
 # Add CubeAI module if enabled.
 ifeq ($(MICROPY_PY_CUBEAI), 1)

@@ -18,7 +18,7 @@ override VELA_ARGS := ""
 endif
 
 # Extra module flags.
-CXXFLAGS += $(filter-out -std=gnu99,$(CFLAGS)) \
+CXXFLAGS += $(filter-out -std=gnu99 -std=gnu11,$(CFLAGS)) \
             -std=c++11 \
             -fno-rtti \
             -fno-exceptions \
@@ -29,7 +29,7 @@ CXXFLAGS += $(filter-out -std=gnu99,$(CFLAGS)) \
             -fmessage-length=0 \
             -fno-threadsafe-statics \
             -Wno-double-promotion \
-            -Wno-float-conversion \
+            -Wno-float-conversion
 
 CXXFLAGS += -DTF_LITE_STATIC_MEMORY \
             -DTF_LITE_DISABLE_X86_NEON \
