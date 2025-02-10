@@ -67,7 +67,6 @@
 #define EVENT_THRESHOLD_SIGMA           10
 
 #define EVT_CLK_FREQ                    ((omv_csi_get_xclk_frequency() + 500000) / 1000000)
-#define EVT_SCALE_PERIOD(period)        (((period) * EVT_CLK_FREQ) / 10)
 
 #define AFK_50_HZ                       (50)
 #define AFK_60_HZ                       (60)
@@ -108,6 +107,8 @@ static int reset(omv_csi_t *csi) {
     // Start the Init sequence
     #if (OMV_GENX320_EHC_ENABLE == 1)
     psee_sensor_init(&dcmi_histo);
+    psee_sensor_write(CPI_PACKET_TIME_CONTROL, ACTIVE_SENSOR_WIDTH << CPI_PACKET_TIME_CONTROL_PERIOD_Pos |
+                      OMV_GENX320_HSYNC_VALUE << CPI_PACKET_TIME_CONTROL_BLANKING_Pos);
     #else
     psee_sensor_init(&dcmi_evt);
 
@@ -166,7 +167,7 @@ static int reset(omv_csi_t *csi) {
     }
 
     if (psee_ehc_activate(&psee_ehc, EHC_ALGO_DIFF3D, 0, EHC_DIFF3D_N_BITS_SIZE,
-                          EVT_SCALE_PERIOD(INTEGRATION_DEF_PREIOD), EHC_WITHOUT_PADDING) != EHC_OK) {
+                          INTEGRATION_DEF_PREIOD, EHC_WITHOUT_PADDING) != EHC_OK) {
         return -1;
     }
     #else
@@ -231,7 +232,7 @@ static int set_framerate(omv_csi_t *csi, int framerate) {
         return -1;
     }
 
-    psee_sensor_write(EHC_INTEGRATION_PERIOD, EVT_SCALE_PERIOD(us));
+    psee_sensor_write(EHC_INTEGRATION_PERIOD, us);
     #endif // (OMV_GENX320_EHC_ENABLE == 1)
     return 0;
 }
