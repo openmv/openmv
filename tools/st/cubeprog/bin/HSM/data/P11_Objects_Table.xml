@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Objects xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+	<KEY_PAIRS>
+	</KEY_PAIRS>
+	<PUBLIC_KEYS>
+	</PUBLIC_KEYS>
+	<CERTIFICATES>
+	</CERTIFICATES>
+	<SECRET_KEYS>
+	</SECRET_KEYS>	
+	<CKO_DATA>
+		<FILE_DATA DF_PATH="3F00" ID="011D">
+			<CKA_LABEL>FwId</CKA_LABEL>
+		</FILE_DATA>
+	</CKO_DATA>
+</Objects>

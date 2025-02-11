@@ -1,0 +1,706 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Root xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="SCHVerif.xsd">
+<Device>
+		<DeviceID>0x489</DeviceID>
+		<Vendor>STMicroelectronics</Vendor>
+		<Type>MCU</Type>
+		<!-- cortex written in word file +mpu should it be written?? -->
+		<CPU>Cortex-M0+</CPU>
+		<Name>STM32U0xx</Name>
+		<Series>STM32U0</Series>
+		<Description>ARM 32-bit Cortex-M0+ based device</Description>
+		<Configurations>
+			<!-- JTAG_SWD Interface -->
+			<Interface name="JTAG_SWD"/>
+			<!-- Bootloader Interface -->
+			<Interface name="Bootloader"/>
+		</Configurations>
+		<!-- Peripherals -->
+		<Peripherals>
+			<!-- Embedded SRAM -->
+			<Peripheral>
+				<Name>Embedded SRAM</Name>
+				<Type>Storage</Type>
+				<Description/>
+				<ErasedValue>0x00</ErasedValue>
+				<Access>RWE</Access>
+				<!-- 6KB  -->
+				<Configuration>
+					<Parameters address="0x20000000" name="SRAM" size="0x8000"/>
+					<Description/>
+					<Organization>Single</Organization>
+					<Bank name="Bank 1">
+						<Field>
+							<Parameters address="0x20000000" name="SRAM" occurrence="0x1" size="0x8000"/>
+						</Field>
+					</Bank>
+				</Configuration>
+			</Peripheral>
+			<!-- Embedded Flash -->
+			<Peripheral>
+				<Name>Embedded Flash</Name>
+				<Type>Storage</Type>
+				<Description>The Flash memory interface manages CPU AHB I-Code and D-Code accesses to the Flash memory. It implements the erase and program Flash memory operations and the read and write protection mechanisms</Description>
+				<ErasedValue>0xFF</ErasedValue>
+				<Access>RWE</Access>
+				<FlashSize address="0x1FFF777C" default="0x40000"/>
+				<BootloaderVersion address="0x1FFF17FE"/>
+				<RCC_DBGEN address="0x40021058" mask="0x00000800"/>
+				<DBGMCU_CR address="0x40015804" mask="0x06"/>
+				<DBGMCU_APB1_FZ address="0x40015808" mask="0x1800"/>
+				<!--DBGMCU_CR address="0xF0001004" mask="0x06"/--> 
+				<!--DBGMCU_CR address="0xF0001004" mask="0x06"/-->
+                <!--DBGMCU_APB1_FZ address="0xF0001008" mask="0x1800"/--> 
+				<!-- 256KB  -->
+				<Configuration>
+					<Parameters address="0x08000000" name=" 256 KB Embedded Flash" size="0x40000"/>
+					<Description/>
+					<Organization>Single</Organization>
+					<Alignment>0x8</Alignment>
+					<Bank name="Bank 1">
+						<Field>
+							<Parameters address="0x08000000" name="sector0" occurrence="0x80" size="0x800"/>
+						</Field>
+					</Bank>
+				</Configuration>
+			</Peripheral>
+				<!-- OTP -->
+			<Peripheral>
+				<Name>OTP</Name>
+				<Type>Storage</Type>
+				<Description>The Data OTP memory block. It contains the one time programmable bits.</Description>
+				<ErasedValue>0xFF</ErasedValue>
+				<Access>RW</Access>
+				<!-- 1 KBytes single bank -->
+				<Configuration>
+					<Parameters address="0x1FFF6800" name=" 1 KBytes Data OTP" size="0x400"/>
+					<Description/>
+					<Organization>Single</Organization>
+					<Alignment>0x4</Alignment>
+					<Bank name="OTP">
+						<Field>
+							<Parameters address="0x1FFF6800" name="OTP" occurrence="0x1" size="0x400"/> 
+						</Field>
+					</Bank>
+				</Configuration>
+			</Peripheral>
+			<!-- Option Bytes -->
+			<Peripheral>
+				<Name>Option Bytes</Name>
+				<Type>Configuration</Type>
+				<Description/>
+				<Access>RW</Access>
+				<Bank interface="JTAG_SWD">
+					<Parameters address="0x40022020" name="Bank 1" size="0x64"/>
+					<Category>
+						<Name>Read Out Protection</Name>
+						<Field>
+							<Parameters address="0x40022020" name="FLASH_OPTR" size="0x4"/>
+							<AssignedBits>
+								<Bit>
+									<Name>RDP</Name>
+									<Description>Read protection option byte. The read protection is used to protect the software code stored in Flash memory.</Description>
+									<BitOffset>0x0</BitOffset>
+									<BitWidth>0x8</BitWidth>
+									<Access>RW</Access>
+									<Values>
+										<Val value="0xAA">Level 0, no protection</Val>
+										<Val value="0xBB">or any value other than 0xAA and 0xCC: Level 1, read protection</Val>
+										<Val value="0xCC">Level 2, chip protection</Val>
+									</Values>
+								</Bit>
+							</AssignedBits>
+						</Field>
+					</Category>
+					<Category>
+						<Name>BOR Level</Name>
+						<Field>
+							<Parameters name="FLASH_OPTR" size="0x4" address="0x40022020"/>
+							<AssignedBits>
+								<Bit>
+									<Name>BOR_LEV</Name>
+									<Description>This bitfield contains the VDD supply level threshold that activates/releases the reset</Description>
+									<BitOffset>0x8</BitOffset>
+									<BitWidth>0x3</BitWidth>
+									<Access>RW</Access>
+									<Values>
+										<Val value="0x0">BOR level 0, reset level threshold around 1.7 V</Val>
+										<Val value="0x1">BOR level 1, reset level threshold around 2.0 V</Val>
+										<Val value="0x2">BOR level 2, reset level threshold around 2.2 V</Val>
+										<Val value="0x3">BOR level 3, reset level threshold around 2.5 V</Val>
+										<Val value="0x4">BOR level 4, reset level threshold around 2.8 V</Val>
+									</Values>
+								</Bit>
+							</AssignedBits>
+						</Field>
+					</Category>
+					<Category>
+						<Name>User Configuration</Name>
+						<Field>
+							<Parameters address="0x40022020" name="FLASH_OPTR" size="0x4"/>
+							<AssignedBits>
+								<Bit>
+									<Name>nRST_STOP</Name>
+									<Description/>
+									<BitOffset>0xD</BitOffset>
+									<BitWidth>0x1</BitWidth>
+									<Access>RW</Access>
+									<Values>
+										<Val value="0x0">Reset generated when entering Stop mode</Val>
+										<Val value="0x1">No reset generated when entering Stop mode</Val>
+									</Values>
+								</Bit>
+								<Bit>
+									<Name>nRST_STDBY</Name>
+									<Description/>
+									<BitOffset>0xE</BitOffset>
+									<BitWidth>0x1</BitWidth>
+									<Access>RW</Access>
+									<Values>
+										<Val value="0x0">Reset generated when entering Standby mode</Val>
+										<Val value="0x1">No reset generated when entering Standby mode</Val>
+									</Values>
+								</Bit>
+								<Bit>
+									<Name>nRST_SHDW</Name>
+									<Description/>
+									<BitOffset>0xF</BitOffset>
+									<BitWidth>0x1</BitWidth>
+									<Access>RW</Access>
+									<Values>
+										<Val value="0x0">Reset generated when entering the Shutdown mode</Val>
+										<Val value="0x1">No reset generated when entering the Shutdown mode</Val>
+									</Values>
+								</Bit>
+								<Bit>
+									<Name>IWDG_SW</Name>
+									<Description/>
+									<BitOffset>0x10</BitOffset>
+									<BitWidth>0x1</BitWidth>
+									<Access>RW</Access>
+									<Values>
+										<Val value="0x0">Hardware independant watchdog</Val>
+										<Val value="0x1">Software independant watchdog</Val>
+									</Values>
+								</Bit>
+								<Bit>
+									<Name>IWDG_STOP</Name>
+									<Description/>
+									<BitOffset>0x11</BitOffset>
+									<BitWidth>0x1</BitWidth>
+									<Access>RW</Access>
+									<Values>
+										<Val value="0x0">Freeze IWDG counter in stop mode</Val>
+										<Val value="0x1">IWDG counter active in stop mode</Val>
+									</Values>
+								</Bit>
+								<Bit>
+									<Name>IWDG_STDBY</Name>
+									<Description/>
+									<BitOffset>0x12</BitOffset>
+									<BitWidth>0x1</BitWidth>
+									<Access>RW</Access>
+									<Values>
+										<Val value="0x0">Freeze IWDG counter in standby mode</Val>
+										<Val value="0x1">IWDG counter active in standby mode</Val>
+									</Values>
+								</Bit>
+								<Bit>
+									<Name>WWDG_SW</Name>
+									<Description/>
+									<BitOffset>0x13</BitOffset>
+									<BitWidth>0x1</BitWidth>
+									<Access>RW</Access>
+									<Values>
+										<Val value="0x0">Hardware window watchdog</Val>
+										<Val value="0x1">Software window watchdog</Val>
+									</Values>
+								</Bit>
+								<Bit>
+									<Name>RAM_PARITY_CHECK</Name>
+									<Description/>
+									<BitOffset>0x16</BitOffset>
+									<BitWidth>0x1</BitWidth>
+									<Access>RW</Access>
+									<Values>
+										<Val value="0x0">RAM_PARITY_CHECK enable</Val>
+										<Val value="0x1">RAM_PARITY_CHECK disable</Val>
+									</Values>
+								</Bit>
+								<Bit>
+									<Name>BKPSRAM_HW_ERASE_DISABLE</Name>
+									<Description/>
+									<BitOffset>0x17</BitOffset>
+									<BitWidth>0x1</BitWidth>
+									<Access>RW</Access>
+									<Values>
+										<Val value="0x0">Backup SRAM is erased on system reset </Val>
+										<Val value="0x1">Backup SRAM content is kept when a system reset occurs</Val>
+									</Values>
+								</Bit>
+								<Bit>
+									<Name>NBOOT_SEL</Name>
+									<Description/>
+									<BitOffset>0x18</BitOffset>
+									<BitWidth>0x1</BitWidth>
+									<Access>RW</Access>
+									<Values>
+										<Val value="0x0">BOOT0 pin (legacy mode)</Val>
+										<Val value="0x1">NBOOT0 option bit </Val>
+									</Values>
+								</Bit>
+								<Bit>
+									<Name>nBOOT1</Name>
+									<Description/>
+									<BitOffset>0x19</BitOffset>
+									<BitWidth>0x1</BitWidth>
+									<Access>RW</Access>
+									<Values>
+										<Val value="0x0">Boot from Flash if BOOT0 = 1, otherwise Embedded SRAM1</Val>
+										<Val value="0x1">Boot from Flash if BOOT0 = 1, otherwise system memory</Val>
+									</Values>
+								</Bit>	
+								<Bit>
+									<Name>nBOOT0</Name>
+									<Description/>
+									<BitOffset>0x1A</BitOffset>
+									<BitWidth>0x1</BitWidth>
+									<Access>RW</Access>
+									<Values>
+										<Val value="0x0">nBOOT0=0</Val>
+										<Val value="0x1">nBOOT0=1</Val>
+									</Values>
+								</Bit>				
+								<Bit>
+									<Name>NRST_MODE</Name>
+									<Description/>
+									<BitOffset>0x1B</BitOffset>
+									<BitWidth>0x2</BitWidth>
+									<Access>RW</Access>
+									<Values>
+										<Val value="0x0">Reserved</Val>
+										<Val value="0x1">Reset input only</Val>
+										<Val value="0x2">Standard GPIO:only internal RESET is possible</Val>
+										<Val value="0x3">Bidirectional reset:The NRST pin is configured in reset input/output (legacy) mode</Val>
+									</Values>
+								</Bit>
+								<Bit>
+									<Name>BDRST</Name>
+									<Description/>
+									<BitOffset>0x15</BitOffset>
+									<BitWidth>0x1</BitWidth>
+									<Access>RW</Access>
+									<Values>
+										<Val value="0x0">Backup domain not reset on shutdown exit</Val>
+										<Val value="0x1">Reset of backup domaine(RTC registers and backup registers)forsed on shutdown exit</Val>
+									</Values>
+								</Bit>
+								<Bit>
+									<Name>IRHEN</Name>
+									<Description/>
+									<BitOffset>0x1D</BitOffset>
+									<BitWidth>0x1</BitWidth>
+									<Access>RW</Access>
+									<Values>
+										<Val value="0x0">Internal resets are propagated as simple pulse on NRST pin</Val>
+										<Val value="0x1">Internal resets drives NRST pin low until it is seen as low level</Val>
+									</Values>
+								</Bit>
+							</AssignedBits>
+						</Field>
+					</Category>
+					<Category>
+						<Name>Write Protection</Name>
+						<Field>
+							<Parameters address="0x4002202C" name="FLASH_WRP1AR" size="0x4"/>
+							<AssignedBits>
+								<Bit>
+									<Name>WRP1A_STRT</Name>
+									<Description>Start offset of WRP zone A of bank 1. WRP1A_STRT contains the first page of the first WRP zone to protect</Description>
+									<BitOffset>0x0</BitOffset>
+									<BitWidth>0x7</BitWidth>
+									<Access>RW</Access>
+									<Equation multiplier="0x800" offset="0x08000000"/>
+								</Bit>
+								<Bit>
+									<Name>WRP1A_END</Name>
+									<Description>End offset of WRP zone A of bank 1. WRP1A_END contains the last page of the first WRP zone to protect.</Description>
+									<BitOffset>0x10</BitOffset>
+									<BitWidth>0x7</BitWidth>
+									<Access>RW</Access>
+									<Equation multiplier="0x800" offset="0x08000000"/>
+								</Bit>
+							</AssignedBits>
+						</Field>
+						<Field>
+							<Parameters address="0x40022030" name="FLASH_WRP1BR" size="0x4"/>
+							<AssignedBits>
+								<Bit>
+									<Name>WRP1B_STRT</Name>
+									<Description>Start offset of WRP zone B of bank 1. WRP1B_START contains the first page of the second WRP zone to protect</Description>
+									<BitOffset>0x0</BitOffset>
+									<BitWidth>0x7</BitWidth>
+									<Access>RW</Access>
+									<Equation multiplier="0x800" offset="0x08000000"/>
+								</Bit>
+								<Bit>
+									<Name>WRP1B_END</Name>
+									<Description>End offset of WRP zone B of bank 1. WRP1B_END contains the last page of the second WRP zone to protect</Description>
+									<BitOffset>0x10</BitOffset>
+									<BitWidth>0x7</BitWidth>
+									<Access>RW</Access>
+									<Equation multiplier="0x800" offset="0x08000000"/>
+								</Bit>
+							</AssignedBits>
+						</Field>
+												
+					</Category>
+					<Category>
+						<Name>FLASH security</Name>
+						<Field>
+							<Parameters address="0x40022080" name="FLASH_SECR" size="0x4"/>
+							<AssignedBits>
+								<Bit>
+									<Name>HDP1_PEND</Name>
+									<Description>Securable memory area size</Description>
+									<BitOffset>0x0</BitOffset>
+									<BitWidth>0x7</BitWidth>
+									<Access>RW</Access>
+									<Equation multiplier="0x800" offset="0x08000000"/>
+								</Bit>
+								<Bit>
+									<Name>BOOT_lOCK</Name>
+									<Description>Used to force boot from user area</Description>
+									<BitOffset>0x10</BitOffset>
+									<BitWidth>0x1</BitWidth>
+									<Access>RW</Access>
+									<Values>
+										<Val value="0x0">Boot based on the pad/option bit configuration</Val>
+										<Val value="0x1">Boot forced from Main Flash memory</Val>
+									</Values>
+								</Bit>
+								<Bit>
+									<Name>HDP1EN</Name>
+									<Description> Hide protection area enable</Description>
+									<BitOffset>0x18</BitOffset>
+									<BitWidth>0x8</BitWidth>
+									<Access>RW</Access>
+									<Values>
+										<Val value="0xB4">no HDP area</Val>
+										<Val value="0x1">or any value other than 0xB4 HDP area enabled</Val>
+									</Values>
+								</Bit>
+								
+							</AssignedBits>
+						</Field>
+					</Category>
+				</Bank>
+				<Bank interface="Bootloader">
+					<Parameters address="0x40022020" name="Bank 1" size="0x64"/>
+					<Category>
+						<Name>Read Out Protection</Name>
+						<Field>
+							<Parameters address="0x40022020" name="FLASH_OPTR" size="0x4"/>
+							<AssignedBits>
+								<Bit>
+									<Name>RDP</Name>
+									<Description>Read protection option byte. The read protection is used to protect the software code stored in Flash memory.</Description>
+									<BitOffset>0x0</BitOffset>
+									<BitWidth>0x8</BitWidth>
+									<Access>RW</Access>
+									<Values>
+										<Val value="0xAA">Level 0, no protection</Val>
+										<Val value="0xBB">or any value other than 0xAA and 0xCC: Level 1, read protection</Val>
+										<Val value="0xCC">Level 2, chip protection</Val>
+									</Values>
+								</Bit>
+							</AssignedBits>
+						</Field>
+					</Category>
+					<Category>
+						<Name>BOR Level</Name>
+						<Field>
+							<Parameters name="FLASH_OPTR" size="0x4" address="0x40022020"/>
+							<AssignedBits>
+								<Bit>
+									<Name>BOR_LEV</Name>
+									<Description>This bitfield contains the VDD supply level threshold that activates/releases the reset</Description>
+									<BitOffset>0x8</BitOffset>
+									<BitWidth>0x3</BitWidth>
+									<Access>RW</Access>
+									<Values>
+										<Val value="0x0">BOR level 0, reset level threshold around 1.7 V</Val>
+										<Val value="0x1">BOR level 1, reset level threshold around 2.0 V</Val>
+										<Val value="0x2">BOR level 2, reset level threshold around 2.2 V</Val>
+										<Val value="0x3">BOR level 3, reset level threshold around 2.5 V</Val>
+										<Val value="0x4">BOR level 4, reset level threshold around 2.8 V</Val>
+									</Values>
+								</Bit>								
+							</AssignedBits>
+						</Field>
+					</Category>
+					<Category>
+						<Name>User Configuration</Name>
+						<Field>
+							<Parameters address="0x40022020" name="FLASH_OPTR" size="0x4"/>
+							<AssignedBits>
+								<Bit>
+									<Name>nRST_STOP</Name>
+									<Description/>
+									<BitOffset>0xD</BitOffset>
+									<BitWidth>0x1</BitWidth>
+									<Access>RW</Access>
+									<Values>
+										<Val value="0x0">Reset generated when entering Stop mode</Val>
+										<Val value="0x1">No reset generated when entering Stop mode</Val>
+									</Values>
+								</Bit>
+								<Bit>
+									<Name>nRST_STDBY</Name>
+									<Description/>
+									<BitOffset>0xE</BitOffset>
+									<BitWidth>0x1</BitWidth>
+									<Access>RW</Access>
+									<Values>
+										<Val value="0x0">Reset generated when entering Standby mode</Val>
+										<Val value="0x1">No reset generated when entering Standby mode</Val>
+									</Values>
+								</Bit>
+								<Bit>
+									<Name>nRST_SHDW</Name>
+									<Description/>
+									<BitOffset>0xF</BitOffset>
+									<BitWidth>0x1</BitWidth>
+									<Access>RW</Access>
+									<Values>
+										<Val value="0x0">Reset generated when entering the Shutdown mode</Val>
+										<Val value="0x1">No reset generated when entering the Shutdown mode</Val>
+									</Values>
+								</Bit>
+								<Bit>
+									<Name>IWDG_SW</Name>
+									<Description/>
+									<BitOffset>0x10</BitOffset>
+									<BitWidth>0x1</BitWidth>
+									<Access>RW</Access>
+									<Values>
+										<Val value="0x0">Hardware independant watchdog</Val>
+										<Val value="0x1">Software independant watchdog</Val>
+									</Values>
+								</Bit>
+								<Bit>
+									<Name>IWDG_STOP</Name>
+									<Description/>
+									<BitOffset>0x11</BitOffset>
+									<BitWidth>0x1</BitWidth>
+									<Access>RW</Access>
+									<Values>
+										<Val value="0x0">Freeze IWDG counter in stop mode</Val>
+										<Val value="0x1">IWDG counter active in stop mode</Val>
+									</Values>
+								</Bit>
+								<Bit>
+									<Name>IWDG_STDBY</Name>
+									<Description/>
+									<BitOffset>0x12</BitOffset>
+									<BitWidth>0x1</BitWidth>
+									<Access>RW</Access>
+									<Values>
+										<Val value="0x0">Freeze IWDG counter in standby mode</Val>
+										<Val value="0x1">IWDG counter active in standby mode</Val>
+									</Values>
+								</Bit>
+								<Bit>
+									<Name>WWDG_SW</Name>
+									<Description/>
+									<BitOffset>0x13</BitOffset>
+									<BitWidth>0x1</BitWidth>
+									<Access>RW</Access>
+									<Values>
+										<Val value="0x0">Hardware window watchdog</Val>
+										<Val value="0x1">Software window watchdog</Val>
+									</Values>
+								</Bit>
+								<Bit>
+									<Name>RAM_PARITY_CHECK</Name>
+									<Description/>
+									<BitOffset>0x16</BitOffset>
+									<BitWidth>0x1</BitWidth>
+									<Access>RW</Access>
+									<Values>
+										<Val value="0x0">RAM_PARITY_CHECK enable</Val>
+										<Val value="0x1">RAM_PARITY_CHECK disable</Val>
+									</Values>
+								</Bit>
+								<Bit>
+									<Name>BKPSRAM_HW_ERASE_DISABLE</Name>
+									<Description/>
+									<BitOffset>0x17</BitOffset>
+									<BitWidth>0x1</BitWidth>
+									<Access>RW</Access>
+									<Values>
+										<Val value="0x0">Backup SRAM is erased on system reset </Val>
+										<Val value="0x1">Backup SRAM content is kept when a system reset occurs</Val>
+									</Values>
+								</Bit>
+								<Bit>
+									<Name>NBOOT_SEL</Name>
+									<Description/>
+									<BitOffset>0x18</BitOffset>
+									<BitWidth>0x1</BitWidth>
+									<Access>RW</Access>
+									<Values>
+										<Val value="0x0">BOOT0 pin (legacy mode)</Val>
+										<Val value="0x1">NBOOT0 option bit </Val>
+									</Values>
+								</Bit>
+								<Bit>
+									<Name>nBOOT1</Name>
+									<Description/>
+									<BitOffset>0x19</BitOffset>
+									<BitWidth>0x1</BitWidth>
+									<Access>RW</Access>
+									<Values>
+										<Val value="0x0">Boot from Flash if BOOT0 = 1, otherwise Embedded SRAM1</Val>
+										<Val value="0x1">Boot from Flash if BOOT0 = 1, otherwise system memory</Val>
+									</Values>
+								</Bit>	
+								<Bit>
+									<Name>nBOOT0</Name>
+									<Description/>
+									<BitOffset>0x1A</BitOffset>
+									<BitWidth>0x1</BitWidth>
+									<Access>RW</Access>
+									<Values>
+										<Val value="0x0">nBOOT0=0</Val>
+										<Val value="0x1">nBOOT0=1</Val>
+									</Values>
+								</Bit>				
+								<Bit>
+									<Name>NRST_MODE</Name>
+									<Description/>
+									<BitOffset>0x1B</BitOffset>
+									<BitWidth>0x2</BitWidth>
+									<Access>RW</Access>
+									<Values>
+										<Val value="0x0">Reserved</Val>
+										<Val value="0x1">Reset input only</Val>
+										<Val value="0x2">Standard GPIO:only internal RESET is possible</Val>
+										<Val value="0x3">Bidirectional reset:The NRST pin is configured in reset input/output (legacy) mode</Val>
+									</Values>
+								</Bit>
+								<Bit>
+									<Name>BDRST</Name>
+									<Description/>
+									<BitOffset>0x15</BitOffset>
+									<BitWidth>0x1</BitWidth>
+									<Access>RW</Access>
+									<Values>
+										<Val value="0x0">Backup domain not reset on shutdown exit</Val>
+										<Val value="0x1">Reset of backup domaine(RTC registers and backup registers)forsed on shutdown exit</Val>
+									</Values>
+								</Bit>
+								<Bit>
+									<Name>IRHEN</Name>
+									<Description/>
+									<BitOffset>0x1D</BitOffset>
+									<BitWidth>0x1</BitWidth>
+									<Access>RW</Access>
+									<Values>
+										<Val value="0x0">Internal resets are propagated as simple pulse on NRST pin</Val>
+										<Val value="0x1">Internal resets drives NRST pin low until it is seen as low level</Val>
+									</Values>
+								</Bit>
+							</AssignedBits>
+						</Field>
+					</Category>
+					<Category>
+						<Name>Write Protection</Name>
+						<Field>
+							<Parameters address="0x4002202C" name="FLASH_WRP1AR" size="0x4"/>
+							<AssignedBits>
+								<Bit>
+									<Name>WRP1A_STRT</Name>
+									<Description>Start offset of WRP zone A of bank 1. WRP1A_STRT contains the first page of the first WRP zone to protect</Description>
+									<BitOffset>0x0</BitOffset>
+									<BitWidth>0x7</BitWidth>
+									<Access>RW</Access>
+									<Equation multiplier="0x800" offset="0x08000000"/>
+								</Bit>
+								<Bit>
+									<Name>WRP1A_END</Name>
+									<Description>End offset of WRP zone A of bank 1. WRP1A_END contains the last page of the first WRP zone to protect.</Description>
+									<BitOffset>0x10</BitOffset>
+									<BitWidth>0x7</BitWidth>
+									<Access>RW</Access>
+									<Equation multiplier="0x800" offset="0x08000000"/>
+								</Bit>
+							</AssignedBits>
+						</Field>
+						<Field>
+							<Parameters address="0x40022030" name="FLASH_WRP1BR" size="0x4"/>
+							<AssignedBits>
+								<Bit>
+									<Name>WRP1B_STRT</Name>
+									<Description>Start offset of WRP zone B of bank 1. WRP1B_START contains the first page of the second WRP zone to protect</Description>
+									<BitOffset>0x0</BitOffset>
+									<BitWidth>0x7</BitWidth>
+									<Access>RW</Access>
+									<Equation multiplier="0x800" offset="0x08000000"/>
+								</Bit>
+								<Bit>
+									<Name>WRP1B_END</Name>
+									<Description>End offset of WRP zone B of bank 1. WRP1B_END contains the last page of the second WRP zone to protect</Description>
+									<BitOffset>0x10</BitOffset>
+									<BitWidth>0x7</BitWidth>
+									<Access>RW</Access>
+									<Equation multiplier="0x800" offset="0x08000000"/>
+								</Bit>
+							</AssignedBits>
+						</Field>
+												
+					</Category>
+					<Category>
+						<Name>FLASH security</Name>
+						<Field>
+							<Parameters address="0x40022080" name="FLASH_SECR" size="0x4"/>
+							<AssignedBits>
+								<Bit>
+									<Name>HDP1_PEND</Name>
+									<Description>Securable memory area size</Description>
+									<BitOffset>0x0</BitOffset>
+									<BitWidth>0x7</BitWidth>
+									<Access>RW</Access>
+									<Equation multiplier="0x800" offset="0x08000000"/>
+								</Bit>
+								<Bit>
+									<Name>BOOT_lOCK</Name>
+									<Description>Used to force boot from user area</Description>
+									<BitOffset>0x10</BitOffset>
+									<BitWidth>0x1</BitWidth>
+									<Access>RW</Access>
+									<Values>
+										<Val value="0x0">Boot based on the pad/option bit configuration</Val>
+										<Val value="0x1">Boot forced from Main Flash memory</Val>
+									</Values>
+								</Bit>
+								<Bit>
+									<Name>HDP1EN</Name>
+									<Description> Hide protection area enable</Description>
+									<BitOffset>0x18</BitOffset>
+									<BitWidth>0x8</BitWidth>
+									<Access>RW</Access>
+									<Values>
+										<Val value="0xB4">no HDP area</Val>
+										<Val value="0x1">or any value other than 0xB4 HDP area enabled</Val>
+									</Values>
+								</Bit>
+								
+							</AssignedBits>
+						</Field>
+					</Category>
+				</Bank>
+			</Peripheral>
+		</Peripherals>
+	</Device>
+</Root>

@@ -1,0 +1,316 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Root xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="SCHVerif.xsd">
+<Device>
+		<DeviceID>0x444</DeviceID>
+		<Vendor>STMicroelectronics</Vendor>
+		<Type>MCU</Type>
+		<CPU>Cortex-M0</CPU>
+		<Name>STM32F03x</Name>
+		<Series>STM32F0</Series>
+		<Description>ARM 32-bit Cortex-M0 based device</Description>
+		<Configurations>
+			<!-- JTAG_SWD Interface -->
+			<Interface name="JTAG_SWD"/>
+		</Configurations>
+		<!-- Peripherals -->
+		<Peripherals>
+			<!-- Embedded SRAM -->
+			<Peripheral>
+				<Name>Embedded SRAM</Name>
+				<Type>Storage</Type>
+				<Description/>
+				<ErasedValue>0x00</ErasedValue>
+				<Access>RWE</Access>
+				<!-- 4 KB -->
+				<Configuration>
+					<Parameters address="0x20000000" name="SRAM" size="0x1000"/>
+					<Description/>
+					<Organization>Single</Organization>
+					<Bank name="Bank 1">
+						<Field>
+							<Parameters address="0x20000000" name="SRAM" occurrence="0x1" size="0x1000"/>
+						</Field>
+					</Bank>
+				</Configuration>
+			</Peripheral>
+			<!-- Embedded Flash -->
+			<Peripheral>
+				<Name>Embedded Flash</Name>
+				<Type>Storage</Type>
+				<Description>The Flash memory interface manages CPU AHB I-Code and D-Code accesses to the Flash memory. It implements the erase and program Flash memory operations and the read and write protection mechanisms</Description>
+				<ErasedValue>0xFF</ErasedValue>
+				<Access>RWE</Access>
+				<FlashSize address="0x1FFFF7CC" default="0x8000"/>
+				<BootloaderVersion address="0x1FFFF7A6"/>
+				<!-- 32KB single Bank -->
+				<Configuration>
+					<Parameters address="0x08000000" name=" 32 Kbytes Embedded Flash" size="0x8000"/>
+					<Description/>
+					<Organization>Single</Organization>
+					<Alignment>0x4</Alignment>
+					<Bank name="Bank 1">
+						<Field>
+							<Parameters address="0x08000000" name="sector0" occurrence="0x20" size="0x400"/>
+						</Field>
+					</Bank>
+				</Configuration>
+			</Peripheral>
+			<!-- Option Bytes -->
+			<Peripheral>
+				<Name>Option Bytes</Name>
+				<Type>Configuration</Type>
+				<Description/>
+				<Access>RW</Access>
+				<Bank>
+					<Parameters address="0x1FFFF800" name="Bank 1" size="0x10"/>
+					<Category>
+						<Name>Read Out Protection</Name>
+						<Field>
+							<Parameters address="0x1FFFF800" name="USR_RDP" size="0x4"/>
+							<AssignedBits>
+								<Bit>
+									<Name>RDP</Name>
+									<Description>Read protection option byte. The read protection is used to protect the software code stored in Flash memory.</Description>
+									<BitOffset>0x0</BitOffset>
+									<BitWidth>0x8</BitWidth>
+									<Access>RW</Access>
+									<Values>
+										<Val value="0xAA">Level 0, no protection</Val>
+										<Val value="0xBB">or any value other than 0xAA and 0xCC: Level 1, read protection</Val>
+										<Val value="0xCC">Level 2, chip protection</Val>
+									</Values>
+									<DefaultVal>0xAA</DefaultVal>
+									<ValLine>0x1</ValLine>
+								</Bit>
+							</AssignedBits>
+						</Field>
+					</Category>
+					<Category>
+						<Name>User Configuration</Name>
+						<Field>
+							<Parameters address="0x1FFFF800" name="USR_RDP" size="0x4"/>
+							<AssignedBits>
+								<Bit>
+									<Name>WDG_SW</Name>
+									<Description/>
+									<BitOffset>0x10</BitOffset>
+									<BitWidth>0x1</BitWidth>
+									<Access>RW</Access>
+									<Values>
+										<Val value="0x0">Hardware watchdog</Val>
+										<Val value="0x1">Software watchdog</Val>
+									</Values>
+									<DefaultVal>0x1</DefaultVal>
+									<ValLine>0x1</ValLine>
+								</Bit>
+								<Bit>
+									<Name>nRST_STOP</Name>
+									<Description/>
+									<BitOffset>0x11</BitOffset>
+									<BitWidth>0x1</BitWidth>
+									<Access>RW</Access>
+									<Values>
+										<Val value="0x0">Reset generated when entering Stop mode</Val>
+										<Val value="0x1">No reset generated</Val>
+									</Values>
+									<DefaultVal>0x1</DefaultVal>
+									<ValLine>0x1</ValLine>
+								</Bit>
+								<Bit>
+									<Name>nRST_STDBY</Name>
+									<Description/>
+									<BitOffset>0x12</BitOffset>
+									<BitWidth>0x1</BitWidth>
+									<Access>RW</Access>
+									<Values>
+										<Val value="0x0">Reset generated when entering Standby mode</Val>
+										<Val value="0x1">No reset generated</Val>
+									</Values>
+									<DefaultVal>0x1</DefaultVal>
+									<ValLine>0x1</ValLine>
+								</Bit>
+								<Bit>
+									<Name>nBOOT1</Name>
+									<Description>Together with the input pad BOOT0, selects the Boot mode. If BOOT0=0, always boot from main flash memory regardless of nBoot1 value. </Description>
+									<BitOffset>0x14</BitOffset>
+									<BitWidth>0x1</BitWidth>
+									<Access>RW</Access>
+									<Values>
+										<Val value="0x0">Boot from embedded SRAM when BOOT0=1</Val>
+										<Val value="0x1">Boot from system flash when BOOT0=1</Val>
+									</Values>
+									<DefaultVal>0x1</DefaultVal>
+									<ValLine>0x1</ValLine>
+								</Bit>
+								<Bit>
+									<Name>VDDA_MONITOR</Name>
+									<Description/>
+									<BitOffset>0x15</BitOffset>
+									<BitWidth>0x1</BitWidth>
+									<Access>RW</Access>
+									<Values>
+										<Val value="0x0">VDDA power supply supervisor disabled</Val>
+										<Val value="0x1">VDDA power supply supervisor enabled</Val>
+									</Values>
+									<DefaultVal>0x1</DefaultVal>
+									<ValLine>0x1</ValLine>
+								</Bit>
+								<Bit>
+									<Name>RAM_PARITY</Name>
+									<Description/>
+									<BitOffset>0x16</BitOffset>
+									<BitWidth>0x1</BitWidth>
+									<Access>RW</Access>
+									<Values>
+										<Val value="0x0">RAM parity check enabled</Val>
+										<Val value="0x1">RAM parity check disabled</Val>
+									</Values>
+									<DefaultVal>0x1</DefaultVal>
+									<ValLine>0x1</ValLine>
+								</Bit>
+							</AssignedBits>
+						</Field>
+					</Category>
+					<Category>
+						<Name>User Data</Name>
+						<Field>
+							<Parameters address="0x1FFFF804" name="USR_DATA" size="0x4"/>
+							<AssignedBits>
+								<Bit>
+									<Name>Data0</Name>
+									<Description>User data 0 (8-bit)</Description>
+									<BitOffset>0x0</BitOffset>
+									<BitWidth>0x8</BitWidth>
+									<Access>RW</Access>
+									<DefaultVal>0xFF</DefaultVal>
+									<ValLine>0x1</ValLine>
+								</Bit>
+								<Bit>
+									<Name>Data1</Name>
+									<Description>User data 1 (8-bit)</Description>
+									<BitOffset>0x10</BitOffset>
+									<BitWidth>0x8</BitWidth>
+									<Access>RW</Access>
+									<DefaultVal>0xFF</DefaultVal>
+									<ValLine>0x1</ValLine>
+								</Bit>
+							</AssignedBits>
+						</Field>
+					</Category>
+					<Category>
+						<Name>Write Protection</Name>
+						<Field>
+							<Parameters address="0x1FFFF808" name="WRP_0_1" size="0x4"/>
+							<AssignedBits>
+								<Bit>
+									<Name>nWRP0</Name>
+									<Description/>
+									<BitOffset>0x0</BitOffset>
+									<BitWidth>0x1</BitWidth>
+									<Access>RW</Access>
+									<Values>
+										<Val value="0x0">Write protection active on this sector</Val>
+										<Val value="0x1">Write protection not active on this sector</Val>
+									</Values>
+									<DefaultVal>0x0</DefaultVal>
+									<ValLine>0x1</ValLine>
+								</Bit>
+							    <Bit>
+									<Name>nWRP1</Name>
+									<Description/>
+									<BitOffset>0x1</BitOffset>
+									<BitWidth>0x1</BitWidth>
+									<Access>RW</Access>
+									<Values>
+										<Val value="0x0">Write protection active on this sector</Val>
+										<Val value="0x1">Write protection not active on this sector</Val>
+									</Values>
+									<DefaultVal>0x0</DefaultVal>
+									<ValLine>0x1</ValLine>
+								</Bit>
+								<Bit>
+									<Name>nWRP2</Name>
+									<Description/>
+									<BitOffset>0x2</BitOffset>
+									<BitWidth>0x1</BitWidth>
+									<Access>RW</Access>
+									<Values>
+										<Val value="0x0">Write protection active on this sector</Val>
+										<Val value="0x1">Write protection not active on this sector</Val>
+									</Values>
+									<DefaultVal>0x0</DefaultVal>
+									<ValLine>0x1</ValLine>
+								</Bit>
+								<Bit>
+									<Name>nWRP3</Name>
+									<Description/>
+									<BitOffset>0x3</BitOffset>
+									<BitWidth>0x1</BitWidth>
+									<Access>RW</Access>
+									<Values>
+										<Val value="0x0">Write protection active on this sector</Val>
+										<Val value="0x1">Write protection not active on this sector</Val>
+									</Values>
+									<DefaultVal>0x0</DefaultVal>
+									<ValLine>0x1</ValLine>
+								</Bit>
+								<Bit>
+									<Name>nWRP4</Name>
+									<Description/>
+									<BitOffset>0x4</BitOffset>
+									<BitWidth>0x1</BitWidth>
+									<Access>RW</Access>
+									<Values>
+										<Val value="0x0">Write protection active on this sector</Val>
+										<Val value="0x1">Write protection not active on this sector</Val>
+									</Values>
+									<DefaultVal>0x0</DefaultVal>
+									<ValLine>0x1</ValLine>
+								</Bit>
+								<Bit>
+									<Name>nWRP5</Name>
+									<Description/>
+									<BitOffset>0x5</BitOffset>
+									<BitWidth>0x1</BitWidth>
+									<Access>RW</Access>
+									<Values>
+										<Val value="0x0">Write protection active on this sector</Val>
+										<Val value="0x1">Write protection not active on this sector</Val>
+									</Values>
+									<DefaultVal>0x0</DefaultVal>
+									<ValLine>0x1</ValLine>
+								</Bit>
+								<Bit>
+									<Name>nWRP6</Name>
+									<Description/>
+									<BitOffset>0x6</BitOffset>
+									<BitWidth>0x1</BitWidth>
+									<Access>RW</Access>
+									<Values>
+										<Val value="0x0">Write protection active on this sector</Val>
+										<Val value="0x1">Write protection not active on this sector</Val>
+									</Values>
+									<DefaultVal>0x0</DefaultVal>
+									<ValLine>0x1</ValLine>
+								</Bit>
+								<Bit>
+									<Name>nWRP7</Name>
+									<Description/>
+									<BitOffset>0x7</BitOffset>
+									<BitWidth>0x1</BitWidth>
+									<Access>RW</Access>
+									<Values>
+										<Val value="0x0">Write protection active on this sector</Val>
+										<Val value="0x1">Write protection not active on this sector</Val>
+									</Values>
+									<DefaultVal>0x0</DefaultVal>
+									<ValLine>0x1</ValLine>
+								</Bit>
+							</AssignedBits>
+						</Field>
+					</Category>
+				</Bank>
+			</Peripheral>
+		</Peripherals>
+	</Device>
+</Root>
