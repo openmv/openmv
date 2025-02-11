@@ -1,0 +1,178 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<xs:schema xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" attributeFormDefault="unqualified" elementFormDefault="qualified" xmlns:xs="http://www.w3.org/2001/XMLSchema">
+<xs:simpleType name="LimitedStringTitle">
+    <xs:restriction base="xs:string">
+      <xs:maxLength value="100" />
+    </xs:restriction>
+</xs:simpleType>
+
+<xs:simpleType name="LimitedStringTooltip">
+    <xs:restriction base="xs:string">
+      <xs:maxLength value="580" />
+    </xs:restriction>
+</xs:simpleType>
+
+<xs:simpleType name="LimitedContent">
+    <xs:restriction base="xs:string">
+      <xs:maxLength value="60" />
+    </xs:restriction>
+</xs:simpleType>
+  
+<xs:simpleType name="LimitedStringaddress">
+    <xs:restriction base="xs:string">
+      <xs:maxLength value="36" />
+    </xs:restriction>
+</xs:simpleType>
+  
+<xs:simpleType name="limitedStringVal">
+    <xs:restriction base="xs:string">
+      <xs:maxLength value="4" />
+    </xs:restriction>
+</xs:simpleType>
+  
+	<xs:element name="Root">
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element name="Obdata">
+					<xs:complexType>
+						<xs:sequence>
+								<xs:element name="Info">
+									<xs:complexType>
+										<xs:sequence>
+										<xs:element type="LimitedStringTitle" name="Title"/>
+											<xs:choice maxOccurs="unbounded" minOccurs="0">
+												<xs:element type="limitedStringVal" name="GlobalAlign" />
+												<xs:element type="LimitedStringaddress" minOccurs="0" maxOccurs="1" name="ObDestAddress" />
+												<xs:element type="limitedStringVal" minOccurs="0" maxOccurs="1" name="DoEncryption" />
+												<xs:element type="LimitedStringaddress" minOccurs="0" maxOccurs="1"  name="FlashStart" />
+												<xs:element type="LimitedStringaddress" minOccurs="0" maxOccurs="1" name="FlashSize" />
+												<xs:element type="LimitedStringaddress" minOccurs="0" maxOccurs="1" name="FlashSectorSize"/>
+												<xs:element type="LimitedStringaddress" minOccurs="0" maxOccurs="1" name="OBKStart" />
+												<xs:element type="LimitedStringaddress" minOccurs="0" maxOccurs="1" name="OBKSize" />
+												<xs:element type="LimitedStringaddress" minOccurs="0" maxOccurs="1" name="OBKSectorSize"/>
+												<xs:element type="LimitedStringaddress" minOccurs="0" maxOccurs="1" name="AuthOBKStart"  />
+												<xs:element type="LimitedStringaddress" minOccurs="0" maxOccurs="1" name="AuthOBKSize"  />
+												<xs:element type="LimitedStringaddress" minOccurs="0" maxOccurs="1" name="MCU"  />
+											</xs:choice>
+										</xs:sequence>
+									</xs:complexType>
+								</xs:element>
+								<xs:element minOccurs="0" maxOccurs="1" name="Hash" type="xs:string" />
+								<xs:element minOccurs="0" maxOccurs="1" name="DA" type="xs:string" />
+								<xs:element name="Text" minOccurs="0" maxOccurs="1">
+									<xs:complexType>
+										<xs:sequence>
+											<xs:element name="Name" type="LimitedStringTitle" />
+											<xs:element minOccurs="0" name="Value" type="LimitedStringTooltip" />
+											<xs:choice maxOccurs="unbounded" minOccurs="0">
+												<xs:element name="MinWidth" type="limitedStringVal" />
+												<xs:element name="Width" type="limitedStringVal" />
+												<xs:element name="Default" type="LimitedStringTooltip" />
+												<xs:element minOccurs="0" name="Tooltip" type="LimitedStringTooltip" />
+											</xs:choice>
+										</xs:sequence>
+									</xs:complexType>
+								</xs:element>
+							<xs:choice maxOccurs="unbounded">
+								<xs:element name="Data">
+									<xs:complexType>
+										<xs:sequence>
+											<xs:element name="Name" type="LimitedStringTitle" />
+											<xs:element minOccurs="0" name="Value" type="LimitedStringaddress" />
+											<xs:choice maxOccurs="unbounded" minOccurs="0">
+												<xs:element name="Width" type="limitedStringVal" />
+												<xs:element minOccurs="0" name="Reserved" type="limitedStringVal" />
+												<xs:element minOccurs="0" name="Hidden" type="limitedStringVal" />
+												<xs:element name="Default" type="LimitedStringaddress" />
+												<xs:element minOccurs="0" maxOccurs="unbounded" name="Slot" type="LimitedStringaddress" />
+												<xs:element minOccurs="0" maxOccurs="unbounded" name="OBKSlot" type="LimitedStringaddress" />
+												<xs:element minOccurs="0" name="Dependency" type="LimitedContent" />
+												<xs:element minOccurs="0" name="SlotType" type="xs:string" />
+												<xs:element minOccurs="0" name="Tooltip" type="LimitedStringTooltip" />
+											</xs:choice>
+										</xs:sequence>
+									</xs:complexType>
+								</xs:element>
+								<xs:element name="Bool">
+									<xs:complexType>
+										<xs:sequence>
+											<xs:element name="Name" type="LimitedStringTitle" />
+											<xs:element minOccurs="0" name="Value" type="LimitedStringaddress" />
+											<xs:choice maxOccurs="unbounded" minOccurs="0">
+												<xs:element name="Width" type="LimitedStringaddress" />
+												<xs:element minOccurs="0" name="Hidden" type="limitedStringVal" />
+												<xs:element name="Default" type="LimitedStringaddress" />
+												<xs:element name="True" type="LimitedStringaddress" />
+												<xs:element name="False" type="LimitedStringaddress" />
+												<xs:element minOccurs="0" name="Dependency" type="LimitedContent" />
+												<xs:element minOccurs="0" name="Tooltip" type="LimitedStringTooltip" />
+											</xs:choice>
+										</xs:sequence>
+									</xs:complexType>
+								</xs:element>
+								<xs:element name="List">
+									<xs:complexType>
+										<xs:sequence>
+											<xs:element name="Name" type="LimitedStringTitle" />
+											<xs:element minOccurs="0" name="Value" type="LimitedStringaddress" />
+											<xs:choice maxOccurs="unbounded" minOccurs="0">
+												<xs:element name="Width" type="limitedStringVal" />
+												<xs:element minOccurs="0" name="Hidden" type="limitedStringVal" />
+												<xs:element name="Default" type="LimitedStringaddress" />
+												<xs:element maxOccurs="unbounded" name="Val" type="LimitedContent" />
+												<xs:element minOccurs="0" name="Dependency" type="LimitedContent" />
+												<xs:element minOccurs="0" name="Tooltip" type="LimitedStringTooltip" />
+											</xs:choice>
+										</xs:sequence>
+									</xs:complexType>
+								</xs:element>
+								<xs:element name="File">
+									<xs:complexType>
+										<xs:sequence>
+											<xs:element name="Name" type="LimitedStringTitle" />
+											<xs:element minOccurs="0" name="Value" type="xs:string" />
+											<xs:choice maxOccurs="unbounded" minOccurs="0">
+												<xs:element name="Align" type="limitedStringVal" />
+												<xs:element name="KeyType" type="LimitedContent" />
+												<xs:element minOccurs="0" name="Hash" type="xs:string" />
+												<xs:element minOccurs="0" name="Type" type="LimitedContent" />
+												<xs:element minOccurs="0" name="Hidden" type="limitedStringVal" />
+												<xs:element name="Default" type="xs:string" />
+												<xs:element minOccurs="0" name="Tooltip" type="LimitedStringTooltip" />
+											</xs:choice>
+										</xs:sequence>
+									</xs:complexType>
+								</xs:element>
+							</xs:choice>
+							<xs:element minOccurs="0" maxOccurs="1" name="Permission">
+									<xs:complexType>
+										<xs:sequence>
+											<xs:element name="Name" type="LimitedStringTitle" />
+											<xs:element minOccurs="0" name="Value" type="LimitedStringaddress" />
+											<xs:choice maxOccurs="unbounded" minOccurs="0">
+												<xs:element name="Width" type="limitedStringVal" />
+												<xs:element name="Default" type="LimitedStringaddress" />
+												<xs:element minOccurs="0" name="Tooltip" type="LimitedStringTooltip" />
+											</xs:choice>
+										</xs:sequence>
+									</xs:complexType>
+							</xs:element>
+							<xs:element name="Output">
+									<xs:complexType>
+										<xs:sequence>
+											<xs:element name="Name" type="LimitedStringTitle" />
+											<xs:element minOccurs="0" name="Value" type="xs:string" />
+											<xs:choice maxOccurs="unbounded" minOccurs="0">
+												<xs:element name="Default" type="xs:string" />
+												<xs:element minOccurs="0" name="Tooltip" type="LimitedStringTooltip" />
+											</xs:choice>
+										</xs:sequence>
+									</xs:complexType>
+							</xs:element>
+						</xs:sequence>
+					</xs:complexType>
+				</xs:element>
+			</xs:sequence>
+		</xs:complexType>
+	</xs:element>
+</xs:schema>

@@ -1,0 +1,656 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Root xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="SCHVerif.xsd">
+<Device>
+		<DeviceID>0x483</DeviceID>
+		<Vendor>STMicroelectronics</Vendor>
+		<Type>MCU</Type>
+		<CPU>Cortex-M7</CPU>
+		<Name>STM32H72x/STM32H73x</Name>
+		<Series>STM32H7</Series>
+		<Description>ARM 32-bit Cortex-M7 based device</Description>
+		<Configurations>
+			<!-- JTAG_SWD Interface -->
+			<Interface name="JTAG_SWD">
+				<Configuration number="0x0"> <!-- Security extension available -->
+					<SecurityEx>
+						<WriteRegister address="0x580244F4" value="0x2"/>
+						<ReadRegister address="0x58000528" mask="0x1" value="0x0"/>
+					</SecurityEx>
+				</Configuration>
+				<Configuration number="0x1"> <!-- Security extension not available -->
+					<SecurityEx>
+						<WriteRegister address="0x580244F4" value="0x2"/>
+						<ReadRegister address="0x58000528" mask="0x1" value="0x1"/>
+					</SecurityEx>
+				</Configuration>
+			</Interface>
+			<!-- Bootloader Interface -->
+			<Interface name="Bootloader">
+				<Configuration number="0x0"> <!-- dummy always true, security extension is checked using dedicated cmd -->
+					<Dummy>
+						<ReadRegister address="0x08000000" mask="0x0" value="0x0"/>
+					</Dummy>
+				</Configuration>
+			</Interface>
+		</Configurations>
+		<!-- Peripherals -->
+		<Peripherals>
+			<!-- Embedded SRAM -->
+			<Peripheral>
+				<Name>Embedded SRAM</Name>
+				<Type>Storage</Type>
+				<Description/>
+				<ErasedValue>0x00</ErasedValue>
+				<Access>RWE</Access>
+				<!-- 1024 KB -->
+				<Configuration>
+					<Parameters address="0x24000000" name="SRAM" size="0x20000"/>
+					<Description/>
+					<Organization>Single</Organization>
+					<Bank name="Bank 1">
+						<Field>
+							<Parameters address="0x24000000" name="SRAM" occurrence="0x1" size="0x20000"/>
+						</Field>
+					</Bank>
+				</Configuration>
+			</Peripheral>
+			<!-- Embedded Flash -->
+			<Peripheral>
+				<Name>Embedded Flash</Name>
+				<Type>Storage</Type>
+				<Description>The Flash memory interface manages AXI accesses to the Flash memory. It implements the erase and program Flash memory operations and the read and write protection mechanisms</Description>
+				<ErasedValue>0xFF</ErasedValue>
+				<Access>RWE</Access>
+				<FlashSize address="0x1FF1E880" default="0x100000"/>
+				<BootloaderVersion address="0x1FF1E7FE"/>
+				<!-- 1MB Single Bank -->
+				<Configuration config="0,1">
+					<Parameters address="0x08000000" name="1 MBytes Single Bank Embedded Flash" size="0x100000"/>
+					<Description/>
+					<Organization>Single</Organization>
+					<Alignment>0x20</Alignment>
+					<Bank name="Bank 1">
+						<Field>
+							<Parameters address="0x08000000" name="sector0" occurrence="0x8" size="0x20000"/>
+						</Field>
+					</Bank>
+				</Configuration>
+			</Peripheral>
+			<!-- Option Bytes -->
+			<Peripheral>
+				<Name>Option Bytes</Name>
+				<Type>Configuration</Type>
+				<Description/>
+				<Access>RW</Access>
+				<Bank>
+					<Parameters address="0x5200201C" name="Bank 1" size="0x5C"/>
+					<Category>
+						<Name>Read Out Protection</Name>
+						<Field>
+							<Parameters address="0x5200201C" name="FOPTSR_CUR" size="0x4"/>
+							<AssignedBits>
+								<Bit>
+									<Name>RDP</Name>
+									<Description>Read protection option byte. The read protection is used to protect the software code stored in Flash memory.</Description>
+									<BitOffset>0x8</BitOffset>
+									<BitWidth>0x8</BitWidth>
+									<Access>R</Access>
+									<Values>
+										<Val value="0xAA">Level 0, no protection</Val>
+										<Val value="0xBB">or any value other than 0xAA and 0xCC: Level 1, read protection</Val>
+										<Val value="0xCC">Level 2, chip protection</Val>
+									</Values>
+								</Bit>
+							</AssignedBits>
+						</Field>
+						<Field>
+							<Parameters address="0x52002020" name="FOPTSR_PRG" size="0x4"/>
+							<AssignedBits>
+								<Bit>
+									<Name>RDP</Name>
+									<Description>Read protection option byte. The read protection is used to protect the software code stored in Flash memory.</Description>
+									<BitOffset>0x8</BitOffset>
+									<BitWidth>0x8</BitWidth>
+									<Access>W</Access>
+									<Values>
+										<Val value="0xAA">Level 0, no protection</Val>
+										<Val value="0xBB">or any value other than 0xAA and 0xCC: Level 1, read protection</Val>
+										<Val value="0xCC">Level 2, chip protection</Val>
+									</Values>
+								</Bit>
+							</AssignedBits>
+						</Field>
+					</Category>
+					<Category>
+						<Name>BOR Level</Name>
+						<Field>
+							<Parameters address="0x5200201C" name="FOPTSR_CUR" size="0x4"/>
+							<AssignedBits>
+								<Bit>
+									<Name>BOR_LEV</Name>
+									<Description>These bits contain the supply level threshold that activates/releases the reset. They can be written to program a new BOR level value into Flash memory</Description>
+									<BitOffset>0x2</BitOffset>
+									<BitWidth>0x2</BitWidth>
+									<Access>R</Access>
+									<Values>
+										<Val value="0x0">BOR OFF</Val>
+										<Val value="0x1">BOR level1: 2.1V</Val>
+										<Val value="0x2">BOR level2: 2.4 V</Val>
+										<Val value="0x3">BOR level3: 2.7 V</Val>
+									</Values>
+								</Bit>
+							</AssignedBits>
+						</Field>
+						<Field>
+							<Parameters address="0x52002020" name="FOPTSR_PRG" size="0x4"/>
+							<AssignedBits>
+								<Bit>
+									<Name>BOR_LEV</Name>
+									<Description>These bits contain the supply level threshold that activates/releases the reset. They can be written to program a new BOR level value into Flash memory</Description>
+									<BitOffset>0x2</BitOffset>
+									<BitWidth>0x2</BitWidth>
+									<Access>W</Access>
+									<Values>
+										<Val value="0x0">reset level is set to 0.0 V</Val>
+										<Val value="0x1">reset level is set to 2.1 V</Val>
+										<Val value="0x2">reset level is set to 2.4 V</Val>
+										<Val value="0x3">reset level is set to 2.7 V</Val>
+									</Values>
+								</Bit>
+							</AssignedBits>
+						</Field>
+					</Category>
+					<Category>
+						<Name>User Configuration</Name>
+						<Field>
+							<Parameters address="0x5200201C" name="FOPTSR_CUR" size="0x4"/>
+							<AssignedBits>
+								<Bit>
+									<Name>IWDG1_SW</Name>
+									<Description/>
+									<BitOffset>0x4</BitOffset>
+									<BitWidth>0x1</BitWidth>
+									<Access>R</Access>
+									<Values>
+										<Val value="0x0">Independent watchdog is controlled by hardware</Val>
+										<Val value="0x1">Independent watchdog is controlled by software</Val>
+									</Values>
+								</Bit>
+								<Bit>
+									<Name>NRST_STOP</Name>
+									<Description/>
+									<BitOffset>0x6</BitOffset>
+									<BitWidth>0x1</BitWidth>
+									<Access>R</Access>
+									<Values>
+										<Val value="0x0">STOP mode on Domain 1 is entering with reset</Val>
+										<Val value="0x1">STOP mode on Domain 1 is entering without reset</Val>
+									</Values>
+								</Bit>
+								<Bit>
+									<Name>NRST_STBY</Name>
+									<Description/>
+									<BitOffset>0x7</BitOffset>
+									<BitWidth>0x1</BitWidth>
+									<Access>R</Access>
+									<Values>
+										<Val value="0x0">STANDBY mode on Domain 1 is entering with reset</Val>
+										<Val value="0x1">STANDBY mode on Domain 1 is entering without reset</Val>
+									</Values>
+								</Bit>
+								<Bit>
+									<Name>IO_HSLV</Name>
+									<Description/>
+									<BitOffset>0x1D</BitOffset>
+									<BitWidth>0x1</BitWidth>
+									<Access>R</Access>
+									<Values>
+										<Val value="0x0">Product working in the full voltage range, I/O speed optimization at low-voltage disabled</Val>
+										<Val value="0x1">Product operating below 2.5 V, I/O speed optimization at low-voltage feature allowed</Val>
+									</Values>
+								</Bit>
+								<Bit>
+									<Name>FZ_IWDG_STOP</Name>
+									<Description/>
+									<BitOffset>0x11</BitOffset>
+									<BitWidth>0x1</BitWidth>
+									<Access>R</Access>
+									<Values>
+										<Val value="0x0">Independent watchdog is freezed in STOP mode</Val>
+										<Val value="0x1">Independent watchdog is running in STOP mode</Val>
+									</Values>
+								</Bit>
+								<Bit>
+									<Name>FZ_IWDG_SDBY</Name>
+									<Description/>
+									<BitOffset>0x12</BitOffset>
+									<BitWidth>0x1</BitWidth>
+									<Access>R</Access>
+									<Values>
+										<Val value="0x0">Independent watchdog is freezed in STANDBY mode</Val>
+										<Val value="0x1">Independent watchdog is running in STANDBY mode</Val>
+									</Values>
+								</Bit>
+								<Bit config="0">
+									<Name>SECURITY</Name>
+									<Description/>
+									<BitOffset>0x15</BitOffset>
+									<BitWidth>0x1</BitWidth>
+									<Access>R</Access>
+									<Values>
+										<Val value="0x0">Security feature disabled</Val>
+										<Val value="0x1">Security feature enabled</Val>
+									</Values>
+								</Bit>
+							</AssignedBits>
+						</Field>
+						<Field>
+							<Parameters address="0x52002020" name="FOPTSR_PRG" size="0x4"/>
+							<AssignedBits>
+								<Bit>
+									<Name>IWDG1_SW</Name>
+									<Description/>
+									<BitOffset>0x4</BitOffset>
+									<BitWidth>0x1</BitWidth>
+									<Access>W</Access>
+									<Values>
+										<Val value="0x0">Independent watchdog is controlled by hardware</Val>
+										<Val value="0x1">Independent watchdog is controlled by software</Val>
+									</Values>
+								</Bit>
+								<Bit>
+									<Name>NRST_STOP</Name>
+									<Description/>
+									<BitOffset>0x6</BitOffset>
+									<BitWidth>0x1</BitWidth>
+									<Access>W</Access>
+									<Values>
+										<Val value="0x0">STOP mode on Domain 1 is entering with reset</Val>
+										<Val value="0x1">STOP mode on Domain 1 is entering without reset</Val>
+									</Values>
+								</Bit>
+								<Bit>
+									<Name>NRST_STBY</Name>
+									<Description/>
+									<BitOffset>0x7</BitOffset>
+									<BitWidth>0x1</BitWidth>
+									<Access>W</Access>
+									<Values>
+										<Val value="0x0">STANDBY mode on Domain 1 is entering with reset</Val>
+										<Val value="0x1">STANDBY mode on Domain 1 is entering without reset</Val>
+									</Values>
+								</Bit>
+								<Bit>
+									<Name>IO_HSLV</Name>
+									<Description/>
+									<BitOffset>0x1D</BitOffset>
+									<BitWidth>0x1</BitWidth>
+									<Access>W</Access>
+									<Values>
+										<Val value="0x0">Product working in the full voltage range, I/O speed optimization at low-voltage disabled</Val>
+										<Val value="0x1">Product operating below 2.5 V, I/O speed optimization at low-voltage feature allowed</Val>
+									</Values>
+								</Bit>
+								<Bit>
+									<Name>FZ_IWDG_STOP</Name>
+									<Description/>
+									<BitOffset>0x11</BitOffset>
+									<BitWidth>0x1</BitWidth>
+									<Access>W</Access>
+									<Values>
+										<Val value="0x0">Independent watchdog is freezed in STOP mode</Val>
+										<Val value="0x1">Independent watchdog is running in STOP mode</Val>
+									</Values>
+								</Bit>
+								<Bit>
+									<Name>FZ_IWDG_SDBY</Name>
+									<Description/>
+									<BitOffset>0x12</BitOffset>
+									<BitWidth>0x1</BitWidth>
+									<Access>W</Access>
+									<Values>
+										<Val value="0x0">Independent watchdog is freezed in STANDBY mode</Val>
+										<Val value="0x1">Independent watchdog is running in STANDBY mode</Val>
+									</Values>
+								</Bit>
+								<Bit config="0">
+									<Name>SECURITY</Name>
+									<Description/>
+									<BitOffset>0x15</BitOffset>
+									<BitWidth>0x1</BitWidth>
+									<Access>W</Access>
+									<Values>
+										<Val value="0x0">Security feature disabled</Val>
+										<Val value="0x1">Security feature enabled</Val>
+									</Values>
+								</Bit>
+								<Bit config="0,1">
+									<Name>SWAP_BANK_OPT</Name>
+									<Description/>
+									<BitOffset>0x1F</BitOffset>
+									<BitWidth>0x1</BitWidth>
+									<Access>W</Access>
+									<Values>
+										<Val value="0x0">after boot loading, no swap for user sectors</Val>
+										<Val value="0x1">after boot loading, user sectors swapped</Val>
+									</Values>
+								</Bit>
+							</AssignedBits>
+						</Field>
+					</Category>
+					<Category>
+						<Name>Boot address Option Bytes</Name>
+						<Field>
+							<Parameters address="0x52002040" name="FBOOT7_CUR" size="0x4"/>
+							<AssignedBits>
+								<Bit>
+									<Name>BOOT_CM7_ADD0</Name>
+									<Description>Define the boot address for Cortex-M7 when BOOT0=0</Description>
+									<BitOffset>0x0</BitOffset>
+									<BitWidth>0x10</BitWidth>
+									<Access>R</Access>
+									<Equation multiplier="0x10000" offset="0x0"/>
+								</Bit>
+								<Bit>
+									<Name>BOOT_CM7_ADD1</Name>
+									<Description>Define the boot address for Cortex-M7 when BOOT0=1</Description>
+									<BitOffset>0x10</BitOffset>
+									<BitWidth>0x10</BitWidth>
+									<Access>R</Access>
+									<Equation multiplier="0x10000" offset="0x0"/>
+								</Bit>
+							</AssignedBits>
+						</Field>
+						<Field>
+							<Parameters address="0x52002044" name="FBOOT7_PRG" size="0x4"/>
+							<AssignedBits>
+								<Bit>
+									<Name>BOOT_CM7_ADD0</Name>
+									<Description/>
+									<BitOffset>0x0</BitOffset>
+									<BitWidth>0x10</BitWidth>
+									<Access>W</Access>
+									<Equation multiplier="0x10000" offset="0x0"/>
+								</Bit>
+								<Bit>
+									<Name>BOOT_CM7_ADD1</Name>
+									<Description/>
+									<BitOffset>0x10</BitOffset>
+									<BitWidth>0x10</BitWidth>
+									<Access>W</Access>
+									<Equation multiplier="0x10000" offset="0x0"/>
+								</Bit>
+							</AssignedBits>
+						</Field>
+					</Category>
+					<Category>
+						<Name>PCROP Protection</Name>
+						<Field>
+							<Parameters address="0x52002028" name="FPRAR_CUR_A" size="0x4"/>
+							<AssignedBits>
+								<Bit>
+									<Name>PROT_AREA_START</Name>
+									<Description>Flash Bank PCROP start address</Description>
+									<BitOffset>0x0</BitOffset>
+									<BitWidth>0xC</BitWidth>
+									<Access>R</Access>
+									<Equation multiplier="0x100" offset="0x08000000"/>
+								</Bit>
+								<Bit>
+									<Name>PROT_AREA_END</Name>
+									<Description>Flash Bank PCROP End address (excluded). Deactivation of PCROP can be done by enbaling DMEP bit and changing RDP from level 1 to level 0 while putting end address greater than start address.</Description>
+									<BitOffset>0x10</BitOffset>
+									<BitWidth>0xC</BitWidth>
+									<Access>R</Access>
+									<Equation multiplier="0x100" offset="0x080000FF"/>
+								</Bit>
+								<Bit>
+									<Name>DMEP</Name>
+									<Description/>
+									<BitOffset>0x1F</BitOffset>
+									<BitWidth>0x1</BitWidth>
+									<Access>R</Access>
+									<Values>
+										<Val value="0x0">Flash Bank PCROP zone is kept when RDP level regression (change from level 1 to 0) occurs</Val>
+										<Val value="0x1">Flash Bank PCROP zone is erased when RDP level regression (change from level 1 to 0) occurs</Val>
+									</Values>
+								</Bit>
+							</AssignedBits>
+						</Field>
+						<Field>
+							<Parameters address="0x5200202C" name="FPRAR_PRG_A" size="0x4"/>
+							<AssignedBits>
+								<Bit>
+									<Name>PROT_AREA_START</Name>
+									<Description>Flash Bank PCROP start address</Description>
+									<BitOffset>0x0</BitOffset>
+									<BitWidth>0xC</BitWidth>
+									<Access>W</Access>
+									<Equation multiplier="0x100" offset="0x08000000"/>
+								</Bit>
+								<Bit>
+									<Name>PROT_AREA_END</Name>
+									<Description>Flash Bank PCROP End address (excluded). Deactivation of PCROP can be done by enbaling DMEP bit and changing RDP from level 1 to level 0 while putting end address greater than start address</Description>
+									<BitOffset>0x10</BitOffset>
+									<BitWidth>0xC</BitWidth>
+									<Access>W</Access>
+									<Equation multiplier="0x100" offset="0x080000FF"/>
+								</Bit>
+								<Bit>
+									<Name>DMEP</Name>
+									<Description/>
+									<BitOffset>0x1F</BitOffset>
+									<BitWidth>0x1</BitWidth>
+									<Access>W</Access>
+									<Values>
+										<Val value="0x0">Flash Bank PCROP zone is kept when RDP level regression (change from level 1 to 0) occurs</Val>
+										<Val value="0x1">Flash Bank PCROP zone is erased when RDP level regression (change from level 1 to 0) occurs</Val>
+									</Values>
+								</Bit>
+							</AssignedBits>
+						</Field>
+					</Category>
+					<Category>
+						<Name>Secure Protection</Name>
+						<Field>
+							<Parameters address="0x5200201C" name="FOPTSR_CUR" size="0x4"/>
+							<AssignedBits>
+								<Bit config="0">
+									<Name>ST_RAM_SIZE</Name>
+									<Description/>
+									<BitOffset>0x13</BitOffset>
+									<BitWidth>0x2</BitWidth>
+									<Access>R</Access>
+									<Values>
+										<Val value="0x0">2  KB reserved to ST code</Val>
+										<Val value="0x1">4  KB reserved to ST code</Val>
+										<Val value="0x2">8  KB reserved to ST code</Val>
+										<Val value="0x3">16 KB reserved to ST code</Val>
+									</Values>
+								</Bit>
+							</AssignedBits>
+						</Field>
+						<Field>
+							<Parameters address="0x52002020" name="FOPTSR_PRG" size="0x4"/>
+							<AssignedBits>
+								<Bit config="0">
+									<Name>ST_RAM_SIZE</Name>
+									<Description/>
+									<BitOffset>0x13</BitOffset>
+									<BitWidth>0x2</BitWidth>
+									<Access>W</Access>
+									<Values>
+										<Val value="0x0">2  KB reserved to ST code</Val>
+										<Val value="0x1">4  KB reserved to ST code</Val>
+										<Val value="0x2">8  KB reserved to ST code</Val>
+										<Val value="0x3">16 KB reserved to ST code</Val>
+									</Values>
+								</Bit>
+							</AssignedBits>
+						</Field>
+						<Field>
+							<Parameters address="0x52002030" name="FLASH_SCAR_CUR" size="0x4"/>
+							<AssignedBits>
+								<Bit config="0">
+									<Name>SEC_AREA_START</Name>
+									<Description>Flash secure area start address</Description>
+									<BitOffset>0x0</BitOffset>
+									<BitWidth>0xC</BitWidth>
+									<Access>R</Access>
+									<Equation multiplier="0x100" offset="0x08000000"/>
+								</Bit>
+								<Bit config="0">
+									<Name>SEC_AREA_END</Name>
+									<Description>Flash secure area end address. If this address is equal to SEC_AREA_START, the whole flash memory is secure protected.If this address is lower than SEC_AREA_START, no protection is set on flash memory.</Description>
+									<BitOffset>0x10</BitOffset>
+									<BitWidth>0xC</BitWidth>
+									<Access>R</Access>
+									<Equation multiplier="0x100" offset="0x080000FF"/>
+								</Bit>
+								<Bit config="0">
+									<Name>DMES</Name>
+									<Description/>
+									<BitOffset>0x1F</BitOffset>
+									<BitWidth>0x1</BitWidth>
+									<Access>R</Access>
+									<Values>
+										<Val value="0x0">Flash secure area is kept when RDP level regression (change from level 1 to 0) occurs</Val>
+										<Val value="0x1">Flash secure area is erased when RDP level regression (change from level 1 to 0) occurs</Val>
+									</Values>
+								</Bit>
+							</AssignedBits>
+						</Field>
+						<Field>
+							<Parameters address="0x52002034" name="FLASH_SCAR_PRG" size="0x4"/>
+							<AssignedBits>
+								<Bit config="0">
+									<Name>SEC_AREA_START</Name>
+									<Description>Flash secure area start address</Description>
+									<BitOffset>0x0</BitOffset>
+									<BitWidth>0xC</BitWidth>
+									<Access>W</Access>
+									<Equation multiplier="0x100" offset="0x08000000"/>
+								</Bit>
+								<Bit config="0">
+									<Name>SEC_AREA_END</Name>
+									<Description>Flash secure area end address. If this address is equal to SEC_AREA_START, the whole flash memory is secure protected.If this address is lower than SEC_AREA_START, no protection is set on flash memory.</Description>
+									<BitOffset>0x10</BitOffset>
+									<BitWidth>0xC</BitWidth>
+									<Access>W</Access>
+									<Equation multiplier="0x100" offset="0x080000FF"/>
+								</Bit>
+								<Bit config="0">
+									<Name>DMES</Name>
+									<Description/>
+									<BitOffset>0x1F</BitOffset>
+									<BitWidth>0x1</BitWidth>
+									<Access>W</Access>
+									<Values>
+										<Val value="0x0">Flash secure area is kept when RDP level regression (change from level 1 to 0) occurs</Val>
+										<Val value="0x1">Flash secure area is erased when RDP level regression (change from level 1 to 0) occurs</Val>
+									</Values>
+								</Bit>
+							</AssignedBits>
+						</Field>
+					</Category>
+					<Category>
+						<Name>Write Protection</Name>
+						<Field>
+							<Parameters address="0x52002038" name="FWPSN_CUR_A" size="0x4"/>
+							<AssignedBits>
+								<Bit config="0,1">
+									<Name>nWRP0</Name>
+									<Description/>
+									<BitOffset>0x0</BitOffset>
+									<BitWidth>0x8</BitWidth>
+									<Access>R</Access>
+									<Values ByBit="true">
+										<Val value="0x0">Write protection active</Val>
+										<Val value="0x1">Write protection not active</Val>
+									</Values>
+								</Bit>
+							</AssignedBits>
+						</Field>
+						<Field>
+							<Parameters address="0x5200203C" name="FWPSN_PRG_A" size="0x4"/>
+							<AssignedBits>
+								<Bit config="0,1">
+									<Name>nWRP0</Name>
+									<Description/>
+									<BitOffset>0x0</BitOffset>
+									<BitWidth>0x8</BitWidth>
+									<Access>W</Access>
+									<Values ByBit="true">
+										<Val value="0x0">Write protection active</Val>
+										<Val value="0x1">Write protection not active</Val>
+									</Values>
+								</Bit>
+							</AssignedBits>
+						</Field>
+					</Category>
+					<Category>
+						<Name>TCM_AXI Shared Configuration</Name>
+						<Field>
+							<Parameters address="0x52002070" name="FLASH_OPTSR2_CUR" size="0x4"/>
+							<AssignedBits>
+								<Bit>
+									<Name>TCM_AXI_SHARED</Name>
+									<Description/>
+									<BitOffset>0x0</BitOffset>
+									<BitWidth>0x2</BitWidth>
+									<Access>R</Access>
+									<Values>
+										<Val value="0x0">64 KB ITCM : 320KB system AXI</Val>
+										<Val value="0x1">128KB ITCM : 256KB system AXI</Val>
+										<Val value="0x2">192KB ITCM : 192KB system AXI</Val>
+										<Val value="0x3">256KB ITCM : 128KB system AXI</Val>
+									</Values>
+								</Bit>
+								<Bit>
+									<Name>CPU_FREQ_BOOST</Name>
+									<Description/>
+									<BitOffset>0x2</BitOffset>
+									<BitWidth>0x1</BitWidth>
+									<Access>R</Access>
+									<Values>
+										<Val value="0x0">Feature disabled</Val>
+										<Val value="0x1">CPU can operate at a boosted Fmax frequency (no more ECC on I/DTCM)</Val>
+									</Values>
+								</Bit>
+							</AssignedBits>
+						</Field>
+						<Field>
+							<Parameters address="0x52002074" name="FLASH_OPTSR2_PRG" size="0x4"/>
+							<AssignedBits>
+								<Bit>
+									<Name>TCM_AXI_SHARED</Name>
+									<Description/>
+									<BitOffset>0x0</BitOffset>
+									<BitWidth>0x2</BitWidth>
+									<Access>W</Access>
+							        <Values>
+										<Val value="0x0">64KB ITCM : 320KB system AXI</Val>
+										<Val value="0x1">128KB ITCM : 256KB system AXI</Val>
+										<Val value="0x2">192KB ITCM : 192KB system AXI</Val>
+										<Val value="0x3">256KB ITCM : 128KB system AXI</Val>
+									</Values>
+								</Bit>
+								<Bit>
+									<Name>CPU_FREQ_BOOST</Name>
+									<Description/>
+									<BitOffset>0x2</BitOffset>
+									<BitWidth>0x1</BitWidth>
+									<Access>W</Access>
+									<Values>
+										<Val value="0x0">Feature disabled</Val>
+										<Val value="0x1">CPU can operate at a boosted Fmax frequency (no more ECC on I/DTCM)</Val>
+									</Values>
+								</Bit>
+							</AssignedBits>
+						</Field>
+					</Category>
+				</Bank>
+			</Peripheral>
+		</Peripherals>
+	</Device>
+</Root>

@@ -1,0 +1,82 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<xs:schema xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" attributeFormDefault="unqualified" elementFormDefault="qualified" xmlns:xs="http://www.w3.org/2001/XMLSchema">
+<xs:simpleType name="LimitedStringTitle">
+    <xs:restriction base="xs:string">
+      <xs:maxLength value="100" />
+    </xs:restriction>
+</xs:simpleType>
+<xs:simpleType name="LimitedStringTooltip">
+    <xs:restriction base="xs:string">
+      <xs:maxLength value="580" />
+    </xs:restriction>
+</xs:simpleType>
+<xs:simpleType name="LimitedContent">
+    <xs:restriction base="xs:string">
+      <xs:maxLength value="30" />
+    </xs:restriction>
+</xs:simpleType>
+<xs:simpleType name="limitedStringVal">
+    <xs:restriction base="xs:string">
+      <xs:maxLength value="4" />
+    </xs:restriction>
+</xs:simpleType>
+<xs:simpleType name="limitedValHidden">
+    <xs:restriction base="xs:string">
+      <xs:maxLength value="1" />
+	  <xs:pattern value="0"/>
+	  <xs:pattern value="1"/>
+    </xs:restriction>
+</xs:simpleType>
+	<xs:element name="Root">
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element name="McubootFormat">
+					<xs:complexType>
+						<xs:sequence>
+							<xs:element name="GlobalParam">
+								<xs:complexType>
+									<xs:sequence>
+										<xs:choice maxOccurs="unbounded">
+											<xs:element name="Title" type="LimitedStringTitle" />
+											<xs:element name="Command" type="LimitedContent" />
+											<xs:element minOccurs="0" maxOccurs="unbounded" name="LinkedXML" type="xs:string" />
+										</xs:choice>
+									</xs:sequence>
+								</xs:complexType>
+							</xs:element>
+							<xs:element maxOccurs="unbounded" name="Param">
+								<xs:complexType>
+									<xs:sequence>
+										<xs:element name="Name" type="LimitedStringTitle" />
+										<xs:element minOccurs="0" name="Value" type="xs:string" />
+										<xs:choice maxOccurs="7">
+											<xs:element minOccurs="0" name="Link" type="LimitedContent" />
+											<xs:element name="Type" type="LimitedContent" />
+											<xs:element minOccurs="0" name="Command" type="LimitedContent" />
+											<xs:element minOccurs="0" name="Enable" type="limitedValHidden" />
+											<xs:element minOccurs="0" name="Hidden" type="limitedValHidden" />
+											<xs:element minOccurs="0" name="Tooltip" type="LimitedStringTooltip" />
+											<xs:element name="Default" type="xs:string" />
+										</xs:choice>
+									</xs:sequence>
+								</xs:complexType>
+							</xs:element>
+							<xs:element name="Output">
+								<xs:complexType>
+									<xs:sequence>
+										<xs:element name="Name" type="LimitedStringTitle" />
+										<xs:element minOccurs="0" name="Value" type="xs:string" />
+										<xs:choice maxOccurs="2">
+											<xs:element minOccurs="0" name="Tooltip" type="LimitedStringTooltip" />
+											<xs:element name="Default" type="xs:string" />
+										</xs:choice>
+									</xs:sequence>
+								</xs:complexType>
+							</xs:element>
+						</xs:sequence>
+					</xs:complexType>
+				</xs:element>
+			</xs:sequence>
+		</xs:complexType>
+	</xs:element>
+</xs:schema>

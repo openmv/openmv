@@ -1,0 +1,1814 @@
+{
+  "Registers": [
+    {
+      "Address": "0x90",
+      "Name": "MAIN_CTRL_SHR1",
+	  "Description": "NVM main control shadow register 1",
+      "Size": "0x1",
+      "Fields": [
+        {
+          "Bit": {
+            "Name": "AUTO_TURN_ON",
+            "Description": "0: PMIC does not start automatically on VIN rising\n1: PMIC starts automatically on VIN rising",
+            "BitOffset": "0x0",
+            "BitWidth": "0x1",
+            "Access": "RW",
+            "PossibleValues": {
+              "0x0": "Yes",
+              "0x1": "No"
+            }
+          }
+        },
+        {
+          "Bit": {
+            "Name": "WDG_EN",
+            "Description": "NVM Watchdog default value",
+            "BitOffset": "0x1",
+            "BitWidth": "0x1",
+            "Access": "RW",
+            "PossibleValues": {
+              "0x0": "Disable",
+              "0x1": "Enable"
+            }
+          }
+        },
+		{
+          "Bit": {
+            "Name": "TMR_SET",
+            "Description": "Watchdog timer duration default value",
+            "BitOffset": "0x2",
+            "BitWidth": "0x2",
+            "Access": "RW",
+			"PossibleValues": {
+              "0x0": "10s",
+              "0x1": "20s",
+              "0x2": "50s",
+              "0x3": "100s"
+            }
+          }
+        },
+		{
+          "Bit": {
+            "Name": "VINOK_RISE",
+            "Description": "VINOK_RISE threshold voltage",
+            "BitOffset": "0x4",
+            "BitWidth": "0x2",
+            "Access": "RW",
+			"PossibleValues": {
+              "0x0": "3.1V",
+              "0x1": "3.3V",
+              "0x2": "3.5V",
+              "0x3": "4.0V"
+            }
+          }
+        },
+		{
+          "Bit": {
+            "Name": "VINOK_HYST",
+            "Description": "VINOK_HYST threshold voltage",
+            "BitOffset": "0x6",
+            "BitWidth": "0x2",
+            "Access": "RW",
+			"PossibleValues": {
+              "0x0": "200mV",
+              "0x1": "300mV",
+              "0x2": "400mV",
+              "0x3": "500mV"
+            }
+          }
+        }
+      ]
+    },
+	
+    {
+      "Address": "0x91",
+      "Name": "MAIN_CTRL_SHR2",
+	  "Description": "NVM main control shadow register 2",
+      "Size": "0x1",
+      "Fields": [
+        {
+          "Bit": {
+            "Name": "PKEY_LKP_TMR",
+            "Description": "PONKEYn long key press timer duration default value",
+            "BitOffset": "0x0",
+            "BitWidth": "0x2",
+            "Access": "RW",
+            "PossibleValues": {
+              "0x0": "2s",
+              "0x1": "5s",
+			  "0x2": "10s",
+              "0x3": "15s"
+            }
+          }
+        },
+        {
+          "Bit": {
+            "Name": "PKEY_LKP_FSLS",
+            "Description": "PONKEYn long key press allows the PMIC to go from the FAIL_SAFE_LOCK state to the OFF state\n0: No effect\n1: A PONKEYn long key press triggers a turn-off condition",
+            "BitOffset": "0x2",
+            "BitWidth": "0x1",
+            "Access": "RW",
+            "PossibleValues": {
+              "0x0": "No",
+              "0x1": "Yes"
+            }
+          }
+        },
+		{
+          "Bit": {
+            "Name": "PKEY_LKP_OFF",
+            "Description": "PONKEYn long key press turn-off condition default value",
+            "BitOffset": "0x3",
+            "BitWidth": "0x2",
+            "Access": "RW",
+			"PossibleValues": {
+              "0x0": "No",
+              "0x1": "Yes"
+            }
+          }
+        },
+		{
+          "Bit": {
+            "Name": "RST_DLY",
+            "Description": "RST release delay after POWER_UP sequence",
+            "BitOffset": "0x4",
+            "BitWidth": "0x2",
+            "Access": "RW",
+			"PossibleValues": {
+              "0x0": "0ms",
+              "0x1": "1.5ms",
+              "0x2": "3ms",
+              "0x3": "6ms"
+            }
+          }
+        },
+		{
+          "Bit": {
+            "Name": "RANK_DLY",
+            "Description": "power-up/power-down step (RANK) duration",
+            "BitOffset": "0x6",
+            "BitWidth": "0x2",
+            "Access": "RW",
+			"PossibleValues": {
+              "0x0": "1.5ms",
+              "0x1": "3ms",
+              "0x2": "4.5ms",
+              "0x3": "6ms"
+            }
+          }
+        }
+      ]
+    },
+	
+	{
+      "Address": "0x92",
+      "Name": "RANK_SHR1",
+	  "Description": "NVM rank shadow register 1",
+      "Size": "0x1",
+      "Fields": [
+        {
+          "Bit": {
+            "Name": "BUCK1_RANK",
+            "Description": "-",
+            "BitOffset": "0x0",
+            "BitWidth": "0x3",
+            "Access": "RW",
+            "PossibleValues": {
+              "0x0": "rank0",
+              "0x1": "rank1",
+			  "0x2": "rank2",
+              "0x3": "rank3",
+			  "0x4": "rank4",
+              "0x5": "rank5",
+			  "0x6": "rank0",
+              "0x7": "rank0"
+            }
+          }
+        },
+        {
+          "Bit": {
+            "Name": "BUCK2_RANK",
+            "Description": "-",
+            "BitOffset": "0x3",
+            "BitWidth": "0x3",
+            "Access": "RW",
+            "PossibleValues": {
+              "0x0": "rank0",
+              "0x1": "rank1",
+			  "0x2": "rank2",
+              "0x3": "rank3",
+			  "0x4": "rank4",
+              "0x5": "rank5",
+			  "0x6": "rank0",
+              "0x7": "rank0"
+            }
+          }
+        }
+      ]
+    },
+	
+	{
+      "Address": "0x93",
+      "Name": "RANK_SHR2",
+	  "Description": "NVM rank shadow register 2",
+      "Size": "0x1",
+      "Fields": [
+        {
+          "Bit": {
+            "Name": "BUCK3_RANK",
+            "Description": "-",
+            "BitOffset": "0x0",
+            "BitWidth": "0x3",
+            "Access": "RW",
+            "PossibleValues": {
+              "0x0": "rank0",
+              "0x1": "rank1",
+			  "0x2": "rank2",
+              "0x3": "rank3",
+			  "0x4": "rank4",
+              "0x5": "rank5",
+			  "0x6": "rank0",
+              "0x7": "rank0"
+            }
+          }
+        },
+        {
+          "Bit": {
+            "Name": "BUCK4_RANK",
+            "Description": "-",
+            "BitOffset": "0x3",
+            "BitWidth": "0x3",
+            "Access": "RW",
+            "PossibleValues": {
+              "0x0": "rank0",
+              "0x1": "rank1",
+			  "0x2": "rank2",
+              "0x3": "rank3",
+			  "0x4": "rank4",
+              "0x5": "rank5",
+			  "0x6": "rank0",
+              "0x7": "rank0"
+            }
+          }
+        }
+      ]
+    },
+	
+	{
+      "Address": "0x94",
+      "Name": "RANK_SHR3",
+	  "Description": "NVM rank shadow register 3",
+      "Size": "0x1",
+      "Fields": [
+        {
+          "Bit": {
+            "Name": "BUCK5_RANK",
+            "Description": "-",
+            "BitOffset": "0x0",
+            "BitWidth": "0x3",
+            "Access": "RW",
+            "PossibleValues": {
+              "0x0": "rank0",
+              "0x1": "rank1",
+			  "0x2": "rank2",
+              "0x3": "rank3",
+			  "0x4": "rank4",
+              "0x5": "rank5",
+			  "0x6": "rank0",
+              "0x7": "rank0"
+            }
+          }
+        },
+        {
+          "Bit": {
+            "Name": "BUCK6_RANK",
+            "Description": "-",
+            "BitOffset": "0x3",
+            "BitWidth": "0x3",
+            "Access": "RW",
+            "PossibleValues": {
+              "0x0": "rank0",
+              "0x1": "rank1",
+			  "0x2": "rank2",
+              "0x3": "rank3",
+			  "0x4": "rank4",
+              "0x5": "rank5",
+			  "0x6": "rank0",
+              "0x7": "rank0"
+            }
+          }
+        }
+      ]
+    },
+	
+	{
+      "Address": "0x95",
+      "Name": "RANK_SHR4",
+	  "Description": "NVM rank shadow register 4",
+      "Size": "0x1",
+      "Fields": [
+        {
+          "Bit": {
+            "Name": "BUCK7_RANK",
+            "Description": "-",
+            "BitOffset": "0x0",
+            "BitWidth": "0x3",
+            "Access": "RW",
+            "PossibleValues": {
+              "0x0": "rank0",
+              "0x1": "rank1",
+			  "0x2": "rank2",
+              "0x3": "rank3",
+			  "0x4": "rank4",
+              "0x5": "rank5",
+			  "0x6": "rank0",
+              "0x7": "rank0"
+            }
+          }
+        },
+        {
+          "Bit": {
+            "Name": "REFDDR_RANKs",
+            "Description": "-",
+            "BitOffset": "0x3",
+            "BitWidth": "0x3",
+            "Access": "RW",
+            "PossibleValues": {
+              "0x0": "rank0",
+              "0x1": "rank1",
+			  "0x2": "rank2",
+              "0x3": "rank3",
+			  "0x4": "rank4",
+              "0x5": "rank5",
+			  "0x6": "rank0",
+              "0x7": "rank0"
+            }
+          }
+        }
+      ]
+    },
+	
+	{
+      "Address": "0x96",
+      "Name": "RANK_SHR5",
+	  "Description": "NVM rank shadow register 5",
+      "Size": "0x1",
+      "Fields": [
+        {
+          "Bit": {
+            "Name": "LDO1_RANK",
+            "Description": "-",
+            "BitOffset": "0x0",
+            "BitWidth": "0x3",
+            "Access": "RW",
+            "PossibleValues": {
+              "0x0": "rank0",
+              "0x1": "rank1",
+			  "0x2": "rank2",
+              "0x3": "rank3",
+			  "0x4": "rank4",
+              "0x5": "rank5",
+			  "0x6": "rank0",
+              "0x7": "rank0"
+            }
+          }
+        },
+        {
+          "Bit": {
+            "Name": "LDO2_RANK",
+            "Description": "-",
+            "BitOffset": "0x3",
+            "BitWidth": "0x3",
+            "Access": "RW",
+            "PossibleValues": {
+              "0x0": "rank0",
+              "0x1": "rank1",
+			  "0x2": "rank2",
+              "0x3": "rank3",
+			  "0x4": "rank4",
+              "0x5": "rank5",
+			  "0x6": "rank0",
+              "0x7": "rank0"
+            }
+          }
+        }
+      ]
+    },
+	
+	{
+      "Address": "0x97",
+      "Name": "RANK_SHR6",
+	  "Description": "NVM rank shadow register 6",
+      "Size": "0x1",
+      "Fields": [
+        {
+          "Bit": {
+            "Name": "LDO3_RANK",
+            "Description": "-",
+            "BitOffset": "0x0",
+            "BitWidth": "0x3",
+            "Access": "RW",
+            "PossibleValues": {
+              "0x0": "rank0",
+              "0x1": "rank1",
+			  "0x2": "rank2",
+              "0x3": "rank3",
+			  "0x4": "rank4",
+              "0x5": "rank5",
+			  "0x6": "rank0",
+              "0x7": "rank0"
+            }
+          }
+        },
+        {
+          "Bit": {
+            "Name": "LDO4_RANK",
+            "Description": "-",
+            "BitOffset": "0x3",
+            "BitWidth": "0x3",
+            "Access": "RW",
+            "PossibleValues": {
+              "0x0": "rank0",
+              "0x1": "rank1",
+			  "0x2": "rank2",
+              "0x3": "rank3",
+			  "0x4": "rank4",
+              "0x5": "rank5",
+			  "0x6": "rank0",
+              "0x7": "rank0"
+            }
+          }
+        }
+      ]
+    },
+	
+	{
+      "Address": "0x98",
+      "Name": "RANK_SHR7",
+	  "Description": "NVM rank shadow register 7",
+      "Size": "0x1",
+      "Fields": [
+        {
+          "Bit": {
+            "Name": "LDO5_RANK",
+            "Description": "-",
+            "BitOffset": "0x0",
+            "BitWidth": "0x3",
+            "Access": "RW",
+            "PossibleValues": {
+              "0x0": "rank0",
+              "0x1": "rank1",
+			  "0x2": "rank2",
+              "0x3": "rank3",
+			  "0x4": "rank4",
+              "0x5": "rank5",
+			  "0x6": "rank0",
+              "0x7": "rank0"
+            }
+          }
+        },
+        {
+          "Bit": {
+            "Name": "LDO6_RANK",
+            "Description": "-",
+            "BitOffset": "0x3",
+            "BitWidth": "0x3",
+            "Access": "RW",
+            "PossibleValues": {
+              "0x0": "rank0",
+              "0x1": "rank1",
+			  "0x2": "rank2",
+              "0x3": "rank3",
+			  "0x4": "rank4",
+              "0x5": "rank5",
+			  "0x6": "rank0",
+              "0x7": "rank0"
+            }
+          }
+        }
+      ]
+    },
+	
+	{
+      "Address": "0x99",
+      "Name": "RANK_SHR7",
+	  "Description": "NVM rank shadow register 8",
+      "Size": "0x1",
+      "Fields": [
+        {
+          "Bit": {
+            "Name": "LDO7_RANK",
+            "Description": "-",
+            "BitOffset": "0x0",
+            "BitWidth": "0x3",
+            "Access": "RW",
+            "PossibleValues": {
+              "0x0": "rank0",
+              "0x1": "rank1",
+			  "0x2": "rank2",
+              "0x3": "rank3",
+			  "0x4": "rank4",
+              "0x5": "rank5",
+			  "0x6": "rank0",
+              "0x7": "rank0"
+            }
+          }
+        },
+        {
+          "Bit": {
+            "Name": "LDO8_RANK",
+            "Description": "-",
+            "BitOffset": "0x3",
+            "BitWidth": "0x3",
+            "Access": "RW",
+            "PossibleValues": {
+              "0x0": "rank0",
+              "0x1": "rank1",
+			  "0x2": "rank2",
+              "0x3": "rank3",
+			  "0x4": "rank4",
+              "0x5": "rank5",
+			  "0x6": "rank0",
+              "0x7": "rank0"
+            }
+          }
+        }
+      ]
+    },
+	
+	{
+      "Address": "0x9A",
+      "Name": "BUCK_MODE_SHR1",
+	  "Description": "NVM BUCK mode shadow register 1",
+      "Size": "0x1",
+      "Fields": [
+        {
+          "Bit": {
+            "Name": "BUCK1_PREG_MODE",
+            "Description": "BUCK1 operates in high power mode (HP)\nlow power mode (LP)\nforced PWM mode (CCM)",
+            "BitOffset": "0x0",
+            "BitWidth": "0x2",
+            "Access": "RW",
+            "PossibleValues": {
+              "0x0": "BUCK1 HP",
+              "0x1": "BUCK1 LP",
+			  "0x2": "BUCK1 CCM"
+            }
+          }
+        },
+        {
+          "Bit": {
+            "Name": "BUCK2_PREG_MODE",
+            "Description": "BUCK2 operates in high power mode (HP)\nlow power mode (LP)\nforced PWM mode (CCM)",
+            "BitOffset": "0x2",
+            "BitWidth": "0x2",
+            "Access": "RW",
+            "PossibleValues": {
+              "0x0": "BUCK2 HP",
+              "0x1": "BUCK2 LP",
+			  "0x2": "BUCK2 CCM"
+            }
+          }
+        },
+		{
+          "Bit": {
+            "Name": "BUCK3_PREG_MODE",
+            "Description": "BUCK3 operates in high power mode (HP)\nlow power mode (LP)\nforced PWM mode (CCM)",
+            "BitOffset": "0x4",
+            "BitWidth": "0x2",
+            "Access": "RW",
+            "PossibleValues": {
+              "0x0": "BUCK3 HP",
+              "0x1": "BUCK3 LP",
+			  "0x2": "BUCK3 CCM"
+            }
+          }
+        },
+		{
+          "Bit": {
+            "Name": "BUCK4_PREG_MODE",
+            "Description": "BUCK4 operates in high power mode (HP)\nlow power mode (LP)\nforced PWM mode (CCM)",
+            "BitOffset": "0x6",
+            "BitWidth": "0x2",
+            "Access": "RW",
+            "PossibleValues": {
+              "0x0": "BUCK4 HP",
+              "0x1": "BUCK4 LP",
+			  "0x2": "BUCK4 CCM"
+            }
+          }
+        }
+      ]
+    },
+	
+	{
+      "Address": "0x9B",
+      "Name": "BUCK_MODE_SHR2",
+	  "Description": "NVM BUCK mode shadow register 2",
+      "Size": "0x1",
+      "Fields": [
+        {
+          "Bit": {
+            "Name": "BUCK5_PREG_MODE",
+            "Description": "BUCK5 operates in high power mode (HP)\nlow power mode (LP)\nforced PWM mode (CCM)",
+            "BitOffset": "0x0",
+            "BitWidth": "0x2",
+            "Access": "RW",
+            "PossibleValues": {
+              "0x0": "BUCK5 HP",
+              "0x1": "BUCK5 LP",
+			  "0x2": "BUCK5 CCM"
+            }
+          }
+        },
+        {
+          "Bit": {
+            "Name": "BUCK6_PREG_MODE",
+            "Description": "BUCK6 operates in high power mode (HP)\nlow power mode (LP)\nforced PWM mode (CCM)",
+            "BitOffset": "0x2",
+            "BitWidth": "0x2",
+            "Access": "RW",
+            "PossibleValues": {
+              "0x0": "BUCK6 HP",
+              "0x1": "BUCK6 LP",
+			  "0x2": "BUCK6 CCM"
+            }
+          }
+        },
+		{
+          "Bit": {
+            "Name": "BUCK7_PREG_MODE",
+            "Description": "BUCK7 operates in high power mode (HP)\nlow power mode (LP)\nforced PWM mode (CCM)",
+            "BitOffset": "0x4",
+            "BitWidth": "0x2",
+            "Access": "RW",
+            "PossibleValues": {
+              "0x0": "BUCK7 HP",
+              "0x1": "BUCK7 LP",
+			  "0x2": "BUCK7 CCM"
+            }
+          }
+        }
+      ]
+    },
+	
+	{
+        "Address": "0x9C",
+        "Name": "BUCK1_VOUT_SHR",
+        "Description": "NVM BUCK1 mode shadow register 2",
+        "Size": "0x1",
+        "Fields": [
+            {
+                "Bit": {
+                    "Name": "VOUT",
+                    "Description": "NVM BUCK1 output voltage shadow register",
+                    "BitOffset": "0x0",
+                    "BitWidth": "0x7",
+                    "Access": "RW"
+                }
+            }
+        ]
+    },
+	
+    {
+        "Address": "0x9D",
+        "Name": "BUCK2_VOUT_SHR",
+        "Description": "NVM BUCK2 mode shadow register 2",
+        "Size": "0x1",
+        "Fields": [
+            {
+                "Bit": {
+                    "Name": "VOUT",
+                    "Description": "NVM BUCK2 output voltage shadow register",
+                    "BitOffset": "0x0",
+                    "BitWidth": "0x7",
+                    "Access": "RW"
+                }
+            }
+        ]
+    },
+    {
+        "Address": "0x9E",
+        "Name": "BUCK3_VOUT_SHR",
+        "Description": "NVM BUCK3 mode shadow register 2",
+        "Size": "0x1",
+        "Fields": [
+            {
+                "Bit": {
+                    "Name": "VOUT",
+                    "Description": "NVM BUCK3 output voltage shadow register",
+                    "BitOffset": "0x0",
+                    "BitWidth": "0x7",
+                    "Access": "RW"
+                }
+            }
+        ]
+    },
+    {
+        "Address": "0x9F",
+        "Name": "BUCK4_VOUT_SHR",
+        "Description": "NVM BUCK4 mode shadow register 2",
+        "Size": "0x1",
+        "Fields": [
+            {
+                "Bit": {
+                    "Name": "VOUT",
+                    "Description": "NVM BUCK4 output voltage shadow register",
+                    "BitOffset": "0x0",
+                    "BitWidth": "0x7",
+                    "Access": "RW"
+                }
+            }
+        ]
+    },
+    {
+        "Address": "0xA0",
+        "Name": "BUCK5_VOUT_SHR",
+        "Description": "NVM BUCK5 mode shadow register 2",
+        "Size": "0x1",
+        "Fields": [
+            {
+                "Bit": {
+                    "Name": "VOUT",
+                    "Description": "NVM BUCK5 output voltage shadow register",
+                    "BitOffset": "0x0",
+                    "BitWidth": "0x7",
+                    "Access": "RW"
+                }
+            }
+        ]
+    },
+    {
+        "Address": "0xA1",
+        "Name": "BUCK6_VOUT_SHR",
+        "Description": "NVM BUCK6 mode shadow register 2",
+        "Size": "0x1",
+        "Fields": [
+            {
+                "Bit": {
+                    "Name": "VOUT",
+                    "Description": "NVM BUCK6 output voltage shadow register",
+                    "BitOffset": "0x0",
+                    "BitWidth": "0x7",
+                    "Access": "RW"
+                }
+            }
+        ]
+    },
+    {
+        "Address": "0xA2",
+        "Name": "BUCK7_VOUT_SHR",
+        "Description": "NVM BUCK7 mode shadow register 2",
+        "Size": "0x1",
+        "Fields": [
+            {
+                "Bit": {
+                    "Name": "VOUT",
+                    "Description": "NVM BUCK7 output voltage shadow register",
+                    "BitOffset": "0x0",
+                    "BitWidth": "0x7",
+                    "Access": "RW"
+                }
+            }
+        ]
+    },
+	
+    {
+        "Address": "0xA3",
+        "Name": "LDO2_SHR",
+        "Description": "LDO2 control shadow register",
+        "Size": "0x1",
+        "Fields": [
+            {
+                "Bit": {
+                    "Name": "VOUT",
+                    "Description": "LDO2 default output voltage settings",
+                    "BitOffset": "0x1",
+                    "BitWidth": "0x5",
+                    "Access": "RW"
+                },
+                "Bit": {
+                    "Name": "BYPASS",
+                    "Description": "select default bypass mode operation",
+                    "BitOffset": "0x6",
+                    "BitWidth": "0x1",
+                    "Access": "RW",
+                    "PossibleValues": {
+                        "0x0": "Normal",
+                        "0x1": "Bypass"
+                    }
+                }
+            }
+        ]
+    },
+
+	{
+        "Address": "0xA4",
+        "Name": "LDO3_SHR",
+        "Description": "LDO3 control shadow register",
+        "Size": "0x1",
+        "Fields": [
+            {
+                "Bit": {
+                    "Name": "VOUT",
+                    "Description": "LDO3 default output voltage settings",
+                    "BitOffset": "0x1",
+                    "BitWidth": "0x5",
+                    "Access": "RW"
+                },
+                "Bit": {
+                    "Name": "BYPASS",
+                    "Description": "select default bypass mode operation",
+                    "BitOffset": "0x6",
+                    "BitWidth": "0x1",
+                    "Access": "RW",
+                    "PossibleValues": {
+                        "0x0": "Normal",
+                        "0x1": "Bypass"
+                    }
+                }
+            }
+        ]
+    },
+
+    {
+        "Address": "0xA5",
+        "Name": "LDO5_SHR",
+        "Description": "LDO5 control shadow register",
+        "Size": "0x1",
+        "Fields": [
+            {
+                "Bit": {
+                    "Name": "VOUT",
+                    "Description": "LDO5 default output voltage settings",
+                    "BitOffset": "0x1",
+                    "BitWidth": "0x5",
+                    "Access": "RW"
+                },
+                "Bit": {
+                    "Name": "BYPASS",
+                    "Description": "select default bypass mode operation",
+                    "BitOffset": "0x6",
+                    "BitWidth": "0x1",
+                    "Access": "RW",
+                    "PossibleValues": {
+                        "0x0": "Normal",
+                        "0x1": "Bypass"
+                    }
+                }
+            }
+        ]
+    },
+    {
+        "Address": "0xA6",
+        "Name": "LDO6_SHR",
+        "Description": "LDO6 control shadow register",
+        "Size": "0x1",
+        "Fields": [
+            {
+                "Bit": {
+                    "Name": "VOUT",
+                    "Description": "LDO6 default output voltage settings",
+                    "BitOffset": "0x1",
+                    "BitWidth": "0x5",
+                    "Access": "RW"
+                },
+                "Bit": {
+                    "Name": "BYPASS",
+                    "Description": "select default bypass mode operation",
+                    "BitOffset": "0x6",
+                    "BitWidth": "0x1",
+                    "Access": "RW",
+                    "PossibleValues": {
+                        "0x0": "Normal",
+                        "0x1": "Bypass"
+                    }
+                }
+            }
+        ]
+    },
+    {
+        "Address": "0xA7",
+        "Name": "LDO7_SHR",
+        "Description": "LDO7 control shadow register",
+        "Size": "0x1",
+        "Fields": [
+            {
+                "Bit": {
+                    "Name": "VOUT",
+                    "Description": "LDO7 default output voltage settings",
+                    "BitOffset": "0x1",
+                    "BitWidth": "0x5",
+                    "Access": "RW"
+                },
+                "Bit": {
+                    "Name": "BYPASS",
+                    "Description": "select default bypass mode operation",
+                    "BitOffset": "0x6",
+                    "BitWidth": "0x1",
+                    "Access": "RW",
+                    "PossibleValues": {
+                        "0x0": "Normal",
+                        "0x1": "Bypass"
+                    }
+                }
+            }
+        ]
+    },
+	{
+        "Address": "0xA8",
+        "Name": "LDO8_SHR",
+        "Description": "LDO8 control shadow register",
+        "Size": "0x1",
+        "Fields": [
+            {
+                "Bit": {
+                    "Name": "VOUT",
+                    "Description": "LDO8 default output voltage settings",
+                    "BitOffset": "0x1",
+                    "BitWidth": "0x5",
+                    "Access": "RW"
+                },
+                "Bit": {
+                    "Name": "BYPASS",
+                    "Description": "select default bypass mode operation",
+                    "BitOffset": "0x6",
+                    "BitWidth": "0x1",
+                    "Access": "RW",
+                    "PossibleValues": {
+                        "0x0": "Normal",
+                        "0x1": "Bypass"
+                    }
+                }
+            }
+        ]
+    },
+	
+	{
+      "Address": "0xA9",
+      "Name": "PD_SHR1",
+	  "Description": "NVM pull-down control shadow register 1",
+      "Size": "0x1",
+      "Fields": [
+        {
+          "Bit": {
+            "Name": "BUCK1_PD",
+            "Description": "BUCK1 pull-down (PD) selection",
+            "BitOffset": "0x0",
+            "BitWidth": "0x2",
+            "Access": "RW",
+            "PossibleValues": {
+              "0x0": "No PD",
+              "0x1": "Slow PD active",
+			  "0x2": "Fast PD active",
+			  "0x3": "Slow PD forced active"
+            }
+          }
+        },
+        {
+          "Bit": {
+            "Name": "BUCK2_PD",
+            "Description": "BUCK2 pull-down (PD) selection",
+            "BitOffset": "0x2",
+            "BitWidth": "0x2",
+            "Access": "RW",
+            "PossibleValues": {
+              "0x0": "No PD",
+              "0x1": "Slow PD active",
+			  "0x2": "Fast PD active",
+			  "0x3": "Slow PD forced active"
+            }
+          }
+        },
+		{
+          "Bit": {
+            "Name": "BUCK3_PD",
+            "Description": "BUCK3 pull-down (PD) selection",
+            "BitOffset": "0x4",
+            "BitWidth": "0x2",
+            "Access": "RW",
+            "PossibleValues": {
+              "0x0": "No PD",
+              "0x1": "Slow PD active",
+			  "0x2": "Fast PD active",
+			  "0x3": "Slow PD forced active"
+            }
+          }
+        },
+		{
+          "Bit": {
+            "Name": "BUCK4_PD",
+            "Description": "BUCK4 pull-down (PD) selection",
+            "BitOffset": "0x6",
+            "BitWidth": "0x2",
+            "Access": "RW",
+            "PossibleValues": {
+              "0x0": "No PD",
+              "0x1": "Slow PD active",
+			  "0x2": "Fast PD active",
+			  "0x3": "Slow PD forced active"
+            }
+          }
+        }
+      ]
+    },
+	
+	{
+      "Address": "0xAA",
+      "Name": "PD_SHR2",
+	  "Description": "NVM pull-down control shadow register 2",
+      "Size": "0x1",
+      "Fields": [
+        {
+          "Bit": {
+            "Name": "BUCK5_PD",
+            "Description": "BUCK5 pull-down (PD) selection",
+            "BitOffset": "0x0",
+            "BitWidth": "0x2",
+            "Access": "RW",
+            "PossibleValues": {
+              "0x0": "No PD",
+              "0x1": "Slow PD active",
+			  "0x2": "Fast PD active",
+			  "0x3": "Slow PD forced active"
+            }
+          }
+        },
+        {
+          "Bit": {
+            "Name": "BUCK6_PD",
+            "Description": "BUCK6 pull-down (PD) selection",
+            "BitOffset": "0x2",
+            "BitWidth": "0x2",
+            "Access": "RW",
+            "PossibleValues": {
+              "0x0": "No PD",
+              "0x1": "Slow PD active",
+			  "0x2": "Fast PD active",
+			  "0x3": "Slow PD forced active"
+            }
+          }
+        },
+		{
+          "Bit": {
+            "Name": "BUCK7_PD",
+            "Description": "BUCK7 pull-down (PD) selection",
+            "BitOffset": "0x4",
+            "BitWidth": "0x2",
+            "Access": "RW",
+            "PossibleValues": {
+              "0x0": "No PD",
+              "0x1": "Slow PD active",
+			  "0x2": "Fast PD active",
+			  "0x3": "Slow PD forced active"
+            }
+          }
+        },
+		{
+          "Bit": {
+            "Name": "REFDDR_PD",
+            "Description": "pull-down active/inactive when REFDDR is disabled (EN = 0)",
+            "BitOffset": "0x7",
+            "BitWidth": "0x1",
+            "Access": "RW",
+            "PossibleValues": {
+              "0x0": "Inactive",
+              "0x1": "Active"
+            }
+          }
+        }
+      ]
+    },
+	
+	{
+      "Address": "0xAB",
+      "Name": "PD_SHR3",
+	  "Description": "NVM pull-down control shadow register 3",
+      "Size": "0x1",
+      "Fields": [
+        {
+          "Bit": {
+            "Name": "LDO1_PD",
+            "Description": "pull-down active when LDO1 is disabled (EN = 0)",
+            "BitOffset": "0x0",
+            "BitWidth": "0x1",
+            "Access": "RW",
+            "PossibleValues": {
+              "0x0": "Inactive",
+              "0x1": "Active"
+            }
+          }
+        },
+		{
+          "Bit": {
+            "Name": "LDO2_PD",
+            "Description": "pull-down active when LDO2 is disabled (EN = 0)",
+            "BitOffset": "0x1",
+            "BitWidth": "0x1",
+            "Access": "RW",
+            "PossibleValues": {
+              "0x0": "Inactive",
+              "0x1": "Active"
+            }
+          }
+        },
+		{
+          "Bit": {
+            "Name": "LDO3_PD",
+            "Description": "pull-down active when LDO3 is disabled (EN = 0)",
+            "BitOffset": "0x2",
+            "BitWidth": "0x1",
+            "Access": "RW",
+            "PossibleValues": {
+              "0x0": "Inactive",
+              "0x1": "Active"
+            }
+          }
+        },
+		{
+          "Bit": {
+            "Name": "LDO4_PD",
+            "Description": "pull-down active when LDO4 is disabled (EN = 0)",
+            "BitOffset": "0x3",
+            "BitWidth": "0x1",
+            "Access": "RW",
+            "PossibleValues": {
+              "0x0": "Inactive",
+              "0x1": "Active"
+            }
+          }
+        },
+		{
+          "Bit": {
+            "Name": "LDO5_PD",
+            "Description": "pull-down active when LDO5 is disabled (EN = 0)",
+            "BitOffset": "0x4",
+            "BitWidth": "0x1",
+            "Access": "RW",
+            "PossibleValues": {
+              "0x0": "Inactive",
+              "0x1": "Active"
+            }
+          }
+        },
+		{
+          "Bit": {
+            "Name": "LDO6_PD",
+            "Description": "pull-down active when LDO62 is disabled (EN = 0)",
+            "BitOffset": "0x5",
+            "BitWidth": "0x1",
+            "Access": "RW",
+            "PossibleValues": {
+              "0x0": "Inactive",
+              "0x1": "Active"
+            }
+          }
+        },
+		{
+          "Bit": {
+            "Name": "LDO7_PD",
+            "Description": "pull-down active when LDO7 is disabled (EN = 0)",
+            "BitOffset": "0x6",
+            "BitWidth": "0x1",
+            "Access": "RW",
+            "PossibleValues": {
+              "0x0": "Inactive",
+              "0x1": "Active"
+            }
+          }
+        },
+		{
+          "Bit": {
+            "Name": "LDO8_PD",
+            "Description": "pull-down active when LDO8 is disabled (EN = 0)",
+            "BitOffset": "0x7",
+            "BitWidth": "0x1",
+            "Access": "RW",
+            "PossibleValues": {
+              "0x0": "Inactive",
+              "0x1": "Active"
+            }
+          }
+        }
+      ]
+    },
+	
+	{
+      "Address": "0xAC",
+      "Name": "BUCKS_IOUT_SHR1",
+	  "Description": "NVM BUCKs output current limitation shadow register 1",
+      "Size": "0x1",
+      "Fields": [
+        {
+          "Bit": {
+            "Name": "BUCK1_ILIM",
+            "Description": "BUCK1 output current limitation",
+            "BitOffset": "0x0",
+            "BitWidth": "0x2",
+            "Access": "RW",
+            "PossibleValues": {
+              "0x0": "500mA",
+              "0x1": "1000mA",
+			  "0x2": "1500mA",
+              "0x3": "2000mA"
+            }
+          }
+        },
+        {
+          "Bit": {
+            "Name": "BUCK2_ILIM",
+            "Description": "BUCK2 output current limitation",
+            "BitOffset": "0x2",
+            "BitWidth": "0x2",
+            "Access": "RW",
+            "PossibleValues": {
+              "0x0": "500mA",
+              "0x1": "1000mA",
+			  "0x2": "1500mA",
+              "0x3": "2000mA"
+            }
+          }
+        },
+		{
+          "Bit": {
+            "Name": "BUCK3_ILIM",
+            "Description": "BUCK3 output current limitation",
+            "BitOffset": "0x4",
+            "BitWidth": "0x2",
+            "Access": "RW",
+            "PossibleValues": {
+              "0x0": "500mA",
+              "0x1": "1000mA",
+			  "0x2": "1500mA",
+              "0x3": "2000mA"
+            }
+          }
+        },
+		{
+          "Bit": {
+            "Name": "BUCK4_ILIM",
+            "Description": "BUCK4 output current limitation",
+            "BitOffset": "0x6",
+            "BitWidth": "0x2",
+            "Access": "RW",
+            "PossibleValues": {
+              "0x0": "250mA",
+              "0x1": "500mA",
+			  "0x2": "500mA",
+              "0x3": "500mA"
+            }
+          }
+        }
+      ]
+    },
+	
+	{
+      "Address": "0xAD",
+      "Name": "BUCKS_IOUT_SHR2",
+	  "Description": "NVM BUCKs output current limitation shadow register 2",
+      "Size": "0x1",
+      "Fields": [
+        {
+          "Bit": {
+            "Name": "BUCK5_ILIM",
+            "Description": "BUCK5 output current limitation",
+            "BitOffset": "0x0",
+            "BitWidth": "0x2",
+            "Access": "RW",
+            "PossibleValues": {
+              "0x0": "250mA",
+              "0x1": "500mA",
+			  "0x2": "500mA",
+              "0x3": "500mA"
+            }
+          }
+        },
+        {
+          "Bit": {
+            "Name": "BUCK6_ILIM",
+            "Description": "BUCK6 output current limitation",
+            "BitOffset": "0x2",
+            "BitWidth": "0x2",
+            "Access": "RW",
+            "PossibleValues": {
+              "0x0": "500mA",
+              "0x1": "1000mA",
+			  "0x2": "1500mA",
+              "0x3": "2000mA"
+            }
+          }
+        },
+		{
+          "Bit": {
+            "Name": "BUCK7_ILIM",
+            "Description": "BUCK7 output current limitation",
+            "BitOffset": "0x4",
+            "BitWidth": "0x2",
+            "Access": "RW",
+            "PossibleValues": {
+              "0x0": "1000mA",
+              "0x1": "1500mA",
+			  "0x2": "2000mA",
+              "0x3": "2500mA"
+            }
+          }
+        },
+		{
+          "Bit": {
+            "Name": "HICCUP_DLY",
+            "Description": "HICCUP_DLY output current limitation",
+            "BitOffset": "0x6",
+            "BitWidth": "0x2",
+            "Access": "RW",
+            "PossibleValues": {
+              "0x0": "0ms",
+              "0x1": "100ms",
+			  "0x2": "500ms",
+              "0x3": "1000ms"
+            }
+          }
+        }
+      ]
+    },
+	
+	{
+      "Address": "0xAE",
+      "Name": "LDOS_IOUT_SHR",
+	  "Description": "NVM LDOs output current limitation shadow register",
+      "Size": "0x1",
+      "Fields": [
+        {
+          "Bit": {
+            "Name": "LDO2_ILIM",
+            "Description": "LDO2 output current limitation",
+            "BitOffset": "0x0",
+            "BitWidth": "0x2",
+            "Access": "RW",
+            "PossibleValues": {
+              "0x0": "50mA",
+              "0x1": "100mA",
+			  "0x2": "200mA",
+              "0x3": "400mA"
+            }
+          }
+        },
+        {
+          "Bit": {
+            "Name": "LDO5_ILIM",
+            "Description": "LDO5 output current limitation",
+            "BitOffset": "0x2",
+            "BitWidth": "0x2",
+            "Access": "RW",
+            "PossibleValues": {
+              "0x0": "50mA",
+              "0x1": "100mA",
+			  "0x2": "200mA",
+              "0x3": "400mA"
+            }
+          }
+        },
+		{
+          "Bit": {
+            "Name": "LDO6_ILIM",
+            "Description": "LDO6 output current limitation",
+            "BitOffset": "0x4",
+            "BitWidth": "0x2",
+            "Access": "RW",
+            "PossibleValues": {
+              "0x0": "50mA",
+              "0x1": "100mA",
+			  "0x2": "200mA",
+              "0x3": "400mA"
+            }
+          }
+        },
+		{
+          "Bit": {
+            "Name": "LDO7_ILIM",
+            "Description": "LDO7 output current limitation",
+            "BitOffset": "0x6",
+            "BitWidth": "0x2",
+            "Access": "RW",
+            "PossibleValues": {
+              "0x0": "50mA",
+              "0x1": "100mA",
+			  "0x2": "200mA",
+              "0x3": "400mA"
+            }
+          }
+        }
+      ]
+    },
+	
+	{
+      "Address": "0xAF",
+      "Name": "FS_OCP_SHR1",
+	  "Description": "NVM fail-safe overcurrent protection shadow register 1",
+      "Size": "0x1",
+      "Fields": [
+        {
+          "Bit": {
+            "Name": "FS_OCP_BUCK1",
+            "Description": "BUCK1 OCP management mode selection\nOCP Hiccup mode (Level 0)\nOCP fail-safe PMIC turn-off (Level 1)",
+            "BitOffset": "0x0",
+            "BitWidth": "0x1",
+            "Access": "RW",
+            "PossibleValues": {
+              "0x0": "Level 0",
+              "0x1": "Level 1"
+            }
+          }
+        },
+		{
+          "Bit": {
+            "Name": "LDO2_PD",
+            "Description": "BUCK2 OCP management mode selection\nOCP Hiccup mode (Level 0)\nOCP fail-safe PMIC turn-off (Level 1)",
+            "BitOffset": "0x1",
+            "BitWidth": "0x1",
+            "Access": "RW",
+            "PossibleValues": {
+              "0x0": "Level 0",
+              "0x1": "Level 1"
+            }
+          }
+        },
+		{
+          "Bit": {
+            "Name": "LDO3_PD",
+            "Description": "BUCK3 OCP management mode selection\nOCP Hiccup mode (Level 0)\nOCP fail-safe PMIC turn-off (Level 1)",
+            "BitOffset": "0x2",
+            "BitWidth": "0x1",
+            "Access": "RW",
+            "PossibleValues": {
+              "0x0": "Level 0",
+              "0x1": "Level 1"
+            }
+          }
+        },
+		{
+          "Bit": {
+            "Name": "LDO4_PD",
+            "Description": "BUCK4 OCP management mode selection\nOCP Hiccup mode (Level 0)\nOCP fail-safe PMIC turn-off (Level 1)",
+            "BitOffset": "0x3",
+            "BitWidth": "0x1",
+            "Access": "RW",
+            "PossibleValues": {
+              "0x0": "Level 0",
+              "0x1": "Level 1"
+            }
+          }
+        },
+		{
+          "Bit": {
+            "Name": "LDO5_PD",
+            "Description": "BUCK5 OCP management mode selection\nOCP Hiccup mode (Level 0)\nOCP fail-safe PMIC turn-off (Level 1)",
+            "BitOffset": "0x4",
+            "BitWidth": "0x1",
+            "Access": "RW",
+            "PossibleValues": {
+              "0x0": "Level 0",
+              "0x1": "Level 1"
+            }
+          }
+        },
+		{
+          "Bit": {
+            "Name": "LDO6_PD",
+            "Description": "BUCK6 OCP management mode selection\nOCP Hiccup mode (Level 0)\nOCP fail-safe PMIC turn-off (Level 1)",
+            "BitOffset": "0x5",
+            "BitWidth": "0x1",
+            "Access": "RW",
+            "PossibleValues": {
+              "0x0": "Level 0",
+              "0x1": "Level 1"
+            }
+          }
+        },
+		{
+          "Bit": {
+            "Name": "LDO7_PD",
+            "Description": "BUCK7 OCP management mode selection\nOCP Hiccup mode (Level 0)\nOCP fail-safe PMIC turn-off (Level 1)",
+            "BitOffset": "0x6",
+            "BitWidth": "0x1",
+            "Access": "RW",
+            "PossibleValues": {
+              "0x0": "Level 0",
+              "0x1": "Level 1"
+            }
+          }
+        },
+		{
+          "Bit": {
+            "Name": "FS_OCP_REFDDR",
+            "Description": "REFDDR OCP management mode selection\nOCP Hiccup mode (Level 0)\nOCP fail-safe PMIC turn-off (Level 1)",
+            "BitOffset": "0x7",
+            "BitWidth": "0x1",
+            "Access": "RW",
+            "PossibleValues": {
+              "0x0": "Level 0",
+              "0x1": "Level 1"
+            }
+          }
+        }
+      ]
+    },
+	
+	{
+      "Address": "0xB0",
+      "Name": "FS_OCP_SHR2",
+	  "Description": "NVM fail-safe overcurrent protection shadow register 2",
+      "Size": "0x1",
+      "Fields": [
+        {
+          "Bit": {
+            "Name": "FS_OCP_LDO1",
+            "Description": "LDO1 OCP management mode selection\nOCP Hiccup mode (Level 0)\nOCP fail-safe PMIC turn-off (Level 1)",
+            "BitOffset": "0x0",
+            "BitWidth": "0x1",
+            "Access": "RW",
+            "PossibleValues": {
+              "0x0": "Level 0",
+              "0x1": "Level 1"
+            }
+          }
+        },
+		{
+          "Bit": {
+            "Name": "FS_OCP_LDO2",
+            "Description": "LDO2 OCP management mode selection\nOCP Hiccup mode (Level 0)\nOCP fail-safe PMIC turn-off (Level 1)",
+            "BitOffset": "0x1",
+            "BitWidth": "0x1",
+            "Access": "RW",
+            "PossibleValues": {
+              "0x0": "Level 0",
+              "0x1": "Level 1"
+            }
+          }
+        },
+		{
+          "Bit": {
+            "Name": "FS_OCP_LDO3",
+            "Description": "LDO3 OCP management mode selection\nOCP Hiccup mode (Level 0)\nOCP fail-safe PMIC turn-off (Level 1)",
+            "BitOffset": "0x2",
+            "BitWidth": "0x1",
+            "Access": "RW",
+            "PossibleValues": {
+              "0x0": "Level 0",
+              "0x1": "Level 1"
+            }
+          }
+        },
+		{
+          "Bit": {
+            "Name": "FS_OCP_LDO4",
+            "Description": "LDO4 OCP management mode selection\nOCP Hiccup mode (Level 0)\nOCP fail-safe PMIC turn-off (Level 1)",
+            "BitOffset": "0x3",
+            "BitWidth": "0x1",
+            "Access": "RW",
+            "PossibleValues": {
+              "0x0": "Level 0",
+              "0x1": "Level 1"
+            }
+          }
+        },
+		{
+          "Bit": {
+            "Name": "FS_OCP_LDO5",
+            "Description": "LDO5 OCP management mode selection\nOCP Hiccup mode (Level 0)\nOCP fail-safe PMIC turn-off (Level 1)",
+            "BitOffset": "0x4",
+            "BitWidth": "0x1",
+            "Access": "RW",
+            "PossibleValues": {
+              "0x0": "Level 0",
+              "0x1": "Level 1"
+            }
+          }
+        },
+		{
+          "Bit": {
+            "Name": "FS_OCP_LDO6",
+            "Description": "LDO6 OCP management mode selection\nOCP Hiccup mode (Level 0)\nOCP fail-safe PMIC turn-off (Level 1)",
+            "BitOffset": "0x5",
+            "BitWidth": "0x1",
+            "Access": "RW",
+            "PossibleValues": {
+              "0x0": "Level 0",
+              "0x1": "Level 1"
+            }
+          }
+        },
+		{
+          "Bit": {
+            "Name": "FS_OCP_LDO7",
+            "Description": "LDO7 OCP management mode selection\nOCP Hiccup mode (Level 0)\nOCP fail-safe PMIC turn-off (Level 1)",
+            "BitOffset": "0x6",
+            "BitWidth": "0x1",
+            "Access": "RW",
+            "PossibleValues": {
+              "0x0": "Level 0",
+              "0x1": "Level 1"
+            }
+          }
+        },
+		{
+          "Bit": {
+            "Name": "FS_OCP_LDO8",
+            "Description": "LDO8 OCP management mode selection\nOCP Hiccup mode (Level 0)\nOCP fail-safe PMIC turn-off (Level 1)",
+            "BitOffset": "0x7",
+            "BitWidth": "0x1",
+            "Access": "RW",
+            "PossibleValues": {
+              "0x0": "Level 0",
+              "0x1": "Level 1"
+            }
+          }
+        }
+      ]
+    },
+	
+	{
+      "Address": "0xB1",
+      "Name": "FS_SHR1",
+	  "Description": "NVM fail-safe shadow register 1",
+      "Size": "0x1",
+      "Fields": [
+        {
+          "Bit": {
+            "Name": "PKEY_FLT_CNT_MAX",
+            "Description": "Setting of the maximum number of occurrences triggered by a PONKEYn long key press hard-fault source",
+            "BitOffset": "0x0",
+            "BitWidth": "0x4",
+            "Access": "RW"
+          }
+        },
+        {
+          "Bit": {
+            "Name": "VIN_FLT_CNT_MAX",
+            "Description": "Setting of the maximum number of occurrences triggered by a VIN falling below VINOK_Fall hard-fault source",
+            "BitOffset": "0x4",
+            "BitWidth": "0x4",
+            "Access": "RW"
+          }
+        }
+      ]
+    },
+	
+	{
+      "Address": "0xB2",
+      "Name": "FS_SHR2",
+	  "Description": "NVM fail-safe shadow register 2",
+      "Size": "0x1",
+      "Fields": [
+        {
+          "Bit": {
+            "Name": "OCP_FLT_CNT_MAX",
+            "Description": "Setting of the maximum number of occurrences triggered by regulator overcurrent hard-fault source",
+            "BitOffset": "0x0",
+            "BitWidth": "0x4",
+            "Access": "RW"
+          }
+        },
+        {
+          "Bit": {
+            "Name": "TSHDN_FLT_CNT_MAX",
+            "Description": "Setting of the maximum number of occurrences triggered by a thermal shutdown hard-fault source",
+            "BitOffset": "0x4",
+            "BitWidth": "0x4",
+            "Access": "RW"
+          }
+        }
+      ]
+    },
+	
+	{
+      "Address": "0xB3",
+      "Name": "FS_SHR3",
+	  "Description": "NVM fail-safe shadow register 3",
+      "Size": "0x1",
+      "Fields": [
+        {
+          "Bit": {
+            "Name": "WDG_FLT_CNT_MAX",
+            "Description": "Setting of the maximum number of occurrences triggered by a watchdog hard-fault source",
+            "BitOffset": "0x0",
+            "BitWidth": "0x4",
+            "Access": "RW"
+          }
+        },
+        {
+          "Bit": {
+            "Name": "RST_FLT_CNT_TMR",
+            "Description": "Setting of the maximum number of occurrences triggered by a thermal shutdown hard-fault source",
+            "BitOffset": "0x4",
+            "BitWidth": "0x2",
+            "Access": "RW",
+			"PossibleValues": {
+              "0x0": "Disabled",
+              "0x1": "1 minutes",
+			  "0x2": "6 minutes",
+              "0x3": "60 minutes"
+            }
+          }
+        },
+		{
+          "Bit": {
+            "Name": "FAIL_SAFE_LOCK_DIS",
+            "Description": "Disable fail-safe lock state (pass through)",
+            "BitOffset": "0x6",
+            "BitWidth": "0x1",
+            "Access": "RW",
+			"PossibleValues": {
+              "0x0": "Enabled",
+              "0x1": "Disabled"
+            }
+          }
+        }
+      ]
+    },
+	
+	{
+      "Address": "0xB4",
+      "Name": "Reserved",
+	  "Description": "-",
+      "Size": "0x1",
+      "Fields": [
+        {
+          "Bit": {
+            "Name": "Reserved",
+            "Description": "-",
+            "BitOffset": "0x0",
+            "BitWidth": "0x8",
+            "Access": "R"
+          }
+        }
+      ]
+    },
+	
+	{
+      "Address": "0xB5",
+      "Name": "I2C_ADDR_SHR",
+	  "Description": "NVM I2C device address shadow register",
+      "Size": "0x1",
+      "Fields": [
+        {
+          "Bit": {
+            "Name": "I2C_ADDR",
+            "Description": "PMIC I2C address\nThe content of this register take effect after the NVM programming command",
+            "BitOffset": "0x0",
+            "BitWidth": "0x7",
+            "Access": "RW"
+          }
+        },
+        {
+          "Bit": {
+            "Name": "LOCK_NVM",
+            "Description": "NVM write access lock\nThe LOCK_NVM bit takes effect on both shadow registers write and NVM programming command",
+            "BitOffset": "0x7",
+            "BitWidth": "0x1",
+            "Access": "RW",
+			"PossibleValues": {
+              "0x0": "No",
+              "0x1": "Yes"
+            }
+          }
+        }
+      ]
+    },
+	
+	{
+      "Address": "0xB6",
+      "Name": "NVM_USER_SHR1",
+	  "Description": "User free shadow register 1",
+      "Size": "0x1",
+      "Fields": [
+        {
+          "Bit": {
+            "Name": "NVM_USER1",
+            "Description": "User defined value\nFree usage scratch registers save end-product application data in the NVM",
+            "BitOffset": "0x0",
+            "BitWidth": "0x8",
+            "Access": "RW"
+          }
+        }
+      ]
+    },
+	
+	{
+      "Address": "0xB7",
+      "Name": "NVM_USER_SHR2",
+	  "Description": "User free shadow register 2",
+      "Size": "0x1",
+      "Fields": [
+        {
+          "Bit": {
+            "Name": "NVM_USER2",
+            "Description": "User defined value\nFree usage scratch registers save end-product application data in the NVM",
+            "BitOffset": "0x0",
+            "BitWidth": "0x8",
+            "Access": "RW"
+          }
+        }
+      ]
+    }
+  ]
+}

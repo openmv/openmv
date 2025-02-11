@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Root xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="SCHVerif.xsd">
+<Obdata>
+	<Info>
+		<Title>STM32H7RS - Debug Authentication Configuration</Title>
+		<ObDestAddress>0x00510008</ObDestAddress>
+		<DoEncryption>1</DoEncryption>
+		<GlobalAlign>16</GlobalAlign>
+		<MCU>STM32H7RS</MCU>
+	</Info>
+	<Hash>
+	</Hash>
+	<DA>
+	</DA>
+	<File>
+		<Name>Debug Authentication root key</Name>
+		<Value></Value>
+		<Align>4</Align>
+		<KeyType>ecdsa-p256</KeyType>
+		<Type>Public</Type>
+		<Default>../Keys/key_root.pem</Default>
+		<Tooltip>Select the key used as root for authentication debug certificate chain. When this key is regenerated, all certificates must be regenerated as well</Tooltip>
+	</File>
+	<Permission>
+		<Name>Permission</Name> 
+		<Value>0x00000000000000000000000000000000</Value>
+		<Width>4</Width>
+		<Default>0xFFFFFFFF</Default>
+		<Tooltip>Enter Permission</Tooltip>
+	</Permission>
+	<Output>
+		<Name>Output File</Name>
+		<Value>../DAH7RS-ConfingWithCertificate.obk</Value>
+		<Default>../DAH7RS-ConfingWithCertificate.obk</Default>
+		<Tooltip>Select the output file .obk including DA configuration</Tooltip>
+	</Output>
+</Obdata>
+</Root>

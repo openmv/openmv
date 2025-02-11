@@ -1,0 +1,153 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Root xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="SCHVerif.xsd">
+<Device>
+		<DeviceID>0x027</DeviceID>
+		<Vendor>STMicroelectronics</Vendor>
+		<Type>MCU</Type>
+		<CPU>Cortex-M0+</CPU>
+		<Name>STM32WL3</Name>
+		<Series>STM32WL3</Series>
+		<Description>ARM 32-bit Cortex-M0+ based device</Description>
+		<Configurations>
+			<!-- JTAG_SWD Interface -->
+			<Interface name="JTAG_SWD"/>
+			<!-- Bootloader Interface -->
+			<Interface name="Bootloader"/>
+		</Configurations>
+		<!-- Peripherals -->
+		<Peripherals>
+			<!-- Embedded SRAM -->
+			<Peripheral>
+				<Name>Embedded SRAM</Name>
+				<Type>Storage</Type>
+				<Description/>
+				<ErasedValue>0x00</ErasedValue>
+				<Access>RWE</Access>
+				<Configuration>
+					<Parameters address="0x20000000" name="SRAM" size="0x4000"/>
+					<Description/>
+					<Organization>Single</Organization>
+					<Bank name="Bank 1">
+						<Field>
+							<Parameters address="0x20000000" name="SRAM" occurrence="0x1" size="0x4000"/>
+						</Field>
+					</Bank>
+				</Configuration>
+			</Peripheral>
+			<!-- Embedded Flash -->
+			<Peripheral>
+				<Name>Embedded Flash</Name>
+				<Type>Storage</Type>
+				<Description>The Flash memory interface manages CPU AHB I-Code and D-Code accesses to the Flash memory. It implements the erase and program Flash memory operations and the read and write protection mechanisms</Description>
+				<ErasedValue>0xFF</ErasedValue>
+				<Access>RWE</Access>
+				<FlashSize address="0x1FFFA90E" default="0x40000"/>
+				<!-- <BootloaderVersion: Not applicable -->
+				<!-- 192KB single Bank -->
+				<Configuration>
+					<Parameters address="0x10040000" name=" 256 Kbytes Embedded Flash" size="0x40000"/>
+					<Description/>
+					<Organization>Single</Organization>
+					<Alignment>0x10</Alignment>
+					<Bank name="Bank 0">
+						<Field>
+							<Parameters address="0x10040000" name="sector0" occurrence="0x80" size="0x800"/>
+						</Field>
+					</Bank>
+				</Configuration>
+			</Peripheral>
+			<!-- OTP -->
+			<Peripheral>
+				<Name>OTP</Name>
+				<Type>Storage</Type>
+				<Description>The Data OTP memory block. It contains the one time programmable bits.</Description>
+				<ErasedValue>0xFF</ErasedValue>
+				<Access>RW</Access>
+				<!-- 1 KBytes single bank -->
+				<Configuration>
+					<Parameters address="0x10001800" name=" 1 KBytes Data OTP" size="0x400"/>
+					<Description/>
+					<Organization>Single</Organization>
+					<Alignment>0x4</Alignment>
+					<Bank name="OTP">
+						<Field>
+							<Parameters address="0x10001800" name="OTP" occurrence="0x1" size="0x400"/>
+						</Field>
+					</Bank>
+				</Configuration>
+			</Peripheral>
+			<!-- Mirror Option Bytes -->
+			<Peripheral>
+				<Name>MirrorOptionBytes</Name>
+				<Type>Storage</Type>
+				<Description>Mirror Option Bytes contains the extra area.</Description>
+				<ErasedValue>0xFF</ErasedValue>
+				<Access>RW</Access>
+				<!-- 16 Bytes single bank -->
+				<Configuration>
+					<Parameters address="0x1FFFF800" name=" 16 Bytes Data MirrorOptionBytes" size="0x10"/>
+					<Description/>
+					<Organization>Single</Organization>
+					<Alignment>0x20</Alignment>
+					<Bank name="MirrorOptionBytes">
+						<Field>
+							<Parameters address="0x1FFFF800" name="MirrorOptionBytes" occurrence="0x1" size="0x10"/>
+						</Field>
+					</Bank>
+				</Configuration>
+			</Peripheral>
+			<!-- Option Bytes -->
+			<Peripheral>
+				<Name>Option Bytes</Name>
+				<Type>Configuration</Type>
+				<Description/>
+				<Access>RW</Access>				
+				<Bank interface="JTAG_SWD">
+					<Parameters address="0xF9F9F9F9" name="Bank 0" size="0x4"/>
+					<Category>
+						<Name>Read Out Protection</Name>
+						<Field>
+							<Parameters address="0xF9F9F9F9" name="DeviceID" size="0x4"/>
+							<AssignedBits>
+								<Bit>
+									<Name>RDP</Name>
+									<Description>The read protection is used to protect the software code stored in Flash memory</Description>
+									<BitOffset>0x0</BitOffset>
+									<BitWidth>0x20</BitWidth>
+									<Access>RW</Access>
+									<Values>
+										<Val value="0xff">Debugger can access and modify flash memory and RAM content.</Val>
+										<Val value="0xABACABAD">Debugger connection is not possible.</Val>
+										<Val value="0xaa">Debugger cannot access or modify flash memory and RAM content.</Val>
+									</Values>
+								</Bit>
+							</AssignedBits>
+						</Field>
+					</Category>
+				</Bank>
+				<Bank interface="Bootloader">
+					<Parameters address="0x10040000" name="Bank 0" size="0x10"/>
+										<Category>
+						<Name>Device Id Test</Name>
+						<Field>
+							<Parameters address="0x10040000" name="DeviceID" size="0x4"/>
+							<AssignedBits>
+								<Bit>
+									<Name>RDP</Name>
+									<Description>Read protection option byte. The read protection is used to protect the software code stored in Flash memory.</Description>
+									<BitOffset>0x1</BitOffset>
+									<BitWidth>0x1</BitWidth>
+									<Access>R</Access>
+									<Values>
+										<Val value="0">Flash memory is not read-protected.</Val>
+										<Val value="1">Flash memory is read-protected.</Val>
+									</Values>
+								</Bit>
+							</AssignedBits>
+						</Field>
+					</Category>
+	</Bank>
+			</Peripheral>
+		</Peripherals>
+	</Device>
+</Root>
