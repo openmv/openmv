@@ -242,7 +242,7 @@ static void py_ml_model_print(const mp_print_t *print, mp_obj_t self_in, mp_prin
     mp_printf(print, " }");
 }
 
-static mp_obj_t py_ml_model_predict(uint n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
+static mp_obj_t py_ml_model_predict(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
     enum { ARG_callback };
     static const mp_arg_t allowed_args[] = {
         { MP_QSTR_callback, MP_ARG_OBJ | MP_ARG_KW_ONLY, {.u_rom_obj = MP_ROM_NONE} },

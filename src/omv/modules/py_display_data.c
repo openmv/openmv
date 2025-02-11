@@ -64,7 +64,7 @@ static void cec_extint_callback(mp_obj_t self_in) {
     }
 }
 
-static mp_obj_t py_cec_send_frame(uint n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
+static mp_obj_t py_cec_send_frame(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
     enum { ARG_dst_addr, ARG_src_addr, ARG_data };
     static const mp_arg_t allowed_args[] = {
         { MP_QSTR_dst_addr, MP_ARG_REQUIRED | MP_ARG_INT },
@@ -94,7 +94,7 @@ static mp_obj_t py_cec_send_frame(uint n_args, const mp_obj_t *pos_args, mp_map_
 }
 static MP_DEFINE_CONST_FUN_OBJ_KW(py_cec_send_frame_obj, 4, py_cec_send_frame);
 
-static mp_obj_t py_cec_receive_frame(uint n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
+static mp_obj_t py_cec_receive_frame(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
     enum { ARG_dst_addr, ARG_timeout };
     static const mp_arg_t allowed_args[] = {
         { MP_QSTR_dst_addr, MP_ARG_REQUIRED | MP_ARG_INT },
