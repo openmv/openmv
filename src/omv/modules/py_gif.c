@@ -83,7 +83,7 @@ static mp_obj_t py_gif_loop(mp_obj_t self_in) {
 }
 static MP_DEFINE_CONST_FUN_OBJ_1(py_gif_loop_obj, py_gif_loop);
 
-static mp_obj_t py_gif_add_frame(uint n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
+static mp_obj_t py_gif_add_frame(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
     enum { ARG_delay };
     static const mp_arg_t allowed_args[] = {
         { MP_QSTR_delay, MP_ARG_INT | MP_ARG_KW_ONLY,  {.u_int = 10 } },
@@ -115,7 +115,7 @@ static mp_obj_t py_gif_close(mp_obj_t self_in) {
 }
 static MP_DEFINE_CONST_FUN_OBJ_1(py_gif_close_obj, py_gif_close);
 
-static mp_obj_t py_gif_open(uint n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
+static mp_obj_t py_gif_open(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
     enum { ARG_width, ARG_height, ARG_color, ARG_loop };
     static const mp_arg_t allowed_args[] = {
         { MP_QSTR_width, MP_ARG_INT | MP_ARG_KW_ONLY,  {.u_int = -1 } },
