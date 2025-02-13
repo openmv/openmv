@@ -47,6 +47,13 @@ void vl53l5cx_reset(VL53L5CX_Platform *platform) {
     #endif
 }
 
+void vl53l5cx_shutdown(VL53L5CX_Platform *platform) {
+    #if defined(OMV_TOF_POWER_PIN)
+    omv_gpio_config(OMV_TOF_POWER_PIN, OMV_GPIO_MODE_OUTPUT, OMV_GPIO_PULL_NONE, OMV_GPIO_SPEED_LOW, -1);
+    omv_gpio_write(OMV_TOF_POWER_PIN, 0);
+    #endif
+}
+
 void vl53l5cx_swap(uint8_t *buf, uint16_t size) {
     for (size_t i=0; i<size; i++) {
         ((uint32_t *) buf)[i] = __REV(((uint32_t *) buf)[i]);
