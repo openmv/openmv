@@ -197,7 +197,7 @@ static mp_obj_t tof_get_depth_obj(int w, int h, float *frame, bool mirror,
 }
 #endif
 
-static mp_obj_t py_tof_deinit() {
+static mp_obj_t py_tof_reset() {
     tof_width = 0;
     tof_height = 0;
     tof_transposed = false;
@@ -216,6 +216,17 @@ static mp_obj_t py_tof_deinit() {
     #endif
     return mp_const_none;
 }
+static MP_DEFINE_CONST_FUN_OBJ_0(py_tof_reset_obj, py_tof_reset);
+
+static mp_obj_t py_tof_deinit() {
+    tof_width = 0;
+    tof_height = 0;
+    tof_transposed = false;
+    #if (OMV_TOF_VL53L5CX_ENABLE == 1)
+    vl53l5cx_shutdown(&vl53l5cx_dev.platform);
+    #endif
+    return mp_const_none;
+}
 static MP_DEFINE_CONST_FUN_OBJ_0(py_tof_deinit_obj, py_tof_deinit);
 
 mp_obj_t py_tof_init(uint n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
@@ -228,7 +239,7 @@ mp_obj_t py_tof_init(uint n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
     mp_arg_val_t args[MP_ARRAY_SIZE(allowed_args)];
     mp_arg_parse_all(n_args, pos_args, kw_args, MP_ARRAY_SIZE(allowed_args), allowed_args, args);
 
-    py_tof_deinit();
+    py_tof_reset();
     bool first_init = true;
     int type = args[ARG_type].u_int;
 
@@ -302,7 +313,7 @@ mp_obj_t py_tof_init(uint n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
                 omv_i2c_pulse_scl(&tof_bus);
                 goto TOF_VL53L5CX_RETRY;
             } else if (error != 0) {
-                py_tof_deinit();
+                py_tof_reset();
                 mp_raise_msg(&mp_type_RuntimeError, MP_ERROR_TEXT("Failed to init the VL53L5CX"));
             }
             tof_sensor = TOF_VL53L5CX;
@@ -579,7 +590,7 @@ static const mp_rom_map_elem_t globals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_TOF_VL53L5CX),        MP_ROM_INT(TOF_VL53L5CX)                },
     #endif
     { MP_ROM_QSTR(MP_QSTR_init),                MP_ROM_PTR(&py_tof_init_obj)            },
-    { MP_ROM_QSTR(MP_QSTR_reset),               MP_ROM_PTR(&py_tof_init_obj)            },
+    { MP_ROM_QSTR(MP_QSTR_reset),               MP_ROM_PTR(&py_tof_reset_obj)           },
     { MP_ROM_QSTR(MP_QSTR_deinit),              MP_ROM_PTR(&py_tof_deinit_obj)          },
     { MP_ROM_QSTR(MP_QSTR_type),                MP_ROM_PTR(&py_tof_type_obj)            },
     { MP_ROM_QSTR(MP_QSTR_width),               MP_ROM_PTR(&py_tof_width_obj)           },

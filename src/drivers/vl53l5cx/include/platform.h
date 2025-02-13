@@ -48,6 +48,7 @@ typedef struct {
 } VL53L5CX_Platform;
 
 void vl53l5cx_reset(VL53L5CX_Platform *platform);
+void vl53l5cx_shutdown(VL53L5CX_Platform *platform);
 void vl53l5cx_swap(uint8_t *buf, uint16_t size);
 uint8_t vl53l5cx_read(VL53L5CX_Platform *platform, uint16_t addr, uint8_t *buf, uint32_t size);
 uint8_t vl53l5cx_write(VL53L5CX_Platform *platform, uint16_t addr, uint8_t *buf, uint32_t size);
