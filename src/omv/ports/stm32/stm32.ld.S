@@ -111,6 +111,15 @@ SECTIONS
     . = ALIGN(4);
   } >FLASH_TEXT
 
+  .gnu.sgstubs :
+  {
+    . = ALIGN(4);
+    _start_sg = .;
+    *(.gnu*)
+    . = ALIGN(4);
+    _end_sg = .;
+  } >FLASH_TEXT
+
   /* The address used as the source for copying the initialized data section. */
   _sidata = LOADADDR(.data);
 

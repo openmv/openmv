@@ -365,6 +365,11 @@ mp_obj_t py_ml_model_make_new(const mp_obj_type_t *type, size_t n_args, size_t n
             break;
         }
     }
+    #else
+    extern int ml_backend_load_model(py_ml_model_obj_t *model, const char *path);
+    if (ml_backend_load_model(model, path) != 0) {
+        mp_raise_msg(&mp_type_OSError, MP_ERROR_TEXT("Failed to load builtin model"));
+    }
     #endif
 
     if (model->data == NULL) {
