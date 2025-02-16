@@ -156,6 +156,8 @@ OBJS_DIR = $(sort $(dir $(OBJS)))
 all: $(FIRMWARE)
 	$(SIZE) $(FW_DIR)/$(FIRMWARE).elf
 
+$(OBJS): | $(OBJS_DIR)
+
 $(OBJS_DIR):
 	$(MKDIR) -p $@
 
@@ -183,9 +185,7 @@ $(BUILD)/%.o : %.s
 	$(ECHO) "AS $<"
 	$(AS) $(AFLAGS) $< -o $@
 
-FIRMWARE_OBJS: | $(OBJS_DIR) $(OBJS)
-
-$(FIRMWARE): FIRMWARE_OBJS
+$(FIRMWARE): $(OBJS)
 	$(CPP) -P -E -DBOOTLOADER -DLINKER_SCRIPT -I$(OMV_BOARD_CONFIG_DIR) \
                     $(PORT_DIR)/$(LDSCRIPT).ld.S > $(BUILD)/$(LDSCRIPT).lds
 	$(CC) $(LDFLAGS) $(OBJS) -o $(FW_DIR)/$(FIRMWARE).elf
