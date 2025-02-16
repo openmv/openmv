@@ -122,6 +122,8 @@ SECTIONS
     . = ALIGN(4);
     *(.data*)           // .data* sections
     . = ALIGN(4);
+    *(.ram_function*)
+    . = ALIGN(4);
     _edata = .;         // Define a global symbol at data end
   } >OMV_MAIN_MEMORY AT> FLASH_TEXT
 
