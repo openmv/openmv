@@ -229,7 +229,7 @@ static mp_obj_t py_tof_deinit() {
 }
 static MP_DEFINE_CONST_FUN_OBJ_0(py_tof_deinit_obj, py_tof_deinit);
 
-mp_obj_t py_tof_init(uint n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
+mp_obj_t py_tof_init(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
     enum { ARG_type };
     static const mp_arg_t allowed_args[] = {
         { MP_QSTR_type, MP_ARG_INT,  {.u_int = -1 } },
@@ -367,7 +367,7 @@ static mp_obj_t py_tof_refresh() {
 }
 static MP_DEFINE_CONST_FUN_OBJ_0(py_tof_refresh_obj, py_tof_refresh);
 
-mp_obj_t py_tof_read_depth(uint n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
+mp_obj_t py_tof_read_depth(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
     enum { ARG_hmirror, ARG_vflip, ARG_transpose, ARG_timeout };
     static const mp_arg_t allowed_args[] = {
         { MP_QSTR_hmirror, MP_ARG_INT | MP_ARG_KW_ONLY,  {.u_bool = false } },
@@ -402,7 +402,7 @@ mp_obj_t py_tof_read_depth(uint n_args, const mp_obj_t *pos_args, mp_map_t *kw_a
 }
 static MP_DEFINE_CONST_FUN_OBJ_KW(py_tof_read_depth_obj, 0, py_tof_read_depth);
 
-mp_obj_t py_tof_draw_depth(uint n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
+mp_obj_t py_tof_draw_depth(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
     enum {
         ARG_x, ARG_y, ARG_x_scale, ARG_y_scale, ARG_roi, ARG_channel, ARG_alpha,
         ARG_color_palette, ARG_alpha_palette, ARG_hint, ARG_scale
@@ -476,7 +476,7 @@ mp_obj_t py_tof_draw_depth(uint n_args, const mp_obj_t *pos_args, mp_map_t *kw_a
 }
 static MP_DEFINE_CONST_FUN_OBJ_KW(py_tof_draw_depth_obj, 2, py_tof_draw_depth);
 
-mp_obj_t py_tof_snapshot(uint n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
+mp_obj_t py_tof_snapshot(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
     enum {
         ARG_hmirror, ARG_vflip, ARG_transpose, ARG_x_scale, ARG_y_scale, ARG_roi, ARG_channel,
         ARG_alpha, ARG_color_palette, ARG_alpha_palette, ARG_hint, ARG_scale, ARG_pixformat,

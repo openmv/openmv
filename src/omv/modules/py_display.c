@@ -95,7 +95,7 @@ static mp_obj_t py_display_deinit(mp_obj_t self_in) {
 }
 static MP_DEFINE_CONST_FUN_OBJ_1(py_display_deinit_obj, py_display_deinit);
 
-static mp_obj_t py_display_clear(uint n_args, const mp_obj_t *args) {
+static mp_obj_t py_display_clear(size_t n_args, const mp_obj_t *args) {
     py_display_obj_t *self = MP_OBJ_TO_PTR(args[0]);
     bool display_off = (n_args > 1 && mp_obj_get_int(args[1]));
     py_display_p_t *display_p = (py_display_p_t *) MP_OBJ_TYPE_GET_SLOT(self->base.type, protocol);
@@ -106,7 +106,7 @@ static mp_obj_t py_display_clear(uint n_args, const mp_obj_t *args) {
 }
 static MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(py_display_clear_obj, 1, 2, py_display_clear);
 
-static mp_obj_t py_display_backlight(uint n_args, const mp_obj_t *args) {
+static mp_obj_t py_display_backlight(size_t n_args, const mp_obj_t *args) {
     py_display_obj_t *self = MP_OBJ_TO_PTR(args[0]);
     if (n_args > 1) {
         uint32_t intensity = mp_obj_get_int(args[1]);
@@ -136,7 +136,7 @@ static mp_obj_t py_display_backlight(uint n_args, const mp_obj_t *args) {
 }
 static MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(py_display_backlight_obj, 1, 2, py_display_backlight);
 
-static mp_obj_t py_display_write(uint n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
+static mp_obj_t py_display_write(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
     enum {
         ARG_image, ARG_x, ARG_y, ARG_x_scale, ARG_y_scale, ARG_roi,
         ARG_channel, ARG_alpha, ARG_color_palette, ARG_alpha_palette, ARG_hint
@@ -192,7 +192,7 @@ static mp_obj_t py_display_write(uint n_args, const mp_obj_t *pos_args, mp_map_t
 }
 static MP_DEFINE_CONST_FUN_OBJ_KW(py_display_write_obj, 2, py_display_write);
 
-static mp_obj_t py_display_bus_write(uint n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
+static mp_obj_t py_display_bus_write(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
     enum { ARG_cmd, ARG_args, ARG_dcs };
     static const mp_arg_t allowed_args[] = {
         { MP_QSTR_cmd,  MP_ARG_INT | MP_ARG_REQUIRED },
@@ -222,7 +222,7 @@ static mp_obj_t py_display_bus_write(uint n_args, const mp_obj_t *pos_args, mp_m
 }
 static MP_DEFINE_CONST_FUN_OBJ_KW(py_display_bus_write_obj, 1, py_display_bus_write);
 
-static mp_obj_t py_display_bus_read(uint n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
+static mp_obj_t py_display_bus_read(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
     enum { ARG_cmd, ARG_len, ARG_args, ARG_dcs };
     static const mp_arg_t allowed_args[] = {
         { MP_QSTR_cmd,  MP_ARG_INT | MP_ARG_REQUIRED },

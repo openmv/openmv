@@ -778,7 +778,7 @@ static mp_obj_t py_tv_deinit() {
 }
 static MP_DEFINE_CONST_FUN_OBJ_0(py_tv_deinit_obj, py_tv_deinit);
 
-static mp_obj_t py_tv_init(uint n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
+static mp_obj_t py_tv_init(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
     enum { ARG_type, ARG_triple_buffer };
     static const mp_arg_t allowed_args[] = {
         { MP_QSTR_type, MP_ARG_INT, {.u_int = TV_SHIELD } },
@@ -848,7 +848,7 @@ static mp_obj_t py_tv_refresh() {
 }
 static MP_DEFINE_CONST_FUN_OBJ_0(py_tv_refresh_obj, py_tv_refresh);
 
-static mp_obj_t py_tv_channel(uint n_args, const mp_obj_t *args) {
+static mp_obj_t py_tv_channel(size_t n_args, const mp_obj_t *args) {
     if (tv_type == TV_NONE) {
         mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("TV controller is not initialized"));
     }
@@ -883,7 +883,7 @@ static mp_obj_t py_tv_channel(uint n_args, const mp_obj_t *args) {
 }
 static MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(py_tv_channel_obj, 0, 1, py_tv_channel);
 
-static mp_obj_t py_tv_display(uint n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
+static mp_obj_t py_tv_display(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
     enum {
         ARG_x, ARG_y, ARG_x_scale, ARG_y_scale, ARG_roi, ARG_channel, ARG_alpha,
         ARG_color_palette, ARG_alpha_palette, ARG_hint

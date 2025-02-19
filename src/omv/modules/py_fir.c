@@ -334,7 +334,7 @@ static mp_obj_t py_fir_deinit() {
 }
 static MP_DEFINE_CONST_FUN_OBJ_0(py_fir_deinit_obj, py_fir_deinit);
 
-mp_obj_t py_fir_init(uint n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
+mp_obj_t py_fir_init(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
     enum { ARG_type, ARG_refresh, ARG_resolution };
     static const mp_arg_t allowed_args[] = {
         { MP_QSTR_type, MP_ARG_INT,  {.u_int = -1 } },
@@ -729,7 +729,7 @@ static mp_obj_t py_fir_get_frame_available() {
 }
 static MP_DEFINE_CONST_FUN_OBJ_0(py_fir_get_frame_available_obj, py_fir_get_frame_available);
 
-static mp_obj_t py_fir_trigger_ffc(uint n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
+static mp_obj_t py_fir_trigger_ffc(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
     enum { ARG_timeout };
     static const mp_arg_t allowed_args[] = {
         { MP_QSTR_timeout, MP_ARG_INT, {.u_int = -1 } },
@@ -812,7 +812,7 @@ mp_obj_t py_fir_read_ta() {
 }
 static MP_DEFINE_CONST_FUN_OBJ_0(py_fir_read_ta_obj, py_fir_read_ta);
 
-mp_obj_t py_fir_read_ir(uint n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
+mp_obj_t py_fir_read_ir(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
     enum { ARG_hmirror, ARG_vflip, ARG_transpose, ARG_timeout };
     static const mp_arg_t allowed_args[] = {
         { MP_QSTR_hmirror, MP_ARG_INT | MP_ARG_KW_ONLY,  {.u_bool = false } },
@@ -887,7 +887,7 @@ mp_obj_t py_fir_read_ir(uint n_args, const mp_obj_t *pos_args, mp_map_t *kw_args
 }
 static MP_DEFINE_CONST_FUN_OBJ_KW(py_fir_read_ir_obj, 0, py_fir_read_ir);
 
-mp_obj_t py_fir_draw_ir(uint n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
+mp_obj_t py_fir_draw_ir(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
     enum {
         ARG_x, ARG_y, ARG_x_scale, ARG_y_scale, ARG_roi, ARG_channel, ARG_alpha,
         ARG_color_palette, ARG_alpha_palette, ARG_hint, ARG_scale
@@ -961,7 +961,7 @@ mp_obj_t py_fir_draw_ir(uint n_args, const mp_obj_t *pos_args, mp_map_t *kw_args
 }
 static MP_DEFINE_CONST_FUN_OBJ_KW(py_fir_draw_ir_obj, 2, py_fir_draw_ir);
 
-mp_obj_t py_fir_snapshot(uint n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
+mp_obj_t py_fir_snapshot(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
     enum {
         ARG_hmirror, ARG_vflip, ARG_transpose, ARG_x_scale, ARG_y_scale, ARG_roi, ARG_channel,
         ARG_alpha, ARG_color_palette, ARG_alpha_palette, ARG_hint, ARG_scale, ARG_pixformat,
