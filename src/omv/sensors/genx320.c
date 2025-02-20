@@ -385,6 +385,12 @@ static void snapshot_post_process(image_t *image) {
 }
 
 static int snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
+    #if (OMV_GENX320_EHC_ENABLE != 1)
+    if (csi->transpose) {
+        return OMV_CSI_ERROR_CAPTURE_FAILED;
+    }
+    #endif
+
     #if (OMV_GENX320_CAL_ENABLE == 1)
     if (!hot_pixels_disabled) {
         uint8_t *histogram = fb_alloc0(ACTIVE_SENSOR_SIZE, FB_ALLOC_NO_HINT);
