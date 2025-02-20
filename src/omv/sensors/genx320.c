@@ -49,8 +49,12 @@
 #define ACTIVE_SENSOR_HEIGHT            (SENSOR_HEIGHT - BLANK_LINES)
 #define ACTIVE_SENSOR_SIZE              (ACTIVE_SENSOR_WIDTH * ACTIVE_SENSOR_HEIGHT)
 
-#define HSYNC_CLOCK_CYCLES              32
-#define VSYNC_CLOCK_CYCLES              32
+#ifdef OMV_GENX320_EHC_ENABLE
+#define HSYNC_CLOCK_CYCLES              880 // 320 + 880 = 1200 cycles -> ~122 FPS
+#else
+#define HSYNC_CLOCK_CYCLES              280 // 320 + 280 = 600 cycles
+#endif
+#define VSYNC_CLOCK_CYCLES              8
 
 #define CONTRAST_DEFAULT                16
 #define BRIGHTNESS_DEFAULT              128
@@ -66,8 +70,8 @@
 #define EVENT_THRESHOLD_TO_CALIBRATE    100000
 #define EVENT_THRESHOLD_SIGMA           10
 
-#define EVT_CLK_FREQ                    ((omv_csi_get_xclk_frequency() + 500000) / 1000000)
-#define EVT_SCALE_PERIOD(period)        (((period) * EVT_CLK_FREQ) / 10)
+#define EVT_CLK_MULTIPLIER              (2)
+#define EVT_CLK_FREQ                    (((omv_csi_get_xclk_frequency() * EVT_CLK_MULTIPLIER) + 500000) / 1000000)
 
 #define AFK_50_HZ                       (50)
 #define AFK_60_HZ                       (60)
@@ -113,6 +117,7 @@ static int reset(omv_csi_t *csi) {
 
     // Set EVT20 mode
     psee_sensor_write(EDF_CONTROL, 0);
+    #endif // (OMV_GENX320_EHC_ENABLE == 1)
 
     // Configure Packet and Frame sizes
     psee_sensor_write(CPI_PACKET_SIZE_CONTROL, ACTIVE_SENSOR_WIDTH);
@@ -120,7 +125,6 @@ static int reset(omv_csi_t *csi) {
                       HSYNC_CLOCK_CYCLES << CPI_PACKET_TIME_CONTROL_BLANKING_Pos);
     psee_sensor_write(CPI_FRAME_SIZE_CONTROL, ACTIVE_SENSOR_HEIGHT);
     psee_sensor_write(CPI_FRAME_TIME_CONTROL, VSYNC_CLOCK_CYCLES);
-    #endif // (OMV_GENX320_EHC_ENABLE == 1)
 
     // Enable dropping
     psee_sensor_write(RO_READOUT_CTRL, RO_READOUT_CTRL_DIGITAL_PIPE_EN |
@@ -166,7 +170,7 @@ static int reset(omv_csi_t *csi) {
     }
 
     if (psee_ehc_activate(&psee_ehc, EHC_ALGO_DIFF3D, 0, EHC_DIFF3D_N_BITS_SIZE,
-                          EVT_SCALE_PERIOD(INTEGRATION_DEF_PREIOD), EHC_WITHOUT_PADDING) != EHC_OK) {
+                          INTEGRATION_DEF_PREIOD, EHC_WITHOUT_PADDING) != EHC_OK) {
         return -1;
     }
     #else
@@ -231,7 +235,18 @@ static int set_framerate(omv_csi_t *csi, int framerate) {
         return -1;
     }
 
-    psee_sensor_write(EHC_INTEGRATION_PERIOD, EVT_SCALE_PERIOD(us));
+    psee_sensor_write(EHC_INTEGRATION_PERIOD, us);
+
+    int lines = ACTIVE_SENSOR_HEIGHT + VSYNC_CLOCK_CYCLES;
+    int clocks_per_frame = (omv_csi_get_xclk_frequency() * EVT_CLK_MULTIPLIER) / framerate;
+    int hsync_clocks = (clocks_per_frame / lines) - ACTIVE_SENSOR_WIDTH;
+
+    if (hsync_clocks <= 0) {
+        return -1;
+    }
+
+    psee_sensor_write(CPI_PACKET_TIME_CONTROL, ACTIVE_SENSOR_WIDTH << CPI_PACKET_TIME_CONTROL_PERIOD_Pos |
+                      hsync_clocks << CPI_PACKET_TIME_CONTROL_BLANKING_Pos);
     #endif // (OMV_GENX320_EHC_ENABLE == 1)
     return 0;
 }
