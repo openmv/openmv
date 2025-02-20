@@ -29,6 +29,7 @@
  * CPUs the locking function is implemented with atomic access using disable/enable IRQs.
  */
 #include "mutex.h"
+#include CMSIS_MCU_H
 #include "cmsis_compiler.h"
 #include "py/mphal.h"
 
