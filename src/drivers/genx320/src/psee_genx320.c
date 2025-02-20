@@ -1785,7 +1785,7 @@ AFK_StatusTypeDef psee_afk_activate(AFK_HandleTypeDef *afk, uint16_t f_min, uint
     }
 
     /* Assert Clock Param */
-    if ((evt_clk_freq != 10) && (evt_clk_freq != 24) && (evt_clk_freq != 25) && (evt_clk_freq != 50)) {
+    if ((evt_clk_freq < 10) || (evt_clk_freq > 50)) {
         return AFK_CLK_ERROR;
     }
 
@@ -2992,7 +2992,7 @@ STC_StatusTypeDef psee_stc_only_activate(STC_HandleTypeDef *stc, uint32_t stc_th
     }
 
     /* Assert Clock Param */
-    if ((evt_clk_freq != 10) && (evt_clk_freq != 24) && (evt_clk_freq != 25) && (evt_clk_freq != 50)) {
+    if ((evt_clk_freq < 10) || (evt_clk_freq > 50)) {
         return STC_CLK_ERROR;
     }
 
@@ -3083,7 +3083,7 @@ STC_StatusTypeDef psee_trail_only_activate(STC_HandleTypeDef *stc, uint32_t trai
     }
 
     /* Assert Clock Param */
-    if ((evt_clk_freq != 10) && (evt_clk_freq != 24) && (evt_clk_freq != 25) && (evt_clk_freq != 50)) {
+    if ((evt_clk_freq < 10) || (evt_clk_freq > 50)) {
         return STC_CLK_ERROR;
     }
 
@@ -3175,7 +3175,7 @@ STC_StatusTypeDef psee_stc_trail_activate(STC_HandleTypeDef *stc, uint32_t stc_t
     }
 
     /* Assert Clock Param */
-    if ((evt_clk_freq != 10) && (evt_clk_freq != 24) && (evt_clk_freq != 25) && (evt_clk_freq != 50)) {
+    if ((evt_clk_freq < 10) || (evt_clk_freq > 50)) {
         return STC_CLK_ERROR;
     }
 
