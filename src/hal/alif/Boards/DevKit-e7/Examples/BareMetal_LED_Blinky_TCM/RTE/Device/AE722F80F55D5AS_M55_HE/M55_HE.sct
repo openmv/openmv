@@ -1,0 +1,126 @@
+#! armclang -E --target=arm-arm-none-eabi -mcpu=cortex-m55 -xc
+; command above MUST be in first line (no comment above!)
+#include "M55_HE_map.h"
+/*
+;-------- <<< Use Configuration Wizard in Context Menu >>> -------------------
+*/
+
+/*--------------------- ITCM Configuration ----------------------------------
+; <h> ITCM Configuration
+;   <o0> ITCM Base Address <0x0-0xFFFFFFFF:8>
+;   <o1> ITCM Size (in Bytes) <0x0-0xFFFFFFFF:8>
+; </h>
+ *----------------------------------------------------------------------------*/
+/* SRAM4 is mapped as ITCM in M55-HE */
+#define __ROM_BASE      0x00000000
+#define __ROM_SIZE      SRAM4_SIZE
+
+/*--------------------- DTCM Configuration ---------------------------
+; <h> DTCM Configuration
+;   <o0> DTCM Base Address    <0x0-0xFFFFFFFF:8>
+;   <o1> DTCM Size (in Bytes) <0x0-0xFFFFFFFF:8>
+; </h>
+ *----------------------------------------------------------------------------*/
+/* SRAM5 is mapped as DTCM in M55-HE */
+#define __RAM_BASE      0x20000000
+#define __RAM_SIZE      SRAM5_SIZE
+
+/*--------------------- Stack / Heap Configuration ---------------------------
+; <h> Stack / Heap Configuration
+;   <o0> Stack Size (in Bytes) <0x0-0xFFFFFFFF:8>
+;   <o1> Heap Size (in Bytes) <0x0-0xFFFFFFFF:8>
+;   <o2> App Heap Size (in Bytes) <0x0-0xFFFFFFFF:8>
+; </h>
+ *----------------------------------------------------------------------------*/
+#define __STACK_SIZE    0x00002000
+#define __HEAP_SIZE     0x00001000
+#define __APP_HEAP_SIZE 0x00008000
+
+/*
+;------------- <<< end of configuration section >>> ---------------------------
+*/
+
+
+/*----------------------------------------------------------------------------
+  User Stack & Heap boundary definition
+ *----------------------------------------------------------------------------*/
+#define __STACK_TOP     (__RAM_BASE + __RAM_SIZE)    /* starts at end of RAM */
+#define __HEAP_BASE     (AlignExpr(+0, 8))           /* starts after RW_RAM section, 8 byte aligned */
+#define __APP_HEAP_BASE (AlignExpr(+0, 8))           /* starts after HEAP, 8 byte aligned */
+
+
+/*----------------------------------------------------------------------------
+  Scatter File Definitions definition
+ *----------------------------------------------------------------------------*/
+#define __RO_BASE       __ROM_BASE
+#define __RO_SIZE       __ROM_SIZE
+
+#define __RW_BASE       __RAM_BASE
+#define __RW_SIZE      (__RAM_SIZE - __STACK_SIZE - __HEAP_SIZE - __APP_HEAP_SIZE - NS_REGION_0_SIZE)
+
+
+LR_ROM __RO_BASE __RO_SIZE  {                       ; load region size_region
+  ER_ROM __RO_BASE __RO_SIZE  {                     ; load address = execution address
+   *.o (RESET, +First)
+   *(InRoot$$Sections)
+   *.o (startup_ro_data)
+   .ANY (+RO)
+   .ANY (+XO)
+  }
+
+  RW_RAM __RW_BASE __RW_SIZE  {                     ; RW data
+   .ANY (+RW +ZI)
+  }
+
+#if __HEAP_SIZE > 0
+  ARM_LIB_HEAP  __HEAP_BASE EMPTY  __HEAP_SIZE  {   ; Reserve empty region for heap
+  }
+#endif
+
+  APP_HEAP  __APP_HEAP_BASE EMPTY  __APP_HEAP_SIZE {; Reserve empty region for application heap
+  }
+
+  NS_REGION_0  NS_REGION_0_BASE  NS_REGION_0_SIZE { ; Non secure region 0
+    * (eth_buf)
+    * (usb_dma_buf)
+    * (sd_dma_buf)
+  }
+
+  ARM_LIB_STACK __STACK_TOP EMPTY -__STACK_SIZE {   ; Reserve empty region for stack
+  }
+
+  RW_SRAM0 SRAM0_BASE SRAM0_SIZE  {  ; Update sections as needed
+   * (lcd_crop_and_interpolate_buf)  ; LCD crop and intrepolate image processing buffer.
+   * (lcd_frame_buf)                 ; LCD frame Buffer.
+   * (camera_frame_buf)              ; Camera Frame Buffer
+   * (camera_frame_bayer_to_rgb_buf) ; (Optional) Camera Frame Buffer for Bayer to RGB Conversion
+  }
+  RW_SRAM1 SRAM1_BASE SRAM1_SIZE  {  ; Update sections as needed
+
+  }
+  RW_SRAM2 SRAM2_BASE SRAM2_SIZE  {  ; Update sections as needed
+
+  }
+  RW_SRAM3 SRAM3_BASE SRAM3_SIZE  {  ; Update sections as needed
+
+  }
+  RW_SRAM6_A SRAM6_A_BASE SRAM6_A_SIZE  {  ; Update sections as needed
+
+  }
+  RW_SRAM6_B SRAM6_B_BASE SRAM6_B_SIZE  {  ; Update sections as needed
+
+  }
+  RW_SRAM7 SRAM7_BASE SRAM7_SIZE  {  ; Update sections as needed
+
+  }
+  RW_SRAM8 SRAM8_BASE SRAM8_SIZE  {  ; Update sections as needed
+
+  }
+  RW_SRAM9_A SRAM9_A_BASE SRAM9_A_SIZE  {  ; Update sections as needed
+
+  }
+  RW_SRAM9_B SRAM9_B_BASE SRAM9_B_SIZE  {  ; Update sections as needed
+
+  }
+
+}
