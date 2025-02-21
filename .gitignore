@@ -53,5 +53,6 @@ openmv.includes
 tools/alif/**/*.cfg
 tools/alif/**/*.crt
 tools/alif/**/*.ds
+tools/alif/**/*.bin
 tools/alif/**/*.bin.sign
-tools/alif/**/*map.txt
+tools/alif/build/*-map.txt
