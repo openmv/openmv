@@ -84,6 +84,8 @@ static bool hot_pixels_disabled = false;
 static int32_t contrast = CONTRAST_DEFAULT;
 static int32_t brightness = BRIGHTNESS_DEFAULT;
 
+static AFK_HandleTypeDef psee_afk;
+
 static int reset(omv_csi_t *csi) {
     csi->color_palette = NULL;
 
@@ -129,8 +131,6 @@ static int reset(omv_csi_t *csi) {
                       RO_READOUT_CTRL_DROP_ON_FULL_EN);
 
     // Enable the Anti-FlicKering filter
-    AFK_HandleTypeDef psee_afk;
-
     if (psee_afk_init(&psee_afk) != AFK_OK) {
         return -1;
     }
@@ -524,6 +524,29 @@ static int ioctl(omv_csi_t *csi, int request, va_list ap) {
                 default: {
                     ret = -1;
                     break;
+                }
+            }
+            break;
+        }
+        // Controlling AFK filter
+        case OMV_CSI_IOCTL_GENX320_SET_AFK: {
+            int mode = va_arg(ap, int);
+            if (mode == 0) {
+                // Disable AFK
+                if (psee_afk_get_state(&psee_afk) != AFK_STATE_RESET) {
+                    if (psee_afk_deactivate(&psee_afk) != AFK_OK) {
+                        ret = -1;
+                    }
+                }
+            } else {
+                // Enable AFK
+                int freq_min = va_arg(ap, int);
+                int freq_max = va_arg(ap, int);
+                if (psee_afk_init(&psee_afk) != AFK_OK) {
+                    ret = -1;
+                }
+                if (psee_afk_activate(&psee_afk, freq_min, freq_max, EVT_CLK_FREQ) != AFK_OK) {
+                    ret = -1;
                 }
             }
             break;

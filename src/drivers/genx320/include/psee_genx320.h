@@ -205,7 +205,7 @@ typedef enum {
 } AFK_StatusTypeDef;
 
 /**
- * @brief EHC State structures definition
+ * @brief AFK State structures definition
  */
 typedef enum {
     AFK_STATE_RESET     = 0x00U,
@@ -214,7 +214,7 @@ typedef enum {
 } AFK_StateTypeDef;
 
 /**
- * @brief EHC Statistics structures definition
+ * @brief AFK Statistics structures definition
  */
 typedef enum {
 	AFK_STATS_RESET     = 0x00U,
@@ -266,27 +266,27 @@ typedef enum {
  * @brief EHC Algo structures definition
  */
 typedef enum {
-    EHC_ALGO_DIFF3D     = 0x00U,  
-    EHC_ALGO_HISTO3D    = 0x01U,  
-    EHC_ALGO_RESET      = 0x02U,  
+    EHC_ALGO_DIFF3D     = 0x00U,
+    EHC_ALGO_HISTO3D    = 0x01U,
+    EHC_ALGO_RESET      = 0x02U,
 } EHC_AlgoTypeDef;
 
 /**
  * @brief EHC Trigger structures definition
  */
 typedef enum {
-    EHC_TRIGGER_EVENT_RATE          = 0x00U,         
+    EHC_TRIGGER_EVENT_RATE          = 0x00U,
     EHC_TRIGGER_INTEGRATION_PERIOD  = 0x01U,
-    EHC_TRIGGER_RESET               = 0x02U,  
+    EHC_TRIGGER_RESET               = 0x02U,
 } EHC_TriggerTypeDef;
 
 /**
  * @brief EHC Padding structures definition
  */
 typedef enum {
-    EHC_WITHOUT_PADDING = 0x00U, 
-    EHC_WITH_PADDING    = 0x01U,    
-    EHC_PADDING_RESET   = 0x02U,  
+    EHC_WITHOUT_PADDING = 0x00U,
+    EHC_WITH_PADDING    = 0x01U,
+    EHC_PADDING_RESET   = 0x02U,
 } EHC_PaddingTypeDef;
 
 /**

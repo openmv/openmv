@@ -220,7 +220,8 @@ typedef enum {
     OMV_CSI_IOCTL_HIMAX_OSC_ENABLE      = 0x1E | OMV_CSI_IOCTL_FLAGS_ABORT,
     OMV_CSI_IOCTL_GET_RGB_STATS         = 0x1F,
     OMV_CSI_IOCTL_GENX320_SET_BIASES    = 0x20,
-    OMV_CSI_IOCTL_GENX320_SET_BIAS      = 0x21
+    OMV_CSI_IOCTL_GENX320_SET_BIAS      = 0x21,
+    OMV_CSI_IOCTL_GENX320_SET_AFK       = 0x22
 } omv_csi_ioctl_t;
 
 typedef enum {

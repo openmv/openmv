@@ -1644,7 +1644,7 @@ static void psee_sram_powerdown(GenX320_ModulesTypeDef module) {
     case STC:
         psee_sensor_read(SRAM_PD0, &sram_pd0);
         psee_sensor_write(SRAM_PD0, sram_pd0 |           /*!< Previous State of SRAM_PD0 */
-                                        SRAM_PD0_STC0_PD /*!< SRAM's Power Down Register : 1 - EHC's SRAM cuts in powerdown */
+                                        SRAM_PD0_STC0_PD /*!< SRAM's Power Down Register : 1 - STC's SRAM cuts in powerdown */
         );
         break;
 
@@ -1785,7 +1785,7 @@ AFK_StatusTypeDef psee_afk_activate(AFK_HandleTypeDef *afk, uint16_t f_min, uint
     }
 
     /* Assert Clock Param */
-    if ((evt_clk_freq != 10) && (evt_clk_freq != 24) && (evt_clk_freq != 25) && (evt_clk_freq != 50)) {
+    if ((evt_clk_freq < 10) || (evt_clk_freq > 50)) {
         return AFK_CLK_ERROR;
     }
 

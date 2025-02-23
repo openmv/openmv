@@ -1028,6 +1028,15 @@ static mp_obj_t py_omv_csi_ioctl(size_t n_args, const mp_obj_t *args) {
             }
             break;
         }
+        case OMV_CSI_IOCTL_GENX320_SET_AFK: {
+            if (n_args == 2) {
+                error = omv_csi_ioctl(request, mp_obj_get_int(args[1]));
+            } else if (n_args == 4) {
+                error = omv_csi_ioctl(request, mp_obj_get_int(args[1]), mp_obj_get_int(args[2]),
+                                      mp_obj_get_int(args[3]));
+            }
+            break;
+        }
         #endif // (OMV_GENX320_ENABLE == 1)
 
         default: {
@@ -1241,6 +1250,7 @@ static const mp_rom_map_elem_t globals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_GENX320_BIAS_FO),              MP_ROM_INT(OMV_CSI_GENX320_BIAS_FO)},
     { MP_ROM_QSTR(MP_QSTR_GENX320_BIAS_HPF),             MP_ROM_INT(OMV_CSI_GENX320_BIAS_HPF)},
     { MP_ROM_QSTR(MP_QSTR_GENX320_BIAS_REFR),            MP_ROM_INT(OMV_CSI_GENX320_BIAS_REFR)},
+    { MP_ROM_QSTR(MP_QSTR_IOCTL_GENX320_SET_AFK),        MP_ROM_INT(OMV_CSI_IOCTL_GENX320_SET_AFK)},
     #endif
 
     // Sensor functions
