@@ -84,7 +84,7 @@ static bool hot_pixels_disabled = false;
 static int32_t contrast = CONTRAST_DEFAULT;
 static int32_t brightness = BRIGHTNESS_DEFAULT;
 
-AFK_HandleTypeDef psee_afk;
+static AFK_HandleTypeDef psee_afk;
 
 static int reset(omv_csi_t *csi) {
     csi->color_palette = NULL;
