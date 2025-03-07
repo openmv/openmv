@@ -32,8 +32,6 @@ PROBE_SEROM     = 1
 PROBE_SERAM     = 2
 PROBE_NO_MESSAGE= 3
 
-EXIT_WITH_ERROR = 1
-
 BRING_UP_MODE   = 1
 
 def write_mram(isp, fileName, destAddress, verbose_display):
@@ -43,8 +41,8 @@ def write_mram(isp, fileName, destAddress, verbose_display):
     try:
         f = open(fileName, 'rb')
     except IOError as e:
-        print('[ERROR] {0}'.format(e))
-        sys.exit(EXIT_WITH_ERROR)
+        close_isp_and_exit(isp, '[ERROR] {0}'.format(e))
+
     with f:
         fileSize = file_get_size(f)
 #        print("FILESIZE = %d" %fileSize)
@@ -72,8 +70,7 @@ def write_mram(isp, fileName, destAddress, verbose_display):
             offset = offset + data_size
             writeAddress = writeAddress + data_size # increment by 16
             if isp.CTRLCHandler.Handler_exit():
-                print("[INFO] CTRL-C")
-                break
+                close_isp_and_exit(isp, "[INFO] CTRL-C detected. User aborted this process")
 
         end_time = time.time()
         print("\r")
@@ -116,8 +113,7 @@ def recovery_action_no_reset(isp):
     # check SERAM is the bootloader stage
     print('Bootloader stage: ' + device_probe.STAGE_TEXT[device.stage])
     if device.stage == device_probe.STAGE_SERAM:
-        print('[ERROR] Device not in Recovery mode, use updateSystemPackage Tool')
-        sys.exit(EXIT_WITH_ERROR)
+        close_isp_and_exit(isp, '[ERROR] Device not in Recovery mode, use updateSystemPackage Tool')
 
     if device.revision == 'B2':  #Device Part# is not retrieved by SEROM in B2
         # load parameters based on Part# selected in tools-config
@@ -132,14 +128,12 @@ def recovery_action_no_reset(isp):
                 elif device.revision in ['EG']:          # Eagle A0
                     device.part_number = 'AE722F80F55D5EG'
                     device.revision = 'A0'
-                elif device.revision in ['B1','A0']:     # Balletto B1C / E1C
+                elif device.revision in ['B1','A0','A5']:     # Balletto B1C / E1C
                     device.part_number = 'AB1C1F4M51820PH'
                 else:
-                    print('[ERROR] Revision is not reconginzed', device.revision)
-                    sys.exit(EXIT_WITH_ERROR)
+                    close_isp_and_exit(isp, '[ERROR] Revision is not recognized: ' + device.revision)
             else:
-                print('[ERROR] There is no Part# in the device!')
-                sys.exit(EXIT_WITH_ERROR)
+                close_isp_and_exit(isp, '[ERROR] There is no Part# in the device!')
 
         # selected device from global-cfg.db
         selectedDescription = utils.config.DEVICE_PART_NUMBER
@@ -168,10 +162,9 @@ def recovery_action_no_reset(isp):
 
     if device.revision == 'B2':
         if device.revision != DEVICE_REVISION:
-            print("[ERROR] Target device revision (%s) mismatch with configured device (%s)"
+            close_isp_and_exit(isp, "[ERROR] Target device revision (%s) mismatch with configured device (%s)"
                 % (device.revision,DEVICE_REVISION))
-            sys.exit(EXIT_WITH_ERROR)
-
+ 
     env_ext = ''
     if device.env.lower() in HASHES_DB:
         if HASHES_DB[device.env] == 'DEV':
@@ -193,15 +186,13 @@ def recovery_action_no_reset(isp):
     rev_ext = DEVICE_REV_PACKAGE_EXT[DEVICE_REVISION]
     alif_image = 'alif/' + DEVICE_PACKAGE + '-' + rev_ext + env_ext + '.bin'
     alif_offset = 'alif/' + DEVICE_OFFSET + '-' + rev_ext + env_ext + '.bin'
-
+    
     # check images exist...
     if not os.path.exists(alif_image):
-        print('Image ' + alif_image + ' does not exist!')
-        sys.exit(EXIT_WITH_ERROR)
+        close_isp_and_exit(isp, 'Image ' + alif_image + ' does not exist!')
 
     if not os.path.exists(alif_offset):
-        print('Image ' + alif_offset + ' does not exist!')
-        sys.exit(EXIT_WITH_ERROR)
+        close_isp_and_exit(isp, 'Image ' + alif_offset + ' does not exist!')
 
     argList = '../' + alif_image + ' ' + hex(ALIF_BASE_ADDRESS) + \
               ' ../' + alif_offset + ' ' + hex(MRAM_BASE_ADDRESS + MRAM_SIZE - 16)      
@@ -222,6 +213,8 @@ def recovery_action_no_reset(isp):
 
         write_mram(isp, fileName, addr, False)
 
+    recovery_end_exit()
+
 def recovery_action(isp):
     """
         Recover MRAM via SEROM. Reset the device at the end.
@@ -231,3 +224,8 @@ def recovery_action(isp):
 
     print("[INFO] Target reset")
     isp_reset(isp)      # Reset the target
+    recovery_end_exit()
+
+def recovery_end_exit():
+    print('Recovery process finished. Please reload maintenance tool for verification')
+    sys.exit(0)

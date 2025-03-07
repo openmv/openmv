@@ -25,11 +25,13 @@ from serialport import COM_BAUD_RATE_MAXIMUM
 #import ispcommands
 from isp_core import *
 from isp_util import *
+import device_probe
 import pylink
 import datetime
 #from array import array
 
 #  Version                  Feature
+# 0.23.000     Added probing to detect device stage/Part#/Rev
 # 0.22.000     Added support for MAC OS (J-Link not included yet)
 # 0.21.000     get baudrate from DBs
 # 0.20.007     Added padding option for binaries not multiple of 16
@@ -43,7 +45,7 @@ import datetime
 # 0.19.000     Removed JTAG access
 # 0.16.000     Addition of baud rate increase for bulk transfer
 # 0.15.000     Fixes for Block sizes and left overs
-TOOL_VERSION ="0.22.000"        # Define Version constant for each separate tool
+TOOL_VERSION ="0.23.000"        # Define Version constant for each separate tool
 
 EXIT_WITH_ERROR = 1
 
@@ -325,7 +327,26 @@ def main():
 
     isp.setBaudRate(baud_rate)
     isp.setVerbose(args.verbose)
-    
+
+    # be sure device is not in SEROM Recovery Mode
+    device = device_probe.device_get_attributes(isp)    
+    if device.stage != device_probe.STAGE_SERAM:
+        print('[ERROR] The device is in RECOVERY MODE! Please use Recovery option in Maintenance Tool to recover the device!')
+        sys.exit(EXIT_WITH_ERROR)
+
+    print('[INFO] Detected Device:')
+    partDetected = device.part_number
+    print('Part# ' + partDetected + ' - Rev: ' + device.revision)
+
+    partDescription = getPartDescription(partDetected)
+
+    if partDescription != DEVICE_PART_NUMBER:
+        print('[WARN] ************ Part# detected is different than the one configured in tools-config tool!')
+
+    if device.revision != DEVICE_REVISION:
+        print('[WARN] ************ Part Revision detected is different than the one configured in tools-config tool!')
+
+
     if not args.no_reset:
         put_target_in_maintenance_mode(isp, baud_rate, args.verbose)        
 

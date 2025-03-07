@@ -10,9 +10,9 @@
   "Spark":{
     "mram_total" : "0x200000",
     "mram_base"  : "0x80000000",
-    "revisions": ["A0"],
-    "rev_package_ext": {"A0":"rev-a0"},    
-    "rev_baud_rate": {"A0":56500},
+    "revisions": ["A0","A5"],
+    "rev_package_ext": {"A0":"rev-a0","A5":"rev-a5"},    
+    "rev_baud_rate": {"A0":56500,"A5":18000},
     "seram_banks" : 2
   }
 }

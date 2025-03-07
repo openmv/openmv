@@ -4,8 +4,7 @@
         "Device Information" : "info",
         "MRAM" : "mram",
         "Utilities" : "utils",
-        "Setting capabilities" : "setting",
-        "ROM" : "rom"
+        "Setting capabilities" : "setting"
     },
     "control" : {
         "Hard maintenance mode" : "maintenance_mode",
@@ -37,10 +36,6 @@
         "Get SERAM metrics" : "get_seram_info_action",
         "Get ECC key" : "get_ecc_key",
         "Get Firewall configuration" : "get_firewall_config"
-    },
-    "rom" : {
-     "Recovery" : "recovery_action",
-     "Recovery (No Reset)" : "recovery_action_no_reset"
     },
     "setting" : {
       "Enable LOGGING" : "set_logger_enable_action",

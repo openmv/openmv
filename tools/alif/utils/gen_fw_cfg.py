@@ -131,6 +131,10 @@ def gen_fw_cfg_icv(family, mram_size, sram_size, device_revision, featureSet):
     with open('firewall/mram.json', "r") as json_file:
         mram_json = json.load(json_file)
 
+    if family != "Predator":
+        # Delete the OSPI mirrorred region at 0x20000000
+        mram_json["firewall_components"][0]["configured_regions"].pop(2)
+        
     mram_json["firewall_components"][0]["configured_regions"][0]["end_address"] = atoc_end_address
     mram_json["protected_areas"][0]["start_address"] = stoc_start_address
 
