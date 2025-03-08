@@ -1,7 +1,7 @@
 /*
  * SPDX-License-Identifier: MIT
  *
- * Copyright (C) 2013-2024 OpenMV, LLC.
+ * Copyright (C) 2013-2025 OpenMV, LLC.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -81,4 +81,27 @@ uint8_t vl53l5cx_write(VL53L5CX_Platform *platform, uint16_t addr, uint8_t *buf,
     })
 #define VL53L5CX_WaitMs(platform, ms) ({ mp_hal_delay_ms(ms); 0; })
 #define VL53L5CX_SwapBuffer(buf, size) vl53l5cx_swap(buf, size)
+
+// Driver shim layer.
+#define vl53lx_dev_t                    VL53L5CX_Configuration
+#define vl53lx_data_t                   VL53L5CX_ResultsData
+
+#define vl53lx_init                     vl53l5cx_init
+#define vl53lx_reset                    vl53l5cx_reset
+#define vl53lx_shutdown                 vl53l5cx_shutdown
+#define vl53lx_is_alive                 vl53l5cx_is_alive
+
+#define vl53lx_set_resolution           vl53l5cx_set_resolution
+#define vl53lx_set_sharpener_percent    vl53l5cx_set_sharpener_percent
+
+#define vl53lx_start_ranging            vl53l5cx_start_ranging
+#define vl53lx_stop_ranging             vl53l5cx_stop_ranging
+#define vl53lx_get_ranging_data         vl53l5cx_get_ranging_data
+#define vl53lx_check_data_ready         vl53l5cx_check_data_ready
+#define vl53lx_set_ranging_mode         vl53l5cx_set_ranging_mode
+#define vl53lx_set_ranging_frequency_hz vl53l5cx_set_ranging_frequency_hz
+
+#define VL53LX_RESOLUTION_8X8           VL53L5CX_RESOLUTION_8X8
+#define VL53LX_RANGING_MODE_CONTINUOUS  VL53L5CX_RANGING_MODE_CONTINUOUS
+
 #endif	// __VL53L5CX_PLATFORM_H__
