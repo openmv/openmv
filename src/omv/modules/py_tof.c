@@ -36,33 +36,41 @@
 #include "py_image.h"
 #include "framebuffer.h"
 
-#if (OMV_TOF_VL53L5CX_ENABLE == 1)
+#if OMV_TOF_VL53L5CX_ENABLE
 #include "vl53l5cx_api.h"
 #endif
 
-#define VL53L5CX_ADDR               0x52
-#define VL53L5CX_WIDTH              8
-#define VL53L5CX_HEIGHT             8
-#define VL53L5CX_FRAME_DATA_SIZE    64
+#if OMV_TOF_VL53L8CX_ENABLE
+#include "vl53l8cx_api.h"
+#endif
 
-typedef enum tof_type {
-    TOF_NONE,
-    #if (OMV_TOF_VL53L5CX_ENABLE == 1)
-    TOF_VL53L5CX,
+#if OMV_TOF_VL53L5CX_ENABLE || OMV_TOF_VL53L8CX_ENABLE
+#define OMV_TOF_VL53LX_ENABLE   (1)
+#endif
+
+#define OMV_TOF_VL53LX_ADDR     0x52
+#define OMV_TOF_VL53LX_WIDTH    8
+#define OMV_TOF_VL53LX_HEIGHT   8
+
+typedef enum omv_tof_id {
+    OMV_TOF_NONE,
+    #if OMV_TOF_VL53LX_ENABLE
+    OMV_TOF_VL53LX_ID,
     #endif
-} tof_type_t;
+} omv_tof_id_t;
 
 static int tof_width = 0;
 static int tof_height = 0;
 static bool tof_transposed = false;
-static tof_type_t tof_sensor = TOF_NONE;
+static omv_tof_id_t tof_sensor = OMV_TOF_NONE;
+
 static omv_i2c_t tof_bus = { 0 };
 
-#if (OMV_TOF_VL53L5CX_ENABLE == 1)
-static VL53L5CX_Configuration vl53l5cx_dev = {
+#if OMV_TOF_VL53LX_ENABLE
+static vl53lx_dev_t vl53lx_dev = {
     .platform = {
         .bus = &tof_bus,
-        .address = VL53L5CX_ADDR,
+        .address = OMV_TOF_VL53LX_ADDR,
     }
 };
 #endif
@@ -97,27 +105,27 @@ static void tof_fill_image_float_obj(image_t *img, mp_obj_t *data, float min, fl
     }
 }
 
-#if (OMV_TOF_VL53L5CX_ENABLE == 1)
-static void tof_vl53l5cx_get_depth(VL53L5CX_Configuration *vl53l5cx_dev, float *frame, uint32_t timeout) {
+#if OMV_TOF_VL53LX_ENABLE
+static void tof_vl53lx_get_depth(vl53lx_dev_t *vl53lx_dev, float *frame, uint32_t timeout) {
     uint8_t frame_ready = 0;
     // Note depending on the config in platform.h, this struct can be too big to alloc on the stack.
-    VL53L5CX_ResultsData ranging_data;
+    vl53lx_data_t ranging_data;
 
     for (mp_uint_t start = mp_hal_ticks_ms(); !frame_ready; mp_hal_delay_ms(1)) {
-        if (vl53l5cx_check_data_ready(vl53l5cx_dev, &frame_ready) != 0) {
-            mp_raise_msg(&mp_type_RuntimeError, MP_ERROR_TEXT("VL53L5CX ranging failed"));
+        if (vl53lx_check_data_ready(vl53lx_dev, &frame_ready) != 0) {
+            mp_raise_msg(&mp_type_RuntimeError, MP_ERROR_TEXT("VL53LX ranging failed"));
         }
 
         if ((mp_hal_ticks_ms() - start) >= timeout) {
-            mp_raise_msg(&mp_type_RuntimeError, MP_ERROR_TEXT("VL53L5CX ranging timeout"));
+            mp_raise_msg(&mp_type_RuntimeError, MP_ERROR_TEXT("VL53LX ranging timeout"));
         }
     }
 
-    if (vl53l5cx_get_ranging_data(vl53l5cx_dev, &ranging_data) != 0) {
-        mp_raise_msg(&mp_type_RuntimeError, MP_ERROR_TEXT("VL53L5CX ranging failed"));
+    if (vl53lx_get_ranging_data(vl53lx_dev, &ranging_data) != 0) {
+        mp_raise_msg(&mp_type_RuntimeError, MP_ERROR_TEXT("VL53LX ranging failed"));
     }
 
-    for (int i = 0, ii = VL53L5CX_WIDTH * VL53L5CX_HEIGHT; i < ii; i++) {
+    for (int i = 0, ii = OMV_TOF_VL53LX_WIDTH * OMV_TOF_VL53LX_HEIGHT; i < ii; i++) {
         frame[i] = (float) ranging_data.distance_mm[i];
     }
 }
@@ -202,17 +210,17 @@ static mp_obj_t py_tof_reset() {
     tof_height = 0;
     tof_transposed = false;
 
-    if (tof_sensor != TOF_NONE) {
-        #if (OMV_TOF_VL53L5CX_ENABLE == 1)
-        if (tof_sensor == TOF_VL53L5CX) {
-            vl53l5cx_stop_ranging(&vl53l5cx_dev);
+    if (tof_sensor != OMV_TOF_NONE) {
+        #if OMV_TOF_VL53LX_ENABLE
+        if (tof_sensor == OMV_TOF_VL53LX_ID) {
+            vl53lx_stop_ranging(&vl53lx_dev);
         }
         #endif
         omv_i2c_deinit(&tof_bus);
-        tof_sensor = TOF_NONE;
+        tof_sensor = OMV_TOF_NONE;
     }
-    #if (OMV_TOF_VL53L5CX_ENABLE == 1)
-    vl53l5cx_reset(&vl53l5cx_dev.platform);
+    #if OMV_TOF_VL53LX_ENABLE
+    vl53lx_reset(&vl53lx_dev.platform);
     #endif
     return mp_const_none;
 }
@@ -222,8 +230,8 @@ static mp_obj_t py_tof_deinit() {
     tof_width = 0;
     tof_height = 0;
     tof_transposed = false;
-    #if (OMV_TOF_VL53L5CX_ENABLE == 1)
-    vl53l5cx_shutdown(&vl53l5cx_dev.platform);
+    #if OMV_TOF_VL53LX_ENABLE
+    vl53lx_shutdown(&vl53lx_dev.platform);
     #endif
     return mp_const_none;
 }
@@ -251,9 +259,9 @@ mp_obj_t py_tof_init(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_args)
         int dev_size = omv_i2c_scan(&tof_bus, dev_list, sizeof(dev_list));
         for (int i = 0; i < dev_size && type == -1; i++) {
             switch (dev_list[i]) {
-                #if (OMV_TOF_VL53L5CX_ENABLE == 1)
-                case (VL53L5CX_ADDR): {
-                    type = TOF_VL53L5CX;
+                #if OMV_TOF_VL53LX_ENABLE
+                case (OMV_TOF_VL53LX_ADDR): {
+                    type = OMV_TOF_VL53LX_ID;
                     break;
                 }
                 #endif
@@ -275,50 +283,50 @@ mp_obj_t py_tof_init(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_args)
     // Initialize the detected sensor.
     first_init = true;
     switch (type) {
-        #if (OMV_TOF_VL53L5CX_ENABLE == 1)
-        case TOF_VL53L5CX: {
+        #if OMV_TOF_VL53LX_ENABLE
+        case OMV_TOF_VL53LX_ID: {
             int error = 0;
             uint8_t isAlive = 0;
-            TOF_VL53L5CX_RETRY:
+            TOF_VL53LX_RETRY:
             // Initialize I2C bus.
             omv_i2c_init(&tof_bus, OMV_TOF_I2C_ID, OMV_TOF_I2C_SPEED);
 
             // Check sensor and initialize.
-            error |= vl53l5cx_is_alive(&vl53l5cx_dev, &isAlive);
-            error |= vl53l5cx_init(&vl53l5cx_dev);
+            error |= vl53lx_is_alive(&vl53lx_dev, &isAlive);
+            error |= vl53lx_init(&vl53lx_dev);
 
             // Set resolution (number of zones).
             // NOTE: This function must be called before updating the ranging frequency.
-            error |= vl53l5cx_set_resolution(&vl53l5cx_dev, VL53L5CX_RESOLUTION_8X8);
+            error |= vl53lx_set_resolution(&vl53lx_dev, VL53LX_RESOLUTION_8X8);
 
             // Set ranging frequency (FPS).
             // For 4x4 the allowed ranging frequency range is 1 -> 60.
             // For 8x8 the allowed ranging frequency range is 1 -> 15.
-            error |= vl53l5cx_set_ranging_frequency_hz(&vl53l5cx_dev, 15);
+            error |= vl53lx_set_ranging_frequency_hz(&vl53lx_dev, 15);
 
             // Set ranging mode to continuous:
             // The device continuously grabs frames with the set ranging frequency.
             // Maximum ranging depth and ambient immunity are better.
             // This mode is advised for fast ranging measurements or high performances.
-            error |= vl53l5cx_set_ranging_mode(&vl53l5cx_dev, VL53L5CX_RANGING_MODE_CONTINUOUS);
+            error |= vl53lx_set_ranging_mode(&vl53lx_dev, VL53LX_RANGING_MODE_CONTINUOUS);
 
-            error |= vl53l5cx_set_sharpener_percent(&vl53l5cx_dev, 50);
+            error |= vl53lx_set_sharpener_percent(&vl53lx_dev, 50);
 
             // Start ranging.
-            error |= vl53l5cx_start_ranging(&vl53l5cx_dev);
+            error |= vl53lx_start_ranging(&vl53lx_dev);
 
             if (error != 0 && first_init) {
                 first_init = false;
                 // Recover bus and scan one more time.
                 omv_i2c_pulse_scl(&tof_bus);
-                goto TOF_VL53L5CX_RETRY;
+                goto TOF_VL53LX_RETRY;
             } else if (error != 0) {
                 py_tof_reset();
-                mp_raise_msg(&mp_type_RuntimeError, MP_ERROR_TEXT("Failed to init the VL53L5CX"));
+                mp_raise_msg(&mp_type_RuntimeError, MP_ERROR_TEXT("Failed to init the VL53LX"));
             }
-            tof_sensor = TOF_VL53L5CX;
-            tof_width = VL53L5CX_WIDTH;
-            tof_height = VL53L5CX_HEIGHT;
+            tof_sensor = OMV_TOF_VL53LX_ID;
+            tof_width = OMV_TOF_VL53LX_WIDTH;
+            tof_height = OMV_TOF_VL53LX_HEIGHT;
             break;
         }
         #endif
@@ -332,7 +340,7 @@ mp_obj_t py_tof_init(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_args)
 static MP_DEFINE_CONST_FUN_OBJ_KW(py_tof_init_obj, 0, py_tof_init);
 
 static mp_obj_t py_tof_type() {
-    if (tof_sensor != TOF_NONE) {
+    if (tof_sensor != OMV_TOF_NONE) {
         return mp_obj_new_int(tof_sensor);
     }
     mp_raise_msg(&mp_type_RuntimeError, MP_ERROR_TEXT("TOF sensor is not initialized"));
@@ -340,7 +348,7 @@ static mp_obj_t py_tof_type() {
 static MP_DEFINE_CONST_FUN_OBJ_0(py_tof_type_obj, py_tof_type);
 
 static mp_obj_t py_tof_width() {
-    if (tof_sensor != TOF_NONE) {
+    if (tof_sensor != OMV_TOF_NONE) {
         return mp_obj_new_int(tof_width);
     }
     mp_raise_msg(&mp_type_RuntimeError, MP_ERROR_TEXT("TOF sensor is not initialized"));
@@ -348,7 +356,7 @@ static mp_obj_t py_tof_width() {
 static MP_DEFINE_CONST_FUN_OBJ_0(py_tof_width_obj, py_tof_width);
 
 static mp_obj_t py_tof_height() {
-    if (tof_sensor != TOF_NONE) {
+    if (tof_sensor != OMV_TOF_NONE) {
         return mp_obj_new_int(tof_height);
     }
     mp_raise_msg(&mp_type_RuntimeError, MP_ERROR_TEXT("TOF sensor is not initialized"));
@@ -357,8 +365,8 @@ static MP_DEFINE_CONST_FUN_OBJ_0(py_tof_height_obj, py_tof_height);
 
 static mp_obj_t py_tof_refresh() {
     switch (tof_sensor) {
-        #if (OMV_TOF_VL53L5CX_ENABLE == 1)
-        case TOF_VL53L5CX:
+        #if OMV_TOF_VL53LX_ENABLE
+        case OMV_TOF_VL53LX_ID:
             return mp_obj_new_int(15);
         #endif
         default:
@@ -383,13 +391,15 @@ mp_obj_t py_tof_read_depth(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw
     tof_transposed = args[ARG_transpose].u_bool;
 
     switch (tof_sensor) {
-        #if (OMV_TOF_VL53L5CX_ENABLE == 1)
-        case TOF_VL53L5CX: {
+        #if OMV_TOF_VL53LX_ENABLE
+        case OMV_TOF_VL53LX_ID: {
             fb_alloc_mark();
-            float *frame = fb_alloc(VL53L5CX_WIDTH * VL53L5CX_HEIGHT * sizeof(float), FB_ALLOC_PREFER_SPEED);
-            tof_vl53l5cx_get_depth(&vl53l5cx_dev, frame, args[ARG_timeout].u_int);
-            mp_obj_t result = tof_get_depth_obj(VL53L5CX_WIDTH, VL53L5CX_HEIGHT, frame, !args[ARG_hmirror].u_bool,
-                                                args[ARG_vflip].u_bool, args[ARG_transpose].u_bool, true);
+            float *frame = fb_alloc(OMV_TOF_VL53LX_WIDTH * OMV_TOF_VL53LX_HEIGHT * sizeof(float),
+                                    FB_ALLOC_PREFER_SPEED);
+            tof_vl53lx_get_depth(&vl53lx_dev, frame, args[ARG_timeout].u_int);
+            mp_obj_t result = tof_get_depth_obj(OMV_TOF_VL53LX_WIDTH, OMV_TOF_VL53LX_HEIGHT, frame,
+                                                !args[ARG_hmirror].u_bool, args[ARG_vflip].u_bool,
+                                                args[ARG_transpose].u_bool, true);
             fb_alloc_free_till_mark();
             return result;
         }
@@ -426,7 +436,7 @@ mp_obj_t py_tof_draw_depth(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw
     mp_arg_parse_all(n_args - 2, pos_args + 2, kw_args, MP_ARRAY_SIZE(allowed_args), allowed_args, args);
 
     // Sanity checks
-    if (tof_sensor == TOF_NONE) {
+    if (tof_sensor == OMV_TOF_NONE) {
         mp_raise_msg(&mp_type_RuntimeError, MP_ERROR_TEXT("TOF sensor is not initialized"));
     }
 
@@ -553,14 +563,16 @@ mp_obj_t py_tof_snapshot(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_a
     src_img.data = fb_alloc(src_img.w * src_img.h * sizeof(uint8_t), FB_ALLOC_NO_HINT);
 
     switch (tof_sensor) {
-        #if (OMV_TOF_VL53L5CX_ENABLE == 1)
-        case TOF_VL53L5CX: {
-            float *frame = fb_alloc(VL53L5CX_WIDTH * VL53L5CX_HEIGHT * sizeof(float), FB_ALLOC_PREFER_SPEED);
-            tof_vl53l5cx_get_depth(&vl53l5cx_dev, frame, args[ARG_timeout].u_int);
+        #if OMV_TOF_VL53LX_ENABLE
+        case OMV_TOF_VL53LX_ID: {
+            float *frame = fb_alloc(OMV_TOF_VL53LX_WIDTH * OMV_TOF_VL53LX_HEIGHT * sizeof(float),
+                                    FB_ALLOC_PREFER_SPEED);
+            tof_vl53lx_get_depth(&vl53lx_dev, frame, args[ARG_timeout].u_int);
             if (args[ARG_scale].u_obj == mp_const_none) {
-                fast_get_min_max(frame, VL53L5CX_WIDTH * VL53L5CX_HEIGHT, &min, &max);
+                fast_get_min_max(frame, OMV_TOF_VL53LX_WIDTH * OMV_TOF_VL53LX_HEIGHT, &min, &max);
             }
-            imlib_fill_image_from_float(&src_img, VL53L5CX_WIDTH, VL53L5CX_HEIGHT, frame, min, max,
+            imlib_fill_image_from_float(&src_img, OMV_TOF_VL53LX_WIDTH, OMV_TOF_VL53LX_HEIGHT,
+                                        frame, min, max,
                                         !args[ARG_hmirror].u_bool, args[ARG_vflip].u_bool,
                                         args[ARG_transpose].u_bool, true);
             break;
@@ -584,21 +596,20 @@ mp_obj_t py_tof_snapshot(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_a
 static MP_DEFINE_CONST_FUN_OBJ_KW(py_tof_snapshot_obj, 0, py_tof_snapshot);
 
 static const mp_rom_map_elem_t globals_dict_table[] = {
-    { MP_ROM_QSTR(MP_QSTR___name__),            MP_ROM_QSTR(MP_QSTR_tof)                },
-    { MP_ROM_QSTR(MP_QSTR_TOF_NONE),            MP_ROM_INT(TOF_NONE)                    },
-    #if (OMV_TOF_VL53L5CX_ENABLE == 1)
-    { MP_ROM_QSTR(MP_QSTR_TOF_VL53L5CX),        MP_ROM_INT(TOF_VL53L5CX)                },
+    { MP_ROM_QSTR(MP_QSTR___name__),            MP_ROM_QSTR(MP_QSTR_tof) },
+    #if OMV_TOF_VL53LX_ENABLE
+    { MP_ROM_QSTR(MP_QSTR_TOF_VL53LX),          MP_ROM_INT(OMV_TOF_VL53LX_ID) },
     #endif
-    { MP_ROM_QSTR(MP_QSTR_init),                MP_ROM_PTR(&py_tof_init_obj)            },
-    { MP_ROM_QSTR(MP_QSTR_reset),               MP_ROM_PTR(&py_tof_reset_obj)           },
-    { MP_ROM_QSTR(MP_QSTR_deinit),              MP_ROM_PTR(&py_tof_deinit_obj)          },
-    { MP_ROM_QSTR(MP_QSTR_type),                MP_ROM_PTR(&py_tof_type_obj)            },
-    { MP_ROM_QSTR(MP_QSTR_width),               MP_ROM_PTR(&py_tof_width_obj)           },
-    { MP_ROM_QSTR(MP_QSTR_height),              MP_ROM_PTR(&py_tof_height_obj)          },
-    { MP_ROM_QSTR(MP_QSTR_refresh),             MP_ROM_PTR(&py_tof_refresh_obj)         },
-    { MP_ROM_QSTR(MP_QSTR_read_depth),          MP_ROM_PTR(&py_tof_read_depth_obj)      },
-    { MP_ROM_QSTR(MP_QSTR_draw_depth),          MP_ROM_PTR(&py_tof_draw_depth_obj)      },
-    { MP_ROM_QSTR(MP_QSTR_snapshot),            MP_ROM_PTR(&py_tof_snapshot_obj)        }
+    { MP_ROM_QSTR(MP_QSTR_init),                MP_ROM_PTR(&py_tof_init_obj) },
+    { MP_ROM_QSTR(MP_QSTR_reset),               MP_ROM_PTR(&py_tof_reset_obj) },
+    { MP_ROM_QSTR(MP_QSTR_deinit),              MP_ROM_PTR(&py_tof_deinit_obj) },
+    { MP_ROM_QSTR(MP_QSTR_type),                MP_ROM_PTR(&py_tof_type_obj) },
+    { MP_ROM_QSTR(MP_QSTR_width),               MP_ROM_PTR(&py_tof_width_obj) },
+    { MP_ROM_QSTR(MP_QSTR_height),              MP_ROM_PTR(&py_tof_height_obj) },
+    { MP_ROM_QSTR(MP_QSTR_refresh),             MP_ROM_PTR(&py_tof_refresh_obj) },
+    { MP_ROM_QSTR(MP_QSTR_read_depth),          MP_ROM_PTR(&py_tof_read_depth_obj) },
+    { MP_ROM_QSTR(MP_QSTR_draw_depth),          MP_ROM_PTR(&py_tof_draw_depth_obj) },
+    { MP_ROM_QSTR(MP_QSTR_snapshot),            MP_ROM_PTR(&py_tof_snapshot_obj) }
 };
 
 static MP_DEFINE_CONST_DICT(globals_dict, globals_dict_table);
