@@ -183,7 +183,8 @@ TRACE_OVERRIDE_SOC_ID                              = 0x88
 TRACE_ACTIVE_SW_VERSION                            = 0x89
 TRACE_TOGGLE_EXTSYS0_WAKEUP                        = 0x8A
 TRACE_TOGGLE_EXTSYS1_WAKEUP                        = 0x8B
-
+TRACE_MRAM_WRITE_FAILURE                           = 0x8C
+TRACE_MRAM_CONTROLLER_ERROR                        = 0x8D
 TRACE_SERAM_RESET_HANDLER                          = 0x8E
 TRACE_FAST_BOOT                                    = 0x8B
 
@@ -218,6 +219,8 @@ TRACE_RESUME_FROM_STANDBY                          = 0xAA
 TRACE_BOOT_TIME_US                                 = 0xAB
 TRACE_TURN_OFF_SE_POWER                            = 0xAC
 TRACE_TURN_ON_HOST_POWER                           = 0xAD
+TRACE_HARD_FAULT                                   = 0xAE
+TRACE_HARD_FAULT_PC                                = 0xAF
 
 TRACE_STOP_ENABLE_END                              = 0xB0
 TRACE_OFF_HANDLER                                  = 0xB1
@@ -250,8 +253,7 @@ TRACE_POWER_INIT                                   = 0xD9
 TRACE_SES_INIT                                     = 0xDA
 TRACE_MRAM_CFG                                     = 0xDB
 TRACE_MRAM_PWR_EN                                  = 0xDC
-
-
+TRACE_HARD_FAULT_LR                                = 0xDD
 
 # Marker trace translation
 marker_lookup = {
@@ -411,6 +413,8 @@ marker_lookup = {
     TRACE_ACTIVE_SW_VERSION                        : 'Certificate Active Software Version',
     TRACE_TOGGLE_EXTSYS0_WAKEUP                    : 'Toggle EXTSYS0 Wakeup',
     TRACE_TOGGLE_EXTSYS1_WAKEUP                    : 'Toggle EXTSYS1 Wakeup',
+    TRACE_MRAM_WRITE_FAILURE                       : 'MRAM Write Miscompare Failure',
+    TRACE_MRAM_CONTROLLER_ERROR                    : 'MRAM Write Controller Error',
     TRACE_SERAM_RESET_HANDLER                      : 'SERAM reset handler',
     TRACE_FAST_BOOT                                : 'FAST BOOT',
     TRACE_RISC_V_RELEASED                          : 'RISC-V released',
@@ -427,6 +431,8 @@ marker_lookup = {
     TRACE_BOOT_TIME_US                             : 'Boot time in us',
     TRACE_TURN_OFF_SE_POWER                        : 'Turn off SE POWER register',
     TRACE_TURN_ON_HOST_POWER                       : 'Turn on HOST POWER register',
+    TRACE_HARD_FAULT                               : 'HARD FAULT - R0',
+    TRACE_HARD_FAULT_PC                            : 'HARD FAULT - PC',
     TRACE_BISR_REPAIR_FAILED                       : 'BISR repair failed',
     TRACE_STOP_ENABLE_END                          : 'Stop mode enable END',
     TRACE_OFF_HANDLER                              : 'OFF mode handler',
@@ -456,7 +462,8 @@ marker_lookup = {
     TRACE_POWER_INIT                               : 'Power Init',
     TRACE_SES_INIT                                 : 'Ses Init',
     TRACE_MRAM_CFG                                 : 'MRAM config',
-    TRACE_MRAM_PWR_EN                              : 'MRAM power enable'
+    TRACE_MRAM_PWR_EN                              : 'MRAM power enable',
+    TRACE_HARD_FAULT_LR                            : 'HARD FAULT - LR'
 }
 
 service_id_lut = {

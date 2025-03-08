@@ -25,12 +25,14 @@ def display_cpu_info(message):
         element = message[stride:stride+6]      # Slice one record
 
         (cpu_id,) = struct.unpack("<B",bytes(element[0:1]))
-        if cpu_id == TOC_IMAGE_CPU_LAST:
-            continue
         (booted,) = struct.unpack("<B",bytes(element[1:2]))
         (address,)= struct.unpack("<I",bytes(element[2:6]))
-#       (cpu_id, booted, address) = \
-#          struct.unpack("<BBI",bytes(message[0:6]))
+
+        if cpu_id >= TOC_IMAGE_CPU_LAST:  # valid values [0..8]
+            continue
+        if booted > 1:  # valid values: 0 or 1
+            continue
+
         boot_string = "YES" if booted else " "
 
         isp_print_color("blue",

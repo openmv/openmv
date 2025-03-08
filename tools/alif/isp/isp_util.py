@@ -123,6 +123,12 @@ def authenticate_image(isp, fileName):
     isp_download_done(isp)
     return token
 
+def close_isp_and_exit(isp, msg):
+    isp.closeSerial()
+    print('\n')
+    print(msg)
+    sys.exit(EXIT_WITH_ERROR)
+
 def burn_mram_isp(isp, handler, fileName, destAddress, verbose_display, auth_image):
     """
         burn_mram_isp - use ISP method to write MRAM
@@ -171,8 +177,7 @@ def burn_mram_isp(isp, handler, fileName, destAddress, verbose_display, auth_ima
             number_of_blocks = number_of_blocks - 1
 
             if handler.Handler_exit():
-                print("[INFO] CTRL-C")
-                break
+                close_isp_and_exit(isp, "[INFO] CTRL-C detected. User aborted this process")
 
         if number_of_blocks == 0:
             if left_over_blocks != 0:

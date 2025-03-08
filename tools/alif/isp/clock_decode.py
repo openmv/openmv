@@ -170,10 +170,10 @@ def display_clock_info(message):
     isp_print_color("blue" ,"CLK freq A32 %s\n" % (clk_frequency_to_string(frequency)))
     # M55-HP frequency
     frequency = (status & 0x00FF0000) >> 16
-    isp_print_color("blue" ,"CLK freq ES0 %s\n" % (clk_frequency_to_string(frequency)))
+    isp_print_color("blue" ,"CLK freq M55-HP %s\n" % (clk_frequency_to_string(frequency)))
     # M55-HE frequency
     frequency = (status & 0xFF000000) >> 24
-    isp_print_color("blue" ,"CLK freq ES1 %s\n" % (clk_frequency_to_string(frequency)))
+    isp_print_color("blue" ,"CLK freq M55-HE %s\n" % (clk_frequency_to_string(frequency)))
 
     # word 1 is the CM0+ frequency
     (cm0_freq,) = struct.unpack("<f",bytes(message[4:8]))

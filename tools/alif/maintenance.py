@@ -22,6 +22,7 @@ from isp_protocol import *        # ISP protocol constants
 from isp_core import *
 from isp_util import *
 from isp_print import *
+import device_probe
 #from isp_print import isp_print_color, isp_print_cursor_enable
 #from isp_print import isp_print_cursor_disable,isp_print_terminal_reset
 from toc_decode import *                 # ISP TOC support
@@ -30,8 +31,6 @@ from utils.config import *
 from utils.user_validations import validateArgList
 from recovery import recovery_action, recovery_action_no_reset
 
-MENU_DB  = 'utils/maintDB.db'
-MENU_CFG = 'utils/menuconfDB.db'
 
 # Define Version constant for each separate tool
 # 0.01.000    Concept+realisation
@@ -54,11 +53,12 @@ MENU_CFG = 'utils/menuconfDB.db'
 # 0.14.000    add get clock data
 # 0.15.000    add Fast Erase including NTOC
 # 0.16.000    add Recovery MRAM_READ
-TOOL_VERSION = "0.16.000"
+# 0.17.000    add different menues for SEROM/SERAM stages
+TOOL_VERSION = "0.17.000"
 
-EXIT_WITH_ERROR = 1
-
-FAST_ERASE_SIZE = 16
+EXIT_WITH_ERROR   = 1
+TARGET_RESPONDED  = 1
+FAST_ERASE_SIZE   = 16
 
 def reset_action(isp):
     """
@@ -746,6 +746,25 @@ def main():
     #if baud_rate != COM_BAUD_RATE_DEFAULT:
     #    isp.setBaudRate(baud_rate)
     print("[INFO] baud rate", isp.getBaudRate())
+
+    test_target = isp_test_target(baud_rate, isp)
+    print('[INFO] Connecting to target...', end='')
+    if test_target == TARGET_RESPONDED:
+        # be sure device is not in SEROM Recovery Mode
+        device = device_probe.device_get_attributes(isp)    
+        if device.stage == device_probe.STAGE_SEROM:
+            print('Device connected in Recovery')
+            MENU_DB  = 'utils/maint-recoveryDB.db'     
+        else:
+            # target responded and in SERAM stage
+            print('Device connected')
+            MENU_DB  = 'utils/maintDB.db'  
+    else:
+        # target did not respond... set full menu
+        print('Device did not respond')
+        MENU_DB  = 'utils/maintDB.db'
+
+    MENU_CFG = 'utils/menuconfDB.db'
 
     # Process Maintenance Grouped Menus
     menuDB = read_json_file(MENU_DB)

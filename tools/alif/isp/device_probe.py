@@ -3,10 +3,12 @@
     device_probe.py
     discovery class for finding out what is on the other end of the SE-UART
 """
+import sys
 import struct
 from isp_core import isp_start
 from isp_core import isp_stop
 from isp_core import isp_build_packet
+from isp_util import close_isp_and_exit
 from isp_protocol import ISP_COMMAND_DATA_RESPONSE
 from isp_protocol import ISP_COMMAND_ENQUIRY
 from isp_protocol import ISP_COMMAND_GET
@@ -21,12 +23,14 @@ PART_UNKNOWN = 0
 REVISIONS = {
              '0 0 0 0'   : 'UNKNOWN',
              '0 161 0 0' : 'A1',
+             '0 165 0 0' : 'A5', # E1C
              '0 176 0 0' : 'B0',
              '0 178 0 0' : 'B2',
              '0 179 0 0' : 'B3',
              '0 180 0 0' : 'B4',
              '1 160 0 0' : 'A0',
-             '2 160 0 0' : 'EG'  # super hack...
+             '1 165 0 0' : 'A5',
+             '160 2 0 0' : 'EG'  # super hack...
             }
 
 # bootloader stages
@@ -34,6 +38,8 @@ STAGE_UNKOWN    = 0
 STAGE_SEROM     = 1
 STAGE_SERAM     = 2
 STAGE_TEXT      = ['UNKNOWN','SEROM','SERAM']
+
+EXPECTED_PACKET_LENGTH = 136
 
 class device_get_attributes:
     """ device_get_attributes
@@ -63,11 +69,14 @@ class device_get_attributes:
         isp_start(isp)
         rev = 'ERROR'
         message = isp_build_packet(isp, ISP_COMMAND_GET, [ISP_GET_REVISION])
-        cmd = message[ISP_PACKET_COMMAND_FIELD]
+        
         if len(message) == 0:
-            print("[ERROR] Target did not respond")
-            return rev
+            close_isp_and_exit(isp, "[ERROR] Target did not respond")
 
+        if len(message) != EXPECTED_PACKET_LENGTH or message[0] != EXPECTED_PACKET_LENGTH:
+            close_isp_and_exit(isp, "[ERROR] Malformed packet received from target")
+
+        cmd = message[ISP_PACKET_COMMAND_FIELD]
         if cmd == ISP_COMMAND_DATA_RESPONSE:
             # silicon revision
             lst = message[2:6]

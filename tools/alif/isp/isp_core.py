@@ -30,6 +30,8 @@ from otp import display_otp_info
 #from seram_trace import trace_buffer_decode
 from trace_decode import trace_buffer_decode
 
+EXIT_WITH_ERROR = 1
+
 # ISP Command set
 # Command : Value
 isp_command_lookup = {
@@ -483,7 +485,7 @@ def isp_start(isp):
         sys.stdout.flush()
         # isp_start is called before any dynamic baud rate change, so it is ok to sys.exit()
         isp.closeSerial()
-        sys.exit(-1)
+        sys.exit(EXIT_WITH_ERROR)
 
     if isp.getVerbose() is True:
         print("RX<--                           command= COMMAND_ACK")
@@ -1059,7 +1061,15 @@ def isp_mram_write(isp, offset, data):
         - send data to write to the MRAM - SEROM style
         (used by icv-recovery.py and recovery.py)
     """
-    isp_build_packet(isp, ISP_COMMAND_MRAM_WRITE, [offset, bytearray(data)])
+    response = isp_build_packet(isp, ISP_COMMAND_MRAM_WRITE, [offset, bytearray(data)])
+    if len(response) > ISP_PACKET_HEADER_LENGTH:
+        command = response[ISP_PACKET_COMMAND_FIELD]
+        if command == ISP_COMMAND_NAK:  # NACK, DO NOT CONTINUE
+            print('ERROR: There was an error in the recovery process')
+            sys.exit(EXIT_WITH_ERROR)
+    else:
+        print('ERROR: There was an error in the recovery process ( invalid ISP PACKET HEADER LENGTH)!')
+        sys.exit(EXIT_WITH_ERROR)
 
 def isp_read_mram(isp,word_offset=0x0):
     """
