@@ -66,6 +66,7 @@ MLX90621_DIR=drivers/mlx90621
 MLX90640_DIR=drivers/mlx90640
 MLX90641_DIR=drivers/mlx90641
 VL53L5CX_DIR=drivers/vl53l5cx
+VL53L8CX_DIR=drivers/vl53l8cx
 PIXART_DIR=drivers/pixart
 DISPLAY_DIR=drivers/display
 DAVE2D_DIR=drivers/dave2d
