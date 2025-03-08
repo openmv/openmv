@@ -83,6 +83,7 @@ export MLX90621_DIR
 export MLX90640_DIR
 export MLX90641_DIR
 export VL53L5CX_DIR
+export VL53L8CX_DIR
 export PIXART_DIR
 export DISPLAY_DIR
 export LIBPDM_DIR
