@@ -1,0 +1,83 @@
+================================================================
+ Overview : readme for uart test application (uart4_baremetal.c)
+================================================================
+ RTE configurations(".rteconfig" file) for UART:
+	- CMSIS
+		- Core		
+	- Device
+		- SOC Peripherals
+			- Ensemble Peripherals
+				- PINCONF
+			- USART(API)
+				- UART4
+		- Startup		
+=======================
+ Usage of UART TestApp
+=======================
+This testApp "uart4_testApp.c" demonstrates how to use cmsis standard usart driver and transfer data between board and personal computer.
+This example demonstrates:
+	UART interactive console application:
+	 where UART waits for a char on serial terminal;
+	    if 'Enter' key is received; UART Sends back "Hello World!".
+	    else, it sends back received character.		
+	
+=====================
+ Toolchain supported
+=====================
+- ARM DS IDE 2020.1
+
+=======================
+ Hardware requirements
+=======================
+- Alif Semiconductor CSP Board + Carrier Card
+- USB to UART FTDI Cable
+- Personal Computer
+
+=======================
+ Board Pin Connections
+=======================
+- Connect one end(USB end) of FTDI Cable to the PC and other end to the Carrier Card pins as shown below.
+Note:- It uses UART instance-4 for data transfer.
+
+------------------------------------------------------------
+    PC                       Carrier Card
+	
+                             Board-Header  Port  Pin-Name
+TX  of FTDI Cable  ----> RX  J409-Pin6     PORT_5,  PIN_0  UART4_RX_B
+RX  of FTDI Cable  ----> TX  J409-Pin7     PORT_5,  PIN_1  UART4_TX_B
+GND of FTDI Cable  ----> GND J416-Pin1      -     -
+-------------------------------------------------------------
+
+======================
+ Prepare for the Demo
+======================
+1. Connect a USB to UART FTDI cable between the PC host and Carrier Card on "J409" header.
+2. Open a serial terminal on PC for the connected FTDI serial device with these settings:
+    - 115200 baud rate
+    - 8 data bits
+    - No parity
+    - One stop bit
+    - No flow control
+3. Connect Power cable to the Board and turn on the power.
+4. Compile and Upload binary .axf file to the target board.
+5. Either press the reset button on your board or launch the debugger in your IDE to begin running the demo.
+
+==================
+ Running the demo
+==================
+When the example runs successfully, you can see the below information on IDE App Console and Serial Terminal.
+
+-----------------
+ IDE App Console
+-----------------
+ >>> UART testApp starting up!!!...<<<
+ UART version api:204 driver:100...
+ Press Enter or any character on serial terminal to receive a message:
+ 
+-----------------
+ Serial Terminal
+-----------------
+ Press Enter or any character to receive a message
+
+ Hello World! (if user pressed "ENTER" key)
+ ABCD1234abcd (if user sends chars ABCD1234abcd)
