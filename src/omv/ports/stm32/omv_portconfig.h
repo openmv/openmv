@@ -108,6 +108,17 @@ typedef I2C_HandleTypeDef *omv_i2c_dev_t;
 #define OMV_SPI_MAX_16BIT_XFER (65536U - 8U)
 #define OMV_SPI_MAX_TIMEOUT    (HAL_MAX_DELAY)
 
+#if defined(STM32N6)
+#define OMV_SPI_PORT_BITS               \
+    struct {                            \
+        IRQn_Type irqn;                 \
+        SPI_HandleTypeDef *descr;       \
+        DMA_QListTypeDef dma_queue_tx;  \
+        DMA_QListTypeDef dma_queue_rx;  \
+        DMA_HandleTypeDef dma_descr_tx; \
+        DMA_HandleTypeDef dma_descr_rx; \
+    };
+#else
 #define OMV_SPI_PORT_BITS               \
     struct {                            \
         IRQn_Type irqn;                 \
@@ -115,9 +126,9 @@ typedef I2C_HandleTypeDef *omv_i2c_dev_t;
         DMA_HandleTypeDef dma_descr_tx; \
         DMA_HandleTypeDef dma_descr_rx; \
     };
+#endif
 
 // omv_csi_t port-specific fields.
-#if defined(STM32F4) || defined(STM32F7) || defined(STM32H7)
 #if defined(STM32H7)
 #define OMV_CSI_PORT_BITS_MDMA \
     MDMA_HandleTypeDef mdma0;  \
@@ -125,6 +136,14 @@ typedef I2C_HandleTypeDef *omv_i2c_dev_t;
 #else
 #define OMV_CSI_PORT_BITS_MDMA
 #endif
+
+#if defined(STM32N6)
+#define OMV_CSI_PORT_BITS          \
+    struct {                       \
+        TIM_HandleTypeDef tim;     \
+        DCMIPP_HandleTypeDef dcmi; \
+    };
+#else
 #define OMV_CSI_PORT_BITS        \
     struct {                     \
         TIM_HandleTypeDef tim;   \
