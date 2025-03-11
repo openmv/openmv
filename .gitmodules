@@ -11,3 +11,6 @@
 [submodule "src/lib/tinyusb"]
 	path = src/lib/tinyusb
 	url = https://github.com/hathach/tinyusb
+[submodule "tools/alif"]
+	path = tools/alif
+	url = https://github.com/micropython/alif-security-toolkit.git
