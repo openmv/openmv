@@ -1,0 +1,35 @@
+{
+  "DEVICE": {
+    "disabled" : false,
+    "binary": "app-device-config-ae3.json",
+    "version" : "0.5.00",
+    "signed": false
+  },
+  "HP_BOOT": {
+    "disabled" : false,
+    "binary": "bootloader.bin",
+    "mramAddress": "0x80000000",
+    "version": "1.0.0",
+    "cpu_id": "M55_HP",
+    "flags": ["boot"],
+    "signed": false
+  },
+  "HP_APP": {
+    "disabled" : false,
+    "binary": "firmware_M55_HP.bin",
+    "mramAddress": "0x80020000",
+    "version": "1.0.0",
+    "cpu_id": "M55_HP",
+    "flags": ["deferred"],
+    "signed": false
+  },
+  "HE_APP": {
+    "disabled" : false,
+    "binary": "firmware_M55_HE.bin",
+    "mramAddress": "0x80320000",
+    "version": "1.0.0",
+    "cpu_id": "M55_HE",
+    "flags": ["deferred"],
+    "signed": false
+  }
+}
