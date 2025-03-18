@@ -17,9 +17,9 @@ jobs:
       - name: '📜 Check commit messages format'
         uses: gsactions/commit-message-checker@v2
         with:
-          pattern: '^[^!]+: [A-Za-z]+.+ .+\.$'
+          pattern: '^[^!]+: [A-Za-z]+.+ .+$'
           flags: 'gm'
-          error: 'Commit subject line must match the following pattern: <scope>: <description>.'
+          error: 'Commit subject line must match the following pattern: <scope>: <description>'
           excludeTitle: 'false'
           excludeDescription: 'true'
           checkAllCommitMessages: 'true'
