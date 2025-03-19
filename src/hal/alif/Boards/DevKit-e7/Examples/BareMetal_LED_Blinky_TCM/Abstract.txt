@@ -1,0 +1,36 @@
+===================================================================
+ Overview : Readme for BareMetal LED BLINK test application 
+===================================================================
+
+=======================
+About LED Blink TestApp
+=======================
+
+ - The LED blink test application is developed as baremetal example.
+ - led_blink_app function configures pin-14 & pin-15 of GPIO port-1 as a output to operate leds, using CMSIS GPIO module.
+ - The Leds ds1 and ds2 will turn off and on alternately.
+  (means for first cycle ds1=ON and ds2=OFF. next cycle ds1=OFF and ds2=On or vice-versa. this cycle will repeate infinate times).
+ 
+
+=====================
+ Toolchain supported
+=====================
+- ARM DS IDE 2020.1
+- Alifsemiconductor Ensemble DFP
+
+=======================
+ Hardware requirements:
+=======================
+- Alif Semiconductor CSP Board + Carrier Card set up with Host.
+
+=======================
+ Board Pin Connections
+=======================
+
+CSP board gpio connection to Carrier card as follows:
+---------------------------------------
+    CSP board                     Carrier Card
+    GPIO3_PIN7           ----> ds1 LED
+    GPIO7_PIN2           ----> ds2 LED
+---------------------------------------
+If both CSP and Carrier card connected, Internally above mentioned pins of the CSP borad is routed to leds of carrier card.

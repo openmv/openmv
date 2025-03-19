@@ -29,11 +29,18 @@
 import uml
 import image
 from ml.preprocessing import Normalization
+import os
 
 
 class Model(uml.Model):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, kwargs.get("load_to_fb", False))
+        try:
+            path = args[0].split(".")[0] + ".txt"
+            os.stat(path)
+            self.labels = [line.rstrip('\n') for line in open(path)]
+        except Exception:
+            self.labels = None
 
     def predict(self, args, **kwargs):
         args = [Normalization()(x) if isinstance(x, image.Image) else x for x in args]
