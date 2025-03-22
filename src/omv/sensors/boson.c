@@ -44,21 +44,38 @@
 #include "Client_API.h"
 #include "UART_Connector.h"
 
-#define FLIR_BOSON_BOOT_TIME_MS (2500)
+#define FLIR_BOSON_BOOT_TRY_COUNT (10)
+#define FLIR_BOSON_BOOT_TIME_MS (1000)
 
 static int boson_framesize = 0;
 
 static int reset(omv_csi_t *csi) {
     csi->color_palette = NULL;
 
-    // Give the camera time to boot.
-    mp_hal_delay_ms(FLIR_BOSON_BOOT_TIME_MS);
-
-    // Turn the com port on.
-    Initialize();
-
+    int i = 0;
     FLR_BOSON_PARTNUMBER_T part;
-    if (bosonGetCameraPN(&part) != FLR_OK) {
+
+    // Older FLIR Boson (< IDD 4.x) cameras take forever to boot up.
+    for (; i < FLIR_BOSON_BOOT_TRY_COUNT; i++) {
+        if (i > 1) {
+            // Print something to prevent the user from thinking the camera is stuck.
+            mp_printf(MP_PYTHON_PRINTER,
+                      "CSI: FLIR Boson not ready, retrying (%d/%d)...\n",
+                      i, FLIR_BOSON_BOOT_TRY_COUNT - 1);
+        }
+
+        // Give the camera time to boot.
+        mp_hal_delay_ms(FLIR_BOSON_BOOT_TIME_MS);
+
+        // Turn the com port on.
+        Initialize();
+
+        if (bosonGetCameraPN(&part) == FLR_OK) {
+            break;
+        }
+    }
+
+    if (i == FLIR_BOSON_BOOT_TRY_COUNT) {
         return -1;
     }
 
