@@ -2517,7 +2517,7 @@ EHC_StatusTypeDef psee_ehc_activate_override(EHC_HandleTypeDef *ehc, EHC_AlgoTyp
         );
 
         /* EHC Accumulation time */
-        psee_sensor_write(EHC_INTEGRATION_PERIOD, 0); /*!< EHC Accumulation time in us */
+        psee_sensor_write(EHC_INTEGRATION_PERIOD, ehc->accumulation_period); /*!< EHC Accumulation time in us */
 
         /* Check if SRAM Initialization is done */
         uint32_t flag_init_done = 0;
