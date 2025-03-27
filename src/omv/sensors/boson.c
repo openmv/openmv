@@ -87,7 +87,23 @@ static int reset(omv_csi_t *csi) {
         return -1;
     }
 
+    // Always restore factory defaults to ensure the camera is in a known state.
+    FLR_RESULT ret = bosonRestoreFactoryDefaultsFromFlash();
+
+    // FLIR BOSON may glitch after restoring factory defaults.
+    if (ret != FLR_OK && ret != FLR_COMM_ERROR_READING_COMM) {
+        return -1;
+    }
+
+    if (dvoSetOutputFormat(FLR_DVO_DEFAULT_FORMAT) != FLR_OK) {
+        return -1;
+    }
+
     if (dvoSetType(FLR_DVO_TYPE_MONO8) != FLR_OK) {
+        return -1;
+    }
+
+    if (dvoApplyCustomSettings() != FLR_OK) {
         return -1;
     }
 
