@@ -45,6 +45,12 @@ TARGET ?= OPENMV4
 OPENMV = openmv
 FIRMWARE = firmware
 
+# Jlink config
+JLINK_INTERFACE ?= swd
+JLINK_SPEED ?= 100000
+JLINK_DEVICE ?= unspecified
+JLINK_GDB_SERVER ?= /opt/JLink/JLinkGDBServer
+
 # Directories
 TOP_DIR=$(shell pwd)
 BUILD=$(TOP_DIR)/build
@@ -207,3 +213,8 @@ include $(OMV_COMMON_DIR)/export.mk
 
 clean:
 	$(RM) -fr $(BUILD)
+
+jlink:
+	${JLINK_GDB_SERVER} -speed ${JLINK_SPEED} -nogui 1 \
+        -if ${JLINK_INTERFACE} -halt -cpu cortex-m \
+		-device ${JLINK_DEVICE} -novd ${JLINK_SCRIPT}
