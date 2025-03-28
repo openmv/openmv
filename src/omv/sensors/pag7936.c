@@ -706,6 +706,7 @@ int pag7936_init(omv_csi_t *csi) {
     csi->cfa_format = SUBFORMAT_ID_BGGR;
     #if OMV_PAG7936_MIPI_CSI2
     csi->mipi_if = 1;
+    csi->mipi_brate = 1200;
     #endif
 
     // Initialize csi ops.
