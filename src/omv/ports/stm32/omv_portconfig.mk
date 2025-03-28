@@ -222,6 +222,7 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/sensors/,   \
 	pag7920.o                   \
 	pag7936.o                   \
 	paj6100.o                   \
+	ps5520.o                    \
 	frogeye2020.o               \
    )
 
@@ -616,6 +617,7 @@ UVC_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/sensors/, \
 	pag7920.o                               \
 	pag7936.o                               \
 	paj6100.o                               \
+	ps5520.o                                \
 	frogeye2020.o                           \
 	)
 
