@@ -57,6 +57,7 @@
 #include "pag7920.h"
 #include "pag7936.h"
 #include "paj6100.h"
+#include "ps5520.h"
 #include "frogeye2020.h"
 #include "gc2145.h"
 #include "genx320.h"
@@ -301,6 +302,12 @@ static int omv_csi_detect() {
                 csi.chip_id = ((csi.chip_id << 8) | (csi.chip_id >> 8)) & 0xFFFF;
                 return slv_addr;
             #endif // (OMV_PAG7936_ENABLE == 1)
+
+            #if (OMV_PS5520_ENABLE == 1)
+            case PS5520_SLV_ADDR:
+                omv_i2c_readw2(&csi.i2c_bus, slv_addr, PIXART_CHIP_ID, (uint16_t *) &csi.chip_id);
+                return slv_addr;
+            #endif // (OMV_PS5520_ENABLE == 1)
         }
     }
 
@@ -545,6 +552,15 @@ int omv_csi_probe_init(uint32_t bus_id, uint32_t bus_speed) {
             init_ret = paj6100_init(&csi);
             break;
         #endif // (OMV_PAJ6100_ENABLE == 1)
+
+        #if (OMV_PS5520_ENABLE == 1)
+        case PS5520_ID:
+            if (omv_csi_set_clk_frequency(OMV_PS5520_CLK_FREQ) != 0) {
+                return OMV_CSI_ERROR_TIM_INIT_FAILED;
+            }
+            init_ret = ps5520_init(&csi);
+            break;
+        #endif // (OMV_PS5520_ENABLE == 1)
 
         #if (OMV_FROGEYE2020_ENABLE == 1)
         case FROGEYE2020_ID:
