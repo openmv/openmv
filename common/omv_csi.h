@@ -51,6 +51,7 @@
 #define PAG7920_SLV_ADDR        (0x80)
 #define PAG7936_SLV_ADDR        (0x80)
 #define SOFTCSI_SLV_ADDR        (0x7f)
+#define PS5520_SLV_ADDR         (0x90)
 
 // Chip ID Registers
 #define OV5640_CHIP_ID          (0x300A)
@@ -92,6 +93,7 @@
 #define GENX320_ID_MP           (0xB0602003)
 #define PAG7920_ID              (0x7920)
 #define PAG7936_ID              (0x7936)
+#define PS5520_ID               (0x5520)
 #define PAJ6100_ID              (0x6100)
 #define FROGEYE2020_ID          (0x2020)
 #define SOFTCSI_ID              (0x50F7)
