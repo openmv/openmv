@@ -39,9 +39,9 @@ ECHO    = $(Q)@echo
 MAKE    = $(Q)make
 CAT     = $(Q)cat
 TFLITE2C = tflite2c.py
+MKROMFS = mkromfs.py
 
 # Targets
-TARGET ?= OPENMV4
 OPENMV = openmv
 FIRMWARE = firmware
 
@@ -50,6 +50,13 @@ JLINK_INTERFACE ?= swd
 JLINK_SPEED ?= 100000
 JLINK_DEVICE ?= unspecified
 JLINK_GDB_SERVER ?= /opt/JLink/JLinkGDBServer
+
+ifeq ($(TARGET),)
+  ifneq ($(MAKECMDGOALS),clean)
+    $(error Invalid or no TARGET specified)
+  endif
+  TARGET=OPENMV4
+endif
 
 # Directories
 TOP_DIR=$(shell pwd)

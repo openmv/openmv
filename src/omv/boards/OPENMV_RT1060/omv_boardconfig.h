@@ -92,7 +92,7 @@
 #define OMV_GC_BLOCK0_MEMORY            OCRM2   // Extra GC block 0.
 #define OMV_GC_BLOCK0_SIZE              (26K)
 #define OMV_GC_BLOCK1_MEMORY            DTCM    // Main GC block
-#define OMV_GC_BLOCK1_SIZE              (290K)
+#define OMV_GC_BLOCK1_SIZE              (288K)
 #define OMV_GC_BLOCK2_MEMORY            DRAM    // Extra GC block 1.
 #define OMV_GC_BLOCK2_SIZE              (8M)
 #define OMV_RAMFUNC_MEMORY              ITCM2   // RAM code memory.
@@ -122,6 +122,10 @@
 #define OMV_FLASH_TXT_LENGTH            0x00380000
 #define OMV_FLASH_FFS_ORIGIN            0x60400000
 #define OMV_FLASH_FFS_LENGTH            0x00400000
+
+// ROMFS configuration.
+#define OMV_ROMFS_PART0_ORIGIN          0x60800000
+#define OMV_ROMFS_PART0_LENGTH          8M
 
 // CSI I2C bus
 #define OMV_CSI_I2C_ID                  (1)
