@@ -49,9 +49,10 @@
 #include "i2c.h"
 #include "uart.h"
 #include "dac.h"
-#include "can.h"
+#include "pyb_can.h"
 #include "extint.h"
 #include "servo.h"
+#include "storage.h"
 #include "sdcard.h"
 #include "modmachine.h"
 #include "extmod/modmachine.h"
@@ -157,6 +158,10 @@ int main(void) {
     sdram_test(false);
     #endif
 
+    #if MICROPY_HW_ENABLE_STORAGE
+    storage_init();
+    #endif
+
     // Basic sub-system init
     led_init();
     pendsv_init();
@@ -199,7 +204,7 @@ soft_reset:
     extint_init0();
     timer_init0();
     #if MICROPY_HW_ENABLE_CAN
-    can_init0();
+    pyb_can_init0();
     #endif
     i2c_init0();
     spi_init0();
@@ -355,11 +360,11 @@ soft_reset_exit:
     cyw43_deinit(&cyw43_state);
     #endif
     timer_deinit();
-    i2c_deinit_all();
+    pyb_i2c_deinit_all();
     spi_deinit_all();
     uart_deinit_all();
     #if MICROPY_HW_ENABLE_CAN
-    can_deinit_all();
+    pyb_can_deinit_all();
     #endif
     #if MICROPY_PY_THREAD
     pyb_thread_deinit();
