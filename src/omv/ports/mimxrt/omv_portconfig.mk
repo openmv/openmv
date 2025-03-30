@@ -492,9 +492,6 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/,\
 	lib/cyw43-driver/src/*.o    \
 	extmod/network_cyw43.o      \
 	)
-FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/drivers/,\
-	cyw43/cywbt.o               \
-	)
 endif
 
 ifeq ($(MICROPY_BLUETOOTH_NIMBLE),1)

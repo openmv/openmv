@@ -28,7 +28,19 @@ jobs:
     runs-on: ubuntu-24.04
     strategy:
       matrix:
-        target: [OPENMV2, OPENMV3, OPENMV4, OPENMV4P, OPENMVPT, OPENMV_RT1060, ARDUINO_PORTENTA_H7, ARDUINO_GIGA, ARDUINO_NICLA_VISION, ARDUINO_NANO_RP2040_CONNECT, ARDUINO_NANO_33_BLE_SENSE]
+        target:
+          - OPENMV2
+          - OPENMV3
+          - OPENMV4
+          - OPENMV4P
+          - OPENMVPT
+          - OPENMV_RT1060
+          - OPENMV_AE3
+          - ARDUINO_PORTENTA_H7
+          - ARDUINO_GIGA
+          - ARDUINO_NICLA_VISION
+          - ARDUINO_NANO_RP2040_CONNECT
+          - ARDUINO_NANO_33_BLE_SENSE
       fail-fast: false
     steps:
     - name: '⏳ Checkout repository'
@@ -53,11 +65,13 @@ jobs:
       uses: actions/setup-python@v5
       with:
         cache: 'pip'
-        python-version: "3.12.4"
+        python-version: "3.12.0"
 
-    - name: '🛠 Install Vela'
+    - name: '🛠 Install dependencies'
       run: |
-        pip install ethos-u-vela==3.12.0
+        pip install -r .github/workflows/requirements.txt
+        flake8 --version
+        pytest --version
         vela --version
 
     - name: '🛠 Install GNU Make '
