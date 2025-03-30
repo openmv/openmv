@@ -16,10 +16,15 @@ async def coro():  # noqa
 class EndpointIO(io.IOBase):
     def __init__(self, ept):
         self.ept = ept
+        self.buffer = bytearray()
 
     def write(self, buf):
-        if buf != b"\r\n":
-            self.ept.send(buf, timeout=0)
+        self.buffer.extend(buf)
+        if b'\n' in self.buffer:
+            lines = self.buffer.split(b'\n')
+            self.buffer = lines.pop()
+            for line in lines:
+                self.ept.send(line, timeout=0)
 
     def ioctl(self, op, arg):
         if op == _MP_STREAM_POLL and self.ept.is_ready():
@@ -28,7 +33,7 @@ class EndpointIO(io.IOBase):
 
 
 def vm_out_callback(src_addr, data):
-    print("VM ❯", data.decode())
+    print("❯", data.decode('utf-8'), end="")
 
 
 def vm_ns_callback(src_addr, name):
