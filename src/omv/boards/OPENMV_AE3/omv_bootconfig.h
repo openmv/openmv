@@ -109,7 +109,7 @@ static const partition_t OMV_BOOT_DFU_PARTITIONS[] = {
 { .type = PTYPE_REC_FLASH, .region=-1, .rdonly = 0, .start = 0x00000000, .limit = 0x00001000, .attr = 0 },
 };
 #define OMV_BOOT_DFU_PARTITIONS_COUNT   8   // Must be a literal
-#define OMV_BOOT_DFU_PARTITIONS_STR     "BOOT", "HP", "HE", "ROMFS0", "TOC", "RWFS", "ROMFS1", "RECOVERY"
+#define OMV_BOOT_DFU_PARTITIONS_STR     "BOOT", "HP", "HE", "ROMFS1", "TOC", "RWFS", "ROMFS0", "RECOVERY"
 
 // Protects MRAM before jump to main firmware
 static const partition_t OMV_BOOT_XIP_PARTITIONS[] = {

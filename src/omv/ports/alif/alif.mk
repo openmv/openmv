@@ -38,7 +38,7 @@ CORE_M55_HP := $(if $(filter M55_HP,$(MCU_CORE)),1,0)
 CMSIS_MCU_H := '<system_utils.h>'
 
 ROMFS_CONFIG := $(OMV_BOARD_CONFIG_DIR)/romfs.json
-ROMFS_PART := $(if $(filter M55_HE,$(MCU_CORE)),0,1)
+ROMFS_PART := $(if $(filter M55_HP,$(MCU_CORE)),0,1)
 ROMFS_IMAGE := $(FW_DIR)/romfs$(ROMFS_PART).stamp
 
 # Compiler Flags
