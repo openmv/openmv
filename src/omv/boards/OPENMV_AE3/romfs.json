@@ -1,27 +1,5 @@
 {
   "0": {
-    "size": "0x100000",
-    "entries": [
-    {
-      "type": "tflite",
-      "path": "{TOP}/lib/tflm/models/micro_speech.tflite",
-      "alignment": 16,
-      "optimize": "Performance"
-    },
-    {
-        "type": "tflite",
-        "path": "{TOP}/lib/tflm/models/audio_preprocessor.tflite",
-        "optimize": "Performance"
-    },
-    {
-      "type": "tflite",
-      "path": "{TOP}/lib/tflm/models/force_int_quant.tflite",
-      "alignment": 16,
-      "optimize": "Performance"
-    }
-    ]
-  },
-  "1": {
     "size": "0x1000000",
     "entries": [
     {
@@ -74,6 +52,28 @@
       "type": "haar",
       "path": "{TOP}/lib/haar/haarcascade_frontalface.xml",
       "stages": 0
+    }
+    ]
+  },
+  "1": {
+    "size": "0x100000",
+    "entries": [
+    {
+      "type": "tflite",
+      "path": "{TOP}/lib/tflm/models/micro_speech.tflite",
+      "alignment": 16,
+      "optimize": "Performance"
+    },
+    {
+        "type": "tflite",
+        "path": "{TOP}/lib/tflm/models/audio_preprocessor.tflite",
+        "optimize": "Performance"
+    },
+    {
+      "type": "tflite",
+      "path": "{TOP}/lib/tflm/models/force_int_quant.tflite",
+      "alignment": 16,
+      "optimize": "Performance"
     }
     ]
   }
