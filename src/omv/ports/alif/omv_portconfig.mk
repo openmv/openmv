@@ -26,7 +26,7 @@
 # OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-all: $(FW_DIR)/firmware.toc
+all: $(FW_DIR)/firmware_pad.toc
 
 ifeq ($(MCU_CORE),M55_HP)
 ALIF_TOC_APPS = $(FW_DIR)/firmware_M55_HP.bin
@@ -64,6 +64,12 @@ $(FW_DIR)/firmware.toc: $(ALIF_TOC_APPS)
         --output-dir $(BUILD) \
         --firmware-dir $(FW_DIR) \
         --output $@
+
+$(FW_DIR)/firmware_pad.toc: $(FW_DIR)/firmware.toc
+	$(ECHO) "Generating padded ToC"
+	$(eval PAD_SIZE := $(shell expr 8192 - $(shell stat -c%s $<)))
+	$(Q)dd if=/dev/zero bs=1 count=$(PAD_SIZE) of=$@
+	$(CAT) $< >> $@
 
 deploy: $(FW_DIR)/firmware.toc
 	$(ECHO) "Writing $< to the board"
