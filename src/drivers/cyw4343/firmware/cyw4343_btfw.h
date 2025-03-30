@@ -1,2 +1,2 @@
-#define CYW43_BT_FW_LEN   (35182)
-const uintptr_t bt_fw_data = (uintptr_t) CYW43_BT_FIRMWARE_ADDRESS;
+const size_t btfw_len = 35182;
+const uint8_t *btfw_data = (const uint8_t *) CYW43_BT_FIRMWARE_ADDRESS;
