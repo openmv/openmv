@@ -79,6 +79,7 @@
 #include "alif_dma.h"
 #include "py_audio.h"
 #include "py_imu.h"
+#include "omv_gpio.h"
 
 NORETURN void __fatal_error(const char *msg);
 
@@ -99,6 +100,12 @@ int main(void) {
     #endif
 
 soft_reset:
+    #if CORE_M55_HP
+    omv_gpio_write(&omv_pin_LED_R, 1);
+    omv_gpio_write(&omv_pin_LED_G, 1);
+    omv_gpio_write(&omv_pin_LED_B, 1);
+    #endif
+
     // Initialise stack extents and GC heap.
     extern uint8_t _estack, _sstack, _heap_start, _heap_end;
     mp_init_gc_stack(&_sstack, &_estack, &_heap_start, &_heap_end, 1024);
