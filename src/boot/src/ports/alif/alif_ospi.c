@@ -291,9 +291,6 @@ static int ospi_flash_init(ospi_flash_t *ospi) {
     // Detect onboard flash based on ID.
     uint8_t id[3] = { 0 };
     ospi_recv(ospi, OSPI_RDID_COMMAND, OSPI_ADDR_0BIT, 0, 3, id, OSPI_RDID_DCYCLES);
-    // The byte order of 16-bit words is swapped when written in 1-1-1 and read back
-    // in 8D-8D-8D. The MX chips seems to be the only one that doesn't swap 16-bit words.
-    ospi->bswap16 = id[0] != 0xC2;
     ospi->initialized = true;
     return 0;
 }
