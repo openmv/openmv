@@ -3,7 +3,7 @@
 To build the firmware using docker, follow the following steps:
 
 ```
-git clone https://github.com/openmv/openmv.git --depth=50
+git clone https://github.com/openmv/openmv.git --depth=1
 cd openmv/docker
 make TARGET=<TARGET NAME>
 ```
