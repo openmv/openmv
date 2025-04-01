@@ -225,3 +225,6 @@ jlink:
 	${JLINK_GDB_SERVER} -speed ${JLINK_SPEED} -nogui 1 \
         -if ${JLINK_INTERFACE} -halt -cpu cortex-m \
 		-device ${JLINK_DEVICE} -novd ${JLINK_SCRIPT}
+
+submodules:
+	$(MAKE) -C $(MICROPY_DIR)/ports/$(PORT) BOARD=$(TARGET) submodules
