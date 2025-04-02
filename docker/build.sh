@@ -1,7 +1,6 @@
 #!/bin/bash
 set -e -x
 
-git config --global --add safe.directory '*'
 git submodule update --init --depth=1
 make -C src -j$(nproc) TARGET=$TARGET submodules
 
@@ -13,3 +12,4 @@ make -j$(nproc) -C src TARGET=$TARGET LLVM_PATH=/workspace/llvm/bin
 rm -fr /workspace/build/$TARGET
 mkdir -p /workspace/build/$TARGET
 cp -r src/build/bin/* /workspace/build/$TARGET
+chown -R ${HOST_UID:-1000}:${HOST_GID:-1000} /workspace/build

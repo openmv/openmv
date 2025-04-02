@@ -13,6 +13,8 @@ build-image:
 build-firmware: build-image
 	docker run --rm \
         -e TARGET=$(TARGET) \
+        -e HOST_UID=$(shell id -u) \
+        -e HOST_GID=$(shell id -g) \
         -v $(PWD)/build:/workspace/build \
         --name $(CONTAINER_NAME) \
         $(DOCKER_IMAGE_NAME):$(DOCKER_TAG) docker/build.sh
