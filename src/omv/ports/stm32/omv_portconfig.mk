@@ -28,16 +28,17 @@ UVC_DIR     := $(OMV_DIR)/ports/$(PORT)/uvc
 MCU_SERIES  := $(shell echo $(MCU) | cut -c6-7 | tr '[:upper:]' '[:lower:]')
 MCU_LOWER   := $(shell echo $(MCU) | tr '[:upper:]' '[:lower:]')
 HAL_DIR     := hal/stm32/$(MCU_SERIES)
+STAI_DIR := lib/stai
 
 SIGN_TOOL = $(TOOLS)/st/cubeprog/bin/STM32MP_SigningTool_CLI
-PROG_TOOL = $(TOOLS)/st/cubeprog/bin/STM32_Programmer.sh
+PROG_TOOL = $(TOOLS)/st/cubeprog/bin/STM32_Programmer_CLI
 STLDR_DIR = $(TOOLS)/st/cubeprog/bin/ExternalLoader/
 
 ROMFS_IMAGE := $(FW_DIR)/romfs.stamp
 ROMFS_CONFIG := $(OMV_BOARD_CONFIG_DIR)/romfs.json
 
 # Compiler Flags
-CFLAGS += -std=gnu99 \
+CFLAGS += -std=gnu11 \
           -Wall \
           -Werror \
           -Warray-bounds \
@@ -222,7 +223,9 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/sensors/,   \
 	gc2145.o                    \
 	genx320.o                   \
 	pag7920.o                   \
+	pag7936.o                   \
 	paj6100.o                   \
+	ps5520.o                    \
 	frogeye2020.o               \
    )
 
@@ -574,11 +577,6 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/,\
 	)
 endif
 
-#------------- CubeAI Objects -------------------#
-ifeq ($(CUBEAI), 1)
-include $(TOP_DIR)/stm32cubeai/cube.mk
-endif
-
 ifeq ($(OMV_ENABLE_UVC), 1)
 UVC = uvc
 # UVC object files
@@ -620,7 +618,9 @@ UVC_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/sensors/, \
 	gc2145.o                                \
 	genx320.o                               \
 	pag7920.o                               \
+	pag7936.o                               \
 	paj6100.o                               \
+	ps5520.o                                \
 	frogeye2020.o                           \
 	)
 
@@ -681,6 +681,18 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(TENSORFLOW_DIR)/, \
 LIBS += $(TOP_DIR)/$(TENSORFLOW_DIR)/libtflm/lib/libtflm-$(CPU)+fp-release.a
 endif
 
+ifeq ($(MICROPY_PY_ML_STAI), 1)
+OMV_CFLAGS += -I$(TOP_DIR)/$(STAI_DIR)/libstai/include
+FIRM_OBJ += $(addprefix $(BUILD)/$(STAI_DIR)/,\
+	stai_backend.o \
+	libstai/ll_aton/*.o \
+	)
+endif
+
+ifeq ($(CUBEAI), 1)
+include $(TOP_DIR)/stm32cubeai/cube.mk
+endif
+
 ###################################################
 all: $(OPENMV)
 
@@ -713,10 +725,13 @@ endif
 ifeq ($(MICROPY_PY_ML_TFLM), 1)
 	$(MAKE)  -C $(TENSORFLOW_DIR)            BUILD=$(BUILD)/$(TENSORFLOW_DIR)   CFLAGS="$(CFLAGS) -MMD"
 endif
-	$(MAKE)  -C $(OMV_DIR)                   BUILD=$(BUILD)/$(OMV_DIR)          CFLAGS="$(CFLAGS) -MMD"
+ifeq ($(MICROPY_PY_ML_STAI), 1)
+	$(MAKE)  -C $(STAI_DIR)                  BUILD=$(BUILD)/$(STAI_DIR)         CFLAGS="$(CFLAGS) -fno-strict-aliasing -MMD"
+endif
 ifeq ($(CUBEAI), 1)
 	$(MAKE)  -C $(CUBEAI_DIR)                BUILD=$(BUILD)/$(CUBEAI_DIR)       CFLAGS="$(CFLAGS) -fno-strict-aliasing -MMD"
 endif
+	$(MAKE)  -C $(OMV_DIR)                   BUILD=$(BUILD)/$(OMV_DIR)          CFLAGS="$(CFLAGS) -MMD"
 
 ifeq ($(OMV_ENABLE_UVC), 1)
 UVC_OBJS: FIRMWARE_OBJS
