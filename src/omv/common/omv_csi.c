@@ -584,13 +584,9 @@ __weak int omv_csi_sleep(int enable) {
     // Disable any ongoing frame capture.
     omv_csi_abort(true, false);
 
-    // Check if the control is supported.
-    if (csi.sleep == NULL) {
-        return OMV_CSI_ERROR_CTL_UNSUPPORTED;
-    }
-
     // Call the sensor specific function.
-    if (csi.sleep(&csi, enable) != 0) {
+    if (csi.sleep != NULL &&
+        csi.sleep(&csi, enable) != 0) {
         return OMV_CSI_ERROR_CTL_FAILED;
     }
 
