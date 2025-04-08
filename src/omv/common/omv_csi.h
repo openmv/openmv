@@ -95,16 +95,14 @@
 
 #define OMV_CSI_TIMEOUT_MS      (3000)
 
+#define OMV_CSI_CLK_SOURCE_MCO  (0U)
+#define OMV_CSI_CLK_SOURCE_TIM  (1U)
+#define OMV_CSI_CLK_SOURCE_OSC  (2U)
+
 typedef enum {
     OMV_CSI_ACTIVE_LOW  = 0,
     OMV_CSI_ACTIVE_HIGH = 1
 } omv_csi_polarity_t;
-
-typedef enum {
-    OMV_CSI_CLK_SOURCE_MCO = 0U,
-    OMV_CSI_CLK_SOURCE_TIM = 1U,
-    OMV_CSI_CLK_SOURCE_OSC = 2U,
-} omv_csi_clk_source_t;
 
 typedef enum {
     OMV_CSI_CONFIG_INIT      = (1 << 0),
