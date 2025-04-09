@@ -101,6 +101,8 @@ static const uint32_t omv_i2c_timing[OMV_I2C_SPEED_MAX] = {
     0x1090699B, 0x70330309, 0x50100103,
 #elif defined(STM32H7)
     0x20D09DE7, 0x40900C22, 0x4030040B,
+#elif defined(STM32N6)
+    0x10C0ECFF, 0x00602173, 0x00300B29,
 #else
 #error "no I2C timings for this MCU"
 #endif
@@ -186,6 +188,9 @@ int omv_i2c_init(omv_i2c_t *i2c, uint32_t bus_id, uint32_t speed) {
 
     #if defined(IS_I2C_FASTMODEPLUS)
     if (speed == OMV_I2C_SPEED_FAST) {
+        #if defined(STM32N6)
+        HAL_I2CEx_ConfigFastModePlus(i2c->inst, I2C_FASTMODEPLUS_ENABLE);
+        #else
         // Enable FAST mode plus.
         switch (bus_id) {
             #if defined(I2C_FASTMODEPLUS_I2C1)
@@ -209,6 +214,7 @@ int omv_i2c_init(omv_i2c_t *i2c, uint32_t bus_id, uint32_t speed) {
                 break;
             #endif
         }
+        #endif  // defined(STM32N6)
     }
     #endif
 
@@ -299,7 +305,8 @@ int omv_i2c_scan(omv_i2c_t *i2c, uint8_t *list, uint8_t size) {
             }
         }
     }
-    #if defined(STM32H7)
+
+    #if defined(STM32H7) || defined(STM32N6)
     // After a failed scan the bus can get stuck. Re-initializing the bus fixes
     // it, but it seems disabling and re-enabling the bus is all that's needed.
     if (idx == 0) {
