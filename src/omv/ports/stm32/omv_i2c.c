@@ -184,7 +184,7 @@ int omv_i2c_init(omv_i2c_t *i2c, uint32_t bus_id, uint32_t speed) {
         return -1;
     }
 
-    #if !defined(OMV_I2C_DISABLE_FASTMODE)
+    #if defined(IS_I2C_FASTMODEPLUS)
     if (speed == OMV_I2C_SPEED_FAST) {
         // Enable FAST mode plus.
         switch (bus_id) {
