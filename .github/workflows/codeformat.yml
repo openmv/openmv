@@ -55,7 +55,6 @@ jobs:
             lib/tflm/*.{c,cc,h}
             !scripts/**
             !tools/**
-            !ports/stm32/uvc/**
 
     - name: '📜 Show list of changed files'
       run: |
