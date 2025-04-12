@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: MIT
 #
-# Copyright (C) 2013-2024 OpenMV, LLC.
+# Copyright (C) 2025 OpenMV, LLC.
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -20,23 +20,10 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 #
-# ST Makefile
-override CFLAGS += -Os
+# Ports Makefile
 
-SRCS = $(wildcard src/*.c)
-OBJS = $(addprefix $(BUILD)/, $(SRCS:.c=.o))
-OBJ_DIRS = $(sort $(dir $(OBJS)))
+CFLAGS += -I$(TOP_DIR)/ports/$(PORT)
+CFLAGS += -I$(TOP_DIR)/ports/$(PORT)/modules
 
-all: | $(OBJ_DIRS) $(OBJS)
-$(OBJ_DIRS):
-	$(MKDIR) -p $@
-
-$(BUILD)/%.o : %.c
-	$(ECHO) "CC $<"
-	$(CC) $(CFLAGS) -c -o $@ $<
-
-$(BUILD)/%.o : %.s
-	$(ECHO) "AS $<"
-	$(AS) $(AFLAGS) $< -o $@
-
--include $(OBJS:%.o=%.d)
+PORT_SRC_C = $(wildcard ports/$(PORT)/*.c)
+OMV_FIRM_OBJ += $(addprefix $(BUILD)/, $(PORT_SRC_C:.c=.o))

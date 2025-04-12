@@ -20,23 +20,36 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 #
-# VL53L8CX Makefile
-override CFLAGS += -Os
+# TFLM Makefile
 
-SRCS = $(wildcard src/*.c)
-OBJS = $(addprefix $(BUILD)/, $(SRCS:.c=.o))
-OBJ_DIRS = $(sort $(dir $(OBJS)))
+ifeq ($(MICROPY_PY_ML_TFLM), 1)
+TFLM_SRC_CC = tflm_backend.cc
 
-all: | $(OBJ_DIRS) $(OBJS)
-$(OBJ_DIRS):
-	$(MKDIR) -p $@
+$(BUILD)/lib/tflm/tflm_backend.o: CXXFLAGS = \
+    $(filter-out -std=gnu99 -std=gnu11,$(CFLAGS)) \
+    -std=c++11 \
+    -fno-rtti \
+    -fno-exceptions \
+    -fno-use-cxa-atexit \
+    -nodefaultlibs \
+    -fno-unwind-tables \
+    -fpermissive \
+    -fmessage-length=0 \
+    -fno-threadsafe-statics \
+    -Wno-double-promotion \
+    -Wno-float-conversion \
+    -DTF_LITE_STATIC_MEMORY \
+    -DTF_LITE_DISABLE_X86_NEON \
+    -DKERNELS_OPTIMIZED_FOR_SPEED \
+    -DTF_LITE_STRIP_ERROR_STRINGS \
+    -I$(TOP_DIR)/lib/tflm/libtflm/include \
+    -I$(TOP_DIR)/lib/tflm/libtflm/include/third_party \
+    -I$(TOP_DIR)/lib/tflm/libtflm/include/third_party/gemmlowp \
+    -I$(TOP_DIR)/lib/tflm/libtflm/include/third_party/flatbuffers/include \
+    -I$(TOP_DIR)/lib/tflm/libtflm/include/third_party/ethos_u_core_driver/include
 
-$(BUILD)/%.o : %.c
-	$(ECHO) "CC $<"
-	$(CC) $(CFLAGS) -c -o $@ $<
+OMV_CFLAGS += -I$(TOP_DIR)/lib/tflm/libtflm/include
+OMV_CFLAGS += -I$(TOP_DIR)/lib/tflm/libtflm/include/third_party/ethos_u_core_driver/include
 
-$(BUILD)/%.o : %.s
-	$(ECHO) "AS $<"
-	$(AS) $(AFLAGS) $< -o $@
-
--include $(OBJS:%.o=%.d)
+OMV_FIRM_OBJ += $(addprefix $(BUILD)/lib/tflm/, $(TFLM_SRC_CC:.cc=.o))
+endif

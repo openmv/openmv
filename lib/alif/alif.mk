@@ -1,13 +1,13 @@
 # This file is part of the OpenMV project.
 #
-# Copyright (c) 2013-2024 Ibrahim Abdelkader <iabdalkader@openmv.io>
-# Copyright (c) 2013-2024 Kwabena W. Agyeman <kwagyeman@openmv.io>
+# Copyright (c) 2013-2021 Ibrahim Abdelkader <iabdalkader@openmv.io>
+# Copyright (c) 2013-2021 Kwabena W. Agyeman <kwagyeman@openmv.io>
 #
 # This work is licensed under the MIT license, see the file LICENSE for details.
 #
-# Alif SDK Makefile
+# Alif Makefile
 
-SRCS += \
+HAL_SRC_C += \
 	drivers/source/adc.c \
 	drivers/source/dma_ctrl.c \
 	drivers/source/dma_op.c \
@@ -42,25 +42,19 @@ SRCS += \
 	Device/common/source/tcm_partition.c \
 	Device/core/$(MCU_CORE)/source/startup_$(MCU_CORE).c \
 
-OBJS = $(addprefix $(BUILD)/, $(SRCS:.c=.o))
-OBJ_DIRS = $(sort $(dir $(OBJS)))
+HAL_CFLAGS += -I$(TOP_DIR)/lib/alif/drivers/include/
+HAL_CFLAGS += -I$(TOP_DIR)/lib/alif/ospi_xip/source/ospi/
+HAL_CFLAGS += -I$(TOP_DIR)/lib/alif/se_services/include
+HAL_CFLAGS += -I$(TOP_DIR)/lib/alif/Device/common/config/
+HAL_CFLAGS += -I$(TOP_DIR)/lib/alif/Device/common/include/
+HAL_CFLAGS += -I$(TOP_DIR)/lib/alif/Device/core/$(MCU_CORE)/config/
+HAL_CFLAGS += -I$(TOP_DIR)/lib/alif/Device/core/$(MCU_CORE)/include/
+HAL_CFLAGS += -I$(TOP_DIR)/lib/alif/Device/$(MCU_SERIES)/$(MCU_VARIANT)/
 
-all: | $(OBJ_DIRS) $(OBJS)
-$(OBJ_DIRS):
-	$(MKDIR) -p $@
+OMV_FIRM_OBJ += $(addprefix $(BUILD)/lib/alif/, $(HAL_SRC_C:.c=.o))
 
-$(BUILD)/%.o : %.c
-	$(ECHO) "CC $<"
-	$(CC) $(CFLAGS) -c -o $@ $<
-
-$(BUILD)/%.o : %.s
-	$(ECHO) "AS $<"
-	$(AS) $(AFLAGS) $< -o $@
-
-$(BUILD)/drivers/source/spi.o: override CFLAGS += -Wno-maybe-uninitialized
-$(BUILD)/drivers/source/i3c.o: override CFLAGS += -Wno-int-conversion
-$(BUILD)/drivers/source/mram.o: override CFLAGS += -Wno-strict-aliasing
-$(BUILD)/se_services/source/services_host_boot.o: override CFLAGS += -Wno-stringop-truncation
-$(BUILD)/se_services/source/services_host_system.o: override CFLAGS += -Wno-maybe-uninitialized
-
--include $(OBJS:%.o=%.d)
+$(BUILD)/lib/alif/drivers/source/spi.o: override CFLAGS += -Wno-maybe-uninitialized
+$(BUILD)/lib/alif/drivers/source/i3c.o: override CFLAGS += -Wno-int-conversion
+$(BUILD)/lib/alif/drivers/source/mram.o: override CFLAGS += -Wno-strict-aliasing
+$(BUILD)/lib/alif/se_services/source/services_host_boot.o: override CFLAGS += -Wno-stringop-truncation
+$(BUILD)/lib/alif/se_services/source/services_host_system.o: override CFLAGS += -Wno-maybe-uninitialized

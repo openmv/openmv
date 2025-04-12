@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: MIT
 #
-# Copyright (C) 2013-2024 OpenMV, LLC.
+# Copyright (C) 2025 OpenMV, LLC.
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -20,23 +20,35 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 #
-# ST Makefile
-override CFLAGS += -Os
+# Rules for building firmware object files
 
-SRCS = $(wildcard src/*.c)
-OBJS = $(addprefix $(BUILD)/, $(SRCS:.c=.o))
-OBJ_DIRS = $(sort $(dir $(OBJS)))
+# Ensure all necessary directories exist
+FIRM_DIRS:
+	$(MKDIR) -p $(sort $(BUILD) $(FW_DIR) $(dir $(OMV_FIRM_OBJ)))
 
-all: | $(OBJ_DIRS) $(OBJS)
-$(OBJ_DIRS):
-	$(MKDIR) -p $@
-
+# Compile C source files to object files
 $(BUILD)/%.o : %.c
 	$(ECHO) "CC $<"
-	$(CC) $(CFLAGS) -c -o $@ $<
+	$(CC) $(CFLAGS) -MMD -c -o $@ $<
 
+# Compile C++ source files to object files
+$(BUILD)/%.o : %.cc
+	$(ECHO) "CXX $<"
+	$(CC) $(CXXFLAGS) -MMD -c -o $@ $<
+
+# Assemble raw assembly files (.s)
 $(BUILD)/%.o : %.s
 	$(ECHO) "AS $<"
 	$(AS) $(AFLAGS) $< -o $@
 
--include $(OBJS:%.o=%.d)
+# Assemble preprocessed assembly files (.S) using the C compiler
+$(BUILD)/%.o: %.S
+	$(ECHO) "CC $<"
+	$(CC) $(CFLAGS) -MMD -c -o $@ $<
+
+# Special rule for compiling certain files with Clang
+$(OMV_CLANG_OBJ): $(BUILD)/%.o : %.c
+	$(ECHO) "CL $<"
+	$(CLANG) $(CLANG_FLAGS) -c -o $@ $<
+
+-include $(MPY_FIRM_OBJ:%.o=%.d) $(OMV_FIRM_OBJ:%.o=%.d)

@@ -9,9 +9,9 @@
 
 # Set verbosity
 ifeq ($(V), 1)
-Q =
+export Q =
 else
-Q = @
+export Q = @
 MAKEFLAGS += --silent
 endif
 
@@ -19,31 +19,31 @@ endif
 LLVM_PATH ?=/opt/LLVM-ET-Arm-18.1.3-Linux-x86_64/bin/
 
 # Commands
-CC      = $(Q)arm-none-eabi-gcc
-CLANG   = $(Q)$(LLVM_PATH)/clang
-CXX     = $(Q)arm-none-eabi-g++
-AS      = $(Q)arm-none-eabi-as
-LD      = $(Q)arm-none-eabi-ld
-AR      = $(Q)arm-none-eabi-ar
-RM      = $(Q)rm
-CPP     = $(Q)arm-none-eabi-cpp
-SIZE    = $(Q)arm-none-eabi-size
-STRIP   = $(Q)arm-none-eabi-strip -s
-OBJCOPY = $(Q)arm-none-eabi-objcopy
-OBJDUMP = $(Q)arm-none-eabi-objdump
-PYTHON  = $(Q)python3
-MKDFU   = $(MICROPY_DIR)/tools/dfu.py
-PYDFU   = $(Q)../tools/pydfu.py
-MKDIR   = $(Q)mkdir
-ECHO    = $(Q)@echo
-MAKE    = $(Q)make
-CAT     = $(Q)cat
-TFLITE2C = tflite2c.py
-MKROMFS = mkromfs.py
+export CC      = $(Q)arm-none-eabi-gcc
+export CLANG   = $(Q)$(LLVM_PATH)/clang
+export CXX     = $(Q)arm-none-eabi-g++
+export AS      = $(Q)arm-none-eabi-as
+export LD      = $(Q)arm-none-eabi-ld
+export AR      = $(Q)arm-none-eabi-ar
+export RM      = $(Q)rm
+export CPP     = $(Q)arm-none-eabi-cpp
+export SIZE    = $(Q)arm-none-eabi-size
+export STRIP   = $(Q)arm-none-eabi-strip -s
+export OBJCOPY = $(Q)arm-none-eabi-objcopy
+export OBJDUMP = $(Q)arm-none-eabi-objdump
+export PYTHON  = $(Q)python3
+export MKDFU   = $(MICROPY_DIR)/tools/dfu.py
+export PYDFU   = $(Q)tools/pydfu.py
+export MKDIR   = $(Q)mkdir
+export ECHO    = $(Q)@echo
+export MAKE    = $(Q)make
+export CAT     = $(Q)cat
+export MKROMFS = mkromfs.py
 
 # Targets
-OPENMV = openmv
-FIRMWARE = firmware
+export OPENMV ?= openmv
+export FIRMWARE ?= firmware
+export BOOTLOADER ?= bootloader
 
 # Jlink config
 JLINK_INTERFACE ?= swd
@@ -59,40 +59,25 @@ ifeq ($(TARGET),)
 endif
 
 # Directories
-TOP_DIR=$(shell pwd)
-BUILD=$(TOP_DIR)/build
-TOOLS=$(TOP_DIR)/../tools
-FW_DIR=$(BUILD)/bin
-OMV_DIR=omv
-BOOT_DIR=boot
-CUBEAI_DIR=stm32cubeai
-CMSIS_DIR=hal/cmsis
-MICROPY_DIR=lib/micropython
-GENX320_DIR=drivers/genx320
-BOSON_DIR=drivers/boson
-LEPTON_DIR=drivers/lepton
-LSM6DS3_DIR=drivers/lsm6ds3
-LSM6DSM_DIR=drivers/lsm6dsm
-LSM6DSOX_DIR=drivers/lsm6dsox
-WINC1500_DIR=drivers/winc1500
-MLX90621_DIR=drivers/mlx90621
-MLX90640_DIR=drivers/mlx90640
-MLX90641_DIR=drivers/mlx90641
-VL53L5CX_DIR=drivers/vl53l5cx
-VL53L8CX_DIR=drivers/vl53l8cx
-PIXART_DIR=drivers/pixart
-DISPLAY_DIR=drivers/display
-DAVE2D_DIR=drivers/dave2d
-NEMA_DIR=drivers/nema
-LIBPDM_DIR=lib/libpdm
-TENSORFLOW_DIR=lib/tflm
-CYW4343_FW_DIR=drivers/cyw4343/firmware/
-OMV_BOARD_CONFIG_DIR=$(TOP_DIR)/$(OMV_DIR)/boards/$(TARGET)/
-OMV_PORT_DIR=$(TOP_DIR)/$(OMV_DIR)/ports/$(PORT)
-MP_BOARD_CONFIG_DIR=$(TOP_DIR)/$(MICROPY_DIR)/ports/$(PORT)/boards/$(TARGET)/
-OMV_LIB_DIR=$(TOP_DIR)/../scripts/libraries
-FROZEN_MANIFEST=$(OMV_BOARD_CONFIG_DIR)/manifest.py
-OMV_COMMON_DIR=$(TOP_DIR)/$(OMV_DIR)/common
+export TOP_DIR=$(shell pwd)
+export BUILD=$(TOP_DIR)/build
+export TOOLS_DIR=$(TOP_DIR)/tools
+export FW_DIR=$(BUILD)/bin
+export BOOT_DIR=boot
+export PORTS_DIR=ports
+export CUBEAI_DIR=cubeai
+export CMSIS_DIR=lib/cmsis
+export MICROPY_DIR=lib/micropython
+export NEMA_DIR=drivers/nema
+export LIBPDM_DIR=lib/libpdm
+export TENSORFLOW_DIR=lib/tflm
+export COMMON_DIR=common
+export CYW4343_FW_DIR=drivers/cyw4343/firmware/
+export OMV_BOARD_CONFIG_DIR=$(TOP_DIR)/boards/$(TARGET)/
+export OMV_PORT_DIR=$(TOP_DIR)/ports/$(PORT)
+export MP_BOARD_CONFIG_DIR=$(TOP_DIR)/$(MICROPY_DIR)/ports/$(PORT)/boards/$(TARGET)/
+export OMV_LIB_DIR=$(TOP_DIR)/scripts/libraries
+export FROZEN_MANIFEST=$(OMV_BOARD_CONFIG_DIR)/manifest.py
 
 # Debugging/Optimization
 ifeq ($(DEBUG), 1)
@@ -133,17 +118,22 @@ include $(OMV_BOARD_CONFIG_DIR)/omv_boardconfig.mk
 #include $(MP_BOARD_CONFIG_DIR)/mpconfigboard.mk
 
 # Additional qstr definitions for OpenMV
-#OMV_SRC_QSTR := $(wildcard $(TOP_DIR)/$(OMV_DIR)/modules/*.c)
+#OMV_SRC_QSTR := $(wildcard $(TOP_DIR)/modules/*.c)
 
 # The following command line args are passed to MicroPython's top Makefile.
 MPY_MKARGS = PORT=$(PORT) BOARD=$(TARGET) DEBUG=$(DEBUG) MICROPY_MANIFEST_OMV_LIB_DIR=$(OMV_LIB_DIR)\
              FROZEN_MANIFEST=$(FROZEN_MANIFEST) OMV_SRC_QSTR="$(OMV_SRC_QSTR)"\
-             MICROPY_ROM_TEXT_COMPRESSION=$(ROM_TEXT_COMPRESSION) USER_C_MODULES=$(TOP_DIR)/$(OMV_DIR)
+             MICROPY_ROM_TEXT_COMPRESSION=$(ROM_TEXT_COMPRESSION) USER_C_MODULES=$(TOP_DIR)
 
 # Configure additional built-in modules. Note must define both the CFLAGS and the Make command line args.
 ifeq ($(MICROPY_PY_CSI), 1)
 MPY_CFLAGS += -DMICROPY_PY_CSI=1
 MPY_MKARGS += MICROPY_PY_CSI=1
+endif
+
+ifeq ($(MICROPY_PY_FIR), 1)
+MPY_CFLAGS += -DMICROPY_PY_FIR=1
+MPY_MKARGS += MICROPY_PY_FIR=1
 endif
 
 ifeq ($(MICROPY_PY_WINC1500), 1)
@@ -215,11 +205,25 @@ MPY_CFLAGS += -DMP_CONFIGFILE=\<$(OMV_PORT_DIR)/omv_mpconfigport.h\>
 # Include the port Makefile.
 include $(OMV_PORT_DIR)/omv_portconfig.mk
 
-# Export all common variables
-include $(OMV_COMMON_DIR)/export.mk
+# Export variables for sub-make.
+export PORT
+export MCU
+export TARGET
+export CFLAGS
+export AFLAGS
+export LDFLAGS
+export MPY_CFLAGS
+export MPY_MKARGS
+export USERMOD_OPT
 
 clean:
 	$(RM) -fr $(BUILD)
+
+size:
+ifeq ($(OMV_ENABLE_BL), 1)
+	$(SIZE) --format=SysV $(FW_DIR)/$(BOOTLOADER).elf
+endif
+	$(SIZE) --format=SysV $(FW_DIR)/$(FIRMWARE).elf
 
 jlink:
 	${JLINK_GDB_SERVER} -speed ${JLINK_SPEED} -nogui 1 \
