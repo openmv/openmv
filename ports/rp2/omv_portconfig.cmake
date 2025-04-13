@@ -26,10 +26,7 @@ set(TARGET                  $ENV{TARGET})
 set(PORT                    rp2)
 set(BUILD                   ${TOP_DIR}/build/rp2)
 set(BIN_DIR                 ${TOP_DIR}/build/bin)
-set(OMV_DIR                 omv)
-set(UVC_DIR                 uvc)
-set(CM4_DIR                 cm4)
-set(CMSIS_DIR               hal/cmsis)
+set(CMSIS_DIR               lib/cmsis)
 set(LEPTON_DIR              drivers/lepton)
 set(LSM6DS3_DIR             drivers/lsm6ds3)
 set(WINC1500_DIR            drivers/winc1500)
@@ -37,11 +34,9 @@ set(MLX90621_DIR            drivers/mlx90621)
 set(MLX90640_DIR            drivers/mlx90640)
 set(MLX90641_DIR            drivers/mlx90641)
 set(OPENPDM_DIR             ${TOP_DIR}/lib/openpdm)
-set(TENSORFLOW_DIR          ${TOP_DIR}/lib/libtf)
-set(OMV_BOARD_CONFIG_DIR    ${TOP_DIR}/${OMV_DIR}/boards/${TARGET}/)
-set(OMV_COMMON_DIR          ${TOP_DIR}/${OMV_DIR}/common)
-set(PORT_DIR                ${TOP_DIR}/${OMV_DIR}/ports/${PORT})
-set(MICROPY_MANIFEST_OMV_LIB_DIR    ${TOP_DIR}/../scripts/libraries)
+set(OMV_BOARD_CONFIG_DIR    ${TOP_DIR}/boards/${TARGET}/)
+set(PORT_DIR                ${TOP_DIR}/ports/${PORT})
+set(MICROPY_MANIFEST_OMV_LIB_DIR    ${TOP_DIR}/scripts/libraries)
 
 # Include board cmake fragment
 include(${OMV_BOARD_CONFIG_DIR}/omv_boardconfig.cmake)
@@ -81,8 +76,8 @@ add_custom_target(
 pico_set_linker_script(${MICROPY_TARGET} ${BUILD}/rp2.ld)
 
 # Add OMV qstr sources
-file(GLOB OMV_SRC_QSTR1 ${TOP_DIR}/${OMV_DIR}/modules/*.c)
-file(GLOB OMV_SRC_QSTR2 ${TOP_DIR}/${OMV_DIR}/ports/${PORT}/modules/*.c)
+file(GLOB OMV_SRC_QSTR1 ${TOP_DIR}/modules/*.c)
+file(GLOB OMV_SRC_QSTR2 ${TOP_DIR}/ports/${PORT}/modules/*.c)
 list(APPEND MICROPY_SOURCE_QSTR ${OMV_SRC_QSTR1} ${OMV_SRC_QSTR2})
 
 target_include_directories(${MICROPY_TARGET} PRIVATE
@@ -93,14 +88,13 @@ target_include_directories(${MICROPY_TARGET} PRIVATE
     ${MICROPY_DIR}/lib/oofatfs/
     ${MICROPY_DIR}/lib/tinyusb/src/
 
-    ${TOP_DIR}/${OMV_DIR}/
-    ${TOP_DIR}/${OMV_DIR}/alloc/
-    ${TOP_DIR}/${OMV_DIR}/common/
-    ${TOP_DIR}/${OMV_DIR}/imlib/
-    ${TOP_DIR}/${OMV_DIR}/modules/
-    ${TOP_DIR}/${OMV_DIR}/sensors/
-    ${TOP_DIR}/${OMV_DIR}/ports/${PORT}/
-    ${TOP_DIR}/${OMV_DIR}/ports/${PORT}/modules/
+    ${TOP_DIR}/
+    ${TOP_DIR}/common/
+    ${TOP_DIR}/modules/
+    ${TOP_DIR}/drivers/sensors/
+    ${TOP_DIR}/ports/${PORT}/
+    ${TOP_DIR}/ports/${PORT}/modules/
+    ${TOP_DIR}/lib/imlib/
 
     ${TOP_DIR}/${LEPTON_DIR}/include/
     ${TOP_DIR}/${LSM6DS3_DIR}/include/
@@ -109,105 +103,104 @@ target_include_directories(${MICROPY_TARGET} PRIVATE
     ${TOP_DIR}/${MLX90640_DIR}/include/
     ${TOP_DIR}/${MLX90641_DIR}/include/
     ${OMV_BOARD_CONFIG_DIR}
-    ${TOP_DIR}/${OMV_DIR}/templates/
+    ${TOP_DIR}/templates/
 )
 
-file(GLOB OMV_USER_MODULES ${TOP_DIR}/${OMV_DIR}/modules/*.c)
+file(GLOB OMV_USER_MODULES ${TOP_DIR}/modules/*.c)
 
 target_sources(${MICROPY_TARGET} PRIVATE
-    ${TOP_DIR}/${OMV_DIR}/alloc/xalloc.c
-    ${TOP_DIR}/${OMV_DIR}/alloc/fb_alloc.c
-    ${TOP_DIR}/${OMV_DIR}/alloc/umm_malloc.c
-    ${TOP_DIR}/${OMV_DIR}/alloc/dma_alloc.c
-    ${TOP_DIR}/${OMV_DIR}/alloc/unaligned_memcpy.c
+    ${TOP_DIR}/common/array.c
+    ${TOP_DIR}/common/ringbuf.c
+    ${TOP_DIR}/common/trace.c
+    ${TOP_DIR}/common/mutex.c
+    ${TOP_DIR}/common/pendsv.c
+    ${TOP_DIR}/common/usbdbg.c
+    ${TOP_DIR}/common/tinyusb_debug.c
+    ${TOP_DIR}/common/file_utils.c
+    ${TOP_DIR}/common/mp_utils.c
+    ${TOP_DIR}/common/omv_csi.c
+    ${TOP_DIR}/common/xalloc.c
+    ${TOP_DIR}/common/fb_alloc.c
+    ${TOP_DIR}/common/umm_malloc.c
+    ${TOP_DIR}/common/dma_alloc.c
+    ${TOP_DIR}/common/unaligned_memcpy.c
 
-    ${TOP_DIR}/${OMV_DIR}/common/array.c
-    ${TOP_DIR}/${OMV_DIR}/common/ringbuf.c
-    ${TOP_DIR}/${OMV_DIR}/common/trace.c
-    ${TOP_DIR}/${OMV_DIR}/common/mutex.c
-    ${TOP_DIR}/${OMV_DIR}/common/pendsv.c
-    ${TOP_DIR}/${OMV_DIR}/common/usbdbg.c
-    ${TOP_DIR}/${OMV_DIR}/common/tinyusb_debug.c
-    ${TOP_DIR}/${OMV_DIR}/common/file_utils.c
-    ${TOP_DIR}/${OMV_DIR}/common/mp_utils.c
-    ${TOP_DIR}/${OMV_DIR}/common/omv_csi.c
+    ${TOP_DIR}/drivers/sensors/ov2640.c
+    ${TOP_DIR}/drivers/sensors/ov5640.c
+    ${TOP_DIR}/drivers/sensors/ov7670.c
+    ${TOP_DIR}/drivers/sensors/ov7690.c
+    ${TOP_DIR}/drivers/sensors/ov7725.c
+    ${TOP_DIR}/drivers/sensors/ov9650.c
+    ${TOP_DIR}/drivers/sensors/mt9v0xx.c
+    ${TOP_DIR}/drivers/sensors/mt9m114.c
+    ${TOP_DIR}/drivers/sensors/lepton.c
+    ${TOP_DIR}/drivers/sensors/hm01b0.c
+    ${TOP_DIR}/drivers/sensors/gc2145.c
 
-    ${TOP_DIR}/${OMV_DIR}/sensors/ov2640.c
-    ${TOP_DIR}/${OMV_DIR}/sensors/ov5640.c
-    ${TOP_DIR}/${OMV_DIR}/sensors/ov7670.c
-    ${TOP_DIR}/${OMV_DIR}/sensors/ov7690.c
-    ${TOP_DIR}/${OMV_DIR}/sensors/ov7725.c
-    ${TOP_DIR}/${OMV_DIR}/sensors/ov9650.c
-    ${TOP_DIR}/${OMV_DIR}/sensors/mt9v0xx.c
-    ${TOP_DIR}/${OMV_DIR}/sensors/mt9m114.c
-    ${TOP_DIR}/${OMV_DIR}/sensors/lepton.c
-    ${TOP_DIR}/${OMV_DIR}/sensors/hm01b0.c
-    ${TOP_DIR}/${OMV_DIR}/sensors/gc2145.c
+    ${TOP_DIR}/lib/imlib/agast.c
+    ${TOP_DIR}/lib/imlib/apriltag.c
+    ${TOP_DIR}/lib/imlib/bayer.c
+    ${TOP_DIR}/lib/imlib/binary.c
+    ${TOP_DIR}/lib/imlib/blob.c
+    ${TOP_DIR}/lib/imlib/bmp.c
+    ${TOP_DIR}/lib/imlib/clahe.c
+    ${TOP_DIR}/lib/imlib/collections.c
+    ${TOP_DIR}/lib/imlib/dmtx.c
+    ${TOP_DIR}/lib/imlib/draw.c
+    ${TOP_DIR}/lib/imlib/edge.c
+    ${TOP_DIR}/lib/imlib/eye.c
+    ${TOP_DIR}/lib/imlib/fast.c
+    ${TOP_DIR}/lib/imlib/fft.c
+    ${TOP_DIR}/lib/imlib/filter.c
+    ${TOP_DIR}/lib/imlib/fmath.c
+    ${TOP_DIR}/lib/imlib/font.c
+    ${TOP_DIR}/lib/imlib/framebuffer.c
+    ${TOP_DIR}/lib/imlib/fsort.c
+    ${TOP_DIR}/lib/imlib/gif.c
+    ${TOP_DIR}/lib/imlib/haar.c
+    ${TOP_DIR}/lib/imlib/hog.c
+    ${TOP_DIR}/lib/imlib/hough.c
+    ${TOP_DIR}/lib/imlib/imlib.c
+    ${TOP_DIR}/lib/imlib/integral.c
+    ${TOP_DIR}/lib/imlib/integral_mw.c
+    ${TOP_DIR}/lib/imlib/isp.c
+    ${TOP_DIR}/lib/imlib/jpegd.c
+    ${TOP_DIR}/lib/imlib/jpege.c
+    ${TOP_DIR}/lib/imlib/lodepng.c
+    ${TOP_DIR}/lib/imlib/png.c
+    ${TOP_DIR}/lib/imlib/kmeans.c
+    ${TOP_DIR}/lib/imlib/lab_tab.c
+    ${TOP_DIR}/lib/imlib/lbp.c
+    ${TOP_DIR}/lib/imlib/line.c
+    ${TOP_DIR}/lib/imlib/lsd.c
+    ${TOP_DIR}/lib/imlib/mathop.c
+    ${TOP_DIR}/lib/imlib/mjpeg.c
+    ${TOP_DIR}/lib/imlib/orb.c
+    ${TOP_DIR}/lib/imlib/phasecorrelation.c
+    ${TOP_DIR}/lib/imlib/point.c
+    ${TOP_DIR}/lib/imlib/ppm.c
+    ${TOP_DIR}/lib/imlib/qrcode.c
+    ${TOP_DIR}/lib/imlib/qsort.c
+    ${TOP_DIR}/lib/imlib/rainbow_tab.c
+    ${TOP_DIR}/lib/imlib/rectangle.c
+    ${TOP_DIR}/lib/imlib/selective_search.c
+    ${TOP_DIR}/lib/imlib/sincos_tab.c
+    ${TOP_DIR}/lib/imlib/stats.c
+    ${TOP_DIR}/lib/imlib/stereo.c
+    ${TOP_DIR}/lib/imlib/template.c
+    ${TOP_DIR}/lib/imlib/xyz_tab.c
+    ${TOP_DIR}/lib/imlib/yuv.c
+    ${TOP_DIR}/lib/imlib/zbar.c
 
-    ${TOP_DIR}/${OMV_DIR}/imlib/agast.c
-    ${TOP_DIR}/${OMV_DIR}/imlib/apriltag.c
-    ${TOP_DIR}/${OMV_DIR}/imlib/bayer.c
-    ${TOP_DIR}/${OMV_DIR}/imlib/binary.c
-    ${TOP_DIR}/${OMV_DIR}/imlib/blob.c
-    ${TOP_DIR}/${OMV_DIR}/imlib/bmp.c
-    ${TOP_DIR}/${OMV_DIR}/imlib/clahe.c
-    ${TOP_DIR}/${OMV_DIR}/imlib/collections.c
-    ${TOP_DIR}/${OMV_DIR}/imlib/dmtx.c
-    ${TOP_DIR}/${OMV_DIR}/imlib/draw.c
-    ${TOP_DIR}/${OMV_DIR}/imlib/edge.c
-    ${TOP_DIR}/${OMV_DIR}/imlib/eye.c
-    ${TOP_DIR}/${OMV_DIR}/imlib/fast.c
-    ${TOP_DIR}/${OMV_DIR}/imlib/fft.c
-    ${TOP_DIR}/${OMV_DIR}/imlib/filter.c
-    ${TOP_DIR}/${OMV_DIR}/imlib/fmath.c
-    ${TOP_DIR}/${OMV_DIR}/imlib/font.c
-    ${TOP_DIR}/${OMV_DIR}/imlib/framebuffer.c
-    ${TOP_DIR}/${OMV_DIR}/imlib/fsort.c
-    ${TOP_DIR}/${OMV_DIR}/imlib/gif.c
-    ${TOP_DIR}/${OMV_DIR}/imlib/haar.c
-    ${TOP_DIR}/${OMV_DIR}/imlib/hog.c
-    ${TOP_DIR}/${OMV_DIR}/imlib/hough.c
-    ${TOP_DIR}/${OMV_DIR}/imlib/imlib.c
-    ${TOP_DIR}/${OMV_DIR}/imlib/integral.c
-    ${TOP_DIR}/${OMV_DIR}/imlib/integral_mw.c
-    ${TOP_DIR}/${OMV_DIR}/imlib/isp.c
-    ${TOP_DIR}/${OMV_DIR}/imlib/jpegd.c
-    ${TOP_DIR}/${OMV_DIR}/imlib/jpege.c
-    ${TOP_DIR}/${OMV_DIR}/imlib/lodepng.c
-    ${TOP_DIR}/${OMV_DIR}/imlib/png.c
-    ${TOP_DIR}/${OMV_DIR}/imlib/kmeans.c
-    ${TOP_DIR}/${OMV_DIR}/imlib/lab_tab.c
-    ${TOP_DIR}/${OMV_DIR}/imlib/lbp.c
-    ${TOP_DIR}/${OMV_DIR}/imlib/line.c
-    ${TOP_DIR}/${OMV_DIR}/imlib/lsd.c
-    ${TOP_DIR}/${OMV_DIR}/imlib/mathop.c
-    ${TOP_DIR}/${OMV_DIR}/imlib/mjpeg.c
-    ${TOP_DIR}/${OMV_DIR}/imlib/orb.c
-    ${TOP_DIR}/${OMV_DIR}/imlib/phasecorrelation.c
-    ${TOP_DIR}/${OMV_DIR}/imlib/point.c
-    ${TOP_DIR}/${OMV_DIR}/imlib/ppm.c
-    ${TOP_DIR}/${OMV_DIR}/imlib/qrcode.c
-    ${TOP_DIR}/${OMV_DIR}/imlib/qsort.c
-    ${TOP_DIR}/${OMV_DIR}/imlib/rainbow_tab.c
-    ${TOP_DIR}/${OMV_DIR}/imlib/rectangle.c
-    ${TOP_DIR}/${OMV_DIR}/imlib/selective_search.c
-    ${TOP_DIR}/${OMV_DIR}/imlib/sincos_tab.c
-    ${TOP_DIR}/${OMV_DIR}/imlib/stats.c
-    ${TOP_DIR}/${OMV_DIR}/imlib/stereo.c
-    ${TOP_DIR}/${OMV_DIR}/imlib/template.c
-    ${TOP_DIR}/${OMV_DIR}/imlib/xyz_tab.c
-    ${TOP_DIR}/${OMV_DIR}/imlib/yuv.c
-    ${TOP_DIR}/${OMV_DIR}/imlib/zbar.c
-
-    ${TOP_DIR}/${OMV_DIR}/ports/${PORT}/main.c
-    ${TOP_DIR}/${OMV_DIR}/ports/${PORT}/omv_gpio.c
-    ${TOP_DIR}/${OMV_DIR}/ports/${PORT}/omv_i2c.c
-    ${TOP_DIR}/${OMV_DIR}/ports/${PORT}/omv_csi.c
+    ${TOP_DIR}/ports/${PORT}/main.c
+    ${TOP_DIR}/ports/${PORT}/omv_gpio.c
+    ${TOP_DIR}/ports/${PORT}/omv_i2c.c
+    ${TOP_DIR}/ports/${PORT}/omv_csi.c
 
     ${OMV_USER_MODULES}
 )
 set_source_files_properties(
-    ${TOP_DIR}/${OMV_DIR}/imlib/fmath.c
+    ${TOP_DIR}/lib/imlib/fmath.c
     PROPERTIES
     COMPILE_OPTIONS "-fno-strict-aliasing"
 )
@@ -230,7 +223,7 @@ if(MICROPY_PY_AUDIO)
 
     set(AUDIO_SOURCES
 	    ${OPENPDM_DIR}/OpenPDMFilter.c
-        ${TOP_DIR}/${OMV_DIR}/ports/${PORT}/modules/py_audio.c
+        ${TOP_DIR}/ports/${PORT}/modules/py_audio.c
     )
 
     target_sources(${MICROPY_TARGET} PRIVATE ${AUDIO_SOURCES})
@@ -241,12 +234,12 @@ if(MICROPY_PY_AUDIO)
     )
 
     pico_generate_pio_header(${MICROPY_TARGET}
-        ${TOP_DIR}/${OMV_DIR}/ports/${PORT}/pdm.pio
+        ${TOP_DIR}/ports/${PORT}/pdm.pio
     )
 endif()
 
 if(MICROPY_PY_ULAB)
-    set(MICROPY_ULAB_DIR "${TOP_DIR}/${OMV_DIR}/modules/ulab")
+    set(MICROPY_ULAB_DIR "${TOP_DIR}/modules/ulab")
 
     target_include_directories(${MICROPY_TARGET} PRIVATE
         ${MICROPY_ULAB_DIR}/code/
@@ -299,7 +292,7 @@ if(MICROPY_PY_ULAB)
 endif()
 
 target_compile_definitions(${MICROPY_TARGET} PRIVATE
-    MP_CONFIGFILE="${TOP_DIR}/${OMV_DIR}/ports/${PORT}/omv_mpconfigport.h"
+    MP_CONFIGFILE="${TOP_DIR}/ports/${PORT}/omv_mpconfigport.h"
 )
 
 add_custom_command(TARGET ${MICROPY_TARGET}
