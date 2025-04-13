@@ -42,8 +42,11 @@ endif
 .PHONY: $(FW_DIR)/firmware_M55_HE.bin
 .PHONY: $(FW_DIR)/firmware_M55_HP.bin
 
+# Targets in this Makefile will not run in parallel to get a readable romfs output
+.NOTPARALLEL:
+
 SERIAL_PORT ?= /dev/ttyUSB0
-ALIF_TOOLS = $(TOOLS)/alif/toolkit
+ALIF_TOOLS = $(TOOLS_DIR)/alif/toolkit
 ALIF_TOC_CONFIG = $(OMV_PORT_DIR)/alif_cfg.json
 
 $(FW_DIR):

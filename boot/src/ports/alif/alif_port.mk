@@ -110,7 +110,7 @@ SRC_C += $(addprefix $(PORT_DIR)/, \
 	alif_services.c \
 )
 
-SRC_C += $(addprefix $(OMV_COMMON_DIR)/, \
+SRC_C += $(addprefix $(TOP_DIR)/$(COMMON_DIR)/, \
 	nosys_stubs.c \
 )
 
@@ -168,7 +168,7 @@ $(BUILD)/$(TINYUSB_DIR)/%.o : $(TOP_DIR)/$(TINYUSB_DIR)/%.c
 	$(ECHO) "CC $(shell realpath --relative-to=pwd $<)"
 	$(CC) $(CFLAGS) -c -o $@ $<
 
-$(BUILD)/$(OMV_COMMON_DIR)/%.o : $(TOP_DIR)/$(OMV_COMMON_DIR)/%.c
+$(BUILD)/$(COMMON_DIR)/%.o : $(TOP_DIR)/$(COMMON_DIR)/%.c
 	$(ECHO) "CC $(shell realpath --relative-to=pwd $<)"
 	$(CC) $(CFLAGS) -c -o $@ $<
 
@@ -179,7 +179,7 @@ $(BUILD)/%.o : %.s
 FIRMWARE_OBJS: | $(OBJS_DIR) $(OBJS)
 
 $(FIRMWARE): FIRMWARE_OBJS
-	$(CPP) -P -E -DBOOTLOADER -DLINKER_SCRIPT -DCORE_$(MCU_CORE) -I$(OMV_COMMON_DIR) \
+	$(CPP) -P -E -DBOOTLOADER -DLINKER_SCRIPT -DCORE_$(MCU_CORE) -I$(TOP_DIR)/$(COMMON_DIR) \
                     -I$(OMV_BOARD_CONFIG_DIR) $(PORT_DIR)/$(LDSCRIPT).ld.S > $(BUILD)/$(LDSCRIPT).lds
 	$(CC) $(LDFLAGS) $(OBJS) -o $(FW_DIR)/$(FIRMWARE).elf
 	$(OBJCOPY) -Obinary $(FW_DIR)/$(FIRMWARE).elf $(FW_DIR)/$(FIRMWARE).bin
