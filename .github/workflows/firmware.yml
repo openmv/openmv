@@ -7,21 +7,31 @@ on:
     branches:    
       - 'master'
     paths:
-      - 'src/**'
+      - '**'
       - '.github/workflows/*.yml'
       - '.github/workflows/*.json'
       - '!**/README.md'
       - '!**.rst'
+      - '!**.md'
+      - '!cubeai**'
+      - '!docker**'
+      - '!scripts**'
+      - '!tools/**'
 
   pull_request:
     branches:    
       - 'master'
     paths:
-      - 'src/**'
+      - '**'
       - '.github/workflows/*.yml'
       - '.github/workflows/*.json'
       - '!**/README.md'
       - '!**.rst'
+      - '!**.md'
+      - '!cubeai**'
+      - '!docker**'
+      - '!scripts**'
+      - '!tools/**'
 
 jobs:
   build-firmware:
