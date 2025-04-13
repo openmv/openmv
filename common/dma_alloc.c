@@ -32,6 +32,7 @@
 #include "dma_alloc.h"
 #include "omv_boardconfig.h"
 #include "omv_common.h"
+#if OMV_DMA_ALLOC
 
 typedef union block block_t;
 union block {
@@ -220,3 +221,4 @@ void dma_alloc_free(void *ptr) {
         block->periph = NULL;
     }
 }
+#endif
