@@ -64,7 +64,9 @@ typedef struct ml_backend_state {
 } ml_backend_state_t;
 
 void abort(void) {
-    while (1);
+    while (1) {
+        ;
+    }
 }
 
 void ml_backend_log_handler(const char *s) {
@@ -265,7 +267,7 @@ int ml_backend_init_model(py_ml_model_obj_t *model) {
     model->input_zero_point = (mp_obj_tuple_t *) MP_OBJ_TO_PTR(mp_obj_new_tuple(model->inputs_size, NULL));
     model->input_dtype = (mp_obj_tuple_t *) MP_OBJ_TO_PTR(mp_obj_new_tuple(model->inputs_size, NULL));
 
-    for (size_t i=0; i<model->inputs_size; i++) {
+    for (size_t i = 0; i < model->inputs_size; i++) {
         TfLiteTensor *input = state->interpreter->input(i);
 
         // Check input data type.
@@ -274,7 +276,7 @@ int ml_backend_init_model(py_ml_model_obj_t *model) {
         }
 
         mp_obj_tuple_t *o = (mp_obj_tuple_t *) MP_OBJ_TO_PTR(mp_obj_new_tuple(input->dims->size, NULL));
-        for (int j=0; j<input->dims->size; j++) {
+        for (int j = 0; j < input->dims->size; j++) {
             o->items[j] = mp_obj_new_int(input->dims->data[j]);
         }
 
@@ -292,7 +294,7 @@ int ml_backend_init_model(py_ml_model_obj_t *model) {
     model->output_zero_point = (mp_obj_tuple_t *) MP_OBJ_TO_PTR(mp_obj_new_tuple(model->outputs_size, NULL));
     model->output_dtype = (mp_obj_tuple_t *) MP_OBJ_TO_PTR(mp_obj_new_tuple(model->outputs_size, NULL));
 
-    for (size_t i=0; i<model->outputs_size; i++) {
+    for (size_t i = 0; i < model->outputs_size; i++) {
         TfLiteTensor *output = state->interpreter->output(i);
 
         // Check output data type.
@@ -301,7 +303,7 @@ int ml_backend_init_model(py_ml_model_obj_t *model) {
         }
 
         mp_obj_tuple_t *o = (mp_obj_tuple_t *) MP_OBJ_TO_PTR(mp_obj_new_tuple(output->dims->size, NULL));
-        for (int j=0; j<output->dims->size; j++) {
+        for (int j = 0; j < output->dims->size; j++) {
             o->items[j] = mp_obj_new_int(output->dims->data[j]);
         }
 
