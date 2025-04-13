@@ -37,7 +37,7 @@ STARTUP    ?= st/startup_$(shell echo $(MCU) | tr '[:upper:]' '[:lower:]')
 MCU_LOWER   = $(shell echo $(MCU) | tr '[:upper:]' '[:lower:]')
 MCU_SERIES := $(shell echo $(MCU) | cut -c6-7 | tr '[:upper:]' '[:lower:]')
 MCU_SERIES_UPPER := $(shell echo $(MCU_SERIES) | tr '[:lower:]' '[:upper:]')
-HAL_DIR     = hal/stm32/$(MCU_SERIES)
+HAL_DIR     = lib/stm32/$(MCU_SERIES)
 
 # Compiler Flags
 CFLAGS += -std=gnu99 \

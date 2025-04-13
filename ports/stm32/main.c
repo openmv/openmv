@@ -215,7 +215,9 @@ soft_reset:
     #if MICROPY_PY_CSI
     omv_csi_init0();
     #endif
+    #if OMV_DMA_ALLOC
     dma_alloc_init0();
+    #endif
     #ifdef IMLIB_ENABLE_IMAGE_FILE_IO
     file_buffer_init0();
     #endif
