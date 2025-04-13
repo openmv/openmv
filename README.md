@@ -27,7 +27,7 @@ The first generation of OpenMV cameras is based on STM32 ARM Cortex-M Digital Si
 The OpenMV project was successfully funded via Kickstarter back in 2015 and has come a long way since then. For more information, please visit [https://openmv.io](https://openmv.io)
 
 ## TensorFlow support
-The OpenMV firmware supports loading quantized TensorFlow Lite models. The firmware supports loading external models that reside on the filesystem to memory (on boards with SDRAM), and internal models (embedded into the firmware) in place. To load an external TensorFlow model from the filesystem from Python use [`tf`](https://docs.openmv.io/library/omv.tf.html) Python module. For information on embedding TensorFlow models into the firmware, and loading them, please see [TensorFlow Support](https://github.com/openmv/openmv/blob/master/src/lib/libtf/README.md).
+The OpenMV firmware supports loading quantized TensorFlow Lite models. The firmware supports loading external models that reside on the filesystem to memory (on boards with SDRAM), and internal models (embedded into the firmware) in place. To load an external TensorFlow model from the filesystem from Python use [`tf`](https://docs.openmv.io/library/omv.tf.html) Python module. For information on embedding TensorFlow models into the firmware, and loading them, please see [TensorFlow Support](https://github.com/openmv/openmv/blob/master/lib/tflm/README.md).
 
 ## Interface library
 
@@ -63,7 +63,7 @@ The above code works for Windows, Mac, or Linux. You just need to change the abo
 
 ## Building the firmware from source
 
-The easiest way to patch the firmware and rebuild it, is to fork this repository, enable Actions (from the Actions tab) in the forked repository, and pushing the changes. Our GitHub workflow rebuilds the firmware on pushes to the master branch and/or merging pull requests and generates a development release with attached separate firmware packages per supported board. For more complex changes, and building the OpenMV firmware from source locally, see [Building the Firmware From Source](https://github.com/openmv/openmv/blob/master/src/README.md).
+The easiest way to patch the firmware and rebuild it, is to fork this repository, enable Actions (from the Actions tab) in the forked repository, and pushing the changes. Our GitHub workflow rebuilds the firmware on pushes to the master branch and/or merging pull requests and generates a development release with attached separate firmware packages per supported board. For more complex changes, and building the OpenMV firmware from source locally, see [Building the Firmware From Source](https://github.com/openmv/openmv/blob/master/docs/firmware.md).
 
 ## Contributing to the project
 
@@ -118,5 +118,5 @@ ports/stm32/main.c: Fix storage label.
 Most of the code in the repository is licensed under the MIT license, with the following exceptions:
 
 * Some image library code is licensed under the GPL. This includes AGAST, LSD, and ZBAR. GPL code can be completely disabled in a build by defining `OMV_NO_GPL` in the `imlib_config.h` files.
-* Third-party libraries and drivers in `src/lib` and `src/drivers` are licensed under various permissive licenses. Please consult the LICENSE file in each driver/library subdirectory for more details.
+* Third-party libraries and drivers in `lib` and `drivers` are licensed under various permissive licenses. Please consult the LICENSE file in each driver/library subdirectory for more details.
 * Some drivers, modules, and libraries in OpenMV are proprietary and available for non-commercial use only. These proprietary components can be disabled during the build process. Official OpenMV hardware and licensed devices may use the proprietary code. For commercial licensing options, contact openmv@openmv.io.

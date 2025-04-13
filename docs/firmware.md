@@ -28,7 +28,7 @@ make TARGET=<TARGET_NAME>
 ```
 
 When the firmware build is done, the build artifacts should be located in `docker/build/<TARGET_NAME>`.
-> Note: `TARGET_NAME` is one of the [supported boards](https://github.com/openmv/openmv/tree/master/src/omv/boards). 
+> Note: `TARGET_NAME` is one of the [supported boards](https://github.com/openmv/openmv/tree/master/boards). 
 
 ## Linux Build
 
@@ -61,21 +61,21 @@ The above command will clone this repository along with all of its submodules re
 git clone --depth=1 https://github.com/openmv/openmv.git
 cd openmv
 git submodule update --init --depth=1 --no-single-branch
-git -C src/lib/micropython/ submodule update --init --depth=1
+git -C lib/micropython/ submodule update --init --depth=1
 ```
 
 ### Build the firmware
 To build the firmware, run the following commands inside the openmv repository:
 ```bash
 cd openmv
-make -j$(nproc) -C src/lib/micropython/mpy-cross   # Builds Micropython mpy cross-compiler
-make -j$(nproc) TARGET=<TRAGET_NAME> -C src    # Builds the OpenMV firmware
+make -j$(nproc) -C lib/micropython/mpy-cross   # Builds Micropython mpy cross-compiler
+make -j$(nproc) TARGET=<TRAGET_NAME>           # Builds the OpenMV firmware
 ```
 
-> Note: `TARGET_NAME` is one of the [supported boards](https://github.com/openmv/openmv/tree/master/src/omv/boards).
+> Note: `TARGET_NAME` is one of the [supported boards](https://github.com/openmv/openmv/tree/master/boards).
 
 ### Build artifacts
-When the firmware build is done, the build artifacts should be located in `src/build/bin`. Note the build artifacts depend on the target board, for example whether a bootloader or UVC binaries are generated or not depends on the target board's configuration. However, generally speaking the following files are generated:
+When the firmware build is done, the build artifacts should be located in `build/bin`. Note the build artifacts depend on the target board, for example whether a bootloader is generated or not depends on the target board's configuration. However, generally speaking the following files are generated:
 ```
 * bootloader.bin  # Bootloader Binary Image (not directly used)
 * bootloader.dfu  # Bootloader DFU Image (not directly used)
@@ -85,13 +85,11 @@ When the firmware build is done, the build artifacts should be located in `src/b
 * firmware.elf    # Firmware ELF Image (used to generate the BIN/DFU Files)
 * openmv.bin      # Combined Bootloader+Firmware Binary Image (not directly used)
 * openmv.dfu      # Combined Bootloader+Firmware DFU Image (Used by `Tools->Run Bootloader` in OpenMV IDE)
-* uvc.bin         # Alternative UVC Binary Image (not directly used)
-* uvc.dfu         # Alternative UVC DFU Image (not directly used)
-* uvc.elf         # Alternative UVC ELF Image (used to generate the BIN/DFU Files)
+* romfs<n>.img    # ROM filesystem image
 ```
 
 ### Notes on building the firmware in a Virtual Machine
-* When building the firmware inside of a Linux Virtual Machine, shared folders should be used to make the `src/build/bin` folder inside the VM available to the host OS. If using VMware, this can be done by going to `Player->Manage -> Virtual Machine Settings -> Options -> Shared Folders` and adding a shared folder named `shared` on the host OS. The shared folder will appear in Linux (for Ubuntu) under `/mnt/hgfs/shared/`. Any files copied to that path appear in the host OS inside of the shared folder. To copy firmware after the build into that folder run `mv build/bin/* /mnt/hgfs/shared/`.
+* When building the firmware inside of a Linux Virtual Machine, shared folders should be used to make the `build/bin` folder inside the VM available to the host OS. If using VMware, this can be done by going to `Player->Manage -> Virtual Machine Settings -> Options -> Shared Folders` and adding a shared folder named `shared` on the host OS. The shared folder will appear in Linux (for Ubuntu) under `/mnt/hgfs/shared/`. Any files copied to that path appear in the host OS inside of the shared folder. To copy firmware after the build into that folder run `mv build/bin/* /mnt/hgfs/shared/`.
 
 * OpenMV IDE's bootloader will have trouble connecting to your OpenMV Cam from inside of a virtual machine. You can download OpenMV IDE [here](https://openmv.io/pages/download). *To be clear, OpenMV IDE can connect to an OpenMV Cam from inside of a virtual machine, however OpenMV IDE's bootloader needs to connect to the OpenMV Cam using a timing critical handshake that generally fails when you introduce moving USB devices around between the Host OS and a Virtual Machine*.
 
