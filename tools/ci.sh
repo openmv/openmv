@@ -47,7 +47,7 @@ ci_update_submodules() {
 ci_build_target() {
     export LLVM_PATH=${LLVM_TOOLCHAIN_PATH}/bin
     export PATH=${GNU_MAKE_PATH}:${GCC_TOOLCHAIN_PATH}/bin:${PATH}
-    if [ "$1" == "Docker" ]; then
+    if [ "$1" == "DOCKER" ]; then
         BOARD=ARDUINO_NICLA_VISION
         make -j$(nproc) -C docker TARGET=${BOARD}
     else
