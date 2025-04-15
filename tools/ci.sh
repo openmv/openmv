@@ -38,8 +38,7 @@ ci_install_gnu_make() {
 
 ci_update_submodules() {
   git submodule update --init --depth=1 --no-single-branch
-  git -C src/lib/micropython/ submodule update --init --depth=1
-#  (cd src/lib/micropython/ && for remote in `git branch -r | grep -v /HEAD | grep -v master`; do git checkout --track $remote ; done)
+  git -C lib/micropython/ submodule update --init --depth=1
 }
 
 ########################################################################################
@@ -47,9 +46,9 @@ ci_update_submodules() {
 
 ci_build_target() {
     export PATH=${GNU_MAKE_PATH}:${GCC_TOOLCHAIN_PATH}/bin:${PATH}
-    make -j$(nproc) -C src/lib/micropython/mpy-cross
-    make -j$(nproc) TARGET=${1} LLVM_PATH=${LLVM_TOOLCHAIN_PATH}/bin -C src
-    mv src/build/bin ${1}
+    make -j$(nproc) -C lib/micropython/mpy-cross
+    make -j$(nproc) TARGET=${1} LLVM_PATH=${LLVM_TOOLCHAIN_PATH}/bin
+    mv build/bin ${1}
 }
 
 ########################################################################################
@@ -57,8 +56,8 @@ ci_build_target() {
 
 ci_package_firmware_release() {
     # Add WiFi firmware blobs
-    cp -rf src/drivers/cyw4343/firmware firmware/CYW4343
-    cp -rf src/drivers/winc1500/firmware firmware/WINC1500
+    cp -rf drivers/cyw4343/firmware firmware/CYW4343
+    cp -rf drivers/winc1500/firmware firmware/WINC1500
     (cd firmware && zip -r ../firmware_${1}.zip *)
 }
 

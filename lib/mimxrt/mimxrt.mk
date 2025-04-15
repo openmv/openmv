@@ -1,0 +1,166 @@
+# This file is part of the OpenMV project.
+#
+# Copyright (c) 2013-2021 Ibrahim Abdelkader <iabdalkader@openmv.io>
+# Copyright (c) 2013-2021 Kwabena W. Agyeman <kwagyeman@openmv.io>
+#
+# This work is licensed under the MIT license, see the file LICENSE for details.
+#
+# MIMXRT Makefile
+ifeq ($(MCU_SERIES),MIMXRT1062)
+HAL_SRC_C = $(addprefix MIMXRT1062/drivers/,\
+	fsl_adc.c\
+	fsl_adc_etc.c\
+	fsl_aipstz.c\
+	fsl_aoi.c\
+	fsl_bee.c\
+	fsl_cache.c\
+	fsl_clock.c\
+	fsl_cmp.c\
+	fsl_common_arm.c\
+	fsl_common.c\
+	fsl_csi.c\
+	fsl_dcdc.c\
+	fsl_dcp.c\
+	fsl_dmamux.c\
+	fsl_edma.c\
+	fsl_elcdif.c\
+	fsl_enc.c\
+	fsl_enet.c\
+	fsl_ewm.c\
+	fsl_flexcan.c\
+	fsl_flexcan_edma.c\
+	fsl_flexio.c\
+	fsl_flexio_camera.c\
+	fsl_flexio_camera_edma.c\
+	fsl_flexio_i2c_master.c\
+	fsl_flexio_i2s.c\
+	fsl_flexio_i2s_edma.c\
+	fsl_flexio_mculcd.c\
+	fsl_flexio_mculcd_edma.c\
+	fsl_flexio_spi.c\
+	fsl_flexio_spi_edma.c\
+	fsl_flexio_uart.c\
+	fsl_flexio_uart_edma.c\
+	fsl_flexram_allocate.c\
+	fsl_flexram.c\
+	fsl_flexspi.c\
+	fsl_flexspi_edma.c\
+	fsl_flexspi_nor_boot.c\
+	fsl_gpc.c\
+	fsl_gpio.c\
+	fsl_gpt.c\
+	fsl_kpp.c\
+	fsl_lpi2c.c\
+	fsl_lpi2c_edma.c\
+	fsl_lpspi.c\
+	fsl_lpspi_edma.c\
+	fsl_lpuart.c\
+	fsl_lpuart_edma.c\
+	fsl_ocotp.c\
+	fsl_pit.c\
+	fsl_pmu.c\
+	fsl_pwm.c\
+	fsl_pxp.c\
+	fsl_qtmr.c\
+	fsl_romapi.c\
+	fsl_rtwdog.c\
+	fsl_sai.c\
+	fsl_sai_edma.c\
+	fsl_semc.c\
+	fsl_snvs_hp.c\
+	fsl_snvs_lp.c\
+	fsl_spdif.c\
+	fsl_spdif_edma.c\
+	fsl_src.c\
+	fsl_tempmon.c\
+	fsl_trng.c\
+	fsl_tsc.c\
+	fsl_usdhc.c\
+	fsl_usb_phy.c\
+	fsl_wdog.c\
+	fsl_xbara.c\
+	fsl_xbarb.c\
+	mimxrt_pads.c\
+)
+endif
+
+ifeq ($(MCU_SERIES),MIMXRT1064)
+HAL_SRC_C = $(addprefix MIMXRT1064/drivers/,\
+	fsl_adc.c\
+	fsl_adc_etc.c\
+	fsl_aipstz.c\
+	fsl_aoi.c\
+	fsl_bee.c\
+	fsl_cache.c\
+	fsl_clock.c\
+	fsl_cmp.c\
+	fsl_common_arm.c\
+	fsl_common.c\
+	fsl_csi.c\
+	fsl_dcdc.c\
+	fsl_dcp.c\
+	fsl_dmamux.c\
+	fsl_edma.c\
+	fsl_elcdif.c\
+	fsl_enc.c\
+	fsl_enet.c\
+	fsl_ewm.c\
+	fsl_flexcan.c\
+	fsl_flexcan_edma.c\
+	fsl_flexio.c\
+	fsl_flexio_camera.c\
+	fsl_flexio_camera_edma.c\
+	fsl_flexio_i2c_master.c\
+	fsl_flexio_i2s.c\
+	fsl_flexio_i2s_edma.c\
+	fsl_flexio_mculcd.c\
+	fsl_flexio_mculcd_edma.c\
+	fsl_flexio_spi.c\
+	fsl_flexio_spi_edma.c\
+	fsl_flexio_uart.c\
+	fsl_flexio_uart_edma.c\
+	fsl_flexram_allocate.c\
+	fsl_flexram.c\
+	fsl_flexspi.c\
+	fsl_flexspi_edma.c\
+	fsl_flexspi_nor_boot.c\
+	fsl_gpc.c\
+	fsl_gpio.c\
+	fsl_gpt.c\
+	fsl_kpp.c\
+	fsl_lpi2c.c\
+	fsl_lpi2c_edma.c\
+	fsl_lpspi.c\
+	fsl_lpspi_edma.c\
+	fsl_lpuart.c\
+	fsl_lpuart_edma.c\
+	fsl_ocotp.c\
+	fsl_pit.c\
+	fsl_pmu.c\
+	fsl_pwm.c\
+	fsl_pxp.c\
+	fsl_qtmr.c\
+	fsl_romapi.c\
+	fsl_rtwdog.c\
+	fsl_sai.c\
+	fsl_sai_edma.c\
+	fsl_semc.c\
+	fsl_snvs_hp.c\
+	fsl_snvs_lp.c\
+	fsl_spdif.c\
+	fsl_spdif_edma.c\
+	fsl_src.c\
+	fsl_tempmon.c\
+	fsl_trng.c\
+	fsl_tsc.c\
+	fsl_usdhc.c\
+	fsl_wdog.c\
+	fsl_xbara.c\
+	fsl_xbarb.c\
+)
+endif
+
+HAL_CFLAGS += -I$(TOP_DIR)/lib/mimxrt/$(MCU_SERIES)
+HAL_CFLAGS += -I$(TOP_DIR)/lib/mimxrt/$(MCU_SERIES)/drivers
+
+OMV_FIRM_OBJ += $(addprefix $(BUILD)/lib/mimxrt/, $(HAL_SRC_C:.c=.o))

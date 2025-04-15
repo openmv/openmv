@@ -44,15 +44,18 @@ jobs:
       uses: tj-actions/changed-files@v46
       with:
         files: |
-            src/**/*.c
-            src/**/*.h
-            !src/hal/**
-            !src/lib/**
-            !src/drivers/**
-            !src/lib/micropython/**
-            !src/stm32cubeai/**
-            !src/omv/ports/stm32/uvc/**
-            !src/omv/ports/stm32/boot/**
+            **/*.{c,cc,h}
+            !cubeai/**
+            !docker/**
+            !docs/**
+            !drivers/**
+            drivers/sensors/*.{c,cc,h}
+            !lib/**
+            lib/imlib/*.{c,cc,h}
+            lib/tflm/*.{c,cc,h}
+            !scripts/**
+            !tools/**
+            !ports/stm32/uvc/**
 
     - name: '📜 Show list of changed files'
       run: |
