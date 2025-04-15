@@ -67,7 +67,6 @@ extern unsigned char OMV_BOARD_UID_ADDR[12];    // Unique address.
 #define OMV_FIR_MLX90641_ENABLE         (0)
 #define OMV_FIR_AMG8833_ENABLE          (1)
 #define OMV_FIR_LEPTON_ENABLE           (0)
-#define OMV_TOF_VL53L5CX_ENABLE         (1)
 
 // Debugging configuration.
 #define OMV_TUSBDBG_ENABLE              (CORE_M55_HP)

@@ -66,7 +66,6 @@
 #define OMV_FIR_MLX90640_ENABLE             (1)
 #define OMV_FIR_MLX90641_ENABLE             (1)
 #define OMV_FIR_AMG8833_ENABLE              (1)
-#define OMV_FIR_LEPTON_ENABLE               (0)
 
 // UMM heap block size
 #define OMV_UMM_BLOCK_SIZE                  256
