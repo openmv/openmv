@@ -45,10 +45,16 @@ ci_update_submodules() {
 # Build Targets.
 
 ci_build_target() {
+    export LLVM_PATH=${LLVM_TOOLCHAIN_PATH}/bin
     export PATH=${GNU_MAKE_PATH}:${GCC_TOOLCHAIN_PATH}/bin:${PATH}
-    make -j$(nproc) -C lib/micropython/mpy-cross
-    make -j$(nproc) TARGET=${1} LLVM_PATH=${LLVM_TOOLCHAIN_PATH}/bin
-    mv build/bin ${1}
+    if [ "$1" == "Docker" ]; then
+        BOARD=ARDUINO_NICLA_VISION
+        make -j$(nproc) -C docker TARGET=${BOARD}
+    else
+        make -j$(nproc) -C lib/micropython/mpy-cross
+        make -j$(nproc) TARGET=${1}
+        mv build/bin ${1}
+    fi
 }
 
 ########################################################################################
