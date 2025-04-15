@@ -51,6 +51,7 @@ jobs:
           - ARDUINO_NICLA_VISION
           - ARDUINO_NANO_RP2040_CONNECT
           - ARDUINO_NANO_33_BLE_SENSE
+          - Docker
       fail-fast: false
     steps:
     - name: '⏳ Checkout repository'
@@ -100,6 +101,7 @@ jobs:
       run: source tools/ci.sh && ci_build_target ${{ matrix.target }}
 
     - name: '⬆ Upload artifacts'
+      if: matrix.target != 'Docker'
       uses: actions/upload-artifact@v4
       with:
         name: ${{ matrix.target }}
