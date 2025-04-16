@@ -7,8 +7,9 @@
 *.dis
 *.pyc
 
-# Packages #
+# Cscope files #
 ############
+cscope.*
 
 # Logs and databases #
 ######################
@@ -20,33 +21,12 @@
 
 # Build dir #
 ######################
-src/build
+build
 docker/build/
-*.dapper
-
 
 # Old releases
+######################
 releases
-
-# IDE config file #
-######################
-usr/openmv.config
-
-# Caffe #
-######################
-ml/cmsisnn/caffe
-
-# VS Code #
-######################
-.vscode/
-
-# Qt Creator #
-######################
-openmv.config
-openmv.creator
-openmv.creator.user
-openmv.files
-openmv.includes
 
 # Alif tools temp files
 ######################
