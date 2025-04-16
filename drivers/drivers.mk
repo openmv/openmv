@@ -113,9 +113,7 @@ DRIVER_SRC_C += $(addprefix genx320/src/, \
     psee_genx320.c \
 )
 
-OMV_GENX320_EHC_ENABLE ?= 0
 CFLAGS += -DOMV_GENX320_ENABLE=1
-CFLAGS += -DOMV_GENX320_EHC_ENABLE=$(OMV_GENX320_EHC_ENABLE)
 CFLAGS += -I$(TOP_DIR)/drivers/genx320/include
 endif # OMV_GENX320_ENABLE
 
