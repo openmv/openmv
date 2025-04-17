@@ -5,9 +5,7 @@ on:
     branches:
       - 'master'
     paths:
-      - 'src/**'
-      - '!**/README.md'
-      - '!**.rst'
+      - '**/*.{c,cc,h}'
 
   pull_request:
     types:
@@ -17,6 +15,8 @@ on:
       - synchronize
     branches:
       - 'master'
+    paths:
+      - '**/*.{c,cc,h}'
 
 jobs:
   formatting-check:
