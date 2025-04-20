@@ -60,6 +60,7 @@
 #include "frogeye2020.h"
 #include "gc2145.h"
 #include "genx320.h"
+#include "softcsi.h"
 #include "framebuffer.h"
 #include "unaligned_memcpy.h"
 
@@ -370,7 +371,12 @@ int omv_csi_probe_init(uint32_t bus_id, uint32_t bus_speed) {
                 csi.reset_pol = OMV_CSI_ACTIVE_LOW;
             #endif
             } else {
+                #if (OMV_SOFTCSI_ENABLE == 1)
+                csi.slv_addr = SOFTCSI_SLV_ADDR;
+                csi.chip_id = SOFTCSI_ID;
+                #else
                 return OMV_CSI_ERROR_ISC_UNDETECTED;
+                #endif
             }
         }
     }
@@ -546,6 +552,12 @@ int omv_csi_probe_init(uint32_t bus_id, uint32_t bus_speed) {
             init_ret = frogeye2020_init(&csi);
             break;
         #endif // (OMV_FROGEYE2020_ENABLE == 1)
+
+        #if (OMV_SOFTCSI_ENABLE == 1)
+        case SOFTCSI_ID:
+            init_ret = softcsi_init(&csi);
+            break;
+        #endif // (OMV_SOFTCSI_ENABLE == 1)
 
         default:
             return OMV_CSI_ERROR_ISC_UNSUPPORTED;

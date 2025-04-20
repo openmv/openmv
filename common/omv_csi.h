@@ -49,6 +49,7 @@
 #define FROGEYE2020_SLV_ADDR    (0x6E)
 #define PAG7920_SLV_ADDR        (0x80)
 #define PAG7936_SLV_ADDR        (0x80)
+#define SOFTCSI_SLV_ADDR        (0x7f)
 
 // Chip ID Registers
 #define OV5640_CHIP_ID          (0x300A)
@@ -92,6 +93,7 @@
 #define PAG7936_ID              (0x7936)
 #define PAJ6100_ID              (0x6100)
 #define FROGEYE2020_ID          (0x2020)
+#define SOFTCSI_ID              (0x50F7)
 
 #define OMV_CSI_TIMEOUT_MS      (3000)
 
