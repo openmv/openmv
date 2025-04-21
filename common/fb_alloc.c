@@ -64,15 +64,17 @@ void fb_alloc_init0() {
 }
 
 uint32_t fb_avail() {
-    uint32_t temp = pointer - framebuffer_get_buffers_end() - sizeof(uint32_t);
+    framebuffer_t *fb = framebuffer_get(0);
+    uint32_t temp = pointer - framebuffer_get_buffers_end(fb) - sizeof(uint32_t);
     return (temp < sizeof(uint32_t)) ? 0 : temp;
 }
 
 void fb_alloc_mark() {
+    framebuffer_t *fb = framebuffer_get(0);
     char *new_pointer = pointer - sizeof(uint32_t);
 
     // Check if allocation overwrites the framebuffer pixels
-    if (new_pointer < framebuffer_get_buffers_end()) {
+    if (new_pointer < framebuffer_get_buffers_end(fb)) {
         nlr_jump(MP_OBJ_TO_PTR(mp_obj_new_exception_msg(&mp_type_MemoryError,
                                                         MP_ERROR_TEXT("Out of fast frame buffer stack memory"))));
     }
@@ -135,6 +137,8 @@ void fb_alloc_free_till_mark_past_mark_permanent() {
 
 // returns null pointer without error if size==0
 void *fb_alloc(uint32_t size, int hints) {
+    framebuffer_t *fb = framebuffer_get(0);
+
     if (!size) {
         return NULL;
     }
@@ -150,7 +154,7 @@ void *fb_alloc(uint32_t size, int hints) {
     char *new_pointer = result - sizeof(uint32_t);
 
     // Check if allocation overwrites the framebuffer pixels
-    if (new_pointer < framebuffer_get_buffers_end()) {
+    if (new_pointer < framebuffer_get_buffers_end(fb)) {
         fb_alloc_fail();
     }
 
@@ -194,7 +198,8 @@ void *fb_alloc0(uint32_t size, int hints) {
 }
 
 void *fb_alloc_all(uint32_t *size, int hints) {
-    uint32_t temp = pointer - framebuffer_get_buffers_end() - sizeof(uint32_t);
+    framebuffer_t *fb = framebuffer_get(0);
+    uint32_t temp = pointer - framebuffer_get_buffers_end(fb) - sizeof(uint32_t);
 
     if (temp < sizeof(uint32_t)) {
         *size = 0;
