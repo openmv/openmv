@@ -35,6 +35,7 @@
 #include <stdarg.h>
 #include "omv_i2c.h"
 #include "imlib.h"
+#include "framebuffer.h"
 
 #define OV2640_SLV_ADDR         (0x60)
 #define OV5640_SLV_ADDR         (0x78)
@@ -319,6 +320,8 @@ typedef struct _omv_csi {
     bool detected;              // Set to true when the sensor is initialized.
 
     omv_i2c_t i2c_bus;          // SCCB/I2C bus.
+
+    framebuffer_t *fb;          // Frame buffer pointer
 
     #ifdef OMV_CSI_PORT_BITS
     // Additional port-specific members like device base pointer,
