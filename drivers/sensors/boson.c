@@ -143,13 +143,13 @@ static int snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
 
     int num_pixels = resolution[boson_framesize][0] * resolution[boson_framesize][1];
 
-    if (csi->color_palette && (framebuffer_get_buffer_size() >= (num_pixels * sizeof(uint16_t)))) {
+    if (csi->color_palette && (framebuffer_get_buffer_size(csi->fb) >= (num_pixels * sizeof(uint16_t)))) {
         for (int32_t i = num_pixels - 1; i >= 0; i--) {
             ((uint16_t *) image->data)[i] = csi->color_palette[image->data[i]];
         }
 
         image->pixfmt = PIXFORMAT_RGB565;
-        MAIN_FB()->pixfmt = PIXFORMAT_RGB565;
+        csi->fb->pixfmt = PIXFORMAT_RGB565;
     }
 
     return ret;
