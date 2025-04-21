@@ -547,24 +547,27 @@ const uint8_t *py_helper_keyword_alpha_palette(size_t n_args, const mp_obj_t *ar
 }
 
 bool py_helper_is_equal_to_framebuffer(image_t *img) {
-    return framebuffer_get_buffer(framebuffer->head)->data == img->data;
+    framebuffer_t *fb = framebuffer_get(0);
+    return framebuffer_get_buffer(fb, fb->head)->data == img->data;
 }
 
 void py_helper_update_framebuffer(image_t *img) {
     if (py_helper_is_equal_to_framebuffer(img)) {
-        framebuffer_init_from_image(img);
+        framebuffer_init_from_image(framebuffer_get(0), img);
     }
 }
 
 void py_helper_set_to_framebuffer(image_t *img) {
+    framebuffer_t *fb = framebuffer_get(0);
+
     #if MICROPY_PY_CSI
     omv_csi_set_framebuffers(1);
     #else
-    framebuffer_set_buffers(1);
+    framebuffer_set_buffers(fb, 1);
     #endif
 
-    PY_ASSERT_TRUE_MSG((image_size(img) <= framebuffer_get_buffer_size()),
+    PY_ASSERT_TRUE_MSG((image_size(img) <= framebuffer_get_buffer_size(fb)),
                        "The image doesn't fit in the frame buffer!");
-    framebuffer_init_from_image(img);
-    img->data = framebuffer_get_buffer(framebuffer->head)->data;
+    framebuffer_init_from_image(fb, img);
+    img->data = framebuffer_get_buffer(fb, fb->head)->data;
 }

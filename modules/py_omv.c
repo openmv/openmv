@@ -77,10 +77,12 @@ static mp_obj_t py_omv_debug_mode() {
 static MP_DEFINE_CONST_FUN_OBJ_0(py_omv_debug_mode_obj, py_omv_debug_mode);
 
 static mp_obj_t py_omv_disable_fb(size_t n_args, const mp_obj_t *args) {
+    framebuffer_t *fb = framebuffer_get(0);
+
     if (!n_args) {
-        return mp_obj_new_bool(!fb_get_streaming_enabled());
+        return mp_obj_new_bool(!framebuffer_get_streaming(fb));
     }
-    fb_set_streaming_enabled(!mp_obj_get_int(args[0]));
+    framebuffer_set_streaming(fb, !mp_obj_get_int(args[0]));
     return mp_const_none;
 }
 static MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(py_omv_disable_fb_obj, 0, 1, py_omv_disable_fb);

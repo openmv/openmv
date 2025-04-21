@@ -1107,7 +1107,8 @@ mp_obj_t py_fir_snapshot(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_a
     fb_alloc_free_till_mark();
 
     if (args[ARG_copy_to_fb].u_bool) {
-        framebuffer_update_jpeg_buffer();
+        framebuffer_t *fb = framebuffer_get(0);
+        framebuffer_update_jpeg_buffer(fb);
     }
     return py_image_from_struct(&dst_img);
 }

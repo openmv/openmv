@@ -415,7 +415,8 @@ static mp_obj_t py_imageio_read(size_t n_args, const mp_obj_t *pos_args, mp_map_
     py_helper_update_framebuffer(&image);
 
     if (args[ARG_copy_to_fb].u_bool) {
-        framebuffer_update_jpeg_buffer();
+        framebuffer_t *fb = framebuffer_get(0);
+        framebuffer_update_jpeg_buffer(fb);
     }
     return py_image_from_struct(&image);
 }

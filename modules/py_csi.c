@@ -131,7 +131,7 @@ static mp_obj_t py_omv_csi_shutdown(mp_obj_t enable) {
 static MP_DEFINE_CONST_FUN_OBJ_1(py_omv_csi_shutdown_obj, py_omv_csi_shutdown);
 
 static mp_obj_t py_omv_csi_flush() {
-    framebuffer_update_jpeg_buffer();
+    framebuffer_update_jpeg_buffer(csi.fb);
     return mp_const_none;
 }
 static MP_DEFINE_CONST_FUN_OBJ_0(py_omv_csi_flush_obj, py_omv_csi_flush);
@@ -194,12 +194,13 @@ static mp_obj_t py_omv_csi_height() {
 static MP_DEFINE_CONST_FUN_OBJ_0(py_omv_csi_height_obj, py_omv_csi_height);
 
 static mp_obj_t py_omv_csi_get_fb() {
-    if (framebuffer_get_depth() < 0) {
+    image_t image;
+
+    if (framebuffer_get_depth(csi.fb) < 0) {
         return mp_const_none;
     }
 
-    image_t image;
-    framebuffer_init_image(&image);
+    framebuffer_init_image(csi.fb, &image);
     return py_image_from_struct(&image);
 }
 static MP_DEFINE_CONST_FUN_OBJ_0(py_omv_csi_get_fb_obj, py_omv_csi_get_fb);
@@ -210,7 +211,8 @@ static mp_obj_t py_omv_csi_get_id() {
 static MP_DEFINE_CONST_FUN_OBJ_0(py_omv_csi_get_id_obj, py_omv_csi_get_id);
 
 static mp_obj_t py_omv_csi_get_frame_available() {
-    return mp_obj_new_bool(framebuffer->tail != framebuffer->head);
+    framebuffer_t *fb = framebuffer_get(0);
+    return mp_obj_new_bool(fb->tail != fb->head);
 }
 static MP_DEFINE_CONST_FUN_OBJ_0(py_omv_csi_get_frame_available_obj, py_omv_csi_get_frame_available);
 
@@ -351,10 +353,10 @@ static mp_obj_t py_omv_csi_get_windowing() {
         omv_csi_raise_error(OMV_CSI_ERROR_INVALID_FRAMESIZE);
     }
 
-    return mp_obj_new_tuple(4, (mp_obj_t []) {mp_obj_new_int(framebuffer_get_x()),
-                                              mp_obj_new_int(framebuffer_get_y()),
-                                              mp_obj_new_int(framebuffer_get_u()),
-                                              mp_obj_new_int(framebuffer_get_v())});
+    return mp_obj_new_tuple(4, (mp_obj_t []) {mp_obj_new_int(framebuffer_get_x(csi.fb)),
+                                              mp_obj_new_int(framebuffer_get_y(csi.fb)),
+                                              mp_obj_new_int(framebuffer_get_u(csi.fb)),
+                                              mp_obj_new_int(framebuffer_get_v(csi.fb))});
 }
 static MP_DEFINE_CONST_FUN_OBJ_0(py_omv_csi_get_windowing_obj, py_omv_csi_get_windowing);
 
@@ -651,8 +653,9 @@ static MP_DEFINE_CONST_FUN_OBJ_0(py_omv_csi_get_auto_rotation_obj, py_omv_csi_ge
 
 static mp_obj_t py_omv_csi_set_framebuffers(mp_obj_t count) {
     mp_int_t c = mp_obj_get_int(count);
+    framebuffer_t *fb = framebuffer_get(0);
 
-    if (framebuffer->n_buffers == c) {
+    if (fb->n_buffers == c) {
         return mp_const_none;
     }
 
@@ -670,7 +673,8 @@ static mp_obj_t py_omv_csi_set_framebuffers(mp_obj_t count) {
 static MP_DEFINE_CONST_FUN_OBJ_1(py_omv_csi_set_framebuffers_obj, py_omv_csi_set_framebuffers);
 
 static mp_obj_t py_omv_csi_get_framebuffers() {
-    return mp_obj_new_int(framebuffer->n_buffers);
+    framebuffer_t *fb = framebuffer_get(0);
+    return mp_obj_new_int(fb->n_buffers);
 }
 static MP_DEFINE_CONST_FUN_OBJ_0(py_omv_csi_get_framebuffers_obj, py_omv_csi_get_framebuffers);
 
