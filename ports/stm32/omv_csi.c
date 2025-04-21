@@ -35,7 +35,6 @@
 #include <stdbool.h>
 #include "py/mphal.h"
 #include "irq.h"
-#include "framebuffer.h"
 #include "omv_boardconfig.h"
 #include "unaligned_memcpy.h"
 #include "omv_gpio.h"
@@ -47,7 +46,6 @@
 #define DMA_MAX_XFER_SIZE       (0xFFFFU * 4U)
 #define DMA_LENGTH_ALIGNMENT    (16)
 
-omv_csi_t csi = {};
 extern uint8_t _line_buf;
 extern uint32_t hal_get_exti_gpio(uint32_t line);
 
@@ -107,7 +105,7 @@ static int omv_csi_dma_config() {
 }
 
 void omv_csi_init0() {
-    omv_csi_abort(true, false);
+    omv_csi_abort(&csi, true, false);
 
     // Re-init i2c bus to reset the bus state after soft reset, which
     // could have interrupted the bus in the middle of a transfer.
@@ -139,8 +137,10 @@ int omv_csi_init() {
     // Reset the csi state
     memset(&csi, 0, sizeof(omv_csi_t));
 
+    // Set default framebuffer
+    csi.fb = framebuffer_get(0);
+
     // Set default snapshot function.
-    // Some sensors need to call snapshot from init.
     csi.snapshot = omv_csi_snapshot;
 
     // Configure the csi external clock (XCLK).
@@ -222,35 +222,41 @@ int omv_csi_config(omv_csi_config_t config) {
 }
 
 // Stop the DCMI from generating more DMA requests, and disable the DMA.
-int omv_csi_abort(bool fifo_flush, bool in_irq) {
+int omv_csi_abort(omv_csi_t *csi, bool fifo_flush, bool in_irq) {
     if (DCMI->CR & DCMI_CR_ENABLE) {
         DCMI->CR &= ~DCMI_CR_ENABLE;
+
         if (in_irq) {
-            HAL_DMA_Abort_IT(&csi.dma);
+            HAL_DMA_Abort_IT(&csi->dma);
         } else {
-            HAL_DMA_Abort(&csi.dma);
+            HAL_DMA_Abort(&csi->dma);
         }
         HAL_NVIC_DisableIRQ(DMA2_Stream1_IRQn);
+
         #if defined(OMV_MDMA_CHANNEL_DCMI_0)
         if (!in_irq) {
-            HAL_MDMA_Abort(&csi.mdma0);
-            HAL_MDMA_Abort(&csi.mdma1);
+            HAL_MDMA_Abort(&csi->mdma0);
+            HAL_MDMA_Abort(&csi->mdma1);
         }
-        HAL_MDMA_DeInit(&csi.mdma0);
-        HAL_MDMA_DeInit(&csi.mdma1);
+        HAL_MDMA_DeInit(&csi->mdma0);
+        HAL_MDMA_DeInit(&csi->mdma1);
         #endif
-        __HAL_DCMI_DISABLE_IT(&csi.dcmi, DCMI_IT_FRAME);
-        __HAL_DCMI_CLEAR_FLAG(&csi.dcmi, DCMI_FLAG_FRAMERI);
-        csi.first_line = false;
-        csi.drop_frame = false;
-        csi.last_frame_ms = 0;
-        csi.last_frame_ms_valid = false;
+
+        __HAL_DCMI_DISABLE_IT(&csi->dcmi, DCMI_IT_FRAME);
+        __HAL_DCMI_CLEAR_FLAG(&csi->dcmi, DCMI_FLAG_FRAMERI);
+
+        csi->first_line = false;
+        csi->drop_frame = false;
+        csi->last_frame_ms = 0;
+        csi->last_frame_ms_valid = false;
     }
 
-    if (fifo_flush) {
-        framebuffer_flush_buffers(true);
-    } else if (!csi.disable_full_flush) {
-        framebuffer_flush_buffers(false);
+    if (csi->fb) {
+        if (fifo_flush) {
+            framebuffer_flush_buffers(csi->fb, true);
+        } else if (!csi->disable_full_flush) {
+            framebuffer_flush_buffers(csi->fb, false);
+        }
     }
 
     return 0;
@@ -325,7 +331,7 @@ int omv_csi_set_clk_frequency(uint32_t frequency) {
 
 int omv_csi_shutdown(int enable) {
     int ret = 0;
-    omv_csi_abort(true, false);
+    omv_csi_abort(&csi, true, false);
 
     if (enable) {
         #if defined(OMV_CSI_POWER_PIN)
@@ -377,8 +383,9 @@ int omv_csi_set_vsync_callback(vsync_cb_t vsync_cb) {
 // address to improve copy performance. Do not crop by more than 1 word as this will
 // result in less time between DMA transfers complete interrupts on 16-byte boundaries.
 static uint32_t get_dcmi_hw_crop(uint32_t bytes_per_pixel) {
-    uint32_t byte_x_offset = (MAIN_FB()->x * bytes_per_pixel) % sizeof(uint32_t);
-    uint32_t width_remainder = (resolution[csi.framesize][0] - (MAIN_FB()->x + MAIN_FB()->u)) * bytes_per_pixel;
+    framebuffer_t *fb = csi.fb;
+    uint32_t byte_x_offset = (fb->x * bytes_per_pixel) % sizeof(uint32_t);
+    uint32_t width_remainder = (resolution[csi.framesize][0] - (fb->x + fb->u)) * bytes_per_pixel;
     uint32_t x_crop = 0;
 
     if (byte_x_offset && (width_remainder >= (sizeof(uint32_t) - byte_x_offset))) {
@@ -389,6 +396,8 @@ static uint32_t get_dcmi_hw_crop(uint32_t bytes_per_pixel) {
 }
 
 void HAL_DCMI_FrameEventCallback(DCMI_HandleTypeDef *hdcmi) {
+    framebuffer_t *fb = csi.fb;
+
     #if defined(OMV_MDMA_CHANNEL_DCMI_0)
     // Clear out any stale flags.
     DMA2->LIFCR = DMA_FLAG_TCIF1_5 | DMA_FLAG_HTIF1_5;
@@ -401,14 +410,14 @@ void HAL_DCMI_FrameEventCallback(DCMI_HandleTypeDef *hdcmi) {
     if (csi.drop_frame) {
         csi.drop_frame = false;
         // Reset the buffer's state if the frame was dropped.
-        vbuffer_t *buffer = framebuffer_get_tail(FB_PEEK);
+        vbuffer_t *buffer = framebuffer_get_tail(fb, FB_PEEK);
         if (buffer) {
             buffer->reset_state = true;
         }
         return;
     }
 
-    framebuffer_get_tail(FB_NO_FLAGS);
+    framebuffer_get_tail(fb, FB_NO_FLAGS);
 
     if (csi.frame_callback) {
         csi.frame_callback();
@@ -417,6 +426,7 @@ void HAL_DCMI_FrameEventCallback(DCMI_HandleTypeDef *hdcmi) {
 
 #if defined(OMV_MDMA_CHANNEL_DCMI_0)
 int omv_csi_dma_memcpy(void *dma, void *dst, void *src, int bpp, bool transposed) {
+    framebuffer_t *fb = csi.fb;
     MDMA_HandleTypeDef *handle = dma;
 
     // Drop the frame if MDMA is not keeping up as the image will be corrupted.
@@ -431,8 +441,8 @@ int omv_csi_dma_memcpy(void *dma, void *dst, void *src, int bpp, bool transposed
     HAL_MDMA_Start(handle,
                    (uint32_t) src,
                    (uint32_t) dst,
-                   transposed ? bpp : (MAIN_FB()->u * bpp),
-                   transposed ? MAIN_FB()->u : 1);
+                   transposed ? bpp : (fb->u * bpp),
+                   transposed ? fb->u : 1);
     return 0;
 }
 #endif
@@ -442,6 +452,8 @@ int omv_csi_dma_memcpy(void *dma, void *dst, void *src, int bpp, bool transposed
 // Using line buffers allows performing post-processing before writing the frame to the
 // framebuffer, and help hide external RAM latency.
 void DCMI_DMAConvCpltUser(uint32_t addr) {
+    framebuffer_t *fb = csi.fb;
+
     // Throttle frames to match the current frame rate.
     omv_csi_throttle_framerate();
 
@@ -454,9 +466,9 @@ void DCMI_DMAConvCpltUser(uint32_t addr) {
         return;
     }
 
-    vbuffer_t *buffer = framebuffer_get_tail(FB_PEEK);
+    vbuffer_t *buffer = framebuffer_get_tail(fb, FB_PEEK);
     if (buffer == NULL) {
-        omv_csi_abort(false, true);
+        omv_csi_abort(&csi, false, true);
         return;
     }
 
@@ -471,7 +483,7 @@ void DCMI_DMAConvCpltUser(uint32_t addr) {
             // valid data length, followed by image data and optional padding (0xFF). `offset` holds the
             // total size.
             uint16_t size = __REV16(*((uint16_t *) addr));
-            if (buffer->offset + size > framebuffer_get_buffer_size()) {
+            if (buffer->offset + size > framebuffer_get_buffer_size(fb)) {
                 buffer->jpeg_buffer_overflow = true;
                 return;
             }
@@ -490,7 +502,7 @@ void DCMI_DMAConvCpltUser(uint32_t addr) {
     #endif
 
     uint32_t bytes_per_pixel = omv_csi_get_src_bpp();
-    uint8_t *src = ((uint8_t *) addr) + (MAIN_FB()->x * bytes_per_pixel) - get_dcmi_hw_crop(bytes_per_pixel);
+    uint8_t *src = ((uint8_t *) addr) + (fb->x * bytes_per_pixel) - get_dcmi_hw_crop(bytes_per_pixel);
     uint8_t *dst = buffer->data;
 
     if (csi.pixformat == PIXFORMAT_GRAYSCALE) {
@@ -502,7 +514,7 @@ void DCMI_DMAConvCpltUser(uint32_t addr) {
     if (!csi.transpose) {
         // NOTE: MDMA is started here, not in FRAME/VSYNC callbacks, to maximize the time before
         // the frame has to be dropped.
-        uint32_t line_width_bytes = MAIN_FB()->u * bytes_per_pixel;
+        uint32_t line_width_bytes = fb->u * bytes_per_pixel;
         // mdma0 will copy this line of the image to the final destination.
         __HAL_UNLOCK(&csi.mdma0);
         csi.mdma0.State = HAL_MDMA_STATE_READY;
@@ -512,14 +524,14 @@ void DCMI_DMAConvCpltUser(uint32_t addr) {
         __HAL_UNLOCK(&csi.mdma1);
         csi.mdma1.State = HAL_MDMA_STATE_READY;
         HAL_MDMA_Start(&csi.mdma1, (uint32_t) src, (uint32_t) (dst + line_width_bytes),
-                       line_width_bytes, MAIN_FB()->v - 1);
+                       line_width_bytes, fb->v - 1);
         HAL_NVIC_DisableIRQ(DMA2_Stream1_IRQn);
         return;
     }
     #endif
 
     if (!csi.transpose) {
-        dst += MAIN_FB()->u * bytes_per_pixel * buffer->offset++;
+        dst += fb->u * bytes_per_pixel * buffer->offset++;
     } else {
         dst += bytes_per_pixel * buffer->offset++;
     }
@@ -535,6 +547,8 @@ void DCMI_DMAConvCpltUser(uint32_t addr) {
 #if defined(OMV_MDMA_CHANNEL_DCMI_0)
 // Configures an MDMA channel to completely offload the CPU in copying one line of pixels.
 static void mdma_config(MDMA_InitTypeDef *init, omv_csi_t *csi, uint32_t bytes_per_pixel) {
+    framebuffer_t *fb = csi->fb;
+
     init->Request = MDMA_REQUEST_SW;
     init->TransferTriggerMode = MDMA_REPEAT_BLOCK_TRANSFER;
     init->Priority = MDMA_PRIORITY_VERY_HIGH;
@@ -553,12 +567,12 @@ static void mdma_config(MDMA_InitTypeDef *init, omv_csi_t *csi, uint32_t bytes_p
         init->Endianness = MDMA_LITTLE_ENDIANNESS_PRESERVE;
     }
 
-    uint32_t line_offset_bytes = (MAIN_FB()->x * bytes_per_pixel) - get_dcmi_hw_crop(bytes_per_pixel);
-    uint32_t line_width_bytes = MAIN_FB()->u * bytes_per_pixel;
+    uint32_t line_offset_bytes = (fb->x * bytes_per_pixel) - get_dcmi_hw_crop(bytes_per_pixel);
+    uint32_t line_width_bytes = fb->u * bytes_per_pixel;
 
     if (csi->transpose) {
         line_width_bytes = bytes_per_pixel;
-        init->DestBlockAddressOffset = (MAIN_FB()->v - 1) * bytes_per_pixel;
+        init->DestBlockAddressOffset = (fb->v - 1) * bytes_per_pixel;
     }
 
     // YUV422 Source -> Y Destination
@@ -609,28 +623,29 @@ static void mdma_config(MDMA_InitTypeDef *init, omv_csi_t *csi, uint32_t bytes_p
 // This is the default snapshot function, which can be replaced in omv_csi_init functions.
 int omv_csi_snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
     uint32_t length = 0;
+    framebuffer_t *fb = csi->fb;
 
     // Compress the framebuffer for the IDE preview, if not the first frame, the
     // framebuffer is enabled, and the image sensor doesn't support JPEG encoding.
-    framebuffer_update_jpeg_buffer();
+    framebuffer_update_jpeg_buffer(fb);
 
     // Ensure that the raw frame fits into the FB. It will be switched from RGB565 to BAYER
     // first to save space before being cropped until it fits.
     omv_csi_auto_crop_framebuffer();
 
-    // Restore MAIN_FB width and height if they were changed before. BPP is restored later.
+    // Restore frame buffer width and height if they were changed before. BPP is restored later.
     // Note that JPEG compression is done first on the framebuffer with the user settings.
-    uint32_t w = MAIN_FB()->u;
-    uint32_t h = MAIN_FB()->v;
+    uint32_t w = fb->u;
+    uint32_t h = fb->v;
 
     // If DCMI_DMAConvCpltUser() happens before framebuffer_free_current_buffer(); below then the
     // transfer is stopped and it will be re-enabled again right afterwards in the single vbuffer
     // case. We know the transfer was stopped by checking DCMI_CR_ENABLE.
-    framebuffer_free_current_buffer();
+    framebuffer_free_current_buffer(fb);
 
     // Configure and start the capture.
     if (!(DCMI->CR & DCMI_CR_ENABLE)) {
-        framebuffer_setup_buffers();
+        framebuffer_setup_buffers(fb);
 
         // Setup the size and address of the transfer
         uint32_t bytes_per_pixel = omv_csi_get_src_bpp();
@@ -660,7 +675,7 @@ int omv_csi_snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
         }
 
         // Get the destination buffer address.
-        vbuffer_t *buffer = framebuffer_get_tail(FB_PEEK);
+        vbuffer_t *buffer = framebuffer_get_tail(fb, FB_PEEK);
 
         if ((csi->pixformat == PIXFORMAT_JPEG) && (csi->jpg_format == 3) && (!buffer)) {
             return OMV_CSI_ERROR_FRAMEBUFFER_ERROR;
@@ -679,7 +694,7 @@ int omv_csi_snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
                 csi->mdma1.Init.Request = MDMA_REQUEST_DMA2_Stream1_TC;
                 csi->mdma1.Init.TransferTriggerMode = MDMA_BLOCK_TRANSFER;
                 // We setup MDMA to repeatedly reset itself to transfer the same line buffer.
-                csi->mdma1.Init.SourceBlockAddressOffset = -(MAIN_FB()->u * bytes_per_pixel);
+                csi->mdma1.Init.SourceBlockAddressOffset = -(fb->u * bytes_per_pixel);
 
                 HAL_MDMA_Init(&csi->mdma1);
                 HAL_MDMA_ConfigPostRequestMask(&csi->mdma1, (uint32_t) &DMA2->LIFCR, DMA_FLAG_TCIF1_5);
@@ -692,7 +707,7 @@ int omv_csi_snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
         HAL_DCMI_DisableCrop(&csi->dcmi);
         if (csi->pixformat != PIXFORMAT_JPEG) {
             // Vertically crop the image. Horizontal cropping is done in software.
-            HAL_DCMI_ConfigCrop(&csi->dcmi, x_crop, MAIN_FB()->y, dma_line_width_bytes - 1, h - 1);
+            HAL_DCMI_ConfigCrop(&csi->dcmi, x_crop, fb->y, dma_line_width_bytes - 1, h - 1);
             HAL_DCMI_EnableCrop(&csi->dcmi);
         }
 
@@ -706,7 +721,7 @@ int omv_csi_snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
         // differing only in size, with an interrupt after every half of the transfer.
         if ((csi->pixformat == PIXFORMAT_JPEG) && (csi->jpg_format == 3)) {
             // Start a one-shot transfer to the framebuffer, used only for JPEG mode 3.
-            uint32_t size = framebuffer_get_buffer_size();
+            uint32_t size = framebuffer_get_buffer_size(fb);
             length = IM_MIN(size, (DMA_MAX_XFER_SIZE * 2U));
             HAL_DCMI_Start_DMA(&csi->dcmi, DCMI_MODE_SNAPSHOT,
                                (uint32_t) buffer->data, length / sizeof(uint32_t));
@@ -753,10 +768,10 @@ int omv_csi_snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
 
     // Wait for a frame to be ready.
     vbuffer_t *buffer = NULL;
-    for (uint32_t tick_start = HAL_GetTick(); !(buffer = framebuffer_get_head(fb_flags)); ) {
+    for (uint32_t tick_start = HAL_GetTick(); !(buffer = framebuffer_get_head(fb, fb_flags)); ) {
         __WFI();
         if ((HAL_GetTick() - tick_start) > OMV_CSI_TIMEOUT_MS) {
-            omv_csi_abort(true, false);
+            omv_csi_abort(csi, true, false);
 
             #if defined(OMV_CSI_FSYNC_PIN)
             if (csi->frame_sync) {
@@ -770,7 +785,7 @@ int omv_csi_snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
 
     // In JPEG 3 mode, the transfer must be aborted as it waits for data indefinitely.
     if ((csi->pixformat == PIXFORMAT_JPEG) && (csi->jpg_format == 3)) {
-        omv_csi_abort(true, false);
+        omv_csi_abort(csi, true, false);
     }
 
     // We're done receiving data.
@@ -787,30 +802,30 @@ int omv_csi_snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
 
     // Prepare the frame buffer w/h/bpp values given the image type.
     if (!csi->transpose) {
-        MAIN_FB()->w = w;
-        MAIN_FB()->h = h;
+        fb->w = w;
+        fb->h = h;
     } else {
-        MAIN_FB()->w = h;
-        MAIN_FB()->h = w;
+        fb->w = h;
+        fb->h = w;
     }
 
     // Fix the BPP.
     switch (csi->pixformat) {
         case PIXFORMAT_GRAYSCALE:
-            MAIN_FB()->pixfmt = PIXFORMAT_GRAYSCALE;
+            fb->pixfmt = PIXFORMAT_GRAYSCALE;
             break;
         case PIXFORMAT_RGB565:
-            MAIN_FB()->pixfmt = PIXFORMAT_RGB565;
+            fb->pixfmt = PIXFORMAT_RGB565;
             break;
         case PIXFORMAT_BAYER:
-            MAIN_FB()->pixfmt = PIXFORMAT_BAYER;
-            MAIN_FB()->subfmt_id = csi->cfa_format;
-            MAIN_FB()->pixfmt = imlib_bayer_shift(MAIN_FB()->pixfmt, MAIN_FB()->x, MAIN_FB()->y, csi->transpose);
+            fb->pixfmt = PIXFORMAT_BAYER;
+            fb->subfmt_id = csi->cfa_format;
+            fb->pixfmt = imlib_bayer_shift(fb->pixfmt, fb->x, fb->y, csi->transpose);
             break;
         case PIXFORMAT_YUV422: {
-            MAIN_FB()->pixfmt = PIXFORMAT_YUV;
-            MAIN_FB()->subfmt_id = csi->yuv_format;
-            MAIN_FB()->pixfmt = imlib_yuv_shift(MAIN_FB()->pixfmt, MAIN_FB()->x);
+            fb->pixfmt = PIXFORMAT_YUV;
+            fb->subfmt_id = csi->yuv_format;
+            fb->pixfmt = imlib_yuv_shift(fb->pixfmt, fb->x);
             break;
         }
         case PIXFORMAT_JPEG: {
@@ -828,8 +843,8 @@ int omv_csi_snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
                 }
             }
             // Clean trailing data after 0xFFD9 at the end of the jpeg byte stream.
-            MAIN_FB()->pixfmt = PIXFORMAT_JPEG;
-            MAIN_FB()->size = jpeg_clean_trailing_bytes(size, buffer->data);
+            fb->pixfmt = PIXFORMAT_JPEG;
+            fb->size = jpeg_clean_trailing_bytes(size, buffer->data);
             break;
         }
         default:
@@ -837,6 +852,6 @@ int omv_csi_snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
     }
 
     // Set the user image.
-    framebuffer_init_image(image);
+    framebuffer_init_image(fb, image);
     return 0;
 }
