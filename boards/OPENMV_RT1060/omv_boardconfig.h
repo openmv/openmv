@@ -191,12 +191,7 @@
 // FIR Lepton
 #define OMV_FIR_LEPTON_I2C_BUS          (OMV_FIR_I2C_ID)
 #define OMV_FIR_LEPTON_I2C_BUS_SPEED    (OMV_FIR_I2C_SPEED)
-
 #define OMV_FIR_LEPTON_SPI_BUS          (OMV_SPI3_ID)
-#define OMV_FIR_LEPTON_MOSI_PIN         (&omv_pin_LPSPI3_MOSI)
-#define OMV_FIR_LEPTON_MISO_PIN         (&omv_pin_LPSPI3_MISO)
-#define OMV_FIR_LEPTON_SCLK_PIN         (&omv_pin_LPSPI3_SCLK)
-#define OMV_FIR_LEPTON_SSEL_PIN         (&omv_pin_LPSPI3_GPIO)
 
 // Camera interface configuration.
 #define OMV_CSI_BASE                    (CSI)
