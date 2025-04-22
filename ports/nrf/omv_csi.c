@@ -29,14 +29,10 @@
 #include "py/mphal.h"
 #include "omv_i2c.h"
 #include "omv_csi.h"
-#include "framebuffer.h"
 #include "omv_boardconfig.h"
 #include "unaligned_memcpy.h"
 #include "nrf_i2s.h"
 #include "hal/nrf_gpio.h"
-
-// Sensor struct.
-omv_csi_t csi = {};
 
 static uint32_t _vsyncMask;
 static uint32_t _hrefMask;
@@ -81,8 +77,10 @@ int omv_csi_init() {
     // Reset the csi state
     memset(&csi, 0, sizeof(omv_csi_t));
 
+    // Set default framebuffer
+    csi.fb = framebuffer_get(0);
+
     // Set default snapshot function.
-    // Some sensors need to call snapshot from init.
     csi.snapshot = omv_csi_snapshot;
 
     // Configure the csi external clock (XCLK).
@@ -178,31 +176,33 @@ int omv_csi_set_windowing(int x, int y, int w, int h) {
 
 // This is the default snapshot function, which can be replaced in omv_csi_init functions.
 int omv_csi_snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
+    framebuffer_t *fb = csi->fb;
+
     // Compress the framebuffer for the IDE preview, only if it's not the first frame,
     // the framebuffer is enabled and the image sensor does not support JPEG encoding.
     // Note: This doesn't run unless the IDE is connected and the framebuffer is enabled.
-    framebuffer_update_jpeg_buffer();
+    framebuffer_update_jpeg_buffer(fb);
 
     // This driver supports a single buffer.
-    if (MAIN_FB()->n_buffers != 1) {
-        framebuffer_set_buffers(1);
+    if (fb->n_buffers != 1) {
+        framebuffer_set_buffers(fb, 1);
     }
 
-    if (omv_csi_check_framebuffer_size() != 0) {
+    if (omv_csi_check_framebuffer_size(fb) != 0) {
         return OMV_CSI_ERROR_FRAMEBUFFER_OVERFLOW;
     }
 
-    framebuffer_free_current_buffer();
-    framebuffer_setup_buffers();
-    vbuffer_t *buffer = framebuffer_get_tail(FB_NO_FLAGS);
+    framebuffer_free_current_buffer(fb);
+    framebuffer_setup_buffers(fb);
+    vbuffer_t *buffer = framebuffer_get_tail(fb, FB_NO_FLAGS);
 
     if (!buffer) {
         return OMV_CSI_ERROR_FRAMEBUFFER_ERROR;
     }
 
     uint8_t *b = buffer->data;
-    uint32_t _width = MAIN_FB()->w;
-    uint32_t _height = MAIN_FB()->h;
+    uint32_t _width = fb->w;
+    uint32_t _height = fb->h;
     int bytesPerRow = _width * 2;  // Always read 2 BPP
     bool _grayscale = (csi->pixformat == PIXFORMAT_GRAYSCALE);
 
@@ -249,15 +249,15 @@ int omv_csi_snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
     }
 
     // Set framebuffer pixel format.
-    MAIN_FB()->pixfmt = csi->pixformat;
+    fb->pixfmt = csi->pixformat;
 
     // Swap bytes if set.
-    if ((MAIN_FB()->pixfmt == PIXFORMAT_RGB565 && csi->rgb_swap) ||
-        (MAIN_FB()->pixfmt == PIXFORMAT_YUV422 && csi->yuv_swap)) {
+    if ((fb->pixfmt == PIXFORMAT_RGB565 && csi->rgb_swap) ||
+        (fb->pixfmt == PIXFORMAT_YUV422 && csi->yuv_swap)) {
         unaligned_memcpy_rev16(buffer->data, buffer->data, _width * _height);
     }
 
     // Set the user image.
-    framebuffer_init_image(image);
+    framebuffer_init_image(fb, image);
     return 0;
 }
