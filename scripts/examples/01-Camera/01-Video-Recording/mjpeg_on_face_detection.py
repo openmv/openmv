@@ -19,6 +19,7 @@ import image
 import time
 import mjpeg
 import random
+import machine
 
 sensor.reset()  # Reset and initialize the sensor.
 sensor.set_pixformat(sensor.GRAYSCALE)  # Set pixel format to RGB565 (or GRAYSCALE)
