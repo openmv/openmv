@@ -43,14 +43,11 @@
 #include "omv_gpio.h"
 #include "omv_i2c.h"
 #include "omv_csi.h"
-#include "framebuffer.h"
 #include "unaligned_memcpy.h"
 
 #define DMA_LENGTH_ALIGNMENT    (8)
 #define MIN_EDMA_DST_INC        (4)
 
-// Sensor struct.
-omv_csi_t csi = {};
 extern uint8_t _line_buf[OMV_LINE_BUF_SIZE];
 
 #define CSI_IRQ_FLAGS    (CSI_CR1_SOF_INTEN_MASK            \
@@ -58,7 +55,7 @@ extern uint8_t _line_buf[OMV_LINE_BUF_SIZE];
                           | CSI_CR1_FB1_DMA_DONE_INTEN_MASK)
 
 void omv_csi_init0() {
-    omv_csi_abort(true, false);
+    omv_csi_abort(&csi, true, false);
 
     // Re-init I2C to reset the bus state after soft reset, which
     // could have interrupted the bus in the middle of a transfer.
@@ -91,6 +88,9 @@ int omv_csi_init() {
 
     // Reset the csi state
     memset(&csi, 0, sizeof(omv_csi_t));
+
+    // Set default framebuffer
+    csi.fb = framebuffer_get(0);
 
     // Set default snapshot function.
     // Some sensors need to call snapshot from init.
@@ -168,20 +168,24 @@ int omv_csi_config(omv_csi_config_t config) {
     return 0;
 }
 
-int omv_csi_abort(bool fifo_flush, bool in_irq) {
+int omv_csi_abort(omv_csi_t *csi, bool fifo_flush, bool in_irq) {
     NVIC_DisableIRQ(CSI_IRQn);
     CSI_DisableInterrupts(CSI, CSI_IRQ_FLAGS);
     CSI_REG_CR3(CSI) &= ~CSI_CR3_DMA_REQ_EN_RFF_MASK;
     CSI_REG_CR18(CSI) &= ~CSI_CR18_CSI_ENABLE_MASK;
-    csi.dest_inc = 0;
-    csi.first_line = false;
-    csi.drop_frame = false;
-    csi.last_frame_ms = 0;
-    csi.last_frame_ms_valid = false;
-    if (fifo_flush) {
-        framebuffer_flush_buffers(true);
-    } else if (!csi.disable_full_flush) {
-        framebuffer_flush_buffers(false);
+
+    csi->dest_inc = 0;
+    csi->first_line = false;
+    csi->drop_frame = false;
+    csi->last_frame_ms = 0;
+    csi->last_frame_ms_valid = false;
+
+    if (csi->fb) {
+        if (fifo_flush) {
+            framebuffer_flush_buffers(csi->fb, true);
+        } else if (!csi->disable_full_flush) {
+            framebuffer_flush_buffers(csi->fb, false);
+        }
     }
     return 0;
 }
@@ -210,10 +214,12 @@ uint32_t omv_csi_get_xclk_frequency() {
 void omv_csi_sof_callback() {
     csi.first_line = false;
     csi.drop_frame = false;
+
     // Get current framebuffer.
-    vbuffer_t *buffer = framebuffer_get_tail(FB_PEEK);
+    vbuffer_t *buffer = framebuffer_get_tail(csi.fb, FB_PEEK);
+
     if (buffer == NULL) {
-        omv_csi_abort(false, true);
+        omv_csi_abort(&csi, false, true);
     } else if (buffer->offset < resolution[csi.framesize][1]) {
         // Missed a few lines, reset buffer state and continue.
         buffer->reset_state = true;
@@ -232,15 +238,17 @@ int omv_csi_dma_memcpy(void *dma, void *dst, void *src, int bpp, bool transposed
 
     edma_handle_t *handle = dma;
     edma_transfer_config_t config;
+    framebuffer_t *fb = csi.fb;
+
     EDMA_PrepareTransferConfig(&config,
                                src, // srcAddr
                                csi.src_size, // srcWidth
                                csi.src_inc, // srcOffset
                                dst, // destAddr
                                transposed ? bpp : csi.dest_inc, // destWidth
-                               transposed ? (MAIN_FB()->v * bpp) : csi.dest_inc, // destOffset
-                               MAIN_FB()->u * bpp, // bytesEachRequest
-                               MAIN_FB()->u * bpp); // transferBytes
+                               transposed ? (fb->v * bpp) : csi.dest_inc, // destOffset
+                               fb->u * bpp, // bytesEachRequest
+                               fb->u * bpp); // transferBytes
 
     size_t retry = 3;
     status_t status = kStatus_EDMA_Busy;
@@ -262,11 +270,13 @@ int omv_csi_dma_memcpy(void *dma, void *dst, void *src, int bpp, bool transposed
 #endif
 
 void omv_csi_line_callback(uint32_t addr) {
+    framebuffer_t *fb = csi.fb;
+
     // Throttle frames to match the current frame rate.
     omv_csi_throttle_framerate();
 
     // Get current framebuffer.
-    vbuffer_t *buffer = framebuffer_get_tail(FB_PEEK);
+    vbuffer_t *buffer = framebuffer_get_tail(fb, FB_PEEK);
 
     if (csi.pixformat == PIXFORMAT_JPEG) {
         if (csi.drop_frame) {
@@ -288,7 +298,7 @@ void omv_csi_line_callback(uint32_t addr) {
             //
             uint16_t size = __REV16(*((uint16_t *) addr));
             // Prevent a buffer overflow when writing the jpeg data.
-            if (buffer->offset + size > framebuffer_get_buffer_size()) {
+            if (buffer->offset + size > framebuffer_get_buffer_size(fb)) {
                 buffer->jpeg_buffer_overflow = true;
                 jpeg_end = true;
             } else {
@@ -311,7 +321,7 @@ void omv_csi_line_callback(uint32_t addr) {
         // detect the end of the frame when there's no more jpeg data.
         if (jpeg_end) {
             // Release the current framebuffer.
-            framebuffer_get_tail(FB_NO_FLAGS);
+            framebuffer_get_tail(fb, FB_NO_FLAGS);
             CSI_REG_CR3(CSI) &= ~CSI_CR3_DMA_REQ_EN_RFF_MASK;
             if (csi.frame_callback) {
                 csi.frame_callback();
@@ -329,10 +339,10 @@ void omv_csi_line_callback(uint32_t addr) {
         return;
     }
 
-    if ((MAIN_FB()->y <= buffer->offset) && (buffer->offset < (MAIN_FB()->y + MAIN_FB()->v))) {
+    if ((fb->y <= buffer->offset) && (buffer->offset < (fb->y + fb->v))) {
         // Copy from DMA buffer to framebuffer.
         uint32_t bytes_per_pixel = omv_csi_get_src_bpp();
-        uint8_t *src = ((uint8_t *) addr) + (MAIN_FB()->x * bytes_per_pixel);
+        uint8_t *src = ((uint8_t *) addr) + (fb->x * bytes_per_pixel);
         uint8_t *dst = buffer->data;
 
         // Adjust BPP for Grayscale.
@@ -341,9 +351,9 @@ void omv_csi_line_callback(uint32_t addr) {
         }
 
         if (csi.transpose) {
-            dst += bytes_per_pixel * (buffer->offset - MAIN_FB()->y);
+            dst += bytes_per_pixel * (buffer->offset - fb->y);
         } else {
-            dst += MAIN_FB()->u * bytes_per_pixel * (buffer->offset - MAIN_FB()->y);
+            dst += fb->u * bytes_per_pixel * (buffer->offset - fb->y);
         }
 
         #if defined(OMV_CSI_DMA)
@@ -358,7 +368,7 @@ void omv_csi_line_callback(uint32_t addr) {
 
     if (++buffer->offset == resolution[csi.framesize][1]) {
         // Release the current framebuffer.
-        framebuffer_get_tail(FB_NO_FLAGS);
+        framebuffer_get_tail(fb, FB_NO_FLAGS);
         CSI_REG_CR3(CSI) &= ~CSI_CR3_DMA_REQ_EN_RFF_MASK;
         if (csi.frame_callback) {
             csi.frame_callback();
@@ -368,8 +378,9 @@ void omv_csi_line_callback(uint32_t addr) {
 
 #if defined(OMV_CSI_DMA)
 static void edma_config(omv_csi_t *csi, uint32_t bytes_per_pixel) {
-    uint32_t line_offset_bytes = MAIN_FB()->x * bytes_per_pixel;
-    uint32_t line_width_bytes = MAIN_FB()->u * bytes_per_pixel;
+    framebuffer_t *fb = fb;
+    uint32_t line_offset_bytes = fb->x * bytes_per_pixel;
+    uint32_t line_width_bytes = fb->u * bytes_per_pixel;
 
     // YUV422 Source -> Y Destination
     if ((csi->pixformat == PIXFORMAT_GRAYSCALE) && (csi->mono_bpp == 2)) {
@@ -407,9 +418,11 @@ static void edma_config(omv_csi_t *csi, uint32_t bytes_per_pixel) {
 #endif
 
 int omv_csi_snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
-    // Used to restore MAIN_FB's width and height.
-    uint32_t w = MAIN_FB()->u;
-    uint32_t h = MAIN_FB()->v;
+    framebuffer_t *fb = csi->fb;
+
+    // Used to restore the frame buffer width and height.
+    uint32_t w = fb->u;
+    uint32_t h = fb->v;
 
     if (csi->pixformat == PIXFORMAT_INVALID) {
         return OMV_CSI_ERROR_INVALID_PIXFORMAT;
@@ -424,14 +437,14 @@ int omv_csi_snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
     }
 
     // Compress the framebuffer for the IDE preview.
-    framebuffer_update_jpeg_buffer();
+    framebuffer_update_jpeg_buffer(fb);
 
     // Free the current FB head.
-    framebuffer_free_current_buffer();
+    framebuffer_free_current_buffer(fb);
 
     // If the DMA is not active, reconfigure and restart the CSI transfer.
     if (!(CSI->CR18 & CSI_CR18_CSI_ENABLE_MASK)) {
-        framebuffer_setup_buffers();
+        framebuffer_setup_buffers(fb);
 
         uint32_t bytes_per_pixel = omv_csi_get_src_bpp();
         uint32_t dma_line_bytes = resolution[csi->framesize][0] * bytes_per_pixel;
@@ -452,7 +465,9 @@ int omv_csi_snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
             edma_config(csi, bytes_per_pixel);
             for (int i = 0; i < OMV_CSI_DMA_CHANNEL_COUNT; i++) {
                 EDMA_CreateHandle(&csi->dma_channels[i], OMV_CSI_DMA, OMV_CSI_DMA_CHANNEL_START + i);
-                EDMA_DisableChannelInterrupts(OMV_CSI_DMA, OMV_CSI_DMA_CHANNEL_START + i, kEDMA_MajorInterruptEnable);
+                EDMA_DisableChannelInterrupts(OMV_CSI_DMA,
+                                              OMV_CSI_DMA_CHANNEL_START + i,
+                                              kEDMA_MajorInterruptEnable);
             }
         }
         #endif
@@ -492,12 +507,12 @@ int omv_csi_snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
     }
     #endif
 
-    vbuffer_t *buffer = framebuffer_get_head(fb_flags);
+    vbuffer_t *buffer = framebuffer_get_head(fb, fb_flags);
     // Wait for the DMA to finish the transfer.
     for (mp_uint_t ticks = mp_hal_ticks_ms(); buffer == NULL;) {
         MICROPY_EVENT_POLL_HOOK
         if ((mp_hal_ticks_ms() - ticks) > OMV_CSI_TIMEOUT_MS) {
-            omv_csi_abort(true, false);
+            omv_csi_abort(csi, true, false);
 
             #if defined(OMV_CSI_FSYNC_PIN)
             if (csi->frame_sync) {
@@ -507,7 +522,7 @@ int omv_csi_snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
 
             return OMV_CSI_ERROR_CAPTURE_TIMEOUT;
         }
-        buffer = framebuffer_get_head(fb_flags);
+        buffer = framebuffer_get_head(fb, fb_flags);
     }
 
     // We're done receiving data.
@@ -523,30 +538,30 @@ int omv_csi_snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
     }
 
     if (!csi->transpose) {
-        MAIN_FB()->w = w;
-        MAIN_FB()->h = h;
+        fb->w = w;
+        fb->h = h;
     } else {
-        MAIN_FB()->w = h;
-        MAIN_FB()->h = w;
+        fb->w = h;
+        fb->h = w;
     }
 
     // Fix the BPP.
     switch (csi->pixformat) {
         case PIXFORMAT_GRAYSCALE:
-            MAIN_FB()->pixfmt = PIXFORMAT_GRAYSCALE;
+            fb->pixfmt = PIXFORMAT_GRAYSCALE;
             break;
         case PIXFORMAT_RGB565:
-            MAIN_FB()->pixfmt = PIXFORMAT_RGB565;
+            fb->pixfmt = PIXFORMAT_RGB565;
             break;
         case PIXFORMAT_BAYER:
-            MAIN_FB()->pixfmt = PIXFORMAT_BAYER;
-            MAIN_FB()->subfmt_id = csi->cfa_format;
-            MAIN_FB()->pixfmt = imlib_bayer_shift(MAIN_FB()->pixfmt, MAIN_FB()->x, MAIN_FB()->y, csi->transpose);
+            fb->pixfmt = PIXFORMAT_BAYER;
+            fb->subfmt_id = csi->cfa_format;
+            fb->pixfmt = imlib_bayer_shift(fb->pixfmt, fb->x, fb->y, csi->transpose);
             break;
         case PIXFORMAT_YUV422: {
-            MAIN_FB()->pixfmt = PIXFORMAT_YUV;
-            MAIN_FB()->subfmt_id = csi->yuv_format;
-            MAIN_FB()->pixfmt = imlib_yuv_shift(MAIN_FB()->pixfmt, MAIN_FB()->x);
+            fb->pixfmt = PIXFORMAT_YUV;
+            fb->subfmt_id = csi->yuv_format;
+            fb->pixfmt = imlib_yuv_shift(fb->pixfmt, fb->x);
             break;
         }
         case PIXFORMAT_JPEG: {
@@ -559,8 +574,8 @@ int omv_csi_snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
                 // OV2640 JPEG TODO
             }
             // Clean trailing data after 0xFFD9 at the end of the jpeg byte stream.
-            MAIN_FB()->pixfmt = PIXFORMAT_JPEG;
-            MAIN_FB()->size = jpeg_clean_trailing_bytes(size, buffer->data);
+            fb->pixfmt = PIXFORMAT_JPEG;
+            fb->size = jpeg_clean_trailing_bytes(size, buffer->data);
             break;
         }
         default:
@@ -568,7 +583,7 @@ int omv_csi_snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
     }
 
     // Set the user image.
-    framebuffer_init_image(image);
+    framebuffer_init_image(fb, image);
     return 0;
 }
 #endif
