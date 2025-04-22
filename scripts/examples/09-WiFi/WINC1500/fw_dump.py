@@ -9,4 +9,4 @@ import network
 wlan = network.WINC(mode=network.WINC.MODE_FIRMWARE)
 
 # For ATWINC1500-MR210PB only.
-wlan.fw_dump("/winc_19_7_6.bin")
+wlan.fw_dump("winc_19_7_6.bin")

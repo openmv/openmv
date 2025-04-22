@@ -32,8 +32,8 @@ kpts = img.find_keypoints(max_keypoints=150, threshold=10, scale_factor=1.2)
 if kpts is None:
     raise (Exception("Couldn't find any keypoints!"))
 
-image.save_descriptor(kpts, "/%s.orb" % (FILE_NAME))
-img.save("/%s.pgm" % (FILE_NAME))
+image.save_descriptor(kpts, "%s.orb" % (FILE_NAME))
+img.save("%s.pgm" % (FILE_NAME))
 
 img.draw_keypoints(kpts)
 sensor.snapshot()

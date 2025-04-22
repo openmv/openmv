@@ -6,6 +6,7 @@
 
 import network
 import requests
+import time
 
 # AP info
 SSID = ""  # Network SSID
