@@ -379,7 +379,7 @@ int omv_csi_probe_init(uint32_t bus_id, uint32_t bus_speed);
 int omv_csi_config(omv_csi_config_t config);
 
 // Abort frame capture and disable IRQs, DMA etc..
-int omv_csi_abort(bool fifo_flush, bool in_irq);
+int omv_csi_abort(omv_csi_t *csi, bool fifo_flush, bool in_irq);
 
 // Reset the sensor to its default state.
 int omv_csi_reset();

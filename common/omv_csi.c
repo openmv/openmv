@@ -141,13 +141,13 @@ __weak int omv_csi_init() {
     return OMV_CSI_ERROR_CTL_UNSUPPORTED;
 }
 
-__weak int omv_csi_abort(bool fifo_flush, bool in_irq) {
+__weak int omv_csi_abort(omv_csi_t *csi, bool fifo_flush, bool in_irq) {
     return OMV_CSI_ERROR_CTL_UNSUPPORTED;
 }
 
 __weak int omv_csi_reset() {
     // Disable any ongoing frame capture.
-    omv_csi_abort(true, false);
+    omv_csi_abort(&csi, true, false);
 
     // Reset the csi state
     csi.sde = 0;
@@ -596,7 +596,7 @@ __weak bool omv_csi_is_detected() {
 
 __weak int omv_csi_sleep(int enable) {
     // Disable any ongoing frame capture.
-    omv_csi_abort(true, false);
+    omv_csi_abort(&csi, true, false);
 
     // Call the sensor specific function.
     if (csi.sleep != NULL &&
@@ -611,7 +611,7 @@ __weak int omv_csi_shutdown(int enable) {
     int ret = 0;
 
     // Disable any ongoing frame capture.
-    omv_csi_abort(true, false);
+    omv_csi_abort(&csi, true, false);
 
     #if defined(OMV_CSI_POWER_PIN)
     if (enable) {
@@ -688,7 +688,7 @@ __weak int omv_csi_set_pixformat(pixformat_t pixformat) {
     }
 
     // Disable any ongoing frame capture.
-    omv_csi_abort(true, false);
+    omv_csi_abort(&csi, true, false);
 
     // Flush previous frame.
     framebuffer_update_jpeg_buffer(csi.fb);
@@ -727,7 +727,7 @@ __weak int omv_csi_set_framesize(omv_csi_framesize_t framesize) {
     }
 
     // Disable any ongoing frame capture.
-    omv_csi_abort(true, false);
+    omv_csi_abort(&csi, true, false);
 
     // Flush previous frame.
     framebuffer_update_jpeg_buffer(csi.fb);
@@ -860,7 +860,7 @@ __weak int omv_csi_set_windowing(int x, int y, int w, int h) {
     }
 
     // Disable any ongoing frame capture.
-    omv_csi_abort(true, false);
+    omv_csi_abort(&csi, true, false);
 
     // Flush previous frame.
     framebuffer_update_jpeg_buffer(csi.fb);
@@ -1095,7 +1095,7 @@ __weak int omv_csi_set_hmirror(int enable) {
     }
 
     // Disable any ongoing frame capture.
-    omv_csi_abort(true, false);
+    omv_csi_abort(&csi, true, false);
 
     // Check if the control is supported.
     if (csi.set_hmirror == NULL) {
@@ -1129,7 +1129,7 @@ __weak int omv_csi_set_vflip(int enable) {
     }
 
     // Disable any ongoing frame capture.
-    omv_csi_abort(true, false);
+    omv_csi_abort(&csi, true, false);
 
     // Check if the control is supported.
     if (csi.set_vflip == NULL) {
@@ -1163,7 +1163,7 @@ __weak int omv_csi_set_transpose(bool enable) {
     }
 
     // Disable any ongoing frame capture.
-    omv_csi_abort(true, false);
+    omv_csi_abort(&csi, true, false);
 
     if ((csi.pixformat == PIXFORMAT_YUV422) || (csi.pixformat == PIXFORMAT_JPEG)) {
         return OMV_CSI_ERROR_PIXFORMAT_UNSUPPORTED;
@@ -1186,7 +1186,7 @@ __weak int omv_csi_set_auto_rotation(bool enable) {
     }
 
     // Disable any ongoing frame capture.
-    omv_csi_abort(true, false);
+    omv_csi_abort(&csi, true, false);
 
     // Operation not supported on JPEG images.
     if ((csi.pixformat == PIXFORMAT_YUV422) || (csi.pixformat == PIXFORMAT_JPEG)) {
@@ -1204,7 +1204,7 @@ __weak bool omv_csi_get_auto_rotation() {
 
 __weak int omv_csi_set_framebuffers(int count) {
     // Disable any ongoing frame capture.
-    omv_csi_abort(true, false);
+    omv_csi_abort(&csi, true, false);
 
     // Flush previous frame.
     framebuffer_update_jpeg_buffer(csi.fb);
@@ -1266,7 +1266,7 @@ __weak int omv_csi_set_lens_correction(int enable, int radi, int coef) {
 __weak int omv_csi_ioctl(int request, ... /* arg */) {
     // Disable any ongoing frame capture.
     if (request & OMV_CSI_IOCTL_FLAGS_ABORT) {
-        omv_csi_abort(true, false);
+        omv_csi_abort(&csi, true, false);
     }
 
     // Check if the control is supported.
