@@ -99,7 +99,7 @@ static mp_obj_t fir_lepton_spi_resync_callback(mp_obj_t unused) {
         .callback = fir_lepton_spi_callback,
     };
 
-    omv_gpio_write(OMV_FIR_LEPTON_SSEL_PIN, 0);
+    omv_gpio_write(spi_bus.cs, 0);
     omv_spi_transfer_start(&spi_bus, &spi_xfer);
     return mp_const_none;
 }
@@ -167,7 +167,7 @@ void fir_lepton_spi_callback(omv_spi_t *spi, void *userdata, void *buf) {
         fir_lepton_spi_rx_cb_expected_pid = 0;
         fir_lepton_spi_rx_cb_expected_sid = 0;
         omv_spi_transfer_abort(&spi_bus);
-        omv_gpio_write(OMV_FIR_LEPTON_SSEL_PIN, 1);
+        omv_gpio_write(spi_bus.cs, 1);
         fir_lepton_spi_resync();
         return;
     }
@@ -264,7 +264,7 @@ int fir_lepton_init(omv_i2c_t *bus, int *w, int *h, int *refresh, int *resolutio
     spi_config.dma_flags = OMV_SPI_DMA_CIRCULAR | OMV_SPI_DMA_DOUBLE;
     omv_spi_init(&spi_bus, &spi_config);
 
-    omv_gpio_write(OMV_FIR_LEPTON_SSEL_PIN, 1);
+    omv_gpio_write(spi_bus.cs, 1);
 
     #if defined(OMV_FIR_LEPTON_RESET_PIN)
     omv_gpio_config(OMV_FIR_LEPTON_RESET_PIN, OMV_GPIO_MODE_OUTPUT, OMV_GPIO_PULL_UP, OMV_GPIO_SPEED_LOW, -1);

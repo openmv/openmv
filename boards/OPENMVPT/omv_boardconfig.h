@@ -356,10 +356,6 @@
 #define OMV_FIR_LEPTON_I2C_BUS_SPEED            (OMV_CSI_I2C_SPEED)
 
 #define OMV_FIR_LEPTON_SPI_BUS                  (OMV_SPI3_ID)
-#define OMV_FIR_LEPTON_MOSI_PIN                 (&omv_pin_B5_SPI3)
-#define OMV_FIR_LEPTON_MISO_PIN                 (&omv_pin_B4_SPI3)
-#define OMV_FIR_LEPTON_SCLK_PIN                 (&omv_pin_B3_SPI3)
-#define OMV_FIR_LEPTON_SSEL_PIN                 (&omv_pin_A15_GPIO)
 
 #define OMV_FIR_LEPTON_RESET_PIN                (&omv_pin_D5_GPIO)
 #define OMV_FIR_LEPTON_POWER_PIN                (&omv_pin_D4_GPIO)

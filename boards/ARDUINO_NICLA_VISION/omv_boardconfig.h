@@ -307,11 +307,6 @@
 // FIR Lepton
 #define OMV_FIR_LEPTON_I2C_BUS                (OMV_FIR_I2C_ID)
 #define OMV_FIR_LEPTON_I2C_BUS_SPEED          (OMV_FIR_I2C_SPEED)
-
 #define OMV_FIR_LEPTON_SPI_BUS                (OMV_SPI4_ID)
-#define OMV_FIR_LEPTON_MOSI_PIN               (&omv_pin_E14_SPI4)
-#define OMV_FIR_LEPTON_MISO_PIN               (&omv_pin_E13_SPI4)
-#define OMV_FIR_LEPTON_SCLK_PIN               (&omv_pin_E12_SPI4)
-#define OMV_FIR_LEPTON_SSEL_PIN               (&omv_pin_E11_GPIO)
 
 #endif //__OMV_BOARDCONFIG_H__
