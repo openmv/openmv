@@ -30,7 +30,6 @@
 #include "py/mphal.h"
 #include "omv_i2c.h"
 #include "omv_csi.h"
-#include "framebuffer.h"
 
 #include "pico/time.h"
 #include "pico/stdlib.h"
@@ -41,9 +40,6 @@
 #include "omv_boardconfig.h"
 #include "unaligned_memcpy.h"
 #include "dcmi.pio.h"
-
-// Sensor struct.
-omv_csi_t csi = {};
 
 static void dma_irq_handler();
 extern void __fatal_error(const char *msg);
@@ -101,8 +97,10 @@ int omv_csi_init() {
     // Reset the csi state
     memset(&csi, 0, sizeof(omv_csi_t));
 
+    // Set default framebuffer
+    csi.fb = framebuffer_get(0);
+
     // Set default snapshot function.
-    // Some sensors need to call snapshot from init.
     csi.snapshot = omv_csi_snapshot;
 
     // Configure the csi external clock (XCLK).
@@ -152,7 +150,7 @@ int omv_csi_init() {
     return 0;
 }
 
-int omv_csi_abort(bool fifo_flush, bool in_irq) {
+int omv_csi_abort(omv_csi_t *csi, bool fifo_flush, bool in_irq) {
     // Disable DMA channel
     dma_channel_abort(OMV_CSI_DMA_CHANNEL);
     dma_irqn_set_channel_enabled(OMV_CSI_DMA, OMV_CSI_DMA_CHANNEL, false);
@@ -161,8 +159,10 @@ int omv_csi_abort(bool fifo_flush, bool in_irq) {
     pio_sm_set_enabled(OMV_CSI_PIO, OMV_CSI_SM, false);
     pio_sm_clear_fifos(OMV_CSI_PIO, OMV_CSI_SM);
 
-    // Clear bpp flag.
-    MAIN_FB()->pixfmt = PIXFORMAT_INVALID;
+    if (csi->fb) {
+        // Clear bpp flag.
+        csi->fb->pixfmt = PIXFORMAT_INVALID;
+    }
 
     return 0;
 }
@@ -197,12 +197,14 @@ int omv_csi_set_windowing(int x, int y, int w, int h) {
 }
 
 static void dma_irq_handler() {
+    framebuffer_t *fb = csi.fb;
+
     if (dma_irqn_get_channel_status(OMV_CSI_DMA, OMV_CSI_DMA_CHANNEL)) {
         // Clear the interrupt request.
         dma_irqn_acknowledge_channel(OMV_CSI_DMA, OMV_CSI_DMA_CHANNEL);
 
-        framebuffer_get_tail(FB_NO_FLAGS);
-        vbuffer_t *buffer = framebuffer_get_tail(FB_PEEK);
+        framebuffer_get_tail(fb, FB_NO_FLAGS);
+        vbuffer_t *buffer = framebuffer_get_tail(fb, FB_PEEK);
         if (buffer != NULL) {
             // Set next buffer and retrigger the DMA channel.
             dma_channel_set_write_addr(OMV_CSI_DMA_CHANNEL, buffer->data, true);
@@ -210,69 +212,71 @@ static void dma_irq_handler() {
             // Unblock the state machine
             pio_sm_restart(OMV_CSI_PIO, OMV_CSI_SM);
             pio_sm_clear_fifos(OMV_CSI_PIO, OMV_CSI_SM);
-            pio_sm_put_blocking(OMV_CSI_PIO, OMV_CSI_SM, (MAIN_FB()->v - 1));
-            pio_sm_put_blocking(OMV_CSI_PIO, OMV_CSI_SM, (MAIN_FB()->u * MAIN_FB()->bpp) - 1);
+            pio_sm_put_blocking(OMV_CSI_PIO, OMV_CSI_SM, (fb->v - 1));
+            pio_sm_put_blocking(OMV_CSI_PIO, OMV_CSI_SM, (fb->u * fb->bpp) - 1);
         }
     }
 }
 
 int omv_csi_snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
+    framebuffer_t *fb = csi->fb;
+
     // Compress the framebuffer for the IDE preview.
-    framebuffer_update_jpeg_buffer();
+    framebuffer_update_jpeg_buffer(fb);
 
     if (omv_csi_check_framebuffer_size() != 0) {
         return OMV_CSI_ERROR_FRAMEBUFFER_OVERFLOW;
     }
 
     // Free the current FB head.
-    framebuffer_free_current_buffer();
+    framebuffer_free_current_buffer(fb);
 
     // Set framebuffer pixel format.
     if (csi->pixformat == PIXFORMAT_INVALID) {
         return OMV_CSI_ERROR_INVALID_PIXFORMAT;
     }
-    MAIN_FB()->pixfmt = csi->pixformat;
+    fb->pixfmt = csi->pixformat;
 
-    vbuffer_t *buffer = framebuffer_get_head(FB_NO_FLAGS);
+    vbuffer_t *buffer = framebuffer_get_head(fb, FB_NO_FLAGS);
 
     // If there's no ready buffer in the fifo, and the DMA is Not currently
     // transferring a new buffer, reconfigure and restart the DMA transfer.
     if (buffer == NULL && !dma_channel_is_busy(OMV_CSI_DMA_CHANNEL)) {
-        framebuffer_setup_buffers();
+        framebuffer_setup_buffers(fb);
 
-        buffer = framebuffer_get_tail(FB_PEEK);
+        buffer = framebuffer_get_tail(fb, FB_PEEK);
         if (buffer == NULL) {
             return OMV_CSI_ERROR_FRAMEBUFFER_ERROR;
         }
 
         // Configure the DMA on the first frame, for later frames only the write is changed.
-        omv_csi_dma_config(MAIN_FB()->u, MAIN_FB()->v, MAIN_FB()->bpp,
-                           (void *) buffer->data, (csi->rgb_swap && MAIN_FB()->bpp == 2));
-
+        omv_csi_dma_config(fb->u, fb->v, fb->bpp,
+                           (void *) buffer->data,
+                           (csi->rgb_swap && fb->bpp == 2));
 
         // Re-enable the state machine.
         pio_sm_clear_fifos(OMV_CSI_PIO, OMV_CSI_SM);
         pio_sm_set_enabled(OMV_CSI_PIO, OMV_CSI_SM, true);
 
         // Unblock the state machine
-        pio_sm_put_blocking(OMV_CSI_PIO, OMV_CSI_SM, (MAIN_FB()->v - 1));
-        pio_sm_put_blocking(OMV_CSI_PIO, OMV_CSI_SM, (MAIN_FB()->u * MAIN_FB()->bpp) - 1);
+        pio_sm_put_blocking(OMV_CSI_PIO, OMV_CSI_SM, (fb->v - 1));
+        pio_sm_put_blocking(OMV_CSI_PIO, OMV_CSI_SM, (fb->u * fb->bpp) - 1);
     }
 
     // Wait for the DMA to finish the transfer.
     for (mp_uint_t ticks = mp_hal_ticks_ms(); buffer == NULL;) {
-        buffer = framebuffer_get_head(FB_NO_FLAGS);
+        buffer = framebuffer_get_head(fb, FB_NO_FLAGS);
         if ((mp_hal_ticks_ms() - ticks) > 3000) {
-            omv_csi_abort(true, false);
+            omv_csi_abort(csi, true, false);
             return OMV_CSI_ERROR_CAPTURE_TIMEOUT;
         }
     }
 
-    MAIN_FB()->w = MAIN_FB()->u;
-    MAIN_FB()->h = MAIN_FB()->v;
+    fb->w = fb->u;
+    fb->h = fb->v;
 
     // Set the user image.
-    framebuffer_init_image(image);
+    framebuffer_init_image(fb, image);
     return 0;
 }
 #endif
