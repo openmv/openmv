@@ -30,7 +30,7 @@ threshold_list = [(70, 100, -30, 40, 20, 100)]
 
 # Set the target temp range here
 min_temp_in_celsius = 20
-max_temp_in_celsius = 32
+max_temp_in_celsius = 40
 
 print("Resetting Lepton...")
 # These settings are applied on reset
