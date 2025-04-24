@@ -53,7 +53,18 @@ static int set_framesize(omv_csi_t *csi, omv_csi_framesize_t framesize) {
     return 0;
 }
 
+static int set_hmirror(omv_csi_t *csi, int enable) {
+    return 0;
+}
+
+static int set_vflip(omv_csi_t *csi, int enable) {
+    return 0;
+}
+
 static int snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
+    uint32_t w = MAIN_FB()->u;
+    uint32_t h = MAIN_FB()->v;
+
     if (!image) {
         return 0;
     }
@@ -83,31 +94,49 @@ static int snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
         return OMV_CSI_ERROR_FRAMEBUFFER_ERROR;
     }
 
-    MAIN_FB()->w = MAIN_FB()->u;
-    MAIN_FB()->h = MAIN_FB()->v;
-    MAIN_FB()->pixfmt = csi->pixformat;
 
+    if (!csi->transpose) {
+        MAIN_FB()->w = w;
+        MAIN_FB()->h = h;
+    } else {
+        MAIN_FB()->w = h;
+        MAIN_FB()->h = w;
+    }
+
+    MAIN_FB()->pixfmt = csi->pixformat;
     framebuffer_init_image(image);
 
     static uint32_t step = 0;
     uint32_t offset = (step / 4);
-    
+
     for (size_t y = 0; y < image->h; y++) {
         for (size_t x = 0; x < image->w; x++) {
+            size_t tx = x;
+            size_t ty = y;
+    
+            if (csi->hmirror) {
+                tx = image->w - 1 - tx;
+            }
+    
+            if (csi->vflip) {
+                ty = image->h - 1 - ty;
+            }
+    
+            size_t pattern_x = csi->transpose ? y : x;
+            size_t pattern_y = csi->transpose ? x : y;
+    
             switch (csi->pixformat) {
                 case PIXFORMAT_GRAYSCALE: {
-                    // Checkerboard: periodic every 16 pixels, scrolls horizontally
-                    uint8_t value = ((((x + offset) / 16) + (y / 16)) % 2) ? 0xFF : 0x00;
-                    IMAGE_PUT_GRAYSCALE_PIXEL(image, x, y, value);
+                    uint8_t value = ((((pattern_x + offset) / 16) + (pattern_y / 16)) % 2) ? 0xFF : 0x00;
+                    IMAGE_PUT_GRAYSCALE_PIXEL(image, tx, ty, value);
                     break;
                 }
                 case PIXFORMAT_RGB565: {
-                    // Make red/blue periodic with smooth wrap using modulo
-                    uint8_t r = (((x + offset) % image->w) * 31) / (image->w - 1);
+                    uint8_t r = (((pattern_x + offset) % image->w) * 31) / (image->w - 1);
                     uint8_t g = (y * 63) / (image->h - 1);
-                    uint8_t b = (((((x + offset) % image->w) ^ y) * 31) / (image->w + image->h - 2));
+                    uint8_t b = ((((pattern_x + offset) % image->w) ^ y) * 31) / (image->w + image->h - 2);
                     uint16_t pixel = COLOR_R5_G6_B5_TO_RGB565(r, g, b);
-                    IMAGE_PUT_RGB565_PIXEL(image, x, y, pixel);
+                    IMAGE_PUT_RGB565_PIXEL(image, tx, ty, pixel);
                     break;
                 }
                 default:
@@ -122,9 +151,11 @@ static int snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
 
 int softcsi_init(omv_csi_t *csi) {
     csi->reset = reset;
-    csi->snapshot = snapshot;
     csi->set_pixformat = set_pixformat;
     csi->set_framesize = set_framesize;
+    csi->set_hmirror = set_hmirror;
+    csi->set_vflip = set_vflip;
+    csi->snapshot = snapshot;
 
     csi->vsync_pol = 1;
     csi->hsync_pol = 0;
