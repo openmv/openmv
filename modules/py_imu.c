@@ -111,9 +111,9 @@ static bool imu_initialized = false;
 #define IMU_SPI_BUS_TIMEOUT    (5000)
 #endif
 
-static omv_spi_t imubus;
+static omv_spi_t imu_bus;
 
-static void platform_init(void *imubus) {
+static void platform_init(void *imu_bus) {
     omv_spi_config_t spi_config;
     omv_spi_default_config(&spi_config, OMV_IMU_SPI_ID);
 
@@ -122,16 +122,16 @@ static void platform_init(void *imubus) {
     spi_config.clk_pha = OMV_SPI_CPHA_2EDGE;
     spi_config.nss_enable = false; // Soft NSS
 
-    omv_spi_init(imubus, &spi_config);
+    omv_spi_init(imu_bus, &spi_config);
 }
 
-static void platform_deinit(void *imubus) {
-    omv_spi_deinit(imubus);
+static void platform_deinit(void *imu_bus) {
+    omv_spi_deinit(imu_bus);
     imu_initialized = false;
 }
 
-static int32_t platform_write(void *imubus, uint8_t Reg, const uint8_t *Bufp, uint16_t len) {
-    omv_spi_t *spi_bus = imubus;
+static int32_t platform_write(void *imu_bus, uint8_t Reg, const uint8_t *Bufp, uint16_t len) {
+    omv_spi_t *spi_bus = imu_bus;
 
     omv_spi_transfer_t spi_xfer = {
         .timeout = IMU_SPI_BUS_TIMEOUT,
@@ -155,8 +155,8 @@ static int32_t platform_write(void *imubus, uint8_t Reg, const uint8_t *Bufp, ui
     return 0;
 }
 
-static int32_t platform_read(void *imubus, uint8_t Reg, uint8_t *Bufp, uint16_t len) {
-    omv_spi_t *spi_bus = imubus;
+static int32_t platform_read(void *imu_bus, uint8_t Reg, uint8_t *Bufp, uint16_t len) {
+    omv_spi_t *spi_bus = imu_bus;
 
     Reg |= 0x80;
     omv_spi_transfer_t spi_xfer = {
@@ -180,34 +180,37 @@ static int32_t platform_read(void *imubus, uint8_t Reg, uint8_t *Bufp, uint16_t 
     omv_gpio_write(spi_bus->cs, 1);
     return 0;
 }
-#elif defined(IMU_I2C)
+#elif defined(OMV_IMU_I2C_ID)
 static omv_i2c_t imu_bus = {};
 
-static void platform_init(void *imubus) {
-    omv_i2c_init(&imu_bus, OMV_IMU_I2C_ID, OMV_I2C_SPEED_FULL);
+static void platform_init(void *imu_bus) {
+    omv_i2c_init(imu_bus, OMV_IMU_I2C_ID, OMV_IMU_I2C_SPEED);
 }
 
-static void platform_deinit(void *imubus) {
-    omv_i2c_deinit(&imu_bus);
+static void platform_deinit(void *imu_bus) {
+    omv_i2c_deinit(imu_bus);
     imu_initialized = false;
 }
 
-static int32_t platform_write(void *imubus, uint8_t reg, const uint8_t *bufp, uint16_t len) {
-    if (omv_i2c_write_bytes(&imu_bus, LSM6DS3TR_C_I2C_ADD_L, (uint8_t *) &reg, 1, OMV_I2C_XFER_SUSPEND) != 0) {
+static int32_t platform_write(void *imu_bus, uint8_t reg, const uint8_t *bufp, uint16_t len) {
+    omv_i2c_t *i2c_bus = imu_bus;
+
+    if (omv_i2c_write_bytes(i2c_bus, LSM6DSM_I2C_ADD_L, (uint8_t *) &reg, 1, OMV_I2C_XFER_SUSPEND) != 0) {
         return -1;
     }
-    if (omv_i2c_write_bytes(&imu_bus, LSM6DS3TR_C_I2C_ADD_L, (uint8_t *) bufp, len, OMV_I2C_XFER_NO_FLAGS) != 0) {
+    if (omv_i2c_write_bytes(i2c_bus, LSM6DSM_I2C_ADD_L, (uint8_t *) bufp, len, OMV_I2C_XFER_NO_FLAGS) != 0) {
         return -1;
     }
     return 0;
 }
 
-static int32_t platform_read(void *imubus, uint8_t reg, uint8_t *bufp, uint16_t len) {
-    HAL_I2C_Mem_Read(imubus, LSM6DS3TR_C_I2C_ADD_L, reg, I2C_MEMADD_SIZE_8BIT, bufp, len, 1000);
-    if (omv_i2c_write_bytes(&imu_bus, LSM6DS3TR_C_I2C_ADD_L, (uint8_t *) &reg, 1, OMV_I2C_XFER_NO_STOP) != 0) {
+static int32_t platform_read(void *imu_bus, uint8_t reg, uint8_t *bufp, uint16_t len) {
+    omv_i2c_t *i2c_bus = imu_bus;
+
+    if (omv_i2c_write_bytes(i2c_bus, LSM6DSM_I2C_ADD_L, (uint8_t *) &reg, 1, OMV_I2C_XFER_NO_STOP) != 0) {
         return -1;
     }
-    if (omv_i2c_read_bytes(&imu_bus, LSM6DS3TR_C_I2C_ADD_L, bufp, len, OMV_I2C_XFER_NO_FLAGS) != 0) {
+    if (omv_i2c_read_bytes(i2c_bus, LSM6DSM_I2C_ADD_L, bufp, len, OMV_I2C_XFER_NO_FLAGS) != 0) {
         return -1;
     }
     return 0;
@@ -217,7 +220,7 @@ static int32_t platform_read(void *imubus, uint8_t reg, uint8_t *bufp, uint16_t 
 #endif
 
 static stmdev_ctx_t dev_ctx = {
-    .handle = &imubus,
+    .handle = &imu_bus,
     .read_reg = platform_read,
     .write_reg = platform_write,
 };
@@ -411,7 +414,7 @@ void py_imu_init() {
     uint8_t rst = 1;
     uint8_t whoamI = 0;
 
-    platform_init(&imubus);
+    platform_init(&imu_bus);
 
     // Try to read device id...
     for (int i = 0; (i < 10) && (whoamI != LSM_CONST(ID)); i++) {
@@ -420,7 +423,7 @@ void py_imu_init() {
     }
 
     if (whoamI != LSM_CONST(ID)) {
-        platform_deinit(&imubus);
+        platform_deinit(&imu_bus);
         return;
     }
 
@@ -431,7 +434,7 @@ void py_imu_init() {
     }
 
     if (rst) {
-        platform_deinit(&imubus);
+        platform_deinit(&imu_bus);
         return;
     }
 
