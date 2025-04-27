@@ -35,6 +35,7 @@
 #include <stdarg.h>
 #include "omv_i2c.h"
 #include "imlib.h"
+#include "framebuffer.h"
 
 #define OV2640_SLV_ADDR         (0x60)
 #define OV5640_SLV_ADDR         (0x78)
@@ -320,6 +321,8 @@ typedef struct _omv_csi {
 
     omv_i2c_t i2c_bus;          // SCCB/I2C bus.
 
+    framebuffer_t *fb;          // Frame buffer pointer
+
     #ifdef OMV_CSI_PORT_BITS
     // Additional port-specific members like device base pointer,
     // dma handles, more I/Os etc... are included directly here,
@@ -376,7 +379,7 @@ int omv_csi_probe_init(uint32_t bus_id, uint32_t bus_speed);
 int omv_csi_config(omv_csi_config_t config);
 
 // Abort frame capture and disable IRQs, DMA etc..
-int omv_csi_abort(bool fifo_flush, bool in_irq);
+int omv_csi_abort(omv_csi_t *csi, bool fifo_flush, bool in_irq);
 
 // Reset the sensor to its default state.
 int omv_csi_reset();

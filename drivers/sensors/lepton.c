@@ -380,10 +380,11 @@ static int reset(omv_csi_t *csi) {
 }
 
 static int snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
-    framebuffer_update_jpeg_buffer();
+    framebuffer_t *fb = csi->fb;
+    framebuffer_update_jpeg_buffer(fb);
 
-    if (MAIN_FB()->n_buffers != 1) {
-        framebuffer_set_buffers(1);
+    if (fb->n_buffers != 1) {
+        framebuffer_set_buffers(fb, 1);
     }
 
     if (csi->pixformat == PIXFORMAT_INVALID) {
@@ -402,8 +403,8 @@ static int snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
         return OMV_CSI_ERROR_FRAMEBUFFER_OVERFLOW;
     }
 
-    framebuffer_free_current_buffer();
-    vbuffer_t *buffer = framebuffer_get_tail(FB_NO_FLAGS);
+    framebuffer_free_current_buffer(fb);
+    vbuffer_t *buffer = framebuffer_get_tail(fb, FB_NO_FLAGS);
 
     if (!buffer) {
         return OMV_CSI_ERROR_FRAMEBUFFER_ERROR;
@@ -422,11 +423,11 @@ static int snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
         }
     }
 
-    MAIN_FB()->w = MAIN_FB()->u;
-    MAIN_FB()->h = MAIN_FB()->v;
-    MAIN_FB()->pixfmt = csi->pixformat;
+    fb->w = fb->u;
+    fb->h = fb->v;
+    fb->pixfmt = csi->pixformat;
 
-    framebuffer_init_image(image);
+    framebuffer_init_image(fb, image);
 
     float x_scale = resolution[csi->framesize][0] / ((float) lepton.h_res);
     float y_scale = resolution[csi->framesize][1] / ((float) lepton.v_res);
@@ -445,13 +446,13 @@ static int snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
     }
 
     for (int y = y_offset, yy = fast_ceilf(lepton.v_res * scale) + y_offset; y < yy; y++) {
-        if ((MAIN_FB()->y <= y) && (y < (MAIN_FB()->y + MAIN_FB()->v))) {
+        if ((fb->y <= y) && (y < (fb->y + fb->v))) {
             // user window cropping
 
             uint16_t *row_ptr = _vospi_buf + (fast_floorf(y * scale_inv) * lepton.h_res);
 
             for (int x = x_offset, xx = fast_ceilf(lepton.h_res * scale) + x_offset; x < xx; x++) {
-                if ((MAIN_FB()->x <= x) && (x < (MAIN_FB()->x + MAIN_FB()->u))) {
+                if ((fb->x <= x) && (x < (fb->x + fb->u))) {
                     // user window cropping
 
                     // Value is the 14/16-bit value from the FLIR IR camera.
@@ -469,14 +470,14 @@ static int snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
                                               (lepton.max_temp - lepton.min_temp)), 8);
                     }
 
-                    int t_x = x - MAIN_FB()->x;
-                    int t_y = y - MAIN_FB()->y;
+                    int t_x = x - fb->x;
+                    int t_y = y - fb->y;
 
                     if (lepton.hmirror) {
-                        t_x = MAIN_FB()->u - t_x - 1;
+                        t_x = fb->u - t_x - 1;
                     }
                     if (lepton.vflip) {
-                        t_y = MAIN_FB()->v - t_y - 1;
+                        t_y = fb->v - t_y - 1;
                     }
 
                     switch (csi->pixformat) {

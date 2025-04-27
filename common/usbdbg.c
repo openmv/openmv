@@ -319,7 +319,9 @@ void usbdbg_data_out(uint32_t size, usbdbg_read_callback_t read_callback) {
         case USBDBG_TEMPLATE_SAVE: {
             #if defined(IMLIB_ENABLE_IMAGE_FILE_IO)
             image_t image;
-            framebuffer_init_image(&image);
+            framebuffer_t *fb = framebuffer_get(0);
+
+            framebuffer_init_image(fb, &image);
 
             size = MIN(128, size);
             char buffer[size];
@@ -338,7 +340,9 @@ void usbdbg_data_out(uint32_t size, usbdbg_read_callback_t read_callback) {
             #if defined(IMLIB_ENABLE_IMAGE_FILE_IO) \
             && defined(IMLIB_ENABLE_KEYPOINTS)
             image_t image;
-            framebuffer_init_image(&image);
+            framebuffer_t *fb = framebuffer_get(0);
+
+            framebuffer_init_image(fb, &image);
 
             size = MIN(128, size);
             char buffer[size];

@@ -1045,7 +1045,8 @@ static mp_obj_t py_image_to(pixformat_t pixfmt, mp_rom_obj_t default_color_palet
                                                      IMAGE_HINT_SCALE_ASPECT_IGNORE)) | IMAGE_HINT_BLACK_BACKGROUND;
 
     if (args[ARG_copy_to_fb].u_bool) {
-        framebuffer_update_jpeg_buffer();
+        framebuffer_t *fb = framebuffer_get(0);
+        framebuffer_update_jpeg_buffer(fb);
     }
 
     image_t dst_img = {
@@ -1136,7 +1137,8 @@ static mp_obj_t py_image_to(pixformat_t pixfmt, mp_rom_obj_t default_color_palet
         }
 
         if (args[ARG_encode_for_ide].u_bool) {
-            dst_img.size = fb_encode_for_ide_new_size(&dst_img_tmp);
+            framebuffer_t *fb = framebuffer_get(0);
+            dst_img.size = framebuffer_encoded_size(fb, &dst_img_tmp);
         } else {
             dst_img.size = dst_img_tmp.size;
         }
@@ -1152,15 +1154,17 @@ static mp_obj_t py_image_to(pixformat_t pixfmt, mp_rom_obj_t default_color_palet
         image_xalloc(&dst_img, size);
     } else {
         // Convert in place.
-        bool fb = py_helper_is_equal_to_framebuffer(src_img);
-        size_t buf_size = fb ? framebuffer_get_buffer_size() : image_size(src_img);
+        framebuffer_t *fb = framebuffer_get(0);
+        bool is_fb = py_helper_is_equal_to_framebuffer(src_img);
+        size_t buf_size = is_fb ? framebuffer_get_buffer_size(fb) : image_size(src_img);
         PY_ASSERT_TRUE_MSG((size <= buf_size), "The image doesn't fit in the frame buffer!");
         dst_img.data = src_img->data;
     }
 
     if (dst_img.is_compressed) {
         if (args[ARG_encode_for_ide].u_bool) {
-            fb_encode_for_ide(dst_img.data, &dst_img_tmp);
+            framebuffer_t *fb = framebuffer_get(0);
+            framebuffer_encode(fb, dst_img.data, &dst_img_tmp);
         } else if (dst_img.data != dst_img_tmp.data) {
             memcpy(dst_img.data, dst_img_tmp.data, dst_img.size);
         }
@@ -1265,7 +1269,8 @@ static MP_DEFINE_CONST_FUN_OBJ_KW(py_image_save_obj, 2, py_image_save);
 #endif //IMLIB_ENABLE_IMAGE_FILE_IO
 
 static mp_obj_t py_image_flush(mp_obj_t img_obj) {
-    framebuffer_update_jpeg_buffer();
+    framebuffer_t *fb = framebuffer_get(0);
+    framebuffer_update_jpeg_buffer(fb);
     return mp_const_none;
 }
 static MP_DEFINE_CONST_FUN_OBJ_1(py_image_flush_obj, py_image_flush);
@@ -6231,7 +6236,8 @@ mp_obj_t py_image_make_new(const mp_obj_type_t *type, size_t n_args, size_t n_kw
     }
 
     if (args[ARG_copy_to_fb].u_bool) {
-        framebuffer_update_jpeg_buffer();
+        framebuffer_t *fb = framebuffer_get(0);
+        framebuffer_update_jpeg_buffer(fb);
     }
     return py_image_from_struct(&image);
 }

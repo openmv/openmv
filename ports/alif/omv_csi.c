@@ -47,8 +47,6 @@
 #include "omv_gpu.h"
 #include "omv_i2c.h"
 #include "omv_csi.h"
-
-#include "framebuffer.h"
 #include "unaligned_memcpy.h"
 
 // Bits missing from cpi.h
@@ -71,15 +69,13 @@
 #define CPI_ERROR_FLAGS (CAM_INTR_INFIFO_OVERRUN |  \
                          CAM_INTR_OUTFIFO_OVERRUN | \
                          CAM_INTR_BRESP_ERR)
-// csi struct.
-omv_csi_t csi = {};
 
 static CPI_Type *cpi_get_base_addr(omv_csi_t *csi) {
     return ((CPI_Type *) CPI_BASE);
 }
 
 void omv_csi_init0() {
-    omv_csi_abort(true, false);
+    omv_csi_abort(&csi, true, false);
 
     // Re-init I2C to reset the bus state after soft reset, which
     // could have interrupted the bus in the middle of a transfer.
@@ -115,8 +111,10 @@ int omv_csi_init() {
     // Reset the csi state
     memset(&csi, 0, sizeof(omv_csi_t));
 
+    // Set default framebuffer
+    csi.fb = framebuffer_get(0);
+
     // Set default snapshot function.
-    // Some sensors need to call snapshot from init.
     csi.snapshot = omv_csi_snapshot;
 
     // Configure the CSI external clock.
@@ -190,24 +188,25 @@ int omv_csi_config(omv_csi_config_t config) {
     return 0;
 }
 
-int omv_csi_abort(bool fifo_flush, bool in_irq) {
-    CPI_Type *cpi = cpi_get_base_addr(&csi);
+int omv_csi_abort(omv_csi_t *csi, bool fifo_flush, bool in_irq) {
+    CPI_Type *cpi = cpi_get_base_addr(csi);
     cpi->CAM_CTRL = 0;
     NVIC_DisableIRQ(CAM_IRQ_IRQn);
     cpi_disable_interrupt(cpi, CPI_IRQ_FLAGS);
     cpi_irq_handler_clear_intr_status(cpi, CPI_IRQ_FLAGS);
 
-    csi.first_line = false;
-    csi.drop_frame = false;
-    csi.last_frame_ms = 0;
-    csi.last_frame_ms_valid = false;
+    csi->first_line = false;
+    csi->drop_frame = false;
+    csi->last_frame_ms = 0;
+    csi->last_frame_ms_valid = false;
 
-    if (fifo_flush) {
-        framebuffer_flush_buffers(true);
-    } else if (!csi.disable_full_flush) {
-        framebuffer_flush_buffers(false);
+    if (csi->fb) {
+        if (fifo_flush) {
+            framebuffer_flush_buffers(csi->fb, true);
+        } else if (!csi->disable_full_flush) {
+            framebuffer_flush_buffers(csi->fb, false);
+        }
     }
-
     return 0;
 }
 
@@ -248,12 +247,10 @@ uint32_t omv_csi_get_fb_offset(omv_csi_t *csi) {
 
 // This is the default snapshot function, which can be replaced in omv_csi_init functions.
 int omv_csi_snapshot(omv_csi_t *csi, image_t *dst_image, uint32_t flags) {
+    framebuffer_t *fb = csi->fb;
+
     static uint32_t frames = 0;
     static uint32_t r_stat, gb_stat, gr_stat, b_stat;
-
-    // Used to restore MAIN_FB's width and height.
-    uint32_t w = MAIN_FB()->u;
-    uint32_t h = MAIN_FB()->v;
 
     CPI_Type *cpi = cpi_get_base_addr(csi);
 
@@ -270,14 +267,14 @@ int omv_csi_snapshot(omv_csi_t *csi, image_t *dst_image, uint32_t flags) {
     }
 
     // Compress the framebuffer for the IDE preview.
-    framebuffer_update_jpeg_buffer();
+    framebuffer_update_jpeg_buffer(fb);
 
     // Free the current FB head.
-    framebuffer_free_current_buffer();
+    framebuffer_free_current_buffer(fb);
 
     // Reconfigure and restart the CSI transfer if it's not running.
     if (!(cpi->CAM_CTRL & CAM_CTRL_BUSY)) {
-        framebuffer_setup_buffers();
+        framebuffer_setup_buffers(fb);
         uint32_t bytes_per_pixel = omv_csi_get_src_bpp();
         uint32_t line_size_bytes = resolution[csi->framesize][0] * bytes_per_pixel;
 
@@ -290,7 +287,7 @@ int omv_csi_snapshot(omv_csi_t *csi, image_t *dst_image, uint32_t flags) {
         }
 
         // Get the destination buffer address.
-        vbuffer_t *buffer = framebuffer_get_tail(FB_PEEK);
+        vbuffer_t *buffer = framebuffer_get_tail(fb, FB_PEEK);
 
         // Check if buffer is not ready or is not 64-bit aligned.
         if ((!buffer) || (LocalToGlobal(buffer->data) & 0x7)) {
@@ -341,12 +338,12 @@ int omv_csi_snapshot(omv_csi_t *csi, image_t *dst_image, uint32_t flags) {
     }
     #endif
 
-    vbuffer_t *buffer = framebuffer_get_head(FB_INVALIDATE);
+    vbuffer_t *buffer = framebuffer_get_head(fb, FB_INVALIDATE);
     // Wait for the DMA to finish the transfer.
     for (mp_uint_t ticks = mp_hal_ticks_ms(); buffer == NULL;) {
         MICROPY_EVENT_POLL_HOOK
         if ((mp_hal_ticks_ms() - ticks) > 3000) {
-            omv_csi_abort(true, false);
+            omv_csi_abort(csi, true, false);
 
             #if defined(OMV_CSI_FSYNC_PIN)
             if (csi->frame_sync) {
@@ -356,7 +353,7 @@ int omv_csi_snapshot(omv_csi_t *csi, image_t *dst_image, uint32_t flags) {
 
             return OMV_CSI_ERROR_CAPTURE_TIMEOUT;
         }
-        buffer = framebuffer_get_head(FB_INVALIDATE);
+        buffer = framebuffer_get_head(fb, FB_INVALIDATE);
     }
 
     // We're done receiving data.
@@ -366,31 +363,32 @@ int omv_csi_snapshot(omv_csi_t *csi, image_t *dst_image, uint32_t flags) {
     }
     #endif
 
+    // Restore the frame buffer width and height.
     if (!csi->transpose) {
-        MAIN_FB()->w = w;
-        MAIN_FB()->h = h;
+        fb->w = fb->u;
+        fb->h = fb->v;
     } else {
-        MAIN_FB()->w = h;
-        MAIN_FB()->h = w;
+        fb->w = fb->v;
+        fb->h = fb->u;
     }
 
     // Reset the frame buffer's pixel format.
     switch (csi->pixformat) {
         case PIXFORMAT_GRAYSCALE:
-            MAIN_FB()->pixfmt = PIXFORMAT_GRAYSCALE;
+            fb->pixfmt = PIXFORMAT_GRAYSCALE;
             break;
         case PIXFORMAT_RGB565:
-            MAIN_FB()->pixfmt = PIXFORMAT_RGB565;
+            fb->pixfmt = PIXFORMAT_RGB565;
             break;
         case PIXFORMAT_YUV422: {
-            MAIN_FB()->pixfmt = PIXFORMAT_YUV;
-            MAIN_FB()->subfmt_id = csi->yuv_format;
-            MAIN_FB()->pixfmt = imlib_yuv_shift(MAIN_FB()->pixfmt, MAIN_FB()->x);
+            fb->pixfmt = PIXFORMAT_YUV;
+            fb->subfmt_id = csi->yuv_format;
+            fb->pixfmt = imlib_yuv_shift(fb->pixfmt, fb->x);
             break;
             case PIXFORMAT_BAYER:
-                MAIN_FB()->pixfmt = PIXFORMAT_BAYER;
-                MAIN_FB()->subfmt_id = csi->cfa_format;
-                MAIN_FB()->pixfmt = imlib_bayer_shift(MAIN_FB()->pixfmt, MAIN_FB()->x, MAIN_FB()->y, csi->transpose);
+                fb->pixfmt = PIXFORMAT_BAYER;
+                fb->subfmt_id = csi->cfa_format;
+                fb->pixfmt = imlib_bayer_shift(fb->pixfmt, fb->x, fb->y, csi->transpose);
                 break;
         }
         default:
@@ -398,13 +396,13 @@ int omv_csi_snapshot(omv_csi_t *csi, image_t *dst_image, uint32_t flags) {
     }
 
     // Initialize a frame using the frame buffer.
-    framebuffer_init_image(dst_image);
+    framebuffer_init_image(fb, dst_image);
 
     // Set the frame's pixel format to bayer for raw sensors.
     if (csi->raw_output && csi->pixformat != PIXFORMAT_BAYER) {
         dst_image->pixfmt = PIXFORMAT_BAYER;
         dst_image->subfmt_id = csi->cfa_format;
-        dst_image->pixfmt = imlib_bayer_shift(dst_image->pixfmt, MAIN_FB()->x, MAIN_FB()->y, csi->transpose);
+        dst_image->pixfmt = imlib_bayer_shift(dst_image->pixfmt, fb->x, fb->y, csi->transpose);
     }
 
     // Crop first to reduce the frame size before debayering.
@@ -421,8 +419,8 @@ int omv_csi_snapshot(omv_csi_t *csi, image_t *dst_image, uint32_t flags) {
             dst_cimage.pixels += omv_csi_get_fb_offset(csi);
         }
 
-        rectangle_t srect = { MAIN_FB()->x, MAIN_FB()->y, MAIN_FB()->u, MAIN_FB()->v };
-        rectangle_t drect = { 0, 0, MAIN_FB()->u, MAIN_FB()->v };
+        rectangle_t srect = { fb->x, fb->y, fb->u, fb->v };
+        rectangle_t drect = { 0, 0, fb->u, fb->v };
         if (omv_gpu_draw_image(&src_cimage, &srect, &dst_cimage, &drect, 255, NULL, NULL, 0) != 0) {
             return OMV_CSI_ERROR_IO_ERROR;
         }
@@ -438,7 +436,7 @@ int omv_csi_snapshot(omv_csi_t *csi, image_t *dst_image, uint32_t flags) {
         }
 
         // Set the target pixel format before debayer.
-        dst_image->pixfmt = MAIN_FB()->pixfmt;
+        dst_image->pixfmt = fb->pixfmt;
 
         // Update AWB stats every n frames.
         if ((frames++ % 100) == 0) {
@@ -466,19 +464,19 @@ void CAM_IRQHandler(void) {
 
     if (status & CAM_INTR_INFIFO_OVERRUN) {
         mask |= CAM_INTR_INFIFO_OVERRUN;
-        omv_csi_abort(true, true);
+        omv_csi_abort(&csi, true, true);
         printf("INFIFO_OVERRUN\n");
     }
 
     if (status & CAM_INTR_OUTFIFO_OVERRUN) {
         mask |= CAM_INTR_OUTFIFO_OVERRUN;
-        omv_csi_abort(true, true);
+        omv_csi_abort(&csi, true, true);
         printf("OUTFIFO_OVERRUN\n");
     }
 
     if (status & CAM_INTR_BRESP_ERR) {
         mask |= CAM_INTR_BRESP_ERR;
-        omv_csi_abort(true, true);
+        omv_csi_abort(&csi, true, true);
         printf("BRESP_ERR %lu\n", cpi->CAM_AXI_ERR_STAT);
     }
 
@@ -487,10 +485,12 @@ void CAM_IRQHandler(void) {
         cpi->CAM_CTRL = 0;
         if (!(status & CPI_ERROR_FLAGS)) {
             // Release the current framebuffer.
-            framebuffer_get_tail(FB_NO_FLAGS);
+            framebuffer_get_tail(csi.fb, FB_NO_FLAGS);
         }
+
         // Get the current framebuffer (or new tail).
-        vbuffer_t *buffer = framebuffer_get_tail(FB_PEEK);
+        vbuffer_t *buffer = framebuffer_get_tail(csi.fb, FB_PEEK);
+
         if (buffer != NULL) {
             cpi->CAM_CTRL = 0;
             cpi->CAM_CTRL |= CAM_CTRL_SW_RESET;
@@ -498,6 +498,7 @@ void CAM_IRQHandler(void) {
             cpi_irq_handler_clear_intr_status(cpi, mask);
             cpi->CAM_CTRL = (CAM_CTRL_SNAPSHOT | CAM_CTRL_START | CAM_CTRL_FIFO_CLK_SEL);
         }
+
         if (!(status & CPI_ERROR_FLAGS)) {
             if (csi.frame_callback) {
                 csi.frame_callback();

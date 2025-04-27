@@ -62,17 +62,16 @@ static int set_vflip(omv_csi_t *csi, int enable) {
 }
 
 static int snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
-    uint32_t w = MAIN_FB()->u;
-    uint32_t h = MAIN_FB()->v;
+    framebuffer_t *fb = csi->fb;
 
     if (!image) {
         return 0;
     }
 
-    framebuffer_update_jpeg_buffer();
+    framebuffer_update_jpeg_buffer(fb);
 
-    if (MAIN_FB()->n_buffers != 1) {
-        framebuffer_set_buffers(1);
+    if (fb->n_buffers != 1) {
+        framebuffer_set_buffers(fb, 1);
     }
 
     if (csi->pixformat == PIXFORMAT_INVALID) {
@@ -87,24 +86,23 @@ static int snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
         return OMV_CSI_ERROR_FRAMEBUFFER_OVERFLOW;
     }
 
-    framebuffer_free_current_buffer();
-    vbuffer_t *buffer = framebuffer_get_tail(FB_NO_FLAGS);
+    framebuffer_free_current_buffer(fb);
+    vbuffer_t *buffer = framebuffer_get_tail(fb, FB_NO_FLAGS);
 
     if (!buffer) {
         return OMV_CSI_ERROR_FRAMEBUFFER_ERROR;
     }
 
-
     if (!csi->transpose) {
-        MAIN_FB()->w = w;
-        MAIN_FB()->h = h;
+        fb->w = fb->u;
+        fb->h = fb->v;
     } else {
-        MAIN_FB()->w = h;
-        MAIN_FB()->h = w;
+        fb->w = fb->v;
+        fb->h = fb->u;
     }
 
-    MAIN_FB()->pixfmt = csi->pixformat;
-    framebuffer_init_image(image);
+    fb->pixfmt = csi->pixformat;
+    framebuffer_init_image(fb, image);
 
     static uint32_t step = 0;
     uint32_t offset = (step / 4);

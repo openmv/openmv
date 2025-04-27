@@ -128,6 +128,8 @@ uint16_t resolution[][2] = {
     {2592, 1944},    /* WQXGA2    */
 };
 
+omv_csi_t csi = {0};
+
 __weak void omv_csi_init0() {
     // Reset the csi state
     memset(&csi, 0, sizeof(omv_csi_t));
@@ -139,13 +141,13 @@ __weak int omv_csi_init() {
     return OMV_CSI_ERROR_CTL_UNSUPPORTED;
 }
 
-__weak int omv_csi_abort(bool fifo_flush, bool in_irq) {
+__weak int omv_csi_abort(omv_csi_t *csi, bool fifo_flush, bool in_irq) {
     return OMV_CSI_ERROR_CTL_UNSUPPORTED;
 }
 
 __weak int omv_csi_reset() {
     // Disable any ongoing frame capture.
-    omv_csi_abort(true, false);
+    omv_csi_abort(&csi, true, false);
 
     // Reset the csi state
     csi.sde = 0;
@@ -198,13 +200,13 @@ __weak int omv_csi_reset() {
     omv_i2c_enable(&csi.i2c_bus, true);
 
     // Call csi-specific reset function
-    if (csi.reset != NULL
-        && csi.reset(&csi) != 0) {
+    if (csi.reset != NULL &&
+        csi.reset(&csi) != 0) {
         return OMV_CSI_ERROR_CTL_FAILED;
     }
 
     // Reset framebuffers
-    framebuffer_flush_buffers(true);
+    framebuffer_flush_buffers(csi.fb, true);
 
     return 0;
 }
@@ -594,7 +596,7 @@ __weak bool omv_csi_is_detected() {
 
 __weak int omv_csi_sleep(int enable) {
     // Disable any ongoing frame capture.
-    omv_csi_abort(true, false);
+    omv_csi_abort(&csi, true, false);
 
     // Call the sensor specific function.
     if (csi.sleep != NULL &&
@@ -609,7 +611,7 @@ __weak int omv_csi_shutdown(int enable) {
     int ret = 0;
 
     // Disable any ongoing frame capture.
-    omv_csi_abort(true, false);
+    omv_csi_abort(&csi, true, false);
 
     #if defined(OMV_CSI_POWER_PIN)
     if (enable) {
@@ -671,11 +673,11 @@ __weak int omv_csi_set_pixformat(pixformat_t pixformat) {
     // Some sensor drivers automatically switch to BAYER to reduce the frame size if it does not fit in RAM.
     // If the current format is BAYER (1BPP), and the target format is color and (2BPP), and the frame does not
     // fit in RAM it will just be switched back again to BAYER, so we keep the current format unchanged.
-    uint32_t size = framebuffer_get_buffer_size();
+    uint32_t size = framebuffer_get_buffer_size(csi.fb);
     if ((csi.pixformat == PIXFORMAT_BAYER) &&
         ((pixformat == PIXFORMAT_RGB565) || (pixformat == PIXFORMAT_YUV422)) &&
-        (MAIN_FB()->u * MAIN_FB()->v * 2 > size) &&
-        (MAIN_FB()->u * MAIN_FB()->v * 1 <= size)) {
+        (csi.fb->u * csi.fb->v * 2 > size) &&
+        (csi.fb->u * csi.fb->v * 1 <= size)) {
         return 0;
     }
 
@@ -686,10 +688,10 @@ __weak int omv_csi_set_pixformat(pixformat_t pixformat) {
     }
 
     // Disable any ongoing frame capture.
-    omv_csi_abort(true, false);
+    omv_csi_abort(&csi, true, false);
 
     // Flush previous frame.
-    framebuffer_update_jpeg_buffer();
+    framebuffer_update_jpeg_buffer(csi.fb);
 
     // Check if the control is supported.
     if (csi.set_pixformat == NULL) {
@@ -709,7 +711,7 @@ __weak int omv_csi_set_pixformat(pixformat_t pixformat) {
     csi.pixformat = pixformat;
 
     // Reset pixel format to skip the first frame.
-    MAIN_FB()->pixfmt = PIXFORMAT_INVALID;
+    csi.fb->pixfmt = PIXFORMAT_INVALID;
 
     // Auto-adjust the number of frame buffers.
     omv_csi_set_framebuffers(-1);
@@ -725,10 +727,10 @@ __weak int omv_csi_set_framesize(omv_csi_framesize_t framesize) {
     }
 
     // Disable any ongoing frame capture.
-    omv_csi_abort(true, false);
+    omv_csi_abort(&csi, true, false);
 
     // Flush previous frame.
-    framebuffer_update_jpeg_buffer();
+    framebuffer_update_jpeg_buffer(csi.fb);
 
     // Call the sensor specific function
     if (csi.set_framesize == NULL) {
@@ -747,16 +749,16 @@ __weak int omv_csi_set_framesize(omv_csi_framesize_t framesize) {
     csi.framesize = framesize;
 
     // Set x and y offsets.
-    MAIN_FB()->x = 0;
-    MAIN_FB()->y = 0;
+    csi.fb->x = 0;
+    csi.fb->y = 0;
     // Set width and height.
-    MAIN_FB()->w = resolution[framesize][0];
-    MAIN_FB()->h = resolution[framesize][1];
+    csi.fb->w = resolution[framesize][0];
+    csi.fb->h = resolution[framesize][1];
     // Set backup width and height.
-    MAIN_FB()->u = resolution[framesize][0];
-    MAIN_FB()->v = resolution[framesize][1];
+    csi.fb->u = resolution[framesize][0];
+    csi.fb->v = resolution[framesize][1];
     // Reset pixel format to skip the first frame.
-    MAIN_FB()->pixfmt = PIXFORMAT_INVALID;
+    csi.fb->pixfmt = PIXFORMAT_INVALID;
 
     // Auto-adjust the number of frame buffers.
     omv_csi_set_framebuffers(-1);
@@ -776,8 +778,8 @@ __weak int omv_csi_set_framerate(int framerate) {
     }
 
     // If the csi implements framerate control use it.
-    if (csi.set_framerate != NULL
-        && csi.set_framerate(&csi, framerate) != 0) {
+    if (csi.set_framerate != NULL &&
+        csi.set_framerate(&csi, framerate) != 0) {
         return OMV_CSI_ERROR_CTL_FAILED;
     } else {
         // Otherwise use software framerate control.
@@ -807,10 +809,10 @@ __weak void omv_csi_throttle_framerate() {
 
 __weak bool omv_csi_get_cropped() {
     if (csi.framesize != OMV_CSI_FRAMESIZE_INVALID) {
-        return (MAIN_FB()->x != 0) ||
-               (MAIN_FB()->y != 0) ||
-               (MAIN_FB()->u != resolution[csi.framesize][0]) ||
-               (MAIN_FB()->v != resolution[csi.framesize][1]);
+        return (csi.fb->x != 0) ||
+               (csi.fb->y != 0) ||
+               (csi.fb->u != resolution[csi.framesize][0]) ||
+               (csi.fb->v != resolution[csi.framesize][1]);
     }
     return false;
 }
@@ -848,8 +850,8 @@ __weak uint32_t omv_csi_get_dst_bpp() {
 
 __weak int omv_csi_set_windowing(int x, int y, int w, int h) {
     // Check if the value has changed.
-    if ((MAIN_FB()->x == x) && (MAIN_FB()->y == y) &&
-        (MAIN_FB()->u == w) && (MAIN_FB()->v == h)) {
+    if ((csi.fb->x == x) && (csi.fb->y == y) &&
+        (csi.fb->u == w) && (csi.fb->v == h)) {
         return 0;
     }
 
@@ -858,22 +860,22 @@ __weak int omv_csi_set_windowing(int x, int y, int w, int h) {
     }
 
     // Disable any ongoing frame capture.
-    omv_csi_abort(true, false);
+    omv_csi_abort(&csi, true, false);
 
     // Flush previous frame.
-    framebuffer_update_jpeg_buffer();
+    framebuffer_update_jpeg_buffer(csi.fb);
 
     // Set x and y offsets.
-    MAIN_FB()->x = x;
-    MAIN_FB()->y = y;
+    csi.fb->x = x;
+    csi.fb->y = y;
     // Set width and height.
-    MAIN_FB()->w = w;
-    MAIN_FB()->h = h;
+    csi.fb->w = w;
+    csi.fb->h = h;
     // Set backup width and height.
-    MAIN_FB()->u = w;
-    MAIN_FB()->v = h;
+    csi.fb->u = w;
+    csi.fb->v = h;
     // Reset pixel format to skip the first frame.
-    MAIN_FB()->pixfmt = PIXFORMAT_INVALID;
+    csi.fb->pixfmt = PIXFORMAT_INVALID;
 
     // Auto-adjust the number of frame buffers.
     omv_csi_set_framebuffers(-1);
@@ -1093,7 +1095,7 @@ __weak int omv_csi_set_hmirror(int enable) {
     }
 
     // Disable any ongoing frame capture.
-    omv_csi_abort(true, false);
+    omv_csi_abort(&csi, true, false);
 
     // Check if the control is supported.
     if (csi.set_hmirror == NULL) {
@@ -1127,7 +1129,7 @@ __weak int omv_csi_set_vflip(int enable) {
     }
 
     // Disable any ongoing frame capture.
-    omv_csi_abort(true, false);
+    omv_csi_abort(&csi, true, false);
 
     // Check if the control is supported.
     if (csi.set_vflip == NULL) {
@@ -1161,7 +1163,7 @@ __weak int omv_csi_set_transpose(bool enable) {
     }
 
     // Disable any ongoing frame capture.
-    omv_csi_abort(true, false);
+    omv_csi_abort(&csi, true, false);
 
     if ((csi.pixformat == PIXFORMAT_YUV422) || (csi.pixformat == PIXFORMAT_JPEG)) {
         return OMV_CSI_ERROR_PIXFORMAT_UNSUPPORTED;
@@ -1184,7 +1186,7 @@ __weak int omv_csi_set_auto_rotation(bool enable) {
     }
 
     // Disable any ongoing frame capture.
-    omv_csi_abort(true, false);
+    omv_csi_abort(&csi, true, false);
 
     // Operation not supported on JPEG images.
     if ((csi.pixformat == PIXFORMAT_YUV422) || (csi.pixformat == PIXFORMAT_JPEG)) {
@@ -1202,10 +1204,10 @@ __weak bool omv_csi_get_auto_rotation() {
 
 __weak int omv_csi_set_framebuffers(int count) {
     // Disable any ongoing frame capture.
-    omv_csi_abort(true, false);
+    omv_csi_abort(&csi, true, false);
 
     // Flush previous frame.
-    framebuffer_update_jpeg_buffer();
+    framebuffer_update_jpeg_buffer(csi.fb);
 
     if (csi.pixformat == PIXFORMAT_INVALID) {
         return OMV_CSI_ERROR_INVALID_PIXFORMAT;
@@ -1217,12 +1219,12 @@ __weak int omv_csi_set_framebuffers(int count) {
 
     #if OMV_CSI_HW_CROP_ENABLE
     // If hardware cropping is supported, use window size.
-    MAIN_FB()->frame_size = MAIN_FB()->u * MAIN_FB()->v * 2;
+    csi.fb->frame_size = csi.fb->u * csi.fb->v * 2;
     #else
     // Otherwise, use the real frame size.
-    MAIN_FB()->frame_size = resolution[csi.framesize][0] * resolution[csi.framesize][1] * 2;
+    csi.fb->frame_size = resolution[csi.framesize][0] * resolution[csi.framesize][1] * 2;
     #endif
-    return framebuffer_set_buffers(count);
+    return framebuffer_set_buffers(csi.fb, count);
 }
 
 __weak int omv_csi_set_special_effect(omv_csi_sde_t sde) {
@@ -1264,7 +1266,7 @@ __weak int omv_csi_set_lens_correction(int enable, int radi, int coef) {
 __weak int omv_csi_ioctl(int request, ... /* arg */) {
     // Disable any ongoing frame capture.
     if (request & OMV_CSI_IOCTL_FLAGS_ABORT) {
-        omv_csi_abort(true, false);
+        omv_csi_abort(&csi, true, false);
     }
 
     // Check if the control is supported.
@@ -1302,21 +1304,21 @@ __weak const uint16_t *omv_csi_get_color_palette() {
 
 __weak int omv_csi_check_framebuffer_size() {
     uint32_t bpp = omv_csi_get_dst_bpp();
-    uint32_t size = framebuffer_get_buffer_size();
-    return (((MAIN_FB()->u * MAIN_FB()->v * bpp) <= size) ? 0 : -1);
+    uint32_t size = framebuffer_get_buffer_size(csi.fb);
+    return (((csi.fb->u * csi.fb->v * bpp) <= size) ? 0 : -1);
 }
 
 __weak int omv_csi_auto_crop_framebuffer() {
     uint32_t bpp = omv_csi_get_dst_bpp();
-    uint32_t size = framebuffer_get_buffer_size();
+    uint32_t size = framebuffer_get_buffer_size(csi.fb);
 
     // If the pixformat is NULL/JPEG there we can't do anything to check if it fits before hand.
     if (!bpp) {
         return 0;
     }
 
-    // MAIN_FB() fits, we are done.
-    if ((MAIN_FB()->u * MAIN_FB()->v * bpp) <= size) {
+    // csi.fb fits, we are done.
+    if ((csi.fb->u * csi.fb->v * bpp) <= size) {
         return 0;
     }
 
@@ -1325,14 +1327,14 @@ __weak int omv_csi_auto_crop_framebuffer() {
         omv_csi_set_pixformat(PIXFORMAT_BAYER);
         bpp = 1;
 
-        // MAIN_FB() fits, we are done (bpp is 1).
-        if ((MAIN_FB()->u * MAIN_FB()->v) <= size) {
+        // csi.fb fits, we are done (bpp is 1).
+        if ((csi.fb->u * csi.fb->v) <= size) {
             return 0;
         }
     }
 
-    int window_w = MAIN_FB()->u;
-    int window_h = MAIN_FB()->v;
+    int window_w = csi.fb->u;
+    int window_h = csi.fb->v;
 
     // We need to shrink the frame buffer. We can do this by cropping. So, we will subtract columns
     // and rows from the frame buffer until it fits within the frame buffer.
@@ -1373,20 +1375,20 @@ __weak int omv_csi_auto_crop_framebuffer() {
     }
 
     // Crop the frame buffer while keeping the aspect ratio and keeping the width/height even.
-    while (((MAIN_FB()->u * MAIN_FB()->v * bpp) > size) || (MAIN_FB()->u % 2) || (MAIN_FB()->v % 2)) {
-        MAIN_FB()->u -= u_sub;
-        MAIN_FB()->v -= v_sub;
+    while (((csi.fb->u * csi.fb->v * bpp) > size) || (csi.fb->u % 2) || (csi.fb->v % 2)) {
+        csi.fb->u -= u_sub;
+        csi.fb->v -= v_sub;
     }
 
     // Center the new window using the previous offset and keep the offset even.
-    MAIN_FB()->x += (window_w - MAIN_FB()->u) / 2;
-    MAIN_FB()->y += (window_h - MAIN_FB()->v) / 2;
+    csi.fb->x += (window_w - csi.fb->u) / 2;
+    csi.fb->y += (window_h - csi.fb->v) / 2;
 
-    if (MAIN_FB()->x % 2) {
-        MAIN_FB()->x -= 1;
+    if (csi.fb->x % 2) {
+        csi.fb->x -= 1;
     }
-    if (MAIN_FB()->y % 2) {
-        MAIN_FB()->y -= 1;
+    if (csi.fb->y % 2) {
+        csi.fb->y -= 1;
     }
 
     // Auto-adjust the number of frame buffers.
@@ -1395,13 +1397,13 @@ __weak int omv_csi_auto_crop_framebuffer() {
 }
 
 #define copy_transposed_line(dstp, srcp)                   \
-    for (int i = MAIN_FB()->u, h = MAIN_FB()->v; i; i--) { \
+    for (int i = csi.fb->u, h = csi.fb->v; i; i--) { \
         *dstp = *srcp++;                                   \
         dstp += h;                                         \
     }
 
 #define copy_transposed_line_rev16(dstp, srcp)             \
-    for (int i = MAIN_FB()->u, h = MAIN_FB()->v; i; i--) { \
+    for (int i = csi.fb->u, h = csi.fb->v; i; i--) { \
         *dstp = __REV16(*srcp++);                          \
         dstp += h;                                         \
     }
@@ -1421,7 +1423,7 @@ __weak int omv_csi_copy_line(void *dma, uint8_t *src, uint8_t *dst) {
             }
             #endif
             if (!csi.transpose) {
-                unaligned_memcpy(dst, src, MAIN_FB()->u);
+                unaligned_memcpy(dst, src, csi.fb->u);
             } else {
                 copy_transposed_line(dst, src);
             }
@@ -1435,14 +1437,14 @@ __weak int omv_csi_copy_line(void *dma, uint8_t *src, uint8_t *dst) {
             if (csi.mono_bpp == 1) {
                 // 1BPP GRAYSCALE.
                 if (!csi.transpose) {
-                    unaligned_memcpy(dst, src, MAIN_FB()->u);
+                    unaligned_memcpy(dst, src, csi.fb->u);
                 } else {
                     copy_transposed_line(dst, src);
                 }
             } else {
                 // Extract Y channel from YUV.
                 if (!csi.transpose) {
-                    unaligned_2_to_1_memcpy(dst, src16, MAIN_FB()->u);
+                    unaligned_2_to_1_memcpy(dst, src16, csi.fb->u);
                 } else {
                     copy_transposed_line(dst, src16);
                 }
@@ -1460,14 +1462,14 @@ __weak int omv_csi_copy_line(void *dma, uint8_t *src, uint8_t *dst) {
             } else if ((csi.pixformat == PIXFORMAT_RGB565 && csi.rgb_swap) ||
                        (csi.pixformat == PIXFORMAT_YUV422 && csi.yuv_swap)) {
                 if (!csi.transpose) {
-                    unaligned_memcpy_rev16(dst16, src16, MAIN_FB()->u);
+                    unaligned_memcpy_rev16(dst16, src16, csi.fb->u);
                 } else {
                     copy_transposed_line_rev16(dst16, src16);
                 }
             #endif
             } else {
                 if (!csi.transpose) {
-                    unaligned_memcpy(dst16, src16, MAIN_FB()->u * sizeof(uint16_t));
+                    unaligned_memcpy(dst16, src16, csi.fb->u * sizeof(uint16_t));
                 } else {
                     copy_transposed_line(dst16, src16);
                 }

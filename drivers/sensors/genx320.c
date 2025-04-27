@@ -244,7 +244,7 @@ static int set_framerate(omv_csi_t *csi, int framerate) {
     }
 
     // Disable any ongoing frame capture.
-    omv_csi_abort(true, false);
+    omv_csi_abort(csi, true, false);
 
     psee_sensor_write(EHC_INTEGRATION_PERIOD, us);
     psee_sensor_write(CPI_PACKET_TIME_CONTROL, ACTIVE_SENSOR_WIDTH << CPI_PACKET_TIME_CONTROL_PERIOD_Pos |
@@ -345,7 +345,7 @@ static void disable_hot_pixels(uint8_t *histogram) {
 }
 #endif // (OMV_GENX320_CAL_ENABLE == 1)
 
-static void snapshot_post_process(image_t *image) {
+static void snapshot_post_process(omv_csi_t *csi, image_t *image) {
     #if (OMV_GENX320_EHC_ENABLE == 1)
     for (uint32_t i = 0; i < ACTIVE_SENSOR_SIZE; i++) {
         image->data[i] = __USAT((((int8_t *) image->data)[i] * contrast) + brightness, UINT8_T_BITS);
@@ -383,12 +383,13 @@ static void snapshot_post_process(image_t *image) {
     fb_free();
     #endif // (OMV_GENX320_EHC_ENABLE == 1)
 
-    if (csi.color_palette && (framebuffer_get_buffer_size() >= (ACTIVE_SENSOR_SIZE * sizeof(uint16_t)))) {
+    if (csi->color_palette &&
+        (framebuffer_get_buffer_size(csi->fb) >= (ACTIVE_SENSOR_SIZE * sizeof(uint16_t)))) {
         for (int32_t i = ACTIVE_SENSOR_SIZE - 1; i >= 0; i--) {
-            ((uint16_t *) image->data)[i] = csi.color_palette[image->data[i]];
+            ((uint16_t *) image->data)[i] = csi->color_palette[image->data[i]];
         }
         image->pixfmt = PIXFORMAT_RGB565;
-        MAIN_FB()->pixfmt = PIXFORMAT_RGB565;
+        csi->fb->pixfmt = PIXFORMAT_RGB565;
     }
 }
 
@@ -440,7 +441,7 @@ static int snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
             }
             #endif // (OMV_GENX320_EHC_ENABLE == 1)
 
-            snapshot_post_process(image);
+            snapshot_post_process(csi, image);
         }
 
         disable_hot_pixels(histogram);
@@ -456,7 +457,7 @@ static int snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
         return ret;
     }
 
-    snapshot_post_process(image);
+    snapshot_post_process(csi, image);
     return ret;
 }
 

@@ -53,8 +53,6 @@ typedef struct framebuffer {
     OMV_ATTR_ALIGNED(uint8_t data[], FRAMEBUFFER_ALIGNMENT);
 } framebuffer_t;
 
-extern framebuffer_t *framebuffer;
-
 typedef enum {
     FB_NO_FLAGS   = (0 << 0),
     FB_PEEK       = (1 << 0),   // If set, will not move the head/tail.
@@ -81,72 +79,73 @@ typedef struct jpegbuffer {
     OMV_ATTR_ALIGNED(uint8_t pixels[], FRAMEBUFFER_ALIGNMENT);
 } jpegbuffer_t;
 
-extern jpegbuffer_t *jpeg_framebuffer;
-
-// Force fb streaming to the IDE off.
-void fb_set_streaming_enabled(bool enable);
-bool fb_get_streaming_enabled();
-
-// Encode jpeg data for transmission over a text channel.
-int fb_encode_for_ide_new_size(image_t *img);
-void fb_encode_for_ide(uint8_t *ptr, image_t *img);
+extern jpegbuffer_t *jpegbuffer;
 
 void framebuffer_init0();
 
-int32_t framebuffer_get_x();
-int32_t framebuffer_get_y();
-int32_t framebuffer_get_u();
-int32_t framebuffer_get_v();
+framebuffer_t *framebuffer_get(size_t id);
 
-int32_t framebuffer_get_width();
-int32_t framebuffer_get_height();
-int32_t framebuffer_get_depth();
+int32_t framebuffer_get_x(framebuffer_t *fb);
+int32_t framebuffer_get_y(framebuffer_t *fb);
+int32_t framebuffer_get_u(framebuffer_t *fb);
+int32_t framebuffer_get_v(framebuffer_t *fb);
+
+int32_t framebuffer_get_width(framebuffer_t *fb);
+int32_t framebuffer_get_height(framebuffer_t *fb);
+int32_t framebuffer_get_depth(framebuffer_t *fb);
+
+// Force fb streaming to the IDE off.
+void framebuffer_set_streaming(framebuffer_t *fb, bool enable);
+bool framebuffer_get_streaming(framebuffer_t *fb);
+
+// Encode jpeg data for transmission over a text channel.
+void framebuffer_encode(framebuffer_t *fb, uint8_t *ptr, image_t *img);
+int  framebuffer_encoded_size(framebuffer_t *fb, image_t *img);
 
 // Return the number of bytes in the current buffer.
-uint32_t framebuffer_get_buffer_size();
+uint32_t framebuffer_get_buffer_size(framebuffer_t *fb);
 
 // Return the state of a buffer.
-vbuffer_t *framebuffer_get_buffer(int32_t index);
+vbuffer_t *framebuffer_get_buffer(framebuffer_t *fb, int32_t index);
 
 // Initializes an image from the frame buffer.
-void framebuffer_init_image(image_t *img);
+void framebuffer_init_image(framebuffer_t *fb, image_t *img);
 
 // Sets the frame buffer from an image.
-void framebuffer_init_from_image(image_t *img);
+void framebuffer_init_from_image(framebuffer_t *fb, image_t *img);
 
 // Compress src image to the JPEG buffer if src is mutable, otherwise copy src to the JPEG buffer
 // if the src is JPEG and fits in the JPEG buffer, or encode and stream src image to the IDE if not.
-void framebuffer_update_jpeg_buffer();
+void framebuffer_update_jpeg_buffer(framebuffer_t *fb);
 
 // Clear the framebuffer FIFO. If fifo_flush is true, reset and discard all framebuffers,
 // otherwise, retain the last frame in the fifo.
-void framebuffer_flush_buffers(bool fifo_flush);
+void framebuffer_flush_buffers(framebuffer_t *fb, bool fifo_flush);
 
 // Set the number of virtual buffers in the frame buffer.
 // If n_buffers = -1 the number of virtual buffers will be set to 3 each  if possible.
 // If n_buffers = 1 the whole framebuffer is used. In this case, `frame_size` is ignored.
-int framebuffer_set_buffers(int32_t n_buffers);
+int framebuffer_set_buffers(framebuffer_t *fb, int32_t n_buffers);
 
 // Call when done with the current vbuffer to mark it as free.
-void framebuffer_free_current_buffer();
+void framebuffer_free_current_buffer(framebuffer_t *fb);
 
 // Call to do any heavy setup before frame capture.
-void framebuffer_setup_buffers();
+void framebuffer_setup_buffers(framebuffer_t *fb);
 
 // Sets the current frame buffer to the latest virtual frame buffer.
 // Returns the buffer if it is ready or NULL if not...
 // Pass FB_PEEK to get the next buffer but not take it.
-vbuffer_t *framebuffer_get_head(framebuffer_flags_t flags);
+vbuffer_t *framebuffer_get_head(framebuffer_t *fb, framebuffer_flags_t flags);
 
 // Return the next vbuffer to store image data to or NULL if none.
 // Pass FB_PEEK to get the next buffer but not commit it.
-vbuffer_t *framebuffer_get_tail(framebuffer_flags_t flags);
+vbuffer_t *framebuffer_get_tail(framebuffer_t *fb, framebuffer_flags_t flags);
 
 // Returns a pointer to the end of the framebuffer(s).
-char *framebuffer_get_buffers_end();
+char *framebuffer_get_buffers_end(framebuffer_t *fb);
 
-// Use these macros to get a pointer to main or JPEG framebuffer.
-#define MAIN_FB()    (framebuffer)
-#define JPEG_FB()    (jpeg_framebuffer)
+// Use this macro to get a pointer to the JPEG buffer.
+#define JPEG_FB()    (jpegbuffer)
 
 #endif /* __FRAMEBUFFER_H__ */
