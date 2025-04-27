@@ -33,9 +33,18 @@
 #define FB_ALIGN_SIZE_ROUND_UP(x)   FB_ALIGN_SIZE_ROUND_DOWN(((x) + FRAMEBUFFER_ALIGNMENT - 1))
 #define OMV_JPEG_BUFFER_SIZE_MAX    ((&_jpeg_memory_end - &_jpeg_memory_start) - sizeof(jpegbuffer_t))
 
-extern char _fb_memory_start[];
-extern char _fb_memory_end[];
-static framebuffer_t *framebuffer = (framebuffer_t *) &_fb_memory_start;
+extern char _fb0_memory_start[];
+extern char _fb0_memory_end[];
+
+extern char _fb1_memory_start[];
+extern char _fb1_memory_end[];
+
+static framebuffer_t *framebuffer[] = {
+    (framebuffer_t *) &_fb0_memory_start,
+    #ifdef OMV_FB1_MEMORY
+    (framebuffer_t *) &_fb1_memory_start,
+    #endif
+};
 
 extern char _jpeg_memory_start;
 extern char _jpeg_memory_end;
@@ -43,25 +52,20 @@ jpegbuffer_t *jpegbuffer = (jpegbuffer_t *) &_jpeg_memory_start;
 
 void framebuffer_init0() {
     // Save fb_enabled flag state
-    int fb_enabled = jpegbuffer->enabled;
+    bool fb_enabled = jpegbuffer->enabled;
 
-    // Clear framebuffers
-    memset(framebuffer, 0, sizeof(*framebuffer));
+    // Setup jpeg buffer.
     memset(jpegbuffer, 0, sizeof(*jpegbuffer));
-
     mutex_init0(&jpegbuffer->lock);
-
-    // Enable streaming.
-    framebuffer->streaming_enabled = true; // controlled by the OpenMV Cam.
-
-    // Set default quality
+    jpegbuffer->enabled = fb_enabled;
     jpegbuffer->quality = ((OMV_JPEG_QUALITY_HIGH - OMV_JPEG_QUALITY_LOW) / 2) + OMV_JPEG_QUALITY_LOW;
 
-    // Set fb_enabled
-    jpegbuffer->enabled = fb_enabled; // controlled by the IDE.
-
-    // Setup buffering.
-    framebuffer_set_buffers(framebuffer, 1);
+    // Setup frame buffer(s)
+    for (size_t i=0; i<OMV_ARRAY_SIZE(framebuffer); i++) {
+        memset(framebuffer[i], 0, sizeof(framebuffer_t));
+        framebuffer[i]->streaming_enabled = true;
+        framebuffer_set_buffers(framebuffer[i], 1);
+    }
 }
 
 void framebuffer_init_image(framebuffer_t *fb, image_t *img) {
@@ -203,7 +207,7 @@ void framebuffer_update_jpeg_buffer(framebuffer_t *fb) {
 }
 
 framebuffer_t *framebuffer_get(size_t id) {
-    return framebuffer;
+    return framebuffer[id];
 }
 
 int32_t framebuffer_get_x(framebuffer_t *fb) {
@@ -283,9 +287,14 @@ int framebuffer_encoded_size(framebuffer_t *fb, image_t *img) {
 
 // Returns the current frame buffer size, factoring in the space taken by fb_alloc.
 static uint32_t framebuffer_max_buffer_size(framebuffer_t *fb) {
-    uint32_t fb_total_size = FB_ALIGN_SIZE_ROUND_DOWN((char *) &_fb_memory_end - (char *) fb->data);
-    uint32_t fb_avail_size = FB_ALIGN_SIZE_ROUND_DOWN(fb_alloc_stack_pointer() - (char *) fb->data);
-    return IM_MIN(fb_total_size, fb_avail_size);
+    if (fb == framebuffer[0]) {
+        uint32_t fb_total_size = FB_ALIGN_SIZE_ROUND_DOWN((char *) &_fb0_memory_end - (char *) fb->data);
+        uint32_t fb_avail_size = FB_ALIGN_SIZE_ROUND_DOWN(fb_alloc_stack_pointer() - (char *) fb->data);
+        return IM_MIN(fb_total_size, fb_avail_size);
+    } else {
+        uint32_t fb_total_size = FB_ALIGN_SIZE_ROUND_DOWN((char *) &_fb1_memory_end - (char *) fb->data);
+        return fb_total_size;
+    }
 }
 
 uint32_t framebuffer_get_buffer_size(framebuffer_t *fb) {
