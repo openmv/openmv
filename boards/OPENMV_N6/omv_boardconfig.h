@@ -34,32 +34,28 @@
 #define OMV_GPU_NEMA                        (1)
 #define OMV_GPU_NEMA_BUFFER_SIZE            (32 * 1024)
 
-// Enable RAW preview.
-//#define OMV_RAW_PREVIEW_ENABLE              (1)
-//#define OMV_RAW_PREVIEW_WIDTH               (512)
-//#define OMV_RAW_PREVIEW_HEIGHT              (512)
+//#define OMV_OV7725_ENABLE                   (1)
+//#define OMV_OV7725_PLL_CONFIG               (0x41) // x4
+//#define OMV_OV7725_BANDING                  (0x7F)
 
-#define OMV_OV7725_ENABLE                   (1)
-#define OMV_OV7725_PLL_CONFIG               (0x41) // x4
-#define OMV_OV7725_BANDING                  (0x7F)
+//#define OMV_OV5640_ENABLE                   (1)
+//#define OMV_OV5640_AF_ENABLE                (1)
+//#define OMV_OV5640_CLK_FREQ                 (24000000)
+//#define OMV_OV5640_PLL_CTRL2                (0x64)
+//#define OMV_OV5640_PLL_CTRL3                (0x13)
+//#define OMV_OV5640_REV_Y_CHECK              (1)
+//#define OMV_OV5640_REV_Y_FREQ               (25000000)
+//#define OMV_OV5640_REV_Y_CTRL2              (0x54)
+//#define OMV_OV5640_REV_Y_CTRL3              (0x13)
 
-#define OMV_OV5640_ENABLE                   (1)
-#define OMV_OV5640_AF_ENABLE                (1)
-#define OMV_OV5640_CLK_FREQ                 (24000000)
-#define OMV_OV5640_PLL_CTRL2                (0x64)
-#define OMV_OV5640_PLL_CTRL3                (0x13)
-#define OMV_OV5640_REV_Y_CHECK              (1)
-#define OMV_OV5640_REV_Y_FREQ               (25000000)
-#define OMV_OV5640_REV_Y_CTRL2              (0x54)
-#define OMV_OV5640_REV_Y_CTRL3              (0x13)
-
-#define OMV_MT9V0XX_ENABLE                  (1)
+//#define OMV_MT9V0XX_ENABLE                  (1)
 #define OMV_LEPTON_ENABLE                   (1)
 #define OMV_PAG7936_ENABLE                  (1)
 #define OMV_PAG7936_MIPI_CSI2               (1)
+#define OMV_SOFTCSI_ENABLE                  (1)
 #define OMV_PS5520_ENABLE                   (1)
-#define OMV_GENX320_EHC_ENABLE              (1)
-#define OMV_GENX320_HSYNC_VALUE             (0x1)
+//#define OMV_GENX320_EHC_ENABLE              (1)
+//#define OMV_GENX320_HSYNC_VALUE             (0x1)
 
 // FIR drivers configuration.
 #define OMV_FIR_MLX90621_ENABLE             (0)
@@ -152,9 +148,11 @@
 #define OMV_STACK_SIZE                      (64K)
 #define OMV_HEAP_MEMORY                     SRAM1  // libc/sbrk heap memory
 #define OMV_HEAP_SIZE                       (256K)
-#define OMV_FB_MEMORY                       DRAM   // Framebuffer, fb_alloc
-#define OMV_FB_SIZE                         (8M)   // FB memory.
-#define OMV_FB_ALLOC_SIZE                   (1M)   // minimum fb_alloc size
+#define OMV_FB0_MEMORY                      DRAM   // Framebuffer 0
+#define OMV_FB0_SIZE                        (8M)   // FB memory.
+#define OMV_FB0_ALLOC_SIZE                  (1M)   // minimum fb_alloc size
+#define OMV_FB1_MEMORY                      DRAM   // Framebuffer 1
+#define OMV_FB1_SIZE                        (8M)   // FB memory.
 #define OMV_JPEG_MEMORY                     DRAM   // JPEG buffer memory buffer.
 #define OMV_JPEG_SIZE                       (1M)   // IDE JPEG buffer (header + data).
 #define OMV_VOSPI_MEMORY                    SRAM1  // VoSPI buffer memory.
@@ -273,6 +271,7 @@
 #define OMV_CSI_DMA_REQUEST                 (HPDMA1_REQUEST_DCMI_PSSI)
 #define OMV_CSI_DMA_MEMCPY_ENABLE           (0)
 #define OMV_CSI_HW_CROP_ENABLE              (1)
+#define OMV_CSI_MAX_DEVICES                 (2)
 
 #define OMV_CSI_D0_PIN                      (&omv_pin_A1_DCMI)
 #define OMV_CSI_D1_PIN                      (&omv_pin_A10_DCMI)
