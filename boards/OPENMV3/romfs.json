@@ -4,7 +4,7 @@
     "entries": [
     {
       "type": "tflite",
-      "path": "{TOP}/lib/tflm/models/fomo_face_detection.tflite",
+      "path": "{TOP}/lib/models/fomo_face_detection.tflite",
       "alignment": 16,
       "optimize": "Performance"
     },
