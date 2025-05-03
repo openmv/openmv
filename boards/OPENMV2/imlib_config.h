@@ -18,7 +18,7 @@
 #define IMLIB_ENABLE_IMAGE_FILE_IO
 
 // Enable LAB LUT
-#define IMLIB_ENABLE_LAB_LUT
+//#define IMLIB_ENABLE_LAB_LUT
 
 // Enable YUV LUT
 //#define IMLIB_ENABLE_YUV_LUT
@@ -110,7 +110,7 @@
 //#define IMLIB_ENABLE_FEATURES
 
 // Enable AGAST.
-#define IMLIB_ENABLE_AGAST
+//#define IMLIB_ENABLE_AGAST
 
 // Enable find_template()
 //#define IMLIB_FIND_TEMPLATE
