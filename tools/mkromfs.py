@@ -13,7 +13,8 @@ import os
 import json
 import argparse
 import struct
-from tflite2c import vela_compile
+from modelc import vela_compile
+from modelc import stedge_compile
 from haar2c import cascade_binary_universal
 
 CG = '\033[92m'
@@ -89,6 +90,10 @@ def romfs_build(romfs_cfg, p, args):
                 vela_args = args.vela_args + " --optimise " + entry["optimize"]
                 vela_compile(file_path, args.build_dir, vela_args.split())
                 file_path = os.path.join(args.build_dir, file_name + ".tflite")
+            if args.stedge_args:
+                # Compile the model using Vela.
+                stedge_compile(file_path, args.build_dir, entry["profile"], args.stedge_args.split())
+                file_path = os.path.join(args.build_dir, file_name + ".tflite")
             # If tflite has a labels file add it as a new entry
             labels_path = os.path.splitext(_file_path)[0] + ".txt"
             if os.path.exists(labels_path):
@@ -146,6 +151,7 @@ def main():
     parser.add_argument('--out-dir', action = 'store', help='Output directory', required=True)
     parser.add_argument('--build-dir', action = 'store', help='Build directory', required=True)
     parser.add_argument('--vela-args', action = 'store', help='Vela compiler args', default='')
+    parser.add_argument('--stedge-args', action = 'store', help='STEdgeAI compiler args', default='')
     parser.add_argument('--partition', action = 'store', help = 'romfs partition to build. Default=all.', default=None)
 
     # Parse arguments

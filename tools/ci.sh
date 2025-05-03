@@ -5,12 +5,6 @@
 GCC_TOOLCHAIN_PATH=${HOME}/cache/gcc
 GCC_TOOLCHAIN_URL="https://developer.arm.com/-/media/Files/downloads/gnu/13.2.rel1/binrel/arm-gnu-toolchain-13.2.rel1-x86_64-arm-none-eabi.tar.xz"
 
-LLVM_TOOLCHAIN_PATH=${HOME}/cache/llvm
-LLVM_TOOLCHAIN_URL="https://github.com/ARM-software/LLVM-embedded-toolchain-for-Arm/releases/download/release-18.1.3/LLVM-ET-Arm-18.1.3-Linux-x86_64.tar.xz"
-
-GNU_MAKE_PATH=${HOME}/cache/make
-GNU_MAKE_URL="https://ftp.gnu.org/gnu/make/make-4.4.1.tar.gz"
-
 ci_install_arm_gcc() {
     mkdir -p ${GCC_TOOLCHAIN_PATH}
     wget --no-check-certificate -O - ${GCC_TOOLCHAIN_URL} | tar --strip-components=1 -Jx -C ${GCC_TOOLCHAIN_PATH}
@@ -18,12 +12,22 @@ ci_install_arm_gcc() {
     arm-none-eabi-gcc --version
 }
 
+########################################################################################
+# Install ARM LLVM.
+LLVM_TOOLCHAIN_PATH=${HOME}/cache/llvm
+LLVM_TOOLCHAIN_URL="https://github.com/ARM-software/LLVM-embedded-toolchain-for-Arm/releases/download/release-18.1.3/LLVM-ET-Arm-18.1.3-Linux-x86_64.tar.xz"
+
 ci_install_arm_llvm() {
     mkdir -p ${LLVM_TOOLCHAIN_PATH}
     wget --no-check-certificate -O - ${LLVM_TOOLCHAIN_URL} | tar --strip-components=1 -Jx -C ${LLVM_TOOLCHAIN_PATH}
     export PATH=${LLVM_TOOLCHAIN_PATH}/bin:${PATH}
     clang --version
 }
+
+########################################################################################
+# Install GNU Make.
+GNU_MAKE_PATH=${HOME}/cache/make
+GNU_MAKE_URL="https://ftp.gnu.org/gnu/make/make-4.4.1.tar.gz"
 
 ci_install_gnu_make() {
     mkdir -p ${GNU_MAKE_PATH}
@@ -35,7 +39,6 @@ ci_install_gnu_make() {
 
 ########################################################################################
 # Update Submodules.
-
 ci_update_submodules() {
   git submodule update --init --depth=1 --no-single-branch
   git -C lib/micropython/ submodule update --init --depth=1
@@ -43,7 +46,6 @@ ci_update_submodules() {
 
 ########################################################################################
 # Build Targets.
-
 ci_build_target() {
     export LLVM_PATH=${LLVM_TOOLCHAIN_PATH}/bin
     export PATH=${GNU_MAKE_PATH}:${GCC_TOOLCHAIN_PATH}/bin:${PATH}
@@ -59,7 +61,6 @@ ci_build_target() {
 
 ########################################################################################
 # Prepare Firmware Packages.
-
 ci_package_firmware_release() {
     # Add WiFi firmware blobs
     cp -rf drivers/cyw4343/firmware firmware/CYW4343
@@ -93,7 +94,6 @@ ci_install_code_format_deps() {
 
 ########################################################################################
 # Run code formatter
-
 ci_run_code_format_check() {
     export PATH=${CODEFORMAT_PATH}/bin:${PATH}
     UNCRUSTIFY_CONFIG=tools/uncrustify.cfg
@@ -109,4 +109,53 @@ ci_run_code_format_check() {
         }
     done
     exit $exit_code
+}
+
+########################################################################################
+# Install STEdgeAI tools
+STEDGEAI_URL="https://upload.openmv.io/stedgeai/STEdgeAI-2.1.0.tar.gz"
+STEDGEAI_SHA256="888e71715127ff6384e38fcde96eea28f53f8370b2bb9cf0d2f6f939001b350c"
+STEDGEAI_CACHE="${HOME}/cache/stedgeai"
+
+ci_install_stedgeai() {
+    STEDGEAI_PATH="${1}"
+    
+    # If cached in CI, copy from cache to build.
+    if [ -d "${STEDGEAI_CACHE}" ]; then
+        mkdir -p "${STEDGEAI_PATH}"
+        cp -r "${STEDGEAI_CACHE}/." "${STEDGEAI_PATH}"
+        touch "${STEDGEAI_PATH}/stedgeai.stamp"
+        return 0
+    fi
+
+    # Download and install to STEDGEAI_PATH
+    echo "Downloading STEdge AI tools..."
+    mkdir -p "${STEDGEAI_PATH}"
+    
+    # Create temporary file
+    tmpfile=$(mktemp)
+    trap 'rm -f "$tmpfile"' EXIT
+    
+    # Download and verify checksum
+    wget --no-check-certificate -O "$tmpfile" "$STEDGEAI_URL" || {
+        echo "Download failed!"
+        return 1
+    }
+    
+    echo "${STEDGEAI_SHA256}  ${tmpfile}" | sha256sum -c - || {
+        echo "Checksum failed!"
+        return 1
+    }
+    
+    # Extract the tools
+    echo "Extracting to ${STEDGEAI_PATH}..."
+    tar -xzf "$tmpfile" -C "${STEDGEAI_PATH}" --strip-components=1 || {
+        echo "Extraction failed!"
+        return 1
+    }
+    
+    touch "${STEDGEAI_PATH}/stedgeai.stamp"
+   
+    echo "STEdgeAI installed successfully to ${STEDGEAI_PATH}"
+    return 0
 }

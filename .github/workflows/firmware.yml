@@ -68,13 +68,14 @@ jobs:
           ~/cache/gcc
           ~/cache/llvm
           ~/cache/make
-        key: 'toolchain_gcc-13.2.rel1_llvm-18.1.3_make_4.4.1'
+          ~/cache/stedgeai
+        key: 'gcc-13.2.rel1_llvm-18.1.3_make-4.4.1_stedgeai-2.1'
 
     - name: '🐍 Install Python'
       uses: actions/setup-python@v5
       with:
         cache: 'pip'
-        python-version: "3.12.0"
+        python-version: "3.12.4"
 
     - name: '🛠 Install dependencies'
       run: |
@@ -94,6 +95,10 @@ jobs:
     - name: '🛠 Install LLVM toolchain '
       if: steps.cache.outputs.cache-hit != 'true'
       run: source tools/ci.sh && ci_install_arm_llvm
+
+    - name: '🛠 Install STEdge AI tools '
+      if: steps.cache.outputs.cache-hit != 'true'
+      run: source tools/ci.sh && ci_install_stedgeai ${HOME}/cache/stedgeai
 
     - name: '🏗 Build firmware'
       run: source tools/ci.sh && ci_build_target ${{ matrix.target }}
@@ -124,7 +129,8 @@ jobs:
           ~/cache/gcc
           ~/cache/llvm
           ~/cache/make
-        key: 'toolchain_gcc-13.2.rel1_llvm-18.1.3_make_4.4.1'
+          ~/cache/stedgeai
+        key: 'gcc-13.2.rel1_llvm-18.1.3_make-4.4.1_stedgeai-2.1'
 
     - name: '🐍 Install Python'
       uses: actions/setup-python@v5

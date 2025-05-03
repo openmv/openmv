@@ -1,0 +1,10 @@
+{
+    "Globals": {
+    },
+    "Profiles": {
+        "default": {
+            "memory_pool": "stm32n6.mpool",
+            "options": "--native-float --mvei --cache-maintenance --Ocache-opt --enable-virtual-mem-pools --Os --optimization 3 --Oauto-sched --all-buffers-info --csv-file network.csv --enable-epoch-controller"
+        }
+    }
+}
