@@ -36,6 +36,7 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include "py/mphal.h"
+#include "py/runtime.h"
 
 #include "alif_hal.h"
 #include "cpi.h"
@@ -341,7 +342,8 @@ int omv_csi_snapshot(omv_csi_t *csi, image_t *dst_image, uint32_t flags) {
     vbuffer_t *buffer = framebuffer_get_head(fb, FB_INVALIDATE);
     // Wait for the DMA to finish the transfer.
     for (mp_uint_t ticks = mp_hal_ticks_ms(); buffer == NULL;) {
-        MICROPY_EVENT_POLL_HOOK
+        mp_event_handle_nowait();
+
         if ((mp_hal_ticks_ms() - ticks) > 3000) {
             omv_csi_abort(csi, true, false);
 
@@ -353,6 +355,7 @@ int omv_csi_snapshot(omv_csi_t *csi, image_t *dst_image, uint32_t flags) {
 
             return OMV_CSI_ERROR_CAPTURE_TIMEOUT;
         }
+
         buffer = framebuffer_get_head(fb, FB_INVALIDATE);
     }
 

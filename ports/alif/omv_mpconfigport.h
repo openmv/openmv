@@ -36,15 +36,6 @@
         fb_alloc_free_till_mark();             \
     } while (0);
 
-#ifndef MICROPY_EVENT_POLL_HOOK
-#define MICROPY_EVENT_POLL_HOOK              \
-    do {                                     \
-        extern void mp_handle_pending(bool); \
-        mp_handle_pending(true);             \
-    } while (0);
-
-#endif
-
 #define MICROPY_ENABLE_VM_ABORT             (1)
 #define MICROPY_GC_SPLIT_HEAP               (1)
 #define MICROPY_PY_MARSHAL                  (1)
