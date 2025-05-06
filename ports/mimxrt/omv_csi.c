@@ -378,7 +378,7 @@ void omv_csi_line_callback(uint32_t addr) {
 
 #if defined(OMV_CSI_DMA)
 static void edma_config(omv_csi_t *csi, uint32_t bytes_per_pixel) {
-    framebuffer_t *fb = fb;
+    framebuffer_t *fb = csi->fb;
     uint32_t line_offset_bytes = fb->x * bytes_per_pixel;
     uint32_t line_width_bytes = fb->u * bytes_per_pixel;
 
