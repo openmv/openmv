@@ -21,7 +21,7 @@ sensor.set_windowing((320, 240))
 sensor.set_pixformat(sensor.GRAYSCALE)
 
 sensor.skip_frames(time=2000)
-sensor.set_auto_gain(False, value=100)
+sensor.set_auto_gain(False, gain_db=100)
 
 FILE_NAME = "desc"
 img = sensor.snapshot()
