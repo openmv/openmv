@@ -46,13 +46,10 @@ void tud_dfu_detach_cb(void) {
 // or before tud_dfu_manifest_cb() (state=DFU_MANIFEST).
 uint32_t tud_dfu_get_timeout_cb(uint8_t itf, uint8_t state) {
     tud_dfu_detached = false;
+    const partition_t *p = &OMV_BOOT_DFU_PARTITIONS[itf];
 
     if (state == DFU_DNBUSY) {
-        if (itf < 3) {
-            return 0;
-        } else {
-            return 100;
-        }
+        return p->delay;
     } else if (state == DFU_MANIFEST) {
         return 0;
     }
