@@ -133,7 +133,7 @@
 #define OMV_DMA_MEMORY_D2                     SRAM3  // Domain 2 DMA buffers.
 #define OMV_DMA_MEMORY_D3                     SRAM4  // Domain 3 DMA buffers.
 #define OMV_GC_BLOCK0_MEMORY                  SRAM1  // Main GC block
-#define OMV_GC_BLOCK0_SIZE                    (239K)
+#define OMV_GC_BLOCK0_SIZE                    (236K)
 #define OMV_GC_BLOCK1_MEMORY                  DRAM   // Extra GC block 0.
 #define OMV_GC_BLOCK1_SIZE                    (4M)
 #define OMV_MSC_BUF_SIZE                      (2K)   // USB MSC bot data
@@ -193,6 +193,10 @@
 // FIR I2C bus
 #define OMV_FIR_I2C_ID                        (2)
 #define OMV_FIR_I2C_SPEED                     (OMV_I2C_SPEED_FULL)
+
+// TOF I2C bus
+#define OMV_TOF_I2C_ID                        (2)
+#define OMV_TOF_I2C_SPEED                     (OMV_I2C_SPEED_FULL)
 
 // Soft I2C bus.
 #define OMV_SOFT_I2C_SIOC_PIN                 (&omv_pin_B10_GPIO)
