@@ -68,6 +68,7 @@ typedef struct {
     uintptr_t start;
     uintptr_t limit;
     uint32_t attr;
+    uint32_t delay;
 } partition_t;
 
 typedef enum {

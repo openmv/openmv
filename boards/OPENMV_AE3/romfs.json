@@ -22,13 +22,7 @@
     },
     {
       "type": "tflite",
-      "path": "{TOP}/lib/models/yolo_v5_224_nano.tflite",
-      "alignment": 16,
-      "optimize": "Performance"
-    },
-    {
-      "type": "tflite",
-      "path": "{TOP}/lib/models/person_detect.tflite",
+      "path": "{TOP}/lib/models/yolo_v2_224_small.tflite",
       "alignment": 16,
       "optimize": "Performance"
     },
