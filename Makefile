@@ -226,7 +226,7 @@ endif
 	$(SIZE) --format=SysV $(FW_DIR)/$(FIRMWARE).elf
 
 jlink:
-	${JLINK_GDB_SERVER} -speed ${JLINK_SPEED} -nogui 1 \
+	${JLINK_GDB_SERVER} -speed ${JLINK_SPEED} -nogui \
         -if ${JLINK_INTERFACE} -halt -cpu cortex-m \
 		-device ${JLINK_DEVICE} -novd ${JLINK_SCRIPT}
 
