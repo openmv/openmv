@@ -105,9 +105,7 @@ class yolo_v2_postprocess:
 
         # Threshold all the scores
         score_indices = sigmoid(row_outputs[:, _YOLO_V2_SCORE])
-        score_indices = np.nonzero(score_indices > self.threshold)
-        if isinstance(score_indices, tuple):
-            score_indices = score_indices[0]
+        score_indices = np.nonzero(score_indices > self.threshold)[0]
         if not len(score_indices):
             return _NO_DETECTION
 
@@ -173,9 +171,7 @@ class yolo_v5_postprocess:
 
         # Threshold all the scores
         score_indices = row_outputs[:, _YOLO_V5_SCORE]
-        score_indices = np.nonzero(score_indices > self.threshold)
-        if isinstance(score_indices, tuple):
-            score_indices = score_indices[0]
+        score_indices = np.nonzero(score_indices > self.threshold)[0]
         if not len(score_indices):
             return _NO_DETECTION
 
