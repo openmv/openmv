@@ -100,11 +100,11 @@ class yolo_v2_postprocess:
             return e_x / np.sum(e_x, axis=1, keepdims=True)
 
         # Reshape the output to a 2D array
-        colum_outputs = outputs[0].reshape((oh * ow * self.anchors_len,
-                                            _YOLO_V2_CLASSES + class_count))
+        row_outputs = outputs[0].reshape((oh * ow * self.anchors_len,
+                                          _YOLO_V2_CLASSES + class_count))
 
         # Threshold all the scores
-        score_indices = sigmoid(colum_outputs[:, _YOLO_V2_SCORE])
+        score_indices = sigmoid(row_outputs[:, _YOLO_V2_SCORE])
         score_indices = np.nonzero(score_indices > self.threshold)
         if isinstance(score_indices, tuple):
             score_indices = score_indices[0]
@@ -112,7 +112,7 @@ class yolo_v2_postprocess:
             return _NO_DETECTION
 
         # Get the bounding boxes that have a valid score
-        bb = np.take(colum_outputs, score_indices, axis=0)
+        bb = np.take(row_outputs, score_indices, axis=0)
 
         # Extract rows, columns, and anchor indices
         bb_rows = score_indices // (ow * self.anchors_len)
@@ -169,10 +169,10 @@ class yolo_v5_postprocess:
         class_count = oc - _YOLO_V5_CLASSES
 
         # Reshape the output to a 2D array
-        colum_outputs = outputs[0].reshape((oh * ow, _YOLO_V5_CLASSES + class_count))
+        row_outputs = outputs[0].reshape((oh * ow, _YOLO_V5_CLASSES + class_count))
 
         # Threshold all the scores
-        score_indices = colum_outputs[:, _YOLO_V5_SCORE]
+        score_indices = row_outputs[:, _YOLO_V5_SCORE]
         score_indices = np.nonzero(score_indices > self.threshold)
         if isinstance(score_indices, tuple):
             score_indices = score_indices[0]
@@ -180,7 +180,7 @@ class yolo_v5_postprocess:
             return _NO_DETECTION
 
         # Get the bounding boxes that have a valid score
-        bb = np.take(colum_outputs, score_indices, axis=0)
+        bb = np.take(row_outputs, score_indices, axis=0)
 
         # Get the score information
         bb_scores = bb[:, _YOLO_V5_SCORE]
