@@ -140,7 +140,7 @@ class yolo_v2_postprocess:
         h_rel = h_rel * ih
 
         nms = NMS(iw, ih, inputs[0].roi)
-        for i in range(len(bb)):
+        for i in range(bb.shape[0]):
             nms.add_bounding_box(x_center[i] - (w_rel[i] / 2),
                                  y_center[i] - (h_rel[i] / 2),
                                  x_center[i] + (w_rel[i] / 2),
@@ -198,7 +198,7 @@ class yolo_v5_postprocess:
         ymax = (y_center + h_rel) * ih
 
         nms = NMS(iw, ih, inputs[0].roi)
-        for i in range(len(bb)):
+        for i in range(bb.shape[0]):
             nms.add_bounding_box(xmin[i], ymin[i], xmax[i], ymax[i],
                                  bb_scores[i], bb_classes[i])
         return nms.get_bounding_boxes(threshold=self.nms_threshold, sigma=self.nms_sigma)
