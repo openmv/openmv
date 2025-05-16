@@ -58,7 +58,7 @@
 #define HAL_LPTIM_MODULE_ENABLED
 /*#define HAL_LTDC_MODULE_ENABLED   */
 /*#define HAL_MCE_MODULE_ENABLED   */
-/*#define HAL_MDF_MODULE_ENABLED   */
+#define HAL_MDF_MODULE_ENABLED
 /*#define HAL_MMC_MODULE_ENABLED   */
 /*#define HAL_NAND_MODULE_ENABLED   */
 /*#define HAL_NOR_MODULE_ENABLED   */
@@ -416,6 +416,7 @@
 
 #ifdef HAL_RTC_MODULE_ENABLED
 #include "stm32n6xx_hal_rtc.h"
+#include "stm32n6xx_ll_rtc.h"
 #endif /* HAL_RTC_MODULE_ENABLED */
 
 #ifdef HAL_SAI_MODULE_ENABLED

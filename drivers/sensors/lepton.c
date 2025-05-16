@@ -88,14 +88,14 @@ static int sleep(omv_csi_t *csi, int enable) {
 
 static int read_reg(omv_csi_t *csi, uint16_t reg_addr) {
     uint16_t reg_data;
-    if (omv_i2c_readw2(&csi->i2c_bus, csi->slv_addr, reg_addr, &reg_data)) {
+    if (omv_i2c_readw2(csi->i2c_bus, csi->slv_addr, reg_addr, &reg_data)) {
         return -1;
     }
     return reg_data;
 }
 
 static int write_reg(omv_csi_t *csi, uint16_t reg_addr, uint16_t reg_data) {
-    return omv_i2c_writew2(&csi->i2c_bus, csi->slv_addr, reg_addr, reg_data);
+    return omv_i2c_writew2(csi->i2c_bus, csi->slv_addr, reg_addr, reg_data);
 }
 
 static int set_pixformat(omv_csi_t *csi, pixformat_t pixformat) {
@@ -299,7 +299,7 @@ static int lepton_reset(omv_csi_t *csi, bool measurement_mode, bool high_temp_mo
     memset(&lepton.port, 0, sizeof(LEP_CAMERA_PORT_DESC_T));
 
     for (mp_uint_t start = mp_hal_ticks_ms(); ; mp_hal_delay_ms(1)) {
-        if (LEP_OpenPort(&csi->i2c_bus, LEP_CCI_TWI, 0, &lepton.port) == LEP_OK) {
+        if (LEP_OpenPort(csi->i2c_bus, LEP_CCI_TWI, 0, &lepton.port) == LEP_OK) {
             break;
         }
         if ((mp_hal_ticks_ms() - start) >= LEPTON_BOOT_TIMEOUT) {
@@ -381,7 +381,10 @@ static int reset(omv_csi_t *csi) {
 
 static int snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
     framebuffer_t *fb = csi->fb;
-    framebuffer_update_jpeg_buffer(fb);
+
+    if (flags & OMV_CSI_CAPTURE_FLAGS_UPDATE) {
+        framebuffer_update_jpeg_buffer(fb);
+    }
 
     if (fb->n_buffers != 1) {
         framebuffer_set_buffers(fb, 1);
@@ -503,6 +506,8 @@ static int snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
 
 int lepton_init(omv_csi_t *csi) {
     csi->reset = reset;
+    csi->config = NULL;
+    csi->abort = NULL;
     csi->sleep = sleep;
     csi->snapshot = snapshot;
     csi->read_reg = read_reg;
@@ -527,6 +532,7 @@ int lepton_init(omv_csi_t *csi) {
     csi->set_lens_correction = set_lens_correction;
     csi->ioctl = ioctl;
 
+    csi->auxiliary = 1;
     csi->vsync_pol = 1;
     csi->hsync_pol = 0;
     csi->pixck_pol = 0;

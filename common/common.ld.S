@@ -179,19 +179,31 @@ PROVIDE(__stack = __StackTop);
 #endif
 
 /* Main framebuffer memory */
-#if defined(OMV_FB_MEMORY)
-.fb_memory (NOLOAD) :
+#if defined(OMV_FB0_MEMORY)
+.fb0_memory (NOLOAD) :
 {
   . = ALIGN(4);
-  _fb_memory_start = .;
-  . += OMV_FB_SIZE;
+  _fb0_memory_start = .;
+  . += OMV_FB0_SIZE;
   . = ALIGN(4);
-  _fb_memory_end = .;
-  . += OMV_FB_ALLOC_SIZE;
+  _fb0_memory_end = .;
+  . += OMV_FB0_ALLOC_SIZE;
   . = ALIGN(4);
-  _fb_alloc_end = .;
+  _fb0_alloc_end = .;
   . = ALIGN(4);
-} >OMV_FB_MEMORY
+} >OMV_FB0_MEMORY
+#endif
+
+#if defined(OMV_FB1_MEMORY)
+.fb1_memory (NOLOAD) :
+{
+  . = ALIGN(4);
+  _fb1_memory_start = .;
+  . += OMV_FB1_SIZE;
+  . = ALIGN(4);
+  _fb1_memory_end = .;
+  . = ALIGN(4);
+} >OMV_FB1_MEMORY
 #endif
 
 /* Main framebuffer fast memory */
