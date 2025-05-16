@@ -145,9 +145,11 @@ void usbdbg_data_in(uint32_t size, usbdbg_write_callback_t write_callback) {
 
         case USBDBG_SENSOR_ID: {
             uint32_t buffer = 0xFF;
+            omv_csi_t *csi = omv_csi_get(-1);
+
             #if MICROPY_PY_CSI
-            if (omv_csi_is_detected() == true) {
-                buffer = omv_csi_get_id();
+            if (omv_csi_is_detected(csi) == true) {
+                buffer = omv_csi_get_id(csi);
             }
             #endif
             cmd = USBDBG_NONE;
@@ -363,21 +365,24 @@ void usbdbg_data_out(uint32_t size, usbdbg_read_callback_t read_callback) {
             struct {
                 int32_t name;
                 int32_t value;
-            }
-            attr;
+            } attr;
+
+            omv_csi_t *csi = omv_csi_get(-1);
+
             read_callback(&attr, sizeof(attr));
+
             switch (attr.name) {
                 case OMV_CSI_ATTR_CONTRAST:
-                    omv_csi_set_contrast(attr.value);
+                    omv_csi_set_contrast(csi, attr.value);
                     break;
                 case OMV_CSI_ATTR_BRIGHTNESS:
-                    omv_csi_set_brightness(attr.value);
+                    omv_csi_set_brightness(csi, attr.value);
                     break;
                 case OMV_CSI_ATTR_SATURATION:
-                    omv_csi_set_saturation(attr.value);
+                    omv_csi_set_saturation(csi, attr.value);
                     break;
                 case OMV_CSI_ATTR_GAINCEILING:
-                    omv_csi_set_gainceiling(attr.value);
+                    omv_csi_set_gainceiling(csi, attr.value);
                     break;
                 default:
                     break;
