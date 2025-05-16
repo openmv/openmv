@@ -64,6 +64,8 @@ class fomo_postprocess:
         return nms.get_bounding_boxes()
 
 
+# This is a lightweight version of the tiny yolo v2 object detection algorithm.
+# It was optimized to work well on embedded devices with limited computational resources.
 class yolo_v2_postprocess:
     _YOLO_V2_TX = const(0)
     _YOLO_V2_TY = const(1)
@@ -147,6 +149,19 @@ class yolo_v2_postprocess:
                                  y_center[i] + (h_rel[i] / 2),
                                  bb_scores[i], bb_classes[i])
         return nms.get_bounding_boxes(threshold=self.nms_threshold, sigma=self.nms_sigma)
+
+
+# This is a lightweight version of the YOLO (You Only Look Once) object detection algorithm.
+# It is designed to work well on embedded devices with limited computational resources.
+class yolo_lc_postprocess(yolo_v2_postprocess):
+    def __init__(self, threshold=0.6, anchors=None, nms_threshold=0.1, nms_sigma=0.1):
+        if anchors is None:
+            anchors = np.array([[0.076023, 0.258508],
+                                [0.163031, 0.413531],
+                                [0.234769, 0.702585],
+                                [0.427054, 0.715892],
+                                [0.748154, 0.857092]])
+        super().__init__(threshold, anchors, nms_threshold, nms_sigma)
 
 
 class yolo_v5_postprocess:
