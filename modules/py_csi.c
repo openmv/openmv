@@ -38,6 +38,8 @@
 #if MICROPY_PY_CSI
 
 #include "omv_csi.h"
+#include "omv_gpio.h"
+
 #include "imlib.h"
 #include "xalloc.h"
 #include "py_assert.h"
@@ -50,7 +52,6 @@
 #include "py_helper.h"
 #include "framebuffer.h"
 
-extern omv_csi_t csi;
 static mp_obj_t vsync_callback = mp_const_none;
 static mp_obj_t frame_callback = mp_const_none;
 
@@ -58,8 +59,8 @@ static mp_obj_t frame_callback = mp_const_none;
 #define omv_csi_print_error(op)  printf("\x1B[31mWARNING: %s control is not supported by this image sensor.\x1B[0m\n", op);
 
 #if MICROPY_PY_IMU
-static void do_auto_rotation(int pitch_deadzone, int roll_activezone) {
-    if (omv_csi_get_auto_rotation()) {
+static void do_auto_rotation(omv_csi_t *csi, int pitch_deadzone, int roll_activezone) {
+    if (omv_csi_get_auto_rotation(csi)) {
         float pitch = py_imu_pitch_rotation();
         if (((pitch <= (90 - pitch_deadzone)) || ((90 + pitch_deadzone) < pitch))
             && ((pitch <= (270 - pitch_deadzone)) || ((270 + pitch_deadzone) < pitch))) {
@@ -67,24 +68,24 @@ static void do_auto_rotation(int pitch_deadzone, int roll_activezone) {
             float roll = py_imu_roll_rotation();
             if (((360 - roll_activezone) <= roll) || (roll < (0 + roll_activezone)) ) {
                 // center is 0/360, upright
-                omv_csi_set_hmirror(false);
-                omv_csi_set_vflip(false);
-                omv_csi_set_transpose(false);
+                omv_csi_set_hmirror(csi, false);
+                omv_csi_set_vflip(csi, false);
+                omv_csi_set_transpose(csi, false);
             } else if (((270 - roll_activezone) <= roll) && (roll < (270 + roll_activezone))) {
                 // center is 270, rotated right
-                omv_csi_set_hmirror(true);
-                omv_csi_set_vflip(false);
-                omv_csi_set_transpose(true);
+                omv_csi_set_hmirror(csi, true);
+                omv_csi_set_vflip(csi, false);
+                omv_csi_set_transpose(csi, true);
             } else if (((180 - roll_activezone) <= roll) && (roll < (180 + roll_activezone))) {
                 // center is 180, upside down
-                omv_csi_set_hmirror(true);
-                omv_csi_set_vflip(true);
-                omv_csi_set_transpose(false);
+                omv_csi_set_hmirror(csi, true);
+                omv_csi_set_vflip(csi, true);
+                omv_csi_set_transpose(csi, false);
             } else if (((90 - roll_activezone) <= roll) && (roll < (90 + roll_activezone))) {
                 // center is 90, rotated left
-                omv_csi_set_hmirror(false);
-                omv_csi_set_vflip(true);
-                omv_csi_set_transpose(true);
+                omv_csi_set_hmirror(csi, false);
+                omv_csi_set_vflip(csi, true);
+                omv_csi_set_transpose(csi, true);
             }
         }
     }
@@ -92,10 +93,11 @@ static void do_auto_rotation(int pitch_deadzone, int roll_activezone) {
 #endif // MICROPY_PY_IMU
 
 static mp_obj_t py_omv_csi__init__() {
+    omv_csi_t *csi = omv_csi_get(-1);
     // This is the module init function, not the sensor init function.
     // This gets called when the module is imported, so it's a good
     // place to check if the sensor was detected or not.
-    if (omv_csi_is_detected() == false) {
+    if (omv_csi_is_detected(csi) == false) {
         omv_csi_raise_error(OMV_CSI_ERROR_ISC_UNDETECTED);
     }
     return mp_const_none;
@@ -103,14 +105,16 @@ static mp_obj_t py_omv_csi__init__() {
 static MP_DEFINE_CONST_FUN_OBJ_0(py_omv_csi__init__obj, py_omv_csi__init__);
 
 static mp_obj_t py_omv_csi_reset() {
-    int error = omv_csi_reset();
+    omv_csi_t *csi = omv_csi_get(-1);
+
+    int error = omv_csi_reset(csi, true);
     if (error != 0) {
         omv_csi_raise_error(error);
     }
     #if MICROPY_PY_IMU
     // +-10 degree dead-zone around pitch 90/270.
     // +-45 degree active-zone around roll 0/90/180/270/360.
-    do_auto_rotation(10, 45);
+    do_auto_rotation(csi, 10, 45);
     // We're setting the dead-zone on pitch because roll readings are invalid there.
     // We're setting the full range on roll to set the initial state.
     #endif // MICROPY_PY_IMU
@@ -119,34 +123,41 @@ static mp_obj_t py_omv_csi_reset() {
 static MP_DEFINE_CONST_FUN_OBJ_0(py_omv_csi_reset_obj, py_omv_csi_reset);
 
 static mp_obj_t py_omv_csi_sleep(mp_obj_t enable) {
-    PY_ASSERT_FALSE_MSG(omv_csi_sleep(mp_obj_is_true(enable)) != 0, "Sleep Failed");
+    omv_csi_t *csi = omv_csi_get(-1);
+    PY_ASSERT_FALSE_MSG(omv_csi_sleep(csi, mp_obj_is_true(enable)) != 0, "Sleep Failed");
     return mp_const_none;
 }
 static MP_DEFINE_CONST_FUN_OBJ_1(py_omv_csi_sleep_obj, py_omv_csi_sleep);
 
 static mp_obj_t py_omv_csi_shutdown(mp_obj_t enable) {
-    PY_ASSERT_FALSE_MSG(omv_csi_shutdown(mp_obj_is_true(enable)) != 0, "Shutdown Failed");
+    omv_csi_t *csi = omv_csi_get(-1);
+    PY_ASSERT_FALSE_MSG(omv_csi_shutdown(csi, mp_obj_is_true(enable)) != 0, "Shutdown Failed");
     return mp_const_none;
 }
 static MP_DEFINE_CONST_FUN_OBJ_1(py_omv_csi_shutdown_obj, py_omv_csi_shutdown);
 
 static mp_obj_t py_omv_csi_flush() {
-    framebuffer_update_jpeg_buffer(csi.fb);
+    omv_csi_t *csi = omv_csi_get(-1);
+    framebuffer_update_jpeg_buffer(csi->fb);
     return mp_const_none;
 }
 static MP_DEFINE_CONST_FUN_OBJ_0(py_omv_csi_flush_obj, py_omv_csi_flush);
 
 static mp_obj_t py_omv_csi_snapshot(size_t n_args, const mp_obj_t *args, mp_map_t *kw_args) {
+    omv_csi_t *csi = omv_csi_get(-1);
+
     #if MICROPY_PY_IMU
     // +-10 degree dead-zone around pitch 90/270.
     // +-35 degree active-zone around roll 0/90/180/270/360.
-    do_auto_rotation(10, 35);
+    do_auto_rotation(csi, 10, 35);
     // We're setting the dead-zone on pitch because roll readings are invalid there.
     // We're not setting the full range on roll to prevent oscillation.
     #endif // MICROPY_PY_IMU
 
     mp_obj_t image = py_image(0, 0, 0, 0, 0);
-    int error = csi.snapshot(&csi, (image_t *) py_image_cobj(image), 0);
+    uint32_t flags = OMV_CSI_CAPTURE_FLAGS_UPDATE;
+
+    int error = omv_csi_snapshot(csi, (image_t *) py_image_cobj(image), flags);
     if (error != 0) {
         omv_csi_raise_error(error);
     }
@@ -184,34 +195,39 @@ static mp_obj_t py_omv_csi_skip_frames(size_t n_args, const mp_obj_t *args, mp_m
 static MP_DEFINE_CONST_FUN_OBJ_KW(py_omv_csi_skip_frames_obj, 0, py_omv_csi_skip_frames);
 
 static mp_obj_t py_omv_csi_width() {
-    return mp_obj_new_int(resolution[csi.framesize][0]);
+    omv_csi_t *csi = omv_csi_get(-1);
+    return mp_obj_new_int(resolution[csi->framesize][0]);
 }
 static MP_DEFINE_CONST_FUN_OBJ_0(py_omv_csi_width_obj, py_omv_csi_width);
 
 static mp_obj_t py_omv_csi_height() {
-    return mp_obj_new_int(resolution[csi.framesize][1]);
+    omv_csi_t *csi = omv_csi_get(-1);
+    return mp_obj_new_int(resolution[csi->framesize][1]);
 }
 static MP_DEFINE_CONST_FUN_OBJ_0(py_omv_csi_height_obj, py_omv_csi_height);
 
 static mp_obj_t py_omv_csi_get_fb() {
     image_t image;
+    omv_csi_t *csi = omv_csi_get(-1);
 
-    if (framebuffer_get_depth(csi.fb) < 0) {
+    if (framebuffer_get_depth(csi->fb) < 0) {
         return mp_const_none;
     }
 
-    framebuffer_init_image(csi.fb, &image);
+    framebuffer_init_image(csi->fb, &image);
     return py_image_from_struct(&image);
 }
 static MP_DEFINE_CONST_FUN_OBJ_0(py_omv_csi_get_fb_obj, py_omv_csi_get_fb);
 
 static mp_obj_t py_omv_csi_get_id() {
-    return mp_obj_new_int(omv_csi_get_id());
+    omv_csi_t *csi = omv_csi_get(-1);
+    return mp_obj_new_int(omv_csi_get_id(csi));
 }
 static MP_DEFINE_CONST_FUN_OBJ_0(py_omv_csi_get_id_obj, py_omv_csi_get_id);
 
 static mp_obj_t py_omv_csi_get_frame_available() {
-    framebuffer_t *fb = framebuffer_get(0);
+    omv_csi_t *csi = omv_csi_get(-1);
+    framebuffer_t *fb = csi->fb;
     return mp_obj_new_bool(fb->tail != fb->head);
 }
 static MP_DEFINE_CONST_FUN_OBJ_0(py_omv_csi_get_frame_available_obj, py_omv_csi_get_frame_available);
@@ -245,7 +261,8 @@ static mp_obj_t py_omv_csi_dealloc_extra_fb() {
 static MP_DEFINE_CONST_FUN_OBJ_0(py_omv_csi_dealloc_extra_fb_obj, py_omv_csi_dealloc_extra_fb);
 
 static mp_obj_t py_omv_csi_set_pixformat(mp_obj_t pixformat) {
-    int error = omv_csi_set_pixformat(mp_obj_get_int(pixformat));
+    omv_csi_t *csi = omv_csi_get(-1);
+    int error = omv_csi_set_pixformat(csi, mp_obj_get_int(pixformat));
     if (error != 0) {
         omv_csi_raise_error(error);
     }
@@ -254,15 +271,17 @@ static mp_obj_t py_omv_csi_set_pixformat(mp_obj_t pixformat) {
 static MP_DEFINE_CONST_FUN_OBJ_1(py_omv_csi_set_pixformat_obj, py_omv_csi_set_pixformat);
 
 static mp_obj_t py_omv_csi_get_pixformat() {
-    if (csi.pixformat == PIXFORMAT_INVALID) {
+    omv_csi_t *csi = omv_csi_get(-1);
+    if (csi->pixformat == PIXFORMAT_INVALID) {
         omv_csi_raise_error(OMV_CSI_ERROR_INVALID_PIXFORMAT);
     }
-    return mp_obj_new_int(csi.pixformat);
+    return mp_obj_new_int(csi->pixformat);
 }
 static MP_DEFINE_CONST_FUN_OBJ_0(py_omv_csi_get_pixformat_obj, py_omv_csi_get_pixformat);
 
 static mp_obj_t py_omv_csi_set_framesize(mp_obj_t framesize) {
-    int error = omv_csi_set_framesize(mp_obj_get_int(framesize));
+    omv_csi_t *csi = omv_csi_get(-1);
+    int error = omv_csi_set_framesize(csi, mp_obj_get_int(framesize));
     if (error != 0) {
         omv_csi_raise_error(error);
     }
@@ -271,15 +290,17 @@ static mp_obj_t py_omv_csi_set_framesize(mp_obj_t framesize) {
 static MP_DEFINE_CONST_FUN_OBJ_1(py_omv_csi_set_framesize_obj, py_omv_csi_set_framesize);
 
 static mp_obj_t py_omv_csi_get_framesize() {
-    if (csi.framesize == OMV_CSI_FRAMESIZE_INVALID) {
+    omv_csi_t *csi = omv_csi_get(-1);
+    if (csi->framesize == OMV_CSI_FRAMESIZE_INVALID) {
         omv_csi_raise_error(OMV_CSI_ERROR_INVALID_FRAMESIZE);
     }
-    return mp_obj_new_int(csi.framesize);
+    return mp_obj_new_int(csi->framesize);
 }
 static MP_DEFINE_CONST_FUN_OBJ_0(py_omv_csi_get_framesize_obj, py_omv_csi_get_framesize);
 
 static mp_obj_t py_omv_csi_set_framerate(mp_obj_t framerate) {
-    int error = omv_csi_set_framerate(mp_obj_get_int(framerate));
+    omv_csi_t *csi = omv_csi_get(-1);
+    int error = omv_csi_set_framerate(csi, mp_obj_get_int(framerate));
     if (error != 0) {
         omv_csi_raise_error(error);
     }
@@ -288,23 +309,25 @@ static mp_obj_t py_omv_csi_set_framerate(mp_obj_t framerate) {
 static MP_DEFINE_CONST_FUN_OBJ_1(py_omv_csi_set_framerate_obj, py_omv_csi_set_framerate);
 
 static mp_obj_t py_omv_csi_get_framerate() {
-    if (csi.framerate == 0) {
+    omv_csi_t *csi = omv_csi_get(-1);
+    if (csi->framerate == 0) {
         omv_csi_raise_error(OMV_CSI_ERROR_INVALID_FRAMERATE);
     }
-    return mp_obj_new_int(csi.framerate);
+    return mp_obj_new_int(csi->framerate);
 }
 static MP_DEFINE_CONST_FUN_OBJ_0(py_omv_csi_get_framerate_obj, py_omv_csi_get_framerate);
 
 static mp_obj_t py_omv_csi_set_windowing(size_t n_args, const mp_obj_t *args) {
-    if (csi.framesize == OMV_CSI_FRAMESIZE_INVALID) {
+    omv_csi_t *csi = omv_csi_get(-1);
+    if (csi->framesize == OMV_CSI_FRAMESIZE_INVALID) {
         omv_csi_raise_error(OMV_CSI_ERROR_INVALID_FRAMESIZE);
     }
 
     rectangle_t temp;
     temp.x = 0;
     temp.y = 0;
-    temp.w = resolution[csi.framesize][0];
-    temp.h = resolution[csi.framesize][1];
+    temp.w = resolution[csi->framesize][0];
+    temp.h = resolution[csi->framesize][1];
 
     mp_obj_t *array = (mp_obj_t *) args;
     mp_uint_t array_len = n_args;
@@ -339,7 +362,7 @@ static mp_obj_t py_omv_csi_set_windowing(size_t n_args, const mp_obj_t *args) {
 
     rectangle_intersected(&r, &temp);
 
-    int error = omv_csi_set_windowing(r.x, r.y, r.w, r.h);
+    int error = omv_csi_set_windowing(csi, r.x, r.y, r.w, r.h);
     if (error != 0) {
         omv_csi_raise_error(error);
     }
@@ -349,18 +372,20 @@ static mp_obj_t py_omv_csi_set_windowing(size_t n_args, const mp_obj_t *args) {
 static MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(py_omv_csi_set_windowing_obj, 1, 4, py_omv_csi_set_windowing);
 
 static mp_obj_t py_omv_csi_get_windowing() {
-    if (csi.framesize == OMV_CSI_FRAMESIZE_INVALID) {
+    omv_csi_t *csi = omv_csi_get(-1);
+    if (csi->framesize == OMV_CSI_FRAMESIZE_INVALID) {
         omv_csi_raise_error(OMV_CSI_ERROR_INVALID_FRAMESIZE);
     }
 
-    return mp_obj_new_tuple(4, (mp_obj_t []) {mp_obj_new_int(framebuffer_get_x(csi.fb)),
-                                              mp_obj_new_int(framebuffer_get_y(csi.fb)),
-                                              mp_obj_new_int(framebuffer_get_u(csi.fb)),
-                                              mp_obj_new_int(framebuffer_get_v(csi.fb))});
+    return mp_obj_new_tuple(4, (mp_obj_t []) {mp_obj_new_int(framebuffer_get_x(csi->fb)),
+                                              mp_obj_new_int(framebuffer_get_y(csi->fb)),
+                                              mp_obj_new_int(framebuffer_get_u(csi->fb)),
+                                              mp_obj_new_int(framebuffer_get_v(csi->fb))});
 }
 static MP_DEFINE_CONST_FUN_OBJ_0(py_omv_csi_get_windowing_obj, py_omv_csi_get_windowing);
 
 static mp_obj_t py_omv_csi_set_gainceiling(mp_obj_t gainceiling) {
+    omv_csi_t *csi = omv_csi_get(-1);
     omv_csi_gainceiling_t gain;
     switch (mp_obj_get_int(gainceiling)) {
         case 2:
@@ -389,7 +414,7 @@ static mp_obj_t py_omv_csi_set_gainceiling(mp_obj_t gainceiling) {
             break;
     }
 
-    if (omv_csi_set_gainceiling(gain) != 0) {
+    if (omv_csi_set_gainceiling(csi, gain) != 0) {
         return mp_const_false;
     }
     return mp_const_true;
@@ -397,7 +422,8 @@ static mp_obj_t py_omv_csi_set_gainceiling(mp_obj_t gainceiling) {
 static MP_DEFINE_CONST_FUN_OBJ_1(py_omv_csi_set_gainceiling_obj, py_omv_csi_set_gainceiling);
 
 static mp_obj_t py_omv_csi_set_brightness(mp_obj_t brightness) {
-    if (omv_csi_set_brightness(mp_obj_get_int(brightness)) != 0) {
+    omv_csi_t *csi = omv_csi_get(-1);
+    if (omv_csi_set_brightness(csi, mp_obj_get_int(brightness)) != 0) {
         return mp_const_false;
     }
     return mp_const_true;
@@ -405,7 +431,8 @@ static mp_obj_t py_omv_csi_set_brightness(mp_obj_t brightness) {
 static MP_DEFINE_CONST_FUN_OBJ_1(py_omv_csi_set_brightness_obj, py_omv_csi_set_brightness);
 
 static mp_obj_t py_omv_csi_set_contrast(mp_obj_t contrast) {
-    if (omv_csi_set_contrast(mp_obj_get_int(contrast)) != 0) {
+    omv_csi_t *csi = omv_csi_get(-1);
+    if (omv_csi_set_contrast(csi, mp_obj_get_int(contrast)) != 0) {
         return mp_const_false;
     }
     return mp_const_true;
@@ -413,7 +440,8 @@ static mp_obj_t py_omv_csi_set_contrast(mp_obj_t contrast) {
 static MP_DEFINE_CONST_FUN_OBJ_1(py_omv_csi_set_contrast_obj, py_omv_csi_set_contrast);
 
 static mp_obj_t py_omv_csi_set_saturation(mp_obj_t saturation) {
-    if (omv_csi_set_saturation(mp_obj_get_int(saturation)) != 0) {
+    omv_csi_t *csi = omv_csi_get(-1);
+    if (omv_csi_set_saturation(csi, mp_obj_get_int(saturation)) != 0) {
         return mp_const_false;
     }
     return mp_const_true;
@@ -421,12 +449,13 @@ static mp_obj_t py_omv_csi_set_saturation(mp_obj_t saturation) {
 static MP_DEFINE_CONST_FUN_OBJ_1(py_omv_csi_set_saturation_obj, py_omv_csi_set_saturation);
 
 static mp_obj_t py_omv_csi_set_quality(mp_obj_t qs) {
+    omv_csi_t *csi = omv_csi_get(-1);
     int q = mp_obj_get_int(qs);
     PY_ASSERT_TRUE((q >= 0 && q <= 100));
 
     q = 100 - q; //invert quality
     q = 255 * q / 100; //map to 0->255
-    if (omv_csi_set_quality(q) != 0) {
+    if (omv_csi_set_quality(csi, q) != 0) {
         return mp_const_false;
     }
     return mp_const_true;
@@ -434,7 +463,8 @@ static mp_obj_t py_omv_csi_set_quality(mp_obj_t qs) {
 static MP_DEFINE_CONST_FUN_OBJ_1(py_omv_csi_set_quality_obj, py_omv_csi_set_quality);
 
 static mp_obj_t py_omv_csi_set_colorbar(mp_obj_t enable) {
-    if (omv_csi_set_colorbar(mp_obj_is_true(enable)) != 0) {
+    omv_csi_t *csi = omv_csi_get(-1);
+    if (omv_csi_set_colorbar(csi, mp_obj_is_true(enable)) != 0) {
         return mp_const_false;
     }
     return mp_const_true;
@@ -449,6 +479,7 @@ static mp_obj_t py_omv_csi_set_auto_gain(size_t n_args, const mp_obj_t *pos_args
     };
 
     // Parse args.
+    omv_csi_t *csi = omv_csi_get(-1);
     int enable = mp_obj_get_int(pos_args[0]);
     mp_arg_val_t args[MP_ARRAY_SIZE(allowed_args)];
     mp_arg_parse_all(n_args - 1, pos_args + 1, kw_args, MP_ARRAY_SIZE(allowed_args), allowed_args, args);
@@ -456,7 +487,7 @@ static mp_obj_t py_omv_csi_set_auto_gain(size_t n_args, const mp_obj_t *pos_args
     float gain_db = py_helper_arg_to_float(args[ARG_gain_db].u_obj, NAN);
     float gain_db_ceiling = py_helper_arg_to_float(args[ARG_gain_db_ceiling].u_obj, NAN);
 
-    int error = omv_csi_set_auto_gain(enable, gain_db, gain_db_ceiling);
+    int error = omv_csi_set_auto_gain(csi, enable, gain_db, gain_db_ceiling);
     if (error != 0) {
         if (error != OMV_CSI_ERROR_CTL_UNSUPPORTED) {
             omv_csi_raise_error(error);
@@ -468,8 +499,9 @@ static mp_obj_t py_omv_csi_set_auto_gain(size_t n_args, const mp_obj_t *pos_args
 static MP_DEFINE_CONST_FUN_OBJ_KW(py_omv_csi_set_auto_gain_obj, 1, py_omv_csi_set_auto_gain);
 
 static mp_obj_t py_omv_csi_get_gain_db() {
+    omv_csi_t *csi = omv_csi_get(-1);
     float gain_db;
-    int error = omv_csi_get_gain_db(&gain_db);
+    int error = omv_csi_get_gain_db(csi, &gain_db);
     if (error != 0) {
         omv_csi_raise_error(error);
     }
@@ -484,11 +516,12 @@ static mp_obj_t py_omv_csi_set_auto_exposure(size_t n_args, const mp_obj_t *pos_
     };
 
     // Parse args.
+    omv_csi_t *csi = omv_csi_get(-1);
     int enable = mp_obj_get_int(pos_args[0]);
     mp_arg_val_t args[MP_ARRAY_SIZE(allowed_args)];
     mp_arg_parse_all(n_args - 1, pos_args + 1, kw_args, MP_ARRAY_SIZE(allowed_args), allowed_args, args);
 
-    int error = omv_csi_set_auto_exposure(enable, args[ARG_exposure_us].u_int);
+    int error = omv_csi_set_auto_exposure(csi, enable, args[ARG_exposure_us].u_int);
     if (error != 0) {
         if (error != OMV_CSI_ERROR_CTL_UNSUPPORTED) {
             omv_csi_raise_error(error);
@@ -501,7 +534,8 @@ static MP_DEFINE_CONST_FUN_OBJ_KW(py_omv_csi_set_auto_exposure_obj, 1, py_omv_cs
 
 static mp_obj_t py_omv_csi_get_exposure_us() {
     int exposure_us;
-    int error = omv_csi_get_exposure_us(&exposure_us);
+    omv_csi_t *csi = omv_csi_get(-1);
+    int error = omv_csi_get_exposure_us(csi, &exposure_us);
     if (error != 0) {
         omv_csi_raise_error(error);
     }
@@ -516,6 +550,7 @@ static mp_obj_t py_omv_csi_set_auto_whitebal(size_t n_args, const mp_obj_t *pos_
     };
 
     // Parse args.
+    omv_csi_t *csi = omv_csi_get(-1);
     int enable = mp_obj_get_int(pos_args[0]);
     mp_arg_val_t args[MP_ARRAY_SIZE(allowed_args)];
     mp_arg_parse_all(n_args - 1, pos_args + 1, kw_args, MP_ARRAY_SIZE(allowed_args), allowed_args, args);
@@ -523,7 +558,7 @@ static mp_obj_t py_omv_csi_set_auto_whitebal(size_t n_args, const mp_obj_t *pos_
     float rgb_gain_db[3] = {NAN, NAN, NAN};
     py_helper_arg_to_float_array(args[ARG_rgb_gain_db].u_obj, rgb_gain_db, 3);
 
-    int error = omv_csi_set_auto_whitebal(enable, rgb_gain_db[0], rgb_gain_db[1], rgb_gain_db[2]);
+    int error = omv_csi_set_auto_whitebal(csi, enable, rgb_gain_db[0], rgb_gain_db[1], rgb_gain_db[2]);
     if (error != 0) {
         if (error != OMV_CSI_ERROR_CTL_UNSUPPORTED) {
             omv_csi_raise_error(error);
@@ -536,7 +571,8 @@ static MP_DEFINE_CONST_FUN_OBJ_KW(py_omv_csi_set_auto_whitebal_obj, 1, py_omv_cs
 
 static mp_obj_t py_omv_csi_get_rgb_gain_db() {
     float r_gain_db = 0.0, g_gain_db = 0.0, b_gain_db = 0.0;
-    int error = omv_csi_get_rgb_gain_db(&r_gain_db, &g_gain_db, &b_gain_db);
+    omv_csi_t *csi = omv_csi_get(-1);
+    int error = omv_csi_get_rgb_gain_db(csi, &r_gain_db, &g_gain_db, &b_gain_db);
     if (error != 0) {
         omv_csi_raise_error(error);
     }
@@ -558,18 +594,20 @@ static mp_obj_t py_omv_csi_set_auto_blc(size_t n_args, const mp_obj_t *pos_args,
     mp_arg_val_t args[MP_ARRAY_SIZE(allowed_args)];
     mp_arg_parse_all(n_args, pos_args, kw_args, MP_ARRAY_SIZE(allowed_args), allowed_args, args);
 
+    omv_csi_t *csi = omv_csi_get(-1);
     int enable = args[ARG_enable].u_int;
-    int regs[csi.blc_size];
+    int regs[csi->blc_size];
     bool regs_present = args[ARG_regs].u_obj != mp_const_none;
+
     if (regs_present) {
         mp_obj_t *arg_array;
-        mp_obj_get_array_fixed_n(args[ARG_regs].u_obj, csi.blc_size, &arg_array);
-        for (uint32_t i = 0; i < csi.blc_size; i++) {
+        mp_obj_get_array_fixed_n(args[ARG_regs].u_obj, csi->blc_size, &arg_array);
+        for (uint32_t i = 0; i < csi->blc_size; i++) {
             regs[i] = mp_obj_get_int(arg_array[i]);
         }
     }
 
-    int error = omv_csi_set_auto_blc(enable, regs_present ? regs : NULL);
+    int error = omv_csi_set_auto_blc(csi, enable, regs_present ? regs : NULL);
     if (error != 0) {
         if (error != OMV_CSI_ERROR_CTL_UNSUPPORTED) {
             omv_csi_raise_error(error);
@@ -581,14 +619,16 @@ static mp_obj_t py_omv_csi_set_auto_blc(size_t n_args, const mp_obj_t *pos_args,
 static MP_DEFINE_CONST_FUN_OBJ_KW(py_omv_csi_set_auto_blc_obj, 1,  py_omv_csi_set_auto_blc);
 
 static mp_obj_t py_omv_csi_get_blc_regs() {
-    int regs[csi.blc_size];
-    int error = omv_csi_get_blc_regs(regs);
+    omv_csi_t *csi = omv_csi_get(-1);
+    int regs[csi->blc_size];
+
+    int error = omv_csi_get_blc_regs(csi, regs);
     if (error != 0) {
         omv_csi_raise_error(error);
     }
 
-    mp_obj_list_t *l = mp_obj_new_list(csi.blc_size, NULL);
-    for (uint32_t i = 0; i < csi.blc_size; i++) {
+    mp_obj_list_t *l = mp_obj_new_list(csi->blc_size, NULL);
+    for (uint32_t i = 0; i < csi->blc_size; i++) {
         l->items[i] = mp_obj_new_int(regs[i]);
     }
     return l;
@@ -596,7 +636,8 @@ static mp_obj_t py_omv_csi_get_blc_regs() {
 static MP_DEFINE_CONST_FUN_OBJ_0(py_omv_csi_get_blc_regs_obj, py_omv_csi_get_blc_regs);
 
 static mp_obj_t py_omv_csi_set_hmirror(mp_obj_t enable) {
-    int error = omv_csi_set_hmirror(mp_obj_is_true(enable));
+    omv_csi_t *csi = omv_csi_get(-1);
+    int error = omv_csi_set_hmirror(csi, mp_obj_is_true(enable));
     if (error != 0) {
         omv_csi_raise_error(error);
     }
@@ -605,12 +646,14 @@ static mp_obj_t py_omv_csi_set_hmirror(mp_obj_t enable) {
 static MP_DEFINE_CONST_FUN_OBJ_1(py_omv_csi_set_hmirror_obj, py_omv_csi_set_hmirror);
 
 static mp_obj_t py_omv_csi_get_hmirror() {
-    return mp_obj_new_bool(omv_csi_get_hmirror());
+    omv_csi_t *csi = omv_csi_get(-1);
+    return mp_obj_new_bool(omv_csi_get_hmirror(csi));
 }
 static MP_DEFINE_CONST_FUN_OBJ_0(py_omv_csi_get_hmirror_obj, py_omv_csi_get_hmirror);
 
 static mp_obj_t py_omv_csi_set_vflip(mp_obj_t enable) {
-    int error = omv_csi_set_vflip(mp_obj_is_true(enable));
+    omv_csi_t *csi = omv_csi_get(-1);
+    int error = omv_csi_set_vflip(csi, mp_obj_is_true(enable));
     if (error != 0) {
         omv_csi_raise_error(error);
     }
@@ -619,12 +662,14 @@ static mp_obj_t py_omv_csi_set_vflip(mp_obj_t enable) {
 static MP_DEFINE_CONST_FUN_OBJ_1(py_omv_csi_set_vflip_obj, py_omv_csi_set_vflip);
 
 static mp_obj_t py_omv_csi_get_vflip() {
-    return mp_obj_new_bool(omv_csi_get_vflip());
+    omv_csi_t *csi = omv_csi_get(-1);
+    return mp_obj_new_bool(omv_csi_get_vflip(csi));
 }
 static MP_DEFINE_CONST_FUN_OBJ_0(py_omv_csi_get_vflip_obj, py_omv_csi_get_vflip);
 
 static mp_obj_t py_omv_csi_set_transpose(mp_obj_t enable) {
-    int error = omv_csi_set_transpose(mp_obj_is_true(enable));
+    omv_csi_t *csi = omv_csi_get(-1);
+    int error = omv_csi_set_transpose(csi, mp_obj_is_true(enable));
     if (error != 0) {
         omv_csi_raise_error(error);
     }
@@ -633,12 +678,14 @@ static mp_obj_t py_omv_csi_set_transpose(mp_obj_t enable) {
 static MP_DEFINE_CONST_FUN_OBJ_1(py_omv_csi_set_transpose_obj, py_omv_csi_set_transpose);
 
 static mp_obj_t py_omv_csi_get_transpose() {
-    return mp_obj_new_bool(omv_csi_get_transpose());
+    omv_csi_t *csi = omv_csi_get(-1);
+    return mp_obj_new_bool(omv_csi_get_transpose(csi));
 }
 static MP_DEFINE_CONST_FUN_OBJ_0(py_omv_csi_get_transpose_obj, py_omv_csi_get_transpose);
 
 static mp_obj_t py_omv_csi_set_auto_rotation(mp_obj_t enable) {
-    int error = omv_csi_set_auto_rotation(mp_obj_is_true(enable));
+    omv_csi_t *csi = omv_csi_get(-1);
+    int error = omv_csi_set_auto_rotation(csi, mp_obj_is_true(enable));
     if (error != 0) {
         omv_csi_raise_error(error);
     }
@@ -647,15 +694,16 @@ static mp_obj_t py_omv_csi_set_auto_rotation(mp_obj_t enable) {
 static MP_DEFINE_CONST_FUN_OBJ_1(py_omv_csi_set_auto_rotation_obj, py_omv_csi_set_auto_rotation);
 
 static mp_obj_t py_omv_csi_get_auto_rotation() {
-    return mp_obj_new_bool(omv_csi_get_auto_rotation());
+    omv_csi_t *csi = omv_csi_get(-1);
+    return mp_obj_new_bool(omv_csi_get_auto_rotation(csi));
 }
 static MP_DEFINE_CONST_FUN_OBJ_0(py_omv_csi_get_auto_rotation_obj, py_omv_csi_get_auto_rotation);
 
 static mp_obj_t py_omv_csi_set_framebuffers(mp_obj_t count) {
+    omv_csi_t *csi = omv_csi_get(-1);
     mp_int_t c = mp_obj_get_int(count);
-    framebuffer_t *fb = framebuffer_get(0);
 
-    if (fb->n_buffers == c) {
+    if (c == csi->fb->n_buffers) {
         return mp_const_none;
     }
 
@@ -663,7 +711,7 @@ static mp_obj_t py_omv_csi_set_framebuffers(mp_obj_t count) {
         omv_csi_raise_error(OMV_CSI_ERROR_INVALID_ARGUMENT);
     }
 
-    int error = omv_csi_set_framebuffers(c);
+    int error = omv_csi_set_framebuffers(csi, c);
     if (error != 0) {
         omv_csi_raise_error(error);
     }
@@ -673,33 +721,36 @@ static mp_obj_t py_omv_csi_set_framebuffers(mp_obj_t count) {
 static MP_DEFINE_CONST_FUN_OBJ_1(py_omv_csi_set_framebuffers_obj, py_omv_csi_set_framebuffers);
 
 static mp_obj_t py_omv_csi_get_framebuffers() {
-    framebuffer_t *fb = framebuffer_get(0);
-    return mp_obj_new_int(fb->n_buffers);
+    omv_csi_t *csi = omv_csi_get(-1);
+    return mp_obj_new_int(csi->fb->n_buffers);
 }
 static MP_DEFINE_CONST_FUN_OBJ_0(py_omv_csi_get_framebuffers_obj, py_omv_csi_get_framebuffers);
 
 static mp_obj_t py_omv_csi_disable_delays(size_t n_args, const mp_obj_t *args) {
+    omv_csi_t *csi = omv_csi_get(-1);
     if (!n_args) {
-        return mp_obj_new_bool(csi.disable_delays);
+        return mp_obj_new_bool(csi->disable_delays);
     }
 
-    csi.disable_delays = mp_obj_get_int(args[0]);
+    csi->disable_delays = mp_obj_get_int(args[0]);
     return mp_const_none;
 }
 static MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(py_omv_csi_disable_delays_obj, 0, 1, py_omv_csi_disable_delays);
 
 static mp_obj_t py_omv_csi_disable_full_flush(size_t n_args, const mp_obj_t *args) {
+    omv_csi_t *csi = omv_csi_get(-1);
     if (!n_args) {
-        return mp_obj_new_bool(csi.disable_full_flush);
+        return mp_obj_new_bool(csi->disable_full_flush);
     }
 
-    csi.disable_full_flush = mp_obj_get_int(args[0]);
+    csi->disable_full_flush = mp_obj_get_int(args[0]);
     return mp_const_none;
 }
 static MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(py_omv_csi_disable_full_flush_obj, 0, 1, py_omv_csi_disable_full_flush);
 
 static mp_obj_t py_omv_csi_set_special_effect(mp_obj_t sde) {
-    if (omv_csi_set_special_effect(mp_obj_get_int(sde)) != 0) {
+    omv_csi_t *csi = omv_csi_get(-1);
+    if (omv_csi_set_special_effect(csi, mp_obj_get_int(sde)) != 0) {
         return mp_const_false;
     }
     return mp_const_true;
@@ -707,7 +758,8 @@ static mp_obj_t py_omv_csi_set_special_effect(mp_obj_t sde) {
 static MP_DEFINE_CONST_FUN_OBJ_1(py_omv_csi_set_special_effect_obj, py_omv_csi_set_special_effect);
 
 static mp_obj_t py_omv_csi_set_lens_correction(mp_obj_t enable, mp_obj_t radi, mp_obj_t coef) {
-    if (omv_csi_set_lens_correction(mp_obj_is_true(enable),
+    omv_csi_t *csi = omv_csi_get(-1);
+    if (omv_csi_set_lens_correction(csi, mp_obj_is_true(enable),
                                     mp_obj_get_int(radi), mp_obj_get_int(coef)) != 0) {
         return mp_const_false;
     }
@@ -715,45 +767,58 @@ static mp_obj_t py_omv_csi_set_lens_correction(mp_obj_t enable, mp_obj_t radi, m
 }
 static MP_DEFINE_CONST_FUN_OBJ_3(py_omv_csi_set_lens_correction_obj, py_omv_csi_set_lens_correction);
 
-static void omv_csi_vsync_callback(uint32_t vsync) {
+static void omv_csi_vsync_callback(void *data) {
     if (mp_obj_is_callable(vsync_callback)) {
-        mp_call_function_1(vsync_callback, mp_obj_new_int(vsync));
+        uint32_t vsync_state = 0;
+        #ifdef OMV_CSI_VSYNC_PIN
+        vsync_state = omv_gpio_read(OMV_CSI_VSYNC_PIN);
+        #endif
+        mp_call_function_1(vsync_callback, mp_obj_new_int(vsync_state));
     }
 }
 
 static mp_obj_t py_omv_csi_set_vsync_callback(mp_obj_t vsync_callback_obj) {
+    omv_csi_cb_t cb;
+    omv_csi_t *csi = omv_csi_get(-1);
+
     if (!mp_obj_is_callable(vsync_callback_obj)) {
         vsync_callback = mp_const_none;
-        omv_csi_set_vsync_callback(NULL);
+        cb = (omv_csi_cb_t) { NULL, NULL };
     } else {
         vsync_callback = vsync_callback_obj;
-        omv_csi_set_vsync_callback(omv_csi_vsync_callback);
+        cb = (omv_csi_cb_t) { omv_csi_vsync_callback, NULL };
     }
 
+    omv_csi_set_vsync_callback(csi, cb);
     return mp_const_none;
 }
 static MP_DEFINE_CONST_FUN_OBJ_1(py_omv_csi_set_vsync_callback_obj, py_omv_csi_set_vsync_callback);
 
-static void omv_csi_frame_callback() {
+static void omv_csi_frame_callback(void *data) {
     if (mp_obj_is_callable(frame_callback)) {
         mp_call_function_0(frame_callback);
     }
 }
 
 static mp_obj_t py_omv_csi_set_frame_callback(mp_obj_t frame_callback_obj) {
+    omv_csi_cb_t cb;
+    omv_csi_t *csi = omv_csi_get(-1);
+
     if (!mp_obj_is_callable(frame_callback_obj)) {
         frame_callback = mp_const_none;
-        omv_csi_set_frame_callback(NULL);
+        cb = (omv_csi_cb_t) { NULL, NULL };
     } else {
         frame_callback = frame_callback_obj;
-        omv_csi_set_frame_callback(omv_csi_frame_callback);
+        cb = (omv_csi_cb_t) { omv_csi_frame_callback, NULL };
     }
 
+    omv_csi_set_frame_callback(csi, cb);
     return mp_const_none;
 }
 static MP_DEFINE_CONST_FUN_OBJ_1(py_omv_csi_set_frame_callback_obj, py_omv_csi_set_frame_callback);
 
 static mp_obj_t py_omv_csi_ioctl(size_t n_args, const mp_obj_t *args) {
+    omv_csi_t *csi = omv_csi_get(-1);
     mp_obj_t ret_obj = mp_const_none;
     int request = mp_obj_get_int(args[0]);
     int error = OMV_CSI_ERROR_INVALID_ARGUMENT;
@@ -781,14 +846,14 @@ static mp_obj_t py_omv_csi_ioctl(size_t n_args, const mp_obj_t *args) {
                                  MP_ERROR_TEXT("The tuple/list must either be (x, y, w, h) or (w, h)"));
                 }
 
-                error = omv_csi_ioctl(request, x, y, w, h);
+                error = omv_csi_ioctl(csi, request, x, y, w, h);
             }
             break;
         }
 
         case OMV_CSI_IOCTL_GET_READOUT_WINDOW: {
             int x, y, w, h;
-            error = omv_csi_ioctl(request, &x, &y, &w, &h);
+            error = omv_csi_ioctl(csi, request, &x, &y, &w, &h);
             if (error == 0) {
                 ret_obj = mp_obj_new_tuple(4, (mp_obj_t []) {mp_obj_new_int(x),
                                                              mp_obj_new_int(y),
@@ -802,7 +867,7 @@ static mp_obj_t py_omv_csi_ioctl(size_t n_args, const mp_obj_t *args) {
         case OMV_CSI_IOCTL_SET_FOV_WIDE:
         case OMV_CSI_IOCTL_SET_NIGHT_MODE: {
             if (n_args >= 2) {
-                error = omv_csi_ioctl(request, mp_obj_get_int(args[1]));
+                error = omv_csi_ioctl(csi, request, mp_obj_get_int(args[1]));
             }
             break;
         }
@@ -811,7 +876,7 @@ static mp_obj_t py_omv_csi_ioctl(size_t n_args, const mp_obj_t *args) {
         case OMV_CSI_IOCTL_GET_FOV_WIDE:
         case OMV_CSI_IOCTL_GET_NIGHT_MODE: {
             int enabled;
-            error = omv_csi_ioctl(request, &enabled);
+            error = omv_csi_ioctl(csi, request, &enabled);
             if (error == 0) {
                 ret_obj = mp_obj_new_bool(enabled);
             }
@@ -822,18 +887,18 @@ static mp_obj_t py_omv_csi_ioctl(size_t n_args, const mp_obj_t *args) {
         case OMV_CSI_IOCTL_TRIGGER_AUTO_FOCUS:
         case OMV_CSI_IOCTL_PAUSE_AUTO_FOCUS:
         case OMV_CSI_IOCTL_RESET_AUTO_FOCUS: {
-            error = omv_csi_ioctl(request);
+            error = omv_csi_ioctl(csi, request);
             break;
         }
         case OMV_CSI_IOCTL_WAIT_ON_AUTO_FOCUS: {
-            error = omv_csi_ioctl(request, (n_args < 2) ? 5000 : mp_obj_get_int(args[1]));
+            error = omv_csi_ioctl(csi, request, (n_args < 2) ? 5000 : mp_obj_get_int(args[1]));
             break;
         }
         #endif
 
         case OMV_CSI_IOCTL_LEPTON_GET_WIDTH: {
             int width;
-            error = omv_csi_ioctl(request, &width);
+            error = omv_csi_ioctl(csi, request, &width);
             if (error == 0) {
                 ret_obj = mp_obj_new_int(width);
             }
@@ -842,7 +907,7 @@ static mp_obj_t py_omv_csi_ioctl(size_t n_args, const mp_obj_t *args) {
 
         case OMV_CSI_IOCTL_LEPTON_GET_HEIGHT: {
             int height;
-            error = omv_csi_ioctl(request, &height);
+            error = omv_csi_ioctl(csi, request, &height);
             if (error == 0) {
                 ret_obj = mp_obj_new_int(height);
             }
@@ -851,7 +916,7 @@ static mp_obj_t py_omv_csi_ioctl(size_t n_args, const mp_obj_t *args) {
 
         case OMV_CSI_IOCTL_LEPTON_GET_RADIOMETRY: {
             int radiometry;
-            error = omv_csi_ioctl(request, &radiometry);
+            error = omv_csi_ioctl(csi, request, &radiometry);
             if (error == 0) {
                 ret_obj = mp_obj_new_int(radiometry);
             }
@@ -860,7 +925,7 @@ static mp_obj_t py_omv_csi_ioctl(size_t n_args, const mp_obj_t *args) {
 
         case OMV_CSI_IOCTL_LEPTON_GET_REFRESH: {
             int refresh;
-            error = omv_csi_ioctl(request, &refresh);
+            error = omv_csi_ioctl(csi, request, &refresh);
             if (error == 0) {
                 ret_obj = mp_obj_new_int(refresh);
             }
@@ -869,7 +934,7 @@ static mp_obj_t py_omv_csi_ioctl(size_t n_args, const mp_obj_t *args) {
 
         case OMV_CSI_IOCTL_LEPTON_GET_RESOLUTION: {
             int resolution;
-            error = omv_csi_ioctl(request, &resolution);
+            error = omv_csi_ioctl(csi, request, &resolution);
             if (error == 0) {
                 ret_obj = mp_obj_new_int(resolution);
             }
@@ -878,7 +943,7 @@ static mp_obj_t py_omv_csi_ioctl(size_t n_args, const mp_obj_t *args) {
 
         case OMV_CSI_IOCTL_LEPTON_RUN_COMMAND: {
             if (n_args >= 2) {
-                error = omv_csi_ioctl(request, mp_obj_get_int(args[1]));
+                error = omv_csi_ioctl(csi, request, mp_obj_get_int(args[1]));
             }
             break;
         }
@@ -889,7 +954,7 @@ static mp_obj_t py_omv_csi_ioctl(size_t n_args, const mp_obj_t *args) {
                 int command = mp_obj_get_int(args[1]);
                 uint16_t *data = (uint16_t *) mp_obj_str_get_data(args[2], &data_len);
                 PY_ASSERT_TRUE_MSG(data_len > 0, "0 bytes transferred!");
-                error = omv_csi_ioctl(request, command, data, data_len / sizeof(uint16_t));
+                error = omv_csi_ioctl(csi, request, command, data, data_len / sizeof(uint16_t));
             }
             break;
         }
@@ -900,7 +965,7 @@ static mp_obj_t py_omv_csi_ioctl(size_t n_args, const mp_obj_t *args) {
                 size_t data_len = mp_obj_get_int(args[2]);
                 PY_ASSERT_TRUE_MSG(data_len > 0, "0 bytes transferred!");
                 uint16_t *data = xalloc(data_len * sizeof(uint16_t));
-                error = omv_csi_ioctl(request, command, data, data_len);
+                error = omv_csi_ioctl(csi, request, command, data, data_len);
                 if (error == 0) {
                     ret_obj = mp_obj_new_bytearray_by_ref(data_len * sizeof(uint16_t), data);
                 }
@@ -911,7 +976,7 @@ static mp_obj_t py_omv_csi_ioctl(size_t n_args, const mp_obj_t *args) {
         case OMV_CSI_IOCTL_LEPTON_GET_FPA_TEMP:
         case OMV_CSI_IOCTL_LEPTON_GET_AUX_TEMP: {
             int temp;
-            error = omv_csi_ioctl(request, &temp);
+            error = omv_csi_ioctl(csi, request, &temp);
             if (error == 0) {
                 ret_obj = mp_obj_new_float((((float) temp) / 100) - 273.15f);
             }
@@ -921,13 +986,13 @@ static mp_obj_t py_omv_csi_ioctl(size_t n_args, const mp_obj_t *args) {
         case OMV_CSI_IOCTL_LEPTON_SET_MODE:
             if (n_args >= 2) {
                 int high_temp = (n_args == 2) ? false : mp_obj_get_int(args[2]);
-                error = omv_csi_ioctl(request, mp_obj_get_int(args[1]), high_temp);
+                error = omv_csi_ioctl(csi, request, mp_obj_get_int(args[1]), high_temp);
             }
             break;
 
         case OMV_CSI_IOCTL_LEPTON_GET_MODE: {
             int enabled, high_temp;
-            error = omv_csi_ioctl(request, &enabled, &high_temp);
+            error = omv_csi_ioctl(csi, request, &enabled, &high_temp);
             if (error == 0) {
                 ret_obj = mp_obj_new_tuple(2, (mp_obj_t []) {mp_obj_new_bool(enabled), mp_obj_new_bool(high_temp)});
             }
@@ -939,13 +1004,13 @@ static mp_obj_t py_omv_csi_ioctl(size_t n_args, const mp_obj_t *args) {
                 // GCC will not let us pass floats to ... so we have to pass float pointers instead.
                 float min = mp_obj_get_float(args[1]);
                 float max = mp_obj_get_float(args[2]);
-                error = omv_csi_ioctl(request, &min, &max);
+                error = omv_csi_ioctl(csi, request, &min, &max);
             }
             break;
 
         case OMV_CSI_IOCTL_LEPTON_GET_RANGE: {
             float min, max;
-            error = omv_csi_ioctl(request, &min, &max);
+            error = omv_csi_ioctl(csi, request, &min, &max);
             if (error == 0) {
                 ret_obj = mp_obj_new_tuple(2, (mp_obj_t []) {mp_obj_new_float(min), mp_obj_new_float(max)});
             }
@@ -955,7 +1020,7 @@ static mp_obj_t py_omv_csi_ioctl(size_t n_args, const mp_obj_t *args) {
         #if (OMV_HM01B0_ENABLE == 1)
         case OMV_CSI_IOCTL_HIMAX_MD_ENABLE: {
             if (n_args >= 2) {
-                error = omv_csi_ioctl(request, mp_obj_get_int(args[1]));
+                error = omv_csi_ioctl(csi, request, mp_obj_get_int(args[1]));
             }
             break;
         }
@@ -982,26 +1047,26 @@ static mp_obj_t py_omv_csi_ioctl(size_t n_args, const mp_obj_t *args) {
                                  MP_ERROR_TEXT("The tuple/list must either be (x, y, w, h) or (w, h)"));
                 }
 
-                error = omv_csi_ioctl(request, x, y, w, h);
+                error = omv_csi_ioctl(csi, request, x, y, w, h);
             }
             break;
         }
 
         case OMV_CSI_IOCTL_HIMAX_MD_THRESHOLD: {
             if (n_args >= 2) {
-                error = omv_csi_ioctl(request, mp_obj_get_int(args[1]));
+                error = omv_csi_ioctl(csi, request, mp_obj_get_int(args[1]));
             }
             break;
         }
 
         case OMV_CSI_IOCTL_HIMAX_MD_CLEAR: {
-            error = omv_csi_ioctl(request);
+            error = omv_csi_ioctl(csi, request);
             break;
         }
 
         case OMV_CSI_IOCTL_HIMAX_OSC_ENABLE: {
             if (n_args >= 2) {
-                error = omv_csi_ioctl(request, mp_obj_get_int(args[1]));
+                error = omv_csi_ioctl(csi, request, mp_obj_get_int(args[1]));
             }
             break;
         }
@@ -1009,7 +1074,7 @@ static mp_obj_t py_omv_csi_ioctl(size_t n_args, const mp_obj_t *args) {
 
         case OMV_CSI_IOCTL_GET_RGB_STATS: {
             uint32_t r, gb, gr, b;
-            error = omv_csi_ioctl(request, &r, &gb, &gr, &b);
+            error = omv_csi_ioctl(csi, request, &r, &gb, &gr, &b);
             if (error == 0) {
                 ret_obj = mp_obj_new_tuple(4, (mp_obj_t []) {mp_obj_new_int(r),
                                                              mp_obj_new_int(gb),
@@ -1022,21 +1087,21 @@ static mp_obj_t py_omv_csi_ioctl(size_t n_args, const mp_obj_t *args) {
         #if (OMV_GENX320_ENABLE == 1)
         case OMV_CSI_IOCTL_GENX320_SET_BIASES: {
             if (n_args == 2) {
-                error = omv_csi_ioctl(request, mp_obj_get_int(args[1]));
+                error = omv_csi_ioctl(csi, request, mp_obj_get_int(args[1]));
             }
             break;
         }
         case OMV_CSI_IOCTL_GENX320_SET_BIAS: {
             if (n_args == 3) {
-                error = omv_csi_ioctl(request, mp_obj_get_int(args[1]), mp_obj_get_int(args[2]));
+                error = omv_csi_ioctl(csi, request, mp_obj_get_int(args[1]), mp_obj_get_int(args[2]));
             }
             break;
         }
         case OMV_CSI_IOCTL_GENX320_SET_AFK: {
             if (n_args == 2) {
-                error = omv_csi_ioctl(request, mp_obj_get_int(args[1]));
+                error = omv_csi_ioctl(csi, request, mp_obj_get_int(args[1]));
             } else if (n_args == 4) {
-                error = omv_csi_ioctl(request, mp_obj_get_int(args[1]), mp_obj_get_int(args[2]),
+                error = omv_csi_ioctl(csi, request, mp_obj_get_int(args[1]), mp_obj_get_int(args[2]),
                                       mp_obj_get_int(args[3]));
             }
             break;
@@ -1058,25 +1123,26 @@ static mp_obj_t py_omv_csi_ioctl(size_t n_args, const mp_obj_t *args) {
 static MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(py_omv_csi_ioctl_obj, 1, 5, py_omv_csi_ioctl);
 
 static mp_obj_t py_omv_csi_set_color_palette(mp_obj_t palette_obj) {
+    omv_csi_t *csi = omv_csi_get(-1);
     int palette = mp_obj_get_int(palette_obj);
     switch (palette) {
         case COLOR_PALETTE_RAINBOW:
-            omv_csi_set_color_palette(rainbow_table);
+            omv_csi_set_color_palette(csi, rainbow_table);
             break;
         case COLOR_PALETTE_IRONBOW:
-            omv_csi_set_color_palette(ironbow_table);
+            omv_csi_set_color_palette(csi, ironbow_table);
             break;
         #if (MICROPY_PY_TOF == 1)
         case COLOR_PALETTE_DEPTH:
-            omv_csi_set_color_palette(depth_table);
+            omv_csi_set_color_palette(csi, depth_table);
             break;
         #endif // MICROPY_PY_TOF == 1
         #if (OMV_GENX320_ENABLE == 1)
         case COLOR_PALETTE_EVT_DARK:
-            omv_csi_set_color_palette(evt_dark_table);
+            omv_csi_set_color_palette(csi, evt_dark_table);
             break;
         case COLOR_PALETTE_EVT_LIGHT:
-            omv_csi_set_color_palette(evt_light_table);
+            omv_csi_set_color_palette(csi, evt_light_table);
             break;
         #endif // OMV_GENX320_ENABLE == 1
         default:
@@ -1088,7 +1154,8 @@ static mp_obj_t py_omv_csi_set_color_palette(mp_obj_t palette_obj) {
 static MP_DEFINE_CONST_FUN_OBJ_1(py_omv_csi_set_color_palette_obj, py_omv_csi_set_color_palette);
 
 static mp_obj_t py_omv_csi_get_color_palette() {
-    const uint16_t *palette = omv_csi_get_color_palette();
+    omv_csi_t *csi = omv_csi_get(-1);
+    const uint16_t *palette = omv_csi_get_color_palette(csi);
     if (palette == rainbow_table) {
         return mp_obj_new_int(COLOR_PALETTE_RAINBOW);
     } else if (palette == ironbow_table) {
@@ -1109,13 +1176,15 @@ static mp_obj_t py_omv_csi_get_color_palette() {
 static MP_DEFINE_CONST_FUN_OBJ_0(py_omv_csi_get_color_palette_obj, py_omv_csi_get_color_palette);
 
 static mp_obj_t py_omv_csi_write_reg(mp_obj_t addr, mp_obj_t val) {
-    omv_csi_write_reg(mp_obj_get_int(addr), mp_obj_get_int(val));
+    omv_csi_t *csi = omv_csi_get(-1);
+    omv_csi_write_reg(csi, mp_obj_get_int(addr), mp_obj_get_int(val));
     return mp_const_none;
 }
 static MP_DEFINE_CONST_FUN_OBJ_2(py_omv_csi_write_reg_obj, py_omv_csi_write_reg);
 
 static mp_obj_t py_omv_csi_read_reg(mp_obj_t addr) {
-    return mp_obj_new_int(omv_csi_read_reg(mp_obj_get_int(addr)));
+    omv_csi_t *csi = omv_csi_get(-1);
+    return mp_obj_new_int(omv_csi_read_reg(csi, mp_obj_get_int(addr)));
 }
 static MP_DEFINE_CONST_FUN_OBJ_1(py_omv_csi_read_reg_obj, py_omv_csi_read_reg);
 
@@ -1323,6 +1392,5 @@ const mp_obj_module_t omv_csi_module = {
     .globals = (mp_obj_t) &globals_dict,
 };
 
-MP_REGISTER_MODULE(MP_QSTR_csi, omv_csi_module);
 MP_REGISTER_MODULE(MP_QSTR_sensor, omv_csi_module);
 #endif // MICROPY_PY_CSI
