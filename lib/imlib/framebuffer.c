@@ -42,26 +42,28 @@ extern char _jpeg_memory_end;
 jpegbuffer_t *jpegbuffer = (jpegbuffer_t *) &_jpeg_memory_start;
 
 void framebuffer_init0() {
-    // Save fb_enabled flag state
+    // Save enable flag.
     int fb_enabled = jpegbuffer->enabled;
+    uint32_t fb_size = (char *) &_fb_memory_end - (char *) framebuffer->data;
 
-    // Clear framebuffers
-    memset(framebuffer, 0, sizeof(*framebuffer));
+    // Initialize frame buffer. 
+    framebuffer_init_fb(framebuffer, fb_size, false);
+
+    // Initialize jpeg buffer. 
     memset(jpegbuffer, 0, sizeof(*jpegbuffer));
-
     mutex_init0(&jpegbuffer->lock);
-
-    // Enable streaming.
-    framebuffer->streaming_enabled = true; // controlled by the OpenMV Cam.
-
-    // Set default quality
+    jpegbuffer->enabled = fb_enabled;
     jpegbuffer->quality = ((OMV_JPEG_QUALITY_HIGH - OMV_JPEG_QUALITY_LOW) / 2) + OMV_JPEG_QUALITY_LOW;
+}
 
-    // Set fb_enabled
-    jpegbuffer->enabled = fb_enabled; // controlled by the IDE.
+void framebuffer_init_fb(framebuffer_t *fb, size_t size, bool dynamic) {
+    // Clear framebuffers
+    memset(fb, 0, sizeof(*fb));
 
-    // Setup buffering.
-    framebuffer_set_buffers(framebuffer, 1);
+    fb->raw_size = size;
+    fb->streaming_enabled = true;
+    fb->dynamic = dynamic;
+    framebuffer_set_buffers(fb, 1);
 }
 
 void framebuffer_init_image(framebuffer_t *fb, image_t *img) {
@@ -283,8 +285,14 @@ int framebuffer_encoded_size(framebuffer_t *fb, image_t *img) {
 
 // Returns the current frame buffer size, factoring in the space taken by fb_alloc.
 static uint32_t framebuffer_max_buffer_size(framebuffer_t *fb) {
-    uint32_t fb_total_size = FB_ALIGN_SIZE_ROUND_DOWN((char *) &_fb_memory_end - (char *) fb->data);
+    uint32_t fb_total_size = FB_ALIGN_SIZE_ROUND_DOWN(fb->raw_size);
     uint32_t fb_avail_size = FB_ALIGN_SIZE_ROUND_DOWN(fb_alloc_stack_pointer() - (char *) fb->data);
+
+    // No fb_alloc on dynamic FBs.
+    if (fb->dynamic) {
+        fb_avail_size = fb_total_size;
+    }
+
     return IM_MIN(fb_total_size, fb_avail_size);
 }
 
