@@ -113,7 +113,7 @@ int omv_gpu_draw_image(image_t *src_img,
 
     // Configure operations.
     nema_set_blend_blit(NEMA_BL_SRC);
-    nema_set_clip(0, 0, dst_rect->w, dst_rect->h);
+    nema_set_clip(dst_rect->x, dst_rect->y, dst_rect->w, dst_rect->h);
     nema_blit_subrect_fit(dst_rect->x, dst_rect->y, dst_rect->w, dst_rect->h,
                           src_rect->x, src_rect->y, src_rect->w, src_rect->h);
 
