@@ -43,6 +43,7 @@ typedef struct framebuffer {
     int32_t u, v;
     PIXFORMAT_STRUCT;
     int32_t streaming_enabled;
+    uint32_t raw_size;
     uint32_t buff_size;
     uint32_t n_buffers;
     uint32_t frame_size;
@@ -50,6 +51,7 @@ typedef struct framebuffer {
     volatile int32_t tail;
     bool check_head;
     int32_t sampled_head;
+    bool dynamic;
     OMV_ATTR_ALIGNED(uint8_t data[], FRAMEBUFFER_ALIGNMENT);
 } framebuffer_t;
 
@@ -107,6 +109,9 @@ uint32_t framebuffer_get_buffer_size(framebuffer_t *fb);
 
 // Return the state of a buffer.
 vbuffer_t *framebuffer_get_buffer(framebuffer_t *fb, int32_t index);
+
+// Initializes a frame buffer instance.
+void framebuffer_init_fb(framebuffer_t *fb, size_t size, bool dynamic);
 
 // Initializes an image from the frame buffer.
 void framebuffer_init_image(framebuffer_t *fb, image_t *img);

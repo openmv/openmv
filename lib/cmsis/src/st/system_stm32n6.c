@@ -147,6 +147,16 @@ void SystemClock_Config(void) {
     //PeriphClkInit.CsiClockSelection     = OMV_OSC_DCMIPP_SOURCE;
     #endif
 
+    #if defined(OMV_OSC_MDF1_SOURCE)
+    PeriphClkInit.PeriphClockSelection   |= RCC_PERIPHCLK_MDF1;
+    PeriphClkInit.Mdf1ClockSelection      = OMV_OSC_MDF1_SOURCE;
+    #endif
+
+    #if defined(OMV_OSC_ADF1_SOURCE)
+    PeriphClkInit.PeriphClockSelection   |= RCC_PERIPHCLK_ADF1;
+    PeriphClkInit.Adf1ClockSelection      = OMV_OSC_ADF1_SOURCE;
+    #endif
+
     PeriphClkInit.PeriphClockSelection   |= RCC_PERIPHCLK_XSPI1;
     PeriphClkInit.Xspi1ClockSelection     = RCC_XSPI1CLKSOURCE_HCLK;
 
