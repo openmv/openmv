@@ -140,8 +140,8 @@ extern unsigned char OMV_BOARD_UID_ADDR[12];    // Unique address.
 #elif CORE_M55_HP
 #define OMV_FLASH_ORIGIN                0x80020000
 #define OMV_FLASH_LENGTH                0x00300000      /* 3MB */
-#define OMV_ROMFS_PART0_ORIGIN          0xa1000000
-#define OMV_ROMFS_PART0_LENGTH          0x01000000
+#define OMV_ROMFS_PART0_ORIGIN          0xa0800000
+#define OMV_ROMFS_PART0_LENGTH          0x01800000
 #define OMV_ROMFS_PART1_ORIGIN          0x8047E000
 #define OMV_ROMFS_PART1_LENGTH          0x00100000
 #elif CORE_M55_HE

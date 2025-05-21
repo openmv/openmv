@@ -104,8 +104,8 @@ static const partition_t OMV_BOOT_DFU_PARTITIONS[] = {
 { .type = PTYPE_AXI_FLASH, .region= 6, .rdonly = 0, .start = 0x80320000, .limit = 0x8047E000, .attr = MEMATTR_DEVICE_nGnRE },
 { .type = PTYPE_AXI_FLASH, .region= 7, .rdonly = 0, .start = 0x8047E000, .limit = 0x8057E000, .attr = MEMATTR_DEVICE_nGnRE },
 { .type = PTYPE_AXI_FLASH, .region= 8, .rdonly = 0, .start = 0x8057E000, .limit = 0x80580000, .attr = MEMATTR_DEVICE_nGnRE },
-{ .type = PTYPE_SPI_FLASH, .region=-1, .rdonly = 0, .start = 0x00000000, .limit = 0x01000000, .attr = 0 },
-{ .type = PTYPE_SPI_FLASH, .region=-1, .rdonly = 0, .start = 0x01000000, .limit = 0x02000000, .attr = 0 },
+{ .type = PTYPE_SPI_FLASH, .region=-1, .rdonly = 0, .start = 0x00000000, .limit = 0x00800000, .attr = 0 },
+{ .type = PTYPE_SPI_FLASH, .region=-1, .rdonly = 0, .start = 0x00800000, .limit = 0x02000000, .attr = 0 },
 { .type = PTYPE_REC_FLASH, .region=-1, .rdonly = 0, .start = 0x00000000, .limit = 0x00001000, .attr = 0 },
 };
 #define OMV_BOOT_DFU_PARTITIONS_COUNT   8   // Must be a literal

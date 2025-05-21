@@ -1,6 +1,6 @@
 {
   "0": {
-    "size": "0x1000000",
+    "size": "0x1800000",
     "entries": [
     {
       "type": "tflite",
