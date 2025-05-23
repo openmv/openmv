@@ -262,12 +262,16 @@ static mp_obj_t py_ml_model_predict(size_t n_args, const mp_obj_t *pos_args, mp_
     ml_backend_run_inference(model);
     OMV_PROFILE_PRINT(inference);
 
+    OMV_PROFILE_START(postprocess);
     mp_obj_t output = py_ml_process_output(model);
+    OMV_PROFILE_PRINT(postprocess);
 
     if (args[ARG_callback].u_obj != mp_const_none) {
         // Pass model, inputs, outputs to the post-processing callback.
         mp_obj_t fargs[3] = { MP_OBJ_FROM_PTR(model), pos_args[1], output };
+        OMV_PROFILE_START(postprocess_callback);
         output = mp_call_function_n_kw(args[ARG_callback].u_obj, 3, 0, fargs);
+        OMV_PROFILE_PRINT(postprocess_callback);
     }
 
     return output;
