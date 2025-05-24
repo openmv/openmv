@@ -157,7 +157,13 @@ static void py_ml_process_input(py_ml_model_obj_t *model, mp_obj_t arg) {
     }
 }
 
-static mp_obj_t py_ml_process_output(py_ml_model_obj_t *model) {
+static mp_obj_t py_ml_process_output(py_ml_model_obj_t *model, mp_obj_t callback) {
+    mp_obj_t dest[4] = {MP_OBJ_NULL, MP_OBJ_NULL, MP_OBJ_NULL, MP_OBJ_NULL};
+
+    if (callback != mp_const_none) {
+        mp_load_method_maybe(callback, MP_QSTR_transpose, dest);
+    }
+
     mp_obj_list_t *output_list = MP_OBJ_TO_PTR(mp_obj_new_list(model->outputs_size, NULL));
     for (size_t i = 0; i < model->outputs_size; i++) {
         void *model_output = ml_backend_get_output(model, i);
@@ -173,36 +179,162 @@ static mp_obj_t py_ml_process_output(py_ml_model_obj_t *model) {
             mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Output shape has too many dimensions"));
         }
 
+        // Initialize all shape dimensions so that transpose works correctly.
+        for (size_t j = 0; j < ULAB_MAX_DIMS; j++) {
+            shape[j] = 1;
+        }
+
         for (size_t j = 0; j < output_shape->len; j++) {
             size_t ulab_offset = ULAB_MAX_DIMS - output_shape->len;
             shape[ulab_offset + j] = mp_obj_get_int(output_shape->items[j]);
         }
 
-        ndarray_obj_t *ndarray = ndarray_new_dense_ndarray(output_shape->len, shape, NDARRAY_FLOAT);
+        size_t strides[ULAB_MAX_DIMS] = {};
+        strides[ULAB_MAX_DIMS - 1] = 1;
 
-        if (output_dtype == 'f') {
-            memcpy(ndarray->array, model_output, size * sizeof(float));
-        } else if (output_dtype == 'b') {
-            for (size_t j = 0; j < size; j++) {
-                float v = (((int8_t *) model_output)[j] - output_zero_point);
-                ((float *) ndarray->array)[j] = v * output_scale;
-            }
-        } else if (output_dtype == 'B') {
-            for (size_t j = 0; j < size; j++) {
-                float v = (((uint8_t *) model_output)[j] - output_zero_point);
-                ((float *) ndarray->array)[j] = v * output_scale;
-            }
-        } else if (output_dtype == 'h') {
-            for (size_t j = 0; j < size; j++) {
-                float v = (((int16_t *) model_output)[j] - output_zero_point);
-                ((float *) ndarray->array)[j] = v * output_scale;
-            }
-        } else if (output_dtype == 'H') {
-            for (size_t j = 0; j < size; j++) {
-                float v = (((uint16_t *) model_output)[j] - output_zero_point);
-                ((float *) ndarray->array)[j] = v * output_scale;
+        for (size_t j = ULAB_MAX_DIMS; j > 1; j--) {
+            strides[j - 2] = strides[j - 1] * shape[j - 1];
+        }
+
+        size_t len = output_shape->len;
+        bool transpose = false;
+
+        if (dest[1] != MP_OBJ_NULL) {
+            dest[2] = model;
+            dest[3] = mp_obj_new_int(i);
+            transpose = mp_obj_is_true(mp_call_method_n_kw(2, 0, dest));
+
+            if (transpose) {
+                // Remove leading 1 outer dimensions as they become 1 inner dimensions which reduces
+                // the speed of the transpose operation.
+                while (len > 1 && shape[ULAB_MAX_DIMS - len] == 1) {
+                    len--;
+                }
+
+                // Reverse shape and strides in place.
+                for (size_t j = 0; j < len / 2; j++) {
+                    size_t ulab_offset = ULAB_MAX_DIMS - len;
+
+                    size_t temp = shape[ulab_offset + j];
+                    shape[ulab_offset + j] = shape[ULAB_MAX_DIMS - j - 1];
+                    shape[ULAB_MAX_DIMS - j - 1] = temp;
+
+                    temp = strides[ulab_offset + j];
+                    strides[ulab_offset + j] = strides[ULAB_MAX_DIMS - j - 1];
+                    strides[ULAB_MAX_DIMS - j - 1] = temp;
+                }
             }
         }
+
+        ndarray_obj_t *ndarray = ndarray_new_dense_ndarray(len, shape, NDARRAY_FLOAT);
+
+        if (!transpose) {
+            if (output_dtype == 'f') {
+                memcpy(ndarray->array, model_output, size * sizeof(float));
+            } else if (output_dtype == 'b') {
+                for (size_t j = 0; j < size; j++) {
+                    float v = (((int8_t *) model_output)[j] - output_zero_point);
+                    ((float *) ndarray->array)[j] = v * output_scale;
+                }
+            } else if (output_dtype == 'B') {
+                for (size_t j = 0; j < size; j++) {
+                    float v = (((uint8_t *) model_output)[j] - output_zero_point);
+                    ((float *) ndarray->array)[j] = v * output_scale;
+                }
+            } else if (output_dtype == 'h') {
+                for (size_t j = 0; j < size; j++) {
+                    float v = (((int16_t *) model_output)[j] - output_zero_point);
+                    ((float *) ndarray->array)[j] = v * output_scale;
+                }
+            } else if (output_dtype == 'H') {
+                for (size_t j = 0; j < size; j++) {
+                    float v = (((uint16_t *) model_output)[j] - output_zero_point);
+                    ((float *) ndarray->array)[j] = v * output_scale;
+                }
+            }
+        } else {
+            if (output_dtype == 'f') {
+                size_t index = 0;
+                for (size_t j = 0; j < shape[0]; j++) {
+                    size_t indexJ = j * strides[0];
+                    for (size_t k = 0; k < shape[1]; k++) {
+                        size_t indexK = indexJ + k * strides[1];
+                        for (size_t l = 0; l < shape[2]; l++) {
+                            size_t indexL = indexK + l * strides[2];
+                            for (size_t m = 0; m < shape[3]; m++) {
+                                size_t indexM = indexL + m * strides[3];
+                                ((float *) ndarray->array)[index++] = ((float *) model_output)[indexM];
+                            }
+                        }
+                    }
+                }
+            } else if (output_dtype == 'b') {
+                size_t index = 0;
+                for (size_t j = 0; j < shape[0]; j++) {
+                    size_t indexJ = j * strides[0];
+                    for (size_t k = 0; k < shape[1]; k++) {
+                        size_t indexK = indexJ + k * strides[1];
+                        for (size_t l = 0; l < shape[2]; l++) {
+                            size_t indexL = indexK + l * strides[2];
+                            for (size_t m = 0; m < shape[3]; m++) {
+                                size_t indexM = indexL + m * strides[3];
+                                float v = (((int8_t *) model_output)[indexM] - output_zero_point);
+                                ((float *) ndarray->array)[index++] = v * output_scale;
+                            }
+                        }
+                    }
+                }
+            } else if (output_dtype == 'B') {
+                size_t index = 0;
+                for (size_t j = 0; j < shape[0]; j++) {
+                    size_t indexJ = j * strides[0];
+                    for (size_t k = 0; k < shape[1]; k++) {
+                        size_t indexK = indexJ + k * strides[1];
+                        for (size_t l = 0; l < shape[2]; l++) {
+                            size_t indexL = indexK + l * strides[2];
+                            for (size_t m = 0; m < shape[3]; m++) {
+                                size_t indexM = indexL + m * strides[3];
+                                float v = (((uint8_t *) model_output)[indexM] - output_zero_point);
+                                ((float *) ndarray->array)[index++] = v * output_scale;
+                            }
+                        }
+                    }
+                }
+            } else if (output_dtype == 'h') {
+                size_t index = 0;
+                for (size_t j = 0; j < shape[0]; j++) {
+                    size_t indexJ = j * strides[0];
+                    for (size_t k = 0; k < shape[1]; k++) {
+                        size_t indexK = indexJ + k * strides[1];
+                        for (size_t l = 0; l < shape[2]; l++) {
+                            size_t indexL = indexK + l * strides[2];
+                            for (size_t m = 0; m < shape[3]; m++) {
+                                size_t indexM = indexL + m * strides[3];
+                                float v = (((int16_t *) model_output)[indexM] - output_zero_point);
+                                ((float *) ndarray->array)[index++] = v * output_scale;
+                            }
+                        }
+                    }
+                }
+            } else if (output_dtype == 'H') {
+                size_t index = 0;
+                for (size_t j = 0; j < shape[0]; j++) {
+                    size_t indexJ = j * strides[0];
+                    for (size_t k = 0; k < shape[1]; k++) {
+                        size_t indexK = indexJ + k * strides[1];
+                        for (size_t l = 0; l < shape[2]; l++) {
+                            size_t indexL = indexK + l * strides[2];
+                            for (size_t m = 0; m < shape[3]; m++) {
+                                size_t indexM = indexL + m * strides[3];
+                                float v = (((uint16_t *) model_output)[indexM] - output_zero_point);
+                                ((float *) ndarray->array)[index++] = v * output_scale;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
         output_list->items[i] = MP_OBJ_FROM_PTR(ndarray);
     }
 
@@ -268,12 +400,16 @@ static mp_obj_t py_ml_model_predict(size_t n_args, const mp_obj_t *pos_args, mp_
     ml_backend_run_inference(model);
     OMV_PROFILE_PRINT(inference);
 
-    mp_obj_t output = py_ml_process_output(model);
+    OMV_PROFILE_START(postprocess);
+    mp_obj_t output = py_ml_process_output(model, args[ARG_callback].u_obj);
+    OMV_PROFILE_PRINT(postprocess);
 
     if (args[ARG_callback].u_obj != mp_const_none) {
         // Pass model, inputs, outputs to the post-processing callback.
         mp_obj_t fargs[3] = { MP_OBJ_FROM_PTR(model), pos_args[1], output };
+        OMV_PROFILE_START(postprocess_callback);
         output = mp_call_function_n_kw(args[ARG_callback].u_obj, 3, 0, fargs);
+        OMV_PROFILE_PRINT(postprocess_callback);
     }
 
     return output;
