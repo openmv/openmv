@@ -1,6 +1,7 @@
 include("$(MPY_DIR)/extmod/asyncio")
 
 # Filesystem
+freeze ("$(OMV_LIB_DIR)/", "boot.py")
 freeze ("$(OMV_LIB_DIR)/", "_boot.py")
 
 # Drivers
