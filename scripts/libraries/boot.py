@@ -19,7 +19,8 @@ while True:
     print("Waiting for connection")
     time.sleep(1)
 
-time.sleep(10)
+for _ in range(10):
+    time.sleep(1)
 uart = UART(1, baudrate=115200, timeout_char=1000)
 MOVES = [
     (-500, 0, 500, 0),   # CMD_MOVE_LEFT
