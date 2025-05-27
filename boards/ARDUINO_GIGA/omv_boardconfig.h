@@ -279,9 +279,7 @@
 #define OMV_RGB_DISPLAY_RELEASE_RESET()     __HAL_RCC_LTDC_RELEASE_RESET()
 
 // DSI Interface
-#define OMV_DISPLAY_ST7701_ENABLE           (1)
 #define OMV_DSI_DISPLAY_CONTROLLER          (DSI)
-#define OMV_DSI_DISPLAY_CONTROLLER_INIT     st7701_init
 #define OMV_DSI_DISPLAY_TE_ENABLE           (1)
 #define OMV_DSI_DISPLAY_BL_PIN              (&omv_pin_B12_GPIO)
 #define OMV_DSI_DISPLAY_CLK_ENABLE()        __HAL_RCC_DSI_CLK_ENABLE()
