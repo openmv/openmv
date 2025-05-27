@@ -50,6 +50,7 @@
 #include "file_utils.h"
 #include "py_ml.h"
 #include "ulab/code/ndarray.h"
+#include "simd.h"
 
 #ifndef IMLIB_ML_MODEL_ALIGN
 #ifndef __DCACHE_PRESENT
@@ -57,6 +58,10 @@
 #else
 #define IMLIB_ML_MODEL_ALIGN    (__SCB_DCACHE_LINE_SIZE - 1)
 #endif
+#endif
+
+#if ULAB_MAX_DIMS != 4
+#error "ULAB_MAX_DIMS must be equal to 4 for the ML module."
 #endif
 
 static size_t py_ml_tuple_sum(mp_obj_tuple_t *o) {
@@ -230,104 +235,130 @@ static mp_obj_t py_ml_process_output(py_ml_model_obj_t *model, mp_obj_t callback
 
         if (!transpose) {
             if (output_dtype == 'f') {
-                memcpy(ndarray->array, model_output, size * sizeof(float));
+                vmemcpy_32(ndarray->array, model_output, size * sizeof(float));
             } else if (output_dtype == 'b') {
-                for (size_t j = 0; j < size; j++) {
-                    float v = (((int8_t *) model_output)[j] - output_zero_point);
-                    ((float *) ndarray->array)[j] = v * output_scale;
+                for (size_t j = 0; j < size; j += FLOAT32_VECTOR_SIZE) {
+                    v128_predicate_t pred = vpredicate_32(size - j);
+                    v128_t v = vldr_s8_widen_s32_pred(((int8_t *) model_output) + j, pred);
+                    v = vmul_n_f32(vcvt_f32_s32(vsub_n_s32(v, output_zero_point)), output_scale);
+                    vstr_f32_pred(((float *) ndarray->array) + j, v, pred);
                 }
             } else if (output_dtype == 'B') {
-                for (size_t j = 0; j < size; j++) {
-                    float v = (((uint8_t *) model_output)[j] - output_zero_point);
-                    ((float *) ndarray->array)[j] = v * output_scale;
+                for (size_t j = 0; j < size; j += FLOAT32_VECTOR_SIZE) {
+                    v128_predicate_t pred = vpredicate_32(size - j);
+                    v128_t v = vldr_u8_widen_u32_pred(((uint8_t *) model_output) + j, pred);
+                    v = vmul_n_f32(vcvt_f32_s32(vsub_n_s32(v, output_zero_point)), output_scale);
+                    vstr_f32_pred(((float *) ndarray->array) + j, v, pred);
                 }
             } else if (output_dtype == 'h') {
-                for (size_t j = 0; j < size; j++) {
-                    float v = (((int16_t *) model_output)[j] - output_zero_point);
-                    ((float *) ndarray->array)[j] = v * output_scale;
+                for (size_t j = 0; j < size; j += FLOAT32_VECTOR_SIZE) {
+                    v128_predicate_t pred = vpredicate_32(size - j);
+                    v128_t v = vldr_s16_widen_s32_pred(((int16_t *) model_output) + j, pred);
+                    v = vmul_n_f32(vcvt_f32_s32(vsub_n_s32(v, output_zero_point)), output_scale);
+                    vstr_f32_pred(((float *) ndarray->array) + j, v, pred);
                 }
             } else if (output_dtype == 'H') {
-                for (size_t j = 0; j < size; j++) {
-                    float v = (((uint16_t *) model_output)[j] - output_zero_point);
-                    ((float *) ndarray->array)[j] = v * output_scale;
+                for (size_t j = 0; j < size; j += FLOAT32_VECTOR_SIZE) {
+                    v128_predicate_t pred = vpredicate_32(size - j);
+                    v128_t v = vldr_u16_widen_u32_pred(((uint16_t *) model_output) + j, pred);
+                    v = vmul_n_f32(vcvt_f32_s32(vsub_n_s32(v, output_zero_point)), output_scale);
+                    vstr_f32_pred(((float *) ndarray->array) + j, v, pred);
                 }
             }
         } else {
+            float32_t *array = (float32_t *) ndarray->array;
+            v128_t offsets_start = vmul_n_u32(vidup_u32(0, 1), strides[ULAB_MAX_DIMS - 1]);
+            size_t offsets_inc = strides[ULAB_MAX_DIMS - 1] * FLOAT32_VECTOR_SIZE;
             if (output_dtype == 'f') {
-                size_t index = 0;
-                for (size_t j = 0; j < shape[0]; j++) {
-                    size_t indexJ = j * strides[0];
-                    for (size_t k = 0; k < shape[1]; k++) {
-                        size_t indexK = indexJ + k * strides[1];
-                        for (size_t l = 0; l < shape[2]; l++) {
-                            size_t indexL = indexK + l * strides[2];
-                            for (size_t m = 0; m < shape[3]; m++) {
-                                size_t indexM = indexL + m * strides[3];
-                                ((float *) ndarray->array)[index++] = ((float *) model_output)[indexM];
+                for (size_t j = 0; j < shape[ULAB_MAX_DIMS - 4]; j++) {
+                    size_t indexJ = j * strides[ULAB_MAX_DIMS - 4];
+                    for (size_t k = 0; k < shape[ULAB_MAX_DIMS - 3]; k++) {
+                        size_t indexK = indexJ + (k * strides[ULAB_MAX_DIMS - 3]);
+                        for (size_t l = 0; l < shape[ULAB_MAX_DIMS - 2]; l++) {
+                            size_t indexL = indexK + (l * strides[ULAB_MAX_DIMS - 2]);
+                            v128_t offsets = vadd_n_u32(offsets_start, indexL);
+                            for (size_t m = 0; m < shape[ULAB_MAX_DIMS - 1]; m += FLOAT32_VECTOR_SIZE) {
+                                v128_predicate_t pred = vpredicate_32(shape[ULAB_MAX_DIMS - 1] - m);
+                                v128_t v = vldr_f32_gather_pred((float32_t *) model_output, offsets, pred);
+                                vstr_f32_pred(array, v, pred);
+                                offsets = vadd_n_u32(offsets, offsets_inc);
+                                array += FLOAT32_VECTOR_SIZE;
                             }
                         }
                     }
                 }
             } else if (output_dtype == 'b') {
-                size_t index = 0;
-                for (size_t j = 0; j < shape[0]; j++) {
-                    size_t indexJ = j * strides[0];
-                    for (size_t k = 0; k < shape[1]; k++) {
-                        size_t indexK = indexJ + k * strides[1];
-                        for (size_t l = 0; l < shape[2]; l++) {
-                            size_t indexL = indexK + l * strides[2];
-                            for (size_t m = 0; m < shape[3]; m++) {
-                                size_t indexM = indexL + m * strides[3];
-                                float v = (((int8_t *) model_output)[indexM] - output_zero_point);
-                                ((float *) ndarray->array)[index++] = v * output_scale;
+                for (size_t j = 0; j < shape[ULAB_MAX_DIMS - 4]; j++) {
+                    size_t indexJ = j * strides[ULAB_MAX_DIMS - 4];
+                    for (size_t k = 0; k < shape[ULAB_MAX_DIMS - 3]; k++) {
+                        size_t indexK = indexJ + (k * strides[ULAB_MAX_DIMS - 3]);
+                        for (size_t l = 0; l < shape[ULAB_MAX_DIMS - 2]; l++) {
+                            size_t indexL = indexK + (l * strides[ULAB_MAX_DIMS - 2]);
+                            v128_t offsets = vadd_n_u32(offsets_start, indexL);
+                            for (size_t m = 0; m < shape[ULAB_MAX_DIMS - 1]; m += FLOAT32_VECTOR_SIZE) {
+                                v128_predicate_t pred = vpredicate_32(shape[ULAB_MAX_DIMS - 1] - m);
+                                v128_t v = vldr_s8_widen_s32_gather_pred((int8_t *) model_output, offsets, pred);
+                                v = vmul_n_f32(vcvt_f32_s32(vsub_n_s32(v, output_zero_point)), output_scale);
+                                vstr_f32_pred(array, v, pred);
+                                offsets = vadd_n_u32(offsets, offsets_inc);
+                                array += FLOAT32_VECTOR_SIZE;
                             }
                         }
                     }
                 }
             } else if (output_dtype == 'B') {
-                size_t index = 0;
-                for (size_t j = 0; j < shape[0]; j++) {
-                    size_t indexJ = j * strides[0];
-                    for (size_t k = 0; k < shape[1]; k++) {
-                        size_t indexK = indexJ + k * strides[1];
-                        for (size_t l = 0; l < shape[2]; l++) {
-                            size_t indexL = indexK + l * strides[2];
-                            for (size_t m = 0; m < shape[3]; m++) {
-                                size_t indexM = indexL + m * strides[3];
-                                float v = (((uint8_t *) model_output)[indexM] - output_zero_point);
-                                ((float *) ndarray->array)[index++] = v * output_scale;
+                for (size_t j = 0; j < shape[ULAB_MAX_DIMS - 4]; j++) {
+                    size_t indexJ = j * strides[ULAB_MAX_DIMS - 4];
+                    for (size_t k = 0; k < shape[ULAB_MAX_DIMS - 3]; k++) {
+                        size_t indexK = indexJ + (k * strides[ULAB_MAX_DIMS - 3]);
+                        for (size_t l = 0; l < shape[ULAB_MAX_DIMS - 2]; l++) {
+                            size_t indexL = indexK + (l * strides[ULAB_MAX_DIMS - 2]);
+                            v128_t offsets = vadd_n_u32(offsets_start, indexL);
+                            for (size_t m = 0; m < shape[ULAB_MAX_DIMS - 1]; m += FLOAT32_VECTOR_SIZE) {
+                                v128_predicate_t pred = vpredicate_32(shape[ULAB_MAX_DIMS - 1] - m);
+                                v128_t v = vldr_u8_widen_u32_gather_pred((uint8_t *) model_output, offsets, pred);
+                                v = vmul_n_f32(vcvt_f32_s32(vsub_n_s32(v, output_zero_point)), output_scale);
+                                vstr_f32_pred(array, v, pred);
+                                offsets = vadd_n_u32(offsets, offsets_inc);
+                                array += FLOAT32_VECTOR_SIZE;
                             }
                         }
                     }
                 }
             } else if (output_dtype == 'h') {
-                size_t index = 0;
-                for (size_t j = 0; j < shape[0]; j++) {
-                    size_t indexJ = j * strides[0];
-                    for (size_t k = 0; k < shape[1]; k++) {
-                        size_t indexK = indexJ + k * strides[1];
-                        for (size_t l = 0; l < shape[2]; l++) {
-                            size_t indexL = indexK + l * strides[2];
-                            for (size_t m = 0; m < shape[3]; m++) {
-                                size_t indexM = indexL + m * strides[3];
-                                float v = (((int16_t *) model_output)[indexM] - output_zero_point);
-                                ((float *) ndarray->array)[index++] = v * output_scale;
+                for (size_t j = 0; j < shape[ULAB_MAX_DIMS - 4]; j++) {
+                    size_t indexJ = j * strides[ULAB_MAX_DIMS - 4];
+                    for (size_t k = 0; k < shape[ULAB_MAX_DIMS - 3]; k++) {
+                        size_t indexK = indexJ + (k * strides[ULAB_MAX_DIMS - 3]);
+                        for (size_t l = 0; l < shape[ULAB_MAX_DIMS - 2]; l++) {
+                            size_t indexL = indexK + (l * strides[ULAB_MAX_DIMS - 2]);
+                            v128_t offsets = vadd_n_u32(offsets_start, indexL);
+                            for (size_t m = 0; m < shape[ULAB_MAX_DIMS - 1]; m += FLOAT32_VECTOR_SIZE) {
+                                v128_predicate_t pred = vpredicate_32(shape[ULAB_MAX_DIMS - 1] - m);
+                                v128_t v = vldr_s16_widen_s32_gather_pred((int16_t *) model_output, offsets, pred);
+                                v = vmul_n_f32(vcvt_f32_s32(vsub_n_s32(v, output_zero_point)), output_scale);
+                                vstr_f32_pred(array, v, pred);
+                                offsets = vadd_n_u32(offsets, offsets_inc);
+                                array += FLOAT32_VECTOR_SIZE;
                             }
                         }
                     }
                 }
             } else if (output_dtype == 'H') {
-                size_t index = 0;
-                for (size_t j = 0; j < shape[0]; j++) {
-                    size_t indexJ = j * strides[0];
-                    for (size_t k = 0; k < shape[1]; k++) {
-                        size_t indexK = indexJ + k * strides[1];
-                        for (size_t l = 0; l < shape[2]; l++) {
-                            size_t indexL = indexK + l * strides[2];
-                            for (size_t m = 0; m < shape[3]; m++) {
-                                size_t indexM = indexL + m * strides[3];
-                                float v = (((uint16_t *) model_output)[indexM] - output_zero_point);
-                                ((float *) ndarray->array)[index++] = v * output_scale;
+                for (size_t j = 0; j < shape[ULAB_MAX_DIMS - 4]; j++) {
+                    size_t indexJ = j * strides[ULAB_MAX_DIMS - 4];
+                    for (size_t k = 0; k < shape[ULAB_MAX_DIMS - 3]; k++) {
+                        size_t indexK = indexJ + (k * strides[ULAB_MAX_DIMS - 3]);
+                        for (size_t l = 0; l < shape[ULAB_MAX_DIMS - 2]; l++) {
+                            size_t indexL = indexK + (l * strides[ULAB_MAX_DIMS - 2]);
+                            v128_t offsets = vadd_n_u32(offsets_start, indexL);
+                            for (size_t m = 0; m < shape[ULAB_MAX_DIMS - 1]; m += FLOAT32_VECTOR_SIZE) {
+                                v128_predicate_t pred = vpredicate_32(shape[ULAB_MAX_DIMS - 1] - m);
+                                v128_t v = vldr_u16_widen_u32_gather_pred((uint16_t *) model_output, offsets, pred);
+                                v = vmul_n_f32(vcvt_f32_s32(vsub_n_s32(v, output_zero_point)), output_scale);
+                                vstr_f32_pred(array, v, pred);
+                                offsets = vadd_n_u32(offsets, offsets_inc);
+                                array += FLOAT32_VECTOR_SIZE;
                             }
                         }
                     }
