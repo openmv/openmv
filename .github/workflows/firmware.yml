@@ -37,19 +37,7 @@ jobs:
     strategy:
       matrix:
         target:
-          - OPENMV2
-          - OPENMV3
-          - OPENMV4
-          - OPENMV4P
-          - OPENMVPT
-          - OPENMV_RT1060
-          - OPENMV_AE3
-          - ARDUINO_PORTENTA_H7
-          - ARDUINO_GIGA
-          - ARDUINO_NICLA_VISION
-          - ARDUINO_NANO_RP2040_CONNECT
-          - ARDUINO_NANO_33_BLE_SENSE
-          - DOCKER
+          - OPENMV_N6
       fail-fast: false
     steps:
     - name: '⏳ Checkout repository'
