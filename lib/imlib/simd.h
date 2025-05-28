@@ -1623,6 +1623,15 @@ static inline void vstr_u16_narrow_u8_pred(uint8_t *p, v128_t v0, v128_predicate
     #endif
 }
 
+static inline void vstr_u16_narrow_u8_scatter(uint8_t *p, v128_t offsets, v128_t v0) {
+    #if (__ARM_ARCH >= 8)
+    vstrbq_scatter_offset(p, offsets.u16, v0.u16);
+    #else
+    *(p + offsets.u16[0]) = v0.u32[0];
+    *(p + offsets.u16[1]) = v0.u8[2];
+    #endif
+}
+
 static inline v128_t vldr_u32_gather_unaligned(const uint8_t *p, v128_t offsets) {
     #if (__ARM_ARCH >= 8)
     // vldrwq_gather_offset cannot handle unaligned loads.
@@ -1934,6 +1943,24 @@ static inline v128_t vrgb_pixels_to_grayscale(vrgb_pixels_t pixels) {
     pixels.r = vmla_n_u32(pixels.g, 75, pixels.r);
     pixels.r = vmla_n_u32(pixels.b, 15, pixels.r);
     return vlsr_u32(pixels.r, 7);
+}
+
+// In the case of vectors larger than 32-bits the pattern is repeated for every 32-bits.
+//
+// 2x uint16_t RGB565 (MSB [RGB1, RGB0] LSB) pixels for every 32-bits.
+//
+// Returns pixels.r = MSB [0, R1, 0, R0] LSB pixels where each pixel is 8-bits.
+// Returns pixels.g = MSB [0, G1, 0, G0] LSB pixels where each pixel is 8-bits.
+// Returns pixels.b = MSB [0, B1, 0, B0] LSB pixels where each pixel is 8-bits.
+static inline vrgb_pixels_t vrgb_rgb565_to_pixels888(v128_t rgb565) {
+    vrgb_pixels_t pixels;
+    pixels.r = vand_u32(vlsr_u32(rgb565, 8), vdup_u16(0xf8));
+    pixels.r = vorr_u32(pixels.r, vlsr_u32(pixels.r, 5));
+    pixels.g = vand_u32(vlsr_u32(rgb565, 3), vdup_u16(0xfc));
+    pixels.g = vorr_u32(pixels.g, vlsr_u32(pixels.g, 6));
+    pixels.b = vand_u32(vlsl_u32(rgb565, 3), vdup_u16(0xf8));
+    pixels.b = vorr_u32(pixels.b, vlsr_u32(pixels.b, 5));
+    return pixels;
 }
 
 // In the case of vectors larger than 32-bits the pattern is repeated for every 32-bits.
