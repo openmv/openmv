@@ -61,4 +61,5 @@ def send_packet(vx, vy, vz, yaw):
 for _ in range(10):  
     send_packet(0, 0, 500, 0)
     time.sleep(1.0)
+send_packet(0, 0, 0, 0)
     
