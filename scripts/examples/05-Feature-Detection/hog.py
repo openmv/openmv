@@ -27,7 +27,7 @@ while True:
     img.find_hog()
 
     # Uncomment to save raw FB to file and exit the loop
-    # img.save("/hog.pgm")
+    # img.save("hog.pgm")
     # break
 
     print(clock.fps())

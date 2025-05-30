@@ -11,7 +11,7 @@
 import image
 import time
 
-stream = image.ImageIO("/stream.bin", "r")
+stream = image.ImageIO("stream.bin", "r")
 
 clock = time.clock()  # Create a clock object to track the FPS.
 while True:

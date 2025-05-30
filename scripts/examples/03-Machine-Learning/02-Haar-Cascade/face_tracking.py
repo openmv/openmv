@@ -26,7 +26,7 @@ sensor.skip_frames(time=2000)
 
 # Load Haar Cascade
 # By default this will use all stages, lower satges is faster but less accurate.
-face_cascade = image.HaarCascade("frontalface", stages=25)
+face_cascade = image.HaarCascade("/rom/haarcascade_frontalface.cascade", stages=25)
 print(face_cascade)
 
 # First set of keypoints

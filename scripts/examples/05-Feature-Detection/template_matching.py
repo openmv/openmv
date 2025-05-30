@@ -33,7 +33,7 @@ sensor.set_pixformat(sensor.GRAYSCALE)
 
 # Load template.
 # Template should be a small (eg. 32x32 pixels) grayscale image.
-template = image.Image("/template.pgm")
+template = image.Image("template.pgm")
 
 clock = time.clock()
 
