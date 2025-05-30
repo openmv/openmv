@@ -34,7 +34,7 @@ def draw_keypoints(img, kpts):
 
 kpts1 = None
 # NOTE: uncomment to load a keypoints descriptor from file
-# kpts1 = image.load_descriptor("/desc.orb")
+# kpts1 = image.load_descriptor("desc.orb")
 # img = sensor.snapshot()
 # draw_keypoints(img, kpts1)
 

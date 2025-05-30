@@ -32,7 +32,7 @@ sensor.set_pixformat(sensor.GRAYSCALE)
 
 # Load Haar Cascade
 # By default this will use all stages, lower stages is faster but less accurate.
-eyes_cascade = image.HaarCascade("eye", stages=24)
+eyes_cascade = image.HaarCascade("/rom/haarcascade_eye.cascade", stages=24)
 print(eyes_cascade)
 
 # FPS clock

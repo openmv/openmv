@@ -26,7 +26,7 @@ sensor.set_pixformat(sensor.GRAYSCALE)
 
 # Load Haar Cascade
 # By default this will use all stages, lower satges is faster but less accurate.
-face_cascade = image.HaarCascade("frontalface", stages=25)
+face_cascade = image.HaarCascade("/rom/haarcascade_frontalface.cascade", stages=25)
 print(face_cascade)
 
 # Skip a few frames to allow the sensor settle down
@@ -36,7 +36,7 @@ for i in range(0, 30):
     img.draw_string(0, 0, "Please wait...")
 
 d0 = None
-# d0 = image.load_descriptor("/desc.lbp")
+# d0 = image.load_descriptor("desc.lbp")
 clock = time.clock()
 
 while True:
