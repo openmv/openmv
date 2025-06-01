@@ -30,8 +30,8 @@
  * Firmware version (major, minor and patch numbers).
  */
 #define FIRMWARE_VERSION_MAJOR  (4)
-#define FIRMWARE_VERSION_MINOR  (6)
-#define FIRMWARE_VERSION_PATCH  (20)
+#define FIRMWARE_VERSION_MINOR  (7)
+#define FIRMWARE_VERSION_PATCH  (0)
 
 #define USBDBG_BAUDRATE_SLOW    (921600)
 #define USBDBG_BAUDRATE_FAST    (12000000)
