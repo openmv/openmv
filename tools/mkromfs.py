@@ -129,7 +129,7 @@ def romfs_build(romfs_cfg, p, args):
             print(
                   f"Partition size: {romfs_size/1024:.1f} KiB"
                   f"ROMFS Size: {len(romfs_data)/1024:.1f} KiB{CN}")
-            raise Exception("{CR}romfs partition overflow{CN}")
+            raise Exception(f"{CR}romfs partition overflow{CN}")
         romfs_file.write(romfs_data)
 
     print(f"{CB}romfs image: {CR}\"romfs{p}.img\" {CB}usage: "
