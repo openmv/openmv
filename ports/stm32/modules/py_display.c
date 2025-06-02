@@ -260,9 +260,9 @@ static void dsi_init(py_display_obj_t *self) {
     uint32_t pixel_clock = (dm.pixel_clock * self->refresh) / 60;
 
     DSI_PLLInitTypeDef dsi_pllinit;
-    dsi_pllinit.PLLNDIV = 125;
-    dsi_pllinit.PLLIDF = DSI_PLL_IN_DIV4;
-    dsi_pllinit.PLLODF = DSI_PLL_OUT_DIV1;
+    dsi_pllinit.PLLNDIV = OMV_DSI_PLL_NDIV;
+    dsi_pllinit.PLLIDF = OMV_DSI_PLL_IDF;
+    dsi_pllinit.PLLODF = OMV_DSI_PLL_ODF;
     uint32_t LANE_BYTE_CLOCK = 62500;
 
     display.hdsi.Instance = DSI;
