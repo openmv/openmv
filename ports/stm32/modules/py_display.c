@@ -254,10 +254,8 @@ static void get_display_mode(display_mode_t *dm_out, uint32_t framesize, bool po
 }
 
 #ifdef OMV_DSI_DISPLAY_CONTROLLER
-static void dsi_init(py_display_obj_t *self) {
-    display_mode_t dm;
-    get_display_mode(&dm, self->framesize, self->portrait);
-    uint32_t pixel_clock = (dm.pixel_clock * self->refresh) / 60;
+static void dsi_init(py_display_obj_t *self, display_mode_t *dm) {
+    uint32_t pixel_clock = (dm->pixel_clock * self->refresh) / 60;
 
     DSI_PLLInitTypeDef dsi_pllinit;
     dsi_pllinit.PLLNDIV = OMV_DSI_PLL_NDIV;
@@ -311,15 +309,15 @@ static void dsi_init(py_display_obj_t *self) {
     dsi_vidcfg.Mode = DSI_VID_MODE_BURST;
     dsi_vidcfg.NullPacketSize = 0xFFF;
     dsi_vidcfg.NumberOfChunks = 0;
-    dsi_vidcfg.PacketSize = dm.hactive;
-    dsi_vidcfg.HorizontalSyncActive = dm.hsync_len * LANE_BYTE_CLOCK / pixel_clock;
-    dsi_vidcfg.HorizontalBackPorch = dm.hback_porch * LANE_BYTE_CLOCK / pixel_clock;
-    dsi_vidcfg.HorizontalLine = (dm.hactive + dm.hsync_len + dm.hback_porch + dm.hfront_porch)
+    dsi_vidcfg.PacketSize = dm->hactive;
+    dsi_vidcfg.HorizontalSyncActive = dm->hsync_len * LANE_BYTE_CLOCK / pixel_clock;
+    dsi_vidcfg.HorizontalBackPorch = dm->hback_porch * LANE_BYTE_CLOCK / pixel_clock;
+    dsi_vidcfg.HorizontalLine = (dm->hactive + dm->hsync_len + dm->hback_porch + dm->hfront_porch)
                                 * LANE_BYTE_CLOCK / pixel_clock;
-    dsi_vidcfg.VerticalSyncActive = dm.vsync_len;
-    dsi_vidcfg.VerticalBackPorch = dm.vback_porch;
-    dsi_vidcfg.VerticalFrontPorch = dm.vfront_porch;
-    dsi_vidcfg.VerticalActive = dm.vactive;
+    dsi_vidcfg.VerticalSyncActive = dm->vsync_len;
+    dsi_vidcfg.VerticalBackPorch = dm->vback_porch;
+    dsi_vidcfg.VerticalFrontPorch = dm->vfront_porch;
+    dsi_vidcfg.VerticalActive = dm->vactive;
 
     // Enable/disable sending LP command while streaming
     dsi_vidcfg.LPCommandEnable = DSI_LP_COMMAND_ENABLE;
@@ -346,26 +344,24 @@ static void dsi_init(py_display_obj_t *self) {
 }
 #endif
 
-static void ltdc_init(py_display_obj_t *self) {
-    display_mode_t dm;
-    get_display_mode(&dm, self->framesize, self->portrait);
-    uint32_t fb_size = dm.hactive * dm.vactive * sizeof(uint16_t);
+static void ltdc_init(py_display_obj_t *self, display_mode_t *dm) {
+    uint32_t fb_size = dm->hactive * dm->vactive * sizeof(uint16_t);
 
     fb_alloc_mark();
     for (int i = 0; i < FRAMEBUFFER_COUNT; i++) {
         self->framebuffers[i] = (uint16_t *) fb_alloc0(fb_size, FB_ALLOC_CACHE_ALIGN);
         display.framebuffer_layers[i].WindowX0 = 0;
-        display.framebuffer_layers[i].WindowX1 = dm.hactive;
+        display.framebuffer_layers[i].WindowX1 = dm->hactive;
         display.framebuffer_layers[i].WindowY0 = 0;
-        display.framebuffer_layers[i].WindowY1 = dm.vactive;
+        display.framebuffer_layers[i].WindowY1 = dm->vactive;
         display.framebuffer_layers[i].PixelFormat = LTDC_PIXEL_FORMAT_RGB565;
         display.framebuffer_layers[i].Alpha = 0;
         display.framebuffer_layers[i].Alpha0 = 0;
         display.framebuffer_layers[i].BlendingFactor1 = LTDC_BLENDING_FACTOR1_PAxCA;
         display.framebuffer_layers[i].BlendingFactor2 = LTDC_BLENDING_FACTOR2_PAxCA;
         display.framebuffer_layers[i].FBStartAdress = (uint32_t) self->framebuffers[i];
-        display.framebuffer_layers[i].ImageWidth = dm.hactive;
-        display.framebuffer_layers[i].ImageHeight = dm.vactive;
+        display.framebuffer_layers[i].ImageWidth = dm->hactive;
+        display.framebuffer_layers[i].ImageHeight = dm->vactive;
         display.framebuffer_layers[i].Backcolor.Blue = 0;
         display.framebuffer_layers[i].Backcolor.Green = 0;
         display.framebuffer_layers[i].Backcolor.Red = 0;
@@ -378,14 +374,14 @@ static void ltdc_init(py_display_obj_t *self) {
     display.hltdc.Init.DEPolarity = LTDC_DEPOLARITY_AL,
     display.hltdc.Init.PCPolarity = LTDC_PCPOLARITY_IPC,
 
-    display.hltdc.Init.HorizontalSync = dm.hsync_len - 1;
-    display.hltdc.Init.VerticalSync = dm.vsync_len - 1;
-    display.hltdc.Init.AccumulatedHBP = dm.hsync_len + dm.hback_porch - 1;
-    display.hltdc.Init.AccumulatedVBP = dm.vsync_len + dm.vback_porch - 1;
-    display.hltdc.Init.AccumulatedActiveW = dm.hsync_len + dm.hback_porch + dm.hactive - 1;
-    display.hltdc.Init.AccumulatedActiveH = dm.vsync_len + dm.vback_porch + dm.vactive - 1;
-    display.hltdc.Init.TotalWidth = dm.hsync_len + dm.hback_porch + dm.hactive + dm.hfront_porch - 1;
-    display.hltdc.Init.TotalHeigh = dm.vsync_len + dm.vback_porch + dm.vactive + dm.vfront_porch - 1;
+    display.hltdc.Init.HorizontalSync = dm->hsync_len - 1;
+    display.hltdc.Init.VerticalSync = dm->vsync_len - 1;
+    display.hltdc.Init.AccumulatedHBP = dm->hsync_len + dm->hback_porch - 1;
+    display.hltdc.Init.AccumulatedVBP = dm->vsync_len + dm->vback_porch - 1;
+    display.hltdc.Init.AccumulatedActiveW = dm->hsync_len + dm->hback_porch + dm->hactive - 1;
+    display.hltdc.Init.AccumulatedActiveH = dm->vsync_len + dm->vback_porch + dm->vactive - 1;
+    display.hltdc.Init.TotalWidth = dm->hsync_len + dm->hback_porch + dm->hactive + dm->hfront_porch - 1;
+    display.hltdc.Init.TotalHeigh = dm->vsync_len + dm->vback_porch + dm->vactive + dm->vfront_porch - 1;
 
     display.hltdc.Init.Backcolor.Blue = 0;
     display.hltdc.Init.Backcolor.Green = 0;
@@ -592,6 +588,9 @@ mp_obj_t display_make_new(const mp_obj_type_t *type, size_t n_args, size_t n_kw,
         mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Invalid Refresh Rate!"));
     }
 
+    display_mode_t dm;
+    get_display_mode(&dm, args[ARG_framesize].u_int, args[ARG_portrait].u_bool);
+
     py_display_obj_t *self;
     #ifdef OMV_DSI_DISPLAY_CONTROLLER
     self = mp_obj_malloc_with_finaliser(py_display_obj_t, &py_dsi_display_type);
@@ -607,13 +606,8 @@ mp_obj_t display_make_new(const mp_obj_type_t *type, size_t n_args, size_t n_kw,
     self->framebuffer_head = 0;
     self->framesize = args[ARG_framesize].u_int;
     self->portrait = args[ARG_portrait].u_bool;
-    if (self->portrait) {
-        self->width = display_modes[self->framesize].vactive;
-        self->height = display_modes[self->framesize].hactive;
-    } else {
-        self->width = display_modes[self->framesize].hactive;
-        self->height = display_modes[self->framesize].vactive;
-    }
+    self->width  = dm.hactive;
+    self->height = dm.vactive;
     self->controller = args[ARG_controller].u_obj;
     self->bl_controller = args[ARG_backlight].u_obj;
 
@@ -624,19 +618,33 @@ mp_obj_t display_make_new(const mp_obj_type_t *type, size_t n_args, size_t n_kw,
     pll_config(self->framesize, self->refresh);
 
     // Init LTDC controller
-    ltdc_init(self);
+    ltdc_init(self, &dm);
 
     #ifdef OMV_DSI_DISPLAY_CONTROLLER
     // Init DSI controller
-    dsi_init(self);
+    dsi_init(self, &dm);
 
     // Init the display controller.
     if (self->controller != mp_const_none) {
-        mp_obj_t dest[3];
+        mp_obj_t dest[4];
         mp_load_method_maybe(self->controller, MP_QSTR_init, dest);
+
         if (dest[0] != MP_OBJ_NULL) {
+            mp_obj_t dict = mp_obj_new_dict(9);
+
+            mp_obj_dict_store(dict, MP_OBJ_NEW_QSTR(MP_QSTR_hactive), mp_obj_new_int(dm.hactive));
+            mp_obj_dict_store(dict, MP_OBJ_NEW_QSTR(MP_QSTR_hback_porch), mp_obj_new_int(dm.hback_porch));
+            mp_obj_dict_store(dict, MP_OBJ_NEW_QSTR(MP_QSTR_hfront_porch), mp_obj_new_int(dm.hfront_porch));
+            mp_obj_dict_store(dict, MP_OBJ_NEW_QSTR(MP_QSTR_hsync_len), mp_obj_new_int(dm.hsync_len));
+            mp_obj_dict_store(dict, MP_OBJ_NEW_QSTR(MP_QSTR_vactive), mp_obj_new_int(dm.vactive));
+            mp_obj_dict_store(dict, MP_OBJ_NEW_QSTR(MP_QSTR_vback_porch), mp_obj_new_int(dm.vback_porch));
+            mp_obj_dict_store(dict, MP_OBJ_NEW_QSTR(MP_QSTR_vfront_porch), mp_obj_new_int(dm.vfront_porch));
+            mp_obj_dict_store(dict, MP_OBJ_NEW_QSTR(MP_QSTR_vsync_len), mp_obj_new_int(dm.vsync_len));
+            mp_obj_dict_store(dict, MP_OBJ_NEW_QSTR(MP_QSTR_pixel_clock), mp_obj_new_int(dm.pixel_clock));
+
             dest[2] = MP_OBJ_FROM_PTR(self);
-            mp_call_method_n_kw(1, 0, dest);
+            dest[3] = dict;
+            mp_call_method_n_kw(2, 0, dest);
         }
     }
     #endif

@@ -47,7 +47,7 @@ class ST7701:
     def __init__(self):
         pass
 
-    def init(self, dc):
+    def init(self, dc, dt):
         self.dc = dc
 
         # Soft-reset
@@ -66,6 +66,7 @@ class ST7701:
         dc.bus_write(DSI_CMD2_BK0_PORCTRL, b"\x11\x02")
         dc.bus_write(DSI_CMD2_BK0_INVSEL, b"\x01\x08")
         # dc.bus_write(0xCC, b"\x18")
+
         # Gamma cluster settings
         dc.bus_write(
             0xB0, b"\x40\xc9\x91\x0d\x12\x07\x02\x09\x09\x1f\x04\x50\x0f\xe4\x29\xdf"
