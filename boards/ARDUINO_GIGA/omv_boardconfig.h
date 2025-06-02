@@ -105,6 +105,11 @@
 #define OMV_OSC_PLL3VCO                     (RCC_PLL3VCOWIDE)
 #define OMV_OSC_PLL3FRAC                    (0)
 
+// DSI PLL
+#define OMV_DSI_PLL_NDIV                    (125)
+#define OMV_DSI_PLL_IDF                     (DSI_PLL_IN_DIV4)
+#define OMV_DSI_PLL_ODF                     (DSI_PLL_OUT_DIV1)
+
 // Clock Sources
 #define OMV_OSC_PLL_CLKSOURCE               RCC_PLLSOURCE_HSE
 #define OMV_OSC_USB_CLKSOURCE               RCC_USBCLKSOURCE_HSI48
