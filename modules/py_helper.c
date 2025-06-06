@@ -558,11 +558,14 @@ void py_helper_update_framebuffer(image_t *img) {
 }
 
 void py_helper_set_to_framebuffer(image_t *img) {
+    #if MICROPY_PY_CSI
+    omv_csi_t *csi = omv_csi_get(-1);
+    framebuffer_t *fb = csi->fb;
+
+    omv_csi_set_framebuffers(csi, 1);
+    #else
     framebuffer_t *fb = framebuffer_get(0);
 
-    #if MICROPY_PY_CSI
-    omv_csi_set_framebuffers(1);
-    #else
     framebuffer_set_buffers(fb, 1);
     #endif
 
