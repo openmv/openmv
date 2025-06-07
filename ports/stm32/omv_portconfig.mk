@@ -28,16 +28,24 @@ MCU_SERIES  := $(shell echo $(MCU) | cut -c6-7 | tr '[:upper:]' '[:lower:]')
 MCU_LOWER   := $(shell echo $(MCU) | tr '[:upper:]' '[:lower:]')
 HAL_DIR     := lib/stm32/$(MCU_SERIES)
 CMSIS_INC   := st
+CUBE_DIR    := $(TOOLS_DIR)/st/cubeprog/bin/
+MCU_SERIES_LD := $(shell echo $(MCU) | cut -c1-7 | tr '[:lower:]' '[:upper:]')
 
-SIGN_TOOL = $(TOOLS_DIR)/st/cubeprog/bin/STM32MP_SigningTool_CLI
-PROG_TOOL = $(TOOLS_DIR)/st/cubeprog/bin/STM32_Programmer.sh
-STLDR_DIR = $(TOOLS_DIR)/st/cubeprog/bin/ExternalLoader/
+SIGN_TOOL = $(CUBE_DIR)STM32MP_SigningTool_CLI
+PROG_TOOL = $(CUBE_DIR)STM32_Programmer_CLI
+STLDR_DIR = $(CUBE_DIR)ExternalLoader/
+
+ifeq ($(MCU_SERIES),$(filter $(MCU_SERIES),n6))
+STEDGE_ARGS ?= "--target stm32n6"
+STEDGE_DIR = tools/st/stedgeai
+STEDGE_TOOLS = $(STEDGE_DIR)/stedgeai.stamp
+endif
 
 ROMFS_IMAGE := $(FW_DIR)/romfs.stamp
 ROMFS_CONFIG := $(OMV_BOARD_CONFIG_DIR)/romfs.json
 
 # Compiler Flags
-CFLAGS += -std=gnu99 \
+CFLAGS += -std=gnu11 \
           -Wall \
           -Werror \
           -Warray-bounds \
@@ -127,12 +135,13 @@ include common/common.mk
 include drivers/drivers.mk
 include lib/imlib/imlib.mk
 include lib/tflm/tflm.mk
+include lib/stai/stai.mk
 include ports/ports.mk
 include common/micropy.mk
 
 # Firmware objects from port.
 MPY_FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/,\
-	stm32_it.o              \
+	stm32_it.o             \
 	usbd_conf.o             \
 	usbd_desc.o             \
 	usbd_cdc_interface.o    \
@@ -176,6 +185,7 @@ MPY_FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/,\
 	sdcard.o                \
 	sdram.o                 \
 	sdio.o                  \
+	xspi.o                  \
 	vfs_rom_ioctl.o         \
 	fatfs_port.o            \
 	extint.o                \
@@ -191,11 +201,6 @@ MPY_FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/,\
 	usbdev/**/src/*.o       \
 )
 
-# CubeAI objects
-ifeq ($(CUBEAI), 1)
-include $(TOP_DIR)/$(CUBEAI_DIR)/cube.mk
-endif
-
 # Libraries
 ifeq ($(MICROPY_PY_AUDIO), 1)
 LIBS += $(TOP_DIR)/$(LIBPDM_DIR)/libPDMFilter_CM7_GCC_wc32.a
@@ -209,6 +214,10 @@ ifeq ($(MICROPY_PY_ML_TFLM), 1)
 LIBS += $(TOP_DIR)/$(TENSORFLOW_DIR)/libtflm/lib/libtflm-$(CPU)+fp-release.a
 endif
 
+ifeq ($(CUBEAI), 1)
+include $(TOP_DIR)/$(CUBEAI_DIR)/cube.mk
+endif
+
 ###################################################
 all: $(ROMFS_IMAGE)
 ifeq ($(OMV_ENABLE_BL), 1)
@@ -216,15 +225,18 @@ ifeq ($(OMV_ENABLE_BL), 1)
 endif
 	$(SIZE) $(FW_DIR)/$(FIRMWARE).elf
 
+$(STEDGE_TOOLS):
+	@bash -c "source tools/ci.sh && ci_install_stedgeai $(STEDGE_DIR)"
+
 # This target builds MicroPython.
-MICROPYTHON: | FIRM_DIRS
+MICROPYTHON: $(STEDGE_TOOLS) | FIRM_DIRS
 	$(MAKE) -C $(MICROPY_DIR)/ports/$(PORT) BUILD=$(BUILD)/$(MICROPY_DIR) $(MPY_MKARGS)
 
 $(OMV_FIRM_OBJ): | MICROPYTHON
 
 # This target builds the firmware.
 $(FIRMWARE): $(OMV_FIRM_OBJ)
-	$(CPP) -P -E  -I$(COMMON_DIR) -I$(OMV_BOARD_CONFIG_DIR) \
+	$(CPP) -P -E -I$(COMMON_DIR) -I$(OMV_BOARD_CONFIG_DIR) -D$(MCU_SERIES_LD) \
         ports/$(PORT)/$(LDSCRIPT).ld.S > $(BUILD)/$(LDSCRIPT).lds
 	$(CC) $(LDFLAGS) $(OMV_FIRM_OBJ) $(MPY_FIRM_OBJ) -o $(FW_DIR)/$(FIRMWARE).elf $(LIBS) -lm
 	$(OBJCOPY) -Obinary $(FW_DIR)/$(FIRMWARE).elf $(FW_DIR)/$(FIRMWARE).bin
@@ -238,7 +250,7 @@ ifeq ($(OMV_ENABLE_BL), 1)
 endif
 
 # This target builds the bootloader.
-$(BOOTLOADER): | FIRM_DIRS
+$(BOOTLOADER): $(STEDGE_TOOLS) | FIRM_DIRS
 ifeq ($(OMV_ENABLE_BL), 1)
 	$(MAKE) -C $(TOP_DIR)/$(BOOT_DIR) BUILD=$(BUILD)/$(BOOT_DIR)
 	$(OBJCOPY) -Obinary $(FW_DIR)/$(BOOTLOADER).elf $(FW_DIR)/$(BOOTLOADER).bin
@@ -254,8 +266,10 @@ endif
 $(ROMFS_IMAGE): $(ROMFS_CONFIG) | $(FIRMWARE) $(BOOTLOADER)
 	$(ECHO) "GEN romfs image"
 	$(PYTHON) $(TOOLS_DIR)/$(MKROMFS) \
-            --top-dir $(TOP_DIR) --out-dir $(FW_DIR) \
-            --build-dir $(BUILD) --config $(ROMFS_CONFIG)
+            --top-dir $(TOP_DIR) \
+            --out-dir $(FW_DIR) \
+            --build-dir $(BUILD)/lib/models \
+            --stedge-args $(STEDGE_ARGS) --config $(ROMFS_CONFIG)
 	touch $@
 
 # Flash the bootloader
@@ -274,7 +288,7 @@ flash_boot_dfu_util::
 flash_image_dfu_util::
 	dfu-util -a 0 -d $(DFU_DEVICE) -D $(FW_DIR)/$(FIRMWARE).dfu
 
-deploy: $(FIRMWARE)
+deploy: $(ROMFS_IMAGE)
 	$(PROG_TOOL) -c port=SWD mode=HOTPLUG ap=1 \
         -el $(STLDR_DIR)/$(OMV_PROG_STLDR) -w $(FW_DIR)/openmv.bin $(OMV_FIRM_BASE) -hardRst
 
