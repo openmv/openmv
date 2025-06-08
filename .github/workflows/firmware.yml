@@ -15,7 +15,6 @@ on:
       - '!**.md'
       - '!cubeai**'
       - '!scripts**'
-      - '!tools/**'
 
   pull_request:
     branches:    
@@ -29,7 +28,6 @@ on:
       - '!**.md'
       - '!cubeai**'
       - '!scripts**'
-      - '!tools/**'
 
 jobs:
   build-firmware:

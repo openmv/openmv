@@ -168,6 +168,9 @@ def main():
         print(f"Error: Invalid JSON format in '{path}'. {str(e)}")
         sys.exit(1)
     
+    # Create output dir(s) if they don't exist
+    os.makedirs(args.build_dir, exist_ok=True)
+
     if args.partition is None:
         for p in romfs_cfg:
             romfs_build(romfs_cfg, p, args)
