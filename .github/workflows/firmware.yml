@@ -197,7 +197,7 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     - name: '🔥 Create stable release'
-      uses: softprops/action-gh-release@da05d552573ad5aba039eaac05058a918a7bf631
+      uses: softprops/action-gh-release@d5382d3e6f2fa7bd53cb749d33091853d4985daf
       with:
         draft: true
         files: firmware_*.zip
@@ -249,7 +249,7 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     - name: '🔥 Create development release'
-      uses: softprops/action-gh-release@da05d552573ad5aba039eaac05058a918a7bf631
+      uses: softprops/action-gh-release@d5382d3e6f2fa7bd53cb749d33091853d4985daf
       with:
         draft: false
         name: Development Release
