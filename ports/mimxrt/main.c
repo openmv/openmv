@@ -95,7 +95,9 @@ soft_reset:
     mp_init();
 
     // Initialise low-level sub-systems.
+    #if MICROPY_PY_FIR
     py_fir_init0();
+    #endif // MICROPY_PY_FIR
     #if MICROPY_PY_TV
     py_tv_init0();
     #endif
