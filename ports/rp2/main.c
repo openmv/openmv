@@ -180,7 +180,9 @@ soft_reset:
     fb_alloc_init0();
     framebuffer_init0();
 
+    #if MICROPY_PY_FIR
     py_fir_init0();
+    #endif // MICROPY_PY_FIR
 
     #if MICROPY_PY_CSI
     if (omv_csi_init() != 0) {
