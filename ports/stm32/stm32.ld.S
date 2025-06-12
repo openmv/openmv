@@ -99,16 +99,28 @@ SECTIONS
   /* The program code and other data goes into FLASH */
   .text : ALIGN(4)
   {
-    KEEP(*(.isr_vector))// ISR table
+    KEEP(*(.isr_vector))
     . = ALIGN(4);
-    *(.text)            // .text sections (code)
+    #ifdef OMV_RAMFUNC_EXC
+    *(EXCLUDE_FILE(OMV_RAMFUNC_EXC) .text*)
     . = ALIGN(4);
+    *(EXCLUDE_FILE(OMV_RAMFUNC_EXC) .rodata*)
+    . = ALIGN(4);
+    #else
     *(.text*)           // .text* sections (code)
-    . = ALIGN(4);
-    *(.rodata)          // .rodata sections (constants, strings, etc.)
     . = ALIGN(4);
     *(.rodata*)         // .rodata* sections (constants, strings, etc.)
     . = ALIGN(4);
+    #endif
+  } >FLASH_TEXT
+
+  .gnu.sgstubs :
+  {
+    . = ALIGN(4);
+    _start_sg = .;
+    *(.gnu*)
+    . = ALIGN(4);
+    _end_sg = .;
   } >FLASH_TEXT
 
   /* The address used as the source for copying the initialized data section. */
@@ -121,8 +133,6 @@ SECTIONS
     *(.data)            // .data sections
     . = ALIGN(4);
     *(.data*)           // .data* sections
-    . = ALIGN(4);
-    *(.ram_function*)
     . = ALIGN(4);
     _edata = .;         // Define a global symbol at data end
   } >OMV_MAIN_MEMORY AT> FLASH_TEXT
@@ -148,6 +158,22 @@ SECTIONS
     . = ALIGN(32);
     _cm4_ram_end = .;
   } >OMV_CM4_BOOT_MEMORY
+  #endif
+
+  #ifdef OMV_RAMFUNC_MEMORY
+  .ram_function : ALIGN(4)
+  {
+      _ram_function_start = .;
+      . = ALIGN(4);
+      *(.ram_function*)
+      #ifdef OMV_RAMFUNC_INC
+      OMV_RAMFUNC_INC
+      #endif
+      . = ALIGN(4);
+      _ram_function_end = .;
+  } >OMV_RAMFUNC_MEMORY AT> FLASH_TEXT
+
+  _ram_function_flash = LOADADDR(.ram_function);
   #endif
 
   #include "common.ld.S"

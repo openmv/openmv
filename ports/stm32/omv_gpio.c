@@ -34,11 +34,23 @@
 #include "omv_boardconfig.h"
 #include "omv_gpio.h"
 
+#if defined(STM32N6)
+// EXTI lines 0 to 15 have single IRQs.
+#define MAX_SINGLE_IRQ_LINE (16)
+#else
+// EXTI lines 0 to 4 have single IRQs.
+#define MAX_SINGLE_IRQ_LINE (5)
+#endif
+
 static omv_gpio_irq_descr_t gpio_irq_descr_table[16] = {{0}};
 
 // Returns the port number configured in EXTI_CR for this line.
 static uint32_t omv_gpio_irq_get_gpio(uint32_t line) {
+    #if defined(STM32N6)
+    return (EXTI->EXTICR[line >> 2] >> (8 * (line & 3))) & 0x0F;
+    #else
     return (SYSCFG->EXTICR[line >> 2] >> (4 * (line & 3))) & 0x0F;
+    #endif
 }
 
 // Returns pin number.
@@ -67,12 +79,48 @@ static uint32_t omv_gpio_irq_get_irqn(omv_gpio_t pin) {
         case 4:
             exti_irqn = EXTI4_IRQn;
             break;
+        #if defined(STM32N6)
+        case 5:
+            exti_irqn = EXTI5_IRQn;
+            break;
+        case 6:
+            exti_irqn = EXTI6_IRQn;
+            break;
+        case 7:
+            exti_irqn = EXTI7_IRQn;
+            break;
+        case 8:
+            exti_irqn = EXTI8_IRQn;
+            break;
+        case 9:
+            exti_irqn = EXTI9_IRQn;
+            break;
+        case 10:
+            exti_irqn = EXTI10_IRQn;
+            break;
+        case 11:
+            exti_irqn = EXTI11_IRQn;
+            break;
+        case 12:
+            exti_irqn = EXTI12_IRQn;
+            break;
+        case 13:
+            exti_irqn = EXTI13_IRQn;
+            break;
+        case 14:
+            exti_irqn = EXTI14_IRQn;
+            break;
+        case 15:
+            exti_irqn = EXTI15_IRQn;
+            break;
+        #else
         case 5 ... 9:
             exti_irqn = EXTI9_5_IRQn;
             break;
         case 10 ... 15:
             exti_irqn = EXTI15_10_IRQn;
             break;
+        #endif
         default:
             break;
     }
@@ -87,8 +135,7 @@ static inline bool omv_gpio_irq_enabled(omv_gpio_irq_descr_t *gpio_irq_descr, ui
 }
 
 void omv_gpio_irq_handler(uint32_t line) {
-    if (line < 5) {
-        // EXTI lines 0 to 4 have single IRQs.
+    if (line < MAX_SINGLE_IRQ_LINE) {
         omv_gpio_irq_descr_t *gpio_irq_descr = &gpio_irq_descr_table[line];
         if (omv_gpio_irq_enabled(gpio_irq_descr, line)) {
             __HAL_GPIO_EXTI_CLEAR_FLAG(1 << line);

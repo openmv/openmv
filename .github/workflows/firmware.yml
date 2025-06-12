@@ -42,6 +42,7 @@ jobs:
           - OPENMVPT
           - OPENMV_RT1060
           - OPENMV_AE3
+          - OPENMV_N6
           - ARDUINO_PORTENTA_H7
           - ARDUINO_GIGA
           - ARDUINO_NICLA_VISION
