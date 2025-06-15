@@ -27,6 +27,7 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 import math
+import uml
 import image
 import ml.utils
 from micropython import const
@@ -54,11 +55,6 @@ _YOLO_V8_CH = const(3)
 _YOLO_V8_CLASSES = const(4)
 
 
-def to_float(value, model):
-    if model.output_dtype[0] == 'f':
-        return value
-    return (value - model.output_zero_point[0]) * model.output_scale[0]
-
 def sigmoid(x):
     return 1.0 / (1.0 + np.exp(-x))
 
@@ -83,18 +79,20 @@ class fomo_postprocess:
 
     def __call__(self, model, inputs, outputs):
         ob, oh, ow, oc = model.output_shape[0]
+        s = model.output_scale[0]
+        zp = model.output_zero_point[0]
 
         # Reshape the output to a 2D array
         row_outputs = outputs[0].reshape((oh * ow, oc))
 
         # Threshold all the scores
-        score_indices = np.max(to_float(row_outputs[:, _FOMO_CLASSES:], model), axis=1)
+        score_indices = np.max(uml.dequantize(row_outputs[:, _FOMO_CLASSES:], s, zp), axis=1)
         score_indices = np.nonzero(score_indices > self.threshold)[0]
         if not len(score_indices):
             return _NO_DETECTION
 
         # Get the bounding boxes that have a valid score
-        bb = to_float(np.take(row_outputs, score_indices, axis=0), model)
+        bb = uml.dequantize(np.take(row_outputs, score_indices, axis=0), s, zp)
 
         # Extract rows and columns
         bb_rows = score_indices // ow
@@ -137,6 +135,8 @@ class yolo_v2_postprocess:
 
     def __call__(self, model, inputs, outputs):
         ob, oh, ow, oc = model.output_shape[0]
+        s = model.output_scale[0]
+        zp = model.output_zero_point[0]
         class_count = (oc // self.anchors_len) - _YOLO_V2_CLASSES
 
         # Reshape the output to a 2D array
@@ -144,13 +144,13 @@ class yolo_v2_postprocess:
                                           _YOLO_V2_CLASSES + class_count))
 
         # Threshold all the scores
-        score_indices = sigmoid(to_float(row_outputs[:, _YOLO_V2_SCORE], model))
+        score_indices = sigmoid(uml.dequantize(row_outputs[:, _YOLO_V2_SCORE], s, zp))
         score_indices = np.nonzero(score_indices > self.threshold)[0]
         if not len(score_indices):
             return _NO_DETECTION
 
         # Get the bounding boxes that have a valid score
-        bb = to_float(np.take(row_outputs, score_indices, axis=0), model)
+        bb = uml.dequantize(np.take(row_outputs, score_indices, axis=0), s, zp)
 
         # Extract rows, columns, and anchor indices
         bb_rows = score_indices // (ow * self.anchors_len)
@@ -201,19 +201,21 @@ class yolo_v5_postprocess:
 
     def __call__(self, model, inputs, outputs):
         oh, ow, oc = model.output_shape[0]
+        s = model.output_scale[0]
+        zp = model.output_zero_point[0]
         class_count = oc - _YOLO_V5_CLASSES
 
         # Reshape the output to a 2D array
         row_outputs = outputs[0].reshape((oh * ow, _YOLO_V5_CLASSES + class_count))
 
         # Threshold all the scores
-        score_indices = to_float(row_outputs[:, _YOLO_V5_SCORE], model)
+        score_indices = uml.dequantize(row_outputs[:, _YOLO_V5_SCORE], s, zp)
         score_indices = np.nonzero(score_indices > self.threshold)[0]
         if not len(score_indices):
             return _NO_DETECTION
 
         # Get the bounding boxes that have a valid score
-        bb = to_float(np.take(row_outputs, score_indices, axis=0), model)
+        bb = uml.dequantize(np.take(row_outputs, score_indices, axis=0), s, zp)
 
         # Get the score information
         bb_scores = bb[:, _YOLO_V5_SCORE]
@@ -242,19 +244,21 @@ class yolo_v8_postprocess:
 
     def __call__(self, model, inputs, outputs):
         oh, ow, oc = model.output_shape[0]
+        s = model.output_scale[0]
+        zp = model.output_zero_point[0]
         class_count = ow - _YOLO_V8_CLASSES
 
         # Reshape the output to a 2D array
         row_outputs = outputs[0].reshape((oh * (_YOLO_V8_CLASSES + class_count), oc)).T
 
         # Threshold all the scores
-        score_indices = np.max(to_float(row_outputs[:, _YOLO_V8_CLASSES:], model), axis=1)
+        score_indices = np.max(uml.dequantize(row_outputs[:, _YOLO_V8_CLASSES:], s, zp), axis=1)
         score_indices = np.nonzero(score_indices > self.threshold)[0]
         if not len(score_indices):
             return _NO_DETECTION
 
         # Get the bounding boxes that have a valid score
-        bb = to_float(np.take(row_outputs, score_indices, axis=0), model)
+        bb = uml.dequantize(np.take(row_outputs, score_indices, axis=0), s, zp)
 
         # Get the score information
         bb_scores = np.max(bb[:, _YOLO_V8_CLASSES:], axis=1)
