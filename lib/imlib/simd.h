@@ -844,7 +844,7 @@ static inline v128_t vshlc(v128_t v0, uint32_t *reg, uint32_t n) {
 
 static inline v128_t vadd_u32(v128_t v0, v128_t v1) {
     #if (__ARM_ARCH >= 8)
-    return (v128_t) vaddq(v0.u32, v1.u32);
+    return (v128_t) vaddq_u32(v0.u32, v1.u32);
     #else
     return (v128_t) {
         .u32 = v0.u32 + v1.u32
@@ -854,7 +854,7 @@ static inline v128_t vadd_u32(v128_t v0, v128_t v1) {
 
 static inline v128_t vadd_s32(v128_t v0, v128_t v1) {
     #if (__ARM_ARCH >= 8)
-    return (v128_t) vaddq(v0.s32, v1.s32);
+    return (v128_t) vaddq_s32(v0.s32, v1.s32);
     #else
     return (v128_t) {
         .s32 = v0.s32 + v1.s32
@@ -864,7 +864,7 @@ static inline v128_t vadd_s32(v128_t v0, v128_t v1) {
 
 static inline v128_t vsub_u8(v128_t v0, v128_t v1) {
     #if (__ARM_ARCH >= 8)
-    return (v128_t) vsubq(v0.u8, v1.u8);
+    return (v128_t) vsubq_u8(v0.u8, v1.u8);
     #elif (__ARM_ARCH >= 7)
     return (v128_t) {
         .u32 = { __USUB8(v0.u32[0], v1.u32[0]) }
@@ -878,7 +878,7 @@ static inline v128_t vsub_u8(v128_t v0, v128_t v1) {
 
 static inline v128_t vsub_s8(v128_t v0, v128_t v1) {
     #if (__ARM_ARCH >= 8)
-    return (v128_t) vsubq(v0.s8, v1.s8);
+    return (v128_t) vsubq_s8(v0.s8, v1.s8);
     #elif (__ARM_ARCH >= 7)
     return (v128_t) {
         .u32 = { __SSUB8(v0.u32[0], v1.u32[0]) }
@@ -892,7 +892,7 @@ static inline v128_t vsub_s8(v128_t v0, v128_t v1) {
 
 static inline v128_t vsub_u16(v128_t v0, v128_t v1) {
     #if (__ARM_ARCH >= 8)
-    return (v128_t) vsubq(v0.u16, v1.u16);
+    return (v128_t) vsubq_u16(v0.u16, v1.u16);
     #elif (__ARM_ARCH >= 7)
     return (v128_t) {
         .u32 = { __USUB16(v0.u32[0], v1.u32[0]) }
@@ -906,7 +906,7 @@ static inline v128_t vsub_u16(v128_t v0, v128_t v1) {
 
 static inline v128_t vsub_s16(v128_t v0, v128_t v1) {
     #if (__ARM_ARCH >= 8)
-    return (v128_t) vsubq(v0.s16, v1.s16);
+    return (v128_t) vsubq_s16(v0.s16, v1.s16);
     #elif (__ARM_ARCH >= 7)
     return (v128_t) {
         .u32 = { __SSUB16(v0.u32[0], v1.u32[0]) }
@@ -1146,7 +1146,7 @@ static inline v128_t veor_s32(v128_t v0, v128_t v1) {
 
 static inline v128_t vmul_u32(v128_t v0, v128_t v1) {
     #if (__ARM_ARCH >= 8)
-    return (v128_t) vmulq(v0.u32, v1.u32);
+    return (v128_t) vmulq_u32(v0.u32, v1.u32);
     #else
     return (v128_t) {
         .u32 = v0.u32 * v1.u32
@@ -1156,7 +1156,7 @@ static inline v128_t vmul_u32(v128_t v0, v128_t v1) {
 
 static inline v128_t vmul_s32(v128_t v0, v128_t v1) {
     #if (__ARM_ARCH >= 8)
-    return (v128_t) vmulq(v0.s32, v1.s32);
+    return (v128_t) vmulq_s32(v0.s32, v1.s32);
     #else
     return (v128_t) {
         .s32 = v0.s32 * v1.s32
@@ -1166,7 +1166,7 @@ static inline v128_t vmul_s32(v128_t v0, v128_t v1) {
 
 static inline v128_t vmla_u32(v128_t v0, v128_t v1, v128_t v2) {
     #if (__ARM_ARCH >= 8)
-    return (v128_t) vaddq(vmulq(v0.u32, v1.u32), v2.u32);
+    return (v128_t) vaddq_u32(vmulq_u32(v0.u32, v1.u32), v2.u32);
     #else
     return (v128_t) {
         .u32 = (v0.u32 * v1.u32) + v2.u32
@@ -1176,7 +1176,7 @@ static inline v128_t vmla_u32(v128_t v0, v128_t v1, v128_t v2) {
 
 static inline v128_t vmla_s32(v128_t v0, v128_t v1, v128_t v2) {
     #if (__ARM_ARCH >= 8)
-    return (v128_t) vaddq(vmulq(v0.s32, v1.s32), v2.s32);
+    return (v128_t) vaddq_s32(vmulq_s32(v0.s32, v1.s32), v2.s32);
     #else
     return (v128_t) {
         .s32 = (v0.s32 * v1.s32) + v2.s32
@@ -1428,6 +1428,15 @@ static inline void vstr_u16_narrow_u8_pred(uint8_t *p, v128_t v0, v128_predicate
     if (pred > 1) {
         *((uint8_t *) (p + 1)) = v0.u8[2];
     }
+    #endif
+}
+
+static inline void vstr_u16_narrow_u8_scatter(uint8_t *p, v128_t offsets, v128_t v0) {
+    #if (__ARM_ARCH >= 8)
+    vstrbq_scatter_offset(p, offsets.u16, v0.u16);
+    #else
+    *(p + offsets.u16[0]) = v0.u32[0];
+    *(p + offsets.u16[1]) = v0.u8[2];
     #endif
 }
 
@@ -1712,6 +1721,24 @@ static inline v128_t vrgb_pixels_to_grayscale(vrgb_pixels_t pixels) {
     pixels.r = vmla_n_u32(pixels.g, 75, pixels.r);
     pixels.r = vmla_n_u32(pixels.b, 15, pixels.r);
     return vlsr_u32(pixels.r, 7);
+}
+
+// In the case of vectors larger than 32-bits the pattern is repeated for every 32-bits.
+//
+// 2x uint16_t RGB565 (MSB [RGB1, RGB0] LSB) pixels for every 32-bits.
+//
+// Returns pixels.r = MSB [0, R1, 0, R0] LSB pixels where each pixel is 8-bits.
+// Returns pixels.g = MSB [0, G1, 0, G0] LSB pixels where each pixel is 8-bits.
+// Returns pixels.b = MSB [0, B1, 0, B0] LSB pixels where each pixel is 8-bits.
+static inline vrgb_pixels_t vrgb_rgb565_to_pixels888(v128_t rgb565) {
+    vrgb_pixels_t pixels;
+    pixels.r = vand_u32(vlsr_u32(rgb565, 8), vdup_u16(0xf8));
+    pixels.r = vorr_u32(pixels.r, vlsr_u32(pixels.r, 5));
+    pixels.g = vand_u32(vlsr_u32(rgb565, 3), vdup_u16(0xfc));
+    pixels.g = vorr_u32(pixels.g, vlsr_u32(pixels.g, 6));
+    pixels.b = vand_u32(vlsl_u32(rgb565, 3), vdup_u16(0xf8));
+    pixels.b = vorr_u32(pixels.b, vlsr_u32(pixels.b, 5));
+    return pixels;
 }
 
 // In the case of vectors larger than 32-bits the pattern is repeated for every 32-bits.
