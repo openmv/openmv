@@ -36,6 +36,12 @@ from ulab import numpy as np
 _NO_DETECTION = const(())
 
 
+def dequantize(value, dtype, zero_point, scale):
+    if dtype == 'f':
+        return value
+    return (value - zero_point) * scale
+
+
 # FOMO generates an image per class, where each pixel represents the centroid
 # of the trained object. These images are processed with `find_blobs()` to
 # extract centroids, and `get_stats()` is used to get their scores. Overlapping
@@ -48,9 +54,12 @@ class fomo_postprocess:
 
     def __call__(self, model, inputs, outputs):
         n, oh, ow, oc = model.output_shape[0]
+        s = model.output_scale[0]
+        zp = model.output_zero_point[0]
+        dt = model.output_dtype[0]
         nms = NMS(ow, oh, inputs[0].roi)
         for i in range(oc):
-            img = image.Image(outputs[0][0, :, :, i] * 255)
+            img = image.Image(dequantize(outputs[0][0, :, :, i], dt, zp, s) * 255)
             blobs = img.find_blobs(
                 self.threshold_list, x_stride=1, area_threshold=1, pixels_threshold=1
             )
@@ -89,6 +98,9 @@ class yolo_v2_postprocess:
 
     def __call__(self, model, inputs, outputs):
         ob, oh, ow, oc = model.output_shape[0]
+        s = model.output_scale[0]
+        zp = model.output_zero_point[0]
+        dt = model.output_dtype[0]
         class_count = (oc // self.anchors_len) - _YOLO_V2_CLASSES
 
         def sigmoid(x):
@@ -106,13 +118,13 @@ class yolo_v2_postprocess:
                                           _YOLO_V2_CLASSES + class_count))
 
         # Threshold all the scores
-        score_indices = sigmoid(row_outputs[:, _YOLO_V2_SCORE])
+        score_indices = sigmoid(dequantize(row_outputs[:, _YOLO_V2_SCORE], dt, zp, s))
         score_indices = np.nonzero(score_indices > self.threshold)[0]
         if not len(score_indices):
             return _NO_DETECTION
 
         # Get the bounding boxes that have a valid score
-        bb = np.take(row_outputs, score_indices, axis=0)
+        bb = dequantize(np.take(row_outputs, score_indices, axis=0), dt, zp, s)
 
         # Extract rows, columns, and anchor indices
         bb_rows = score_indices // (ow * self.anchors_len)
@@ -179,19 +191,22 @@ class yolo_v5_postprocess:
 
     def __call__(self, model, inputs, outputs):
         oh, ow, oc = model.output_shape[0]
+        s = model.output_scale[0]
+        zp = model.output_zero_point[0]
+        dt = model.output_dtype[0]
         class_count = oc - _YOLO_V5_CLASSES
 
         # Reshape the output to a 2D array
         row_outputs = outputs[0].reshape((oh * ow, _YOLO_V5_CLASSES + class_count))
 
         # Threshold all the scores
-        score_indices = row_outputs[:, _YOLO_V5_SCORE]
+        score_indices = dequantize(row_outputs[:, _YOLO_V5_SCORE], dt, zp, s)
         score_indices = np.nonzero(score_indices > self.threshold)[0]
         if not len(score_indices):
             return _NO_DETECTION
 
         # Get the bounding boxes that have a valid score
-        bb = np.take(row_outputs, score_indices, axis=0)
+        bb = dequantize(np.take(row_outputs, score_indices, axis=0), dt, zp, s)
 
         # Get the score information
         bb_scores = bb[:, _YOLO_V5_SCORE]
@@ -233,19 +248,22 @@ class yolo_v8_postprocess:
 
     def __call__(self, model, inputs, outputs):
         oh, ow, oc = model.output_shape[0]
+        s = model.output_scale[0]
+        zp = model.output_zero_point[0]
+        dt = model.output_dtype[0]
         class_count = ow - _YOLO_V8_CLASSES
 
         # Reshape the output to a 2D array
         column_outputs = outputs[0].reshape((oh * (_YOLO_V8_CLASSES + class_count), oc))
 
         # Threshold all the scores
-        score_indices = np.max(column_outputs[_YOLO_V8_CLASSES:, :], axis=0)
+        score_indices = np.max(dequantize(column_outputs[_YOLO_V8_CLASSES:, :], dt, zp, s), axis=0)
         score_indices = np.nonzero(score_indices > self.threshold)[0]
         if not len(score_indices):
             return _NO_DETECTION
 
         # Get the bounding boxes that have a valid score
-        bb = np.take(column_outputs, score_indices, axis=1)
+        bb = dequantize(np.take(column_outputs, score_indices, axis=1), dt, zp, s)
 
         # Get the score information
         bb_scores = np.max(bb[_YOLO_V8_CLASSES:, :], axis=0)
