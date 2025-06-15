@@ -258,28 +258,28 @@ class yolo_v8_postprocess:
         class_count = ow - _YOLO_V8_CLASSES
 
         # Reshape the output to a 2D array
-        column_outputs = outputs[0].reshape((oh * (_YOLO_V8_CLASSES + class_count), oc))
+        row_outputs = outputs[0].reshape((oh * (_YOLO_V8_CLASSES + class_count), oc)).T
 
         # Threshold all the scores
-        score_indices = np.max(dequantize(column_outputs[_YOLO_V8_CLASSES:, :], dt, zp, s), axis=0)
+        score_indices = np.max(dequantize(row_outputs[:, _YOLO_V8_CLASSES:], dt, zp, s), axis=1)
         score_indices = np.nonzero(score_indices > self.threshold)[0]
         if not len(score_indices):
             return _NO_DETECTION
 
         # Get the bounding boxes that have a valid score
-        bb = dequantize(np.take(column_outputs, score_indices, axis=1), dt, zp, s)
+        bb = dequantize(np.take(row_outputs, score_indices, axis=0), dt, zp, s)
 
         # Get the score information
-        bb_scores = np.max(bb[_YOLO_V8_CLASSES:, :], axis=0)
+        bb_scores = np.max(bb[:, _YOLO_V8_CLASSES:], axis=1)
 
         # Get the class information
-        bb_classes = np.argmax(bb[_YOLO_V8_CLASSES:, :], axis=0)
+        bb_classes = np.argmax(bb[:, _YOLO_V8_CLASSES:], axis=1)
 
         # Compute the bounding box information
-        x_center = bb[_YOLO_V8_CX, :]
-        y_center = bb[_YOLO_V8_CY, :]
-        w_rel = bb[_YOLO_V8_CW, :]
-        h_rel = bb[_YOLO_V8_CH, :]
+        x_center = bb[:, _YOLO_V8_CX]
+        y_center = bb[:, _YOLO_V8_CY]
+        w_rel = bb[:, _YOLO_V8_CW]
+        h_rel = bb[:, _YOLO_V8_CH]
 
         return ml.utils.box_nms(x_center, y_center, w_rel, h_rel, bb_scores, bb_classes,
                                 model.input_shape[0][1:3], inputs[0].roi,
