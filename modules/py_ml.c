@@ -50,6 +50,7 @@
 #include "file_utils.h"
 #include "py_ml.h"
 #include "ulab/code/ndarray.h"
+#include "simd.h"
 
 #ifndef IMLIB_ML_MODEL_ALIGN
 #ifndef __DCACHE_PRESENT
@@ -57,6 +58,10 @@
 #else
 #define IMLIB_ML_MODEL_ALIGN    (__SCB_DCACHE_LINE_SIZE - 1)
 #endif
+#endif
+
+#if ULAB_MAX_DIMS != 4
+#error "ULAB_MAX_DIMS must be equal to 4 for the ML module."
 #endif
 
 static size_t py_ml_tuple_sum(mp_obj_tuple_t *o) {
@@ -71,7 +76,7 @@ static size_t py_ml_tuple_sum(mp_obj_tuple_t *o) {
     return size;
 }
 
-static size_t pl_ml_dtype_size(char dtype) {
+static size_t py_ml_dtype_size(char dtype) {
     switch (dtype) {
         case 'f':
             return 4;
@@ -98,7 +103,7 @@ static void py_ml_process_input(py_ml_model_obj_t *model, mp_obj_t arg) {
         if (mp_obj_is_callable(input_arg)) {
             // Input is a callable. Call the object and pass the tensor buffer and dtype.
             mp_obj_t fargs[3] = {
-                mp_obj_new_bytearray_by_ref(input_size * pl_ml_dtype_size(input_dtype), input_buffer),
+                mp_obj_new_bytearray_by_ref(input_size * py_ml_dtype_size(input_dtype), input_buffer),
                 MP_OBJ_FROM_PTR(input_shape),
                 mp_obj_new_int(input_dtype)
             };
@@ -157,7 +162,7 @@ static void py_ml_process_input(py_ml_model_obj_t *model, mp_obj_t arg) {
     }
 }
 
-static mp_obj_t py_ml_process_output(py_ml_model_obj_t *model) {
+static mp_obj_t py_ml_process_output(py_ml_model_obj_t *model, bool callback) {
     mp_obj_list_t *output_list = MP_OBJ_TO_PTR(mp_obj_new_list(model->outputs_size, NULL));
     for (size_t i = 0; i < model->outputs_size; i++) {
         void *model_output = ml_backend_get_output(model, i);
@@ -178,31 +183,63 @@ static mp_obj_t py_ml_process_output(py_ml_model_obj_t *model) {
             shape[ulab_offset + j] = mp_obj_get_int(output_shape->items[j]);
         }
 
-        ndarray_obj_t *ndarray = ndarray_new_dense_ndarray(output_shape->len, shape, NDARRAY_FLOAT);
+        ndarray_obj_t *ndarray;
 
-        if (output_dtype == 'f') {
-            memcpy(ndarray->array, model_output, size * sizeof(float));
-        } else if (output_dtype == 'b') {
-            for (size_t j = 0; j < size; j++) {
-                float v = (((int8_t *) model_output)[j] - output_zero_point);
-                ((float *) ndarray->array)[j] = v * output_scale;
+        if (callback) {
+            size_t strides[ULAB_MAX_DIMS] = {};
+            strides[ULAB_MAX_DIMS - 1] = py_ml_dtype_size(output_dtype);
+
+            for (int j = ULAB_MAX_DIMS - 2; j >= 0; j--) {
+                strides[j] = strides[j + 1] * shape[j + 1];
             }
-        } else if (output_dtype == 'B') {
-            for (size_t j = 0; j < size; j++) {
-                float v = (((uint8_t *) model_output)[j] - output_zero_point);
-                ((float *) ndarray->array)[j] = v * output_scale;
-            }
-        } else if (output_dtype == 'h') {
-            for (size_t j = 0; j < size; j++) {
-                float v = (((int16_t *) model_output)[j] - output_zero_point);
-                ((float *) ndarray->array)[j] = v * output_scale;
-            }
-        } else if (output_dtype == 'H') {
-            for (size_t j = 0; j < size; j++) {
-                float v = (((uint16_t *) model_output)[j] - output_zero_point);
-                ((float *) ndarray->array)[j] = v * output_scale;
+
+            ndarray = m_new_obj(ndarray_obj_t);
+            ndarray->base.type = &ulab_ndarray_type;
+            ndarray->dtype = output_dtype;
+            ndarray->boolean = NDARRAY_NUMERIC;
+            ndarray->ndim = output_shape->len;
+            ndarray->len = size;
+            ndarray->itemsize = py_ml_dtype_size(output_dtype);
+            memcpy(ndarray->shape, shape, sizeof(shape));
+            memcpy(ndarray->strides, strides, sizeof(strides));
+            ndarray->array = model_output;
+            ndarray->origin = model_output;
+        } else {
+            ndarray = ndarray_new_dense_ndarray(output_shape->len, shape, NDARRAY_FLOAT);
+
+            if (output_dtype == 'f') {
+                vmemcpy_32(ndarray->array, model_output, size * sizeof(float));
+            } else if (output_dtype == 'b') {
+                for (size_t j = 0; j < size; j += FLOAT32_VECTOR_SIZE) {
+                    v128_predicate_t pred = vpredicate_32(size - j);
+                    v128_t v = vldr_s8_widen_s32_pred(((int8_t *) model_output) + j, pred);
+                    v = vmul_n_f32(vcvt_f32_s32(vsub_n_s32(v, output_zero_point)), output_scale);
+                    vstr_f32_pred(((float *) ndarray->array) + j, v, pred);
+                }
+            } else if (output_dtype == 'B') {
+                for (size_t j = 0; j < size; j += FLOAT32_VECTOR_SIZE) {
+                    v128_predicate_t pred = vpredicate_32(size - j);
+                    v128_t v = vldr_u8_widen_u32_pred(((uint8_t *) model_output) + j, pred);
+                    v = vmul_n_f32(vcvt_f32_s32(vsub_n_s32(v, output_zero_point)), output_scale);
+                    vstr_f32_pred(((float *) ndarray->array) + j, v, pred);
+                }
+            } else if (output_dtype == 'h') {
+                for (size_t j = 0; j < size; j += FLOAT32_VECTOR_SIZE) {
+                    v128_predicate_t pred = vpredicate_32(size - j);
+                    v128_t v = vldr_s16_widen_s32_pred(((int16_t *) model_output) + j, pred);
+                    v = vmul_n_f32(vcvt_f32_s32(vsub_n_s32(v, output_zero_point)), output_scale);
+                    vstr_f32_pred(((float *) ndarray->array) + j, v, pred);
+                }
+            } else if (output_dtype == 'H') {
+                for (size_t j = 0; j < size; j += FLOAT32_VECTOR_SIZE) {
+                    v128_predicate_t pred = vpredicate_32(size - j);
+                    v128_t v = vldr_u16_widen_u32_pred(((uint16_t *) model_output) + j, pred);
+                    v = vmul_n_f32(vcvt_f32_s32(vsub_n_s32(v, output_zero_point)), output_scale);
+                    vstr_f32_pred(((float *) ndarray->array) + j, v, pred);
+                }
             }
         }
+
         output_list->items[i] = MP_OBJ_FROM_PTR(ndarray);
     }
 
@@ -260,6 +297,8 @@ static mp_obj_t py_ml_model_predict(size_t n_args, const mp_obj_t *pos_args, mp_
         mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Unsupported input type. Expected a list"));
     }
 
+    bool callback = args[ARG_callback].u_obj != mp_const_none;
+
     OMV_PROFILE_START(preprocess);
     py_ml_process_input(model, pos_args[1]);
     OMV_PROFILE_PRINT(preprocess);
@@ -268,12 +307,16 @@ static mp_obj_t py_ml_model_predict(size_t n_args, const mp_obj_t *pos_args, mp_
     ml_backend_run_inference(model);
     OMV_PROFILE_PRINT(inference);
 
-    mp_obj_t output = py_ml_process_output(model);
+    OMV_PROFILE_START(postprocess);
+    mp_obj_t output = py_ml_process_output(model, callback);
+    OMV_PROFILE_PRINT(postprocess);
 
-    if (args[ARG_callback].u_obj != mp_const_none) {
+    if (callback) {
         // Pass model, inputs, outputs to the post-processing callback.
         mp_obj_t fargs[3] = { MP_OBJ_FROM_PTR(model), pos_args[1], output };
+        OMV_PROFILE_START(postprocess_callback);
         output = mp_call_function_n_kw(args[ARG_callback].u_obj, 3, 0, fargs);
+        OMV_PROFILE_PRINT(postprocess_callback);
     }
 
     return output;
@@ -419,11 +462,152 @@ static MP_DEFINE_CONST_OBJ_TYPE(
     locals_dict, &py_ml_model_locals_dict
     );
 
-extern const mp_obj_type_t py_ml_nms_type;
+static mp_obj_t py_ml_dequantize(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
+    enum { ARG_output_scale, ARG_output_zero_point };
+    static const mp_arg_t allowed_args[] = {
+        { MP_QSTR_output_scale, MP_ARG_OBJ, {.u_rom_obj = MP_ROM_NONE} },
+        { MP_QSTR_output_zero_point, MP_ARG_INT, {.u_int = 0 } },
+    };
+
+    if (!MP_OBJ_IS_TYPE(pos_args[0], &ulab_ndarray_type)) {
+        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Expected an ndarray."));
+    }
+
+    mp_arg_val_t args[MP_ARRAY_SIZE(allowed_args)];
+    mp_arg_parse_all(n_args - 1, pos_args + 1, kw_args, MP_ARRAY_SIZE(allowed_args), allowed_args, args);
+
+    float output_scale = py_helper_arg_to_float(args[ARG_output_scale].u_obj, 1.0f);
+    int output_zero_point = args[ARG_output_zero_point].u_int;
+
+    // The input ndarray may be sliced and transposed. This code extracts and dequantizes the
+    // data to a new contiguous ndarray that can be processed efficiently.
+    ndarray_obj_t *input = MP_OBJ_TO_PTR(pos_args[0]);
+    ndarray_obj_t *output = ndarray_new_dense_ndarray(input->ndim, input->shape, NDARRAY_FLOAT);
+
+    size_t shape[ULAB_MAX_DIMS], strides[ULAB_MAX_DIMS];
+    memcpy(shape, input->shape, sizeof(input->shape));
+    memcpy(strides, input->strides, sizeof(input->strides));
+
+    for (size_t i = 0; i < ULAB_MAX_DIMS; i++) {
+        if (shape[i] == 0) {
+            shape[i] = 1;
+        }
+        if (strides[i] == 0) {
+            strides[i] = 1;
+        }
+    }
+
+    void *input_array = input->array;
+    float32_t *output_array = (float32_t *) output->array;
+    v128_t offsets_start = vmul_n_u32(vidup_u32(0, 1), input->strides[ULAB_MAX_DIMS - 1] / input->itemsize);
+    size_t offsets_inc = (input->strides[ULAB_MAX_DIMS - 1] / input->itemsize) * FLOAT32_VECTOR_SIZE;
+
+    if (input->dtype == 'f') {
+        for (size_t j = 0; j < shape[ULAB_MAX_DIMS - 4]; j++) {
+            size_t indexJ = j * strides[ULAB_MAX_DIMS - 4];
+            for (size_t k = 0; k < shape[ULAB_MAX_DIMS - 3]; k++) {
+                size_t indexK = indexJ + (k * strides[ULAB_MAX_DIMS - 3]);
+                for (size_t l = 0; l < shape[ULAB_MAX_DIMS - 2]; l++) {
+                    size_t indexL = indexK + (l * strides[ULAB_MAX_DIMS - 2]);
+                    v128_t offsets = vadd_n_u32(offsets_start, indexL);
+                    for (size_t m = 0; m < shape[ULAB_MAX_DIMS - 1]; m += FLOAT32_VECTOR_SIZE) {
+                        v128_predicate_t pred = vpredicate_32(shape[ULAB_MAX_DIMS - 1] - m);
+                        v128_t v = vldr_f32_gather_pred((float32_t *) input_array, offsets, pred);
+                        vstr_f32_pred(output_array, v, pred);
+                        offsets = vadd_n_u32(offsets, offsets_inc);
+                        output_array += vpredicate_32_get_n(pred);
+                    }
+                }
+            }
+        }
+    } else if (input->dtype == 'b') {
+        for (size_t j = 0; j < shape[ULAB_MAX_DIMS - 4]; j++) {
+            size_t indexJ = j * strides[ULAB_MAX_DIMS - 4];
+            for (size_t k = 0; k < shape[ULAB_MAX_DIMS - 3]; k++) {
+                size_t indexK = indexJ + (k * strides[ULAB_MAX_DIMS - 3]);
+                for (size_t l = 0; l < shape[ULAB_MAX_DIMS - 2]; l++) {
+                    size_t indexL = indexK + (l * strides[ULAB_MAX_DIMS - 2]);
+                    v128_t offsets = vadd_n_u32(offsets_start, indexL);
+                    for (size_t m = 0; m < shape[ULAB_MAX_DIMS - 1]; m += FLOAT32_VECTOR_SIZE) {
+                        v128_predicate_t pred = vpredicate_32(shape[ULAB_MAX_DIMS - 1] - m);
+                        v128_t v = vldr_s8_widen_s32_gather_pred((int8_t *) input_array, offsets, pred);
+                        v = vmul_n_f32(vcvt_f32_s32(vsub_n_s32(v, output_zero_point)), output_scale);
+                        vstr_f32_pred(output_array, v, pred);
+                        offsets = vadd_n_u32(offsets, offsets_inc);
+                        output_array += vpredicate_32_get_n(pred);
+                    }
+                }
+            }
+        }
+    } else if (input->dtype == 'B') {
+        for (size_t j = 0; j < shape[ULAB_MAX_DIMS - 4]; j++) {
+            size_t indexJ = j * strides[ULAB_MAX_DIMS - 4];
+            for (size_t k = 0; k < shape[ULAB_MAX_DIMS - 3]; k++) {
+                size_t indexK = indexJ + (k * strides[ULAB_MAX_DIMS - 3]);
+                for (size_t l = 0; l < shape[ULAB_MAX_DIMS - 2]; l++) {
+                    size_t indexL = indexK + (l * strides[ULAB_MAX_DIMS - 2]);
+                    v128_t offsets = vadd_n_u32(offsets_start, indexL);
+                    for (size_t m = 0; m < shape[ULAB_MAX_DIMS - 1]; m += FLOAT32_VECTOR_SIZE) {
+                        v128_predicate_t pred = vpredicate_32(shape[ULAB_MAX_DIMS - 1] - m);
+                        v128_t v = vldr_u8_widen_u32_gather_pred((uint8_t *) input_array, offsets, pred);
+                        v = vmul_n_f32(vcvt_f32_s32(vsub_n_s32(v, output_zero_point)), output_scale);
+                        vstr_f32_pred(output_array, v, pred);
+                        offsets = vadd_n_u32(offsets, offsets_inc);
+                        output_array += vpredicate_32_get_n(pred);
+                    }
+                }
+            }
+        }
+    } else if (input->dtype == 'h') {
+        for (size_t j = 0; j < shape[ULAB_MAX_DIMS - 4]; j++) {
+            size_t indexJ = j * strides[ULAB_MAX_DIMS - 4];
+            for (size_t k = 0; k < shape[ULAB_MAX_DIMS - 3]; k++) {
+                size_t indexK = indexJ + (k * strides[ULAB_MAX_DIMS - 3]);
+                for (size_t l = 0; l < shape[ULAB_MAX_DIMS - 2]; l++) {
+                    size_t indexL = indexK + (l * strides[ULAB_MAX_DIMS - 2]);
+                    v128_t offsets = vadd_n_u32(offsets_start, indexL);
+                    for (size_t m = 0; m < shape[ULAB_MAX_DIMS - 1]; m += FLOAT32_VECTOR_SIZE) {
+                        v128_predicate_t pred = vpredicate_32(shape[ULAB_MAX_DIMS - 1] - m);
+                        v128_t v = vldr_s16_widen_s32_gather_pred((int16_t *) input_array, offsets, pred);
+                        v = vmul_n_f32(vcvt_f32_s32(vsub_n_s32(v, output_zero_point)), output_scale);
+                        vstr_f32_pred(output_array, v, pred);
+                        offsets = vadd_n_u32(offsets, offsets_inc);
+                        output_array += vpredicate_32_get_n(pred);
+                    }
+                }
+            }
+        }
+    } else if (input->dtype == 'H') {
+        for (size_t j = 0; j < shape[ULAB_MAX_DIMS - 4]; j++) {
+            size_t indexJ = j * strides[ULAB_MAX_DIMS - 4];
+            for (size_t k = 0; k < shape[ULAB_MAX_DIMS - 3]; k++) {
+                size_t indexK = indexJ + (k * strides[ULAB_MAX_DIMS - 3]);
+                for (size_t l = 0; l < shape[ULAB_MAX_DIMS - 2]; l++) {
+                    size_t indexL = indexK + (l * strides[ULAB_MAX_DIMS - 2]);
+                    v128_t offsets = vadd_n_u32(offsets_start, indexL);
+                    for (size_t m = 0; m < shape[ULAB_MAX_DIMS - 1]; m += FLOAT32_VECTOR_SIZE) {
+                        v128_predicate_t pred = vpredicate_32(shape[ULAB_MAX_DIMS - 1] - m);
+                        v128_t v = vldr_u16_widen_u32_gather_pred((uint16_t *) input_array, offsets, pred);
+                        v = vmul_n_f32(vcvt_f32_s32(vsub_n_s32(v, output_zero_point)), output_scale);
+                        vstr_f32_pred(output_array, v, pred);
+                        offsets = vadd_n_u32(offsets, offsets_inc);
+                        output_array += vpredicate_32_get_n(pred);
+                    }
+                }
+            }
+        }
+    } else {
+        mp_raise_ValueError(MP_ERROR_TEXT("Unsupported dtype"));
+    }
+
+    return MP_OBJ_FROM_PTR(output);
+}
+static MP_DEFINE_CONST_FUN_OBJ_KW(py_ml_dequantize_obj, 1, py_ml_dequantize);
 
 static const mp_rom_map_elem_t py_ml_globals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR___name__),            MP_OBJ_NEW_QSTR(MP_QSTR_ml) },
     { MP_ROM_QSTR(MP_QSTR_Model),               MP_ROM_PTR(&py_ml_model_type) },
+    { MP_ROM_QSTR(MP_QSTR_dequantize),          MP_ROM_PTR(&py_ml_dequantize_obj) },
 };
 
 static MP_DEFINE_CONST_DICT(py_ml_globals_dict, py_ml_globals_dict_table);
