@@ -50,6 +50,7 @@
 #include "py_imageio.h"
 #endif
 #include "ulab/code/ndarray.h"
+#include "simd.h"
 
 const mp_obj_type_t py_image_type;
 
@@ -827,8 +828,6 @@ static mp_obj_t py_image_to_ndarray(size_t n_args, const mp_obj_t *pos_args, mp_
         ndarray = ndarray_new_dense_ndarray(ndim, shape, dtype_code);
     }
 
-    int shift = (dtype_code == 'b') ? 0x80808080 : 0x00000000;
-
     if (image->pixfmt == PIXFORMAT_GRAYSCALE) {
         uint8_t *input_u8 = (uint8_t *) image->data;
         if (dtype_code == 'f') {
@@ -839,14 +838,18 @@ static mp_obj_t py_image_to_ndarray(size_t n_args, const mp_obj_t *pos_args, mp_
         } else {
             uint8_t *output_u8 = (uint8_t *) ndarray->array;
 
-            int i = 0;
+            if (dtype_code == 'b') {
+                int i = 0;
 
-            for (; i < (len - 3); i += 4) {
-                *((uint32_t *) (output_u8 + i)) = *((uint32_t *) (input_u8 + i)) ^ shift;
-            }
+                for (; i < (len - UINT8_VECTOR_SIZE - 1); i += UINT8_VECTOR_SIZE) {
+                    vstr_u8(output_u8 + i, veor_u32(vldr_u8(input_u8 + i), vdup_u8(0x80)));
+                }
 
-            for (; i < len; i++) {
-                output_u8[i] = input_u8[i] ^ shift;
+                for (; i < len; i++) {
+                    output_u8[i] = input_u8[i] ^ 0x80;
+                }
+            } else {
+                vmemcpy_8(output_u8, input_u8, len);
             }
         }
     } else {
@@ -861,11 +864,37 @@ static mp_obj_t py_image_to_ndarray(size_t n_args, const mp_obj_t *pos_args, mp_
             }
         } else {
             uint8_t *output_u8 = (uint8_t *) ndarray->array;
-            for (int i = 0, j = 0; i < len; i++, j += 3) {
-                int pixel = input_u16[i];
-                output_u8[j + 0] = COLOR_RGB565_TO_R8(pixel) ^ shift;
-                output_u8[j + 1] = COLOR_RGB565_TO_G8(pixel) ^ shift;
-                output_u8[j + 2] = COLOR_RGB565_TO_B8(pixel) ^ shift;
+            int i = 0, j = 0;
+            v128_t offsets = vmul_n_u16(vidup_u16(0, 1), 3);
+
+            if (dtype_code == 'b') {
+                for (; i < (len - UINT16_VECTOR_SIZE - 1); i += UINT16_VECTOR_SIZE, j += (3 * UINT16_VECTOR_SIZE)) {
+                    vrgb_pixels_t pixels = vrgb_rgb565_to_pixels888(vldr_u16(input_u16 + i));
+                    vstr_u16_narrow_u8_scatter(output_u8 + j + 0, offsets, veor_u32(pixels.r, vdup_u8(0x80)));
+                    vstr_u16_narrow_u8_scatter(output_u8 + j + 1, offsets, veor_u32(pixels.g, vdup_u8(0x80)));
+                    vstr_u16_narrow_u8_scatter(output_u8 + j + 2, offsets, veor_u32(pixels.b, vdup_u8(0x80)));
+                }
+
+                for (; i < len; i++, j += 3) {
+                    int pixel = input_u16[i];
+                    output_u8[j + 0] = COLOR_RGB565_TO_R8(pixel) ^ 0x80;
+                    output_u8[j + 1] = COLOR_RGB565_TO_G8(pixel) ^ 0x80;
+                    output_u8[j + 2] = COLOR_RGB565_TO_B8(pixel) ^ 0x80;
+                }
+            } else {
+                for (; i < (len - UINT16_VECTOR_SIZE - 1); i += UINT16_VECTOR_SIZE, j += (3 * UINT16_VECTOR_SIZE)) {
+                    vrgb_pixels_t pixels = vrgb_rgb565_to_pixels888(vldr_u16(input_u16 + i));
+                    vstr_u16_narrow_u8_scatter(output_u8 + j + 0, offsets, pixels.r);
+                    vstr_u16_narrow_u8_scatter(output_u8 + j + 1, offsets, pixels.g);
+                    vstr_u16_narrow_u8_scatter(output_u8 + j + 2, offsets, pixels.b);
+                }
+
+                for (; i < len; i++, j += 3) {
+                    int pixel = input_u16[i];
+                    output_u8[j + 0] = COLOR_RGB565_TO_R8(pixel);
+                    output_u8[j + 1] = COLOR_RGB565_TO_G8(pixel);
+                    output_u8[j + 2] = COLOR_RGB565_TO_B8(pixel);
+                }
             }
         }
     }
