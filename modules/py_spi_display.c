@@ -54,7 +54,7 @@ static void spi_transmit(py_display_obj_t *self, uint8_t *txdata, uint16_t size)
     omv_spi_transfer_t spi_xfer = {
         .txbuf = txdata,
         .size = size,
-        .timeout = OMV_SPI_MAX_TIMEOUT,
+        .timeout = 1000,
         .flags = OMV_SPI_XFER_BLOCKING
     };
 
@@ -67,7 +67,7 @@ static void spi_transmit_16(py_display_obj_t *self, uint8_t *txdata, uint16_t si
     omv_spi_transfer_t spi_xfer = {
         .txbuf = txdata,
         .size = (!self->byte_swap) ? size : (size * 2),
-        .timeout = OMV_SPI_MAX_TIMEOUT,
+        .timeout = 1000,
         .flags = OMV_SPI_XFER_BLOCKING,
     };
 
