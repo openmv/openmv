@@ -34,7 +34,9 @@
 #include <string.h>
 
 #include "omv_boardconfig.h"
+
 #include "py/mphal.h"
+#include "py/runtime.h"
 
 #include "spi.h"
 #include "alif_hal.h"
@@ -76,31 +78,84 @@ static const omv_spi_descr_t omv_spi_descr_all[] = {
     #endif
 };
 
-int omv_spi_transfer_start(omv_spi_t *spi, omv_spi_transfer_t *xfer) {
-
-    const omv_spi_descr_t *spi_descr = &omv_spi_descr_all[spi->id];
-
-    if (xfer->flags & OMV_SPI_XFER_BLOCKING) {
-        spi_transfer_t spi_xfer = { 0 };
-
-        spi_xfer.tx_buff = xfer->txbuf;
-        spi_xfer.tx_total_cnt = xfer->size;
-
-        spi_xfer.rx_buff = xfer->rxbuf;
-        spi_xfer.rx_total_cnt = xfer->size;
-
-        spi_xfer.tx_default_val = 0xFF;
-        spi_xfer.tx_default_enable = true;
-
-        spi_xfer.mode = SPI_TMOD_TX_AND_RX;
-        if (!spi_descr->is_lp) {
-            spi_transfer_blocking(spi->inst, &spi_xfer);
-        } else {
-            lpspi_transfer_blocking(spi->inst, &spi_xfer);
+static int omv_spi_poll_flag(SPI_Type *spi, uint32_t flag, uint32_t timeout) {
+    mp_uint_t tick_start = mp_hal_ticks_ms();
+    while (!(spi->SPI_SR & flag)) {
+        if (mp_hal_ticks_ms() - tick_start >= timeout) {
+            return -1;
         }
+        mp_event_handle_nowait();
+    }
+    return 0;
+}
+
+int omv_spi_transfer_start(omv_spi_t *spi, omv_spi_transfer_t *xfer) {
+    if (xfer->flags & OMV_SPI_XFER_BLOCKING) {
+        volatile uint32_t *dr = spi->inst->SPI_DR;
+        spi_set_tmod(spi->inst, SPI_TMOD_TX_AND_RX);
+        
+        size_t tx_sent = 0;
+        size_t rx_received = 0;
+        
+        // FIFO depth is 16 words
+        const size_t rx_threshold = (SPI_RX_FIFO_DEPTH - 1);
+        
+        while (rx_received < xfer->size) {
+            // Fill TX FIFO as much as possible without causing RX overflow
+            while (tx_sent < xfer->size && 
+                   (tx_sent - rx_received) < rx_threshold &&
+                   (spi->inst->SPI_SR & SPI_SR_TFNF)) {
+                
+                // Send data
+                if (xfer->txbuf == NULL) {
+                    *dr = 0xFFFFFFFFU;
+                } else if (spi->datasize > 16) {
+                    *dr = ((uint32_t *) xfer->txbuf)[tx_sent];
+                } else if (spi->datasize > 8) {
+                    *dr = ((uint16_t *) xfer->txbuf)[tx_sent];
+                } else {
+                    *dr = ((uint8_t *) xfer->txbuf)[tx_sent];
+                }
+                tx_sent++;
+            }
+            
+            // Receive available data
+            while (rx_received < tx_sent &&
+                   (spi->inst->SPI_SR & SPI_SR_RFNE)) {
+                
+                if (xfer->rxbuf == NULL) {
+                    (void) *dr;
+                } else if (spi->datasize > 16) {
+                    ((uint32_t *) xfer->rxbuf)[rx_received] = *dr;
+                } else if (spi->datasize > 8) {
+                    ((uint16_t *) xfer->rxbuf)[rx_received] = *dr;
+                } else {
+                    ((uint8_t *) xfer->rxbuf)[rx_received] = *dr;
+                }
+                rx_received++;
+            }
+            
+            // If we're not making progress, use blocking wait
+            if (tx_sent < xfer->size && (tx_sent - rx_received) >= rx_threshold) {
+                // Wait for RX data to free up space
+                if (omv_spi_poll_flag(spi->inst, SPI_SR_RFNE, xfer->timeout) == -1) {
+                    return -1;
+                }
+            } else if (tx_sent == xfer->size && rx_received < tx_sent) {
+                // All data sent, wait for remaining RX data
+                if (omv_spi_poll_flag(spi->inst, SPI_SR_RFNE, xfer->timeout) == -1) {
+                    return -1;
+                }
+            } else if (tx_sent < xfer->size) {
+                // Wait for space in the TX FIFO
+                if (omv_spi_poll_flag(spi->inst, SPI_SR_TFNF, xfer->timeout) == -1) {
+                    return -1;
+                }
+            }
+        }
+        
         return 0;
     }
-
     return -1;
 }
 
@@ -116,6 +171,9 @@ int omv_spi_init(omv_spi_t *spi, omv_spi_config_t *config) {
     spi->inst = spi_descr->inst;
     spi->cs = spi_descr->cs;
     spi->is_lp = spi_descr->is_lp;
+    spi->spi_mode = config->spi_mode;
+    spi->bus_mode = config->bus_mode;
+    spi->datasize = config->datasize;
 
     if (spi->inst == NULL) {
         return -1;
