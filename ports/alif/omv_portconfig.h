@@ -125,6 +125,7 @@ struct {                    \
 #define OMV_SPI_MAX_8BIT_XFER   (32768U - 32U)
 #define OMV_SPI_MAX_16BIT_XFER  (32768U - 16U)
 #define OMV_SPI_MAX_TIMEOUT     (0xFFFFFFFF)
+#define OMV_SPI_NO_DMA          (1)
 
 #define OMV_SPI_PORT_BITS           \
 struct {                            \
