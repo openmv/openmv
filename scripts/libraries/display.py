@@ -16,6 +16,11 @@ try:
 except (ImportError, AttributeError):
     pass
 
+try:
+    from ssd1351 import *  # noqa
+except (ImportError, AttributeError):
+    pass
+
 
 class DACBacklight:
     def __init__(self, channel, bits=8):
