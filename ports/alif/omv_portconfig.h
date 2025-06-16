@@ -130,5 +130,8 @@ struct {                    \
 struct {                            \
     SPI_Type *inst;                 \
     bool is_lp;                     \
+    uint32_t spi_mode;              \
+    uint32_t bus_mode;              \
+    uint8_t datasize;               \
  };
 #endif // __OMV_PORTCONFIG_H__
