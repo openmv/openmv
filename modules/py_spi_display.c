@@ -103,6 +103,33 @@ static int spi_write(py_display_obj_t *self, uint8_t cmd, uint8_t *args, size_t 
 }
 
 static void spi_display_command(py_display_obj_t *self, uint8_t cmd, uint8_t arg) {
+    if (self->controller != mp_const_none) {
+        qstr attr = 0;
+        switch (cmd) {
+            case LCD_COMMAND_DISPOFF:
+                attr = MP_QSTR_display_off;
+                break;
+            case LCD_COMMAND_DISPON:
+                attr = MP_QSTR_display_on;
+                break;
+            case LCD_COMMAND_RAMWR:
+                attr = MP_QSTR_ram_write;
+                break;
+            default:
+                break;
+        }
+
+        if (attr) {
+            mp_obj_t dest[3];
+            mp_load_method_maybe(self->controller, attr, dest);
+            if (dest[0] != MP_OBJ_NULL) {
+                dest[2] = MP_OBJ_FROM_PTR(self);
+                mp_call_method_n_kw(1, 0, dest);
+                return;
+            }
+        }
+    }
+
     spi_write(self, cmd, &arg, (arg > 0) ? 1 : 0, false);
 }
 
@@ -357,7 +384,7 @@ mp_obj_t spi_display_make_new(const mp_obj_type_t *type, size_t n_args, size_t n
     if ((args[ARG_height].u_int <= 0) || (args[ARG_height].u_int > 32767)) {
         mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Invalid Height!"));
     }
-    if ((args[ARG_refresh].u_int < 30) || (args[ARG_refresh].u_int > 120)) {
+    if ((args[ARG_refresh].u_int < 1) || (args[ARG_refresh].u_int > 120)) {
         mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Invalid Refresh Rate!"));
     }
 
