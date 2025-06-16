@@ -84,7 +84,11 @@ static void spi_switch_mode(py_display_obj_t *self, int bits, bool dma) {
     spi_config.datasize = bits;
     spi_config.bus_mode = OMV_SPI_BUS_TX;
     spi_config.nss_enable = false;
+    #if OMV_SPI_NO_DMA
+    spi_config.dma_flags = 0;
+    #else
     spi_config.dma_flags = dma ? OMV_SPI_DMA_NORMAL : 0;
+    #endif
     omv_spi_init(&self->spi_bus, &spi_config);
 }
 
