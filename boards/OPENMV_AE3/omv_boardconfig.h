@@ -232,6 +232,13 @@ extern unsigned char OMV_BOARD_UID_ADDR[12];    // Unique address.
 #define OMV_PDM1_D0_PIN                 (&omv_pin_PDM_D1)
 
 // Physical SPI buses.
+// SPI bus 0
+#define OMV_SPI0_ID                     (0)
+#define OMV_SPI0_SCLK_PIN               (&omv_pin_SPI_SCLK)
+#define OMV_SPI0_MISO_PIN               (&omv_pin_SPI_MISO)
+#define OMV_SPI0_MOSI_PIN               (&omv_pin_SPI_MOSI)
+#define OMV_SPI0_SSEL_PIN               (&omv_pin_SPI_SSEL)
+
 // SPI bus 4
 #define OMV_SPI4_ID                     (4)
 #define OMV_SPI4_SCLK_PIN               (&omv_pin_LPSPI_SCLK)
@@ -285,4 +292,14 @@ extern unsigned char OMV_BOARD_UID_ADDR[12];    // Unique address.
 
 #define OMV_WL_POWER_PIN                (&omv_pin_WL_REG_ON)
 #define OMV_BT_POWER_PIN                (&omv_pin_BT_REG_ON)
+
+// SPI LCD Interface
+#define OMV_SPI_DISPLAY_CONTROLLER      (OMV_SPI0_ID)
+#define OMV_SPI_DISPLAY_MOSI_PIN        (&omv_pin_SPI_MOSI)
+#define OMV_SPI_DISPLAY_MISO_PIN        (&omv_pin_SPI_MISO)
+#define OMV_SPI_DISPLAY_SCLK_PIN        (&omv_pin_SPI_SCLK)
+#define OMV_SPI_DISPLAY_SSEL_PIN        (&omv_pin_SPI_SSEL)
+#define OMV_SPI_DISPLAY_RS_PIN          (&omv_pin_LCD_RS)
+#define OMV_SPI_DISPLAY_RST_PIN         (&omv_pin_LCD_RST)
+
 #endif //__OMV_BOARDCONFIG_H__
