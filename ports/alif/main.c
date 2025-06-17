@@ -82,6 +82,7 @@
 #include "omv_gpio.h"
 
 NORETURN void __fatal_error(const char *msg);
+extern void machine_pin_irq_deinit(void);
 
 int main(void) {
     bool first_soft_reset = true; (void) first_soft_reset;
@@ -246,6 +247,7 @@ soft_reset_exit:
     #if MICROPY_PY_NETWORK_CYW43
     cyw43_deinit(&cyw43_state);
     #endif
+    machine_pin_irq_deinit();
     imlib_deinit_all();
     soft_timer_deinit();
     dma_deinit_all();
