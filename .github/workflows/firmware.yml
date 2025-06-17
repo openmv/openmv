@@ -15,7 +15,6 @@ on:
       - '!**.md'
       - '!cubeai**'
       - '!scripts**'
-      - '!tools/**'
 
   pull_request:
     branches:    
@@ -29,7 +28,6 @@ on:
       - '!**.md'
       - '!cubeai**'
       - '!scripts**'
-      - '!tools/**'
 
 jobs:
   build-firmware:
@@ -199,7 +197,7 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     - name: '🔥 Create stable release'
-      uses: softprops/action-gh-release@v2
+      uses: softprops/action-gh-release@da05d552573ad5aba039eaac05058a918a7bf631
       with:
         draft: true
         files: firmware_*.zip
@@ -251,7 +249,7 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     - name: '🔥 Create development release'
-      uses: softprops/action-gh-release@v2
+      uses: softprops/action-gh-release@da05d552573ad5aba039eaac05058a918a7bf631
       with:
         draft: false
         name: Development Release

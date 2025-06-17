@@ -90,5 +90,15 @@ SECTIONS
     _estack = .;
   } >RAM
 
+  .ram_function : ALIGN(4)
+  {
+    _ram_function_start = .;
+    *(.ram_function*)
+    . = ALIGN(4);
+    _ram_function_end = .;
+  } > RAM AT> ROM
+
+  _ram_function_flash = LOADADDR(.ram_function);
+
   .ARM.attributes 0 : { *(.ARM.attributes) }
 }

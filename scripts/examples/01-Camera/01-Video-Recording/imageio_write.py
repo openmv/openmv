@@ -23,7 +23,7 @@ sensor.skip_frames(time=2000)  # Wait for settings take effect.
 clock = time.clock()  # Create a clock object to track the FPS.
 
 led = machine.LED("LED_RED")
-stream = image.ImageIO("/stream.bin", "w")
+stream = image.ImageIO("stream.bin", "w")
 
 # Red LED on means we are capturing frames.
 led.on()

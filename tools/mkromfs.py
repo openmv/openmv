@@ -129,7 +129,7 @@ def romfs_build(romfs_cfg, p, args):
             print(
                   f"Partition size: {romfs_size/1024:.1f} KiB"
                   f"ROMFS Size: {len(romfs_data)/1024:.1f} KiB{CN}")
-            raise Exception("{CR}romfs partition overflow{CN}")
+            raise Exception(f"{CR}romfs partition overflow{CN}")
         romfs_file.write(romfs_data)
 
     print(f"{CB}romfs image: {CR}\"romfs{p}.img\" {CB}usage: "
@@ -168,6 +168,9 @@ def main():
         print(f"Error: Invalid JSON format in '{path}'. {str(e)}")
         sys.exit(1)
     
+    # Create output dir(s) if they don't exist
+    os.makedirs(args.build_dir, exist_ok=True)
+
     if args.partition is None:
         for p in romfs_cfg:
             romfs_build(romfs_cfg, p, args)

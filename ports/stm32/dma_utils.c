@@ -32,7 +32,7 @@
 #include "dma_utils.h"
 
 #if defined(GPDMA1)
-DMA_HandleTypeDef *dma_handle[32];
+static DMA_HandleTypeDef *dma_handle[32];
 #else
 // Defined in micropython/ports/stm32/dma.c or in uvc/src/main.c
 extern DMA_HandleTypeDef *dma_handle[16];

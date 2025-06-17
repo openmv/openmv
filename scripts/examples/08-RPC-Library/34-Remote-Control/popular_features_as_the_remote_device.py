@@ -123,7 +123,7 @@ def face_detection(data):
     faces = (
         sensor.snapshot()
         .gamma_corr(contrast=1.5)
-        .find_features(image.HaarCascade("frontalface"))
+        .find_features(image.HaarCascade("/rom/haarcascade_frontalface.cascade"))
     )
     if not faces:
         return bytes()  # No detections.

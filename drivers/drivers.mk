@@ -203,6 +203,7 @@ DRIVER_SRC_C += $(addprefix sensors/, \
     ov9650.c \
     pag7920.c \
     pag7936.c \
+    ps5520.c \
     paj6100.c \
     softcsi.c \
 )

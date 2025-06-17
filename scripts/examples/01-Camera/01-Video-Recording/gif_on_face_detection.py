@@ -33,7 +33,7 @@ led = machine.LED("LED_RED")
 # HaarCascade are loaded. However, You can adjust the number of stages to speed
 # up processing at the expense of accuracy. The frontalface HaarCascade has 25
 # stages.
-face_cascade = image.HaarCascade("frontalface", stages=25)
+face_cascade = image.HaarCascade("/rom/haarcascade_frontalface.cascade", stages=25)
 
 while True:
     print("About to start detecting faces...")
