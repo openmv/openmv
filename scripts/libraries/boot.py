@@ -54,15 +54,13 @@ def send_packet(vx, vy, vz, yaw):
     print("Sent packet:", [hex(b) for b in bytearray(packet)])
 
 # Infinite loop sending commands every second
-# while True:
-#     for vx, vy, vz, yaw in MOVES:
-#         send_packet(vx, vy, vz, yaw)
-#         time.sleep(1.0)
-time.sleep(5.0)
-start = time.ticks_ms()
-while time.ticks_diff(time.ticks_ms(), start) < 10000:  # 10000 ms = 10 sec
+while True:
     send_packet(0, 0, 1000, 0)
     time.sleep_ms(20)
+# time.sleep(5.0)
+# start = time.ticks_ms()
+# while time.ticks_diff(time.ticks_ms(), start) < 10000:  # 10000 ms = 10 sec
+#     send_packet(0, 0, 1000, 0)
+#     time.sleep_ms(20)
 
 send_packet(0, 0, 0, 0)
-    
