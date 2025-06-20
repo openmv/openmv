@@ -163,23 +163,23 @@
 #define OMV_MSC_BUF_SIZE                    (4K)   // USB MSC bot data
 
 // Memory map.
-#define OMV_DTCM_ORIGIN                     0x20000000
+#define OMV_DTCM_ORIGIN                     0x30000000
 #define OMV_DTCM_LENGTH                     128K
-#define OMV_ITCM_ORIGIN                     0x00000000
+#define OMV_ITCM_ORIGIN                     0x10000000
 #define OMV_ITCM_LENGTH                     64K
-#define OMV_SRAM1_ORIGIN                    0x24000000  // AXISRAM1
+#define OMV_SRAM1_ORIGIN                    0x34000000  // AXISRAM1
 #define OMV_SRAM1_LENGTH                    1M          // 1MB
-#define OMV_SRAM2_ORIGIN                    0x24100000  // AXISRAM2
+#define OMV_SRAM2_ORIGIN                    0x34100000  // AXISRAM2
 #define OMV_SRAM2_LENGTH                    1M          // 1MB
-#define OMV_SRAM3_ORIGIN                    0x24200000  // AXISRAM3
+#define OMV_SRAM3_ORIGIN                    0x34200000  // AXISRAM3
 #define OMV_SRAM3_LENGTH                    448K        // 448KB
-#define OMV_SRAM4_ORIGIN                    0x24270000  // AXISRAM4
+#define OMV_SRAM4_ORIGIN                    0x34270000  // AXISRAM4
 #define OMV_SRAM4_LENGTH                    448K        // 448KB
-#define OMV_SRAM5_ORIGIN                    0x242E0000  // AXISRAM5
+#define OMV_SRAM5_ORIGIN                    0x342E0000  // AXISRAM5
 #define OMV_SRAM5_LENGTH                    448K        // 448KB
-#define OMV_SRAM6_ORIGIN                    0x24350000  // AXISRAM6
+#define OMV_SRAM6_ORIGIN                    0x34350000  // AXISRAM6
 #define OMV_SRAM6_LENGTH                    448K        // 448KB
-#define OMV_SRAM7_ORIGIN                    0x28000000  // AHBSRAM1 + AHBSRAM2 combined
+#define OMV_SRAM7_ORIGIN                    0x38000000  // AHBSRAM1 + AHBSRAM2 combined
 #define OMV_SRAM7_LENGTH                    32K         // 16KB + 16KB = 32KB
 #define OMV_DRAM_ORIGIN                     0x90000000  // XSPI1
 #define OMV_DRAM_LENGTH                     64M         // 512 Mbits (64 MBytes)
