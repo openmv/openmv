@@ -45,7 +45,7 @@
 
 #define LEPTON_BOOT_TIMEOUT        (1000)
 #define LEPTON_SNAPSHOT_RETRY      (3)
-#define LEPTON_SNAPSHOT_TIMEOUT    (10000)
+#define LEPTON_SNAPSHOT_TIMEOUT    (5000)
 
 // Min/Max temperatures in Celsius.
 #define LEPTON_MIN_TEMP_NORM       (-10.0f)
