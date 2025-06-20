@@ -111,6 +111,7 @@ ifeq ($(PROFILE), 1)
 CFLAGS += -DOMV_PROFILE_ENABLE=1
 endif
 
+
 # Include OpenMV board config first to set the port.
 include $(OMV_BOARD_CONFIG_DIR)/omv_boardconfig.mk
 
@@ -124,6 +125,12 @@ include $(OMV_BOARD_CONFIG_DIR)/omv_boardconfig.mk
 MPY_MKARGS = PORT=$(PORT) BOARD=$(TARGET) DEBUG=$(DEBUG) MICROPY_MANIFEST_OMV_LIB_DIR=$(OMV_LIB_DIR)\
              FROZEN_MANIFEST=$(FROZEN_MANIFEST) OMV_SRC_QSTR="$(OMV_SRC_QSTR)"\
              MICROPY_ROM_TEXT_COMPRESSION=$(ROM_TEXT_COMPRESSION) USER_C_MODULES=$(TOP_DIR)
+
+
+# Disable broken optimization for CM55.
+ifeq ($(CPU),cortex-m55)
+CFLAGS += -fdisable-rtl-loop2_doloop
+endif
 
 # Configure additional built-in modules. Note must define both the CFLAGS and the Make command line args.
 ifeq ($(MICROPY_PY_CSI), 1)
