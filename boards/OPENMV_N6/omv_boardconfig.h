@@ -226,9 +226,9 @@
 #define OMV_SPI5_MISO_PIN                   (&omv_pin_D4_SPI5)
 #define OMV_SPI5_MOSI_PIN                   (&omv_pin_A4_SPI5)
 #define OMV_SPI5_SSEL_PIN                   (&omv_pin_A3_SPI5)
-#define OMV_SPI5_DMA_TX_CHANNEL             (GPDMA1_Channel0)
+#define OMV_SPI5_DMA_TX_CHANNEL             (GPDMA1_Channel8)
 #define OMV_SPI5_DMA_TX_REQUEST             (GPDMA1_REQUEST_SPI5_TX)
-#define OMV_SPI5_DMA_RX_CHANNEL             (GPDMA1_Channel1)
+#define OMV_SPI5_DMA_RX_CHANNEL             (GPDMA1_Channel9)
 #define OMV_SPI5_DMA_RX_REQUEST             (GPDMA1_REQUEST_SPI5_RX)
 
 // CSI SPI bus
@@ -260,9 +260,9 @@
 
 #define OMV_MDF_FLT0_IRQ                    ADF1_FLT0_IRQn
 #define OMV_MDF_FLT0_IRQHandler             ADF1_FLT0_IRQHandler
-#define OMV_MDF_FLT0_DMA_STREAM             GPDMA1_Channel6
+#define OMV_MDF_FLT0_DMA_STREAM             GPDMA1_Channel10
 #define OMV_MDF_FLT0_DMA_REQUEST            GPDMA1_REQUEST_ADF1_FLT0
-#define OMV_MDF_FLT0_DMA_IRQ                GPDMA1_Channel6_IRQn
+#define OMV_MDF_FLT0_DMA_IRQ                GPDMA1_Channel10_IRQn
 
 // Camera Interface
 #define OMV_CSI_CLK_SOURCE                  (OMV_CSI_CLK_SOURCE_TIM)
