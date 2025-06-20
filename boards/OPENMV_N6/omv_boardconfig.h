@@ -159,7 +159,7 @@
 #define OMV_GC_BLOCK0_MEMORY                SRAM2  // Main GC block
 #define OMV_GC_BLOCK0_SIZE                  (1M)
 #define OMV_GC_BLOCK1_MEMORY                DRAM  // Main GC block
-#define OMV_GC_BLOCK1_SIZE                  (32M)
+#define OMV_GC_BLOCK1_SIZE                  (24M)
 #define OMV_MSC_BUF_SIZE                    (4K)   // USB MSC bot data
 
 // Memory map.
