@@ -195,10 +195,36 @@ void HAL_MspInit(void) {
     __HAL_RCC_GPIOC_CLK_SLEEP_ENABLE();
     __HAL_RCC_GPIOD_CLK_SLEEP_ENABLE();
     __HAL_RCC_GPIOE_CLK_SLEEP_ENABLE();
+    #if OMV_GPIO_PORT_F_ENABLE
     __HAL_RCC_GPIOF_CLK_SLEEP_ENABLE();
+    #endif
+    #if OMV_GPIO_PORT_G_ENABLE
     __HAL_RCC_GPIOG_CLK_SLEEP_ENABLE();
+    #endif
+    #if OMV_GPIO_PORT_H_ENABLE
+    __HAL_RCC_GPIOH_CLK_SLEEP_ENABLE();
+    #endif
+    #if OMV_GPIO_PORT_I_ENABLE
+    __HAL_RCC_GPIOI_CLK_SLEEP_ENABLE();
+    #endif
+    #if OMV_GPIO_PORT_J_ENABLE
+    __HAL_RCC_GPIOJ_CLK_SLEEP_ENABLE();
+    #endif
+    #if OMV_GPIO_PORT_K_ENABLE
+    __HAL_RCC_GPIOK_CLK_SLEEP_ENABLE();
+    #endif
+    #if OMV_GPIO_PORT_N_ENABLE
+    __HAL_RCC_GPION_CLK_SLEEP_ENABLE();
+    #endif
+    #if OMV_GPIO_PORT_O_ENABLE
     __HAL_RCC_GPIOO_CLK_SLEEP_ENABLE();
+    #endif
+    #if OMV_GPIO_PORT_P_ENABLE
     __HAL_RCC_GPIOP_CLK_SLEEP_ENABLE();
+    #endif
+    #if OMV_GPIO_PORT_Q_ENABLE
+    __HAL_RCC_GPIOQ_CLK_SLEEP_ENABLE();
+    #endif
     #endif
 
     // Enable DMA clocks.
@@ -304,6 +330,7 @@ void HAL_MspInit(void) {
 
     #if defined(STM32N6)
     __HAL_RCC_RIFSC_CLK_ENABLE();
+    __HAL_RCC_RIFSC_CLK_SLEEP_ENABLE();
 
     RIMC_MasterConfig_t RIMC_master = {
         .MasterCID = RIF_CID_1,
@@ -378,24 +405,28 @@ void HAL_I2C_MspDeInit(I2C_HandleTypeDef *hi2c) {
         __HAL_RCC_I2C1_FORCE_RESET();
         __HAL_RCC_I2C1_RELEASE_RESET();
         __HAL_RCC_I2C1_CLK_DISABLE();
+        __HAL_RCC_I2C1_CLK_SLEEP_DISABLE();
     #endif
     #if defined(OMV_I2C2_ID)
     } else if (hi2c->Instance == I2C2) {
         __HAL_RCC_I2C2_FORCE_RESET();
         __HAL_RCC_I2C2_RELEASE_RESET();
         __HAL_RCC_I2C2_CLK_DISABLE();
+        __HAL_RCC_I2C2_CLK_SLEEP_DISABLE();
     #endif
     #if defined(OMV_I2C3_ID)
     } else if (hi2c->Instance == I2C3) {
         __HAL_RCC_I2C3_FORCE_RESET();
         __HAL_RCC_I2C3_RELEASE_RESET();
         __HAL_RCC_I2C3_CLK_DISABLE();
+        __HAL_RCC_I2C3_CLK_SLEEP_DISABLE();
     #endif
     #if defined(OMV_I2C4_ID)
     } else if (hi2c->Instance == I2C4) {
         __HAL_RCC_I2C4_FORCE_RESET();
         __HAL_RCC_I2C4_RELEASE_RESET();
         __HAL_RCC_I2C4_CLK_DISABLE();
+        __HAL_RCC_I2C4_CLK_SLEEP_DISABLE();
     #endif
     }
 }
@@ -422,6 +453,19 @@ void HAL_TIM_PWM_MspInit(TIM_HandleTypeDef *htim) {
 }
 
 void HAL_TIM_PWM_MspDeInit(TIM_HandleTypeDef *htim) {
+    #if defined(OMV_CSI_TIM)
+    if (htim->Instance == OMV_CSI_TIM) {
+        // Disable DCMI timer clock.
+        OMV_CSI_TIM_CLK_DISABLE();
+        OMV_CSI_TIM_CLK_SLEEP_DISABLE();
+        // Deinit timer GPIO.
+        omv_gpio_deinit(OMV_CSI_TIM_PIN);
+        #if defined(OMV_CSI_TIM_EXT_PIN)
+        omv_gpio_deinit(OMV_CSI_TIM_EXT_PIN);
+        #endif
+    }
+    #endif // (OMV_CSI_TIM)
+
     #if defined(OMV_BUZZER_TIM)
     if (htim->Instance == OMV_BUZZER_TIM) {
         OMV_BUZZER_TIM_FORCE_RESET();
@@ -702,6 +746,7 @@ void HAL_SPI_MspDeInit(SPI_HandleTypeDef *hspi) {
         __HAL_RCC_SPI1_FORCE_RESET();
         __HAL_RCC_SPI1_RELEASE_RESET();
         __HAL_RCC_SPI1_CLK_DISABLE();
+        __HAL_RCC_SPI1_CLK_SLEEP_DISABLE();
         spi_pins = (spi_pins_t) {
             OMV_SPI1_SCLK_PIN, OMV_SPI1_MISO_PIN, OMV_SPI1_MOSI_PIN, OMV_SPI1_SSEL_PIN
         };
@@ -711,6 +756,7 @@ void HAL_SPI_MspDeInit(SPI_HandleTypeDef *hspi) {
         __HAL_RCC_SPI2_FORCE_RESET();
         __HAL_RCC_SPI2_RELEASE_RESET();
         __HAL_RCC_SPI2_CLK_DISABLE();
+        __HAL_RCC_SPI2_CLK_SLEEP_DISABLE();
         spi_pins = (spi_pins_t) {
             OMV_SPI2_SCLK_PIN, OMV_SPI2_MISO_PIN, OMV_SPI2_MOSI_PIN, OMV_SPI2_SSEL_PIN
         };
@@ -720,6 +766,7 @@ void HAL_SPI_MspDeInit(SPI_HandleTypeDef *hspi) {
         __HAL_RCC_SPI3_FORCE_RESET();
         __HAL_RCC_SPI3_RELEASE_RESET();
         __HAL_RCC_SPI3_CLK_DISABLE();
+        __HAL_RCC_SPI3_CLK_SLEEP_DISABLE();
         spi_pins = (spi_pins_t) {
             OMV_SPI3_SCLK_PIN, OMV_SPI3_MISO_PIN, OMV_SPI3_MOSI_PIN, OMV_SPI3_SSEL_PIN
         };
@@ -729,6 +776,7 @@ void HAL_SPI_MspDeInit(SPI_HandleTypeDef *hspi) {
         __HAL_RCC_SPI4_FORCE_RESET();
         __HAL_RCC_SPI4_RELEASE_RESET();
         __HAL_RCC_SPI4_CLK_DISABLE();
+        __HAL_RCC_SPI4_CLK_SLEEP_DISABLE();
         spi_pins = (spi_pins_t) {
             OMV_SPI4_SCLK_PIN, OMV_SPI4_MISO_PIN, OMV_SPI4_MOSI_PIN, OMV_SPI4_SSEL_PIN
         };
@@ -738,6 +786,7 @@ void HAL_SPI_MspDeInit(SPI_HandleTypeDef *hspi) {
         __HAL_RCC_SPI5_FORCE_RESET();
         __HAL_RCC_SPI5_RELEASE_RESET();
         __HAL_RCC_SPI5_CLK_DISABLE();
+        __HAL_RCC_SPI5_CLK_SLEEP_DISABLE();
         spi_pins = (spi_pins_t) {
             OMV_SPI5_SCLK_PIN, OMV_SPI5_MISO_PIN, OMV_SPI5_MOSI_PIN, OMV_SPI5_SSEL_PIN
         };
@@ -747,6 +796,7 @@ void HAL_SPI_MspDeInit(SPI_HandleTypeDef *hspi) {
         __HAL_RCC_SPI6_FORCE_RESET();
         __HAL_RCC_SPI6_RELEASE_RESET();
         __HAL_RCC_SPI6_CLK_DISABLE();
+        __HAL_RCC_SPI6_CLK_SLEEP_DISABLE();
         spi_pins = (spi_pins_t) {
             SPI6_SCLK_PIN, SPI6_MISO_PIN, SPI6_MOSI_PIN, SPI6_SSEL_PIN
         };
@@ -895,6 +945,7 @@ void HAL_JPEG_MspDeInit(JPEG_HandleTypeDef *hjpeg) {
     __HAL_RCC_JPEG_FORCE_RESET();
     __HAL_RCC_JPEG_RELEASE_RESET();
     __HAL_RCC_JPEG_CLK_DISABLE();
+    __HAL_RCC_JPEG_CLK_SLEEP_DISABLE();
 }
 #endif
 
@@ -1086,14 +1137,17 @@ void HAL_XSPI_MspDeInit(XSPI_HandleTypeDef *hxspi) {
         __HAL_RCC_XSPI1_FORCE_RESET();
         __HAL_RCC_XSPI1_RELEASE_RESET();
         __HAL_RCC_XSPI1_CLK_DISABLE();
+        __HAL_RCC_XSPI1_CLK_SLEEP_DISABLE();
     } else if (hxspi->Instance == XSPI2) {
         __HAL_RCC_XSPI2_FORCE_RESET();
         __HAL_RCC_XSPI2_RELEASE_RESET();
         __HAL_RCC_XSPI2_CLK_DISABLE();
+        __HAL_RCC_XSPI2_CLK_SLEEP_DISABLE();
     } else if (hxspi->Instance == XSPI3) {
         __HAL_RCC_XSPI3_FORCE_RESET();
         __HAL_RCC_XSPI3_RELEASE_RESET();
         __HAL_RCC_XSPI3_CLK_DISABLE();
+        __HAL_RCC_XSPI3_CLK_SLEEP_DISABLE();
     }
 
     for (int i = 0; i < OMV_ARRAY_SIZE(xspi_pins); i++) {
