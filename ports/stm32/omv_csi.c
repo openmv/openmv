@@ -254,7 +254,6 @@ static int stm_csi_config(omv_csi_t *csi, omv_csi_config_t config) {
 
         // Configure debayer.
         if (csi->raw_output && csi->pixformat != PIXFORMAT_BAYER) {
-
             DCMIPP_RawBayer2RGBConfTypeDef rawcfg = {
                 .RawBayerType = DCMIPP_RAWBAYER_BGGR,
                 .VLineStrength = DCMIPP_RAWBAYER_ALGO_NONE,
@@ -262,6 +261,7 @@ static int stm_csi_config(omv_csi_t *csi, omv_csi_config_t config) {
                 .PeakStrength = DCMIPP_RAWBAYER_ALGO_NONE,
                 .EdgeStrength = DCMIPP_RAWBAYER_ALGO_NONE,
             };
+
             if (HAL_DCMIPP_PIPE_SetISPRawBayer2RGBConfig(&csi->dcmi, DCMIPP_PIPE, &rawcfg) != HAL_OK ||
                 HAL_DCMIPP_PIPE_EnableISPRawBayer2RGB(&csi->dcmi, DCMIPP_PIPE) != HAL_OK) {
                 return OMV_CSI_ERROR_CSI_INIT_FAILED;
@@ -275,6 +275,7 @@ static int stm_csi_config(omv_csi_t *csi, omv_csi_config_t config) {
                 .ShiftBlue = 0,
                 .MultiplierBlue = 128,
             };
+
             if (HAL_DCMIPP_PIPE_SetISPExposureConfig(&csi->dcmi, DCMIPP_PIPE, &expcfg) != HAL_OK ||
                 HAL_DCMIPP_PIPE_EnableISPExposure(&csi->dcmi, DCMIPP_PIPE) != HAL_OK) {
                 return OMV_CSI_ERROR_CSI_INIT_FAILED;
@@ -342,7 +343,14 @@ static int stm_csi_abort(omv_csi_t *csi, bool fifo_flush, bool in_irq) {
     __HAL_DCMI_DISABLE_IT(&csi->dcmi, DCMI_IT_FRAME);
     __HAL_DCMI_CLEAR_FLAG(&csi->dcmi, DCMI_FLAG_FRAMERI);
     #else
-    HAL_DCMIPP_PIPE_Stop(&csi->dcmi, DCMIPP_PIPE);
+    if (!csi->mipi_if) {
+        HAL_DCMIPP_PIPE_Stop(&csi->dcmi, DCMIPP_PIPE);
+    } else {
+        HAL_DCMIPP_CSI_PIPE_Stop(&csi->dcmi, DCMIPP_PIPE, DCMIPP_VIRTUAL_CHANNEL0);
+    }
+    for (size_t i=0; i<DCMIPP_NUM_OF_PIPES; i++) {
+        csi->dcmi.PipeState[i] = HAL_DCMIPP_PIPE_STATE_RESET;
+    }
     #endif
 
     return 0;
@@ -524,11 +532,7 @@ void HAL_DCMIPP_PIPE_FrameEventCallback(DCMIPP_HandleTypeDef *dcmipp, uint32_t p
     // Get the destination buffer address.
     vbuffer_t *buffer = framebuffer_get_tail(fb, FB_PEEK);
     if (buffer == NULL) {
-        if (!csi->mipi_if) {
-            HAL_DCMIPP_PIPE_Stop(dcmipp, pipe);
-        } else {
-            HAL_DCMIPP_CSI_PIPE_Stop(dcmipp, pipe, DCMIPP_VIRTUAL_CHANNEL0);
-        }
+        omv_csi_abort(csi, false, false);
     } else {
         HAL_DCMIPP_PIPE_SetMemoryAddress(dcmipp, pipe, DCMIPP_MEMORY_ADDRESS_0, (uint32_t) buffer->data);
     }
