@@ -90,7 +90,7 @@ CLANG_FLAGS = -fshort-enums \
               -Wno-unused-command-line-argument \
               -D__ARMCC_VERSION=6100100 \
               -DALIF_CMSIS_H=$(CMSIS_MCU_H) \
-              $(filter-out -march%,$(CFLAGS))
+              $(filter-out -march% -fdisable-rtl%,$(CFLAGS))
 
 OMV_CFLAGS += -I$(TOP_DIR)/$(OMV_DIR)/$(COMMON_DIR)
 OMV_CFLAGS += -I$(TOP_DIR)/$(OMV_DIR)/modules/

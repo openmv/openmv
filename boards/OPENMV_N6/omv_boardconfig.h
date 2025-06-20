@@ -159,27 +159,27 @@
 #define OMV_GC_BLOCK0_MEMORY                SRAM2  // Main GC block
 #define OMV_GC_BLOCK0_SIZE                  (1M)
 #define OMV_GC_BLOCK1_MEMORY                DRAM  // Main GC block
-#define OMV_GC_BLOCK1_SIZE                  (32M)
-#define OMV_MSC_BUF_SIZE                    (2K)   // USB MSC bot data
+#define OMV_GC_BLOCK1_SIZE                  (24M)
+#define OMV_MSC_BUF_SIZE                    (4K)   // USB MSC bot data
 
 // Memory map.
-#define OMV_DTCM_ORIGIN                     0x20000000
+#define OMV_DTCM_ORIGIN                     0x30000000
 #define OMV_DTCM_LENGTH                     128K
-#define OMV_ITCM_ORIGIN                     0x00000000
+#define OMV_ITCM_ORIGIN                     0x10000000
 #define OMV_ITCM_LENGTH                     64K
-#define OMV_SRAM1_ORIGIN                    0x24000000  // AXISRAM1
+#define OMV_SRAM1_ORIGIN                    0x34000000  // AXISRAM1
 #define OMV_SRAM1_LENGTH                    1M          // 1MB
-#define OMV_SRAM2_ORIGIN                    0x24100000  // AXISRAM2
+#define OMV_SRAM2_ORIGIN                    0x34100000  // AXISRAM2
 #define OMV_SRAM2_LENGTH                    1M          // 1MB
-#define OMV_SRAM3_ORIGIN                    0x24200000  // AXISRAM3
+#define OMV_SRAM3_ORIGIN                    0x34200000  // AXISRAM3
 #define OMV_SRAM3_LENGTH                    448K        // 448KB
-#define OMV_SRAM4_ORIGIN                    0x24270000  // AXISRAM4
+#define OMV_SRAM4_ORIGIN                    0x34270000  // AXISRAM4
 #define OMV_SRAM4_LENGTH                    448K        // 448KB
-#define OMV_SRAM5_ORIGIN                    0x242E0000  // AXISRAM5
+#define OMV_SRAM5_ORIGIN                    0x342E0000  // AXISRAM5
 #define OMV_SRAM5_LENGTH                    448K        // 448KB
-#define OMV_SRAM6_ORIGIN                    0x24350000  // AXISRAM6
+#define OMV_SRAM6_ORIGIN                    0x34350000  // AXISRAM6
 #define OMV_SRAM6_LENGTH                    448K        // 448KB
-#define OMV_SRAM7_ORIGIN                    0x28000000  // AHBSRAM1 + AHBSRAM2 combined
+#define OMV_SRAM7_ORIGIN                    0x38000000  // AHBSRAM1 + AHBSRAM2 combined
 #define OMV_SRAM7_LENGTH                    32K         // 16KB + 16KB = 32KB
 #define OMV_DRAM_ORIGIN                     0x90000000  // XSPI1
 #define OMV_DRAM_LENGTH                     64M         // 512 Mbits (64 MBytes)
@@ -226,9 +226,9 @@
 #define OMV_SPI5_MISO_PIN                   (&omv_pin_D4_SPI5)
 #define OMV_SPI5_MOSI_PIN                   (&omv_pin_A4_SPI5)
 #define OMV_SPI5_SSEL_PIN                   (&omv_pin_A3_SPI5)
-#define OMV_SPI5_DMA_TX_CHANNEL             (GPDMA1_Channel0)
+#define OMV_SPI5_DMA_TX_CHANNEL             (GPDMA1_Channel8)
 #define OMV_SPI5_DMA_TX_REQUEST             (GPDMA1_REQUEST_SPI5_TX)
-#define OMV_SPI5_DMA_RX_CHANNEL             (GPDMA1_Channel1)
+#define OMV_SPI5_DMA_RX_CHANNEL             (GPDMA1_Channel9)
 #define OMV_SPI5_DMA_RX_REQUEST             (GPDMA1_REQUEST_SPI5_RX)
 
 // CSI SPI bus
@@ -260,9 +260,9 @@
 
 #define OMV_MDF_FLT0_IRQ                    ADF1_FLT0_IRQn
 #define OMV_MDF_FLT0_IRQHandler             ADF1_FLT0_IRQHandler
-#define OMV_MDF_FLT0_DMA_STREAM             GPDMA1_Channel6
+#define OMV_MDF_FLT0_DMA_STREAM             GPDMA1_Channel10
 #define OMV_MDF_FLT0_DMA_REQUEST            GPDMA1_REQUEST_ADF1_FLT0
-#define OMV_MDF_FLT0_DMA_IRQ                GPDMA1_Channel6_IRQn
+#define OMV_MDF_FLT0_DMA_IRQ                GPDMA1_Channel10_IRQn
 
 // Camera Interface
 #define OMV_CSI_CLK_SOURCE                  (OMV_CSI_CLK_SOURCE_TIM)
@@ -273,6 +273,7 @@
 #define OMV_CSI_TIM_CLK_ENABLE()            __TIM1_CLK_ENABLE()
 #define OMV_CSI_TIM_CLK_DISABLE()           __TIM1_CLK_DISABLE()
 #define OMV_CSI_TIM_CLK_SLEEP_ENABLE()      __TIM1_CLK_SLEEP_ENABLE()
+#define OMV_CSI_TIM_CLK_SLEEP_DISABLE()     __TIM1_CLK_SLEEP_DISABLE()
 #define OMV_CSI_TIM_PCLK_FREQ()             HAL_RCC_GetPCLK2Freq()
 #define OMV_CSI_DMA_CHANNEL                 (HPDMA1_Channel12)
 #define OMV_CSI_DMA_REQUEST                 (HPDMA1_REQUEST_DCMI_PSSI)

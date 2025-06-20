@@ -48,3 +48,9 @@ endif
 
 # Include the port Makefile.
 include $(PORT_DIR)/$(PORT_LOWER)_port.mk
+
+# Disable broken optimization for CM55.
+ifeq ($(CPU),cortex-m55)
+CFLAGS += -fdisable-rtl-loop2_doloop
+endif
+
