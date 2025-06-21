@@ -133,17 +133,6 @@ PROVIDE(__stack = __StackTop);
 } >OMV_JPEG_MEMORY
 #endif
 
-/* VOSPI framebuffer memory */
-#if defined(OMV_VOSPI_MEMORY)
-.vospi_memory (NOLOAD) :
-{
-  . = ALIGN(4);
-  _vospi_buf = .;
-  . = . + OMV_VOSPI_SIZE;
-  . = ALIGN(4);
-} >OMV_VOSPI_MEMORY
-#endif
-
 /* GPU memory */
 #if defined(OMV_GPU_MEMORY)
 .gpu_memory (NOLOAD) :
