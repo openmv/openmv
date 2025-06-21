@@ -202,7 +202,7 @@ static int ioctl(omv_csi_t *csi, int request, va_list ap) {
         }
         case OMV_CSI_IOCTL_LEPTON_GET_RESOLUTION: {
             int *resolution = va_arg(ap, int *);
-            *resolution = 14;
+            *resolution =  lepton.radiometry ? 16 : 14;
             break;
         }
         case OMV_CSI_IOCTL_LEPTON_RUN_COMMAND: {

@@ -390,7 +390,7 @@ int fir_lepton_init(omv_i2c_t *bus, int *w, int *h, int *refresh, int *resolutio
     fir_lepton_rad_en = rad == LEP_RAD_ENABLE;
     *w = flir_w;
     *h = flir_h;
-    *refresh = fir_lepton_3 ? 27 : 9;
+    *refresh = fir_lepton_3 ? 9 : 27;
     *resolution = fir_lepton_rad_en ? 16 : 14;
 
     #if defined(OMV_FIR_LEPTON_VSYNC_PIN)
