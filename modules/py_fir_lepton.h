@@ -31,9 +31,10 @@ void fir_lepton_register_vsync_cb(mp_obj_t cb);
 mp_obj_t fir_lepton_get_radiometry();
 void fir_lepton_register_frame_cb(mp_obj_t cb);
 mp_obj_t fir_lepton_get_frame_available();
+uint16_t *fir_lepton_get_frame(int timeout);
+bool fir_lepton_get_radiometry_enabled();
+int fir_lepton_get_temperature();
 mp_obj_t fir_lepton_read_ta();
 mp_obj_t fir_lepton_read_ir(int w, int h, bool mirror, bool flip, bool transpose, int timeout);
-void fir_lepton_fill_image(image_t *img, int w, int h, bool auto_range, float min, float max,
-                           bool mirror, bool flip, bool transpose, int timeout);
 void fir_lepton_trigger_ffc(int timeout);
 #endif // __PY_FIR_LEPTON_H__

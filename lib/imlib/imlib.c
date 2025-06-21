@@ -456,6 +456,76 @@ void imlib_fill_image_from_float(image_t *img, int w, int h, float *data, float 
     }
 }
 
+// This function fills a grayscale image from an array of lepton 8/14/16-bit values that are scaled
+// between min and max. The image w*h must equal the floating point array w*h.
+void imlib_fill_image_from_lepton(image_t *img, int w, int h, uint16_t *data, float min, float max,
+                                  bool auto_range, bool radiometric, int kelvin_offset,
+                                  bool mirror, bool flip, bool transpose) {
+    int new_min;
+    int new_max;
+
+    if (auto_range) {
+        new_min = INT_MAX;
+        new_max = INT_MIN;
+
+        for (int i = 0; i < w * h; i++) {
+            int temp = data[i];
+
+            if (!radiometric) {
+                temp = (temp - 8192) + kelvin_offset;
+            }
+
+            if (temp < new_min) {
+                new_min = temp;
+            }
+
+            if (temp > new_max) {
+                new_max = temp;
+            }
+        }
+    } else {
+        float tmp = min;
+        min = (min < max) ? min : max;
+        max = (max > tmp) ? max : tmp;
+        new_min = fast_roundf((min + 273.15f) * 100.f); // to kelvin
+        new_max = fast_roundf((max + 273.15f) * 100.f); // to kelvin
+    }
+
+    float diff = 255.f / (new_max - new_min);
+
+    for (int y = 0; y < h; y++) {
+        int y_dst = flip ? (h - 1 - y) : y;
+        const uint16_t *raw_row = data + (y * w);
+        uint8_t *row_pointer = ((uint8_t *) img->data) + (y_dst * w);
+        uint8_t *t_row_pointer = ((uint8_t *) img->data) + y_dst;
+
+        for (int x = 0; x < w; x++) {
+            int x_dst = mirror ? (w - 1 - x) : x;
+            int raw = raw_row[x];
+
+            if (!radiometric) {
+                raw = (raw - 8192) + kelvin_offset;
+            }
+
+            if (raw < new_min) {
+                raw = new_min;
+            }
+
+            if (raw > new_max) {
+                raw = new_max;
+            }
+
+            int pixel = __USAT(fast_roundf((raw - new_min) * diff), 8);
+
+            if (!transpose) {
+                row_pointer[x_dst] = pixel;
+            } else {
+                t_row_pointer[x_dst * h] = pixel;
+            }
+        }
+    }
+}
+
 int8_t imlib_rgb565_to_l(uint16_t pixel) {
     float r_lin = xyz_table[COLOR_RGB565_TO_R8(pixel)];
     float g_lin = xyz_table[COLOR_RGB565_TO_G8(pixel)];

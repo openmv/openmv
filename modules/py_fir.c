@@ -1089,9 +1089,10 @@ mp_obj_t py_fir_snapshot(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_a
         #if (OMV_FIR_LEPTON_ENABLE == 1)
         case FIR_LEPTON: {
             bool auto_range = args[ARG_scale].u_obj == mp_const_none;
-            fir_lepton_fill_image(&src_img, fir_width, fir_height, auto_range, min, max,
-                                  args[ARG_hmirror].u_bool, args[ARG_vflip].u_bool,
-                                  args[ARG_transpose].u_bool, args[ARG_timeout].u_int);
+            imlib_fill_image_from_lepton(&src_img, fir_width, fir_height,
+                                         fir_lepton_get_frame(args[ARG_timeout].u_int), min, max, auto_range,
+                                         fir_lepton_get_radiometry_enabled(), fir_lepton_get_temperature(),
+                                         args[ARG_hmirror].u_bool, args[ARG_vflip].u_bool, args[ARG_transpose].u_bool);
             break;
         }
         #endif
