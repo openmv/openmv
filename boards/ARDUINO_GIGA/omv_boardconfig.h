@@ -141,8 +141,6 @@
 #define OMV_FB_OVERLAY_SIZE                 (448K)  // Fast fb_alloc memory size.
 #define OMV_JPEG_MEMORY                     DRAM    // JPEG buffer memory buffer.
 #define OMV_JPEG_SIZE                       (1M)    // IDE JPEG buffer (header + data).
-#define OMV_VOSPI_MEMORY                    DTCM    // VoSPI buffer memory.
-#define OMV_VOSPI_SIZE                      (38K)
 #define OMV_DMA_MEMORY                      SRAM3   // Misc DMA buffers memory.
 #define OMV_DMA_MEMORY_D1                   SRAM0   // Domain 1 DMA buffers.
 #define OMV_DMA_MEMORY_D2                   SRAM3   // Domain 2 DMA buffers.
