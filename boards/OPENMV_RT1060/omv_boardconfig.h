@@ -93,6 +93,7 @@
 #define OMV_GC_BLOCK2_SIZE              (8M)
 #define OMV_RAMFUNC_MEMORY              ITCM2   // RAM code memory.
 #define OMV_LINE_BUF_SIZE               (11 * 1024)  // Image line buffer.
+#define OMV_VOSPI_DMA_BUFFER            ".dma_buffer"
 
 // Memory configuration.
 #define OMV_DTCM_ORIGIN                 0x20000000

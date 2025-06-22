@@ -93,6 +93,7 @@
 #define OMV_MSC_BUF_SIZE                      (2K)  // USB MSC bot data
 #define OMV_FFS_BUF_SIZE                      (16K) // Flash filesystem cache
 #define OMV_LINE_BUF_SIZE                     (2 * 1024) // Image line buffer round(320 * 2BPP * 2 buffers).
+#define OMV_VOSPI_DMA_BUFFER                  ".dma_buffer"
 
 // Memory map.
 #define OMV_FLASH_ORIGIN                      0x08000000

@@ -154,11 +154,13 @@
 #define OMV_JPEG_MEMORY                     DRAM   // JPEG buffer memory buffer.
 #define OMV_JPEG_SIZE                       (1M)   // IDE JPEG buffer (header + data).
 #define OMV_DMA_MEMORY                      SRAM1  // Misc DMA buffers memory.
+#define OMV_DMA_MEMORY_D2                   SRAM7  // Domain 2 DMA buffers.
 #define OMV_GC_BLOCK0_MEMORY                SRAM2  // Main GC block
 #define OMV_GC_BLOCK0_SIZE                  (1M)
 #define OMV_GC_BLOCK1_MEMORY                DRAM  // Main GC block
 #define OMV_GC_BLOCK1_SIZE                  (24M)
 #define OMV_MSC_BUF_SIZE                    (4K)   // USB MSC bot data
+#define OMV_VOSPI_DMA_BUFFER                ".d2_dma_buffer"
 
 // Memory map.
 #define OMV_DTCM_ORIGIN                     0x30000000

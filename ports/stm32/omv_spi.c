@@ -95,7 +95,7 @@ DEFINE_SPI_INSTANCE(6)
 
 static omv_spi_t *omv_spi_descr_all[6] = { NULL };
 #if defined(STM32N6)
-static DMA_NodeTypeDef OMV_ATTR_SECTION(OMV_ATTR_ALIGNED(omv_dma_nodes_all[6 * 2], 32), ".dma_buffer");
+static DMA_NodeTypeDef OMV_ATTR_SECTION(OMV_ATTR_ALIGNED(omv_dma_nodes_all[6 * 2], 32), OMV_VOSPI_DMA_BUFFER);
 #endif
 
 static uint32_t omv_spi_clocksource(SPI_TypeDef *spi) {

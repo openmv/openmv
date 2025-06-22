@@ -145,6 +145,7 @@
 #define OMV_GC_BLOCK1_SIZE                    (267K)
 #define OMV_MSC_BUF_SIZE                      (2K)  // USB MSC bot data
 #define OMV_LINE_BUF_SIZE                     (3 * 1024) // Image line buffer round(640 * 2BPP * 2 buffers).
+#define OMV_VOSPI_DMA_BUFFER                  ".dma_buffer"
 
 // Memory map.
 #define OMV_FLASH_ORIGIN                      0x08000000

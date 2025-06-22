@@ -128,6 +128,7 @@
 #define OMV_SDRAM_SIZE                          (64 * 1024 * 1024)  // This needs to be here for UVC firmware.
 #define OMV_MSC_BUF_SIZE                        (2K)    // USB MSC bot data
 #define OMV_LINE_BUF_SIZE                       (11 * 1024) // Image line buffer round(2592 * 2BPP * 2 buffers).
+#define OMV_VOSPI_DMA_BUFFER                    ".dma_buffer"
 
 // Memory map.
 #define OMV_FLASH_ORIGIN                        0x08000000
