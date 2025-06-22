@@ -117,8 +117,13 @@ int omv_gpu_draw_image(image_t *src_img,
     nema_blit_subrect_fit(dst_rect->x, dst_rect->y, dst_rect->w, dst_rect->h,
                           src_rect->x, src_rect->y, src_rect->w, src_rect->h);
 
+    // Ensures any cached writes to dst are flushed.
+    SCB_CleanInvalidateDCache_by_Addr(dst_img->data, image_size(dst_img));
     // Flush source image
     SCB_CleanDCache_by_Addr(src_img->data, image_size(src_img));
+    // Ensure the GPU cache is clean before starting the GPU operation.
+    // Will start invalidating the GPU cache if not already invalidated.
+    HAL_ICACHE_WaitForInvalidateComplete();
 
     nema_cl_submit(&cl);
     nema_cl_wait(&cl);
@@ -126,6 +131,9 @@ int omv_gpu_draw_image(image_t *src_img,
     nema_cl_destroy(&cl);
     #endif
 
+    // Start invalidation of the GPU cache for the next operation.
+    // This is done asynchronously so that the CPU can continue working.
+    HAL_ICACHE_Invalidate_IT();
     // Invalidate the destination image.
     SCB_InvalidateDCache_by_Addr(dst_img->data, image_size(dst_img));
     OMV_PROFILE_PRINT();

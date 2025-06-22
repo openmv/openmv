@@ -55,6 +55,7 @@ int32_t nema_sys_init(void) {
     // Configure and enable texture cache
     HAL_ICACHE_DeInit();
     HAL_ICACHE_Disable();
+    HAL_ICACHE_WaitForInvalidateComplete();
     HAL_ICACHE_ConfigAssociativityMode(ICACHE_4WAYS);
     HAL_ICACHE_Enable();
 
