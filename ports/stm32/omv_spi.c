@@ -330,8 +330,8 @@ static int omv_spi_dma_init(omv_spi_t *spi, uint32_t direction, omv_spi_config_t
     dma_init->Direction = direction;
     dma_init->SrcInc = (direction == DMA_PERIPH_TO_MEMORY) ? DMA_SINC_FIXED : DMA_SINC_INCREMENTED;
     dma_init->DestInc = (direction == DMA_MEMORY_TO_PERIPH) ? DMA_DINC_FIXED : DMA_DINC_INCREMENTED;
-    dma_init->SrcDataWidth = (config->datasize == 8) ?  DMA_SRC_DATAWIDTH_BYTE : DMA_SRC_DATAWIDTH_WORD;
-    dma_init->DestDataWidth = (config->datasize == 8) ?  DMA_DEST_DATAWIDTH_BYTE : DMA_DEST_DATAWIDTH_WORD;
+    dma_init->SrcDataWidth = DMA_SRC_DATAWIDTH_WORD;
+    dma_init->DestDataWidth = DMA_DEST_DATAWIDTH_WORD;
     dma_init->SrcBurstLength = 1;
     dma_init->DestBurstLength = 1;
     dma_init->TransferEventMode = DMA_TCEM_BLOCK_TRANSFER;
@@ -368,7 +368,7 @@ static int omv_spi_dma_init(omv_spi_t *spi, uint32_t direction, omv_spi_config_t
             return -1;
         }
 
-        dma_descr->InitLinkedList.Priority = DMA_LOW_PRIORITY_LOW_WEIGHT;
+        dma_descr->InitLinkedList.Priority = DMA_HIGH_PRIORITY;
         dma_descr->InitLinkedList.LinkStepMode = DMA_LSM_FULL_EXECUTION;
         dma_descr->InitLinkedList.LinkedListMode = DMA_LINKEDLIST_CIRCULAR;
         dma_descr->InitLinkedList.LinkAllocatedPort = DMA_LINK_ALLOCATED_PORT0;
