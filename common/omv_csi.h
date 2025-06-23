@@ -390,7 +390,7 @@ int omv_csi_reset();
 int omv_csi_get_id();
 
 // Returns the xclk freq in hz.
-uint32_t omv_csi_get_xclk_frequency();
+uint32_t omv_csi_get_clk_frequency();
 
 // Returns the xclk freq in hz.
 int omv_csi_set_clk_frequency(uint32_t frequency);
