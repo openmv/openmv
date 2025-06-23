@@ -40,7 +40,7 @@
 #define OMV_GPU_NEMA_RING_SIZE 1024
 #endif
 
-volatile static int last_cl_id;
+volatile static int last_cl_id = -1;
 static GPU2D_HandleTypeDef gpu2d = { 0 };
 static nema_ringbuffer_t ring_buf = {{0}};
 #if OMV_GPU_NEMA_MM_STATIC
@@ -55,6 +55,7 @@ int32_t nema_sys_init(void) {
     // Configure and enable texture cache
     HAL_ICACHE_DeInit();
     HAL_ICACHE_Disable();
+    HAL_ICACHE_WaitForInvalidateComplete();
     HAL_ICACHE_ConfigAssociativityMode(ICACHE_4WAYS);
     HAL_ICACHE_Enable();
 
@@ -72,6 +73,8 @@ int32_t nema_sys_init(void) {
     if (nema_rb_init(&ring_buf, 1) != 0) {
         return -1;
     }
+
+    last_cl_id = -1;
 
     NVIC_SetPriority(GPU2D_IRQn, IRQ_PRI_GPU);
     NVIC_EnableIRQ(GPU2D_IRQn);
