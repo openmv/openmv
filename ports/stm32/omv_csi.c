@@ -349,7 +349,14 @@ int omv_csi_abort(omv_csi_t *csi, bool fifo_flush, bool in_irq) {
         __HAL_DCMI_DISABLE_IT(&csi->dcmi, DCMI_IT_FRAME);
         __HAL_DCMI_CLEAR_FLAG(&csi->dcmi, DCMI_FLAG_FRAMERI);
         #else
-        HAL_DCMIPP_PIPE_Stop(&csi->dcmi, DCMIPP_PIPE);
+        if (!csi->mipi_if) {
+            HAL_DCMIPP_PIPE_Stop(&csi->dcmi, DCMIPP_PIPE);
+        } else {
+            HAL_DCMIPP_CSI_PIPE_Stop(&csi->dcmi, DCMIPP_PIPE, DCMIPP_VIRTUAL_CHANNEL0);
+        }
+        for (size_t i=0; i<DCMIPP_NUM_OF_PIPES; i++) {
+            csi->dcmi.PipeState[i] = HAL_DCMIPP_PIPE_STATE_RESET;
+        }
         #endif
         csi->first_line = false;
         csi->drop_frame = false;
@@ -540,11 +547,7 @@ void HAL_DCMIPP_PIPE_FrameEventCallback(DCMIPP_HandleTypeDef *dcmipp, uint32_t p
     // Get the destination buffer address.
     vbuffer_t *buffer = framebuffer_get_tail(fb, FB_PEEK);
     if (buffer == NULL) {
-        if (!csi.mipi_if) {
-            HAL_DCMIPP_PIPE_Stop(dcmipp, pipe);
-        } else {
-            HAL_DCMIPP_CSI_PIPE_Stop(dcmipp, pipe, DCMIPP_VIRTUAL_CHANNEL0);
-        }
+        omv_csi_abort(&csi, false, false);
     } else {
         HAL_DCMIPP_PIPE_SetMemoryAddress(dcmipp, pipe, DCMIPP_MEMORY_ADDRESS_0, (uint32_t) buffer->data);
     }
