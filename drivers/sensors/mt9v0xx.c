@@ -343,7 +343,7 @@ static int set_auto_exposure(omv_csi_t *csi, int enable, int exposure_us) {
     ret |= omv_i2c_readw(&csi->i2c_bus, csi->slv_addr, window_width, &row_time_0);
     ret |= omv_i2c_readw(&csi->i2c_bus, csi->slv_addr, horizontal_blanking, &row_time_1);
 
-    int clock = omv_csi_get_xclk_frequency();
+    int clock = omv_csi_get_clk_frequency();
 
     int exposure = IM_MIN(exposure_us, MICROSECOND_CLKS / 2) * (clock / MICROSECOND_CLKS);
     int row_time = row_time_0 + row_time_1;
@@ -389,7 +389,7 @@ static int get_exposure_us(omv_csi_t *csi, int *exposure_us) {
         ret |= omv_i2c_readw(&csi->i2c_bus, csi->slv_addr, fine_shutter_width_total, &int_pixels);
     }
 
-    int clock = omv_csi_get_xclk_frequency();
+    int clock = omv_csi_get_clk_frequency();
 
     if (reg & (context ? MT9V0X4_AEC_ENABLE_B : MT9V0XX_AEC_ENABLE)) {
         ret |= omv_i2c_readw(&csi->i2c_bus, csi->slv_addr, MT9V0XX_AEC_EXPOSURE_OUTPUT, &int_rows);
