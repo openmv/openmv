@@ -321,7 +321,7 @@ typedef struct _omv_csi {
     bool auto_rotation;         // Rotate Image Automatically
     bool detected;              // Set to true when the sensor is initialized.
 
-    omv_i2c_t i2c_bus;          // SCCB/I2C bus.
+    omv_i2c_t *i2c;             // SCCB/I2C bus.
 
     framebuffer_t *fb;          // Frame buffer pointer
 
@@ -363,6 +363,7 @@ typedef struct _omv_csi {
 } omv_csi_t;
 
 extern omv_csi_t csi;
+extern omv_i2c_t csi_i2c;
 
 // Resolution table
 extern uint16_t resolution[][2];
