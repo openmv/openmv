@@ -130,6 +130,7 @@ uint16_t resolution[][2] = {
 };
 
 omv_csi_t csi = {0};
+omv_i2c_t csi_i2c = {0};
 
 __weak void omv_csi_init0() {
     // Reset the csi state
@@ -180,7 +181,7 @@ __weak int omv_csi_reset() {
     omv_csi_shutdown(false);
 
     // Disable the bus before reset.
-    omv_i2c_enable(&csi.i2c_bus, false);
+    omv_i2c_enable(csi.i2c, false);
 
     #if defined(OMV_CSI_RESET_PIN)
     // Hard-reset the csi
@@ -198,7 +199,7 @@ __weak int omv_csi_reset() {
     mp_hal_delay_ms(OMV_CSI_RESET_DELAY);
 
     // Re-enable the bus.
-    omv_i2c_enable(&csi.i2c_bus, true);
+    omv_i2c_enable(csi.i2c, true);
 
     // Call csi-specific reset function
     if (csi.reset != NULL &&
@@ -214,14 +215,14 @@ __weak int omv_csi_reset() {
 
 static int omv_csi_detect() {
     uint8_t devs_list[OMV_CSI_MAX_DEVICES];
-    int n_devs = omv_i2c_scan(&csi.i2c_bus, devs_list, OMV_ARRAY_SIZE(devs_list));
+    int n_devs = omv_i2c_scan(csi.i2c, devs_list, OMV_ARRAY_SIZE(devs_list));
 
     for (int i = 0; i < OMV_MIN(n_devs, OMV_CSI_MAX_DEVICES); i++) {
         uint8_t slv_addr = devs_list[i];
         switch (slv_addr) {
             #if (OMV_OV2640_ENABLE == 1)
             case OV2640_SLV_ADDR: // Or OV9650.
-                omv_i2c_readb(&csi.i2c_bus, slv_addr, OV_CHIP_ID, (uint8_t *) &csi.chip_id);
+                omv_i2c_readb(csi.i2c, slv_addr, OV_CHIP_ID, (uint8_t *) &csi.chip_id);
                 return slv_addr;
             #endif // (OMV_OV2640_ENABLE == 1)
 
@@ -229,17 +230,17 @@ static int omv_csi_detect() {
             // OV5640, GC2145, and GENX320 share the same I2C address
             case OV5640_SLV_ADDR:   // Or GC2145, or GENX320.
                 // Try to read GC2145 chip ID first
-                omv_i2c_readb(&csi.i2c_bus, slv_addr, GC_CHIP_ID, (uint8_t *) &csi.chip_id);
+                omv_i2c_readb(csi.i2c, slv_addr, GC_CHIP_ID, (uint8_t *) &csi.chip_id);
                 if (csi.chip_id != GC2145_ID) {
                     // If it fails, try reading OV5640 chip ID.
-                    omv_i2c_readb2(&csi.i2c_bus, slv_addr, OV5640_CHIP_ID, (uint8_t *) &csi.chip_id);
+                    omv_i2c_readb2(csi.i2c, slv_addr, OV5640_CHIP_ID, (uint8_t *) &csi.chip_id);
 
                     #if (OMV_GENX320_ENABLE == 1)
                     if (csi.chip_id != OV5640_ID) {
                         // If it fails, try reading GENX320 chip ID.
                         uint8_t buf[] = {(GENX320_CHIP_ID >> 8), GENX320_CHIP_ID};
-                        omv_i2c_write_bytes(&csi.i2c_bus, slv_addr, buf, 2, OMV_I2C_XFER_NO_STOP);
-                        omv_i2c_read_bytes(&csi.i2c_bus, slv_addr, (uint8_t *) &csi.chip_id, 4, OMV_I2C_XFER_NO_FLAGS);
+                        omv_i2c_write_bytes(csi.i2c, slv_addr, buf, 2, OMV_I2C_XFER_NO_STOP);
+                        omv_i2c_read_bytes(csi.i2c, slv_addr, (uint8_t *) &csi.chip_id, 4, OMV_I2C_XFER_NO_FLAGS);
                         csi.chip_id = __REV(csi.chip_id);
                     }
                     #endif // (OMV_GENX320_ENABLE == 1)
@@ -249,19 +250,19 @@ static int omv_csi_detect() {
 
             #if (OMV_OV7725_ENABLE == 1) || (OMV_OV7670_ENABLE == 1) || (OMV_OV7690_ENABLE == 1)
             case OV7725_SLV_ADDR: // Or OV7690 or OV7670.
-                omv_i2c_readb(&csi.i2c_bus, slv_addr, OV_CHIP_ID, (uint8_t *) &csi.chip_id);
+                omv_i2c_readb(csi.i2c, slv_addr, OV_CHIP_ID, (uint8_t *) &csi.chip_id);
                 return slv_addr;
             #endif //(OMV_OV7725_ENABLE == 1) || (OMV_OV7670_ENABLE == 1) || (OMV_OV7690_ENABLE == 1)
 
             #if (OMV_MT9V0XX_ENABLE == 1)
             case MT9V0XX_SLV_ADDR:
-                omv_i2c_readw(&csi.i2c_bus, slv_addr, ON_CHIP_ID, (uint16_t *) &csi.chip_id);
+                omv_i2c_readw(csi.i2c, slv_addr, ON_CHIP_ID, (uint16_t *) &csi.chip_id);
                 return slv_addr;
             #endif //(OMV_MT9V0XX_ENABLE == 1)
 
             #if (OMV_MT9M114_ENABLE == 1)
             case MT9M114_SLV_ADDR:
-                omv_i2c_readw2(&csi.i2c_bus, slv_addr, ON_CHIP_ID, (uint16_t *) &csi.chip_id);
+                omv_i2c_readw2(csi.i2c, slv_addr, ON_CHIP_ID, (uint16_t *) &csi.chip_id);
                 return slv_addr;
             #endif // (OMV_MT9M114_ENABLE == 1)
 
@@ -279,7 +280,7 @@ static int omv_csi_detect() {
 
             #if (OMV_HM01B0_ENABLE == 1) || (OMV_HM0360_ENABLE == 1)
             case HM0XX0_SLV_ADDR:
-                omv_i2c_readb2(&csi.i2c_bus, slv_addr, HIMAX_CHIP_ID, (uint8_t *) &csi.chip_id);
+                omv_i2c_readb2(csi.i2c, slv_addr, HIMAX_CHIP_ID, (uint8_t *) &csi.chip_id);
                 return slv_addr;
             #endif // (OMV_HM01B0_ENABLE == 1) || (OMV_HM0360_ENABLE == 1)
 
@@ -291,21 +292,21 @@ static int omv_csi_detect() {
 
             #if (OMV_PAG7920_ENABLE == 1)
             case PAG7920_SLV_ADDR:
-                omv_i2c_readw2(&csi.i2c_bus, slv_addr, PIXART_CHIP_ID, (uint16_t *) &csi.chip_id);
+                omv_i2c_readw2(csi.i2c, slv_addr, PIXART_CHIP_ID, (uint16_t *) &csi.chip_id);
                 csi.chip_id = ((csi.chip_id << 8) | (csi.chip_id >> 8)) & 0xFFFF;
                 return slv_addr;
             #endif // (OMV_PAG7920_ENABLE == 1)
 
             #if (OMV_PAG7936_ENABLE == 1)
             case PAG7936_SLV_ADDR:
-                omv_i2c_readw2(&csi.i2c_bus, slv_addr, PIXART_CHIP_ID, (uint16_t *) &csi.chip_id);
+                omv_i2c_readw2(csi.i2c, slv_addr, PIXART_CHIP_ID, (uint16_t *) &csi.chip_id);
                 csi.chip_id = ((csi.chip_id << 8) | (csi.chip_id >> 8)) & 0xFFFF;
                 return slv_addr;
             #endif // (OMV_PAG7936_ENABLE == 1)
 
             #if (OMV_PS5520_ENABLE == 1)
             case PS5520_SLV_ADDR:
-                omv_i2c_readw2(&csi.i2c_bus, slv_addr, PIXART_CHIP_ID, (uint16_t *) &csi.chip_id);
+                omv_i2c_readw2(csi.i2c, slv_addr, PIXART_CHIP_ID, (uint16_t *) &csi.chip_id);
                 return slv_addr;
             #endif // (OMV_PS5520_ENABLE == 1)
         }
@@ -338,7 +339,7 @@ int omv_csi_probe_init(uint32_t bus_id, uint32_t bus_speed) {
     #endif
 
     // Initialize the camera bus.
-    omv_i2c_init(&csi.i2c_bus, bus_id, bus_speed);
+    omv_i2c_init(csi.i2c, bus_id, bus_speed);
     mp_hal_delay_ms(10);
 
     // Scan the bus multiple times using different reset and power-down

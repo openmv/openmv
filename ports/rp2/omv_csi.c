@@ -231,6 +231,9 @@ int omv_csi_init() {
     // Set default framebuffer
     csi.fb = framebuffer_get(0);
 
+    // Set I2C bus
+    csi.i2c = &csi_i2c;
+
     // Set default snapshot function.
     csi.snapshot = omv_csi_snapshot;
 

@@ -106,9 +106,9 @@ void omv_csi_init0() {
 
     // Re-init i2c bus to reset the bus state after soft reset, which
     // could have interrupted the bus in the middle of a transfer.
-    if (csi.i2c_bus.initialized) {
+    if (csi.i2c->initialized) {
         // Reinitialize the bus using the last used id and speed.
-        omv_i2c_init(&csi.i2c_bus, csi.i2c_bus.id, csi.i2c_bus.speed);
+        omv_i2c_init(csi.i2c, csi.i2c->id, csi.i2c->speed);
     }
 }
 
@@ -1105,6 +1105,9 @@ int omv_csi_init() {
     // Set default framebuffer
     csi.fb = framebuffer_get(0);
 
+    // Set I2C bus
+    csi.i2c = &csi_i2c;
+
     // Set default snapshot function.
     csi.snapshot = omv_csi_snapshot;
 
@@ -1119,7 +1122,7 @@ int omv_csi_init() {
         if ((init_ret = omv_csi_probe_init(id, speed)) == 0) {
             break;
         }
-        omv_i2c_deinit(&csi.i2c_bus);
+        omv_i2c_deinit(csi.i2c);
         // Scan the next bus or fail if this is the last one.
         if ((i + 1) == n_buses) {
             return init_ret;

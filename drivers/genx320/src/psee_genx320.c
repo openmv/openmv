@@ -61,8 +61,8 @@
   */
 void psee_sensor_read(uint16_t register_address, uint32_t *buf) {
 	uint8_t addr[] = {(register_address >> 8), register_address};
-	omv_i2c_write_bytes(&csi.i2c_bus, csi.slv_addr, addr, 2, OMV_I2C_XFER_NO_STOP);
-	omv_i2c_read_bytes(&csi.i2c_bus, csi.slv_addr, (uint8_t *) buf, 4, OMV_I2C_XFER_NO_FLAGS);
+	omv_i2c_write_bytes(csi.i2c, csi.slv_addr, addr, 2, OMV_I2C_XFER_NO_STOP);
+	omv_i2c_read_bytes(csi.i2c, csi.slv_addr, (uint8_t *) buf, 4, OMV_I2C_XFER_NO_FLAGS);
 	*buf = __REV(*buf);
 };
 
@@ -74,7 +74,7 @@ void psee_sensor_read(uint16_t register_address, uint32_t *buf) {
 void psee_sensor_write(uint16_t register_address, uint32_t register_data) {
 	uint8_t buf[] = {(register_address >> 8), register_address,
 					 (register_data >> 24), (register_data >> 16), (register_data >> 8), register_data};
-	omv_i2c_write_bytes(&csi.i2c_bus, csi.slv_addr, buf, 6, OMV_I2C_XFER_NO_FLAGS);
+	omv_i2c_write_bytes(csi.i2c, csi.slv_addr, buf, 6, OMV_I2C_XFER_NO_FLAGS);
 };
 
 /**
@@ -85,8 +85,8 @@ void psee_sensor_write(uint16_t register_address, uint32_t register_data) {
   */
 void psee_sensor_sequential_read(uint16_t reg, uint32_t *data, uint16_t n_word) {
 	uint8_t buf[] = {(reg >> 8), reg};
-	omv_i2c_write_bytes(&csi.i2c_bus, csi.slv_addr, buf, sizeof(buf), OMV_I2C_XFER_NO_STOP);
-	omv_i2c_read_bytes(&csi.i2c_bus, csi.slv_addr, (uint8_t *) data, n_word * sizeof(uint32_t),
+	omv_i2c_write_bytes(csi.i2c, csi.slv_addr, buf, sizeof(buf), OMV_I2C_XFER_NO_STOP);
+	omv_i2c_read_bytes(csi.i2c, csi.slv_addr, (uint8_t *) data, n_word * sizeof(uint32_t),
 					   OMV_I2C_XFER_NO_FLAGS);
 	for (int32_t i = 0; i < n_word; i++) {
 		data[i] = __builtin_bswap32(data[i]);
@@ -99,7 +99,7 @@ void psee_sensor_sequential_read(uint16_t reg, uint32_t *data, uint16_t n_word) 
   * @param  n_bytes Total number of bytes that needs to be written
   */
 void psee_sensor_sequential_write(uint8_t *register_data, uint16_t n_bytes) {
-	omv_i2c_write_bytes(&csi.i2c_bus, csi.slv_addr, register_data, n_bytes, OMV_I2C_XFER_NO_FLAGS);
+	omv_i2c_write_bytes(csi.i2c, csi.slv_addr, register_data, n_bytes, OMV_I2C_XFER_NO_FLAGS);
 }
 
 /**

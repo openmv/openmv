@@ -211,7 +211,7 @@ static bool g_f_vflip = false;
 static int switch_bank(omv_csi_t *csi, uint8_t bank) {
     if (g_bank_cache != bank) {
         debug_printf("W Reg: 0x%02X 0x%02X\r\n", REG_BANK, bank);
-        int res = omv_i2c_writeb(&csi->i2c_bus, csi->slv_addr, REG_BANK, bank);
+        int res = omv_i2c_writeb(csi->i2c, csi->slv_addr, REG_BANK, bank);
         if (res) {
             g_bank_cache = -1;  // Encountered an unknown error, clear cache.
             printf("switch bank failed, res = %d\n", res);
@@ -234,7 +234,7 @@ static int write_reg_w_bank(omv_csi_t *csi, uint8_t bank, uint8_t addr,
     }
 
     debug_printf("W Reg: 0x%02X 0x%02X\r\n", addr, val);
-    return omv_i2c_writeb(&csi->i2c_bus, csi->slv_addr, addr, val);
+    return omv_i2c_writeb(csi->i2c, csi->slv_addr, addr, val);
 }
 
 static int read_reg_w_bank(omv_csi_t *csi, uint8_t bank, uint8_t addr,
@@ -245,7 +245,7 @@ static int read_reg_w_bank(omv_csi_t *csi, uint8_t bank, uint8_t addr,
     }
 
     debug_printf("R Reg: 0x%02X\r\n", addr);
-    return omv_i2c_readb(&csi->i2c_bus, csi->slv_addr, addr, p_val);
+    return omv_i2c_readb(csi->i2c, csi->slv_addr, addr, p_val);
 }
 
 static int init_csi(omv_csi_t *csi) {
@@ -254,7 +254,7 @@ static int init_csi(omv_csi_t *csi) {
 #define ta_seq default_regs
     for (int i = 0; ta_seq[i][0]; i++) {
         debug_printf("W Reg: 0x%02X 0x%02X\r\n", ta_seq[i][0], ta_seq[i][1]);
-        int res = omv_i2c_writeb(&csi->i2c_bus, csi->slv_addr, ta_seq[i][0],
+        int res = omv_i2c_writeb(csi->i2c, csi->slv_addr, ta_seq[i][0],
                                  ta_seq[i][1]);
         if (res) {
             return res;
@@ -282,7 +282,7 @@ static int sleep(omv_csi_t *csi, int enable) {
 
 static int read_reg(omv_csi_t *csi, uint16_t reg_addr) {
     uint8_t val = 0;
-    if (omv_i2c_readb(&csi->i2c_bus, csi->slv_addr, (uint8_t) reg_addr, &val)) {
+    if (omv_i2c_readb(csi->i2c, csi->slv_addr, (uint8_t) reg_addr, &val)) {
         return -1;
     }
     return val;
@@ -290,7 +290,7 @@ static int read_reg(omv_csi_t *csi, uint16_t reg_addr) {
 
 static int write_reg(omv_csi_t *csi, uint16_t reg_addr, uint16_t reg_data) {
     int ret;
-    ret = omv_i2c_writeb(&csi->i2c_bus, csi->slv_addr, (uint8_t) reg_addr,
+    ret = omv_i2c_writeb(csi->i2c, csi->slv_addr, (uint8_t) reg_addr,
                          (uint8_t) reg_data);
     if (ret == 0 && reg_addr == REG_BANK) {
         g_bank_cache = (uint8_t) reg_data;

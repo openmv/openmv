@@ -668,8 +668,8 @@ static int reset(omv_csi_t *csi) {
     hts_target = 0;
 
     // Reset all registers
-    ret |= omv_i2c_writeb2(&csi->i2c_bus, csi->slv_addr, SCCB_SYSTEM_CTRL_1, 0x11);
-    ret |= omv_i2c_writeb2(&csi->i2c_bus, csi->slv_addr, SYSTEM_CTROL0, 0x82);
+    ret |= omv_i2c_writeb2(csi->i2c, csi->slv_addr, SCCB_SYSTEM_CTRL_1, 0x11);
+    ret |= omv_i2c_writeb2(csi->i2c, csi->slv_addr, SYSTEM_CTROL0, 0x82);
 
     // Delay 5 ms
     mp_hal_delay_ms(5);
@@ -693,16 +693,16 @@ static int reset(omv_csi_t *csi) {
         }
         #endif
 
-        ret |= omv_i2c_writeb2(&csi->i2c_bus, csi->slv_addr, addr, data);
+        ret |= omv_i2c_writeb2(csi->i2c, csi->slv_addr, addr, data);
     }
 
     #if (OMV_OV5640_AF_ENABLE == 1)
-    ret |= omv_i2c_writeb2(&csi->i2c_bus, csi->slv_addr, SYSTEM_RESET_00, 0x20); // force mcu reset
+    ret |= omv_i2c_writeb2(csi->i2c, csi->slv_addr, SYSTEM_RESET_00, 0x20); // force mcu reset
 
     // Write firmware
     uint16_t fw_addr = __REV16(MCU_FIRMWARE_BASE);
-    ret |= omv_i2c_write_bytes(&csi->i2c_bus, csi->slv_addr, (uint8_t *) &fw_addr, 2, OMV_I2C_XFER_SUSPEND);
-    ret |= omv_i2c_write_bytes(&csi->i2c_bus,
+    ret |= omv_i2c_write_bytes(csi->i2c, csi->slv_addr, (uint8_t *) &fw_addr, 2, OMV_I2C_XFER_SUSPEND);
+    ret |= omv_i2c_write_bytes(csi->i2c,
                                csi->slv_addr,
                                (uint8_t *) af_firmware_regs,
                                sizeof(af_firmware_regs),
@@ -710,13 +710,13 @@ static int reset(omv_csi_t *csi) {
 
     for (int i = 0; af_firmware_command_regs[i][0]; i++) {
         ret |=
-            omv_i2c_writeb2(&csi->i2c_bus,
+            omv_i2c_writeb2(csi->i2c,
                             csi->slv_addr,
                             (af_firmware_command_regs[i][0] << 8) | (af_firmware_command_regs[i][1] << 0),
                             af_firmware_command_regs[i][2]);
     }
 
-    ret |= omv_i2c_writeb2(&csi->i2c_bus, csi->slv_addr, SYSTEM_RESET_00, 0x00); // release mcu reset
+    ret |= omv_i2c_writeb2(csi->i2c, csi->slv_addr, SYSTEM_RESET_00, 0x00); // release mcu reset
     #endif
 
     // Delay 300 ms
@@ -735,19 +735,19 @@ static int sleep(omv_csi_t *csi, int enable) {
         reg = 0x02;
     }
 
-    return omv_i2c_writeb2(&csi->i2c_bus, csi->slv_addr, SYSTEM_CTROL0, reg);
+    return omv_i2c_writeb2(csi->i2c, csi->slv_addr, SYSTEM_CTROL0, reg);
 }
 
 static int read_reg(omv_csi_t *csi, uint16_t reg_addr) {
     uint8_t reg_data;
-    if (omv_i2c_readb2(&csi->i2c_bus, csi->slv_addr, reg_addr, &reg_data) != 0) {
+    if (omv_i2c_readb2(csi->i2c, csi->slv_addr, reg_addr, &reg_data) != 0) {
         return -1;
     }
     return reg_data;
 }
 
 static int write_reg(omv_csi_t *csi, uint16_t reg_addr, uint16_t reg_data) {
-    return omv_i2c_writeb2(&csi->i2c_bus, csi->slv_addr, reg_addr, reg_data);
+    return omv_i2c_writeb2(csi->i2c, csi->slv_addr, reg_addr, reg_data);
 }
 
 // HTS (Horizontal Time) is the readout width plus the HSYNC_TIME time. However, if this value gets
@@ -810,49 +810,49 @@ static int set_pixformat(omv_csi_t *csi, pixformat_t pixformat) {
 
     switch (pixformat) {
         case PIXFORMAT_GRAYSCALE:
-            ret |= omv_i2c_writeb2(&csi->i2c_bus, csi->slv_addr, FORMAT_CONTROL, 0x10);
-            ret |= omv_i2c_writeb2(&csi->i2c_bus, csi->slv_addr, FORMAT_CONTROL_MUX, 0x00);
+            ret |= omv_i2c_writeb2(csi->i2c, csi->slv_addr, FORMAT_CONTROL, 0x10);
+            ret |= omv_i2c_writeb2(csi->i2c, csi->slv_addr, FORMAT_CONTROL_MUX, 0x00);
             break;
         case PIXFORMAT_RGB565:
-            ret |= omv_i2c_writeb2(&csi->i2c_bus, csi->slv_addr, FORMAT_CONTROL, 0x6F);
-            ret |= omv_i2c_writeb2(&csi->i2c_bus, csi->slv_addr, FORMAT_CONTROL_MUX, 0x01);
+            ret |= omv_i2c_writeb2(csi->i2c, csi->slv_addr, FORMAT_CONTROL, 0x6F);
+            ret |= omv_i2c_writeb2(csi->i2c, csi->slv_addr, FORMAT_CONTROL_MUX, 0x01);
             break;
         case PIXFORMAT_YUV422:
-            ret |= omv_i2c_writeb2(&csi->i2c_bus, csi->slv_addr, FORMAT_CONTROL, 0x30);
-            ret |= omv_i2c_writeb2(&csi->i2c_bus, csi->slv_addr, FORMAT_CONTROL_MUX, 0x00);
+            ret |= omv_i2c_writeb2(csi->i2c, csi->slv_addr, FORMAT_CONTROL, 0x30);
+            ret |= omv_i2c_writeb2(csi->i2c, csi->slv_addr, FORMAT_CONTROL_MUX, 0x00);
             break;
         case PIXFORMAT_BAYER:
-            ret |= omv_i2c_writeb2(&csi->i2c_bus, csi->slv_addr, FORMAT_CONTROL, 0x00);
-            ret |= omv_i2c_writeb2(&csi->i2c_bus, csi->slv_addr, FORMAT_CONTROL_MUX, 0x01);
+            ret |= omv_i2c_writeb2(csi->i2c, csi->slv_addr, FORMAT_CONTROL, 0x00);
+            ret |= omv_i2c_writeb2(csi->i2c, csi->slv_addr, FORMAT_CONTROL_MUX, 0x01);
             break;
         case PIXFORMAT_JPEG:
-            ret |= omv_i2c_writeb2(&csi->i2c_bus, csi->slv_addr, FORMAT_CONTROL, 0x30);
-            ret |= omv_i2c_writeb2(&csi->i2c_bus, csi->slv_addr, FORMAT_CONTROL_MUX, 0x00);
+            ret |= omv_i2c_writeb2(csi->i2c, csi->slv_addr, FORMAT_CONTROL, 0x30);
+            ret |= omv_i2c_writeb2(csi->i2c, csi->slv_addr, FORMAT_CONTROL_MUX, 0x00);
             break;
         default:
             return -1;
     }
 
-    ret |= omv_i2c_readb2(&csi->i2c_bus, csi->slv_addr, TIMING_TC_REG_21, &reg);
+    ret |= omv_i2c_readb2(csi->i2c, csi->slv_addr, TIMING_TC_REG_21, &reg);
     ret |=
-        omv_i2c_writeb2(&csi->i2c_bus, csi->slv_addr, TIMING_TC_REG_21,
+        omv_i2c_writeb2(csi->i2c, csi->slv_addr, TIMING_TC_REG_21,
                         (reg & 0xDF) | ((pixformat == PIXFORMAT_JPEG) ? 0x20 : 0x00));
 
-    ret |= omv_i2c_readb2(&csi->i2c_bus, csi->slv_addr, SYSTEM_RESET_02, &reg);
+    ret |= omv_i2c_readb2(csi->i2c, csi->slv_addr, SYSTEM_RESET_02, &reg);
     ret |=
-        omv_i2c_writeb2(&csi->i2c_bus, csi->slv_addr, SYSTEM_RESET_02,
+        omv_i2c_writeb2(csi->i2c, csi->slv_addr, SYSTEM_RESET_02,
                         (reg & 0xE3) | ((pixformat == PIXFORMAT_JPEG) ? 0x00 : 0x1C));
 
-    ret |= omv_i2c_readb2(&csi->i2c_bus, csi->slv_addr, CLOCK_ENABLE_02, &reg);
+    ret |= omv_i2c_readb2(csi->i2c, csi->slv_addr, CLOCK_ENABLE_02, &reg);
     ret |=
-        omv_i2c_writeb2(&csi->i2c_bus, csi->slv_addr, CLOCK_ENABLE_02,
+        omv_i2c_writeb2(csi->i2c, csi->slv_addr, CLOCK_ENABLE_02,
                         (reg & 0xD7) | ((pixformat == PIXFORMAT_JPEG) ? 0x28 : 0x00));
 
     if (hts_target) {
         uint16_t sensor_hts = calculate_hts(csi, resolution[csi->framesize][0]);
 
-        ret |= omv_i2c_writeb2(&csi->i2c_bus, csi->slv_addr, TIMING_HTS_H, sensor_hts >> 8);
-        ret |= omv_i2c_writeb2(&csi->i2c_bus, csi->slv_addr, TIMING_HTS_L, sensor_hts);
+        ret |= omv_i2c_writeb2(csi->i2c, csi->slv_addr, TIMING_HTS_H, sensor_hts >> 8);
+        ret |= omv_i2c_writeb2(csi->i2c, csi->slv_addr, TIMING_HTS_L, sensor_hts);
     }
 
     return ret;
@@ -950,50 +950,50 @@ static int set_framesize(omv_csi_t *csi, omv_csi_framesize_t framesize) {
 
     // Step 5: Write regs.
 
-    ret |= omv_i2c_writeb2(&csi->i2c_bus, csi->slv_addr, TIMING_HS_H, sensor_ws >> 8);
-    ret |= omv_i2c_writeb2(&csi->i2c_bus, csi->slv_addr, TIMING_HS_L, sensor_ws);
+    ret |= omv_i2c_writeb2(csi->i2c, csi->slv_addr, TIMING_HS_H, sensor_ws >> 8);
+    ret |= omv_i2c_writeb2(csi->i2c, csi->slv_addr, TIMING_HS_L, sensor_ws);
 
-    ret |= omv_i2c_writeb2(&csi->i2c_bus, csi->slv_addr, TIMING_VS_H, sensor_hs >> 8);
-    ret |= omv_i2c_writeb2(&csi->i2c_bus, csi->slv_addr, TIMING_VS_L, sensor_hs);
+    ret |= omv_i2c_writeb2(csi->i2c, csi->slv_addr, TIMING_VS_H, sensor_hs >> 8);
+    ret |= omv_i2c_writeb2(csi->i2c, csi->slv_addr, TIMING_VS_L, sensor_hs);
 
-    ret |= omv_i2c_writeb2(&csi->i2c_bus, csi->slv_addr, TIMING_HW_H, sensor_we >> 8);
-    ret |= omv_i2c_writeb2(&csi->i2c_bus, csi->slv_addr, TIMING_HW_L, sensor_we);
+    ret |= omv_i2c_writeb2(csi->i2c, csi->slv_addr, TIMING_HW_H, sensor_we >> 8);
+    ret |= omv_i2c_writeb2(csi->i2c, csi->slv_addr, TIMING_HW_L, sensor_we);
 
-    ret |= omv_i2c_writeb2(&csi->i2c_bus, csi->slv_addr, TIMING_VH_H, sensor_he >> 8);
-    ret |= omv_i2c_writeb2(&csi->i2c_bus, csi->slv_addr, TIMING_VH_L, sensor_he);
+    ret |= omv_i2c_writeb2(csi->i2c, csi->slv_addr, TIMING_VH_H, sensor_he >> 8);
+    ret |= omv_i2c_writeb2(csi->i2c, csi->slv_addr, TIMING_VH_L, sensor_he);
 
-    ret |= omv_i2c_writeb2(&csi->i2c_bus, csi->slv_addr, TIMING_DVPHO_H, w >> 8);
-    ret |= omv_i2c_writeb2(&csi->i2c_bus, csi->slv_addr, TIMING_DVPHO_L, w);
+    ret |= omv_i2c_writeb2(csi->i2c, csi->slv_addr, TIMING_DVPHO_H, w >> 8);
+    ret |= omv_i2c_writeb2(csi->i2c, csi->slv_addr, TIMING_DVPHO_L, w);
 
-    ret |= omv_i2c_writeb2(&csi->i2c_bus, csi->slv_addr, TIMING_DVPVO_H, h >> 8);
-    ret |= omv_i2c_writeb2(&csi->i2c_bus, csi->slv_addr, TIMING_DVPVO_L, h);
+    ret |= omv_i2c_writeb2(csi->i2c, csi->slv_addr, TIMING_DVPVO_H, h >> 8);
+    ret |= omv_i2c_writeb2(csi->i2c, csi->slv_addr, TIMING_DVPVO_L, h);
 
-    ret |= omv_i2c_writeb2(&csi->i2c_bus, csi->slv_addr, TIMING_HTS_H, sensor_hts >> 8);
-    ret |= omv_i2c_writeb2(&csi->i2c_bus, csi->slv_addr, TIMING_HTS_L, sensor_hts);
+    ret |= omv_i2c_writeb2(csi->i2c, csi->slv_addr, TIMING_HTS_H, sensor_hts >> 8);
+    ret |= omv_i2c_writeb2(csi->i2c, csi->slv_addr, TIMING_HTS_L, sensor_hts);
 
-    ret |= omv_i2c_writeb2(&csi->i2c_bus, csi->slv_addr, TIMING_VTS_H, sensor_vts >> 8);
-    ret |= omv_i2c_writeb2(&csi->i2c_bus, csi->slv_addr, TIMING_VTS_L, sensor_vts);
+    ret |= omv_i2c_writeb2(csi->i2c, csi->slv_addr, TIMING_VTS_H, sensor_vts >> 8);
+    ret |= omv_i2c_writeb2(csi->i2c, csi->slv_addr, TIMING_VTS_L, sensor_vts);
 
-    ret |= omv_i2c_writeb2(&csi->i2c_bus, csi->slv_addr, TIMING_HOFFSET_H, x_off >> 8);
-    ret |= omv_i2c_writeb2(&csi->i2c_bus, csi->slv_addr, TIMING_HOFFSET_L, x_off);
+    ret |= omv_i2c_writeb2(csi->i2c, csi->slv_addr, TIMING_HOFFSET_H, x_off >> 8);
+    ret |= omv_i2c_writeb2(csi->i2c, csi->slv_addr, TIMING_HOFFSET_L, x_off);
 
-    ret |= omv_i2c_writeb2(&csi->i2c_bus, csi->slv_addr, TIMING_VOFFSET_H, y_off >> 8);
-    ret |= omv_i2c_writeb2(&csi->i2c_bus, csi->slv_addr, TIMING_VOFFSET_L, y_off);
+    ret |= omv_i2c_writeb2(csi->i2c, csi->slv_addr, TIMING_VOFFSET_H, y_off >> 8);
+    ret |= omv_i2c_writeb2(csi->i2c, csi->slv_addr, TIMING_VOFFSET_L, y_off);
 
-    ret |= omv_i2c_writeb2(&csi->i2c_bus, csi->slv_addr, TIMING_X_INC, sensor_x_inc);
-    ret |= omv_i2c_writeb2(&csi->i2c_bus, csi->slv_addr, TIMING_Y_INC, sensor_y_inc);
+    ret |= omv_i2c_writeb2(csi->i2c, csi->slv_addr, TIMING_X_INC, sensor_x_inc);
+    ret |= omv_i2c_writeb2(csi->i2c, csi->slv_addr, TIMING_Y_INC, sensor_y_inc);
 
-    ret |= omv_i2c_readb2(&csi->i2c_bus, csi->slv_addr, TIMING_TC_REG_20, &reg);
-    ret |= omv_i2c_writeb2(&csi->i2c_bus, csi->slv_addr, TIMING_TC_REG_20, (reg & 0xFE) | (sensor_div > 1));
+    ret |= omv_i2c_readb2(csi->i2c, csi->slv_addr, TIMING_TC_REG_20, &reg);
+    ret |= omv_i2c_writeb2(csi->i2c, csi->slv_addr, TIMING_TC_REG_20, (reg & 0xFE) | (sensor_div > 1));
 
-    ret |= omv_i2c_readb2(&csi->i2c_bus, csi->slv_addr, TIMING_TC_REG_21, &reg);
-    ret |= omv_i2c_writeb2(&csi->i2c_bus, csi->slv_addr, TIMING_TC_REG_21, (reg & 0xFE) | (sensor_div > 1));
+    ret |= omv_i2c_readb2(csi->i2c, csi->slv_addr, TIMING_TC_REG_21, &reg);
+    ret |= omv_i2c_writeb2(csi->i2c, csi->slv_addr, TIMING_TC_REG_21, (reg & 0xFE) | (sensor_div > 1));
 
-    ret |= omv_i2c_writeb2(&csi->i2c_bus, csi->slv_addr, VFIFO_HSIZE_H, w >> 8);
-    ret |= omv_i2c_writeb2(&csi->i2c_bus, csi->slv_addr, VFIFO_HSIZE_L, w);
+    ret |= omv_i2c_writeb2(csi->i2c, csi->slv_addr, VFIFO_HSIZE_H, w >> 8);
+    ret |= omv_i2c_writeb2(csi->i2c, csi->slv_addr, VFIFO_HSIZE_L, w);
 
-    ret |= omv_i2c_writeb2(&csi->i2c_bus, csi->slv_addr, VFIFO_VSIZE_H, h >> 8);
-    ret |= omv_i2c_writeb2(&csi->i2c_bus, csi->slv_addr, VFIFO_VSIZE_L, h);
+    ret |= omv_i2c_writeb2(csi->i2c, csi->slv_addr, VFIFO_VSIZE_H, h >> 8);
+    ret |= omv_i2c_writeb2(csi->i2c, csi->slv_addr, VFIFO_VSIZE_L, h);
 
     return ret;
 }
@@ -1006,11 +1006,11 @@ static int set_contrast(omv_csi_t *csi, int level) {
         return -1;
     }
 
-    ret |= omv_i2c_writeb2(&csi->i2c_bus, csi->slv_addr, 0x3212, 0x03); // start group 3
-    ret |= omv_i2c_writeb2(&csi->i2c_bus, csi->slv_addr, 0x5586, (new_level + 5) << 2);
-    ret |= omv_i2c_writeb2(&csi->i2c_bus, csi->slv_addr, 0x5585, contrast_regs[new_level][0]);
-    ret |= omv_i2c_writeb2(&csi->i2c_bus, csi->slv_addr, 0x3212, 0x13); // end group 3
-    ret |= omv_i2c_writeb2(&csi->i2c_bus, csi->slv_addr, 0x3212, 0xa3); // launch group 3
+    ret |= omv_i2c_writeb2(csi->i2c, csi->slv_addr, 0x3212, 0x03); // start group 3
+    ret |= omv_i2c_writeb2(csi->i2c, csi->slv_addr, 0x5586, (new_level + 5) << 2);
+    ret |= omv_i2c_writeb2(csi->i2c, csi->slv_addr, 0x5585, contrast_regs[new_level][0]);
+    ret |= omv_i2c_writeb2(csi->i2c, csi->slv_addr, 0x3212, 0x13); // end group 3
+    ret |= omv_i2c_writeb2(csi->i2c, csi->slv_addr, 0x3212, 0xa3); // launch group 3
 
     return ret;
 }
@@ -1023,11 +1023,11 @@ static int set_brightness(omv_csi_t *csi, int level) {
         return -1;
     }
 
-    ret |= omv_i2c_writeb2(&csi->i2c_bus, csi->slv_addr, 0x3212, 0x03); // start group 3
-    ret |= omv_i2c_writeb2(&csi->i2c_bus, csi->slv_addr, 0x5587, abs(level) << 4);
-    ret |= omv_i2c_writeb2(&csi->i2c_bus, csi->slv_addr, 0x5588, (level < 0) ? 0x09 : 0x01);
-    ret |= omv_i2c_writeb2(&csi->i2c_bus, csi->slv_addr, 0x3212, 0x13); // end group 3
-    ret |= omv_i2c_writeb2(&csi->i2c_bus, csi->slv_addr, 0x3212, 0xa3); // launch group 3
+    ret |= omv_i2c_writeb2(csi->i2c, csi->slv_addr, 0x3212, 0x03); // start group 3
+    ret |= omv_i2c_writeb2(csi->i2c, csi->slv_addr, 0x5587, abs(level) << 4);
+    ret |= omv_i2c_writeb2(csi->i2c, csi->slv_addr, 0x5588, (level < 0) ? 0x09 : 0x01);
+    ret |= omv_i2c_writeb2(csi->i2c, csi->slv_addr, 0x3212, 0x13); // end group 3
+    ret |= omv_i2c_writeb2(csi->i2c, csi->slv_addr, 0x3212, 0xa3); // launch group 3
 
     return ret;
 }
@@ -1040,20 +1040,20 @@ static int set_saturation(omv_csi_t *csi, int level) {
         return -1;
     }
 
-    ret |= omv_i2c_writeb2(&csi->i2c_bus, csi->slv_addr, 0x3212, 0x03); // start group 3
-    ret |= omv_i2c_writeb2(&csi->i2c_bus, csi->slv_addr, 0x5581, 0x1c);
-    ret |= omv_i2c_writeb2(&csi->i2c_bus, csi->slv_addr, 0x5582, 0x5a);
-    ret |= omv_i2c_writeb2(&csi->i2c_bus, csi->slv_addr, 0x5583, 0x06);
-    ret |= omv_i2c_writeb2(&csi->i2c_bus, csi->slv_addr, 0x5584, saturation_regs[new_level][0]);
-    ret |= omv_i2c_writeb2(&csi->i2c_bus, csi->slv_addr, 0x5585, saturation_regs[new_level][1]);
-    ret |= omv_i2c_writeb2(&csi->i2c_bus, csi->slv_addr, 0x5586, saturation_regs[new_level][2]);
-    ret |= omv_i2c_writeb2(&csi->i2c_bus, csi->slv_addr, 0x5587, saturation_regs[new_level][3]);
-    ret |= omv_i2c_writeb2(&csi->i2c_bus, csi->slv_addr, 0x5588, saturation_regs[new_level][4]);
-    ret |= omv_i2c_writeb2(&csi->i2c_bus, csi->slv_addr, 0x5589, saturation_regs[new_level][5]);
-    ret |= omv_i2c_writeb2(&csi->i2c_bus, csi->slv_addr, 0x558b, 0x98);
-    ret |= omv_i2c_writeb2(&csi->i2c_bus, csi->slv_addr, 0x558a, 0x01);
-    ret |= omv_i2c_writeb2(&csi->i2c_bus, csi->slv_addr, 0x3212, 0x13); // end group 3
-    ret |= omv_i2c_writeb2(&csi->i2c_bus, csi->slv_addr, 0x3212, 0xa3); // launch group 3
+    ret |= omv_i2c_writeb2(csi->i2c, csi->slv_addr, 0x3212, 0x03); // start group 3
+    ret |= omv_i2c_writeb2(csi->i2c, csi->slv_addr, 0x5581, 0x1c);
+    ret |= omv_i2c_writeb2(csi->i2c, csi->slv_addr, 0x5582, 0x5a);
+    ret |= omv_i2c_writeb2(csi->i2c, csi->slv_addr, 0x5583, 0x06);
+    ret |= omv_i2c_writeb2(csi->i2c, csi->slv_addr, 0x5584, saturation_regs[new_level][0]);
+    ret |= omv_i2c_writeb2(csi->i2c, csi->slv_addr, 0x5585, saturation_regs[new_level][1]);
+    ret |= omv_i2c_writeb2(csi->i2c, csi->slv_addr, 0x5586, saturation_regs[new_level][2]);
+    ret |= omv_i2c_writeb2(csi->i2c, csi->slv_addr, 0x5587, saturation_regs[new_level][3]);
+    ret |= omv_i2c_writeb2(csi->i2c, csi->slv_addr, 0x5588, saturation_regs[new_level][4]);
+    ret |= omv_i2c_writeb2(csi->i2c, csi->slv_addr, 0x5589, saturation_regs[new_level][5]);
+    ret |= omv_i2c_writeb2(csi->i2c, csi->slv_addr, 0x558b, 0x98);
+    ret |= omv_i2c_writeb2(csi->i2c, csi->slv_addr, 0x558a, 0x01);
+    ret |= omv_i2c_writeb2(csi->i2c, csi->slv_addr, 0x3212, 0x13); // end group 3
+    ret |= omv_i2c_writeb2(csi->i2c, csi->slv_addr, 0x3212, 0xa3); // launch group 3
 
     return ret;
 }
@@ -1067,44 +1067,44 @@ static int set_gainceiling(omv_csi_t *csi, omv_csi_gainceiling_t gainceiling) {
         return -1;
     }
 
-    ret |= omv_i2c_readb2(&csi->i2c_bus, csi->slv_addr, AEC_GAIN_CEILING_H, &reg);
-    ret |= omv_i2c_writeb2(&csi->i2c_bus, csi->slv_addr, AEC_GAIN_CEILING_H, (reg & 0xFC) | (new_gainceiling >> 8));
-    ret |= omv_i2c_writeb2(&csi->i2c_bus, csi->slv_addr, AEC_GAIN_CEILING_L, new_gainceiling);
+    ret |= omv_i2c_readb2(csi->i2c, csi->slv_addr, AEC_GAIN_CEILING_H, &reg);
+    ret |= omv_i2c_writeb2(csi->i2c, csi->slv_addr, AEC_GAIN_CEILING_H, (reg & 0xFC) | (new_gainceiling >> 8));
+    ret |= omv_i2c_writeb2(csi->i2c, csi->slv_addr, AEC_GAIN_CEILING_L, new_gainceiling);
 
     return ret;
 }
 
 static int set_quality(omv_csi_t *csi, int qs) {
     uint8_t reg;
-    int ret = omv_i2c_readb2(&csi->i2c_bus, csi->slv_addr, JPEG_CTRL07, &reg);
-    ret |= omv_i2c_writeb2(&csi->i2c_bus, csi->slv_addr, JPEG_CTRL07, (reg & 0xC0) | (qs >> 2));
+    int ret = omv_i2c_readb2(csi->i2c, csi->slv_addr, JPEG_CTRL07, &reg);
+    ret |= omv_i2c_writeb2(csi->i2c, csi->slv_addr, JPEG_CTRL07, (reg & 0xC0) | (qs >> 2));
 
     return ret;
 }
 
 static int set_colorbar(omv_csi_t *csi, int enable) {
     uint8_t reg;
-    int ret = omv_i2c_readb2(&csi->i2c_bus, csi->slv_addr, PRE_ISP_TEST, &reg);
-    return omv_i2c_writeb2(&csi->i2c_bus, csi->slv_addr, PRE_ISP_TEST, (reg & 0x7F) | (enable ? 0x80 : 0x00)) | ret;
+    int ret = omv_i2c_readb2(csi->i2c, csi->slv_addr, PRE_ISP_TEST, &reg);
+    return omv_i2c_writeb2(csi->i2c, csi->slv_addr, PRE_ISP_TEST, (reg & 0x7F) | (enable ? 0x80 : 0x00)) | ret;
 }
 
 static int set_auto_gain(omv_csi_t *csi, int enable, float gain_db, float gain_db_ceiling) {
     uint8_t reg;
-    int ret = omv_i2c_readb2(&csi->i2c_bus, csi->slv_addr, AEC_PK_MANUAL, &reg);
-    ret |= omv_i2c_writeb2(&csi->i2c_bus, csi->slv_addr, AEC_PK_MANUAL, (reg & 0xFD) | ((enable == 0) << 1));
+    int ret = omv_i2c_readb2(csi->i2c, csi->slv_addr, AEC_PK_MANUAL, &reg);
+    ret |= omv_i2c_writeb2(csi->i2c, csi->slv_addr, AEC_PK_MANUAL, (reg & 0xFD) | ((enable == 0) << 1));
 
     if ((enable == 0) && (!isnanf(gain_db)) && (!isinff(gain_db))) {
         int gain = __USAT(fast_roundf(expf((gain_db / 20.0f) * M_LN10) * 16.0f), 10);
 
-        ret |= omv_i2c_readb2(&csi->i2c_bus, csi->slv_addr, AEC_PK_REAL_GAIN_H, &reg);
-        ret |= omv_i2c_writeb2(&csi->i2c_bus, csi->slv_addr, AEC_PK_REAL_GAIN_H, (reg & 0xFC) | (gain >> 8));
-        ret |= omv_i2c_writeb2(&csi->i2c_bus, csi->slv_addr, AEC_PK_REAL_GAIN_L, gain);
+        ret |= omv_i2c_readb2(csi->i2c, csi->slv_addr, AEC_PK_REAL_GAIN_H, &reg);
+        ret |= omv_i2c_writeb2(csi->i2c, csi->slv_addr, AEC_PK_REAL_GAIN_H, (reg & 0xFC) | (gain >> 8));
+        ret |= omv_i2c_writeb2(csi->i2c, csi->slv_addr, AEC_PK_REAL_GAIN_L, gain);
     } else if ((enable != 0) && (!isnanf(gain_db_ceiling)) && (!isinff(gain_db_ceiling))) {
         int gain_ceiling = __USAT(fast_roundf(expf((gain_db_ceiling / 20.0f) * M_LN10) * 16.0f), 10);
 
-        ret |= omv_i2c_readb2(&csi->i2c_bus, csi->slv_addr, AEC_GAIN_CEILING_H, &reg);
-        ret |= omv_i2c_writeb2(&csi->i2c_bus, csi->slv_addr, AEC_GAIN_CEILING_H, (reg & 0xFC) | (gain_ceiling >> 8));
-        ret |= omv_i2c_writeb2(&csi->i2c_bus, csi->slv_addr, AEC_GAIN_CEILING_L, gain_ceiling);
+        ret |= omv_i2c_readb2(csi->i2c, csi->slv_addr, AEC_GAIN_CEILING_H, &reg);
+        ret |= omv_i2c_writeb2(csi->i2c, csi->slv_addr, AEC_GAIN_CEILING_H, (reg & 0xFC) | (gain_ceiling >> 8));
+        ret |= omv_i2c_writeb2(csi->i2c, csi->slv_addr, AEC_GAIN_CEILING_L, gain_ceiling);
     }
 
     return ret;
@@ -1113,8 +1113,8 @@ static int set_auto_gain(omv_csi_t *csi, int enable, float gain_db, float gain_d
 static int get_gain_db(omv_csi_t *csi, float *gain_db) {
     uint8_t gainh, gainl;
 
-    int ret = omv_i2c_readb2(&csi->i2c_bus, csi->slv_addr, AEC_PK_REAL_GAIN_H, &gainh);
-    ret |= omv_i2c_readb2(&csi->i2c_bus, csi->slv_addr, AEC_PK_REAL_GAIN_L, &gainl);
+    int ret = omv_i2c_readb2(csi->i2c, csi->slv_addr, AEC_PK_REAL_GAIN_H, &gainh);
+    ret |= omv_i2c_readb2(csi->i2c, csi->slv_addr, AEC_PK_REAL_GAIN_L, &gainl);
 
     *gain_db = 20.0f * log10f((((gainh & 0x3) << 8) | gainl) / 16.0f);
 
@@ -1153,21 +1153,21 @@ static int calc_pclk_freq(uint8_t sc_pll_ctrl_0,
 
 static int set_auto_exposure(omv_csi_t *csi, int enable, int exposure_us) {
     uint8_t reg, spc0, spc1, spc2, spc3, sysrootdiv, hts_h, hts_l, vts_h, vts_l;
-    int ret = omv_i2c_readb2(&csi->i2c_bus, csi->slv_addr, AEC_PK_MANUAL, &reg);
-    ret |= omv_i2c_writeb2(&csi->i2c_bus, csi->slv_addr, AEC_PK_MANUAL, (reg & 0xFE) | ((enable == 0) << 0));
+    int ret = omv_i2c_readb2(csi->i2c, csi->slv_addr, AEC_PK_MANUAL, &reg);
+    ret |= omv_i2c_writeb2(csi->i2c, csi->slv_addr, AEC_PK_MANUAL, (reg & 0xFE) | ((enable == 0) << 0));
 
     if ((enable == 0) && (exposure_us >= 0)) {
-        ret |= omv_i2c_readb2(&csi->i2c_bus, csi->slv_addr, SC_PLL_CONTRL0, &spc0);
-        ret |= omv_i2c_readb2(&csi->i2c_bus, csi->slv_addr, SC_PLL_CONTRL1, &spc1);
-        ret |= omv_i2c_readb2(&csi->i2c_bus, csi->slv_addr, SC_PLL_CONTRL2, &spc2);
-        ret |= omv_i2c_readb2(&csi->i2c_bus, csi->slv_addr, SC_PLL_CONTRL3, &spc3);
-        ret |= omv_i2c_readb2(&csi->i2c_bus, csi->slv_addr, SYSTEM_ROOT_DIVIDER, &sysrootdiv);
+        ret |= omv_i2c_readb2(csi->i2c, csi->slv_addr, SC_PLL_CONTRL0, &spc0);
+        ret |= omv_i2c_readb2(csi->i2c, csi->slv_addr, SC_PLL_CONTRL1, &spc1);
+        ret |= omv_i2c_readb2(csi->i2c, csi->slv_addr, SC_PLL_CONTRL2, &spc2);
+        ret |= omv_i2c_readb2(csi->i2c, csi->slv_addr, SC_PLL_CONTRL3, &spc3);
+        ret |= omv_i2c_readb2(csi->i2c, csi->slv_addr, SYSTEM_ROOT_DIVIDER, &sysrootdiv);
 
-        ret |= omv_i2c_readb2(&csi->i2c_bus, csi->slv_addr, TIMING_HTS_H, &hts_h);
-        ret |= omv_i2c_readb2(&csi->i2c_bus, csi->slv_addr, TIMING_HTS_L, &hts_l);
+        ret |= omv_i2c_readb2(csi->i2c, csi->slv_addr, TIMING_HTS_H, &hts_h);
+        ret |= omv_i2c_readb2(csi->i2c, csi->slv_addr, TIMING_HTS_L, &hts_l);
 
-        ret |= omv_i2c_readb2(&csi->i2c_bus, csi->slv_addr, TIMING_VTS_H, &vts_h);
-        ret |= omv_i2c_readb2(&csi->i2c_bus, csi->slv_addr, TIMING_VTS_L, &vts_l);
+        ret |= omv_i2c_readb2(csi->i2c, csi->slv_addr, TIMING_VTS_H, &vts_h);
+        ret |= omv_i2c_readb2(csi->i2c, csi->slv_addr, TIMING_VTS_L, &vts_l);
 
         uint16_t hts = (hts_h << 8) | hts_l;
         uint16_t vts = (vts_h << 8) | vts_l;
@@ -1178,12 +1178,12 @@ static int set_auto_exposure(omv_csi_t *csi, int enable, int exposure_us) {
 
         int new_vts = IM_MAX(exposure, vts);
 
-        ret |= omv_i2c_writeb2(&csi->i2c_bus, csi->slv_addr, AEC_PK_EXPOSURE_0, exposure >> 12);
-        ret |= omv_i2c_writeb2(&csi->i2c_bus, csi->slv_addr, AEC_PK_EXPOSURE_1, exposure >> 4);
-        ret |= omv_i2c_writeb2(&csi->i2c_bus, csi->slv_addr, AEC_PK_EXPOSURE_2, exposure << 4);
+        ret |= omv_i2c_writeb2(csi->i2c, csi->slv_addr, AEC_PK_EXPOSURE_0, exposure >> 12);
+        ret |= omv_i2c_writeb2(csi->i2c, csi->slv_addr, AEC_PK_EXPOSURE_1, exposure >> 4);
+        ret |= omv_i2c_writeb2(csi->i2c, csi->slv_addr, AEC_PK_EXPOSURE_2, exposure << 4);
 
-        ret |= omv_i2c_writeb2(&csi->i2c_bus, csi->slv_addr, TIMING_VTS_H, new_vts >> 8);
-        ret |= omv_i2c_writeb2(&csi->i2c_bus, csi->slv_addr, TIMING_VTS_L, new_vts);
+        ret |= omv_i2c_writeb2(csi->i2c, csi->slv_addr, TIMING_VTS_H, new_vts >> 8);
+        ret |= omv_i2c_writeb2(csi->i2c, csi->slv_addr, TIMING_VTS_L, new_vts);
     }
 
     return ret;
@@ -1193,21 +1193,21 @@ static int get_exposure_us(omv_csi_t *csi, int *exposure_us) {
     uint8_t spc0, spc1, spc2, spc3, sysrootdiv, aec_0, aec_1, aec_2, hts_h, hts_l, vts_h, vts_l;
     int ret = 0;
 
-    ret |= omv_i2c_readb2(&csi->i2c_bus, csi->slv_addr, SC_PLL_CONTRL0, &spc0);
-    ret |= omv_i2c_readb2(&csi->i2c_bus, csi->slv_addr, SC_PLL_CONTRL1, &spc1);
-    ret |= omv_i2c_readb2(&csi->i2c_bus, csi->slv_addr, SC_PLL_CONTRL2, &spc2);
-    ret |= omv_i2c_readb2(&csi->i2c_bus, csi->slv_addr, SC_PLL_CONTRL3, &spc3);
-    ret |= omv_i2c_readb2(&csi->i2c_bus, csi->slv_addr, SYSTEM_ROOT_DIVIDER, &sysrootdiv);
+    ret |= omv_i2c_readb2(csi->i2c, csi->slv_addr, SC_PLL_CONTRL0, &spc0);
+    ret |= omv_i2c_readb2(csi->i2c, csi->slv_addr, SC_PLL_CONTRL1, &spc1);
+    ret |= omv_i2c_readb2(csi->i2c, csi->slv_addr, SC_PLL_CONTRL2, &spc2);
+    ret |= omv_i2c_readb2(csi->i2c, csi->slv_addr, SC_PLL_CONTRL3, &spc3);
+    ret |= omv_i2c_readb2(csi->i2c, csi->slv_addr, SYSTEM_ROOT_DIVIDER, &sysrootdiv);
 
-    ret |= omv_i2c_readb2(&csi->i2c_bus, csi->slv_addr, AEC_PK_EXPOSURE_0, &aec_0);
-    ret |= omv_i2c_readb2(&csi->i2c_bus, csi->slv_addr, AEC_PK_EXPOSURE_1, &aec_1);
-    ret |= omv_i2c_readb2(&csi->i2c_bus, csi->slv_addr, AEC_PK_EXPOSURE_2, &aec_2);
+    ret |= omv_i2c_readb2(csi->i2c, csi->slv_addr, AEC_PK_EXPOSURE_0, &aec_0);
+    ret |= omv_i2c_readb2(csi->i2c, csi->slv_addr, AEC_PK_EXPOSURE_1, &aec_1);
+    ret |= omv_i2c_readb2(csi->i2c, csi->slv_addr, AEC_PK_EXPOSURE_2, &aec_2);
 
-    ret |= omv_i2c_readb2(&csi->i2c_bus, csi->slv_addr, TIMING_HTS_H, &hts_h);
-    ret |= omv_i2c_readb2(&csi->i2c_bus, csi->slv_addr, TIMING_HTS_L, &hts_l);
+    ret |= omv_i2c_readb2(csi->i2c, csi->slv_addr, TIMING_HTS_H, &hts_h);
+    ret |= omv_i2c_readb2(csi->i2c, csi->slv_addr, TIMING_HTS_L, &hts_l);
 
-    ret |= omv_i2c_readb2(&csi->i2c_bus, csi->slv_addr, TIMING_VTS_H, &vts_h);
-    ret |= omv_i2c_readb2(&csi->i2c_bus, csi->slv_addr, TIMING_VTS_L, &vts_l);
+    ret |= omv_i2c_readb2(csi->i2c, csi->slv_addr, TIMING_VTS_H, &vts_h);
+    ret |= omv_i2c_readb2(csi->i2c, csi->slv_addr, TIMING_VTS_L, &vts_l);
 
     uint32_t aec = ((aec_0 << 16) | (aec_1 << 8) | aec_2) >> 4;
     uint16_t hts = (hts_h << 8) | hts_l;
@@ -1224,8 +1224,8 @@ static int get_exposure_us(omv_csi_t *csi, int *exposure_us) {
 
 static int set_auto_whitebal(omv_csi_t *csi, int enable, float r_gain_db, float g_gain_db, float b_gain_db) {
     uint8_t reg;
-    int ret = omv_i2c_readb2(&csi->i2c_bus, csi->slv_addr, AWB_MANUAL_CONTROL, &reg);
-    ret |= omv_i2c_writeb2(&csi->i2c_bus, csi->slv_addr, AWB_MANUAL_CONTROL, (reg & 0xFE) | (enable == 0));
+    int ret = omv_i2c_readb2(csi->i2c, csi->slv_addr, AWB_MANUAL_CONTROL, &reg);
+    ret |= omv_i2c_writeb2(csi->i2c, csi->slv_addr, AWB_MANUAL_CONTROL, (reg & 0xFE) | (enable == 0));
 
     if ((enable == 0) && (!isnanf(r_gain_db)) && (!isnanf(g_gain_db)) && (!isnanf(b_gain_db))
         && (!isinff(r_gain_db)) && (!isinff(g_gain_db)) && (!isinff(b_gain_db))) {
@@ -1234,12 +1234,12 @@ static int set_auto_whitebal(omv_csi_t *csi, int enable, float r_gain_db, float 
         int g_gain = __USAT(fast_roundf(expf((g_gain_db / 20.0f) * M_LN10)), 12);
         int b_gain = __USAT(fast_roundf(expf((b_gain_db / 20.0f) * M_LN10)), 12);
 
-        ret |= omv_i2c_writeb2(&csi->i2c_bus, csi->slv_addr, AWB_R_GAIN_H, r_gain >> 8);
-        ret |= omv_i2c_writeb2(&csi->i2c_bus, csi->slv_addr, AWB_R_GAIN_L, r_gain);
-        ret |= omv_i2c_writeb2(&csi->i2c_bus, csi->slv_addr, AWB_G_GAIN_H, g_gain >> 8);
-        ret |= omv_i2c_writeb2(&csi->i2c_bus, csi->slv_addr, AWB_G_GAIN_L, g_gain);
-        ret |= omv_i2c_writeb2(&csi->i2c_bus, csi->slv_addr, AWB_B_GAIN_H, b_gain >> 8);
-        ret |= omv_i2c_writeb2(&csi->i2c_bus, csi->slv_addr, AWB_B_GAIN_L, b_gain);
+        ret |= omv_i2c_writeb2(csi->i2c, csi->slv_addr, AWB_R_GAIN_H, r_gain >> 8);
+        ret |= omv_i2c_writeb2(csi->i2c, csi->slv_addr, AWB_R_GAIN_L, r_gain);
+        ret |= omv_i2c_writeb2(csi->i2c, csi->slv_addr, AWB_G_GAIN_H, g_gain >> 8);
+        ret |= omv_i2c_writeb2(csi->i2c, csi->slv_addr, AWB_G_GAIN_L, g_gain);
+        ret |= omv_i2c_writeb2(csi->i2c, csi->slv_addr, AWB_B_GAIN_H, b_gain >> 8);
+        ret |= omv_i2c_writeb2(csi->i2c, csi->slv_addr, AWB_B_GAIN_L, b_gain);
     }
 
     return ret;
@@ -1248,12 +1248,12 @@ static int set_auto_whitebal(omv_csi_t *csi, int enable, float r_gain_db, float 
 static int get_rgb_gain_db(omv_csi_t *csi, float *r_gain_db, float *g_gain_db, float *b_gain_db) {
     uint8_t redh, redl, greenh, greenl, blueh, bluel;
 
-    int ret = omv_i2c_readb2(&csi->i2c_bus, csi->slv_addr, AWB_R_GAIN_H, &redh);
-    ret |= omv_i2c_readb2(&csi->i2c_bus, csi->slv_addr, AWB_R_GAIN_L, &redl);
-    ret |= omv_i2c_readb2(&csi->i2c_bus, csi->slv_addr, AWB_G_GAIN_H, &greenh);
-    ret |= omv_i2c_readb2(&csi->i2c_bus, csi->slv_addr, AWB_G_GAIN_L, &greenl);
-    ret |= omv_i2c_readb2(&csi->i2c_bus, csi->slv_addr, AWB_B_GAIN_H, &blueh);
-    ret |= omv_i2c_readb2(&csi->i2c_bus, csi->slv_addr, AWB_B_GAIN_L, &bluel);
+    int ret = omv_i2c_readb2(csi->i2c, csi->slv_addr, AWB_R_GAIN_H, &redh);
+    ret |= omv_i2c_readb2(csi->i2c, csi->slv_addr, AWB_R_GAIN_L, &redl);
+    ret |= omv_i2c_readb2(csi->i2c, csi->slv_addr, AWB_G_GAIN_H, &greenh);
+    ret |= omv_i2c_readb2(csi->i2c, csi->slv_addr, AWB_G_GAIN_L, &greenl);
+    ret |= omv_i2c_readb2(csi->i2c, csi->slv_addr, AWB_B_GAIN_H, &blueh);
+    ret |= omv_i2c_readb2(csi->i2c, csi->slv_addr, AWB_B_GAIN_L, &bluel);
 
     *r_gain_db = 20.0f * log10f(((redh & 0xF) << 8) | redl);
     *g_gain_db = 20.0f * log10f(((greenh & 0xF) << 8) | greenl);
@@ -1264,12 +1264,12 @@ static int get_rgb_gain_db(omv_csi_t *csi, float *r_gain_db, float *g_gain_db, f
 
 static int set_auto_blc(omv_csi_t *csi, int enable, int *regs) {
     uint8_t reg;
-    int ret = omv_i2c_readb2(&csi->i2c_bus, csi->slv_addr, BLC_CTRL_00, &reg);
-    ret |= omv_i2c_writeb2(&csi->i2c_bus, csi->slv_addr, BLC_CTRL_00, (reg & 0xFE) | (enable != 0));
+    int ret = omv_i2c_readb2(csi->i2c, csi->slv_addr, BLC_CTRL_00, &reg);
+    ret |= omv_i2c_writeb2(csi->i2c, csi->slv_addr, BLC_CTRL_00, (reg & 0xFE) | (enable != 0));
 
     if ((enable == 0) && (regs != NULL)) {
         for (uint32_t i = 0; i < csi->blc_size; i++) {
-            ret |= omv_i2c_writeb2(&csi->i2c_bus, csi->slv_addr, BLACK_LEVEL_00_H + i, regs[i]);
+            ret |= omv_i2c_writeb2(csi->i2c, csi->slv_addr, BLACK_LEVEL_00_H + i, regs[i]);
         }
     }
 
@@ -1281,7 +1281,7 @@ static int get_blc_regs(omv_csi_t *csi, int *regs) {
 
     for (uint32_t i = 0; i < csi->blc_size; i++) {
         uint8_t reg;
-        ret |= omv_i2c_readb2(&csi->i2c_bus, csi->slv_addr, BLACK_LEVEL_00_H + i, &reg);
+        ret |= omv_i2c_readb2(csi->i2c, csi->slv_addr, BLACK_LEVEL_00_H + i, &reg);
         regs[i] = reg;
     }
 
@@ -1290,22 +1290,22 @@ static int get_blc_regs(omv_csi_t *csi, int *regs) {
 
 static int set_hmirror(omv_csi_t *csi, int enable) {
     uint8_t reg;
-    int ret = omv_i2c_readb2(&csi->i2c_bus, csi->slv_addr, TIMING_TC_REG_21, &reg);
+    int ret = omv_i2c_readb2(csi->i2c, csi->slv_addr, TIMING_TC_REG_21, &reg);
     if (enable) {
-        ret |= omv_i2c_writeb2(&csi->i2c_bus, csi->slv_addr, TIMING_TC_REG_21, reg | 0x06);
+        ret |= omv_i2c_writeb2(csi->i2c, csi->slv_addr, TIMING_TC_REG_21, reg | 0x06);
     } else {
-        ret |= omv_i2c_writeb2(&csi->i2c_bus, csi->slv_addr, TIMING_TC_REG_21, reg & 0xF9);
+        ret |= omv_i2c_writeb2(csi->i2c, csi->slv_addr, TIMING_TC_REG_21, reg & 0xF9);
     }
     return ret;
 }
 
 static int set_vflip(omv_csi_t *csi, int enable) {
     uint8_t reg;
-    int ret = omv_i2c_readb2(&csi->i2c_bus, csi->slv_addr, TIMING_TC_REG_20, &reg);
+    int ret = omv_i2c_readb2(csi->i2c, csi->slv_addr, TIMING_TC_REG_20, &reg);
     if (!enable) {
-        ret |= omv_i2c_writeb2(&csi->i2c_bus, csi->slv_addr, TIMING_TC_REG_20, reg | 0x06);
+        ret |= omv_i2c_writeb2(csi->i2c, csi->slv_addr, TIMING_TC_REG_20, reg | 0x06);
     } else {
-        ret |= omv_i2c_writeb2(&csi->i2c_bus, csi->slv_addr, TIMING_TC_REG_20, reg & 0xF9);
+        ret |= omv_i2c_writeb2(csi->i2c, csi->slv_addr, TIMING_TC_REG_20, reg & 0xF9);
     }
     return ret;
 }
@@ -1315,22 +1315,22 @@ static int set_special_effect(omv_csi_t *csi, omv_csi_sde_t sde) {
 
     switch (sde) {
         case OMV_CSI_SDE_NEGATIVE:
-            ret |= omv_i2c_writeb2(&csi->i2c_bus, csi->slv_addr, 0x3212, 0x03); // start group 3
-            ret |= omv_i2c_writeb2(&csi->i2c_bus, csi->slv_addr, 0x5580, 0x40);
-            ret |= omv_i2c_writeb2(&csi->i2c_bus, csi->slv_addr, 0x5003, 0x08);
-            ret |= omv_i2c_writeb2(&csi->i2c_bus, csi->slv_addr, 0x5583, 0x40); // sat U
-            ret |= omv_i2c_writeb2(&csi->i2c_bus, csi->slv_addr, 0x5584, 0x10); // sat V
-            ret |= omv_i2c_writeb2(&csi->i2c_bus, csi->slv_addr, 0x3212, 0x13); // end group 3
-            ret |= omv_i2c_writeb2(&csi->i2c_bus, csi->slv_addr, 0x3212, 0xa3); // latch group 3
+            ret |= omv_i2c_writeb2(csi->i2c, csi->slv_addr, 0x3212, 0x03); // start group 3
+            ret |= omv_i2c_writeb2(csi->i2c, csi->slv_addr, 0x5580, 0x40);
+            ret |= omv_i2c_writeb2(csi->i2c, csi->slv_addr, 0x5003, 0x08);
+            ret |= omv_i2c_writeb2(csi->i2c, csi->slv_addr, 0x5583, 0x40); // sat U
+            ret |= omv_i2c_writeb2(csi->i2c, csi->slv_addr, 0x5584, 0x10); // sat V
+            ret |= omv_i2c_writeb2(csi->i2c, csi->slv_addr, 0x3212, 0x13); // end group 3
+            ret |= omv_i2c_writeb2(csi->i2c, csi->slv_addr, 0x3212, 0xa3); // latch group 3
             break;
         case OMV_CSI_SDE_NORMAL:
-            ret |= omv_i2c_writeb2(&csi->i2c_bus, csi->slv_addr, 0x3212, 0x03); // start group 3
-            ret |= omv_i2c_writeb2(&csi->i2c_bus, csi->slv_addr, 0x5580, 0x06);
-            ret |= omv_i2c_writeb2(&csi->i2c_bus, csi->slv_addr, 0x5583, 0x40); // sat U
-            ret |= omv_i2c_writeb2(&csi->i2c_bus, csi->slv_addr, 0x5584, 0x10); // sat V
-            ret |= omv_i2c_writeb2(&csi->i2c_bus, csi->slv_addr, 0x5003, 0x08);
-            ret |= omv_i2c_writeb2(&csi->i2c_bus, csi->slv_addr, 0x3212, 0x13); // end group 3
-            ret |= omv_i2c_writeb2(&csi->i2c_bus, csi->slv_addr, 0x3212, 0xa3); // latch group 3
+            ret |= omv_i2c_writeb2(csi->i2c, csi->slv_addr, 0x3212, 0x03); // start group 3
+            ret |= omv_i2c_writeb2(csi->i2c, csi->slv_addr, 0x5580, 0x06);
+            ret |= omv_i2c_writeb2(csi->i2c, csi->slv_addr, 0x5583, 0x40); // sat U
+            ret |= omv_i2c_writeb2(csi->i2c, csi->slv_addr, 0x5584, 0x10); // sat V
+            ret |= omv_i2c_writeb2(csi->i2c, csi->slv_addr, 0x5003, 0x08);
+            ret |= omv_i2c_writeb2(csi->i2c, csi->slv_addr, 0x3212, 0x13); // end group 3
+            ret |= omv_i2c_writeb2(csi->i2c, csi->slv_addr, 0x3212, 0xa3); // latch group 3
             break;
         default:
             return -1;
@@ -1341,8 +1341,8 @@ static int set_special_effect(omv_csi_t *csi, omv_csi_sde_t sde) {
 
 static int set_lens_correction(omv_csi_t *csi, int enable, int radi, int coef) {
     uint8_t reg;
-    int ret = omv_i2c_readb2(&csi->i2c_bus, csi->slv_addr, ISP_CONTROL_00, &reg);
-    return omv_i2c_writeb2(&csi->i2c_bus, csi->slv_addr, ISP_CONTROL_00, (reg & 0x7F) | (enable ? 0x80 : 0x00)) | ret;
+    int ret = omv_i2c_readb2(csi->i2c, csi->slv_addr, ISP_CONTROL_00, &reg);
+    return omv_i2c_writeb2(csi->i2c, csi->slv_addr, ISP_CONTROL_00, (reg & 0x7F) | (enable ? 0x80 : 0x00)) | ret;
 }
 
 static int ioctl(omv_csi_t *csi, int request, va_list ap) {
@@ -1379,21 +1379,21 @@ static int ioctl(omv_csi_t *csi, int request, va_list ap) {
         }
     #if (OMV_OV5640_AF_ENABLE == 1)
         case OMV_CSI_IOCTL_TRIGGER_AUTO_FOCUS: {
-            ret = omv_i2c_writeb2(&csi->i2c_bus, csi->slv_addr, AF_CMD_MAIN, 0x03);
+            ret = omv_i2c_writeb2(csi->i2c, csi->slv_addr, AF_CMD_MAIN, 0x03);
             break;
         }
         case OMV_CSI_IOCTL_PAUSE_AUTO_FOCUS: {
-            ret = omv_i2c_writeb2(&csi->i2c_bus, csi->slv_addr, AF_CMD_MAIN, 0x06);
+            ret = omv_i2c_writeb2(csi->i2c, csi->slv_addr, AF_CMD_MAIN, 0x06);
             break;
         }
         case OMV_CSI_IOCTL_RESET_AUTO_FOCUS: {
-            ret = omv_i2c_writeb2(&csi->i2c_bus, csi->slv_addr, AF_CMD_MAIN, 0x08);
+            ret = omv_i2c_writeb2(csi->i2c, csi->slv_addr, AF_CMD_MAIN, 0x08);
             break;
         }
         case OMV_CSI_IOCTL_WAIT_ON_AUTO_FOCUS: {
             mp_uint_t start_tick = mp_hal_ticks_ms(), delay_ms = va_arg(ap, uint32_t);
             for (;;) {
-                ret = omv_i2c_readb2(&csi->i2c_bus, csi->slv_addr, AF_CMD_ACK, &reg);
+                ret = omv_i2c_readb2(csi->i2c, csi->slv_addr, AF_CMD_ACK, &reg);
                 if ((ret < 0) || (!reg)) {
                     break;
                 }
@@ -1407,14 +1407,14 @@ static int ioctl(omv_csi_t *csi, int request, va_list ap) {
     #endif
         case OMV_CSI_IOCTL_SET_NIGHT_MODE: {
             int enable = va_arg(ap, int);
-            ret = omv_i2c_readb2(&csi->i2c_bus, csi->slv_addr, AEC_CTRL_00, &reg);
-            ret |= omv_i2c_writeb2(&csi->i2c_bus, csi->slv_addr, AEC_CTRL_00,
+            ret = omv_i2c_readb2(csi->i2c, csi->slv_addr, AEC_CTRL_00, &reg);
+            ret |= omv_i2c_writeb2(csi->i2c, csi->slv_addr, AEC_CTRL_00,
                                    (reg & 0xFB) | ((enable != 0) << 2));
             break;
         }
         case OMV_CSI_IOCTL_GET_NIGHT_MODE: {
             int *enable = va_arg(ap, int *);
-            ret = omv_i2c_readb2(&csi->i2c_bus, csi->slv_addr, AEC_CTRL_00, &reg);
+            ret = omv_i2c_readb2(csi->i2c, csi->slv_addr, AEC_CTRL_00, &reg);
             if (ret >= 0) {
                 *enable = reg & 0x4;
             }
