@@ -95,62 +95,6 @@ void omv_csi_init0() {
     omv_csi_set_frame_callback(NULL);
 }
 
-int omv_csi_init() {
-    int init_ret = 0;
-    CPI_Type *cpi = cpi_get_base_addr(&csi);
-
-    alif_hal_csi_init(cpi, 0);
-
-    #if defined(OMV_CSI_POWER_PIN)
-    omv_gpio_write(OMV_CSI_POWER_PIN, 0);
-    #endif
-
-    #if defined(OMV_CSI_RESET_PIN)
-    omv_gpio_write(OMV_CSI_RESET_PIN, 0);
-    #endif
-
-    // Reset the csi state
-    memset(&csi, 0, sizeof(omv_csi_t));
-
-    // Set default framebuffer
-    csi.fb = framebuffer_get(0);
-
-    // Set default snapshot function.
-    csi.snapshot = omv_csi_snapshot;
-
-    // Configure the CSI external clock.
-    if (omv_csi_set_clk_frequency(OMV_CSI_CLK_FREQUENCY) != 0) {
-        // Failed to initialize the csi clock.
-        return OMV_CSI_ERROR_TIM_INIT_FAILED;
-    }
-
-    // Detect and initialize the image csi.
-    if ((init_ret = omv_csi_probe_init(OMV_CSI_I2C_ID, OMV_CSI_I2C_SPEED)) != 0) {
-        // csi probe/init failed.
-        return init_ret;
-    }
-
-    // Configure the CSI interface.
-    if (omv_csi_config(OMV_CSI_CONFIG_INIT) != 0) {
-        // CSI config failed
-        return OMV_CSI_ERROR_CSI_INIT_FAILED;
-    }
-
-    // Set default color palette.
-    csi.color_palette = rainbow_table;
-
-    // Disable VSYNC IRQ and callback
-    omv_csi_set_vsync_callback(NULL);
-
-    // Disable Frame callback.
-    omv_csi_set_frame_callback(NULL);
-
-    // All good!
-    csi.detected = true;
-
-    return 0;
-}
-
 int omv_csi_config(omv_csi_config_t config) {
     if (config == OMV_CSI_CONFIG_INIT) {
         CPI_Type *cpi = cpi_get_base_addr(&csi);
@@ -449,6 +393,62 @@ int omv_csi_snapshot(omv_csi_t *csi, image_t *dst_image, uint32_t flags) {
         // Debayer frame.
         imlib_debayer_image_awb(dst_image, &src_image, false, r_stat, (gb_stat + gr_stat) / 2, b_stat);
     }
+    return 0;
+}
+
+int omv_csi_init() {
+    int init_ret = 0;
+    CPI_Type *cpi = cpi_get_base_addr(&csi);
+
+    alif_hal_csi_init(cpi, 0);
+
+    #if defined(OMV_CSI_POWER_PIN)
+    omv_gpio_write(OMV_CSI_POWER_PIN, 0);
+    #endif
+
+    #if defined(OMV_CSI_RESET_PIN)
+    omv_gpio_write(OMV_CSI_RESET_PIN, 0);
+    #endif
+
+    // Reset the csi state
+    memset(&csi, 0, sizeof(omv_csi_t));
+
+    // Set default framebuffer
+    csi.fb = framebuffer_get(0);
+
+    // Set default snapshot function.
+    csi.snapshot = omv_csi_snapshot;
+
+    // Configure the CSI external clock.
+    if (omv_csi_set_clk_frequency(OMV_CSI_CLK_FREQUENCY) != 0) {
+        // Failed to initialize the csi clock.
+        return OMV_CSI_ERROR_TIM_INIT_FAILED;
+    }
+
+    // Detect and initialize the image csi.
+    if ((init_ret = omv_csi_probe_init(OMV_CSI_I2C_ID, OMV_CSI_I2C_SPEED)) != 0) {
+        // csi probe/init failed.
+        return init_ret;
+    }
+
+    // Configure the CSI interface.
+    if (omv_csi_config(OMV_CSI_CONFIG_INIT) != 0) {
+        // CSI config failed
+        return OMV_CSI_ERROR_CSI_INIT_FAILED;
+    }
+
+    // Set default color palette.
+    csi.color_palette = rainbow_table;
+
+    // Disable VSYNC IRQ and callback
+    omv_csi_set_vsync_callback(NULL);
+
+    // Disable Frame callback.
+    omv_csi_set_frame_callback(NULL);
+
+    // All good!
+    csi.detected = true;
+
     return 0;
 }
 
