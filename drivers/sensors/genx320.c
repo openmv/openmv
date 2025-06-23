@@ -200,10 +200,10 @@ static int sleep(omv_csi_t *csi, int enable) {
 static int read_reg(omv_csi_t *csi, uint16_t reg_addr) {
     uint32_t reg_data;
     uint8_t addr[] = {(reg_addr >> 8), reg_addr};
-    if (omv_i2c_write_bytes(&csi->i2c_bus, csi->slv_addr, addr, 2, OMV_I2C_XFER_NO_STOP) != 0) {
+    if (omv_i2c_write_bytes(csi->i2c, csi->slv_addr, addr, 2, OMV_I2C_XFER_NO_STOP) != 0) {
         return -1;
     }
-    if (omv_i2c_read_bytes(&csi->i2c_bus, csi->slv_addr, (uint8_t *) &reg_data, 4, OMV_I2C_XFER_NO_FLAGS) != 0) {
+    if (omv_i2c_read_bytes(csi->i2c, csi->slv_addr, (uint8_t *) &reg_data, 4, OMV_I2C_XFER_NO_FLAGS) != 0) {
         return -1;
     }
     reg_data = __REV(reg_data);
@@ -212,7 +212,7 @@ static int read_reg(omv_csi_t *csi, uint16_t reg_addr) {
 
 static int write_reg(omv_csi_t *csi, uint16_t reg_addr, uint16_t reg_data) {
     uint8_t buf[] = {(reg_addr >> 8), reg_addr, (reg_data >> 24), (reg_data >> 16), (reg_data >> 8), reg_data};
-    return omv_i2c_write_bytes(&csi->i2c_bus, csi->slv_addr, buf, 6, OMV_I2C_XFER_NO_FLAGS);
+    return omv_i2c_write_bytes(csi->i2c, csi->slv_addr, buf, 6, OMV_I2C_XFER_NO_FLAGS);
 }
 
 static int set_pixformat(omv_csi_t *csi, pixformat_t pixformat) {

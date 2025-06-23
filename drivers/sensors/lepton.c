@@ -88,14 +88,14 @@ static int sleep(omv_csi_t *csi, int enable) {
 
 static int read_reg(omv_csi_t *csi, uint16_t reg_addr) {
     uint16_t reg_data;
-    if (omv_i2c_readw2(&csi->i2c_bus, csi->slv_addr, reg_addr, &reg_data)) {
+    if (omv_i2c_readw2(csi->i2c, csi->slv_addr, reg_addr, &reg_data)) {
         return -1;
     }
     return reg_data;
 }
 
 static int write_reg(omv_csi_t *csi, uint16_t reg_addr, uint16_t reg_data) {
-    return omv_i2c_writew2(&csi->i2c_bus, csi->slv_addr, reg_addr, reg_data);
+    return omv_i2c_writew2(csi->i2c, csi->slv_addr, reg_addr, reg_data);
 }
 
 static int set_pixformat(omv_csi_t *csi, pixformat_t pixformat) {
@@ -299,7 +299,7 @@ static int lepton_reset(omv_csi_t *csi, bool measurement_mode, bool high_temp_mo
     memset(&lepton.port, 0, sizeof(LEP_CAMERA_PORT_DESC_T));
 
     for (mp_uint_t start = mp_hal_ticks_ms(); ; mp_hal_delay_ms(1)) {
-        if (LEP_OpenPort(&csi->i2c_bus, LEP_CCI_TWI, 0, &lepton.port) == LEP_OK) {
+        if (LEP_OpenPort(csi->i2c, LEP_CCI_TWI, 0, &lepton.port) == LEP_OK) {
             break;
         }
         if ((mp_hal_ticks_ms() - start) >= LEPTON_BOOT_TIMEOUT) {

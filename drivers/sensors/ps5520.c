@@ -1149,20 +1149,20 @@ static int reset(omv_csi_t *csi) {
     aec_exposure = PS5520_DEF_EXP;
     aec_exposure_ceiling = PS5520_DEF_EXP_CEILING;
 
-    ret |= omv_i2c_readb(&csi->i2c_bus, csi->slv_addr, CMD_LPF_H, &exposure_line_h);
-    ret |= omv_i2c_readb(&csi->i2c_bus, csi->slv_addr, CMD_LPF_L, &exposure_line_l);
+    ret |= omv_i2c_readb(csi->i2c, csi->slv_addr, CMD_LPF_H, &exposure_line_h);
+    ret |= omv_i2c_readb(csi->i2c, csi->slv_addr, CMD_LPF_L, &exposure_line_l);
     lpf = (exposure_line_h << 8) + exposure_line_l; // Cmd_Lpf
 
-    ret |= omv_i2c_writeb(&csi->i2c_bus, csi->slv_addr, REG_BANK, 0x01);
+    ret |= omv_i2c_writeb(csi->i2c, csi->slv_addr, REG_BANK, 0x01);
 
     // Set default gain
-    ret |= omv_i2c_writeb(&csi->i2c_bus, csi->slv_addr, CMD_GAIN_IDX, agc_gain);
+    ret |= omv_i2c_writeb(csi->i2c, csi->slv_addr, CMD_GAIN_IDX, agc_gain);
 
     // Set default exposure
-    ret |= omv_i2c_writeb(&csi->i2c_bus, csi->slv_addr, CMD_OFFNY1_H, (lpf - 1 - aec_exposure) >> 8);
-    ret |= omv_i2c_writeb(&csi->i2c_bus, csi->slv_addr, CMD_OFFNY1_L, (lpf - 1 - aec_exposure) & 0xFF);
+    ret |= omv_i2c_writeb(csi->i2c, csi->slv_addr, CMD_OFFNY1_H, (lpf - 1 - aec_exposure) >> 8);
+    ret |= omv_i2c_writeb(csi->i2c, csi->slv_addr, CMD_OFFNY1_L, (lpf - 1 - aec_exposure) & 0xFF);
 
-    ret |= omv_i2c_writeb(&csi->i2c_bus, csi->slv_addr, SENSOR_UPDATE, 0x01);
+    ret |= omv_i2c_writeb(csi->i2c, csi->slv_addr, SENSOR_UPDATE, 0x01);
 
     return ret;
 }
@@ -1173,14 +1173,14 @@ static int sleep(omv_csi_t *csi, int enable) {
 
 static int read_reg(omv_csi_t *csi, uint16_t reg) {
     uint8_t reg_data;
-    if (omv_i2c_readb(&csi->i2c_bus, csi->slv_addr, reg, &reg_data) != 0) {
+    if (omv_i2c_readb(csi->i2c, csi->slv_addr, reg, &reg_data) != 0) {
         return -1;
     }
     return reg_data;
 }
 
 static int write_reg(omv_csi_t *csi, uint16_t reg, uint16_t reg_data) {
-    return omv_i2c_writeb(&csi->i2c_bus, csi->slv_addr, reg, reg_data);
+    return omv_i2c_writeb(csi->i2c, csi->slv_addr, reg, reg_data);
 }
 
 static int write_registers(omv_csi_t *csi, const uint8_t(*regs)[2]) {
@@ -1303,23 +1303,23 @@ static int set_framerate(omv_csi_t *csi, int framerate) {
 
     exposure_line = IM_CLAMP(exposure_line, PS5520_MIN_INT, (lpf - 2));
 
-    ret |= omv_i2c_writeb(&csi->i2c_bus, csi->slv_addr, REG_BANK, 0x01);
+    ret |= omv_i2c_writeb(csi->i2c, csi->slv_addr, REG_BANK, 0x01);
 
-    ret |= omv_i2c_writeb(&csi->i2c_bus, csi->slv_addr, CMD_LPF_H, lpf >> 8);
-    ret |= omv_i2c_writeb(&csi->i2c_bus, csi->slv_addr, CMD_LPF_L, lpf & 0xFF);
+    ret |= omv_i2c_writeb(csi->i2c, csi->slv_addr, CMD_LPF_H, lpf >> 8);
+    ret |= omv_i2c_writeb(csi->i2c, csi->slv_addr, CMD_LPF_L, lpf & 0xFF);
 
-    ret |= omv_i2c_writeb(&csi->i2c_bus, csi->slv_addr, CMD_OFFNY1_H, (lpf - exposure_line) >> 8);
-    ret |= omv_i2c_writeb(&csi->i2c_bus, csi->slv_addr, CMD_OFFNY1_L, (lpf - exposure_line) & 0xFF);
+    ret |= omv_i2c_writeb(csi->i2c, csi->slv_addr, CMD_OFFNY1_H, (lpf - exposure_line) >> 8);
+    ret |= omv_i2c_writeb(csi->i2c, csi->slv_addr, CMD_OFFNY1_L, (lpf - exposure_line) & 0xFF);
 
-    ret |= omv_i2c_writeb(&csi->i2c_bus, csi->slv_addr, CMD_NP, np & 0xFF);
+    ret |= omv_i2c_writeb(csi->i2c, csi->slv_addr, CMD_NP, np & 0xFF);
 
-    ret |= omv_i2c_writeb(&csi->i2c_bus, csi->slv_addr, SENSOR_UPDATE, 0x01);
+    ret |= omv_i2c_writeb(csi->i2c, csi->slv_addr, SENSOR_UPDATE, 0x01);
 
     if (flg_stall == 1) {
-        ret |= omv_i2c_writeb(&csi->i2c_bus, csi->slv_addr, REG_BANK, 0x05);
-        ret |= omv_i2c_writeb(&csi->i2c_bus, csi->slv_addr, 0x25, 0x01);
+        ret |= omv_i2c_writeb(csi->i2c, csi->slv_addr, REG_BANK, 0x05);
+        ret |= omv_i2c_writeb(csi->i2c, csi->slv_addr, 0x25, 0x01);
         mp_hal_delay_ms(35 * g_div);  // delay over 1 frame time
-        ret |= omv_i2c_writeb(&csi->i2c_bus, csi->slv_addr, 0x25, 0x00);
+        ret |= omv_i2c_writeb(csi->i2c, csi->slv_addr, 0x25, 0x00);
     }
 
     return ret;
@@ -1335,17 +1335,17 @@ static int set_colorbar(omv_csi_t *csi, int enable) {
     int ret = 0;
     uint8_t reg;
 
-    ret |= omv_i2c_writeb(&csi->i2c_bus, csi->slv_addr, REG_BANK, 0x00);
-    ret |= omv_i2c_readb(&csi->i2c_bus, csi->slv_addr, CMD_OUTGEN, &reg);
+    ret |= omv_i2c_writeb(csi->i2c, csi->slv_addr, REG_BANK, 0x00);
+    ret |= omv_i2c_readb(csi->i2c, csi->slv_addr, CMD_OUTGEN, &reg);
 
     reg = enable ? (reg | 0x60) : (reg & 0x8F);
-    ret |= omv_i2c_writeb(&csi->i2c_bus, csi->slv_addr, CMD_OUTGEN, reg);
-    ret |= omv_i2c_writeb(&csi->i2c_bus, csi->slv_addr, REG_BANK, 0x01);
-    ret |= omv_i2c_readb(&csi->i2c_bus, csi->slv_addr, R_ISP_TESTMODE, &reg);
+    ret |= omv_i2c_writeb(csi->i2c, csi->slv_addr, CMD_OUTGEN, reg);
+    ret |= omv_i2c_writeb(csi->i2c, csi->slv_addr, REG_BANK, 0x01);
+    ret |= omv_i2c_readb(csi->i2c, csi->slv_addr, R_ISP_TESTMODE, &reg);
 
     reg = enable ? (reg | 0x06) : (reg & 0xE0);
-    ret |= omv_i2c_writeb(&csi->i2c_bus, csi->slv_addr, R_ISP_TESTMODE, reg);
-    ret |= omv_i2c_writeb(&csi->i2c_bus, csi->slv_addr, SENSOR_UPDATE, 0x01);
+    ret |= omv_i2c_writeb(csi->i2c, csi->slv_addr, R_ISP_TESTMODE, reg);
+    ret |= omv_i2c_writeb(csi->i2c, csi->slv_addr, SENSOR_UPDATE, 0x01);
 
     return ret;
 }
@@ -1365,9 +1365,9 @@ static int set_auto_gain(omv_csi_t *csi, int enable, float gain_db, float gain_d
 
         agc_gain = ((idx - 1) << 4) + ((gain >> (idx - 1)) & 0x0F);
 
-        ret |= omv_i2c_writeb(&csi->i2c_bus, csi->slv_addr, REG_BANK, 0x01);
-        ret |= omv_i2c_writeb(&csi->i2c_bus, csi->slv_addr, CMD_GAIN_IDX, agc_gain);
-        ret |= omv_i2c_writeb(&csi->i2c_bus, csi->slv_addr, SENSOR_UPDATE, 0x01);
+        ret |= omv_i2c_writeb(csi->i2c, csi->slv_addr, REG_BANK, 0x01);
+        ret |= omv_i2c_writeb(csi->i2c, csi->slv_addr, CMD_GAIN_IDX, agc_gain);
+        ret |= omv_i2c_writeb(csi->i2c, csi->slv_addr, SENSOR_UPDATE, 0x01);
     } else if ((enable != 0) && (!isnanf(gain_db_ceiling)) && (!isinff(gain_db_ceiling))) {
         int gain = fast_roundf(expf((gain_db_ceiling / 20.0f) * M_LN10) * PS5520_GAIN_SCALE_F);
         gain = IM_CLAMP(gain, PS5520_MIN_AGAIN_REG, PS5520_MAX_AGAIN_REG);
@@ -1383,9 +1383,9 @@ static int set_auto_gain(omv_csi_t *csi, int enable, float gain_db, float gain_d
 
 static int get_gain_db(omv_csi_t *csi, float *gain_db) {
     uint8_t gain;
-    int ret = omv_i2c_writeb(&csi->i2c_bus, csi->slv_addr, REG_BANK, 0x01);
+    int ret = omv_i2c_writeb(csi->i2c, csi->slv_addr, REG_BANK, 0x01);
 
-    ret |= omv_i2c_readb(&csi->i2c_bus, csi->slv_addr, CMD_GAIN_IDX, &gain);
+    ret |= omv_i2c_readb(csi->i2c, csi->slv_addr, CMD_GAIN_IDX, &gain);
 
     *gain_db = 20.0f * log10f(PS5520_GAIN((int) gain) / PS5520_GAIN_SCALE_F);
 
@@ -1401,19 +1401,19 @@ static int set_auto_exposure(omv_csi_t *csi, int enable, int exposure_us) {
     enable_aec = enable;
 
     if ((enable == 0) && (exposure_us >= 0)) {
-        ret |= omv_i2c_writeb(&csi->i2c_bus, csi->slv_addr, REG_BANK, 0x01);
+        ret |= omv_i2c_writeb(csi->i2c, csi->slv_addr, REG_BANK, 0x01);
 
-        ret |= omv_i2c_readb(&csi->i2c_bus, csi->slv_addr, CMD_LPF_H, &exposure_line_h);
-        ret |= omv_i2c_readb(&csi->i2c_bus, csi->slv_addr, CMD_LPF_L, &exposure_line_l);
+        ret |= omv_i2c_readb(csi->i2c, csi->slv_addr, CMD_LPF_H, &exposure_line_h);
+        ret |= omv_i2c_readb(csi->i2c, csi->slv_addr, CMD_LPF_L, &exposure_line_l);
         lpf = (exposure_line_h << 8) + exposure_line_l; // Cmd_Lpf
 
         int32_t exposure_line = ConvertT2L(exposure_us);
         aec_exposure = IM_CLAMP(exposure_line, PS5520_MIN_INT, (lpf - 2));
 
-        ret |= omv_i2c_writeb(&csi->i2c_bus, csi->slv_addr, CMD_OFFNY1_H, (lpf - aec_exposure) >> 8);
-        ret |= omv_i2c_writeb(&csi->i2c_bus, csi->slv_addr, CMD_OFFNY1_L, (lpf - aec_exposure) & 0xFF);
+        ret |= omv_i2c_writeb(csi->i2c, csi->slv_addr, CMD_OFFNY1_H, (lpf - aec_exposure) >> 8);
+        ret |= omv_i2c_writeb(csi->i2c, csi->slv_addr, CMD_OFFNY1_L, (lpf - aec_exposure) & 0xFF);
 
-        ret |= omv_i2c_writeb(&csi->i2c_bus, csi->slv_addr, SENSOR_UPDATE, 0x01);
+        ret |= omv_i2c_writeb(csi->i2c, csi->slv_addr, SENSOR_UPDATE, 0x01);
     } else if ((enable != 0) && (exposure_us >= 0)) {
         aec_exposure_ceiling = ConvertT2LineBase(exposure_us);
         aec_exposure_ceiling = IM_CLAMP(aec_exposure_ceiling, PS5520_MIN_INT, PS5520_MAX_INT);
@@ -1428,14 +1428,14 @@ static int get_exposure_us(omv_csi_t *csi, int *exposure_us) {
     uint8_t exposure_line_h;
     uint8_t exposure_line_l;
 
-    ret |= omv_i2c_writeb(&csi->i2c_bus, csi->slv_addr, REG_BANK, 0x01);
+    ret |= omv_i2c_writeb(csi->i2c, csi->slv_addr, REG_BANK, 0x01);
 
-    ret |= omv_i2c_readb(&csi->i2c_bus, csi->slv_addr, CMD_LPF_H, &exposure_line_h);
-    ret |= omv_i2c_readb(&csi->i2c_bus, csi->slv_addr, CMD_LPF_L, &exposure_line_l);
+    ret |= omv_i2c_readb(csi->i2c, csi->slv_addr, CMD_LPF_H, &exposure_line_h);
+    ret |= omv_i2c_readb(csi->i2c, csi->slv_addr, CMD_LPF_L, &exposure_line_l);
     lpf = (exposure_line_h << 8) + exposure_line_l; // Cmd_Lpf
 
-    ret |= omv_i2c_readb(&csi->i2c_bus, csi->slv_addr, CMD_OFFNY1_H, &exposure_line_h);
-    ret |= omv_i2c_readb(&csi->i2c_bus, csi->slv_addr, CMD_OFFNY1_L, &exposure_line_l);
+    ret |= omv_i2c_readb(csi->i2c, csi->slv_addr, CMD_OFFNY1_H, &exposure_line_h);
+    ret |= omv_i2c_readb(csi->i2c, csi->slv_addr, CMD_OFFNY1_L, &exposure_line_l);
 
     int16_t exposure_line = lpf - ((exposure_line_h << 8) + exposure_line_l);
     *exposure_us = ConvertL2T(exposure_line);
@@ -1447,16 +1447,16 @@ static int set_hmirror(omv_csi_t *csi, int enable) {
     uint8_t reg1, reg2;
     uint16_t hsize;
 
-    int ret = omv_i2c_writeb(&csi->i2c_bus, csi->slv_addr, REG_BANK, 0x01);
-    ret |= omv_i2c_readb(&csi->i2c_bus, csi->slv_addr, CMD_HFLIP, &reg1);
-    ret |= omv_i2c_readb(&csi->i2c_bus, csi->slv_addr, CMD_HSIZE_E1, &reg2);
+    int ret = omv_i2c_writeb(csi->i2c, csi->slv_addr, REG_BANK, 0x01);
+    ret |= omv_i2c_readb(csi->i2c, csi->slv_addr, CMD_HFLIP, &reg1);
+    ret |= omv_i2c_readb(csi->i2c, csi->slv_addr, CMD_HSIZE_E1, &reg2);
 
     hsize = ((reg1 & 0x7F) << 8) + reg2 - (reg1 >> 7) + (enable?0x7FFF:0);
     reg1 = hsize >> 8;
     reg2 = hsize & 0xFF;
-    ret |= omv_i2c_writeb(&csi->i2c_bus, csi->slv_addr, CMD_HFLIP, reg1);
-    ret |= omv_i2c_writeb(&csi->i2c_bus, csi->slv_addr, CMD_HSIZE_E1, reg2);
-    ret |= omv_i2c_writeb(&csi->i2c_bus, csi->slv_addr, SENSOR_UPDATE, 0x01);
+    ret |= omv_i2c_writeb(csi->i2c, csi->slv_addr, CMD_HFLIP, reg1);
+    ret |= omv_i2c_writeb(csi->i2c, csi->slv_addr, CMD_HSIZE_E1, reg2);
+    ret |= omv_i2c_writeb(csi->i2c, csi->slv_addr, SENSOR_UPDATE, 0x01);
 
     return ret;
 }
@@ -1464,11 +1464,11 @@ static int set_hmirror(omv_csi_t *csi, int enable) {
 static int set_vflip(omv_csi_t *csi, int enable) {
     uint8_t reg1;
 
-    int ret = omv_i2c_writeb(&csi->i2c_bus, csi->slv_addr, REG_BANK, 0x01);
-    ret |= omv_i2c_readb(&csi->i2c_bus, csi->slv_addr, CMD_VFLIP, &reg1);
+    int ret = omv_i2c_writeb(csi->i2c, csi->slv_addr, REG_BANK, 0x01);
+    ret |= omv_i2c_readb(csi->i2c, csi->slv_addr, CMD_VFLIP, &reg1);
 
-    ret |= omv_i2c_writeb(&csi->i2c_bus, csi->slv_addr, CMD_VFLIP, (reg1 & 0x7F) | ((enable & 0x01) << 7));
-    ret |= omv_i2c_writeb(&csi->i2c_bus, csi->slv_addr, SENSOR_UPDATE, 0x01);
+    ret |= omv_i2c_writeb(csi->i2c, csi->slv_addr, CMD_VFLIP, (reg1 & 0x7F) | ((enable & 0x01) << 7));
+    ret |= omv_i2c_writeb(csi->i2c, csi->slv_addr, SENSOR_UPDATE, 0x01);
 
     return ret;
 }
@@ -1481,7 +1481,7 @@ static int update_agc_aec(omv_csi_t *csi, int luminance) {
         bool aec_exposure_in = ((diff > 0) && (aec_exposure < aec_exposure_ceiling)) ||
                                ((diff < 0) && (agc_gain <= PS5520_MIN_GAIN_IDX));
 
-        ret |= omv_i2c_writeb(&csi->i2c_bus, csi->slv_addr, REG_BANK, 0x01);
+        ret |= omv_i2c_writeb(csi->i2c, csi->slv_addr, REG_BANK, 0x01);
 
         if (enable_aec && aec_exposure_in) {
             // Long exposure first for better SNR
@@ -1515,35 +1515,35 @@ static int update_agc_aec(omv_csi_t *csi, int luminance) {
                     g_div = gu16ExpTbl[cnt].div;
                     flg_stall = 1;
                 }
-                ret |= omv_i2c_writeb(&csi->i2c_bus, csi->slv_addr, CMD_NP, np & 0xFF);
+                ret |= omv_i2c_writeb(csi->i2c, csi->slv_addr, CMD_NP, np & 0xFF);
 
             } else {
                 lpf = VTS_5M_30 - 1;
                 exposure_line = aec_exposure;
                 exposure_line = IM_CLAMP(exposure_line, PS5520_MIN_INT, (lpf - 2));
             }
-            ret |= omv_i2c_writeb(&csi->i2c_bus, csi->slv_addr, CMD_LPF_H, lpf >> 8);
-            ret |= omv_i2c_writeb(&csi->i2c_bus, csi->slv_addr, CMD_LPF_L, lpf & 0xFF);
+            ret |= omv_i2c_writeb(csi->i2c, csi->slv_addr, CMD_LPF_H, lpf >> 8);
+            ret |= omv_i2c_writeb(csi->i2c, csi->slv_addr, CMD_LPF_L, lpf & 0xFF);
 
-            ret |= omv_i2c_writeb(&csi->i2c_bus, csi->slv_addr, CMD_OFFNY1_H, (lpf - exposure_line) >> 8);
-            ret |= omv_i2c_writeb(&csi->i2c_bus, csi->slv_addr, CMD_OFFNY1_L, (lpf - exposure_line) & 0xFF);
+            ret |= omv_i2c_writeb(csi->i2c, csi->slv_addr, CMD_OFFNY1_H, (lpf - exposure_line) >> 8);
+            ret |= omv_i2c_writeb(csi->i2c, csi->slv_addr, CMD_OFFNY1_L, (lpf - exposure_line) & 0xFF);
 
-            ret |= omv_i2c_writeb(&csi->i2c_bus, csi->slv_addr, SENSOR_UPDATE, 0x01);
+            ret |= omv_i2c_writeb(csi->i2c, csi->slv_addr, SENSOR_UPDATE, 0x01);
 
             if (flg_stall == 1) {
-                ret |= omv_i2c_writeb(&csi->i2c_bus, csi->slv_addr, REG_BANK, 0x05);
-                ret |= omv_i2c_writeb(&csi->i2c_bus, csi->slv_addr, 0x25, 0x01);
+                ret |= omv_i2c_writeb(csi->i2c, csi->slv_addr, REG_BANK, 0x05);
+                ret |= omv_i2c_writeb(csi->i2c, csi->slv_addr, 0x25, 0x01);
                 mp_hal_delay_ms(35 * g_div);  // delay over 1 frame time
-                ret |= omv_i2c_writeb(&csi->i2c_bus, csi->slv_addr, 0x25, 0x00);
+                ret |= omv_i2c_writeb(csi->i2c, csi->slv_addr, 0x25, 0x00);
             }
 
         } else if (enable_agc) {
             agc_gain += diff / PS5520_L_AGC_DIFF_DIV;
             agc_gain = IM_CLAMP(agc_gain, PS5520_MIN_GAIN_IDX, agc_gain_ceiling);
 
-            //ret |= omv_i2c_writeb(&csi->i2c_bus, csi->slv_addr, REG_BANK, 0x01);
-            ret |= omv_i2c_writeb(&csi->i2c_bus, csi->slv_addr, CMD_GAIN_IDX, agc_gain);
-            ret |= omv_i2c_writeb(&csi->i2c_bus, csi->slv_addr, SENSOR_UPDATE, 0x01);
+            //ret |= omv_i2c_writeb(csi->i2c, csi->slv_addr, REG_BANK, 0x01);
+            ret |= omv_i2c_writeb(csi->i2c, csi->slv_addr, CMD_GAIN_IDX, agc_gain);
+            ret |= omv_i2c_writeb(csi->i2c, csi->slv_addr, SENSOR_UPDATE, 0x01);
         }
     }
 
