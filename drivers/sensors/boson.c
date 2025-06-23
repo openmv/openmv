@@ -43,6 +43,7 @@
 
 #include "Client_API.h"
 #include "UART_Connector.h"
+#include "serialPortAdapter.h"
 
 #define FLIR_BOSON_BOOT_TRY_COUNT (10)
 #define FLIR_BOSON_BOOT_TIME_MS (1000)
@@ -50,6 +51,7 @@
 static int boson_framesize = 0;
 
 static int reset(omv_csi_t *csi) {
+    FSLP_set_csi(csi);
     csi->color_palette = NULL;
 
     int i = 0;
@@ -123,6 +125,8 @@ static int set_framesize(omv_csi_t *csi, omv_csi_framesize_t framesize) {
 }
 
 static int set_colorbar(omv_csi_t *csi, int enable) {
+    FSLP_set_csi(csi);
+
     if (gaoSetTestRampState(enable ? FLR_ENABLE : FLR_DISABLE) != FLR_OK) {
         return -1;
     }

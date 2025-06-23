@@ -17,6 +17,10 @@
 
 #include <stdlib.h>
 #include <stdint.h>
+#include "omv_csi.h"
+
+// Set the omv_csi_t pointer to use for serial port operations.
+void FSLP_set_csi(omv_csi_t *csi);
 
 // open port by id, using specified baud_rate.
 // passes library errors up, 0 on success.
