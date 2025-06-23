@@ -35,8 +35,6 @@
 
 /* Includes ------------------------------------------------------------------*/
 #include "py/mphal.h"
-
-#include "omv_csi.h"
 #include "psee_genx320.h"
 
 /** @defgroup GenX320 - Sensor Register Manipulation Functions
@@ -59,11 +57,11 @@
   * @param  register_address Sensor's register from which the data needs to be read
   * @param	buf Pointer to the variable where the data needs to be stored
   */
-void psee_sensor_read(uint16_t register_address, uint32_t *buf) {
+void psee_sensor_read(omv_csi_t *csi, uint16_t register_address, uint32_t *buf) {
 	uint8_t addr[] = {(register_address >> 8), register_address};
-	omv_i2c_write_bytes(csi.i2c, csi.slv_addr, addr, 2, OMV_I2C_XFER_NO_STOP);
-	omv_i2c_read_bytes(csi.i2c, csi.slv_addr, (uint8_t *) buf, 4, OMV_I2C_XFER_NO_FLAGS);
-	*buf = __REV(*buf);
+	omv_i2c_write_bytes(csi->i2c, csi->slv_addr, addr, 2, OMV_I2C_XFER_NO_STOP);
+	omv_i2c_read_bytes(csi->i2c, csi->slv_addr, (uint8_t *) buf, 4, OMV_I2C_XFER_NO_FLAGS);
+	*buf = __builtin_bswap32(*buf);
 };
 
 /**
@@ -71,10 +69,10 @@ void psee_sensor_read(uint16_t register_address, uint32_t *buf) {
   * @param	register_address Sensor's register to which the data needs to be written
   * @param  register_data Data to be written
   */
-void psee_sensor_write(uint16_t register_address, uint32_t register_data) {
+void psee_sensor_write(omv_csi_t *csi, uint16_t register_address, uint32_t register_data) {
 	uint8_t buf[] = {(register_address >> 8), register_address,
 					 (register_data >> 24), (register_data >> 16), (register_data >> 8), register_data};
-	omv_i2c_write_bytes(csi.i2c, csi.slv_addr, buf, 6, OMV_I2C_XFER_NO_FLAGS);
+	omv_i2c_write_bytes(csi->i2c, csi->slv_addr, buf, 6, OMV_I2C_XFER_NO_FLAGS);
 };
 
 /**
@@ -83,10 +81,10 @@ void psee_sensor_write(uint16_t register_address, uint32_t register_data) {
   * @param	data Pointer to the array where the data needs to be stored
   * @param  n_word Total number of 32-bits that needs to be read
   */
-void psee_sensor_sequential_read(uint16_t reg, uint32_t *data, uint16_t n_word) {
+void psee_sensor_sequential_read(omv_csi_t *csi, uint16_t reg, uint32_t *data, uint16_t n_word) {
 	uint8_t buf[] = {(reg >> 8), reg};
-	omv_i2c_write_bytes(csi.i2c, csi.slv_addr, buf, sizeof(buf), OMV_I2C_XFER_NO_STOP);
-	omv_i2c_read_bytes(csi.i2c, csi.slv_addr, (uint8_t *) data, n_word * sizeof(uint32_t),
+	omv_i2c_write_bytes(csi->i2c, csi->slv_addr, buf, sizeof(buf), OMV_I2C_XFER_NO_STOP);
+	omv_i2c_read_bytes(csi->i2c, csi->slv_addr, (uint8_t *) data, n_word * sizeof(uint32_t),
 					   OMV_I2C_XFER_NO_FLAGS);
 	for (int32_t i = 0; i < n_word; i++) {
 		data[i] = __builtin_bswap32(data[i]);
@@ -98,8 +96,8 @@ void psee_sensor_sequential_read(uint16_t reg, uint32_t *data, uint16_t n_word) 
   * @param  register_data Address of the data array that needs to be written
   * @param  n_bytes Total number of bytes that needs to be written
   */
-void psee_sensor_sequential_write(uint8_t *register_data, uint16_t n_bytes) {
-	omv_i2c_write_bytes(csi.i2c, csi.slv_addr, register_data, n_bytes, OMV_I2C_XFER_NO_FLAGS);
+void psee_sensor_sequential_write(omv_csi_t *csi, uint8_t *register_data, uint16_t n_bytes) {
+	omv_i2c_write_bytes(csi->i2c, csi->slv_addr, register_data, n_bytes, OMV_I2C_XFER_NO_FLAGS);
 }
 
 /**
@@ -155,14 +153,14 @@ void psee_sleep_us_imp(uint32_t duration) {
  * @brief Function to execute the operation sequence.
  * @param seq Operation sequence that needs to be executed
  */
-static void execute_reg_op_sequence(const struct sequence seq) {
+static void execute_reg_op_sequence(omv_csi_t *csi, const struct sequence seq) {
 
     for (unsigned int i = 0; i < seq.len; i++) {
         if (seq.ops[i].op == WRITE) {
-            psee_sensor_write(seq.ops[i].args.write.addr, seq.ops[i].args.write.data);
+            psee_sensor_write(csi, seq.ops[i].args.write.addr, seq.ops[i].args.write.data);
         } else if (seq.ops[i].op == READ) {
             uint32_t data = 0;
-            psee_sensor_read(seq.ops[i].args.write.addr, &data);
+            psee_sensor_read(csi, seq.ops[i].args.write.addr, &data);
             (void)data;
             // if (data == seq.ops[i].args.read.data){}
         } else if (seq.ops[i].op == DELAY) {
@@ -177,48 +175,48 @@ static void execute_reg_op_sequence(const struct sequence seq) {
 /**
  * @brief Function to execute the Init sequence of the ISSD.
  */
-void psee_sensor_init(const struct issd *issd) {
+void psee_sensor_init(omv_csi_t *csi, const struct issd *issd) {
 
     if (issd)
-        execute_reg_op_sequence(issd->init);
+        execute_reg_op_sequence(csi, issd->init);
 }
 
 /**
  * @brief Function to execute the Destroy sequence of the ISSD.
  */
-static void destroy(const struct issd *issd) {
+static void destroy(omv_csi_t *csi, const struct issd *issd) {
 
     if (issd)
-        execute_reg_op_sequence(issd->destroy);
+        execute_reg_op_sequence(csi, issd->destroy);
 }
 
 /**
  * @brief Function to execute the Start sequence of the ISSD.
  */
-void psee_sensor_start(const struct issd *issd) {
+void psee_sensor_start(omv_csi_t *csi, const struct issd *issd) {
 
     if (issd)
-        execute_reg_op_sequence(issd->start);
+        execute_reg_op_sequence(csi, issd->start);
 }
 
 /**
  * @brief Function to execute the Stop sequence of the ISSD.
  */
-void psee_sensor_stop(const struct issd *issd) {
+void psee_sensor_stop(omv_csi_t *csi, const struct issd *issd) {
 
     if (issd)
-        execute_reg_op_sequence(issd->stop);
+        execute_reg_op_sequence(csi, issd->stop);
 }
 
 /**
  * @brief Function to detect the boot mode of the sensor.
  */
-static GenX320_Rommode psee_detect_boot_mode() {
+static GenX320_Rommode psee_detect_boot_mode(omv_csi_t *csi) {
 
 	GenX320_Rommode boot_mode = 2;
 
     /* Read the boot message */
-    uint32_t boot_value = psee_get_mbx_misc();
+    uint32_t boot_value = psee_get_mbx_misc(csi);
 
     if (boot_value == 0) {
         boot_mode = RM_IMEM;
@@ -234,7 +232,7 @@ static GenX320_Rommode psee_detect_boot_mode() {
  */
 BIAS_Params_t genx320_default_biases;
 GenX320_Rommode genx320_boot_mode;
-const struct issd *psee_open_evt() {
+const struct issd *psee_open_evt(omv_csi_t *csi) {
 
     /* Setup I2C */
     psee_sensor_platform_init();
@@ -242,7 +240,7 @@ const struct issd *psee_open_evt() {
 
     /* Check chip ID */
     uint32_t chip_id;
-    psee_sensor_read(SAPHIR_CHIP_ID, &chip_id);
+    psee_sensor_read(csi, SAPHIR_CHIP_ID, &chip_id);
     printf("Sensor ID : %lX \n\r", chip_id);
     if ((chip_id != SAPHIR_MP_ID) && (chip_id != SAPHIR_ES_ID)) {
         while (1)
@@ -250,7 +248,7 @@ const struct issd *psee_open_evt() {
     }
 
     /* Detect the Boot mode */
-    genx320_boot_mode = psee_detect_boot_mode();
+    genx320_boot_mode = psee_detect_boot_mode(csi);
 
     if (chip_id == SAPHIR_ES_ID) {
         genx320_default_biases = genx320es_default_biases;
@@ -259,13 +257,13 @@ const struct issd *psee_open_evt() {
     }
 
     /* Force CPI with chicken bits */
-    psee_sensor_write(TOP_CHICKEN, 0x03E8000A); /*!< EVT */
+    psee_sensor_write(csi, TOP_CHICKEN, 0x03E8000A); /*!< EVT */
 
     /* Start the Init sequence */
-    psee_sensor_init(&dcmi_evt);
+    psee_sensor_init(csi, &dcmi_evt);
 
     /* Configure CPI for event streaming */
-    psee_sensor_set_CPI_EVT20();
+    psee_sensor_set_CPI_EVT20(csi);
 
     return &dcmi_evt;
 }
@@ -308,158 +306,158 @@ const BIAS_Params_t genx320mp_default_biases = {
 /**
  * @brief Function to set the standard biases
  */
-void psee_sensor_set_biases(const BIAS_Params_t *bias) {
+void psee_sensor_set_biases(omv_csi_t *csi, const BIAS_Params_t *bias) {
 
     /* PR */
-    psee_sensor_write(BIAS_BIAS_PR_HV0, (0x03010000 + bias->pr) | BIAS_PR_HV0_SINGLE_Msk);
+    psee_sensor_write(csi, BIAS_BIAS_PR_HV0, (0x03010000 + bias->pr) | BIAS_PR_HV0_SINGLE_Msk);
     uint32_t bias_pr_val = 0;
-    psee_sensor_read(BIAS_BIAS_PR_HV0, &bias_pr_val);
-    psee_sensor_write(BIAS_BIAS_PR_HV0, bias_pr_val & ~BIAS_PR_HV0_SINGLE_Msk);
+    psee_sensor_read(csi, BIAS_BIAS_PR_HV0, &bias_pr_val);
+    psee_sensor_write(csi, BIAS_BIAS_PR_HV0, bias_pr_val & ~BIAS_PR_HV0_SINGLE_Msk);
 
     /* FO */
-    psee_sensor_write(BIAS_BIAS_FO_HV0, (0x03010000 + bias->fo) | BIAS_FO_HV0_SINGLE_Msk);
+    psee_sensor_write(csi, BIAS_BIAS_FO_HV0, (0x03010000 + bias->fo) | BIAS_FO_HV0_SINGLE_Msk);
     uint32_t bias_fo_val = 0;
-    psee_sensor_read(BIAS_BIAS_FO_HV0, &bias_fo_val);
-    psee_sensor_write(BIAS_BIAS_FO_HV0, bias_fo_val & ~BIAS_FO_HV0_SINGLE_Msk);
+    psee_sensor_read(csi, BIAS_BIAS_FO_HV0, &bias_fo_val);
+    psee_sensor_write(csi, BIAS_BIAS_FO_HV0, bias_fo_val & ~BIAS_FO_HV0_SINGLE_Msk);
 
     /* FES */
-    psee_sensor_write(BIAS_BIAS_FES_HV0, (0x01010000 + bias->fes) | BIAS_FES_HV0_SINGLE_Msk);
+    psee_sensor_write(csi, BIAS_BIAS_FES_HV0, (0x01010000 + bias->fes) | BIAS_FES_HV0_SINGLE_Msk);
     uint32_t bias_fes_val = 0;
-    psee_sensor_read(BIAS_BIAS_FES_HV0, &bias_fes_val);
-    psee_sensor_write(BIAS_BIAS_FES_HV0, bias_fes_val & ~BIAS_FES_HV0_SINGLE_Msk);
+    psee_sensor_read(csi, BIAS_BIAS_FES_HV0, &bias_fes_val);
+    psee_sensor_write(csi, BIAS_BIAS_FES_HV0, bias_fes_val & ~BIAS_FES_HV0_SINGLE_Msk);
 
     /* HPF */
-    psee_sensor_write(BIAS_BIAS_HPF_LV0, (0x03010000 + bias->hpf) | BIAS_HPF_LV0_SINGLE_Msk);
+    psee_sensor_write(csi, BIAS_BIAS_HPF_LV0, (0x03010000 + bias->hpf) | BIAS_HPF_LV0_SINGLE_Msk);
     uint32_t bias_hpf_val = 0;
-    psee_sensor_read(BIAS_BIAS_HPF_LV0, &bias_hpf_val);
-    psee_sensor_write(BIAS_BIAS_HPF_LV0, bias_hpf_val & ~BIAS_HPF_LV0_SINGLE_Msk);
+    psee_sensor_read(csi, BIAS_BIAS_HPF_LV0, &bias_hpf_val);
+    psee_sensor_write(csi, BIAS_BIAS_HPF_LV0, bias_hpf_val & ~BIAS_HPF_LV0_SINGLE_Msk);
 
     /* DIFF ON */
-    psee_sensor_write(BIAS_BIAS_DIFF_ON_LV0, (0x01010000 + bias->diff_on) | BIAS_DIFF_ON_LV0_SINGLE_Msk);
+    psee_sensor_write(csi, BIAS_BIAS_DIFF_ON_LV0, (0x01010000 + bias->diff_on) | BIAS_DIFF_ON_LV0_SINGLE_Msk);
     uint32_t bias_diffon_val = 0;
-    psee_sensor_read(BIAS_BIAS_DIFF_ON_LV0, &bias_diffon_val);
-    psee_sensor_write(BIAS_BIAS_DIFF_ON_LV0, bias_diffon_val & ~BIAS_DIFF_ON_LV0_SINGLE_Msk);
+    psee_sensor_read(csi, BIAS_BIAS_DIFF_ON_LV0, &bias_diffon_val);
+    psee_sensor_write(csi, BIAS_BIAS_DIFF_ON_LV0, bias_diffon_val & ~BIAS_DIFF_ON_LV0_SINGLE_Msk);
 
     /* DIFF */
-    psee_sensor_write(BIAS_BIAS_DIFF_LV0, (0x01010000 + bias->diff) | BIAS_DIFF_LV0_SINGLE_Msk);
+    psee_sensor_write(csi, BIAS_BIAS_DIFF_LV0, (0x01010000 + bias->diff) | BIAS_DIFF_LV0_SINGLE_Msk);
     uint32_t bias_diff_val = 0;
-    psee_sensor_read(BIAS_BIAS_DIFF_LV0, &bias_diff_val);
-    psee_sensor_write(BIAS_BIAS_DIFF_LV0, bias_diff_val & ~BIAS_DIFF_LV0_SINGLE_Msk);
+    psee_sensor_read(csi, BIAS_BIAS_DIFF_LV0, &bias_diff_val);
+    psee_sensor_write(csi, BIAS_BIAS_DIFF_LV0, bias_diff_val & ~BIAS_DIFF_LV0_SINGLE_Msk);
 
     /* DIFF OFF */
-    psee_sensor_write(BIAS_BIAS_DIFF_OFF_LV0, (0x01010000 + bias->diff_off) | BIAS_DIFF_OFF_LV0_SINGLE_Msk);
+    psee_sensor_write(csi, BIAS_BIAS_DIFF_OFF_LV0, (0x01010000 + bias->diff_off) | BIAS_DIFF_OFF_LV0_SINGLE_Msk);
     uint32_t bias_diffoff_val = 0;
-    psee_sensor_read(BIAS_BIAS_DIFF_OFF_LV0, &bias_diffoff_val);
-    psee_sensor_write(BIAS_BIAS_DIFF_OFF_LV0, bias_diffoff_val & ~BIAS_DIFF_OFF_LV0_SINGLE_Msk);
+    psee_sensor_read(csi, BIAS_BIAS_DIFF_OFF_LV0, &bias_diffoff_val);
+    psee_sensor_write(csi, BIAS_BIAS_DIFF_OFF_LV0, bias_diffoff_val & ~BIAS_DIFF_OFF_LV0_SINGLE_Msk);
 
     /* INV */
-    psee_sensor_write(BIAS_BIAS_INV_LV0, (0x01010000 + bias->inv) | BIAS_INV_LV0_SINGLE_Msk);
+    psee_sensor_write(csi, BIAS_BIAS_INV_LV0, (0x01010000 + bias->inv) | BIAS_INV_LV0_SINGLE_Msk);
     uint32_t bias_inv_val = 0;
-    psee_sensor_read(BIAS_BIAS_INV_LV0, &bias_inv_val);
-    psee_sensor_write(BIAS_BIAS_INV_LV0, bias_inv_val & ~BIAS_INV_LV0_SINGLE_Msk);
+    psee_sensor_read(csi, BIAS_BIAS_INV_LV0, &bias_inv_val);
+    psee_sensor_write(csi, BIAS_BIAS_INV_LV0, bias_inv_val & ~BIAS_INV_LV0_SINGLE_Msk);
 
     /* REFR */
-    psee_sensor_write(BIAS_BIAS_REFR_LV0, (0x03010000 + bias->refr) | BIAS_REFR_LV0_SINGLE_Msk);
+    psee_sensor_write(csi, BIAS_BIAS_REFR_LV0, (0x03010000 + bias->refr) | BIAS_REFR_LV0_SINGLE_Msk);
     uint32_t bias_refr_val = 0;
-    psee_sensor_read(BIAS_BIAS_REFR_LV0, &bias_refr_val);
-    psee_sensor_write(BIAS_BIAS_REFR_LV0, bias_refr_val & ~BIAS_REFR_LV0_SINGLE_Msk);
+    psee_sensor_read(csi, BIAS_BIAS_REFR_LV0, &bias_refr_val);
+    psee_sensor_write(csi, BIAS_BIAS_REFR_LV0, bias_refr_val & ~BIAS_REFR_LV0_SINGLE_Msk);
 
     /* INVP */
-    psee_sensor_write(BIAS_BIAS_INVP_LV0, (0x03010000 + bias->invp) | BIAS_INVP_LV0_SINGLE_Msk);
+    psee_sensor_write(csi, BIAS_BIAS_INVP_LV0, (0x03010000 + bias->invp) | BIAS_INVP_LV0_SINGLE_Msk);
     uint32_t bias_invp_val = 0;
-    psee_sensor_read(BIAS_BIAS_INVP_LV0, &bias_invp_val);
-    psee_sensor_write(BIAS_BIAS_INVP_LV0, bias_invp_val & ~BIAS_INVP_LV0_SINGLE_Msk);
+    psee_sensor_read(csi, BIAS_BIAS_INVP_LV0, &bias_invp_val);
+    psee_sensor_write(csi, BIAS_BIAS_INVP_LV0, bias_invp_val & ~BIAS_INVP_LV0_SINGLE_Msk);
 
     /* REQ_PU */
-    psee_sensor_write(BIAS_BIAS_REQ_PU_LV0, (0x03010000 + bias->req_pu) | BIAS_REQ_PU_LV0_SINGLE_Msk);
+    psee_sensor_write(csi, BIAS_BIAS_REQ_PU_LV0, (0x03010000 + bias->req_pu) | BIAS_REQ_PU_LV0_SINGLE_Msk);
     uint32_t bias_reqpu_val = 0;
-    psee_sensor_read(BIAS_BIAS_REQ_PU_LV0, &bias_reqpu_val);
-    psee_sensor_write(BIAS_BIAS_REQ_PU_LV0, bias_reqpu_val & ~BIAS_REQ_PU_LV0_SINGLE_Msk);
+    psee_sensor_read(csi, BIAS_BIAS_REQ_PU_LV0, &bias_reqpu_val);
+    psee_sensor_write(csi, BIAS_BIAS_REQ_PU_LV0, bias_reqpu_val & ~BIAS_REQ_PU_LV0_SINGLE_Msk);
 
     /* SM_PDy */
-    psee_sensor_write(BIAS_BIAS_SM_PDY_LV0, (0x01010000 + bias->sm_pdy) | BIAS_SM_PDY_LV0_SINGLE_Msk);
+    psee_sensor_write(csi, BIAS_BIAS_SM_PDY_LV0, (0x01010000 + bias->sm_pdy) | BIAS_SM_PDY_LV0_SINGLE_Msk);
     uint32_t bias_smpdy_val = 0;
-    psee_sensor_read(BIAS_BIAS_SM_PDY_LV0, &bias_smpdy_val);
-    psee_sensor_write(BIAS_BIAS_SM_PDY_LV0, bias_smpdy_val & ~BIAS_SM_PDY_LV0_SINGLE_Msk);
+    psee_sensor_read(csi, BIAS_BIAS_SM_PDY_LV0, &bias_smpdy_val);
+    psee_sensor_write(csi, BIAS_BIAS_SM_PDY_LV0, bias_smpdy_val & ~BIAS_SM_PDY_LV0_SINGLE_Msk);
 }
 
 /**
  * @brief Function to change the Bias setting
  */
-void psee_sensor_set_bias(BIAS_Name_t bias, uint32_t val) {
+void psee_sensor_set_bias(omv_csi_t *csi, BIAS_Name_t bias, uint32_t val) {
 
     switch (bias) {
     case PR:
-        psee_sensor_write(BIAS_BIAS_PR_HV0, (0x03010000 + val) | BIAS_PR_HV0_SINGLE_Msk);
+        psee_sensor_write(csi, BIAS_BIAS_PR_HV0, (0x03010000 + val) | BIAS_PR_HV0_SINGLE_Msk);
         uint32_t bias_pr_val = 0;
-        psee_sensor_read(BIAS_BIAS_PR_HV0, &bias_pr_val);
-        psee_sensor_write(BIAS_BIAS_PR_HV0, bias_pr_val & ~BIAS_PR_HV0_SINGLE_Msk);
+        psee_sensor_read(csi, BIAS_BIAS_PR_HV0, &bias_pr_val);
+        psee_sensor_write(csi, BIAS_BIAS_PR_HV0, bias_pr_val & ~BIAS_PR_HV0_SINGLE_Msk);
         break;
     case FO:
-        psee_sensor_write(BIAS_BIAS_FO_HV0, (0x03010000 + val) | BIAS_FO_HV0_SINGLE_Msk);
+        psee_sensor_write(csi, BIAS_BIAS_FO_HV0, (0x03010000 + val) | BIAS_FO_HV0_SINGLE_Msk);
         uint32_t bias_fo_val = 0;
-        psee_sensor_read(BIAS_BIAS_FO_HV0, &bias_fo_val);
-        psee_sensor_write(BIAS_BIAS_FO_HV0, bias_fo_val & ~BIAS_FO_HV0_SINGLE_Msk);
+        psee_sensor_read(csi, BIAS_BIAS_FO_HV0, &bias_fo_val);
+        psee_sensor_write(csi, BIAS_BIAS_FO_HV0, bias_fo_val & ~BIAS_FO_HV0_SINGLE_Msk);
         break;
     case FES:
-        psee_sensor_write(BIAS_BIAS_FES_HV0, (0x01010000 + val) | BIAS_FES_HV0_SINGLE_Msk);
+        psee_sensor_write(csi, BIAS_BIAS_FES_HV0, (0x01010000 + val) | BIAS_FES_HV0_SINGLE_Msk);
         uint32_t bias_fes_val = 0;
-        psee_sensor_read(BIAS_BIAS_FES_HV0, &bias_fes_val);
-        psee_sensor_write(BIAS_BIAS_FES_HV0, bias_fes_val & ~BIAS_FES_HV0_SINGLE_Msk);
+        psee_sensor_read(csi, BIAS_BIAS_FES_HV0, &bias_fes_val);
+        psee_sensor_write(csi, BIAS_BIAS_FES_HV0, bias_fes_val & ~BIAS_FES_HV0_SINGLE_Msk);
         break;
     case HPF:
-        psee_sensor_write(BIAS_BIAS_HPF_LV0, (0x03010000 + val) | BIAS_HPF_LV0_SINGLE_Msk);
+        psee_sensor_write(csi, BIAS_BIAS_HPF_LV0, (0x03010000 + val) | BIAS_HPF_LV0_SINGLE_Msk);
         uint32_t bias_hpf_val = 0;
-        psee_sensor_read(BIAS_BIAS_HPF_LV0, &bias_hpf_val);
-        psee_sensor_write(BIAS_BIAS_HPF_LV0, bias_hpf_val & ~BIAS_HPF_LV0_SINGLE_Msk);
+        psee_sensor_read(csi, BIAS_BIAS_HPF_LV0, &bias_hpf_val);
+        psee_sensor_write(csi, BIAS_BIAS_HPF_LV0, bias_hpf_val & ~BIAS_HPF_LV0_SINGLE_Msk);
         break;
     case DIFF_ON:
-        psee_sensor_write(BIAS_BIAS_DIFF_ON_LV0, (0x01010000 + val) | BIAS_DIFF_ON_LV0_SINGLE_Msk);
+        psee_sensor_write(csi, BIAS_BIAS_DIFF_ON_LV0, (0x01010000 + val) | BIAS_DIFF_ON_LV0_SINGLE_Msk);
         uint32_t bias_diffon_val = 0;
-        psee_sensor_read(BIAS_BIAS_DIFF_ON_LV0, &bias_diffon_val);
-        psee_sensor_write(BIAS_BIAS_DIFF_ON_LV0, bias_diffon_val & ~BIAS_DIFF_ON_LV0_SINGLE_Msk);
+        psee_sensor_read(csi, BIAS_BIAS_DIFF_ON_LV0, &bias_diffon_val);
+        psee_sensor_write(csi, BIAS_BIAS_DIFF_ON_LV0, bias_diffon_val & ~BIAS_DIFF_ON_LV0_SINGLE_Msk);
         break;
     case DIFF:
-        psee_sensor_write(BIAS_BIAS_DIFF_LV0, (0x01010000 + val) | BIAS_DIFF_LV0_SINGLE_Msk);
+        psee_sensor_write(csi, BIAS_BIAS_DIFF_LV0, (0x01010000 + val) | BIAS_DIFF_LV0_SINGLE_Msk);
         uint32_t bias_diff_val = 0;
-        psee_sensor_read(BIAS_BIAS_DIFF_LV0, &bias_diff_val);
-        psee_sensor_write(BIAS_BIAS_DIFF_LV0, bias_diff_val & ~BIAS_DIFF_LV0_SINGLE_Msk);
+        psee_sensor_read(csi, BIAS_BIAS_DIFF_LV0, &bias_diff_val);
+        psee_sensor_write(csi, BIAS_BIAS_DIFF_LV0, bias_diff_val & ~BIAS_DIFF_LV0_SINGLE_Msk);
         break;
     case DIFF_OFF:
-        psee_sensor_write(BIAS_BIAS_DIFF_OFF_LV0, (0x01010000 + val) | BIAS_DIFF_OFF_LV0_SINGLE_Msk);
+        psee_sensor_write(csi, BIAS_BIAS_DIFF_OFF_LV0, (0x01010000 + val) | BIAS_DIFF_OFF_LV0_SINGLE_Msk);
         uint32_t bias_diffoff_val = 0;
-        psee_sensor_read(BIAS_BIAS_DIFF_OFF_LV0, &bias_diffoff_val);
-        psee_sensor_write(BIAS_BIAS_DIFF_OFF_LV0, bias_diffoff_val & ~BIAS_DIFF_OFF_LV0_SINGLE_Msk);
+        psee_sensor_read(csi, BIAS_BIAS_DIFF_OFF_LV0, &bias_diffoff_val);
+        psee_sensor_write(csi, BIAS_BIAS_DIFF_OFF_LV0, bias_diffoff_val & ~BIAS_DIFF_OFF_LV0_SINGLE_Msk);
         break;
     case INV:
-        psee_sensor_write(BIAS_BIAS_INV_LV0, (0x01010000 + val) | BIAS_INV_LV0_SINGLE_Msk);
+        psee_sensor_write(csi, BIAS_BIAS_INV_LV0, (0x01010000 + val) | BIAS_INV_LV0_SINGLE_Msk);
         uint32_t bias_inv_val = 0;
-        psee_sensor_read(BIAS_BIAS_INV_LV0, &bias_inv_val);
-        psee_sensor_write(BIAS_BIAS_INV_LV0, bias_inv_val & ~BIAS_INV_LV0_SINGLE_Msk);
+        psee_sensor_read(csi, BIAS_BIAS_INV_LV0, &bias_inv_val);
+        psee_sensor_write(csi, BIAS_BIAS_INV_LV0, bias_inv_val & ~BIAS_INV_LV0_SINGLE_Msk);
         break;
     case REFR:
-        psee_sensor_write(BIAS_BIAS_REFR_LV0, (0x03010000 + val) | BIAS_REFR_LV0_SINGLE_Msk);
+        psee_sensor_write(csi, BIAS_BIAS_REFR_LV0, (0x03010000 + val) | BIAS_REFR_LV0_SINGLE_Msk);
         uint32_t bias_refr_val = 0;
-        psee_sensor_read(BIAS_BIAS_REFR_LV0, &bias_refr_val);
-        psee_sensor_write(BIAS_BIAS_REFR_LV0, bias_refr_val & ~BIAS_REFR_LV0_SINGLE_Msk);
+        psee_sensor_read(csi, BIAS_BIAS_REFR_LV0, &bias_refr_val);
+        psee_sensor_write(csi, BIAS_BIAS_REFR_LV0, bias_refr_val & ~BIAS_REFR_LV0_SINGLE_Msk);
         break;
     case INVP:
-        psee_sensor_write(BIAS_BIAS_INVP_LV0, (0x03010000 + val) | BIAS_INVP_LV0_SINGLE_Msk);
+        psee_sensor_write(csi, BIAS_BIAS_INVP_LV0, (0x03010000 + val) | BIAS_INVP_LV0_SINGLE_Msk);
         uint32_t bias_invp_val = 0;
-        psee_sensor_read(BIAS_BIAS_INVP_LV0, &bias_invp_val);
-        psee_sensor_write(BIAS_BIAS_INVP_LV0, bias_invp_val & ~BIAS_INVP_LV0_SINGLE_Msk);
+        psee_sensor_read(csi, BIAS_BIAS_INVP_LV0, &bias_invp_val);
+        psee_sensor_write(csi, BIAS_BIAS_INVP_LV0, bias_invp_val & ~BIAS_INVP_LV0_SINGLE_Msk);
         break;
     case REQ_PU:
-        psee_sensor_write(BIAS_BIAS_REQ_PU_LV0, (0x03010000 + val) | BIAS_REQ_PU_LV0_SINGLE_Msk);
+        psee_sensor_write(csi, BIAS_BIAS_REQ_PU_LV0, (0x03010000 + val) | BIAS_REQ_PU_LV0_SINGLE_Msk);
         uint32_t bias_reqpu_val = 0;
-        psee_sensor_read(BIAS_BIAS_REQ_PU_LV0, &bias_reqpu_val);
-        psee_sensor_write(BIAS_BIAS_REQ_PU_LV0, bias_reqpu_val & ~BIAS_REQ_PU_LV0_SINGLE_Msk);
+        psee_sensor_read(csi, BIAS_BIAS_REQ_PU_LV0, &bias_reqpu_val);
+        psee_sensor_write(csi, BIAS_BIAS_REQ_PU_LV0, bias_reqpu_val & ~BIAS_REQ_PU_LV0_SINGLE_Msk);
         break;
     case SM_PDY:
-        psee_sensor_write(BIAS_BIAS_SM_PDY_LV0, (0x01010000 + val) | BIAS_SM_PDY_LV0_SINGLE_Msk);
+        psee_sensor_write(csi, BIAS_BIAS_SM_PDY_LV0, (0x01010000 + val) | BIAS_SM_PDY_LV0_SINGLE_Msk);
         uint32_t bias_smpdy_val = 0;
-        psee_sensor_read(BIAS_BIAS_SM_PDY_LV0, &bias_smpdy_val);
-        psee_sensor_write(BIAS_BIAS_SM_PDY_LV0, bias_smpdy_val & ~BIAS_SM_PDY_LV0_SINGLE_Msk);
+        psee_sensor_read(csi, BIAS_BIAS_SM_PDY_LV0, &bias_smpdy_val);
+        psee_sensor_write(csi, BIAS_BIAS_SM_PDY_LV0, bias_smpdy_val & ~BIAS_SM_PDY_LV0_SINGLE_Msk);
         break;
     default:
         break;
@@ -469,28 +467,28 @@ void psee_sensor_set_bias(BIAS_Name_t bias, uint32_t val) {
 /**
  * @brief Function to configure the CPI and configure the sensor data format in EVT2.0
  */
-void psee_sensor_set_CPI_EVT20() {
+void psee_sensor_set_CPI_EVT20(omv_csi_t *csi) {
 
     /* Set EVT20 mode */
-    psee_sensor_write(EDF_CONTROL, 0x00UL); /*!< Event Format : Legacy EVT2.0 */
+    psee_sensor_write(csi, EDF_CONTROL, 0x00UL); /*!< Event Format : Legacy EVT2.0 */
 
     /* Configure Packet and Frame sizes */
-    psee_sensor_write(CPI_FRAME_SIZE_CONTROL, 0x4UL); /*!< Frame Size in Packets : 4 Packets */
+    psee_sensor_write(csi, CPI_FRAME_SIZE_CONTROL, 0x4UL); /*!< Frame Size in Packets : 4 Packets */
 
     /* Polarities fr VSYNC & HSYNC */
-    psee_sensor_write(CPI_OUTPUT_IF_CONTROL, CPI_OUTPUT_IF_CONTROL_HSYNC_POL |   /*!< HSYNC polarity control : Synchronize at active high */
+    psee_sensor_write(csi, CPI_OUTPUT_IF_CONTROL, CPI_OUTPUT_IF_CONTROL_HSYNC_POL |   /*!< HSYNC polarity control : Synchronize at active high */
                                                  CPI_OUTPUT_IF_CONTROL_VSYNC_POL /*!< VSYNC polarity control : Synchronize at active high */
     );
 
     /* Enable dropping */
-    psee_sensor_write(RO_READOUT_CTRL, RO_READOUT_CTRL_DIGITAL_PIPE_EN |     /*!< Enable Whole Readout block */
+    psee_sensor_write(csi, RO_READOUT_CTRL, RO_READOUT_CTRL_DIGITAL_PIPE_EN |     /*!< Enable Whole Readout block */
                                            RO_READOUT_CTRL_AVOID_BPRESS_TD | /*!< Avoid back pressure propagation when readout is busy */
                                            RO_READOUT_CTRL_DROP_EN |         /*!< Drop all events at the output of the RO except first events and timer high */
                                            RO_READOUT_CTRL_DROP_ON_FULL_EN   /*!< Drop a packet only if cannot be accepted by the following stage */
     );
 
     /* Configure CPI Pipeline */
-    psee_sensor_write(CPI_PIPELINE_CONTROL, CPI_PIPELINE_CONTROL_ENABLE |                       /*!< Enable Output Interface */
+    psee_sensor_write(csi, CPI_PIPELINE_CONTROL, CPI_PIPELINE_CONTROL_ENABLE |                       /*!< Enable Output Interface */
                                                 CPI_PIPELINE_CONTROL_OUTPUT_IF_MODE |           /*!< Output Interface Mode : DCMI */
                                                 CPI_PIPELINE_CONTROL_PACKET_FIXED_SIZE_ENABLE | /*!< Fixed Packet Size */
                                                 CPI_PIPELINE_CONTROL_FRAME_FIXED_SIZE_ENABLE |  /*!< Fixed Frame Size */
@@ -501,15 +499,15 @@ void psee_sensor_set_CPI_EVT20() {
 /**
  * @brief Function to configure CPI and configure the sensor data format in HISTO3D (WIP)
  */
-void psee_sensor_set_CPI_HISTO() {
+void psee_sensor_set_CPI_HISTO(omv_csi_t *csi) {
 
     /* Polarities for VSYNC & HSYNC */
-    psee_sensor_write(CPI_OUTPUT_IF_CONTROL, CPI_OUTPUT_IF_CONTROL_HSYNC_POL |   /*!< HSYNC polarity control : Synchronize at active high */
+    psee_sensor_write(csi, CPI_OUTPUT_IF_CONTROL, CPI_OUTPUT_IF_CONTROL_HSYNC_POL |   /*!< HSYNC polarity control : Synchronize at active high */
                                                  CPI_OUTPUT_IF_CONTROL_VSYNC_POL /*!< VSYNC polarity control : Synchronize at active high */
     );
 
     /* Enable dropping */
-    psee_sensor_write(RO_READOUT_CTRL, RO_READOUT_CTRL_DIGITAL_PIPE_EN |     /*!< Enable Whole Readout block */
+    psee_sensor_write(csi, RO_READOUT_CTRL, RO_READOUT_CTRL_DIGITAL_PIPE_EN |     /*!< Enable Whole Readout block */
                                            RO_READOUT_CTRL_AVOID_BPRESS_TD | /*!< Avoid back pressure propagation when readout is busy */
                                            RO_READOUT_CTRL_DROP_EN |         /*!< Drop all events at the output of the RO except first events and timer high */
                                            RO_READOUT_CTRL_DROP_ON_FULL_EN   /*!< Drop a packet only if cannot be accepted by the following stage */
@@ -521,12 +519,12 @@ void psee_sensor_set_CPI_HISTO() {
  * @param flip_x To indicate that x axis needs to be flipped
  * @param flip_y To indicate that y axis needs to be flipped
  */
-void psee_sensor_set_flip(uint32_t flip_x, uint32_t flip_y) {
+void psee_sensor_set_flip(omv_csi_t *csi, uint32_t flip_x, uint32_t flip_y) {
 
     uint32_t reg_val;
 
     /* Read the old value*/
-    psee_sensor_read(RO_READOUT_CTRL, &reg_val);
+    psee_sensor_read(csi, RO_READOUT_CTRL, &reg_val);
     reg_val &= 0x003FF6FF;
 
     /* Check if it is a X axis flip*/
@@ -542,45 +540,45 @@ void psee_sensor_set_flip(uint32_t flip_x, uint32_t flip_y) {
         reg_val &= ~(flip_y << 7);
 
     /* Update the new value*/
-    psee_sensor_write(RO_READOUT_CTRL, reg_val);
+    psee_sensor_write(csi, RO_READOUT_CTRL, reg_val);
 }
 
 /**
  * @brief Function to execute mipi_phy power down sequence.
  */
-static void mipi_dphy_power_down() {
+static void mipi_dphy_power_down(omv_csi_t *csi) {
 
     /* MIPI Power and Clock control */
-    psee_sensor_write(MIPI_CSI_POWER, (0UL << MIPI_CSI_POWER_CL_ENABLE_Pos) |   /*!< Clock lane power up input signal */
+    psee_sensor_write(csi, MIPI_CSI_POWER, (0UL << MIPI_CSI_POWER_CL_ENABLE_Pos) |   /*!< Clock lane power up input signal */
                                           (0UL << MIPI_CSI_POWER_DL_ENABLE_Pos) /*!< Data lane power up input signal */
     );
 
-    psee_sensor_write(MIPI_CSI_CLK_CTRL, (0UL << MIPI_CSI_CLK_CTRL_STBUS_EN_Pos) |         /*!< STbus clock */
+    psee_sensor_write(csi, MIPI_CSI_CLK_CTRL, (0UL << MIPI_CSI_CLK_CTRL_STBUS_EN_Pos) |         /*!< STbus clock */
                                              (0UL << MIPI_CSI_CLK_CTRL_CL_CLKESC_EN_Pos) | /*!< Clock Lane escape clock */
                                              (0UL << MIPI_CSI_CLK_CTRL_DL_CLKESC_EN_Pos)   /*!< Data Lane escape clock */
     );
 
-    psee_sensor_write(MIPI_CSI_POWER, (0UL << MIPI_CSI_POWER_CL_RSTN_Pos) |   /*!< Asynchronous Reset of Clock Lane */
+    psee_sensor_write(csi, MIPI_CSI_POWER, (0UL << MIPI_CSI_POWER_CL_RSTN_Pos) |   /*!< Asynchronous Reset of Clock Lane */
                                           (0UL << MIPI_CSI_POWER_DL_RSTN_Pos) /*!< Asynchronous Reset of Data Lane */
     );
 
-    psee_sensor_write(MIPI_CSI_CLK_CTRL, (0UL << MIPI_CSI_CLK_CTRL_TXCLKESC_EN_Pos)); /*!< Escape clock */
+    psee_sensor_write(csi, MIPI_CSI_CLK_CTRL, (0UL << MIPI_CSI_CLK_CTRL_TXCLKESC_EN_Pos)); /*!< Escape clock */
 
     /* Disable Calibration */
-    psee_sensor_write(LDO_PMU, (0UL << LDO_PMU_V2I_CAL_EN_Pos)); /*!< Calibration to adjust resistor value */
+    psee_sensor_write(csi, LDO_PMU, (0UL << LDO_PMU_V2I_CAL_EN_Pos)); /*!< Calibration to adjust resistor value */
 
-    psee_sensor_write(ADC_CONTROL, (0UL << ADC_CONTROL_CLK_EN_Pos)); /*!< ADC Clock */
+    psee_sensor_write(csi, ADC_CONTROL, (0UL << ADC_CONTROL_CLK_EN_Pos)); /*!< ADC Clock */
 
-    psee_sensor_write(MIPI_CSI_POWER, (0UL << MIPI_CSI_POWER_CUR_EN_Pos)); /*!< MIPI Bias */
+    psee_sensor_write(csi, MIPI_CSI_POWER, (0UL << MIPI_CSI_POWER_CUR_EN_Pos)); /*!< MIPI Bias */
 
     /* Disable pmu_icgm, v2i, mipi_v2i */
-    psee_sensor_write(LDO_PMU, (0UL << LDO_PMU_ICGM_EN_Pos) |       /*!< CGM Current */
+    psee_sensor_write(csi, LDO_PMU, (0UL << LDO_PMU_ICGM_EN_Pos) |       /*!< CGM Current */
                                    (0UL << LDO_PMU_V2I_EN_Pos) |    /*!< V2i */
                                    (0UL << LDO_PMU_MIPI_V2I_EN_Pos) /*!< Reference bias current for MIPI V2i */
     );
 
     /* Disable BG */
-    psee_sensor_write(LDO_BG, (0UL << LDO_BG_EN_Pos) |       /*!< Bandgap */
+    psee_sensor_write(csi, LDO_BG, (0UL << LDO_BG_EN_Pos) |       /*!< Bandgap */
                                   (0UL << LDO_BG_BUF_EN_Pos) /*!< Bandgap Buffer */
     );
 }
@@ -589,7 +587,7 @@ static void mipi_dphy_power_down() {
  * @brief Function to read all the sensor clock tree registers and compute the value of each clocks.
  * @args in_freq Sensor input clock in MHz
  */
-static clk_freq_dict get_sensor_clk_freq(uint32_t in_freq) {
+static clk_freq_dict get_sensor_clk_freq(omv_csi_t *csi, uint32_t in_freq) {
 
     /* Create a Instance of Clock frequency structure */
     clk_freq_dict clk_freq;
@@ -607,7 +605,7 @@ static clk_freq_dict get_sensor_clk_freq(uint32_t in_freq) {
 
     /* Get sys clock freq */
     uint32_t sys_clk_ctrl = 0, sys_clk_switch = 0, sys_clk_auto_mode = 0;
-    psee_sensor_read(SYS_CLK_CTRL, &sys_clk_ctrl);
+    psee_sensor_read(csi, SYS_CLK_CTRL, &sys_clk_ctrl);
     sys_clk_switch = (sys_clk_ctrl & SYS_CLK_CTRL_SWITCH_Msk) >> SYS_CLK_CTRL_SWITCH_Pos;
 
     if (sys_clk_switch == 0) {
@@ -615,7 +613,7 @@ static clk_freq_dict get_sensor_clk_freq(uint32_t in_freq) {
     } else {
         /* Get all PLL freq */
         uint32_t ref_clk_ctrl = 0, ref_clk_switch = 0, ref_clk_div = 0;
-        psee_sensor_read(REF_CLK_CTRL, &ref_clk_ctrl);
+        psee_sensor_read(csi, REF_CLK_CTRL, &ref_clk_ctrl);
         ref_clk_switch = (ref_clk_ctrl & REF_CLK_CTRL_SWITCH_Msk) >> REF_CLK_CTRL_SWITCH_Pos;
 
         if (ref_clk_switch == 0) {
@@ -626,7 +624,7 @@ static clk_freq_dict get_sensor_clk_freq(uint32_t in_freq) {
         }
 
         uint32_t pll_ctrl = 0, pl_ndiv = 0, pl_odf = 0;
-        psee_sensor_read(PLL_CTRL, &pll_ctrl);
+        psee_sensor_read(csi, PLL_CTRL, &pll_ctrl);
         pl_ndiv = (pll_ctrl & PLL_CTRL_PL_NDIV_Msk) >> PLL_CTRL_PL_NDIV_Pos;
         pl_odf = (pll_ctrl & PLL_CTRL_PL_ODF_Msk) >> PLL_CTRL_PL_ODF_Pos;
         clk_freq.pll_vco_freq = clk_freq.pll_in_freq * pl_ndiv * 2;
@@ -649,11 +647,11 @@ static clk_freq_dict get_sensor_clk_freq(uint32_t in_freq) {
     sys_clk_auto_mode = (sys_clk_ctrl & SYS_CLK_CTRL_AUTO_MODE_Msk) >> SYS_CLK_CTRL_AUTO_MODE_Pos;
 
     uint32_t evt_icn_clk_ctrl = 0, evt_icn_clk_switch = 0, esp_clk_en = 0;
-    psee_sensor_read(EVT_ICN_CLK_CTRL, &evt_icn_clk_ctrl);
+    psee_sensor_read(csi, EVT_ICN_CLK_CTRL, &evt_icn_clk_ctrl);
     evt_icn_clk_switch = (evt_icn_clk_ctrl & EVT_ICN_CLK_CTRL_SWITCH_Msk) >> EVT_ICN_CLK_CTRL_SWITCH_Pos;
 
     uint32_t cpu_ss_clk_ctrl = 0, cpu_ss_clk_switch = 0;
-    psee_sensor_read(CPU_SS_CLK_CTRL, &cpu_ss_clk_ctrl);
+    psee_sensor_read(csi, CPU_SS_CLK_CTRL, &cpu_ss_clk_ctrl);
     cpu_ss_clk_switch = (cpu_ss_clk_ctrl & CPU_SS_CLK_CTRL_SWITCH_Msk) >> CPU_SS_CLK_CTRL_SWITCH_Pos;
 
     if (((sys_clk_auto_mode == 0) && (evt_icn_clk_switch == 1)) || ((sys_clk_auto_mode == 1) && (sys_clk_switch == 1))) {
@@ -674,7 +672,7 @@ static clk_freq_dict get_sensor_clk_freq(uint32_t in_freq) {
     esp_clk_en = (evt_icn_clk_ctrl & EVT_ICN_CLK_CTRL_EN_Msk) >> EVT_ICN_CLK_CTRL_EN_Pos;
     if (esp_clk_en == 1) {
         uint32_t mipi_csi_clk_ctrl = 0, txclkesc_en = 0;
-        psee_sensor_read(MIPI_CSI_CLK_CTRL, &mipi_csi_clk_ctrl);
+        psee_sensor_read(csi, MIPI_CSI_CLK_CTRL, &mipi_csi_clk_ctrl);
         txclkesc_en = (mipi_csi_clk_ctrl & MIPI_CSI_CLK_CTRL_TXCLKESC_EN_Msk) >> MIPI_CSI_CLK_CTRL_TXCLKESC_EN_Pos;
 
         if (txclkesc_en == 1) {
@@ -689,82 +687,82 @@ static clk_freq_dict get_sensor_clk_freq(uint32_t in_freq) {
 /**
  * @brief Function to execute pll power down sequence
  */
-static void pll_power_down_and_switch(uint32_t in_freq) {
+static void pll_power_down_and_switch(omv_csi_t *csi, uint32_t in_freq) {
 
     /* Read sensor clock tree */
     clk_freq_dict clk_freq;
-    clk_freq = get_sensor_clk_freq(in_freq);
+    clk_freq = get_sensor_clk_freq(csi, in_freq);
 
     /* Put back the cpu_ss and evt_icn clocks to sys_freq/2 before switch the sys clock to ref clock */
     if (clk_freq.sys_freq != clk_freq.cpu_ss_freq) {
-        psee_sensor_write(CPU_SS_CLK_CTRL, (2UL << CPU_SS_CLK_CTRL_DIV_Pos));
+        psee_sensor_write(csi, CPU_SS_CLK_CTRL, (2UL << CPU_SS_CLK_CTRL_DIV_Pos));
     }
     if (clk_freq.sys_freq != clk_freq.evt_icn_freq) {
-        psee_sensor_write(EVT_ICN_CLK_CTRL, (2UL << EVT_ICN_CLK_CTRL_DIV_Pos));
+        psee_sensor_write(csi, EVT_ICN_CLK_CTRL, (2UL << EVT_ICN_CLK_CTRL_DIV_Pos));
     }
 
     /* Switch sys clock and pll power down */
     if (clk_freq.pll_vco_freq != 0) {
-        psee_sensor_write(SYS_CLK_CTRL, (1UL << SYS_CLK_CTRL_EN_Pos) |
+        psee_sensor_write(csi, SYS_CLK_CTRL, (1UL << SYS_CLK_CTRL_EN_Pos) |
                                             (0UL << SYS_CLK_CTRL_SWITCH_Pos));
 
-        psee_sensor_write(SYS_CLK_CTRL, (0UL << SYS_CLK_CTRL_EN_Pos) |
+        psee_sensor_write(csi, SYS_CLK_CTRL, (0UL << SYS_CLK_CTRL_EN_Pos) |
                                             (0UL << SYS_CLK_CTRL_SWITCH_Pos));
 
-        psee_sensor_write(PLL_CTRL, (0UL << PLL_CTRL_PL_ENABLE_Pos));
+        psee_sensor_write(csi, PLL_CTRL, (0UL << PLL_CTRL_PL_ENABLE_Pos));
     }
 
     if (clk_freq.sys_freq != clk_freq.cpu_ss_freq) {
-        psee_sensor_write(CPU_SS_CLK_CTRL, (0UL << CPU_SS_CLK_CTRL_SWITCH_Pos));
+        psee_sensor_write(csi, CPU_SS_CLK_CTRL, (0UL << CPU_SS_CLK_CTRL_SWITCH_Pos));
     }
 
     if (clk_freq.sys_freq != clk_freq.evt_icn_freq) {
-        psee_sensor_write(EVT_ICN_CLK_CTRL, (0UL << EVT_ICN_CLK_CTRL_SWITCH_Pos));
+        psee_sensor_write(csi, EVT_ICN_CLK_CTRL, (0UL << EVT_ICN_CLK_CTRL_SWITCH_Pos));
     }
 }
 
 /**
  * @brief Function to execute the destroy sequence of the ISSD.
  */
-void psee_sensor_destroy() {
+void psee_sensor_destroy(omv_csi_t *csi) {
 
     /* MIPI power down */
-    mipi_dphy_power_down();
+    mipi_dphy_power_down(csi);
 
     /* PLL power down and switch */
-    pll_power_down_and_switch(10);
+    pll_power_down_and_switch(csi, 10);
 }
 
 /**
  * @brief Function to reconfigure the sensor.
  */
-void psee_sensor_reconfig() {
+void psee_sensor_reconfig(omv_csi_t *csi) {
 
     /* Execute the DESTROY sequence of the ISSD */
-    psee_sensor_destroy();
+    psee_sensor_destroy(csi);
 
     /* Execute the INIT sequence of the ISSD */
-    psee_sensor_init(current_issd);
+    psee_sensor_init(csi, current_issd);
 
     if (current_issd == &dcmi_histo) {
         /* Configure CPI for Histo streaming */
-        psee_sensor_set_CPI_HISTO();
+        psee_sensor_set_CPI_HISTO(csi);
 
         /* Set Flip */
-        psee_sensor_set_flip(1, 0);
+        psee_sensor_set_flip(csi, 1, 0);
     } else {
         /* Configure CPI for event streaming */
-        psee_sensor_set_CPI_EVT20();
+        psee_sensor_set_CPI_EVT20(csi);
 
         /* Set Flip */
-        psee_sensor_set_flip(0, 0);
+        psee_sensor_set_flip(csi, 0, 0);
     }
 
     /* Set Standard biases */
-    psee_sensor_set_biases(&genx320_default_biases);
+    psee_sensor_set_biases(csi, &genx320_default_biases);
 
     /* Start the sensor */
-    psee_sensor_start(current_issd);
+    psee_sensor_start(csi, current_issd);
 }
 
 /**
@@ -788,7 +786,7 @@ void psee_sensor_reconfig() {
 /**
  * @brief  Function to configure the sensor for streaming mode.
  */
-void psee_PM3C_config() {
+void psee_PM3C_config(omv_csi_t *csi) {
 
     /*
      * RO 		- ON
@@ -799,7 +797,7 @@ void psee_PM3C_config() {
      */
 
     /* CPI Default Pipeline Setting */
-    psee_sensor_write(CPI_PIPELINE_CONTROL, CPI_PIPELINE_CONTROL_ENABLE |                       /*!< Enable Output Interface */
+    psee_sensor_write(csi, CPI_PIPELINE_CONTROL, CPI_PIPELINE_CONTROL_ENABLE |                       /*!< Enable Output Interface */
                                                 CPI_PIPELINE_CONTROL_OUTPUT_IF_MODE |           /*!< Output Interface Mode : DCMI */
                                                 CPI_PIPELINE_CONTROL_PACKET_FIXED_SIZE_ENABLE | /*!< Fixed Packet Size */
                                                 CPI_PIPELINE_CONTROL_FRAME_FIXED_SIZE_ENABLE |  /*!< Fixed Frame Size */
@@ -810,7 +808,7 @@ void psee_PM3C_config() {
 /**
  * @brief  Function to configure the sensor in PM3 mode for Histo configuration.
  */
-void psee_PM3C_Histo_config() {
+void psee_PM3C_Histo_config(omv_csi_t *csi) {
 
     /*
      * RO 		- ON
@@ -821,7 +819,7 @@ void psee_PM3C_Histo_config() {
      */
 
     /* CPI Default Pipeline Setting */
-    psee_sensor_write(CPI_PIPELINE_CONTROL, CPI_PIPELINE_CONTROL_ENABLE |                        /*!< Enable Output Interface */
+    psee_sensor_write(csi, CPI_PIPELINE_CONTROL, CPI_PIPELINE_CONTROL_ENABLE |                        /*!< Enable Output Interface */
                                                 CPI_PIPELINE_CONTROL_OUTPUT_IF_MODE |            /*!< Output Interface Mode : DCMI */
                                                 CPI_PIPELINE_CONTROL_PACKET_FIXED_SIZE_ENABLE |  /*!< Fixed Packet Size */
                                                 CPI_PIPELINE_CONTROL_FRAME_FIXED_SIZE_ENABLE |   /*!< Fixed Frame Size */
@@ -835,7 +833,7 @@ void psee_PM3C_Histo_config() {
 /**
  * @brief  Function to configure the sensor for low power monitor mode.
  */
-void psee_PM2_config() {
+void psee_PM2_config(omv_csi_t *csi) {
 
     /*
      * RO 		- ON
@@ -846,7 +844,7 @@ void psee_PM2_config() {
      */
 
     /* CPI Hot Disable */
-    psee_sensor_write(CPI_PIPELINE_CONTROL, (0x0UL << CPI_PIPELINE_CONTROL_ENABLE_Pos) |  /*!< Disable Output Interface */
+    psee_sensor_write(csi, CPI_PIPELINE_CONTROL, (0x0UL << CPI_PIPELINE_CONTROL_ENABLE_Pos) |  /*!< Disable Output Interface */
                                                 CPI_PIPELINE_CONTROL_DROP_NBACKPRESSURE | /*!< Drop the back-pressure when the block is disabled */
                                                 CPI_PIPELINE_CONTROL_HOT_DISABLE_ENABLE   /*!< Hot Disable Mode */
     );
@@ -855,7 +853,7 @@ void psee_PM2_config() {
 /**
  * @brief  Function to configure the sensor in PM2 mode for Histo configuration.
  */
-void psee_PM2_Histo_config() {
+void psee_PM2_Histo_config(omv_csi_t *csi) {
 
     /*
      * RO 		- ON
@@ -866,7 +864,7 @@ void psee_PM2_Histo_config() {
      */
 
     /* CPI Hot Disable */
-    psee_sensor_write(CPI_PIPELINE_CONTROL, (0x0UL << CPI_PIPELINE_CONTROL_ENABLE_Pos) /*!< Disable Output Interface */
+    psee_sensor_write(csi, CPI_PIPELINE_CONTROL, (0x0UL << CPI_PIPELINE_CONTROL_ENABLE_Pos) /*!< Disable Output Interface */
     );
 }
 
@@ -895,7 +893,7 @@ void psee_PM2_Histo_config() {
  * @param  firmwareArray Pointer to the firmware array
  * @param  n_bytes Size of the firmware
  */
-FW_StatusTypeDef psee_write_firmware_single(const Firmware *firmwareArray, uint32_t n_bytes) {
+FW_StatusTypeDef psee_write_firmware_single(omv_csi_t *csi, const Firmware *firmwareArray, uint32_t n_bytes) {
 
     uint32_t prev_addr = 0;
 
@@ -907,15 +905,15 @@ FW_StatusTypeDef psee_write_firmware_single(const Firmware *firmwareArray, uint3
         if (((offset & 0x3F) == 0) || (firmwareArray[i].address != (prev_addr + 4))) {
             uint32_t select = (firmwareArray[i].address < DMEM_START) ? GENX_MEM_BANK_IMEM : GENX_MEM_BANK_DMEM;
             uint32_t bank = offset >> 6;
-            psee_sensor_write(MEM_BANK_SELECT, (select << 28) + bank);
+            psee_sensor_write(csi, MEM_BANK_SELECT, (select << 28) + bank);
         }
-        psee_sensor_write(MEM_BANK_MEM0 + ((offset & 0x3F) << 2), firmwareArray[i].value);
+        psee_sensor_write(csi, MEM_BANK_MEM0 + ((offset & 0x3F) << 2), firmwareArray[i].value);
 
         prev_addr = firmwareArray[i].address;
     }
 
     /* Reset the Mem_bank */
-    psee_sensor_write(MEM_BANK_SELECT, 0x00000000);
+    psee_sensor_write(csi, MEM_BANK_SELECT, 0x00000000);
 
     return fw_OK;
 }
@@ -926,7 +924,7 @@ FW_StatusTypeDef psee_write_firmware_single(const Firmware *firmwareArray, uint3
  * @param  n_bytes Size of the firmware
  * @note   Should be used after flashing the firmware and before starting the firmware
  */
-FW_StatusTypeDef psee_test_firmware_single(const Firmware *firmwareArray, uint32_t n_bytes) {
+FW_StatusTypeDef psee_test_firmware_single(omv_csi_t *csi, const Firmware *firmwareArray, uint32_t n_bytes) {
 
     uint32_t prev_addr = 0;
 
@@ -938,12 +936,12 @@ FW_StatusTypeDef psee_test_firmware_single(const Firmware *firmwareArray, uint32
         if (((offset & 0x3F) == 0) || (firmwareArray[i].address != (prev_addr + 4))) {
             uint32_t select = (firmwareArray[i].address < DMEM_START) ? GENX_MEM_BANK_IMEM : GENX_MEM_BANK_DMEM;
             uint32_t bank = offset >> 6;
-            psee_sensor_write(MEM_BANK_SELECT, (select << 28) + bank);
+            psee_sensor_write(csi, MEM_BANK_SELECT, (select << 28) + bank);
         }
 
         /* Compare the value */
         uint32_t mem_val = 0;
-        psee_sensor_read(MEM_BANK_MEM0 + ((offset & 0x3F) << 2), &mem_val);
+        psee_sensor_read(csi, MEM_BANK_MEM0 + ((offset & 0x3F) << 2), &mem_val);
         if (mem_val != firmwareArray[i].value) {
             return fw_Flash_Error;
         }
@@ -952,7 +950,7 @@ FW_StatusTypeDef psee_test_firmware_single(const Firmware *firmwareArray, uint32
     }
 
     /* Reset the Mem_bank */
-    psee_sensor_write(MEM_BANK_SELECT, 0x00000000);
+    psee_sensor_write(csi, MEM_BANK_SELECT, 0x00000000);
 
     return fw_OK;
 }
@@ -962,20 +960,20 @@ FW_StatusTypeDef psee_test_firmware_single(const Firmware *firmwareArray, uint32
  * @param  reg_address Register address to be read
  * @note   Should be used after flashing the firmware and before starting the firmware
  */
-uint32_t psee_read_firmware_register(uint32_t reg_address) {
+uint32_t psee_read_firmware_register(omv_csi_t *csi, uint32_t reg_address) {
 
     uint32_t offset = (reg_address < DMEM_START) ? reg_address - IMEM_START : reg_address - DMEM_START;
     offset >>= 2;
 
     uint32_t select = (reg_address < DMEM_START) ? GENX_MEM_BANK_IMEM : GENX_MEM_BANK_DMEM;
     uint32_t bank = offset >> 6;
-    psee_sensor_write(MEM_BANK_SELECT, (select << 28) + bank);
+    psee_sensor_write(csi, MEM_BANK_SELECT, (select << 28) + bank);
 
     uint32_t mem_value = 0;
-    psee_sensor_read(MEM_BANK_MEM0 + ((offset & 0x3F) << 2), &mem_value);
+    psee_sensor_read(csi, MEM_BANK_MEM0 + ((offset & 0x3F) << 2), &mem_value);
 
     /* Reset the Mem_bank */
-    psee_sensor_write(MEM_BANK_SELECT, 0x00000000);
+    psee_sensor_write(csi, MEM_BANK_SELECT, 0x00000000);
 
     return mem_value;
 }
@@ -985,7 +983,7 @@ uint32_t psee_read_firmware_register(uint32_t reg_address) {
  * @param  firmwareArray Pointer to the firmware array
  * @param  n_bytes Size of the firmware
  */
-FW_StatusTypeDef psee_write_firmware_burst(const Firmware *firmwareArray, uint32_t n_bytes) {
+FW_StatusTypeDef psee_write_firmware_burst(omv_csi_t *csi, const Firmware *firmwareArray, uint32_t n_bytes) {
 
     /* Check for invalid pointer */
     if (firmwareArray == NULL) {
@@ -1027,7 +1025,7 @@ FW_StatusTypeDef psee_write_firmware_burst(const Firmware *firmwareArray, uint32
     for (uint32_t b_index = 0; b_index < mem_bank_index; b_index++) {
 
         /* Select the memory bank for IMEM */
-        psee_sensor_write(MEM_BANK_SELECT, ((0x2 << 28) + (bank + b_index)));
+        psee_sensor_write(csi, MEM_BANK_SELECT, ((0x2 << 28) + (bank + b_index)));
 
         reg = MEM_BANK_MEM0;
 
@@ -1045,11 +1043,11 @@ FW_StatusTypeDef psee_write_firmware_burst(const Firmware *firmwareArray, uint32
         }
 
         /* Flash the firmware on the IMEM */
-        psee_sensor_sequential_write(buff, ((mem_bank_size[b_index] * 4) + 2));
+        psee_sensor_sequential_write(csi, buff, ((mem_bank_size[b_index] * 4) + 2));
     }
 
     /* Reset Memory Bank */
-    psee_sensor_write(MEM_BANK_SELECT, 0x00000000);
+    psee_sensor_write(csi, MEM_BANK_SELECT, 0x00000000);
 
     return fw_OK;
 }
@@ -1058,13 +1056,13 @@ FW_StatusTypeDef psee_write_firmware_burst(const Firmware *firmwareArray, uint32
  * @brief  Function to start the firmware.
  * @retval FW status
  */
-static FW_StatusTypeDef psee_start_fw_imem() {
+static FW_StatusTypeDef psee_start_fw_imem(omv_csi_t *csi) {
 
     /* CPU is active, no reset is applied */
-    psee_sensor_write(MBX_CPU_SOFT_RESET, (0UL << MBX_CPU_SOFT_RESET_Pos));
+    psee_sensor_write(csi, MBX_CPU_SOFT_RESET, (0UL << MBX_CPU_SOFT_RESET_Pos));
 
     /* Release the IMEM code execution */
-    psee_sensor_write(MBX_CPU_START_EN, MBX_CPU_START_EN_Msk);
+    psee_sensor_write(csi, MBX_CPU_START_EN, MBX_CPU_START_EN_Msk);
 
     return fw_OK;
 }
@@ -1073,13 +1071,13 @@ static FW_StatusTypeDef psee_start_fw_imem() {
  * @brief  Function to reset the firmware.
  * @retval FW status
  */
-static FW_StatusTypeDef psee_reset_fw_imem() {
+static FW_StatusTypeDef psee_reset_fw_imem(omv_csi_t *csi) {
 
     /* Keep CPU core under reset */
-    psee_sensor_write(MBX_CPU_START_EN, (0UL << MBX_CPU_START_EN_Pos));
+    psee_sensor_write(csi, MBX_CPU_START_EN, (0UL << MBX_CPU_START_EN_Pos));
 
     /* Force a reset on CPU system*/
-    psee_sensor_write(MBX_CPU_SOFT_RESET, MBX_CPU_SOFT_RESET_Msk);
+    psee_sensor_write(csi, MBX_CPU_SOFT_RESET, MBX_CPU_SOFT_RESET_Msk);
 
     return fw_OK;
 }
@@ -1088,10 +1086,10 @@ static FW_StatusTypeDef psee_reset_fw_imem() {
  * @brief  Function to reset the firmware for ROM_BOOT.
  * @retval FW status
  */
-static FW_StatusTypeDef psee_reset_fw_rom() {
+static FW_StatusTypeDef psee_reset_fw_rom(omv_csi_t *csi) {
 
     /* Force a reset on CPU system*/
-    psee_sensor_write(MBX_CPU_SOFT_RESET, MBX_CPU_SOFT_RESET_Msk);
+    psee_sensor_write(csi, MBX_CPU_SOFT_RESET, MBX_CPU_SOFT_RESET_Msk);
     psee_sleep_ms_imp(1);
 
     return fw_OK;
@@ -1102,29 +1100,29 @@ static FW_StatusTypeDef psee_reset_fw_rom() {
  * @param   jump_add Jump address
  * @retval  FW status
  */
-static FW_StatusTypeDef psee_start_fw_rom(uint32_t jump_add) {
+static FW_StatusTypeDef psee_start_fw_rom(omv_csi_t *csi, uint32_t jump_add) {
 
     uint32_t boot_address = 0x70000000 | jump_add;
 
     /* Remove the Reset */
-    psee_sensor_write(MBX_CPU_SOFT_RESET, (0UL << MBX_CPU_SOFT_RESET_Pos));
+    psee_sensor_write(csi, MBX_CPU_SOFT_RESET, (0UL << MBX_CPU_SOFT_RESET_Pos));
 
     /* Check if the ROM_BOOT is successful */
-    uint32_t mbx_misc_val = psee_get_mbx_misc();
+    uint32_t mbx_misc_val = psee_get_mbx_misc(csi);
     while (mbx_misc_val != 0xCAFEBABE) {
-        mbx_misc_val = psee_get_mbx_misc();
+        mbx_misc_val = psee_get_mbx_misc(csi);
     }
 
     /* Reconfigure the sensor for CPI */
-    psee_sensor_reconfig();
+    psee_sensor_reconfig(csi);
 
     /* Release the IMEM code execution */
-    psee_sensor_write(MBX_CMD_PTR, boot_address);
+    psee_sensor_write(csi, MBX_CMD_PTR, boot_address);
 
     /* Check if the application has started processing */
-    uint32_t mbx_val = psee_get_mbx_misc();
+    uint32_t mbx_val = psee_get_mbx_misc(csi);
     while (mbx_val == 0xCAFEBABE) {
-        mbx_val = psee_get_mbx_misc();
+        mbx_val = psee_get_mbx_misc(csi);
     }
 
     return fw_OK;
@@ -1135,13 +1133,13 @@ static FW_StatusTypeDef psee_start_fw_rom(uint32_t jump_add) {
  * @param  jump_add Jump address for boot from ROM
  * @retval FW status
  */
-FW_StatusTypeDef psee_start_firmware(GenX320_Rommode boot_mode, uint32_t jump_add) {
+FW_StatusTypeDef psee_start_firmware(omv_csi_t *csi, GenX320_Rommode boot_mode, uint32_t jump_add) {
 
     /* Check the boot mode and flash the FW accordingly */
     if (boot_mode == RM_IMEM) {
-        psee_start_fw_imem();
+        psee_start_fw_imem(csi);
     } else if (boot_mode == RM_ROM) {
-        psee_start_fw_rom(jump_add);
+        psee_start_fw_rom(csi, jump_add);
     }
     return fw_OK;
 }
@@ -1150,13 +1148,13 @@ FW_StatusTypeDef psee_start_firmware(GenX320_Rommode boot_mode, uint32_t jump_ad
  * @brief  Function to reset the RISC-V firmware.
  * @retval FW status
  */
-FW_StatusTypeDef psee_reset_firmware(GenX320_Rommode boot_mode) {
+FW_StatusTypeDef psee_reset_firmware(omv_csi_t *csi, GenX320_Rommode boot_mode) {
 
     /* Check the boot mode and reset the FW accordingly */
     if (boot_mode == RM_IMEM) {
-        psee_reset_fw_imem();
+        psee_reset_fw_imem(csi);
     } else if (boot_mode == RM_ROM) {
-        psee_reset_fw_rom();
+        psee_reset_fw_rom(csi);
     }
     return fw_OK;
 }
@@ -1184,10 +1182,10 @@ FW_StatusTypeDef psee_reset_firmware(GenX320_Rommode boot_mode) {
  * @brief  Function to read the 32-bit value from the Mailbox cmd_ptr register.
  * @retval  Value of Mailbox cmd_ptr register
  */
-uint32_t psee_get_mbx_cmd_ptr() {
+uint32_t psee_get_mbx_cmd_ptr(omv_csi_t *csi) {
 
     uint32_t mbx_cmd_ptr = 0;
-    psee_sensor_read(MBX_CMD_PTR, &mbx_cmd_ptr);
+    psee_sensor_read(csi, MBX_CMD_PTR, &mbx_cmd_ptr);
     return mbx_cmd_ptr;
 }
 
@@ -1195,10 +1193,10 @@ uint32_t psee_get_mbx_cmd_ptr() {
  * @brief  Function to read the 32-bit value from the Mailbox misc register.
  * @retval  Value of Mailbox misc register
  */
-uint32_t psee_get_mbx_misc() {
+uint32_t psee_get_mbx_misc(omv_csi_t *csi) {
 
     uint32_t mbx_misc = 0;
-    psee_sensor_read(MBX_MISC, &mbx_misc);
+    psee_sensor_read(csi, MBX_MISC, &mbx_misc);
     return mbx_misc;
 }
 
@@ -1206,10 +1204,10 @@ uint32_t psee_get_mbx_misc() {
  * @brief  Function to read the 32-bit value from the Mailbox status_ptr register.
  * @retval  Value of Mailbox status_ptr register
  */
-uint32_t psee_get_mbx_status_ptr() {
+uint32_t psee_get_mbx_status_ptr(omv_csi_t *csi) {
 
     uint32_t mbx_status_ptr = 0;
-    psee_sensor_read(MBX_STATUS_PTR, &mbx_status_ptr);
+    psee_sensor_read(csi, MBX_STATUS_PTR, &mbx_status_ptr);
     return mbx_status_ptr;
 }
 
@@ -1217,27 +1215,27 @@ uint32_t psee_get_mbx_status_ptr() {
  * @brief  Function to write a 32-bit value on the Mailbox cmd_ptr register.
  * @param  val Data to be written on the Mailbox cmd_ptr register
  */
-void psee_set_mbx_cmd_ptr(uint32_t val) {
+void psee_set_mbx_cmd_ptr(omv_csi_t *csi, uint32_t val) {
 
-    psee_sensor_write(MBX_CMD_PTR, val);
+    psee_sensor_write(csi, MBX_CMD_PTR, val);
 }
 
 /**
  * @brief  Function to write a 32-bit value on the Mailbox misc register.
  * @param  val Data to be written on the Mailbox misc register
  */
-void psee_set_mbx_misc(uint32_t val) {
+void psee_set_mbx_misc(omv_csi_t *csi, uint32_t val) {
 
-    psee_sensor_write(MBX_MISC, val);
+    psee_sensor_write(csi, MBX_MISC, val);
 }
 
 /**
  * @brief  Function to write a 32-bit value on the Mailbox status_ptr register.
  * @param  val Data to be written on the Mailbox status_ptr register
  */
-void psee_set_mbx_status_ptr(uint32_t val) {
+void psee_set_mbx_status_ptr(omv_csi_t *csi, uint32_t val) {
 
-    psee_sensor_write(MBX_STATUS_PTR, val);
+    psee_sensor_write(csi, MBX_STATUS_PTR, val);
 }
 
 /**
@@ -1263,9 +1261,9 @@ void psee_set_mbx_status_ptr(uint32_t val) {
  * @param	offset Register Offset
  * @param  val Data to be written on the TD_ROI_X register
  */
-void psee_write_ROI_X(uint32_t offset, uint32_t val) {
+void psee_write_ROI_X(omv_csi_t *csi, uint32_t offset, uint32_t val) {
 
-    psee_sensor_write(ROI_TD_ROI_X00 + offset, val);
+    psee_sensor_write(csi, ROI_TD_ROI_X00 + offset, val);
 }
 
 /**
@@ -1273,18 +1271,18 @@ void psee_write_ROI_X(uint32_t offset, uint32_t val) {
  * @param	offset Register Offset
  * @param  val Data to be written on the TD_ROI_Y register
  */
-void psee_write_ROI_Y(uint32_t offset, uint32_t val) {
+void psee_write_ROI_Y(omv_csi_t *csi, uint32_t offset, uint32_t val) {
 
-    psee_sensor_write(ROI_TD_ROI_Y00 + offset, val);
+    psee_sensor_write(csi, ROI_TD_ROI_Y00 + offset, val);
 }
 
 /**
  * @brief  Function to write a 32-bit value on the TD_ROI_CTR register
  * @param  val Data to be written on the TD_ROI_CTR register
  */
-void psee_write_ROI_CTRL(uint32_t val) {
+void psee_write_ROI_CTRL(omv_csi_t *csi, uint32_t val) {
 
-    psee_sensor_write(ROI_CTRL, val);
+    psee_sensor_write(csi, ROI_CTRL, val);
 }
 
 /**
@@ -1311,17 +1309,17 @@ void psee_write_ROI_CTRL(uint32_t val) {
  * the RISC-V and sends an acknowledgment to receive the next value.
  * @retval  Value of Mailbox status_ptr register
  */
-uint32_t psee_mbx_read_uint32() {
+uint32_t psee_mbx_read_uint32(omv_csi_t *csi) {
 
     /* Wait until a new value is available */
-    while (psee_get_mbx_misc() == 0)
+    while (psee_get_mbx_misc(csi) == 0)
         ;
 
     /* Get the value from the RISC V */
-    uint32_t val = psee_get_mbx_status_ptr();
+    uint32_t val = psee_get_mbx_status_ptr(csi);
 
     /* Indicate that the value has been consumed */
-    psee_set_mbx_misc(0);
+    psee_set_mbx_misc(csi, 0);
 
     return val;
 }
@@ -1329,12 +1327,12 @@ uint32_t psee_mbx_read_uint32() {
 /**
  * @brief  Decoder function to decode the message sent from the RISC-V.
  */
-void psee_decode_debugger() {
+void psee_decode_debugger(omv_csi_t *csi) {
 
     printf("Starting Debugger...\r\n");
 
     while (1) {
-        uint32_t v = psee_mbx_read_uint32();
+        uint32_t v = psee_mbx_read_uint32(csi);
         for (int pos = 0; pos < sizeof(uint32_t); ++pos) {
             char c = v & 0xff;
             if (c == 0) {
@@ -1353,7 +1351,7 @@ void psee_decode_debugger() {
  * @param  address Address of the DMEM register
  * @retval  Value of the DMEM register
  */
-uint32_t psee_sensor_read_dmem(uint32_t address) {
+uint32_t psee_sensor_read_dmem(omv_csi_t *csi, uint32_t address) {
 
     static uint32_t offsets[0x80] = {0};
 
@@ -1368,14 +1366,14 @@ uint32_t psee_sensor_read_dmem(uint32_t address) {
 
     if (bank < 0x80) {
         /* Select the memory bank for DMEM */
-        psee_sensor_write(MEM_BANK_SELECT, ((0x3 << 28) + bank));
+        psee_sensor_write(csi, MEM_BANK_SELECT, ((0x3 << 28) + bank));
 
         /* Read the value from corresponding bank */
-        psee_sensor_read((MEM_BANK_MEM0 + offsets[bank]), &dmem_data);
+        psee_sensor_read(csi, (MEM_BANK_MEM0 + offsets[bank]), &dmem_data);
     }
 
     /* Reset the Mem_bank */
-    psee_sensor_write(MEM_BANK_SELECT, 0x00000000);
+    psee_sensor_write(csi, MEM_BANK_SELECT, 0x00000000);
 
     return dmem_data;
 }
@@ -1385,7 +1383,7 @@ uint32_t psee_sensor_read_dmem(uint32_t address) {
  * @param  address Address of the IMEM register
  * @retval  Value of the IMEM register
  */
-uint32_t psee_sensor_read_imem(uint32_t address) {
+uint32_t psee_sensor_read_imem(omv_csi_t *csi, uint32_t address) {
 
     static uint32_t offsets[0x80] = {0};
 
@@ -1400,14 +1398,14 @@ uint32_t psee_sensor_read_imem(uint32_t address) {
 
     if (bank < 0x80) {
         /* Select the memory bank for DMEM */
-        psee_sensor_write(MEM_BANK_SELECT, ((0x2 << 28) + bank));
+        psee_sensor_write(csi, MEM_BANK_SELECT, ((0x2 << 28) + bank));
 
         /* Read the value from corresponding bank */
-        psee_sensor_read((MEM_BANK_MEM0 + offsets[bank]), &imem_data);
+        psee_sensor_read(csi, (MEM_BANK_MEM0 + offsets[bank]), &imem_data);
     }
 
     /* Reset the Mem_bank */
-    psee_sensor_write(MEM_BANK_SELECT, 0x00000000);
+    psee_sensor_write(csi, MEM_BANK_SELECT, 0x00000000);
 
     return imem_data;
 }
@@ -1435,32 +1433,32 @@ uint32_t psee_sensor_read_imem(uint32_t address) {
  * @brief  Reads the counter value from the 16 low-power event counters (RO_LP_CNT00 - RO_LP_CNT15).
  * @param  p_data Pointer to data buffer
  */
-void psee_read_ro_lp_evt_cnt(uint32_t *p_data) {
+void psee_read_ro_lp_evt_cnt(omv_csi_t *csi, uint32_t *p_data) {
 
     uint16_t total_counters = 16;
     uint32_t start_address = RO_LP_CNT00;
     uint32_t ro_shadow_status = 0;
 
     /* Check if shadow status is valid */
-    psee_sensor_read(RO_SHADOW_STATUS, &ro_shadow_status);
+    psee_sensor_read(csi, RO_SHADOW_STATUS, &ro_shadow_status);
     while ((ro_shadow_status & 1) != 1) {
-        psee_sensor_read(RO_SHADOW_STATUS, &ro_shadow_status);
+        psee_sensor_read(csi, RO_SHADOW_STATUS, &ro_shadow_status);
         psee_sleep_ms_imp(1);
     }
 
     /* If shadow status is valid read the counter values*/
-    psee_sensor_sequential_read(start_address, p_data, total_counters);
+    psee_sensor_sequential_read(csi, start_address, p_data, total_counters);
 }
 
 /**
  * @brief  Reads the value from the RO_EVT_CD_CNT register
  * @retval  Value of the RO_EVT_CD_CNT register
  */
-uint32_t psee_read_ro_evt_cd_cnt() {
+uint32_t psee_read_ro_evt_cd_cnt(omv_csi_t *csi) {
 
     uint32_t evt_cd_cnt;
 
-    psee_sensor_read(RO_EVT_CD_CNT, &evt_cd_cnt);
+    psee_sensor_read(csi, RO_EVT_CD_CNT, &evt_cd_cnt);
     return evt_cd_cnt;
 }
 
@@ -1486,20 +1484,20 @@ uint32_t psee_read_ro_evt_cd_cnt() {
 /**
  * @brief  Function to enable and configure the Activity map
  */
-void psee_configure_activity_map() {
+void psee_configure_activity_map(omv_csi_t *csi) {
 
     /* Enable Low power control*/
-    psee_sensor_write(RO_RO_LP_CTRL, RO_LP_CTRL_CNT_EN |    /*!< Enable the 16 event counters */
+    psee_sensor_write(csi, RO_RO_LP_CTRL, RO_LP_CTRL_CNT_EN |    /*!< Enable the 16 event counters */
                                          RO_LP_CTRL_KEEP_TH /*!< Keep timer high and trash all the rest when in lp_out_disable mode */
     );
 
     /* Enable Shadow control*/
-    psee_sensor_write(RO_SHADOW_CTRL, RO_SHADOW_CTRL_TIMER_EN |        /*!< Enable microsecond-based timer */
+    psee_sensor_write(csi, RO_SHADOW_CTRL, RO_SHADOW_CTRL_TIMER_EN |        /*!< Enable microsecond-based timer */
                                           RO_SHADOW_CTRL_RESET_ON_COPY /*!< Reset the counters after a copy&reset IRQ */
     );
 
     /* Set Shadow Timer Threshold - Accumulation Time */
-    psee_sensor_write(RO_SHADOW_TIMER_THRESHOLD, 25000);
+    psee_sensor_write(csi, RO_SHADOW_TIMER_THRESHOLD, 25000);
 }
 
 /**
@@ -1523,21 +1521,21 @@ AM_Borders_t genx320mp_default_am_borders = {
 /**
  * @brief  Function to set the default X and Y borders for the Activity map
  */
-void psee_set_default_XY_borders(AM_Borders_t *border) {
+void psee_set_default_XY_borders(omv_csi_t *csi, AM_Borders_t *border) {
 
     /* Set the default X borders */
-    psee_sensor_write(RO_LP_X0, border->x0);
-    psee_sensor_write(RO_LP_X1, border->x1);
-    psee_sensor_write(RO_LP_X2, border->x2);
-    psee_sensor_write(RO_LP_X3, border->x3);
-    psee_sensor_write(RO_LP_X4, border->x4);
+    psee_sensor_write(csi, RO_LP_X0, border->x0);
+    psee_sensor_write(csi, RO_LP_X1, border->x1);
+    psee_sensor_write(csi, RO_LP_X2, border->x2);
+    psee_sensor_write(csi, RO_LP_X3, border->x3);
+    psee_sensor_write(csi, RO_LP_X4, border->x4);
 
     /* Set the default Y borders */
-    psee_sensor_write(RO_LP_Y0, border->y0);
-    psee_sensor_write(RO_LP_Y1, border->y1);
-    psee_sensor_write(RO_LP_Y2, border->y2);
-    psee_sensor_write(RO_LP_Y3, border->y3);
-    psee_sensor_write(RO_LP_Y4, border->y4);
+    psee_sensor_write(csi, RO_LP_Y0, border->y0);
+    psee_sensor_write(csi, RO_LP_Y1, border->y1);
+    psee_sensor_write(csi, RO_LP_Y2, border->y2);
+    psee_sensor_write(csi, RO_LP_Y3, border->y3);
+    psee_sensor_write(csi, RO_LP_Y4, border->y4);
 }
 
 /**
@@ -1563,20 +1561,20 @@ void psee_set_default_XY_borders(AM_Borders_t *border) {
  * @brief  Function to powerup SRAM
  * @param  module Module to be configured
  */
-static void psee_sram_powerup(GenX320_ModulesTypeDef module) {
+static void psee_sram_powerup(omv_csi_t *csi, GenX320_ModulesTypeDef module) {
 
     uint32_t sram_initn = 0;
     uint32_t sram_pd0 = 0;
     switch (module) {
 
     case EHC:
-        psee_sensor_read(SRAM_INITN, &sram_initn);
-        psee_sensor_write(SRAM_INITN, sram_initn |           /*!< Previous State of SRAM_INITN */
+        psee_sensor_read(csi, SRAM_INITN, &sram_initn);
+        psee_sensor_write(csi, SRAM_INITN, sram_initn |           /*!< Previous State of SRAM_INITN */
                                           SRAM_INITN_EHC_STC /*!< Initialize the memory state machine : EHC's SRAM control init_n */
         );
 
-        psee_sensor_read(SRAM_PD0, &sram_pd0);
-        psee_sensor_write(SRAM_PD0, sram_pd0 &              /*!< Previous State of SRAM_PD0 */
+        psee_sensor_read(csi, SRAM_PD0, &sram_pd0);
+        psee_sensor_write(csi, SRAM_PD0, sram_pd0 &              /*!< Previous State of SRAM_PD0 */
                                         ~SRAM_PD0_EHC_PD &  /*!< SRAM's Power Down Register : 0 - EHC's SRAM cuts are supplied */
                                         ~SRAM_PD0_STC0_PD & /*!< SRAM's Power Down Register : 0 - EHC's SRAM cuts are supplied */
                                         ~SRAM_PD0_STC1_PD   /*!< SRAM's Power Down Register : 0 - EHC's SRAM cuts are supplied */
@@ -1584,13 +1582,13 @@ static void psee_sram_powerup(GenX320_ModulesTypeDef module) {
         break;
 
     case AFK:
-        psee_sensor_read(SRAM_INITN, &sram_initn);
-        psee_sensor_write(SRAM_INITN, sram_initn |                    /*!< Previous State of SRAM_INITN */
+        psee_sensor_read(csi, SRAM_INITN, &sram_initn);
+        psee_sensor_write(csi, SRAM_INITN, sram_initn |                    /*!< Previous State of SRAM_INITN */
                                           (1UL << SRAM_INITN_AFK_Pos) /*!< Initialize the memory state machine : AFK's SRAM control init_n */
         );
 
-        psee_sensor_read(SRAM_PD0, &sram_pd0);
-        psee_sensor_write(SRAM_PD0, sram_pd0 &                  /*!< Previous State of SRAM_PD0 */
+        psee_sensor_read(csi, SRAM_PD0, &sram_pd0);
+        psee_sensor_write(csi, SRAM_PD0, sram_pd0 &                  /*!< Previous State of SRAM_PD0 */
                                         ~SRAM_PD0_AFK_ALR_PD &  /*!< SRAM's Power Down Register : 0 - AFK's SRAM cuts are supplied */
                                         ~SRAM_PD0_AFK_STR0_PD & /*!< SRAM's Power Down Register : 0 - AFK's SRAM cuts are supplied */
                                         ~SRAM_PD0_AFK_STR1_PD   /*!< SRAM's Power Down Register : 0 - AFK's SRAM cuts are supplied */
@@ -1598,13 +1596,13 @@ static void psee_sram_powerup(GenX320_ModulesTypeDef module) {
         break;
 
     case STC:
-        psee_sensor_read(SRAM_INITN, &sram_initn);
-        psee_sensor_write(SRAM_INITN, sram_initn |                          /*!< Previous State of SRAM_INITN */
+        psee_sensor_read(csi, SRAM_INITN, &sram_initn);
+        psee_sensor_write(csi, SRAM_INITN, sram_initn |                          /*!< Previous State of SRAM_INITN */
                                           (0x1UL << SRAM_INITN_EHC_STC_Pos) /*!< Initialize the memory state machine : EHC's SRAM control init_n */
         );
 
-        psee_sensor_read(SRAM_PD0, &sram_pd0);
-        psee_sensor_write(SRAM_PD0, sram_pd0 &            /*!< Previous State of SRAM_PD0 */
+        psee_sensor_read(csi, SRAM_PD0, &sram_pd0);
+        psee_sensor_write(csi, SRAM_PD0, sram_pd0 &            /*!< Previous State of SRAM_PD0 */
                                         ~SRAM_PD0_STC0_PD /*!< SRAM's Power Down Register : 0 - EHC's SRAM cuts are supplied */
         );
         break;
@@ -1618,14 +1616,14 @@ static void psee_sram_powerup(GenX320_ModulesTypeDef module) {
  * @brief  Function to powerdown SRAM
  * @param  module Module to be configured
  */
-static void psee_sram_powerdown(GenX320_ModulesTypeDef module) {
+static void psee_sram_powerdown(omv_csi_t *csi, GenX320_ModulesTypeDef module) {
 
     uint32_t sram_pd0 = 0;
     switch (module) {
 
     case EHC:
-        psee_sensor_read(SRAM_PD0, &sram_pd0);
-        psee_sensor_write(SRAM_PD0, sram_pd0 |             /*!< Previous State of SRAM_PD0 */
+        psee_sensor_read(csi, SRAM_PD0, &sram_pd0);
+        psee_sensor_write(csi, SRAM_PD0, sram_pd0 |             /*!< Previous State of SRAM_PD0 */
                                         SRAM_PD0_EHC_PD |  /*!< SRAM's Power Down Register : 1 - EHC's SRAM cuts in powerdown */
                                         SRAM_PD0_STC0_PD | /*!< SRAM's Power Down Register : 1 - EHC's SRAM cuts in powerdown */
                                         SRAM_PD0_STC1_PD   /*!< SRAM's Power Down Register : 1 - EHC's SRAM cuts in powerdown */
@@ -1633,8 +1631,8 @@ static void psee_sram_powerdown(GenX320_ModulesTypeDef module) {
         break;
 
     case AFK:
-        psee_sensor_read(SRAM_PD0, &sram_pd0);
-        psee_sensor_write(SRAM_PD0, sram_pd0 |                 /*!< Previous State of SRAM_PD0 */
+        psee_sensor_read(csi, SRAM_PD0, &sram_pd0);
+        psee_sensor_write(csi, SRAM_PD0, sram_pd0 |                 /*!< Previous State of SRAM_PD0 */
                                         SRAM_PD0_AFK_ALR_PD |  /*!< SRAM's Power Down Register : 1 - AFK's SRAM cuts in powerdown */
                                         SRAM_PD0_AFK_STR0_PD | /*!< SRAM's Power Down Register : 1 - AFK's SRAM cuts in powerdown */
                                         SRAM_PD0_AFK_STR1_PD   /*!< SRAM's Power Down Register : 1 - AFK's SRAM cuts in powerdown */
@@ -1642,8 +1640,8 @@ static void psee_sram_powerdown(GenX320_ModulesTypeDef module) {
         break;
 
     case STC:
-        psee_sensor_read(SRAM_PD0, &sram_pd0);
-        psee_sensor_write(SRAM_PD0, sram_pd0 |           /*!< Previous State of SRAM_PD0 */
+        psee_sensor_read(csi, SRAM_PD0, &sram_pd0);
+        psee_sensor_write(csi, SRAM_PD0, sram_pd0 |           /*!< Previous State of SRAM_PD0 */
                                         SRAM_PD0_STC0_PD /*!< SRAM's Power Down Register : 1 - STC's SRAM cuts in powerdown */
         );
         break;
@@ -1737,7 +1735,7 @@ static int32_t psee_afk_dutycycle_to_idutycycle(float duty_cycle) {
  * @param  afk Pointer to a AFK_HandleTypeDef structure
  * @retval AFK status
  */
-AFK_StatusTypeDef psee_afk_init(AFK_HandleTypeDef *afk) {
+AFK_StatusTypeDef psee_afk_init(omv_csi_t *csi, AFK_HandleTypeDef *afk) {
 
     /* Check the AFK handle allocation */
     if (afk == NULL) {
@@ -1745,6 +1743,7 @@ AFK_StatusTypeDef psee_afk_init(AFK_HandleTypeDef *afk) {
     }
 
     /* Reset the block */
+    afk->csi = csi;
     afk->State = AFK_STATE_RESET;
     afk->Stats = AFK_STATS_RESET;
     afk->f_min = 0;
@@ -1814,42 +1813,42 @@ AFK_StatusTypeDef psee_afk_activate(AFK_HandleTypeDef *afk, uint16_t f_min, uint
         uint32_t afk_param_drop_disable = 0; /*!< Detect but not drop when enabled */
 
         /* Bypass the block in order to configure AFK parameters */
-        psee_sensor_write(AFK_PIPELINE_CONTROL, AFK_PIPELINE_CONTROL_BYPASS); /*!< Bypass the block */
+        psee_sensor_write(afk->csi, AFK_PIPELINE_CONTROL, AFK_PIPELINE_CONTROL_BYPASS); /*!< Bypass the block */
 
         /* SRAM Powerup */
-        psee_sram_powerup(AFK);
+        psee_sram_powerup(afk->csi, AFK);
 
         /* Request for Invalidation */
-        psee_sensor_write(AFK_INITIALISATION, AFK_INITIALISATION_REQ_INIT); /*!< Force an Initialisation on SRAMs */
+        psee_sensor_write(afk->csi, AFK_INITIALISATION, AFK_INITIALISATION_REQ_INIT); /*!< Force an Initialisation on SRAMs */
 
         /* Check if SRAM Initialization is done */
         uint32_t flag_init_done = 0;
         while (flag_init_done != 1) {
-            psee_sensor_read(AFK_INITIALISATION, &flag_init_done);
+            psee_sensor_read(afk->csi, AFK_INITIALISATION, &flag_init_done);
             flag_init_done = ((flag_init_done & (1 << 2)) >> 2);
         }
 
         /* Configure the AFK Invalidation */
-        psee_sensor_write(AFK_INVALIDATION, (afk_invalidation.dt_fifo_wait_time << AFK_INVALIDATION_DT_FIFO_WAIT_TIME_Pos) | /*!< Deadtime fifo wait time, in unit of clock cycle */
+        psee_sensor_write(afk->csi, AFK_INVALIDATION, (afk_invalidation.dt_fifo_wait_time << AFK_INVALIDATION_DT_FIFO_WAIT_TIME_Pos) | /*!< Deadtime fifo wait time, in unit of clock cycle */
                                                 (afk_invalidation.dt_fifo_timeout << AFK_INVALIDATION_DT_FIFO_TIMEOUT_Pos) | /*!< Deadtime fifo time out, in unit of clock cycles */
                                                 (5UL << AFK_INVALIDATION_IN_PARALLEL_Pos)                                    /*!< Number of ram invalidated together this is then changed into one hot, in unit of SRAM cut on parallel */
         );
 
         /* Set the AFK Frequency Bandwidth */
-        psee_sensor_write(AFK_FILTER_PERIOD, (filter_period_min_cutoff_period << AFK_FILTER_PERIOD_MIN_CUTOFF_Pos) |              /*!< AntiFlickering Filter : Minimum cutoff period of undesired flickering light */
+        psee_sensor_write(afk->csi, AFK_FILTER_PERIOD, (filter_period_min_cutoff_period << AFK_FILTER_PERIOD_MIN_CUTOFF_Pos) |              /*!< AntiFlickering Filter : Minimum cutoff period of undesired flickering light */
                                                  (filter_period_max_cutoff_period << AFK_FILTER_PERIOD_MAX_CUTOFF_Pos) |          /*!< AntiFlickering Filter : Maximum  cutoff period of undesired flickering light */
                                                  (filter_period_inverted_duty_cycle << AFK_FILTER_PERIOD_INVERTED_DUTY_CYCLE_Pos) /*!< Flickering duty cycle ratio */
         );
 
         /* Configure the AFK parameters */
-        psee_sensor_write(AFK_AFK_PARAM, (afk_param_counter_high << AFK_PARAM_COUNTER_HIGH_Pos) |   /*!< Hysteresis threshold above which we consider the block flickering */
+        psee_sensor_write(afk->csi, AFK_AFK_PARAM, (afk_param_counter_high << AFK_PARAM_COUNTER_HIGH_Pos) |   /*!< Hysteresis threshold above which we consider the block flickering */
                                              (afk_param_counter_low << AFK_PARAM_COUNTER_LOW_Pos) | /*!< Hysteresis threshold below which we consider the block is not flickering anymore */
                                              (afk_param_invert << AFK_PARAM_INVERT_Pos) |           /*!< Invert the output of anti-flicker filter : 0 No-flickering event pass */
                                              (afk_param_drop_disable << AFK_PARAM_DROP_DISABLE_Pos) /*!< Enable AFK Dropping */
         );
 
         /* Enable the AFK Block */
-        psee_sensor_write(AFK_PIPELINE_CONTROL, AFK_PIPELINE_CONTROL_ENABLE |                                /*!< Enable the block */
+        psee_sensor_write(afk->csi, AFK_PIPELINE_CONTROL, AFK_PIPELINE_CONTROL_ENABLE |                                /*!< Enable the block */
                                                     (0x0UL << AFK_PIPELINE_CONTROL_DROP_NBACKPRESSURE_Pos) | /*!< Propagate Back pressure */
                                                     (0x0UL << AFK_PIPELINE_CONTROL_BYPASS_Pos)               /*!< Disable Bypass */
         );
@@ -1882,7 +1881,7 @@ AFK_StatusTypeDef psee_afk_deactivate(AFK_HandleTypeDef *afk) {
     }
 
     /* Bypass the block */
-    psee_sensor_write(AFK_PIPELINE_CONTROL, (0x1UL << AFK_PIPELINE_CONTROL_ENABLE_Pos) |   /*!< Enable the block */
+    psee_sensor_write(afk->csi, AFK_PIPELINE_CONTROL, (0x1UL << AFK_PIPELINE_CONTROL_ENABLE_Pos) |   /*!< Enable the block */
                                                 (0x1UL << AFK_PIPELINE_CONTROL_BYPASS_Pos) /*!< Enable Bypass */
     );
 
@@ -1892,7 +1891,7 @@ AFK_StatusTypeDef psee_afk_deactivate(AFK_HandleTypeDef *afk) {
     }
 
     /* SRAM Powerdown */
-    psee_sram_powerdown(AFK);
+    psee_sram_powerdown(afk->csi, AFK);
 
     /* Update the state */
     afk->Init = AFK_INIT_NOT_DONE;
@@ -1923,12 +1922,12 @@ AFK_StatusTypeDef psee_afk_start_statistics(AFK_HandleTypeDef *afk, uint32_t acc
     }
 
     /* Configure the Atomic Register */
-    psee_sensor_write(AFK_SHADOW_CTRL, AFK_SHADOW_CTRL_TIMER_EN |        /*!< Enable Microsecond-based Timer */
+    psee_sensor_write(afk->csi, AFK_SHADOW_CTRL, AFK_SHADOW_CTRL_TIMER_EN |        /*!< Enable Microsecond-based Timer */
                                            AFK_SHADOW_CTRL_RESET_ON_COPY /*!< Reset the Counters after a copy&reset IRQ */
     );
 
     /* Set Shadow Timer Threshold - Accumulation Time */
-    psee_sensor_write(AFK_SHADOW_TIMER_THRESHOLD, acc_time); /*!< Accumulation time in Microseconds */
+    psee_sensor_write(afk->csi, AFK_SHADOW_TIMER_THRESHOLD, acc_time); /*!< Accumulation time in Microseconds */
 
     /* Update Accumulation time */
     afk->stats_acc = acc_time;
@@ -1957,10 +1956,10 @@ AFK_StatusTypeDef psee_afk_stop_statistics(AFK_HandleTypeDef *afk) {
     }
 
     /* Configure the Atomic Register */
-    psee_sensor_write(AFK_SHADOW_CTRL, (0x0UL << AFK_SHADOW_CTRL_TIMER_EN_Pos)); /*!< Disable Microsecond-based Timer */
+    psee_sensor_write(afk->csi, AFK_SHADOW_CTRL, (0x0UL << AFK_SHADOW_CTRL_TIMER_EN_Pos)); /*!< Disable Microsecond-based Timer */
 
     /* Set Shadow Timer Threshold - Accumulation Time */
-    psee_sensor_write(AFK_SHADOW_TIMER_THRESHOLD, 1000); /*!< Accumulation time in Microseconds */
+    psee_sensor_write(afk->csi, AFK_SHADOW_TIMER_THRESHOLD, 1000); /*!< Accumulation time in Microseconds */
 
     /* Update Accumulation time */
     afk->stats_acc = 1000; /*!< Reset Value */
@@ -1985,16 +1984,16 @@ uint32_t psee_afk_read_total_evt_cnt(AFK_HandleTypeDef *afk) {
     /* Wait for shadow valid */
     uint32_t flag_shadow_valid = 0;
     while (flag_shadow_valid != 1) {
-        psee_sensor_read(AFK_SHADOW_STATUS, &flag_shadow_valid);
+        psee_sensor_read(afk->csi, AFK_SHADOW_STATUS, &flag_shadow_valid);
         flag_shadow_valid = (flag_shadow_valid & 1);
     }
 
     /* Read AFK total event count */
     uint32_t total_evt_cnt = 0;
-    psee_sensor_read(AFK_TOTAL_EVT_CNT, &total_evt_cnt);
+    psee_sensor_read(afk->csi, AFK_TOTAL_EVT_CNT, &total_evt_cnt);
 
     /* Clear shadow valid */
-    psee_sensor_write(AFK_SHADOW_STATUS, AFK_SHADOW_STATUS_VALID);
+    psee_sensor_write(afk->csi, AFK_SHADOW_STATUS, AFK_SHADOW_STATUS_VALID);
 
     /* Return Count */
     return total_evt_cnt;
@@ -2014,16 +2013,16 @@ uint32_t psee_afk_read_flicker_evt_cnt(AFK_HandleTypeDef *afk) {
     /* Wait for shadow valid */
     uint32_t flag_shadow_valid = 0;
     while (flag_shadow_valid != 1) {
-        psee_sensor_read(AFK_SHADOW_STATUS, &flag_shadow_valid);
+        psee_sensor_read(afk->csi, AFK_SHADOW_STATUS, &flag_shadow_valid);
         flag_shadow_valid = (flag_shadow_valid & 1);
     }
 
     /* Read AFK flicker event count */
     uint32_t flicker_evt_cnt;
-    psee_sensor_read(AFK_FLICKER_EVT_CNT, &flicker_evt_cnt);
+    psee_sensor_read(afk->csi, AFK_FLICKER_EVT_CNT, &flicker_evt_cnt);
 
     /* Clear shadow valid */
-    psee_sensor_write(AFK_SHADOW_STATUS, AFK_SHADOW_STATUS_VALID);
+    psee_sensor_write(afk->csi, AFK_SHADOW_STATUS, AFK_SHADOW_STATUS_VALID);
 
     /* Return Count */
     return flicker_evt_cnt;
@@ -2141,7 +2140,7 @@ uint32_t psee_afk_get_stats_acc_time(AFK_HandleTypeDef *afk) {
 /**
  * @brief  Function to start the sensor in Histogram mode
  */
-const struct issd *psee_open_ehc() {
+const struct issd *psee_open_ehc(omv_csi_t *csi) {
 
     /* Setup I2C */
     psee_sensor_platform_init();
@@ -2149,7 +2148,7 @@ const struct issd *psee_open_ehc() {
 
     /* Check chip ID */
     uint32_t chip_id;
-    psee_sensor_read(SAPHIR_CHIP_ID, &chip_id);
+    psee_sensor_read(csi, SAPHIR_CHIP_ID, &chip_id);
     printf("Sensor ID : %lX \n\r", chip_id);
     if ((chip_id != SAPHIR_MP_ID) && (chip_id != SAPHIR_ES_ID)) {
         while (1) {
@@ -2157,7 +2156,7 @@ const struct issd *psee_open_ehc() {
     }
 
     /* Detect the Boot mode */
-    genx320_boot_mode = psee_detect_boot_mode();
+    genx320_boot_mode = psee_detect_boot_mode(csi);
 
     if (chip_id == SAPHIR_ES_ID) {
         genx320_default_biases = genx320es_default_biases;
@@ -2166,13 +2165,13 @@ const struct issd *psee_open_ehc() {
     }
 
     /* Force CPI with chicken bits */
-    psee_sensor_write(TOP_CHICKEN, 0x03E8001A);
+    psee_sensor_write(csi, TOP_CHICKEN, 0x03E8001A);
 
     /* Start the Init sequence */
-    psee_sensor_init(&dcmi_histo);
+    psee_sensor_init(csi, &dcmi_histo);
 
     /* Configure CPI for Histo streaming */
-    psee_sensor_set_CPI_HISTO();
+    psee_sensor_set_CPI_HISTO(csi);
 
     return &dcmi_histo;
 }
@@ -2182,7 +2181,7 @@ const struct issd *psee_open_ehc() {
  * @param  ehc Pointer to a EHC_HandleTypeDef structure
  * @retval EHC status
  */
-EHC_StatusTypeDef psee_ehc_init(EHC_HandleTypeDef *ehc) {
+EHC_StatusTypeDef psee_ehc_init(omv_csi_t *csi, EHC_HandleTypeDef *ehc) {
 
     /* Check the EHC handle allocation */
     if (ehc == NULL) {
@@ -2190,6 +2189,7 @@ EHC_StatusTypeDef psee_ehc_init(EHC_HandleTypeDef *ehc) {
     }
 
     /* Reset the block */
+    ehc->csi = csi;
     ehc->State = EHC_STATE_RESET;
     ehc->Algo = EHC_ALGO_RESET;
     ehc->Trigger = EHC_TRIGGER_RESET;
@@ -2272,37 +2272,37 @@ EHC_StatusTypeDef psee_ehc_activate(EHC_HandleTypeDef *ehc, EHC_AlgoTypeDef sel_
         ehc->Padding = bits_padding;
 
         /* Bypass the filter in order to configure */
-        psee_sensor_write(EHC_PIPELINE_CONTROL, (0UL << EHC_PIPELINE_CONTROL_ENABLE_Pos)); /*!< Disable the block */
+        psee_sensor_write(ehc->csi, EHC_PIPELINE_CONTROL, (0UL << EHC_PIPELINE_CONTROL_ENABLE_Pos)); /*!< Disable the block */
 
         /* SRAM Powerup */
-        psee_sram_powerup(EHC);
+        psee_sram_powerup(ehc->csi, EHC);
 
         /* EHC Initialisation */
-        psee_sensor_write(EHC_INITIALISATION, EHC_INITIALISATION_REQ_INIT); /*!< Force an Initialisation on SRAMs */
+        psee_sensor_write(ehc->csi, EHC_INITIALISATION, EHC_INITIALISATION_REQ_INIT); /*!< Force an Initialisation on SRAMs */
 
         /* EHC Control Configuration */
-        psee_sensor_write(EHC_EHC_CONTROL, (sel_algo << EHC_CONTROL_ALGO_SEL_Pos) |       /*!< Select Histo algorithm */
+        psee_sensor_write(ehc->csi, EHC_EHC_CONTROL, (sel_algo << EHC_CONTROL_ALGO_SEL_Pos) |       /*!< Select Histo algorithm */
                                                (ehc->Trigger << EHC_CONTROL_TRIG_SEL_Pos) /*!< Close accumulation period by Integration period mode */
         );
 
         /* EHC Bits Configuration */
-        psee_sensor_write(EHC_BITS_SPLITTING, (n_bits_size << EHC_BITS_SPLITTING_NEGATIVE_BIT_LENGTH_Pos) |        /*!< Size of negative data container */
+        psee_sensor_write(ehc->csi, EHC_BITS_SPLITTING, (n_bits_size << EHC_BITS_SPLITTING_NEGATIVE_BIT_LENGTH_Pos) |        /*!< Size of negative data container */
                                                   (p_bits_size << EHC_BITS_SPLITTING_POSITIVE_BIT_LENGTH_Pos) |    /*!< Size of positive data container */
                                                   (bits_padding << EHC_BITS_SPLITTING_OUT_16BITS_PADDING_MODE_Pos) /*!< Padding mode */
         );
 
         /* EHC Accumulation time */
-        psee_sensor_write(EHC_INTEGRATION_PERIOD, integration_period); /*!< EHC Accumulation time in us */
+        psee_sensor_write(ehc->csi, EHC_INTEGRATION_PERIOD, integration_period); /*!< EHC Accumulation time in us */
 
         /* Check if SRAM Initialization is done */
         uint32_t flag_init_done = 0;
         while (flag_init_done != 1) {
-            psee_sensor_read(EHC_INITIALISATION, &flag_init_done);
+            psee_sensor_read(ehc->csi, EHC_INITIALISATION, &flag_init_done);
             flag_init_done = ((flag_init_done & (1 << 2)) >> 2);
         }
 
         /* Enable the filter */
-        psee_sensor_write(EHC_PIPELINE_CONTROL, EHC_PIPELINE_CONTROL_ENABLE |                /*!< Enable the filter */
+        psee_sensor_write(ehc->csi, EHC_PIPELINE_CONTROL, EHC_PIPELINE_CONTROL_ENABLE |                /*!< Enable the filter */
                                                     (0UL << EHC_PIPELINE_CONTROL_BYPASS_Pos) /*!< Disable the filter bypass */
         );
 
@@ -2334,10 +2334,10 @@ EHC_StatusTypeDef psee_ehc_deactivate(EHC_HandleTypeDef *ehc) {
     }
 
     /* Bypass the filter */
-    psee_sensor_write(EHC_PIPELINE_CONTROL, (0UL << EHC_PIPELINE_CONTROL_ENABLE_Pos)); /*!< Disable the block */
+    psee_sensor_write(ehc->csi, EHC_PIPELINE_CONTROL, (0UL << EHC_PIPELINE_CONTROL_ENABLE_Pos)); /*!< Disable the block */
 
     /* SRAM Powerdown */
-    psee_sram_powerdown(EHC);
+    psee_sram_powerdown(ehc->csi, EHC);
 
     /* Update the state */
     ehc->Init = EHC_INIT_NOT_DONE;
@@ -2497,37 +2497,37 @@ EHC_StatusTypeDef psee_ehc_activate_override(EHC_HandleTypeDef *ehc, EHC_AlgoTyp
         ehc->Override = override;
 
         /* Bypass the filter in order to configure */
-        psee_sensor_write(EHC_PIPELINE_CONTROL, (0UL << EHC_PIPELINE_CONTROL_ENABLE_Pos)); /*!< Disable the block */
+        psee_sensor_write(ehc->csi, EHC_PIPELINE_CONTROL, (0UL << EHC_PIPELINE_CONTROL_ENABLE_Pos)); /*!< Disable the block */
 
         /* SRAM Powerup */
-        psee_sram_powerup(EHC);
+        psee_sram_powerup(ehc->csi, EHC);
 
         /* EHC Initialisation */
-        psee_sensor_write(EHC_INITIALISATION, EHC_INITIALISATION_REQ_INIT); /*!< Force an Initialisation on SRAMs */
+        psee_sensor_write(ehc->csi, EHC_INITIALISATION, EHC_INITIALISATION_REQ_INIT); /*!< Force an Initialisation on SRAMs */
 
         /* EHC Control Configuration */
-        psee_sensor_write(EHC_EHC_CONTROL, (sel_algo << EHC_CONTROL_ALGO_SEL_Pos) |       /*!< Select Histo algorithm */
+        psee_sensor_write(ehc->csi, EHC_EHC_CONTROL, (sel_algo << EHC_CONTROL_ALGO_SEL_Pos) |       /*!< Select Histo algorithm */
                                                (ehc->Trigger << EHC_CONTROL_TRIG_SEL_Pos) /*!< Close accumulation period by Integration period mode */
         );
 
         /* EHC Bits Configuration */
-        psee_sensor_write(EHC_BITS_SPLITTING, (n_bits_size << EHC_BITS_SPLITTING_NEGATIVE_BIT_LENGTH_Pos) |        /*!< Size of negative data container */
+        psee_sensor_write(ehc->csi, EHC_BITS_SPLITTING, (n_bits_size << EHC_BITS_SPLITTING_NEGATIVE_BIT_LENGTH_Pos) |        /*!< Size of negative data container */
                                                   (p_bits_size << EHC_BITS_SPLITTING_POSITIVE_BIT_LENGTH_Pos) |    /*!< Size of positive data container */
                                                   (bits_padding << EHC_BITS_SPLITTING_OUT_16BITS_PADDING_MODE_Pos) /*!< Padding mode */
         );
 
         /* EHC Accumulation time */
-        psee_sensor_write(EHC_INTEGRATION_PERIOD, ehc->accumulation_period); /*!< EHC Accumulation time in us */
+        psee_sensor_write(ehc->csi, EHC_INTEGRATION_PERIOD, ehc->accumulation_period); /*!< EHC Accumulation time in us */
 
         /* Check if SRAM Initialization is done */
         uint32_t flag_init_done = 0;
         while (flag_init_done != 1) {
-            psee_sensor_read(EHC_INITIALISATION, &flag_init_done);
+            psee_sensor_read(ehc->csi, EHC_INITIALISATION, &flag_init_done);
             flag_init_done = ((flag_init_done & (1 << 2)) >> 2);
         }
 
         /* Enable the filter */
-        psee_sensor_write(EHC_PIPELINE_CONTROL, EHC_PIPELINE_CONTROL_ENABLE |                /*!< Enable the filter */
+        psee_sensor_write(ehc->csi, EHC_PIPELINE_CONTROL, EHC_PIPELINE_CONTROL_ENABLE |                /*!< Enable the filter */
                                                     (0UL << EHC_PIPELINE_CONTROL_BYPASS_Pos) /*!< Disable the filter bypass */
         );
 
@@ -2553,7 +2553,7 @@ EHC_StatusTypeDef psee_ehc_start_histo_acc(EHC_HandleTypeDef *ehc) {
     if (ehc->State == EHC_STATE_READY && ehc->Override == EHC_OVERRIDE) {
 
         /* Start Accumulation */
-        psee_sensor_write(NFL_PIPELINE_CONTROL, NFL_PIPELINE_CONTROL_ENABLE);
+        psee_sensor_write(ehc->csi, NFL_PIPELINE_CONTROL, NFL_PIPELINE_CONTROL_ENABLE);
     } else {
         return EHC_ERROR;
     }
@@ -2572,8 +2572,8 @@ EHC_StatusTypeDef psee_ehc_drain_histo(EHC_HandleTypeDef *ehc) {
     if (ehc->State == EHC_STATE_READY && ehc->Override == EHC_OVERRIDE) {
 
         /* Drain Histo */
-        psee_sensor_write(NFL_PIPELINE_CONTROL, NFL_PIPELINE_CONTROL_DROP_NBACKPRESSURE);
-        psee_sensor_write(EHC_CHICKEN0_BITS, EHC_CHICKEN0_BITS_FORCE_DRAIN_REQ);
+        psee_sensor_write(ehc->csi, NFL_PIPELINE_CONTROL, NFL_PIPELINE_CONTROL_DROP_NBACKPRESSURE);
+        psee_sensor_write(ehc->csi, EHC_CHICKEN0_BITS, EHC_CHICKEN0_BITS_FORCE_DRAIN_REQ);
     } else {
         return EHC_ERROR;
     }
@@ -2584,9 +2584,9 @@ EHC_StatusTypeDef psee_ehc_drain_histo(EHC_HandleTypeDef *ehc) {
 /**
  * @brief  Function to execute the destroy sequence for the EHC mode.
  */
-void psee_close_ehc(const struct issd *issd) {
+void psee_close_ehc(omv_csi_t *csi, const struct issd *issd) {
 
-    destroy(issd);
+    destroy(csi, issd);
 }
 
 /**
@@ -2953,7 +2953,7 @@ static STC_ParamsTypeDef psee_stc_params(STC_HandleTypeDef *stc, uint32_t thresh
  * @param  stc Pointer to a STC_HandleTypeDef structure
  * @retval STC status
  */
-STC_StatusTypeDef psee_stc_init(STC_HandleTypeDef *stc) {
+STC_StatusTypeDef psee_stc_init(omv_csi_t *csi, STC_HandleTypeDef *stc) {
 
     /* Check the STC handle allocation */
     if (stc == NULL) {
@@ -2961,6 +2961,7 @@ STC_StatusTypeDef psee_stc_init(STC_HandleTypeDef *stc) {
     }
 
     /* Reset the block */
+    stc->csi = csi;
     stc->Mode = STC_MODE_RESET;
     stc->State = STC_STATE_RESET;
     stc->Params.Mult = 0;
@@ -3019,37 +3020,37 @@ STC_StatusTypeDef psee_stc_only_activate(STC_HandleTypeDef *stc, uint32_t stc_th
         stc->Params.Timeout = stc_params.Timeout;
 
         /* Bypass the filter in order to configure */
-        psee_sensor_write(STC_PIPELINE_CONTROL, (0x1UL << STC_PIPELINE_CONTROL_ENABLE_Pos) |   /*!< Enable the block */
+        psee_sensor_write(stc->csi, STC_PIPELINE_CONTROL, (0x1UL << STC_PIPELINE_CONTROL_ENABLE_Pos) |   /*!< Enable the block */
                                                     (0x1UL << STC_PIPELINE_CONTROL_BYPASS_Pos) /*!< Bypass the block */
         );
 
         /* SRAM Powerup */
-        psee_sram_powerup(STC);
+        psee_sram_powerup(stc->csi, STC);
 
         /* STC Initialisation */
-        psee_sensor_write(STC_INITIALISATION, (0x1UL << STC_INITIALISATION_REQ_INIT_Pos)); /*!< Force an Initialisation on SRAMs */
+        psee_sensor_write(stc->csi, STC_INITIALISATION, (0x1UL << STC_INITIALISATION_REQ_INIT_Pos)); /*!< Force an Initialisation on SRAMs */
 
         /* STC Configuration */
-        psee_sensor_write(STC_STC_PARAM, (0x1UL << STC_PARAM_ENABLE_Pos) |                       /*!< Enable STC filter */
+        psee_sensor_write(stc->csi, STC_STC_PARAM, (0x1UL << STC_PARAM_ENABLE_Pos) |                       /*!< Enable STC filter */
                                              ((stc_threshold * 1000) << STC_PARAM_THRESHOLD_Pos) /*!< STC filter threshold */
         );
 
-        psee_sensor_write(STC_TRAIL_PARAM, (0x0UL << STC_TRAIL_PARAM_ENABLE_Pos)); /*!< Disable Trail filter */
+        psee_sensor_write(stc->csi, STC_TRAIL_PARAM, (0x0UL << STC_TRAIL_PARAM_ENABLE_Pos)); /*!< Disable Trail filter */
 
-        psee_sensor_write(STC_TIMESTAMPING, (stc_params.Presc << STC_TIMESTAMPING_PRESCALER_Pos) |     /*!< Time-stamping prescaler */
+        psee_sensor_write(stc->csi, STC_TIMESTAMPING, (stc_params.Presc << STC_TIMESTAMPING_PRESCALER_Pos) |     /*!< Time-stamping prescaler */
                                                 (stc_params.Mult << STC_TIMESTAMPING_MULTIPLIER_Pos)); /*!< Time-stamping multiplier */
 
-        psee_sensor_write(STC_INVALIDATION, (stc_params.Timeout << STC_INVALIDATION_DT_FIFO_TIMEOUT_Pos)); /*!< Deadtime fifo timeout */
+        psee_sensor_write(stc->csi, STC_INVALIDATION, (stc_params.Timeout << STC_INVALIDATION_DT_FIFO_TIMEOUT_Pos)); /*!< Deadtime fifo timeout */
 
         /* Check if SRAM Initialization is done */
         uint32_t flag_init_done = 0;
         while (flag_init_done != 1) {
-            psee_sensor_read(STC_INITIALISATION, &flag_init_done);
+            psee_sensor_read(stc->csi, STC_INITIALISATION, &flag_init_done);
             flag_init_done = ((flag_init_done & (1 << 2)) >> 2);
         }
 
         /* Enable the filter */
-        psee_sensor_write(STC_PIPELINE_CONTROL, (0x1UL << STC_PIPELINE_CONTROL_ENABLE_Pos) | /*!< Enable the filter */
+        psee_sensor_write(stc->csi, STC_PIPELINE_CONTROL, (0x1UL << STC_PIPELINE_CONTROL_ENABLE_Pos) | /*!< Enable the filter */
                                                     (0UL << STC_PIPELINE_CONTROL_BYPASS)     /*!< Disable the filter bypass */
         );
 
@@ -3110,37 +3111,37 @@ STC_StatusTypeDef psee_trail_only_activate(STC_HandleTypeDef *stc, uint32_t trai
         stc->Params.Timeout = stc_params.Timeout;
 
         /* Bypass the filter in order to configure */
-        psee_sensor_write(STC_PIPELINE_CONTROL, (0x1UL << STC_PIPELINE_CONTROL_ENABLE_Pos) |   /*!< Enable the block */
+        psee_sensor_write(stc->csi, STC_PIPELINE_CONTROL, (0x1UL << STC_PIPELINE_CONTROL_ENABLE_Pos) |   /*!< Enable the block */
                                                     (0x1UL << STC_PIPELINE_CONTROL_BYPASS_Pos) /*!< Bypass the block */
         );
 
         /* SRAM Powerup */
-        psee_sram_powerup(STC);
+        psee_sram_powerup(stc->csi, STC);
 
         /* STC Initialisation */
-        psee_sensor_write(STC_INITIALISATION, (0x1UL << STC_INITIALISATION_REQ_INIT_Pos)); /*!< Force an Initialisation on SRAMs */
+        psee_sensor_write(stc->csi, STC_INITIALISATION, (0x1UL << STC_INITIALISATION_REQ_INIT_Pos)); /*!< Force an Initialisation on SRAMs */
 
         /* STC Configuration */
-        psee_sensor_write(STC_STC_PARAM, (0x0UL << STC_PARAM_ENABLE_Pos)); /*!< Disables STC filter */
+        psee_sensor_write(stc->csi, STC_STC_PARAM, (0x0UL << STC_PARAM_ENABLE_Pos)); /*!< Disables STC filter */
 
-        psee_sensor_write(STC_TRAIL_PARAM, (0x1UL << STC_TRAIL_PARAM_ENABLE_Pos) |                         /*!< Enable Trail filter */
+        psee_sensor_write(stc->csi, STC_TRAIL_PARAM, (0x1UL << STC_TRAIL_PARAM_ENABLE_Pos) |                         /*!< Enable Trail filter */
                                                ((trail_threshold * 1000) << STC_TRAIL_PARAM_THRESHOLD_Pos) /*!< Trail filter threshold */
         );
 
-        psee_sensor_write(STC_TIMESTAMPING, (stc_params.Presc << STC_TIMESTAMPING_PRESCALER_Pos) |     /*!< Time-stamping prescaler */
+        psee_sensor_write(stc->csi, STC_TIMESTAMPING, (stc_params.Presc << STC_TIMESTAMPING_PRESCALER_Pos) |     /*!< Time-stamping prescaler */
                                                 (stc_params.Mult << STC_TIMESTAMPING_MULTIPLIER_Pos)); /*!< Time-stamping multiplier */
 
-        psee_sensor_write(STC_INVALIDATION, (stc_params.Timeout << STC_INVALIDATION_DT_FIFO_TIMEOUT_Pos)); /*!< Deadtime fifo timeout */
+        psee_sensor_write(stc->csi, STC_INVALIDATION, (stc_params.Timeout << STC_INVALIDATION_DT_FIFO_TIMEOUT_Pos)); /*!< Deadtime fifo timeout */
 
         /* Check if SRAM Initialization is done */
         uint32_t flag_init_done = 0;
         while (flag_init_done != 1) {
-            psee_sensor_read(STC_INITIALISATION, &flag_init_done);
+            psee_sensor_read(stc->csi, STC_INITIALISATION, &flag_init_done);
             flag_init_done = ((flag_init_done & (1 << 2)) >> 2);
         }
 
         /* Enable the filter */
-        psee_sensor_write(STC_PIPELINE_CONTROL, (0x1UL << STC_PIPELINE_CONTROL_ENABLE_Pos) | /*!< Enable the filter */
+        psee_sensor_write(stc->csi, STC_PIPELINE_CONTROL, (0x1UL << STC_PIPELINE_CONTROL_ENABLE_Pos) | /*!< Enable the filter */
                                                     (0UL << STC_PIPELINE_CONTROL_BYPASS)     /*!< Disable the filter bypass */
         );
 
@@ -3209,39 +3210,39 @@ STC_StatusTypeDef psee_stc_trail_activate(STC_HandleTypeDef *stc, uint32_t stc_t
         stc->Params.Timeout = stc_params.Timeout;
 
         /* Bypass the filter in order to configure */
-        psee_sensor_write(STC_PIPELINE_CONTROL, (0x1UL << STC_PIPELINE_CONTROL_ENABLE_Pos) |   /*!< Enable the block */
+        psee_sensor_write(stc->csi, STC_PIPELINE_CONTROL, (0x1UL << STC_PIPELINE_CONTROL_ENABLE_Pos) |   /*!< Enable the block */
                                                     (0x1UL << STC_PIPELINE_CONTROL_BYPASS_Pos) /*!< Bypass the block */
         );
 
         /* SRAM Powerup */
-        psee_sram_powerup(STC);
+        psee_sram_powerup(stc->csi, STC);
 
         /* STC Initialisation */
-        psee_sensor_write(STC_INITIALISATION, (0x1UL << STC_INITIALISATION_REQ_INIT_Pos)); /*!< Force an Initialisation on SRAMs */
+        psee_sensor_write(stc->csi, STC_INITIALISATION, (0x1UL << STC_INITIALISATION_REQ_INIT_Pos)); /*!< Force an Initialisation on SRAMs */
 
         /* STC Configuration */
-        psee_sensor_write(STC_STC_PARAM, (0x1UL << STC_PARAM_ENABLE_Pos) |                       /*!< Enable STC filter */
+        psee_sensor_write(stc->csi, STC_STC_PARAM, (0x1UL << STC_PARAM_ENABLE_Pos) |                       /*!< Enable STC filter */
                                              ((stc_threshold * 1000) << STC_PARAM_THRESHOLD_Pos) /*!< STC filter threshold */
         );
 
-        psee_sensor_write(STC_TRAIL_PARAM, (0x1UL << STC_TRAIL_PARAM_ENABLE_Pos) |                         /*!< Enable Trail filter */
+        psee_sensor_write(stc->csi, STC_TRAIL_PARAM, (0x1UL << STC_TRAIL_PARAM_ENABLE_Pos) |                         /*!< Enable Trail filter */
                                                ((trail_threshold * 1000) << STC_TRAIL_PARAM_THRESHOLD_Pos) /*!< Trail filter threshold */
         );
 
-        psee_sensor_write(STC_TIMESTAMPING, (stc_params.Presc << STC_TIMESTAMPING_PRESCALER_Pos) |     /*!< Time-stamping prescaler */
+        psee_sensor_write(stc->csi, STC_TIMESTAMPING, (stc_params.Presc << STC_TIMESTAMPING_PRESCALER_Pos) |     /*!< Time-stamping prescaler */
                                                 (stc_params.Mult << STC_TIMESTAMPING_MULTIPLIER_Pos)); /*!< Time-stamping multiplier */
 
-        psee_sensor_write(STC_INVALIDATION, (stc_params.Timeout << STC_INVALIDATION_DT_FIFO_TIMEOUT_Pos)); /*!< Deadtime fifo timeout */
+        psee_sensor_write(stc->csi, STC_INVALIDATION, (stc_params.Timeout << STC_INVALIDATION_DT_FIFO_TIMEOUT_Pos)); /*!< Deadtime fifo timeout */
 
         /* Check if SRAM Initialization is done */
         uint32_t flag_init_done = 0;
         while (flag_init_done != 1) {
-            psee_sensor_read(STC_INITIALISATION, &flag_init_done);
+            psee_sensor_read(stc->csi, STC_INITIALISATION, &flag_init_done);
             flag_init_done = ((flag_init_done & (1 << 2)) >> 2);
         }
 
         /* Enable the filter */
-        psee_sensor_write(STC_PIPELINE_CONTROL, (0x1UL << STC_PIPELINE_CONTROL_ENABLE_Pos) | /*!< Enable the filter */
+        psee_sensor_write(stc->csi, STC_PIPELINE_CONTROL, (0x1UL << STC_PIPELINE_CONTROL_ENABLE_Pos) | /*!< Enable the filter */
                                                     (0UL << STC_PIPELINE_CONTROL_BYPASS)     /*!< Disable the filter bypass */
         );
 
@@ -3273,12 +3274,12 @@ STC_StatusTypeDef psee_stc_trail_deactivate(STC_HandleTypeDef *stc) {
     }
 
     /* Bypass the filter */
-    psee_sensor_write(STC_PIPELINE_CONTROL, (0x1UL << STC_PIPELINE_CONTROL_ENABLE_Pos) |   /*!< Enable the block */
+    psee_sensor_write(stc->csi, STC_PIPELINE_CONTROL, (0x1UL << STC_PIPELINE_CONTROL_ENABLE_Pos) |   /*!< Enable the block */
                                                 (0x1UL << STC_PIPELINE_CONTROL_BYPASS_Pos) /*!< Bypass the block */
     );
 
     /* SRAM Powerdown */
-    psee_sram_powerdown(STC);
+    psee_sram_powerdown(stc->csi, STC);
 
     /* Update the state */
     stc->Init = STC_INIT_NOT_DONE;

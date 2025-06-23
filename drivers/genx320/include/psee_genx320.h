@@ -20,6 +20,7 @@
 /* User Includes*/
 #include "genx320_all_pub_registers.h"
 #include "psee_issd.h"
+#include "omv_csi.h"
 
 /* Sensor I2C Address */
 #define I2C_ADDRESS 	  0x3C
@@ -226,6 +227,7 @@ typedef enum {
  */
 typedef struct
 {
+	omv_csi_t               *csi;
 	AFK_InitTypeDef   		Init;		/*!< AFK Init */
 	AFK_StateTypeDef    	State;		/*!< AFK State */
 	AFK_StatisticsTypeDef 	Stats;		/*!< AFK Statistics */
@@ -303,6 +305,7 @@ typedef enum {
  */
 typedef struct
 {
+    omv_csi_t             *csi;
     EHC_InitTypeDef       Init;                 /*!< EHC Init */
     EHC_StateTypeDef  	  State;                /*!< EHC State */
     EHC_AlgoTypeDef       Algo;                 /*!< EHC Algo */
@@ -367,6 +370,7 @@ typedef enum {
  */
 typedef struct
 {
+    omv_csi_t           *csi;
     STC_InitTypeDef     Init;       /*!< STC block Init */
     STC_StateTypeDef    State;      /*!< STC block State */
     STC_ModeTypeDef     Mode;       /*!< STC Mode */
@@ -390,64 +394,64 @@ extern const struct issd *current_issd;
 extern GenX320_Rommode genx320_boot_mode;
 
 /* Sensor Register Manipulation Functions */
-extern void psee_sensor_read(uint16_t register_address, uint32_t *buf);
-extern void psee_sensor_write(uint16_t register_address, uint32_t register_data);
+extern void psee_sensor_read(omv_csi_t *csi, uint16_t register_address, uint32_t *buf);
+extern void psee_sensor_write(omv_csi_t *csi, uint16_t register_address, uint32_t register_data);
 
 /* Sensor Bring Up Functions */
-extern void psee_sensor_init(const struct issd *);
-extern void psee_sensor_start(const struct issd *);
-extern void psee_sensor_stop(const struct issd *);
-extern const struct issd *psee_open_evt();
-extern void psee_sensor_set_bias(BIAS_Name_t bias, uint32_t val);
-extern void psee_sensor_set_biases(const BIAS_Params_t *bias);
-extern void psee_sensor_set_CPI_EVT20();
-extern void psee_sensor_set_CPI_HISTO();
-extern void psee_sensor_set_flip(uint32_t flip_x, uint32_t flip_y);
-extern void psee_sensor_destroy();
+extern void psee_sensor_init(omv_csi_t *csi, const struct issd *);
+extern void psee_sensor_start(omv_csi_t *csi, const struct issd *);
+extern void psee_sensor_stop(omv_csi_t *csi, const struct issd *);
+extern const struct issd *psee_open_evt(omv_csi_t *csi);
+extern void psee_sensor_set_bias(omv_csi_t *csi, BIAS_Name_t bias, uint32_t val);
+extern void psee_sensor_set_biases(omv_csi_t *csi, const BIAS_Params_t *bias);
+extern void psee_sensor_set_CPI_EVT20(omv_csi_t *csi);
+extern void psee_sensor_set_CPI_HISTO(omv_csi_t *csi);
+extern void psee_sensor_set_flip(omv_csi_t *csi, uint32_t flip_x, uint32_t flip_y);
+extern void psee_sensor_destroy(omv_csi_t *csi);
 
 /* Operating Mode Control Functions */
-extern void psee_PM3C_config();
-extern void psee_PM3C_Histo_config();
-extern void psee_PM2_config();
-extern void psee_PM2_Histo_config();
+extern void psee_PM3C_config(omv_csi_t *csi);
+extern void psee_PM3C_Histo_config(omv_csi_t *csi);
+extern void psee_PM2_config(omv_csi_t *csi);
+extern void psee_PM2_Histo_config(omv_csi_t *csi);
 
 /* Firmware flashing functions */
-extern FW_StatusTypeDef psee_write_firmware_single(const Firmware *firmwareArray, uint32_t n_bytes);
-extern FW_StatusTypeDef psee_test_firmware_single(const Firmware *firmwareArray, uint32_t n_bytes);
-extern uint32_t psee_read_firmware_register(uint32_t reg_address);
-extern FW_StatusTypeDef psee_write_firmware_burst(const Firmware *firmwareArray, uint32_t n_bytes);
-extern FW_StatusTypeDef psee_start_firmware(GenX320_Rommode boot_mode, uint32_t jump_add);
-extern FW_StatusTypeDef psee_reset_firmware(GenX320_Rommode boot_mode);
+extern FW_StatusTypeDef psee_write_firmware_single(omv_csi_t *csi, const Firmware *firmwareArray, uint32_t n_bytes);
+extern FW_StatusTypeDef psee_test_firmware_single(omv_csi_t *csi, const Firmware *firmwareArray, uint32_t n_bytes);
+extern uint32_t psee_read_firmware_register(omv_csi_t *csi, uint32_t reg_address);
+extern FW_StatusTypeDef psee_write_firmware_burst(omv_csi_t *csi, const Firmware *firmwareArray, uint32_t n_bytes);
+extern FW_StatusTypeDef psee_start_firmware(omv_csi_t *csi, GenX320_Rommode boot_mode, uint32_t jump_add);
+extern FW_StatusTypeDef psee_reset_firmware(omv_csi_t *csi, GenX320_Rommode boot_mode);
 
 /* Mailbox Communication Functions */
-extern uint32_t psee_get_mbx_cmd_ptr();
-extern uint32_t psee_get_mbx_misc();
-extern uint32_t psee_get_mbx_status_ptr();
-extern void psee_set_mbx_cmd_ptr(uint32_t val);
-extern void psee_set_mbx_misc(uint32_t val);
-extern void psee_set_mbx_status_ptr(uint32_t val);
+extern uint32_t psee_get_mbx_cmd_ptr(omv_csi_t *csi);
+extern uint32_t psee_get_mbx_misc(omv_csi_t *csi);
+extern uint32_t psee_get_mbx_status_ptr(omv_csi_t *csi);
+extern void psee_set_mbx_cmd_ptr(omv_csi_t *csi, uint32_t val);
+extern void psee_set_mbx_misc(omv_csi_t *csi, uint32_t val);
+extern void psee_set_mbx_status_ptr(omv_csi_t *csi, uint32_t val);
 
 /* ROI Access Functions */
-extern void psee_write_ROI_X(uint32_t offset, uint32_t val);
-extern void psee_write_ROI_Y(uint32_t offset, uint32_t val);
-extern void psee_write_ROI_CTRL(uint32_t val);
+extern void psee_write_ROI_X(omv_csi_t *csi, uint32_t offset, uint32_t val);
+extern void psee_write_ROI_Y(omv_csi_t *csi, uint32_t offset, uint32_t val);
+extern void psee_write_ROI_CTRL(omv_csi_t *csi, uint32_t val);
 
 /* RISC-V Debugger Functions */
-extern uint32_t psee_mbx_read_uint32();
-extern void psee_decode_debugger();
-extern uint32_t psee_sensor_read_dmem(uint32_t address);
-extern uint32_t psee_sensor_read_imem(uint32_t address);
+extern uint32_t psee_mbx_read_uint32(omv_csi_t *csi);
+extern void psee_decode_debugger(omv_csi_t *csi);
+extern uint32_t psee_sensor_read_dmem(omv_csi_t *csi, uint32_t address);
+extern uint32_t psee_sensor_read_imem(omv_csi_t *csi, uint32_t address);
 
 /* Statistics Register Read Functions */
-extern void psee_read_ro_lp_evt_cnt(uint32_t *p_data);
-extern uint32_t psee_read_ro_evt_cd_cnt();
+extern void psee_read_ro_lp_evt_cnt(omv_csi_t *csi, uint32_t *p_data);
+extern uint32_t psee_read_ro_evt_cd_cnt(omv_csi_t *csi);
 
 /* Activity Map Configuration Functions */
-extern void psee_configure_activity_map();
-extern void psee_set_default_XY_borders(AM_Borders_t *border);
+extern void psee_configure_activity_map(omv_csi_t *csi);
+extern void psee_set_default_XY_borders(omv_csi_t *csi, AM_Borders_t *border);
 
 /* AFK Configuration Functions */
-extern AFK_StatusTypeDef psee_afk_init(AFK_HandleTypeDef *afk);
+extern AFK_StatusTypeDef psee_afk_init(omv_csi_t *csi, AFK_HandleTypeDef *afk);
 extern AFK_StatusTypeDef psee_afk_activate(AFK_HandleTypeDef *afk,
                                            uint16_t f_min,
                                            uint16_t f_max,
@@ -465,8 +469,8 @@ extern AFK_StatisticsTypeDef psee_afk_get_stats(AFK_HandleTypeDef *afk);
 extern uint32_t psee_afk_get_stats_acc_time(AFK_HandleTypeDef *afk);
 
 /* EHC Configuration Functions */
-extern const struct issd *psee_open_ehc();
-extern EHC_StatusTypeDef psee_ehc_init(EHC_HandleTypeDef *ehc);
+extern const struct issd *psee_open_ehc(omv_csi_t *csi);
+extern EHC_StatusTypeDef psee_ehc_init(omv_csi_t *csi, EHC_HandleTypeDef *ehc);
 extern EHC_StatusTypeDef psee_ehc_activate(EHC_HandleTypeDef *ehc,
                                            EHC_AlgoTypeDef sel_algo,
                                            uint8_t p_bits_size,
@@ -488,10 +492,10 @@ extern EHC_StatusTypeDef psee_ehc_activate_override(EHC_HandleTypeDef *ehc,
                                                     EHC_OverrideTypeDef override);
 extern EHC_StatusTypeDef psee_ehc_start_histo_acc(EHC_HandleTypeDef *ehc);
 extern EHC_StatusTypeDef psee_ehc_drain_histo(EHC_HandleTypeDef *ehc);
-extern void psee_close_ehc(const struct issd *issd);
+extern void psee_close_ehc(omv_csi_t *csi, const struct issd *issd);
 
 /* STC Configuration Functions */
-extern STC_StatusTypeDef psee_stc_init(STC_HandleTypeDef *stc);
+extern STC_StatusTypeDef psee_stc_init(omv_csi_t *csi, STC_HandleTypeDef *stc);
 extern STC_StatusTypeDef psee_stc_only_activate(STC_HandleTypeDef *stc,
                                                 uint32_t stc_threshold,
                                                 uint8_t evt_clk_freq);

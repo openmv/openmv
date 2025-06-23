@@ -102,7 +102,7 @@ static int reset(omv_csi_t *csi) {
     BIAS_Params_t biases = (csi->chip_id == SAPHIR_ES_ID) ? genx320es_default_biases : genx320mp_default_biases;
 
     // Force CPI with chicken bits
-    psee_sensor_write(TOP_CHICKEN, TOP_CHICKEN_OVERRIDE_MIPI_MODE_EN |
+    psee_sensor_write(csi, TOP_CHICKEN, TOP_CHICKEN_OVERRIDE_MIPI_MODE_EN |
                       TOP_CHICKEN_OVERRIDE_HISTO_MODE_EN |
                       #if (OMV_GENX320_EHC_ENABLE == 1)
                       1 << TOP_CHICKEN_OVERRIDE_HISTO_MODE_Pos |
@@ -113,29 +113,29 @@ static int reset(omv_csi_t *csi) {
 
     // Start the Init sequence
     #if (OMV_GENX320_EHC_ENABLE == 1)
-    psee_sensor_init(&dcmi_histo);
+    psee_sensor_init(csi, &dcmi_histo);
     #else
-    psee_sensor_init(&dcmi_evt);
+    psee_sensor_init(csi, &dcmi_evt);
 
     // Set EVT20 mode
-    psee_sensor_write(EDF_CONTROL, 0);
+    psee_sensor_write(csi, EDF_CONTROL, 0);
     #endif // (OMV_GENX320_EHC_ENABLE == 1)
 
     // Configure Packet and Frame sizes
-    psee_sensor_write(CPI_PACKET_SIZE_CONTROL, ACTIVE_SENSOR_WIDTH);
-    psee_sensor_write(CPI_PACKET_TIME_CONTROL, ACTIVE_SENSOR_WIDTH << CPI_PACKET_TIME_CONTROL_PERIOD_Pos |
+    psee_sensor_write(csi, CPI_PACKET_SIZE_CONTROL, ACTIVE_SENSOR_WIDTH);
+    psee_sensor_write(csi, CPI_PACKET_TIME_CONTROL, ACTIVE_SENSOR_WIDTH << CPI_PACKET_TIME_CONTROL_PERIOD_Pos |
                       HSYNC_CLOCK_CYCLES << CPI_PACKET_TIME_CONTROL_BLANKING_Pos);
-    psee_sensor_write(CPI_FRAME_SIZE_CONTROL, ACTIVE_SENSOR_HEIGHT);
-    psee_sensor_write(CPI_FRAME_TIME_CONTROL, VSYNC_CLOCK_CYCLES);
+    psee_sensor_write(csi, CPI_FRAME_SIZE_CONTROL, ACTIVE_SENSOR_HEIGHT);
+    psee_sensor_write(csi, CPI_FRAME_TIME_CONTROL, VSYNC_CLOCK_CYCLES);
 
     // Enable dropping
-    psee_sensor_write(RO_READOUT_CTRL, RO_READOUT_CTRL_DIGITAL_PIPE_EN |
+    psee_sensor_write(csi, RO_READOUT_CTRL, RO_READOUT_CTRL_DIGITAL_PIPE_EN |
                       RO_READOUT_CTRL_AVOID_BPRESS_TD |
                       RO_READOUT_CTRL_DROP_EN |
                       RO_READOUT_CTRL_DROP_ON_FULL_EN);
 
     // Enable the Anti-FlicKering filter
-    if (psee_afk_init(&psee_afk) != AFK_OK) {
+    if (psee_afk_init(csi, &psee_afk) != AFK_OK) {
         return -1;
     }
 
@@ -145,27 +145,27 @@ static int reset(omv_csi_t *csi) {
 
     // Operation Mode Configuration
     #if (OMV_GENX320_EHC_ENABLE == 1)
-    psee_PM3C_Histo_config();
+    psee_PM3C_Histo_config(csi);
     #else
-    psee_PM3C_config();
+    psee_PM3C_config(csi);
     #endif // (OMV_GENX320_EHC_ENABLE == 1)
 
     // Set the default border for the Activity map
-    psee_set_default_XY_borders(&genx320mp_default_am_borders);
+    psee_set_default_XY_borders(csi, &genx320mp_default_am_borders);
 
     // Configure the activity map
-    psee_configure_activity_map();
+    psee_configure_activity_map(csi);
 
     // Set Standard biases
-    psee_sensor_set_biases(&biases);
+    psee_sensor_set_biases(csi, &biases);
 
     // Start the csi
     #if (OMV_GENX320_EHC_ENABLE == 1)
-    psee_sensor_start(&dcmi_histo);
+    psee_sensor_start(csi, &dcmi_histo);
 
     EHC_HandleTypeDef psee_ehc;
 
-    if (psee_ehc_init(&psee_ehc) != EHC_OK) {
+    if (psee_ehc_init(csi, &psee_ehc) != EHC_OK) {
         return -1;
     }
 
@@ -174,7 +174,7 @@ static int reset(omv_csi_t *csi) {
         return -1;
     }
     #else
-    psee_sensor_start(&dcmi_evt);
+    psee_sensor_start(csi, &dcmi_evt);
     #endif //  (OMV_GENX320_EHC_ENABLE == 1)
 
     return 0;
@@ -183,15 +183,15 @@ static int reset(omv_csi_t *csi) {
 static int sleep(omv_csi_t *csi, int enable) {
     if (enable) {
         #if (OMV_GENX320_EHC_ENABLE == 1)
-        psee_PM2_Histo_config();
+        psee_PM2_Histo_config(csi);
         #else
-        psee_PM2_config();
+        psee_PM2_config(csi);
         #endif // (OMV_GENX320_EHC_ENABLE == 1)
     } else {
         #if (OMV_GENX320_EHC_ENABLE == 1)
-        psee_PM3C_Histo_config();
+        psee_PM3C_Histo_config(csi);
         #else
-        psee_PM3C_config();
+        psee_PM3C_config(csi);
         #endif // (OMV_GENX320_EHC_ENABLE == 1)
     }
     return 0;
@@ -246,8 +246,8 @@ static int set_framerate(omv_csi_t *csi, int framerate) {
     // Disable any ongoing frame capture.
     omv_csi_abort(csi, true, false);
 
-    psee_sensor_write(EHC_INTEGRATION_PERIOD, us);
-    psee_sensor_write(CPI_PACKET_TIME_CONTROL, ACTIVE_SENSOR_WIDTH << CPI_PACKET_TIME_CONTROL_PERIOD_Pos |
+    psee_sensor_write(csi, EHC_INTEGRATION_PERIOD, us);
+    psee_sensor_write(csi, CPI_PACKET_TIME_CONTROL, ACTIVE_SENSOR_WIDTH << CPI_PACKET_TIME_CONTROL_PERIOD_Pos |
                       hsync_clocks << CPI_PACKET_TIME_CONTROL_BLANKING_Pos);
 
     // Wait for the camera to settle
@@ -271,24 +271,24 @@ static int set_brightness(omv_csi_t *csi, int level) {
 
 static int set_colorbar(omv_csi_t *csi, int enable) {
     uint32_t reg;
-    psee_sensor_read(RO_READOUT_CTRL, &reg);
+    psee_sensor_read(csi, RO_READOUT_CTRL, &reg);
     reg = (reg & ~RO_READOUT_CTRL_ERC_SELF_TEST_EN) | (enable ? RO_READOUT_CTRL_ERC_SELF_TEST_EN : 0);
-    psee_sensor_write(RO_READOUT_CTRL, reg);
+    psee_sensor_write(csi, RO_READOUT_CTRL, reg);
     return 0;
 }
 
 static int set_hmirror(omv_csi_t *csi, int enable) {
-    psee_sensor_set_flip(enable, csi->vflip);
+    psee_sensor_set_flip(csi, enable, csi->vflip);
     return 0;
 }
 
 static int set_vflip(omv_csi_t *csi, int enable) {
-    psee_sensor_set_flip(csi->hmirror, enable);
+    psee_sensor_set_flip(csi, csi->hmirror, enable);
     return 0;
 }
 
 #if (OMV_GENX320_CAL_ENABLE == 1)
-static void disable_hot_pixels(uint8_t *histogram) {
+static void disable_hot_pixels(omv_csi_t *csi, uint8_t *histogram) {
     // Compute average
     int32_t avg = 0;
 
@@ -313,15 +313,15 @@ static void disable_hot_pixels(uint8_t *histogram) {
     for (uint32_t y = 0; y < ACTIVE_SENSOR_HEIGHT; y++) {
         // Reset all blocks
         for (uint32_t i = 0; i < (ACTIVE_SENSOR_WIDTH / UINT32_T_BITS); i++) {
-            psee_write_ROI_X(i * sizeof(uint32_t), 0);
+            psee_write_ROI_X(csi, i * sizeof(uint32_t), 0);
         }
 
         // Select line
         uint32_t offset = y / UINT32_T_BITS;
-        psee_write_ROI_Y(offset * sizeof(uint32_t), 1 << (y % UINT32_T_BITS));
+        psee_write_ROI_Y(csi, offset * sizeof(uint32_t), 1 << (y % UINT32_T_BITS));
 
         // Trigger shadow
-        psee_write_ROI_CTRL(ROI_CTRL_PX_SW_RSTN | ROI_CTRL_TD_SHADOW_TRIGGER);
+        psee_write_ROI_CTRL(csi, ROI_CTRL_PX_SW_RSTN | ROI_CTRL_TD_SHADOW_TRIGGER);
 
         uint32_t tmp[ACTIVE_SENSOR_WIDTH / UINT32_T_BITS] = {};
         for (uint32_t x = 0; x < ACTIVE_SENSOR_WIDTH; x++) {
@@ -332,15 +332,15 @@ static void disable_hot_pixels(uint8_t *histogram) {
 
         // Write x values to disable
         for (uint32_t i = 0; i < (ACTIVE_SENSOR_WIDTH / UINT32_T_BITS); i++) {
-            psee_write_ROI_X(i * sizeof(uint32_t), tmp[i]);
+            psee_write_ROI_X(csi, i * sizeof(uint32_t), tmp[i]);
         }
 
         // Activate block
-        psee_write_ROI_CTRL(ROI_CTRL_PX_SW_RSTN | ROI_CTRL_TD_SHADOW_TRIGGER | ROI_CTRL_TD_EN);
+        psee_write_ROI_CTRL(csi, ROI_CTRL_PX_SW_RSTN | ROI_CTRL_TD_SHADOW_TRIGGER | ROI_CTRL_TD_EN);
 
         // Disable roi block
-        psee_write_ROI_CTRL(ROI_CTRL_PX_SW_RSTN);
-        psee_write_ROI_Y(offset * sizeof(uint32_t), 0);
+        psee_write_ROI_CTRL(csi, ROI_CTRL_PX_SW_RSTN);
+        psee_write_ROI_Y(csi, offset * sizeof(uint32_t), 0);
     }
 }
 #endif // (OMV_GENX320_CAL_ENABLE == 1)
@@ -444,7 +444,7 @@ static int snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
             snapshot_post_process(csi, image);
         }
 
-        disable_hot_pixels(histogram);
+        disable_hot_pixels(csi, histogram);
 
         fb_free();
         hot_pixels_disabled = true;
@@ -471,52 +471,52 @@ static int ioctl(omv_csi_t *csi, int request, va_list ap) {
             switch (mode) {
                 case OMV_CSI_GENX320_BIASES_DEFAULT: {
                     // Set default biases V2.0.0
-                    psee_sensor_set_bias(DIFF, 51);
-                    psee_sensor_set_bias(DIFF_OFF, 28);
-                    psee_sensor_set_bias(DIFF_ON, 25);
-                    psee_sensor_set_bias(FO, 34);
-                    psee_sensor_set_bias(HPF, 40);
-                    psee_sensor_set_bias(REFR, 10);
+                    psee_sensor_set_bias(csi, DIFF, 51);
+                    psee_sensor_set_bias(csi, DIFF_OFF, 28);
+                    psee_sensor_set_bias(csi, DIFF_ON, 25);
+                    psee_sensor_set_bias(csi, FO, 34);
+                    psee_sensor_set_bias(csi, HPF, 40);
+                    psee_sensor_set_bias(csi, REFR, 10);
                     break;
                 }
                 case OMV_CSI_GENX320_BIASES_LOW_LIGHT: {
                     // Set biases tuned for low light
-                    psee_sensor_set_bias(DIFF, 51);
-                    psee_sensor_set_bias(DIFF_OFF, 19);
-                    psee_sensor_set_bias(DIFF_ON, 24);
-                    psee_sensor_set_bias(FO, 19);
-                    psee_sensor_set_bias(HPF, 0);
-                    psee_sensor_set_bias(REFR, 10);
+                    psee_sensor_set_bias(csi, DIFF, 51);
+                    psee_sensor_set_bias(csi, DIFF_OFF, 19);
+                    psee_sensor_set_bias(csi, DIFF_ON, 24);
+                    psee_sensor_set_bias(csi, FO, 19);
+                    psee_sensor_set_bias(csi, HPF, 0);
+                    psee_sensor_set_bias(csi, REFR, 10);
                     break;
                 }
                 case OMV_CSI_GENX320_BIASES_ACTIVE_MARKER: {
                     // Set biases tuned for active marker
-                    psee_sensor_set_bias(DIFF, 51);
-                    psee_sensor_set_bias(DIFF_OFF, 45); //127
-                    psee_sensor_set_bias(DIFF_ON, 55); //78
-                    psee_sensor_set_bias(FO, 50);
-                    psee_sensor_set_bias(HPF, 127);
-                    psee_sensor_set_bias(REFR, 0);
+                    psee_sensor_set_bias(csi, DIFF, 51);
+                    psee_sensor_set_bias(csi, DIFF_OFF, 45); //127
+                    psee_sensor_set_bias(csi, DIFF_ON, 55); //78
+                    psee_sensor_set_bias(csi, FO, 50);
+                    psee_sensor_set_bias(csi, HPF, 127);
+                    psee_sensor_set_bias(csi, REFR, 0);
                     break;
                 }
                 case OMV_CSI_GENX320_BIASES_LOW_NOISE: {
                     // Set low sensitivity low noise biases
-                    psee_sensor_set_bias(DIFF, 51);
-                    psee_sensor_set_bias(DIFF_OFF, 38);
-                    psee_sensor_set_bias(DIFF_ON, 35);
-                    psee_sensor_set_bias(FO, 24);
-                    psee_sensor_set_bias(HPF, 40);
-                    psee_sensor_set_bias(REFR, 10);
+                    psee_sensor_set_bias(csi, DIFF, 51);
+                    psee_sensor_set_bias(csi, DIFF_OFF, 38);
+                    psee_sensor_set_bias(csi, DIFF_ON, 35);
+                    psee_sensor_set_bias(csi, FO, 24);
+                    psee_sensor_set_bias(csi, HPF, 40);
+                    psee_sensor_set_bias(csi, REFR, 10);
                     break;
                 }
                 case OMV_CSI_GENX320_BIASES_HIGH_SPEED: {
                     // Set biases tuned for high speed motion
-                    psee_sensor_set_bias(DIFF, 51);
-                    psee_sensor_set_bias(DIFF_OFF, 26);
-                    psee_sensor_set_bias(DIFF_ON, 37);
-                    psee_sensor_set_bias(FO, 38);
-                    psee_sensor_set_bias(HPF, 74);
-                    psee_sensor_set_bias(REFR, 25);
+                    psee_sensor_set_bias(csi, DIFF, 51);
+                    psee_sensor_set_bias(csi, DIFF_OFF, 26);
+                    psee_sensor_set_bias(csi, DIFF_ON, 37);
+                    psee_sensor_set_bias(csi, FO, 38);
+                    psee_sensor_set_bias(csi, HPF, 74);
+                    psee_sensor_set_bias(csi, REFR, 25);
                     break;
                 }
                 default: {
@@ -532,23 +532,23 @@ static int ioctl(omv_csi_t *csi, int request, va_list ap) {
             int bias_value = va_arg(ap, int);
             switch (bias_name) {
                 case OMV_CSI_GENX320_BIAS_DIFF_OFF: {
-                    psee_sensor_set_bias(DIFF_OFF, bias_value);
+                    psee_sensor_set_bias(csi, DIFF_OFF, bias_value);
                     break;
                 }
                 case OMV_CSI_GENX320_BIAS_DIFF_ON: {
-                    psee_sensor_set_bias(DIFF_ON, bias_value);
+                    psee_sensor_set_bias(csi, DIFF_ON, bias_value);
                     break;
                 }
                 case OMV_CSI_GENX320_BIAS_FO: {
-                    psee_sensor_set_bias(FO, bias_value);
+                    psee_sensor_set_bias(csi, FO, bias_value);
                     break;
                 }
                 case OMV_CSI_GENX320_BIAS_HPF: {
-                    psee_sensor_set_bias(HPF, bias_value);
+                    psee_sensor_set_bias(csi, HPF, bias_value);
                     break;
                 }
                 case OMV_CSI_GENX320_BIAS_REFR: {
-                    psee_sensor_set_bias(REFR, bias_value);
+                    psee_sensor_set_bias(csi, REFR, bias_value);
                     break;
                 }
                 default: {
@@ -572,7 +572,7 @@ static int ioctl(omv_csi_t *csi, int request, va_list ap) {
                 // Enable AFK
                 int freq_min = va_arg(ap, int);
                 int freq_max = va_arg(ap, int);
-                if (psee_afk_init(&psee_afk) != AFK_OK) {
+                if (psee_afk_init(csi, &psee_afk) != AFK_OK) {
                     ret = -1;
                 }
                 if (psee_afk_activate(&psee_afk, freq_min, freq_max, EVT_CLK_FREQ) != AFK_OK) {
