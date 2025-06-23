@@ -65,91 +65,6 @@ static void omv_csi_dma_config(int w, int h, int bpp, uint32_t *capture_buf, boo
     dma_irqn_set_channel_enabled(OMV_CSI_DMA, OMV_CSI_DMA_CHANNEL, true);
 }
 
-int omv_csi_init() {
-    int init_ret = 0;
-
-    // PIXCLK
-    gpio_init(OMV_CSI_PXCLK_PIN);
-    gpio_set_dir(OMV_CSI_PXCLK_PIN, GPIO_IN);
-
-    // HSYNC
-    gpio_init(OMV_CSI_HSYNC_PIN);
-    gpio_set_dir(OMV_CSI_HSYNC_PIN, GPIO_IN);
-
-    // VSYNC
-    gpio_init(OMV_CSI_VSYNC_PIN);
-    gpio_set_dir(OMV_CSI_VSYNC_PIN, GPIO_IN);
-
-    #if defined(OMV_CSI_POWER_PIN)
-    gpio_init(OMV_CSI_POWER_PIN);
-    gpio_set_dir(OMV_CSI_POWER_PIN, GPIO_OUT);
-    gpio_pull_down(OMV_CSI_POWER_PIN);
-    gpio_put(OMV_CSI_POWER_PIN, 1);
-    #endif
-
-    #if defined(OMV_CSI_RESET_PIN)
-    gpio_init(OMV_CSI_RESET_PIN);
-    gpio_set_dir(OMV_CSI_RESET_PIN, GPIO_OUT);
-    gpio_pull_up(OMV_CSI_RESET_PIN);
-    gpio_put(OMV_CSI_RESET_PIN, 1);
-    #endif
-
-    // Reset the csi state
-    memset(&csi, 0, sizeof(omv_csi_t));
-
-    // Set default framebuffer
-    csi.fb = framebuffer_get(0);
-
-    // Set default snapshot function.
-    csi.snapshot = omv_csi_snapshot;
-
-    // Configure the csi external clock (XCLK).
-    if (omv_csi_set_clk_frequency(OMV_CSI_CLK_FREQUENCY) != 0) {
-        // Failed to initialize the csi clock.
-        return OMV_CSI_ERROR_TIM_INIT_FAILED;
-    }
-
-    // Detect and initialize the image sensor.
-    if ((init_ret = omv_csi_probe_init(OMV_CSI_I2C_ID, OMV_CSI_I2C_SPEED)) != 0) {
-        // Sensor probe/init failed.
-        return init_ret;
-    }
-
-    // Set default color palette.
-    csi.color_palette = rainbow_table;
-
-    // Set new DMA IRQ handler.
-    // Disable IRQs.
-    irq_set_enabled(OMV_CSI_DMA_IRQ, false);
-
-    // Clear DMA interrupts.
-    dma_irqn_acknowledge_channel(OMV_CSI_DMA, OMV_CSI_DMA_CHANNEL);
-
-    // Remove current handler if any
-    irq_handler_t irq_handler = irq_get_exclusive_handler(OMV_CSI_DMA_IRQ);
-    if (irq_handler != NULL) {
-        irq_remove_handler(OMV_CSI_DMA_IRQ, irq_handler);
-    }
-
-    // Set new exclusive IRQ handler.
-    irq_set_exclusive_handler(OMV_CSI_DMA_IRQ, dma_irq_handler);
-    // Or set shared IRQ handler, but this needs to be called once.
-    // irq_add_shared_handler(OMV_CSI_DMA_IRQ, dma_irq_handler, PICO_DEFAULT_IRQ_PRIORITY);
-
-    irq_set_enabled(OMV_CSI_DMA_IRQ, true);
-
-    // Disable VSYNC IRQ and callback
-    omv_csi_set_vsync_callback(NULL);
-
-    // Disable Frame callback.
-    omv_csi_set_frame_callback(NULL);
-
-    /* All good! */
-    csi.detected = true;
-
-    return 0;
-}
-
 int omv_csi_abort(omv_csi_t *csi, bool fifo_flush, bool in_irq) {
     // Disable DMA channel
     dma_channel_abort(OMV_CSI_DMA_CHANNEL);
@@ -280,3 +195,88 @@ int omv_csi_snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
     return 0;
 }
 #endif
+
+int omv_csi_init() {
+    int init_ret = 0;
+
+    // PIXCLK
+    gpio_init(OMV_CSI_PXCLK_PIN);
+    gpio_set_dir(OMV_CSI_PXCLK_PIN, GPIO_IN);
+
+    // HSYNC
+    gpio_init(OMV_CSI_HSYNC_PIN);
+    gpio_set_dir(OMV_CSI_HSYNC_PIN, GPIO_IN);
+
+    // VSYNC
+    gpio_init(OMV_CSI_VSYNC_PIN);
+    gpio_set_dir(OMV_CSI_VSYNC_PIN, GPIO_IN);
+
+    #if defined(OMV_CSI_POWER_PIN)
+    gpio_init(OMV_CSI_POWER_PIN);
+    gpio_set_dir(OMV_CSI_POWER_PIN, GPIO_OUT);
+    gpio_pull_down(OMV_CSI_POWER_PIN);
+    gpio_put(OMV_CSI_POWER_PIN, 1);
+    #endif
+
+    #if defined(OMV_CSI_RESET_PIN)
+    gpio_init(OMV_CSI_RESET_PIN);
+    gpio_set_dir(OMV_CSI_RESET_PIN, GPIO_OUT);
+    gpio_pull_up(OMV_CSI_RESET_PIN);
+    gpio_put(OMV_CSI_RESET_PIN, 1);
+    #endif
+
+    // Reset the csi state
+    memset(&csi, 0, sizeof(omv_csi_t));
+
+    // Set default framebuffer
+    csi.fb = framebuffer_get(0);
+
+    // Set default snapshot function.
+    csi.snapshot = omv_csi_snapshot;
+
+    // Configure the csi external clock (XCLK).
+    if (omv_csi_set_clk_frequency(OMV_CSI_CLK_FREQUENCY) != 0) {
+        // Failed to initialize the csi clock.
+        return OMV_CSI_ERROR_TIM_INIT_FAILED;
+    }
+
+    // Detect and initialize the image sensor.
+    if ((init_ret = omv_csi_probe_init(OMV_CSI_I2C_ID, OMV_CSI_I2C_SPEED)) != 0) {
+        // Sensor probe/init failed.
+        return init_ret;
+    }
+
+    // Set default color palette.
+    csi.color_palette = rainbow_table;
+
+    // Set new DMA IRQ handler.
+    // Disable IRQs.
+    irq_set_enabled(OMV_CSI_DMA_IRQ, false);
+
+    // Clear DMA interrupts.
+    dma_irqn_acknowledge_channel(OMV_CSI_DMA, OMV_CSI_DMA_CHANNEL);
+
+    // Remove current handler if any
+    irq_handler_t irq_handler = irq_get_exclusive_handler(OMV_CSI_DMA_IRQ);
+    if (irq_handler != NULL) {
+        irq_remove_handler(OMV_CSI_DMA_IRQ, irq_handler);
+    }
+
+    // Set new exclusive IRQ handler.
+    irq_set_exclusive_handler(OMV_CSI_DMA_IRQ, dma_irq_handler);
+    // Or set shared IRQ handler, but this needs to be called once.
+    // irq_add_shared_handler(OMV_CSI_DMA_IRQ, dma_irq_handler, PICO_DEFAULT_IRQ_PRIORITY);
+
+    irq_set_enabled(OMV_CSI_DMA_IRQ, true);
+
+    // Disable VSYNC IRQ and callback
+    omv_csi_set_vsync_callback(NULL);
+
+    // Disable Frame callback.
+    omv_csi_set_frame_callback(NULL);
+
+    /* All good! */
+    csi.detected = true;
+
+    return 0;
+}
