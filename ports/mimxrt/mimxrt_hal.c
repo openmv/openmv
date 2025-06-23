@@ -40,6 +40,7 @@
 #include "omv_boardconfig.h"
 // Define pin objects in this file.
 #define OMV_GPIO_DEFINE_PINS    (1)
+#include "omv_csi.h"
 #include "omv_gpio.h"
 #include "mimxrt_hal.h"
 
@@ -320,9 +321,11 @@ int mimxrt_hal_spi_deinit(uint32_t bus_id, uint32_t bus_mode) {
 }
 
 void CSI_IRQHandler(void) {
+    omv_csi_t *csi = omv_csi_get(-1);
     uint32_t csisr = CSI_REG_SR(CSI);
-    extern void omv_csi_sof_callback();
-    extern void omv_csi_line_callback(uint32_t);
+
+    extern void omv_csi_sof_callback(omv_csi_t *csi);
+    extern void omv_csi_line_callback(omv_csi_t *csi, uint32_t);
 
     // Clear interrupt flags.
     CSI_REG_SR(CSI) = csisr;
@@ -330,11 +333,11 @@ void CSI_IRQHandler(void) {
     if (csisr & CSI_SR_SOF_INT_MASK) {
         // Clear the FIFO and re/enable DMA.
         CSI_REG_CR3(CSI) |= (CSI_CR3_DMA_REFLASH_RFF_MASK | CSI_CR3_DMA_REQ_EN_RFF_MASK);
-        omv_csi_sof_callback();
+        omv_csi_sof_callback(csi);
     } else if (csisr & CSI_SR_DMA_TSF_DONE_FB1_MASK) {
-        omv_csi_line_callback(CSI_REG_DMASA_FB1(CSI));
+        omv_csi_line_callback(csi, CSI_REG_DMASA_FB1(CSI));
     } else if (csisr & CSI_SR_DMA_TSF_DONE_FB2_MASK) {
-        omv_csi_line_callback(CSI_REG_DMASA_FB2(CSI));
+        omv_csi_line_callback(csi, CSI_REG_DMASA_FB2(CSI));
     }
 
     // Add for ARM errata 838869, affects Cortex-M4, Cortex-M4F Store immediate
