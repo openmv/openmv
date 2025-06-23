@@ -73,18 +73,6 @@ static lepton_state_t lepton;
 
 static int lepton_reset(omv_csi_t *csi, bool measurement_mode, bool high_temp_mode);
 
-static int sleep(omv_csi_t *csi, int enable) {
-    if (enable) {
-        omv_gpio_write(OMV_CSI_POWER_PIN, 0);
-        mp_hal_delay_ms(100);
-    } else {
-        omv_gpio_write(OMV_CSI_POWER_PIN, 1);
-        mp_hal_delay_ms(100);
-    }
-
-    return 0;
-}
-
 static int read_reg(omv_csi_t *csi, uint16_t reg_addr) {
     uint16_t reg_data;
     if (omv_i2c_readw2(csi->i2c, csi->slv_addr, reg_addr, &reg_data)) {
@@ -281,29 +269,37 @@ static int ioctl(omv_csi_t *csi, int request, va_list ap) {
 }
 
 static int lepton_reset(omv_csi_t *csi, bool measurement_mode, bool high_temp_mode) {
-    omv_gpio_write(OMV_CSI_POWER_PIN, 0);
-    mp_hal_delay_ms(10);
-
-    omv_gpio_write(OMV_CSI_POWER_PIN, 1);
-    mp_hal_delay_ms(10);
-
-    omv_gpio_write(OMV_CSI_RESET_PIN, 0);
-    mp_hal_delay_ms(10);
-
-    omv_gpio_write(OMV_CSI_RESET_PIN, 1);
-    mp_hal_delay_ms(1000);
-
     LEP_RAD_ENABLE_E rad;
     LEP_AGC_ROI_T roi;
     memset(&lepton.port, 0, sizeof(LEP_CAMERA_PORT_DESC_T));
+
+    if (!csi->auxiliary) {
+        omv_gpio_write(OMV_CSI_POWER_PIN, 0);
+        mp_hal_delay_ms(10);
+
+        omv_gpio_write(OMV_CSI_POWER_PIN, 1);
+        mp_hal_delay_ms(10);
+
+        omv_gpio_write(OMV_CSI_RESET_PIN, 0);
+        mp_hal_delay_ms(10);
+
+        omv_gpio_write(OMV_CSI_RESET_PIN, 1);
+        mp_hal_delay_ms(1000);
+    }
 
     for (mp_uint_t start = mp_hal_ticks_ms(); ; mp_hal_delay_ms(1)) {
         if (LEP_OpenPort(csi->i2c, LEP_CCI_TWI, 0, &lepton.port) == LEP_OK) {
             break;
         }
+
         if ((mp_hal_ticks_ms() - start) >= LEPTON_BOOT_TIMEOUT) {
             return -1;
         }
+    }
+
+    if (csi->auxiliary) {
+        LEP_RunOemReboot(&lepton.port);
+        mp_hal_delay_ms(1000);
     }
 
     for (mp_uint_t start = mp_hal_ticks_ms(); ; mp_hal_delay_ms(1)) {
@@ -311,9 +307,11 @@ static int lepton_reset(omv_csi_t *csi, bool measurement_mode, bool high_temp_mo
         if (LEP_GetCameraBootStatus(&lepton.port, &status) != LEP_OK) {
             return -1;
         }
+
         if (status == LEP_BOOT_STATUS_BOOTED) {
             break;
         }
+
         if ((mp_hal_ticks_ms() - start) >= LEPTON_BOOT_TIMEOUT) {
             return -1;
         }
@@ -324,9 +322,11 @@ static int lepton_reset(omv_csi_t *csi, bool measurement_mode, bool high_temp_mo
         if (LEP_DirectReadRegister(&lepton.port, LEP_I2C_STATUS_REG, &status) != LEP_OK) {
             return -1;
         }
+
         if (!(status & LEP_I2C_STATUS_BUSY_BIT_MASK)) {
             break;
         }
+
         if ((mp_hal_ticks_ms() - start) >= LEPTON_BOOT_TIMEOUT) {
             return -1;
         }
@@ -357,6 +357,14 @@ static int lepton_reset(omv_csi_t *csi, bool measurement_mode, bool high_temp_mo
     return 0;
 }
 
+static int sleep(omv_csi_t *csi, int enable) {
+    return 0;
+}
+
+static int match(omv_csi_t *csi, size_t id) {
+    return (id == LEPTON_ID) || ((id >> 8) == LEPTON_ID);
+}
+
 static int reset(omv_csi_t *csi) {
     vospi_deinit();
 
@@ -380,7 +388,10 @@ static int reset(omv_csi_t *csi) {
 
 static int snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
     framebuffer_t *fb = csi->fb;
-    framebuffer_update_jpeg_buffer(fb);
+
+    if (flags & OMV_CSI_CAPTURE_FLAGS_UPDATE) {
+        framebuffer_update_jpeg_buffer(fb);
+    }
 
     if (csi->pixformat == PIXFORMAT_INVALID) {
         return OMV_CSI_ERROR_INVALID_PIXFORMAT;
@@ -472,6 +483,9 @@ static int snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
 int lepton_init(omv_csi_t *csi) {
     csi->reset = reset;
     csi->sleep = sleep;
+    csi->config = NULL;
+    csi->abort = NULL;
+    csi->match = match;
     csi->snapshot = snapshot;
     csi->read_reg = read_reg;
     csi->write_reg = write_reg;
@@ -495,11 +509,15 @@ int lepton_init(omv_csi_t *csi) {
     csi->set_lens_correction = set_lens_correction;
     csi->ioctl = ioctl;
 
+    csi->auxiliary = 1;
     csi->vsync_pol = 1;
     csi->hsync_pol = 0;
     csi->pixck_pol = 0;
     csi->frame_sync = 0;
     csi->mono_bpp = 1;
+
+    // Extra delay after power-on
+    mp_hal_delay_ms(1000);
 
     if (reset(csi) != 0) {
         return -1;
