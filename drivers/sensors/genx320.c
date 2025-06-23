@@ -71,7 +71,7 @@
 #define EVENT_THRESHOLD_SIGMA           10
 
 #define EVT_CLK_MULTIPLIER              (2)
-#define EVT_CLK_FREQ                    (((omv_csi_get_xclk_frequency() * EVT_CLK_MULTIPLIER) + 500000) / 1000000)
+#define EVT_CLK_FREQ                    (((omv_csi_get_clk_frequency() * EVT_CLK_MULTIPLIER) + 500000) / 1000000)
 
 #define AFK_50_HZ                       (50)
 #define AFK_60_HZ                       (60)
@@ -236,7 +236,7 @@ static int set_framerate(omv_csi_t *csi, int framerate) {
     }
 
     int lines = ACTIVE_SENSOR_HEIGHT + VSYNC_CLOCK_CYCLES;
-    int clocks_per_frame = (omv_csi_get_xclk_frequency() * EVT_CLK_MULTIPLIER) / framerate;
+    int clocks_per_frame = (omv_csi_get_clk_frequency() * EVT_CLK_MULTIPLIER) / framerate;
     int hsync_clocks = (clocks_per_frame / lines) - ACTIVE_SENSOR_WIDTH;
 
     if (hsync_clocks <= 0) {

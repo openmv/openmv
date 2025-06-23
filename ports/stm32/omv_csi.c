@@ -95,50 +95,14 @@ void omv_csi_mdma_irq_handler(void) {
 }
 #endif
 
-#if USE_DMA
-static int omv_csi_dma_config() {
-    // DMA Stream configuration
-    csi.dma.Instance = DMA2_Stream1;
-    #if defined(STM32H7)
-    csi.dma.Init.Request = DMA_REQUEST_DCMI;
-    #else
-    csi.dma.Init.Channel = DMA_CHANNEL_1;
-    #endif
-    csi.dma.Init.Direction = DMA_PERIPH_TO_MEMORY;
-    csi.dma.Init.MemInc = DMA_MINC_ENABLE;
-    csi.dma.Init.PeriphInc = DMA_PINC_DISABLE;
-    csi.dma.Init.PeriphDataAlignment = DMA_PDATAALIGN_WORD;
-    csi.dma.Init.MemDataAlignment = DMA_MDATAALIGN_WORD;
-    csi.dma.Init.Mode = DMA_NORMAL;
-    csi.dma.Init.Priority = DMA_PRIORITY_HIGH;
-    csi.dma.Init.FIFOMode = DMA_FIFOMODE_ENABLE;
-    csi.dma.Init.FIFOThreshold = DMA_FIFO_THRESHOLD_FULL;
-    csi.dma.Init.MemBurst = DMA_MBURST_INC4;
-    csi.dma.Init.PeriphBurst = DMA_PBURST_SINGLE;
-
-    // Initialize the DMA stream
-    HAL_DMA_DeInit(&csi.dma);
-    if (HAL_DMA_Init(&csi.dma) != HAL_OK) {
-        return -1;
-    }
-
-    // Set DMA IRQ handle
-    dma_utils_set_irq_descr(DMA2_Stream1, &csi.dma);
-
-    // Configure the DMA IRQ Channel
-    NVIC_SetPriority(DMA2_Stream1_IRQn, IRQ_PRI_DMA21);
-
-    #if USE_MDMA
-    csi.mdma0.Instance = MDMA_CHAN_TO_INSTANCE(OMV_MDMA_CHANNEL_DCMI_0);
-    csi.mdma1.Instance = MDMA_CHAN_TO_INSTANCE(OMV_MDMA_CHANNEL_DCMI_1);
-    #endif
-
-    return 0;
-}
-#endif
-
 void omv_csi_init0() {
     omv_csi_abort(&csi, true, false);
+
+    // Disable callbacks
+    omv_csi_set_vsync_callback(NULL);
+    omv_csi_set_frame_callback(NULL);
+
+    csi.disable_delays = false;
 
     // Re-init i2c bus to reset the bus state after soft reset, which
     // could have interrupted the bus in the middle of a transfer.
@@ -146,78 +110,49 @@ void omv_csi_init0() {
         // Reinitialize the bus using the last used id and speed.
         omv_i2c_init(&csi.i2c_bus, csi.i2c_bus.id, csi.i2c_bus.speed);
     }
-
-    csi.disable_delays = false;
-
-    // Disable VSYNC IRQ and callback
-    omv_csi_set_vsync_callback(NULL);
-
-    // Disable Frame callback.
-    omv_csi_set_frame_callback(NULL);
-}
-
-int omv_csi_init() {
-    int init_ret = 0;
-
-    // List of I2C buses to scan.
-    uint32_t buses[][2] = {
-        {OMV_CSI_I2C_ID, OMV_CSI_I2C_SPEED},
-        #if defined(OMV_CSI_I2C_ALT_ID)
-        {OMV_CSI_I2C_ALT_ID, OMV_CSI_I2C_ALT_SPEED},
-        #endif
-    };
-
-    // Reset the csi state
-    memset(&csi, 0, sizeof(omv_csi_t));
-
-    // Set default framebuffer
-    csi.fb = framebuffer_get(0);
-
-    // Set default snapshot function.
-    csi.snapshot = omv_csi_snapshot;
-
-    // Configure the csi external clock (XCLK).
-    if (omv_csi_set_clk_frequency(OMV_CSI_CLK_FREQUENCY) != 0) {
-        return OMV_CSI_ERROR_TIM_INIT_FAILED;
-    }
-
-    // Detect and initialize the image sensor.
-    for (uint32_t i = 0, n_buses = OMV_ARRAY_SIZE(buses); i < n_buses; i++) {
-        uint32_t id = buses[i][0], speed = buses[i][1];
-        if ((init_ret = omv_csi_probe_init(id, speed)) == 0) {
-            break;
-        }
-        omv_i2c_deinit(&csi.i2c_bus);
-        // Scan the next bus or fail if this is the last one.
-        if ((i + 1) == n_buses) {
-            return init_ret;
-        }
-    }
-
-    // Configure the DCMI DMA Stream
-    #if USE_DMA
-    if (omv_csi_dma_config() != 0) {
-        return OMV_CSI_ERROR_DMA_INIT_FAILED;
-    }
-    #endif
-
-    // Configure the DCMI interface.
-    if (omv_csi_config(OMV_CSI_CONFIG_INIT) != 0) {
-        return OMV_CSI_ERROR_CSI_INIT_FAILED;
-    }
-
-    // Clear fb_enabled flag.
-    JPEG_FB()->enabled = 0;
-
-    // Set default color palette.
-    csi.color_palette = rainbow_table;
-
-    csi.detected = true;
-    return 0;
 }
 
 int omv_csi_config(omv_csi_config_t config) {
     if (config == OMV_CSI_CONFIG_INIT) {
+        #if USE_DMA
+        // DMA Stream configuration
+        csi.dma.Instance = DMA2_Stream1;
+        #if defined(STM32H7)
+        csi.dma.Init.Request = DMA_REQUEST_DCMI;
+        #else
+        csi.dma.Init.Channel = DMA_CHANNEL_1;
+        #endif
+        csi.dma.Init.Direction = DMA_PERIPH_TO_MEMORY;
+        csi.dma.Init.MemInc = DMA_MINC_ENABLE;
+        csi.dma.Init.PeriphInc = DMA_PINC_DISABLE;
+        csi.dma.Init.PeriphDataAlignment = DMA_PDATAALIGN_WORD;
+        csi.dma.Init.MemDataAlignment = DMA_MDATAALIGN_WORD;
+        csi.dma.Init.Mode = DMA_NORMAL;
+        csi.dma.Init.Priority = DMA_PRIORITY_HIGH;
+        csi.dma.Init.FIFOMode = DMA_FIFOMODE_ENABLE;
+        csi.dma.Init.FIFOThreshold = DMA_FIFO_THRESHOLD_FULL;
+        csi.dma.Init.MemBurst = DMA_MBURST_INC4;
+        csi.dma.Init.PeriphBurst = DMA_PBURST_SINGLE;
+
+        // Initialize the DMA stream
+        HAL_DMA_DeInit(&csi.dma);
+        if (HAL_DMA_Init(&csi.dma) != HAL_OK) {
+            return -1;
+        }
+
+        // Set DMA IRQ handle
+        dma_utils_set_irq_descr(DMA2_Stream1, &csi.dma);
+
+        // Configure the DMA IRQ Channel
+        NVIC_SetPriority(DMA2_Stream1_IRQn, IRQ_PRI_DMA21);
+
+        #if USE_MDMA
+        csi.mdma0.Instance = MDMA_CHAN_TO_INSTANCE(OMV_MDMA_CHANNEL_DCMI_0);
+        csi.mdma1.Instance = MDMA_CHAN_TO_INSTANCE(OMV_MDMA_CHANNEL_DCMI_1);
+        #endif
+
+        #endif // USE_DMA
+
         // Configure DCMI/PP.
         #if USE_DCMIPP
         // Initialize the DCMIPP
@@ -352,6 +287,7 @@ int omv_csi_config(omv_csi_config_t config) {
                 .ShiftBlue = 0,
                 .MultiplierBlue = 128,
             };
+
             if (HAL_DCMIPP_PIPE_SetISPExposureConfig(&csi.dcmi, DCMIPP_PIPE, &expcfg) != HAL_OK ||
                 HAL_DCMIPP_PIPE_EnableISPExposure(&csi.dcmi, DCMIPP_PIPE) != HAL_OK) {
                 return OMV_CSI_ERROR_CSI_INIT_FAILED;
@@ -432,7 +368,7 @@ int omv_csi_abort(omv_csi_t *csi, bool fifo_flush, bool in_irq) {
     return 0;
 }
 
-uint32_t omv_csi_get_xclk_frequency() {
+uint32_t omv_csi_get_clk_frequency() {
     return (OMV_CSI_TIM_PCLK_FREQ() * 2) / (csi.tim.Init.Period + 1);
 }
 
@@ -1146,5 +1082,58 @@ int omv_csi_snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
         omv_csi_update_awb(csi, w * h);
     }
     #endif
+    return 0;
+}
+
+int omv_csi_init() {
+    int init_ret = 0;
+
+    // List of I2C buses to scan.
+    uint32_t buses[][2] = {
+        {OMV_CSI_I2C_ID, OMV_CSI_I2C_SPEED},
+        #if defined(OMV_CSI_I2C_ALT_ID)
+        {OMV_CSI_I2C_ALT_ID, OMV_CSI_I2C_ALT_SPEED},
+        #endif
+    };
+
+    // Reset the csi state
+    memset(&csi, 0, sizeof(omv_csi_t));
+
+    // Set default framebuffer
+    csi.fb = framebuffer_get(0);
+
+    // Set default snapshot function.
+    csi.snapshot = omv_csi_snapshot;
+
+    // Configure the csi external clock (XCLK).
+    if (omv_csi_set_clk_frequency(OMV_CSI_CLK_FREQUENCY) != 0) {
+        return OMV_CSI_ERROR_TIM_INIT_FAILED;
+    }
+
+    // Detect and initialize the image sensor.
+    for (uint32_t i = 0, n_buses = OMV_ARRAY_SIZE(buses); i < n_buses; i++) {
+        uint32_t id = buses[i][0], speed = buses[i][1];
+        if ((init_ret = omv_csi_probe_init(id, speed)) == 0) {
+            break;
+        }
+        omv_i2c_deinit(&csi.i2c_bus);
+        // Scan the next bus or fail if this is the last one.
+        if ((i + 1) == n_buses) {
+            return init_ret;
+        }
+    }
+
+    // Configure the DCMI interface.
+    if (omv_csi_config(OMV_CSI_CONFIG_INIT) != 0) {
+        return OMV_CSI_ERROR_CSI_INIT_FAILED;
+    }
+
+    // Clear fb_enabled flag.
+    JPEG_FB()->enabled = 0;
+
+    // Set default color palette.
+    csi.color_palette = rainbow_table;
+
+    csi.detected = true;
     return 0;
 }

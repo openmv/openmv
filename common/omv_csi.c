@@ -598,7 +598,7 @@ __weak int omv_csi_get_id() {
     return csi.chip_id;
 }
 
-__weak uint32_t omv_csi_get_xclk_frequency() {
+__weak uint32_t omv_csi_get_clk_frequency() {
     return OMV_CSI_ERROR_CTL_UNSUPPORTED;
 }
 
