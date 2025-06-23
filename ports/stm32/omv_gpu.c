@@ -35,7 +35,6 @@
 
 #if OMV_GPU_NEMA
 #include "nema_core.h"
-#include "nema_vg.h"
 #include "nema_error.h"
 #endif
 
@@ -53,21 +52,38 @@ int omv_gpu_init() {
 }
 
 void omv_gpu_deinit() {
-
 }
 
+uint32_t OMV_ATTR_SECTION(OMV_ATTR_ALIGNED(CLUT_BUFFER[256], 32), ".dma_buffer");
+
 #if OMV_GPU_NEMA
+// Not documented anywhere but this is how NEMA expects the CLUT index to be calculated.
+#define NEMA_CLUT_INDEX(i) (((i << 4) | (i >> 4)) & 0xFF)
+
+static void omv_gpu_load_clut(const uint16_t *color_palette, const uint8_t *alpha_palette) {
+    for (int i = 0; i < 256; i++) {
+        int r, g, b;
+        if (color_palette) {
+            int pixel = color_palette[i];
+            r = COLOR_RGB565_TO_R8(pixel);
+            g = COLOR_RGB565_TO_G8(pixel);
+            b = COLOR_RGB565_TO_B8(pixel);
+        } else {
+            r = g = b = i;
+        }
+        int a = (alpha_palette) ? alpha_palette[i] : 255;
+        CLUT_BUFFER[NEMA_CLUT_INDEX(i)] = nema_rgba(r, g, b, a);
+    }
+}
+
 static nema_tex_format_t omv_gpu_pixfmt(uint32_t omv_pixfmt) {
     switch (omv_pixfmt) {
-        case PIXFORMAT_BINARY:
-            return NEMA_L1;     // source only
-        case PIXFORMAT_BAYER_ANY:
         case PIXFORMAT_GRAYSCALE:
             return NEMA_L8;
         case PIXFORMAT_RGB565:
             return NEMA_RGB565;
     }
-    mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Pixel format is not supported"));
+    __builtin_unreachable();
 }
 
 int omv_gpu_draw_image(image_t *src_img,
@@ -79,7 +95,27 @@ int omv_gpu_draw_image(image_t *src_img,
                        const uint8_t *alpha_palette,
                        image_hint_t hint) {
     OMV_PROFILE_START();
-    if (color_palette || alpha_palette) {
+
+    // GPU2D can only draw on RGB565/GRAYSCALE buffers.
+    if ((dst_img->pixfmt != PIXFORMAT_RGB565) && (dst_img->pixfmt != PIXFORMAT_GRAYSCALE)) {
+        return -1;
+    }
+
+    // GPU2D can only read from RGB565 or GRAYSCALE buffers.
+    // If the source image is RGB565, it must not have a color or alpha palette.
+    if ((src_img->pixfmt != PIXFORMAT_GRAYSCALE) &&
+        ((src_img->pixfmt != PIXFORMAT_RGB565) || color_palette || alpha_palette)) {
+        return -1;
+    }
+
+    // If the source format is grayscale with a color/alpha palette bilinear scaling is not supported.
+    if ((src_img->pixfmt == PIXFORMAT_GRAYSCALE) && (hint & IMAGE_HINT_BILINEAR) &&
+        (color_palette || alpha_palette)) {
+        return -1;
+    }
+
+    // GPU2D cannot handle generic hmirror or vflip.
+    if (hint & (IMAGE_HINT_HMIRROR | IMAGE_HINT_VFLIP)) {
         return -1;
     }
 
@@ -94,39 +130,46 @@ int omv_gpu_draw_image(image_t *src_img,
     #else
     nema_cmdlist_t cl = nema_cl_create_sized(OMV_GPU_NEMA_BUFFER_SIZE);
     #endif
+
     // Bind command list.
     nema_cl_bind_circular(&cl);
 
-    nema_tex_mode_t blit_mode;
-    if (hint & IMAGE_HINT_BILINEAR) {
-        blit_mode = NEMA_FILTER_BL;
-    } else {
-        blit_mode = NEMA_FILTER_PS;
-    }
     // Set up destination texture.
     nema_tex_format_t dst_pixfmt = omv_gpu_pixfmt(dst_img->pixfmt);
     nema_bind_dst_tex((uintptr_t) dst_img->data, dst_img->w, dst_img->h, dst_pixfmt, -1);
 
     // Set up source texture.
-    nema_tex_format_t src_pixfmt = omv_gpu_pixfmt(src_img->pixfmt);
-    nema_bind_src_tex((uintptr_t) src_img->data, src_img->w, src_img->h, src_pixfmt, -1, blit_mode);
+    nema_tex_mode_t blit_mode = (hint & IMAGE_HINT_BILINEAR) ? NEMA_FILTER_BL : NEMA_FILTER_PS;
+    uint32_t blops = NEMA_BLOP_MODULATE_A;
+
+    if (alpha_palette || color_palette) {
+        omv_gpu_load_clut(color_palette, alpha_palette);
+        blops |= NEMA_BLOP_LUT;
+        nema_bind_lut_tex((uintptr_t) src_img->data, src_img->w, src_img->h, NEMA_L8, -1,
+                          NEMA_FILTER_PS, (uintptr_t) CLUT_BUFFER, NEMA_RGBA8888);
+    } else {
+        nema_tex_format_t src_pixfmt = omv_gpu_pixfmt(src_img->pixfmt);
+        nema_bind_src_tex((uintptr_t) src_img->data, src_img->w, src_img->h, src_pixfmt, -1, blit_mode);
+    }
 
     // Configure operations.
-    nema_set_blend_blit(NEMA_BL_SRC);
+    uint32_t dst_bf = (hint & IMAGE_HINT_BLACK_BACKGROUND) ? NEMA_BF_ZERO : NEMA_BF_INVSRCALPHA;
+    nema_set_blend_blit(nema_blending_mode(NEMA_BF_SRCALPHA, dst_bf, blops));
+    nema_set_const_color(nema_rgba(0, 0, 0, alpha));
     nema_set_clip(dst_rect->x, dst_rect->y, dst_rect->w, dst_rect->h);
     nema_blit_subrect_fit(dst_rect->x, dst_rect->y, dst_rect->w, dst_rect->h,
                           src_rect->x, src_rect->y, src_rect->w, src_rect->h);
 
-    // Ensures any cached writes to dst are flushed.
     SCB_CleanInvalidateDCache_by_Addr(dst_img->data, image_size(dst_img));
-    // Flush source image
     SCB_CleanDCache_by_Addr(src_img->data, image_size(src_img));
+
     // Ensure the GPU cache is clean before starting the GPU operation.
     // Will start invalidating the GPU cache if not already invalidated.
     HAL_ICACHE_WaitForInvalidateComplete();
 
     nema_cl_submit(&cl);
     nema_cl_wait(&cl);
+
     #if !OMV_GPU_NEMA_MM_STATIC
     nema_cl_destroy(&cl);
     #endif
@@ -134,14 +177,13 @@ int omv_gpu_draw_image(image_t *src_img,
     // Start invalidation of the GPU cache for the next operation.
     // This is done asynchronously so that the CPU can continue working.
     HAL_ICACHE_Invalidate_IT();
-    // Invalidate the destination image.
+
     SCB_InvalidateDCache_by_Addr(dst_img->data, image_size(dst_img));
+
     OMV_PROFILE_PRINT();
     return 0;
 }
 #else
-uint32_t OMV_ATTR_SECTION(OMV_ATTR_ALIGNED(CLUT_BUFFER[256], 32), ".dma_buffer");
-
 int omv_gpu_draw_image(image_t *src_img,
                        rectangle_t *src_rect,
                        image_t *dst_img,
