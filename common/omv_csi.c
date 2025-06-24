@@ -1621,16 +1621,14 @@ __weak int omv_csi_copy_line(omv_csi_t *csi, void *dma, uint8_t *src, uint8_t *d
 }
 
 __weak int omv_csi_snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
+    int ret = OMV_CSI_ERROR_CTL_UNSUPPORTED;
+
     // Call the sensor specific function.
-    if (csi->snapshot == NULL) {
-        return OMV_CSI_ERROR_CTL_UNSUPPORTED;
+    if (csi->snapshot) {
+        ret = csi->snapshot(csi, image, flags);
     }
 
-    if (csi->snapshot(csi, image, flags) != 0) {
-        return OMV_CSI_ERROR_CTL_FAILED;
-    }
-
-    return 0;
+    return ret;
 }
 
 const char *omv_csi_strerror(int error) {
@@ -1656,6 +1654,7 @@ const char *omv_csi_strerror(int error) {
         "Frame buffer error.",
         "Frame buffer overflow, try reducing the frame size.",
         "JPEG frame buffer overflow.",
+        "The requested operation would block.",
     };
 
     // Sensor errors are negative.

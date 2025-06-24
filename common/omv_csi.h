@@ -195,6 +195,7 @@ typedef enum {
 
 typedef enum {
     OMV_CSI_CAPTURE_FLAGS_UPDATE = (1 << 0),
+    OMV_CSI_CAPTURE_FLAGS_NBLOCK = (1 << 1),
 } omv_csi_capture_flags_t;
 
 typedef enum {
@@ -258,6 +259,7 @@ typedef enum {
     OMV_CSI_ERROR_FRAMEBUFFER_ERROR     = -18,
     OMV_CSI_ERROR_FRAMEBUFFER_OVERFLOW  = -19,
     OMV_CSI_ERROR_JPEG_OVERFLOW         = -20,
+    OMV_CSI_ERROR_WOULD_BLOCK           = -21,
 } omv_csi_error_t;
 
 #if (OMV_GENX320_ENABLE == 1)
