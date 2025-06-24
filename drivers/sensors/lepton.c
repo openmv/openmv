@@ -389,6 +389,19 @@ static int reset(omv_csi_t *csi) {
 static int snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
     framebuffer_t *fb = csi->fb;
 
+    if (flags & OMV_CSI_CAPTURE_FLAGS_NBLOCK) {
+        if (!vospi_active()) {
+            // Start the capture without blocking
+            vospi_snapshot(0);
+            return OMV_CSI_ERROR_WOULD_BLOCK;
+        }
+
+        // If capture is running and no frames return.
+        if (!framebuffer_get_head(fb, FB_PEEK)) {
+            return OMV_CSI_ERROR_WOULD_BLOCK;
+        }
+    }
+
     if (flags & OMV_CSI_CAPTURE_FLAGS_UPDATE) {
         framebuffer_update_jpeg_buffer(fb);
     }
