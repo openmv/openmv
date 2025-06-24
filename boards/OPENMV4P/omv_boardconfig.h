@@ -126,8 +126,6 @@
 #define OMV_FB_OVERLAY_SIZE                   (496K) // Fast fb_alloc memory size.
 #define OMV_JPEG_MEMORY                       DRAM   // JPEG buffer memory buffer.
 #define OMV_JPEG_SIZE                         (1M)   // IDE JPEG buffer (header + data).
-#define OMV_VOSPI_MEMORY                      SRAM4  // VoSPI buffer memory.
-#define OMV_VOSPI_SIZE                        (38K)
 #define OMV_DMA_MEMORY                        SRAM3  // Misc DMA buffers memory.
 #define OMV_DMA_MEMORY_D1                     SRAM0  // Domain 1 DMA buffers.
 #define OMV_DMA_MEMORY_D2                     SRAM3  // Domain 2 DMA buffers.
@@ -139,6 +137,7 @@
 #define OMV_MSC_BUF_SIZE                      (2K)   // USB MSC bot data
 #define OMV_SDRAM_SIZE                        (32 * 1024 * 1024) // This needs to be here for UVC firmware.
 #define OMV_LINE_BUF_SIZE                     (11 * 1024) // Image line buffer round(2592 * 2BPP * 2 buffers).
+#define OMV_VOSPI_DMA_BUFFER                  ".dma_buffer"
 
 // Memory map.
 #define OMV_FLASH_ORIGIN                      0x08000000

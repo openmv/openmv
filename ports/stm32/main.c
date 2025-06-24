@@ -88,6 +88,7 @@
 #include "fb_alloc.h"
 #include "dma_alloc.h"
 #include "file_utils.h"
+#include "vospi.h"
 
 #include "py_image.h"
 #include "py_fir.h"
@@ -373,6 +374,9 @@ soft_reset_exit:
     // soft reset
     mp_printf(MP_PYTHON_PRINTER, "MPY: soft reboot\n");
 
+    #if OMV_ENABLE_VOSPI || OMV_LEPTON_ENABLE
+    vospi_deinit();
+    #endif
     #if MICROPY_PY_LWIP
     systick_disable_dispatch(SYSTICK_DISPATCH_LWIP);
     #endif

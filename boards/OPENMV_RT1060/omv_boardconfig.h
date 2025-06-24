@@ -84,17 +84,16 @@
 #define OMV_FB_ALLOC_SIZE               (10M)   // minimum fb alloc size
 #define OMV_FB_OVERLAY_MEMORY           OCRM1   // Fast fb_alloc memory.
 #define OMV_FB_OVERLAY_SIZE             (512K)
-#define OMV_VOSPI_MEMORY                OCRM2   // VoSPI buffer memory.
-#define OMV_VOSPI_SIZE                  (38K)
 #define OMV_DMA_MEMORY                  DTCM    // Misc DMA buffers memory.
 #define OMV_GC_BLOCK0_MEMORY            OCRM2   // Extra GC block 0.
-#define OMV_GC_BLOCK0_SIZE              (26K)
+#define OMV_GC_BLOCK0_SIZE              (64K)
 #define OMV_GC_BLOCK1_MEMORY            DTCM    // Main GC block
 #define OMV_GC_BLOCK1_SIZE              (288K)
 #define OMV_GC_BLOCK2_MEMORY            DRAM    // Extra GC block 1.
 #define OMV_GC_BLOCK2_SIZE              (8M)
 #define OMV_RAMFUNC_MEMORY              ITCM2   // RAM code memory.
 #define OMV_LINE_BUF_SIZE               (11 * 1024)  // Image line buffer.
+#define OMV_VOSPI_DMA_BUFFER            ".dma_buffer"
 
 // Memory configuration.
 #define OMV_DTCM_ORIGIN                 0x20000000

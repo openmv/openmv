@@ -69,7 +69,6 @@ typedef struct lepton_state {
     LEP_CAMERA_PORT_DESC_T port;
 } lepton_state_t;
 
-extern uint16_t _vospi_buf[];
 static lepton_state_t lepton;
 
 static int lepton_reset(omv_csi_t *csi, bool measurement_mode, bool high_temp_mode);
@@ -202,7 +201,7 @@ static int ioctl(omv_csi_t *csi, int request, va_list ap) {
         }
         case OMV_CSI_IOCTL_LEPTON_GET_RESOLUTION: {
             int *resolution = va_arg(ap, int *);
-            *resolution = 14;
+            *resolution =  lepton.radiometry ? 16 : 14;
             break;
         }
         case OMV_CSI_IOCTL_LEPTON_RUN_COMMAND: {
@@ -359,21 +358,21 @@ static int lepton_reset(omv_csi_t *csi, bool measurement_mode, bool high_temp_mo
 }
 
 static int reset(omv_csi_t *csi) {
-    static bool vospi_initialized = false;
+    vospi_deinit();
 
     memset(&lepton, 0, sizeof(lepton_state_t));
     lepton.min_temp = LEPTON_MIN_TEMP_DEFAULT;
     lepton.max_temp = LEPTON_MAX_TEMP_DEFAULT;
 
+    // Extra delay after power-on
+    mp_hal_delay_ms(1000);
+
     if (lepton_reset(csi, false, false) != 0) {
         return OMV_CSI_ERROR_CTL_FAILED;
     }
 
-    if (vospi_initialized == false) {
-        if (vospi_init(lepton.v_res, _vospi_buf) != 0) {
-            return OMV_CSI_ERROR_CTL_FAILED;
-        }
-        vospi_initialized = true;
+    if (csi->fb && vospi_init(lepton.v_res, csi->fb) != 0) {
+        return OMV_CSI_ERROR_CTL_FAILED;
     }
 
     return 0;
@@ -382,10 +381,6 @@ static int reset(omv_csi_t *csi) {
 static int snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
     framebuffer_t *fb = csi->fb;
     framebuffer_update_jpeg_buffer(fb);
-
-    if (fb->n_buffers != 1) {
-        framebuffer_set_buffers(fb, 1);
-    }
 
     if (csi->pixformat == PIXFORMAT_INVALID) {
         return OMV_CSI_ERROR_INVALID_PIXFORMAT;
@@ -399,15 +394,12 @@ static int snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
         return OMV_CSI_ERROR_INVALID_FRAMESIZE;
     }
 
-    if (omv_csi_check_framebuffer_size(csi) == -1) {
-        return OMV_CSI_ERROR_FRAMEBUFFER_OVERFLOW;
+    if (resolution[csi->framesize][0] < lepton.h_res || resolution[csi->framesize][1] < lepton.v_res) {
+        return OMV_CSI_ERROR_INVALID_FRAMESIZE;
     }
 
-    framebuffer_free_current_buffer(fb);
-    vbuffer_t *buffer = framebuffer_get_tail(fb, FB_NO_FLAGS);
-
-    if (!buffer) {
-        return OMV_CSI_ERROR_FRAMEBUFFER_ERROR;
+    if (omv_csi_check_framebuffer_size(csi) == -1) {
+        return OMV_CSI_ERROR_FRAMEBUFFER_OVERFLOW;
     }
 
     for (int i = 0; i < LEPTON_SNAPSHOT_RETRY; i++) {
@@ -423,20 +415,18 @@ static int snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
         }
     }
 
-    fb->w = fb->u;
-    fb->h = fb->v;
+    if (!csi->transpose) {
+        fb->w = fb->u;
+        fb->h = fb->v;
+    } else {
+        fb->w = fb->v;
+        fb->h = fb->u;
+    }
+
     fb->pixfmt = csi->pixformat;
 
-    framebuffer_init_image(fb, image);
-
-    float x_scale = resolution[csi->framesize][0] / ((float) lepton.h_res);
-    float y_scale = resolution[csi->framesize][1] / ((float) lepton.v_res);
-    // MAX == KeepAspectRationByExpanding - MIN == KeepAspectRatio
-    float scale = IM_MAX(x_scale, y_scale), scale_inv = 1.0f / scale;
-    int x_offset = (resolution[csi->framesize][0] - (lepton.h_res * scale)) / 2;
-    int y_offset = (resolution[csi->framesize][1] - (lepton.v_res * scale)) / 2;
-    // The code below upscales the source image to the requested frame size
-    // and then crops it to the window set by the user.
+    image_t fb_image; 
+    framebuffer_init_image(fb, &fb_image);
 
     LEP_SYS_FPA_TEMPERATURE_KELVIN_T kelvin;
     if (lepton.measurement_mode && (!lepton.radiometry)) {
@@ -444,60 +434,38 @@ static int snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
             return OMV_CSI_ERROR_IO_ERROR;
         }
     }
+    
+    fb_alloc_mark();
+    image_t temp = {
+        .w = (!csi->transpose) ? lepton.h_res : lepton.v_res,
+        .h = (!csi->transpose) ? lepton.v_res : lepton.h_res,
+        .pixfmt = PIXFORMAT_GRAYSCALE,
+        .data = fb_alloc(lepton.h_res * lepton.v_res, FB_ALLOC_CACHE_ALIGN),
+    };
 
-    for (int y = y_offset, yy = fast_ceilf(lepton.v_res * scale) + y_offset; y < yy; y++) {
-        if ((fb->y <= y) && (y < (fb->y + fb->v))) {
-            // user window cropping
+    // When not in measurment mode set the min and max temperatures such that 0-255 values from the
+    // sensor, which are grayscale pixels 0-255, are not clipped when interpreted as Kelvin values.
+    float min = -273.15f; // in Celsius -> 0.0f in Kelvin
+    float max = -270.6f; // in Celsius -> 2.55f in Kelvin
 
-            uint16_t *row_ptr = _vospi_buf + (fast_floorf(y * scale_inv) * lepton.h_res);
-
-            for (int x = x_offset, xx = fast_ceilf(lepton.h_res * scale) + x_offset; x < xx; x++) {
-                if ((fb->x <= x) && (x < (fb->x + fb->u))) {
-                    // user window cropping
-
-                    // Value is the 14/16-bit value from the FLIR IR camera.
-                    // However, with AGC enabled only the bottom 8-bits are non-zero.
-                    int value = row_ptr[fast_floorf(x * scale_inv)];
-
-                    if (lepton.measurement_mode) {
-                        // Need to convert 14/16-bits to 8-bits ourselves...
-                        if (!lepton.radiometry) {
-                            value = (value - 8192) + kelvin;
-                        }
-                        float celsius = (value * 0.01f) - 273.15f;
-                        celsius = IM_CLAMP(celsius, lepton.min_temp, lepton.max_temp);
-                        value = __USAT(IM_DIV(((celsius - lepton.min_temp) * 255),
-                                              (lepton.max_temp - lepton.min_temp)), 8);
-                    }
-
-                    int t_x = x - fb->x;
-                    int t_y = y - fb->y;
-
-                    if (lepton.hmirror) {
-                        t_x = fb->u - t_x - 1;
-                    }
-                    if (lepton.vflip) {
-                        t_y = fb->v - t_y - 1;
-                    }
-
-                    switch (csi->pixformat) {
-                        case PIXFORMAT_GRAYSCALE: {
-                            IMAGE_PUT_GRAYSCALE_PIXEL(image, t_x, t_y, value & 0xFF);
-                            break;
-                        }
-                        case PIXFORMAT_RGB565: {
-                            IMAGE_PUT_RGB565_PIXEL(image, t_x, t_y, csi->color_palette[value & 0xFF]);
-                            break;
-                        }
-                        default: {
-                            break;
-                        }
-                    }
-                }
-            }
-        }
+    // When in measurment mode the lepton provides 14-bit or 16-bit values that must be clamped
+    // between the min and max temperatures in celsius and scaled to 0-255 values.
+    if (lepton.measurement_mode) {
+        min = lepton.min_temp;
+        max = lepton.max_temp;
     }
 
+    imlib_fill_image_from_lepton(&temp, lepton.h_res, lepton.v_res, (uint16_t *) fb_image.data, min, max,
+                                 false, (!lepton.measurement_mode) || lepton.radiometry, kelvin,
+                                 lepton.hmirror, lepton.vflip, csi->transpose);
+
+    imlib_draw_image(&fb_image, &temp, 0, 0, 1.0f, 1.0f, NULL, -1, 255,
+                     (csi->pixformat == PIXFORMAT_RGB565) ? csi->color_palette : NULL, NULL,
+                     IMAGE_HINT_BILINEAR | IMAGE_HINT_CENTER | IMAGE_HINT_SCALE_ASPECT_EXPAND,
+                     NULL, NULL, NULL);
+
+    fb_alloc_free_till_mark();
+    framebuffer_init_image(fb, image);
     return 0;
 }
 

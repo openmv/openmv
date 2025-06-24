@@ -60,7 +60,7 @@ typedef enum {
 typedef struct _vospi_state {
     int pid;
     int sid;
-    uint16_t *framebuffer;
+    framebuffer_t *fb;
     bool lepton_3;
     omv_spi_t spi_bus;
     volatile uint32_t flags;
@@ -68,7 +68,7 @@ typedef struct _vospi_state {
 
 static vospi_state_t vospi;
 
-static uint16_t OMV_ATTR_SECTION(OMV_ATTR_ALIGNED_DMA(vospi_buf[VOSPI_BUFFER_SIZE]), ".dma_buffer");
+static uint16_t OMV_ATTR_SECTION(OMV_ATTR_ALIGNED_DMA(vospi_buf[VOSPI_BUFFER_SIZE]), OMV_VOSPI_DMA_BUFFER);
 static void vospi_callback(omv_spi_t *spi, void *userdata, void *buf);
 
 static void vospi_resync() {
@@ -143,33 +143,39 @@ void vospi_callback(omv_spi_t *spi, void *userdata, void *buf) {
         return;
     }
 
-    memcpy(vospi.framebuffer
-           + (vospi.pid * VOSPI_PID_SIZE_PIXELS)
-           + (vospi.sid * VOSPI_SID_SIZE_PIXELS),
-           base + VOSPI_HEADER_WORDS, VOSPI_PID_SIZE_PIXELS * sizeof(uint16_t));
+    vbuffer_t *buffer = framebuffer_get_tail(vospi.fb, FB_PEEK);
 
-    vospi.pid += 1;
-    if (vospi.pid == VOSPI_PIDS_PER_SID) {
-        vospi.pid = 0;
+    if (buffer) {
+        memcpy(((uint16_t *) buffer->data)
+               + (vospi.pid * VOSPI_PID_SIZE_PIXELS)
+               + (vospi.sid * VOSPI_SID_SIZE_PIXELS),
+               base + VOSPI_HEADER_WORDS, VOSPI_PID_SIZE_PIXELS * sizeof(uint16_t));
 
-        // For the FLIR Lepton 3 we have to receive all the pids in all the segments.
-        if (vospi.lepton_3) {
-            vospi.sid += 1;
-            if (vospi.sid == VOSPI_SIDS_PER_FRAME) {
-                vospi.sid = 0;
-                vospi.flags &= ~VOSPI_FLAGS_CAPTURE;
+        vospi.pid += 1;
+        if (vospi.pid == VOSPI_PIDS_PER_SID) {
+            vospi.pid = 0;
+
+            // For the FLIR Lepton 3 we have to receive all the pids in all the segments.
+            if (vospi.lepton_3) {
+                vospi.sid += 1;
+                if (vospi.sid == VOSPI_SIDS_PER_FRAME) {
+                    vospi.sid = 0;
+                    framebuffer_get_tail(vospi.fb, FB_NO_FLAGS);
+                }
+                // For the FLIR Lepton 1/2 we just have to receive all the pids.
+            } else {
+                framebuffer_get_tail(vospi.fb, FB_NO_FLAGS);
             }
-            // For the FLIR Lepton 1/2 we just have to receive all the pids.
-        } else {
-            vospi.flags &= ~VOSPI_FLAGS_CAPTURE;
         }
+    } else {
+        vospi.flags &= ~VOSPI_FLAGS_CAPTURE;
     }
 }
 
-int vospi_init(uint32_t n_packets, void *buffer) {
+int vospi_init(uint32_t n_packets, framebuffer_t *fb) {
     memset(&vospi, 0, sizeof(vospi_state_t));
     vospi.lepton_3 = n_packets > VOSPI_PIDS_PER_SID;
-    vospi.framebuffer = buffer;
+    vospi.fb = fb;
     // resync on first snapshot.
     vospi.flags = VOSPI_FLAGS_RESYNC;
 
@@ -183,15 +189,26 @@ int vospi_init(uint32_t n_packets, void *buffer) {
     spi_config.clk_pha = OMV_SPI_CPHA_2EDGE;
     spi_config.dma_flags = OMV_SPI_DMA_CIRCULAR | OMV_SPI_DMA_DOUBLE;
 
-    if (omv_spi_init(&vospi.spi_bus, &spi_config) != 0) {
-        return -1;
-    }
-    return 0;
+    return omv_spi_init(&vospi.spi_bus, &spi_config);
+}
+
+int vospi_deinit() {
+    return omv_spi_deinit(&vospi.spi_bus);
+}
+
+bool vospi_active(void) {
+    return vospi.flags & VOSPI_FLAGS_CAPTURE;
 }
 
 int vospi_snapshot(uint32_t timeout_ms) {
-    // Restart counters to capture a new frame.
-    vospi.flags |= VOSPI_FLAGS_CAPTURE;
+    framebuffer_free_current_buffer(vospi.fb);
+
+    if (!(vospi.flags & VOSPI_FLAGS_CAPTURE)) {
+        framebuffer_setup_buffers(vospi.fb);
+
+        // Restart counters to capture a new frame.
+        vospi.flags |= VOSPI_FLAGS_CAPTURE;
+    }
 
     // Snapshot start tick
     mp_uint_t tick_start = mp_hal_ticks_ms();
@@ -200,6 +217,10 @@ int vospi_snapshot(uint32_t timeout_ms) {
         if (vospi.flags & VOSPI_FLAGS_RESYNC) {
             vospi.flags &= ~VOSPI_FLAGS_RESYNC;
             vospi_resync();
+        }
+
+        if (timeout_ms == 0) {
+            return -1;
         }
 
         if ((mp_hal_ticks_ms() - tick_start) > timeout_ms) {
@@ -211,9 +232,8 @@ int vospi_snapshot(uint32_t timeout_ms) {
         }
 
         MICROPY_EVENT_POLL_HOOK
-    } while (vospi.flags & VOSPI_FLAGS_CAPTURE);
+    } while (!framebuffer_get_head(vospi.fb, FB_NO_FLAGS));
 
     return 0;
 }
-
 #endif
