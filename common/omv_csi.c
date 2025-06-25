@@ -399,60 +399,45 @@ static size_t omv_csi_detect(omv_i2c_t *i2c, i2c_dev_t *dev_list) {
 int omv_csi_probe(omv_i2c_t *i2c) {
     int init_ret = 0;
 
-    bool reset_pol = OMV_CSI_ACTIVE_HIGH;
-    bool power_pol = OMV_CSI_ACTIVE_HIGH;
-
     size_t dev_count = 0;
     size_t aux_count = 0;
     i2c_dev_t dev_list[OMV_CSI_MAX_DEVICES] = { 0 };
 
-    #if defined(OMV_CSI_POWER_PIN)
-    // Do a power cycle
-    omv_gpio_write(OMV_CSI_POWER_PIN, 1);
-    mp_hal_delay_ms(10);
+    bool reset_pol = OMV_CSI_ACTIVE_HIGH;
+    bool power_pol = OMV_CSI_ACTIVE_HIGH;
 
-    omv_gpio_write(OMV_CSI_POWER_PIN, 0);
-    mp_hal_delay_ms(OMV_CSI_POWER_DELAY);
-    #endif
+    // Active power-down state, active reset state
+    const omv_csi_polarity_t polarity_configs[][2] = {
+        { OMV_CSI_ACTIVE_LOW,  OMV_CSI_ACTIVE_LOW },
+        { OMV_CSI_ACTIVE_LOW,  OMV_CSI_ACTIVE_HIGH },
+        { OMV_CSI_ACTIVE_HIGH, OMV_CSI_ACTIVE_LOW }, 
+        { OMV_CSI_ACTIVE_HIGH, OMV_CSI_ACTIVE_HIGH },
+    };
+    
+    // Scan the bus multiple times using different reset and power polarities,
+    // until a supported sensor is detected.
+    for (size_t i=0; dev_count == 0 && i<OMV_ARRAY_SIZE(polarity_configs); i++) {
+        // Power cycle
+        #if defined(OMV_CSI_POWER_PIN)
+        power_pol = polarity_configs[0][0];
+        omv_gpio_write(OMV_CSI_POWER_PIN, power_pol);
+        mp_hal_delay_ms(10);
+        omv_gpio_write(OMV_CSI_POWER_PIN, !power_pol);
+        mp_hal_delay_ms(OMV_CSI_POWER_DELAY);
+        #endif
 
-    #if defined(OMV_CSI_RESET_PIN)
-    // Reset the csi
-    omv_gpio_write(OMV_CSI_RESET_PIN, 1);
-    mp_hal_delay_ms(10);
-
-    omv_gpio_write(OMV_CSI_RESET_PIN, 0);
-    mp_hal_delay_ms(OMV_CSI_RESET_DELAY);
-    #endif
-
-    // Scan the bus multiple times using different reset and power-down
-    // polarities, until a supported sensor is detected.
-    if (!(dev_count = omv_csi_detect(i2c, dev_list))) {
-        // No devices were detected, try scanning the bus
-        // again with different reset/power-down polarities.
+        // Reset
         #if defined(OMV_CSI_RESET_PIN)
-        reset_pol = OMV_CSI_ACTIVE_LOW;
-        omv_gpio_write(OMV_CSI_RESET_PIN, 1);
+        reset_pol = polarity_configs[0][1];
+        omv_gpio_write(OMV_CSI_RESET_PIN, reset_pol);
+        mp_hal_delay_ms(10);
+        omv_gpio_write(OMV_CSI_RESET_PIN, !reset_pol);
         mp_hal_delay_ms(OMV_CSI_RESET_DELAY);
         #endif
 
-        if (!(dev_count = omv_csi_detect(i2c, dev_list))) {
-            #if defined(OMV_CSI_POWER_PIN)
-            power_pol = OMV_CSI_ACTIVE_LOW;
-            omv_gpio_write(OMV_CSI_POWER_PIN, 1);
-            mp_hal_delay_ms(OMV_CSI_POWER_DELAY);
-            #endif
-
-            if (!(dev_count = omv_csi_detect(i2c, dev_list))) {
-                #if defined(OMV_CSI_RESET_PIN)
-                reset_pol = OMV_CSI_ACTIVE_HIGH;
-                omv_gpio_write(OMV_CSI_RESET_PIN, 0);
-                mp_hal_delay_ms(OMV_CSI_RESET_DELAY);
-                #endif
-                dev_count = omv_csi_detect(i2c, dev_list);
-            }
-        }
+        dev_count = omv_csi_detect(i2c, dev_list);
     }
-
+    
     // Add special devices, such as SPI sensors, soft-CSI etc...
     #if (OMV_SOFTCSI_ENABLE == 1)
     if (dev_count < OMV_CSI_MAX_DEVICES) {
