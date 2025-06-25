@@ -249,6 +249,7 @@ extern unsigned char OMV_BOARD_UID_ADDR[12];    // Unique address.
 // CSI I2C bus
 #define OMV_CSI_I2C_ID                  (0)
 #define OMV_CSI_I2C_SPEED               (OMV_I2C_SPEED_FULL)
+#define OMV_CSI_I2C_REINIT              (0)
 
 // FIR I2C bus
 #define OMV_FIR_I2C_ID                  (1)

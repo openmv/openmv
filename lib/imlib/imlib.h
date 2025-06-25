@@ -570,7 +570,7 @@ typedef struct image {
 void image_xalloc(image_t *img, size_t size);
 void image_xalloc0(image_t *img, size_t size);
 void image_init(image_t *ptr, int w, int h, pixformat_t pixfmt, uint32_t size, void *pixels);
-void image_copy(image_t *dst, image_t *src);
+void image_copy(image_t *dst, image_t *src, bool deep);
 size_t image_line_size(image_t *ptr);
 size_t image_size(image_t *ptr);
 bool image_get_mask_pixel(image_t *ptr, int x, int y);

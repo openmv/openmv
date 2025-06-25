@@ -68,7 +68,9 @@ static int snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
         return 0;
     }
 
-    framebuffer_update_jpeg_buffer(fb);
+    if (flags & OMV_CSI_CAPTURE_FLAGS_UPDATE) {
+        framebuffer_update_jpeg_buffer(fb);
+    }
 
     if (fb->n_buffers != 1) {
         framebuffer_set_buffers(fb, 1);
@@ -149,12 +151,15 @@ static int snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
 
 int softcsi_init(omv_csi_t *csi) {
     csi->reset = reset;
+    csi->abort = NULL;
+    csi->config = NULL;
     csi->set_pixformat = set_pixformat;
     csi->set_framesize = set_framesize;
     csi->set_hmirror = set_hmirror;
     csi->set_vflip = set_vflip;
     csi->snapshot = snapshot;
 
+    csi->auxiliary = 1;
     csi->vsync_pol = 1;
     csi->hsync_pol = 0;
     csi->pixck_pol = 0;

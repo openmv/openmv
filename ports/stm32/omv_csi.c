@@ -70,94 +70,82 @@ extern uint32_t hal_get_exti_gpio(uint32_t line);
 
 #if USE_DCMI
 void DCMI_IRQHandler(void) {
-    HAL_DCMI_IRQHandler(&csi.dcmi);
+    omv_csi_t *csi = omv_csi_get(-1);
+    HAL_DCMI_IRQHandler(&csi->dcmi);
 }
 #endif
 
 #if USE_DCMIPP
 void CSI_IRQHandler(void) {
-    HAL_DCMIPP_CSI_IRQHandler(&csi.dcmi);
+    omv_csi_t *csi = omv_csi_get(-1);
+    HAL_DCMIPP_CSI_IRQHandler(&csi->dcmi);
 }
 
 void DCMIPP_IRQHandler(void) {
-    HAL_DCMIPP_IRQHandler(&csi.dcmi);
+    omv_csi_t *csi = omv_csi_get(-1);
+    HAL_DCMIPP_IRQHandler(&csi->dcmi);
 }
 #endif
 
 #if USE_MDMA
 void omv_csi_mdma_irq_handler(void) {
+    omv_csi_t *csi = omv_csi_get(-1);
+
     if (MDMA->GISR0 & (1 << OMV_MDMA_CHANNEL_DCMI_0)) {
-        HAL_MDMA_IRQHandler(&csi.mdma0);
+        HAL_MDMA_IRQHandler(&csi->mdma0);
     }
     if (MDMA->GISR0 & (1 << OMV_MDMA_CHANNEL_DCMI_1)) {
-        HAL_MDMA_IRQHandler(&csi.mdma1);
+        HAL_MDMA_IRQHandler(&csi->mdma1);
     }
 }
 #endif
 
-void omv_csi_init0() {
-    omv_csi_abort(&csi, true, false);
-
-    // Disable callbacks
-    omv_csi_set_vsync_callback(NULL);
-    omv_csi_set_frame_callback(NULL);
-
-    csi.disable_delays = false;
-
-    // Re-init i2c bus to reset the bus state after soft reset, which
-    // could have interrupted the bus in the middle of a transfer.
-    if (csi.i2c->initialized) {
-        // Reinitialize the bus using the last used id and speed.
-        omv_i2c_init(csi.i2c, csi.i2c->id, csi.i2c->speed);
-    }
-}
-
-int omv_csi_config(omv_csi_config_t config) {
+static int stm_csi_config(omv_csi_t *csi, omv_csi_config_t config) {
     if (config == OMV_CSI_CONFIG_INIT) {
         #if USE_DMA
         // DMA Stream configuration
-        csi.dma.Instance = DMA2_Stream1;
+        csi->dma.Instance = DMA2_Stream1;
         #if defined(STM32H7)
-        csi.dma.Init.Request = DMA_REQUEST_DCMI;
+        csi->dma.Init.Request = DMA_REQUEST_DCMI;
         #else
-        csi.dma.Init.Channel = DMA_CHANNEL_1;
+        csi->dma.Init.Channel = DMA_CHANNEL_1;
         #endif
-        csi.dma.Init.Direction = DMA_PERIPH_TO_MEMORY;
-        csi.dma.Init.MemInc = DMA_MINC_ENABLE;
-        csi.dma.Init.PeriphInc = DMA_PINC_DISABLE;
-        csi.dma.Init.PeriphDataAlignment = DMA_PDATAALIGN_WORD;
-        csi.dma.Init.MemDataAlignment = DMA_MDATAALIGN_WORD;
-        csi.dma.Init.Mode = DMA_NORMAL;
-        csi.dma.Init.Priority = DMA_PRIORITY_HIGH;
-        csi.dma.Init.FIFOMode = DMA_FIFOMODE_ENABLE;
-        csi.dma.Init.FIFOThreshold = DMA_FIFO_THRESHOLD_FULL;
-        csi.dma.Init.MemBurst = DMA_MBURST_INC4;
-        csi.dma.Init.PeriphBurst = DMA_PBURST_SINGLE;
-
+        csi->dma.Init.Direction = DMA_PERIPH_TO_MEMORY;
+        csi->dma.Init.MemInc = DMA_MINC_ENABLE;
+        csi->dma.Init.PeriphInc = DMA_PINC_DISABLE;
+        csi->dma.Init.PeriphDataAlignment = DMA_PDATAALIGN_WORD;
+        csi->dma.Init.MemDataAlignment = DMA_MDATAALIGN_WORD;
+        csi->dma.Init.Mode = DMA_NORMAL;
+        csi->dma.Init.Priority = DMA_PRIORITY_HIGH;
+        csi->dma.Init.FIFOMode = DMA_FIFOMODE_ENABLE;
+        csi->dma.Init.FIFOThreshold = DMA_FIFO_THRESHOLD_FULL;
+        csi->dma.Init.MemBurst = DMA_MBURST_INC4;
+        csi->dma.Init.PeriphBurst = DMA_PBURST_SINGLE;
+    
         // Initialize the DMA stream
-        HAL_DMA_DeInit(&csi.dma);
-        if (HAL_DMA_Init(&csi.dma) != HAL_OK) {
-            return -1;
+        HAL_DMA_DeInit(&csi->dma);
+        if (HAL_DMA_Init(&csi->dma) != HAL_OK) {
+            return OMV_CSI_ERROR_DMA_INIT_FAILED;
         }
-
+    
         // Set DMA IRQ handle
-        dma_utils_set_irq_descr(DMA2_Stream1, &csi.dma);
-
+        dma_utils_set_irq_descr(DMA2_Stream1, &csi->dma);
+    
         // Configure the DMA IRQ Channel
         NVIC_SetPriority(DMA2_Stream1_IRQn, IRQ_PRI_DMA21);
-
+    
         #if USE_MDMA
-        csi.mdma0.Instance = MDMA_CHAN_TO_INSTANCE(OMV_MDMA_CHANNEL_DCMI_0);
-        csi.mdma1.Instance = MDMA_CHAN_TO_INSTANCE(OMV_MDMA_CHANNEL_DCMI_1);
+        csi->mdma0.Instance = MDMA_CHAN_TO_INSTANCE(OMV_MDMA_CHANNEL_DCMI_0);
+        csi->mdma1.Instance = MDMA_CHAN_TO_INSTANCE(OMV_MDMA_CHANNEL_DCMI_1);
         #endif
 
-        #endif // USE_DMA
+        #endif  // USE_DMA
 
         // Configure DCMI/PP.
         #if USE_DCMIPP
         // Initialize the DCMIPP
-        csi.dcmi.Instance = DCMIPP;
-        if (HAL_DCMIPP_Init(&csi.dcmi) != HAL_OK) {
+        csi->dcmi.Instance = DCMIPP;
+        if (HAL_DCMIPP_Init(&csi->dcmi) != HAL_OK) {
             return -1;
         }
 
@@ -169,21 +157,21 @@ int omv_csi_config(omv_csi_config_t config) {
         NVIC_SetPriority(CSI_IRQn, IRQ_PRI_DCMI);
         HAL_NVIC_EnableIRQ(CSI_IRQn);
         #else
-        csi.dcmi.Instance = DCMI;
-        csi.dcmi.Init.VSPolarity = csi.vsync_pol ? DCMI_VSPOLARITY_HIGH : DCMI_VSPOLARITY_LOW;
-        csi.dcmi.Init.HSPolarity = csi.hsync_pol ? DCMI_HSPOLARITY_HIGH : DCMI_HSPOLARITY_LOW;
-        csi.dcmi.Init.PCKPolarity = csi.pixck_pol ? DCMI_PCKPOLARITY_RISING : DCMI_PCKPOLARITY_FALLING;
-        csi.dcmi.Init.SynchroMode = DCMI_SYNCHRO_HARDWARE;
-        csi.dcmi.Init.CaptureRate = DCMI_CR_ALL_FRAME;
-        csi.dcmi.Init.ExtendedDataMode = DCMI_EXTEND_DATA_8B;
-        csi.dcmi.Init.JPEGMode = DCMI_JPEG_DISABLE;
+        csi->dcmi.Instance = DCMI;
+        csi->dcmi.Init.VSPolarity = csi->vsync_pol ? DCMI_VSPOLARITY_HIGH : DCMI_VSPOLARITY_LOW;
+        csi->dcmi.Init.HSPolarity = csi->hsync_pol ? DCMI_HSPOLARITY_HIGH : DCMI_HSPOLARITY_LOW;
+        csi->dcmi.Init.PCKPolarity = csi->pixck_pol ? DCMI_PCKPOLARITY_RISING : DCMI_PCKPOLARITY_FALLING;
+        csi->dcmi.Init.SynchroMode = DCMI_SYNCHRO_HARDWARE;
+        csi->dcmi.Init.CaptureRate = DCMI_CR_ALL_FRAME;
+        csi->dcmi.Init.ExtendedDataMode = DCMI_EXTEND_DATA_8B;
+        csi->dcmi.Init.JPEGMode = DCMI_JPEG_DISABLE;
 
         // Link the DMA handle to the DCMI handle
-        __HAL_LINKDMA(&csi.dcmi, DMA_Handle, csi.dma);
+        __HAL_LINKDMA(&csi->dcmi, DMA_Handle, csi->dma);
 
         // Initialize the DCMI
-        HAL_DCMI_DeInit(&csi.dcmi);
-        if (HAL_DCMI_Init(&csi.dcmi) != HAL_OK) {
+        HAL_DCMI_DeInit(&csi->dcmi);
+        if (HAL_DCMI_Init(&csi->dcmi) != HAL_OK) {
             return -1;
         }
 
@@ -194,16 +182,16 @@ int omv_csi_config(omv_csi_config_t config) {
     } else if (config == OMV_CSI_CONFIG_PIXFORMAT) {
         #if USE_DCMI
         DCMI->CR &= ~(DCMI_CR_JPEG_Msk << DCMI_CR_JPEG_Pos);
-        DCMI->CR |= (csi.pixformat == PIXFORMAT_JPEG) ? DCMI_JPEG_ENABLE : DCMI_JPEG_DISABLE;
+        DCMI->CR |= (csi->pixformat == PIXFORMAT_JPEG) ? DCMI_JPEG_ENABLE : DCMI_JPEG_DISABLE;
         #else
         // Select and configure the DCMIPP source.
-        if (csi.mipi_if) {
+        if (csi->mipi_if) {
             DCMIPP_CSI_ConfTypeDef scfg = {
                 .NumberOfLanes = DCMIPP_CSI_TWO_DATA_LANES,
                 .DataLaneMapping = DCMIPP_CSI_PHYSICAL_DATA_LANES,
-                .PHYBitrate = (csi.mipi_brate == 850) ? DCMIPP_CSI_PHY_BT_850 : DCMIPP_CSI_PHY_BT_1200,
+                .PHYBitrate = (csi->mipi_brate == 850) ? DCMIPP_CSI_PHY_BT_850 : DCMIPP_CSI_PHY_BT_1200,
             };
-            if (HAL_DCMIPP_CSI_SetConfig(&csi.dcmi, &scfg) != HAL_OK) {
+            if (HAL_DCMIPP_CSI_SetConfig(&csi->dcmi, &scfg) != HAL_OK) {
                 return OMV_CSI_ERROR_CSI_INIT_FAILED;
             }
             // Configure CSI virtual channel and pipe.
@@ -212,61 +200,60 @@ int omv_csi_config(omv_csi_config_t config) {
                 .DataTypeIDA = DCMIPP_DT_RAW10,
                 .DataTypeIDB = DCMIPP_DT_RAW10,
             };
-            if (HAL_DCMIPP_CSI_SetVCConfig(&csi.dcmi, DCMIPP_VIRTUAL_CHANNEL0,
+            if (HAL_DCMIPP_CSI_SetVCConfig(&csi->dcmi, DCMIPP_VIRTUAL_CHANNEL0,
                                            DCMIPP_CSI_DT_BPP10) != HAL_OK) {
                 return OMV_CSI_ERROR_CSI_INIT_FAILED;
             }
-            if (HAL_DCMIPP_CSI_PIPE_SetConfig(&csi.dcmi, DCMIPP_PIPE, &pcfg) != HAL_OK) {
+            if (HAL_DCMIPP_CSI_PIPE_SetConfig(&csi->dcmi, DCMIPP_PIPE, &pcfg) != HAL_OK) {
                 return OMV_CSI_ERROR_CSI_INIT_FAILED;
             }
         } else {
             DCMIPP_ParallelConfTypeDef scfg = {
                 .SynchroMode = DCMIPP_SYNCHRO_HARDWARE,
                 .ExtendedDataMode = DCMIPP_INTERFACE_8BITS,
-                .VSPolarity = csi.vsync_pol ? DCMIPP_VSPOLARITY_HIGH : DCMIPP_VSPOLARITY_LOW,
-                .HSPolarity = csi.hsync_pol ? DCMIPP_HSPOLARITY_HIGH : DCMIPP_HSPOLARITY_LOW,
-                .PCKPolarity = csi.pixck_pol ? DCMIPP_PCKPOLARITY_RISING : DCMIPP_PCKPOLARITY_FALLING,
+                .VSPolarity = csi->vsync_pol ? DCMIPP_VSPOLARITY_HIGH : DCMIPP_VSPOLARITY_LOW,
+                .HSPolarity = csi->hsync_pol ? DCMIPP_HSPOLARITY_HIGH : DCMIPP_HSPOLARITY_LOW,
+                .PCKPolarity = csi->pixck_pol ? DCMIPP_PCKPOLARITY_RISING : DCMIPP_PCKPOLARITY_FALLING,
             };
-            if (csi.raw_output) {
+            if (csi->raw_output) {
                 scfg.Format = DCMIPP_FORMAT_RAW8;
-            } else if (csi.pixformat == PIXFORMAT_RGB565) {
+            } else if (csi->pixformat == PIXFORMAT_RGB565) {
                 scfg.Format = DCMIPP_FORMAT_RGB565;
                 scfg.SwapCycles = DCMIPP_SWAPCYCLES_ENABLE;
-            } else if (csi.pixformat == PIXFORMAT_GRAYSCALE) {
-                scfg.Format = (csi.mono_bpp == 1) ? DCMIPP_FORMAT_MONOCHROME_8B : DCMIPP_FORMAT_YUV422;
+            } else if (csi->pixformat == PIXFORMAT_GRAYSCALE) {
+                scfg.Format = (csi->mono_bpp == 1) ? DCMIPP_FORMAT_MONOCHROME_8B : DCMIPP_FORMAT_YUV422;
             } else {
                 return OMV_CSI_ERROR_PIXFORMAT_UNSUPPORTED;
             }
-            if (HAL_DCMIPP_PARALLEL_SetConfig(&csi.dcmi, &scfg) != HAL_OK) {
+            if (HAL_DCMIPP_PARALLEL_SetConfig(&csi->dcmi, &scfg) != HAL_OK) {
                 return OMV_CSI_ERROR_CSI_INIT_FAILED;
             }
         }
 
         // Configure the pixel processing pipeline.
         DCMIPP_PipeConfTypeDef pcfg = { .FrameRate = DCMIPP_FRAME_RATE_ALL };
-        if (csi.pixformat == PIXFORMAT_RGB565) {
+        if (csi->pixformat == PIXFORMAT_RGB565) {
             pcfg.PixelPackerFormat = DCMIPP_PIXEL_PACKER_FORMAT_RGB565_1;
-        } else if (csi.pixformat == PIXFORMAT_GRAYSCALE) {
+        } else if (csi->pixformat == PIXFORMAT_GRAYSCALE) {
             pcfg.PixelPackerFormat = DCMIPP_PIXEL_PACKER_FORMAT_MONO_Y8_G8_1;
         } else {
             return OMV_CSI_ERROR_PIXFORMAT_UNSUPPORTED;
         }
-        if (HAL_DCMIPP_PIPE_SetConfig(&csi.dcmi, DCMIPP_PIPE, &pcfg) != HAL_OK) {
+        if (HAL_DCMIPP_PIPE_SetConfig(&csi->dcmi, DCMIPP_PIPE, &pcfg) != HAL_OK) {
             return OMV_CSI_ERROR_CSI_INIT_FAILED;
         }
 
         // Swap RGB enabled.
-        if (csi.yuv_swap) {
-            HAL_DCMIPP_PIPE_EnableYUVSwap(&csi.dcmi, DCMIPP_PIPE);
+        if (csi->yuv_swap) {
+            HAL_DCMIPP_PIPE_EnableYUVSwap(&csi->dcmi, DCMIPP_PIPE);
         }
         // Swap YUV if enabled.
-        if (csi.rgb_swap) {
-            HAL_DCMIPP_PIPE_EnableRedBlueSwap(&csi.dcmi, DCMIPP_PIPE);
+        if (csi->rgb_swap) {
+            HAL_DCMIPP_PIPE_EnableRedBlueSwap(&csi->dcmi, DCMIPP_PIPE);
         }
 
         // Configure debayer.
-        if (csi.raw_output && csi.pixformat != PIXFORMAT_BAYER) {
-
+        if (csi->raw_output && csi->pixformat != PIXFORMAT_BAYER) {
             DCMIPP_RawBayer2RGBConfTypeDef rawcfg = {
                 .RawBayerType = DCMIPP_RAWBAYER_BGGR,
                 .VLineStrength = DCMIPP_RAWBAYER_ALGO_NONE,
@@ -274,8 +261,9 @@ int omv_csi_config(omv_csi_config_t config) {
                 .PeakStrength = DCMIPP_RAWBAYER_ALGO_NONE,
                 .EdgeStrength = DCMIPP_RAWBAYER_ALGO_NONE,
             };
-            if (HAL_DCMIPP_PIPE_SetISPRawBayer2RGBConfig(&csi.dcmi, DCMIPP_PIPE, &rawcfg) != HAL_OK ||
-                HAL_DCMIPP_PIPE_EnableISPRawBayer2RGB(&csi.dcmi, DCMIPP_PIPE) != HAL_OK) {
+
+            if (HAL_DCMIPP_PIPE_SetISPRawBayer2RGBConfig(&csi->dcmi, DCMIPP_PIPE, &rawcfg) != HAL_OK ||
+                HAL_DCMIPP_PIPE_EnableISPRawBayer2RGB(&csi->dcmi, DCMIPP_PIPE) != HAL_OK) {
                 return OMV_CSI_ERROR_CSI_INIT_FAILED;
             }
 
@@ -288,8 +276,8 @@ int omv_csi_config(omv_csi_config_t config) {
                 .MultiplierBlue = 128,
             };
 
-            if (HAL_DCMIPP_PIPE_SetISPExposureConfig(&csi.dcmi, DCMIPP_PIPE, &expcfg) != HAL_OK ||
-                HAL_DCMIPP_PIPE_EnableISPExposure(&csi.dcmi, DCMIPP_PIPE) != HAL_OK) {
+            if (HAL_DCMIPP_PIPE_SetISPExposureConfig(&csi->dcmi, DCMIPP_PIPE, &expcfg) != HAL_OK ||
+                HAL_DCMIPP_PIPE_EnableISPExposure(&csi->dcmi, DCMIPP_PIPE) != HAL_OK) {
                 return OMV_CSI_ERROR_CSI_INIT_FAILED;
             }
 
@@ -307,13 +295,13 @@ int omv_csi_config(omv_csi_config_t config) {
             }
 
             for (size_t i = DCMIPP_STATEXT_MODULE1; i <= DCMIPP_STATEXT_MODULE3; i++) {
-                if (HAL_DCMIPP_PIPE_SetISPStatisticExtractionConfig(&csi.dcmi,
+                if (HAL_DCMIPP_PIPE_SetISPStatisticExtractionConfig(&csi->dcmi,
                                                                     DCMIPP_PIPE, i,
                                                                     &statcfg[i - DCMIPP_STATEXT_MODULE1]) != HAL_OK) {
                     return OMV_CSI_ERROR_CSI_INIT_FAILED;
                 }
 
-                if (HAL_DCMIPP_PIPE_EnableISPStatisticExtraction(&csi.dcmi, DCMIPP_PIPE, i) != HAL_OK) {
+                if (HAL_DCMIPP_PIPE_EnableISPStatisticExtraction(&csi->dcmi, DCMIPP_PIPE, i) != HAL_OK) {
                     return OMV_CSI_ERROR_CSI_INIT_FAILED;
                 }
             }
@@ -324,73 +312,74 @@ int omv_csi_config(omv_csi_config_t config) {
 }
 
 // Stop the DCMI from generating more DMA requests, and disable the DMA.
-int omv_csi_abort(omv_csi_t *csi, bool fifo_flush, bool in_irq) {
-    if (DCMI_IS_ACTIVE()) {
-        #if USE_DCMI
-        DCMI->CR &= ~DCMI_CR_ENABLE;
-        #endif
-        #if USE_DMA
-        if (in_irq) {
-            HAL_DMA_Abort_IT(&csi->dma);
-        } else {
-            HAL_DMA_Abort(&csi->dma);
-        }
-        HAL_NVIC_DisableIRQ(DMA2_Stream1_IRQn);
-        #endif
-        #if USE_MDMA
-        if (!in_irq) {
-            HAL_MDMA_Abort(&csi->mdma0);
-            HAL_MDMA_Abort(&csi->mdma1);
-        }
-        HAL_MDMA_DeInit(&csi->mdma0);
-        HAL_MDMA_DeInit(&csi->mdma1);
-        #endif
-        #if USE_DCMI
-        __HAL_DCMI_DISABLE_IT(&csi->dcmi, DCMI_IT_FRAME);
-        __HAL_DCMI_CLEAR_FLAG(&csi->dcmi, DCMI_FLAG_FRAMERI);
-        #else
-        if (!csi->mipi_if) {
-            HAL_DCMIPP_PIPE_Stop(&csi->dcmi, DCMIPP_PIPE);
-        } else {
-            HAL_DCMIPP_CSI_PIPE_Stop(&csi->dcmi, DCMIPP_PIPE, DCMIPP_VIRTUAL_CHANNEL0);
-        }
-        for (size_t i=0; i<DCMIPP_NUM_OF_PIPES; i++) {
-            csi->dcmi.PipeState[i] = HAL_DCMIPP_PIPE_STATE_RESET;
-        }
-        #endif
-        csi->first_line = false;
-        csi->drop_frame = false;
-        csi->last_frame_ms = 0;
-        csi->last_frame_ms_valid = false;
+static int stm_csi_abort(omv_csi_t *csi, bool fifo_flush, bool in_irq) {
+    if (!DCMI_IS_ACTIVE()) {
+        return 0;
     }
 
-    if (csi->fb) {
-        if (fifo_flush) {
-            framebuffer_flush_buffers(csi->fb, true);
-        } else if (!csi->disable_full_flush) {
-            framebuffer_flush_buffers(csi->fb, false);
-        }
+    #if USE_DCMI
+    DCMI->CR &= ~DCMI_CR_ENABLE;
+    #endif
+
+    #if USE_DMA
+    if (in_irq) {
+        HAL_DMA_Abort_IT(&csi->dma);
+    } else {
+        HAL_DMA_Abort(&csi->dma);
     }
+    HAL_NVIC_DisableIRQ(DMA2_Stream1_IRQn);
+    #endif
+
+    #if USE_MDMA
+    if (!in_irq) {
+        HAL_MDMA_Abort(&csi->mdma0);
+        HAL_MDMA_Abort(&csi->mdma1);
+    }
+    HAL_MDMA_DeInit(&csi->mdma0);
+    HAL_MDMA_DeInit(&csi->mdma1);
+    #endif
+
+    #if USE_DCMI
+    __HAL_DCMI_DISABLE_IT(&csi->dcmi, DCMI_IT_FRAME);
+    __HAL_DCMI_CLEAR_FLAG(&csi->dcmi, DCMI_FLAG_FRAMERI);
+    #else
+    if (!csi->mipi_if) {
+        HAL_DCMIPP_PIPE_Stop(&csi->dcmi, DCMIPP_PIPE);
+    } else {
+        HAL_DCMIPP_CSI_PIPE_Stop(&csi->dcmi, DCMIPP_PIPE, DCMIPP_VIRTUAL_CHANNEL0);
+    }
+    for (size_t i=0; i<DCMIPP_NUM_OF_PIPES; i++) {
+        csi->dcmi.PipeState[i] = HAL_DCMIPP_PIPE_STATE_RESET;
+    }
+    #endif
 
     return 0;
 }
 
 uint32_t omv_csi_get_clk_frequency() {
-    return (OMV_CSI_TIM_PCLK_FREQ() * 2) / (csi.tim.Init.Period + 1);
+    omv_csi_t *csi = omv_csi_get(-1);
+
+    if (!csi->tim.Instance) {
+        return 0;
+    }
+    return (OMV_CSI_TIM_PCLK_FREQ() * 2) / (csi->tim.Init.Period + 1);
 }
 
+// TODO save frequency.
 int omv_csi_set_clk_frequency(uint32_t frequency) {
     #if (OMV_CSI_CLK_SOURCE == OMV_CSI_CLK_SOURCE_TIM)
+    omv_csi_t *csi = omv_csi_get(-1);
+
     if (frequency == 0) {
-        if (csi.tim.Init.Period) {
-            HAL_TIM_PWM_Stop(&csi.tim, OMV_CSI_TIM_CHANNEL);
-            HAL_TIM_PWM_DeInit(&csi.tim);
-            memset(&csi.tim, 0, sizeof(csi.tim));
+        if (csi->tim.Init.Period) {
+            HAL_TIM_PWM_Stop(&csi->tim, OMV_CSI_TIM_CHANNEL);
+            HAL_TIM_PWM_DeInit(&csi->tim);
+            memset(&csi->tim, 0, sizeof(csi->tim));
         }
         return 0;
     }
 
-    csi.tim.Instance = OMV_CSI_TIM;
+    csi->tim.Instance = OMV_CSI_TIM;
 
     // TCLK (PCLK * 2)
     int tclk = OMV_CSI_TIM_PCLK_FREQ() * 2;
@@ -399,20 +388,20 @@ int omv_csi_set_clk_frequency(uint32_t frequency) {
     int period = fast_ceilf(tclk / ((float) frequency)) - 1;
     int pulse = (period + 1) / 2;
 
-    if (csi.tim.Init.Period && (csi.tim.Init.Period != period)) {
-        // __HAL_TIM_SET_AUTORELOAD sets csi.tim.Init.Period...
-        __HAL_TIM_SET_AUTORELOAD(&csi.tim, period);
-        __HAL_TIM_SET_COMPARE(&csi.tim, OMV_CSI_TIM_CHANNEL, pulse);
+    if (csi->tim.Init.Period && (csi->tim.Init.Period != period)) {
+        // __HAL_TIM_SET_AUTORELOAD sets csi->tim.Init.Period...
+        __HAL_TIM_SET_AUTORELOAD(&csi->tim, period);
+        __HAL_TIM_SET_COMPARE(&csi->tim, OMV_CSI_TIM_CHANNEL, pulse);
         return 0;
     }
 
     /* Timer base configuration */
-    csi.tim.Init.Period = period;
-    csi.tim.Init.Prescaler = 0;
-    csi.tim.Init.CounterMode = TIM_COUNTERMODE_UP;
-    csi.tim.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
-    csi.tim.Init.RepetitionCounter = 0;
-    csi.tim.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
+    csi->tim.Init.Period = period;
+    csi->tim.Init.Prescaler = 0;
+    csi->tim.Init.CounterMode = TIM_COUNTERMODE_UP;
+    csi->tim.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+    csi->tim.Init.RepetitionCounter = 0;
+    csi->tim.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
 
     /* Timer channel configuration */
     TIM_OC_InitTypeDef TIMOCHandle;
@@ -424,9 +413,9 @@ int omv_csi_set_clk_frequency(uint32_t frequency) {
     TIMOCHandle.OCIdleState = TIM_OCIDLESTATE_RESET;
     TIMOCHandle.OCNIdleState = TIM_OCNIDLESTATE_RESET;
 
-    if ((HAL_TIM_PWM_Init(&csi.tim) != HAL_OK)
-        || (HAL_TIM_PWM_ConfigChannel(&csi.tim, &TIMOCHandle, OMV_CSI_TIM_CHANNEL) != HAL_OK)
-        || (HAL_TIM_PWM_Start(&csi.tim, OMV_CSI_TIM_CHANNEL) != HAL_OK)) {
+    if ((HAL_TIM_PWM_Init(&csi->tim) != HAL_OK)
+        || (HAL_TIM_PWM_ConfigChannel(&csi->tim, &TIMOCHandle, OMV_CSI_TIM_CHANNEL) != HAL_OK)
+        || (HAL_TIM_PWM_Start(&csi->tim, OMV_CSI_TIM_CHANNEL) != HAL_OK)) {
         return -1;
     }
     #elif (OMV_CSI_CLK_SOURCE == OMV_CSI_CLK_SOURCE_MCO)
@@ -442,13 +431,13 @@ int omv_csi_set_clk_frequency(uint32_t frequency) {
     return 0;
 }
 
-int omv_csi_shutdown(int enable) {
+int omv_csi_shutdown(omv_csi_t *csi, int enable) {
     int ret = 0;
-    omv_csi_abort(&csi, true, false);
+    omv_csi_abort(csi, true, false);
 
     if (enable) {
         #if defined(OMV_CSI_POWER_PIN)
-        if (csi.power_pol == OMV_CSI_ACTIVE_HIGH) {
+        if (csi->power_pol == OMV_CSI_ACTIVE_HIGH) {
             omv_gpio_write(OMV_CSI_POWER_PIN, 1);
         } else {
             omv_gpio_write(OMV_CSI_POWER_PIN, 0);
@@ -456,39 +445,32 @@ int omv_csi_shutdown(int enable) {
         #endif
         #if USE_DCMI
         HAL_NVIC_DisableIRQ(DCMI_IRQn);
-        HAL_DCMI_DeInit(&csi.dcmi);
+        HAL_DCMI_DeInit(&csi->dcmi);
         #endif
     } else {
         #if defined(OMV_CSI_POWER_PIN)
-        if (csi.power_pol == OMV_CSI_ACTIVE_HIGH) {
+        if (csi->power_pol == OMV_CSI_ACTIVE_HIGH) {
             omv_gpio_write(OMV_CSI_POWER_PIN, 0);
         } else {
             omv_gpio_write(OMV_CSI_POWER_PIN, 1);
         }
         #endif
-        ret = omv_csi_config(OMV_CSI_CONFIG_INIT);
+        ret = omv_csi_config(csi, OMV_CSI_CONFIG_INIT);
     }
 
     mp_hal_delay_ms(10);
     return ret;
 }
 
-static void omv_csi_vsync_callback(void *data) {
-    if (csi.vsync_callback != NULL) {
-        csi.vsync_callback(omv_gpio_read(OMV_CSI_VSYNC_PIN));
-    }
-}
-
-int omv_csi_set_vsync_callback(vsync_cb_t vsync_cb) {
-    csi.vsync_callback = vsync_cb;
-    if (csi.vsync_callback == NULL) {
+int omv_csi_set_vsync_callback(omv_csi_t *csi, omv_csi_cb_t cb) {
+    if (cb.fun == NULL) {
         #if (DCMI_VSYNC_EXTI_SHARED == 0)
         // Disable VSYNC EXTI IRQ
         omv_gpio_irq_enable(OMV_CSI_VSYNC_PIN, false);
         #endif
     } else {
         // Enable VSYNC EXTI IRQ
-        omv_gpio_irq_register(OMV_CSI_VSYNC_PIN, omv_csi_vsync_callback, NULL);
+        omv_gpio_irq_register(OMV_CSI_VSYNC_PIN, cb.fun, cb.arg);
         omv_gpio_irq_enable(OMV_CSI_VSYNC_PIN, true);
     }
     return 0;
@@ -498,17 +480,16 @@ int omv_csi_set_vsync_callback(vsync_cb_t vsync_cb) {
 // If the image is cropped by more than 1 word in width, align the line start to a word
 // address to improve copy performance. Do not crop by more than 1 word as this will
 // result in less time between DMA transfers complete interrupts on 16-byte boundaries.
-static uint32_t get_dcmi_hw_crop(uint32_t bytes_per_pixel) {
-    framebuffer_t *fb = csi.fb;
+static uint32_t get_dcmi_hw_crop(omv_csi_t *csi, uint32_t bytes_per_pixel) {
+    framebuffer_t *fb = csi->fb;
     uint32_t byte_x_offset = (fb->x * bytes_per_pixel) % sizeof(uint32_t);
-    uint32_t width_remainder = (resolution[csi.framesize][0] - (fb->x + fb->u)) * bytes_per_pixel;
-    uint32_t x_crop = 0;
+    uint32_t width_remainder = (resolution[csi->framesize][0] - (fb->x + fb->u)) * bytes_per_pixel;
 
     if (byte_x_offset && (width_remainder >= (sizeof(uint32_t) - byte_x_offset))) {
-        x_crop = byte_x_offset;
+        return byte_x_offset;
     }
 
-    return x_crop;
+    return 0;
 }
 #endif
 
@@ -517,7 +498,9 @@ void HAL_DCMI_FrameEventCallback(DCMI_HandleTypeDef *hdcmi) {
 #else
 void HAL_DCMIPP_PIPE_FrameEventCallback(DCMIPP_HandleTypeDef *dcmipp, uint32_t pipe) {
 #endif
-    framebuffer_t *fb = csi.fb;
+    omv_csi_t *csi = omv_csi_get(-1);
+    framebuffer_t *fb = csi->fb;
+
     #if USE_MDMA
     // Clear out any stale flags.
     DMA2->LIFCR = DMA_FLAG_TCIF1_5 | DMA_FLAG_HTIF1_5;
@@ -526,9 +509,9 @@ void HAL_DCMIPP_PIPE_FrameEventCallback(DCMIPP_HandleTypeDef *dcmipp, uint32_t p
     #endif
 
     // Reset DCMI_DMAConvCpltUser frame drop state.
-    csi.first_line = false;
-    if (csi.drop_frame) {
-        csi.drop_frame = false;
+    csi->first_line = false;
+    if (csi->drop_frame) {
+        csi->drop_frame = false;
         // Reset the buffer's state if the frame was dropped.
         vbuffer_t *buffer = framebuffer_get_tail(fb, FB_PEEK);
         if (buffer) {
@@ -539,15 +522,15 @@ void HAL_DCMIPP_PIPE_FrameEventCallback(DCMIPP_HandleTypeDef *dcmipp, uint32_t p
 
     framebuffer_get_tail(fb, FB_NO_FLAGS);
 
-    if (csi.frame_callback) {
-        csi.frame_callback();
+    if (csi->frame_cb.fun) {
+        csi->frame_cb.fun(csi->frame_cb.arg);
     }
 
     #if USE_DCMIPP
     // Get the destination buffer address.
     vbuffer_t *buffer = framebuffer_get_tail(fb, FB_PEEK);
     if (buffer == NULL) {
-        omv_csi_abort(&csi, false, false);
+        omv_csi_abort(csi, false, false);
     } else {
         HAL_DCMIPP_PIPE_SetMemoryAddress(dcmipp, pipe, DCMIPP_MEMORY_ADDRESS_0, (uint32_t) buffer->data);
     }
@@ -560,14 +543,15 @@ void HAL_DCMIPP_PIPE_FrameEventCallback(DCMIPP_HandleTypeDef *dcmipp, uint32_t p
 // Using line buffers allows performing post-processing before writing the frame to the
 // framebuffer, and help hide external RAM latency.
 void DCMI_DMAConvCpltUser(uint32_t addr) {
-    framebuffer_t *fb = csi.fb;
+    omv_csi_t *csi = omv_csi_get(-1);
+    framebuffer_t *fb = csi->fb;
 
     // Throttle frames to match the current frame rate.
-    omv_csi_throttle_framerate();
+    omv_csi_throttle_framerate(csi);
 
-    if (csi.drop_frame) {
+    if (csi->drop_frame) {
         #if USE_MDMA
-        if (!csi.transpose) {
+        if (!csi->transpose) {
             HAL_NVIC_DisableIRQ(DMA2_Stream1_IRQn);
         }
         #endif
@@ -576,17 +560,17 @@ void DCMI_DMAConvCpltUser(uint32_t addr) {
 
     vbuffer_t *buffer = framebuffer_get_tail(fb, FB_PEEK);
     if (buffer == NULL) {
-        omv_csi_abort(&csi, false, true);
+        omv_csi_abort(csi, false, true);
         return;
     }
 
-    if (csi.pixformat == PIXFORMAT_JPEG) {
-        if (csi.jpg_format == 3) {
+    if (csi->pixformat == PIXFORMAT_JPEG) {
+        if (csi->jpg_format == 3) {
             // JPEG MODE 3: Variable line width per frame, with the last line potentially shorter and
             // no padding. `offset` is incremented once every max transfer, and the DMA counter holds
             // the total size.
             buffer->offset += 1;
-        } else if (csi.jpg_format == 4) {
+        } else if (csi->jpg_format == 4) {
             // JPEG MODE 4: Fixed width and height per frame. Each line starts with two bytes indicating
             // valid data length, followed by image data and optional padding (0xFF). `offset` holds the
             // total size.
@@ -604,41 +588,41 @@ void DCMI_DMAConvCpltUser(uint32_t addr) {
     #if USE_MDMA
     // DCMI_DMAConvCpltUser is called with the other MAR register.
     // So, we have to fix the address in full MDMA offload mode.
-    if (!csi.transpose) {
+    if (!csi->transpose) {
         addr = (uint32_t) &_line_buf;
     }
     #endif
 
-    uint32_t bytes_per_pixel = omv_csi_get_src_bpp();
-    uint8_t *src = ((uint8_t *) addr) + (fb->x * bytes_per_pixel) - get_dcmi_hw_crop(bytes_per_pixel);
+    uint32_t bytes_per_pixel = omv_csi_get_src_bpp(csi);
+    uint8_t *src = ((uint8_t *) addr) + (fb->x * bytes_per_pixel) - get_dcmi_hw_crop(csi, bytes_per_pixel);
     uint8_t *dst = buffer->data;
 
-    if (csi.pixformat == PIXFORMAT_GRAYSCALE) {
+    if (csi->pixformat == PIXFORMAT_GRAYSCALE) {
         bytes_per_pixel = sizeof(uint8_t);
     }
 
     // For all non-JPEG and non-transposed modes image capture can be completely offload to MDMA.
     #if USE_MDMA
-    if (!csi.transpose) {
+    if (!csi->transpose) {
         // NOTE: MDMA is started here, not in FRAME/VSYNC callbacks, to maximize the time before
         // the frame has to be dropped.
         uint32_t line_width_bytes = fb->u * bytes_per_pixel;
         // mdma0 will copy this line of the image to the final destination.
-        __HAL_UNLOCK(&csi.mdma0);
-        csi.mdma0.State = HAL_MDMA_STATE_READY;
-        HAL_MDMA_Start(&csi.mdma0, (uint32_t) src, (uint32_t) dst,
+        __HAL_UNLOCK(&csi->mdma0);
+        csi->mdma0.State = HAL_MDMA_STATE_READY;
+        HAL_MDMA_Start(&csi->mdma0, (uint32_t) src, (uint32_t) dst,
                        line_width_bytes, 1);
         // mdma1 will copy all remaining lines of the image to the final destination.
-        __HAL_UNLOCK(&csi.mdma1);
-        csi.mdma1.State = HAL_MDMA_STATE_READY;
-        HAL_MDMA_Start(&csi.mdma1, (uint32_t) src, (uint32_t) (dst + line_width_bytes),
+        __HAL_UNLOCK(&csi->mdma1);
+        csi->mdma1.State = HAL_MDMA_STATE_READY;
+        HAL_MDMA_Start(&csi->mdma1, (uint32_t) src, (uint32_t) (dst + line_width_bytes),
                        line_width_bytes, fb->v - 1);
         HAL_NVIC_DisableIRQ(DMA2_Stream1_IRQn);
         return;
     }
     #endif
 
-    if (!csi.transpose) {
+    if (!csi->transpose) {
         dst += fb->u * bytes_per_pixel * buffer->offset++;
     } else {
         dst += bytes_per_pixel * buffer->offset++;
@@ -646,9 +630,9 @@ void DCMI_DMAConvCpltUser(uint32_t addr) {
 
     #if USE_MDMA
     // Two MDMA channels are used to maximize the time available for each channel to finish the transfer.
-    omv_csi_copy_line((buffer->offset % 2) ? &csi.mdma1 : &csi.mdma0, src, dst);
+    omv_csi_copy_line(csi, (buffer->offset % 2) ? &csi->mdma1 : &csi->mdma0, src, dst);
     #else
-    omv_csi_copy_line(NULL, src, dst);
+    omv_csi_copy_line(csi, NULL, src, dst);
     #endif
 }
 #endif
@@ -676,7 +660,7 @@ static void omv_csi_mdma_config(omv_csi_t *csi, MDMA_InitTypeDef *init, uint32_t
         init->Endianness = MDMA_LITTLE_ENDIANNESS_PRESERVE;
     }
 
-    uint32_t line_offset_bytes = (fb->x * bytes_per_pixel) - get_dcmi_hw_crop(bytes_per_pixel);
+    uint32_t line_offset_bytes = (fb->x * bytes_per_pixel) - get_dcmi_hw_crop(csi, bytes_per_pixel);
     uint32_t line_width_bytes = fb->u * bytes_per_pixel;
 
     if (csi->transpose) {
@@ -750,13 +734,13 @@ static void omv_csi_mdma_enable(omv_csi_t *csi, uint32_t bytes_per_pixel) {
     }
 }
 
-int omv_csi_dma_memcpy(void *dma, void *dst, void *src, int bpp, bool transposed) {
-    framebuffer_t *fb = csi.fb;
+int omv_csi_dma_memcpy(omv_csi_t *csi, void *dma, void *dst, void *src, int bpp, bool transposed) {
+    framebuffer_t *fb = csi->fb;
     MDMA_HandleTypeDef *handle = dma;
 
     // Drop the frame if MDMA is not keeping up as the image will be corrupted.
     if (handle->Instance->CCR & MDMA_CCR_EN) {
-        csi.drop_frame = true;
+        csi->drop_frame = true;
         return 0;
     }
 
@@ -793,7 +777,7 @@ void omv_csi_update_awb(omv_csi_t *csi, uint32_t n_pixels) {
     //printf("Luminance: %f AVG_R: %lu, AVG_G: %lu, AVG_B: %lu\n", (double) luminance, avg[0], avg[1], avg[2]);
 
     if (csi->ioctl) {
-        omv_csi_ioctl(OMV_CSI_IOCTL_UPDATE_AGC_AEC, fast_floorf(luminance));
+        omv_csi_ioctl(csi, OMV_CSI_IOCTL_UPDATE_AGC_AEC, fast_floorf(luminance));
     }
 
     // Calculate average and exposure factors for each channel (R, G, B)
@@ -820,8 +804,7 @@ void omv_csi_update_awb(omv_csi_t *csi, uint32_t n_pixels) {
 }
 #endif
 
-// This is the default snapshot function, which can be replaced in omv_csi_init functions.
-int omv_csi_snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
+static int stm_csi_snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
     uint32_t length = 0;
     framebuffer_t *fb = csi->fb;
 
@@ -835,11 +818,13 @@ int omv_csi_snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
 
     // Compress the framebuffer for the IDE preview, if not the first frame, the
     // framebuffer is enabled, and the image sensor doesn't support JPEG encoding.
-    framebuffer_update_jpeg_buffer(fb);
+    if (flags & OMV_CSI_CAPTURE_FLAGS_UPDATE) {
+        framebuffer_update_jpeg_buffer(fb);
+    }
 
     // Ensure that the raw frame fits into the FB. It will be switched from RGB565 to BAYER
     // first to save space before being cropped until it fits.
-    omv_csi_auto_crop_framebuffer();
+    omv_csi_auto_crop_framebuffer(csi);
 
     // Restore frame buffer width and height if they were changed before. BPP is restored later.
     // Note that JPEG compression is done first on the framebuffer with the user settings.
@@ -864,8 +849,8 @@ int omv_csi_snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
 
         #if USE_DCMI
         // Setup the size and address of the transfer
-        uint32_t bytes_per_pixel = omv_csi_get_src_bpp();
-        uint32_t x_crop = get_dcmi_hw_crop(bytes_per_pixel);
+        uint32_t bytes_per_pixel = omv_csi_get_src_bpp(csi);
+        uint32_t x_crop = get_dcmi_hw_crop(csi, bytes_per_pixel);
         uint32_t line_width_bytes = resolution[csi->framesize][0] * bytes_per_pixel;
 
         // Shrink the captured pixel count by one word to allow cropping to fix alignment.
@@ -928,7 +913,7 @@ int omv_csi_snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
                                   (uint32_t) &_line_buf, length / sizeof(uint32_t), h);
         }
         #else
-        uint32_t bytes_per_pixel = omv_csi_get_dst_bpp();
+        uint32_t bytes_per_pixel = omv_csi_get_dst_bpp(csi);
         uint32_t line_width_bytes = fb->u * bytes_per_pixel;
 
         if (!line_width_bytes ||
@@ -1089,7 +1074,8 @@ int omv_csi_snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
 }
 
 int omv_csi_init() {
-    int init_ret = 0;
+    int ret = 0;
+    static omv_i2c_t i2c;
 
     // List of I2C buses to scan.
     uint32_t buses[][2] = {
@@ -1099,47 +1085,54 @@ int omv_csi_init() {
         #endif
     };
 
-    // Reset the csi state
-    memset(&csi, 0, sizeof(omv_csi_t));
+    // Initialize the CSIs using this driver's ops as defaults,
+    // which can be overridden by sensor drivers during probe.
+    for (size_t i=0; i<OMV_CSI_MAX_DEVICES; i++) {
+        omv_csi_t *csi = &csi_all[i];
 
-    // Set default framebuffer
-    csi.fb = framebuffer_get(0);
-
-    // Set I2C bus
-    csi.i2c = &csi_i2c;
-
-    // Set default snapshot function.
-    csi.snapshot = omv_csi_snapshot;
+        memset(csi, 0, sizeof(omv_csi_t));
+        csi->i2c = &i2c;
+        csi->fb = framebuffer_get(-1);
+        csi->abort = stm_csi_abort;
+        csi->config = stm_csi_config;
+        csi->snapshot = stm_csi_snapshot;
+        csi->color_palette = rainbow_table;
+    }
 
     // Configure the csi external clock (XCLK).
     if (omv_csi_set_clk_frequency(OMV_CSI_CLK_FREQUENCY) != 0) {
         return OMV_CSI_ERROR_TIM_INIT_FAILED;
     }
 
-    // Detect and initialize the image sensor.
+    // Detect and initialize sensor(s).
     for (uint32_t i = 0, n_buses = OMV_ARRAY_SIZE(buses); i < n_buses; i++) {
-        uint32_t id = buses[i][0], speed = buses[i][1];
-        if ((init_ret = omv_csi_probe_init(id, speed)) == 0) {
+        // Initialize the camera bus.
+        omv_i2c_init(&i2c, buses[i][0], buses[i][1]);
+
+        if (!(ret = omv_csi_probe(&i2c))) {
             break;
         }
-        omv_i2c_deinit(csi.i2c);
+
+        omv_i2c_deinit(&i2c);
+
         // Scan the next bus or fail if this is the last one.
         if ((i + 1) == n_buses) {
-            return init_ret;
+            return ret;
         }
     }
 
     // Configure the DCMI interface.
-    if (omv_csi_config(OMV_CSI_CONFIG_INIT) != 0) {
-        return OMV_CSI_ERROR_CSI_INIT_FAILED;
+    for (size_t i=0; i<OMV_CSI_MAX_DEVICES; i++) {
+        omv_csi_t *csi = &csi_all[i];
+
+        if (omv_csi_config(csi, OMV_CSI_CONFIG_INIT) != 0) {
+            return OMV_CSI_ERROR_CSI_INIT_FAILED;
+        }
+
+        csi->detected = true;
     }
 
     // Clear fb_enabled flag.
     JPEG_FB()->enabled = 0;
-
-    // Set default color palette.
-    csi.color_palette = rainbow_table;
-
-    csi.detected = true;
     return 0;
 }
