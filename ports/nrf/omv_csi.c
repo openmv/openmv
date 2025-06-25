@@ -61,7 +61,7 @@ static const volatile uint32_t *_pclkPort;
 
 extern void __fatal_error(const char *msg);
 
-int omv_csi_config(omv_csi_config_t config) {
+static int nrf_csi_config(omv_csi_t *csi, omv_csi_config_t config) {
     if (config == OMV_CSI_CONFIG_INIT) {
         uint32_t csi_pins[] = {
             OMV_CSI_D0_PIN,
@@ -114,12 +114,12 @@ int omv_csi_set_clk_frequency(uint32_t frequency) {
     return 0;
 }
 
-int omv_csi_set_windowing(int x, int y, int w, int h) {
+int omv_csi_set_windowing(omv_csi_t *csi, int x, int y, int w, int h) {
     return OMV_CSI_ERROR_CTL_UNSUPPORTED;
 }
 
 // This is the default snapshot function, which can be replaced in omv_csi_init functions.
-int omv_csi_snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
+static int nrf_csi_snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
     framebuffer_t *fb = csi->fb;
 
     // Compress the framebuffer for the IDE preview, only if it's not the first frame,
@@ -132,7 +132,7 @@ int omv_csi_snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
         framebuffer_set_buffers(fb, 1);
     }
 
-    if (omv_csi_check_framebuffer_size(fb) != 0) {
+    if (omv_csi_check_framebuffer_size(csi) != 0) {
         return OMV_CSI_ERROR_FRAMEBUFFER_OVERFLOW;
     }
 
@@ -188,8 +188,8 @@ int omv_csi_snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
     interrupts();
 
     // Not useful for the NRF but must call to keep API the same.
-    if (csi->frame_callback) {
-        csi->frame_callback();
+    if (csi->frame_cb.fun) {
+        csi->frame_cb.fun(csi->frame_cb.arg);
     }
 
     // Set framebuffer pixel format.
@@ -208,6 +208,7 @@ int omv_csi_snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
 
 int omv_csi_init() {
     int init_ret = 0;
+    static omv_i2c_t i2c;
 
     #if defined(OMV_CSI_POWER_PIN)
     nrf_gpio_cfg_output(OMV_CSI_POWER_PIN);
@@ -219,17 +220,19 @@ int omv_csi_init() {
     nrf_gpio_pin_write(OMV_CSI_RESET_PIN, 1);
     #endif
 
-    // Reset the csi state
-    memset(&csi, 0, sizeof(omv_csi_t));
+    // Initialize the CSIs using this driver's ops as defaults,
+    // which can be overridden by sensor drivers during probe.
+    for (size_t i=0; i<OMV_CSI_MAX_DEVICES; i++) {
+        omv_csi_t *csi = &csi_all[i];
 
-    // Set default framebuffer
-    csi.fb = framebuffer_get(0);
-
-    // Set I2C bus
-    csi.i2c = &csi_i2c;
-
-    // Set default snapshot function.
-    csi.snapshot = omv_csi_snapshot;
+        memset(csi, 0, sizeof(omv_csi_t));
+        csi->i2c = &i2c;
+        csi->fb = framebuffer_get(-1);
+        csi->abort = NULL;
+        csi->config = nrf_csi_config;
+        csi->snapshot = nrf_csi_snapshot;
+        csi->color_palette = rainbow_table;
+    }
 
     // Configure the csi external clock (XCLK).
     if (omv_csi_set_clk_frequency(OMV_CSI_CLK_FREQUENCY) != 0) {
@@ -237,30 +240,28 @@ int omv_csi_init() {
         return OMV_CSI_ERROR_TIM_INIT_FAILED;
     }
 
+    // Initialize the camera bus.
+    omv_i2c_init(&i2c, OMV_CSI_I2C_ID, OMV_CSI_I2C_SPEED);
+
     // Detect and initialize the image sensor.
-    if ((init_ret = omv_csi_probe_init(OMV_CSI_I2C_ID, OMV_CSI_I2C_SPEED)) != 0) {
+    if ((init_ret = omv_csi_probe(&i2c)) != 0) {
         // Sensor probe/init failed.
         return init_ret;
     }
 
-    // Configure the CSI interface.
-    if (omv_csi_config(OMV_CSI_CONFIG_INIT) != 0) {
-        // CSI config failed
-        return OMV_CSI_ERROR_CSI_INIT_FAILED;
+    // Configure the CSI interfaces.
+    for (size_t i=0; i<OMV_CSI_MAX_DEVICES; i++) {
+        omv_csi_t *csi = &csi_all[i];
+
+        if (omv_csi_config(csi, OMV_CSI_CONFIG_INIT) != 0) {
+            return OMV_CSI_ERROR_CSI_INIT_FAILED;
+        }
+
+        csi->detected = true;
     }
 
     // Clear fb_enabled flag
-    // This is executed only once to initialize the FB enabled flag.
-    //JPEG_FB()->enabled = 0;
+    JPEG_FB()->enabled = 0;
 
-    // Set default color palette.
-    csi.color_palette = rainbow_table;
-
-    csi.detected = true;
-
-    // Disable VSYNC IRQ and callback
-    omv_csi_set_vsync_callback(NULL);
-
-    /* All good! */
     return 0;
 }
