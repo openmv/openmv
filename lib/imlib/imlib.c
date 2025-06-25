@@ -284,7 +284,7 @@ void image_init(image_t *ptr, int w, int h, pixformat_t pixfmt, uint32_t size, v
     ptr->pixels = pixels;
 }
 
-void image_copy(image_t *dst, image_t *src) {
+void image_copy(image_t *dst, image_t *src, bool deep) {
     memcpy(dst, src, sizeof(image_t));
 }
 
