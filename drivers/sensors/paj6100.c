@@ -661,8 +661,9 @@ static int reset(omv_csi_t *csi) {
 }
 
 static int paj6100_snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
-    int res = omv_csi_snapshot(csi, image, flags);
-    if (res == 0) {
+    int ret = ((omv_csi_snapshot_t) csi->priv)(csi, image, flags);
+
+    if (ret == 0) {
         l_total = 0;
         int iml = image->h * image->w;
         for (int i = 0; i < iml; ++i) {
@@ -673,7 +674,7 @@ static int paj6100_snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
         auto_exposure(csi);
     }
 
-    return res;
+    return ret;
 }
 
 int paj6100_init(omv_csi_t *csi) {
@@ -700,6 +701,7 @@ int paj6100_init(omv_csi_t *csi) {
     csi->set_special_effect = set_special_effect;
     csi->set_lens_correction = set_lens_correction;
 
+    csi->priv = csi->snapshot;
     csi->snapshot = paj6100_snapshot;
 
     // Set csi flags

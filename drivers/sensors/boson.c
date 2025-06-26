@@ -139,7 +139,7 @@ static int set_colorbar(omv_csi_t *csi, int enable) {
 }
 
 static int snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
-    int ret = omv_csi_snapshot(csi, image, flags);
+    int ret = ((omv_csi_snapshot_t) csi->priv)(csi, image, flags);
 
     if (ret < 0) {
         return ret;
@@ -165,6 +165,7 @@ int boson_init(omv_csi_t *csi) {
     csi->set_pixformat = set_pixformat;
     csi->set_framesize = set_framesize;
     csi->set_colorbar = set_colorbar;
+    csi->priv = csi->snapshot;
     csi->snapshot = snapshot;
 
     // Set csi flags
