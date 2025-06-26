@@ -287,6 +287,24 @@ typedef struct _omv_csi_callback_t {
     void *arg;
 } omv_csi_cb_t;
 
+typedef struct _omv_clk omv_clk_t;
+
+typedef struct _omv_clk {
+    uint32_t freq;
+    #ifdef OMV_CSI_CLK_PORT_BITS
+    OMV_CSI_CLK_PORT_BITS
+    #endif
+    uint32_t (*get_freq) (omv_clk_t *csi);
+    int (*set_freq) (omv_clk_t *csi, uint32_t freq);
+} omv_clk_t;
+
+// Returns the xclk freq in hz.
+uint32_t omv_clk_get_frequency(omv_clk_t *csi);
+
+// Returns the xclk freq in hz.
+int omv_clk_set_frequency(omv_clk_t *clk, uint32_t frequency);
+
+
 typedef struct _omv_csi {
     uint32_t chip_id;           // Sensor ID 32 bits.
     uint8_t slv_addr;           // Sensor I2C slave address.
@@ -337,6 +355,7 @@ typedef struct _omv_csi {
 
     omv_i2c_t *i2c;             // SCCB/I2C bus.
     framebuffer_t *fb;          // Frame buffer pointer
+    omv_clk_t *clk;
 
     #ifdef OMV_CSI_PORT_BITS
     // Additional port-specific members like device base pointer,
@@ -349,9 +368,11 @@ typedef struct _omv_csi {
     void *priv;
 
     // Sensor function pointers
-    int (*reset) (omv_csi_t *csi);
     int (*sleep) (omv_csi_t *csi, int enable);
     int (*match) (omv_csi_t *csi, size_t id);
+    int (*config) (omv_csi_t *csi, omv_csi_config_t config);
+    int (*abort) (omv_csi_t *csi, bool fifo_flush, bool in_irq);
+    int (*reset) (omv_csi_t *csi);
     int (*read_reg) (omv_csi_t *csi, uint16_t reg_addr);
     int (*write_reg) (omv_csi_t *csi, uint16_t reg_addr, uint16_t reg_data);
     int (*set_pixformat) (omv_csi_t *csi, pixformat_t pixformat);
@@ -376,8 +397,6 @@ typedef struct _omv_csi {
     int (*set_special_effect) (omv_csi_t *csi, omv_csi_sde_t sde);
     int (*set_lens_correction) (omv_csi_t *csi, int enable, int radi, int coef);
     int (*ioctl) (omv_csi_t *csi, int request, va_list ap);
-    int (*config) (omv_csi_t *csi, omv_csi_config_t config);
-    int (*abort) (omv_csi_t *csi, bool fifo_flush, bool in_irq);
     int (*snapshot) (omv_csi_t *csi, image_t *image, uint32_t flags);
 } omv_csi_t;
 
@@ -415,14 +434,8 @@ int omv_csi_reset(omv_csi_t *csi, bool hard);
 
 int omv_csi_get_id(omv_csi_t *csi);
 
-// Returns the xclk freq in hz.
-uint32_t omv_csi_get_clk_frequency();
-
-// Returns the xclk freq in hz.
-int omv_csi_set_clk_frequency(uint32_t frequency);
-
 // Return true if the sensor was detected and initialized.
-bool omv_csi_is_detected(omv_csi_t *csi);
+bool omv_csi_is_detected(omv_csi_t *clk);
 
 // Sleep mode.
 int omv_csi_sleep(omv_csi_t *csi, int enable);
