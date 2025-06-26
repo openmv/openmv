@@ -287,6 +287,9 @@ typedef struct _omv_csi_callback_t {
     void *arg;
 } omv_csi_cb_t;
 
+typedef int (*omv_csi_snapshot_t)
+    (omv_csi_t *csi, image_t *image, uint32_t flags);
+
 typedef struct _omv_csi {
     uint32_t chip_id;           // Sensor ID 32 bits.
     uint8_t slv_addr;           // Sensor I2C slave address.

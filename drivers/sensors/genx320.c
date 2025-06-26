@@ -406,7 +406,7 @@ static int snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
 
         // Collect events to calibrate hot pixels.
         for (uint32_t i = 0; i < EVENT_THRESHOLD_TO_CALIBRATE; ) {
-            int ret = omv_csi_snapshot(csi, image, flags);
+            int ret = ((omv_csi_snapshot_t) csi->priv)(csi, image, flags);
 
             if (ret < 0) {
                 return ret;
@@ -451,7 +451,7 @@ static int snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
     }
     #endif // (OMV_GENX320_CAL_ENABLE == 1)
 
-    int ret = omv_csi_snapshot(csi, image, flags);
+    int ret = ((omv_csi_snapshot_t) csi->priv)(csi, image, flags);
 
     if (ret < 0) {
         return ret;
@@ -604,6 +604,7 @@ int genx320_init(omv_csi_t *csi) {
     csi->set_colorbar = set_colorbar;
     csi->set_hmirror = set_hmirror;
     csi->set_vflip = set_vflip;
+    csi->priv = csi->snapshot;
     csi->snapshot = snapshot;
     csi->ioctl = ioctl;
 
