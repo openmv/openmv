@@ -285,7 +285,13 @@ void image_init(image_t *ptr, int w, int h, pixformat_t pixfmt, uint32_t size, v
 }
 
 void image_copy(image_t *dst, image_t *src, bool deep) {
+    size_t dst_size = image_size(dst);
+    size_t src_size = image_size(src);
     memcpy(dst, src, sizeof(image_t));
+
+    if (deep && (dst_size > src_size)) {
+        memcpy(dst->data, src->data, src_size);
+    }
 }
 
 size_t image_line_size(image_t *ptr) {
