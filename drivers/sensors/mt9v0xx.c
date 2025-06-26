@@ -537,6 +537,12 @@ int mt9v0xx_init(omv_csi_t *csi) {
     csi->mono_bpp = 1;
     csi->cfa_format = SUBFORMAT_ID_BGGR;
 
+    // Force old versions to the newest.
+    if (csi->chip_id == MT9V0X2_ID_V_1 ||
+        csi->chip_id == MT9V0X2_ID_V_2) {
+        csi->chip_id = MT9V0X2_ID;
+    }
+
     uint16_t cfa_type_reg;
     int ret = omv_i2c_readw(csi->i2c, csi->slv_addr, MT9V0XX_CFA_ID_REG, &cfa_type_reg);
     switch ((cfa_type_reg >> 9) & 0x7) {
