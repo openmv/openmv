@@ -470,7 +470,7 @@ int omv_csi_probe(omv_i2c_t *i2c) {
         switch (dev_list[i].chip_id) {
             #if (OMV_OV2640_ENABLE == 1)
             case OV2640_ID:
-                if (omv_csi_set_clk_frequency(OMV_OV2640_CLK_FREQ) != 0) {
+                if (omv_clk_set_frequency(csi->clk, OMV_OV2640_CLK_FREQ) != 0) {
                     return OMV_CSI_ERROR_TIM_INIT_FAILED;
                 }
                 init_ret = ov2640_init(csi);
@@ -486,7 +486,7 @@ int omv_csi_probe(omv_i2c_t *i2c) {
                     freq = OMV_OV5640_REV_Y_FREQ;
                 }
                 #endif
-                if (omv_csi_set_clk_frequency(freq) != 0) {
+                if (omv_clk_set_frequency(csi->clk, freq) != 0) {
                     return OMV_CSI_ERROR_TIM_INIT_FAILED;
                 }
                 init_ret = ov5640_init(csi);
@@ -496,7 +496,7 @@ int omv_csi_probe(omv_i2c_t *i2c) {
 
             #if (OMV_OV7670_ENABLE == 1)
             case OV7670_ID:
-                if (omv_csi_set_clk_frequency(OMV_OV7670_CLK_FREQ) != 0) {
+                if (omv_clk_set_frequency(csi->clk, OMV_OV7670_CLK_FREQ) != 0) {
                     return OMV_CSI_ERROR_TIM_INIT_FAILED;
                 }
                 init_ret = ov7670_init(csi);
@@ -505,7 +505,7 @@ int omv_csi_probe(omv_i2c_t *i2c) {
 
             #if (OMV_OV7690_ENABLE == 1)
             case OV7690_ID:
-                if (omv_csi_set_clk_frequency(OMV_OV7690_CLK_FREQ) != 0) {
+                if (omv_clk_set_frequency(csi->clk, OMV_OV7690_CLK_FREQ) != 0) {
                     return OMV_CSI_ERROR_TIM_INIT_FAILED;
                 }
                 init_ret = ov7690_init(csi);
@@ -531,7 +531,7 @@ int omv_csi_probe(omv_i2c_t *i2c) {
                 csi->chip_id = MT9V0X2_ID;
             case MT9V0X2_ID:
             case MT9V0X4_ID:
-                if (omv_csi_set_clk_frequency(OMV_MT9V0XX_CLK_FREQ) != 0) {
+                if (omv_clk_set_frequency(csi->clk, OMV_MT9V0XX_CLK_FREQ) != 0) {
                     return OMV_CSI_ERROR_TIM_INIT_FAILED;
                 }
                 init_ret = mt9v0xx_init(csi);
@@ -540,7 +540,7 @@ int omv_csi_probe(omv_i2c_t *i2c) {
 
             #if (OMV_MT9M114_ENABLE == 1)
             case MT9M114_ID:
-                if (omv_csi_set_clk_frequency(OMV_MT9M114_CLK_FREQ) != 0) {
+                if (omv_clk_set_frequency(csi->clk, OMV_MT9M114_CLK_FREQ) != 0) {
                     return OMV_CSI_ERROR_TIM_INIT_FAILED;
                 }
                 init_ret = mt9m114_init(csi);
@@ -549,7 +549,7 @@ int omv_csi_probe(omv_i2c_t *i2c) {
 
             #if (OMV_BOSON_ENABLE == 1)
             case BOSON_ID:
-                if (omv_csi_set_clk_frequency(OMV_BOSON_CLK_FREQ) != 0) {
+                if (omv_clk_set_frequency(csi->clk, OMV_BOSON_CLK_FREQ) != 0) {
                     return OMV_CSI_ERROR_TIM_INIT_FAILED;
                 }
                 init_ret = boson_init(csi);
@@ -558,8 +558,7 @@ int omv_csi_probe(omv_i2c_t *i2c) {
 
             #if (OMV_LEPTON_ENABLE == 1)
             case LEPTON_ID:
-                if (dev_count == 1 &&
-                    omv_csi_set_clk_frequency(OMV_LEPTON_CLK_FREQ) != 0) {
+                if (omv_clk_set_frequency(csi->clk, OMV_LEPTON_CLK_FREQ) != 0) {
                     return OMV_CSI_ERROR_TIM_INIT_FAILED;
                 }
                 init_ret = lepton_init(csi);
@@ -568,7 +567,7 @@ int omv_csi_probe(omv_i2c_t *i2c) {
 
             #if (OMV_HM01B0_ENABLE == 1)
             case HM01B0_ID:
-                if (omv_csi_set_clk_frequency(OMV_HM01B0_CLK_FREQ) != 0) {
+                if (omv_clk_set_frequency(csi->clk, OMV_HM01B0_CLK_FREQ) != 0) {
                     return OMV_CSI_ERROR_TIM_INIT_FAILED;
                 }
                 init_ret = hm01b0_init(csi);
@@ -577,7 +576,7 @@ int omv_csi_probe(omv_i2c_t *i2c) {
 
             #if (OMV_HM0360_ENABLE == 1)
             case HM0360_ID:
-                if (omv_csi_set_clk_frequency(OMV_HM0360_CLK_FREQ) != 0) {
+                if (omv_clk_set_frequency(csi->clk, OMV_HM0360_CLK_FREQ) != 0) {
                     return OMV_CSI_ERROR_TIM_INIT_FAILED;
                 }
                 init_ret = hm0360_init(csi);
@@ -586,7 +585,7 @@ int omv_csi_probe(omv_i2c_t *i2c) {
 
             #if (OMV_GC2145_ENABLE == 1)
             case GC2145_ID:
-                if (omv_csi_set_clk_frequency(OMV_GC2145_CLK_FREQ) != 0) {
+                if (omv_clk_set_frequency(csi->clk, OMV_GC2145_CLK_FREQ) != 0) {
                     return OMV_CSI_ERROR_TIM_INIT_FAILED;
                 }
                 init_ret = gc2145_init(csi);
@@ -596,7 +595,7 @@ int omv_csi_probe(omv_i2c_t *i2c) {
             #if (OMV_GENX320_ENABLE == 1)
             case GENX320_ID_ES:
             case GENX320_ID_MP:
-                if (omv_csi_set_clk_frequency(OMV_GENX320_CLK_FREQ) != 0) {
+                if (omv_clk_set_frequency(csi->clk, OMV_GENX320_CLK_FREQ) != 0) {
                     return OMV_CSI_ERROR_TIM_INIT_FAILED;
                 }
                 init_ret = genx320_init(csi);
@@ -605,7 +604,7 @@ int omv_csi_probe(omv_i2c_t *i2c) {
 
             #if (OMV_PAG7920_ENABLE == 1)
             case PAG7920_ID:
-                if (omv_csi_set_clk_frequency(OMV_PAG7920_CLK_FREQ) != 0) {
+                if (omv_clk_set_frequency(csi->clk, OMV_PAG7920_CLK_FREQ) != 0) {
                     return OMV_CSI_ERROR_TIM_INIT_FAILED;
                 }
                 init_ret = pag7920_init(csi);
@@ -614,7 +613,7 @@ int omv_csi_probe(omv_i2c_t *i2c) {
 
             #if (OMV_PAG7936_ENABLE == 1)
             case PAG7936_ID:
-                if (omv_csi_set_clk_frequency(OMV_PAG7936_CLK_FREQ) != 0) {
+                if (omv_clk_set_frequency(csi->clk, OMV_PAG7936_CLK_FREQ) != 0) {
                     return OMV_CSI_ERROR_TIM_INIT_FAILED;
                 }
                 init_ret = pag7936_init(csi);
@@ -623,7 +622,7 @@ int omv_csi_probe(omv_i2c_t *i2c) {
 
             #if (OMV_PAJ6100_ENABLE == 1)
             case PAJ6100_ID:
-                if (omv_csi_set_clk_frequency(OMV_PAJ6100_CLK_FREQ) != 0) {
+                if (omv_clk_set_frequency(csi->clk, OMV_PAJ6100_CLK_FREQ) != 0) {
                     return OMV_CSI_ERROR_TIM_INIT_FAILED;
                 }
                 init_ret = paj6100_init(csi);
@@ -632,7 +631,7 @@ int omv_csi_probe(omv_i2c_t *i2c) {
 
             #if (OMV_PS5520_ENABLE == 1)
             case PS5520_ID:
-                if (omv_csi_set_clk_frequency(OMV_PS5520_CLK_FREQ) != 0) {
+                if (omv_clk_set_frequency(csi->clk, OMV_PS5520_CLK_FREQ) != 0) {
                     return OMV_CSI_ERROR_TIM_INIT_FAILED;
                 }
                 init_ret = ps5520_init(csi);
@@ -641,7 +640,7 @@ int omv_csi_probe(omv_i2c_t *i2c) {
 
             #if (OMV_FROGEYE2020_ENABLE == 1)
             case FROGEYE2020_ID:
-                if (omv_csi_set_clk_frequency(OMV_FROGEYE2020_CLK_FREQ) != 0) {
+                if (omv_clk_set_frequency(csi->clk, OMV_FROGEYE2020_CLK_FREQ) != 0) {
                     return OMV_CSI_ERROR_TIM_INIT_FAILED;
                 }
                 init_ret = frogeye2020_init(csi);
@@ -718,12 +717,28 @@ __weak int omv_csi_get_id(omv_csi_t *csi) {
     return csi->chip_id;
 }
 
-__weak uint32_t omv_csi_get_clk_frequency() {
-    return OMV_CSI_ERROR_CTL_UNSUPPORTED;
+__weak uint32_t omv_clk_get_frequency(omv_clk_t *clk) {
+    if (clk->get_freq != NULL) {
+        return clk->get_freq(clk);
+    }
+
+    return clk->freq;
 }
 
-__weak int omv_csi_set_clk_frequency(uint32_t frequency) {
-    return OMV_CSI_ERROR_CTL_UNSUPPORTED;
+__weak int omv_clk_set_frequency(omv_clk_t *clk, uint32_t frequency) {
+    uint32_t diff_hz= abs(frequency - omv_clk_get_frequency(clk));
+
+    if (diff_hz <= 500000) {
+        return 0;
+    }
+
+    if (clk->set_freq != NULL &&
+        clk->set_freq(clk, frequency) != 0) {
+        return OMV_CSI_ERROR_CTL_FAILED;
+    }
+    
+    clk->freq = frequency;
+    return 0;
 }
 
 __weak bool omv_csi_is_detected(omv_csi_t *csi) {

@@ -356,30 +356,25 @@ static int stm_csi_abort(omv_csi_t *csi, bool fifo_flush, bool in_irq) {
     return 0;
 }
 
-uint32_t omv_csi_get_clk_frequency() {
-    omv_csi_t *csi = omv_csi_get(-1);
-
-    if (!csi->tim.Instance) {
+static uint32_t stm_clk_get_frequency(omv_clk_t *clk) {
+    if (!clk->tim.Instance) {
         return 0;
     }
-    return (OMV_CSI_TIM_PCLK_FREQ() * 2) / (csi->tim.Init.Period + 1);
+    return (OMV_CSI_TIM_PCLK_FREQ() * 2) / (clk->tim.Init.Period + 1);
 }
 
-// TODO save frequency.
-int omv_csi_set_clk_frequency(uint32_t frequency) {
+static int stm_clk_set_frequency(omv_clk_t *clk, uint32_t frequency) {
     #if (OMV_CSI_CLK_SOURCE == OMV_CSI_CLK_SOURCE_TIM)
-    omv_csi_t *csi = omv_csi_get(-1);
-
     if (frequency == 0) {
-        if (csi->tim.Init.Period) {
-            HAL_TIM_PWM_Stop(&csi->tim, OMV_CSI_TIM_CHANNEL);
-            HAL_TIM_PWM_DeInit(&csi->tim);
-            memset(&csi->tim, 0, sizeof(csi->tim));
+        if (clk->tim.Init.Period) {
+            HAL_TIM_PWM_Stop(&clk->tim, OMV_CSI_TIM_CHANNEL);
+            HAL_TIM_PWM_DeInit(&clk->tim);
+            memset(&clk->tim, 0, sizeof(clk->tim));
         }
         return 0;
     }
 
-    csi->tim.Instance = OMV_CSI_TIM;
+    clk->tim.Instance = OMV_CSI_TIM;
 
     // TCLK (PCLK * 2)
     int tclk = OMV_CSI_TIM_PCLK_FREQ() * 2;
@@ -388,20 +383,20 @@ int omv_csi_set_clk_frequency(uint32_t frequency) {
     int period = fast_ceilf(tclk / ((float) frequency)) - 1;
     int pulse = (period + 1) / 2;
 
-    if (csi->tim.Init.Period && (csi->tim.Init.Period != period)) {
-        // __HAL_TIM_SET_AUTORELOAD sets csi->tim.Init.Period...
-        __HAL_TIM_SET_AUTORELOAD(&csi->tim, period);
-        __HAL_TIM_SET_COMPARE(&csi->tim, OMV_CSI_TIM_CHANNEL, pulse);
+    if (clk->tim.Init.Period && (clk->tim.Init.Period != period)) {
+        // __HAL_TIM_SET_AUTORELOAD sets clk->tim.Init.Period...
+        __HAL_TIM_SET_AUTORELOAD(&clk->tim, period);
+        __HAL_TIM_SET_COMPARE(&clk->tim, OMV_CSI_TIM_CHANNEL, pulse);
         return 0;
     }
 
     /* Timer base configuration */
-    csi->tim.Init.Period = period;
-    csi->tim.Init.Prescaler = 0;
-    csi->tim.Init.CounterMode = TIM_COUNTERMODE_UP;
-    csi->tim.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
-    csi->tim.Init.RepetitionCounter = 0;
-    csi->tim.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
+    clk->tim.Init.Period = period;
+    clk->tim.Init.Prescaler = 0;
+    clk->tim.Init.CounterMode = TIM_COUNTERMODE_UP;
+    clk->tim.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+    clk->tim.Init.RepetitionCounter = 0;
+    clk->tim.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
 
     /* Timer channel configuration */
     TIM_OC_InitTypeDef TIMOCHandle;
@@ -413,9 +408,9 @@ int omv_csi_set_clk_frequency(uint32_t frequency) {
     TIMOCHandle.OCIdleState = TIM_OCIDLESTATE_RESET;
     TIMOCHandle.OCNIdleState = TIM_OCNIDLESTATE_RESET;
 
-    if ((HAL_TIM_PWM_Init(&csi->tim) != HAL_OK)
-        || (HAL_TIM_PWM_ConfigChannel(&csi->tim, &TIMOCHandle, OMV_CSI_TIM_CHANNEL) != HAL_OK)
-        || (HAL_TIM_PWM_Start(&csi->tim, OMV_CSI_TIM_CHANNEL) != HAL_OK)) {
+    if ((HAL_TIM_PWM_Init(&clk->tim) != HAL_OK)
+        || (HAL_TIM_PWM_ConfigChannel(&clk->tim, &TIMOCHandle, OMV_CSI_TIM_CHANNEL) != HAL_OK)
+        || (HAL_TIM_PWM_Start(&clk->tim, OMV_CSI_TIM_CHANNEL) != HAL_OK)) {
         return -1;
     }
     #elif (OMV_CSI_CLK_SOURCE == OMV_CSI_CLK_SOURCE_MCO)
@@ -1075,7 +1070,13 @@ static int stm_csi_snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
 
 int omv_csi_init() {
     int ret = 0;
-    static omv_i2c_t i2c;
+    static omv_i2c_t csi_i2c;
+
+    static omv_clk_t csi_clk = {
+        .freq = 0,
+        .set_freq = stm_clk_set_frequency,
+        .get_freq = stm_clk_get_frequency,
+    };
 
     // List of I2C buses to scan.
     uint32_t buses[][2] = {
@@ -1091,7 +1092,8 @@ int omv_csi_init() {
         omv_csi_t *csi = &csi_all[i];
 
         memset(csi, 0, sizeof(omv_csi_t));
-        csi->i2c = &i2c;
+        csi->i2c = &csi_i2c;
+        csi->clk = &csi_clk;
         csi->fb = framebuffer_get(-1);
         csi->abort = stm_csi_abort;
         csi->config = stm_csi_config;
@@ -1100,20 +1102,20 @@ int omv_csi_init() {
     }
 
     // Configure the csi external clock (XCLK).
-    if (omv_csi_set_clk_frequency(OMV_CSI_CLK_FREQUENCY) != 0) {
+    if (omv_clk_set_frequency(&csi_clk, OMV_CSI_CLK_FREQUENCY) != 0) {
         return OMV_CSI_ERROR_TIM_INIT_FAILED;
     }
 
     // Detect and initialize sensor(s).
     for (uint32_t i = 0, n_buses = OMV_ARRAY_SIZE(buses); i < n_buses; i++) {
         // Initialize the camera bus.
-        omv_i2c_init(&i2c, buses[i][0], buses[i][1]);
+        omv_i2c_init(&csi_i2c, buses[i][0], buses[i][1]);
 
-        if (!(ret = omv_csi_probe(&i2c))) {
+        if (!(ret = omv_csi_probe(&csi_i2c))) {
             break;
         }
 
-        omv_i2c_deinit(&i2c);
+        omv_i2c_deinit(&csi_i2c);
 
         // Scan the next bus or fail if this is the last one.
         if ((i + 1) == n_buses) {
