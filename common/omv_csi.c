@@ -407,11 +407,12 @@ int omv_csi_probe(omv_i2c_t *i2c) {
     bool power_pol = OMV_CSI_ACTIVE_HIGH;
 
     // Active power-down state, active reset state
+    // This order is required for all sensors to work correctly.
     const omv_csi_polarity_t polarity_configs[][2] = {
-        { OMV_CSI_ACTIVE_LOW,  OMV_CSI_ACTIVE_LOW },
-        { OMV_CSI_ACTIVE_LOW,  OMV_CSI_ACTIVE_HIGH },
-        { OMV_CSI_ACTIVE_HIGH, OMV_CSI_ACTIVE_LOW }, 
         { OMV_CSI_ACTIVE_HIGH, OMV_CSI_ACTIVE_HIGH },
+        { OMV_CSI_ACTIVE_HIGH, OMV_CSI_ACTIVE_LOW },
+        { OMV_CSI_ACTIVE_LOW,  OMV_CSI_ACTIVE_HIGH },
+        { OMV_CSI_ACTIVE_LOW,  OMV_CSI_ACTIVE_LOW },
     };
     
     // Scan the bus multiple times using different reset and power polarities,
@@ -419,7 +420,7 @@ int omv_csi_probe(omv_i2c_t *i2c) {
     for (size_t i=0; dev_count == 0 && i<OMV_ARRAY_SIZE(polarity_configs); i++) {
         // Power cycle
         #if defined(OMV_CSI_POWER_PIN)
-        power_pol = polarity_configs[0][0];
+        power_pol = polarity_configs[i][0];
         omv_gpio_write(OMV_CSI_POWER_PIN, power_pol);
         mp_hal_delay_ms(10);
         omv_gpio_write(OMV_CSI_POWER_PIN, !power_pol);
@@ -428,7 +429,7 @@ int omv_csi_probe(omv_i2c_t *i2c) {
 
         // Reset
         #if defined(OMV_CSI_RESET_PIN)
-        reset_pol = polarity_configs[0][1];
+        reset_pol = polarity_configs[i][1];
         omv_gpio_write(OMV_CSI_RESET_PIN, reset_pol);
         mp_hal_delay_ms(10);
         omv_gpio_write(OMV_CSI_RESET_PIN, !reset_pol);
