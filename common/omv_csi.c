@@ -336,12 +336,6 @@ static size_t omv_csi_detect(omv_i2c_t *i2c, i2c_dev_t *dev_list) {
                 break;
             #endif //(OMV_MT9V0XX_ENABLE == 1)
 
-            #if (OMV_MT9M114_ENABLE == 1)
-            case MT9M114_SLV_ADDR:
-                omv_i2c_readw2(i2c, slv_addr, ON_CHIP_ID, (uint16_t *) &chip_id);
-                break;
-            #endif // (OMV_MT9M114_ENABLE == 1)
-
             #if (OMV_BOSON_ENABLE == 1)
             case BOSON_SLV_ADDR:
                 chip_id = BOSON_ID;
@@ -366,26 +360,24 @@ static size_t omv_csi_detect(omv_i2c_t *i2c, i2c_dev_t *dev_list) {
                 break;
             #endif // (OMV_FROGEYE2020_ENABLE == 1)
 
-            #if (OMV_PAG7920_ENABLE == 1)
+            #if (OMV_PAG7920_ENABLE == 1) || (OMV_PAG7936_ENABLE == 1)
+            // PAG720 and PAG7936 share the same I2C address.
             case PAG7920_SLV_ADDR:
-                omv_i2c_readw2(i2c, slv_addr, PIXART_CHIP_ID, (uint16_t *) &chip_id);
-                chip_id = ((chip_id << 8) | (chip_id >> 8)) & 0xFFFF;
-                break;
-            #endif // (OMV_PAG7920_ENABLE == 1)
-
-            #if (OMV_PAG7936_ENABLE == 1)
-            case PAG7936_SLV_ADDR:
             case PAG7936_SLV_ADDR_ALT:
                 omv_i2c_readw2(i2c, slv_addr, PIXART_CHIP_ID, (uint16_t *) &chip_id);
                 chip_id = ((chip_id << 8) | (chip_id >> 8)) & 0xFFFF;
                 break;
-            #endif // (OMV_PAG7936_ENABLE == 1)
+            #endif // (OMV_PAG7920_ENABLE == 1) || (OMV_PAG7936_ENABLE == 1)
 
-            #if (OMV_PS5520_ENABLE == 1)
-            case PS5520_SLV_ADDR:
-                omv_i2c_readw2(i2c, slv_addr, PIXART_CHIP_ID, (uint16_t *) &chip_id);
+            #if (OMV_MT9M114_ENABLE == 1) || (OMV_PS5520_ENABLE == 1)
+            // MT9M114 and PS5520 share the same I2C address.
+            case MT9M114_SLV_ADDR:
+                omv_i2c_readw2(i2c, slv_addr, ON_CHIP_ID, (uint16_t *) &chip_id);
+                if (slv_addr != MT9M114_ID) {
+                    omv_i2c_readw2(i2c, slv_addr, PIXART_CHIP_ID, (uint16_t *) &chip_id);
+                }
                 break;
-            #endif // (OMV_PS5520_ENABLE == 1)
+            #endif // (OMV_MT9M114_ENABLE == 1) || (OMV_PS5520_ENABLE == 1)
         }
 
         if (chip_id && dev_count < OMV_CSI_MAX_DEVICES) {
