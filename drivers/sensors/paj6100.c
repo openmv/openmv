@@ -34,8 +34,8 @@
 #include "omv_gpio.h"
 
 #include "paj6100.h"
-#include "paj6100_reg.h"
 #include "pixspi.h"
+#include "sensor_config.h"
 
 #define CACHE_BANK
 
@@ -632,7 +632,9 @@ static int reset(omv_csi_t *csi) {
     #endif
 
     // Re-init csi every time.
-    init_sensor(csi);
+    if (init_sensor(csi) != 0) {
+        return OMV_CSI_ERROR_CSI_INIT_FAILED;
+    }
 
     // Fetch default R_Frame_Time
     uint8_t buff[3] = {};
@@ -711,7 +713,9 @@ int paj6100_init(omv_csi_t *csi) {
     csi->frame_sync = 0;
     csi->mono_bpp = 1;
 
-    init_sensor(csi);
+    if (init_sensor(csi) != 0) {
+        return OMV_CSI_ERROR_CSI_INIT_FAILED;
+    }
     return 0;
 }
 

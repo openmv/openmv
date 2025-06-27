@@ -32,7 +32,6 @@
 #include "omv_i2c.h"
 #include "omv_csi.h"
 #include "hm0360.h"
-#include "hm0360_regs.h"
 #include "py/mphal.h"
 
 #define HIMAX_BOOT_RETRY            (10)

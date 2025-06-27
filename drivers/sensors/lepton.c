@@ -533,7 +533,7 @@ int lepton_init(omv_csi_t *csi) {
     mp_hal_delay_ms(1000);
 
     if (reset(csi) != 0) {
-        return -1;
+        return OMV_CSI_ERROR_CSI_INIT_FAILED;
     }
 
     LEP_OEM_PART_NUMBER_T part;

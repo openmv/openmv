@@ -34,9 +34,8 @@
 #include "omv_csi.h"
 #include "framebuffer.h"
 #include "omv_i2c.h"
-
 #include "pag7920.h"
-#include "pag7920_reg.h"
+#include "sensor_config.h"
 
 #define SENSOR_I2C_DEBUG (0)
 
@@ -268,7 +267,10 @@ static int reset(omv_csi_t *csi) {
     // Reset internal flag.
     g_f_hflip = g_f_vflip = false;
     g_bank_cache = -1;
-    return init_csi(csi);
+    if (init_csi(csi) != 0) {
+        return OMV_CSI_ERROR_CSI_INIT_FAILED;
+    }
+    return 0;
 }
 
 static int sleep(omv_csi_t *csi, int enable) {
@@ -661,7 +663,9 @@ int pag7920_init(omv_csi_t *csi) {
     csi->frame_sync = 1;
     csi->mono_bpp = 1;
 
-    init_csi(csi);
+    if (init_csi(csi) != 0) {
+        return OMV_CSI_ERROR_CSI_INIT_FAILED;
+    }
 
     return 0;
 }

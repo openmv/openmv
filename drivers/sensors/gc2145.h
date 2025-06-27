@@ -21,10 +21,24 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  *
- * GC2145 driver.
+ * GC2145 register definitions.
  */
-#ifndef __GC2145_H__
-#define __GC2145_H__
-#define OMV_GC2145_CLK_FREQ     (12000000)
-int gc2145_init(omv_csi_t *csi);
-#endif // __GC2145_H__
+#ifndef __GC2145_REGS_H__
+#define __GC2145_REGS_H__
+
+#define REG_AMODE1                      (0x17)
+#define REG_AMODE1_DEF                  (0x14)
+#define REG_AMODE1_SET_HMIRROR(r, x)    ((r & 0xFE) | ((x & 1) << 0))
+#define REG_AMODE1_SET_VMIRROR(r, x)    ((r & 0xFD) | ((x & 1) << 1))
+
+#define REG_OUTPUT_FMT                  (0x84)
+#define REG_OUTPUT_FMT_RGB565           (0x06)
+#define REG_OUTPUT_FMT_YCBYCR           (0x02)
+#define REG_OUTPUT_FMT_BAYER            (0x17)
+#define REG_OUTPUT_SET_FMT(r, x)        ((r & 0xE0) | (x))
+
+#define REG_SYNC_MODE                   (0x86)
+#define REG_SYNC_MODE_DEF               (0x03)
+#define REG_SYNC_MODE_COL_SWITCH        (0x10)
+#define REG_SYNC_MODE_ROW_SWITCH        (0x20)
+#endif //__GC2145_REGS_H__

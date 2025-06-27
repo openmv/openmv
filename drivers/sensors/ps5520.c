@@ -40,7 +40,6 @@
 
 #include "omv_i2c.h"
 #include "omv_csi.h"
-#include "ps5520.h"
 #include "py/mphal.h"
 
 #define REG_BANK                (0xEF)

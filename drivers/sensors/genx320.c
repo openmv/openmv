@@ -35,7 +35,6 @@
 #include "omv_i2c.h"
 #include "omv_csi.h"
 
-#include "genx320.h"
 #include "evt_2_0.h"
 #include "psee_genx320.h"
 

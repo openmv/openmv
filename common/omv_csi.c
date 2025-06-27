@@ -41,29 +41,9 @@
 #include "omv_i2c.h"
 #include "omv_csi.h"
 #include "omv_boardconfig.h"
-
-#include "ov2640.h"
-#include "ov5640.h"
-#include "ov7725.h"
-#include "ov7670.h"
-#include "ov7690.h"
-#include "ov9650.h"
-#include "mt9v0xx.h"
-#include "mt9m114.h"
-#include "lepton.h"
-#include "boson.h"
-#include "hm01b0.h"
-#include "hm0360.h"
-#include "pag7920.h"
-#include "pag7936.h"
-#include "paj6100.h"
-#include "ps5520.h"
-#include "frogeye2020.h"
-#include "gc2145.h"
-#include "genx320.h"
-#include "softcsi.h"
 #include "framebuffer.h"
 #include "unaligned_memcpy.h"
+#include "sensor_config.h"
 
 #ifndef OMV_CSI_RESET_DELAY
 #define OMV_CSI_RESET_DELAY (10)
@@ -145,6 +125,10 @@ __weak void omv_csi_init0() {
     for (size_t i=0; i<OMV_CSI_MAX_DEVICES; i++) {
         omv_csi_t *csi = &csi_all[i];
         omv_i2c_t *i2c = csi->i2c;
+
+        if (!csi->detected) {
+            continue;
+        }
 
         // Abort ongoing transfer
         omv_csi_abort(csi, true, false);
@@ -336,12 +320,6 @@ static size_t omv_csi_detect(omv_i2c_t *i2c, i2c_dev_t *dev_list) {
                 break;
             #endif //(OMV_MT9V0XX_ENABLE == 1)
 
-            #if (OMV_MT9M114_ENABLE == 1)
-            case MT9M114_SLV_ADDR:
-                omv_i2c_readw2(i2c, slv_addr, ON_CHIP_ID, (uint16_t *) &chip_id);
-                break;
-            #endif // (OMV_MT9M114_ENABLE == 1)
-
             #if (OMV_BOSON_ENABLE == 1)
             case BOSON_SLV_ADDR:
                 chip_id = BOSON_ID;
@@ -366,26 +344,24 @@ static size_t omv_csi_detect(omv_i2c_t *i2c, i2c_dev_t *dev_list) {
                 break;
             #endif // (OMV_FROGEYE2020_ENABLE == 1)
 
-            #if (OMV_PAG7920_ENABLE == 1)
+            #if (OMV_PAG7920_ENABLE == 1) || (OMV_PAG7936_ENABLE == 1)
+            // PAG720 and PAG7936 share the same I2C address.
             case PAG7920_SLV_ADDR:
-                omv_i2c_readw2(i2c, slv_addr, PIXART_CHIP_ID, (uint16_t *) &chip_id);
-                chip_id = ((chip_id << 8) | (chip_id >> 8)) & 0xFFFF;
-                break;
-            #endif // (OMV_PAG7920_ENABLE == 1)
-
-            #if (OMV_PAG7936_ENABLE == 1)
-            case PAG7936_SLV_ADDR:
             case PAG7936_SLV_ADDR_ALT:
                 omv_i2c_readw2(i2c, slv_addr, PIXART_CHIP_ID, (uint16_t *) &chip_id);
                 chip_id = ((chip_id << 8) | (chip_id >> 8)) & 0xFFFF;
                 break;
-            #endif // (OMV_PAG7936_ENABLE == 1)
+            #endif // (OMV_PAG7920_ENABLE == 1) || (OMV_PAG7936_ENABLE == 1)
 
-            #if (OMV_PS5520_ENABLE == 1)
-            case PS5520_SLV_ADDR:
-                omv_i2c_readw2(i2c, slv_addr, PIXART_CHIP_ID, (uint16_t *) &chip_id);
+            #if (OMV_MT9M114_ENABLE == 1) || (OMV_PS5520_ENABLE == 1)
+            // MT9M114 and PS5520 share the same I2C address.
+            case MT9M114_SLV_ADDR:
+                omv_i2c_readw2(i2c, slv_addr, ON_CHIP_ID, (uint16_t *) &chip_id);
+                if (slv_addr != MT9M114_ID) {
+                    omv_i2c_readw2(i2c, slv_addr, PIXART_CHIP_ID, (uint16_t *) &chip_id);
+                }
                 break;
-            #endif // (OMV_PS5520_ENABLE == 1)
+            #endif // (OMV_MT9M114_ENABLE == 1) || (OMV_PS5520_ENABLE == 1)
         }
 
         if (chip_id && dev_count < OMV_CSI_MAX_DEVICES) {
@@ -397,21 +373,20 @@ static size_t omv_csi_detect(omv_i2c_t *i2c, i2c_dev_t *dev_list) {
 }
 
 int omv_csi_probe(omv_i2c_t *i2c) {
-    int init_ret = 0;
+    bool reset_pol = OMV_CSI_ACTIVE_HIGH;
+    bool power_pol = OMV_CSI_ACTIVE_HIGH;
 
     size_t dev_count = 0;
     size_t aux_count = 0;
     i2c_dev_t dev_list[OMV_CSI_MAX_DEVICES] = { 0 };
 
-    bool reset_pol = OMV_CSI_ACTIVE_HIGH;
-    bool power_pol = OMV_CSI_ACTIVE_HIGH;
-
     // Active power-down state, active reset state
+    // This order is required for all sensors to work correctly.
     const omv_csi_polarity_t polarity_configs[][2] = {
-        { OMV_CSI_ACTIVE_LOW,  OMV_CSI_ACTIVE_LOW },
-        { OMV_CSI_ACTIVE_LOW,  OMV_CSI_ACTIVE_HIGH },
-        { OMV_CSI_ACTIVE_HIGH, OMV_CSI_ACTIVE_LOW }, 
         { OMV_CSI_ACTIVE_HIGH, OMV_CSI_ACTIVE_HIGH },
+        { OMV_CSI_ACTIVE_HIGH, OMV_CSI_ACTIVE_LOW },
+        { OMV_CSI_ACTIVE_LOW,  OMV_CSI_ACTIVE_HIGH },
+        { OMV_CSI_ACTIVE_LOW,  OMV_CSI_ACTIVE_LOW },
     };
     
     // Scan the bus multiple times using different reset and power polarities,
@@ -419,7 +394,7 @@ int omv_csi_probe(omv_i2c_t *i2c) {
     for (size_t i=0; dev_count == 0 && i<OMV_ARRAY_SIZE(polarity_configs); i++) {
         // Power cycle
         #if defined(OMV_CSI_POWER_PIN)
-        power_pol = polarity_configs[0][0];
+        power_pol = polarity_configs[i][0];
         omv_gpio_write(OMV_CSI_POWER_PIN, power_pol);
         mp_hal_delay_ms(10);
         omv_gpio_write(OMV_CSI_POWER_PIN, !power_pol);
@@ -428,7 +403,7 @@ int omv_csi_probe(omv_i2c_t *i2c) {
 
         // Reset
         #if defined(OMV_CSI_RESET_PIN)
-        reset_pol = polarity_configs[0][1];
+        reset_pol = polarity_configs[i][1];
         omv_gpio_write(OMV_CSI_RESET_PIN, reset_pol);
         mp_hal_delay_ms(10);
         omv_gpio_write(OMV_CSI_RESET_PIN, !reset_pol);
@@ -439,7 +414,7 @@ int omv_csi_probe(omv_i2c_t *i2c) {
     }
     
     // Add special devices, such as SPI sensors, soft-CSI etc...
-    #if (OMV_SOFTCSI_ENABLE == 1)
+    #if OMV_SOFTCSI_ENABLE
     if (dev_count < OMV_CSI_MAX_DEVICES) {
         dev_list[dev_count++] = (i2c_dev_t) { 0, SOFTCSI_ID };
     }
@@ -462,221 +437,58 @@ int omv_csi_probe(omv_i2c_t *i2c) {
     // Initialize detected sensors.
     for (size_t i=0; i<dev_count; i++) {
         omv_csi_t *csi = &csi_all[i];
+
         csi->power_pol = power_pol;
         csi->reset_pol = reset_pol;
         csi->chip_id =  dev_list[i].chip_id;
         csi->slv_addr = dev_list[i].slv_addr;
+        csi->detected = true;
 
-        switch (dev_list[i].chip_id) {
-            #if (OMV_OV2640_ENABLE == 1)
-            case OV2640_ID:
-                if (omv_csi_set_clk_frequency(OMV_OV2640_CLK_FREQ) != 0) {
-                    return OMV_CSI_ERROR_TIM_INIT_FAILED;
-                }
-                init_ret = ov2640_init(csi);
-                break;
-            #endif // (OMV_OV2640_ENABLE == 1)
+        uint32_t clk_hz = 0;
+        sensor_init_t init_fun = NULL;
 
-            #if (OMV_OV5640_ENABLE == 1)
-            case OV5640_ID: {
-                int freq = OMV_OV5640_CLK_FREQ;
-                #if (OMV_OV5640_REV_Y_CHECK == 1)
-                if (HAL_GetREVID() < 0x2003) {
-                    // Is this REV Y?
-                    freq = OMV_OV5640_REV_Y_FREQ;
-                }
-                #endif
-                if (omv_csi_set_clk_frequency(freq) != 0) {
-                    return OMV_CSI_ERROR_TIM_INIT_FAILED;
-                }
-                init_ret = ov5640_init(csi);
+        // Find the sensors init function.
+        for (size_t i=0; i<OMV_ARRAY_SIZE(sensor_config_table); i++) {
+            const sensor_config_t *config = &sensor_config_table[i];
+            if (csi->chip_id == config->chip_id) {
+                clk_hz = config->clk_hz;
+                init_fun = config->init_fun;
                 break;
             }
-            #endif // (OMV_OV5640_ENABLE == 1)
-
-            #if (OMV_OV7670_ENABLE == 1)
-            case OV7670_ID:
-                if (omv_csi_set_clk_frequency(OMV_OV7670_CLK_FREQ) != 0) {
-                    return OMV_CSI_ERROR_TIM_INIT_FAILED;
-                }
-                init_ret = ov7670_init(csi);
-                break;
-            #endif // (OMV_OV7670_ENABLE == 1)
-
-            #if (OMV_OV7690_ENABLE == 1)
-            case OV7690_ID:
-                if (omv_csi_set_clk_frequency(OMV_OV7690_CLK_FREQ) != 0) {
-                    return OMV_CSI_ERROR_TIM_INIT_FAILED;
-                }
-                init_ret = ov7690_init(csi);
-                break;
-            #endif // (OMV_OV7690_ENABLE == 1)
-
-            #if (OMV_OV7725_ENABLE == 1)
-            case OV7725_ID:
-                init_ret = ov7725_init(csi);
-                break;
-            #endif // (OMV_OV7725_ENABLE == 1)
-
-            #if (OMV_OV9650_ENABLE == 1)
-            case OV9650_ID:
-                init_ret = ov9650_init(csi);
-                break;
-            #endif // (OMV_OV9650_ENABLE == 1)
-
-            #if (OMV_MT9V0XX_ENABLE == 1)
-            case MT9V0X2_ID_V_1:
-            case MT9V0X2_ID_V_2:
-                // Force old versions to the newest.
-                csi->chip_id = MT9V0X2_ID;
-            case MT9V0X2_ID:
-            case MT9V0X4_ID:
-                if (omv_csi_set_clk_frequency(OMV_MT9V0XX_CLK_FREQ) != 0) {
-                    return OMV_CSI_ERROR_TIM_INIT_FAILED;
-                }
-                init_ret = mt9v0xx_init(csi);
-                break;
-            #endif //(OMV_MT9V0XX_ENABLE == 1)
-
-            #if (OMV_MT9M114_ENABLE == 1)
-            case MT9M114_ID:
-                if (omv_csi_set_clk_frequency(OMV_MT9M114_CLK_FREQ) != 0) {
-                    return OMV_CSI_ERROR_TIM_INIT_FAILED;
-                }
-                init_ret = mt9m114_init(csi);
-                break;
-            #endif //(OMV_MT9M114_ENABLE == 1)
-
-            #if (OMV_BOSON_ENABLE == 1)
-            case BOSON_ID:
-                if (omv_csi_set_clk_frequency(OMV_BOSON_CLK_FREQ) != 0) {
-                    return OMV_CSI_ERROR_TIM_INIT_FAILED;
-                }
-                init_ret = boson_init(csi);
-                break;
-            #endif // (OMV_BOSON_ENABLE == 1)
-
-            #if (OMV_LEPTON_ENABLE == 1)
-            case LEPTON_ID:
-                if (dev_count == 1 &&
-                    omv_csi_set_clk_frequency(OMV_LEPTON_CLK_FREQ) != 0) {
-                    return OMV_CSI_ERROR_TIM_INIT_FAILED;
-                }
-                init_ret = lepton_init(csi);
-                break;
-            #endif // (OMV_LEPTON_ENABLE == 1)
-
-            #if (OMV_HM01B0_ENABLE == 1)
-            case HM01B0_ID:
-                if (omv_csi_set_clk_frequency(OMV_HM01B0_CLK_FREQ) != 0) {
-                    return OMV_CSI_ERROR_TIM_INIT_FAILED;
-                }
-                init_ret = hm01b0_init(csi);
-                break;
-            #endif //(OMV_HM01B0_ENABLE == 1)
-
-            #if (OMV_HM0360_ENABLE == 1)
-            case HM0360_ID:
-                if (omv_csi_set_clk_frequency(OMV_HM0360_CLK_FREQ) != 0) {
-                    return OMV_CSI_ERROR_TIM_INIT_FAILED;
-                }
-                init_ret = hm0360_init(csi);
-                break;
-            #endif //(OMV_HM0360_ENABLE == 1)
-
-            #if (OMV_GC2145_ENABLE == 1)
-            case GC2145_ID:
-                if (omv_csi_set_clk_frequency(OMV_GC2145_CLK_FREQ) != 0) {
-                    return OMV_CSI_ERROR_TIM_INIT_FAILED;
-                }
-                init_ret = gc2145_init(csi);
-                break;
-            #endif //(OMV_GC2145_ENABLE == 1)
-
-            #if (OMV_GENX320_ENABLE == 1)
-            case GENX320_ID_ES:
-            case GENX320_ID_MP:
-                if (omv_csi_set_clk_frequency(OMV_GENX320_CLK_FREQ) != 0) {
-                    return OMV_CSI_ERROR_TIM_INIT_FAILED;
-                }
-                init_ret = genx320_init(csi);
-                break;
-            #endif // (OMV_GENX320_ENABLE == 1)
-
-            #if (OMV_PAG7920_ENABLE == 1)
-            case PAG7920_ID:
-                if (omv_csi_set_clk_frequency(OMV_PAG7920_CLK_FREQ) != 0) {
-                    return OMV_CSI_ERROR_TIM_INIT_FAILED;
-                }
-                init_ret = pag7920_init(csi);
-                break;
-            #endif // (OMV_PAG7920_ENABLE == 1)
-
-            #if (OMV_PAG7936_ENABLE == 1)
-            case PAG7936_ID:
-                if (omv_csi_set_clk_frequency(OMV_PAG7936_CLK_FREQ) != 0) {
-                    return OMV_CSI_ERROR_TIM_INIT_FAILED;
-                }
-                init_ret = pag7936_init(csi);
-                break;
-            #endif // (OMV_PAG7936_ENABLE == 1)
-
-            #if (OMV_PAJ6100_ENABLE == 1)
-            case PAJ6100_ID:
-                if (omv_csi_set_clk_frequency(OMV_PAJ6100_CLK_FREQ) != 0) {
-                    return OMV_CSI_ERROR_TIM_INIT_FAILED;
-                }
-                init_ret = paj6100_init(csi);
-                break;
-            #endif // (OMV_PAJ6100_ENABLE == 1)
-
-            #if (OMV_PS5520_ENABLE == 1)
-            case PS5520_ID:
-                if (omv_csi_set_clk_frequency(OMV_PS5520_CLK_FREQ) != 0) {
-                    return OMV_CSI_ERROR_TIM_INIT_FAILED;
-                }
-                init_ret = ps5520_init(csi);
-                break;
-            #endif // (OMV_PS5520_ENABLE == 1)
-
-            #if (OMV_FROGEYE2020_ENABLE == 1)
-            case FROGEYE2020_ID:
-                if (omv_csi_set_clk_frequency(OMV_FROGEYE2020_CLK_FREQ) != 0) {
-                    return OMV_CSI_ERROR_TIM_INIT_FAILED;
-                }
-                init_ret = frogeye2020_init(csi);
-                break;
-            #endif // (OMV_FROGEYE2020_ENABLE == 1)
-
-            #if (OMV_SOFTCSI_ENABLE == 1)
-            case SOFTCSI_ID:
-                init_ret = softcsi_init(csi);
-                break;
-            #endif // (OMV_SOFTCSI_ENABLE == 1)
-
-            default:
-                return OMV_CSI_ERROR_ISC_UNSUPPORTED;
-                break;
         }
 
-        if (init_ret != 0) {
-            // Sensor init failed.
+        if (init_fun ==  NULL) {
+            return OMV_CSI_ERROR_ISC_UNSUPPORTED;
+        } else if (init_fun(csi) != 0) {
             return OMV_CSI_ERROR_ISC_INIT_FAILED;
+        }
+
+        // Special case for OV5640.
+        #if (OMV_OV5640_REV_Y_CHECK == 1)
+        if (csi->chip_id == OV5640_ID && HAL_GetREVID() < 0x2003) {
+            clk_hz = OMV_OV5640_REV_Y_FREQ;
+        }
+        #endif
+
+        // Allow reconfiguring (or disabling) the external clock
+        // if just one sensor is detected, or for main sensors.
+        if (dev_count == 1 || !csi->auxiliary) {
+            omv_csi_set_clk_frequency(clk_hz);
         }
 
         // Count aux devices.
         aux_count += csi->auxiliary;
     }
 
-    // In case a single aux sensor was detected, clear
-    // the aux flag so it gets used as the main sensor.
+    // Special case: A single aux sensor was detected, clear
+    // the auxiliary flag so it gets used as the main sensor.
     if (dev_count == 1 && csi_all[0].auxiliary) {
         csi_all[0].auxiliary = 0;
         aux_count--;
     }
 
-    // Special case: two aux sensors detected, for example
-    // SoftCSI and Lepton. Use SoftCSI as the main sensor.
+    // Special case: Soft-CSI and another aux sensor detected,
+    // (Lepton for example). Use Soft-CSI for the main sensor.
     if (dev_count == aux_count) {
         for (size_t i=0; i<dev_count; i++) {
             omv_csi_t *csi = &csi_all[i];
@@ -694,7 +506,8 @@ int omv_csi_probe(omv_i2c_t *i2c) {
         return -1;
     }
     
-    // Auxiliary sensors use dynamically allocated frame buffers.
+    // Clear the FB pointer for all aux sensors, as they use
+    // dynamically allocated frame buffers.
     for (size_t i=0; i<dev_count; i++) {
         omv_csi_t *csi = &csi_all[i];
         if (csi->auxiliary) {
@@ -707,7 +520,8 @@ int omv_csi_probe(omv_i2c_t *i2c) {
 
 __weak int omv_csi_config(omv_csi_t *csi, omv_csi_config_t config) {
     // Call the sensor specific function.
-    if (csi->config != NULL &&
+    if (csi->detected &&
+        csi->config != NULL &&
         csi->config(csi, config) != 0) {
         return OMV_CSI_ERROR_CTL_FAILED;
     }

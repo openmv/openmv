@@ -40,7 +40,6 @@
 
 #include "omv_i2c.h"
 #include "omv_csi.h"
-#include "pag7936.h"
 #include "py/mphal.h"
 
 #define FRAME_TIME_20_16            (0x004E)
