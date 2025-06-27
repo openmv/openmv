@@ -33,7 +33,6 @@
 #include "omv_i2c.h"
 #include "omv_csi.h"
 #include "mt9v0xx.h"
-#include "mt9v0xx_regs.h"
 #include "py/mphal.h"
 
 #define ACTIVE_SENSOR_WIDTH     (752)

@@ -33,9 +33,7 @@
 
 #include "omv_i2c.h"
 #include "omv_csi.h"
-
 #include "hm01b0.h"
-#include "hm01b0_regs.h"
 
 #define HIMAX_BOOT_RETRY            (10)
 #define HIMAX_LINE_LEN_PCK_FULL     0x178

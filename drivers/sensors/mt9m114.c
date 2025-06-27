@@ -32,9 +32,9 @@
 
 #include "omv_i2c.h"
 #include "omv_csi.h"
-#include "mt9m114.h"
-#include "mt9m114_regs.h"
 #include "py/mphal.h"
+#include "mt9m114.h"
+#include "sensor_config.h"
 
 #define DUMMY_LINES             8
 #define DUMMY_COLUMNS           8

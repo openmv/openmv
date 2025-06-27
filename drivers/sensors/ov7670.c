@@ -33,7 +33,6 @@
 #include "omv_i2c.h"
 #include "omv_csi.h"
 #include "ov7670.h"
-#include "ov7670_regs.h"
 #include "py/mphal.h"
 
 static const uint8_t default_regs[][2] = {

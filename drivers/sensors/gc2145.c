@@ -33,7 +33,6 @@
 #include "omv_i2c.h"
 #include "omv_csi.h"
 #include "gc2145.h"
-#include "gc2145_regs.h"
 #include "py/mphal.h"
 
 #define BLANK_LINES             16

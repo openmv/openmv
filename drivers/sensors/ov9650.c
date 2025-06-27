@@ -34,7 +34,6 @@
 #include "omv_csi.h"
 #include "ov9650.h"
 #include "py/mphal.h"
-#include "ov9650_regs.h"
 
 #define NUM_BR_LEVELS    7
 

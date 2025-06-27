@@ -34,8 +34,8 @@
 #include "omv_gpio.h"
 
 #include "paj6100.h"
-#include "paj6100_reg.h"
 #include "pixspi.h"
+#include "sensor_config.h"
 
 #define CACHE_BANK
 

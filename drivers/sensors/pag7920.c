@@ -34,9 +34,8 @@
 #include "omv_csi.h"
 #include "framebuffer.h"
 #include "omv_i2c.h"
-
 #include "pag7920.h"
-#include "pag7920_reg.h"
+#include "sensor_config.h"
 
 #define SENSOR_I2C_DEBUG (0)
 

@@ -33,7 +33,6 @@
 #include "omv_i2c.h"
 #include "omv_csi.h"
 #include "ov2640.h"
-#include "ov2640_regs.h"
 #include "py/mphal.h"
 
 #define CIF_WIDTH      (400)

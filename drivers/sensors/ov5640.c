@@ -33,7 +33,6 @@
 #include "omv_i2c.h"
 #include "omv_csi.h"
 #include "ov5640.h"
-#include "ov5640_regs.h"
 #include "py/mphal.h"
 
 #define BLANK_LINES             8
