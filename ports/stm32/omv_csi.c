@@ -1128,8 +1128,6 @@ int omv_csi_init() {
         if (omv_csi_config(csi, OMV_CSI_CONFIG_INIT) != 0) {
             return OMV_CSI_ERROR_CSI_INIT_FAILED;
         }
-
-        csi->detected = true;
     }
 
     // Clear fb_enabled flag.

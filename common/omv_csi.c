@@ -146,6 +146,10 @@ __weak void omv_csi_init0() {
         omv_csi_t *csi = &csi_all[i];
         omv_i2c_t *i2c = csi->i2c;
 
+        if (!csi->detected) {
+            continue;
+        }
+
         // Abort ongoing transfer
         omv_csi_abort(csi, true, false);
 
@@ -459,6 +463,7 @@ int omv_csi_probe(omv_i2c_t *i2c) {
         csi->reset_pol = reset_pol;
         csi->chip_id =  dev_list[i].chip_id;
         csi->slv_addr = dev_list[i].slv_addr;
+        csi->detected = true;
 
         switch (dev_list[i].chip_id) {
             #if (OMV_OV2640_ENABLE == 1)
@@ -700,7 +705,8 @@ int omv_csi_probe(omv_i2c_t *i2c) {
 
 __weak int omv_csi_config(omv_csi_t *csi, omv_csi_config_t config) {
     // Call the sensor specific function.
-    if (csi->config != NULL &&
+    if (csi->detected &&
+        csi->config != NULL &&
         csi->config(csi, config) != 0) {
         return OMV_CSI_ERROR_CTL_FAILED;
     }
