@@ -302,7 +302,7 @@ void png_read(image_t *img, const char *path) {
     png_read_geometry(&fp, img, path, &rs);
 
     if (!img->pixels) {
-        image_xalloc(img, img->size);
+        image_alloc(img, img->size);
     }
 
     png_read_pixels(&fp, img);

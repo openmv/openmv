@@ -41,7 +41,6 @@
 #include "omv_gpio.h"
 
 #include "imlib.h"
-#include "xalloc.h"
 #include "py_assert.h"
 #include "py_image.h"
 #if MICROPY_PY_IMU
@@ -1028,7 +1027,7 @@ static mp_obj_t py_csi_ioctl(size_t n_args, const mp_obj_t *args) {
                 int command = mp_obj_get_int(args[0]);
                 size_t data_len = mp_obj_get_int(args[1]);
                 PY_ASSERT_TRUE_MSG(data_len > 0, "0 bytes transferred!");
-                uint16_t *data = xalloc(data_len * sizeof(uint16_t));
+                uint16_t *data = m_malloc(data_len * sizeof(uint16_t));
                 error = omv_csi_ioctl(self->csi, request, command, data, data_len);
                 if (error == 0) {
                     ret_obj = mp_obj_new_bytearray_by_ref(data_len * sizeof(uint16_t), data);

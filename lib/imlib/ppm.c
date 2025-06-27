@@ -31,7 +31,6 @@
 #include "py/obj.h"
 #include "py/runtime.h"
 
-#include "xalloc.h"
 #include "imlib.h"
 #include "file_utils.h"
 
@@ -143,7 +142,7 @@ void ppm_read(image_t *img, const char *path) {
     ppm_read_geometry(&fp, img, path, &rs);
 
     if (!img->pixels) {
-        image_xalloc(img, img->w * img->h * img->bpp);
+        image_alloc(img, img->w * img->h * img->bpp);
     }
     ppm_read_pixels(&fp, img, img->h, &rs);
     file_close(&fp);

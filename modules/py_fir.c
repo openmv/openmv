@@ -416,7 +416,7 @@ mp_obj_t py_fir_init(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_args)
             ir_fresh_rate = 14 - __CLZ(__RBIT((ir_fresh_rate > 512) ? 512 : ((ir_fresh_rate < 1) ? 1 : ir_fresh_rate)));
             adc_resolution = ((adc_resolution > 18) ? 18 : ((adc_resolution < 15) ? 15 : adc_resolution)) - 15;
 
-            MP_STATE_PORT(fir_mlx_data) = xalloc(sizeof(paramsMLX90621));
+            MP_STATE_PORT(fir_mlx_data) = m_malloc(sizeof(paramsMLX90621));
 
             fir_sensor = FIR_MLX90621;
             FIR_MLX90621_RETRY:
@@ -463,7 +463,7 @@ mp_obj_t py_fir_init(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_args)
             ir_fresh_rate = __CLZ(__RBIT((ir_fresh_rate > 64) ? 64 : ((ir_fresh_rate < 1) ? 1 : ir_fresh_rate))) + 1;
             adc_resolution = ((adc_resolution > 19) ? 19 : ((adc_resolution < 16) ? 16 : adc_resolution)) - 16;
 
-            MP_STATE_PORT(fir_mlx_data) = xalloc(sizeof(paramsMLX90640));
+            MP_STATE_PORT(fir_mlx_data) = m_malloc(sizeof(paramsMLX90640));
 
             fir_sensor = FIR_MLX90640;
             FIR_MLX90640_RETRY:
@@ -509,7 +509,7 @@ mp_obj_t py_fir_init(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_args)
             ir_fresh_rate = __CLZ(__RBIT((ir_fresh_rate > 64) ? 64 : ((ir_fresh_rate < 1) ? 1 : ir_fresh_rate))) + 1;
             adc_resolution = ((adc_resolution > 19) ? 19 : ((adc_resolution < 16) ? 16 : adc_resolution)) - 16;
 
-            MP_STATE_PORT(fir_mlx_data) = xalloc(sizeof(paramsMLX90641));
+            MP_STATE_PORT(fir_mlx_data) = m_malloc(sizeof(paramsMLX90641));
 
             fir_sensor = FIR_MLX90641;
             FIR_MLX90641_RETRY:
@@ -1023,7 +1023,7 @@ mp_obj_t py_fir_snapshot(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_a
     if (args[ARG_copy_to_fb].u_bool) {
         py_helper_set_to_framebuffer(&dst_img);
     } else {
-        dst_img.data = xalloc(image_size(&dst_img));
+        dst_img.data = m_malloc(image_size(&dst_img));
     }
 
     float min = FLT_MAX;

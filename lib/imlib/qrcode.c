@@ -3016,7 +3016,7 @@ void imlib_find_qrcodes(list_t *out, image_t *ptr, rectangle_t *roi)
 
             // Payload is already null terminated.
             lnk_data.payload_len = data->payload_len;
-            lnk_data.payload = xalloc(data->payload_len);
+            lnk_data.payload = m_malloc(data->payload_len);
             memcpy(lnk_data.payload, data->payload, data->payload_len);
 
             lnk_data.version = data->version;

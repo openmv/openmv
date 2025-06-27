@@ -38,13 +38,13 @@
 #include "fb_alloc.h"
 #include "file_utils.h"
 #include "umm_malloc.h"
-#include "xalloc.h"
 #include "array.h"
 #include "fmath.h"
 #include "collections.h"
 #include "imlib_config.h"
 #include "omv_boardconfig.h"
 #include "omv_common.h"
+#include "py/runtime.h"
 
 // Enables 38 TensorFlow Lite operators.
 #define IMLIB_TF_DEFAULT        (1)
@@ -559,7 +559,7 @@ typedef struct image {
     int32_t w;
     int32_t h;
     PIXFORMAT_STRUCT;
-    // Keeps a reference to the GC block when used with image_xalloc/image_xalloc0.
+    // Keeps a reference to the GC block when used with image_alloc/image_alloc0.
     uint8_t *_raw;
     union {
         uint8_t *pixels;
@@ -567,8 +567,8 @@ typedef struct image {
     };
 } image_t;
 
-void image_xalloc(image_t *img, size_t size);
-void image_xalloc0(image_t *img, size_t size);
+void image_alloc(image_t *img, size_t size);
+void image_alloc0(image_t *img, size_t size);
 void image_init(image_t *ptr, int w, int h, pixformat_t pixfmt, uint32_t size, void *pixels);
 void image_copy(image_t *dst, image_t *src, bool deep);
 size_t image_line_size(image_t *ptr);

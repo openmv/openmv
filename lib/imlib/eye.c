@@ -24,7 +24,6 @@
  * Pupil localization using image gradients. See Fabian Timm's paper for details.
  */
 #include "imlib.h"
-#include "xalloc.h"
 #include "fmath.h"
 
 static void find_gradients(image_t *src, array_t *gradients, int x_off, int y_off, int box_w, int box_h) {
@@ -49,7 +48,7 @@ static void find_gradients(image_t *src, array_t *gradients, int x_off, int y_of
 
             float m = fast_sqrtf(vx * vx + vy * vy);
             if (m > 200) {
-                vec_t *v = xalloc(sizeof(vec_t));
+                vec_t *v = m_malloc(sizeof(vec_t));
                 v->m = m;
                 v->x = vx / m;
                 v->y = vy / m;
@@ -127,7 +126,7 @@ static void find_iris(image_t *src, array_t *gradients, int x_off, int y_off, in
 // This function should be called on an ROI detected with the eye Haar cascade.
 void imlib_find_iris(image_t *src, point_t *iris, rectangle_t *roi) {
     array_t *iris_gradients;
-    array_alloc(&iris_gradients, xfree);
+    array_alloc(&iris_gradients, m_free);
 
     // Tune these offsets to skip eyebrows and reduce window size
     int box_w = roi->w - ((int) (0.15f * roi->w));

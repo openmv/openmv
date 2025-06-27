@@ -25,10 +25,9 @@
  */
 #include "imlib.h"
 #include "array.h"
-#include "xalloc.h"
 
 rectangle_t *rectangle_alloc(int16_t x, int16_t y, int16_t w, int16_t h) {
-    rectangle_t *r = xalloc(sizeof(rectangle_t));
+    rectangle_t *r = m_malloc(sizeof(rectangle_t));
     r->x = x;
     r->y = y;
     r->w = w;
@@ -87,8 +86,8 @@ static void rectangle_div(rectangle_t *r, int c) {
 }
 
 array_t *rectangle_merge(array_t *rectangles) {
-    array_t *objects; array_alloc(&objects, xfree);
-    array_t *overlap; array_alloc(&overlap, xfree);
+    array_t *objects; array_alloc(&objects, m_free);
+    array_t *overlap; array_alloc(&overlap, m_free);
     /* merge overlapping detections */
     while (array_length(rectangles)) {
         /* check for overlapping detections */
@@ -104,7 +103,7 @@ array_t *rectangle_merge(array_t *rectangles) {
         for (int i = 0; i < count; i++) {
             rectangle_t *overlap_rect = (rectangle_t *) array_pop_back(overlap);
             rectangle_add(rect, overlap_rect);
-            xfree(overlap_rect);
+            m_free(overlap_rect);
         }
         /* average the overlapping detections */
         rectangle_div(rect, count + 1);

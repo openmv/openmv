@@ -46,7 +46,7 @@ image_t *py_helper_arg_to_image(const mp_obj_t arg, uint32_t flags) {
         #if defined(IMLIB_ENABLE_IMAGE_FILE_IO)
         const char *path = mp_obj_str_get_str(arg);
         FIL fp;
-        image = xalloc(sizeof(image_t));
+        image = m_malloc(sizeof(image_t));
         img_read_settings_t rs;
         imlib_read_geometry(&fp, image, path, &rs);
         file_close(&fp);
@@ -313,7 +313,7 @@ float *py_helper_keyword_corner_array(size_t n_args, const mp_obj_t *args, size_
     if (kw_arg) {
         mp_obj_t *arg_array;
         mp_obj_get_array_fixed_n(kw_arg->value, 4, &arg_array);
-        float *corners = xalloc(sizeof(float) * 8);
+        float *corners = m_malloc(sizeof(float) * 8);
         for (int i = 0; i < 4; i++) {
             mp_obj_t *arg_point;
             mp_obj_get_array_fixed_n(arg_array[i], 2, &arg_point);
@@ -324,7 +324,7 @@ float *py_helper_keyword_corner_array(size_t n_args, const mp_obj_t *args, size_
     } else if (n_args > arg_index) {
         mp_obj_t *arg_array;
         mp_obj_get_array_fixed_n(args[arg_index], 4, &arg_array);
-        float *corners = xalloc(sizeof(float) * 8);
+        float *corners = m_malloc(sizeof(float) * 8);
         for (int i = 0; i < 4; i++) {
             mp_obj_t *arg_point;
             mp_obj_get_array_fixed_n(arg_array[i], 2, &arg_point);

@@ -29,13 +29,12 @@
 #include <stdio.h>
 #include "imlib.h"
 #include "array.h"
-#include "xalloc.h"
 
 extern uint32_t rng_randint(uint32_t min, uint32_t max);
 
 static cluster_t *cluster_alloc(int cx, int cy) {
     cluster_t *c = NULL;
-    c = xalloc(sizeof(*c));
+    c = m_malloc(sizeof(*c));
     if (c != NULL) {
         c->x = cx;
         c->y = cy;
@@ -49,7 +48,7 @@ static cluster_t *cluster_alloc(int cx, int cy) {
 static void cluster_free(void *c) {
     cluster_t *cl = c;
     array_free(cl->points);
-    xfree(cl);
+    m_free(cl);
 }
 
 static void cluster_reset(array_t *clusters, array_t *points) {
