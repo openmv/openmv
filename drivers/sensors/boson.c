@@ -181,7 +181,7 @@ int boson_init(omv_csi_t *csi) {
     resolution[OMV_CSI_FRAMESIZE_QVGA][1] = 256;
 
     if (reset(csi) != 0) {
-        return -1;
+        return OMV_CSI_ERROR_CSI_INIT_FAILED;
     }
 
     csi->chip_id = (boson_framesize == OMV_CSI_FRAMESIZE_VGA) ? BOSON_640_ID : BOSON_320_ID;
