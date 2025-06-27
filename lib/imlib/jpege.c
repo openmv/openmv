@@ -592,7 +592,7 @@ static int jpeg_check_highwater(jpeg_buf_t *jpeg_buf) {
             return 1;
         }
         jpeg_buf->length += 1024;
-        jpeg_buf->buf = xrealloc(jpeg_buf->buf, jpeg_buf->length);
+        jpeg_buf->buf = m_realloc(jpeg_buf->buf, jpeg_buf->length);
     }
     return 0;
 }
@@ -605,7 +605,7 @@ static void jpeg_put_char(jpeg_buf_t *jpeg_buf, char c) {
             return;
         }
         jpeg_buf->length += 1024;
-        jpeg_buf->buf = xrealloc(jpeg_buf->buf, jpeg_buf->length);
+        jpeg_buf->buf = m_realloc(jpeg_buf->buf, jpeg_buf->length);
     }
 
     jpeg_buf->buf[jpeg_buf->idx++] = c;
@@ -619,7 +619,7 @@ static void jpeg_put_bytes(jpeg_buf_t *jpeg_buf, const void *data, int size) {
             return;
         }
         jpeg_buf->length += 1024;
-        jpeg_buf->buf = xrealloc(jpeg_buf->buf, jpeg_buf->length);
+        jpeg_buf->buf = m_realloc(jpeg_buf->buf, jpeg_buf->length);
     }
 
     memcpy(jpeg_buf->buf + jpeg_buf->idx, data, size);
@@ -1371,7 +1371,7 @@ void jpeg_read(image_t *img, const char *path) {
     jpeg_read_geometry(&fp, img, path, &rs);
 
     if (!img->pixels) {
-        image_xalloc(img, img->size);
+        image_alloc(img, img->size);
     }
 
     jpeg_read_pixels(&fp, img);

@@ -26,25 +26,24 @@
 #include <string.h>
 #include "py/runtime.h"
 #include "py/stackctrl.h"
-#include "xalloc.h"
 #include "array.h"
 #define ARRAY_INIT_SIZE    (4) // Size of one GC block.
 
 void array_alloc(array_t **a, array_dtor_t dtor) {
-    array_t *array = xalloc(sizeof(array_t));
+    array_t *array = m_malloc(sizeof(array_t));
     array->index = 0;
     array->length = ARRAY_INIT_SIZE;
     array->dtor = dtor;
-    array->data = xalloc(ARRAY_INIT_SIZE * sizeof(void *));
+    array->data = m_malloc(ARRAY_INIT_SIZE * sizeof(void *));
     *a = array;
 }
 
 void array_alloc_init(array_t **a, array_dtor_t dtor, int size) {
-    array_t *array = xalloc(sizeof(array_t));
+    array_t *array = m_malloc(sizeof(array_t));
     array->index = 0;
     array->length = size;
     array->dtor = dtor;
-    array->data = xalloc(size * sizeof(void *));
+    array->data = m_malloc(size * sizeof(void *));
     *a = array;
 }
 
@@ -54,7 +53,7 @@ void array_clear(array_t *array) {
             array->dtor(array->data[i]);
         }
     }
-    xfree(array->data);
+    m_free(array->data);
     array->index = 0;
     array->length = 0;
     array->data = NULL;
@@ -64,7 +63,7 @@ void array_clear(array_t *array) {
 
 void array_free(array_t *array) {
     array_clear(array);
-    xfree(array);
+    m_free(array);
 }
 
 int array_length(array_t *array) {
@@ -78,7 +77,7 @@ void *array_at(array_t *array, int idx) {
 void array_push_back(array_t *array, void *element) {
     if (array->index == array->length) {
         array->length += ARRAY_INIT_SIZE;
-        array->data = xrealloc(array->data, array->length * sizeof(void *));
+        array->data = m_realloc(array->data, array->length * sizeof(void *));
     }
     array->data[array->index++] = element;
 }
@@ -123,7 +122,7 @@ void array_resize(array_t *array, int num) {
             }
             // resize array
             array->length = num;
-            array->data = xrealloc(array->data, array->length * sizeof(void *));
+            array->data = m_realloc(array->data, array->length * sizeof(void *));
         }
     }
 }

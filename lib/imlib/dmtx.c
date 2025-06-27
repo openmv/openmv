@@ -6077,7 +6077,7 @@ void imlib_find_datamatrices(list_t *out, image_t *ptr, rectangle_t *roi, int ef
 
             // Payload is NOT already null terminated.
             lnk_data.payload_len = message->outputIdx;
-            lnk_data.payload = xalloc(message->outputIdx);
+            lnk_data.payload = m_malloc(message->outputIdx);
             memcpy(lnk_data.payload, message->output, message->outputIdx);
 
             int rotate = fast_roundf((((2 * M_PI) + fast_atan2f(p[1].Y - p[0].Y, p[1].X - p[0].X)) * 180) / M_PI);

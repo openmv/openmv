@@ -29,7 +29,6 @@
 #include <stdint.h>
 #include "imlib.h"
 #include "fb_alloc.h"
-#include "xalloc.h"
 #ifdef IMLIB_ENABLE_SELECTIVE_SEARCH
 
 #define THRESHOLD(size, c)    (c / size)
@@ -235,7 +234,7 @@ array_t *imlib_selective_search(image_t *src, float t, int min_size, float a1, f
 
     // Region proposals array
     array_t *proposals;
-    array_alloc(&proposals, xfree);
+    array_alloc(&proposals, m_free);
 
     universe *u = universe_create(width * height);
     edge *edges = (edge *) fb_alloc(width * height * sizeof(edge) * 4, FB_ALLOC_NO_HINT);

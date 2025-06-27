@@ -119,7 +119,6 @@ target_sources(${MICROPY_TARGET} PRIVATE
     ${TOP_DIR}/common/file_utils.c
     ${TOP_DIR}/common/mp_utils.c
     ${TOP_DIR}/common/omv_csi.c
-    ${TOP_DIR}/common/xalloc.c
     ${TOP_DIR}/common/fb_alloc.c
     ${TOP_DIR}/common/umm_malloc.c
     ${TOP_DIR}/common/dma_alloc.c

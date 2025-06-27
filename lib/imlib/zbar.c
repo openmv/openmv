@@ -8787,7 +8787,7 @@ void imlib_find_barcodes(list_t *out, image_t *ptr, rectangle_t *roi)
 
                 // Payload is already null terminated.
                 lnk_data.payload_len = zbar_symbol_get_data_length(symbol);
-                lnk_data.payload = xalloc(zbar_symbol_get_data_length(symbol));
+                lnk_data.payload = m_malloc(zbar_symbol_get_data_length(symbol));
                 memcpy(lnk_data.payload, zbar_symbol_get_data(symbol), zbar_symbol_get_data_length(symbol));
 
                 switch (zbar_symbol_get_type(symbol)) {

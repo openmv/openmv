@@ -30,7 +30,6 @@
 #include "py/obj.h"
 #include "py/runtime.h"
 
-#include "xalloc.h"
 #include "file_utils.h"
 
 // This function inits the geometry values of an image (opens file).
@@ -270,7 +269,7 @@ void bmp_read(image_t *img, const char *path) {
     file_open(&fp, path, true, FA_READ | FA_OPEN_EXISTING);
     bmp_read_geometry(&fp, img, path, &rs);
     if (!img->pixels) {
-        image_xalloc(img, img->w * img->h * img->bpp);
+        image_alloc(img, img->w * img->h * img->bpp);
     }
     bmp_read_pixels(&fp, img, img->h, &rs);
     file_close(&fp);

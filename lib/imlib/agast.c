@@ -13,7 +13,6 @@
  */
 #include "imlib.h"
 #if defined(IMLIB_ENABLE_AGAST) && !defined(OMV_NO_GPL)
-#include "xalloc.h"
 #include "fb_alloc.h"
 #include "gc.h"
 
@@ -44,7 +43,7 @@ static void nonmax_suppression(corner_t *corners, int num_corners, array_t *keyp
 
 static kp_t *alloc_keypoint(uint16_t x, uint16_t y, uint16_t score) {
     // Note must set keypoint descriptor to zeros
-    kp_t *kpt = xalloc0(sizeof *kpt);
+    kp_t *kpt = m_malloc0(sizeof *kpt);
     kpt->x = x;
     kpt->y = y;
     kpt->score = score;

@@ -30,7 +30,6 @@
 #include <stdlib.h>
 
 #include "imlib.h"
-#include "xalloc.h"
 #include "file_utils.h"
 #ifdef IMLIB_ENABLE_FIND_LBP
 
@@ -72,7 +71,7 @@ uint8_t *imlib_lbp_desc(image_t *image, rectangle_t *roi) {
     int RX = roi->w / LBP_NUM_REGIONS;
     int RY = roi->h / LBP_NUM_REGIONS;
     uint8_t *data = image->data;
-    uint8_t *desc = xalloc0(LBP_DESC_SIZE);
+    uint8_t *desc = m_malloc0(LBP_DESC_SIZE);
 
     for (int y = roi->y; y < (roi->y + roi->h) - 3; y++) {
         int y_idx = ((y - roi->y) / RY) * LBP_NUM_REGIONS;
@@ -116,13 +115,13 @@ int imlib_lbp_desc_load(FIL *fp, uint8_t **desc) {
     FRESULT res = FR_OK;
 
     *desc = NULL;
-    uint8_t *hist = xalloc(LBP_DESC_SIZE);
+    uint8_t *hist = m_malloc(LBP_DESC_SIZE);
 
     // Read descriptor
     res = file_ll_read(fp, hist, LBP_DESC_SIZE, &bytes);
     if (res != FR_OK || bytes != LBP_DESC_SIZE) {
         *desc = NULL;
-        xfree(hist);
+        m_free(hist);
     } else {
         *desc = hist;
     }

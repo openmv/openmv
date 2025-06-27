@@ -209,7 +209,7 @@ void list_copy(list_t *dst, list_t *src) {
 void list_free(list_t *ptr) {
     for (list_lnk_t *i = ptr->head; i; ) {
         list_lnk_t *j = i->next;
-        xfree(i);
+        m_free(i);
         i = j;
     }
 }
@@ -272,7 +272,7 @@ static void list_unlink(list_t *src, list_lnk_t *lnk) {
 }
 
 void list_insert(list_t *ptr, list_lnk_t *lnk, void *data) {
-    list_lnk_t *tmp = (list_lnk_t *) xalloc(sizeof(list_lnk_t) + ptr->data_len);
+    list_lnk_t *tmp = (list_lnk_t *) m_malloc(sizeof(list_lnk_t) + ptr->data_len);
     memcpy(tmp->data, data, ptr->data_len);
     list_link(ptr, lnk, tmp);
 }
@@ -291,7 +291,7 @@ void list_remove(list_t *ptr, list_lnk_t *lnk, void *data) {
     }
 
     list_unlink(ptr, lnk);
-    xfree(lnk);
+    m_free(lnk);
 }
 
 void list_pop_front(list_t *ptr, void *data) {

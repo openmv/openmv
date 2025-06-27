@@ -29,7 +29,6 @@
 #include <string.h>
 #include "imlib.h"
 #include "fb_alloc.h"
-#include "xalloc.h"
 
 #ifdef IMLIB_ENABLE_HOG
 #define N_BINS    (9)
@@ -145,7 +144,7 @@ void imlib_find_hog(image_t *src, rectangle_t *roi, int cell_size) {
         }
     }
 
-    xfree(gds);
+    m_free(gds);
     fb_free();
 }
 #endif // IMLIB_ENABLE_HOG

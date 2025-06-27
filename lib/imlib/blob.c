@@ -68,7 +68,7 @@ static void bin_up(uint16_t *hist, uint16_t size, unsigned int max_size, uint16_
 
         uint16_t bin_count = end - start + 1; // >= 1
         *new_size = IM_MIN(max_size, bin_count);
-        *new_hist = xalloc0((*new_size) * sizeof(uint16_t));
+        *new_hist = m_malloc0((*new_size) * sizeof(uint16_t));
         float div_value = (*new_size) / ((float) bin_count); // Reversed so we can multiply below.
 
         for (int i = 0; i < bin_count; i++) {
@@ -85,7 +85,7 @@ static void merge_bins(int b_dst_start, int b_dst_end, uint16_t **b_dst_hist, ui
 
     uint16_t bin_count = end - start + 1; // >= 1
     uint16_t new_size = IM_MIN(max_size, bin_count);
-    uint16_t *new_hist = xalloc0(new_size * sizeof(uint16_t));
+    uint16_t *new_hist = m_malloc0(new_size * sizeof(uint16_t));
     float div_value = new_size / ((float) bin_count); // Reversed so we can multiply below.
 
     int b_dst_bin_count = b_dst_end - b_dst_start + 1; // >= 1
@@ -109,8 +109,8 @@ static void merge_bins(int b_dst_start, int b_dst_end, uint16_t **b_dst_hist, ui
         }
     }
 
-    xfree(*b_dst_hist);
-    xfree(*b_src_hist);
+    m_free(*b_dst_hist);
+    m_free(*b_src_hist);
 
     *b_dst_hist_len = new_size;
     (*b_dst_hist) = new_hist;
@@ -462,10 +462,10 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                                     list_push_back(out, &lnk_blob);
                                 } else {
                                     if (lnk_blob.x_hist_bins) {
-                                        xfree(lnk_blob.x_hist_bins);
+                                        m_free(lnk_blob.x_hist_bins);
                                     }
                                     if (lnk_blob.y_hist_bins) {
-                                        xfree(lnk_blob.y_hist_bins);
+                                        m_free(lnk_blob.y_hist_bins);
                                     }
                                 }
                             }
@@ -768,10 +768,10 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                                     list_push_back(out, &lnk_blob);
                                 } else {
                                     if (lnk_blob.x_hist_bins) {
-                                        xfree(lnk_blob.x_hist_bins);
+                                        m_free(lnk_blob.x_hist_bins);
                                     }
                                     if (lnk_blob.y_hist_bins) {
-                                        xfree(lnk_blob.y_hist_bins);
+                                        m_free(lnk_blob.y_hist_bins);
                                     }
                                 }
                             }
@@ -1074,10 +1074,10 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                                     list_push_back(out, &lnk_blob);
                                 } else {
                                     if (lnk_blob.x_hist_bins) {
-                                        xfree(lnk_blob.x_hist_bins);
+                                        m_free(lnk_blob.x_hist_bins);
                                     }
                                     if (lnk_blob.y_hist_bins) {
-                                        xfree(lnk_blob.y_hist_bins);
+                                        m_free(lnk_blob.y_hist_bins);
                                     }
                                 }
                             }

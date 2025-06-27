@@ -24,10 +24,9 @@
  * Point functions.
  */
 #include "imlib.h"
-#include "xalloc.h"
 
 point_t *point_alloc(int16_t x, int16_t y) {
-    point_t *p = xalloc(sizeof(point_t));
+    point_t *p = m_malloc(sizeof(point_t));
     p->x = x;
     p->y = y;
     return p;

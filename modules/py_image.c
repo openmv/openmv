@@ -39,7 +39,6 @@
 #include "imlib.h"
 #include "array.h"
 #include "file_utils.h"
-#include "xalloc.h"
 #include "fb_alloc.h"
 #include "framebuffer.h"
 #include "py_assert.h"
@@ -1151,7 +1150,7 @@ static mp_obj_t py_image_to(pixformat_t pixfmt, mp_rom_obj_t default_color_palet
         py_helper_set_to_framebuffer(&dst_img);
     } else if (args[ARG_copy].u_bool) {
         // Create dynamic copy.
-        image_xalloc(&dst_img, size);
+        image_alloc(&dst_img, size);
     } else {
         // Convert in place.
         framebuffer_t *fb = framebuffer_get(0);
@@ -1987,7 +1986,7 @@ static mp_obj_t py_image_binary(size_t n_args, const mp_obj_t *pos_args, mp_map_
     out.pixfmt = args[ARG_to_bitmap].u_bool ? PIXFORMAT_BINARY : image->pixfmt;
 
     if (args[ARG_copy].u_bool) {
-        image_xalloc(&out, image_size(&out));
+        image_alloc(&out, image_size(&out));
     } else {
         out.data = image->data;
     }
@@ -4498,10 +4497,10 @@ static mp_obj_t py_image_find_blobs(size_t n_args, const mp_obj_t *args, mp_map_
         list_pop_front(&out, &lnk_data);
         objects_list->items[i] = py_blob_new(&lnk_data);
         if (lnk_data.x_hist_bins) {
-            xfree(lnk_data.x_hist_bins);
+            m_free(lnk_data.x_hist_bins);
         }
         if (lnk_data.y_hist_bins) {
-            xfree(lnk_data.y_hist_bins);
+            m_free(lnk_data.y_hist_bins);
         }
     }
 
@@ -5090,7 +5089,7 @@ static mp_obj_t py_image_find_qrcodes(size_t n_args, const mp_obj_t *args, mp_ma
         o->eci = mp_obj_new_int(lnk_data.eci);
 
         objects_list->items[i] = o;
-        xfree(lnk_data.payload);
+        m_free(lnk_data.payload);
     }
 
     return objects_list;
@@ -5523,7 +5522,7 @@ static mp_obj_t py_image_find_datamatrices(size_t n_args, const mp_obj_t *args, 
         o->padding = mp_obj_new_int(lnk_data.padding);
 
         objects_list->items[i] = o;
-        xfree(lnk_data.payload);
+        m_free(lnk_data.payload);
     }
 
     return objects_list;
@@ -5700,7 +5699,7 @@ static mp_obj_t py_image_find_barcodes(size_t n_args, const mp_obj_t *args, mp_m
         o->quality = mp_obj_new_int(lnk_data.quality);
 
         objects_list->items[i] = o;
-        xfree(lnk_data.payload);
+        m_free(lnk_data.payload);
     }
 
     return objects_list;
@@ -6130,7 +6129,7 @@ mp_obj_t py_image_make_new(const mp_obj_type_t *type, size_t n_args, size_t n_kw
         if (args[ARG_copy_to_fb].u_bool) {
             py_helper_set_to_framebuffer(&image);
         } else {
-            image_xalloc(&image, image_size(&image));
+            image_alloc(&image, image_size(&image));
         }
 
         imlib_load_image(&image, path);
@@ -6171,7 +6170,7 @@ mp_obj_t py_image_make_new(const mp_obj_type_t *type, size_t n_args, size_t n_kw
                 mp_raise_ValueError(MP_ERROR_TEXT("Buffer is too small"));
             }
         } else {
-            image_xalloc(&image, image_size(&image));
+            image_alloc(&image, image_size(&image));
         }
 
         mp_float_t *farray = (mp_float_t *) array->array;
@@ -6231,7 +6230,7 @@ mp_obj_t py_image_make_new(const mp_obj_type_t *type, size_t n_args, size_t n_kw
                 mp_raise_ValueError(MP_ERROR_TEXT("Buffer is too small"));
             }
         } else {
-            image_xalloc0(&image, image_size(&image));
+            image_alloc0(&image, image_size(&image));
         }
     }
 
@@ -6869,7 +6868,7 @@ mp_obj_t py_image_load_descriptor(size_t n_args, const mp_obj_t *args, mp_map_t 
         #if defined(IMLIB_ENABLE_FIND_KEYPOINTS)
         case DESC_ORB: {
             array_t *kpts = NULL;
-            array_alloc(&kpts, xfree);
+            array_alloc(&kpts, m_free);
 
             res = orb_load_descriptor(&fp, kpts);
             if (res == FR_OK) {

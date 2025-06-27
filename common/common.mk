@@ -39,7 +39,6 @@ COMMON_SRC_C += \
     unaligned_memcpy.c \
     usbdbg.c \
     vospi.c \
-    xalloc.c \
 
 CFLAGS += -I$(TOP_DIR)/common
 OMV_FIRM_OBJ += $(addprefix $(BUILD)/common/, $(COMMON_SRC_C:.c=.o))

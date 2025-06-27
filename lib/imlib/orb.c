@@ -37,7 +37,6 @@
 #if defined(IMLIB_ENABLE_FIND_KEYPOINTS)
 #include "fmath.h"
 #include "arm_math.h"
-#include "xalloc.h"
 #include "fb_alloc.h"
 #include "file_utils.h"
 
@@ -372,7 +371,7 @@ static void image_scale(image_t *src, image_t *dst) {
 array_t *orb_find_keypoints(image_t *img, bool normalized, int threshold,
                             float scale_factor, int max_keypoints, corner_detector_t corner_detector, rectangle_t *roi) {
     array_t *kpts;
-    array_alloc(&kpts, xfree);
+    array_alloc(&kpts, m_free);
 
     int octave = 1;
     int kpts_index = 0;
@@ -778,7 +777,7 @@ int orb_load_descriptor(FIL *fp, array_t *kpts) {
 
     // Read keypoints
     for (int i = 0; i < kpts_size; i++) {
-        kp_t *kp = xalloc(sizeof(*kp));
+        kp_t *kp = m_malloc(sizeof(*kp));
         kp->matched = 0;
 
         // Read X
