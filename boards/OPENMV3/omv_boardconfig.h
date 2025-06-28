@@ -46,6 +46,7 @@
 #define OMV_OV7725_ENABLE                     (1)
 #define OMV_OV7725_PLL_CONFIG                 (0x81) // x6
 #define OMV_OV7725_BANDING                    (0x8F)
+#define OMV_OV7725_CLK_FREQ                   (9000000)
 
 // FIR drivers configuration.
 #define OMV_FIR_MLX90621_ENABLE               (1)
