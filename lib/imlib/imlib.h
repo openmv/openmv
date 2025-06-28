@@ -131,9 +131,6 @@ typedef struct point {
 } point_t;
 
 void point_init(point_t *ptr, int x, int y);
-void point_copy(point_t *dst, point_t *src);
-bool point_equal_fast(point_t *ptr0, point_t *ptr1);
-int point_quadrance(point_t *ptr0, point_t *ptr1);
 void point_rotate(int x, int y, float r, int center_x, int center_y, int16_t *new_x, int16_t *new_y);
 void point_min_area_rectangle(point_t *corners, point_t *new_corners, int corners_len);
 
@@ -161,22 +158,10 @@ typedef struct rectangle {
     int16_t h;
 } rectangle_t;
 
-typedef struct bounding_box_lnk_data {
-    rectangle_t rect;
-    float score;
-    int label_index;
-} bounding_box_lnk_data_t;
-
 void rectangle_init(rectangle_t *ptr, int x, int y, int w, int h);
-void rectangle_copy(rectangle_t *dst, rectangle_t *src);
-bool rectangle_equal_fast(rectangle_t *ptr0, rectangle_t *ptr1);
 bool rectangle_overlap(rectangle_t *ptr0, rectangle_t *ptr1);
 void rectangle_intersected(rectangle_t *dst, rectangle_t *src);
 void rectangle_united(rectangle_t *dst, rectangle_t *src);
-float rectangle_iou(rectangle_t *r1, rectangle_t *r2);
-void rectangle_nms_add_bounding_box(list_t *bounding_boxes, bounding_box_lnk_data_t *box);
-int rectangle_nms_get_bounding_boxes(list_t *bounding_boxes, float threshold, float sigma);
-void rectangle_map_bounding_boxes(list_t *bounding_boxes, int window_w, int window_h, rectangle_t *roi);
 
 /////////////////
 // Color Stuff //
@@ -569,8 +554,6 @@ typedef struct image {
 
 void image_alloc(image_t *img, size_t size);
 void image_alloc0(image_t *img, size_t size);
-void image_init(image_t *ptr, int w, int h, pixformat_t pixfmt, uint32_t size, void *pixels);
-void image_copy(image_t *dst, image_t *src, bool deep);
 size_t image_line_size(image_t *ptr);
 size_t image_size(image_t *ptr);
 bool image_get_mask_pixel(image_t *ptr, int x, int y);

@@ -66,20 +66,6 @@ void point_init(point_t *ptr, int x, int y) {
     ptr->y = y;
 }
 
-void point_copy(point_t *dst, point_t *src) {
-    memcpy(dst, src, sizeof(point_t));
-}
-
-bool point_equal_fast(point_t *ptr0, point_t *ptr1) {
-    return !memcmp(ptr0, ptr1, sizeof(point_t));
-}
-
-int point_quadrance(point_t *ptr0, point_t *ptr1) {
-    int delta_x = ptr0->x - ptr1->x;
-    int delta_y = ptr0->y - ptr1->y;
-    return (delta_x * delta_x) + (delta_y * delta_y);
-}
-
 void point_rotate(int x, int y, float r, int center_x, int center_y, int16_t *new_x, int16_t *new_y) {
     x -= center_x;
     y -= center_y;
@@ -216,14 +202,6 @@ void rectangle_init(rectangle_t *ptr, int x, int y, int w, int h) {
     ptr->h = h;
 }
 
-void rectangle_copy(rectangle_t *dst, rectangle_t *src) {
-    memcpy(dst, src, sizeof(rectangle_t));
-}
-
-bool rectangle_equal_fast(rectangle_t *ptr0, rectangle_t *ptr1) {
-    return !memcmp(ptr0, ptr1, sizeof(rectangle_t));
-}
-
 bool rectangle_overlap(rectangle_t *ptr0, rectangle_t *ptr1) {
     int x0 = ptr0->x;
     int y0 = ptr0->y;
@@ -274,18 +252,6 @@ void image_alloc(image_t *img, size_t size) {
 void image_alloc0(image_t *img, size_t size) {
     image_alloc(img, size);
     memset(img->data, 0, size);
-}
-
-void image_init(image_t *ptr, int w, int h, pixformat_t pixfmt, uint32_t size, void *pixels) {
-    ptr->w = w;
-    ptr->h = h;
-    ptr->pixfmt = pixfmt;
-    ptr->size = size;
-    ptr->pixels = pixels;
-}
-
-void image_copy(image_t *dst, image_t *src, bool deep) {
-    memcpy(dst, src, sizeof(image_t));
 }
 
 size_t image_line_size(image_t *ptr) {
