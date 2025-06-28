@@ -219,9 +219,14 @@ static int stm_csi_config(omv_csi_t *csi, omv_csi_config_t config) {
                 scfg.Format = DCMIPP_FORMAT_RAW8;
             } else if (csi->pixformat == PIXFORMAT_RGB565) {
                 scfg.Format = DCMIPP_FORMAT_RGB565;
-                scfg.SwapCycles = DCMIPP_SWAPCYCLES_ENABLE;
+                scfg.SwapCycles = (csi->rgb_swap == 1) ? DCMIPP_SWAPCYCLES_DISABLE : DCMIPP_SWAPCYCLES_ENABLE;
             } else if (csi->pixformat == PIXFORMAT_GRAYSCALE) {
                 scfg.Format = (csi->mono_bpp == 1) ? DCMIPP_FORMAT_MONOCHROME_8B : DCMIPP_FORMAT_YUV422;
+            } else if (csi->pixformat == PIXFORMAT_YUV422) {
+                scfg.Format = DCMIPP_FORMAT_YUV422;
+                scfg.SwapCycles = (csi->yuv_swap == 1) ? DCMIPP_SWAPCYCLES_ENABLE : DCMIPP_SWAPCYCLES_DISABLE;
+            } else if (csi->pixformat == PIXFORMAT_BAYER) {
+                scfg.Format = DCMIPP_FORMAT_RAW8;
             } else {
                 return OMV_CSI_ERROR_PIXFORMAT_UNSUPPORTED;
             }
@@ -234,22 +239,15 @@ static int stm_csi_config(omv_csi_t *csi, omv_csi_config_t config) {
         DCMIPP_PipeConfTypeDef pcfg = { .FrameRate = DCMIPP_FRAME_RATE_ALL };
         if (csi->pixformat == PIXFORMAT_RGB565) {
             pcfg.PixelPackerFormat = DCMIPP_PIXEL_PACKER_FORMAT_RGB565_1;
-        } else if (csi->pixformat == PIXFORMAT_GRAYSCALE) {
+        } else if (csi->pixformat == PIXFORMAT_GRAYSCALE || csi->pixformat == PIXFORMAT_BAYER) {
             pcfg.PixelPackerFormat = DCMIPP_PIXEL_PACKER_FORMAT_MONO_Y8_G8_1;
+        } else if (csi->pixformat == PIXFORMAT_YUV422) {
+            pcfg.PixelPackerFormat = DCMIPP_PIXEL_PACKER_FORMAT_YUV422_1;
         } else {
             return OMV_CSI_ERROR_PIXFORMAT_UNSUPPORTED;
         }
         if (HAL_DCMIPP_PIPE_SetConfig(&csi->dcmi, DCMIPP_PIPE, &pcfg) != HAL_OK) {
             return OMV_CSI_ERROR_CSI_INIT_FAILED;
-        }
-
-        // Swap RGB enabled.
-        if (csi->yuv_swap) {
-            HAL_DCMIPP_PIPE_EnableYUVSwap(&csi->dcmi, DCMIPP_PIPE);
-        }
-        // Swap YUV if enabled.
-        if (csi->rgb_swap) {
-            HAL_DCMIPP_PIPE_EnableRedBlueSwap(&csi->dcmi, DCMIPP_PIPE);
         }
 
         // Configure debayer.

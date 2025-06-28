@@ -446,6 +446,11 @@ static int set_framesize(omv_csi_t *csi, omv_csi_framesize_t framesize) {
     lt_lockrange_out_ubound = (L_TARGET + AE_LOCK_RANGE_OUT) * w * h;
     lt_lockrange_out_lbound = (L_TARGET - AE_LOCK_RANGE_OUT) * w * h;
 
+    // PAJ6100 crashes CSI hardware unless we recongfigure it.
+    #if (OMV_PAJ6100_GLITCH_RECONFIG == 1)
+    csi->config(csi, OMV_CSI_CONFIG_INIT);
+    #endif // (OMV_PAJ6100_GLITCH_RECONFIG == 1)
+
     return 0;
 }
 
