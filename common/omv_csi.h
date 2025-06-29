@@ -354,6 +354,7 @@ typedef struct _omv_csi {
     // Sensor function pointers
     int (*reset) (omv_csi_t *csi);
     int (*sleep) (omv_csi_t *csi, int enable);
+    int (*shutdown) (omv_csi_t *csi, int enable);
     int (*match) (omv_csi_t *csi, size_t id);
     int (*read_reg) (omv_csi_t *csi, uint16_t reg_addr);
     int (*write_reg) (omv_csi_t *csi, uint16_t reg_addr, uint16_t reg_data);

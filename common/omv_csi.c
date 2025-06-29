@@ -576,10 +576,15 @@ __weak int omv_csi_shutdown(omv_csi_t *csi, int enable) {
         } else {
             omv_gpio_write(OMV_CSI_POWER_PIN, 1);
         }
+        mp_hal_delay_ms(OMV_CSI_POWER_DELAY);
     }
     #endif
 
-    mp_hal_delay_ms(10);
+    // Call csi-specific shutdown function
+    if (csi->shutdown != NULL &&
+        csi->shutdown(csi, enable) != 0) {
+        return OMV_CSI_ERROR_CTL_FAILED;
+    }
 
     return ret;
 }
