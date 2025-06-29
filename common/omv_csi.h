@@ -115,9 +115,10 @@ typedef enum {
 
 typedef enum {
     OMV_CSI_CONFIG_INIT      = (1 << 0),
-    OMV_CSI_CONFIG_FRAMESIZE = (1 << 1),
-    OMV_CSI_CONFIG_PIXFORMAT = (1 << 2),
-    OMV_CSI_CONFIG_WINDOWING = (1 << 3),
+    OMV_CSI_CONFIG_DEINIT    = (1 << 1),
+    OMV_CSI_CONFIG_FRAMESIZE = (1 << 2),
+    OMV_CSI_CONFIG_PIXFORMAT = (1 << 3),
+    OMV_CSI_CONFIG_WINDOWING = (1 << 4),
 } omv_csi_config_t;
 
 typedef enum {
