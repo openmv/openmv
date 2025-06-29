@@ -192,6 +192,14 @@ static int stm_csi_config(omv_csi_t *csi, omv_csi_config_t config) {
         DCMI->CR &= ~(DCMI_CR_JPEG_Msk << DCMI_CR_JPEG_Pos);
         DCMI->CR |= (csi->pixformat == PIXFORMAT_JPEG) ? DCMI_JPEG_ENABLE : DCMI_JPEG_DISABLE;
         #else
+
+        // Reset DCMI and pipes states to allow reconfiguring them. Note
+        // that abort() doesn't reset the state unless the pipe is active.
+        csi->dcmi.State = HAL_DCMIPP_STATE_INIT;
+        for (size_t i=0; i<DCMIPP_NUM_OF_PIPES; i++) {
+            csi->dcmi.PipeState[i] = HAL_DCMIPP_PIPE_STATE_RESET;
+        }
+
         // Select and configure the DCMIPP source.
         if (csi->mipi_if) {
             DCMIPP_CSI_ConfTypeDef scfg = {
@@ -208,6 +216,7 @@ static int stm_csi_config(omv_csi_t *csi, omv_csi_config_t config) {
                 .DataTypeIDA = DCMIPP_DT_RAW10,
                 .DataTypeIDB = DCMIPP_DT_RAW10,
             };
+
             if (HAL_DCMIPP_CSI_SetVCConfig(&csi->dcmi, DCMIPP_VIRTUAL_CHANNEL0,
                                            DCMIPP_CSI_DT_BPP10) != HAL_OK) {
                 return OMV_CSI_ERROR_CSI_INIT_FAILED;
