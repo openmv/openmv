@@ -386,6 +386,42 @@ static int reset(omv_csi_t *csi) {
     return 0;
 }
 
+static int _abort(omv_csi_t *csi, bool fifo_flush, bool in_irq) {
+    return vospi_abort();
+}
+
+static int config(omv_csi_t *csi, omv_csi_config_t config) {
+    if (config == OMV_CSI_CONFIG_INIT) {
+        if (reset(csi) != 0) {
+            return OMV_CSI_ERROR_CSI_INIT_FAILED;
+        }
+
+        LEP_OEM_PART_NUMBER_T part;
+        if (LEP_GetOemFlirPartNumber(&lepton.port, &part) != LEP_OK) {
+            return OMV_CSI_ERROR_CSI_INIT_FAILED;
+        }
+
+        // 500 == Lepton
+        // xxxx == Version
+        // 01/00 == Shutter/NoShutter
+        if (!strncmp(part.value, "500-0771", 8)) {
+            csi->chip_id = LEPTON_3_5;
+        } else if (!strncmp(part.value, "500-0726", 8)) {
+            csi->chip_id = LEPTON_3_0;
+        } else if (!strncmp(part.value, "500-0763", 8)) {
+            csi->chip_id = LEPTON_2_5;
+        } else if (!strncmp(part.value, "500-0659", 8)) {
+            csi->chip_id = LEPTON_2_0;
+        } else if (!strncmp(part.value, "500-0690", 8)) {
+            csi->chip_id = LEPTON_1_6;
+        } else if (!strncmp(part.value, "500-0643", 8)) {
+            csi->chip_id = LEPTON_1_5;
+        }
+    }
+
+    return 0;
+}
+
 static int snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
     framebuffer_t *fb = csi->fb;
 
@@ -493,43 +529,11 @@ static int snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
     return 0;
 }
 
-static int config(omv_csi_t *csi, omv_csi_config_t config) {
-    if (config == OMV_CSI_CONFIG_INIT) {
-        if (reset(csi) != 0) {
-            return OMV_CSI_ERROR_CSI_INIT_FAILED;
-        }
-
-        LEP_OEM_PART_NUMBER_T part;
-        if (LEP_GetOemFlirPartNumber(&lepton.port, &part) != LEP_OK) {
-            return OMV_CSI_ERROR_CSI_INIT_FAILED;
-        }
-
-        // 500 == Lepton
-        // xxxx == Version
-        // 01/00 == Shutter/NoShutter
-        if (!strncmp(part.value, "500-0771", 8)) {
-            csi->chip_id = LEPTON_3_5;
-        } else if (!strncmp(part.value, "500-0726", 8)) {
-            csi->chip_id = LEPTON_3_0;
-        } else if (!strncmp(part.value, "500-0763", 8)) {
-            csi->chip_id = LEPTON_2_5;
-        } else if (!strncmp(part.value, "500-0659", 8)) {
-            csi->chip_id = LEPTON_2_0;
-        } else if (!strncmp(part.value, "500-0690", 8)) {
-            csi->chip_id = LEPTON_1_6;
-        } else if (!strncmp(part.value, "500-0643", 8)) {
-            csi->chip_id = LEPTON_1_5;
-        }
-    }
-
-    return 0;
-}
-
 int lepton_init(omv_csi_t *csi) {
     csi->reset = reset;
     csi->sleep = sleep;
     csi->config = config;
-    csi->abort = NULL;
+    csi->abort = _abort;
     csi->shutdown = NULL;
     csi->match = match;
     csi->snapshot = snapshot;
