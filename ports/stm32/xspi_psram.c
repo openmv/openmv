@@ -154,7 +154,7 @@ static int xspi_psram_memory_map(XSPI_HandleTypeDef *xspi, uint32_t burst_enable
 
     XSPI_MemoryMappedTypeDef mmap_config = {
         .TimeoutPeriodClock = 0x34,
-        .TimeOutActivation = HAL_XSPI_TIMEOUT_COUNTER_DISABLE,
+        .TimeOutActivation = HAL_XSPI_TIMEOUT_COUNTER_ENABLE,
     };
 
     if (HAL_XSPI_MemoryMapped(xspi, &mmap_config) != HAL_OK) {
@@ -185,7 +185,7 @@ int xspi_psram_init() {
     xspi.Init.MemoryMode = HAL_XSPI_SINGLE_MEM;
     xspi.Init.MemorySize = __builtin_ctz(OMV_XSPI_PSRAM_SIZE) - 1;
     xspi.Init.MemorySelect = HAL_XSPI_CSSEL_NCS1;
-    xspi.Init.ChipSelectHighTimeCycle = 1;
+    xspi.Init.ChipSelectHighTimeCycle = 5;
     xspi.Init.ClockMode = HAL_XSPI_CLOCK_MODE_0;
     xspi.Init.ClockPrescaler = (xspi_clk / OMV_XSPI_PSRAM_FREQUENCY) - 1;
     xspi.Init.FreeRunningClock = HAL_XSPI_FREERUNCLK_DISABLE;
