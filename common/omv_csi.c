@@ -130,9 +130,6 @@ __weak void omv_csi_init0() {
             continue;
         }
 
-        // Abort ongoing transfer
-        omv_csi_abort(csi, true, false);
-
         // Reset delays
         csi->disable_delays = false;
 
@@ -200,6 +197,18 @@ __weak int omv_csi_abort(omv_csi_t *csi, bool fifo_flush, bool in_irq) {
         }
     }
     return 0;
+}
+
+void omv_csi_abort_all(void) {
+    for (size_t i=0; i<OMV_CSI_MAX_DEVICES; i++) {
+        omv_csi_t *csi = &csi_all[i];
+
+        // Abort ongoing transfer
+        if (csi->detected) {
+            omv_csi_abort(csi, true, false);
+
+        }
+    }
 }
 
 __weak int omv_csi_reset(omv_csi_t *csi, bool hard) {

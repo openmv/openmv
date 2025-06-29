@@ -416,6 +416,9 @@ int omv_csi_config(omv_csi_t *csi, omv_csi_config_t config);
 // Abort frame capture and disable IRQs, DMA etc..
 int omv_csi_abort(omv_csi_t *csi, bool fifo_flush, bool in_irq);
 
+// Call on soft-reboot
+void omv_csi_abort_all(void);
+
 // Reset the sensor to its default state.
 int omv_csi_reset(omv_csi_t *csi, bool hard);
 

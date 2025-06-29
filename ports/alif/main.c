@@ -235,6 +235,9 @@ soft_reset:
 
 soft_reset_exit:
     mp_printf(MP_PYTHON_PRINTER, "MPY: soft reboot\n");
+    #if MICROPY_PY_CSI
+    omv_csi_abort_all();
+    #endif
     #if MICROPY_PY_AUDIO
     py_audio_deinit();
     #endif
