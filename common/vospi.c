@@ -136,10 +136,8 @@ void vospi_callback(omv_spi_t *spi, void *userdata, void *buf) {
         || (!vospi_check_crc(base))
     #endif
         || (vospi.lepton_3 && (pid == VOSPI_SPECIAL_PACKET) && (sid != vospi.sid))) {
-        vospi.pid = 0;
-        vospi.sid = 0;
-        omv_spi_transfer_abort(&vospi.spi_bus);
-        vospi.flags |= VOSPI_FLAGS_RESYNC;
+        vospi_abort();
+        vospi.flags |= VOSPI_FLAGS_CAPTURE;
         return;
     }
 
@@ -196,6 +194,15 @@ int vospi_deinit() {
     return omv_spi_deinit(&vospi.spi_bus);
 }
 
+int vospi_abort(void) {
+    vospi.flags &= ~VOSPI_FLAGS_CAPTURE;
+    int ret = omv_spi_transfer_abort(&vospi.spi_bus);
+    vospi.pid = 0;
+    vospi.sid = 0;
+    vospi.flags |= VOSPI_FLAGS_RESYNC;
+    return ret;
+}
+
 bool vospi_active(void) {
     return vospi.flags & VOSPI_FLAGS_CAPTURE;
 }
@@ -224,10 +231,7 @@ int vospi_snapshot(uint32_t timeout_ms) {
         }
 
         if ((mp_hal_ticks_ms() - tick_start) > timeout_ms) {
-            omv_spi_transfer_abort(&vospi.spi_bus);
-            vospi.pid = 0;
-            vospi.sid = 0;
-            vospi.flags = VOSPI_FLAGS_RESYNC;
+            vospi_abort();
             return -1;
         }
 
