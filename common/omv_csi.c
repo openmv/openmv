@@ -130,9 +130,6 @@ __weak void omv_csi_init0() {
             continue;
         }
 
-        // Abort ongoing transfer
-        omv_csi_abort(csi, true, false);
-
         // Reset delays
         csi->disable_delays = false;
 
@@ -202,9 +199,23 @@ __weak int omv_csi_abort(omv_csi_t *csi, bool fifo_flush, bool in_irq) {
     return 0;
 }
 
+void omv_csi_abort_all(void) {
+    for (size_t i=0; i<OMV_CSI_MAX_DEVICES; i++) {
+        omv_csi_t *csi = &csi_all[i];
+
+        // Abort ongoing transfer
+        if (csi->detected) {
+            omv_csi_abort(csi, true, false);
+
+        }
+    }
+}
+
 __weak int omv_csi_reset(omv_csi_t *csi, bool hard) {
     // Disable any ongoing frame capture.
-    omv_csi_abort(csi, true, false);
+    if (csi->power_on) {
+        omv_csi_abort(csi, true, false);
+    }
 
     // Reset the csi state
     csi->sde = 0;
@@ -224,16 +235,15 @@ __weak int omv_csi_reset(omv_csi_t *csi, bool hard) {
     #else
     csi->auto_rotation = false;
     #endif // MICROPY_PY_IMU
-
-    csi->vsync_cb = (omv_csi_cb_t) { NULL, NULL };
-    csi->frame_cb = (omv_csi_cb_t) { NULL, NULL };
-
-    // Reset default color palette.
     csi->color_palette = rainbow_table;
     csi->disable_full_flush = false;
-    
+    csi->vsync_cb = (omv_csi_cb_t) { NULL, NULL };
+    csi->frame_cb = (omv_csi_cb_t) { NULL, NULL };
+   
     // Restore shutdown state on reset.
-    omv_csi_shutdown(csi, false);
+    if (!csi->power_on) {
+        omv_csi_shutdown(csi, false);
+    }
 
     if (hard) {
         // Disable the bus before reset.
@@ -438,11 +448,12 @@ int omv_csi_probe(omv_i2c_t *i2c) {
     for (size_t i=0; i<dev_count; i++) {
         omv_csi_t *csi = &csi_all[i];
 
+        csi->detected = true;
+        csi->power_on = true;
         csi->power_pol = power_pol;
         csi->reset_pol = reset_pol;
         csi->chip_id =  dev_list[i].chip_id;
         csi->slv_addr = dev_list[i].slv_addr;
-        csi->detected = true;
 
         uint32_t clk_hz = 0;
         sensor_init_t init_fun = NULL;
@@ -576,10 +587,18 @@ __weak int omv_csi_shutdown(omv_csi_t *csi, int enable) {
         } else {
             omv_gpio_write(OMV_CSI_POWER_PIN, 1);
         }
+        mp_hal_delay_ms(OMV_CSI_POWER_DELAY);
     }
     #endif
 
-    mp_hal_delay_ms(10);
+    // Call csi-specific shutdown function
+    if (csi->shutdown != NULL &&
+        csi->shutdown(csi, enable) != 0) {
+        return OMV_CSI_ERROR_CTL_FAILED;
+    }
+
+    // Update power-on flag.
+    csi->power_on = !enable;
 
     return ret;
 }
