@@ -496,7 +496,7 @@ static int snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
 static int config(omv_csi_t *csi, omv_csi_config_t config) {
     if (config == OMV_CSI_CONFIG_INIT) {
         if (reset(csi) != 0) {
-            return -1;
+            return OMV_CSI_ERROR_CSI_INIT_FAILED;
         }
 
         LEP_OEM_PART_NUMBER_T part;
@@ -530,6 +530,7 @@ int lepton_init(omv_csi_t *csi) {
     csi->sleep = sleep;
     csi->config = config;
     csi->abort = NULL;
+    csi->shutdown = NULL;
     csi->match = match;
     csi->snapshot = snapshot;
     csi->read_reg = read_reg;
