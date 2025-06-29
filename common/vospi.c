@@ -196,6 +196,11 @@ int vospi_deinit() {
     return omv_spi_deinit(&vospi.spi_bus);
 }
 
+int vospi_abort(void) {
+    vospi.flags &= ~VOSPI_FLAGS_CAPTURE;
+    return 0;
+}
+
 bool vospi_active(void) {
     return vospi.flags & VOSPI_FLAGS_CAPTURE;
 }

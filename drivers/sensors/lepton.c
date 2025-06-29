@@ -493,6 +493,10 @@ static int snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
     return 0;
 }
 
+static int lepton_abort(omv_csi_t *csi, bool fifo_flush, bool in_irq) {
+    return vospi_abort();
+}
+
 static int config(omv_csi_t *csi, omv_csi_config_t config) {
     if (config == OMV_CSI_CONFIG_INIT) {
         if (reset(csi) != 0) {
@@ -529,7 +533,7 @@ int lepton_init(omv_csi_t *csi) {
     csi->reset = reset;
     csi->sleep = sleep;
     csi->config = config;
-    csi->abort = NULL;
+    csi->abort = lepton_abort;
     csi->match = match;
     csi->snapshot = snapshot;
     csi->read_reg = read_reg;
