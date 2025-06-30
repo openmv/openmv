@@ -278,10 +278,12 @@ int omv_spi_transfer_start(omv_spi_t *spi, omv_spi_transfer_t *xfer) {
 }
 
 int omv_spi_transfer_abort(omv_spi_t *spi) {
-    if (SCB->ICSR & SCB_ICSR_VECTACTIVE_Msk) {
-        HAL_SPI_Abort_IT(spi->descr);
-    } else {
-        HAL_SPI_Abort(spi->descr);
+    if (spi && spi->initialized) {
+        if (SCB->ICSR & SCB_ICSR_VECTACTIVE_Msk) {
+            HAL_SPI_Abort_IT(spi->descr);
+        } else {
+            HAL_SPI_Abort(spi->descr);
+        }
     }
     return 0;
 }

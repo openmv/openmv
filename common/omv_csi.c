@@ -130,9 +130,6 @@ __weak void omv_csi_init0() {
             continue;
         }
 
-        // Abort ongoing transfer
-        omv_csi_abort(csi, true, false);
-
         // Reset delays
         csi->disable_delays = false;
 
@@ -202,9 +199,23 @@ __weak int omv_csi_abort(omv_csi_t *csi, bool fifo_flush, bool in_irq) {
     return 0;
 }
 
+void omv_csi_abort_all(void) {
+    for (size_t i=0; i<OMV_CSI_MAX_DEVICES; i++) {
+        omv_csi_t *csi = &csi_all[i];
+
+        // Abort ongoing transfer
+        if (csi->detected) {
+            omv_csi_abort(csi, true, false);
+
+        }
+    }
+}
+
 __weak int omv_csi_reset(omv_csi_t *csi, bool hard) {
     // Disable any ongoing frame capture.
-    omv_csi_abort(csi, true, false);
+    if (csi->power_on) {
+        omv_csi_abort(csi, true, false);
+    }
 
     // Reset the csi state
     csi->sde = 0;
@@ -224,16 +235,15 @@ __weak int omv_csi_reset(omv_csi_t *csi, bool hard) {
     #else
     csi->auto_rotation = false;
     #endif // MICROPY_PY_IMU
-
-    csi->vsync_cb = (omv_csi_cb_t) { NULL, NULL };
-    csi->frame_cb = (omv_csi_cb_t) { NULL, NULL };
-
-    // Reset default color palette.
     csi->color_palette = rainbow_table;
     csi->disable_full_flush = false;
-    
+    csi->vsync_cb = (omv_csi_cb_t) { NULL, NULL };
+    csi->frame_cb = (omv_csi_cb_t) { NULL, NULL };
+   
     // Restore shutdown state on reset.
-    omv_csi_shutdown(csi, false);
+    if (!csi->power_on) {
+        omv_csi_shutdown(csi, false);
+    }
 
     if (hard) {
         // Disable the bus before reset.
@@ -437,22 +447,21 @@ int omv_csi_probe(omv_i2c_t *i2c) {
     // Initialize detected sensors.
     for (size_t i=0; i<dev_count; i++) {
         omv_csi_t *csi = &csi_all[i];
+        sensor_init_t init_fun = NULL;
 
+        csi->detected = true;
+        csi->power_on = true;
         csi->power_pol = power_pol;
         csi->reset_pol = reset_pol;
         csi->chip_id =  dev_list[i].chip_id;
         csi->slv_addr = dev_list[i].slv_addr;
-        csi->detected = true;
-
-        uint32_t clk_hz = 0;
-        sensor_init_t init_fun = NULL;
 
         // Find the sensors init function.
         for (size_t i=0; i<OMV_ARRAY_SIZE(sensor_config_table); i++) {
             const sensor_config_t *config = &sensor_config_table[i];
             if (csi->chip_id == config->chip_id) {
-                clk_hz = config->clk_hz;
                 init_fun = config->init_fun;
+                csi->clk_hz = config->clk_hz;
                 break;
             }
         }
@@ -466,35 +475,34 @@ int omv_csi_probe(omv_i2c_t *i2c) {
         // Special case for OV5640.
         #if (OMV_OV5640_REV_Y_CHECK == 1)
         if (csi->chip_id == OV5640_ID && HAL_GetREVID() < 0x2003) {
-            clk_hz = OMV_OV5640_REV_Y_FREQ;
+            csi->clk_hz = OMV_OV5640_REV_Y_FREQ;
         }
         #endif
 
         // Allow reconfiguring (or disabling) the external clock
         // if just one sensor is detected, or for main sensors.
         if (dev_count == 1 || !csi->auxiliary) {
-            omv_csi_set_clk_frequency(clk_hz);
+            omv_csi_set_clk_frequency(csi->clk_hz);
         }
 
         // Count aux devices.
         aux_count += csi->auxiliary;
     }
 
-    // Special case: A single aux sensor was detected, clear
-    // the auxiliary flag so it gets used as the main sensor.
-    if (dev_count == 1 && csi_all[0].auxiliary) {
-        csi_all[0].auxiliary = 0;
-        aux_count--;
-    }
-
-    // Special case: Soft-CSI and another aux sensor detected,
-    // (Lepton for example). Use Soft-CSI for the main sensor.
+    // Special case: all detected sensors are aux (e.g., Soft-CSI or
+    // Soft-CSI + Lepton). If only one is found, use it as main. If
+    // multiple, pick the first non-Soft-CSI sensor as main.
     if (dev_count == aux_count) {
         for (size_t i=0; i<dev_count; i++) {
             omv_csi_t *csi = &csi_all[i];
-            if (csi->chip_id == SOFTCSI_ID) {
-                csi->auxiliary = 0;
+            if (dev_count == 1 || csi->chip_id != SOFTCSI_ID) {
                 aux_count--;
+                csi->auxiliary = 0;
+                // If more than one aux sensor was detected, the clock
+                // hasn't been changed, so reconfigure using this freq.
+                if (dev_count > 1) {
+                    omv_csi_set_clk_frequency(csi->clk_hz);
+                }
                 break;
             }
         }
@@ -576,10 +584,18 @@ __weak int omv_csi_shutdown(omv_csi_t *csi, int enable) {
         } else {
             omv_gpio_write(OMV_CSI_POWER_PIN, 1);
         }
+        mp_hal_delay_ms(OMV_CSI_POWER_DELAY);
     }
     #endif
 
-    mp_hal_delay_ms(10);
+    // Call csi-specific shutdown function
+    if (csi->shutdown != NULL &&
+        csi->shutdown(csi, enable) != 0) {
+        return OMV_CSI_ERROR_CTL_FAILED;
+    }
+
+    // Update power-on flag.
+    csi->power_on = !enable;
 
     return ret;
 }

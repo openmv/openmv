@@ -75,7 +75,6 @@
 #include "file_utils.h"
 #include "mp_utils.h"
 #include "mimxrt_hal.h"
-#include "vospi.h"
 
 int main(void) {
     bool first_soft_reset = true;
@@ -223,8 +222,8 @@ soft_reset:
 
 soft_reset_exit:
     mp_printf(MP_PYTHON_PRINTER, "MPY: soft reboot\n");
-    #if OMV_ENABLE_VOSPI || OMV_LEPTON_ENABLE
-    vospi_deinit();
+    #if MICROPY_PY_CSI
+    omv_csi_abort_all();
     #endif
     #if MICROPY_PY_MACHINE_CAN
     machine_can_irq_deinit();

@@ -179,11 +179,27 @@ static int stm_csi_config(omv_csi_t *csi, omv_csi_config_t config) {
         NVIC_SetPriority(DCMI_IRQn, IRQ_PRI_DCMI);
         HAL_NVIC_EnableIRQ(DCMI_IRQn);
         #endif
+    } else if (config == OMV_CSI_CONFIG_DEINIT) {
+        #if USE_DCMI
+        HAL_NVIC_DisableIRQ(DCMI_IRQn);
+        HAL_DCMI_DeInit(&csi->dcmi);
+        #else
+        HAL_NVIC_DisableIRQ(DCMIPP_IRQn);
+        HAL_DCMIPP_DeInit(&csi->dcmi);
+        #endif
     } else if (config == OMV_CSI_CONFIG_PIXFORMAT) {
         #if USE_DCMI
         DCMI->CR &= ~(DCMI_CR_JPEG_Msk << DCMI_CR_JPEG_Pos);
         DCMI->CR |= (csi->pixformat == PIXFORMAT_JPEG) ? DCMI_JPEG_ENABLE : DCMI_JPEG_DISABLE;
         #else
+
+        // Reset DCMI and pipes states to allow reconfiguring them. Note
+        // that abort() doesn't reset the state unless the pipe is active.
+        csi->dcmi.State = HAL_DCMIPP_STATE_INIT;
+        for (size_t i=0; i<DCMIPP_NUM_OF_PIPES; i++) {
+            csi->dcmi.PipeState[i] = HAL_DCMIPP_PIPE_STATE_RESET;
+        }
+
         // Select and configure the DCMIPP source.
         if (csi->mipi_if) {
             DCMIPP_CSI_ConfTypeDef scfg = {
@@ -200,6 +216,7 @@ static int stm_csi_config(omv_csi_t *csi, omv_csi_config_t config) {
                 .DataTypeIDA = DCMIPP_DT_RAW10,
                 .DataTypeIDB = DCMIPP_DT_RAW10,
             };
+
             if (HAL_DCMIPP_CSI_SetVCConfig(&csi->dcmi, DCMIPP_VIRTUAL_CHANNEL0,
                                            DCMIPP_CSI_DT_BPP10) != HAL_OK) {
                 return OMV_CSI_ERROR_CSI_INIT_FAILED;
@@ -354,6 +371,16 @@ static int stm_csi_abort(omv_csi_t *csi, bool fifo_flush, bool in_irq) {
     return 0;
 }
 
+static int stm_csi_shutdown(omv_csi_t *csi, int enable) {
+    int ret = 0;
+    if (enable) {
+        ret = omv_csi_config(csi, OMV_CSI_CONFIG_DEINIT);
+    } else {
+        ret = omv_csi_config(csi, OMV_CSI_CONFIG_INIT);
+    }
+    return ret;
+}
+
 uint32_t omv_csi_get_clk_frequency() {
     omv_csi_t *csi = omv_csi_get(-1);
 
@@ -427,37 +454,6 @@ int omv_csi_set_clk_frequency(uint32_t frequency) {
     #error "OMV_CSI_CLK_SOURCE is not set!"
     #endif // (OMV_CSI_CLK_SOURCE == OMV_CSI_CLK_SOURCE_TIM)
     return 0;
-}
-
-int omv_csi_shutdown(omv_csi_t *csi, int enable) {
-    int ret = 0;
-    omv_csi_abort(csi, true, false);
-
-    if (enable) {
-        #if defined(OMV_CSI_POWER_PIN)
-        if (csi->power_pol == OMV_CSI_ACTIVE_HIGH) {
-            omv_gpio_write(OMV_CSI_POWER_PIN, 1);
-        } else {
-            omv_gpio_write(OMV_CSI_POWER_PIN, 0);
-        }
-        #endif
-        #if USE_DCMI
-        HAL_NVIC_DisableIRQ(DCMI_IRQn);
-        HAL_DCMI_DeInit(&csi->dcmi);
-        #endif
-    } else {
-        #if defined(OMV_CSI_POWER_PIN)
-        if (csi->power_pol == OMV_CSI_ACTIVE_HIGH) {
-            omv_gpio_write(OMV_CSI_POWER_PIN, 0);
-        } else {
-            omv_gpio_write(OMV_CSI_POWER_PIN, 1);
-        }
-        #endif
-        ret = omv_csi_config(csi, OMV_CSI_CONFIG_INIT);
-    }
-
-    mp_hal_delay_ms(10);
-    return ret;
 }
 
 int omv_csi_set_vsync_callback(omv_csi_t *csi, omv_csi_cb_t cb) {
@@ -1093,6 +1089,7 @@ int omv_csi_init() {
         csi->fb = framebuffer_get(-1);
         csi->abort = stm_csi_abort;
         csi->config = stm_csi_config;
+        csi->shutdown = stm_csi_shutdown;
         csi->snapshot = stm_csi_snapshot;
         csi->color_palette = rainbow_table;
     }

@@ -43,9 +43,10 @@
 #include "LEPTON_RAD.h"
 #include "LEPTON_I2C_Reg.h"
 
-#define LEPTON_BOOT_TIMEOUT        (1000)
+#define LEPTON_BOOT_TIMEOUT        (3000)
 #define LEPTON_SNAPSHOT_RETRY      (3)
 #define LEPTON_SNAPSHOT_TIMEOUT    (5000)
+#define LEPTON_I2C_STATUS_BOOT     (LEP_I2C_STATUS_BOOT_MODE_MASK | LEP_I2C_STATUS_BOOT_STAT_MASK)
 
 // Min/Max temperatures in Celsius.
 #define LEPTON_MIN_TEMP_NORM       (-10.0f)
@@ -271,23 +272,18 @@ static int ioctl(omv_csi_t *csi, int request, va_list ap) {
 static int lepton_reset(omv_csi_t *csi, bool measurement_mode, bool high_temp_mode) {
     LEP_RAD_ENABLE_E rad;
     LEP_AGC_ROI_T roi;
+
     memset(&lepton.port, 0, sizeof(LEP_CAMERA_PORT_DESC_T));
 
     if (!csi->auxiliary) {
-        omv_gpio_write(OMV_CSI_POWER_PIN, 0);
-        mp_hal_delay_ms(10);
-
-        omv_gpio_write(OMV_CSI_POWER_PIN, 1);
-        mp_hal_delay_ms(10);
-
         omv_gpio_write(OMV_CSI_RESET_PIN, 0);
-        mp_hal_delay_ms(10);
+        mp_hal_delay_ms(100);
 
         omv_gpio_write(OMV_CSI_RESET_PIN, 1);
-        mp_hal_delay_ms(1000);
+        mp_hal_delay_ms(2500);
     }
 
-    for (mp_uint_t start = mp_hal_ticks_ms(); ; mp_hal_delay_ms(1)) {
+    for (mp_uint_t start = mp_hal_ticks_ms(); ; mp_hal_delay_ms(10)) {
         if (LEP_OpenPort(csi->i2c, LEP_CCI_TWI, 0, &lepton.port) == LEP_OK) {
             break;
         }
@@ -299,56 +295,32 @@ static int lepton_reset(omv_csi_t *csi, bool measurement_mode, bool high_temp_mo
 
     if (csi->auxiliary) {
         LEP_RunOemReboot(&lepton.port);
-        mp_hal_delay_ms(1000);
+        mp_hal_delay_ms(1500);
     }
 
-    for (mp_uint_t start = mp_hal_ticks_ms(); ; mp_hal_delay_ms(1)) {
-        LEP_SDK_BOOT_STATUS_E status;
-        if (LEP_GetCameraBootStatus(&lepton.port, &status) != LEP_OK) {
-            return -1;
-        }
-
-        if (status == LEP_BOOT_STATUS_BOOTED) {
-            break;
-        }
-
-        if ((mp_hal_ticks_ms() - start) >= LEPTON_BOOT_TIMEOUT) {
-            return -1;
-        }
-    }
-
-    for (mp_uint_t start = mp_hal_ticks_ms(); ; mp_hal_delay_ms(1)) {
+    for (mp_uint_t start = mp_hal_ticks_ms(); ; mp_hal_delay_ms(10)) {
         LEP_UINT16 status;
-        if (LEP_DirectReadRegister(&lepton.port, LEP_I2C_STATUS_REG, &status) != LEP_OK) {
-            return -1;
-        }
+        LEP_DirectReadRegister(&lepton.port, LEP_I2C_STATUS_REG, &status);
 
-        if (!(status & LEP_I2C_STATUS_BUSY_BIT_MASK)) {
+        if (status == LEPTON_I2C_STATUS_BOOT) {
             break;
         }
 
         if ((mp_hal_ticks_ms() - start) >= LEPTON_BOOT_TIMEOUT) {
             return -1;
         }
-    }
-
-    if (LEP_GetRadEnableState(&lepton.port, &rad) != LEP_OK
-        || LEP_GetAgcROI(&lepton.port, &roi) != LEP_OK) {
-        return -1;
     }
 
     // Use the low gain mode to enable high temperature readings (~450C) on Lepton 3.5
-    LEP_SYS_GAIN_MODE_E gain_mode = lepton.high_temp_mode ? LEP_SYS_GAIN_MODE_LOW : LEP_SYS_GAIN_MODE_HIGH;
-    if (LEP_SetSysGainMode(&lepton.port, gain_mode) != LEP_OK) {
-        return -1;
-    }
+    LEP_SYS_GAIN_MODE_E gain_mode = high_temp_mode ? LEP_SYS_GAIN_MODE_LOW : LEP_SYS_GAIN_MODE_HIGH;
 
-    if (!lepton.measurement_mode) {
-        if (LEP_SetRadEnableState(&lepton.port, LEP_RAD_DISABLE) != LEP_OK
-            || LEP_SetAgcEnableState(&lepton.port, LEP_AGC_ENABLE) != LEP_OK
-            || LEP_SetAgcCalcEnableState(&lepton.port, LEP_AGC_ENABLE) != LEP_OK) {
-            return -1;
-        }
+    if (LEP_SetSysGainMode(&lepton.port, gain_mode) != LEP_OK ||
+        LEP_GetAgcROI(&lepton.port, &roi) != LEP_OK ||
+        LEP_SetRadEnableState(&lepton.port, measurement_mode) != LEP_OK ||
+        LEP_SetAgcEnableState(&lepton.port, !measurement_mode) != LEP_OK ||
+        LEP_SetAgcCalcEnableState(&lepton.port, !measurement_mode) != LEP_OK ||
+        LEP_GetRadEnableState(&lepton.port, &rad) != LEP_OK) {
+        return -1;
     }
 
     lepton.h_res = roi.endCol + 1;
@@ -373,7 +345,7 @@ static int reset(omv_csi_t *csi) {
     lepton.max_temp = LEPTON_MAX_TEMP_DEFAULT;
 
     // Extra delay after power-on
-    mp_hal_delay_ms(1000);
+    mp_hal_delay_ms(1500);
 
     if (lepton_reset(csi, false, false) != 0) {
         return OMV_CSI_ERROR_CTL_FAILED;
@@ -381,6 +353,42 @@ static int reset(omv_csi_t *csi) {
 
     if (csi->fb && vospi_init(lepton.v_res, csi->fb) != 0) {
         return OMV_CSI_ERROR_CTL_FAILED;
+    }
+
+    return 0;
+}
+
+static int _abort(omv_csi_t *csi, bool fifo_flush, bool in_irq) {
+    return vospi_abort();
+}
+
+static int config(omv_csi_t *csi, omv_csi_config_t config) {
+    if (config == OMV_CSI_CONFIG_INIT) {
+        if (reset(csi) != 0) {
+            return OMV_CSI_ERROR_CSI_INIT_FAILED;
+        }
+
+        LEP_OEM_PART_NUMBER_T part;
+        if (LEP_GetOemFlirPartNumber(&lepton.port, &part) != LEP_OK) {
+            return OMV_CSI_ERROR_CSI_INIT_FAILED;
+        }
+
+        // 500 == Lepton
+        // xxxx == Version
+        // 01/00 == Shutter/NoShutter
+        if (!strncmp(part.value, "500-0771", 8)) {
+            csi->chip_id = LEPTON_3_5;
+        } else if (!strncmp(part.value, "500-0726", 8)) {
+            csi->chip_id = LEPTON_3_0;
+        } else if (!strncmp(part.value, "500-0763", 8)) {
+            csi->chip_id = LEPTON_2_5;
+        } else if (!strncmp(part.value, "500-0659", 8)) {
+            csi->chip_id = LEPTON_2_0;
+        } else if (!strncmp(part.value, "500-0690", 8)) {
+            csi->chip_id = LEPTON_1_6;
+        } else if (!strncmp(part.value, "500-0643", 8)) {
+            csi->chip_id = LEPTON_1_5;
+        }
     }
 
     return 0;
@@ -493,43 +501,12 @@ static int snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
     return 0;
 }
 
-static int config(omv_csi_t *csi, omv_csi_config_t config) {
-    if (config == OMV_CSI_CONFIG_INIT) {
-        if (reset(csi) != 0) {
-            return -1;
-        }
-
-        LEP_OEM_PART_NUMBER_T part;
-        if (LEP_GetOemFlirPartNumber(&lepton.port, &part) != LEP_OK) {
-            return OMV_CSI_ERROR_CSI_INIT_FAILED;
-        }
-
-        // 500 == Lepton
-        // xxxx == Version
-        // 01/00 == Shutter/NoShutter
-        if (!strncmp(part.value, "500-0771", 8)) {
-            csi->chip_id = LEPTON_3_5;
-        } else if (!strncmp(part.value, "500-0726", 8)) {
-            csi->chip_id = LEPTON_3_0;
-        } else if (!strncmp(part.value, "500-0763", 8)) {
-            csi->chip_id = LEPTON_2_5;
-        } else if (!strncmp(part.value, "500-0659", 8)) {
-            csi->chip_id = LEPTON_2_0;
-        } else if (!strncmp(part.value, "500-0690", 8)) {
-            csi->chip_id = LEPTON_1_6;
-        } else if (!strncmp(part.value, "500-0643", 8)) {
-            csi->chip_id = LEPTON_1_5;
-        }
-    }
-
-    return 0;
-}
-
 int lepton_init(omv_csi_t *csi) {
     csi->reset = reset;
     csi->sleep = sleep;
     csi->config = config;
-    csi->abort = NULL;
+    csi->abort = _abort;
+    csi->shutdown = NULL;
     csi->match = match;
     csi->snapshot = snapshot;
     csi->read_reg = read_reg;

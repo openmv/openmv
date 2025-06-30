@@ -129,7 +129,8 @@ extern "C"
     #define LEP_I2C_DATA_BUFFER_1_LENGTH        0x400
 
     #define LEP_I2C_STATUS_BUSY_BIT_MASK        0x0001   /* Bit 0 is the Busy Bit */
-
+    #define LEP_I2C_STATUS_BOOT_MODE_MASK       0x0002   /* Bit 1 is the boot mode */
+    #define LEP_I2C_STATUS_BOOT_STAT_MASK       0x0004   /* Bit 2 is the boot status */
 
 /******************************************************************************/
 /** EXPORTED TYPE DEFINITIONS                                                **/

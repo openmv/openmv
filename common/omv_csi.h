@@ -115,9 +115,10 @@ typedef enum {
 
 typedef enum {
     OMV_CSI_CONFIG_INIT      = (1 << 0),
-    OMV_CSI_CONFIG_FRAMESIZE = (1 << 1),
-    OMV_CSI_CONFIG_PIXFORMAT = (1 << 2),
-    OMV_CSI_CONFIG_WINDOWING = (1 << 3),
+    OMV_CSI_CONFIG_DEINIT    = (1 << 1),
+    OMV_CSI_CONFIG_FRAMESIZE = (1 << 2),
+    OMV_CSI_CONFIG_PIXFORMAT = (1 << 3),
+    OMV_CSI_CONFIG_WINDOWING = (1 << 4),
 } omv_csi_config_t;
 
 typedef enum {
@@ -337,6 +338,8 @@ typedef struct _omv_csi {
     bool transpose;             // Transpose Image
     bool auto_rotation;         // Rotate Image Automatically
     bool detected;              // Set to true when the sensor is initialized.
+    bool power_on;              // Set to true when the sensor is active.
+    uint32_t clk_hz;            // Clock frequency requested by the driver.
 
     omv_i2c_t *i2c;             // SCCB/I2C bus.
     framebuffer_t *fb;          // Frame buffer pointer
@@ -354,6 +357,7 @@ typedef struct _omv_csi {
     // Sensor function pointers
     int (*reset) (omv_csi_t *csi);
     int (*sleep) (omv_csi_t *csi, int enable);
+    int (*shutdown) (omv_csi_t *csi, int enable);
     int (*match) (omv_csi_t *csi, size_t id);
     int (*read_reg) (omv_csi_t *csi, uint16_t reg_addr);
     int (*write_reg) (omv_csi_t *csi, uint16_t reg_addr, uint16_t reg_data);
@@ -412,6 +416,9 @@ int omv_csi_config(omv_csi_t *csi, omv_csi_config_t config);
 
 // Abort frame capture and disable IRQs, DMA etc..
 int omv_csi_abort(omv_csi_t *csi, bool fifo_flush, bool in_irq);
+
+// Call on soft-reboot
+void omv_csi_abort_all(void);
 
 // Reset the sensor to its default state.
 int omv_csi_reset(omv_csi_t *csi, bool hard);

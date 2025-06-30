@@ -318,11 +318,14 @@ soft_reset:
 
 soft_reset_exit:
     printf("MPY: soft reboot\n");
-    #if MICROPY_PY_MACHINE_HW_PWM
-    pwm_deinit_all();
+    #if MICROPY_PY_CSI
+    omv_csi_abort_all();
     #endif
     #if MICROPY_PY_AUDIO
     py_audio_deinit();
+    #endif
+    #if MICROPY_PY_MACHINE_HW_PWM
+    pwm_deinit_all();
     #endif
     #if BLUETOOTH_SD
     sd_softdevice_disable();
