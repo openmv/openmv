@@ -1114,12 +1114,6 @@ HAL_StatusTypeDef HAL_DCMI_UnRegisterCallback(DCMI_HandleTypeDef *hdcmi, HAL_DCM
 /** @defgroup DCMI_Private_Functions DCMI Private Functions
   * @{
   */
-
-__weak void DCMI_DMAConvCpltUser(uint32_t addr)
-{
-
-}
-
 /**
   * @brief  DMA conversion complete callback.
   * @param  hdma pointer to a DMA_HandleTypeDef structure that contains
@@ -1129,28 +1123,30 @@ __weak void DCMI_DMAConvCpltUser(uint32_t addr)
 static void DCMI_DMAXferCplt(DMA_HandleTypeDef *hdma)
 {
   DCMI_HandleTypeDef* hdcmi;
+  DMA_Stream_TypeDef *stream;
+  extern void DCMI_DMAConvCpltUser(DCMI_HandleTypeDef* hdcmi, uint32_t addr);
 
-  hdcmi = ( DCMI_HandleTypeDef* )((DMA_HandleTypeDef* )hdma)->Parent;
-  hdcmi->State= HAL_DCMI_STATE_READY;
+  hdcmi  = (DCMI_HandleTypeDef*) ((DMA_HandleTypeDef*)hdma)->Parent;
+  stream = (DMA_Stream_TypeDef*) (hdcmi->DMA_Handle->Instance);
 
   // Note: we don't need to adjust memory addresses because they stay the same.
-  if(hdcmi->XferCount != 0) {
+  if (hdcmi->XferCount != 0) {
     hdcmi->XferCount--;
   }
 
-  if((hdcmi->DMA_Handle->Instance->CR & DMA_SxCR_CT) == 0) {
+  if ((stream->CR & DMA_SxCR_CT) == 0) {
     // Current traget is M0 call user callback with M1
-    DCMI_DMAConvCpltUser(hdcmi->DMA_Handle->Instance->M1AR);
+    DCMI_DMAConvCpltUser(hdcmi, stream->M1AR);
   } else {
     // Current traget is M1 call user callback with M0
-    DCMI_DMAConvCpltUser(hdcmi->DMA_Handle->Instance->M0AR);
+    DCMI_DMAConvCpltUser(hdcmi, stream->M0AR);
   }
 
   /* Check if the frame is transferred */
-  if(hdcmi->XferCount == 0) {
+  if (hdcmi->XferCount == 0) {
     /* Reload XferCount */
     hdcmi->XferCount = hdcmi->XferTransferNumber;
-    /* Enable the Frame interrupt */
+    /* Re-enable frame interrupt */
     __HAL_DCMI_ENABLE_IT(hdcmi, DCMI_IT_FRAME);
 
     /* When snapshot mode, set dcmi state to ready */

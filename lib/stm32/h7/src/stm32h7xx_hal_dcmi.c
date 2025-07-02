@@ -809,11 +809,6 @@ __weak void HAL_DCMI_FrameEventCallback(DCMI_HandleTypeDef *hdcmi)
    */
 }
 
-__weak void DCMI_DMAConvCpltUser(uint32_t addr)
-{
-
-}
-
 /**
   * @}
   */
@@ -1194,6 +1189,7 @@ static void DCMI_DMAXferCplt(DMA_HandleTypeDef *hdma)
 {
   DCMI_HandleTypeDef* hdcmi;
   DMA_Stream_TypeDef *stream;
+  extern void DCMI_DMAConvCpltUser(DCMI_HandleTypeDef* hdcmi, uint32_t addr);
 
   hdcmi  = (DCMI_HandleTypeDef*) ((DMA_HandleTypeDef*)hdma)->Parent;
   stream = (DMA_Stream_TypeDef*) (hdcmi->DMA_Handle->Instance);
@@ -1205,10 +1201,10 @@ static void DCMI_DMAXferCplt(DMA_HandleTypeDef *hdma)
 
   if ((stream->CR & DMA_SxCR_CT) == 0) {
     // Current traget is M0 call user callback with M1
-    DCMI_DMAConvCpltUser(stream->M1AR);
+    DCMI_DMAConvCpltUser(hdcmi, stream->M1AR);
   } else {
     // Current traget is M1 call user callback with M0
-    DCMI_DMAConvCpltUser(stream->M0AR);
+    DCMI_DMAConvCpltUser(hdcmi, stream->M0AR);
   }
 
   /* Check if the frame is transferred */
