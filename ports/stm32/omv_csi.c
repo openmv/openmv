@@ -1067,65 +1067,10 @@ static int stm_csi_snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
     return 0;
 }
 
-int omv_csi_init() {
-    int ret = 0;
-    static omv_i2c_t i2c;
-
-    // List of I2C buses to scan.
-    uint32_t buses[][2] = {
-        {OMV_CSI_I2C_ID, OMV_CSI_I2C_SPEED},
-        #if defined(OMV_CSI_I2C_ALT_ID)
-        {OMV_CSI_I2C_ALT_ID, OMV_CSI_I2C_ALT_SPEED},
-        #endif
-    };
-
-    // Initialize the CSIs using this driver's ops as defaults,
-    // which can be overridden by sensor drivers during probe.
-    for (size_t i=0; i<OMV_CSI_MAX_DEVICES; i++) {
-        omv_csi_t *csi = &csi_all[i];
-
-        memset(csi, 0, sizeof(omv_csi_t));
-        csi->i2c = &i2c;
-        csi->fb = framebuffer_get(-1);
-        csi->abort = stm_csi_abort;
-        csi->config = stm_csi_config;
-        csi->shutdown = stm_csi_shutdown;
-        csi->snapshot = stm_csi_snapshot;
-        csi->color_palette = rainbow_table;
-    }
-
-    // Configure the csi external clock (XCLK).
-    if (omv_csi_set_clk_frequency(OMV_CSI_CLK_FREQUENCY) != 0) {
-        return OMV_CSI_ERROR_TIM_INIT_FAILED;
-    }
-
-    // Detect and initialize sensor(s).
-    for (uint32_t i = 0, n_buses = OMV_ARRAY_SIZE(buses); i < n_buses; i++) {
-        // Initialize the camera bus.
-        omv_i2c_init(&i2c, buses[i][0], buses[i][1]);
-
-        if (!(ret = omv_csi_probe(&i2c))) {
-            break;
-        }
-
-        omv_i2c_deinit(&i2c);
-
-        // Scan the next bus or fail if this is the last one.
-        if ((i + 1) == n_buses) {
-            return ret;
-        }
-    }
-
-    // Configure the DCMI interface.
-    for (size_t i=0; i<OMV_CSI_MAX_DEVICES; i++) {
-        omv_csi_t *csi = &csi_all[i];
-
-        if (omv_csi_config(csi, OMV_CSI_CONFIG_INIT) != 0) {
-            return OMV_CSI_ERROR_CSI_INIT_FAILED;
-        }
-    }
-
-    // Clear fb_enabled flag.
-    JPEG_FB()->enabled = 0;
+int omv_csi_ops_init(omv_csi_t *csi) {
+    csi->abort = stm_csi_abort;
+    csi->config = stm_csi_config;
+    csi->shutdown = stm_csi_shutdown;
+    csi->snapshot = stm_csi_snapshot;
     return 0;
 }
