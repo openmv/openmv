@@ -119,6 +119,7 @@ uint16_t resolution[][2] = {
     {2592, 1944},    /* WQXGA2    */
 };
 
+static omv_i2c_t csi_i2c;
 omv_csi_t csi_all[OMV_CSI_MAX_DEVICES] = {0};
 
 __weak void omv_csi_init0() {
@@ -149,9 +150,73 @@ __weak void omv_csi_init0() {
 }
 
 __weak int omv_csi_init() {
-    // Reset the csi state
-    memset(csi_all, 0, sizeof(csi_all));
-    return OMV_CSI_ERROR_CTL_UNSUPPORTED;
+    int ret = 0;
+
+    // List of I2C buses to scan.
+    uint32_t buses[][2] = {
+        { OMV_CSI_I2C_ID, OMV_CSI_I2C_SPEED },
+        #if defined(OMV_CSI_I2C_ALT_ID)
+        { OMV_CSI_I2C_ALT_ID, OMV_CSI_I2C_ALT_SPEED },
+        #endif
+    };
+
+    // Configure CSI GPIOs
+    #if defined(OMV_CSI_RESET_PIN)
+    omv_gpio_config(OMV_CSI_RESET_PIN, OMV_GPIO_MODE_OUTPUT, OMV_GPIO_PULL_NONE, OMV_GPIO_SPEED_LOW, -1);
+    #endif
+    #if defined(OMV_CSI_FSYNC_PIN)
+    omv_gpio_config(OMV_CSI_FSYNC_PIN, OMV_GPIO_MODE_OUTPUT, OMV_GPIO_PULL_NONE, OMV_GPIO_SPEED_LOW, -1);
+    #endif
+    #if defined(OMV_CSI_POWER_PIN)
+    omv_gpio_config(OMV_CSI_POWER_PIN, OMV_GPIO_MODE_OUTPUT, OMV_GPIO_PULL_NONE, OMV_GPIO_SPEED_LOW, -1);
+    #endif
+
+    // Initialize the CSIs using the port's ops as defaults,
+    // which can be overridden by sensor drivers during probe.
+    for (size_t i=0; i<OMV_CSI_MAX_DEVICES; i++) {
+        omv_csi_t *csi = &csi_all[i];
+
+        memset(csi, 0, sizeof(omv_csi_t));
+        csi->i2c = &csi_i2c;
+        csi->fb = framebuffer_get(-1);
+        csi->color_palette = rainbow_table;
+        omv_csi_ops_init(csi);
+    }
+
+    // Configure the csi external clock (XCLK).
+    if (omv_csi_set_clk_frequency(OMV_CSI_CLK_FREQUENCY) != 0) {
+        return OMV_CSI_ERROR_TIM_INIT_FAILED;
+    }
+
+    // Detect and initialize sensor(s).
+    for (uint32_t i=0, n_buses=OMV_ARRAY_SIZE(buses); i<n_buses; i++) {
+        // Initialize the camera bus.
+        omv_i2c_init(&csi_i2c, buses[i][0], buses[i][1]);
+
+        if (!(ret = omv_csi_probe(&csi_i2c))) {
+            break;
+        }
+
+        omv_i2c_deinit(&csi_i2c);
+
+        // Scan the next bus or fail if this is the last one.
+        if ((i + 1) == n_buses) {
+            return ret;
+        }
+    }
+
+    // Configure the DCMI interface.
+    for (size_t i=0; i<OMV_CSI_MAX_DEVICES; i++) {
+        omv_csi_t *csi = &csi_all[i];
+
+        if (omv_csi_config(csi, OMV_CSI_CONFIG_INIT) != 0) {
+            return OMV_CSI_ERROR_CSI_INIT_FAILED;
+        }
+    }
+
+    // Clear fb_enabled flag.
+    JPEG_FB()->enabled = 0;
+    return 0;
 }
 
 omv_csi_t *omv_csi_get(int id) {

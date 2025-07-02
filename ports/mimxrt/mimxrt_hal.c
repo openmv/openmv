@@ -107,6 +107,11 @@ void mimxrt_hal_init() {
     edma_config_t edma_config = {0};
     EDMA_GetDefaultConfig(&edma_config);
     EDMA_Init(DMA0, &edma_config);
+
+    #if MICROPY_PY_CSI
+    // Enable CSI clock and configure pins.
+    mimxrt_hal_csi_init(CSI);
+    #endif
 }
 
 void mimxrt_hal_bootloader() {
@@ -118,9 +123,10 @@ void mimxrt_hal_bootloader() {
 }
 
 int mimxrt_hal_csi_init(CSI_Type *inst) {
+    // Enable CSI clock.
     CLOCK_EnableClock(kCLOCK_Csi);
 
-    // Configure DCMI pins.
+    // Configure CSI pins.
     omv_gpio_config(OMV_CSI_D0_PIN, OMV_GPIO_MODE_ALT, OMV_GPIO_PULL_NONE, OMV_GPIO_SPEED_MED, -1);
     omv_gpio_config(OMV_CSI_D1_PIN, OMV_GPIO_MODE_ALT, OMV_GPIO_PULL_NONE, OMV_GPIO_SPEED_MED, -1);
     omv_gpio_config(OMV_CSI_D2_PIN, OMV_GPIO_MODE_ALT, OMV_GPIO_PULL_NONE, OMV_GPIO_SPEED_MED, -1);
@@ -134,20 +140,6 @@ int mimxrt_hal_csi_init(CSI_Type *inst) {
     omv_gpio_config(OMV_CSI_HSYNC_PIN, OMV_GPIO_MODE_ALT, OMV_GPIO_PULL_NONE, OMV_GPIO_SPEED_MED, -1);
     omv_gpio_config(OMV_CSI_VSYNC_PIN, OMV_GPIO_MODE_ALT, OMV_GPIO_PULL_NONE, OMV_GPIO_SPEED_MED, -1);
     omv_gpio_config(OMV_CSI_PXCLK_PIN, OMV_GPIO_MODE_ALT, OMV_GPIO_PULL_NONE, OMV_GPIO_SPEED_MED, -1);
-
-    // Configure DCMI GPIOs
-    #if defined(OMV_CSI_RESET_PIN)
-    omv_gpio_config(OMV_CSI_RESET_PIN, OMV_GPIO_MODE_OUTPUT, OMV_GPIO_PULL_DOWN, OMV_GPIO_SPEED_LOW, -1);
-    #endif
-    #if defined(OMV_CSI_FSYNC_PIN)
-    omv_gpio_config(OMV_CSI_FSYNC_PIN, OMV_GPIO_MODE_OUTPUT, OMV_GPIO_PULL_DOWN, OMV_GPIO_SPEED_LOW, -1);
-    #endif
-    #if defined(OMV_CSI_POWER_PIN)
-    omv_gpio_config(OMV_CSI_POWER_PIN, OMV_GPIO_MODE_OUTPUT, OMV_GPIO_PULL_UP, OMV_GPIO_SPEED_LOW, -1);
-    #endif
-
-    // Configure IRQ priority.
-    NVIC_SetPriority(CSI_IRQn, IRQ_PRI_CSI);
 
     return 0;
 }

@@ -56,9 +56,8 @@ extern uint8_t _line_buf[OMV_LINE_BUF_SIZE];
 
 int imx_csi_config(omv_csi_t *csi, omv_csi_config_t config) {
     if (config == OMV_CSI_CONFIG_INIT) {
+        // Reset and configure CSI.
         CSI_Reset(CSI);
-        NVIC_DisableIRQ(CSI_IRQn);
-
         // CSI_Reset does not zero CR1.
         CSI_REG_CR1(CSI) = 0;
         // CSI mode: HSYNC, VSYNC, and PIXCLK signals are used.
@@ -94,8 +93,11 @@ int imx_csi_config(omv_csi_t *csi, omv_csi_config_t config) {
 }
 
 static int imx_csi_abort(omv_csi_t *csi, bool fifo_flush, bool in_irq) {
-    NVIC_DisableIRQ(CSI_IRQn);
+    // Disable CSI interrupts.
     CSI_DisableInterrupts(CSI, CSI_IRQ_FLAGS);
+    NVIC_DisableIRQ(CSI_IRQn);
+    NVIC_ClearPendingIRQ(CSI_IRQn);
+
     CSI_REG_CR3(CSI) &= ~CSI_CR3_DMA_REQ_EN_RFF_MASK;
     CSI_REG_CR18(CSI) &= ~CSI_CR18_CSI_ENABLE_MASK;
     csi->dest_inc = 0;
@@ -395,8 +397,10 @@ int imx_csi_snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
             (dma_line_bytes << CSI_IMAG_PARA_IMAGE_WIDTH_SHIFT) |
             (1 << CSI_IMAG_PARA_IMAGE_HEIGHT_SHIFT);
 
-        // Configure and enable CSI interrupts.
+        // Enable CSI interrupts.
         CSI_EnableInterrupts(CSI, CSI_IRQ_FLAGS);
+        NVIC_ClearPendingIRQ(CSI_IRQn);
+        NVIC_SetPriority(CSI_IRQn, IRQ_PRI_CSI);
         NVIC_EnableIRQ(CSI_IRQn);
 
         // Enable CSI
@@ -499,60 +503,10 @@ int imx_csi_snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
     return 0;
 }
 
-int omv_csi_init() {
-    int init_ret = 0;
-    static omv_i2c_t i2c;
-
-    mimxrt_hal_csi_init(CSI);
-
-    #if defined(OMV_CSI_POWER_PIN)
-    omv_gpio_write(OMV_CSI_POWER_PIN, 1);
-    #endif
-
-    #if defined(OMV_CSI_RESET_PIN)
-    omv_gpio_write(OMV_CSI_RESET_PIN, 1);
-    #endif
-
-    // Initialize the CSIs using this driver's ops as defaults,
-    // which can be overridden by sensor drivers during probe.
-    for (size_t i=0; i<OMV_CSI_MAX_DEVICES; i++) {
-        omv_csi_t *csi = &csi_all[i];
-
-        memset(csi, 0, sizeof(omv_csi_t));
-        csi->i2c = &i2c;
-        csi->fb = framebuffer_get(-1);
-        csi->abort = imx_csi_abort;
-        csi->config = imx_csi_config;
-        csi->snapshot = imx_csi_snapshot;
-        csi->color_palette = rainbow_table;
-    }
-
-    // Configure the csi external clock (XCLK).
-    if (omv_csi_set_clk_frequency(OMV_CSI_CLK_FREQUENCY) != 0) {
-        // Failed to initialize the csi clock.
-        return OMV_CSI_ERROR_TIM_INIT_FAILED;
-    }
-
-    // Initialize the camera bus.
-    omv_i2c_init(&i2c, OMV_CSI_I2C_ID, OMV_CSI_I2C_SPEED);
-
-    // Detect and initialize the image sensor.
-    if ((init_ret = omv_csi_probe(&i2c)) != 0) {
-        // Sensor probe/init failed.
-        return init_ret;
-    }
-
-    // Configure the CSI interfaces.
-    for (size_t i=0; i<OMV_CSI_MAX_DEVICES; i++) {
-        omv_csi_t *csi = &csi_all[i];
-
-        if (omv_csi_config(csi, OMV_CSI_CONFIG_INIT) != 0) {
-            return OMV_CSI_ERROR_CSI_INIT_FAILED;
-        }
-    }
-
-    // Clear fb_enabled flag.
-    JPEG_FB()->enabled = 0;
+int omv_csi_ops_init(omv_csi_t *csi) {
+    csi->abort = imx_csi_abort;
+    csi->config = imx_csi_config;
+    csi->snapshot = imx_csi_snapshot;
     return 0;
 }
 #endif // MICROPY_PY_CSI

@@ -68,6 +68,18 @@ static void dma_irq_handler() {
 
 static int rp2_csi_config(omv_csi_t *csi, omv_csi_config_t config) {
     if (config == OMV_CSI_CONFIG_INIT) {
+        // PIXCLK
+        gpio_init(OMV_CSI_PXCLK_PIN);
+        gpio_set_dir(OMV_CSI_PXCLK_PIN, GPIO_IN);
+
+        // HSYNC
+        gpio_init(OMV_CSI_HSYNC_PIN);
+        gpio_set_dir(OMV_CSI_HSYNC_PIN, GPIO_IN);
+
+        // VSYNC
+        gpio_init(OMV_CSI_VSYNC_PIN);
+        gpio_set_dir(OMV_CSI_VSYNC_PIN, GPIO_IN);
+
         // Install new DMA IRQ handler.
         irq_set_enabled(OMV_CSI_DMA_IRQ, false);
 
@@ -213,76 +225,10 @@ static int rp2_csi_snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
     return 0;
 }
 
-int omv_csi_init() {
-    int init_ret = 0;
-    static omv_i2c_t i2c;
-
-    // PIXCLK
-    gpio_init(OMV_CSI_PXCLK_PIN);
-    gpio_set_dir(OMV_CSI_PXCLK_PIN, GPIO_IN);
-
-    // HSYNC
-    gpio_init(OMV_CSI_HSYNC_PIN);
-    gpio_set_dir(OMV_CSI_HSYNC_PIN, GPIO_IN);
-
-    // VSYNC
-    gpio_init(OMV_CSI_VSYNC_PIN);
-    gpio_set_dir(OMV_CSI_VSYNC_PIN, GPIO_IN);
-
-    #if defined(OMV_CSI_POWER_PIN)
-    gpio_init(OMV_CSI_POWER_PIN);
-    gpio_set_dir(OMV_CSI_POWER_PIN, GPIO_OUT);
-    gpio_pull_down(OMV_CSI_POWER_PIN);
-    gpio_put(OMV_CSI_POWER_PIN, 1);
-    #endif
-
-    #if defined(OMV_CSI_RESET_PIN)
-    gpio_init(OMV_CSI_RESET_PIN);
-    gpio_set_dir(OMV_CSI_RESET_PIN, GPIO_OUT);
-    gpio_pull_up(OMV_CSI_RESET_PIN);
-    gpio_put(OMV_CSI_RESET_PIN, 1);
-    #endif
-
-    // Initialize the CSIs using this driver's ops as defaults,
-    // which can be overridden by sensor drivers during probe.
-    for (size_t i=0; i<OMV_CSI_MAX_DEVICES; i++) {
-        omv_csi_t *csi = &csi_all[i];
-
-        memset(csi, 0, sizeof(omv_csi_t));
-        csi->i2c = &i2c;
-        csi->fb = framebuffer_get(-1);
-        csi->abort = rp2_csi_abort;
-        csi->config = rp2_csi_config;
-        csi->snapshot = rp2_csi_snapshot;
-        csi->color_palette = rainbow_table;
-    }
-
-    // Configure the csi external clock (XCLK).
-    if (omv_csi_set_clk_frequency(OMV_CSI_CLK_FREQUENCY) != 0) {
-        // Failed to initialize the csi clock.
-        return OMV_CSI_ERROR_TIM_INIT_FAILED;
-    }
-
-    // Initialize the camera bus.
-    omv_i2c_init(&i2c, OMV_CSI_I2C_ID, OMV_CSI_I2C_SPEED);
-
-    // Detect and initialize the image sensor.
-    if ((init_ret = omv_csi_probe(&i2c)) != 0) {
-        // Sensor probe/init failed.
-        return init_ret;
-    }
-
-    // Configure the DCMI interface.
-    for (size_t i=0; i<OMV_CSI_MAX_DEVICES; i++) {
-        omv_csi_t *csi = &csi_all[i];
-
-        if (omv_csi_config(csi, OMV_CSI_CONFIG_INIT) != 0) {
-            return OMV_CSI_ERROR_CSI_INIT_FAILED;
-        }
-    }
-
-    // Clear fb_enabled flag.
-    JPEG_FB()->enabled = 0;
+int omv_csi_ops_init(omv_csi_t *csi) {
+    csi->abort = rp2_csi_abort;
+    csi->config = rp2_csi_config;
+    csi->snapshot = rp2_csi_snapshot;
     return 0;
 }
 #endif // MICROPY_PY_CSI
