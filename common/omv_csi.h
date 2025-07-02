@@ -400,6 +400,9 @@ void omv_csi_init0();
 // Initializes CSI struct with default ops.
 int omv_csi_init();
 
+// Implemented by ports to set the default CSI ops.
+int omv_csi_ops_init(omv_csi_t *csi);
+
 // Return CSI instance.
 // If id == -1, return the main csi, otherwise look up csi by chip-id.
 omv_csi_t *omv_csi_get(int id);
