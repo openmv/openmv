@@ -103,6 +103,11 @@ void alif_hal_init(void) {
     // Configure and enable USB IRQs.
     NVIC_ClearPendingIRQ(USB_IRQ_IRQn);
     NVIC_SetPriority(USB_IRQ_IRQn, IRQ_PRI_USB);
+
+    #if MICROPY_PY_CSI
+    // Enable CSI clock and configure pins.
+    alif_hal_csi_init(OMV_CSI_BASE);
+    #endif
 }
 
 int alif_hal_i2c_init(uint32_t bus_id) {
@@ -364,14 +369,15 @@ int alif_hal_pdm_deinit(uint32_t pdm_id) {
     return 0;
 }
 
-int alif_hal_csi_init(CPI_Type *cpi, uint32_t mode) {
-    if (mode == 0) {
+int alif_hal_csi_init(CPI_Type *cpi) {
+    // Enable CPI clock.
+    if (cpi == ((CPI_Type *) CPI_BASE)) {
         enable_cpi_periph_clk();
     } else {
         enable_lpcpi_periph_clk();
     }
 
-    // Configure camera sensor interface pins
+    // Configure CPI pins.
     omv_gpio_config(OMV_CSI_D0_PIN, OMV_GPIO_MODE_ALT, OMV_GPIO_PULL_NONE, OMV_GPIO_SPEED_HIGH, -1);
     omv_gpio_config(OMV_CSI_D1_PIN, OMV_GPIO_MODE_ALT, OMV_GPIO_PULL_NONE, OMV_GPIO_SPEED_HIGH, -1);
     omv_gpio_config(OMV_CSI_D2_PIN, OMV_GPIO_MODE_ALT, OMV_GPIO_PULL_NONE, OMV_GPIO_SPEED_HIGH, -1);
@@ -386,18 +392,6 @@ int alif_hal_csi_init(CPI_Type *cpi, uint32_t mode) {
     omv_gpio_config(OMV_CSI_PXCLK_PIN, OMV_GPIO_MODE_ALT, OMV_GPIO_PULL_NONE, OMV_GPIO_SPEED_HIGH, -1);
     omv_gpio_config(OMV_CSI_MXCLK_PIN, OMV_GPIO_MODE_ALT, OMV_GPIO_PULL_NONE, OMV_GPIO_SPEED_HIGH, -1);
 
-    // Configure DCMI GPIOs
-    #if defined(OMV_CSI_RESET_PIN)
-    omv_gpio_config(OMV_CSI_RESET_PIN, OMV_GPIO_MODE_OUTPUT, OMV_GPIO_PULL_DOWN, OMV_GPIO_SPEED_LOW, -1);
-    #endif
-    #if defined(OMV_CSI_FSYNC_PIN)
-    omv_gpio_config(OMV_CSI_FSYNC_PIN, OMV_GPIO_MODE_OUTPUT, OMV_GPIO_PULL_DOWN, OMV_GPIO_SPEED_LOW, -1);
-    #endif
-    #if defined(OMV_CSI_POWER_PIN)
-    omv_gpio_config(OMV_CSI_POWER_PIN, OMV_GPIO_MODE_OUTPUT, OMV_GPIO_PULL_UP, OMV_GPIO_SPEED_LOW, -1);
-    #endif
-
-    NVIC_SetPriority(CAM_IRQ_IRQn, IRQ_PRI_CSI);
     return 0;
 }
 

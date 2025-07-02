@@ -71,6 +71,66 @@
                          CAM_INTR_OUTFIFO_OVERRUN | \
                          CAM_INTR_BRESP_ERR)
 
+static uint32_t omv_csi_get_fb_offset(omv_csi_t *csi);
+
+void CAM_IRQHandler(void) {
+    uint32_t mask = 0;
+    omv_csi_t *csi = omv_csi_get(-1);
+    CPI_Type *cpi = csi->base;
+
+    uint32_t status = cpi_get_interrupt_status(cpi);
+
+    if (status & CAM_INTR_VSYNC) {
+        mask |= CAM_INTR_VSYNC;
+    }
+
+    if (status & CAM_INTR_HSYNC) {
+        mask |= CAM_INTR_HSYNC;
+    }
+
+    if (status & CAM_INTR_INFIFO_OVERRUN) {
+        mask |= CAM_INTR_INFIFO_OVERRUN;
+        omv_csi_abort(csi, true, true);
+    }
+
+    if (status & CAM_INTR_OUTFIFO_OVERRUN) {
+        mask |= CAM_INTR_OUTFIFO_OVERRUN;
+        omv_csi_abort(csi, true, true);
+    }
+
+    if (status & CAM_INTR_BRESP_ERR) {
+        mask |= CAM_INTR_BRESP_ERR;
+        omv_csi_abort(csi, true, true);
+    }
+
+    if (status & CAM_INTR_STOP) {
+        mask |= CAM_INTR_STOP;
+        cpi->CAM_CTRL = 0;
+        if (!(status & CPI_ERROR_FLAGS)) {
+            // Release the current framebuffer.
+            framebuffer_get_tail(csi->fb, FB_NO_FLAGS);
+        }
+
+        // Get the current framebuffer (or new tail).
+        vbuffer_t *buffer = framebuffer_get_tail(csi->fb, FB_PEEK);
+
+        if (buffer != NULL) {
+            cpi->CAM_CTRL = 0;
+            cpi->CAM_CTRL = CAM_CTRL_SW_RESET;
+            cpi->CAM_FRAME_ADDR = LocalToGlobal(buffer->data + omv_csi_get_fb_offset(csi));
+            cpi_irq_handler_clear_intr_status(cpi, mask);
+            cpi->CAM_CTRL = (CAM_CTRL_SNAPSHOT | CAM_CTRL_START | CAM_CTRL_FIFO_CLK_SEL);
+        }
+
+        if (csi->frame_cb.fun && !(status & CPI_ERROR_FLAGS)) {
+            csi->frame_cb.fun(csi->frame_cb.arg);
+        }
+    }
+
+    // Clear interrupts.
+    cpi_irq_handler_clear_intr_status(cpi, mask);
+}
+
 int alif_csi_config(omv_csi_t *csi, omv_csi_config_t config) {
     if (config == OMV_CSI_CONFIG_INIT) {
         CPI_Type *cpi = csi->base;
@@ -235,13 +295,13 @@ int alif_csi_snapshot(omv_csi_t *csi, image_t *dst_image, uint32_t flags) {
         cpi_irq_handler_clear_intr_status(cpi, CPI_IRQ_FLAGS);
         cpi_enable_interrupt(cpi, CPI_IRQ_FLAGS);
         NVIC_ClearPendingIRQ(CAM_IRQ_IRQn);
+        NVIC_SetPriority(CAM_IRQ_IRQn, IRQ_PRI_CSI);
         NVIC_EnableIRQ(CAM_IRQ_IRQn);
 
         // Reset CSI and start the capture.
         cpi->CAM_CTRL = 0;
-        cpi->CAM_CTRL |= CAM_CTRL_SW_RESET;
+        cpi->CAM_CTRL = CAM_CTRL_SW_RESET;
         cpi->CAM_CTRL = (CAM_CTRL_SNAPSHOT | CAM_CTRL_START | CAM_CTRL_FIFO_CLK_SEL);
-        //printf("==== reconfigured ===\n");
     }
 
     // Let the camera know we want to trigger it now.
@@ -364,126 +424,11 @@ int alif_csi_snapshot(omv_csi_t *csi, image_t *dst_image, uint32_t flags) {
     return 0;
 }
 
-int omv_csi_init() {
-    int init_ret = 0;
-    static omv_i2c_t i2c;
-    CPI_Type *base = ((CPI_Type *) CPI_BASE);
-
-    alif_hal_csi_init(base, 0);
-
-    #if defined(OMV_CSI_POWER_PIN)
-    omv_gpio_write(OMV_CSI_POWER_PIN, 0);
-    #endif
-
-    #if defined(OMV_CSI_RESET_PIN)
-    omv_gpio_write(OMV_CSI_RESET_PIN, 0);
-    #endif
-
-    // Initialize the CSIs using this driver's ops as defaults,
-    // which can be overridden by sensor drivers during probe.
-    for (size_t i=0; i<OMV_CSI_MAX_DEVICES; i++) {
-        omv_csi_t *csi = &csi_all[i];
-
-        memset(csi, 0, sizeof(omv_csi_t));
-        csi->i2c = &i2c;
-        csi->fb = framebuffer_get(-1);
-        csi->base = base;
-        csi->abort = alif_csi_abort;
-        csi->config = alif_csi_config;
-        csi->snapshot = alif_csi_snapshot;
-        csi->color_palette = rainbow_table;
-    }
-
-    // Configure the CSI external clock.
-    if (omv_csi_set_clk_frequency(OMV_CSI_CLK_FREQUENCY) != 0) {
-        // Failed to initialize the csi clock.
-        return OMV_CSI_ERROR_TIM_INIT_FAILED;
-    }
-
-    // Initialize the camera bus.
-    omv_i2c_init(&i2c, OMV_CSI_I2C_ID, OMV_CSI_I2C_SPEED);
-
-    // Detect and initialize the image csi.
-    if ((init_ret = omv_csi_probe(&i2c)) != 0) {
-        // csi probe/init failed.
-        return init_ret;
-    }
-
-    // Configure the DCMI interface.
-    for (size_t i=0; i<OMV_CSI_MAX_DEVICES; i++) {
-        omv_csi_t *csi = &csi_all[i];
-
-        if (omv_csi_config(csi, OMV_CSI_CONFIG_INIT) != 0) {
-            return OMV_CSI_ERROR_CSI_INIT_FAILED;
-        }
-
-        csi->detected = true;
-    }
-
-    // Clear fb_enabled flag.
-    JPEG_FB()->enabled = 0;
-
+int omv_csi_ops_init(omv_csi_t *csi) {
+    csi->base = OMV_CSI_BASE;
+    csi->abort = alif_csi_abort;
+    csi->config = alif_csi_config;
+    csi->snapshot = alif_csi_snapshot;
     return 0;
-}
-
-void CAM_IRQHandler(void) {
-    uint32_t mask = 0;
-    omv_csi_t *csi = omv_csi_get(-1);
-    CPI_Type *cpi = csi->base;
-
-    uint32_t status = cpi_get_interrupt_status(cpi);
-
-    if (status & CAM_INTR_VSYNC) {
-        mask |= CAM_INTR_VSYNC;
-    }
-
-    if (status & CAM_INTR_HSYNC) {
-        mask |= CAM_INTR_HSYNC;
-    }
-
-    if (status & CAM_INTR_INFIFO_OVERRUN) {
-        mask |= CAM_INTR_INFIFO_OVERRUN;
-        omv_csi_abort(csi, true, true);
-        printf("INFIFO_OVERRUN\n");
-    }
-
-    if (status & CAM_INTR_OUTFIFO_OVERRUN) {
-        mask |= CAM_INTR_OUTFIFO_OVERRUN;
-        omv_csi_abort(csi, true, true);
-        printf("OUTFIFO_OVERRUN\n");
-    }
-
-    if (status & CAM_INTR_BRESP_ERR) {
-        mask |= CAM_INTR_BRESP_ERR;
-        omv_csi_abort(csi, true, true);
-        printf("BRESP_ERR %lu\n", cpi->CAM_AXI_ERR_STAT);
-    }
-
-    if (status & CAM_INTR_STOP) {
-        mask |= CAM_INTR_STOP;
-        cpi->CAM_CTRL = 0;
-        if (!(status & CPI_ERROR_FLAGS)) {
-            // Release the current framebuffer.
-            framebuffer_get_tail(csi->fb, FB_NO_FLAGS);
-        }
-
-        // Get the current framebuffer (or new tail).
-        vbuffer_t *buffer = framebuffer_get_tail(csi->fb, FB_PEEK);
-
-        if (buffer != NULL) {
-            cpi->CAM_CTRL = 0;
-            cpi->CAM_CTRL |= CAM_CTRL_SW_RESET;
-            cpi->CAM_FRAME_ADDR = LocalToGlobal(buffer->data + omv_csi_get_fb_offset(csi));
-            cpi_irq_handler_clear_intr_status(cpi, mask);
-            cpi->CAM_CTRL = (CAM_CTRL_SNAPSHOT | CAM_CTRL_START | CAM_CTRL_FIFO_CLK_SEL);
-        }
-
-        if (csi->frame_cb.fun && !(status & CPI_ERROR_FLAGS)) {
-            csi->frame_cb.fun(csi->frame_cb.arg);
-        }
-    }
-
-    // Clear interrupts.
-    cpi_irq_handler_clear_intr_status(cpi, mask);
 }
 #endif // MICROPY_PY_CSI
