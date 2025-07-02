@@ -72,28 +72,36 @@
 extern uint8_t _line_buf;
 extern uint32_t hal_get_exti_gpio(uint32_t line);
 
+// Stores the CSI handle associated with DCMI/DCMIPP.
+typedef enum {
+    CSI_HANDLE_DCMI = 0,
+    CSI_HANDLE_DCMIPP = 1,
+} csi_handle_t;
+
+static omv_csi_t *stm_csi_all[2] = { 0 };
+
 #if USE_DCMI
 void DCMI_IRQHandler(void) {
-    omv_csi_t *csi = omv_csi_get(-1);
+    omv_csi_t *csi = stm_csi_all[CSI_HANDLE_DCMI];
     HAL_DCMI_IRQHandler(&csi->dcmi);
 }
 #endif
 
 #if USE_DCMIPP
 void CSI_IRQHandler(void) {
-    omv_csi_t *csi = omv_csi_get(-1);
+    omv_csi_t *csi = stm_csi_all[CSI_HANDLE_DCMIPP];
     HAL_DCMIPP_CSI_IRQHandler(&csi->dcmi);
 }
 
 void DCMIPP_IRQHandler(void) {
-    omv_csi_t *csi = omv_csi_get(-1);
+    omv_csi_t *csi = stm_csi_all[CSI_HANDLE_DCMIPP];
     HAL_DCMIPP_IRQHandler(&csi->dcmi);
 }
 #endif
 
 #if USE_MDMA
 void omv_csi_mdma_irq_handler(void) {
-    omv_csi_t *csi = omv_csi_get(-1);
+    omv_csi_t *csi = stm_csi_all[CSI_HANDLE_DCMI];
 
     if (MDMA->GISR0 & (1 << OMV_MDMA_CHANNEL_DCMI_0)) {
         HAL_MDMA_IRQHandler(&csi->mdma0);
@@ -137,6 +145,9 @@ static int stm_csi_config(omv_csi_t *csi, omv_csi_config_t config) {
             return -1;
         }
 
+        // Store CSI handle used for DCMIPP
+        stm_csi_all[CSI_HANDLE_DCMIPP] = csi;
+
         // Configure and enable DCMI IRQ Channel
         NVIC_SetPriority(DCMIPP_IRQn, IRQ_PRI_DCMI);
         HAL_NVIC_EnableIRQ(DCMIPP_IRQn);
@@ -162,6 +173,9 @@ static int stm_csi_config(omv_csi_t *csi, omv_csi_config_t config) {
         if (HAL_DCMI_Init(&csi->dcmi) != HAL_OK) {
             return -1;
         }
+
+        // Store CSI handle used for DCMI
+        stm_csi_all[CSI_HANDLE_DCMI] = csi;
 
         // Configure and enable DCMI IRQ Channel
         NVIC_SetPriority(DCMI_IRQn, IRQ_PRI_DCMI);
@@ -408,9 +422,9 @@ static uint32_t get_dcmi_hw_crop(omv_csi_t *csi, uint32_t bytes_per_pixel) {
 #if USE_DCMI
 void HAL_DCMI_FrameEventCallback(DCMI_HandleTypeDef *hdcmi) {
 #else
-void HAL_DCMIPP_PIPE_FrameEventCallback(DCMIPP_HandleTypeDef *dcmipp, uint32_t pipe) {
+void HAL_DCMIPP_PIPE_FrameEventCallback(DCMIPP_HandleTypeDef *hdcmi, uint32_t pipe) {
 #endif
-    omv_csi_t *csi = omv_csi_get(-1);
+    omv_csi_t *csi = OMV_CONTAINER_OF(hdcmi, omv_csi_t, dcmi);
     framebuffer_t *fb = csi->fb;
 
     #if USE_MDMA
@@ -444,7 +458,7 @@ void HAL_DCMIPP_PIPE_FrameEventCallback(DCMIPP_HandleTypeDef *dcmipp, uint32_t p
     if (buffer == NULL) {
         omv_csi_abort(csi, false, false);
     } else {
-        HAL_DCMIPP_PIPE_SetMemoryAddress(dcmipp, pipe, DCMIPP_MEMORY_ADDRESS_0, (uint32_t) buffer->data);
+        HAL_DCMIPP_PIPE_SetMemoryAddress(hdcmi, pipe, DCMIPP_MEMORY_ADDRESS_0, (uint32_t) buffer->data);
     }
     #endif
 }
@@ -454,8 +468,8 @@ void HAL_DCMIPP_PIPE_FrameEventCallback(DCMIPP_HandleTypeDef *dcmipp, uint32_t p
 // buffer that was used. At this point, the DMA transfers the next line to the next buffer.
 // Using line buffers allows performing post-processing before writing the frame to the
 // framebuffer, and help hide external RAM latency.
-void DCMI_DMAConvCpltUser(uint32_t addr) {
-    omv_csi_t *csi = omv_csi_get(-1);
+void DCMI_DMAConvCpltUser(DCMI_HandleTypeDef *hdcmi, uint32_t addr) {
+    omv_csi_t *csi = OMV_CONTAINER_OF(hdcmi, omv_csi_t, dcmi);
     framebuffer_t *fb = csi->fb;
 
     // Throttle frames to match the current frame rate.
