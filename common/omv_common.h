@@ -74,4 +74,10 @@
 #define OMV_PROFILE_PRINT(F)
 #endif
 
+// Returns a pointer to the containing structure
+// ptr: Pointer to the member within the structure
+// type: Type of the containing structure
+// member: Name of the member within the structure
+#define OMV_CONTAINER_OF(ptr, type, member) \
+    ((type *)((char *)(ptr) - offsetof(type, member)))
 #endif //__OMV_COMMON_H__
