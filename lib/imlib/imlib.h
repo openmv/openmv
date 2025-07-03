@@ -1399,6 +1399,7 @@ void imlib_draw_string(image_t *img,
                        int string_rotation,
                        bool string_hmirror,
                        bool string_hflip);
+void imlib_draw_event_histogram(image_t *img, ec_event_t *ec_event, int num_events, int gain);
 void imlib_draw_image(image_t *dst_img,
                       image_t *src_img,
                       int dst_x_start,
