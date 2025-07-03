@@ -1221,6 +1221,16 @@ static mp_obj_t py_csi_ioctl(size_t n_args, const mp_obj_t *args) {
             }
             break;
         }
+        case OMV_CSI_IOCTL_GENX320_CALIBRATE: {
+            if (n_args == 2) {
+                error = omv_csi_ioctl(self->csi, request, mp_obj_get_int(args[0]),
+                                      (double) mp_obj_get_float(args[1]));
+                if (error > 0) {
+                    ret_obj = mp_obj_new_int(error);
+                }
+            }
+            break;
+        }
         #endif // (OMV_GENX320_ENABLE == 1)
 
         default: {
@@ -1557,6 +1567,7 @@ static const mp_rom_map_elem_t globals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_GENX320_MODE_HISTO),           MP_ROM_INT(OMV_CSI_GENX320_MODE_HISTO) },
     { MP_ROM_QSTR(MP_QSTR_GENX320_MODE_EVENT),           MP_ROM_INT(OMV_CSI_GENX320_MODE_EVENT) },
     { MP_ROM_QSTR(MP_QSTR_IOCTL_GENX320_READ_EVENTS),    MP_ROM_INT(OMV_CSI_IOCTL_GENX320_READ_EVENTS)},
+    { MP_ROM_QSTR(MP_QSTR_IOCTL_GENX320_CALIBRATE),      MP_ROM_INT(OMV_CSI_IOCTL_GENX320_CALIBRATE)},
     { MP_ROM_QSTR(MP_QSTR_PIX_OFF_EVENT),                MP_ROM_INT(EC_PIX_OFF_EVENT)},
     { MP_ROM_QSTR(MP_QSTR_PIX_ON_EVENT),                 MP_ROM_INT(EC_PIX_ON_EVENT)},
     { MP_ROM_QSTR(MP_QSTR_RST_TRIGGER_RISING),           MP_ROM_INT(EC_RST_TRIGGER_RISING)},
