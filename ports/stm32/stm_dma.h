@@ -29,4 +29,17 @@ uint8_t stm_dma_channel_to_irqn(void *dma_channel);
 uint8_t stm_dma_channel_to_id(void *dma_channel);
 int stm_dma_set_irq_descr(void *dma_channel, DMA_HandleTypeDef *dma_descr);
 uint8_t stm_dma_mpu_region_size(uint32_t size);
+
+#ifdef OMV_MDMA_CHANNEL_DCMI_0
+#include "omv_csi.h"
+
+#define MDMA_BUFFER_SIZE    (64)
+#define MDMA_CHAN_TO_INSTANCE(x) \
+    (MDMA_Channel_TypeDef *) (MDMA_Channel0_BASE + ((MDMA_Channel1_BASE - MDMA_Channel0_BASE) * x))
+
+void stm_mdma_init(omv_csi_t *csi, uint32_t bytes_per_pixel, uint32_t x_crop);
+void stm_mdma_init_channel(omv_csi_t *csi, MDMA_InitTypeDef *init, uint32_t bytes_per_pixel, uint32_t x_crop);
+void stm_mdma_start(omv_csi_t *csi, uint32_t src, uint32_t dst, uint32_t line_width, uint32_t line_count);
+#endif  // OMV_MDMA_CHANNEL_DCMI_0
+
 #endif // __STM_DMA_H__
