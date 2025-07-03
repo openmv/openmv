@@ -235,6 +235,7 @@ typedef enum {
     OMV_CSI_IOCTL_GENX320_SET_BIASES    = 0x20,
     OMV_CSI_IOCTL_GENX320_SET_BIAS      = 0x21,
     OMV_CSI_IOCTL_GENX320_SET_AFK       = 0x22,
+    OMV_CSI_IOCTL_GENX320_READ_EVENTS   = 0x23,
     OMV_CSI_IOCTL_UPDATE_AGC_AEC        = 0x7F
 } omv_csi_ioctl_t;
 

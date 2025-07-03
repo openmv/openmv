@@ -50,6 +50,9 @@
 #include "omv_i2c.h"
 #include "py_helper.h"
 #include "framebuffer.h"
+#if MICROPY_PY_ULAB
+#include "ndarray.h"
+#endif
 
 static mp_obj_t vsync_callback = mp_const_none;
 static mp_obj_t frame_callback = mp_const_none;
@@ -1105,6 +1108,28 @@ static mp_obj_t py_omv_csi_ioctl(size_t n_args, const mp_obj_t *args) {
             }
             break;
         }
+        case OMV_CSI_IOCTL_GENX320_READ_EVENTS: {
+            if (n_args == 2 && MP_OBJ_IS_TYPE(args[1], &ulab_ndarray_type)) {
+                ndarray_obj_t *array = MP_OBJ_TO_PTR(args[1]);
+
+                if (array->dtype != NDARRAY_UINT16) {
+                    mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Expected a ndarray with dtype uint16"));
+                }
+
+                if (!(ndarray_is_dense(array) && (array->ndim == 2) &&
+                    (array->shape[ULAB_MAX_DIMS - 2] == 2048) &&
+                    (array->shape[ULAB_MAX_DIMS - 1] == EC_EVENT_SIZE))) {
+                    mp_raise_msg_varg(&mp_type_ValueError,
+                                      MP_ERROR_TEXT("Expected a dense ndarray with shape (2048, %d)"), EC_EVENT_SIZE);
+                }
+
+                error = omv_csi_ioctl(csi, request, array->array);
+                if (error > 0) {
+                    ret_obj = mp_obj_new_int(error);
+                }
+            }
+            break;
+        }
         #endif // (OMV_GENX320_ENABLE == 1)
 
         default: {
@@ -1323,6 +1348,13 @@ static const mp_rom_map_elem_t globals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_GENX320_BIAS_HPF),             MP_ROM_INT(OMV_CSI_GENX320_BIAS_HPF)},
     { MP_ROM_QSTR(MP_QSTR_GENX320_BIAS_REFR),            MP_ROM_INT(OMV_CSI_GENX320_BIAS_REFR)},
     { MP_ROM_QSTR(MP_QSTR_IOCTL_GENX320_SET_AFK),        MP_ROM_INT(OMV_CSI_IOCTL_GENX320_SET_AFK)},
+    { MP_ROM_QSTR(MP_QSTR_IOCTL_GENX320_READ_EVENTS),    MP_ROM_INT(OMV_CSI_IOCTL_GENX320_READ_EVENTS)},
+    { MP_ROM_QSTR(MP_QSTR_PIX_OFF_EVENT),                MP_ROM_INT(EC_PIX_OFF_EVENT)},
+    { MP_ROM_QSTR(MP_QSTR_PIX_ON_EVENT),                 MP_ROM_INT(EC_PIX_ON_EVENT)},
+    { MP_ROM_QSTR(MP_QSTR_RST_TRIGGER_RISING),           MP_ROM_INT(EC_RST_TRIGGER_RISING)},
+    { MP_ROM_QSTR(MP_QSTR_RST_TRIGGER_FALLING),          MP_ROM_INT(EC_RST_TRIGGER_FALLING)},
+    { MP_ROM_QSTR(MP_QSTR_EXT_TRIGGER_RISING),           MP_ROM_INT(EC_EXT_TRIGGER_RISING)},
+    { MP_ROM_QSTR(MP_QSTR_EXT_TRIGGER_FALLING),          MP_ROM_INT(EC_EXT_TRIGGER_FALLING)},
     #endif
 
     // Sensor functions
