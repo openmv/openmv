@@ -11,6 +11,9 @@ sensor.reset()
 sensor.set_pixformat(sensor.GRAYSCALE)  # Must always be grayscale.
 sensor.set_framesize(sensor.B320X320)  # Must always be 320x320.
 
+# The default frame rate is 50 FPS. You can change it between ~20 FPS and ~350 FPS.
+sensor.set_framerate(50)
+
 clock = time.clock()
 
 while True:
