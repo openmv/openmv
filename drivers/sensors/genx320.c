@@ -1,7 +1,7 @@
 /*
  * SPDX-License-Identifier: MIT
  *
- * Copyright (C) 2013-2024 OpenMV, LLC.
+ * Copyright (C) 2013-2025 OpenMV, LLC.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -48,11 +48,8 @@
 #define ACTIVE_SENSOR_HEIGHT            (SENSOR_HEIGHT - BLANK_LINES)
 #define ACTIVE_SENSOR_SIZE              (ACTIVE_SENSOR_WIDTH * ACTIVE_SENSOR_HEIGHT)
 
-#ifdef OMV_GENX320_EHC_ENABLE
-#define HSYNC_CLOCK_CYCLES              880 // 320 + 880 = 1200 cycles -> ~122 FPS
-#else
-#define HSYNC_CLOCK_CYCLES              280 // 320 + 280 = 600 cycles
-#endif
+#define HISTO_HSYNC_CLOCK_CYCLES        880 // 320 + 880 = 1200 cycles -> ~122 FPS
+#define EVENT_HSYNC_CLOCK_CYCLES        280 // 320 + 280 = 600 cycles
 #define VSYNC_CLOCK_CYCLES              8
 
 #define CONTRAST_DEFAULT                16
@@ -65,9 +62,6 @@
 #define INTEGRATION_MAX_PREIOD          0x1FFF0 // 131056us
 
 #define FPS_TO_US(fps)                  (1000000 / (fps))
-
-#define EVENT_THRESHOLD_TO_CALIBRATE    100000
-#define EVENT_THRESHOLD_SIGMA           10
 
 #define EVT_CLK_MULTIPLIER              (2)
 #define EVT_CLK_FREQ \
@@ -82,117 +76,51 @@
 
 #define EHC_DIFF3D_N_BITS_SIZE          (7) // signed 8-bit value
 
-#if (OMV_GENX320_CAL_ENABLE == 1)
-static bool hot_pixels_disabled = false;
-#endif // (OMV_GENX320_CAL_ENABLE == 1)
-static int32_t contrast = CONTRAST_DEFAULT;
-static int32_t brightness = BRIGHTNESS_DEFAULT;
+typedef struct genx_state {
+    int32_t contrast;
+    int32_t brightness;
+    uint64_t event_time_us;
+    const struct issd *issd;
+    genx_mode_t mode;
+    AFK_HandleTypeDef psee_afk;
+    ec_event_t *events;
+} genx_state_t;
 
-static AFK_HandleTypeDef psee_afk;
+static genx_state_t genx = {};
+
+static int set_active_mode(omv_csi_t *csi, genx_mode_t mode);
 
 static int reset(omv_csi_t *csi) {
+    genx_state_t *genx = csi->priv;
+
     csi->color_palette = NULL;
+    genx->contrast = CONTRAST_DEFAULT;
+    genx->brightness = BRIGHTNESS_DEFAULT;
+    genx->event_time_us = 0;
 
-    #if (OMV_GENX320_CAL_ENABLE == 1)
-    hot_pixels_disabled = false;
-    #endif // (OMV_GENX320_CAL_ENABLE == 1)
-    contrast = CONTRAST_DEFAULT;
-    brightness = BRIGHTNESS_DEFAULT;
-
-    BIAS_Params_t biases = (csi->chip_id == SAPHIR_ES_ID) ? genx320es_default_biases : genx320mp_default_biases;
-
-    // Force CPI with chicken bits
-    psee_sensor_write(csi, TOP_CHICKEN, TOP_CHICKEN_OVERRIDE_MIPI_MODE_EN |
-                      TOP_CHICKEN_OVERRIDE_HISTO_MODE_EN |
-                      #if (OMV_GENX320_EHC_ENABLE == 1)
-                      1 << TOP_CHICKEN_OVERRIDE_HISTO_MODE_Pos |
-                      #else
-                      0 << TOP_CHICKEN_OVERRIDE_HISTO_MODE_Pos |
-                      #endif // (OMV_GENX320_EHC_ENABLE == 1)
-                      I2C_TIMEOUT << TOP_CHICKEN_I2C_TIMEOUT_Pos);
-
-    // Start the Init sequence
-    #if (OMV_GENX320_EHC_ENABLE == 1)
-    psee_sensor_init(csi, &dcmi_histo);
-    #else
-    psee_sensor_init(csi, &dcmi_evt);
-
-    // Set EVT20 mode
-    psee_sensor_write(csi, EDF_CONTROL, 0);
-    #endif // (OMV_GENX320_EHC_ENABLE == 1)
-
-    // Configure Packet and Frame sizes
-    psee_sensor_write(csi, CPI_PACKET_SIZE_CONTROL, ACTIVE_SENSOR_WIDTH);
-    psee_sensor_write(csi, CPI_PACKET_TIME_CONTROL, ACTIVE_SENSOR_WIDTH << CPI_PACKET_TIME_CONTROL_PERIOD_Pos |
-                      HSYNC_CLOCK_CYCLES << CPI_PACKET_TIME_CONTROL_BLANKING_Pos);
-    psee_sensor_write(csi, CPI_FRAME_SIZE_CONTROL, ACTIVE_SENSOR_HEIGHT);
-    psee_sensor_write(csi, CPI_FRAME_TIME_CONTROL, VSYNC_CLOCK_CYCLES);
-
-    // Enable dropping
-    psee_sensor_write(csi, RO_READOUT_CTRL, RO_READOUT_CTRL_DIGITAL_PIPE_EN |
-                      RO_READOUT_CTRL_AVOID_BPRESS_TD |
-                      RO_READOUT_CTRL_DROP_EN |
-                      RO_READOUT_CTRL_DROP_ON_FULL_EN);
-
-    // Enable the Anti-FlicKering filter
-    if (psee_afk_init(csi, &psee_afk) != AFK_OK) {
-        return -1;
+    // Set histogram mode by default.
+    if (set_active_mode(csi, OMV_CSI_GENX320_MODE_HISTO)) {
+        return OMV_CSI_ERROR_CSI_INIT_FAILED;
     }
-
-    if (psee_afk_activate(&psee_afk, AFK_LOW_BAND, AFK_HIGH_BAND, EVT_CLK_FREQ) != AFK_OK) {
-        return -1;
-    }
-
-    // Operation Mode Configuration
-    #if (OMV_GENX320_EHC_ENABLE == 1)
-    psee_PM3C_Histo_config(csi);
-    #else
-    psee_PM3C_config(csi);
-    #endif // (OMV_GENX320_EHC_ENABLE == 1)
-
-    // Set the default border for the Activity map
-    psee_set_default_XY_borders(csi, &genx320mp_default_am_borders);
-
-    // Configure the activity map
-    psee_configure_activity_map(csi);
-
-    // Set Standard biases
-    psee_sensor_set_biases(csi, &biases);
-
-    // Start the csi
-    #if (OMV_GENX320_EHC_ENABLE == 1)
-    psee_sensor_start(csi, &dcmi_histo);
-
-    EHC_HandleTypeDef psee_ehc;
-
-    if (psee_ehc_init(csi, &psee_ehc) != EHC_OK) {
-        return -1;
-    }
-
-    if (psee_ehc_activate(&psee_ehc, EHC_ALGO_DIFF3D, 0, EHC_DIFF3D_N_BITS_SIZE,
-                          INTEGRATION_DEF_PREIOD, EHC_WITHOUT_PADDING) != EHC_OK) {
-        return -1;
-    }
-    #else
-    psee_sensor_start(csi, &dcmi_evt);
-    #endif //  (OMV_GENX320_EHC_ENABLE == 1)
 
     return 0;
 }
 
 static int sleep(omv_csi_t *csi, int enable) {
+    genx_state_t *genx = csi->priv;
+
     if (enable) {
-        #if (OMV_GENX320_EHC_ENABLE == 1)
-        psee_PM2_Histo_config(csi);
-        #else
-        psee_PM2_config(csi);
-        #endif // (OMV_GENX320_EHC_ENABLE == 1)
+        if (genx->mode == OMV_CSI_GENX320_MODE_HISTO) {
+            psee_PM2_Histo_config(csi);
+        } else {
+            psee_PM2_config(csi);
+        }
     } else {
-        #if (OMV_GENX320_EHC_ENABLE == 1)
-        psee_PM3C_Histo_config(csi);
-        #else
-        psee_PM3C_config(csi);
-        #endif // (OMV_GENX320_EHC_ENABLE == 1)
+        if (genx->mode == OMV_CSI_GENX320_MODE_HISTO) {
+            psee_PM3C_Histo_config(csi);
+        } else {
+            psee_PM3C_config(csi);
+        }
     }
     return 0;
 }
@@ -220,11 +148,22 @@ static int set_pixformat(omv_csi_t *csi, pixformat_t pixformat) {
 }
 
 static int set_framesize(omv_csi_t *csi, omv_csi_framesize_t framesize) {
-    return (framesize == OMV_CSI_FRAMESIZE_320X320) ? 0 : -1;
+    genx_state_t *genx = csi->priv;
+
+    if (genx->mode == OMV_CSI_GENX320_MODE_HISTO) {
+        return (framesize == OMV_CSI_FRAMESIZE_320X320) ? 0 : -1;
+    } else {
+        return (framesize == OMV_CSI_FRAMESIZE_128X64) ? 0 : -1;
+    }
 }
 
 static int set_framerate(omv_csi_t *csi, int framerate) {
-    #if (OMV_GENX320_EHC_ENABLE == 1)
+    genx_state_t *genx = csi->priv;
+
+    if (genx->mode == OMV_CSI_GENX320_MODE_EVENT) {
+        return -1;
+    }
+
     int us = FPS_TO_US(framerate);
 
     if (us < INTEGRATION_MIN_PREIOD) {
@@ -255,24 +194,31 @@ static int set_framerate(omv_csi_t *csi, int framerate) {
         mp_hal_delay_ms(100);
     }
 
-    #endif // (OMV_GENX320_EHC_ENABLE == 1)
     return 0;
 }
 
 static int set_contrast(omv_csi_t *csi, int level) {
-    contrast = __USAT(level, UINT8_T_BITS);
+    genx_state_t *genx = csi->priv;
+    genx->contrast = __USAT(level, UINT8_T_BITS);
     return 0;
 }
 
 static int set_brightness(omv_csi_t *csi, int level) {
-    brightness = __USAT(level, UINT8_T_BITS);
+    genx_state_t *genx = csi->priv;
+    genx->brightness = __USAT(level, UINT8_T_BITS);
     return 0;
 }
 
 static int set_colorbar(omv_csi_t *csi, int enable) {
+    genx_state_t *genx = csi->priv;
+
+    if (genx->mode == OMV_CSI_GENX320_MODE_HISTO) {
+        return -1;
+    }
+
     uint32_t reg;
     psee_sensor_read(csi, RO_READOUT_CTRL, &reg);
-    reg = (reg & ~RO_READOUT_CTRL_ERC_SELF_TEST_EN) | (enable ? RO_READOUT_CTRL_ERC_SELF_TEST_EN : 0);
+    reg = (reg & ~RO_READOUT_CTRL_SELF_TEST_EN) | (enable ? RO_READOUT_CTRL_SELF_TEST_EN : 0);
     psee_sensor_write(csi, RO_READOUT_CTRL, reg);
     return 0;
 }
@@ -287,181 +233,8 @@ static int set_vflip(omv_csi_t *csi, int enable) {
     return 0;
 }
 
-#if (OMV_GENX320_CAL_ENABLE == 1)
-static void disable_hot_pixels(omv_csi_t *csi, uint8_t *histogram) {
-    // Compute average
-    int32_t avg = 0;
-
-    for (uint32_t i = 0; i < ACTIVE_SENSOR_SIZE; i++) {
-        avg += histogram[i];
-    }
-
-    avg /= ACTIVE_SENSOR_SIZE;
-
-    // Compute std
-    int32_t std = 0;
-
-    for (uint32_t i = 0; i < ACTIVE_SENSOR_SIZE; i++) {
-        int32_t diff = histogram[i] - avg;
-        std += diff * diff;
-    }
-
-    std = fast_sqrtf(std / ACTIVE_SENSOR_SIZE);
-
-    int32_t threshold = avg + (std * EVENT_THRESHOLD_SIGMA);
-
-    for (uint32_t y = 0; y < ACTIVE_SENSOR_HEIGHT; y++) {
-        // Reset all blocks
-        for (uint32_t i = 0; i < (ACTIVE_SENSOR_WIDTH / UINT32_T_BITS); i++) {
-            psee_write_ROI_X(csi, i * sizeof(uint32_t), 0);
-        }
-
-        // Select line
-        uint32_t offset = y / UINT32_T_BITS;
-        psee_write_ROI_Y(csi, offset * sizeof(uint32_t), 1 << (y % UINT32_T_BITS));
-
-        // Trigger shadow
-        psee_write_ROI_CTRL(csi, ROI_CTRL_PX_SW_RSTN | ROI_CTRL_TD_SHADOW_TRIGGER);
-
-        uint32_t tmp[ACTIVE_SENSOR_WIDTH / UINT32_T_BITS] = {};
-        for (uint32_t x = 0; x < ACTIVE_SENSOR_WIDTH; x++) {
-            if (histogram[(y * ACTIVE_SENSOR_WIDTH) + x] > threshold) {
-                tmp[x / UINT32_T_BITS] |= 1 << (x % UINT32_T_BITS);
-            }
-        }
-
-        // Write x values to disable
-        for (uint32_t i = 0; i < (ACTIVE_SENSOR_WIDTH / UINT32_T_BITS); i++) {
-            psee_write_ROI_X(csi, i * sizeof(uint32_t), tmp[i]);
-        }
-
-        // Activate block
-        psee_write_ROI_CTRL(csi, ROI_CTRL_PX_SW_RSTN | ROI_CTRL_TD_SHADOW_TRIGGER | ROI_CTRL_TD_EN);
-
-        // Disable roi block
-        psee_write_ROI_CTRL(csi, ROI_CTRL_PX_SW_RSTN);
-        psee_write_ROI_Y(csi, offset * sizeof(uint32_t), 0);
-    }
-}
-#endif // (OMV_GENX320_CAL_ENABLE == 1)
-
-static void snapshot_post_process(omv_csi_t *csi, image_t *image) {
-    #if (OMV_GENX320_EHC_ENABLE == 1)
-    for (uint32_t i = 0; i < ACTIVE_SENSOR_SIZE; i++) {
-        image->data[i] = __USAT((((int8_t *) image->data)[i] * contrast) + brightness, UINT8_T_BITS);
-    }
-    #else
-    uint8_t *out = fb_alloc(ACTIVE_SENSOR_SIZE, FB_ALLOC_NO_HINT);
-    memset(out, brightness, ACTIVE_SENSOR_SIZE);
-
-    for (uint32_t i = 0; i < (ACTIVE_SENSOR_SIZE / sizeof(uint32_t)); i++) {
-        uint32_t val = ((uint32_t *) image->data)[i];
-        uint32_t x = __EVT20_X(val);
-        uint32_t y = __EVT20_Y(val);
-        switch (__EVT20_TYPE(val)) {
-            case TD_LOW: {
-                if ((x < ACTIVE_SENSOR_WIDTH) && (y < ACTIVE_SENSOR_HEIGHT)) {
-                    uint32_t index = (y * ACTIVE_SENSOR_WIDTH) + x;
-                    out[index] = __USAT(((int32_t) out[index]) - contrast, UINT8_T_BITS);
-                }
-                break;
-            }
-            case TD_HIGH: {
-                if ((x < ACTIVE_SENSOR_WIDTH) && (y < ACTIVE_SENSOR_HEIGHT)) {
-                    uint32_t index = (y * ACTIVE_SENSOR_WIDTH) + x;
-                    out[index] = __USAT(((int32_t) out[index]) + contrast, UINT8_T_BITS);
-                }
-                break;
-            }
-            default: {
-                break;
-            }
-        }
-    }
-
-    memcpy(image->data, out, ACTIVE_SENSOR_SIZE);
-    fb_free();
-    #endif // (OMV_GENX320_EHC_ENABLE == 1)
-
-    if (csi->color_palette &&
-        (framebuffer_get_buffer_size(csi->fb) >= (ACTIVE_SENSOR_SIZE * sizeof(uint16_t)))) {
-        for (int32_t i = ACTIVE_SENSOR_SIZE - 1; i >= 0; i--) {
-            ((uint16_t *) image->data)[i] = csi->color_palette[image->data[i]];
-        }
-        image->pixfmt = PIXFORMAT_RGB565;
-        csi->fb->pixfmt = PIXFORMAT_RGB565;
-    }
-}
-
-static int snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
-    #if (OMV_GENX320_EHC_ENABLE != 1)
-    if (csi->transpose) {
-        return OMV_CSI_ERROR_CAPTURE_FAILED;
-    }
-    #endif
-
-    #if (OMV_GENX320_CAL_ENABLE == 1)
-    if (!hot_pixels_disabled) {
-        uint8_t *histogram = fb_alloc0(ACTIVE_SENSOR_SIZE, FB_ALLOC_NO_HINT);
-
-        // Collect events to calibrate hot pixels.
-        for (uint32_t i = 0; i < EVENT_THRESHOLD_TO_CALIBRATE; ) {
-            int ret = ((omv_csi_snapshot_t) csi->priv)(csi, image, flags);
-
-            if (ret < 0) {
-                return ret;
-            }
-
-            // Build histogram of events.
-            #if (OMV_GENX320_EHC_ENABLE == 1)
-            for (uint32_t j = 0; j < ACTIVE_SENSOR_SIZE; j++) {
-                int32_t val = abs(((int8_t *) image->data)[j]);
-                histogram[j] = val;
-                i += val;
-            }
-            #else
-            for (uint32_t j = 0; j < (ACTIVE_SENSOR_SIZE / sizeof(uint32_t)); j++) {
-                uint32_t val = ((uint32_t *) image->data)[j];
-                switch (__EVT20_TYPE(val)) {
-                    case TD_LOW:
-                    case TD_HIGH: {
-                        uint32_t x = __EVT20_X(val);
-                        uint32_t y = __EVT20_Y(val);
-                        if ((x < ACTIVE_SENSOR_WIDTH) && (y < ACTIVE_SENSOR_HEIGHT)) {
-                            uint32_t index = (y * ACTIVE_SENSOR_WIDTH) + x;
-                            histogram[index] = __USAT(histogram[index] + 1, UINT8_T_BITS);
-                            i++;
-                        }
-                        break;
-                    }
-                    default: {
-                        break;
-                    }
-                }
-            }
-            #endif // (OMV_GENX320_EHC_ENABLE == 1)
-
-            snapshot_post_process(csi, image);
-        }
-
-        disable_hot_pixels(csi, histogram);
-
-        fb_free();
-        hot_pixels_disabled = true;
-    }
-    #endif // (OMV_GENX320_CAL_ENABLE == 1)
-
-    int ret = ((omv_csi_snapshot_t) csi->priv)(csi, image, flags);
-
-    if (ret < 0) {
-        return ret;
-    }
-
-    snapshot_post_process(csi, image);
-    return ret;
-}
-
 static int ioctl(omv_csi_t *csi, int request, va_list ap) {
+    genx_state_t *genx = csi->priv;
     int ret = 0;
 
     switch (request) {
@@ -563,8 +336,8 @@ static int ioctl(omv_csi_t *csi, int request, va_list ap) {
             int mode = va_arg(ap, int);
             if (mode == 0) {
                 // Disable AFK
-                if (psee_afk_get_state(&psee_afk) != AFK_STATE_RESET) {
-                    if (psee_afk_deactivate(&psee_afk) != AFK_OK) {
+                if (psee_afk_get_state(&genx->psee_afk) != AFK_STATE_RESET) {
+                    if (psee_afk_deactivate(&genx->psee_afk) != AFK_OK) {
                         ret = -1;
                     }
                 }
@@ -572,13 +345,62 @@ static int ioctl(omv_csi_t *csi, int request, va_list ap) {
                 // Enable AFK
                 int freq_min = va_arg(ap, int);
                 int freq_max = va_arg(ap, int);
-                if (psee_afk_init(csi, &psee_afk) != AFK_OK) {
+                if (psee_afk_init(csi, &genx->psee_afk) != AFK_OK) {
                     ret = -1;
                 }
-                if (psee_afk_activate(&psee_afk, freq_min, freq_max, EVT_CLK_FREQ) != AFK_OK) {
+                if (psee_afk_activate(&genx->psee_afk, freq_min, freq_max, EVT_CLK_FREQ) != AFK_OK) {
                     ret = -1;
                 }
             }
+            break;
+        }
+        case OMV_CSI_IOCTL_GENX320_SET_MODE: {
+            int mode = va_arg(ap, int);
+
+            if (mode == OMV_CSI_GENX320_MODE_HISTO) {
+                if ((ret = set_active_mode(csi, OMV_CSI_GENX320_MODE_HISTO))) {
+                    break;
+                }
+
+                if ((ret = omv_csi_set_pixformat(csi, PIXFORMAT_GRAYSCALE))) {
+                    break;
+                }
+
+                if ((ret = omv_csi_set_framesize(csi, OMV_CSI_FRAMESIZE_320X320))) {
+                    break;
+                }
+            } else if (mode == OMV_CSI_GENX320_MODE_EVENT) {
+                if ((ret = set_active_mode(csi, OMV_CSI_GENX320_MODE_EVENT))) {
+                    break;
+                }
+
+                // 1 byte per pixel.
+                if ((ret = omv_csi_set_pixformat(csi, PIXFORMAT_GRAYSCALE))) {
+                    break;
+                }
+
+                // 128*64 bytes / 4 bytes per event = 2048 events.
+                if ((ret = omv_csi_set_framesize(csi, OMV_CSI_FRAMESIZE_128X64))) {
+                    break;
+                }
+            } else {
+                ret = -1;
+            }
+            break;
+        }
+        case OMV_CSI_IOCTL_GENX320_READ_EVENTS: {
+            if (omv_csi_get_cropped(csi)) {
+                return OMV_CSI_ERROR_CAPTURE_FAILED;
+            }
+
+            if (csi->transpose) {
+                return OMV_CSI_ERROR_CAPTURE_FAILED;
+            }
+
+            genx->events = (ec_event_t *) va_arg(ap, ec_event_t *);
+
+            image_t image;
+            ret = omv_csi_snapshot(csi, &image, 0);
             break;
         }
         default: {
@@ -596,6 +418,164 @@ static int match(omv_csi_t *csi, size_t id) {
            (id == (GENX320_ID_MP & 0x7FFFFFFF));
 }
 
+static int post_process_histo(omv_csi_t *csi, image_t *image, uint32_t flags) {
+    genx_state_t *genx = csi->priv;
+    size_t image_size = image->w * image->h;
+
+    for (uint32_t i = 0; i < image_size; i++) {
+        image->data[i] = __USAT((((int8_t *) image->data)[i] * genx->contrast) + genx->brightness, UINT8_T_BITS);
+    }
+
+    if (csi->color_palette && (framebuffer_get_buffer_size(csi->fb) >= (image_size * sizeof(uint16_t)))) {
+        for (int32_t i = image_size - 1; i >= 0; i--) {
+            ((uint16_t *) image->data)[i] = csi->color_palette[image->data[i]];
+        }
+        image->pixfmt = PIXFORMAT_RGB565;
+        csi->fb->pixfmt = PIXFORMAT_RGB565;
+    }
+
+    return 0;
+}
+
+static int post_process_event(omv_csi_t *csi, image_t *image, uint32_t flags) {
+    genx_state_t *genx = csi->priv;
+    int event_count = (image->w * image->h) / sizeof(uint32_t);
+    int valid_count = 0;
+
+    for (int i = 0; i < event_count; i++) {
+        uint32_t val = ((uint32_t *) image->data)[i];
+        uint32_t type = __EVT20_TYPE(val);
+        switch (type) {
+            case TD_LOW:
+            case TD_HIGH: {
+                ec_event_t *event = genx->events + valid_count++;
+                uint64_t t = __EVT20_TIME(genx->event_time_us, __EVT20_TS(val));
+                event->type = EC_PIXEL_EVENT(type);
+                event->ts_s = EC_TS_S(t);
+                event->ts_ms = EC_TS_MS(t);
+                event->ts_us = EC_TS_US(t);
+                event->x = __EVT20_X(val);
+                event->y = __EVT20_Y(val);
+                break;
+            }
+            case EV_TIME_HIGH: {
+                genx->event_time_us = __EVT20_TIME_HIGH(val);
+                break;
+            }
+            case EXT_TRIGGER: {
+                ec_event_t *event = genx->events + valid_count++;
+                uint64_t t = __EVT20_TIME(genx->event_time_us, __EVT20_TS(val));
+                event->type = EC_TRIGGER_EVENT(__EVT20_TRIGGER_ID(val), __EVT20_TRIGGER_POLARITY(val));
+                event->ts_s = EC_TS_S(t);
+                event->ts_ms = EC_TS_MS(t);
+                event->ts_us = EC_TS_US(t);
+                event->x = 0;
+                event->y = 0;
+                break;
+            }
+            default: {
+                break;
+            }
+        }
+    }
+
+    return valid_count;
+}
+
+static int set_active_mode(omv_csi_t *csi, genx_mode_t mode) {
+    genx_state_t *genx = csi->priv;
+
+    if (genx->issd) {
+        psee_sensor_stop(csi, genx->issd);
+        psee_sensor_destroy(csi);
+        // Invalidate frame.
+        csi->fb->pixfmt = PIXFORMAT_INVALID;
+    }
+
+    genx->issd = (mode == OMV_CSI_GENX320_MODE_EVENT) ? &dcmi_evt : &dcmi_histo;
+    genx->mode = mode;
+    csi->post_process = (mode == OMV_CSI_GENX320_MODE_EVENT) ? post_process_event : post_process_histo;
+
+    BIAS_Params_t biases = (csi->chip_id == SAPHIR_ES_ID) ? genx320es_default_biases : genx320mp_default_biases;
+
+    // Force CPI with chicken bits
+    psee_sensor_write(csi, TOP_CHICKEN, TOP_CHICKEN_OVERRIDE_MIPI_MODE_EN |
+                      TOP_CHICKEN_OVERRIDE_HISTO_MODE_EN |
+                      (mode == OMV_CSI_GENX320_MODE_HISTO) << TOP_CHICKEN_OVERRIDE_HISTO_MODE_Pos |
+                      I2C_TIMEOUT << TOP_CHICKEN_I2C_TIMEOUT_Pos);
+
+    // Start the Init sequence
+    psee_sensor_init(csi, genx->issd);
+
+    if (mode == OMV_CSI_GENX320_MODE_EVENT) {
+        // Set EVT20 mode
+        psee_sensor_write(csi, EDF_CONTROL, 0);
+    }
+
+    // Configure Packet and Frame sizes
+    uint32_t packet_width = (mode == OMV_CSI_GENX320_MODE_EVENT) ? 128 : ACTIVE_SENSOR_WIDTH;
+    uint32_t packet_height = (mode == OMV_CSI_GENX320_MODE_EVENT) ? 64 : ACTIVE_SENSOR_HEIGHT;
+    uint32_t packet_hsync = (mode == OMV_CSI_GENX320_MODE_EVENT) ?
+                            EVENT_HSYNC_CLOCK_CYCLES : HISTO_HSYNC_CLOCK_CYCLES;
+
+    psee_sensor_write(csi, CPI_PACKET_SIZE_CONTROL, packet_width);
+    psee_sensor_write(csi, CPI_PACKET_TIME_CONTROL,
+                      packet_width << CPI_PACKET_TIME_CONTROL_PERIOD_Pos |
+                      packet_hsync << CPI_PACKET_TIME_CONTROL_BLANKING_Pos);
+    psee_sensor_write(csi, CPI_FRAME_SIZE_CONTROL, packet_height);
+    psee_sensor_write(csi, CPI_FRAME_TIME_CONTROL, VSYNC_CLOCK_CYCLES);
+
+    // Enable dropping
+    psee_sensor_write(csi, RO_READOUT_CTRL, RO_READOUT_CTRL_DIGITAL_PIPE_EN |
+                      RO_READOUT_CTRL_AVOID_BPRESS_TD |
+                      RO_READOUT_CTRL_DROP_EN |
+                      RO_READOUT_CTRL_DROP_ON_FULL_EN);
+
+    // Enable the Anti-FlicKering filter
+    if (psee_afk_init(csi, &genx->psee_afk) != AFK_OK) {
+        return -1;
+    }
+
+    if (psee_afk_activate(&genx->psee_afk, AFK_LOW_BAND, AFK_HIGH_BAND, EVT_CLK_FREQ) != AFK_OK) {
+        return -1;
+    }
+
+    if (mode == OMV_CSI_GENX320_MODE_EVENT) {
+        // Operation Mode Configuration
+        psee_PM3C_config(csi);
+    } else {
+        // Operation Mode Configuration
+        psee_PM3C_Histo_config(csi);
+    }
+
+    // Set the default border for the Activity map
+    psee_set_default_XY_borders(csi, &genx320mp_default_am_borders);
+
+    // Configure the activity map
+    psee_configure_activity_map(csi);
+
+    // Set Standard biases
+    psee_sensor_set_biases(csi, &biases);
+
+    // Start the csi
+    psee_sensor_start(csi, genx->issd);
+
+    if (mode == OMV_CSI_GENX320_MODE_HISTO) {
+        EHC_HandleTypeDef psee_ehc;
+
+        if (psee_ehc_init(csi, &psee_ehc) != EHC_OK) {
+            return -1;
+        }
+
+        if (psee_ehc_activate(&psee_ehc, EHC_ALGO_DIFF3D, 0, EHC_DIFF3D_N_BITS_SIZE,
+                              INTEGRATION_DEF_PREIOD, EHC_WITHOUT_PADDING) != EHC_OK) {
+            return -1;
+        }
+    }
+
+    return 0;
+}
+
 int genx320_init(omv_csi_t *csi) {
     // Initialize csi structure
     csi->reset = reset;
@@ -611,12 +591,13 @@ int genx320_init(omv_csi_t *csi) {
     csi->set_colorbar = set_colorbar;
     csi->set_hmirror = set_hmirror;
     csi->set_vflip = set_vflip;
-    csi->priv = csi->snapshot;
-    csi->snapshot = snapshot;
     csi->ioctl = ioctl;
 
     // Set csi flags
     csi->mono_bpp = sizeof(uint8_t);
+
+    memset(&genx, 0, sizeof(genx_state_t));
+    csi->priv = &genx;
 
     return 0;
 }
