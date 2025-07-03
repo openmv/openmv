@@ -476,7 +476,7 @@ static int reset(omv_csi_t *csi) {
     ret |= omv_i2c_writew2(csi->i2c, csi->slv_addr, 0x301A, reg | (1 << 9));
 
     ret |= omv_i2c_writew2(csi->i2c, csi->slv_addr, MT9M114_REG_CAM_SYSCTL_PLL_DIVIDER_M_N,
-                           (omv_csi_get_clk_frequency() == OMV_MT9M114_CLK_FREQ)
+                           (omv_csi_get_clk_frequency(csi, true) == OMV_MT9M114_CLK_FREQ)
             ? 0x120 // xclk=24MHz, m=32, n=1, csi=48MHz, bus=76.8MHz
             : 0x448); // xclk=25MHz, m=72, n=4, csi=45MHz, bus=72MHz
 
@@ -675,7 +675,7 @@ static int set_framesize(omv_csi_t *csi, omv_csi_framesize_t framesize) {
     ret |= omv_i2c_writew2(csi->i2c, csi->slv_addr, MT9M114_REG_SENSOR_CFG_Y_ADDR_END, sensor_he);
     ret |= omv_i2c_writew2(csi->i2c, csi->slv_addr, MT9M114_REG_SENSOR_CFG_X_ADDR_END, sensor_we);
 
-    int pixclk = (omv_csi_get_clk_frequency() == OMV_MT9M114_CLK_FREQ) ? 48000000 : 45000000;
+    int pixclk = (omv_csi_get_clk_frequency(csi, true) == OMV_MT9M114_CLK_FREQ) ? 48000000 : 45000000;
 
     ret |= omv_i2c_writew2(csi->i2c, csi->slv_addr, MT9M114_REG_SENSOR_CFG_PIXCLK, pixclk >> 16);
     ret |= omv_i2c_writew2(csi->i2c, csi->slv_addr, MT9M114_REG_SENSOR_CFG_PIXCLK + 2, pixclk);

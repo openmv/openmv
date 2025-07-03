@@ -1120,12 +1120,13 @@ static int get_gain_db(omv_csi_t *csi, float *gain_db) {
     return ret;
 }
 
-static int calc_pclk_freq(uint8_t sc_pll_ctrl_0,
+static int calc_pclk_freq(omv_csi_t *csi,
+                          uint8_t sc_pll_ctrl_0,
                           uint8_t sc_pll_ctrl_1,
                           uint8_t sc_pll_ctrl_2,
                           uint8_t sc_pll_ctrl_3,
                           uint8_t sys_root_div) {
-    uint32_t pclk_freq = omv_csi_get_clk_frequency();
+    uint32_t pclk_freq = omv_csi_get_clk_frequency(csi, false);
     pclk_freq /= ((sc_pll_ctrl_3 & 0x10) != 0x00) ? 2 : 1;
     pclk_freq /= ((sc_pll_ctrl_0 & 0x0F) == 0x0A) ? 5 : 4; //camera has two MIPI lanes
     switch (sc_pll_ctrl_3 & 0x0F) {
@@ -1171,7 +1172,7 @@ static int set_auto_exposure(omv_csi_t *csi, int enable, int exposure_us) {
         uint16_t hts = (hts_h << 8) | hts_l;
         uint16_t vts = (vts_h << 8) | vts_l;
 
-        int pclk_freq = calc_pclk_freq(spc0, spc1, spc2, spc3, sysrootdiv);
+        int pclk_freq = calc_pclk_freq(csi, spc0, spc1, spc2, spc3, sysrootdiv);
         int clocks_per_us = pclk_freq / 1000000;
         int exposure = __USAT((exposure_us * clocks_per_us) / hts, 16);
 
@@ -1214,7 +1215,7 @@ static int get_exposure_us(omv_csi_t *csi, int *exposure_us) {
 
     aec = IM_MIN(aec, vts);
 
-    int pclk_freq = calc_pclk_freq(spc0, spc1, spc2, spc3, sysrootdiv);
+    int pclk_freq = calc_pclk_freq(csi, spc0, spc1, spc2, spc3, sysrootdiv);
     int clocks_per_us = pclk_freq / 1000000;
     *exposure_us = (aec * hts) / clocks_per_us;
 
