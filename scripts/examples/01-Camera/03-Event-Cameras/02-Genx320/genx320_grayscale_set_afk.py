@@ -12,6 +12,8 @@ import time
 sensor.reset()
 sensor.set_pixformat(sensor.GRAYSCALE)  # Must always be grayscale.
 sensor.set_framesize(sensor.B320X320)  # Must always be 320x320.
+sensor.set_brightness(128)  # Leave at 128 generally (this is the default).
+sensor.set_contrast(16)  # Increase to make the image pop.
 sensor.set_framerate(100)
 
 # Enables AFK filter to remove periodic data in the frequency range from 130Hz to 160Hz
