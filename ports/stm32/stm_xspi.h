@@ -30,7 +30,7 @@
  *
  * STM32 XSPI PSRAM driver.
  */
-#ifndef __XSPI_PSRAM_H__
-int xspi_psram_init();
-bool xspi_psram_test(bool exhaustive);
-#endif // __XSPI_PSRAM_H__
+#ifndef __STM_XSPI_H__
+int stm_xspi_psram_init();
+bool stm_xspi_psram_test(bool exhaustive);
+#endif // __STM_XSPI_H__

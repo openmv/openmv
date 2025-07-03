@@ -22,7 +22,7 @@
 
 # Set startup and system files for CMSIS Makefile.
 SYSTEM      ?= st/system_stm32
-LDSCRIPT    ?= stm32
+LDSCRIPT    ?= stm
 STARTUP     ?= st/startup_$(shell echo $(MCU) | tr '[:upper:]' '[:lower:]')
 MCU_SERIES  := $(shell echo $(MCU) | cut -c6-7 | tr '[:upper:]' '[:lower:]')
 MCU_LOWER   := $(shell echo $(MCU) | tr '[:upper:]' '[:lower:]')

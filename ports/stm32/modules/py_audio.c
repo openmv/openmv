@@ -39,7 +39,7 @@
 #include "fb_alloc.h"
 #include "omv_boardconfig.h"
 #include "omv_common.h"
-#include "dma_utils.h"
+#include "stm_dma.h"
 
 #if MICROPY_PY_AUDIO
 
@@ -378,7 +378,7 @@ static mp_obj_t py_audio_init(uint n_args, const mp_obj_t *pos_args, mp_map_t *k
     __HAL_LINKDMA(&hdfsdm_filter[0], hdmaReg, hdma_filter[0]);
 
     // Set DMA IRQ handle
-    dma_utils_set_irq_descr(OMV_DFSDM_FLT0_DMA_STREAM, &hdma_filter[0]);
+    stm_dma_set_irq_descr(OMV_DFSDM_FLT0_DMA_STREAM, &hdma_filter[0]);
 
     // Initialize the DMA stream
     HAL_DMA_DeInit(&hdma_filter[0]);
@@ -474,7 +474,7 @@ static mp_obj_t py_audio_init(uint n_args, const mp_obj_t *pos_args, mp_map_t *k
     }
 
     // Set DMA IRQ handle
-    dma_utils_set_irq_descr(OMV_MDF_FLT0_DMA_STREAM, &hdma_filter[0]);
+    stm_dma_set_irq_descr(OMV_MDF_FLT0_DMA_STREAM, &hdma_filter[0]);
 
     // Configure and enable MDF Filter 0 DMA IRQ.
     NVIC_SetPriority(OMV_MDF_FLT0_IRQ, IRQ_PRI_DMA21);

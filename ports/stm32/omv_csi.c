@@ -41,7 +41,7 @@
 #include "omv_gpio.h"
 #include "omv_i2c.h"
 #include "omv_csi.h"
-#include "dma_utils.h"
+#include "stm_dma.h"
 
 #if defined(DMA2)
 #define USE_DMA             (1)
@@ -129,7 +129,7 @@ static int stm_csi_config(omv_csi_t *csi, omv_csi_config_t config) {
         }
     
         // Set DMA IRQ handle
-        dma_utils_set_irq_descr(DMA2_Stream1, &csi->dma);
+        stm_dma_set_irq_descr(DMA2_Stream1, &csi->dma);
     
         // Configure the DMA IRQ Channel
         NVIC_SetPriority(DMA2_Stream1_IRQn, IRQ_PRI_DMA21);
