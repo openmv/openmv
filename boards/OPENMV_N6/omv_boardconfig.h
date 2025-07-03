@@ -49,8 +49,6 @@
 #define OMV_PAG7936_MIPI_CSI2               (1)
 #define OMV_SOFTCSI_ENABLE                  (1)
 #define OMV_PS5520_ENABLE                   (1)
-#define OMV_GENX320_EHC_ENABLE              (1)
-#define OMV_GENX320_HSYNC_VALUE             (0x1)
 
 // FIR drivers configuration.
 #define OMV_FIR_MLX90621_ENABLE             (1)
