@@ -303,6 +303,68 @@ static int set_vflip(omv_csi_t *csi, int enable) {
     return 0;
 }
 
+static int disable_hot_pixels(omv_csi_t *csi, uint8_t *histogram, float sigma) {
+    // Compute average
+    int32_t avg = 0;
+
+    for (uint32_t i = 0; i < ACTIVE_SENSOR_SIZE; i++) {
+        avg += histogram[i];
+    }
+
+    avg /= ACTIVE_SENSOR_SIZE;
+
+    // Compute std
+    int64_t std = 0;
+
+    for (uint32_t i = 0; i < ACTIVE_SENSOR_SIZE; i++) {
+        int32_t diff = histogram[i] - avg;
+        std += diff * diff;
+    }
+
+    std = fast_sqrtf(std / ((float) ACTIVE_SENSOR_SIZE));
+
+    int32_t threshold = fast_roundf(avg + (std * sigma));
+    int ret = 0;
+
+    for (uint32_t y = 0; y < ACTIVE_SENSOR_HEIGHT; y++) {
+        // Reset all blocks
+        for (uint32_t i = 0; i < (ACTIVE_SENSOR_WIDTH / UINT32_T_BITS); i++) {
+            psee_write_ROI_X(csi, i * sizeof(uint32_t), 0);
+        }
+
+        // Select line
+        uint32_t offset = y / UINT32_T_BITS;
+        psee_write_ROI_Y(csi, offset * sizeof(uint32_t), 1 << (y % UINT32_T_BITS));
+
+        // Trigger shadow
+        psee_write_ROI_CTRL(csi, ROI_CTRL_PX_SW_RSTN | ROI_CTRL_TD_SHADOW_TRIGGER);
+
+        uint32_t tmp[ACTIVE_SENSOR_WIDTH / UINT32_T_BITS] = {};
+        for (uint32_t x = 0; x < ACTIVE_SENSOR_WIDTH; x++) {
+            if (histogram[(y * ACTIVE_SENSOR_WIDTH) + x] > threshold) {
+                tmp[x / UINT32_T_BITS] |= 1 << (x % UINT32_T_BITS);
+                ret += 1;
+            }
+        }
+
+        // Write x values to disable
+        for (uint32_t i = 0; i < (ACTIVE_SENSOR_WIDTH / UINT32_T_BITS); i++) {
+            psee_write_ROI_X(csi, i * sizeof(uint32_t), tmp[i]);
+        }
+
+        // Activate block
+        psee_write_ROI_CTRL(csi, ROI_CTRL_PX_SW_RSTN | ROI_CTRL_TD_SHADOW_TRIGGER | ROI_CTRL_TD_EN);
+
+        // Disable roi block
+        psee_write_ROI_CTRL(csi, ROI_CTRL_PX_SW_RSTN);
+        psee_write_ROI_Y(csi, offset * sizeof(uint32_t), 0);
+
+        mp_printf(MP_PYTHON_PRINTER, "CSI: Calibrating - %d%%\n", ((y * 50) / ACTIVE_SENSOR_HEIGHT) + 50);
+    }
+
+    return ret;
+}
+
 static void histo_post_process(omv_csi_t *csi, image_t *image) {
     for (uint32_t i = 0; i < ACTIVE_SENSOR_SIZE; i++) {
         image->data[i] = __USAT((((int8_t *) image->data)[i] * contrast) + brightness, UINT8_T_BITS);
@@ -545,6 +607,76 @@ static int ioctl(omv_csi_t *csi, int request, va_list ap) {
             csi->fb->pixfmt = PIXFORMAT_INVALID;
 
             ret = event_post_process((ec_event_t *) va_arg(ap, ec_event_t *), &image);
+            break;
+        }
+        case OMV_CSI_IOCTL_GENX320_CALIBRATE: {
+            uint32_t event_count = va_arg(ap, uint32_t);
+            float sigma = va_arg(ap, double);
+
+            if (!reset_called) {
+                return OMV_CSI_ERROR_CAPTURE_FAILED;
+            }
+
+            if (csi->pixformat != PIXFORMAT_GRAYSCALE) {
+                return OMV_CSI_ERROR_INVALID_PIXFORMAT;
+            }
+
+            if ((csi->framesize != OMV_CSI_FRAMESIZE_128X64) && (csi->framesize != OMV_CSI_FRAMESIZE_320X320)) {
+                return OMV_CSI_ERROR_INVALID_FRAMESIZE;
+            }
+
+            if (csi->transpose) {
+                return OMV_CSI_ERROR_CAPTURE_FAILED;
+            }
+
+            uint8_t *histogram = fb_alloc0(ACTIVE_SENSOR_SIZE, FB_ALLOC_NO_HINT);
+
+            // Collect events to calibrate hot pixels.
+            for (uint32_t i = 0; i < event_count; ) {
+                image_t image;
+                ret = ((omv_csi_snapshot_t) csi->priv)(csi, &image, 0);
+                if (ret < 0) {
+                    return ret;
+                }
+
+                // Invalidate frame.
+                csi->fb->pixfmt = PIXFORMAT_INVALID;
+
+                if (!event_mode) {
+                    for (uint32_t j = 0; j < ACTIVE_SENSOR_SIZE; j++) {
+                        int32_t val = abs(((int8_t *) image.data)[j]);
+                        histogram[j] = val;
+                        i += val;
+                    }
+                } else {
+                    // Build histogram of events.
+                    for (uint32_t j = 0; j < 2048; j++) {
+                        uint32_t val = ((uint32_t *) image.data)[j];
+                        switch (__EVT20_TYPE(val)) {
+                            case TD_LOW:
+                            case TD_HIGH: {
+                                uint32_t x = __EVT20_X(val);
+                                uint32_t y = __EVT20_Y(val);
+                                if ((x < ACTIVE_SENSOR_WIDTH) && (y < ACTIVE_SENSOR_HEIGHT)) {
+                                    uint32_t index = (y * ACTIVE_SENSOR_WIDTH) + x;
+                                    histogram[index] = __USAT(histogram[index] + 1, UINT8_T_BITS);
+                                    i++;
+                                }
+                                break;
+                            }
+                            default: {
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                // Print something to prevent the user from thinking the camera is stuck.
+                mp_printf(MP_PYTHON_PRINTER, "CSI: Calibrating - %d%%\n", ((i * 50) / event_count));
+            }
+
+            ret = disable_hot_pixels(csi, histogram, sigma);
+            fb_free();
             break;
         }
         default: {
