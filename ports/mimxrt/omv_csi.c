@@ -351,7 +351,7 @@ int imx_csi_snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
     }
 
     // Compress the framebuffer for the IDE preview.
-    framebuffer_update_jpeg_buffer(fb);
+    framebuffer_update_jpeg_buffer(fb, NULL);
 
     // Free the current FB head.
     framebuffer_free_current_buffer(fb);

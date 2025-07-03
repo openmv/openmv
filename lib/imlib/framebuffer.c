@@ -95,12 +95,14 @@ static void jpegbuffer_init_from_image(framebuffer_t *fb, image_t *img) {
     }
 }
 
-void framebuffer_update_jpeg_buffer(framebuffer_t *fb) {
+void framebuffer_update_jpeg_buffer(framebuffer_t *fb, image_t *src) {
     static int overflow_count = 0;
 
     image_t main_fb_src;
-    framebuffer_init_image(fb, &main_fb_src);
-    image_t *src = &main_fb_src;
+    if (!src) {
+        framebuffer_init_image(fb, &main_fb_src);
+        src = &main_fb_src;
+    }
 
     if (src->pixfmt != PIXFORMAT_INVALID &&
         fb->streaming_enabled && jpegbuffer->enabled) {
