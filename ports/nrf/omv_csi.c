@@ -94,11 +94,11 @@ static int nrf_csi_config(omv_csi_t *csi, omv_csi_config_t config) {
     return 0;
 }
 
-uint32_t omv_csi_get_clk_frequency() {
+static uint32_t nrf_clk_get_frequency(omv_clk_t *clk) {
     return OMV_CSI_CLK_FREQUENCY;
 }
 
-int omv_csi_set_clk_frequency(uint32_t frequency) {
+static int nrf_clk_set_frequency(omv_clk_t *clk, uint32_t frequency) {
     nrf_gpio_cfg_output(OMV_CSI_MXCLK_PIN);
 
     // Generates 16 MHz signal using I2S peripheral
@@ -207,7 +207,14 @@ static int nrf_csi_snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
 }
 
 int omv_csi_ops_init(omv_csi_t *csi) {
+    // Set CSI ops.
     csi->config = nrf_csi_config;
     csi->snapshot = nrf_csi_snapshot;
+
+
+    // Set CSI clock ops.
+    csi->clk->freq = OMV_CSI_CLK_FREQUENCY;
+    csi->clk->set_freq = nrf_clk_set_frequency;
+    csi->clk->get_freq = nrf_clk_get_frequency;
     return 0;
 }

@@ -381,30 +381,25 @@ static int stm_csi_shutdown(omv_csi_t *csi, int enable) {
     return ret;
 }
 
-uint32_t omv_csi_get_clk_frequency() {
-    omv_csi_t *csi = omv_csi_get(-1);
-
-    if (!csi->tim.Instance) {
+static uint32_t stm_clk_get_frequency(omv_clk_t *clk) {
+    if (!clk->tim.Instance) {
         return 0;
     }
-    return (OMV_CSI_TIM_PCLK_FREQ() * 2) / (csi->tim.Init.Period + 1);
+    return (OMV_CSI_TIM_PCLK_FREQ() * 2) / (clk->tim.Init.Period + 1);
 }
 
-// TODO save frequency.
-int omv_csi_set_clk_frequency(uint32_t frequency) {
+static int stm_clk_set_frequency(omv_clk_t *clk, uint32_t frequency) {
     #if (OMV_CSI_CLK_SOURCE == OMV_CSI_CLK_SOURCE_TIM)
-    omv_csi_t *csi = omv_csi_get(-1);
-
     if (frequency == 0) {
-        if (csi->tim.Init.Period) {
-            HAL_TIM_PWM_Stop(&csi->tim, OMV_CSI_TIM_CHANNEL);
-            HAL_TIM_PWM_DeInit(&csi->tim);
-            memset(&csi->tim, 0, sizeof(csi->tim));
+        if (clk->tim.Init.Period) {
+            HAL_TIM_PWM_Stop(&clk->tim, OMV_CSI_TIM_CHANNEL);
+            HAL_TIM_PWM_DeInit(&clk->tim);
+            memset(&clk->tim, 0, sizeof(clk->tim));
         }
         return 0;
     }
 
-    csi->tim.Instance = OMV_CSI_TIM;
+    clk->tim.Instance = OMV_CSI_TIM;
 
     // TCLK (PCLK * 2)
     int tclk = OMV_CSI_TIM_PCLK_FREQ() * 2;
@@ -413,20 +408,20 @@ int omv_csi_set_clk_frequency(uint32_t frequency) {
     int period = fast_ceilf(tclk / ((float) frequency)) - 1;
     int pulse = (period + 1) / 2;
 
-    if (csi->tim.Init.Period && (csi->tim.Init.Period != period)) {
-        // __HAL_TIM_SET_AUTORELOAD sets csi->tim.Init.Period...
-        __HAL_TIM_SET_AUTORELOAD(&csi->tim, period);
-        __HAL_TIM_SET_COMPARE(&csi->tim, OMV_CSI_TIM_CHANNEL, pulse);
+    if (clk->tim.Init.Period && (clk->tim.Init.Period != period)) {
+        // __HAL_TIM_SET_AUTORELOAD sets clk->tim.Init.Period...
+        __HAL_TIM_SET_AUTORELOAD(&clk->tim, period);
+        __HAL_TIM_SET_COMPARE(&clk->tim, OMV_CSI_TIM_CHANNEL, pulse);
         return 0;
     }
 
     /* Timer base configuration */
-    csi->tim.Init.Period = period;
-    csi->tim.Init.Prescaler = 0;
-    csi->tim.Init.CounterMode = TIM_COUNTERMODE_UP;
-    csi->tim.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
-    csi->tim.Init.RepetitionCounter = 0;
-    csi->tim.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
+    clk->tim.Init.Period = period;
+    clk->tim.Init.Prescaler = 0;
+    clk->tim.Init.CounterMode = TIM_COUNTERMODE_UP;
+    clk->tim.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+    clk->tim.Init.RepetitionCounter = 0;
+    clk->tim.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
 
     /* Timer channel configuration */
     TIM_OC_InitTypeDef TIMOCHandle;
@@ -438,9 +433,9 @@ int omv_csi_set_clk_frequency(uint32_t frequency) {
     TIMOCHandle.OCIdleState = TIM_OCIDLESTATE_RESET;
     TIMOCHandle.OCNIdleState = TIM_OCNIDLESTATE_RESET;
 
-    if ((HAL_TIM_PWM_Init(&csi->tim) != HAL_OK)
-        || (HAL_TIM_PWM_ConfigChannel(&csi->tim, &TIMOCHandle, OMV_CSI_TIM_CHANNEL) != HAL_OK)
-        || (HAL_TIM_PWM_Start(&csi->tim, OMV_CSI_TIM_CHANNEL) != HAL_OK)) {
+    if ((HAL_TIM_PWM_Init(&clk->tim) != HAL_OK)
+        || (HAL_TIM_PWM_ConfigChannel(&clk->tim, &TIMOCHandle, OMV_CSI_TIM_CHANNEL) != HAL_OK)
+        || (HAL_TIM_PWM_Start(&clk->tim, OMV_CSI_TIM_CHANNEL) != HAL_OK)) {
         return -1;
     }
     #elif (OMV_CSI_CLK_SOURCE == OMV_CSI_CLK_SOURCE_MCO)
@@ -1068,9 +1063,15 @@ static int stm_csi_snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
 }
 
 int omv_csi_ops_init(omv_csi_t *csi) {
+    // Set CSI ops.
     csi->abort = stm_csi_abort;
     csi->config = stm_csi_config;
     csi->shutdown = stm_csi_shutdown;
     csi->snapshot = stm_csi_snapshot;
+
+    // Set CSI clock ops.
+    csi->clk->freq = OMV_CSI_CLK_FREQUENCY;
+    csi->clk->set_freq = stm_clk_set_frequency;
+    csi->clk->get_freq = stm_clk_get_frequency;
     return 0;
 }

@@ -182,7 +182,17 @@ int alif_csi_abort(omv_csi_t *csi, bool fifo_flush, bool in_irq) {
     return 0;
 }
 
-int omv_csi_set_clk_frequency(uint32_t frequency) {
+static uint32_t alif_clk_get_frequency(omv_clk_t *clk) {
+    uint32_t div = (CLKCTL_PER_MST->CAMERA_PIXCLK_CTRL & CAMERA_PIXCLK_CTRL_DIVISOR_Msk) >>
+                   CAMERA_PIXCLK_CTRL_DIVISOR_Pos;
+    if (CLKCTL_PER_MST->CAMERA_PIXCLK_CTRL & CAMERA_PIXCLK_CTRL_CLK_SEL) {
+        return 480000000 / div;
+    } else {
+        return 400000000 / div;
+    }
+}
+
+static int alif_clk_set_frequency(omv_clk_t *clk, uint32_t frequency) {
     // Configure CPI clock source (400MHz or 480MHz) and divider.
     if (frequency >= 24000000) {
         set_cpi_pixel_clk(CPI_PIX_CLKSEL_480MZ, 20);
@@ -194,16 +204,6 @@ int omv_csi_set_clk_frequency(uint32_t frequency) {
         set_cpi_pixel_clk(CPI_PIX_CLKSEL_400MZ, 100);
     }
     return 0;
-}
-
-uint32_t omv_csi_get_clk_frequency() {
-    uint32_t div = (CLKCTL_PER_MST->CAMERA_PIXCLK_CTRL & CAMERA_PIXCLK_CTRL_DIVISOR_Msk) >>
-                   CAMERA_PIXCLK_CTRL_DIVISOR_Pos;
-    if (CLKCTL_PER_MST->CAMERA_PIXCLK_CTRL & CAMERA_PIXCLK_CTRL_CLK_SEL) {
-        return 480000000 / div;
-    } else {
-        return 400000000 / div;
-    }
 }
 
 static uint32_t omv_csi_get_fb_offset(omv_csi_t *csi) {
@@ -425,10 +425,18 @@ int alif_csi_snapshot(omv_csi_t *csi, image_t *dst_image, uint32_t flags) {
 }
 
 int omv_csi_ops_init(omv_csi_t *csi) {
+    // Set CPI base (LP/CPI).
     csi->base = OMV_CSI_BASE;
+
+    // Set CSI ops.
     csi->abort = alif_csi_abort;
     csi->config = alif_csi_config;
     csi->snapshot = alif_csi_snapshot;
+
+    // Set CSI clock ops.
+    csi->clk->freq = OMV_CSI_CLK_FREQUENCY;
+    csi->clk->set_freq = alif_clk_set_frequency;
+    csi->clk->get_freq = alif_clk_get_frequency;
     return 0;
 }
 #endif // MICROPY_PY_CSI
