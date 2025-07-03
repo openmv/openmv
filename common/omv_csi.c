@@ -1353,7 +1353,7 @@ __weak int omv_csi_ioctl(omv_csi_t *csi, int request, ... /* arg */) {
     int ret = csi->ioctl(csi, request, ap);
     va_end(ap);
 
-    return ((ret != 0) ? OMV_CSI_ERROR_CTL_FAILED : 0);
+    return ((ret < 0) ? OMV_CSI_ERROR_CTL_FAILED : ret);
 }
 
 __weak int omv_csi_set_vsync_callback(omv_csi_t *csi, omv_csi_cb_t cb) {
