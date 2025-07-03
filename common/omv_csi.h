@@ -291,6 +291,17 @@ typedef struct _omv_csi_callback_t {
 typedef int (*omv_csi_snapshot_t)
     (omv_csi_t *csi, image_t *image, uint32_t flags);
 
+typedef struct _omv_clk omv_clk_t;
+
+typedef struct _omv_clk {
+    uint32_t freq;
+    #ifdef OMV_CSI_CLK_PORT_BITS
+    OMV_CSI_CLK_PORT_BITS
+    #endif
+    uint32_t (*get_freq) (omv_clk_t *csi);
+    int (*set_freq) (omv_clk_t *csi, uint32_t freq);
+} omv_clk_t;
+
 typedef struct _omv_csi {
     uint32_t chip_id;           // Sensor ID 32 bits.
     uint8_t slv_addr;           // Sensor I2C slave address.
@@ -339,10 +350,11 @@ typedef struct _omv_csi {
     bool auto_rotation;         // Rotate Image Automatically
     bool detected;              // Set to true when the sensor is initialized.
     bool power_on;              // Set to true when the sensor is active.
-    uint32_t clk_hz;            // Clock frequency requested by the driver.
 
     omv_i2c_t *i2c;             // SCCB/I2C bus.
     framebuffer_t *fb;          // Frame buffer pointer
+    omv_clk_t *clk;             // Clock controller.
+    uint32_t clk_hz;            // Clock freqeuency request by this CSI.
 
     #ifdef OMV_CSI_PORT_BITS
     // Additional port-specific members like device base pointer,
@@ -429,10 +441,10 @@ int omv_csi_reset(omv_csi_t *csi, bool hard);
 int omv_csi_get_id(omv_csi_t *csi);
 
 // Returns the xclk freq in hz.
-uint32_t omv_csi_get_clk_frequency();
+uint32_t omv_csi_get_clk_frequency(omv_csi_t *csi, bool nominal);
 
 // Returns the xclk freq in hz.
-int omv_csi_set_clk_frequency(uint32_t frequency);
+int omv_csi_set_clk_frequency(omv_csi_t *csi, uint32_t frequency);
 
 // Return true if the sensor was detected and initialized.
 bool omv_csi_is_detected(omv_csi_t *csi);
