@@ -23,16 +23,10 @@
  *
  * STM32 DMA helper functions.
  */
-#ifndef __DMA_UTILS_H__
-#define __DMA_UTILS_H__
-
-#ifdef MDMA
-#define MDMA_CHAN_TO_INSTANCE(x) \
-    (MDMA_Channel_TypeDef *) (MDMA_Channel0_BASE + ((MDMA_Channel1_BASE - MDMA_Channel0_BASE) * x))
-#endif
-
-uint8_t dma_utils_channel_to_irqn(void *dma_channel);
-uint8_t dma_utils_channel_to_id(void *dma_channel);
-int dma_utils_set_irq_descr(void *dma_channel, DMA_HandleTypeDef *dma_descr);
-uint8_t dma_utils_mpu_region_size(uint32_t size);
-#endif // __DMA_UTILS_H__
+#ifndef __STM_DMA_H__
+#define __STM_DMA_H__
+uint8_t stm_dma_channel_to_irqn(void *dma_channel);
+uint8_t stm_dma_channel_to_id(void *dma_channel);
+int stm_dma_set_irq_descr(void *dma_channel, DMA_HandleTypeDef *dma_descr);
+uint8_t stm_dma_mpu_region_size(uint32_t size);
+#endif // __STM_DMA_H__

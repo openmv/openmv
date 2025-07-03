@@ -32,7 +32,7 @@
 // Define pin objects in this file.
 #define OMV_GPIO_DEFINE_PINS    (1)
 #include "omv_gpio.h"
-#include "dma_utils.h"
+#include "stm_dma.h"
 
 #if defined(MPU_REGION_NUMBER15)
 #define MPU_REGION_NUMBER_MAX   (MPU_REGION_NUMBER15)
@@ -116,7 +116,7 @@ void HAL_MspInit(void) {
             MPU_InitStruct.Number = region_number--;
             MPU_InitStruct.Enable = MPU_REGION_ENABLE;
             MPU_InitStruct.BaseAddress = buf->addr;
-            MPU_InitStruct.Size = dma_utils_mpu_region_size(buf->size);
+            MPU_InitStruct.Size = stm_dma_mpu_region_size(buf->size);
             HAL_MPU_ConfigRegion(&MPU_InitStruct);
         }
     }

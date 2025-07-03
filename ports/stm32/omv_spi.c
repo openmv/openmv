@@ -33,7 +33,7 @@
 #include "omv_boardconfig.h"
 #include "irq.h"
 #include "omv_common.h"
-#include "dma_utils.h"
+#include "stm_dma.h"
 #include "omv_gpio.h"
 #include "omv_spi.h"
 
@@ -397,10 +397,10 @@ static int omv_spi_dma_init(omv_spi_t *spi, uint32_t direction, omv_spi_config_t
     }
 
     // Set the SPI handle used by the DMA channel's IRQ handler.
-    dma_utils_set_irq_descr(dma_descr->Instance, dma_descr);
+    stm_dma_set_irq_descr(dma_descr->Instance, dma_descr);
 
     // Get DMA channel's IRQ number.
-    uint8_t dma_irqn = dma_utils_channel_to_irqn(dma_descr->Instance);
+    uint8_t dma_irqn = stm_dma_channel_to_irqn(dma_descr->Instance);
 
     // Configure and enable DMA IRQ channel.
     NVIC_SetPriority(dma_irqn, IRQ_PRI_DMA);
