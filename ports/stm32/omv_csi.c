@@ -62,6 +62,10 @@
 #define DCMIPP_PIPE         (DCMIPP_PIPE1)
 #endif
 
+#ifndef OMV_CSI_DMA_XFER_PORTS
+#define OMV_CSI_DMA_XFER_PORTS (0)
+#endif
+
 #define LINE_WIDTH_ALIGNMENT (16)
 
 extern uint8_t _line_buf;
@@ -102,37 +106,21 @@ void omv_csi_mdma_irq_handler(void) {
 static int stm_csi_config(omv_csi_t *csi, omv_csi_config_t config) {
     if (config == OMV_CSI_CONFIG_INIT) {
         #if USE_DMA
-        // DMA Stream configuration
-        csi->dma.Instance = DMA2_Stream1;
-        #if defined(STM32H7)
-        csi->dma.Init.Request = DMA_REQUEST_DCMI;
-        #else
-        csi->dma.Init.Channel = DMA_CHANNEL_1;
-        #endif
-        csi->dma.Init.Direction = DMA_PERIPH_TO_MEMORY;
-        csi->dma.Init.MemInc = DMA_MINC_ENABLE;
-        csi->dma.Init.PeriphInc = DMA_PINC_DISABLE;
-        csi->dma.Init.PeriphDataAlignment = DMA_PDATAALIGN_WORD;
-        csi->dma.Init.MemDataAlignment = DMA_MDATAALIGN_WORD;
-        csi->dma.Init.Mode = DMA_NORMAL;
-        csi->dma.Init.Priority = DMA_PRIORITY_HIGH;
-        csi->dma.Init.FIFOMode = DMA_FIFOMODE_ENABLE;
-        csi->dma.Init.FIFOThreshold = DMA_FIFO_THRESHOLD_FULL;
-        csi->dma.Init.MemBurst = DMA_MBURST_INC4;
-        csi->dma.Init.PeriphBurst = DMA_PBURST_SINGLE;
-    
-        // Initialize the DMA stream
-        HAL_DMA_DeInit(&csi->dma);
-        if (HAL_DMA_Init(&csi->dma) != HAL_OK) {
+
+        // Configure and initialize DMA.
+        if (stm_dma_init(&csi->dma, OMV_CSI_DMA_CHANNEL, OMV_CSI_DMA_REQUEST,
+                         DMA_PERIPH_TO_MEMORY, 4, 4, OMV_CSI_DMA_XFER_PORTS,
+                         &stm_dma_csi_init, true)) {
             return OMV_CSI_ERROR_DMA_INIT_FAILED;
         }
-    
+
         // Set DMA IRQ handle
-        stm_dma_set_irq_descr(DMA2_Stream1, &csi->dma);
+        stm_dma_set_irq_descr(OMV_CSI_DMA_CHANNEL, &csi->dma);
     
         // Configure the DMA IRQ Channel
-        NVIC_SetPriority(DMA2_Stream1_IRQn, IRQ_PRI_DMA21);
-    
+        csi->dma_irqn = stm_dma_channel_to_irqn(OMV_CSI_DMA_CHANNEL);
+        NVIC_SetPriority(csi->dma_irqn, IRQ_PRI_DMA21);
+
         #if USE_MDMA
         csi->mdma0.Instance = MDMA_CHAN_TO_INSTANCE(OMV_MDMA_CHANNEL_DCMI_0);
         csi->mdma1.Instance = MDMA_CHAN_TO_INSTANCE(OMV_MDMA_CHANNEL_DCMI_1);
@@ -341,7 +329,7 @@ static int stm_csi_abort(omv_csi_t *csi, bool fifo_flush, bool in_irq) {
     } else {
         HAL_DMA_Abort(&csi->dma);
     }
-    HAL_NVIC_DisableIRQ(DMA2_Stream1_IRQn);
+    HAL_NVIC_DisableIRQ(csi->dma_irqn);
     #endif
 
     #if USE_MDMA
@@ -493,7 +481,7 @@ void HAL_DCMIPP_PIPE_FrameEventCallback(DCMIPP_HandleTypeDef *dcmipp, uint32_t p
     // Clear out any stale flags.
     DMA2->LIFCR = DMA_FLAG_TCIF1_5 | DMA_FLAG_HTIF1_5;
     // Re-enable the DMA IRQ to catch the next start line.
-    HAL_NVIC_EnableIRQ(DMA2_Stream1_IRQn);
+    HAL_NVIC_EnableIRQ(csi->dma_irqn);
     #endif
 
     // Reset DCMI_DMAConvCpltUser frame drop state.
@@ -540,7 +528,7 @@ void DCMI_DMAConvCpltUser(uint32_t addr) {
     if (csi->drop_frame) {
         #if USE_MDMA
         if (!csi->transpose) {
-            HAL_NVIC_DisableIRQ(DMA2_Stream1_IRQn);
+            HAL_NVIC_DisableIRQ(csi->dma_irqn);
         }
         #endif
         return;
@@ -595,7 +583,7 @@ void DCMI_DMAConvCpltUser(uint32_t addr) {
     // maximize the time before the frame has to be dropped.
     if (!csi->transpose) {
         stm_mdma_start(csi, (uint32_t) src, (uint32_t) dst, fb->u * bytes_per_pixel, fb->v);
-        HAL_NVIC_DisableIRQ(DMA2_Stream1_IRQn);
+        HAL_NVIC_DisableIRQ(csi->dma_irqn);
         return;
     }
     #endif
@@ -745,7 +733,7 @@ static int stm_csi_snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
 
         // Reset the DMA state and re-enable it.
         ((DMA_Stream_TypeDef *) csi->dma.Instance)->CR &= ~(DMA_SxCR_CIRC | DMA_SxCR_CT | DMA_SxCR_DBM);
-        HAL_NVIC_EnableIRQ(DMA2_Stream1_IRQn);
+        HAL_NVIC_EnableIRQ(csi->dma_irqn);
 
         // HAL_DCMI_Start_DMA and HAL_DCMI_Start_DMA_MB both perform circular transfers,
         // differing only in size, with an interrupt after every half of the transfer.

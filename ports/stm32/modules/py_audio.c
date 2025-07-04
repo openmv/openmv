@@ -73,8 +73,8 @@ static MDF_HandleTypeDef hmdf;
 static MDF_FilterConfigTypeDef hmdf_filter[OMV_AUDIO_MAX_CHANNELS];
 
 // NOTE: Only 1 filter is supported right now.
-static DMA_QListTypeDef hdma_queue;
-static DMA_NodeTypeDef OMV_ATTR_SECTION(OMV_ATTR_ALIGNED(hdma_node, 32), ".dma_buffer");
+static DMA_QListTypeDef dma_queue;
+static DMA_NodeTypeDef OMV_ATTR_SECTION(OMV_ATTR_ALIGNED(dma_nodes, 32), ".dma_buffer");
 static DMA_HandleTypeDef hdma_filter[OMV_AUDIO_MAX_CHANNELS];
 
 #define PDM_BUFFER_SIZE      (512 * 2)
@@ -267,27 +267,17 @@ static mp_obj_t py_audio_init(uint n_args, const mp_obj_t *pos_args, mp_map_t *k
     // Enable the DMA clock
     OMV_SAI_DMA_CLK_ENABLE();
 
-    // Configure the SAI DMA
-    hdma_sai_rx.Instance = OMV_SAI_DMA_STREAM;
-    hdma_sai_rx.Init.Request = OMV_SAI_DMA_REQUEST;
-    hdma_sai_rx.Init.Direction = DMA_PERIPH_TO_MEMORY;
-    hdma_sai_rx.Init.PeriphInc = DMA_PINC_DISABLE;
-    hdma_sai_rx.Init.MemInc = DMA_MINC_ENABLE;
-    hdma_sai_rx.Init.PeriphDataAlignment = (g_channels == 1) ? DMA_PDATAALIGN_BYTE : DMA_PDATAALIGN_HALFWORD;
-    hdma_sai_rx.Init.MemDataAlignment = (g_channels == 1) ? DMA_MDATAALIGN_BYTE : DMA_MDATAALIGN_HALFWORD;
-    hdma_sai_rx.Init.Mode = DMA_CIRCULAR;
-    hdma_sai_rx.Init.Priority = DMA_PRIORITY_HIGH;
-    hdma_sai_rx.Init.FIFOMode = DMA_FIFOMODE_ENABLE;
-    hdma_sai_rx.Init.FIFOThreshold = DMA_FIFO_THRESHOLD_FULL;
-    hdma_sai_rx.Init.MemBurst = DMA_MBURST_SINGLE;
-    hdma_sai_rx.Init.PeriphBurst = DMA_MBURST_SINGLE;
-    __HAL_LINKDMA(&hsai, hdmarx, hdma_sai_rx);
-
     // Initialize the DMA stream
-    HAL_DMA_DeInit(&hdma_sai_rx);
-    if (HAL_DMA_Init(&hdma_sai_rx) != HAL_OK) {
+    uint32_t ssize = (g_channels == 1) ? 1 : 2;
+    uint32_t dsize = (g_channels == 1) ? 1 : 2;
+
+    if (stm_dma_init(&hdma_sai_rx, OMV_SAI_DMA_STREAM, OMV_SAI_DMA_REQUEST,
+                     DMA_PERIPH_TO_MEMORY, ssize, dsize, 0, &stm_dma_sai_init, true)) {
         RAISE_OS_EXCEPTION("SAI DMA init failed!");
     }
+
+    // Link DMA handle.
+    __HAL_LINKDMA(&hsai, hdmarx, hdma_sai_rx);
 
     // Configure and enable SAI DMA IRQ Channel
     NVIC_SetPriority(OMV_SAI_DMA_IRQ, IRQ_PRI_DMA21);
@@ -364,27 +354,17 @@ static mp_obj_t py_audio_init(uint n_args, const mp_obj_t *pos_args, mp_map_t *k
     OMV_DFSDM_DMA_CLK_ENABLE();
 
     // Configure the DFSDM Filter 0 DMA/IRQ
-    hdma_filter[0].Instance = OMV_DFSDM_FLT0_DMA_STREAM;
-    hdma_filter[0].Init.Request = OMV_DFSDM_FLT0_DMA_REQUEST;
-    hdma_filter[0].Init.Direction = DMA_PERIPH_TO_MEMORY;
-    hdma_filter[0].Init.PeriphInc = DMA_PINC_DISABLE;
-    hdma_filter[0].Init.MemInc = DMA_MINC_ENABLE;
-    hdma_filter[0].Init.PeriphDataAlignment = DMA_PDATAALIGN_WORD;
-    hdma_filter[0].Init.MemDataAlignment = DMA_MDATAALIGN_WORD;
-    hdma_filter[0].Init.Mode = DMA_CIRCULAR;
-    hdma_filter[0].Init.Priority = DMA_PRIORITY_HIGH;
+    if (stm_dma_init(&hdma_filter[0], OMV_DFSDM_FLT0_DMA_STREAM, OMV_DFSDM_FLT0_DMA_REQUEST,
+                     DMA_PERIPH_TO_MEMORY, 4, 4, 0, &stm_dma_dfsdm_init, true)) {
+        RAISE_OS_EXCEPTION("DFSDM DMA init failed!");
+    }
 
+    // Link DMA handles.
     __HAL_LINKDMA(&hdfsdm_filter[0], hdmaInj, hdma_filter[0]);
     __HAL_LINKDMA(&hdfsdm_filter[0], hdmaReg, hdma_filter[0]);
 
     // Set DMA IRQ handle
     stm_dma_set_irq_descr(OMV_DFSDM_FLT0_DMA_STREAM, &hdma_filter[0]);
-
-    // Initialize the DMA stream
-    HAL_DMA_DeInit(&hdma_filter[0]);
-    if (HAL_DMA_Init(&hdma_filter[0]) != HAL_OK) {
-        RAISE_OS_EXCEPTION("SAI DFSDM init failed!");
-    }
 
     // Configure and enable DFSDM Filter 0 DMA IRQ.
     NVIC_SetPriority(OMV_DFSDM_FLT0_DMA_IRQ, IRQ_PRI_DMA21);
@@ -405,10 +385,13 @@ static mp_obj_t py_audio_init(uint n_args, const mp_obj_t *pos_args, mp_map_t *k
     hmdf.Init.SerialInterface.ClockSource = MDF_SITF_CCK0_SOURCE;
     hmdf.Init.SerialInterface.Threshold = 31;
     hmdf.Init.FilterBistream = MDF_BITSTREAM0_FALLING;
+
+    // Initialize MDF.
     if (HAL_MDF_Init(&hmdf) != HAL_OK) {
         RAISE_OS_EXCEPTION("MDF init failed!");
     }
 
+    // No init is called on this filter config.
     hmdf_filter[0].DataSource = MDF_DATA_SOURCE_BSMX;
     hmdf_filter[0].Delay = 0;
     hmdf_filter[0].CicMode = MDF_ONE_FILTER_SINC4;
@@ -425,53 +408,20 @@ static mp_obj_t py_audio_init(uint n_args, const mp_obj_t *pos_args, mp_map_t *k
     hmdf_filter[0].FifoThreshold = MDF_FIFO_THRESHOLD_NOT_EMPTY;
     hmdf_filter[0].DiscardSamples = 0;
 
-    DMA_NodeConfTypeDef dma_ncfg;
-
-    dma_ncfg.NodeType = DMA_GPDMA_LINEAR_NODE;
-    dma_ncfg.Init.Mode = DMA_NORMAL;
-    dma_ncfg.Init.Request = OMV_MDF_FLT0_DMA_REQUEST;
-    dma_ncfg.Init.BlkHWRequest = DMA_BREQ_SINGLE_BURST;
-    dma_ncfg.Init.Direction = DMA_PERIPH_TO_MEMORY;
-    dma_ncfg.Init.SrcInc = DMA_SINC_FIXED;
-    dma_ncfg.Init.DestInc = DMA_DINC_INCREMENTED;
-    dma_ncfg.Init.SrcDataWidth = DMA_SRC_DATAWIDTH_WORD;
-    dma_ncfg.Init.DestDataWidth = DMA_DEST_DATAWIDTH_WORD;
-    dma_ncfg.Init.SrcBurstLength = 1;
-    dma_ncfg.Init.DestBurstLength = 1;
-    dma_ncfg.Init.TransferAllocatedPort = DMA_SRC_ALLOCATED_PORT0 | DMA_DEST_ALLOCATED_PORT1;
-    dma_ncfg.Init.TransferEventMode = DMA_TCEM_BLOCK_TRANSFER;
-
-    dma_ncfg.SrcSecure = DMA_CHANNEL_SRC_SEC;
-    dma_ncfg.DestSecure = DMA_CHANNEL_DEST_SEC;
-    dma_ncfg.DataHandlingConfig.DataExchange = DMA_EXCHANGE_NONE;
-    dma_ncfg.DataHandlingConfig.DataAlignment = DMA_DATA_RIGHTALIGN_ZEROPADDED;
-    dma_ncfg.TriggerConfig.TriggerPolarity = DMA_TRIG_POLARITY_MASKED;
-
-    if (HAL_DMAEx_List_BuildNode(&dma_ncfg, &hdma_node) != HAL_OK ||
-        HAL_DMAEx_List_InsertNode(&hdma_queue, NULL, &hdma_node) != HAL_OK ||
-        HAL_DMAEx_List_SetCircularMode(&hdma_queue) != HAL_OK) {
+    // Initialize DMA.
+    if (stm_dma_init(&hdma_filter[0], OMV_MDF_FLT0_DMA_STREAM, OMV_MDF_FLT0_DMA_REQUEST,
+                     DMA_PERIPH_TO_MEMORY, 4, 4, OMV_MDF_DMA_XFER_PORTS, &stm_dma_mdf_init,
+                     true)) {
         RAISE_OS_EXCEPTION("MDF DMA init failed!");
     }
 
-    hdma_filter[0].Instance = OMV_MDF_FLT0_DMA_STREAM;
-    hdma_filter[0].InitLinkedList.Priority = DMA_LOW_PRIORITY_LOW_WEIGHT;
-    hdma_filter[0].InitLinkedList.LinkStepMode = DMA_LSM_FULL_EXECUTION;
-    hdma_filter[0].InitLinkedList.LinkedListMode = DMA_LINKEDLIST_CIRCULAR;
-    hdma_filter[0].InitLinkedList.LinkAllocatedPort = DMA_LINK_ALLOCATED_PORT0;
-    hdma_filter[0].InitLinkedList.TransferEventMode = DMA_TCEM_BLOCK_TRANSFER;
-
-    if (HAL_DMAEx_List_Init(&hdma_filter[0]) != HAL_OK ||
-        HAL_DMAEx_List_LinkQ(&hdma_filter[0], &hdma_queue) != HAL_OK) {
+    // Initialize DMA circular mode.
+    if (stm_dma_ll_init(&hdma_filter[0], &dma_queue, &dma_nodes, 1, OMV_MDF_DMA_LIST_PORTS)) {
         RAISE_OS_EXCEPTION("MDF DMA init failed!");
     }
 
+    // Link DMA handle.
     __HAL_LINKDMA(&hmdf, hdma, hdma_filter[0]);
-
-    if (HAL_DMA_ConfigChannelAttributes(&hdma_filter[0],
-                                        DMA_CHANNEL_PRIV | DMA_CHANNEL_SEC |
-                                        DMA_CHANNEL_SRC_SEC | DMA_CHANNEL_DEST_SEC) != HAL_OK) {
-        RAISE_OS_EXCEPTION("MDF DMA init failed!");
-    }
 
     // Set DMA IRQ handle
     stm_dma_set_irq_descr(OMV_MDF_FLT0_DMA_STREAM, &hdma_filter[0]);
