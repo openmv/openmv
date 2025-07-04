@@ -24,6 +24,8 @@
  * STM32 DMA helper functions.
  */
 #include <stdbool.h>
+#include <stdint.h>
+#include <string.h>
 #include STM32_HAL_H
 #include "py/mphal.h"
 
@@ -36,6 +38,86 @@ static DMA_HandleTypeDef *dma_handle[32];
 #else
 // Defined in micropython/ports/stm32/dma.c or in uvc/src/main.c
 extern DMA_HandleTypeDef *dma_handle[16];
+#endif
+
+const DMA_InitTypeDef stm_dma_csi_init = {
+    #if defined(STM32N6)
+    .BlkHWRequest = DMA_BREQ_SINGLE_BURST,
+    .Priority = DMA_HIGH_PRIORITY,
+    .SrcBurstLength = 1,
+    // The maximum allowed AXI burst length 16 for HPDMA.
+    // TODO: Should set dynamically for GPDMA or other buses.
+    .DestBurstLength = 16,
+    .TransferEventMode = DMA_TCEM_BLOCK_TRANSFER,
+    #elif defined(STM32F4) || defined(STM32F7) || defined(STM32H7)
+    .PeriphInc = DMA_PINC_DISABLE,
+    .MemInc = DMA_MINC_ENABLE,
+    .Priority = DMA_PRIORITY_HIGH,
+    .FIFOMode = DMA_FIFOMODE_ENABLE,
+    .FIFOThreshold = DMA_FIFO_THRESHOLD_FULL,
+    .MemBurst = DMA_MBURST_INC4,
+    .PeriphBurst = DMA_PBURST_SINGLE,
+    #else
+    #error Unsupported MCU
+    #endif
+};
+
+const DMA_InitTypeDef stm_dma_spi_init = {
+    #if defined(STM32N6)
+    .BlkHWRequest = DMA_BREQ_SINGLE_BURST,
+    .Priority = DMA_HIGH_PRIORITY,
+    .SrcBurstLength = 1,
+    .DestBurstLength = 1,
+    .TransferEventMode = DMA_TCEM_BLOCK_TRANSFER,
+    #elif defined(STM32F4) || defined(STM32F7) || defined(STM32H7)
+    .PeriphInc = DMA_PINC_DISABLE,
+    .MemInc = DMA_MINC_ENABLE,
+    .Priority = DMA_PRIORITY_HIGH,
+    // If the FIFO is disabled (DMA direct mode), the source and
+    // destination transfer widths are equal and both are defined
+    // by PSIZE (MSIZE is ignored).
+    .FIFOMode = DMA_FIFOMODE_DISABLE,
+    .FIFOThreshold = DMA_FIFO_THRESHOLD_1QUARTERFULL,
+    // Note MBURST and PBURST are ignored in direct mode.
+    .MemBurst = DMA_MBURST_SINGLE,
+    .PeriphBurst = DMA_PBURST_SINGLE,
+    #else
+    #error Unsupported MCU
+    #endif
+};
+
+#if defined(OMV_SAI)
+const DMA_InitTypeDef stm_dma_sai_init = {
+    .PeriphInc = DMA_PINC_DISABLE,
+    .MemInc = DMA_MINC_ENABLE,
+    .Priority = DMA_PRIORITY_HIGH,
+    .FIFOMode = DMA_FIFOMODE_ENABLE,
+    .FIFOThreshold = DMA_FIFO_THRESHOLD_FULL,
+    .MemBurst = DMA_MBURST_SINGLE,
+    .PeriphBurst = DMA_PBURST_SINGLE,
+};
+#endif
+
+#if defined(OMV_DFSDM)
+const DMA_InitTypeDef stm_dma_dfsdm_init = {
+    .PeriphInc = DMA_PINC_DISABLE,
+    .MemInc = DMA_MINC_ENABLE,
+    .Priority = DMA_PRIORITY_HIGH,
+    .FIFOMode = DMA_FIFOMODE_DISABLE,   // Note: wasn't set
+    .FIFOThreshold = DMA_FIFO_THRESHOLD_FULL,
+    .MemBurst = DMA_MBURST_SINGLE,
+    .PeriphBurst = DMA_PBURST_SINGLE,
+};
+#endif
+
+#if defined(OMV_MDF)
+const DMA_InitTypeDef stm_dma_mdf_init = {
+    .BlkHWRequest = DMA_BREQ_SINGLE_BURST,
+    .Priority = DMA_HIGH_PRIORITY,
+    .SrcBurstLength = 1,
+    .DestBurstLength = 1,
+    .TransferEventMode = DMA_TCEM_BLOCK_TRANSFER,
+};
 #endif
 
 uint8_t stm_dma_channel_to_irqn(void *dma_channel) {
@@ -186,6 +268,165 @@ uint8_t stm_dma_mpu_region_size(uint32_t size) {
     return -1;
 }
 
+#if defined(HPDMA1_Channel0)
+static bool stm_dma_is_hp_channel(void *dma_channel) {
+    return ((((uint32_t) dma_channel) & 0xFFFFF000) == HPDMA1_BASE);
+}
+#endif
+
+static uint32_t stm_dma_width(uint32_t size, bool source) {
+    #if defined(STM32N6)
+    switch(size) {
+        case 1: return (source) ? DMA_SRC_DATAWIDTH_BYTE : DMA_DEST_DATAWIDTH_BYTE;
+        case 2: return (source) ? DMA_SRC_DATAWIDTH_HALFWORD : DMA_DEST_DATAWIDTH_HALFWORD;
+        case 4: return (source) ? DMA_SRC_DATAWIDTH_WORD : DMA_DEST_DATAWIDTH_WORD;
+        case 8: return (source) ? DMA_SRC_DATAWIDTH_DOUBLEWORD : DMA_DEST_DATAWIDTH_DOUBLEWORD;
+        default: return -1;
+    }
+    #else
+    switch(size) {
+        case 1: return (source) ? DMA_PDATAALIGN_BYTE : DMA_MDATAALIGN_BYTE;
+        case 2: return (source) ? DMA_PDATAALIGN_HALFWORD : DMA_MDATAALIGN_HALFWORD;
+        case 4: return (source) ? DMA_PDATAALIGN_WORD : DMA_MDATAALIGN_WORD;
+        default: return -1;
+    }
+    #endif
+}
+
+int stm_dma_init(DMA_HandleTypeDef *dma_descr, void *dma_channel, uint32_t request,
+                 uint32_t direction, uint32_t ssize, uint32_t dsize, uint32_t ports,
+                 const DMA_InitTypeDef *init, bool circular) {
+    bool dma_init_done = true;
+    DMA_InitTypeDef *dma_init = &dma_descr->Init;
+
+    // Set channel
+    dma_descr->Instance = dma_channel;
+
+    // Copy static init.
+    memcpy(dma_init, init, sizeof(DMA_InitTypeDef));
+
+    // Set request
+    #if defined(STM32H7) || defined(STM32N6)
+    dma_init->Request = request;
+    #else
+    dma_init->Channel = request;
+    #endif
+    
+    // Set direction
+    dma_init->Direction = direction;
+
+    // Set src/dest increment
+    #if defined(STM32N6)
+    if (direction == DMA_PERIPH_TO_MEMORY) {
+        dma_init->SrcInc = DMA_SINC_FIXED;
+        dma_init->DestInc = DMA_DINC_INCREMENTED;
+    } else {
+        dma_init->SrcInc = DMA_SINC_INCREMENTED;
+        dma_init->DestInc = DMA_DINC_FIXED;
+    }
+    #endif
+
+    // Configure src/dest size/alignment
+    #if defined(STM32N6)
+    dma_init->SrcDataWidth = stm_dma_width(ssize, true);
+    dma_init->DestDataWidth = stm_dma_width(dsize, false);
+    #else
+    dma_init->PeriphDataAlignment = stm_dma_width(ssize, true);
+    dma_init->MemDataAlignment = stm_dma_width(dsize, false);
+    #endif
+
+    // Set mode.
+    #if defined(STM32N6)
+    dma_init->Mode = DMA_NORMAL;
+    #else
+    dma_init->Mode = circular ? DMA_CIRCULAR : DMA_NORMAL;
+    #endif
+
+    // Set allocated ports.
+    #if defined(STM32N6)
+    dma_init->TransferAllocatedPort = ports;
+    #endif    
+
+    // F4, F7, H7 or N6 in non-circular mode.
+    #if defined(STM32N6)
+    dma_init_done = !circular;
+    #endif
+
+    if (dma_init_done) {
+        HAL_DMA_DeInit(dma_descr);
+        if (HAL_DMA_Init(dma_descr) != HAL_OK) {
+            return -1;
+        }
+    }
+
+    return 0;
+}
+
+#if defined(STM32N6)
+int stm_dma_ll_init(DMA_HandleTypeDef *dma_descr, DMA_QListTypeDef *dma_queue,
+        DMA_NodeTypeDef *dma_nodes, size_t nodes_count, uint32_t ports) {
+    bool is_hp = stm_dma_is_hp_channel(dma_descr->Instance);
+
+    DMA_NodeConfTypeDef node_conf = {
+        .SrcSecure = DMA_CHANNEL_SRC_SEC,
+        .DestSecure = DMA_CHANNEL_DEST_SEC,
+        .DataHandlingConfig.DataExchange = DMA_EXCHANGE_NONE,
+        .DataHandlingConfig.DataAlignment = DMA_DATA_RIGHTALIGN_ZEROPADDED,
+        .TriggerConfig.TriggerPolarity = DMA_TRIG_POLARITY_MASKED,
+        .NodeType = is_hp ? DMA_HPDMA_LINEAR_NODE : DMA_GPDMA_LINEAR_NODE,
+    };
+
+    // Copy Node DMA init.
+    memcpy(&node_conf.Init, &dma_descr->Init, sizeof(DMA_InitTypeDef));
+
+    // Clear DMA queue and node(s).
+    memset(dma_queue, 0, sizeof(DMA_QListTypeDef));
+    memset(dma_nodes, 0, sizeof(DMA_NodeTypeDef) * nodes_count);
+
+    DMA_NodeTypeDef *prev_node = NULL;
+    for (size_t i=0; i<nodes_count; i++) {
+        if (HAL_DMAEx_List_BuildNode(&node_conf, &dma_nodes[i]) != HAL_OK ||
+            HAL_DMAEx_List_InsertNode(dma_queue, prev_node, &dma_nodes[i]) != HAL_OK) {
+            return -1;
+        }
+        prev_node = &dma_nodes[i];
+    }
+
+    if (HAL_DMAEx_List_SetCircularMode(dma_queue) != HAL_OK) {
+        return -1;
+    }
+
+    dma_descr->InitLinkedList.Priority = DMA_HIGH_PRIORITY;
+    dma_descr->InitLinkedList.LinkStepMode = DMA_LSM_FULL_EXECUTION;
+    dma_descr->InitLinkedList.LinkedListMode = DMA_LINKEDLIST_CIRCULAR;
+    dma_descr->InitLinkedList.LinkAllocatedPort = ports;
+    dma_descr->InitLinkedList.TransferEventMode = DMA_TCEM_BLOCK_TRANSFER;
+
+    if (HAL_DMAEx_List_Init(dma_descr) != HAL_OK ||
+        HAL_DMAEx_List_LinkQ(dma_descr, dma_queue) != HAL_OK) {
+        return -1;
+    }
+
+    uint32_t chan_flags = DMA_CHANNEL_PRIV | DMA_CHANNEL_SEC |
+                          DMA_CHANNEL_SRC_SEC | DMA_CHANNEL_DEST_SEC;
+    if (HAL_DMA_ConfigChannelAttributes(dma_descr, chan_flags) != HAL_OK) {
+        return -1;
+    }
+
+    if (is_hp) {
+        DMA_IsolationConfigTypeDef isocfg = {
+            .CidFiltering =  DMA_ISOLATION_ON,
+            .StaticCid = DMA_CHANNEL_STATIC_CID_1,
+        };
+        if (HAL_DMA_SetIsolationAttributes(dma_descr, &isocfg) != HAL_OK) {
+            return -1;
+        }
+    }
+
+    return 0;
+}
+#endif
+
 #ifdef OMV_MDMA_CHANNEL_DCMI_0
 void stm_mdma_init(omv_csi_t *csi, uint32_t bytes_per_pixel, uint32_t x_crop) {
     framebuffer_t *fb = csi->fb;
@@ -210,8 +451,7 @@ void stm_mdma_init(omv_csi_t *csi, uint32_t bytes_per_pixel, uint32_t x_crop) {
 }
 
 // Configures an MDMA channel to completely offload the CPU in copying one line of pixels.
-static void stm_mdma_init_channel(omv_csi_t *csi,
-        MDMA_InitTypeDef *init, uint32_t bytes_per_pixel, uint32_t x_crop) {
+void stm_mdma_init_channel(omv_csi_t *csi, MDMA_InitTypeDef *init, uint32_t bytes_per_pixel, uint32_t x_crop) {
     framebuffer_t *fb = csi->fb;
 
     init->Request = MDMA_REQUEST_SW;
@@ -390,7 +630,9 @@ void GPDMA1_Channel14_IRQHandler(void) {
 void GPDMA1_Channel15_IRQHandler(void) {
     stm_dma_irq_handler(15);
 }
+#endif // GPDMA1
 
+#if defined(HPDMA1)
 void HPDMA1_Channel0_IRQHandler(void) {
     stm_dma_irq_handler(16);
 }

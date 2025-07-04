@@ -25,10 +25,28 @@
  */
 #ifndef __STM_DMA_H__
 #define __STM_DMA_H__
+#include <stdint.h>
+#include <stdbool.h>
+#include STM32_HAL_H
+
+extern const DMA_InitTypeDef stm_dma_csi_init;
+extern const DMA_InitTypeDef stm_dma_spi_init;
+extern const DMA_InitTypeDef stm_dma_sai_init;
+extern const DMA_InitTypeDef stm_dma_dfsdm_init;
+extern const DMA_InitTypeDef stm_dma_mdf_init;
+
 uint8_t stm_dma_channel_to_irqn(void *dma_channel);
 uint8_t stm_dma_channel_to_id(void *dma_channel);
 int stm_dma_set_irq_descr(void *dma_channel, DMA_HandleTypeDef *dma_descr);
 uint8_t stm_dma_mpu_region_size(uint32_t size);
+int stm_dma_init(DMA_HandleTypeDef *dma_descr, void *dma_channel, uint32_t request,
+                 uint32_t direction, uint32_t ssize, uint32_t dsize, uint32_t ports,
+                 const DMA_InitTypeDef *init, bool circular);
+
+#if defined(STM32N6)
+int stm_dma_ll_init(DMA_HandleTypeDef *dma_descr, DMA_QListTypeDef *dma_queue,
+        DMA_NodeTypeDef *dma_nodes, size_t nodes_count, uint32_t ports);
+#endif
 
 #ifdef OMV_MDMA_CHANNEL_DCMI_0
 #include "omv_csi.h"
