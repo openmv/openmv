@@ -16,6 +16,7 @@ img = image.Image(320, 320, image.GRAYSCALE)
 
 # Stores camera events
 # Shape: (EVT_res, 6) where EVT_res is the event resolution
+# EVT_res: must be a power of two between 1024 and 65536.
 # Columns:
 #   [0]  Event type
 #   [1]  Seconds timestamp
@@ -28,7 +29,7 @@ events = np.zeros((2048, 6), dtype=np.uint16)
 # Initialize the sensor.
 csi0 = csi.CSI(cid=csi.GENX320)
 csi0.reset()
-csi0.ioctl(csi.IOCTL_GENX320_SET_MODE, csi.GENX320_MODE_EVENT)
+csi0.ioctl(csi.IOCTL_GENX320_SET_MODE, csi.GENX320_MODE_EVENT, events.shape[0])
 
 clock = time.clock()
 

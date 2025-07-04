@@ -1196,6 +1196,8 @@ static mp_obj_t py_csi_ioctl(size_t n_args, const mp_obj_t *args) {
         case OMV_CSI_IOCTL_GENX320_SET_MODE: {
             if (n_args == 1) {
                 error = omv_csi_ioctl(self->csi, request, mp_obj_get_int(args[0]));
+            } else if (n_args == 2) {
+                error = omv_csi_ioctl(self->csi, request, mp_obj_get_int(args[0]), mp_obj_get_int(args[1]));
             }
             break;
         }
@@ -1207,11 +1209,15 @@ static mp_obj_t py_csi_ioctl(size_t n_args, const mp_obj_t *args) {
                     mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Expected a ndarray with dtype uint16"));
                 }
 
+                uint32_t expected_len = resolution[self->csi->framesize][0] *
+                                       (resolution[self->csi->framesize][1] / sizeof(uint32_t));
+
                 if (!(ndarray_is_dense(array) && (array->ndim == 2) &&
-                    (array->shape[ULAB_MAX_DIMS - 2] == 2048) &&
+                    (array->shape[ULAB_MAX_DIMS - 2] == expected_len) &&
                     (array->shape[ULAB_MAX_DIMS - 1] == EC_EVENT_SIZE))) {
                     mp_raise_msg_varg(&mp_type_ValueError,
-                                      MP_ERROR_TEXT("Expected a dense ndarray with shape (2048, %d)"), EC_EVENT_SIZE);
+                                      MP_ERROR_TEXT("Expected a dense ndarray with shape (%d, %d)"),
+                                      expected_len, EC_EVENT_SIZE);
                 }
 
                 error = omv_csi_ioctl(self->csi, request, array->array);

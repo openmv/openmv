@@ -15,13 +15,14 @@ from ulab import numpy as np
 
 TARGET_EVENT_TYPE = csi.PIX_ON_EVENT  # Change to PIX_OFF_EVENT to filter low events.
 
-EXPOSURE_FRAMES = 10
+EXPOSURE_FRAMES = 30
 
 # Surface to draw the histogram image on.
 img = image.Image(320, 320, image.GRAYSCALE)
 
 # Stores camera events
 # Shape: (EVT_res, 6) where EVT_res is the event resolution
+# EVT_res: must be a power of two between 1024 and 65536.
 # Columns:
 #   [0]  Event type
 #   [1]  Seconds timestamp
@@ -34,7 +35,7 @@ events = np.zeros((32768, 6), dtype=np.uint16)
 # Initialize the sensor.
 csi0 = csi.CSI(cid=csi.GENX320)
 csi0.reset()
-csi0.ioctl(csi.IOCTL_GENX320_SET_MODE, csi.GENX320_MODE_EVENT)
+csi0.ioctl(csi.IOCTL_GENX320_SET_MODE, csi.GENX320_MODE_EVENT, events.shape[0])
 
 clock = time.clock()
 i = 0
@@ -59,7 +60,7 @@ while True:
         # For each PIX_ON_EVENT, add "contrast" to the bin value;
         # for each PIX_OFF_EVENT, subtract it and clamp to [0, 255].
         # If clear=False, histogram accumulates over multiple calls.
-        img.draw_event_histogram(target_events, clear=c, brightness=128, contrast=64)
+        img.draw_event_histogram(target_events, clear=c, brightness=128, contrast=16)
 
         # Push the image to the jpeg buffer for the IDE to pull and display.
         # The IDE pulls frames off the camera at a much lower rate than the

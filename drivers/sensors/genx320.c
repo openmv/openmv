@@ -88,7 +88,7 @@ typedef struct genx_state {
 
 static genx_state_t genx = {};
 
-static int set_active_mode(omv_csi_t *csi, genx_mode_t mode);
+static int set_active_mode(omv_csi_t *csi, genx_mode_t mode, int framesize);
 
 static int reset(omv_csi_t *csi) {
     genx_state_t *genx = csi->priv;
@@ -99,7 +99,7 @@ static int reset(omv_csi_t *csi) {
     genx->event_time_us = 0;
 
     // Set histogram mode by default.
-    if (set_active_mode(csi, OMV_CSI_GENX320_MODE_HISTO)) {
+    if (set_active_mode(csi, OMV_CSI_GENX320_MODE_HISTO, OMV_CSI_FRAMESIZE_320X320)) {
         return OMV_CSI_ERROR_CSI_INIT_FAILED;
     }
 
@@ -153,7 +153,7 @@ static int set_framesize(omv_csi_t *csi, omv_csi_framesize_t framesize) {
     if (genx->mode == OMV_CSI_GENX320_MODE_HISTO) {
         return (framesize == OMV_CSI_FRAMESIZE_320X320) ? 0 : -1;
     } else {
-        return (framesize == OMV_CSI_FRAMESIZE_128X64) ? 0 : -1;
+        return (framesize == OMV_CSI_FRAMESIZE_CUSTOM) ? 0 : -1;
     }
 }
 
@@ -420,7 +420,7 @@ static int ioctl(omv_csi_t *csi, int request, va_list ap) {
             int mode = va_arg(ap, int);
 
             if (mode == OMV_CSI_GENX320_MODE_HISTO) {
-                if ((ret = set_active_mode(csi, OMV_CSI_GENX320_MODE_HISTO))) {
+                if ((ret = set_active_mode(csi, OMV_CSI_GENX320_MODE_HISTO, OMV_CSI_FRAMESIZE_320X320))) {
                     break;
                 }
 
@@ -432,17 +432,25 @@ static int ioctl(omv_csi_t *csi, int request, va_list ap) {
                     break;
                 }
             } else if (mode == OMV_CSI_GENX320_MODE_EVENT) {
-                if ((ret = set_active_mode(csi, OMV_CSI_GENX320_MODE_EVENT))) {
+                size_t ndarray_size = va_arg(ap, size_t);
+
+                if (ndarray_size < 1024 || ndarray_size > 65536 || (ndarray_size & (ndarray_size - 1))) {
+                    ret = -1;
                     break;
                 }
 
-                // 1 byte per pixel.
+                resolution[OMV_CSI_FRAMESIZE_CUSTOM][0] = 1024;
+                resolution[OMV_CSI_FRAMESIZE_CUSTOM][1] = ndarray_size >> 8;
+
+                if ((ret = set_active_mode(csi, OMV_CSI_GENX320_MODE_EVENT, OMV_CSI_FRAMESIZE_CUSTOM))) {
+                    break;
+                }
+
                 if ((ret = omv_csi_set_pixformat(csi, PIXFORMAT_GRAYSCALE))) {
                     break;
                 }
 
-                // 128*64 bytes / 4 bytes per event = 2048 events.
-                if ((ret = omv_csi_set_framesize(csi, OMV_CSI_FRAMESIZE_128X64))) {
+                if ((ret = omv_csi_set_framesize(csi, OMV_CSI_FRAMESIZE_CUSTOM))) {
                     break;
                 }
             } else {
@@ -607,7 +615,7 @@ static int post_process_event(omv_csi_t *csi, image_t *image, uint32_t flags) {
     return valid_count;
 }
 
-static int set_active_mode(omv_csi_t *csi, genx_mode_t mode) {
+static int set_active_mode(omv_csi_t *csi, genx_mode_t mode, int framesize) {
     genx_state_t *genx = csi->priv;
 
     if (genx->issd) {
@@ -638,8 +646,8 @@ static int set_active_mode(omv_csi_t *csi, genx_mode_t mode) {
     }
 
     // Configure Packet and Frame sizes
-    uint32_t packet_width = (mode == OMV_CSI_GENX320_MODE_EVENT) ? 128 : ACTIVE_SENSOR_WIDTH;
-    uint32_t packet_height = (mode == OMV_CSI_GENX320_MODE_EVENT) ? 64 : ACTIVE_SENSOR_HEIGHT;
+    uint32_t packet_width = resolution[framesize][0];
+    uint32_t packet_height = resolution[framesize][1];
     uint32_t packet_hsync = (mode == OMV_CSI_GENX320_MODE_EVENT) ?
                             EVENT_HSYNC_CLOCK_CYCLES : HISTO_HSYNC_CLOCK_CYCLES;
 
