@@ -188,6 +188,16 @@ typedef enum {
     OMV_CSI_FRAMESIZE_QXGA,     // 2048x1536
     OMV_CSI_FRAMESIZE_WQXGA,    // 2560x1600
     OMV_CSI_FRAMESIZE_WQXGA2,   // 2592x1944
+    #if (OMV_GENX320_ENABLE == 1)
+    // Event Resolutions
+    OMV_CSI_FRAMESIZE_EVT_1024, // 1024 events
+    OMV_CSI_FRAMESIZE_EVT_2048, // 2048 events
+    OMV_CSI_FRAMESIZE_EVT_4096, // 4096 events
+    OMV_CSI_FRAMESIZE_EVT_8192, // 8192 events
+    OMV_CSI_FRAMESIZE_EVT_16384, // 16384 events
+    OMV_CSI_FRAMESIZE_EVT_32768, // 32768 events
+    OMV_CSI_FRAMESIZE_EVT_65536, // 65536 events
+    #endif // (OMV_GENX320_ENABLE == 1)
 } omv_csi_framesize_t;
 
 typedef enum {

@@ -15,13 +15,13 @@ from ulab import numpy as np
 
 TARGET_EVENT_TYPE = sensor.PIX_ON_EVENT  # Change to PIX_OFF_EVENT to filter low events.
 
-EXPOSURE_FRAMES = 10
+EXPOSURE_FRAMES = 30
 
 # Surface to draw the histogram image on.
 img = image.Image(320, 320, sensor.GRAYSCALE)
 
 # ndarray to hold events from the camera
-# must be 2048 events by 6 values
+# must be EVT_res events by 6 values
 #
 # 0: event type
 # 1: seconds timestamp
@@ -29,10 +29,12 @@ img = image.Image(320, 320, sensor.GRAYSCALE)
 # 3: microseconds timestamp
 # 4: x coordinate (0-319 for the genx320)
 # 5: y coordinate (0-319 for the genx320)
-events = np.zeros((2048, 6), dtype=np.uint16)
+events = np.zeros((32768, 6), dtype=np.uint16)
 
 # Initialize the sensor.
 sensor.reset()
+sensor.set_pixformat(sensor.GRAYSCALE)  # Must always be grayscale.
+sensor.set_framesize(sensor.EVT_32768)  # Must be EVT_1024/2048/.../65536
 
 clock = time.clock()
 i = 0
@@ -57,7 +59,7 @@ while True:
         # added to them for PIX_ON_EVENT events and subtracted from them for
         # PIX_OFF_EVENT events clampped between 0 and 255. Pass clear=False to keep
         # accumulating events in the histogram image.
-        img.draw_event_histogram(target_events, clear=c, brightness=128, contrast=64)
+        img.draw_event_histogram(target_events, clear=c, brightness=128, contrast=16)
 
         # Push the image to the jpeg buffer for the IDE to pull and display.
         # The IDE pulls frames off the camera at a much lower rate than the

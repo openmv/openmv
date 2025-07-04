@@ -19,7 +19,7 @@ CALIBRATION_SIGMA = 0.5  # Standard deviation for hot pixel detection.
 img = image.Image(320, 320, sensor.GRAYSCALE)
 
 # ndarray to hold events from the camera
-# must be 2048 events by 6 values
+# must be EVT_res events by 6 values
 #
 # 0: event type
 # 1: seconds timestamp
@@ -31,6 +31,8 @@ events = np.zeros((2048, 6), dtype=np.uint16)
 
 # Initialize the sensor.
 sensor.reset()
+sensor.set_pixformat(sensor.GRAYSCALE)  # Must always be grayscale.
+sensor.set_framesize(sensor.EVT_2048)  # Must be EVT_1024/2048/.../65536
 
 clock = time.clock()
 
