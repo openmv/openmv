@@ -84,6 +84,27 @@ static uint64_t event_time = 0;
 
 static AFK_HandleTypeDef psee_afk;
 
+static int is_valid_framesize(omv_csi_framesize_t framesize, bool event_mode_only) {
+    omv_csi_framesize_t valid_frame_sizes[] = {
+        OMV_CSI_FRAMESIZE_320X320,
+        OMV_CSI_FRAMESIZE_EVT_1024,
+        OMV_CSI_FRAMESIZE_EVT_2048,
+        OMV_CSI_FRAMESIZE_EVT_4096,
+        OMV_CSI_FRAMESIZE_EVT_8192,
+        OMV_CSI_FRAMESIZE_EVT_16384,
+        OMV_CSI_FRAMESIZE_EVT_32768,
+        OMV_CSI_FRAMESIZE_EVT_65536
+    };
+
+    for (int i = event_mode_only ? 1 : 0; i < OMV_ARRAY_SIZE(valid_frame_sizes); i++) {
+        if (framesize == valid_frame_sizes[i]) {
+            return 0;
+        }
+    }
+
+    return -1;
+}
+
 static int set_event_mode(omv_csi_t *csi, bool enable) {
     if (reset_called) {
         if (event_mode == enable) {
@@ -111,8 +132,8 @@ static int set_event_mode(omv_csi_t *csi, bool enable) {
     }
 
     // Configure Packet and Frame sizes
-    int packet_width = enable ? 128 : ACTIVE_SENSOR_WIDTH;
-    int packet_height = enable ? 64 : ACTIVE_SENSOR_HEIGHT;
+    int packet_width = enable ? resolution[csi->framesize][0] : ACTIVE_SENSOR_WIDTH;
+    int packet_height = enable ? resolution[csi->framesize][1] : ACTIVE_SENSOR_HEIGHT;
     int packet_hsync = enable ? EVENT_HSYNC_CLOCK_CYCLES : HISTO_HSYNC_CLOCK_CYCLES;
     psee_sensor_write(csi, CPI_PACKET_SIZE_CONTROL, packet_width);
     psee_sensor_write(csi, CPI_PACKET_TIME_CONTROL, packet_width << CPI_PACKET_TIME_CONTROL_PERIOD_Pos |
@@ -230,7 +251,7 @@ static int set_pixformat(omv_csi_t *csi, pixformat_t pixformat) {
 }
 
 static int set_framesize(omv_csi_t *csi, omv_csi_framesize_t framesize) {
-    return ((framesize == OMV_CSI_FRAMESIZE_128X64) || (framesize == OMV_CSI_FRAMESIZE_320X320)) ? 0 : -1;
+    return is_valid_framesize(framesize, false);
 }
 
 static int set_framerate(omv_csi_t *csi, int framerate) {
@@ -431,14 +452,8 @@ static int snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
         return ret;
     }
 
-    ret = omv_csi_set_pixformat(csi, PIXFORMAT_GRAYSCALE);
-    if (ret < 0) {
-        return ret;
-    }
-
-    ret = omv_csi_set_framesize(csi, OMV_CSI_FRAMESIZE_320X320);
-    if (ret < 0) {
-        return ret;
+    if (csi->framesize != OMV_CSI_FRAMESIZE_320X320) {
+        return OMV_CSI_ERROR_INVALID_FRAMESIZE;
     }
 
     if (csi->transpose) {
@@ -581,16 +596,8 @@ static int ioctl(omv_csi_t *csi, int request, va_list ap) {
                 break;
             }
 
-            // 1 byte per pixel.
-            ret = omv_csi_set_pixformat(csi, PIXFORMAT_GRAYSCALE);
-            if (ret < 0) {
-                break;
-            }
-
-            // 128*64 bytes / 4 bytes per event = 2048 events.
-            ret = omv_csi_set_framesize(csi, OMV_CSI_FRAMESIZE_128X64);
-            if (ret < 0) {
-                break;
+            if (is_valid_framesize(csi->framesize, true) < 0) {
+                return OMV_CSI_ERROR_INVALID_FRAMESIZE;
             }
 
             if (csi->transpose) {
@@ -617,12 +624,14 @@ static int ioctl(omv_csi_t *csi, int request, va_list ap) {
                 return OMV_CSI_ERROR_CAPTURE_FAILED;
             }
 
-            if (csi->pixformat != PIXFORMAT_GRAYSCALE) {
-                return OMV_CSI_ERROR_INVALID_PIXFORMAT;
-            }
-
-            if ((csi->framesize != OMV_CSI_FRAMESIZE_128X64) && (csi->framesize != OMV_CSI_FRAMESIZE_320X320)) {
-                return OMV_CSI_ERROR_INVALID_FRAMESIZE;
+            if (!event_mode) {
+                if (csi->framesize != OMV_CSI_FRAMESIZE_320X320) {
+                    return OMV_CSI_ERROR_INVALID_FRAMESIZE;
+                }
+            } else {
+                if (is_valid_framesize(csi->framesize, true) < 0) {
+                    return OMV_CSI_ERROR_INVALID_FRAMESIZE;
+                }
             }
 
             if (csi->transpose) {
@@ -649,8 +658,9 @@ static int ioctl(omv_csi_t *csi, int request, va_list ap) {
                         i += val;
                     }
                 } else {
-                    // Build histogram of events.
-                    for (uint32_t j = 0; j < 2048; j++) {
+                    uint32_t len = resolution[csi->framesize][0] *
+                                  (resolution[csi->framesize][1] / sizeof(uint32_t));
+                    for (uint32_t j = 0; j < len; j++) {
                         uint32_t val = ((uint32_t *) image.data)[j];
                         switch (__EVT20_TYPE(val)) {
                             case TD_LOW:
