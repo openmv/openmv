@@ -17,7 +17,7 @@ from ulab import numpy as np
 TARGET_EVENT_TYPE = csi.PIX_ON_EVENT  # Change to PIX_OFF_EVENT to filter low events.
 
 # ndarray to hold events from the camera
-# must be 2048 events by 6 values
+# must be EVT_res events by 6 values
 #
 # 0: event type
 # 1: seconds timestamp
@@ -30,6 +30,8 @@ events = np.zeros((2048, 6), dtype=np.uint16)
 # Initialize the sensor.
 csi0 = csi.CSI(cid=csi.GENX320)
 csi0.reset()
+csi0.pixformat(csi.GRAYSCALE)  # Must always be grayscale.
+csi0.framesize(csi.EVT_2048)  # Must be EVT_1024/2048/.../65536
 
 clock = time.clock()
 t = time.ticks_us()

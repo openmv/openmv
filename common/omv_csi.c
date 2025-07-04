@@ -121,6 +121,16 @@ uint16_t resolution[][2] = {
     {2048, 1536},    /* QXGA      */
     {2560, 1600},    /* WQXGA     */
     {2592, 1944},    /* WQXGA2    */
+    #if (OMV_GENX320_ENABLE == 1)
+    // Event Resolutions
+    {1024, 4},       /* 1024 events */
+    {1024, 8},       /* 2048 events */
+    {1024, 16},      /* 4096 events */
+    {1024, 32},      /* 8192 events */
+    {1024, 64},      /* 16384 events */
+    {1024, 128},     /* 32768 events */
+    {1024, 256},     /* 65536 events */
+    #endif // (OMV_GENX320_ENABLE == 1)
 };
 
 static omv_i2c_t csi_i2c;

@@ -11,13 +11,13 @@ import time
 # https://micropython-ulab.readthedocs.io/en/latest/index.html
 from ulab import numpy as np
 
-EXPOSURE_FRAMES = 10
+EXPOSURE_FRAMES = 30
 
 # Surface to draw the histogram image on.
 img = image.Image(320, 320, image.GRAYSCALE)
 
 # ndarray to hold events from the camera
-# must be 2048 events by 6 values
+# must be EVT_res events by 6 values
 #
 # 0: event type
 # 1: seconds timestamp
@@ -25,11 +25,13 @@ img = image.Image(320, 320, image.GRAYSCALE)
 # 3: microseconds timestamp
 # 4: x coordinate (0-319 for the genx320)
 # 5: y coordinate (0-319 for the genx320)
-events = np.zeros((2048, 6), dtype=np.uint16)
+events = np.zeros((32768, 6), dtype=np.uint16)
 
 # Initialize the sensor.
 csi0 = csi.CSI(cid=csi.GENX320)
 csi0.reset()
+csi0.pixformat(csi.GRAYSCALE)  # Must always be grayscale.
+csi0.framesize(csi.EVT_32768)  # Must be EVT_1024/2048/.../65536
 
 clock = time.clock()
 i = 0

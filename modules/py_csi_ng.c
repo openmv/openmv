@@ -1180,11 +1180,15 @@ static mp_obj_t py_csi_ioctl(size_t n_args, const mp_obj_t *args) {
                     mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Expected a ndarray with dtype uint16"));
                 }
 
+                uint32_t expected_len = resolution[self->csi->framesize][0] *
+                                       (resolution[self->csi->framesize][1] / sizeof(uint32_t));
+
                 if (!(ndarray_is_dense(array) && (array->ndim == 2) &&
-                    (array->shape[ULAB_MAX_DIMS - 2] == 2048) &&
+                    (array->shape[ULAB_MAX_DIMS - 2] == expected_len) &&
                     (array->shape[ULAB_MAX_DIMS - 1] == EC_EVENT_SIZE))) {
                     mp_raise_msg_varg(&mp_type_ValueError,
-                                      MP_ERROR_TEXT("Expected a dense ndarray with shape (2048, %d)"), EC_EVENT_SIZE);
+                                      MP_ERROR_TEXT("Expected a dense ndarray with shape (%d, %d)"),
+                                      expected_len, EC_EVENT_SIZE);
                 }
 
                 error = omv_csi_ioctl(self->csi, request, array->array);
@@ -1470,6 +1474,16 @@ static const mp_rom_map_elem_t globals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_QXGA),            MP_ROM_INT(OMV_CSI_FRAMESIZE_QXGA) },     /* 2048x1536 */
     { MP_ROM_QSTR(MP_QSTR_WQXGA),           MP_ROM_INT(OMV_CSI_FRAMESIZE_WQXGA) },    /* 2560x1600 */
     { MP_ROM_QSTR(MP_QSTR_WQXGA2),          MP_ROM_INT(OMV_CSI_FRAMESIZE_WQXGA2) },   /* 2592x1944 */
+    #if (OMV_GENX320_ENABLE == 1)
+    // Event Resolutions
+    { MP_ROM_QSTR(MP_QSTR_EVT_1024),        MP_ROM_INT(OMV_CSI_FRAMESIZE_EVT_1024)}, /* 1024x4 */
+    { MP_ROM_QSTR(MP_QSTR_EVT_2048),        MP_ROM_INT(OMV_CSI_FRAMESIZE_EVT_2048)}, /* 1024x8 */
+    { MP_ROM_QSTR(MP_QSTR_EVT_4096),        MP_ROM_INT(OMV_CSI_FRAMESIZE_EVT_4096)}, /* 1024x16 */
+    { MP_ROM_QSTR(MP_QSTR_EVT_8192),        MP_ROM_INT(OMV_CSI_FRAMESIZE_EVT_8192)}, /* 1024x32 */
+    { MP_ROM_QSTR(MP_QSTR_EVT_16384),       MP_ROM_INT(OMV_CSI_FRAMESIZE_EVT_16384)}, /* 1024x64 */
+    { MP_ROM_QSTR(MP_QSTR_EVT_32768),       MP_ROM_INT(OMV_CSI_FRAMESIZE_EVT_32768)}, /* 1024x128 */
+    { MP_ROM_QSTR(MP_QSTR_EVT_65536),       MP_ROM_INT(OMV_CSI_FRAMESIZE_EVT_65536)}, /* 1024x256 */
+    #endif // (OMV_GENX320_ENABLE == 1)
 
     // OMV_CSI_IOCTLs
     { MP_ROM_QSTR(MP_QSTR_IOCTL_SET_READOUT_WINDOW),    MP_ROM_INT(OMV_CSI_IOCTL_SET_READOUT_WINDOW) },
