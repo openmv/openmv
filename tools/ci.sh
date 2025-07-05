@@ -3,7 +3,7 @@
 ########################################################################################
 # Install ARM GCC.
 GCC_TOOLCHAIN_PATH=${HOME}/cache/gcc
-GCC_TOOLCHAIN_URL="https://developer.arm.com/-/media/Files/downloads/gnu/13.2.rel1/binrel/arm-gnu-toolchain-13.2.rel1-x86_64-arm-none-eabi.tar.xz"
+GCC_TOOLCHAIN_URL="https://developer.arm.com/-/media/Files/downloads/gnu/14.3.rel1/binrel/arm-gnu-toolchain-14.3.rel1-x86_64-arm-none-eabi.tar.xz"
 
 ci_install_arm_gcc() {
     mkdir -p ${GCC_TOOLCHAIN_PATH}
