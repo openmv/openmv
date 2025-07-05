@@ -32,9 +32,6 @@
 #define OMV_OV5640_AF_ENABLE                    (1)
 #define OMV_OV5640_PLL_CTRL2                    (0x64)
 #define OMV_OV5640_PLL_CTRL3                    (0x13)
-#define OMV_OV5640_REV_Y_CHECK                  (1)
-#define OMV_OV5640_REV_Y_CTRL2                  (0x54)
-#define OMV_OV5640_REV_Y_CTRL3                  (0x13)
 
 // FIR drivers configuration.
 #define OMV_FIR_MLX90621_ENABLE                 (1)

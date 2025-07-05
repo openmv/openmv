@@ -678,20 +678,6 @@ static int reset(omv_csi_t *csi) {
         int addr = (default_regs[i][0] << 8) | (default_regs[i][1] << 0);
         int data = default_regs[i][2];
 
-        #if (OMV_OV5640_REV_Y_CHECK == 1)
-        // Rev V (480 MHz / 20) -> 24 MHz PCLK / 3 * 100 = 800 MHz / 10 = 80 MHz PCLK.
-        // Rev Y (400 MHz / 16) -> 25 MHz PCLK / 3 * 84 = 700 MHz / 10 = 70 MHz PCLK.
-        if (HAL_GetREVID() < 0x2003) {
-            // Is this REV Y?
-            if (addr == SC_PLL_CONTRL2) {
-                data = OMV_OV5640_REV_Y_CTRL2;
-            }
-            if (addr == SC_PLL_CONTRL3) {
-                data = OMV_OV5640_REV_Y_CTRL3;
-            }
-        }
-        #endif
-
         ret |= omv_i2c_writeb2(csi->i2c, csi->slv_addr, addr, data);
     }
 

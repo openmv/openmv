@@ -543,13 +543,6 @@ int omv_csi_probe(omv_i2c_t *i2c) {
             return OMV_CSI_ERROR_ISC_INIT_FAILED;
         }
 
-        // Special case for OV5640.
-        #if (OMV_OV5640_REV_Y_CHECK == 1)
-        if (csi->chip_id == OV5640_ID && HAL_GetREVID() < 0x2003) {
-            csi->clk_hz = OMV_OV5640_REV_Y_FREQ;
-        }
-        #endif
-
         // Sensors can change the clock's frequency or disable it
         // (with clk_hz=0). This is allowed only if the clock is
         // not shared (dev_count == 1) or if this is a main sensor.
