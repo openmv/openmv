@@ -265,7 +265,7 @@
 
 // Camera Interface
 #define OMV_CSI_CLK_SOURCE                  (OMV_CSI_CLK_SOURCE_TIM)
-#define OMV_CSI_CLK_FREQUENCY               (12000000)
+#define OMV_CSI_CLK_FREQUENCY               (24000000)
 #define OMV_CSI_TIM                         (TIM1)
 #define OMV_CSI_TIM_PIN                     (&omv_pin_E9_TIM1)
 #define OMV_CSI_TIM_CHANNEL                 (TIM_CHANNEL_1)

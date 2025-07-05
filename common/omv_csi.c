@@ -61,6 +61,10 @@
 #define OMV_CSI_I2C_REINIT  (1)
 #endif
 
+#ifndef OMV_CSI_CLK_TOLERANCE
+#define OMV_CSI_CLK_TOLERANCE   (500000)
+#endif
+
 #ifndef __weak
 #define __weak    __attribute__((weak))
 #endif
@@ -120,6 +124,7 @@ uint16_t resolution[][2] = {
 };
 
 static omv_i2c_t csi_i2c;
+static omv_clk_t csi_clk;
 omv_csi_t csi_all[OMV_CSI_MAX_DEVICES] = {0};
 
 __weak void omv_csi_init0() {
@@ -178,14 +183,15 @@ __weak int omv_csi_init() {
 
         memset(csi, 0, sizeof(omv_csi_t));
         csi->i2c = &csi_i2c;
+        csi->clk = &csi_clk;
         csi->fb = framebuffer_get(-1);
         csi->color_palette = rainbow_table;
         omv_csi_ops_init(csi);
-    }
 
-    // Configure the csi external clock (XCLK).
-    if (omv_csi_set_clk_frequency(OMV_CSI_CLK_FREQUENCY) != 0) {
-        return OMV_CSI_ERROR_TIM_INIT_FAILED;
+        // Configure the csi external clock (XCLK).
+        if (omv_csi_set_clk_frequency(csi, OMV_CSI_CLK_FREQUENCY) != 0) {
+            return OMV_CSI_ERROR_TIM_INIT_FAILED;
+        }
     }
 
     // Detect and initialize sensor(s).
@@ -544,10 +550,11 @@ int omv_csi_probe(omv_i2c_t *i2c) {
         }
         #endif
 
-        // Allow reconfiguring (or disabling) the external clock
-        // if just one sensor is detected, or for main sensors.
+        // Sensors can change the clock's frequency or disable it
+        // (with clk_hz=0). This is allowed only if the clock is
+        // not shared (dev_count == 1) or if this is a main sensor.
         if (dev_count == 1 || !csi->auxiliary) {
-            omv_csi_set_clk_frequency(csi->clk_hz);
+            omv_csi_set_clk_frequency(csi, csi->clk_hz);
         }
 
         // Count aux devices.
@@ -566,7 +573,7 @@ int omv_csi_probe(omv_i2c_t *i2c) {
                 // If more than one aux sensor was detected, the clock
                 // hasn't been changed, so reconfigure using this freq.
                 if (dev_count > 1) {
-                    omv_csi_set_clk_frequency(csi->clk_hz);
+                    omv_csi_set_clk_frequency(csi, csi->clk_hz);
                 }
                 break;
             }
@@ -605,12 +612,33 @@ __weak int omv_csi_get_id(omv_csi_t *csi) {
     return csi->chip_id;
 }
 
-__weak uint32_t omv_csi_get_clk_frequency() {
-    return OMV_CSI_ERROR_CTL_UNSUPPORTED;
+__weak uint32_t omv_csi_get_clk_frequency(omv_csi_t *csi, bool nominal) {
+    omv_clk_t *clk = csi->clk;
+
+    if (clk->get_freq != NULL && !nominal) {
+        // Return the exact frequency
+        return clk->get_freq(clk);
+    }
+
+    // Return nominal frequency
+    return clk->freq;
 }
 
-__weak int omv_csi_set_clk_frequency(uint32_t frequency) {
-    return OMV_CSI_ERROR_CTL_UNSUPPORTED;
+__weak int omv_csi_set_clk_frequency(omv_csi_t *csi, uint32_t frequency) {
+    omv_clk_t *clk = csi->clk;
+    uint32_t diff_hz = abs(frequency - omv_csi_get_clk_frequency(csi, false));
+
+    if (diff_hz <= OMV_CSI_CLK_TOLERANCE) {
+        return 0;
+    }
+
+    if (clk->set_freq != NULL &&
+        clk->set_freq(clk, frequency) != 0) {
+        return OMV_CSI_ERROR_CTL_FAILED;
+    }
+    
+    clk->freq = frequency;
+    return 0;
 }
 
 __weak bool omv_csi_is_detected(omv_csi_t *csi) {

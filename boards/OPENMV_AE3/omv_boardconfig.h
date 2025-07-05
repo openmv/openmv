@@ -273,7 +273,7 @@ extern unsigned char OMV_BOARD_UID_ADDR[12];    // Unique address.
 
 // Camera interface
 #define OMV_CSI_BASE                    ((CPI_Type *) CPI_BASE)
-#define OMV_CSI_CLK_FREQUENCY           (12000000)
+#define OMV_CSI_CLK_FREQUENCY           (24000000)
 
 #define OMV_CSI_D0_PIN                  (&omv_pin_CSI_D0)
 #define OMV_CSI_D1_PIN                  (&omv_pin_CSI_D1)

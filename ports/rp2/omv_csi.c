@@ -119,7 +119,11 @@ static int rp2_csi_abort(omv_csi_t *csi, bool fifo_flush, bool in_irq) {
     return 0;
 }
 
-int omv_csi_set_clk_frequency(uint32_t frequency) {
+static uint32_t rp2_clk_get_frequency(omv_clk_t *clk) {
+    return OMV_CSI_CLK_FREQUENCY;
+}
+
+static int rp2_clk_set_frequency(omv_clk_t *clk, uint32_t frequency) {
     uint32_t p = 4;
 
     // Allocate pin to the PWM
@@ -226,9 +230,15 @@ static int rp2_csi_snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
 }
 
 int omv_csi_ops_init(omv_csi_t *csi) {
+    // Set CSI ops.
     csi->abort = rp2_csi_abort;
     csi->config = rp2_csi_config;
     csi->snapshot = rp2_csi_snapshot;
+
+    // Set CSI clock ops.
+    csi->clk->freq = OMV_CSI_CLK_FREQUENCY;
+    csi->clk->set_freq = rp2_clk_set_frequency;
+    csi->clk->get_freq = rp2_clk_get_frequency;
     return 0;
 }
 #endif // MICROPY_PY_CSI

@@ -104,11 +104,11 @@ static int imx_csi_abort(omv_csi_t *csi, bool fifo_flush, bool in_irq) {
     return 0;
 }
 
-uint32_t omv_csi_get_clk_frequency() {
+static uint32_t imx_clk_get_frequency(omv_clk_t *clk) {
     return 24000000 / (CLOCK_GetDiv(kCLOCK_CsiDiv) + 1);
 }
 
-int omv_csi_set_clk_frequency(uint32_t frequency) {
+static int imx_clk_set_frequency(omv_clk_t *clk, uint32_t frequency) {
     if (frequency >= 24000000) {
         CLOCK_SetDiv(kCLOCK_CsiDiv, 0);
     } else if (frequency >= 12000000) {
@@ -504,9 +504,15 @@ int imx_csi_snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
 }
 
 int omv_csi_ops_init(omv_csi_t *csi) {
+    // Set CSI ops.
     csi->abort = imx_csi_abort;
     csi->config = imx_csi_config;
     csi->snapshot = imx_csi_snapshot;
+
+    // Set CSI clock ops.
+    csi->clk->freq = OMV_CSI_CLK_FREQUENCY;
+    csi->clk->set_freq = imx_clk_set_frequency;
+    csi->clk->get_freq = imx_clk_get_frequency;
     return 0;
 }
 #endif // MICROPY_PY_CSI
