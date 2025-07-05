@@ -29,9 +29,6 @@
 #define OMV_OV5640_AF_ENABLE            (1)
 #define OMV_OV5640_PLL_CTRL2            (0x64)
 #define OMV_OV5640_PLL_CTRL3            (0x13)
-#define OMV_OV5640_REV_Y_CHECK          (0)
-#define OMV_OV5640_REV_Y_CTRL2          (0x54)
-#define OMV_OV5640_REV_Y_CTRL3          (0x13)
 
 #define OMV_OV7725_ENABLE               (1)
 #define OMV_OV7725_PLL_CONFIG           (0x41)   // x4

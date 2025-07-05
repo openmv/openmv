@@ -22,9 +22,6 @@ extern int ov2640_init(omv_csi_t *csi);
 #ifndef OMV_OV5640_CLK_FREQ
 #define OMV_OV5640_CLK_FREQ     (24000000)
 #endif
-#ifndef OMV_OV5640_REV_Y_FREQ
-#define OMV_OV5640_REV_Y_FREQ   (25000000)
-#endif
 extern int ov5640_init(omv_csi_t *csi);
 
 #ifndef OMV_OV7670_CLK_FREQ
