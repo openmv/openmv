@@ -32,7 +32,7 @@
 
 #include STM32_HAL_H
 #include "irq.h"
-#include "dma_utils.h"
+#include "stm_dma.h"
 
 #define JPEG_CODEC_TIMEOUT          (1000)
 #define JPEG_ALLOC_PADDING          ((__SCB_DCACHE_LINE_SIZE) * 4)

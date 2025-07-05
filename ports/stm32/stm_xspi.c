@@ -36,6 +36,7 @@
 
 #include STM32_HAL_H
 #include "omv_boardconfig.h"
+#include "stm_xspi.h"
 
 #if defined(OMV_XSPI_PSRAM_ID)
 
@@ -164,7 +165,7 @@ static int xspi_psram_memory_map(XSPI_HandleTypeDef *xspi, uint32_t burst_enable
     return 0;
 }
 
-int xspi_psram_init() {
+int stm_xspi_psram_init(void) {
     uint32_t xspi_clk = 0;
 
     // Reset and enable XSPI clock.
@@ -225,7 +226,7 @@ extern void __fatal_error(const char *msg);
 #pragma GCC diagnostic ignored "-Wstringop-overflow"
 #endif
 
-bool __attribute__((optimize("Os"))) xspi_psram_test(bool exhaustive) {
+bool __attribute__((optimize("Os"))) stm_xspi_psram_test(bool exhaustive) {
     uint8_t const pattern = 0xaa;
     uint8_t const antipattern = 0x55;
     volatile uint8_t *const mem_base = (uint8_t *) 0x90000000;

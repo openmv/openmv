@@ -147,6 +147,7 @@ typedef I2C_HandleTypeDef *omv_i2c_dev_t;
 #define OMV_CSI_PORT_BITS        \
     struct {                     \
         DMA_HandleTypeDef dma;   \
+        IRQn_Type dma_irqn;      \
         DCMI_HandleTypeDef dcmi; \
         OMV_CSI_PORT_BITS_MDMA   \
     };

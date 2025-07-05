@@ -84,7 +84,7 @@
 
 #include "usbdbg.h"
 #include "sdram.h"
-#include "xspi_psram.h"
+#include "stm_xspi.h"
 #include "fb_alloc.h"
 #include "dma_alloc.h"
 #include "file_utils.h"
@@ -164,13 +164,13 @@ int main(void) {
     #endif
 
     #if OMV_XSPI_PSRAM_SIZE
-    if (xspi_psram_init() != 0) {
+    if (stm_xspi_psram_init() != 0) {
         __fatal_error("Failed to init XSPI PSRAM!");
     }
     #endif
 
     #if OMV_XSPI_PSRAM_STARTUP_TEST
-    if (xspi_psram_test(true) == 0) {
+    if (stm_xspi_psram_test(true) == 0) {
         __fatal_error("XSPI PSRAM test failed");
     }
     #endif
