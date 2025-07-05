@@ -50,6 +50,9 @@
 #include "omv_i2c.h"
 #include "py_helper.h"
 #include "framebuffer.h"
+#if MICROPY_PY_ULAB
+#include "ndarray.h"
+#endif
 
 static mp_obj_t vsync_callback = mp_const_none;
 static mp_obj_t frame_callback = mp_const_none;
@@ -137,7 +140,7 @@ static MP_DEFINE_CONST_FUN_OBJ_1(py_omv_csi_shutdown_obj, py_omv_csi_shutdown);
 
 static mp_obj_t py_omv_csi_flush() {
     omv_csi_t *csi = omv_csi_get(-1);
-    framebuffer_update_jpeg_buffer(csi->fb);
+    framebuffer_update_jpeg_buffer(csi->fb, NULL);
     return mp_const_none;
 }
 static MP_DEFINE_CONST_FUN_OBJ_0(py_omv_csi_flush_obj, py_omv_csi_flush);
@@ -1105,6 +1108,42 @@ static mp_obj_t py_omv_csi_ioctl(size_t n_args, const mp_obj_t *args) {
             }
             break;
         }
+        case OMV_CSI_IOCTL_GENX320_READ_EVENTS: {
+            if (n_args == 2 && MP_OBJ_IS_TYPE(args[1], &ulab_ndarray_type)) {
+                ndarray_obj_t *array = MP_OBJ_TO_PTR(args[1]);
+
+                if (array->dtype != NDARRAY_UINT16) {
+                    mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Expected a ndarray with dtype uint16"));
+                }
+
+                uint32_t expected_len = resolution[csi->framesize][0] *
+                                       (resolution[csi->framesize][1] / sizeof(uint32_t));
+
+                if (!(ndarray_is_dense(array) && (array->ndim == 2) &&
+                    (array->shape[ULAB_MAX_DIMS - 2] == expected_len) &&
+                    (array->shape[ULAB_MAX_DIMS - 1] == EC_EVENT_SIZE))) {
+                    mp_raise_msg_varg(&mp_type_ValueError,
+                                      MP_ERROR_TEXT("Expected a dense ndarray with shape (%d, %d)"),
+                                      expected_len, EC_EVENT_SIZE);
+                }
+
+                error = omv_csi_ioctl(csi, request, array->array);
+                if (error > 0) {
+                    ret_obj = mp_obj_new_int(error);
+                }
+            }
+            break;
+        }
+        case OMV_CSI_IOCTL_GENX320_CALIBRATE: {
+            if (n_args == 3) {
+                error = omv_csi_ioctl(csi, request, mp_obj_get_int(args[1]),
+                                      (double) mp_obj_get_float(args[2]));
+                if (error > 0) {
+                    ret_obj = mp_obj_new_int(error);
+                }
+            }
+            break;
+        }
         #endif // (OMV_GENX320_ENABLE == 1)
 
         default: {
@@ -1113,7 +1152,7 @@ static mp_obj_t py_omv_csi_ioctl(size_t n_args, const mp_obj_t *args) {
         }
     }
 
-    if (error != 0) {
+    if (error < 0) {
         omv_csi_raise_error(error);
     }
 
@@ -1270,6 +1309,16 @@ static const mp_rom_map_elem_t globals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_QXGA),                MP_ROM_INT(OMV_CSI_FRAMESIZE_QXGA)},     /* 2048x1536 */
     { MP_ROM_QSTR(MP_QSTR_WQXGA),               MP_ROM_INT(OMV_CSI_FRAMESIZE_WQXGA)},    /* 2560x1600 */
     { MP_ROM_QSTR(MP_QSTR_WQXGA2),              MP_ROM_INT(OMV_CSI_FRAMESIZE_WQXGA2)},   /* 2592x1944 */
+    #if (OMV_GENX320_ENABLE == 1)
+    // Event Resolutions
+    { MP_ROM_QSTR(MP_QSTR_EVT_1024),            MP_ROM_INT(OMV_CSI_FRAMESIZE_EVT_1024)}, /* 1024x4 */
+    { MP_ROM_QSTR(MP_QSTR_EVT_2048),            MP_ROM_INT(OMV_CSI_FRAMESIZE_EVT_2048)}, /* 1024x8 */
+    { MP_ROM_QSTR(MP_QSTR_EVT_4096),            MP_ROM_INT(OMV_CSI_FRAMESIZE_EVT_4096)}, /* 1024x16 */
+    { MP_ROM_QSTR(MP_QSTR_EVT_8192),            MP_ROM_INT(OMV_CSI_FRAMESIZE_EVT_8192)}, /* 1024x32 */
+    { MP_ROM_QSTR(MP_QSTR_EVT_16384),           MP_ROM_INT(OMV_CSI_FRAMESIZE_EVT_16384)}, /* 1024x64 */
+    { MP_ROM_QSTR(MP_QSTR_EVT_32768),           MP_ROM_INT(OMV_CSI_FRAMESIZE_EVT_32768)}, /* 1024x128 */
+    { MP_ROM_QSTR(MP_QSTR_EVT_65536),           MP_ROM_INT(OMV_CSI_FRAMESIZE_EVT_65536)}, /* 1024x256 */
+    #endif // (OMV_GENX320_ENABLE == 1)
 
     // OMV_CSI_IOCTLs
     { MP_ROM_QSTR(MP_QSTR_IOCTL_SET_READOUT_WINDOW),    MP_ROM_INT(OMV_CSI_IOCTL_SET_READOUT_WINDOW)},
@@ -1323,6 +1372,14 @@ static const mp_rom_map_elem_t globals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_GENX320_BIAS_HPF),             MP_ROM_INT(OMV_CSI_GENX320_BIAS_HPF)},
     { MP_ROM_QSTR(MP_QSTR_GENX320_BIAS_REFR),            MP_ROM_INT(OMV_CSI_GENX320_BIAS_REFR)},
     { MP_ROM_QSTR(MP_QSTR_IOCTL_GENX320_SET_AFK),        MP_ROM_INT(OMV_CSI_IOCTL_GENX320_SET_AFK)},
+    { MP_ROM_QSTR(MP_QSTR_IOCTL_GENX320_READ_EVENTS),    MP_ROM_INT(OMV_CSI_IOCTL_GENX320_READ_EVENTS)},
+    { MP_ROM_QSTR(MP_QSTR_IOCTL_GENX320_CALIBRATE),      MP_ROM_INT(OMV_CSI_IOCTL_GENX320_CALIBRATE)},
+    { MP_ROM_QSTR(MP_QSTR_PIX_OFF_EVENT),                MP_ROM_INT(EC_PIX_OFF_EVENT)},
+    { MP_ROM_QSTR(MP_QSTR_PIX_ON_EVENT),                 MP_ROM_INT(EC_PIX_ON_EVENT)},
+    { MP_ROM_QSTR(MP_QSTR_RST_TRIGGER_RISING),           MP_ROM_INT(EC_RST_TRIGGER_RISING)},
+    { MP_ROM_QSTR(MP_QSTR_RST_TRIGGER_FALLING),          MP_ROM_INT(EC_RST_TRIGGER_FALLING)},
+    { MP_ROM_QSTR(MP_QSTR_EXT_TRIGGER_RISING),           MP_ROM_INT(EC_EXT_TRIGGER_RISING)},
+    { MP_ROM_QSTR(MP_QSTR_EXT_TRIGGER_FALLING),          MP_ROM_INT(EC_EXT_TRIGGER_FALLING)},
     #endif
 
     // Sensor functions

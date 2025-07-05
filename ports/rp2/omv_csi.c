@@ -156,7 +156,7 @@ static int rp2_csi_snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
     framebuffer_t *fb = csi->fb;
 
     // Compress the framebuffer for the IDE preview.
-    framebuffer_update_jpeg_buffer(fb);
+    framebuffer_update_jpeg_buffer(fb, NULL);
 
     if (omv_csi_check_framebuffer_size(csi) != 0) {
         return OMV_CSI_ERROR_FRAMEBUFFER_OVERFLOW;

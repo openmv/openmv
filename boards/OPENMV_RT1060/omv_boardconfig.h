@@ -40,7 +40,6 @@
 #define OMV_PAG7920_ENABLE              (1)
 #define OMV_PAJ6100_ENABLE              (1)
 #define OMV_FROGEYE2020_ENABLE          (1)
-#define OMV_GENX320_EHC_ENABLE          (1)
 
 // FIR drivers configuration.
 #define OMV_FIR_MLX90621_ENABLE         (1)

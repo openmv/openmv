@@ -125,7 +125,7 @@ static int nrf_csi_snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
     // Compress the framebuffer for the IDE preview, only if it's not the first frame,
     // the framebuffer is enabled and the image sensor does not support JPEG encoding.
     // Note: This doesn't run unless the IDE is connected and the framebuffer is enabled.
-    framebuffer_update_jpeg_buffer(fb);
+    framebuffer_update_jpeg_buffer(fb, NULL);
 
     // This driver supports a single buffer.
     if (fb->n_buffers != 1) {
