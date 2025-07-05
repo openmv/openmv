@@ -64,7 +64,7 @@ image_t *py_helper_arg_to_image(const mp_obj_t arg, uint32_t flags) {
         } else if ((flags & ARG_IMAGE_UNCOMPRESSED) && image->is_compressed) {
             mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Expected an uncompressed image"));
         } else if ((flags & ARG_IMAGE_GRAYSCALE) && image->pixfmt != PIXFORMAT_GRAYSCALE) {
-            mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Expected an uncompressed image"));
+            mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Expected a grayscale image"));
         }
     }
     return image;
