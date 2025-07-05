@@ -68,7 +68,7 @@ jobs:
           ~/cache/llvm
           ~/cache/make
           ~/cache/stedgeai
-        key: 'gcc-13.2.rel1_llvm-18.1.3_make-4.4.1_stedgeai-2.1'
+        key: 'gcc-14.3.rel1_llvm-18.1.3_make-4.4.1_stedgeai-2.1'
 
     - name: '🐍 Install Python'
       uses: actions/setup-python@v5
@@ -129,7 +129,7 @@ jobs:
           ~/cache/llvm
           ~/cache/make
           ~/cache/stedgeai
-        key: 'gcc-13.2.rel1_llvm-18.1.3_make-4.4.1_stedgeai-2.1'
+        key: 'gcc-14.3.rel1_llvm-18.1.3_make-4.4.1_stedgeai-2.1'
 
     - name: '🐍 Install Python'
       uses: actions/setup-python@v5

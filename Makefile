@@ -127,9 +127,10 @@ MPY_MKARGS = PORT=$(PORT) BOARD=$(TARGET) DEBUG=$(DEBUG) MICROPY_MANIFEST_OMV_LI
              MICROPY_ROM_TEXT_COMPRESSION=$(ROM_TEXT_COMPRESSION) USER_C_MODULES=$(TOP_DIR)
 
 
-# Disable broken optimization for CM55.
+
+# Check GCC toolchain version.
 ifeq ($(CPU),cortex-m55)
-CFLAGS += -fdisable-rtl-loop2_doloop
+include $(TOP_DIR)/common/check_toolchain.mk
 endif
 
 # Configure additional built-in modules. Note must define both the CFLAGS and the Make command line args.

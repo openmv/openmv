@@ -10,7 +10,7 @@ RUN apt update && apt install -y \
 
 # Download and extract GCC
 RUN mkdir -p /workspace/gcc
-ENV GCC_URL="https://developer.arm.com/-/media/Files/downloads/gnu/13.2.rel1/binrel/arm-gnu-toolchain-13.2.rel1-x86_64-arm-none-eabi.tar.xz"
+ENV GCC_URL="https://developer.arm.com/-/media/Files/downloads/gnu/14.3.rel1/binrel/arm-gnu-toolchain-14.3.rel1-x86_64-arm-none-eabi.tar.xz"
 RUN wget --no-check-certificate -O - ${GCC_URL} | tar --strip-components=1 -Jx -C /workspace/gcc
 
 # Download and extract LLVM
