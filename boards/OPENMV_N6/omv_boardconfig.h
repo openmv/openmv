@@ -226,6 +226,8 @@
 #define OMV_SPI5_DMA_TX_REQUEST             (GPDMA1_REQUEST_SPI5_TX)
 #define OMV_SPI5_DMA_RX_CHANNEL             (GPDMA1_Channel9)
 #define OMV_SPI5_DMA_RX_REQUEST             (GPDMA1_REQUEST_SPI5_RX)
+#define OMV_SPI_DMA_LIST_PORTS              (DMA_LINK_ALLOCATED_PORT0)
+#define OMV_SPI_DMA_XFER_PORTS              (DMA_SRC_ALLOCATED_PORT0 | DMA_DEST_ALLOCATED_PORT1)
 
 // CSI SPI bus
 #define OMV_CSI_SPI_ID                      (OMV_SPI5_ID)
@@ -259,6 +261,8 @@
 #define OMV_MDF_FLT0_DMA_STREAM             GPDMA1_Channel10
 #define OMV_MDF_FLT0_DMA_REQUEST            GPDMA1_REQUEST_ADF1_FLT0
 #define OMV_MDF_FLT0_DMA_IRQ                GPDMA1_Channel10_IRQn
+#define OMV_MDF_DMA_LIST_PORTS              (DMA_LINK_ALLOCATED_PORT0)
+#define OMV_MDF_DMA_XFER_PORTS              (DMA_SRC_ALLOCATED_PORT0 | DMA_DEST_ALLOCATED_PORT1)
 
 // Camera Interface
 #define OMV_CSI_CLK_SOURCE                  (OMV_CSI_CLK_SOURCE_TIM)
@@ -274,6 +278,8 @@
 #define OMV_CSI_DMA_CHANNEL                 (HPDMA1_Channel12)
 #define OMV_CSI_DMA_REQUEST                 (HPDMA1_REQUEST_DCMI_PSSI)
 #define OMV_CSI_DMA_MEMCPY_ENABLE           (0)
+#define OMV_CSI_DMA_LIST_PORTS              (DMA_LINK_ALLOCATED_PORT0)
+#define OMV_CSI_DMA_XFER_PORTS              (DMA_SRC_ALLOCATED_PORT1 | DMA_DEST_ALLOCATED_PORT0)
 #define OMV_CSI_HW_CROP_ENABLE              (1)
 #define OMV_CSI_MAX_DEVICES                 (3)
 
