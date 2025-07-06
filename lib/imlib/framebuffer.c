@@ -99,28 +99,16 @@ void framebuffer_update_jpeg_buffer(image_t *src) {
 
     if (src->pixfmt != PIXFORMAT_INVALID && jpegbuffer->enabled) {
         if (src->is_compressed) {
-            bool does_not_fit = false;
-
             if (mutex_try_lock_alternate(&jpegbuffer->lock, MUTEX_TID_OMV)) {
                 if (OMV_JPEG_BUFFER_SIZE_MAX < src->size) {
                     jpegbuffer_init_from_image(NULL);
-                    does_not_fit = true;
+                    mp_printf(MP_PYTHON_PRINTER, "\x1b[40O\n");
                 } else {
                     jpegbuffer_init_from_image(src);
                     memcpy(jpegbuffer->pixels, src->pixels, src->size);
                 }
 
                 mutex_unlock(&jpegbuffer->lock, MUTEX_TID_OMV);
-            }
-
-            if (does_not_fit) {
-                printf("Warning: JPEG/PNG too big! Trying framebuffer transfer using fallback method!\n");
-                int new_size = framebuffer_encoded_size(src);
-                fb_alloc_mark();
-                uint8_t *temp = fb_alloc(new_size, FB_ALLOC_NO_HINT);
-                framebuffer_encode(temp, src);
-                (MP_PYTHON_PRINTER)->print_strn((MP_PYTHON_PRINTER)->data, (const char *) temp, new_size);
-                fb_alloc_free_till_mark();
             }
         } else if (src->pixfmt != PIXFORMAT_INVALID) {
             if (mutex_try_lock_alternate(&jpegbuffer->lock, MUTEX_TID_OMV)) {
@@ -228,45 +216,6 @@ int32_t framebuffer_get_height(framebuffer_t *fb) {
 
 int32_t framebuffer_get_depth(framebuffer_t *fb) {
     return fb->bpp;
-}
-
-void framebuffer_encode(uint8_t *ptr, image_t *img) {
-    *ptr++ = 0xFE;
-
-    for (int i = 0, j = (img->size / 3) * 3; i < j; i += 3) {
-        int x = 0;
-        x |= img->data[i + 0] << 0;
-        x |= img->data[i + 1] << 8;
-        x |= img->data[i + 2] << 16;
-        *ptr++ = 0x80 | ((x >> 0) & 0x3F);
-        *ptr++ = 0x80 | ((x >> 6) & 0x3F);
-        *ptr++ = 0x80 | ((x >> 12) & 0x3F);
-        *ptr++ = 0x80 | ((x >> 18) & 0x3F);
-    }
-
-    if ((img->size % 3) == 2) {
-        // 2 bytes -> 16-bits -> 24-bits sent
-        int x = 0;
-        x |= img->data[img->size - 2] << 0;
-        x |= img->data[img->size - 1] << 8;
-        *ptr++ = 0x80 | ((x >> 0) & 0x3F);
-        *ptr++ = 0x80 | ((x >> 6) & 0x3F);
-        *ptr++ = 0x80 | ((x >> 12) & 0x3F);
-    }
-
-    if ((img->size % 3) == 1) {
-        // 1 byte -> 8-bits -> 16-bits sent
-        int x = 0;
-        x |= img->data[img->size - 1] << 0;
-        *ptr++ = 0x80 | ((x >> 0) & 0x3F);
-        *ptr++ = 0x80 | ((x >> 6) & 0x3F);
-    }
-
-    *ptr++ = 0xFE;
-}
-
-int framebuffer_encoded_size(image_t *img) {
-    return (((img->size * 8) + 5) / 6) + 2;
 }
 
 // Returns the current frame buffer size, factoring in the space taken by fb_alloc.

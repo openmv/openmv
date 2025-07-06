@@ -95,10 +95,6 @@ int32_t framebuffer_get_width(framebuffer_t *fb);
 int32_t framebuffer_get_height(framebuffer_t *fb);
 int32_t framebuffer_get_depth(framebuffer_t *fb);
 
-// Encode jpeg data for transmission over a text channel.
-void framebuffer_encode(uint8_t *ptr, image_t *img);
-int  framebuffer_encoded_size(image_t *img);
-
 // Return the number of bytes in the current buffer.
 uint32_t framebuffer_get_buffer_size(framebuffer_t *fb);
 

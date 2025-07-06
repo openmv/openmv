@@ -400,28 +400,21 @@ static mp_obj_t py_image_getiter(mp_obj_t o_in, mp_obj_iter_buf_t *iter_buf) {
 
 static void py_image_print(const mp_print_t *print, mp_obj_t self, mp_print_kind_t kind) {
     image_t *image = py_image_cobj(self);
-    if (image->is_compressed
-        && image->pixels[0] == 0xFE
-        && image->pixels[image->size - 1] == 0xFE) {
-        // print for ide.
-        print->print_strn(print->data, (const char *) image->pixels, image->size);
-    } else {
-        mp_printf(print, "{\"w\":%d, \"h\":%d, \"type\":\"%s\", \"size\":%d}",
-                  image->w,
-                  image->h,
-                  (image->pixfmt == PIXFORMAT_BINARY)     ? "binary" :
-                  (image->pixfmt == PIXFORMAT_GRAYSCALE)  ? "grayscale" :
-                  (image->pixfmt == PIXFORMAT_RGB565)     ? "rgb565" :
-                  (image->pixfmt == PIXFORMAT_BAYER_BGGR) ? "bayer_bggr" :
-                  (image->pixfmt == PIXFORMAT_BAYER_GBRG) ? "bayer_gbrg" :
-                  (image->pixfmt == PIXFORMAT_BAYER_GRBG) ? "bayer_grbg" :
-                  (image->pixfmt == PIXFORMAT_BAYER_RGGB) ? "bayer_rggb" :
-                  (image->pixfmt == PIXFORMAT_YUV422)     ? "yuv422" :
-                  (image->pixfmt == PIXFORMAT_YVU422)     ? "yvu422" :
-                  (image->pixfmt == PIXFORMAT_JPEG)       ? "jpeg" :
-                  (image->pixfmt == PIXFORMAT_PNG)        ? "png" : "unknown",
-                  image_size(image));
-    }
+    mp_printf(print, "{\"w\":%d, \"h\":%d, \"type\":\"%s\", \"size\":%d}",
+              image->w,
+              image->h,
+              (image->pixfmt == PIXFORMAT_BINARY)     ? "binary" :
+              (image->pixfmt == PIXFORMAT_GRAYSCALE)  ? "grayscale" :
+              (image->pixfmt == PIXFORMAT_RGB565)     ? "rgb565" :
+              (image->pixfmt == PIXFORMAT_BAYER_BGGR) ? "bayer_bggr" :
+              (image->pixfmt == PIXFORMAT_BAYER_GBRG) ? "bayer_gbrg" :
+              (image->pixfmt == PIXFORMAT_BAYER_GRBG) ? "bayer_grbg" :
+              (image->pixfmt == PIXFORMAT_BAYER_RGGB) ? "bayer_rggb" :
+              (image->pixfmt == PIXFORMAT_YUV422)     ? "yuv422" :
+              (image->pixfmt == PIXFORMAT_YVU422)     ? "yvu422" :
+              (image->pixfmt == PIXFORMAT_JPEG)       ? "jpeg" :
+              (image->pixfmt == PIXFORMAT_PNG)        ? "png" : "unknown",
+              image_size(image));
 }
 
 static mp_obj_t py_image_subscr(mp_obj_t self_in, mp_obj_t index, mp_obj_t value) {
@@ -993,8 +986,8 @@ static MP_DEFINE_CONST_FUN_OBJ_KW(py_image_set_pixel_obj, 2, py_image_set_pixel)
 static mp_obj_t py_image_to(pixformat_t pixfmt, mp_rom_obj_t default_color_palette, bool default_copy,
                             size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
     enum {
-        ARG_x_scale, ARG_y_scale, ARG_roi, ARG_channel, ARG_alpha, ARG_color_palette, ARG_alpha_palette, ARG_hint,
-        ARG_copy, ARG_copy_to_fb, ARG_quality, ARG_encode_for_ide, ARG_subsampling
+        ARG_x_scale, ARG_y_scale, ARG_roi, ARG_channel, ARG_alpha, ARG_color_palette, ARG_alpha_palette,
+        ARG_hint, ARG_copy, ARG_copy_to_fb, ARG_quality, ARG_subsampling
     };
     const mp_arg_t allowed_args[] = {
         { MP_QSTR_x_scale, MP_ARG_OBJ | MP_ARG_KW_ONLY, {.u_rom_obj = MP_ROM_NONE} },
@@ -1008,7 +1001,6 @@ static mp_obj_t py_image_to(pixformat_t pixfmt, mp_rom_obj_t default_color_palet
         { MP_QSTR_copy, MP_ARG_BOOL | MP_ARG_KW_ONLY, {.u_bool = default_copy} },
         { MP_QSTR_copy_to_fb, MP_ARG_BOOL | MP_ARG_KW_ONLY, {.u_bool = false} },
         { MP_QSTR_quality, MP_ARG_INT | MP_ARG_KW_ONLY, {.u_int = 90} },
-        { MP_QSTR_encode_for_ide, MP_ARG_BOOL | MP_ARG_KW_ONLY,  {.u_bool = false} },
         { MP_QSTR_subsampling, MP_ARG_INT | MP_ARG_KW_ONLY,  {.u_int = JPEG_SUBSAMPLING_AUTO} },
     };
 
@@ -1130,18 +1122,11 @@ static mp_obj_t py_image_to(pixformat_t pixfmt, mp_rom_obj_t default_color_palet
                 || ((dst_img.pixfmt == PIXFORMAT_PNG) && png_compress(&temp, &dst_img_tmp))) {
                 mp_raise_msg(&mp_type_OSError, MP_ERROR_TEXT("Compression Failed!"));
             }
-        } else if (args[ARG_encode_for_ide].u_bool) {
-            dst_img_tmp.data = fb_alloc(image_size(&dst_img_tmp), FB_ALLOC_NO_HINT);
-            memcpy(dst_img_tmp.data, src_img->data, dst_img_tmp.size);
         } else {
             dst_img_tmp.data = src_img->data;
         }
 
-        if (args[ARG_encode_for_ide].u_bool) {
-            dst_img.size = framebuffer_encoded_size(&dst_img_tmp);
-        } else {
-            dst_img.size = dst_img_tmp.size;
-        }
+        dst_img.size = dst_img_tmp.size;
     }
 
     uint32_t size = image_size(&dst_img);
@@ -1162,9 +1147,7 @@ static mp_obj_t py_image_to(pixformat_t pixfmt, mp_rom_obj_t default_color_palet
     }
 
     if (dst_img.is_compressed) {
-        if (args[ARG_encode_for_ide].u_bool) {
-            framebuffer_encode(dst_img.data, &dst_img_tmp);
-        } else if (dst_img.data != dst_img_tmp.data) {
+        if (dst_img.data != dst_img_tmp.data) {
             memcpy(dst_img.data, dst_img_tmp.data, dst_img.size);
         }
         fb_alloc_free_till_mark();
