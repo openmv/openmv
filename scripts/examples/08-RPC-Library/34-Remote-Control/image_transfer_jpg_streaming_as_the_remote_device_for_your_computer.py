@@ -8,7 +8,6 @@
 #
 # This script shows off how to transfer the frame buffer to your computer as a jpeg image.
 
-import omv
 import rpc
 import sensor
 
@@ -16,14 +15,6 @@ sensor.reset()
 sensor.set_pixformat(sensor.RGB565)
 sensor.set_framesize(sensor.QVGA)
 sensor.skip_frames(time=2000)
-
-# Turn off the frame buffer connection to the IDE from the OpenMV Cam side.
-#
-# This needs to be done when manually compressing jpeg images at higher quality
-# so that the OpenMV Cam does not try to stream them to the IDE using a fall back
-# mechanism if the JPEG image is too large to fit in the IDE JPEG frame buffer on the OpenMV Cam.
-
-omv.disable_fb(True)
 
 # The RPC library above is installed on your OpenMV Cam and provides multiple classes for
 # allowing your OpenMV Cam to be controlled over USB or LAN/WLAN.

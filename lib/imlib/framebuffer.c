@@ -61,7 +61,6 @@ void framebuffer_init_fb(framebuffer_t *fb, size_t size, bool dynamic) {
     memset(fb, 0, sizeof(*fb));
 
     fb->raw_size = size;
-    fb->streaming_enabled = true;
     fb->dynamic = dynamic;
     framebuffer_set_buffers(fb, 1);
 }
@@ -102,8 +101,7 @@ void framebuffer_update_jpeg_buffer(framebuffer_t *fb) {
     framebuffer_init_image(fb, &main_fb_src);
     image_t *src = &main_fb_src;
 
-    if (src->pixfmt != PIXFORMAT_INVALID &&
-        fb->streaming_enabled && jpegbuffer->enabled) {
+    if (src->pixfmt != PIXFORMAT_INVALID && jpegbuffer->enabled) {
         if (src->is_compressed) {
             bool does_not_fit = false;
 
@@ -234,14 +232,6 @@ int32_t framebuffer_get_height(framebuffer_t *fb) {
 
 int32_t framebuffer_get_depth(framebuffer_t *fb) {
     return fb->bpp;
-}
-
-void framebuffer_set_streaming(framebuffer_t *fb, bool enable) {
-    fb->streaming_enabled = enable;
-}
-
-bool framebuffer_get_streaming(framebuffer_t *fb) {
-    return fb->streaming_enabled;
 }
 
 void framebuffer_encode(framebuffer_t *fb, uint8_t *ptr, image_t *img) {

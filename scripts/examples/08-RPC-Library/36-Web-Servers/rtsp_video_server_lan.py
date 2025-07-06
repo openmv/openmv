@@ -11,7 +11,6 @@
 # you can use by going to Tools->Video Tools->Play RSTP Stream.
 
 import network
-import omv
 import rtsp
 import sensor
 import time
@@ -30,14 +29,6 @@ sensor.reset()
 
 sensor.set_pixformat(sensor.RGB565)
 sensor.set_framesize(sensor.VGA)
-
-# Turn off the frame buffer connection to the IDE from the OpenMV Cam side.
-#
-# This needs to be done when manually compressing jpeg images at higher quality
-# so that the OpenMV Cam does not try to stream them to the IDE using a fall back
-# mechanism if the JPEG image is too large to fit in the IDE JPEG frame buffer on the OpenMV Cam.
-
-omv.disable_fb(True)
 
 # Setup Network Interface
 
