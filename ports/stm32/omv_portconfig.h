@@ -139,19 +139,24 @@ typedef I2C_HandleTypeDef *omv_i2c_dev_t;
 
 
 #if defined(STM32N6)
-#define OMV_CSI_PORT_BITS          \
-    struct {                       \
-        DCMIPP_HandleTypeDef dcmi; \
+#define OMV_CSI_PORT_BITS_DCMIPP     \
+    struct {                         \
+        DCMIPP_HandleTypeDef dcmipp; \
     };
 #else
+#define OMV_CSI_PORT_BITS_DCMIPP
+#endif
+
 #define OMV_CSI_PORT_BITS        \
     struct {                     \
+        uint32_t dma_size;       \
+        bool one_shot;           \
         DMA_HandleTypeDef dma;   \
         IRQn_Type dma_irqn;      \
         DCMI_HandleTypeDef dcmi; \
         OMV_CSI_PORT_BITS_MDMA   \
+        OMV_CSI_PORT_BITS_DCMIPP \
     };
-#endif
 
 #define OMV_CSI_CLK_PORT_BITS      \
     struct {                       \
