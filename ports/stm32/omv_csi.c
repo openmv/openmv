@@ -42,6 +42,7 @@
 #include "omv_i2c.h"
 #include "omv_csi.h"
 #include "stm_dma.h"
+#include "stm_isp.h"
 
 #if defined(DMA2)
 #define USE_DMA             (1)
@@ -240,73 +241,8 @@ static int stm_csi_config(omv_csi_t *csi, omv_csi_config_t config) {
         }
 
         // Configure the pixel processing pipeline.
-        DCMIPP_PipeConfTypeDef pcfg = { .FrameRate = DCMIPP_FRAME_RATE_ALL };
-        if (csi->pixformat == PIXFORMAT_RGB565) {
-            pcfg.PixelPackerFormat = DCMIPP_PIXEL_PACKER_FORMAT_RGB565_1;
-        } else if (csi->pixformat == PIXFORMAT_GRAYSCALE || csi->pixformat == PIXFORMAT_BAYER) {
-            pcfg.PixelPackerFormat = DCMIPP_PIXEL_PACKER_FORMAT_MONO_Y8_G8_1;
-        } else if (csi->pixformat == PIXFORMAT_YUV422) {
-            pcfg.PixelPackerFormat = DCMIPP_PIXEL_PACKER_FORMAT_YUV422_1;
-        } else {
-            return OMV_CSI_ERROR_PIXFORMAT_UNSUPPORTED;
-        }
-        if (HAL_DCMIPP_PIPE_SetConfig(&csi->dcmi, DCMIPP_PIPE, &pcfg) != HAL_OK) {
+        if (stm_isp_config_pipeline(&csi->dcmi, DCMIPP_PIPE, csi->pixformat, csi->raw_output)) {
             return OMV_CSI_ERROR_CSI_INIT_FAILED;
-        }
-
-        // Configure debayer.
-        if (csi->raw_output && csi->pixformat != PIXFORMAT_BAYER) {
-            DCMIPP_RawBayer2RGBConfTypeDef rawcfg = {
-                .RawBayerType = DCMIPP_RAWBAYER_BGGR,
-                .VLineStrength = DCMIPP_RAWBAYER_ALGO_NONE,
-                .HLineStrength = DCMIPP_RAWBAYER_ALGO_NONE,
-                .PeakStrength = DCMIPP_RAWBAYER_ALGO_NONE,
-                .EdgeStrength = DCMIPP_RAWBAYER_ALGO_NONE,
-            };
-
-            if (HAL_DCMIPP_PIPE_SetISPRawBayer2RGBConfig(&csi->dcmi, DCMIPP_PIPE, &rawcfg) != HAL_OK ||
-                HAL_DCMIPP_PIPE_EnableISPRawBayer2RGB(&csi->dcmi, DCMIPP_PIPE) != HAL_OK) {
-                return OMV_CSI_ERROR_CSI_INIT_FAILED;
-            }
-
-            DCMIPP_ExposureConfTypeDef expcfg = {
-                .ShiftRed = 0,
-                .MultiplierRed = 128,
-                .ShiftGreen = 0,
-                .MultiplierGreen = 128,
-                .ShiftBlue = 0,
-                .MultiplierBlue = 128,
-            };
-
-            if (HAL_DCMIPP_PIPE_SetISPExposureConfig(&csi->dcmi, DCMIPP_PIPE, &expcfg) != HAL_OK ||
-                HAL_DCMIPP_PIPE_EnableISPExposure(&csi->dcmi, DCMIPP_PIPE) != HAL_OK) {
-                return OMV_CSI_ERROR_CSI_INIT_FAILED;
-            }
-
-            const uint32_t statsrc[] = {
-                DCMIPP_STAT_EXT_SOURCE_PRE_BLKLVL_R,
-                DCMIPP_STAT_EXT_SOURCE_PRE_BLKLVL_G,
-                DCMIPP_STAT_EXT_SOURCE_PRE_BLKLVL_B
-            };
-            DCMIPP_StatisticExtractionConfTypeDef statcfg[3];
-
-            for (size_t i = 0; i < 3; i++) {
-                statcfg[i].Source = statsrc[i];
-                statcfg[i].Mode = DCMIPP_STAT_EXT_MODE_AVERAGE;
-                statcfg[i].Bins = DCMIPP_STAT_EXT_AVER_MODE_ALL_PIXELS; //NOEXT16;
-            }
-
-            for (size_t i = DCMIPP_STATEXT_MODULE1; i <= DCMIPP_STATEXT_MODULE3; i++) {
-                if (HAL_DCMIPP_PIPE_SetISPStatisticExtractionConfig(&csi->dcmi,
-                                                                    DCMIPP_PIPE, i,
-                                                                    &statcfg[i - DCMIPP_STATEXT_MODULE1]) != HAL_OK) {
-                    return OMV_CSI_ERROR_CSI_INIT_FAILED;
-                }
-
-                if (HAL_DCMIPP_PIPE_EnableISPStatisticExtraction(&csi->dcmi, DCMIPP_PIPE, i) != HAL_OK) {
-                    return OMV_CSI_ERROR_CSI_INIT_FAILED;
-                }
-            }
         }
         #endif
     }
@@ -603,54 +539,6 @@ void DCMI_DMAConvCpltUser(uint32_t addr) {
 }
 #endif
 
-#if USE_DCMIPP
-void omv_csi_update_awb(omv_csi_t *csi, uint32_t n_pixels) {
-    uint32_t avg[3];
-    uint32_t shift[3];
-    uint32_t multi[3];
-
-    for (int i = 0; i < 3; i++) {
-        // DCMIPP_STATEXT_MODULE1
-        HAL_DCMIPP_PIPE_GetISPAccumulatedStatisticsCounter(&csi->dcmi, DCMIPP_PIPE, i + 1, &avg[i]);
-    }
-
-    // Averages are collected from bayer components (4R 2G 4B).
-    avg[0] = OMV_MAX((avg[0] * 256 * 4) / n_pixels, 1);
-    avg[1] = OMV_MAX((avg[1] * 256 * 2) / n_pixels, 1);
-    avg[2] = OMV_MAX((avg[2] * 256 * 4) / n_pixels, 1);
-
-    // Compute global luminance
-    float luminance = avg[0] * 0.299 + avg[1] * 0.587 + avg[2] * 0.114;
-    //printf("Luminance: %f AVG_R: %lu, AVG_G: %lu, AVG_B: %lu\n", (double) luminance, avg[0], avg[1], avg[2]);
-
-    if (csi->ioctl) {
-        omv_csi_ioctl(csi, OMV_CSI_IOCTL_UPDATE_AGC_AEC, fast_floorf(luminance));
-    }
-
-    // Calculate average and exposure factors for each channel (R, G, B)
-    for (int i = 0; i < 3; i++) {
-        shift[i] = 0;
-        multi[i] = roundf((luminance * 128.0f / avg[i]));
-        while (multi[i] >= 255.0f && shift[i] < 7) {
-            multi[i] /= 2;
-            shift[i]++;
-        }
-        //printf("Channel %d: Expf: %lu Shift: %lu, Multi: %lu\n", i, expf, shift[i], multi[i]);
-    }
-
-    // Configure RGB exposure settings.
-    DCMIPP_ExposureConfTypeDef expcfg = {
-        .ShiftRed = shift[0],
-        .MultiplierRed = multi[0],
-        .ShiftGreen = shift[1],
-        .MultiplierGreen = multi[1],
-        .ShiftBlue = shift[2],
-        .MultiplierBlue = multi[2],
-    };
-    HAL_DCMIPP_PIPE_SetISPExposureConfig(&csi->dcmi, DCMIPP_PIPE, &expcfg);
-}
-#endif
-
 static int stm_csi_snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
     uint32_t length = 0;
     framebuffer_t *fb = csi->fb;
@@ -915,7 +803,11 @@ static int stm_csi_snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
     framebuffer_init_image(fb, image);
     #if USE_DCMIPP
     if (csi->raw_output) {
-        omv_csi_update_awb(csi, w * h);
+        float luminance = stm_isp_update_awb(&csi->dcmi, DCMIPP_PIPE, w * h);
+        if (csi->ioctl) {
+            omv_csi_ioctl(csi, OMV_CSI_IOCTL_UPDATE_AGC_AEC, fast_floorf(luminance));
+        }
+
     }
     #endif
     return 0;
