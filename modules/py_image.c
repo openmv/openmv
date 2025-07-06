@@ -1045,7 +1045,9 @@ static mp_obj_t py_image_to(pixformat_t pixfmt, mp_rom_obj_t default_color_palet
 
     if (args[ARG_copy_to_fb].u_bool) {
         framebuffer_t *fb = framebuffer_get(0);
-        framebuffer_update_jpeg_buffer(fb);
+        image_t tmp;
+        framebuffer_init_image(fb, &tmp);
+        framebuffer_update_jpeg_buffer(&tmp);
     }
 
     image_t dst_img = {
@@ -1136,8 +1138,7 @@ static mp_obj_t py_image_to(pixformat_t pixfmt, mp_rom_obj_t default_color_palet
         }
 
         if (args[ARG_encode_for_ide].u_bool) {
-            framebuffer_t *fb = framebuffer_get(0);
-            dst_img.size = framebuffer_encoded_size(fb, &dst_img_tmp);
+            dst_img.size = framebuffer_encoded_size(&dst_img_tmp);
         } else {
             dst_img.size = dst_img_tmp.size;
         }
@@ -1162,8 +1163,7 @@ static mp_obj_t py_image_to(pixformat_t pixfmt, mp_rom_obj_t default_color_palet
 
     if (dst_img.is_compressed) {
         if (args[ARG_encode_for_ide].u_bool) {
-            framebuffer_t *fb = framebuffer_get(0);
-            framebuffer_encode(fb, dst_img.data, &dst_img_tmp);
+            framebuffer_encode(dst_img.data, &dst_img_tmp);
         } else if (dst_img.data != dst_img_tmp.data) {
             memcpy(dst_img.data, dst_img_tmp.data, dst_img.size);
         }
@@ -1268,8 +1268,7 @@ static MP_DEFINE_CONST_FUN_OBJ_KW(py_image_save_obj, 2, py_image_save);
 #endif //IMLIB_ENABLE_IMAGE_FILE_IO
 
 static mp_obj_t py_image_flush(mp_obj_t img_obj) {
-    framebuffer_t *fb = framebuffer_get(0);
-    framebuffer_update_jpeg_buffer(fb);
+    framebuffer_update_jpeg_buffer(py_image_cobj(img_obj));
     return mp_const_none;
 }
 static MP_DEFINE_CONST_FUN_OBJ_1(py_image_flush_obj, py_image_flush);
@@ -6235,8 +6234,7 @@ mp_obj_t py_image_make_new(const mp_obj_type_t *type, size_t n_args, size_t n_kw
     }
 
     if (args[ARG_copy_to_fb].u_bool) {
-        framebuffer_t *fb = framebuffer_get(0);
-        framebuffer_update_jpeg_buffer(fb);
+        framebuffer_update_jpeg_buffer(&image);
     }
     return py_image_from_struct(&image);
 }

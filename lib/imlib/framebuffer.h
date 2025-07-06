@@ -96,8 +96,8 @@ int32_t framebuffer_get_height(framebuffer_t *fb);
 int32_t framebuffer_get_depth(framebuffer_t *fb);
 
 // Encode jpeg data for transmission over a text channel.
-void framebuffer_encode(framebuffer_t *fb, uint8_t *ptr, image_t *img);
-int  framebuffer_encoded_size(framebuffer_t *fb, image_t *img);
+void framebuffer_encode(uint8_t *ptr, image_t *img);
+int  framebuffer_encoded_size(image_t *img);
 
 // Return the number of bytes in the current buffer.
 uint32_t framebuffer_get_buffer_size(framebuffer_t *fb);
@@ -116,7 +116,7 @@ void framebuffer_init_from_image(framebuffer_t *fb, image_t *img);
 
 // Compress src image to the JPEG buffer if src is mutable, otherwise copy src to the JPEG buffer
 // if the src is JPEG and fits in the JPEG buffer, or encode and stream src image to the IDE if not.
-void framebuffer_update_jpeg_buffer(framebuffer_t *fb);
+void framebuffer_update_jpeg_buffer(image_t *src);
 
 // Clear the framebuffer FIFO. If fifo_flush is true, reset and discard all framebuffers,
 // otherwise, retain the last frame in the fifo.

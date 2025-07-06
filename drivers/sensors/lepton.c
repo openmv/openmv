@@ -411,7 +411,9 @@ static int snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
     }
 
     if (flags & OMV_CSI_CAPTURE_FLAGS_UPDATE) {
-        framebuffer_update_jpeg_buffer(fb);
+        image_t tmp;
+        framebuffer_init_image(fb, &tmp);
+        framebuffer_update_jpeg_buffer(&tmp);
     }
 
     if (csi->pixformat == PIXFORMAT_INVALID) {
