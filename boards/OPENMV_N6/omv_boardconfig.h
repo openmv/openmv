@@ -216,6 +216,17 @@
 
 // Physical SPI buses.
 
+// SPI bus 2
+#define OMV_SPI2_ID                         (2)
+#define OMV_SPI2_SCLK_PIN                   (&omv_pin_A12_SPI2)
+#define OMV_SPI2_MISO_PIN                   (&omv_pin_D11_SPI2)
+#define OMV_SPI2_MOSI_PIN                   (&omv_pin_D7_SPI2)
+#define OMV_SPI2_SSEL_PIN                   (&omv_pin_A11_SPI2)
+#define OMV_SPI2_DMA_TX_CHANNEL             (GPDMA1_Channel11)
+#define OMV_SPI2_DMA_TX_REQUEST             (GPDMA1_REQUEST_SPI2_TX)
+#define OMV_SPI2_DMA_RX_CHANNEL             (GPDMA1_Channel12)
+#define OMV_SPI2_DMA_RX_REQUEST             (GPDMA1_REQUEST_SPI2_RX)
+
 // SPI bus 5
 #define OMV_SPI5_ID                         (5)
 #define OMV_SPI5_SCLK_PIN                   (&omv_pin_E15_SPI5)
@@ -228,6 +239,18 @@
 #define OMV_SPI5_DMA_RX_REQUEST             (GPDMA1_REQUEST_SPI5_RX)
 #define OMV_SPI_DMA_LIST_PORTS              (DMA_LINK_ALLOCATED_PORT0)
 #define OMV_SPI_DMA_XFER_PORTS              (DMA_SRC_ALLOCATED_PORT0 | DMA_DEST_ALLOCATED_PORT1)
+
+// SPI LCD Interface
+#define OMV_SPI_DISPLAY_CONTROLLER          (OMV_SPI2_ID)
+#define OMV_SPI_DISPLAY_MOSI_PIN            (&omv_pin_D7_SPI2)
+#define OMV_SPI_DISPLAY_MISO_PIN            (&omv_pin_D11_SPI2)
+#define OMV_SPI_DISPLAY_SCLK_PIN            (&omv_pin_A12_SPI2)
+#define OMV_SPI_DISPLAY_SSEL_PIN            (&omv_pin_A11_SPI2)
+
+#define OMV_SPI_DISPLAY_RS_PIN              (&omv_pin_D13_GPIO)
+#define OMV_SPI_DISPLAY_RST_PIN             (&omv_pin_G13_GPIO)
+#define OMV_SPI_DISPLAY_BL_PIN              (&omv_pin_G0_GPIO)
+// TODO #define OMV_SPI_DISPLAY_TRIPLE_BUFFER       (1)
 
 // CSI SPI bus
 #define OMV_CSI_SPI_ID                      (OMV_SPI5_ID)
