@@ -360,8 +360,8 @@ static void spi_display_deinit(py_display_obj_t *self) {
 
 mp_obj_t spi_display_make_new(const mp_obj_type_t *type, size_t n_args, size_t n_kw, const mp_obj_t *all_args) {
     enum {
-        ARG_width, ARG_height, ARG_refresh, ARG_bgr, ARG_byte_swap, ARG_triple_buffer,
-        ARG_controller, ARG_backlight
+        ARG_width, ARG_height, ARG_refresh, ARG_bgr, ARG_byte_swap, ARG_hmirror, ARG_vflip,
+        ARG_triple_buffer, ARG_controller, ARG_backlight
     };
     static const mp_arg_t allowed_args[] = {
         { MP_QSTR_width,         MP_ARG_INT,  {.u_int = 128  } },
@@ -369,6 +369,8 @@ mp_obj_t spi_display_make_new(const mp_obj_type_t *type, size_t n_args, size_t n
         { MP_QSTR_refresh,       MP_ARG_INT,  {.u_int = 60   } },
         { MP_QSTR_bgr,           MP_ARG_BOOL, {.u_bool = false} },
         { MP_QSTR_byte_swap,     MP_ARG_BOOL, {.u_bool = false} },
+        { MP_QSTR_hmirror,       MP_ARG_BOOL, {.u_bool = true} },
+        { MP_QSTR_vflip,         MP_ARG_BOOL, {.u_bool = true} },
         { MP_QSTR_triple_buffer, MP_ARG_BOOL, {.u_bool = LCD_TRIPLE_BUFFER_DEFAULT} },
         { MP_QSTR_controller,    MP_ARG_OBJ | MP_ARG_KW_ONLY, {.u_rom_obj = MP_ROM_NONE} },
         { MP_QSTR_backlight,     MP_ARG_OBJ | MP_ARG_KW_ONLY, {.u_rom_obj = MP_ROM_NONE} },
@@ -435,7 +437,17 @@ mp_obj_t spi_display_make_new(const mp_obj_type_t *type, size_t n_args, size_t n
         spi_display_command(self, LCD_COMMAND_SLPOUT, 0);
         mp_hal_delay_ms(120);
         // Memory data access control
-        spi_display_command(self, LCD_COMMAND_MADCTL, self->bgr ? 0xC8 : 0xC0);
+        uint8_t madctl = 0;
+        if (args[ARG_hmirror].u_bool) {
+            madctl |= 0x40;
+        }
+        if (args[ARG_vflip].u_bool) {
+            madctl |= 0x80;
+        }
+        if (self->bgr) {
+            madctl |= 0x08;
+        }
+        spi_display_command(self, LCD_COMMAND_MADCTL, madctl);
         // Interface pixel format
         spi_display_command(self, LCD_COMMAND_COLMOD, 0x05);
     }
