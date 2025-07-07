@@ -514,22 +514,6 @@ void HAL_DCMI_MspDeInit(DCMI_HandleTypeDef *hdcmi) {
 
 #if defined(DCMIPP)
 void HAL_DCMIPP_MspInit(DCMIPP_HandleTypeDef *hdcmipp) {
-    const omv_gpio_t dcmi_pins[] = {
-        #ifdef OMV_CSI_D0_PIN
-        OMV_CSI_D0_PIN,
-        OMV_CSI_D1_PIN,
-        OMV_CSI_D2_PIN,
-        OMV_CSI_D3_PIN,
-        OMV_CSI_D4_PIN,
-        OMV_CSI_D5_PIN,
-        OMV_CSI_D6_PIN,
-        OMV_CSI_D7_PIN,
-        OMV_CSI_HSYNC_PIN,
-        OMV_CSI_VSYNC_PIN,
-        OMV_CSI_PXCLK_PIN,
-        #endif
-    };
-
     // Enable DCMIPP clock.
     __HAL_RCC_DCMIPP_CLK_ENABLE();
     __HAL_RCC_DCMIPP_CLK_SLEEP_ENABLE();
@@ -541,38 +525,9 @@ void HAL_DCMIPP_MspInit(DCMIPP_HandleTypeDef *hdcmipp) {
     __HAL_RCC_CSI_CLK_SLEEP_ENABLE();
     __HAL_RCC_CSI_FORCE_RESET();
     __HAL_RCC_CSI_RELEASE_RESET();
-
-    #ifdef OMV_CSI_VSYNC_PIN
-    // Configure VSYNC EXTI.
-    #if DCMI_VSYNC_EXTI_SHARED
-    if (exti_gpio == 0)
-    #endif  // DCMI_VSYNC_EXTI_SHARED
-    omv_gpio_config(OMV_CSI_VSYNC_PIN, OMV_GPIO_MODE_IT_BOTH, OMV_GPIO_PULL_UP, OMV_GPIO_SPEED_MAX, -1);
-    #endif  // OMV_CSI_VSYNC_PIN
-
-    // Configure DCMI pins.
-    for (int i = 0; i < OMV_ARRAY_SIZE(dcmi_pins); i++) {
-        omv_gpio_config(dcmi_pins[i], OMV_GPIO_MODE_ALT, OMV_GPIO_PULL_UP, OMV_GPIO_SPEED_MAX, -1);
-    }
 }
 
 void HAL_DCMIPP_MspDeInit(DCMIPP_HandleTypeDef *hdcmipp) {
-    const omv_gpio_t dcmi_pins[] = {
-        #ifdef OMV_CSI_D0_PIN
-        OMV_CSI_D0_PIN,
-        OMV_CSI_D1_PIN,
-        OMV_CSI_D2_PIN,
-        OMV_CSI_D3_PIN,
-        OMV_CSI_D4_PIN,
-        OMV_CSI_D5_PIN,
-        OMV_CSI_D6_PIN,
-        OMV_CSI_D7_PIN,
-        OMV_CSI_HSYNC_PIN,
-        OMV_CSI_VSYNC_PIN,
-        OMV_CSI_PXCLK_PIN,
-        #endif
-    };
-
     // Disable DCMI clock.
     __HAL_RCC_DCMIPP_FORCE_RESET();
     __HAL_RCC_DCMIPP_RELEASE_RESET();
@@ -583,11 +538,6 @@ void HAL_DCMIPP_MspDeInit(DCMIPP_HandleTypeDef *hdcmipp) {
     __HAL_RCC_CSI_RELEASE_RESET();
     __HAL_RCC_CSI_CLK_DISABLE();
     __HAL_RCC_CSI_CLK_SLEEP_DISABLE();
-
-    // Deinit pins.
-    for (int i = 0; i < OMV_ARRAY_SIZE(dcmi_pins); i++) {
-        omv_gpio_deinit(dcmi_pins[i]);
-    }
 }
 #endif
 
