@@ -26,7 +26,7 @@ RUN wget --no-check-certificate -O - ${CMAKE_URL} | tar --strip-components=1 -xz
 # Download, build, and install Make
 RUN mkdir -p /workspace/make
 ENV MAKE_URL="https://ftp.gnu.org/gnu/make/make-4.4.1.tar.gz"
-RUN wget --no-check-certificate -O - ${MAKE_URL} | tar --strip-components=1 -xz -C /workspace/make
+RUN wget --no-check-certificate --user-agent="Mozilla/5.0" -O - ${MAKE_URL} | tar --strip-components=1 -xz -C /workspace/make
 RUN cd /workspace/make && ./configure && make -j$(nproc)
 
 # Set up directories
