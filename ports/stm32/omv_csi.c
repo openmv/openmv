@@ -43,6 +43,7 @@
 #include "omv_csi.h"
 #include "stm_dma.h"
 #include "stm_isp.h"
+#include "stm_pwm.h"
 
 #if defined(DCMIPP)
 #define USE_DCMIPP          (1)
@@ -317,66 +318,21 @@ static uint32_t stm_clk_get_frequency(omv_clk_t *clk) {
     if (!clk->tim.Instance) {
         return 0;
     }
-    return (OMV_CSI_TIM_PCLK_FREQ() * 2) / (clk->tim.Init.Period + 1);
+    return stm_pwm_get_frequency(&clk->tim, OMV_CSI_TIM_CHANNEL);
 }
 
 static int stm_clk_set_frequency(omv_clk_t *clk, uint32_t frequency) {
-    #if (OMV_CSI_CLK_SOURCE == OMV_CSI_CLK_SOURCE_TIM)
-    if (frequency == 0) {
-        if (clk->tim.Init.Period) {
-            HAL_TIM_PWM_Stop(&clk->tim, OMV_CSI_TIM_CHANNEL);
-            HAL_TIM_PWM_DeInit(&clk->tim);
-            memset(&clk->tim, 0, sizeof(clk->tim));
-        }
-        return 0;
-    }
-
-    clk->tim.Instance = OMV_CSI_TIM;
-
-    // TCLK (PCLK * 2)
-    int tclk = OMV_CSI_TIM_PCLK_FREQ() * 2;
-
-    // Find highest possible frequency under requested.
-    int period = fast_ceilf(tclk / ((float) frequency)) - 1;
-    int pulse = (period + 1) / 2;
-
-    if (clk->tim.Init.Period && (clk->tim.Init.Period != period)) {
-        // __HAL_TIM_SET_AUTORELOAD sets clk->tim.Init.Period...
-        __HAL_TIM_SET_AUTORELOAD(&clk->tim, period);
-        __HAL_TIM_SET_COMPARE(&clk->tim, OMV_CSI_TIM_CHANNEL, pulse);
-        return 0;
-    }
-
-    /* Timer base configuration */
-    clk->tim.Init.Period = period;
-    clk->tim.Init.Prescaler = 0;
-    clk->tim.Init.CounterMode = TIM_COUNTERMODE_UP;
-    clk->tim.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
-    clk->tim.Init.RepetitionCounter = 0;
-    clk->tim.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
-
-    /* Timer channel configuration */
-    TIM_OC_InitTypeDef TIMOCHandle;
-    TIMOCHandle.Pulse = pulse;
-    TIMOCHandle.OCMode = TIM_OCMODE_PWM1;
-    TIMOCHandle.OCPolarity = TIM_OCPOLARITY_HIGH;
-    TIMOCHandle.OCNPolarity = TIM_OCNPOLARITY_HIGH;
-    TIMOCHandle.OCFastMode = TIM_OCFAST_DISABLE;
-    TIMOCHandle.OCIdleState = TIM_OCIDLESTATE_RESET;
-    TIMOCHandle.OCNIdleState = TIM_OCNIDLESTATE_RESET;
-
-    if ((HAL_TIM_PWM_Init(&clk->tim) != HAL_OK)
-        || (HAL_TIM_PWM_ConfigChannel(&clk->tim, &TIMOCHandle, OMV_CSI_TIM_CHANNEL) != HAL_OK)
-        || (HAL_TIM_PWM_Start(&clk->tim, OMV_CSI_TIM_CHANNEL) != HAL_OK)) {
-        return OMV_CSI_ERROR_TIM_INIT_FAILED;
-    }
-    #elif (OMV_CSI_CLK_SOURCE == OMV_CSI_CLK_SOURCE_MCO)
+    #if (OMV_CSI_CLK_SOURCE == OMV_CSI_CLK_SOURCE_MCO)
     // Pass through the MCO1 clock with source input set to HSE (12MHz).
     // Note MCO1 is multiplexed on OPENMV2/TIM1 only.
     HAL_RCC_MCOConfig(RCC_MCO1, RCC_MCO1SOURCE_HSE, RCC_MCODIV_1);
     #elif (OMV_CSI_CLK_SOURCE == OMV_CSI_CLK_SOURCE_OSC)
     // An external oscillator is used for the csi clock.
     // Configure and enable external oscillator if needed.
+    #elif (OMV_CSI_CLK_SOURCE == OMV_CSI_CLK_SOURCE_TIM)
+    if (stm_pwm_start(&clk->tim, OMV_CSI_TIM, OMV_CSI_TIM_CHANNEL, frequency)) {
+        return OMV_CSI_ERROR_TIM_INIT_FAILED;
+    }
     #else
     #error "OMV_CSI_CLK_SOURCE is not set!"
     #endif // (OMV_CSI_CLK_SOURCE == OMV_CSI_CLK_SOURCE_TIM)
