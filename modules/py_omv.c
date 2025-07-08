@@ -76,17 +76,6 @@ static mp_obj_t py_omv_debug_mode() {
 }
 static MP_DEFINE_CONST_FUN_OBJ_0(py_omv_debug_mode_obj, py_omv_debug_mode);
 
-static mp_obj_t py_omv_disable_fb(size_t n_args, const mp_obj_t *args) {
-    framebuffer_t *fb = framebuffer_get(0);
-
-    if (!n_args) {
-        return mp_obj_new_bool(!framebuffer_get_streaming(fb));
-    }
-    framebuffer_set_streaming(fb, !mp_obj_get_int(args[0]));
-    return mp_const_none;
-}
-static MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(py_omv_disable_fb_obj, 0, 1, py_omv_disable_fb);
-
 static const mp_rom_map_elem_t globals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR___name__),        MP_OBJ_NEW_QSTR(MP_QSTR_omv) },
     { MP_ROM_QSTR(MP_QSTR_version_major),   MP_ROM_INT(FIRMWARE_VERSION_MAJOR) },
@@ -96,8 +85,7 @@ static const mp_rom_map_elem_t globals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_arch),            MP_ROM_PTR(&py_omv_arch_obj) },
     { MP_ROM_QSTR(MP_QSTR_board_type),      MP_ROM_PTR(&py_omv_board_type_obj) },
     { MP_ROM_QSTR(MP_QSTR_board_id),        MP_ROM_PTR(&py_omv_board_id_obj) },
-    { MP_ROM_QSTR(MP_QSTR_debug_mode),      MP_ROM_PTR(&py_omv_debug_mode_obj) },
-    { MP_ROM_QSTR(MP_QSTR_disable_fb),      MP_ROM_PTR(&py_omv_disable_fb_obj) }
+    { MP_ROM_QSTR(MP_QSTR_debug_mode),      MP_ROM_PTR(&py_omv_debug_mode_obj) }
 };
 
 static MP_DEFINE_CONST_DICT(globals_dict, globals_dict_table);

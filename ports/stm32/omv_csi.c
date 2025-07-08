@@ -554,7 +554,9 @@ static int stm_csi_snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
     // Compress the framebuffer for the IDE preview, if not the first frame, the
     // framebuffer is enabled, and the image sensor doesn't support JPEG encoding.
     if (flags & OMV_CSI_CAPTURE_FLAGS_UPDATE) {
-        framebuffer_update_jpeg_buffer(fb);
+        image_t tmp;
+        framebuffer_init_image(fb, &tmp);
+        framebuffer_update_jpeg_buffer(&tmp);
     }
 
     // Ensure that the raw frame fits into the FB. It will be switched from RGB565 to BAYER

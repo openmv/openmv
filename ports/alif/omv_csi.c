@@ -240,7 +240,11 @@ int alif_csi_snapshot(omv_csi_t *csi, image_t *dst_image, uint32_t flags) {
     }
 
     // Compress the framebuffer for the IDE preview.
-    framebuffer_update_jpeg_buffer(fb);
+    if (flags & OMV_CSI_CAPTURE_FLAGS_UPDATE) {
+        image_t tmp;
+        framebuffer_init_image(fb, &tmp);
+        framebuffer_update_jpeg_buffer(&tmp);
+    }
 
     // Free the current FB head.
     framebuffer_free_current_buffer(fb);

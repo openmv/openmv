@@ -137,7 +137,9 @@ static MP_DEFINE_CONST_FUN_OBJ_1(py_omv_csi_shutdown_obj, py_omv_csi_shutdown);
 
 static mp_obj_t py_omv_csi_flush() {
     omv_csi_t *csi = omv_csi_get(-1);
-    framebuffer_update_jpeg_buffer(csi->fb);
+    image_t tmp;
+    framebuffer_init_image(csi->fb, &tmp);
+    framebuffer_update_jpeg_buffer(&tmp);
     return mp_const_none;
 }
 static MP_DEFINE_CONST_FUN_OBJ_0(py_omv_csi_flush_obj, py_omv_csi_flush);

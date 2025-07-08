@@ -177,8 +177,9 @@ static MP_DEFINE_CONST_FUN_OBJ_2(py_csi_sleep_obj, py_csi_sleep);
 
 static mp_obj_t py_csi_flush(mp_obj_t self_in) {
     py_csi_obj_t *self = MP_OBJ_TO_PTR(self_in);
-
-    framebuffer_update_jpeg_buffer(self->csi->fb);
+    image_t tmp;
+    framebuffer_init_image(self->csi->fb, &tmp);
+    framebuffer_update_jpeg_buffer(&tmp);
     return mp_const_none;
 }
 static MP_DEFINE_CONST_FUN_OBJ_1(py_csi_flush_obj, py_csi_flush);

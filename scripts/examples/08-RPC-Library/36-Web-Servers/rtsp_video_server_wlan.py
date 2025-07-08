@@ -11,9 +11,8 @@
 # you can use by going to Tools->Video Tools->Play RSTP Stream.
 
 import network
-import omv
 import rtsp
-import sensor
+import csi
 import time
 
 # If you are using VLC on linux you may need to install the live555 library for RTSP support to
@@ -26,18 +25,10 @@ import time
 # "show more options" when you open the network stream in VLC. You can reduce this to like 10ms
 # to make the video real-time.
 
-sensor.reset()
-
-sensor.set_pixformat(sensor.RGB565)
-sensor.set_framesize(sensor.VGA)
-
-# Turn off the frame buffer connection to the IDE from the OpenMV Cam side.
-#
-# This needs to be done when manually compressing jpeg images at higher quality
-# so that the OpenMV Cam does not try to stream them to the IDE using a fall back
-# mechanism if the JPEG image is too large to fit in the IDE JPEG frame buffer on the OpenMV Cam.
-
-omv.disable_fb(True)
+csi0 = csi.CSI()
+csi0.reset()
+csi0.pixformat(csi.RGB565)
+csi0.framesize(csi.VGA)
 
 # Setup Network Interface
 
@@ -70,6 +61,7 @@ def setup_callback(pathname, session):
 
 
 def play_callback(pathname, session):
+    global clock
     clock.reset()
     clock.tick()
     print('Playing "%s" in session %d' % (pathname, session))
@@ -91,7 +83,9 @@ server.register_teardown_cb(teardown_callback)
 
 # Called each time a new frame is needed.
 def image_callback(pathname, session):
-    img = sensor.snapshot()
+    global csi0
+    global clock
+    img = csi0.snapshot(update=False)
     # Markup image and/or do various things.
     print(clock.fps())
     clock.tick()
