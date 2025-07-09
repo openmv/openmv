@@ -668,7 +668,7 @@ void HAL_SPI_MspInit(SPI_HandleTypeDef *hspi) {
     if (hspi->Init.Direction == SPI_DIRECTION_2LINES || hspi->Init.Direction == SPI_DIRECTION_2LINES_RXONLY) {
         omv_gpio_config(spi_pins.miso_pin, OMV_GPIO_MODE_ALT, OMV_GPIO_PULL_NONE, OMV_GPIO_SPEED_HIGH, -1);
     }
-    #if defined(STM32H7)
+    #if defined(STM32H7) || defined(STM32N6)
     if (hspi->Init.Direction == SPI_DIRECTION_2LINES || hspi->Init.Direction == SPI_DIRECTION_2LINES_TXONLY) {
     #else
     if (hspi->Init.Direction == SPI_DIRECTION_2LINES || hspi->Init.Direction == SPI_DIRECTION_1LINE) {
@@ -774,7 +774,7 @@ void HAL_SPI_MspDeInit(SPI_HandleTypeDef *hspi) {
     if (hspi->Init.Direction == SPI_DIRECTION_2LINES || hspi->Init.Direction == SPI_DIRECTION_2LINES_RXONLY) {
         omv_gpio_deinit(spi_pins.miso_pin);
     }
-    #if defined(STM32H7)
+    #if defined(STM32H7) || defined(STM32N6)
     if (hspi->Init.Direction == SPI_DIRECTION_2LINES || hspi->Init.Direction == SPI_DIRECTION_2LINES_TXONLY) {
     #else
     if (hspi->Init.Direction == SPI_DIRECTION_2LINES || hspi->Init.Direction == SPI_DIRECTION_1LINE) {
