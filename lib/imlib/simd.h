@@ -37,9 +37,11 @@
 
 #define INT16_VECTOR_SIZE   (VECTOR_SIZE_BYTES / 2U)
 #define UINT16_VECTOR_SIZE  (VECTOR_SIZE_BYTES / 2U)
+#define FLOAT16_VECTOR_SIZE (VECTOR_SIZE_BYTES / 2U)
 
 #define INT32_VECTOR_SIZE   (VECTOR_SIZE_BYTES / 4U)
 #define UINT32_VECTOR_SIZE  (VECTOR_SIZE_BYTES / 4U)
+#define FLOAT32_VECTOR_SIZE (VECTOR_SIZE_BYTES / 4U)
 
 #if (VECTOR_SIZE_BYTES >= 8)
 #define INT64_VECTOR_SIZE   (VECTOR_SIZE_BYTES / 8U)
@@ -52,9 +54,11 @@ typedef uint8x16_t v128_u8_t;
 
 typedef int16x8_t  v128_s16_t;
 typedef uint16x8_t v128_u16_t;
+typedef float16x8_t v128_f16_t;
 
 typedef int32x4_t  v128_s32_t;
 typedef uint32x4_t v128_u32_t;
+typedef float32x4_t v128_f32_t;
 
 #if (VECTOR_SIZE_BYTES >= 8)
 typedef int64x2_t  v128_s64_t;
@@ -68,9 +72,11 @@ typedef uint8_t v128_u8_t __attribute__ ((vector_size(VECTOR_SIZE_BYTES)));
 
 typedef int16_t  v128_s16_t __attribute__ ((vector_size(VECTOR_SIZE_BYTES)));
 typedef uint16_t v128_u16_t __attribute__ ((vector_size(VECTOR_SIZE_BYTES)));
+typedef float16_t v128_f16_t __attribute__ ((vector_size(VECTOR_SIZE_BYTES)));
 
 typedef int32_t  v128_s32_t __attribute__ ((vector_size(VECTOR_SIZE_BYTES)));
 typedef uint32_t v128_u32_t __attribute__ ((vector_size(VECTOR_SIZE_BYTES)));
+typedef float32_t v128_f32_t __attribute__ ((vector_size(VECTOR_SIZE_BYTES)));
 
 #if (VECTOR_SIZE_BYTES >= 8)
 typedef int64_t  v128_s64_t __attribute__ ((vector_size(VECTOR_SIZE_BYTES)));
@@ -85,8 +91,10 @@ typedef union {
     v128_u8_t u8;
     v128_s16_t s16;
     v128_u16_t u16;
+    v128_f16_t f16;
     v128_s32_t s32;
     v128_u32_t u32;
+    v128_f32_t f32;
     #if (VECTOR_SIZE_BYTES >= 8)
     v128_s64_t s64;
     v128_u64_t u64;
@@ -104,8 +112,10 @@ typedef union vrow_ptr {
     int8_t *s8;
     uint16_t *u16;
     int16_t *s16;
+    float16_t *f16;
     uint32_t *u32;
     int32_t *s32;
+    float32_t *f32;
     #if (VECTOR_SIZE_BYTES >= 8)
     uint64_t *u64;
     int64_t *s64;
@@ -844,7 +854,7 @@ static inline v128_t vshlc(v128_t v0, uint32_t *reg, uint32_t n) {
 
 static inline v128_t vadd_u32(v128_t v0, v128_t v1) {
     #if (__ARM_ARCH >= 8)
-    return (v128_t) vaddq(v0.u32, v1.u32);
+    return (v128_t) vaddq_u32(v0.u32, v1.u32);
     #else
     return (v128_t) {
         .u32 = v0.u32 + v1.u32
@@ -854,7 +864,7 @@ static inline v128_t vadd_u32(v128_t v0, v128_t v1) {
 
 static inline v128_t vadd_s32(v128_t v0, v128_t v1) {
     #if (__ARM_ARCH >= 8)
-    return (v128_t) vaddq(v0.s32, v1.s32);
+    return (v128_t) vaddq_s32(v0.s32, v1.s32);
     #else
     return (v128_t) {
         .s32 = v0.s32 + v1.s32
@@ -862,9 +872,29 @@ static inline v128_t vadd_s32(v128_t v0, v128_t v1) {
     #endif
 }
 
+static inline v128_t vadd_n_u32(v128_t v0, uint32_t x) {
+    #if (__ARM_ARCH >= 8)
+    return (v128_t) vaddq_n_u32(v0.u32, x);
+    #else
+    return (v128_t) {
+        .u32 = v0.u32 + x
+    };
+    #endif
+}
+
+static inline v128_t vadd_n_s32(v128_t v0, int32_t x) {
+    #if (__ARM_ARCH >= 8)
+    return (v128_t) vaddq_n_s32(v0.s32, x);
+    #else
+    return (v128_t) {
+        .s32 = v0.s32 + x
+    };
+    #endif
+}
+
 static inline v128_t vsub_u8(v128_t v0, v128_t v1) {
     #if (__ARM_ARCH >= 8)
-    return (v128_t) vsubq(v0.u8, v1.u8);
+    return (v128_t) vsubq_u8(v0.u8, v1.u8);
     #elif (__ARM_ARCH >= 7)
     return (v128_t) {
         .u32 = { __USUB8(v0.u32[0], v1.u32[0]) }
@@ -878,7 +908,7 @@ static inline v128_t vsub_u8(v128_t v0, v128_t v1) {
 
 static inline v128_t vsub_s8(v128_t v0, v128_t v1) {
     #if (__ARM_ARCH >= 8)
-    return (v128_t) vsubq(v0.s8, v1.s8);
+    return (v128_t) vsubq_s8(v0.s8, v1.s8);
     #elif (__ARM_ARCH >= 7)
     return (v128_t) {
         .u32 = { __SSUB8(v0.u32[0], v1.u32[0]) }
@@ -892,7 +922,7 @@ static inline v128_t vsub_s8(v128_t v0, v128_t v1) {
 
 static inline v128_t vsub_u16(v128_t v0, v128_t v1) {
     #if (__ARM_ARCH >= 8)
-    return (v128_t) vsubq(v0.u16, v1.u16);
+    return (v128_t) vsubq_u16(v0.u16, v1.u16);
     #elif (__ARM_ARCH >= 7)
     return (v128_t) {
         .u32 = { __USUB16(v0.u32[0], v1.u32[0]) }
@@ -906,7 +936,7 @@ static inline v128_t vsub_u16(v128_t v0, v128_t v1) {
 
 static inline v128_t vsub_s16(v128_t v0, v128_t v1) {
     #if (__ARM_ARCH >= 8)
-    return (v128_t) vsubq(v0.s16, v1.s16);
+    return (v128_t) vsubq_s16(v0.s16, v1.s16);
     #elif (__ARM_ARCH >= 7)
     return (v128_t) {
         .u32 = { __SSUB16(v0.u32[0], v1.u32[0]) }
@@ -914,6 +944,26 @@ static inline v128_t vsub_s16(v128_t v0, v128_t v1) {
     #else
     return (v128_t) {
         .s16 = v0.s16 - v1.s16
+    };
+    #endif
+}
+
+static inline v128_t vsub_n_u32(v128_t v0, uint32_t x) {
+    #if (__ARM_ARCH >= 8)
+    return (v128_t) vsubq_n_u32(v0.u32, x);
+    #else
+    return (v128_t) {
+        .u32 = v0.u32 - x
+    };
+    #endif
+}
+
+static inline v128_t vsub_n_s32(v128_t v0, int32_t x) {
+    #if (__ARM_ARCH >= 8)
+    return (v128_t) vsubq_n_s32(v0.s32, x);
+    #else
+    return (v128_t) {
+        .s32 = v0.s32 - x
     };
     #endif
 }
@@ -1146,7 +1196,7 @@ static inline v128_t veor_s32(v128_t v0, v128_t v1) {
 
 static inline v128_t vmul_u32(v128_t v0, v128_t v1) {
     #if (__ARM_ARCH >= 8)
-    return (v128_t) vmulq(v0.u32, v1.u32);
+    return (v128_t) vmulq_u32(v0.u32, v1.u32);
     #else
     return (v128_t) {
         .u32 = v0.u32 * v1.u32
@@ -1156,7 +1206,7 @@ static inline v128_t vmul_u32(v128_t v0, v128_t v1) {
 
 static inline v128_t vmul_s32(v128_t v0, v128_t v1) {
     #if (__ARM_ARCH >= 8)
-    return (v128_t) vmulq(v0.s32, v1.s32);
+    return (v128_t) vmulq_s32(v0.s32, v1.s32);
     #else
     return (v128_t) {
         .s32 = v0.s32 * v1.s32
@@ -1166,7 +1216,7 @@ static inline v128_t vmul_s32(v128_t v0, v128_t v1) {
 
 static inline v128_t vmla_u32(v128_t v0, v128_t v1, v128_t v2) {
     #if (__ARM_ARCH >= 8)
-    return (v128_t) vaddq(vmulq(v0.u32, v1.u32), v2.u32);
+    return (v128_t) vaddq_u32(vmulq_u32(v0.u32, v1.u32), v2.u32);
     #else
     return (v128_t) {
         .u32 = (v0.u32 * v1.u32) + v2.u32
@@ -1176,7 +1226,7 @@ static inline v128_t vmla_u32(v128_t v0, v128_t v1, v128_t v2) {
 
 static inline v128_t vmla_s32(v128_t v0, v128_t v1, v128_t v2) {
     #if (__ARM_ARCH >= 8)
-    return (v128_t) vaddq(vmulq(v0.s32, v1.s32), v2.s32);
+    return (v128_t) vaddq_s32(vmulq_s32(v0.s32, v1.s32), v2.s32);
     #else
     return (v128_t) {
         .s32 = (v0.s32 * v1.s32) + v2.s32
@@ -1220,6 +1270,16 @@ static inline v128_t vmul_n_s32(v128_t v0, int32_t x) {
     #else
     return (v128_t) {
         .s32 = v0.s32 * x
+    };
+    #endif
+}
+
+static inline v128_t vmul_n_f32(v128_t v0, float32_t x) {
+    #if (__ARM_ARCH >= 8)
+    return (v128_t) vmulq_n_f32(v0.f32, x);
+    #else
+    return (v128_t) {
+        .f32 = v0.f32 * x
     };
     #endif
 }
@@ -1300,6 +1360,26 @@ static inline int32_t vmladava_s16(v128_t v0, v128_t v1, int32_t acc) {
     #endif
 }
 
+static inline v128_t vcvt_f32_u32(v128_t v0) {
+    #if (__ARM_ARCH >= 8)
+    return (v128_t) vcvtq(v0.u32);
+    #else
+    return (v128_t) {
+        .f32 = { (float32_t) v0.u32 }
+    };
+    #endif
+}
+
+static inline v128_t vcvt_f32_s32(v128_t v0) {
+    #if (__ARM_ARCH >= 8)
+    return (v128_t) vcvtq(v0.s32);
+    #else
+    return (v128_t) {
+        .f32 = { (float32_t) v0.s32 }
+    };
+    #endif
+}
+
 static inline v128_t vldr_u8(const uint8_t *p) {
     #if (__ARM_ARCH >= 8)
     return (v128_t) vldrbq_u8(p);
@@ -1328,6 +1408,50 @@ static inline v128_t vldr_u8_pred(const uint8_t *p, v128_predicate_t pred) {
     }
 
     return v0;
+    #endif
+}
+
+static inline v128_t vldr_u8_widen_u32_pred(const uint8_t *p, v128_predicate_t pred) {
+    #if (__ARM_ARCH >= 8)
+    return (v128_t) vldrbq_z_u32(p, pred);
+    #else
+    return (v128_t) {
+        .u32 = { *p; }
+    };
+    #endif
+}
+
+static inline v128_t vldr_u8_widen_u32_gather_pred(const uint8_t *p,
+                                                   v128_t offsets,
+                                                   v128_predicate_t pred) {
+    #if (__ARM_ARCH >= 8)
+    return (v128_t) vldrbq_gather_offset_z_u32(p, offsets.u32, pred);
+    #else
+    return (v128_t) {
+        .u32 = { *(p + offsets.u32); }
+    };
+    #endif
+}
+
+static inline v128_t vldr_s8_widen_s32_pred(const int8_t *p, v128_predicate_t pred) {
+    #if (__ARM_ARCH >= 8)
+    return (v128_t) vldrbq_z_s32(p, pred);
+    #else
+    return (v128_t) {
+        .s32 = { *p; }
+    };
+    #endif
+}
+
+static inline v128_t vldr_s8_widen_s32_gather_pred(const int8_t *p,
+                                                   v128_t offsets,
+                                                   v128_predicate_t pred) {
+    #if (__ARM_ARCH >= 8)
+    return (v128_t) vldrbq_gather_offset_z_s32(p, offsets.u32, pred);
+    #else
+    return (v128_t) {
+        .s32 = { *(p + offsets.u32); }
+    };
     #endif
 }
 
@@ -1382,6 +1506,74 @@ static inline v128_t vldr_u16_pred(const uint16_t *p, v128_predicate_t pred) {
     #endif
 }
 
+static inline v128_t vldr_u16_widen_u32_pred(const uint16_t *p, v128_predicate_t pred) {
+    #if (__ARM_ARCH >= 8)
+    return (v128_t) vldrhq_z_u32(p, pred);
+    #else
+    v128_t v0 = {
+        .u32 = { *p; }
+    };
+
+    if (pred > 1) {
+        v0.u16[1] = *(p + 1);
+    }
+
+    return v0;
+    #endif
+}
+
+static inline v128_t vldr_u16_widen_u32_gather_pred(const uint16_t *p,
+                                                    v128_t offsets,
+                                                    v128_predicate_t pred) {
+    #if (__ARM_ARCH >= 8)
+    return (v128_t) vldrhq_gather_offset_z_u32(p, offsets.u32, pred);
+    #else
+    v128_t v0 = {
+        .u32 = { *(p + offsets.u32[0]); }
+    };
+
+    if (pred > 1) {
+        v0.u16[1] = *(p + offsets.u32[1]);
+    }
+
+    return v0;
+    #endif
+}
+
+static inline v128_t vldr_s16_widen_s32_pred(const int16_t *p, v128_predicate_t pred) {
+    #if (__ARM_ARCH >= 8)
+    return (v128_t) vldrhq_z_s32(p, pred);
+    #else
+    v128_t v0 = {
+        .s32 = { *p; }
+    };
+
+    if (pred > 1) {
+        v0.s16[1] = *(p + 1);
+    }
+
+    return v0;
+    #endif
+}
+
+static inline v128_t vldr_s16_widen_s32_gather_pred(const int16_t *p,
+                                                    v128_t offsets,
+                                                    v128_predicate_t pred) {
+    #if (__ARM_ARCH >= 8)
+    return (v128_t) vldrhq_gather_offset_z_s32(p, offsets.u32, pred);
+    #else
+    v128_t v0 = {
+        .s32 = { *(p + offsets.u32[0]); }
+    };
+
+    if (pred > 1) {
+        v0.s16[1] = *(p + offsets.u32[1]);
+    }
+
+    return v0;
+    #endif
+}
+
 static inline void vstr_u16(uint16_t *p, v128_t v0) {
     #if (__ARM_ARCH >= 8)
     vstrhq(p, v0.u16);
@@ -1428,6 +1620,15 @@ static inline void vstr_u16_narrow_u8_pred(uint8_t *p, v128_t v0, v128_predicate
     if (pred > 1) {
         *((uint8_t *) (p + 1)) = v0.u8[2];
     }
+    #endif
+}
+
+static inline void vstr_u16_narrow_u8_scatter(uint8_t *p, v128_t offsets, v128_t v0) {
+    #if (__ARM_ARCH >= 8)
+    vstrbq_scatter_offset(p, offsets.u16, v0.u16);
+    #else
+    *(p + offsets.u16[0]) = v0.u32[0];
+    *(p + offsets.u16[1]) = v0.u8[2];
     #endif
 }
 
@@ -1486,6 +1687,36 @@ static inline v4x_rows_t vldr_u32_gather_pred_x4_unaligned(v4x_row_ptrs_t rowptr
     }
     #endif
     return rows;
+}
+
+static inline v128_t vldr_f32_pred(const float32_t *p, v128_predicate_t pred) {
+    #if (__ARM_ARCH >= 8)
+    return (v128_t) vldrwq_z_f32(p, pred);
+    #else
+    return (v128_t) {
+        .f32 = { *p; }
+    };
+    #endif
+}
+
+static inline v128_t vldr_f32_gather_pred(const float32_t *p,
+                                          v128_t offsets,
+                                          v128_predicate_t pred) {
+    #if (__ARM_ARCH >= 8)
+    return (v128_t) vldrwq_gather_offset_z_f32(p, offsets.u32, pred);
+    #else
+    return (v128_t) {
+        .f32 = { *(p + offsets.u32[0]); }
+    };
+    #endif
+}
+
+static inline void vstr_f32_pred(float32_t *p, v128_t v0, v128_predicate_t pred) {
+    #if (__ARM_ARCH >= 8)
+    vstrwq_p_f32(p, v0.f32, pred);
+    #else
+    *p = v0.f32[0];
+    #endif
 }
 
 static inline v2x_rows_t vld2_u8(const uint8_t *p) {
@@ -1712,6 +1943,24 @@ static inline v128_t vrgb_pixels_to_grayscale(vrgb_pixels_t pixels) {
     pixels.r = vmla_n_u32(pixels.g, 75, pixels.r);
     pixels.r = vmla_n_u32(pixels.b, 15, pixels.r);
     return vlsr_u32(pixels.r, 7);
+}
+
+// In the case of vectors larger than 32-bits the pattern is repeated for every 32-bits.
+//
+// 2x uint16_t RGB565 (MSB [RGB1, RGB0] LSB) pixels for every 32-bits.
+//
+// Returns pixels.r = MSB [0, R1, 0, R0] LSB pixels where each pixel is 8-bits.
+// Returns pixels.g = MSB [0, G1, 0, G0] LSB pixels where each pixel is 8-bits.
+// Returns pixels.b = MSB [0, B1, 0, B0] LSB pixels where each pixel is 8-bits.
+static inline vrgb_pixels_t vrgb_rgb565_to_pixels888(v128_t rgb565) {
+    vrgb_pixels_t pixels;
+    pixels.r = vand_u32(vlsr_u32(rgb565, 8), vdup_u16(0xf8));
+    pixels.r = vorr_u32(pixels.r, vlsr_u32(pixels.r, 5));
+    pixels.g = vand_u32(vlsr_u32(rgb565, 3), vdup_u16(0xfc));
+    pixels.g = vorr_u32(pixels.g, vlsr_u32(pixels.g, 6));
+    pixels.b = vand_u32(vlsl_u32(rgb565, 3), vdup_u16(0xf8));
+    pixels.b = vorr_u32(pixels.b, vlsr_u32(pixels.b, 5));
+    return pixels;
 }
 
 // In the case of vectors larger than 32-bits the pattern is repeated for every 32-bits.
