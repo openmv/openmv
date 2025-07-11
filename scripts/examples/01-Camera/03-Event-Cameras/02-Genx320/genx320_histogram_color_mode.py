@@ -4,26 +4,27 @@
 #
 # This example shows off using the genx320 event camera from Prophesee.
 
-import sensor
+import csi
 import image
 import time
 
-sensor.reset()
-sensor.set_pixformat(sensor.GRAYSCALE)  # Must always be grayscale.
-sensor.set_framesize(sensor.B320X320)  # Must always be 320x320.
-sensor.set_brightness(128)  # Leave at 128 generally (this is the default).
-sensor.set_contrast(16)  # Increase to make the image pop.
-sensor.set_color_palette(image.PALETTE_EVT_LIGHT)  # image.PALETTE_EVT_DARK for dark mode.
+csi0 = csi.CSI(cid=csi.GENX320)
+csi0.reset()
+csi0.pixformat(csi.GRAYSCALE)
+csi0.framesize((320, 320))
+csi0.brightness(128)  # Leave at 128 generally (this is the default).
+csi0.contrast(16)  # Increase to make the image pop.
+csi0.color_palette(image.PALETTE_EVT_LIGHT)  # image.PALETTE_EVT_DARK for dark mode.
 
 # The default frame rate is 50 FPS. You can change it between ~20 FPS and ~350 FPS.
-sensor.set_framerate(50)
+csi0.framerate(50)
 
 clock = time.clock()
 
 while True:
     clock.tick()
 
-    img = sensor.snapshot()
+    img = csi0.snapshot()
     # img.median(1) # noise cleanup.
 
     print(clock.fps())

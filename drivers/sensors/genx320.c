@@ -151,6 +151,11 @@ static int set_framesize(omv_csi_t *csi, omv_csi_framesize_t framesize) {
     genx_state_t *genx = csi->priv;
 
     if (genx->mode == OMV_CSI_GENX320_MODE_HISTO) {
+        if (framesize == OMV_CSI_FRAMESIZE_CUSTOM &&
+            resolution[framesize][0] == ACTIVE_SENSOR_WIDTH &&
+            resolution[framesize][1] == ACTIVE_SENSOR_HEIGHT) {
+                return 0;
+        }
         return (framesize == OMV_CSI_FRAMESIZE_320X320) ? 0 : -1;
     } else {
         return (framesize == OMV_CSI_FRAMESIZE_CUSTOM) ? 0 : -1;
