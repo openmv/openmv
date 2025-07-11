@@ -248,7 +248,7 @@ static mp_obj_t py_csi_snapshot(size_t n_args, const mp_obj_t *pos_args, mp_map_
                 break;
             }
 
-            int error = omv_csi_snapshot(self->csi, NULL, flags);
+            int error = omv_csi_snapshot(self->csi, &image, flags);
             if (error != 0) {
                 omv_csi_raise_error(error);
             }
