@@ -590,10 +590,17 @@ static int ioctl(omv_csi_t *csi, int request, va_list ap) {
     return ret;
 }
 
+static int match(omv_csi_t *csi, size_t id) {
+    id &= 0x7FFFFFFF;
+    return (id == (GENX320_ID_ES & 0x7FFFFFFF)) ||
+           (id == (GENX320_ID_MP & 0x7FFFFFFF));
+}
+
 int genx320_init(omv_csi_t *csi) {
     // Initialize csi structure
     csi->reset = reset;
     csi->sleep = sleep;
+    csi->match = match;
     csi->read_reg = read_reg;
     csi->write_reg = write_reg;
     csi->set_pixformat = set_pixformat;
