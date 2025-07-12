@@ -62,7 +62,6 @@ typedef struct _py_csi_obj_t {
     omv_csi_t *csi;
     mp_obj_t vsync_cb;
     mp_obj_t frame_cb;
-    framebuffer_t *fb; // Track dynamically allocated FBs.
 } py_csi_obj_t;
 
 const mp_obj_type_t py_csi_type;
@@ -123,7 +122,6 @@ static mp_obj_t py_csi_deinit(mp_obj_t self_in) {
 
     // Reset FB pointer (realloc'd in make_new).
     if (self->csi->fb->dynamic) {
-        self->fb = NULL;
         self->csi->fb = NULL;
     }
 
@@ -284,8 +282,9 @@ static MP_DEFINE_CONST_FUN_OBJ_1(py_csi_cid_obj, py_csi_cid);
 
 static mp_obj_t py_csi_readable(mp_obj_t self_in) {
     py_csi_obj_t *self = MP_OBJ_TO_PTR(self_in);
-    vbuffer_t *head = framebuffer_get_head(self->csi->fb, FB_PEEK);
-    return mp_obj_new_bool(head != NULL);
+    framebuffer_t *fb = self->csi->fb;
+
+    return mp_obj_new_bool(framebuffer_readable(fb));
 }
 static MP_DEFINE_CONST_FUN_OBJ_1(py_csi_readable_obj, py_csi_readable);
 
@@ -355,10 +354,10 @@ static mp_obj_t py_csi_window(size_t n_args, const mp_obj_t *args) {
     }
 
     if (n_args == 1) {
-        return mp_obj_new_tuple(4, (mp_obj_t []) {mp_obj_new_int(framebuffer_get_x(self->csi->fb)),
-                                                  mp_obj_new_int(framebuffer_get_y(self->csi->fb)),
-                                                  mp_obj_new_int(framebuffer_get_u(self->csi->fb)),
-                                                  mp_obj_new_int(framebuffer_get_v(self->csi->fb))});
+        return mp_obj_new_tuple(4, (mp_obj_t []) {mp_obj_new_int(self->csi->fb->x),
+                                                  mp_obj_new_int(self->csi->fb->y),
+                                                  mp_obj_new_int(self->csi->fb->u),
+                                                  mp_obj_new_int(self->csi->fb->v)});
     }
 
     mp_obj_t *array;
@@ -750,19 +749,26 @@ static MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(py_csi_auto_rotation_obj, 1, 2, py_cs
 static mp_obj_t py_csi_framebuffers(size_t n_args, const mp_obj_t *args) {
     py_csi_obj_t *self = MP_OBJ_TO_PTR(args[0]);
     framebuffer_t *fb = self->csi->fb;
+    bool expand = false;
 
     if (n_args == 1) {
-        return mp_obj_new_int(fb->n_buffers);
+        return mp_obj_new_int(fb->buf_count);
     }
 
     mp_int_t num = mp_obj_get_int(args[1]);
+
+    if (n_args == 3) {
+        expand = mp_obj_is_true(args[2]);
+    }
 
     if (num < 1) {
         omv_csi_raise_error(OMV_CSI_ERROR_INVALID_ARGUMENT);
     }
 
-    if (num != fb->n_buffers) {
-        int error = omv_csi_set_framebuffers(self->csi, num);
+    // Reconfigure the FB only if changing the number
+    // of buffers or reconfiguring the memory expansion.
+    if (fb->expanded != expand || num != fb->buf_count) {
+        int error = omv_csi_set_framebuffers(self->csi, num, expand);
         if (error != 0) {
             omv_csi_raise_error(error);
         }
@@ -770,7 +776,7 @@ static mp_obj_t py_csi_framebuffers(size_t n_args, const mp_obj_t *args) {
 
     return mp_const_none;
 }
-static MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(py_csi_framebuffers_obj, 1, 2, py_csi_framebuffers);
+static MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(py_csi_framebuffers_obj, 1, 3, py_csi_framebuffers);
 
 static mp_obj_t py_csi_special_effect(mp_obj_t self_in, mp_obj_t sde) {
     py_csi_obj_t *self = MP_OBJ_TO_PTR(self_in);
@@ -1281,9 +1287,8 @@ mp_obj_t py_csi_make_new(const mp_obj_type_t *type, size_t n_args, size_t n_kw, 
 
     if (csi->fb == NULL) {
         size_t fb_size = args[ARG_fb_size].u_int;
-        csi->fb = (framebuffer_t *) m_new(uint8_t, fb_size + sizeof(framebuffer_t));
-        framebuffer_init_fb(csi->fb, fb_size, true);
-        self->fb = csi->fb; // Track GC heap alloc
+        csi->fb = (framebuffer_t *) m_malloc(sizeof(framebuffer_t));
+        framebuffer_init(csi->fb, m_malloc(fb_size), fb_size, true);
     }
     
     #if MICROPY_PY_IMU
