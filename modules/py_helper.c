@@ -548,7 +548,9 @@ const uint8_t *py_helper_keyword_alpha_palette(size_t n_args, const mp_obj_t *ar
 
 bool py_helper_is_equal_to_framebuffer(image_t *img) {
     framebuffer_t *fb = framebuffer_get(0);
-    return framebuffer_get_buffer(fb, fb->head)->data == img->data;
+    vbuffer_t *buffer = framebuffer_acquire(fb, FB_FLAG_USED | FB_FLAG_PEEK);
+
+    return (buffer != NULL) && (img->data == buffer->data);
 }
 
 void py_helper_update_framebuffer(image_t *img) {
@@ -557,20 +559,27 @@ void py_helper_update_framebuffer(image_t *img) {
     }
 }
 
+// TODO need to pass a CSI here.
 void py_helper_set_to_framebuffer(image_t *img) {
     #if MICROPY_PY_CSI
     omv_csi_t *csi = omv_csi_get(-1);
     framebuffer_t *fb = csi->fb;
 
-    omv_csi_set_framebuffers(csi, 1);
+    omv_csi_abort(csi, true, false);
     #else
     framebuffer_t *fb = framebuffer_get(0);
-
-    framebuffer_set_buffers(fb, 1);
     #endif
+    
+    // Resize the frame buffer to use all memory for one buffer.
+    framebuffer_resize(fb, 1, true);
 
+    // This should never be NULL after resizing the frame buffer.
+    vbuffer_t *buffer = framebuffer_acquire(fb, FB_FLAG_FREE | FB_FLAG_PEEK);
+
+    PY_ASSERT_TRUE_MSG(buffer, "No free buffers!");
     PY_ASSERT_TRUE_MSG((image_size(img) <= framebuffer_get_buffer_size(fb)),
                        "The image doesn't fit in the frame buffer!");
+
     framebuffer_init_from_image(fb, img);
-    img->data = framebuffer_get_buffer(fb, fb->head)->data;
+    img->data = buffer->data;
 }
