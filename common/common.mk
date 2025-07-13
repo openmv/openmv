@@ -32,7 +32,6 @@ COMMON_SRC_C += \
     nosys_stubs.c \
     omv_csi.c \
     pendsv.c \
-    ringbuf.c \
     tinyusb_debug.c \
     trace.c \
     umm_malloc.c \
