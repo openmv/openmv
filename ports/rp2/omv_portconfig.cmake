@@ -110,7 +110,6 @@ file(GLOB OMV_USER_MODULES ${TOP_DIR}/modules/*.c)
 
 target_sources(${MICROPY_TARGET} PRIVATE
     ${TOP_DIR}/common/array.c
-    ${TOP_DIR}/common/ringbuf.c
     ${TOP_DIR}/common/trace.c
     ${TOP_DIR}/common/mutex.c
     ${TOP_DIR}/common/pendsv.c
