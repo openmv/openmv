@@ -378,28 +378,27 @@ static void stm_csi_frame_event(omv_csi_t *csi, uint32_t pipe) {
     HAL_NVIC_EnableIRQ(csi->dma_irqn);
     #endif
 
-    // Reset DCMI_DMAConvCpltUser frame drop state.
     csi->first_line = false;
     if (csi->drop_frame) {
-        csi->drop_frame = false;
         // Reset the buffer's state if the frame was dropped.
-        vbuffer_t *buffer = framebuffer_get_tail(fb, FB_PEEK);
-        if (buffer) {
-            buffer->reset_state = true;
-        }
+        vbuffer_t *buffer = framebuffer_release(fb, FB_FLAG_FREE | FB_FLAG_PEEK);
+        memset(buffer, 0, sizeof(vbuffer_t));
         return;
     }
 
-    framebuffer_get_tail(fb, FB_NO_FLAGS);
+    // Release the buffer from free queue -> used queue.
+    framebuffer_release(fb, FB_FLAG_FREE | FB_FLAG_CHECK_LAST);
 
     if (csi->frame_cb.fun) {
         csi->frame_cb.fun(csi->frame_cb.arg);
     }
 
     #if defined(STM32N6)
-    // Get the destination buffer address.
-    vbuffer_t *buffer = framebuffer_get_tail(fb, FB_PEEK);
-    if (buffer == NULL) {   // FIFO is FULL
+    // Acquire a buffer from the free queue.
+    vbuffer_t *buffer = framebuffer_acquire(fb, FB_FLAG_FREE | FB_FLAG_PEEK, 0);
+    //printf("next buffer 0x%p\n", buffer);
+
+    if (buffer == NULL) {
         omv_csi_abort(csi, false, false);
     } else if (csi->mipi_if) {
         HAL_DCMIPP_PIPE_SetMemoryAddress(&csi->dcmipp, pipe,
@@ -440,7 +439,8 @@ void DCMI_DMAConvCpltUser(DCMI_HandleTypeDef *hdcmi, uint32_t addr) {
         return;
     }
 
-    vbuffer_t *buffer = framebuffer_get_tail(fb, FB_PEEK);
+    // Acquire a buffer from the free queue.
+    vbuffer_t *buffer = framebuffer_acquire(fb, FB_FLAG_FREE | FB_FLAG_PEEK, 0);
     if (buffer == NULL) {
         omv_csi_abort(csi, false, true);
         return;
@@ -458,7 +458,7 @@ void DCMI_DMAConvCpltUser(DCMI_HandleTypeDef *hdcmi, uint32_t addr) {
             // data and optional padding (0xFF). `offset` holds the total size.
             uint16_t size = __REV16(*((uint16_t *) addr));
             if (buffer->offset + size > framebuffer_get_buffer_size(fb)) {
-                buffer->jpeg_buffer_overflow = true;
+                buffer->flags |= VB_FLAG_OVERFLOW;
                 return;
             }
             unaligned_memcpy(buffer->data + buffer->offset, ((uint16_t *) addr) + 1, size);
@@ -510,6 +510,7 @@ void DCMI_DMAConvCpltUser(DCMI_HandleTypeDef *hdcmi, uint32_t addr) {
 #endif  // #if defined(STM32F4) || defined(STM32F7) || defined(STM32H7)
 
 static int stm_csi_snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
+    vbuffer_t *buffer = NULL;
     framebuffer_t *fb = csi->fb;
 
     if (csi->pixformat == PIXFORMAT_INVALID) {
@@ -538,18 +539,13 @@ static int stm_csi_snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
     uint32_t w = fb->u;
     uint32_t h = fb->v;
 
-    // If DCMI_DMAConvCpltUser() happens before framebuffer_free_current_buffer();
-    // below then the transfer is stopped and it will be re-enabled again right
-    // afterwards in the single vbuffer case.
-    framebuffer_free_current_buffer(fb);
+    // Release the buffer from used queue -> free queue.
+    framebuffer_release(fb, FB_FLAG_USED | FB_FLAG_INVALIDATE);
 
     // Configure and start the capture.
     if (!stm_csi_is_active(csi)) {
-        framebuffer_setup_buffers(fb);
-
-        // Get the destination buffer address.
-        vbuffer_t *buffer = framebuffer_get_tail(fb, FB_PEEK);
-        if (buffer == NULL) {
+        // Acquire a free buffer from the free queue.
+        if (!(buffer = framebuffer_acquire(fb, FB_FLAG_FREE | FB_FLAG_PEEK, 0))) {
             return OMV_CSI_ERROR_FRAMEBUFFER_ERROR;
         }
 
@@ -671,27 +667,22 @@ static int stm_csi_snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
     }
     #endif
 
-    framebuffer_flags_t fb_flags = FB_NO_FLAGS;
-
     // One shot DMA transfers must be invalidated.
-    if (csi->one_shot) {
-        fb_flags |= FB_INVALIDATE;
-    }
+    framebuffer_flags_t fb_flags = FB_FLAG_USED | FB_FLAG_PEEK |
+                                   ((csi->one_shot) ? FB_FLAG_INVALIDATE : 0);
 
     // Wait for a frame to be ready.
-    vbuffer_t *buffer = NULL;
-    for (uint32_t tick_start = HAL_GetTick(); !(buffer = framebuffer_get_head(fb, fb_flags)); ) {
-        __WFI();
-        if ((HAL_GetTick() - tick_start) > OMV_CSI_TIMEOUT_MS) {
-            omv_csi_abort(csi, true, false);
-            #if defined(OMV_CSI_FSYNC_PIN)
-            if (csi->frame_sync) {
-                omv_gpio_write(OMV_CSI_FSYNC_PIN, 0);
-            }
-            #endif
-            return OMV_CSI_ERROR_CAPTURE_TIMEOUT;
+    if (!(buffer = framebuffer_acquire(fb, fb_flags, OMV_CSI_TIMEOUT_MS))) {
+        omv_csi_abort(csi, true, false);
+        #if defined(OMV_CSI_FSYNC_PIN)
+        if (csi->frame_sync) {
+            omv_gpio_write(OMV_CSI_FSYNC_PIN, 0);
         }
+        #endif
+        return OMV_CSI_ERROR_CAPTURE_TIMEOUT;
     }
+
+    //printf("snapshot buffer 0x%p\n", buffer);
 
     // In JPEG 3 mode, the transfer must be aborted as it waits for data indefinitely.
     if (!csi->mipi_if && (csi->pixformat == PIXFORMAT_JPEG) && (csi->jpg_format == 3)) {
@@ -706,7 +697,7 @@ static int stm_csi_snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
     #endif
 
     // The JPEG in the frame buffer is actually invalid.
-    if (buffer->jpeg_buffer_overflow) {
+    if (buffer->flags & VB_FLAG_OVERFLOW) {
         return OMV_CSI_ERROR_JPEG_OVERFLOW;
     }
 
@@ -763,6 +754,7 @@ static int stm_csi_snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
 
     // Set the user image.
     framebuffer_init_image(fb, image);
+
     #if USE_DCMIPP
     if (csi->raw_output) {
         float luminance = stm_isp_update_awb(&csi->dcmipp, DCMIPP_PIPE, w * h);
