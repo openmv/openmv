@@ -378,28 +378,27 @@ static void stm_csi_frame_event(omv_csi_t *csi, uint32_t pipe) {
     HAL_NVIC_EnableIRQ(csi->dma_irqn);
     #endif
 
-    // Reset DCMI_DMAConvCpltUser frame drop state.
     csi->first_line = false;
     if (csi->drop_frame) {
         csi->drop_frame = false;
         // Reset the buffer's state if the frame was dropped.
-        vbuffer_t *buffer = framebuffer_get_tail(fb, FB_PEEK);
-        if (buffer) {
-            buffer->reset_state = true;
-        }
+        vbuffer_t *buffer = framebuffer_acquire(fb, FB_FLAG_FREE | FB_FLAG_PEEK);
+        framebuffer_reset(buffer);
         return;
     }
 
-    framebuffer_get_tail(fb, FB_NO_FLAGS);
+    // Release the buffer from free queue -> used queue.
+    framebuffer_release(fb, FB_FLAG_FREE | FB_FLAG_CHECK_LAST);
 
     if (csi->frame_cb.fun) {
         csi->frame_cb.fun(csi->frame_cb.arg);
     }
 
     #if defined(STM32N6)
-    // Get the destination buffer address.
-    vbuffer_t *buffer = framebuffer_get_tail(fb, FB_PEEK);
-    if (buffer == NULL) {   // FIFO is FULL
+    // Acquire a buffer from the free queue.
+    vbuffer_t *buffer = framebuffer_acquire(fb, FB_FLAG_FREE | FB_FLAG_PEEK);
+
+    if (buffer == NULL) {
         omv_csi_abort(csi, false, false);
     } else if (csi->mipi_if) {
         HAL_DCMIPP_PIPE_SetMemoryAddress(&csi->dcmipp, pipe,
@@ -440,7 +439,8 @@ void DCMI_DMAConvCpltUser(DCMI_HandleTypeDef *hdcmi, uint32_t addr) {
         return;
     }
 
-    vbuffer_t *buffer = framebuffer_get_tail(fb, FB_PEEK);
+    // Acquire a buffer from the free queue.
+    vbuffer_t *buffer = framebuffer_acquire(fb, FB_FLAG_FREE | FB_FLAG_PEEK);
     if (buffer == NULL) {
         omv_csi_abort(csi, false, true);
         return;
@@ -458,7 +458,7 @@ void DCMI_DMAConvCpltUser(DCMI_HandleTypeDef *hdcmi, uint32_t addr) {
             // data and optional padding (0xFF). `offset` holds the total size.
             uint16_t size = __REV16(*((uint16_t *) addr));
             if (buffer->offset + size > framebuffer_get_buffer_size(fb)) {
-                buffer->jpeg_buffer_overflow = true;
+                buffer->flags |= VB_FLAG_OVERFLOW;
                 return;
             }
             unaligned_memcpy(buffer->data + buffer->offset, ((uint16_t *) addr) + 1, size);
@@ -510,46 +510,14 @@ void DCMI_DMAConvCpltUser(DCMI_HandleTypeDef *hdcmi, uint32_t addr) {
 #endif  // #if defined(STM32F4) || defined(STM32F7) || defined(STM32H7)
 
 static int stm_csi_snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
+    vbuffer_t *buffer = NULL;
     framebuffer_t *fb = csi->fb;
 
-    if (csi->pixformat == PIXFORMAT_INVALID) {
-        return OMV_CSI_ERROR_INVALID_PIXFORMAT;
-    }
-
-    if (csi->framesize == OMV_CSI_FRAMESIZE_INVALID) {
-        return OMV_CSI_ERROR_INVALID_FRAMESIZE;
-    }
-
-    // Compress the framebuffer for the IDE preview, if not the first frame, the
-    // framebuffer is enabled, and the image sensor doesn't support JPEG encoding.
-    if (flags & OMV_CSI_CAPTURE_FLAGS_UPDATE) {
-        image_t tmp;
-        framebuffer_init_image(fb, &tmp);
-        framebuffer_update_jpeg_buffer(&tmp);
-    }
-
-    // Ensure that the raw frame fits into the FB. It will be switched from RGB565
-    // to BAYER first to save space before being cropped until it fits.
-    omv_csi_auto_crop_framebuffer(csi);
-
-    // Restore frame buffer width and height if they were changed before. BPP is
-    // restored later. Note that JPEG compression is done first on the framebuffer
-    // with the user settings.
-    uint32_t w = fb->u;
-    uint32_t h = fb->v;
-
-    // If DCMI_DMAConvCpltUser() happens before framebuffer_free_current_buffer();
-    // below then the transfer is stopped and it will be re-enabled again right
-    // afterwards in the single vbuffer case.
-    framebuffer_free_current_buffer(fb);
-
-    // Configure and start the capture.
-    if (!stm_csi_is_active(csi)) {
-        framebuffer_setup_buffers(fb);
-
-        // Get the destination buffer address.
-        vbuffer_t *buffer = framebuffer_get_tail(fb, FB_PEEK);
-        if (buffer == NULL) {
+    // Configure and re/start the capture if it's not alrady active
+    // and there are no pending buffers (from non-blocking capture).
+    if (!stm_csi_is_active(csi) && !framebuffer_readable(fb)) {
+        // Acquire a buffer from the free queue.
+        if (!(buffer = framebuffer_acquire(fb, FB_FLAG_FREE | FB_FLAG_PEEK))) {
             return OMV_CSI_ERROR_FRAMEBUFFER_ERROR;
         }
 
@@ -597,7 +565,7 @@ static int stm_csi_snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
                 line_width -= 4;
             }
 
-            csi->dma_size = line_width * h / 4;
+            csi->dma_size = line_width * fb->v / 4;
 
             // Error out if the transfer size is not compatible with DMA transfer restrictions.
             if ((!line_width) || (line_width % 4) ||
@@ -611,7 +579,7 @@ static int stm_csi_snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
             HAL_DCMI_DisableCrop(&csi->dcmi);
             if (csi->pixformat != PIXFORMAT_JPEG) {
                 // Vertically crop the image. Horizontal cropping is done in software.
-                HAL_DCMI_ConfigCrop(&csi->dcmi, x_crop, fb->y, line_width - 1, h - 1);
+                HAL_DCMI_ConfigCrop(&csi->dcmi, x_crop, fb->y, line_width - 1, fb->v - 1);
                 HAL_DCMI_EnableCrop(&csi->dcmi);
             }
 
@@ -648,7 +616,7 @@ static int stm_csi_snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
             } else {
                 #if defined(STM32F4) || defined(STM32F7) || defined(STM32H7)
                 // Start a multibuffer (line by line) transfer.
-                HAL_DCMI_Start_DMA_MB(&csi->dcmi, DCMI_MODE_CONTINUOUS, (uint32_t) &_line_buf, csi->dma_size, h);
+                HAL_DCMI_Start_DMA_MB(&csi->dcmi, DCMI_MODE_CONTINUOUS, (uint32_t) &_line_buf, csi->dma_size, fb->v);
                 #else
                 csi->one_shot = true;
                 HAL_DCMI_Start_DMA(&csi->dcmi, DCMI_MODE_SNAPSHOT, (uint32_t) buffer->data, csi->dma_size);
@@ -657,36 +625,27 @@ static int stm_csi_snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
         }
     }
 
-    // Trigger the camera if FSYNC is enabled.
-    #if defined(OMV_CSI_FSYNC_PIN)
-    if (csi->frame_sync) {
-        omv_gpio_write(OMV_CSI_FSYNC_PIN, 1);
-    }
-    #endif
-
     // In JPEG mode, enable the end of frame interrupt.
     if (!csi->mipi_if && csi->pixformat != PIXFORMAT_JPEG) {
         __HAL_DCMI_ENABLE_IT(&csi->dcmi, DCMI_IT_FRAME);
     }
 
-    framebuffer_flags_t fb_flags = FB_NO_FLAGS;
-
     // One shot DMA transfers must be invalidated.
-    if (csi->one_shot) {
-        fb_flags |= FB_INVALIDATE;
-    }
+    framebuffer_flags_t fb_flags = FB_FLAG_USED | FB_FLAG_PEEK |
+                                   ((csi->one_shot) ? FB_FLAG_INVALIDATE : 0);
 
     // Wait for a frame to be ready.
-    vbuffer_t *buffer = NULL;
-    for (uint32_t tick_start = HAL_GetTick(); !(buffer = framebuffer_get_head(fb, fb_flags)); ) {
-        __WFI();
-        if ((HAL_GetTick() - tick_start) > OMV_CSI_TIMEOUT_MS) {
+    for (mp_uint_t start = mp_hal_ticks_ms(); ; mp_event_handle_nowait()) {
+        if ((buffer = framebuffer_acquire(fb, fb_flags))) {
+            break;
+        }
+
+        if (flags & OMV_CSI_CAPTURE_FLAGS_NBLOCK) {
+            return OMV_CSI_ERROR_WOULD_BLOCK;
+        }
+
+        if ((mp_hal_ticks_ms() - start) > OMV_CSI_TIMEOUT_MS) {
             omv_csi_abort(csi, true, false);
-            #if defined(OMV_CSI_FSYNC_PIN)
-            if (csi->frame_sync) {
-                omv_gpio_write(OMV_CSI_FSYNC_PIN, 0);
-            }
-            #endif
             return OMV_CSI_ERROR_CAPTURE_TIMEOUT;
         }
     }
@@ -696,28 +655,16 @@ static int stm_csi_snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
         omv_csi_abort(csi, true, false);
     }
 
-    // We're done receiving data.
-    #if defined(OMV_CSI_FSYNC_PIN)
-    if (csi->frame_sync) {
-        omv_gpio_write(OMV_CSI_FSYNC_PIN, 0);
-    }
-    #endif
-
-    // The JPEG in the frame buffer is actually invalid.
-    if (buffer->jpeg_buffer_overflow) {
+    // The JPEG in the framebuffer is actually invalid.
+    if (buffer->flags & VB_FLAG_OVERFLOW) {
         return OMV_CSI_ERROR_JPEG_OVERFLOW;
     }
 
-    // Prepare the frame buffer w/h/bpp values given the image type.
-    if (!csi->transpose) {
-        fb->w = w;
-        fb->h = h;
-    } else {
-        fb->w = h;
-        fb->h = w;
-    }
+    // Set the framebuffer width/height.
+    fb->w = csi->transpose ? fb->v : fb->u;
+    fb->h = csi->transpose ? fb->u : fb->v;
 
-    // Fix the BPP.
+    // Set the framebuffer pixel format.
     switch (csi->pixformat) {
         case PIXFORMAT_GRAYSCALE:
             fb->pixfmt = PIXFORMAT_GRAYSCALE;
@@ -759,17 +706,18 @@ static int stm_csi_snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
             break;
     }
 
-    // Set the user image.
-    framebuffer_init_image(fb, image);
     #if USE_DCMIPP
     if (csi->raw_output) {
-        float luminance = stm_isp_update_awb(&csi->dcmipp, DCMIPP_PIPE, w * h);
+        float luminance = stm_isp_update_awb(&csi->dcmipp, DCMIPP_PIPE, fb->u * fb->v);
         if (csi->ioctl) {
             omv_csi_ioctl(csi, OMV_CSI_IOCTL_UPDATE_AGC_AEC, fast_floorf(luminance));
         }
 
     }
     #endif
+
+    // Set the user image.
+    framebuffer_init_image(fb, image);
     return 0;
 }
 
