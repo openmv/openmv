@@ -64,52 +64,32 @@ static int set_vflip(omv_csi_t *csi, int enable) {
 static int snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
     framebuffer_t *fb = csi->fb;
 
+    // This driver can't use handle NULL images.
     if (!image) {
         return 0;
     }
 
-    if (flags & OMV_CSI_CAPTURE_FLAGS_UPDATE) {
-        image_t tmp;
-        framebuffer_init_image(fb, &tmp);
-        framebuffer_update_jpeg_buffer(&tmp);
-    }
-
-    if (fb->n_buffers != 1) {
-        framebuffer_set_buffers(fb, 1);
-    }
-
-    if (csi->pixformat == PIXFORMAT_INVALID) {
-        return OMV_CSI_ERROR_INVALID_PIXFORMAT;
-    }
-
-    if (csi->framesize == OMV_CSI_FRAMESIZE_INVALID) {
-        return OMV_CSI_ERROR_INVALID_FRAMESIZE;
-    }
-
-    if (omv_csi_check_framebuffer_size(csi) == -1) {
-        return OMV_CSI_ERROR_FRAMEBUFFER_OVERFLOW;
-    }
-
-    framebuffer_free_current_buffer(fb);
-    vbuffer_t *buffer = framebuffer_get_tail(fb, FB_NO_FLAGS);
+    // Acquire a new free buffer.
+    vbuffer_t *buffer = framebuffer_acquire(fb, FB_FLAG_FREE | FB_FLAG_PEEK);
 
     if (!buffer) {
         return OMV_CSI_ERROR_FRAMEBUFFER_ERROR;
     }
 
-    if (!csi->transpose) {
-        fb->w = fb->u;
-        fb->h = fb->v;
-    } else {
-        fb->w = fb->v;
-        fb->h = fb->u;
-    }
-
+    // Set the framebuffer pixel format.
     fb->pixfmt = csi->pixformat;
+
+    // Set the framebuffer width/height.
+    fb->w = csi->transpose ? fb->v : fb->u;
+    fb->h = csi->transpose ? fb->u : fb->v;
+
+    // The new buffer hasn't been released yet, so the data pointer
+    // has to be set manually after calling framebuffer_init_image.
     framebuffer_init_image(fb, image);
+    image->pixels = buffer->data;
 
     static uint32_t step = 0;
-    uint32_t offset = (step / 4);
+    uint32_t offset = (step++ / 4);
 
     for (size_t y = 0; y < image->h; y++) {
         for (size_t x = 0; x < image->w; x++) {
@@ -147,7 +127,9 @@ static int snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
         }
     }
     
-    step++;
+    // Move the buffer from free queue -> used queue.
+    framebuffer_release(fb, FB_FLAG_FREE);
+    framebuffer_init_image(fb, image);
     return 0;
 }
 
