@@ -30,5 +30,5 @@ int vospi_init(uint32_t n_packets, framebuffer_t *fb);
 int vospi_deinit();
 int vospi_abort(void);
 bool vospi_active(void);
-int vospi_snapshot(uint32_t timeout_ms);
+void vospi_restart(void);
 #endif // __VOSPI_H__
