@@ -48,7 +48,7 @@ static char *pointer_overlay = &_fballoc_overlay_end;
 // Use fb_alloc_free_till_mark_permanent() instead.
 #define FB_PERMANENT_FLAG       0x2
 
-char *fb_alloc_stack_pointer() {
+char *fb_alloc_sp() {
     return pointer;
 }
 
