@@ -260,12 +260,8 @@ __weak int omv_csi_abort(omv_csi_t *csi, bool fifo_flush, bool in_irq) {
     csi->last_frame_ms = 0;
     csi->last_frame_ms_valid = false;
 
-    if (csi->fb) {
-        if (fifo_flush) {
-            framebuffer_flush_buffers(csi->fb, true);
-        } else if (!csi->disable_full_flush) {
-            framebuffer_flush_buffers(csi->fb, false);
-        }
+    if (csi->fb && fifo_flush && !csi->disable_full_flush) {
+        framebuffer_flush(csi->fb);
     }
 
     #if defined(OMV_CSI_FSYNC_PIN)
@@ -353,7 +349,7 @@ __weak int omv_csi_reset(omv_csi_t *csi, bool hard) {
     }
 
     // Reset framebuffers
-    framebuffer_flush_buffers(csi->fb, true);
+    framebuffer_flush(csi->fb);
     return 0;
 }
 
@@ -774,7 +770,7 @@ __weak int omv_csi_set_pixformat(omv_csi_t *csi, pixformat_t pixformat) {
     csi->fb->pixfmt = PIXFORMAT_INVALID;
 
     // Auto-adjust the number of frame buffers.
-    omv_csi_set_framebuffers(csi, -1);
+    omv_csi_set_framebuffers(csi, -1, false);
 
     // Reconfigure the hardware if needed.
     return omv_csi_config(csi, OMV_CSI_CONFIG_PIXFORMAT);
@@ -818,7 +814,7 @@ __weak int omv_csi_set_framesize(omv_csi_t *csi, omv_csi_framesize_t framesize) 
     csi->fb->pixfmt = PIXFORMAT_INVALID;
 
     // Auto-adjust the number of frame buffers.
-    omv_csi_set_framebuffers(csi, -1);
+    omv_csi_set_framebuffers(csi, -1, false);
 
     // Reconfigure the hardware if needed.
     return omv_csi_config(csi, OMV_CSI_CONFIG_FRAMESIZE);
@@ -932,7 +928,7 @@ __weak int omv_csi_set_windowing(omv_csi_t *csi, int x, int y, int w, int h) {
     csi->fb->pixfmt = PIXFORMAT_INVALID;
 
     // Auto-adjust the number of frame buffers.
-    omv_csi_set_framebuffers(csi, -1);
+    omv_csi_set_framebuffers(csi, -1, false);
 
     // Reconfigure the hardware if needed.
     return omv_csi_config(csi, OMV_CSI_CONFIG_WINDOWING);
@@ -1256,7 +1252,7 @@ __weak bool omv_csi_get_auto_rotation(omv_csi_t *csi) {
     return csi->auto_rotation;
 }
 
-__weak int omv_csi_set_framebuffers(omv_csi_t *csi, int count) {
+__weak int omv_csi_set_framebuffers(omv_csi_t *csi, size_t count, bool expand) {
     // Disable any ongoing frame capture.
     omv_csi_abort(csi, true, false);
 
@@ -1275,7 +1271,17 @@ __weak int omv_csi_set_framebuffers(omv_csi_t *csi, int count) {
     // Otherwise, use the real frame size.
     csi->fb->frame_size = resolution[csi->framesize][0] * resolution[csi->framesize][1] * 2;
     #endif
-    return framebuffer_set_buffers(csi->fb, count);
+
+    if (count == -1) {
+        for (size_t i=3; i>0; i--) {
+            if (!framebuffer_resize(csi->fb, i, expand)) {
+                return 0;
+            }
+        }
+        return -1;
+    }
+
+    return framebuffer_resize(csi->fb, count, expand);
 }
 
 __weak int omv_csi_set_special_effect(omv_csi_t *csi, omv_csi_sde_t sde) {
@@ -1443,7 +1449,7 @@ __weak int omv_csi_auto_crop_framebuffer(omv_csi_t *csi) {
     }
 
     // Auto-adjust the number of frame buffers.
-    omv_csi_set_framebuffers(csi, -1);
+    omv_csi_set_framebuffers(csi, -1, false);
     return 0;
 }
 
