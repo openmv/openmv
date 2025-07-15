@@ -35,7 +35,7 @@
 #define OMV_ALLOC_ALIGNMENT     (OMV_CACHE_LINE_SIZE)
 #endif
 
-char *fb_alloc_stack_pointer();
+char *fb_alloc_sp();
 void fb_alloc_fail();
 void fb_alloc_init0();
 uint32_t fb_avail();
