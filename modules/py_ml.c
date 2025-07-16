@@ -51,13 +51,7 @@
 #include "py_ml.h"
 #include "ulab/code/ndarray.h"
 
-#ifndef IMLIB_ML_MODEL_ALIGN
-#ifndef __DCACHE_PRESENT
-#define IMLIB_ML_MODEL_ALIGN    (32 - 1)
-#else
-#define IMLIB_ML_MODEL_ALIGN    (__SCB_DCACHE_LINE_SIZE - 1)
-#endif
-#endif
+#define IMLIB_ML_MODEL_ALIGN    (OMV_CACHE_LINE_SIZE)
 
 static size_t py_ml_tuple_sum(mp_obj_tuple_t *o) {
     if (o->len < 1) {
@@ -372,9 +366,9 @@ mp_obj_t py_ml_model_make_new(const mp_obj_type_t *type, size_t n_args, size_t n
             fb_alloc_mark_permanent();
         } else {
             // Align size and memory and keep a reference to the GC block.
-            size_t size = (model->size + IMLIB_ML_MODEL_ALIGN) & ~IMLIB_ML_MODEL_ALIGN;
-            model->_raw = m_malloc(size + IMLIB_ML_MODEL_ALIGN);
-            model->data = (void *) (((uintptr_t) model->_raw + IMLIB_ML_MODEL_ALIGN) & ~IMLIB_ML_MODEL_ALIGN);
+            size_t size = OMV_ALIGN_TO(model->size, IMLIB_ML_MODEL_ALIGN);
+            model->_raw = m_malloc(size + IMLIB_ML_MODEL_ALIGN - 1);
+            model->data = (void *) OMV_ALIGN_TO(model->_raw, IMLIB_ML_MODEL_ALIGN);
         }
 
         // Read file data.

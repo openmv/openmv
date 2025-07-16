@@ -241,12 +241,12 @@ void rectangle_united(rectangle_t *dst, rectangle_t *src) {
 /////////////////
 
 void image_alloc(image_t *img, size_t size) {
-    // Round the size up to ensure that the allocation is a multiple of the alignment in bytes.
-    // This ensures after address alignment that the data can be modified without affecting other cache lines.
-    size = ((size + OMV_ALLOC_ALIGNMENT - 1) / OMV_ALLOC_ALIGNMENT) * OMV_ALLOC_ALIGNMENT;
-    img->_raw = m_malloc(size + OMV_ALLOC_ALIGNMENT - 1);
-    // Offset the data pointer to ensure it is aligned.
-    img->data = (void *) (((uintptr_t) img->_raw + OMV_ALLOC_ALIGNMENT - 1) & ~(OMV_ALLOC_ALIGNMENT - 1));
+    // Align the memory size to cache line.
+    size = OMV_ALIGN_TO(size, OMV_CACHE_LINE_SIZE);
+    // Allocate extra to align the pointer.
+    img->_raw = m_malloc(size + OMV_CACHE_LINE_SIZE - 1);
+    // Align the memory address to cache line.
+    img->data = (void *) OMV_ALIGN_TO(img->_raw, OMV_CACHE_LINE_SIZE);
 }
 
 void image_alloc0(image_t *img, size_t size) {
