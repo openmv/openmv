@@ -589,6 +589,9 @@ int omv_csi_copy_line(omv_csi_t *csi, void *dma, uint8_t *src, uint8_t *dst);
 // Default snapshot function.
 int omv_csi_snapshot(omv_csi_t *csi, image_t *image, uint32_t flags);
 
+// Convert csi chip id to string.
+const char *omv_csi_name(omv_csi_t *csi);
+
 // Convert csi error codes to strings.
 const char *omv_csi_strerror(int error);
 #endif // __OMV_CSI_H__

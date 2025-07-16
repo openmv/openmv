@@ -275,19 +275,6 @@ static mp_obj_t py_csi_height(mp_obj_t self_in) {
 }
 static MP_DEFINE_CONST_FUN_OBJ_1(py_csi_height_obj, py_csi_height);
 
-static mp_obj_t py_csi_fb(mp_obj_t self_in) {
-    image_t image;
-    py_csi_obj_t *self = MP_OBJ_TO_PTR(self_in);
-
-    if (framebuffer_get_depth(self->csi->fb) < 0) {
-        return mp_const_none;
-    }
-
-    framebuffer_init_image(self->csi->fb, &image);
-    return py_image_from_struct(&image);
-}
-static MP_DEFINE_CONST_FUN_OBJ_1(py_csi_fb_obj, py_csi_fb);
-
 static mp_obj_t py_csi_cid(mp_obj_t self_in) {
     py_csi_obj_t *self = MP_OBJ_TO_PTR(self_in);
 
@@ -1318,7 +1305,6 @@ static const mp_rom_map_elem_t py_csi_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_snapshot),            MP_ROM_PTR(&py_csi_snapshot_obj) },
     { MP_ROM_QSTR(MP_QSTR_width),               MP_ROM_PTR(&py_csi_width_obj) },
     { MP_ROM_QSTR(MP_QSTR_height),              MP_ROM_PTR(&py_csi_height_obj) },
-    { MP_ROM_QSTR(MP_QSTR_fb),                  MP_ROM_PTR(&py_csi_fb_obj) },
     { MP_ROM_QSTR(MP_QSTR_cid),                 MP_ROM_PTR(&py_csi_cid_obj) },
     { MP_ROM_QSTR(MP_QSTR_readable),            MP_ROM_PTR(&py_csi_readable_obj) },
     { MP_ROM_QSTR(MP_QSTR_pixformat),           MP_ROM_PTR(&py_csi_pixformat_obj) },
