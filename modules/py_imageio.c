@@ -56,19 +56,11 @@
 #define RGB565_FIXED_VER        11
 #define NEW_PIXFORMAT_VER       20
 
-#ifndef __DCACHE_PRESENT
-#define IMAGE_ALIGNMENT         32 // Use 32-byte alignment on MCUs with no cache for DMA buffer alignment.
-#else
-#define IMAGE_ALIGNMENT         __SCB_DCACHE_LINE_SIZE
-#endif
+#define IMAGE_ALIGNMENT         OMV_CACHE_LINE_SIZE
 
 #define IMAGE_T_SIZE_ALIGNED    (((sizeof(uint32_t) + sizeof(image_t) + (IMAGE_ALIGNMENT) -1) \
                                   / (IMAGE_ALIGNMENT))                                        \
                                  * (IMAGE_ALIGNMENT))
-
-static size_t image_size_aligned(image_t *image) {
-    return ((image_size(image) + (IMAGE_ALIGNMENT) -1) / (IMAGE_ALIGNMENT)) * (IMAGE_ALIGNMENT);
-}
 
 typedef enum image_io_stream_type {
     IMAGE_IO_FILE_STREAM,
@@ -579,7 +571,7 @@ static mp_obj_t py_imageio_make_new(const mp_obj_type_t *type, size_t n_args, si
         }
 
         stream->count = mp_obj_get_int(args[1]);
-        stream->size = IMAGE_T_SIZE_ALIGNED + image_size_aligned(&image);
+        stream->size = IMAGE_T_SIZE_ALIGNED + OMV_ALIGN_TO(image_size(&image), IMAGE_ALIGNMENT);
 
         fb_alloc_mark();
         stream->buffer = fb_alloc(stream->count * stream->size, FB_ALLOC_PREFER_SIZE | FB_ALLOC_CACHE_ALIGN);

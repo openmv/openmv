@@ -81,7 +81,7 @@ static soft_timer_entry_t flir_lepton_spi_rx_timer = {};
 static int fir_lepton_spi_rx_cb_tail = 0;
 static int fir_lepton_spi_rx_cb_expected_pid = 0;
 static int fir_lepton_spi_rx_cb_expected_sid = 0;
-static uint16_t OMV_ATTR_SECTION(OMV_ATTR_ALIGNED_DMA(fir_lepton_buf[VOSPI_BUFFER_SIZE]), OMV_VOSPI_DMA_BUFFER);
+static uint16_t OMV_ATTR_SEC_ALIGN(fir_lepton_buf[VOSPI_BUFFER_SIZE], OMV_VOSPI_DMA_BUFFER, OMV_DMA_ALIGNMENT);
 static void fir_lepton_spi_callback(omv_spi_t *spi, void *userdata, void *buf);
 
 static mp_obj_t fir_lepton_spi_resync_callback(mp_obj_t unused) {
