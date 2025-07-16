@@ -1300,6 +1300,35 @@ mp_obj_t py_csi_make_new(const mp_obj_type_t *type, size_t n_args, size_t n_kw, 
     return MP_OBJ_FROM_PTR(self);
 }
 
+static void py_csi_print(const mp_print_t *print, mp_obj_t self_in, mp_print_kind_t kind) {
+    py_csi_obj_t *self = MP_OBJ_TO_PTR(self_in);
+    omv_csi_t *csi = self->csi;
+
+    mp_printf(print, "CSI {\n");
+    mp_printf(print, "  Name                : %s\n", omv_csi_name(csi));
+    mp_printf(print, "  Chip ID             : 0x%04X\n", csi->chip_id);
+    mp_printf(print, "  Address             : 0x%02X\n", csi->slv_addr);
+    mp_printf(print, "  Powered On          : %s\n", csi->power_on ? "true" : "false");
+    mp_printf(print, "  Auxiliary           : %s\n", csi->auxiliary ? "true" : "false");
+    mp_printf(print, "  Raw Output          : %s\n", csi->raw_output ? "true" : "false");
+    if (csi->mipi_if) {
+        mp_printf(print, "  MIPI Bitrate        : %uMbps\n", csi->mipi_brate);
+    }
+    mp_printf(print, "  Frame Rate          : %d\n", csi->framerate);
+    mp_printf(print, "  Clock Frequency     : %luMHz\n", csi->clk_hz / 1000000);
+    mp_printf(print, "  Framebuffer {\n");
+    mp_printf(print, "    Dynamic           : %s\n", csi->fb->dynamic ? "true" : "false");
+    mp_printf(print, "    Expanded          : %s\n", csi->fb->expanded ? "true" : "false");
+    mp_printf(print, "    Raw Buffer Size   : %u\n", (unsigned) csi->fb->raw_size);
+    mp_printf(print, "    Raw Buffer Addr   : 0x%p\n", csi->fb->raw_base);
+    mp_printf(print, "    Frame Size        : %u\n", (unsigned) csi->fb->frame_size);
+    mp_printf(print, "    Vbuffer Size      : %u\n", (unsigned) csi->fb->buf_size);
+    mp_printf(print, "    Vbuffer Count     : %u\n", (unsigned) csi->fb->buf_count);
+    mp_printf(print, "    Used Queue Size   : %u\n", queue_size(csi->fb->used_queue));
+    mp_printf(print, "    Free Queue Size   : %u\n", queue_size(csi->fb->free_queue));
+    mp_printf(print, "  }\n}\n");
+}
+
 static const mp_rom_map_elem_t py_csi_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR___name__),            MP_ROM_QSTR(MP_QSTR_CSI) },
     { MP_ROM_QSTR(MP_QSTR___del__),             MP_ROM_PTR(&py_csi_deinit_obj) },
@@ -1351,6 +1380,7 @@ MP_DEFINE_CONST_OBJ_TYPE(
     MP_QSTR_CSI,
     MP_TYPE_FLAG_NONE,
     make_new, py_csi_make_new,
+    print, py_csi_print,
     locals_dict, &py_csi_locals_dict
     );
 
