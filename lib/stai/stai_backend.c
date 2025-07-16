@@ -33,6 +33,7 @@
 #include <string.h>
 #include <stdint.h>
 #include "imlib_config.h"
+#include "omv_common.h"
 #include STM32_HAL_H
 
 #include "py/runtime.h"
@@ -48,8 +49,7 @@
 #include "ll_aton_caches_interface.h"
 #include "ll_aton_reloc_network.h"
 
-#define AI_RELOC_ALIGNMENT      (32 - 1)
-#define AI_RELOC_ALIGN(x)       (((x) + (AI_RELOC_ALIGNMENT)) & ~(AI_RELOC_ALIGNMENT))
+#define AI_RELOC_ALIGNMENT      (32)
 
 typedef struct ml_backend_state {
     void *exec_ram_addr;
@@ -133,19 +133,19 @@ int ml_backend_init_model(py_ml_model_obj_t *model) {
     }
 
     // Allocate executable memory.
-    state->exec_ram_size = AI_RELOC_ALIGN(rt.rt_ram_xip); 
+    state->exec_ram_size = OMV_ALIGN_TO(rt.rt_ram_xip, AI_RELOC_ALIGNMENT); 
     state->exec_ram_addr = m_new(uint8_t, state->exec_ram_size + AI_RELOC_ALIGNMENT);
 
     // Allocate external memory.
-    state->ext_ram_size = AI_RELOC_ALIGN(rt.ext_ram_sz); 
+    state->ext_ram_size = OMV_ALIGN_TO(rt.ext_ram_sz, AI_RELOC_ALIGNMENT); 
     state->ext_ram_addr = m_new(uint8_t, state->ext_ram_size + AI_RELOC_ALIGNMENT);
 
     // Create and install the relocatable model.
     ll_aton_reloc_config config = {
         .ext_ram_size = state->ext_ram_size,
-        .ext_ram_addr = AI_RELOC_ALIGN((uintptr_t) state->ext_ram_addr),
+        .ext_ram_addr = OMV_ALIGN_TO(state->ext_ram_addr, AI_RELOC_ALIGNMENT),
         .exec_ram_size = state->exec_ram_size,
-        .exec_ram_addr = AI_RELOC_ALIGN((uintptr_t) state->exec_ram_addr),
+        .exec_ram_addr = OMV_ALIGN_TO(state->exec_ram_addr, AI_RELOC_ALIGNMENT),
         .ext_param_addr = (uintptr_t) NULL,
         // For COPY mode - XIP region is expected, else only RW region is requested.
         // In the case where the HW epoch blob is embedded in the binary image, this

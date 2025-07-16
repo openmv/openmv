@@ -35,6 +35,8 @@
 #include <stdint.h>
 
 #include "imlib_config.h"
+#include "omv_common.h"
+
 #include "tensorflow/lite/micro/micro_op_resolver.h"
 #include "tensorflow/lite/micro/micro_mutable_op_resolver.h"
 #include "tensorflow/lite/micro/cortex_m_generic/debug_log_callback.h"
@@ -52,8 +54,7 @@ extern "C" {
 
 using namespace tflite;
 #define TF_ARENA_EXTRA      (512)
-#define TF_ARENA_ALIGN      (16 - 1)
-#define TF_ARENA_ROUND(x)   (((x) + TF_ARENA_ALIGN) & ~(TF_ARENA_ALIGN))
+#define TF_ARENA_ALIGN      (16)
 typedef MicroMutableOpResolver<113> MicroOpsResolver;
 
 typedef struct ml_backend_state {
@@ -238,7 +239,7 @@ int ml_backend_init_model(py_ml_model_obj_t *model) {
         mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Failed to allocate tensors"));
     }
     // Round up the optimal arena size to a multiple of the alignment.
-    arena_size = TF_ARENA_ROUND(interpreter.arena_used_bytes()) + TF_ARENA_EXTRA;
+    arena_size = OMV_ALIGN_TO(interpreter.arena_used_bytes(), TF_ARENA_ALIGN) + TF_ARENA_EXTRA;
     m_free(arena_memory);
 
     // Allocate the persistent model state and interpreter.
