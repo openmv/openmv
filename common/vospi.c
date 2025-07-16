@@ -68,7 +68,7 @@ typedef struct _vospi_state {
 
 static vospi_state_t vospi;
 
-static uint16_t OMV_ATTR_SECTION(OMV_ATTR_ALIGNED_DMA(vospi_buf[VOSPI_BUFFER_SIZE]), OMV_VOSPI_DMA_BUFFER);
+static uint16_t OMV_ATTR_SEC_ALIGN(vospi_buf[VOSPI_BUFFER_SIZE], OMV_VOSPI_DMA_BUFFER, OMV_DMA_ALIGNMENT);
 static void vospi_callback(omv_spi_t *spi, void *userdata, void *buf);
 
 static void vospi_resync() {

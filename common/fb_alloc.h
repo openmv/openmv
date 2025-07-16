@@ -30,6 +30,11 @@
 #define FB_ALLOC_PREFER_SPEED    1
 #define FB_ALLOC_PREFER_SIZE     2
 #define FB_ALLOC_CACHE_ALIGN     4
+
+#ifndef OMV_ALLOC_ALIGNMENT
+#define OMV_ALLOC_ALIGNMENT     (OMV_CACHE_LINE_SIZE)
+#endif
+
 char *fb_alloc_stack_pointer();
 void fb_alloc_fail();
 void fb_alloc_init0();
