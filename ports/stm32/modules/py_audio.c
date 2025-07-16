@@ -52,7 +52,7 @@ static PDM_Filter_Config_t PDM_FilterConfig[OMV_AUDIO_MAX_CHANNELS];
 static PDM_Filter_Handler_t PDM_FilterHandler[OMV_AUDIO_MAX_CHANNELS];
 // NOTE: BDMA can only access D3 SRAM4 memory.
 #define PDM_BUFFER_SIZE      (16384)
-uint8_t OMV_ATTR_SECTION(OMV_ATTR_ALIGNED(PDM_BUFFER[PDM_BUFFER_SIZE], 32), ".d3_dma_buffer");
+uint8_t OMV_ATTR_SEC_ALIGN(PDM_BUFFER[PDM_BUFFER_SIZE], ".d3_dma_buffer", OMV_DMA_ALIGNMENT);
 
 #elif defined(OMV_DFSDM)
 static DFSDM_Channel_HandleTypeDef hdfsdm;
@@ -63,7 +63,7 @@ static DMA_HandleTypeDef hdma_filter[OMV_AUDIO_MAX_CHANNELS];
 
 // NOTE: placed in D2 memory.
 #define PDM_BUFFER_SIZE      (512 * 2)
-int32_t OMV_ATTR_SECTION(OMV_ATTR_ALIGNED(PDM_BUFFER[PDM_BUFFER_SIZE], 32), ".d2_dma_buffer");
+int32_t OMV_ATTR_SEC_ALIGN(PDM_BUFFER[PDM_BUFFER_SIZE], ".d2_dma_buffer", OMV_DMA_ALIGNMENT);
 
 #define DFSDM_GAIN_FRAC_BITS (3)
 static int32_t dfsdm_gain = 1;
@@ -74,11 +74,11 @@ static MDF_FilterConfigTypeDef hmdf_filter[OMV_AUDIO_MAX_CHANNELS];
 
 // NOTE: Only 1 filter is supported right now.
 static DMA_QListTypeDef dma_queue;
-static DMA_NodeTypeDef OMV_ATTR_SECTION(OMV_ATTR_ALIGNED(dma_nodes, 32), ".dma_buffer");
+static DMA_NodeTypeDef OMV_ATTR_SEC_ALIGN(dma_nodes, ".dma_buffer", OMV_DMA_ALIGNMENT);
 static DMA_HandleTypeDef hdma_filter[OMV_AUDIO_MAX_CHANNELS];
 
 #define PDM_BUFFER_SIZE      (512 * 2)
-int32_t OMV_ATTR_SECTION(OMV_ATTR_ALIGNED(PDM_BUFFER[PDM_BUFFER_SIZE], 32), ".dma_buffer");
+int32_t OMV_ATTR_SEC_ALIGN(PDM_BUFFER[PDM_BUFFER_SIZE], ".dma_buffer", OMV_DMA_ALIGNMENT);
 #else
 #error "No audio driver defined for this board"
 #endif
