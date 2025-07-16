@@ -1532,6 +1532,45 @@ __weak int omv_csi_snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
     return ret;
 }
 
+const char *omv_csi_name(omv_csi_t *csi) {
+    switch (csi->chip_id) {
+        case OV2640_ID:          return "OV2640";
+        case OV5640_ID:          return "OV5640";
+        case OV7670_ID:          return "OV7670";
+        case OV7725_ID:          return "OV7725";
+        case OV9650_ID:          return "OV9650";
+        case MT9V0X2_ID_V_1:     return "MT9V0X2 (v1)";
+        case MT9V0X2_ID_V_2:     return "MT9V0X2 (v2)";
+        case MT9V0X2_ID:         return "MT9V0X2";
+        case MT9V0X2_C_ID:       return "MT9V0X2 Color";
+        case MT9V0X4_ID:         return "MT9V0X4";
+        case MT9V0X4_C_ID:       return "MT9V0X4 Color";
+        case MT9M114_ID:         return "MT9M114";
+        case BOSON_ID:           return "Boson";
+        case BOSON_320_ID:       return "Boson 320";
+        case BOSON_640_ID:       return "Boson 640";
+        case LEPTON_ID:          return "Lepton";
+        case LEPTON_1_5:         return "Lepton 1.5";
+        case LEPTON_1_6:         return "Lepton 1.6";
+        case LEPTON_2_0:         return "Lepton 2.0";
+        case LEPTON_2_5:         return "Lepton 2.5";
+        case LEPTON_3_0:         return "Lepton 3.0";
+        case LEPTON_3_5:         return "Lepton 3.5";
+        case HM01B0_ID:          return "HM01B0";
+        case HM0360_ID:          return "HM0360";
+        case GC2145_ID:          return "GC2145";
+        case GENX320_ID_ES:      return "GENX320 ES";
+        case GENX320_ID_MP:      return "GENX320 MP";
+        case PAG7920_ID:         return "PAG7920";
+        case PAG7936_ID:         return "PAG7936";
+        case PS5520_ID:          return "PS5520";
+        case PAJ6100_ID:         return "PAJ6100";
+        case FROGEYE2020_ID:     return "FROGEYE2020";
+        case SOFTCSI_ID:         return "SoftCSI";
+        default:                 return "Unknown";
+    }
+}
+
 const char *omv_csi_strerror(int error) {
     static const char *omv_csi_errors[] = {
         "No error.",
