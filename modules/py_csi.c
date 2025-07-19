@@ -211,7 +211,7 @@ static mp_obj_t py_omv_csi_get_fb() {
     image_t image;
     omv_csi_t *csi = omv_csi_get(-1);
 
-    if (framebuffer_get_depth(csi->fb) < 0) {
+    if (csi->fb->bpp < 0) {
         return mp_const_none;
     }
 
@@ -229,7 +229,8 @@ static MP_DEFINE_CONST_FUN_OBJ_0(py_omv_csi_get_id_obj, py_omv_csi_get_id);
 static mp_obj_t py_omv_csi_get_frame_available() {
     omv_csi_t *csi = omv_csi_get(-1);
     framebuffer_t *fb = csi->fb;
-    return mp_obj_new_bool(fb->tail != fb->head);
+
+    return mp_obj_new_bool(framebuffer_readable(fb));
 }
 static MP_DEFINE_CONST_FUN_OBJ_0(py_omv_csi_get_frame_available_obj, py_omv_csi_get_frame_available);
 
@@ -378,10 +379,10 @@ static mp_obj_t py_omv_csi_get_windowing() {
         omv_csi_raise_error(OMV_CSI_ERROR_INVALID_FRAMESIZE);
     }
 
-    return mp_obj_new_tuple(4, (mp_obj_t []) {mp_obj_new_int(framebuffer_get_x(csi->fb)),
-                                              mp_obj_new_int(framebuffer_get_y(csi->fb)),
-                                              mp_obj_new_int(framebuffer_get_u(csi->fb)),
-                                              mp_obj_new_int(framebuffer_get_v(csi->fb))});
+    return mp_obj_new_tuple(4, (mp_obj_t []) {mp_obj_new_int(csi->fb->x),
+                                              mp_obj_new_int(csi->fb->y),
+                                              mp_obj_new_int(csi->fb->u),
+                                              mp_obj_new_int(csi->fb->v)});
 }
 static MP_DEFINE_CONST_FUN_OBJ_0(py_omv_csi_get_windowing_obj, py_omv_csi_get_windowing);
 
@@ -704,7 +705,7 @@ static mp_obj_t py_omv_csi_set_framebuffers(mp_obj_t count) {
     omv_csi_t *csi = omv_csi_get(-1);
     mp_int_t c = mp_obj_get_int(count);
 
-    if (c == csi->fb->n_buffers) {
+    if (c == csi->fb->buf_count) {
         return mp_const_none;
     }
 
@@ -712,7 +713,7 @@ static mp_obj_t py_omv_csi_set_framebuffers(mp_obj_t count) {
         omv_csi_raise_error(OMV_CSI_ERROR_INVALID_ARGUMENT);
     }
 
-    int error = omv_csi_set_framebuffers(csi, c);
+    int error = omv_csi_set_framebuffers(csi, c, false);
     if (error != 0) {
         omv_csi_raise_error(error);
     }
@@ -723,7 +724,7 @@ static MP_DEFINE_CONST_FUN_OBJ_1(py_omv_csi_set_framebuffers_obj, py_omv_csi_set
 
 static mp_obj_t py_omv_csi_get_framebuffers() {
     omv_csi_t *csi = omv_csi_get(-1);
-    return mp_obj_new_int(csi->fb->n_buffers);
+    return mp_obj_new_int(csi->fb->buf_count);
 }
 static MP_DEFINE_CONST_FUN_OBJ_0(py_omv_csi_get_framebuffers_obj, py_omv_csi_get_framebuffers);
 

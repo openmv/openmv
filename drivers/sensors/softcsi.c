@@ -68,16 +68,6 @@ static int snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
         return 0;
     }
 
-    if (flags & OMV_CSI_CAPTURE_FLAGS_UPDATE) {
-        image_t tmp;
-        framebuffer_init_image(fb, &tmp);
-        framebuffer_update_jpeg_buffer(&tmp);
-    }
-
-    if (fb->n_buffers != 1) {
-        framebuffer_set_buffers(fb, 1);
-    }
-
     if (csi->pixformat == PIXFORMAT_INVALID) {
         return OMV_CSI_ERROR_INVALID_PIXFORMAT;
     }
@@ -90,8 +80,17 @@ static int snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
         return OMV_CSI_ERROR_FRAMEBUFFER_OVERFLOW;
     }
 
-    framebuffer_free_current_buffer(fb);
-    vbuffer_t *buffer = framebuffer_get_tail(fb, FB_NO_FLAGS);
+    if (flags & OMV_CSI_CAPTURE_FLAGS_UPDATE) {
+        image_t tmp;
+        framebuffer_init_image(fb, &tmp);
+        framebuffer_update_jpeg_buffer(&tmp);
+    }
+
+    // Release the last buffer from used queue -> free queue.
+    framebuffer_release(fb, FB_FLAG_USED);
+    
+    // Acquire a new free buffer.
+    vbuffer_t *buffer = framebuffer_acquire(fb, FB_FLAG_FREE | FB_FLAG_PEEK, 0);
 
     if (!buffer) {
         return OMV_CSI_ERROR_FRAMEBUFFER_ERROR;
@@ -107,9 +106,12 @@ static int snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
 
     fb->pixfmt = csi->pixformat;
     framebuffer_init_image(fb, image);
+    // Because the buffer is not released yet, it's not
+    // at the used queue's head, so pixels will be NULL.
+    image->pixels = buffer->data;
 
     static uint32_t step = 0;
-    uint32_t offset = (step / 4);
+    uint32_t offset = (step++ / 4);
 
     for (size_t y = 0; y < image->h; y++) {
         for (size_t x = 0; x < image->w; x++) {
@@ -147,7 +149,8 @@ static int snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
         }
     }
     
-    step++;
+    // Move the buffer from free queue -> used queue.
+    framebuffer_release(fb, FB_FLAG_FREE);
     return 0;
 }
 
