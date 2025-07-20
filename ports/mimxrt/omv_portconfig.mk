@@ -31,7 +31,7 @@ ROMFS_IMAGE := $(FW_DIR)/romfs.stamp
 ROMFS_CONFIG := $(OMV_BOARD_CONFIG_DIR)/romfs.json
 
 # Compiler Flags
-CFLAGS += -std=gnu99 \
+CFLAGS += -std=gnu11 \
           -Wall \
           -Werror \
           -Warray-bounds \
@@ -83,6 +83,7 @@ LDFLAGS = -mthumb \
           -Wl,-T$(BUILD)/$(LDSCRIPT).lds \
           -Wl,-Map=$(BUILD)/$(FIRMWARE).map
 
+OMV_CFLAGS += -I$(TOP_DIR)
 OMV_CFLAGS += -I$(TOP_DIR)/$(COMMON_DIR)
 OMV_CFLAGS += -I$(TOP_DIR)/modules
 OMV_CFLAGS += -I$(TOP_DIR)/ports/$(PORT)
