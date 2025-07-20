@@ -267,6 +267,13 @@ __weak int omv_csi_abort(omv_csi_t *csi, bool fifo_flush, bool in_irq) {
             framebuffer_flush_buffers(csi->fb, false);
         }
     }
+
+    #if defined(OMV_CSI_FSYNC_PIN)
+    if (csi->frame_sync) {
+        omv_gpio_write(OMV_CSI_FSYNC_PIN, 0);
+    }
+    #endif
+
     return 0;
 }
 
@@ -1526,11 +1533,61 @@ __weak int omv_csi_copy_line(omv_csi_t *csi, void *dma, uint8_t *src, uint8_t *d
 }
 
 __weak int omv_csi_snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
-    int ret = OMV_CSI_ERROR_CTL_UNSUPPORTED;
+    vbuffer_t *buffer = NULL;
+
+    if (!csi->snapshot) {
+        return OMV_CSI_ERROR_CTL_UNSUPPORTED;
+    }
+
+    if (csi->pixformat == PIXFORMAT_INVALID) {
+        return OMV_CSI_ERROR_INVALID_PIXFORMAT;
+    }
+
+    if (csi->framesize == OMV_CSI_FRAMESIZE_INVALID) {
+        return OMV_CSI_ERROR_INVALID_FRAMESIZE;
+    }
+
+    if (omv_csi_check_framebuffer_size(csi) == -1) {
+        return OMV_CSI_ERROR_FRAMEBUFFER_OVERFLOW;
+    }
+
+    buffer = framebuffer_acquire(csi->fb, FB_FLAG_USED | FB_FLAG_PEEK);
+
+    // Compress the previous framebuffer for the IDE preview and release it.
+    // Note: We must check if the buffer has been used before releasing it,
+    // as it might have been captured in non-blocking mode but not used yet.
+    if (buffer && (buffer->flags & VB_FLAG_USED)) {
+        if (flags & OMV_CSI_CAPTURE_FLAGS_UPDATE) {
+            image_t tmp;
+            framebuffer_init_image(csi->fb, &tmp);
+            framebuffer_update_jpeg_buffer(&tmp);
+        }
+
+        // Release the previous buffer from used queue -> free queue.
+        framebuffer_release(csi->fb, FB_FLAG_USED | FB_FLAG_INVALIDATE);
+    }
+
+    // Toggle FSYNC.
+    #if defined(OMV_CSI_FSYNC_PIN)
+    if (csi->frame_sync) {
+        omv_gpio_write(OMV_CSI_FSYNC_PIN, 1);
+    }
+    #endif
 
     // Call the sensor specific function.
-    if (csi->snapshot) {
-        ret = csi->snapshot(csi, image, flags);
+    int ret = csi->snapshot(csi, image, flags);
+
+    // Toggle FSYNC.
+    #if defined(OMV_CSI_FSYNC_PIN)
+    if (csi->frame_sync) {
+        omv_gpio_write(OMV_CSI_FSYNC_PIN, 0);
+    }
+    #endif
+
+    if (ret == 0) {
+        // Mark this buffer to be released on the next call.
+        buffer = framebuffer_acquire(csi->fb, FB_FLAG_USED | FB_FLAG_PEEK);
+        buffer->flags |= VB_FLAG_USED;
     }
 
     return ret;
