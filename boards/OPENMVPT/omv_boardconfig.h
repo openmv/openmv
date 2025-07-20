@@ -38,7 +38,6 @@
 #define OMV_FIR_MLX90640_ENABLE                 (1)
 #define OMV_FIR_MLX90641_ENABLE                 (1)
 #define OMV_FIR_AMG8833_ENABLE                  (1)
-#define OMV_FIR_LEPTON_ENABLE                   (1)
 
 // UMM heap block size
 #define OMV_UMM_BLOCK_SIZE                      256
@@ -345,26 +344,5 @@
 #define OMV_FT5X06_SCL_PIN                      (pin_J13)
 #define OMV_FT5X06_SDA_PIN                      (pin_J14)
 #define OMV_FT5X06_INT_PIN                      (&omv_pin_J6_GPIO)
-
-// FIR Lepton
-#define OMV_FIR_LEPTON_I2C_BUS                  (OMV_CSI_I2C_ID)
-#define OMV_FIR_LEPTON_I2C_BUS_SPEED            (OMV_CSI_I2C_SPEED)
-
-#define OMV_FIR_LEPTON_SPI_BUS                  (OMV_SPI3_ID)
-
-#define OMV_FIR_LEPTON_RESET_PIN                (&omv_pin_D5_GPIO)
-#define OMV_FIR_LEPTON_POWER_PIN                (&omv_pin_D4_GPIO)
-#define OMV_FIR_LEPTON_VSYNC_PIN                (&omv_pin_E3_GPIO)
-
-#define OMV_FIR_LEPTON_MCLK_PIN                 (&omv_pin_A3_TIM15)
-#define OMV_FIR_LEPTON_MCLK_FREQ                (24000000)
-
-#define OMV_FIR_LEPTON_MCLK_TIM                 (TIM15)
-#define OMV_FIR_LEPTON_MCLK_TIM_CHANNEL         (TIM_CHANNEL_2)
-#define OMV_FIR_LEPTON_MCLK_TIM_CLK_ENABLE()    __HAL_RCC_TIM15_CLK_ENABLE()
-#define OMV_FIR_LEPTON_MCLK_TIM_CLK_DISABLE()   __HAL_RCC_TIM15_CLK_DISABLE()
-#define OMV_FIR_LEPTON_MCLK_TIM_FORCE_RESET()   __HAL_RCC_TIM15_FORCE_RESET()
-#define OMV_FIR_LEPTON_MCLK_TIM_RELEASE_RESET() __HAL_RCC_TIM15_RELEASE_RESET()
-#define OMV_FIR_LEPTON_MCLK_TIM_PCLK_FREQ()     HAL_RCC_GetPCLK2Freq()
 
 #endif //__OMV_BOARDCONFIG_H__
