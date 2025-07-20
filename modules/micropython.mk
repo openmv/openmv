@@ -32,13 +32,14 @@ SRC_USERMOD_CXX += $(wildcard $(OMV_PORT_MOD_DIR)/*.cpp)
 
 # Extra module flags.
 CFLAGS_USERMOD += \
+        -std=gnu11 \
         -I$(OMV_MOD_DIR) \
         -I$(OMV_PORT_MOD_DIR) \
         -Wno-float-conversion
 
 CXXFLAGS_USERMOD += \
         $(CFLAGS_USERMOD) \
-        -std=c++11 \
+        -std=gnu++11 \
         -fno-rtti \
         -fno-exceptions \
         -fno-use-cxa-atexit \
@@ -47,7 +48,7 @@ CXXFLAGS_USERMOD += \
         -fpermissive \
         -fno-threadsafe-statics \
         -fmessage-length=0 \
-        $(filter-out -std=gnu99 -std=gnu11,$(CFLAGS))
+        $(filter-out -std=gnu11,$(CFLAGS))
 
 # Add CubeAI module if enabled.
 ifeq ($(MICROPY_PY_CUBEAI), 1)
