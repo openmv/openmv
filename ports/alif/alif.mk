@@ -42,7 +42,7 @@ ROMFS_PART := $(if $(filter M55_HP,$(MCU_CORE)),0,1)
 ROMFS_IMAGE := $(FW_DIR)/romfs$(ROMFS_PART).stamp
 
 # Compiler Flags
-CFLAGS += -std=gnu99 \
+CFLAGS += -std=gnu11 \
           -Wall \
           -Werror \
           -Warray-bounds \
@@ -126,6 +126,7 @@ MPY_MKARGS += MICROPY_VFS_LFS2=0
 MPY_MKARGS += MICROPY_FLOAT_IMPL=float
 MPY_MKARGS += ALIF_DFP_REL_HERE=$(TOP_DIR)/$(HAL_DIR)
 MPY_MKARGS += CMSIS_DIR=$(TOP_DIR)/$(HAL_DIR)/cmsis/inc
+MPY_MKARGS += CFLAGS_EXTRA="-std=gnu11"
 MPY_MKARGS += MICROPY_PY_CSI=$(MICROPY_PY_CSI)
 MPY_MKARGS += MICROPY_PY_CSI_NG=$(MICROPY_PY_CSI_NG)
 MPY_MKARGS += MICROPY_PY_LWIP=$(MICROPY_PY_LWIP)
