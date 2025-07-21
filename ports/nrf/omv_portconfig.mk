@@ -72,6 +72,7 @@ LDFLAGS = -mcpu=$(CPU) \
           -Wl,-Map=$(BUILD)/$(FIRMWARE).map \
           -Wl,-T$(BUILD)/$(LDSCRIPT).lds
 
+OMV_CFLAGS += -I$(TOP_DIR)
 OMV_CFLAGS += -I$(TOP_DIR)/$(COMMON_DIR)
 OMV_CFLAGS += -I$(TOP_DIR)/modules
 OMV_CFLAGS += -I$(TOP_DIR)/ports/$(PORT)
