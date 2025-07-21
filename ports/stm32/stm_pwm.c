@@ -82,7 +82,7 @@ int stm_pwm_start(TIM_HandleTypeDef *tim, TIM_TypeDef *inst, uint32_t channel, u
 
         if (HAL_TIM_PWM_Init(tim) != HAL_OK ||
             HAL_TIM_PWM_ConfigChannel(tim, &TIMOCHandle, channel) != HAL_OK ||
-            HAL_TIM_PWM_Start(tim, channel != HAL_OK)) {
+            HAL_TIM_PWM_Start(tim, channel) != HAL_OK) {
             return -1;
         }
     }
