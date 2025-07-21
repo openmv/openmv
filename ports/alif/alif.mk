@@ -92,10 +92,11 @@ CLANG_FLAGS = -fshort-enums \
               -DALIF_CMSIS_H=$(CMSIS_MCU_H) \
               $(filter-out -march% -fdisable-rtl%,$(CFLAGS))
 
-OMV_CFLAGS += -I$(TOP_DIR)/$(OMV_DIR)/$(COMMON_DIR)
-OMV_CFLAGS += -I$(TOP_DIR)/$(OMV_DIR)/modules/
-OMV_CFLAGS += -I$(TOP_DIR)/$(OMV_DIR)/ports/$(PORT)/
-OMV_CFLAGS += -I$(TOP_DIR)/$(OMV_DIR)/ports/$(PORT)/modules/
+OMV_CFLAGS += -I$(TOP_DIR)
+OMV_CFLAGS += -I$(TOP_DIR)/$(COMMON_DIR)
+OMV_CFLAGS += -I$(TOP_DIR)/modules/
+OMV_CFLAGS += -I$(TOP_DIR)/ports/$(PORT)/
+OMV_CFLAGS += -I$(TOP_DIR)/ports/$(PORT)/modules/
 OMV_CFLAGS += -I$(OMV_BOARD_CONFIG_DIR)
 
 MPY_CFLAGS += -I$(MP_BOARD_CONFIG_DIR)

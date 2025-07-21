@@ -106,13 +106,14 @@ void CAM_IRQHandler(void) {
     if (status & CAM_INTR_STOP) {
         mask |= CAM_INTR_STOP;
         cpi->CAM_CTRL = 0;
+
         if (!(status & CPI_ERROR_FLAGS)) {
-            // Release the current framebuffer.
-            framebuffer_get_tail(csi->fb, FB_NO_FLAGS);
+            // Release the buffer from free queue -> used queue.
+            framebuffer_release(csi->fb, FB_FLAG_FREE | FB_FLAG_CHECK_LAST);
         }
 
-        // Get the current framebuffer (or new tail).
-        vbuffer_t *buffer = framebuffer_get_tail(csi->fb, FB_PEEK);
+        // Acquire a buffer from the free queue.
+        vbuffer_t *buffer = framebuffer_acquire(csi->fb, FB_FLAG_FREE | FB_FLAG_PEEK);
 
         if (buffer != NULL) {
             cpi->CAM_CTRL = 0;
@@ -129,6 +130,12 @@ void CAM_IRQHandler(void) {
 
     // Clear interrupts.
     cpi_irq_handler_clear_intr_status(cpi, mask);
+}
+
+static bool alif_csi_is_active(omv_csi_t *csi) {
+    CPI_Type *cpi = csi->base;
+
+    return (cpi->CAM_CTRL & CAM_CTRL_BUSY);
 }
 
 int alif_csi_config(omv_csi_t *csi, omv_csi_config_t config) {
@@ -224,51 +231,30 @@ int alif_csi_snapshot(omv_csi_t *csi, image_t *dst_image, uint32_t flags) {
     CPI_Type *cpi = csi->base;
     framebuffer_t *fb = csi->fb;
 
+    vbuffer_t *buffer = NULL;
     static uint32_t frames = 0;
     static uint32_t r_stat, gb_stat, gr_stat, b_stat;
 
-    if (csi->pixformat == PIXFORMAT_INVALID) {
-        return OMV_CSI_ERROR_INVALID_PIXFORMAT;
-    }
-
-    if (csi->framesize == OMV_CSI_FRAMESIZE_INVALID) {
-        return OMV_CSI_ERROR_INVALID_FRAMESIZE;
-    }
-
-    if (omv_csi_check_framebuffer_size(csi) != 0) {
-        return OMV_CSI_ERROR_FRAMEBUFFER_OVERFLOW;
-    }
-
-    // Compress the framebuffer for the IDE preview.
-    if (flags & OMV_CSI_CAPTURE_FLAGS_UPDATE) {
-        image_t tmp;
-        framebuffer_init_image(fb, &tmp);
-        framebuffer_update_jpeg_buffer(&tmp);
-    }
-
-    // Free the current FB head.
-    framebuffer_free_current_buffer(fb);
-
-    // Reconfigure and restart the CSI transfer if it's not running.
-    if (!(cpi->CAM_CTRL & CAM_CTRL_BUSY)) {
-        framebuffer_setup_buffers(fb);
+    // Configure and re/start the capture if it's not alrady active
+    // and there are no pending buffers (from non-blocking capture).
+    if (!alif_csi_is_active(csi) && !framebuffer_readable(fb)) {
         uint32_t bytes_per_pixel = omv_csi_get_src_bpp(csi);
         uint32_t line_size_bytes = resolution[csi->framesize][0] * bytes_per_pixel;
 
-        // Error out if the transfer size is not compatible with DMA transfer restrictions.
+        // Acquire a buffer from the free queue.
+        buffer = framebuffer_acquire(fb, FB_FLAG_FREE | FB_FLAG_PEEK);
+
+        // Check if buffer is not ready or is not 64-bit aligned.
+        if ((!buffer) || (LocalToGlobal(buffer->data) & 0x7)) {
+            return OMV_CSI_ERROR_FRAMEBUFFER_ERROR;
+        }
+
+        // Ensure that the transfer size is compatible with DMA restrictions.
         if ((!line_size_bytes) ||
             (line_size_bytes % sizeof(uint64_t)) ||
             csi->transpose ||
             (csi->pixformat == PIXFORMAT_JPEG)) {
             return OMV_CSI_ERROR_INVALID_FRAMESIZE;
-        }
-
-        // Get the destination buffer address.
-        vbuffer_t *buffer = framebuffer_get_tail(fb, FB_PEEK);
-
-        // Check if buffer is not ready or is not 64-bit aligned.
-        if ((!buffer) || (LocalToGlobal(buffer->data) & 0x7)) {
-            return OMV_CSI_ERROR_FRAMEBUFFER_ERROR;
         }
 
         if (!csi->raw_output &&
@@ -315,43 +301,30 @@ int alif_csi_snapshot(omv_csi_t *csi, image_t *dst_image, uint32_t flags) {
     }
     #endif
 
-    vbuffer_t *buffer = framebuffer_get_head(fb, FB_INVALIDATE);
-    // Wait for the DMA to finish the transfer.
-    for (mp_uint_t ticks = mp_hal_ticks_ms(); buffer == NULL;) {
-        mp_event_handle_nowait();
+    // One shot DMA transfers must be invalidated.
+    framebuffer_flags_t fb_flags = FB_FLAG_USED | FB_FLAG_PEEK | FB_FLAG_INVALIDATE;
 
-        if ((mp_hal_ticks_ms() - ticks) > 3000) {
-            omv_csi_abort(csi, true, false);
-
-            #if defined(OMV_CSI_FSYNC_PIN)
-            if (csi->frame_sync) {
-                omv_gpio_write(OMV_CSI_FSYNC_PIN, 0);
-            }
-            #endif
-
-            return OMV_CSI_ERROR_CAPTURE_TIMEOUT;
+    // Wait for a frame to be ready.
+    for (mp_uint_t start = mp_hal_ticks_ms(); ; mp_event_handle_nowait()) {
+        if ((buffer = framebuffer_acquire(fb, fb_flags))) {
+            break;
         }
 
-        buffer = framebuffer_get_head(fb, FB_INVALIDATE);
+        if (flags & OMV_CSI_CAPTURE_FLAGS_NBLOCK) {
+            return OMV_CSI_ERROR_WOULD_BLOCK;
+        }
+
+        if ((mp_hal_ticks_ms() - start) > OMV_CSI_TIMEOUT_MS) {
+            omv_csi_abort(csi, true, false);
+            return OMV_CSI_ERROR_CAPTURE_TIMEOUT;
+        }
     }
 
-    // We're done receiving data.
-    #if defined(OMV_CSI_FSYNC_PIN)
-    if (csi->frame_sync) {
-        omv_gpio_write(OMV_CSI_FSYNC_PIN, 0);
-    }
-    #endif
+    // Set the framebuffer width/height.
+    fb->w = csi->transpose ? fb->v : fb->u;
+    fb->h = csi->transpose ? fb->u : fb->v;
 
-    // Restore the frame buffer width and height.
-    if (!csi->transpose) {
-        fb->w = fb->u;
-        fb->h = fb->v;
-    } else {
-        fb->w = fb->v;
-        fb->h = fb->u;
-    }
-
-    // Reset the frame buffer's pixel format.
+    // Set the framebuffer pixel format.
     switch (csi->pixformat) {
         case PIXFORMAT_GRAYSCALE:
             fb->pixfmt = PIXFORMAT_GRAYSCALE;
