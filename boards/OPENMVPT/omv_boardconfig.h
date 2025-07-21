@@ -33,6 +33,8 @@
 #define OMV_OV5640_PLL_CTRL2                    (0x64)
 #define OMV_OV5640_PLL_CTRL3                    (0x13)
 
+#define OMV_LEPTON_ENABLE                       (1)
+
 // FIR drivers configuration.
 #define OMV_FIR_MLX90621_ENABLE                 (1)
 #define OMV_FIR_MLX90640_ENABLE                 (1)
@@ -185,6 +187,9 @@
 #define OMV_SOFT_I2C_SIOD_PIN                   (&omv_pin_B11_GPIO)
 #define OMV_SOFT_I2C_SPIN_DELAY                 64
 
+// CSI SPI bus
+#define OMV_CSI_SPI_ID                          (3)
+
 // WINC1500 WiFi module SPI bus
 #define OMV_WINC_SPI_ID                         (5)
 #define OMV_WINC_SPI_BAUDRATE                   (50000000)
@@ -208,6 +213,7 @@
 #define OMV_CSI_DMA_REQUEST                     (DMA_REQUEST_DCMI)
 #define OMV_CSI_DMA_MEMCPY_ENABLE               (1)
 #define OMV_CSI_HW_CROP_ENABLE                  (1)
+#define OMV_CSI_MAX_DEVICES                     (2)
 
 #define OMV_CSI_D0_PIN                          (&omv_pin_C6_DCMI)
 #define OMV_CSI_D1_PIN                          (&omv_pin_C7_DCMI)
@@ -223,6 +229,8 @@
 #define OMV_CSI_PXCLK_PIN                       (&omv_pin_A6_DCMI)
 #define OMV_CSI_RESET_PIN                       (&omv_pin_A10_GPIO)
 #define OMV_CSI_POWER_PIN                       (&omv_pin_D7_GPIO)
+
+#define OMV_CSI_POLARITY_CONFIG                 { OMV_CSI_ACTIVE_HIGH, OMV_CSI_ACTIVE_LOW }
 
 // Physical I2C buses.
 
