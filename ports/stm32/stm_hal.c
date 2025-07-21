@@ -409,12 +409,6 @@ void HAL_TIM_PWM_MspInit(TIM_HandleTypeDef *htim) {
         #endif
     }
     #endif // (OMV_CSI_TIM)
-
-    #if defined(OMV_BUZZER_TIM)
-    if (htim->Instance == OMV_BUZZER_TIM) {
-        OMV_BUZZER_TIM_CLK_ENABLE();
-    }
-    #endif
 }
 
 void HAL_TIM_PWM_MspDeInit(TIM_HandleTypeDef *htim) {
@@ -430,14 +424,6 @@ void HAL_TIM_PWM_MspDeInit(TIM_HandleTypeDef *htim) {
         #endif
     }
     #endif // (OMV_CSI_TIM)
-
-    #if defined(OMV_BUZZER_TIM)
-    if (htim->Instance == OMV_BUZZER_TIM) {
-        OMV_BUZZER_TIM_FORCE_RESET();
-        OMV_BUZZER_TIM_RELEASE_RESET();
-        OMV_BUZZER_TIM_CLK_DISABLE();
-    }
-    #endif
 }
 
 void HAL_DCMI_MspInit(DCMI_HandleTypeDef *hdcmi) {

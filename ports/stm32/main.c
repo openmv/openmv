@@ -92,7 +92,6 @@
 #include "py_image.h"
 #include "py_fir.h"
 #include "py_tv.h"
-#include "py_buzzer.h"
 #include "py_imu.h"
 #include "py_audio.h"
 
@@ -210,9 +209,6 @@ soft_reset:
     #if MICROPY_PY_TV
     py_tv_init0();
     #endif
-    #if MICROPY_PY_BUZZER
-    py_buzzer_init0();
-    #endif // MICROPY_PY_BUZZER
     imlib_init_all();
     readline_init0();
     pin_init0();

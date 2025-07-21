@@ -101,9 +101,6 @@ soft_reset:
     #if MICROPY_PY_TV
     py_tv_init0();
     #endif
-    #if MICROPY_PY_BUZZER
-    py_buzzer_init0();
-    #endif // MICROPY_PY_BUZZER
     imlib_init_all();
     readline_init0();
     fb_alloc_init0();

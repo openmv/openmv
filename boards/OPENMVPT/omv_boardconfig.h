@@ -367,16 +367,4 @@
 #define OMV_FIR_LEPTON_MCLK_TIM_RELEASE_RESET() __HAL_RCC_TIM15_RELEASE_RESET()
 #define OMV_FIR_LEPTON_MCLK_TIM_PCLK_FREQ()     HAL_RCC_GetPCLK2Freq()
 
-// Buzzer
-#define OMV_BUZZER_PIN                          (&omv_pin_A1_TIM2)
-#define OMV_BUZZER_FREQ                         (4000)
-
-#define OMV_BUZZER_TIM                          (TIM2)
-#define OMV_BUZZER_TIM_CHANNEL                  (TIM_CHANNEL_2)
-#define OMV_BUZZER_TIM_CLK_ENABLE()             __HAL_RCC_TIM2_CLK_ENABLE()
-#define OMV_BUZZER_TIM_CLK_DISABLE()            __HAL_RCC_TIM2_CLK_DISABLE()
-#define OMV_BUZZER_TIM_FORCE_RESET()            __HAL_RCC_TIM2_FORCE_RESET()
-#define OMV_BUZZER_TIM_RELEASE_RESET()          __HAL_RCC_TIM2_RELEASE_RESET()
-#define OMV_BUZZER_TIM_PCLK_FREQ()              HAL_RCC_GetPCLK1Freq()
-
 #endif //__OMV_BOARDCONFIG_H__
