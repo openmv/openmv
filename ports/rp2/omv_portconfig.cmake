@@ -122,6 +122,7 @@ target_sources(${MICROPY_TARGET} PRIVATE
     ${TOP_DIR}/common/umm_malloc.c
     ${TOP_DIR}/common/dma_alloc.c
     ${TOP_DIR}/common/unaligned_memcpy.c
+    ${TOP_DIR}/common/queue.c
 
     ${TOP_DIR}/drivers/sensors/ov2640.c
     ${TOP_DIR}/drivers/sensors/ov5640.c

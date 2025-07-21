@@ -28,7 +28,7 @@ export CXX=
 
 # Note this overrides USER_C_MODULES.
 MPY_MKARGS += BOARD=$(TARGET) BUILD=$(BUILD)/rp2 USER_C_MODULES="" \
-              OMV_CMAKE=$(TOP_DIR)/$(OMV_DIR)/ports/$(PORT)/omv_portconfig.cmake
+              OMV_CMAKE=$(TOP_DIR)/ports/$(PORT)/omv_portconfig.cmake
 
 ###################################################
 all: $(OPENMV)

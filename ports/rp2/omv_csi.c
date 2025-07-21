@@ -51,8 +51,10 @@ static void dma_irq_handler() {
         // Clear the interrupt request.
         dma_irqn_acknowledge_channel(OMV_CSI_DMA, OMV_CSI_DMA_CHANNEL);
 
-        framebuffer_get_tail(fb, FB_NO_FLAGS);
-        vbuffer_t *buffer = framebuffer_get_tail(fb, FB_PEEK);
+        // Release the current buffer and acquire a new one.
+        framebuffer_release(fb, FB_FLAG_FREE | FB_FLAG_CHECK_LAST);
+        vbuffer_t *buffer = framebuffer_acquire(fb, FB_FLAG_FREE | FB_FLAG_PEEK);
+
         if (buffer != NULL) {
             // Set next buffer and retrigger the DMA channel.
             dma_channel_set_write_addr(OMV_CSI_DMA_CHANNEL, buffer->data, true);
@@ -64,6 +66,10 @@ static void dma_irq_handler() {
             pio_sm_put_blocking(OMV_CSI_PIO, OMV_CSI_SM, (fb->u * fb->bpp) - 1);
         }
     }
+}
+
+static bool rp2_csi_is_active(omv_csi_t *csi) {
+    return dma_channel_is_busy(OMV_CSI_DMA_CHANNEL);
 }
 
 static int rp2_csi_config(omv_csi_t *csi, omv_csi_config_t config) {
@@ -153,37 +159,14 @@ int omv_csi_set_windowing(omv_csi_t *csi, int x, int y, int w, int h) {
 }
 
 static int rp2_csi_snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
+    vbuffer_t *buffer = NULL;
     framebuffer_t *fb = csi->fb;
-
-    // Compress the framebuffer for the IDE preview.
-    if (flags & OMV_CSI_CAPTURE_FLAGS_UPDATE) {
-        image_t tmp;
-        framebuffer_init_image(fb, &tmp);
-        framebuffer_update_jpeg_buffer(&tmp);
-    }
-
-    if (omv_csi_check_framebuffer_size(csi) != 0) {
-        return OMV_CSI_ERROR_FRAMEBUFFER_OVERFLOW;
-    }
-
-    // Free the current FB head.
-    framebuffer_free_current_buffer(fb);
-
-    // Set framebuffer pixel format.
-    if (csi->pixformat == PIXFORMAT_INVALID) {
-        return OMV_CSI_ERROR_INVALID_PIXFORMAT;
-    }
-    fb->pixfmt = csi->pixformat;
-
-    vbuffer_t *buffer = framebuffer_get_head(fb, FB_NO_FLAGS);
 
     // If there's no ready buffer in the fifo, and the DMA is Not currently
     // transferring a new buffer, reconfigure and restart the DMA transfer.
-    if (buffer == NULL && !dma_channel_is_busy(OMV_CSI_DMA_CHANNEL)) {
-        framebuffer_setup_buffers(fb);
-
-        buffer = framebuffer_get_tail(fb, FB_PEEK);
-        if (buffer == NULL) {
+    if (!rp2_csi_is_active(csi) && !framebuffer_readable(fb)) {
+        // Acquire a buffer from the free queue.
+        if (!(buffer = framebuffer_acquire(fb, FB_FLAG_FREE | FB_FLAG_PEEK))) {
             return OMV_CSI_ERROR_FRAMEBUFFER_ERROR;
         }
 
@@ -216,17 +199,30 @@ static int rp2_csi_snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
         pio_sm_put_blocking(OMV_CSI_PIO, OMV_CSI_SM, (fb->u * fb->bpp) - 1);
     }
 
-    // Wait for the DMA to finish the transfer.
-    for (mp_uint_t ticks = mp_hal_ticks_ms(); buffer == NULL;) {
-        buffer = framebuffer_get_head(fb, FB_NO_FLAGS);
-        if ((mp_hal_ticks_ms() - ticks) > 3000) {
+    // One shot DMA transfers must be invalidated.
+    framebuffer_flags_t fb_flags = FB_FLAG_USED | FB_FLAG_PEEK | FB_FLAG_INVALIDATE;
+
+    // Wait for a frame to be ready.
+    for (mp_uint_t start = mp_hal_ticks_ms(); ; mp_event_handle_nowait()) {
+        if ((buffer = framebuffer_acquire(fb, fb_flags))) {
+            break;
+        }
+
+        if (flags & OMV_CSI_CAPTURE_FLAGS_NBLOCK) {
+            return OMV_CSI_ERROR_WOULD_BLOCK;
+        }
+
+        if ((mp_hal_ticks_ms() - start) > OMV_CSI_TIMEOUT_MS) {
             omv_csi_abort(csi, true, false);
             return OMV_CSI_ERROR_CAPTURE_TIMEOUT;
         }
     }
 
+    // Set the framebuffer width/height.
     fb->w = fb->u;
     fb->h = fb->v;
+    // Set the framebuffer pixel format.
+    fb->pixfmt = csi->pixformat;
 
     // Set the user image.
     framebuffer_init_image(fb, image);
