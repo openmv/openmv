@@ -165,6 +165,8 @@
 #define OMV_CSI_RESET_PIN                     (&omv_pin_A10_GPIO)
 #define OMV_CSI_POWER_PIN                     (&omv_pin_B5_GPIO)
 
+#define OMV_CSI_POLARITY_CONFIG               { OMV_CSI_ACTIVE_HIGH, OMV_CSI_ACTIVE_LOW }
+
 // Physical I2C buses.
 
 // I2C bus 1
