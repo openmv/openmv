@@ -66,6 +66,8 @@ The above code works for Windows, Mac, or Linux. You just need to change the abo
 
 The easiest way to patch the firmware and rebuild it, is to fork this repository, enable Actions (from the Actions tab) in the forked repository, and pushing the changes. Our GitHub workflow rebuilds the firmware on pushes to the master branch and/or merging pull requests and generates a development release with attached separate firmware packages per supported board. For more complex changes, and building the OpenMV firmware from source locally, see [Building the Firmware From Source](https://github.com/openmv/openmv/blob/master/docs/firmware.md).
 
+For more information about customizing your OpenMV Cam's configuration see [Board Configuration](docs/boards.md).
+
 ## Contributing to the project
 
 Contributions are most welcome. If you are interested in contributing to the project, start by creating a fork of each of the following repositories:
