@@ -464,10 +464,14 @@ int omv_csi_probe(omv_i2c_t *i2c) {
     // Active power-down state, active reset state
     // This order is required for all sensors to work correctly.
     const omv_csi_polarity_t polarity_configs[][2] = {
+        #if defined(OMV_CSI_POLARITY_CONFIG)
+        OMV_CSI_POLARITY_CONFIG
+        #else
         { OMV_CSI_ACTIVE_HIGH, OMV_CSI_ACTIVE_HIGH },
         { OMV_CSI_ACTIVE_HIGH, OMV_CSI_ACTIVE_LOW },
         { OMV_CSI_ACTIVE_LOW,  OMV_CSI_ACTIVE_HIGH },
         { OMV_CSI_ACTIVE_LOW,  OMV_CSI_ACTIVE_LOW },
+        #endif // OMV_CSI_POLARITY_CONFIG
     };
     
     // Scan the bus multiple times using different reset and power polarities,
