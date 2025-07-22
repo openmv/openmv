@@ -30,8 +30,7 @@
 #if OMV_FIR_MLX90621_ENABLE || \
     OMV_FIR_MLX90640_ENABLE || \
     OMV_FIR_MLX90641_ENABLE || \
-    OMV_FIR_AMG8833_ENABLE ||  \
-    OMV_FIR_LEPTON_ENABLE
+    OMV_FIR_AMG8833_ENABLE
 #include "omv_i2c.h"
 #if (OMV_FIR_MLX90621_ENABLE == 1)
 #include "MLX90621_API.h"
@@ -50,10 +49,6 @@
 #include "py_assert.h"
 #include "py_helper.h"
 #include "py_image.h"
-
-#if (OMV_FIR_LEPTON_ENABLE == 1)
-#include "py_fir_lepton.h"
-#endif
 
 #define MLX90621_ADDR                   0x50
 #define MLX90621_WIDTH                  16
@@ -107,9 +102,6 @@ typedef enum fir_sensor_type {
     #endif
     #if (OMV_FIR_AMG8833_ENABLE == 1)
     FIR_AMG8833,
-    #endif
-    #if (OMV_FIR_LEPTON_ENABLE == 1)
-    FIR_LEPTON
     #endif
 } fir_sensor_type_t;
 
@@ -308,12 +300,6 @@ static mp_obj_t fir_get_ir(int w, int h, float Ta, float *To, bool mirror,
 }
 
 static mp_obj_t py_fir_deinit() {
-    #if (OMV_FIR_LEPTON_ENABLE == 1)
-    if (fir_sensor == FIR_LEPTON) {
-        fir_lepton_deinit();
-    }
-    #endif
-
     if (fir_sensor != FIR_NONE) {
         omv_i2c_deinit(&fir_bus);
         fir_sensor = FIR_NONE;
@@ -379,12 +365,6 @@ mp_obj_t py_fir_init(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_args)
                 #if (OMV_FIR_AMG8833_ENABLE == 1)
                 case AMG8833_ADDR: {
                     type = FIR_AMG8833;
-                    break;
-                }
-                #endif
-                #if (OMV_FIR_LEPTON_ENABLE == 1)
-                case LEPTON_ADDR: {
-                    type = FIR_LEPTON;
                     break;
                 }
                 #endif
@@ -571,28 +551,6 @@ mp_obj_t py_fir_init(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_args)
             return mp_const_none;
         }
         #endif
-        #if (OMV_FIR_LEPTON_ENABLE == 1)
-        case FIR_LEPTON: {
-            fir_sensor = FIR_LEPTON;
-            FIR_LEPTON_RETRY:
-            omv_i2c_init(&fir_bus, OMV_FIR_LEPTON_I2C_BUS, OMV_FIR_LEPTON_I2C_BUS_SPEED);
-
-            int error = fir_lepton_init(&fir_bus, &fir_width, &fir_height, &fir_ir_fresh_rate, &fir_adc_resolution);
-
-            if (error != 0) {
-                if (first_init) {
-                    first_init = false;
-                    omv_i2c_pulse_scl(&fir_bus);
-                    goto FIR_LEPTON_RETRY;
-                } else {
-                    py_fir_deinit();
-                    mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Failed to init the Lepton!"));
-                }
-            }
-
-            return mp_const_none;
-        }
-        #endif
         default: {
             mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Failed to detect a supported FIR sensor."));
         }
@@ -650,10 +608,6 @@ static mp_obj_t py_fir_refresh() {
         case FIR_AMG8833:
             return mp_obj_new_int(fir_ir_fresh_rate);
         #endif
-        #if (OMV_FIR_LEPTON_ENABLE == 1)
-        case FIR_LEPTON:
-            return mp_obj_new_int(fir_ir_fresh_rate);
-        #endif
         default:
             mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("FIR sensor is not initialized"));
     }
@@ -678,76 +632,11 @@ static mp_obj_t py_fir_resolution() {
         case FIR_AMG8833:
             return mp_obj_new_int(fir_adc_resolution);
         #endif
-        #if (OMV_FIR_LEPTON_ENABLE == 1)
-        case FIR_LEPTON:
-            return mp_obj_new_int(fir_adc_resolution);
-        #endif
         default:
             mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("FIR sensor is not initialized"));
     }
 }
 static MP_DEFINE_CONST_FUN_OBJ_0(py_fir_resolution_obj, py_fir_resolution);
-
-#if (OMV_FIR_LEPTON_ENABLE == 1)
-static mp_obj_t py_fir_radiometric() {
-    if (fir_sensor == FIR_LEPTON) {
-        return fir_lepton_get_radiometry();
-    } else {
-        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Operation not supported by this FIR sensor"));
-    }
-}
-static MP_DEFINE_CONST_FUN_OBJ_0(py_fir_radiometric_obj, py_fir_radiometric);
-
-#if defined(OMV_FIR_LEPTON_VSYNC_PRESENT)
-static mp_obj_t py_fir_register_vsync_cb(mp_obj_t cb) {
-    if (fir_sensor == FIR_LEPTON) {
-        fir_lepton_register_vsync_cb(cb);
-    } else {
-        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Operation not supported by this FIR sensor"));
-    }
-    return mp_const_none;
-}
-static MP_DEFINE_CONST_FUN_OBJ_1(py_fir_register_vsync_cb_obj, py_fir_register_vsync_cb);
-#endif
-
-static mp_obj_t py_fir_register_frame_cb(mp_obj_t cb) {
-    if (fir_sensor == FIR_LEPTON) {
-        fir_lepton_register_frame_cb(cb);
-    } else {
-        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Operation not supported by this FIR sensor"));
-    }
-    return mp_const_none;
-}
-static MP_DEFINE_CONST_FUN_OBJ_1(py_fir_register_frame_cb_obj, py_fir_register_frame_cb);
-
-static mp_obj_t py_fir_get_frame_available() {
-    if (fir_sensor == FIR_LEPTON) {
-        return fir_lepton_get_frame_available();
-    } else {
-        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Operation not supported by this FIR sensor"));
-    }
-}
-static MP_DEFINE_CONST_FUN_OBJ_0(py_fir_get_frame_available_obj, py_fir_get_frame_available);
-
-static mp_obj_t py_fir_trigger_ffc(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
-    enum { ARG_timeout };
-    static const mp_arg_t allowed_args[] = {
-        { MP_QSTR_timeout, MP_ARG_INT, {.u_int = -1 } },
-    };
-
-    // Parse args.
-    mp_arg_val_t args[MP_ARRAY_SIZE(allowed_args)];
-    mp_arg_parse_all(n_args, pos_args, kw_args, MP_ARRAY_SIZE(allowed_args), allowed_args, args);
-
-    if (fir_sensor == FIR_LEPTON) {
-        fir_lepton_trigger_ffc(args[ARG_timeout].u_int);
-    } else {
-        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Operation not supported by this FIR sensor"));
-    }
-    return mp_const_none;
-}
-static MP_DEFINE_CONST_FUN_OBJ_KW(py_fir_trigger_ffc_obj, 0, py_fir_trigger_ffc);
-#endif
 
 mp_obj_t py_fir_read_ta() {
     switch (fir_sensor) {
@@ -796,11 +685,6 @@ mp_obj_t py_fir_read_ta() {
             error |= omv_i2c_read_bytes(&fir_bus, AMG8833_ADDR, (uint8_t *) &temp, sizeof(temp), OMV_I2C_XFER_NO_FLAGS);
             PY_ASSERT_TRUE_MSG((error == 0), "Failed to read the AMG8833 sensor data!");
             return mp_obj_new_float(AMG8833_12_TO_16(temp) * 0.0625f);
-        }
-        #endif
-        #if (OMV_FIR_LEPTON_ENABLE == 1)
-        case FIR_LEPTON: {
-            return fir_lepton_read_ta();
         }
         #endif
         default: {
@@ -870,12 +754,6 @@ mp_obj_t py_fir_read_ir(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_ar
                                          args[ARG_vflip].u_bool, args[ARG_transpose].u_bool, true);
             fb_alloc_free_till_mark();
             return result;
-        }
-        #endif
-        #if (OMV_FIR_LEPTON_ENABLE == 1)
-        case FIR_LEPTON: {
-            return fir_lepton_read_ir(fir_width, fir_height, args[ARG_hmirror].u_bool,
-                                      args[ARG_vflip].u_bool, args[ARG_transpose].u_bool, args[ARG_timeout].u_int);
         }
         #endif
         default: {
@@ -1086,16 +964,6 @@ mp_obj_t py_fir_snapshot(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_a
             break;
         }
         #endif
-        #if (OMV_FIR_LEPTON_ENABLE == 1)
-        case FIR_LEPTON: {
-            bool auto_range = args[ARG_scale].u_obj == mp_const_none;
-            imlib_fill_image_from_lepton(&src_img, fir_width, fir_height,
-                                         fir_lepton_get_frame(args[ARG_timeout].u_int), min, max, auto_range,
-                                         fir_lepton_get_radiometry_enabled(), fir_lepton_get_temperature(),
-                                         args[ARG_hmirror].u_bool, args[ARG_vflip].u_bool, args[ARG_transpose].u_bool);
-            break;
-        }
-        #endif
         default: {
             mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("FIR sensor is not initialized"));
         }
@@ -1129,9 +997,6 @@ static const mp_rom_map_elem_t globals_dict_table[] = {
     #if (OMV_FIR_AMG8833_ENABLE == 1)
     { MP_ROM_QSTR(MP_QSTR_FIR_AMG8833),         MP_ROM_INT(FIR_AMG8833)                     },
     #endif
-    #if (OMV_FIR_LEPTON_ENABLE == 1)
-    { MP_ROM_QSTR(MP_QSTR_FIR_LEPTON),          MP_ROM_INT(FIR_LEPTON)                      },
-    #endif
     { MP_ROM_QSTR(MP_QSTR_init),                MP_ROM_PTR(&py_fir_init_obj)                },
     { MP_ROM_QSTR(MP_QSTR_deinit),              MP_ROM_PTR(&py_fir_deinit_obj)              },
     { MP_ROM_QSTR(MP_QSTR_type),                MP_ROM_PTR(&py_fir_type_obj)                },
@@ -1139,23 +1004,6 @@ static const mp_rom_map_elem_t globals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_height),              MP_ROM_PTR(&py_fir_height_obj)              },
     { MP_ROM_QSTR(MP_QSTR_refresh),             MP_ROM_PTR(&py_fir_refresh_obj)             },
     { MP_ROM_QSTR(MP_QSTR_resolution),          MP_ROM_PTR(&py_fir_resolution_obj)          },
-    #if (OMV_FIR_LEPTON_ENABLE == 1)
-    { MP_ROM_QSTR(MP_QSTR_radiometric),         MP_ROM_PTR(&py_fir_radiometric_obj)         },
-    #if defined(OMV_FIR_LEPTON_VSYNC_PRESENT)
-    { MP_ROM_QSTR(MP_QSTR_register_vsync_cb),   MP_ROM_PTR(&py_fir_register_vsync_cb_obj)   },
-    #else
-    { MP_ROM_QSTR(MP_QSTR_register_vsync_cb),   MP_ROM_PTR(&py_func_unavailable_obj)        },
-    #endif
-    { MP_ROM_QSTR(MP_QSTR_register_frame_cb),   MP_ROM_PTR(&py_fir_register_frame_cb_obj)   },
-    { MP_ROM_QSTR(MP_QSTR_get_frame_available), MP_ROM_PTR(&py_fir_get_frame_available_obj) },
-    { MP_ROM_QSTR(MP_QSTR_trigger_ffc),         MP_ROM_PTR(&py_fir_trigger_ffc_obj)         },
-    #else
-    { MP_ROM_QSTR(MP_QSTR_radiometric),         MP_ROM_PTR(&py_func_unavailable_obj)        },
-    { MP_ROM_QSTR(MP_QSTR_register_vsync_cb),   MP_ROM_PTR(&py_func_unavailable_obj)        },
-    { MP_ROM_QSTR(MP_QSTR_register_frame_cb),   MP_ROM_PTR(&py_func_unavailable_obj)        },
-    { MP_ROM_QSTR(MP_QSTR_get_frame_available), MP_ROM_PTR(&py_func_unavailable_obj)        },
-    { MP_ROM_QSTR(MP_QSTR_trigger_ffc),         MP_ROM_PTR(&py_func_unavailable_obj)        },
-    #endif
     { MP_ROM_QSTR(MP_QSTR_read_ta),             MP_ROM_PTR(&py_fir_read_ta_obj)             },
     { MP_ROM_QSTR(MP_QSTR_read_ir),             MP_ROM_PTR(&py_fir_read_ir_obj)             },
     { MP_ROM_QSTR(MP_QSTR_draw_ir),             MP_ROM_PTR(&py_fir_draw_ir_obj)             },

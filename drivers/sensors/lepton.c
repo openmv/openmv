@@ -314,7 +314,11 @@ static int lepton_reset(omv_csi_t *csi, bool measurement_mode, bool high_temp_mo
     // Use the low gain mode to enable high temperature readings (~450C) on Lepton 3.5
     LEP_SYS_GAIN_MODE_E gain_mode = high_temp_mode ? LEP_SYS_GAIN_MODE_LOW : LEP_SYS_GAIN_MODE_HIGH;
 
-    if (LEP_SetSysGainMode(&lepton.port, gain_mode) != LEP_OK ||
+    bool hasSetSysGainMode = csi->chip_id == LEPTON_3_5 ||
+                             csi->chip_id == LEPTON_3_0 ||
+                             csi->chip_id == LEPTON_2_5;
+
+    if ((hasSetSysGainMode && LEP_SetSysGainMode(&lepton.port, gain_mode) != LEP_OK) ||
         LEP_GetAgcROI(&lepton.port, &roi) != LEP_OK ||
         LEP_SetRadEnableState(&lepton.port, measurement_mode) != LEP_OK ||
         LEP_SetAgcEnableState(&lepton.port, !measurement_mode) != LEP_OK ||

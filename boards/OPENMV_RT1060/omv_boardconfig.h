@@ -47,7 +47,6 @@
 #define OMV_FIR_MLX90640_ENABLE         (1)
 #define OMV_FIR_MLX90641_ENABLE         (1)
 #define OMV_FIR_AMG8833_ENABLE          (1)
-#define OMV_FIR_LEPTON_ENABLE           (1)
 
 // Debugging configuration.
 #define OMV_TUSBDBG_ENABLE              (1)
@@ -181,11 +180,6 @@
 #define OMV_SPI_DISPLAY_BL_PIN          (&omv_pin_P6_GPIO)
 #define OMV_SPI_DISPLAY_TRIPLE_BUFFER   (0)
 #define OMV_SPI_DISPLAY_RX_CLK_DIV      (8)
-
-// FIR Lepton
-#define OMV_FIR_LEPTON_I2C_BUS          (OMV_FIR_I2C_ID)
-#define OMV_FIR_LEPTON_I2C_BUS_SPEED    (OMV_FIR_I2C_SPEED)
-#define OMV_FIR_LEPTON_SPI_BUS          (OMV_SPI3_ID)
 
 // Camera interface configuration.
 #define OMV_CSI_BASE                    (CSI)

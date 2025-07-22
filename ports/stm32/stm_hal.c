@@ -271,16 +271,6 @@ void HAL_MspInit(void) {
     OMV_AXI_QOS_LTDC_W_SET(OMV_AXI_QOS_LTDC_W_PRI);
     #endif
 
-    #if defined(OMV_FIR_LEPTON_RESET_PIN)
-    omv_gpio_config(OMV_FIR_LEPTON_RESET_PIN, OMV_GPIO_MODE_OUTPUT, OMV_GPIO_PULL_NONE, OMV_GPIO_SPEED_LOW, -1);
-    omv_gpio_write(OMV_FIR_LEPTON_RESET_PIN, 0);
-    #endif
-
-    #if defined(OMV_FIR_LEPTON_POWER_PIN)
-    omv_gpio_config(OMV_FIR_LEPTON_POWER_PIN, OMV_GPIO_MODE_OUTPUT, OMV_GPIO_PULL_NONE, OMV_GPIO_SPEED_LOW, -1);
-    omv_gpio_write(OMV_FIR_LEPTON_POWER_PIN, 0);
-    #endif
-
     #if defined(STM32H7)
     // This disconnects PA0/PA1 from PA0_C/PA1_C.
     // PA0_C/PA1_C connect to ADC1/2 Channels P0/P1
