@@ -57,9 +57,13 @@ static MP_DEFINE_CONST_FUN_OBJ_0(py_omv_board_type_obj, py_omv_board_type);
 static mp_obj_t py_omv_board_id() {
     char str[25];
     snprintf(str, 25, "%08X%08X%08X",
-             *((unsigned int *) (OMV_BOARD_UID_ADDR + 8)),
-             *((unsigned int *) (OMV_BOARD_UID_ADDR + 4)),
-             *((unsigned int *) (OMV_BOARD_UID_ADDR + 0)));
+             #if (OMV_BOARD_UID_SIZE == 2)
+             0U,
+             #else
+             *((unsigned int *) (OMV_BOARD_UID_ADDR + OMV_BOARD_UID_OFFSET * 2)),
+             #endif
+             *((unsigned int *) (OMV_BOARD_UID_ADDR + OMV_BOARD_UID_OFFSET * 1)),
+             *((unsigned int *) (OMV_BOARD_UID_ADDR + OMV_BOARD_UID_OFFSET * 0)));
     return mp_obj_new_str(str, strlen(str));
 }
 static MP_DEFINE_CONST_FUN_OBJ_0(py_omv_board_id_obj, py_omv_board_id);
