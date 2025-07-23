@@ -83,8 +83,8 @@
 #define OMV_STACK_MEMORY                      DTCM  // stack memory
 #define OMV_STACK_SIZE                        (8K)
 #define OMV_FB_MEMORY                         SRAM1 // Framebuffer, fb_alloc
-#define OMV_FB_SIZE                           (150K) // FB memory: header + QVGA/GS image
-#define OMV_FB_ALLOC_SIZE                     (10K) // minimum fb alloc size
+#define OMV_FB_SIZE                           (151K) // FB memory: header + QVGA/GS image
+#define OMV_FB_ALLOC_SIZE                     (9K) // minimum fb alloc size
 #define OMV_DMA_MEMORY                        SRAM2 // Misc DMA buffers
 #define OMV_GC_BLOCK0_MEMORY                  DTCM  // Main GC block
 #define OMV_GC_BLOCK0_SIZE                    (46K)
