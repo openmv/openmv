@@ -372,6 +372,36 @@ extern const uint16_t depth_table[256];
 extern const uint16_t evt_dark_table[256];
 extern const uint16_t evt_light_table[256];
 
+//////////////////
+// Event Camera //
+//////////////////
+
+typedef struct ec_event {
+    uint16_t type;
+    uint16_t ts_s;
+    uint16_t ts_ms;
+    uint16_t ts_us;
+    uint16_t x;
+    uint16_t y;
+} ec_event_t;
+
+#define EC_EVENT_SIZE (sizeof(ec_event_t) / sizeof(uint16_t))
+
+typedef enum {
+    EC_PIX_OFF_EVENT = 0,
+    EC_PIX_ON_EVENT = 1,
+    EC_EXT_TRIGGER_FALLING = 2,
+    EC_EXT_TRIGGER_RISING = 3,
+    EC_RST_TRIGGER_FALLING = 4,
+    EC_RST_TRIGGER_RISING = 5
+} ec_event_type_t;
+
+#define EC_PIXEL_EVENT(event) (EC_PIX_OFF_EVENT + ((event) & 1))
+#define EC_TRIGGER_EVENT(id, polarity) (EC_EXT_TRIGGER_FALLING + (((id) & 1) << 1) + ((polarity) & 1))
+#define EC_TS_S(timestamp) ((timestamp) / 1000000)
+#define EC_TS_MS(timestamp) (((timestamp) / 1000) % 1000)
+#define EC_TS_US(timestamp) ((timestamp) % 1000)
+
 /////////////////
 // Image Stuff //
 /////////////////
@@ -1369,6 +1399,7 @@ void imlib_draw_string(image_t *img,
                        int string_rotation,
                        bool string_hmirror,
                        bool string_hflip);
+void imlib_draw_event_histogram(image_t *img, ec_event_t *ec_event, int num_events, int gain);
 void imlib_draw_image(image_t *dst_img,
                       image_t *src_img,
                       int dst_x_start,
