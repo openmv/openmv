@@ -62,6 +62,10 @@ def sigmoid(x):
     return 1.0 / (1.0 + np.exp(-x))
 
 
+def logit(x):
+    return np.log(x / (1.0 - x))
+
+
 def mod(a, b):
     return a - (b * (a // b))
 
@@ -69,6 +73,17 @@ def mod(a, b):
 def softmax(x):
     e_x = np.exp(x - np.max(x, axis=1, keepdims=True))
     return e_x / np.sum(e_x, axis=1, keepdims=True)
+
+
+def threshold(scores, threshold, scale, find_max=False, find_max_axis=1):
+    if scale > 0:
+        if find_max:
+            scores = np.max(scores, axis=find_max_axis)
+        return np.nonzero(scores > threshold)[0]
+    else:
+        if find_max:
+            scores = np.min(scores, axis=find_max_axis)
+        return np.nonzero(scores < threshold)[0]
 
 
 class fomo_postprocess:
@@ -87,13 +102,14 @@ class fomo_postprocess:
         s = model.output_scale[0]
         zp = model.output_zero_point[0]
         dt = model.output_dtype[0]
+        t = (self.threshold / s) + zp
 
         # Reshape the output to a 2D array
         row_outputs = outputs[0].reshape((oh * ow, oc))
 
         # Threshold all the scores
-        score_indices = np.max(dequantize(row_outputs[:, _FOMO_CLASSES:], dt, zp, s), axis=1)
-        score_indices = np.nonzero(score_indices > self.threshold)[0]
+        score_indices = row_outputs[:, _FOMO_CLASSES:]
+        score_indices = threshold(score_indices, t, s, find_max=True, find_max_axis=1)
         if not len(score_indices):
             return _NO_DETECTION
 
@@ -144,6 +160,7 @@ class yolo_v2_postprocess:
         s = model.output_scale[0]
         zp = model.output_zero_point[0]
         dt = model.output_dtype[0]
+        t = (logit(self.threshold) / s) + zp
         class_count = (oc // self.anchors_len) - _YOLO_V2_CLASSES
 
         # Reshape the output to a 2D array
@@ -151,8 +168,8 @@ class yolo_v2_postprocess:
                                           _YOLO_V2_CLASSES + class_count))
 
         # Threshold all the scores
-        score_indices = sigmoid(dequantize(row_outputs[:, _YOLO_V2_SCORE], dt, zp, s))
-        score_indices = np.nonzero(score_indices > self.threshold)[0]
+        score_indices = row_outputs[:, _YOLO_V2_SCORE]
+        score_indices = threshold(score_indices, t, s)
         if not len(score_indices):
             return _NO_DETECTION
 
@@ -211,14 +228,15 @@ class yolo_v5_postprocess:
         s = model.output_scale[0]
         zp = model.output_zero_point[0]
         dt = model.output_dtype[0]
+        t = (self.threshold / s) + zp
         class_count = oc - _YOLO_V5_CLASSES
 
         # Reshape the output to a 2D array
         row_outputs = outputs[0].reshape((oh * ow, _YOLO_V5_CLASSES + class_count))
 
         # Threshold all the scores
-        score_indices = dequantize(row_outputs[:, _YOLO_V5_SCORE], dt, zp, s)
-        score_indices = np.nonzero(score_indices > self.threshold)[0]
+        score_indices = row_outputs[:, _YOLO_V5_SCORE]
+        score_indices = threshold(score_indices, t, s)
         if not len(score_indices):
             return _NO_DETECTION
 
@@ -255,14 +273,15 @@ class yolo_v8_postprocess:
         s = model.output_scale[0]
         zp = model.output_zero_point[0]
         dt = model.output_dtype[0]
+        t = (self.threshold / s) + zp
         class_count = ow - _YOLO_V8_CLASSES
 
         # Reshape the output to a 2D array
         row_outputs = outputs[0].reshape((oh * (_YOLO_V8_CLASSES + class_count), oc)).T
 
         # Threshold all the scores
-        score_indices = np.max(dequantize(row_outputs[:, _YOLO_V8_CLASSES:], dt, zp, s), axis=1)
-        score_indices = np.nonzero(score_indices > self.threshold)[0]
+        score_indices = row_outputs[:, _YOLO_V8_CLASSES:]
+        score_indices = threshold(score_indices, t, s, find_max=True, find_max_axis=1)
         if not len(score_indices):
             return _NO_DETECTION
 
