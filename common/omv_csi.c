@@ -260,13 +260,16 @@ __weak int omv_csi_abort(omv_csi_t *csi, bool fifo_flush, bool in_irq) {
     csi->last_frame_ms = 0;
     csi->last_frame_ms_valid = false;
 
-    if (csi->fb) {
-        if (fifo_flush) {
-            framebuffer_flush_buffers(csi->fb, true);
-        } else if (!csi->disable_full_flush) {
-            framebuffer_flush_buffers(csi->fb, false);
-        }
+    if (csi->fb && fifo_flush && !csi->disable_full_flush) {
+        framebuffer_flush(csi->fb);
     }
+
+    #if defined(OMV_CSI_FSYNC_PIN)
+    if (csi->frame_sync) {
+        omv_gpio_write(OMV_CSI_FSYNC_PIN, 0);
+    }
+    #endif
+
     return 0;
 }
 
@@ -346,7 +349,7 @@ __weak int omv_csi_reset(omv_csi_t *csi, bool hard) {
     }
 
     // Reset framebuffers
-    framebuffer_flush_buffers(csi->fb, true);
+    framebuffer_flush(csi->fb);
     return 0;
 }
 
@@ -767,7 +770,7 @@ __weak int omv_csi_set_pixformat(omv_csi_t *csi, pixformat_t pixformat) {
     csi->fb->pixfmt = PIXFORMAT_INVALID;
 
     // Auto-adjust the number of frame buffers.
-    omv_csi_set_framebuffers(csi, -1);
+    omv_csi_set_framebuffers(csi, -1, false);
 
     // Reconfigure the hardware if needed.
     return omv_csi_config(csi, OMV_CSI_CONFIG_PIXFORMAT);
@@ -811,7 +814,7 @@ __weak int omv_csi_set_framesize(omv_csi_t *csi, omv_csi_framesize_t framesize) 
     csi->fb->pixfmt = PIXFORMAT_INVALID;
 
     // Auto-adjust the number of frame buffers.
-    omv_csi_set_framebuffers(csi, -1);
+    omv_csi_set_framebuffers(csi, -1, false);
 
     // Reconfigure the hardware if needed.
     return omv_csi_config(csi, OMV_CSI_CONFIG_FRAMESIZE);
@@ -925,7 +928,7 @@ __weak int omv_csi_set_windowing(omv_csi_t *csi, int x, int y, int w, int h) {
     csi->fb->pixfmt = PIXFORMAT_INVALID;
 
     // Auto-adjust the number of frame buffers.
-    omv_csi_set_framebuffers(csi, -1);
+    omv_csi_set_framebuffers(csi, -1, false);
 
     // Reconfigure the hardware if needed.
     return omv_csi_config(csi, OMV_CSI_CONFIG_WINDOWING);
@@ -1249,7 +1252,7 @@ __weak bool omv_csi_get_auto_rotation(omv_csi_t *csi) {
     return csi->auto_rotation;
 }
 
-__weak int omv_csi_set_framebuffers(omv_csi_t *csi, int count) {
+__weak int omv_csi_set_framebuffers(omv_csi_t *csi, size_t count, bool expand) {
     // Disable any ongoing frame capture.
     omv_csi_abort(csi, true, false);
 
@@ -1268,7 +1271,17 @@ __weak int omv_csi_set_framebuffers(omv_csi_t *csi, int count) {
     // Otherwise, use the real frame size.
     csi->fb->frame_size = resolution[csi->framesize][0] * resolution[csi->framesize][1] * 2;
     #endif
-    return framebuffer_set_buffers(csi->fb, count);
+
+    if (count == -1) {
+        for (size_t i=3; i>0; i--) {
+            if (!framebuffer_resize(csi->fb, i, expand)) {
+                return 0;
+            }
+        }
+        return -1;
+    }
+
+    return framebuffer_resize(csi->fb, count, expand);
 }
 
 __weak int omv_csi_set_special_effect(omv_csi_t *csi, omv_csi_sde_t sde) {
@@ -1436,7 +1449,7 @@ __weak int omv_csi_auto_crop_framebuffer(omv_csi_t *csi) {
     }
 
     // Auto-adjust the number of frame buffers.
-    omv_csi_set_framebuffers(csi, -1);
+    omv_csi_set_framebuffers(csi, -1, false);
     return 0;
 }
 
@@ -1526,11 +1539,61 @@ __weak int omv_csi_copy_line(omv_csi_t *csi, void *dma, uint8_t *src, uint8_t *d
 }
 
 __weak int omv_csi_snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
-    int ret = OMV_CSI_ERROR_CTL_UNSUPPORTED;
+    vbuffer_t *buffer = NULL;
+
+    if (!csi->snapshot) {
+        return OMV_CSI_ERROR_CTL_UNSUPPORTED;
+    }
+
+    if (csi->pixformat == PIXFORMAT_INVALID) {
+        return OMV_CSI_ERROR_INVALID_PIXFORMAT;
+    }
+
+    if (csi->framesize == OMV_CSI_FRAMESIZE_INVALID) {
+        return OMV_CSI_ERROR_INVALID_FRAMESIZE;
+    }
+
+    if (omv_csi_check_framebuffer_size(csi) == -1) {
+        return OMV_CSI_ERROR_FRAMEBUFFER_OVERFLOW;
+    }
+
+    buffer = framebuffer_acquire(csi->fb, FB_FLAG_USED | FB_FLAG_PEEK);
+
+    // Compress the previous framebuffer for the IDE preview and release it.
+    // Note: We must check if the buffer has been used before releasing it,
+    // as it might have been captured in non-blocking mode but not used yet.
+    if (buffer && (buffer->flags & VB_FLAG_USED)) {
+        if (flags & OMV_CSI_CAPTURE_FLAGS_UPDATE) {
+            image_t tmp;
+            framebuffer_init_image(csi->fb, &tmp);
+            framebuffer_update_jpeg_buffer(&tmp);
+        }
+
+        // Release the previous buffer from used queue -> free queue.
+        framebuffer_release(csi->fb, FB_FLAG_USED | FB_FLAG_INVALIDATE);
+    }
+
+    // Toggle FSYNC.
+    #if defined(OMV_CSI_FSYNC_PIN)
+    if (csi->frame_sync) {
+        omv_gpio_write(OMV_CSI_FSYNC_PIN, 1);
+    }
+    #endif
 
     // Call the sensor specific function.
-    if (csi->snapshot) {
-        ret = csi->snapshot(csi, image, flags);
+    int ret = csi->snapshot(csi, image, flags);
+
+    // Toggle FSYNC.
+    #if defined(OMV_CSI_FSYNC_PIN)
+    if (csi->frame_sync) {
+        omv_gpio_write(OMV_CSI_FSYNC_PIN, 0);
+    }
+    #endif
+
+    if (ret == 0) {
+        // Mark this buffer to be released on the next call.
+        buffer = framebuffer_acquire(csi->fb, FB_FLAG_USED | FB_FLAG_PEEK);
+        buffer->flags |= VB_FLAG_USED;
     }
 
     return ret;

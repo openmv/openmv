@@ -120,31 +120,16 @@ int omv_csi_set_windowing(omv_csi_t *csi, int x, int y, int w, int h) {
 
 // This is the default snapshot function, which can be replaced in omv_csi_init functions.
 static int nrf_csi_snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
+    vbuffer_t *buffer = NULL;
     framebuffer_t *fb = csi->fb;
 
-    // Compress the framebuffer for the IDE preview, only if it's not the first frame,
-    // the framebuffer is enabled and the image sensor does not support JPEG encoding.
-    // Note: This doesn't run unless the IDE is connected and the framebuffer is enabled.
-    if (flags & OMV_CSI_CAPTURE_FLAGS_UPDATE) {
-        image_t tmp;
-        framebuffer_init_image(fb, &tmp);
-        framebuffer_update_jpeg_buffer(&tmp);
-    }
-
     // This driver supports a single buffer.
-    if (fb->n_buffers != 1) {
-        framebuffer_set_buffers(fb, 1);
+    if (fb->buf_count != 1) {
+        omv_csi_set_framebuffers(csi, 1, false);
     }
 
-    if (omv_csi_check_framebuffer_size(csi) != 0) {
-        return OMV_CSI_ERROR_FRAMEBUFFER_OVERFLOW;
-    }
-
-    framebuffer_free_current_buffer(fb);
-    framebuffer_setup_buffers(fb);
-    vbuffer_t *buffer = framebuffer_get_tail(fb, FB_NO_FLAGS);
-
-    if (!buffer) {
+    // Acquire a buffer from the free queue.
+    if ((buffer = framebuffer_acquire(fb, FB_FLAG_FREE | FB_FLAG_PEEK))) {
         return OMV_CSI_ERROR_FRAMEBUFFER_ERROR;
     }
 
@@ -204,6 +189,9 @@ static int nrf_csi_snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
         (fb->pixfmt == PIXFORMAT_YUV422 && csi->yuv_swap)) {
         unaligned_memcpy_rev16(buffer->data, buffer->data, _width * _height);
     }
+
+    // Release the current framebuffer.
+    framebuffer_release(fb, FB_FLAG_FREE);
 
     // Set the user image.
     framebuffer_init_image(fb, image);

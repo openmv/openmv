@@ -21,32 +21,41 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  *
- * Interface for using extra frame buffer RAM as a stack.
+ * Single-producer, single-consumer, lock-free bounded Queue.
  */
-#ifndef __FB_ALLOC_H__
-#define __FB_ALLOC_H__
-#include <stdint.h>
-#define FB_ALLOC_NO_HINT         0
-#define FB_ALLOC_PREFER_SPEED    1
-#define FB_ALLOC_PREFER_SIZE     2
-#define FB_ALLOC_CACHE_ALIGN     4
+#ifndef __QUEUE_H__
+#define __QUEUE_H__
 
-#ifndef OMV_ALLOC_ALIGNMENT
-#define OMV_ALLOC_ALIGNMENT     (OMV_CACHE_LINE_SIZE)
+#include <stddef.h>
+#include <stdbool.h>
+
+#if __STDC_VERSION__ < 201112L
+typedef size_t queue_index_t;
+#warning "Atomics not supported"
+#else
+#include <stdatomic.h>
+#define HAVE_STDATOMIC_H
+typedef atomic_size_t queue_index_t;
 #endif
 
-char *fb_alloc_sp();
-void fb_alloc_fail();
-void fb_alloc_init0();
-uint32_t fb_avail();
-void fb_alloc_mark();
-void fb_alloc_free_till_mark();
-void fb_alloc_mark_permanent(); // tag memory that should not be popped on exception
-void fb_alloc_free_till_mark_past_mark_permanent(); // frees past marked permanent allocations
-void *fb_alloc(uint32_t size, int hints);
-void *fb_alloc0(uint32_t size, int hints);
-void *fb_alloc_all(uint32_t *size, int hints); // returns pointer and sets size
-void *fb_alloc0_all(uint32_t *size, int hints); // returns pointer and sets size
-void fb_free();
-void fb_free_all();
-#endif /* __FF_ALLOC_H__ */
+typedef struct {
+    size_t capacity;
+    queue_index_t head;
+    queue_index_t tail; // TODO pad with cache line if needed.
+    void *items[];
+} queue_t;
+
+// One extra slot is used to distinguish full from empty.
+#define queue_calc_size(capacity) \
+    (sizeof(queue_t) + ((capacity) + 1) * sizeof(void *))
+
+void queue_init(queue_t **q, size_t capacity, void *buffer);
+void queue_flush(queue_t *q);
+queue_t *queue_alloc(size_t capacity);
+void queue_destroy(queue_t *q);
+bool queue_is_empty(const queue_t *q);
+bool queue_push(queue_t *q, void *item);
+void *queue_pop(queue_t *q, bool peek);
+size_t queue_size(const queue_t *q);
+void *queue_swap(queue_t *q0, queue_t *q1);
+#endif // __QUEUE_H__

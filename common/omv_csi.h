@@ -550,7 +550,7 @@ int omv_csi_set_auto_rotation(omv_csi_t *csi, bool enable);
 bool omv_csi_get_auto_rotation(omv_csi_t *csi);
 
 // Set the number of virtual frame buffers.
-int omv_csi_set_framebuffers(omv_csi_t *csi, int count);
+int omv_csi_set_framebuffers(omv_csi_t *csi, size_t count, bool expand);
 
 // Drop the next frame to match the current frame rate.
 void omv_csi_throttle_framerate(omv_csi_t *csi);

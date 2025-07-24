@@ -24,54 +24,53 @@
  * Framebuffer functions.
  */
 #include <stdio.h>
+#include "py/mphal.h"
 #include "mpprint.h"
 #include "fmath.h"
 #include "framebuffer.h"
 #include "omv_boardconfig.h"
 
-#define FB_ALIGN_SIZE_ROUND_DOWN(x) (((x) / FRAMEBUFFER_ALIGNMENT) * FRAMEBUFFER_ALIGNMENT)
-#define FB_ALIGN_SIZE_ROUND_UP(x)   FB_ALIGN_SIZE_ROUND_DOWN(((x) + FRAMEBUFFER_ALIGNMENT - 1))
-#define OMV_JPEG_BUFFER_SIZE_MAX    ((&_jpeg_memory_end - &_jpeg_memory_start) - sizeof(jpegbuffer_t))
-
-extern char _fb_memory_start[];
-extern char _fb_memory_end[];
-static framebuffer_t *framebuffer = (framebuffer_t *) &_fb_memory_start;
+extern char _fb_memory_start;
+extern char _fb_memory_end;
+static framebuffer_t framebuffer;
 
 extern char _jpeg_memory_start;
 extern char _jpeg_memory_end;
-jpegbuffer_t *jpegbuffer = (jpegbuffer_t *) &_jpeg_memory_start;
+jpegbuffer_t jpegbuffer;
 
 void framebuffer_init0() {
-    // Save enable flag.
-    int fb_enabled = jpegbuffer->enabled;
-    uint32_t fb_size = (char *) &_fb_memory_end - (char *) framebuffer->data;
+    // Save enable flag before resetting the state.
+    int fb_enabled = jpegbuffer.enabled;
 
-    // Initialize frame buffer. 
-    framebuffer_init_fb(framebuffer, fb_size, false);
+    // Initialize the static frame buffer. 
+    framebuffer_init(&framebuffer, &_fb_memory_start, &_fb_memory_end - &_fb_memory_start, false);
 
     // Initialize jpeg buffer. 
-    memset(jpegbuffer, 0, sizeof(*jpegbuffer));
-    mutex_init0(&jpegbuffer->lock);
-    jpegbuffer->enabled = fb_enabled;
-    jpegbuffer->quality = ((OMV_JPEG_QUALITY_HIGH - OMV_JPEG_QUALITY_LOW) / 2) + OMV_JPEG_QUALITY_LOW;
+    memset(&jpegbuffer, 0, sizeof(jpegbuffer_t));
+    mutex_init0(&jpegbuffer.lock);
+    jpegbuffer.enabled = fb_enabled;
+    jpegbuffer.pixels = (uint8_t *) &_jpeg_memory_start;
+    jpegbuffer.quality = ((OMV_JPEG_QUALITY_HIGH - OMV_JPEG_QUALITY_LOW) / 2) + OMV_JPEG_QUALITY_LOW;
 }
 
-void framebuffer_init_fb(framebuffer_t *fb, size_t size, bool dynamic) {
+void framebuffer_init(framebuffer_t *fb, void *buff, size_t size, bool dynamic) {
     // Clear framebuffers
-    memset(fb, 0, sizeof(*fb));
+    memset(fb, 0, sizeof(framebuffer_t));
 
     fb->raw_size = size;
+    fb->raw_base = buff;
     fb->dynamic = dynamic;
-    framebuffer_set_buffers(fb, 1);
 }
 
 void framebuffer_init_image(framebuffer_t *fb, image_t *img) {
     if (img != NULL) {
+        vbuffer_t *buffer = framebuffer_acquire(fb, FB_FLAG_USED | FB_FLAG_PEEK);
+
         img->w = fb->w;
         img->h = fb->h;
         img->size = fb->size;
         img->pixfmt = fb->pixfmt;
-        img->pixels = framebuffer_get_buffer(fb, fb->head)->data;
+        img->pixels = (buffer == NULL) ? NULL : buffer->data;
     }
 }
 
@@ -84,364 +83,254 @@ void framebuffer_init_from_image(framebuffer_t *fb, image_t *img) {
 
 static void jpegbuffer_init_from_image(image_t *img) {
     if (img == NULL) {
-        jpegbuffer->w = 0;
-        jpegbuffer->h = 0;
-        jpegbuffer->size = 0;
+        jpegbuffer.w = 0;
+        jpegbuffer.h = 0;
+        jpegbuffer.size = 0;
     } else {
-        jpegbuffer->w = img->w;
-        jpegbuffer->h = img->h;
-        jpegbuffer->size = img->size;
-    }
-}
-
-void framebuffer_update_jpeg_buffer(image_t *src) {
-    static int overflow_count = 0;
-
-    if (src->pixfmt != PIXFORMAT_INVALID && jpegbuffer->enabled) {
-        if (src->is_compressed) {
-            if (mutex_try_lock_alternate(&jpegbuffer->lock, MUTEX_TID_OMV)) {
-                if (OMV_JPEG_BUFFER_SIZE_MAX < src->size) {
-                    jpegbuffer_init_from_image(NULL);
-                    mp_printf(MP_PYTHON_PRINTER, "\x1b[40O\n");
-                } else {
-                    jpegbuffer_init_from_image(src);
-                    memcpy(jpegbuffer->pixels, src->pixels, src->size);
-                }
-
-                mutex_unlock(&jpegbuffer->lock, MUTEX_TID_OMV);
-            }
-        } else if (src->pixfmt != PIXFORMAT_INVALID) {
-            if (mutex_try_lock_alternate(&jpegbuffer->lock, MUTEX_TID_OMV)) {
-                image_t dst = {
-                    .w = src->w,
-                    .h = src->h,
-                    .pixfmt = PIXFORMAT_JPEG,
-                    .size = OMV_JPEG_BUFFER_SIZE_MAX,
-                    .pixels = jpegbuffer->pixels
-                };
-
-                bool compress = true;
-                bool overflow = false;
-
-                #if OMV_RAW_PREVIEW_ENABLE
-                if (src->is_mutable) {
-                    // Down-scale the frame (if necessary) and send the raw frame.
-                    dst.size = src->bpp;
-                    dst.pixfmt = src->pixfmt;
-                    if (src->w <= OMV_RAW_PREVIEW_WIDTH && src->h <= OMV_RAW_PREVIEW_HEIGHT) {
-                        if (image_size(&dst) <= OMV_JPEG_BUFFER_SIZE_MAX) {
-                            memcpy(dst.pixels, src->pixels, image_size(src));
-                            compress = false;
-                        }
-                    } else {
-                        float x_scale = OMV_RAW_PREVIEW_WIDTH / (float) src->w;
-                        float y_scale = OMV_RAW_PREVIEW_HEIGHT / (float) src->h;
-                        float scale = IM_MIN(x_scale, y_scale);
-                        dst.w = fast_floorf(src->w * scale);
-                        dst.h = fast_floorf(src->h * scale);
-                        if (image_size(&dst) <= OMV_JPEG_BUFFER_SIZE_MAX) {
-                            imlib_draw_image(&dst, src, 0, 0, scale, scale, NULL, -1, 255, NULL, NULL,
-                                             IMAGE_HINT_BILINEAR | IMAGE_HINT_BLACK_BACKGROUND, NULL, NULL, NULL);
-                            compress = false;
-                        }
-                    }
-                }
-                #endif
-
-                if (compress) {
-                    // For all other formats, send a compressed frame.
-                    overflow = jpeg_compress(src, &dst, jpegbuffer->quality, false, JPEG_SUBSAMPLING_AUTO);
-                }
-
-                if (overflow) {
-                    // JPEG buffer overflowed, reduce JPEG quality for the next frame
-                    // and skip the current frame. The IDE doesn't receive this frame.
-                    if (jpegbuffer->quality > 1) {
-                        // Keep this quality for the next n frames
-                        overflow_count = 60;
-                        jpegbuffer->quality = IM_MAX(1, (jpegbuffer->quality / 2));
-                    }
-
-                    jpegbuffer_init_from_image(NULL);
-                } else {
-                    if (overflow_count) {
-                        overflow_count--;
-                    }
-
-                    // Dynamically adjust our quality if the image is huge.
-                    bool big_frame_buffer = image_size(src) > OMV_JPEG_QUALITY_THRESHOLD;
-                    int jpeg_quality_max = big_frame_buffer ? OMV_JPEG_QUALITY_LOW : OMV_JPEG_QUALITY_HIGH;
-
-                    // No buffer overflow, increase quality up to max quality based on frame size...
-                    if ((!overflow_count) && (jpegbuffer->quality < jpeg_quality_max)) {
-                        jpegbuffer->quality++;
-                    }
-
-                    jpegbuffer_init_from_image(&dst);
-                }
-
-                mutex_unlock(&jpegbuffer->lock, MUTEX_TID_OMV);
-            }
-        }
+        jpegbuffer.w = img->w;
+        jpegbuffer.h = img->h;
+        jpegbuffer.size = img->size;
     }
 }
 
 framebuffer_t *framebuffer_get(size_t id) {
-    return framebuffer;
+    return &framebuffer;
 }
 
-int32_t framebuffer_get_x(framebuffer_t *fb) {
-    return fb->x;
+char *framebuffer_pool_start(framebuffer_t *fb, size_t buf_count) {
+    size_t qsize = (buf_count <= 3) ? 0 : queue_calc_size(buf_count);
+    return fb->raw_base + OMV_ALIGN_TO(qsize * 2, FRAMEBUFFER_ALIGNMENT);
 }
 
-int32_t framebuffer_get_y(framebuffer_t *fb) {
-    return fb->y;
+char *framebuffer_pool_end(framebuffer_t *fb) {
+    char *pool_start = framebuffer_pool_start(fb, fb->buf_count);
+    return pool_start + ((fb->buf_size + sizeof(vbuffer_t)) * fb->buf_count);
 }
 
-int32_t framebuffer_get_u(framebuffer_t *fb) {
-    return fb->u;
+void *framebuffer_pool_get(framebuffer_t *fb, int32_t index) {
+    char *pool_start = framebuffer_pool_start(fb, fb->buf_count);
+    return pool_start + ((fb->buf_size + sizeof(vbuffer_t)) * index);
 }
 
-int32_t framebuffer_get_v(framebuffer_t *fb) {
-    return fb->v;
-}
+void framebuffer_flush(framebuffer_t *fb) {
+    // Invalidate the frame buffer.
+    fb->pixfmt = PIXFORMAT_INVALID;
 
-int32_t framebuffer_get_width(framebuffer_t *fb) {
-    return fb->w;
-}
-
-int32_t framebuffer_get_height(framebuffer_t *fb) {
-    return fb->h;
-}
-
-int32_t framebuffer_get_depth(framebuffer_t *fb) {
-    return fb->bpp;
-}
-
-// Returns the current frame buffer size, factoring in the space taken by fb_alloc.
-static uint32_t framebuffer_max_buffer_size(framebuffer_t *fb) {
-    uint32_t fb_total_size = FB_ALIGN_SIZE_ROUND_DOWN(fb->raw_size);
-    uint32_t fb_avail_size = FB_ALIGN_SIZE_ROUND_DOWN(fb_alloc_stack_pointer() - (char *) fb->data);
-
-    // No fb_alloc on dynamic FBs.
-    if (fb->dynamic) {
-        fb_avail_size = fb_total_size;
+    // Drop all frame buffers.
+    if (fb->buf_count) {
+        queue_flush(fb->free_queue);
+        queue_flush(fb->used_queue);
     }
 
-    return IM_MIN(fb_total_size, fb_avail_size);
+    for (size_t i=0; i<fb->buf_count; i++) {
+        vbuffer_t *buffer = framebuffer_pool_get(fb, i);
+
+        // Reset the buffer's state.
+        framebuffer_reset(buffer);
+
+        // Discard any cached CPU writes.
+        #ifdef __DCACHE_PRESENT
+        SCB_InvalidateDCache_by_Addr(buffer->data, fb->buf_size);
+        #endif
+
+        // Push it back the free queue.
+        queue_push(fb->free_queue, buffer);
+    }
 }
 
-uint32_t framebuffer_get_buffer_size(framebuffer_t *fb) {
-    uint32_t size;
+int framebuffer_resize(framebuffer_t *fb, size_t count, bool expand) {
+    size_t buf_size = 0;
+    // Queue size given the requested buffer count.
+    size_t queue_size = queue_calc_size(count);
 
-    if (fb->n_buffers == 1) {
-        // With only 1 vbuffer the frame buffer size can change given fb_alloc().
-        size = framebuffer_max_buffer_size(fb);
+    // Maximum usable memory size without queues.
+    size_t max_size = fb->raw_size - queue_size * 2;
+    size_t min_size = fb->frame_size + sizeof(vbuffer_t);
+
+    // Use the frame buffer memory for big queues.
+    char *queue_memory = (count > 3) ? fb->raw_base : fb->raw_static;
+
+    // Calculate a single buffer size (including vbuffer header).
+    if (!expand) {
+        // No expansion: buffer size equals frame size plus header.
+        buf_size = OMV_ALIGN_TO(min_size, FRAMEBUFFER_ALIGNMENT);
+    } else if (fb->dynamic) {
+        // Expanding a dynamic FB: divide the raw buffer size evenly.
+        buf_size = OMV_ALIGN_DOWN(max_size / count, FRAMEBUFFER_ALIGNMENT);
     } else {
-        // Whatever the raw size was when the number of buffers were set is locked in.
-        size = fb->buff_size;
+        // Expanding a static FB: calculate the free FB memory size.
+        size_t fb_size = fb_alloc_sp() - framebuffer_pool_start(fb, count);
+        max_size = IM_MIN(max_size, fb_size);
+        buf_size = OMV_ALIGN_DOWN(max_size / count, FRAMEBUFFER_ALIGNMENT);
     }
 
-    // Remove the size of the state header plus alignment padding.
-    size -= sizeof(vbuffer_t);
-
-    // Needs to be a multiple of FRAMEBUFFER_ALIGNMENT for DMA transfers.
-    return FB_ALIGN_SIZE_ROUND_DOWN(size);
-}
-
-// Each raw frame buffer is split into two parts. The vbuffer_t struct followed by
-// padding and then the pixel array starting at the next 32-byte offset.
-vbuffer_t *framebuffer_get_buffer(framebuffer_t *fb, int32_t index) {
-    uint32_t fbsize = framebuffer_get_buffer_size(fb);
-    uint32_t offset = (sizeof(vbuffer_t) + fbsize) * index;
-    return (vbuffer_t *) (fb->data + offset);
-}
-
-void framebuffer_flush_buffers(framebuffer_t *fb, bool fifo_flush) {
-    if (fifo_flush) {
-        // Drop all frame buffers.
-        for (uint32_t i = 0; i < fb->n_buffers; i++) {
-            memset(framebuffer_get_buffer(fb, i), 0, sizeof(vbuffer_t));
-        }
-    }
-    // Move the tail pointer to the head which empties the virtual fifo while keeping the same
-    // position of the current frame for the rest of the code.
-    fb->tail = fb->head;
-    fb->check_head = true;
-    fb->sampled_head = 0;
-}
-
-int framebuffer_set_buffers(framebuffer_t *fb, int32_t n_buffers) {
-    uint32_t avail_size = FB_ALIGN_SIZE_ROUND_DOWN(framebuffer_max_buffer_size(fb));
-    uint32_t frame_size = FB_ALIGN_SIZE_ROUND_UP(fb->frame_size + sizeof(vbuffer_t));
-    uint32_t vbuff_size = (n_buffers == 1) ? avail_size : frame_size;
-    uint32_t vbuff_count = IM_MIN((avail_size / vbuff_size), (n_buffers == -1) ? 3 : (uint32_t) n_buffers);
-
-    if (vbuff_count == 0 || vbuff_size < sizeof(vbuffer_t)) {
+    // Ensure that the buffer size is reasonable.
+    if (buf_size < min_size || buf_size * count > max_size) {
         return -1;
     }
 
-    fb->head = 0;
-    fb->buff_size = vbuff_size;
-    fb->n_buffers = vbuff_count;
-    fb->pixfmt = PIXFORMAT_INVALID;
+    // Initialize the frame buffer.
+    fb->expanded = expand;
+    fb->buf_count = count;
+    fb->buf_size = buf_size - sizeof(vbuffer_t);
 
-    framebuffer_flush_buffers(fb, true);
+    // Initialize the buffer queues.
+    queue_init(&fb->free_queue, count, &queue_memory[queue_size * 0]);
+    queue_init(&fb->used_queue, count, &queue_memory[queue_size * 1]);
+
+    // Flush and reset the queues.
+    framebuffer_flush(fb);
     return 0;
 }
 
-// Returns the real size of bytes in the frame buffer.
-static uint32_t framebuffer_total_buffer_size(framebuffer_t *fb) {
-    if (fb->n_buffers == 1) {
-        // Allow fb_alloc to use frame buffer space up until the image size.
-        image_t img;
-        framebuffer_init_image(fb, &img);
-        return sizeof(vbuffer_t) + FB_ALIGN_SIZE_ROUND_UP(image_size(&img));
-    } else {
-        // fb_alloc may only use up to the size of all the virtual buffers.
-        uint32_t fbsize = framebuffer_get_buffer_size(fb);
-        return (sizeof(vbuffer_t) + fbsize) * fb->n_buffers;
-    }
+bool framebuffer_writable(framebuffer_t *fb) {
+    return !queue_is_empty(fb->free_queue);
 }
 
-void framebuffer_free_current_buffer(framebuffer_t *fb) {
-    vbuffer_t *buffer = framebuffer_get_buffer(fb, fb->head);
+bool framebuffer_readable(framebuffer_t *fb) {
+    return !queue_is_empty(fb->used_queue);
+}
+
+vbuffer_t *framebuffer_acquire(framebuffer_t *fb, uint32_t flags) {
+    queue_t *queue = (flags & FB_FLAG_USED) ? fb->used_queue : fb->free_queue;
+    vbuffer_t *buffer = queue_pop(queue, (flags & FB_FLAG_PEEK));
 
     #ifdef __DCACHE_PRESENT
-    // Make sure all cached CPU writes are discarded before returning the buffer.
-    SCB_InvalidateDCache_by_Addr(buffer->data, framebuffer_get_buffer_size(fb));
-    #endif
-
-    // Invalidate frame.
-    fb->pixfmt = PIXFORMAT_INVALID;
-
-    // Allow frame to be updated in single buffer mode...
-    if (fb->n_buffers == 1) {
-        buffer->waiting_for_data = true;
-    }
-}
-
-void framebuffer_setup_buffers(framebuffer_t *fb) {
-    #ifdef __DCACHE_PRESENT
-    for (int32_t i = 0; i < fb->n_buffers; i++) {
-        if (i != fb->head) {
-            vbuffer_t *buffer = framebuffer_get_buffer(fb, i);
-            // Make sure all cached CPU writes are discarded before returning the buffer.
-            SCB_InvalidateDCache_by_Addr(buffer->data, framebuffer_get_buffer_size(fb));
-        }
+    // Discard any cached CPU writes.
+    if (buffer && (flags & FB_FLAG_INVALIDATE)) {
+        SCB_InvalidateDCache_by_Addr(buffer->data, fb->buf_size);
     }
     #endif
+
+    return buffer;
 }
 
-vbuffer_t *framebuffer_get_head(framebuffer_t *fb, framebuffer_flags_t flags) {
-    int32_t new_head = (fb->head + 1) % fb->n_buffers;
+vbuffer_t *framebuffer_release(framebuffer_t *fb, uint32_t flags) {
+    vbuffer_t *buffer = NULL;
 
-    // Single Buffer Mode.
-    if (fb->n_buffers == 1) {
-        if (framebuffer_get_buffer(fb, fb->head)->waiting_for_data) {
+    if ((flags & FB_FLAG_CHECK_LAST) && queue_size(fb->free_queue) == 1) {
+        if (fb->buf_count == 2) {
+            // Double buffer: Reset but do Not release the buffer.
+            vbuffer_t *buffer = queue_pop(fb->free_queue, true);
+            framebuffer_reset(buffer);
+            return NULL;
+        } else if (fb->buf_count == 3) {
+            // Triple buffer: Swap the old buffer with the latest.
+            vbuffer_t *buffer = queue_swap(fb->used_queue, fb->free_queue);
+            framebuffer_reset(buffer);
             return NULL;
         }
-        // Double Buffer Mode.
-    } else if (fb->n_buffers == 2) {
-        if (fb->head == fb->tail) {
-            return NULL;
-        }
-        // Triple Buffer Mode.
-    } else if (fb->n_buffers == 3) {
-        int32_t sampled_tail = fb->tail;
-        if (fb->head == sampled_tail) {
-            return NULL;
+    }
+
+    if ((buffer = framebuffer_acquire(fb, flags))) {
+        if (flags & FB_FLAG_USED) {
+            // Invalidate the frame buffer.
+            fb->pixfmt = PIXFORMAT_INVALID;
+            // Move the buffer back to the free queue.
+            framebuffer_reset(buffer);
+            queue_push(fb->free_queue, buffer);
         } else {
-            new_head = sampled_tail;
-        }
-        // Video FIFO Mode.
-    } else {
-        if (fb->head == fb->tail) {
-            return NULL;
+            // Move the buffer back to the used queue.
+            queue_push(fb->used_queue, buffer);
         }
     }
-
-    if (!(flags & FB_PEEK)) {
-        fb->head = new_head;
-    }
-
-    vbuffer_t *buffer = framebuffer_get_buffer(fb, new_head);
-
-    #ifdef __DCACHE_PRESENT
-    if (flags & FB_INVALIDATE) {
-        // Make sure any cached CPU reads are dropped before returning the buffer.
-        SCB_InvalidateDCache_by_Addr(buffer->data, framebuffer_get_buffer_size(fb));
-    }
-    #endif
 
     return buffer;
 }
 
-vbuffer_t *framebuffer_get_tail(framebuffer_t *fb, framebuffer_flags_t flags) {
-    // Sample head on the first line of a new frame.
-    if (fb->check_head) {
-        fb->check_head = false;
-        fb->sampled_head = fb->head;
+void framebuffer_update_jpeg_buffer(image_t *src) {
+    static int overflow_count = 0;
+    const size_t max_size = (&_jpeg_memory_end - &_jpeg_memory_start) - sizeof(jpegbuffer_t);
+
+    // Check if JPEG buffer is disabled, image is NULL or format is not set.
+    if (!jpegbuffer.enabled || !src->data || src->pixfmt == PIXFORMAT_INVALID) {
+        return;
     }
 
-    int32_t new_tail = (fb->tail + 1) % fb->n_buffers;
+    // Lock the JPEG buffer.
+    if (!mutex_try_lock_alternate(&jpegbuffer.lock, MUTEX_TID_OMV)) {
+        return;
+    }
 
-    // Single Buffer Mode.
-    if (fb->n_buffers == 1) {
-        if (!framebuffer_get_buffer(fb, new_tail)->waiting_for_data) {
-            // Setup to check head again.
-            fb->check_head = true;
-            return NULL;
+    if (src->is_compressed) {
+        if (max_size < src->size) {
+            jpegbuffer_init_from_image(NULL);
+            mp_printf(MP_PYTHON_PRINTER, "\x1b[40O\n");
+        } else {
+            jpegbuffer_init_from_image(src);
+            memcpy(jpegbuffer.pixels, src->pixels, src->size);
         }
-        // Double Buffer Mode.
-    } else if (fb->n_buffers == 2) {
-        if (new_tail == fb->sampled_head) {
-            // Setup to check head again.
-            fb->check_head = true;
-            return NULL;
-        }
-        // Triple Buffer Mode.
-    } else if (fb->n_buffers == 3) {
-        // For triple buffering we are never writing where tail or head
-        // (which may instantly update to be equal to tail) is.
-        if (new_tail == fb->sampled_head) {
-            new_tail = (new_tail + 1) % fb->n_buffers;
-        }
-        // Video FIFO Mode.
     } else {
-        if (new_tail == fb->sampled_head) {
-            // Setup to check head again.
-            fb->check_head = true;
-            return NULL;
+        image_t dst = {
+            .w = src->w,
+            .h = src->h,
+            .pixfmt = PIXFORMAT_JPEG,
+            .size = max_size,
+            .pixels = jpegbuffer.pixels
+        };
+
+        bool compress = true;
+        bool overflow = false;
+
+        #if OMV_RAW_PREVIEW_ENABLE
+        if (src->is_mutable) {
+            // Down-scale the frame (if necessary) and send the raw frame.
+            dst.size = src->bpp;
+            dst.pixfmt = src->pixfmt;
+            if (src->w <= OMV_RAW_PREVIEW_WIDTH && src->h <= OMV_RAW_PREVIEW_HEIGHT) {
+                if (image_size(&dst) <= max_size) {
+                    memcpy(dst.pixels, src->pixels, image_size(src));
+                    compress = false;
+                }
+            } else {
+                float x_scale = OMV_RAW_PREVIEW_WIDTH / (float) src->w;
+                float y_scale = OMV_RAW_PREVIEW_HEIGHT / (float) src->h;
+                float scale = IM_MIN(x_scale, y_scale);
+                dst.w = fast_floorf(src->w * scale);
+                dst.h = fast_floorf(src->h * scale);
+                if (image_size(&dst) <= max_size) {
+                    imlib_draw_image(&dst, src, 0, 0, scale, scale, NULL, -1, 255, NULL, NULL,
+                                     IMAGE_HINT_BILINEAR | IMAGE_HINT_BLACK_BACKGROUND, NULL,
+                                     NULL, NULL);
+                    compress = false;
+                }
+            }
+        }
+        #endif
+
+        if (compress) {
+            // For all other formats, send a compressed frame.
+            overflow = jpeg_compress(src, &dst, jpegbuffer.quality, false, JPEG_SUBSAMPLING_AUTO);
+        }
+
+        if (overflow) {
+            // JPEG buffer overflowed, reduce JPEG quality for the next frame
+            // and skip the current frame. The IDE doesn't receive this frame.
+            if (jpegbuffer.quality > 1) {
+                // Keep this quality for the next n frames
+                overflow_count = 60;
+                jpegbuffer.quality = IM_MAX(1, (jpegbuffer.quality / 2));
+            }
+
+            jpegbuffer_init_from_image(NULL);
+        } else {
+            if (overflow_count) {
+                overflow_count--;
+            }
+
+            // Dynamically adjust our quality if the image is huge.
+            bool big_frame = image_size(src) > OMV_JPEG_QUALITY_THRESHOLD;
+            int quality_max = big_frame ? OMV_JPEG_QUALITY_LOW : OMV_JPEG_QUALITY_HIGH;
+
+            // No buffer overflow, increase quality up to max quality based on frame size...
+            if ((!overflow_count) && (jpegbuffer.quality < quality_max)) {
+                jpegbuffer.quality++;
+            }
+
+            jpegbuffer_init_from_image(&dst);
         }
     }
-
-    vbuffer_t *buffer = framebuffer_get_buffer(fb, new_tail);
-
-    // Reset on start versus the end so offset and jpeg_buffer_overflow are valid after FB_COMMIT.
-    if (buffer->reset_state) {
-        buffer->reset_state = false;
-        buffer->offset = 0;
-        buffer->jpeg_buffer_overflow = false;
-    }
-
-    if (!(flags & FB_PEEK)) {
-        // Trigger reset on the frame buffer the next time it is used.
-        buffer->reset_state = true;
-
-        // Mark the frame buffer ready in single buffer mode.
-        if (fb->n_buffers == 1) {
-            buffer->waiting_for_data = false;
-        }
-
-        fb->tail = new_tail;
-
-        // Setup to check head again.
-        fb->check_head = true;
-    }
-    return buffer;
-}
-
-char *framebuffer_get_buffers_end(framebuffer_t *fb) {
-    return (char *) (fb->data + framebuffer_total_buffer_size(fb));
+        
+    // Unlock the JPEG buffer.
+    mutex_unlock(&jpegbuffer.lock, MUTEX_TID_OMV);
 }

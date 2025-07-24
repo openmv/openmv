@@ -46,6 +46,9 @@
 #define OMV_ALIGN_TO(x, alignment) \
     ((((uintptr_t)(x)) + (alignment) - 1) & ~((uintptr_t)((alignment) - 1)))
 
+#define OMV_ALIGN_DOWN(x, alignment) \
+    ((uintptr_t)(x) & ~((uintptr_t)(alignment) - 1))
+
 #ifdef OMV_DEBUG_PRINTF
 #define debug_printf(fmt, ...) \
     do { printf("%s(): " fmt, __func__, ##__VA_ARGS__);} while (0)
