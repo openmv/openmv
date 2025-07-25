@@ -1,7 +1,7 @@
 /*
  * SPDX-License-Identifier: MIT
  *
- * Copyright (C) 2013-2024 OpenMV, LLC.
+ * Copyright (C) 2013-2025 OpenMV, LLC.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -22,89 +22,39 @@
  * THE SOFTWARE.
  *
  * Mutex implementation.
- * This is a standard implementation of mutexs on ARM processors following the ARM guide.
- * http://infocenter.arm.com/help/index.jsp?topic=/com.arm.doc.dai0321a/BIHEJCHB.html
- *
- * Note: The Cortex-M0/M0+ does Not have the Load/Store exclusive instructions, on these
- * CPUs the locking function is implemented with atomic access using disable/enable IRQs.
  */
-#include "mutex.h"
-#include "cmsis_compiler.h"
-#include "py/mphal.h"
+#include "common/mutex.h"
 
-void mutex_init0(omv_mutex_t *mutex) {
-    __DMB();
-    mutex->tid = 0;
-    mutex->lock = 0;
-    mutex->last_tid = 0;
+void mutex_init0(mutex_t *m) {
+    atomic_store_explicit(&m->tid, 0, memory_order_relaxed);
+    atomic_flag_clear_explicit(&m->lock, memory_order_relaxed);
 }
 
-static void _mutex_lock(omv_mutex_t *mutex, uint32_t tid, bool blocking) {
-    #if (__ARM_ARCH < 7)
-    do {
-        __disable_irq();
-        if (mutex->lock == 0) {
-            mutex->lock = 1;
-            mutex->tid = tid;
-        }
-        __enable_irq();
-    } while (mutex->tid != tid && blocking);
-    #else
-    do {
-        // Attempt to lock the mutex
-        if (__LDREXW(&mutex->lock) == 0) {
-            if (__STREXW(1, &mutex->lock) == 0) {
-                // Set TID if mutex is locked
-                mutex->tid = tid;
-            }
-        }
-    } while (mutex->tid != tid && blocking);
-    #endif
-    __DMB();
+void mutex_lock(mutex_t *m, size_t tid) {
+    while (atomic_flag_test_and_set_explicit(&m->lock, memory_order_acquire));
+    atomic_store_explicit(&m->tid, tid, memory_order_release);
 }
 
-void mutex_lock(omv_mutex_t *mutex, uint32_t tid) {
-    _mutex_lock(mutex, tid, true);
-}
-
-int mutex_try_lock(omv_mutex_t *mutex, uint32_t tid) {
-    // If the mutex is already locked by the current thread then
-    // release it and return without locking, otherwise try to lock it.
-    if (mutex->tid == tid) {
-        mutex_unlock(mutex, tid);
-    } else {
-        _mutex_lock(mutex, tid, false);
+bool mutex_try_lock(mutex_t *m, size_t tid) {
+    if (!atomic_flag_test_and_set_explicit(&m->lock, memory_order_acquire)) {
+        atomic_store_explicit(&m->tid, tid, memory_order_release);
+        return true;
     }
-
-    return (mutex->tid == tid);
+    return false;
 }
 
-int mutex_try_lock_alternate(omv_mutex_t *mutex, uint32_t tid) {
-    if (mutex->last_tid != tid) {
-        if (mutex_try_lock(mutex, tid)) {
-            mutex->last_tid = tid;
-            return 1;
+bool mutex_try_lock_fair(mutex_t *m, size_t tid) {
+    if (atomic_load_explicit(&m->tid, memory_order_acquire) != tid) {
+        if (!atomic_flag_test_and_set_explicit(&m->lock, memory_order_acquire)) {
+            atomic_store_explicit(&m->tid, tid, memory_order_release);
+            return true;
         }
     }
-
-    return 0;
+    return false;
 }
 
-int mutex_lock_timeout(omv_mutex_t *mutex, uint32_t tid, uint32_t timeout) {
-    mp_uint_t tick_start = mp_hal_ticks_ms();
-    while ((mp_hal_ticks_ms() - tick_start) >= timeout) {
-        if (mutex_try_lock(mutex, tid)) {
-            return 1;
-        }
-        __WFI();
-    }
-    return 0;
-}
-
-void mutex_unlock(omv_mutex_t *mutex, uint32_t tid) {
-    if (mutex->tid == tid) {
-        __DMB();
-        mutex->tid = 0;
-        mutex->lock = 0;
+void mutex_unlock(mutex_t *m, size_t tid) {
+    if (atomic_load_explicit(&m->tid, memory_order_acquire) == tid) {
+        atomic_flag_clear_explicit(&m->lock, memory_order_release);
     }
 }
