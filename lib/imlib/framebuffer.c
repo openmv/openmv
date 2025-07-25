@@ -248,7 +248,7 @@ void framebuffer_update_jpeg_buffer(image_t *src) {
     }
 
     // Lock the JPEG buffer.
-    if (!mutex_try_lock_alternate(&jpegbuffer.lock, MUTEX_TID_OMV)) {
+    if (!mutex_try_lock_fair(&jpegbuffer.lock, MUTEX_TID_OMV)) {
         return;
     }
 

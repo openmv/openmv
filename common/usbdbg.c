@@ -173,7 +173,7 @@ void usbdbg_data_in(uint32_t size, usbdbg_write_callback_t write_callback) {
             // Return 0 if FB is locked or not ready.
             uint32_t buffer[3] = { 0 };
             // Try to lock FB. If header size == 0 frame is not ready
-            if (mutex_try_lock_alternate(&JPEG_FB()->lock, MUTEX_TID_IDE)) {
+            if (mutex_try_lock_fair(&JPEG_FB()->lock, MUTEX_TID_IDE)) {
                 // If header size == 0 frame is not ready
                 if (JPEG_FB()->size == 0) {
                     // unlock FB
@@ -249,7 +249,7 @@ void usbdbg_data_in(uint32_t size, usbdbg_write_callback_t write_callback) {
 
             // Limit the frames sent over USB to 20Hz.
             if (ticks_diff_ms(last_update_ms) > 50 &&
-                mutex_try_lock_alternate(&JPEG_FB()->lock, MUTEX_TID_IDE)) {
+                mutex_try_lock_fair(&JPEG_FB()->lock, MUTEX_TID_IDE)) {
                 // If header size == 0 frame is not ready
                 if (JPEG_FB()->size == 0) {
                     // unlock FB
