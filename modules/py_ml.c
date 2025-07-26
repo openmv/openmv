@@ -50,6 +50,7 @@
 #include "file_utils.h"
 #include "py_ml.h"
 #include "ulab/code/ndarray.h"
+#include "simd.h"
 
 #define IMLIB_ML_MODEL_ALIGN    (OMV_CACHE_LINE_SIZE)
 
@@ -426,11 +427,159 @@ static MP_DEFINE_CONST_OBJ_TYPE(
     locals_dict, &py_ml_model_locals_dict
     );
 
-extern const mp_obj_type_t py_ml_nms_type;
+// The function finds the maximum value in each row of a 2D ndarray and returns the indices
+// of the rows where the maximum exceeds a threshold which is the most CPU intensive post-processing
+// step. This function can handle regular and transposed ndarrays where the strides result in
+// non-contiguous memory access patterns. TODO: Futher performance optimizations are possible for
+// contiguous int8/uint8/int16/uint16 ndarrays by processing contiguous rows using contiguous
+// memory operations and integer SIMD operations.
+static mp_obj_t py_ml_threshold(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
+    OMV_PROFILE_START();
+    enum { ARG_output_scale, ARG_output_zero_point, ARG_threshold };
+    static const mp_arg_t allowed_args[] = {
+        { MP_QSTR_output_scale, MP_ARG_OBJ, {.u_rom_obj = MP_ROM_NONE} },
+        { MP_QSTR_output_zero_point, MP_ARG_INT, {.u_int = 0 } },
+        { MP_QSTR_threshold, MP_ARG_OBJ, {.u_rom_obj = MP_ROM_NONE} }
+    };
+
+    if (!MP_OBJ_IS_TYPE(pos_args[0], &ulab_ndarray_type)) {
+        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Expected an ndarray."));
+    }
+
+    ndarray_obj_t *input = MP_OBJ_TO_PTR(pos_args[0]);
+    size_t height, width, row_stride, value_stride;
+
+    if (input->ndim == 1) {
+        height = input->shape[ULAB_MAX_DIMS - 1];
+        width = 1;
+        row_stride = input->strides[ULAB_MAX_DIMS - 1] / input->itemsize;
+        value_stride = 1;
+    } else if (input->ndim == 2) {
+        height = input->shape[ULAB_MAX_DIMS - 2];
+        width = input->shape[ULAB_MAX_DIMS - 1];
+        row_stride = input->strides[ULAB_MAX_DIMS - 2] / input->itemsize;
+        value_stride = input->strides[ULAB_MAX_DIMS - 1] / input->itemsize;
+    } else {
+        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Expected a 1D or 2D ndarray."));
+    }
+
+    mp_arg_val_t args[MP_ARRAY_SIZE(allowed_args)];
+    mp_arg_parse_all(n_args - 1, pos_args + 1, kw_args, MP_ARRAY_SIZE(allowed_args), allowed_args, args);
+
+    float output_scale = py_helper_arg_to_float(args[ARG_output_scale].u_obj, 1.0f);
+    int output_zero_point = args[ARG_output_zero_point].u_int;
+    float threshold = py_helper_arg_to_float(args[ARG_threshold].u_obj, 0.1f);
+
+    fb_alloc_mark();
+    uint16_t *output_array = (uint16_t *) fb_alloc(height * sizeof(uint16_t), FB_ALLOC_PREFER_SPEED);
+    v128_t offsets_start = vmul_n_u32(vidup_u32(0, 1), value_stride);
+    size_t offsets_inc = FLOAT32_VECTOR_SIZE * value_stride;
+    size_t count = 0;
+
+    if (input->dtype == 'f') {
+        for (size_t y = 0; y < height; y++) {
+            v128_t offsets = vadd_n_u32(offsets_start, y * row_stride);
+            float row_max = -FLT_MAX;
+
+            for (size_t m = 0; m < width; m += FLOAT32_VECTOR_SIZE) {
+                v128_predicate_t pred = vpredicate_32(width - m);
+                v128_t v = vldr_f32_gather_pred((float32_t *) input->array, offsets, pred);
+                row_max = vmaxv_f32_pred(v, row_max, pred);
+                offsets = vadd_n_u32(offsets, offsets_inc);
+            }
+
+            if (row_max > threshold) {
+                output_array[count++] = y;
+            }
+        }
+    } else if (input->dtype == 'b') {
+        for (size_t y = 0; y < height; y++) {
+            v128_t offsets = vadd_n_u32(offsets_start, y * row_stride);
+            float row_max = -FLT_MAX;
+
+            for (size_t x = 0; x < width; x += FLOAT32_VECTOR_SIZE) {
+                v128_predicate_t pred = vpredicate_32(width - x);
+                v128_t v = vldr_s8_widen_s32_gather_pred((int8_t *) input->array, offsets, pred);
+                v = vmul_n_f32(vcvt_f32_s32(vsub_n_s32(v, output_zero_point)), output_scale);
+                row_max = vmaxv_f32_pred(v, row_max, pred);
+                offsets = vadd_n_u32(offsets, offsets_inc);
+            }
+
+            if (row_max > threshold) {
+                output_array[count++] = y;
+            }
+        }
+    } else if (input->dtype == 'B') {
+        for (size_t y = 0; y < height; y++) {
+            v128_t offsets = vadd_n_u32(offsets_start, y * row_stride);
+            float row_max = -FLT_MAX;
+
+            for (size_t x = 0; x < width; x += FLOAT32_VECTOR_SIZE) {
+                v128_predicate_t pred = vpredicate_32(width - x);
+                v128_t v = vldr_u8_widen_u32_gather_pred((uint8_t *) input->array, offsets, pred);
+                v = vmul_n_f32(vcvt_f32_s32(vsub_n_s32(v, output_zero_point)), output_scale);
+                row_max = vmaxv_f32_pred(v, row_max, pred);
+                offsets = vadd_n_u32(offsets, offsets_inc);
+            }
+
+            if (row_max > threshold) {
+                output_array[count++] = y;
+            }
+        }
+    } else if (input->dtype == 'h') {
+        for (size_t y = 0; y < height; y++) {
+            v128_t offsets = vadd_n_u32(offsets_start, y * row_stride);
+            float row_max = -FLT_MAX;
+
+            for (size_t x = 0; x < width; x += FLOAT32_VECTOR_SIZE) {
+                v128_predicate_t pred = vpredicate_32(width - x);
+                v128_t v = vldr_s16_widen_s32_gather_pred((int16_t *) input->array, offsets, pred);
+                v = vmul_n_f32(vcvt_f32_s32(vsub_n_s32(v, output_zero_point)), output_scale);
+                row_max = vmaxv_f32_pred(v, row_max, pred);
+                offsets = vadd_n_u32(offsets, offsets_inc);
+            }
+
+            if (row_max > threshold) {
+                output_array[count++] = y;
+            }
+        }
+    } else if (input->dtype == 'H') {
+        for (size_t y = 0; y < height; y++) {
+            v128_t offsets = vadd_n_u32(offsets_start, y * row_stride);
+            float row_max = -FLT_MAX;
+
+            for (size_t x = 0; x < width; x += FLOAT32_VECTOR_SIZE) {
+                v128_predicate_t pred = vpredicate_32(width - x);
+                v128_t v = vldr_u16_widen_u32_gather_pred((uint16_t *) input->array, offsets, pred);
+                v = vmul_n_f32(vcvt_f32_s32(vsub_n_s32(v, output_zero_point)), output_scale);
+                row_max = vmaxv_f32_pred(v, row_max, pred);
+                offsets = vadd_n_u32(offsets, offsets_inc);
+            }
+
+            if (row_max > threshold) {
+                output_array[count++] = y;
+            }
+        }
+    } else {
+        mp_raise_ValueError(MP_ERROR_TEXT("Unsupported dtype"));
+    }
+
+    // Copy the output array to a new ndarray.
+    size_t output_shape[ULAB_MAX_DIMS] = {};
+    output_shape[ULAB_MAX_DIMS - 1] = count;
+    ndarray_obj_t *output = ndarray_new_dense_ndarray(1, output_shape, NDARRAY_UINT16);
+    memcpy(output->array, output_array, count * sizeof(uint16_t));
+    fb_alloc_free_till_mark();
+
+    OMV_PROFILE_PRINT();
+    return MP_OBJ_FROM_PTR(output);
+}
+static MP_DEFINE_CONST_FUN_OBJ_KW(py_ml_threshold_obj, 1, py_ml_threshold);
 
 static const mp_rom_map_elem_t py_ml_globals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR___name__),            MP_OBJ_NEW_QSTR(MP_QSTR_ml) },
     { MP_ROM_QSTR(MP_QSTR_Model),               MP_ROM_PTR(&py_ml_model_type) },
+    { MP_ROM_QSTR(MP_QSTR_threshold),           MP_ROM_PTR(&py_ml_threshold_obj) },
 };
 
 static MP_DEFINE_CONST_DICT(py_ml_globals_dict, py_ml_globals_dict_table);
