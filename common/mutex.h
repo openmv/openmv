@@ -1,7 +1,7 @@
 /*
  * SPDX-License-Identifier: MIT
  *
- * Copyright (C) 2013-2024 OpenMV, LLC.
+ * Copyright (C) 2013-2025 OpenMV, LLC.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -26,19 +26,27 @@
 #ifndef __MUTEX_H__
 #define __MUTEX_H__
 #include <stdint.h>
-#define MUTEX_TID_IDE    (1 << 0)
-#define MUTEX_TID_OMV    (1 << 1)
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdatomic.h>
+
+// Conflicts with picosdk
+#define mutex_t omv_mutex_t
+
+typedef enum {
+    MUTEX_TID_IDE = 1,
+    MUTEX_TID_OMV = 2
+} mutex_tid_t;
 
 typedef volatile struct {
-    uint32_t tid;
-    uint32_t lock;
-    uint32_t last_tid;
-} omv_mutex_t;
+    atomic_size_t tid;
+    atomic_flag lock;
+} mutex_t;
 
-void mutex_init0(omv_mutex_t *mutex);
-void mutex_lock(omv_mutex_t *mutex, uint32_t tid);
-int mutex_try_lock(omv_mutex_t *mutex, uint32_t tid);
-int mutex_try_lock_alternate(omv_mutex_t *mutex, uint32_t tid);
-int mutex_lock_timeout(omv_mutex_t *mutex, uint32_t tid, uint32_t timeout);
-void mutex_unlock(omv_mutex_t *mutex, uint32_t tid);
-#endif /* __MUTEX_H__ */
+void mutex_init0(mutex_t *mutex);
+void mutex_lock(mutex_t *mutex, size_t tid);
+bool mutex_try_lock(mutex_t *mutex, size_t tid);
+// Prevents a thread from locking twice in a row.
+bool mutex_try_lock_fair(mutex_t *mutex, size_t tid);
+void mutex_unlock(mutex_t *mutex, size_t tid);
+#endif // __MUTEX_H__

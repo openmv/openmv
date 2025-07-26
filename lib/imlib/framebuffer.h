@@ -27,9 +27,9 @@
 #define __FRAMEBUFFER_H__
 #include <stdint.h>
 #include "imlib.h"
-#include "mutex.h"
 #include "omv_common.h"
 #include "common/queue.h"
+#include "common/mutex.h"
 
 #ifndef FRAMEBUFFER_ALIGNMENT
 #define FRAMEBUFFER_ALIGNMENT    OMV_CACHE_LINE_SIZE
@@ -122,7 +122,7 @@ typedef struct jpegbuffer {
     int32_t enabled;
     int32_t quality;
     uint8_t *pixels;
-    omv_mutex_t lock;
+    mutex_t lock;
 } jpegbuffer_t;
 
 void framebuffer_init0();
