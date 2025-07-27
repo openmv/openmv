@@ -79,7 +79,7 @@ extern "C"
 
     /* Timeout count to wait for I2C command to complete
     */
-    #define LEPTON_I2C_COMMAND_BUSY_WAIT_COUNT              1000
+    #define LEPTON_I2C_COMMAND_BUSY_WAIT_COUNT              5000
 
 /******************************************************************************/
 /** EXPORTED TYPE DEFINITIONS                                                **/
