@@ -1307,7 +1307,7 @@ static void py_csi_print(const mp_print_t *print, mp_obj_t self_in, mp_print_kin
     mp_printf(print, "CSI {\n");
     mp_printf(print, "  Name                : %s\n", omv_csi_name(csi));
     mp_printf(print, "  Chip ID             : 0x%04X\n", csi->chip_id);
-    mp_printf(print, "  Address             : 0x%02X\n", csi->slv_addr);
+    mp_printf(print, "  Address             : 0x%02X\n", csi->slv_addr >> 1);
     mp_printf(print, "  Powered On          : %s\n", csi->power_on ? "true" : "false");
     mp_printf(print, "  Auxiliary           : %s\n", csi->auxiliary ? "true" : "false");
     mp_printf(print, "  Raw Output          : %s\n", csi->raw_output ? "true" : "false");
