@@ -149,7 +149,7 @@ void HAL_MspInit(void) {
     #endif
 
     // Config Systick.
-    HAL_NVIC_SetPriority(SysTick_IRQn, 0, 0);
+    assert(HAL_InitTick(0) == HAL_OK);
 
     // Enable GPIO clocks.
     __HAL_RCC_GPIOA_CLK_ENABLE();
