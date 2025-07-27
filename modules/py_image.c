@@ -987,7 +987,7 @@ static mp_obj_t py_image_to(pixformat_t pixfmt, mp_rom_obj_t default_color_palet
                             size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
     enum {
         ARG_x_scale, ARG_y_scale, ARG_roi, ARG_channel, ARG_alpha, ARG_color_palette, ARG_alpha_palette,
-        ARG_hint, ARG_copy, ARG_copy_to_fb, ARG_quality, ARG_subsampling
+        ARG_hint, ARG_transform, ARG_copy, ARG_copy_to_fb, ARG_quality, ARG_subsampling
     };
     const mp_arg_t allowed_args[] = {
         { MP_QSTR_x_scale, MP_ARG_OBJ | MP_ARG_KW_ONLY, {.u_rom_obj = MP_ROM_NONE} },
@@ -998,6 +998,7 @@ static mp_obj_t py_image_to(pixformat_t pixfmt, mp_rom_obj_t default_color_palet
         { MP_QSTR_color_palette, MP_ARG_OBJ | MP_ARG_KW_ONLY, {.u_rom_obj = default_color_palette} },
         { MP_QSTR_alpha_palette, MP_ARG_OBJ | MP_ARG_KW_ONLY, {.u_rom_obj = MP_ROM_NONE} },
         { MP_QSTR_hint, MP_ARG_INT | MP_ARG_KW_ONLY,  {.u_int = 0 } },
+        { MP_QSTR_transform, MP_ARG_OBJ | MP_ARG_KW_ONLY,  {.u_rom_obj = MP_ROM_NONE} },
         { MP_QSTR_copy, MP_ARG_BOOL | MP_ARG_KW_ONLY, {.u_bool = default_copy} },
         { MP_QSTR_copy_to_fb, MP_ARG_BOOL | MP_ARG_KW_ONLY, {.u_bool = false} },
         { MP_QSTR_quality, MP_ARG_INT | MP_ARG_KW_ONLY, {.u_int = 90} },
@@ -1034,6 +1035,8 @@ static mp_obj_t py_image_to(pixformat_t pixfmt, mp_rom_obj_t default_color_palet
                                                      IMAGE_HINT_SCALE_ASPECT_KEEP |
                                                      IMAGE_HINT_SCALE_ASPECT_EXPAND |
                                                      IMAGE_HINT_SCALE_ASPECT_IGNORE)) | IMAGE_HINT_BLACK_BACKGROUND;
+
+    float *transform = py_helper_arg_to_transform(args[ARG_transform].u_obj);
 
     if (args[ARG_copy_to_fb].u_bool) {
         framebuffer_t *fb = framebuffer_get(0);
@@ -1155,7 +1158,7 @@ static mp_obj_t py_image_to(pixformat_t pixfmt, mp_rom_obj_t default_color_palet
         fb_alloc_mark();
         imlib_draw_image(&dst_img, src_img, 0, 0, x_scale, y_scale, &roi,
                          args[ARG_channel].u_int, args[ARG_alpha].u_int, color_palette, alpha_palette,
-                         args[ARG_hint].u_int, NULL, NULL, NULL, NULL);
+                         args[ARG_hint].u_int, transform, NULL, NULL, NULL);
         fb_alloc_free_till_mark();
     }
 
@@ -1704,7 +1707,7 @@ static mp_obj_t py_image_line_op(size_t n_args, const mp_obj_t *pos_args, mp_map
                                  imlib_draw_row_callback_t callback) {
     enum {
         ARG_image, ARG_x, ARG_y, ARG_x_scale, ARG_y_scale, ARG_roi,
-        ARG_channel, ARG_alpha, ARG_color_palette, ARG_alpha_palette, ARG_hint, ARG_mask
+        ARG_channel, ARG_alpha, ARG_color_palette, ARG_alpha_palette, ARG_hint, ARG_transform, ARG_mask
     };
     static const mp_arg_t allowed_args[] = {
         { MP_QSTR_image, MP_ARG_OBJ | MP_ARG_REQUIRED, {.u_rom_obj = MP_ROM_NONE} },
@@ -1718,6 +1721,7 @@ static mp_obj_t py_image_line_op(size_t n_args, const mp_obj_t *pos_args, mp_map
         { MP_QSTR_color_palette, MP_ARG_OBJ | MP_ARG_KW_ONLY, {.u_rom_obj = MP_ROM_NONE} },
         { MP_QSTR_alpha_palette, MP_ARG_OBJ | MP_ARG_KW_ONLY, {.u_rom_obj = MP_ROM_NONE} },
         { MP_QSTR_hint, MP_ARG_INT | MP_ARG_KW_ONLY,  {.u_int = 0 } },
+        { MP_QSTR_transform, MP_ARG_OBJ | MP_ARG_KW_ONLY,  {.u_rom_obj = MP_ROM_NONE} },
         { MP_QSTR_mask, MP_ARG_OBJ | MP_ARG_KW_ONLY,  {.u_rom_obj = MP_ROM_NONE} },
     };
 
@@ -1781,6 +1785,8 @@ static mp_obj_t py_image_line_op(size_t n_args, const mp_obj_t *pos_args, mp_map
     const uint16_t *color_palette = py_helper_arg_to_palette(args[ARG_color_palette].u_obj, PIXFORMAT_RGB565);
     const uint8_t *alpha_palette = py_helper_arg_to_palette(args[ARG_alpha_palette].u_obj, PIXFORMAT_GRAYSCALE);
 
+    float *transform = py_helper_arg_to_transform(args[ARG_transform].u_obj);
+
     image_t *mask = NULL;
     if (args[ARG_mask].u_obj != mp_const_none) {
         mask = py_helper_arg_to_image(args[ARG_mask].u_obj, ARG_IMAGE_MUTABLE | ARG_IMAGE_ALLOC);
@@ -1799,7 +1805,7 @@ static mp_obj_t py_image_line_op(size_t n_args, const mp_obj_t *pos_args, mp_map
 
     imlib_draw_image(image, other, args[ARG_x].u_int, args[ARG_y].u_int, x_scale, y_scale, &roi,
                      args[ARG_channel].u_int, args[ARG_alpha].u_int, color_palette, alpha_palette,
-                     args[ARG_hint].u_int, NULL, callback, mask, dst_row_override);
+                     args[ARG_hint].u_int, transform, callback, mask, dst_row_override);
 
     fb_alloc_free_till_mark();
     return pos_args[0];
