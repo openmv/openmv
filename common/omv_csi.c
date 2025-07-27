@@ -501,6 +501,9 @@ int omv_csi_probe(omv_i2c_t *i2c) {
         dev_count = omv_csi_detect(i2c, dev_list);
     }
     
+    // Set the current ms for tracking elapsed time since power-on.
+    uint32_t power_time_ms = mp_hal_ticks_ms();
+
     // Add special devices, such as SPI sensors, soft-CSI etc...
     #if OMV_SOFTCSI_ENABLE
     if (dev_count < OMV_CSI_MAX_DEVICES) {
@@ -533,6 +536,7 @@ int omv_csi_probe(omv_i2c_t *i2c) {
         csi->reset_pol = reset_pol;
         csi->chip_id =  dev_list[i].chip_id;
         csi->slv_addr = dev_list[i].slv_addr;
+        csi->power_time_ms = power_time_ms;
 
         // Find the sensors init function.
         for (size_t i=0; i<OMV_ARRAY_SIZE(sensor_config_table); i++) {

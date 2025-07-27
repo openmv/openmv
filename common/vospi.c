@@ -46,7 +46,7 @@
 
 #define VOSPI_BUFFER_SIZE           (VOSPI_PACKET_SIZE * 2) // 16-bits
 #define VOSPI_CLOCK_SPEED           20000000 // hz
-#define VOSPI_SYNC_MS               250 // ms
+#define VOSPI_SYNC_MS               200 // ms
 
 #define VOSPI_DONT_CARE_PACKET      (0x0F00)
 #define VOSPI_HEADER_DONT_CARE(x)   (((x) & VOSPI_DONT_CARE_PACKET) == VOSPI_DONT_CARE_PACKET)
@@ -66,6 +66,7 @@ typedef struct _vospi_state {
     bool lepton_3;
     omv_spi_t spi_bus;
     volatile uint32_t flags;
+    uint32_t resync_ms;
 } vospi_state_t;
 
 static vospi_state_t vospi;
@@ -182,7 +183,8 @@ int vospi_deinit() {
 }
 
 bool vospi_active(void) {
-    return vospi.flags & VOSPI_FLAG_CAPTURE;
+    return (vospi.flags & VOSPI_FLAG_CAPTURE) &&
+           (vospi.flags & VOSPI_FLAG_STREAM);
 }
 
 int vospi_abort(void) {
@@ -190,6 +192,7 @@ int vospi_abort(void) {
     int ret = omv_spi_transfer_abort(&vospi.spi_bus);
     vospi.pid = 0;
     vospi.sid = 0;
+    vospi.resync_ms = mp_hal_ticks_ms();
     return ret;
 }
 
@@ -204,8 +207,8 @@ void vospi_restart(void) {
     // Resume streaming.
     vospi.flags |= VOSPI_FLAG_CAPTURE;
 
-    if (!(vospi.flags & VOSPI_FLAG_STREAM)) {
-        mp_hal_delay_ms(VOSPI_SYNC_MS);
+    if (!(vospi.flags & VOSPI_FLAG_STREAM) &&
+        (mp_hal_ticks_ms() - vospi.resync_ms) >= VOSPI_SYNC_MS) {
         omv_spi_transfer_start(&vospi.spi_bus, &spi_xfer);
         vospi.flags |= VOSPI_FLAG_STREAM;
     }
