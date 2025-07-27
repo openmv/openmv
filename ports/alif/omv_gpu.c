@@ -129,7 +129,8 @@ int omv_gpu_draw_image(image_t *src_img,
                        int alpha,
                        const uint16_t *color_palette,
                        const uint8_t *alpha_palette,
-                       image_hint_t hint) {
+                       image_hint_t hint,
+                       float *transform) {
     // Belnding is not supported yet.
     if (color_palette || alpha_palette) {
         return -1;

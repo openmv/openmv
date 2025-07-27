@@ -93,7 +93,8 @@ int omv_gpu_draw_image(image_t *src_img,
                        int alpha,
                        const uint16_t *color_palette,
                        const uint8_t *alpha_palette,
-                       image_hint_t hint) {
+                       image_hint_t hint,
+                       float *transform) {
     OMV_PROFILE_START();
 
     // GPU2D can only draw on RGB565/GRAYSCALE buffers.
@@ -191,7 +192,8 @@ int omv_gpu_draw_image(image_t *src_img,
                        int alpha,
                        const uint16_t *color_palette,
                        const uint8_t *alpha_palette,
-                       image_hint_t hint) {
+                       image_hint_t hint,
+                       float *transform) {
     OMV_PROFILE_START();
 
     // DMA2D can only draw on RGB565 buffers and the destination/source buffers must be accessible by DMA.

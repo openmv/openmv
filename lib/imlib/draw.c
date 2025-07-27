@@ -3056,7 +3056,7 @@ void imlib_draw_image(image_t *dst_img,
                                  (hint & (IMAGE_HINT_BILINEAR | IMAGE_HINT_BLACK_BACKGROUND));
 
         if (!omv_gpu_draw_image(src_img, &src_rect, dst_img, &dst_rect,
-                                alpha, color_palette, alpha_palette, gpu_hints)) {
+                                alpha, color_palette, alpha_palette, gpu_hints, NULL)) {
             goto exit_cleanup;
         }
     }

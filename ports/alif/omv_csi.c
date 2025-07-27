@@ -373,7 +373,7 @@ int alif_csi_snapshot(omv_csi_t *csi, image_t *dst_image, uint32_t flags) {
 
         rectangle_t srect = { fb->x, fb->y, fb->u, fb->v };
         rectangle_t drect = { 0, 0, fb->u, fb->v };
-        if (omv_gpu_draw_image(&src_cimage, &srect, &dst_cimage, &drect, 255, NULL, NULL, 0) != 0) {
+        if (omv_gpu_draw_image(&src_cimage, &srect, &dst_cimage, &drect, 255, NULL, NULL, 0, NULL) != 0) {
             return OMV_CSI_ERROR_IO_ERROR;
         }
     }
