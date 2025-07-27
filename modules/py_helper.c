@@ -28,6 +28,9 @@
 #include "framebuffer.h"
 #include "py_helper.h"
 #include "py_assert.h"
+#if defined(MODULE_ULAB_ENABLED)
+#include "ndarray.h"
+#endif // MODULE_ULAB_ENABLED
 #if MICROPY_PY_CSI
 #include "omv_csi.h"
 #endif
@@ -102,6 +105,40 @@ const void *py_helper_arg_to_palette(const mp_obj_t arg, uint32_t pixfmt) {
         palette = img->data;
     }
     return palette;
+}
+
+void *py_helper_arg_to_transform(const mp_obj_t arg) {
+    if (arg == mp_const_none) {
+        return NULL;
+    }
+
+    #if defined(MODULE_ULAB_ENABLED) && defined(OPENMV_N6)
+    if (!MP_OBJ_IS_TYPE(arg, &ulab_ndarray_type)) {
+        mp_raise_msg(&mp_type_TypeError, MP_ERROR_TEXT("Expected a ndarray"));
+    }
+
+    ndarray_obj_t *ndarray = MP_OBJ_TO_PTR(arg);
+
+    if (ndarray->dtype != NDARRAY_FLOAT) {
+        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Expected a ndarray with dtype float"));
+    }
+
+    if (!ndarray_is_dense(ndarray)) {
+        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Expected a dense ndarray"));
+    }
+
+    if (ndarray->ndim != 2) {
+        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Expected a 2D ndarray"));
+    }
+
+    if ((ndarray->shape[ULAB_MAX_DIMS-2] != 3) || (ndarray->shape[ULAB_MAX_DIMS-1] != 3)) {
+        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Invalid matrix shape!"));
+    }
+
+    return ndarray->array;
+    #else
+    mp_raise_msg(&mp_type_TypeError, MP_ERROR_TEXT("Transform operations are not supported!"));
+    #endif // MODULE_ULAB_ENABLED
 }
 
 rectangle_t py_helper_arg_to_roi(const mp_obj_t arg, const image_t *img) {
