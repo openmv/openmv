@@ -290,8 +290,8 @@ void framebuffer_update_jpeg_buffer(image_t *src) {
                 dst.h = fast_floorf(src->h * scale);
                 if (image_size(&dst) <= max_size) {
                     imlib_draw_image(&dst, src, 0, 0, scale, scale, NULL, -1, 255, NULL, NULL,
-                                     IMAGE_HINT_BILINEAR | IMAGE_HINT_BLACK_BACKGROUND, NULL,
-                                     NULL, NULL);
+                                     IMAGE_HINT_BILINEAR | IMAGE_HINT_BLACK_BACKGROUND,
+                                     NULL, NULL, NULL, NULL);
                     compress = false;
                 }
             }

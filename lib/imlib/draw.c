@@ -2817,6 +2817,7 @@ void imlib_draw_image(image_t *dst_img,
                       const uint16_t *color_palette,
                       const uint8_t *alpha_palette,
                       image_hint_t hint,
+                      float *transform,
                       imlib_draw_row_callback_t callback,
                       void *callback_arg,
                       void *dst_row_override) {
@@ -2998,7 +2999,7 @@ void imlib_draw_image(image_t *dst_img,
         new_src_img.pixfmt = color_palette ? PIXFORMAT_RGB565 : PIXFORMAT_GRAYSCALE;
         new_src_img.data = fb_alloc(image_size(&new_src_img), FB_ALLOC_CACHE_ALIGN);
         imlib_draw_image(&new_src_img, src_img, 0, 0, 1.f, 1.f, NULL,
-                         rgb_channel, 255, color_palette, NULL, 0, NULL, NULL, NULL);
+                         rgb_channel, 255, color_palette, NULL, 0, NULL, NULL, NULL, NULL);
         src_img = &new_src_img;
         rgb_channel = -1;
         color_palette = NULL;
@@ -3056,7 +3057,7 @@ void imlib_draw_image(image_t *dst_img,
                                  (hint & (IMAGE_HINT_BILINEAR | IMAGE_HINT_BLACK_BACKGROUND));
 
         if (!omv_gpu_draw_image(src_img, &src_rect, dst_img, &dst_rect,
-                                alpha, color_palette, alpha_palette, gpu_hints, NULL)) {
+                                alpha, color_palette, alpha_palette, gpu_hints, transform)) {
             goto exit_cleanup;
         }
     }
@@ -3122,14 +3123,14 @@ void imlib_draw_image(image_t *dst_img,
         t_src_img.pixfmt = src_img->pixfmt;
 
         // Are we scaling?
-        if ((src_x_frac != 65536) || (src_y_frac != 65536)) {
+        if ((src_x_frac != 65536) || (src_y_frac != 65536) || transform) {
             t_src_img.w = t_roi.w = src_height_scaled; // was transposed
             t_src_img.h = t_roi.h = src_width_scaled; // was transposed
             t_src_img.data = fb_alloc(image_size(&t_src_img), FB_ALLOC_CACHE_ALIGN);
             imlib_draw_image(&t_src_img, src_img, 0, 0, x_scale, y_scale, roi,
                              -1, 255, NULL, NULL,
                              hint & (IMAGE_HINT_AREA | IMAGE_HINT_BILINEAR | IMAGE_HINT_BICUBIC),
-                             NULL, NULL, NULL);
+                             transform, NULL, NULL, NULL);
         } else {
             memcpy(&t_roi, roi, sizeof(rectangle_t));
             t_src_img.w = src_img->w;
@@ -3223,7 +3224,7 @@ void imlib_draw_image(image_t *dst_img,
             imlib_draw_image(dst_img, &out, dst_x_start_backup + i, dst_y_start_backup, 1.f, 1.f, NULL,
                              rgb_channel, alpha, color_palette, alpha_palette,
                              hint & IMAGE_HINT_BLACK_BACKGROUND,
-                             callback, callback_arg, dst_row_override);
+                             NULL, callback, callback_arg, dst_row_override);
         }
 
         fb_free(); // fb_alloc_all

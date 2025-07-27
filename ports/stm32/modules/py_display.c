@@ -448,7 +448,7 @@ static void display_write(py_display_obj_t *self, image_t *src_img, int dst_x_st
     if (!black) {
         imlib_draw_image(&dst_img, src_img, dst_x_start, dst_y_start,
                          x_scale, y_scale, roi, rgb_channel, 255, color_palette,
-                         alpha_palette, hint | IMAGE_HINT_BLACK_BACKGROUND, NULL, NULL, NULL);
+                         alpha_palette, hint | IMAGE_HINT_BLACK_BACKGROUND, NULL, NULL, NULL, NULL);
     }
 
     #ifdef __DCACHE_PRESENT

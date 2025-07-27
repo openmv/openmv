@@ -1381,6 +1381,7 @@ void imlib_draw_image(image_t *dst_img,
                       const uint16_t *color_palette,
                       const uint8_t *alpha_palette,
                       image_hint_t hint,
+                      float *transform,
                       imlib_draw_row_callback_t callback,
                       void *callback_arg,
                       void *dst_row_override);

@@ -175,7 +175,7 @@ void mjpeg_write(FIL *fp, int width, int height, uint32_t *frames, uint32_t *byt
                 imlib_draw_image(&temp, img, center_x, center_y, scale, scale, roi,
                                  rgb_channel, alpha, color_palette, alpha_palette,
                                  (hint & (~IMAGE_HINT_CENTER)) | IMAGE_HINT_BLACK_BACKGROUND,
-                                 NULL, NULL, NULL);
+                                 NULL, NULL, NULL, NULL);
 
                 if (temp.w - p1.x) {
                     for (int i = p0.y; i < p1.y; i++) {

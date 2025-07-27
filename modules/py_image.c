@@ -1114,7 +1114,7 @@ static mp_obj_t py_image_to(pixformat_t pixfmt, mp_rom_obj_t default_color_palet
                 temp.data = fb_alloc(image_size(&temp), FB_ALLOC_NO_HINT);
                 imlib_draw_image(&temp, src_img, 0, 0, x_scale, y_scale, &roi,
                                  args[ARG_channel].u_int, args[ARG_alpha].u_int, color_palette, alpha_palette,
-                                 args[ARG_hint].u_int, NULL, NULL, NULL);
+                                 args[ARG_hint].u_int, NULL, NULL, NULL, NULL);
             }
 
             if (((dst_img.pixfmt == PIXFORMAT_JPEG) &&
@@ -1155,7 +1155,7 @@ static mp_obj_t py_image_to(pixformat_t pixfmt, mp_rom_obj_t default_color_palet
         fb_alloc_mark();
         imlib_draw_image(&dst_img, src_img, 0, 0, x_scale, y_scale, &roi,
                          args[ARG_channel].u_int, args[ARG_alpha].u_int, color_palette, alpha_palette,
-                         args[ARG_hint].u_int, NULL, NULL, NULL);
+                         args[ARG_hint].u_int, NULL, NULL, NULL, NULL);
         fb_alloc_free_till_mark();
     }
 
@@ -1799,7 +1799,7 @@ static mp_obj_t py_image_line_op(size_t n_args, const mp_obj_t *pos_args, mp_map
 
     imlib_draw_image(image, other, args[ARG_x].u_int, args[ARG_y].u_int, x_scale, y_scale, &roi,
                      args[ARG_channel].u_int, args[ARG_alpha].u_int, color_palette, alpha_palette,
-                     args[ARG_hint].u_int, callback, mask, dst_row_override);
+                     args[ARG_hint].u_int, NULL, callback, mask, dst_row_override);
 
     fb_alloc_free_till_mark();
     return pos_args[0];

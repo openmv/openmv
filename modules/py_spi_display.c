@@ -247,7 +247,7 @@ static void spi_display_write(py_display_obj_t *self, image_t *src_img, int dst_
             // Transmits left/right parts already zeroed...
             imlib_draw_image(&dst_img, src_img, dst_x_start, dst_y_start,
                              x_scale, y_scale, roi, rgb_channel, alpha, color_palette, alpha_palette,
-                             hint | IMAGE_HINT_BLACK_BACKGROUND, spi_display_draw_image_cb, self, dst_img.data);
+                             hint | IMAGE_HINT_BLACK_BACKGROUND, NULL, spi_display_draw_image_cb, self, dst_img.data);
 
             // Zero the bottom rows
             if (p1.y < self->height) {
@@ -290,7 +290,7 @@ static void spi_display_write(py_display_obj_t *self, image_t *src_img, int dst_
 
             imlib_draw_image(&dst_img, src_img, dst_x_start, dst_y_start,
                              x_scale, y_scale, roi, rgb_channel, alpha, color_palette,
-                             alpha_palette, hint | IMAGE_HINT_BLACK_BACKGROUND, NULL, NULL, NULL);
+                             alpha_palette, hint | IMAGE_HINT_BLACK_BACKGROUND, NULL, NULL, NULL, NULL);
 
             if (self->width - p1.x) {
                 for (int i = p0.y; i < p1.y; i++) {

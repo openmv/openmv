@@ -6016,7 +6016,7 @@ void imlib_find_datamatrices(list_t *out, image_t *ptr, rectangle_t *roi, int ef
         img.h = roi->h;
         img.pixfmt = PIXFORMAT_GRAYSCALE;
         img.data = grayscale_image;
-        imlib_draw_image(&img, ptr, 0, 0, 1.f, 1.f, roi, -1, 255, NULL, NULL, 0, NULL, NULL, NULL);
+        imlib_draw_image(&img, ptr, 0, 0, 1.f, 1.f, roi, -1, 255, NULL, NULL, 0, NULL, NULL, NULL, NULL);
     }
 
     umm_init_x(fb_avail());
