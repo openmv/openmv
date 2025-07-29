@@ -211,6 +211,7 @@ void imlib_draw_line(image_t *img, int x0, int y0, int x1, int y1, int c, int th
         // steep line
         x1 = (e2 + th / 2) / dy; // start offset
         int err = x1 * dy - th / 2; // shift error value to offset width
+        err = IM_MAX(err, 0); // prevent negative error on straight line
         for (x0 -= x1 * sx;; y0 += sy) {
             x1 = x0;
             imlib_set_pixel_aa(img, x1, y0, err, c); // aliasing pre-pixel
@@ -232,6 +233,7 @@ void imlib_draw_line(image_t *img, int x0, int y0, int x1, int y1, int c, int th
         // flat line
         y1 = (e2 + th / 2) / dx; // start offset
         int err = y1 * dx - th / 2; // shift error value to offset width
+        err = IM_MAX(err, 0); // prevent negative error on straight line
         for (y0 -= y1 * sy;; x0 += sx) {
             y1 = y0;
             imlib_set_pixel_aa(img, x0, y1, err, c); // aliasing pre-pixel
