@@ -710,6 +710,39 @@ void imlib_draw_string(image_t *img,
     }
 }
 
+void imlib_draw_event_histogram(image_t *img, ec_event_t *ec_event, int num_events, int gain) {
+    switch (img->pixfmt) {
+        case PIXFORMAT_GRAYSCALE: {
+            for (int i = 0; i < num_events; i++) {
+                int x = ec_event[i].x;
+                int y = ec_event[i].y;
+                switch (ec_event[i].type) {
+                    case EC_PIX_OFF_EVENT: {
+                        if ((x < img->w) && (y < img->h)) {
+                            int index = (y * img->w) + x;
+                            img->data[index] = __USAT(((int32_t) img->data[index]) - gain, UINT8_T_BITS);
+                        }
+                        break;
+                    }
+                    case EC_PIX_ON_EVENT: {
+                        if ((x < img->w) && (y < img->h)) {
+                            int index = (y * img->w) + x;
+                            img->data[index] = __USAT(((int32_t) img->data[index]) + gain, UINT8_T_BITS);
+                        }
+                        break;
+                    }
+                    default: {
+                        break;
+                    }
+                }
+            }
+        }
+        default: {
+            break;
+        }
+    }
+}
+
 void imlib_draw_row_setup(imlib_draw_row_data_t *data) {
     image_t temp;
     temp.w = data->dst_img->w;

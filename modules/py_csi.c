@@ -1116,7 +1116,7 @@ static mp_obj_t py_omv_csi_ioctl(size_t n_args, const mp_obj_t *args) {
         }
     }
 
-    if (error != 0) {
+    if (error < 0) {
         omv_csi_raise_error(error);
     }
 
