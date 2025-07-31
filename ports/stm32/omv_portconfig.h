@@ -82,8 +82,13 @@ typedef const stm32_gpio_t *omv_gpio_t;
 // IRQ handlers, if this I2C is enabled in Micropython, or defined and handled in stm32_hal_msp.c.
 typedef I2C_HandleTypeDef *omv_i2c_dev_t;
 
+#if defined(STM32N6)
+#define OMV_I2C_MAX_8BIT_XFER   (65536U - 16U)
+#define OMV_I2C_MAX_16BIT_XFER  (32768U - 8U)
+#else
 #define OMV_I2C_MAX_8BIT_XFER   (65536U - 16U)
 #define OMV_I2C_MAX_16BIT_XFER  (65536U - 8U)
+#endif
 
 #define OMV_SPI_MODE_SLAVE     (SPI_MODE_SLAVE)
 #define OMV_SPI_MODE_MASTER    (SPI_MODE_MASTER)
@@ -104,8 +109,13 @@ typedef I2C_HandleTypeDef *omv_i2c_dev_t;
 #define OMV_SPI_NSS_LOW        (0)
 #define OMV_SPI_NSS_HIGH       (1)
 
+#if defined(STM32N6)
+#define OMV_SPI_MAX_8BIT_XFER  (65536U - 16U)
+#define OMV_SPI_MAX_16BIT_XFER (32768U - 8U)
+#else
 #define OMV_SPI_MAX_8BIT_XFER  (65536U - 16U)
 #define OMV_SPI_MAX_16BIT_XFER (65536U - 8U)
+#endif
 #define OMV_SPI_MAX_TIMEOUT    (HAL_MAX_DELAY)
 
 #if defined(STM32N6)
