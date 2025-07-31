@@ -352,6 +352,12 @@ int stm_dma_init(DMA_HandleTypeDef *dma_descr, void *dma_channel, uint32_t reque
     dma_init_done = !circular;
     #endif
 
+    #if defined(STM32N6)
+    if (stm_dma_sec_config(dma_descr) != HAL_OK) {
+        return -1;
+    }
+    #endif
+
     if (dma_init_done) {
         HAL_DMA_DeInit(dma_descr);
         if (HAL_DMA_Init(dma_descr) != HAL_OK) {
@@ -407,13 +413,17 @@ int stm_dma_ll_init(DMA_HandleTypeDef *dma_descr, DMA_QListTypeDef *dma_queue,
         return -1;
     }
 
+    return 0;
+}
+
+int stm_dma_sec_config(DMA_HandleTypeDef *dma_descr) {
     uint32_t chan_flags = DMA_CHANNEL_PRIV | DMA_CHANNEL_SEC |
                           DMA_CHANNEL_SRC_SEC | DMA_CHANNEL_DEST_SEC;
     if (HAL_DMA_ConfigChannelAttributes(dma_descr, chan_flags) != HAL_OK) {
         return -1;
     }
 
-    if (is_hp) {
+    if (stm_dma_is_hp_channel(dma_descr->Instance)) {
         DMA_IsolationConfigTypeDef isocfg = {
             .CidFiltering =  DMA_ISOLATION_ON,
             .StaticCid = DMA_CHANNEL_STATIC_CID_1,
