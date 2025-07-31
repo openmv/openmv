@@ -249,7 +249,7 @@
 #define OMV_SPI_DISPLAY_RS_PIN              (&omv_pin_D13_GPIO)
 #define OMV_SPI_DISPLAY_RST_PIN             (&omv_pin_G13_GPIO)
 #define OMV_SPI_DISPLAY_BL_PIN              (&omv_pin_G0_GPIO)
-// TODO #define OMV_SPI_DISPLAY_TRIPLE_BUFFER       (1)
+#define OMV_SPI_DISPLAY_TRIPLE_BUFFER       (1)
 
 // CSI SPI bus
 #define OMV_CSI_SPI_ID                      (OMV_SPI5_ID)
