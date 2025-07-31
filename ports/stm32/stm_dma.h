@@ -46,6 +46,7 @@ int stm_dma_init(DMA_HandleTypeDef *dma_descr, void *dma_channel, uint32_t reque
 #if defined(STM32N6)
 int stm_dma_ll_init(DMA_HandleTypeDef *dma_descr, DMA_QListTypeDef *dma_queue,
         DMA_NodeTypeDef *dma_nodes, size_t nodes_count, uint32_t ports);
+int stm_dma_sec_config(DMA_HandleTypeDef *dma_descr);
 #endif
 
 #ifdef OMV_MDMA_CHANNEL_DCMI_0
