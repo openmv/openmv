@@ -44,6 +44,8 @@
 #include "LEPTON_I2C_Reg.h"
 
 #define LEPTON_BOOT_TIMEOUT        (3000)
+#define LEPTON_COLD_BOOT_DELAY     (2000)
+#define LEPTON_WARM_BOOT_DELAY     (1000)
 #define LEPTON_SNAPSHOT_RETRY      (3)
 #define LEPTON_SNAPSHOT_TIMEOUT    (5000)
 #define LEPTON_I2C_STATUS_BOOT     (LEP_I2C_STATUS_BOOT_MODE_MASK | LEP_I2C_STATUS_BOOT_STAT_MASK)
@@ -72,7 +74,7 @@ typedef struct lepton_state {
 
 static lepton_state_t lepton;
 
-static int lepton_reset(omv_csi_t *csi, bool measurement_mode, bool high_temp_mode);
+static int lepton_config(omv_csi_t *csi, bool measurement_mode, bool high_temp_mode);
 
 static int read_reg(omv_csi_t *csi, uint16_t reg_addr) {
     uint16_t reg_data;
@@ -232,7 +234,7 @@ static int ioctl(omv_csi_t *csi, int request, va_list ap) {
             if (lepton.measurement_mode != measurement_mode_in) {
                 lepton.measurement_mode = measurement_mode_in;
                 lepton.high_temp_mode = high_temp_mode_in;
-                ret = lepton_reset(csi, lepton.measurement_mode, lepton.high_temp_mode);
+                ret = lepton_config(csi, lepton.measurement_mode, lepton.high_temp_mode);
             }
             break;
         }
@@ -269,19 +271,9 @@ static int ioctl(omv_csi_t *csi, int request, va_list ap) {
     return ret;
 }
 
-static int lepton_reset(omv_csi_t *csi, bool measurement_mode, bool high_temp_mode) {
+static int lepton_config(omv_csi_t *csi, bool measurement_mode, bool high_temp_mode) {
     LEP_RAD_ENABLE_E rad;
     LEP_AGC_ROI_T roi;
-
-    memset(&lepton.port, 0, sizeof(LEP_CAMERA_PORT_DESC_T));
-
-    if (!csi->auxiliary) {
-        omv_gpio_write(OMV_CSI_RESET_PIN, 0);
-        mp_hal_delay_ms(100);
-
-        omv_gpio_write(OMV_CSI_RESET_PIN, 1);
-        mp_hal_delay_ms(2500);
-    }
 
     for (mp_uint_t start = mp_hal_ticks_ms(); ; mp_hal_delay_ms(10)) {
         if (LEP_OpenPort(csi->i2c, LEP_CCI_TWI, 0, &lepton.port) == LEP_OK) {
@@ -293,10 +285,9 @@ static int lepton_reset(omv_csi_t *csi, bool measurement_mode, bool high_temp_mo
         }
     }
 
-    if (csi->auxiliary) {
-        LEP_RunOemReboot(&lepton.port);
-        mp_hal_delay_ms(1500);
-    }
+    // Soft-reboot Lepton
+    LEP_RunOemReboot(&lepton.port);
+    mp_hal_delay_ms(LEPTON_WARM_BOOT_DELAY);
 
     for (mp_uint_t start = mp_hal_ticks_ms(); ; mp_hal_delay_ms(10)) {
         LEP_UINT16 status;
@@ -348,10 +339,13 @@ static int reset(omv_csi_t *csi) {
     lepton.min_temp = LEPTON_MIN_TEMP_DEFAULT;
     lepton.max_temp = LEPTON_MAX_TEMP_DEFAULT;
 
-    // Extra delay after power-on
-    mp_hal_delay_ms(1500);
+    // Extra delay after hard-reset.
+    uint32_t ticks_diff = mp_hal_ticks_ms() - csi->reset_time_ms;
+    if (ticks_diff < LEPTON_COLD_BOOT_DELAY) {
+        mp_hal_delay_ms(LEPTON_COLD_BOOT_DELAY - ticks_diff);
+    }
 
-    if (lepton_reset(csi, false, false) != 0) {
+    if (lepton_config(csi, false, false) != 0) {
         return OMV_CSI_ERROR_CTL_FAILED;
     }
 
@@ -426,14 +420,14 @@ static int snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
             return OMV_CSI_ERROR_WOULD_BLOCK;
         }
 
-        // Reset the FLIR lepton on timeout, up to LEPTON_SNAPSHOT_RETRY.
+        // Reset the module on timeout, up to LEPTON_SNAPSHOT_RETRY times.
         if ((mp_hal_ticks_ms() - tick_start) > LEPTON_SNAPSHOT_TIMEOUT) {
             if (reset_retry++ == LEPTON_SNAPSHOT_RETRY) {
                 vospi_abort();
                 return OMV_CSI_ERROR_CAPTURE_TIMEOUT;
             }
 
-            if (lepton_reset(csi, lepton.measurement_mode, lepton.high_temp_mode) != 0) {
+            if (lepton_config(csi, lepton.measurement_mode, lepton.high_temp_mode) != 0) {
                 return OMV_CSI_ERROR_CTL_FAILED;
             }
             

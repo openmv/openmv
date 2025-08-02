@@ -355,6 +355,7 @@ typedef struct _omv_csi {
     framebuffer_t *fb;          // Frame buffer pointer
     omv_clk_t *clk;             // Clock controller.
     uint32_t clk_hz;            // Clock freqeuency request by this CSI.
+    uint32_t reset_time_ms;     // To track elapsed time since hard-reset.
     uint32_t power_time_ms;     // To track elapsed time since power on.
 
     #ifdef OMV_CSI_PORT_BITS

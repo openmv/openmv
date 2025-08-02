@@ -334,6 +334,17 @@ __weak int omv_csi_reset(omv_csi_t *csi, bool hard) {
             mp_hal_delay_ms(10);
             omv_gpio_write(OMV_CSI_RESET_PIN, 1);
         }
+
+        // Track elapsed time since last hard-reset.
+        // Note hard-reset is shared between all CSIs.
+        uint32_t reset_time_ms = mp_hal_ticks_ms();
+
+        for (size_t i=0; i<OMV_CSI_MAX_DEVICES; i++) {
+            omv_csi_t *csi = &csi_all[i];
+            if (csi->detected) {
+                csi->reset_time_ms = reset_time_ms;
+            }
+        }
         #endif
 
         mp_hal_delay_ms(OMV_CSI_RESET_DELAY);
@@ -501,7 +512,7 @@ int omv_csi_probe(omv_i2c_t *i2c) {
         dev_count = omv_csi_detect(i2c, dev_list);
     }
     
-    // Set the current ms for tracking elapsed time since power-on.
+    // Track elapsed time since power-on.
     uint32_t power_time_ms = mp_hal_ticks_ms();
 
     // Add special devices, such as SPI sensors, soft-CSI etc...
@@ -537,6 +548,7 @@ int omv_csi_probe(omv_i2c_t *i2c) {
         csi->chip_id =  dev_list[i].chip_id;
         csi->slv_addr = dev_list[i].slv_addr;
         csi->power_time_ms = power_time_ms;
+        csi->reset_time_ms = power_time_ms;
 
         // Find the sensors init function.
         for (size_t i=0; i<OMV_ARRAY_SIZE(sensor_config_table); i++) {
