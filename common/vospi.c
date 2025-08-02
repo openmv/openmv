@@ -37,36 +37,47 @@
 #include "omv_common.h"
 #include "omv_spi.h"
 
-#define VOSPI_HEADER_WORDS          (2) // 16-bits
-#define VOSPI_PID_SIZE_PIXELS       (80) // w, 16-bits per pixel
-#define VOSPI_PIDS_PER_SID          (60) // h
-#define VOSPI_SIDS_PER_FRAME        (4)
-#define VOSPI_PACKET_SIZE           (VOSPI_HEADER_WORDS + VOSPI_PID_SIZE_PIXELS) // 16-bits
-#define VOSPI_SID_SIZE_PIXELS       (VOSPI_PIDS_PER_SID * VOSPI_PID_SIZE_PIXELS) // 16-bits
+#define VOSPI_HEADER_WORDS              (2) // 16-bits
+#define VOSPI_PID_SIZE_PIXELS           (80) // w, 16-bits per pixel
+#define VOSPI_PIDS_PER_SID              (60) // h
+#define VOSPI_SIDS_PER_FRAME(vospi)     (VOSPI_IS_LEPTON3(vospi) ? 4 : 1)
+#define VOSPI_PACKET_SIZE               (VOSPI_HEADER_WORDS + VOSPI_PID_SIZE_PIXELS) // 16-bits
+#define VOSPI_SID_SIZE_PIXELS           (VOSPI_PIDS_PER_SID * VOSPI_PID_SIZE_PIXELS) // 16-bits
 
-#define VOSPI_BUFFER_SIZE           (VOSPI_PACKET_SIZE * 2) // 16-bits
-#define VOSPI_CLOCK_SPEED           20000000 // hz
-#define VOSPI_SYNC_MS               200 // ms
+#define VOSPI_BUFFER_SIZE               (VOSPI_PACKET_SIZE * 2) // 16-bits
+#define VOSPI_CLOCK_SPEED               20000000 // hz
+#define VOSPI_SYNC_DELAY_MS             250 // ms
+#define VOSPI_SYNC_TIMEOUT_MS           100
 
-#define VOSPI_DONT_CARE_PACKET      (0x0F00)
-#define VOSPI_HEADER_DONT_CARE(x)   (((x) & VOSPI_DONT_CARE_PACKET) == VOSPI_DONT_CARE_PACKET)
-#define VOSPI_HEADER_PID(id)        ((id) & 0x0FFF)
-#define VOSPI_HEADER_SID(id)        (((id) >> 12) & 0x7)
-#define VOSPI_IS_SPECIAL_PACKET(pid)    (vospi.lepton_3 && pid == 20)
+// Packet Header Format (32 bits total: ID Field + CRC)
+// ┌───┬───────────┬──────────────────┬───────────────┐
+// │ 0 │ 3-bit SID │ 12-bit PID (0–20)│   16-bit CRC  │
+// └───┴───────────┴──────────────────┴───────────────┘
+// Notes:
+// - Packet numbers restart at 0 on each new segment.
+// - Discard packets with PID 0x0Fxx.
+// - On packet 20, the SID bits encode the segment number (1–4).
+#define VOSPI_HEADER_PID(id)            ((id) & 0x0FFFu)
+#define VOSPI_HEADER_SID(id)            (((id) >> 12u) & 0x7u)
+#define VOSPI_IS_LEPTON3(vospi)         (vospi.n_packets > VOSPI_PIDS_PER_SID)
+#define VOSPI_IS_PID_VALID(vospi, pid)  (((pid) & 0x0F00u) != 0x0F00u)
+#define VOSPI_IS_SID_VALID(vospi, pid)  (VOSPI_IS_LEPTON3(vospi) && pid == 20)
 
 typedef enum {
     VOSPI_FLAG_STREAM   = (1 << 0),
     VOSPI_FLAG_CAPTURE  = (1 << 1),
+    VOSPI_FLAG_SYNC_ERROR = (1 << 2),
 } vospi_flags_t;
 
 typedef struct _vospi_state {
-    int pid;
-    int sid;
+    size_t pid;
+    size_t sid;
     framebuffer_t *fb;
-    bool lepton_3;
     omv_spi_t spi_bus;
+    size_t n_packets;
+    uint32_t last_abort_ms;
+    size_t last_sync_ms;
     volatile uint32_t flags;
-    uint32_t resync_ms;
 } vospi_state_t;
 
 static vospi_state_t vospi;
@@ -94,22 +105,28 @@ static bool vospi_check_crc(const uint16_t *base) {
 }
 
 static void vospi_callback(omv_spi_t *spi, void *userdata, void *buf) {
+    vbuffer_t *buffer = NULL;
+    const uint16_t *base = (uint16_t *) buf;
+
     if (!(vospi.flags & VOSPI_FLAG_CAPTURE) ||
         !(vospi.flags & VOSPI_FLAG_STREAM)) {
         return;
     }
 
-    const uint16_t *base = (uint16_t *) buf;
+    size_t pid = VOSPI_HEADER_PID(base[0]);
+    size_t sid = VOSPI_HEADER_SID(base[0]) - 1; // SID is one-based
 
-    int id = base[0];
-
-    // Ignore don't care packets.
-    if (VOSPI_HEADER_DONT_CARE(id)) {
+    // Discard invalid/don't care packets.
+    if (!VOSPI_IS_PID_VALID(vospi, pid)) {
         return;
     }
 
-    int pid = VOSPI_HEADER_PID(id);
-    int sid = VOSPI_HEADER_SID(id) - 1;
+    // Abort the VoSPI stream if not sync'ing for too long.
+    if ((mp_hal_ticks_ms() - vospi.last_sync_ms) >= VOSPI_SYNC_TIMEOUT_MS) {
+        vospi.flags |= VOSPI_FLAG_SYNC_ERROR;
+        vospi_abort();
+        return;
+    }
 
     // Discard packets with a pid != 0 when waiting for the first packet.
     if (vospi.pid == 0 && pid != 0) {
@@ -117,22 +134,22 @@ static void vospi_callback(omv_spi_t *spi, void *userdata, void *buf) {
     }
 
     // Discard segments with a sid != 0 when waiting for the first segment.
-    if (VOSPI_IS_SPECIAL_PACKET(pid) && vospi.sid == 0 && sid != 0) {
+    if (vospi.sid == 0 && sid != 0 && VOSPI_IS_SID_VALID(vospi, pid)) {
         vospi.pid = 0;
         return;
     }
 
-    // Are we in sync with the flir lepton?
-    if (pid != vospi.pid ||
-        !vospi_check_crc(base) ||
-        (VOSPI_IS_SPECIAL_PACKET(pid) && sid != vospi.sid)) {
+    // Check if packet is in sync with the expected VoSPI stream
+    if (pid != vospi.pid || !vospi_check_crc(base) ||
+        (VOSPI_IS_SID_VALID(vospi, pid) && sid != vospi.sid)) {
         vospi_abort();
         return;
     }
 
-    vbuffer_t *buffer = framebuffer_acquire(vospi.fb, FB_FLAG_FREE | FB_FLAG_PEEK);
+    // Update sync timestamp.
+    vospi.last_sync_ms = mp_hal_ticks_ms();
 
-    if (!buffer) {
+    if (!(buffer = framebuffer_acquire(vospi.fb, FB_FLAG_FREE | FB_FLAG_PEEK))) {
         vospi.flags &= ~VOSPI_FLAG_CAPTURE;
         return;
     }
@@ -144,26 +161,17 @@ static void vospi_callback(omv_spi_t *spi, void *userdata, void *buf) {
 
     if (++vospi.pid == VOSPI_PIDS_PER_SID) {
         vospi.pid = 0;
-
-        // For the FLIR Lepton 3 we have to receive all the pids in all the segments.
-        if (vospi.lepton_3) {
-            if (++vospi.sid == VOSPI_SIDS_PER_FRAME) {
-                vospi.sid = 0;
-                framebuffer_release(vospi.fb, FB_FLAG_FREE);
-            }
-            // For the FLIR Lepton 1/2 we just have to receive all the pids.
-        } else {
-            // Move the buffer from free queue -> used queue.
+        if (++vospi.sid == VOSPI_SIDS_PER_FRAME(vospi)) {
+            vospi.sid = 0;
             framebuffer_release(vospi.fb, FB_FLAG_FREE);
         }
     }
-    
 }
 
-int vospi_init(uint32_t n_packets, framebuffer_t *fb) {
+int vospi_init(size_t n_packets, framebuffer_t *fb) {
     memset(&vospi, 0, sizeof(vospi_state_t));
     vospi.fb = fb;
-    vospi.lepton_3 = n_packets > VOSPI_PIDS_PER_SID;
+    vospi.n_packets = n_packets;
 
     omv_spi_config_t spi_config;
     omv_spi_default_config(&spi_config, OMV_CSI_SPI_ID);
@@ -189,29 +197,34 @@ bool vospi_active(void) {
 
 int vospi_abort(void) {
     vospi.flags = 0;
-    int ret = omv_spi_transfer_abort(&vospi.spi_bus);
-    vospi.pid = 0;
-    vospi.sid = 0;
-    vospi.resync_ms = mp_hal_ticks_ms();
-    return ret;
+    omv_spi_deinit(&vospi.spi_bus);
+    vospi.last_abort_ms = mp_hal_ticks_ms();
+    return 0;
 }
 
 void vospi_restart(void) {
-    omv_spi_transfer_t spi_xfer = {
-        .rxbuf = vospi_buf,
-        .size = VOSPI_BUFFER_SIZE,
-        .flags = OMV_SPI_XFER_DMA,
-        .callback = vospi_callback,
-    };
+    // Update sync timestamp.
+    vospi.last_sync_ms = mp_hal_ticks_ms();
 
     // Resume streaming.
     vospi.flags |= VOSPI_FLAG_CAPTURE;
+    vospi.flags &= ~VOSPI_FLAG_SYNC_ERROR;
 
     if (!(vospi.flags & VOSPI_FLAG_STREAM) &&
-        (mp_hal_ticks_ms() - vospi.resync_ms) >= VOSPI_SYNC_MS) {
-        omv_spi_transfer_start(&vospi.spi_bus, &spi_xfer);
-        vospi.flags |= VOSPI_FLAG_STREAM;
-    }
+        (mp_hal_ticks_ms() - vospi.last_abort_ms) >= VOSPI_SYNC_DELAY_MS) {
+        omv_spi_transfer_t spi_xfer = {
+            .rxbuf = vospi_buf,
+            .size = VOSPI_BUFFER_SIZE,
+            .flags = OMV_SPI_XFER_DMA,
+            .callback = vospi_callback,
+        };
 
+        vospi_init(vospi.n_packets, vospi.fb);
+
+        // Restart VoSPI transfer.
+        vospi.flags |= VOSPI_FLAG_STREAM;
+        vospi.last_sync_ms = mp_hal_ticks_ms();
+        omv_spi_transfer_start(&vospi.spi_bus, &spi_xfer);
+    }
 }
 #endif

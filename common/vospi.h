@@ -26,8 +26,8 @@
 #ifndef __VOSPI_H__
 #define __VOSPI_H__
 #include "framebuffer.h"
-int vospi_init(uint32_t n_packets, framebuffer_t *fb);
-int vospi_deinit();
+int vospi_init(size_t n_packets, framebuffer_t *fb);
+int vospi_deinit(void);
 int vospi_abort(void);
 bool vospi_active(void);
 void vospi_restart(void);
