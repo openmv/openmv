@@ -832,7 +832,7 @@ mp_obj_t py_fir_draw_ir(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_ar
 
     imlib_draw_image(dst_img, &src_img, args[ARG_x].u_int, args[ARG_y].u_int, x_scale, y_scale, &roi,
                      args[ARG_channel].u_int, args[ARG_alpha].u_int, color_palette, alpha_palette,
-                     args[ARG_hint].u_int, NULL, NULL, NULL);
+                     args[ARG_hint].u_int, NULL, NULL, NULL, NULL);
 
     fb_alloc_free_till_mark();
     return mp_const_none;
@@ -971,7 +971,8 @@ mp_obj_t py_fir_snapshot(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_a
 
     imlib_draw_image(&dst_img, &src_img, 0, 0, x_scale, y_scale, &roi,
                      args[ARG_channel].u_int, args[ARG_alpha].u_int, color_palette, alpha_palette,
-                     (args[ARG_hint].u_int & (~IMAGE_HINT_CENTER)) | IMAGE_HINT_BLACK_BACKGROUND, NULL, NULL, NULL);
+                     (args[ARG_hint].u_int & (~IMAGE_HINT_CENTER)) | IMAGE_HINT_BLACK_BACKGROUND,
+                     NULL, NULL, NULL, NULL);
 
     fb_alloc_free_till_mark();
 

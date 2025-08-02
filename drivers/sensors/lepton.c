@@ -484,7 +484,7 @@ static int snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
     imlib_draw_image(&fb_image, &temp, 0, 0, 1.0f, 1.0f, NULL, -1, 255,
                      (csi->pixformat == PIXFORMAT_RGB565) ? csi->color_palette : NULL, NULL,
                      IMAGE_HINT_BILINEAR | IMAGE_HINT_CENTER | IMAGE_HINT_SCALE_ASPECT_EXPAND,
-                     NULL, NULL, NULL);
+                     NULL, NULL, NULL, NULL);
 
     fb_alloc_free_till_mark();
     framebuffer_init_image(fb, image);

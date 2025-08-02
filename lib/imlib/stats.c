@@ -182,8 +182,8 @@ void imlib_get_similarity(image_t *img,
 
     void *dst_row_override = fb_alloc0(image_line_size(img), FB_ALLOC_CACHE_ALIGN);
     imlib_draw_image(img, other, x_start, y_start, x_scale, y_scale, roi,
-                     rgb_channel, alpha, color_palette, alpha_palette,
-                     hint, imlib_similarity_line_op, &state, dst_row_override);
+                     rgb_channel, alpha, color_palette, alpha_palette, hint,
+                     NULL, imlib_similarity_line_op, &state, dst_row_override);
 
     *avg = state.similarity_sum / blocks;
     *std = fast_sqrtf((state.similarity_sum_2 / blocks) - ((*avg) * (*avg)));

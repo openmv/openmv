@@ -93,7 +93,8 @@ int omv_gpu_draw_image(image_t *src_img,
                        int alpha,
                        const uint16_t *color_palette,
                        const uint8_t *alpha_palette,
-                       image_hint_t hint) {
+                       image_hint_t hint,
+                       float *transform) {
     OMV_PROFILE_START();
 
     // GPU2D can only draw on RGB565/GRAYSCALE buffers.
@@ -117,6 +118,22 @@ int omv_gpu_draw_image(image_t *src_img,
     // GPU2D cannot handle generic hmirror or vflip.
     if (hint & (IMAGE_HINT_HMIRROR | IMAGE_HINT_VFLIP)) {
         return -1;
+    }
+
+    float dx0 = dst_rect->x;
+    float dy0 = dst_rect->y;
+    float dx1 = dst_rect->x + dst_rect->w;
+    float dy1 = dst_rect->y;
+    float dx2 = dst_rect->x + dst_rect->w;
+    float dy2 = dst_rect->y + dst_rect->h;
+    float dx3 = dst_rect->x;
+    float dy3 = dst_rect->y + dst_rect->h;
+
+    if (transform) {
+        nema_mat3x3_mul_vec(*((nema_matrix3x3_t *) transform), &dx0, &dy0);
+        nema_mat3x3_mul_vec(*((nema_matrix3x3_t *) transform), &dx1, &dy1);
+        nema_mat3x3_mul_vec(*((nema_matrix3x3_t *) transform), &dx2, &dy2);
+        nema_mat3x3_mul_vec(*((nema_matrix3x3_t *) transform), &dx3, &dy3);
     }
 
     // Create command list.
@@ -156,9 +173,10 @@ int omv_gpu_draw_image(image_t *src_img,
     uint32_t dst_bf = (hint & IMAGE_HINT_BLACK_BACKGROUND) ? NEMA_BF_ZERO : NEMA_BF_INVSRCALPHA;
     nema_set_blend_blit(nema_blending_mode(NEMA_BF_SRCALPHA, dst_bf, blops));
     nema_set_const_color(nema_rgba(0, 0, 0, alpha));
-    nema_set_clip(dst_rect->x, dst_rect->y, dst_rect->w, dst_rect->h);
-    nema_blit_subrect_fit(dst_rect->x, dst_rect->y, dst_rect->w, dst_rect->h,
-                          src_rect->x, src_rect->y, src_rect->w, src_rect->h);
+    nema_set_clip(0, 0, dst_img->w, dst_img->h);
+    nema_enable_aa(true, true, true, true);
+    nema_blit_subrect_quad_fit(dx0, dy0, dx1, dy1, dx2, dy2, dx3, dy3,
+                               src_rect->x, src_rect->y, src_rect->w, src_rect->h);
 
     SCB_CleanInvalidateDCache_by_Addr(dst_img->data, image_size(dst_img));
     SCB_CleanDCache_by_Addr(src_img->data, image_size(src_img));
@@ -191,7 +209,8 @@ int omv_gpu_draw_image(image_t *src_img,
                        int alpha,
                        const uint16_t *color_palette,
                        const uint8_t *alpha_palette,
-                       image_hint_t hint) {
+                       image_hint_t hint,
+                       float *transform) {
     OMV_PROFILE_START();
 
     // DMA2D can only draw on RGB565 buffers and the destination/source buffers must be accessible by DMA.
@@ -223,6 +242,11 @@ int omv_gpu_draw_image(image_t *src_img,
         return -1;
     }
     #endif
+
+    // DMA2D cannot do matrix transformations.
+    if (transform) {
+        return -1;
+    }
 
     DMA2D_HandleTypeDef dma2d = {
         .Instance = DMA2D,

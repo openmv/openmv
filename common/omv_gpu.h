@@ -50,5 +50,6 @@ int omv_gpu_draw_image(image_t *src_img,
                        int alpha,
                        const uint16_t *color_palette,
                        const uint8_t *alpha_palette,
-                       image_hint_t hint);
+                       image_hint_t hint,
+                       float *transform);
 #endif // __OMV_GPU_H__

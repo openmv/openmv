@@ -224,7 +224,7 @@ static mp_obj_t py_csi_snapshot(size_t n_args, const mp_obj_t *pos_args, mp_map_
             image_t *other = py_helper_arg_to_image(args[ARG_image].u_obj, ARG_IMAGE_MUTABLE);
             fb_alloc_mark();
             imlib_draw_image(other, &image, 0, 0, 1.f, 1.f, NULL, -1, 255, NULL, NULL,
-                             IMAGE_HINT_SCALE_ASPECT_IGNORE, NULL, NULL, NULL);
+                             IMAGE_HINT_SCALE_ASPECT_IGNORE, NULL, NULL, NULL, NULL);
             fb_alloc_free_till_mark();
             return mp_const_none;
         }

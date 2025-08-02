@@ -129,9 +129,10 @@ int omv_gpu_draw_image(image_t *src_img,
                        int alpha,
                        const uint16_t *color_palette,
                        const uint8_t *alpha_palette,
-                       image_hint_t hint) {
-    // Belnding is not supported yet.
-    if (color_palette || alpha_palette) {
+                       image_hint_t hint,
+                       float *transform) {
+    // Belnding is not supported yet and transformations are not supported.
+    if (color_palette || alpha_palette || transform) {
         return -1;
     }
     OMV_PROFILE_START();
