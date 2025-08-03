@@ -293,6 +293,32 @@ static uint32_t stm_dma_width(uint32_t size, bool source) {
     #endif
 }
 
+#if defined(STM32N6)
+static int stm_dma_sec_config(DMA_HandleTypeDef *dma_descr) {
+    // Configure default security attributes.
+    uint32_t chan_flags = DMA_CHANNEL_PRIV | DMA_CHANNEL_SEC |
+                          DMA_CHANNEL_SRC_SEC | DMA_CHANNEL_DEST_SEC;
+
+    if (HAL_DMA_ConfigChannelAttributes(dma_descr, chan_flags) != HAL_OK) {
+        return -1;
+    }
+
+    // Enable isolation for HPDMA channels.
+    if (stm_dma_is_hp_channel(dma_descr->Instance)) {
+        DMA_IsolationConfigTypeDef isocfg = {
+            .CidFiltering =  DMA_ISOLATION_ON,
+            .StaticCid = DMA_CHANNEL_STATIC_CID_1,
+        };
+
+        if (HAL_DMA_SetIsolationAttributes(dma_descr, &isocfg) != HAL_OK) {
+            return -1;
+        }
+    }
+
+    return 0;
+}
+#endif
+
 int stm_dma_init(DMA_HandleTypeDef *dma_descr, void *dma_channel, uint32_t request,
                  uint32_t direction, uint32_t ssize, uint32_t dsize, uint32_t ports,
                  const DMA_InitTypeDef *init, bool circular) {
@@ -357,8 +383,13 @@ int stm_dma_init(DMA_HandleTypeDef *dma_descr, void *dma_channel, uint32_t reque
         if (HAL_DMA_Init(dma_descr) != HAL_OK) {
             return -1;
         }
-    }
 
+        #if defined(STM32N6)
+        if (stm_dma_sec_config(dma_descr)) {
+            return -1;
+        }
+        #endif
+    }
     return 0;
 }
 
@@ -407,20 +438,8 @@ int stm_dma_ll_init(DMA_HandleTypeDef *dma_descr, DMA_QListTypeDef *dma_queue,
         return -1;
     }
 
-    uint32_t chan_flags = DMA_CHANNEL_PRIV | DMA_CHANNEL_SEC |
-                          DMA_CHANNEL_SRC_SEC | DMA_CHANNEL_DEST_SEC;
-    if (HAL_DMA_ConfigChannelAttributes(dma_descr, chan_flags) != HAL_OK) {
+    if (stm_dma_sec_config(dma_descr)) {
         return -1;
-    }
-
-    if (is_hp) {
-        DMA_IsolationConfigTypeDef isocfg = {
-            .CidFiltering =  DMA_ISOLATION_ON,
-            .StaticCid = DMA_CHANNEL_STATIC_CID_1,
-        };
-        if (HAL_DMA_SetIsolationAttributes(dma_descr, &isocfg) != HAL_OK) {
-            return -1;
-        }
     }
 
     return 0;
