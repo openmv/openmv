@@ -844,7 +844,7 @@ static inline v128_t vshlc(v128_t v0, uint32_t *reg, uint32_t n) {
 
 static inline v128_t vadd_u32(v128_t v0, v128_t v1) {
     #if (__ARM_ARCH >= 8)
-    return (v128_t) vaddq(v0.u32, v1.u32);
+    return (v128_t) vaddq_u32(v0.u32, v1.u32);
     #else
     return (v128_t) {
         .u32 = v0.u32 + v1.u32
@@ -854,7 +854,7 @@ static inline v128_t vadd_u32(v128_t v0, v128_t v1) {
 
 static inline v128_t vadd_s32(v128_t v0, v128_t v1) {
     #if (__ARM_ARCH >= 8)
-    return (v128_t) vaddq(v0.s32, v1.s32);
+    return (v128_t) vaddq_s32(v0.s32, v1.s32);
     #else
     return (v128_t) {
         .s32 = v0.s32 + v1.s32
@@ -864,7 +864,7 @@ static inline v128_t vadd_s32(v128_t v0, v128_t v1) {
 
 static inline v128_t vsub_u8(v128_t v0, v128_t v1) {
     #if (__ARM_ARCH >= 8)
-    return (v128_t) vsubq(v0.u8, v1.u8);
+    return (v128_t) vsubq_u8(v0.u8, v1.u8);
     #elif (__ARM_ARCH >= 7)
     return (v128_t) {
         .u32 = { __USUB8(v0.u32[0], v1.u32[0]) }
@@ -878,7 +878,7 @@ static inline v128_t vsub_u8(v128_t v0, v128_t v1) {
 
 static inline v128_t vsub_s8(v128_t v0, v128_t v1) {
     #if (__ARM_ARCH >= 8)
-    return (v128_t) vsubq(v0.s8, v1.s8);
+    return (v128_t) vsubq_s8(v0.s8, v1.s8);
     #elif (__ARM_ARCH >= 7)
     return (v128_t) {
         .u32 = { __SSUB8(v0.u32[0], v1.u32[0]) }
@@ -892,7 +892,7 @@ static inline v128_t vsub_s8(v128_t v0, v128_t v1) {
 
 static inline v128_t vsub_u16(v128_t v0, v128_t v1) {
     #if (__ARM_ARCH >= 8)
-    return (v128_t) vsubq(v0.u16, v1.u16);
+    return (v128_t) vsubq_u16(v0.u16, v1.u16);
     #elif (__ARM_ARCH >= 7)
     return (v128_t) {
         .u32 = { __USUB16(v0.u32[0], v1.u32[0]) }
@@ -906,7 +906,7 @@ static inline v128_t vsub_u16(v128_t v0, v128_t v1) {
 
 static inline v128_t vsub_s16(v128_t v0, v128_t v1) {
     #if (__ARM_ARCH >= 8)
-    return (v128_t) vsubq(v0.s16, v1.s16);
+    return (v128_t) vsubq_s16(v0.s16, v1.s16);
     #elif (__ARM_ARCH >= 7)
     return (v128_t) {
         .u32 = { __SSUB16(v0.u32[0], v1.u32[0]) }
@@ -1146,7 +1146,7 @@ static inline v128_t veor_s32(v128_t v0, v128_t v1) {
 
 static inline v128_t vmul_u32(v128_t v0, v128_t v1) {
     #if (__ARM_ARCH >= 8)
-    return (v128_t) vmulq(v0.u32, v1.u32);
+    return (v128_t) vmulq_u32(v0.u32, v1.u32);
     #else
     return (v128_t) {
         .u32 = v0.u32 * v1.u32
@@ -1156,7 +1156,7 @@ static inline v128_t vmul_u32(v128_t v0, v128_t v1) {
 
 static inline v128_t vmul_s32(v128_t v0, v128_t v1) {
     #if (__ARM_ARCH >= 8)
-    return (v128_t) vmulq(v0.s32, v1.s32);
+    return (v128_t) vmulq_s32(v0.s32, v1.s32);
     #else
     return (v128_t) {
         .s32 = v0.s32 * v1.s32
@@ -1166,7 +1166,7 @@ static inline v128_t vmul_s32(v128_t v0, v128_t v1) {
 
 static inline v128_t vmla_u32(v128_t v0, v128_t v1, v128_t v2) {
     #if (__ARM_ARCH >= 8)
-    return (v128_t) vaddq(vmulq(v0.u32, v1.u32), v2.u32);
+    return (v128_t) vaddq_u32(vmulq_u32(v0.u32, v1.u32), v2.u32);
     #else
     return (v128_t) {
         .u32 = (v0.u32 * v1.u32) + v2.u32
@@ -1176,7 +1176,7 @@ static inline v128_t vmla_u32(v128_t v0, v128_t v1, v128_t v2) {
 
 static inline v128_t vmla_s32(v128_t v0, v128_t v1, v128_t v2) {
     #if (__ARM_ARCH >= 8)
-    return (v128_t) vaddq(vmulq(v0.s32, v1.s32), v2.s32);
+    return (v128_t) vaddq_s32(vmulq_s32(v0.s32, v1.s32), v2.s32);
     #else
     return (v128_t) {
         .s32 = (v0.s32 * v1.s32) + v2.s32
