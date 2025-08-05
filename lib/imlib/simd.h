@@ -862,6 +862,26 @@ static inline v128_t vadd_s32(v128_t v0, v128_t v1) {
     #endif
 }
 
+static inline v128_t vadd_n_u32(v128_t v0, uint32_t x) {
+    #if (__ARM_ARCH >= 8)
+    return (v128_t) vaddq_n_u32(v0.u32, x);
+    #else
+    return (v128_t) {
+        .u32 = v0.u32 + x
+    };
+    #endif
+}
+
+static inline v128_t vadd_n_s32(v128_t v0, int32_t x) {
+    #if (__ARM_ARCH >= 8)
+    return (v128_t) vaddq_n_s32(v0.s32, x);
+    #else
+    return (v128_t) {
+        .s32 = v0.s32 + x
+    };
+    #endif
+}
+
 static inline v128_t vsub_u8(v128_t v0, v128_t v1) {
     #if (__ARM_ARCH >= 8)
     return (v128_t) vsubq_u8(v0.u8, v1.u8);
@@ -914,6 +934,26 @@ static inline v128_t vsub_s16(v128_t v0, v128_t v1) {
     #else
     return (v128_t) {
         .s16 = v0.s16 - v1.s16
+    };
+    #endif
+}
+
+static inline v128_t vsub_n_u32(v128_t v0, uint32_t x) {
+    #if (__ARM_ARCH >= 8)
+    return (v128_t) vsubq_n_u32(v0.u32, x);
+    #else
+    return (v128_t) {
+        .u32 = v0.u32 - x
+    };
+    #endif
+}
+
+static inline v128_t vsub_n_s32(v128_t v0, int32_t x) {
+    #if (__ARM_ARCH >= 8)
+    return (v128_t) vsubq_n_s32(v0.s32, x);
+    #else
+    return (v128_t) {
+        .s32 = v0.s32 - x
     };
     #endif
 }
