@@ -1371,6 +1371,30 @@ static inline v128_t vldr_u8_pred(const uint8_t *p, v128_predicate_t pred) {
     #endif
 }
 
+static inline v128_t vldr_u8_widen_u32_gather_pred(const uint8_t *p,
+                                                   v128_t offsets,
+                                                   v128_predicate_t pred) {
+    #if (__ARM_ARCH >= 8)
+    return (v128_t) vldrbq_gather_offset_z_u32(p, offsets.u32, pred);
+    #else
+    return (v128_t) {
+        .u32 = { *(p + offsets.u32[0]) }
+    };
+    #endif
+}
+
+static inline v128_t vldr_s8_widen_s32_gather_pred(const int8_t *p,
+                                                   v128_t offsets,
+                                                   v128_predicate_t pred) {
+    #if (__ARM_ARCH >= 8)
+    return (v128_t) vldrbq_gather_offset_z_s32(p, offsets.u32, pred);
+    #else
+    return (v128_t) {
+        .s32 = { *(p + offsets.u32[0]) }
+    };
+    #endif
+}
+
 static inline void vstr_u8(uint8_t *p, v128_t v0) {
     #if (__ARM_ARCH >= 8)
     vstrbq(p, v0.u8);
@@ -1422,6 +1446,30 @@ static inline v128_t vldr_u16_pred(const uint16_t *p, v128_predicate_t pred) {
     #endif
 }
 
+static inline v128_t vldr_u16_widen_u32_gather_pred(const uint16_t *p,
+                                                    v128_t offsets,
+                                                    v128_predicate_t pred) {
+    #if (__ARM_ARCH >= 8)
+    return (v128_t) vldrhq_gather_shifted_offset_z_u32(p, offsets.u32, pred);
+    #else
+    return (v128_t) {
+        .u32 = { *(p + offsets.u32[0]) }
+    };
+    #endif
+}
+
+static inline v128_t vldr_s16_widen_s32_gather_pred(const int16_t *p,
+                                                    v128_t offsets,
+                                                    v128_predicate_t pred) {
+    #if (__ARM_ARCH >= 8)
+    return (v128_t) vldrhq_gather_shifted_offset_z_s32(p, offsets.u32, pred);
+    #else
+    return (v128_t) {
+        .s32 = { *(p + offsets.u32[0]) }
+    };
+    #endif
+}
+
 static inline void vstr_u16(uint16_t *p, v128_t v0) {
     #if (__ARM_ARCH >= 8)
     vstrhq(p, v0.u16);
@@ -1468,6 +1516,15 @@ static inline void vstr_u16_narrow_u8_pred(uint8_t *p, v128_t v0, v128_predicate
     if (pred > 1) {
         *((uint8_t *) (p + 1)) = v0.u8[2];
     }
+    #endif
+}
+
+static inline void vstr_u16_narrow_u8_scatter(uint8_t *p, v128_t offsets, v128_t v0) {
+    #if (__ARM_ARCH >= 8)
+    vstrbq_scatter_offset(p, offsets.u16, v0.u16);
+    #else
+    *(p + offsets.u16[0]) = v0.u8[0];
+    *(p + offsets.u16[1]) = v0.u8[2];
     #endif
 }
 
