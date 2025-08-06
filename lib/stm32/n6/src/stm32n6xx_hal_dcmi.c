@@ -418,7 +418,7 @@ HAL_StatusTypeDef HAL_DCMI_Start_DMA(DCMI_HandleTypeDef *hdcmi, uint32_t DCMI_Mo
   /* Length should be converted to number of bytes */
   tmp_length = tmp_length * 4U;
 
-  if (tmp_length <= 0xFFFFU)
+  if (tmp_length <= 0)
   {
     /* Continuoues Mode */
     /* Enable the DMA Stream */
