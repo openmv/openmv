@@ -145,6 +145,7 @@ typedef enum {
 
 typedef enum {
     OMV_CSI_FRAMESIZE_INVALID = 0,
+    OMV_CSI_FRAMESIZE_CUSTOM,
     // C/SIF Resolutions
     OMV_CSI_FRAMESIZE_QQCIF,    // 88x72
     OMV_CSI_FRAMESIZE_QCIF,     // 176x144

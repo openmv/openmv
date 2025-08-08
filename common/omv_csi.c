@@ -78,6 +78,7 @@ typedef struct _i2c_dev {
 // Sensor frame size/resolution table.
 uint16_t resolution[][2] = {
     {0,    0   },
+    {0,    0   },    /* Custom set by drivers */
     // C/SIF Resolutions
     {88,   72  },    /* QQCIF     */
     {176,  144 },    /* QCIF      */
