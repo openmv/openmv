@@ -65,7 +65,7 @@ static size_t py_ml_tuple_sum(mp_obj_tuple_t *o) {
     return size;
 }
 
-static size_t pl_ml_dtype_size(char dtype) {
+static size_t py_ml_dtype_size(char dtype) {
     switch (dtype) {
         case 'f':
             return 4;
@@ -92,7 +92,7 @@ static void py_ml_process_input(py_ml_model_obj_t *model, mp_obj_t arg) {
         if (mp_obj_is_callable(input_arg)) {
             // Input is a callable. Call the object and pass the tensor buffer and dtype.
             mp_obj_t fargs[3] = {
-                mp_obj_new_bytearray_by_ref(input_size * pl_ml_dtype_size(input_dtype), input_buffer),
+                mp_obj_new_bytearray_by_ref(input_size * py_ml_dtype_size(input_dtype), input_buffer),
                 MP_OBJ_FROM_PTR(input_shape),
                 mp_obj_new_int(input_dtype)
             };
