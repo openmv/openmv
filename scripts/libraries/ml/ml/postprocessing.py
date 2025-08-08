@@ -36,6 +36,12 @@ from ulab import numpy as np
 _NO_DETECTION = const(())
 
 
+def dequantize(model, value):
+    if model.output_dtype[0] == 'f':
+        return value
+    return (value - model.output_zero_point[0]) * model.output_scale[0]
+
+
 # FOMO generates an image per class, where each pixel represents the centroid
 # of the trained object. These images are processed with `find_blobs()` to
 # extract centroids, and `get_stats()` is used to get their scores. Overlapping
@@ -50,7 +56,7 @@ class fomo_postprocess:
         n, oh, ow, oc = model.output_shape[0]
         nms = NMS(ow, oh, inputs[0].roi)
         for i in range(oc):
-            img = image.Image(outputs[0][0, :, :, i] * 255)
+            img = image.Image(dequantize(model, outputs[0][0, :, :, i]) * 255)
             blobs = img.find_blobs(
                 self.threshold_list, x_stride=1, area_threshold=1, pixels_threshold=1
             )
@@ -106,13 +112,13 @@ class yolo_v2_postprocess:
                                           _YOLO_V2_CLASSES + class_count))
 
         # Threshold all the scores
-        score_indices = sigmoid(row_outputs[:, _YOLO_V2_SCORE])
+        score_indices = sigmoid(dequantize(model, row_outputs[:, _YOLO_V2_SCORE]))
         score_indices = np.nonzero(score_indices > self.threshold)[0]
         if not len(score_indices):
             return _NO_DETECTION
 
         # Get the bounding boxes that have a valid score
-        bb = np.take(row_outputs, score_indices, axis=0)
+        bb = dequantize(model, np.take(row_outputs, score_indices, axis=0))
 
         # Extract rows, columns, and anchor indices
         bb_rows = score_indices // (ow * self.anchors_len)
@@ -185,13 +191,13 @@ class yolo_v5_postprocess:
         row_outputs = outputs[0].reshape((oh * ow, _YOLO_V5_CLASSES + class_count))
 
         # Threshold all the scores
-        score_indices = row_outputs[:, _YOLO_V5_SCORE]
+        score_indices = dequantize(model, row_outputs[:, _YOLO_V5_SCORE])
         score_indices = np.nonzero(score_indices > self.threshold)[0]
         if not len(score_indices):
             return _NO_DETECTION
 
         # Get the bounding boxes that have a valid score
-        bb = np.take(row_outputs, score_indices, axis=0)
+        bb = dequantize(model, np.take(row_outputs, score_indices, axis=0))
 
         # Get the score information
         bb_scores = bb[:, _YOLO_V5_SCORE]
@@ -239,13 +245,13 @@ class yolo_v8_postprocess:
         column_outputs = outputs[0].reshape((oh * (_YOLO_V8_CLASSES + class_count), oc))
 
         # Threshold all the scores
-        score_indices = np.max(column_outputs[_YOLO_V8_CLASSES:, :], axis=0)
+        score_indices = np.max(dequantize(model, column_outputs[_YOLO_V8_CLASSES:, :]), axis=0)
         score_indices = np.nonzero(score_indices > self.threshold)[0]
         if not len(score_indices):
             return _NO_DETECTION
 
         # Get the bounding boxes that have a valid score
-        bb = np.take(column_outputs, score_indices, axis=1)
+        bb = dequantize(model, np.take(column_outputs, score_indices, axis=1))
 
         # Get the score information
         bb_scores = np.max(bb[_YOLO_V8_CLASSES:, :], axis=0)
