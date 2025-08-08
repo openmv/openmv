@@ -86,8 +86,7 @@ class YoloV5:
 
         nms = NMS(iw, ih, inputs[0].roi)
         for i in range(bb.shape[0]):
-            nms.add_bounding_box(xmin[i], ymin[i], xmax[i], ymax[i],
-                                 bb_scores[i], bb_classes[i])
+            nms.add_bounding_box(xmin[i], ymin[i], xmax[i], ymax[i], bb_scores[i], bb_classes[i])
         return nms.get_bounding_boxes(threshold=self.nms_threshold, sigma=self.nms_sigma)
 
 
@@ -142,6 +141,5 @@ class YoloV8:
 
         nms = NMS(iw, ih, inputs[0].roi)
         for i in range(bb.shape[0]):
-            nms.add_bounding_box(xmin[i], ymin[i], xmax[i], ymax[i],
-                                 bb_scores[i], bb_classes[i])
+            nms.add_bounding_box(xmin[i], ymin[i], xmax[i], ymax[i], bb_scores[i], bb_classes[i])
         return nms.get_bounding_boxes(threshold=self.nms_threshold, sigma=self.nms_sigma)
