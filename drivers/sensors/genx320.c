@@ -97,9 +97,11 @@ static int reset(omv_csi_t *csi) {
     genx->contrast = CONTRAST_DEFAULT;
     genx->brightness = BRIGHTNESS_DEFAULT;
     genx->event_time_us = 0;
+    resolution[OMV_CSI_FRAMESIZE_CUSTOM][0] = ACTIVE_SENSOR_WIDTH;
+    resolution[OMV_CSI_FRAMESIZE_CUSTOM][1] = ACTIVE_SENSOR_HEIGHT;
 
     // Set histogram mode by default.
-    if (set_active_mode(csi, OMV_CSI_GENX320_MODE_HISTO, OMV_CSI_FRAMESIZE_320X320)) {
+    if (set_active_mode(csi, OMV_CSI_GENX320_MODE_HISTO, OMV_CSI_FRAMESIZE_CUSTOM)) {
         return OMV_CSI_ERROR_CSI_INIT_FAILED;
     }
 
@@ -425,7 +427,10 @@ static int ioctl(omv_csi_t *csi, int request, va_list ap) {
             int mode = va_arg(ap, int);
 
             if (mode == OMV_CSI_GENX320_MODE_HISTO) {
-                if ((ret = set_active_mode(csi, OMV_CSI_GENX320_MODE_HISTO, OMV_CSI_FRAMESIZE_320X320))) {
+                resolution[OMV_CSI_FRAMESIZE_CUSTOM][0] = ACTIVE_SENSOR_WIDTH;
+                resolution[OMV_CSI_FRAMESIZE_CUSTOM][1] = ACTIVE_SENSOR_HEIGHT;
+
+                if ((ret = set_active_mode(csi, OMV_CSI_GENX320_MODE_HISTO, OMV_CSI_FRAMESIZE_CUSTOM))) {
                     break;
                 }
 
@@ -433,7 +438,7 @@ static int ioctl(omv_csi_t *csi, int request, va_list ap) {
                     break;
                 }
 
-                if ((ret = omv_csi_set_framesize(csi, OMV_CSI_FRAMESIZE_320X320))) {
+                if ((ret = omv_csi_set_framesize(csi, OMV_CSI_FRAMESIZE_CUSTOM))) {
                     break;
                 }
             } else if (mode == OMV_CSI_GENX320_MODE_EVENT) {
