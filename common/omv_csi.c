@@ -77,51 +77,50 @@ typedef struct _i2c_dev {
 
 // Sensor frame size/resolution table.
 uint16_t resolution[][2] = {
-    {0,    0   },
-    {0,    0   },    /* Custom set by drivers */
+    [OMV_CSI_FRAMESIZE_INVALID]     = {0,    0},
+    [OMV_CSI_FRAMESIZE_CUSTOM]      = {0,    0},
     // C/SIF Resolutions
-    {88,   72  },    /* QQCIF     */
-    {176,  144 },    /* QCIF      */
-    {352,  288 },    /* CIF       */
-    {88,   60  },    /* QQSIF     */
-    {176,  120 },    /* QSIF      */
-    {352,  240 },    /* SIF       */
+    [OMV_CSI_FRAMESIZE_QQCIF]       = {88,   72},
+    [OMV_CSI_FRAMESIZE_QCIF]        = {176,  144},
+    [OMV_CSI_FRAMESIZE_CIF]         = {352,  288},
+    [OMV_CSI_FRAMESIZE_QQSIF]       = {88,   60},
+    [OMV_CSI_FRAMESIZE_QSIF]        = {176,  120},
+    [OMV_CSI_FRAMESIZE_SIF]         = {352,  240},
     // VGA Resolutions
-    {40,   30  },    /* QQQQVGA   */
-    {80,   60  },    /* QQQVGA    */
-    {160,  120 },    /* QQVGA     */
-    {320,  240 },    /* QVGA      */
-    {640,  480 },    /* VGA       */
-    {30,   20  },    /* HQQQQVGA  */
-    {60,   40  },    /* HQQQVGA   */
-    {120,  80  },    /* HQQVGA    */
-    {240,  160 },    /* HQVGA     */
-    {480,  320 },    /* HVGA      */
-    // FFT Resolutions
-    {64,   32  },    /* 64x32     */
-    {64,   64  },    /* 64x64     */
-    {128,  64  },    /* 128x64    */
-    {128,  128 },    /* 128x128   */
-    // Himax Resolutions
-    {160,  160 },    /* 160x160   */
-    {320,  320 },    /* 320x320   */
+    [OMV_CSI_FRAMESIZE_QQQQVGA]     = {40,   30},
+    [OMV_CSI_FRAMESIZE_QQQVGA]      = {80,   60},
+    [OMV_CSI_FRAMESIZE_QQVGA]       = {160,  120},
+    [OMV_CSI_FRAMESIZE_QVGA]        = {320,  240},
+    [OMV_CSI_FRAMESIZE_VGA]         = {640,  480},
+    [OMV_CSI_FRAMESIZE_HQQQQVGA]    = {30,   20},
+    [OMV_CSI_FRAMESIZE_HQQQVGA]     = {60,   40},
+    [OMV_CSI_FRAMESIZE_HQQVGA]      = {120,  80},
+    [OMV_CSI_FRAMESIZE_HQVGA]       = {240,  160},
+    [OMV_CSI_FRAMESIZE_HVGA]        = {480,  320},
+    // TODO remove these when sensor is deprecated.
+    [OMV_CSI_FRAMESIZE_64X32]       = {64,   32},
+    [OMV_CSI_FRAMESIZE_64X64]       = {64,   64},
+    [OMV_CSI_FRAMESIZE_128X64]      = {128,  64},
+    [OMV_CSI_FRAMESIZE_128X128]     = {128,  128},
+    [OMV_CSI_FRAMESIZE_160X160]     = {160,  160},
+    [OMV_CSI_FRAMESIZE_320X320]     = {320,  320},
     // Other
-    {128,  160 },    /* LCD       */
-    {128,  160 },    /* QQVGA2    */
-    {720,  480 },    /* WVGA      */
-    {752,  480 },    /* WVGA2     */
-    {800,  600 },    /* SVGA      */
-    {1024, 768 },    /* XGA       */
-    {1280, 768 },    /* WXGA      */
-    {1280, 1024},    /* SXGA      */
-    {1280, 960 },    /* SXGAM     */
-    {1600, 1200},    /* UXGA      */
-    {1280, 720 },    /* HD        */
-    {1920, 1080},    /* FHD       */
-    {2560, 1440},    /* QHD       */
-    {2048, 1536},    /* QXGA      */
-    {2560, 1600},    /* WQXGA     */
-    {2592, 1944},    /* WQXGA2    */
+    [OMV_CSI_FRAMESIZE_LCD]         = {128,  160},
+    [OMV_CSI_FRAMESIZE_QQVGA2]      = {128,  160},
+    [OMV_CSI_FRAMESIZE_WVGA]        = {720,  480},
+    [OMV_CSI_FRAMESIZE_WVGA2]       = {752,  480},
+    [OMV_CSI_FRAMESIZE_SVGA]        = {800,  600},
+    [OMV_CSI_FRAMESIZE_XGA]         = {1024, 768},
+    [OMV_CSI_FRAMESIZE_WXGA]        = {1280, 768},
+    [OMV_CSI_FRAMESIZE_SXGA]        = {1280, 1024},
+    [OMV_CSI_FRAMESIZE_SXGAM]       = {1280, 960},
+    [OMV_CSI_FRAMESIZE_UXGA]        = {1600, 1200},
+    [OMV_CSI_FRAMESIZE_HD]          = {1280, 720},
+    [OMV_CSI_FRAMESIZE_FHD]         = {1920, 1080},
+    [OMV_CSI_FRAMESIZE_QHD]         = {2560, 1440},
+    [OMV_CSI_FRAMESIZE_QXGA]        = {2048, 1536},
+    [OMV_CSI_FRAMESIZE_WQXGA]       = {2560, 1600},
+    [OMV_CSI_FRAMESIZE_WQXGA2]      = {2592, 1944},
 };
 
 static omv_i2c_t csi_i2c;

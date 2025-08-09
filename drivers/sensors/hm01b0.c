@@ -256,11 +256,6 @@ static int set_framesize(omv_csi_t *csi, omv_csi_framesize_t framesize) {
     uint16_t h = resolution[framesize][1];
 
     switch (framesize) {
-        case OMV_CSI_FRAMESIZE_320X320:
-            for (int i = 0; FULL_regs[i][0] && ret == 0; i++) {
-                ret |= omv_i2c_writeb2(csi->i2c, csi->slv_addr, FULL_regs[i][0], FULL_regs[i][1]);
-            }
-            break;
         case OMV_CSI_FRAMESIZE_QVGA:
             for (int i = 0; QVGA_regs[i][0] && ret == 0; i++) {
                 ret |= omv_i2c_writeb2(csi->i2c, csi->slv_addr, QVGA_regs[i][0], QVGA_regs[i][1]);
@@ -271,11 +266,18 @@ static int set_framesize(omv_csi_t *csi, omv_csi_framesize_t framesize) {
                 ret |= omv_i2c_writeb2(csi->i2c, csi->slv_addr, QQVGA_regs[i][0], QQVGA_regs[i][1]);
             }
             break;
-        default:
-            if (w > 320 || h > 320) {
+        case OMV_CSI_FRAMESIZE_CUSTOM:
+        case OMV_CSI_FRAMESIZE_320X320:
+            if (w != 320 || h != 320) {
                 ret = -1;
+                break;
             }
-
+            for (int i = 0; FULL_regs[i][0] && ret == 0; i++) {
+                ret |= omv_i2c_writeb2(csi->i2c, csi->slv_addr, FULL_regs[i][0], FULL_regs[i][1]);
+            }
+            break;
+        default:
+            ret = -1;
     }
 
     return ret;
