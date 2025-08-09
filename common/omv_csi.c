@@ -1607,11 +1607,11 @@ __weak int omv_csi_snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
     #endif
 
     // Call the sensor specific post-process.
-    if (ret == 0 && csi->post_process && !(flags & OMV_CSI_FLAG_NO_POST)) {
+    if (ret >= 0 && csi->post_process && !(flags & OMV_CSI_FLAG_NO_POST)) {
         ret = csi->post_process(csi, image, flags);
     }
 
-    if (ret == 0) {
+    if (ret >= 0) {
         // Mark this buffer to be released on the next call.
         buffer = framebuffer_acquire(csi->fb, FB_FLAG_USED | FB_FLAG_PEEK);
         buffer->flags |= VB_FLAG_USED;
