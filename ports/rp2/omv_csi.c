@@ -208,7 +208,7 @@ static int rp2_csi_snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
             break;
         }
 
-        if (flags & OMV_CSI_CAPTURE_FLAGS_NBLOCK) {
+        if (flags & OMV_CSI_FLAG_NON_BLOCK) {
             return OMV_CSI_ERROR_WOULD_BLOCK;
         }
 
