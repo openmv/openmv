@@ -183,6 +183,15 @@ int omv_csi_dma_memcpy(omv_csi_t *csi, void *dma, void *dst, void *src, int bpp,
 }
 #endif
 
+void omv_csi_frame_callback(omv_csi_t *csi) {
+    // Release the current framebuffer.
+    framebuffer_release(csi->fb, FB_FLAG_FREE | FB_FLAG_CHECK_LAST);
+    CSI_REG_CR3(CSI) &= ~CSI_CR3_DMA_REQ_EN_RFF_MASK;
+    if (csi->frame_cb.fun) {
+        csi->frame_cb.fun(csi->frame_cb.arg);
+    }
+}
+
 void omv_csi_line_callback(omv_csi_t *csi, uint32_t addr) {
     framebuffer_t *fb = csi->fb;
 
@@ -228,12 +237,7 @@ void omv_csi_line_callback(omv_csi_t *csi, uint32_t addr) {
         // match the current frame size. Since we don't have an end-of-frame
         // interrupt on the MIMXRT, the frame ends when there's no more data.
         if (jpeg_end) {
-            // Release the current framebuffer.
-            framebuffer_release(fb, FB_FLAG_FREE | FB_FLAG_CHECK_LAST);
-            CSI_REG_CR3(CSI) &= ~CSI_CR3_DMA_REQ_EN_RFF_MASK;
-            if (csi->frame_cb.fun) {
-                csi->frame_cb.fun(csi->frame_cb.arg);
-            }
+            omv_csi_frame_callback(csi);
             csi->drop_frame = true;
         }
         return;
@@ -275,12 +279,7 @@ void omv_csi_line_callback(omv_csi_t *csi, uint32_t addr) {
     }
 
     if (++buffer->offset == csi->resolution[csi->framesize][1]) {
-        // Release the current framebuffer.
-        framebuffer_release(fb, FB_FLAG_FREE | FB_FLAG_CHECK_LAST);
-        CSI_REG_CR3(CSI) &= ~CSI_CR3_DMA_REQ_EN_RFF_MASK;
-        if (csi->frame_cb.fun) {
-            csi->frame_cb.fun(csi->frame_cb.arg);
-        }
+        omv_csi_frame_callback(csi);
     }
 }
 
