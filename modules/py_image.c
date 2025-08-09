@@ -1703,6 +1703,45 @@ static mp_obj_t py_image_flood_fill(size_t n_args, const mp_obj_t *args, mp_map_
 static MP_DEFINE_CONST_FUN_OBJ_KW(py_image_flood_fill_obj, 2, py_image_flood_fill);
 #endif // IMLIB_ENABLE_FLOOD_FILL
 
+#if (OMV_GENX320_ENABLE == 1)
+static mp_obj_t py_image_draw_event_histogram(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
+    enum {
+        ARG_array, ARG_clear, ARG_brightness, ARG_contrast
+    };
+    static const mp_arg_t allowed_args[] = {
+        { MP_QSTR_array, MP_ARG_OBJ | MP_ARG_REQUIRED, {.u_rom_obj = MP_ROM_NONE} },
+        { MP_QSTR_clear, MP_ARG_BOOL | MP_ARG_KW_ONLY, {.u_bool = true} },
+        { MP_QSTR_brightness, MP_ARG_INT | MP_ARG_KW_ONLY, {.u_int = 128} },
+        { MP_QSTR_contrast, MP_ARG_INT | MP_ARG_KW_ONLY, {.u_int = 16} },
+    };
+
+    // Parse args.
+    image_t *image = py_helper_arg_to_image(pos_args[0], ARG_IMAGE_GRAYSCALE);
+    mp_arg_val_t args[MP_ARRAY_SIZE(allowed_args)];
+    mp_arg_parse_all(n_args - 1, pos_args + 1, kw_args, MP_ARRAY_SIZE(allowed_args), allowed_args, args);
+
+    ndarray_obj_t *array = MP_OBJ_TO_PTR(args[ARG_array].u_obj);
+
+    if (array->dtype != NDARRAY_UINT16) {
+        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Expected a ndarray with dtype uint16"));
+    }
+
+    if (!(ndarray_is_dense(array) && (array->ndim == 2) &&
+        (array->shape[ULAB_MAX_DIMS - 1] == EC_EVENT_SIZE))) {
+        mp_raise_msg_varg(&mp_type_ValueError,
+                            MP_ERROR_TEXT("Expected a dense ndarray with shape (N, %d)"), EC_EVENT_SIZE);
+    }
+
+    if (args[ARG_clear].u_bool) {
+        memset(image->data, args[ARG_brightness].u_int, image_size(image));
+    }
+
+    imlib_draw_event_histogram(image, array->array, array->shape[ULAB_MAX_DIMS - 2], args[ARG_contrast].u_int);
+    return pos_args[0];
+}
+static MP_DEFINE_CONST_FUN_OBJ_KW(py_image_draw_event_histogram_obj, 1, py_image_draw_event_histogram);
+#endif // OMV_GENX320_ENABLE == 1
+
 static mp_obj_t py_image_line_op(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_args,
                                  imlib_draw_row_callback_t callback) {
     enum {
@@ -6274,6 +6313,9 @@ static const mp_rom_map_elem_t locals_dict_table[] = {
     {MP_ROM_QSTR(MP_QSTR_draw_cross),          MP_ROM_PTR(&py_image_draw_cross_obj)},
     {MP_ROM_QSTR(MP_QSTR_draw_arrow),          MP_ROM_PTR(&py_image_draw_arrow_obj)},
     {MP_ROM_QSTR(MP_QSTR_draw_edges),          MP_ROM_PTR(&py_image_draw_edges_obj)},
+    #if (OMV_GENX320_ENABLE == 1)
+    {MP_ROM_QSTR(MP_QSTR_draw_event_histogram), MP_ROM_PTR(&py_image_draw_event_histogram_obj)},
+    #endif // OMV_GENX320_ENABLE == 1
     {MP_ROM_QSTR(MP_QSTR_draw_image),          MP_ROM_PTR(&py_image_draw_image_obj)},
     #ifdef IMLIB_ENABLE_FLOOD_FILL
     {MP_ROM_QSTR(MP_QSTR_flood_fill),          MP_ROM_PTR(&py_image_flood_fill_obj)},

@@ -9,24 +9,25 @@
 # Prophesee active marker board with LEDs and the corresponding event-based data are shown in
 # https://youtu.be/j-LpkDpCxUU?si=jA3B4xZg9RHlyoW3.
 
-import sensor
+import csi
 import time
 
-sensor.reset()
-sensor.set_pixformat(sensor.GRAYSCALE)  # Must always be grayscale.
-sensor.set_framesize(sensor.B320X320)  # Must always be 320x320.
-sensor.set_brightness(128)  # Leave at 128 generally (this is the default).
-sensor.set_contrast(16)  # Increase to make the image pop.
-sensor.set_framerate(200)
+csi0 = csi.CSI(cid=csi.GENX320)
+csi0.reset()
+csi0.pixformat(csi.GRAYSCALE)
+csi0.framesize((320, 320))
+csi0.brightness(128)  # Leave at 128 generally (this is the default).
+csi0.contrast(16)  # Increase to make the image pop.
+csi0.framerate(200)
 # Applies sensor biases tuned for tracking of an active marker with LEDs
-sensor.ioctl(sensor.IOCTL_GENX320_SET_BIASES, sensor.GENX320_BIASES_ACTIVE_MARKER)
+csi0.ioctl(csi.IOCTL_GENX320_SET_BIASES, csi.GENX320_BIASES_ACTIVE_MARKER)
 
 clock = time.clock()
 
 while True:
     clock.tick()
 
-    img = sensor.snapshot()
+    img = csi0.snapshot()
 
     blobs = img.find_blobs(
         [(120, 140)], invert=True, pixels_threshold=2, area_threshold=4, merge=True

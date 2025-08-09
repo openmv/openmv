@@ -234,6 +234,9 @@ typedef enum {
     OMV_CSI_IOCTL_GENX320_SET_BIASES    = 0x20,
     OMV_CSI_IOCTL_GENX320_SET_BIAS      = 0x21,
     OMV_CSI_IOCTL_GENX320_SET_AFK       = 0x22,
+    OMV_CSI_IOCTL_GENX320_SET_MODE      = 0x23,
+    OMV_CSI_IOCTL_GENX320_READ_EVENTS   = 0x24,
+    OMV_CSI_IOCTL_GENX320_CALIBRATE     = 0x25,
     OMV_CSI_IOCTL_UPDATE_AGC_AEC        = 0x7F
 } omv_csi_ioctl_t;
 
@@ -263,6 +266,11 @@ typedef enum {
 } omv_csi_error_t;
 
 #if (OMV_GENX320_ENABLE == 1)
+typedef enum {
+    OMV_CSI_GENX320_MODE_HISTO,
+    OMV_CSI_GENX320_MODE_EVENT,
+} genx_mode_t;
+
 typedef enum {
     OMV_CSI_GENX320_BIASES_DEFAULT,
     OMV_CSI_GENX320_BIASES_LOW_LIGHT,

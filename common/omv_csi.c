@@ -1353,7 +1353,7 @@ __weak int omv_csi_ioctl(omv_csi_t *csi, int request, ... /* arg */) {
     int ret = csi->ioctl(csi, request, ap);
     va_end(ap);
 
-    return ((ret != 0) ? OMV_CSI_ERROR_CTL_FAILED : 0);
+    return ((ret < 0) ? OMV_CSI_ERROR_CTL_FAILED : ret);
 }
 
 __weak int omv_csi_set_vsync_callback(omv_csi_t *csi, omv_csi_cb_t cb) {
@@ -1607,11 +1607,11 @@ __weak int omv_csi_snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
     #endif
 
     // Call the sensor specific post-process.
-    if (ret == 0 && csi->post_process && !(flags & OMV_CSI_FLAG_NO_POST)) {
+    if (ret >= 0 && csi->post_process && !(flags & OMV_CSI_FLAG_NO_POST)) {
         ret = csi->post_process(csi, image, flags);
     }
 
-    if (ret == 0) {
+    if (ret >= 0) {
         // Mark this buffer to be released on the next call.
         buffer = framebuffer_acquire(csi->fb, FB_FLAG_USED | FB_FLAG_PEEK);
         buffer->flags |= VB_FLAG_USED;

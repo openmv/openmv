@@ -6,26 +6,27 @@
 # AntiFlicKer (AFK) filter bloc in the GenX320 digital pipeline.
 # AFK allows to detect periodic changes of given frequencies in the scene and filter them out.
 
-import sensor
+import csi
 import time
 
-sensor.reset()
-sensor.set_pixformat(sensor.GRAYSCALE)  # Must always be grayscale.
-sensor.set_framesize(sensor.B320X320)  # Must always be 320x320.
-sensor.set_brightness(128)  # Leave at 128 generally (this is the default).
-sensor.set_contrast(16)  # Increase to make the image pop.
-sensor.set_framerate(100)
+csi0 = csi.CSI(cid=csi.GENX320)
+csi0.reset()
+csi0.pixformat(csi.GRAYSCALE)
+csi0.framesize((320, 320))
+csi0.brightness(128)  # Leave at 128 generally (this is the default).
+csi0.contrast(16)  # Increase to make the image pop.
+csi0.framerate(100)
 
 # Enables AFK filter to remove periodic data in the frequency range from 130Hz to 160Hz
-sensor.ioctl(sensor.IOCTL_GENX320_SET_AFK, 1, 130, 160)
+csi0.ioctl(csi.IOCTL_GENX320_SET_AFK, 1, 130, 160)
 # Disables AFK filter
-# sensor.ioctl(sensor.IOCTL_GENX320_SET_AFK, 0)
+# csi0.ioctl(csi.IOCTL_GENX320_SET_AFK, 0)
 
 clock = time.clock()
 
 while True:
     clock.tick()
 
-    img = sensor.snapshot()
+    img = csi0.snapshot()
 
     print(clock.fps())

@@ -17,10 +17,13 @@
 #define INC_EVT_2_0_H_
 
 #define __EVT20_TYPE(__VAL__) ((__VAL__ >> 28)& 0xFU)
-#define __EVT20_TS(__VAL__) ((__VAL__ >> 22) & 0xF3U)
+#define __EVT20_TS(__VAL__) ((__VAL__ >> 22) & 0x3FU)
 #define __EVT20_X(__VAL__) ((__VAL__ >> 11) & 0x7FFU)
 #define __EVT20_Y(__VAL__) ((__VAL__ ) & 0x7FFU)
-#define __EVT20_TIME_HIGH(__VAL__) ((__VAL__ ) & 0xFFFFFFFU)
+#define __EVT20_TIME_HIGH(__VAL__) (((uint64_t) ((__VAL__ ) & 0xFFFFFFFU)) << 6)
+#define __EVT20_TRIGGER_ID(__VAL__) ((__VAL__ >> 8) & 0x1FU)
+#define __EVT20_TRIGGER_POLARITY(__VAL__) (__VAL__ & 0x1U)
+#define __EVT20_TIME(__TS_HIGH__, __TS_LOW__) ((__TS_HIGH__) | (__TS_LOW__))
 
 #define TD_LOW              0x0U  /*!< EVT2.0 TD Event, Decrease in illumination   */
 #define TD_HIGH             0x1U  /*!< EVT2.0 TD Event, Increase in illumination   */
@@ -28,5 +31,11 @@
 #define EXT_TRIGGER         0xAU  /*!< External triggers                           */
 #define OTHERS              0xEU  /*!< To be used in extension in the event types  */
 #define CONTINUED           0xFU  /*!< Extra data to previous events               */
+
+#define TRIGGER_FALLING_B   0x00
+#define TRIGGER_RISING_B    0x01
+
+#define EXT_TRIGGER_B       0x00
+#define PXRST_TRIGGER_B     0x01
 
 #endif /* INC_EVT_2_0_H_ */
