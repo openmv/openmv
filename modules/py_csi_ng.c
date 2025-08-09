@@ -202,18 +202,18 @@ static mp_obj_t py_csi_snapshot(size_t n_args, const mp_obj_t *pos_args, mp_map_
     mp_int_t frames = args[ARG_frames].u_int;
 
     if (args[ARG_update].u_bool) {
-        flags |= OMV_CSI_CAPTURE_FLAGS_UPDATE;
+        flags |= OMV_CSI_FLAG_UPDATE_FB;
     }
 
     if (!args[ARG_blocking].u_bool) {
-        flags |= OMV_CSI_CAPTURE_FLAGS_NBLOCK;
+        flags |= OMV_CSI_FLAG_NON_BLOCK;
     }
 
     if (time == -1 && frames == -1) {   
         int error = omv_csi_snapshot(self->csi, &image, flags);
         if (error != 0) {
             if (error == OMV_CSI_ERROR_WOULD_BLOCK &&
-                (flags & OMV_CSI_CAPTURE_FLAGS_NBLOCK)) {
+                (flags & OMV_CSI_FLAG_NON_BLOCK)) {
                 return mp_const_none;
             }
             omv_csi_raise_error(error);

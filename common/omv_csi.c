@@ -1339,7 +1339,7 @@ __weak int omv_csi_set_lens_correction(omv_csi_t *csi, int enable, int radi, int
 
 __weak int omv_csi_ioctl(omv_csi_t *csi, int request, ... /* arg */) {
     // Disable any ongoing frame capture.
-    if (request & OMV_CSI_IOCTL_FLAGS_ABORT) {
+    if (request & OMV_CSI_FLAG_IOCTL_ABORT) {
         omv_csi_abort(csi, true, false);
     }
 
@@ -1580,7 +1580,7 @@ __weak int omv_csi_snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
     // Note: We must check if the buffer has been used before releasing it,
     // as it might have been captured in non-blocking mode but not used yet.
     if (buffer && (buffer->flags & VB_FLAG_USED)) {
-        if (flags & OMV_CSI_CAPTURE_FLAGS_UPDATE) {
+        if (flags & OMV_CSI_FLAG_UPDATE_FB) {
             image_t tmp;
             framebuffer_init_image(csi->fb, &tmp);
             framebuffer_update_jpeg_buffer(&tmp);
