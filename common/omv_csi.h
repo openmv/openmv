@@ -194,6 +194,7 @@ typedef enum {
 typedef enum {
     OMV_CSI_FLAG_UPDATE_FB      = (1 << 0),
     OMV_CSI_FLAG_NON_BLOCK      = (1 << 1),
+    OMV_CSI_FLAG_NO_POST        = (1 << 2),
     OMV_CSI_FLAG_IOCTL_ABORT    = (1 << 8),
 } omv_csi_flags_t;
 
@@ -287,6 +288,9 @@ typedef struct _omv_csi_callback_t {
 } omv_csi_cb_t;
 
 typedef int (*omv_csi_snapshot_t)
+    (omv_csi_t *csi, image_t *image, uint32_t flags);
+
+typedef int (*omv_csi_post_process_t)
     (omv_csi_t *csi, image_t *image, uint32_t flags);
 
 typedef struct _omv_clk omv_clk_t;
@@ -398,6 +402,7 @@ typedef struct _omv_csi {
     int (*config) (omv_csi_t *csi, omv_csi_config_t config);
     int (*abort) (omv_csi_t *csi, bool fifo_flush, bool in_irq);
     int (*snapshot) (omv_csi_t *csi, image_t *image, uint32_t flags);
+    int (*post_process) (omv_csi_t *csi, image_t *image, uint32_t flags);
 } omv_csi_t;
 
 // CSI array
