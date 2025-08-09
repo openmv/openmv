@@ -317,7 +317,22 @@ static mp_obj_t py_csi_framesize(size_t n_args, const mp_obj_t *args) {
         return mp_obj_new_int(self->csi->framesize);
     }
 
-    int error = omv_csi_set_framesize(self->csi, mp_obj_get_int(args[1]));
+    omv_csi_framesize_t framesize;
+
+    if (mp_obj_is_integer(args[1])) {
+        framesize = mp_obj_get_int(args[1]);
+    } else if (MP_OBJ_IS_TYPE(args[1], &mp_type_tuple)) {
+        mp_obj_t *arg_array;
+        mp_obj_get_array_fixed_n(args[1], 2, &arg_array);
+
+        framesize = OMV_CSI_FRAMESIZE_CUSTOM;
+        resolution[OMV_CSI_FRAMESIZE_CUSTOM][0] = mp_obj_get_int(arg_array[0]);
+        resolution[OMV_CSI_FRAMESIZE_CUSTOM][1] = mp_obj_get_int(arg_array[1]);
+    } else {
+        omv_csi_raise_error(OMV_CSI_ERROR_INVALID_ARGUMENT);
+    }
+
+    int error = omv_csi_set_framesize(self->csi, framesize);
     if (error != 0) {
         omv_csi_raise_error(error);
     }
@@ -1428,34 +1443,18 @@ static const mp_rom_map_elem_t globals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_NEGATIVE),        MP_ROM_INT(OMV_CSI_SDE_NEGATIVE) },  /* Negative image */
 
     // C/SIF Resolutions
-    { MP_ROM_QSTR(MP_QSTR_QQCIF),           MP_ROM_INT(OMV_CSI_FRAMESIZE_QQCIF) },    /* 88x72     */
     { MP_ROM_QSTR(MP_QSTR_QCIF),            MP_ROM_INT(OMV_CSI_FRAMESIZE_QCIF) },     /* 176x144   */
     { MP_ROM_QSTR(MP_QSTR_CIF),             MP_ROM_INT(OMV_CSI_FRAMESIZE_CIF) },      /* 352x288   */
-    { MP_ROM_QSTR(MP_QSTR_QQSIF),           MP_ROM_INT(OMV_CSI_FRAMESIZE_QQSIF) },    /* 88x60     */
     { MP_ROM_QSTR(MP_QSTR_QSIF),            MP_ROM_INT(OMV_CSI_FRAMESIZE_QSIF) },     /* 176x120   */
     { MP_ROM_QSTR(MP_QSTR_SIF),             MP_ROM_INT(OMV_CSI_FRAMESIZE_SIF) },      /* 352x240   */
     // VGA Resolutions
-    { MP_ROM_QSTR(MP_QSTR_QQQQVGA),         MP_ROM_INT(OMV_CSI_FRAMESIZE_QQQQVGA) },  /* 40x30     */
     { MP_ROM_QSTR(MP_QSTR_QQQVGA),          MP_ROM_INT(OMV_CSI_FRAMESIZE_QQQVGA) },   /* 80x60     */
     { MP_ROM_QSTR(MP_QSTR_QQVGA),           MP_ROM_INT(OMV_CSI_FRAMESIZE_QQVGA) },    /* 160x120   */
     { MP_ROM_QSTR(MP_QSTR_QVGA),            MP_ROM_INT(OMV_CSI_FRAMESIZE_QVGA) },     /* 320x240   */
     { MP_ROM_QSTR(MP_QSTR_VGA),             MP_ROM_INT(OMV_CSI_FRAMESIZE_VGA) },      /* 640x480   */
-    { MP_ROM_QSTR(MP_QSTR_HQQQQVGA),        MP_ROM_INT(OMV_CSI_FRAMESIZE_HQQQQVGA) }, /* 40x20     */
-    { MP_ROM_QSTR(MP_QSTR_HQQQVGA),         MP_ROM_INT(OMV_CSI_FRAMESIZE_HQQQVGA) },  /* 80x40     */
-    { MP_ROM_QSTR(MP_QSTR_HQQVGA),          MP_ROM_INT(OMV_CSI_FRAMESIZE_HQQVGA) },   /* 160x80    */
     { MP_ROM_QSTR(MP_QSTR_HQVGA),           MP_ROM_INT(OMV_CSI_FRAMESIZE_HQVGA) },    /* 240x160   */
     { MP_ROM_QSTR(MP_QSTR_HVGA),            MP_ROM_INT(OMV_CSI_FRAMESIZE_HVGA) },     /* 480x320   */
-    // FFT Resolutions
-    { MP_ROM_QSTR(MP_QSTR_B64X32),          MP_ROM_INT(OMV_CSI_FRAMESIZE_64X32) },    /* 64x32     */
-    { MP_ROM_QSTR(MP_QSTR_B64X64),          MP_ROM_INT(OMV_CSI_FRAMESIZE_64X64) },    /* 64x64     */
-    { MP_ROM_QSTR(MP_QSTR_B128X64),         MP_ROM_INT(OMV_CSI_FRAMESIZE_128X64) },   /* 128x64    */
-    { MP_ROM_QSTR(MP_QSTR_B128X128),        MP_ROM_INT(OMV_CSI_FRAMESIZE_128X128) },  /* 128x128   */
-    // Himax Resolutions
-    { MP_ROM_QSTR(MP_QSTR_B160X160),        MP_ROM_INT(OMV_CSI_FRAMESIZE_160X160) },  /* 160x160   */
-    { MP_ROM_QSTR(MP_QSTR_B320X320),        MP_ROM_INT(OMV_CSI_FRAMESIZE_320X320) },  /* 320x320   */
     // Other Resolutions
-    { MP_ROM_QSTR(MP_QSTR_LCD),             MP_ROM_INT(OMV_CSI_FRAMESIZE_LCD) },      /* 128x160   */
-    { MP_ROM_QSTR(MP_QSTR_QQVGA2),          MP_ROM_INT(OMV_CSI_FRAMESIZE_QQVGA2) },   /* 128x160   */
     { MP_ROM_QSTR(MP_QSTR_WVGA),            MP_ROM_INT(OMV_CSI_FRAMESIZE_WVGA) },     /* 720x480   */
     { MP_ROM_QSTR(MP_QSTR_WVGA2),           MP_ROM_INT(OMV_CSI_FRAMESIZE_WVGA2) },    /* 752x480   */
     { MP_ROM_QSTR(MP_QSTR_SVGA),            MP_ROM_INT(OMV_CSI_FRAMESIZE_SVGA) },     /* 800x600   */
