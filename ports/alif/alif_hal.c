@@ -60,8 +60,9 @@
 #define MPU_REGION_MRAM                 (3)
 #define MPU_REGION_OSPI_REGISTERS       (4)
 #define MPU_REGION_OSPI0_XIP            (5)
-#define MPU_REGION_OPENAMP              (6)
-#define MPU_REGION_FIRST_FREE           (7) // Reserve the first 8 regions.
+#define MPU_REGION_OSPI1_XIP            (6)
+#define MPU_REGION_OPENAMP              (7)
+#define MPU_REGION_FIRST_FREE           (MPU_REGION_OPENAMP + 1)
 
 uint8_t OMV_BOARD_UID_ADDR[12];
 
@@ -420,6 +421,10 @@ void alif_hal_mpu_init(void) {
         [MPU_REGION_OSPI0_XIP] = {   /* OSPI0 XIP flash - 512MB : RO-1, NP-1, XN-0  */
             .RBAR = ARM_MPU_RBAR(0xA0000000, ARM_MPU_SH_NON, 1, 1, 0),
             .RLAR = ARM_MPU_RLAR(0xBFFFFFFF, MPU_ATTR_NORMAL_NON_CACHEABLE)
+        },
+        [MPU_REGION_OSPI1_XIP] = {   /* OSPI1 XIP flash - 512MB : RO-1, NP-1, XN-0  */
+            .RBAR = ARM_MPU_RBAR(0xC0000000, ARM_MPU_SH_NON, 1, 1, 0),
+            .RLAR = ARM_MPU_RLAR(0xDFFFFFFF, MPU_ATTR_NORMAL_NON_CACHEABLE)
         },
     };
 

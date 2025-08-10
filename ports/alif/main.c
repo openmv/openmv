@@ -47,6 +47,7 @@
 
 #include "extmod/vfs.h"
 #include "extmod/vfs_fat.h"
+#include "extmod/modmachine.h"
 
 #if MICROPY_PY_LWIP
 #include "lwip/init.h"
@@ -249,6 +250,9 @@ soft_reset_exit:
     #endif
     #if MICROPY_PY_NETWORK_CYW43
     cyw43_deinit(&cyw43_state);
+    #endif
+    #if MICROPY_PY_MACHINE_I2C_TARGET
+    mp_machine_i2c_target_deinit_all();
     #endif
     machine_pin_irq_deinit();
     imlib_deinit_all();
