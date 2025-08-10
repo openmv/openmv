@@ -98,14 +98,12 @@
 #define OMV_RCC_IC8_SOURCE                  (RCC_ICCLKSOURCE_PLL3)
 #define OMV_RCC_IC8_CLKDIV                  (25)
 
-#define OMV_RCC_IC9_SOURCE                  (RCC_ICCLKSOURCE_PLL1)
-#define OMV_RCC_IC9_CLKDIV                  (10)
-
 #define OMV_RCC_IC10_SOURCE                 (RCC_ICCLKSOURCE_PLL1)
 #define OMV_RCC_IC10_CLKDIV                 (8)
 
-#define OMV_RCC_IC14_SOURCE                 (RCC_ICCLKSOURCE_PLL1)
-#define OMV_RCC_IC14_CLKDIV                 (10)
+// Used by MicroPython UART and SPI
+#define OMV_RCC_IC9_SOURCE                  (RCC_ICCLKSOURCE_PLL1)
+#define OMV_RCC_IC9_CLKDIV                  (8)
 
 #define OMV_RCC_IC15_SOURCE                 (RCC_ICCLKSOURCE_PLL1)
 #define OMV_RCC_IC15_CLKDIV                 (16)
@@ -118,6 +116,8 @@
 
 #define OMV_OSC_I2C3_SOURCE                 (RCC_I2C3CLKSOURCE_IC10)
 #define OMV_OSC_SPI5_SOURCE                 (RCC_SPI5CLKSOURCE_IC9)
+#define OMV_OSC_USART2_SOURCE               (RCC_USART2CLKSOURCE_IC9)
+
 #define OMV_OSC_DCMIPP_SOURCE               (RCC_DCMIPPCLKSOURCE_IC17)
 #define OMV_OSC_CSI_SOURCE                  (0) // has one clock source IC18
 #define OMV_OSC_ADF1_SOURCE                 (RCC_ADF1CLKSOURCE_IC8)
@@ -230,9 +230,9 @@
 #define OMV_SPI5_MISO_PIN                   (&omv_pin_D4_SPI5)
 #define OMV_SPI5_MOSI_PIN                   (&omv_pin_A4_SPI5)
 #define OMV_SPI5_SSEL_PIN                   (&omv_pin_A3_SPI5)
-#define OMV_SPI5_DMA_TX_CHANNEL             (GPDMA1_Channel8)
+#define OMV_SPI5_DMA_TX_CHANNEL             (GPDMA1_Channel13)
 #define OMV_SPI5_DMA_TX_REQUEST             (GPDMA1_REQUEST_SPI5_TX)
-#define OMV_SPI5_DMA_RX_CHANNEL             (GPDMA1_Channel9)
+#define OMV_SPI5_DMA_RX_CHANNEL             (GPDMA1_Channel14)
 #define OMV_SPI5_DMA_RX_REQUEST             (GPDMA1_REQUEST_SPI5_RX)
 #define OMV_SPI_DMA_LIST_PORTS              (DMA_LINK_ALLOCATED_PORT0)
 #define OMV_SPI_DMA_XFER_PORTS              (DMA_SRC_ALLOCATED_PORT0 | DMA_DEST_ALLOCATED_PORT1)
@@ -278,9 +278,9 @@
 
 #define OMV_MDF_FLT0_IRQ                    ADF1_FLT0_IRQn
 #define OMV_MDF_FLT0_IRQHandler             ADF1_FLT0_IRQHandler
-#define OMV_MDF_FLT0_DMA_STREAM             GPDMA1_Channel10
+#define OMV_MDF_FLT0_DMA_STREAM             GPDMA1_Channel15
 #define OMV_MDF_FLT0_DMA_REQUEST            GPDMA1_REQUEST_ADF1_FLT0
-#define OMV_MDF_FLT0_DMA_IRQ                GPDMA1_Channel10_IRQn
+#define OMV_MDF_FLT0_DMA_IRQ                GPDMA1_Channel15_IRQn
 #define OMV_MDF_DMA_LIST_PORTS              (DMA_LINK_ALLOCATED_PORT0)
 #define OMV_MDF_DMA_XFER_PORTS              (DMA_SRC_ALLOCATED_PORT0 | DMA_DEST_ALLOCATED_PORT1)
 
