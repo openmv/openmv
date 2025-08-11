@@ -392,6 +392,9 @@ soft_reset_exit:
     #if MICROPY_PY_PYB_LEGACY && MICROPY_HW_ENABLE_HW_I2C
     pyb_i2c_deinit_all();
     #endif
+    #if MICROPY_PY_MACHINE_I2C_TARGET
+    mp_machine_i2c_target_deinit_all();
+    #endif
     spi_deinit_all();
     uart_deinit_all();
     #if MICROPY_HW_ENABLE_CAN
