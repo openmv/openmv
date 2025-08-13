@@ -247,7 +247,7 @@ void dcd_set_address(uint8_t rhport, uint8_t dev_addr)
 {
     LOG("%010u >%s", DWT->CYCCNT, __func__);
 
-    udev->dcfg_b.devaddr = dev_addr;
+    // udev->dcfg_b.devaddr = dev_addr; // <- handled from xfernotready ISR
     dcd_edpt_xfer(rhport, tu_edpt_addr(0, TUSB_DIR_IN), NULL, 0);
 }
 
@@ -567,6 +567,9 @@ static void _dcd_handle_depevt(uint8_t ep, uint8_t evt, uint8_t sts, uint16_t pa
 
             // XferNotReady NotActive for status stage
             if ((1 == ep) && (0b0010 == (sts & 0b1011))) {
+                if (0x00 == _ctrl_buf[0] && 0x05 == _ctrl_buf[1]) {
+                    udev->dcfg_b.devaddr = _ctrl_buf[2];
+                }
                 _dcd_start_xfer(1, NULL, 0, TRBCTL_CTL_STAT2);
                 break;
             }
