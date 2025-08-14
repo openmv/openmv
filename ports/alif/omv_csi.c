@@ -216,11 +216,11 @@ static int alif_clk_set_frequency(omv_clk_t *clk, uint32_t frequency) {
 static uint32_t omv_csi_get_fb_offset(omv_csi_t *csi) {
     uint32_t offset = 0;
     uint32_t bytes_per_pixel = omv_csi_get_src_bpp(csi);
-    uint32_t line_size_bytes = resolution[csi->framesize][0] * bytes_per_pixel;
+    uint32_t line_size_bytes = csi->resolution[csi->framesize][0] * bytes_per_pixel;
 
     // Offset the pixels buffer for debayering.
     if (csi->raw_output && csi->pixformat == PIXFORMAT_RGB565) {
-        offset += line_size_bytes * resolution[csi->framesize][1];
+        offset += line_size_bytes * csi->resolution[csi->framesize][1];
     }
 
     return offset;
@@ -239,7 +239,7 @@ int alif_csi_snapshot(omv_csi_t *csi, image_t *dst_image, uint32_t flags) {
     // and there are no pending buffers (from non-blocking capture).
     if (!alif_csi_is_active(csi) && !framebuffer_readable(fb)) {
         uint32_t bytes_per_pixel = omv_csi_get_src_bpp(csi);
-        uint32_t line_size_bytes = resolution[csi->framesize][0] * bytes_per_pixel;
+        uint32_t line_size_bytes = csi->resolution[csi->framesize][0] * bytes_per_pixel;
 
         // Acquire a buffer from the free queue.
         buffer = framebuffer_acquire(fb, FB_FLAG_FREE | FB_FLAG_PEEK);
@@ -278,7 +278,7 @@ int alif_csi_snapshot(omv_csi_t *csi, image_t *dst_image, uint32_t flags) {
         cpi->CAM_VIDEO_FCFG &= ~CAM_VIDEO_FCFG_DATA_Msk;
         cpi->CAM_VIDEO_FCFG = line_size_bytes;
         cpi->CAM_VIDEO_FCFG &= ~CAM_VIDEO_FCFG_ROW_Msk;
-        cpi->CAM_VIDEO_FCFG |= ((resolution[csi->framesize][1] - 1) << CAM_VIDEO_FCFG_ROW_Pos);
+        cpi->CAM_VIDEO_FCFG |= ((csi->resolution[csi->framesize][1] - 1) << CAM_VIDEO_FCFG_ROW_Pos);
         cpi->CAM_FRAME_ADDR = LocalToGlobal(buffer->data + omv_csi_get_fb_offset(csi));
 
         // Configure and enable CSI interrupts.
@@ -362,8 +362,8 @@ int alif_csi_snapshot(omv_csi_t *csi, image_t *dst_image, uint32_t flags) {
         image_t src_cimage = *dst_image;
         image_t dst_cimage = *dst_image;
 
-        src_cimage.w = resolution[csi->framesize][0];
-        src_cimage.h = resolution[csi->framesize][1];
+        src_cimage.w = csi->resolution[csi->framesize][0];
+        src_cimage.h = csi->resolution[csi->framesize][1];
 
         // Offset the pixels buffer for the debayer code.
         if (csi->pixformat == PIXFORMAT_RGB565) {

@@ -97,8 +97,8 @@ static int reset(omv_csi_t *csi) {
     genx->contrast = CONTRAST_DEFAULT;
     genx->brightness = BRIGHTNESS_DEFAULT;
     genx->event_time_us = 0;
-    resolution[OMV_CSI_FRAMESIZE_CUSTOM][0] = ACTIVE_SENSOR_WIDTH;
-    resolution[OMV_CSI_FRAMESIZE_CUSTOM][1] = ACTIVE_SENSOR_HEIGHT;
+    csi->resolution[OMV_CSI_FRAMESIZE_CUSTOM][0] = ACTIVE_SENSOR_WIDTH;
+    csi->resolution[OMV_CSI_FRAMESIZE_CUSTOM][1] = ACTIVE_SENSOR_HEIGHT;
 
     // Set histogram mode by default.
     if (set_active_mode(csi, OMV_CSI_GENX320_MODE_HISTO, OMV_CSI_FRAMESIZE_CUSTOM)) {
@@ -154,8 +154,8 @@ static int set_framesize(omv_csi_t *csi, omv_csi_framesize_t framesize) {
 
     if (genx->mode == OMV_CSI_GENX320_MODE_HISTO) {
         if (framesize == OMV_CSI_FRAMESIZE_CUSTOM &&
-            resolution[framesize][0] == ACTIVE_SENSOR_WIDTH &&
-            resolution[framesize][1] == ACTIVE_SENSOR_HEIGHT) {
+            csi->resolution[framesize][0] == ACTIVE_SENSOR_WIDTH &&
+            csi->resolution[framesize][1] == ACTIVE_SENSOR_HEIGHT) {
                 return 0;
         }
         return (framesize == OMV_CSI_FRAMESIZE_320X320) ? 0 : -1;
@@ -193,7 +193,8 @@ static int set_framerate(omv_csi_t *csi, int framerate) {
     omv_csi_abort(csi, true, false);
 
     psee_sensor_write(csi, EHC_INTEGRATION_PERIOD, us);
-    psee_sensor_write(csi, CPI_PACKET_TIME_CONTROL, ACTIVE_SENSOR_WIDTH << CPI_PACKET_TIME_CONTROL_PERIOD_Pos |
+    psee_sensor_write(csi, CPI_PACKET_TIME_CONTROL,
+                      ACTIVE_SENSOR_WIDTH << CPI_PACKET_TIME_CONTROL_PERIOD_Pos |
                       hsync_clocks << CPI_PACKET_TIME_CONTROL_BLANKING_Pos);
 
     // Wait for the camera to settle
@@ -427,8 +428,8 @@ static int ioctl(omv_csi_t *csi, int request, va_list ap) {
             int mode = va_arg(ap, int);
 
             if (mode == OMV_CSI_GENX320_MODE_HISTO) {
-                resolution[OMV_CSI_FRAMESIZE_CUSTOM][0] = ACTIVE_SENSOR_WIDTH;
-                resolution[OMV_CSI_FRAMESIZE_CUSTOM][1] = ACTIVE_SENSOR_HEIGHT;
+                csi->resolution[OMV_CSI_FRAMESIZE_CUSTOM][0] = ACTIVE_SENSOR_WIDTH;
+                csi->resolution[OMV_CSI_FRAMESIZE_CUSTOM][1] = ACTIVE_SENSOR_HEIGHT;
 
                 if ((ret = set_active_mode(csi, OMV_CSI_GENX320_MODE_HISTO, OMV_CSI_FRAMESIZE_CUSTOM))) {
                     break;
@@ -449,8 +450,8 @@ static int ioctl(omv_csi_t *csi, int request, va_list ap) {
                     break;
                 }
 
-                resolution[OMV_CSI_FRAMESIZE_CUSTOM][0] = 1024;
-                resolution[OMV_CSI_FRAMESIZE_CUSTOM][1] = ndarray_size >> 8;
+                csi->resolution[OMV_CSI_FRAMESIZE_CUSTOM][0] = 1024;
+                csi->resolution[OMV_CSI_FRAMESIZE_CUSTOM][1] = ndarray_size >> 8;
 
                 if ((ret = set_active_mode(csi, OMV_CSI_GENX320_MODE_EVENT, OMV_CSI_FRAMESIZE_CUSTOM))) {
                     break;
@@ -518,8 +519,8 @@ static int ioctl(omv_csi_t *csi, int request, va_list ap) {
                         i += val;
                     }
                 } else {
-                    uint32_t len = resolution[csi->framesize][0] *
-                                  (resolution[csi->framesize][1] / sizeof(uint32_t));
+                    uint32_t len = csi->resolution[csi->framesize][0] *
+                                  (csi->resolution[csi->framesize][1] / sizeof(uint32_t));
                     for (uint32_t j = 0; j < len; j++) {
                         uint32_t val = ((uint32_t *) image.data)[j];
                         switch (__EVT20_TYPE(val)) {
@@ -656,8 +657,8 @@ static int set_active_mode(omv_csi_t *csi, genx_mode_t mode, int framesize) {
     }
 
     // Configure Packet and Frame sizes
-    uint32_t packet_width = resolution[framesize][0];
-    uint32_t packet_height = resolution[framesize][1];
+    uint32_t packet_width = csi->resolution[framesize][0];
+    uint32_t packet_height = csi->resolution[framesize][1];
     uint32_t packet_hsync = (mode == OMV_CSI_GENX320_MODE_EVENT) ?
                             EVENT_HSYNC_CLOCK_CYCLES : HISTO_HSYNC_CLOCK_CYCLES;
 

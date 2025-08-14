@@ -252,8 +252,8 @@ static const uint16_t QQVGA_regs[][2] = {
 
 static int set_framesize(omv_csi_t *csi, omv_csi_framesize_t framesize) {
     int ret = 0;
-    uint16_t w = resolution[framesize][0];
-    uint16_t h = resolution[framesize][1];
+    uint16_t w = csi->resolution[framesize][0];
+    uint16_t h = csi->resolution[framesize][1];
 
     switch (framesize) {
         case OMV_CSI_FRAMESIZE_QVGA:

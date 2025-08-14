@@ -727,14 +727,14 @@ int pag7936_init(omv_csi_t *csi) {
     csi->set_vflip = set_vflip;
 
     // Override standard resolutions
-    resolution[OMV_CSI_FRAMESIZE_HD][0] = 1280;
-    resolution[OMV_CSI_FRAMESIZE_HD][1] = 800;
+    csi->resolution[OMV_CSI_FRAMESIZE_HD][0] = 1280;
+    csi->resolution[OMV_CSI_FRAMESIZE_HD][1] = 800;
 
-    resolution[OMV_CSI_FRAMESIZE_VGA][0] = 640;
-    resolution[OMV_CSI_FRAMESIZE_VGA][1] = 400;
+    csi->resolution[OMV_CSI_FRAMESIZE_VGA][0] = 640;
+    csi->resolution[OMV_CSI_FRAMESIZE_VGA][1] = 400;
 
-    resolution[OMV_CSI_FRAMESIZE_QVGA][0] = 320;
-    resolution[OMV_CSI_FRAMESIZE_QVGA][1] = 200;
+    csi->resolution[OMV_CSI_FRAMESIZE_QVGA][0] = 320;
+    csi->resolution[OMV_CSI_FRAMESIZE_QVGA][1] = 200;
     return 0;
 }
 #endif // (OMV_PAG7936_ENABLE == 1)

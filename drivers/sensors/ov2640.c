@@ -441,8 +441,8 @@ static int set_framesize(omv_csi_t *csi, omv_csi_framesize_t framesize) {
     uint16_t sensor_w = 0;
     uint16_t sensor_h = 0;
     int ret = 0;
-    uint16_t w = resolution[framesize][0];
-    uint16_t h = resolution[framesize][1];
+    uint16_t w = csi->resolution[framesize][0];
+    uint16_t h = csi->resolution[framesize][1];
 
     if ((w % 4) || (h % 4) || (w > UXGA_WIDTH) || (h > UXGA_HEIGHT)) {
         // w/h must be divisible by 4

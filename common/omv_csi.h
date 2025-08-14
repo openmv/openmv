@@ -189,6 +189,7 @@ typedef enum {
     OMV_CSI_FRAMESIZE_QXGA,     // 2048x1536
     OMV_CSI_FRAMESIZE_WQXGA,    // 2560x1600
     OMV_CSI_FRAMESIZE_WQXGA2,   // 2592x1944
+    OMV_CSI_FRAMESIZE_MAX,
 } omv_csi_framesize_t;
 
 typedef enum {
@@ -378,6 +379,9 @@ typedef struct _omv_csi {
     // data, internal state, or additional operations.
     void *priv;
 
+    // Resolution table
+    uint16_t resolution[OMV_CSI_FRAMESIZE_MAX][2];
+
     // Sensor function pointers
     int (*reset) (omv_csi_t *csi);
     int (*sleep) (omv_csi_t *csi, int enable);
@@ -415,9 +419,6 @@ typedef struct _omv_csi {
 
 // CSI array
 extern omv_csi_t csi_all[OMV_CSI_MAX_DEVICES];
-
-// Resolution table
-extern uint16_t resolution[][2];
 
 // Resets the sensor state on soft-reboots.
 void omv_csi_init0();

@@ -359,7 +359,7 @@ int omv_csi_set_vsync_callback(omv_csi_t *csi, omv_csi_cb_t cb) {
 static uint32_t get_dcmi_hw_crop(omv_csi_t *csi, uint32_t bytes_per_pixel) {
     framebuffer_t *fb = csi->fb;
     uint32_t byte_x_offset = (fb->x * bytes_per_pixel) % 4;
-    uint32_t width_remainder = (resolution[csi->framesize][0] - (fb->x + fb->u)) * bytes_per_pixel;
+    uint32_t width_remainder = (csi->resolution[csi->framesize][0] - (fb->x + fb->u)) * bytes_per_pixel;
 
     if (byte_x_offset && (width_remainder >= (4 - byte_x_offset))) {
         return byte_x_offset;
@@ -558,7 +558,7 @@ static int stm_csi_snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
             // Setup the size and address of the transfer
             uint32_t bytes_per_pixel = omv_csi_get_src_bpp(csi);
             uint32_t x_crop = get_dcmi_hw_crop(csi, bytes_per_pixel);
-            uint32_t line_width = resolution[csi->framesize][0] * bytes_per_pixel;
+            uint32_t line_width = csi->resolution[csi->framesize][0] * bytes_per_pixel;
 
             // Shrink the captured pixel count by one word to allow cropping to fix alignment.
             if (x_crop) {

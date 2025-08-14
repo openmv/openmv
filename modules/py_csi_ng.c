@@ -265,14 +265,14 @@ static MP_DEFINE_CONST_FUN_OBJ_KW(py_csi_snapshot_obj, 1, py_csi_snapshot);
 static mp_obj_t py_csi_width(mp_obj_t self_in) {
     py_csi_obj_t *self = MP_OBJ_TO_PTR(self_in);
 
-    return mp_obj_new_int(resolution[self->csi->framesize][0]);
+    return mp_obj_new_int(self->csi->resolution[self->csi->framesize][0]);
 }
 static MP_DEFINE_CONST_FUN_OBJ_1(py_csi_width_obj, py_csi_width);
 
 static mp_obj_t py_csi_height(mp_obj_t self_in) {
     py_csi_obj_t *self = MP_OBJ_TO_PTR(self_in);
 
-    return mp_obj_new_int(resolution[self->csi->framesize][1]);
+    return mp_obj_new_int(self->csi->resolution[self->csi->framesize][1]);
 }
 static MP_DEFINE_CONST_FUN_OBJ_1(py_csi_height_obj, py_csi_height);
 
@@ -329,8 +329,8 @@ static mp_obj_t py_csi_framesize(size_t n_args, const mp_obj_t *args) {
         mp_obj_get_array_fixed_n(args[1], 2, &arg_array);
 
         framesize = OMV_CSI_FRAMESIZE_CUSTOM;
-        resolution[OMV_CSI_FRAMESIZE_CUSTOM][0] = mp_obj_get_int(arg_array[0]);
-        resolution[OMV_CSI_FRAMESIZE_CUSTOM][1] = mp_obj_get_int(arg_array[1]);
+        self->csi->resolution[OMV_CSI_FRAMESIZE_CUSTOM][0] = mp_obj_get_int(arg_array[0]);
+        self->csi->resolution[OMV_CSI_FRAMESIZE_CUSTOM][1] = mp_obj_get_int(arg_array[1]);
     } else {
         omv_csi_raise_error(OMV_CSI_ERROR_INVALID_ARGUMENT);
     }
@@ -386,8 +386,8 @@ static mp_obj_t py_csi_window(size_t n_args, const mp_obj_t *args) {
     rectangle_t t = {
         .x = 0,
         .y = 0,
-        .w = resolution[self->csi->framesize][0],
-        .h = resolution[self->csi->framesize][1],
+        .w = self->csi->resolution[self->csi->framesize][0],
+        .h = self->csi->resolution[self->csi->framesize][1],
     };
 
     if (array_len == 2) {
@@ -1209,8 +1209,8 @@ static mp_obj_t py_csi_ioctl(size_t n_args, const mp_obj_t *args) {
                     mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Expected a ndarray with dtype uint16"));
                 }
 
-                uint32_t expected_len = resolution[self->csi->framesize][0] *
-                                       (resolution[self->csi->framesize][1] / sizeof(uint32_t));
+                uint32_t expected_len = self->csi->resolution[self->csi->framesize][0] *
+                                       (self->csi->resolution[self->csi->framesize][1] / sizeof(uint32_t));
 
                 if (!(ndarray_is_dense(array) && (array->ndim == 2) &&
                     (array->shape[ULAB_MAX_DIMS - 2] == expected_len) &&
