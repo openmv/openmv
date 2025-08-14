@@ -134,7 +134,7 @@ void omv_csi_sof_callback(omv_csi_t *csi) {
 
     if (buffer == NULL) {
         omv_csi_abort(csi, false, true);
-    } else if (buffer->offset < resolution[csi->framesize][1]) {
+    } else if (buffer->offset < csi->resolution[csi->framesize][1]) {
         // Missed a few lines, reset buffer state and continue.
         framebuffer_reset(buffer);
     }
@@ -240,7 +240,7 @@ void omv_csi_line_callback(omv_csi_t *csi, uint32_t addr) {
     }
 
     if (csi->drop_frame) {
-        if (++buffer->offset == resolution[csi->framesize][1]) {
+        if (++buffer->offset == csi->resolution[csi->framesize][1]) {
             buffer->offset = 0;
             CSI_REG_CR3(CSI) &= ~CSI_CR3_DMA_REQ_EN_RFF_MASK;
         }
@@ -274,7 +274,7 @@ void omv_csi_line_callback(omv_csi_t *csi, uint32_t addr) {
         #endif
     }
 
-    if (++buffer->offset == resolution[csi->framesize][1]) {
+    if (++buffer->offset == csi->resolution[csi->framesize][1]) {
         // Release the current framebuffer.
         framebuffer_release(fb, FB_FLAG_FREE | FB_FLAG_CHECK_LAST);
         CSI_REG_CR3(CSI) &= ~CSI_CR3_DMA_REQ_EN_RFF_MASK;
@@ -333,7 +333,7 @@ int imx_csi_snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
     // and there are no pending buffers (from non-blocking capture).
     if (!(CSI->CR18 & CSI_CR18_CSI_ENABLE_MASK) && !framebuffer_readable(fb)) {
         uint32_t bytes_per_pixel = omv_csi_get_src_bpp(csi);
-        uint32_t dma_line_bytes = resolution[csi->framesize][0] * bytes_per_pixel;
+        uint32_t dma_line_bytes = csi->resolution[csi->framesize][0] * bytes_per_pixel;
         uint32_t length = dma_line_bytes * fb->v;
 
         // Error out if the transfer size is not compatible with DMA transfer restrictions.
