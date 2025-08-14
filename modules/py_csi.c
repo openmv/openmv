@@ -197,13 +197,13 @@ static MP_DEFINE_CONST_FUN_OBJ_KW(py_omv_csi_skip_frames_obj, 0, py_omv_csi_skip
 
 static mp_obj_t py_omv_csi_width() {
     omv_csi_t *csi = omv_csi_get(-1);
-    return mp_obj_new_int(resolution[csi->framesize][0]);
+    return mp_obj_new_int(csi->resolution[csi->framesize][0]);
 }
 static MP_DEFINE_CONST_FUN_OBJ_0(py_omv_csi_width_obj, py_omv_csi_width);
 
 static mp_obj_t py_omv_csi_height() {
     omv_csi_t *csi = omv_csi_get(-1);
-    return mp_obj_new_int(resolution[csi->framesize][1]);
+    return mp_obj_new_int(csi->resolution[csi->framesize][1]);
 }
 static MP_DEFINE_CONST_FUN_OBJ_0(py_omv_csi_height_obj, py_omv_csi_height);
 
@@ -328,8 +328,8 @@ static mp_obj_t py_omv_csi_set_windowing(size_t n_args, const mp_obj_t *args) {
     rectangle_t temp;
     temp.x = 0;
     temp.y = 0;
-    temp.w = resolution[csi->framesize][0];
-    temp.h = resolution[csi->framesize][1];
+    temp.w = csi->resolution[csi->framesize][0];
+    temp.h = csi->resolution[csi->framesize][1];
 
     mp_obj_t *array = (mp_obj_t *) args;
     mp_uint_t array_len = n_args;
