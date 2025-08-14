@@ -775,7 +775,9 @@ static int set_pixformat(omv_csi_t *csi, pixformat_t pixformat) {
     int ret = 0;
 
     // Not a multiple of 8. The JPEG encoder on the OV5640 can't handle this.
-    if ((pixformat == PIXFORMAT_JPEG) && ((resolution[csi->framesize][0] % 8) || (resolution[csi->framesize][1] % 8))) {
+    if ((pixformat == PIXFORMAT_JPEG) &&
+        ((csi->resolution[csi->framesize][0] % 8) ||
+         (csi->resolution[csi->framesize][1] % 8))) {
         return -1;
     }
 
@@ -834,7 +836,7 @@ static int set_pixformat(omv_csi_t *csi, pixformat_t pixformat) {
                         (reg & 0xD7) | ((pixformat == PIXFORMAT_JPEG) ? 0x28 : 0x00));
 
     if (hts_target) {
-        uint16_t sensor_hts = calculate_hts(csi, resolution[csi->framesize][0]);
+        uint16_t sensor_hts = calculate_hts(csi, csi->resolution[csi->framesize][0]);
 
         ret |= omv_i2c_writeb2(csi->i2c, csi->slv_addr, TIMING_HTS_H, sensor_hts >> 8);
         ret |= omv_i2c_writeb2(csi->i2c, csi->slv_addr, TIMING_HTS_L, sensor_hts);
@@ -846,8 +848,8 @@ static int set_pixformat(omv_csi_t *csi, pixformat_t pixformat) {
 static int set_framesize(omv_csi_t *csi, omv_csi_framesize_t framesize) {
     uint8_t reg;
     int ret = 0;
-    uint16_t w = resolution[framesize][0];
-    uint16_t h = resolution[framesize][1];
+    uint16_t w = csi->resolution[framesize][0];
+    uint16_t h = csi->resolution[framesize][1];
 
     // Not a multiple of 8. The JPEG encoder on the OV5640 can't handle this.
     if ((csi->pixformat == PIXFORMAT_JPEG) && ((w % 8) || (h % 8))) {
@@ -1339,8 +1341,12 @@ static int ioctl(omv_csi_t *csi, int request, va_list ap) {
         case OMV_CSI_IOCTL_SET_READOUT_WINDOW: {
             int tmp_readout_x = va_arg(ap, int);
             int tmp_readout_y = va_arg(ap, int);
-            int tmp_readout_w = IM_CLAMP(va_arg(ap, int), resolution[csi->framesize][0], ACTIVE_SENSOR_WIDTH);
-            int tmp_readout_h = IM_CLAMP(va_arg(ap, int), resolution[csi->framesize][1], ACTIVE_SENSOR_HEIGHT);
+            int tmp_readout_w = IM_CLAMP(va_arg(ap, int),
+                                         csi->resolution[csi->framesize][0],
+                                         ACTIVE_SENSOR_WIDTH);
+            int tmp_readout_h = IM_CLAMP(va_arg(ap, int),
+                                         csi->resolution[csi->framesize][1],
+                                         ACTIVE_SENSOR_HEIGHT);
             int readout_x_max = (ACTIVE_SENSOR_WIDTH - tmp_readout_w) / 2;
             int readout_y_max = (ACTIVE_SENSOR_HEIGHT - tmp_readout_h) / 2;
             tmp_readout_x = IM_CLAMP(tmp_readout_x, -readout_x_max, readout_x_max);

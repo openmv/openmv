@@ -237,8 +237,8 @@ static int set_pixformat(omv_csi_t *csi, pixformat_t pixformat) {
 static int set_framesize(omv_csi_t *csi, omv_csi_framesize_t framesize) {
     uint8_t reg;
     int ret = 0;
-    uint16_t w = resolution[framesize][0];
-    uint16_t h = resolution[framesize][1];
+    uint16_t w = csi->resolution[framesize][0];
+    uint16_t h = csi->resolution[framesize][1];
     bool vflip;
 
     if ((w > 640) || (h > 480)) {

@@ -395,8 +395,8 @@ static int set_pixformat(omv_csi_t *csi, pixformat_t pixformat) {
 static int set_framesize(omv_csi_t *csi, omv_csi_framesize_t framesize) {
     int ret = 0;
 
-    uint16_t w = resolution[framesize][0];
-    uint16_t h = resolution[framesize][1];
+    uint16_t w = csi->resolution[framesize][0];
+    uint16_t h = csi->resolution[framesize][1];
 
     uint8_t aavg_VnH, abc_start_line, voffset, abc_sample_size;
     ret |= read_regs_w_bank(BANK_0, REG_CMD_AAVG_V /* REG_CMD_AAVG_H */, &aavg_VnH, 1);

@@ -145,7 +145,7 @@ static int snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
         return ret;
     }
 
-    int num_pixels = resolution[boson_framesize][0] * resolution[boson_framesize][1];
+    int num_pixels = csi->resolution[boson_framesize][0] * csi->resolution[boson_framesize][1];
 
     if (csi->color_palette && (framebuffer_get_buffer_size(csi->fb) >= (num_pixels * sizeof(uint16_t)))) {
         for (int32_t i = num_pixels - 1; i >= 0; i--) {
@@ -175,11 +175,11 @@ int boson_init(omv_csi_t *csi) {
     csi->mono_bpp = sizeof(uint8_t);
 
     // Override standard resolutions
-    resolution[OMV_CSI_FRAMESIZE_VGA][0] = 640;
-    resolution[OMV_CSI_FRAMESIZE_VGA][1] = 512;
+    csi->resolution[OMV_CSI_FRAMESIZE_VGA][0] = 640;
+    csi->resolution[OMV_CSI_FRAMESIZE_VGA][1] = 512;
 
-    resolution[OMV_CSI_FRAMESIZE_QVGA][0] = 320;
-    resolution[OMV_CSI_FRAMESIZE_QVGA][1] = 256;
+    csi->resolution[OMV_CSI_FRAMESIZE_QVGA][0] = 320;
+    csi->resolution[OMV_CSI_FRAMESIZE_QVGA][1] = 256;
 
     if (reset(csi) != 0) {
         return OMV_CSI_ERROR_CSI_INIT_FAILED;

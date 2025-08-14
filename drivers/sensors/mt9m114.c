@@ -586,8 +586,8 @@ static int set_pixformat(omv_csi_t *csi, pixformat_t pixformat) {
 
 static int set_framesize(omv_csi_t *csi, omv_csi_framesize_t framesize) {
     int ret = 0;
-    uint16_t w = resolution[framesize][0];
-    uint16_t h = resolution[framesize][1];
+    uint16_t w = csi->resolution[framesize][0];
+    uint16_t h = csi->resolution[framesize][1];
 
     if ((csi->pixformat == PIXFORMAT_BAYER) &&
         ((framesize != OMV_CSI_FRAMESIZE_VGA) && (framesize != OMV_CSI_FRAMESIZE_SXGAM))) {
@@ -942,8 +942,12 @@ static int ioctl(omv_csi_t *csi, int request, va_list ap) {
         case OMV_CSI_IOCTL_SET_READOUT_WINDOW: {
             int tmp_readout_x = va_arg(ap, int);
             int tmp_readout_y = va_arg(ap, int);
-            int tmp_readout_w = IM_CLAMP(va_arg(ap, int), resolution[csi->framesize][0], ACTIVE_SENSOR_WIDTH);
-            int tmp_readout_h = IM_CLAMP(va_arg(ap, int), resolution[csi->framesize][1], ACTIVE_SENSOR_HEIGHT);
+            int tmp_readout_w = IM_CLAMP(va_arg(ap, int),
+                                         csi->resolution[csi->framesize][0],
+                                         ACTIVE_SENSOR_WIDTH);
+            int tmp_readout_h = IM_CLAMP(va_arg(ap, int),
+                                         csi->resolution[csi->framesize][1],
+                                         ACTIVE_SENSOR_HEIGHT);
             int readout_x_max = (ACTIVE_SENSOR_WIDTH - tmp_readout_w) / 2;
             int readout_y_max = (ACTIVE_SENSOR_HEIGHT - tmp_readout_h) / 2;
             tmp_readout_x = IM_CLAMP(tmp_readout_x, -readout_x_max, readout_x_max);

@@ -401,8 +401,8 @@ static int snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
         return OMV_CSI_ERROR_INVALID_FRAMESIZE;
     }
 
-    if (resolution[csi->framesize][0] < lepton.h_res ||
-        resolution[csi->framesize][1] < lepton.v_res) {
+    if (csi->resolution[csi->framesize][0] < lepton.h_res ||
+        csi->resolution[csi->framesize][1] < lepton.v_res) {
         return OMV_CSI_ERROR_INVALID_FRAMESIZE;
     }
 

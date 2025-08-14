@@ -171,8 +171,8 @@ static int set_pixformat(omv_csi_t *csi, pixformat_t pixformat) {
 static int set_framesize(omv_csi_t *csi, omv_csi_framesize_t framesize) {
     uint16_t chip_control, read_mode;
     int ret = 0;
-    uint16_t w = resolution[framesize][0];
-    uint16_t h = resolution[framesize][1];
+    uint16_t w = csi->resolution[framesize][0];
+    uint16_t h = csi->resolution[framesize][1];
 
     if ((w > ACTIVE_SENSOR_WIDTH) || (h > ACTIVE_SENSOR_HEIGHT)) {
         return -1;
@@ -443,8 +443,8 @@ static int ioctl(omv_csi_t *csi, int request, va_list ap) {
 
     // The MT9V0XX does not have a hardware scaler so the readout w/h must be equal to the
     // framesize w/h.
-    int tmp_readout_w = resolution[csi->framesize][0];
-    int tmp_readout_h = resolution[csi->framesize][1];
+    int tmp_readout_w = csi->resolution[csi->framesize][0];
+    int tmp_readout_h = csi->resolution[csi->framesize][1];
     if (csi->framesize == OMV_CSI_FRAMESIZE_INVALID) {
         tmp_readout_w = ACTIVE_SENSOR_WIDTH;
         tmp_readout_h = ACTIVE_SENSOR_HEIGHT;
