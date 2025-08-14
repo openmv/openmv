@@ -138,13 +138,7 @@ static int set_colorbar(omv_csi_t *csi, int enable) {
     return 0;
 }
 
-static int snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
-    int ret = ((omv_csi_snapshot_t) csi->priv)(csi, image, flags);
-
-    if (ret < 0) {
-        return ret;
-    }
-
+static int post_process(omv_csi_t *csi, image_t *image, uint32_t flags) {
     int num_pixels = csi->resolution[boson_framesize][0] * csi->resolution[boson_framesize][1];
 
     if (csi->color_palette && (framebuffer_get_buffer_size(csi->fb) >= (num_pixels * sizeof(uint16_t)))) {
@@ -156,7 +150,7 @@ static int snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
         csi->fb->pixfmt = PIXFORMAT_RGB565;
     }
 
-    return ret;
+    return 0;
 }
 
 int boson_init(omv_csi_t *csi) {
@@ -165,8 +159,7 @@ int boson_init(omv_csi_t *csi) {
     csi->set_pixformat = set_pixformat;
     csi->set_framesize = set_framesize;
     csi->set_colorbar = set_colorbar;
-    csi->priv = csi->snapshot;
-    csi->snapshot = snapshot;
+    csi->post_process = post_process;
 
     // Set csi flags
     csi->vsync_pol = 0;
