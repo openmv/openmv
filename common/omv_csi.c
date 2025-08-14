@@ -75,8 +75,11 @@ typedef struct _i2c_dev {
     uint32_t chip_id;   // Chip ID.
 } i2c_dev_t;
 
-// Sensor frame size/resolution table.
-uint16_t resolution[][2] = {
+static omv_i2c_t csi_i2c;
+static omv_clk_t csi_clk;
+
+// Standard resolution table;
+static uint16_t csi_resolution[][2] = {
     [OMV_CSI_FRAMESIZE_INVALID]     = {0,    0},
     [OMV_CSI_FRAMESIZE_CUSTOM]      = {0,    0},
     // C/SIF Resolutions
@@ -123,8 +126,6 @@ uint16_t resolution[][2] = {
     [OMV_CSI_FRAMESIZE_WQXGA2]      = {2592, 1944},
 };
 
-static omv_i2c_t csi_i2c;
-static omv_clk_t csi_clk;
 omv_csi_t csi_all[OMV_CSI_MAX_DEVICES] = {0};
 
 __weak void omv_csi_init0() {
@@ -186,6 +187,7 @@ __weak int omv_csi_init() {
         csi->clk = &csi_clk;
         csi->fb = framebuffer_get(-1);
         csi->color_palette = rainbow_table;
+        memcpy(csi->resolution, csi_resolution, sizeof(csi_resolution));
         omv_csi_ops_init(csi);
 
         // Configure the csi external clock (XCLK).
@@ -821,11 +823,11 @@ __weak int omv_csi_set_framesize(omv_csi_t *csi, omv_csi_framesize_t framesize) 
     csi->fb->x = 0;
     csi->fb->y = 0;
     // Set width and height.
-    csi->fb->w = resolution[framesize][0];
-    csi->fb->h = resolution[framesize][1];
+    csi->fb->w = csi->resolution[framesize][0];
+    csi->fb->h = csi->resolution[framesize][1];
     // Set backup width and height.
-    csi->fb->u = resolution[framesize][0];
-    csi->fb->v = resolution[framesize][1];
+    csi->fb->u = csi->resolution[framesize][0];
+    csi->fb->v = csi->resolution[framesize][1];
     // Reset pixel format to skip the first frame.
     csi->fb->pixfmt = PIXFORMAT_INVALID;
 
@@ -880,8 +882,8 @@ __weak bool omv_csi_get_cropped(omv_csi_t *csi) {
     if (csi->framesize != OMV_CSI_FRAMESIZE_INVALID) {
         return (csi->fb->x != 0) ||
                (csi->fb->y != 0) ||
-               (csi->fb->u != resolution[csi->framesize][0]) ||
-               (csi->fb->v != resolution[csi->framesize][1]);
+               (csi->fb->u != csi->resolution[csi->framesize][0]) ||
+               (csi->fb->v != csi->resolution[csi->framesize][1]);
     }
     return false;
 }
@@ -1285,7 +1287,7 @@ __weak int omv_csi_set_framebuffers(omv_csi_t *csi, size_t count, bool expand) {
     csi->fb->frame_size = csi->fb->u * csi->fb->v * 2;
     #else
     // Otherwise, use the real frame size.
-    csi->fb->frame_size = resolution[csi->framesize][0] * resolution[csi->framesize][1] * 2;
+    csi->fb->frame_size = csi->resolution[csi->framesize][0] * csi->resolution[csi->framesize][1] * 2;
     #endif
 
     if (count == -1) {
