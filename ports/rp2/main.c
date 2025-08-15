@@ -34,6 +34,7 @@
 #include "py/stackctrl.h"
 #include "extmod/modbluetooth.h"
 #include "extmod/modnetwork.h"
+#include "extmod/modmachine.h"
 #include "shared/readline/readline.h"
 #include "shared/runtime/gchelper.h"
 #include "shared/runtime/pyexec.h"
@@ -175,6 +176,7 @@ soft_reset:
     #endif
 
     pendsv_init();
+    soft_timer_init();
     usbdbg_init();
 
     fb_alloc_init0();
@@ -275,6 +277,14 @@ soft_reset_exit:
     rp2_dma_deinit();
     machine_pwm_deinit_all();
     machine_pin_deinit();
+    machine_uart_deinit_all();
+    #if MICROPY_PY_MACHINE_I2C_TARGET
+    mp_machine_i2c_target_deinit_all();
+    #endif
+    #if MICROPY_PY_THREAD
+    mp_thread_deinit();
+    #endif
+    soft_timer_deinit();
     gc_sweep_all();
     mp_deinit();
     first_soft_reset = false;
