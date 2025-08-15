@@ -572,7 +572,7 @@ static int stm_csi_snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
                 #if defined(OMV_LINE_BUF_SIZE)
                 (line_width > (OMV_LINE_BUF_SIZE / 2)) ||
                 #endif
-                (!csi->dma_size) || (csi->dma_size % OMV_CSI_LINE_ALIGNMENT)) {
+                (!csi->dma_size) || ((line_width * fb->v) % OMV_CSI_LINE_ALIGNMENT)) {
                 return OMV_CSI_ERROR_INVALID_FRAMESIZE;
             }
 
