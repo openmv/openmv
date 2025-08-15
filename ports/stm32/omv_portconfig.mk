@@ -175,6 +175,7 @@ MPY_FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/,\
 	systick.o               \
 	powerctrl.o             \
 	i2c.o                   \
+	i2cslave.o              \
 	pyb_i2c.o               \
 	spi.o                   \
 	qspi.o                  \

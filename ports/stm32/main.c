@@ -96,6 +96,8 @@
 #include "py_audio.h"
 
 int errno;
+extern void SystemClock_Config(void);
+
 #if MICROPY_PY_THREAD
 pyb_thread_t pyb_thread_main;
 #endif
@@ -134,6 +136,9 @@ int main(void) {
     bool sdram_ok = false;
     #endif
     bool first_soft_reset = true;
+
+    // Configure PLLs, oscillators, and system/peripheral clocks
+    SystemClock_Config();
 
     #if defined(MICROPY_BOARD_EARLY_INIT)
     MICROPY_BOARD_EARLY_INIT();
@@ -386,6 +391,9 @@ soft_reset_exit:
     timer_deinit();
     #if MICROPY_PY_PYB_LEGACY && MICROPY_HW_ENABLE_HW_I2C
     pyb_i2c_deinit_all();
+    #endif
+    #if MICROPY_PY_MACHINE_I2C_TARGET
+    mp_machine_i2c_target_deinit_all();
     #endif
     spi_deinit_all();
     uart_deinit_all();

@@ -43,13 +43,9 @@
 #define MEMATTR_NORMAL_NCACHE      0
 #define MEMATTR_NORMAL_WB_RA_WA    1
 
-extern void SystemClock_Config(void);
 extern uint32_t omv_exti_get_gpio(uint32_t line);
 
 void HAL_MspInit(void) {
-    // Set the system clock
-    SystemClock_Config();
-
     #if __DCACHE_PRESENT && defined(OMV_DMA_MEMORY)
     // Configure MPU regions.
     typedef struct {
@@ -147,9 +143,6 @@ void HAL_MspInit(void) {
         __ISB(); __DSB(); __DMB();
     }
     #endif
-
-    // Config Systick.
-    assert(HAL_InitTick(0) == HAL_OK);
 
     // Enable GPIO clocks.
     __HAL_RCC_GPIOA_CLK_ENABLE();

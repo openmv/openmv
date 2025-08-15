@@ -33,11 +33,11 @@
 #include "omv_common.h"
 #include "stm_dma.h"
 
-#if defined(GPDMA1)
-static DMA_HandleTypeDef *dma_handle[32];
-#else
-// Defined in micropython/ports/stm32/dma.c or in uvc/src/main.c
+// Defined in micropython/ports/stm32/dma.c
 extern DMA_HandleTypeDef *dma_handle[16];
+
+#if defined(HPDMA1)
+static DMA_HandleTypeDef *dma_hp_handle[16];
 #endif
 
 const DMA_InitTypeDef stm_dma_csi_init = {
@@ -120,6 +120,12 @@ const DMA_InitTypeDef stm_dma_mdf_init = {
 };
 #endif
 
+#if defined(HPDMA1)
+static bool stm_dma_is_hp_channel(void *dma_channel) {
+    return ((((uint32_t) dma_channel) & 0xFFFFF000) == HPDMA1_BASE);
+}
+#endif
+
 uint8_t stm_dma_channel_to_irqn(void *dma_channel) {
     if (0) {
     #if defined(DMA1_Stream0)
@@ -161,7 +167,7 @@ uint8_t stm_dma_channel_to_id(void *dma_channel) {
     #endif
     #if defined(HPDMA1_Channel0)
     } else if ((((uint32_t) dma_channel) & 0xFFFFF000) == HPDMA1_BASE) {
-        return ((DMA_Channel_TypeDef *) dma_channel - HPDMA1_Channel0) + 16;
+        return ((DMA_Channel_TypeDef *) dma_channel - HPDMA1_Channel0);
     #endif
     }
     return -1;
@@ -170,7 +176,14 @@ uint8_t stm_dma_channel_to_id(void *dma_channel) {
 int stm_dma_set_irq_descr(void *dma_channel, DMA_HandleTypeDef *dma_descr) {
     uint8_t dma_id = stm_dma_channel_to_id(dma_channel);
     if (dma_id != -1) {
-        dma_handle[dma_id] = dma_descr;
+        if (0) {
+        #if defined(HPDMA1)
+        } else if (stm_dma_is_hp_channel(dma_channel)) {
+            dma_hp_handle[dma_id] = dma_descr;
+        #endif
+        } else {
+            dma_handle[dma_id] = dma_descr;
+        }
         return 0;
     }
     return -1;
@@ -267,12 +280,6 @@ uint8_t stm_dma_mpu_region_size(uint32_t size) {
     #endif
     return -1;
 }
-
-#if defined(HPDMA1_Channel0)
-static bool stm_dma_is_hp_channel(void *dma_channel) {
-    return ((((uint32_t) dma_channel) & 0xFFFFF000) == HPDMA1_BASE);
-}
-#endif
 
 static uint32_t stm_dma_width(uint32_t size, bool source) {
     #if defined(STM32N6)
@@ -579,140 +586,74 @@ int omv_csi_dma_memcpy(omv_csi_t *csi, void *dma, void *dst, void *src, int bpp,
 }
 #endif  // OMV_MDMA_CHANNEL_DCMI_0
 
-#if defined(GPDMA1)
+#if defined(HPDMA1)
 static inline void stm_dma_irq_handler(size_t irqn) {
-    if (dma_handle[irqn] != NULL) {
-        HAL_DMA_IRQHandler(dma_handle[irqn]);
+    if (dma_hp_handle[irqn] != NULL) {
+        HAL_DMA_IRQHandler(dma_hp_handle[irqn]);
     }
 }
 
-void GPDMA1_Channel0_IRQHandler(void) {
+void HPDMA1_Channel0_IRQHandler(void) {
     stm_dma_irq_handler(0);
 }
 
-void GPDMA1_Channel1_IRQHandler(void) {
+void HPDMA1_Channel1_IRQHandler(void) {
     stm_dma_irq_handler(1);
 }
 
-void GPDMA1_Channel2_IRQHandler(void) {
+void HPDMA1_Channel2_IRQHandler(void) {
     stm_dma_irq_handler(2);
 }
 
-void GPDMA1_Channel3_IRQHandler(void) {
+void HPDMA1_Channel3_IRQHandler(void) {
     stm_dma_irq_handler(3);
 }
 
-void GPDMA1_Channel4_IRQHandler(void) {
+void HPDMA1_Channel4_IRQHandler(void) {
     stm_dma_irq_handler(4);
 }
 
-void GPDMA1_Channel5_IRQHandler(void) {
+void HPDMA1_Channel5_IRQHandler(void) {
     stm_dma_irq_handler(5);
 }
 
-void GPDMA1_Channel6_IRQHandler(void) {
+void HPDMA1_Channel6_IRQHandler(void) {
     stm_dma_irq_handler(6);
 }
 
-void GPDMA1_Channel7_IRQHandler(void) {
+void HPDMA1_Channel7_IRQHandler(void) {
     stm_dma_irq_handler(7);
 }
 
-void GPDMA1_Channel8_IRQHandler(void) {
+void HPDMA1_Channel8_IRQHandler(void) {
     stm_dma_irq_handler(8);
 }
 
-void GPDMA1_Channel9_IRQHandler(void) {
+void HPDMA1_Channel9_IRQHandler(void) {
     stm_dma_irq_handler(9);
 }
 
-void GPDMA1_Channel10_IRQHandler(void) {
+void HPDMA1_Channel10_IRQHandler(void) {
     stm_dma_irq_handler(10);
 }
 
-void GPDMA1_Channel11_IRQHandler(void) {
+void HPDMA1_Channel11_IRQHandler(void) {
     stm_dma_irq_handler(11);
 }
 
-void GPDMA1_Channel12_IRQHandler(void) {
+void HPDMA1_Channel12_IRQHandler(void) {
     stm_dma_irq_handler(12);
 }
 
-void GPDMA1_Channel13_IRQHandler(void) {
+void HPDMA1_Channel13_IRQHandler(void) {
     stm_dma_irq_handler(13);
 }
 
-void GPDMA1_Channel14_IRQHandler(void) {
+void HPDMA1_Channel14_IRQHandler(void) {
     stm_dma_irq_handler(14);
 }
 
-void GPDMA1_Channel15_IRQHandler(void) {
-    stm_dma_irq_handler(15);
-}
-#endif // GPDMA1
-
-#if defined(HPDMA1)
-void HPDMA1_Channel0_IRQHandler(void) {
-    stm_dma_irq_handler(16);
-}
-
-void HPDMA1_Channel1_IRQHandler(void) {
-    stm_dma_irq_handler(17);
-}
-
-void HPDMA1_Channel2_IRQHandler(void) {
-    stm_dma_irq_handler(18);
-}
-
-void HPDMA1_Channel3_IRQHandler(void) {
-    stm_dma_irq_handler(19);
-}
-
-void HPDMA1_Channel4_IRQHandler(void) {
-    stm_dma_irq_handler(20);
-}
-
-void HPDMA1_Channel5_IRQHandler(void) {
-    stm_dma_irq_handler(21);
-}
-
-void HPDMA1_Channel6_IRQHandler(void) {
-    stm_dma_irq_handler(22);
-}
-
-void HPDMA1_Channel7_IRQHandler(void) {
-    stm_dma_irq_handler(23);
-}
-
-void HPDMA1_Channel8_IRQHandler(void) {
-    stm_dma_irq_handler(24);
-}
-
-void HPDMA1_Channel9_IRQHandler(void) {
-    stm_dma_irq_handler(25);
-}
-
-void HPDMA1_Channel10_IRQHandler(void) {
-    stm_dma_irq_handler(26);
-}
-
-void HPDMA1_Channel11_IRQHandler(void) {
-    stm_dma_irq_handler(27);
-}
-
-void HPDMA1_Channel12_IRQHandler(void) {
-    stm_dma_irq_handler(28);
-}
-
-void HPDMA1_Channel13_IRQHandler(void) {
-    stm_dma_irq_handler(29);
-}
-
-void HPDMA1_Channel14_IRQHandler(void) {
-    stm_dma_irq_handler(30);
-}
-
 void HPDMA1_Channel15_IRQHandler(void) {
-    stm_dma_irq_handler(31);
+    stm_dma_irq_handler(15);
 }
 #endif

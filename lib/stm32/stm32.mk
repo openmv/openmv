@@ -83,6 +83,7 @@ HAL_SRC_C += $(addprefix stm32/f7/src/,\
     stm32f7xx_hal_tim.c \
     stm32f7xx_hal_tim_ex.c \
     stm32f7xx_hal_uart.c \
+    stm32f7xx_hal_uart_ex.c \
     stm32f7xx_hal_usart.c \
     stm32f7xx_hal_jpeg.c \
     stm32f7xx_ll_usb.c \
@@ -136,6 +137,7 @@ HAL_SRC_C += $(addprefix stm32/h7/src/,\
     stm32h7xx_hal_tim.c \
     stm32h7xx_hal_tim_ex.c \
     stm32h7xx_hal_uart.c \
+    stm32h7xx_hal_uart_ex.c \
     stm32h7xx_hal_usart.c \
     stm32h7xx_hal_jpeg.c \
     stm32h7xx_hal_qspi.c \
