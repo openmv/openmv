@@ -609,6 +609,7 @@ static int stm_csi_snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
                 // Special transfer mode that uses DMA in circular mode and MDMA
                 // to move the lines to the final destination.
                 ((DMA_Stream_TypeDef *) csi->dma.Instance)->CR |= DMA_SxCR_CIRC;
+                csi->one_shot = true;
                 HAL_DCMI_Start_DMA(&csi->dcmi, DCMI_MODE_CONTINUOUS, (uint32_t) &_line_buf, line_width / 4);
             #endif  // USE_MDMA
             } else {
