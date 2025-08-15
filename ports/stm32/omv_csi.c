@@ -626,7 +626,7 @@ static int stm_csi_snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
     }
 
     // In JPEG mode, enable the end of frame interrupt.
-    if (!csi->mipi_if && csi->pixformat != PIXFORMAT_JPEG) {
+    if (!csi->mipi_if && csi->pixformat == PIXFORMAT_JPEG) {
         __HAL_DCMI_ENABLE_IT(&csi->dcmi, DCMI_IT_FRAME);
     }
 
