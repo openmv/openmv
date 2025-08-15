@@ -81,10 +81,6 @@ int imx_csi_config(omv_csi_t *csi, omv_csi_config_t config) {
         CSI_REG_CR2(CSI) |= CSI_CR2_DMA_BURST_TYPE_RFF(3U);
         CSI_REG_CR3(CSI) |= 7U << CSI_CR3_RxFF_LEVEL_SHIFT;
 
-        // Configure DMA buffers.
-        CSI_REG_DMASA_FB1(CSI) = (uint32_t) (&_line_buf[OMV_LINE_BUF_SIZE * 0]);
-        CSI_REG_DMASA_FB2(CSI) = (uint32_t) (&_line_buf[OMV_LINE_BUF_SIZE / 2]);
-
         // Write to memory from first completed frame.
         // DMA CSI addr switch at dma transfer done.
         CSI_REG_CR18(CSI) |= CSI_CR18_MASK_OPTION(0);
@@ -134,10 +130,21 @@ void omv_csi_sof_callback(omv_csi_t *csi) {
 
     if (buffer == NULL) {
         omv_csi_abort(csi, false, true);
-    } else if (buffer->offset < csi->resolution[csi->framesize][1]) {
+        return;
+    } else if (csi->one_shot) {
+        omv_csi_throttle_framerate(csi);
+        if (csi->drop_frame) {
+            return;
+        }
+        CSI_REG_DMASA_FB1(CSI) = (uint32_t) buffer->data;
+        CSI_REG_DMASA_FB2(CSI) = (uint32_t) buffer->data;
+    } else if (csi->pixformat != PIXFORMAT_JPEG && buffer->offset < csi->resolution[csi->framesize][1]) {
         // Missed a few lines, reset buffer state and continue.
         framebuffer_reset(buffer);
     }
+
+    // Clear the FIFO and re/enable DMA.
+    CSI_REG_CR3(CSI) |= (CSI_CR3_DMA_REFLASH_RFF_MASK | CSI_CR3_DMA_REQ_EN_RFF_MASK);
 }
 
 #if defined(OMV_CSI_DMA)
@@ -183,8 +190,23 @@ int omv_csi_dma_memcpy(omv_csi_t *csi, void *dma, void *dst, void *src, int bpp,
 }
 #endif
 
+void omv_csi_frame_callback(omv_csi_t *csi) {
+    // Release the current framebuffer.
+    framebuffer_release(csi->fb, FB_FLAG_FREE | FB_FLAG_CHECK_LAST);
+    CSI_REG_CR3(CSI) &= ~CSI_CR3_DMA_REQ_EN_RFF_MASK;
+    if (csi->frame_cb.fun) {
+        csi->frame_cb.fun(csi->frame_cb.arg);
+    }
+}
+
 void omv_csi_line_callback(omv_csi_t *csi, uint32_t addr) {
     framebuffer_t *fb = csi->fb;
+
+    // omv_csi_line_callback() will be called at the end of the complete frame in one-shot mode.
+    if (csi->one_shot) {
+        omv_csi_frame_callback(csi);
+        return;
+    }
 
     // Throttle frames to match the current frame rate.
     omv_csi_throttle_framerate(csi);
@@ -228,12 +250,7 @@ void omv_csi_line_callback(omv_csi_t *csi, uint32_t addr) {
         // match the current frame size. Since we don't have an end-of-frame
         // interrupt on the MIMXRT, the frame ends when there's no more data.
         if (jpeg_end) {
-            // Release the current framebuffer.
-            framebuffer_release(fb, FB_FLAG_FREE | FB_FLAG_CHECK_LAST);
-            CSI_REG_CR3(CSI) &= ~CSI_CR3_DMA_REQ_EN_RFF_MASK;
-            if (csi->frame_cb.fun) {
-                csi->frame_cb.fun(csi->frame_cb.arg);
-            }
+            omv_csi_frame_callback(csi);
             csi->drop_frame = true;
         }
         return;
@@ -275,12 +292,7 @@ void omv_csi_line_callback(omv_csi_t *csi, uint32_t addr) {
     }
 
     if (++buffer->offset == csi->resolution[csi->framesize][1]) {
-        // Release the current framebuffer.
-        framebuffer_release(fb, FB_FLAG_FREE | FB_FLAG_CHECK_LAST);
-        CSI_REG_CR3(CSI) &= ~CSI_CR3_DMA_REQ_EN_RFF_MASK;
-        if (csi->frame_cb.fun) {
-            csi->frame_cb.fun(csi->frame_cb.arg);
-        }
+        omv_csi_frame_callback(csi);
     }
 }
 
@@ -365,9 +377,16 @@ int imx_csi_snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
             CSI_REG_CR1(CSI) &= ~(CSI_CR1_SWAP16_EN_MASK | CSI_CR1_PACK_DIR_MASK);
         }
 
+        csi->one_shot = csi->pixformat != PIXFORMAT_JPEG &&
+                        !csi->transpose && !omv_csi_get_cropped(csi) &&
+                        !(csi->pixformat == PIXFORMAT_GRAYSCALE && csi->mono_bpp == 2);
+ 
+        // Configure DMA buffers.
+        CSI_REG_DMASA_FB1(CSI) = (uint32_t) (&_line_buf[OMV_LINE_BUF_SIZE * 0]);
+        CSI_REG_DMASA_FB2(CSI) = (uint32_t) (&_line_buf[OMV_LINE_BUF_SIZE / 2]);
         CSI_REG_IMAG_PARA(CSI) =
             (dma_line_bytes << CSI_IMAG_PARA_IMAGE_WIDTH_SHIFT) |
-            (1 << CSI_IMAG_PARA_IMAGE_HEIGHT_SHIFT);
+            ((csi->one_shot ? fb->v : 1) << CSI_IMAG_PARA_IMAGE_HEIGHT_SHIFT);
 
         // Enable CSI interrupts.
         CSI_EnableInterrupts(CSI, CSI_IRQ_FLAGS);

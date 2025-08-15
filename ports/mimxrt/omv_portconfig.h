@@ -151,6 +151,7 @@ struct {                                                \
         int src_inc;            \
         int src_size;           \
         int dest_inc;           \
+        bool one_shot;          \
         edma_handle_t dma_channels[OMV_CSI_DMA_CHANNEL_COUNT];  \
     };
 #endif // __OMV_PORTCONFIG_H__
