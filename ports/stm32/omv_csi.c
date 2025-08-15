@@ -625,6 +625,16 @@ static int stm_csi_snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
                     csi->dcmi.Instance->CR &= ~DCMI_CR_BSM_0;
                 }
 
+                // Turn on/off byte swapping for RGB/YUV formats.
+                for (size_t i = 0; i < OMV_ARRAY_SIZE(dma_nodes); i++) {
+                    if ((csi->pixformat == PIXFORMAT_RGB565 && csi->rgb_swap) ||
+                        (csi->pixformat == PIXFORMAT_YUV422 && csi->yuv_swap)) {
+                        dma_nodes[i].LinkRegisters[NODE_CTR1_DEFAULT_OFFSET] |= DMA_CTR1_DBX;
+                    } else {
+                        dma_nodes[i].LinkRegisters[NODE_CTR1_DEFAULT_OFFSET] &= ~DMA_CTR1_DBX;
+                    }
+                }
+
                 csi->one_shot = true;
                 HAL_DCMI_Start_DMA(&csi->dcmi, DCMI_MODE_SNAPSHOT, (uint32_t) buffer->data, csi->dma_size);
                 #endif
