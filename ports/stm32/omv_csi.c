@@ -264,8 +264,6 @@ static int stm_csi_config(omv_csi_t *csi, omv_csi_config_t config) {
 
 // Stop the DCMI from generating more DMA requests, and disable the DMA.
 static int stm_csi_abort(omv_csi_t *csi, bool fifo_flush, bool in_irq) {
-    csi->dma_size = 0;
-
     if (!stm_csi_is_active(csi)) {
         return 0;
     }
@@ -652,7 +650,7 @@ static int stm_csi_snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
 
     // In JPEG 3 mode, the transfer must be aborted as it waits for data indefinitely.
     if (!csi->mipi_if && (csi->pixformat == PIXFORMAT_JPEG) && (csi->jpg_format == 3)) {
-        omv_csi_abort(csi, true, false);
+        omv_csi_abort(csi, false, false);
     }
 
     // The JPEG in the framebuffer is actually invalid.
@@ -689,12 +687,17 @@ static int stm_csi_snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
                 // Offset is the total frame size.
                 size = buffer->offset;
             } else {
+                // HAL_DCMI_Start_DMA splits bigger transfers.
+                if (csi->dma_size > (OMV_CSI_DMA_MAX_SIZE / 4)) {
+                    csi->dma_size /= 2;
+                }
+
                 // Offset is the number of length-size transfers performed.
-                size = buffer->offset * csi->dma_size / 2;
+                size = buffer->offset * csi->dma_size * 4;
                 // The DMA counter holds the number of bytes per transfer.
                 if (!csi->mipi_if && __HAL_DMA_GET_COUNTER(&csi->dma)) {
                     // Add in the uncompleted transfer length.
-                    size += ((csi->dma_size / 2) - __HAL_DMA_GET_COUNTER(&csi->dma)) * 4;
+                    size += (csi->dma_size - __HAL_DMA_GET_COUNTER(&csi->dma)) * 4;
                 }
             }
             // Clean trailing data after 0xFFD9 at the end of the jpeg byte stream.
