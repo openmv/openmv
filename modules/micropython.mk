@@ -66,3 +66,10 @@ ifeq ($(DEBUG), 0)
 # Use a higher optimization level for user C modules.
 $(BUILD)/modules/%.o: override CFLAGS += $(USERMOD_OPT)
 endif
+
+ifeq ($(PROFILE_ENABLE), 1)
+$(BUILD)/modules/py_ml.o: override CFLAGS += -finstrument-functions
+$(BUILD)/modules/py_image.o: override CFLAGS += -finstrument-functions
+$(BUILD)/modules/ulab/%.o: override CFLAGS += -finstrument-functions
+endif
+

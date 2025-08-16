@@ -39,6 +39,7 @@ COMMON_SRC_C += \
     usbdbg.c \
     vospi.c \
     queue.c \
+    omv_profiler.c \
 
 CFLAGS += -I$(TOP_DIR)/common
 OMV_FIRM_OBJ += $(addprefix $(BUILD)/common/, $(COMMON_SRC_C:.c=.o))
