@@ -244,6 +244,24 @@ static int stm_csi_config(omv_csi_t *csi, omv_csi_config_t config) {
         if (!csi->mipi_if) {
             DCMI->CR &= ~(DCMI_CR_JPEG_Msk << DCMI_CR_JPEG_Pos);
             DCMI->CR |= (csi->pixformat == PIXFORMAT_JPEG) ? DCMI_JPEG_ENABLE : DCMI_JPEG_DISABLE;
+            #if defined(STM32N6)
+            // Handle YUV422 Source -> Y Destination using DCMI byte drop.
+            if (csi->pixformat == PIXFORMAT_GRAYSCALE && csi->mono_bpp == 2) {
+                DCMI->CR |= DCMI_CR_BSM_0;
+            } else {
+                DCMI->CR &= ~DCMI_CR_BSM_0;
+            }
+
+            // Turn on/off byte swapping for RGB/YUV formats.
+            for (size_t i = 0; i < OMV_ARRAY_SIZE(dma_nodes); i++) {
+                if ((csi->pixformat == PIXFORMAT_RGB565 && csi->rgb_swap) ||
+                    (csi->pixformat == PIXFORMAT_YUV422 && csi->yuv_swap)) {
+                    dma_nodes[i].LinkRegisters[NODE_CTR1_DEFAULT_OFFSET] |= DMA_CTR1_DBX;
+                } else {
+                    dma_nodes[i].LinkRegisters[NODE_CTR1_DEFAULT_OFFSET] &= ~DMA_CTR1_DBX;
+                }
+            }
+            #endif 
         } else {
             #if USE_DCMIPP
             csi->dcmipp.State = HAL_DCMIPP_STATE_READY;
@@ -617,6 +635,11 @@ static int stm_csi_snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
                 // Start a multibuffer (line by line) transfer.
                 HAL_DCMI_Start_DMA_MB(&csi->dcmi, DCMI_MODE_CONTINUOUS, (uint32_t) &_line_buf, csi->dma_size, fb->v);
                 #else
+                // Handle YUV422 Source -> Y Destination using DCMI byte drop.
+                if (csi->pixformat == PIXFORMAT_GRAYSCALE && csi->mono_bpp == 2) {
+                    csi->dma_size /= 2;
+                }
+
                 csi->one_shot = true;
                 HAL_DCMI_Start_DMA(&csi->dcmi, DCMI_MODE_SNAPSHOT, (uint32_t) buffer->data, csi->dma_size);
                 #endif
