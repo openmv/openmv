@@ -137,6 +137,9 @@ int main(void) {
     #endif
     bool first_soft_reset = true;
 
+    // Initialize SysTick.
+    HAL_InitTick(TICK_INT_PRIORITY);
+
     // Configure PLLs, oscillators, and system/peripheral clocks
     SystemClock_Config();
 
