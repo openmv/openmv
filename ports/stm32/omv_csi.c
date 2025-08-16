@@ -640,6 +640,13 @@ static int stm_csi_snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
                     csi->dma_size /= 2;
                 }
 
+                // Disable circular mode for transfer sizes less than 64KB.
+                if (csi->dma_size * 4 <= OMV_CSI_DMA_MAX_SIZE / 4) {
+                    HAL_DMAEx_List_ClearCircularMode(&dma_queue);
+                } else {
+                    HAL_DMAEx_List_SetCircularMode(&dma_queue);
+                }
+
                 csi->one_shot = true;
                 HAL_DCMI_Start_DMA(&csi->dcmi, DCMI_MODE_SNAPSHOT, (uint32_t) buffer->data, csi->dma_size);
                 #endif
