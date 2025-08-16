@@ -592,6 +592,14 @@ static int stm_csi_snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
                 return OMV_CSI_ERROR_INVALID_FRAMESIZE;
             }
 
+            #if defined(STM32N6)
+            // The N6 DCMI driver currently does not support any of these modes.
+            if (csi->pixformat == PIXFORMAT_JPEG || csi->transpose ||
+                fb->x != 0 || fb->u != csi->resolution[csi->framesize][0]) {
+                return OMV_CSI_ERROR_CAPTURE_FAILED;
+            }
+            #endif
+
             HAL_DCMI_DisableCrop(&csi->dcmi);
             if (csi->pixformat != PIXFORMAT_JPEG) {
                 // Vertically crop the image. Horizontal cropping is done in software.
