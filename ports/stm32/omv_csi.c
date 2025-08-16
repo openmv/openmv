@@ -264,8 +264,6 @@ static int stm_csi_config(omv_csi_t *csi, omv_csi_config_t config) {
 
 // Stop the DCMI from generating more DMA requests, and disable the DMA.
 static int stm_csi_abort(omv_csi_t *csi, bool fifo_flush, bool in_irq) {
-    csi->dma_size = 0;
-
     if (!stm_csi_is_active(csi)) {
         return 0;
     }
@@ -572,9 +570,17 @@ static int stm_csi_snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
                 #if defined(OMV_LINE_BUF_SIZE)
                 (line_width > (OMV_LINE_BUF_SIZE / 2)) ||
                 #endif
-                (!csi->dma_size) || (csi->dma_size % OMV_CSI_LINE_ALIGNMENT)) {
+                (!csi->dma_size) || ((line_width * fb->v) % OMV_CSI_LINE_ALIGNMENT)) {
                 return OMV_CSI_ERROR_INVALID_FRAMESIZE;
             }
+
+            #if defined(STM32N6)
+            // The N6 DCMI driver currently does not support any of these modes.
+            if (csi->pixformat == PIXFORMAT_JPEG || csi->transpose ||
+                fb->x != 0 || fb->u != csi->resolution[csi->framesize][0]) {
+                return OMV_CSI_ERROR_CAPTURE_FAILED;
+            }
+            #endif
 
             HAL_DCMI_DisableCrop(&csi->dcmi);
             if (csi->pixformat != PIXFORMAT_JPEG) {
@@ -611,6 +617,7 @@ static int stm_csi_snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
                 // Special transfer mode that uses DMA in circular mode and MDMA
                 // to move the lines to the final destination.
                 ((DMA_Stream_TypeDef *) csi->dma.Instance)->CR |= DMA_SxCR_CIRC;
+                csi->one_shot = true;
                 HAL_DCMI_Start_DMA(&csi->dcmi, DCMI_MODE_CONTINUOUS, (uint32_t) &_line_buf, line_width / 4);
             #endif  // USE_MDMA
             } else {
@@ -618,6 +625,35 @@ static int stm_csi_snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
                 // Start a multibuffer (line by line) transfer.
                 HAL_DCMI_Start_DMA_MB(&csi->dcmi, DCMI_MODE_CONTINUOUS, (uint32_t) &_line_buf, csi->dma_size, fb->v);
                 #else
+                // Handle YUV422 Source -> Y Destination using DCMI byte drop.
+                if ((csi->pixformat == PIXFORMAT_GRAYSCALE) && (csi->mono_bpp == 2)) {
+                    csi->dma_size /= 2;
+                    csi->dcmi.Instance->CR |= DCMI_CR_BSM_0;
+                } else {
+                    csi->dcmi.Instance->CR &= ~DCMI_CR_BSM_0;
+                }
+
+                // Turn on/off byte swapping for RGB/YUV formats.
+                for (size_t i = 0; i < OMV_ARRAY_SIZE(dma_nodes); i++) {
+                    if ((csi->pixformat == PIXFORMAT_RGB565 && csi->rgb_swap) ||
+                        (csi->pixformat == PIXFORMAT_YUV422 && csi->yuv_swap)) {
+                        dma_nodes[i].LinkRegisters[NODE_CTR1_DEFAULT_OFFSET] |= DMA_CTR1_DBX;
+                    } else {
+                        dma_nodes[i].LinkRegisters[NODE_CTR1_DEFAULT_OFFSET] &= ~DMA_CTR1_DBX;
+                    }
+                }
+
+                // HAL_DCMI_Start_DMA() for transfer sizes less than 64KB expects a non-circular linked list.
+                if ((csi->dma_size * 4) <= (OMV_CSI_DMA_MAX_SIZE / 4)) {
+                    // Modify the link list head to point to nothing.
+                    dma_nodes[0].LinkRegisters[NODE_CLLR_LINEAR_DEFAULT_OFFSET] = 0;
+                } else {
+                    // Modify the link list head to point to the tail node (default).
+                    dma_nodes[0].LinkRegisters[NODE_CLLR_LINEAR_DEFAULT_OFFSET] =
+                        DMA_CLLR_UT1 | DMA_CLLR_UT2 | DMA_CLLR_UB1 | DMA_CLLR_USA | DMA_CLLR_UDA | DMA_CLLR_ULL |
+                        (((uint32_t) &dma_nodes[1]) & DMA_CLLR_LA);
+                }
+
                 csi->one_shot = true;
                 HAL_DCMI_Start_DMA(&csi->dcmi, DCMI_MODE_SNAPSHOT, (uint32_t) buffer->data, csi->dma_size);
                 #endif
@@ -626,7 +662,7 @@ static int stm_csi_snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
     }
 
     // In JPEG mode, enable the end of frame interrupt.
-    if (!csi->mipi_if && csi->pixformat != PIXFORMAT_JPEG) {
+    if (!csi->mipi_if && csi->pixformat == PIXFORMAT_JPEG) {
         __HAL_DCMI_ENABLE_IT(&csi->dcmi, DCMI_IT_FRAME);
     }
 
@@ -652,7 +688,7 @@ static int stm_csi_snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
 
     // In JPEG 3 mode, the transfer must be aborted as it waits for data indefinitely.
     if (!csi->mipi_if && (csi->pixformat == PIXFORMAT_JPEG) && (csi->jpg_format == 3)) {
-        omv_csi_abort(csi, true, false);
+        omv_csi_abort(csi, false, false);
     }
 
     // The JPEG in the framebuffer is actually invalid.
@@ -689,12 +725,17 @@ static int stm_csi_snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
                 // Offset is the total frame size.
                 size = buffer->offset;
             } else {
+                // HAL_DCMI_Start_DMA splits bigger transfers.
+                if (csi->dma_size > (OMV_CSI_DMA_MAX_SIZE / 4)) {
+                    csi->dma_size /= 2;
+                }
+
                 // Offset is the number of length-size transfers performed.
-                size = buffer->offset * csi->dma_size / 2;
+                size = buffer->offset * csi->dma_size * 4;
                 // The DMA counter holds the number of bytes per transfer.
                 if (!csi->mipi_if && __HAL_DMA_GET_COUNTER(&csi->dma)) {
                     // Add in the uncompleted transfer length.
-                    size += ((csi->dma_size / 2) - __HAL_DMA_GET_COUNTER(&csi->dma)) * 4;
+                    size += (csi->dma_size - __HAL_DMA_GET_COUNTER(&csi->dma)) * 4;
                 }
             }
             // Clean trailing data after 0xFFD9 at the end of the jpeg byte stream.
