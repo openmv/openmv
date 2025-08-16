@@ -635,6 +635,17 @@ static int stm_csi_snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
                     }
                 }
 
+                // HAL_DCMI_Start_DMA() for transfer sizes less than 64KB expects a non-circular linked list.
+                if ((csi->dma_size * 4) <= (OMV_CSI_DMA_MAX_SIZE / 4)) {
+                    // Modify the link list head to point to nothing.
+                    dma_nodes[0].LinkRegisters[NODE_CLLR_LINEAR_DEFAULT_OFFSET] = 0;
+                } else {
+                    // Modify the link list head to point to the tail node (default).
+                    dma_nodes[0].LinkRegisters[NODE_CLLR_LINEAR_DEFAULT_OFFSET] =
+                        DMA_CLLR_UT1 | DMA_CLLR_UT2 | DMA_CLLR_UB1 | DMA_CLLR_USA | DMA_CLLR_UDA | DMA_CLLR_ULL |
+                        (((uint32_t) &dma_nodes[1]) & DMA_CLLR_LA);
+                }
+
                 csi->one_shot = true;
                 HAL_DCMI_Start_DMA(&csi->dcmi, DCMI_MODE_SNAPSHOT, (uint32_t) buffer->data, csi->dma_size);
                 #endif
