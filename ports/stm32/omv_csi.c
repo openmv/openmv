@@ -617,6 +617,14 @@ static int stm_csi_snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
                 // Start a multibuffer (line by line) transfer.
                 HAL_DCMI_Start_DMA_MB(&csi->dcmi, DCMI_MODE_CONTINUOUS, (uint32_t) &_line_buf, csi->dma_size, fb->v);
                 #else
+                // Handle YUV422 Source -> Y Destination using DCMI byte drop.
+                if ((csi->pixformat == PIXFORMAT_GRAYSCALE) && (csi->mono_bpp == 2)) {
+                    csi->dma_size /= 2;
+                    csi->dcmi.Instance->CR |= DCMI_CR_BSM_0;
+                } else {
+                    csi->dcmi.Instance->CR &= ~DCMI_CR_BSM_0;
+                }
+
                 csi->one_shot = true;
                 HAL_DCMI_Start_DMA(&csi->dcmi, DCMI_MODE_SNAPSHOT, (uint32_t) buffer->data, csi->dma_size);
                 #endif
