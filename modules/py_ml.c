@@ -254,14 +254,8 @@ static mp_obj_t py_ml_model_predict(size_t n_args, const mp_obj_t *pos_args, mp_
         mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Unsupported input type. Expected a list"));
     }
 
-    OMV_PROFILE_START(preprocess);
     py_ml_process_input(model, pos_args[1]);
-    OMV_PROFILE_PRINT(preprocess);
-
-    OMV_PROFILE_START(inference);
     ml_backend_run_inference(model);
-    OMV_PROFILE_PRINT(inference);
-
     mp_obj_t output = py_ml_process_output(model);
 
     if (args[ARG_callback].u_obj != mp_const_none) {

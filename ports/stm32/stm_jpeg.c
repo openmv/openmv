@@ -129,7 +129,6 @@ static void jpeg_compress_data_ready(JPEG_HandleTypeDef *hjpeg, uint8_t *pDataOu
 }
 
 bool jpeg_compress(image_t *src, image_t *dst, int quality, bool realloc, jpeg_subsampling_t subsampling) {
-    OMV_PROFILE_START();
     HAL_JPEG_RegisterGetDataCallback(&JPEG_state.jpeg_descr, jpeg_compress_get_data);
     HAL_JPEG_RegisterDataReadyCallback(&JPEG_state.jpeg_descr, jpeg_compress_data_ready);
 
@@ -394,8 +393,6 @@ exit_cleanup:
     HAL_JPEG_UnRegisterGetDataCallback(&JPEG_state.jpeg_descr);
 
     fb_free(); // mcu_row_buffer (after DMA is aborted)
-
-    OMV_PROFILE_PRINT();
     return jpeg_overflow;
 }
 
@@ -427,8 +424,6 @@ static void jpeg_decompress_data_ready(JPEG_HandleTypeDef *hjpeg, uint8_t *pData
 }
 
 void jpeg_decompress(image_t *dst, image_t *src) {
-    OMV_PROFILE_START();
-
     // Verify the jpeg image is not a non-baseline jpeg image and check that is has
     // valid headers up to the start-of-scan header (which cannot be trivially walked).
     if (!jpeg_is_valid(src)) {
@@ -795,8 +790,6 @@ exit_cleanup:
     if (((uint32_t) src->data) % __SCB_DCACHE_LINE_SIZE) {
         fb_free(); // JPEG_state.jpeg_descr.pJpegInBuffPtr (after DMA is aborted)
     }
-
-    OMV_PROFILE_PRINT();
 }
 
 void imlib_hardware_jpeg_init() {

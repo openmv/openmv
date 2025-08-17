@@ -731,7 +731,6 @@ static MP_DEFINE_CONST_FUN_OBJ_1(py_image_bytearray_obj, py_image_bytearray);
 
 #if defined(MODULE_ULAB_ENABLED) && (ULAB_MAX_DIMS == 4)
 static mp_obj_t py_image_to_ndarray(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
-    OMV_PROFILE_START();
     enum { ARG_dtype, ARG_buffer };
     static const mp_arg_t allowed_args[] = {
         { MP_QSTR_dtype, MP_ARG_OBJ | MP_ARG_REQUIRED, {.u_rom_obj = MP_ROM_NONE } },
@@ -906,8 +905,6 @@ static mp_obj_t py_image_to_ndarray(size_t n_args, const mp_obj_t *pos_args, mp_
             }
         }
     }
-
-    OMV_PROFILE_PRINT();
     return MP_OBJ_FROM_PTR(ndarray);
 }
 static MP_DEFINE_CONST_FUN_OBJ_KW(py_image_to_ndarray_obj, 1, py_image_to_ndarray);
