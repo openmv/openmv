@@ -83,8 +83,7 @@ extern uint8_t _line_buf;
 static omv_csi_t *stm_csi_all[2] = { 0 };
 
 #if defined(STM32N6)
-static DMA_QListTypeDef dma_queue;
-// Nodes can't be places in CSI state because the need to be uncacheable.
+// Nodes can't be placed in CSI state because they need to be uncacheable.
 static DMA_NodeTypeDef OMV_ATTR_SECTION(dma_nodes[2], ".dma_buffer");
 #endif
 
@@ -139,7 +138,7 @@ static int stm_csi_config(omv_csi_t *csi, omv_csi_config_t config) {
 
             #if defined(STM32N6)
             // Initialize DMA in circular mode.
-            if (stm_dma_ll_init(&csi->dma, &dma_queue, dma_nodes,
+            if (stm_dma_ll_init(&csi->dma, &csi->dma_queue, dma_nodes,
                         OMV_ARRAY_SIZE(dma_nodes), OMV_CSI_DMA_LIST_PORTS)) {
                 return OMV_CSI_ERROR_CSI_INIT_FAILED;
             }
@@ -650,9 +649,9 @@ static int stm_csi_snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
 
                 // Disable circular mode for transfer sizes less than 64KB.
                 if (csi->dma_size * 4 <= OMV_CSI_DMA_MAX_SIZE / 4) {
-                    HAL_DMAEx_List_ClearCircularMode(&dma_queue);
+                    HAL_DMAEx_List_ClearCircularMode(&csi->dma_queue);
                 } else {
-                    HAL_DMAEx_List_SetCircularMode(&dma_queue);
+                    HAL_DMAEx_List_SetCircularMode(&csi->dma_queue);
                 }
 
                 csi->one_shot = true;
