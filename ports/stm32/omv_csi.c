@@ -66,7 +66,7 @@
 #endif
 
 #ifndef OMV_CSI_DMA_MAX_SIZE
-#define OMV_CSI_DMA_MAX_SIZE    (0xFFFFU * 4U)
+#define OMV_CSI_DMA_MAX_SIZE    (0xFFFFU)
 #endif
 
 #ifndef OMV_CSI_LINE_ALIGNMENT
@@ -625,8 +625,8 @@ static int stm_csi_snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
             // differing only in size, with an interrupt after every half of the transfer.
             if ((csi->pixformat == PIXFORMAT_JPEG) && (csi->jpg_format == 3)) {
                 // Start a one-shot transfer to the framebuffer, used only for JPEG mode 3.
-                uint32_t size = framebuffer_get_buffer_size(fb);
-                csi->dma_size = IM_MIN(size, (OMV_CSI_DMA_MAX_SIZE * 2U)) / 4;
+                uint32_t size = framebuffer_get_buffer_size(fb) / 4;
+                csi->dma_size = IM_MIN(size, OMV_CSI_DMA_MAX_SIZE * 2U);
                 csi->one_shot = true;
                 HAL_DCMI_Start_DMA(&csi->dcmi, DCMI_MODE_SNAPSHOT, (uint32_t) buffer->data, csi->dma_size);
             #if USE_MDMA
@@ -648,7 +648,7 @@ static int stm_csi_snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
                 }
 
                 // Disable circular mode for transfer sizes less than 64KB.
-                if (csi->dma_size * 4 <= OMV_CSI_DMA_MAX_SIZE / 4) {
+                if (csi->dma_size * 4 <= OMV_CSI_DMA_MAX_SIZE) {
                     HAL_DMAEx_List_ClearCircularMode(&csi->dma_queue);
                 } else {
                     HAL_DMAEx_List_SetCircularMode(&csi->dma_queue);
@@ -726,7 +726,7 @@ static int stm_csi_snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
                 size = buffer->offset;
             } else {
                 // HAL_DCMI_Start_DMA splits bigger transfers.
-                if (csi->dma_size > (OMV_CSI_DMA_MAX_SIZE / 4)) {
+                if (csi->dma_size > OMV_CSI_DMA_MAX_SIZE) {
                     csi->dma_size /= 2;
                 }
 
