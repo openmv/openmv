@@ -57,7 +57,6 @@ extern uint32_t usb_cdc_buf_len();
 extern uint32_t usb_cdc_get_buf(uint8_t *buf, uint32_t len);
 extern void usb_cdc_reset_buffers(void);
 
-
 void usbdbg_init() {
     cmd = USBDBG_NONE;
     script_ready = false;
@@ -66,6 +65,9 @@ void usbdbg_init() {
     vstr_init(&script_buf, 32);
     #if OMV_TUSBDBG_ENABLE
     tinyusb_debug_init();
+    #endif
+    #if OMV_PROFILER_ENABLE
+    omv_profiler_init();
     #endif
 }
 
@@ -166,7 +168,7 @@ void usbdbg_data_in(uint32_t size, usbdbg_write_callback_t write_callback) {
             // Return 0 if FB is locked or not ready.
             uint32_t buffer[3] = { 0 };
             // Try to lock FB. If header size == 0 frame is not ready
-            if (mutex_try_lock_fair(&JPEG_FB()->lock, MUTEX_TID_IDE)) {
+            if (mutex_try_lock(&JPEG_FB()->lock, MUTEX_TID_IDE)) {
                 // If header size == 0 frame is not ready
                 if (JPEG_FB()->size == 0) {
                     // unlock FB
@@ -231,14 +233,22 @@ void usbdbg_data_in(uint32_t size, usbdbg_write_callback_t write_callback) {
 
             // Set script running flag
             if (script_running) {
-                buffer[0] |= USBDBG_STATE_FLAGS_SCRIPT;
+                buffer[0] |= USBDBG_FLAG_SCRIPT_RUNNING;
             }
 
             // Set text buf valid flag.
             uint32_t tx_buf_len = usb_cdc_buf_len();
             if (tx_buf_len) {
-                buffer[0] |= USBDBG_STATE_FLAGS_TEXT;
+                buffer[0] |= USBDBG_FLAG_TEXTBUF_NOTEMPTY;
             }
+
+            // Set code profiling flags
+            #if OMV_PROFILER_ENABLE
+            buffer[0] |= USBDBG_FLAG_PROFILE_ENABLED;
+            #if __PMU_PRESENT
+            buffer[0] |= USBDBG_FLAG_PROFILE_HAS_PMU;
+            #endif // __PMU_PRESENT
+            #endif // OMV_PROFILER_ENABLE
 
             // Limit the frames sent over USB to 20Hz.
             if (check_timeout_ms(last_update_ms, 50) &&
@@ -249,7 +259,7 @@ void usbdbg_data_in(uint32_t size, usbdbg_write_callback_t write_callback) {
                     mutex_unlock(&JPEG_FB()->lock, MUTEX_TID_IDE);
                 } else {
                     // Set valid frame flag.
-                    buffer[0] |= USBDBG_STATE_FLAGS_FRAME;
+                    buffer[0] |= USBDBG_FLAG_FRAMEBUF_LOCKED;
 
                     // Set frame width, height and size/bpp
                     buffer[1] = JPEG_FB()->w;
@@ -271,6 +281,40 @@ void usbdbg_data_in(uint32_t size, usbdbg_write_callback_t write_callback) {
             write_callback(&byte_buffer, size);
             break;
         }
+
+        case USBDBG_PROFILE_SIZE: {
+            // Return 0 if the profiling data is locked.
+            uint32_t buffer[3] = { 0 };
+            #if OMV_PROFILER_ENABLE
+            if (mutex_try_lock(omv_profiler_lock(), MUTEX_TID_IDE)) {
+                size_t count = 0;
+                (void) omv_profiler_get_data(&count);
+
+                buffer[0] = count;
+                buffer[1] = sizeof(omv_profiler_data_t);
+                buffer[2] = __PMU_NUM_EVENTCNT;
+            }
+            #endif
+            cmd = USBDBG_NONE;
+            write_callback(&buffer, sizeof(buffer));
+            break;
+        }
+
+        #if OMV_PROFILER_ENABLE
+        case USBDBG_PROFILE_DUMP:
+            if (xfer_offs < xfer_size) {
+                size_t count = 0;
+                char *data = omv_profiler_get_data(&count);
+
+                write_callback(data + xfer_offs, size);
+                xfer_offs += size;
+                if (xfer_offs == xfer_size) {
+                    cmd = USBDBG_NONE;
+                    mutex_unlock(omv_profiler_lock(), MUTEX_TID_IDE);
+                }
+            }
+            break;
+        #endif
 
         default: /* error */
             break;
@@ -310,6 +354,26 @@ void usbdbg_data_out(uint32_t size, usbdbg_read_callback_t read_callback) {
             }
             break;
 
+        case USBDBG_PROFILE_MODE: {
+            uint32_t buffer[1];
+            read_callback(&buffer, sizeof(buffer));
+            #if OMV_PROFILER_ENABLE
+            omv_profiler_set_mode(buffer[0]);
+            #endif
+            cmd = USBDBG_NONE;
+            break;
+        }
+
+        case USBDBG_PROFILE_EVENT: {
+            uint32_t buffer[2];
+            read_callback(&buffer, sizeof(buffer));
+            #if OMV_PROFILER_ENABLE
+            omv_profiler_set_event(buffer[0], buffer[1]);
+            #endif
+            cmd = USBDBG_NONE;
+            break;
+        }
+
         default: /* error */
             break;
     }
@@ -327,17 +391,29 @@ void usbdbg_control(void *buffer, uint8_t request, uint32_t size) {
         case USBDBG_TX_BUF_LEN:
         case USBDBG_SENSOR_ID:
         case USBDBG_GET_STATE:
-            xfer_offs = 0;
-            xfer_size = size;
-            break;
-
-        case USBDBG_SCRIPT_RUNNING:
-            vstr_reset(&script_buf);
+        case USBDBG_PROFILE_SIZE:
+        case USBDBG_PROFILE_DUMP:
+        case USBDBG_PROFILE_MODE:
+        case USBDBG_PROFILE_EVENT:
         case USBDBG_SCRIPT_EXEC:
             xfer_offs = 0;
             xfer_size = size;
             break;
 
+        case USBDBG_PROFILE_RESET: {
+            #if OMV_PROFILER_ENABLE
+            omv_profiler_reset();
+            #endif
+            cmd = USBDBG_NONE;
+            break;
+        }
+
+        case USBDBG_SCRIPT_RUNNING:
+            vstr_reset(&script_buf);
+            xfer_offs = 0;
+            xfer_size = size;
+            break;
+        
         case USBDBG_SCRIPT_STOP:
             if (script_running) {
                 // Reset CDC buffers.
