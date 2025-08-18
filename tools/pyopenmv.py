@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python
 # This file is part of the OpenMV project.
 #
 # Copyright (c) 2013-2021 Ibrahim Abdelkader <iabdalkader@openmv.io>
@@ -16,7 +16,7 @@ import numpy as np
 from PIL import Image
 
 __serial = None
-__FB_HDR_SIZE   =12
+__FB_HDR_SIZE = 12
 
 # USB Debug commands
 __USBDBG_CMD            = 48
@@ -38,20 +38,27 @@ __USBDBG_FB_ENABLE      = 0x0D
 __USBDBG_TX_BUF_LEN     = 0x8E
 __USBDBG_TX_BUF         = 0x8F
 __USBDBG_GET_STATE      = 0x93
+__USBDBG_PROFILE_SIZE   = 0x94
+__USBDBG_PROFILE_DUMP   = 0x95
+__USBDBG_PROFILE_MODE   = 0x16
+__USBDBG_PROFILE_EVENT  = 0x17
+__USBDBG_PROFILE_RESET  = 0x18
 
-__USBDBG_STATE_FLAGS_SCRIPT = (1 << 0)
-__USBDBG_STATE_FLAGS_TEXT   = (1 << 1)
-__USBDBG_STATE_FLAGS_FRAME  = (1 << 2)
+__USBDBG_FLAG_SCRIPT_RUNNING   = (1 << 0)
+__USBDBG_FLAG_TEXTBUF_NOTEMPTY = (1 << 1)
+__USBDBG_FLAG_FRAMEBUF_LOCKED  = (1 << 2)
+__USBDBG_FLAG_PROFILE_ENABLED  = (1 << 3)
+__USBDBG_FLAG_PROFILE_HAS_PMU  = (1 << 4)
 
-ATTR_CONTRAST   =0
-ATTR_BRIGHTNESS =1
-ATTR_SATURATION =2
-ATTR_GAINCEILING=3
+ATTR_CONTRAST = 0
+ATTR_BRIGHTNESS = 1
+ATTR_SATURATION = 2
+ATTR_GAINCEILING = 3
 
-__BOOTLDR_START         = 0xABCD0001
-__BOOTLDR_RESET         = 0xABCD0002
-__BOOTLDR_ERASE         = 0xABCD0004
-__BOOTLDR_WRITE         = 0xABCD0008
+__BOOTLDR_START = 0xABCD0001
+__BOOTLDR_RESET = 0xABCD0002
+__BOOTLDR_ERASE = 0xABCD0004
+__BOOTLDR_WRITE = 0xABCD0008
 
 def init(port, baudrate=921600, timeout=0.3):
     global __serial
@@ -67,29 +74,40 @@ def disconnect():
     except:
         pass
 
+def write_pack(fmt, *values):
+    __serial.write(struct.pack(fmt, *values))
+
+def read_unpack(fmt):
+    return struct.unpack(fmt, __serial.read(struct.calcsize(fmt)))
+
 def set_timeout(timeout):
     __serial.timeout = timeout
 
 def fb_size():
     # read fb header
-    __serial.write(struct.pack("<BBI", __USBDBG_CMD, __USBDBG_FRAME_SIZE, __FB_HDR_SIZE))
-    return struct.unpack("III", __serial.read(12))
+    write_pack("<BBI", __USBDBG_CMD, __USBDBG_FRAME_SIZE, __FB_HDR_SIZE)
+    return read_unpack("III")
 
 def read_state():
-    __serial.write(struct.pack("<BBI", __USBDBG_CMD, __USBDBG_GET_STATE, 64))
-    flags, w, h, size, text_buf = struct.unpack("IIII48s", __serial.read(64))
-
+    write_pack("<BBI", __USBDBG_CMD, __USBDBG_GET_STATE, 64)
+    flags, w, h, size, text_buf = read_unpack("IIII48s")
+    
     text = None
-    if flags & __USBDBG_STATE_FLAGS_TEXT:
+    profile = False
+
+    if flags & __USBDBG_FLAG_PROFILE_ENABLED:
+        profile = True
+
+    if flags & __USBDBG_FLAG_TEXTBUF_NOTEMPTY:
         text = text_buf.split(b'\0', 1)[0].decode()
 
-    if flags & __USBDBG_STATE_FLAGS_FRAME == 0:
-        return 0, 0, None, 0, text, ""
+    if flags & __USBDBG_FLAG_FRAMEBUF_LOCKED == 0:
+        return 0, 0, None, 0, text, "", profile
 
     num_bytes = size if size > 2 else (w * h * size)
 
     # read fb data
-    __serial.write(struct.pack("<BBI", __USBDBG_CMD, __USBDBG_FRAME_DUMP, num_bytes))
+    write_pack("<BBI", __USBDBG_CMD, __USBDBG_FRAME_DUMP, num_bytes)
     buff = __serial.read(num_bytes)
 
     if size == 1:  # Grayscale
@@ -113,7 +131,7 @@ def read_state():
     if (buff.size != (w*h*3)):
         raise ValueError(f"Unexpected frame size. Expected: {w*h*3} received: {buff.size}")
 
-    return w, h, buff.reshape((h, w, 3)), num_bytes, text, fmt
+    return w, h, buff.reshape((h, w, 3)), num_bytes, text, fmt, profile
 
 
 def fb_dump():
@@ -129,7 +147,7 @@ def fb_dump():
         num_bytes = size[0]*size[1]*size[2]
 
     # read fb data
-    __serial.write(struct.pack("<BBI", __USBDBG_CMD, __USBDBG_FRAME_DUMP, num_bytes))
+    write_pack("<BBI", __USBDBG_CMD, __USBDBG_FRAME_DUMP, num_bytes)
     buff = __serial.read(num_bytes)
 
     if size[2] == 1:  # Grayscale
@@ -153,72 +171,119 @@ def fb_dump():
 
     return (size[0], size[1], buff.reshape((size[1], size[0], 3)))
 
+def read_profile():
+    records = []
+    
+    # Read and unpack profiling data size
+    write_pack("<BBI", __USBDBG_CMD, __USBDBG_PROFILE_SIZE, 12)
+    record_count, record_size, event_count = read_unpack("<III")
+
+    if record_count:
+        offset = 0
+        record_format = f"<5I2Q{event_count}QI"
+        profile_size = record_count * record_size
+
+        # Read profiling data
+        write_pack("<BBI", __USBDBG_CMD, __USBDBG_PROFILE_DUMP, profile_size)
+        profile_data = __serial.read(profile_size)
+
+        for i in range(record_count):
+            # Unpack the record
+            profile = struct.unpack(record_format, profile_data[offset:offset + record_size])
+            
+            # Parse the profile data
+            records.append({
+                'address': profile[0],
+                'caller': profile[1],
+                'call_count': profile[2],
+                'min_ticks': profile[3],
+                'max_ticks': profile[4],
+                'total_ticks': profile[5],
+                'total_cycles': profile[6],
+                'events': profile[7:7 + event_count] if event_count > 0 else []
+            })
+
+            offset += record_size
+        
+    return records
+
+def set_profile_mode(mode):
+    write_pack("<BBI", __USBDBG_CMD, __USBDBG_PROFILE_MODE, 4)
+    write_pack("<I", mode)
+
+def set_event_counter(event_num, event_type): 
+    write_pack("<BBI", __USBDBG_CMD, __USBDBG_PROFILE_EVENT, 8)
+    write_pack("<II", event_num, event_type)
+
+def reset_profiler(): 
+    write_pack("<BBI", __USBDBG_CMD, __USBDBG_PROFILE_RESET, 0)
+
 def exec_script(buf):
-    __serial.write(struct.pack("<BBI", __USBDBG_CMD, __USBDBG_SCRIPT_EXEC, len(buf)))
+    write_pack("<BBI", __USBDBG_CMD, __USBDBG_SCRIPT_EXEC, len(buf))
     __serial.write(buf.encode())
 
 def stop_script():
-    __serial.write(struct.pack("<BBI", __USBDBG_CMD, __USBDBG_SCRIPT_STOP, 0))
+    write_pack("<BBI", __USBDBG_CMD, __USBDBG_SCRIPT_STOP, 0)
 
 def script_running():
-    __serial.write(struct.pack("<BBI", __USBDBG_CMD, __USBDBG_SCRIPT_RUNNING, 4))
-    return struct.unpack("I", __serial.read(4))[0]
+    write_pack("<BBI", __USBDBG_CMD, __USBDBG_SCRIPT_RUNNING, 4)
+    return read_unpack("I")[0]
 
 def save_template(x, y, w, h, path):
     buf = struct.pack("IIII", x, y, w, h) + path
-    __serial.write(struct.pack("<BBI", __USBDBG_CMD, __USBDBG_TEMPLATE_SAVE, len(buf)))
+    write_pack("<BBI", __USBDBG_CMD, __USBDBG_TEMPLATE_SAVE, len(buf))
     __serial.write(buf)
 
 def save_descriptor(x, y, w, h, path):
     buf = struct.pack("HHHH", x, y, w, h) + path
-    __serial.write(struct.pack("<BBI", __USBDBG_CMD, __USBDBG_DESCRIPTOR_SAVE, len(buf)))
+    write_pack("<BBI", __USBDBG_CMD, __USBDBG_DESCRIPTOR_SAVE, len(buf))
     __serial.write(buf)
 
 def set_attr(attr, value):
-    __serial.write(struct.pack("<BBI", __USBDBG_CMD, __USBDBG_ATTR_WRITE, 8))
-    __serial.write(struct.pack("<II", attr, value))
+    write_pack("<BBI", __USBDBG_CMD, __USBDBG_ATTR_WRITE, 8)
+    write_pack("<II", attr, value)
 
 def get_attr(attr):
-    __serial.write(struct.pack("<BBIh", __USBDBG_CMD, __USBDBG_ATTR_READ, 1, attr))
+    write_pack("<BBIh", __USBDBG_CMD, __USBDBG_ATTR_READ, 1, attr)
     return __serial.read(1)
 
 def reset():
-    __serial.write(struct.pack("<BBI", __USBDBG_CMD, __USBDBG_SYS_RESET, 0))
+    write_pack("<BBI", __USBDBG_CMD, __USBDBG_SYS_RESET, 0)
 
 def reset_to_bl():
-    __serial.write(struct.pack("<BBI", __USBDBG_CMD, __USBDBG_SYS_RESET_TO_BL, 0))
+    write_pack("<BBI", __USBDBG_CMD, __USBDBG_SYS_RESET_TO_BL, 0)
 
 def bootloader_start():
-    __serial.write(struct.pack("<I", __BOOTLDR_START))
-    return struct.unpack("I", __serial.read(4))[0] == __BOOTLDR_START
+    write_pack("<I", __BOOTLDR_START)
+    return read_unpack("I")[0] == __BOOTLDR_START
 
 def bootloader_reset():
-    __serial.write(struct.pack("<I", __BOOTLDR_RESET))
+    write_pack("<I", __BOOTLDR_RESET)
 
 def flash_erase(sector):
-    __serial.write(struct.pack("<II", __BOOTLDR_ERASE, sector))
+    write_pack("<II", __BOOTLDR_ERASE, sector)
 
 def flash_write(buf):
-    __serial.write(struct.pack("<I", __BOOTLDR_WRITE) + buf)
+    write_pack("<I", __BOOTLDR_WRITE) + buf
 
 def tx_buf_len():
-    __serial.write(struct.pack("<BBI", __USBDBG_CMD, __USBDBG_TX_BUF_LEN, 4))
-    return struct.unpack("I", __serial.read(4))[0]
+    write_pack("<BBI", __USBDBG_CMD, __USBDBG_TX_BUF_LEN, 4)
+    return read_unpack("I")[0]
 
 def tx_buf(bytes):
-    __serial.write(struct.pack("<BBI", __USBDBG_CMD, __USBDBG_TX_BUF, bytes))
+    write_pack("<BBI", __USBDBG_CMD, __USBDBG_TX_BUF, bytes)
     return __serial.read(bytes)
 
 def fw_version():
-    __serial.write(struct.pack("<BBI", __USBDBG_CMD, __USBDBG_FW_VERSION, 12))
-    return struct.unpack("III", __serial.read(12))
+    write_pack("<BBI", __USBDBG_CMD, __USBDBG_FW_VERSION, 12)
+    return read_unpack("III")
 
 def enable_fb(enable):
-    __serial.write(struct.pack("<BBI", __USBDBG_CMD, __USBDBG_FB_ENABLE, 4))
-    __serial.write(struct.pack("<I", enable))
+    write_pack("<BBI", __USBDBG_CMD, __USBDBG_FB_ENABLE, 4)
+    write_pack("<I", enable)
 
 def arch_str():
-    __serial.write(struct.pack("<BBI", __USBDBG_CMD, __USBDBG_ARCH_STR, 64))
+    write_pack("<BBI", __USBDBG_CMD, __USBDBG_ARCH_STR, 64)
     return __serial.read(64).split(b'\0', 1)[0]
 
 if __name__ == '__main__':
