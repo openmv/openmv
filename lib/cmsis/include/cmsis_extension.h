@@ -192,11 +192,23 @@ __STATIC_FORCEINLINE uint32_t __UXTB(uint32_t op1)
   return(result);
 }
 
+__STATIC_FORCEINLINE uint32_t __UXTAB(uint32_t op1, uint32_t op2)
+{
+  uint32_t result;
+
+  __ASM volatile ("uxtab %0, %1, %2" : "=r" (result) : "r" (op1), "r" (op2));
+  return(result);
+}
+
 __STATIC_FORCEINLINE uint32_t __UXTB_RORn(uint32_t op1, uint32_t rotate)
 {
   uint32_t result;
 
-  __ASM volatile ("uxtb %0, %1, ROR %2" : "=r" (result) : "r" (op1), "i" (rotate) );
+  if (__builtin_constant_p(rotate) && ((rotate == 8U) || (rotate == 16U) || (rotate == 24U))) {
+    __ASM volatile ("uxtb %0, %1, ROR %2" : "=r" (result) : "r" (op1), "i" (rotate) );
+  } else {
+    result = __UXTB(__ROR(op1, rotate));
+  }
   return result;
 }
 
@@ -204,7 +216,11 @@ __STATIC_FORCEINLINE uint32_t __UXTB16_RORn(uint32_t op1, uint32_t rotate)
 {
   uint32_t result;
 
-  __ASM volatile ("uxtb16 %0, %1, ROR %2" : "=r" (result) : "r" (op1), "i" (rotate) );
+  if (__builtin_constant_p(rotate) && ((rotate == 8U) || (rotate == 16U) || (rotate == 24U))) {
+    __ASM volatile ("uxtb16 %0, %1, ROR %2" : "=r" (result) : "r" (op1), "i" (rotate) );
+  } else {
+    result = __UXTB16(__ROR(op1, rotate));
+  }
   return result;
 }
 
@@ -212,7 +228,11 @@ __STATIC_FORCEINLINE uint32_t __UXTAB_RORn(uint32_t op1, uint32_t op2, uint32_t 
 {
   uint32_t result;
 
-  __ASM volatile ("uxtab %0, %1, %2, ROR %3" : "=r" (result) : "r" (op1), "r" (op2), "i" (rotate) );
+  if (__builtin_constant_p(rotate) && ((rotate == 8U) || (rotate == 16U) || (rotate == 24U))) {
+    __ASM volatile ("uxtab %0, %1, %2, ROR %3" : "=r" (result) : "r" (op1), "r" (op2), "i" (rotate) );
+  } else {
+    result = __UXTAB(op1, __ROR(op2, rotate));
+  }
   return result;
 }
 
@@ -228,7 +248,11 @@ __STATIC_FORCEINLINE uint32_t __SXTB_RORn(uint32_t op1, uint32_t rotate)
 {
   uint32_t result;
 
-  __ASM volatile ("sxtb %0, %1, ROR %2" : "=r" (result) : "r" (op1), "i" (rotate) );
+  if (__builtin_constant_p(rotate) && ((rotate == 8U) || (rotate == 16U) || (rotate == 24U))) {
+    __ASM volatile ("sxtb %0, %1, ROR %2" : "=r" (result) : "r" (op1), "i" (rotate) );
+  } else {
+    result = __SXTB(__ROR(op1, rotate));
+  }
   return result;
 }
 
