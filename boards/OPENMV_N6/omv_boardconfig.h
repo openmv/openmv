@@ -101,9 +101,9 @@
 #define OMV_RCC_IC10_SOURCE                 (RCC_ICCLKSOURCE_PLL1)
 #define OMV_RCC_IC10_CLKDIV                 (8)
 
-// Used by MicroPython UART and SPI
-#define OMV_RCC_IC9_SOURCE                  (RCC_ICCLKSOURCE_PLL1)
-#define OMV_RCC_IC9_CLKDIV                  (8)
+// Used by MicroPython for slow peripherals.
+#define OMV_RCC_IC14_SOURCE                 (RCC_ICCLKSOURCE_PLL1)
+#define OMV_RCC_IC14_CLKDIV                 (8)
 
 #define OMV_RCC_IC15_SOURCE                 (RCC_ICCLKSOURCE_PLL1)
 #define OMV_RCC_IC15_CLKDIV                 (16)
@@ -115,8 +115,8 @@
 #define OMV_RCC_IC18_CLKDIV                 (60)
 
 #define OMV_OSC_I2C3_SOURCE                 (RCC_I2C3CLKSOURCE_IC10)
-#define OMV_OSC_SPI5_SOURCE                 (RCC_SPI5CLKSOURCE_IC9)
-#define OMV_OSC_USART2_SOURCE               (RCC_USART2CLKSOURCE_IC9)
+#define OMV_OSC_SPI5_SOURCE                 (RCC_SPI5CLKSOURCE_IC14)
+#define OMV_OSC_USART2_SOURCE               (RCC_USART2CLKSOURCE_IC14)
 
 #define OMV_OSC_DCMIPP_SOURCE               (RCC_DCMIPPCLKSOURCE_IC17)
 #define OMV_OSC_CSI_SOURCE                  (0) // has one clock source IC18
