@@ -49,6 +49,10 @@ jobs:
           - ARDUINO_NANO_RP2040_CONNECT
           - ARDUINO_NANO_33_BLE_SENSE
           - DOCKER
+        profile: [0]   # default profile
+        include:
+          - target: OPENMV_N6
+            profile: 1
       fail-fast: false
     steps:
     - name: '⏳ Checkout repository'
@@ -100,10 +104,10 @@ jobs:
       run: source tools/ci.sh && ci_install_stedgeai ${HOME}/cache/stedgeai
 
     - name: '🏗 Build firmware'
-      run: source tools/ci.sh && ci_build_target ${{ matrix.target }}
+      run: source tools/ci.sh && ci_build_target ${{ matrix.target }} ${{ matrix.profile }}
 
     - name: '⬆ Upload artifacts'
-      if: matrix.target != 'DOCKER'
+      if: matrix.target != 'DOCKER' && matrix.profile == 0 
       uses: actions/upload-artifact@v4
       with:
         name: ${{ matrix.target }}

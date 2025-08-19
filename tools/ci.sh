@@ -54,8 +54,11 @@ ci_build_target() {
         make -j$(nproc) -C docker TARGET=${BOARD}
     else
         make -j$(nproc) -C lib/micropython/mpy-cross
-        make -j$(nproc) TARGET=${1}
-        mv build/bin ${1}
+        make -j$(nproc) TARGET=${1} PROFILE_ENABLE=${2}
+        # Don't copy artifacts for profiling builds
+        if [ "$2" = 0 ]; then
+            mv build/bin ${1}
+        fi
     fi
 }
 
