@@ -37,6 +37,8 @@
 #include "tinyusb_debug.h"
 #include "omv_common.h"
 
+#include "cmsis_gcc.h"
+
 #define USBDBG_BAUDRATE_SLOW     (921600)
 #define USBDBG_BAUDRATE_FAST     (12000000)
 #define DEBUG_EP_SIZE           (TUD_OPT_HIGH_SPEED ? 512 : 64)
@@ -54,6 +56,8 @@ usbdbg_cmd_t;
 static uint8_t tx_array[OMV_TUSBDBG_BUFFER];
 static ringbuf_t tx_ringbuf = { tx_array, sizeof(tx_array) };
 static volatile bool tinyusb_debug_mode = false;
+static uint8_t request = 0;
+static uint32_t xfer_length = 0;
 
 uint32_t usb_cdc_buf_len() {
     return ringbuf_avail(&tx_ringbuf);
@@ -84,6 +88,8 @@ void usb_cdc_reset_buffers(void) {
 void tud_cdc_line_coding_cb(uint8_t itf, cdc_line_coding_t const *coding) {
     tx_ringbuf.iget = 0;
     tx_ringbuf.iput = 0;
+    request = 0;
+    xfer_length = 0;
 
     if (0) {
         #if defined(MICROPY_BOARD_ENTER_BOOTLOADER)
@@ -147,23 +153,26 @@ mp_uint_t __wrap_mp_hal_stdout_tx_strn(const char *str, mp_uint_t len) {
 }
 
 void tinyusb_debug_task(mp_sched_node_t *node) {
-    tud_task_ext(0, false);
+    // tinyusb_debug_task() can be called while interrupts are disabled because it's scheduled.
+    if (!xfer_length) {
+        tud_task_ext(0, false);
 
-    if (!tinyusb_debug_enabled() || !tud_cdc_connected() || tud_cdc_available() < 6) {
-        return;
+        if (!tinyusb_debug_enabled() || !tud_cdc_connected() || tud_cdc_available() < 6) {
+            return;
+        }
+
+        usbdbg_cmd_t cmd;
+        tud_cdc_read(&cmd, sizeof(cmd));
+
+        if (cmd.cmd != 0x30) {
+            // TODO: Try to recover from this state but for now, call __fatal_error.
+            __fatal_error("Invalid USB CMD received.");
+        }
+
+        request = cmd.request;
+        xfer_length = cmd.xfer_length;
+        usbdbg_control(NULL, request, xfer_length);
     }
-
-    usbdbg_cmd_t cmd;
-    tud_cdc_read(&cmd, sizeof(cmd));
-
-    if (cmd.cmd != 0x30) {
-        // TODO: Try to recover from this state but for now, call __fatal_error.
-        __fatal_error("Invalid USB CMD received.");
-    }
-
-    uint8_t request = cmd.request;
-    uint32_t xfer_length = cmd.xfer_length;
-    usbdbg_control(NULL, request, xfer_length);
 
     while (xfer_length) {
         // && tud_cdc_connected())
@@ -187,6 +196,10 @@ void tinyusb_debug_task(mp_sched_node_t *node) {
                 xfer_length -= size;
                 usbdbg_data_out(size, tud_cdc_read);
             }
+        }
+        // Exit if interrupts are disabled.
+        if (__get_PRIMASK() & 1) {
+            break;
         }
     }
 }
