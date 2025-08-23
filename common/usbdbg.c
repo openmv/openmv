@@ -39,6 +39,7 @@
 #endif
 #include "framebuffer.h"
 #include "usbdbg.h"
+#include "tinyusb_debug.h"
 #include "omv_boardconfig.h"
 #include "py_image.h"
 
@@ -62,8 +63,10 @@ void usbdbg_init() {
     script_ready = false;
     script_running = false;
     irq_enabled = false;
-
     vstr_init(&script_buf, 32);
+    #if OMV_TUSBDBG_ENABLE
+    tinyusb_debug_init();
+    #endif
 }
 
 bool usbdbg_script_ready() {
@@ -111,16 +114,6 @@ static void usbdbg_interrupt_vm(bool ready) {
 
 bool usbdbg_get_irq_enabled() {
     return irq_enabled;
-}
-
-uint32_t ticks_diff_ms(uint32_t start_ms) {
-    uint32_t current_ms = mp_hal_ticks_ms();
-    if (current_ms >= start_ms) {
-        return current_ms - start_ms;
-    } else {
-        // Handle wraparound
-        return (UINT32_MAX - start_ms) + current_ms + 1;
-    }
 }
 
 void usbdbg_data_in(uint32_t size, usbdbg_write_callback_t write_callback) {
@@ -248,7 +241,7 @@ void usbdbg_data_in(uint32_t size, usbdbg_write_callback_t write_callback) {
             }
 
             // Limit the frames sent over USB to 20Hz.
-            if (ticks_diff_ms(last_update_ms) > 50 &&
+            if (check_timeout_ms(last_update_ms, 50) &&
                 mutex_try_lock_fair(&JPEG_FB()->lock, MUTEX_TID_IDE)) {
                 // If header size == 0 frame is not ready
                 if (JPEG_FB()->size == 0) {
@@ -317,93 +310,6 @@ void usbdbg_data_out(uint32_t size, usbdbg_read_callback_t read_callback) {
             }
             break;
 
-        case USBDBG_TEMPLATE_SAVE: {
-            #if defined(IMLIB_ENABLE_IMAGE_FILE_IO)
-            image_t image;
-            framebuffer_t *fb = framebuffer_get(0);
-
-            framebuffer_init_image(fb, &image);
-
-            size = MIN(128, size);
-            char buffer[size];
-            read_callback(buffer, size);
-            buffer[size - 1] = 0;
-
-            rectangle_t *roi = (rectangle_t *) buffer;
-            char *path = (char *) buffer + sizeof(rectangle_t);
-
-            imlib_save_image(&image, path, roi, 50);
-            #endif  //IMLIB_ENABLE_IMAGE_FILE_IO
-            break;
-        }
-
-        case USBDBG_DESCRIPTOR_SAVE: {
-            #if defined(IMLIB_ENABLE_IMAGE_FILE_IO) \
-            && defined(IMLIB_ENABLE_KEYPOINTS)
-            image_t image;
-            framebuffer_t *fb = framebuffer_get(0);
-
-            framebuffer_init_image(fb, &image);
-
-            size = MIN(128, size);
-            char buffer[size];
-            read_callback(buffer, size);
-            buffer[size - 1] = 0;
-
-            rectangle_t *roi = (rectangle_t *) buffer;
-            char *path = (char *) buffer + sizeof(rectangle_t);
-
-            py_image_descriptor_from_roi(&image, path, roi);
-            #endif  //IMLIB_ENABLE_IMAGE_FILE_IO && IMLIB_ENABLE_KEYPOINTS
-            cmd = USBDBG_NONE;
-            break;
-        }
-
-        case USBDBG_ATTR_WRITE: {
-            #if MICROPY_PY_CSI
-            struct {
-                int32_t name;
-                int32_t value;
-            } attr;
-
-            omv_csi_t *csi = omv_csi_get(-1);
-
-            read_callback(&attr, sizeof(attr));
-
-            switch (attr.name) {
-                case OMV_CSI_ATTR_CONTRAST:
-                    omv_csi_set_contrast(csi, attr.value);
-                    break;
-                case OMV_CSI_ATTR_BRIGHTNESS:
-                    omv_csi_set_brightness(csi, attr.value);
-                    break;
-                case OMV_CSI_ATTR_SATURATION:
-                    omv_csi_set_saturation(csi, attr.value);
-                    break;
-                case OMV_CSI_ATTR_GAINCEILING:
-                    omv_csi_set_gainceiling(csi, attr.value);
-                    break;
-                default:
-                    break;
-            }
-            #endif
-            cmd = USBDBG_NONE;
-            break;
-        }
-
-        case USBDBG_SET_TIME: {
-            // TODO implement
-            uint8_t buffer[32];
-            read_callback(&buffer, sizeof(buffer));
-            cmd = USBDBG_NONE;
-            break;
-        }
-
-        case USBDBG_TX_INPUT: {
-            // TODO implement
-            cmd = USBDBG_NONE;
-            break;
-        }
         default: /* error */
             break;
     }
@@ -413,29 +319,23 @@ void usbdbg_control(void *buffer, uint8_t request, uint32_t size) {
     cmd = (enum usbdbg_cmd) request;
     switch (cmd) {
         case USBDBG_FW_VERSION:
-            xfer_offs = 0;
-            xfer_size = size;
-            break;
-
         case USBDBG_FRAME_SIZE:
-            xfer_offs = 0;
-            xfer_size = size;
-            break;
-
         case USBDBG_FRAME_DUMP:
-            xfer_offs = 0;
-            xfer_size = size;
-            break;
-
         case USBDBG_ARCH_STR:
+        case USBDBG_FB_ENABLE:
+        case USBDBG_TX_BUF:
+        case USBDBG_TX_BUF_LEN:
+        case USBDBG_SENSOR_ID:
+        case USBDBG_GET_STATE:
             xfer_offs = 0;
             xfer_size = size;
             break;
 
+        case USBDBG_SCRIPT_RUNNING:
+            vstr_reset(&script_buf);
         case USBDBG_SCRIPT_EXEC:
             xfer_offs = 0;
             xfer_size = size;
-            vstr_reset(&script_buf);
             break;
 
         case USBDBG_SCRIPT_STOP:
@@ -447,28 +347,6 @@ void usbdbg_control(void *buffer, uint8_t request, uint32_t size) {
                 usbdbg_interrupt_vm(false);
             }
             cmd = USBDBG_NONE;
-            break;
-
-        case USBDBG_SCRIPT_SAVE:
-            // TODO: save running script
-            cmd = USBDBG_NONE;
-            break;
-
-        case USBDBG_SCRIPT_RUNNING:
-            xfer_offs = 0;
-            xfer_size = size;
-            break;
-
-        case USBDBG_TEMPLATE_SAVE:
-        case USBDBG_DESCRIPTOR_SAVE:
-            /* save template */
-            xfer_offs = 0;
-            xfer_size = size;
-            break;
-
-        case USBDBG_ATTR_WRITE:
-            xfer_offs = 0;
-            xfer_size = size;
             break;
 
         case USBDBG_SYS_RESET:
@@ -487,38 +365,6 @@ void usbdbg_control(void *buffer, uint8_t request, uint32_t size) {
             #endif
             break;
         }
-
-        case USBDBG_FB_ENABLE: {
-            xfer_offs = 0;
-            xfer_size = size;
-            break;
-        }
-
-        case USBDBG_TX_BUF:
-        case USBDBG_TX_BUF_LEN:
-            xfer_offs = 0;
-            xfer_size = size;
-            break;
-
-        case USBDBG_SENSOR_ID:
-            xfer_offs = 0;
-            xfer_size = size;
-            break;
-
-        case USBDBG_SET_TIME:
-            xfer_offs = 0;
-            xfer_size = size;
-            break;
-
-        case USBDBG_TX_INPUT:
-            xfer_offs = 0;
-            xfer_size = size;
-            break;
-
-        case USBDBG_GET_STATE:
-            xfer_offs = 0;
-            xfer_size = size;
-            break;
 
         default: /* error */
             cmd = USBDBG_NONE;

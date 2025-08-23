@@ -27,5 +27,4 @@
 void USBD_IRQHandler(void);
 int  tinyusb_debug_init(void);
 bool tinyusb_debug_enabled(void);
-void tinyusb_debug_tx_strn(const char *str, mp_uint_t len);
 #endif // __TUSBDBG_H__

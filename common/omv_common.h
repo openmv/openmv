@@ -49,6 +49,12 @@
 #define OMV_ALIGN_DOWN(x, alignment) \
     ((uintptr_t)(x) & ~((uintptr_t)(alignment) - 1))
 
+#define check_timeout_ms(start_ms, timeout) \
+    ((mp_hal_ticks_ms() - start_ms) > timeout)
+
+#define check_timeout_us(start_us, timeout) \
+    ((mp_hal_ticks_us() - start_us) > timeout)
+
 #ifdef OMV_DEBUG_PRINTF
 #define debug_printf(fmt, ...) \
     do { printf("%s(): " fmt, __func__, ##__VA_ARGS__);} while (0)
