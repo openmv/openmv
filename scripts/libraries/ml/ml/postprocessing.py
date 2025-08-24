@@ -26,8 +26,6 @@
 # OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-import math
-import image
 from ml.utils import NMS
 from micropython import const
 from ulab import numpy as np
@@ -36,32 +34,86 @@ from ulab import numpy as np
 _NO_DETECTION = const(())
 
 
-# FOMO generates an image per class, where each pixel represents the centroid
-# of the trained object. These images are processed with `find_blobs()` to
-# extract centroids, and `get_stats()` is used to get their scores. Overlapping
-# detections are then filtered with NMS and positions are mapped back to the
-# original image, and a list of (rect, score) tuples is returned for each class,
-# representing detected objects.
+def mod(a, b):
+    return a - (b * (a // b))
+
+
+def threshold(scores, threshold, scale, find_max=False, find_max_axis=1):
+    if scale > 0:
+        if find_max:
+            scores = np.max(scores, axis=find_max_axis)
+        return np.nonzero(scores > threshold)[0]
+    else:
+        if find_max:
+            scores = np.min(scores, axis=find_max_axis)
+        return np.nonzero(scores < threshold)[0]
+
+
+def quantize(model, value):
+    if model.output_dtype[0] == 'f':
+        return value
+    return (value / model.output_scale[0]) + model.output_zero_point[0]
+
+
+def dequantize(model, value):
+    if model.output_dtype[0] == 'f':
+        return value
+    return (value - model.output_zero_point[0]) * model.output_scale[0]
+
+
 class fomo_postprocess:
-    def __init__(self, threshold=0.4):
-        self.threshold_list = [(math.ceil(threshold * 255), 255)]
+    _FOMO_CLASSES = const(1)
+
+    def __init__(self, threshold=0.4, w_scale=1.414214, h_scale=1.414214,
+                 nms_threshold=0.1, nms_sigma=0.001):
+        self.threshold = threshold
+        self.w_scale = w_scale
+        self.h_scale = h_scale
+        self.nms_threshold = nms_threshold
+        self.nms_sigma = nms_sigma
 
     def __call__(self, model, inputs, outputs):
-        n, oh, ow, oc = model.output_shape[0]
-        nms = NMS(ow, oh, inputs[0].roi)
-        for i in range(oc):
-            img = image.Image(outputs[0][0, :, :, i] * 255)
-            blobs = img.find_blobs(
-                self.threshold_list, x_stride=1, area_threshold=1, pixels_threshold=1
-            )
-            for b in blobs:
-                rect = b.rect()
-                x, y, w, h = rect
-                score = (
-                    img.get_statistics(thresholds=self.threshold_list, roi=rect).l_mean() / 255.0
-                )
-                nms.add_bounding_box(x, y, x + w, y + h, score, i)
-        return nms.get_bounding_boxes()
+        ob, oh, ow, oc = model.output_shape[0]
+        scale = model.output_scale[0]
+        t = quantize(model, self.threshold)
+
+        # Reshape the output to a 2D array
+        row_outputs = outputs[0].reshape((oh * ow, oc))
+
+        # Threshold all the scores
+        score_indices = row_outputs[:, _FOMO_CLASSES:]
+        score_indices = threshold(score_indices, t, scale, find_max=True, find_max_axis=1)
+        if not len(score_indices):
+            return _NO_DETECTION
+
+        # Get the bounding boxes that have a valid score
+        bb = dequantize(model, np.take(row_outputs, score_indices, axis=0))
+
+        # Extract rows and columns
+        bb_rows = score_indices // ow
+        bb_cols = mod(score_indices, ow)
+
+        # Get the score information
+        bb_scores = np.max(bb[:, _FOMO_CLASSES:], axis=1)
+
+        # Get the class information
+        bb_classes = np.argmax(bb[:, _FOMO_CLASSES:], axis=1) + _FOMO_CLASSES
+
+        # Scale the bounding boxes to have enough integer precision for NMS
+        ib, ih, iw, ic = model.input_shape[0]
+        x_center = ((bb_cols + 0.5) / ow) * iw
+        y_center = ((bb_rows + 0.5) / oh) * ih
+        w_rel = np.full(len(bb_cols), self.w_scale / ow) * iw
+        h_rel = np.full(len(bb_rows), self.h_scale / oh) * ih
+
+        nms = NMS(iw, ih, inputs[0].roi)
+        for i in range(bb.shape[0]):
+            nms.add_bounding_box(x_center[i] - (w_rel[i] / 2),
+                                 y_center[i] - (h_rel[i] / 2),
+                                 x_center[i] + (w_rel[i] / 2),
+                                 y_center[i] + (h_rel[i] / 2),
+                                 bb_scores[i], bb_classes[i])
+        return nms.get_bounding_boxes(threshold=self.nms_threshold, sigma=self.nms_sigma)
 
 
 # This is a lightweight version of the tiny yolo v2 object detection algorithm.
@@ -88,31 +140,34 @@ class yolo_v2_postprocess:
         self.nms_sigma = nms_sigma
 
     def __call__(self, model, inputs, outputs):
-        ob, oh, ow, oc = model.output_shape[0]
-        class_count = (oc // self.anchors_len) - _YOLO_V2_CLASSES
+
+        def logit(x):
+            return np.log(x / (1.0 - x))
 
         def sigmoid(x):
             return 1.0 / (1.0 + np.exp(-x))
 
-        def mod(a, b):
-            return a - (b * (a // b))
-
         def softmax(x):
             e_x = np.exp(x - np.max(x, axis=1, keepdims=True))
             return e_x / np.sum(e_x, axis=1, keepdims=True)
+
+        ob, oh, ow, oc = model.output_shape[0]
+        scale = model.output_scale[0]
+        t = quantize(model, logit(self.threshold))
+        class_count = (oc // self.anchors_len) - _YOLO_V2_CLASSES
 
         # Reshape the output to a 2D array
         row_outputs = outputs[0].reshape((oh * ow * self.anchors_len,
                                           _YOLO_V2_CLASSES + class_count))
 
         # Threshold all the scores
-        score_indices = sigmoid(row_outputs[:, _YOLO_V2_SCORE])
-        score_indices = np.nonzero(score_indices > self.threshold)[0]
+        score_indices = row_outputs[:, _YOLO_V2_SCORE]
+        score_indices = threshold(score_indices, t, scale)
         if not len(score_indices):
             return _NO_DETECTION
 
         # Get the bounding boxes that have a valid score
-        bb = np.take(row_outputs, score_indices, axis=0)
+        bb = dequantize(model, np.take(row_outputs, score_indices, axis=0))
 
         # Extract rows, columns, and anchor indices
         bb_rows = score_indices // (ow * self.anchors_len)
@@ -179,6 +234,8 @@ class yolo_v5_postprocess:
 
     def __call__(self, model, inputs, outputs):
         oh, ow, oc = model.output_shape[0]
+        scale = model.output_scale[0]
+        t = quantize(model, self.threshold)
         class_count = oc - _YOLO_V5_CLASSES
 
         # Reshape the output to a 2D array
@@ -186,12 +243,12 @@ class yolo_v5_postprocess:
 
         # Threshold all the scores
         score_indices = row_outputs[:, _YOLO_V5_SCORE]
-        score_indices = np.nonzero(score_indices > self.threshold)[0]
+        score_indices = threshold(score_indices, t, scale)
         if not len(score_indices):
             return _NO_DETECTION
 
         # Get the bounding boxes that have a valid score
-        bb = np.take(row_outputs, score_indices, axis=0)
+        bb = dequantize(model, np.take(row_outputs, score_indices, axis=0))
 
         # Get the score information
         bb_scores = bb[:, _YOLO_V5_SCORE]
@@ -233,19 +290,21 @@ class yolo_v8_postprocess:
 
     def __call__(self, model, inputs, outputs):
         oh, ow, oc = model.output_shape[0]
+        scale = model.output_scale[0]
+        t = quantize(model, self.threshold)
         class_count = ow - _YOLO_V8_CLASSES
 
         # Reshape the output to a 2D array
         column_outputs = outputs[0].reshape((oh * (_YOLO_V8_CLASSES + class_count), oc))
 
         # Threshold all the scores
-        score_indices = np.max(column_outputs[_YOLO_V8_CLASSES:, :], axis=0)
-        score_indices = np.nonzero(score_indices > self.threshold)[0]
+        score_indices = column_outputs[_YOLO_V8_CLASSES:, :]
+        score_indices = threshold(score_indices, t, scale, find_max=True, find_max_axis=0)
         if not len(score_indices):
             return _NO_DETECTION
 
         # Get the bounding boxes that have a valid score
-        bb = np.take(column_outputs, score_indices, axis=1)
+        bb = dequantize(model, np.take(column_outputs, score_indices, axis=1))
 
         # Get the score information
         bb_scores = np.max(bb[_YOLO_V8_CLASSES:, :], axis=0)
