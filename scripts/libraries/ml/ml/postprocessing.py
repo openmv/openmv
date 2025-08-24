@@ -26,8 +26,6 @@
 # OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-import math
-import image
 from ml.utils import NMS
 from micropython import const
 from ulab import numpy as np
@@ -36,38 +34,67 @@ from ulab import numpy as np
 _NO_DETECTION = const(())
 
 
+def mod(a, b):
+    return a - (b * (a // b))
+
+
 def dequantize(model, value):
     if model.output_dtype[0] == 'f':
         return value
     return (value - model.output_zero_point[0]) * model.output_scale[0]
 
 
-# FOMO generates an image per class, where each pixel represents the centroid
-# of the trained object. These images are processed with `find_blobs()` to
-# extract centroids, and `get_stats()` is used to get their scores. Overlapping
-# detections are then filtered with NMS and positions are mapped back to the
-# original image, and a list of (rect, score) tuples is returned for each class,
-# representing detected objects.
 class fomo_postprocess:
-    def __init__(self, threshold=0.4):
-        self.threshold_list = [(math.ceil(threshold * 255), 255)]
+    _FOMO_CLASSES = const(1)
+
+    def __init__(self, threshold=0.4, w_scale=1.414214, h_scale=1.414214,
+                 nms_threshold=0.1, nms_sigma=0.001):
+        self.threshold = threshold
+        self.w_scale = w_scale
+        self.h_scale = h_scale
+        self.nms_threshold = nms_threshold
+        self.nms_sigma = nms_sigma
 
     def __call__(self, model, inputs, outputs):
-        n, oh, ow, oc = model.output_shape[0]
-        nms = NMS(ow, oh, inputs[0].roi)
-        for i in range(oc):
-            img = image.Image(dequantize(model, outputs[0][0, :, :, i]) * 255)
-            blobs = img.find_blobs(
-                self.threshold_list, x_stride=1, area_threshold=1, pixels_threshold=1
-            )
-            for b in blobs:
-                rect = b.rect()
-                x, y, w, h = rect
-                score = (
-                    img.get_statistics(thresholds=self.threshold_list, roi=rect).l_mean() / 255.0
-                )
-                nms.add_bounding_box(x, y, x + w, y + h, score, i)
-        return nms.get_bounding_boxes()
+        ob, oh, ow, oc = model.output_shape[0]
+
+        # Reshape the output to a 2D array
+        row_outputs = outputs[0].reshape((oh * ow, oc))
+
+        # Threshold all the scores
+        score_indices = np.max(dequantize(model, row_outputs[:, _FOMO_CLASSES:]), axis=1)
+        score_indices = np.nonzero(score_indices > self.threshold)[0]
+        if not len(score_indices):
+            return _NO_DETECTION
+
+        # Get the bounding boxes that have a valid score
+        bb = dequantize(model, np.take(row_outputs, score_indices, axis=0))
+
+        # Extract rows and columns
+        bb_rows = score_indices // ow
+        bb_cols = mod(score_indices, ow)
+
+        # Get the score information
+        bb_scores = np.max(bb[:, _FOMO_CLASSES:], axis=1)
+
+        # Get the class information
+        bb_classes = np.argmax(bb[:, _FOMO_CLASSES:], axis=1) + _FOMO_CLASSES
+
+        # Scale the bounding boxes to have enough integer precision for NMS
+        ib, ih, iw, ic = model.input_shape[0]
+        x_center = ((bb_cols + 0.5) / ow) * iw
+        y_center = ((bb_rows + 0.5) / oh) * ih
+        w_rel = np.full(len(bb_cols), self.w_scale / ow) * iw
+        h_rel = np.full(len(bb_rows), self.h_scale / oh) * ih
+
+        nms = NMS(iw, ih, inputs[0].roi)
+        for i in range(bb.shape[0]):
+            nms.add_bounding_box(x_center[i] - (w_rel[i] / 2),
+                                 y_center[i] - (h_rel[i] / 2),
+                                 x_center[i] + (w_rel[i] / 2),
+                                 y_center[i] + (h_rel[i] / 2),
+                                 bb_scores[i], bb_classes[i])
+        return nms.get_bounding_boxes(threshold=self.nms_threshold, sigma=self.nms_sigma)
 
 
 # This is a lightweight version of the tiny yolo v2 object detection algorithm.
@@ -99,9 +126,6 @@ class yolo_v2_postprocess:
 
         def sigmoid(x):
             return 1.0 / (1.0 + np.exp(-x))
-
-        def mod(a, b):
-            return a - (b * (a // b))
 
         def softmax(x):
             e_x = np.exp(x - np.max(x, axis=1, keepdims=True))
