@@ -35,6 +35,7 @@
 
 #define USBDBG_BAUDRATE_SLOW    (921600)
 #define USBDBG_BAUDRATE_FAST    (12000000)
+#define USBDBG_HEADER_SIZE      (6)
 
 /**
  * To add a new debugging command, increment the last command value used.
@@ -52,20 +53,13 @@ enum usbdbg_cmd {
     USBDBG_ARCH_STR        = 0x83,
     USBDBG_SCRIPT_EXEC     = 0x05,
     USBDBG_SCRIPT_STOP     = 0x06,
-    USBDBG_SCRIPT_SAVE     = 0x07,
     USBDBG_SCRIPT_RUNNING  = 0x87,
-    USBDBG_TEMPLATE_SAVE   = 0x08,
-    USBDBG_DESCRIPTOR_SAVE = 0x09,
-    USBDBG_ATTR_READ       = 0x8A,
-    USBDBG_ATTR_WRITE      = 0x0B,
     USBDBG_SYS_RESET       = 0x0C,
     USBDBG_SYS_RESET_TO_BL = 0x0E,
     USBDBG_FB_ENABLE       = 0x0D,
     USBDBG_TX_BUF_LEN      = 0x8E,
     USBDBG_TX_BUF          = 0x8F,
     USBDBG_SENSOR_ID       = 0x90,
-    USBDBG_TX_INPUT        = 0x11,
-    USBDBG_SET_TIME        = 0x12,
     USBDBG_GET_STATE       = 0x93,
 };
 
