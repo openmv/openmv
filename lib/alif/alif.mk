@@ -9,6 +9,7 @@
 
 HAL_SRC_C += \
 	drivers/source/adc.c \
+	drivers/source/crc.c \
 	drivers/source/dma_ctrl.c \
 	drivers/source/dma_op.c \
 	drivers/source/i2c.c \
