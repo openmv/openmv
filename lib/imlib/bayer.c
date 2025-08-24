@@ -1160,7 +1160,6 @@ void imlib_debayer_line(int x_start, int x_end, int y_row, void *dst_row_ptr, pi
 // assumes dst->h == src->h
 // src and dst may not overlap, but, faster than imlib_debayer_image_awb
 void imlib_debayer_image(image_t *dst, image_t *src) {
-    OMV_PROFILE_START();
     rectangle_t roi = {
         .x = 0,
         .y = 0,
@@ -1168,7 +1167,6 @@ void imlib_debayer_image(image_t *dst, image_t *src) {
         .h = src->h,
     };
     vdebayer(src, &roi, 0, dst);
-    OMV_PROFILE_PRINT();
 }
 
 #if defined(IMLIB_ENABLE_DEBAYER_OPTIMIZATION)
@@ -2294,8 +2292,6 @@ static void vdebayer_rggb_to_rgb565_awb_quarter(image_t *src, image_t *dst, uint
 // RGB565: src->data == dst->data + image_size(src)
 // YUV422: Not supported
 void imlib_debayer_image_awb(image_t *dst, image_t *src, bool fast, uint32_t r_out, uint32_t g_out, uint32_t b_out) {
-    OMV_PROFILE_START();
-
     uint32_t red_gain = IM_DIV(g_out * 32, r_out);
     red_gain = IM_MIN(red_gain, 128U);
 
@@ -2459,6 +2455,4 @@ void imlib_debayer_image_awb(image_t *dst, image_t *src, bool fast, uint32_t r_o
             }
         }
     }
-
-    OMV_PROFILE_PRINT();
 }

@@ -135,7 +135,6 @@ int omv_gpu_draw_image(image_t *src_img,
     if (color_palette || alpha_palette || transform) {
         return -1;
     }
-    OMV_PROFILE_START();
     d2_s32 err;
     d2_u32 blit_flags = 0;
 
@@ -183,7 +182,6 @@ int omv_gpu_draw_image(image_t *src_img,
 
     // Invalidate the framebuffer image.
     SCB_InvalidateDCache_by_Addr(dst_img->data, image_size(dst_img));
-    OMV_PROFILE_PRINT();
     return 0;
 }
 

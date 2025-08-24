@@ -107,10 +107,24 @@ CFLAGS += -DFB_ALLOC_STATS
 endif
 
 # Enable timing for some functions.
-ifeq ($(PROFILE), 1)
-CFLAGS += -DOMV_PROFILE_ENABLE=1
+ifeq ($(PROFILE_ENABLE), 1)
+$(info ===================================)
+$(info =======  Profiling Enabled  =======)
+$(info ===================================)
+
+# Enable profiling in IRQ context (default: enabled)
+PROFILE_IRQ ?= 0
+
+# Default profiler hash table size (must be power of 2)
+ifeq ($(PROFILE_HASH),)
+PROFILE_HASH=256
 endif
 
+CFLAGS += -DOMV_PROFILER_ENABLE=1
+CFLAGS += -DOMV_PROFILER_HASH_SIZE=$(PROFILE_HASH)
+CFLAGS += -DOMV_PROFILER_IRQ_ENABLE=$(PROFILE_IRQ)
+CFLAGS += -finstrument-functions-exclude-file-list=lib/cmsis,lib/stm32,/lib/mimxrt,lib/alif,simd.h
+endif
 
 # Include OpenMV board config first to set the port.
 include $(OMV_BOARD_CONFIG_DIR)/omv_boardconfig.mk

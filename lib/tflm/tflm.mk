@@ -50,6 +50,5 @@ $(BUILD)/lib/tflm/tflm_backend.o: CXXFLAGS = \
 
 OMV_CFLAGS += -I$(TOP_DIR)/lib/tflm/libtflm/include
 OMV_CFLAGS += -I$(TOP_DIR)/lib/tflm/libtflm/include/third_party/ethos_u_core_driver/include
-
 OMV_FIRM_OBJ += $(addprefix $(BUILD)/lib/tflm/, $(TFLM_SRC_CC:.cc=.o))
 endif

@@ -78,6 +78,11 @@ $(BUILD)/lib/stai/libstai/ll_aton/%.o: override CFLAGS += \
         -Wno-double-promotion \
         $(STAI_CFLAGS) \
 
+# Enable instrumentation.
+ifeq ($(PROFILE_ENABLE), 1)
+$(BUILD)/lib/stai/stai_backend.o: override CFLAGS += -finstrument-functions
+endif
+
 OMV_CFLAGS += -I$(TOP_DIR)/lib/stai/libstai/include
 OMV_FIRM_OBJ += $(addprefix $(BUILD)/lib/stai/, $(STAI_SRC_C:.c=.o))
 endif

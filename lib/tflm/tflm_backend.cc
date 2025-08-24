@@ -51,6 +51,7 @@ extern "C" {
 #include "py/binary.h"
 #include "py/gc.h"
 #include "py_ml.h"
+#include "common/omv_profiler.h"
 
 using namespace tflite;
 #define TF_ARENA_EXTRA      (512)
@@ -319,6 +320,8 @@ int ml_backend_init_model(py_ml_model_obj_t *model) {
 }
 
 int ml_backend_run_inference(py_ml_model_obj_t *model) {
+    OMV_PROFILER_ENTER(ml_backend_run_inference);
+
     RegisterDebugLogCallback(ml_backend_log_handler);
     ml_backend_state_t *state = (ml_backend_state_t *) model->state;
 
@@ -326,6 +329,7 @@ int ml_backend_run_inference(py_ml_model_obj_t *model) {
         mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Invoke failed"));
     }
 
+    OMV_PROFILER_EXIT(ml_backend_run_inference);
     return 0;
 }
 

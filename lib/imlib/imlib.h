@@ -44,6 +44,7 @@
 #include "imlib_config.h"
 #include "omv_boardconfig.h"
 #include "omv_common.h"
+#include "omv_profiler.h"
 #include "py/runtime.h"
 
 // Enables 38 TensorFlow Lite operators.

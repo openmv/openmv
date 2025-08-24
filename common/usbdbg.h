@@ -61,13 +61,20 @@ enum usbdbg_cmd {
     USBDBG_TX_BUF          = 0x8F,
     USBDBG_SENSOR_ID       = 0x90,
     USBDBG_GET_STATE       = 0x93,
+    USBDBG_PROFILE_SIZE    = 0x94,
+    USBDBG_PROFILE_DUMP    = 0x95,
+    USBDBG_PROFILE_MODE    = 0x16,
+    USBDBG_PROFILE_EVENT   = 0x17,
+    USBDBG_PROFILE_RESET   = 0x18,
 };
 
-enum usbdbg_state_flags {
-    USBDBG_STATE_FLAGS_SCRIPT   = (1 << 0),
-    USBDBG_STATE_FLAGS_TEXT     = (1 << 1),
-    USBDBG_STATE_FLAGS_FRAME    = (1 << 2),
-};
+typedef enum {
+    USBDBG_FLAG_SCRIPT_RUNNING      = (1 << 0),
+    USBDBG_FLAG_TEXTBUF_NOTEMPTY    = (1 << 1),
+    USBDBG_FLAG_FRAMEBUF_LOCKED     = (1 << 2),
+    USBDBG_FLAG_PROFILE_ENABLED     = (1 << 3),
+    USBDBG_FLAG_PROFILE_HAS_PMU     = (1 << 4),
+} usbdbg_flags_t;
 
 typedef uint32_t (*usbdbg_read_callback_t) (void *buf, uint32_t len);
 typedef uint32_t (*usbdbg_write_callback_t) (const void *buf, uint32_t len);

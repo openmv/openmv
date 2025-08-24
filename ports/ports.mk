@@ -27,3 +27,9 @@ CFLAGS += -I$(TOP_DIR)/ports/$(PORT)/modules
 
 PORT_SRC_C = $(wildcard ports/$(PORT)/*.c)
 OMV_FIRM_OBJ += $(addprefix $(BUILD)/, $(PORT_SRC_C:.c=.o))
+
+# Enable instrumentation.
+ifeq ($(PROFILE_ENABLE), 1)
+$(BUILD)/ports/alif/%.o: override CFLAGS += -finstrument-functions
+$(BUILD)/ports/stm32/%.o: override CFLAGS += -finstrument-functions
+endif

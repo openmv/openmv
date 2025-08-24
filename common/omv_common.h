@@ -31,6 +31,7 @@
 #define OMV_ATTR_ALWAYS_INLINE      inline __attribute__((always_inline))
 #define OMV_ATTR_OPTIMIZE(o)        __attribute__((optimize(o)))
 #define OMV_ATTR_SEC_ALIGN(x, s, a) x __attribute__((section(s), aligned(a)))
+#define OMV_ATTR_NO_INSTRUMENT      __attribute__((no_instrument_function))
 #define OMV_DEBUG_BREAKPOINT()      __asm__ volatile ("BKPT")
 
 #ifndef __DCACHE_PRESENT
@@ -76,17 +77,11 @@
 
 #define OMV_ARRAY_SIZE(a)         (sizeof(a) / sizeof(a[0]))
 
-#if OMV_PROFILE_ENABLE
-#include <stdio.h>
-#include "py/mphal.h"
-#define OMV_CONCATENATE_DETAIL(x, y) x##y
-#define OMV_CONCATENATE(x, y)   OMV_CONCATENATE_DETAIL(x, y)
-#define OMV_PROFILE_START(F)    mp_uint_t OMV_CONCATENATE(_ticks_start_, F) = mp_hal_ticks_us()
-#define OMV_PROFILE_PRINT(F)    printf("%s:%s %u us\n", __FUNCTION__, #F, mp_hal_ticks_us() - OMV_CONCATENATE(_ticks_start_, F))
-#else
-#define OMV_PROFILE_START(F)
-#define OMV_PROFILE_PRINT(F)
-#endif
+// Token concatenation macros
+// OMV_CONCAT expands its arguments before pasting, while
+// OMV_CONCAT_HELPER performs the raw token pasting (x##y).
+#define OMV_CONCAT_HELPER(x, y) x##y
+#define OMV_CONCAT_STR(x, y)    OMV_CONCAT_HELPER(x, y)
 
 // Returns a pointer to the containing structure
 // ptr: Pointer to the member within the structure
