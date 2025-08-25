@@ -375,6 +375,9 @@ void usbdbg_data_out(uint32_t size, usbdbg_read_callback_t read_callback) {
         }
 
         default: /* error */
+            size = OMV_MIN(size, 512);
+            uint8_t byte_buffer[size];
+            read_callback(&byte_buffer, size);
             break;
     }
 }
