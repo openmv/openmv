@@ -287,10 +287,8 @@ void usbdbg_data_in(uint32_t size, usbdbg_write_callback_t write_callback) {
             uint32_t buffer[3] = { 0 };
             #if OMV_PROFILER_ENABLE
             if (mutex_try_lock(omv_profiler_lock(), MUTEX_TID_IDE)) {
-                size_t count = 0;
-                (void) omv_profiler_get_data(&count);
-
-                buffer[0] = count;
+                size_t size = omv_profiler_get_size();
+                buffer[0] = size / sizeof(omv_profiler_data_t);
                 buffer[1] = sizeof(omv_profiler_data_t);
                 buffer[2] = __PMU_NUM_EVENTCNT;
             }
@@ -303,9 +301,7 @@ void usbdbg_data_in(uint32_t size, usbdbg_write_callback_t write_callback) {
         #if OMV_PROFILER_ENABLE
         case USBDBG_PROFILE_DUMP:
             if (xfer_offs < xfer_size) {
-                size_t count = 0;
-                char *data = omv_profiler_get_data(&count);
-
+                const char *data = omv_profiler_get_data();
                 write_callback(data + xfer_offs, size);
                 xfer_offs += size;
                 if (xfer_offs == xfer_size) {
