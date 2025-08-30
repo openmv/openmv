@@ -149,8 +149,11 @@ mutex_t *omv_profiler_lock(void) {
     return &profiler.mutex;
 }
 
-void *omv_profiler_get_data(size_t *count) {
-    *count = profiler.pool_index;
+size_t omv_profiler_get_size(void) {
+    return profiler.pool_index * sizeof(omv_profiler_data_t);
+}
+
+const void *omv_profiler_get_data(void) {
     return profiler.pool;
 }
 

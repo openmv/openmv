@@ -72,7 +72,8 @@ typedef struct __attribute__((packed)) _prof_data {
 
 OMV_ATTR_NO_INSTRUMENT void omv_profiler_init(void);
 OMV_ATTR_NO_INSTRUMENT void omv_profiler_reset(void);
-OMV_ATTR_NO_INSTRUMENT void *omv_profiler_get_data(size_t *count);
+OMV_ATTR_NO_INSTRUMENT size_t omv_profiler_get_size(void);
+OMV_ATTR_NO_INSTRUMENT const void *omv_profiler_get_data(void);
 OMV_ATTR_NO_INSTRUMENT void omv_profiler_set_mode(uint32_t mode);
 OMV_ATTR_NO_INSTRUMENT void omv_profiler_set_event(uint32_t num, uint32_t type);
 #ifndef __cplusplus
