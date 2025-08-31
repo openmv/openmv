@@ -65,7 +65,7 @@ static size_t py_ml_tuple_sum(mp_obj_tuple_t *o) {
     return size;
 }
 
-static size_t pl_ml_dtype_size(char dtype) {
+static size_t py_ml_dtype_size(char dtype) {
     switch (dtype) {
         case 'f':
             return 4;
@@ -92,7 +92,7 @@ static void py_ml_process_input(py_ml_model_obj_t *model, mp_obj_t arg) {
         if (mp_obj_is_callable(input_arg)) {
             // Input is a callable. Call the object and pass the tensor buffer and dtype.
             mp_obj_t fargs[3] = {
-                mp_obj_new_bytearray_by_ref(input_size * pl_ml_dtype_size(input_dtype), input_buffer),
+                mp_obj_new_bytearray_by_ref(input_size * py_ml_dtype_size(input_dtype), input_buffer),
                 MP_OBJ_FROM_PTR(input_shape),
                 mp_obj_new_int(input_dtype)
             };
@@ -151,7 +151,7 @@ static void py_ml_process_input(py_ml_model_obj_t *model, mp_obj_t arg) {
     }
 }
 
-static mp_obj_t py_ml_process_output(py_ml_model_obj_t *model) {
+static mp_obj_t py_ml_process_output(py_ml_model_obj_t *model, bool deep_copy) {
     mp_obj_list_t *output_list = MP_OBJ_TO_PTR(mp_obj_new_list(model->outputs_size, NULL));
     for (size_t i = 0; i < model->outputs_size; i++) {
         void *model_output = ml_backend_get_output(model, i);
@@ -172,31 +172,38 @@ static mp_obj_t py_ml_process_output(py_ml_model_obj_t *model) {
             shape[ulab_offset + j] = mp_obj_get_int(output_shape->items[j]);
         }
 
-        ndarray_obj_t *ndarray = ndarray_new_dense_ndarray(output_shape->len, shape, NDARRAY_FLOAT);
+        ndarray_obj_t *ndarray;
 
-        if (output_dtype == 'f') {
-            memcpy(ndarray->array, model_output, size * sizeof(float));
-        } else if (output_dtype == 'b') {
-            for (size_t j = 0; j < size; j++) {
-                float v = (((int8_t *) model_output)[j] - output_zero_point);
-                ((float *) ndarray->array)[j] = v * output_scale;
+        if (deep_copy) {
+            ndarray = ndarray_new_dense_ndarray(output_shape->len, shape, NDARRAY_FLOAT);
+
+            if (output_dtype == 'f') {
+                memcpy(ndarray->array, model_output, size * sizeof(float));
+            } else if (output_dtype == 'b') {
+                for (size_t j = 0; j < size; j++) {
+                    float v = (((int8_t *) model_output)[j] - output_zero_point);
+                    ((float *) ndarray->array)[j] = v * output_scale;
+                }
+            } else if (output_dtype == 'B') {
+                for (size_t j = 0; j < size; j++) {
+                    float v = (((uint8_t *) model_output)[j] - output_zero_point);
+                    ((float *) ndarray->array)[j] = v * output_scale;
+                }
+            } else if (output_dtype == 'h') {
+                for (size_t j = 0; j < size; j++) {
+                    float v = (((int16_t *) model_output)[j] - output_zero_point);
+                    ((float *) ndarray->array)[j] = v * output_scale;
+                }
+            } else if (output_dtype == 'H') {
+                for (size_t j = 0; j < size; j++) {
+                    float v = (((uint16_t *) model_output)[j] - output_zero_point);
+                    ((float *) ndarray->array)[j] = v * output_scale;
+                }
             }
-        } else if (output_dtype == 'B') {
-            for (size_t j = 0; j < size; j++) {
-                float v = (((uint8_t *) model_output)[j] - output_zero_point);
-                ((float *) ndarray->array)[j] = v * output_scale;
-            }
-        } else if (output_dtype == 'h') {
-            for (size_t j = 0; j < size; j++) {
-                float v = (((int16_t *) model_output)[j] - output_zero_point);
-                ((float *) ndarray->array)[j] = v * output_scale;
-            }
-        } else if (output_dtype == 'H') {
-            for (size_t j = 0; j < size; j++) {
-                float v = (((uint16_t *) model_output)[j] - output_zero_point);
-                ((float *) ndarray->array)[j] = v * output_scale;
-            }
+        } else {
+            ndarray = ndarray_new_ndarray(output_shape->len, shape, NULL, output_dtype, model_output);
         }
+
         output_list->items[i] = MP_OBJ_FROM_PTR(ndarray);
     }
 
@@ -254,11 +261,14 @@ static mp_obj_t py_ml_model_predict(size_t n_args, const mp_obj_t *pos_args, mp_
         mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Unsupported input type. Expected a list"));
     }
 
+    bool callback = args[ARG_callback].u_obj != mp_const_none;
+
     py_ml_process_input(model, pos_args[1]);
     ml_backend_run_inference(model);
-    mp_obj_t output = py_ml_process_output(model);
 
-    if (args[ARG_callback].u_obj != mp_const_none) {
+    mp_obj_t output = py_ml_process_output(model, !callback);
+
+    if (callback) {
         // Pass model, inputs, outputs to the post-processing callback.
         mp_obj_t fargs[3] = { MP_OBJ_FROM_PTR(model), pos_args[1], output };
         output = mp_call_function_n_kw(args[ARG_callback].u_obj, 3, 0, fargs);
