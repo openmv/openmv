@@ -35,12 +35,6 @@
 #define FRAMEBUFFER_ALIGNMENT    OMV_CACHE_LINE_SIZE
 #endif
 
-// TODO these should just be removed.
-#define framebuffer_get_width(fb)   (fb->w)
-#define framebuffer_get_height(fb)  (fb->h)
-#define framebuffer_get_depth(fb)   (fb->bpp)
-#define framebuffer_get_buffer_size(fb) (fb->buf_size)
-
 // If FB_FLAG_CHECK_LAST is set and this is the last buffer in
 // the free queue the release logic depends on the buffer mode:
 //

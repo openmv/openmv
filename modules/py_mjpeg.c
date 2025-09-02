@@ -196,8 +196,8 @@ static mp_obj_t py_mjpeg_open(size_t n_args, const mp_obj_t *pos_args, mp_map_t 
     mjpeg->us_old = 0;
     mjpeg->us_avg = 0;
     mjpeg->closed = 0;
-    mjpeg->width = (args[ARG_width].u_int == -1) ? framebuffer_get_width(fb) : args[ARG_width].u_int;
-    mjpeg->height = (args[ARG_height].u_int == -1) ? framebuffer_get_height(fb) : args[ARG_height].u_int;
+    mjpeg->width = (args[ARG_width].u_int == -1) ? fb->w : args[ARG_width].u_int;
+    mjpeg->height = (args[ARG_height].u_int == -1) ? fb->h : args[ARG_height].u_int;
 
     file_open(&mjpeg->fp, path, false, FA_WRITE | FA_CREATE_ALWAYS);
     mjpeg_open(&mjpeg->fp, mjpeg->width, mjpeg->height);
