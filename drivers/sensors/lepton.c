@@ -440,7 +440,7 @@ static int snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
     fb->pixfmt = csi->pixformat;
 
     image_t fb_image; 
-    framebuffer_init_image(fb, &fb_image);
+    framebuffer_to_image(fb, &fb_image);
 
     LEP_SYS_FPA_TEMPERATURE_KELVIN_T kelvin;
     if (lepton.measurement_mode && (!lepton.radiometry)) {
@@ -481,7 +481,7 @@ static int snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
                      NULL, NULL, NULL, NULL);
 
     fb_alloc_free_till_mark();
-    framebuffer_init_image(fb, image);
+    framebuffer_to_image(fb, image);
     return 0;
 }
 

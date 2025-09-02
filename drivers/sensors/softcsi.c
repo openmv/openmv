@@ -84,8 +84,8 @@ static int snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
     fb->h = csi->transpose ? fb->u : fb->v;
 
     // The new buffer hasn't been released yet, so the data pointer
-    // has to be set manually after calling framebuffer_init_image.
-    framebuffer_init_image(fb, image);
+    // has to be set manually after calling framebuffer_to_image.
+    framebuffer_to_image(fb, image);
     image->pixels = buffer->data;
 
     static uint32_t step = 0;
@@ -129,7 +129,7 @@ static int snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
     
     // Move the buffer from free queue -> used queue.
     framebuffer_release(fb, FB_FLAG_FREE);
-    framebuffer_init_image(fb, image);
+    framebuffer_to_image(fb, image);
     return 0;
 }
 
