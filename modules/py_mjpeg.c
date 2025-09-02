@@ -188,7 +188,7 @@ static mp_obj_t py_mjpeg_open(size_t n_args, const mp_obj_t *pos_args, mp_map_t 
     mp_arg_val_t args[MP_ARRAY_SIZE(allowed_args)];
     mp_arg_parse_all(n_args - 1, pos_args + 1, kw_args, MP_ARRAY_SIZE(allowed_args), allowed_args, args);
 
-    framebuffer_t *fb = framebuffer_get(0);
+    framebuffer_t *fb = framebuffer_get(FB_MAINFB_ID);
     py_mjpeg_obj_t *mjpeg = mp_obj_malloc_with_finaliser(py_mjpeg_obj_t, &py_mjpeg_type);
 
     mjpeg->frames = 0;

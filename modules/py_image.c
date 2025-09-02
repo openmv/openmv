@@ -1082,10 +1082,10 @@ static mp_obj_t py_image_to(pixformat_t pixfmt, mp_rom_obj_t default_color_palet
     float *transform = py_helper_arg_to_transform(args[ARG_transform].u_obj);
 
     if (args[ARG_copy_to_fb].u_bool) {
-        framebuffer_t *fb = framebuffer_get(0);
+        framebuffer_t *fb = framebuffer_get(FB_MAINFB_ID);
         image_t tmp;
-        framebuffer_init_image(fb, &tmp);
-        framebuffer_update_jpeg_buffer(&tmp);
+        framebuffer_to_image(fb, &tmp);
+        framebuffer_update_preview(&tmp);
     }
 
     image_t dst_img = {
@@ -1185,7 +1185,7 @@ static mp_obj_t py_image_to(pixformat_t pixfmt, mp_rom_obj_t default_color_palet
         image_alloc(&dst_img, size);
     } else {
         // Convert in place.
-        framebuffer_t *fb = framebuffer_get(0);
+        framebuffer_t *fb = framebuffer_get(FB_MAINFB_ID);
         bool is_fb = py_helper_is_equal_to_framebuffer(src_img);
         size_t buf_size = is_fb ? framebuffer_get_buffer_size(fb) : image_size(src_img);
         PY_ASSERT_TRUE_MSG((size <= buf_size), "The image doesn't fit in the frame buffer!");
@@ -1297,7 +1297,7 @@ static MP_DEFINE_CONST_FUN_OBJ_KW(py_image_save_obj, 2, py_image_save);
 #endif //IMLIB_ENABLE_IMAGE_FILE_IO
 
 static mp_obj_t py_image_flush(mp_obj_t img_obj) {
-    framebuffer_update_jpeg_buffer(py_image_cobj(img_obj));
+    framebuffer_update_preview(py_image_cobj(img_obj));
     return mp_const_none;
 }
 static MP_DEFINE_CONST_FUN_OBJ_1(py_image_flush_obj, py_image_flush);
@@ -6305,7 +6305,7 @@ mp_obj_t py_image_make_new(const mp_obj_type_t *type, size_t n_args, size_t n_kw
     }
 
     if (args[ARG_copy_to_fb].u_bool) {
-        framebuffer_update_jpeg_buffer(&image);
+        framebuffer_update_preview(&image);
     }
     return py_image_from_struct(&image);
 }
