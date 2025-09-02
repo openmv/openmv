@@ -348,7 +348,7 @@ int alif_csi_snapshot(omv_csi_t *csi, image_t *dst_image, uint32_t flags) {
     }
 
     // Initialize a frame using the frame buffer.
-    framebuffer_init_image(fb, dst_image);
+    framebuffer_to_image(fb, dst_image);
 
     // Set the frame's pixel format to bayer for raw sensors.
     if (csi->raw_output && csi->pixformat != PIXFORMAT_BAYER) {

@@ -225,7 +225,7 @@ static int rp2_csi_snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
     fb->pixfmt = csi->pixformat;
 
     // Set the user image.
-    framebuffer_init_image(fb, image);
+    framebuffer_to_image(fb, image);
     return 0;
 }
 
