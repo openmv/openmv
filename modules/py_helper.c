@@ -584,7 +584,7 @@ const uint8_t *py_helper_keyword_alpha_palette(size_t n_args, const mp_obj_t *ar
 }
 
 bool py_helper_is_equal_to_framebuffer(image_t *img) {
-    framebuffer_t *fb = framebuffer_get(0);
+    framebuffer_t *fb = framebuffer_get(FB_MAINFB_ID);
     vbuffer_t *buffer = framebuffer_acquire(fb, FB_FLAG_USED | FB_FLAG_PEEK);
 
     return (buffer != NULL) && (img->data == buffer->data);
@@ -592,7 +592,7 @@ bool py_helper_is_equal_to_framebuffer(image_t *img) {
 
 void py_helper_update_framebuffer(image_t *img) {
     if (py_helper_is_equal_to_framebuffer(img)) {
-        framebuffer_init_from_image(framebuffer_get(0), img);
+        framebuffer_from_image(framebuffer_get(FB_MAINFB_ID), img);
     }
 }
 
@@ -604,11 +604,11 @@ void py_helper_set_to_framebuffer(image_t *img) {
 
     omv_csi_abort(csi, true, false);
     #else
-    framebuffer_t *fb = framebuffer_get(0);
+    framebuffer_t *fb = framebuffer_get(FB_MAINFB_ID);
     #endif
     
     // Resize the frame buffer to use all memory for one buffer.
-    framebuffer_resize(fb, 1, true);
+    framebuffer_resize(fb, 1, 0, true);
 
     // This should never be NULL after resizing the frame buffer.
     vbuffer_t *buffer = framebuffer_acquire(fb, FB_FLAG_FREE | FB_FLAG_PEEK);
@@ -617,6 +617,6 @@ void py_helper_set_to_framebuffer(image_t *img) {
     PY_ASSERT_TRUE_MSG((image_size(img) <= framebuffer_get_buffer_size(fb)),
                        "The image doesn't fit in the frame buffer!");
 
-    framebuffer_init_from_image(fb, img);
+    framebuffer_from_image(fb, img);
     img->data = buffer->data;
 }

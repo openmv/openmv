@@ -35,11 +35,12 @@
 #define FRAMEBUFFER_ALIGNMENT    OMV_CACHE_LINE_SIZE
 #endif
 
-// TODO these should just be removed.
-#define framebuffer_get_width(fb)   (fb->w)
-#define framebuffer_get_height(fb)  (fb->h)
-#define framebuffer_get_depth(fb)   (fb->bpp)
-#define framebuffer_get_buffer_size(fb) (fb->buf_size)
+// Framebuffer ID
+typedef enum {
+    FB_MAINFB_ID    = 0,
+    FB_STREAM_ID    = 1,
+    FB_MAX_ID       = 2,
+} fb_id_t;
 
 // If FB_FLAG_CHECK_LAST is set and this is the last buffer in
 // the free queue the release logic depends on the buffer mode:
@@ -85,19 +86,25 @@ typedef enum {
 // ² Unused frame buffer space can be used to expand buffers up
 //   to the maximum available size (raw size minus queue size).
 typedef struct framebuffer {
-    int32_t x, y, w, h, u, v;
-    PIXFORMAT_STRUCT;
-    bool dynamic;       // Dynamically allocated or not.
-    bool expanded;      // True if buffers were expanded.
-    size_t raw_size;    // Raw buffer size and address.
-    char *raw_base;
-    size_t buf_size;    // Buffers size and count
-    size_t buf_count;
-    size_t frame_size;  // Actual frame size
-    queue_t *used_queue;
-    queue_t *free_queue;
-    // Static memory for small queues.
-    char raw_static[queue_calc_size(3) * 2];
+    int32_t x, y;           // Framebuffer offset
+    int32_t w, h;           // Framebuffer dimensions
+    int32_t u, v;           // Backup dimensions
+    int16_t raw_w;          // Raw streaming width
+    int16_t raw_h;          // Raw streaming height
+    PIXFORMAT_STRUCT;       // Pixel format struct.
+    uint8_t dynamic;        // Dynamically allocated or not.
+    uint8_t expanded;       // True if buffers were expanded.
+    uint8_t enabled;        // Enable/disable framebuffer
+    uint8_t quality;        // JPEG compression quality (1-100)
+    uint8_t raw_enabled;    // Enable raw streaming
+    size_t raw_size;        // Raw buffer size.
+    char *raw_base;         // Raw buffer address.
+    size_t buf_size;        // Vbuffer size.
+    size_t buf_count;       // Vbuffer count
+    mutex_t lock;           // Thread-safe access
+    queue_t *used_queue;    // Vbuffer used/read queue.
+    queue_t *free_queue;    // Vbuffer free/write queue.
+    char raw_static[queue_calc_size(3) * 2]; // Static memory for small queues.
 } framebuffer_t;
 
 // Drivers can add more flags:
@@ -116,28 +123,29 @@ typedef struct vbuffer {
     OMV_ATTR_ALIGNED(uint8_t data[], FRAMEBUFFER_ALIGNMENT);    // Data.
 } vbuffer_t;
 
-typedef struct jpegbuffer {
-    int32_t w, h;
-    int32_t size;
-    int32_t enabled;
-    int32_t quality;
-    uint8_t *pixels;
-    mutex_t lock;
-} jpegbuffer_t;
-
 void framebuffer_init0();
 
 // Initializes a frame buffer instance.
-void framebuffer_init(framebuffer_t *fb, void *buff, size_t size, bool dynamic);
+void framebuffer_init(framebuffer_t *fb, void *buff, size_t size, bool dynamic, bool enabled);
 
 // Initializes an image from the frame buffer.
-void framebuffer_init_image(framebuffer_t *fb, image_t *img);
+void framebuffer_to_image(framebuffer_t *fb, image_t *img);
 
 // Sets the frame buffer from an image.
-void framebuffer_init_from_image(framebuffer_t *fb, image_t *img);
+void framebuffer_from_image(framebuffer_t *fb, image_t *img);
 
 // Return the static frame buffer instance.
 framebuffer_t *framebuffer_get(size_t id);
+
+// Return the current buffer size
+static inline size_t framebuffer_get_buffer_size(framebuffer_t *fb) {
+    return fb->buf_size;
+}
+
+// Enable/disable framebuffer.
+static inline void framebuffer_set_enabled(framebuffer_t *fb, bool enabled) {
+    fb->enabled = enabled;
+}
 
 // Returns a pointer to the end of the framebuffer(s).
 char *framebuffer_pool_end(framebuffer_t *fb);
@@ -148,7 +156,7 @@ void framebuffer_flush(framebuffer_t *fb);
 // Change the number of buffers in the frame buffer.
 // If expand is true, the buffer size will expand to use all of the
 // available memory, otherwise it will equal the current frame size.
-int framebuffer_resize(framebuffer_t *fb, size_t count, bool expand);
+int framebuffer_resize(framebuffer_t *fb, size_t count, size_t frame_size, bool expand);
 
 // Return true if free queue is not empty.
 bool framebuffer_writable(framebuffer_t *fb);
@@ -170,12 +178,13 @@ static inline void framebuffer_reset(vbuffer_t *buffer) {
     memset(buffer, 0, offsetof(vbuffer_t, data));
 }
 
-// Compress src image to the JPEG buffer if src is mutable,
-// otherwise copy src to the JPEG buffer.
-void framebuffer_update_jpeg_buffer(image_t *src);
+// Set raw preview dimensions.
+static inline void framebuffer_set_preview(framebuffer_t *fb, uint16_t width, uint16_t height) {
+    fb->raw_w = width;
+    fb->raw_h = height;
+}
 
-// Use this macro to get a pointer to the JPEG buffer.
-extern jpegbuffer_t jpegbuffer;
-#define JPEG_FB()   (&jpegbuffer)
-
+// Compress the source image into the streaming buffer if it is mutable
+// and raw preview is disabled, or copy it directly if already compressed.
+void framebuffer_update_preview(image_t *src);
 #endif /* __FRAMEBUFFER_H__ */

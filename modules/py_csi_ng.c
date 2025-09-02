@@ -179,8 +179,8 @@ static MP_DEFINE_CONST_FUN_OBJ_2(py_csi_sleep_obj, py_csi_sleep);
 static mp_obj_t py_csi_flush(mp_obj_t self_in) {
     py_csi_obj_t *self = MP_OBJ_TO_PTR(self_in);
     image_t tmp;
-    framebuffer_init_image(self->csi->fb, &tmp);
-    framebuffer_update_jpeg_buffer(&tmp);
+    framebuffer_to_image(self->csi->fb, &tmp);
+    framebuffer_update_preview(&tmp);
     return mp_const_none;
 }
 static MP_DEFINE_CONST_FUN_OBJ_1(py_csi_flush_obj, py_csi_flush);
@@ -1350,7 +1350,7 @@ mp_obj_t py_csi_make_new(const mp_obj_type_t *type, size_t n_args, size_t n_kw, 
     if (csi->fb == NULL) {
         size_t fb_size = args[ARG_fb_size].u_int;
         csi->fb = (framebuffer_t *) m_malloc(sizeof(framebuffer_t));
-        framebuffer_init(csi->fb, m_malloc(fb_size), fb_size, true);
+        framebuffer_init(csi->fb, m_malloc(fb_size), fb_size, true, true);
     }
     
     #if MICROPY_PY_IMU
@@ -1383,7 +1383,6 @@ static void py_csi_print(const mp_print_t *print, mp_obj_t self_in, mp_print_kin
     mp_printf(print, "    Expanded          : %s\n", csi->fb->expanded ? "true" : "false");
     mp_printf(print, "    Raw Buffer Size   : %u\n", (unsigned) csi->fb->raw_size);
     mp_printf(print, "    Raw Buffer Addr   : 0x%p\n", csi->fb->raw_base);
-    mp_printf(print, "    Frame Size        : %u\n", (unsigned) csi->fb->frame_size);
     mp_printf(print, "    Vbuffer Size      : %u\n", (unsigned) csi->fb->buf_size);
     mp_printf(print, "    Vbuffer Count     : %u\n", (unsigned) csi->fb->buf_count);
     mp_printf(print, "    Used Queue Size   : %u\n", queue_size(csi->fb->used_queue));

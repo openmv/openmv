@@ -188,7 +188,7 @@ static mp_obj_t py_mjpeg_open(size_t n_args, const mp_obj_t *pos_args, mp_map_t 
     mp_arg_val_t args[MP_ARRAY_SIZE(allowed_args)];
     mp_arg_parse_all(n_args - 1, pos_args + 1, kw_args, MP_ARRAY_SIZE(allowed_args), allowed_args, args);
 
-    framebuffer_t *fb = framebuffer_get(0);
+    framebuffer_t *fb = framebuffer_get(FB_MAINFB_ID);
     py_mjpeg_obj_t *mjpeg = mp_obj_malloc_with_finaliser(py_mjpeg_obj_t, &py_mjpeg_type);
 
     mjpeg->frames = 0;
@@ -196,8 +196,8 @@ static mp_obj_t py_mjpeg_open(size_t n_args, const mp_obj_t *pos_args, mp_map_t 
     mjpeg->us_old = 0;
     mjpeg->us_avg = 0;
     mjpeg->closed = 0;
-    mjpeg->width = (args[ARG_width].u_int == -1) ? framebuffer_get_width(fb) : args[ARG_width].u_int;
-    mjpeg->height = (args[ARG_height].u_int == -1) ? framebuffer_get_height(fb) : args[ARG_height].u_int;
+    mjpeg->width = (args[ARG_width].u_int == -1) ? fb->w : args[ARG_width].u_int;
+    mjpeg->height = (args[ARG_height].u_int == -1) ? fb->h : args[ARG_height].u_int;
 
     file_open(&mjpeg->fp, path, false, FA_WRITE | FA_CREATE_ALWAYS);
     mjpeg_open(&mjpeg->fp, mjpeg->width, mjpeg->height);

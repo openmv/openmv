@@ -103,8 +103,8 @@ extern unsigned char OMV_BOARD_UID_ADDR[12];    // Unique address.
 #define OMV_FB_ALLOC_SIZE               (464K)  // Minimum fb alloc size
 #define OMV_FB_OVERLAY_MEMORY           DTCM    // Fast fb_alloc memory.
 #define OMV_FB_OVERLAY_SIZE             (256K)  // Fast fb_alloc memory size.
-#define OMV_JPEG_MEMORY                 SRAM6_A   // JPEG buffer.
-#define OMV_JPEG_SIZE                   (1M)
+#define OMV_SB_MEMORY                   SRAM6_A // Streaming buffer memory.
+#define OMV_SB_SIZE                     (1M)    // Streaming buffer size.
 #define OMV_DMA_MEMORY                  DTCM    // Misc DMA buffers memory.
 #define OMV_GPU_MEMORY                  SRAM9_B // GPU heap.
 #define OMV_GPU_SIZE                    (256K)
@@ -123,8 +123,8 @@ extern unsigned char OMV_BOARD_UID_ADDR[12];    // Unique address.
 #define OMV_FB_MEMORY                   SRAM6_B   // Main Frame buffer, fb_alloc
 #define OMV_FB_SIZE                     (256K)
 #define OMV_FB_ALLOC_SIZE               (256K)  // Minimum fb alloc size
-#define OMV_JPEG_MEMORY                 SRAM6_B   // JPEG buffer.
-#define OMV_JPEG_SIZE                   (500K)
+#define OMV_SB_MEMORY                   SRAM6_B   // JPEG buffer.
+#define OMV_SB_SIZE                     (500K)
 #define OMV_DMA_MEMORY                  DTCM    // Misc DMA buffers memory.
 #define OMV_OPENAMP_MEMORY              SRAM9_A // Open-AMP SHM
 #define OMV_OPENAMP_SIZE                (64K)

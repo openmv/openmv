@@ -168,16 +168,17 @@ void usbdbg_data_in(uint32_t size, usbdbg_write_callback_t write_callback) {
             // Return 0 if FB is locked or not ready.
             uint32_t buffer[3] = { 0 };
             // Try to lock FB. If header size == 0 frame is not ready
-            if (mutex_try_lock(&JPEG_FB()->lock, MUTEX_TID_IDE)) {
+            framebuffer_t *fb = framebuffer_get(FB_STREAM_ID);
+            if (mutex_try_lock(&fb->lock, MUTEX_TID_IDE)) {
                 // If header size == 0 frame is not ready
-                if (JPEG_FB()->size == 0) {
+                if (fb->size == 0) {
                     // unlock FB
-                    mutex_unlock(&JPEG_FB()->lock, MUTEX_TID_IDE);
+                    mutex_unlock(&fb->lock, MUTEX_TID_IDE);
                 } else {
                     // Return header w, h and size/bpp
-                    buffer[0] = JPEG_FB()->w;
-                    buffer[1] = JPEG_FB()->h;
-                    buffer[2] = JPEG_FB()->size;
+                    buffer[0] = fb->w;
+                    buffer[1] = fb->h;
+                    buffer[2] = fb->size;
                 }
             }
             cmd = USBDBG_NONE;
@@ -187,12 +188,13 @@ void usbdbg_data_in(uint32_t size, usbdbg_write_callback_t write_callback) {
 
         case USBDBG_FRAME_DUMP:
             if (xfer_offs < xfer_size) {
-                write_callback(JPEG_FB()->pixels + xfer_offs, size);
+                framebuffer_t *fb = framebuffer_get(FB_STREAM_ID);
+                write_callback(fb->raw_base + xfer_offs, size);
                 xfer_offs += size;
                 if (xfer_offs == xfer_size) {
                     cmd = USBDBG_NONE;
-                    JPEG_FB()->w = 0; JPEG_FB()->h = 0; JPEG_FB()->size = 0;
-                    mutex_unlock(&JPEG_FB()->lock, MUTEX_TID_IDE);
+                    fb->w = 0; fb->h = 0; fb->size = 0;
+                    mutex_unlock(&fb->lock, MUTEX_TID_IDE);
                 }
             }
             break;
@@ -251,20 +253,21 @@ void usbdbg_data_in(uint32_t size, usbdbg_write_callback_t write_callback) {
             #endif // OMV_PROFILER_ENABLE
 
             // Limit the frames sent over USB to 20Hz.
+            framebuffer_t *fb = framebuffer_get(FB_STREAM_ID);
             if (check_timeout_ms(last_update_ms, 50) &&
-                mutex_try_lock_fair(&JPEG_FB()->lock, MUTEX_TID_IDE)) {
+                mutex_try_lock_fair(&fb->lock, MUTEX_TID_IDE)) {
                 // If header size == 0 frame is not ready
-                if (JPEG_FB()->size == 0) {
+                if (fb->size == 0) {
                     // unlock FB
-                    mutex_unlock(&JPEG_FB()->lock, MUTEX_TID_IDE);
+                    mutex_unlock(&fb->lock, MUTEX_TID_IDE);
                 } else {
                     // Set valid frame flag.
                     buffer[0] |= USBDBG_FLAG_FRAMEBUF_LOCKED;
 
                     // Set frame width, height and size/bpp
-                    buffer[1] = JPEG_FB()->w;
-                    buffer[2] = JPEG_FB()->h;
-                    buffer[3] = JPEG_FB()->size;
+                    buffer[1] = fb->w;
+                    buffer[2] = fb->h;
+                    buffer[3] = fb->size;
                     last_update_ms = mp_hal_ticks_ms();
                 }
             }
@@ -320,11 +323,14 @@ void usbdbg_data_in(uint32_t size, usbdbg_write_callback_t write_callback) {
 void usbdbg_data_out(uint32_t size, usbdbg_read_callback_t read_callback) {
     switch (cmd) {
         case USBDBG_FB_ENABLE: {
-            read_callback(&(JPEG_FB()->enabled), 4);
-            if (JPEG_FB()->enabled == 0) {
+            uint32_t enabled = 0;
+            framebuffer_t *fb = framebuffer_get(FB_STREAM_ID);
+            read_callback(&enabled, 4);
+            framebuffer_set_enabled(fb, enabled);
+            if (fb->enabled == 0) {
                 // When disabling framebuffer, the IDE might still be holding FB lock.
                 // If the IDE is not the current lock owner, this operation is ignored.
-                mutex_unlock(&JPEG_FB()->lock, MUTEX_TID_IDE);
+                mutex_unlock(&fb->lock, MUTEX_TID_IDE);
             }
             cmd = USBDBG_NONE;
             break;
