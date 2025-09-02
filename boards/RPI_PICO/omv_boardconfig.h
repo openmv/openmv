@@ -53,7 +53,7 @@ extern unsigned char *OMV_BOARD_UID_ADDR;   // Unique ID address.
 #define OMV_FB_MEMORY              RAM    // Framebuffer, fb_alloc
 #define OMV_FB_SIZE                (151K) // FB memory: header + QVGA/GS image
 #define OMV_FB_ALLOC_SIZE          (12K)  // minimum fb alloc size
-#define OMV_JPEG_SIZE              (20K)  // IDE JPEG buffer (header + data).
+#define OMV_SB_SIZE                (20K)  // IDE JPEG buffer (header + data).
 
 // GP LED
 #define OMV_LED_PIN                (25)

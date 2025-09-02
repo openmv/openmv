@@ -121,16 +121,16 @@ OMV_GC_BLOCK_NEW(4)
 PROVIDE(__stack = __StackTop);
 #endif
 
-/* JPEG framebuffer memory */
-#if defined(OMV_JPEG_MEMORY)
-.jpeg_memory (NOLOAD) :
+/* Streaming buffer memory */
+#if defined(OMV_SB_MEMORY)
+.sb_memory (NOLOAD) :
 {
   . = ALIGN(4);
-  _jpeg_memory_start = .;
-  . = . + OMV_JPEG_SIZE;
+  _sb_memory_start = .;
+  . = . + OMV_SB_SIZE;
   . = ALIGN(4);
-  _jpeg_memory_end = .;
-} >OMV_JPEG_MEMORY
+  _sb_memory_end = .;
+} >OMV_SB_MEMORY
 #endif
 
 /* GPU memory */
@@ -211,11 +211,11 @@ PROVIDE(__stack = __StackTop);
   . = . + OMV_MSC_BUF_SIZE;
   #endif
 
-  #if defined(OMV_JPEG_SIZE) && !defined(OMV_JPEG_MEMORY)
+  #if defined(OMV_SB_SIZE) && !defined(OMV_SB_MEMORY)
   . = ALIGN(16);
-  _jpeg_memory_start = .;
-  . = . + OMV_JPEG_SIZE;
-  _jpeg_memory_end = .;
+  _sb_memory_start = .;
+  . = . + OMV_SB_SIZE;
+  _sb_memory_end = .;
   #endif
 
   /* FFS (internal) filesystem buffer */

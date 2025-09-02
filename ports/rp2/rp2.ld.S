@@ -210,10 +210,10 @@ SECTIONS
       _fb_alloc_end = .;
 
       . = ALIGN(4);
-      _jpeg_memory_start = .;
-      . = . + OMV_JPEG_SIZE;
+      _sb_memory_start = .;
+      . = . + OMV_SB_SIZE;
       . = ALIGN(4);
-      _jpeg_memory_end = .;
+      _sb_memory_end = .;
     } >OMV_FB_MEMORY
 
     .heap (COPY):
