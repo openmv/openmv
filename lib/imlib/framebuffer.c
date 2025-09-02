@@ -255,8 +255,6 @@ void framebuffer_update_preview(image_t *src) {
     static int overflow_count = 0;
     framebuffer_t *fb = framebuffer_get(FB_STREAM_ID);
 
-    while (fb->quality == 0) {
-    }
     // Check if the streaming buffer is disabled, image is NULL or format is not set.
     if (!fb->enabled || !src->data || src->pixfmt == PIXFORMAT_INVALID) {
         return;
