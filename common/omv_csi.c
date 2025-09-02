@@ -185,7 +185,7 @@ __weak int omv_csi_init() {
         memset(csi, 0, sizeof(omv_csi_t));
         csi->i2c = &csi_i2c;
         csi->clk = &csi_clk;
-        csi->fb = framebuffer_get(-1);
+        csi->fb = framebuffer_get(FB_MAINFB_ID);
         csi->color_palette = rainbow_table;
         memcpy(csi->resolution, csi_resolution, sizeof(csi_resolution));
         omv_csi_ops_init(csi);
@@ -223,7 +223,7 @@ __weak int omv_csi_init() {
     }
 
     // Clear fb_enabled flag.
-    JPEG_FB()->enabled = 0;
+    framebuffer_set_enabled(framebuffer_get(FB_STREAM_ID), false);
     return 0;
 }
 
@@ -1282,24 +1282,25 @@ __weak int omv_csi_set_framebuffers(omv_csi_t *csi, size_t count, bool expand) {
         return OMV_CSI_ERROR_INVALID_FRAMESIZE;
     }
 
+    // TODO pass this to resize.
     #if OMV_CSI_HW_CROP_ENABLE
     // If hardware cropping is supported, use window size.
-    csi->fb->frame_size = csi->fb->u * csi->fb->v * 2;
+    size_t frame_size = csi->fb->u * csi->fb->v * 2;
     #else
     // Otherwise, use the real frame size.
-    csi->fb->frame_size = csi->resolution[csi->framesize][0] * csi->resolution[csi->framesize][1] * 2;
+    size_t frame_size = csi->resolution[csi->framesize][0] * csi->resolution[csi->framesize][1] * 2;
     #endif
 
     if (count == -1) {
         for (size_t i=3; i>0; i--) {
-            if (!framebuffer_resize(csi->fb, i, expand)) {
+            if (!framebuffer_resize(csi->fb, i, frame_size, expand)) {
                 return 0;
             }
         }
         return -1;
     }
 
-    return framebuffer_resize(csi->fb, count, expand);
+    return framebuffer_resize(csi->fb, count, frame_size, expand);
 }
 
 __weak int omv_csi_set_special_effect(omv_csi_t *csi, omv_csi_sde_t sde) {
@@ -1583,8 +1584,8 @@ __weak int omv_csi_snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
     if (buffer && (buffer->flags & VB_FLAG_USED)) {
         if (flags & OMV_CSI_FLAG_UPDATE_FB) {
             image_t tmp;
-            framebuffer_init_image(csi->fb, &tmp);
-            framebuffer_update_jpeg_buffer(&tmp);
+            framebuffer_to_image(csi->fb, &tmp);
+            framebuffer_update_preview(&tmp);
         }
 
         // Release the previous buffer from used queue -> free queue.

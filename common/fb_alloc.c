@@ -64,13 +64,13 @@ void fb_alloc_init0() {
 }
 
 uint32_t fb_avail() {
-    framebuffer_t *fb = framebuffer_get(0);
+    framebuffer_t *fb = framebuffer_get(FB_MAINFB_ID);
     uint32_t temp = pointer - framebuffer_pool_end(fb) - sizeof(uint32_t);
     return (temp < sizeof(uint32_t)) ? 0 : temp;
 }
 
 void fb_alloc_mark() {
-    framebuffer_t *fb = framebuffer_get(0);
+    framebuffer_t *fb = framebuffer_get(FB_MAINFB_ID);
     char *new_pointer = pointer - sizeof(uint32_t);
 
     // Check if allocation overwrites the framebuffer pixels
@@ -137,7 +137,7 @@ void fb_alloc_free_till_mark_past_mark_permanent() {
 
 // returns null pointer without error if size==0
 void *fb_alloc(uint32_t size, int hints) {
-    framebuffer_t *fb = framebuffer_get(0);
+    framebuffer_t *fb = framebuffer_get(FB_MAINFB_ID);
 
     if (!size) {
         return NULL;
@@ -198,7 +198,7 @@ void *fb_alloc0(uint32_t size, int hints) {
 }
 
 void *fb_alloc_all(uint32_t *size, int hints) {
-    framebuffer_t *fb = framebuffer_get(0);
+    framebuffer_t *fb = framebuffer_get(FB_MAINFB_ID);
     uint32_t temp = pointer - framebuffer_pool_end(fb) - sizeof(uint32_t);
 
     if (temp < sizeof(uint32_t)) {
