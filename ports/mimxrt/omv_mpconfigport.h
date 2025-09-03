@@ -29,6 +29,18 @@
         fb_alloc_free_till_mark();             \
     } while (0);
 
+#define MICROPY_BOARD_BEFORE_PYTHON_EXEC(input_kind, exec_flags) \
+    do {                                                         \
+        extern void stdio_channel_pyexec_hook(bool);             \
+        stdio_channel_pyexec_hook(true);                         \
+    } while (0);
+
+#define MICROPY_BOARD_AFTER_PYTHON_EXEC(input_kind, exec_flags, nlr, ret) \
+    do {                                                                  \
+        extern void stdio_channel_pyexec_hook(bool);                      \
+        stdio_channel_pyexec_hook(false);                                 \
+    } while (0);
+
 #define MICROPY_ENABLE_VM_ABORT             (1)
 #define MICROPY_PY_NETWORK_PPP_LWIP         (0)
 #define MICROPY_PY_MACHINE_UART_IRQ         (0)
@@ -38,6 +50,7 @@
 #define MICROPY_BANNER_NAME_AND_VERSION "OpenMV " OPENMV_GIT_TAG "; MicroPython " MICROPY_GIT_TAG
 
 #define MICROPY_WRAP_TUD_CDC_RX_CB(name) __mp_ ## name
+#define MICROPY_WRAP_TUD_CDC_LINE_STATE_CB(name) __mp_ ## name
 #define MICROPY_WRAP_TUD_EVENT_HOOK_CB(name) __mp_ ## name
 
 #include <mpconfigport.h>
