@@ -80,6 +80,10 @@ LDFLAGS = -mthumb \
           -mabi=aapcs-linux \
           -Wl,--print-memory-usage \
           -Wl,--gc-sections \
+          -Wl,--wrap=usbd_cdc_control \
+          -Wl,--wrap=usbd_cdc_receive \
+          -Wl,--wrap=mp_os_dupterm_rx_chr \
+          -Wl,--wrap=mp_hal_stdout_tx_strn \
           -Wl,-T$(BUILD)/$(LDSCRIPT).lds \
           -Wl,-Map=$(BUILD)/$(FIRMWARE).map
 
@@ -141,6 +145,7 @@ CFLAGS += $(HAL_CFLAGS) $(MPY_CFLAGS) $(OMV_CFLAGS)
 include lib/cmsis/cmsis.mk
 include lib/stm32/stm32.mk
 include common/common.mk
+include protocol/protocol.mk
 include drivers/drivers.mk
 include lib/imlib/imlib.mk
 include lib/tflm/tflm.mk
