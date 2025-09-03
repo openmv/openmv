@@ -138,6 +138,7 @@ include lib/imlib/imlib.mk
 include lib/tflm/tflm.mk
 include ports/ports.mk
 include common/micropy.mk
+include protocol/protocol.mk
 
 # Firmware objects from port.
 MPY_FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/,\
