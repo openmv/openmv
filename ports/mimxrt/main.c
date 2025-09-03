@@ -68,13 +68,12 @@
 #include "omv_boardconfig.h"
 #include "framebuffer.h"
 #include "omv_csi.h"
-#include "usbdbg.h"
-#include "tinyusb_debug.h"
 #include "fb_alloc.h"
 #include "dma_alloc.h"
 #include "file_utils.h"
 #include "mp_utils.h"
 #include "mimxrt_hal.h"
+#include "omv_protocol.h"
 
 int main(void) {
     bool first_soft_reset = true;
@@ -110,7 +109,6 @@ soft_reset:
     #ifdef IMLIB_ENABLE_IMAGE_FILE_IO
     file_buffer_init0();
     #endif
-    usbdbg_init();
     machine_adc_init();
     #if MICROPY_PY_MACHINE_SDCARD
     machine_sdcard_init0();
@@ -119,6 +117,7 @@ soft_reset:
     machine_i2s_init0();
     #endif
     machine_rtc_start();
+    omv_protocol_init_default();
 
     #if MICROPY_PY_LWIP
     // lwIP can only be initialized once, because the system timeout
@@ -173,22 +172,18 @@ soft_reset:
         tusb_init();
     }
 
-    // Run boot.py script.
-    bool interrupted = mp_exec_bootscript("boot.py", true);
-
-    // Run main.py script on first soft-reset.
-    if (first_soft_reset && !interrupted && mp_vfs_import_stat("main.py")) {
-        mp_exec_bootscript("main.py", true);
-        goto soft_reset_exit;
+    // Run boot.py every reset and main.py on first soft-reset
+    if (pyexec_file_if_exists("boot.py") && first_soft_reset) {
+        pyexec_file_if_exists("main.py");
     }
 
-    // If there's no script ready, just re-exec REPL
-    while (!usbdbg_script_ready()) {
+    while (!omv_protocol_exec_script()) {
         nlr_buf_t nlr;
+
         if (nlr_push(&nlr) == 0) {
-            // enable IDE interrupt
-            usbdbg_set_irq_enabled(true);
-            // run REPL
+            // Enable Ctrl+C to interrupt script or REPL.
+            mp_hal_set_interrupt_char(CHAR_CTRL_C);
+
             if (pyexec_mode_kind == PYEXEC_MODE_RAW_REPL) {
                 if (pyexec_raw_repl() != 0) {
                     break;
@@ -202,22 +197,8 @@ soft_reset:
         }
     }
 
-    if (usbdbg_script_ready()) {
-        nlr_buf_t nlr;
-        if (nlr_push(&nlr) == 0) {
-            // Enable IDE interrupt
-            usbdbg_set_irq_enabled(true);
-            // Execute the script.
-            pyexec_str(usbdbg_get_script(), true);
-            // Disable IDE interrupts
-            usbdbg_set_irq_enabled(false);
-            nlr_pop();
-        } else {
-            mp_obj_print_exception(&mp_plat_print, (mp_obj_t) nlr.ret_val);
-        }
-    }
-
-soft_reset_exit:
+    // soft reset
+    mp_hal_set_interrupt_char(-1);
     mp_printf(MP_PYTHON_PRINTER, "MPY: soft reboot\n");
     #if MICROPY_PY_CSI
     omv_csi_abort_all();
