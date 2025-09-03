@@ -35,7 +35,6 @@
 #include "shared/runtime/softtimer.h"
 #include "shared/runtime/pyexec.h"
 #include "omv_boardconfig.h"
-#include "usbdbg.h"
 #include "mp_utils.h"
 
 void __attribute__((weak)) gc_collect(void) {
@@ -57,35 +56,6 @@ void __attribute__((weak)) gc_collect(void) {
 
     // end the GC
     gc_collect_end();
-}
-
-bool mp_exec_bootscript(const char *path, bool interruptible) {
-    nlr_buf_t nlr;
-    bool interrupted = false;
-
-    if (nlr_push(&nlr) == 0) {
-        // Enable IDE interrupts if allowed.
-        if (interruptible) {
-            usbdbg_set_irq_enabled(true);
-            usbdbg_set_script_running(true);
-        }
-
-        // Parse, compile and execute the script.
-        pyexec_file_if_exists(path, true);
-        nlr_pop();
-    } else {
-        interrupted = true;
-    }
-
-    // Disable IDE interrupts
-    usbdbg_set_irq_enabled(false);
-    usbdbg_set_script_running(false);
-
-    if (interrupted) {
-        mp_obj_print_exception(&mp_plat_print, (mp_obj_t) nlr.ret_val);
-    }
-
-    return interrupted;
 }
 
 void mp_init_gc_stack(void *sstack, void *estack, void *heap_start, void *heap_end, size_t stack_limit) {
