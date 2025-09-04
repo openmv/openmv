@@ -75,7 +75,7 @@ jobs:
         key: 'gcc-14.3.rel1_llvm-18.1.3_make-4.4.1_stedgeai-2.1'
 
     - name: '🐍 Install Python'
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@v6
       with:
         cache: 'pip'
         python-version: "3.12.4"
@@ -136,7 +136,7 @@ jobs:
         key: 'gcc-14.3.rel1_llvm-18.1.3_make-4.4.1_stedgeai-2.1'
 
     - name: '🐍 Install Python'
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@v6
       with:
         cache: 'pip'
         python-version: "3.12.4"
