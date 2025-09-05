@@ -344,7 +344,7 @@ class mediapipe_face_detection_postprocess:
     def __init__(self, threshold=0.6, anchors=None, nms_threshold=0.1, nms_sigma=0.1):
         self.threshold = threshold
         self.anchors = anchors
-    
+
         if self.anchors is None:
             self.anchors = np.empty((896, 2))
             idx = 0
@@ -363,6 +363,20 @@ class mediapipe_face_detection_postprocess:
 
         self.nms_threshold = nms_threshold
         self.nms_sigma = nms_sigma
+
+    def __call__(self, model, inputs, outputs):
+        ib, ih, iw, ic = model.input_shape[0]
+        nms = NMS(iw, ih, inputs[0].roi)
+        output_len = outputs[0].shape[1]
+
+        self.blazeface_post_process(ih, iw, nms, model, inputs, outputs, 1, 0,
+                                    self.threshold, self.anchors[:output_len])
+
+        if output_len < len(self.anchors):
+            self.blazeface_post_process(ih, iw, nms, model, inputs, outputs, 2, 3,
+                                        self.threshold, self.anchors[output_len:])
+
+        return nms.get_bounding_boxes(threshold=self.nms_threshold, sigma=self.nms_sigma)
 
     def blazeface_post_process(self, ih, iw, nms, model, inputs, outputs, score_idx, cords_idx, t, anchors):
         s_oh, s_ow, s_oc = model.output_shape[score_idx]
@@ -409,17 +423,3 @@ class mediapipe_face_detection_postprocess:
 
         for i in range(bb.shape[0]):
             nms.add_bounding_box(xmin[i], ymin[i], xmax[i], ymax[i], bb_scores[i], 0, keypoints=keypoints[i])
-
-    def __call__(self, model, inputs, outputs):
-        ib, ih, iw, ic = model.input_shape[0]
-        nms = NMS(iw, ih, inputs[0].roi)
-        output_len = outputs[0].shape[1]
-
-        self.blazeface_post_process(ih, iw, nms, model, inputs, outputs, 1, 0,
-                                    self.threshold, self.anchors[:output_len])
-
-        if output_len < len(self.anchors):
-            self.blazeface_post_process(ih, iw, nms, model, inputs, outputs, 2, 3,
-                                        self.threshold, self.anchors[output_len:])
-
-        return nms.get_bounding_boxes(threshold=self.nms_threshold, sigma=self.nms_sigma)
