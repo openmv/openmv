@@ -323,7 +323,7 @@ static int ioctl(omv_csi_t *csi, int request, va_list ap) {
                     break;
                 }
                 case OMV_CSI_GENX320_BIASES_LOW_LIGHT: {
-                    // Set biases tuned for low light
+                    // Set biases tuned for low light conditions
                     psee_sensor_set_bias(csi, DIFF, 51);
                     psee_sensor_set_bias(csi, DIFF_OFF, 19);
                     psee_sensor_set_bias(csi, DIFF_ON, 24);
@@ -333,7 +333,7 @@ static int ioctl(omv_csi_t *csi, int request, va_list ap) {
                     break;
                 }
                 case OMV_CSI_GENX320_BIASES_ACTIVE_MARKER: {
-                    // Set biases tuned for active marker
+                    // Set biases tuned for active marker or LED tracking
                     psee_sensor_set_bias(csi, DIFF, 51);
                     psee_sensor_set_bias(csi, DIFF_OFF, 45); //127
                     psee_sensor_set_bias(csi, DIFF_ON, 55); //78
