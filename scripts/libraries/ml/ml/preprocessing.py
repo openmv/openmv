@@ -93,4 +93,6 @@ class Normalization:
                 fadd = (fadd - np.array(self.mean)) / np.array(self.stdev)
                 fscale = fscale / np.array(self.stdev)
 
-            array = (array * fscale) + fadd
+            # Apply normalization in-place (must be done in two steps for ulab).
+            array *= fscale
+            array += fadd
