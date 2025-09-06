@@ -20,25 +20,26 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 #
-# Common files Makefile
+# OpenMV Protocol Makefile
 
-COMMON_SRC_C += \
-    array.c \
-    dma_alloc.c \
-    fb_alloc.c \
-    file_utils.c \
-    mp_utils.c \
-    mutex.c \
-    nosys_stubs.c \
-    omv_csi.c \
-    omv_crc.c \
-    pendsv.c \
-    trace.c \
-    umm_malloc.c \
-    unaligned_memcpy.c \
-    vospi.c \
-    queue.c \
-    omv_profiler.c \
+PROTOCOL_SRC_C += \
+    omv_protocol.c \
+    omv_protocol_channel_stdio.c \
+    omv_protocol_channel_stream.c \
+    omv_protocol_channel_profile.c \
 
-CFLAGS += -I$(TOP_DIR)/common
-OMV_FIRM_OBJ += $(addprefix $(BUILD)/common/, $(COMMON_SRC_C:.c=.o))
+ifeq ($(OMV_USB_STACK_TINYUSB), 1)
+CFLAGS += -DOMV_USB_STACK_TINYUSB=1
+PROTOCOL_SRC_C += omv_protocol_channel_tinyusb.c
+endif
+
+ifeq ($(OMV_USB_STACK_STMUSB), 1)
+CFLAGS += -DOMV_USB_STACK_STMUSB=1
+PROTOCOL_SRC_C += omv_protocol_channel_stmusb.c
+endif
+
+CFLAGS += -I$(TOP_DIR)/protocol
+CFLAGS += -DOMV_USB_VID=$(OMV_USB_VID)
+CFLAGS += -DOMV_USB_PID=$(OMV_USB_PID)
+OMV_FIRM_OBJ += $(addprefix $(BUILD)/protocol/, $(PROTOCOL_SRC_C:.c=.o))
+
