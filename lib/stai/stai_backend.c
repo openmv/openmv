@@ -178,7 +178,7 @@ int ml_backend_init_model(py_ml_model_obj_t *model) {
     const LL_Buffer_InfoTypeDef *model_outputs = ll_aton_reloc_get_output_buffers_info(&state->nn_inst, -1);
 
     // Initialize the model's inputs.
-    model->inputs_size = 1;
+    for (model->inputs_size = 0; model_inputs[model->inputs_size].name != NULL; model->inputs_size++);
     model->input_shape = (mp_obj_tuple_t *) MP_OBJ_TO_PTR(mp_obj_new_tuple(model->inputs_size, NULL));
     model->input_scale = (mp_obj_tuple_t *) MP_OBJ_TO_PTR(mp_obj_new_tuple(model->inputs_size, NULL));
     model->input_zero_point = (mp_obj_tuple_t *) MP_OBJ_TO_PTR(mp_obj_new_tuple(model->inputs_size, NULL));
@@ -205,7 +205,7 @@ int ml_backend_init_model(py_ml_model_obj_t *model) {
     }
 
     // Initialize the model's outputs.
-    model->outputs_size = 1;
+    for (model->outputs_size = 0; model_outputs[model->outputs_size].name != NULL; model->outputs_size++);
     model->output_shape = (mp_obj_tuple_t *) MP_OBJ_TO_PTR(mp_obj_new_tuple(model->outputs_size, NULL));
     model->output_scale = (mp_obj_tuple_t *) MP_OBJ_TO_PTR(mp_obj_new_tuple(model->outputs_size, NULL));
     model->output_zero_point = (mp_obj_tuple_t *) MP_OBJ_TO_PTR(mp_obj_new_tuple(model->outputs_size, NULL));

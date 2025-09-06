@@ -43,7 +43,7 @@ class NMS:
             raise ValueError("Invalid ROI dimensions!")
         self.boxes = []
 
-    def add_bounding_box(self, xmin, ymin, xmax, ymax, score, label_index):
+    def add_bounding_box(self, xmin, ymin, xmax, ymax, score, label_index, keypoints=None):
         if score >= 0.0 and score <= 1.0:
             xmin = max(0.0, min(xmin, self.window_w))
             ymin = max(0.0, min(ymin, self.window_h))
@@ -52,7 +52,7 @@ class NMS:
             w = int(xmax - xmin)
             h = int(ymax - ymin)
             if w > 0 and h > 0:
-                self.boxes.append([int(xmin), int(ymin), w, h, score, label_index])
+                self.boxes.append([int(xmin), int(ymin), w, h, score, label_index, keypoints])
 
     def get_bounding_boxes(self, threshold=0.1, sigma=0.1):
         sorted_boxes = sorted(self.boxes, key=lambda x: x[4], reverse=True)
@@ -107,15 +107,22 @@ class NMS:
             output_boxes[i][1] = int((output_boxes[i][1] * scale) + y_offset)
             output_boxes[i][2] = int(output_boxes[i][2] * scale)
             output_boxes[i][3] = int(output_boxes[i][3] * scale)
+            keypoints = output_boxes[i][6]
+            if keypoints is not None:
+                keypoints *= scale
+                keypoints[:, 0] += x_offset
+                keypoints[:, 1] += y_offset
 
         # Create a list per class with (rect, score) tuples.
 
         output_list = [[] for i in range(max_label_index + 1)]
 
         for i in range(len(output_boxes)):
-            output_list[output_boxes[i][5]].append(
-                (output_boxes[i][0:4], output_boxes[i][4])
-            )
+            rect_score = [output_boxes[i][:4], output_boxes[i][4]]
+            keypoints = output_boxes[i][6]
+            if keypoints is not None:
+                rect_score.append(keypoints)
+            output_list[output_boxes[i][5]].append(tuple(rect_score))
 
         return output_list
 
