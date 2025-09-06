@@ -70,6 +70,11 @@
 #define OMV_USB_ULPI_STP_PIN                (&omv_pin_C0_OTG_HS)
 #define OMV_USB_ULPI_DIR_PIN                (&omv_pin_I11_OTG_HS)
 
+// OpenMV protocol configuration.
+#define OMV_PROTOCOL_MAX_BUFFER_SIZE        (4096)
+#define OMV_PROTOCOL_HW_CAPS                OMV_PROTOCOL_HW_CAPS_MAKE( \
+        HAS_JPEG, HAS_DRAM, HAS_CRC, HAS_WIFI, HAS_BT, HAS_SD, HAS_ETH, HAS_USB_HS)
+
 // Defined for cpu frequency scaling to override the revid.
 #define OMV_MAX_CPU_FREQ                    (400)
 

@@ -74,6 +74,11 @@
 #define OMV_USB_IRQN                        (OTG_FS_IRQn)
 #define OMV_USB_ULPI                        (0)
 
+// OpenMV protocol configuration.
+#define OMV_PROTOCOL_MAX_BUFFER_SIZE        (4096)
+#define OMV_PROTOCOL_HW_CAPS                OMV_PROTOCOL_HW_CAPS_MAKE( \
+        HAS_JPEG, HAS_DRAM, HAS_CRC, HAS_WIFI, HAS_BT, HAS_SD, HAS_ETH, HAS_USB_HS)
+
 // PLL1 480MHz/48MHz SDMMC and FDCAN
 // USB and RNG are clocked from the HSI48
 #define OMV_OSC_PLL1M                       (4)
@@ -138,7 +143,7 @@
 #define OMV_FB_SIZE                         (3M)    // FB memory: header + VGA/GS image
 #define OMV_FB_ALLOC_SIZE                   (1M)    // minimum fb alloc size
 #define OMV_FB_OVERLAY_MEMORY               SRAM0   // Fast fb_alloc memory.
-#define OMV_FB_OVERLAY_SIZE                 (448K)  // Fast fb_alloc memory size.
+#define OMV_FB_OVERLAY_SIZE                 (443K)  // Fast fb_alloc memory size.
 #define OMV_SB_MEMORY                       DRAM    // Streaming buffer memory.
 #define OMV_SB_SIZE                         (1M)    // Streaming buffer size.
 #define OMV_DMA_MEMORY                      SRAM3   // Misc DMA buffers memory.
