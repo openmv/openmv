@@ -61,6 +61,11 @@
 #define OMV_USB_ULPI_STP_PIN                  (&omv_pin_C0_OTG_HS)
 #define OMV_USB_ULPI_DIR_PIN                  (&omv_pin_C2_OTG_HS)
 
+// OpenMV protocol configuration.
+#define OMV_PROTOCOL_MAX_BUFFER_SIZE          (4096)
+#define OMV_PROTOCOL_HW_CAPS                  OMV_PROTOCOL_HW_CAPS_MAKE( \
+        HAS_JPEG, HAS_DRAM, HAS_CRC, HAS_WIFI, HAS_BT, HAS_SD, HAS_ETH, HAS_USB_HS)
+
 // Defined for cpu frequency scaling to override the revid.
 #define OMV_MAX_CPU_FREQ                      (400)
 
@@ -131,7 +136,7 @@
 #define OMV_CM4_BOOT_MEMORY                   SRAM4     // Use to boot CM4 for low-power mode.
 #define OMV_CM4_BOOT_SIZE                     1K
 #define OMV_GC_BLOCK0_MEMORY                  DTCM      // Main GC block 0.
-#define OMV_GC_BLOCK0_SIZE                    (32K)
+#define OMV_GC_BLOCK0_SIZE                    (31K)
 #define OMV_GC_BLOCK1_MEMORY                  SRAM4     // Extra GC block 1.
 #define OMV_GC_BLOCK1_SIZE                    (63K)
 #define OMV_GC_BLOCK2_MEMORY                  SRAM1     // Extra GC block 2.
