@@ -47,12 +47,12 @@
 #define OMV_FIR_MLX90641_ENABLE         (1)
 #define OMV_FIR_AMG8833_ENABLE          (1)
 
-// Debugging configuration.
-#define OMV_TUSBDBG_ENABLE              (1)
-#define OMV_TUSBDBG_BUFFER              (2048)
-
 // UMM heap block size
 #define OMV_UMM_BLOCK_SIZE              256
+
+// Protocol hardware capabilities
+#define OMV_PROTOCOL_HW_CAPS            OMV_PROTOCOL_HW_CAPS_MAKE( \
+                                            HAS_DRAM, HAS_WIFI, HAS_BT, HAS_SD, HAS_ETH, HAS_USB_HS)
 
 // USB config.
 #define OMV_USB_IRQN                    (USB_OTG1_IRQn)
