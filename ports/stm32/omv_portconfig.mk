@@ -80,6 +80,10 @@ LDFLAGS = -mthumb \
           -mabi=aapcs-linux \
           -Wl,--print-memory-usage \
           -Wl,--gc-sections \
+          -Wl,--wrap=usbd_cdc_control \
+          -Wl,--wrap=usbd_cdc_receive \
+          -Wl,--wrap=mp_os_dupterm_rx_chr \
+          -Wl,--wrap=mp_hal_stdout_tx_strn \
           -Wl,-T$(BUILD)/$(LDSCRIPT).lds \
           -Wl,-Map=$(BUILD)/$(FIRMWARE).map
 

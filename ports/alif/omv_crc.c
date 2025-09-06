@@ -1,7 +1,7 @@
 /*
  * SPDX-License-Identifier: MIT
  *
- * Copyright (C) 2013-2024 OpenMV, LLC.
+ * Copyright (C) 2023-2024 OpenMV, LLC.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -20,11 +20,49 @@
  * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
- *
- * Common MicroPython utility functions.
  */
-#ifndef __MP_UTILS_H__
-#define __MP_UTILS_H__
-typedef struct _fs_user_mount_t fs_user_mount_t;
-void mp_init_gc_stack(void *stack_start, void *stack_end, void *heap_start, void *heap_end, size_t stack_limit);
-#endif // __MP_UTILS_H__
+#include "crc.h"
+#include "global_map.h"
+#include "omv_crc.h"
+
+#define CRC0 ((CRC_Type *)CRC0_BASE)
+
+static bool crc_initialized = false;
+
+void omv_crc_init(void) {   
+    crc_clear_config(CRC0);
+    crc_enable_16bit_ccitt(CRC0);
+    crc_set_seed(CRC0, OMV_CRC_INIT);
+    crc_enable(CRC0);
+    crc_initialized = true;
+}
+
+omv_crc_t omv_crc_start(const void *buf, size_t size) {
+    if (!crc_initialized) {
+        omv_crc_init();
+    }
+    
+    if (size == 0) {
+        return OMV_CRC_INIT;
+    }
+   
+    uint32_t result = 0;
+    crc_calculate_16bit(CRC0, buf, size, &result);
+    return (omv_crc_t)result;
+}
+
+omv_crc_t omv_crc_update(omv_crc_t crc, const void *buf, size_t size) {
+    if (!crc_initialized) {
+        omv_crc_init();
+    }
+
+    if (size == 0) {
+        return crc;
+    }
+
+    // Set current CRC value and calculate incrementally
+    crc_set_seed(CRC0, crc);
+    uint32_t result = 0;
+    crc_calculate_16bit(CRC0, buf, size, &result);
+    return (omv_crc_t)result;
+}

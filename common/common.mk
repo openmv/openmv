@@ -31,15 +31,19 @@ COMMON_SRC_C += \
     mutex.c \
     nosys_stubs.c \
     omv_csi.c \
+    omv_crc.c \
     pendsv.c \
-    tinyusb_debug.c \
     trace.c \
     umm_malloc.c \
     unaligned_memcpy.c \
-    usbdbg.c \
     vospi.c \
     queue.c \
     omv_profiler.c \
+    omv_protocol.c \
+    omv_channel_usb.c \
+    omv_channel_stdio.c \
+    omv_channel_stream.c \
+    omv_channel_profile.c \
 
 CFLAGS += -I$(TOP_DIR)/common
 OMV_FIRM_OBJ += $(addprefix $(BUILD)/common/, $(COMMON_SRC_C:.c=.o))

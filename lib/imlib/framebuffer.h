@@ -123,6 +123,13 @@ typedef struct vbuffer {
     OMV_ATTR_ALIGNED(uint8_t data[], FRAMEBUFFER_ALIGNMENT);    // Data.
 } vbuffer_t;
 
+// Frame header embedded in frame data for streaming protocol.
+typedef struct __attribute__((packed)) framebuffer_header {
+    uint32_t width;     // Frame width
+    uint32_t height;    // Frame height
+    PIXFORMAT_STRUCT;   // Pixel format
+} framebuffer_header_t;
+
 void framebuffer_init0();
 
 // Initializes a frame buffer instance.

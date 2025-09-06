@@ -23,10 +23,22 @@
  *
  * MicroPython port config.
  */
-#define MICROPY_NLR_RAISE_HOOK                 \
-    do {                                       \
-        extern void fb_alloc_free_till_mark(); \
-        fb_alloc_free_till_mark();             \
+#define MICROPY_NLR_RAISE_HOOK                                              \
+    do {                                                                    \
+        extern void fb_alloc_free_till_mark();                              \
+        fb_alloc_free_till_mark();                                          \
+    } while (0);
+
+#define MICROPY_BOARD_BEFORE_PYTHON_EXEC(input_kind, exec_flags)            \
+    do {                                                                    \
+        extern void stdio_channel_pyexec_hook(bool);                        \
+        stdio_channel_pyexec_hook(true);                                    \
+    } while (0);
+
+#define MICROPY_BOARD_AFTER_PYTHON_EXEC(input_kind, exec_flags, nlr, ret)   \
+    do {                                                                    \
+        extern void stdio_channel_pyexec_hook(bool);                        \
+        stdio_channel_pyexec_hook(false);                                   \
     } while (0);
 
 #define MICROPY_ENABLE_VM_ABORT             (1)
