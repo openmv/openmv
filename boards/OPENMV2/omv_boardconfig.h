@@ -60,6 +60,10 @@
 // USB IRQn.
 #define OMV_USB_IRQN                          (OTG_FS_IRQn)
 
+// OpenMV protocol configuration.
+#define OMV_PROTOCOL_MAX_BUFFER_SIZE          (512)
+#define OMV_PROTOCOL_HW_CAPS                  OMV_PROTOCOL_HW_CAPS_MAKE(HAS_SD)
+
 //PLL1 192MHz/48MHz
 #define OMV_OSC_PLL1M                         (12)
 #define OMV_OSC_PLL1N                         (384)
@@ -87,7 +91,7 @@
 #define OMV_FB_ALLOC_SIZE                     (9K) // minimum fb alloc size
 #define OMV_DMA_MEMORY                        SRAM2 // Misc DMA buffers
 #define OMV_GC_BLOCK0_MEMORY                  DTCM  // Main GC block
-#define OMV_GC_BLOCK0_SIZE                    (46K)
+#define OMV_GC_BLOCK0_SIZE                    (45K)
 #define OMV_SB_SIZE                           (8K)  // IDE JPEG buffer size (header + data).
 #define OMV_MSC_BUF_SIZE                      (2K)  // USB MSC bot data
 #define OMV_FFS_BUF_SIZE                      (16K) // Flash filesystem cache
