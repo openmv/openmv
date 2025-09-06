@@ -99,20 +99,23 @@ class fomo_postprocess:
         # Get the class information
         bb_classes = np.argmax(bb[:, _FOMO_CLASSES:], axis=1) + _FOMO_CLASSES
 
+        # Compute the bounding box information
+        x_center = (bb_cols + 0.5) / ow
+        y_center = (bb_rows + 0.5) / oh
+        w_rel = np.full(len(bb_cols), self.w_scale / ow) * 0.5
+        h_rel = np.full(len(bb_rows), self.h_scale / oh) * 0.5
+
         # Scale the bounding boxes to have enough integer precision for NMS
         ib, ih, iw, ic = model.input_shape[0]
-        x_center = ((bb_cols + 0.5) / ow) * iw
-        y_center = ((bb_rows + 0.5) / oh) * ih
-        w_rel = np.full(len(bb_cols), self.w_scale / ow) * iw
-        h_rel = np.full(len(bb_rows), self.h_scale / oh) * ih
+        xmin = (x_center - w_rel) * iw
+        ymin = (y_center - h_rel) * ih
+        xmax = (x_center + w_rel) * iw
+        ymax = (y_center + h_rel) * ih
 
         nms = NMS(iw, ih, inputs[0].roi)
         for i in range(bb.shape[0]):
-            nms.add_bounding_box(x_center[i] - (w_rel[i] / 2),
-                                 y_center[i] - (h_rel[i] / 2),
-                                 x_center[i] + (w_rel[i] / 2),
-                                 y_center[i] + (h_rel[i] / 2),
-                                 bb_scores[i], bb_classes[i])
+            nms.add_bounding_box(xmin[i], ymin[i], xmax[i], ymax[i], bb_scores[i], bb_classes[i])
+
         return nms.get_bounding_boxes(threshold=self.nms_threshold, sigma=self.nms_sigma)
 
 
@@ -157,8 +160,7 @@ class yolo_v2_postprocess:
         class_count = (oc // self.anchors_len) - _YOLO_V2_CLASSES
 
         # Reshape the output to a 2D array
-        row_outputs = outputs[0].reshape((oh * ow * self.anchors_len,
-                                          _YOLO_V2_CLASSES + class_count))
+        row_outputs = outputs[0].reshape((oh * ow * self.anchors_len, _YOLO_V2_CLASSES + class_count))
 
         # Threshold all the scores
         score_indices = row_outputs[:, _YOLO_V2_SCORE]
@@ -186,23 +188,20 @@ class yolo_v2_postprocess:
         # Compute the bounding box information
         x_center = (bb_cols + sigmoid(bb[:, _YOLO_V2_TX])) / ow
         y_center = (bb_rows + sigmoid(bb[:, _YOLO_V2_TY])) / oh
-        w_rel = (bb_a_array[:, 0] * np.exp(bb[:, _YOLO_V2_TW])) / ow
-        h_rel = (bb_a_array[:, 1] * np.exp(bb[:, _YOLO_V2_TH])) / oh
+        w_rel = ((bb_a_array[:, 0] * np.exp(bb[:, _YOLO_V2_TW])) / ow) * 0.5
+        h_rel = ((bb_a_array[:, 1] * np.exp(bb[:, _YOLO_V2_TH])) / oh) * 0.5
 
         # Scale the bounding boxes to have enough integer precision for NMS
         ib, ih, iw, ic = model.input_shape[0]
-        x_center = x_center * iw
-        y_center = y_center * ih
-        w_rel = w_rel * iw
-        h_rel = h_rel * ih
+        xmin = (x_center - w_rel) * iw
+        ymin = (y_center - h_rel) * ih
+        xmax = (x_center + w_rel) * iw
+        ymax = (y_center + h_rel) * ih
 
         nms = NMS(iw, ih, inputs[0].roi)
         for i in range(bb.shape[0]):
-            nms.add_bounding_box(x_center[i] - (w_rel[i] / 2),
-                                 y_center[i] - (h_rel[i] / 2),
-                                 x_center[i] + (w_rel[i] / 2),
-                                 y_center[i] + (h_rel[i] / 2),
-                                 bb_scores[i], bb_classes[i])
+            nms.add_bounding_box(xmin[i], ymin[i], xmax[i], ymax[i], bb_scores[i], bb_classes[i])
+
         return nms.get_bounding_boxes(threshold=self.nms_threshold, sigma=self.nms_sigma)
 
 
@@ -271,8 +270,8 @@ class yolo_v5_postprocess:
 
         nms = NMS(iw, ih, inputs[0].roi)
         for i in range(bb.shape[0]):
-            nms.add_bounding_box(xmin[i], ymin[i], xmax[i], ymax[i],
-                                 bb_scores[i], bb_classes[i])
+            nms.add_bounding_box(xmin[i], ymin[i], xmax[i], ymax[i], bb_scores[i], bb_classes[i])
+
         return nms.get_bounding_boxes(threshold=self.nms_threshold, sigma=self.nms_sigma)
 
 
@@ -295,28 +294,28 @@ class yolo_v8_postprocess:
         class_count = ow - _YOLO_V8_CLASSES
 
         # Reshape the output to a 2D array
-        column_outputs = outputs[0].reshape((oh * (_YOLO_V8_CLASSES + class_count), oc))
+        row_outputs = outputs[0].reshape((oh * (_YOLO_V8_CLASSES + class_count), oc)).T
 
         # Threshold all the scores
-        score_indices = column_outputs[_YOLO_V8_CLASSES:, :]
-        score_indices = threshold(score_indices, t, scale, find_max=True, find_max_axis=0)
+        score_indices = row_outputs[:, _YOLO_V8_CLASSES:]
+        score_indices = threshold(score_indices, t, scale, find_max=True, find_max_axis=1)
         if not len(score_indices):
             return _NO_DETECTION
 
         # Get the bounding boxes that have a valid score
-        bb = dequantize(model, np.take(column_outputs, score_indices, axis=1))
+        bb = dequantize(model, np.take(row_outputs, score_indices, axis=0))
 
         # Get the score information
-        bb_scores = np.max(bb[_YOLO_V8_CLASSES:, :], axis=0)
+        bb_scores = np.max(bb[:, _YOLO_V8_CLASSES:], axis=1)
 
         # Get the class information
-        bb_classes = np.argmax(bb[_YOLO_V8_CLASSES:, :], axis=0)
+        bb_classes = np.argmax(bb[:, _YOLO_V8_CLASSES:], axis=1)
 
         # Compute the bounding box information
-        x_center = bb[_YOLO_V8_CX, :]
-        y_center = bb[_YOLO_V8_CY, :]
-        w_rel = bb[_YOLO_V8_CW, :] * 0.5
-        h_rel = bb[_YOLO_V8_CH, :] * 0.5
+        x_center = bb[:, _YOLO_V8_CX]
+        y_center = bb[:, _YOLO_V8_CY]
+        w_rel = bb[:, _YOLO_V8_CW] * 0.5
+        h_rel = bb[:, _YOLO_V8_CH] * 0.5
 
         # Scale the bounding boxes to have enough integer precision for NMS
         ib, ih, iw, ic = model.input_shape[0]
@@ -326,7 +325,7 @@ class yolo_v8_postprocess:
         ymax = (y_center + h_rel) * ih
 
         nms = NMS(iw, ih, inputs[0].roi)
-        for i in range(bb.shape[1]):
-            nms.add_bounding_box(xmin[i], ymin[i], xmax[i], ymax[i],
-                                 bb_scores[i], bb_classes[i])
+        for i in range(bb.shape[0]):
+            nms.add_bounding_box(xmin[i], ymin[i], xmax[i], ymax[i], bb_scores[i], bb_classes[i])
+
         return nms.get_bounding_boxes(threshold=self.nms_threshold, sigma=self.nms_sigma)
