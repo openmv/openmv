@@ -59,8 +59,10 @@
 // UMM heap block size
 #define OMV_UMM_BLOCK_SIZE                  256
 
-// USB IRQn.
-#define OMV_USB_IRQN                        (USB1_OTG_HS_IRQn)
+// Protocol hardware capabilities
+#define OMV_PROTOCOL_HW_CAPS OMV_PROTOCOL_HW_CAPS_MAKE(\
+        HW_GPU, HW_NPU, HW_ISP, HW_VENC, HW_JPEG, HW_DRAM,\
+        HW_PMU, HW_WIFI, HW_BT, HW_SD, HW_ETH, HW_USB_HS)
 
 //PLL1 800MHz
 #define OMV_OSC_PLL1M                       (3)
