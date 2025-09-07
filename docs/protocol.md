@@ -7,13 +7,12 @@ The OpenMV Protocol is a channel-based communication protocol for OpenMV camera 
 ### 1.1 Key Features
 - Channel-based architecture with 8-bit channel IDs (up to 32 channels)
 - Transport-agnostic design (USB, UART, TCP/IP)
-- Dual CRC error detection (CRC-16-CCITT for header, CRC-32 for payload)
+- Dual CRC error detection (CRC-16 for header, CRC-32 for payload)
 - Packet fragmentation for large transfers
 - Zero-copy data transmission with readp() interface
 - Channel-specific operations (read, write, ioctl, lock/unlock, shape)
 - Configurable CRC and sequence number validation
 - Configurable async event notifications
-- Real-time stream processing with ring buffer
 - Retransmission support with exponential backoff
 
 ### 1.2 Channel Architecture
@@ -34,7 +33,7 @@ All packets follow this structure:
 | 4      | FLAGS    | 1 byte   | Flags                   | Packet flags (see section 2.2)    |
 | 5      | OPCODE   | 1 byte   | Code                    | Command/Response operation code   |
 | 6      | LENGTH   | 2 bytes  | Length                  | Length of data field only         |
-| 8      | CRC      | 2 bytes  | Checksum                | CRC-16-CCITT over header fields   |
+| 8      | CRC      | 2 bytes  | Checksum                | CRC-16 over header fields         |
 | 10     | DATA     | Variable | Payload                 | Optional payload data             |
 | 10+N   | D_CRC    | 4 bytes  | Checksum                | CRC-32 over data (if N > 0)       |
 
@@ -110,7 +109,7 @@ Commands are organized by functional area:
 |--------|---------|-------------|---------------|-------------|
 | 0x10 | SYS_RESET | 0 bytes | No response | System reset |
 | 0x11 | SYS_BOOT | 0 bytes | No response | Jump to bootloader |
-| 0x12 | SYS_INFO | 0 bytes | 64 bytes | Get system information |
+| 0x12 | SYS_INFO | 0 bytes | 80 bytes | Get system information |
 | 0x13 | SYS_EVENT | 4 bytes | No response | System event notification |
 
 #### Channel Operations (0x20-0x2F)
@@ -186,7 +185,7 @@ Response Format: (32 bytes)
 | 16-19  | retransmit           | 4 bytes  | Count                | Number of packet retransmissions  |
 | 20-23  | transport_errors     | 4 bytes  | Count                | Number of transport layer errors  |
 | 24-27  | sent_events          | 4 bytes  | Count                | Number of events sent             |
-| 28-31  | max_ack_queue_depth  | 4 bytes  | Count                | Maximum ACK queue depth reached   |
+| 28-31  | reserved             | 4 bytes  | Reserved             | Reserved for future use           |
 
 
 
@@ -215,6 +214,7 @@ Event types:
 - 0x00: CHANNEL_REGISTERED - Channel dynamically registered
 - 0x01: CHANNEL_UNREGISTERED - Channel unregistered
 - 0x02: SOFT_REBOOT - System is going for a soft-reboot
+- 0xFFFF: NOTIFY - Notification event (no payload)
 
 Note: Events are only sent when the events_enabled capability is set to true.
 
@@ -237,8 +237,8 @@ Response Format: (80 bytes)
 |        |                     |          |              | bit 4: JPEG encoder,              |
 |        |                     |          |              | bit 5: DRAM,                      |
 |        |                     |          |              | bit 6: Hardware CRC,              |
-|        |                     |          |              | bit 7: PMU,                       |
-|        |                     |          |              | bits 8-15: PMU event count,       |
+|        |                     |          |              | bit 7: PMU available,             |
+|        |                     |          |              | bits 8-15: PMU event counter count,|
 |        |                     |          |              | bit 16: WiFi,                     |
 |        |                     |          |              | bit 17: Bluetooth,                |
 |        |                     |          |              | bit 18: SD card,                  |
@@ -405,14 +405,16 @@ The OpenMV Protocol uses a channel-based architecture where each channel represe
 
 **Channel 3 (stream)**: Read-only channel for high-bandwidth data like image frames. Supports exclusive locking to prevent concurrent access conflicts.
 
-**Channel 4 (profile)**: Optional read-only channel providing performance metrics and diagnostic information. Profiling availability is determined by the presence of this channel rather than a capability flag. The channel is only registered when OMV_PROFILER_ENABLE is defined at compile time. The number of PMU event counters is embedded in the hardware capabilities bitfield (bits 7-12) in the system information.
+**Channel 4 (profile)**: Optional read-only channel providing performance metrics and diagnostic information. Profiling availability is determined by the presence of this channel rather than a capability flag. The channel is only registered when OMV_PROFILER_ENABLE is defined at compile time. The number of PMU event counters is embedded in the hardware capabilities bitfield (bits 8-15) in the system information.
 
 ### 5.2 Channel Capabilities
 
 Each channel declares its supported operations through capability flags:
 - **READ**: Channel supports read operations
-- **WRITE**: Channel supports write operations  
+- **WRITE**: Channel supports write operations
+- **EXEC**: Channel supports script execution
 - **LOCK**: Channel supports exclusive locking
+- **STREAM**: Streaming channel
 - **DYNAMIC**: Channel was dynamically created
 - **PHYSICAL**: Transport-only channel (not accessible via protocol)
 
@@ -428,12 +430,52 @@ Each channel declares its supported operations through capability flags:
 
 **Flow Control**: Channels return appropriate status codes when data isn't ready, and use locking mechanisms to coordinate access between host and device.
 
+### 5.4 Channel IOCTL Commands
+
+Each channel type supports specific IOCTL commands for configuration and control:
+
+#### Stdin Channel IOCTLs
+| Request | Name | Payload Size | Description |
+|---------|------|--------------|-------------|
+| 0x01 | STDIN_STOP | 0 bytes | Stop running script |
+| 0x02 | STDIN_EXEC | 0 bytes | Execute buffered script |
+| 0x03 | STDIN_RESET | 0 bytes | Reset script buffer |
+
+#### Stream Channel IOCTLs
+| Request | Name | Payload Size | Description |
+|---------|------|--------------|-------------|
+| 0x00 | STREAM_CTRL | 4 bytes | Enable/disable streaming (uint32_t enable) |
+| 0x01 | STREAM_RAW_CTRL | 4 bytes | Enable/disable raw streaming (uint32_t enable) |
+| 0x02 | STREAM_RAW_CFG | 8 bytes | Set raw stream resolution (uint32_t width, uint32_t height) |
+
+#### Profile Channel IOCTLs
+| Request | Name | Payload Size | Description |
+|---------|------|--------------|-------------|
+| 0x00 | PROFILE_MODE | 4 bytes | Set profiling mode (uint32_t mode) |
+| 0x01 | PROFILE_SET_EVENT | 8 bytes | Set event type to profile |
+| 0x02 | PROFILE_RESET | 0 bytes | Reset profiler data |
+| 0x03 | PROFILE_STATS | 0 bytes | Get profiler statistics |
+
 ## 6. Error Handling
 
 ### 6.1 CRC Verification
-- Header CRC: CRC-16-CCITT polynomial (0x1021) with initial value 0xFFFF, calculated over header fields (excluding CRC field itself)
-- Data CRC: CRC-32 calculated over payload data (only if payload length > 0)
-- Hardware acceleration available on STM32 and Alif platforms
+
+The protocol uses custom CRC polynomials optimized for Hamming distance (HD=6):
+
+**Header CRC (CRC-16)**
+- Polynomial: 0xF94F
+- Initial value: 0xFFFF
+- HD=6 up to 114 bits (covers 10-byte header)
+- Calculated over header fields (excluding the CRC field itself)
+
+**Payload CRC (CRC-32)**
+- Polynomial: 0xFA567D89
+- Initial value: 0xFFFFFFFF
+- HD=6 up to 32738 bits (~4KB payload)
+- Only present if payload length > 0
+- Calculated over payload data (excluding the CRC field itself)
+
+Hardware CRC acceleration is available on supported platforms (indicated by HW_CAPS bit 6).
 
 ### 6.2 Stream Recovery
 - On sync loss, scan for SYNC pattern (0xD5AA)
