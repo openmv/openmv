@@ -69,6 +69,11 @@ void framebuffer_init(framebuffer_t *fb, void *buff, size_t size, bool dynamic, 
     #if OMV_RAW_PREVIEW_ENABLE
     fb->raw_w = OMV_RAW_PREVIEW_WIDTH;
     fb->raw_h = OMV_RAW_PREVIEW_HEIGHT;
+    fb->raw_enabled = true;
+    #else
+    fb->raw_w = 0;
+    fb->raw_h = 0;
+    fb->raw_enabled = false;
     #endif
     fb->quality = ((OMV_JPEG_QUALITY_HIGH - OMV_JPEG_QUALITY_LOW) / 2) + OMV_JPEG_QUALITY_LOW;
     mutex_init0(&fb->lock);
@@ -293,19 +298,15 @@ void framebuffer_update_preview(image_t *src) {
         .pixels = frame_data
     };
 
-    bool compress = true;
     bool overflow = false;
+    bool raw_stream = src->is_mutable && fb->raw_enabled && fb->raw_w && fb->raw_h;
 
-    #if OMV_RAW_PREVIEW_ENABLE
-    if (src->is_mutable) {
+    if (raw_stream) {
         // Down-scale the frame (if necessary) and send the raw frame.
         dst.size = src->bpp;
         dst.pixfmt = src->pixfmt;
-        if (src->w <= fb->raw_w && src->h <= fb->raw_h) {
-            if (image_size(&dst) <= available_size) {
-                memcpy(dst.pixels, src->pixels, image_size(src));
-                compress = false;
-            }
+        if (image_size(&dst) <= available_size) {
+            memcpy(dst.pixels, src->pixels, image_size(src));
         } else {
             float scale = IM_MIN((fb->raw_w / (float) src->w),
                                  (fb->raw_h / (float) src->h));
@@ -315,14 +316,14 @@ void framebuffer_update_preview(image_t *src) {
                 imlib_draw_image(&dst, src, 0, 0, scale, scale, NULL, -1, 255, NULL, NULL,
                                  IMAGE_HINT_BILINEAR | IMAGE_HINT_BLACK_BACKGROUND,
                                  NULL, NULL, NULL, NULL);
-                compress = false;
+            } else {
+                raw_stream = false;
             }
         }
     }
-    #endif
 
     // Compress the frame if the raw image didn't fit or the format is non-mutable.
-    if (compress) {
+    if (!raw_stream) {
         overflow = jpeg_compress(src, &dst, fb->quality, false, JPEG_SUBSAMPLING_AUTO);
     }
 
