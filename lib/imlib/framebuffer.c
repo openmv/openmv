@@ -29,6 +29,7 @@
 #include "fmath.h"
 #include "framebuffer.h"
 #include "omv_boardconfig.h"
+#include "omv_protocol.h"
 
 // Main framebuffer memory
 extern char _fb_memory_start;
@@ -368,4 +369,8 @@ exit_cleanup:
 
     // Unlock the streaming buffer.
     mutex_unlock(&fb->lock, MUTEX_TID_OMV);
+
+    #if MICROPY_PY_PROTOCOL
+    omv_protocol_send_event(OMV_PROTOCOL_CHANNEL_ID_STREAM, OMV_PROTOCOL_EVENT_NOTIFY, false);
+    #endif
 }
