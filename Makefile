@@ -253,9 +253,12 @@ endif
 	$(SIZE) --format=SysV $(FW_DIR)/$(FIRMWARE).elf
 
 jlink:
-	${JLINK_GDB_SERVER} -speed ${JLINK_SPEED} -nogui \
+	setsid ${JLINK_GDB_SERVER} -speed ${JLINK_SPEED} -nogui \
         -if ${JLINK_INTERFACE} -halt -cpu cortex-m \
-		-device ${JLINK_DEVICE} -novd ${JLINK_SCRIPT}
+		-device ${JLINK_DEVICE} -novd ${JLINK_SCRIPT} & \
+	JLINK_PID=$$!; \
+	trap "kill $$JLINK_PID 2>/dev/null" EXIT; \
+	sleep 1 && jlink-gdb $(FW_DIR)/$(FIRMWARE).elf
 
 submodules:
 	$(MAKE) -C $(MICROPY_DIR)/ports/$(PORT) BOARD=$(TARGET) submodules
