@@ -31,6 +31,7 @@ COMMON_SRC_C += \
     mutex.c \
     nosys_stubs.c \
     omv_csi.c \
+    omv_crc.c \
     pendsv.c \
     tinyusb_debug.c \
     trace.c \
