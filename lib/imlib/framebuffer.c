@@ -52,6 +52,10 @@ void framebuffer_init0() {
     // Initialize the streaming buffer. 
     framebuffer_init(framebuffer_get(FB_STREAM_ID), &_sb_memory_start,
                      &_sb_memory_end - &_sb_memory_start, false, enabled);
+
+    // Reset embedded header
+    framebuffer_t *fb = framebuffer_get(FB_STREAM_ID);
+    memset(fb->raw_base, 0, sizeof(framebuffer_header_t));
 }
 
 void framebuffer_init(framebuffer_t *fb, void *buff, size_t size, bool dynamic, bool enabled) {
@@ -65,6 +69,11 @@ void framebuffer_init(framebuffer_t *fb, void *buff, size_t size, bool dynamic, 
     #if OMV_RAW_PREVIEW_ENABLE
     fb->raw_w = OMV_RAW_PREVIEW_WIDTH;
     fb->raw_h = OMV_RAW_PREVIEW_HEIGHT;
+    fb->raw_enabled = true;
+    #else
+    fb->raw_w = 0;
+    fb->raw_h = 0;
+    fb->raw_enabled = false;
     #endif
     fb->quality = ((OMV_JPEG_QUALITY_HIGH - OMV_JPEG_QUALITY_LOW) / 2) + OMV_JPEG_QUALITY_LOW;
     mutex_init0(&fb->lock);
@@ -265,13 +274,18 @@ void framebuffer_update_preview(image_t *src) {
         return;
     }
 
+    // Reserve space for header at the beginning
+    framebuffer_header_t *header = (framebuffer_header_t *)fb->raw_base;
+    uint8_t *frame_data = (uint8_t *)fb->raw_base + sizeof(framebuffer_header_t);
+    size_t available_size = fb->raw_size - sizeof(framebuffer_header_t);
+
     if (src->is_compressed) {
-        if (src->size > fb->raw_size) {
+        if (src->size > available_size) {
             framebuffer_from_image(fb, NULL);
             mp_printf(MP_PYTHON_PRINTER, "\x1b[40O\n");
         } else {
             framebuffer_from_image(fb, src);
-            memcpy(fb->raw_base, src->pixels, src->size);
+            memcpy(frame_data, src->pixels, src->size);
         }
         goto exit_cleanup;
     }
@@ -280,40 +294,36 @@ void framebuffer_update_preview(image_t *src) {
         .w = src->w,
         .h = src->h,
         .pixfmt = PIXFORMAT_JPEG,
-        .size = fb->raw_size,
-        .pixels = (uint8_t *) fb->raw_base
+        .size = available_size,
+        .pixels = frame_data
     };
 
-    bool compress = true;
     bool overflow = false;
+    bool raw_stream = src->is_mutable && fb->raw_enabled && fb->raw_w && fb->raw_h;
 
-    #if OMV_RAW_PREVIEW_ENABLE
-    if (src->is_mutable) {
+    if (raw_stream) {
         // Down-scale the frame (if necessary) and send the raw frame.
         dst.size = src->bpp;
         dst.pixfmt = src->pixfmt;
-        if (src->w <= fb->raw_w && src->h <= fb->raw_h) {
-            if (image_size(&dst) <= fb->raw_size) {
-                memcpy(dst.pixels, src->pixels, image_size(src));
-                compress = false;
-            }
+        if (image_size(&dst) <= available_size) {
+            memcpy(dst.pixels, src->pixels, image_size(src));
         } else {
             float scale = IM_MIN((fb->raw_w / (float) src->w),
                                  (fb->raw_h / (float) src->h));
             dst.w = fast_floorf(src->w * scale);
             dst.h = fast_floorf(src->h * scale);
-            if (image_size(&dst) <= fb->raw_size) {
+            if (image_size(&dst) <= available_size) {
                 imlib_draw_image(&dst, src, 0, 0, scale, scale, NULL, -1, 255, NULL, NULL,
                                  IMAGE_HINT_BILINEAR | IMAGE_HINT_BLACK_BACKGROUND,
                                  NULL, NULL, NULL, NULL);
-                compress = false;
+            } else {
+                raw_stream = false;
             }
         }
     }
-    #endif
 
     // Compress the frame if the raw image didn't fit or the format is non-mutable.
-    if (compress) {
+    if (!raw_stream) {
         overflow = jpeg_compress(src, &dst, fb->quality, false, JPEG_SUBSAMPLING_AUTO);
     }
 
@@ -345,6 +355,11 @@ void framebuffer_update_preview(image_t *src) {
     }
 
 exit_cleanup:
+    header->width = fb->w;
+    header->height = fb->h;
+    header->pixfmt = fb->pixfmt;
+    header->size = fb->is_compressed ? fb->size : fb->bpp;
+    
     // Unlock the streaming buffer.
     mutex_unlock(&fb->lock, MUTEX_TID_OMV);
 }

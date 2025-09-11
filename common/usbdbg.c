@@ -189,7 +189,7 @@ void usbdbg_data_in(uint32_t size, usbdbg_write_callback_t write_callback) {
         case USBDBG_FRAME_DUMP:
             if (xfer_offs < xfer_size) {
                 framebuffer_t *fb = framebuffer_get(FB_STREAM_ID);
-                write_callback(fb->raw_base + xfer_offs, size);
+                write_callback(fb->raw_base + sizeof(framebuffer_header_t) + xfer_offs, size);
                 xfer_offs += size;
                 if (xfer_offs == xfer_size) {
                     cmd = USBDBG_NONE;
