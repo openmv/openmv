@@ -55,6 +55,7 @@ bool mutex_try_lock_fair(mutex_t *m, size_t tid) {
 
 void mutex_unlock(mutex_t *m, size_t tid) {
     if (atomic_load_explicit(&m->tid, memory_order_acquire) == tid) {
+        atomic_store_explicit(&m->tid, 0, memory_order_relaxed);
         atomic_flag_clear_explicit(&m->lock, memory_order_release);
     }
 }
