@@ -736,6 +736,7 @@ int genx320_init(omv_csi_t *csi) {
     csi->set_hmirror = set_hmirror;
     csi->set_vflip = set_vflip;
     csi->ioctl = ioctl;
+    csi->auxiliary = 1;
 
     // Set csi flags
     csi->mono_bpp = sizeof(uint8_t);
