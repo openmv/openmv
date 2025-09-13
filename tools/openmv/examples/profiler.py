@@ -1,20 +1,58 @@
 #!/usr/bin/env python
-# This file is part of the OpenMV project.
+# SPDX-License-Identifier: MIT
 #
-# Copyright (c) 2013-2025 Ibrahim Abdelkader <iabdalkader@openmv.io>
-# Copyright (c) 2013-2025 Kwabena W. Agyeman <kwagyeman@openmv.io>
+# Copyright (c) 2025 OpenMV, LLC.
 #
-# This work is licensed under the MIT license, see the file LICENSE for details.
+# OpenMV Framebuffer Display with Advanced Profiling
 #
-# An example script using pyopenmv to grab the framebuffer.
+# This example demonstrates advanced profiling features of OpenMV cameras, including:
+# - Live framebuffer display with pygame
+# - Performance profiling with function timing
+# - Event counter profiling for hardware performance monitoring
+# - Symbol loading from ELF firmware files for function name resolution
+# - Interactive profiling controls and colorized performance visualization
+#
+# Controls:
+# - P key: Toggle profiling overlay (off/profile/events)
+# - M key: Toggle profiling mode (inclusive/exclusive)
+# - R key: Reset profiler data
+# - C key: Capture screenshot to 'capture.png'
+# - ESC key: Exit
+#
+# Dependencies:
+# - pygame
+# - numpy
+# - elftools (for symbol loading)
 
 import sys
-import numpy as np
-import pygame
-import pyopenmv
+import os
 import argparse
 import time
+import logging
+import pygame
+import numpy as np
+import struct
+from functools import reduce
+from operator import mul
 
+# Add parent directories to path for openmv module
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../..'))
+
+from openmv.camera import OMVCamera
+
+def str2bool(v):
+    """Convert string to boolean for argparse"""
+    if isinstance(v, bool):
+        return v
+    if v.lower() in ('yes', 'true', 't', 'y', '1'):
+        return True
+    elif v.lower() in ('no', 'false', 'f', 'n', '0'):
+        return False
+    else:
+        raise argparse.ArgumentTypeError('Boolean value expected.')
+
+# Default test script for sensor-based cameras
 test_script = """
 import sensor, image, time
 sensor.reset()
@@ -29,6 +67,7 @@ while(True):
     print(clock.fps(), " FPS")
 """
 
+# Benchmark script for throughput testing
 bench_script = """
 import sensor, image, time
 sensor.reset()
@@ -40,7 +79,7 @@ while(True):
 """
 
 def addr_to_symbol(symbols, address):
-    # Binary search for speed
+    """Binary search for speed"""
     lo, hi = 0, len(symbols) - 1
     while lo <= hi:
         mid = (lo + hi) // 2
@@ -54,9 +93,7 @@ def addr_to_symbol(symbols, address):
     return None
 
 def get_color_by_percentage(percentage, base_color=(220, 220, 220)):
-    """
-    Return a color based on percentage with fine-grained intensity levels.
-    """
+    """Return a color based on percentage with fine-grained intensity levels."""
     def clamp(value):
         return max(0, min(255, int(value)))
     
@@ -288,7 +325,7 @@ def draw_profile_table(overlay_surface, config, profile_data, profile_mode, symb
         total_ticks = record['total_ticks']
         avg_cycles = record['total_cycles'] // max(1, call_count)
         avg_ticks = total_ticks // max(1, call_count)
-        percentage = (total_ticks / total_ticks_all * 100)
+        percentage = (total_ticks / total_ticks_all * 100) if total_ticks_all else 0
         
         ticks_scale = ""
         if total_ticks > 1_000_000_000:
@@ -344,6 +381,39 @@ def draw_profile_table(overlay_surface, config, profile_data, profile_mode, symb
     instruction_text = config['fonts']['instruction'].render(instruction_str, True, (180, 180, 180))
     overlay_surface.blit(instruction_text, (0, summary_y + int(20 * config['scale_factor'])))
 
+def handle_key_events(event, camera, profile_type, profile_mode, zoom_factor, base_width, base_height, screen, args):
+    """Handle keyboard events and return updated values"""
+    if event.key == pygame.K_ESCAPE:
+        raise KeyboardInterrupt
+    elif event.key == pygame.K_c and not args.bench:
+        if 'image' in locals():
+            pygame.image.save(image, "capture.png")
+            logging.info("Screenshot saved as capture.png")
+    elif event.key == pygame.K_p:
+        profile_type = not profile_type
+        logging.info(f"Profile type: {'Performance' if profile_type else 'Events'}")
+    elif event.key == pygame.K_m:
+        profile_mode = not profile_mode
+        camera.profiler_mode(exclusive=profile_mode)
+        logging.info(f"Profile mode: {'Exclusive' if profile_mode else 'Inclusive'}")
+    elif event.key == pygame.K_r:
+        camera.profiler_reset()
+        logging.info("Profiler reset")
+    elif event.key == pygame.K_EQUALS and (pygame.key.get_pressed()[pygame.K_LCTRL] or pygame.key.get_pressed()[pygame.K_RCTRL]):
+        # Ctrl+ to zoom in
+        zoom_factor = min(zoom_factor * 1.25, 3.0)
+        new_width, new_height = int(base_width * zoom_factor), int(base_height * zoom_factor)
+        screen = pygame.display.set_mode((new_width, new_height), pygame.DOUBLEBUF, 32)
+        logging.info(f"Zoom: {zoom_factor:.2f}x")
+    elif event.key == pygame.K_MINUS and (pygame.key.get_pressed()[pygame.K_LCTRL] or pygame.key.get_pressed()[pygame.K_RCTRL]):
+        # Ctrl- to zoom out
+        zoom_factor = max(zoom_factor / 1.25, 0.5)
+        new_width, new_height = int(base_width * zoom_factor), int(base_height * zoom_factor)
+        screen = pygame.display.set_mode((new_width, new_height), pygame.DOUBLEBUF, 32)
+        logging.info(f"Zoom: {zoom_factor:.2f}x")
+    
+    return profile_type, profile_mode, zoom_factor, screen
+
 def draw_profile_overlay(screen, screen_width, screen_height, profile_data,
                          profile_mode, profile_type, scale, symbols, alpha=250):
     """Main entry point for drawing the profile overlay."""
@@ -387,178 +457,168 @@ def draw_profile_overlay(screen, screen_width, screen_height, profile_data,
     
     screen.blit(overlay_surface, (0, 0))
 
-def pygame_test(port, script, poll_rate, scale, benchmark, symbols):
-    # init pygame
-    pygame.init()
-    pyopenmv.disconnect()
+def main():
+    parser = argparse.ArgumentParser(description='OpenMV Framebuffer Display with Profiling')
+    parser.add_argument('--port', action='store', help='Serial port (default: /dev/ttyACM0)', default='/dev/ttyACM0')
+    parser.add_argument("--script", action="store", default=None, help="Script file")
+    parser.add_argument('--poll', action='store', help='Poll rate in ms (default: 4)', default=4, type=int)
+    parser.add_argument('--bench', action='store_true', help='Run throughput benchmark', default=False)
+    parser.add_argument('--firmware', action='store', help='Firmware ELF file for symbol resolution', default=None)
+    parser.add_argument('--timeout', action='store', type=float, default=2.0, help='Protocol timeout in seconds')
+    parser.add_argument('--debug', action='store_true', help='Enable debug logging')
+    
+    # Camera configuration options
+    parser.add_argument('--crc', type=str2bool, nargs='?', const=True, default=True, help='Enable CRC validation (default: true)')
+    parser.add_argument('--seq', type=str2bool, nargs='?', const=True, default=True, help='Enable sequence number validation (default: true)')
+    parser.add_argument('--ack', type=str2bool, nargs='?', const=True, default=False, help='Enable packet acknowledgment (default: false)')
+    parser.add_argument('--events', type=str2bool, nargs='?', const=True, default=True, help='Enable event notifications (default: true)')
+    parser.add_argument('--max-retry', type=int, default=3, help='Maximum number of retries (default: 3)')
+    parser.add_argument('--max-payload', type=int, default=4096, help='Maximum payload size in bytes (default: 4096)')
+    parser.add_argument('--quiet', action='store_true', help='Suppress script output text')
 
-    connected = False
-    for i in range(10):
+    args = parser.parse_args()
+
+    # Configure logging
+    if args.quiet:
+        log_level = logging.WARNING
+    elif args.debug:
+        log_level = logging.DEBUG
+    else:
+        log_level = logging.INFO
+
+    logging.basicConfig(
+        format="%(relativeCreated)010.3f - %(message)s",
+        level=log_level,
+    )
+
+    # Load script
+    if args.script is not None:
+        with open(args.script, 'r') as f:
+            script = f.read()
+        logging.info(f"Loaded script from {args.script}")
+    else:
+        script = bench_script if args.bench else test_script
+        logging.info("Using built-in script")
+
+    # Load symbols from firmware ELF file
+    symbols = []
+    if args.firmware:
         try:
-            # opens CDC port.
-            # Set small timeout when connecting
-            pyopenmv.init(port, baudrate=921600, timeout=0.050)
-            connected = True
-            break
+            from elftools.elf.elffile import ELFFile
+            with open(args.firmware, 'rb') as f:
+                elf = ELFFile(f)
+                symtab = elf.get_section_by_name('.symtab')
+                if not symtab:
+                    logging.warning("No symbol table found in ELF file")
+                else:
+                    for sym in symtab.iter_symbols():
+                        addr = sym['st_value']
+                        size = sym['st_size']
+                        name = sym.name
+                        if name and size > 0:  # ignore empty symbols
+                            symbols.append((addr, addr + size, name))
+                    symbols.sort()
+                    logging.info(f"Loaded {len(symbols)} symbols from {args.firmware}")
+        except ImportError:
+            logging.error("elftools package not installed. Install with: pip install pyelftools")
+            sys.exit(1)
         except Exception as e:
-            connected = False
-            time.sleep(0.100)
-    
-    if not connected:
-        print("Failed to connect to OpenMV's serial port.\n"
-              "Please install OpenMV's udev rules first:\n"
-              "sudo cp openmv/udev/50-openmv.rules /etc/udev/rules.d/\n"
-              "sudo udevadm control --reload-rules\n\n")
-        sys.exit(1)
-    
-    # Set higher timeout after connecting for lengthy transfers.
-    pyopenmv.set_timeout(1*2) # SD Cards can cause big hicups.
-    pyopenmv.stop_script()
-    pyopenmv.enable_fb(True)
-    pyopenmv.reset_profiler()
+            logging.error(f"Failed to load symbols from {args.firmware}: {e}")
 
-    # Configure some event counters.
-    pyopenmv.set_event_counter(0, 0x0039)
-    pyopenmv.set_event_counter(1, 0x0023)
-    pyopenmv.set_event_counter(2, 0x0024)
-    pyopenmv.set_event_counter(3, 0x0001)
-    pyopenmv.set_event_counter(4, 0x0003)
-    pyopenmv.set_event_counter(5, 0xC102)
-    pyopenmv.set_event_counter(6, 0x02CC)
-    pyopenmv.set_event_counter(7, 0xC303)
-
-    pyopenmv.exec_script(script)
+    # Initialize pygame with centered window
+    import os
+    os.environ['SDL_VIDEO_CENTERED'] = '1'
+    pygame.init()
     
-    # init screen
     running = True
     screen = None
-
-    # Profiling control
-    profile_type = 0
-    profile_mode = 0
-    profile_data = []
-    last_profile_read = 0
-    
     clock = pygame.time.Clock()
     fps_clock = pygame.time.Clock()
     font = pygame.font.SysFont("monospace", 30)
 
-    if not benchmark:
-        pygame.display.set_caption("OpenMV Camera")
-    else:
-        pygame.display.set_caption("OpenMV Camera (Benchmark)")
-        screen = pygame.display.set_mode((640, 120), pygame.DOUBLEBUF, 32)
+    # Profiling control - start with performance profiling enabled
+    profile_type = True  # True = performance profiling, False = event profiling
+    profile_mode = False  # False = inclusive, True = exclusive
+    profile_data = []
+    last_profile_read = 0
+
+    # Zoom control
+    zoom_factor = 1.0
+    base_width, base_height = 1600, 1200
+
+    # Create window for profiling display
+    pygame.display.set_caption("OpenMV Profiler")
+    screen = pygame.display.set_mode((int(base_width * zoom_factor), 
+                                     int(base_height * zoom_factor)), pygame.DOUBLEBUF, 32)
+
 
     try:
-        while running:
-            # Read state
-            w, h, data, size, text, fmt, profiling = pyopenmv.read_state()
-    
-            if text is not None:
-                print(text, end="")
-    
-            # Read profiling data (maximum 10Hz)
-            if profiling and profile_type:
+        with OMVCamera(args.port, crc=args.crc, seq=args.seq, 
+                       ack=args.ack, events=args.events, timeout=args.timeout, max_retry=args.max_retry,
+                       max_payload=args.max_payload) as camera:
+            logging.info(f"Connected to OpenMV camera on {args.port}")
+
+            # Configure event counters for profiling
+            camera.profiler_event_type(0, 0x0039)  # CPU cycles 
+            camera.profiler_event_type(1, 0x0023)  # L1I cache access
+            camera.profiler_event_type(2, 0x0024)  # L1I cache refill
+            camera.profiler_event_type(3, 0x0001)  # L1I cache TLB refill
+            camera.profiler_event_type(4, 0x0003)  # L1D cache access
+            camera.profiler_event_type(5, 0xC102)  # L1D cache refill
+            camera.profiler_event_type(6, 0x02CC)  # L2D cache access
+            camera.profiler_event_type(7, 0xC303)  # L2D cache refill
+
+            camera.profiler_reset()
+
+            camera.stop()
+            camera.exec(script)
+            camera.streaming(True)
+            logging.info("Script executed, starting display...")
+
+            while True:
+                # Handle pygame events first to keep UI responsive
+                for event in pygame.event.get():
+                    if event.type == pygame.QUIT:
+                        raise KeyboardInterrupt
+                    elif event.type == pygame.KEYDOWN:
+                        profile_type, profile_mode, zoom_factor, screen = handle_key_events(
+                            event, camera, profile_type, profile_mode, zoom_factor, 
+                            base_width, base_height, screen, args)
+
+                # Read profiling data (maximum 10Hz)
                 current_time = time.time()
                 if current_time - last_profile_read >= 0.1:  # 10Hz = 0.1s interval
-                    tmp_data = pyopenmv.read_profile()
+                    tmp_data = camera.read_profile()
                     if tmp_data:
                         profile_data = tmp_data
                     last_profile_read = current_time
 
-            #if profile_data:
-            #    for r in profile_data:
-            #        print(f"Func: {addr_to_symbol(symbols, r['address'])}@0x{r['address']:x} ")
-            #        print(f"Call: {addr_to_symbol(symbols, r['caller'])}@0x{r['caller']:x}")
-            #    sys.exit(0)
+                # Clear screen
+                screen.fill((0, 0, 0))
 
-            if data is not None:
-                fps = fps_clock.get_fps()
-    
-                # Create image from RGB888
-                if not benchmark:
-                    image = pygame.image.frombuffer(data.flat[0:], (w, h), 'RGB')
-                    image = pygame.transform.smoothscale(image, (w * scale, h * scale))
-    
-                if screen is None:
-                    screen = pygame.display.set_mode((w * scale, h * scale), pygame.DOUBLEBUF, 32)
-    
-                # blit stuff
-                if benchmark:
-                    screen.fill((0, 0, 0))
-                else:
-                    screen.blit(image, (0, 0))
-                
-                # FPS text
-                fps_text = f"{fps:.2f} FPS {fps * size / 1024**2:.2f} MB/s {w}x{h} {fmt}"
-                screen.blit(font.render(fps_text, 5, (255, 0, 0)), (0, 0))
-                
                 # Draw profile overlay if enabled
-                if profile_type and profile_data:
-                    draw_profile_overlay(screen, w, h, profile_data, profile_mode, profile_type, scale, symbols)
-    
-                # update display
-                pygame.display.flip()
-                fps_clock.tick(1000//poll_rate)
-    
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                     running = False
-                elif event.type == pygame.KEYDOWN:
-                    if event.key == pygame.K_ESCAPE:
-                        running = False
-                    elif event.key == pygame.K_c:
-                        pygame.image.save(image, "capture.png")
-                    elif event.key == pygame.K_p:
-                        profile_type = (profile_type + 1) % 3
-                    elif event.key == pygame.K_m:
-                        profile_mode = not profile_mode
-                        pyopenmv.set_profile_mode(profile_mode)
-                    elif event.key == pygame.K_r:
-                        pyopenmv.reset_profiler()
+                if profile_data:
+                    screen_width, screen_height = screen.get_size()
+                    # Convert boolean to expected integer: True=1 (performance), False=2 (events)
+                    overlay_type = 1 if profile_type else 2
+                    draw_profile_overlay(screen, screen_width, screen_height,
+                                         profile_data, profile_mode, overlay_type, 1, symbols)
 
-            clock.tick(1000//poll_rate)
-            
+                # Update display
+                pygame.display.flip()
+
+                # Control main loop timing
+                clock.tick(1000//args.poll)
+
     except KeyboardInterrupt:
-        pass
-    
-    pygame.quit()
-    pyopenmv.stop_script()
+        logging.info("Interrupted by user")
+    except Exception as e:
+        logging.error(f"Error: {e}")
+        import traceback
+        logging.error(f"{traceback.format_exc()}")
+        sys.exit(1)
+    finally:
+        pygame.quit()
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='pyopenmv module')
-    parser.add_argument('--port', action = 'store', help='Serial port (dev/ttyACM0)', default='/dev/ttyACM0')
-    parser.add_argument("--script", action = "store", default=None, help = "Script file")
-    parser.add_argument('--poll', action = 'store', help='Poll rate (default 4ms)', default=4, type=int)
-    parser.add_argument('--bench', action = 'store_true', help='Run throughput benchmark.', default=False)
-    parser.add_argument('--scale', action = 'store', help='Set frame scaling factor (default 4x).', default=4, type=int)
-    parser.add_argument('--firmware', action = 'store', help='Firmware for address to symbol', default=None)
-
-    args = parser.parse_args()
-    if args.script is not None:
-        with open(args.script) as f:
-            args.script = f.read()
-    else:
-        args.script = bench_script if args.bench else test_script
-
-    symbols = []
-
-    if args.firmware:
-        from elftools.elf.elffile import ELFFile
-    
-        with open(args.firmware, 'rb') as f:
-            elf = ELFFile(f)
-            symtab = elf.get_section_by_name('.symtab')
-            if not symtab:
-                raise ValueError("No symbol table found in ELF.")
-    
-            for sym in symtab.iter_symbols():
-                addr = sym['st_value']
-                size = sym['st_size']
-                name = sym.name
-                if name and size > 0:  # ignore empty symbols
-                    symbols.append((addr, addr + size, name))
-
-        symbols.sort()
-
-    pygame_test(args.port, args.script, args.poll, args.scale, args.bench, symbols)
+    main()

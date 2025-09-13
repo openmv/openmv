@@ -79,6 +79,7 @@
 #include "omv_gpio.h"
 #include "omv_i2c.h"
 #include "omv_csi.h"
+#include "omv_protocol.h"
 #include "mp_utils.h"
 #include "framebuffer.h"
 
@@ -245,7 +246,6 @@ soft_reset:
     #if MICROPY_HW_ENABLE_SERVO
     servo_init();
     #endif
-    usbdbg_init();
     #if MICROPY_HW_ENABLE_SDCARD
     sdcard_init();
     #endif
@@ -297,6 +297,9 @@ soft_reset:
     mod_network_init();
     #endif
 
+    // Initialize OpenMV protocol
+    omv_protocol_init_default();
+
     // Execute _boot.py to set up the filesystem.
     pyexec_frozen_module("_boot.py", false);
 
@@ -326,55 +329,32 @@ soft_reset:
     }
     #endif
 
-    // Run boot.py script.
-    bool interrupted = mp_exec_bootscript("boot.py", true);
-
-    // Run main.py script on first soft-reset.
-    if (first_soft_reset && !interrupted && mp_vfs_import_stat("main.py")) {
-        mp_exec_bootscript("main.py", true);
-        goto soft_reset_exit;
+    // Run boot.py every reset and main.py on first soft-reset
+    if (pyexec_file_if_exists("boot.py") && first_soft_reset) {
+        pyexec_file_if_exists("main.py");
     }
 
-    // If there's no script ready, just re-exec REPL
-    while (!usbdbg_script_ready()) {
-        nlr_buf_t nlr;
+    // Enable Ctrl+C to interrupt script or REPL.
+    mp_hal_set_interrupt_char(CHAR_CTRL_C);
 
-        if (nlr_push(&nlr) == 0) {
-            // enable IDE interrupt
-            usbdbg_set_irq_enabled(true);
-
-            // run REPL
-            if (pyexec_mode_kind == PYEXEC_MODE_RAW_REPL) {
-                if (pyexec_raw_repl() != 0) {
-                    break;
-                }
-            } else {
-                if (pyexec_friendly_repl() != 0) {
-                    break;
-                }
-            }
-
-            nlr_pop();
-        }
+    while (!omv_protocol_exec_script()) {
+      nlr_buf_t nlr;
+      if (nlr_push(&nlr) == 0) {
+          if (pyexec_mode_kind == PYEXEC_MODE_RAW_REPL) {
+              if (pyexec_raw_repl() != 0) {
+                  break;
+              }
+          } else {
+              if (pyexec_friendly_repl() != 0) {
+                  break;
+              }
+          }
+          nlr_pop();
+      }
     }
 
-    if (usbdbg_script_ready()) {
-        nlr_buf_t nlr;
-        if (nlr_push(&nlr) == 0) {
-            // Enable IDE interrupts
-            usbdbg_set_irq_enabled(true);
-            // Execute the script.
-            pyexec_str(usbdbg_get_script(), true);
-            // Disable IDE interrupts
-            usbdbg_set_irq_enabled(false);
-            nlr_pop();
-        } else {
-            mp_obj_print_exception(MP_PYTHON_PRINTER, (mp_obj_t) nlr.ret_val);
-        }
-    }
-
-soft_reset_exit:
     // soft reset
+    mp_hal_set_interrupt_char(-1);
     mp_printf(MP_PYTHON_PRINTER, "MPY: soft reboot\n");
     #if MICROPY_PY_CSI
     omv_csi_abort_all(); 

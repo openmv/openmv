@@ -1,7 +1,7 @@
 /*
  * SPDX-License-Identifier: MIT
  *
- * Copyright (C) 2013-2024 OpenMV, LLC.
+ * Copyright (C) 2025 OpenMV, LLC.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -21,10 +21,35 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  *
- * Common MicroPython utility functions.
+ * OpenMV Protocol Queue Management
  */
-#ifndef __MP_UTILS_H__
-#define __MP_UTILS_H__
-typedef struct _fs_user_mount_t fs_user_mount_t;
-void mp_init_gc_stack(void *stack_start, void *stack_end, void *heap_start, void *heap_end, size_t stack_limit);
-#endif // __MP_UTILS_H__
+#ifndef __OMV_PROTOCOL_QUEUE_H__
+#define __OMV_PROTOCOL_QUEUE_H__
+
+#include <stdint.h>
+#include <stdbool.h>
+
+#define OMV_PROTOCOL_QUEUE_SIZE         (16)
+
+// Queue entry
+typedef struct {
+    uint8_t opcode;
+    uint8_t sequence;
+} omv_protocol_queue_entry_t;
+
+// Queue structure
+typedef struct {
+    omv_protocol_queue_entry_t entries[OMV_PROTOCOL_QUEUE_SIZE];
+    uint8_t head;
+    uint8_t tail;
+    uint8_t count;
+} omv_protocol_queue_t;
+
+// Queue management functions
+void omv_protocol_queue_reset(omv_protocol_queue_t *queue);
+bool omv_protocol_queue_check(omv_protocol_queue_t *queue, uint8_t opcode, uint8_t sequence);
+bool omv_protocol_queue_push(omv_protocol_queue_t *queue, uint8_t opcode, uint8_t sequence);
+bool omv_protocol_queue_pop(omv_protocol_queue_t *queue, uint8_t opcode, uint8_t sequence, bool seq_check);
+bool omv_protocol_queue_is_full(omv_protocol_queue_t *queue);
+
+#endif // __OMV_PROTOCOL_QUEUE_H__
