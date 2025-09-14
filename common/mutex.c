@@ -31,7 +31,9 @@ void mutex_init0(mutex_t *m) {
 }
 
 void mutex_lock(mutex_t *m, size_t tid) {
-    while (atomic_flag_test_and_set_explicit(&m->lock, memory_order_acquire));
+    while (atomic_flag_test_and_set_explicit(&m->lock, memory_order_acquire)) {
+
+    }
     atomic_store_explicit(&m->tid, tid, memory_order_release);
 }
 
@@ -53,8 +55,10 @@ bool mutex_try_lock_fair(mutex_t *m, size_t tid) {
     return false;
 }
 
-void mutex_unlock(mutex_t *m, size_t tid) {
+bool mutex_unlock(mutex_t *m, size_t tid) {
     if (atomic_load_explicit(&m->tid, memory_order_acquire) == tid) {
         atomic_flag_clear_explicit(&m->lock, memory_order_release);
+        return true;
     }
+    return false;
 }

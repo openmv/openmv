@@ -48,5 +48,5 @@ void mutex_lock(mutex_t *mutex, size_t tid);
 bool mutex_try_lock(mutex_t *mutex, size_t tid);
 // Prevents a thread from locking twice in a row.
 bool mutex_try_lock_fair(mutex_t *mutex, size_t tid);
-void mutex_unlock(mutex_t *mutex, size_t tid);
+bool mutex_unlock(mutex_t *mutex, size_t tid);
 #endif // __MUTEX_H__
