@@ -5,7 +5,9 @@ on:
     branches:
       - 'master'
     paths:
-      - '**/*.{c,cc,h}'
+      - '**/*.c'
+      - '**/*.cc'
+      - '**/*.h'
 
   pull_request:
     types:
@@ -16,7 +18,9 @@ on:
     branches:
       - 'master'
     paths:
-      - '**/*.{c,cc,h}'
+      - '**/*.c'
+      - '**/*.cc'
+      - '**/*.h'
 
 jobs:
   formatting-check:
@@ -27,6 +31,7 @@ jobs:
       with:
         submodules: false
         persist-credentials: false
+        fetch-depth: 0
 
     - name: '🔎 Check code formatting'
       uses: openmv/uncrustify-action@v1
