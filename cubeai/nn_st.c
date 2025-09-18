@@ -14,7 +14,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-static void crc_init(void) {
+static void crc_init(void)
+{
   CRC_HandleTypeDef hcrc;
 
   __HAL_RCC_CRC_CLK_ENABLE();
@@ -25,8 +26,7 @@ static void crc_init(void) {
   hcrc.Init.InputDataInversionMode = CRC_INPUTDATA_INVERSION_NONE;
   hcrc.Init.OutputDataInversionMode = CRC_OUTPUTDATA_INVERSION_DISABLE;
   hcrc.InputDataFormat = CRC_INPUTDATA_FORMAT_BYTES;
-  HAL_CRC_Init(&hcrc);
-}
+  HAL_CRC_Init(&hcrc);}
 
 AI_ALIGNED(4)
 static ai_float out_data[AI_NETWORK_OUT_1_SIZE];

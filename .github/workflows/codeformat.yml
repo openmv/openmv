@@ -31,7 +31,6 @@ jobs:
       with:
         submodules: false
         persist-credentials: false
-        fetch-depth: 0
 
     - name: '🔎 Check code formatting'
       uses: openmv/uncrustify-action@v1
