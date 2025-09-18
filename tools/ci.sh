@@ -76,45 +76,6 @@ ci_package_firmware_development() {
 }
 
 ########################################################################################
-# Install code formatter deps
-CODEFORMAT_PATH=${HOME}/cache/deps/
-UNCRUSTIFY_PATH=${CODEFORMAT_PATH}/uncrustify
-UNCRUSTIFY_URL="https://github.com/uncrustify/uncrustify/archive/uncrustify-0.75.0.tar.gz"
-
-ci_install_code_format_deps() {
-    sudo apt-get install wget cmake build-essential colordiff
-
-    mkdir -p ${UNCRUSTIFY_PATH}
-    wget --no-check-certificate -O - ${UNCRUSTIFY_URL} | tar xvz --strip-components=1 -C ${UNCRUSTIFY_PATH}
-    (cd ${UNCRUSTIFY_PATH} && mkdir build && cd build && cmake .. && cmake --build .)
-
-    # Copy binaries to cache
-    mkdir -p ${CODEFORMAT_PATH}/bin
-    cp ${UNCRUSTIFY_PATH}/build/uncrustify ${CODEFORMAT_PATH}/bin/
-    cp `which colordiff` ${CODEFORMAT_PATH}/bin/
-    chmod +x ${CODEFORMAT_PATH}/bin/uncrustify
-}
-
-########################################################################################
-# Run code formatter
-ci_run_code_format_check() {
-    export PATH=${CODEFORMAT_PATH}/bin:${PATH}
-    UNCRUSTIFY_CONFIG=tools/uncrustify.cfg
-
-    exit_code=0
-    for file in "$@"; do
-        file_fmt="${file}.tmp"
-        uncrustify -q -c ${UNCRUSTIFY_CONFIG} -f ${file} -o ${file_fmt} || true
-
-        diff -q -u ${file} ${file_fmt} >> /dev/null 2>&1 || {
-            colordiff -u ${file} ${file_fmt} || true
-            exit_code=1
-        }
-    done
-    exit $exit_code
-}
-
-########################################################################################
 # Install STEdgeAI tools
 STEDGEAI_URL="https://upload.openmv.io/stedgeai/STEdgeAI-2.1.0.tar.gz"
 STEDGEAI_SHA256="888e71715127ff6384e38fcde96eea28f53f8370b2bb9cf0d2f6f939001b350c"
