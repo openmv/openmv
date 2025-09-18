@@ -51,7 +51,8 @@
 
 #define AI_RELOC_ALIGNMENT      (32)
 
-typedef struct ml_backend_state {
+typedef struct ml_backend_state
+{
     void *exec_ram_addr;
     uint32_t exec_ram_size;
 
