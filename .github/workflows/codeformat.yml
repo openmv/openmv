@@ -15,7 +15,6 @@ on:
       - synchronize
     branches:
       - 'master'
-      - 'update_code_formatter'
     paths:
       - '**/*.{c,cc,h}'
 
@@ -46,4 +45,4 @@ jobs:
           scripts/**
           tools/**
         uncrustify-version: '0.75.0'
-        fail-on-error: 'true'
+        fail-on-error: true
