@@ -330,13 +330,15 @@ soft_reset:
     bool interrupted = mp_exec_bootscript("boot.py", true);
 
     // Run main.py script on first soft-reset.
-    if (first_soft_reset && !interrupted && mp_vfs_import_stat("main.py")) {
+    if (first_soft_reset && !interrupted && mp_vfs_import_stat("main.py"))
+        {
         mp_exec_bootscript("main.py", true);
         goto soft_reset_exit;
-    }
+}
 
     // If there's no script ready, just re-exec REPL
-    while (!usbdbg_script_ready()) {
+    while (!usbdbg_script_ready())
+    {
         nlr_buf_t nlr;
 
         if (nlr_push(&nlr) == 0) {
@@ -355,7 +357,7 @@ soft_reset:
             }
 
             nlr_pop();
-        }
+}
     }
 
     if (usbdbg_script_ready()) {

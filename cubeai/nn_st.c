@@ -14,7 +14,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-static void crc_init(void) {
+static void crc_init(void)
+{
   CRC_HandleTypeDef hcrc;
 
   __HAL_RCC_CRC_CLK_ENABLE();
