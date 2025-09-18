@@ -15,6 +15,7 @@ on:
       - synchronize
     branches:
       - 'master'
+      - 'update_code_formatter'
     paths:
       - '**/*.{c,cc,h}'
 
@@ -28,41 +29,21 @@ jobs:
         submodules: false
         persist-credentials: false
 
-    - name: '♻ Caching dependencies'
-      uses: actions/cache@v4.2.0
-      id: cache
-      with:
-        path: ~/cache/deps/bin
-        key: 'uncrustify'
-
-    - name: '🛠 Install dependencies'
-      if: steps.cache.outputs.cache-hit != 'true'
-      run: source tools/ci.sh && ci_install_code_format_deps
-
-    - name: '📜 Get list of changed files'
-      id: changed-files
-      uses: tj-actions/changed-files@v46
-      with:
-        files: |
-            **/*.{c,cc,h}
-            !cubeai/**
-            !docker/**
-            !docs/**
-            !drivers/**
-            drivers/sensors/*.{c,cc,h}
-            !lib/**
-            lib/imlib/*.{c,cc,h}
-            lib/tflm/*.{c,cc,h}
-            !scripts/**
-            !tools/**
-
-    - name: '📜 Show list of changed files'
-      run: |
-        echo "${{ toJSON(steps.changed-files.outputs) }}"
-      shell:
-        bash
-
     - name: '🔎 Check code formatting'
-      if: steps.changed-files.outputs.any_changed == 'true'
-      run: |
-        source tools/ci.sh && ci_run_code_format_check ${{ steps.changed-files.outputs.all_changed_files }}
+      uses: openmv/uncrustify-action@v1
+      with:
+        config-path: 'tools/uncrustify.cfg'
+        extensions: 'c,cc,h'
+        exclude-patterns: |
+          cubeai/**
+          docker/**
+          docs/**
+          drivers/**
+          !drivers/sensors/**
+          lib/**
+          !lib/imlib/**
+          !lib/tflm/**
+          scripts/**
+          tools/**
+        uncrustify-version: '0.75.0'
+        fail-on-error: 'true'
