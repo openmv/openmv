@@ -45,6 +45,7 @@ void __fatal_error(const char *);
 #define MICROPY_BOARD_FATAL_ERROR           __fatal_error
 
 #define MICROPY_WRAP_TUD_CDC_RX_CB(name)    __mp_ ## name
+#define MICROPY_WRAP_TUD_CDC_LINE_STATE_CB(name) __mp_ ## name
 #define MICROPY_WRAP_TUD_EVENT_HOOK_CB(name) __mp_ ## name
 
 #include <mpconfigport.h>
