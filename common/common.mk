@@ -33,11 +33,9 @@ COMMON_SRC_C += \
     omv_csi.c \
     omv_crc.c \
     pendsv.c \
-    tinyusb_debug.c \
     trace.c \
     umm_malloc.c \
     unaligned_memcpy.c \
-    usbdbg.c \
     vospi.c \
     queue.c \
     omv_profiler.c \
