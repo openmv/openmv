@@ -45,11 +45,11 @@ void framebuffer_init0() {
     // Reuse the last enabled flag after resetting the state.
     bool enabled = framebuffer_get(FB_STREAM_ID)->enabled;
 
-    // Initialize the main framebuffer. 
+    // Initialize the main framebuffer.
     framebuffer_init(framebuffer_get(FB_MAINFB_ID), &_fb_memory_start,
                      &_fb_memory_end - &_fb_memory_start, false, true);
 
-    // Initialize the streaming buffer. 
+    // Initialize the streaming buffer.
     framebuffer_init(framebuffer_get(FB_STREAM_ID), &_sb_memory_start,
                      &_sb_memory_end - &_sb_memory_start, false, enabled);
 
@@ -85,10 +85,10 @@ void framebuffer_to_image(framebuffer_t *fb, image_t *img) {
         img->h = fb->h;
         img->size = fb->size;
         img->pixfmt = fb->pixfmt;
-        
+
         // For streaming buffers (no queues), use raw_base directly
         if (fb->used_queue == NULL) {
-            img->pixels = (uint8_t *)fb->raw_base;
+            img->pixels = (uint8_t *) fb->raw_base;
         } else {
             vbuffer_t *buffer = framebuffer_acquire(fb, FB_FLAG_USED | FB_FLAG_PEEK);
             img->pixels = (buffer == NULL) ? NULL : buffer->data;
@@ -144,7 +144,7 @@ void framebuffer_flush(framebuffer_t *fb) {
         queue_flush(fb->used_queue);
     }
 
-    for (size_t i=0; i<fb->buf_count; i++) {
+    for (size_t i = 0; i < fb->buf_count; i++) {
         vbuffer_t *buffer = framebuffer_pool_get(fb, i);
 
         // Reset the buffer's state.
@@ -275,8 +275,8 @@ void framebuffer_update_preview(image_t *src) {
     }
 
     // Reserve space for header at the beginning
-    framebuffer_header_t *header = (framebuffer_header_t *)fb->raw_base;
-    uint8_t *frame_data = (uint8_t *)fb->raw_base + sizeof(framebuffer_header_t);
+    framebuffer_header_t *header = (framebuffer_header_t *) fb->raw_base;
+    uint8_t *frame_data = (uint8_t *) fb->raw_base + sizeof(framebuffer_header_t);
     size_t available_size = fb->raw_size - sizeof(framebuffer_header_t);
 
     if (src->is_compressed) {
@@ -305,7 +305,7 @@ void framebuffer_update_preview(image_t *src) {
         // Down-scale the frame (if necessary) and send the raw frame.
         dst.size = src->bpp;
         dst.pixfmt = src->pixfmt;
-        if (image_size(&dst) <= available_size) {
+        if (src->w <= fb->raw_w && src->h <= fb->raw_h && image_size(&dst) <= available_size) {
             memcpy(dst.pixels, src->pixels, image_size(src));
         } else {
             float scale = IM_MIN((fb->raw_w / (float) src->w),
@@ -359,7 +359,7 @@ exit_cleanup:
     header->height = fb->h;
     header->pixfmt = fb->pixfmt;
     header->size = fb->is_compressed ? fb->size : fb->bpp;
-    
+
     // Unlock the streaming buffer.
     mutex_unlock(&fb->lock, MUTEX_TID_OMV);
 }
