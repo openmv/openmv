@@ -90,3 +90,13 @@ void mp_init_gc_stack(void *sstack, void *estack, void *heap_start, void *heap_e
     }
     #endif
 }
+
+void mp_handle_pending_restore(void) {
+    bool vm_abort = MP_STATE_VM(vm_abort);
+    mp_obj_t exc_obj = MP_STATE_THREAD(mp_pending_exception);
+
+    mp_handle_pending(false);
+
+    MP_STATE_VM(vm_abort) = vm_abort;
+    MP_STATE_THREAD(mp_pending_exception) = exc_obj;
+}
