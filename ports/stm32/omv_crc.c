@@ -31,43 +31,66 @@
 static CRC_HandleTypeDef hcrc = {0};
 static bool crc_initialized = false;
 
-void omv_crc_init(void) {
+static void omv_crc_init(void) {
     hcrc.Instance = CRC;
+    hcrc.InputDataFormat = CRC_INPUTDATA_FORMAT_BYTES;
     hcrc.Init.DefaultPolynomialUse = DEFAULT_POLYNOMIAL_DISABLE;
-    hcrc.Init.GeneratingPolynomial = OMV_CRC_POLY;
     hcrc.Init.DefaultInitValueUse = DEFAULT_INIT_VALUE_DISABLE;
-    hcrc.Init.InitValue = OMV_CRC_INIT;
-    hcrc.Init.CRCLength = CRC_POLYLENGTH_16B;
     hcrc.Init.InputDataInversionMode = CRC_INPUTDATA_INVERSION_NONE;
     hcrc.Init.OutputDataInversionMode = CRC_OUTPUTDATA_INVERSION_DISABLE;
-    hcrc.InputDataFormat = CRC_INPUTDATA_FORMAT_BYTES;
+    hcrc.Init.CRCLength = CRC_POLYLENGTH_32B;
+    hcrc.Init.InitValue = OMV_CRC32_INIT;
+    hcrc.Init.GeneratingPolynomial = OMV_CRC32_POLY;
 
     HAL_CRC_Init(&hcrc);
     crc_initialized = true;
 }
 
-omv_crc_t omv_crc_start(const void *buf, size_t size) {
+uint16_t omv_crc16_start(const void *buf, size_t len) {
     if (!crc_initialized) {
         omv_crc_init();
     }
 
-    if (size == 0) {
-        return OMV_CRC_INIT;
+    // Set CRC16 polynomial and length directly
+    WRITE_REG(hcrc.Instance->POL, OMV_CRC16_POLY);
+    MODIFY_REG(hcrc.Instance->CR, CRC_CR_POLYSIZE, CRC_POLYLENGTH_16B);
+
+    if (len == 0) {
+        return OMV_CRC16_INIT;
     }
 
-    return (omv_crc_t) HAL_CRC_Calculate(&hcrc, (uint32_t *)buf, size);
+    return (uint16_t) HAL_CRC_Calculate(&hcrc, (uint32_t *) buf, len);
 }
 
-omv_crc_t omv_crc_update(omv_crc_t crc, const void *buf, size_t size) {
-    if (!crc_initialized) {
-        omv_crc_init();
-    }
-
-    if (size == 0) {
+uint16_t omv_crc16_update(uint16_t crc, const void *buf, size_t len) {
+    if (len == 0) {
         return crc;
     }
 
-    return (omv_crc_t) HAL_CRC_Accumulate(&hcrc, (uint32_t *)buf, size);
+    return (uint16_t) HAL_CRC_Accumulate(&hcrc, (uint32_t *) buf, len);
+}
+
+uint32_t omv_crc32_start(const void *buf, size_t len) {
+    if (!crc_initialized) {
+        omv_crc_init();
+    }
+
+    // Set CRC32 polynomial and length directly
+    WRITE_REG(hcrc.Instance->POL, OMV_CRC32_POLY);
+    MODIFY_REG(hcrc.Instance->CR, CRC_CR_POLYSIZE, CRC_POLYLENGTH_32B);
+
+    if (len == 0) {
+        return OMV_CRC32_INIT;
+    }
+
+    return HAL_CRC_Calculate(&hcrc, (uint32_t *) buf, len);
+}
+
+uint32_t omv_crc32_update(uint32_t crc, const void *buf, size_t len) {
+    if (len == 0) {
+        return crc;
+    }
+    return HAL_CRC_Accumulate(&hcrc, (uint32_t *) buf, len);
 }
 
 #endif // STM32F7 || STM32H7 || STM32N6
