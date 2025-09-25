@@ -93,19 +93,19 @@ int omv_spi_transfer_start(omv_spi_t *spi, omv_spi_transfer_t *xfer) {
     if (xfer->flags & OMV_SPI_XFER_BLOCKING) {
         volatile uint32_t *dr = spi->inst->SPI_DR;
         spi_set_tmod(spi->inst, SPI_TMOD_TX_AND_RX);
-        
+
         size_t tx_sent = 0;
         size_t rx_received = 0;
-        
+
         // FIFO depth is 16 words
         const size_t rx_threshold = (SPI_RX_FIFO_DEPTH - 1);
-        
+
         while (rx_received < xfer->size) {
             // Fill TX FIFO as much as possible without causing RX overflow
-            while (tx_sent < xfer->size && 
+            while (tx_sent < xfer->size &&
                    (tx_sent - rx_received) < rx_threshold &&
                    (spi->inst->SPI_SR & SPI_SR_TFNF)) {
-                
+
                 // Send data
                 if (xfer->txbuf == NULL) {
                     *dr = 0xFFFFFFFFU;
@@ -118,11 +118,11 @@ int omv_spi_transfer_start(omv_spi_t *spi, omv_spi_transfer_t *xfer) {
                 }
                 tx_sent++;
             }
-            
+
             // Receive available data
             while (rx_received < tx_sent &&
                    (spi->inst->SPI_SR & SPI_SR_RFNE)) {
-                
+
                 if (xfer->rxbuf == NULL) {
                     (void) *dr;
                 } else if (spi->datasize > 16) {
@@ -134,7 +134,7 @@ int omv_spi_transfer_start(omv_spi_t *spi, omv_spi_transfer_t *xfer) {
                 }
                 rx_received++;
             }
-            
+
             // If we're not making progress, use blocking wait
             if (tx_sent < xfer->size && (tx_sent - rx_received) >= rx_threshold) {
                 // Wait for RX data to free up space
@@ -152,8 +152,11 @@ int omv_spi_transfer_start(omv_spi_t *spi, omv_spi_transfer_t *xfer) {
                     return -1;
                 }
             }
+
+            // Handle pending events
+            mp_event_handle_nowait();
         }
-        
+
         return 0;
     }
     return -1;
