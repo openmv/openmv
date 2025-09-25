@@ -25,46 +25,78 @@
 #include "global_map.h"
 #include "omv_crc.h"
 
-#define CRC0 ((CRC_Type *)CRC0_BASE)
+// There seems to be a mismatch between how the Alif HW CRC32 algorithm
+// works and the other HW CRCs and the software implementation.
+// Just leaving this here just in case it works on a different series.
+#if 0
+#define CRC0 ((CRC_Type *) CRC0_BASE)
 
-static bool crc_initialized = false;
+static bool crc32_initialized = false;
+static void crc_calculate(CRC_Type *crc, const void *buf, uint32_t len, uint32_t *value);
 
-void omv_crc_init(void) {   
-    crc_clear_config(CRC0);
-    crc_enable_16bit(CRC0);
-    crc_enable_custom_poly(CRC0);
-    crc_set_custom_poly(CRC0, OMV_CRC_POLY);
-    crc_set_seed(CRC0, OMV_CRC_INIT);
-    crc_enable(CRC0);
-    crc_initialized = true;
+static void omv_crc32_init(void) {
+    CRC0->CRC_CONTROL = CRC_32C |
+                        CRC_CUSTOM_POLY |
+                        CRC_ALGO_32_BIT_SIZE;
+    CRC0->CRC_SEED = OMV_CRC32_INIT;
+    CRC0->CRC_POLY_CUSTOM = OMV_CRC32_POLY;
+    crc32_initialized = true;
 }
 
-omv_crc_t omv_crc_start(const void *buf, size_t size) {
-    if (!crc_initialized) {
-        omv_crc_init();
+uint32_t omv_crc32_start(const void *buf, size_t len) {
+    uint32_t result = OMV_CRC32_INIT;
+
+    if (!crc32_initialized) {
+        omv_crc32_init();
     }
-    
-    if (size == 0) {
-        return OMV_CRC_INIT;
+
+    if (len == 0) {
+        return OMV_CRC32_INIT;
     }
-   
-    uint32_t result = 0;
-    crc_calculate_16bit(CRC0, buf, size, &result);
-    return (omv_crc_t)result;
+
+    crc_calculate(CRC0, buf, len, &result);
+    return result;
 }
 
-omv_crc_t omv_crc_update(omv_crc_t crc, const void *buf, size_t size) {
-    if (!crc_initialized) {
-        omv_crc_init();
+uint32_t omv_crc32_update(uint32_t crc, const void *buf, size_t len) {
+    uint32_t result = crc;
+
+    if (!crc32_initialized) {
+        omv_crc32_init();
     }
 
-    if (size == 0) {
+    if (len == 0) {
         return crc;
     }
 
-    // Set current CRC value and calculate incrementally
-    crc_set_seed(CRC0, crc);
-    uint32_t result = 0;
-    crc_calculate_16bit(CRC0, buf, size, &result);
-    return (omv_crc_t)result;
+    crc_calculate(CRC0, buf, len, &result);
+    return result;
 }
+
+static void crc_calculate(CRC_Type *crc, const void *buf, uint32_t len, uint32_t *value) {
+    const uint8_t *data = (const uint8_t *) buf;
+
+    if ((len % 4) == 0) {
+        // Use hardware only if length is multiple of 4
+        crc->CRC_SEED = *value;
+        crc->CRC_CONTROL |= CRC_INIT_BIT;
+
+        // Hardware path - process all data as 32-bit words
+        const uint32_t *data32 = (const uint32_t *) data;
+        for (uint32_t i = 0; i < len / 4; i++) {
+            crc->CRC_DATA_IN_32_0 = data32[i];
+        }
+        *value = crc->CRC_OUT;
+    } else {
+        // Software path - use lookup table
+        uint32_t result = *value;
+        extern const uint32_t crc32_table[256];
+
+        for (uint32_t i = 0; i < len; i++) {
+            uint8_t index = (result >> 24) ^ data[i];
+            result = (result << 8) ^ crc32_table[index];
+        }
+        *value = result;
+    }
+}
+#endif
