@@ -294,10 +294,19 @@ void HAL_MspInit(void) {
         { RIF_MASTER_INDEX_DCMIPP, RIF_RISC_PERIPH_INDEX_DCMIPP },
         { RIF_MASTER_INDEX_DCMIPP, RIF_RISC_PERIPH_INDEX_CSI },
     };
-    
+
     for (int i = 0; i < sizeof(rif_config_pairs) / sizeof(rif_config_pairs[0]); i++) {
         HAL_RIF_RIMC_ConfigMasterAttributes(rif_config_pairs[i][0], &RIMC_master);
         HAL_RIF_RISC_SetSlaveSecureAttributes(rif_config_pairs[i][1], RIF_ATTRIBUTE_SEC | RIF_ATTRIBUTE_PRIV);
+    }
+
+    // Array of peripheral indexes [periph_index]
+    static const uint32_t rif_periph_indexes[] = {
+        RIF_RISC_PERIPH_INDEX_ADC12
+    };
+
+    for (int i = 0; i < sizeof(rif_periph_indexes) / sizeof(rif_periph_indexes[0]); i++) {
+        HAL_RIF_RISC_SetSlaveSecureAttributes(rif_periph_indexes[i], RIF_ATTRIBUTE_SEC | RIF_ATTRIBUTE_PRIV);
     }
     #endif
 }
