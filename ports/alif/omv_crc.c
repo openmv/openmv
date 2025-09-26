@@ -28,8 +28,6 @@
 #define CRC0 ((CRC_Type *) CRC0_BASE)
 
 static bool crc32_initialized = false;
-extern const uint32_t crc32_table[256];
-
 static void crc_calculate(CRC_Type *crc, const void *buf, uint32_t len, uint32_t *value);
 
 static void omv_crc32_init(void) {
@@ -89,14 +87,20 @@ static void crc_calculate(CRC_Type *crc, const void *buf, uint32_t len, uint32_t
         *value = crc->CRC_OUT;
     }
 
-    // Process remaining bytes using software CRC with lookup table
+    // Process remaining bytes using software CRC calculation
     if (remainder > 0) {
         uint32_t result = *value;
         const uint8_t *remaining_data = data + aligned_len;
 
         for (uint32_t i = 0; i < remainder; i++) {
-            uint8_t index = (result >> 24) ^ remaining_data[i];
-            result = (result << 8) ^ crc32_table[index];
+            result ^= (uint32_t) remaining_data[i] << 24;
+            for (int bit = 0; bit < 8; bit++) {
+                if (result & 0x80000000) {
+                    result = (result << 1) ^ OMV_CRC32_POLY;
+                } else {
+                    result <<= 1;
+                }
+            }
         }
         *value = result;
     }
