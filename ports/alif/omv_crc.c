@@ -25,17 +25,16 @@
 #include "global_map.h"
 #include "omv_crc.h"
 
-// There seems to be a mismatch between how the Alif HW CRC32 algorithm
-// works and the other HW CRCs and the software implementation.
-// Just leaving this here just in case it works on a different series.
-#if 0
 #define CRC0 ((CRC_Type *) CRC0_BASE)
 
 static bool crc32_initialized = false;
+extern const uint32_t crc32_table[256];
+
 static void crc_calculate(CRC_Type *crc, const void *buf, uint32_t len, uint32_t *value);
 
 static void omv_crc32_init(void) {
     CRC0->CRC_CONTROL = CRC_32C |
+                        CRC_BYTE_SWAP |
                         CRC_CUSTOM_POLY |
                         CRC_ALGO_32_BIT_SIZE;
     CRC0->CRC_SEED = OMV_CRC32_INIT;
@@ -75,28 +74,30 @@ uint32_t omv_crc32_update(uint32_t crc, const void *buf, size_t len) {
 
 static void crc_calculate(CRC_Type *crc, const void *buf, uint32_t len, uint32_t *value) {
     const uint8_t *data = (const uint8_t *) buf;
+    uint32_t aligned_len = len & ~3U;  // Length aligned to 4 bytes
+    uint32_t remainder = len & 3U;     // Remaining bytes
 
-    if ((len % 4) == 0) {
-        // Use hardware only if length is multiple of 4
+    // Process aligned part (multiple of 4 bytes) with hardware
+    if (aligned_len > 0) {
         crc->CRC_SEED = *value;
         crc->CRC_CONTROL |= CRC_INIT_BIT;
 
-        // Hardware path - process all data as 32-bit words
         const uint32_t *data32 = (const uint32_t *) data;
-        for (uint32_t i = 0; i < len / 4; i++) {
+        for (uint32_t i = 0; i < aligned_len / 4; i++) {
             crc->CRC_DATA_IN_32_0 = data32[i];
         }
         *value = crc->CRC_OUT;
-    } else {
-        // Software path - use lookup table
-        uint32_t result = *value;
-        extern const uint32_t crc32_table[256];
+    }
 
-        for (uint32_t i = 0; i < len; i++) {
-            uint8_t index = (result >> 24) ^ data[i];
+    // Process remaining bytes using software CRC with lookup table
+    if (remainder > 0) {
+        uint32_t result = *value;
+        const uint8_t *remaining_data = data + aligned_len;
+
+        for (uint32_t i = 0; i < remainder; i++) {
+            uint8_t index = (result >> 24) ^ remaining_data[i];
             result = (result << 8) ^ crc32_table[index];
         }
         *value = result;
     }
 }
-#endif
