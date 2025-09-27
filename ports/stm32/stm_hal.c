@@ -43,6 +43,8 @@
 #define MEMATTR_NORMAL_NCACHE      0
 #define MEMATTR_NORMAL_WB_RA_WA    1
 
+#define RIF_MASTER_INDEX_NONE ((uint32_t) -1)
+
 extern uint32_t omv_exti_get_gpio(uint32_t line);
 
 void HAL_MspInit(void) {
@@ -283,20 +285,23 @@ void HAL_MspInit(void) {
     };
 
     // Array of master/peripheral index pairs [master_index, periph_index]
-    static const uint32_t rif_config_pairs[][2] = {
-        { RIF_MASTER_INDEX_NPU,    RIF_RISC_PERIPH_INDEX_NPU },
-        { RIF_MASTER_INDEX_OTG1,   RIF_RISC_PERIPH_INDEX_OTG1HS },
-        { RIF_MASTER_INDEX_DMA2D,  RIF_RISC_PERIPH_INDEX_DMA2D },
-        { RIF_MASTER_INDEX_GPU2D,  RIF_RISC_PERIPH_INDEX_GPU2D },
-        { RIF_MASTER_INDEX_VENC,   RIF_RISC_PERIPH_INDEX_VENC },
-        { RIF_MASTER_INDEX_SDMMC1, RIF_RISC_PERIPH_INDEX_SDMMC1 },
-        { RIF_MASTER_INDEX_SDMMC2, RIF_RISC_PERIPH_INDEX_SDMMC2 },
-        { RIF_MASTER_INDEX_DCMIPP, RIF_RISC_PERIPH_INDEX_DCMIPP },
-        { RIF_MASTER_INDEX_DCMIPP, RIF_RISC_PERIPH_INDEX_CSI },
+    const uint32_t rif_config_pairs[][2] = {
+        { RIF_MASTER_INDEX_NPU,     RIF_RISC_PERIPH_INDEX_NPU },
+        { RIF_MASTER_INDEX_OTG1,    RIF_RISC_PERIPH_INDEX_OTG1HS },
+        { RIF_MASTER_INDEX_DMA2D,   RIF_RISC_PERIPH_INDEX_DMA2D },
+        { RIF_MASTER_INDEX_GPU2D,   RIF_RISC_PERIPH_INDEX_GPU2D },
+        { RIF_MASTER_INDEX_VENC,    RIF_RISC_PERIPH_INDEX_VENC },
+        { RIF_MASTER_INDEX_SDMMC1,  RIF_RISC_PERIPH_INDEX_SDMMC1 },
+        { RIF_MASTER_INDEX_SDMMC2,  RIF_RISC_PERIPH_INDEX_SDMMC2 },
+        { RIF_MASTER_INDEX_DCMIPP,  RIF_RISC_PERIPH_INDEX_DCMIPP },
+        { RIF_MASTER_INDEX_NONE,    RIF_RISC_PERIPH_INDEX_CSI },
+        { RIF_MASTER_INDEX_NONE,    RIF_RISC_PERIPH_INDEX_ADC12 },
     };
-    
+
     for (int i = 0; i < sizeof(rif_config_pairs) / sizeof(rif_config_pairs[0]); i++) {
-        HAL_RIF_RIMC_ConfigMasterAttributes(rif_config_pairs[i][0], &RIMC_master);
+        if (rif_config_pairs[i][0] != RIF_MASTER_INDEX_NONE) {
+            HAL_RIF_RIMC_ConfigMasterAttributes(rif_config_pairs[i][0], &RIMC_master);
+        }
         HAL_RIF_RISC_SetSlaveSecureAttributes(rif_config_pairs[i][1], RIF_ATTRIBUTE_SEC | RIF_ATTRIBUTE_PRIV);
     }
     #endif
