@@ -156,7 +156,7 @@ static int set_framesize(omv_csi_t *csi, omv_csi_framesize_t framesize) {
         if (framesize == OMV_CSI_FRAMESIZE_CUSTOM &&
             csi->resolution[framesize][0] == ACTIVE_SENSOR_WIDTH &&
             csi->resolution[framesize][1] == ACTIVE_SENSOR_HEIGHT) {
-                return 0;
+            return 0;
         }
         return (framesize == OMV_CSI_FRAMESIZE_320X320) ? 0 : -1;
     } else {
@@ -520,7 +520,7 @@ static int ioctl(omv_csi_t *csi, int request, va_list ap) {
                     }
                 } else {
                     uint32_t len = csi->resolution[csi->framesize][0] *
-                                  (csi->resolution[csi->framesize][1] / sizeof(uint32_t));
+                                   (csi->resolution[csi->framesize][1] / sizeof(uint32_t));
                     for (uint32_t j = 0; j < len; j++) {
                         uint32_t val = ((uint32_t *) image.data)[j];
                         switch (__EVT20_TYPE(val)) {

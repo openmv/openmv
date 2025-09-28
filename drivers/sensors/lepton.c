@@ -192,7 +192,7 @@ static int ioctl(omv_csi_t *csi, int request, va_list ap) {
         }
         case OMV_CSI_IOCTL_LEPTON_GET_RESOLUTION: {
             int *resolution = va_arg(ap, int *);
-            *resolution =  lepton.radiometry ? 16 : 14;
+            *resolution = lepton.radiometry ? 16 : 14;
             break;
         }
         case OMV_CSI_IOCTL_LEPTON_RUN_COMMAND: {
@@ -411,7 +411,7 @@ static int snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
         if (!vospi_active()) {
             vospi_restart();
         }
-    
+
         if ((buffer = framebuffer_acquire(csi->fb, FB_FLAG_USED | FB_FLAG_PEEK))) {
             break;
         }
@@ -430,7 +430,7 @@ static int snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
             if (lepton_config(csi, lepton.measurement_mode, lepton.high_temp_mode) != 0) {
                 return OMV_CSI_ERROR_CTL_FAILED;
             }
-            
+
             tick_start = mp_hal_ticks_ms();
         }
     }
@@ -439,7 +439,7 @@ static int snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
     fb->h = csi->transpose ? fb->u : fb->v;
     fb->pixfmt = csi->pixformat;
 
-    image_t fb_image; 
+    image_t fb_image;
     framebuffer_to_image(fb, &fb_image);
 
     LEP_SYS_FPA_TEMPERATURE_KELVIN_T kelvin;
@@ -448,7 +448,7 @@ static int snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
             return OMV_CSI_ERROR_IO_ERROR;
         }
     }
-    
+
     fb_alloc_mark();
     image_t temp = {
         .w = csi->transpose ? lepton.v_res : lepton.h_res,

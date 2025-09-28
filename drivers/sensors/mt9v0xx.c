@@ -47,8 +47,7 @@ static int16_t readout_y = 0;
 
 static enum {
     MONO_CFA, RCCC_CFA, BAYER_CFA
-}
-cfa_type = MONO_CFA;
+} cfa_type = MONO_CFA;
 
 static bool is_mt9v0x2(omv_csi_t *csi) {
     return (csi->chip_id == MT9V0X2_ID) || (csi->chip_id == MT9V0X2_C_ID);

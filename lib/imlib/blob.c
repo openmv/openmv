@@ -27,8 +27,7 @@
 
 typedef struct xylr {
     int16_t x, y, l, r, t_l, b_l;
-}
-xylr_t;
+} xylr_t;
 
 static float sign(float x) {
     return x / fabsf(x);

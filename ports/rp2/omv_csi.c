@@ -181,11 +181,11 @@ static int rp2_csi_snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
         channel_config_set_bswap(&c, csi->rgb_swap && (fb->bpp == 2));
 
         dma_channel_configure(OMV_CSI_DMA_CHANNEL, &c,
-                (uint32_t *) buffer->data, // Destinatinon pointer.
-                &OMV_CSI_PIO->rxf[OMV_CSI_SM], // Source pointer.
-                (fb->u * fb->v * fb->bpp) >> 2, // Number of transfers in words.
-                true      // Start immediately, will block on SM.
-                );
+                              (uint32_t *) buffer->data, // Destinatinon pointer.
+                              &OMV_CSI_PIO->rxf[OMV_CSI_SM], // Source pointer.
+                              (fb->u * fb->v * fb->bpp) >> 2, // Number of transfers in words.
+                              true // Start immediately, will block on SM.
+                              );
 
         // Re-enable DMA IRQs.
         dma_irqn_set_channel_enabled(OMV_CSI_DMA, OMV_CSI_DMA_CHANNEL, true);

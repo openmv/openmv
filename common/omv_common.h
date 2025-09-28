@@ -45,10 +45,10 @@
 #endif
 
 #define OMV_ALIGN_TO(x, alignment) \
-    ((((uintptr_t)(x)) + (alignment) - 1) & ~((uintptr_t)((alignment) - 1)))
+    ((((uintptr_t) (x)) + (alignment) - 1) & ~((uintptr_t) ((alignment) - 1)))
 
 #define OMV_ALIGN_DOWN(x, alignment) \
-    ((uintptr_t)(x) & ~((uintptr_t)(alignment) - 1))
+    ((uintptr_t) (x) & ~((uintptr_t) (alignment) - 1))
 
 #define check_timeout_ms(start_ms, timeout) \
     ((mp_hal_ticks_ms() - start_ms) > timeout)
@@ -88,5 +88,5 @@
 // type: Type of the containing structure
 // member: Name of the member within the structure
 #define OMV_CONTAINER_OF(ptr, type, member) \
-    ((type *)((char *)(ptr) - offsetof(type, member)))
+    ((type *) ((char *) (ptr) - offsetof(type, member)))
 #endif //__OMV_COMMON_H__

@@ -418,7 +418,7 @@ void usbdbg_control(void *buffer, uint8_t request, uint32_t size) {
             xfer_offs = 0;
             xfer_size = size;
             break;
-        
+
         case USBDBG_SCRIPT_STOP:
             if (script_running) {
                 // Reset CDC buffers.

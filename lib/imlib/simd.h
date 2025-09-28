@@ -54,8 +54,8 @@ typedef uint8x16_t v128_u8_t;
 typedef int16x8_t  v128_s16_t;
 typedef uint16x8_t v128_u16_t;
 
-typedef int32x4_t  v128_s32_t;
-typedef uint32x4_t v128_u32_t;
+typedef int32x4_t   v128_s32_t;
+typedef uint32x4_t  v128_u32_t;
 typedef float32x4_t v128_f32_t;
 
 #if (VECTOR_SIZE_BYTES >= 8)
@@ -71,8 +71,8 @@ typedef uint8_t v128_u8_t __attribute__ ((vector_size(VECTOR_SIZE_BYTES)));
 typedef int16_t  v128_s16_t __attribute__ ((vector_size(VECTOR_SIZE_BYTES)));
 typedef uint16_t v128_u16_t __attribute__ ((vector_size(VECTOR_SIZE_BYTES)));
 
-typedef int32_t  v128_s32_t __attribute__ ((vector_size(VECTOR_SIZE_BYTES)));
-typedef uint32_t v128_u32_t __attribute__ ((vector_size(VECTOR_SIZE_BYTES)));
+typedef int32_t   v128_s32_t __attribute__ ((vector_size(VECTOR_SIZE_BYTES)));
+typedef uint32_t  v128_u32_t __attribute__ ((vector_size(VECTOR_SIZE_BYTES)));
 typedef float32_t v128_f32_t __attribute__ ((vector_size(VECTOR_SIZE_BYTES)));
 
 #if (VECTOR_SIZE_BYTES >= 8)
@@ -1357,10 +1357,18 @@ static inline v4x_rows_t vcvt_u8_f32(v128_t v0) {
     };
     #else
     return (v4x_rows_t) {
-        .r0 = (v128_t) { .f32 = { (float32_t) v0.u8[0] } },
-        .r1 = (v128_t) { .f32 = { (float32_t) v0.u8[1] } },
-        .r2 = (v128_t) { .f32 = { (float32_t) v0.u8[2] } },
-        .r3 = (v128_t) { .f32 = { (float32_t) v0.u8[3] } }
+        .r0 = (v128_t) {
+            .f32 = { (float32_t) v0.u8[0] }
+        },
+        .r1 = (v128_t) {
+            .f32 = { (float32_t) v0.u8[1] }
+        },
+        .r2 = (v128_t) {
+            .f32 = { (float32_t) v0.u8[2] }
+        },
+        .r3 = (v128_t) {
+            .f32 = { (float32_t) v0.u8[3] }
+        }
     };
     #endif
 }
@@ -1377,10 +1385,18 @@ static inline v4x_rows_t vcvt_s8_f32(v128_t v0) {
     };
     #else
     return (v4x_rows_t) {
-        .r0 = (v128_t) { .f32 = { (float32_t) v0.s8[0] } },
-        .r1 = (v128_t) { .f32 = { (float32_t) v0.s8[1] } },
-        .r2 = (v128_t) { .f32 = { (float32_t) v0.s8[2] } },
-        .r3 = (v128_t) { .f32 = { (float32_t) v0.s8[3] } }
+        .r0 = (v128_t) {
+            .f32 = { (float32_t) v0.s8[0] }
+        },
+        .r1 = (v128_t) {
+            .f32 = { (float32_t) v0.s8[1] }
+        },
+        .r2 = (v128_t) {
+            .f32 = { (float32_t) v0.s8[2] }
+        },
+        .r3 = (v128_t) {
+            .f32 = { (float32_t) v0.s8[3] }
+        }
     };
     #endif
 }
@@ -1393,8 +1409,12 @@ static inline v2x_rows_t vcvt_u16_f32(v128_t v0) {
     };
     #else
     return (v2x_rows_t) {
-        .r0 = (v128_t) { .f32 = { (float32_t) v0.u16[0] } },
-        .r1 = (v128_t) { .f32 = { (float32_t) v0.u16[1] } }
+        .r0 = (v128_t) {
+            .f32 = { (float32_t) v0.u16[0] }
+        },
+        .r1 = (v128_t) {
+            .f32 = { (float32_t) v0.u16[1] }
+        }
     };
     #endif
 }
@@ -1407,8 +1427,12 @@ static inline v2x_rows_t vcvt_s16_f32(v128_t v0) {
     };
     #else
     return (v2x_rows_t) {
-        .r0 = (v128_t) { .f32 = { (float32_t) v0.s16[0] } },
-        .r1 = (v128_t) { .f32 = { (float32_t) v0.s16[1] } }
+        .r0 = (v128_t) {
+            .f32 = { (float32_t) v0.s16[0] }
+        },
+        .r1 = (v128_t) {
+            .f32 = { (float32_t) v0.s16[1] }
+        }
     };
     #endif
 }

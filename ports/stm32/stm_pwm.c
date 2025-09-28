@@ -12,11 +12,11 @@ typedef struct _tim_info {
 
 static uint32_t stm_tim_get_source_clock(TIM_TypeDef *inst) {
     uint32_t source = 0;
-    #if defined (STM32F4) || defined(STM32F7) || defined(STM32H7)
+    #if defined(STM32F4) || defined(STM32F7) || defined(STM32H7)
     uintptr_t base = ((uintptr_t) inst) & 0xFFFF0000u;
     #endif
 
-    #if defined (STM32F4) || defined(STM32F7)
+    #if defined(STM32F4) || defined(STM32F7)
     // Timer clock on F4, F7, H7 == APBx * 2.
     if (base == APB1PERIPH_BASE) {
         source = HAL_RCC_GetPCLK1Freq() * 2;
@@ -38,7 +38,7 @@ static uint32_t stm_tim_get_source_clock(TIM_TypeDef *inst) {
 }
 
 static void stm_tim_calc_period_pulse(TIM_TypeDef *inst, uint32_t frequency,
-                               uint32_t *period, uint32_t *pulse) {
+                                      uint32_t *period, uint32_t *pulse) {
     uint32_t tclk = stm_tim_get_source_clock(inst);
 
     *period = fast_ceilf(tclk / ((float) frequency)) - 1;
@@ -100,7 +100,7 @@ int stm_pwm_stop(TIM_HandleTypeDef *tim, uint32_t channel) {
 
 int stm_pwm_set_frequency(TIM_HandleTypeDef *tim, uint32_t channel, uint32_t frequency) {
     uint32_t period, pulse;
-    
+
     if (tim->Instance) {
         // Calculate period and pulse.
         stm_tim_calc_period_pulse(tim->Instance, frequency, &period, &pulse);

@@ -78,8 +78,7 @@ static inline int fast_ceilf(float x) {
     #else
     union {
         uint32_t i; float f;
-    }
-    max = { 0x3f7fffff };
+    } max = { 0x3f7fffff };
     x += max.f;
     __asm__ volatile (
         "vcvt.S32.f32  %[r], %[x]\n"

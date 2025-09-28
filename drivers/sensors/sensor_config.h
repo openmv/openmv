@@ -6,7 +6,7 @@
 #include "omv_csi.h"
 #include "omv_boardconfig.h"
 
-typedef int (*sensor_init_t)(omv_csi_t *);
+typedef int (*sensor_init_t) (omv_csi_t *);
 
 typedef struct {
     uint32_t chip_id;
@@ -115,7 +115,7 @@ extern int frogeye2020_init(omv_csi_t *csi);
 #endif
 extern int softcsi_init(omv_csi_t *csi);
 
-// Sensor table
+// Sensor table *INDENT-OFF*
 static const sensor_config_t sensor_config_table[] = {
     #if OMV_OV2640_ENABLE
     { OV2640_ID, OMV_OV2640_CLK_FREQ, ov2640_init },

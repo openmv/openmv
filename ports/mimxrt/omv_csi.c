@@ -380,7 +380,7 @@ int imx_csi_snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
         csi->one_shot = csi->pixformat != PIXFORMAT_JPEG &&
                         !csi->transpose && !omv_csi_get_cropped(csi) &&
                         !(csi->pixformat == PIXFORMAT_GRAYSCALE && csi->mono_bpp == 2);
- 
+
         // Configure DMA buffers.
         CSI_REG_DMASA_FB1(CSI) = (uint32_t) (&_line_buf[OMV_LINE_BUF_SIZE * 0]);
         CSI_REG_DMASA_FB2(CSI) = (uint32_t) (&_line_buf[OMV_LINE_BUF_SIZE / 2]);

@@ -41,8 +41,7 @@ static void read_int_reset(ppm_read_settings_t *rs) {
 static void read_int(FIL *fp, uint32_t *i, ppm_read_settings_t *rs) {
     enum {
         EAT_WHITESPACE, EAT_COMMENT, EAT_NUMBER
-    }
-    mode = EAT_WHITESPACE;
+    } mode = EAT_WHITESPACE;
     for (*i = 0;;) {
         if (!rs->read_int_c_valid) {
             if (file_tell(fp) == file_size(fp)) {
