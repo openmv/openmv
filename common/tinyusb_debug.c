@@ -143,7 +143,9 @@ int tinyusb_debug_init(void) {
     ctx.opcode = 0;
     ctx.length = 0;
     if (!ctx.ringbuf.buf) {
-        ctx.ringbuf = (ringbuf_t) { ctx.rawbuf, sizeof(ctx.rawbuf), 0, 0 };
+        ctx.ringbuf = (ringbuf_t) {
+            ctx.rawbuf, sizeof(ctx.rawbuf), 0, 0
+        };
     }
     return 0;
 }
@@ -165,7 +167,7 @@ void tinyusb_debug_task(mp_sched_node_t *node) {
 
         if (cmdbuf[0] == 0x30) {
             ctx.opcode = cmdbuf[1];
-            ctx.length = *((uint32_t*)(cmdbuf+2));
+            ctx.length = *((uint32_t *) (cmdbuf + 2));
             usbdbg_control(NULL, ctx.opcode, ctx.length);
         }
 
@@ -180,7 +182,7 @@ void tinyusb_debug_task(mp_sched_node_t *node) {
         if (tud_task_event_ready()) {
             tud_task_ext(0, false);
         }
-        
+
         if (ctx.opcode & 0x80) {
             bytes = OMV_MIN(ctx.length, tud_cdc_write_available());
             if (bytes) {
@@ -197,7 +199,7 @@ void tinyusb_debug_task(mp_sched_node_t *node) {
                 usbdbg_data_out(bytes, tud_cdc_read);
             }
         }
-        
+
         if (bytes) {
             ctx.timestamp = mp_hal_ticks_ms();
         } else if (__get_PRIMASK() & 1) {
@@ -205,7 +207,7 @@ void tinyusb_debug_task(mp_sched_node_t *node) {
         } else if (check_timeout_ms(ctx.timestamp, USBDBG_DATA_TIMEOUT)) {
             tinyusb_debug_init();
         }
-    } 
+    }
 }
 
 // For the mimxrt, and nrf ports this replaces the weak USB IRQ handlers.

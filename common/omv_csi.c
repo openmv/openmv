@@ -78,6 +78,7 @@ typedef struct _i2c_dev {
 static omv_i2c_t csi_i2c;
 static omv_clk_t csi_clk;
 
+// *INDENT-OFF*
 // Standard resolution table;
 static uint16_t csi_resolution[][2] = {
     [OMV_CSI_FRAMESIZE_INVALID]     = {0,    0},
@@ -125,11 +126,12 @@ static uint16_t csi_resolution[][2] = {
     [OMV_CSI_FRAMESIZE_WQXGA]       = {2560, 1600},
     [OMV_CSI_FRAMESIZE_WQXGA2]      = {2592, 1944},
 };
+// *INDENT-ON*
 
 omv_csi_t csi_all[OMV_CSI_MAX_DEVICES] = {0};
 
 __weak void omv_csi_init0() {
-    for (size_t i=0; i<OMV_CSI_MAX_DEVICES; i++) {
+    for (size_t i = 0; i < OMV_CSI_MAX_DEVICES; i++) {
         omv_csi_t *csi = &csi_all[i];
         omv_i2c_t *i2c = csi->i2c;
 
@@ -179,7 +181,7 @@ __weak int omv_csi_init() {
 
     // Initialize the CSIs using the port's ops as defaults,
     // which can be overridden by sensor drivers during probe.
-    for (size_t i=0; i<OMV_CSI_MAX_DEVICES; i++) {
+    for (size_t i = 0; i < OMV_CSI_MAX_DEVICES; i++) {
         omv_csi_t *csi = &csi_all[i];
 
         memset(csi, 0, sizeof(omv_csi_t));
@@ -197,7 +199,7 @@ __weak int omv_csi_init() {
     }
 
     // Detect and initialize sensor(s).
-    for (uint32_t i=0, n_buses=OMV_ARRAY_SIZE(buses); i<n_buses; i++) {
+    for (uint32_t i = 0, n_buses = OMV_ARRAY_SIZE(buses); i < n_buses; i++) {
         // Initialize the camera bus.
         omv_i2c_init(&csi_i2c, buses[i][0], buses[i][1]);
 
@@ -214,7 +216,7 @@ __weak int omv_csi_init() {
     }
 
     // Configure the DCMI interface.
-    for (size_t i=0; i<OMV_CSI_MAX_DEVICES; i++) {
+    for (size_t i = 0; i < OMV_CSI_MAX_DEVICES; i++) {
         omv_csi_t *csi = &csi_all[i];
 
         if (omv_csi_config(csi, OMV_CSI_CONFIG_INIT) != 0) {
@@ -230,7 +232,7 @@ __weak int omv_csi_init() {
 omv_csi_t *omv_csi_get(int id) {
     omv_csi_t *csi = NULL;
 
-    for (size_t i=0; !csi && i<OMV_CSI_MAX_DEVICES; i++) {
+    for (size_t i = 0; !csi && i < OMV_CSI_MAX_DEVICES; i++) {
         if (id == -1 && !csi_all[i].auxiliary) {
             csi = &csi_all[i];
         } else if (omv_csi_match(&csi_all[i], id)) {
@@ -276,7 +278,7 @@ __weak int omv_csi_abort(omv_csi_t *csi, bool fifo_flush, bool in_irq) {
 }
 
 void omv_csi_abort_all(void) {
-    for (size_t i=0; i<OMV_CSI_MAX_DEVICES; i++) {
+    for (size_t i = 0; i < OMV_CSI_MAX_DEVICES; i++) {
         omv_csi_t *csi = &csi_all[i];
 
         // Abort ongoing transfer
@@ -313,9 +315,13 @@ __weak int omv_csi_reset(omv_csi_t *csi, bool hard) {
     #endif // MICROPY_PY_IMU
     csi->color_palette = rainbow_table;
     csi->disable_full_flush = false;
-    csi->vsync_cb = (omv_csi_cb_t) { NULL, NULL };
-    csi->frame_cb = (omv_csi_cb_t) { NULL, NULL };
-   
+    csi->vsync_cb = (omv_csi_cb_t) {
+        NULL, NULL
+    };
+    csi->frame_cb = (omv_csi_cb_t) {
+        NULL, NULL
+    };
+
     // Restore shutdown state on reset.
     if (!csi->power_on) {
         omv_csi_shutdown(csi, false);
@@ -341,7 +347,7 @@ __weak int omv_csi_reset(omv_csi_t *csi, bool hard) {
         // Note hard-reset is shared between all CSIs.
         uint32_t reset_time_ms = mp_hal_ticks_ms();
 
-        for (size_t i=0; i<OMV_CSI_MAX_DEVICES; i++) {
+        for (size_t i = 0; i < OMV_CSI_MAX_DEVICES; i++) {
             omv_csi_t *csi = &csi_all[i];
             if (csi->detected) {
                 csi->reset_time_ms = reset_time_ms;
@@ -371,7 +377,7 @@ static size_t omv_csi_detect(omv_i2c_t *i2c, i2c_dev_t *dev_list) {
     uint8_t addr_list[OMV_CSI_I2C_MAX_DEV];
     int addr_count = omv_i2c_scan(i2c, addr_list, OMV_ARRAY_SIZE(addr_list));
 
-    for (int i=0; i<addr_count; i++) {
+    for (int i = 0; i < addr_count; i++) {
         uint32_t chip_id = 0;
         uint8_t slv_addr = addr_list[i];
 
@@ -462,7 +468,9 @@ static size_t omv_csi_detect(omv_i2c_t *i2c, i2c_dev_t *dev_list) {
         }
 
         if (chip_id && dev_count < OMV_CSI_MAX_DEVICES) {
-            dev_list[dev_count++] = (i2c_dev_t) { slv_addr, chip_id };
+            dev_list[dev_count++] = (i2c_dev_t) {
+                slv_addr, chip_id
+            };
         }
     }
 
@@ -489,10 +497,10 @@ int omv_csi_probe(omv_i2c_t *i2c) {
         { OMV_CSI_ACTIVE_LOW,  OMV_CSI_ACTIVE_LOW },
         #endif // OMV_CSI_POLARITY_CONFIG
     };
-    
+
     // Scan the bus multiple times using different reset and power polarities,
     // until a supported sensor is detected.
-    for (size_t i=0; dev_count == 0 && i<OMV_ARRAY_SIZE(polarity_configs); i++) {
+    for (size_t i = 0; dev_count == 0 && i < OMV_ARRAY_SIZE(polarity_configs); i++) {
         // Power cycle
         #if defined(OMV_CSI_POWER_PIN)
         power_pol = polarity_configs[i][0];
@@ -513,14 +521,16 @@ int omv_csi_probe(omv_i2c_t *i2c) {
 
         dev_count = omv_csi_detect(i2c, dev_list);
     }
-    
+
     // Track elapsed time since power-on.
     uint32_t power_time_ms = mp_hal_ticks_ms();
 
     // Add special devices, such as SPI sensors, soft-CSI etc...
     #if OMV_SOFTCSI_ENABLE
     if (dev_count < OMV_CSI_MAX_DEVICES) {
-        dev_list[dev_count++] = (i2c_dev_t) { 0, SOFTCSI_ID };
+        dev_list[dev_count++] = (i2c_dev_t) {
+            0, SOFTCSI_ID
+        };
     }
     #endif
 
@@ -529,7 +539,9 @@ int omv_csi_probe(omv_i2c_t *i2c) {
         // Found PixArt PAJ6100
         power_pol = OMV_CSI_ACTIVE_LOW;
         reset_pol = OMV_CSI_ACTIVE_LOW;
-        dev_list[dev_count++] = (i2c_dev_t) { 0, PAJ6100_ID };
+        dev_list[dev_count++] = (i2c_dev_t) {
+            0, PAJ6100_ID
+        };
     }
     #endif
 
@@ -539,7 +551,7 @@ int omv_csi_probe(omv_i2c_t *i2c) {
     }
 
     // Initialize detected sensors.
-    for (size_t i=0; i<dev_count; i++) {
+    for (size_t i = 0; i < dev_count; i++) {
         omv_csi_t *csi = &csi_all[i];
         sensor_init_t init_fun = NULL;
 
@@ -547,13 +559,13 @@ int omv_csi_probe(omv_i2c_t *i2c) {
         csi->power_on = true;
         csi->power_pol = power_pol;
         csi->reset_pol = reset_pol;
-        csi->chip_id =  dev_list[i].chip_id;
+        csi->chip_id = dev_list[i].chip_id;
         csi->slv_addr = dev_list[i].slv_addr;
         csi->power_time_ms = power_time_ms;
         csi->reset_time_ms = power_time_ms;
 
         // Find the sensors init function.
-        for (size_t i=0; i<OMV_ARRAY_SIZE(sensor_config_table); i++) {
+        for (size_t i = 0; i < OMV_ARRAY_SIZE(sensor_config_table); i++) {
             const sensor_config_t *config = &sensor_config_table[i];
             if (csi->chip_id == config->chip_id) {
                 init_fun = config->init_fun;
@@ -562,7 +574,7 @@ int omv_csi_probe(omv_i2c_t *i2c) {
             }
         }
 
-        if (init_fun ==  NULL) {
+        if (init_fun == NULL) {
             return OMV_CSI_ERROR_ISC_UNSUPPORTED;
         } else if (init_fun(csi) != 0) {
             return OMV_CSI_ERROR_ISC_INIT_FAILED;
@@ -583,7 +595,7 @@ int omv_csi_probe(omv_i2c_t *i2c) {
     // Soft-CSI + Lepton). If only one is found, use it as main. If
     // multiple, pick the first non-Soft-CSI sensor as main.
     if (dev_count == aux_count) {
-        for (size_t i=0; i<dev_count; i++) {
+        for (size_t i = 0; i < dev_count; i++) {
             omv_csi_t *csi = &csi_all[i];
             if (dev_count == 1 || csi->chip_id != SOFTCSI_ID) {
                 aux_count--;
@@ -603,10 +615,10 @@ int omv_csi_probe(omv_i2c_t *i2c) {
     if ((dev_count - aux_count) != 1) {
         return -1;
     }
-    
+
     // Clear the FB pointer for all aux sensors, as they use
     // dynamically allocated frame buffers.
-    for (size_t i=0; i<dev_count; i++) {
+    for (size_t i = 0; i < dev_count; i++) {
         omv_csi_t *csi = &csi_all[i];
         if (csi->auxiliary) {
             csi->fb = NULL;
@@ -654,7 +666,7 @@ __weak int omv_csi_set_clk_frequency(omv_csi_t *csi, uint32_t frequency) {
         clk->set_freq(clk, frequency) != 0) {
         return OMV_CSI_ERROR_CTL_FAILED;
     }
-    
+
     clk->freq = frequency;
     return 0;
 }
@@ -1292,7 +1304,7 @@ __weak int omv_csi_set_framebuffers(omv_csi_t *csi, size_t count, bool expand) {
     #endif
 
     if (count == -1) {
-        for (size_t i=3; i>0; i--) {
+        for (size_t i = 3; i > 0; i--) {
             if (!framebuffer_resize(csi->fb, i, frame_size, expand)) {
                 return 0;
             }
@@ -1472,16 +1484,16 @@ __weak int omv_csi_auto_crop_framebuffer(omv_csi_t *csi) {
     return 0;
 }
 
-#define copy_transposed_line(dstp, srcp)                   \
+#define copy_transposed_line(dstp, srcp)               \
     for (int i = csi->fb->u, h = csi->fb->v; i; i--) { \
-        *dstp = *srcp++;                                   \
-        dstp += h;                                         \
+        *dstp = *srcp++;                               \
+        dstp += h;                                     \
     }
 
-#define copy_transposed_line_rev16(dstp, srcp)             \
+#define copy_transposed_line_rev16(dstp, srcp)         \
     for (int i = csi->fb->u, h = csi->fb->v; i; i--) { \
-        *dstp = __REV16(*srcp++);                          \
-        dstp += h;                                         \
+        *dstp = __REV16(*srcp++);                      \
+        dstp += h;                                     \
     }
 
 __weak int omv_csi_copy_line(omv_csi_t *csi, void *dma, uint8_t *src, uint8_t *dst) {

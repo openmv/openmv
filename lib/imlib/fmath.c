@@ -61,8 +61,7 @@ float fast_expf(float x) {
 float fast_cbrtf(float x) {
     union {
         int ix; float x;
-    }
-    v;
+    } v;
     v.x = x;               // x can be viewed as int.
     v.ix = v.ix / 4 + v.ix / 16; // Approximate divide by 3.
     v.ix = v.ix + v.ix / 16;
@@ -135,12 +134,10 @@ float fast_atan2f(float y, float x) {
 float fast_log2(float x) {
     union {
         float f; uint32_t i;
-    }
-    vx = { x };
+    } vx = { x };
     union {
         uint32_t i; float f;
-    }
-    mx = { (vx.i & 0x007FFFFF) | 0x3f000000 };
+    } mx = { (vx.i & 0x007FFFFF) | 0x3f000000 };
     float y = vx.i;
     y *= 1.1920928955078125e-7f;
 
@@ -155,8 +152,7 @@ float fast_log(float x) {
 float fast_powf(float a, float b) {
     union {
         float d; int x;
-    }
-    u = { a };
+    } u = { a };
     u.x = (int) ((b * (u.x - 1064866805)) + 1064866805);
     return u.d;
 }

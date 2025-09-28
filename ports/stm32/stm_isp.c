@@ -149,8 +149,8 @@ int stm_isp_config_pipeline(DCMIPP_HandleTypeDef *dcmipp, uint32_t pipe,
 
     for (size_t i = DCMIPP_STATEXT_MODULE1; i <= DCMIPP_STATEXT_MODULE3; i++) {
         if (HAL_DCMIPP_PIPE_SetISPStatisticExtractionConfig(dcmipp,
-                    pipe, i,
-                    &statcfg[i - DCMIPP_STATEXT_MODULE1]) != HAL_OK) {
+                                                            pipe, i,
+                                                            &statcfg[i - DCMIPP_STATEXT_MODULE1]) != HAL_OK) {
             return -1;
         }
 
@@ -158,7 +158,7 @@ int stm_isp_config_pipeline(DCMIPP_HandleTypeDef *dcmipp, uint32_t pipe,
             return -1;
         }
     }
-    
+
     return 0;
 }
 #endif  // DCMIPP

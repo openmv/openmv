@@ -302,8 +302,8 @@ static int omv_spi_dma_init(omv_spi_t *spi, uint32_t direction, omv_spi_config_t
     }
 
     #if defined(STM32N6)
-    DMA_NodeTypeDef   *dma_nodes = NULL;
-    DMA_QListTypeDef  *dma_queue = NULL;
+    DMA_NodeTypeDef *dma_nodes = NULL;
+    DMA_QListTypeDef *dma_queue = NULL;
 
     if (direction == DMA_MEMORY_TO_PERIPH) {
         dma_queue = &spi->dma_queue_tx;

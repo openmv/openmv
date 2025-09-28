@@ -74,7 +74,7 @@
 #endif
 
 typedef enum {
-    CSI_HANDLE_DCMI = 0,
+    CSI_HANDLE_DCMI   = 0,
     CSI_HANDLE_DCMIPP = 1,
 } csi_handle_t;
 
@@ -131,15 +131,15 @@ static int stm_csi_config(omv_csi_t *csi, omv_csi_config_t config) {
         if (!csi->mipi_if) {
             // Configure and initialize DMA.
             if (stm_dma_init(&csi->dma, OMV_CSI_DMA_CHANNEL, OMV_CSI_DMA_REQUEST,
-                        DMA_PERIPH_TO_MEMORY, 4, 4, OMV_CSI_DMA_XFER_PORTS,
-                        &stm_dma_csi_init, true)) {
+                             DMA_PERIPH_TO_MEMORY, 4, 4, OMV_CSI_DMA_XFER_PORTS,
+                             &stm_dma_csi_init, true)) {
                 return OMV_CSI_ERROR_DMA_INIT_FAILED;
             }
 
             #if defined(STM32N6)
             // Initialize DMA in circular mode.
             if (stm_dma_ll_init(&csi->dma, &csi->dma_queue, dma_nodes,
-                        OMV_ARRAY_SIZE(dma_nodes), OMV_CSI_DMA_LIST_PORTS)) {
+                                OMV_ARRAY_SIZE(dma_nodes), OMV_CSI_DMA_LIST_PORTS)) {
                 return OMV_CSI_ERROR_CSI_INIT_FAILED;
             }
             #endif
@@ -209,7 +209,7 @@ static int stm_csi_config(omv_csi_t *csi, omv_csi_config_t config) {
             };
 
             if (HAL_DCMIPP_CSI_SetVCConfig(&csi->dcmipp, DCMIPP_VIRTUAL_CHANNEL0,
-                        DCMIPP_CSI_DT_BPP10) != HAL_OK) {
+                                           DCMIPP_CSI_DT_BPP10) != HAL_OK) {
                 return OMV_CSI_ERROR_CSI_INIT_FAILED;
             }
 
@@ -260,12 +260,12 @@ static int stm_csi_config(omv_csi_t *csi, omv_csi_config_t config) {
                     dma_nodes[i].LinkRegisters[NODE_CTR1_DEFAULT_OFFSET] &= ~DMA_CTR1_DBX;
                 }
             }
-            #endif 
+            #endif
         } else {
             #if USE_DCMIPP
             csi->dcmipp.State = HAL_DCMIPP_STATE_READY;
             // Reset pipes states to allow reconfiguring them.
-            for (size_t i=0; i<DCMIPP_NUM_OF_PIPES; i++) {
+            for (size_t i = 0; i < DCMIPP_NUM_OF_PIPES; i++) {
                 csi->dcmipp.PipeState[i] = HAL_DCMIPP_PIPE_STATE_RESET;
             }
             // Configure the pixel processing pipeline.
@@ -287,7 +287,9 @@ static int stm_csi_abort(omv_csi_t *csi, bool fifo_flush, bool in_irq) {
 
     if (!csi->mipi_if) {
         DCMI->CR &= ~DCMI_CR_ENABLE;
-        while (DCMI->CR & DCMI_CR_ENABLE);
+        while (DCMI->CR & DCMI_CR_ENABLE) {
+            ;
+        }
 
         #if defined(STM32N6)
         HAL_DMA_Abort(&csi->dma);

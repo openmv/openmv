@@ -42,36 +42,36 @@
 
 // Call stack entry for tracking nested calls
 typedef struct {
-    void *func_addr;	    // Function address
-    void *call_addr;	    // Call site address
+    void *func_addr;            // Function address
+    void *call_addr;            // Call site address
 
-    uint32_t enter_ticks;	// Timestamp on entry
-    uint32_t enter_cycles;	// Cycle count on entry
+    uint32_t enter_ticks;       // Timestamp on entry
+    uint32_t enter_cycles;      // Cycle count on entry
 
-    uint64_t child_ticks;	// Total child execution time
-    uint64_t child_cycles;	// Total child cycle count
+    uint64_t child_ticks;       // Total child execution time
+    uint64_t child_cycles;      // Total child cycle count
 
     #if __PMU_PRESENT
-    uint16_t enter_events[__PMU_NUM_EVENTCNT];	// PMU events on entry
-    uint64_t child_events[__PMU_NUM_EVENTCNT];	// Total child PMU events
+    uint16_t enter_events[__PMU_NUM_EVENTCNT];  // PMU events on entry
+    uint64_t child_events[__PMU_NUM_EVENTCNT];  // Total child PMU events
     #endif
 } omv_stack_entry_t;
 
 typedef struct {
-    bool initialized;           // Profiler state.
-    mutex_t mutex;	            // Protects profile data
-    bool reset_pending;	        // Reset requested flag
-    omv_profiler_mode_t mode;	// Inclusive/exclusive mode
+    bool initialized;               // Profiler state.
+    mutex_t mutex;                  // Protects profile data
+    bool reset_pending;             // Reset requested flag
+    omv_profiler_mode_t mode;       // Inclusive/exclusive mode
 
-    uint32_t collisions;	    // Hash table collision count
-    omv_profiler_data_t *hash[OMV_PROFILER_HASH_SIZE];	// Hash table buckets
+    uint32_t collisions;            // Hash table collision count
+    omv_profiler_data_t *hash[OMV_PROFILER_HASH_SIZE];  // Hash table buckets
 
-    uint32_t pool_index;	    // Next free pool entry
-    omv_profiler_data_t pool[OMV_PROFILER_HASH_SIZE];	// Entry pool
+    uint32_t pool_index;            // Next free pool entry
+    omv_profiler_data_t pool[OMV_PROFILER_HASH_SIZE];   // Entry pool
 
-    int32_t stack_top;	        // Current stack position
-    uint32_t stack_depth;	    // Max stack depth reached
-    omv_stack_entry_t stack[OMV_PROFILER_STACK_DEPTH];	// Call stack
+    int32_t stack_top;              // Current stack position
+    uint32_t stack_depth;           // Max stack depth reached
+    omv_stack_entry_t stack[OMV_PROFILER_STACK_DEPTH];  // Call stack
 } omv_profiler_state_t;
 
 static omv_profiler_state_t profiler;
@@ -82,12 +82,12 @@ static omv_profiler_state_t profiler;
 static OMV_ATTR_NO_INSTRUMENT mp_uint_t ticks_us_monotonic(void) {
     static mp_uint_t last_timestamp = 0;
     mp_uint_t current = mp_hal_ticks_us();
-    
+
     // Ensure monotonic behavior
     if (current > last_timestamp) {
         last_timestamp = current;
     }
-    
+
     return last_timestamp;
 }
 
@@ -103,7 +103,7 @@ static inline uint32_t OMV_ATTR_NO_INSTRUMENT hash_address(void *addr) {
 }
 
 // Initialize profiling system
-void omv_profiler_init(void) { 
+void omv_profiler_init(void) {
     if (!profiler.initialized) {
         // Reset state
         memset(&profiler, 0, sizeof(profiler));
@@ -125,7 +125,7 @@ void omv_profiler_init(void) {
 }
 
 void omv_profiler_reset(void) {
-    if (!mutex_try_lock(&profiler.mutex, MUTEX_TID_OMV)) { 
+    if (!mutex_try_lock(&profiler.mutex, MUTEX_TID_OMV)) {
         // Set a pending reset if the data is locked.
         profiler.reset_pending = true;
     } else {
@@ -184,7 +184,7 @@ void omv_profiler_set_event(uint32_t num, uint32_t type) {
 static omv_profiler_data_t *omv_profiler_get_entry(void *func_addr) {
     uint32_t hash = hash_address(func_addr);
     omv_profiler_data_t *entry = profiler.hash[hash];
-    
+
     // Search existing entries in collision chain
     while (entry != NULL) {
         if (entry->func_addr == func_addr) {
@@ -192,18 +192,18 @@ static omv_profiler_data_t *omv_profiler_get_entry(void *func_addr) {
         }
         entry = entry->next;
     }
-    
+
     // Create new entry if not found
     if (profiler.pool_index >= OMV_PROFILER_HASH_SIZE) {
         // Pool exhausted
         return NULL;
     }
-    
+
     entry = &profiler.pool[profiler.pool_index++];
 
     memset(entry, 0, sizeof(omv_profiler_data_t));
     entry->min_ticks = UINT32_MAX;
-    
+
     // Insert at head of collision chain
     if (profiler.hash[hash] != NULL) {
         profiler.collisions++;
@@ -211,14 +211,14 @@ static omv_profiler_data_t *omv_profiler_get_entry(void *func_addr) {
 
     entry->next = profiler.hash[hash];
     profiler.hash[hash] = entry;
-    
+
     return entry;
 }
 
 void OMV_ATTR_NO_INSTRUMENT __cyg_profile_func_enter(void *func_addr, void *call_addr) {
     uint32_t enter_ticks = OMV_GET_TICKS_COUNT();
     uint32_t enter_cycles = OMV_GET_CYCLE_COUNT();
-    
+
     if (func_addr == NULL || call_addr == NULL) {
         return;
     }
@@ -241,11 +241,11 @@ void OMV_ATTR_NO_INSTRUMENT __cyg_profile_func_enter(void *func_addr, void *call
         profiler.stack_top = OMV_PROFILER_STACK_DEPTH - 1;
         return;
     }
-    
-    if (profiler.stack_top > (int32_t)profiler.stack_depth) {
+
+    if (profiler.stack_top > (int32_t) profiler.stack_depth) {
         profiler.stack_depth = profiler.stack_top;
     }
-    
+
     profiler_stack_top(func_addr) = func_addr;
     profiler_stack_top(call_addr) = call_addr;
 
@@ -254,7 +254,7 @@ void OMV_ATTR_NO_INSTRUMENT __cyg_profile_func_enter(void *func_addr, void *call
 
     profiler_stack_top(child_cycles) = 0;
     profiler_stack_top(enter_cycles) = enter_cycles;
-    
+
     #if __PMU_PRESENT
     for (size_t i = 0; i < __PMU_NUM_EVENTCNT; i++) {
         profiler_stack_top(child_events[i]) = 0;
@@ -294,13 +294,13 @@ void OMV_ATTR_NO_INSTRUMENT __cyg_profile_func_exit(void *func_addr, void *call_
     if (profiler.stack_top < 0 || profiler.stack_top >= OMV_PROFILER_STACK_DEPTH) {
         return;
     }
- 
+
     // Function address should match the stack's top.
     if (func_addr != profiler_stack_top(func_addr) ||
         call_addr != profiler_stack_top(call_addr)) {
         goto exit_cleanup;
     }
-       
+
     // Protect profile data update via mutex.
     if (!mutex_try_lock(&profiler.mutex, MUTEX_TID_OMV)) {
         goto exit_cleanup;
@@ -359,7 +359,7 @@ void OMV_ATTR_NO_INSTRUMENT __cyg_profile_func_exit(void *func_addr, void *call_
         }
     }
     #endif
-        
+
 mutex_unlock:
     mutex_unlock(&profiler.mutex, MUTEX_TID_OMV);
 exit_cleanup:

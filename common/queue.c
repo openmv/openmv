@@ -36,7 +36,7 @@ void queue_init(queue_t **q, size_t capacity, void *buffer) {
     if (!q || !buffer) {
         return;
     }
-    
+
     *q = (queue_t *) buffer;
     (*q)->capacity = capacity;
     queue_flush(*q);
@@ -46,12 +46,12 @@ queue_t *queue_alloc(size_t capacity) {
     if (capacity == 0) {
         return NULL;
     }
-    
+
     void *buffer = malloc(queue_calc_size(capacity));
     if (!buffer) {
         return NULL;
     }
-    
+
     queue_t *q;
     queue_init(&q, capacity, buffer);
     return q;
@@ -79,7 +79,7 @@ bool queue_push(queue_t *q, void *item) {
     if (!q || !item) {
         return false;
     }
-    
+
     #ifndef HAVE_STDATOMIC_H
     size_t new_tail = (q->tail + 1) % (q->capacity + 1);
 
@@ -101,7 +101,7 @@ bool queue_push(queue_t *q, void *item) {
     // Release ensures the write completes before advancing tail
     atomic_store_explicit(&q->tail, new_tail, memory_order_release);
     #endif
-    
+
     return true;
 }
 
@@ -125,7 +125,7 @@ void *queue_pop(queue_t *q, bool peek) {
         atomic_store_explicit(&q->head, new_head, memory_order_release);
     }
     #endif
-    
+
     return item;
 }
 
@@ -133,7 +133,7 @@ bool queue_is_empty(const queue_t *q) {
     if (!q) {
         return true;
     }
-    
+
     #ifndef HAVE_STDATOMIC_H
     size_t head = q->head;
     size_t tail = q->tail;
@@ -149,7 +149,7 @@ size_t queue_size(const queue_t *q) {
     if (!q) {
         return 0;
     }
-    
+
     #ifndef HAVE_STDATOMIC_H
     size_t head = q->head;
     size_t tail = q->tail;
@@ -158,7 +158,7 @@ size_t queue_size(const queue_t *q) {
     size_t head = atomic_load_explicit(&q->head, memory_order_acquire);
     size_t tail = atomic_load_explicit(&q->tail, memory_order_acquire);
     #endif
-    
+
     // Calculate size considering the circular buffer
     if (tail >= head) {
         return tail - head;

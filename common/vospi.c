@@ -64,8 +64,8 @@
 #define VOSPI_IS_SID_VALID(vospi, pid)  (VOSPI_IS_LEPTON3(vospi) && pid == 20)
 
 typedef enum {
-    VOSPI_FLAG_STREAM   = (1 << 0),
-    VOSPI_FLAG_CAPTURE  = (1 << 1),
+    VOSPI_FLAG_STREAM     = (1 << 0),
+    VOSPI_FLAG_CAPTURE    = (1 << 1),
     VOSPI_FLAG_SYNC_ERROR = (1 << 2),
 } vospi_flags_t;
 

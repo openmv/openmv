@@ -133,11 +133,11 @@ int ml_backend_init_model(py_ml_model_obj_t *model) {
     }
 
     // Allocate executable memory.
-    state->exec_ram_size = OMV_ALIGN_TO(rt.rt_ram_xip, AI_RELOC_ALIGNMENT); 
+    state->exec_ram_size = OMV_ALIGN_TO(rt.rt_ram_xip, AI_RELOC_ALIGNMENT);
     state->exec_ram_addr = m_new(uint8_t, state->exec_ram_size + AI_RELOC_ALIGNMENT);
 
     // Allocate external memory.
-    state->ext_ram_size = OMV_ALIGN_TO(rt.ext_ram_sz, AI_RELOC_ALIGNMENT); 
+    state->ext_ram_size = OMV_ALIGN_TO(rt.ext_ram_sz, AI_RELOC_ALIGNMENT);
     state->ext_ram_addr = m_new(uint8_t, state->ext_ram_size + AI_RELOC_ALIGNMENT);
 
     // Create and install the relocatable model.
@@ -174,17 +174,19 @@ int ml_backend_init_model(py_ml_model_obj_t *model) {
     model->memory_addr = config.exec_ram_addr;
     model->memory_size = config.exec_ram_size + config.ext_ram_size;
 
-    const LL_Buffer_InfoTypeDef *model_inputs  = ll_aton_reloc_get_input_buffers_info(&state->nn_inst, -1);
+    const LL_Buffer_InfoTypeDef *model_inputs = ll_aton_reloc_get_input_buffers_info(&state->nn_inst, -1);
     const LL_Buffer_InfoTypeDef *model_outputs = ll_aton_reloc_get_output_buffers_info(&state->nn_inst, -1);
 
     // Initialize the model's inputs.
-    for (model->inputs_size = 0; model_inputs[model->inputs_size].name != NULL; model->inputs_size++);
+    for (model->inputs_size = 0; model_inputs[model->inputs_size].name != NULL; model->inputs_size++) {
+        ;
+    }
     model->input_shape = (mp_obj_tuple_t *) MP_OBJ_TO_PTR(mp_obj_new_tuple(model->inputs_size, NULL));
     model->input_scale = (mp_obj_tuple_t *) MP_OBJ_TO_PTR(mp_obj_new_tuple(model->inputs_size, NULL));
     model->input_zero_point = (mp_obj_tuple_t *) MP_OBJ_TO_PTR(mp_obj_new_tuple(model->inputs_size, NULL));
     model->input_dtype = (mp_obj_tuple_t *) MP_OBJ_TO_PTR(mp_obj_new_tuple(model->inputs_size, NULL));
 
-    for (size_t i=0; i<model->inputs_size; i++) {
+    for (size_t i = 0; i < model->inputs_size; i++) {
         const LL_Buffer_InfoTypeDef *input = &model_inputs[i];
 
         // Check input data type.
@@ -193,7 +195,7 @@ int ml_backend_init_model(py_ml_model_obj_t *model) {
         }
 
         mp_obj_tuple_t *o = (mp_obj_tuple_t *) MP_OBJ_TO_PTR(mp_obj_new_tuple(input->mem_ndims, NULL));
-        for (int j=0; j<input->mem_ndims; j++) {
+        for (int j = 0; j < input->mem_ndims; j++) {
             o->items[j] = mp_obj_new_int(input->mem_shape[j]);
         }
 
@@ -205,13 +207,15 @@ int ml_backend_init_model(py_ml_model_obj_t *model) {
     }
 
     // Initialize the model's outputs.
-    for (model->outputs_size = 0; model_outputs[model->outputs_size].name != NULL; model->outputs_size++);
+    for (model->outputs_size = 0; model_outputs[model->outputs_size].name != NULL; model->outputs_size++) {
+        ;
+    }
     model->output_shape = (mp_obj_tuple_t *) MP_OBJ_TO_PTR(mp_obj_new_tuple(model->outputs_size, NULL));
     model->output_scale = (mp_obj_tuple_t *) MP_OBJ_TO_PTR(mp_obj_new_tuple(model->outputs_size, NULL));
     model->output_zero_point = (mp_obj_tuple_t *) MP_OBJ_TO_PTR(mp_obj_new_tuple(model->outputs_size, NULL));
     model->output_dtype = (mp_obj_tuple_t *) MP_OBJ_TO_PTR(mp_obj_new_tuple(model->outputs_size, NULL));
 
-    for (size_t i=0; i<model->outputs_size; i++) {
+    for (size_t i = 0; i < model->outputs_size; i++) {
         const LL_Buffer_InfoTypeDef *output = &model_outputs[i];
 
         // Check output data type.
@@ -220,7 +224,7 @@ int ml_backend_init_model(py_ml_model_obj_t *model) {
         }
 
         mp_obj_tuple_t *o = (mp_obj_tuple_t *) MP_OBJ_TO_PTR(mp_obj_new_tuple(output->mem_ndims, NULL));
-        for (int j=0; j<output->mem_ndims; j++) {
+        for (int j = 0; j < output->mem_ndims; j++) {
             o->items[j] = mp_obj_new_int(output->mem_shape[j]);
         }
 
@@ -237,7 +241,7 @@ int ml_backend_run_inference(py_ml_model_obj_t *model) {
     ml_backend_state_t *state = (ml_backend_state_t *) model->state;
 
     // Flush input buffers.
-    for (size_t i=0; i< model->inputs_size; i++) {
+    for (size_t i = 0; i < model->inputs_size; i++) {
         const LL_Buffer_InfoTypeDef *buf = ll_aton_reloc_get_input_buffers_info(&state->nn_inst, i);
         SCB_CleanDCache_by_Addr(LL_Buffer_addr_start(buf), LL_Buffer_len(buf));
     }

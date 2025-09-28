@@ -81,23 +81,23 @@ OMV_ATTR_NO_INSTRUMENT mutex_t *omv_profiler_lock(void);
 #endif
 
 // Manual instrumentation macros
-#define OMV_PROFILER_ENTER(func) \
-    do { \
-        void *func_addr = (void*)(func); \
-        void *call_addr = __builtin_return_address(0); \
+#define OMV_PROFILER_ENTER(func)                        \
+    do {                                                \
+        void *func_addr = (void *) (func);              \
+        void *call_addr = __builtin_return_address(0);  \
         __cyg_profile_func_enter(func_addr, call_addr); \
-    } while(0)
+    } while (0)
 
-#define OMV_PROFILER_EXIT(func) \
-    do { \
-        void *func_addr = (void*)(func); \
+#define OMV_PROFILER_EXIT(func)                        \
+    do {                                               \
+        void *func_addr = (void *) (func);             \
         void *call_addr = __builtin_return_address(0); \
         __cyg_profile_func_exit(func_addr, call_addr); \
-    } while(0)
+    } while (0)
 
 #else
 // Disabled - empty macros
-#define OMV_PROFILER_ENTER(func) do {} while(0)
-#define OMV_PROFILER_EXIT(func) do {} while(0)
+#define OMV_PROFILER_ENTER(func) do {} while (0)
+#define OMV_PROFILER_EXIT(func) do {} while (0)
 #endif // OMV_PROFILER_ENABLE
 #endif // __OMV_PROFILER_H__

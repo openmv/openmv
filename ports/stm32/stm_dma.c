@@ -283,7 +283,7 @@ uint8_t stm_dma_mpu_region_size(uint32_t size) {
 
 static uint32_t stm_dma_width(uint32_t size, bool source) {
     #if defined(STM32N6)
-    switch(size) {
+    switch (size) {
         case 1: return (source) ? DMA_SRC_DATAWIDTH_BYTE : DMA_DEST_DATAWIDTH_BYTE;
         case 2: return (source) ? DMA_SRC_DATAWIDTH_HALFWORD : DMA_DEST_DATAWIDTH_HALFWORD;
         case 4: return (source) ? DMA_SRC_DATAWIDTH_WORD : DMA_DEST_DATAWIDTH_WORD;
@@ -291,7 +291,7 @@ static uint32_t stm_dma_width(uint32_t size, bool source) {
         default: return -1;
     }
     #else
-    switch(size) {
+    switch (size) {
         case 1: return (source) ? DMA_PDATAALIGN_BYTE : DMA_MDATAALIGN_BYTE;
         case 2: return (source) ? DMA_PDATAALIGN_HALFWORD : DMA_MDATAALIGN_HALFWORD;
         case 4: return (source) ? DMA_PDATAALIGN_WORD : DMA_MDATAALIGN_WORD;
@@ -313,7 +313,7 @@ static int stm_dma_sec_config(DMA_HandleTypeDef *dma_descr) {
     // Enable isolation for HPDMA channels.
     if (stm_dma_is_hp_channel(dma_descr->Instance)) {
         DMA_IsolationConfigTypeDef isocfg = {
-            .CidFiltering =  DMA_ISOLATION_ON,
+            .CidFiltering = DMA_ISOLATION_ON,
             .StaticCid = DMA_CHANNEL_STATIC_CID_1,
         };
 
@@ -344,7 +344,7 @@ int stm_dma_init(DMA_HandleTypeDef *dma_descr, void *dma_channel, uint32_t reque
     #else
     dma_init->Channel = request;
     #endif
-    
+
     // Set direction
     dma_init->Direction = direction;
 
@@ -378,7 +378,7 @@ int stm_dma_init(DMA_HandleTypeDef *dma_descr, void *dma_channel, uint32_t reque
     // Set allocated ports.
     #if defined(STM32N6)
     dma_init->TransferAllocatedPort = ports;
-    #endif    
+    #endif
 
     // F4, F7, H7 or N6 in non-circular mode.
     #if defined(STM32N6)
@@ -402,7 +402,7 @@ int stm_dma_init(DMA_HandleTypeDef *dma_descr, void *dma_channel, uint32_t reque
 
 #if defined(STM32N6)
 int stm_dma_ll_init(DMA_HandleTypeDef *dma_descr, DMA_QListTypeDef *dma_queue,
-        DMA_NodeTypeDef *dma_nodes, size_t nodes_count, uint32_t ports) {
+                    DMA_NodeTypeDef *dma_nodes, size_t nodes_count, uint32_t ports) {
     bool is_hp = stm_dma_is_hp_channel(dma_descr->Instance);
 
     DMA_NodeConfTypeDef node_conf = {
@@ -422,7 +422,7 @@ int stm_dma_ll_init(DMA_HandleTypeDef *dma_descr, DMA_QListTypeDef *dma_queue,
     memset(dma_nodes, 0, sizeof(DMA_NodeTypeDef) * nodes_count);
 
     DMA_NodeTypeDef *prev_node = NULL;
-    for (size_t i=0; i<nodes_count; i++) {
+    for (size_t i = 0; i < nodes_count; i++) {
         if (HAL_DMAEx_List_BuildNode(&node_conf, &dma_nodes[i]) != HAL_OK ||
             HAL_DMAEx_List_InsertNode(dma_queue, prev_node, &dma_nodes[i]) != HAL_OK) {
             return -1;

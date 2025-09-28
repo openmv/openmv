@@ -225,7 +225,7 @@ soft_reset:
     #if MICROPY_HW_ENABLE_CAN
     pyb_can_init0();
     #endif
-    #if MICROPY_PY_PYB_LEGACY  && MICROPY_HW_ENABLE_HW_I2C
+    #if MICROPY_PY_PYB_LEGACY && MICROPY_HW_ENABLE_HW_I2C
     i2c_init0();
     #endif
     spi_init0();
@@ -377,7 +377,7 @@ soft_reset_exit:
     // soft reset
     mp_printf(MP_PYTHON_PRINTER, "MPY: soft reboot\n");
     #if MICROPY_PY_CSI
-    omv_csi_abort_all(); 
+    omv_csi_abort_all();
     #endif
     #if MICROPY_PY_LWIP
     systick_disable_dispatch(SYSTICK_DISPATCH_LWIP);

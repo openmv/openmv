@@ -172,8 +172,7 @@ typedef struct color_thresholds_list_lnk_data {
     uint8_t LMin, LMax; // or grayscale
     int8_t AMin, AMax;
     int8_t BMin, BMax;
-}
-color_thresholds_list_lnk_data_t;
+}color_thresholds_list_lnk_data_t;
 
 #define COLOR_THRESHOLD_BINARY(pixel, threshold, invert)                          \
     ({                                                                            \
@@ -389,12 +388,12 @@ typedef struct ec_event {
 #define EC_EVENT_SIZE (sizeof(ec_event_t) / sizeof(uint16_t))
 
 typedef enum {
-    EC_PIX_OFF_EVENT = 0,
-    EC_PIX_ON_EVENT = 1,
+    EC_PIX_OFF_EVENT       = 0,
+    EC_PIX_ON_EVENT        = 1,
     EC_EXT_TRIGGER_FALLING = 2,
-    EC_EXT_TRIGGER_RISING = 3,
+    EC_EXT_TRIGGER_RISING  = 3,
     EC_RST_TRIGGER_FALLING = 4,
-    EC_RST_TRIGGER_RISING = 5
+    EC_RST_TRIGGER_RISING  = 5
 } ec_event_type_t;
 
 #define EC_PIXEL_EVENT(event) (EC_PIX_OFF_EVENT + ((event) & 1))

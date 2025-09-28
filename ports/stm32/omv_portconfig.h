@@ -158,20 +158,20 @@ typedef I2C_HandleTypeDef *omv_i2c_dev_t;
 #define OMV_CSI_PORT_BITS_DCMIPP
 #endif
 
-#define OMV_CSI_PORT_BITS        \
-    struct {                     \
-        uint32_t dma_size;       \
-        bool one_shot;           \
-        DMA_HandleTypeDef dma;   \
-        IRQn_Type dma_irqn;      \
-        DCMI_HandleTypeDef dcmi; \
-        OMV_CSI_PORT_BITS_MDMA   \
-        OMV_CSI_PORT_BITS_DCMIPP \
+#define OMV_CSI_PORT_BITS            \
+    struct {                         \
+        uint32_t dma_size;           \
+        bool one_shot;               \
+        DMA_HandleTypeDef dma;       \
+        IRQn_Type dma_irqn;          \
+        DCMI_HandleTypeDef dcmi;     \
+        OMV_CSI_PORT_BITS_MDMA       \
+            OMV_CSI_PORT_BITS_DCMIPP \
     };
 
-#define OMV_CSI_CLK_PORT_BITS      \
-    struct {                       \
-        TIM_HandleTypeDef tim;     \
+#define OMV_CSI_CLK_PORT_BITS  \
+    struct {                   \
+        TIM_HandleTypeDef tim; \
     };
 
 #endif // __OMV_PORTCONFIG_H__

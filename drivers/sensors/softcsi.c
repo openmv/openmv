@@ -95,18 +95,18 @@ static int snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
         for (size_t x = 0; x < image->w; x++) {
             size_t tx = x;
             size_t ty = y;
-    
+
             if (csi->hmirror) {
                 tx = image->w - 1 - tx;
             }
-    
+
             if (csi->vflip) {
                 ty = image->h - 1 - ty;
             }
-    
+
             size_t pattern_x = csi->transpose ? y : x;
             size_t pattern_y = csi->transpose ? x : y;
-    
+
             switch (csi->pixformat) {
                 case PIXFORMAT_GRAYSCALE: {
                     uint8_t value = ((((pattern_x + offset) / 16) + (pattern_y / 16)) % 2) ? 0xFF : 0x00;
@@ -126,7 +126,7 @@ static int snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
             }
         }
     }
-    
+
     // Move the buffer from free queue -> used queue.
     framebuffer_release(fb, FB_FLAG_FREE);
     framebuffer_to_image(fb, image);
