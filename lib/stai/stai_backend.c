@@ -238,6 +238,7 @@ int ml_backend_init_model(py_ml_model_obj_t *model) {
 }
 
 int ml_backend_run_inference(py_ml_model_obj_t *model) {
+    LL_ATON_RT_RetValues_t ll_aton_rt_ret;
     ml_backend_state_t *state = (ml_backend_state_t *) model->state;
 
     // Flush input buffers.
@@ -246,7 +247,25 @@ int ml_backend_run_inference(py_ml_model_obj_t *model) {
         SCB_CleanDCache_by_Addr(LL_Buffer_addr_start(buf), LL_Buffer_len(buf));
     }
 
-    LL_ATON_RT_Main(&state->nn_inst);
+    LL_ATON_RT_RuntimeInit();
+    LL_ATON_RT_Init_Network(&state->nn_inst);
+
+    do {
+        // Execute first/next runtime step
+        ll_aton_rt_ret = LL_ATON_RT_RunEpochBlock(&state->nn_inst);
+
+        // Handle pending events (TinyUSB, OMV Protocol etc..)
+        mp_handle_pending_internal(MP_HANDLE_PENDING_CALLBACKS_ONLY);
+
+        // Wait for the next event
+        if (ll_aton_rt_ret == LL_ATON_RT_WFE) {
+            LL_ATON_OSAL_WFE();
+        }
+    } while (ll_aton_rt_ret != LL_ATON_RT_DONE);
+
+    LL_ATON_RT_DeInit_Network(&state->nn_inst);
+    LL_ATON_RT_RuntimeDeInit();
+
     return 0;
 }
 

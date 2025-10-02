@@ -35,6 +35,8 @@
 #include CMSIS_MCU_H
 
 #include "py/mphal.h"
+#include "py/runtime.h"
+
 #include "alif_hal.h"
 #include "omv_boardconfig.h"
 #include "ethosu_driver.h"
@@ -150,11 +152,11 @@ uint64_t ethosu_address_remap(uint64_t address, int index) {
 }
 
 void ethosu_inference_begin(struct ethosu_driver *drv, void *user_arg) {
-
+    mp_handle_pending_internal(MP_HANDLE_PENDING_CALLBACKS_ONLY);
 }
 
 void ethosu_inference_end(struct ethosu_driver *drv, void *user_arg) {
-
+    mp_handle_pending_internal(MP_HANDLE_PENDING_CALLBACKS_ONLY);
 }
 
 void ETHOSU_IRQ_HANDLER(void) {
