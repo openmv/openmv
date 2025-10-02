@@ -60,6 +60,10 @@
 // USB IRQn.
 #define OMV_USB_IRQN                          (OTG_FS_IRQn)
 
+// OpenMV protocol configuration.
+#define OMV_PROTOCOL_MAX_BUFFER_SIZE          (4096)
+#define OMV_PROTOCOL_HW_CAPS                  OMV_PROTOCOL_HW_CAPS_MAKE(HAS_JPEG, HAS_DRAM, HAS_CRC, HAS_SD)
+
 //PLL1 48MHz for USB, SDMMC and FDCAN
 #define OMV_OSC_PLL1M                         (3)
 #define OMV_OSC_PLL1N                         (240)
@@ -125,7 +129,7 @@
 #define OMV_DMA_MEMORY_D2                     SRAM3  // Domain 2 DMA buffers.
 #define OMV_DMA_MEMORY_D3                     SRAM4  // Domain 3 DMA buffers.
 #define OMV_GC_BLOCK0_MEMORY                  SRAM1  // Main GC block
-#define OMV_GC_BLOCK0_SIZE                    (239K)
+#define OMV_GC_BLOCK0_SIZE                    (235K)
 #define OMV_GC_BLOCK1_MEMORY                  DRAM   // Extra GC block 0.
 #define OMV_GC_BLOCK1_SIZE                    (4M)
 #define OMV_MSC_BUF_SIZE                      (2K)   // USB MSC bot data

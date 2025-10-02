@@ -29,6 +29,7 @@
 #include "fmath.h"
 #include "framebuffer.h"
 #include "omv_boardconfig.h"
+#include "omv_protocol.h"
 
 // Main framebuffer memory
 extern char _fb_memory_start;
@@ -353,6 +354,8 @@ void framebuffer_update_preview(image_t *src) {
 
         framebuffer_from_image(fb, &dst);
     }
+
+    omv_protocol_send_event(OMV_PROTOCOL_CHANNEL_ID_STREAM, OMV_PROTOCOL_EVENT_NOTIFY, false);
 
 exit_cleanup:
     header->width = fb->w;

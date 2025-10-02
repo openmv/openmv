@@ -178,8 +178,8 @@ LDFLAGS = -mthumb \
 
 ifeq ($(MCU_CORE),M55_HP)
 # Linker Flags
-LDFLAGS += -Wl,--wrap=mp_usbd_task \
-           -Wl,--wrap=tud_cdc_rx_cb \
+LDFLAGS += -Wl,--wrap=tud_cdc_rx_cb \
+           -Wl,--wrap=tud_cdc_line_state_cb \
            -Wl,--wrap=mp_hal_stdio_poll \
            -Wl,--wrap=mp_hal_stdout_tx_strn
 endif
@@ -188,6 +188,7 @@ endif
 include lib/cmsis/cmsis.mk
 include lib/alif/alif.mk
 include common/common.mk
+include protocol/protocol.mk
 include drivers/drivers.mk
 include lib/imlib/imlib.mk
 include lib/tflm/tflm.mk
