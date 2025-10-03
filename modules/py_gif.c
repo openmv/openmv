@@ -45,7 +45,7 @@ typedef struct py_gif_obj {
     uint32_t height;
     bool color;
     bool loop;
-    FIL fp;
+    file_t fp;
 } py_gif_obj_t;
 
 static void py_gif_print(const mp_print_t *print, mp_obj_t self_in, mp_print_kind_t kind) {

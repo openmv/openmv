@@ -6188,7 +6188,7 @@ mp_obj_t py_image_make_new(const mp_obj_type_t *type, size_t n_args, size_t n_kw
 
     if (mp_obj_is_str(args[ARG_arg].u_obj)) {
         #if defined(IMLIB_ENABLE_IMAGE_FILE_IO)
-        FIL fp;
+        file_t fp;
         img_read_settings_t rs;
         const char *path = mp_obj_str_get_str(args[ARG_arg].u_obj);
 
@@ -6911,8 +6911,7 @@ static MP_DEFINE_CONST_FUN_OBJ_KW(py_image_load_cascade_obj, 1, py_image_load_ca
 #if defined(IMLIB_ENABLE_DESCRIPTOR)
 #if defined(IMLIB_ENABLE_IMAGE_FILE_IO)
 mp_obj_t py_image_load_descriptor(size_t n_args, const mp_obj_t *args, mp_map_t *kw_args) {
-    FIL fp;
-    FRESULT res = FR_OK;
+    file_t fp;
 
     uint32_t desc_type;
     mp_obj_t desc = mp_const_none;
@@ -6973,8 +6972,7 @@ mp_obj_t py_image_load_descriptor(size_t n_args, const mp_obj_t *args, mp_map_t 
 static MP_DEFINE_CONST_FUN_OBJ_KW(py_image_load_descriptor_obj, 1, py_image_load_descriptor);
 
 mp_obj_t py_image_save_descriptor(size_t n_args, const mp_obj_t *args, mp_map_t *kw_args) {
-    FIL fp;
-    FRESULT res = FR_OK;
+    file_t fp;
 
     uint32_t desc_type;
     const char *path = mp_obj_str_get_str(args[1]);
@@ -7116,16 +7114,12 @@ static MP_DEFINE_CONST_FUN_OBJ_KW(py_image_match_descriptor_obj, 2, py_image_mat
 
 #if defined(IMLIB_ENABLE_FIND_KEYPOINTS) && defined(IMLIB_ENABLE_IMAGE_FILE_IO)
 int py_image_descriptor_from_roi(image_t *img, const char *path, rectangle_t *roi) {
-    FIL fp;
+    file_t fp;
     array_t *kpts = orb_find_keypoints(img, false, 20, 1.5f, 100, CORNER_AGAST, roi);
     if (array_length(kpts)) {
         file_open(&fp, path, false, FA_WRITE | FA_CREATE_ALWAYS);
-        FRESULT res = orb_save_descriptor(&fp, kpts);
+        orb_save_descriptor(&fp, kpts);
         file_close(&fp);
-        // File write error
-        if (res != FR_OK) {
-            mp_raise_msg(&mp_type_OSError, (mp_rom_error_text_t) file_strerror(res));
-        }
     }
     return 0;
 }

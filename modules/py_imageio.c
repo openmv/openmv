@@ -187,7 +187,7 @@ static mp_obj_t py_imageio_write(mp_obj_t self, mp_obj_t img_obj) {
     if (0) {
     #if defined(IMLIB_ENABLE_IMAGE_FILE_IO)
     } else if (stream->type == IMAGE_IO_FILE_STREAM) {
-        FIL *fp = &stream->fp;
+        file_t *fp = &stream->fp;
 
         file_write_long(fp, elapsed_ms);
         file_write_long(fp, image->w);
@@ -273,7 +273,7 @@ static void int_py_imageio_pause(py_imageio_obj_t *stream, bool pause) {
 
 #if defined(IMLIB_ENABLE_IMAGE_FILE_IO)
 static void int_py_imageio_read_chunk(py_imageio_obj_t *stream, image_t *image, bool pause) {
-    FIL *fp = &stream->fp;
+    file_t *fp = &stream->fp;
 
     if (f_eof(fp)) {
         mp_raise_msg(&mp_type_EOFError, MP_ERROR_TEXT("End of stream"));
@@ -333,7 +333,7 @@ static mp_obj_t py_imageio_read(size_t n_args, const mp_obj_t *pos_args, mp_map_
     if (0) {
     #if defined(IMLIB_ENABLE_IMAGE_FILE_IO)
     } else if (stream->type == IMAGE_IO_FILE_STREAM) {
-        FIL *fp = &stream->fp;
+        file_t *fp = &stream->fp;
 
         if (f_eof(fp)) {
             if (args[ARG_loop].u_bool == false) {
@@ -372,7 +372,7 @@ static mp_obj_t py_imageio_read(size_t n_args, const mp_obj_t *pos_args, mp_map_
     if (0) {
     #if defined(IMLIB_ENABLE_IMAGE_FILE_IO)
     } else if (stream->type == IMAGE_IO_FILE_STREAM) {
-        FIL *fp = &stream->fp;
+        file_t *fp = &stream->fp;
         file_read(fp, image.data, size);
 
         // Check if original byte reversed data.
@@ -423,7 +423,7 @@ static mp_obj_t py_imageio_seek(mp_obj_t self, mp_obj_t offs) {
 
     #if defined(IMLIB_ENABLE_IMAGE_FILE_IO)
     if (stream->type == IMAGE_IO_FILE_STREAM) {
-        FIL *fp = &stream->fp;
+        file_t *fp = &stream->fp;
         file_seek(fp, MAGIC_SIZE); // skip past the file header
 
         for (int i = 0; i < offset; i++) {
@@ -490,7 +490,7 @@ static mp_obj_t py_imageio_make_new(const mp_obj_type_t *type, size_t n_args, si
     #if defined(IMLIB_ENABLE_IMAGE_FILE_IO)
     } else if (mp_obj_is_str(args[0])) {
         // File Stream I/O
-        FIL *fp = &stream->fp;
+        file_t *fp = &stream->fp;
         stream->type = IMAGE_IO_FILE_STREAM;
         stream->count = 0;
 
