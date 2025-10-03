@@ -6188,7 +6188,7 @@ mp_obj_t py_image_make_new(const mp_obj_type_t *type, size_t n_args, size_t n_kw
 
     if (mp_obj_is_str(args[ARG_arg].u_obj)) {
         #if defined(IMLIB_ENABLE_IMAGE_FILE_IO)
-        FIL fp;
+        file_t fp;
         img_read_settings_t rs;
         const char *path = mp_obj_str_get_str(args[ARG_arg].u_obj);
 
@@ -6911,8 +6911,7 @@ static MP_DEFINE_CONST_FUN_OBJ_KW(py_image_load_cascade_obj, 1, py_image_load_ca
 #if defined(IMLIB_ENABLE_DESCRIPTOR)
 #if defined(IMLIB_ENABLE_IMAGE_FILE_IO)
 mp_obj_t py_image_load_descriptor(size_t n_args, const mp_obj_t *args, mp_map_t *kw_args) {
-    FIL fp;
-    FRESULT res = FR_OK;
+    file_t fp;
 
     uint32_t desc_type;
     mp_obj_t desc = mp_const_none;
@@ -6930,10 +6929,8 @@ mp_obj_t py_image_load_descriptor(size_t n_args, const mp_obj_t *args, mp_map_t 
             py_lbp_obj_t *lbp = m_new_obj(py_lbp_obj_t);
             lbp->base.type = &py_lbp_type;
 
-            res = imlib_lbp_desc_load(&fp, &lbp->hist);
-            if (res == FR_OK) {
-                desc = lbp;
-            }
+            imlib_lbp_desc_load(&fp, &lbp->hist);
+            desc = lbp;
             break;
         }
         #endif  //IMLIB_ENABLE_FIND_LBP
@@ -6942,29 +6939,27 @@ mp_obj_t py_image_load_descriptor(size_t n_args, const mp_obj_t *args, mp_map_t 
             array_t *kpts = NULL;
             array_alloc(&kpts, m_free);
 
-            res = orb_load_descriptor(&fp, kpts);
-            if (res == FR_OK) {
-                // Return keypoints MP object
-                py_kp_obj_t *kp_obj = m_new_obj(py_kp_obj_t);
-                kp_obj->base.type = &py_kp_type;
-                kp_obj->kpts = kpts;
-                kp_obj->threshold = 10;
-                kp_obj->normalized = false;
-                desc = kp_obj;
-            }
+            orb_load_descriptor(&fp, kpts);
+
+            // Return keypoints MP object
+            py_kp_obj_t *kp_obj = m_new_obj(py_kp_obj_t);
+            kp_obj->base.type = &py_kp_type;
+            kp_obj->kpts = kpts;
+            kp_obj->threshold = 10;
+            kp_obj->normalized = false;
+            desc = kp_obj;
             break;
         }
         #endif //IMLIB_ENABLE_FIND_KEYPOINTS
+        default:
+            // Unsupported descriptor type
+            desc = mp_const_none;
+            break;
     }
 
     file_close(&fp);
 
-    // File read error
-    if (res != FR_OK) {
-        mp_raise_msg(&mp_type_OSError, (mp_rom_error_text_t) file_strerror(res));
-    }
-
-    // If no file error and descriptor is still none, then it's not supported.
+    // If descriptor is still none, then it's not supported.
     if (desc == mp_const_none) {
         mp_raise_msg(&mp_type_OSError, MP_ERROR_TEXT("Descriptor type is not supported"));
     }
@@ -6973,8 +6968,7 @@ mp_obj_t py_image_load_descriptor(size_t n_args, const mp_obj_t *args, mp_map_t 
 static MP_DEFINE_CONST_FUN_OBJ_KW(py_image_load_descriptor_obj, 1, py_image_load_descriptor);
 
 mp_obj_t py_image_save_descriptor(size_t n_args, const mp_obj_t *args, mp_map_t *kw_args) {
-    FIL fp;
-    FRESULT res = FR_OK;
+    file_t fp;
 
     uint32_t desc_type;
     const char *path = mp_obj_str_get_str(args[1]);
@@ -7005,26 +6999,20 @@ mp_obj_t py_image_save_descriptor(size_t n_args, const mp_obj_t *args, mp_map_t 
         #if defined(IMLIB_ENABLE_FIND_LBP)
         case DESC_LBP: {
             py_lbp_obj_t *lbp = ((py_lbp_obj_t *) args[0]);
-            res = imlib_lbp_desc_save(&fp, lbp->hist);
+            imlib_lbp_desc_save(&fp, lbp->hist);
             break;
         }
         #endif //IMLIB_ENABLE_FIND_LBP
         #if defined(IMLIB_ENABLE_FIND_KEYPOINTS)
         case DESC_ORB: {
             py_kp_obj_t *kpts = ((py_kp_obj_t *) args[0]);
-            res = orb_save_descriptor(&fp, kpts->kpts);
+            orb_save_descriptor(&fp, kpts->kpts);
             break;
         }
         #endif //IMLIB_ENABLE_FIND_KEYPOINTS
     }
 
-    // ignore unsupported descriptors when saving
     file_close(&fp);
-
-    // File write error
-    if (res != FR_OK) {
-        mp_raise_msg(&mp_type_OSError, (mp_rom_error_text_t) file_strerror(res));
-    }
     return mp_const_true;
 }
 static MP_DEFINE_CONST_FUN_OBJ_KW(py_image_save_descriptor_obj, 2, py_image_save_descriptor);
@@ -7116,16 +7104,12 @@ static MP_DEFINE_CONST_FUN_OBJ_KW(py_image_match_descriptor_obj, 2, py_image_mat
 
 #if defined(IMLIB_ENABLE_FIND_KEYPOINTS) && defined(IMLIB_ENABLE_IMAGE_FILE_IO)
 int py_image_descriptor_from_roi(image_t *img, const char *path, rectangle_t *roi) {
-    FIL fp;
+    file_t fp;
     array_t *kpts = orb_find_keypoints(img, false, 20, 1.5f, 100, CORNER_AGAST, roi);
     if (array_length(kpts)) {
         file_open(&fp, path, false, FA_WRITE | FA_CREATE_ALWAYS);
-        FRESULT res = orb_save_descriptor(&fp, kpts);
+        orb_save_descriptor(&fp, kpts);
         file_close(&fp);
-        // File write error
-        if (res != FR_OK) {
-            mp_raise_msg(&mp_type_OSError, (mp_rom_error_text_t) file_strerror(res));
-        }
     }
     return 0;
 }

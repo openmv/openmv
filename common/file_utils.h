@@ -21,48 +21,57 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  *
- * Filesystem helper functions.
+ * Filesystem helper functions using MicroPython VFS interface.
  */
 #ifndef __FILE_UTILS_H__
 #define __FILE_UTILS_H__
 #include <stdint.h>
 #include <stdbool.h>
-#include <ff.h>
-void file_raise_format(FIL *fp);
-void file_raise_corrupted(FIL *fp);
-void file_raise_error(FIL *fp, FRESULT res);
+#include <sys/types.h>
+#include "py/obj.h"
 
-// These low-level functions/wrappers don't use file buffering,
-// and they don't raise any exceptions, so they're safe to call
-// from anywhere.
-FRESULT file_ll_open(FIL *fp, const TCHAR *path, BYTE mode);
-FRESULT file_ll_close(FIL *fp);
-FRESULT file_ll_read(FIL *fp, void *buff, UINT btr, UINT *br);
-FRESULT file_ll_write(FIL *fp, const void *buff, UINT btw, UINT *bw);
-FRESULT file_ll_opendir(FF_DIR *dp, const TCHAR *path);
-FRESULT file_ll_stat(const TCHAR *path, FILINFO *fno);
-FRESULT file_ll_mkdir(const TCHAR *path);
-FRESULT file_ll_unlink(const TCHAR *path);
-FRESULT file_ll_rename(const TCHAR *path_old, const TCHAR *path_new);
-FRESULT file_ll_touch(const TCHAR *path);
+// File handle that wraps a MicroPython file object
+// Replaces FatFS FIL type with VFS-agnostic abstraction
+typedef struct {
+    mp_obj_t fp;      // MicroPython file object
+    uint8_t flags;    // Open mode flags (FA_READ, FA_WRITE, etc.)
+} file_t;
 
-// File buffer functions.
+// FatFS-compatible mode flags for backward compatibility
+#define FA_READ             0x01
+#define FA_WRITE            0x02
+#define FA_OPEN_EXISTING    0x00
+#define FA_CREATE_NEW       0x04
+#define FA_CREATE_ALWAYS    0x08
+#define FA_OPEN_ALWAYS      0x10
+#define FA_OPEN_APPEND      0x30
+
+// Error/exception functions
+void file_raise_format(file_t *fp);
+void file_raise_corrupted(file_t *fp);
+void file_raise_error(file_t *fp, mp_rom_error_text_t msg);
+
+// File buffer functions
 void file_buffer_init0();
-void file_buffer_on(FIL *fp);  // Calls fb_alloc_all()
-void file_buffer_off(FIL *fp); // Calls fb_free()
+void file_buffer_on(file_t *fp);  // Calls fb_alloc_all()
+void file_buffer_off(file_t *fp); // Calls fb_free()
 
-void file_open(FIL *fp, const char *path, bool buffered, uint32_t flags);
-void file_close(FIL *fp);
-void file_seek(FIL *fp, UINT offset);
-void file_truncate(FIL *fp);
-void file_sync(FIL *fp);
-uint32_t file_tell(FIL *fp);
-uint32_t file_size(FIL *fp);
-void file_read(FIL *fp, void *data, size_t size);
-void file_write(FIL *fp, const void *data, size_t size);
-void file_write_byte(FIL *fp, uint8_t value);
-void file_write_short(FIL *fp, uint16_t value);
-void file_write_long(FIL *fp, uint32_t value);
-void file_read_check(FIL *fp, const void *data, size_t size);
-const char *file_strerror(FRESULT res);
+// File operations
+void file_open(file_t *fp, const char *path, bool buffered, uint32_t flags);
+void file_close(file_t *fp);
+void file_seek(file_t *fp, size_t offset);
+void file_truncate(file_t *fp);
+void file_sync(file_t *fp);
+size_t file_tell(file_t *fp);
+size_t file_size(file_t *fp);
+bool file_eof(file_t *fp);
+
+// Buffered read/write operations
+void file_read(file_t *fp, void *data, size_t size);
+void file_write(file_t *fp, const void *data, size_t size);
+void file_write_byte(file_t *fp, uint8_t value);
+void file_write_short(file_t *fp, uint16_t value);
+void file_write_long(file_t *fp, uint32_t value);
+void file_read_check(file_t *fp, const void *data, size_t size);
+
 #endif /* __FILE_UTILS_H__ */

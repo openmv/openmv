@@ -50,7 +50,7 @@ typedef struct py_mjpeg_obj {
     uint32_t width;
     uint32_t height;
     bool closed;
-    FIL fp;
+    file_t fp;
 } py_mjpeg_obj_t;
 
 static void py_mjpeg_print(const mp_print_t *print, mp_obj_t self_in, mp_print_kind_t kind) {
@@ -60,7 +60,7 @@ static void py_mjpeg_print(const mp_print_t *print, mp_obj_t self_in, mp_print_k
               self->width,
               self->height,
               self->frames,
-              f_size(&self->fp));
+              file_size(&self->fp));
 }
 
 static mp_obj_t py_mjpeg_is_closed(mp_obj_t self_in) {
@@ -89,7 +89,7 @@ static MP_DEFINE_CONST_FUN_OBJ_1(py_mjpeg_count_obj, py_mjpeg_count);
 
 static mp_obj_t py_mjpeg_size(mp_obj_t self_in) {
     py_mjpeg_obj_t *self = MP_OBJ_TO_PTR(self_in);
-    return mp_obj_new_int(f_size(&self->fp));
+    return mp_obj_new_int(file_size(&self->fp));
 }
 static MP_DEFINE_CONST_FUN_OBJ_1(py_mjpeg_size_obj, py_mjpeg_size);
 
