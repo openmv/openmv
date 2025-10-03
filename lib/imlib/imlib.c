@@ -634,7 +634,7 @@ static save_image_format_t imblib_parse_extension(image_t *img, const char *path
     return FORMAT_DONT_CARE;
 }
 
-bool imlib_read_geometry(FIL *fp, image_t *img, const char *path, img_read_settings_t *rs) {
+bool imlib_read_geometry(file_t *fp, image_t *img, const char *path, img_read_settings_t *rs) {
     char magic[4];
     file_open(fp, path, false, FA_READ | FA_OPEN_EXISTING);
     file_read(fp, &magic, 4);
@@ -675,7 +675,7 @@ bool imlib_read_geometry(FIL *fp, image_t *img, const char *path, img_read_setti
 
 #if defined(IMLIB_ENABLE_IMAGE_FILE_IO)
 void imlib_load_image(image_t *img, const char *path) {
-    FIL fp;
+    file_t fp;
     char magic[4];
     file_open(&fp, path, false, FA_READ | FA_OPEN_EXISTING);
     file_read(&fp, &magic, 4);
@@ -710,7 +710,7 @@ void imlib_save_image(image_t *img, const char *path, rectangle_t *roi, int qual
             ppm_write_subimg(img, path, roi);
             break;
         case FORMAT_RAW: {
-            FIL fp;
+            file_t fp;
             file_open(&fp, path, false, FA_WRITE | FA_CREATE_ALWAYS);
             file_write(&fp, img->pixels, img->w * img->h);
             file_close(&fp);
@@ -733,7 +733,7 @@ void imlib_save_image(image_t *img, const char *path, rectangle_t *roi, int qual
                 png_write(img, new_path);
                 fb_free();
             } else if (IM_IS_BAYER(img)) {
-                FIL fp;
+                file_t fp;
                 char *new_path = strcat(strcpy(fb_alloc(strlen(path) + 5, FB_ALLOC_NO_HINT), path), ".raw");
                 file_open(&fp, new_path, false, FA_WRITE | FA_CREATE_ALWAYS);
                 file_write(&fp, img->pixels, img->w * img->h);
