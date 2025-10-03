@@ -30,6 +30,103 @@ OMV_PORT_MOD_DIR := $(OMV_MOD_DIR)/../ports/$(PORT)/modules
 SRC_USERMOD += $(wildcard $(OMV_PORT_MOD_DIR)/*.c)
 SRC_USERMOD_CXX += $(wildcard $(OMV_PORT_MOD_DIR)/*.cpp)
 
+# Add Unix port-specific source files
+ifeq ($(PORT),unix)
+OMV_PORT_DIR := $(OMV_MOD_DIR)/../ports/$(PORT)
+OMV_LIB_IMLIB_DIR := $(OMV_MOD_DIR)/../lib/imlib
+OMV_COMMON_DIR := $(OMV_MOD_DIR)/../common
+
+SRC_USERMOD += $(wildcard $(OMV_PORT_DIR)/*.c)
+
+# Add OpenMV common utilities for Unix port
+SRC_USERMOD += $(OMV_COMMON_DIR)/array.c \
+               $(OMV_COMMON_DIR)/umm_malloc.c \
+               $(OMV_COMMON_DIR)/file_utils.c \
+               $(OMV_COMMON_DIR)/mutex.c \
+               $(OMV_COMMON_DIR)/queue.c
+
+# Add OpenMV image library for Unix port
+SRC_USERMOD += $(addprefix $(OMV_LIB_IMLIB_DIR)/, \
+    agast.c                   \
+    apriltag.c                \
+    bayer.c                   \
+    binary.c                  \
+    blob.c                    \
+    bmp.c                     \
+    clahe.c                   \
+    collections.c             \
+    dmtx.c                    \
+    draw.c                    \
+    edge.c                    \
+    eye.c                     \
+    fast.c                    \
+    fft.c                     \
+    filter.c                  \
+    font.c                    \
+    framebuffer.c             \
+    fsort.c                   \
+    gif.c                     \
+    haar.c                    \
+    hog.c                     \
+    hough.c                   \
+    imlib.c                   \
+    integral.c                \
+    integral_mw.c             \
+    isp.c                     \
+    jpegd.c                   \
+    jpege.c                   \
+    kmeans.c                  \
+    lab_tab.c                 \
+    lbp.c                     \
+    line.c                    \
+    lodepng.c                 \
+    lsd.c                     \
+    mathop.c                  \
+    mjpeg.c                   \
+    orb.c                     \
+    phasecorrelation.c        \
+    png.c                     \
+    point.c                   \
+    ppm.c                     \
+    qrcode.c                  \
+    qsort.c                   \
+    rainbow_tab.c             \
+    rectangle.c               \
+    selective_search.c        \
+    sincos_tab.c              \
+    stats.c                   \
+    stereo.c                  \
+    template.c                \
+    xyz_tab.c                 \
+    yuv.c                     \
+    zbar.c                    \
+)
+
+CFLAGS_USERMOD += \
+    -I$(OMV_PORT_DIR) \
+    -I$(OMV_PORT_DIR)/unix_compat \
+    -I$(OMV_LIB_IMLIB_DIR) \
+    -I$(OMV_MOD_DIR) \
+    -I$(OMV_MOD_DIR)/.. \
+    -I$(OMV_MOD_DIR)/../common \
+    -I$(OMV_MOD_DIR)/../boards/UNIX \
+    -I$(OMV_MOD_DIR)/../lib/micropython \
+    -I$(OMV_MOD_DIR)/../lib/micropython/py \
+    -DUNIX \
+    -Wno-unused-parameter \
+    -Wno-missing-field-initializers \
+    -Wno-cpp \
+    -Wno-incompatible-pointer-types \
+    -Wno-sign-compare \
+    -Wno-float-conversion
+
+# Force-include Unix compatibility headers
+# Note: fmath.h not included as imlib provides its own implementation
+CFLAGS_USERMOD += \
+    -include $(OMV_PORT_DIR)/unix_compat/omv_force_include.h \
+    -include $(OMV_PORT_DIR)/unix_compat/mp_compat.h
+endif
+
 # Extra module flags.
 CFLAGS_USERMOD += \
         -std=gnu11 \
@@ -71,5 +168,11 @@ ifeq ($(PROFILE_ENABLE), 1)
 $(BUILD)/modules/py_ml.o: override CFLAGS += -finstrument-functions
 $(BUILD)/modules/py_image.o: override CFLAGS += -finstrument-functions
 $(BUILD)/modules/ulab/%.o: override CFLAGS += -finstrument-functions
+endif
+
+# Unix port: Suppress warnings that MicroPython's build system enables
+ifeq ($(PORT), unix)
+$(BUILD)/modules/%.o: override CFLAGS += -Wno-float-conversion -Wno-double-promotion -Wno-type-limits -Wno-absolute-value
+$(BUILD)/modules/../lib/imlib/%.o: override CFLAGS += -Wno-float-conversion -Wno-double-promotion -Wno-type-limits -Wno-absolute-value -Wno-old-style-declaration -Wno-shift-negative-value -Wno-implicit-fallthrough
 endif
 
