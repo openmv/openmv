@@ -33,6 +33,7 @@
 #include "py/objlist.h"
 #include "py/stream.h"
 #include "py/runtime.h"
+#include "py/builtin.h"
 #include "shared/netutils/netutils.h"
 #include "extmod/modnetwork.h"
 #include "pin.h"
@@ -342,13 +343,15 @@ static mp_obj_t py_winc_fw_dump(mp_obj_t self_in, mp_obj_t path_in) {
 }
 
 static mp_obj_t py_winc_fw_update(mp_obj_t self_in, mp_obj_t path_in) {
-    FRESULT res;
-    FILINFO fno;
     const char *path = mp_obj_str_get_str(path_in);
 
-    if ((res = file_ll_stat(path, &fno)) != FR_OK) {
-        mp_raise_msg(&mp_type_OSError, (mp_rom_error_text_t) file_strerror(res));
-    }
+    // Check if file exists by attempting to open it
+    mp_obj_t args[2] = {
+        path_in,
+        MP_OBJ_NEW_QSTR(MP_QSTR_rb)
+    };
+    mp_obj_t file = mp_builtin_open(2, args, (mp_map_t *) &mp_const_empty_map);
+    mp_stream_close(file);
 
     // Erase the WINC1500 flash.
     printf("Erasing flash...\n");
