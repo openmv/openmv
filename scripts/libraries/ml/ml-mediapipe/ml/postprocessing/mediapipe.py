@@ -139,3 +139,37 @@ class BlazePalm(mediapipe_detection_postprocess):
         super().__init__(threshold=threshold, anchors=anchors,
                          anchor_grid=[(24, 2), (12, 6)], scores=[0], cords=[1],
                          nms_threshold=nms_threshold, nms_sigma=nms_sigma)
+
+
+class HandLandmarks:
+    def __init__(self, threshold=0.6, nms_threshold=0.1, nms_sigma=0.1):
+        self.threshold = threshold
+        self.nms_threshold = nms_threshold
+        self.nms_sigma = nms_sigma
+
+    def __call__(self, model, inputs, outputs):
+        ib, ih, iw, ic = model.input_shape[0]
+        nms = NMS(iw, ih, inputs[0].roi)
+
+        score = outputs[2][0, 0]
+        if score < self.threshold:
+            return _NO_DETECTION
+
+        cords = outputs[3][0, :]
+
+        # Get the keypoint information
+        keypoints = np.empty((len(cords) // 3, 3))
+        keypoints[:, 0] = cords[0::3]
+        keypoints[:, 1] = cords[1::3]
+        keypoints[:, 2] = cords[2::3]
+
+        # Get bounding box information
+        xmin = np.min(keypoints[:, 0])
+        ymin = np.min(keypoints[:, 1])
+        xmax = np.max(keypoints[:, 0])
+        ymax = np.max(keypoints[:, 1])
+
+        left_right = outputs[0][0, 0] > 0.5
+
+        nms.add_bounding_box(xmin, ymin, xmax, ymax, score, left_right, keypoints=keypoints)
+        return nms.get_bounding_boxes(threshold=self.nms_threshold, sigma=self.nms_sigma)
