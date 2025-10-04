@@ -39,6 +39,12 @@
       "optimize": "Performance"
     },
     {
+      "type": "tflite",
+      "path": "{TOP}/lib/models/palm_detection_full_192.tflite",
+      "alignment": 16,
+      "optimize": "Performance"
+    },
+    {
       "type": "haar",
       "path": "{TOP}/lib/haar/haarcascade_eye.xml",
       "stages": 0
