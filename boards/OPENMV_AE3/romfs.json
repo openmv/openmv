@@ -45,6 +45,12 @@
       "optimize": "Performance"
     },
     {
+      "type": "tflite",
+      "path": "{TOP}/lib/models/hand_landmarks_full_224.tflite",
+      "alignment": 16,
+      "optimize": "Performance"
+    },
+    {
       "type": "haar",
       "path": "{TOP}/lib/haar/haarcascade_eye.xml",
       "stages": 0
