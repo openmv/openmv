@@ -25,6 +25,12 @@
       "path": "{TOP}/lib/models/blazeface_front_128.tflite",
       "alignment": 32,
       "profile": "default"
+    },
+    {
+      "type": "tflite",
+      "path": "{TOP}/lib/models/palm_detection_full_192.tflite",
+      "alignment": 32,
+      "profile": "default"
     }
     ]
   }
