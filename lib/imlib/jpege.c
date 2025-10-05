@@ -1307,7 +1307,7 @@ int jpeg_clean_trailing_bytes(int size, uint8_t *data) {
 
 #if defined(IMLIB_ENABLE_IMAGE_FILE_IO)
 // This function inits the geometry values of an image.
-void jpeg_read_geometry(FIL *fp, image_t *img, const char *path, jpg_read_settings_t *rs) {
+void jpeg_read_geometry(file_t *fp, image_t *img, const char *path, jpg_read_settings_t *rs) {
     for (;;) {
         uint16_t header;
         file_read(fp, &header, 2);
@@ -1336,7 +1336,7 @@ void jpeg_read_geometry(FIL *fp, image_t *img, const char *path, jpg_read_settin
 
                 rs->jpg_w = width;
                 rs->jpg_h = height;
-                rs->jpg_size = IMLIB_IMAGE_MAX_SIZE(f_size(fp));
+                rs->jpg_size = IMLIB_IMAGE_MAX_SIZE(file_size(fp));
 
                 img->w = rs->jpg_w;
                 img->h = rs->jpg_h;
@@ -1344,7 +1344,7 @@ void jpeg_read_geometry(FIL *fp, image_t *img, const char *path, jpg_read_settin
                 img->pixfmt = PIXFORMAT_JPEG;
                 return;
             } else {
-                file_seek(fp, f_tell(fp) + size - 2);
+                file_seek(fp, file_tell(fp) + size - 2);
             }
         } else {
             file_raise_corrupted(fp);
@@ -1353,13 +1353,13 @@ void jpeg_read_geometry(FIL *fp, image_t *img, const char *path, jpg_read_settin
 }
 
 // This function reads the pixel values of an image.
-void jpeg_read_pixels(FIL *fp, image_t *img) {
+void jpeg_read_pixels(file_t *fp, image_t *img) {
     file_seek(fp, 0);
     file_read(fp, img->pixels, img->size);
 }
 
 void jpeg_read(image_t *img, const char *path) {
-    FIL fp;
+    file_t fp;
     jpg_read_settings_t rs;
 
     // Do not use file buffering here.
@@ -1375,7 +1375,7 @@ void jpeg_read(image_t *img, const char *path) {
 }
 
 void jpeg_write(image_t *img, const char *path, int quality) {
-    FIL fp;
+    file_t fp;
     file_open(&fp, path, false, FA_WRITE | FA_CREATE_ALWAYS);
     if (IM_IS_JPEG(img)) {
         file_write(&fp, img->pixels, img->size);
