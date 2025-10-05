@@ -606,7 +606,7 @@ mp_obj_t display_make_new(const mp_obj_type_t *type, size_t n_args, size_t n_kw,
     self->framebuffer_head = 0;
     self->framesize = args[ARG_framesize].u_int;
     self->portrait = args[ARG_portrait].u_bool;
-    self->width  = dm.hactive;
+    self->width = dm.hactive;
     self->height = dm.vactive;
     self->controller = args[ARG_controller].u_obj;
     self->bl_controller = args[ARG_backlight].u_obj;

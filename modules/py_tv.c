@@ -422,8 +422,7 @@ static volatile enum {
     SPI_TX_CB_IDLE,
     SPI_TX_CB_MEMORY_WRITE_CMD,
     SPI_TX_CB_MEMORY_WRITE
-}
-spi_tx_cb_state = SPI_TX_CB_IDLE;
+} spi_tx_cb_state = SPI_TX_CB_IDLE;
 
 static void spi_config_deinit() {
     if (tv_triple_buffer) {
