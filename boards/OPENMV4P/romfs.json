@@ -16,12 +16,6 @@
     },
     {
       "type": "tflite",
-      "path": "{TOP}/lib/models/yolo_v5_224_nano.tflite",
-      "alignment": 16,
-      "optimize": "Performance"
-    },
-    {
-      "type": "tflite",
       "path": "{TOP}/lib/models/force_int_quant.tflite",
       "alignment": 16,
       "optimize": "Performance"
