@@ -174,11 +174,6 @@ soft_reset:
     pyexec_frozen_module("_boot.py", false);
     #endif
 
-    #if MICROPY_HW_ENABLE_OSPI
-    // Mark the filesystem as an OpenMV storage.
-    file_ll_touch(".openmv_disk");
-    #endif
-
     // Initialize TinyUSB after the filesystem is mounted.
     #if MICROPY_HW_ENABLE_USBDEV
     if (!tusb_inited()) {
