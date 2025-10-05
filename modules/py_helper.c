@@ -131,7 +131,7 @@ void *py_helper_arg_to_transform(const mp_obj_t arg) {
         mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Expected a 2D ndarray"));
     }
 
-    if ((ndarray->shape[ULAB_MAX_DIMS-2] != 3) || (ndarray->shape[ULAB_MAX_DIMS-1] != 3)) {
+    if ((ndarray->shape[ULAB_MAX_DIMS - 2] != 3) || (ndarray->shape[ULAB_MAX_DIMS - 1] != 3)) {
         mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Invalid matrix shape!"));
     }
 
@@ -606,7 +606,7 @@ void py_helper_set_to_framebuffer(image_t *img) {
     #else
     framebuffer_t *fb = framebuffer_get(FB_MAINFB_ID);
     #endif
-    
+
     // Resize the frame buffer to use all memory for one buffer.
     framebuffer_resize(fb, 1, 0, true);
 

@@ -1770,9 +1770,9 @@ static mp_obj_t py_image_draw_event_histogram(size_t n_args, const mp_obj_t *pos
     }
 
     if (!(ndarray_is_dense(array) && (array->ndim == 2) &&
-        (array->shape[ULAB_MAX_DIMS - 1] == EC_EVENT_SIZE))) {
+          (array->shape[ULAB_MAX_DIMS - 1] == EC_EVENT_SIZE))) {
         mp_raise_msg_varg(&mp_type_ValueError,
-                            MP_ERROR_TEXT("Expected a dense ndarray with shape (N, %d)"), EC_EVENT_SIZE);
+                          MP_ERROR_TEXT("Expected a dense ndarray with shape (N, %d)"), EC_EVENT_SIZE);
     }
 
     if (args[ARG_clear].u_bool) {

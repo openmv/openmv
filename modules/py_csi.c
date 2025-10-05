@@ -785,10 +785,14 @@ static mp_obj_t py_omv_csi_set_vsync_callback(mp_obj_t vsync_callback_obj) {
 
     if (!mp_obj_is_callable(vsync_callback_obj)) {
         vsync_callback = mp_const_none;
-        cb = (omv_csi_cb_t) { NULL, NULL };
+        cb = (omv_csi_cb_t) {
+            NULL, NULL
+        };
     } else {
         vsync_callback = vsync_callback_obj;
-        cb = (omv_csi_cb_t) { omv_csi_vsync_callback, NULL };
+        cb = (omv_csi_cb_t) {
+            omv_csi_vsync_callback, NULL
+        };
     }
 
     omv_csi_set_vsync_callback(csi, cb);
@@ -808,10 +812,14 @@ static mp_obj_t py_omv_csi_set_frame_callback(mp_obj_t frame_callback_obj) {
 
     if (!mp_obj_is_callable(frame_callback_obj)) {
         frame_callback = mp_const_none;
-        cb = (omv_csi_cb_t) { NULL, NULL };
+        cb = (omv_csi_cb_t) {
+            NULL, NULL
+        };
     } else {
         frame_callback = frame_callback_obj;
-        cb = (omv_csi_cb_t) { omv_csi_frame_callback, NULL };
+        cb = (omv_csi_cb_t) {
+            omv_csi_frame_callback, NULL
+        };
     }
 
     omv_csi_set_frame_callback(csi, cb);

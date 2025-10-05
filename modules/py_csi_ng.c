@@ -57,7 +57,7 @@
 #define omv_csi_raise_error(err) \
     mp_raise_msg(&mp_type_RuntimeError, (mp_rom_error_text_t) omv_csi_strerror(err))
 
-#define omv_csi_print_error(op)  \
+#define omv_csi_print_error(op) \
     printf("\x1B[31mWARNING: %s control is not supported by this image sensor.\x1B[0m\n", op);
 
 typedef struct _py_csi_obj_t {
@@ -106,7 +106,7 @@ static void omv_csi_set_rotation(omv_csi_t *csi, int pitch_deadzone, int roll_ac
 static mp_obj_t py_csi_devices() {
     mp_obj_t dev_list = mp_obj_new_list(0, NULL);
 
-    for (size_t i=0; i<OMV_CSI_MAX_DEVICES; i++) {
+    for (size_t i = 0; i < OMV_CSI_MAX_DEVICES; i++) {
         omv_csi_t *csi = &csi_all[i];
         if (csi->detected) {
             mp_obj_list_append(dev_list, mp_obj_new_int(csi->chip_id));
@@ -212,7 +212,7 @@ static mp_obj_t py_csi_snapshot(size_t n_args, const mp_obj_t *pos_args, mp_map_
         flags |= OMV_CSI_FLAG_NON_BLOCK;
     }
 
-    if (time == -1 && frames == -1) {   
+    if (time == -1 && frames == -1) {
         int error = omv_csi_snapshot(self->csi, &image, flags);
         if (error != 0) {
             if (error == OMV_CSI_ERROR_WOULD_BLOCK &&
@@ -237,7 +237,7 @@ static mp_obj_t py_csi_snapshot(size_t n_args, const mp_obj_t *pos_args, mp_map_
         // +-35 degree active-zone around roll 0/90/180/270/360.
         omv_csi_set_rotation(self->csi, 10, 35);
         #endif // MICROPY_PY_IMU
- 
+
         return py_image_from_struct(&image);
     } else {
         uint32_t millis = mp_hal_ticks_ms();
@@ -256,7 +256,7 @@ static mp_obj_t py_csi_snapshot(size_t n_args, const mp_obj_t *pos_args, mp_map_
                 omv_csi_raise_error(error);
             }
         }
-    
+
         return mp_const_none;
     }
 }
@@ -831,7 +831,7 @@ static MP_DEFINE_CONST_FUN_OBJ_KW(py_csi_lens_correction_obj, 1, py_csi_lens_cor
 
 static void omv_csi_vsync_callback(void *data) {
     py_csi_obj_t *self = data;
-    
+
     if (mp_obj_is_callable(self->vsync_cb)) {
         uint32_t vsync_state = 0;
         #ifdef OMV_CSI_VSYNC_PIN
@@ -848,13 +848,17 @@ static mp_obj_t py_csi_vsync_callback(size_t n_args, const mp_obj_t *args) {
     if (n_args == 1) {
         return self->vsync_cb;
     }
-    
+
     if (!mp_obj_is_callable(args[1])) {
         self->vsync_cb = mp_const_none;
-        cb = (omv_csi_cb_t) { NULL, NULL };
+        cb = (omv_csi_cb_t) {
+            NULL, NULL
+        };
     } else {
         self->vsync_cb = args[1];
-        cb = (omv_csi_cb_t) { .fun = omv_csi_vsync_callback, .arg = self };
+        cb = (omv_csi_cb_t) {
+            .fun = omv_csi_vsync_callback, .arg = self
+        };
     }
 
     omv_csi_set_vsync_callback(self->csi, cb);
@@ -880,10 +884,14 @@ static mp_obj_t py_csi_frame_callback(size_t n_args, const mp_obj_t *args) {
 
     if (!mp_obj_is_callable(args[1])) {
         self->frame_cb = mp_const_none;
-        cb = (omv_csi_cb_t) { NULL, NULL };
+        cb = (omv_csi_cb_t) {
+            NULL, NULL
+        };
     } else {
         self->frame_cb = args[1];
-        cb = (omv_csi_cb_t) { .fun = omv_csi_frame_callback, .arg = self };
+        cb = (omv_csi_cb_t) {
+            .fun = omv_csi_frame_callback, .arg = self
+        };
     }
 
     omv_csi_set_frame_callback(self->csi, cb);
@@ -1074,8 +1082,8 @@ static mp_obj_t py_csi_ioctl(size_t n_args, const mp_obj_t *args) {
             error = omv_csi_ioctl(self->csi, request, &enabled, &high_temp);
             if (error == 0) {
                 ret_obj = mp_obj_new_tuple(2, (mp_obj_t []) {
-                        mp_obj_new_bool(enabled), mp_obj_new_bool(high_temp)
-                        });
+                    mp_obj_new_bool(enabled), mp_obj_new_bool(high_temp)
+                });
             }
             break;
         }
@@ -1210,11 +1218,11 @@ static mp_obj_t py_csi_ioctl(size_t n_args, const mp_obj_t *args) {
                 }
 
                 uint32_t expected_len = self->csi->resolution[self->csi->framesize][0] *
-                                       (self->csi->resolution[self->csi->framesize][1] / sizeof(uint32_t));
+                                        (self->csi->resolution[self->csi->framesize][1] / sizeof(uint32_t));
 
                 if (!(ndarray_is_dense(array) && (array->ndim == 2) &&
-                    (array->shape[ULAB_MAX_DIMS - 2] == expected_len) &&
-                    (array->shape[ULAB_MAX_DIMS - 1] == EC_EVENT_SIZE))) {
+                      (array->shape[ULAB_MAX_DIMS - 2] == expected_len) &&
+                      (array->shape[ULAB_MAX_DIMS - 1] == EC_EVENT_SIZE))) {
                     mp_raise_msg_varg(&mp_type_ValueError,
                                       MP_ERROR_TEXT("Expected a dense ndarray with shape (%d, %d)"),
                                       expected_len, EC_EVENT_SIZE);
@@ -1352,7 +1360,7 @@ mp_obj_t py_csi_make_new(const mp_obj_type_t *type, size_t n_args, size_t n_kw, 
         csi->fb = (framebuffer_t *) m_malloc(sizeof(framebuffer_t));
         framebuffer_init(csi->fb, m_malloc(fb_size), fb_size, true, true);
     }
-    
+
     #if MICROPY_PY_IMU
     // +-10 degree dead-zone around pitch 90/270.
     // +-45 degree active-zone around roll 0/90/180/270/360.
