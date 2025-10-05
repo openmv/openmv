@@ -14,9 +14,9 @@
 
 #ifndef _TIMEOUT_LOGIC_H
 #define _TIMEOUT_LOGIC_H
+#include <sys/timespec.h>
 
 #define CLOCK_MONOTONIC 0
-struct timespec { long tv_sec; long tv_nsec; };
 int clock_gettime(int _ignore, struct timespec *spec);
 double difftime(long current, long reference);
 
