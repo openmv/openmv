@@ -260,6 +260,10 @@
 #define OMV_FIR_I2C_ID                      (OMV_I2C2_ID)
 #define OMV_FIR_I2C_SPEED                   (OMV_I2C_SPEED_FULL)
 
+// TOF I2C bus
+#define OMV_TOF_I2C_ID                      (OMV_I2C2_ID)
+#define OMV_TOF_I2C_SPEED                   (OMV_I2C_SPEED_FULL)
+
 // IMU SPI bus
 #define OMV_IMU_I2C_ID                      (OMV_I2C4_ID)
 #define OMV_IMU_I2C_SPEED                   (OMV_I2C_SPEED_FULL)
