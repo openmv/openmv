@@ -27,6 +27,45 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 import math
+from ulab import numpy as np
+
+
+_NO_DETECTION = const(())
+
+
+def logit(x):
+    return np.log(x / (1.0 - x))
+
+
+def sigmoid(x):
+    return 1.0 / (1.0 + np.exp(-x))
+
+
+def mod(a, b):
+    return a - (b * (a // b))
+
+
+def threshold(scores, threshold, scale, find_max=False, find_max_axis=1):
+    if scale > 0:
+        if find_max:
+            scores = np.max(scores, axis=find_max_axis)
+        return np.nonzero(scores > threshold)[0]
+    else:
+        if find_max:
+            scores = np.min(scores, axis=find_max_axis)
+        return np.nonzero(scores < threshold)[0]
+
+
+def quantize(model, value, index=0):
+    if model.output_dtype[index] == 'f':
+        return value
+    return (value / model.output_scale[index]) + model.output_zero_point[index]
+
+
+def dequantize(model, value, index=0):
+    if model.output_dtype[index] == 'f':
+        return value
+    return (value - float(model.output_zero_point[index])) * model.output_scale[index]
 
 
 class NMS:
