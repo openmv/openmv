@@ -195,3 +195,27 @@ def draw_predictions(
             color=box_color,
         )
         image.draw_string(x, y - font_height, label.upper(), text_color)
+
+
+def draw_keypoints(
+    image,
+    keypoints,
+    radius=4,
+    color=(255, 0, 0),
+    thickness=1,
+    fill=False,
+):
+    for kp in keypoints:
+        image.draw_circle(int(kp[0]), int(kp[1]), radius, color=color, thickness=thickness, fill=fill)
+
+
+def draw_keypoint_lines(
+    image,
+    keypoints,
+    lines,
+    color=(0, 255, 0),
+    thickness=1,
+):
+    for line in lines:
+        image.draw_line(int(keypoints[line[0]][0]), int(keypoints[line[0]][1]),
+                        int(keypoints[line[1]][0]), int(keypoints[line[1]][1]), color=color, thickness=thickness)
