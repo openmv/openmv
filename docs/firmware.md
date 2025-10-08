@@ -93,6 +93,47 @@ When the firmware build is done, the build artifacts should be located in `build
 
 * OpenMV IDE's bootloader will have trouble connecting to your OpenMV Cam from inside of a virtual machine. You can download OpenMV IDE [here](https://openmv.io/pages/download). *To be clear, OpenMV IDE can connect to an OpenMV Cam from inside of a virtual machine, however OpenMV IDE's bootloader needs to connect to the OpenMV Cam using a timing critical handshake that generally fails when you introduce moving USB devices around between the Host OS and a Virtual Machine*.
 
+## Unix Port Build
+
+The Unix port allows running OpenMV's image processing library on desktop systems (Linux, Mac, Windows with WSL) for development, testing, and prototyping.
+
+### Build Unix Port
+```bash
+cd openmv
+make -j$(nproc) -C lib/micropython/mpy-cross   # Build mpy-cross compiler
+make unix                                       # Build Unix port
+```
+
+### Run Unix Port
+```bash
+cd lib/micropython/ports/unix
+./build-openmv/micropython
+```
+
+Example usage:
+```python
+>>> import image
+>>> img = image.Image(320, 240, image.RGB565)
+>>> img.draw_rectangle(10, 10, 50, 50)
+>>> img.save("test.bmp")
+```
+
+### Features
+- Full image processing library (imlib)
+- Image I/O (BMP, PNG, JPEG, GIF, MJPEG)
+- All image processing algorithms (filters, feature detection, etc.)
+- QR codes, barcodes, AprilTags, data matrices
+- Software-only processing (no hardware dependencies)
+- Useful for testing algorithms, CI/CD pipelines, desktop tools
+
+### Limitations
+- No hardware modules (sensor, display, IMU, FIR, etc.)
+- GC-based memory allocation (no hardware framebuffer stack)
+- Performance may differ from embedded targets
+- No camera/sensor support (software image processing only)
+
+For more detailed information about the Unix port, see [Unix Port Documentation](unix-port.md).
+
 ## Windows Build
 
 There is no Windows development environment. It is very difficult to install the toolchain on Windows. Instead you can install Ubuntu on a virtual machine running on your windows machine:

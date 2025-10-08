@@ -39,7 +39,7 @@
 
 #define TIME_SCALE          (1000)
 
-void mjpeg_open(FIL *fp, int width, int height) {
+void mjpeg_open(file_t *fp, int width, int height) {
     file_write(fp, "RIFF", 4); // FOURCC fcc; - 0
     file_write_long(fp, 0); // DWORD cb; size - updated on close - 1
     file_write(fp, "AVI ", 4); // FOURCC fcc; - 2
@@ -108,7 +108,7 @@ void mjpeg_open(FIL *fp, int width, int height) {
     file_write(fp, "movi", 4); // FOURCC fcc; - 55
 }
 
-void mjpeg_write(FIL *fp, int width, int height, uint32_t *frames, uint32_t *bytes,
+void mjpeg_write(file_t *fp, int width, int height, uint32_t *frames, uint32_t *bytes,
                  image_t *img, int quality, rectangle_t *roi, int rgb_channel, int alpha,
                  const uint16_t *color_palette, const uint8_t *alpha_palette, image_hint_t hint) {
     float xscale = width / ((float) roi->w);
@@ -213,8 +213,8 @@ void mjpeg_write(FIL *fp, int width, int height, uint32_t *frames, uint32_t *byt
     fb_alloc_free_till_mark();
 }
 
-void mjpeg_sync(FIL *fp, uint32_t frames, uint32_t bytes, uint32_t us_avg) {
-    uint32_t position = f_tell(fp);
+void mjpeg_sync(file_t *fp, uint32_t frames, uint32_t bytes, uint32_t us_avg) {
+    uint32_t position = file_tell(fp);
     // size of all mjpeg headers and jpegs.
     uint32_t datasize = (frames * 8) + bytes;
     // frames_per_second == rate / scale
@@ -250,7 +250,7 @@ void mjpeg_sync(FIL *fp, uint32_t frames, uint32_t bytes, uint32_t us_avg) {
     file_seek(fp, position);
 }
 
-void mjpeg_close(FIL *fp, uint32_t frames, uint32_t bytes, uint32_t us_avg) {
+void mjpeg_close(file_t *fp, uint32_t frames, uint32_t bytes, uint32_t us_avg) {
     mjpeg_sync(fp, frames, bytes, us_avg);
     file_close(fp);
 }

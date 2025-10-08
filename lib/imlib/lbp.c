@@ -104,28 +104,21 @@ int imlib_lbp_desc_distance(uint8_t *d0, uint8_t *d1) {
     return sum;
 }
 
-int imlib_lbp_desc_save(FIL *fp, uint8_t *desc) {
-    UINT bytes;
-    // Write descriptor
-    return file_ll_write(fp, desc, LBP_DESC_SIZE, &bytes);
+int imlib_lbp_desc_save(file_t *fp, uint8_t *desc) {
+    // Write descriptor using VFS abstraction
+    file_write(fp, desc, LBP_DESC_SIZE);
+    return 0;  // Success
 }
 
-int imlib_lbp_desc_load(FIL *fp, uint8_t **desc) {
-    UINT bytes;
-    FRESULT res = FR_OK;
-
+int imlib_lbp_desc_load(file_t *fp, uint8_t **desc) {
     *desc = NULL;
     uint8_t *hist = m_malloc(LBP_DESC_SIZE);
 
-    // Read descriptor
-    res = file_ll_read(fp, hist, LBP_DESC_SIZE, &bytes);
-    if (res != FR_OK || bytes != LBP_DESC_SIZE) {
-        *desc = NULL;
-        m_free(hist);
-    } else {
-        *desc = hist;
-    }
+    // Read descriptor using VFS abstraction
+    // file_read will raise exception on error
+    file_read(fp, hist, LBP_DESC_SIZE);
+    *desc = hist;
 
-    return res;
+    return 0;  // Success
 }
 #endif //IMLIB_ENABLE_FIND_LBP

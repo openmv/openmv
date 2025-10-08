@@ -1224,12 +1224,12 @@ uint16_t imlib_lab_to_rgb(uint8_t l, int8_t a, int8_t b);
 uint16_t imlib_yuv_to_rgb(uint8_t y, int8_t u, int8_t v);
 
 /* Image file functions */
-void ppm_read_geometry(FIL *fp, image_t *img, const char *path, ppm_read_settings_t *rs);
-void ppm_read_pixels(FIL *fp, image_t *img, int n_lines, ppm_read_settings_t *rs);
+void ppm_read_geometry(file_t *fp, image_t *img, const char *path, ppm_read_settings_t *rs);
+void ppm_read_pixels(file_t *fp, image_t *img, int n_lines, ppm_read_settings_t *rs);
 void ppm_read(image_t *img, const char *path);
 void ppm_write_subimg(image_t *img, const char *path, rectangle_t *r);
-bool bmp_read_geometry(FIL *fp, image_t *img, const char *path, bmp_read_settings_t *rs);
-void bmp_read_pixels(FIL *fp, image_t *img, int n_lines, bmp_read_settings_t *rs);
+bool bmp_read_geometry(file_t *fp, image_t *img, const char *path, bmp_read_settings_t *rs);
+void bmp_read_pixels(file_t *fp, image_t *img, int n_lines, bmp_read_settings_t *rs);
 void bmp_read(image_t *img, const char *path);
 void bmp_write_subimg(image_t *img, const char *path, rectangle_t *r);
 #if (OMV_JPEG_CODEC_ENABLE == 1)
@@ -1242,33 +1242,33 @@ void jpeg_decompress(image_t *dst, image_t *src);
 bool jpeg_compress(image_t *src, image_t *dst, int quality, bool realloc, jpeg_subsampling_t subsampling);
 bool jpeg_is_valid(image_t *img);
 int jpeg_clean_trailing_bytes(int bpp, uint8_t *data);
-void jpeg_read_geometry(FIL *fp, image_t *img, const char *path, jpg_read_settings_t *rs);
-void jpeg_read_pixels(FIL *fp, image_t *img);
+void jpeg_read_geometry(file_t *fp, image_t *img, const char *path, jpg_read_settings_t *rs);
+void jpeg_read_pixels(file_t *fp, image_t *img);
 void jpeg_read(image_t *img, const char *path);
 void jpeg_write(image_t *img, const char *path, int quality);
 void png_decompress(image_t *dst, image_t *src);
 bool png_compress(image_t *src, image_t *dst);
-void png_read_geometry(FIL *fp, image_t *img, const char *path, png_read_settings_t *rs);
-void png_read_pixels(FIL *fp, image_t *img);
+void png_read_geometry(file_t *fp, image_t *img, const char *path, png_read_settings_t *rs);
+void png_read_pixels(file_t *fp, image_t *img);
 void png_read(image_t *img, const char *path);
 void png_write(image_t *img, const char *path);
-bool imlib_read_geometry(FIL *fp, image_t *img, const char *path, img_read_settings_t *rs);
+bool imlib_read_geometry(file_t *fp, image_t *img, const char *path, img_read_settings_t *rs);
 void imlib_image_operation(image_t *img, const char *path, image_t *other, int scalar, line_op_t op, void *data);
 void imlib_load_image(image_t *img, const char *path);
 void imlib_save_image(image_t *img, const char *path, rectangle_t *roi, int quality);
 
 /* GIF functions */
-void gif_open(FIL *fp, int width, int height, bool color, bool loop);
-void gif_add_frame(FIL *fp, image_t *img, uint16_t delay);
-void gif_close(FIL *fp);
+void gif_open(file_t *fp, int width, int height, bool color, bool loop);
+void gif_add_frame(file_t *fp, image_t *img, uint16_t delay);
+void gif_close(file_t *fp);
 
 /* MJPEG functions */
-void mjpeg_open(FIL *fp, int width, int height);
-void mjpeg_write(FIL *fp, int width, int height, uint32_t *frames, uint32_t *bytes,
+void mjpeg_open(file_t *fp, int width, int height);
+void mjpeg_write(file_t *fp, int width, int height, uint32_t *frames, uint32_t *bytes,
                  image_t *img, int quality, rectangle_t *roi, int rgb_channel, int alpha,
                  const uint16_t *color_palette, const uint8_t *alpha_palette, image_hint_t hint);
-void mjpeg_sync(FIL *fp, uint32_t frames, uint32_t bytes, uint32_t us_avg);
-void mjpeg_close(FIL *fp, uint32_t frames, uint32_t bytes, uint32_t us_avg);
+void mjpeg_sync(file_t *fp, uint32_t frames, uint32_t bytes, uint32_t us_avg);
+void mjpeg_close(file_t *fp, uint32_t frames, uint32_t bytes, uint32_t us_avg);
 
 /* Point functions */
 point_t *point_alloc(int16_t x, int16_t y);
@@ -1332,15 +1332,15 @@ array_t *orb_find_keypoints(image_t *image, bool normalized, int threshold,
                             float scale_factor, int max_keypoints, corner_detector_t corner_detector, rectangle_t *roi);
 int orb_match_keypoints(array_t *kpts1, array_t *kpts2, int *match, int threshold, rectangle_t *r, point_t *c, int *angle);
 int orb_filter_keypoints(array_t *kpts, rectangle_t *r, point_t *c);
-int orb_save_descriptor(FIL *fp, array_t *kpts);
-int orb_load_descriptor(FIL *fp, array_t *kpts);
+int orb_save_descriptor(file_t *fp, array_t *kpts);
+int orb_load_descriptor(file_t *fp, array_t *kpts);
 float orb_cluster_dist(int cx, int cy, void *kp);
 
 /* LBP Operator */
 uint8_t *imlib_lbp_desc(image_t *image, rectangle_t *roi);
 int imlib_lbp_desc_distance(uint8_t *d0, uint8_t *d1);
-int imlib_lbp_desc_save(FIL *fp, uint8_t *desc);
-int imlib_lbp_desc_load(FIL *fp, uint8_t **desc);
+int imlib_lbp_desc_save(file_t *fp, uint8_t *desc);
+int imlib_lbp_desc_load(file_t *fp, uint8_t **desc);
 
 /* Iris detector */
 void imlib_find_iris(image_t *src, point_t *iris, rectangle_t *roi);

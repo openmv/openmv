@@ -53,9 +53,16 @@ JLINK_GDB_SERVER ?= /opt/JLink/JLinkGDBServer
 
 ifeq ($(TARGET),)
   ifneq ($(MAKECMDGOALS),clean)
-    $(error Invalid or no TARGET specified)
+    ifneq ($(MAKECMDGOALS),unix)
+      ifneq ($(MAKECMDGOALS),submodules)
+        $(error Invalid or no TARGET specified)
+      endif
+    endif
   endif
-  TARGET=OPENMV4
+  # Don't set TARGET for unix builds
+  ifneq ($(MAKECMDGOALS),unix)
+    TARGET=OPENMV4
+  endif
 endif
 
 # Directories
@@ -126,8 +133,10 @@ CFLAGS += -DOMV_PROFILER_IRQ_ENABLE=$(PROFILE_IRQ)
 CFLAGS += -finstrument-functions-exclude-file-list=lib/cmsis,lib/stm32,/lib/mimxrt,lib/alif,simd.h
 endif
 
-# Include OpenMV board config first to set the port.
+# Include OpenMV board config first to set the port (skip for unix builds).
+ifneq ($(MAKECMDGOALS),unix)
 include $(OMV_BOARD_CONFIG_DIR)/omv_boardconfig.mk
+endif
 
 # Include MicroPython board config.
 #include $(MP_BOARD_CONFIG_DIR)/mpconfigboard.mk
@@ -234,8 +243,10 @@ MPY_PENDSV_ENTRIES := $(shell echo $(MPY_PENDSV_ENTRIES) | tr -d '[:space:]')
 MPY_CFLAGS += -DMICROPY_BOARD_PENDSV_ENTRIES="$(MPY_PENDSV_ENTRIES)"
 MPY_CFLAGS += -DMP_CONFIGFILE=\<$(OMV_PORT_DIR)/omv_mpconfigport.h\>
 
-# Include the port Makefile.
+# Include the port Makefile (skip for unix builds).
+ifneq ($(MAKECMDGOALS),unix)
 include $(OMV_PORT_DIR)/omv_portconfig.mk
+endif
 
 # Export variables for sub-make.
 export PORT
@@ -272,6 +283,28 @@ jlink:
 		exit 1; \
 	fi; \
 	jlink-gdb $(FW_DIR)/$(FIRMWARE).elf
+
+.PHONY: unix
+unix:
+	@echo "Building Unix port..."
+	@echo "Initializing Unix port submodules..."
+	+$(Q)cd lib/micropython/ports/unix && exec env -i PATH="$$PATH" HOME="$$HOME" USER="$$USER" \
+		make submodules
+	@echo "Building mpy-cross..."
+	+$(Q)cd lib/micropython/mpy-cross && exec env -i PATH="$$PATH" HOME="$$HOME" USER="$$USER" \
+		make
+	@echo "Building Unix port with OpenMV modules..."
+	+$(Q)cd lib/micropython/ports/unix && exec env -i PATH="$$PATH" HOME="$$HOME" USER="$$USER" \
+		make \
+			PORT=unix \
+			VARIANT=openmv \
+			VARIANT_DIR=$(shell pwd)/boards/UNIX \
+			USER_C_MODULES=$(shell pwd)
+	@echo ""
+	@echo "Unix port build complete!"
+	@echo "Binary: lib/micropython/ports/unix/build-openmv/micropython"
+	@echo ""
+	@echo "To run: cd lib/micropython/ports/unix && ./build-openmv/micropython"
 
 submodules:
 	$(MAKE) -C $(MICROPY_DIR)/ports/$(PORT) BOARD=$(TARGET) submodules
