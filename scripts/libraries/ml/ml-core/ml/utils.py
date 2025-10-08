@@ -195,3 +195,39 @@ def draw_predictions(
             color=box_color,
         )
         image.draw_string(x, y - font_height, label.upper(), text_color)
+
+
+def draw_keypoints(
+    image,
+    keypoints,
+    radius=4,
+    color=(255, 0, 0),
+    thickness=1,
+    fill=False,
+):
+
+    if radius > 0:
+        for kp in keypoints:
+            image.draw_circle(int(kp[0]), int(kp[1]), radius, color=color, thickness=thickness, fill=fill)
+    elif radius == 0:
+        for kp in keypoints:
+            image.set_pixel(int(kp[0]), int(kp[1]), color)
+
+
+def draw_skeleton(
+    image,
+    keypoints,
+    lines,
+    kp_radius=4,
+    kp_color=(255, 0, 0),
+    kp_thickness=1,
+    kp_fill=False,
+    line_color=(0, 255, 0),
+    line_thickness=1,
+):
+    draw_keypoints(image, keypoints, radius=kp_radius, color=kp_color, thickness=kp_thickness, fill=kp_fill)
+
+    for line in lines:
+        image.draw_line(int(keypoints[line[0]][0]), int(keypoints[line[0]][1]),
+                        int(keypoints[line[1]][0]), int(keypoints[line[1]][1]),
+                        color=line_color, thickness=line_thickness)
