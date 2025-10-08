@@ -31,6 +31,9 @@ from micropython import const
 from ulab import numpy as np
 
 
+_NO_DETECTION = const(())
+
+
 # This is a lightweight version of the tiny yolo v2 object detection algorithm.
 # It was optimized to work well on embedded devices with limited computational resources.
 class YoloV2:

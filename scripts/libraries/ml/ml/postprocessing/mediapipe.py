@@ -31,6 +31,9 @@ from micropython import const
 from ulab import numpy as np
 
 
+_NO_DETECTION = const(())
+
+
 class BlazeFace:
     _BLAZEFACE_CX = const(0)
     _BLAZEFACE_CY = const(1)
