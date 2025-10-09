@@ -1,7 +1,5 @@
-include("$(MPY_DIR)/extmod/asyncio")
-
-# Filesystem
-freeze ("$(OMV_LIB_DIR)/", "_boot.py")
+# OpenMV library
+add_library("openmv-lib", "$(OMV_LIB_DIR)")
 
 # Drivers
 require("onewire")
@@ -16,7 +14,6 @@ freeze ("$(OMV_LIB_DIR)/", "tb6612.py")
 freeze ("$(OMV_LIB_DIR)/", "vl53l1x.py")
 freeze ("$(OMV_LIB_DIR)/", "machine.py")
 freeze ("$(OMV_LIB_DIR)/", "display.py")
-freeze ("$(OMV_LIB_DIR)/ml")
 
 # Networking
 require("ssl")
@@ -31,3 +28,10 @@ freeze ("$(OMV_LIB_DIR)/", "requests.py")
 require("time")
 require("logging")
 freeze ("$(OMV_LIB_DIR)/", "mutex.py")
+
+# Libraries
+require("ml", library="openmv-lib")
+include("$(MPY_DIR)/extmod/asyncio")
+
+# Boot script
+freeze ("$(OMV_LIB_DIR)/", "_boot.py")
