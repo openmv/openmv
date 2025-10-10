@@ -31,6 +31,9 @@ from micropython import const
 from ulab import numpy as np
 
 
+_NO_DETECTION = const(())
+
+
 class Fomo:
     _FOMO_CLASSES = const(1)
 

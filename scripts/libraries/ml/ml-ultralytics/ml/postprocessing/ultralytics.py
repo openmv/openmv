@@ -31,6 +31,9 @@ from micropython import const
 from ulab import numpy as np
 
 
+_NO_DETECTION = const(())
+
+
 class YoloV5:
     _YOLO_V5_CX = const(0)
     _YOLO_V5_CY = const(1)

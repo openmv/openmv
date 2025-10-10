@@ -1,7 +1,5 @@
-include("$(MPY_DIR)/extmod/asyncio")
-
-# Filesystem
-freeze ("$(OMV_LIB_DIR)/", "_boot.py")
+# OpenMV library
+add_library("openmv-lib", "$(OMV_LIB_DIR)")
 
 # Drivers
 freeze ("$(OMV_LIB_DIR)/", "modbus.py")
@@ -12,7 +10,9 @@ freeze ("$(OMV_LIB_DIR)/", "tb6612.py")
 freeze ("$(OMV_LIB_DIR)/", "vl53l1x.py")
 freeze ("$(OMV_LIB_DIR)/", "machine.py")
 freeze ("$(OMV_LIB_DIR)/", "display.py")
-freeze ("$(OMV_LIB_DIR)/ml")
+
+# Bluetooth
+require("aioble")
 
 # Networking
 require("ssl")
@@ -29,5 +29,9 @@ require("logging")
 require("collections-defaultdict")
 require("types")
 
-# Bluetooth
-require("aioble")
+# Libraries
+require("ml", library="openmv-lib")
+include("$(MPY_DIR)/extmod/asyncio")
+
+# Boot script
+freeze ("$(OMV_LIB_DIR)/", "_boot.py")

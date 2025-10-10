@@ -1,5 +1,3 @@
-#include("$(MPY_DIR)/extmod/asyncio")
-
 # Drivers
 require("hts221")
 require("lps22h")
@@ -17,6 +15,5 @@ freeze ("$(OMV_LIB_DIR)/", "machine.py")
 
 # Utils
 require("time")
-#require("logging")
 
 freeze("$(PORT_DIR)/modules/scripts", "_mkfs.py")
