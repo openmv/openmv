@@ -162,6 +162,29 @@ int alif_hal_i2c_init(uint32_t bus_id) {
     return 0;
 }
 
+int alif_hal_i3c_init(uint32_t bus_id) {
+    omv_gpio_t scl_pin = NULL;
+    omv_gpio_t sda_pin = NULL;
+
+    switch (bus_id) {
+        #if defined(OMV_I3C0_ID)
+        case OMV_I3C0_ID: {
+            enable_i3c_clock();
+            scl_pin = OMV_I3C0_SCL_PIN;
+            sda_pin = OMV_I3C0_SDA_PIN;
+            break;
+        }
+        #endif
+        default:
+            return -1;
+    }
+
+    omv_gpio_config(scl_pin, OMV_GPIO_MODE_ALT_OD, OMV_GPIO_PULL_UP, OMV_GPIO_SPEED_MED, -1);
+    omv_gpio_config(sda_pin, OMV_GPIO_MODE_ALT_OD, OMV_GPIO_PULL_UP, OMV_GPIO_SPEED_MED, -1);
+
+    return 0;
+}
+
 int alif_hal_spi_init(uint32_t bus_id, bool nss_enable, uint32_t nss_pol) {
     typedef struct {
         omv_gpio_t sclk_pin;
