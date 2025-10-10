@@ -413,7 +413,8 @@ static int omv_i3c_transfer_timeout(omv_i2c_t *i2c, i2c_transfer_t *xfer, uint32
 
     // Wait for the transfer to finish.
     mp_uint_t tick_start = mp_hal_ticks_ms();
-    while (base->I3C_INTR_STATUS == 0) {
+    /* Waits till some response received */
+    while (!(base->I3C_QUEUE_STATUS_LEVEL & I3C_QUEUE_STATUS_LEVEL_RESP_BUF_BLR_Msk)) {
         if ((mp_hal_ticks_ms() - tick_start) >= timeout) {
             // Should not raise exception as we're not always in nlr context.
             ret = -1;
@@ -422,11 +423,11 @@ static int omv_i3c_transfer_timeout(omv_i2c_t *i2c, i2c_transfer_t *xfer, uint32
         mp_event_handle_nowait();
     }
 
-    uint32_t status = base->I3C_INTR_STATUS;
     // See Table 15-81 Response Data Structure
     uint32_t resp = base->I3C_RESPONSE_QUEUE_PORT;
 
-    if ((status & I3C_INTR_STATUS_TRANSFER_ERR_STS) || I3C_RESPONSE_QUEUE_PORT_ERR_STATUS(resp)) {
+    if ((I3C_RESPONSE_QUEUE_PORT_ERR_STATUS(resp)) ||
+        (I3C_RESPONSE_QUEUE_PORT_TID(resp) != i3c_xfer.xfer_cmd.port_id)) {
         ret = -1;
         goto cleanup;
     }
