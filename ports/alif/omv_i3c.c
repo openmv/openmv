@@ -97,24 +97,6 @@
 #define I3C_CCC_DEF_BYTE_TU                             0x9F
 #define I3C_CCC_DEF_BYTE_ODR                            0x8F
 
-#ifdef NDEBUG
-#define I3C_CHECK_ERRORS(base)                       \
-    if (base->I3C_RAW_INTR_STAT & I3C_STAT_ERRORS) { \
-        (void) base->I3C_RAW_INTR_STAT;              \
-        (void) base->I3C_CLR_TX_ABRT;                \
-        return -1;                                   \
-    }
-#else
-#define I3C_CHECK_ERRORS(base)                                                \
-    if (base->I3C_RAW_INTR_STAT & I3C_STAT_ERRORS) {                          \
-        uint32_t status = base->I3C_RAW_INTR_STAT;                            \
-        printf("status: 0x%lx raw_int: 0x%lx abort: 0x%lx line: %d\n",        \
-               base->I3C_STATUS, status, base->I3C_TX_ABRT_SOURCE, __LINE__); \
-        (void) base->I3C_CLR_TX_ABRT;                                         \
-        return -1;                                                            \
-    }
-#endif
-
 int omv_i3c_init(omv_i2c_t *i3c, uint32_t bus_id, uint32_t speed) {
     i3c->id = bus_id;
     i3c->initialized = false;
@@ -228,10 +210,11 @@ static int32_t omv_i3c_gen_dyn_addr(omv_i2c_t *i3c, uint8_t *ref_dyn_addr) {
     return (int32_t) i3c->cw_size++;
 }
 
-static int omv_i2c_transfer_wait(I3C_Type *base, uint32_t timeout) {
+static int omv_i3c_transfer_wait(I3C_Type *base, i3c_xfer_t *xfer, uint32_t timeout) {
     // Wait for the transfer to finish.
     mp_uint_t tick_start = mp_hal_ticks_ms();
-    while (base->I3C_INTR_STATUS == 0) {
+    /* Waits till some response received */
+    while (!(base->I3C_QUEUE_STATUS_LEVEL & I3C_QUEUE_STATUS_LEVEL_RESP_BUF_BLR_Msk)) {
         if ((mp_hal_ticks_ms() - tick_start) >= timeout) {
             // Should not raise exception as we're not always in nlr context.
             return -1;
@@ -239,18 +222,18 @@ static int omv_i2c_transfer_wait(I3C_Type *base, uint32_t timeout) {
         mp_event_handle_nowait();
     }
 
-    uint32_t status = base->I3C_INTR_STATUS;
     // See Table 15-81 Response Data Structure
     uint32_t resp = base->I3C_RESPONSE_QUEUE_PORT;
 
-    if ((status & I3C_INTR_STATUS_TRANSFER_ERR_STS) || I3C_RESPONSE_QUEUE_PORT_ERR_STATUS(resp)) {
+    if ((I3C_RESPONSE_QUEUE_PORT_ERR_STATUS(resp)) ||
+        (I3C_RESPONSE_QUEUE_PORT_TID(resp) != xfer->xfer_cmd.port_id)) {
         return -1;
     }
 
     return 0;
 }
 
-static void omv_i2c_transfer_end(I3C_Type *base) {
+static void omv_i3c_transfer_end(I3C_Type *base) {
     i3c_clear_xfer_error(base);
     i3c_resume(base);
 }
@@ -270,8 +253,8 @@ static int omv_i3c_send_command_assign(I3C_Type *base, uint8_t cmd_id, uint8_t a
     xfer.xfer_cmd.data_len = 0U;
 
     i3c_send_xfer_cmd(base, &xfer);
-    if (omv_i2c_transfer_wait(base, I3C_SCAN_TIMEOUT) != 0) {
-        omv_i2c_transfer_end(base);
+    if (omv_i3c_transfer_wait(base, &xfer, I3C_SCAN_TIMEOUT) != 0) {
+        omv_i3c_transfer_end(base);
         return -1;
     }
 
@@ -351,34 +334,6 @@ int omv_i3c_scan_assign(omv_i2c_t *i3c, uint8_t *list, uint8_t size) {
 
     return 0;
 }
-
-// int omv_i2c_scan(omv_i2c_t *i3c, uint8_t *list, uint8_t size) {
-//     uint32_t idx = 0;
-
-//     for (uint8_t addr = 0x29, data = 0; addr < 0x78; addr++) {
-//         i3c_transfer_t xfer = {
-//             .data = &data,
-//             .size = 1,
-//             .flags = 0,
-//             .direction = I3C_TRANSFER_READ,
-//             .address = addr
-//         };
-
-//         if (omv_ixc_transfer_timeout(i3c, &xfer, I3C_SCAN_TIMEOUT) == 0) {
-//             if (list == NULL || size == 0) {
-//                 idx = (addr << 1);
-//                 break;
-//             } else if (idx < size) {
-//                 list[idx++] = (addr << 1);
-//             } else {
-//                 break;
-//             }
-//         }
-//         mp_event_handle_nowait();
-//     }
-
-//     return idx;
-// }
 
 int omv_i3c_enable(omv_i2c_t *i3c, bool enable) {
     //TODO: For I3C this causes a lockup.
@@ -503,10 +458,11 @@ int omv_i3c_read_bytes(omv_i2c_t *i3c, uint8_t tgt_addr, uint8_t *buf, int len, 
         i3c_master_rx_blocking(base, &xfer);
     } else {
         i3c_master_rx(base, &xfer);
-        if (omv_i2c_transfer_wait(base, I3C_XFER_TIMEOUT) != 0) {
-            omv_i2c_transfer_end(base);
-            return -1;
-        }
+    }
+
+    if (omv_i3c_transfer_wait(base, &xfer, I3C_XFER_TIMEOUT) != 0) {
+        omv_i3c_transfer_end(base);
+        return -1;
     }
 
     // if (xfer.rx_buf) {
@@ -545,10 +501,11 @@ int omv_i3c_write_bytes(omv_i2c_t *i3c, uint8_t tgt_addr, uint8_t *buf, int len,
         i3c_master_tx_blocking(base, &xfer);
     } else {
         i3c_master_tx(base, &xfer);
-        if (omv_i2c_transfer_wait(base, I3C_XFER_TIMEOUT) != 0) {
-            omv_i2c_transfer_end(base);
-            return -1;
-        }
+    }
+
+    if (omv_i3c_transfer_wait(base, &xfer, I3C_XFER_TIMEOUT) != 0) {
+        omv_i3c_transfer_end(base);
+        return -1;
     }
 
     return 0;
