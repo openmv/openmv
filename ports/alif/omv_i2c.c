@@ -243,13 +243,13 @@ int omv_i2c_enable(omv_i2c_t *i2c, bool enable) {
         //TODO: For I3C this causes a lockup.
         I3C_Type *inst = i2c->inst;
         if (enable) {
-            inst->I3C_DEVICE_CTRL = inst->I3C_DEVICE_CTRL & ~DEV_CTRL_ENABLE;
-            while (inst->I3C_DEVICE_CTRL & DEV_CTRL_ENABLE) {
+            inst->I3C_DEVICE_CTRL = inst->I3C_DEVICE_CTRL & ~I3C_DEVICE_CTRL_ENABLE;
+            while (inst->I3C_DEVICE_CTRL & I3C_DEVICE_CTRL_ENABLE) {
             }
 
         } else {
-            inst->I3C_DEVICE_CTRL = inst->I3C_DEVICE_CTRL | DEV_CTRL_ENABLE;
-            while (!(inst->I3C_DEVICE_CTRL & DEV_CTRL_ENABLE)) {
+            inst->I3C_DEVICE_CTRL = inst->I3C_DEVICE_CTRL | I3C_DEVICE_CTRL_ENABLE;
+            while (!(inst->I3C_DEVICE_CTRL & I3C_DEVICE_CTRL_ENABLE)) {
             }
             i3c_resume(inst);
         }
@@ -397,18 +397,18 @@ static int omv_i2c_transfer_timeout(omv_i2c_t *i2c, i2c_transfer_t *xfer, uint32
 
 static int omv_i3c_transfer_timeout(omv_i2c_t *i2c, i2c_transfer_t *xfer, uint32_t timeout) {
     int ret = 0;
-    I3C_XFER i3c_xfer = {0};
+    i3c_xfer_t i3c_xfer = {0};
     I3C_Type *base = i2c->inst;
 
     i3c_add_slv_to_dat(base, I2C_DAT_INDEX, 0, xfer->address);
     if (xfer->direction == I2C_TRANSFER_READ) {
         i3c_xfer.rx_buf = xfer->data;
         i3c_xfer.rx_len = xfer->size;
-        i3c_master_rx(base, &i3c_xfer, I2C_DAT_INDEX, i3c_xfer.rx_len);
+        i3c_master_rx(base, &i3c_xfer);
     } else {
         i3c_xfer.tx_buf = xfer->data;
         i3c_xfer.tx_len = xfer->size;
-        i3c_master_tx(base, &i3c_xfer, I2C_DAT_INDEX, i3c_xfer.tx_len);
+        i3c_master_tx(base, &i3c_xfer);
     }
 
     // Wait for the transfer to finish.
@@ -426,7 +426,7 @@ static int omv_i3c_transfer_timeout(omv_i2c_t *i2c, i2c_transfer_t *xfer, uint32
     // See Table 15-81 Response Data Structure
     uint32_t resp = base->I3C_RESPONSE_QUEUE_PORT;
 
-    if ((status & INTR_TRANSFER_ERR_STAT) || RESPONSE_PORT_ERR_STATUS(resp)) {
+    if ((status & I3C_INTR_STATUS_TRANSFER_ERR_STS) || I3C_RESPONSE_QUEUE_PORT_ERR_STATUS(resp)) {
         ret = -1;
         goto cleanup;
     }
