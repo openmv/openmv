@@ -23,6 +23,7 @@
  *
  * USB debugger.
  */
+#ifndef QEMU_BUILD
 #include <string.h>
 #include <stdio.h>
 #include "py/nlr.h"
@@ -452,3 +453,4 @@ void usbdbg_control(void *buffer, uint8_t request, uint32_t size) {
             break;
     }
 }
+#endif // QEMU_BUILD
