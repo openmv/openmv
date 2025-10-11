@@ -195,3 +195,12 @@ def draw_predictions(
             color=box_color,
         )
         image.draw_string(x, y - font_height, label.upper(), text_color)
+
+
+def draw_keypoint_dots(
+    image,
+    keypoints,
+    color=(0, 255, 0)
+):
+    for kp in keypoints:
+        image.set_pixel(int(kp[0]), int(kp[1]), color)
