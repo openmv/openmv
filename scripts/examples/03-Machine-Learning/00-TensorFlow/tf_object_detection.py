@@ -9,7 +9,7 @@
 import sensor
 import time
 import ml
-from ml.postprocessing import fomo_postprocess
+from ml.postprocessing.edgeimpulse import Fomo
 import math
 
 sensor.reset()  # Reset and initialize the sensor.
@@ -25,6 +25,9 @@ print(model)
 # Alternatively, models can be loaded from the filesystem storage.
 # model = ml.Model('<object_detection_modelwork>.tflite', load_to_fb=True)
 # labels = [line.rstrip('\n') for line in open("labels.txt")]
+
+# Create the post-processor.
+fomo_postprocess = Fomo(threshold=0.4)
 
 colors = [  # Add more colors if you are detecting more than 7 types of classes at once.
     (255, 0, 0),
@@ -42,7 +45,7 @@ while True:
 
     img = sensor.snapshot()
 
-    for i, detection_list in enumerate(model.predict([img], callback=fomo_postprocess())):
+    for i, detection_list in enumerate(model.predict([img], callback=fomo_postprocess)):
         if i == 0:
             continue  # background class
         if len(detection_list) == 0:
