@@ -48,11 +48,26 @@ jobs:
           - ARDUINO_NICLA_VISION
           - ARDUINO_NANO_RP2040_CONNECT
           - ARDUINO_NANO_33_BLE_SENSE
-          - DOCKER
-        profile: [0]   # default profile
+        qemu: [false]
+        profile: [0]
+        artifacts: [true]
         include:
+          - target: DOCKER
+            qemu: false
+            profile: 0
+            artifacts: false
           - target: OPENMV_N6
+            qemu: false
             profile: 1
+            artifacts: false
+          - target: MPS2_AN500
+            qemu: true
+            profile: 0
+            artifacts: false
+          - target: MPS3_AN547
+            qemu: true
+            profile: 0
+            artifacts: false
       fail-fast: false
     steps:
     - name: '⏳ Checkout repository'
@@ -82,6 +97,8 @@ jobs:
 
     - name: '🛠 Install dependencies'
       run: |
+        sudo apt-get update
+        sudo apt-get install -y qemu-system-arm
         pip install -r .github/workflows/requirements.txt
         flake8 --version
         pytest --version
@@ -104,10 +121,14 @@ jobs:
       run: source tools/ci.sh && ci_install_stedgeai ${HOME}/cache/stedgeai
 
     - name: '🏗 Build firmware'
-      run: source tools/ci.sh && ci_build_target ${{ matrix.target }} ${{ matrix.profile }}
+      run: source tools/ci.sh && ci_build_target ${{ matrix.target }} ${{ matrix.qemu }} ${{ matrix.profile }} ${{ matrix.artifacts }}
+
+    - name: '🧪 Run QEMU tests'
+      if: matrix.qemu
+      run: source tools/ci.sh && ci_run_qemu_tests ${{ matrix.target }}
 
     - name: '⬆ Upload artifacts'
-      if: matrix.target != 'DOCKER' && matrix.profile == 0 
+      if: matrix.artifacts
       uses: actions/upload-artifact@v4
       with:
         name: ${{ matrix.target }}

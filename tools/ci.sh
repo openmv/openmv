@@ -54,9 +54,9 @@ ci_build_target() {
         make -j$(nproc) -C docker TARGET=${BOARD}
     else
         make -j$(nproc) -C lib/micropython/mpy-cross
-        make -j$(nproc) TARGET=${1} PROFILE_ENABLE=${2}
-        # Don't copy artifacts for profiling builds
-        if [ "$2" = 0 ]; then
+        make -j$(nproc) TARGET=${1} PROFILE_ENABLE=${3}
+        # Copy artifacts if enabled
+        if [ "$4" == "true" ]; then
             mv build/bin ${1}
         fi
     fi
@@ -83,7 +83,7 @@ STEDGEAI_CACHE="${HOME}/cache/stedgeai"
 
 ci_install_stedgeai() {
     STEDGEAI_PATH="${1}"
-    
+
     # If cached in CI, copy from cache to build.
     if [ -d "${STEDGEAI_CACHE}" ]; then
         mkdir -p "${STEDGEAI_PATH}"
@@ -95,31 +95,84 @@ ci_install_stedgeai() {
     # Download and install to STEDGEAI_PATH
     echo "Downloading STEdge AI tools..."
     mkdir -p "${STEDGEAI_PATH}"
-    
+
     # Create temporary file
     tmpfile=$(mktemp)
     trap 'rm -f "$tmpfile"' EXIT
-    
+
     # Download and verify checksum
     wget --no-check-certificate -O "$tmpfile" "$STEDGEAI_URL" || {
         echo "Download failed!"
         return 1
     }
-    
+
     echo "${STEDGEAI_SHA256}  ${tmpfile}" | sha256sum -c - || {
         echo "Checksum failed!"
         return 1
     }
-    
+
     # Extract the tools
     echo "Extracting to ${STEDGEAI_PATH}..."
     tar -xzf "$tmpfile" -C "${STEDGEAI_PATH}" --strip-components=1 || {
         echo "Extraction failed!"
         return 1
     }
-    
+
     touch "${STEDGEAI_PATH}/stedgeai.stamp"
-   
+
     echo "STEdgeAI installed successfully to ${STEDGEAI_PATH}"
+    return 0
+}
+
+########################################################################################
+# Run QEMU unit tests
+ci_run_qemu_tests() {
+    TARGET="${1}"
+
+    export PATH=${GNU_MAKE_PATH}:${GCC_TOOLCHAIN_PATH}/bin:${PATH}
+
+    # Patch micropython's mpremote for QEMU serial communication
+    echo "Patching micropython mpremote for QEMU..."
+    patch -N -p1 -d lib/micropython < tools/mpremote-qemu-serial.patch || echo "Patch already applied or failed"
+
+    # Start QEMU in background and capture output
+    echo "Starting QEMU for ${TARGET}..."
+    make TARGET=${TARGET} run > qemu_output.txt 2>&1 &
+
+    # Wait for QEMU to start and find the serial port from output
+    echo "Waiting for QEMU to start..."
+    for i in {1..30}; do
+        if grep -q "char device redirected to" qemu_output.txt; then
+            break
+        fi
+        sleep 1
+    done
+
+    # Extract the pts device from QEMU output
+    PTS_DEVICE=$(grep "redirected to" qemu_output.txt | sed 's/.*redirected to \(\/dev\/pts\/[0-9]*\).*/\1/')
+
+    if [ -z "$PTS_DEVICE" ]; then
+        echo "Error: Could not find QEMU serial port"
+        cat qemu_output.txt
+        return 1
+    else
+        echo "Found QEMU serial port: $PTS_DEVICE"
+    fi
+
+    # Run unit tests using patched mpremote from micropython
+    echo "Running unit tests..."
+    python3 lib/micropython/tools/mpremote/mpremote.py connect $PTS_DEVICE \
+        mount scripts/unittest/ run scripts/unittest/run.py 2>&1 | tee test_output.txt
+    TEST_EXIT_CODE=${PIPESTATUS[0]}
+
+    if [ $TEST_EXIT_CODE -ne 0 ]; then
+        echo "❌ mpremote command failed with exit code $TEST_EXIT_CODE"
+        return 1
+    fi
+
+    # Check if tests failed
+    if grep -q "Some tests FAILED" test_output.txt; then
+        return 1
+    fi
     return 0
 }
