@@ -496,41 +496,14 @@ static mp_obj_t py_imageio_make_new(const mp_obj_type_t *type, size_t n_args, si
 
         char mode = mp_obj_str_get_str(args[1])[0];
 
-        if ((mode == 'W') || (mode == 'w')) {
-            file_open(fp, mp_obj_str_get_str(args[0]), false, FA_READ | FA_WRITE | FA_OPEN_ALWAYS);
+        if (mode == 'w') {
+            file_open(fp, mp_obj_str_get_str(args[0]), false, FA_WRITE | FA_CREATE_ALWAYS);
             const char string[] = "OMV IMG STR V2.0";
             stream->version = NEW_PIXFORMAT_VER;
-
-            // Overwrite if file is too small.
-            if (f_size(fp) < MAGIC_SIZE) {
-                file_write(fp, string, sizeof(string) - 1); // exclude null terminator
-            } else {
-                uint8_t version_hi, period, version_lo;
-                char temp[sizeof(string) - 3] = {};
-                file_read(fp, temp, sizeof(temp) - 1);
-                file_read(fp, &version_hi, 1);
-                file_read(fp, &period, 1);
-                file_read(fp, &version_lo, 1);
-                int version = ((version_hi - '0') * 10) + (version_lo - '0');
-
-                // Overwrite if file magic does not match.
-                if (strcmp(string, temp)
-                    || (period != ((uint8_t) '.'))
-                    || (version != ORIGINAL_VER)
-                    || (version != RGB565_FIXED_VER)
-                    || (version != NEW_PIXFORMAT_VER)) {
-                    file_seek(fp, 0);
-                    file_write(fp, string, sizeof(string) - 1); // exclude null terminator
-                } else {
-                    file_close(fp);
-                    mode = 'R';
-                }
-            }
-        }
-
-        if ((mode == 'R') || (mode == 'r')) {
+            file_write(fp, string, sizeof(string) - 1); // exclude null terminator
+        } else if (mode == 'r') {
             uint8_t version_hi, version_lo;
-            file_open(fp, mp_obj_str_get_str(args[0]), false, FA_READ | FA_WRITE | FA_OPEN_EXISTING);
+            file_open(fp, mp_obj_str_get_str(args[0]), false, FA_READ | FA_OPEN_EXISTING);
             file_read_check(fp, "OMV IMG STR ", 12); // Magic
             file_read_check(fp, "V", 1);
             file_read(fp, &version_hi, 1);
@@ -545,7 +518,7 @@ static mp_obj_t py_imageio_make_new(const mp_obj_type_t *type, size_t n_args, si
                 mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Expected version V1.0, V1.1, or V2.0"));
             }
         } else if ((mode != 'W') && (mode != 'w')) {
-            mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Invalid stream mode, expected 'R/r' or 'W/w'"));
+            mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Invalid stream mode, expected 'r' or 'w'"));
         }
     #endif
     } else if (mp_obj_is_type(args[0], &mp_type_tuple)) {
