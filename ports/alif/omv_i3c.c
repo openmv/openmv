@@ -138,13 +138,27 @@ int omv_i3c_init(omv_i2c_t *i3c, uint32_t bus_id, uint32_t speed) {
     while (base->I3C_RESET_CTRL & 0x1) {
     }
 
+    i3c_master_set_dynamic_addr(base);
+
+    i3c_master_enable_interrupts(base);
+
+    /* Sets Slave Interrupt Request acceptability at master side */
+    i3c_master_setup_slv_intr_req_ctrl(base, false);
+
+    /* Sets Master Request acceptability at master side */
+    i3c_master_setup_mst_req_ctrl(base, false);
+
+    /* Sets up HJ acceptability at master side */
+    i3c_master_setup_hot_join_ctrl(base, false);
+
+    // Initialize I2C controller
+    i3c_master_init(base);
+
     // Initialize I3C controller
     i3c_master_init(base);
 
     // Configure clock and speed.
     i3c_normal_bus_clk_cfg(base, speed);
-
-    i3c_master_set_dynamic_addr(base);
 
     i3c->initialized = true;
     return 0;

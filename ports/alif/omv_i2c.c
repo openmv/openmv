@@ -173,6 +173,10 @@ int omv_i2c_init(omv_i2c_t *i2c, uint32_t bus_id, uint32_t speed) {
         while (inst->I3C_RESET_CTRL & 0x1) {
         }
 
+        i3c_master_set_dynamic_addr(inst);
+
+        i3c_master_enable_interrupts(inst);
+
         // Initialize I2C controller
         i3c_master_init(inst);
 
@@ -401,6 +405,14 @@ static int omv_i3c_transfer_timeout(omv_i2c_t *i2c, i2c_transfer_t *xfer, uint32
     I3C_Type *base = i2c->inst;
 
     i3c_add_slv_to_dat(base, I2C_DAT_INDEX, 0, xfer->address);
+
+    i3c_xfer.xfer_cmd.speed = I3C_SPEED_SDR0;
+    // i3c_xfer.addr = xfer->address;
+
+    i3c_xfer.xfer_cmd.addr_index = I2C_DAT_INDEX;
+    // i3c_xfer.xfer_cmd.addr_depth = 1U;
+    i3c_xfer.xfer_cmd.data_len = xfer->size;
+
     if (xfer->direction == I2C_TRANSFER_READ) {
         i3c_xfer.rx_buf = xfer->data;
         i3c_xfer.rx_len = xfer->size;
@@ -414,7 +426,7 @@ static int omv_i3c_transfer_timeout(omv_i2c_t *i2c, i2c_transfer_t *xfer, uint32
     // Wait for the transfer to finish.
     mp_uint_t tick_start = mp_hal_ticks_ms();
     /* Waits till some response received */
-    while (!(base->I3C_QUEUE_STATUS_LEVEL & I3C_QUEUE_STATUS_LEVEL_RESP_BUF_BLR_Msk)) {
+    while (base->I3C_INTR_STATUS == 0) {
         if ((mp_hal_ticks_ms() - tick_start) >= timeout) {
             // Should not raise exception as we're not always in nlr context.
             ret = -1;
@@ -423,11 +435,11 @@ static int omv_i3c_transfer_timeout(omv_i2c_t *i2c, i2c_transfer_t *xfer, uint32
         mp_event_handle_nowait();
     }
 
+    uint32_t status = base->I3C_INTR_STATUS;
     // See Table 15-81 Response Data Structure
     uint32_t resp = base->I3C_RESPONSE_QUEUE_PORT;
 
-    if ((I3C_RESPONSE_QUEUE_PORT_ERR_STATUS(resp)) ||
-        (I3C_RESPONSE_QUEUE_PORT_TID(resp) != i3c_xfer.xfer_cmd.port_id)) {
+    if ((status & I3C_INTR_STATUS_TRANSFER_ERR_STS) || I3C_RESPONSE_QUEUE_PORT_ERR_STATUS(resp)) {
         ret = -1;
         goto cleanup;
     }
