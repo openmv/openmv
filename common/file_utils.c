@@ -40,44 +40,32 @@
 
 // Error/exception functions
 NORETURN static void ff_read_fail(file_t *fp) {
-    if (fp && fp->fp) {
-        mp_stream_close(fp->fp);
-    }
+    file_close(fp);
     mp_raise_msg(&mp_type_OSError, MP_ERROR_TEXT("Failed to read requested bytes!"));
 }
 
 NORETURN static void ff_write_fail(file_t *fp) {
-    if (fp && fp->fp) {
-        mp_stream_close(fp->fp);
-    }
+    file_close(fp);
     mp_raise_msg(&mp_type_OSError, MP_ERROR_TEXT("Failed to write requested bytes!"));
 }
 
 NORETURN static void ff_expect_fail(file_t *fp) {
-    if (fp && fp->fp) {
-        mp_stream_close(fp->fp);
-    }
+    file_close(fp);
     mp_raise_msg(&mp_type_OSError, MP_ERROR_TEXT("Unexpected value read!"));
 }
 
 NORETURN void file_raise_format(file_t *fp) {
-    if (fp && fp->fp) {
-        mp_stream_close(fp->fp);
-    }
+    file_close(fp);
     mp_raise_msg(&mp_type_OSError, MP_ERROR_TEXT("Unsupported format!"));
 }
 
 NORETURN void file_raise_corrupted(file_t *fp) {
-    if (fp && fp->fp) {
-        mp_stream_close(fp->fp);
-    }
+    file_close(fp);
     mp_raise_msg(&mp_type_OSError, MP_ERROR_TEXT("File corrupted!"));
 }
 
 NORETURN void file_raise_error(file_t *fp, mp_rom_error_text_t msg) {
-    if (fp && fp->fp) {
-        mp_stream_close(fp->fp);
-    }
+    file_close(fp);
     mp_raise_msg(&mp_type_OSError, msg);
 }
 
@@ -165,6 +153,9 @@ OMV_ATTR_ALWAYS_INLINE static void file_flush(file_t *fp) {
 }
 
 void file_buffer_on(file_t *fp) {
+    if (!fp) {
+        return;
+    }
     off_t current_pos = file_seek_helper(fp, 0, SEEK_CUR);
     file_buffer_offset = current_pos % 4;
     file_buffer_pointer = (uint8_t *) fb_alloc_all(&file_buffer_size, FB_ALLOC_PREFER_SIZE) + file_buffer_offset;
@@ -189,17 +180,44 @@ void file_buffer_on(file_t *fp) {
 }
 
 void file_buffer_off(file_t *fp) {
-    if ((fp->flags & FA_WRITE) && file_buffer_index) {
-        size_t bytes = file_write_helper(fp, file_buffer_pointer, file_buffer_index);
-        if (bytes != file_buffer_index) {
+    if (!fp) {
+        return;
+    }
+    // Save buffer state and clear globals FIRST to prevent recursion
+    // if error handlers call file_close() again
+    uint8_t *buf_to_flush = file_buffer_pointer;
+    uint32_t bytes_to_flush = file_buffer_index;
+
+    file_buffer_pointer = 0;
+    file_buffer_index = 0;
+    file_buffer_offset = 0;
+    file_buffer_size = 0;
+
+    // Attempt flush after clearing globals
+    if ((fp->flags & FA_WRITE) && bytes_to_flush) {
+        size_t bytes = file_write_helper(fp, buf_to_flush, bytes_to_flush);
+        if (bytes != bytes_to_flush) {
+            fb_free();
             ff_write_fail(fp);
         }
     }
-    file_buffer_pointer = 0;
     fb_free();
 }
 
 void file_open(file_t *fp, const char *path, bool buffered, uint32_t flags) {
+    // Initialize fp to safe state in case open fails
+    fp->fp = MP_OBJ_NULL;
+    fp->flags = 0;
+
+    // Reject unsupported FA_READ | FA_WRITE without creation/append flags
+    // This combination would silently truncate the file (mode "wb")
+    if ((flags & (FA_READ | FA_WRITE)) == (FA_READ | FA_WRITE)) {
+        if (!(flags & (FA_CREATE_ALWAYS | FA_OPEN_APPEND | FA_OPEN_ALWAYS))) {
+            mp_raise_msg(&mp_type_ValueError,
+                         MP_ERROR_TEXT("FA_READ|FA_WRITE requires FA_OPEN_ALWAYS or FA_CREATE_ALWAYS"));
+        }
+    }
+
     // Convert flags to MicroPython mode string
     const char *mode;
     if (flags & FA_WRITE) {
@@ -216,12 +234,12 @@ void file_open(file_t *fp, const char *path, bool buffered, uint32_t flags) {
         mode = "rb";
     }
 
-    // Open file using MicroPython's builtin open
+    // Open file using MicroPython VFS
     mp_obj_t args[2] = {
-        mp_obj_new_str(path, strlen(path)),
-        mp_obj_new_str(mode, strlen(mode))
+        mp_obj_new_str_from_cstr(path),
+        mp_obj_new_str_from_cstr(mode)
     };
-    fp->fp = mp_builtin_open(2, args, (mp_map_t *) &mp_const_empty_map);
+    fp->fp = mp_vfs_open(MP_ARRAY_SIZE(args), args, (mp_map_t *) &mp_const_empty_map);
     fp->flags = (uint8_t) flags;
 
     if (buffered) {
@@ -230,10 +248,20 @@ void file_open(file_t *fp, const char *path, bool buffered, uint32_t flags) {
 }
 
 void file_close(file_t *fp) {
-    if (file_buffer_pointer) {
-        file_buffer_off(fp);
+    if (fp && fp->fp != MP_OBJ_NULL) {
+        // Save stream handle and mark as closed FIRST to prevent double-close
+        // if file_buffer_off() fails and error handler calls file_close() again
+        mp_obj_t stream = fp->fp;
+        fp->fp = MP_OBJ_NULL;
+
+        // Note: file_buffer_pointer is global - only valid if this file owns the buffer
+        // This is a limitation of the current single-buffer design
+        if (file_buffer_pointer) {
+            file_buffer_off(fp);
+        }
+
+        mp_stream_close(stream);
     }
-    mp_stream_close(fp->fp);
 }
 
 void file_seek(file_t *fp, size_t offset) {
