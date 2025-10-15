@@ -63,28 +63,22 @@ int hash_digest(uint8_t *buffer, uint32_t size, uint8_t *digest) {
 }
 
 int hash_from_file(const char *path, uint8_t *digest) {
-    FIL fp;
+    file_t fp;
     uint32_t offset = 0;
-    UINT bytes = 0;
-    UINT bytes_out = 0;
+    size_t bytes = 0;
 
     int ret = -1;
     uint8_t *buf = fb_alloc(BLOCK_SIZE, FB_ALLOC_NO_HINT);
 
-    if (file_ll_open(&fp, path, FA_READ | FA_OPEN_EXISTING) != FR_OK) {
-        goto error;
-    }
+    file_open(&fp, path, false, FA_READ | FA_OPEN_EXISTING);
 
     // File size
-    uint32_t size = f_size(&fp);
+    uint32_t size = file_size(&fp);
 
     while (size) {
         // Read a block.
         bytes = MIN(size, BLOCK_SIZE);
-        if (file_ll_read(&fp, buf, bytes, &bytes_out) != FR_OK || bytes != bytes_out) {
-            printf("hash_from_file: file read error!\n");
-            goto error;
-        }
+        file_read(&fp, buf, bytes);
 
         // Accumulate buffer.
         if ((size - bytes) > 0) {
@@ -107,7 +101,7 @@ int hash_from_file(const char *path, uint8_t *digest) {
 
 error:
     fb_free();
-    file_ll_close(&fp);
+    file_close(&fp);
     return ret;
 }
 #endif //OMV_ENABLE_HASH == 1

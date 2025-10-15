@@ -33,7 +33,7 @@
 #include "file_utils.h"
 
 // This function inits the geometry values of an image (opens file).
-bool bmp_read_geometry(FIL *fp, image_t *img, const char *path, bmp_read_settings_t *rs) {
+bool bmp_read_geometry(file_t *fp, image_t *img, const char *path, bmp_read_settings_t *rs) {
     file_read_check(fp, "BM", 2);
 
     uint32_t file_size;
@@ -177,7 +177,7 @@ bool bmp_read_geometry(FIL *fp, image_t *img, const char *path, bmp_read_setting
 }
 
 // This function reads the pixel values of an image.
-void bmp_read_pixels(FIL *fp, image_t *img, int n_lines, bmp_read_settings_t *rs) {
+void bmp_read_pixels(file_t *fp, image_t *img, int n_lines, bmp_read_settings_t *rs) {
     if (rs->bmp_bpp == 8) {
         if ((rs->bmp_h < 0) && (rs->bmp_w >= 0) && (img->w == rs->bmp_row_bytes)) {
             file_read(fp, img->pixels, n_lines * img->w);
@@ -264,7 +264,7 @@ void bmp_read_pixels(FIL *fp, image_t *img, int n_lines, bmp_read_settings_t *rs
 }
 
 void bmp_read(image_t *img, const char *path) {
-    FIL fp;
+    file_t fp;
     bmp_read_settings_t rs;
     file_open(&fp, path, true, FA_READ | FA_OPEN_EXISTING);
     bmp_read_geometry(&fp, img, path, &rs);
@@ -275,7 +275,7 @@ void bmp_read(image_t *img, const char *path) {
     file_close(&fp);
 }
 
-static void bmp_write_header(FIL *fp, uint32_t header_size, uint32_t data_size,
+static void bmp_write_header(file_t *fp, uint32_t header_size, uint32_t data_size,
                              uint32_t bpp, uint32_t ncomp, rectangle_t *r) {
     // File Header (14 bytes)
     file_write(fp, "BM", 2);
@@ -299,7 +299,7 @@ void bmp_write_subimg(image_t *img, const char *path, rectangle_t *r) {
         mp_raise_msg(&mp_type_OSError, MP_ERROR_TEXT("No intersection!"));
     }
 
-    FIL fp;
+    file_t fp;
     file_open(&fp, path, true, FA_WRITE | FA_CREATE_ALWAYS);
 
     if (IM_IS_GS(img)) {

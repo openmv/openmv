@@ -21,164 +21,91 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  *
- * Filesystem helper functions.
+ * Filesystem helper functions using MicroPython VFS interface.
  */
 #include "imlib_config.h"
 #if defined(IMLIB_ENABLE_IMAGE_FILE_IO)
 
 #include <string.h>
+#include <unistd.h>
 #include "py/runtime.h"
+#include "py/stream.h"
+#include "py/builtin.h"
 #include "extmod/vfs.h"
-#include "extmod/vfs_fat.h"
 
 #include "omv_common.h"
 #include "fb_alloc.h"
 #include "file_utils.h"
 #define FF_MIN(x, y)    (((x) < (y))?(x):(y))
 
-NORETURN static void ff_read_fail(FIL *fp) {
-    if (fp) {
-        f_close(fp);
-    }
+// Error/exception functions
+NORETURN static void ff_read_fail(file_t *fp) {
+    file_close(fp);
     mp_raise_msg(&mp_type_OSError, MP_ERROR_TEXT("Failed to read requested bytes!"));
 }
 
-NORETURN static void ff_write_fail(FIL *fp) {
-    if (fp) {
-        f_close(fp);
-    }
+NORETURN static void ff_write_fail(file_t *fp) {
+    file_close(fp);
     mp_raise_msg(&mp_type_OSError, MP_ERROR_TEXT("Failed to write requested bytes!"));
 }
 
-NORETURN static void ff_expect_fail(FIL *fp) {
-    if (fp) {
-        f_close(fp);
-    }
+NORETURN static void ff_expect_fail(file_t *fp) {
+    file_close(fp);
     mp_raise_msg(&mp_type_OSError, MP_ERROR_TEXT("Unexpected value read!"));
 }
 
-NORETURN void file_raise_format(FIL *fp) {
-    if (fp) {
-        f_close(fp);
-    }
+NORETURN void file_raise_format(file_t *fp) {
+    file_close(fp);
     mp_raise_msg(&mp_type_OSError, MP_ERROR_TEXT("Unsupported format!"));
 }
 
-NORETURN void file_raise_corrupted(FIL *fp) {
-    if (fp) {
-        f_close(fp);
-    }
+NORETURN void file_raise_corrupted(file_t *fp) {
+    file_close(fp);
     mp_raise_msg(&mp_type_OSError, MP_ERROR_TEXT("File corrupted!"));
 }
 
-NORETURN void file_raise_error(FIL *fp, FRESULT res) {
-    if (fp) {
-        f_close(fp);
-    }
-    mp_raise_msg(&mp_type_OSError, (mp_rom_error_text_t) file_strerror(res));
+NORETURN void file_raise_error(file_t *fp, mp_rom_error_text_t msg) {
+    file_close(fp);
+    mp_raise_msg(&mp_type_OSError, msg);
 }
 
-static FATFS *lookup_path(const TCHAR **path) {
-    mp_vfs_mount_t *fs = mp_vfs_lookup_path(*path, path);
-    if (fs == MP_VFS_NONE || fs == MP_VFS_ROOT) {
-        return NULL;
+// Helper function to perform stream seek
+static off_t file_seek_helper(file_t *fp, off_t offset, int whence) {
+    int err;
+    const mp_stream_p_t *stream_p = mp_get_stream_raise(fp->fp, MP_STREAM_OP_IOCTL);
+    struct mp_stream_seek_t seek_s;
+    seek_s.offset = offset;
+    seek_s.whence = whence;
+    mp_uint_t res = stream_p->ioctl(fp->fp, MP_STREAM_SEEK, (mp_uint_t) (uintptr_t) &seek_s, &err);
+    if (res == MP_STREAM_ERROR) {
+        file_raise_error(fp, MP_ERROR_TEXT("Seek failed"));
     }
-    // here we assume that the mounted device is FATFS
-    return &((fs_user_mount_t *) MP_OBJ_TO_PTR(fs->obj))->fatfs;
+    return seek_s.offset;
 }
 
-FRESULT file_ll_open(FIL *fp, const TCHAR *path, BYTE mode) {
-    FATFS *fs = lookup_path(&path);
-    if (fs == NULL) {
-        return FR_NO_PATH;
+// Helper function to read from stream
+static size_t file_read_helper(file_t *fp, void *buf, size_t len) {
+    int err;
+    const mp_stream_p_t *stream_p = mp_get_stream_raise(fp->fp, MP_STREAM_OP_READ);
+    mp_uint_t out_sz = stream_p->read(fp->fp, buf, len, &err);
+    if (out_sz == MP_STREAM_ERROR) {
+        file_raise_error(fp, MP_ERROR_TEXT("Read failed"));
     }
-    return f_open(fs, fp, path, mode);
+    return out_sz;
 }
 
-FRESULT file_ll_close(FIL *fp) {
-    return f_close(fp);
+// Helper function to write to stream
+static size_t file_write_helper(file_t *fp, const void *buf, size_t len) {
+    int err;
+    const mp_stream_p_t *stream_p = mp_get_stream_raise(fp->fp, MP_STREAM_OP_WRITE);
+    mp_uint_t out_sz = stream_p->write(fp->fp, buf, len, &err);
+    if (out_sz == MP_STREAM_ERROR) {
+        file_raise_error(fp, MP_ERROR_TEXT("Write failed"));
+    }
+    return out_sz;
 }
 
-FRESULT file_ll_read(FIL *fp, void *buff, UINT btr, UINT *br) {
-    return f_read(fp, buff, btr, br);
-}
-
-FRESULT file_ll_write(FIL *fp, const void *buff, UINT btw, UINT *bw) {
-    return f_write(fp, buff, btw, bw);
-}
-
-FRESULT file_ll_opendir(FF_DIR *dp, const TCHAR *path) {
-    FATFS *fs = lookup_path(&path);
-    if (fs == NULL) {
-        return FR_NO_PATH;
-    }
-    return f_opendir(fs, dp, path);
-}
-
-FRESULT file_ll_stat(const TCHAR *path, FILINFO *fno) {
-    FATFS *fs = lookup_path(&path);
-    if (fs == NULL) {
-        return FR_NO_PATH;
-    }
-    return f_stat(fs, path, fno);
-}
-
-FRESULT file_ll_mkdir(const TCHAR *path) {
-    FATFS *fs = lookup_path(&path);
-    if (fs == NULL) {
-        return FR_NO_PATH;
-    }
-    return f_mkdir(fs, path);
-}
-
-FRESULT file_ll_unlink(const TCHAR *path) {
-    FATFS *fs = lookup_path(&path);
-    if (fs == NULL) {
-        return FR_NO_PATH;
-    }
-    return f_unlink(fs, path);
-}
-
-FRESULT file_ll_rename(const TCHAR *path_old, const TCHAR *path_new) {
-    FATFS *fs_old = lookup_path(&path_old);
-    if (fs_old == NULL) {
-        return FR_NO_PATH;
-    }
-    FATFS *fs_new = lookup_path(&path_new);
-    if (fs_new == NULL) {
-        return FR_NO_PATH;
-    }
-    if (fs_old != fs_new) {
-        return FR_NO_PATH;
-    }
-    return f_rename(fs_new, path_old, path_new);
-}
-
-FRESULT file_ll_touch(const TCHAR *path) {
-    FIL fp;
-    FATFS *fs = lookup_path(&path);
-    if (fs == NULL) {
-        return FR_NO_PATH;
-    }
-
-    if (f_stat(fs, path, NULL) != FR_OK) {
-        f_open(fs, &fp, path, FA_WRITE | FA_CREATE_ALWAYS);
-        f_close(&fp);
-    }
-
-    return FR_OK;
-}
-
-// When a sector boundary is encountered while writing a file and there are
-// more than 512 bytes left to write FatFs will detect that it can bypass
-// its internal write buffer and pass the data buffer passed to it directly
-// to the disk write function. However, the disk write function needs the
-// buffer to be aligned to a 4-byte boundary. FatFs doesn't know this and
-// will pass an unaligned buffer if we don't fix the issue. To fix this problem
-// we use a temporary buffer to fix the alignment and to speed everything up.
-// We use this temporary buffer for both reads and writes. The buffer allows us
-// to do multi-block reads and writes which significantly speed things up.
-
+// File buffering support
 static uint32_t file_buffer_offset = 0;
 static uint8_t *file_buffer_pointer = 0;
 static uint32_t file_buffer_size = 0;
@@ -191,32 +118,30 @@ void file_buffer_init0() {
     file_buffer_index = 0;
 }
 
-OMV_ATTR_ALWAYS_INLINE static void file_fill(FIL *fp) {
+OMV_ATTR_ALWAYS_INLINE static void file_fill(file_t *fp) {
     if (file_buffer_index == file_buffer_size) {
         file_buffer_pointer -= file_buffer_offset;
         file_buffer_size += file_buffer_offset;
         file_buffer_offset = 0;
         file_buffer_index = 0;
-        uint32_t file_remaining = f_size(fp) - f_tell(fp);
+
+        // Calculate remaining bytes in file
+        off_t current_pos = file_seek_helper(fp, 0, SEEK_CUR);
+        off_t file_end = file_seek_helper(fp, 0, SEEK_END);
+        file_seek_helper(fp, current_pos, SEEK_SET);
+        uint32_t file_remaining = file_end - current_pos;
         uint32_t can_do = FF_MIN(file_buffer_size, file_remaining);
-        UINT bytes;
-        FRESULT res = f_read(fp, file_buffer_pointer, can_do, &bytes);
-        if (res != FR_OK) {
-            file_raise_error(fp, res);
-        }
+
+        size_t bytes = file_read_helper(fp, file_buffer_pointer, can_do);
         if (bytes != can_do) {
             ff_read_fail(fp);
         }
     }
 }
 
-OMV_ATTR_ALWAYS_INLINE static void file_flush(FIL *fp) {
+OMV_ATTR_ALWAYS_INLINE static void file_flush(file_t *fp) {
     if (file_buffer_index == file_buffer_size) {
-        UINT bytes;
-        FRESULT res = f_write(fp, file_buffer_pointer, file_buffer_index, &bytes);
-        if (res != FR_OK) {
-            file_raise_error(fp, res);
-        }
+        size_t bytes = file_write_helper(fp, file_buffer_pointer, file_buffer_index);
         if (bytes != file_buffer_index) {
             ff_write_fail(fp);
         }
@@ -227,109 +152,183 @@ OMV_ATTR_ALWAYS_INLINE static void file_flush(FIL *fp) {
     }
 }
 
-void file_buffer_on(FIL *fp) {
-    file_buffer_offset = f_tell(fp) % 4;
-    file_buffer_pointer = fb_alloc_all(&file_buffer_size, FB_ALLOC_PREFER_SIZE) + file_buffer_offset;
+void file_buffer_on(file_t *fp) {
+    if (!fp) {
+        return;
+    }
+    off_t current_pos = file_seek_helper(fp, 0, SEEK_CUR);
+    file_buffer_offset = current_pos % 4;
+    file_buffer_pointer = (uint8_t *) fb_alloc_all(&file_buffer_size, FB_ALLOC_PREFER_SIZE) + file_buffer_offset;
     if (!file_buffer_size) {
         mp_raise_msg(&mp_type_MemoryError, MP_ERROR_TEXT("No memory!"));
     }
     file_buffer_size -= file_buffer_offset;
     file_buffer_index = 0;
-    if (fp->flag & FA_READ) {
-        uint32_t file_remaining = f_size(fp) - f_tell(fp);
+
+    if (fp->flags & FA_READ) {
+        // Pre-fill buffer for reading
+        off_t file_end = file_seek_helper(fp, 0, SEEK_END);
+        file_seek_helper(fp, current_pos, SEEK_SET);
+        uint32_t file_remaining = file_end - current_pos;
         uint32_t can_do = FF_MIN(file_buffer_size, file_remaining);
-        UINT bytes;
-        FRESULT res = f_read(fp, file_buffer_pointer, can_do, &bytes);
-        if (res != FR_OK) {
-            file_raise_error(fp, res);
-        }
+
+        size_t bytes = file_read_helper(fp, file_buffer_pointer, can_do);
         if (bytes != can_do) {
             ff_read_fail(fp);
         }
     }
 }
 
-void file_buffer_off(FIL *fp) {
-    if ((fp->flag & FA_WRITE) && file_buffer_index) {
-        UINT bytes;
-        FRESULT res = f_write(fp, file_buffer_pointer, file_buffer_index, &bytes);
-        if (res != FR_OK) {
-            file_raise_error(fp, res);
-        }
-        if (bytes != file_buffer_index) {
+void file_buffer_off(file_t *fp) {
+    if (!fp) {
+        return;
+    }
+    // Save buffer state and clear globals FIRST to prevent recursion
+    // if error handlers call file_close() again
+    uint8_t *buf_to_flush = file_buffer_pointer;
+    uint32_t bytes_to_flush = file_buffer_index;
+
+    file_buffer_pointer = 0;
+    file_buffer_index = 0;
+    file_buffer_offset = 0;
+    file_buffer_size = 0;
+
+    // Attempt flush after clearing globals
+    if ((fp->flags & FA_WRITE) && bytes_to_flush) {
+        size_t bytes = file_write_helper(fp, buf_to_flush, bytes_to_flush);
+        if (bytes != bytes_to_flush) {
+            fb_free();
             ff_write_fail(fp);
         }
     }
-    file_buffer_pointer = 0;
     fb_free();
 }
 
-void file_open(FIL *fp, const char *path, bool buffered, uint32_t flags) {
-    FRESULT res = file_ll_open(fp, path, flags);
-    if (res != FR_OK) {
-        file_raise_error(fp, res);
+void file_open(file_t *fp, const char *path, bool buffered, uint32_t flags) {
+    // Initialize fp to safe state in case open fails
+    fp->fp = MP_OBJ_NULL;
+    fp->flags = 0;
+
+    // Reject unsupported FA_READ | FA_WRITE without creation/append flags
+    // This combination would silently truncate the file (mode "wb")
+    if ((flags & (FA_READ | FA_WRITE)) == (FA_READ | FA_WRITE)) {
+        if (!(flags & (FA_CREATE_ALWAYS | FA_OPEN_APPEND | FA_OPEN_ALWAYS))) {
+            mp_raise_msg(&mp_type_ValueError,
+                         MP_ERROR_TEXT("FA_READ|FA_WRITE requires FA_OPEN_ALWAYS or FA_CREATE_ALWAYS"));
+        }
     }
+
+    // Convert flags to MicroPython mode string
+    const char *mode;
+    if (flags & FA_WRITE) {
+        if (flags & FA_CREATE_ALWAYS) {
+            mode = "wb";
+        } else if (flags & FA_OPEN_APPEND) {
+            mode = "ab";
+        } else if (flags & FA_OPEN_ALWAYS) {
+            mode = "r+b";
+        } else {
+            mode = "wb";
+        }
+    } else {
+        mode = "rb";
+    }
+
+    // Open file using MicroPython VFS
+    mp_obj_t args[2] = {
+        mp_obj_new_str_from_cstr(path),
+        mp_obj_new_str_from_cstr(mode)
+    };
+    fp->fp = mp_vfs_open(MP_ARRAY_SIZE(args), args, (mp_map_t *) &mp_const_empty_map);
+    fp->flags = (uint8_t) flags;
+
     if (buffered) {
         file_buffer_on(fp);
     }
 }
 
-void file_close(FIL *fp) {
+void file_close(file_t *fp) {
+    if (fp && fp->fp != MP_OBJ_NULL) {
+        // Save stream handle and mark as closed FIRST to prevent double-close
+        // if file_buffer_off() fails and error handler calls file_close() again
+        mp_obj_t stream = fp->fp;
+        fp->fp = MP_OBJ_NULL;
+
+        // Note: file_buffer_pointer is global - only valid if this file owns the buffer
+        // This is a limitation of the current single-buffer design
+        if (file_buffer_pointer) {
+            file_buffer_off(fp);
+        }
+
+        mp_stream_close(stream);
+    }
+}
+
+void file_seek(file_t *fp, size_t offset) {
+    file_seek_helper(fp, offset, SEEK_SET);
+}
+
+void file_truncate(file_t *fp) {
+    // Truncate file at current position by calling Python truncate() method
+    // Use getattr to get the truncate method
+    mp_obj_t truncate_str = mp_obj_new_str("truncate", 8);
+    mp_obj_t truncate_method = mp_load_attr(fp->fp, qstr_from_str(mp_obj_str_get_str(truncate_str)));
+    // Call truncate() method with no args (truncates at current position)
+    mp_call_function_0(truncate_method);
+}
+
+void file_sync(file_t *fp) {
+    int err;
+    const mp_stream_p_t *stream_p = mp_get_stream_raise(fp->fp, MP_STREAM_OP_WRITE);
+    mp_uint_t res = stream_p->ioctl(fp->fp, MP_STREAM_FLUSH, 0, &err);
+    if (res == MP_STREAM_ERROR) {
+        file_raise_error(fp, MP_ERROR_TEXT("Flush failed"));
+    }
+}
+
+size_t file_tell(file_t *fp) {
     if (file_buffer_pointer) {
-        file_buffer_off(fp);
-    }
-
-    FRESULT res = f_close(fp);
-    if (res != FR_OK) {
-        file_raise_error(fp, res);
-    }
-}
-
-void file_seek(FIL *fp, UINT offset) {
-    FRESULT res = f_lseek(fp, offset);
-    if (res != FR_OK) {
-        file_raise_error(fp, res);
-    }
-}
-
-void file_truncate(FIL *fp) {
-    FRESULT res = f_truncate(fp);
-    if (res != FR_OK) {
-        file_raise_error(fp, res);
-    }
-}
-
-void file_sync(FIL *fp) {
-    FRESULT res = f_sync(fp);
-    if (res != FR_OK) {
-        file_raise_error(fp, res);
-    }
-}
-
-uint32_t file_tell(FIL *fp) {
-    if (file_buffer_pointer) {
-        if (fp->flag & FA_READ) {
-            return f_tell(fp) - file_buffer_size + file_buffer_index;
+        off_t stream_pos = file_seek_helper(fp, 0, SEEK_CUR);
+        if (fp->flags & FA_READ) {
+            return stream_pos - file_buffer_size + file_buffer_index;
         } else {
-            return f_tell(fp) + file_buffer_index;
+            return stream_pos + file_buffer_index;
         }
     }
-    return f_tell(fp);
+    return file_seek_helper(fp, 0, SEEK_CUR);
 }
 
-uint32_t file_size(FIL *fp) {
+size_t file_size(file_t *fp) {
     if (file_buffer_pointer) {
-        if (fp->flag & FA_READ) {
-            return f_size(fp);
+        off_t current_pos = file_seek_helper(fp, 0, SEEK_CUR);
+        off_t file_end = file_seek_helper(fp, 0, SEEK_END);
+        file_seek_helper(fp, current_pos, SEEK_SET);
+
+        if (fp->flags & FA_READ) {
+            return file_end;
         } else {
-            return f_size(fp) + file_buffer_index;
+            return file_end + file_buffer_index;
         }
     }
-    return f_size(fp);
+    off_t current_pos = file_seek_helper(fp, 0, SEEK_CUR);
+    off_t file_end = file_seek_helper(fp, 0, SEEK_END);
+    file_seek_helper(fp, current_pos, SEEK_SET);
+    return file_end;
 }
 
-void file_read(FIL *fp, void *data, size_t size) {
+bool file_eof(file_t *fp) {
+    if (file_buffer_pointer && (fp->flags & FA_READ)) {
+        return file_buffer_index >= file_buffer_size;
+    }
+    off_t current_pos = file_seek_helper(fp, 0, SEEK_CUR);
+    off_t file_end = file_seek_helper(fp, 0, SEEK_END);
+    file_seek_helper(fp, current_pos, SEEK_SET);
+    return current_pos >= file_end;
+}
+
+void file_read(file_t *fp, void *data, size_t size) {
     if (data == NULL) {
+        // Skip bytes
         uint8_t byte;
         if (file_buffer_pointer) {
             for (size_t i = 0; i < size; i++) {
@@ -338,11 +337,7 @@ void file_read(FIL *fp, void *data, size_t size) {
             }
         } else {
             for (size_t i = 0; i < size; i++) {
-                UINT bytes;
-                FRESULT res = f_read(fp, &byte, 1, &bytes);
-                if (res != FR_OK) {
-                    file_raise_error(fp, res);
-                }
+                size_t bytes = file_read_helper(fp, &byte, 1);
                 if (bytes != 1) {
                     ff_read_fail(fp);
                 }
@@ -364,61 +359,51 @@ void file_read(FIL *fp, void *data, size_t size) {
                 uint32_t can_do = FF_MIN(size, file_buffer_space_left);
                 memcpy(data, file_buffer_pointer + file_buffer_index, can_do);
                 file_buffer_index += can_do;
-                data += can_do;
+                data = ((uint8_t *) data) + can_do;
                 size -= can_do;
             }
         }
     } else {
-        UINT bytes;
-        FRESULT res = f_read(fp, data, size, &bytes);
-        if (res != FR_OK) {
-            file_raise_error(fp, res);
-        }
+        size_t bytes = file_read_helper(fp, data, size);
         if (bytes != size) {
             ff_read_fail(fp);
         }
     }
 }
 
-void file_write(FIL *fp, const void *data, size_t size) {
+void file_write(file_t *fp, const void *data, size_t size) {
     if (file_buffer_pointer) {
-        // We get a massive speed boost by buffering up as much data as possible
-        // before a write to the SD card. So much so that the time wasted by
-        // all these operations does not cost us.
+        // Buffer writes for performance
         while (size) {
             uint32_t file_buffer_space_left = file_buffer_size - file_buffer_index;
             uint32_t can_do = FF_MIN(size, file_buffer_space_left);
             memcpy(file_buffer_pointer + file_buffer_index, data, can_do);
             file_buffer_index += can_do;
-            data += can_do;
+            data = ((const uint8_t *) data) + can_do;
             size -= can_do;
             file_flush(fp);
         }
     } else {
-        UINT bytes;
-        FRESULT res = f_write(fp, data, size, &bytes);
-        if (res != FR_OK) {
-            file_raise_error(fp, res);
-        }
+        size_t bytes = file_write_helper(fp, data, size);
         if (bytes != size) {
             ff_write_fail(fp);
         }
     }
 }
 
-void file_write_byte(FIL *fp, uint8_t value) {
+void file_write_byte(file_t *fp, uint8_t value) {
     file_write(fp, &value, 1);
 }
 
-void file_write_short(FIL *fp, uint16_t value) {
+void file_write_short(file_t *fp, uint16_t value) {
     file_write(fp, &value, 2);
 }
 
-void file_write_long(FIL *fp, uint32_t value) {
+void file_write_long(file_t *fp, uint32_t value) {
     file_write(fp, &value, 4);
 }
 
-void file_read_check(FIL *fp, const void *data, size_t size) {
+void file_read_check(file_t *fp, const void *data, size_t size) {
     uint8_t buf[16];
     while (size) {
         size_t len = OMV_MIN(sizeof(buf), size);
@@ -427,38 +412,8 @@ void file_read_check(FIL *fp, const void *data, size_t size) {
             ff_expect_fail(fp);
         }
         size -= len;
-        data = ((uint8_t *) data) + len;
+        data = ((const uint8_t *) data) + len;
     }
 }
 
-const char *file_strerror(FRESULT res) {
-    static const char *ffs_errors[] = {
-        "Succeeded",
-        "A hard error occurred in the low level disk I/O layer",
-        "Assertion failed",
-        "The physical drive cannot work",
-        "Could not find the file",
-        "Could not find the path",
-        "The path name format is invalid",
-        "Access denied due to prohibited access or directory full",
-        "Access denied due to prohibited access",
-        "The file/directory object is invalid",
-        "The physical drive is write protected",
-        "The logical drive number is invalid",
-        "The volume has no work area",
-        "There is no valid FAT volume",
-        "The f_mkfs() aborted due to any parameter error",
-        "Could not get a grant to access the volume within defined period",
-        "The operation is rejected according to the file sharing policy",
-        "LFN working buffer could not be allocated",
-        "Number of open files > _FS_SHARE",
-        "Given parameter is invalid",
-    };
-
-    if (res > (sizeof(ffs_errors) / sizeof(ffs_errors[0]))) {
-        return "unknown error";
-    } else {
-        return ffs_errors[res];
-    }
-}
 #endif //IMLIB_ENABLE_IMAGE_FILE_IO
