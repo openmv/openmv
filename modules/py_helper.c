@@ -619,4 +619,6 @@ void py_helper_set_to_framebuffer(image_t *img) {
 
     framebuffer_from_image(fb, img);
     img->data = buffer->data;
+
+    framebuffer_release(fb, FB_FLAG_FREE);
 }
