@@ -38,34 +38,48 @@
 #include "file_utils.h"
 #define FF_MIN(x, y)    (((x) < (y))?(x):(y))
 
+// File buffering support
+static uint32_t file_buffer_offset = 0;
+static uint8_t *file_buffer_pointer = 0;
+static uint32_t file_buffer_size = 0;
+static uint32_t file_buffer_index = 0;
+
+static inline void file_cleanup(file_t *fp) {
+    if (fp && fp->fp != MP_OBJ_NULL) {
+        file_buffer_init0();
+        mp_stream_close(fp->fp);
+        fp->fp = MP_OBJ_NULL;
+    }
+}
+
 // Error/exception functions
-NORETURN static void ff_read_fail(file_t *fp) {
-    file_close(fp);
+NORETURN static void file_read_fail(file_t *fp) {
+    file_cleanup(fp);
     mp_raise_msg(&mp_type_OSError, MP_ERROR_TEXT("Failed to read requested bytes!"));
 }
 
-NORETURN static void ff_write_fail(file_t *fp) {
-    file_close(fp);
+NORETURN static void file_write_fail(file_t *fp) {
+    file_cleanup(fp);
     mp_raise_msg(&mp_type_OSError, MP_ERROR_TEXT("Failed to write requested bytes!"));
 }
 
-NORETURN static void ff_expect_fail(file_t *fp) {
-    file_close(fp);
+NORETURN static void file_expect_fail(file_t *fp) {
+    file_cleanup(fp);
     mp_raise_msg(&mp_type_OSError, MP_ERROR_TEXT("Unexpected value read!"));
 }
 
 NORETURN void file_raise_format(file_t *fp) {
-    file_close(fp);
+    file_cleanup(fp);
     mp_raise_msg(&mp_type_OSError, MP_ERROR_TEXT("Unsupported format!"));
 }
 
 NORETURN void file_raise_corrupted(file_t *fp) {
-    file_close(fp);
+    file_cleanup(fp);
     mp_raise_msg(&mp_type_OSError, MP_ERROR_TEXT("File corrupted!"));
 }
 
 NORETURN void file_raise_error(file_t *fp, mp_rom_error_text_t msg) {
-    file_close(fp);
+    file_cleanup(fp);
     mp_raise_msg(&mp_type_OSError, msg);
 }
 
@@ -105,51 +119,11 @@ static size_t file_write_helper(file_t *fp, const void *buf, size_t len) {
     return out_sz;
 }
 
-// File buffering support
-static uint32_t file_buffer_offset = 0;
-static uint8_t *file_buffer_pointer = 0;
-static uint32_t file_buffer_size = 0;
-static uint32_t file_buffer_index = 0;
-
 void file_buffer_init0() {
     file_buffer_offset = 0;
     file_buffer_pointer = 0;
     file_buffer_size = 0;
     file_buffer_index = 0;
-}
-
-OMV_ATTR_ALWAYS_INLINE static void file_fill(file_t *fp) {
-    if (file_buffer_index == file_buffer_size) {
-        file_buffer_pointer -= file_buffer_offset;
-        file_buffer_size += file_buffer_offset;
-        file_buffer_offset = 0;
-        file_buffer_index = 0;
-
-        // Calculate remaining bytes in file
-        off_t current_pos = file_seek_helper(fp, 0, SEEK_CUR);
-        off_t file_end = file_seek_helper(fp, 0, SEEK_END);
-        file_seek_helper(fp, current_pos, SEEK_SET);
-        uint32_t file_remaining = file_end - current_pos;
-        uint32_t can_do = FF_MIN(file_buffer_size, file_remaining);
-
-        size_t bytes = file_read_helper(fp, file_buffer_pointer, can_do);
-        if (bytes != can_do) {
-            ff_read_fail(fp);
-        }
-    }
-}
-
-OMV_ATTR_ALWAYS_INLINE static void file_flush(file_t *fp) {
-    if (file_buffer_index == file_buffer_size) {
-        size_t bytes = file_write_helper(fp, file_buffer_pointer, file_buffer_index);
-        if (bytes != file_buffer_index) {
-            ff_write_fail(fp);
-        }
-        file_buffer_pointer -= file_buffer_offset;
-        file_buffer_size += file_buffer_offset;
-        file_buffer_offset = 0;
-        file_buffer_index = 0;
-    }
 }
 
 void file_buffer_on(file_t *fp) {
@@ -175,34 +149,57 @@ void file_buffer_on(file_t *fp) {
 
         size_t bytes = file_read_helper(fp, file_buffer_pointer, can_do);
         if (bytes != can_do) {
-            ff_read_fail(fp);
+            file_read_fail(fp);
         }
     }
 }
 
 void file_buffer_off(file_t *fp) {
-    if (!fp || fp->fp == MP_OBJ_NULL) {
-        return;
-    }
-    // Save buffer state and clear globals FIRST to prevent recursion
-    // if error handlers call file_close() again
-    uint8_t *buf_to_flush = file_buffer_pointer;
-    uint32_t bytes_to_flush = file_buffer_index;
-
-    file_buffer_pointer = 0;
-    file_buffer_index = 0;
-    file_buffer_offset = 0;
-    file_buffer_size = 0;
-
     // Attempt flush after clearing globals
-    if ((fp->flags & FA_WRITE) && bytes_to_flush) {
-        size_t bytes = file_write_helper(fp, buf_to_flush, bytes_to_flush);
-        if (bytes != bytes_to_flush) {
+    if (file_buffer_index && fp && fp->fp && (fp->flags & FA_WRITE)) {
+        size_t bytes = file_write_helper(fp, file_buffer_pointer, file_buffer_index);
+        if (bytes != file_buffer_index) {
             fb_free();
-            ff_write_fail(fp);
+            file_write_fail(fp);
         }
     }
+
     fb_free();
+    file_buffer_init0();
+}
+
+OMV_ATTR_ALWAYS_INLINE static void file_fill(file_t *fp) {
+    if (file_buffer_index == file_buffer_size) {
+        file_buffer_pointer -= file_buffer_offset;
+        file_buffer_size += file_buffer_offset;
+        file_buffer_offset = 0;
+        file_buffer_index = 0;
+
+        // Calculate remaining bytes in file
+        off_t current_pos = file_seek_helper(fp, 0, SEEK_CUR);
+        off_t file_end = file_seek_helper(fp, 0, SEEK_END);
+        file_seek_helper(fp, current_pos, SEEK_SET);
+        uint32_t file_remaining = file_end - current_pos;
+        uint32_t can_do = FF_MIN(file_buffer_size, file_remaining);
+
+        size_t bytes = file_read_helper(fp, file_buffer_pointer, can_do);
+        if (bytes != can_do) {
+            file_read_fail(fp);
+        }
+    }
+}
+
+OMV_ATTR_ALWAYS_INLINE static void file_flush(file_t *fp) {
+    if (file_buffer_index == file_buffer_size) {
+        size_t bytes = file_write_helper(fp, file_buffer_pointer, file_buffer_index);
+        if (bytes != file_buffer_index) {
+            file_write_fail(fp);
+        }
+        file_buffer_pointer -= file_buffer_offset;
+        file_buffer_size += file_buffer_offset;
+        file_buffer_offset = 0;
+        file_buffer_index = 0;
+    }
 }
 
 void file_open(file_t *fp, const char *path, bool buffered, uint32_t flags) {
@@ -250,18 +247,11 @@ void file_open(file_t *fp, const char *path, bool buffered, uint32_t flags) {
 
 void file_close(file_t *fp) {
     if (fp && fp->fp != MP_OBJ_NULL) {
-        // Save stream handle and mark as closed FIRST to prevent double-close
-        // if file_buffer_off() fails and error handler calls file_close() again
-        mp_obj_t stream = fp->fp;
-        fp->fp = MP_OBJ_NULL;
-
-        // Note: file_buffer_pointer is global - only valid if this file owns the buffer
-        // This is a limitation of the current single-buffer design
         if (file_buffer_pointer) {
             file_buffer_off(fp);
         }
-
-        mp_stream_close(stream);
+        mp_stream_close(fp->fp);
+        fp->fp = MP_OBJ_NULL;
     }
 }
 
@@ -355,7 +345,7 @@ void file_read(file_t *fp, void *data, size_t size) {
             for (size_t i = 0; i < size; i++) {
                 size_t bytes = file_read_helper(fp, &byte, 1);
                 if (bytes != 1) {
-                    ff_read_fail(fp);
+                    file_read_fail(fp);
                 }
             }
         }
@@ -382,7 +372,7 @@ void file_read(file_t *fp, void *data, size_t size) {
     } else {
         size_t bytes = file_read_helper(fp, data, size);
         if (bytes != size) {
-            ff_read_fail(fp);
+            file_read_fail(fp);
         }
     }
 }
@@ -406,7 +396,7 @@ void file_write(file_t *fp, const void *data, size_t size) {
     } else {
         size_t bytes = file_write_helper(fp, data, size);
         if (bytes != size) {
-            ff_write_fail(fp);
+            file_write_fail(fp);
         }
     }
 }
@@ -433,7 +423,7 @@ void file_read_check(file_t *fp, const void *data, size_t size) {
         size_t len = OMV_MIN(sizeof(buf), size);
         file_read(fp, buf, len);
         if (memcmp(data, buf, len)) {
-            ff_expect_fail(fp);
+            file_expect_fail(fp);
         }
         size -= len;
         data = ((const uint8_t *) data) + len;
