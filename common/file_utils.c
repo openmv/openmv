@@ -153,9 +153,10 @@ OMV_ATTR_ALWAYS_INLINE static void file_flush(file_t *fp) {
 }
 
 void file_buffer_on(file_t *fp) {
-    if (!fp) {
+    if (!fp || fp->fp == MP_OBJ_NULL) {
         return;
     }
+
     off_t current_pos = file_seek_helper(fp, 0, SEEK_CUR);
     file_buffer_offset = current_pos % 4;
     file_buffer_pointer = (uint8_t *) fb_alloc_all(&file_buffer_size, FB_ALLOC_PREFER_SIZE) + file_buffer_offset;
@@ -180,7 +181,7 @@ void file_buffer_on(file_t *fp) {
 }
 
 void file_buffer_off(file_t *fp) {
-    if (!fp) {
+    if (!fp || fp->fp == MP_OBJ_NULL) {
         return;
     }
     // Save buffer state and clear globals FIRST to prevent recursion
@@ -265,10 +266,16 @@ void file_close(file_t *fp) {
 }
 
 void file_seek(file_t *fp, size_t offset) {
-    file_seek_helper(fp, offset, SEEK_SET);
+    if (fp && fp->fp) {
+        file_seek_helper(fp, offset, SEEK_SET);
+    }
 }
 
 void file_truncate(file_t *fp) {
+    if (!fp || fp->fp == MP_OBJ_NULL) {
+        return;
+    }
+
     // Truncate file at current position by calling Python truncate() method
     // Use getattr to get the truncate method
     mp_obj_t truncate_str = mp_obj_new_str("truncate", 8);
@@ -279,6 +286,11 @@ void file_truncate(file_t *fp) {
 
 void file_sync(file_t *fp) {
     int err;
+
+    if (!fp || fp->fp == MP_OBJ_NULL) {
+        return;
+    }
+
     const mp_stream_p_t *stream_p = mp_get_stream_raise(fp->fp, MP_STREAM_OP_WRITE);
     mp_uint_t res = stream_p->ioctl(fp->fp, MP_STREAM_FLUSH, 0, &err);
     if (res == MP_STREAM_ERROR) {
@@ -327,6 +339,10 @@ bool file_eof(file_t *fp) {
 }
 
 void file_read(file_t *fp, void *data, size_t size) {
+    if (!fp || fp->fp == MP_OBJ_NULL) {
+        return;
+    }
+
     if (data == NULL) {
         // Skip bytes
         uint8_t byte;
@@ -372,6 +388,10 @@ void file_read(file_t *fp, void *data, size_t size) {
 }
 
 void file_write(file_t *fp, const void *data, size_t size) {
+    if (!fp || fp->fp == MP_OBJ_NULL) {
+        return;
+    }
+
     if (file_buffer_pointer) {
         // Buffer writes for performance
         while (size) {
@@ -404,6 +424,10 @@ void file_write_long(file_t *fp, uint32_t value) {
 }
 
 void file_read_check(file_t *fp, const void *data, size_t size) {
+    if (!fp || fp->fp == MP_OBJ_NULL) {
+        return;
+    }
+
     uint8_t buf[16];
     while (size) {
         size_t len = OMV_MIN(sizeof(buf), size);
