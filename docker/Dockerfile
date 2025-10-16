@@ -29,10 +29,8 @@ ENV MAKE_URL="https://ftp.gnu.org/gnu/make/make-4.4.1.tar.gz"
 RUN wget --no-check-certificate --user-agent="Mozilla/5.0" -O - ${MAKE_URL} | tar --strip-components=1 -xz -C /workspace/make
 RUN cd /workspace/make && ./configure && make -j$(nproc)
 
-# Set up directories
-WORKDIR /workspace
-
-COPY . .
-
+# Permissive git permissions inside container
+ENV HOME=/tmp
 RUN git config --global --add safe.directory '*'
+
 ENV PATH="/workspace/gcc/bin:/workspace/llvm/bin:/workspace/cmake/bin:/workspace/make:$PATH"
