@@ -126,7 +126,11 @@ void gif_add_frame(file_t *fp, image_t *img, uint16_t delay) {
 }
 
 void gif_close(file_t *fp) {
-    file_write_byte(fp, ';');
+    // Check file validity before writing terminator byte
+    // Prevents crash if finaliser runs on failed file_open()
+    if (fp && fp->fp != MP_OBJ_NULL) {
+        file_write_byte(fp, ';');
+    }
     file_close(fp);
 }
 #endif //IMLIB_ENABLE_IMAGE_FILE_IO
