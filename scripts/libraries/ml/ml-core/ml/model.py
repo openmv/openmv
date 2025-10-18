@@ -33,7 +33,7 @@ from ml.preprocessing import Normalization
 
 class Model(uml.Model):
     def __init__(self, *args, **kwargs):
-        super().__init__(*args, kwargs.get("load_to_fb", False))
+        super().__init__(*args, kwargs.get("load_to_fb", False), kwargs.get("postprocess", False))
         try:
             path = args[0].split(".")[0] + ".txt"
             self.labels = [line.rstrip('\n') for line in open(path, "r")]

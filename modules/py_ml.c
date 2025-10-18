@@ -262,16 +262,17 @@ static mp_obj_t py_ml_model_predict(size_t n_args, const mp_obj_t *pos_args, mp_
     }
 
     bool callback = args[ARG_callback].u_obj != mp_const_none;
+    bool postprocess = model->postprocess != mp_const_none || callback;
 
     py_ml_process_input(model, pos_args[1]);
     ml_backend_run_inference(model);
 
-    mp_obj_t output = py_ml_process_output(model, !callback);
+    mp_obj_t output = py_ml_process_output(model, !postprocess);
 
-    if (callback) {
+    if (postprocess) {
         // Pass model, inputs, outputs to the post-processing callback.
         mp_obj_t fargs[3] = { MP_OBJ_FROM_PTR(model), pos_args[1], output };
-        output = mp_call_function_n_kw(args[ARG_callback].u_obj, 3, 0, fargs);
+        output = mp_call_function_n_kw(callback ? args[ARG_callback].u_obj : model->postprocess, 3, 0, fargs);
     }
 
     return output;
@@ -313,6 +314,9 @@ static void py_ml_model_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest) {
             case MP_QSTR_output_zero_point:
                 dest[0] = MP_OBJ_FROM_PTR(self->output_zero_point);
                 break;
+            case MP_QSTR_postprocess:
+                dest[0] = self->postprocess;
+                break;
             default:
                 // Continue lookup in locals_dict.
                 dest[1] = MP_OBJ_SENTINEL;
@@ -322,10 +326,11 @@ static void py_ml_model_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest) {
 }
 
 mp_obj_t py_ml_model_make_new(const mp_obj_type_t *type, size_t n_args, size_t n_kw, const mp_obj_t *all_args) {
-    enum { ARG_path, ARG_load_to_fb };
+    enum { ARG_path, ARG_load_to_fb, ARG_postprocess };
     static const mp_arg_t allowed_args[] = {
         { MP_QSTR_path, MP_ARG_REQUIRED | MP_ARG_OBJ },
         { MP_QSTR_load_to_fb, MP_ARG_REQUIRED | MP_ARG_BOOL },
+        { MP_QSTR_postprocess, MP_ARG_REQUIRED | MP_ARG_OBJ, {.u_rom_obj = MP_ROM_NONE} },
     };
 
     // Parse args.
@@ -334,6 +339,7 @@ mp_obj_t py_ml_model_make_new(const mp_obj_type_t *type, size_t n_args, size_t n
 
     //const char *path = mp_obj_str_get_str(args[ARG_path].u_obj);
     py_ml_model_obj_t *model = mp_obj_malloc_with_finaliser(py_ml_model_obj_t, &py_ml_model_type);
+    model->postprocess = args[ARG_postprocess].u_obj;
 
     #if MICROPY_VFS
     mp_obj_t file_args[2] = {
