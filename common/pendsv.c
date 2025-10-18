@@ -23,7 +23,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-
+#ifndef QEMU_BUILD
 #include <stdlib.h>
 #include "py/mphal.h"
 #include "py/runtime.h"
@@ -192,3 +192,4 @@ __attribute__((naked)) void PendSV_Handler(void) {
         "nlr_jump_ptr: .word nlr_jump\n"
         );
 }
+#endif // QEMU_BUILD

@@ -1,0 +1,15 @@
+diff --git a/tools/mpremote/mpremote/transport_serial.py b/tools/mpremote/mpremote/transport_serial.py
+index daeff02b5..fed607d83 100644
+--- a/tools/mpremote/mpremote/transport_serial.py
++++ b/tools/mpremote/mpremote/transport_serial.py
+@@ -127,8 +127,8 @@ class SerialTransport(Transport):
+         while True:
+             if data.endswith(ending):
+                 break
+-            elif self.serial.inWaiting() > 0:
+-                new_data = self.serial.read(1)
++            new_data = self.serial.read(1)
++            if new_data:
+                 if data_consumer:
+                     data_consumer(new_data)
+                     data = new_data
