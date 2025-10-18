@@ -251,7 +251,11 @@ void mjpeg_sync(file_t *fp, uint32_t frames, uint32_t bytes, uint32_t us_avg) {
 }
 
 void mjpeg_close(file_t *fp, uint32_t frames, uint32_t bytes, uint32_t us_avg) {
-    mjpeg_sync(fp, frames, bytes, us_avg);
+    // Check file validity before syncing headers
+    // Prevents crash if finaliser runs on failed file_open()
+    if (fp && fp->fp != MP_OBJ_NULL) {
+        mjpeg_sync(fp, frames, bytes, us_avg);
+    }
     file_close(fp);
 }
 
