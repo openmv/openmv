@@ -35,7 +35,10 @@
 #include "omv_i2c.h"
 #include "framebuffer.h"
 
+static uint32_t step = 0;
+
 static int reset(omv_csi_t *csi) {
+    step = 0;
     return 0;
 }
 
@@ -88,7 +91,6 @@ static int snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
     framebuffer_to_image(fb, image);
     image->pixels = buffer->data;
 
-    static uint32_t step = 0;
     uint32_t offset = (step++ / 4);
 
     for (size_t y = 0; y < image->h; y++) {
