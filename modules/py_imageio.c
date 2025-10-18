@@ -464,7 +464,12 @@ static mp_obj_t py_imageio_sync(mp_obj_t self) {
 static MP_DEFINE_CONST_FUN_OBJ_1(py_imageio_sync_obj, py_imageio_sync);
 
 static mp_obj_t py_imageio_close(mp_obj_t self) {
-    py_imageio_obj_t *stream = py_imageio_obj(self);
+    py_imageio_obj_t *stream = MP_OBJ_TO_PTR(self);
+
+    if (stream->closed) {
+        // Already closed
+        return mp_const_none;
+    }
 
     if (0) {
     #if defined(IMLIB_ENABLE_IMAGE_FILE_IO)
@@ -477,7 +482,7 @@ static mp_obj_t py_imageio_close(mp_obj_t self) {
 
     stream->closed = true;
 
-    return self;
+    return mp_const_none;
 }
 static MP_DEFINE_CONST_FUN_OBJ_1(py_imageio_close_obj, py_imageio_close);
 
