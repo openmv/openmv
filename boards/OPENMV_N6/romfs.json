@@ -10,6 +10,12 @@
     },
     {
       "type": "tflite",
+      "path": "{TOP}/lib/models/yolo_lc_192.tflite",
+      "alignment": 32,
+      "profile": "default"
+    },
+    {
+      "type": "tflite",
       "path": "{TOP}/lib/models/yolo_v2_224_small.tflite",
       "alignment": 32,
       "profile": "default"
