@@ -33,11 +33,6 @@ hand_lines = ((0, 1), (1, 2), (2, 3), (3, 4), (0, 5), (5, 6), (6, 7), (7, 8),
               (5, 9), (9, 10), (10, 11), (11, 12), (9, 13), (13, 14), (14, 15), (15, 16),
               (13, 17), (17, 18), (18, 19), (19, 20), (0, 17))
 
-# Visualization parameters.
-palm_colors = [(0, 0, 255)]
-kp_color = (255, 0, 0)
-line_color = (0, 255, 0)
-
 # Tracking vars.
 n = None
 
@@ -71,7 +66,7 @@ while True:
         # Draw bounding boxes around the detected hands and keypoints.
         for i, detections in enumerate(hands):
             for r, score, keypoints in detections:
-                ml.utils.draw_predictions(img, [r], ["right" if i else "left"], [(0, 0, 255)], format=None)
+                ml.utils.draw_predictions(img, [r], ("right",) if i else ("left",), ((0, 0, 255),), format=None)
 
                 # keypoints: ndarray (21, 3) of hand joints (x, y, z)
                 # Indices follow MediaPipe convention:
@@ -82,7 +77,7 @@ while True:
                 # Ring: 13 mcp, 14 pip, 15 dip, 16 tip
                 # Pinky: 17 mcp, 18 pip, 19 dip, 20 tip
                 # (cmc=base, mcp=knuckle, pip=mid, dip=distal, ip=thumb joint, tip=fingertip)
-                ml.utils.draw_skeleton(img, keypoints, hand_lines, kp_color=kp_color, line_color=line_color)
+                ml.utils.draw_skeleton(img, keypoints, hand_lines, kp_color=(255, 0, 0), line_color=(0, 255, 0))
 
                 # Center new_wider_rect on hand for tracking
                 new_wider_rect = (r[0] + (r[2] // 2) - (wider_rect[2] // 2),

@@ -25,12 +25,6 @@ print(model)
 # Line connections between hand joints for drawing the hand skeleton.
 palm_lines = ((0, 1), (1, 2), (2, 3), (3, 4), (4, 0), (0, 5), (5, 6))
 
-# Visualization parameters.
-palm_labels = ["palm"]
-palm_colors = [(0, 0, 255)]
-kp_color = (255, 0, 0)
-line_color = (0, 255, 0)
-
 clock = time.clock()
 while True:
     clock.tick()
@@ -42,7 +36,7 @@ while True:
     # Draw bounding boxes around the detected palms and keypoints.
     if palms:
         for r, score, keypoints in palms[0]:
-            ml.utils.draw_predictions(img, [r], palm_labels, palm_colors, format=None)
+            ml.utils.draw_predictions(img, [r], ("palm",), ((0, 0, 255),), format=None)
 
             # keypoints is a ndarray of shape (7, 2)
             # 0 - wrist (x, y)
@@ -55,6 +49,6 @@ while True:
             #
             # mcp = Metacarpophalangeal Joint - the knuckle
             # cmc = Carpometacarpal Joint - the base of the thumb
-            ml.utils.draw_skeleton(img, keypoints, palm_lines, kp_color=kp_color, line_color=line_color)
+            ml.utils.draw_skeleton(img, keypoints, palm_lines, kp_color=(255, 0, 0), line_color=(0, 255, 0))
 
     print(clock.fps(), "fps")
