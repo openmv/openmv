@@ -16,18 +16,6 @@
     },
     {
       "type": "tflite",
-      "path": "{TOP}/lib/models/yolo_v2_224_small.tflite",
-      "alignment": 32,
-      "profile": "default"
-    },
-    {
-      "type": "tflite",
-      "path": "{TOP}/lib/models/yolo_v5_224_nano.tflite",
-      "alignment": 32,
-      "profile": "default"
-    },
-    {
-      "type": "tflite",
       "path": "{TOP}/lib/models/blazeface_front_128.tflite",
       "alignment": 32,
       "profile": "default"

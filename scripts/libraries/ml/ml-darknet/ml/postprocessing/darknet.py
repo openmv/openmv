@@ -47,7 +47,6 @@ class YoloV2:
     def __init__(self, threshold=0.6, anchors=None, nms_threshold=0.1, nms_sigma=0.1):
         self.threshold = threshold
         self.anchors = anchors
-        self.anchors_len = len(self.anchors)
         self.nms_threshold = nms_threshold
         self.nms_sigma = nms_sigma
 
@@ -57,6 +56,8 @@ class YoloV2:
                                      [3.05200, 9.13360],
                                      [5.55170, 9.30660],
                                      [9.72600, 11.1422]])
+
+        self.anchors_len = len(self.anchors)
 
     def __call__(self, model, inputs, outputs):
 
