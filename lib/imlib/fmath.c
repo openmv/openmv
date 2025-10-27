@@ -23,6 +23,7 @@
  *
  * Fast approximate math functions.
  */
+#include "imlib.h"
 #include "fmath.h"
 
 const float __atanf_lut[4] = {
@@ -87,11 +88,11 @@ inline float fast_atanf(float xx) {
     /* range reduction */
     if (x > 2.414213562373095f) {
         /* tan 3pi/8 */
-        y = M_PI_2;
+        y = IMLIB_PI_2;
         x = -(1.0f / x);
     } else if (x > 0.4142135623730950f) {
         /* tan pi/8 */
-        y = M_PI_4;
+        y = IMLIB_PI_4;
         x = (x - 1.0f) / (x + 1.0f);
     } else {
         y = 0.0f;
@@ -117,18 +118,18 @@ float fast_atan2f(float y, float x) {
     }
 
     if (x < 0 && y >= 0) {
-        return M_PI - fast_atanf(-y / x);
+        return IMLIB_PI - fast_atanf(-y / x);
     }
 
     if (x < 0 && y < 0) {
-        return M_PI + fast_atanf(y / x);
+        return IMLIB_PI + fast_atanf(y / x);
     }
 
     if (x > 0 && y < 0) {
-        return 2 * M_PI - fast_atanf(-y / x);
+        return 2 * IMLIB_PI - fast_atanf(-y / x);
     }
 
-    return (y == 0) ? 0 : ((y > 0) ? M_PI : -M_PI);
+    return (y == 0) ? 0 : ((y > 0) ? IMLIB_PI : -IMLIB_PI);
 }
 
 float fast_log2(float x) {

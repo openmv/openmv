@@ -342,7 +342,7 @@ static int comp_angle(image_t *img, kp_t *kp, float *a, float *b) {
         m_01 += v * v_sum;
     }
 
-    int angle = (int) (atan2f((float) m_01, (float) m_10) * (180.0f / M_PI));
+    int angle = (int) (atan2f((float) m_01, (float) m_10) * (180.0f / IMLIB_PI));
     if (angle < 0) {
         angle += 360;
     }

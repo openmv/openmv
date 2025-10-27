@@ -79,7 +79,7 @@ void imlib_edge_canny(image_t *src, rectangle_t *roi, int low_thresh, int high_t
             // Find magnitude
             int g = (int) fast_sqrtf(vx * vx + vy * vy);
             // Find the direction and round angle to 0, 45, 90 or 135
-            int t = (int) fast_fabsf((atan2f(vy, vx) * 180.0f / M_PI));
+            int t = (int) fast_fabsf((atan2f(vy, vx) * 180.0f / IMLIB_PI));
             if (t < 22) {
                 t = 0;
             } else if (t < 67) {

@@ -35,9 +35,9 @@ void imlib_logpolar_int(image_t *dst, image_t *src, rectangle_t *roi, bool linea
     if (!linear) {
         rho_scale = fast_log(rho_scale);
     }
-    const float m_pi_1_5 = 1.5f * M_PI;
+    const float m_pi_1_5 = 1.5f * IMLIB_PI;
     const float m_pi_1_5_d = IM_RAD2DEG(m_pi_1_5);
-    const float m_pi_2_0 = 2.0f * M_PI;
+    const float m_pi_2_0 = 2.0f * IMLIB_PI;
     const float m_pi_2_0_d = IM_RAD2DEG(m_pi_2_0);
     const int m_pi_2_0_d_i = m_pi_2_0_d;
     float theta_scale_d = m_pi_2_0_d / (w - 2);
@@ -423,7 +423,7 @@ void imlib_phasecorrelate(image_t *img0,
         float w_2 = roi0->w / 2.0f;
         float h_2 = roi0->h / 2.0f;
         float rho_scale = fast_log(fast_sqrtf((w_2 * w_2) + (h_2 * h_2))) / roi0->h;
-        float theta_scale = (2 * M_PI) / roi0->w;
+        float theta_scale = (2.0f * IMLIB_PI) / roi0->w;
 
         *rotation = f_off_x * theta_scale;
         *scale = (f_off_y * rho_scale) + 1;
@@ -637,7 +637,7 @@ void imlib_phasecorrelate(image_t *img0,
             float w_2 = roi0->w / 2.0f;
             float h_2 = roi0->h / 2.0f;
             float rho_scale = fast_log(fast_sqrtf((w_2 * w_2) + (h_2 * h_2))) / roi0->h;
-            float theta_scale = (2 * M_PI) / roi0->w;
+            float theta_scale = (2.0f * IMLIB_PI) / roi0->w;
 
             *rotation = *x_translation * theta_scale;
             *scale = (*y_translation * rho_scale) + 1;
