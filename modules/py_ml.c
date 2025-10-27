@@ -84,7 +84,7 @@ static void py_ml_process_input(py_ml_model_obj_t *model, mp_obj_t arg) {
         void *input_buffer = ml_backend_get_input(model, i);
         size_t input_size = py_ml_tuple_sum(MP_OBJ_TO_PTR(model->input_shape->items[i]));
         mp_obj_tuple_t *input_shape = MP_OBJ_TO_PTR(model->input_shape->items[i]);
-        float input_scale = 1.0f / mp_obj_get_float(model->input_scale->items[i]);
+        float input_scale = 1.0f / mp_obj_get_float_to_f(model->input_scale->items[i]);
         int input_zero_point = mp_obj_get_int(model->input_zero_point->items[i]);
         int input_dtype = mp_obj_get_int(model->input_dtype->items[i]);
         mp_obj_t input_arg = input_list->items[i];
@@ -157,7 +157,7 @@ static mp_obj_t py_ml_process_output(py_ml_model_obj_t *model, bool deep_copy) {
         void *model_output = ml_backend_get_output(model, i);
         size_t size = py_ml_tuple_sum(MP_OBJ_TO_PTR(model->output_shape->items[i]));
         mp_obj_tuple_t *output_shape = MP_OBJ_TO_PTR(model->output_shape->items[i]);
-        float output_scale = mp_obj_get_float(model->output_scale->items[i]);
+        float output_scale = mp_obj_get_float_to_f(model->output_scale->items[i]);
         int output_zero_point = mp_obj_get_int(model->output_zero_point->items[i]);
         int output_dtype = mp_obj_get_int(model->output_dtype->items[i]);
 

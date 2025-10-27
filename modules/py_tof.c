@@ -89,7 +89,7 @@ static void tof_fill_image_float_obj(image_t *img, mp_obj_t *data, float min, fl
         uint8_t *row_pointer = ((uint8_t *) img->data) + row_offset;
 
         for (int x = 0; x < img->w; x++) {
-            float raw = mp_obj_get_float(raw_row[x]);
+            float raw = mp_obj_get_float_to_f(raw_row[x]);
 
             if (raw < min) {
                 raw = min;

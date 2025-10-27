@@ -59,8 +59,6 @@ bool py_helper_keyword_int_maybe(size_t n_args, const mp_obj_t *args, size_t arg
                                  mp_map_t *kw_args, mp_obj_t kw, int *value);
 float py_helper_keyword_float(size_t n_args, const mp_obj_t *args, size_t arg_index,
                               mp_map_t *kw_args, mp_obj_t kw, float default_val);
-bool py_helper_keyword_float_maybe(size_t n_args, const mp_obj_t *args, size_t arg_index,
-                                   mp_map_t *kw_args, mp_obj_t kw, float *value);
 void py_helper_keyword_int_array(size_t n_args, const mp_obj_t *args, size_t arg_index,
                                  mp_map_t *kw_args, mp_obj_t kw, int *x, int size);
 void py_helper_keyword_float_array(size_t n_args, const mp_obj_t *args, size_t arg_index,
