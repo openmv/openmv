@@ -1012,8 +1012,8 @@ static mp_obj_t py_omv_csi_ioctl(size_t n_args, const mp_obj_t *args) {
         case OMV_CSI_IOCTL_LEPTON_SET_RANGE:
             if (n_args >= 3) {
                 // GCC will not let us pass floats to ... so we have to pass float pointers instead.
-                float min = mp_obj_get_float(args[1]);
-                float max = mp_obj_get_float(args[2]);
+                float min = mp_obj_get_float_to_f(args[1]);
+                float max = mp_obj_get_float_to_f(args[2]);
                 error = omv_csi_ioctl(csi, request, &min, &max);
             }
             break;

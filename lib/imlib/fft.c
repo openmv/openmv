@@ -497,7 +497,7 @@ void fft1d_phase(fft1d_controller_t *controller) {
     for (int i = 0, j = 2 << controller->pow2; i < j; i += 2) {
         float tmp_r = controller->data[i + 0];
         float tmp_i = controller->data[i + 1];
-        controller->data[i + 0] = tmp_r ? fast_atan2f(tmp_i, tmp_r) : ((tmp_i < 0) ? (M_PI * 1.5) : (M_PI * 0.5));
+        controller->data[i + 0] = tmp_r ? fast_atan2f(tmp_i, tmp_r) : ((tmp_i < 0) ? (IMLIB_PI * 1.5f) : (IMLIB_PI * 0.5f));
         controller->data[i + 1] = 0;
     }
 }
@@ -507,7 +507,7 @@ void fft1d_log(fft1d_controller_t *controller) {
         float tmp_r = controller->data[i + 0];
         float tmp_i = controller->data[i + 1];
         controller->data[i + 0] = fast_log(fast_sqrtf((tmp_r * tmp_r) + (tmp_i * tmp_i)));
-        controller->data[i + 1] = tmp_r ? fast_atan2f(tmp_i, tmp_r) : ((tmp_i < 0) ? (M_PI * 1.5) : (M_PI * 0.5));
+        controller->data[i + 1] = tmp_r ? fast_atan2f(tmp_i, tmp_r) : ((tmp_i < 0) ? (IMLIB_PI * 1.5f) : (IMLIB_PI * 0.5f));
     }
 }
 
@@ -629,7 +629,7 @@ void fft2d_phase(fft2d_controller_t *controller) {
     for (int i = 0, j = (1 << controller->h_pow2) * (1 << controller->w_pow2) * 2; i < j; i += 2) {
         float tmp_r = controller->data[i + 0];
         float tmp_i = controller->data[i + 1];
-        controller->data[i + 0] = tmp_r ? fast_atan2f(tmp_i, tmp_r) : ((tmp_i < 0) ? (M_PI * 1.5) : (M_PI * 0.5));
+        controller->data[i + 0] = tmp_r ? fast_atan2f(tmp_i, tmp_r) : ((tmp_i < 0) ? (IMLIB_PI * 1.5f) : (IMLIB_PI * 0.5f));
         controller->data[i + 1] = 0;
     }
 }
@@ -639,7 +639,7 @@ void fft2d_log(fft2d_controller_t *controller) {
         float tmp_r = controller->data[i + 0];
         float tmp_i = controller->data[i + 1];
         controller->data[i + 0] = fast_log(fast_sqrtf((tmp_r * tmp_r) + (tmp_i * tmp_i)));
-        controller->data[i + 1] = tmp_r ? fast_atan2f(tmp_i, tmp_r) : ((tmp_i < 0) ? (M_PI * 1.5) : (M_PI * 0.5));
+        controller->data[i + 1] = tmp_r ? fast_atan2f(tmp_i, tmp_r) : ((tmp_i < 0) ? (IMLIB_PI * 1.5f) : (IMLIB_PI * 0.5f));
     }
 }
 

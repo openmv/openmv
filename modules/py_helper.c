@@ -162,10 +162,10 @@ rectangle_t py_helper_arg_to_roi(const mp_obj_t arg, const image_t *img) {
 void py_helper_arg_to_scale(const mp_obj_t arg_x_scale, const mp_obj_t arg_y_scale,
                             float *x_scale, float *y_scale) {
     if (arg_x_scale != mp_const_none) {
-        *x_scale = mp_obj_get_float(arg_x_scale);
+        *x_scale = mp_obj_get_float_to_f(arg_x_scale);
     }
     if (arg_y_scale != mp_const_none) {
-        *y_scale = mp_obj_get_float(arg_y_scale);
+        *y_scale = mp_obj_get_float_to_f(arg_y_scale);
     }
 
     if (arg_x_scale == mp_const_none && arg_y_scale != mp_const_none) {
@@ -183,11 +183,11 @@ void py_helper_arg_to_minmax(const mp_obj_t minmax, float *min, float *max,
     if (minmax != mp_const_none) {
         mp_obj_t *arg_scale;
         mp_obj_get_array_fixed_n(minmax, 2, &arg_scale);
-        min_out = mp_obj_get_float(arg_scale[0]);
-        max_out = mp_obj_get_float(arg_scale[1]);
+        min_out = mp_obj_get_float_to_f(arg_scale[0]);
+        max_out = mp_obj_get_float_to_f(arg_scale[1]);
     } else if (array && array_size) {
         for (int i = 0; i < array_size; i++) {
-            float t = mp_obj_get_float(array[i]);
+            float t = mp_obj_get_float_to_f(array[i]);
             if (t < min_out) {
                 min_out = t;
             }
@@ -203,7 +203,7 @@ void py_helper_arg_to_minmax(const mp_obj_t minmax, float *min, float *max,
 
 float py_helper_arg_to_float(const mp_obj_t arg, float default_value) {
     if (arg != mp_const_none) {
-        return mp_obj_get_float(arg);
+        return mp_obj_get_float_to_f(arg);
     }
     return default_value;
 }
@@ -213,7 +213,7 @@ void py_helper_arg_to_float_array(const mp_obj_t arg, float *array, size_t size)
         mp_obj_t *arg_array;
         mp_obj_get_array_fixed_n(arg, size, &arg_array);
         for (int i = 0; i < size; i++) {
-            array[i] = mp_obj_get_float(arg_array[i]);
+            array[i] = mp_obj_get_float_to_f(arg_array[i]);
         }
     }
 }
@@ -303,25 +303,12 @@ float py_helper_keyword_float(size_t n_args, const mp_obj_t *args, size_t arg_in
     mp_map_elem_t *kw_arg = mp_map_lookup(kw_args, kw, MP_MAP_LOOKUP);
 
     if (kw_arg) {
-        default_val = mp_obj_get_float(kw_arg->value);
+        default_val = mp_obj_get_float_to_f(kw_arg->value);
     } else if (n_args > arg_index) {
-        default_val = mp_obj_get_float(args[arg_index]);
+        default_val = mp_obj_get_float_to_f(args[arg_index]);
     }
 
     return default_val;
-}
-
-bool py_helper_keyword_float_maybe(size_t n_args, const mp_obj_t *args, size_t arg_index,
-                                   mp_map_t *kw_args, mp_obj_t kw, float *value) {
-    mp_map_elem_t *kw_arg = mp_map_lookup(kw_args, kw, MP_MAP_LOOKUP);
-
-    if (kw_arg) {
-        return mp_obj_get_float_maybe(kw_arg->value, value);
-    } else if (n_args > arg_index) {
-        return mp_obj_get_float_maybe(args[arg_index], value);
-    }
-
-    return false;
 }
 
 void py_helper_keyword_int_array(size_t n_args, const mp_obj_t *args, size_t arg_index,
@@ -354,8 +341,8 @@ float *py_helper_keyword_corner_array(size_t n_args, const mp_obj_t *args, size_
         for (int i = 0; i < 4; i++) {
             mp_obj_t *arg_point;
             mp_obj_get_array_fixed_n(arg_array[i], 2, &arg_point);
-            corners[(i * 2) + 0] = mp_obj_get_float(arg_point[0]);
-            corners[(i * 2) + 1] = mp_obj_get_float(arg_point[1]);
+            corners[(i * 2) + 0] = mp_obj_get_float_to_f(arg_point[0]);
+            corners[(i * 2) + 1] = mp_obj_get_float_to_f(arg_point[1]);
         }
         return corners;
     } else if (n_args > arg_index) {
@@ -365,8 +352,8 @@ float *py_helper_keyword_corner_array(size_t n_args, const mp_obj_t *args, size_
         for (int i = 0; i < 4; i++) {
             mp_obj_t *arg_point;
             mp_obj_get_array_fixed_n(arg_array[i], 2, &arg_point);
-            corners[(i * 2) + 0] = mp_obj_get_float(arg_point[0]);
-            corners[(i * 2) + 1] = mp_obj_get_float(arg_point[1]);
+            corners[(i * 2) + 0] = mp_obj_get_float_to_f(arg_point[0]);
+            corners[(i * 2) + 1] = mp_obj_get_float_to_f(arg_point[1]);
         }
         return corners;
     }

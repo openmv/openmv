@@ -52,11 +52,9 @@
 // Enables 78 TensofFlow Lite operators.
 #define IMLIB_TF_FULLOPS        (2)
 
-#ifndef M_PI
-#define M_PI                     3.14159265f
-#define M_PI_2                   1.57079632f
-#define M_PI_4                   0.78539816f
-#endif
+#define IMLIB_PI                 3.14159265358979323846f
+#define IMLIB_PI_2               1.57079632679489661923f
+#define IMLIB_PI_4               0.78539816339744830962f
 
 #define IM_LOG2_2(x)             (((x) & 0x2ULL) ? (2) :             1)                                // NO ({ ... }) !
 #define IM_LOG2_4(x)             (((x) & 0xCULL) ? (2 + IM_LOG2_2((x) >> 2)) :  IM_LOG2_2(x))          // NO ({ ... }) !
@@ -117,8 +115,8 @@
 #define UINT64_T_MASK            (UINT64_T_BITS - 1)
 #define UINT64_T_SHIFT           IM_LOG2(UINT64_T_MASK)
 
-#define IM_DEG2RAD(x)            (((x) * M_PI) / 180)
-#define IM_RAD2DEG(x)            (((x) * 180) / M_PI)
+#define IM_DEG2RAD(x)            (((x) * IMLIB_PI) / 180.0f)
+#define IM_RAD2DEG(x)            (((x) * 180.0f) / IMLIB_PI)
 
 int imlib_ksize_to_n(int ksize);
 
