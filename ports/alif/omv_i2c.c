@@ -119,7 +119,7 @@ int omv_i2c_init(omv_i2c_t *i2c, uint32_t bus_id, uint32_t speed) {
     switch (bus_id) {
         #if defined(OMV_I3C0_ID)
         case OMV_I3C0_ID: {
-            i2c->inst = (I3C_Type *) I3C_BASE;
+            i2c->inst = (void *) I3C_BASE;
             i2c->scl_pin = OMV_I3C0_SCL_PIN;
             i2c->sda_pin = OMV_I3C0_SDA_PIN;
             break;
@@ -127,7 +127,7 @@ int omv_i2c_init(omv_i2c_t *i2c, uint32_t bus_id, uint32_t speed) {
         #endif
         #if defined(OMV_I2C0_ID)
         case OMV_I2C0_ID: {
-            i2c->inst = (I2C_Type *) I2C0_BASE;
+            i2c->inst = (void *) I2C0_BASE;
             i2c->scl_pin = OMV_I2C0_SCL_PIN;
             i2c->sda_pin = OMV_I2C0_SDA_PIN;
             break;
@@ -135,7 +135,7 @@ int omv_i2c_init(omv_i2c_t *i2c, uint32_t bus_id, uint32_t speed) {
         #endif
         #if defined(OMV_I2C1_ID)
         case OMV_I2C1_ID: {
-            i2c->inst = (I2C_Type *) I2C1_BASE;
+            i2c->inst = (void *) I2C1_BASE;
             i2c->scl_pin = OMV_I2C1_SCL_PIN;
             i2c->sda_pin = OMV_I2C1_SDA_PIN;
             break;
@@ -143,7 +143,7 @@ int omv_i2c_init(omv_i2c_t *i2c, uint32_t bus_id, uint32_t speed) {
         #endif
         #if defined(OMV_I2C2_ID)
         case OMV_I2C2_ID: {
-            i2c->inst = (I2C_Type *) I2C2_BASE;
+            i2c->inst = (void *) I2C2_BASE;
             i2c->scl_pin = OMV_I2C2_SCL_PIN;
             i2c->sda_pin = OMV_I2C2_SDA_PIN;
             break;
@@ -151,7 +151,7 @@ int omv_i2c_init(omv_i2c_t *i2c, uint32_t bus_id, uint32_t speed) {
         #endif
         #if defined(OMV_I2C3_ID)
         case OMV_I2C3_ID: {
-            i2c->inst = (I2C_Type *) I2C3_BASE;
+            i2c->inst = (void *) I2C3_BASE;
             i2c->scl_pin = OMV_I2C3_SCL_PIN;
             i2c->sda_pin = OMV_I2C3_SDA_PIN;
             break;
