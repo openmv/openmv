@@ -30,6 +30,7 @@
  *
  * Alif I3C driver.
  */
+#include <stdint.h>
 #include <stdio.h>
 #include <stdbool.h>
 #include <string.h>
@@ -48,76 +49,15 @@
 #define I3C_SCAN_TIMEOUT    (10)
 #define I3C_XFER_TIMEOUT    (1000)
 
-/* I3C CCC (Common Command Codes) related definitions */
-#define I3C_CCC_DIRECT                                  BIT(7)
-
-#define I3C_CCC_ID(id, broadcast)                       ((id) | ((broadcast) ? 0 : I3C_CCC_DIRECT))
-
-/* Commands valid in both broadcast and unicast modes */
-#define I3C_CCC_ENEC(broadcast)                         I3C_CCC_ID(0x0, broadcast)
-#define I3C_CCC_DISEC(broadcast)                        I3C_CCC_ID(0x1, broadcast)
-#define I3C_CCC_ENTAS(as, broadcast)                    I3C_CCC_ID(0x2 + (as), broadcast)
-#define I3C_CCC_RSTDAA(broadcast)                       I3C_CCC_ID(0x6, broadcast)
-#define I3C_CCC_SETMWL(broadcast)                       I3C_CCC_ID(0x9, broadcast)
-#define I3C_CCC_SETMRL(broadcast)                       I3C_CCC_ID(0xa, broadcast)
-#define I3C_CCC_SETXTIME(broadcast)                     ((broadcast) ? 0x28 : 0x98)
-#define I3C_CCC_VENDOR(id, broadcast)                   ((id) + ((broadcast) ? 0x61 : 0xe0))
-
-/* Broadcast-only commands */
-#define I3C_CCC_ENTDAA                                  I3C_CCC_ID(0x7, true)
-#define I3C_CCC_DEFSLVS                                 I3C_CCC_ID(0x8, true)
-#define I3C_CCC_ENTTM                                   I3C_CCC_ID(0xb, true)
-#define I3C_CCC_ENTHDR(x)                               I3C_CCC_ID(0x20 + (x), true)
-#define I3C_CCC_SETAASA                                 I3C_CCC_ID(0x29, true)
-
-/* Unicast-only commands */
-#define I3C_CCC_SETDASA                                 I3C_CCC_ID(0x7, false)
-#define I3C_CCC_SETNEWDA                                I3C_CCC_ID(0x8, false)
-#define I3C_CCC_GETMWL                                  I3C_CCC_ID(0xb, false)
-#define I3C_CCC_GETMRL                                  I3C_CCC_ID(0xc, false)
-#define I3C_CCC_GETPID                                  I3C_CCC_ID(0xd, false)
-#define I3C_CCC_GETBCR                                  I3C_CCC_ID(0xe, false)
-#define I3C_CCC_GETDCR                                  I3C_CCC_ID(0xf, false)
-#define I3C_CCC_GETSTATUS                               I3C_CCC_ID(0x10, false)
-#define I3C_CCC_GETACCMST                               I3C_CCC_ID(0x11, false)
-#define I3C_CCC_SETBRGTGT                               I3C_CCC_ID(0x13, false)
-#define I3C_CCC_GETMXDS                                 I3C_CCC_ID(0x14, false)
-#define I3C_CCC_GETHDRCAP                               I3C_CCC_ID(0x15, false)
-#define I3C_CCC_GETXTIME                                I3C_CCC_ID(0x19, false)
-
-/* List of some Defining byte values */
-#define I3C_CCC_DEF_BYTE_SYNC_TICK                      0x7F
-#define I3C_CCC_DEF_BYTE_DELAY_TIME                     0xBF
-#define I3C_CCC_DEF_BYTE_ASYNC_MODE0                    0xDF
-#define I3C_CCC_DEF_BYTE_ASYNC_MODE1                    0xEF
-#define I3C_CCC_DEF_BYTE_ASYNC_MODE2                    0xF7
-#define I3C_CCC_DEF_BYTE_ASYNC_MODE3                    0xFB
-#define I3C_CCC_DEF_BYTE_ASYNC_TRIG                     0xFD
-#define I3C_CCC_DEF_BYTE_TPH                            0x3F
-#define I3C_CCC_DEF_BYTE_TU                             0x9F
-#define I3C_CCC_DEF_BYTE_ODR                            0x8F
-
 int omv_i3c_init(omv_i2c_t *i3c, uint32_t bus_id, uint32_t speed) {
     i3c->id = bus_id;
     i3c->initialized = false;
     i3c->cw_size = 0;
-    i3c->speed = speed;
-
-    switch (speed) {
-        case OMV_I3C_SPEED_SDR:
-            speed = I3C_BUS_SDR0_SCL_RATE;      // 12.5 Mbit/s
-            break;
-        case OMV_I3C_SPEED_HDR:
-            speed = I3C_BUS_MAX_I3C_SCL_RATE;   // 12.9 kbit/s
-            break;
-        default:
-            return -1;
-    }
 
     switch (bus_id) {
         #if defined(OMV_I3C0_ID)
         case OMV_I3C0_ID: {
-            i3c->inst = (I3C_Type *) I3C_BASE;
+            i3c->inst = (void *) I3C_BASE;
             i3c->scl_pin = OMV_I3C0_SCL_PIN;
             i3c->sda_pin = OMV_I3C0_SDA_PIN;
             break;
@@ -151,14 +91,13 @@ int omv_i3c_init(omv_i2c_t *i3c, uint32_t bus_id, uint32_t speed) {
     /* Sets up HJ acceptability at master side */
     i3c_master_setup_hot_join_ctrl(base, false);
 
-    // Initialize I2C controller
-    i3c_master_init(base);
-
     // Initialize I3C controller
     i3c_master_init(base);
 
-    // Configure clock and speed.
-    i3c_normal_bus_clk_cfg(base, speed);
+    // Configure clock and speed
+    if (omv_i3c_set_scl(i3c, speed) != 0) {
+        return -1;
+    }
 
     i3c->initialized = true;
     return 0;
@@ -169,6 +108,39 @@ int omv_i3c_deinit(omv_i2c_t *i3c) {
         // TODO
         i3c->initialized = false;
     }
+    return 0;
+}
+
+int omv_i3c_set_scl(omv_i2c_t *i3c, uint32_t speed) {
+    if (!i3c->initialized || speed != i3c->speed) {
+        switch (speed) {
+            case OMV_I2C_SPEED_STANDARD:
+                speed = I3C_I2C_SPEED_MODE_SS_100_KBPS;    // 100 kbit/s
+                break;
+            case OMV_I2C_SPEED_FULL:
+                speed = I3C_I2C_SPEED_MODE_FM_400_KBPS;   // 400 kbit/s
+                break;
+            case OMV_I2C_SPEED_FAST:
+                speed = I3C_I2C_SPEED_MODE_FMP_1_MBPS;    // 1000 kbit/s
+                break;
+            case OMV_I3C_SPEED_SDR:
+                speed = I3C_BUS_SDR0_SCL_RATE;      // 12.5 Mbit/s
+                break;
+            default:
+                return -1;
+        }
+
+        I3C_Type *base = i3c->inst;
+        // Configure clock and speed
+        if (speed == I3C_BUS_SDR0_SCL_RATE) {
+            i3c_normal_bus_clk_cfg(base, speed);
+        } else {
+            i2c_clk_cfg(base, SystemAPBClock, speed);
+        }
+
+        i3c->speed = speed;
+    }
+
     return 0;
 }
 
@@ -252,7 +224,7 @@ static void omv_i3c_transfer_end(I3C_Type *base) {
     i3c_resume(base);
 }
 
-static int omv_i3c_send_command_assign(I3C_Type *base, uint8_t cmd_id, uint8_t addr_index, uint8_t addr_depth) {
+static int omv_i3c_send_command(I3C_Type *base, uint8_t type, uint8_t cmd_id, uint8_t addr_index, uint8_t addr_depth) {
     i3c_xfer_t xfer = {0};
 
     xfer.xfer_cmd.cmd_id = cmd_id;
@@ -262,7 +234,7 @@ static int omv_i3c_send_command_assign(I3C_Type *base, uint8_t cmd_id, uint8_t a
     xfer.error = 0U;
 
     xfer.rx_len = 0U;
-    xfer.xfer_cmd.cmd_type = I3C_XFER_TYPE_ADDR_ASSIGN;
+    xfer.xfer_cmd.cmd_type = type;
     xfer.xfer_cmd.def_byte = 0U;
     xfer.xfer_cmd.data_len = 0U;
 
@@ -297,7 +269,7 @@ int omv_i3c_assign(omv_i2c_t *i3c, uint8_t static_addr, uint8_t *ref_dyn_addr) {
      * program the dat in index pos */
     i3c_add_slv_to_dat(base, pos, *ref_dyn_addr, static_addr);
 
-    if (omv_i3c_send_command_assign(base, I3C_CCC_SETDASA, (uint8_t) pos, 1U) != 0) {
+    if (omv_i3c_send_command(base, I3C_XFER_TYPE_ADDR_ASSIGN, I3C_CCC_SETDASA, (uint8_t) pos, 1U) != 0) {
         return -1;
     }
 
@@ -342,7 +314,7 @@ int omv_i3c_scan_assign(omv_i2c_t *i3c, uint8_t *list, uint8_t size) {
         }
     }
 
-    if (omv_i3c_send_command_assign(base, I3C_CCC_ENTDAA, init_pos, pos + 1) != 0) {
+    if (omv_i3c_send_command(base, I3C_XFER_TYPE_ADDR_ASSIGN, I3C_CCC_ENTDAA, init_pos, pos + 1) != 0) {
         return -1;
     }
 
@@ -367,11 +339,29 @@ int omv_i3c_enable(omv_i2c_t *i3c, bool enable) {
     return 0;
 }
 
-int omv_i3c_gencall(omv_i2c_t *i3c, uint8_t cmd) {
-    int ret = 0;
-    ret |= omv_i3c_write_bytes(i3c, 0, &cmd, 1, OMV_I2C_XFER_NO_FLAGS);
-    return ret;
+int omv_i3c_reset(omv_i2c_t *i3c, uint8_t tgt_addr) {
+    int32_t pos = 0U;
+    uint8_t num_devs = I3C_MAX_DEVS;
 
+    uint8_t command = I3C_CCC_RSTDAA(true);
+
+    if (tgt_addr != 0x7E) {
+        if (tgt_addr < 0x29 || tgt_addr >= 0x78) {
+            return -1;
+        }
+        pos = omv_i3c_get_addr_pos(i3c, tgt_addr);
+        if (pos < 0) {
+            return -1;
+        }
+        command = I3C_CCC_RSTDAA(false);
+        num_devs = 1U;
+    }
+
+    if (omv_i3c_send_command(i3c->inst, I3C_XFER_CCC_SET, command, (uint8_t) pos, num_devs) != 0) {
+        return -1;
+    }
+
+    return 0;
 }
 
 int omv_i3c_readb(omv_i2c_t *i3c, uint8_t tgt_addr, uint8_t reg_addr,  uint8_t *reg_data) {
@@ -434,9 +424,48 @@ int omv_i3c_writew2(omv_i2c_t *i3c, uint8_t tgt_addr, uint16_t reg_addr, uint16_
     return ret;
 }
 
-static int omv_i3c_check_transfer(omv_i2c_t *i3c, uint8_t tgt_addr, uint8_t *buf, int len) {
-    uint8_t addr = tgt_addr >> 1;
+int omv_i3c_readdw(omv_i2c_t *i3c, uint8_t tgt_addr, uint8_t reg_addr, uint32_t *reg_data) {
+    int ret = 0;
+    uint8_t data_1, data_2, data_3, data_4;
+    ret |= omv_i3c_write_bytes(i3c, tgt_addr, &reg_addr, 1, OMV_I2C_XFER_NO_STOP);
+    ret |= omv_i3c_read_bytes(i3c, tgt_addr, (uint8_t *) reg_data, 4, OMV_I2C_XFER_NO_FLAGS);
+    data_1 = (*reg_data) & 0xFF;
+    data_2 = (*reg_data) & 0xFF00;
+    data_3 = (*reg_data) & 0xFF0000;
+    data_4 = (*reg_data) & 0xFF000000;
+    *reg_data = (data_1 << 24) | (data_2 << 8) | (data_3 >> 8) | (data_4 >> 24);
+    return ret;
+}
 
+int omv_i3c_writedw(omv_i2c_t *i3c, uint8_t tgt_addr, uint8_t reg_addr, uint32_t reg_data) {
+    int ret = 0;
+    uint8_t buf[] = {reg_addr, (reg_data >> 24), (reg_data >> 16), (reg_data >> 8), reg_data};
+    ret |= omv_i3c_write_bytes(i3c, tgt_addr, buf, 5, OMV_I2C_XFER_NO_FLAGS);
+    return ret;
+}
+
+int omv_i3c_readdw2(omv_i2c_t *i3c, uint8_t tgt_addr, uint16_t reg_addr, uint32_t *reg_data) {
+    int ret = 0;
+    uint8_t data_1, data_2, data_3, data_4;
+    uint8_t buf[] = {(reg_addr >> 8), reg_addr};
+    ret |= omv_i3c_write_bytes(i3c, tgt_addr, buf, 2, OMV_I2C_XFER_NO_STOP);
+    ret |= omv_i3c_read_bytes(i3c, tgt_addr, (uint8_t *) reg_data, 4, OMV_I2C_XFER_NO_FLAGS);
+    data_1 = (*reg_data) & 0xFF;
+    data_2 = (*reg_data) & 0xFF00;
+    data_3 = (*reg_data) & 0xFF0000;
+    data_4 = (*reg_data) & 0xFF000000;
+    *reg_data = (data_1 << 24) | (data_2 << 8) | (data_3 >> 8) | (data_4 >> 24);
+    return ret;
+}
+
+int omv_i3c_writedw2(omv_i2c_t *i3c, uint8_t tgt_addr, uint16_t reg_addr, uint32_t reg_data) {
+    int ret = 0;
+    uint8_t buf[] = {(reg_addr >> 8), reg_addr, (reg_data >> 24), (reg_data >> 16), (reg_data >> 8), reg_data};
+    ret |= omv_i3c_write_bytes(i3c, tgt_addr, buf, 6, OMV_I2C_XFER_NO_FLAGS);
+    return ret;
+}
+
+static int omv_i3c_check_transfer(omv_i2c_t *i3c, uint8_t tgt_addr, uint8_t *buf, int len) {
     if (!buf || !len) {
         return -1;
     }
@@ -445,23 +474,23 @@ static int omv_i3c_check_transfer(omv_i2c_t *i3c, uint8_t tgt_addr, uint8_t *buf
         return -1;
     }
 
-    return omv_i3c_get_addr_pos(i3c, addr);
+    return omv_i3c_get_addr_pos(i3c, tgt_addr);
 }
 
 int omv_i3c_read_bytes(omv_i2c_t *i3c, uint8_t tgt_addr, uint8_t *buf, int len, uint32_t flags) {
-    int32_t index;
+    int32_t pos;
     i3c_xfer_t xfer = {0};
     I3C_Type *base = (I3C_Type *) i3c->inst;
 
-    index = omv_i3c_check_transfer(i3c, tgt_addr, buf, len);
-    if (index < 0) {
+    pos = omv_i3c_check_transfer(i3c, tgt_addr, buf, len);
+    if (pos < 0) {
         return -1;
     }
 
     xfer.error = 0U;
     xfer.tx_buf = NULL;
     xfer.tx_len = 0U;
-    xfer.xfer_cmd.addr_index = index;
+    xfer.xfer_cmd.addr_index = pos;
     xfer.xfer_cmd.data_len = len;
     xfer.rx_len = len;
 
@@ -492,19 +521,19 @@ int omv_i3c_read_bytes(omv_i2c_t *i3c, uint8_t tgt_addr, uint8_t *buf, int len, 
 }
 
 int omv_i3c_write_bytes(omv_i2c_t *i3c, uint8_t tgt_addr, uint8_t *buf, int len, uint32_t flags) {
-    int32_t index;
+    int32_t pos;
     i3c_xfer_t xfer = {0};
     I3C_Type *base = (I3C_Type *) i3c->inst;
 
-    index = omv_i3c_check_transfer(i3c, tgt_addr, buf, len);
-    if (index < 0) {
+    pos = omv_i3c_check_transfer(i3c, tgt_addr, buf, len);
+    if (pos < 0) {
         return -1;
     }
 
     xfer.error = 0U;
     xfer.rx_buf = NULL;
     xfer.rx_len = 0U;
-    xfer.xfer_cmd.addr_index = index;
+    xfer.xfer_cmd.addr_index = pos;
     xfer.xfer_cmd.data_len = len;
 
     xfer.tx_buf = buf;
@@ -522,21 +551,5 @@ int omv_i3c_write_bytes(omv_i2c_t *i3c, uint8_t tgt_addr, uint8_t *buf, int len,
         return -1;
     }
 
-    return 0;
-}
-
-int omv_i3c_pulse_scl(omv_i2c_t *i3c) {
-    if (i3c->initialized && i3c->scl_pin) {
-        omv_i3c_deinit(i3c);
-        omv_gpio_config(i3c->scl_pin, OMV_GPIO_MODE_OUTPUT, OMV_GPIO_PULL_NONE, OMV_GPIO_SPEED_LOW, -1);
-        // Pulse SCL to recover stuck device.
-        for (int i = 0; i < 1000; i++) {
-            omv_gpio_write(i3c->scl_pin, 1);
-            mp_hal_delay_us(10);
-            omv_gpio_write(i3c->scl_pin, 0);
-            mp_hal_delay_us(10);
-        }
-        omv_i3c_init(i3c, i3c->id, i3c->speed);
-    }
     return 0;
 }
