@@ -81,8 +81,8 @@
 // Transfer speeds
 typedef enum _omv_i3c_speed {
     OMV_I3C_SPEED_SDR = (OMV_I2C_SPEED_MAX),
-    OMV_I3C_SPEED_HDR = (OMV_I2C_SPEED_MAX+1U),
-    OMV_I3C_SPEED_MAX = (OMV_I2C_SPEED_MAX+2U)
+    OMV_I3C_SPEED_HDR = (OMV_I2C_SPEED_MAX + 1U),
+    OMV_I3C_SPEED_MAX = (OMV_I2C_SPEED_MAX + 2U)
 } omv_i3c_speed_t;
 
 int omv_i3c_init(omv_i2c_t *i3c, uint32_t bus_id, uint32_t speed);
