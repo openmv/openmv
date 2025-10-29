@@ -16,6 +16,12 @@
     },
     {
       "type": "tflite",
+      "path": "{TOP}/lib/models/yolov8n_192.tflite",
+      "alignment": 32,
+      "profile": "default"
+    },
+    {
+      "type": "tflite",
       "path": "{TOP}/lib/models/blazeface_front_128.tflite",
       "alignment": 32,
       "profile": "default"
