@@ -44,6 +44,8 @@ def main():
     if not "temp" in os.listdir():
         os.mkdir("temp")  # Make a temp directory
 
+    total_start_time = time.ticks_ms()
+
     for test in tests:
         result = "PASSED"
         path = "/".join((TEST_PATH, test))
@@ -72,14 +74,21 @@ def main():
         print_result(test, result, time_ms)
         gc.collect()
 
+    total_time_ms = time.ticks_diff(time.ticks_ms(), total_start_time)
+
     # Print summary
     total_tests = passed_count + failed_count + skipped_count
-    print("\n" + "=" * 60)
+    stats_line = ("Total: %d | Passed: %d | Failed: %d | Skipped: %d | Time: %dms" %
+                  (total_tests, passed_count, failed_count, skipped_count, total_time_ms))
+    separator = "=" * len(stats_line)
+
+    print("\n" + separator)
     print("Total: %d | " % total_tests +
           COLOR_GREEN + "Passed: %d" % passed_count + COLOR_RESET + " | " +
           COLOR_RED + "Failed: %d" % failed_count + COLOR_RESET + " | " +
-          COLOR_YELLOW + "Skipped: %d" % skipped_count + COLOR_RESET)
-    print("=" * 60)
+          COLOR_YELLOW + "Skipped: %d" % skipped_count + COLOR_RESET + " | " +
+          "Time: %dms" % total_time_ms)
+    print(separator)
 
     if failed_count > 0:
         print(COLOR_RED + "Some tests FAILED." + COLOR_RESET)
