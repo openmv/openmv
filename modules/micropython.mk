@@ -61,7 +61,7 @@ include $(OMV_LIB_IMLIB_DIR)/imlib.mk
 
 # Add OpenMV common utilities for Unix port
 # Filter out hardware-specific files
-UNIX_COMMON_EXCLUDE := dma_alloc.c mp_utils.c nosys_stubs.c omv_crc.c omv_csi.c \
+UNIX_COMMON_EXCLUDE := dma_alloc.c mp_utils.c nosys_stubs.c omv_csi.c \
                        omv_profiler.c pendsv.c tinyusb_debug.c trace.c unaligned_memcpy.c \
                        usbdbg.c vospi.c
 UNIX_COMMON_SRC := $(filter-out $(UNIX_COMMON_EXCLUDE), $(COMMON_SRC_C))
@@ -83,6 +83,7 @@ CFLAGS_USERMOD += \
     -I$(CMSIS_DIR)/include/dsp \
     -DUNIX \
     -DARM_MATH_CM7 \
+    -DMICROPY_PY_CRC=1 \
     -Wno-unused-parameter \
     -Wno-missing-field-initializers \
     -Wno-cpp \
