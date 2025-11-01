@@ -30,8 +30,16 @@
 #include "omv_boardconfig.h"
 #include "omv_common.h"
 
+#if defined(__unix__)
+// On Unix, we can't use linker script symbols, so we use an externally provided pointer
+extern char *_fb_alloc_end_ptr;
+static char *pointer;
+#define FB_ALLOC_END() (_fb_alloc_end_ptr)
+#else
 extern char _fb_alloc_end;
 static char *pointer = &_fb_alloc_end;
+#define FB_ALLOC_END() (&_fb_alloc_end)
+#endif
 
 #if defined(FB_ALLOC_STATS)
 static uint32_t alloc_bytes;
@@ -57,7 +65,7 @@ MP_WEAK NORETURN void fb_alloc_fail() {
 }
 
 void fb_alloc_init0() {
-    pointer = &_fb_alloc_end;
+    pointer = FB_ALLOC_END();
     #if defined(OMV_FB_OVERLAY_MEMORY)
     pointer_overlay = &_fballoc_overlay_end;
     #endif
@@ -98,7 +106,7 @@ static void int_fb_alloc_free_till_mark(bool free_permanent) {
     // This does not really help you in complex memory allocation operations where you want to be
     // able to unwind things until after a certain point. It also did not handle preventing
     // fb_alloc_free_till_mark() from running in recursive call situations (see find_blobs()).
-    while (pointer < &_fb_alloc_end) {
+    while (pointer < FB_ALLOC_END()) {
         uint32_t size = *((uint32_t *) pointer);
         if ((!free_permanent) && (size & FB_PERMANENT_FLAG)) {
             return;
@@ -126,7 +134,7 @@ void fb_alloc_free_till_mark() {
 }
 
 void fb_alloc_mark_permanent() {
-    if (pointer < &_fb_alloc_end) {
+    if (pointer < FB_ALLOC_END()) {
         *((uint32_t *) pointer) |= FB_PERMANENT_FLAG;
     }
 }
@@ -181,7 +189,7 @@ void *fb_alloc(uint32_t size, int hints) {
     #endif
 
     if (hints & FB_ALLOC_CACHE_ALIGN) {
-        int offset = ((uint32_t) result) % OMV_ALLOC_ALIGNMENT;
+        int offset = ((uintptr_t) result) % OMV_ALLOC_ALIGNMENT;
         if (offset) {
             result += OMV_ALLOC_ALIGNMENT - offset;
         }
@@ -240,7 +248,7 @@ void *fb_alloc_all(uint32_t *size, int hints) {
     #endif
 
     if (hints & FB_ALLOC_CACHE_ALIGN) {
-        int offset = ((uint32_t) result) % OMV_ALLOC_ALIGNMENT;
+        int offset = ((uintptr_t) result) % OMV_ALLOC_ALIGNMENT;
         if (offset) {
             int inc = OMV_ALLOC_ALIGNMENT - offset;
             result += inc;
@@ -261,7 +269,7 @@ void *fb_alloc0_all(uint32_t *size, int hints) {
 }
 
 void fb_free() {
-    if (pointer < &_fb_alloc_end) {
+    if (pointer < FB_ALLOC_END()) {
         uint32_t size = *((uint32_t *) pointer);
         size &= ~FB_PERMANENT_FLAG;
         #if defined(OMV_FB_OVERLAY_MEMORY)
@@ -279,7 +287,7 @@ void fb_free() {
 }
 
 void fb_free_all() {
-    while (pointer < &_fb_alloc_end) {
+    while (pointer < FB_ALLOC_END()) {
         uint32_t size = *((uint32_t *) pointer);
         size &= ~FB_PERMANENT_FLAG;
         #if defined(OMV_FB_OVERLAY_MEMORY)
