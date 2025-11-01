@@ -34,12 +34,6 @@
 #include "omv_gpio.h"
 #include "stm_dma.h"
 
-#if defined(MPU_REGION_NUMBER15)
-#define MPU_REGION_NUMBER_MAX   (MPU_REGION_NUMBER15)
-#else
-#define MPU_REGION_NUMBER_MAX   (MPU_REGION_NUMBER7)
-#endif
-
 #define MEMATTR_NORMAL_NCACHE      0
 #define MEMATTR_NORMAL_WB_RA_WA    1
 
