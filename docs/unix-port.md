@@ -222,6 +222,85 @@ The Unix port uses a two-tier memory architecture:
 - **fb_alloc system**: GC-based allocation for temporary image processing buffers
 - **Python objects**: MicroPython's standard heap with automatic garbage collection
 
+## Testing
+
+The Unix port includes integration with OpenMV's official test suite, enabling automated testing of image processing functionality on desktop platforms.
+
+### Running Tests
+
+To run the complete test suite on the Unix port:
+
+```bash
+cd scripts/unittest
+python3 run_tests.py --platform unix
+```
+
+This runs all 81 official OpenMV unit tests, automatically skipping hardware-dependent tests (such as camera capture).
+
+### Test Results
+
+Expected results:
+- **~68-70 tests passing**: Software-only image processing tests
+- **~5 tests skipped**: Hardware-dependent tests (camera, sensor)
+- **~6-8 tests failing**: Known platform differences (compression, color precision)
+
+### Test Categories
+
+**Passing tests include**:
+- Image I/O (file loading, format conversions)
+- Color space conversions (RGB↔LAB, RGB↔Grayscale)
+- Image filters and morphology
+- Object detection (blobs, lines, circles, rectangles)
+- Code detection (QR codes, AprilTags, Data Matrix)
+- Face and eye detection (Haar cascades)
+- Feature detection and matching (ORB descriptors)
+- Image transformations and drawing
+
+**Automatically skipped**:
+- `capture.py` - Requires camera sensor hardware
+- Hardware-specific tests
+
+### Test Data
+
+Tests use reference images and data files from `scripts/unittest/data/`:
+- Image formats: PPM, PGM, BMP, JPEG
+- Haar cascades: `frontalface.cascade`, `cat.cascade`
+- Code samples: QR codes, barcodes, AprilTags, data matrices
+- Feature descriptors: ORB keypoint data
+
+### CI Integration
+
+The Unix port build automatically runs the test suite in GitHub Actions (`.github/workflows/unix-port.yml`), providing continuous validation of Unix port functionality.
+
+### Running Individual Tests
+
+To debug a specific test:
+
+```bash
+cd lib/micropython/ports/unix
+./build-openmv/micropython -c "
+import sys
+sys.path.append('../../../../scripts/unittest/tests')
+DATA_PATH = '../../../../scripts/unittest/data'
+TEMP_PATH = '../../../../scripts/unittest/temp'
+
+# Load and run test
+with open('../../../../scripts/unittest/tests/qrcodes.py') as f:
+    exec(f.read())
+
+result = unittest(DATA_PATH, TEMP_PATH)
+print('Test result:', result)
+"
+```
+
+### Test Development
+
+When adding new Unix port features:
+1. Ensure existing tests still pass
+2. Add new tests to `scripts/unittest/tests/` if adding new functionality
+3. Test locally before pushing: `python3 scripts/unittest/run_tests.py --platform unix`
+4. CI will automatically run tests on pull requests
+
 ## Troubleshooting
 
 ### Build Errors
