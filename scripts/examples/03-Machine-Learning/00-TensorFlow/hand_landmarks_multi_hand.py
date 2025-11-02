@@ -39,34 +39,31 @@ while True:
     img = csi0.snapshot()
 
     # palms is a list of ((x, y, w, h), score, keypoints) tuples
-    palms = palm_detection.predict([img])
+    for r, score, keypoints in palm_detection.predict([img]):
+        # rect is (x, y, w, h) - enlarge by 3x for hand landmarks model
+        wider_rect = (r[0] - r[2], r[1] - r[3], r[2] * 3, r[3] * 3)
+        # Operate on just the ROI of the detected palm
+        n = Normalization(roi=wider_rect)
 
-    if palms:
-        for r, score, keypoints in palms[0]:
-            # rect is (x, y, w, h) - enlarge by 3x for hand landmarks model
-            wider_rect = (r[0] - r[2], r[1] - r[3], r[2] * 3, r[3] * 3)
-            # Operate on just the ROI of the detected palm
-            n = Normalization(roi=wider_rect)
+        # hands is a list of ((x, y, w, h), score, keypoints) tuples
+        # index 0 (if present) is left hand
+        # index 1 (if present) is right hand
+        hands = hand_landmarks.predict([n(img)])
 
-            # hands is a list of ((x, y, w, h), score, keypoints) tuples
-            # index 0 (if present) is left hand
-            # index 1 (if present) is right hand
-            hands = hand_landmarks.predict([n(img)])
+        # Draw bounding boxes around the detected hands and keypoints.
+        for i, detections in enumerate(hands):
+            for r, score, keypoints in detections:
+                ml.utils.draw_predictions(img, [r], ("right",) if i else ("left",), ((0, 0, 255),), format=None)
 
-            # Draw bounding boxes around the detected hands and keypoints.
-            for i, detections in enumerate(hands):
-                for r, score, keypoints in detections:
-                    ml.utils.draw_predictions(img, [r], ("right",) if i else ("left",), ((0, 0, 255),), format=None)
-
-                    # keypoints: ndarray (21, 3) of hand joints (x, y, z)
-                    # Indices follow MediaPipe convention:
-                    # 0: wrist
-                    # Thumb: 1 cmc, 2 mcp, 3 ip, 4 tip
-                    # Index: 5 mcp, 6 pip, 7 dip, 8 tip
-                    # Middle: 9 mcp, 10 pip, 11 dip, 12 tip
-                    # Ring: 13 mcp, 14 pip, 15 dip, 16 tip
-                    # Pinky: 17 mcp, 18 pip, 19 dip, 20 tip
-                    # (cmc=base, mcp=knuckle, pip=mid, dip=distal, ip=thumb joint, tip=fingertip)
-                    ml.utils.draw_skeleton(img, keypoints, hand_lines, kp_color=(255, 0, 0), line_color=(0, 255, 0))
+                # keypoints: ndarray (21, 3) of hand joints (x, y, z)
+                # Indices follow MediaPipe convention:
+                # 0: wrist
+                # Thumb: 1 cmc, 2 mcp, 3 ip, 4 tip
+                # Index: 5 mcp, 6 pip, 7 dip, 8 tip
+                # Middle: 9 mcp, 10 pip, 11 dip, 12 tip
+                # Ring: 13 mcp, 14 pip, 15 dip, 16 tip
+                # Pinky: 17 mcp, 18 pip, 19 dip, 20 tip
+                # (cmc=base, mcp=knuckle, pip=mid, dip=distal, ip=thumb joint, tip=fingertip)
+                ml.utils.draw_skeleton(img, keypoints, hand_lines, kp_color=(255, 0, 0), line_color=(0, 255, 0))
 
     print(clock.fps(), "fps")

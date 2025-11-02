@@ -43,14 +43,11 @@ while True:
 
     if n is None:
         # palms is a list of ((x, y, w, h), score, keypoints) tuples
-        palms = palm_detection.predict([img])
-
-        if palms:
-            for r, score, keypoints in palms[0]:
-                # rect is (x, y, w, h) - enlarge by 3x for hand landmarks model
-                wider_rect = (r[0] - r[2], r[1] - r[3], r[2] * 3, r[3] * 3)
-                # Operate on just the ROI of the detected palm
-                n = Normalization(roi=wider_rect)
+        for r, score, keypoints in palm_detection.predict([img]):
+            # rect is (x, y, w, h) - enlarge by 3x for hand landmarks model
+            wider_rect = (r[0] - r[2], r[1] - r[3], r[2] * 3, r[3] * 3)
+            # Operate on just the ROI of the detected palm
+            n = Normalization(roi=wider_rect)
 
     else:
         # hands is a list of ((x, y, w, h), score, keypoints) tuples
