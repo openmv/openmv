@@ -78,7 +78,7 @@ class mediapipe_detection_postprocess:
             self.detection_post_process(ih, iw, nms, model, inputs, outputs, self.scores[1], self.cords[1],
                                         self.threshold, self.anchors[output_len:])
 
-        return nms.get_bounding_boxes(threshold=self.nms_threshold, sigma=self.nms_sigma)
+        return nms.get_bounding_boxes(threshold=self.nms_threshold, sigma=self.nms_sigma)[0]
 
     def detection_post_process(self, ih, iw, nms, model, inputs, outputs, score_idx, cords_idx, t, anchors):
         s_oh, s_ow, s_oc = model.output_shape[score_idx]
