@@ -49,6 +49,10 @@
 #include "ll_aton_caches_interface.h"
 #include "ll_aton_reloc_network.h"
 
+// Due to limitations with the STM32N6 NPU design, the ext_ram_sz memory pool
+// must be in external SDRAM and not in internal SRAM. Forcing a minimum of a
+// 1MB allocation ensures that the ext_ram_sz buffer ends up in SDRAM.
+#define AI_MIN_EXT_RAM_SZ       (1048576)
 #define AI_RELOC_ALIGNMENT      (32)
 
 typedef struct ml_backend_state {
@@ -130,6 +134,10 @@ int ml_backend_init_model(py_ml_model_obj_t *model) {
     if (ll_aton_reloc_get_info((uintptr_t) model->data, &rt)) {
         mp_raise_msg(&mp_type_RuntimeError, MP_ERROR_TEXT("Failed to load network"));
         return -1;
+    }
+
+    if (rt.ext_ram_sz) {
+        rt.ext_ram_sz = OMV_MAX(rt.ext_ram_sz, AI_MIN_EXT_RAM_SZ);
     }
 
     // Allocate executable memory.
