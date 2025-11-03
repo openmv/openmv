@@ -1442,6 +1442,21 @@ static int get_exposure_us(omv_csi_t *csi, int *exposure_us) {
     return ret;
 }
 
+static int set_auto_whitebal(omv_csi_t *csi, int enable, float r_gain_db, float g_gain_db, float b_gain_db) {
+    csi->stats_enabled = enable;
+    return 0;
+}
+
+static int get_rgb_gain_db(omv_csi_t *csi, float *r_gain_db, float *g_gain_db, float *b_gain_db) {
+    uint32_t r, g, b;
+    omv_csi_get_stats(csi, &r, &g, &b);
+
+    *r_gain_db = 20.0f * log10f(IM_DIV((float) g, r));
+    *g_gain_db = 0.0f;
+    *b_gain_db = 20.0f * log10f(IM_DIV((float) g, b));
+    return 0;
+}
+
 static int set_hmirror(omv_csi_t *csi, int enable) {
     uint8_t reg1, reg2;
     uint16_t hsize;
@@ -1590,6 +1605,8 @@ int ps5520_init(omv_csi_t *csi) {
     csi->get_gain_db = get_gain_db;
     csi->set_auto_exposure = set_auto_exposure;
     csi->get_exposure_us = get_exposure_us;
+    csi->set_auto_whitebal = set_auto_whitebal;
+    csi->get_rgb_gain_db = get_rgb_gain_db;
     csi->set_hmirror = set_hmirror;
     csi->set_vflip = set_vflip;
 
