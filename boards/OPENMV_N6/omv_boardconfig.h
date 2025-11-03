@@ -26,8 +26,8 @@
 
 // Enable RAW preview.
 #define OMV_RAW_PREVIEW_ENABLE              (1)
-#define OMV_RAW_PREVIEW_WIDTH               (512)
-#define OMV_RAW_PREVIEW_HEIGHT              (512)
+#define OMV_RAW_PREVIEW_WIDTH               (640)
+#define OMV_RAW_PREVIEW_HEIGHT              (480)
 
 // GPU Configuration
 #define OMV_GPU_ENABLE                      (1)
