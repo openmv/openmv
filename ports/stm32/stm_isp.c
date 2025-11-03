@@ -161,4 +161,27 @@ int stm_isp_config_pipeline(DCMIPP_HandleTypeDef *dcmipp, uint32_t pipe,
 
     return 0;
 }
+
+int stm_isp_update_gamma_table(DCMIPP_HandleTypeDef *dcmipp, uint32_t pipe,
+                               float brightness, float contrast, float gamma) {
+    uint8_t g_tab[9]; // sizeof(DCMIPP_ContrastConfTypeDef)
+
+    for (int i = 0; i < 9; i++) {
+        // x goes from 0.0001 to 1.0 (to avoid division by zero)
+        float x = IM_MAX(i / 8.0f, 0.0001f);
+        float y = powf(x, 1.0f / gamma) * contrast + brightness;
+        int gain = fast_roundf(y / x * 16.0f);
+        g_tab[i] = IM_CLAMP(gain, 0, 32);
+    }
+
+    if (HAL_DCMIPP_PIPE_SetISPCtrlContrastConfig(dcmipp, pipe, (DCMIPP_ContrastConfTypeDef *) &g_tab) != HAL_OK) {
+        return -1;
+    }
+
+    if (HAL_DCMIPP_PIPE_EnableISPCtrlContrast(dcmipp, pipe) != HAL_OK) {
+        return -1;
+    }
+
+    return 0;
+}
 #endif  // DCMIPP
