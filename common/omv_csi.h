@@ -313,6 +313,16 @@ typedef struct _omv_clk {
     int (*set_freq) (omv_clk_t *csi, uint32_t freq);
 } omv_clk_t;
 
+#if defined(OMV_CSI_STATS_ENABLE)
+typedef struct omv_csi_stats {
+    bool initialized;
+    uint32_t last_ms;
+    float r_avg;
+    float g_avg;
+    float b_avg;
+} omv_csi_stats_t;
+#endif // defined(OMV_CSI_STATS_ENABLE)
+
 typedef struct _omv_csi {
     uint32_t chip_id;           // Sensor ID 32 bits.
     uint8_t slv_addr;           // Sensor I2C slave address.
@@ -368,6 +378,11 @@ typedef struct _omv_csi {
     uint32_t clk_hz;            // Clock freqeuency request by this CSI.
     uint32_t reset_time_ms;     // To track elapsed time since hard-reset.
     uint32_t power_time_ms;     // To track elapsed time since power on.
+
+    #if defined(OMV_CSI_STATS_ENABLE)
+    bool stats_enabled;         // AWB stats enabled.
+    omv_csi_stats_t stats;      // AWB stats struct.
+    #endif // defined(OMV_CSI_STATS_ENABLE)
 
     #ifdef OMV_CSI_PORT_BITS
     // Additional port-specific members like device base pointer,
@@ -533,6 +548,14 @@ int omv_csi_set_auto_whitebal(omv_csi_t *csi, int enable, float r_gain_db, float
 
 // Get the rgb gain values.
 int omv_csi_get_rgb_gain_db(omv_csi_t *csi, float *r_gain_db, float *g_gain_db, float *b_gain_db);
+
+#if defined(OMV_CSI_STATS_ENABLE)
+// Update RGB moving average struct.
+void omv_csi_stats_update(omv_csi_t *csi, uint32_t *r, uint32_t *g, uint32_t *b, uint32_t ms);
+
+// Get RGB moving average values.
+void omv_csi_get_stats(omv_csi_t *csi, uint32_t *r, uint32_t *g, uint32_t *b);
+#endif // defined(OMV_CSI_STATS_ENABLE)
 
 // Enable auto blc (black level calibration) or set from previous calibration.
 int omv_csi_set_auto_blc(omv_csi_t *csi, int enable, int *regs);

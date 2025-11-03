@@ -65,6 +65,10 @@
 #define OMV_CSI_CLK_TOLERANCE   (500000)
 #endif
 
+#ifndef OMV_CSI_STATS_TAU_MS
+#define OMV_CSI_STATS_TAU_MS    (250)
+#endif
+
 #ifndef __weak
 #define __weak    __attribute__((weak))
 #endif
@@ -321,6 +325,12 @@ __weak int omv_csi_reset(omv_csi_t *csi, bool hard) {
     csi->frame_cb = (omv_csi_cb_t) {
         NULL, NULL
     };
+
+    #if defined(OMV_CSI_STATS_ENABLE)
+    // Enable collecting RGB stats.
+    csi->stats_enabled = true;
+    memset(&csi->stats, 0, sizeof(omv_csi_stats_t));
+    #endif // defined(OMV_CSI_STATS_ENABLE)
 
     // Restore shutdown state on reset.
     if (!csi->power_on) {
@@ -1146,6 +1156,36 @@ __weak int omv_csi_get_rgb_gain_db(omv_csi_t *csi, float *r_gain_db, float *g_ga
 
     return 0;
 }
+
+#if defined(OMV_CSI_STATS_ENABLE)
+void omv_csi_stats_update(omv_csi_t *csi, uint32_t *r, uint32_t *g, uint32_t *b, uint32_t ms) {
+    omv_csi_stats_t *stats = &csi->stats;
+
+    if (!stats->initialized) {
+        stats->initialized = true;
+        stats->last_ms = ms;
+        stats->r_avg = *r;
+        stats->g_avg = *g;
+        stats->b_avg = *b;
+    } else {
+        uint32_t dt_ms = ms - stats->last_ms;
+        // Continuous-time EMA gain for elapsed dt: alpha = 1 - exp(-dt/τ)
+        float alpha = IM_CLAMP(1.0f - expf(-((float) dt_ms) / OMV_CSI_STATS_TAU_MS), 0.0f, 1.0f);
+        stats->last_ms = ms;
+        stats->r_avg += alpha * (*r - stats->r_avg);
+        stats->g_avg += alpha * (*g - stats->g_avg);
+        stats->b_avg += alpha * (*b - stats->b_avg);
+    }
+}
+
+void omv_csi_get_stats(omv_csi_t *csi, uint32_t *r, uint32_t *g, uint32_t *b) {
+    omv_csi_stats_t *stats = &csi->stats;
+
+    *r = fast_roundf(stats->r_avg);
+    *g = fast_roundf(stats->g_avg);
+    *b = fast_roundf(stats->b_avg);
+}
+#endif // defined(OMV_CSI_STATS_ENABLE)
 
 __weak int omv_csi_set_auto_blc(omv_csi_t *csi, int enable, int *regs) {
     // Check if the control is supported.
