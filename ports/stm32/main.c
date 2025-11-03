@@ -102,6 +102,14 @@ extern void SystemClock_Config(void);
 pyb_thread_t pyb_thread_main;
 #endif
 
+#if defined(MICROPY_HW_UART_REPL)
+#ifndef MICROPY_HW_UART_REPL_RXBUF
+#define MICROPY_HW_UART_REPL_RXBUF (512)
+#endif
+machine_uart_obj_t uart_repl_obj;
+static uint8_t uart_repl_rxbuf[MICROPY_HW_UART_REPL_RXBUF];
+#endif
+
 void NORETURN __fatal_error(const char *msg) {
     for (uint i = 0;;) {
         led_toggle(((i++) & 3));
@@ -276,8 +284,22 @@ soft_reset:
     cyw43_wifi_ap_set_password(&cyw43_state, 8, (const uint8_t *) "pybd0123");
     #endif
 
+    #if defined(MICROPY_HW_UART_REPL)
+    // Set up a UART REPL using a statically allocated object
+    uart_repl_obj.base.type = &machine_uart_type;
+    uart_repl_obj.uart_id = MICROPY_HW_UART_REPL;
+    uart_repl_obj.is_static = true;
+    uart_repl_obj.timeout = 0;
+    uart_repl_obj.timeout_char = 2;
+    uart_init(&uart_repl_obj, MICROPY_HW_UART_REPL_BAUD,
+              UART_WORDLENGTH_8B, UART_PARITY_NONE, UART_STOPBITS_1, 0);
+    uart_set_rxbuf(&uart_repl_obj, sizeof(uart_repl_rxbuf), uart_repl_rxbuf);
+    uart_attach_to_repl(&uart_repl_obj, true);
+    MP_STATE_PORT(machine_uart_obj_all)[MICROPY_HW_UART_REPL - 1] = &uart_repl_obj;
+    MP_STATE_PORT(pyb_stdio_uart) = &uart_repl_obj;
+    #endif
+
     pyb_usb_init0();
-    MP_STATE_PORT(pyb_stdio_uart) = NULL;
 
     #if MICROPY_PY_CSI
     // Initialize the csi.
@@ -410,6 +432,11 @@ soft_reset_exit:
     py_audio_deinit();
     #endif
     imlib_deinit_all();
+    #if defined(MICROPY_HW_UART_REPL)
+    MP_STATE_PORT(pyb_stdio_uart) = &uart_repl_obj;
+    #else
+    MP_STATE_PORT(pyb_stdio_uart) = NULL;
+    #endif
     gc_sweep_all();
     mp_deinit();
     first_soft_reset = false;
