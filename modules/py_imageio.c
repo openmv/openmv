@@ -265,7 +265,11 @@ static void int_py_imageio_pause(py_imageio_obj_t *stream, bool pause) {
     }
 
     while (pause && ((mp_hal_ticks_ms() - stream->ms) < elapsed_ms)) {
+        #ifndef UNIX
         __WFI();
+        #else
+        mp_hal_delay_ms(1);  // Unix: yield to other processes
+        #endif
     }
 
     stream->ms += elapsed_ms;
