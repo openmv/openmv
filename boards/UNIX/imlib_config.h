@@ -72,7 +72,7 @@
 #define IMLIB_ENABLE_HOG                       (1)
 #define IMLIB_ENABLE_GET_REGRESSION            (1)
 #define IMLIB_ENABLE_IMAGE_FILE_IO             (1)
-// IMLIB_ENABLE_IMAGE_IO is hardware-specific (DVP/CSI streaming)
+#define IMLIB_ENABLE_IMAGE_IO                  (1)
 #define IMLIB_ENABLE_GIF                       (1)
 #define IMLIB_ENABLE_JPEG                      (1)
 #define IMLIB_ENABLE_PNG                       (1)

@@ -37,7 +37,8 @@ MICROPY_PY_BTREE = 1  # Enable btree (standard Unix feature)
 MICROPY_PY_SSL = 1
 MICROPY_SSL_MBEDTLS = 1
 
-# Hardware modules disabled on Unix
+# CSI modules disabled on Unix port
+# Users can implement custom camera sources in Python using Image(..., copy_to_fb=True)
 MICROPY_PY_CSI = 0
 MICROPY_PY_CSI_NG = 0
 MICROPY_PY_FIR = 0

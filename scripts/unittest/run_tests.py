@@ -91,12 +91,14 @@ try:
     sys.exit(0)
 except Exception as e:
     error_str = str(e).lower()
-    if "unavailable" in error_str or "not available" in error_str:
-        # Test requires unavailable feature
+    error_type = type(e).__name__
+    # Check for missing module (ImportError) or unavailable feature
+    if error_type == "ImportError" or "unavailable" in error_str or "not available" in error_str:
+        # Test requires unavailable feature or module
         sys.exit(2)
     else:
         # Test failed - print error without traceback module
-        print("Test failed:", type(e).__name__, "-", str(e))
+        print("Test failed:", error_type, "-", str(e))
         sys.exit(1)
 '''
 

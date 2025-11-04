@@ -25,6 +25,14 @@ OMV_MOD_DIR := $(USERMOD_DIR)
 SRC_USERMOD += $(wildcard $(OMV_MOD_DIR)/*.c)
 SRC_USERMOD_CXX += $(wildcard $(OMV_MOD_DIR)/*.cpp)
 
+# Filter out CSI modules if disabled
+ifneq ($(MICROPY_PY_CSI),1)
+SRC_USERMOD := $(filter-out $(OMV_MOD_DIR)/py_csi.c, $(SRC_USERMOD))
+endif
+ifneq ($(MICROPY_PY_CSI_NG),1)
+SRC_USERMOD := $(filter-out $(OMV_MOD_DIR)/py_csi_ng.c, $(SRC_USERMOD))
+endif
+
 # Add OpenMV port-specific modules.
 OMV_PORT_MOD_DIR := $(OMV_MOD_DIR)/../ports/$(PORT)/modules
 SRC_USERMOD += $(wildcard $(OMV_PORT_MOD_DIR)/*.c)
