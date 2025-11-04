@@ -31,24 +31,20 @@ while True:
     img = csi0.snapshot()
 
     # palms is a list of ((x, y, w, h), score, keypoints) tuples
-    palms = model.predict([img])
+    for r, score, keypoints in model.predict([img]):
+        ml.utils.draw_predictions(img, [r], ("palm",), ((0, 0, 255),), format=None)
 
-    # Draw bounding boxes around the detected palms and keypoints.
-    if palms:
-        for r, score, keypoints in palms[0]:
-            ml.utils.draw_predictions(img, [r], ("palm",), ((0, 0, 255),), format=None)
-
-            # keypoints is a ndarray of shape (7, 2)
-            # 0 - wrist (x, y)
-            # 1 - index finger mcp (x, y)
-            # 2 - middle finger mcp (x, y)
-            # 3 - ring finger mcp (x, y)
-            # 4 - pinky mcp  (x, y)
-            # 5 - thumb cmc (x, y)
-            # 6 - thumb mcp (x, y)
-            #
-            # mcp = Metacarpophalangeal Joint - the knuckle
-            # cmc = Carpometacarpal Joint - the base of the thumb
-            ml.utils.draw_skeleton(img, keypoints, palm_lines, kp_color=(255, 0, 0), line_color=(0, 255, 0))
+        # keypoints is a ndarray of shape (7, 2)
+        # 0 - wrist (x, y)
+        # 1 - index finger mcp (x, y)
+        # 2 - middle finger mcp (x, y)
+        # 3 - ring finger mcp (x, y)
+        # 4 - pinky mcp  (x, y)
+        # 5 - thumb cmc (x, y)
+        # 6 - thumb mcp (x, y)
+        #
+        # mcp = Metacarpophalangeal Joint - the knuckle
+        # cmc = Carpometacarpal Joint - the base of the thumb
+        ml.utils.draw_skeleton(img, keypoints, palm_lines, kp_color=(255, 0, 0), line_color=(0, 255, 0))
 
     print(clock.fps(), "fps")

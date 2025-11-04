@@ -46,6 +46,12 @@
     },
     {
       "type": "tflite",
+      "path": "{TOP}/lib/models/face_landmarks_192.tflite",
+      "alignment": 16,
+      "optimize": "Performance"
+    },
+    {
+      "type": "tflite",
       "path": "{TOP}/lib/models/palm_detection_full_192.tflite",
       "alignment": 16,
       "optimize": "Performance"

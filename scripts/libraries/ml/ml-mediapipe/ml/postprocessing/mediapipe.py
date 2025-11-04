@@ -78,7 +78,7 @@ class mediapipe_detection_postprocess:
             self.detection_post_process(ih, iw, nms, model, inputs, outputs, self.scores[1], self.cords[1],
                                         self.threshold, self.anchors[output_len:])
 
-        return nms.get_bounding_boxes(threshold=self.nms_threshold, sigma=self.nms_sigma)
+        return nms.get_bounding_boxes(threshold=self.nms_threshold, sigma=self.nms_sigma)[0]
 
     def detection_post_process(self, ih, iw, nms, model, inputs, outputs, score_idx, cords_idx, t, anchors):
         s_oh, s_ow, s_oc = model.output_shape[score_idx]
@@ -173,3 +173,35 @@ class HandLandmarks:
 
         nms.add_bounding_box(xmin, ymin, xmax, ymax, score, left_right, keypoints=keypoints)
         return nms.get_bounding_boxes(threshold=self.nms_threshold, sigma=self.nms_sigma)
+
+
+class FaceLandmarks:
+    def __init__(self, threshold=0.6, nms_threshold=0.1, nms_sigma=0.1):
+        self.threshold = threshold
+        self.nms_threshold = nms_threshold
+        self.nms_sigma = nms_sigma
+
+    def __call__(self, model, inputs, outputs):
+        ib, ih, iw, ic = model.input_shape[0]
+        nms = NMS(iw, ih, inputs[0].roi)
+
+        score = sigmoid(outputs[1][0, 0, 0, 0])
+        if score < self.threshold:
+            return _NO_DETECTION
+
+        cords = outputs[0][0, 0, 0, :]
+
+        # Get the keypoint information
+        keypoints = np.empty((len(cords) // 3, 3))
+        keypoints[:, 0] = cords[0::3]
+        keypoints[:, 1] = cords[1::3]
+        keypoints[:, 2] = cords[2::3]
+
+        # Get bounding box information
+        xmin = np.min(keypoints[:, 0])
+        ymin = np.min(keypoints[:, 1])
+        xmax = np.max(keypoints[:, 0])
+        ymax = np.max(keypoints[:, 1])
+
+        nms.add_bounding_box(xmin, ymin, xmax, ymax, score, 0, keypoints=keypoints)
+        return nms.get_bounding_boxes(threshold=self.nms_threshold, sigma=self.nms_sigma)[0]
