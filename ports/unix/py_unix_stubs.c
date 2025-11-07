@@ -56,11 +56,12 @@ struct __attribute__((aligned(32))) {
     char fb_alloc_memory[OMV_FB_ALLOC_SIZE]; // fb_alloc temp buffer
 } omv_memory_region = {0};
 
-// Provide symbol expected by common/fb_alloc.c (Unix version uses pointer)
-char *_fb_alloc_end_ptr = omv_memory_region.fb_alloc_memory + OMV_FB_ALLOC_SIZE;
+// Provide _fb_alloc_end symbol expected by common/fb_alloc.c
+// Unix version is a pointer variable; embedded uses linker symbol
+char *_fb_alloc_end = omv_memory_region.fb_alloc_memory + OMV_FB_ALLOC_SIZE;
 
 // Verify memory regions are contiguous (required for fb_alloc pointer arithmetic)
-// The fb_alloc code does pointer arithmetic between framebuffer_pool_end() and _fb_alloc_end_ptr,
+// The fb_alloc code does pointer arithmetic between framebuffer_pool_end() and _fb_alloc_end,
 // which requires these regions to be in contiguous memory with no padding.
 _Static_assert(offsetof(typeof(omv_memory_region), sb_memory) == OMV_FB_MEMORY_SIZE,
                "Memory regions must be contiguous - struct padding detected between fb_memory and sb_memory");

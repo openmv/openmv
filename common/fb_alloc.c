@@ -31,12 +31,11 @@
 #include "omv_common.h"
 
 #if defined(__unix__)
-// On Unix, we can't use linker script symbols, so we use an externally provided pointer
-extern char *_fb_alloc_end_ptr;
+extern char *_fb_alloc_end;  // Unix: pointer variable containing end address
 static char *pointer;
-#define FB_ALLOC_END() (_fb_alloc_end_ptr)
+#define FB_ALLOC_END() (_fb_alloc_end)
 #else
-extern char _fb_alloc_end;
+extern char _fb_alloc_end;  // Embedded: linker symbol, address IS value
 static char *pointer = &_fb_alloc_end;
 #define FB_ALLOC_END() (&_fb_alloc_end)
 #endif
