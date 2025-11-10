@@ -70,6 +70,10 @@
 #include "lib/cyw43-driver/src/cyw43.h"
 #endif
 #endif
+#if MICROPY_HW_TINYUSB_STACK
+#include "usbd_conf.h"
+#include "shared/tinyusb/mp_usbd.h"
+#endif
 #include "extmod/vfs.h"
 #include "extmod/vfs_fat.h"
 #include "shared/runtime/pyexec.h"
@@ -276,7 +280,17 @@ soft_reset:
     cyw43_wifi_ap_set_password(&cyw43_state, 8, (const uint8_t *) "pybd0123");
     #endif
 
+    #if MICROPY_HW_ENABLE_USB
+    #if MICROPY_HW_TINYUSB_STACK
+    if (first_soft_reset) {
+        pyb_usbd_init();
+    }
+    mp_usbd_init();
+    #else
     pyb_usb_init0();
+    #endif
+    #endif
+
     MP_STATE_PORT(pyb_stdio_uart) = NULL;
 
     #if MICROPY_PY_CSI
@@ -312,6 +326,7 @@ soft_reset:
         pyb_usb_storage_medium = PYB_USB_STORAGE_MEDIUM_SDCARD;
     }
 
+    #if MICROPY_HW_STM_USB_STACK
     // Init USB device to default setting if it was not already configured
     if (!(pyb_usb_flags & PYB_USB_FLAG_USB_MODE_CALLED)) {
         uint8_t usb_mode = USBD_MODE_CDC_MSC;
@@ -321,6 +336,7 @@ soft_reset:
         pyb_usb_dev_init(pyb_usb_dev_detect(), MICROPY_HW_USB_VID,
                          MICROPY_HW_USB_PID, usb_mode, 0, NULL, NULL);
     }
+    #endif
 
     // report if SDRAM failed
     #if MICROPY_HW_SDRAM_SIZE
@@ -392,6 +408,9 @@ soft_reset:
     #endif
     imlib_deinit();
     soft_timer_deinit();
+    #if MICROPY_HW_ENABLE_USB_RUNTIME_DEVICE && MICROPY_HW_TINYUSB_STACK
+    mp_usbd_deinit();
+    #endif
     gc_sweep_all();
     mp_deinit();
     first_soft_reset = false;
