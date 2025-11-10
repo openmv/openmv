@@ -25,6 +25,7 @@ SYSTEM      ?= st/system_stm32
 LDSCRIPT    ?= stm
 STARTUP     ?= st/startup_$(shell echo $(MCU) | tr '[:upper:]' '[:lower:]')
 MCU_SERIES  := $(shell echo $(MCU) | cut -c6-7 | tr '[:upper:]' '[:lower:]')
+MCU_SERIES_UPPER := $(shell echo $(MCU_SERIES) | tr '[:lower:]' '[:upper:]')
 MCU_LOWER   := $(shell echo $(MCU) | tr '[:upper:]' '[:lower:]')
 HAL_DIR     := lib/stm32/$(MCU_SERIES)
 CMSIS_INC   := st
@@ -69,6 +70,7 @@ CFLAGS += -D$(MCU) \
           -DOMV_VTOR_BASE=$(OMV_FIRM_ADDR) \
           -DCMSIS_MCU_H='<$(MCU_LOWER).h>' \
           -DOMV_NOSYS_STUBS_ENABLE=1 \
+          -DCFG_TUD_TASK_QUEUE_SZ=128 \
           -DSTM32_HAL_H='<stm32$(MCU_SERIES)xx_hal.h>' \
           $(OMV_BOARD_CFLAGS)
 
@@ -80,12 +82,18 @@ LDFLAGS = -mthumb \
           -mabi=aapcs-linux \
           -Wl,--print-memory-usage \
           -Wl,--gc-sections \
-          -Wl,--wrap=usbd_cdc_control \
-          -Wl,--wrap=usbd_cdc_receive \
-          -Wl,--wrap=mp_os_dupterm_rx_chr \
-          -Wl,--wrap=mp_hal_stdout_tx_strn \
           -Wl,-T$(BUILD)/$(LDSCRIPT).lds \
           -Wl,-Map=$(BUILD)/$(FIRMWARE).map
+
+ifeq ($(OMV_USB_STACK_TINYUSB), 1)
+LDFLAGS += -Wl,--wrap=mp_hal_stdio_poll \
+           -Wl,--wrap=mp_hal_stdout_tx_strn
+else
+LDFLAGS += -Wl,--wrap=usbd_cdc_control \
+           -Wl,--wrap=usbd_cdc_receive \
+           -Wl,--wrap=mp_os_dupterm_rx_chr \
+           -Wl,--wrap=mp_hal_stdout_tx_strn
+endif
 
 LDSCRIPT_FLAGS += -I$(COMMON_DIR) \
                   -I$(OMV_BOARD_CONFIG_DIR)
@@ -107,13 +115,15 @@ MPY_CFLAGS += -I$(BUILD)/$(MICROPY_DIR)
 MPY_CFLAGS += -I$(TOP_DIR)/$(MICROPY_DIR)
 MPY_CFLAGS += -I$(TOP_DIR)/$(MICROPY_DIR)/py
 MPY_CFLAGS += -I$(TOP_DIR)/$(MICROPY_DIR)/lib/oofatfs
+MPY_CFLAGS += -I$(TOP_DIR)/$(MICROPY_DIR)/lib/tinyusb/src
 MPY_CFLAGS += -I$(TOP_DIR)/$(MICROPY_DIR)/lib/lwip/src/include
 MPY_CFLAGS += -I$(TOP_DIR)/$(MICROPY_DIR)/lib/mbedtls/include
 MPY_CFLAGS += -I$(TOP_DIR)/$(MICROPY_DIR)/ports/stm32
+MPY_CFLAGS += -I$(TOP_DIR)/$(MICROPY_DIR)/ports/stm32/lwip_inc
 MPY_CFLAGS += -I$(TOP_DIR)/$(MICROPY_DIR)/ports/stm32/usbdev/core/inc
 MPY_CFLAGS += -I$(TOP_DIR)/$(MICROPY_DIR)/ports/stm32/usbdev/class/inc
-MPY_CFLAGS += -I$(TOP_DIR)/$(MICROPY_DIR)/ports/stm32/lwip_inc
 MPY_CFLAGS += -I$(TOP_DIR)/$(MICROPY_DIR)/shared/runtime
+MPY_CFLAGS += -I$(TOP_DIR)/$(MICROPY_DIR)/shared/tinyusb
 
 MPY_CFLAGS += -DMICROPY_PY_LWIP=$(MICROPY_PY_LWIP)
 MPY_CFLAGS += -DMICROPY_PY_SSL=$(MICROPY_PY_SSL)
@@ -125,6 +135,9 @@ MPY_CFLAGS += -DMICROPY_BLUETOOTH_NIMBLE=$(MICROPY_BLUETOOTH_NIMBLE)
 MPY_CFLAGS += -DMICROPY_PY_BLUETOOTH_USE_SYNC_EVENTS=1
 MPY_CFLAGS += -DMICROPY_STREAMS_POSIX_API=1
 MPY_CFLAGS += -DMICROPY_VFS_FAT=1
+ifeq ($(OMV_USB_STACK_TINYUSB), 1)
+MPY_CFLAGS += -DMICROPY_HW_TINYUSB_STACK=1
+endif
 
 MPY_MKARGS += CFLAGS_EXTRA="-std=gnu11"
 MPY_MKARGS += STM32LIB_CMSIS_DIR=$(TOP_DIR)/$(CMSIS_DIR)
@@ -163,6 +176,7 @@ MPY_FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/,\
 	usbd_msc_interface.o    \
 	bufhelper.o             \
 	usb.o                   \
+	usbd.o                  \
 	usrsw.o                 \
 	eth.o                   \
 	eth_phy.o               \
@@ -197,6 +211,7 @@ MPY_FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/,\
 	rng.o                   \
 	led.o                   \
 	mphalport.o             \
+	msc_disk.o              \
 	sdcard.o                \
 	sdram.o                 \
 	sdio.o                  \
