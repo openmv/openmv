@@ -131,7 +131,7 @@ soft_reset:
     #if MICROPY_PY_IMU
     py_imu_init();
     #endif
-    imlib_init_all();
+    imlib_init();
     #if MICROPY_PY_CSI
     if (first_soft_reset) {
         omv_csi_init();
@@ -250,7 +250,7 @@ soft_reset_exit:
     mp_machine_i2c_target_deinit_all();
     #endif
     machine_pin_irq_deinit();
-    imlib_deinit_all();
+    imlib_deinit();
     soft_timer_deinit();
     dma_deinit_all();
     gc_sweep_all();

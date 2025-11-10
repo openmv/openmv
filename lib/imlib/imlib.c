@@ -35,7 +35,7 @@
 #include "omv_gpu.h"
 #include "omv_boardconfig.h"
 
-void imlib_init_all() {
+void imlib_init() {
     #if (OMV_GPU_ENABLE == 1)
     omv_gpu_init();
     #endif
@@ -44,7 +44,7 @@ void imlib_init_all() {
     #endif
 }
 
-void imlib_deinit_all() {
+void imlib_deinit() {
     #if (OMV_GPU_ENABLE == 1)
     omv_gpu_deinit();
     #endif
