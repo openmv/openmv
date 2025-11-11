@@ -1514,6 +1514,19 @@ static inline v128_t vldr_u8_pred(const uint8_t *p, v128_predicate_t pred) {
     #endif
 }
 
+static inline v128_t vldr_u8_gather(const uint8_t *p, v128_t offsets) {
+    #if (__ARM_ARCH >= 8)
+    return (v128_t) vldrbq_gather_offset(p, offsets.u8);
+    #else
+    v128_t v0;
+    v0.u8[0] = *(p + offsets.u8[0]);
+    v0.u8[1] = *(p + offsets.u8[1]);
+    v0.u8[2] = *(p + offsets.u8[2]);
+    v0.u8[3] = *(p + offsets.u8[3]);
+    return v0;
+    #endif
+}
+
 static inline v128_t vldr_u8_widen_u32_gather_pred(const uint8_t *p,
                                                    v128_t offsets,
                                                    v128_predicate_t pred) {

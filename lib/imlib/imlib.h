@@ -370,6 +370,9 @@ extern const uint16_t depth_table[256];
 extern const uint16_t evt_dark_table[256];
 extern const uint16_t evt_light_table[256];
 
+// Dynamic LUTs
+extern uint8_t gamma_table[256];
+
 //////////////////
 // Event Camera //
 //////////////////
@@ -1203,6 +1206,7 @@ void imlib_fill_image_from_lepton(image_t *img, int w, int h, uint16_t *data, fl
                                   bool mirror, bool flip, bool transpose);
 
 // Bayer Image Processing
+void imlib_update_gamma_table(float brightness, float contrast, float gamma);
 pixformat_t imlib_bayer_shift(pixformat_t pixfmt, int x, int y, bool transpose);
 void imlib_debayer_ycbcr(image_t *src, rectangle_t *roi, int8_t *Y0, int8_t *CB, int8_t *CR);
 void imlib_debayer_line(int x_start, int x_end, int y_row, void *dst_row_ptr, pixformat_t pixfmt, image_t *src);
