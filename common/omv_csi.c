@@ -367,6 +367,13 @@ __weak int omv_csi_reset(omv_csi_t *csi, bool hard) {
         return OMV_CSI_ERROR_CTL_FAILED;
     }
 
+    // Reset the ISP state.
+    if (csi->raw_output &&
+        csi->isp_reset != NULL &&
+        csi->isp_reset(csi) != 0) {
+        return OMV_CSI_ERROR_CTL_FAILED;
+    }
+
     // Reset framebuffers
     framebuffer_flush(csi->fb);
     return 0;
