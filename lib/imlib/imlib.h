@@ -370,6 +370,9 @@ extern const uint16_t depth_table[256];
 extern const uint16_t evt_dark_table[256];
 extern const uint16_t evt_light_table[256];
 
+// Dynamic LUTs
+extern uint8_t gamma_table[256];
+
 //////////////////
 // Event Camera //
 //////////////////
@@ -1192,8 +1195,8 @@ typedef struct imlib_draw_row_data {
 typedef void (*imlib_draw_row_callback_t) (int x_start, int x_end, int y_row, imlib_draw_row_data_t *data);
 
 // Library Hardware Init
-void imlib_init_all();
-void imlib_deinit_all();
+void imlib_init();
+void imlib_deinit();
 
 // Generic Helper Functions
 void imlib_fill_image_from_float(image_t *img, int w, int h, float *data, float min, float max,
@@ -1203,6 +1206,7 @@ void imlib_fill_image_from_lepton(image_t *img, int w, int h, uint16_t *data, fl
                                   bool mirror, bool flip, bool transpose);
 
 // Bayer Image Processing
+void imlib_update_gamma_table(float brightness, float contrast, float gamma);
 pixformat_t imlib_bayer_shift(pixformat_t pixfmt, int x, int y, bool transpose);
 void imlib_debayer_ycbcr(image_t *src, rectangle_t *roi, int8_t *Y0, int8_t *CB, int8_t *CR);
 void imlib_debayer_line(int x_start, int x_end, int y_row, void *dst_row_ptr, pixformat_t pixfmt, image_t *src);

@@ -101,7 +101,7 @@ soft_reset:
     #if MICROPY_PY_TV
     py_tv_init0();
     #endif
-    imlib_init_all();
+    imlib_init();
     readline_init0();
     fb_alloc_init0();
     framebuffer_init0();
@@ -244,6 +244,7 @@ soft_reset_exit:
     #endif
     machine_pwm_deinit_all();
     soft_timer_deinit();
+    imlib_deinit();
     gc_sweep_all();
     mp_deinit();
     first_soft_reset = false;

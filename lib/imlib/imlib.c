@@ -35,7 +35,11 @@
 #include "omv_gpu.h"
 #include "omv_boardconfig.h"
 
-void imlib_init_all() {
+#ifdef IMLIB_ENABLE_GAMMA_LUT
+uint8_t gamma_table[256];
+#endif
+
+void imlib_init() {
     #if (OMV_GPU_ENABLE == 1)
     omv_gpu_init();
     #endif
@@ -44,7 +48,7 @@ void imlib_init_all() {
     #endif
 }
 
-void imlib_deinit_all() {
+void imlib_deinit() {
     #if (OMV_GPU_ENABLE == 1)
     omv_gpu_deinit();
     #endif
@@ -52,6 +56,16 @@ void imlib_deinit_all() {
     imlib_hardware_jpeg_deinit();
     #endif
 }
+
+#ifdef IMLIB_ENABLE_GAMMA_LUT
+// brightness: -1.0 to 1.0, contrast: 0.0 to 2.0, gamma: 0.0 to inf.
+void imlib_update_gamma_table(float brightness, float contrast, float gamma) {
+    for (int i = 0; i < 256; i++) {
+        int v = fast_roundf((powf(i / 255.0f, 1.0f / gamma) * contrast + brightness) * 255.0f);
+        gamma_table[i] = IM_CLAMP(v, 0, 255);
+    }
+}
+#endif
 
 int imlib_ksize_to_n(int ksize) {
     return ((ksize * 2) + 1) * ((ksize * 2) + 1);

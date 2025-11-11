@@ -217,7 +217,7 @@ soft_reset:
     #if MICROPY_PY_TV
     py_tv_init0();
     #endif
-    imlib_init_all();
+    imlib_init();
     readline_init0();
     pin_init0();
     extint_init0();
@@ -409,7 +409,7 @@ soft_reset_exit:
     #if MICROPY_PY_AUDIO
     py_audio_deinit();
     #endif
-    imlib_deinit_all();
+    imlib_deinit();
     gc_sweep_all();
     mp_deinit();
     first_soft_reset = false;

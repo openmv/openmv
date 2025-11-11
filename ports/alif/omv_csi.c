@@ -138,6 +138,13 @@ static bool alif_csi_is_active(omv_csi_t *csi) {
     return (cpi->CAM_CTRL & CAM_CTRL_BUSY);
 }
 
+int alif_csi_isp_reset(omv_csi_t *csi) {
+    #ifdef IMLIB_ENABLE_GAMMA_LUT
+    imlib_update_gamma_table(-0.2f, 1.0f, 2.2f);
+    #endif
+    return 0;
+}
+
 int alif_csi_config(omv_csi_t *csi, omv_csi_config_t config) {
     if (config == OMV_CSI_CONFIG_INIT) {
         CPI_Type *cpi = csi->base;
@@ -409,6 +416,7 @@ int omv_csi_ops_init(omv_csi_t *csi) {
     csi->abort = alif_csi_abort;
     csi->config = alif_csi_config;
     csi->snapshot = alif_csi_snapshot;
+    csi->isp_reset = alif_csi_isp_reset;
 
     // Set CSI clock ops.
     csi->clk->freq = OMV_CSI_CLK_FREQUENCY;

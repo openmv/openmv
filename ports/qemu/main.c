@@ -62,7 +62,7 @@ soft_reset:
     file_buffer_init0();
     #endif
 
-    imlib_init_all();
+    imlib_init();
 
     #if MICROPY_PY_CSI
     omv_csi_init0();
@@ -85,6 +85,7 @@ soft_reset:
     }
 
     mp_printf(&mp_plat_print, "MPY: soft reboot\n");
+    imlib_deinit();
     gc_sweep_all();
     mp_deinit();
     first_soft_reset = false;

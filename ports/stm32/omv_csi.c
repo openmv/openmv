@@ -126,6 +126,15 @@ static bool stm_csi_is_active(omv_csi_t *csi) {
     return (DCMI->CR & DCMI_CR_ENABLE);
 }
 
+int stm_csi_isp_reset(omv_csi_t *csi) {
+    #if USE_DCMIPP
+    if (csi->mipi_if) {
+        return stm_isp_update_gamma_table(&csi->dcmipp, DCMIPP_PIPE, 0.0f, 1.0f, 2.2f);
+    }
+    #endif // USE_DCMIPP
+    return 0;
+}
+
 static int stm_csi_config(omv_csi_t *csi, omv_csi_config_t config) {
     if (config == OMV_CSI_CONFIG_INIT) {
         if (!csi->mipi_if) {
@@ -770,6 +779,7 @@ int omv_csi_ops_init(omv_csi_t *csi) {
     csi->config = stm_csi_config;
     csi->shutdown = stm_csi_shutdown;
     csi->snapshot = stm_csi_snapshot;
+    csi->isp_reset = stm_csi_isp_reset;
 
     // Set CSI clock ops.
     csi->clk->freq = OMV_CSI_CLK_FREQUENCY;

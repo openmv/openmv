@@ -39,6 +39,8 @@
 #ifdef DCMIPP
 int stm_isp_config_pipeline(DCMIPP_HandleTypeDef *dcmipp, uint32_t pipe,
                             pixformat_t pixformat, bool raw_output);
+int stm_isp_update_gamma_table(DCMIPP_HandleTypeDef *dcmipp, uint32_t pipe,
+                               float brightness, float contrast, float gamma);
 float stm_isp_update_awb(DCMIPP_HandleTypeDef *dcmipp, uint32_t pipe, uint32_t n_pixels);
 #endif
 

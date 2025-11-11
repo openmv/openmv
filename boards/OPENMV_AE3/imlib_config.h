@@ -55,6 +55,9 @@
 // Enable YUV LUT
 //#define IMLIB_ENABLE_YUV_LUT
 
+// Software ISP configuration
+#define IMLIB_ENABLE_GAMMA_LUT
+
 // Enable mean pooling
 #define IMLIB_ENABLE_MEAN_POOLING
 

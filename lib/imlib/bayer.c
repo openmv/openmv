@@ -569,6 +569,11 @@ static inline v128_t vdebayer_to_cr(vrgb_pixels_t pixels) {
 static inline vrgb_pixels_t vdebayer_apply_rb_gain(vrgb_pixels_t pixels, uint32_t red_gain, uint32_t blue_gain) {
     pixels.r = vusat_s16_narrow_u8_lo(pixels.r, vmul_n_u32(pixels.r, red_gain), 5);
     pixels.b = vusat_s16_narrow_u8_lo(pixels.b, vmul_n_u32(pixels.b, blue_gain), 5);
+    #ifdef IMLIB_ENABLE_GAMMA_LUT
+    pixels.r = vldr_u8_gather(gamma_table, pixels.r);
+    pixels.g = vldr_u8_gather(gamma_table, pixels.g);
+    pixels.b = vldr_u8_gather(gamma_table, pixels.b);
+    #endif
     return pixels;
 }
 
