@@ -55,8 +55,8 @@ extern unsigned char OMV_BOARD_UID_ADDR[12];    // Unique address.
 
 // Enable RAW preview.
 #define OMV_RAW_PREVIEW_ENABLE          (1)
-#define OMV_RAW_PREVIEW_WIDTH           (512)
-#define OMV_RAW_PREVIEW_HEIGHT          (320)
+#define OMV_RAW_PREVIEW_WIDTH           (640)
+#define OMV_RAW_PREVIEW_HEIGHT          (400)
 
 // CSI drivers configuration.
 #define OMV_PAG7936_ENABLE              (CORE_M55_HP)
