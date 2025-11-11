@@ -159,6 +159,14 @@ int stm_isp_config_pipeline(DCMIPP_HandleTypeDef *dcmipp, uint32_t pipe,
         }
     }
 
+    if (HAL_DCMIPP_PIPE_SetISPBadPixelRemovalConfig(dcmipp, pipe, DCMIPP_BAD_PXL_REM_SRENGTH_4) != HAL_OK) {
+        return -1;
+    }
+
+    if (HAL_DCMIPP_PIPE_EnableISPBadPixelRemoval(dcmipp, pipe) != HAL_OK) {
+        return -1;
+    }
+
     return 0;
 }
 
