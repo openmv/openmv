@@ -129,7 +129,7 @@ static bool stm_csi_is_active(omv_csi_t *csi) {
 int stm_csi_isp_reset(omv_csi_t *csi) {
     #if USE_DCMIPP
     if (csi->mipi_if) {
-        return stm_isp_update_gamma_table(&csi->dcmipp, DCMIPP_PIPE, 0.0f, 1.0f, 2.2f);
+        return stm_isp_update_gamma_table(csi, DCMIPP_PIPE, 0.0f, 1.0f, 2.2f);
     }
     #endif // USE_DCMIPP
     return 0;
@@ -278,7 +278,7 @@ static int stm_csi_config(omv_csi_t *csi, omv_csi_config_t config) {
                 csi->dcmipp.PipeState[i] = HAL_DCMIPP_PIPE_STATE_RESET;
             }
             // Configure the pixel processing pipeline.
-            if (stm_isp_config_pipeline(&csi->dcmipp, DCMIPP_PIPE, csi->pixformat, csi->raw_output)) {
+            if (stm_isp_init(csi, DCMIPP_PIPE, csi->pixformat, csi->raw_output)) {
                 return OMV_CSI_ERROR_CSI_INIT_FAILED;
             }
             #endif
@@ -760,7 +760,7 @@ static int stm_csi_snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
 
     #if USE_DCMIPP
     if (csi->raw_output) {
-        float luminance = stm_isp_update_awb(&csi->dcmipp, DCMIPP_PIPE, fb->u * fb->v);
+        float luminance = stm_isp_update_awb(csi, DCMIPP_PIPE, fb->u * fb->v);
         if (csi->ioctl) {
             omv_csi_ioctl(csi, OMV_CSI_IOCTL_UPDATE_AGC_AEC, fast_floorf(luminance));
         }
