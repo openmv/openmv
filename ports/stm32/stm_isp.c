@@ -33,6 +33,7 @@
 
 #include <string.h>
 #include "imlib.h"
+#include "py/mphal.h"
 #include "stm_isp.h"
 #include "omv_boardconfig.h"
 
@@ -42,18 +43,23 @@ float stm_isp_update_awb(omv_csi_t *csi, uint32_t pipe, uint32_t n_pixels) {
     uint32_t shift[3];
     uint32_t multi[3];
 
-    for (int i = 0; i < 3; i++) {
-        // DCMIPP_STATEXT_MODULE1
-        HAL_DCMIPP_PIPE_GetISPAccumulatedStatisticsCounter(&csi->dcmipp, pipe, i + 1, &avg[i]);
+    if (csi->stats_enabled) {
+        for (int i = 0; i < 3; i++) {
+            // DCMIPP_STATEXT_MODULE1
+            HAL_DCMIPP_PIPE_GetISPAccumulatedStatisticsCounter(&csi->dcmipp, pipe, i + 1, &avg[i]);
+        }
+
+        // Averages are collected from bayer components (4R 2G 4B).
+        avg[0] = OMV_MAX((avg[0] * 256 * 4) / n_pixels, 1);
+        avg[1] = OMV_MAX((avg[1] * 256 * 2) / n_pixels, 1);
+        avg[2] = OMV_MAX((avg[2] * 256 * 4) / n_pixels, 1);
+        omv_csi_stats_update(csi, &avg[0], &avg[1], &avg[2], mp_hal_ticks_ms());
     }
 
-    // Averages are collected from bayer components (4R 2G 4B).
-    avg[0] = OMV_MAX((avg[0] * 256 * 4) / n_pixels, 1);
-    avg[1] = OMV_MAX((avg[1] * 256 * 2) / n_pixels, 1);
-    avg[2] = OMV_MAX((avg[2] * 256 * 4) / n_pixels, 1);
+    omv_csi_get_stats(csi, &avg[0], &avg[1], &avg[2]);
 
     // Compute global luminance
-    float luminance = avg[0] * 0.299 + avg[1] * 0.587 + avg[2] * 0.114;
+    float luminance = avg[0] * 0.299f + avg[1] * 0.587f + avg[2] * 0.114f;
 
     // Calculate average and exposure factors for each channel (R, G, B)
     for (int i = 0; i < 3; i++) {
