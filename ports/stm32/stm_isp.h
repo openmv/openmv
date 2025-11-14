@@ -35,13 +35,13 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include STM32_HAL_H
+#include "omv_csi.h"
 
 #ifdef DCMIPP
-int stm_isp_config_pipeline(DCMIPP_HandleTypeDef *dcmipp, uint32_t pipe,
-                            pixformat_t pixformat, bool raw_output);
-int stm_isp_update_gamma_table(DCMIPP_HandleTypeDef *dcmipp, uint32_t pipe,
+int stm_isp_init(omv_csi_t *csi, uint32_t pipe, pixformat_t pixformat, bool raw_output);
+int stm_isp_update_gamma_table(omv_csi_t *csi, uint32_t pipe,
                                float brightness, float contrast, float gamma);
-float stm_isp_update_awb(DCMIPP_HandleTypeDef *dcmipp, uint32_t pipe, uint32_t n_pixels);
+float stm_isp_update_awb(omv_csi_t *csi, uint32_t pipe, uint32_t n_pixels);
 #endif
 
 #endif // __STM_ISP_H__

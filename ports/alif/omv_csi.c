@@ -237,10 +237,7 @@ static uint32_t omv_csi_get_fb_offset(omv_csi_t *csi) {
 int alif_csi_snapshot(omv_csi_t *csi, image_t *dst_image, uint32_t flags) {
     CPI_Type *cpi = csi->base;
     framebuffer_t *fb = csi->fb;
-
     vbuffer_t *buffer = NULL;
-    static uint32_t frames = 0;
-    static uint32_t r_stat, gb_stat, gr_stat, b_stat;
 
     // Configure and re/start the capture if it's not alrady active
     // and there are no pending buffers (from non-blocking capture).
@@ -397,13 +394,22 @@ int alif_csi_snapshot(omv_csi_t *csi, image_t *dst_image, uint32_t flags) {
         // Set the target pixel format before debayer.
         dst_image->pixfmt = fb->pixfmt;
 
-        // Update AWB stats every n frames.
-        if ((frames++ % 100) == 0) {
-            omv_csi_ioctl(csi, OMV_CSI_IOCTL_GET_RGB_STATS, &r_stat, &gb_stat, &gr_stat, &b_stat);
+        uint32_t r, g, b;
+        if (csi->stats_enabled) {
+            uint32_t gb, gr;
+            int ret = omv_csi_ioctl(csi, OMV_CSI_IOCTL_GET_RGB_STATS, &r, &gb, &gr, &b);
+            if (ret != 0) {
+                return ret;
+            }
+
+            g = (gb + gr) / 2;
+            omv_csi_stats_update(csi, &r, &g, &b, mp_hal_ticks_ms());
         }
 
+        omv_csi_get_stats(csi, &r, &g, &b);
+
         // Debayer frame.
-        imlib_debayer_image_awb(dst_image, &src_image, false, r_stat, (gb_stat + gr_stat) / 2, b_stat);
+        imlib_debayer_image_awb(dst_image, &src_image, false, r, g, b);
     }
     return 0;
 }

@@ -33,27 +33,33 @@
 
 #include <string.h>
 #include "imlib.h"
+#include "py/mphal.h"
 #include "stm_isp.h"
 #include "omv_boardconfig.h"
 
 #ifdef DCMIPP
-float stm_isp_update_awb(DCMIPP_HandleTypeDef *dcmipp, uint32_t pipe, uint32_t n_pixels) {
+float stm_isp_update_awb(omv_csi_t *csi, uint32_t pipe, uint32_t n_pixels) {
     uint32_t avg[3];
     uint32_t shift[3];
     uint32_t multi[3];
 
-    for (int i = 0; i < 3; i++) {
-        // DCMIPP_STATEXT_MODULE1
-        HAL_DCMIPP_PIPE_GetISPAccumulatedStatisticsCounter(dcmipp, pipe, i + 1, &avg[i]);
+    if (csi->stats_enabled) {
+        for (int i = 0; i < 3; i++) {
+            // DCMIPP_STATEXT_MODULE1
+            HAL_DCMIPP_PIPE_GetISPAccumulatedStatisticsCounter(&csi->dcmipp, pipe, i + 1, &avg[i]);
+        }
+
+        // Averages are collected from bayer components (4R 2G 4B).
+        avg[0] = OMV_MAX((avg[0] * 256 * 4) / n_pixels, 1);
+        avg[1] = OMV_MAX((avg[1] * 256 * 2) / n_pixels, 1);
+        avg[2] = OMV_MAX((avg[2] * 256 * 4) / n_pixels, 1);
+        omv_csi_stats_update(csi, &avg[0], &avg[1], &avg[2], mp_hal_ticks_ms());
     }
 
-    // Averages are collected from bayer components (4R 2G 4B).
-    avg[0] = OMV_MAX((avg[0] * 256 * 4) / n_pixels, 1);
-    avg[1] = OMV_MAX((avg[1] * 256 * 2) / n_pixels, 1);
-    avg[2] = OMV_MAX((avg[2] * 256 * 4) / n_pixels, 1);
+    omv_csi_get_stats(csi, &avg[0], &avg[1], &avg[2]);
 
     // Compute global luminance
-    float luminance = avg[0] * 0.299 + avg[1] * 0.587 + avg[2] * 0.114;
+    float luminance = avg[0] * 0.299f + avg[1] * 0.587f + avg[2] * 0.114f;
 
     // Calculate average and exposure factors for each channel (R, G, B)
     for (int i = 0; i < 3; i++) {
@@ -75,13 +81,12 @@ float stm_isp_update_awb(DCMIPP_HandleTypeDef *dcmipp, uint32_t pipe, uint32_t n
         .MultiplierBlue = multi[2],
     };
 
-    HAL_DCMIPP_PIPE_SetISPExposureConfig(dcmipp, pipe, &expcfg);
+    HAL_DCMIPP_PIPE_SetISPExposureConfig(&csi->dcmipp, pipe, &expcfg);
 
     return luminance;
 }
 
-int stm_isp_config_pipeline(DCMIPP_HandleTypeDef *dcmipp, uint32_t pipe,
-                            pixformat_t pixformat, bool raw_output) {
+int stm_isp_init(omv_csi_t *csi, uint32_t pipe, pixformat_t pixformat, bool raw_output) {
     // Configure the pixel processing pipeline.
     DCMIPP_PipeConfTypeDef pcfg = {
         .FrameRate = DCMIPP_FRAME_RATE_ALL
@@ -97,7 +102,7 @@ int stm_isp_config_pipeline(DCMIPP_HandleTypeDef *dcmipp, uint32_t pipe,
         return -1;
     }
 
-    if (HAL_DCMIPP_PIPE_SetConfig(dcmipp, pipe, &pcfg) != HAL_OK) {
+    if (HAL_DCMIPP_PIPE_SetConfig(&csi->dcmipp, pipe, &pcfg) != HAL_OK) {
         return -1;
     }
 
@@ -115,8 +120,8 @@ int stm_isp_config_pipeline(DCMIPP_HandleTypeDef *dcmipp, uint32_t pipe,
         .EdgeStrength = DCMIPP_RAWBAYER_ALGO_NONE,
     };
 
-    if (HAL_DCMIPP_PIPE_SetISPRawBayer2RGBConfig(dcmipp, pipe, &rawcfg) != HAL_OK ||
-        HAL_DCMIPP_PIPE_EnableISPRawBayer2RGB(dcmipp, pipe) != HAL_OK) {
+    if (HAL_DCMIPP_PIPE_SetISPRawBayer2RGBConfig(&csi->dcmipp, pipe, &rawcfg) != HAL_OK ||
+        HAL_DCMIPP_PIPE_EnableISPRawBayer2RGB(&csi->dcmipp, pipe) != HAL_OK) {
         return -1;
     }
 
@@ -129,8 +134,8 @@ int stm_isp_config_pipeline(DCMIPP_HandleTypeDef *dcmipp, uint32_t pipe,
         .MultiplierBlue = 128,
     };
 
-    if (HAL_DCMIPP_PIPE_SetISPExposureConfig(dcmipp, pipe, &expcfg) != HAL_OK ||
-        HAL_DCMIPP_PIPE_EnableISPExposure(dcmipp, pipe) != HAL_OK) {
+    if (HAL_DCMIPP_PIPE_SetISPExposureConfig(&csi->dcmipp, pipe, &expcfg) != HAL_OK ||
+        HAL_DCMIPP_PIPE_EnableISPExposure(&csi->dcmipp, pipe) != HAL_OK) {
         return -1;
     }
 
@@ -148,29 +153,29 @@ int stm_isp_config_pipeline(DCMIPP_HandleTypeDef *dcmipp, uint32_t pipe,
     }
 
     for (size_t i = DCMIPP_STATEXT_MODULE1; i <= DCMIPP_STATEXT_MODULE3; i++) {
-        if (HAL_DCMIPP_PIPE_SetISPStatisticExtractionConfig(dcmipp,
-                                                            pipe, i,
+        if (HAL_DCMIPP_PIPE_SetISPStatisticExtractionConfig(&csi->dcmipp, pipe, i,
                                                             &statcfg[i - DCMIPP_STATEXT_MODULE1]) != HAL_OK) {
             return -1;
         }
 
-        if (HAL_DCMIPP_PIPE_EnableISPStatisticExtraction(dcmipp, pipe, i) != HAL_OK) {
+        if (HAL_DCMIPP_PIPE_EnableISPStatisticExtraction(&csi->dcmipp, pipe, i) != HAL_OK) {
             return -1;
         }
     }
 
-    if (HAL_DCMIPP_PIPE_SetISPBadPixelRemovalConfig(dcmipp, pipe, DCMIPP_BAD_PXL_REM_SRENGTH_4) != HAL_OK) {
+    if (HAL_DCMIPP_PIPE_SetISPBadPixelRemovalConfig(&csi->dcmipp, pipe,
+                                                    DCMIPP_BAD_PXL_REM_SRENGTH_4) != HAL_OK) {
         return -1;
     }
 
-    if (HAL_DCMIPP_PIPE_EnableISPBadPixelRemoval(dcmipp, pipe) != HAL_OK) {
+    if (HAL_DCMIPP_PIPE_EnableISPBadPixelRemoval(&csi->dcmipp, pipe) != HAL_OK) {
         return -1;
     }
 
     return 0;
 }
 
-int stm_isp_update_gamma_table(DCMIPP_HandleTypeDef *dcmipp, uint32_t pipe,
+int stm_isp_update_gamma_table(omv_csi_t *csi, uint32_t pipe,
                                float brightness, float contrast, float gamma) {
     uint8_t g_tab[9]; // sizeof(DCMIPP_ContrastConfTypeDef)
 
@@ -182,11 +187,12 @@ int stm_isp_update_gamma_table(DCMIPP_HandleTypeDef *dcmipp, uint32_t pipe,
         g_tab[i] = IM_CLAMP(gain, 0, 32);
     }
 
-    if (HAL_DCMIPP_PIPE_SetISPCtrlContrastConfig(dcmipp, pipe, (DCMIPP_ContrastConfTypeDef *) &g_tab) != HAL_OK) {
+    if (HAL_DCMIPP_PIPE_SetISPCtrlContrastConfig(&csi->dcmipp, pipe,
+                                                 (DCMIPP_ContrastConfTypeDef *) &g_tab) != HAL_OK) {
         return -1;
     }
 
-    if (HAL_DCMIPP_PIPE_EnableISPCtrlContrast(dcmipp, pipe) != HAL_OK) {
+    if (HAL_DCMIPP_PIPE_EnableISPCtrlContrast(&csi->dcmipp, pipe) != HAL_OK) {
         return -1;
     }
 
