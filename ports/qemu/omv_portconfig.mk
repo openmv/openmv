@@ -107,6 +107,8 @@ CFLAGS += $(HAL_CFLAGS) $(MPY_CFLAGS) $(OMV_CFLAGS)
 # Firmware objects from .mk files.
 include lib/cmsis/cmsis.mk
 include common/common.mk
+# QEMU uses semihosting, not nosys stubs - remove nosys_stubs.o from build
+OMV_FIRM_OBJ := $(filter-out $(BUILD)/common/nosys_stubs.o,$(OMV_FIRM_OBJ))
 include drivers/drivers.mk
 include lib/imlib/imlib.mk
 include lib/tflm/tflm.mk
@@ -122,6 +124,8 @@ MPY_FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/,\
 	mcu/arm/startup.o                   \
 	mcu/arm/systick.o                   \
 )
+
+# Note: qemu_semihost_stubs.c is automatically included by ports/ports.mk
 
 ifeq ($(MICROPY_PY_ML_TFLM), 1)
 ifeq ($(CPU),cortex-m55)
