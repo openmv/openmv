@@ -365,6 +365,10 @@ int alif_csi_snapshot(omv_csi_t *csi, image_t *dst_image, uint32_t flags) {
     if (omv_csi_get_cropped(csi)) {
         image_t src_cimage = *dst_image;
         image_t dst_cimage = *dst_image;
+        if (csi->pixformat != PIXFORMAT_BAYER) {
+            src_cimage.pixfmt = PIXFORMAT_GRAYSCALE;
+            dst_cimage.pixfmt = PIXFORMAT_GRAYSCALE;
+        }
 
         src_cimage.w = csi->resolution[csi->framesize][0];
         src_cimage.h = csi->resolution[csi->framesize][1];
