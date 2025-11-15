@@ -135,6 +135,22 @@ int omv_gpu_draw_image(image_t *src_img,
                        const uint8_t *alpha_palette,
                        image_hint_t hint,
                        float *transform) {
+    image_t src_copy;
+    image_t dst_copy;
+
+    // BAYER is 8-bpp; the GPU can only do a plain 1:1 crop/copy of it. Any
+    // scale/filter/mirror/flip/blend hint corrupts the raw mosaic, so alias
+    // to GRAYSCALE only for a hintless 1:1 blit; everything else falls to SW.
+    if (src_img->is_bayer && dst_img->is_bayer && hint == 0 &&
+        src_rect->w == dst_rect->w && src_rect->h == dst_rect->h) {
+        src_copy = *src_img;
+        src_copy.pixfmt = PIXFORMAT_GRAYSCALE;
+        src_img = &src_copy;
+        dst_copy = *dst_img;
+        dst_copy.pixfmt = PIXFORMAT_GRAYSCALE;
+        dst_img = &dst_copy;
+    }
+
     // GPU2D can only draw on RGB565/GRAYSCALE buffers.
     if (dst_img->pixfmt != PIXFORMAT_RGB565 && dst_img->pixfmt != PIXFORMAT_GRAYSCALE) {
         return -1;
