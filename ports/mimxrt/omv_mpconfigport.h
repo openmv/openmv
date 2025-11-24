@@ -37,4 +37,7 @@
 #define CYW43_CHIPSET_FIRMWARE_INCLUDE_FILE "lib/cyw43-driver/firmware/w4343WA1_7_45_98_102_combined.h"
 #define MICROPY_BANNER_NAME_AND_VERSION "OpenMV " OPENMV_GIT_TAG "; MicroPython " MICROPY_GIT_TAG
 
+#define MICROPY_WRAP_TUD_CDC_RX_CB(name) __mp_ ## name
+#define MICROPY_WRAP_TUD_EVENT_HOOK_CB(name) __mp_ ## name
+
 #include <mpconfigport.h>
