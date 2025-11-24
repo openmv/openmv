@@ -23,8 +23,6 @@
  *
  * MicroPython port config.
  */
-#include <mpconfigport.h>
-
 #define MICROPY_NLR_RAISE_HOOK                 \
     do {                                       \
         extern void fb_alloc_free_till_mark(); \
@@ -34,3 +32,8 @@
 #define MICROPY_ENABLE_VM_ABORT             (1)
 #define MICROPY_OPT_COMPUTED_GOTO           (1)
 #define MICROPY_BANNER_NAME_AND_VERSION "OpenMV " OPENMV_GIT_TAG "; MicroPython " MICROPY_GIT_TAG
+
+#define MICROPY_WRAP_TUD_CDC_RX_CB(name) __mp_ ## name
+#define MICROPY_WRAP_TUD_EVENT_HOOK_CB(name) __mp_ ## name
+
+#include <mpconfigport.h>

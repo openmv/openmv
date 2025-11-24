@@ -46,7 +46,7 @@ list(REMOVE_ITEM MICROPY_SOURCES pendsv.c main.c)
 set_property(TARGET ${MICROPY_TARGET} PROPERTY SOURCES ${MICROPY_SOURCES})
 
 target_link_options(${MICROPY_TARGET} PRIVATE
-    -Wl,--wrap=tud_cdc_rx_cb
+    -Wl,--wrap=mp_hal_stdio_poll
     -Wl,--wrap=mp_hal_stdout_tx_strn
 )
 

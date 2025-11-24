@@ -58,7 +58,6 @@ extern unsigned char *OMV_BOARD_UID_ADDR;    // Unique address.
 
 // USB IRQn.
 #define OMV_USB_IRQN               (USBCTRL_IRQ_IRQn)
-#define OMV_USB1_IRQ_HANDLER       (USBD_IRQHandler)
 
 // Linker script constants (see the linker script template port/x.ld.S).
 #define OMV_MAIN_MEMORY            RAM // Data/BSS memory
