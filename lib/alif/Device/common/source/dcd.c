@@ -472,7 +472,7 @@ void dcd_uninit(void)
     NVIC_ClearPendingIRQ(USB_IRQ_IRQn);
 }
 
-__attribute__ ((weak)) void USB_IRQHandler(void)
+void USB_IRQHandler(void)
 {
     dcd_int_handler(TUD_OPT_RHPORT);
 }

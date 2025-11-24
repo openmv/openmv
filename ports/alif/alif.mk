@@ -178,9 +178,7 @@ LDFLAGS = -mthumb \
 
 ifeq ($(MCU_CORE),M55_HP)
 # Linker Flags
-LDFLAGS += -Wl,--wrap=mp_usbd_task \
-           -Wl,--wrap=tud_cdc_rx_cb \
-           -Wl,--wrap=mp_hal_stdio_poll \
+LDFLAGS += -Wl,--wrap=mp_hal_stdio_poll \
            -Wl,--wrap=mp_hal_stdout_tx_strn
 endif
 
