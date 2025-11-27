@@ -56,8 +56,6 @@
 
 // USB config.
 #define OMV_USB_IRQN                    (USB_OTG1_IRQn)
-#define OMV_USB1_IRQ_HANDLER            (USB_OTG1_IRQHandler)
-#define OMV_USB2_IRQ_HANDLER            (USB_OTG2_IRQHandler)
 
 #define OMV_USB_PHY_ID                  (kUSB_ControllerEhci0)
 #define OMV_USB_PHY_D_CAL               (0x0CU)

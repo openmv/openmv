@@ -77,7 +77,6 @@ extern unsigned char OMV_BOARD_UID_ADDR[12];    // Unique address.
 
 // USB config.
 #define OMV_USB_IRQN                    (USB_IRQ_IRQn)
-#define OMV_USB1_IRQ_HANDLER            (USB_IRQHandler)
 #define OMV_USB_SWITCH_PIN              (&omv_pin_USB_SWITCH)
 
 // Linker script constants (see the linker script template alif.ld.S).

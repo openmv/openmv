@@ -26,6 +26,7 @@
 
 #include <stdio.h>
 
+#include "rp2_flash.h"
 #include "py/compile.h"
 #include "py/runtime.h"
 #include "py/gc.h"
@@ -116,13 +117,14 @@ int main(int argc, char **argv) {
     SCB->SCR |= SCB_SCR_SEVONPEND_Msk;
     #endif
 
-    soft_timer_init();
-
     // Set the MCU frequency and as a side effect the peripheral clock to 48 MHz.
     set_sys_clock_khz(SYS_CLK_KHZ, false);
 
-    // Hook for setting up anything that needs to be super early in the bootup process.
+    // Hook for setting up anything that needs to be super early in the boot-up process.
     MICROPY_BOARD_STARTUP();
+
+    // Set the flash divisor to an appropriate value
+    rp2_flash_set_timing();
 
     #if MICROPY_HW_ENABLE_UART_REPL
     bi_decl(bi_program_feature("UART REPL"))
@@ -205,11 +207,6 @@ soft_reset:
     // Initialize TinyUSB after the filesystem has been mounted.
     if (!tusb_inited()) {
         tusb_init();
-
-        // Install Tinyusb CDC debugger IRQ handler.
-        irq_set_enabled(USBCTRL_IRQ, false);
-        irq_remove_handler(USBCTRL_IRQ, irq_get_vtable_handler(USBCTRL_IRQ));
-        irq_set_exclusive_handler(USBCTRL_IRQ, OMV_USB1_IRQ_HANDLER);
     }
 
     // Run boot.py script.
@@ -307,7 +304,7 @@ void MP_WEAK __assert_func(const char *file, int line, const char *func, const c
 }
 #endif
 
-#define POLY    (0xD5)
+#define POLY (0xD5)
 
 uint8_t rosc_random_u8(size_t cycles) {
     static uint8_t r;

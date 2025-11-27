@@ -33,6 +33,7 @@
 #define NRFX_USBD_ERRATA_H__
 
 #include <stdbool.h>
+#include <stdint.h>
 
 #ifndef NRFX_USBD_ERRATA_ENABLE
 /**

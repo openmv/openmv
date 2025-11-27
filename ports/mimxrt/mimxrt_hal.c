@@ -43,6 +43,7 @@
 #include "omv_csi.h"
 #include "omv_gpio.h"
 #include "mimxrt_hal.h"
+#include "tusb.h"
 
 const uint8_t dcd_data[] = {0};
 
@@ -310,6 +311,14 @@ int mimxrt_hal_spi_deinit(uint32_t bus_id, uint32_t bus_mode) {
     }
     omv_gpio_deinit(spi_pins.ssel_pin);
     return 0;
+}
+
+void USB_OTG1_IRQHandler(void) {
+    dcd_int_handler(0);
+}
+
+void USB_OTG2_IRQHandler(void) {
+    dcd_int_handler(1);
 }
 
 void CSI_IRQHandler(void) {

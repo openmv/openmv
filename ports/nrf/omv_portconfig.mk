@@ -64,8 +64,6 @@ LDFLAGS = -mcpu=$(CPU) \
           -nostdlib \
           -Wl,--gc-sections \
           -Wl,--print-memory-usage \
-          -Wl,--wrap=mp_usbd_task \
-          -Wl,--wrap=tud_cdc_rx_cb \
           -Wl,--wrap=mp_hal_stdio_poll \
           -Wl,--wrap=mp_hal_stdout_tx_strn \
           -Wl,--no-warn-rwx-segment \

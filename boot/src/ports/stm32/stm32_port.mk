@@ -113,6 +113,7 @@ SRC_C += $(addprefix $(TINYUSB_DIR)/, \
 	src/device/usbd.c \
 	src/device/usbd_control.c \
 	src/portable/synopsys/dwc2/dcd_dwc2.c \
+	src/portable/synopsys/dwc2/dwc2_common.c \
 )
 
 SRC_C += $(addprefix $(CMSIS_DIR)/src/,\

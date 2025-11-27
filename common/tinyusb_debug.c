@@ -53,6 +53,7 @@ typedef struct {
 } debug_context_t;
 
 static debug_context_t ctx;
+void tinyusb_debug_task(mp_sched_node_t *node);
 
 uint32_t usb_cdc_buf_len() {
     return ringbuf_avail(&ctx.ringbuf);
@@ -95,23 +96,25 @@ void tud_cdc_line_coding_cb(uint8_t itf, cdc_line_coding_t const *coding) {
                       coding->bit_rate == USBDBG_BAUDRATE_FAST);
 }
 
+void tud_cdc_rx_cb(uint8_t itf) {
+    extern void __mp_tud_cdc_rx_cb(uint8_t itf);
+
+    if (!tinyusb_debug_enabled()) {
+        __mp_tud_cdc_rx_cb(itf);
+    }
+}
+
+void tud_event_hook_cb(uint8_t rhport, uint32_t eventid, bool in_isr) {
+    extern void __mp_tud_event_hook_cb(uint8_t rhport, uint32_t eventid, bool in_isr);
+
+    if (!tinyusb_debug_enabled()) {
+        __mp_tud_event_hook_cb(rhport, eventid, in_isr);
+    } else if (tud_task_event_ready()) {
+        mp_sched_schedule_node(&ctx.sched_node, tinyusb_debug_task);
+    }
+}
+
 // Wrapped MicroPython functions.
-void __wrap_mp_usbd_task(void) {
-    extern void __real_mp_usbd_task(void);
-
-    if (!tinyusb_debug_enabled()) {
-        __real_mp_usbd_task();
-    }
-}
-
-void __wrap_tud_cdc_rx_cb(uint8_t itf) {
-    extern void __real_tud_cdc_rx_cb(uint8_t itf);
-
-    if (!tinyusb_debug_enabled()) {
-        __real_tud_cdc_rx_cb(itf);
-    }
-}
-
 uintptr_t __wrap_mp_hal_stdio_poll(uintptr_t poll_flags) {
     extern uintptr_t __real_mp_hal_stdio_poll(uintptr_t poll_flags);
 
@@ -209,25 +212,5 @@ void tinyusb_debug_task(mp_sched_node_t *node) {
         }
     }
 }
-
-// For the mimxrt, and nrf ports this replaces the weak USB IRQ handlers.
-// For the RP2 port, this handler is installed in main.c
-void OMV_USB1_IRQ_HANDLER(void) {
-    dcd_int_handler(0);
-    // If there are any event to process, schedule a call to cdc loop.
-    if (tud_task_event_ready()) {
-        mp_sched_schedule_node(&ctx.sched_node, tinyusb_debug_task);
-    }
-}
-
-#if defined(OMV_USB2_IRQ_HANDLER)
-void OMV_USB2_IRQ_HANDLER(void) {
-    dcd_int_handler(1);
-    // If there are any event to process, schedule a call to cdc loop.
-    if (tud_task_event_ready()) {
-        mp_sched_schedule_node(&ctx.sched_node, tinyusb_debug_task);
-    }
-}
-#endif
 
 #endif //OMV_TINYUSB_DEBUG
