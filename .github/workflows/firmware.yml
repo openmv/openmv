@@ -46,8 +46,6 @@ jobs:
           - ARDUINO_PORTENTA_H7
           - ARDUINO_GIGA
           - ARDUINO_NICLA_VISION
-          - ARDUINO_NANO_RP2040_CONNECT
-          - ARDUINO_NANO_33_BLE_SENSE
         qemu: [false]
         profile: [0]
         artifacts: [true]
