@@ -79,7 +79,6 @@ IMLIB_SRC_C += \
     zbar.c \
 
 CFLAGS += -I$(TOP_DIR)/lib/imlib
-$(BUILD)/lib/imlib/fmath.o: override CFLAGS += -fno-strict-aliasing
 
 ifeq ($(CLANG_ENABLE),1)
 OMV_CLANG_OBJ = $(BUILD)/lib/imlib/bayer.o
