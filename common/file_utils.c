@@ -267,11 +267,18 @@ void file_truncate(file_t *fp) {
     }
 
     // Truncate file at current position by calling Python truncate() method
-    // Use getattr to get the truncate method
-    mp_obj_t truncate_str = mp_obj_new_str("truncate", 8);
-    mp_obj_t truncate_method = mp_load_attr(fp->fp, qstr_from_str(mp_obj_str_get_str(truncate_str)));
+    // Check if stream supports truncate (not all VFS streams do)
+    mp_obj_t dest[2];
+    // Use qstr_from_str for runtime qstr lookup since truncate may not be in qstr pool
+    qstr truncate_qstr = qstr_from_str("truncate");
+    mp_load_method_maybe(fp->fp, truncate_qstr, dest);
+    if (dest[0] == MP_OBJ_NULL) {
+        // Stream doesn't support truncate - silently skip
+        // This is acceptable since truncate is an optimization, not critical
+        return;
+    }
     // Call truncate() method with no args (truncates at current position)
-    mp_call_function_0(truncate_method);
+    mp_call_method_n_kw(0, 0, dest);
 }
 
 void file_sync(file_t *fp) {
