@@ -42,6 +42,7 @@
 #include "omv_gpu.h"
 
 static d2_device *dev;
+static d2_color OMV_ATTR_SECTION(OMV_ATTR_ALIGNED(CLUT_BUFFER[256], 32), ".dma_buffer");
 
 extern char _gpu_memory_start;
 extern char _gpu_memory_end;
@@ -89,16 +90,6 @@ int omv_gpu_init() {
         __fatal_error("Failed to init GPU hardware");
     }
 
-#if 0
-    d2_setblendmode(dev, d2_bm_alpha, d2_bm_one_minus_alpha);
-    d2_setalphamode(dev, d2_am_constant); // default in d2_newcontext
-    d2_setlinecap(dev, d2_lc_butt);
-    d2_setantialiasing(dev, 1);
-    d2_setblur(dev, 0);
-    d2_settextureoperation(dev, d2_to_one, d2_to_copy, d2_to_copy, d2_to_copy);
-    d2_setfillmode(dev, d2_fm_texture);
-    d2_settexturemode(dev, d2_tm_filter);
-#endif
     return 0;
 }
 
@@ -109,17 +100,30 @@ void omv_gpu_deinit() {
     }
 }
 
-static d2_u32 omv_gpu_pixfmt(uint32_t omv_pixfmt) {
+static void omv_gpu_load_clut(const uint16_t *color_palette, const uint8_t *alpha_palette) {
+    for (int i = 0; i < 256; i++) {
+        int r, g, b;
+        if (color_palette) {
+            int pixel = color_palette[i];
+            r = COLOR_RGB565_TO_R8(pixel);
+            g = COLOR_RGB565_TO_G8(pixel);
+            b = COLOR_RGB565_TO_B8(pixel);
+        } else {
+            r = g = b = i;
+        }
+        int a = alpha_palette ? alpha_palette[i] : 255;
+        CLUT_BUFFER[i] = a << 24 | r << 16 | g << 8 | b;
+    }
+}
+
+static d2_u32 omv_gpu_pixfmt(uint32_t omv_pixfmt, bool clut) {
     switch (omv_pixfmt) {
-        case PIXFORMAT_BINARY:
-            return d2_mode_alpha1;
-        case PIXFORMAT_BAYER_ANY:
         case PIXFORMAT_GRAYSCALE:
-            return d2_mode_alpha8;
+            return clut ? d2_mode_i8 | d2_mode_clut : d2_mode_alpha8;
         case PIXFORMAT_RGB565:
             return d2_mode_rgb565;
     }
-    mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Pixel format is not supported"));
+    __builtin_unreachable();
 }
 
 int omv_gpu_draw_image(image_t *src_img,
@@ -131,10 +135,36 @@ int omv_gpu_draw_image(image_t *src_img,
                        const uint8_t *alpha_palette,
                        image_hint_t hint,
                        float *transform) {
-    // Belnding is not supported yet and transformations are not supported.
-    if (color_palette || alpha_palette || transform) {
+    // GPU2D can only draw on RGB565/GRAYSCALE buffers.
+    if (dst_img->pixfmt != PIXFORMAT_RGB565 && dst_img->pixfmt != PIXFORMAT_GRAYSCALE) {
         return -1;
     }
+
+    // GPU can only blit grayscale destinations with a grayscale source.
+    if (dst_img->pixfmt == PIXFORMAT_GRAYSCALE &&
+        (src_img->pixfmt != PIXFORMAT_GRAYSCALE || alpha != 255 || color_palette || alpha_palette)) {
+        return -1;
+    }
+
+    // GPU2D can only read from RGB565 or GRAYSCALE buffers.
+    // If the source image is RGB565, it must not have a color or alpha palette.
+    if (src_img->pixfmt != PIXFORMAT_GRAYSCALE &&
+        (src_img->pixfmt != PIXFORMAT_RGB565 || color_palette || alpha_palette)) {
+        return -1;
+    }
+
+    // Transformations are not supported.
+    if (transform) {
+        return -1;
+    }
+
+    // Check GPU hardware limits.
+    if (src_rect->x >= 1024 || src_rect->y >= 1024 ||
+        dst_rect->w >= 1024 || dst_rect->h >= 1024 ||
+        dst_rect->x >= 2048 || dst_rect->y >= 2048) {
+        return -1;
+    }
+
     d2_s32 err;
     d2_u32 blit_flags = 0;
 
@@ -142,23 +172,45 @@ int omv_gpu_draw_image(image_t *src_img,
     err = d2_selectrenderbuffer(dev, rbuffer);
     OMV_GPU_CHECK_ERROR(err);
 
-    d2_u32 dst_pixfmt = omv_gpu_pixfmt(dst_img->pixfmt);
+    d2_u32 dst_pixfmt = omv_gpu_pixfmt(dst_img->pixfmt, false);
     err = d2_framebuffer(dev, dst_img->data, dst_img->w, dst_img->w, dst_img->h, dst_pixfmt);
     OMV_GPU_CHECK_ERROR(err);
 
-    d2_u32 src_pixfmt = omv_gpu_pixfmt(src_img->pixfmt);
+    d2_u32 src_pixfmt = omv_gpu_pixfmt(src_img->pixfmt, dst_img->pixfmt == PIXFORMAT_RGB565);
     err = d2_setblitsrc(dev, src_img->data, src_img->w, src_img->w, src_img->h, src_pixfmt);
+    OMV_GPU_CHECK_ERROR(err);
+
+    err = d2_setalpha(dev, alpha);
+    OMV_GPU_CHECK_ERROR(err);
+
+    err = d2_setblendmode(dev, d2_bm_alpha, hint & IMAGE_HINT_BLACK_BACKGROUND ?
+                          d2_bm_zero : d2_bm_one_minus_alpha);
     OMV_GPU_CHECK_ERROR(err);
 
     if (hint & IMAGE_HINT_BILINEAR) {
         blit_flags |= d2_bf_filter;
     }
 
-    if (src_pixfmt == d2_mode_alpha8 || dst_pixfmt == d2_mode_alpha8) {
-        blit_flags |= d2_bf_usealpha;
+    if (hint & IMAGE_HINT_HMIRROR) {
+        blit_flags |= d2_bf_mirroru;
     }
 
-    // Flush source image
+    if (hint & IMAGE_HINT_VFLIP) {
+        blit_flags |= d2_bf_mirrorv;
+    }
+
+    if (src_img->pixfmt == PIXFORMAT_GRAYSCALE) {
+        blit_flags |= d2_bf_usealpha;
+
+        if (dst_img->pixfmt == PIXFORMAT_RGB565) {
+            omv_gpu_load_clut(color_palette, alpha_palette);
+            err = d2_settexclut(dev, CLUT_BUFFER);
+            OMV_GPU_CHECK_ERROR(err);
+        }
+    }
+
+    // Flush destination/source image
+    SCB_CleanInvalidateDCache_by_Addr(dst_img->data, image_size(dst_img));
     SCB_CleanDCache_by_Addr(src_img->data, image_size(src_img));
 
     // Copy source image to the framebuffer.
@@ -221,5 +273,3 @@ static void omv_gpu_check_error(uint32_t error, uint32_t line) {
 
     mp_raise_msg_varg(&mp_type_RuntimeError, (mp_rom_error_text_t) errors[error], line);
 }
-
-
