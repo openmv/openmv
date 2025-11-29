@@ -67,17 +67,18 @@ extern unsigned char OMV_BOARD_UID_ADDR[12];    // Unique address.
 #define OMV_FIR_MLX90641_ENABLE         (0)
 #define OMV_FIR_AMG8833_ENABLE          (1)
 
-// Debugging configuration.
-#define OMV_TUSBDBG_ENABLE              (CORE_M55_HP)
-#define OMV_TUSBDBG_PACKET              (512)
-#define OMV_TUSBDBG_BUFFER              (4096)
-
 // UMM heap block size
 #define OMV_UMM_BLOCK_SIZE              256
 
 // USB config.
 #define OMV_USB_IRQN                    (USB_IRQ_IRQn)
 #define OMV_USB_SWITCH_PIN              (&omv_pin_USB_SWITCH)
+
+// OpenMV protocol configuration.
+#define OMV_PROTOCOL_MAX_BUFFER_SIZE        (8192)
+#define OMV_PROTOCOL_HW_CAPS                OMV_PROTOCOL_HW_CAPS_MAKE( \
+        HAS_GPU, HAS_NPU, HAS_JPEG, HAS_CRC, HAS_PMU, HAS_WIFI,        \
+        HAS_BT, HAS_SD, HAS_ETH, HAS_USB_HS, HAS_MULTICORE)
 
 // Linker script constants (see the linker script template alif.ld.S).
 // Note: fb_alloc is a stack-based, dynamically allocated memory on FB.
