@@ -66,6 +66,7 @@ OMV_CFLAGS += -I$(TOP_DIR)/modules
 OMV_CFLAGS += -I$(TOP_DIR)/ports/$(PORT)
 OMV_CFLAGS += -I$(TOP_DIR)/ports/$(PORT)/modules
 OMV_CFLAGS += -I$(OMV_BOARD_CONFIG_DIR)
+OMV_CFLAGS += -I$(TOP_DIR)/protocol
 
 MPY_CFLAGS += -I$(MP_BOARD_CONFIG_DIR)
 MPY_CFLAGS += -I$(BUILD)/$(MICROPY_DIR)
@@ -120,7 +121,7 @@ MPY_FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/,\
 	frozen_content.o                    \
 	mcu/arm/errorhandler.o              \
 	mcu/arm/startup.o                   \
-	mcu/arm/systick.o                   \
+	mcu/arm/ticks.o                     \
 )
 
 ifeq ($(MICROPY_PY_ML_TFLM), 1)
