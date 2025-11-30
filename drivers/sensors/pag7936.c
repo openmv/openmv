@@ -194,7 +194,25 @@ static const uint16_t default_regs[][2] = {
     { 0x0989,   0x10 },
     { 0x098B,   0x91 },
     { 0x098E,   0x06 },
-    { 0x0850,   0x00 },
+    { 0x0850,   0x03 },
+    { 0x0851,   0x20 },
+    { 0x0852,   0x40 },
+    { 0x0853,   0x40 },
+    { 0x0854,   0x40 },
+    { 0x0855,   0x60 },
+    { 0x0856,   0x80 },
+    { 0x0857,   0x20 },
+    { 0x0858,   0x40 },
+    { 0x0859,   0x40 },
+    { 0x085A,   0x40 },
+    { 0x085B,   0x60 },
+    { 0x085C,   0x80 },
+    { 0x085D,   0x0C },
+    { 0x085E,   0x0C },
+    { 0x085F,   0x0C },
+    { 0x0860,   0x0C },
+    { 0x0861,   0x0C },
+    { 0x0862,   0x0C },
     { 0x094A,   0x43 },
     { 0x09A0,   0x08 },
     { 0x0032,   0x00 },
@@ -243,7 +261,25 @@ static const uint16_t default_regs[][2] = {
     { 0x0985,   0x10 },
     { 0x098B,   0x90 },
     { 0x098E,   0x06 },
-    { 0x0850,   0x00 }, // TODO BPC
+    { 0x0850,   0x03 },
+    { 0x0851,   0x20 },
+    { 0x0852,   0x40 },
+    { 0x0853,   0x40 },
+    { 0x0854,   0x40 },
+    { 0x0855,   0x60 },
+    { 0x0856,   0x80 },
+    { 0x0857,   0x20 },
+    { 0x0858,   0x40 },
+    { 0x0859,   0x40 },
+    { 0x085A,   0x40 },
+    { 0x085B,   0x60 },
+    { 0x085C,   0x80 },
+    { 0x085D,   0x0C },
+    { 0x085E,   0x0C },
+    { 0x085F,   0x0C },
+    { 0x0860,   0x0C },
+    { 0x0861,   0x0C },
+    { 0x0862,   0x0C },
     { 0x094A,   0x43 },
     { 0x09A0,   0x08 },
     { 0x0724,   0x10 },
@@ -695,10 +731,10 @@ static int ioctl(omv_csi_t *csi, int request, va_list ap) {
             ret |= omv_i2c_write_bytes(csi->i2c, csi->slv_addr, buf, 2, OMV_I2C_XFER_NO_STOP);
             ret |= omv_i2c_read_bytes(csi->i2c, csi->slv_addr, (uint8_t *) rgb_stats, sizeof(rgb_stats), 0);
 
-            *va_arg(ap, uint32_t *) = rgb_stats[2];
             *va_arg(ap, uint32_t *) = rgb_stats[1];
-            *va_arg(ap, uint32_t *) = rgb_stats[3];
+            *va_arg(ap, uint32_t *) = rgb_stats[2];
             *va_arg(ap, uint32_t *) = rgb_stats[0];
+            *va_arg(ap, uint32_t *) = rgb_stats[3];
             break;
         }
         default: {
