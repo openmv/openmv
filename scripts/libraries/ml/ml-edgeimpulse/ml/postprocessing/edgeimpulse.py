@@ -72,18 +72,20 @@ class Fomo:
         # Get the class information
         bb_classes = np.argmax(bb[:, _FOMO_CLASSES:], axis=1) + _FOMO_CLASSES
 
+        # Compute the bounding box information
+        x_center = (bb_cols + 0.5) / ow
+        y_center = (bb_rows + 0.5) / oh
+        w_rel = np.full(len(bb_cols), self.w_scale / ow) * 0.5
+        h_rel = np.full(len(bb_rows), self.h_scale / oh) * 0.5
+
         # Scale the bounding boxes to have enough integer precision for NMS
         ib, ih, iw, ic = model.input_shape[0]
-        x_center = ((bb_cols + 0.5) / ow) * iw
-        y_center = ((bb_rows + 0.5) / oh) * ih
-        w_rel = np.full(len(bb_cols), self.w_scale / ow) * iw
-        h_rel = np.full(len(bb_rows), self.h_scale / oh) * ih
+        xmin = (x_center - w_rel) * iw
+        ymin = (y_center - h_rel) * ih
+        xmax = (x_center + w_rel) * iw
+        ymax = (y_center + h_rel) * ih
 
         nms = NMS(iw, ih, inputs[0].roi)
         for i in range(bb.shape[0]):
-            nms.add_bounding_box(x_center[i] - (w_rel[i] / 2),
-                                 y_center[i] - (h_rel[i] / 2),
-                                 x_center[i] + (w_rel[i] / 2),
-                                 y_center[i] + (h_rel[i] / 2),
-                                 bb_scores[i], bb_classes[i])
+            nms.add_bounding_box(xmin[i], ymin[i], xmax[i], ymax[i], bb_scores[i], bb_classes[i])
         return nms.get_bounding_boxes(threshold=self.nms_threshold, sigma=self.nms_sigma)
