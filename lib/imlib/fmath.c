@@ -48,8 +48,13 @@ float fast_expf(float x) {
     // IEEE binary32 format
     e.e = (e.e - 1023 + 127) & 0xFF; // rebase
 
-    uint32_t packed = (e.s << 31) | (e.e << 23) | e.m << 3;
-    return *((float *) &packed);
+    union {
+        uint32_t u;
+        float f;
+    } packed;
+
+    packed.u = (e.s << 31) | (e.e << 23) | e.m << 3;
+    return packed.f;
 }
 
 /*
