@@ -186,6 +186,7 @@ endif
 include lib/cmsis/cmsis.mk
 include lib/alif/alif.mk
 include common/common.mk
+include protocol/protocol.mk
 include drivers/drivers.mk
 include lib/imlib/imlib.mk
 include lib/tflm/tflm.mk

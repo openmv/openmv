@@ -69,8 +69,6 @@
 
 #include "omv_boardconfig.h"
 #include "framebuffer.h"
-#include "usbdbg.h"
-#include "tinyusb_debug.h"
 #include "fb_alloc.h"
 #include "file_utils.h"
 #include "mp_utils.h"
@@ -81,6 +79,7 @@
 #include "py_audio.h"
 #include "py_imu.h"
 #include "omv_gpio.h"
+#include "omv_protocol.h"
 
 NORETURN void __fatal_error(const char *msg);
 extern void machine_pin_irq_deinit(void);
@@ -125,9 +124,6 @@ soft_reset:
     #ifdef IMLIB_ENABLE_IMAGE_FILE_IO
     file_buffer_init0();
     #endif
-    #if CORE_M55_HP
-    usbdbg_init();
-    #endif
     #if MICROPY_PY_IMU
     py_imu_init();
     #endif
@@ -168,12 +164,6 @@ soft_reset:
     mod_network_init();
     #endif
 
-    // TODO: _boot on HP uses OSPI which is disabled right now.
-    #if MICROPY_HW_ENABLE_OSPI || CORE_M55_HE
-    // Execute _boot.py.
-    pyexec_frozen_module("_boot.py", false);
-    #endif
-
     // Initialize TinyUSB after the filesystem is mounted.
     #if MICROPY_HW_ENABLE_USBDEV
     if (!tusb_inited()) {
@@ -181,26 +171,30 @@ soft_reset:
     }
     #endif
 
-    // Run boot.py script.
-    bool interrupted = mp_exec_bootscript("boot.py", true);
+    #if CORE_M55_HP
+    // Initialize OpenMV protocol
+    omv_protocol_init_default();
+    #endif
 
-    // Run main.py script on first soft-reset.
-    if (first_soft_reset && !interrupted && mp_vfs_import_stat("main.py")) {
-        mp_exec_bootscript("main.py", true);
-        goto soft_reset_exit;
+    // Execute _boot.py.
+    pyexec_frozen_module("_boot.py", false);
+
+    // Run boot.py every reset and main.py on first soft-reset
+    if (pyexec_file_if_exists("boot.py") && first_soft_reset) {
+        pyexec_file_if_exists("main.py");
     }
 
     #if CORE_M55_HE
     goto soft_reset_exit;
     #endif
 
-    // If there's no script ready, just re-exec REPL
-    while (!usbdbg_script_ready()) {
+    while (!omv_protocol_exec_script()) {
         nlr_buf_t nlr;
+
         if (nlr_push(&nlr) == 0) {
-            // enable IDE interrupt
-            usbdbg_set_irq_enabled(true);
-            // run REPL
+            // Enable Ctrl+C to interrupt script or REPL.
+            mp_hal_set_interrupt_char(CHAR_CTRL_C);
+
             if (pyexec_mode_kind == PYEXEC_MODE_RAW_REPL) {
                 if (pyexec_raw_repl() != 0) {
                     break;
@@ -214,22 +208,10 @@ soft_reset:
         }
     }
 
-    if (usbdbg_script_ready()) {
-        nlr_buf_t nlr;
-        if (nlr_push(&nlr) == 0) {
-            // Enable IDE interrupt
-            usbdbg_set_irq_enabled(true);
-            // Execute the script.
-            pyexec_str(usbdbg_get_script(), true);
-            // Disable IDE interrupts
-            usbdbg_set_irq_enabled(false);
-            nlr_pop();
-        } else {
-            mp_obj_print_exception(&mp_plat_print, (mp_obj_t) nlr.ret_val);
-        }
-    }
-
+#if CORE_M55_HE
 soft_reset_exit:
+#endif
+    mp_hal_set_interrupt_char(-1);
     mp_printf(MP_PYTHON_PRINTER, "MPY: soft reboot\n");
     #if MICROPY_PY_CSI
     omv_csi_abort_all();
