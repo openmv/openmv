@@ -32,8 +32,6 @@ export STRIP   = $(Q)arm-none-eabi-strip -s
 export OBJCOPY = $(Q)arm-none-eabi-objcopy
 export OBJDUMP = $(Q)arm-none-eabi-objdump
 export PYTHON  = $(Q)python3
-export MKDFU   = $(MICROPY_DIR)/tools/dfu.py
-export PYDFU   = $(Q)tools/pydfu.py
 export MKDIR   = $(Q)mkdir
 export ECHO    = $(Q)@echo
 export MAKE    = $(Q)make
@@ -231,6 +229,10 @@ MICROPY_ARGS += MICROPY_PY_ML_STAI=1
 endif
 
 MPY_PENDSV_ENTRIES := $(shell echo $(MPY_PENDSV_ENTRIES) | tr -d '[:space:]')
+
+MPY_CFLAGS += -DMICROPY_HW_USB_VID=$(OMV_USB_VID)
+MPY_CFLAGS += -DMICROPY_HW_USB_PID=$(OMV_USB_PID)
+
 MPY_CFLAGS += -DMICROPY_BOARD_PENDSV_ENTRIES="$(MPY_PENDSV_ENTRIES)"
 MPY_CFLAGS += -DMP_CONFIGFILE=\<$(OMV_PORT_DIR)/omv_mpconfigport.h\>
 

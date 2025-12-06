@@ -220,12 +220,4 @@ $(ROMFS_IMAGE): $(ROMFS_CONFIG) | $(FIRMWARE)
             --build-dir $(BUILD) --config $(ROMFS_CONFIG)
 	touch $@
 
-# Flash the main firmware image
-flash_image::
-	$(PYDFU) -u $(FW_DIR)/$(FIRMWARE).dfu
-
-# Flash the main firmware image using dfu_util
-flash_image_dfu_util::
-	dfu-util -a 0 -d $(DFU_DEVICE) -D $(FW_DIR)/$(FIRMWARE).dfu
-
 include common/mkrules.mk
