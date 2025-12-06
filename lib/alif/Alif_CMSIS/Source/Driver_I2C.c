@@ -14,12 +14,10 @@
 #include "stdio.h"
 
 /* system includes */
-#include "Driver_I2C.h"
 #include "Driver_I2C_Private.h"
-#include "i2c.h"
 
 /* Driver version */
-#define ARM_I2C_DRV_VERSION    ARM_DRIVER_VERSION_MAJOR_MINOR(1, 0)
+#define ARM_I2C_DRV_VERSION    ARM_DRIVER_VERSION_MAJOR_MINOR(1, 3)
 
 /* Driver Version */
 static const ARM_DRIVER_VERSION DriverVersion = {
@@ -594,7 +592,6 @@ static int32_t ARM_I2C_MasterTransmit(I2C_RESOURCES *I2C,
          * fields of I2C transfer structure */
         I2C->transfer.tx_buf        = (uint8_t *)NULL;
         I2C->transfer.tx_total_num  = 0U;
-        I2C->transfer.pending       = false;
 
         /* Start the DMA engine for sending the data to I2C */
         dma_params.peri_reqno    = (int8_t)I2C->dma_cfg->dma_tx.dma_periph_req;
@@ -721,43 +718,57 @@ static int32_t ARM_I2C_MasterReceive(I2C_RESOURCES *I2C,
     I2C->transfer.rx_over          = 0U;
     I2C->transfer.curr_stat        = I2C_TRANSFER_MST_RX;
 
-    I2C_SetTargetAddress(I2C, addr);
-
-#if I2C_DMA_ENABLE
-    /* Check if DMA is enabled for this */
-    if (I2C->dma_enable)
+    if(I2C->wr_mode_info & I2C_WRITE_READ_MODE_EN)
     {
-        /* Start the DMA engine for sending the data to I2C */
-        dma_params.peri_reqno    = (int8_t)I2C->dma_cfg->dma_rx.dma_periph_req;
-        dma_params.dir           = ARM_DMA_DEV_TO_MEM;
-        dma_params.cb_event      = I2C->dma_cb;
-        dma_params.src_addr      = i2c_get_data_addr(I2C->regs);
-        dma_params.dst_addr      = (void*)data;
-        dma_params.num_bytes     = (num * 2U);
-        dma_params.irq_priority  = I2C->dma_irq_priority;
-
-        /* i2c TX/RX FIFO is 2-byte aligned */
-        dma_params.burst_size = BS_BYTE_2;
-
-        /* Maximum DMA Rx burst length can be 1*/
-        dma_params.burst_len = 1U;
-
-        i2c_enable_rx_dma(I2C->regs);
-        i2c_set_dma_rx_level(I2C->regs, (dma_params.burst_len - 1U));
-
-        /* Start DMA transfer */
-        if(I2C_DMA_Start(&I2C->dma_cfg->dma_rx, &dma_params) != ARM_DRIVER_OK)
-        {
-            return ARM_DRIVER_ERROR;
-        }
-
-        i2c_enable_dma_master_rx(I2C->regs);
+        /* fill the i2c transfer structure required for Write-Read xfer */
+        I2C->transfer.tx_buf           = (uint8_t *)data;
+        I2C->transfer.tx_total_num     = I2C_WRITE_READ_TAR_REG_ADDR_SIZE
+                                         (I2C->wr_mode_info);
+        I2C->transfer.tx_curr_cnt      = 0U;
+        I2C->transfer.wr_mode          = true;
+        I2C_SetTargetAddress(I2C, addr);
+        i2c_master_enable_rx_interrupt(I2C->regs);
     }
     else
-#endif
     {
-        /* Enabling the rx interrupt */
-        i2c_master_enable_rx_interrupt(I2C->regs);
+        I2C_SetTargetAddress(I2C, addr);
+
+#if I2C_DMA_ENABLE
+        /* Check if DMA is enabled for this */
+        if (I2C->dma_enable)
+        {
+            /* Start the DMA engine for sending the data to I2C */
+            dma_params.peri_reqno    = (int8_t)I2C->dma_cfg->dma_rx.dma_periph_req;
+            dma_params.dir           = ARM_DMA_DEV_TO_MEM;
+            dma_params.cb_event      = I2C->dma_cb;
+            dma_params.src_addr      = i2c_get_data_addr(I2C->regs);
+            dma_params.dst_addr      = (void*)data;
+            dma_params.num_bytes     = (num * 2U);
+            dma_params.irq_priority  = I2C->dma_irq_priority;
+
+            /* i2c TX/RX FIFO is 2-byte aligned */
+            dma_params.burst_size = BS_BYTE_2;
+
+            /* Maximum DMA Rx burst length can be 1*/
+            dma_params.burst_len = 1U;
+
+            i2c_enable_rx_dma(I2C->regs);
+            i2c_set_dma_rx_level(I2C->regs, (dma_params.burst_len - 1U));
+
+            /* Start DMA transfer */
+            if(I2C_DMA_Start(&I2C->dma_cfg->dma_rx, &dma_params) != ARM_DRIVER_OK)
+            {
+                return ARM_DRIVER_ERROR;
+            }
+
+            i2c_enable_dma_master_rx(I2C->regs);
+        }
+        else
+#endif
+        {
+            /* Enabling the rx interrupt */
+            i2c_master_enable_rx_interrupt(I2C->regs);
+        }
     }
     return ARM_DRIVER_OK;
 }
@@ -1147,6 +1158,19 @@ static int32_t ARM_I2C_Control(I2C_RESOURCES  *I2C,
 
         break;
 
+    case ARM_I2C_MODE_WRITE_READ:
+        /* Write-Read combined mode selection */
+        if(arg & ARM_I2C_WRITE_READ_MODE_EN)
+        {
+            I2C->wr_mode_info  = I2C_WRITE_READ_MODE_EN;
+            I2C->wr_mode_info |= I2C_WRITE_READ_TAR_REG_ADDR_SIZE
+                                 (ARM_I2C_TAR_REG_ADDR_SIZE(arg));
+        }
+        else
+        {
+            I2C->wr_mode_info &= ~I2C_WRITE_READ_MODE_EN;
+        }
+        break;
     default:
         return ARM_DRIVER_ERROR_UNSUPPORTED;
     }

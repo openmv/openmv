@@ -23,7 +23,7 @@
 
 /* Includes ------------------------------------------------------------------*/
 #include <stdint.h>
-
+#include <cmsis_version.h>
 
 #ifdef  __cplusplus
 extern "C"
@@ -64,6 +64,7 @@ typedef struct
   __IM  uint32_t EWIC_PSR;               /*!< Offset: 0x600 (R/ )  EWIC Pend Summary Register */
 } _EWIC_Type;
 
+#if (__CM_CMSIS_VERSION < 0x00060000)
 /* EWIC Control (EWIC_CR) Register Definitions */
 #define EWIC_EWIC_CR_EN_Pos                 0U                                         /*!< EWIC EWIC_CR: EN Position */
 #define EWIC_EWIC_CR_EN_Msk                (0x1UL /*<< EWIC_EWIC_CR_EN_Pos*/)          /*!< EWIC EWIC_CR: EN Mask */
@@ -115,7 +116,7 @@ typedef struct
 #define EWIC_EWIC_PSR_NZA_Msk              (0x1UL /*<< EWIC_EWIC_PSR_NZA_Pos*/)        /*!< EWIC EWIC_PSR: NZA Mask */
 
 /*@}*/ /* end of group EWIC_Type */
-
+#endif
 /**
   @brief WakeUp Interrupt Controller(WIC) Type:-
  */

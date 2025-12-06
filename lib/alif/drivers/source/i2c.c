@@ -496,6 +496,7 @@ void i2c_master_tx_isr(I2C_Type *i2c, i2c_transfer_info_t *transfer)
                 transfer->tx_curr_cnt++;
                 transfer->curr_cnt = transfer->tx_curr_cnt;
 
+
                 /* Updating transmitting data to FIFO */
                 i2c->I2C_DATA_CMD = xmit_data;
 
@@ -600,23 +601,36 @@ void i2c_master_rx_isr(I2C_Type *i2c, i2c_transfer_info_t *transfer)
     {
         if (i2c_int_status & I2C_IC_INTR_STAT_TX_EMPTY)
         {
-            while (i2c_tx_ready(i2c))
+            if(transfer->wr_mode)
             {
+                transfer->wr_mode = false;
+                while(i2c_tx_ready(i2c))
+                {
+                    xmit_data = (uint16_t)(transfer->tx_buf[transfer->tx_curr_cnt++])
+                                                           | I2C_IC_DATA_CMD_WRITE_REQ;
+                    /* Updating transmitting data to FIFO */
+                    i2c->I2C_DATA_CMD = xmit_data;
+
+                    if (transfer->tx_curr_cnt >= transfer->tx_total_num)
+                    {
+                        break;
+                    }
+                }
+            }
+            do {
+                i2c->I2C_DATA_CMD = I2C_IC_DATA_CMD_READ_REQ;
+
                 /* completed sending all the read commands? */
-                if (transfer->rx_curr_tx_index >= transfer->rx_total_num)
+                if (++transfer->rx_curr_tx_index >= transfer->rx_total_num)
                 {
                     /* added all the read commands to FIFO.
                      * now we have to read from i2c so disable TX interrupt. */
                     i2c_mask_interrupt(i2c, I2C_IC_INTR_STAT_TX_EMPTY);
                     break;
                 }
-                xmit_data = I2C_IC_DATA_CMD_READ_REQ;
-
-                transfer->rx_curr_tx_index++;
 
                 /* Updating transmitting data to FIFO */
-                i2c->I2C_DATA_CMD = xmit_data;
-            }
+            } while (i2c_tx_ready(i2c));
         }
         /* Checks if transmitted all the read condition,
          *  waiting for i2c to receive data from slave.

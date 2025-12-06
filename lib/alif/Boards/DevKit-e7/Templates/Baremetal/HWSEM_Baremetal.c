@@ -28,6 +28,7 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "RTE_Device.h"
 #include "Driver_USART.h"
 #include <pinconf.h>
 #include "Driver_HWSEM.h"
@@ -53,11 +54,6 @@ const char * rel_msg = "\nM55_HE releasing the semaphore\r\n\n";
 /* Uart driver instance */
 #define UART    4
 
-#define UART_CB_TX_EVENT          1U << 0
-#define UART_CB_RX_EVENT          1U << 1
-#define UART_CB_RX_TIMEOUT        1U << 2
-
-volatile uint32_t event_flags_uart = 0;
 volatile uint32_t event_flags_hwsem = 0;
 
 /* UART Driver */
@@ -67,6 +63,14 @@ static ARM_DRIVER_USART *USARTdrv = &ARM_Driver_USART_(UART);
 /* HWSEM Driver */
 extern ARM_DRIVER_HWSEM ARM_Driver_HWSEM_(HWSEM);
 static ARM_DRIVER_HWSEM *HWSEMdrv = &ARM_Driver_HWSEM_(HWSEM);
+
+#if !RTE_UART4_BLOCKING_MODE_ENABLE
+
+#define UART_CB_TX_EVENT          1U << 0
+#define UART_CB_RX_EVENT          1U << 1
+#define UART_CB_RX_TIMEOUT        1U << 2
+
+volatile uint32_t event_flags_uart = 0;
 
 /**
  * @function    static void myUART_callback(uint32_t event)
@@ -95,6 +99,7 @@ static void myUART_callback(uint32_t event)
         event_flags_uart |= UART_CB_RX_TIMEOUT;
     }
 }
+#endif
 
 /**
  * @function    static void myHWSEM_callback(int32_t event, uint8_t sem_id)
@@ -197,9 +202,13 @@ void uart_hwsem_demo()
             goto error_uninitialize;
         }
 
+#if !RTE_UART4_BLOCKING_MODE_ENABLE
         /* Initialize UART driver */
         ret = USARTdrv->Initialize(myUART_callback);
-
+#else
+        /* Initialize UART driver */
+        ret = USARTdrv->Initialize(NULL);
+#endif
         if (ret)
         {
             printf("\r\n Error in UART Initialize.\r\n");
@@ -238,8 +247,9 @@ void uart_hwsem_demo()
             goto error_exit;
         }
 
+#if !RTE_UART4_BLOCKING_MODE_ENABLE
         event_flags_uart &= ~UART_CB_TX_EVENT;
-
+#endif
         ret = USARTdrv->Send(acq_msg, strlen(acq_msg));
 
         if (ret != ARM_DRIVER_OK)
@@ -248,14 +258,16 @@ void uart_hwsem_demo()
             goto error_exit;
         }
 
+#if !RTE_UART4_BLOCKING_MODE_ENABLE
         /* wait for event flag after UART call */
         while (!(event_flags_uart & (UART_CB_TX_EVENT)));
-
+#endif
         /* Print 10 messages */
         for (int iter = 1; iter <= 10; iter++)
         {
+#if !RTE_UART4_BLOCKING_MODE_ENABLE
             event_flags_uart &= ~UART_CB_TX_EVENT;
-
+#endif
             len = sprintf(uart_msg, "%s %d\r\n", msg, iter);
 
             ret = USARTdrv->Send(uart_msg, len);
@@ -266,15 +278,17 @@ void uart_hwsem_demo()
                 goto error_exit;
             }
 
+#if !RTE_UART4_BLOCKING_MODE_ENABLE
             /* wait for event flag after UART call */
             while (!(event_flags_uart & (UART_CB_TX_EVENT)));
-
+#endif
             for(uint32_t count = 0; count < 5; count++)
                 sys_busy_loop_us(100000);
         }
 
+#if !RTE_UART4_BLOCKING_MODE_ENABLE
         event_flags_uart &= ~UART_CB_TX_EVENT;
-
+#endif
         ret = USARTdrv->Send(rel_msg, strlen(rel_msg));
 
         if (ret != ARM_DRIVER_OK)
@@ -283,9 +297,10 @@ void uart_hwsem_demo()
             goto error_exit;
         }
 
+#if !RTE_UART4_BLOCKING_MODE_ENABLE
         /* wait for event flag after UART call */
         while (!(event_flags_uart & (UART_CB_TX_EVENT)));
-
+#endif
         ret = USARTdrv->PowerControl(ARM_POWER_OFF);
 
         if (ret != ARM_DRIVER_OK)
