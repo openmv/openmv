@@ -61,8 +61,7 @@ uint32_t service_error_code;
 uint32_t error_code = SERVICES_REQ_SUCCESS;
 
 /* Buffer for FileX FF_Disk_t sector cache. This must be large enough for at least one sector , which are typically 512 bytes in size. */
-unsigned char media_memory[SD_BLK_SIZE*NUM_BLK_TEST] __attribute__((section("sd_dma_buf"))) __attribute__((aligned(512)));
-unsigned char filebuffer[SD_BLK_SIZE*NUM_BLK_TEST] __attribute__((section("sd_dma_buf"))) __attribute__((aligned(512)));
+unsigned char filebuffer[(SD_BLK_SIZE*NUM_BLK_TEST) + 1] __attribute__((section("sd_dma_buf"))) __attribute__((aligned(512)));
 FATFS sd_card __attribute__((section("sd_dma_buf"))) __attribute__((aligned(512)));
 FIL test_file;
 

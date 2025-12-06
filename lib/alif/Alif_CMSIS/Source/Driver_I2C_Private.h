@@ -11,7 +11,7 @@
 #ifndef DRIVER_I2C_PRIVATE_H_
 #define DRIVER_I2C_PRIVATE_H_
 
-#include "Driver_I2C.h"
+#include "Driver_I2C_EX.h"
 #include "i2c.h"
 
 /**** system includes ****/
@@ -63,6 +63,7 @@ typedef struct _I2C_RESOURCES
     IRQn_Type               irq_num;            /* i2c interrupt vector number             */
     i2c_speed_mode_t        speed_mode;         /* I2C speed mode                          */
     uint8_t                 mode;               /* current working mode as master or slave */
+    uint8_t                 wr_mode_info;       /* Write-Read combined mode - Bit0 - On/Off, Bits7-4 - Tar reg addr size */
 #if I2C_DMA_ENABLE
     const bool              dma_enable;         /* I2C dma enable */
     const uint32_t          dma_irq_priority;   /* DMA IRQ priority number */

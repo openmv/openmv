@@ -96,7 +96,7 @@ static int32_t setup_PinMUX(void)
     if (ret)
         return -1;
 
-    ret = pinconf_set(PORT_10, PIN_7, PINMUX_ALTERNATE_FUNCTION_1,
+    ret = pinconf_set(PORT_10, PIN_7, PINMUX_ALTERNATE_FUNCTION_7,
                      PADCTRL_OUTPUT_DRIVE_STRENGTH_12MA | PADCTRL_READ_ENABLE);
     if (ret)
         return -1;
@@ -107,11 +107,6 @@ static int32_t setup_PinMUX(void)
         return -1;
 
     ret = pinconf_set(PORT_8, PIN_0, PINMUX_ALTERNATE_FUNCTION_1, PADCTRL_OUTPUT_DRIVE_STRENGTH_12MA);
-    if (ret)
-        return -1;
-
-    ret = pinconf_set(PORT_5, PIN_6, PINMUX_ALTERNATE_FUNCTION_1,
-                     PADCTRL_READ_ENABLE | PADCTRL_OUTPUT_DRIVE_STRENGTH_12MA);
     if (ret)
         return -1;
 

@@ -69,10 +69,12 @@
  *----------------------------------------------------------------------------*/
 #define  MHZ            ( 1000000UL)
 
+#ifndef SYSTEM_CLOCK
 #if defined (M55_HP)
 #define  SYSTEM_CLOCK    (400U * MHZ)
 #elif defined (M55_HE)
 #define  SYSTEM_CLOCK    (160U * MHZ)
+#endif
 #endif
 
 /*----------------------------------------------------------------------------

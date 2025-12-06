@@ -91,7 +91,6 @@ static mhu_channel_combined_group_t sender_receiver_combined_ch_group(
  * @fn        void MHU_receive_message_irq_handler(uint32_t receiver_id)
  * @brief     This functions handles received messages
  * @param     receiver_id  Receiver frame id
- * @return    none
  */
 void MHU_receive_message_irq_handler(uint32_t receiver_id)
 {

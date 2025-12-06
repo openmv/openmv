@@ -116,7 +116,6 @@ static bool sender_is_access_ready(uint32_t sender_id)
 /**
  * @brief     Interrupt handler for send message
  * @param     sender_id    MHU frame ID
- * @return    None
  */
 void MHU_send_message_irq_handler(uint32_t sender_id)
 {
@@ -191,10 +190,11 @@ mhu_send_status_t MHU_send_message(uint32_t sender_id,
                                    uint32_t message_data) __attribute__((used));
 
 /**
+ * @fn mhu_send_status_t MHU_send_message(uint32_t, uint32_t, uint32_t)
  * @brief     This functions sends a message out on a channel
- * @param     sender_id
- * @param     channel_number
- * @param     message_data
+ * @param sender_id
+ * @param channel_number
+ * @param message_data
  * @return
  */
 mhu_send_status_t MHU_send_message(uint32_t sender_id,

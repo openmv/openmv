@@ -25,6 +25,7 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "RTE_Device.h"
 #include "RTE_Components.h"
 #include CMSIS_device_header
 
@@ -59,10 +60,6 @@ StackType_t IdleStack[2 * IDLE_TASK_STACK_SIZE];
 StaticTask_t IdleTcb;
 StackType_t TimerStack[2 * TIMER_SERVICE_TASK_STACK_SIZE];
 StaticTask_t TimerTcb;
-
-#define UART_CB_TX_EVENT          1U << 0
-#define UART_CB_RX_EVENT          1U << 1
-#define UART_CB_RX_TIMEOUT        1U << 2
 
 #define HWSEM_CB_EVENT            1U << 3
 
@@ -112,6 +109,12 @@ void vApplicationIdleHook(void)
 }
 /*****************Only for FreeRTOS use *************************/
 
+#if !RTE_UART4_BLOCKING_MODE_ENABLE
+
+#define UART_CB_TX_EVENT          1U << 0
+#define UART_CB_RX_EVENT          1U << 1
+#define UART_CB_RX_TIMEOUT        1U << 2
+
 /**
  * @function    void myUART_callback(uint32_t event)
  * @brief       UART isr callabck
@@ -126,6 +129,7 @@ static void myUART_callback(uint32_t event)
         xTaskNotifyFromISR(Hwsem_xHandle, UART_CB_TX_EVENT, eSetBits, NULL);
     }
 }
+#endif
 
 /**
  * @function   void HWSEM_callback(int32_t event, uint8_t sem_id)
@@ -156,7 +160,8 @@ static int32_t pinmux_init(void)
     int32_t ret;
 
     /* UART4_RX_B */
-    ret = pinconf_set(PORT_12, PIN_1, PINMUX_ALTERNATE_FUNCTION_2, PADCTRL_READ_ENABLE);
+    ret = pinconf_set(PORT_12, PIN_1, PINMUX_ALTERNATE_FUNCTION_2,
+                      PADCTRL_READ_ENABLE);
 
     if (ret)
     {
@@ -243,9 +248,13 @@ static void Hwsem_Thread(void *pvParameters)
 
             init = 0;
         }
-
+#if !RTE_UART4_BLOCKING_MODE_ENABLE
         /* Initialize UART driver */
         ret = USARTdrv->Initialize(myUART_callback);
+#else
+        /* Initialize UART driver */
+        ret = USARTdrv->Initialize(NULL);
+#endif
 
         if (ret != ARM_DRIVER_OK)
         {
@@ -294,9 +303,10 @@ static void Hwsem_Thread(void *pvParameters)
             goto error_unlock;
         }
 
+#if !RTE_UART4_BLOCKING_MODE_ENABLE
         /* wait for event flag after UART call */
         xTaskNotifyWait(NULL, UART_CB_TX_EVENT, NULL, portMAX_DELAY);
-
+#endif
         /* Print 10 messages */
         for (int iter = 1; iter <= 10; iter++)
         {
@@ -310,8 +320,10 @@ static void Hwsem_Thread(void *pvParameters)
                 goto error_unlock;
             }
 
+#if !RTE_UART4_BLOCKING_MODE_ENABLE
             /* wait for event flag after UART call */
             xTaskNotifyWait(NULL, UART_CB_TX_EVENT, NULL, portMAX_DELAY);
+#endif
             vTaskDelay(pdMS_TO_TICKS(1000));
         }
 
@@ -323,9 +335,10 @@ static void Hwsem_Thread(void *pvParameters)
             goto error_unlock;
         }
 
+#if !RTE_UART4_BLOCKING_MODE_ENABLE
         /* wait for event flag after UART call */
         xTaskNotifyWait(NULL, UART_CB_TX_EVENT, NULL, portMAX_DELAY);
-
+#endif
         ret = USARTdrv->PowerControl(ARM_POWER_OFF);
 
         if (ret != ARM_DRIVER_OK)
@@ -390,7 +403,9 @@ int main(void)
     SystemCoreClockUpdate();
 
     /* Create application main thread */
-    BaseType_t xReturned = xTaskCreate(Hwsem_Thread, "HwsemThread", 1024, NULL, configMAX_PRIORITIES-1, &Hwsem_xHandle);
+    BaseType_t xReturned = xTaskCreate(Hwsem_Thread, "HwsemThread",
+                                       STACK_SIZE, NULL,
+                                       configMAX_PRIORITIES-1, &Hwsem_xHandle);
 
     if (xReturned != pdPASS)
     {

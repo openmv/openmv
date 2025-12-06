@@ -57,6 +57,9 @@ typedef struct _ospi_hyperram_xip_config {
 
     /**< Slave select (Chip select) line used for the hyperram device */
     uint8_t slave_select;
+
+    /**< Data Frame Size used for the hyperram device */
+    uint8_t dfs;
 } ospi_hyperram_xip_config;
 
 /**

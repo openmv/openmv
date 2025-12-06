@@ -111,7 +111,7 @@ static int32_t prvSetupPinMUX( void )
     if (lRet)
         return -1;
 
-    lRet = pinconf_set(PORT_10, PIN_7, PINMUX_ALTERNATE_FUNCTION_1,
+    lRet = pinconf_set(PORT_10, PIN_7, PINMUX_ALTERNATE_FUNCTION_7,
                      PADCTRL_OUTPUT_DRIVE_STRENGTH_12MA | PADCTRL_READ_ENABLE);
     if (lRet)
         return -1;
@@ -122,11 +122,6 @@ static int32_t prvSetupPinMUX( void )
         return -1;
 
     lRet = pinconf_set(PORT_8, PIN_0, PINMUX_ALTERNATE_FUNCTION_1, PADCTRL_OUTPUT_DRIVE_STRENGTH_12MA);
-    if (lRet)
-        return -1;
-
-    lRet = pinconf_set(PORT_5, PIN_6, PINMUX_ALTERNATE_FUNCTION_1,
-                     PADCTRL_READ_ENABLE | PADCTRL_OUTPUT_DRIVE_STRENGTH_12MA);
     if (lRet)
         return -1;
 

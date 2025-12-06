@@ -1056,6 +1056,12 @@ extern const VECTOR_TABLE_Type __VECTOR_TABLE[496];
 #pragma GCC diagnostic pop
 #endif
 
+#if defined ( __clang__ ) && !defined(__ARMCC_VERSION)
+
+#undef __PROGRAM_START
+#define __PROGRAM_START __clang_copy_zero_init
+
+#endif
 /*----------------------------------------------------------------------------
   Reset Handler called on controller reset
  *----------------------------------------------------------------------------*/

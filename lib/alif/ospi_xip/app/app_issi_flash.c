@@ -153,12 +153,6 @@ static int32_t setup_pinmux(void)
     if (ret)
         return -1;
 
-    /* P5_6 is needed to support proper alt function selection of P10_7 */
-    ret = pinconf_set(PORT_5, PIN_6, OSPI1_RXDS_PIN_FUNCTION,
-                    PADCTRL_OUTPUT_DRIVE_STRENGTH_12MA | PADCTRL_SLEW_RATE_FAST | PADCTRL_READ_ENABLE);
-    if (ret)
-        return -1;
-
     ret = pinconf_set(OSPI1_SCLKN_PORT, OSPI1_SCLKN_PIN, OSPI1_SCLKN_PIN_FUNCTION,
                     PADCTRL_OUTPUT_DRIVE_STRENGTH_12MA);
     if (ret)

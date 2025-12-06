@@ -846,6 +846,23 @@ static int32_t HM0360_Start(void)
 }
 
 /**
+  \fn           int32_t HM0360_SnapShot(uint8_t)
+  \brief        Start HM0360 Camera Sensor Streaming in Snapshot mode.
+  \param[in]    num_frames  : Number of frames to capture
+  \return       \ref execution_status
+  */
+static int32_t HM0360_Snapshot(uint8_t num_frames)
+{
+    int ret;
+    ret =  HM0360_WRITE_REG(0x3028, num_frames, 1);
+    if(ret != ARM_DRIVER_OK)
+    {
+        return ret;
+    }
+    return HM0360_WRITE_REG(0x0100, 0x03, 1);
+}
+
+/**
   \fn           int32_t HM0360_Stop(void)
   \brief        Stop HM0360 Camera Sensor Streaming.
   \param[in]    none
@@ -940,11 +957,12 @@ static CSI_INFO HM0360_csi_info =
 */
 static CAMERA_SENSOR_OPERATIONS HM0360_ops =
 {
-    .Init    = HM0360_Init,
-    .Uninit  = HM0360_Uninit,
-    .Start   = HM0360_Start,
-    .Stop    = HM0360_Stop,
-    .Control = HM0360_Control,
+    .Init     = HM0360_Init,
+    .Uninit   = HM0360_Uninit,
+    .Start    = HM0360_Start,
+    .Snapshot = HM0360_Snapshot,
+    .Stop     = HM0360_Stop,
+    .Control  = HM0360_Control,
 };
 
 /**

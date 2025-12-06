@@ -202,7 +202,7 @@ extern "C"
 
 #define OSPI1_RXDS_PORT                          PORT_10
 #define OSPI1_RXDS_PIN                           PIN_7
-#define OSPI1_RXDS_PIN_FUNCTION                  PINMUX_ALTERNATE_FUNCTION_1
+#define OSPI1_RXDS_PIN_FUNCTION                  PINMUX_ALTERNATE_FUNCTION_7
 
 #define OSPI1_SCLK_PORT                          PORT_5
 #define OSPI1_SCLK_PIN                           PIN_5
