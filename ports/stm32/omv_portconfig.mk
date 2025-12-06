@@ -249,8 +249,6 @@ $(FIRMWARE): $(OMV_FIRM_OBJ)
 	$(CPP) -P -E $(LDSCRIPT_FLAGS) ports/$(PORT)/$(LDSCRIPT).ld.S > $(BUILD)/$(LDSCRIPT).lds
 	$(CC) $(LDFLAGS) $(OMV_FIRM_OBJ) $(MPY_FIRM_OBJ) -o $(FW_DIR)/$(FIRMWARE).elf $(LIBS) -lm
 	$(OBJCOPY) -Obinary $(FW_DIR)/$(FIRMWARE).elf $(FW_DIR)/$(FIRMWARE).bin
-	$(PYTHON) $(MKDFU) -D $(DFU_DEVICE) \
-        -b $(OMV_FIRM_ADDR):$(FW_DIR)/$(FIRMWARE).bin $(FW_DIR)/$(FIRMWARE).dfu
 ifeq ($(OMV_ENABLE_BL), 1)
 	# Pad the bootloader binary with 0xFF up to the firmware start.
 	$(OBJCOPY) -I binary -O binary --pad-to $$(($(OMV_FIRM_ADDR) - $(OMV_FIRM_BASE))) \
@@ -268,8 +266,6 @@ ifeq ($(OMV_SIGN_BOOT), 1)
         -of $(OMV_SIGN_FLAGS) -hv $(OMV_SIGN_HDRV) -o $(FW_DIR)/$(BOOTLOADER).bin
 	chmod +rw $(FW_DIR)/$(BOOTLOADER).bin
 endif
-	$(PYTHON) $(MKDFU) -D $(DFU_DEVICE) -b \
-        $(OMV_BOOT_ADDR):$(FW_DIR)/$(BOOTLOADER).bin $(FW_DIR)/$(BOOTLOADER).dfu
 endif
 
 $(ROMFS_IMAGE): $(ROMFS_CONFIG) | $(FIRMWARE) $(BOOTLOADER)
@@ -280,22 +276,6 @@ $(ROMFS_IMAGE): $(ROMFS_CONFIG) | $(FIRMWARE) $(BOOTLOADER)
             --build-dir $(BUILD)/lib/models \
             $(STEDGE_ARGS) --config $(ROMFS_CONFIG)
 	touch $@
-
-# Flash the bootloader
-flash_boot::
-	$(PYDFU) -u $(FW_DIR)/$(BOOTLOADER).dfu
-
-# Flash the main firmware image
-flash_image::
-	$(PYDFU) -u $(FW_DIR)/$(FIRMWARE).dfu
-
-# Flash the bootloader using dfu_util
-flash_boot_dfu_util::
-	dfu-util -a 0 -d $(DFU_DEVICE) -D $(FW_DIR)/$(BOOTLOADER).dfu
-
-# Flash the main firmware image using dfu_util
-flash_image_dfu_util::
-	dfu-util -a 0 -d $(DFU_DEVICE) -D $(FW_DIR)/$(FIRMWARE).dfu
 
 deploy: $(ROMFS_IMAGE)
 	$(PROG_TOOL) -c port=SWD mode=HOTPLUG ap=1 \
