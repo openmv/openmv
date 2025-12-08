@@ -411,13 +411,15 @@ void ospi_hyperbus_xip_init(OSPI_Type *ospi, uint8_t wait_cycles)
 {
     ospi_disable(ospi);
 
-    ospi->OSPI_SPI_CTRLR0 = 1 << SPI_CTRLR0_SPI_DM_EN_OFFSET;
+    ospi->OSPI_SPI_CTRLR0 = (1 << SPI_CTRLR0_SPI_DM_EN_OFFSET);
 
     ospi->OSPI_XIP_CTRL = (1 << XIP_CTRL_XIP_HYPERBUS_EN_OFFSET)
                         | (1 << XIP_CTRL_RXDS_SIG_EN_OFFSET)
-                        | (wait_cycles << XIP_CTRL_WAIT_CYCLES_OFFSET);
+                        | (wait_cycles << XIP_CTRL_WAIT_CYCLES_OFFSET)
+                        | (1 << XIP_CTRL_DFS_HC_OFFSET);
 
     ospi->OSPI_XIP_WRITE_CTRL = (1 << XIP_WRITE_CTRL_XIPWR_HYPERBUS_EN_OFFSET)
+                              | (1 << XIP_WRITE_CTRL_XIPWR_DM_EN_OFFSET)
                               | (1 << XIP_WRITE_CTRL_XIPWR_RXDS_SIG_EN_OFFSET)
                               | (wait_cycles << XIP_WRITE_CTRL_XIPWR_WAIT_CYCLES);
 

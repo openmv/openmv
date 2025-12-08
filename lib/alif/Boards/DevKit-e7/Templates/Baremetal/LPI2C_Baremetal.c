@@ -12,16 +12,15 @@
  * @file     LPI2C_Baremetal.c
  * @brief    TestApp to verify I2C Master and LPI2C Slave functionality
  *           using Baremetal without any operating system.
- * @note     LPI2C cannot transmit or receive more than 8 byte of memory.
- *           Code will verify:
+ * @note     Code will verify:
  *            1.)Master transmit and Slave receive
  *            2.)Master receive  and Slave transmit
  *                I2C0 instance is taken as Master and
  *                LPI2C(Slave-only) instance is taken as Slave.
  *
  *           Hardware Connection:
- *           I2C0 SDA(P0_2) -> LPI2C SDA(P7_5)
- *           I2C0 SCL(P0_3) -> LPI2C SCL(P7_4)
+ *           I2C0 SDA(P3_5) -> LPI2C SDA(P5_3)
+ *           I2C0 SCL(P3_4) -> LPI2C SCL(P5_2)
  ******************************************************************************/
 
 /* Include */
@@ -33,15 +32,14 @@
 
 #include "Driver_I2C.h"
 #include "pinconf.h"
-#include "lpi2c.h"
 
-#if !defined(M55_HE)
+#if !defined(RTSS_HE)
 #error "This Demo application works only on RTSS_HE"
 #endif
 
-#if defined(RTE_Compiler_IO_STDOUT)
+#if defined(RTE_CMSIS_Compiler_STDOUT)
 #include "retarget_stdout.h"
-#endif  /* RTE_Compiler_IO_STDOUT */
+#endif  /* RTE_CMSIS_Compiler_STDOUT */
 
 /* I2C Driver instance */
 extern ARM_DRIVER_I2C Driver_I2C0;
@@ -52,54 +50,59 @@ static ARM_DRIVER_I2C *LPI2C_slvdrv = &Driver_LPI2C;
 
 volatile uint32_t mst_cb_status = 0;
 volatile uint32_t slv_cb_status = 0;
-int slv_rec_compare;
-int slv_xfer_compare;
 
 #define TAR_ADDRS         (0X40)   /* Target(Slave) Address, use by Master */
 #define RESTART           (0X01)
 #define STOP              (0X00)
 
 /* master transmit and slave receive */
-#define MST_BYTE_TO_TRANSMIT            3
+#define MST_BYTE_TO_TRANSMIT            21
 
 /* slave transmit and master receive */
-#define SLV_BYTE_TO_TRANSMIT            3
+#define SLV_BYTE_TO_TRANSMIT            22
 
 /* Master parameter set */
 
 /* Master TX Data (Any random value). */
-uint8_t MST_TX_BUF[MST_BYTE_TO_TRANSMIT] ={0x92,0x42,0x74};
+static uint8_t MST_TX_BUF[MST_BYTE_TO_TRANSMIT+1] ={"Test_Message_to_Slave"};
 
 /* master receive buffer */
-uint8_t MST_RX_BUF[SLV_BYTE_TO_TRANSMIT];
-
-/*  */
-uint8_t MST_REC_DATA[SLV_BYTE_TO_TRANSMIT];
+static uint8_t MST_RX_BUF[SLV_BYTE_TO_TRANSMIT+1];
 
 /* Master parameter set END  */
-
 
 /* Slave parameter set */
 
 /* slave receive buffer */
-uint8_t SLV_RX_BUF[MST_BYTE_TO_TRANSMIT];
+static uint8_t SLV_RX_BUF[MST_BYTE_TO_TRANSMIT+1];
 
 /* Slave TX Data (Any random value). */
-uint8_t SLV_TX_BUF[SLV_BYTE_TO_TRANSMIT]={0x56,0x78,0x88};
+static uint8_t SLV_TX_BUF[SLV_BYTE_TO_TRANSMIT+1]={"Test_Message_to_Master"};
 
 /* Slave parameter set END */
 
-
+/**
+ * @fn      static void i2c_mst_tranfer_callback(uint32_t event)
+ * @brief   I2C Callback function for events
+ * @note    none
+ * @param   event: I2C event
+ * @retval  none
+ */
 static void i2c_mst_tranfer_callback(uint32_t event)
 {
-
     if (event & ARM_I2C_EVENT_TRANSFER_DONE) {
     /* Transfer or receive is finished */
     mst_cb_status = 1;
     }
-
 }
 
+/**
+ * @fn      static void i2c_slv_transfer_callback(uint32_t event)
+ * @brief   LPI2C Callback function for events
+ * @note    none
+ * @param   event: LPI2C event
+ * @retval  none
+ */
 static void i2c_slv_transfer_callback(uint32_t event)
 {
     if (event & ARM_I2C_EVENT_TRANSFER_DONE) {
@@ -108,30 +111,48 @@ static void i2c_slv_transfer_callback(uint32_t event)
     }
 }
 
-/* Pinmux for B0 */
-void pinmux_config()
+/**
+ * @fn      static void pinmux_config(void)
+ * @brief   I2C and LPI2C SCL and SDA pinmux configuration.
+ * @note    Pinmux for B0
+ * @param   none
+ * @retval  none
+ */
+static void pinmux_config()
 {
-    /* LPI2C_SCL_A */
-    pinconf_set(PORT_7, PIN_4, PINMUX_ALTERNATE_FUNCTION_5, \
-         (PADCTRL_READ_ENABLE | PADCTRL_DRIVER_DISABLED_PULL_UP| PADCTRL_OUTPUT_DRIVE_STRENGTH_12MA));
+    /* LPI2C_SDA_B */
+    pinconf_set(PORT_5, PIN_3, PINMUX_ALTERNATE_FUNCTION_4,
+                (PADCTRL_READ_ENABLE | PADCTRL_DRIVER_DISABLED_PULL_UP |
+                 PADCTRL_OUTPUT_DRIVE_STRENGTH_12MA));
 
-    /* LPI2C_SDA_A */
-    pinconf_set(PORT_7, PIN_5, PINMUX_ALTERNATE_FUNCTION_6, \
-         (PADCTRL_READ_ENABLE | PADCTRL_DRIVER_DISABLED_PULL_UP | PADCTRL_OUTPUT_DRIVE_STRENGTH_12MA));
+    /* LPI2C_SCL_B */
+    pinconf_set(PORT_5, PIN_2, PINMUX_ALTERNATE_FUNCTION_5,
+                (PADCTRL_READ_ENABLE | PADCTRL_DRIVER_DISABLED_PULL_UP |
+                 PADCTRL_OUTPUT_DRIVE_STRENGTH_12MA));
 
-    /* I2C0_SDA_A */
-    pinconf_set(PORT_0, PIN_2, PINMUX_ALTERNATE_FUNCTION_3, \
-         (PADCTRL_READ_ENABLE | PADCTRL_DRIVER_DISABLED_PULL_UP | PADCTRL_OUTPUT_DRIVE_STRENGTH_12MA));
+    /* I2C0_SDA_B */
+    pinconf_set(PORT_3, PIN_5, PINMUX_ALTERNATE_FUNCTION_5,
+                (PADCTRL_READ_ENABLE | PADCTRL_DRIVER_DISABLED_PULL_UP |
+                 PADCTRL_OUTPUT_DRIVE_STRENGTH_12MA));
 
-    /* I2C0_SCL_A */
-    pinconf_set(PORT_0, PIN_3, PINMUX_ALTERNATE_FUNCTION_3, \
-         (PADCTRL_READ_ENABLE | PADCTRL_DRIVER_DISABLED_PULL_UP | PADCTRL_OUTPUT_DRIVE_STRENGTH_12MA));
+    /* I2C0_SCL_B */
+    pinconf_set(PORT_3, PIN_4, PINMUX_ALTERNATE_FUNCTION_5,
+                (PADCTRL_READ_ENABLE | PADCTRL_DRIVER_DISABLED_PULL_UP |
+                 PADCTRL_OUTPUT_DRIVE_STRENGTH_12MA));
 
 }
 
-void LPI2C_demo()
+/**
+ * @fn      static void LPI2C_demo(void)
+ * @brief   Performs LPI2C Demo
+ * @note    none
+ * @param   none
+ * @retval  none
+ */
+static void LPI2C_demo(void)
 {
     int32_t   ret      = 0;
+    uint8_t   iter     = 0;
     ARM_DRIVER_VERSION version;
 
     printf("\r\n >>> LPI2C demo starting up !!! <<< \r\n");
@@ -140,8 +161,13 @@ void LPI2C_demo()
     pinmux_config();
 
     version = I2C_mstdrv->GetVersion();
+    printf("\r\n I2C version api:0x%X driver:0x%X...\r\n",
+            version.api, version.drv);
+
     version = LPI2C_slvdrv->GetVersion();
-    printf("\r\n I2C version api:0x%X driver:0x%X...\r\n",version.api, version.drv);
+    printf("\r\n LPI2C version api:0x%X driver:0x%X...\r\n",
+            version.api, version.drv);
+
 
     /* Initialize I2C driver */
     ret = I2C_mstdrv->Initialize(i2c_mst_tranfer_callback);
@@ -177,14 +203,15 @@ void LPI2C_demo()
         goto error_poweroff;
     }
 
-     printf("\n----------------Master transmit/slave receive-----------------------\n");
+     printf("\n----------------Master transmit/slave receive--------------\n");
 
      LPI2C_slvdrv->SlaveReceive(SLV_RX_BUF, MST_BYTE_TO_TRANSMIT);
 
      /* delay */
      sys_busy_loop_us(1000);
 
-     I2C_mstdrv->MasterTransmit(TAR_ADDRS, MST_TX_BUF, MST_BYTE_TO_TRANSMIT, STOP);
+     I2C_mstdrv->MasterTransmit(TAR_ADDRS, MST_TX_BUF,
+                                MST_BYTE_TO_TRANSMIT, STOP);
 
      /* wait for master/slave callback. */
      while (mst_cb_status == 0);
@@ -201,41 +228,21 @@ void LPI2C_demo()
          while(1);
      }
 
-     printf("\n----------------Master receive/slave transmit-----------------------\n");
+     printf("\n----------------Master receive/slave transmit--------------\n");
 
-     LPI2C_slvdrv->SlaveTransmit(SLV_TX_BUF, 3);
+     for(iter = 0; iter < SLV_BYTE_TO_TRANSMIT; iter++)
+     {
+         I2C_mstdrv->MasterReceive(TAR_ADDRS, &MST_RX_BUF[iter], 1, STOP);
 
-     /* Delay */
-     sys_busy_loop_us(500);
+         LPI2C_slvdrv->SlaveTransmit(&SLV_TX_BUF[iter], 1);
 
-     I2C_mstdrv->MasterReceive(TAR_ADDRS, MST_REC_DATA, 1, STOP);
+         /* wait for master callback. */
+         while (mst_cb_status == 0);
+         mst_cb_status = 0;
 
-     /* wait for master/slave callback. */
-     while (slv_cb_status == 0);
-     slv_cb_status = 0;
-
-     while (mst_cb_status == 0);
-     mst_cb_status = 0;
-
-     /* Store Receive data */
-     MST_RX_BUF[0] = MST_REC_DATA[0];
-
-     I2C_mstdrv->MasterReceive(TAR_ADDRS, MST_REC_DATA, 1, STOP);
-
-     while (mst_cb_status == 0);
-     mst_cb_status = 0;
-
-     /* Store Receive data */
-     MST_RX_BUF[1] = MST_REC_DATA[0];
-
-     I2C_mstdrv->MasterReceive(TAR_ADDRS, MST_REC_DATA, 1, STOP);
-
-     /* wait for master callback. */
-     while (mst_cb_status == 0);
-     mst_cb_status = 0;
-
-     /* Store Receive data */
-     MST_RX_BUF[2] = MST_REC_DATA[0];
+         while (slv_cb_status == 0);
+         slv_cb_status = 0;
+     }
 
      /* Compare received data. */
      if (memcmp(&SLV_TX_BUF, &MST_RX_BUF, SLV_BYTE_TO_TRANSMIT))
@@ -286,10 +293,17 @@ error_uninitialize:
     printf("\r\n  LPI2C demo exiting...\r\n");
 }
 
-/* Define main entry point.  */
+/**
+ * @fn      int main(void)
+ * @brief   Entry function of LPI2C
+ * @note    none
+ * @param   none
+ * @retval  none
+ */
 int main (void)
 {
-    #if defined(RTE_Compiler_IO_STDOUT_User)
+    #if defined(RTE_CMSIS_Compiler_STDOUT_Custom)
+    extern int stdout_init (void);
     int32_t ret;
     ret = stdout_init();
     if(ret != ARM_DRIVER_OK)
@@ -301,4 +315,6 @@ int main (void)
     #endif
     /* Enter the demo Application.  */
     LPI2C_demo();
+
+    return 0;
 }

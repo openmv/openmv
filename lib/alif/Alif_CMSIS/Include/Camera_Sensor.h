@@ -107,11 +107,12 @@ typedef struct _CSI_INFO {
 \brief CAMERA Sensor Device Operations
 */
 typedef struct _CAMERA_SENSOR_OPERATIONS {
-    int32_t (*Init)    (void);                           /* Initialize Camera Sensor device */
-    int32_t (*Uninit)  (void);                           /* De-initialize Camera Sensor device */
-    int32_t (*Start)   (void);                           /* Start Camera Sensor device */
-    int32_t (*Stop)    (void);                           /* Stop Camera Sensor device */
-    int32_t (*Control) (uint32_t control, uint32_t arg); /* Control Camera Sensor device */
+    int32_t (*Init)     (void);                           /* Initialize Camera Sensor device */
+    int32_t (*Uninit)   (void);                           /* De-initialize Camera Sensor device */
+    int32_t (*Start)    (void);                           /* Start Camera Sensor device */
+    int32_t (*Snapshot) (uint8_t);                        /* Start Camera Sensor device in snapshot mode*/
+    int32_t (*Stop)     (void);                           /* Stop Camera Sensor device */
+    int32_t (*Control)  (uint32_t control, uint32_t arg); /* Control Camera Sensor device */
 } CAMERA_SENSOR_OPERATIONS;
 
 /**

@@ -414,8 +414,22 @@ static int32_t CPIx_Capture(CPI_RESOURCES *CPI, CAMERA_SENSOR_DEVICE *camera_sen
     }
 #endif
 
-    /* Call Camera Sensor specific Start */
-    ret = camera_sensor->ops->Start();
+    /*
+     * Call Camera Sensor specific Start.
+     * If a Snapshot is expected and camera sensor implements SnapShot API, then use it.
+     * Else Start the camera in continuous mode of capture. The responsibility of capturing
+     *   required number of frames, will lie on Camera Controller.
+     */
+    if ((mode == CPI_MODE_SELECT_SNAPSHOT) && camera_sensor->ops->Snapshot)
+    {
+        /* Capture 1 frame */
+        ret = camera_sensor->ops->Snapshot(1);
+    }
+    else
+    {
+        /* Start Sensor in continuous streaming mode */
+        ret = camera_sensor->ops->Start();
+    }
     if(ret != ARM_DRIVER_OK)
     {
         goto Error_Stop_CSI;

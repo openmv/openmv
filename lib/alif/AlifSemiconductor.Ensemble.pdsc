@@ -12,7 +12,36 @@
   -->
 
   <releases>
-     <release version="1.3.0"  tag="v1.3.0" url="https://github.com/alifsemi/alif_ensemble-cmsis-dfp/releases/download/v1.3.0/AlifSemiconductor.Ensemble.1.3.0.pack" date="2024-10-04">
+       <release version="1.3.4"  tag="v1.3.4" url="https://github.com/alifsemi/alif_ensemble-cmsis-dfp/releases/download/v1.3.4/AlifSemiconductor.Ensemble.1.3.4.pack" date="2025-05-09">
+      - Fix the OSPI HyperRAM XIP demo
+      - Fix rx transfer in UART irq handler
+      - Update SE host services to SE FWv105
+      - wm8904 driver support
+      - hm360 camera sensor Snapshot-mode support
+      - remove WA for P10_7 pinmux issue for OSPI
+      - add restart support and peripheral sync support to I2C
+      - update msg xfer method for LPI2C
+      </release>
+     <release version="1.3.3"  tag="v1.3.3" url="https://github.com/alifsemi/alif_ensemble-cmsis-dfp/releases/download/v1.3.3/AlifSemiconductor.Ensemble.1.3.3.pack" date="2025-02-25">
+      - Fixed SD, HWSEM App issues
+      - Fixed FLM Flashing
+      - Fixed CAN-FD build
+      </release>
+      <release version="1.3.2"  tag="v1.3.2" url="https://github.com/alifsemi/alif_ensemble-cmsis-dfp/releases/download/v1.3.2/AlifSemiconductor.Ensemble.1.3.2.pack" date="2025-02-13">
+      - Update SE services to v1.103.0
+      - Minor Fixes in PDSC file
+    </release>
+    <release version="1.3.1"  tag="v1.3.1" url="https://github.com/alifsemi/alif_ensemble-cmsis-dfp/releases/download/v1.3.1/AlifSemiconductor.Ensemble.1.3.1.pack" date="2024-10-29">
+      - Power off will wait till all queued data is transmitted in UART
+      - update se services to FWv1.101
+      - Build fix for LP timer as retargetting uart.
+      - BECP-2265 Support for OV5675 Camera Sensor
+      - Add LPSPI Blocking mode macro in RTE_Device.h
+      - Add ifdef guards for M55 SYSTEM_CLOCK
+      - LLVM CLang fixes   - add copy and zero table handling for llvm clang builds
+      - Fix CMSIS_6 related Warnings
+    </release>
+    <release version="1.3.0"  tag="v1.3.0" url="https://github.com/alifsemi/alif_ensemble-cmsis-dfp/releases/download/v1.3.0/AlifSemiconductor.Ensemble.1.3.0.pack" date="2024-10-04">
       - ICM42670 driver
       - New component for MIPI DPHY
       - Support for ILI9488 1-lane Display
@@ -89,6 +118,25 @@
           DAP_Delay(500000);  // Delay for 500ms
         </block>
         </sequence>
+
+        <sequence name="ResetSystem">
+          <block>
+            Sequence("DisableWarmResetHandshake");
+          </block>
+          <block>
+            // System Control Space (SCS) offset as defined in Armv6-M/Armv7-M.
+
+            __var SCS_Addr   = 0xE000E000;
+            __var AIRCR_Addr = SCS_Addr + 0xD0C;
+            __var DHCSR_Addr = SCS_Addr + 0xDF0;
+
+            // Execute SYSRESETREQ via AIRCR
+            Write32(AIRCR_Addr, 0x05FA0004);
+          </block>
+
+          <!-- Reset Recovery: Wait for DHCSR.S_RESET_ST bit to clear on read -->
+          <control while="(Read32(DHCSR_Addr) &amp; 0x02000000)" timeout="500000"/>
+        </sequence>
       </sequences>
 
       <subFamily DsubFamily="E7">
@@ -98,6 +146,19 @@
         <processor Dcore="Cortex-M55" DcoreVersion="r1p0" Dfpu="DP_FPU" Dmpu="MPU" Dmve="FP_MVE" Ddsp="DSP" Dtz="TZ" Dendian="Little-endian" Dclock="160000000" Pname="M55_HE"/>
         <!-- DebugConfig for E7 -->
         <debugconfig sdf="Debug/SDF/E7/Ensemble E7.sdf" dormant="true"/>
+        <!-- Debug sequences -->
+        <sequences>
+          <sequence name="DisableWarmResetHandshake" Pname="M55_HP">
+            <block>
+              Write32(0x1A600024, 0);
+            </block>
+          </sequence>
+          <sequence name="DisableWarmResetHandshake" Pname="M55_HE">
+            <block>
+              Write32(0x1A601024, 0);
+            </block>
+          </sequence>
+        </sequences>
         <!-- On-chip NVM Region -->
         <memory name="MRAM" start="0x80000000" size="0x00580000" access="rx" default="1"/>
         <!-- On-Chip RAM Regions 13.5MB-->
@@ -206,6 +267,19 @@
         <processor Dcore="Cortex-M55" DcoreVersion="r1p0" Dfpu="DP_FPU" Dmpu="MPU" Dmve="FP_MVE" Ddsp="DSP" Dtz="TZ" Dendian="Little-endian" Dclock="160000000" Pname="M55_HE"/>
         <!-- DebugConfig for E5 -->
         <debugconfig sdf="Debug/SDF/E5/Ensemble E5.sdf" dormant="true"/>
+        <!-- Debug sequences -->
+        <sequences>
+          <sequence name="DisableWarmResetHandshake" Pname="M55_HP">
+            <block>
+              Write32(0x1A600024, 0);
+            </block>
+          </sequence>
+          <sequence name="DisableWarmResetHandshake" Pname="M55_HE">
+            <block>
+              Write32(0x1A601024, 0);
+            </block>
+          </sequence>
+        </sequences>
         <!-- On-chip NVM Region -->
         <memory name="MRAM" start="0x80000000" size="0x00580000" access="rx" default="1"/>
 
@@ -433,6 +507,19 @@
        <device Dname="AE302F80F55D5AE">
         <!-- DebugConfig for E3 -->
         <debugconfig sdf="Debug/SDF/E3/Ensemble E3.sdf" dormant="true"/>
+        <!-- Debug sequences -->
+        <sequences>
+          <sequence name="DisableWarmResetHandshake" Pname="M55_HP">
+            <block>
+              Write32(0x1A600024, 0);
+            </block>
+          </sequence>
+          <sequence name="DisableWarmResetHandshake" Pname="M55_HE">
+            <block>
+              Write32(0x1A601024, 0);
+            </block>
+          </sequence>
+        </sequences>
 		  <!-- On-chip NVM Region -->
           <memory name="MRAM" start="0x80000000" size="0x00580000" access="rx" default="1"/>
 
@@ -579,6 +666,14 @@
         <processor Dcore="Cortex-M55" DcoreVersion="r1p0" Dfpu="DP_FPU" Dmpu="MPU" Dmve="FP_MVE" Ddsp="DSP" Dtz="TZ" Dendian="Little-endian" Dclock="160000000" Pname="M55_HE"/>
          <!-- DebugConfig for E1 -->
         <debugconfig sdf="Debug/SDF/E1/Ensemble E1.sdf" dormant="true"/>
+        <!-- Debug sequences -->
+        <sequences>
+          <sequence name="DisableWarmResetHandshake" Pname="M55_HE">
+            <block>
+              Write32(0x1A601024, 0);
+            </block>
+          </sequence>
+        </sequences>
         <compile Pname="M55_HE" Pdefine="M55_HE"/>
         <!-- Cortex-M55 Access Ports -->
         <accessportV2 __apid="0" address="0x00300000"/>
@@ -796,7 +891,6 @@
       <accept Dvendor="Alif Semiconductor:165" Dname="AE512F80*"/>
       <accept Dvendor="Alif Semiconductor:165" Dname="AE302F*"/>
       <accept Dvendor="Alif Semiconductor:165" Dname="AE101F*"/>
-      <deny Cclass="Device" Cgroup="SDK Utilities"/>
     </condition>
     <condition id="Ensemble CMSIS_Driver">
       <description>Requirement for CMSIS Driver</description>
@@ -838,6 +932,12 @@
       <require Cclass="Device" Cgroup="SOC Peripherals" Csub="I3C"/>      
     </condition>
 
+    <condition id="PINCONF Driver">
+      <description>Requirement for PINCONF Driver</description>
+      <require condition="Ensemble"/>
+      <require Cclass="CMSIS" Cgroup="CORE"/>
+      <require Cclass="Device" Cgroup="Startup"/>
+    </condition>
     <condition id="GT911 Touch Driver">
       <description>Requirement for GT911 Touch Driver</description>
       <require condition="Ensemble CMSIS_Driver"/>
@@ -946,7 +1046,7 @@
         <file category="linkerScript" name="Device/E7/AE722F80F55D5XX/linker_script/ARM/M55_HP.sct" version="1.3.0" attr="config" condition="ARMCC6"/>
         <file category="linkerScript" name="Device/E7/AE722F80F55D5XX/linker_script/GCC/gcc_M55_HP.ld" version="1.3.0" attr="config" condition="GCC"/>
         <file category="sourceC" name="Device/common/source/system_M55.c"/>
-        <file category="header" name="Device/E7/AE722F80F55D5XX/RTE_Device.h" version="1.3.0" attr="config"/>
+        <file category="header" name="Device/E7/AE722F80F55D5XX/RTE_Device.h" version="1.3.4" attr="config"/>
         <file category="header" name="Device/core/M55_HP/include/M55_HP_map.h" version="1.3.0" attr="config"/>
         <file category="header" name="Device/core/M55_HP/config/M55_HP_Config.h" version="1.3.0" attr="config"/>
         <file category="header" name="Device/common/include/global_map.h" version="1.3.0" attr="config"/>
@@ -1024,7 +1124,6 @@
         <file category="source" name="Boards/DevKit-e7/Templates/FreeRTOS/ADC_testApp.c" attr="template" select="ADC FreeRTOS Demo"/>
         <file category="source" name="Boards/DevKit-e7/Templates/FreeRTOS/ADC_Click_Board_testapp.c" attr="template" select="ADC Click Board FreeRTOS Demo"/>
         <file category="source" name="Boards/DevKit-e7/Templates/FreeRTOS/ADC_Ext_Trigger_testapp.c" attr="template" select="ADC External Trigger FreeRTOS Demo"/>
-        <file category="source" name="Boards/DevKit-e7/Templates/FreeRTOS/ADC_Potentiometer_testapp.c" attr="template" select="ADC External Trigger FreeRTOS Demo"/>
         <file category="source" name="Boards/DevKit-e7/Templates/FreeRTOS/ADC_Potentiometer_testapp.c" attr="template" select="ADC Potentiometer FreeRTOS Demo"/>
         <file category="source" name="Boards/DevKit-e7/Templates/FreeRTOS/arx3A0_camera_sensor_testApp.c" attr="template" select="ARX3A0 Camera Sensor FreeRTOS Demo"/>
         <file category="source" name="Boards/DevKit-e7/Templates/bayer2rgb/bayer2rgb.c" attr="template" select="ARX3A0 Camera Sensor FreeRTOS Demo"/>
@@ -1088,7 +1187,7 @@
         <file category="linkerScript" name="Device/E7/AE722F80F55D5XX/linker_script/ARM/M55_HE.sct" version="1.3.0" attr="config" condition="ARMCC6"/>
         <file category="linkerScript" name="Device/E7/AE722F80F55D5XX/linker_script/GCC/gcc_M55_HE.ld" version="1.3.0" attr="config" condition="GCC"/>
         <file category="sourceC" name="Device/common/source/system_M55.c"/>
-        <file category="header" name="Device/E7/AE722F80F55D5XX/RTE_Device.h" version="1.3.0" attr="config"/>
+        <file category="header" name="Device/E7/AE722F80F55D5XX/RTE_Device.h" version="1.3.4" attr="config"/>
 	    <file category="header" name="Device/core/M55_HE/include/M55_HE_map.h" version="1.3.0" attr="config"/>
 	    <file category="header" name="Device/core/M55_HE/config/M55_HE_Config.h" version="1.3.0" attr="config"/>
 	    <file category="header" name="Device/common/include/global_map.h" version="1.3.0" attr="config"/>
@@ -1170,7 +1269,6 @@
         <file category="source" name="Boards/DevKit-e7/Templates/FreeRTOS/ADC_testApp.c" attr="template" select="ADC FreeRTOS Demo"/>
         <file category="source" name="Boards/DevKit-e7/Templates/FreeRTOS/ADC_Click_Board_testapp.c" attr="template" select="ADC Click Board FreeRTOS Demo"/>
         <file category="source" name="Boards/DevKit-e7/Templates/FreeRTOS/ADC_Ext_Trigger_testapp.c" attr="template" select="ADC External Trigger FreeRTOS Demo"/>
-        <file category="source" name="Boards/DevKit-e7/Templates/FreeRTOS/ADC_Potentiometer_testapp.c" attr="template" select="ADC External Trigger FreeRTOS Demo"/>
         <file category="source" name="Boards/DevKit-e7/Templates/FreeRTOS/ADC_Potentiometer_testapp.c" attr="template" select="ADC Potentiometer FreeRTOS Demo"/>
         <file category="source" name="Boards/DevKit-e7/Templates/FreeRTOS/arx3A0_camera_sensor_testApp.c" attr="template" select="ARX3A0 Camera Sensor FreeRTOS Demo"/>
         <file category="source" name="Boards/DevKit-e7/Templates/bayer2rgb/bayer2rgb.c" attr="template" select="ARX3A0 Camera Sensor FreeRTOS Demo"/>
@@ -1246,7 +1344,6 @@
 		<file category="header" name="drivers/include/uart.h"/>
 		<file category="header" name="drivers/include/sys_ctrl_uart.h"/>
 	    <file category="header" name="Alif_CMSIS/Source/Driver_USART_Private.h"/>
-        <file category="header" name="Alif_CMSIS/Include/Driver_USART.h"/>
       </files>
     </component>
 
@@ -1316,7 +1413,7 @@
    </component>
 
 
-   <component Cclass="Device" Cgroup="SOC Peripherals" Csub="PINCONF" Cversion="1.3.0" condition="Ensemble CMSIS_Driver">
+   <component Cclass="Device" Cgroup="SOC Peripherals" Csub="PINCONF" Cversion="1.3.0" condition="PINCONF Driver">
       <description>PinMUX and PinPAD Config Driver for Alif Semiconductor SOC</description>
       <RTE_Components_h>  <!-- the following content goes into file 'RTE_Components.h' -->
         #define RTE_Drivers_LL_PINCONF   1           /* Driver PinPAD and PinMux */
@@ -1417,7 +1514,6 @@
         #define RTE_Drivers_SPI   1           /* Driver SPI */
       </RTE_Components_h>
       <files>
-	    <file category="header" name="Alif_CMSIS/Include/Driver_SPI.h"/>
         <file category="source" name="Alif_CMSIS/Source/Driver_SPI.c"/>
         <file category="header" name="Alif_CMSIS/Source/Driver_SPI_Private.h"/>
 		<file category="header" name="drivers/include/spi.h"/>
@@ -1500,6 +1596,16 @@
       </RTE_Components_h>
       <files>
         <file category="source" name="components/Source/OV5647_camera_sensor.c"/>
+      </files>
+    </component>
+
+    <component Cclass="BSP" Cgroup="External peripherals" Csub="CAMERA Sensor OV5675" Cversion="1.3.0" condition="Camera Sensor Driver">
+      <description>CAMERA Sensor Driver for OV5675</description>
+      <RTE_Components_h>  <!-- the following content goes into file 'RTE_Components.h' -->
+        #define RTE_Drivers_CAMERA_SENSOR_OV5675			1           /* Driver CAMERA Sensor */
+      </RTE_Components_h>
+      <files>
+        <file category="source" name="components/Source/OV5675_camera_sensor.c"/>
       </files>
     </component>
 
@@ -1749,12 +1855,12 @@
         #define RTE_Drivers_CANFD   1           /* Driver CAN-FD */
       </RTE_Components_h>
       <files>
-        <file category="header" name="Alif_CMSIS/Include/Driver_CAN.h"/>
         <file category="header" name="Alif_CMSIS/Source/CANFD_Private.h"/>
         <file category="source" name="Alif_CMSIS/Source/Driver_CAN.c"/>
         <file category="header" name="drivers/include/canfd.h"/>
         <file category="header" name="drivers/include/sys_ctrl_canfd.h"/>
         <file category="source" name="drivers/source/canfd.c"/>
+        <file category="header" name="Alif_CMSIS/Include/Driver_CAN_EX.h"/>
       </files>
     </component>
 
@@ -1862,7 +1968,7 @@
       </files>
     </component>
 
-    <component Cclass="Device" Cgroup="SOC Peripherals" Csub="MHU" Cversion="1.100.0" condition="SE SERVICES MHU">
+    <component Cclass="Device" Cgroup="SOC Peripherals" Csub="MHU" Cversion="1.105.0" condition="SE SERVICES MHU">
       <description>Message Handling Unit driver for Alif Soc</description>
       <files>
         <file category="header" name="drivers/include/drivers_common.h"/>
@@ -1884,10 +1990,10 @@
       </files>
     </component> -->
 
-    <component Cclass="Device" Cgroup="SE runtime Services" Csub="core" Cvariant="Source" Cversion="1.100.0" condition="SE SERVICES SRC">
+    <component Cclass="Device" Cgroup="SE runtime Services" Csub="core" Cvariant="Source" Cversion="1.105.0" condition="SE SERVICES SRC">
       <description>SE runtime Services for RTSS cores</description>
       <files>
-        <file category="doc" name="se_services/document/SE_Host_Services_API_v1.100.0.pdf"/>
+        <file category="doc" name="se_services/document/SE_Host_Services_API_v1.105.0.pdf"/>
         <file category="include" name="se_services/include/"/>
         <file category="source" name="se_services/source/services_host_application.c"/>
         <file category="source" name="se_services/source/services_host_boot.c"/>
@@ -1912,7 +2018,7 @@
     </component>
 
 
-    <component Cclass="Device" Cgroup="SE runtime Services" Csub="Initialization Helper" Cvariant="Source" Cversion="1.3.0" condition="SE SERVICES INIT">
+    <component Cclass="Device" Cgroup="SE runtime Services" Csub="Initialization Helper" Cvariant="Source" Cversion="1.5.0" condition="SE SERVICES INIT">
       <description>SE runtime Services initialization helper for RTSS cores</description>
       <files>
         <file category="include" name="se_services/port/include/"/>

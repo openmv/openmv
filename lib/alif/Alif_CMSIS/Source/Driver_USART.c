@@ -13,6 +13,7 @@
 #include "Driver_USART_Private.h"
 #include "uart.h"
 #include "sys_ctrl_uart.h"
+#include "system_utils.h"
 
 #if !(RTE_UART0 || RTE_UART1 || RTE_UART2 || RTE_UART3 || RTE_UART4 || RTE_UART5 || RTE_UART6 || RTE_UART7)
 #error "UART is not enabled in the RTE_Device.h"
@@ -367,6 +368,9 @@ static int32_t ARM_USART_PowerControl (ARM_POWER_STATE   state,
 
             /* Clear Any Pending IRQ*/
             NVIC_ClearPendingIRQ (uart->irq_num);
+
+            /* wait for data to be transmitted */
+            while(READ_BIT(uart->regs->UART_LSR, BIT(6)) != UART_LSR_TRANSMITTER_EMPTY);
 
             /* uart EXPMST0 configuration,
              * Disable the selected UART instance. */
@@ -1512,8 +1516,13 @@ static void UART_IRQHandler(UART_RESOURCES *uart)
             uart->cb_event(ARM_USART_EVENT_SEND_COMPLETE);
     }
 
-    /* check for transfer receive complete. */
-    if(transfer->status & UART_TRANSFER_STATUS_RECEIVE_COMPLETE)
+    /* check for transfer receive complete OR If the data requested by
+     * application is already received then mark the transaction as complete
+     * even if there is RX timeout.
+     */
+    if((uart->status.rx_busy == UART_STATUS_BUSY)                  &&
+       ((transfer->status & UART_TRANSFER_STATUS_RECEIVE_COMPLETE) ||
+        (transfer->rx_total_num == transfer->rx_curr_cnt)))
     {
         /* clear transfer status */
         transfer->status = UART_TRANSFER_STATUS_NONE;

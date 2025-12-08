@@ -986,6 +986,89 @@
 #endif
 // </e> OV5647_MIPI [Driver_OV5647_MIPI]
 
+// <e> OV5675_MIPI [Driver_OV5675_MIPI]
+// <o> Enable/Disable OV5675 MIPI camera sensor
+//     <0=> disable
+//     <1=> enable
+// <i> define if to enable or disable OV5675 MIPI camera sensor
+// <i> default: enable
+#define RTE_OV5675_CAMERA_SENSOR_ENABLE                  1
+
+#if (RTE_OV5675_CAMERA_SENSOR_ENABLE)
+
+// <o> Select camera OV5675 frequency
+// <i> Defines camera OV5675 frequency
+// <i> Default: 450000000
+#define RTE_OV5675_CAMERA_SENSOR_CSI_FREQ                   450000000
+
+// <o> select OV5675 CSI2 Data type
+// <i> defines select CSI2 Data type
+// <i> default:  0x2B (RAW10)
+#define RTE_OV5675_CAMERA_SENSOR_CSI_DATA_TYPE              0x2B
+
+// <o> select OV5675 number of lanes in DPHY
+// <i> defines select OV5675 number of lanes in DPHY.
+// <i> default: 2 lane
+#define RTE_OV5675_CAMERA_SENSOR_CSI_N_LANES                2
+
+// <o> select OV5675 virtual channel ID
+// <i> defines select OV5675 virtual channel ID.
+// <i> default: 0
+#define RTE_OV5675_CAMERA_SENSOR_CSI_VC_ID                  0
+
+// <o> select OV5675 override CPI color mode
+// <i> defines select OV5675 override CPI color mode.
+// <i> default: 1
+#define RTE_OV5675_CAMERA_SENSOR_OVERRIDE_CPI_COLOR_MODE    1
+
+// <o> select OV5675 CPI color mode
+// <i> defines select OV5675 CPI color mode.
+// <i> default: 2  (IPI-16 RAW 8)
+#define RTE_OV5675_CAMERA_SENSOR_CPI_COLOR_MODE             2
+
+// <o> select OV5675 frame height
+// <i> defines select OV5675 frame height.
+// <i> default: 972
+#define RTE_OV5675_CAMERA_SENSOR_FRAME_HEIGHT               972
+
+// <o> select OV5675 frame width
+// <i> defines select OV5675 frame width.
+// <i> default: 1296
+#define RTE_OV5675_CAMERA_SENSOR_FRAME_WIDTH                1296
+
+// <o> Select camera sensor OV5675 reset pin number
+// <i> Defines camera sensor OV5675 reset pin number
+// <i> Default: 1
+#define RTE_OV5675_CAMERA_SENSOR_RESET_PIN_NO               1
+
+// <o> Select camera sensor OV5675 reset GPIO port
+// <i> Defines camera sensor OV5675 reset GPIO port
+// <i> Default: 9
+#define RTE_OV5675_CAMERA_SENSOR_RESET_GPIO_PORT            9
+
+// <o> Select camera sensor OV5675 power pin number
+// <i> Defines camera sensor OV5675 power pin number
+// <i> Default: 5
+#define RTE_OV5675_CAMERA_SENSOR_POWER_PIN_NO               5
+
+// <o> Select camera sensor OV5675 power GPIO port
+// <i> Defines camera sensor OV5675 power GPIO port
+// <i> Default: 7
+#define RTE_OV5675_CAMERA_SENSOR_POWER_GPIO_PORT            7
+
+// <o RTE_OV5675_CAMERA_SENSOR_I2C_INSTANCE> Select camera sensor OV5675 i2c instance
+// <i> Defines camera sensor OV5675 i2c instance
+//     <0=>   I2C0
+//     <1=>   I2C1
+//     <2=>   I2C2
+//     <3=>   I2C3
+//     <I3C=> I2C OVER I3C
+// <i> Default: 1
+#define RTE_OV5675_CAMERA_SENSOR_I2C_INSTANCE               1
+
+#endif
+// </e> OV5675_MIPI [Driver_OV5675_MIPI]
+
 #endif
 // </e> MIPI_CSI2 (mipi csi2) [Driver_MIPI_CSI2]
 
@@ -2201,6 +2284,13 @@
 // <i> Defines LPSPI DMA Interrupt priority
 // <i> Default: 0
 #define RTE_LPSPI_DMA_IRQ_PRI                    0
+
+// <o> LPSPI blocking mode enable
+//    <0=> DISABLE
+//    <1=> ENABLE
+// <i> Defines Blocking mode support for LPSPI
+// <i> Default: DISABLE
+#define RTE_LPSPI_BLOCKING_MODE_ENABLE           0
 #endif  //RTE_LPSPI
 #endif //M55_HE
 
@@ -2893,6 +2983,25 @@
 
 // </e> LPI2S (Low Power Integrated Interchip Sound) [Driver_SAILP]
 // </h> I2S (Integrated Interchip Sound)
+
+// <h> WM8904 Codec [Driver_WM8904]
+// <i> Configuration settings for Driver_WM8904 in component ::Drivers:WM8904
+#define RTE_WM8904_CODEC                      1
+
+#if RTE_WM8904_CODEC
+
+// <o> Select WM8904 i2c instance
+// <i> Defines WM8904 i2c instance
+//     <0=>   I2C0
+//     <1=>   I2C1
+//     <2=>   I2C2
+//     <3=>   I2C3
+//     <I3C=> I2C OVER I3C
+// <i> Default: 2
+#define RTE_WM8904_CODEC_I2C_INSTANCE         2
+#endif
+
+// </h> WM8904 Codec [Driver_WM8904]
 
 // <h> UART (Universal asynchronous receiver transmitter)
 // <e> UART0 (Universal asynchronous receiver transmitter) [Driver_USART0]

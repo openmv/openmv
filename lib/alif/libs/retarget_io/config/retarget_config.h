@@ -52,13 +52,23 @@ extern "C"
 #define PRINTF_UART_CONSOLE_BAUD_RATE                           115200
 
 /* UART Related Macros */
-#define _UART_BLOCKING_(n)                                      RTE_UART##n##_BLOCKING_MODE_ENABLE
+#if (PRINTF_UART_CONSOLE == LP)
+    #define _UART_BLOCKING_(n)                                  RTE_##n##UART_BLOCKING_MODE_ENABLE
+#else
+    #define _UART_BLOCKING_(n)                                  RTE_UART##n##_BLOCKING_MODE_ENABLE
+#endif
+
 #define UART_BLOCKING(n)                                        _UART_BLOCKING_(n)
 #define STR(x)                                                  #x
 #define XSTR(x)                                                 STR(x)
 
 #if (UART_BLOCKING(PRINTF_UART_CONSOLE) == 0)
-    #pragma  message("Selected UART : UART" XSTR(PRINTF_UART_CONSOLE))
+    #if (PRINTF_UART_CONSOLE == LP)
+        #pragma  message("Selected UART : " XSTR(PRINTF_UART_CONSOLE) "UART" )
+    #else
+        #pragma  message("Selected UART : UART" XSTR(PRINTF_UART_CONSOLE))
+    #endif
+
     #error " ***** [RETARGET-FAILED] POLLING MODE IS NOT ENABLED (Enable Polling mode in RTE_Device.h) !!! ****** \n"
 #endif
 

@@ -170,7 +170,7 @@ typedef struct {
 	LBA_t	bitbase;		/* Allocation bitmap base sector */
 #endif
 	LBA_t	winsect;		/* Current sector appearing in the win[] */
-	BYTE	win[FF_MAX_SS];	/* Disk access window for Directory, FAT (and file data at tiny cfg) */
+	BYTE	win[FF_MAX_SS] __attribute__((aligned(512)));	/* Disk access window for Directory, FAT (and file data at tiny cfg) */
 } FATFS;
 
 
