@@ -1,7 +1,8 @@
 #!/bin/bash
 set -e -x
 
-BUILD_DIR=/workspace/build/${TARGET}
+OPENMV="$(pwd)"
+BUILD_DIR=${OPENMV}/build/${TARGET}
 
 # Update submodules.
 git submodule update --init --depth=1
@@ -13,4 +14,4 @@ make -j$(nproc) -C lib/micropython/mpy-cross
 make -j$(nproc) BUILD=${BUILD_DIR} TARGET=${TARGET} LLVM_PATH=/workspace/llvm/bin
 
 # Fix permissions.
-chown -R ${HOST_UID:-1000}:${HOST_GID:-1000} /workspace/build
+chown -R ${HOST_UID:-1000}:${HOST_GID:-1000} ${OPENMV}/build
