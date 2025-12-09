@@ -1,5 +1,9 @@
 def unittest(data_path, temp_path):
-    import ml
+    try:
+        import ml
+    except ImportError:
+        raise Exception("ML module unavailable")
+
     import image
     from ml.postprocessing.edgeimpulse import Fomo
 

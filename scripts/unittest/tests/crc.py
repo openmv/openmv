@@ -1,7 +1,10 @@
 def unittest(data_path, temp_path):
     try:
         import crc
-    except ImportError:
+        # Verify it's the real module, not this test file itself
+        if not hasattr(crc, 'crc16'):
+            raise ImportError("crc module not available")
+    except (ImportError, AttributeError):
         raise Exception("crc module unavailable")
 
     # Test data

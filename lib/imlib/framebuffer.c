@@ -41,7 +41,8 @@ extern char _sb_memory_end;
 // Framebuffers array.
 static framebuffer_t framebuffers[2];
 
-void framebuffer_init0() {
+// Weak symbol to allow port-specific overrides (e.g., Unix port)
+__attribute__((weak)) void framebuffer_init0() {
     // Reuse the last enabled flag after resetting the state.
     bool enabled = framebuffer_get(FB_STREAM_ID)->enabled;
 
