@@ -8,7 +8,6 @@ import os
 import gc
 import time
 
-
 TEMP_PATH = "/remote/temp"
 DATA_PATH = "/remote/data"
 TEST_PATH = "/remote/tests"
@@ -39,38 +38,43 @@ def main():
     passed_count = 0
     failed_count = 0
     skipped_count = 0
-    tests = sorted(os.listdir(TEST_PATH))
+    tests = os.listdir(TEST_PATH)
 
     if not "temp" in os.listdir():
         os.mkdir("temp")  # Make a temp directory
 
     total_start_time = time.ticks_ms()
 
-    for test in tests:
-        result = "PASSED"
-        path = "/".join((TEST_PATH, test))
-        start_time = time.ticks_ms()
+    try:
+        import unittest as ut
+
+        # Add unit tests from C module.
+        tests.extend([f.split("test_")[1] for f in dir(ut) if f.startswith("test_")])
+    except ImportError:
+        ut = None
+
+    for test in sorted(tests):
+        start_ms = time.ticks_ms()
         try:
-            with open(path) as f:
-                buf = f.read()
-            exec(buf)
-            if unittest(DATA_PATH, TEMP_PATH) is False:
-                raise Exception()
+            if test.endswith(".py"):
+                with open("/".join((TEST_PATH, test))) as f:
+                    buf = f.read()
+                exec(buf)
+                if unittest(DATA_PATH, TEMP_PATH) is False:
+                    raise Exception()
+            elif getattr(ut, "test_" + test)() is False:
+                    raise Exception()
+            result = "PASSED"
+            passed_count += 1
         except Exception as e:
             if "unavailable" in str(e):
                 result = "DISABLED"
+                skipped_count += 1
             else:
                 result = "FAILED"
+                failed_count += 1
 
-        # Update counters
-        if result == "PASSED":
-            passed_count += 1
-        elif result == "FAILED":
-            failed_count += 1
-        else:  # DISABLED
-            skipped_count += 1
-
-        time_ms = time.ticks_diff(time.ticks_ms(), start_time)
+        time_ms = time.ticks_diff(time.ticks_ms(), start_ms)
         print_result(test, result, time_ms)
         gc.collect()
 
