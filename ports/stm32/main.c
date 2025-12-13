@@ -70,19 +70,24 @@
 #include "lib/cyw43-driver/src/cyw43.h"
 #endif
 #endif
+#if MICROPY_HW_TINYUSB_STACK
+#include "usbd_conf.h"
+#include "shared/tinyusb/mp_usbd.h"
+#endif
 #include "extmod/vfs.h"
 #include "extmod/vfs_fat.h"
 #include "shared/runtime/pyexec.h"
 #include "shared/readline/readline.h"
+#include "shared/runtime/softtimer.h"
 
 #include "omv_boardconfig.h"
 #include "omv_gpio.h"
 #include "omv_i2c.h"
 #include "omv_csi.h"
+#include "omv_protocol.h"
 #include "mp_utils.h"
 #include "framebuffer.h"
 
-#include "usbdbg.h"
 #include "sdram.h"
 #include "stm_xspi.h"
 #include "fb_alloc.h"
@@ -245,7 +250,6 @@ soft_reset:
     #if MICROPY_HW_ENABLE_SERVO
     servo_init();
     #endif
-    usbdbg_init();
     #if MICROPY_HW_ENABLE_SDCARD
     sdcard_init();
     #endif
@@ -276,7 +280,10 @@ soft_reset:
     cyw43_wifi_ap_set_password(&cyw43_state, 8, (const uint8_t *) "pybd0123");
     #endif
 
+    #if MICROPY_HW_STM_USB_STACK && MICROPY_HW_ENABLE_USB
     pyb_usb_init0();
+    #endif
+
     MP_STATE_PORT(pyb_stdio_uart) = NULL;
 
     #if MICROPY_PY_CSI
@@ -297,6 +304,9 @@ soft_reset:
     mod_network_init();
     #endif
 
+    // Initialize OpenMV protocol
+    omv_protocol_init_default();
+
     // Execute _boot.py to set up the filesystem.
     pyexec_frozen_module("_boot.py", false);
 
@@ -309,6 +319,7 @@ soft_reset:
         pyb_usb_storage_medium = PYB_USB_STORAGE_MEDIUM_SDCARD;
     }
 
+    #if MICROPY_HW_STM_USB_STACK
     // Init USB device to default setting if it was not already configured
     if (!(pyb_usb_flags & PYB_USB_FLAG_USB_MODE_CALLED)) {
         uint8_t usb_mode = USBD_MODE_CDC_MSC;
@@ -318,6 +329,11 @@ soft_reset:
         pyb_usb_dev_init(pyb_usb_dev_detect(), MICROPY_HW_USB_VID,
                          MICROPY_HW_USB_PID, usb_mode, 0, NULL, NULL);
     }
+    #endif
+
+    #if MICROPY_HW_TINYUSB_STACK && MICROPY_HW_ENABLE_USBDEV
+    mp_usbd_init();
+    #endif
 
     // report if SDRAM failed
     #if MICROPY_HW_SDRAM_SIZE
@@ -326,24 +342,18 @@ soft_reset:
     }
     #endif
 
-    // Run boot.py script.
-    bool interrupted = mp_exec_bootscript("boot.py", true);
-
-    // Run main.py script on first soft-reset.
-    if (first_soft_reset && !interrupted && mp_vfs_import_stat("main.py")) {
-        mp_exec_bootscript("main.py", true);
-        goto soft_reset_exit;
+    // Run boot.py every reset and main.py on first soft-reset
+    if (pyexec_file_if_exists("boot.py") && first_soft_reset) {
+        pyexec_file_if_exists("main.py");
     }
 
-    // If there's no script ready, just re-exec REPL
-    while (!usbdbg_script_ready()) {
+    while (!omv_protocol_exec_script()) {
         nlr_buf_t nlr;
 
         if (nlr_push(&nlr) == 0) {
-            // enable IDE interrupt
-            usbdbg_set_irq_enabled(true);
+            // Enable Ctrl+C to interrupt script or REPL.
+            mp_hal_set_interrupt_char(CHAR_CTRL_C);
 
-            // run REPL
             if (pyexec_mode_kind == PYEXEC_MODE_RAW_REPL) {
                 if (pyexec_raw_repl() != 0) {
                     break;
@@ -353,28 +363,12 @@ soft_reset:
                     break;
                 }
             }
-
             nlr_pop();
         }
     }
 
-    if (usbdbg_script_ready()) {
-        nlr_buf_t nlr;
-        if (nlr_push(&nlr) == 0) {
-            // Enable IDE interrupts
-            usbdbg_set_irq_enabled(true);
-            // Execute the script.
-            pyexec_str(usbdbg_get_script(), true);
-            // Disable IDE interrupts
-            usbdbg_set_irq_enabled(false);
-            nlr_pop();
-        } else {
-            mp_obj_print_exception(MP_PYTHON_PRINTER, (mp_obj_t) nlr.ret_val);
-        }
-    }
-
-soft_reset_exit:
     // soft reset
+    mp_hal_set_interrupt_char(-1);
     mp_printf(MP_PYTHON_PRINTER, "MPY: soft reboot\n");
     #if MICROPY_PY_CSI
     omv_csi_abort_all();
@@ -410,6 +404,10 @@ soft_reset_exit:
     py_audio_deinit();
     #endif
     imlib_deinit();
+    soft_timer_deinit();
+    #if MICROPY_HW_ENABLE_USB_RUNTIME_DEVICE && MICROPY_HW_TINYUSB_STACK
+    mp_usbd_deinit();
+    #endif
     gc_sweep_all();
     mp_deinit();
     first_soft_reset = false;

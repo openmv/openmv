@@ -29,6 +29,19 @@
         fb_alloc_free_till_mark();             \
     } while (0);
 
+
+#define MICROPY_BOARD_BEFORE_PYTHON_EXEC(input_kind, exec_flags) \
+    do {                                                         \
+        extern void stdio_channel_pyexec_hook(bool);             \
+        stdio_channel_pyexec_hook(true);                         \
+    } while (0);
+
+#define MICROPY_BOARD_AFTER_PYTHON_EXEC(input_kind, exec_flags, nlr, ret) \
+    do {                                                                  \
+        extern void stdio_channel_pyexec_hook(bool);                      \
+        stdio_channel_pyexec_hook(false);                                 \
+    } while (0);
+
 #define MICROPY_ENABLE_VM_ABORT             (1)
 #define MICROPY_OPT_COMPUTED_GOTO           (1)
 #define MICROPY_GC_SPLIT_HEAP               (1)
@@ -40,5 +53,10 @@
 #define MICROPY_HW_ETH_DMA_ATTRIBUTE        __attribute__((aligned(16384), section(".dma_buffer")));
 
 void __fatal_error(const char *);
+#define MICROPY_BOARD_FATAL_ERROR           __fatal_error
+
+#define MICROPY_WRAP_TUD_CDC_RX_CB(name)    __mp_ ## name
+#define MICROPY_WRAP_TUD_CDC_LINE_STATE_CB(name) __mp_ ## name
+#define MICROPY_WRAP_TUD_EVENT_HOOK_CB(name) __mp_ ## name
 
 #include <mpconfigport.h>
