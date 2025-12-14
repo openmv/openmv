@@ -359,6 +359,7 @@ exit_cleanup:
     header->height = fb->h;
     header->pixfmt = fb->pixfmt;
     header->size = fb->is_compressed ? fb->size : fb->bpp;
+    header->offset = sizeof(framebuffer_header_t);
 
     // Unlock the streaming buffer.
     mutex_unlock(&fb->lock, MUTEX_TID_OMV);
