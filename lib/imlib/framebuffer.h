@@ -128,6 +128,8 @@ typedef struct __attribute__((packed)) framebuffer_header {
     uint32_t width;     // Frame width
     uint32_t height;    // Frame height
     PIXFORMAT_STRUCT;   // Pixel format
+    uint32_t offset;    // Data offset
+    OMV_ATTR_ALIGNED(uint8_t data[], FRAMEBUFFER_ALIGNMENT);
 } framebuffer_header_t;
 
 void framebuffer_init0();
