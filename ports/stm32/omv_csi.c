@@ -651,6 +651,11 @@ static int stm_csi_snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
             } else {
                 #if defined(STM32F4) || defined(STM32F7) || defined(STM32H7)
                 // Start a multibuffer (line by line) transfer.
+                #if USE_MDMA
+                csi->one_shot = csi->pixformat != PIXFORMAT_JPEG;
+                #else
+                csi->one_shot = false;
+                #endif
                 HAL_DCMI_Start_DMA_MB(&csi->dcmi, DCMI_MODE_CONTINUOUS, (uint32_t) &_line_buf, csi->dma_size, fb->v);
                 #else
                 // Handle YUV422 Source -> Y Destination using DCMI byte drop.
