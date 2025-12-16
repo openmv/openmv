@@ -34,6 +34,7 @@
 ENTRY(Reset_Handler)
 
 #include "omv_boardconfig.h"
+#include "header.h"
 
 MEMORY
 {
@@ -71,6 +72,11 @@ SECTIONS
   .text : ALIGN(16)
   {
     KEEP(*(.vectors))
+
+    /* Boot header at fixed offset */
+    . = OMV_BOOT_HEADER_OFFSET;
+    KEEP(*(.boot_header))
+
     . = ALIGN(4);
     *(.text*)
     . = ALIGN(4);

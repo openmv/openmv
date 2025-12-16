@@ -33,9 +33,19 @@
 #include <string.h>
 #include <stdint.h>
 #include <stdbool.h>
+#include "header.h"
 #include "omv_bootconfig.h"
 
 bool tud_dfu_detached = true;
+
+__attribute__((section(".boot_header"), used))
+const omv_boot_header_t omv_boot_header = {
+    .magic = OMV_BOOT_MAGIC_VALUE,
+    .major = OMV_BOOT_VERSION_MAJOR,
+    .minor = OMV_BOOT_VERSION_MINOR,
+    .patch = OMV_BOOT_VERSION_PATCH,
+    .reserved = {0},
+};
 
 uint32_t ticks_diff_ms(uint32_t start_ms) {
     uint32_t current_ms = port_ticks_ms();
