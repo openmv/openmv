@@ -132,10 +132,10 @@ extern unsigned char OMV_BOARD_UID_ADDR[12];    // Unique address.
 #endif
 
 // Flash configuration.
-#if BOOTLOADER
-#define OMV_FLASH_ORIGIN                0x80000000
-#define OMV_FLASH_LENGTH                0x00020000      /* 128K */
-#elif CORE_M55_HP
+#define OMV_FLASH_BOOT_ORIGIN           0x80000000
+#define OMV_FLASH_BOOT_LENGTH           0x00020000      /* 128K */
+
+#if CORE_M55_HP
 #define OMV_FLASH_ORIGIN                0x80020000
 #define OMV_FLASH_LENGTH                0x00300000      /* 3MB */
 #define OMV_ROMFS_PART0_ORIGIN          0xa0800000
