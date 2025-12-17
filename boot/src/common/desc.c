@@ -32,6 +32,7 @@
  */
 #include <stdint.h>
 #include <stdbool.h>
+#include "header.h"
 #include "omv_bootconfig.h"
 
 #define STR_DESC_MAX_LEN        (32)
@@ -62,7 +63,7 @@ static tusb_desc_device_t const desc_device = {
     .bMaxPacketSize0 = CFG_TUD_ENDPOINT0_SIZE,
     .idVendor = OMV_BOOT_VID,
     .idProduct = OMV_BOOT_PID,
-    .bcdDevice = 0x0200,
+    .bcdDevice = ((OMV_BOOT_VERSION_MAJOR << 8) | (OMV_BOOT_VERSION_MINOR << 4) | OMV_BOOT_VERSION_PATCH),
     .iManufacturer = 0x01,
     .iProduct = 0x02,
     .iSerialNumber = 0x03,
