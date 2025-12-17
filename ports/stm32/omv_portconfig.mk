@@ -252,15 +252,15 @@ $(FIRMWARE): $(OMV_FIRM_OBJ)
 ifeq ($(OMV_ENABLE_BL), 1)
 	# Pad the bootloader binary with 0xFF up to the firmware start.
 	$(OBJCOPY) -I binary -O binary --pad-to $$(($(OMV_FIRM_ADDR) - $(OMV_FIRM_BASE))) \
-        --gap-fill 0xFF $(FW_DIR)/$(BOOTLOADER).bin $(FW_DIR)/$(BOOTLOADER).bin
-	$(CAT) $(FW_DIR)/$(BOOTLOADER).bin $(FW_DIR)/$(FIRMWARE).bin > $(FW_DIR)/openmv.bin
+        --gap-fill 0xFF $(FW_DIR)/$(BOOTLOADER).bin $(FW_DIR)/$(BOOTLOADER)_padded.bin
+	$(CAT) $(FW_DIR)/$(BOOTLOADER)_padded.bin $(FW_DIR)/$(FIRMWARE).bin > $(FW_DIR)/openmv.bin
+	$(RM) $(FW_DIR)/$(BOOTLOADER)_padded.bin
 endif
 
 # This target builds the bootloader.
 $(BOOTLOADER): $(STEDGE_TOOLS) | FIRM_DIRS
 ifeq ($(OMV_ENABLE_BL), 1)
 	$(MAKE) -C $(TOP_DIR)/$(BOOT_DIR) BUILD=$(BUILD)/$(BOOT_DIR)
-	$(OBJCOPY) -Obinary $(FW_DIR)/$(BOOTLOADER).elf $(FW_DIR)/$(BOOTLOADER).bin
 ifeq ($(OMV_SIGN_BOOT), 1)
 	$(SIGN_TOOL) -bin $(FW_DIR)/$(BOOTLOADER).bin -s -nk -t fsbl \
         -of $(OMV_SIGN_FLAGS) -hv $(OMV_SIGN_HDRV) -o $(FW_DIR)/$(BOOTLOADER).bin
