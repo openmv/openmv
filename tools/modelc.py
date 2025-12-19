@@ -78,8 +78,6 @@ def stedge_compile(model_path, build_dir, profile, stedge_args=None):
     for var in ["RM", "CFLAGS", "CPPFLAGS", "CXXFLAGS", "LDFLAGS", 'MAKEFLAGS']:
         env.pop(var, None)
 
-    print(f"{C_GREEN}Creating relocatable binary model {model_name}{C_RESET}")
-
     # Step 1: stedgeai generate
     generate_command = [
         os.path.join(core_dir, "Utilities/linux/stedgeai"),
@@ -88,7 +86,7 @@ def stedge_compile(model_path, build_dir, profile, stedge_args=None):
         "--model", model_path,
         "--relocatable",
         "--st-neural-art", f"{profile}@{config}",
-        "--no-workspace",
+        "--workspace", os.path.join(output_dir, "workspace"),
         "--output", os.path.join(output_dir, "gen"),
         "--verbosity", "1",
     ]
@@ -122,7 +120,9 @@ def stedge_compile(model_path, build_dir, profile, stedge_args=None):
         r"([ \t]+XIP size.*?Table: mempool.*?\n)", result.stdout, re.DOTALL | re.MULTILINE
     )
     if match:
-        print(C_BLUE + match.group(1).rstrip() + C_RESET + "\n")
+        output = "\n".join(l.strip() for l in match.group(1).split("\n"))
+        print(f"{C_GREEN}Model: {model_name}{C_RESET}")
+        print(C_BLUE + output + C_RESET + "\n")
 
     os.rename(f"{output_dir}/network_rel.bin", f"{build_dir}/{model_name}{model_ext}")
 

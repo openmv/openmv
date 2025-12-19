@@ -11,8 +11,11 @@
 import sys
 import os
 import json
+import signal
 import argparse
 import struct
+from concurrent.futures import ProcessPoolExecutor
+from concurrent.futures import as_completed
 from modelc import vela_compile
 from modelc import stedge_compile
 from haar2c import cascade_binary_universal
@@ -30,6 +33,17 @@ ROMFS_RECORD_KIND_DATA = 2
 ROMFS_RECORD_KIND_FILE = 5
 
 
+def init_worker():
+    """Initialize worker process to ignore SIGINT."""
+    signal.signal(signal.SIGINT, signal.SIG_IGN)
+
+
+def sigint_handler(signum, frame):
+    """Handle SIGINT in parent process."""
+    print(f"\n{CR}Interrupted{CN}", file=sys.stderr)
+    os.killpg(os.getpgid(os.getpid()), signal.SIGKILL)
+
+
 def encode_vint(value):
     encoded = [value & 0x7F]
     value >>= 7
@@ -38,6 +52,7 @@ def encode_vint(value):
         value >>= 7
     return bytes(encoded)
 
+
 def encode_record(kind, payload, align=0, offset=0, padding=0):
     if align:
         # Set offset to where the payload starts to align the payload.
@@ -45,6 +60,7 @@ def encode_record(kind, payload, align=0, offset=0, padding=0):
         padding = ((offset + (align - 1)) & ~(align - 1)) - offset
     kind = encode_vint(kind) if kind else b""
     return kind + (b"\x80" * padding) + encode_vint(len(payload)) + payload
+
 
 def encode_file(name, data, align, offset):
     # file record: <FILE_KIND>, record_length, name_length, name, [<DATA_KIND>, data_length, data]
@@ -59,6 +75,37 @@ def encode_file(name, data, align, offset):
     file_rec = encode_record(ROMFS_RECORD_KIND_FILE, name_rec + data_rec, ROMFS_FILEREC_ALIGN)
     return file_rec
 
+
+def process_entry(entry, variables, vela_args, stedge_args, build_dir):
+    """Process a single romfs entry. Returns (processed_entry, labels_entry_or_None) or None if disabled."""
+    if not entry.get("enabled", True):
+        return None
+
+    file_path = entry['path'].format(**variables)
+    file_name = os.path.basename(os.path.splitext(file_path)[0])
+    labels_entry = None
+
+    if entry['type'] == 'haar':
+        output_path = os.path.join(build_dir, file_name)
+        cascade_binary_universal(file_path, entry["stages"], output_path)
+        file_path = os.path.join(build_dir, file_name + ".cascade")
+    elif entry['type'] == 'tflite':
+        _file_path = file_path
+        if vela_args:
+            vela_args_full = vela_args + " --optimise " + entry["optimize"]
+            vela_compile(file_path, build_dir, vela_args_full.split())
+            file_path = os.path.join(build_dir, file_name + ".tflite")
+        if stedge_args:
+            stedge_compile(file_path, build_dir, entry["profile"], stedge_args.split())
+            file_path = os.path.join(build_dir, file_name + ".tflite")
+        labels_path = os.path.splitext(_file_path)[0] + ".txt"
+        if os.path.exists(labels_path):
+            labels_entry = {"type": "txt", "path": labels_path}
+
+    entry['path'] = file_path
+    return (entry, labels_entry)
+
+
 def romfs_build(romfs_cfg, p, args):
     romfs_cfg = romfs_cfg[p]
 
@@ -68,39 +115,33 @@ def romfs_build(romfs_cfg, p, args):
         "BUILD" : args.build_dir
     }
 
-    # Build/convert files if needed.
-    index = 0
-    while index < len(romfs_cfg["entries"]):
-        entry = romfs_cfg["entries"][index]
-        if not entry.get("enabled", True):
-            romfs_cfg["entries"].pop(index)
-            continue
-        file_path = entry['path'].format(**variables)
-        file_name = os.path.basename(os.path.splitext(file_path)[0])
-        file_size = "%.2f KiB"%(os.path.getsize(file_path) / 1024)
-        if entry['type'] == 'haar':
-            # Convert Haar cascade
-            output_path = os.path.join(args.build_dir, file_name)
-            cascade_binary_universal(file_path, entry["stages"], output_path)
-            file_path = os.path.join(args.build_dir, file_name + ".cascade")
-        elif entry['type'] == 'tflite':
-            _file_path = file_path  # to get labels
-            if args.vela_args:
-                # Compile the model using Vela.
-                vela_args = args.vela_args + " --optimise " + entry["optimize"]
-                vela_compile(file_path, args.build_dir, vela_args.split())
-                file_path = os.path.join(args.build_dir, file_name + ".tflite")
-            if args.stedge_args:
-                # Compile the model using Vela.
-                stedge_compile(file_path, args.build_dir, entry["profile"], args.stedge_args.split())
-                file_path = os.path.join(args.build_dir, file_name + ".tflite")
-            # If tflite has a labels file add it as a new entry
-            labels_path = os.path.splitext(_file_path)[0] + ".txt"
-            if os.path.exists(labels_path):
-                romfs_cfg["entries"].insert(index + 1, { "type" : "txt", "path" : labels_path })
+    # Build/convert files in parallel.
+    signal.signal(signal.SIGINT, sigint_handler)
+    with ProcessPoolExecutor(max_workers=args.jobs, initializer=init_worker) as executor:
+        futures = {
+            executor.submit(
+                process_entry, entry, variables,
+                args.vela_args, args.stedge_args, args.build_dir
+            ): i
+            for i, entry in enumerate(romfs_cfg["entries"])
+        }
 
-        index += 1
-        entry['path'] = file_path
+        results = [None] * len(romfs_cfg["entries"])
+        for future in as_completed(futures):
+            idx = futures[future]
+            results[idx] = future.result()
+
+    # Rebuild entries list preserving order, inserting label entries after their tflite.
+    new_entries = []
+    for result in results:
+        if result is None:  # disabled entry
+            continue
+        entry, labels_entry = result
+        new_entries.append(entry)
+        if labels_entry:
+            new_entries.append(labels_entry)
+
+    romfs_cfg["entries"] = new_entries
 
     # Build romfs image.
     romfs_data = bytearray()
@@ -143,6 +184,7 @@ def romfs_build(romfs_cfg, p, args):
         print(f" {CB}-size: {CR}{file_size:<8} {CB}alignment: {CR}{file_align:<4} {CB}path: {CG}/rom/{file_name}{CN}");
     print("")
 
+
 def main():
     # Set up argument parser
     parser = argparse.ArgumentParser(description='Create a romfs image from json file.')
@@ -153,6 +195,7 @@ def main():
     parser.add_argument('--vela-args', action = 'store', help='Vela compiler args', default='')
     parser.add_argument('--stedge-args', action = 'store', help='STEdgeAI compiler args', default='')
     parser.add_argument('--partition', action = 'store', help = 'romfs partition to build. Default=all.', default=None)
+    parser.add_argument('-j', '--jobs', type=int, default=None, help='Number of parallel jobs (default: CPU count)')
 
     # Parse arguments
     args = parser.parse_args()
@@ -176,6 +219,7 @@ def main():
             romfs_build(romfs_cfg, p, args)
     else:
         romfs_build(romfs_cfg, args.partition, args)
+
 
 if __name__ == '__main__':
     main()
