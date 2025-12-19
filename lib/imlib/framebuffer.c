@@ -303,9 +303,8 @@ void framebuffer_update_preview(image_t *src) {
 
     if (raw_stream) {
         // Down-scale the frame (if necessary) and send the raw frame.
-        dst.size = src->bpp;
         dst.pixfmt = src->pixfmt;
-        if (src->w <= fb->raw_w && src->h <= fb->raw_h && image_size(&dst) <= available_size) {
+        if (src->w <= fb->raw_w && src->h <= fb->raw_h && image_size(src) <= available_size) {
             memcpy(dst.pixels, src->pixels, image_size(src));
         } else {
             float scale = IM_MIN((fb->raw_w / (float) src->w),
@@ -317,6 +316,9 @@ void framebuffer_update_preview(image_t *src) {
                                  IMAGE_HINT_BILINEAR | IMAGE_HINT_BLACK_BACKGROUND,
                                  NULL, NULL, NULL, NULL);
             } else {
+                dst.w = src->w;
+                dst.h = src->h;
+                dst.pixfmt = PIXFORMAT_JPEG;
                 raw_stream = false;
             }
         }
