@@ -302,6 +302,8 @@ void framebuffer_update_preview(image_t *src) {
     bool raw_stream = src->is_mutable && fb->raw_enabled && fb->raw_w && fb->raw_h;
 
     if (raw_stream) {
+        // Size must be set to the bpp for the V1 protocol to work.
+        dst.size = src->bpp;
         // Down-scale the frame (if necessary) and send the raw frame.
         dst.pixfmt = src->pixfmt;
         if (src->w <= fb->raw_w && src->h <= fb->raw_h && image_size(src) <= available_size) {
@@ -319,6 +321,7 @@ void framebuffer_update_preview(image_t *src) {
                 dst.w = src->w;
                 dst.h = src->h;
                 dst.pixfmt = PIXFORMAT_JPEG;
+                dst.size = available_size;
                 raw_stream = false;
             }
         }
