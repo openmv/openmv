@@ -121,7 +121,7 @@ MPY_FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/,\
 	frozen_content.o                    \
 	mcu/arm/errorhandler.o              \
 	mcu/arm/startup.o                   \
-	mcu/arm/systick.o                   \
+	mcu/arm/ticks.o                     \
 )
 
 ifeq ($(MICROPY_PY_ML_TFLM), 1)
