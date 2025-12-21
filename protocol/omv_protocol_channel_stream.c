@@ -57,7 +57,13 @@ static int stream_channel_unlock(const omv_protocol_channel_t *channel) {
 static size_t stream_channel_size(const omv_protocol_channel_t *channel) {
     framebuffer_t *fb = framebuffer_get(FB_STREAM_ID);
     framebuffer_header_t *hdr = (framebuffer_header_t *) fb->raw_base;
-    size_t size = hdr->is_compressed ? hdr->size : (hdr->width * hdr->height * hdr->bpp);
+    image_t img = {
+        .w = hdr->width,
+        .h = hdr->height,
+        .pixfmt = hdr->pixfmt,
+        .size = hdr->size,
+    };
+    size_t size = image_size(&img);
     // Return header size + stream data size
     return !size ? 0 : (size + sizeof(framebuffer_header_t));
 }
