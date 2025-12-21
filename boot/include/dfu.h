@@ -28,41 +28,20 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * Bootloader Header.
+ * DFU definitions.
  */
-#ifndef __OMV_BOOT_HEADER_H__
-#define __OMV_BOOT_HEADER_H__
+#ifndef __DFU_H__
+#define __DFU_H__
 
-#include "omv_boardconfig.h"
+typedef enum {
+    DFU_STATE_DETACHED,
+    DFU_STATE_ATTACHED,
+    DFU_STATE_RESET,
+} omv_dfu_state_t;
 
-// Boot magic value (also used for forced boot entry).
-#ifndef OMV_BOOT_MAGIC_VALUE
-#define OMV_BOOT_MAGIC_VALUE            (0xB00710AD)
-#endif
+extern omv_dfu_state_t dfu_state;
 
-// Header offset from bootloader start (default 4KB, can be overridden).
-#ifndef OMV_BOOT_HEADER_OFFSET
-#define OMV_BOOT_HEADER_OFFSET          (0x1000)
-#endif
+#define DFU_LED_BLINK_FAST      100
+#define DFU_LED_BLINK_SLOW      200
 
-// Bootloader version numbers.
-#define OMV_BOOT_VERSION_MAJOR          (1)
-#define OMV_BOOT_VERSION_MINOR          (0)
-#define OMV_BOOT_VERSION_PATCH          (2)
-
-#ifndef LINKER_SCRIPT
-#include <stdint.h>
-
-// Header struct placed at fixed offset in bootloader binary.
-typedef struct __attribute__((packed)) {
-    uint32_t magic;
-    uint8_t major;
-    uint8_t minor;
-    uint8_t patch;
-    uint8_t reserved[25];
-} omv_boot_header_t;
-
-_Static_assert(sizeof(omv_boot_header_t) == 32, "omv_boot_header_t must be 32 bytes");
-#endif // LINKER_SCRIPT
-
-#endif // __OMV_BOOT_HEADER_H__
+#endif // __DFU_H__

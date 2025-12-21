@@ -33,19 +33,18 @@
 #include <stdint.h>
 #include <string.h>
 #include "omv_bootconfig.h"
+#include "dfu.h"
 #include "flash.h"
-
-extern bool tud_dfu_detached;
 
 // Invoked when a DFU_DETACH request is received.
 void tud_dfu_detach_cb(void) {
-    tud_dfu_detached = true;
+    dfu_state = DFU_STATE_RESET;
 }
 
 // Invoked before tud_dfu_download_cb() (state=DFU_DNBUSY)
 // or before tud_dfu_manifest_cb() (state=DFU_MANIFEST).
 uint32_t tud_dfu_get_timeout_cb(uint8_t itf, uint8_t state) {
-    tud_dfu_detached = false;
+    dfu_state = DFU_STATE_ATTACHED;
     const partition_t *p = &OMV_BOOT_DFU_PARTITIONS[itf];
 
     if (state == DFU_DNBUSY) {
@@ -106,6 +105,6 @@ uint16_t tud_dfu_upload_cb(uint8_t itf, uint16_t block, uint8_t *buf, uint16_t s
         tud_dfu_finish_flashing(DFU_STATUS_OK);
     }
 
-    tud_dfu_detached = false;
+    dfu_state = DFU_STATE_ATTACHED;
     return size;
 }
