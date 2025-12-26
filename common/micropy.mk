@@ -95,7 +95,7 @@ MPY_FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/lib/,\
 endif
 
 # Add TinyUSB library objects.
-ifeq ($(PORT),$(filter $(PORT),alif mimxrt nrf))
+ifeq ($(OMV_USB_STACK_TINYUSB), 1)
 MPY_FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/lib/tinyusb/, \
 	src/*.o \
 	src/common/*.o \
