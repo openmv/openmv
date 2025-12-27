@@ -67,7 +67,7 @@ void forward_lite_dense_hsp_is8os8ws8(ai_i8 * pDataOut,
                                   const ai_float out_scale,
                                   const ai_float Wt_scale);
 
-void forward_lite_dense_hsp_3step_is8os8ws8(ai_i8 * pDataOut,
+void forward_lite_dense_hsp_1step_is8os8ws8(ai_i8 * pDataOut,
                                   const ai_i8 *pDataIn,
                                   const ai_i8 *pWeights,
                                   const ai_i32 *pBias,

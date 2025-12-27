@@ -109,7 +109,6 @@ static int ml_backend_npu_init() {
         __HAL_RCC_CACHEAXI_RELEASE_RESET();
 
         // Initialize NPU cache.
-        npu_cache_init();
         npu_cache_enable();
 
         npu_initialized = true;

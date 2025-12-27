@@ -31,25 +31,33 @@ extern "C"
 
 #ifndef NDEBUG
 
-#define LL_ATON_PRINTF(...) printf(__VA_ARGS__)
-#define LL_ATON_PUTS(...)   puts(__VA_ARGS__)
-#define LL_ATON_FFLUSH(...) fflush(__VA_ARGS__)
+#define LL_ATON_PRINTF(...)  printf(__VA_ARGS__)
+#define LL_ATON_FPRINTF(...) fprintf(__VA_ARGS__)
+#define LL_ATON_PUTS(...)    puts(__VA_ARGS__)
+#define LL_ATON_FFLUSH(...)  fflush(__VA_ARGS__)
+#define LL_ATON_FOPEN(...)   fopen(__VA_ARGS__)
+#define LL_ATON_FCLOSE(...)  fclose(__VA_ARGS__)
 
 #define LL_ATON_ASSERT(...) assert(__VA_ARGS__)
 
-#define LL_ATON_PROFILER_PRINTF(...) printf(__VA_ARGS__)
-#define LL_ATON_PROFILER_ASSERT(...) assert(__VA_ARGS__)
+#define LL_ATON_PROFILER_PRINTF(...)  printf(__VA_ARGS__)
+#define LL_ATON_PROFILER_FPRINTF(...) fprintf(__VA_ARGS__)
+#define LL_ATON_PROFILER_ASSERT(...)  assert(__VA_ARGS__)
 
 #else
 
 #define LL_ATON_PRINTF(...)
+#define LL_ATON_FPRINTF(...)
 #define LL_ATON_PUTS(...)
 #define LL_ATON_FFLUSH(...)
+#define LL_ATON_FOPEN(...) NULL
+#define LL_ATON_FCLOSE(...)
 
 #define LL_ATON_ASSERT(...)
 #define LL_ATON_ASSERTF(...)
 
 #define LL_ATON_PROFILER_PRINTF(...)
+#define LL_ATON_PROFILER_FPRINTF(...)
 #define LL_ATON_PROFILER_ASSERT(...)
 
 #endif
@@ -59,7 +67,7 @@ extern "C"
   LL_ATON_PRINTF("[ERROR] (%s:%d: errno: %s) " M "\n", __FILE__, __LINE__, __clean_errno(), ##__VA_ARGS__)
 
 /**
- *  @brief Cheks a condition: if it evaluates to false, prints an error message and asserts(false).
+ *  @brief Checks a condition: if it evaluates to false, prints an error message and asserts(false).
  *  @param COND the condition to check.
  *  @param MSG the message to print if the condition evaluates to false (can be a formatted string as well)
  *  @param ASSERT_COND boolean parameter: if 1, this command will LL_ATON_ASSERT(COND), otherwise il will

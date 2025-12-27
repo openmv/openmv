@@ -25,8 +25,8 @@
 #define STAI_API_VERSION_MINOR        (0)
 #define STAI_API_VERSION_MICRO        (0)
 
-#define STAI_TOOLS_VERSION_MAJOR      (2)
-#define STAI_TOOLS_VERSION_MINOR      (1)
+#define STAI_TOOLS_VERSION_MAJOR      (3)
+#define STAI_TOOLS_VERSION_MINOR      (0)
 #define STAI_TOOLS_VERSION_MICRO      (0)
 
 /*****************************************************************************/
@@ -201,22 +201,26 @@ typedef enum {
   STAI_FORMAT_FLOAT64           = 0x00822040,
 
   STAI_FORMAT_U1                = 0x000400c0,
+  STAI_FORMAT_U4                = 0x00040240,
   STAI_FORMAT_U8                = 0x00040440,
   STAI_FORMAT_U16               = 0x00040840,
   STAI_FORMAT_U32               = 0x00041040,
   STAI_FORMAT_U64               = 0x00042040,
 
   STAI_FORMAT_S1                = 0x008400c0,
+  STAI_FORMAT_S4                = 0x00840240,
   STAI_FORMAT_S8                = 0x00840440,
   STAI_FORMAT_S16               = 0x00840840,
   STAI_FORMAT_S32               = 0x00841040,
   STAI_FORMAT_S64               = 0x00842040,
 
   STAI_FORMAT_Q                 = 0x00840040,
+  STAI_FORMAT_Q3                = 0x00840243,
   STAI_FORMAT_Q7                = 0x00840447,
   STAI_FORMAT_Q15               = 0x0084084f,
 
   STAI_FORMAT_UQ                = 0x00040040,
+  STAI_FORMAT_UQ3               = 0x00040243,
   STAI_FORMAT_UQ7               = 0x00040447,
   STAI_FORMAT_UQ15              = 0x0004084f,
 

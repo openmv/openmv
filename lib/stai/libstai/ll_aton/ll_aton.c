@@ -16,7 +16,6 @@
  ******************************************************************************
  */
 
-#include <assert.h>
 #include <inttypes.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -148,7 +147,7 @@ LL_ATON_WEAK int startWatchdog(uint32_t timeout)
 }
 
 /**
- * @brief Checkes whether watchdog has expired or not
+ * @brief Checks whether watchdog has expired or not
  * @retval ATON Error code
  */
 LL_ATON_WEAK int checkWatchdog(void)
@@ -294,7 +293,7 @@ int LL_ATON_DeInit(void)
 /**
  * @brief  Enables a set of ATON units
  * @param  LL_ATON_EnableUnits_InitStruct Array of units to enable
- * @param  n Lenght of the initialization array
+ * @param  n Length of the initialization array
  * @retval Error code
  * @todo   Add boundary checks
  */
@@ -394,35 +393,35 @@ int LL_ATON_DisableUnits_Init(const LL_ATON_DisableUnits_InitTypeDef *LL_ATON_Di
     {
 #ifdef ATON_STRENG_NUM
     case STRENG:
-      ATON_DISABLE_CLR_CONFCLR(STRENG, unitId);
+      ATON_DISABLE(STRENG, unitId);
       LL_ATON_DisableClock(ATON_STRENG_CLKB_CLK(unitId));
       break;
 #endif
 
 #ifdef ATON_CONVACC_NUM
     case CONVACC:
-      ATON_DISABLE_CLR_CONFCLR(CONVACC, unitId);
+      ATON_DISABLE(CONVACC, unitId);
       LL_ATON_DisableClock(ATON_CONVACC_CLKB_CLK(unitId));
       break;
 #endif
 
 #ifdef ATON_DECUN_NUM
     case DECUN:
-      ATON_DISABLE_CLR_CONFCLR(DECUN, unitId);
+      ATON_DISABLE(DECUN, unitId);
       LL_ATON_DisableClock(ATON_DECUN_CLKB_CLK(unitId));
       break;
 #endif
 
 #ifdef ATON_ACTIV_NUM
     case ACTIV:
-      ATON_DISABLE_CLR_CONFCLR(ACTIV, unitId);
+      ATON_DISABLE(ACTIV, unitId);
       LL_ATON_DisableClock(ATON_ACTIV_CLKB_CLK(unitId));
       break;
 #endif
 
 #ifdef ATON_ARITH_NUM
     case ARITH:
-      ATON_DISABLE_CLR_CONFCLR(ARITH, unitId);
+      ATON_DISABLE(ARITH, unitId);
       LL_ATON_DisableClock(ATON_ARITH_CLKB_CLK(unitId));
       break;
 #endif
@@ -432,7 +431,7 @@ int LL_ATON_DisableUnits_Init(const LL_ATON_DisableUnits_InitTypeDef *LL_ATON_Di
 #ifdef POOL_RC14
       ATON_POOL_CTRL_SET(unitId, ATON_POOL_CTRL_SET_EN(ATON_POOL_CTRL_GET(unitId), 0));
 #else  // !POOL_RC14
-      ATON_DISABLE_CLR_CONFCLR(POOL, unitId);
+      ATON_DISABLE(POOL, unitId);
 #endif // !POOL_RC14
 
       LL_ATON_DisableClock(ATON_POOL_CLKB_CLK(unitId));
@@ -441,7 +440,7 @@ int LL_ATON_DisableUnits_Init(const LL_ATON_DisableUnits_InitTypeDef *LL_ATON_Di
 
 #ifdef ATON_RECBUF_NUM
     case RECBUF:
-      ATON_DISABLE_CLR_CONFCLR(RECBUF, unitId);
+      ATON_DISABLE(RECBUF, unitId);
       LL_ATON_DisableClock(ATON_RECBUF_CLKB_CLK(unitId));
       break;
 #endif
@@ -679,9 +678,19 @@ int LL_Streng_TensorInit(int id, const LL_Streng_TensorInitTypeDef *conf, int n)
     ATON_STRENG_DEPTH_SET(id, t);
   }
 
+  ATON_STRENG_FOFFSET_SET(id, conf->frame_offset);
+
+  /* Frame repetition loop configuration */
   ATON_STRENG_FRPTOFF_SET(id, conf->loop_offset);
   ATON_STRENG_FRAME_RPT_SET(id, conf->frame_loop_cnt);
-  ATON_STRENG_FOFFSET_SET(id, conf->frame_offset);
+
+  /* Second level frame repetition loop configuration (if available) */
+#ifdef ATON_STRENG_FRAME_RPT2_DT
+  if (conf->frame_loop_cnt2 != ATON_STRENG_FRAME_RPT2_DT)
+    ATON_STRENG_FRAME_RPT2_SET(id, conf->frame_loop_cnt2);
+  if (conf->loop_offset2 != ATON_STRENG_FRPTOFF2_DT)
+    ATON_STRENG_FRPTOFF2_SET(id, conf->loop_offset2);
+#endif
 
   t = ATON_STRENG_LIMITEN_DT; // all other fields set to zero
   t = ATON_STRENG_LIMITEN_SET_FRAMELIMIT(t, 1);
@@ -752,12 +761,13 @@ int LL_Streng_TensorInit(int id, const LL_Streng_TensorInitTypeDef *conf, int n)
   ATON_STRENG_EVENT_SET(id, t_streng_event);
 
   /* Ciphering settings */
-#if (ATON_STRENG_VERSION_ENCR_DT == 1)
-  t = ATON_STRENG_ENCR_MSB_DT;
-  t = ATON_STRENG_ENCR_MSB_SET_EN(t, conf->cipher_en);
-  t = ATON_STRENG_ENCR_MSB_SET_KEY_SEL(t, conf->key_sel);
-  ATON_STRENG_ENCR_MSB_SET(id, t);
-#endif
+  if (ATON_STRENG_ENCRYPTION_EN(id))
+  {
+    t = ATON_STRENG_ENCR_MSB_DT;
+    t = ATON_STRENG_ENCR_MSB_SET_EN(t, conf->cipher_en);
+    t = ATON_STRENG_ENCR_MSB_SET_KEY_SEL(t, conf->key_sel);
+    ATON_STRENG_ENCR_MSB_SET(id, t);
+  }
 
   return 0;
 }
@@ -1549,7 +1559,7 @@ static void LL_Decun_CB_2byte(int id, const LL_Decun_InitTypeDef *conf, uint32_t
 
 /**
  * @brief  Configures Decompression Unit accelerator
- * @param  id Decompression Unit identifier (Always 0 fo Tiny Orlando)
+ * @param  id Decompression Unit identifier (Always 0 for Tiny Orlando)
  * @param  conf Pointer to structure describing decompression unit configuration
  * @retval Error code
  */
@@ -1680,6 +1690,10 @@ int LL_Convacc_Init(int id, const LL_Convacc_InitTypeDef *conf)
     t = ATON_CONVACC_KFILT_SET_LAST(t, conf->kfilt_last);
     ATON_CONVACC_KFILT_SET(id, t);
   }
+  else
+  {
+    ATON_CONVACC_KFILT_SET(id, ATON_CONVACC_KFILT_DT);
+  }
 
   t = ATON_CONVACC_DFORMAT_DT;
   t = ATON_CONVACC_DFORMAT_SET_FROUND(t, conf->rounding_f);
@@ -1727,19 +1741,19 @@ int LL_Convacc_Init(int id, const LL_Convacc_InitTypeDef *conf)
 
 #if defined(ATON_CONVACC_CTRL_GET_DEEPMODE)
   // no pad mode available in 1x1 deepmode
-  // will accomodate padding only with zframe below
+  // will accommodate padding only with zframe below
   if (conf->deepmode != 0)
     p_top = p_bot = p_left = p_right = 0;
 #endif
 #if defined(ATON_CONVACC_CTRL_GET_DSS2MODE)
   // no pad mode available in dss2mode
-  // will accomodate padding only with zframe below
+  // will accommodate padding only with zframe below
   if (conf->dss2mode != 0)
     p_top = p_bot = p_left = p_right = 0;
 #endif
 #if defined(ATON_CONVACC_ZFBIAS_SET)
   // no pad mode available if zfbias is set
-  // will accomodate padding only with zframe below
+  // will accommodate padding only with zframe below
   if (conf->zfbias != 0)
     p_top = p_bot = p_left = p_right = 0;
 #endif
@@ -1787,12 +1801,23 @@ int LL_Convacc_Init(int id, const LL_Convacc_InitTypeDef *conf)
   // LL_ATON_PRINTF("c_t=%d c_b=%d c_l=%d c_r=%d\n",conf->top_crop,conf->bot_crop,conf->left_crop  *
   // conf->batchDepth,conf->right_crop  * conf->batchDepth + (conf->batchDepth - 1));
 
-#if defined(ATON_CONVACC_FSUB_SET)
+#if defined(ATON_CONVACC_FSUB_SET_FSUB)
   if (conf->fsub != 0)
   {
     t = ATON_CONVACC_FSUB_DT;
     t = ATON_CONVACC_FSUB_SET_FSUB(t, conf->fsub);
     ATON_CONVACC_FSUB_SET(id, t);
+  }
+#endif
+#if defined(ATON_CONVACC_FSUB_SET_VSHIFT)
+  if (conf->vshift != 0)
+  {
+    t = ATON_CONVACC_FSUB_GET(id);
+    t = ATON_CONVACC_FSUB_SET_VSHIFT(t, conf->vshift);
+    // LL_ATON_PRINTF("SETTING VSHIFT %d\n", conf->vshift);
+    ATON_CONVACC_FSUB_SET(id, t);
+    // LL_ATON_PRINTF("SETTING VSHIFT %d\n", t);
+    // LL_ATON_PRINTF("FSUB VALUE : %d", ATON_CONVACC_FSUB_GET(id));
   }
 #endif
 #if defined(ATON_CONVACC_ZFBIAS_SET)
@@ -1953,7 +1978,7 @@ int LL_Activacc_Init(int id, const LL_Activacc_InitTypeDef *conf)
     }
   }
 #else
-    assert("Unsupported Activation LUT configuration");
+    LL_ATON_ASSERT("Unsupported Activation LUT configuration");
 #endif
   break;
   default:
@@ -2217,7 +2242,8 @@ int LL_Arithacc_Init(int id, const LL_Arithacc_InitTypeDef *conf)
       uint32_t A = Ap != NULL ? LL_ATON_getbits(Ap, bitcnt_A, nbits_A) : (uint32_t)conf->A_scalar;
       uint32_t B = Bp != NULL ? LL_ATON_getbits(Bp, bitcnt_B, nbits_B) : (uint32_t)conf->B_scalar;
       uint32_t C = Cp != NULL ? (c_sign * LL_ATON_getbits(Cp, bitcnt_C, nbits_C)) : (uint32_t)conf->C_scalar;
-      if (conf->combinebc)
+      LL_ATON_ASSERT(conf->combinebc == 0 || (Cp == NULL && Bp == NULL) || (Cp != NULL && Bp == NULL));
+      if (conf->combinebc && Cp != NULL)
       {
         B = (C >> 16);
         C = (C & 0xFFFF);
@@ -2492,14 +2518,34 @@ unsigned int LL_EpochCtrl_GetBlobSize(uint32_t *eb_addr)
 void LL_ATON_EnableClock(unsigned int clock)
 {
 #if (LL_ATON_ENABLE_CLOCK_GATING == 1)
-  ATON_REG_WRITE_FIELD_RANGE(CLKCTRL, 0, BGATES, clock, 1, 1);
+  if (clock <= 31)
+  {
+    ATON_REG_WRITE_FIELD_RANGE(CLKCTRL, 0, BGATES, clock, 1, 1);
+  }
+#ifdef ATON_CLKCTRL_BGATES1_OFFSET
+  else
+  {
+    clock -= 32;
+    ATON_REG_WRITE_FIELD_RANGE(CLKCTRL, 0, BGATES1, clock, 1, 1);
+  }
+#endif
 #endif
 }
 
 void LL_ATON_DisableClock(unsigned int clock)
 {
 #if (LL_ATON_ENABLE_CLOCK_GATING == 1)
-  ATON_REG_WRITE_FIELD_RANGE(CLKCTRL, 0, BGATES, clock, 1, 0);
+  if (clock <= 31)
+  {
+    ATON_REG_WRITE_FIELD_RANGE(CLKCTRL, 0, BGATES, clock, 1, 0);
+  }
+#ifdef ATON_CLKCTRL_BGATES1_OFFSET
+  else
+  {
+    clock -= 32;
+    ATON_REG_WRITE_FIELD_RANGE(CLKCTRL, 0, BGATES1, clock, 1, 0);
+  }
+#endif
 #endif
 }
 
@@ -2634,7 +2680,7 @@ uintptr_t get_ec_aton_base(void)
 
 void initialize_ec_aton_base(void)
 {
-  ec_aton_base = malloc(ATON_SIZE);
+  ec_aton_base = malloc(ATON_ADDR_SPACE_SIZE);
 }
 
 /* Called by patched ATON.h to trace ATON register stores */

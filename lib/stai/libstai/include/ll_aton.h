@@ -24,12 +24,12 @@ extern "C"
 {
 #endif
 
-#include <assert.h>
 #include <stddef.h>
 #include <stdint.h>
 
 #include "ll_aton_attributes.h"
 #include "ll_aton_config.h"
+#include "ll_aton_util.h"
 
 #if (LL_ATON_PLATFORM != LL_ATON_PLAT_EC_TRACE)
 #include "ll_aton_osal.h"
@@ -235,7 +235,7 @@ extern "C"
     signed char shift_y;       /**< Input feature data shift for stream Y. Use negative values for left shift */
     unsigned rounding_o : 1;   /**< Rounding control, 1=enable, 0=disable */
     unsigned saturation_o : 1; /**< Saturation control, 1=enable, 0=disable */
-    unsigned round_mode_o : 1; /**< Otput rounding mode control */
+    unsigned round_mode_o : 1; /**< Output rounding mode control */
     unsigned relu_mode_o : 1;  /**< Apply Relu operation before rounding */
     unsigned outbytes_o : 2;   /**< Number of output bytes: 1 or 2 */
     unsigned char shift_o;     /**< Optional right shift to apply to final result of operation */
@@ -333,6 +333,7 @@ extern "C"
     unsigned char kfilt_first;         /**< First kernel */
     unsigned char kfilt_last;          /**< Last kernel */
     int fsub;                          /**< Feature data subtract value */
+    unsigned vshift : 2;               /**< Variable shift mode selector */
     short zfbias;                      /**< Bias added to zero frames */
   } LL_Convacc_InitTypeDef;
 
@@ -464,9 +465,12 @@ extern "C"
                                    *   If set to zero it's derived from width and batch_offset */
     unsigned loop_offset;         /**< Offset between frame repetition loops */
     unsigned frame_loop_cnt;      /**< Number of frames to loop */
-    unsigned frame_tot_cnt;       /**< Frame limit */
-    unsigned char nbits_in;       /**< Data size in bits if reading */
-    unsigned char nbits_out;      /**< Data size in bits if writing */
+    unsigned
+        loop_offset2; /**< 2nd level offset between frame repetition loops. If set, has priority over loop_offset */
+    unsigned frame_loop_cnt2; /**< 2nd level number of frames to loop */
+    unsigned frame_tot_cnt;   /**< Frame limit */
+    unsigned char nbits_in;   /**< Data size in bits if reading */
+    unsigned char nbits_out;  /**< Data size in bits if writing */
   } LL_Streng_TensorInitTypeDef;
 
   static inline unsigned char *LL_Streng_addr_start(const LL_Streng_TensorInitTypeDef *conf)

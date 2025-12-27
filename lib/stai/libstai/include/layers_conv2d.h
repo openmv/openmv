@@ -269,7 +269,7 @@ void forward_dw_hsp_1step_sssa8_ch(ai_layer *pLayer);
  * @param layer the convolutional (conv) layer
  */
 AI_INTERNAL_API
-void forward_dw_hsp_sssa8_ch(ai_layer *pLayer);
+void forward_dw_hsp_2step_sssa8_ch(ai_layer *pLayer);
 
 /*!
  * @brief Computes the activations of a int8 quantized DW layer
@@ -343,7 +343,7 @@ void forward_pw_sssa8_ch(ai_layer *pLayer);
  * @param layer the convolutional (conv) layer
  */
 AI_INTERNAL_API
-void forward_pw_hsp_sssa8_ch(ai_layer *pLayer);
+void forward_pw_hsp_2step_sssa8_ch(ai_layer *pLayer);
 
 /*!
  * @brief Computes the activations of a int8 quantized PW layer
@@ -414,7 +414,7 @@ AI_INTERNAL_API
 void forward_conv2d_hsp_1step_sssa8_ch(ai_layer *pLayer);
 
 AI_INTERNAL_API
-void forward_conv2d_hsp_sssa8_ch(ai_layer *pLayer);
+void forward_conv2d_hsp_2step_sssa8_ch(ai_layer *pLayer);
 
 AI_INTERNAL_API
 void forward_conv2d_hsp_3step_sssa8_ch(ai_layer *pLayer);
@@ -689,7 +689,7 @@ void forward_dense_hsp_sssa8(ai_layer *pLayer);
  * @param layer the dense layer
  */
 AI_INTERNAL_API
-void forward_dense_hsp_3step_sssa8(ai_layer *pLayer);
+void forward_dense_hsp_1step_sssa8(ai_layer *pLayer);
 
 /*!
  * @brief Computes the activations of a integer dense (fully connected) layer

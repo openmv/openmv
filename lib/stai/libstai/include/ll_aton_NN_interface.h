@@ -24,7 +24,6 @@ extern "C"
 {
 #endif
 
-#include <assert.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -32,25 +31,20 @@ extern "C"
 #include "ll_aton_config.h"
 
 #include "ll_aton_attributes.h"
+#include "ll_aton_cipher.h"
 #include "ll_aton_util.h"
 
-  /* this is needed to avoid some compilers (e.g. KEIL) that observe a strict semantic about conversion of
-   * pointers to integers in cost initializers
+  /** @defgroup User I/O Return Values & Callback Event Types
+   * @{
    */
-  typedef union
-  {
-    unsigned char *p;
-    uintptr_t i;
-  } __LL_address_t;
 
-  typedef void (*EpochBlock_FuncPtr_t)(const void *epoch_block);
-
-  typedef enum LL_ATON_RT_RetValues
+  typedef enum LL_ATON_User_IO_Result
   {
-    LL_ATON_RT_NO_WFE = 0,
-    LL_ATON_RT_WFE,
-    LL_ATON_RT_DONE,
-  } LL_ATON_RT_RetValues_t;
+    LL_ATON_User_IO_NOERROR,     /**< */
+    LL_ATON_User_IO_WRONG_ALIGN, /**< */
+    LL_ATON_User_IO_WRONG_SIZE,  /**< */
+    LL_ATON_User_IO_WRONG_INDEX, /**< */
+  } LL_ATON_User_IO_Result_t;
 
   typedef enum LL_ATON_RT_Callbacktype
   {
@@ -66,25 +60,37 @@ extern "C"
     LL_ATON_RT_Callbacktype_RT_Deinit,  /**< Callback called before `LL_ATON_RT_RuntimeDeInit` */
   } LL_ATON_RT_Callbacktype_t;
 
-  typedef enum LL_ATON_User_IO_Result
+  /**
+   * @}
+   */
+
+  /** @defgroup Handle-style Data Types for Epoch Blocks
+   * @{
+   */
+
+  /* this is needed to avoid some compilers (e.g. KEIL) that observe a strict semantic about conversion of
+   * pointers to integers in cost initializers
+   */
+  typedef union
   {
-    LL_ATON_User_IO_NOERROR,     /**< */
-    LL_ATON_User_IO_WRONG_ALIGN, /**< */
-    LL_ATON_User_IO_WRONG_SIZE,  /**< */
-    LL_ATON_User_IO_WRONG_INDEX, /**< */
-  } LL_ATON_User_IO_Result_t;
+    unsigned char *p;
+    uintptr_t i;
+  } __LL_address_t;
+
+  typedef void (*EpochBlock_FuncPtr_t)(const void *epoch_block);
 
   typedef enum
   {
-    EpochBlock_Flags_NONE = 0x0,               /**< */
-    EpochBlock_Flags_epoch_start = (0x1 << 0), /**< First EpochBlock of an Epoch */
-    EpochBlock_Flags_epoch_end = (0x1 << 1),   /**< Last EpochBlock of an Epoch */
-    EpochBlock_Flags_blob = (0x1 << 2),        /**< Item is an Epoch Blob */
-    EpochBlock_Flags_last_eb = (0x1 << 3),     /**< Last EpochBlock */
-    EpochBlock_Flags_pure_hw = (0x1 << 4),     /**< Pure HW EpochBlock */
-    EpochBlock_Flags_pure_sw = (0x1 << 5),     /**< Pure SW EpochBlock */
-    EpochBlock_Flags_hybrid = (0x1 << 6),      /**< Hybrid EpochBlock (i.e. mixed HW/SW) */
-    EpochBlock_Flags_internal = (0x1 << 7),    /**< ATON lib internal EpochBlock (used to implement hybrid epochs) */
+    EpochBlock_Flags_NONE = 0x0,                 /**< */
+    EpochBlock_Flags_epoch_start = (0x1 << 0),   /**< First EpochBlock of an Epoch */
+    EpochBlock_Flags_epoch_end = (0x1 << 1),     /**< Last EpochBlock of an Epoch */
+    EpochBlock_Flags_blob = (0x1 << 2),          /**< Item is an Epoch Blob */
+    EpochBlock_Flags_last_eb = (0x1 << 3),       /**< Last EpochBlock */
+    EpochBlock_Flags_pure_hw = (0x1 << 4),       /**< Pure HW EpochBlock */
+    EpochBlock_Flags_pure_sw = (0x1 << 5),       /**< Pure SW EpochBlock */
+    EpochBlock_Flags_hybrid = (0x1 << 6),        /**< Hybrid EpochBlock (i.e. mixed HW/SW) */
+    EpochBlock_Flags_internal = (0x1 << 7),      /**< ATON lib internal EpochBlock (used to implement hybrid epochs) */
+    EpochBlock_Flags_blob_encrypted = (0x1 << 8) /**< The blob is encrypted and must be decrypted on the fly */
   } EpochBlock_Flags_t;
 
   typedef struct
@@ -105,6 +111,15 @@ extern "C"
     uint64_t estimated_tot_cycles; /**< Debug information estimates for NPU cycles in epoch w/ memory penalty */
 #endif                             // LL_ATON_EB_DBG_INFO
   } EpochBlock_ItemTypeDef;
+  typedef EpochBlock_ItemTypeDef LL_ATON_RT_EpochBlockItem_t;
+
+  /**
+   * @}
+   */
+
+  /** @defgroup Helper Function Declarations for User Callbacks
+   * @{
+   */
 
   /**
    * @brief Checks if the pointed element is the last one of an array of `const EpochBlock_ItemTypeDef`
@@ -129,6 +144,12 @@ extern "C"
    *
    */
   static inline bool EpochBlock_IsEpochBlob(const EpochBlock_ItemTypeDef *eb);
+
+  /**
+   * @brief Checks if - in case this epoch is a blob (see above) - the blob is encrypted
+   *
+   */
+  static inline bool EpochBlock_IsBlobEncrypted(const EpochBlock_ItemTypeDef *eb);
 
   /**
    * @brief Checks if the pointed element is pure SW epoch
@@ -170,25 +191,37 @@ extern "C"
    * @brief ATON buffer types definition
    */
 
+  /**
+   * @}
+   */
+
+  /** @defgroup Handle-style Data Types for Input, Output, and Internal Buffers
+   * @{
+   */
+
   typedef enum
   {
     DataType_UNDEFINED = 0,
     DataType_FLOAT = 1,
-    DataType_UINT8 = 2,
-    DataType_INT8 = 3,
-    DataType_UINT16 = 4,
-    DataType_INT16 = 5,
-    DataType_INT32 = 6,
-    DataType_INT64 = 7,
-    DataType_STRING = 8,
-    DataType_BOOL = 9,
-    DataType_FLOAT16 = 10,
-    DataType_DOUBLE = 11,
-    DataType_UINT32 = 12,
-    DataType_UINT64 = 13,
-    DataType_COMPLEX64 = 14,
-    DataType_COMPLEX128 = 15,
-    DataType_BFLOAT16 = 16,
+    DataType_UINT2 = 2,
+    DataType_INT2 = 3,
+    DataType_UINT4 = 4,
+    DataType_INT4 = 5,
+    DataType_UINT8 = 6,
+    DataType_INT8 = 7,
+    DataType_UINT16 = 8,
+    DataType_INT16 = 9,
+    DataType_INT32 = 10,
+    DataType_INT64 = 11,
+    DataType_STRING = 12,
+    DataType_BOOL = 13,
+    DataType_FLOAT16 = 14,
+    DataType_DOUBLE = 15,
+    DataType_UINT32 = 16,
+    DataType_UINT64 = 17,
+    DataType_COMPLEX64 = 18,
+    DataType_COMPLEX128 = 19,
+    DataType_BFLOAT16 = 20,
     DataType_FXP = 100 // AtoNN specific
   } Buffer_DataType_TypeDef;
 
@@ -237,6 +270,14 @@ extern "C"
   } LL_Buffer_InfoTypeDef;
 
   /**
+   * @}
+   */
+
+  /** @defgroup Helper Function Declarations for Buffer Analysis
+   * @{
+   */
+
+  /**
    * @brief returns the base address of the mem pool the buffer is allocated in
    *
    */
@@ -272,117 +313,16 @@ extern "C"
    */
   static inline uint32_t LL_Buffer_bits(const LL_Buffer_InfoTypeDef *buf);
 
-  /** @defgroup ATONN_COMPILER Functions autogenerated by the AtoNN compiler
+  /**
+   * @}
+   */
+
+  /** @defgroup Handle-style Data Types and Declaration Macros for ATON Runtime Execution & User API
    * @{
    */
 
-  /**
-   * @brief  Initialize a Network internal structures for the Epoch Controller
-   * @note   This function is generated by the AtoNN compiler when called without a network name
-   *         (i.e. without option `--network-name`)
-   * @note   Use macro `LL_ATON_DECLARE_NAMED_NN_PROTOS(network_name)` instead when the network has been generated
-   *         (by the AtoNN compiler) with a network name (i.e. with option `--network-name`)
-   * @retval returns if the action succeded or an error occured
-   */
-  extern bool LL_ATON_EC_Network_Init_Default(void);
-
-  /**
-   * @brief  Update a Network internal structures for the Epoch Controller before the execution of an Inference
-   * @note   This function is generated by the AtoNN compiler when called without a network name
-   *         (i.e. without option `--network-name`)
-   * @note   Use macro `LL_ATON_DECLARE_NAMED_NN_PROTOS(network_name)` instead when the network has been generated
-   *         (by the AtoNN compiler) with a network name (i.e. with option `--network-name`)
-   * @retval returns if the action succeded or an error occured
-   */
-  extern bool LL_ATON_EC_Inference_Init_Default(void);
-
-  /**
-   * @brief  Sets user allocated inputs (one at a time)
-   * @note   This function is generated by the AtoNN compiler when called without a network name
-   *         (i.e. without option `--network-name`)
-   * @note   Use macro `LL_ATON_DECLARE_NAMED_NN_PROTOS(network_name)` instead when the network has been generated
-   *         (by the AtoNN compiler) with a network name (i.e. with option `--network-name`)
-   * @param  num zero base index of the input buffer to set
-   * @param  buffer pointer to the area used to store this input
-   * @param  size size of the memory reserved for this input
-   */
-  extern LL_ATON_User_IO_Result_t LL_ATON_Set_User_Input_Buffer_Default(uint32_t num, void *buffer, uint32_t size);
-
-  /**
-   * @brief  Gets user allocated inputs (one at a time)
-   * @note   This function is generated by the AtoNN compiler when called without a network name
-   *         (i.e. without option `--network-name`)
-   * @note   Use macro `LL_ATON_DECLARE_NAMED_NN_PROTOS(network_name)` instead when the network has been generated
-   *         (by the AtoNN compiler) with a network name (i.e. with option `--network-name`)
-   * @param  num zero base index of the input buffer to get
-   * @retval returns a pointer to the specified user allocated input
-   */
-  extern void *LL_ATON_Get_User_Input_Buffer_Default(uint32_t num);
-
-  /**
-   * @brief  Sets user allocated outputs (one at a time)
-   * @note   This function is generated by the AtoNN compiler when called without a network name
-   *         (i.e. without option `--network-name`)
-   * @note   Use macro `LL_ATON_DECLARE_NAMED_NN_PROTOS(network_name)` instead when the network has been generated
-   *         (by the AtoNN compiler) with a network name (i.e. with option `--network-name`)
-   * @param  num zero base index of the output buffer to set
-   * @param  buffer pointer to the area used to store this output
-   * @param  size size of the memory reserved for this output
-   */
-  extern LL_ATON_User_IO_Result_t LL_ATON_Set_User_Output_Buffer_Default(uint32_t num, void *buffer, uint32_t size);
-
-  /**
-   * @brief  Gets user allocated inputs (one at a time)
-   * @note   This function is generated by the AtoNN compiler when called without a network name
-   *         (i.e. without option `--network-name`)
-   * @note   Use macro `LL_ATON_DECLARE_NAMED_NN_PROTOS(network_name)` instead when the network has been generated
-   *         (by the AtoNN compiler) with a network name (i.e. with option `--network-name`)
-   * @param  num zero base index of the output buffer to get
-   * @retval returns a pointer to the specified user allocated output
-   */
-  extern void *LL_ATON_Get_User_Output_Buffer_Default(uint32_t num);
-
-  /**
-   * @brief  Returns an array of structures describing the epoch blocks of the NN to execute
-   * @note   This function is generated by the AtoNN compiler when called without a network name
-   *         (i.e. without option `--network-name`)
-   * @note   Use macro `LL_ATON_DECLARE_NAMED_NN_PROTOS(network_name)` instead when the network has been generated
-   *         (by the AtoNN compiler) with a network name (i.e. with option `--network-name`)
-   * @retval returns a pointer to an array of `const EpochBlock_ItemTypeDef`,
-   *         if `flags` contain `EpochBlock_Flags_last_eb` identifies the last (empty) EpochBlock (i.e. we are done)
-   *         (see helper function `EpochBlock_IsLastEpochBlock()`)
-   */
-  extern const EpochBlock_ItemTypeDef *LL_ATON_EpochBlockItems_Default(void);
-
-  /**
-   * @brief  Returns an array of structures describing input buffers
-   * @note   This function is generated by the AtoNN compiler when called without a network name
-   *         (i.e. without option `--network-name`)
-   * @note   Use macro `LL_ATON_DECLARE_NAMED_NN_PROTOS(network_name)` instead when the network has been generated
-   *         (by the AtoNN compiler) with a network name (i.e. with option `--network-name`)
-   * @retval returns a pointer to the array of LL_Buffer_InfoTypeDef, name is NULL for the last one
-   */
-  extern const LL_Buffer_InfoTypeDef *LL_ATON_Output_Buffers_Info_Default(void);
-
-  /**
-   * @brief  Returns an array of structures describing output buffers
-   * @note   This function is generated by the AtoNN compiler when called without a network name
-   *         (i.e. without option `--network-name`)
-   * @note   Use macro `LL_ATON_DECLARE_NAMED_NN_PROTOS(network_name)` instead when the network has been generated
-   *         (by the AtoNN compiler) with a network name (i.e. with option `--network-name`)
-   * @retval Returns a pointer to the array of LL_Buffer_InfoTypeDef, name is NULL for the last one
-   */
-  extern const LL_Buffer_InfoTypeDef *LL_ATON_Input_Buffers_Info_Default(void);
-
-  /**
-   * @brief  Returns an array of structures describing epoch output transient buffers
-   * @note   This function is generated by the AtoNN compiler when called without a network name
-   *         (i.e. without option `--network-name`)
-   * @note   Use macro `LL_ATON_DECLARE_NAMED_NN_PROTOS(network_name)` instead when the network has been generated
-   *         (by the AtoNN compiler) with a network name (i.e. with option `--network-name`)
-   * @retval Returns a pointer to the array of LL_Buffer_InfoTypeDef, name is NULL for the last one
-   */
-  extern const LL_Buffer_InfoTypeDef *LL_ATON_Internal_Buffers_Info_Default(void);
+  struct __nn_instance_struct; // forward declaration
+  typedef struct __nn_instance_struct NN_Instance_TypeDef;
 
 /**
  * @brief Declare the function prototypes for named NN interface functions generated by the AtoNN compiler
@@ -400,6 +340,8 @@ extern "C"
   extern const EpochBlock_ItemTypeDef *LL_ATON_EpochBlockItems_##network_name(void);                                   \
   extern const LL_Buffer_InfoTypeDef *LL_ATON_Output_Buffers_Info_##network_name(void);                                \
   extern const LL_Buffer_InfoTypeDef *LL_ATON_Input_Buffers_Info_##network_name(void);                                 \
+  extern const LL_Streng_EncryptionTypedef *LL_ATON_WeightEncryption_Info_##network_name(void);                        \
+  extern const LL_Streng_EncryptionTypedef *LL_ATON_BlobEncryption_Info_##network_name(void);                          \
   extern const LL_Buffer_InfoTypeDef *LL_ATON_Internal_Buffers_Info_##network_name(void);
 
   /**
@@ -411,12 +353,11 @@ extern "C"
   typedef LL_ATON_User_IO_Result_t (*NN_OutputSetter_TypeDef)(uint32_t num, void *buffer, uint32_t size);
   typedef void *(*NN_OutputGetter_TypeDef)(uint32_t num);
   typedef const EpochBlock_ItemTypeDef *(*NN_EpochBlockItems_TypeDef)(void);
+  typedef const LL_Streng_EncryptionTypedef *(*NN_Encryption_Info_TypeDef)(void);
   typedef const LL_Buffer_InfoTypeDef *(*NN_Buffers_Info_TypeDef)(void);
 
   typedef void (*TraceRuntime_FuncPtr_t)(LL_ATON_RT_Callbacktype_t ctype);
 
-  struct __nn_instance_struct; // forward declaration
-  typedef struct __nn_instance_struct NN_Instance_TypeDef;
   typedef void (*TraceEpochBlock_FuncPtr_t)(LL_ATON_RT_Callbacktype_t ctype, const NN_Instance_TypeDef *nn_instance,
                                             const EpochBlock_ItemTypeDef *epoch_block);
 
@@ -432,6 +373,8 @@ extern "C"
     NN_EpochBlockItems_TypeDef epoch_block_items;
     NN_Buffers_Info_TypeDef output_buffers_info;
     NN_Buffers_Info_TypeDef input_buffers_info;
+    NN_Encryption_Info_TypeDef blob_encryption_info;
+    NN_Encryption_Info_TypeDef weight_encryption_info;
     NN_Buffers_Info_TypeDef internal_buffers_info;
   } NN_Interface_TypeDef;
 
@@ -457,7 +400,7 @@ extern "C"
         nr_of_epoch_blocks; // number of epoch blocks in network (includes also terminating empty epoch block)
     volatile uint32_t saved_nr_of_epoch_blocks; // number of epoch blocks in saved network (includes also terminating
                                                 // empty epoch block)
-#endif                                          // NDEBUG
+#endif                                          // !NDEBUG
 
     TraceEpochBlock_FuncPtr_t epoch_callback_function; // epoch callback function
 
@@ -473,45 +416,12 @@ extern "C"
     NN_Execution_State_TypeDef exec_state;
   };
 
-/**
- * @brief Declare and fill a constant named NN interface object
- * @param nn_if_name name of the network as provided by option `--network-name`
- */
-#define LL_ATON_DECLARE_NAMED_NN_INTERFACE(nn_if_name)                                                                 \
-  LL_ATON_DECLARE_NAMED_NN_PROTOS(nn_if_name);                                                                         \
-                                                                                                                       \
-  static const NN_Interface_TypeDef NN_Interface_##nn_if_name = {                                                      \
-      .network_name = #nn_if_name,                                                                                     \
-      .ec_network_init = &LL_ATON_EC_Network_Init_##nn_if_name,                                                        \
-      .ec_inference_init = &LL_ATON_EC_Inference_Init_##nn_if_name,                                                    \
-      .input_setter = &LL_ATON_Set_User_Input_Buffer_##nn_if_name,                                                     \
-      .input_getter = &LL_ATON_Get_User_Input_Buffer_##nn_if_name,                                                     \
-      .output_setter = &LL_ATON_Set_User_Output_Buffer_##nn_if_name,                                                   \
-      .output_getter = &LL_ATON_Get_User_Output_Buffer_##nn_if_name,                                                   \
-      .epoch_block_items = &LL_ATON_EpochBlockItems_##nn_if_name,                                                      \
-      .output_buffers_info = &LL_ATON_Output_Buffers_Info_##nn_if_name,                                                \
-      .input_buffers_info = &LL_ATON_Input_Buffers_Info_##nn_if_name,                                                  \
-      .internal_buffers_info = &LL_ATON_Internal_Buffers_Info_##nn_if_name}
-
-/**
- * @brief Declare and fill a non-constant named NN execution instance
- * @param nn_exec_name typically name of the network as provided by option `--network-name`
- * @param _nn_if_name pointer to network interface
- */
-#define LL_ATON_DECLARE_NAMED_NN_INSTANCE(nn_exec_name, _nn_if_name)                                                   \
-  static NN_Instance_TypeDef NN_Instance_##nn_exec_name = {.network = _nn_if_name, .exec_state = {0}}
-
-/**
- * @brief Declare and fill a non-constant named NN execution instance and constant network interface,
- *        which get linked together (by this macro).
- * @param nn_name name of the network as provided by option `--network-name`
- */
-#define LL_ATON_DECLARE_NAMED_NN_INSTANCE_AND_INTERFACE(nn_name)                                                       \
-  LL_ATON_DECLARE_NAMED_NN_INTERFACE(nn_name);                                                                         \
-  LL_ATON_DECLARE_NAMED_NN_INSTANCE(nn_name, &NN_Interface_##nn_name);
-
   /**
    * @}
+   */
+
+  /** @defgroup Helper Function Inline Implementations
+   * @{
    */
 
   static inline bool EpochBlock_IsLastEpochBlock(const EpochBlock_ItemTypeDef *eb)
@@ -532,6 +442,11 @@ extern "C"
   static inline bool EpochBlock_IsEpochBlob(const EpochBlock_ItemTypeDef *eb)
   {
     return ((eb->flags & EpochBlock_Flags_blob) != 0);
+  }
+
+  static inline bool EpochBlock_IsBlobEncrypted(const EpochBlock_ItemTypeDef *eb)
+  {
+    return ((eb->flags & EpochBlock_Flags_blob_encrypted) != 0);
   }
 
   static inline bool EpochBlock_IsEpochPureSW(const EpochBlock_ItemTypeDef *eb)
@@ -601,12 +516,12 @@ extern "C"
     return buf->Qm + buf->Qn + (buf->Qunsigned ? 0 : 1);
   }
 
+  /**
+   * @}
+   */
+
 #ifdef __cplusplus
 }
 #endif
 
-#endif
-
-/**
- * @}
- */
+#endif /* __LL_ATON_NN_INTERFACE_H */

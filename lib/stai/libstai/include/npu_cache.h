@@ -22,11 +22,28 @@
 extern "C" {
 #endif
 
-#include "stm32n6xx_hal.h"
+#include <stdint.h>
 
-void npu_cache_init(void);
+/* 
+Weak functions to be implemented by the user if needed:
+  The CACHEAXI IP must be clocked and reset before use.
+*/
+void npu_cache_enable_clocks_and_reset(void);
+void npu_cache_disable_clocks_and_reset(void);
+
+/*
+  The user is responsible for calling npu_cache_enable before using any
+  of the CACHEAXI cache maintenance functions below.
+  Calling maintenance functions without enabling the cache first will result
+  in an assert failure.
+*/
 void npu_cache_enable(void);
 void npu_cache_disable(void);
+
+/* 
+  Cache maintenance functions
+  reminder: npu_cache_enable() must be called before using any of these functions
+*/
 void npu_cache_invalidate(void);
 void npu_cache_clean_invalidate_range(uint32_t start_addr, uint32_t end_addr);
 void npu_cache_clean_range(uint32_t start_addr, uint32_t end_addr);

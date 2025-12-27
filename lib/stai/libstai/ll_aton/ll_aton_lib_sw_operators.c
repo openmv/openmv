@@ -108,9 +108,9 @@ static inline uint32_t __ll_aton_lib_calc_offset(uint32_t n, uint32_t c, uint32_
  */
 typedef const struct
 {
-  const LL_LIB_TensorShape_TypeDef *input;
+  const LL_Buffer_InfoTypeDef *input;
   const uint32_t *input_axes_offsets;
-  const LL_LIB_TensorShape_TypeDef *output;
+  const LL_Buffer_InfoTypeDef *output;
   const uint32_t *output_axes_offsets;
   uint32_t slice_rank;
   const int32_t *slice_starts;
@@ -272,10 +272,9 @@ static void __ll_aton_lib_slice(uint32_t curr_in_axis, __ll_stack_lnklst_t *back
   }
 }
 
-int LL_ATON_LIB_Slice(const LL_LIB_TensorShape_TypeDef *input, const uint32_t *input_axes_offsets,
-                      const LL_LIB_TensorShape_TypeDef *output, const uint32_t *output_axes_offsets,
-                      uint32_t slice_rank, const int32_t *slice_starts, const int32_t *slice_ends,
-                      const int32_t *slice_steps)
+int LL_ATON_LIB_Slice(const LL_Buffer_InfoTypeDef *input, const uint32_t *input_axes_offsets,
+                      const LL_Buffer_InfoTypeDef *output, const uint32_t *output_axes_offsets, uint32_t slice_rank,
+                      const int32_t *slice_starts, const int32_t *slice_ends, const int32_t *slice_steps)
 {
   if (slice_rank != input->ndims)
   {
@@ -311,8 +310,8 @@ int LL_ATON_LIB_Slice(const LL_LIB_TensorShape_TypeDef *input, const uint32_t *i
   return LL_ATON_OK; // TODO
 }
 
-static int __ll_aton_lib_sw_outputs_flat_copy(const LL_LIB_TensorShape_TypeDef *input,
-                                              const LL_LIB_TensorShape_TypeDef (*outputs)[], unsigned nr_of_outputs)
+static int __ll_aton_lib_sw_outputs_flat_copy(const LL_Buffer_InfoTypeDef *input,
+                                              const LL_Buffer_InfoTypeDef (*outputs)[], unsigned nr_of_outputs)
 {
 #ifndef NDEBUG
   // LL_ATON_PRINTF("%s() line %d\n", __func__, __LINE__);
@@ -368,9 +367,9 @@ static const int onnx_lut[] = {TDIM_ONNX_NKERNELS, TDIM_ONNX_FHEIGHT, TDIM_ONNX_
 #define LUT_ONNX(x) (((x >= (rank - 4)) && (rank > 2)) ? (rank - 4) + onnx_lut[x - (rank - 4)] : x)
 
 /* beyond function assumes that input and output tensors are ATON canonical */
-static void __ll_aton_lib_split_aton_canonical(const LL_LIB_TensorShape_TypeDef *input,
-                                               const LL_LIB_TensorShape_TypeDef (*outputs)[], int nr_of_outputs,
-                                               int rank, int split_onnx_axis)
+static void __ll_aton_lib_split_aton_canonical(const LL_Buffer_InfoTypeDef *input,
+                                               const LL_Buffer_InfoTypeDef (*outputs)[], int nr_of_outputs, int rank,
+                                               int split_onnx_axis)
 {
   int aton_axis = LUT_ATON(split_onnx_axis);
   int tot_size = LL_Buffer_len(input);
@@ -402,9 +401,9 @@ static void __ll_aton_lib_split_aton_canonical(const LL_LIB_TensorShape_TypeDef 
 }
 
 /* beyond function assumes that input and output tensors are ONNX canonical */
-static void __ll_aton_lib_split_onnx_canonical(const LL_LIB_TensorShape_TypeDef *input,
-                                               const LL_LIB_TensorShape_TypeDef (*outputs)[], int nr_of_outputs,
-                                               int rank, int split_onnx_axis)
+static void __ll_aton_lib_split_onnx_canonical(const LL_Buffer_InfoTypeDef *input,
+                                               const LL_Buffer_InfoTypeDef (*outputs)[], int nr_of_outputs, int rank,
+                                               int split_onnx_axis)
 {
   int tot_size = LL_Buffer_len(input);
 
@@ -436,8 +435,8 @@ static void __ll_aton_lib_split_onnx_canonical(const LL_LIB_TensorShape_TypeDef 
 
 /* beyond function assumes that adapted rank is equal to 3, that input tensor is ATON canonical, and that split axis
  * is channel */
-static void __ll_aton_lib_split_channel_batched(const LL_LIB_TensorShape_TypeDef *input,
-                                                const LL_LIB_TensorShape_TypeDef (*outputs)[], uint32_t nr_of_outputs,
+static void __ll_aton_lib_split_channel_batched(const LL_Buffer_InfoTypeDef *input,
+                                                const LL_Buffer_InfoTypeDef (*outputs)[], uint32_t nr_of_outputs,
                                                 uint32_t rank, uint32_t split_onnx_axis)
 {
   LL_ATON_ASSERT(rank >= 3); // input shape is at least 3-dimensional
@@ -508,11 +507,13 @@ typedef enum
   SW_FLAT_CANONICAL = 8,
   DMA_FLAT_BATCHED = 9,
   SW_FLAT_BATCHED = 10,
+  DMA_FLAT_MCD = 11,
+  SW_FLAT_MCD = 12,
 } _split_cases_t;
 
-int LL_ATON_LIB_Split(const LL_LIB_TensorShape_TypeDef *input, bool aton_canonical,
-                      const LL_LIB_TensorShape_TypeDef (*outputs)[], uint32_t noutputs, uint32_t rank,
-                      uint32_t split_onnx_axis, uint32_t leading_dims, int split_case, int dma_in, int dma_out)
+int LL_ATON_LIB_Split(const LL_Buffer_InfoTypeDef *input, bool aton_canonical, const LL_Buffer_InfoTypeDef (*outputs)[],
+                      uint32_t noutputs, uint32_t rank, uint32_t split_onnx_axis, uint32_t leading_dims, int split_case,
+                      int dma_in, int dma_out)
 {
   if (split_onnx_axis >= rank)
   {
@@ -578,8 +579,8 @@ int LL_ATON_LIB_Split(const LL_LIB_TensorShape_TypeDef *input, bool aton_canonic
       LL_ATON_ASSERT(dma_in != -1);
       LL_ATON_ASSERT(dma_out != -1);
 
-      LL_ATON_LIB_DMA_Outputs_Channel_Split_Aton(input, (const LL_LIB_TensorShape_TypeDef *)outputs, noutputs,
-                                                 leading_dims, dma_in, dma_out);
+      LL_ATON_LIB_DMA_Outputs_Channel_Split_Aton(input, (const LL_Buffer_InfoTypeDef *)outputs, noutputs, leading_dims,
+                                                 dma_in, dma_out);
     }
   }
   break;
@@ -602,22 +603,24 @@ int LL_ATON_LIB_Split(const LL_LIB_TensorShape_TypeDef *input, bool aton_canonic
       LL_ATON_ASSERT(dma_in != -1);
       LL_ATON_ASSERT(dma_out != -1);
 
-      LL_ATON_LIB_DMA_Outputs_Channel_Split_Batched(input, (const LL_LIB_TensorShape_TypeDef *)outputs, noutputs,
-                                                    dma_in, dma_out);
+      LL_ATON_LIB_DMA_Outputs_Channel_Split_Batched(input, (const LL_Buffer_InfoTypeDef *)outputs, noutputs, dma_in,
+                                                    dma_out);
     }
   }
   break;
   case SW_FLAT_CANONICAL:
   case SW_FLAT_BATCHED:
   case SW_CHANNEL_UNIFORM:
+  case SW_FLAT_MCD:
     LL_ATON_ASSERT(dma_in == -1);
     LL_ATON_ASSERT(dma_out == -1);
   case DMA_FLAT_CANONICAL:
   case DMA_FLAT_BATCHED:
   case DMA_CHANNEL_UNIFORM:
+  case DMA_FLAT_MCD:
   {
     if ((noutputs > __LL_MAX_TENSORS) || (split_case == SW_FLAT_CANONICAL) || (split_case == SW_FLAT_BATCHED) ||
-        (split_case == SW_CHANNEL_UNIFORM))
+        (split_case == SW_CHANNEL_UNIFORM) || (split_case == SW_FLAT_MCD))
     {
       return __ll_aton_lib_sw_outputs_flat_copy(input, outputs, noutputs);
     }
@@ -626,7 +629,7 @@ int LL_ATON_LIB_Split(const LL_LIB_TensorShape_TypeDef *input, bool aton_canonic
       LL_ATON_ASSERT(dma_in != -1);
       LL_ATON_ASSERT(dma_out != -1);
 
-      LL_ATON_LIB_DMA_Outputs_Flat_Copy(input, (const LL_LIB_TensorShape_TypeDef *)outputs, noutputs, dma_in, dma_out);
+      LL_ATON_LIB_DMA_Outputs_Flat_Copy(input, (const LL_Buffer_InfoTypeDef *)outputs, noutputs, dma_in, dma_out);
     }
   }
   break;
@@ -638,9 +641,9 @@ int LL_ATON_LIB_Split(const LL_LIB_TensorShape_TypeDef *input, bool aton_canonic
   return LL_ATON_OK;
 }
 
-int LL_ATON_LIB_SW_SpaceToDepth(const LL_LIB_TensorShape_TypeDef *input, const uint32_t *input_axes_offsets,
-                                const LL_LIB_TensorShape_TypeDef *output, const uint32_t *output_axes_offsets,
-                                uint32_t bs_h, uint32_t bs_w)
+int LL_ATON_LIB_SW_SpaceToDepth(const LL_Buffer_InfoTypeDef *input, const uint32_t *input_axes_offsets,
+                                const LL_Buffer_InfoTypeDef *output, const uint32_t *output_axes_offsets, uint32_t bs_h,
+                                uint32_t bs_w)
 {
   if (input->ndims != 4)
   {
@@ -710,9 +713,9 @@ int LL_ATON_LIB_SW_SpaceToDepth(const LL_LIB_TensorShape_TypeDef *input, const u
   return LL_ATON_OK;
 }
 
-int LL_ATON_LIB_SW_DepthToSpace(const LL_LIB_TensorShape_TypeDef *input, const uint32_t *input_axes_offsets,
-                                const LL_LIB_TensorShape_TypeDef *output, const uint32_t *output_axes_offsets,
-                                uint32_t bs_h, uint32_t bs_w, uint32_t mode)
+int LL_ATON_LIB_SW_DepthToSpace(const LL_Buffer_InfoTypeDef *input, const uint32_t *input_axes_offsets,
+                                const LL_Buffer_InfoTypeDef *output, const uint32_t *output_axes_offsets, uint32_t bs_h,
+                                uint32_t bs_w, uint32_t mode)
 {
   if (input->ndims != 4)
   {
@@ -1040,9 +1043,8 @@ static void __ll_aton_lib_transpose_3or4(const __ll_transp_params_t *common_para
   }
 }
 
-int LL_ATON_LIB_Transpose(const LL_LIB_TensorShape_TypeDef *input, const uint32_t *input_axes_offsets,
-                          const LL_LIB_TensorShape_TypeDef *output, const uint32_t *output_axes_offsets,
-                          const uint8_t *perm)
+int LL_ATON_LIB_Transpose(const LL_Buffer_InfoTypeDef *input, const uint32_t *input_axes_offsets,
+                          const LL_Buffer_InfoTypeDef *output, const uint32_t *output_axes_offsets, const uint8_t *perm)
 {
   if (input->ndims <= 2)
   {
@@ -1731,7 +1733,7 @@ static int __ll_aton_lib_pad_filling(__ll_pad_sw_params_t *common_params)
 #ifndef NDEBUG
   extern NN_Instance_TypeDef *volatile __ll_current_aton_ip_owner;
   LL_ATON_ASSERT(__ll_current_aton_ip_owner != NULL);
-#endif // NDEBUG
+#endif // !NDEBUG
 
 #if defined(DUMP_RESULTS_PAD_OP)
   int8_t *out_target = common_params->out_target;
@@ -1785,7 +1787,7 @@ static int __ll_aton_lib_pad_filling(__ll_pad_sw_params_t *common_params)
     break;
     case 3: // NOTE: assuming no alignment
     {
-      /* check endianess */
+      /* check endianness */
       const int32_t _const_val = 0x01020304;
       const int8_t *_const_val_ptr = (int8_t *)&_const_val;
       bool is_little_endian = (_const_val_ptr[0] == 0x04);
@@ -1863,7 +1865,7 @@ static int __ll_aton_lib_pad_framing_sw(__ll_pad_sw_params_t *common_params)
 #ifndef NDEBUG
   extern NN_Instance_TypeDef *volatile __ll_current_aton_ip_owner;
   LL_ATON_ASSERT(__ll_current_aton_ip_owner != NULL);
-#endif // NDEBUG
+#endif // !NDEBUG
 
   /* reset input/output target pointers */
   common_params->in_target = common_params->saved_in_target;
@@ -1919,7 +1921,7 @@ static int __ll_aton_lib_pad_framing_sw(__ll_pad_sw_params_t *common_params)
   break;
   case 3: // NOTE: assuming no alignment
   {
-    /* check endianess */
+    /* check endianness */
     const int32_t _const_val = 0x01020304;
     const int8_t *_const_val_ptr = (int8_t *)&_const_val;
     bool is_little_endian = (_const_val_ptr[0] == 0x04);
@@ -1971,12 +1973,13 @@ static int __ll_aton_lib_pad_framing_sw(__ll_pad_sw_params_t *common_params)
   return LL_ATON_OK;
 }
 
-int LL_ATON_LIB_Pad(unsigned char *input, unsigned char *output, unsigned char *input_limit,
-                    unsigned char *output_limit, const uint32_t *min_shape, uint8_t mode, uint8_t nbytes,
-                    uint32_t out_elems, int32_t constant_value, uint32_t consecutive_axis, uint32_t consecutive_elems,
-                    const int32_t *pad_in_offsets_start, const int32_t *pad_in_offsets_end,
-                    const int32_t *pad_out_offsets_start, const int32_t *pad_out_offsets_end, const int32_t *out_shape,
-                    const int32_t *out_offsets, size_t tensor_rank, int dma_in, int dma_out)
+int LL_ATON_LIB_Pad_Standard(unsigned char *input, unsigned char *output, unsigned char *input_limit,
+                             unsigned char *output_limit, const uint32_t *min_shape, uint8_t mode, uint8_t nbytes,
+                             uint32_t out_elems, int32_t constant_value, uint32_t consecutive_axis,
+                             uint32_t consecutive_elems, const int32_t *pad_in_offsets_start,
+                             const int32_t *pad_in_offsets_end, const int32_t *pad_out_offsets_start,
+                             const int32_t *pad_out_offsets_end, const int32_t *out_shape, const int32_t *out_offsets,
+                             size_t tensor_rank, int dma_in, int dma_out)
 {
   LL_ATON_ASSERT(dma_in >= 0);
   LL_ATON_ASSERT(dma_out >= 0);
@@ -2034,8 +2037,8 @@ int LL_ATON_LIB_Pad(unsigned char *input, unsigned char *output, unsigned char *
     else
     {
       common_params.callback_function = (pad_callback_func_t)&__ll_aton_lib_pad_filling;
-      return LL_ATON_LIB_DMA_Pad_Memset((int8_t *)output, constant_value, out_size,
-                                        &common_params); // first phase (in this case `framing`) is made in HW
+      return LL_ATON_LIB_DMA_Pad_Memset((int8_t *)output, constant_value, out_size, &common_params,
+                                        true); // first phase (in this case `framing`) is made in HW
     }
 
   case 1: // `reflect` mode
@@ -2090,7 +2093,7 @@ int LL_ATON_LIB_Pad(unsigned char *input, unsigned char *output, unsigned char *
   break;
   case 3: // NOTE: assuming no alignment
   {
-    /* check endianess */
+    /* check endianness */
     const int32_t _const_val = 0x01020304;
     const int8_t *_const_val_ptr = (int8_t *)&_const_val;
     bool is_little_endian = (_const_val_ptr[0] == 0x04);
@@ -2140,4 +2143,70 @@ int LL_ATON_LIB_Pad(unsigned char *input, unsigned char *output, unsigned char *
 #endif // DUMP_RESULTS_PAD_OP
 
   return LL_ATON_OK;
+}
+
+static int __ll_aton_lib_pad_4loop_filling(__ll_pad_sw_params_t *common_params)
+{
+#ifndef NDEBUG
+  extern NN_Instance_TypeDef *volatile __ll_current_aton_ip_owner;
+  LL_ATON_ASSERT(__ll_current_aton_ip_owner != NULL);
+#endif // !NDEBUG
+
+  if (common_params->callback_function != NULL) /* take this as indication for "called as callback" */
+  {
+    return LL_ATON_LIB_DMA_Pad_4Loop_Filling(NULL);
+  }
+  else // not a callback => `memset` (i.e. `framing`) has been executed in SW
+  {
+    if ((common_params->out_end - common_params->out_target) > 0)
+    {
+      /* *** MCU cache clean & invalidate operation (SW) *** */
+      uint32_t size = (uintptr_t)(common_params->out_end) - (uintptr_t)(common_params->out_target);
+      LL_ATON_Cache_MCU_Clean_Invalidate_Range(ATON_LIB_PHYSICAL_TO_VIRTUAL_ADDR((uintptr_t)common_params->out_target),
+                                               size);
+    }
+
+    return LL_ATON_LIB_DMA_Pad_4Loop_Filling(common_params);
+  }
+}
+
+int LL_ATON_LIB_Pad_4Loop(unsigned char *input_start, unsigned char *input_end, unsigned char *input_limit,
+                          unsigned char *output_start, unsigned char *output_end, unsigned char *output_limit,
+                          int32_t constant_value, uint8_t nbytes, uint32_t *negative_4loop, uint32_t *positive_4loop,
+                          int dma_in, int dma_out)
+{
+  LL_ATON_ASSERT(dma_in >= 0);
+  LL_ATON_ASSERT(dma_out >= 0);
+  LL_ATON_ASSERT(positive_4loop != NULL);
+
+  __ll_pad_sw_params_t common_params = {
+      .in_target = (int8_t *)input_start,
+      .in_end = (int8_t *)input_end,
+      .in_limit = (int8_t *)input_limit,
+      .out_target = (int8_t *)output_start,
+      .out_end = (int8_t *)output_end,
+      .out_limit = (int8_t *)output_limit,
+      .nbytes = nbytes,
+      .callback_function = NULL,
+      .dma_in = dma_in,
+      .dma_out = dma_out,
+      .negative_4loop = *((struct four_axes *)negative_4loop),
+      .positive_4loop = *((struct four_axes *)positive_4loop),
+  };
+
+  /* fill output with constant value
+     (TODO: trade-off between one shot and multiple single short shots - without overwriting non constant value
+     ranges - still to be evaluated) */
+  size_t out_size = (size_t)(output_end - output_start);
+  if (out_size < __LL_PAD_FRAMING_DMA_MIN_BUFF_LEN)
+  {
+    __ll_aton_lib_memset(nbytes, (int8_t *)output_start, constant_value, out_size);
+    return __ll_aton_lib_pad_4loop_filling(&common_params);
+  }
+  else
+  {
+    common_params.callback_function = (pad_callback_func_t)&__ll_aton_lib_pad_4loop_filling;
+    return LL_ATON_LIB_DMA_Pad_Memset((int8_t *)output_start, constant_value, out_size, &common_params,
+                                      false); // first phase (in this case `framing`) is made in HW
+  }
 }

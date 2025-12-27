@@ -20,7 +20,6 @@
 
 #if (LL_ATON_OSAL == LL_ATON_OSAL_FREERTOS)
 
-#include <assert.h>
 #include <limits.h>
 #include <stdbool.h>
 

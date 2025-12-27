@@ -33,6 +33,11 @@ extern "C"
 #define ATON_EPOCH_TIMEOUT_MS 10000
 #endif
 
+/* Reset units registers to their default value when using ATON_DISABLE macro */
+#ifndef ATON_USE_CONFCLR
+#define ATON_USE_CONFCLR 1
+#endif
+
 /*** Platform dependent definitions & includes ***/
 
 /* Bare metal Cortex-M NCSIM simulator platform*/
@@ -54,71 +59,6 @@ extern "C"
 #define OSPI1_MEM             0x60000000
 #define OSPI2_MEM             0x80000000
 #define ATON_EPOCH_TIMEOUT    (ATON_EPOCH_TIMEOUT_MS * 1000)
-#include "cm4ikmcu.h"
-
-/* Neuromem simulation environment */
-#elif (LL_ATON_PLATFORM == LL_ATON_PLAT_NEUROMEM_SIM)
-#define ATON_PLAT_HAS_FFLUSH  (0)
-#define ATON_BASE             0xA0000000
-#define SYSMEM1_BASE          0xA0080000
-#define SYSMEM2_BASE          0xA00A0000
-#define SYSMEM3_BASE          0xA00C0000
-#define SYSMEM4_BASE          0xA00E0000
-#define SYSMEM_LENGTH         0x00020000
-#define DUMP_CONFIG_BASE_ADDR 0x3D807c00
-#define CDMA_BASE_ADDR        0xA0100000
-#define OSPI2_BASE_ADDR       0xA0150000
-#define OSPI1_BASE_ADDR       0xA0160000
-#define OSPI1_MEM             0x00000000
-#define OSPI2_MEM             0x80000000
-#define ATON_EPOCH_TIMEOUT    (ATON_EPOCH_TIMEOUT_MS * 1000)
-
-#define ATON_INT_NR                       (2 * 6 + 2 + 2) // 6 streng, 6 streng err, 2 convacc, 2 busif
-
-/* These macros are not available in Neuromem ATON.h so define them here */
-#define ATON_STRENG_INT_MASK(A, B, C)     (0x003f)
-#define ATON_STRENG_ERR_INT_MASK(A, B, C) (0x0fc0)
-#define ATON_CONVACC_INT_MASK(A, B, C)    (0x3000)
-#define ATON_BUSIF_INT_MASK(A, B, C)      (0xc000)
-
-#ifndef ATON_STRENG_NUM
-#define ATON_STRENG_NUM  6
-#define ATON_CONVACC_NUM 2
-#define ATON_DECUN_NUM   1
-#define ATON_ACTIV_NUM   1
-#define ATON_ARITH_NUM   1
-#define ATON_POOL_NUM    1
-#define ATON_BUSIF_NUM   2
-#endif
-
-#ifndef ATON_STRENG_CTRL_DT
-#define ATON_STRENG_CTRL_DT ATON_STRENG_CTRL_RESET
-#endif
-#ifndef ATON_DECUN_CTRL_DT
-#define ATON_DECUN_CTRL_DT ATON_DECUN_CTRL_RESET
-#endif
-#ifndef ATON_CONVACC_CTRL_DT
-#define ATON_CONVACC_CTRL_DT ATON_CONVACC_CTRL_RESET
-#endif
-#ifndef ATON_ACTIV_CTRL_DT
-#define ATON_ACTIV_CTRL_DT ATON_ACTIV_CTRL_RESET
-#endif
-#ifndef ATON_ARITH_CTRL_DT
-#define ATON_ARITH_CTRL_DT ATON_ARITH_CTRL_RESET
-#endif
-#ifndef ATON_POOL_CTRL_DT
-#define ATON_POOL_CTRL_DT ATON_POOL_CTRL_RESET
-#endif
-#ifndef ATON_ACTIV_FUNC_DT
-#define ATON_ACTIV_FUNC_DT ATON_ACTIV_FUNC_RESET
-#endif
-#ifndef ATON_ACTIV_ACTIVPARAM_DT
-#define ATON_ACTIV_ACTIVPARAM_DT ATON_ACTIV_ACTIVPARAM_RESET
-#endif
-#ifndef ATON_ACTIV_ACTIVPARAM2_DT
-#define ATON_ACTIV_ACTIVPARAM2_DT ATON_ACTIV_ACTIVPARAM2_RESET
-#endif
-
 #include "cm4ikmcu.h"
 
 /* Imaging simulation environment */
@@ -164,16 +104,29 @@ typedef int32_t IRQn_Type;
 /* Linux based Xilinx ZC706 FPGA platform */
 #elif (LL_ATON_PLATFORM == LL_ATON_PLAT_ZC706) || (LL_ATON_PLATFORM == LL_ATON_PLAT_IWAVE) ||                          \
     (LL_ATON_PLATFORM == LL_ATON_PLAT_BITTWARE)
+/* Data synchronization barrier */
+#ifdef __ARM_ARCH
+#define __FPU_PRESENT 1
+#include <cmsis_compiler.h>
+#define LL_ATON_DSB() __DSB()
+#else
+#include <immintrin.h>
+#define LL_ATON_DSB() _mm_lfence()
+#endif
+
 #define ATON_PLAT_HAS_FFLUSH (1)
 extern uint8_t *get_zynq_aton_base(void);
 #define NVIC_EnableIRQ(x)
 #define NVIC_DisableIRQ(x)
-#define ATON_BASE          (get_zynq_aton_base())
+#define ATON_BASE          (uintptr_t)(get_zynq_aton_base())
 /* Timer clock is 100MHz. Compute timeout accordingly. */
 #define ATON_EPOCH_TIMEOUT (ATON_EPOCH_TIMEOUT_MS * 100 * 1000)
 
 /* PC based Orlando Simulator platform */
 #elif (LL_ATON_PLATFORM == LL_ATON_PLAT_SWEMUL)
+#ifndef ATON_BASE
+#define ATON_BASE (0x00010000UL)
+#endif
 #define ATON_PLAT_HAS_FFLUSH (1)
 
 #define __WFE()
@@ -243,73 +196,12 @@ void complete_dmas(void);
                     ec_trace_get_REG_id(ATON_##unitname##_##reg##_OFFSET), ATON_##unitname##_##reg##_##field##_LSB,    \
                     ATON_##unitname##_##reg##_##field##_W, (uint32_t)val)
 
-#elif (LL_ATON_PLATFORM == LL_ATON_PLAT_CENTAURI)
-#define ATON_BASE             0xA0000000
-#define SYSMEM1_BASE          0xA0080000
-#define SYSMEM2_BASE          0xA00A0000
-#define SYSMEM3_BASE          0xA00C0000
-#define SYSMEM4_BASE          0xA00E0000
-#define SYSMEM_LENGTH         0x00020000
-#define DUMMY_MEM_BASE        0x40000000
-#define DUMP_CONFIG_BASE_ADDR 0xA0108000
-#define CDMA_BASE_ADDR        0xA0100000
-#define OSPI2_BASE_ADDR       0x3D710000
-#define OSPI1_BASE_ADDR       0x3D700000
-#define OSPIIOM_BASE_ADDR     0x3D720000
-#define OSPI_HSEL_SEL         0x3D83100C
-#define OSPI1_MEM             0x60000000
-#define OSPI2_MEM             0x80000000
-#define ATON_EPOCH_TIMEOUT    (ATON_EPOCH_TIMEOUT_MS * 1000)
-
-//#define ATON_INT_NR     (2 * 16 + 6 + 4) /* 16 streng, 6 convacc, 4 busif */
-#define ATON_INT_NR           32 //>32 not supported yet
-#if (LL_ATON_RT_MODE == LL_ATON_RT_ASYNC)
-#error Only supported `LL_ATON_RT_MODE==LL_ATON_RT_POLLING`
-#endif
-#include "cm4ikmcu.h"
-
-#elif (LL_ATON_PLATFORM == LL_ATON_PLAT_N64)
-#define ATON_PLAT_HAS_FFLUSH                      (1)
-#define ATON_BASE                                 0x3d83d000
-#define ATON_EPOCH_TIMEOUT                        (ATON_EPOCH_TIMEOUT_MS * 1000)
-#define ATON_STRENG_CID_CACHE_SET_ALLOC(a, b)     0
-#define ATON_STRENG_CID_CACHE_SET_CACHEABLE(a, b) 0
-#define ATON_STRENG_CID_CACHE_SET_CID(a, b)       0
-#define ATON_STRENG_CID_CACHE_SET_LINESIZE(a, b)  0
-#define ATON_STRENG_CID_CACHE_SET_PFETCH(a, b)    0
-
 #elif (LL_ATON_PLATFORM == LL_ATON_PLAT_STM32N6)
 // Cache maintenance
 #include "mcu_cache.h"
 #include "npu_cache.h"
-
 #include "stm32n6xx.h"
 
-#define ATON_N6_DRIVERS_v0200                                                                                          \
-  ((0x0 << 24U) | /* MAIN */                                                                                           \
-   (0x2 << 16) |  /* SUB1 */                                                                                           \
-   (0x0 << 8) |   /* SUB2 */                                                                                           \
-   (0x0)          /* RC */                                                                                             \
-  )
-#define ATON_GET_VERSION_RC(x)          ((x)&0xFF)
-#define ATON_GET_VERSION_FIRST_THREE(x) ((x) >> 8)
-#define ATON_IS_AT_LEAST_VERSION(x, v)                                                                                 \
-  (((ATON_GET_VERSION_RC(x) == 0x0) && (ATON_GET_VERSION_FIRST_THREE(x) >= ATON_GET_VERSION_FIRST_THREE(v))) ||        \
-   (((ATON_GET_VERSION_RC(x) != 0x0) && (ATON_GET_VERSION_RC(v) == 0x0)) &&                                            \
-    (ATON_GET_VERSION_FIRST_THREE(x) > ATON_GET_VERSION_FIRST_THREE(v))) ||                                            \
-   (((ATON_GET_VERSION_RC(x) != 0x0) && (ATON_GET_VERSION_RC(v) != 0x0)) && ((x) >= (v))))
-
-#if !ATON_IS_AT_LEAST_VERSION(__STM32N6xx_HAL_VERSION, ATON_N6_DRIVERS_v0200)
-#define CDNN0_IRQHandler NPU_END_OF_EPOCH_IRQHandler
-#define CDNN1_IRQHandler NPU_INT1_IRQHandler
-#define CDNN2_IRQHandler NPU_INT2_IRQHandler
-#define CDNN3_IRQHandler NPU_INT3_IRQHandler
-
-#define CDNN0_IRQn NPU_END_OF_EPOCH_IRQn
-#define CDNN1_IRQn NPU_INT1_IRQn
-#define CDNN2_IRQn NPU_INT2_IRQn
-#define CDNN3_IRQn NPU_INT3_IRQn
-#else // ATON_IS_AT_LEAST_VERSION
 #define CDNN0_IRQHandler NPU0_IRQHandler
 #define CDNN1_IRQHandler NPU1_IRQHandler
 #define CDNN2_IRQHandler NPU2_IRQHandler
@@ -319,7 +211,6 @@ void complete_dmas(void);
 #define CDNN1_IRQn NPU1_IRQn
 #define CDNN2_IRQn NPU2_IRQn
 #define CDNN3_IRQn NPU3_IRQn
-#endif // ATON_IS_AT_LEAST_VERSION
 
 #define ATON_PLAT_HAS_FFLUSH (0)
 #if defined(CPU_IN_SECURE_STATE)
@@ -330,10 +221,9 @@ void complete_dmas(void);
 #define ATON_EPOCH_TIMEOUT (ATON_EPOCH_TIMEOUT_MS * 1000)
 
 #elif (LL_ATON_PLATFORM == LL_ATON_PLAT_STM32H7P)
-/* Cache maintenance */
-//#include "mcu_cache.h" /* TODO */
-//#include "npu_cache.h" /* TODO */
-#include "stm32h7p4xx.h"
+// Cache maintenance
+#include "mcu_cache.h"
+#include "stm32h7pxx.h"
 
 #define CDNN0_IRQHandler NPU_IT0_IRQHandler
 #define CDNN1_IRQHandler NPU_IT1_IRQHandler
@@ -349,12 +239,10 @@ void complete_dmas(void);
 #define ATON_PLAT_HAS_FFLUSH (0)
 #define ATON_EPOCH_TIMEOUT   (ATON_EPOCH_TIMEOUT_MS * 1000)
 
-/* Stellar P3 support: TODO when information is available */
-#elif (LL_ATON_PLATFORM == LL_ATON_PLAT_STELLARP3)
-/* Cache maintenance */
-//#include "mcu_cache.h" /* TODO */
-//#include "npu_cache.h" /* TODO */
-//#include "stellarp3.h"
+/* Stellar P3E support: TODO use correct header files, when available */
+#elif (LL_ATON_PLATFORM == LL_ATON_PLAT_SR6P3E)
+//#include "stellarp3.h"  /* TODO */
+//#include "mcu_cache.h"
 
 #define CDNN0_IRQHandler NPU_IT0_IRQHandler
 #define CDNN1_IRQHandler NPU_IT1_IRQHandler
@@ -370,8 +258,16 @@ void complete_dmas(void);
 #define ATON_PLAT_HAS_FFLUSH (0)
 #define ATON_EPOCH_TIMEOUT   (ATON_EPOCH_TIMEOUT_MS * 1000)
 
+#elif (LL_ATON_PLATFORM == LL_ATON_PLAT_USER_IMPL)
+#include "ll_aton_user_platform_impl.h" /* file to be provided together with an implementation for the custom platform by the user */
+
 #else
 #error No target platform is specified. Please define macro `LL_ATON_PLATFORM`
+#endif
+
+/* Data synchronization barrier default definition */
+#ifndef LL_ATON_DSB
+#define LL_ATON_DSB() __DSB()
 #endif
 
 // may be included just here because of the platform dependent definitions (above all `ATON_BASE`)
@@ -396,6 +292,20 @@ void complete_dmas(void);
 // Generic boilerplate for enabling an ATON unit
 #define ATON_ENABLE(unitname, id) ATON_REG_WRITE_FIELD(unitname, id, CTRL, EN, 1)
 
+// Generic boilerplate for disabling and stopping pending transactions (aka "clearing") of an ATON unit
+#ifndef ATON_DISABLE_CLR
+#define ATON_DISABLE_CLR(unitname, id)                                                                                 \
+  do                                                                                                                   \
+  {                                                                                                                    \
+    t = ATON_##unitname##_CTRL_DT;                                                                                     \
+    t = ATON_##unitname##_CTRL_SET_EN(t, 0);                                                                           \
+    t = ATON_##unitname##_CTRL_SET_CLR(t, 1);                                                                          \
+    ATON_##unitname##_CTRL_SET(id, t);                                                                                 \
+    /* wait for unit to terminate pipeline registers clearing  */                                                      \
+    ATON_REG_POLL(unitname, id, CTRL, CLR, 0);                                                                         \
+  } while (0)
+#endif // ATON_DISABLE_CLR
+
 // Generic boilerplate for disabling, stopping pending transactions (aka "clearing"), and clearing the configuration of
 // an ATON unit
 #ifndef ATON_DISABLE_CLR_CONFCLR
@@ -406,7 +316,7 @@ void complete_dmas(void);
     t = ATON_##unitname##_CTRL_SET_EN(t, 0);                                                                           \
     t = ATON_##unitname##_CTRL_SET_CLR(t, 1);                                                                          \
     ATON_##unitname##_CTRL_SET(id, t);                                                                                 \
-    /* wait for unit to terminate clearing of configuration registers */                                               \
+    /* wait for unit to terminate pipeline registers clearing */                                                       \
     ATON_REG_POLL(unitname, id, CTRL, CLR, 0);                                                                         \
                                                                                                                        \
     t = ATON_##unitname##_CTRL_DT;                                                                                     \
@@ -416,6 +326,15 @@ void complete_dmas(void);
     ATON_REG_POLL(unitname, id, CTRL, CONFCLR, 0);                                                                     \
   } while (0)
 #endif // ATON_DISABLE_CLR_CONFCLR
+
+#ifndef ATON_DISABLE
+// Two options available for disabling a unit: CLR and CONFCLR
+#if (ATON_USE_CONFCLR == 1)
+#define ATON_DISABLE(unitname, id) ATON_DISABLE_CLR_CONFCLR(unitname, id)
+#else
+#define ATON_DISABLE(unitname, id) ATON_DISABLE_CLR(unitname, id)
+#endif
+#endif // ATON_DISABLE
 
 #ifndef ATON_REG_WRITE_RELOC
 #define ATON_REG_WRITE_RELOC(regaddr, base, offset)                                                                    \
@@ -473,6 +392,11 @@ void complete_dmas(void);
 #error invalid interrupt line number `ATON_STD_IRQ_LINE` (must be in range [0 - 3])
 #endif // ATON_STD_IRQ_LINE
 
+/* For backward compatibility */
+#ifndef ATON_INTCTRL_INTS
+#define ATON_INTCTRL_INTS(UNIT) ATON_INT_NR
+#endif // ATON_INTCTRL_INTS
+
 // Beyond macros may be defined just here
 #define ATON_STD_IRQHandler                  LL_ATON_CONCAT3(CDNN, ATON_STD_IRQ_LINE, _IRQHandler)
 #define ATON_STD_IRQn                        LL_ATON_CONCAT3(CDNN, ATON_STD_IRQ_LINE, _IRQn)
@@ -482,10 +406,10 @@ void complete_dmas(void);
 #define ATON_INTCTRL_STD_INTANDMSK_GET       ATON_INTCTRL_INTANDMSK_GET(0, ATON_STD_IRQ_LINE)
 #define ATON_INTCTRL_STD_INTORMSK_SET(DATA)  ATON_INTCTRL_INTORMSK_SET(0, ATON_STD_IRQ_LINE, DATA)
 #define ATON_INTCTRL_STD_INTORMSK_GET        ATON_INTCTRL_INTORMSK_GET(0, ATON_STD_IRQ_LINE)
-#if (ATON_INT_NR > 32)
+#if (ATON_INTCTRL_INTS(0) > 32)
 #define ATON_INTCTRL_STD_INTORMSK_H_SET(DATA)  ATON_INTCTRL_INTORMSK_H_SET(0, ATON_STD_IRQ_LINE, DATA)
 #define ATON_INTCTRL_STD_INTANDMSK_H_SET(DATA) ATON_INTCTRL_INTANDMSK_H_SET(0, ATON_STD_IRQ_LINE, DATA)
-#endif // (ATON_INT_NR > 32)
+#endif // (ATON_INTCTRL_INTS(0) > 32)
 
 #ifdef __cplusplus
 }

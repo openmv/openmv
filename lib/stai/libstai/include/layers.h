@@ -53,6 +53,10 @@
 #include "layers_wrappers.h"
 #include "ai_math_helpers.h"
 
+#include "layers_loss_softmax_crossentropy.h"
+#include "layers_loss_softmax_crossentropy_grad.h"
+#include "layers_in_place_accumulator.h"
+#include "layers_relu_grad.h"
 
 AI_API_DECLARE_BEGIN
 

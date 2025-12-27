@@ -143,7 +143,7 @@ extern "C"
   /* Compute Epoch Length by monitoring two stream engines */
   int LL_Dbgtrc_Count_Epoch_Len(unsigned int counter, unsigned int istreng, unsigned int ostreng);
 
-  /* Counts stall/actove signal periods */
+  /* Counts stall/active signal periods */
   int LL_Dbgtrc_Count_Stalls(unsigned int counter, unsigned char iostall, unsigned int signal, unsigned int hilow);
 
   /* Burst Lengths computations */
@@ -157,7 +157,7 @@ extern "C"
   /* Count external trigger events. Useful, for example, to detect if a camera has emitted sync signal */
   int LL_Dbgtrc_Count_ExtTrigger(unsigned int counter, unsigned char trigger);
 
-  /* Monitor Stream Engines' active times. Usefult to detect epochs' stall time ratios */
+  /* Monitor Stream Engines' active times. Useful to detect epochs' stall time ratios */
   int LL_Dbgtrc_Count_StrengActive_Config(uint32_t istreng, uint32_t ostreng, unsigned int counter);
   int LL_Dbgtrc_Count_StrengActive_Start(uint32_t istreng, uint32_t ostreng, unsigned int counter);
   int LL_Dbgtrc_Count_StrengActive_Stop(uint32_t istreng, uint32_t ostreng, unsigned int counter);

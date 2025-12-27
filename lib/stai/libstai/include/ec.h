@@ -22,10 +22,10 @@
 #include <inttypes.h>
 
 /** Magic number of the Epoch Controller binary file. */
-#define ECASM_BINARY_MAGIC 0xECBF0020
+#define ECASM_BINARY_MAGIC 0xECBF0050
 
-/** Magic number of the Epoch Controller program. */
-#define ECASM_PROGRAM_MAGIC 0xCA057A7A
+/** Magic number of the Epoch Controller blob. */
+#define ECASM_BLOB_MAGIC 0xCA057A7A
 
 /** Type containing an Epoch Controller instruction. */
 typedef uint32_t ECInstr;

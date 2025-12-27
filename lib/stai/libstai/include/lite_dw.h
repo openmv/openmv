@@ -111,12 +111,10 @@ forward_lite_dw_hsp_1step_sssa8_ch(const ai_i8 *Im_in,
                              const ai_float *pWt_scale,
                              ai_i8 *Im_out,
                              const ai_u16 dim_im_out_x,
-                             const ai_u16 dim_im_out_y,
-                             const ai_u32 scratch_size,
-                             ai_i16 *bufferA);
+                             const ai_u16 dim_im_out_y);
 
 void
-forward_lite_dw_hsp_sssa8_ch(const ai_i8 *Im_in,
+forward_lite_dw_hsp_2step_sssa8_ch(const ai_i8 *Im_in,
                              const ai_u16 dim_im_in_x,
                              const ai_u16 dim_im_in_y,
                              const ai_u16 ch_im_in,
@@ -137,9 +135,7 @@ forward_lite_dw_hsp_sssa8_ch(const ai_i8 *Im_in,
                              const ai_float *pWt_scale,
                              ai_i8 *Im_out,
                              const ai_u16 dim_im_out_x,
-                             const ai_u16 dim_im_out_y,
-                             const ai_u32 scratch_size,
-                             ai_i16 *bufferA);
+                             const ai_u16 dim_im_out_y);
 
 
 /* Variant optimized for HSP: Large tensors */
@@ -165,9 +161,7 @@ forward_lite_dw_hsp_3step_sssa8_ch(const ai_i8 *Im_in,
                                    const ai_float *pWt_scale,
                                    ai_i8 *Im_out,
                                    const ai_u16 dim_im_out_x,
-                                   const ai_u16 dim_im_out_y, 
-                                   const ai_u32 scratch_size,
-                                   ai_i16 *bufferA);
+                                   const ai_u16 dim_im_out_y);
 
 /*!
  * @brief Handles dw convolutions with depth multiplier = 1, valid padding
