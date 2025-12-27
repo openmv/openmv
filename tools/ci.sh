@@ -77,8 +77,8 @@ ci_package_firmware_development() {
 
 ########################################################################################
 # Install STEdgeAI tools
-STEDGEAI_URL="https://upload.openmv.io/stedgeai/STEdgeAI-2.1.0.tar.gz"
-STEDGEAI_SHA256="888e71715127ff6384e38fcde96eea28f53f8370b2bb9cf0d2f6f939001b350c"
+STEDGEAI_URL="https://upload.openmv.io/stedgeai/STEdgeAI-3.0.0.tar.gz"
+STEDGEAI_SHA256="cd379c4e4815fa20c2d00993658a73e82b792093a5a83e0f2231106b0806acd9"
 STEDGEAI_CACHE="${HOME}/cache/stedgeai"
 
 ci_install_stedgeai() {
