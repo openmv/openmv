@@ -21,8 +21,7 @@
  ******************************************************************************
  */
 
-#include "ll_aton_runtime.h"
-#include "ll_aton_util.h"
+#include "ll_aton_rt_user_api.h"
 
 /*** Main Template ***/
 

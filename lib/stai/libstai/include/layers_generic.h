@@ -114,6 +114,20 @@ typedef AI_ALIGNED_TYPE(struct, 4) ai_layer_gather_ {
   } ai_layer_gather;
 
 /*!
+ * @struct ai_layer_gather_elements
+ * @ingroup layers_generic
+ * @brief GatherElements layer definition
+ *
+ * This layer defines the params of a gathering layer. It is intended to be used
+ * by his associated forward function @ref forward_gather_elements
+ */
+typedef AI_ALIGNED_TYPE(struct, 4) ai_layer_gather_elements_ {
+  AI_LAYER_COMMON_FIELDS_DECLARE
+  ai_i16 axis;    /*!< Which axis to gather on It's optional*/
+  ai_tensor* indices;  /*!< Indices of corrisponding axis in axes*/
+  } ai_layer_gather_elements;
+
+/*!
  * @struct ai_layer_gather_nd
  * @ingroup layers_generic
  * @brief GatherND layer definition
@@ -587,6 +601,16 @@ void forward_concat(ai_layer* layer);
  */
 AI_INTERNAL_API
 void forward_gather(ai_layer* layer);
+
+/*!
+ * @brief Gather an input tensor
+ * @ingroup layers_generic
+ * @param layer the gathered layer
+ */
+AI_INTERNAL_API
+void forward_gather_elements(ai_layer* layer);
+
+
 
 /*!
  * @brief GatherND an input tensor

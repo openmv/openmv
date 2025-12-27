@@ -20,7 +20,6 @@
 
 #if LL_ATON_SW_FALLBACK == 1
 
-#include <assert.h>
 #include <stdint.h>
 #include <stdio.h>
 
@@ -666,6 +665,14 @@ void ll_sw_forward_activ(/* int processor, */ void *sw_info_struct)
   {
     AI_LAYER_OBJ_DECLARE(nonlinearity_layer, 2, NL_TYPE, 0x0, NULL, nl, forward_round, &activ_chain, NULL, NULL, ,
                          .nl_params = NULL, )
+    nonlinearity_layer.forward(AI_LAYER_OBJ(&nonlinearity_layer));
+  }
+  break;
+  case LL_SW_GELU:
+  {
+    AI_ARRAY_OBJ_DECLARE_STATIC(gelu_no_approximate_layer_params, ai_bool, AI_ARRAY_FORMAT_BOOL, AI_CONST, 1, false)
+    AI_LAYER_OBJ_DECLARE(nonlinearity_layer, 2, NL_TYPE, 0x0, NULL, nl, forward_gelu, &activ_chain, NULL, NULL, ,
+                         .nl_params = AI_ARRAY_OBJ(&gelu_no_approximate_layer_params), )
     nonlinearity_layer.forward(AI_LAYER_OBJ(&nonlinearity_layer));
   }
   break;

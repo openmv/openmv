@@ -76,6 +76,7 @@ $(BUILD)/lib/stai/libstai/ll_aton/%.o: override CFLAGS += \
         -Wno-dangling-pointer \
         -Wno-incompatible-pointer-types \
         -Wno-double-promotion \
+        -Wno-array-bounds \
         $(STAI_CFLAGS) \
 
 # Enable instrumentation.

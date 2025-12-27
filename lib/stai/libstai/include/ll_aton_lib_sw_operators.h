@@ -19,6 +19,7 @@
 #ifndef __LL_ATON_LIB_SW_OPERATORS_H
 #define __LL_ATON_LIB_SW_OPERATORS_H
 
+#include <math.h>
 #include <stdbool.h>
 #include <stdint.h>
 
@@ -31,7 +32,11 @@ extern "C"
 {
 #endif
 
-#define __LL_PAD_FRAMING_DMA_MIN_BUFF_LEN 9500
+// define C++ `inf` and `NaN` values
+#define inf (INFINITY)
+#define NaN (NAN)
+
+#define __LL_PAD_FRAMING_DMA_MIN_BUFF_LEN 2700
 #define __LL_PAD_FILLING_DMA_MIN_BUFF_LEN 1200
 
   // Uncomment beyond line to get runtime information about beyond SW operator's execution
@@ -40,7 +45,6 @@ extern "C"
   // Uncomment beyond line to dump operation results for `Pad` operator
   // #define DUMP_RESULTS_PAD_OP
 
-  typedef LL_Buffer_InfoTypeDef LL_LIB_TensorShape_TypeDef;
 #define LL_LIB_NBYTES(x) ((x) + 7) >> 3
 
   /**
@@ -62,8 +66,8 @@ extern "C"
   /** @defgroup LL_ATON_LIB_Split function
    *  * @{
    *   */
-  int LL_ATON_LIB_Split(const LL_LIB_TensorShape_TypeDef *input, bool aton_canonical,
-                        const LL_LIB_TensorShape_TypeDef (*outputs)[], uint32_t noutputs, uint32_t rank,
+  int LL_ATON_LIB_Split(const LL_Buffer_InfoTypeDef *input, bool aton_canonical,
+                        const LL_Buffer_InfoTypeDef (*outputs)[], uint32_t noutputs, uint32_t rank,
                         uint32_t split_onnx_axis, uint32_t leading_dims, int split_case, int dma_in, int dma_out);
 
   /**
@@ -79,10 +83,9 @@ extern "C"
   /** @defgroup LL_ATON_LIB_Slice function
    *  * @{
    *   */
-  int LL_ATON_LIB_Slice(const LL_LIB_TensorShape_TypeDef *input, const uint32_t *input_axes_offsets,
-                        const LL_LIB_TensorShape_TypeDef *output, const uint32_t *output_axes_offsets,
-                        uint32_t slice_rank, const int32_t *slice_starts, const int32_t *slice_ends,
-                        const int32_t *slice_steps);
+  int LL_ATON_LIB_Slice(const LL_Buffer_InfoTypeDef *input, const uint32_t *input_axes_offsets,
+                        const LL_Buffer_InfoTypeDef *output, const uint32_t *output_axes_offsets, uint32_t slice_rank,
+                        const int32_t *slice_starts, const int32_t *slice_ends, const int32_t *slice_steps);
 
   /**
    *  * @}
@@ -99,8 +102,8 @@ extern "C"
   /** @defgroup LL_ATON_LIB_SpaceToDepth function
    *  * @{
    *   */
-  int LL_ATON_LIB_SW_SpaceToDepth(const LL_LIB_TensorShape_TypeDef *input, const uint32_t *input_axes_offsets,
-                                  const LL_LIB_TensorShape_TypeDef *output, const uint32_t *output_axes_offsets,
+  int LL_ATON_LIB_SW_SpaceToDepth(const LL_Buffer_InfoTypeDef *input, const uint32_t *input_axes_offsets,
+                                  const LL_Buffer_InfoTypeDef *output, const uint32_t *output_axes_offsets,
                                   uint32_t bs_h, uint32_t bs_w);
 
   /**
@@ -119,8 +122,8 @@ extern "C"
   /** @defgroup LL_ATON_LIB_DepthToSpace function
    *  * @{
    *   */
-  int LL_ATON_LIB_SW_DepthToSpace(const LL_LIB_TensorShape_TypeDef *input, const uint32_t *input_axes_offsets,
-                                  const LL_LIB_TensorShape_TypeDef *output, const uint32_t *output_axes_offsets,
+  int LL_ATON_LIB_SW_DepthToSpace(const LL_Buffer_InfoTypeDef *input, const uint32_t *input_axes_offsets,
+                                  const LL_Buffer_InfoTypeDef *output, const uint32_t *output_axes_offsets,
                                   uint32_t bs_h, uint32_t bs_w, uint32_t mode);
 
   /**
@@ -137,12 +140,30 @@ extern "C"
   /** @defgroup LL_ATON_LIB_Transpose function
    *  * @{
    *   */
-  int LL_ATON_LIB_Transpose(const LL_LIB_TensorShape_TypeDef *input, const uint32_t *input_axes_offsets,
-                            const LL_LIB_TensorShape_TypeDef *output, const uint32_t *output_axes_offsets,
+  int LL_ATON_LIB_Transpose(const LL_Buffer_InfoTypeDef *input, const uint32_t *input_axes_offsets,
+                            const LL_Buffer_InfoTypeDef *output, const uint32_t *output_axes_offsets,
                             const uint8_t *perm);
   /**
    *  * @}
    *   */
+
+  /* Note: the beyond structures & macro must be the same (integer types aside) as the one in the ATON runtime, file
+   * `ll_aton_lib_sw_operators.h` */
+#define NR_OF_STREAM_ENG_LOOPS 4
+  struct four_axes_item
+  {
+    uint32_t offset_in_bytes;
+    uint32_t nr_of_loops;
+  };
+
+  struct four_axes
+  {
+    uint32_t initial_cumulative_start_offset_in_bytes;
+    uint32_t inner_bytes_to_copy;
+    uint32_t nr_of_stream_eng_loops;
+    uint32_t total_bytes_to_copy;
+    struct four_axes_item four_items_array[NR_OF_STREAM_ENG_LOOPS];
+  };
 
   /**
    * @brief  performs a `Pad` operation - composed of several HW-accelerated or pure SW `framing`/`memset` and `filling`
@@ -168,26 +189,24 @@ extern "C"
    * @param  tensor_rank rank of input and output tensors
    * @retval Error code
    */
-  /** @defgroup LL_ATON_LIB_Pad function
+  /** @defgroup LL_ATON_LIB_Pad_Standard function
    *  * @{
    *   */
-  int LL_ATON_LIB_Pad(unsigned char *input, unsigned char *output, unsigned char *input_limit,
-                      unsigned char *output_limit, const uint32_t *min_shape, uint8_t mode, uint8_t nbytes,
-                      uint32_t out_elems, int32_t constant_value, uint32_t consecutive_axis, uint32_t consecutive_elems,
-                      const int32_t *pad_in_offsets_start, const int32_t *pad_in_offsets_end,
-                      const int32_t *pad_out_offsets_start, const int32_t *pad_out_offsets_end,
-                      const int32_t *out_shape, const int32_t *out_offsets, size_t tensor_rank, int dma_in,
-                      int dma_out);
-  /**
-   *  * @}
-   *   */
-
+  int LL_ATON_LIB_Pad_Standard(unsigned char *input, unsigned char *output, unsigned char *input_limit,
+                               unsigned char *output_limit, const uint32_t *min_shape, uint8_t mode, uint8_t nbytes,
+                               uint32_t out_elems, int32_t constant_value, uint32_t consecutive_axis,
+                               uint32_t consecutive_elems, const int32_t *pad_in_offsets_start,
+                               const int32_t *pad_in_offsets_end, const int32_t *pad_out_offsets_start,
+                               const int32_t *pad_out_offsets_end, const int32_t *out_shape, const int32_t *out_offsets,
+                               size_t tensor_rank, int dma_in, int dma_out);
   typedef int (*pad_callback_func_t)(void *);
   typedef struct
   {
     int8_t *in_target;
-    int8_t *out_target;
+    int8_t *in_end;
     int8_t *in_limit;
+    int8_t *out_target;
+    int8_t *out_end;
     int8_t *out_limit;
     uint32_t consecutive_axis;
     uint32_t consecutive_bytes;
@@ -197,6 +216,8 @@ extern "C"
     int8_t *saved_out_target;
     size_t tensor_rank;
     int8_t *end_out_target;
+    struct four_axes negative_4loop;
+    struct four_axes positive_4loop;
     pad_callback_func_t callback_function;
     int dma_in;
     int dma_out;
@@ -216,6 +237,33 @@ extern "C"
     uint32_t *indexes;
   } __ll_pad_sw_params_t;
 
+  /**
+   *  * @}
+   *   */
+
+  /**
+   * @brief Performs a 4-loop optimization for the `Pad` operation
+   * @param  input_start Start address of input tensor
+   * @param  input_end End address of input tensor
+   * @param  input_limit Input tensor limit address
+   * @param  output_start Start address of output tensor
+   * @param  output_end End address of output tensor
+   * @param  output_limit Output tensor limit address
+   * @param  constant_value Value to pad with
+   * @param  nbytes number of bytes per element
+   * @param  negative_4loop Information for 4-loop optimization - negative padding
+   * @param  positive_4loop Information for 4-loop optimization - positive padding
+   * @param  dma_in Input DMA / Streaming Engine to be used
+   * @param  dma_out Output DMA / Streaming Engine to be used
+   * @return Error code
+   */
+  /** @defgroup LL_ATON_LIB_Pad_Standard function
+   *  * @{
+   *   */
+  int LL_ATON_LIB_Pad_4Loop(unsigned char *input_start, unsigned char *input_end, unsigned char *input_limit,
+                            unsigned char *output_start, unsigned char *output_end, unsigned char *output_limit,
+                            int32_t constant_value, uint8_t nbytes, uint32_t *negative_4loop, uint32_t *positive_4loop,
+                            int dma_in, int dma_out);
   /**
    * @}
    */

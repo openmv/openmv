@@ -70,6 +70,12 @@ extern "C"
 #define __LL_LIB_ERROR(_x, _y) return _y
 #endif // !_LL_LIB_DEBUG
 
+  typedef union
+  {
+    float f;
+    int32_t i;
+  } __ll_aton_union_float_int_t;
+
 #if 0
 /**
  *  * @brief tensor data type info structure
@@ -369,9 +375,8 @@ int LL_LIB_TENSOR_ELEMENTS(const LL_LIB_TensorInfo_TypeDef *t);
   /** @defgroup LL_ATON_LIB_DMA_Outputs_Flat_Copy function
    *  * @{
    *   */
-  int LL_ATON_LIB_DMA_Outputs_Flat_Copy(const LL_LIB_TensorShape_TypeDef *input,
-                                        const LL_LIB_TensorShape_TypeDef *outputs, unsigned int nr_of_outputs,
-                                        int dma_in, int dma_out);
+  int LL_ATON_LIB_DMA_Outputs_Flat_Copy(const LL_Buffer_InfoTypeDef *input, const LL_Buffer_InfoTypeDef *outputs,
+                                        unsigned int nr_of_outputs, int dma_in, int dma_out);
   /**
    *  * @}
    *   */
@@ -389,10 +394,9 @@ int LL_LIB_TENSOR_ELEMENTS(const LL_LIB_TensorInfo_TypeDef *t);
    * @param  dma_in DMA number of DMA writing to memory
    * @return Error code
    */
-  int LL_ATON_LIB_DMA_Outputs_Slice_SplitLike(const LL_LIB_TensorShape_TypeDef *input,
-                                              const LL_LIB_TensorShape_TypeDef *output, int32_t tot_out_size,
-                                              int32_t width_in_bytes, int32_t fheight, int32_t line_offset,
-                                              int8_t n_bits, int dma_in, int dma_out);
+  int LL_ATON_LIB_DMA_Outputs_Slice_SplitLike(const LL_Buffer_InfoTypeDef *input, const LL_Buffer_InfoTypeDef *output,
+                                              int32_t tot_out_size, int32_t width_in_bytes, int32_t fheight,
+                                              int32_t line_offset, int8_t n_bits, int dma_in, int dma_out);
   /**
    *  * @}
    *   */
@@ -408,7 +412,7 @@ int LL_LIB_TENSOR_ELEMENTS(const LL_LIB_TensorInfo_TypeDef *t);
   /** @defgroup LL_ATON_LIB_DMA_Outputs_Channel_Split_Aton function
    *  * @{
    *   */
-  int LL_ATON_LIB_DMA_Outputs_Channel_Split_Aton(const LL_LIB_TensorShape_TypeDef *, const LL_LIB_TensorShape_TypeDef *,
+  int LL_ATON_LIB_DMA_Outputs_Channel_Split_Aton(const LL_Buffer_InfoTypeDef *, const LL_Buffer_InfoTypeDef *,
                                                  unsigned int, unsigned int leading_dims, int dma_in, int dma_out);
   /**
    *  * @}
@@ -422,9 +426,9 @@ int LL_LIB_TENSOR_ELEMENTS(const LL_LIB_TensorInfo_TypeDef *t);
    * @param  noutputs number of outputs
    * @retval Error code
    */
-  int LL_ATON_LIB_DMA_Outputs_Channel_Split_Batched(const LL_LIB_TensorShape_TypeDef *input,
-                                                    const LL_LIB_TensorShape_TypeDef *outputs,
-                                                    unsigned int nr_of_outputs, int dma_in, int dma_out);
+  int LL_ATON_LIB_DMA_Outputs_Channel_Split_Batched(const LL_Buffer_InfoTypeDef *input,
+                                                    const LL_Buffer_InfoTypeDef *outputs, unsigned int nr_of_outputs,
+                                                    int dma_in, int dma_out);
   /** @defgroup LL_ATON_LIB_DMA_Outputs_Channel_Split_Batched function
    *  * @{
    *   */
@@ -435,19 +439,20 @@ int LL_LIB_TENSOR_ELEMENTS(const LL_LIB_TensorInfo_TypeDef *t);
    * @param  constant_value constant value to be set
    * @param  out_size number of bytes to output
    * @param  common_params parameters needed to setup DMAs and to forward to eventual callback function
+   * @param  deep_copy if true, common_params vectors are copied to lower heap
    * @retval Error code
    */
   /** @defgroup LL_ATON_LIB_DMA_Pad_Memset function
    *  * @{
    *   */
   int LL_ATON_LIB_DMA_Pad_Memset(void *output, int32_t constant_value, size_t out_size,
-                                 __ll_pad_sw_params_t *common_params);
+                                 __ll_pad_sw_params_t *common_params, bool deep_copy);
   /**
    *  * @}
    *   */
 
   /**
-   * @brief  performs HW accelerated filling operation for `Pad` operator (aka Filling)
+   * @brief  performs HW accelerated filling operation for `Pad` operator
    * @param  init_common_params parameters needed to setup DMAs and to forward to eventual callback function
    * @retval Error code
    */
@@ -455,6 +460,18 @@ int LL_LIB_TENSOR_ELEMENTS(const LL_LIB_TensorInfo_TypeDef *t);
    *  * @{
    *   */
   int LL_ATON_LIB_DMA_Pad_Filling(__ll_pad_sw_params_t *init_common_params);
+  /**
+   *  * @}
+   *   */
+
+  /**
+   * @brief  performs HW accelerated filling operation for `Pad` operator where 4-Loop optimization is possible
+   * @retval Error code
+   */
+  /** @defgroup LL_ATON_LIB_DMA_Pad_4LoopFilling function
+   *  * @{
+   *   */
+  int LL_ATON_LIB_DMA_Pad_4Loop_Filling(__ll_pad_sw_params_t *common_params);
   /**
    *  * @}
    *   */
@@ -471,8 +488,8 @@ int LL_LIB_TENSOR_ELEMENTS(const LL_LIB_TensorInfo_TypeDef *t);
   /** @defgroup LL_ATON_LIB_DMA_Transpose function
    *  * @{
    *   */
-  int LL_ATON_LIB_DMA_Transpose(const LL_LIB_TensorShape_TypeDef *input, const uint32_t *input_axes_offsets,
-                                const LL_LIB_TensorShape_TypeDef *output, const uint32_t *output_axes_offsets,
+  int LL_ATON_LIB_DMA_Transpose(const LL_Buffer_InfoTypeDef *input, const uint32_t *input_axes_offsets,
+                                const LL_Buffer_InfoTypeDef *output, const uint32_t *output_axes_offsets,
                                 const uint8_t *target_pos, const uint8_t *perm_to_use, int dma_in, int dma_out);
 
   /**
@@ -491,7 +508,28 @@ int LL_LIB_TENSOR_ELEMENTS(const LL_LIB_TensorInfo_TypeDef *t);
    *   */
 
   int LL_ATON_LIB_ConvInteger(const LL_LIB_TensorInfo_TypeDef *inputs, unsigned int ninputs,
-                              const LL_LIB_TensorInfo_TypeDef *output);
+                              const LL_LIB_TensorInfo_TypeDef *output, int pad_top, int pad_left, int pad_bottom,
+                              int pad_right, int stride_h, int stride_w, int dilations_h, int dilation_w, int pad_value,
+                              int ngroups, char *conv_name);
+  /**
+   * @
+   */
+
+  /**
+   * @brief Performs an asynchronous memory copy operation using DMAs
+   * @param  input_start Start address of input tensor
+   * @param  input_end End address of input tensor
+   * @param  input_limit Input tensor limit address
+   * @param  output_start Start address of output tensor
+   * @param  dma_in Input DMA / Streaming Engine to be used
+   * @param  dma_out Output DMA / Streaming Engine to be used
+   * @return Error code
+   */
+  /** @defgroup LL_ATON_LIB_Async_Memcpy function
+   *  * @{
+   *   */
+  int LL_ATON_LIB_Async_Memcpy(unsigned char *input_start, unsigned char *input_end, unsigned char *input_limit,
+                               unsigned char *output_start, int dma_in, int dma_out);
   /**
    * @}
    */
@@ -499,5 +537,4 @@ int LL_LIB_TENSOR_ELEMENTS(const LL_LIB_TensorInfo_TypeDef *t);
 #ifdef __cplusplus
 }
 #endif
-
 #endif

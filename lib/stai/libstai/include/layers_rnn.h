@@ -35,7 +35,7 @@ typedef AI_ALIGNED_TYPE(struct, 4) ai_layer_lstm_ {
   func_nl recurrent_nl;   /**< recurrent nonlinearity (hidden to cell) */
   func_nl out_nl;         /**< output nonlinearity (cell to hidden) */
   ai_bool go_backwards;   /**< process reversed input */
-  ai_bool return_state;    /**< return state */
+  ai_bool return_state;   /**< return state */
   ai_bool reverse_seq;    /**< reverse output sequence */
   ai_float cell_clip;     /**< cell clip value */
 } ai_layer_lstm;

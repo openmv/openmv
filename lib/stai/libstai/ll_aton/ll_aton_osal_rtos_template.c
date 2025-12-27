@@ -58,22 +58,22 @@ void LL_ATON_OSAL_INIT()
       _dao_mutex,
       _dao_mutex_buffer); // no thread will ever wait on this "conceptional" mutex
                           // (so priority inheritance - as would come with a "real" mutex - is not needed)
-  assert(ret == _OsTrue_);
+  LL_ATON_ASSERT(ret == _OsTrue_);
   _MakeDaoMutexNoWaitersAvailable_(_dao_mutex); // make it available
 
   /* create "deferred ATON owner" mechanism semaphore */
   ret = _CreateDaoWaitQueue_(_dao_wait_queue, _dao_wait_queue_buffer);
-  assert(ret == _OsTrue_);
+  LL_ATON_ASSERT(ret == _OsTrue_);
   _MakeDaoWaitQueueUnavailable_(_dao_wait_queue); // make it un-available
 
   /* create WFE semaphore */
   ret = _CreateWfeSemaphore_(_wfe_sem, _wfe_sem_buffer);
-  assert(ret == _OsTrue_);
+  LL_ATON_ASSERT(ret == _OsTrue_);
   _MakeWfeSemaphoreUnavailable_(_wfe_sem); // make it un-available
 
   /* create cache mutex */
   ret = _CreateCacheMutex_(_cache_mutex, _cache_mutex_buffer);
-  assert(ret == _OsTrue_);
+  LL_ATON_ASSERT(ret == _OsTrue_);
   _MakeCacheMutexAvailable_(_cache_mutex); // make it available
 
   /* Finalize IRQ handling (e.g. priority) */
@@ -101,7 +101,7 @@ void LL_ATON_OSAL_LOCK_ATON()
 
   // Get current thread
   _TaskHandleType_ current_thread = _GetCurrentTaskHandle_();
-  assert(current_thread != _NullHandle_); // there should be a current thread
+  LL_ATON_ASSERT(current_thread != _NullHandle_); // there should be a current thread
 
   do
   {
@@ -113,7 +113,7 @@ void LL_ATON_OSAL_LOCK_ATON()
     if (ret == _OsTrue_)
     { // we have gotten the mutex
       // perform current owner housekeeping
-      assert(_current_aton_owner == _NullHandle_); // there should be no current owner
+      LL_ATON_ASSERT(_current_aton_owner == _NullHandle_); // there should be no current owner
       _current_aton_owner = current_thread;
       _current_aton_owner_orig_priority = current_thread_priority;
 
@@ -125,13 +125,13 @@ void LL_ATON_OSAL_LOCK_ATON()
     else
     { // didn't get mutex
       // increase current owner's priority if necessary
-      assert(_current_aton_owner != _NullHandle_); // there should be a current owner
+      LL_ATON_ASSERT(_current_aton_owner != _NullHandle_); // there should be a current owner
 
       // check for necessity for priority inheritance
       if (_FirstPrioHigherThanScnd_(current_thread_priority, _GetTaskPriority_(_current_aton_owner)))
       {
         // increase owner's priority
-        assert(_current_aton_owner != current_thread);
+        LL_ATON_ASSERT(_current_aton_owner != current_thread);
         _SetTaskPriority_(_current_aton_owner, current_thread_priority);
       }
 
@@ -143,14 +143,14 @@ void LL_ATON_OSAL_LOCK_ATON()
 
       /* wait on wait queue semaphore */
       ret = _GetDaoWaitQueue_(_dao_wait_queue); // block on wait queue
-      assert(ret == _OsTrue_);
+      LL_ATON_ASSERT(ret == _OsTrue_);
       LL_ATON_LIB_UNUSED(ret);
 
       // disable preemption
       _DisablePreemption_();
 
       // decrement waiters counter
-      assert(_nr_dao_waiters > 0);
+      LL_ATON_ASSERT(_nr_dao_waiters > 0);
       _nr_dao_waiters--;
 
       // re-try to get the mutex
@@ -171,11 +171,11 @@ void LL_ATON_OSAL_UNLOCK_ATON()
 
   /* release `_dao_mutex` */
   ret = _ReleaseDaoMutexNoWaiters_(_dao_mutex);
-  assert(ret == _OsTrue_);
+  LL_ATON_ASSERT(ret == _OsTrue_);
   LL_ATON_LIB_UNUSED(ret);
 
   // check if priority has changed while having been the ATON owner
-  assert(_current_aton_owner == _GetCurrentTaskHandle_());
+  LL_ATON_ASSERT(_current_aton_owner == _GetCurrentTaskHandle_());
   if (_current_aton_owner_orig_priority != _GetTaskPriority_(_current_aton_owner))
   {
     _SetTaskPriority_(_current_aton_owner, _current_aton_owner_orig_priority); // restore original priority
@@ -183,21 +183,21 @@ void LL_ATON_OSAL_UNLOCK_ATON()
   _current_aton_owner = _NullHandle_;
   _current_aton_owner_orig_priority = 0;
 
-  // assert that `_dao_wait_queue`'s value is 0 or 1
+  // LL_ATON_ASSERT that `_dao_wait_queue`'s value is 0 or 1
   _DaoWaitQueueValueType_ dao_wait_queue_val = _GetDaoWaitQueueValue_(_dao_wait_queue);
-  assert(dao_wait_queue_val <= 1); // assuming that `_DaoWaitQueueValueType_` is a regular integer type
+  LL_ATON_ASSERT(dao_wait_queue_val <= 1); // assuming that `_DaoWaitQueueValueType_` is a regular integer type
 
   // in case of waiters release `_dao_wait_queue` semaphore (if not already available)
   if (_nr_dao_waiters > 0)
   {
-    // force a yield after enableing preemption
+    // force a yield after enabling preemption
     do_yield = true;
 
     // increment semaphore
     if (dao_wait_queue_val == 0)
     {
       ret = _ReleaseDaoWaitQueue_(_dao_wait_queue);
-      assert(ret == _OsTrue_);
+      LL_ATON_ASSERT(ret == _OsTrue_);
       LL_ATON_LIB_UNUSED(ret);
     }
   }
@@ -223,7 +223,7 @@ void LL_ATON_OSAL_LOCK_NPU_CACHE()
   _ReturnType_ ret;
 
   ret = _GetCacheMutex_(_cache_mutex);
-  assert(ret == _OsTrue_);
+  LL_ATON_ASSERT(ret == _OsTrue_);
   LL_ATON_LIB_UNUSED(ret);
 }
 
@@ -235,7 +235,7 @@ void LL_ATON_OSAL_UNLOCK_NPU_CACHE()
   _ReturnType_ ret;
 
   ret = _ReleaseCacheMutex_(_cache_mutex);
-  assert(ret == _OsTrue_);
+  LL_ATON_ASSERT(ret == _OsTrue_);
   LL_ATON_LIB_UNUSED(ret);
 }
 #endif // LL_HAS_NO_ATON_OSAL_LOCK_NPU_CACHE
@@ -249,7 +249,7 @@ void LL_ATON_OSAL_LOCK_MCU_CACHE()
   _ReturnType_ ret;
 
   ret = _GetCacheMutex_(_cache_mutex);
-  assert(ret == _OsTrue_);
+  LL_ATON_ASSERT(ret == _OsTrue_);
   LL_ATON_LIB_UNUSED(ret);
 }
 
@@ -261,7 +261,7 @@ void LL_ATON_OSAL_UNLOCK_MCU_CACHE()
   _ReturnType_ ret;
 
   ret = _ReleaseCacheMutex_(_cache_mutex);
-  assert(ret == _OsTrue_);
+  LL_ATON_ASSERT(ret == _OsTrue_);
   LL_ATON_LIB_UNUSED(ret);
 }
 #endif // LL_HAS_NO_ATON_OSAL_LOCK_MCU_CACHE
@@ -274,7 +274,7 @@ void LL_ATON_OSAL_WFE()
   _ReturnType_ ret;
 
   ret = _GetWfeSemaphore_(_wfe_sem);
-  assert(ret == _OsTrue_);
+  LL_ATON_ASSERT(ret == _OsTrue_);
   LL_ATON_LIB_UNUSED(ret);
 }
 
@@ -290,14 +290,14 @@ void LL_ATON_OSAL_SIGNAL_EVENT()
 
 #ifdef RTOS_HAS_NO_ISR_SIGNAL
   ret = _ReleaseWfeSemaphore_(_wfe_sem); // assuming that this function gets NOT called from within an interrupt handler
-  assert(ret == _OsTrue_);
+  LL_ATON_ASSERT(ret == _OsTrue_);
 #else  // !RTOS_HAS_NO_ISR_SIGNAL
   _ReturnType_ task_woken;
 
   _HeadIsrCode_();
   ret = _ReleaseWfeSemaphoreISR_(
       _wfe_sem, &task_woken); // assuming that this function gets called from within an interrupt handler
-  assert(ret == _OsTrue_);
+  LL_ATON_ASSERT(ret == _OsTrue_);
   _TailIsrCode_(task_woken);
 
   LL_ATON_LIB_UNUSED(task_woken);
