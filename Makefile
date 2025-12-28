@@ -43,11 +43,8 @@ export OPENMV ?= openmv
 export FIRMWARE ?= firmware
 export BOOTLOADER ?= bootloader
 
-# Jlink config
-JLINK_INTERFACE ?= swd
-JLINK_SPEED ?= 100000
-JLINK_DEVICE ?= unspecified
-JLINK_GDB_SERVER ?= /opt/JLink/JLinkGDBServer
+# Debug configuration
+DEBUGGER ?= JLINK
 
 ifeq ($(TARGET),)
   ifneq ($(MAKECMDGOALS),clean)
@@ -264,21 +261,8 @@ ifeq ($(OMV_ENABLE_BL), 1)
 endif
 	$(SIZE) --format=SysV $(FW_DIR)/$(FIRMWARE).elf
 
-jlink:
-	setsid ${JLINK_GDB_SERVER} -speed ${JLINK_SPEED} -nogui \
-        -if ${JLINK_INTERFACE} -halt -cpu cortex-m \
-		-device ${JLINK_DEVICE} -novd ${JLINK_SCRIPT} \
-		>/dev/null 2>&1 & \
-	trap "pkill -f JLinkGDBServer 2>/dev/null" EXIT; \
-	for i in $$(seq 1 3); do \
-		if ss -ln | grep -q ":2331 "; then break; fi; \
-		sleep 1; \
-	done; \
-	if ! ss -ln | grep -q ":2331 "; then \
-		echo "J-Link GDB server failed to start after 3 seconds"; \
-		exit 1; \
-	fi; \
-	jlink-gdb $(FW_DIR)/$(FIRMWARE).elf
-
 submodules:
 	$(MAKE) -C $(MICROPY_DIR)/ports/$(PORT) BOARD=$(TARGET) submodules
+
+debug:
+	gdbrunner $(DEBUGGER) $(OMV_$(DEBUGGER)_ARGS) $(FW_DIR)/$(FIRMWARE).elf
