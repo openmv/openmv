@@ -85,8 +85,8 @@ class YoloV2:
 
         # Extract rows, columns, and anchor indices
         bb_rows = score_indices // (ow * self.anchors_len)
-        bb_cols = mod(score_indices // self.anchors_len, ow)
-        bb_anchors = mod(score_indices, self.anchors_len)
+        bb_cols = (score_indices // self.anchors_len) % ow
+        bb_anchors = score_indices % self.anchors_len
 
         # Get the anchor box information
         bb_a_array = np.take(self.anchors, bb_anchors, axis=0)
