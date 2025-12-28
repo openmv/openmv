@@ -10,6 +10,18 @@
     },
     {
       "type": "tflite",
+      "path": "{TOP}/lib/models/force_int_quant.tflite",
+      "alignment": 32,
+      "profile": "default"
+    },
+    {
+      "type": "tflite",
+      "path": "{TOP}/lib/models/person_detect.tflite",
+      "alignment": 32,
+      "profile": "default"
+    },
+    {
+      "type": "tflite",
       "path": "{TOP}/lib/models/yolo_lc_192.tflite",
       "alignment": 32,
       "profile": "default"
@@ -43,6 +55,21 @@
       "path": "{TOP}/lib/models/hand_landmarks_full_224.tflite",
       "alignment": 32,
       "profile": "default"
+    },
+    {
+      "type": "haar",
+      "path": "{TOP}/lib/haar/haarcascade_eye.xml",
+      "stages": 0
+    },
+    {
+      "type": "haar",
+      "path": "{TOP}/lib/haar/haarcascade_smile.xml",
+      "stages": 0
+    },
+    {
+      "type": "haar",
+      "path": "{TOP}/lib/haar/haarcascade_frontalface.xml",
+      "stages": 0
     }
     ]
   }
