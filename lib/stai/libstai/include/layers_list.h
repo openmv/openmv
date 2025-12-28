@@ -135,6 +135,8 @@ LAYER_ENTRY(TREE_ENSEMBLE_REGRESSOR, LAYER_ID(46), tree_ensemble_regressor, forw
 LAYER_ENTRY(GATHER_ND, LAYER_ID(67), gather_nd, forward_gather_nd, NULL, NULL)
 /*!< MATMUL layer */
 LAYER_ENTRY(MATMUL, LAYER_ID(68), matmul, forward_dmatmul, NULL, NULL)
+/*!< GatherElements layer */
+LAYER_ENTRY(GATHER_ELEMENTS, LAYER_ID(70), gather_elements, forward_gather_elements, NULL, NULL)
 /*!< Deeply Quantized Dense Layers */
 LAYER_ENTRY(CONV2D_DQNN, LAYER_ID(48), conv2d_dqnn, forward_pw_is1os1ws1_bn, NULL, NULL)
 LAYER_ENTRY(POOL_DQNN, LAYER_ID(49), pool_dqnn, forward_maxpool_is1os1, NULL, NULL)
@@ -162,6 +164,13 @@ LAYER_ENTRY(GRU, LAYER_STATEFUL_ID(3), gru, forward_gru, init_gru, destroy_gru)
 /* LAYER_ENTRY(TEMPLATE, LAYER_ID(XX), template, forward_template, NULL, NULL) */
 /*!< Stateful Template layer declaration */
 /* LAYER_ENTRY(TEMPLATE, LAYER_STATEFUL_ID(XX), template, forward_template, init_template, destroy_template) */
+
+/*****************************************************************************/
+/*!< Softmax Cross Entropy Loss layer */
+LAYER_ENTRY(SOFTMAXCROSSENTROPYLOSS, LAYER_ID(100), softmaxcrossentropyloss, forward_softmaxcrossentropyloss, NULL, NULL)
+LAYER_ENTRY(SOFTMAXCROSSENTROPYLOSSGRAD, LAYER_ID(101), softmaxcrossentropylossgrad, backward_softmaxcrossentropylossgrad, NULL, NULL)
+LAYER_ENTRY(INPLACEACCUMULATORV2, LAYER_ID(102), inplaceaccumulatorv2, backward_inplaceaccumulatorv2, NULL, NULL)
+LAYER_ENTRY(RELU_GRAD, LAYER_ID(103), relu_grad, backward_relu, NULL, NULL)
 
 #undef LAYER_ENTRY
 #undef LAYER_ID

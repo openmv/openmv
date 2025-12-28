@@ -16,7 +16,6 @@
  ******************************************************************************
  */
 
-#include <assert.h>
 #include <float.h>
 #include <math.h>
 #include <stdbool.h>
@@ -33,7 +32,7 @@
 #if _LL_LIB_DEBUG
 #include <stdio.h>
 
-// if set it will perform CHECKDISTANCE with COSINE_SIMILARIY and not with MAXDISTANCE
+// if set it will perform CHECKDISTANCE with COSINE_SIMILARITY and not with MAXDISTANCE
 #define USE_COSINE_SIMILARITY
 // CHECKDISTANCE mode thresholds
 #define MAXDISTANCE_TH       3
@@ -107,7 +106,7 @@ void __ll_lib_error(int err_code, int line, const char *func) // for library int
     break;
   }
   LL_ATON_PRINTF("%s line %d LL_LIB Error: %s\n", func, line, errs);
-#endif // NDEBUG
+#endif // !NDEBUG
 }
 #endif // _LL_LIB_DEBUG
 
@@ -163,7 +162,7 @@ static inline void __ll_lib_dump_strswitch(int dma_in, int dma_out)
 
 static void __ll_lib_strswitch_set_dmas(int dma_in, int dma_out, LL_ATON_RT_EpochBlockItem_t *epoch_block_array)
 {
-  __ll_lib_dump_strswitch(dma_in, dma_out);
+  __ll_lib_dump_strswitch(dma_in, dma_out); // just for debug purposes
 
   __ll_lib_params_t *params = __ll_lib_get_params();
 
@@ -182,7 +181,7 @@ static void __ll_lib_strswitch_set_dmas(int dma_in, int dma_out, LL_ATON_RT_Epoc
   params->g_wait_mask = wait_mask;
   epoch_block_array->wait_mask = wait_mask;
 
-  __ll_lib_dump_strswitch(dma_in, dma_out);
+  __ll_lib_dump_strswitch(dma_in, dma_out); // just for debug purposes
 }
 
 static inline void __ll_lib_start_transfer(__ll_lib_params_t *params)
@@ -245,10 +244,10 @@ static inline void __ll_lib_prepare_inputs_epoch(const LL_LIB_TensorInfo_TypeDef
   params->g_offset_limit = 0;
 }
 
-static inline void __ll_lib_prepare_outputs_epoch(const LL_LIB_TensorShape_TypeDef *outputs, unsigned int noutputs,
+static inline void __ll_lib_prepare_outputs_epoch(const LL_Buffer_InfoTypeDef *outputs, unsigned int noutputs,
                                                   const LL_Streng_TensorInitTypeDef *dma_in,
                                                   const LL_Streng_TensorInitTypeDef *dma_out,
-                                                  const LL_LIB_TensorShape_TypeDef *input)
+                                                  const LL_Buffer_InfoTypeDef *input)
 {
   /* get pointers to static structures */
   __ll_lib_params_t *params = __ll_lib_get_params();
@@ -263,7 +262,7 @@ static inline void __ll_lib_prepare_outputs_epoch(const LL_LIB_TensorShape_TypeD
   //       and returning with a respective (new) return value (of type `LL_ATON_RT_RetValues_t`),
   //       reporting about the error, from the latest call to `LL_ATON_RT_RunEpochBlock()`
   LL_ATON_ASSERT(noutputs <= __LL_MAX_TENSORS);
-  memcpy(outputs_copy, outputs, sizeof(LL_LIB_TensorShape_TypeDef) * noutputs);
+  memcpy(outputs_copy, outputs, sizeof(LL_Buffer_InfoTypeDef) * noutputs);
 
   params->g_tensors = outputs_copy;
   params->g_num_tensors = noutputs;
@@ -361,7 +360,7 @@ static void __ll_lib_outputs_memcpy_start(const void *epoch_block, uint8_t *_dst
 
   if (params->g_size < 0)
   {
-    n = LL_Buffer_len(((LL_LIB_TensorShape_TypeDef *)params->g_tensors) + params->g_idx);
+    n = LL_Buffer_len(((LL_Buffer_InfoTypeDef *)params->g_tensors) + params->g_idx);
   }
   else
   {
@@ -555,7 +554,7 @@ static void __LL_LIB_Outputs_Channel_Split_Aton_Start_EpochBlock(const void *epo
   params->g_not_continuous =
       1; // disables code in __ll_lib_outputs_memcpy_start that assumes a flat copy operation e.g. prolog test
 
-  uint8_t *dst = (uint8_t *)LL_Buffer_addr_start(((LL_LIB_TensorShape_TypeDef *)params->g_tensors) + params->g_idx);
+  uint8_t *dst = (uint8_t *)LL_Buffer_addr_start(((LL_Buffer_InfoTypeDef *)params->g_tensors) + params->g_idx);
   __ll_lib_outputs_memcpy_start(epoch_block, dst);
 }
 
@@ -568,7 +567,7 @@ static void __LL_LIB_Outputs_Channel_Split_Aton_End_EpochBlock(const void *epoch
     __ll_lib_stop_transfer();
   }
 
-  LL_LIB_TensorShape_TypeDef *out = ((LL_LIB_TensorShape_TypeDef *)params->g_tensors) + params->g_idx;
+  LL_Buffer_InfoTypeDef *out = ((LL_Buffer_InfoTypeDef *)params->g_tensors) + params->g_idx;
   int out_rank_old = out->ndims;
   int out_nchannels_old = out->shape[(out_rank_old - 4) + 1 /* ONNX_CHANNEL_OFFSET */];
 
@@ -576,7 +575,7 @@ static void __LL_LIB_Outputs_Channel_Split_Aton_End_EpochBlock(const void *epoch
 
   if (params->g_idx < params->g_num_tensors)
   {
-    out = ((LL_LIB_TensorShape_TypeDef *)params->g_tensors) + params->g_idx;
+    out = ((LL_Buffer_InfoTypeDef *)params->g_tensors) + params->g_idx;
 
     uint32_t out_ndims = out->ndims;
     LL_ATON_ASSERT(out_ndims >= 3);
@@ -640,7 +639,7 @@ static void __LL_LIB_Outputs_Channel_Split_Batched_Start_EpochBlock(const void *
   params->g_not_continuous =
       1; // disables code in __ll_lib_outputs_memcpy_start that assumes a flat copy operation e.g. prolog test
 
-  uint8_t *dst = (uint8_t *)LL_Buffer_addr_start(((LL_LIB_TensorShape_TypeDef *)params->g_tensors) + params->g_idx);
+  uint8_t *dst = (uint8_t *)LL_Buffer_addr_start(((LL_Buffer_InfoTypeDef *)params->g_tensors) + params->g_idx);
   __ll_lib_outputs_memcpy_start(epoch_block, dst);
 }
 
@@ -653,7 +652,7 @@ static void __LL_LIB_Outputs_Channel_Split_Batched_End_EpochBlock(const void *ep
     __ll_lib_stop_transfer();
   }
 
-  LL_LIB_TensorShape_TypeDef *out = ((LL_LIB_TensorShape_TypeDef *)params->g_tensors) + params->g_idx;
+  LL_Buffer_InfoTypeDef *out = ((LL_Buffer_InfoTypeDef *)params->g_tensors) + params->g_idx;
   int out_rank_old = out->ndims;
   int out_nchannels_old = out->shape[(out_rank_old - 4) + 1 /* ONNX_CHANNEL_OFFSET */];
 
@@ -661,7 +660,7 @@ static void __LL_LIB_Outputs_Channel_Split_Batched_End_EpochBlock(const void *ep
 
   if (params->g_idx < params->g_num_tensors)
   {
-    out = ((LL_LIB_TensorShape_TypeDef *)params->g_tensors) + params->g_idx;
+    out = ((LL_Buffer_InfoTypeDef *)params->g_tensors) + params->g_idx;
 
     uint32_t out_ndims = out->ndims;
     LL_ATON_ASSERT(out_ndims >= 3);
@@ -728,7 +727,7 @@ static void __LL_LIB_Outputs_Memcpy_Start_EpochBlock(const void *epoch_block)
   __ll_lib_params_t *params = __ll_lib_get_params();
   LL_ATON_ASSERT(params->g_idx < params->g_num_tensors); // must be checked before
 
-  uint8_t *dst = (uint8_t *)LL_Buffer_addr_start(((LL_LIB_TensorShape_TypeDef *)params->g_tensors) + params->g_idx);
+  uint8_t *dst = (uint8_t *)LL_Buffer_addr_start(((LL_Buffer_InfoTypeDef *)params->g_tensors) + params->g_idx);
   __ll_lib_outputs_memcpy_start(epoch_block, dst);
 }
 
@@ -743,7 +742,7 @@ static void __LL_LIB_Outputs_Memcpy_End_EpochBlock(const void *epoch_block)
 
   if (params->g_size < 0)
   {
-    params->g_dst_o_src += LL_Buffer_len(((LL_LIB_TensorShape_TypeDef *)params->g_tensors) + params->g_idx);
+    params->g_dst_o_src += LL_Buffer_len(((LL_Buffer_InfoTypeDef *)params->g_tensors) + params->g_idx);
   }
   else
   {
@@ -807,7 +806,7 @@ static void __LL_LIB_DMA_Pad_Filling_Start_EpochBlock(const void *epoch_block)
       params->g_dma_in.addr_base.p = (uint8_t *)_src;
       params->g_dma_in.offset_start = 0;
       params->g_dma_in.offset_end = n;
-      params->g_dma_in.offset_limit = (uint8_t *)common_params->in_limit - (uint8_t *)_src; /* awful FIXME Francesco */
+      params->g_dma_in.offset_limit = (uint8_t *)common_params->in_limit - (uint8_t *)common_params->in_target;
 
       params->g_dma_out.addr_base.p = _dst;
       params->g_dma_out.offset_start = 0;
@@ -966,7 +965,7 @@ static void __LL_LIB_DMA_Pad_Filling_End_EpochBlock(const void *epoch_block)
   break;
   case 3: // NOTE: assuming no alignment
   {
-    /* check endianess */
+    /* check endianness */
     const int32_t _const_val = 0x01020304;
     const int8_t *_const_val_ptr = (int8_t *)&_const_val;
     bool is_little_endian = (_const_val_ptr[0] == 0x04);
@@ -1113,7 +1112,7 @@ static LL_ATON_RT_EpochBlockItem_t _outputs_channel_split_batched_epoch_block_ar
     {.flags = EpochBlock_Flags_last_eb},
 };
 
-static LL_ATON_RT_EpochBlockItem_t _dma_ri2ir_epoch_block_array[] = {
+static LL_ATON_RT_EpochBlockItem_t _simple_oneshot_transfer[] = {
     // REMEMBER: static variables are not suited for multithreaded etc. environments
     {
         .start_epoch_block = __LL_LIB_DMA_Transfer_Start_EpochBlock,
@@ -1150,34 +1149,6 @@ static LL_ATON_RT_EpochBlockItem_t _dma_Pad_filling_epoch_block_array[] = {
 #ifdef LL_ATON_EB_DBG_INFO
         .epoch_num = -9,
         .last_epoch_num = -9,
-#endif
-    },
-    {.flags = EpochBlock_Flags_last_eb},
-};
-
-static LL_ATON_RT_EpochBlockItem_t _dma_transpose_epoch_block_array[] = {
-    // REMEMBER: static variables are not suited for multithreaded etc. environments
-    {
-        .start_epoch_block = __LL_LIB_DMA_Transfer_Start_EpochBlock,
-        .end_epoch_block = __LL_LIB_DMA_Transfer_End_EpochBlock,
-        .flags = EpochBlock_Flags_internal,
-#ifdef LL_ATON_EB_DBG_INFO
-        .epoch_num = -10,
-        .last_epoch_num = -10,
-#endif
-    },
-    {.flags = EpochBlock_Flags_last_eb},
-};
-
-static LL_ATON_RT_EpochBlockItem_t _slice_split_like_epoch_block_array[] = {
-    // REMEMBER: static variables are not suited for multithreaded etc. environments
-    {
-        .start_epoch_block = __LL_LIB_DMA_Transfer_Start_EpochBlock,
-        .end_epoch_block = __LL_LIB_DMA_Transfer_End_EpochBlock,
-        .flags = EpochBlock_Flags_internal,
-#ifdef LL_ATON_EB_DBG_INFO
-        .epoch_num = -11,
-        .last_epoch_num = -11,
 #endif
     },
     {.flags = EpochBlock_Flags_last_eb},
@@ -1296,9 +1267,8 @@ static void __LL_ATON_LIB_DMA_Inputs_Batched_Memcpy(const LL_LIB_TensorInfo_Type
  * @param  outputs list of output tensor shape structures
  * @param  noutputs number of outputs
  */
-static void __LL_ATON_LIB_DMA_Outputs_Memcpy(const LL_LIB_TensorShape_TypeDef *input,
-                                             const LL_LIB_TensorShape_TypeDef *outputs, unsigned int noutputs,
-                                             int dma_in, int dma_out)
+static void __LL_ATON_LIB_DMA_Outputs_Memcpy(const LL_Buffer_InfoTypeDef *input, const LL_Buffer_InfoTypeDef *outputs,
+                                             unsigned int noutputs, int dma_in, int dma_out)
 {
   /* start epoch block sequence */
   if (noutputs > 0)
@@ -1324,10 +1294,9 @@ static void __LL_ATON_LIB_DMA_Outputs_Memcpy(const LL_LIB_TensorShape_TypeDef *i
  * @param  outputs tensor shape structures
  * @param  nr_of_outputs number of output tensors
  */
-static void __LL_ATON_LIB_DMA_Outputs_Channel_Split_Aton(const LL_LIB_TensorShape_TypeDef *input,
-                                                         const LL_LIB_TensorShape_TypeDef *outputs,
-                                                         unsigned int noutputs, unsigned int leading_dims, int dma_in,
-                                                         int dma_out)
+static void __LL_ATON_LIB_DMA_Outputs_Channel_Split_Aton(const LL_Buffer_InfoTypeDef *input,
+                                                         const LL_Buffer_InfoTypeDef *outputs, unsigned int noutputs,
+                                                         unsigned int leading_dims, int dma_in, int dma_out)
 {
   uint32_t out_ndims = outputs[0].ndims;
   LL_ATON_ASSERT(out_ndims >= 3);
@@ -1444,9 +1413,9 @@ static void __LL_ATON_LIB_DMA_Outputs_Channel_Split_Aton(const LL_LIB_TensorShap
  * @param  outputs list of output tensor shape structures
  * @param  noutputs number of outputs
  */
-static void __LL_ATON_LIB_DMA_Outputs_Channel_Split_Batched(const LL_LIB_TensorShape_TypeDef *input,
-                                                            const LL_LIB_TensorShape_TypeDef *outputs,
-                                                            unsigned int noutputs, int dma_in, int dma_out)
+static void __LL_ATON_LIB_DMA_Outputs_Channel_Split_Batched(const LL_Buffer_InfoTypeDef *input,
+                                                            const LL_Buffer_InfoTypeDef *outputs, unsigned int noutputs,
+                                                            int dma_in, int dma_out)
 {
   uint32_t out_ndims = outputs[0].ndims;
   LL_ATON_ASSERT(out_ndims >= 3);
@@ -1690,10 +1659,10 @@ LL_ATON_PRINTF("out: b=%d w=%d g=%d c=%d ndims=%d\n",out_batches,out_fwidth,out_
   }
 
   /* configure stream switch */
-  __ll_lib_strswitch_set_dmas(dma_in, dma_out, _dma_ri2ir_epoch_block_array);
+  __ll_lib_strswitch_set_dmas(dma_in, dma_out, _simple_oneshot_transfer);
 
   /* start epoch block sequence */
-  LL_ATON_RT_Insert_LibEpochBlockArray(_dma_ri2ir_epoch_block_array);
+  LL_ATON_RT_Insert_LibEpochBlockArray(_simple_oneshot_transfer);
 
   return LL_ATON_OK;
 }
@@ -1819,10 +1788,10 @@ LL_ATON_PRINTF("out: b=%d w=%d g=%d c=%d ndims=%d\n",out_batches,out_fwidth,out_
                                 /* all of the rest of parameters are irrelevant to this use */ 0, 0);
 
   /* configure stream switch */
-  __ll_lib_strswitch_set_dmas(dma_in, dma_out, _dma_ri2ir_epoch_block_array);
+  __ll_lib_strswitch_set_dmas(dma_in, dma_out, _simple_oneshot_transfer);
 
   /* start epoch block sequence */
-  LL_ATON_RT_Insert_LibEpochBlockArray(_dma_ri2ir_epoch_block_array);
+  LL_ATON_RT_Insert_LibEpochBlockArray(_simple_oneshot_transfer);
 
   return LL_ATON_OK;
 }
@@ -1850,8 +1819,8 @@ int LL_ATON_LIB_DMA_DepthToSpace(const LL_LIB_TensorInfo_TypeDef *inputs, unsign
                                     dma_out);
 }
 
-int LL_ATON_LIB_DMA_Transpose(const LL_LIB_TensorShape_TypeDef *input, const uint32_t *input_axes_offsets,
-                              const LL_LIB_TensorShape_TypeDef *output, const uint32_t *output_axes_offsets,
+int LL_ATON_LIB_DMA_Transpose(const LL_Buffer_InfoTypeDef *input, const uint32_t *input_axes_offsets,
+                              const LL_Buffer_InfoTypeDef *output, const uint32_t *output_axes_offsets,
                               const uint8_t *target_pos, const uint8_t *perm_to_use, int dma_in, int dma_out)
 {
   if (LL_Buffer_len(output) < __LL_DMA_MIN_BUFF_LEN)
@@ -1970,10 +1939,10 @@ int LL_ATON_LIB_DMA_Transpose(const LL_LIB_TensorShape_TypeDef *input, const uin
   }
 
   /* configure stream switch */
-  __ll_lib_strswitch_set_dmas(dma_in, dma_out, _dma_transpose_epoch_block_array);
+  __ll_lib_strswitch_set_dmas(dma_in, dma_out, _simple_oneshot_transfer);
 
   /* schedule epoch block */
-  LL_ATON_RT_Insert_LibEpochBlockArray(_dma_transpose_epoch_block_array);
+  LL_ATON_RT_Insert_LibEpochBlockArray(_simple_oneshot_transfer);
 
   return LL_ATON_OK;
 }
@@ -2280,22 +2249,22 @@ static int floating_to_Q(float f, int Qm, int Qn)
 {
   float tmp;
   if (Qn >= 0)
-    tmp = (f * ((int)1 << Qn) + (f > (float)0 ? (float)0.5 : (float)-0.5));
+    tmp = (f * ((long long)1 << Qn) + (f > (float)0 ? (float)0.5 : (float)-0.5));
   if (Qn < 0)
-    tmp = (f * (float)1 / ((int)1 << -Qn));
-  if (tmp > (float)(((int)1 << (Qm + Qn)) - 1))
-    tmp = (float)(((int)1 << (Qm + Qn)) - 1);
-  if (tmp < -(float)((int)1 << (Qm + Qn)))
-    tmp = -(float)((int)1 << (Qm + Qn));
+    tmp = (f * (float)1 / ((long long)1 << -Qn));
+  if (tmp > (float)(((long long)1 << (Qm + Qn)) - 1))
+    tmp = (float)(((long long)1 << (Qm + Qn)) - 1);
+  if (tmp < -(float)((long long)1 << (Qm + Qn)))
+    tmp = -(float)((long long)1 << (Qm + Qn));
   return (int)tmp;
 }
 
 static float Q_to_floating(int i, int Qm, int Qn)
 {
   if (Qn >= 0)
-    return ((float)i / (float)((int)1 << Qn));
+    return ((float)i / (float)((long long)1 << Qn));
   if (Qn < 0)
-    return ((float)i * (float)((int)1 << -Qn));
+    return ((float)i * (float)((long long)1 << -Qn));
   return 0.f;
 }
 
@@ -3017,9 +2986,8 @@ int LL_ATON_LIB_Softmax(const LL_LIB_TensorInfo_TypeDef *input, const LL_LIB_Ten
  * @param  dma_in DMA number of DMA writing to memory
  * @retval Error code
  */
-int LL_ATON_LIB_DMA_Outputs_Flat_Copy(const LL_LIB_TensorShape_TypeDef *input,
-                                      const LL_LIB_TensorShape_TypeDef *outputs, unsigned int nr_of_outputs, int dma_in,
-                                      int dma_out)
+int LL_ATON_LIB_DMA_Outputs_Flat_Copy(const LL_Buffer_InfoTypeDef *input, const LL_Buffer_InfoTypeDef *outputs,
+                                      unsigned int nr_of_outputs, int dma_in, int dma_out)
 {
 #ifndef NDEBUG
   // LL_ATON_PRINTF("%s() line %d\n", __func__, __LINE__);
@@ -3066,10 +3034,9 @@ int LL_ATON_LIB_DMA_Outputs_Flat_Copy(const LL_LIB_TensorShape_TypeDef *input,
  * @param  dma_in DMA number of DMA writing to memory
  * @return Error code
  */
-int LL_ATON_LIB_DMA_Outputs_Slice_SplitLike(const LL_LIB_TensorShape_TypeDef *input,
-                                            const LL_LIB_TensorShape_TypeDef *output, int32_t tot_out_size,
-                                            int32_t width_in_bytes, int32_t fheight, int32_t line_offset, int8_t n_bits,
-                                            int dma_in, int dma_out)
+int LL_ATON_LIB_DMA_Outputs_Slice_SplitLike(const LL_Buffer_InfoTypeDef *input, const LL_Buffer_InfoTypeDef *output,
+                                            int32_t tot_out_size, int32_t width_in_bytes, int32_t fheight,
+                                            int32_t line_offset, int8_t n_bits, int dma_in, int dma_out)
 {
   // Do actual copy
   if (tot_out_size < __LL_DMA_MIN_BUFF_LEN)
@@ -3121,9 +3088,9 @@ int LL_ATON_LIB_DMA_Outputs_Slice_SplitLike(const LL_LIB_TensorShape_TypeDef *in
     params->g_dma_out = _dma_out;
 
     /* configure stream switch */
-    __ll_lib_strswitch_set_dmas(dma_in, dma_out, _slice_split_like_epoch_block_array);
+    __ll_lib_strswitch_set_dmas(dma_in, dma_out, _simple_oneshot_transfer);
 
-    LL_ATON_RT_Insert_LibEpochBlockArray(_slice_split_like_epoch_block_array);
+    LL_ATON_RT_Insert_LibEpochBlockArray(_simple_oneshot_transfer);
   }
 
   return LL_ATON_OK;
@@ -3137,9 +3104,9 @@ int LL_ATON_LIB_DMA_Outputs_Slice_SplitLike(const LL_LIB_TensorShape_TypeDef *in
  * @param  nr_of_outputs number of output tensors
  * @retval Error code
  */
-int LL_ATON_LIB_DMA_Outputs_Channel_Split_Aton(const LL_LIB_TensorShape_TypeDef *input,
-                                               const LL_LIB_TensorShape_TypeDef *outputs, unsigned int nr_of_outputs,
-                                               unsigned int leading_dims, int dma_in, int dma_out)
+int LL_ATON_LIB_DMA_Outputs_Channel_Split_Aton(const LL_Buffer_InfoTypeDef *input, const LL_Buffer_InfoTypeDef *outputs,
+                                               unsigned int nr_of_outputs, unsigned int leading_dims, int dma_in,
+                                               int dma_out)
 {
 #ifndef NDEBUG
   // LL_ATON_PRINTF("%s() line %d\n", __func__, __LINE__);
@@ -3181,8 +3148,8 @@ int LL_ATON_LIB_DMA_Outputs_Channel_Split_Aton(const LL_LIB_TensorShape_TypeDef 
  * @param  noutputs number of outputs
  * @retval Error code
  */
-int LL_ATON_LIB_DMA_Outputs_Channel_Split_Batched(const LL_LIB_TensorShape_TypeDef *input,
-                                                  const LL_LIB_TensorShape_TypeDef *outputs, unsigned int nr_of_outputs,
+int LL_ATON_LIB_DMA_Outputs_Channel_Split_Batched(const LL_Buffer_InfoTypeDef *input,
+                                                  const LL_Buffer_InfoTypeDef *outputs, unsigned int nr_of_outputs,
                                                   int dma_in, int dma_out)
 {
 #ifndef NDEBUG
@@ -3389,8 +3356,7 @@ static bool __ll_lib_memset(void *dst, void *dst_limit, int32_t constant_value, 
                                          .addr_base = {dst_orig},
                                          .offset_start = 0,
                                          .offset_end = samples_in_bytes_preloaded,
-                                         .offset_limit =
-                                             (unsigned char *)dst_limit - dst_orig, /* awful FIXME Francesco */
+                                         .offset_limit = (unsigned char *)dst_limit - dst_orig,
                                          .raw = 1,
                                          .noinc = 1,
                                          .frame_tot_cnt = frame_tot_cnt,
@@ -3416,13 +3382,18 @@ static bool __ll_lib_memset(void *dst, void *dst_limit, int32_t constant_value, 
   return true;
 }
 
-static inline void __ll_lib_pad_save_params(__ll_pad_sw_params_t *common_params)
+static inline void __ll_lib_pad_save_params(__ll_pad_sw_params_t *common_params, bool deep_copy)
 {
   __ll_lib_params_t *params = __ll_lib_get_params();
   void *lower_heap = __ll_lib_get_lower_heap();
 
   /* flat copy of params */
   params->special.pad = *common_params;
+
+  if (deep_copy == false)
+  {
+    return;
+  }
 
   /* prepare for deep copy of vectors */
   uint32_t *min_shape = (uint32_t *)lower_heap;
@@ -3462,13 +3433,14 @@ static inline void __ll_lib_pad_save_params(__ll_pad_sw_params_t *common_params)
  * @param  constant_value constant value to be set
  * @param  out_size number of bytes to output
  * @param  common_params parameters needed to setup DMAs and to forward to eventual callback function
+ * @param  deep_copy if true, common_params vectors are to be copied to lower heap
  * @retval Error code
  */
 int LL_ATON_LIB_DMA_Pad_Memset(void *output, int32_t constant_value, size_t out_size,
-                               __ll_pad_sw_params_t *common_params)
+                               __ll_pad_sw_params_t *common_params, bool deep_copy)
 {
   /* save common parameters */
-  __ll_lib_pad_save_params(common_params);
+  __ll_lib_pad_save_params(common_params, deep_copy);
 
   /* start operation */
   bool ret = __ll_lib_memset(output, common_params->out_limit, constant_value, common_params->nbytes, out_size);
@@ -3505,7 +3477,7 @@ int LL_ATON_LIB_DMA_Pad_Memset(void *output, int32_t constant_value, size_t out_
 }
 
 /**
- * @brief  performs HW accelerated filling operation for `Pad` operator (aka Filling)
+ * @brief  performs HW accelerated filling operation for `Pad` operator
  * @retval Error code
  */
 int LL_ATON_LIB_DMA_Pad_Filling(__ll_pad_sw_params_t *init_common_params)
@@ -3513,7 +3485,7 @@ int LL_ATON_LIB_DMA_Pad_Filling(__ll_pad_sw_params_t *init_common_params)
   /* save common parameters */
   if (init_common_params != NULL)
   {
-    __ll_lib_pad_save_params(init_common_params);
+    __ll_lib_pad_save_params(init_common_params, true);
   }
 
   /* get common parameters */
@@ -3554,6 +3526,291 @@ int LL_ATON_LIB_DMA_Pad_Filling(__ll_pad_sw_params_t *init_common_params)
 
   /* start DMAs for filling `consecutive bytes` */
   LL_ATON_RT_Insert_LibEpochBlockArray(_dma_Pad_filling_epoch_block_array);
+
+  return LL_ATON_OK;
+}
+
+/**
+ * @brief  performs HW accelerated filling operation for `Pad` operator where 4-Loop optimization is possible
+ * @retval Error code
+ * @note   Has never a callback to be called
+ */
+int LL_ATON_LIB_DMA_Pad_4Loop_Filling(__ll_pad_sw_params_t *common_params)
+{
+  /* get common parameters */
+  __ll_lib_params_t *params = __ll_lib_get_params();
+  if (common_params != NULL)
+  {
+    params->special.pad = *common_params;
+  }
+
+  struct four_axes *negative_4loop = (struct four_axes *)&params->special.pad.negative_4loop;
+  LL_ATON_ASSERT((negative_4loop->inner_bytes_to_copy > 0) || (negative_4loop->nr_of_stream_eng_loops == 0));
+  LL_ATON_ASSERT(negative_4loop->nr_of_stream_eng_loops <= NR_OF_STREAM_ENG_LOOPS);
+
+  unsigned char *in_start =
+      (unsigned char *)params->special.pad.in_target + negative_4loop->initial_cumulative_start_offset_in_bytes;
+  unsigned char *in_end = in_start + negative_4loop->total_bytes_to_copy;
+
+  struct four_axes *positive_4loop = (struct four_axes *)&params->special.pad.positive_4loop;
+  LL_ATON_ASSERT((positive_4loop->inner_bytes_to_copy > 0) || (positive_4loop->nr_of_stream_eng_loops == 0));
+  LL_ATON_ASSERT(positive_4loop->nr_of_stream_eng_loops <= NR_OF_STREAM_ENG_LOOPS);
+
+  unsigned char *out_start =
+      (unsigned char *)params->special.pad.out_target + positive_4loop->initial_cumulative_start_offset_in_bytes;
+
+  /* both negative and positive padding result to be a memory copy */
+  if ((positive_4loop->nr_of_stream_eng_loops == 0) && (negative_4loop->nr_of_stream_eng_loops == 0))
+  { // just perform a memcpy
+    return LL_ATON_LIB_Async_Memcpy(in_start, in_end, (unsigned char *)params->special.pad.in_limit, out_start,
+                                    params->special.pad.dma_in, params->special.pad.dma_out);
+  }
+
+  /* calculate number of bits to use in input streaming engine */
+  uint32_t n_bits_to_use_negative;
+  uint32_t consecutive_bytes_negative = negative_4loop->inner_bytes_to_copy;
+  uint32_t batch_depth_negative;
+  if ((consecutive_bytes_negative % 3) == 0)
+  {
+    n_bits_to_use_negative = 24;
+    batch_depth_negative = (consecutive_bytes_negative / 3);
+  }
+  else if ((consecutive_bytes_negative % 2) == 0)
+  {
+    n_bits_to_use_negative = 16;
+    batch_depth_negative = (consecutive_bytes_negative / 2);
+  }
+  else
+  {
+    n_bits_to_use_negative = 8;
+    batch_depth_negative = consecutive_bytes_negative;
+  }
+
+  /* calculate number of bits to use in output streaming engine */
+  uint32_t n_bits_to_use_positive;
+  uint32_t consecutive_bytes_positive = positive_4loop->inner_bytes_to_copy;
+  uint32_t batch_depth_positive;
+  if ((consecutive_bytes_positive % 3) == 0)
+  {
+    n_bits_to_use_positive = 24;
+    batch_depth_positive = (consecutive_bytes_positive / 3);
+  }
+  else if ((consecutive_bytes_positive % 2) == 0)
+  {
+    n_bits_to_use_positive = 16;
+    batch_depth_positive = (consecutive_bytes_positive / 2);
+  }
+  else
+  {
+    n_bits_to_use_positive = 8;
+    batch_depth_positive = consecutive_bytes_positive;
+  }
+
+  /* calculate lowest common denominator */
+  uint32_t n_bits_to_use;
+  if (n_bits_to_use_negative == n_bits_to_use_positive)
+  {
+    n_bits_to_use = n_bits_to_use_negative;
+  }
+  else
+  {
+    n_bits_to_use = 8;
+    batch_depth_negative = consecutive_bytes_negative;
+    batch_depth_positive = consecutive_bytes_positive;
+  }
+
+  /* Reset in/out DMA values*/
+  params->g_dma_in = _static_const_dma_in;
+  params->g_dma_out = _static_const_dma_out;
+
+  /*** Configure input DMA ***/
+  /* common values */
+  params->g_dma_in.dir = 0;
+  params->g_dma_in.nbits_in = n_bits_to_use;
+  params->g_dma_in.nbits_out = n_bits_to_use;
+  params->g_dma_in.addr_base.p = in_start;
+  params->g_dma_in.offset_start = 0;
+  params->g_dma_in.offset_end = negative_4loop->total_bytes_to_copy;
+  params->g_dma_in.offset_limit = params->special.pad.in_limit - (int8_t *)in_start;
+
+  /* not common configuration for raw & non-raw mode */
+  if (negative_4loop->nr_of_stream_eng_loops == 0)
+  { // read in raw mode
+    /* configure raw input DMA */
+    params->g_dma_in.raw = 1;
+    params->g_dma_in.frame_tot_cnt = 1;
+  }
+  else
+  { // cannot read in raw mode
+    /* configure non-raw mode */
+    params->g_dma_in.raw = 0;
+
+    /* reset all loops */
+    params->g_dma_in.fwidth = 1;
+    params->g_dma_in.fheight = 1;
+    params->g_dma_in.frame_tot_cnt = 1;
+    params->g_dma_in.frame_loop_cnt = 0;
+
+    params->g_dma_in.batch_offset = 0;
+    params->g_dma_in.line_offset = 0;
+    params->g_dma_in.frame_offset = 0;
+    params->g_dma_in.loop_offset = 0;
+
+    /* start programming batch loop */
+    params->g_dma_in.batch_depth = batch_depth_negative;
+
+    params->g_dma_in.fwidth = negative_4loop->four_items_array[0].nr_of_loops;
+    params->g_dma_in.batch_offset = negative_4loop->four_items_array[0].offset_in_bytes;
+
+    /* start programming line loop */
+    if (negative_4loop->nr_of_stream_eng_loops > 1)
+    {
+      params->g_dma_in.fheight = negative_4loop->four_items_array[1].nr_of_loops;
+      params->g_dma_in.line_offset = negative_4loop->four_items_array[1].offset_in_bytes;
+
+      if (negative_4loop->nr_of_stream_eng_loops > 2)
+      {
+        /* prepare for two outer loops */
+        if (negative_4loop->nr_of_stream_eng_loops < NR_OF_STREAM_ENG_LOOPS) // i.e. == 3
+        {                                                                    // repetition loop
+          params->g_dma_in.frame_tot_cnt = negative_4loop->four_items_array[2].nr_of_loops;
+        }
+        else
+        { // full 4-loops; main loop
+          params->g_dma_in.frame_loop_cnt = negative_4loop->four_items_array[2].nr_of_loops;
+          params->g_dma_in.frame_tot_cnt =
+              params->g_dma_in.frame_loop_cnt * negative_4loop->four_items_array[3].nr_of_loops;
+          params->g_dma_in.loop_offset = negative_4loop->four_items_array[3].offset_in_bytes;
+        }
+        params->g_dma_in.frame_offset = negative_4loop->four_items_array[2].offset_in_bytes;
+      }
+    }
+  }
+
+  /*** Configure output DMA ***/
+  /* common values */
+  params->g_dma_out.dir = 1;
+  params->g_dma_out.nbits_in = n_bits_to_use;
+  params->g_dma_out.nbits_out = n_bits_to_use;
+  params->g_dma_out.addr_base.p = out_start;
+  params->g_dma_out.offset_start = 0;
+  params->g_dma_out.offset_end = positive_4loop->total_bytes_to_copy;
+
+  /* not common configuration for raw & non-raw mode */
+  if (positive_4loop->nr_of_stream_eng_loops == 0)
+  { // read in raw mode
+    /* configure raw input DMA */
+    params->g_dma_out.raw = 1;
+    params->g_dma_out.frame_tot_cnt = 1;
+  }
+  else
+  {
+    /* configure non-raw mode */
+    params->g_dma_out.raw = 0;
+
+    /* reset all loops */
+    params->g_dma_out.fwidth = 1;
+    params->g_dma_out.fheight = 1;
+    params->g_dma_out.frame_tot_cnt = 1;
+    params->g_dma_out.frame_loop_cnt = 0;
+
+    params->g_dma_out.batch_offset = 0;
+    params->g_dma_out.line_offset = 0;
+    params->g_dma_out.frame_offset = 0;
+    params->g_dma_out.loop_offset = 0;
+
+    /* start programming batch loop */
+    params->g_dma_out.batch_depth = batch_depth_positive;
+
+    params->g_dma_out.fwidth = positive_4loop->four_items_array[0].nr_of_loops;
+    params->g_dma_out.batch_offset = positive_4loop->four_items_array[0].offset_in_bytes;
+
+    /* start programming line loop */
+    if (positive_4loop->nr_of_stream_eng_loops > 1)
+    {
+      params->g_dma_out.fheight = positive_4loop->four_items_array[1].nr_of_loops;
+      params->g_dma_out.line_offset = positive_4loop->four_items_array[1].offset_in_bytes;
+
+      if (positive_4loop->nr_of_stream_eng_loops > 2)
+      {
+        /* prepare for two outer loops */
+        if (positive_4loop->nr_of_stream_eng_loops < NR_OF_STREAM_ENG_LOOPS) // i.e. == 3
+        {                                                                    // repetition loop
+          params->g_dma_out.frame_tot_cnt = positive_4loop->four_items_array[2].nr_of_loops;
+        }
+        else
+        { // full 4-loops; main loop
+          params->g_dma_out.frame_loop_cnt = positive_4loop->four_items_array[2].nr_of_loops;
+          params->g_dma_out.frame_tot_cnt =
+              params->g_dma_out.frame_loop_cnt * positive_4loop->four_items_array[3].nr_of_loops;
+          params->g_dma_out.loop_offset = positive_4loop->four_items_array[3].offset_in_bytes;
+        }
+        params->g_dma_out.frame_offset = positive_4loop->four_items_array[2].offset_in_bytes;
+      }
+    }
+  }
+
+  /* configure stream switch */
+  __ll_lib_strswitch_set_dmas(params->special.pad.dma_in, params->special.pad.dma_out, _simple_oneshot_transfer);
+
+  /* start asynchronous memcpy */
+  LL_ATON_RT_Insert_LibEpochBlockArray(_simple_oneshot_transfer);
+
+  return LL_ATON_OK;
+}
+
+/**
+ * @brief Performs an asynchronous memory copy operation using DMAs
+ * @param  input_start Start address of input tensor
+ * @param  input_end End address of input tensor
+ * @param  input_limit Input tensor limit address
+ * @param  output_start Start address of output tensor
+ * @param  dma_in Input DMA / Streaming Engine to be used
+ * @param  dma_out Output DMA / Streaming Engine to be used
+ * @return Error code
+ */
+/** @defgroup LL_ATON_LIB_Async_Memcpy function
+ *  * @{
+ *   */
+int LL_ATON_LIB_Async_Memcpy(unsigned char *input_start, unsigned char *input_end, unsigned char *input_limit,
+                             unsigned char *output_start, int dma_in, int dma_out)
+{
+  /* get parameters location */
+  __ll_lib_params_t *params = __ll_lib_get_params();
+
+  /* use standard settings for DMAs*/
+  params->g_dma_in = _static_const_dma_in;
+  params->g_dma_out = _static_const_dma_out;
+
+  uint8_t *_dst = (uint8_t *)output_start;
+  uint8_t *_src = (uint8_t *)input_start;
+  uint32_t n = input_end - input_start;
+  n = __ll_lib_memcpy_prolog((void **)&_dst, (void **)&_src, n);
+
+  if (n > 0)
+  {
+    /* output dma */
+    params->g_dma_out.addr_base.p = (uint8_t *)_dst;
+    params->g_dma_out.offset_start = 0;
+    params->g_dma_out.offset_end = n;
+
+    /* input dma*/
+    params->g_dma_in.addr_base.p = (uint8_t *)_src;
+    params->g_dma_in.offset_start = 0;
+    params->g_dma_in.offset_end = n;
+
+    params->g_dma_in.offset_limit = input_limit - input_start;
+
+    /* configure stream switch */
+    __ll_lib_strswitch_set_dmas(dma_in, dma_out, _simple_oneshot_transfer);
+
+    /* start asynchronous memcpy */
+    LL_ATON_RT_Insert_LibEpochBlockArray(_simple_oneshot_transfer);
+  }
+  else
+  {
+    /* do not start any transfer and wait, just proceed to end function */
+  }
 
   return LL_ATON_OK;
 }

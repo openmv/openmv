@@ -50,24 +50,25 @@
  */
 
 /* Definition of ATON platforms */
-#define LL_ATON_PLAT_NCSIM        1
-#define LL_ATON_PLAT_STICE4       2
-#define LL_ATON_PLAT_ZC706        3
-#define LL_ATON_PLAT_SWEMUL       4
-#define LL_ATON_PLAT_TLM_MCD      5
-#define LL_ATON_PLAT_TSTXPL       6
-#define LL_ATON_PLAT_NEUROMEM_SIM 7
-#define LL_ATON_PLAT_IMAGING_SIM  8
-#define LL_ATON_PLAT_CENTAURI     9
-#define LL_ATON_PLAT_IWAVE        10
-#define LL_ATON_PLAT_N64          11
-#define LL_ATON_PLAT_STM32N6      12
-#define LL_ATON_PLAT_BITTWARE     13
-#define LL_ATON_PLAT_EC_TRACE     14
-#define LL_ATON_PLAT_STM32H7P     15
+#define LL_ATON_PLAT_NCSIM       1
+#define LL_ATON_PLAT_STICE4      2
+#define LL_ATON_PLAT_ZC706       3
+#define LL_ATON_PLAT_SWEMUL      4
+#define LL_ATON_PLAT_TLM_MCD     5
+#define LL_ATON_PLAT_TSTXPL      6
+#define LL_ATON_PLAT_IMAGING_SIM 7
+#define LL_ATON_PLAT_IWAVE       8
+#define LL_ATON_PLAT_STM32N6     9
+#define LL_ATON_PLAT_BITTWARE    10
+#define LL_ATON_PLAT_EC_TRACE    11
+#define LL_ATON_PLAT_STM32H7P    12
+#define LL_ATON_PLAT_SR6P3E      13
+
+#define LL_ATON_PLAT_USER_IMPL                                                                                         \
+  ((1 << LL_ATON_CONFIG_PLAT_BSIZE) - 1) /* "Backdoor" for platforms not officially supported by our distribution */
 
 /* Definition of ATON RTOS abstraction layers */
-#define LL_ATON_OSAL_BARE_METAL 1
+#define LL_ATON_OSAL_BARE_METAL 1 // for Cortex-M based platforms only
 #define LL_ATON_OSAL_LINUX_UIO  2
 #define LL_ATON_OSAL_LINUX_BW   3
 #define LL_ATON_OSAL_THREADX    4
@@ -130,17 +131,15 @@
 #if (LL_ATON_PLATFORM != LL_ATON_PLAT_SWEMUL)
 #if (LL_ATON_PLATFORM != LL_ATON_PLAT_TLM_MCD)
 #if (LL_ATON_PLATFORM != LL_ATON_PLAT_TSTXPL)
-#if (LL_ATON_PLATFORM != LL_ATON_PLAT_NEUROMEM_SIM)
 #if (LL_ATON_PLATFORM != LL_ATON_PLAT_IMAGING_SIM)
-#if (LL_ATON_PLATFORM != LL_ATON_PLAT_CENTAURI)
 #if (LL_ATON_PLATFORM != LL_ATON_PLAT_IWAVE)
-#if (LL_ATON_PLATFORM != LL_ATON_PLAT_N64)
 #if (LL_ATON_PLATFORM != LL_ATON_PLAT_STM32N6)
 #if (LL_ATON_PLATFORM != LL_ATON_PLAT_BITTWARE)
 #if (LL_ATON_PLATFORM != LL_ATON_PLAT_EC_TRACE)
 #if (LL_ATON_PLATFORM != LL_ATON_PLAT_STM32H7P)
+#if (LL_ATON_PLATFORM != LL_ATON_PLAT_SR6P3E)
+#if (LL_ATON_PLATFORM != LL_ATON_PLAT_USER_IMPL)
 #error "Wrong definition of `LL_ATON_PLATFORM`"
-#endif
 #endif
 #endif
 #endif

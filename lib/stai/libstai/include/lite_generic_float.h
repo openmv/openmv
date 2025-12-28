@@ -68,6 +68,7 @@ typedef struct {
      ai_size d_in;
      ai_size ch_index;
     int32_t ch_stride_in;
+     ai_size d_index;
 } forward_lite_gather_nd_args;
 
 

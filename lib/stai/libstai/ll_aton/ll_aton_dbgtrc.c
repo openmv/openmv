@@ -274,8 +274,7 @@ int LL_Dbgtrc_Counter_Stop(int id, int counter)
  */
 uint32_t LL_Dbgtrc_Counter_Read(int id, int counter)
 {
-  volatile uint32_t *reg = (volatile uint32_t *)(ATON_DEBUG_TRACE_EVENT_CNT_ADDR(id, counter));
-  return *reg;
+  return ATON_DEBUG_TRACE_EVENT_CNT_GET(id, counter);
 }
 
 /**
@@ -723,7 +722,7 @@ unsigned int LL_Dbgtrc_Count_StrengActive_GetMAX(uint32_t istreng, uint32_t ostr
 
 /** @defgroup HENV counters
  * oHENV signal is high when the corresponding link is transferring data so it can be used to measure link activity
- * of the input stream engines (i.e.: reading data) and check whether there are bootlenecks in reading from memory.
+ * of the input stream engines (i.e.: reading data) and check whether there are bottlenecks in reading from memory.
  * @{
  */
 
@@ -825,11 +824,11 @@ int LL_Dbgtrc_Count_StrengHENV_Print(uint32_t istreng, unsigned int counter)
  */
 
 /**
- * @brief Counts the burst lenghts on a given Bus Interface
+ * @brief Counts the burst lengths on a given Bus Interface
  * @param counter The counter ID to start from. Four counters are used: counter, counter+1, counter+2, counter+3
  * @param busif The Bus Interface to monitor
- * @param readwrite If non-zero count the Read burst lengths. If zero, count the Write burst lenghts
- * @note  Uses four counters starting from 'counter' to count four possible burst lenghts [1, 2, 4, 8]
+ * @param readwrite If non-zero count the Read burst lengths. If zero, count the Write burst lengths
+ * @note  Uses four counters starting from 'counter' to count four possible burst lengths [1, 2, 4, 8]
  */
 int LL_Dbgtrc_Count_BurstsLen(unsigned int counter, unsigned char busif, unsigned char readwrite)
 {
@@ -999,7 +998,7 @@ int LL_Dbgtrc_LogTransfers_epoch(unsigned int counter_id, unsigned int *counters
  */
 
 /**
- * @brief Counts the external trigger signals occurences
+ * @brief Counts the external trigger signals occurrences
  * @param counter The counter to be used
  * @param trigger The External Trigger signal to monitor [0..3]
  */
@@ -1016,7 +1015,7 @@ int LL_Dbgtrc_Count_ExtTrigger(unsigned int counter, unsigned char trigger)
 
 /**
  * @brief Example showing how to start/stop counters synchronously
- * @note This is a workaroud for ATON RTL <= 1.6. Proper sync start/stop implemented later versions
+ * @note This is a workaround for ATON RTL <= 1.6. Proper sync start/stop implemented later versions
  */
 int LL_Dbgtrc_SynchronousCountersTest(void)
 {

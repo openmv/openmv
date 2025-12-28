@@ -1237,4 +1237,70 @@ void ll_sw_forward_resize_integer(/* int processor, */ void *sw_info_struct)
   }
 }
 
+//##########################################################################################
+/** ArgMax forward function  */
+void ll_sw_forward_argmax_integer(/* int processor, */ void *sw_info_struct)
+{
+  Argmax_sw_info *sw_info = (Argmax_sw_info *)sw_info_struct;
+  AI_ARRAY_OBJ_DECLARE(input_output_array, AI_ARRAY_FORMAT_S8, sw_info->general.input.mem.start_offset,
+                       sw_info->general.input.mem.start_offset, sw_info->general.input.dim.num_elem, )
+  AI_ARRAY_OBJ_DECLARE(argmax_output_array, AI_ARRAY_FORMAT_S32, sw_info->general.output.mem.start_offset,
+                       sw_info->general.output.mem.start_offset, sw_info->general.output.dim.num_elem, )
+  // tensor init
+  AI_TENSOR_OBJ_DECLARE(input_output, , 0x0, 4,
+                        SHAPE_INIT(sw_info->general.input.dim.tensor_h, sw_info->general.input.dim.tensor_w,
+                                   sw_info->general.input.dim.tensor_c, sw_info->general.input.dim.tensor_b),
+                        STRIDE_INIT(sw_info->general.input.stride.h, sw_info->general.input.stride.w,
+                                    sw_info->general.input.stride.c, sw_info->general.input.stride.b),
+                        1, &input_output_array, NULL)
+  AI_TENSOR_OBJ_DECLARE(argmax_output, , 0x0, 4,
+                        SHAPE_INIT(sw_info->general.output.dim.tensor_h, sw_info->general.output.dim.tensor_w,
+                                   sw_info->general.output.dim.tensor_c, sw_info->general.output.dim.tensor_b),
+                        STRIDE_INIT(sw_info->general.output.stride.h, sw_info->general.output.stride.w,
+                                    sw_info->general.output.stride.c, sw_info->general.output.stride.b),
+                        1, &argmax_output_array, NULL)
+  // tensor chain initialization
+  AI_TENSOR_CHAIN_OBJ_DECLARE(argmax_chain, , 4, AI_TENSOR_LIST_OBJ_INIT(AI_FLAG_NONE, 1, TENSORS(&input_output)),
+                              AI_TENSOR_LIST_OBJ_INIT(AI_FLAG_NONE, 1, TENSORS(&argmax_output)),
+                              AI_TENSOR_LIST_OBJ_EMPTY, AI_TENSOR_LIST_OBJ_EMPTY)
+
+  AI_LAYER_OBJ_DECLARE(argmax_layer, 1, ARGMINMAX_TYPE, 0x0, NULL, argminmax, forward_argmax_is8, &argmax_chain, NULL,
+                       NULL, , .axis = helper_emit_shape_index_axis(sw_info->axis),
+                       .select_last_index = sw_info->select_last_index, )
+  argmax_layer.forward(AI_LAYER_OBJ(&argmax_layer));
+}
+
+//##########################################################################################
+/** ArgMin forward function  */
+void ll_sw_forward_argmin_integer(/* int processor, */ void *sw_info_struct)
+{
+  Argmin_sw_info *sw_info = (Argmin_sw_info *)sw_info_struct;
+  AI_ARRAY_OBJ_DECLARE(input_output_array, AI_ARRAY_FORMAT_S8, sw_info->general.input.mem.start_offset,
+                       sw_info->general.input.mem.start_offset, sw_info->general.input.dim.num_elem, )
+  AI_ARRAY_OBJ_DECLARE(argmin_output_array, AI_ARRAY_FORMAT_S32, sw_info->general.output.mem.start_offset,
+                       sw_info->general.output.mem.start_offset, sw_info->general.output.dim.num_elem, )
+  // tensor init
+  AI_TENSOR_OBJ_DECLARE(input_output, , 0x0, 4,
+                        SHAPE_INIT(sw_info->general.input.dim.tensor_h, sw_info->general.input.dim.tensor_w,
+                                   sw_info->general.input.dim.tensor_c, sw_info->general.input.dim.tensor_b),
+                        STRIDE_INIT(sw_info->general.input.stride.h, sw_info->general.input.stride.w,
+                                    sw_info->general.input.stride.c, sw_info->general.input.stride.b),
+                        1, &input_output_array, NULL)
+  AI_TENSOR_OBJ_DECLARE(argmin_output, , 0x0, 4,
+                        SHAPE_INIT(sw_info->general.output.dim.tensor_h, sw_info->general.output.dim.tensor_w,
+                                   sw_info->general.output.dim.tensor_c, sw_info->general.output.dim.tensor_b),
+                        STRIDE_INIT(sw_info->general.output.stride.h, sw_info->general.output.stride.w,
+                                    sw_info->general.output.stride.c, sw_info->general.output.stride.b),
+                        1, &argmin_output_array, NULL)
+  // tensor chain initialization
+  AI_TENSOR_CHAIN_OBJ_DECLARE(argmin_chain, , 4, AI_TENSOR_LIST_OBJ_INIT(AI_FLAG_NONE, 1, TENSORS(&input_output)),
+                              AI_TENSOR_LIST_OBJ_INIT(AI_FLAG_NONE, 1, TENSORS(&argmin_output)),
+                              AI_TENSOR_LIST_OBJ_EMPTY, AI_TENSOR_LIST_OBJ_EMPTY)
+
+  AI_LAYER_OBJ_DECLARE(argmin_layer, 1, ARGMINMAX_TYPE, 0x0, NULL, argminmax, forward_argmin_is8, &argmin_chain, NULL,
+                       NULL, , .axis = helper_emit_shape_index_axis(sw_info->axis),
+                       .select_last_index = sw_info->select_last_index, )
+  argmin_layer.forward(AI_LAYER_OBJ(&argmin_layer));
+}
+
 #endif // LL_ATON_SW_FALLBACK == 1

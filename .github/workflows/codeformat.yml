@@ -47,7 +47,7 @@ jobs:
           lib/**
           !lib/imlib/**
           !lib/tflm/**
-          !lib/stai/**
+          !lib/stai/stai_backend.c
           scripts/**
           tools/**
         uncrustify-version: '0.75.0'

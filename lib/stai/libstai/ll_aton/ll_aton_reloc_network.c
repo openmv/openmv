@@ -33,24 +33,26 @@
  */
 
 #if !defined(AI_RELOC_LOG_ENABLE)
-#define AI_RELOC_LOG_ENABLE 1 /* 1: enable debug trace support (printf-based) */
+#define AI_RELOC_LOG_ENABLE 0 /* 1: enable debug trace support (printf-based) */
 #endif
 
 #ifndef NDEBUG
-#if defined(AI_RELOC_LOG_ENABLE) && AI_RELOC_LOG_ENABLE == 1
+#if defined(AI_RELOC_LOG_ENABLE) && (AI_RELOC_LOG_ENABLE == 1)
 #define AI_RELOC_LOG(...) printf(__VA_ARGS__)
-#else
+#else // !AI_RELOC_LOG_ENABLE
 #define AI_RELOC_LOG(...)                                                                                              \
   do                                                                                                                   \
   {                                                                                                                    \
   } while (0)
-#endif
-#else
+#endif // !AI_RELOC_LOG_ENABLE
+#else  // NDEBUG
+#undef AI_RELOC_LOG_ENABLE
+#define AI_RELOC_LOG_ENABLE 0
 #define AI_RELOC_LOG(...)                                                                                              \
   do                                                                                                                   \
   {                                                                                                                    \
   } while (0)
-#endif
+#endif // NDEBUG
 
 #if !defined(LL_ATON_PLATFORM) || (LL_ATON_PLATFORM != LL_ATON_PLAT_STM32N6)
 #error "Model Relocatable mode is only supported for LL_ATON_PLAT_STM32N6 platform"
@@ -61,24 +63,36 @@
 
 #define AI_RELOC_NPU_EXTERNAL_ADDR (0x60000000UL)
 
-#if defined(STM32F7) || defined(STM32H7) || defined(STM32N6)
-#define RELOC_MCU_CLEAN_INVALIDATE(_addr, _size)                                                                       \
+#if defined(STM32N6)
+
+#define RELOC_MCU_D_CACHE_CLEAN_INVALIDATE(_addr, _size)                                                               \
   LL_ATON_Cache_MCU_Clean_Invalidate_Range((uintptr_t)(_addr), (uint32_t)(_size))
-#else
-#define RELOC_MCU_CLEAN_INVALIDATE(_addr, _size)                                                                       \
+
+#define RELOC_MCU_I_CACHE_INVALIDATE(_addr, _size) SCB_InvalidateICache_by_Addr((void *)(_addr), (int32_t)(_size));
+
+#else // !STM32N6
+
+#define RELOC_MCU_I_CACHE_INVALIDATE(_addr, _size)                                                                     \
   do                                                                                                                   \
   {                                                                                                                    \
   } while (0)
-#endif
+
+#define RELOC_MCU_D_CACHE_CLEAN_INVALIDATE(_addr, _size)                                                               \
+  do                                                                                                                   \
+  {                                                                                                                    \
+  } while (0)
+
+#endif // !STM32N6
 
 #if defined(STM32N6)
-#define RELOC_NPU_INVALIDATE() LL_ATON_Cache_NPU_Invalidate() // npu_cache_invalidate()
-#else
-#define RELOC_NPU_INVALIDATE()                                                                                         \
+#define RELOC_NPU_CACHE_CLEAN_INVALIDATE(_addr, _size)                                                                 \
+  LL_ATON_Cache_NPU_Clean_Invalidate_Range((uintptr_t)(_addr), (uint32_t)(_size))
+#else // !STM32N6
+#define RELOC_NPU_CACHE_CLEAN_INVALIDATE(_addr, _size)                                                                 \
   do                                                                                                                   \
   {                                                                                                                    \
   } while (0)
-#endif
+#endif // !STM32N6
 
 /*
  *  Implementation of the call-backs fcts
@@ -86,13 +100,13 @@
 static void _assert_func(const char *filename, int line, const char *assert_func, const char *expr)
 {
   AI_RELOC_LOG("-> assert_func called from reloc code : %d %s : %s %s\n", line, filename, assert_func, expr);
-  assert(1 != 1);
+  LL_ATON_ASSERT(1 != 1);
 }
 
 static void _ll_lib_error(int err_code, int line, const char *func)
 {
   AI_RELOC_LOG("-> ll_lib_error called from reloc code : %d %d : %s\n", line, err_code, func);
-  assert(1 != 1);
+  LL_ATON_ASSERT(1 != 1);
 }
 
 static void _LL_ATON_Cache_MCU_Clean_Range(uintptr_t virtual_addr, uint32_t size)
@@ -148,6 +162,8 @@ static struct ll_aton_reloc_callback _network_reloc_callback = {
     .ll_aton_lib_dma_pad_memset = &LL_ATON_LIB_DMA_Pad_Memset,
     .ll_aton_lib_dma_pad_filling = &LL_ATON_LIB_DMA_Pad_Filling,
     .ll_aton_lib_dma_transpose = &LL_ATON_LIB_DMA_Transpose,
+    .ll_aton_lib_async_memcpy = &LL_ATON_LIB_Async_Memcpy,
+    .ll_aton_lib_dma_pad_4loop_filling = &LL_ATON_LIB_DMA_Pad_4Loop_Filling,
 };
 
 /* -----------------------------------------------------------------------------
@@ -194,6 +210,8 @@ static inline uint32_t _ai_reloc_get_val(uint32_t base, uint32_t offset)
 
 #define AI_RELOC_IS_ALIGNED(_v) (((_v)&0x3) == 0) /* 8-Bytes aligned */
 
+#define AI_RELOC_IS_ALIGNED_32B(_v) (((_v)&0x1F) == 0) /* 32-Bytes aligned */
+
 /* ! should be aligned with definition in linker script (see reloc_network.lkr) */
 struct bin_hdr
 {
@@ -229,6 +247,8 @@ struct net_entries
   uint32_t get_epoch_items;
   uint32_t get_output_buffers;
   uint32_t get_input_buffers;
+  uint32_t weight_encryption_info;
+  uint32_t blob_encryption_info;
   uint32_t get_internal_buffers;
   uint32_t ctx;
 };
@@ -267,8 +287,9 @@ call_with_r9(const void *base, uint32_t offset, void *data, uintptr_t arg1, uint
                    "ldr  r2,  [sp, #12]   \n"
                    "blx  r12              \n"
                    "pop  {r9, pc}         \n");
-
+#if !defined(__clang__)
   return 0; // dummy to fool gcc
+#endif      // !defined(__clang__)
 }
 
 #elif defined(__ICCARM__) /* IAR compiler */
@@ -412,12 +433,13 @@ static int _ai_reloc_rt_checking(const struct ai_reloc_bin_hdr *bin)
 #if defined(__ARM_FEATURE_CMSE) && (__ARM_FEATURE_CMSE == 3U)
   if (!AI_RELOC_RT_SECURE(flags))
   {
-    return AI_RELOC_RT_ERR_INVALID_BIN;
+    AI_RELOC_LOG("AI RELOC WARN: RT is secure and model not compiled with secure options\r\n");
+    // return AI_RELOC_RT_ERR_INVALID_BIN;
   }
 #else
   if (AI_RELOC_RT_SECURE(flags))
   {
-    AI_RELOC_LOG("AI RELOC ERROR: Not compiled with secure options\r\n");
+    AI_RELOC_LOG("AI RELOC ERROR: RT is not secure and model compiled with secure options\r\n");
     return AI_RELOC_RT_ERR_INVALID_BIN;
   }
 #endif
@@ -463,6 +485,22 @@ static int _ai_reloc_rt_checking(const struct ai_reloc_bin_hdr *bin)
     return AI_RELOC_RT_ERR_INVALID_BIN;
   }
 
+  /* Compiled C-struct size */
+  const uint32_t c_struct_sizes = rt_ctx->rt_c_struct_sizes;
+  if ((c_struct_sizes & 0xFF) != sizeof(LL_Buffer_InfoTypeDef))
+  {
+    AI_RELOC_LOG("AI RELOC ERROR: sizeof(LL_Buffer_InfoTypeDef) issue - %d != %d\r\n", (int)(c_struct_sizes & 0xFF),
+                 (int)sizeof(LL_Buffer_InfoTypeDef));
+    return AI_RELOC_RT_ERR_INVALID_BIN;
+  }
+
+  if (((c_struct_sizes >> 8) & 0xFF) != sizeof(EpochBlock_ItemTypeDef))
+  {
+    AI_RELOC_LOG("AI RELOC ERROR: sizeof(EpochBlock_ItemTypeDef) issue - %d != %d\r\n",
+                 (int)((c_struct_sizes >> 8) & 0xFF), (int)sizeof(EpochBlock_ItemTypeDef));
+    return AI_RELOC_RT_ERR_INVALID_BIN;
+  }
+
   return AI_RELOC_RT_ERR_NONE;
 }
 
@@ -484,15 +522,14 @@ static int _ai_reloc_prepare_mpools(const uintptr_t file_ptr, struct id_mpool_ma
   uint32_t params_start = AI_RELOC_GET_OFFSET(header->sect.params_start);
   params_start += AI_RELOC_GET_OFFSET(header->sect.data_data);
   uintptr_t addr_0 = 0;
-  bool invalidate_npu_cache = false;
 
   ll_aton_reloc_mem_pool_desc *cur_mem_c_desc;
 
   /* Set/check base param addr - user addr is used in priority */
-  if ((id_map->addr_0 == 0) && (header->sect.params_offset == 0))
+  if ((id_map->addr_0 == (uintptr_t)NULL) && (header->sect.params_offset == 0))
     return AI_RELOC_RT_ERR_PARAM_ADDR;
 
-  if (id_map->addr_0 == 0)
+  if (id_map->addr_0 == (uintptr_t)NULL)
     id_map->addr_0 = file_ptr + AI_RELOC_GET_OFFSET(header->sect.params_offset);
 
   if (!AI_RELOC_IS_ALIGNED(id_map->addr_0))
@@ -508,11 +545,6 @@ static int _ai_reloc_prepare_mpools(const uintptr_t file_ptr, struct id_mpool_ma
     const uint32_t sz = AI_RELOC_ROUND_UP(cur_mem_c_desc->size);
     const uint32_t foff = cur_mem_c_desc->foff;
     const uintptr_t src = id_map->addr_0 + foff;
-
-    if (AI_RELOC_MPOOL_IS_CACHEABLE(flags))
-    {
-      invalidate_npu_cache = true;
-    }
 
     if (AI_RELOC_MPOOL_IS_RELOC(flags)) /* Relocated mempool */
     {
@@ -544,13 +576,15 @@ static int _ai_reloc_prepare_mpools(const uintptr_t file_ptr, struct id_mpool_ma
         }
         if (AI_RELOC_MPOOL_IS_MIXED(flags))
         {
+          RELOC_NPU_CACHE_CLEAN_INVALIDATE(id_map->addr_1, sz); // `addr_1` might not be NPU cacheable
           memcpy((void *)id_map->addr_1, (void const *)(src), sz);
-          RELOC_MCU_CLEAN_INVALIDATE(id_map->addr_1, sz);
+          RELOC_MCU_D_CACHE_CLEAN_INVALIDATE(id_map->addr_1, sz);
         }
         else if ((AI_RELOC_MPOOL_IS_ACTIV(flags)) && (mode & AI_RELOC_RT_LOAD_MODE_CLEAR))
         {
+          RELOC_NPU_CACHE_CLEAN_INVALIDATE(id_map->addr_1, sz); // `addr_1` might not be NPU cacheable
           memset((void *)id_map->addr_1, 0, sz);
-          RELOC_MCU_CLEAN_INVALIDATE(id_map->addr_1, sz);
+          RELOC_MCU_D_CACHE_CLEAN_INVALIDATE(id_map->addr_1, sz);
         }
       }
       else
@@ -560,24 +594,26 @@ static int _ai_reloc_prepare_mpools(const uintptr_t file_ptr, struct id_mpool_ma
     }
     else /* !AI_RELOC_MPOOL_IS_RELOC */
     {
+      if (AI_RELOC_MPOOL_IS_CACHEABLE(flags))
+      {
+        RELOC_NPU_CACHE_CLEAN_INVALIDATE(dst, sz);
+      }
+
       if (AI_RELOC_MPOOL_IS_COPY(flags))
       {
         memcpy((void *)dst, (void const *)(src), sz);
-        RELOC_MCU_CLEAN_INVALIDATE(dst, sz);
+        RELOC_MCU_D_CACHE_CLEAN_INVALIDATE(dst, sz);
       }
       if (AI_RELOC_MPOOL_IS_RESET(flags) && (mode & AI_RELOC_RT_LOAD_MODE_CLEAR))
       {
         memset((void *)dst, 0, sz);
-        RELOC_MCU_CLEAN_INVALIDATE(dst, sz);
+        RELOC_MCU_D_CACHE_CLEAN_INVALIDATE(dst, sz);
       }
     }
 
     cur_mem_c_desc++;
     cur_index++;
   }
-
-  if (invalidate_npu_cache)
-    RELOC_NPU_INVALIDATE();
 
   if (addr_0) /* Update the param_0 base address */
     id_map->addr_0 = addr_0;
@@ -627,7 +663,7 @@ static int _ai_reloc_got_update(const struct ai_reloc_bin_hdr *bin, uintptr_t ra
  * Low level function to update the DATA section in RAM.
  */
 int _ai_reloc_ram_update(const struct ai_reloc_bin_hdr *bin, uintptr_t ram_addr, uintptr_t param_0_addr,
-                         uintptr_t param_1_addr, const uintptr_t obj)
+                         uintptr_t param_1_addr, const uintptr_t obj, bool allow_ro_write)
 {
   uint32_t *rel_start = (uint32_t *)AI_RELOC_GET_ADDR(obj, bin->sect.rel_start);
   uint32_t *rel_end = (uint32_t *)AI_RELOC_GET_ADDR(obj, bin->sect.rel_end);
@@ -635,7 +671,11 @@ int _ai_reloc_ram_update(const struct ai_reloc_bin_hdr *bin, uintptr_t ram_addr,
   for (uint32_t *p = rel_start; p < rel_end; p++)
   {
     uint32_t add = *p;
-    uint32_t val = *(uint32_t *)AI_RELOC_GET_VAL(ram_addr, add);
+    uint32_t val;
+    if AI_RELOC_IN_FLASH (add)
+      val = *(uint32_t *)AI_RELOC_GET_VAL(bin, add);
+    else
+      val = *(uint32_t *)AI_RELOC_GET_VAL(ram_addr, add);
     if AI_RELOC_IN_RAM (val)
     {
       val = (uint32_t)AI_RELOC_GET_VAL(ram_addr, val);
@@ -657,7 +697,18 @@ int _ai_reloc_ram_update(const struct ai_reloc_bin_hdr *bin, uintptr_t ram_addr,
       AI_RELOC_LOG("AI RELOC ERROR: REL update - unsupported value: %08x\r\n", (int)val);
       return AI_RELOC_RT_ERR_INVALID_BIN;
     }
-    uint32_t *dest = (uint32_t *)AI_RELOC_GET_ADDR(ram_addr, add);
+    uint32_t *dest;
+    if AI_RELOC_IN_FLASH (add)
+    {
+      dest = (uint32_t *)AI_RELOC_GET_ADDR(bin, add);
+      if (!allow_ro_write)
+      {
+        AI_RELOC_LOG("AI RELOC ERROR: REL to RO location is not allowed: %08x\r\n", (int)add);
+        return AI_RELOC_RT_ERR_NOT_SUPPORTED;
+      }
+    }
+    else
+      dest = (uint32_t *)AI_RELOC_GET_ADDR(ram_addr, add);
     *dest = val;
   }
   return AI_RELOC_RT_ERR_NONE;
@@ -741,10 +792,11 @@ static int _ai_reloc_install(const uintptr_t file_ptr, uintptr_t ram_addr, size_
   /* Copy hrd, txt and rodata sections in RAM */
   if (mode & AI_RELOC_RT_LOAD_MODE_COPY)
   {
-    const uint32_t ro_sz = AI_RELOC_ROUND_UP(AI_RELOC_GET_OFFSET(rom_addr->sect.data_data));
-    memcpy((void *)ram_addr, (void const *)file_ptr, ro_sz);
+    const uint32_t ro_sz = AI_RELOC_GET_OFFSET(rom_addr->sect.data_data);
 
-    RELOC_MCU_CLEAN_INVALIDATE(ram_addr, ro_sz);
+    RELOC_NPU_CACHE_CLEAN_INVALIDATE(ram_addr, ro_sz); // `ram_addr` might not be NPU cacheable
+    memcpy((void *)ram_addr, (void const *)file_ptr, ro_sz);
+    RELOC_MCU_D_CACHE_CLEAN_INVALIDATE(ram_addr, ro_sz);
 
     /* Update the rom_addr/ram_addr pointers */
     rom_addr = (struct ai_reloc_bin_hdr *)(ram_addr);
@@ -760,6 +812,9 @@ static int _ai_reloc_install(const uintptr_t file_ptr, uintptr_t ram_addr, size_
   const uintptr_t src_data = AI_RELOC_GET_ADDR(file_ptr, rom_addr->sect.data_data);
   const uint32_t rw_sz = AI_RELOC_GET_OFFSET(rom_addr->sect.bss_end);
 
+  RELOC_NPU_CACHE_CLEAN_INVALIDATE(ram_addr, rw_sz - bss_size); // `ram_addr` might not be NPU cacheable
+  RELOC_NPU_CACHE_CLEAN_INVALIDATE(bss_start, bss_size);        // `bss_start` might not be NPU cacheable
+
   /* Copy the data section, including the got section */
   memcpy((void *)ram_addr, (const void *)src_data, rw_sz - bss_size);
 
@@ -772,10 +827,11 @@ static int _ai_reloc_install(const uintptr_t file_ptr, uintptr_t ram_addr, size_
     return AI_RELOC_RT_ERR_INVALID_BIN;
 
   /* R_ARM_ABS32 type */
-  if (_ai_reloc_ram_update(rom_addr, ram_addr, id_map.addr_0, id_map.addr_1, file_ptr))
+  bool allow_ro_write = (mode & AI_RELOC_RT_LOAD_MODE_COPY) == AI_RELOC_RT_LOAD_MODE_COPY;
+  if (_ai_reloc_ram_update(rom_addr, ram_addr, id_map.addr_0, id_map.addr_1, file_ptr, allow_ro_write))
     return AI_RELOC_RT_ERR_INVALID_BIN;
 
-  RELOC_MCU_CLEAN_INVALIDATE(ram_addr, rw_sz);
+  RELOC_MCU_D_CACHE_CLEAN_INVALIDATE(ram_addr, rw_sz);
 
   /* Update the RT context */
   struct ai_reloc_rt_ctx *rt_ctx = (struct ai_reloc_rt_ctx *)AI_RELOC_GET_ADDR(ram_addr, rom_addr->vec.ctx);
@@ -882,7 +938,7 @@ static char *_magic_to_str(uint32_t val)
 
 void ll_aton_reloc_log_info(const uintptr_t file_ptr)
 {
-#if defined(AI_RELOC_LOG_ENABLE) && AI_RELOC_LOG_ENABLE == 1
+#if defined(AI_RELOC_LOG_ENABLE) && (AI_RELOC_LOG_ENABLE == 1)
   ll_aton_reloc_info rt_info;
 
   const struct ai_reloc_bin_hdr *bin = (const struct ai_reloc_bin_hdr *)file_ptr;
@@ -975,6 +1031,8 @@ int ll_aton_reloc_install(const uintptr_t file_ptr, const ll_aton_reloc_config *
 
   if (!res)
     res = ll_aton_reloc_set_callbacks(nn_instance, &_network_reloc_callback);
+
+  RELOC_MCU_I_CACHE_INVALIDATE(config->exec_ram_addr, config->exec_ram_size);
 
   return res;
 }
@@ -1166,6 +1224,40 @@ const LL_Buffer_InfoTypeDef *ai_rel_network_get_internal_buffers_info(uintptr_t 
   buff_infos = (const LL_Buffer_InfoTypeDef *)res;
 
   return buff_infos;
+}
+
+const LL_Streng_EncryptionTypedef *ai_rel_network_blob_encryption_info(uintptr_t inst)
+{
+  if (_ai_rel_check_handler(inst))
+    return NULL;
+
+  const struct ai_reloc_rt_ctx *rt_ctx = (const struct ai_reloc_rt_ctx *)inst;
+  const struct ai_reloc_bin_hdr *bin = (const struct ai_reloc_bin_hdr *)rt_ctx->rom_addr;
+  const LL_Streng_EncryptionTypedef *strg_encrpy_info;
+
+  uintptr_t res =
+      call_with_r9((void *)rt_ctx->rom_addr, AI_RELOC_GET_OFFSET(bin->vec.blob_encryption_info), 0, 0, 0, 0);
+
+  strg_encrpy_info = (const LL_Streng_EncryptionTypedef *)res;
+
+  return strg_encrpy_info;
+}
+
+const LL_Streng_EncryptionTypedef *ai_rel_network_weight_encryption_info(uintptr_t inst)
+{
+  if (_ai_rel_check_handler(inst))
+    return NULL;
+
+  const struct ai_reloc_rt_ctx *rt_ctx = (const struct ai_reloc_rt_ctx *)inst;
+  const struct ai_reloc_bin_hdr *bin = (const struct ai_reloc_bin_hdr *)rt_ctx->rom_addr;
+  const LL_Streng_EncryptionTypedef *strg_encrpy_info;
+
+  uintptr_t res =
+      call_with_r9((void *)rt_ctx->rom_addr, AI_RELOC_GET_OFFSET(bin->vec.weight_encryption_info), 0, 0, 0, 0);
+
+  strg_encrpy_info = (const LL_Streng_EncryptionTypedef *)res;
+
+  return strg_encrpy_info;
 }
 
 void ai_rel_call_start_end_function(uintptr_t inst, start_end_func_ptr fct, const void *epoch_block)
