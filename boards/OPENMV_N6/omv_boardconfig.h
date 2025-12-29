@@ -101,6 +101,10 @@
 #define OMV_RCC_IC10_SOURCE                 (RCC_ICCLKSOURCE_PLL1)
 #define OMV_RCC_IC10_CLKDIV                 (8)
 
+// Used by MicroPython for ethernet clocks.
+#define OMV_RCC_IC12_SOURCE                 (RCC_ICCLKSOURCE_PLL1)
+#define OMV_RCC_IC12_CLKDIV                 (8)
+
 // Used by MicroPython for slow peripherals.
 #define OMV_RCC_IC14_SOURCE                 (RCC_ICCLKSOURCE_PLL1)
 #define OMV_RCC_IC14_CLKDIV                 (8)
