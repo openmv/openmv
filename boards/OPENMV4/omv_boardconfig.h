@@ -74,6 +74,10 @@
 // USB IRQn.
 #define OMV_USB_IRQN                          (OTG_FS_IRQn)
 
+// OpenMV protocol configuration.
+#define OMV_PROTOCOL_MAX_BUFFER_SIZE          (512)
+#define OMV_PROTOCOL_HW_CAPS                  OMV_PROTOCOL_HW_CAPS_MAKE(HAS_JPEG, HAS_CRC, HAS_SD)
+
 //PLL1 480MHz/48MHz for USB, SDMMC and FDCAN
 #define OMV_OSC_PLL1M                         (3)
 #define OMV_OSC_PLL1N                         (240)

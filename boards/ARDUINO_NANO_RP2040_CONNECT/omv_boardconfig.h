@@ -49,10 +49,6 @@ extern unsigned char *OMV_BOARD_UID_ADDR;    // Unique address.
 // FIR drivers configuration.
 #define OMV_FIR_AMG8833_ENABLE     (1)
 
-// Debugging configuration.
-#define OMV_TUSBDBG_ENABLE         (1)
-#define OMV_TUSBDBG_BUFFER         (2048)
-
 // UMM heap block size
 #define OMV_UMM_BLOCK_SIZE         16
 
