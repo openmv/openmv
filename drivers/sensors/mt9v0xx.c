@@ -62,75 +62,75 @@ static int reset(omv_csi_t *csi) {
     readout_x = 0;
     readout_y = 0;
 
-    ret |= omv_i2c_writew(csi->i2c, csi->slv_addr, MT9V0XX_RESET, MT9V0XX_RESET_SOFT_RESET);
+    ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, MT9V0XX_RESET, 1, MT9V0XX_RESET_SOFT_RESET, 2);
 
     if (is_mt9v0x4(csi)) {
         uint16_t chip_control;
-        ret |= omv_i2c_readw(csi->i2c, csi->slv_addr, MT9V0XX_CHIP_CONTROL, &chip_control);
-        ret |= omv_i2c_writew(csi->i2c, csi->slv_addr, MT9V0XX_CHIP_CONTROL,
-                              (chip_control & (~MT9V0X4_CHIP_CONTROL_RESERVED)));
+        ret |= omv_i2c_read_reg(csi->i2c, csi->slv_addr, MT9V0XX_CHIP_CONTROL, 1, &chip_control, 2);
+        ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, MT9V0XX_CHIP_CONTROL, 1,
+                                 (chip_control & (~MT9V0X4_CHIP_CONTROL_RESERVED)), 2);
     }
 
     uint16_t read_mode;
-    ret |= omv_i2c_readw(csi->i2c, csi->slv_addr, MT9V0XX_READ_MODE, &read_mode);
-    ret |= omv_i2c_writew(csi->i2c, csi->slv_addr, MT9V0XX_READ_MODE,
-                          read_mode | MT9V0XX_READ_MODE_ROW_FLIP | MT9V0XX_READ_MODE_COL_FLIP);
+    ret |= omv_i2c_read_reg(csi->i2c, csi->slv_addr, MT9V0XX_READ_MODE, 1, &read_mode, 2);
+    ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, MT9V0XX_READ_MODE, 1,
+                             read_mode | MT9V0XX_READ_MODE_ROW_FLIP | MT9V0XX_READ_MODE_COL_FLIP, 2);
 
     if (is_mt9v0x4(csi)) {
         // We have to copy the differences from context A into context B registers so that we can
         // ping-pong between them seamlessly...
 
-        ret |= omv_i2c_readw(csi->i2c, csi->slv_addr, MT9V0X4_READ_MODE_B, &read_mode);
-        ret |= omv_i2c_writew(csi->i2c, csi->slv_addr, MT9V0X4_READ_MODE_B,
-                              read_mode | MT9V0XX_READ_MODE_ROW_FLIP | MT9V0XX_READ_MODE_COL_FLIP);
+        ret |= omv_i2c_read_reg(csi->i2c, csi->slv_addr, MT9V0X4_READ_MODE_B, 1, &read_mode, 2);
+        ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, MT9V0X4_READ_MODE_B, 1,
+                                 read_mode | MT9V0XX_READ_MODE_ROW_FLIP | MT9V0XX_READ_MODE_COL_FLIP, 2);
 
         uint16_t shutter_width1;
-        ret |= omv_i2c_readw(csi->i2c, csi->slv_addr, MT9V0XX_SHUTTER_WIDTH1, &shutter_width1);
-        ret |= omv_i2c_writew(csi->i2c, csi->slv_addr, MT9V0X4_SHUTTER_WIDTH1_B, shutter_width1);
+        ret |= omv_i2c_read_reg(csi->i2c, csi->slv_addr, MT9V0XX_SHUTTER_WIDTH1, 1, &shutter_width1, 2);
+        ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, MT9V0X4_SHUTTER_WIDTH1_B, 1, shutter_width1, 2);
 
         uint16_t shutter_width2;
-        ret |= omv_i2c_readw(csi->i2c, csi->slv_addr, MT9V0XX_SHUTTER_WIDTH2, &shutter_width2);
-        ret |= omv_i2c_writew(csi->i2c, csi->slv_addr, MT9V0X4_SHUTTER_WIDTH2_B, shutter_width2);
+        ret |= omv_i2c_read_reg(csi->i2c, csi->slv_addr, MT9V0XX_SHUTTER_WIDTH2, 1, &shutter_width2, 2);
+        ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, MT9V0X4_SHUTTER_WIDTH2_B, 1, shutter_width2, 2);
 
         uint16_t shutter_control;
-        ret |= omv_i2c_readw(csi->i2c, csi->slv_addr, MT9V0XX_SHUTTER_WIDTH_CONTROL, &shutter_control);
-        ret |= omv_i2c_writew(csi->i2c, csi->slv_addr, MT9V0X4_SHUTTER_WIDTH_CONTROL_B, shutter_control);
+        ret |= omv_i2c_read_reg(csi->i2c, csi->slv_addr, MT9V0XX_SHUTTER_WIDTH_CONTROL, 1, &shutter_control, 2);
+        ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, MT9V0X4_SHUTTER_WIDTH_CONTROL_B, 1, shutter_control, 2);
 
         uint16_t voltage_level_1;
-        ret |= omv_i2c_readw(csi->i2c, csi->slv_addr, MT9V0XX_V1_CONTROL, &voltage_level_1);
-        ret |= omv_i2c_writew(csi->i2c, csi->slv_addr, MT9V0X4_V1_CONTROL_B, voltage_level_1);
+        ret |= omv_i2c_read_reg(csi->i2c, csi->slv_addr, MT9V0XX_V1_CONTROL, 1, &voltage_level_1, 2);
+        ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, MT9V0X4_V1_CONTROL_B, 1, voltage_level_1, 2);
 
         uint16_t voltage_level_2;
-        ret |= omv_i2c_readw(csi->i2c, csi->slv_addr, MT9V0XX_V2_CONTROL, &voltage_level_2);
-        ret |= omv_i2c_writew(csi->i2c, csi->slv_addr, MT9V0X4_V2_CONTROL_B, voltage_level_2);
+        ret |= omv_i2c_read_reg(csi->i2c, csi->slv_addr, MT9V0XX_V2_CONTROL, 1, &voltage_level_2, 2);
+        ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, MT9V0X4_V2_CONTROL_B, 1, voltage_level_2, 2);
 
         uint16_t voltage_level_3;
-        ret |= omv_i2c_readw(csi->i2c, csi->slv_addr, MT9V0XX_V3_CONTROL, &voltage_level_3);
-        ret |= omv_i2c_writew(csi->i2c, csi->slv_addr, MT9V0X4_V3_CONTROL_B, voltage_level_3);
+        ret |= omv_i2c_read_reg(csi->i2c, csi->slv_addr, MT9V0XX_V3_CONTROL, 1, &voltage_level_3, 2);
+        ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, MT9V0X4_V3_CONTROL_B, 1, voltage_level_3, 2);
 
         uint16_t voltage_level_4;
-        ret |= omv_i2c_readw(csi->i2c, csi->slv_addr, MT9V0XX_V4_CONTROL, &voltage_level_4);
-        ret |= omv_i2c_writew(csi->i2c, csi->slv_addr, MT9V0X4_V4_CONTROL_B, voltage_level_4);
+        ret |= omv_i2c_read_reg(csi->i2c, csi->slv_addr, MT9V0XX_V4_CONTROL, 1, &voltage_level_4, 2);
+        ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, MT9V0X4_V4_CONTROL_B, 1, voltage_level_4, 2);
 
         uint16_t analog_gain;
-        ret |= omv_i2c_readw(csi->i2c, csi->slv_addr, MT9V0XX_ANALOG_GAIN, &analog_gain);
-        ret |= omv_i2c_writew(csi->i2c, csi->slv_addr, MT9V0X4_ANALOG_GAIN_B, analog_gain);
+        ret |= omv_i2c_read_reg(csi->i2c, csi->slv_addr, MT9V0XX_ANALOG_GAIN, 1, &analog_gain, 2);
+        ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, MT9V0X4_ANALOG_GAIN_B, 1, analog_gain, 2);
 
-        ret |= omv_i2c_writew(csi->i2c, csi->slv_addr, MT9V0XX_PIXEL_OPERATION_MODE,
-                              0);
+        ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, MT9V0XX_PIXEL_OPERATION_MODE, 1,
+                                 0, 2);
 
-        ret |= omv_i2c_writew(csi->i2c, csi->slv_addr, MT9V0XX_ADC_COMPANDING_MODE,
-                              MT9V0XX_ADC_COMPANDING_MODE_LINEAR | MT9V0X4_ADC_COMPANDING_MODE_LINEAR_B);
+        ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, MT9V0XX_ADC_COMPANDING_MODE, 1,
+                                 MT9V0XX_ADC_COMPANDING_MODE_LINEAR | MT9V0X4_ADC_COMPANDING_MODE_LINEAR_B, 2);
 
-        ret |= omv_i2c_writew(csi->i2c, csi->slv_addr, MT9V0XX_ROW_NOISE_CORR_CONTROL,
-                              MT9V0X4_ROW_NOISE_CORR_ENABLE | MT9V0X4_ROW_NOISE_CORR_ENABLE_B);
+        ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, MT9V0XX_ROW_NOISE_CORR_CONTROL, 1,
+                                 MT9V0X4_ROW_NOISE_CORR_ENABLE | MT9V0X4_ROW_NOISE_CORR_ENABLE_B, 2);
 
-        ret |= omv_i2c_writew(csi->i2c, csi->slv_addr, MT9V0XX_AEC_AGC_ENABLE,
-                              MT9V0XX_AEC_ENABLE | MT9V0X4_AEC_ENABLE_B | MT9V0XX_AGC_ENABLE | MT9V0X4_AGC_ENABLE_B);
+        ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, MT9V0XX_AEC_AGC_ENABLE, 1,
+                                 MT9V0XX_AEC_ENABLE | MT9V0X4_AEC_ENABLE_B | MT9V0XX_AGC_ENABLE | MT9V0X4_AGC_ENABLE_B, 2);
     }
 
     if (is_mt9v0x2(csi)) {
-        ret |= omv_i2c_writew(csi->i2c, csi->slv_addr, MT9V0X2_PIXEL_CLOCK, MT9V0XX_PIXEL_CLOCK_INV_PXL_CLK);
+        ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, MT9V0X2_PIXEL_CLOCK, 1, MT9V0XX_PIXEL_CLOCK_INV_PXL_CLK, 2);
     }
 
     return ret;
@@ -138,14 +138,14 @@ static int reset(omv_csi_t *csi) {
 
 static int read_reg(omv_csi_t *csi, uint16_t reg_addr) {
     uint16_t reg_data;
-    if (omv_i2c_readw(csi->i2c, csi->slv_addr, reg_addr, &reg_data) != 0) {
+    if (omv_i2c_read_reg(csi->i2c, csi->slv_addr, reg_addr, 1, &reg_data, 2) != 0) {
         return -1;
     }
     return reg_data;
 }
 
 static int write_reg(omv_csi_t *csi, uint16_t reg_addr, uint16_t reg_data) {
-    return omv_i2c_writew(csi->i2c, csi->slv_addr, reg_addr, reg_data);
+    return omv_i2c_write_reg(csi->i2c, csi->slv_addr, reg_addr, 1, reg_data, 2);
 }
 
 static int set_pixformat(omv_csi_t *csi, pixformat_t pixformat) {
@@ -182,7 +182,7 @@ static int set_framesize(omv_csi_t *csi, omv_csi_framesize_t framesize) {
         return -1;
     }
 
-    if (omv_i2c_readw(csi->i2c, csi->slv_addr, MT9V0XX_CHIP_CONTROL, &chip_control) != 0) {
+    if (omv_i2c_read_reg(csi->i2c, csi->slv_addr, MT9V0XX_CHIP_CONTROL, 1, &chip_control, 2) != 0) {
         return -1;
     }
 
@@ -197,7 +197,7 @@ static int set_framesize(omv_csi_t *csi, omv_csi_framesize_t framesize) {
     int window_width_addr = context ? MT9V0XX_WINDOW_WIDTH : MT9V0X4_WINDOW_WIDTH_B;
     int horizontal_blanking_addr = context ? MT9V0XX_HORIZONTAL_BLANKING : MT9V0X4_HORIZONTAL_BLANKING_B;
 
-    if (omv_i2c_readw(csi->i2c, csi->slv_addr, read_mode_addr, &read_mode) != 0) {
+    if (omv_i2c_read_reg(csi->i2c, csi->slv_addr, read_mode_addr, 1, &read_mode, 2) != 0) {
         return -1;
     }
 
@@ -219,12 +219,12 @@ static int set_framesize(omv_csi_t *csi, omv_csi_framesize_t framesize) {
     readout_x = IM_CLAMP(readout_x, -readout_x_max, readout_x_max);
     readout_y = IM_CLAMP(readout_y, -readout_y_max, readout_y_max);
 
-    ret |= omv_i2c_writew(csi->i2c, csi->slv_addr, col_start_addr,
-                          readout_x_max - readout_x + MT9V0XX_COL_START_MIN); // sensor is mirrored by default
-    ret |= omv_i2c_writew(csi->i2c, csi->slv_addr, row_start_addr,
-                          readout_y_max - readout_y + MT9V0XX_ROW_START_MIN); // sensor is mirrored by default
-    ret |= omv_i2c_writew(csi->i2c, csi->slv_addr, window_width_addr, w * read_mode_mul);
-    ret |= omv_i2c_writew(csi->i2c, csi->slv_addr, window_height_addr, h * read_mode_mul);
+    ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, col_start_addr, 1,
+                             readout_x_max - readout_x + MT9V0XX_COL_START_MIN, 2); // sensor is mirrored by default
+    ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, row_start_addr, 1,
+                             readout_y_max - readout_y + MT9V0XX_ROW_START_MIN, 2); // sensor is mirrored by default
+    ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, window_width_addr, 1, w * read_mode_mul, 2);
+    ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, window_height_addr, 1, h * read_mode_mul, 2);
 
     // Notes: 1. The MT9V0XX uses column parallel analog-digital converters, thus short row timing is not possible.
     // The minimum total row time is 690 columns (horizontal width + horizontal blanking). The minimum
@@ -232,16 +232,16 @@ static int set_framesize(omv_csi_t *csi, omv_csi_framesize_t framesize) {
     // must be increased.
     //
     // The STM32H7 needs more than 94+(752-640) clocks between rows otherwise it can't keep up with the pixel rate.
-    ret |= omv_i2c_writew(csi->i2c, csi->slv_addr, horizontal_blanking_addr,
-                          MT9V0XX_HORIZONTAL_BLANKING_DEF + (ACTIVE_SENSOR_WIDTH - IM_MIN(w * read_mode_mul, 640)));
+    ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, horizontal_blanking_addr, 1,
+                             MT9V0XX_HORIZONTAL_BLANKING_DEF + (ACTIVE_SENSOR_WIDTH - IM_MIN(w * read_mode_mul, 640)), 2);
 
-    ret |= omv_i2c_writew(csi->i2c, csi->slv_addr, read_mode_addr, read_mode);
-    ret |= omv_i2c_writew(csi->i2c, csi->slv_addr, MT9V0XX_PIXEL_COUNT, (w * h) / 8);
+    ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, read_mode_addr, 1, read_mode, 2);
+    ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, MT9V0XX_PIXEL_COUNT, 1, (w * h) / 8, 2);
 
     if (is_mt9v0x4(csi)) {
         // We need more setup time for the pixel_clk at the full data rate...
-        ret |= omv_i2c_writew(csi->i2c, csi->slv_addr, MT9V0X4_PIXEL_CLOCK,
-                              (read_mode_mul == 1) ? MT9V0XX_PIXEL_CLOCK_INV_PXL_CLK : 0);
+        ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, MT9V0X4_PIXEL_CLOCK, 1,
+                                 (read_mode_mul == 1) ? MT9V0XX_PIXEL_CLOCK_INV_PXL_CLK : 0, 2);
     }
 
     // EDIT: WORKS BETTER TO STAY IN CONTEXT A
@@ -258,13 +258,13 @@ static int set_colorbar(omv_csi_t *csi, int enable) {
         ? (MT9V0X4_ROW_NOISE_CORR_ENABLE | MT9V0X4_ROW_NOISE_CORR_ENABLE_B)
         : MT9V0X2_ROW_NOISE_CORR_ENABLE;
     uint16_t reg;
-    int ret = omv_i2c_readw(csi->i2c, csi->slv_addr, MT9V0XX_TEST_PATTERN, &reg);
-    ret |= omv_i2c_writew(csi->i2c, csi->slv_addr, MT9V0XX_TEST_PATTERN,
-                          (reg & (~(MT9V0XX_TEST_PATTERN_ENABLE | MT9V0XX_TEST_PATTERN_GRAY_MASK)))
-                          | ((enable != 0) ? (MT9V0XX_TEST_PATTERN_ENABLE | MT9V0XX_TEST_PATTERN_GRAY_VERTICAL) : 0));
-    ret = omv_i2c_readw(csi->i2c, csi->slv_addr, MT9V0XX_ROW_NOISE_CORR_CONTROL, &reg);
-    ret |= omv_i2c_writew(csi->i2c, csi->slv_addr, MT9V0XX_ROW_NOISE_CORR_CONTROL,
-                          (reg & (~mask)) | ((enable == 0) ? mask : 0));
+    int ret = omv_i2c_read_reg(csi->i2c, csi->slv_addr, MT9V0XX_TEST_PATTERN, 1, &reg, 2);
+    ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, MT9V0XX_TEST_PATTERN, 1,
+                             (reg & (~(MT9V0XX_TEST_PATTERN_ENABLE | MT9V0XX_TEST_PATTERN_GRAY_MASK)))
+                             | ((enable != 0) ? (MT9V0XX_TEST_PATTERN_ENABLE | MT9V0XX_TEST_PATTERN_GRAY_VERTICAL) : 0), 2);
+    ret = omv_i2c_read_reg(csi->i2c, csi->slv_addr, MT9V0XX_ROW_NOISE_CORR_CONTROL, 1, &reg, 2);
+    ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, MT9V0XX_ROW_NOISE_CORR_CONTROL, 1,
+                             (reg & (~mask)) | ((enable == 0) ? mask : 0), 2);
     if (!csi->disable_delays) {
         ret |= csi->snapshot(csi, NULL, 0); // Force shadow mode register to update...
     }
@@ -276,9 +276,9 @@ static int set_auto_gain(omv_csi_t *csi, int enable, float gain_db, float gain_d
         ? (MT9V0XX_AGC_ENABLE | MT9V0X4_AGC_ENABLE_B)
         : MT9V0XX_AGC_ENABLE;
     uint16_t reg;
-    int ret = omv_i2c_readw(csi->i2c, csi->slv_addr, MT9V0XX_AEC_AGC_ENABLE, &reg);
-    ret |= omv_i2c_writew(csi->i2c, csi->slv_addr, MT9V0XX_AEC_AGC_ENABLE,
-                          (reg & (~agc_mask)) | ((enable != 0) ? agc_mask : 0));
+    int ret = omv_i2c_read_reg(csi->i2c, csi->slv_addr, MT9V0XX_AEC_AGC_ENABLE, 1, &reg, 2);
+    ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, MT9V0XX_AEC_AGC_ENABLE, 1,
+                             (reg & (~agc_mask)) | ((enable != 0) ? agc_mask : 0), 2);
     if (!csi->disable_delays) {
         ret |= csi->snapshot(csi, NULL, 0); // Force shadow mode register to update...
     }
@@ -286,19 +286,19 @@ static int set_auto_gain(omv_csi_t *csi, int enable, float gain_db, float gain_d
     if ((enable == 0) && (!isnanf(gain_db)) && (!isinff(gain_db))) {
         int gain = IM_CLAMP(fast_roundf(expf((gain_db / 20.0f) * M_LN10) * 16.0f), 16, 64);
 
-        ret |= omv_i2c_readw(csi->i2c, csi->slv_addr, MT9V0XX_ANALOG_GAIN, &reg);
-        ret |= omv_i2c_writew(csi->i2c, csi->slv_addr, MT9V0XX_ANALOG_GAIN, (reg & 0xFF80) | gain);
+        ret |= omv_i2c_read_reg(csi->i2c, csi->slv_addr, MT9V0XX_ANALOG_GAIN, 1, &reg, 2);
+        ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, MT9V0XX_ANALOG_GAIN, 1, (reg & 0xFF80) | gain, 2);
 
         if (is_mt9v0x4(csi)) {
-            ret |= omv_i2c_readw(csi->i2c, csi->slv_addr, MT9V0X4_ANALOG_GAIN_B, &reg);
-            ret |= omv_i2c_writew(csi->i2c, csi->slv_addr, MT9V0X4_ANALOG_GAIN_B, (reg & 0xFF80) | gain);
+            ret |= omv_i2c_read_reg(csi->i2c, csi->slv_addr, MT9V0X4_ANALOG_GAIN_B, 1, &reg, 2);
+            ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, MT9V0X4_ANALOG_GAIN_B, 1, (reg & 0xFF80) | gain, 2);
         }
     } else if ((enable != 0) && (!isnanf(gain_db_ceiling)) && (!isinff(gain_db_ceiling))) {
         int gain_ceiling = IM_CLAMP(fast_roundf(expf((gain_db_ceiling / 20.0f) * M_LN10) * 16.0f), 16, 64);
         int max_gain = (is_mt9v0x4(csi)) ? MT9V0X4_MAX_GAIN : MT9V0X2_MAX_GAIN;
 
-        ret |= omv_i2c_readw(csi->i2c, csi->slv_addr, max_gain, &reg);
-        ret |= omv_i2c_writew(csi->i2c, csi->slv_addr, max_gain, (reg & 0xFF80) | gain_ceiling);
+        ret |= omv_i2c_read_reg(csi->i2c, csi->slv_addr, max_gain, 1, &reg, 2);
+        ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, max_gain, 1, (reg & 0xFF80) | gain_ceiling, 2);
     }
 
     return ret;
@@ -306,15 +306,15 @@ static int set_auto_gain(omv_csi_t *csi, int enable, float gain_db, float gain_d
 
 static int get_gain_db(omv_csi_t *csi, float *gain_db) {
     uint16_t chip_control, reg, gain;
-    int ret = omv_i2c_readw(csi->i2c, csi->slv_addr, MT9V0XX_CHIP_CONTROL, &chip_control);
+    int ret = omv_i2c_read_reg(csi->i2c, csi->slv_addr, MT9V0XX_CHIP_CONTROL, 1, &chip_control, 2);
     int context = chip_control & MT9V0X4_CHIP_CONTROL_CONTEXT;
-    ret |= omv_i2c_readw(csi->i2c, csi->slv_addr, MT9V0XX_AEC_AGC_ENABLE, &reg);
+    ret |= omv_i2c_read_reg(csi->i2c, csi->slv_addr, MT9V0XX_AEC_AGC_ENABLE, 1, &reg, 2);
 
     if (reg & (context ? MT9V0X4_AGC_ENABLE_B : MT9V0XX_AGC_ENABLE)) {
-        ret |= omv_i2c_readw(csi->i2c, csi->slv_addr, MT9V0XX_AGC_GAIN_OUTPUT, &gain);
+        ret |= omv_i2c_read_reg(csi->i2c, csi->slv_addr, MT9V0XX_AGC_GAIN_OUTPUT, 1, &gain, 2);
     } else {
         int analog_gain = context ? MT9V0X4_ANALOG_GAIN_B : MT9V0XX_ANALOG_GAIN;
-        ret |= omv_i2c_readw(csi->i2c, csi->slv_addr, analog_gain, &gain);
+        ret |= omv_i2c_read_reg(csi->i2c, csi->slv_addr, analog_gain, 1, &gain, 2);
     }
 
     *gain_db = 20.0f * log10f((gain & 0x7F) / 16.0f);
@@ -326,20 +326,20 @@ static int set_auto_exposure(omv_csi_t *csi, int enable, int exposure_us) {
         ? (MT9V0XX_AEC_ENABLE | MT9V0X4_AEC_ENABLE_B)
         : MT9V0XX_AEC_ENABLE;
     uint16_t chip_control, reg, read_mode_reg, row_time_0, row_time_1;
-    int ret = omv_i2c_readw(csi->i2c, csi->slv_addr, MT9V0XX_CHIP_CONTROL, &chip_control);
+    int ret = omv_i2c_read_reg(csi->i2c, csi->slv_addr, MT9V0XX_CHIP_CONTROL, 1, &chip_control, 2);
     int context = chip_control & MT9V0X4_CHIP_CONTROL_CONTEXT;
-    ret |= omv_i2c_readw(csi->i2c, csi->slv_addr, MT9V0XX_AEC_AGC_ENABLE, &reg);
-    ret |= omv_i2c_writew(csi->i2c, csi->slv_addr, MT9V0XX_AEC_AGC_ENABLE,
-                          (reg & (~aec_mask)) | ((enable != 0) ? aec_mask : 0));
+    ret |= omv_i2c_read_reg(csi->i2c, csi->slv_addr, MT9V0XX_AEC_AGC_ENABLE, 1, &reg, 2);
+    ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, MT9V0XX_AEC_AGC_ENABLE, 1,
+                             (reg & (~aec_mask)) | ((enable != 0) ? aec_mask : 0), 2);
     if (!csi->disable_delays) {
         ret |= csi->snapshot(csi, NULL, 0); // Force shadow mode register to update...
     }
     int read_mode = context ? MT9V0X4_READ_MODE_B : MT9V0XX_READ_MODE;
     int window_width = context ? MT9V0X4_WINDOW_WIDTH_B : MT9V0XX_WINDOW_WIDTH;
     int horizontal_blanking = context ? MT9V0X4_HORIZONTAL_BLANKING_B : MT9V0XX_HORIZONTAL_BLANKING;
-    ret |= omv_i2c_readw(csi->i2c, csi->slv_addr, read_mode, &read_mode_reg);
-    ret |= omv_i2c_readw(csi->i2c, csi->slv_addr, window_width, &row_time_0);
-    ret |= omv_i2c_readw(csi->i2c, csi->slv_addr, horizontal_blanking, &row_time_1);
+    ret |= omv_i2c_read_reg(csi->i2c, csi->slv_addr, read_mode, 1, &read_mode_reg, 2);
+    ret |= omv_i2c_read_reg(csi->i2c, csi->slv_addr, window_width, 1, &row_time_0, 2);
+    ret |= omv_i2c_read_reg(csi->i2c, csi->slv_addr, horizontal_blanking, 1, &row_time_1, 2);
 
     int clock = omv_csi_get_clk_frequency(csi, false);
 
@@ -350,20 +350,20 @@ static int set_auto_exposure(omv_csi_t *csi, int enable, int exposure_us) {
 
     // Fine shutter time is global.
     if ((enable == 0) && (exposure_us >= 0)) {
-        ret |= omv_i2c_writew(csi->i2c, csi->slv_addr, MT9V0XX_TOTAL_SHUTTER_WIDTH, coarse_time);
+        ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, MT9V0XX_TOTAL_SHUTTER_WIDTH, 1, coarse_time, 2);
 
         if (is_mt9v0x4(csi)) {
-            ret |= omv_i2c_writew(csi->i2c, csi->slv_addr, MT9V0X4_FINE_SHUTTER_WIDTH_TOTAL, fine_time);
-            ret |= omv_i2c_writew(csi->i2c, csi->slv_addr, MT9V0X4_TOTAL_SHUTTER_WIDTH_B, coarse_time);
-            ret |= omv_i2c_writew(csi->i2c, csi->slv_addr, MT9V0X4_FINE_SHUTTER_WIDTH_TOTAL_B, fine_time);
+            ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, MT9V0X4_FINE_SHUTTER_WIDTH_TOTAL, 1, fine_time, 2);
+            ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, MT9V0X4_TOTAL_SHUTTER_WIDTH_B, 1, coarse_time, 2);
+            ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, MT9V0X4_FINE_SHUTTER_WIDTH_TOTAL_B, 1, fine_time, 2);
         }
     } else if ((enable != 0) && (exposure_us >= 0)) {
         int max_expose = (is_mt9v0x4(csi)) ? MT9V0X4_MAX_EXPOSE : MT9V0X2_MAX_EXPOSE;
-        ret |= omv_i2c_writew(csi->i2c, csi->slv_addr, max_expose, coarse_time);
+        ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, max_expose, 1, coarse_time, 2);
 
         if (is_mt9v0x4(csi)) {
-            ret |= omv_i2c_writew(csi->i2c, csi->slv_addr, MT9V0X4_FINE_SHUTTER_WIDTH_TOTAL, fine_time);
-            ret |= omv_i2c_writew(csi->i2c, csi->slv_addr, MT9V0X4_FINE_SHUTTER_WIDTH_TOTAL_B, fine_time);
+            ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, MT9V0X4_FINE_SHUTTER_WIDTH_TOTAL, 1, fine_time, 2);
+            ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, MT9V0X4_FINE_SHUTTER_WIDTH_TOTAL_B, 1, fine_time, 2);
         }
     }
 
@@ -372,28 +372,28 @@ static int set_auto_exposure(omv_csi_t *csi, int enable, int exposure_us) {
 
 static int get_exposure_us(omv_csi_t *csi, int *exposure_us) {
     uint16_t chip_control, reg, read_mode_reg, row_time_0, row_time_1, int_pixels = 0, int_rows = 0;
-    int ret = omv_i2c_readw(csi->i2c, csi->slv_addr, MT9V0XX_CHIP_CONTROL, &chip_control);
+    int ret = omv_i2c_read_reg(csi->i2c, csi->slv_addr, MT9V0XX_CHIP_CONTROL, 1, &chip_control, 2);
     int context = chip_control & MT9V0X4_CHIP_CONTROL_CONTEXT;
-    ret |= omv_i2c_readw(csi->i2c, csi->slv_addr, MT9V0XX_AEC_AGC_ENABLE, &reg);
+    ret |= omv_i2c_read_reg(csi->i2c, csi->slv_addr, MT9V0XX_AEC_AGC_ENABLE, 1, &reg, 2);
 
     int read_mode = context ? MT9V0X4_READ_MODE_B : MT9V0XX_READ_MODE;
     int window_width = context ? MT9V0X4_WINDOW_WIDTH_B : MT9V0XX_WINDOW_WIDTH;
     int horizontal_blanking = context ? MT9V0X4_HORIZONTAL_BLANKING_B : MT9V0XX_HORIZONTAL_BLANKING;
     int fine_shutter_width_total = context ? MT9V0X4_FINE_SHUTTER_WIDTH_TOTAL_B : MT9V0X4_FINE_SHUTTER_WIDTH_TOTAL;
-    ret |= omv_i2c_readw(csi->i2c, csi->slv_addr, read_mode, &read_mode_reg);
-    ret |= omv_i2c_readw(csi->i2c, csi->slv_addr, window_width, &row_time_0);
-    ret |= omv_i2c_readw(csi->i2c, csi->slv_addr, horizontal_blanking, &row_time_1);
+    ret |= omv_i2c_read_reg(csi->i2c, csi->slv_addr, read_mode, 1, &read_mode_reg, 2);
+    ret |= omv_i2c_read_reg(csi->i2c, csi->slv_addr, window_width, 1, &row_time_0, 2);
+    ret |= omv_i2c_read_reg(csi->i2c, csi->slv_addr, horizontal_blanking, 1, &row_time_1, 2);
     if (is_mt9v0x4(csi)) {
-        ret |= omv_i2c_readw(csi->i2c, csi->slv_addr, fine_shutter_width_total, &int_pixels);
+        ret |= omv_i2c_read_reg(csi->i2c, csi->slv_addr, fine_shutter_width_total, 1, &int_pixels, 2);
     }
 
     int clock = omv_csi_get_clk_frequency(csi, false);
 
     if (reg & (context ? MT9V0X4_AEC_ENABLE_B : MT9V0XX_AEC_ENABLE)) {
-        ret |= omv_i2c_readw(csi->i2c, csi->slv_addr, MT9V0XX_AEC_EXPOSURE_OUTPUT, &int_rows);
+        ret |= omv_i2c_read_reg(csi->i2c, csi->slv_addr, MT9V0XX_AEC_EXPOSURE_OUTPUT, 1, &int_rows, 2);
     } else {
         int total_shutter_width = context ? MT9V0X4_TOTAL_SHUTTER_WIDTH_B : MT9V0XX_TOTAL_SHUTTER_WIDTH;
-        ret |= omv_i2c_readw(csi->i2c, csi->slv_addr, total_shutter_width, &int_rows);
+        ret |= omv_i2c_read_reg(csi->i2c, csi->slv_addr, total_shutter_width, 1, &int_rows, 2);
     }
 
     *exposure_us = ((int_rows * (row_time_0 + row_time_1)) + int_pixels) / (clock / MICROSECOND_CLKS);
@@ -402,14 +402,19 @@ static int get_exposure_us(omv_csi_t *csi, int *exposure_us) {
 
 static int set_hmirror(omv_csi_t *csi, int enable) {
     uint16_t read_mode;
-    int ret = omv_i2c_readw(csi->i2c, csi->slv_addr, MT9V0XX_READ_MODE, &read_mode);
-    ret |= omv_i2c_writew(csi->i2c, csi->slv_addr, MT9V0XX_READ_MODE, // inverted behavior
-                          (read_mode & (~MT9V0XX_READ_MODE_COL_FLIP)) | ((enable == 0) ? MT9V0XX_READ_MODE_COL_FLIP : 0));
+    int ret = omv_i2c_read_reg(csi->i2c, csi->slv_addr, MT9V0XX_READ_MODE, 1, &read_mode, 2);
+    ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, MT9V0XX_READ_MODE, 1, // inverted behavior
+                             (read_mode & (~MT9V0XX_READ_MODE_COL_FLIP)) | ((enable == 0) ? MT9V0XX_READ_MODE_COL_FLIP : 0), 2);
 
     if (is_mt9v0x4(csi)) {
-        ret |= omv_i2c_readw(csi->i2c, csi->slv_addr, MT9V0X4_READ_MODE_B, &read_mode);
-        ret |= omv_i2c_writew(csi->i2c, csi->slv_addr, MT9V0X4_READ_MODE_B, // inverted behavior
-                              (read_mode & (~MT9V0XX_READ_MODE_COL_FLIP)) | ((enable == 0) ? MT9V0XX_READ_MODE_COL_FLIP : 0));
+        ret |= omv_i2c_read_reg(csi->i2c, csi->slv_addr, MT9V0X4_READ_MODE_B, 1, &read_mode, 2);
+        ret |= omv_i2c_write_reg(csi->i2c,
+                                 csi->slv_addr,
+                                 MT9V0X4_READ_MODE_B,
+                                 1,
+                                 // inverted behavior
+                                 (read_mode & (~MT9V0XX_READ_MODE_COL_FLIP)) | ((enable == 0) ? MT9V0XX_READ_MODE_COL_FLIP : 0),
+                                 2);
     }
 
     if (!csi->disable_delays) {
@@ -420,14 +425,19 @@ static int set_hmirror(omv_csi_t *csi, int enable) {
 
 static int set_vflip(omv_csi_t *csi, int enable) {
     uint16_t read_mode;
-    int ret = omv_i2c_readw(csi->i2c, csi->slv_addr, MT9V0XX_READ_MODE, &read_mode);
-    ret |= omv_i2c_writew(csi->i2c, csi->slv_addr, MT9V0XX_READ_MODE, // inverted behavior
-                          (read_mode & (~MT9V0XX_READ_MODE_ROW_FLIP)) | ((enable == 0) ? MT9V0XX_READ_MODE_ROW_FLIP : 0));
+    int ret = omv_i2c_read_reg(csi->i2c, csi->slv_addr, MT9V0XX_READ_MODE, 1, &read_mode, 2);
+    ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, MT9V0XX_READ_MODE, 1, // inverted behavior
+                             (read_mode & (~MT9V0XX_READ_MODE_ROW_FLIP)) | ((enable == 0) ? MT9V0XX_READ_MODE_ROW_FLIP : 0), 2);
 
     if (is_mt9v0x4(csi)) {
-        ret |= omv_i2c_readw(csi->i2c, csi->slv_addr, MT9V0X4_READ_MODE_B, &read_mode);
-        ret |= omv_i2c_writew(csi->i2c, csi->slv_addr, MT9V0X4_READ_MODE_B, // inverted behavior
-                              (read_mode & (~MT9V0XX_READ_MODE_ROW_FLIP)) | ((enable == 0) ? MT9V0XX_READ_MODE_ROW_FLIP : 0));
+        ret |= omv_i2c_read_reg(csi->i2c, csi->slv_addr, MT9V0X4_READ_MODE_B, 1, &read_mode, 2);
+        ret |= omv_i2c_write_reg(csi->i2c,
+                                 csi->slv_addr,
+                                 MT9V0X4_READ_MODE_B,
+                                 1,
+                                 // inverted behavior
+                                 (read_mode & (~MT9V0XX_READ_MODE_ROW_FLIP)) | ((enable == 0) ? MT9V0XX_READ_MODE_ROW_FLIP : 0),
+                                 2);
     }
 
     if (!csi->disable_delays) {
@@ -485,10 +495,10 @@ static int ioctl(omv_csi_t *csi, int request, va_list ap) {
         }
         case OMV_CSI_IOCTL_SET_TRIGGERED_MODE: {
             int enable = va_arg(ap, int);
-            ret = omv_i2c_readw(csi->i2c, csi->slv_addr, MT9V0XX_CHIP_CONTROL, &chip_control);
-            ret |= omv_i2c_writew(csi->i2c, csi->slv_addr, MT9V0XX_CHIP_CONTROL,
-                                  (chip_control & (~MT9V0XX_CHIP_CONTROL_MODE_MASK))
-                                  | ((enable != 0) ? MT9V0XX_CHIP_CONTROL_SNAP_MODE : MT9V0XX_CHIP_CONTROL_MASTER_MODE));
+            ret = omv_i2c_read_reg(csi->i2c, csi->slv_addr, MT9V0XX_CHIP_CONTROL, 1, &chip_control, 2);
+            ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, MT9V0XX_CHIP_CONTROL, 1,
+                                     (chip_control & (~MT9V0XX_CHIP_CONTROL_MODE_MASK))
+                                     | ((enable != 0) ? MT9V0XX_CHIP_CONTROL_SNAP_MODE : MT9V0XX_CHIP_CONTROL_MASTER_MODE), 2);
             if (!csi->disable_delays) {
                 ret |= csi->snapshot(csi, NULL, 0); // Force shadow mode register to update...
             }
@@ -496,7 +506,7 @@ static int ioctl(omv_csi_t *csi, int request, va_list ap) {
         }
         case OMV_CSI_IOCTL_GET_TRIGGERED_MODE: {
             int *enable = va_arg(ap, int *);
-            ret = omv_i2c_readw(csi->i2c, csi->slv_addr, MT9V0XX_CHIP_CONTROL, &chip_control);
+            ret = omv_i2c_read_reg(csi->i2c, csi->slv_addr, MT9V0XX_CHIP_CONTROL, 1, &chip_control, 2);
             if (ret >= 0) {
                 *enable = ((chip_control & MT9V0XX_CHIP_CONTROL_MODE_MASK) == MT9V0XX_CHIP_CONTROL_SNAP_MODE);
             }
@@ -542,7 +552,7 @@ int mt9v0xx_init(omv_csi_t *csi) {
     }
 
     uint16_t cfa_type_reg;
-    int ret = omv_i2c_readw(csi->i2c, csi->slv_addr, MT9V0XX_CFA_ID_REG, &cfa_type_reg);
+    int ret = omv_i2c_read_reg(csi->i2c, csi->slv_addr, MT9V0XX_CFA_ID_REG, 1, &cfa_type_reg, 2);
     switch ((cfa_type_reg >> 9) & 0x7) {
         case BAYER_CFA_ID: {
             cfa_type = BAYER_CFA;

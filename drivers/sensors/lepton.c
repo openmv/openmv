@@ -78,14 +78,14 @@ static int lepton_config(omv_csi_t *csi, bool measurement_mode, bool high_temp_m
 
 static int read_reg(omv_csi_t *csi, uint16_t reg_addr) {
     uint16_t reg_data;
-    if (omv_i2c_readw2(csi->i2c, csi->slv_addr, reg_addr, &reg_data)) {
+    if (omv_i2c_read_reg(csi->i2c, csi->slv_addr, reg_addr, 2, &reg_data, 2)) {
         return -1;
     }
     return reg_data;
 }
 
 static int write_reg(omv_csi_t *csi, uint16_t reg_addr, uint16_t reg_data) {
-    return omv_i2c_writew2(csi->i2c, csi->slv_addr, reg_addr, reg_data);
+    return omv_i2c_write_reg(csi->i2c, csi->slv_addr, reg_addr, 2, reg_data, 2);
 }
 
 static int set_pixformat(omv_csi_t *csi, pixformat_t pixformat) {
