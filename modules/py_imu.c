@@ -195,10 +195,10 @@ static void platform_deinit(void *imu_bus) {
 static int32_t platform_write(void *imu_bus, uint8_t reg, const uint8_t *bufp, uint16_t len) {
     omv_i2c_t *i2c_bus = imu_bus;
 
-    if (omv_i2c_write_bytes(i2c_bus, LSM6DSM_I2C_ADD_L, (uint8_t *) &reg, 1, OMV_I2C_XFER_SUSPEND) != 0) {
+    if (omv_i2c_write(i2c_bus, LSM6DSM_I2C_ADD_L, (uint8_t *) &reg, 1, OMV_I2C_XFER_SUSPEND) != 0) {
         return -1;
     }
-    if (omv_i2c_write_bytes(i2c_bus, LSM6DSM_I2C_ADD_L, (uint8_t *) bufp, len, OMV_I2C_XFER_NO_FLAGS) != 0) {
+    if (omv_i2c_write(i2c_bus, LSM6DSM_I2C_ADD_L, (uint8_t *) bufp, len, OMV_I2C_XFER_NO_FLAGS) != 0) {
         return -1;
     }
     return 0;
@@ -207,10 +207,10 @@ static int32_t platform_write(void *imu_bus, uint8_t reg, const uint8_t *bufp, u
 static int32_t platform_read(void *imu_bus, uint8_t reg, uint8_t *bufp, uint16_t len) {
     omv_i2c_t *i2c_bus = imu_bus;
 
-    if (omv_i2c_write_bytes(i2c_bus, LSM6DSM_I2C_ADD_L, (uint8_t *) &reg, 1, OMV_I2C_XFER_NO_STOP) != 0) {
+    if (omv_i2c_write(i2c_bus, LSM6DSM_I2C_ADD_L, (uint8_t *) &reg, 1, OMV_I2C_XFER_NO_STOP) != 0) {
         return -1;
     }
-    if (omv_i2c_read_bytes(i2c_bus, LSM6DSM_I2C_ADD_L, bufp, len, OMV_I2C_XFER_NO_FLAGS) != 0) {
+    if (omv_i2c_read(i2c_bus, LSM6DSM_I2C_ADD_L, bufp, len, OMV_I2C_XFER_NO_FLAGS) != 0) {
         return -1;
     }
     return 0;
