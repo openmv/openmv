@@ -401,7 +401,7 @@ static size_t omv_csi_detect(omv_i2c_t *i2c, i2c_dev_t *dev_list) {
         switch (slv_addr) {
             #if (OMV_OV2640_ENABLE == 1)
             case OV2640_SLV_ADDR: // Or OV9650.
-                omv_i2c_readb(i2c, slv_addr, OV_CHIP_ID, (uint8_t *) &chip_id);
+                omv_i2c_read_sccb(i2c, slv_addr, OV_CHIP_ID, (uint8_t *) &chip_id);
                 break;
             #endif // (OMV_OV2640_ENABLE == 1)
 
@@ -409,19 +409,15 @@ static size_t omv_csi_detect(omv_i2c_t *i2c, i2c_dev_t *dev_list) {
             // OV5640, GC2145, and GENX320 share the same I2C address
             case OV5640_SLV_ADDR:   // Or GC2145, or GENX320.
                 // Try to read GC2145 chip ID first
-                omv_i2c_readb(i2c, slv_addr, GC_CHIP_ID, (uint8_t *) &chip_id);
+                omv_i2c_read_reg(i2c, slv_addr, GC_CHIP_ID, 1, &chip_id, 1);
                 if (chip_id != GC2145_ID) {
                     // If it fails, try reading OV5640 chip ID.
-                    omv_i2c_readb2(i2c, slv_addr, OV5640_CHIP_ID, (uint8_t *) &chip_id);
+                    omv_i2c_read_reg(i2c, slv_addr, OV5640_CHIP_ID, 2, &chip_id, 1);
 
                     #if (OMV_GENX320_ENABLE == 1)
                     if (chip_id != OV5640_ID) {
-                        // If it fails, try reading GENX320 chip ID.
-                        uint8_t buf[] = {(GENX320_CHIP_ID >> 8), GENX320_CHIP_ID};
-                        omv_i2c_write_bytes(i2c, slv_addr, buf, 2, OMV_I2C_XFER_NO_STOP);
-                        omv_i2c_read_bytes(i2c, slv_addr,
-                                           (uint8_t *) &chip_id, 4, OMV_I2C_XFER_NO_FLAGS);
-                        chip_id = __REV(chip_id);
+                        // If it fails, try reading GENX320 chip ID (16-bit addr, 32-bit data).
+                        omv_i2c_read_reg(i2c, slv_addr, GENX320_CHIP_ID, 2, &chip_id, 4);
                     }
                     #endif // (OMV_GENX320_ENABLE == 1)
                 }
@@ -430,13 +426,13 @@ static size_t omv_csi_detect(omv_i2c_t *i2c, i2c_dev_t *dev_list) {
 
             #if (OMV_OV7725_ENABLE == 1) || (OMV_OV7670_ENABLE == 1) || (OMV_OV7690_ENABLE == 1)
             case OV7725_SLV_ADDR: // Or OV7690 or OV7670.
-                omv_i2c_readb(i2c, slv_addr, OV_CHIP_ID, (uint8_t *) &chip_id);
+                omv_i2c_read_sccb(i2c, slv_addr, OV_CHIP_ID, (uint8_t *) &chip_id);
                 break;
             #endif //(OMV_OV7725_ENABLE == 1) || (OMV_OV7670_ENABLE == 1) || (OMV_OV7690_ENABLE == 1)
 
             #if (OMV_MT9V0XX_ENABLE == 1)
             case MT9V0XX_SLV_ADDR:
-                omv_i2c_readw(i2c, slv_addr, ON_CHIP_ID, (uint16_t *) &chip_id);
+                omv_i2c_read_reg(i2c, slv_addr, ON_CHIP_ID, 1, &chip_id, 2);
                 break;
             #endif //(OMV_MT9V0XX_ENABLE == 1)
 
@@ -454,7 +450,7 @@ static size_t omv_csi_detect(omv_i2c_t *i2c, i2c_dev_t *dev_list) {
 
             #if (OMV_HM01B0_ENABLE == 1) || (OMV_HM0360_ENABLE == 1)
             case HM0XX0_SLV_ADDR:
-                omv_i2c_readb2(i2c, slv_addr, HIMAX_CHIP_ID, (uint8_t *) &chip_id);
+                omv_i2c_read_reg(i2c, slv_addr, HIMAX_CHIP_ID, 2, &chip_id, 1);
                 break;
             #endif // (OMV_HM01B0_ENABLE == 1) || (OMV_HM0360_ENABLE == 1)
 
@@ -468,7 +464,7 @@ static size_t omv_csi_detect(omv_i2c_t *i2c, i2c_dev_t *dev_list) {
             // PAG720 and PAG7936 share the same I2C address.
             case PAG7920_SLV_ADDR:
             case PAG7936_SLV_ADDR_ALT:
-                omv_i2c_readw2(i2c, slv_addr, PIXART_CHIP_ID, (uint16_t *) &chip_id);
+                omv_i2c_read_reg(i2c, slv_addr, PIXART_CHIP_ID, 2, &chip_id, 2);
                 chip_id = ((chip_id << 8) | (chip_id >> 8)) & 0xFFFF;
                 break;
             #endif // (OMV_PAG7920_ENABLE == 1) || (OMV_PAG7936_ENABLE == 1)
@@ -476,9 +472,9 @@ static size_t omv_csi_detect(omv_i2c_t *i2c, i2c_dev_t *dev_list) {
             #if (OMV_MT9M114_ENABLE == 1) || (OMV_PS5520_ENABLE == 1)
             // MT9M114 and PS5520 share the same I2C address.
             case MT9M114_SLV_ADDR:
-                omv_i2c_readw2(i2c, slv_addr, ON_CHIP_ID, (uint16_t *) &chip_id);
+                omv_i2c_read_reg(i2c, slv_addr, ON_CHIP_ID, 2, &chip_id, 2);
                 if (slv_addr != MT9M114_ID) {
-                    omv_i2c_readw2(i2c, slv_addr, PIXART_CHIP_ID, (uint16_t *) &chip_id);
+                    omv_i2c_read_reg(i2c, slv_addr, PIXART_CHIP_ID, 2, &chip_id, 2);
                 }
                 break;
             #endif // (OMV_MT9M114_ENABLE == 1) || (OMV_PS5520_ENABLE == 1)
