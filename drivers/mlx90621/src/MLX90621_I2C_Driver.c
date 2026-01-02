@@ -27,11 +27,11 @@ void MLX90621_I2CInit(omv_i2c_t *hbus)
 
 int MLX90621_I2CReadEEPROM(uint8_t slaveAddr, uint8_t startAddress, uint16_t nMemAddressRead, uint8_t *data)
 {
-    if (omv_i2c_write_bytes(bus, (slaveAddr << 1), &startAddress, 1, OMV_I2C_XFER_NO_STOP) != 0) {
+    if (omv_i2c_write(bus, (slaveAddr << 1), &startAddress, 1, OMV_I2C_XFER_NO_STOP) != 0) {
         return -1;
     }
              
-    if (omv_i2c_read_bytes(bus, (slaveAddr << 1), data, nMemAddressRead, OMV_I2C_XFER_NO_FLAGS) != 0) {
+    if (omv_i2c_read(bus, (slaveAddr << 1), data, nMemAddressRead, OMV_I2C_XFER_NO_FLAGS) != 0) {
         return -1; 
     }          
     
@@ -48,11 +48,11 @@ int MLX90621_I2CRead(uint8_t slaveAddr,uint8_t command,
         nMemAddressRead
     };
     
-    if (omv_i2c_write_bytes(bus, (slaveAddr << 1), cmd, 4, OMV_I2C_XFER_NO_STOP) != 0) {
+    if (omv_i2c_write(bus, (slaveAddr << 1), cmd, 4, OMV_I2C_XFER_NO_STOP) != 0) {
         return -1;
     }
 
-    if (omv_i2c_read_bytes(bus, (slaveAddr << 1), (uint8_t *) data, nMemAddressRead * 2, OMV_I2C_XFER_NO_FLAGS) != 0) {
+    if (omv_i2c_read(bus, (slaveAddr << 1), (uint8_t *) data, nMemAddressRead * 2, OMV_I2C_XFER_NO_FLAGS) != 0) {
         return -1; 
     }          
 
@@ -69,7 +69,7 @@ int MLX90621_I2CWrite(uint8_t slaveAddr, uint8_t command, uint8_t checkValue, ui
         (data >> 8)
     };
 
-    if (omv_i2c_write_bytes(bus, (slaveAddr << 1), cmd, 5, OMV_I2C_XFER_NO_FLAGS) != 0) {
+    if (omv_i2c_write(bus, (slaveAddr << 1), cmd, 5, OMV_I2C_XFER_NO_FLAGS) != 0) {
         return -1;
     }
     return 0;
