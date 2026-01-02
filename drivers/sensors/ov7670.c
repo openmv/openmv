@@ -339,14 +339,14 @@ static const uint8_t qqvga_regs[][2] = {
 
 static int reset(omv_csi_t *csi) {
     // Reset all registers
-    int ret = omv_i2c_writeb(csi->i2c, csi->slv_addr, COM7, COM7_RESET);
+    int ret = omv_i2c_write_sccb(csi->i2c, csi->slv_addr, COM7, COM7_RESET);
 
     // Delay 2 ms
     mp_hal_delay_ms(2);
 
     // Write default registers
     for (int i = 0; default_regs[i][0] != 0xff; i++) {
-        ret |= omv_i2c_writeb(csi->i2c, csi->slv_addr, default_regs[i][0], default_regs[i][1]);
+        ret |= omv_i2c_write_sccb(csi->i2c, csi->slv_addr, default_regs[i][0], default_regs[i][1]);
     }
 
     // Delay 300 ms
@@ -359,7 +359,7 @@ static int reset(omv_csi_t *csi) {
 
 static int sleep(omv_csi_t *csi, int enable) {
     uint8_t reg;
-    int ret = omv_i2c_readb(csi->i2c, csi->slv_addr, COM2, &reg);
+    int ret = omv_i2c_read_sccb(csi->i2c, csi->slv_addr, COM2, &reg);
 
     if (enable) {
         reg |= COM2_SOFT_SLEEP;
@@ -368,19 +368,19 @@ static int sleep(omv_csi_t *csi, int enable) {
     }
 
     // Write back register
-    return omv_i2c_writeb(csi->i2c, csi->slv_addr, COM2, reg) | ret;
+    return omv_i2c_write_sccb(csi->i2c, csi->slv_addr, COM2, reg) | ret;
 }
 
 static int read_reg(omv_csi_t *csi, uint16_t reg_addr) {
     uint8_t reg_data;
-    if (omv_i2c_readb(csi->i2c, csi->slv_addr, reg_addr, &reg_data) != 0) {
+    if (omv_i2c_read_sccb(csi->i2c, csi->slv_addr, reg_addr, &reg_data) != 0) {
         return -1;
     }
     return reg_data;
 }
 
 static int write_reg(omv_csi_t *csi, uint16_t reg_addr, uint16_t reg_data) {
-    return omv_i2c_writeb(csi->i2c, csi->slv_addr, reg_addr, reg_data);
+    return omv_i2c_write_sccb(csi->i2c, csi->slv_addr, reg_addr, reg_data);
 }
 
 static int set_pixformat(omv_csi_t *csi, pixformat_t pixformat) {
@@ -401,7 +401,7 @@ static int set_pixformat(omv_csi_t *csi, pixformat_t pixformat) {
 
     // Write pixel format registers
     for (int i = 0; regs[i][0] != 0xff; i++) {
-        ret |= omv_i2c_writeb(csi->i2c, csi->slv_addr, regs[i][0], regs[i][1]);
+        ret |= omv_i2c_write_sccb(csi->i2c, csi->slv_addr, regs[i][0], regs[i][1]);
     }
 
     return ret;
@@ -427,27 +427,27 @@ static int set_framesize(omv_csi_t *csi, omv_csi_framesize_t framesize) {
 
     // Write pixel format registers
     for (int i = 0; regs[i][0] != 0xFF; i++) {
-        ret |= omv_i2c_writeb(csi->i2c, csi->slv_addr, regs[i][0], regs[i][1]);
+        ret |= omv_i2c_write_sccb(csi->i2c, csi->slv_addr, regs[i][0], regs[i][1]);
     }
     return ret;
 }
 
 static int set_hmirror(omv_csi_t *csi, int enable) {
     uint8_t val;
-    int ret = omv_i2c_readb(csi->i2c, csi->slv_addr, MVFP, &val);
+    int ret = omv_i2c_read_sccb(csi->i2c, csi->slv_addr, MVFP, &val);
     ret |=
-        omv_i2c_writeb(csi->i2c, csi->slv_addr, MVFP,
-                       enable ? (val | MVFP_MIRROR) : (val & (~MVFP_MIRROR)));
+        omv_i2c_write_sccb(csi->i2c, csi->slv_addr, MVFP,
+                           enable ? (val | MVFP_MIRROR) : (val & (~MVFP_MIRROR)));
 
     return ret;
 }
 
 static int set_vflip(omv_csi_t *csi, int enable) {
     uint8_t val;
-    int ret = omv_i2c_readb(csi->i2c, csi->slv_addr, MVFP, &val);
+    int ret = omv_i2c_read_sccb(csi->i2c, csi->slv_addr, MVFP, &val);
     ret |=
-        omv_i2c_writeb(csi->i2c, csi->slv_addr, MVFP,
-                       enable ? (val | MVFP_VFLIP) : (val & (~MVFP_VFLIP)));
+        omv_i2c_write_sccb(csi->i2c, csi->slv_addr, MVFP,
+                           enable ? (val | MVFP_VFLIP) : (val & (~MVFP_VFLIP)));
 
     return ret;
 }

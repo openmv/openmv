@@ -341,13 +341,13 @@ static int reset(omv_csi_t *csi) {
     // Reset csi.
     uint8_t reg = 0xff;
     for (int retry = HIMAX_BOOT_RETRY; retry >= 0 && reg != HIMAX_MODE_STANDBY; retry--) {
-        if (omv_i2c_writeb2(csi->i2c, csi->slv_addr, SW_RESET, HIMAX_RESET) != 0) {
+        if (omv_i2c_write_reg(csi->i2c, csi->slv_addr, SW_RESET, 2, HIMAX_RESET, 1) != 0) {
             return -1;
         }
 
         mp_hal_delay_ms(1);
 
-        if (omv_i2c_readb2(csi->i2c, csi->slv_addr, MODE_SELECT, &reg) != 0) {
+        if (omv_i2c_read_reg(csi->i2c, csi->slv_addr, MODE_SELECT, 2, &reg, 1) != 0) {
             return -1;
         }
 
@@ -363,25 +363,25 @@ static int reset(omv_csi_t *csi) {
     // Write default registers
     int ret = 0;
     for (int i = 0; default_regs[i][0] && ret == 0; i++) {
-        ret |= omv_i2c_writeb2(csi->i2c, csi->slv_addr, default_regs[i][0], default_regs[i][1]);
+        ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, default_regs[i][0], 2, default_regs[i][1], 1);
     }
 
     // Set mode to streaming
-    ret |= omv_i2c_writeb2(csi->i2c, csi->slv_addr, MODE_SELECT, HIMAX_MODE_STREAMING);
+    ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, MODE_SELECT, 2, HIMAX_MODE_STREAMING, 1);
 
     return ret;
 }
 
 static int read_reg(omv_csi_t *csi, uint16_t reg_addr) {
     uint8_t reg_data;
-    if (omv_i2c_readb2(csi->i2c, csi->slv_addr, reg_addr, &reg_data) != 0) {
+    if (omv_i2c_read_reg(csi->i2c, csi->slv_addr, reg_addr, 2, &reg_data, 1) != 0) {
         return -1;
     }
     return reg_data;
 }
 
 static int write_reg(omv_csi_t *csi, uint16_t reg_addr, uint16_t reg_data) {
-    return omv_i2c_writeb2(csi->i2c, csi->slv_addr, reg_addr, reg_data);
+    return omv_i2c_write_reg(csi->i2c, csi->slv_addr, reg_addr, 2, reg_data, 1);
 }
 
 static int set_pixformat(omv_csi_t *csi, pixformat_t pixformat) {
@@ -453,17 +453,17 @@ static int set_framesize(omv_csi_t *csi, omv_csi_framesize_t framesize) {
     switch (framesize) {
         case OMV_CSI_FRAMESIZE_VGA:
             for (int i = 0; VGA_regs[i][0] && ret == 0; i++) {
-                ret |= omv_i2c_writeb2(csi->i2c, csi->slv_addr, VGA_regs[i][0], VGA_regs[i][1]);
+                ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, VGA_regs[i][0], 2, VGA_regs[i][1], 1);
             }
             break;
         case OMV_CSI_FRAMESIZE_QVGA:
             for (int i = 0; QVGA_regs[i][0] && ret == 0; i++) {
-                ret |= omv_i2c_writeb2(csi->i2c, csi->slv_addr, QVGA_regs[i][0], QVGA_regs[i][1]);
+                ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, QVGA_regs[i][0], 2, QVGA_regs[i][1], 1);
             }
             break;
         case OMV_CSI_FRAMESIZE_QQVGA:
             for (int i = 0; QQVGA_regs[i][0] && ret == 0; i++) {
-                ret |= omv_i2c_writeb2(csi->i2c, csi->slv_addr, QQVGA_regs[i][0], QQVGA_regs[i][1]);
+                ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, QQVGA_regs[i][0], 2, QQVGA_regs[i][1], 1);
             }
             break;
         default:
@@ -493,8 +493,8 @@ static int set_framerate(omv_csi_t *csi, int framerate) {
         osc_div = (highres == true) ? 0x00 : 0x01;
     }
 
-    ret |= omv_i2c_readb2(csi->i2c, csi->slv_addr, PLL1_CONFIG, &pll_cfg);
-    ret |= omv_i2c_writeb2(csi->i2c, csi->slv_addr, PLL1_CONFIG, (pll_cfg & 0xFC) | osc_div);
+    ret |= omv_i2c_read_reg(csi->i2c, csi->slv_addr, PLL1_CONFIG, 2, &pll_cfg, 1);
+    ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, PLL1_CONFIG, 2, (pll_cfg & 0xFC) | osc_div, 1);
     return ret;
 }
 
@@ -516,7 +516,7 @@ static int set_brightness(omv_csi_t *csi, int level) {
             ae_mean = 100;
             break;
     }
-    return omv_i2c_writeb2(csi->i2c, csi->slv_addr, AE_TARGET_MEAN, ae_mean);
+    return omv_i2c_write_reg(csi->i2c, csi->slv_addr, AE_TARGET_MEAN, 2, ae_mean, 1);
 }
 
 static int set_gainceiling(omv_csi_t *csi, omv_csi_gainceiling_t gainceiling) {
@@ -538,35 +538,35 @@ static int set_gainceiling(omv_csi_t *csi, omv_csi_gainceiling_t gainceiling) {
         default:
             return -1;
     }
-    ret |= omv_i2c_writeb2(csi->i2c, csi->slv_addr, MAX_AGAIN, (gain & 0x07));
+    ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, MAX_AGAIN, 2, (gain & 0x07), 1);
     return ret;
 }
 
 static int set_colorbar(omv_csi_t *csi, int enable) {
-    return omv_i2c_writeb2(csi->i2c, csi->slv_addr, TEST_PATTERN_MODE, enable & 0x1);
+    return omv_i2c_write_reg(csi->i2c, csi->slv_addr, TEST_PATTERN_MODE, 2, enable & 0x1, 1);
 }
 
 static int set_auto_gain(omv_csi_t *csi, int enable, float gain_db, float gain_db_ceiling) {
     uint8_t ae_ctrl = 0;
-    int ret = omv_i2c_readb2(csi->i2c, csi->slv_addr, AE_CTRL, &ae_ctrl);
+    int ret = omv_i2c_read_reg(csi->i2c, csi->slv_addr, AE_CTRL, 2, &ae_ctrl, 1);
     if (!enable && (!isnanf(gain_db)) && (!isinff(gain_db))) {
         gain_db = IM_CLAMP(gain_db, 0.0f, 24.0f);
         uint8_t gain = fast_ceilf(logf(expf((gain_db / 20.0f) * M_LN10)) / M_LN2);
-        ret |= omv_i2c_writeb2(csi->i2c, csi->slv_addr, AE_CTRL, (ae_ctrl & 0xFE));
-        ret |= omv_i2c_writeb2(csi->i2c, csi->slv_addr, ANALOG_GAIN, ((gain & 0x7) << 4));
+        ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, AE_CTRL, 2, (ae_ctrl & 0xFE), 1);
+        ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, ANALOG_GAIN, 2, ((gain & 0x7) << 4), 1);
     } else if (enable && (!isnanf(gain_db_ceiling)) && (!isinff(gain_db_ceiling))) {
         gain_db_ceiling = IM_CLAMP(gain_db_ceiling, 0.0f, 24.0f);
         uint8_t gain = fast_ceilf(logf(expf((gain_db_ceiling / 20.0f) * M_LN10)) / M_LN2);
-        ret |= omv_i2c_writeb2(csi->i2c, csi->slv_addr, MAX_AGAIN, (gain & 0x07));
-        ret |= omv_i2c_writeb2(csi->i2c, csi->slv_addr, AE_CTRL, (ae_ctrl | 0x01));
+        ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, MAX_AGAIN, 2, (gain & 0x07), 1);
+        ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, AE_CTRL, 2, (ae_ctrl | 0x01), 1);
     }
-    ret |= omv_i2c_writeb2(csi->i2c, csi->slv_addr, COMMAND_UPDATE, 0x01);
+    ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, COMMAND_UPDATE, 2, 0x01, 1);
     return ret;
 }
 
 static int get_gain_db(omv_csi_t *csi, float *gain_db) {
     uint8_t gain;
-    if (omv_i2c_readb2(csi->i2c, csi->slv_addr, ANALOG_GAIN, &gain) != 0) {
+    if (omv_i2c_read_reg(csi->i2c, csi->slv_addr, ANALOG_GAIN, 2, &gain, 1) != 0) {
         return -1;
     }
     *gain_db = fast_floorf(log10f(1 << (gain >> 4)) * 20.0f);
@@ -575,7 +575,7 @@ static int get_gain_db(omv_csi_t *csi, float *gain_db) {
 
 static int get_vt_pix_clk(omv_csi_t *csi, uint32_t *vt_pix_clk) {
     uint8_t reg;
-    if (omv_i2c_readb2(csi->i2c, csi->slv_addr, PLL1_CONFIG, &reg) != 0) {
+    if (omv_i2c_read_reg(csi->i2c, csi->slv_addr, PLL1_CONFIG, 2, &reg, 1) != 0) {
         return -1;
     }
     // 00 -> MCLK / 1
@@ -591,10 +591,10 @@ static int get_vt_pix_clk(omv_csi_t *csi, uint32_t *vt_pix_clk) {
 
 static int set_auto_exposure(omv_csi_t *csi, int enable, int exposure_us) {
     uint8_t ae_ctrl = 0;
-    int ret = omv_i2c_readb2(csi->i2c, csi->slv_addr, AE_CTRL, &ae_ctrl);
+    int ret = omv_i2c_read_reg(csi->i2c, csi->slv_addr, AE_CTRL, 2, &ae_ctrl, 1);
 
     if (enable) {
-        ret |= omv_i2c_writeb2(csi->i2c, csi->slv_addr, AE_CTRL, (ae_ctrl | 0x01));
+        ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, AE_CTRL, 2, (ae_ctrl | 0x01), 1);
     } else {
         uint32_t line_len;
         uint32_t frame_len;
@@ -627,10 +627,10 @@ static int set_auto_exposure(omv_csi_t *csi, int enable, int exposure_us) {
             coarse_int = frame_len - 4;
         }
 
-        ret |= omv_i2c_writeb2(csi->i2c, csi->slv_addr, AE_CTRL, (ae_ctrl & 0xFE));
-        ret |= omv_i2c_writeb2(csi->i2c, csi->slv_addr, INTEGRATION_H, coarse_int >> 8);
-        ret |= omv_i2c_writeb2(csi->i2c, csi->slv_addr, INTEGRATION_L, coarse_int & 0xff);
-        ret |= omv_i2c_writeb2(csi->i2c, csi->slv_addr, COMMAND_UPDATE, 0x01);
+        ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, AE_CTRL, 2, (ae_ctrl & 0xFE), 1);
+        ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, INTEGRATION_H, 2, coarse_int >> 8, 1);
+        ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, INTEGRATION_L, 2, coarse_int & 0xff, 1);
+        ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, COMMAND_UPDATE, 2, 0x01, 1);
     }
 
     return ret;
@@ -655,25 +655,25 @@ static int get_exposure_us(omv_csi_t *csi, int *exposure_us) {
             return -1;
     }
     ret |= get_vt_pix_clk(csi, &vt_pix_clk);
-    ret |= omv_i2c_readb2(csi->i2c, csi->slv_addr, INTEGRATION_H, &((uint8_t *) &coarse_int)[1]);
-    ret |= omv_i2c_readb2(csi->i2c, csi->slv_addr, INTEGRATION_L, &((uint8_t *) &coarse_int)[0]);
+    ret |= omv_i2c_read_reg(csi->i2c, csi->slv_addr, INTEGRATION_H, 2, &((uint8_t *) &coarse_int)[1], 1);
+    ret |= omv_i2c_read_reg(csi->i2c, csi->slv_addr, INTEGRATION_L, 2, &((uint8_t *) &coarse_int)[0], 1);
     *exposure_us = fast_roundf(coarse_int * line_len / (vt_pix_clk / 1000000.0f));
     return ret;
 }
 
 static int set_hmirror(omv_csi_t *csi, int enable) {
     uint8_t reg;
-    int ret = omv_i2c_readb2(csi->i2c, csi->slv_addr, IMG_ORIENTATION, &reg);
-    ret |= omv_i2c_writeb2(csi->i2c, csi->slv_addr, IMG_ORIENTATION, HIMAX_SET_HMIRROR(reg, enable));
-    ret |= omv_i2c_writeb2(csi->i2c, csi->slv_addr, COMMAND_UPDATE, 0x01);
+    int ret = omv_i2c_read_reg(csi->i2c, csi->slv_addr, IMG_ORIENTATION, 2, &reg, 1);
+    ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, IMG_ORIENTATION, 2, HIMAX_SET_HMIRROR(reg, enable), 1);
+    ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, COMMAND_UPDATE, 2, 0x01, 1);
     return ret;
 }
 
 static int set_vflip(omv_csi_t *csi, int enable) {
     uint8_t reg;
-    int ret = omv_i2c_readb2(csi->i2c, csi->slv_addr, IMG_ORIENTATION, &reg);
-    ret |= omv_i2c_writeb2(csi->i2c, csi->slv_addr, IMG_ORIENTATION, HIMAX_SET_VMIRROR(reg, enable));
-    ret |= omv_i2c_writeb2(csi->i2c, csi->slv_addr, COMMAND_UPDATE, 0x01);
+    int ret = omv_i2c_read_reg(csi->i2c, csi->slv_addr, IMG_ORIENTATION, 2, &reg, 1);
+    ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, IMG_ORIENTATION, 2, HIMAX_SET_VMIRROR(reg, enable), 1);
+    ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, COMMAND_UPDATE, 2, 0x01, 1);
     return ret;
 }
 
@@ -689,8 +689,8 @@ static int ioctl(omv_csi_t *csi, int request, va_list ap) {
             int ret = 0;
             uint8_t md_ctrl = 0;
             uint32_t enable = va_arg(ap, uint32_t) & 0x01;
-            ret |= omv_i2c_readb2(csi->i2c, csi->slv_addr, MD_CTRL, &md_ctrl);
-            ret |= omv_i2c_writeb2(csi->i2c, csi->slv_addr, MD_CTRL, (md_ctrl & 0xFE) | enable);
+            ret |= omv_i2c_read_reg(csi->i2c, csi->slv_addr, MD_CTRL, 2, &md_ctrl, 1);
+            ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, MD_CTRL, 2, (md_ctrl & 0xFE) | enable, 1);
             break;
         }
 
@@ -729,21 +729,21 @@ static int ioctl(omv_csi_t *csi, int request, va_list ap) {
             y1 = MAX((y1 / roi_h - 1), 0);
             x2 = MIN((x2 / roi_w) + !!(x2 % roi_w), 0xF);
             y2 = MIN((y2 / roi_h) + !!(y2 % roi_h), roi_max_h);
-            ret |= omv_i2c_writeb2(csi->i2c, csi->slv_addr, ROI_START_END_H, ((x2 & 0xF) << 4) | (x1 & 0x0F));
-            ret |= omv_i2c_writeb2(csi->i2c, csi->slv_addr, ROI_START_END_V, ((y2 & 0xF) << 4) | (y1 & 0x0F));
+            ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, ROI_START_END_H, 2, ((x2 & 0xF) << 4) | (x1 & 0x0F), 1);
+            ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, ROI_START_END_V, 2, ((y2 & 0xF) << 4) | (y1 & 0x0F), 1);
             break;
         }
 
         case OMV_CSI_IOCTL_HIMAX_MD_THRESHOLD: {
             uint32_t threshold = va_arg(ap, uint32_t) & 0x3F;
-            ret |= omv_i2c_writeb2(csi->i2c, csi->slv_addr, MD_TH_STR_L, threshold);
-            ret |= omv_i2c_writeb2(csi->i2c, csi->slv_addr, MD_TH_STR_H, threshold);
-            ret |= omv_i2c_writeb2(csi->i2c, csi->slv_addr, MD_LIGHT_COEF, threshold);
+            ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, MD_TH_STR_L, 2, threshold, 1);
+            ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, MD_TH_STR_H, 2, threshold, 1);
+            ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, MD_LIGHT_COEF, 2, threshold, 1);
             break;
         }
 
         case OMV_CSI_IOCTL_HIMAX_MD_CLEAR: {
-            ret = omv_i2c_writeb2(csi->i2c, csi->slv_addr, INT_CLEAR, (1 << 3));
+            ret = omv_i2c_write_reg(csi->i2c, csi->slv_addr, INT_CLEAR, 2, (1 << 3), 1);
             break;
         }
 
