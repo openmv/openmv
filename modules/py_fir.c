@@ -198,25 +198,25 @@ static void fir_MLX90641_get_frame(float *Ta, float *To) {
 static void fir_AMG8833_get_frame(float *Ta, float *To) {
     int16_t temp;
     int error = 0;
-    error |= omv_i2c_write_bytes(&fir_bus,
-                                 AMG8833_ADDR,
-                                 (uint8_t [1]) {AMG8833_THERMISTOR_REGISTER},
-                                 1, OMV_I2C_XFER_NO_STOP);
-    error |= omv_i2c_read_bytes(&fir_bus, AMG8833_ADDR, (uint8_t *) &temp, sizeof(temp), OMV_I2C_XFER_NO_FLAGS);
+    error |= omv_i2c_write(&fir_bus,
+                           AMG8833_ADDR,
+                           (uint8_t [1]) {AMG8833_THERMISTOR_REGISTER},
+                           1, OMV_I2C_XFER_NO_STOP);
+    error |= omv_i2c_read(&fir_bus, AMG8833_ADDR, (uint8_t *) &temp, sizeof(temp), OMV_I2C_XFER_NO_FLAGS);
     PY_ASSERT_TRUE_MSG((error == 0), "Failed to read the AMG8833 sensor data!");
 
     *Ta = AMG8833_12_TO_16(temp) * 0.0625f;
 
     int16_t *data = fb_alloc(AMG8833_WIDTH * AMG8833_HEIGHT * sizeof(int16_t), FB_ALLOC_NO_HINT);
-    error |= omv_i2c_write_bytes(&fir_bus,
-                                 AMG8833_ADDR,
-                                 (uint8_t [1]) {AMG8833_TEMPERATURE_REGISTER},
-                                 1, OMV_I2C_XFER_NO_STOP);
-    error |= omv_i2c_read_bytes(&fir_bus,
-                                AMG8833_ADDR,
-                                (uint8_t *) data,
-                                AMG8833_WIDTH * AMG8833_HEIGHT * 2,
-                                OMV_I2C_XFER_NO_FLAGS);
+    error |= omv_i2c_write(&fir_bus,
+                           AMG8833_ADDR,
+                           (uint8_t [1]) {AMG8833_TEMPERATURE_REGISTER},
+                           1, OMV_I2C_XFER_NO_STOP);
+    error |= omv_i2c_read(&fir_bus,
+                          AMG8833_ADDR,
+                          (uint8_t *) data,
+                          AMG8833_WIDTH * AMG8833_HEIGHT * 2,
+                          OMV_I2C_XFER_NO_FLAGS);
     PY_ASSERT_TRUE_MSG((error == 0), "Failed to read the AMG8833 sensor data!");
 
     for (int i = 0, ii = AMG8833_WIDTH * AMG8833_HEIGHT; i < ii; i++) {
@@ -531,8 +531,8 @@ mp_obj_t py_fir_init(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_args)
             FIR_AMG8833_RETRY:
             omv_i2c_init(&fir_bus, OMV_FIR_I2C_ID, OMV_I2C_SPEED_STANDARD);
 
-            int error = omv_i2c_write_bytes(&fir_bus, AMG8833_ADDR,
-                                            (uint8_t [2]) {AMG8833_RESET_REGISTER, AMG8833_INITIAL_RESET_VALUE}, 2, 0);
+            int error = omv_i2c_write(&fir_bus, AMG8833_ADDR,
+                                      (uint8_t [2]) {AMG8833_RESET_REGISTER, AMG8833_INITIAL_RESET_VALUE}, 2, 0);
             if (error != 0) {
                 if (first_init) {
                     first_init = false;
@@ -677,12 +677,12 @@ mp_obj_t py_fir_read_ta() {
         case FIR_AMG8833: {
             int16_t temp;
             int error = 0;
-            error |= omv_i2c_write_bytes(&fir_bus,
-                                         AMG8833_ADDR,
-                                         (uint8_t [1]) {AMG8833_THERMISTOR_REGISTER},
-                                         1,
-                                         OMV_I2C_XFER_NO_STOP);
-            error |= omv_i2c_read_bytes(&fir_bus, AMG8833_ADDR, (uint8_t *) &temp, sizeof(temp), OMV_I2C_XFER_NO_FLAGS);
+            error |= omv_i2c_write(&fir_bus,
+                                   AMG8833_ADDR,
+                                   (uint8_t [1]) {AMG8833_THERMISTOR_REGISTER},
+                                   1,
+                                   OMV_I2C_XFER_NO_STOP);
+            error |= omv_i2c_read(&fir_bus, AMG8833_ADDR, (uint8_t *) &temp, sizeof(temp), OMV_I2C_XFER_NO_FLAGS);
             PY_ASSERT_TRUE_MSG((error == 0), "Failed to read the AMG8833 sensor data!");
             return mp_obj_new_float(AMG8833_12_TO_16(temp) * 0.0625f);
         }

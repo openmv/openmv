@@ -39,12 +39,12 @@ int MLX90641_I2CRead(uint8_t slaveAddr, uint16_t startAddress, uint16_t nMemAddr
         uint16_t write_address = __REVSH(startAddress);
         uint16_t read_size = n > OMV_I2C_MAX_16BIT_XFER ? OMV_I2C_MAX_16BIT_XFER : n;
 
-        if (omv_i2c_write_bytes(bus, (slaveAddr<<1), (uint8_t *) &write_address, 2, OMV_I2C_XFER_NO_STOP) != 0) {
+        if (omv_i2c_write(bus, (slaveAddr<<1), (uint8_t *) &write_address, 2, OMV_I2C_XFER_NO_STOP) != 0) {
             return -1;
         }
 
 
-        if (omv_i2c_read_bytes(bus, (slaveAddr<<1), (uint8_t *) d, read_size*2, OMV_I2C_XFER_NO_FLAGS) != 0) {
+        if (omv_i2c_read(bus, (slaveAddr<<1), (uint8_t *) d, read_size*2, OMV_I2C_XFER_NO_FLAGS) != 0) {
             return -1;
         }
 
@@ -65,11 +65,11 @@ int MLX90641_I2CWrite(uint8_t slaveAddr, uint16_t writeAddress, uint16_t data)
     data = __REVSH(data);
     writeAddress = __REVSH(writeAddress);
 
-	if (omv_i2c_write_bytes(bus, (slaveAddr << 1), (uint8_t*) &writeAddress, 2, OMV_I2C_XFER_SUSPEND) != 0) {
+	if (omv_i2c_write(bus, (slaveAddr << 1), (uint8_t*) &writeAddress, 2, OMV_I2C_XFER_SUSPEND) != 0) {
         return -1;
 	}         
 
-	if (omv_i2c_write_bytes(bus, (slaveAddr << 1), (uint8_t *) &data, 2, OMV_I2C_XFER_NO_FLAGS) != 0) {
+	if (omv_i2c_write(bus, (slaveAddr << 1), (uint8_t *) &data, 2, OMV_I2C_XFER_NO_FLAGS) != 0) {
         return -1;
 	}         
 	return 0;

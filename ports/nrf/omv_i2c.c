@@ -136,49 +136,7 @@ int omv_i2c_gencall(omv_i2c_t *i2c, uint8_t cmd) {
     return 0;
 }
 
-int omv_i2c_readb(omv_i2c_t *i2c, uint8_t slv_addr, uint8_t reg_addr, uint8_t *reg_data) {
-    int ret = 0;
-    slv_addr = slv_addr >> 1;
-
-    nrfx_twi_enable(&i2c->inst);
-    nrfx_twi_xfer_desc_t desc1 = NRFX_TWI_XFER_DESC_TX(slv_addr, &reg_addr, 1);
-    if (nrfx_twi_xfer(&i2c->inst, &desc1, 0) != NRFX_SUCCESS) {
-        ret = -1;
-        goto i2c_error;
-    }
-
-    nrfx_twi_xfer_desc_t desc2 = NRFX_TWI_XFER_DESC_RX(slv_addr, reg_data, 1);
-    if (nrfx_twi_xfer(&i2c->inst, &desc2, 0) != NRFX_SUCCESS) {
-        ret = -1;
-    }
-
-i2c_error:
-    nrfx_twi_disable(&i2c->inst);
-    return ret;
-}
-
-int omv_i2c_writeb(omv_i2c_t *i2c, uint8_t slv_addr, uint8_t reg_addr, uint8_t reg_data) {
-    int ret = 0;
-    slv_addr = slv_addr >> 1;
-
-    nrfx_twi_enable(&i2c->inst);
-    nrfx_twi_xfer_desc_t desc1 = NRFX_TWI_XFER_DESC_TX(slv_addr, &reg_addr, 1);
-    if (nrfx_twi_xfer(&i2c->inst, &desc1, NRFX_TWI_FLAG_SUSPEND) != NRFX_SUCCESS) {
-        ret = -1;
-        goto i2c_error;
-    }
-
-    nrfx_twi_xfer_desc_t desc2 = NRFX_TWI_XFER_DESC_TX(slv_addr, &reg_data, 1);
-    if (nrfx_twi_xfer(&i2c->inst, &desc2, 0) != NRFX_SUCCESS) {
-        ret = -1;
-    }
-
-i2c_error:
-    nrfx_twi_disable(&i2c->inst);
-    return ret;
-}
-
-int omv_i2c_read_bytes(omv_i2c_t *i2c, uint8_t slv_addr, uint8_t *buf, int len, uint32_t flags) {
+int omv_i2c_read(omv_i2c_t *i2c, uint8_t slv_addr, uint8_t *buf, uint32_t len, uint32_t flags) {
     int ret = 0;
     slv_addr = slv_addr >> 1;
     uint32_t xfer_flags = 0;
@@ -193,7 +151,7 @@ int omv_i2c_read_bytes(omv_i2c_t *i2c, uint8_t slv_addr, uint8_t *buf, int len, 
     return ret;
 }
 
-int omv_i2c_write_bytes(omv_i2c_t *i2c, uint8_t slv_addr, uint8_t *buf, int len, uint32_t flags) {
+int omv_i2c_write(omv_i2c_t *i2c, uint8_t slv_addr, uint8_t *buf, uint32_t len, uint32_t flags) {
     int ret = 0;
     slv_addr = slv_addr >> 1;
     uint32_t xfer_flags = 0;

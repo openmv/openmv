@@ -30,8 +30,9 @@ COMMON_SRC_C += \
     mp_utils.c \
     mutex.c \
     nosys_stubs.c \
-    omv_csi.c \
     omv_crc.c \
+    omv_csi.c \
+    omv_i2c.c \
     pendsv.c \
     trace.c \
     umm_malloc.c \
