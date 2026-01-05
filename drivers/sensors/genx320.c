@@ -83,6 +83,7 @@ typedef struct genx_state {
     const struct issd *issd;
     genx_mode_t mode;
     AFK_HandleTypeDef psee_afk;
+    STC_HandleTypeDef psee_stc;
     ec_event_t *events;
 } genx_state_t;
 
@@ -424,6 +425,56 @@ static int ioctl(omv_csi_t *csi, int request, va_list ap) {
             }
             break;
         }
+        case OMV_CSI_IOCTL_GENX320_SET_STC: {
+            int mode = va_arg(ap, int);
+            if (genx->mode != OMV_CSI_GENX320_MODE_EVENT) {
+                ret = -1;
+                break;
+            }
+            switch (mode) {
+                case OMV_CSI_GENX320_STC_DISABLE: {
+                    // Disable STC
+                    if (psee_stc_get_state(&genx->psee_stc) != STC_STATE_RESET &&
+                        psee_stc_trail_deactivate(&genx->psee_stc) != STC_OK) {
+                        ret = -1;
+                    }
+                    break;
+                }
+                case OMV_CSI_GENX320_STC_ONLY: {
+                    // Enable STC: STC-only mode
+                    int stc_threshold = va_arg(ap, int);
+                    if (psee_stc_init(csi, &genx->psee_stc) != STC_OK ||
+                        psee_stc_only_activate(&genx->psee_stc, stc_threshold, EVT_CLK_FREQ) != STC_OK) {
+                        ret = -1;
+                    }
+                    break;
+                }
+                case OMV_CSI_GENX320_STC_TRAIL_ONLY: {
+                    // Enable STC: Trail-only mode
+                    int trail_threshold = va_arg(ap, int);
+                    if (psee_stc_init(csi, &genx->psee_stc) != STC_OK ||
+                        psee_trail_only_activate(&genx->psee_stc, trail_threshold, EVT_CLK_FREQ) != STC_OK) {
+                        ret = -1;
+                    }
+                    break;
+                }
+                case OMV_CSI_GENX320_STC_TRAIL: {
+                    // Enable STC: STC + Trail mode
+                    int stc_threshold = va_arg(ap, int);
+                    int trail_threshold = va_arg(ap, int);
+                    if (psee_stc_init(csi, &genx->psee_stc) != STC_OK ||
+                        psee_stc_trail_activate(&genx->psee_stc, stc_threshold, trail_threshold, EVT_CLK_FREQ) != STC_OK) {
+                        ret = -1;
+                    }
+                    break;
+                }
+                default: {
+                    ret = -1;
+                    break;
+                }
+            }
+            break;
+        }
         case OMV_CSI_IOCTL_GENX320_SET_MODE: {
             int mode = va_arg(ap, int);
 
@@ -690,6 +741,14 @@ static int set_active_mode(omv_csi_t *csi, genx_mode_t mode, int framesize) {
     } else {
         // Operation Mode Configuration
         psee_PM3C_Histo_config(csi);
+    }
+
+    // Enable event mode specific filters
+    if (mode == OMV_CSI_GENX320_MODE_EVENT) {
+        // Enable the Spatio-Temporal Contrast filter
+        if (psee_stc_init(csi, &genx->psee_stc) != STC_OK) {
+            return -1;
+        }
     }
 
     // Set the default border for the Activity map
