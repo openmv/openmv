@@ -18,6 +18,14 @@ COLOR_RED = "\033[91m"    # Bright red
 COLOR_YELLOW = "\033[33m"
 COLOR_RESET = "\033[0m"
 
+UNITTEST_MODULES = [
+    "unittest_fmath",
+    "unittest_collections",
+    "unittest_imlib",
+    "unittest_fb",
+    "unittest_simd",
+]
+
 
 def print_result(test, result, time_ms):
     s = "Unittest (%s)" % (test)
@@ -38,32 +46,41 @@ def main():
     passed_count = 0
     failed_count = 0
     skipped_count = 0
-    tests = os.listdir(TEST_PATH)
+
+    # Python tests from TEST_PATH
+    tests = [(None, t) for t in os.listdir(TEST_PATH)]
+
+    # C unit test modules
+    for mod_name in UNITTEST_MODULES:
+        try:
+            mod = __import__(mod_name)
+            for name in dir(mod):
+                if name.startswith("test_"):
+                    tests.append((mod, name))
+        except ImportError:
+            pass
 
     if not "temp" in os.listdir():
         os.mkdir("temp")  # Make a temp directory
 
     total_start_time = time.ticks_ms()
 
-    try:
-        import unittest as ut
-
-        # Add unit tests from C module.
-        tests.extend([f.split("test_")[1] for f in dir(ut) if f.startswith("test_")])
-    except ImportError:
-        ut = None
-
-    for test in sorted(tests):
+    for mod, test in sorted(tests, key=lambda x: x[1]):
         start_ms = time.ticks_ms()
         try:
-            if test.endswith(".py"):
+            if mod is None:
+                # Python test file
                 with open("/".join((TEST_PATH, test))) as f:
                     buf = f.read()
                 exec(buf)
                 if unittest(DATA_PATH, TEMP_PATH) is False:
                     raise Exception()
-            elif getattr(ut, "test_" + test)() is False:
+            else:
+                # C unit test function
+                if getattr(mod, test)() is False:
                     raise Exception()
+                # Use shorter name for display (strip test_ prefix)
+                test = test.split("test_")[1]
             result = "PASSED"
             passed_count += 1
         except Exception as e:

@@ -62,6 +62,11 @@ USERMOD_DIR := $(USERMOD_DIR)/ulab/code
 include $(USERMOD_DIR)/micropython.mk
 endif
 
+# Add unit test modules if enabled.
+ifeq ($(MICROPY_PY_UNITTEST), 1)
+SRC_USERMOD += $(wildcard $(OMV_MOD_DIR)/unittests/*.c)
+endif
+
 ifeq ($(DEBUG), 0)
 # Use a higher optimization level for user C modules.
 $(BUILD)/modules/%.o: override CFLAGS += $(USERMOD_OPT)
@@ -72,4 +77,3 @@ $(BUILD)/modules/py_ml.o: override CFLAGS += -finstrument-functions
 $(BUILD)/modules/py_image.o: override CFLAGS += -finstrument-functions
 $(BUILD)/modules/ulab/%.o: override CFLAGS += -finstrument-functions
 endif
-
