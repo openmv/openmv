@@ -66,3 +66,23 @@ int omv_i2c_enable(omv_i2c_t *i2c, bool enable) {
     // Dummy implementation
     return 0;
 }
+
+int omv_i2c_gencall(omv_i2c_t *i2c, uint8_t cmd) {
+    // Dummy implementation
+    return 0;
+}
+
+int omv_i2c_read(omv_i2c_t *i2c, uint8_t slv_addr, uint8_t *buf, uint32_t len, uint32_t flags) {
+    // Dummy implementation
+    return 0;
+}
+
+int omv_i2c_write(omv_i2c_t *i2c, uint8_t slv_addr, uint8_t *buf, uint32_t len, uint32_t flags) {
+    // Dummy implementation
+    return 0;
+}
+
+int omv_i2c_pulse_scl(omv_i2c_t *i2c) {
+    // Dummy implementation
+    return 0;
+}

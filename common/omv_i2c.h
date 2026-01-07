@@ -1,7 +1,7 @@
 /*
  * SPDX-License-Identifier: MIT
  *
- * Copyright (C) 2013-2024 OpenMV, LLC.
+ * Copyright (C) 2013-2026 OpenMV, LLC.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -37,7 +37,7 @@ typedef enum _omv_i2c_speed {
     OMV_I2C_SPEED_MAX      = (3U)
 } omv_i2c_speed_t;
 
-// For use with read/write_bytes
+// Transfer flags for omv_i2c_read/write
 typedef enum omv_i2c_xfer_flags {
     // Stop condition after the transfer.
     // Normal transfer with start condition, address, data and stop condition.
@@ -74,14 +74,21 @@ int omv_i2c_scan(omv_i2c_t *i2c, uint8_t *list, uint8_t size);
 int omv_i2c_enable(omv_i2c_t *i2c, bool enable);
 int omv_i2c_gencall(omv_i2c_t *i2c, uint8_t cmd);
 int omv_i2c_pulse_scl(omv_i2c_t *i2c);
-int omv_i2c_readb(omv_i2c_t *i2c, uint8_t slv_addr, uint8_t reg_addr,  uint8_t *reg_data);
-int omv_i2c_writeb(omv_i2c_t *i2c, uint8_t slv_addr, uint8_t reg_addr, uint8_t reg_data);
-int omv_i2c_readb2(omv_i2c_t *i2c, uint8_t slv_addr, uint16_t reg_addr,  uint8_t *reg_data);
-int omv_i2c_writeb2(omv_i2c_t *i2c, uint8_t slv_addr, uint16_t reg_addr, uint8_t reg_data);
-int omv_i2c_readw(omv_i2c_t *i2c, uint8_t slv_addr, uint8_t reg_addr,  uint16_t *reg_data);
-int omv_i2c_writew(omv_i2c_t *i2c, uint8_t slv_addr, uint8_t reg_addr, uint16_t reg_data);
-int omv_i2c_readw2(omv_i2c_t *i2c, uint8_t slv_addr, uint16_t reg_addr,  uint16_t *reg_data);
-int omv_i2c_writew2(omv_i2c_t *i2c, uint8_t slv_addr, uint16_t reg_addr, uint16_t reg_data);
-int omv_i2c_read_bytes(omv_i2c_t *i2c, uint8_t slv_addr, uint8_t *buf, int len, uint32_t flags);
-int omv_i2c_write_bytes(omv_i2c_t *i2c, uint8_t slv_addr, uint8_t *buf, int len, uint32_t flags);
+
+// Low-level multi-byte transfers (ports must implement these)
+int omv_i2c_read(omv_i2c_t *i2c, uint8_t slv_addr, uint8_t *buf, uint32_t len, uint32_t flags);
+int omv_i2c_write(omv_i2c_t *i2c, uint8_t slv_addr, uint8_t *buf, uint32_t len, uint32_t flags);
+
+// SCCB protocol: 8-bit address/data and no repeated START
+int omv_i2c_read_sccb(omv_i2c_t *i2c, uint8_t slv_addr, uint8_t reg_addr, uint8_t *data);
+int omv_i2c_write_sccb(omv_i2c_t *i2c, uint8_t slv_addr, uint8_t reg_addr, uint8_t data);
+
+// Register access with configurable address/data sizes
+int omv_i2c_read_reg(omv_i2c_t *i2c, uint8_t slv_addr,
+                     uint32_t reg_addr, uint8_t addr_size,
+                     void *data, uint8_t data_size);
+int omv_i2c_write_reg(omv_i2c_t *i2c, uint8_t slv_addr,
+                      uint32_t reg_addr, uint8_t addr_size,
+                      uint32_t data, uint8_t data_size);
+
 #endif // __OMV_I2C_H__

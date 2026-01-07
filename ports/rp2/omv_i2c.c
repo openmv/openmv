@@ -113,27 +113,7 @@ int omv_i2c_gencall(omv_i2c_t *i2c, uint8_t cmd) {
     return (bytes == 1) ? 0 : -1;
 }
 
-int omv_i2c_readb(omv_i2c_t *i2c, uint8_t slv_addr, uint8_t reg_addr,  uint8_t *reg_data) {
-    int bytes = 0;
-    slv_addr = slv_addr >> 1;
-
-    bytes += i2c_write_timeout_us(i2c->inst, slv_addr, &reg_addr, 1, false, I2C_TIMEOUT);
-    bytes += i2c_read_timeout_us(i2c->inst, slv_addr, reg_data, 1, false, I2C_TIMEOUT);
-
-    return (bytes == 2) ? 0 : -1;
-}
-
-int omv_i2c_writeb(omv_i2c_t *i2c, uint8_t slv_addr, uint8_t reg_addr, uint8_t reg_data) {
-    int bytes = 0;
-    slv_addr = slv_addr >> 1;
-
-    uint8_t buf[] = {reg_addr, reg_data};
-    bytes = i2c_write_timeout_us(i2c->inst, slv_addr, buf, 2, false, I2C_TIMEOUT);
-
-    return (bytes == 2) ? 0 : -1;
-}
-
-int omv_i2c_read_bytes(omv_i2c_t *i2c, uint8_t slv_addr, uint8_t *buf, int len, uint32_t flags) {
+int omv_i2c_read(omv_i2c_t *i2c, uint8_t slv_addr, uint8_t *buf, uint32_t len, uint32_t flags) {
     int bytes = 0;
     slv_addr = slv_addr >> 1;
     bool nostop = false;
@@ -147,7 +127,7 @@ int omv_i2c_read_bytes(omv_i2c_t *i2c, uint8_t slv_addr, uint8_t *buf, int len, 
     return (bytes == len) ? 0 : -1;
 }
 
-int omv_i2c_write_bytes(omv_i2c_t *i2c, uint8_t slv_addr, uint8_t *buf, int len, uint32_t flags) {
+int omv_i2c_write(omv_i2c_t *i2c, uint8_t slv_addr, uint8_t *buf, uint32_t len, uint32_t flags) {
     int bytes = 0;
     slv_addr = slv_addr >> 1;
     bool nostop = false;

@@ -266,68 +266,7 @@ int omv_i2c_enable(omv_i2c_t *i2c, bool enable) {
 
 int omv_i2c_gencall(omv_i2c_t *i2c, uint8_t cmd) {
     int ret = 0;
-    ret |= omv_i2c_write_bytes(i2c, 0, &cmd, 1, OMV_I2C_XFER_NO_FLAGS);
-    return ret;
-
-}
-
-int omv_i2c_readb(omv_i2c_t *i2c, uint8_t slv_addr, uint8_t reg_addr,  uint8_t *reg_data) {
-    int ret = 0;
-    ret |= omv_i2c_write_bytes(i2c, slv_addr, &reg_addr, 1, OMV_I2C_XFER_NO_FLAGS);
-    ret |= omv_i2c_read_bytes(i2c, slv_addr, reg_data, 1, OMV_I2C_XFER_NO_FLAGS);
-    return ret;
-}
-
-int omv_i2c_writeb(omv_i2c_t *i2c, uint8_t slv_addr, uint8_t reg_addr, uint8_t reg_data) {
-    int ret = 0;
-    uint8_t buf[] = {reg_addr, reg_data};
-    ret |= omv_i2c_write_bytes(i2c, slv_addr, buf, 2, OMV_I2C_XFER_NO_FLAGS);
-    return ret;
-}
-
-int omv_i2c_readb2(omv_i2c_t *i2c, uint8_t slv_addr, uint16_t reg_addr, uint8_t *reg_data) {
-    int ret = 0;
-    uint8_t buf[] = {(reg_addr >> 8), reg_addr};
-    ret |= omv_i2c_write_bytes(i2c, slv_addr, buf, 2, OMV_I2C_XFER_NO_STOP);
-    ret |= omv_i2c_read_bytes(i2c, slv_addr, reg_data, 1, OMV_I2C_XFER_NO_FLAGS);
-    return ret;
-}
-
-int omv_i2c_writeb2(omv_i2c_t *i2c, uint8_t slv_addr, uint16_t reg_addr, uint8_t reg_data) {
-    int ret = 0;
-    uint8_t buf[] = {(reg_addr >> 8), reg_addr, reg_data};
-    ret |= omv_i2c_write_bytes(i2c, slv_addr, buf, 3, OMV_I2C_XFER_NO_FLAGS);
-    return ret;
-}
-
-int omv_i2c_readw(omv_i2c_t *i2c, uint8_t slv_addr, uint8_t reg_addr, uint16_t *reg_data) {
-    int ret = 0;
-    ret |= omv_i2c_write_bytes(i2c, slv_addr, &reg_addr, 1, OMV_I2C_XFER_NO_STOP);
-    ret |= omv_i2c_read_bytes(i2c, slv_addr, (uint8_t *) reg_data, 2, OMV_I2C_XFER_NO_FLAGS);
-    *reg_data = (*reg_data << 8) | (*reg_data >> 8);
-    return ret;
-}
-
-int omv_i2c_writew(omv_i2c_t *i2c, uint8_t slv_addr, uint8_t reg_addr, uint16_t reg_data) {
-    int ret = 0;
-    uint8_t buf[] = {reg_addr, (reg_data >> 8), reg_data};
-    ret |= omv_i2c_write_bytes(i2c, slv_addr, buf, 3, OMV_I2C_XFER_NO_FLAGS);
-    return ret;
-}
-
-int omv_i2c_readw2(omv_i2c_t *i2c, uint8_t slv_addr, uint16_t reg_addr, uint16_t *reg_data) {
-    int ret = 0;
-    uint8_t buf[] = {(reg_addr >> 8), reg_addr};
-    ret |= omv_i2c_write_bytes(i2c, slv_addr, buf, 2, OMV_I2C_XFER_NO_STOP);
-    ret |= omv_i2c_read_bytes(i2c, slv_addr, (uint8_t *) reg_data, 2, OMV_I2C_XFER_NO_FLAGS);
-    *reg_data = (*reg_data << 8) | (*reg_data >> 8);
-    return ret;
-}
-
-int omv_i2c_writew2(omv_i2c_t *i2c, uint8_t slv_addr, uint16_t reg_addr, uint16_t reg_data) {
-    int ret = 0;
-    uint8_t buf[] = {(reg_addr >> 8), reg_addr, (reg_data >> 8), reg_data};
-    ret |= omv_i2c_write_bytes(i2c, slv_addr, buf, 4, OMV_I2C_XFER_NO_FLAGS);
+    ret |= omv_i2c_write(i2c, 0, &cmd, 1, OMV_I2C_XFER_NO_FLAGS);
     return ret;
 }
 
@@ -467,7 +406,7 @@ static int omv_ixc_transfer_timeout(omv_i2c_t *i2c, i2c_transfer_t *xfer, uint32
 }
 
 
-int omv_i2c_read_bytes(omv_i2c_t *i2c, uint8_t slv_addr, uint8_t *buf, int len, uint32_t flags) {
+int omv_i2c_read(omv_i2c_t *i2c, uint8_t slv_addr, uint8_t *buf, uint32_t len, uint32_t flags) {
     i2c_transfer_t xfer = {
         .data = buf,
         .size = len,
@@ -478,7 +417,7 @@ int omv_i2c_read_bytes(omv_i2c_t *i2c, uint8_t slv_addr, uint8_t *buf, int len, 
     return omv_ixc_transfer_timeout(i2c, &xfer, I2C_XFER_TIMEOUT);
 }
 
-int omv_i2c_write_bytes(omv_i2c_t *i2c, uint8_t slv_addr, uint8_t *buf, int len, uint32_t flags) {
+int omv_i2c_write(omv_i2c_t *i2c, uint8_t slv_addr, uint8_t *buf, uint32_t len, uint32_t flags) {
     i2c_transfer_t xfer = {
         .data = buf,
         .size = len,

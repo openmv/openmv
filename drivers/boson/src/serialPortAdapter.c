@@ -44,14 +44,14 @@ void FSLP_set_csi(omv_csi_t *csi) {
 
 static uint8_t read_reg(uint8_t addr){
     uint8_t buf;
-    omv_i2c_write_bytes(omv_csi->i2c, omv_csi->slv_addr, &addr, 1, OMV_I2C_XFER_NO_STOP);
-    omv_i2c_read_bytes(omv_csi->i2c, omv_csi->slv_addr, &buf, 1, OMV_I2C_XFER_NO_FLAGS);
+    omv_i2c_write(omv_csi->i2c, omv_csi->slv_addr, &addr, 1, OMV_I2C_XFER_NO_STOP);
+    omv_i2c_read(omv_csi->i2c, omv_csi->slv_addr, &buf, 1, OMV_I2C_XFER_NO_FLAGS);
     return buf;
 }
 
 static void write_reg(uint8_t addr, uint8_t data) {
     uint8_t buf[] = {addr, data};
-    omv_i2c_write_bytes(omv_csi->i2c, omv_csi->slv_addr, buf, 2, OMV_I2C_XFER_NO_FLAGS);
+    omv_i2c_write(omv_csi->i2c, omv_csi->slv_addr, buf, 2, OMV_I2C_XFER_NO_FLAGS);
 }
 
 uint8_t FSLP_open_port() {
