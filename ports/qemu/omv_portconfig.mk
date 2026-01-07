@@ -161,10 +161,6 @@ $(ROMFS_IMAGE): $(ROMFS_CONFIG) | $(FIRMWARE)
 QEMU_SYSTEM = qemu-system-arm
 QEMU_ARGS += -machine $(QEMU_MACHINE) -nographic -monitor null -semihosting
 
-ifeq ($(DEBUG), 1)
-QEMU_ARGS += -s -S
-endif
-
 run: $(ROMFS_IMAGE)
 	$(QEMU_SYSTEM) $(QEMU_ARGS) -serial pty -kernel $(FW_DIR)/$(FIRMWARE).elf
 
