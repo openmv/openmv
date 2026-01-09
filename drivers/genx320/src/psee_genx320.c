@@ -2823,6 +2823,110 @@ const STC_ParamsTypeDef params_25[] = {
     {13, 1, 635},
     {13, 1, 635}};
 
+/* Params for 48MHZ clock */
+const STC_ParamsTypeDef params_48[] = {
+    {0, 0, 0},
+    {9, 5, 27},
+    {11, 11, 39},
+    {8, 1, 35},
+    {10, 3, 49},
+    {11, 5, 59},
+    {12, 9, 31},
+    {13, 15, 38},
+    {13, 13, 45},
+    {11, 3, 49},
+    {13, 11, 54},
+    {12, 5, 59},
+    {13, 9, 67},
+    {10, 1, 75},
+    {14, 15, 81},
+    {13, 7, 87},
+    {14, 13, 94},
+    {14, 13, 94},
+    {12, 3, 102},
+    {14, 11, 112},
+    {14, 11, 112},
+    {13, 5, 123},
+    {13, 5, 123},
+    {14, 9, 138},
+    {14, 9, 138},
+    {11, 1, 315},
+    {11, 1, 155},
+    {11, 1, 155},
+    {15, 15, 166},
+    {15, 15, 166},
+    {14, 7, 178},
+    {14, 7, 178},
+    {15, 13, 192},
+    {15, 13, 192},
+    {15, 13, 192},
+    {13, 3, 209},
+    {13, 3, 209},
+    {15, 11, 461},
+    {15, 11, 228},
+    {15, 11, 228},
+    {15, 11, 228},
+    {14, 5, 251},
+    {14, 5, 251},
+    {14, 5, 251},
+    {14, 5, 251},
+    {15, 9, 564},
+    {15, 9, 280},
+    {15, 9, 280},
+    {15, 9, 280},
+    {15, 9, 280},
+    {12, 1, 635},
+    {12, 1, 635},
+    {12, 1, 315},
+    {12, 1, 315},
+    {12, 1, 315},
+    {12, 1, 315},
+    {16, 15, 337},
+    {16, 15, 337},
+    {16, 15, 337},
+    {15, 7, 361},
+    {15, 7, 361},
+    {15, 7, 361},
+    {15, 7, 361},
+    {15, 7, 361},
+    {16, 13, 389},
+    {16, 13, 389},
+    {16, 13, 389},
+    {16, 13, 389},
+    {16, 13, 389},
+    {14, 3, 422},
+    {14, 3, 422},
+    {14, 3, 422},
+    {14, 3, 422},
+    {14, 3, 422},
+    {16, 11, 926},
+    {16, 11, 461},
+    {16, 11, 461},
+    {16, 11, 461},
+    {16, 11, 461},
+    {16, 11, 461},
+    {16, 11, 461},
+    {15, 5, 1019},
+    {15, 5, 507},
+    {15, 5, 507},
+    {15, 5, 507},
+    {15, 5, 507},
+    {15, 5, 507},
+    {15, 5, 507},
+    {15, 5, 507},
+    {16, 9, 1133},
+    {16, 9, 1133},
+    {16, 9, 1133},
+    {16, 9, 564},
+    {16, 9, 564},
+    {16, 9, 564},
+    {16, 9, 564},
+    {16, 9, 564},
+    {16, 9, 564},
+    {16, 9, 564},
+    {13, 1, 1275},
+    {13, 1, 1275}};
+
 /* Params for 50MHZ clock */
 const STC_ParamsTypeDef params_50[] = {
     {0, 0, 0},
@@ -2941,6 +3045,8 @@ static STC_ParamsTypeDef psee_stc_params(STC_HandleTypeDef *stc, uint32_t thresh
         stc_params = params_10;
     } else if (evt_clk_freq == 25) {
         stc_params = params_25;
+    } else if (evt_clk_freq == 48) {
+        stc_params = params_48;
     } else if (evt_clk_freq == 50) {
         stc_params = params_50;
     }
@@ -2993,7 +3099,7 @@ STC_StatusTypeDef psee_stc_only_activate(STC_HandleTypeDef *stc, uint32_t stc_th
     }
 
     /* Assert Clock Param */
-    if ((evt_clk_freq != 10) && (evt_clk_freq != 24) && (evt_clk_freq != 25) && (evt_clk_freq != 50)) {
+    if ((evt_clk_freq != 10) && (evt_clk_freq != 24) && (evt_clk_freq != 25) && (evt_clk_freq != 48) && (evt_clk_freq != 50)) {
         return STC_CLK_ERROR;
     }
 
@@ -3084,7 +3190,7 @@ STC_StatusTypeDef psee_trail_only_activate(STC_HandleTypeDef *stc, uint32_t trai
     }
 
     /* Assert Clock Param */
-    if ((evt_clk_freq != 10) && (evt_clk_freq != 24) && (evt_clk_freq != 25) && (evt_clk_freq != 50)) {
+    if ((evt_clk_freq != 10) && (evt_clk_freq != 24) && (evt_clk_freq != 25) && (evt_clk_freq != 48) && (evt_clk_freq != 50)) {
         return STC_CLK_ERROR;
     }
 
@@ -3176,7 +3282,7 @@ STC_StatusTypeDef psee_stc_trail_activate(STC_HandleTypeDef *stc, uint32_t stc_t
     }
 
     /* Assert Clock Param */
-    if ((evt_clk_freq != 10) && (evt_clk_freq != 24) && (evt_clk_freq != 25) && (evt_clk_freq != 50)) {
+    if ((evt_clk_freq != 10) && (evt_clk_freq != 24) && (evt_clk_freq != 25) && (evt_clk_freq != 48) && (evt_clk_freq != 50)) {
         return STC_CLK_ERROR;
     }
 
