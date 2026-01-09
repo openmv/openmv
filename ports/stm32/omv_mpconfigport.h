@@ -50,7 +50,9 @@
 #define MICROPY_BANNER_NAME_AND_VERSION "OpenMV " OPENMV_GIT_TAG "; MicroPython " MICROPY_GIT_TAG
 #define MICROPY_BOARD_FATAL_ERROR           __fatal_error
 #define MICROPY_HW_DMA_ENABLE_AUTO_TURN_OFF (0)
+#if defined(ARDUINO_PORTENTA_H7)
 #define MICROPY_HW_ETH_DMA_ATTRIBUTE        __attribute__((aligned(16384), section(".dma_buffer")));
+#endif
 
 void __fatal_error(const char *);
 #define MICROPY_BOARD_FATAL_ERROR           __fatal_error
