@@ -2427,7 +2427,7 @@ HAL_StatusTypeDef HAL_SD_ConfigWideBusOperation(SD_HandleTypeDef *hsd, uint32_t 
     Init.HardwareFlowControl = hsd->Init.HardwareFlowControl;
 
     /* Check if user Clock div < Normal speed 25Mhz, no change in Clockdiv */
-    if(hsd->Init.ClockDiv >= SDMMC_NSpeed_CLK_DIV)
+    if(hsd->Init.ClockDiv >= SDMMC_NSPEED_CLK_DIV)
     {
       Init.ClockDiv = hsd->Init.ClockDiv;
     }
@@ -2439,12 +2439,12 @@ HAL_StatusTypeDef HAL_SD_ConfigWideBusOperation(SD_HandleTypeDef *hsd, uint32_t 
     else if (hsd->SdCard.CardSpeed == CARD_HIGH_SPEED)
     {
       /* High speed SD card, Max Frequency = 50Mhz */
-      Init.ClockDiv = SDMMC_HSpeed_CLK_DIV;
+      Init.ClockDiv = SDMMC_HSPEED_CLK_DIV;
     }
     else
     {
       /* No High speed SD card, Max Frequency = 25Mhz */
-      Init.ClockDiv = SDMMC_NSpeed_CLK_DIV;
+      Init.ClockDiv = SDMMC_NSPEED_CLK_DIV;
     }
 
     (void)SDMMC_Init(hsd->Instance, Init);

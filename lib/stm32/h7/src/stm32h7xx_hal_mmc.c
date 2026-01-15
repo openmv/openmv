@@ -3252,7 +3252,7 @@ static uint32_t MMC_HighSpeed(MMC_HandleTypeDef *hmmc, FunctionalState state)
         }
         else
         {
-          Init.ClockDiv = SDMMC_HSpeed_CLK_DIV;
+          Init.ClockDiv = SDMMC_HSPEED_CLK_DIV;
           (void)SDMMC_Init(hmmc->Instance, Init);
           
           SET_BIT(hmmc->Instance->CLKCR, SDMMC_CLKCR_BUSSPEED);

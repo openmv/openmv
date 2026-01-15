@@ -698,10 +698,10 @@ typedef struct
 #define SDMMC_INIT_CLK_DIV ((uint8_t)0x3C)
 
 /* SDMMC Default Speed Frequency (48Mhz max) for Peripheral CLK 48MHz*/
-#define SDMMC_NSpeed_CLK_DIV ((uint8_t)0x0)
+#define SDMMC_NSPEED_CLK_DIV ((uint8_t)0x0)
 
 /* SDMMC High Speed Frequency (48Mhz max) for Peripheral CLK 48MHz*/
-#define SDMMC_HSpeed_CLK_DIV ((uint8_t)0x0)
+#define SDMMC_HSPEED_CLK_DIV ((uint8_t)0x0)
 /**
   * @}
   */
