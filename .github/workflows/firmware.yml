@@ -77,7 +77,7 @@ jobs:
       run: source tools/ci.sh && ci_update_submodules
 
     - name: '♻ Caching dependencies'
-      uses: actions/cache@v5.0.1
+      uses: actions/cache@v5.0.2
       id: cache
       with:
         path: |
@@ -144,7 +144,7 @@ jobs:
         submodules: false
 
     - name: '♻ Caching dependencies'
-      uses: actions/cache@v5.0.1
+      uses: actions/cache@v5.0.2
       id: cache
       with:
         path: |
