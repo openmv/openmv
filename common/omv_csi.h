@@ -238,6 +238,7 @@ typedef enum {
     OMV_CSI_IOCTL_GENX320_SET_MODE      = 0x23,
     OMV_CSI_IOCTL_GENX320_READ_EVENTS   = 0x24,
     OMV_CSI_IOCTL_GENX320_CALIBRATE     = 0x25,
+    OMV_CSI_IOCTL_GENX320_SET_STC       = 0x26,
     OMV_CSI_IOCTL_UPDATE_AGC_AEC        = 0x7F
 } omv_csi_ioctl_t;
 
@@ -287,6 +288,13 @@ typedef enum {
     OMV_CSI_GENX320_BIAS_HPF,
     OMV_CSI_GENX320_BIAS_REFR
 } omv_csi_genx320_bias_t;
+
+typedef enum {
+    OMV_CSI_GENX320_STC_DISABLE,
+    OMV_CSI_GENX320_STC_ONLY,
+    OMV_CSI_GENX320_STC_TRAIL_ONLY,
+    OMV_CSI_GENX320_STC_TRAIL
+} omv_csi_stc_modes_t;
 #endif
 
 typedef struct _omv_csi omv_csi_t;
