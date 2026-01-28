@@ -317,7 +317,12 @@ static mp_obj_t py_csi_framesize(size_t n_args, const mp_obj_t *args) {
         if (self->csi->framesize == OMV_CSI_FRAMESIZE_INVALID) {
             omv_csi_raise_error(OMV_CSI_ERROR_INVALID_FRAMESIZE);
         }
-        return mp_obj_new_int(self->csi->framesize);
+        if (self->csi->framesize != OMV_CSI_FRAMESIZE_CUSTOM) {
+            return mp_obj_new_int(self->csi->framesize);
+        } else {
+            return mp_obj_new_tuple(2, (mp_obj_t []) {mp_obj_new_int(self->csi->resolution[self->csi->framesize][0]),
+                                                      mp_obj_new_int(self->csi->resolution[self->csi->framesize][1])});
+        }
     }
 
     omv_csi_framesize_t framesize;
