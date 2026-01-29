@@ -38,10 +38,6 @@ def sigmoid(x):
     return 1.0 / (1.0 + np.exp(-x))
 
 
-def mod(a, b):
-    return a - (b * (a // b))
-
-
 def threshold(scores, threshold, scale, find_max=False, find_max_axis=1):
     if scale > 0:
         if find_max:

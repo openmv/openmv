@@ -64,7 +64,7 @@ class Fomo:
 
         # Extract rows and columns
         bb_rows = score_indices // ow
-        bb_cols = mod(score_indices, ow)
+        bb_cols = score_indices % ow
 
         # Get the score information
         bb_scores = np.max(bb[:, _FOMO_CLASSES:], axis=1)
