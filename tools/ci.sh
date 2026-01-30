@@ -77,9 +77,22 @@ ci_package_firmware_development() {
 
 ########################################################################################
 # Install STEdgeAI tools
-STEDGEAI_URL="https://upload.openmv.io/stedgeai/STEdgeAI-3.0.0.tar.gz"
-STEDGEAI_SHA256="cd379c4e4815fa20c2d00993658a73e82b792093a5a83e0f2231106b0806acd9"
+STEDGEAI_BASE_URL="https://upload.openmv.io/stedgeai"
 STEDGEAI_CACHE="${HOME}/cache/stedgeai"
+
+case "$(uname -s)-$(uname -m)" in
+    Linux-x86_64)
+        STEDGEAI_URL="${STEDGEAI_BASE_URL}/STEdgeAI-3.0.0-linux-x86_64.tar.gz"
+        STEDGEAI_SHA256="55e31c2a541048616d7a0899de3906acf68655c21fe497eae3c983d067393099"
+        ;;
+    Darwin-arm64)
+        STEDGEAI_URL="${STEDGEAI_BASE_URL}/STEdgeAI-3.0.0-darwin-arm64.tar.gz"
+        STEDGEAI_SHA256="a4bc2605a78bc866b94517e90fac1e930431f4061e0c1265cd78f987963e383f"
+        ;;
+    *)
+        echo "Unsupported platform: $(uname -s)-$(uname -m)"
+        ;;
+esac
 
 ci_install_stedgeai() {
     STEDGEAI_PATH="${1}"
