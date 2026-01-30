@@ -37,6 +37,7 @@ export ECHO    = $(Q)@echo
 export MAKE    = $(Q)make
 export CAT     = $(Q)cat
 export MKROMFS = mkromfs.py
+export MACHINE = $(shell uname -m)
 
 # Targets
 export OPENMV ?= openmv
