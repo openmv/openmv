@@ -16,7 +16,7 @@ MAKEFLAGS += --silent
 endif
 
 # Default path to LLVM toolchain.
-LLVM_PATH ?=/opt/LLVM-ET-Arm-18.1.3-Linux-x86_64/bin/
+LLVM_PATH ?=$(wildcard /opt/LLVM-ET-Arm-*/bin)
 
 # Commands
 export CC      = $(Q)arm-none-eabi-gcc
