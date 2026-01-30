@@ -29,9 +29,9 @@ MCU_SERIES_UPPER := $(shell echo $(MCU_SERIES) | tr '[:lower:]' '[:upper:]')
 MCU_LOWER   := $(shell echo $(MCU) | tr '[:upper:]' '[:lower:]')
 HAL_DIR     := lib/stm32/$(MCU_SERIES)
 CMSIS_INC   := st
-CUBE_DIR    := $(TOOLS_DIR)/st/cubeprog/bin/
+CUBE_DIR    := $(TOOLS_DIR)/st/cubeprog/$(MACHINE)/bin/
 
-SIGN_TOOL = $(CUBE_DIR)STM32MP_SigningTool_CLI
+SIGN_TOOL = $(CUBE_DIR)STM32_SigningTool_CLI
 PROG_TOOL = $(CUBE_DIR)STM32_Programmer_CLI
 STLDR_DIR = $(CUBE_DIR)ExternalLoader/
 
