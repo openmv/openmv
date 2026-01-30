@@ -1,0 +1,600 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Root xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="SCHVerif.xsd">
+<Device>
+		<DeviceID>0x434</DeviceID>
+		<Vendor>STMicroelectronics</Vendor>
+		<Type>MCU</Type>
+		<CPU>Cortex-M4</CPU>
+		<Name>STM32F469xx/F467xx</Name>
+		<Series>STM32F4</Series>
+		<Description>ARM 32-bit Cortex-M4 based device</Description>
+		<Configurations>
+			<!-- JTAG_SWD Interface -->
+			<Interface name="JTAG_SWD">
+				<Configuration number="0x0">
+					<SPRMode reference="0x0"> <ReadRegister address="0x40023C14" mask="0x80000000" value="0x0"/> </SPRMode>
+					<flashSize> <!-- 2M --><ReadRegister address="0x1FFF7A22" mask="0xFFFF" value="0x800"/> </flashSize>
+				</Configuration>
+				<Configuration number="0x1">
+					<SPRMode reference="0x1"> <ReadRegister address="0x40023C14" mask="0x80000000" value="0x0"/> </SPRMode>
+					<flashSize> <!-- 2M --><ReadRegister address="0x1FFF7A22" mask="0xFFFF" value="0x800"/> </flashSize>
+				</Configuration>
+				<Configuration number="0x2">
+					<SPRMode reference="0x0"> <ReadRegister address="0x40023C14" mask="0x80000000" value="0x0"/> </SPRMode>
+					<flashSize> <!-- 1M --><ReadRegister address="0x1FFF7A22" mask="0xFFFF" value="0x400"/> </flashSize>
+					<DB1M reference="0x0"> <ReadRegister address="0x40023C14" mask="0x40000000" value="0x0"/> </DB1M>
+				</Configuration>
+				<Configuration number="0x3">
+					<SPRMode reference="0x1"> <ReadRegister address="0x40023C14" mask="0x80000000" value="0x0"/> </SPRMode>
+					<flashSize> <!-- 1M --><ReadRegister address="0x1FFF7A22" mask="0xFFFF" value="0x400"/> </flashSize>
+					<DB1M reference="0x0"> <ReadRegister address="0x40023C14" mask="0x40000000" value="0x0"/> </DB1M>
+				</Configuration>
+				<Configuration number="0x4">
+					<SPRMode reference="0x0"> <ReadRegister address="0x40023C14" mask="0x80000000" value="0x0"/> </SPRMode>
+					<flashSize> <!-- 1M --><ReadRegister address="0x1FFF7A22" mask="0xFFFF" value="0x400"/> </flashSize>
+					<DB1M reference="0x1"> <ReadRegister address="0x40023C14" mask="0x40000000" value="0x40000000"/> </DB1M>
+				</Configuration>
+				<Configuration number="0x5">
+					<SPRMode reference="0x1"> <ReadRegister address="0x40023C14" mask="0x80000000" value="0x0"/> </SPRMode>
+					<flashSize> <!-- 1M --><ReadRegister address="0x1FFF7A22" mask="0xFFFF" value="0x400"/> </flashSize>
+					<DB1M reference="0x1"> <ReadRegister address="0x40023C14" mask="0x40000000" value="0x40000000"/> </DB1M>
+				</Configuration>
+				<Configuration number="0x6">
+					<dummy> <ReadRegister address="0x20000000" mask="0" value="0"/> </dummy>
+				</Configuration>
+			</Interface>
+			<!-- Bootloader Interface -->
+			<Interface name="Bootloader">
+				<Configuration number="0x0">
+					<SPRMode reference="0x0"> <ReadRegister address="0x1FFFC008" mask="0x8000" value="0x0"/> </SPRMode>
+				</Configuration>
+				<Configuration number="0x1">
+					<SPRMode reference="0x1"> <ReadRegister address="0x1FFFC008" mask="0x8000" value="0x8000"/> </SPRMode>
+				</Configuration>
+				<Configuration number="0x2">
+					<SPRMode reference="0x0"> <ReadRegister address="0x1FFFC008" mask="0x8000" value="0x0"/> </SPRMode>
+					<DB1M reference="0x0"> <ReadRegister address="0x1FFFC008" mask="0x4000" value="0x0"/> </DB1M>
+				</Configuration>
+				<Configuration number="0x3">
+					<SPRMode reference="0x1"> <ReadRegister address="0x1FFFC008" mask="0x8000" value="0x8000"/> </SPRMode>
+					<DB1M reference="0x0"> <ReadRegister address="0x1FFFC008" mask="0x4000" value="0x0"/> </DB1M>
+				</Configuration>
+				<Configuration number="0x4">
+					<SPRMode reference="0x0"> <ReadRegister address="0x1FFFC008" mask="0x8000" value="0x0"/> </SPRMode>
+					<DB1M reference="0x1"> <ReadRegister address="0x1FFFC008" mask="0x4000" value="0x4000"/> </DB1M>
+				</Configuration>
+				<Configuration number="0x5">
+					<SPRMode reference="0x1"> <ReadRegister address="0x1FFFC008" mask="0x8000" value="0x8000"/> </SPRMode>
+					<DB1M reference="0x1"> <ReadRegister address="0x1FFFC008" mask="0x4000" value="0x4000"/> </DB1M>
+				</Configuration>
+				<Configuration number="0x6">
+					<dummy> <ReadRegister address="0x20000000" mask="0" value="0"/> </dummy>
+				</Configuration>
+			</Interface>
+		</Configurations>
+		<!-- Peripherals -->
+		<Peripherals>
+			<!-- Embedded SRAM -->
+			<Peripheral>
+				<Name>Embedded SRAM</Name>
+				<Type>Storage</Type>
+				<Description/>
+				<ErasedValue>0x00</ErasedValue>
+				<Access>RWE</Access>
+				<!-- 320 KB 0x50000-->
+				<Configuration>
+					<Parameters address="0x20000000" name="SRAM" size="0x50000"/>
+					<Description/>
+					<Organization>Single</Organization>
+					<Bank name="Bank 1">
+						<Field>
+							<Parameters address="0x20000000" name="SRAM" occurrence="0x1" size="0x50000"/>
+						</Field>
+					</Bank>
+				</Configuration>
+			</Peripheral>
+			<!-- Embedded Flash -->
+			<Peripheral>
+				<Name>Embedded Flash</Name>
+				<Type>Storage</Type>
+				<Description>The Flash memory interface manages CPU AHB I-Code and D-Code accesses to the Flash memory. It implements the erase and program Flash memory operations and the read and write protection mechanisms</Description>
+				<ErasedValue>0xFF</ErasedValue>
+				<Access>RWE</Access>
+				<FlashSize address="0x1FFF7A22" default="0x200000"/>
+				<BootloaderVersion address="0x1FFF76DE"/>
+				<!-- 1024KB Single Bank -->
+				<Configuration config="0,1,6">
+					<Parameters address="0x08000000" name=" 2048 Kbytes Embedded Flash" size="0x200000"/>
+					<Description/>
+					<Organization>Dual</Organization>
+					<Alignment>0x4</Alignment>
+					<Bank name="Bank 1">
+						<Field>
+							<Parameters address="0x08000000" name="sector0" occurrence="0x4" size="0x4000"/>
+						</Field>
+						<Field>
+							<Parameters address="0x08010000" name="sector4" occurrence="0x1" size="0x10000"/>
+						</Field>
+						<Field>
+							<Parameters address="0x08020000" name="sector5" occurrence="0x7" size="0x20000"/>
+						</Field>
+					</Bank>
+					<Bank name="Bank 2">
+						<Field>
+							<Parameters address="0x08100000" name="sector12" occurrence="0x4" size="0x4000"/>
+						</Field>
+						<Field>
+							<Parameters address="0x08110000" name="sector16" occurrence="0x1" size="0x10000"/>
+						</Field>
+						<Field>
+							<Parameters address="0x08120000" name="sector17" occurrence="0x7" size="0x20000"/>
+						</Field>
+					</Bank>
+				</Configuration>
+				<Configuration config="4,5">
+					<Parameters address="0x08000000" name=" 1024 Kbytes Embedded Flash" size="0x100000"/>
+					<Description/>
+					<Organization>Dual</Organization>
+					<Alignment>0x4</Alignment>
+					<Bank name="Bank 1">
+						<Field>
+							<Parameters address="0x08000000" name="sector0" occurrence="0x4" size="0x4000"/>
+						</Field>
+						<Field>
+							<Parameters address="0x08010000" name="sector4" occurrence="0x1" size="0x10000"/>
+						</Field>
+						<Field>
+							<Parameters address="0x08020000" name="sector5" occurrence="0x3" size="0x20000"/>
+						</Field>
+					</Bank>
+					<Bank name="Bank 2">
+						<Field>
+							<Parameters address="0x08080000" name="sector8" occurrence="0x4" size="0x20000"/>
+						</Field>
+					</Bank>
+				</Configuration>
+				<Configuration config="2,3">
+					<Parameters address="0x08000000" name=" 1024 Kbytes Embedded Flash" size="0x100000"/>
+					<Description/>
+					<Organization>Single</Organization>
+					<Alignment>0x4</Alignment>
+					<Bank name="Bank 1">
+						<Field>
+							<Parameters address="0x08000000" name="sector0" occurrence="0x4" size="0x4000"/>
+						</Field>
+						<Field>
+							<Parameters address="0x08010000" name="sector4" occurrence="0x1" size="0x10000"/>
+						</Field>
+						<Field>
+							<Parameters address="0x08020000" name="sector5" occurrence="0x7" size="0x20000"/>
+						</Field>
+					</Bank>
+				</Configuration>
+			</Peripheral>
+			<!-- OTP -->
+			<Peripheral>
+				<Name>OTP</Name>
+				<Type>Storage</Type>
+				<Description>The Data OTP memory block. It contains the one time programmable bits.</Description>
+				<ErasedValue>0xFF</ErasedValue>
+				<Access>RW</Access>
+				<!-- 512 Bytes single bank -->
+				<Configuration>
+					<Parameters address="0x1FFF7800" name=" 512 Bytes Data OTP" size="0x210"/>
+					<Description/>
+					<Organization>Single</Organization>
+					<Alignment>0x4</Alignment>
+					<Bank name="OTP">
+						<Field>
+							<Parameters address="0x1FFF7800" name="OTP" occurrence="0x1" size="0x210"/>
+						</Field>
+					</Bank>
+				</Configuration>
+			</Peripheral>
+			<!-- Mirror Option Bytes -->
+			<Peripheral>
+				<Name>MirrorOptionBytes</Name>
+				<Type>Storage</Type>
+				<Description>Mirror Option Bytes contains the extra area.</Description>
+				<ErasedValue>0xFF</ErasedValue>
+				<Access>RW</Access>
+				<!-- 20 Bytes Dual bank -->
+				<Configuration>
+					<Parameters address="0x1FFEC008" name=" 20 Bytes Data MirrorOptionBytes" size="0x14"/>
+					<Description/>
+					<Organization>Dual</Organization>
+					<Alignment>0x4</Alignment>
+					<Bank name="Bank 1">
+						<Field>
+							<Parameters address="0x1FFEC008" name="Bank1" occurrence="0x1" size="0x4"/>
+						</Field>
+					</Bank>
+					<Bank name="Bank 2">
+						<Field>
+							<Parameters address="0x1FFFC000" name="Bank2" occurrence="0x1" size="0x10"/>
+						</Field>
+					</Bank>
+				</Configuration>
+			</Peripheral>
+			<!-- Option Bytes -->
+			<Peripheral>
+				<Name>Option Bytes</Name>
+				<Type>Configuration</Type>
+				<Description/>
+				<Access>RW</Access>
+				<Bank interface="JTAG_SWD">
+					<Parameters address="0x40023C14" name="Bank 1" size="0x8"/>
+					<Category>
+						<Name>Read Out Protection</Name>
+						<Field>
+							<Parameters address="0x40023C14" name="RDP" size="0x4"/>
+							<AssignedBits>
+								<Bit>
+									<Name>RDP</Name>
+									<Description>Read protection option byte. The read protection is used to protect the software code stored in Flash memory.</Description>
+									<BitOffset>0x8</BitOffset>
+									<BitWidth>0x8</BitWidth>
+									<Access>RW</Access>
+									<Values>
+										<Val value="0xAA">Level 0, no protection</Val>
+										<Val value="0xBB">or any value other than 0xAA and 0xCC: Level 1, read protection</Val>
+										<Val value="0xCC">Level 2, chip protection</Val>
+									</Values>
+								</Bit>
+							</AssignedBits>
+						</Field>
+					</Category>
+					<Category>
+						<Name>PCROP Protection</Name>
+						<Field>
+							<Parameters address="0x40023C14" name="FLASH_OPTCR" size="0x4"/>
+							<AssignedBits>
+								<Bit reference="SPRMode">
+									<Name>SPRMOD</Name>
+									<Description>Selection of protection mode for nWPRi bits.</Description>
+									<BitOffset>0x1F</BitOffset>
+									<BitWidth>0x1</BitWidth>
+									<Access>RW</Access>
+									<Values>
+										<Val value="0x0">PCROP disabled. nWPRi bits used for Write protection on sector i</Val>
+										<Val value="0x1">PCROP enabled. nWPRi bits used for PCROP protection on sector i</Val>
+									</Values>
+								</Bit>
+							</AssignedBits>
+						</Field>
+					</Category>
+					<Category>
+						<Name>BOR Level</Name>
+						<Field>
+							<Parameters address="0x40023C14" name="FLASH_OPTCR" size="0x4"/>
+							<AssignedBits>
+								<Bit>
+									<Name>BOR_LEV</Name>
+									<Description>These bits contain the supply level threshold that activates/releases the reset. They can be written to program a new BOR level value into Flash memory</Description>
+									<BitOffset>0x2</BitOffset>
+									<BitWidth>0x2</BitWidth>
+									<Access>RW</Access>
+									<Values>
+										<Val value="0x0">BOR Level 3 reset threshold level from 2.70 to 3.60 V</Val>
+										<Val value="0x1">BOR Level 2 reset threshold level from 2.40 to 2.70 V</Val>
+										<Val value="0x2">BOR Level 1 reset threshold level from 2.10 to 2.40 V</Val>
+										<Val value="0x3">BOR  OFF    reset threshold level from 1.80 to 2.10 V</Val>
+									</Values>
+								</Bit>
+							</AssignedBits>
+						</Field>
+					</Category>
+					<Category>
+						<Name>User Configuration</Name>
+						<Field>
+							<Parameters address="0x40023C14" name="FLASH_OPTCR" size="0x4"/>
+							<AssignedBits>
+								<Bit>
+									<Name>BFB2</Name>
+									<Description/>
+									<BitOffset>0x4</BitOffset>
+									<BitWidth>0x1</BitWidth>
+									<Access>RW</Access>
+									<Values>
+										<Val value="0x0">Dual-bank boot disabled. Boot can be performed either from Flash memory bank 1 or from system memory depending on boot pin state (default)</Val>
+										<Val value="0x1">Dual-bank boot enabled. Boot is always performed from system memory.</Val>
+									</Values>
+								</Bit>
+								<Bit>
+									<Name>WDG_SW</Name>
+									<Description/>
+									<BitOffset>0x5</BitOffset>
+									<BitWidth>0x1</BitWidth>
+									<Access>RW</Access>
+									<Values>
+										<Val value="0x0">Hardware watchdog</Val>
+										<Val value="0x1">Software watchdog</Val>
+									</Values>
+								</Bit>
+								<Bit>
+									<Name>nRST_STOP</Name>
+									<Description/>
+									<BitOffset>0x6</BitOffset>
+									<BitWidth>0x1</BitWidth>
+									<Access>RW</Access>
+									<Values>
+										<Val value="0x0">Reset generated when entering Stop mode</Val>
+										<Val value="0x1">No reset generated</Val>
+									</Values>
+								</Bit>
+								<Bit>
+									<Name>nRST_STDBY</Name>
+									<Description/>
+									<BitOffset>0x7</BitOffset>
+									<BitWidth>0x1</BitWidth>
+									<Access>RW</Access>
+									<Values>
+										<Val value="0x0">Reset generated when entering Standby mode</Val>
+										<Val value="0x1">No reset generated</Val>
+									</Values>
+								</Bit>
+								<Bit config="2,3,4,5">
+									<Name>DB1M</Name>
+									<Description>Dual-bank on 1 Mbyte Flash memory devices</Description>
+									<BitOffset>0x1E</BitOffset>
+									<BitWidth>0x1</BitWidth>
+									<Access>RW</Access>
+									<Values>
+										<Val value="0x0">1 Mbyte single bank Flash memory (contiguous addresses in bank1)</Val>
+										<Val value="0x1">1 Mbyte dual bank Flash memory. The Flash memory is organized as two banks of 512 Kbytes each</Val>
+									</Values>
+								</Bit>
+							</AssignedBits>
+						</Field>
+					</Category>
+					<Category>
+						<Name>Write Protection</Name>
+						<Field>
+							<Parameters address="0x40023C14" name="FLASH_OPTCR" size="0x4"/>
+							<AssignedBits>
+								<Bit config="0,2,4">
+									<Name>nWRP0</Name>
+									<Description/>
+									<BitOffset>0x10</BitOffset>
+									<BitWidth>0xC</BitWidth>
+									<Access>RW</Access>
+									<Values ByBit="true">
+										<Val value="0x0">Write protection active</Val>
+										<Val value="0x1">Write protection not active</Val>
+									</Values>	
+								</Bit>
+								<Bit config="1,3,5,6">
+									<Name>nWRP0</Name>
+									<Description/>
+									<BitOffset>0x10</BitOffset>
+									<BitWidth>0xC</BitWidth>
+									<Access>RW</Access>
+									<Values ByBit="true">
+										<Val value="0x0">PCROP protection not active on sector i</Val>
+										<Val value="0x1">PCROP protection active on sector i</Val>
+									</Values>	
+								</Bit>
+							</AssignedBits>
+						</Field>
+						<Field>
+							<Parameters address="0x40023C18" name="FLASH_OPTCR1" size="0x4"/>
+							<AssignedBits>
+								<Bit config="0,2,4">
+									<Name>nWRP12</Name>
+									<Description/>
+									<BitOffset>0x10</BitOffset>
+									<BitWidth>0xC</BitWidth>
+									<Access>RW</Access>
+									<Values ByBit="true">
+										<Val value="0x0">Write protection active</Val>
+										<Val value="0x1">Write protection not active</Val>
+									</Values>	
+								</Bit>
+								<Bit config="1,3,5,6">
+									<Name>nWRP12</Name>
+									<Description/>
+									<BitOffset>0x10</BitOffset>
+									<BitWidth>0xC</BitWidth>
+									<Access>RW</Access>
+									<Values ByBit="true">
+										<Val value="0x0">PCROP protection not active on sector i</Val>
+										<Val value="0x1">PCROP protection active on sector i</Val>
+									</Values>	
+								</Bit>
+							</AssignedBits>
+						</Field> 
+					</Category> 
+				</Bank>
+				<Bank interface="Bootloader">
+					<Parameters address="0x1FFFC000" name="Bank 1" size="0x10"/>
+					<Category>
+						<Name>Read Out Protection</Name>
+						<Field>
+							<Parameters address="0x1FFFC000" name="RDP" size="0x4"/>
+							<AssignedBits>
+								<Bit>
+									<Name>RDP</Name>
+									<Description>Read protection option byte. The read protection is used to protect the software code stored in Flash memory.</Description>
+									<BitOffset>0x8</BitOffset>
+									<BitWidth>0x8</BitWidth>
+									<Access>RW</Access>
+									<Values>
+										<Val value="0xAA">Level 0, no protection</Val>
+										<Val value="0xBB">or any value other than 0xAA and 0xCC: Level 1, read protection</Val>
+										<Val value="0xCC">Level 2, chip protection</Val>
+									</Values>
+								</Bit>
+							</AssignedBits>
+						</Field>
+					</Category>
+					<Category>
+						<Name>PCROP Protection</Name>
+						<Field>
+							<Parameters address="0x1FFFC008" name="FLASH_OPTCR" size="0x4"/>
+							<AssignedBits>
+								<Bit reference="SPRMode">
+									<Name>SPRMOD</Name>
+									<Description>Selection of protection mode for nWPRi bits.</Description>
+									<BitOffset>0xF</BitOffset>
+									<BitWidth>0x1</BitWidth>
+									<Access>RW</Access>
+									<Values>
+										<Val value="0x0">PCROP disabled. nWPRi bits used for Write protection on sector i</Val>
+										<Val value="0x1">PCROP enabled. nWPRi bits used for PCROP protection on sector i</Val>
+									</Values>
+								</Bit>
+							</AssignedBits>
+						</Field>
+					</Category>
+					<Category>
+						<Name>BOR Level</Name>
+						<Field>
+							<Parameters address="0x1FFFC000" name="USER" size="0x4"/>
+							<AssignedBits>
+								<Bit>
+									<Name>BOR_LEV</Name>
+									<Description>These bits contain the supply level threshold that activates/releases the reset. They can be written to program a new BOR level value into Flash memory</Description>
+									<BitOffset>0x2</BitOffset>
+									<BitWidth>0x2</BitWidth>
+									<Access>RW</Access>
+									<Values>
+										<Val value="0x0">BOR Level 3 reset threshold level from 2.70 to 3.60 V</Val>
+										<Val value="0x1">BOR Level 2 reset threshold level from 2.40 to 2.70 V</Val>
+										<Val value="0x2">BOR Level 1 reset threshold level from 2.10 to 2.40 V</Val>
+										<Val value="0x3">BOR  OFF    reset threshold level from 1.80 to 2.10 V</Val>
+									</Values>
+								</Bit>
+							</AssignedBits>
+						</Field>
+					</Category>
+					<Category>
+						<Name>User Configuration</Name>
+						<Field>
+							<Parameters address="0x1FFFC000" name="USER" size="0x4"/>
+							<AssignedBits>
+								<Bit>
+									<Name>BFB2</Name>
+									<Description/>
+									<BitOffset>0x4</BitOffset>
+									<BitWidth>0x1</BitWidth>
+									<Access>RW</Access>
+									<Values>
+										<Val value="0x0">Dual-bank boot disabled. Boot can be performed either from Flash memory bank 1 or from system memory depending on boot pin state (default)</Val>
+										<Val value="0x1">Dual-bank boot enabled. Boot is always performed from system memory.</Val>
+									</Values>
+								</Bit>
+								<Bit>
+									<Name>WDG_SW</Name>
+									<Description/>
+									<BitOffset>0x5</BitOffset>
+									<BitWidth>0x1</BitWidth>
+									<Access>RW</Access>
+									<Values>
+										<Val value="0x0">Hardware watchdog</Val>
+										<Val value="0x1">Software watchdog</Val>
+									</Values>
+								</Bit>
+								<Bit>
+									<Name>nRST_STOP</Name>
+									<Description/>
+									<BitOffset>0x6</BitOffset>
+									<BitWidth>0x1</BitWidth>
+									<Access>RW</Access>
+									<Values>
+										<Val value="0x0">Reset generated when entering Stop mode</Val>
+										<Val value="0x1">No reset generated</Val>
+									</Values>
+								</Bit>
+								<Bit>
+									<Name>nRST_STDBY</Name>
+									<Description/>
+									<BitOffset>0x7</BitOffset>
+									<BitWidth>0x1</BitWidth>
+									<Access>RW</Access>
+									<Values>
+										<Val value="0x0">Reset generated when entering Standby mode</Val>
+										<Val value="0x1">No reset generated</Val>
+									</Values>
+								</Bit>
+								<Bit config="2,3,4,5">
+									<Name>DB1M</Name>
+									<Description>Dual-bank on 1 Mbyte Flash memory devices</Description>
+									<BitOffset>0x1E</BitOffset>
+									<BitWidth>0x1</BitWidth>
+									<Access>RW</Access>
+									<Values>
+										<Val value="0x0">1 Mbyte single bank Flash memory (contiguous addresses in bank1)</Val>
+										<Val value="0x1">1 Mbyte dual bank Flash memory. The Flash memory is organized as two banks of 512 Kbytes each</Val>
+									</Values>
+								</Bit>
+							</AssignedBits>
+						</Field>
+					</Category>
+					<Category>
+						<Name>Write Protection</Name>
+						<Field>
+							<Parameters address="0x1FFFC008" name="WRP0" size="0x4"/>
+							<AssignedBits>
+								<Bit config="0,2,4">
+									<Name>nWRP0</Name>
+									<Description/>
+									<BitOffset>0x0</BitOffset>
+									<BitWidth>0xC</BitWidth>
+									<Access>RW</Access>
+									<Values ByBit="true">
+										<Val value="0x0">Write protection active</Val>
+										<Val value="0x1">Write protection not active</Val>
+									</Values>	
+								</Bit>
+								<Bit config="1,3,5,6">
+									<Name>nWRP0</Name>
+									<Description/>
+									<BitOffset>0x0</BitOffset>
+									<BitWidth>0xC</BitWidth>
+									<Access>RW</Access>
+									<Values ByBit="true">
+										<Val value="0x0">PCROP protection not active on sector i</Val>
+										<Val value="0x1">PCROP protection active on sector i</Val>
+									</Values>	
+								</Bit>
+							</AssignedBits>
+							</Field> 
+					</Category> 
+				</Bank>
+				<Bank interface="Bootloader">
+					<Parameters address="0x1FFEC008" name="Bank 2" size="0x4"/>
+					<Category>
+						<Name>Write Protection</Name>
+						<Field>
+							<Parameters address="0x1FFEC008" name="WRP1" size="0x4"/>
+							<AssignedBits>
+								<Bit config="0,2,4">
+									<Name>nWRP12</Name>
+									<Description/>
+									<BitOffset>0x0</BitOffset>
+									<BitWidth>0xC</BitWidth>
+									<Access>RW</Access>
+									<Values ByBit="true">
+										<Val value="0x0">Write protection active</Val>
+										<Val value="0x1">Write protection not active</Val>
+									</Values>	
+								</Bit>
+								<Bit config="1,3,5,6">
+									<Name>nWRP12</Name>
+									<Description/>
+									<BitOffset>0x0</BitOffset>
+									<BitWidth>0xC</BitWidth>
+									<Access>RW</Access>
+									<Values ByBit="true">
+										<Val value="0x0">PCROP protection not active on sector i</Val>
+										<Val value="0x1">PCROP protection active on sector i</Val>
+									</Values>	
+								</Bit>
+							</AssignedBits>
+						</Field>
+					</Category>
+				</Bank>
+			</Peripheral>
+		</Peripherals>
+	</Device>
+</Root>
