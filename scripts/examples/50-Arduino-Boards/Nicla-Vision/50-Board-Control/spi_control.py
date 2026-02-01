@@ -7,10 +7,10 @@
 # This example shows how to use the SPI bus to control the
 # 1.8" TFT LCD display (JD-T18003-T01) with ST7735R driver.
 
-import sensor
+import csi
 import time
 from pyb import Pin, SPI
-
+csi0 = csi.CSI()
 cs = Pin("CS", Pin.OUT_OD)
 rst = Pin("D0", Pin.OUT_PP)
 rs = Pin("D1", Pin.OUT_PP)
@@ -67,15 +67,15 @@ write_command(0x3A, 0x05)
 # Display On
 write_command(0x29)
 
-sensor.reset()  # Initialize the camera sensor.
-sensor.set_pixformat(sensor.RGB565)
-sensor.set_framesize(sensor.QQVGA2)
-sensor.skip_frames(time=2000)  # Let new settings take affect.
+csi0.reset()  # Initialize the camera sensor.
+csi0.pixformat(csi.RGB565)
+csi0.framesize(csi.QQVGA2)
+csi0.snapshot(time=2000)  # Let new settings take affect.
 clock = time.clock()  # Tracks FPS.
 
 while True:
     clock.tick()  # Track elapsed milliseconds between snapshots().
-    img = sensor.snapshot()  # Take a picture and return the image.
+    img = csi0.snapshot()  # Take a picture and return the image.
 
     write_command(0x2C)  # Write image command...
     write_image(img)

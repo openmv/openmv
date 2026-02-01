@@ -14,10 +14,10 @@
 # 45 or so degree angle. Please make sure that only the line is within the
 # camera's field of view.
 
-import sensor
+import csi
 import time
 import math
-
+csi0 = csi.CSI()
 # Tracks a black line. Use [(128, 255)] for a tracking a white line.
 GRAYSCALE_THRESHOLD = [(0, 64)]
 
@@ -37,17 +37,17 @@ for r in ROIS:
     weight_sum += r[4]  # r[4] is the roi weight.
 
 # Camera setup...
-sensor.reset()  # Initialize the camera sensor.
-sensor.set_pixformat(sensor.GRAYSCALE)  # use grayscale.
-sensor.set_framesize(sensor.QQVGA)  # use QQVGA for speed.
-sensor.skip_frames(time=2000)  # Let new settings take affect.
-sensor.set_auto_gain(False)  # must be turned off for color tracking
-sensor.set_auto_whitebal(False)  # must be turned off for color tracking
+csi0.reset()  # Initialize the camera sensor.
+csi0.pixformat(csi.GRAYSCALE)  # use grayscale.
+csi0.framesize(csi.QQVGA)  # use QQVGA for speed.
+csi0.snapshot(time=2000)  # Let new settings take affect.
+csi0.auto_gain(False)  # must be turned off for color tracking
+csi0.auto_whitebal(False)  # must be turned off for color tracking
 clock = time.clock()  # Tracks FPS.
 
 while True:
     clock.tick()  # Track elapsed milliseconds between snapshots().
-    img = sensor.snapshot()  # Take a picture and return the image.
+    img = csi0.snapshot()  # Take a picture and return the image.
 
     centroid_sum = 0
 

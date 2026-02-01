@@ -6,17 +6,17 @@
 #
 # This examples uses the builtin FOMO model to detect faces.
 
-import sensor
+import csi
 import time
 import ml
 from ml.postprocessing.edgeimpulse import Fomo
 import math
-
-sensor.reset()  # Reset and initialize the sensor.
-sensor.set_pixformat(sensor.RGB565)  # Set pixel format to RGB565 (or GRAYSCALE)
-sensor.set_framesize(sensor.QVGA)  # Set frame size to QVGA (320x240)
-sensor.set_windowing((240, 240))  # Set 240x240 window.
-sensor.skip_frames(time=2000)  # Let the camera adjust.
+csi0 = csi.CSI()
+csi0.reset()  # Reset and initialize the sensor.
+csi0.pixformat(csi.RGB565)  # Set pixel format to RGB565 (or GRAYSCALE)
+csi0.framesize(csi.QVGA)  # Set frame size to QVGA (320x240)
+csi0.window((240, 240))  # Set 240x240 window.
+csi0.snapshot(time=2000)  # Let the camera adjust.
 
 # Load built-in FOMO face detection model
 model = ml.Model("/rom/fomo_face_detection.tflite", postprocess=Fomo(threshold=0.4))
@@ -39,7 +39,7 @@ colors = [  # Add more colors if you are detecting more than 7 types of classes 
 clock = time.clock()
 while True:
     clock.tick()
-    img = sensor.snapshot()
+    img = csi0.snapshot()
 
     for i, detection_list in enumerate(model.predict([img])):
         if i == 0:

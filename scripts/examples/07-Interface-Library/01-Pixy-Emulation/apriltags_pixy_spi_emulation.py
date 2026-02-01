@@ -31,10 +31,10 @@
 
 import math
 import pyb
-import sensor
+import csi
 import struct
 import time
-
+csi0 = csi.CSI()
 # Pixy Parameters ############################################################
 max_blocks = 1000
 max_blocks_per_id = 1000
@@ -52,10 +52,10 @@ analog_out_mode = 0  # 0 == x position of largest tag - 1 == y position of large
 
 
 # Camera Setup
-sensor.reset()
-sensor.set_pixformat(sensor.GRAYSCALE)
-sensor.set_framesize(sensor.QQVGA)
-sensor.skip_frames(time=2000)
+csi0.reset()
+csi0.pixformat(csi.GRAYSCALE)
+csi0.framesize(csi.QQVGA)
+csi0.snapshot(time=2000)
 
 # LED Setup
 red_led = pyb.LED(1)
@@ -232,7 +232,7 @@ def parse_byte(byte):
 clock = time.clock()
 while True:
     clock.tick()
-    img = sensor.snapshot()
+    img = csi0.snapshot()
     tags = img.find_apriltags()  # default TAG36H11 family
 
     # Transmit Tags #
