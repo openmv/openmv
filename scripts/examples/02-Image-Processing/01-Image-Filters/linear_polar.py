@@ -9,18 +9,20 @@
 # become translations in the X direction and linear changes
 # in scale become linear translations in the Y direction.
 
-import sensor
+import csi
 import time
 
-sensor.reset()  # Initialize the camera sensor.
-sensor.set_pixformat(sensor.RGB565)  # or sensor.GRAYSCALE
-sensor.set_framesize(sensor.QQVGA)  # or sensor.QVGA (or others)
-sensor.skip_frames(time=2000)  # Let new settings take affect.
+csi0 = csi.CSI()
+csi0.reset()  # Initialize the camera sensor.
+csi0.pixformat(csi.RGB565)  # or csi.GRAYSCALE
+csi0.framesize(csi.QQVGA)  # or csi.QVGA (or others)
+csi0.snapshot(time=2000)  # Let new settings take affect.
+
 clock = time.clock()  # Tracks FPS.
 
 while True:
     clock.tick()  # Track elapsed milliseconds between snapshots().
-    img = sensor.snapshot().linpolar(reverse=False)
+    img = csi0.snapshot().linpolar(reverse=False)
 
     print(clock.fps())  # Note: Your OpenMV Cam runs about half as fast while
     # connected to your computer. The FPS should increase once disconnected.

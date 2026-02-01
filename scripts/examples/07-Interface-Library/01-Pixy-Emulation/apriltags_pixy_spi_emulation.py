@@ -31,7 +31,7 @@
 
 import math
 import pyb
-import sensor
+import csi
 import struct
 import time
 
@@ -50,12 +50,12 @@ s1_upper_limit = 2000  # Servo pulse width upper limit in microseconds.
 analog_out_enable = False  # P6 -> Analog Out (0v - 3.3v).
 analog_out_mode = 0  # 0 == x position of largest tag - 1 == y position of largest tag
 
-
 # Camera Setup
-sensor.reset()
-sensor.set_pixformat(sensor.GRAYSCALE)
-sensor.set_framesize(sensor.QQVGA)
-sensor.skip_frames(time=2000)
+csi0 = csi.CSI()
+csi0.reset()
+csi0.pixformat(csi.GRAYSCALE)
+csi0.framesize(csi.QQVGA)
+csi0.snapshot(time=2000)
 
 # LED Setup
 red_led = pyb.LED(1)
@@ -232,7 +232,7 @@ def parse_byte(byte):
 clock = time.clock()
 while True:
     clock.tick()
-    img = sensor.snapshot()
+    img = csi0.snapshot()
     tags = img.find_apriltags()  # default TAG36H11 family
 
     # Transmit Tags #

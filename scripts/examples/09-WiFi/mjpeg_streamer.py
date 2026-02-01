@@ -8,7 +8,7 @@
 # Chrome, Firefox and MJpegViewer App on Android have been tested.
 # Connect to the IP address/port printed out from ifconfig to view the stream.
 
-import sensor
+import csi
 import time
 import network
 import socket
@@ -19,9 +19,10 @@ HOST = ""  # Use first available interface
 PORT = 8080  # Arbitrary non-privileged port
 
 # Init sensor
-sensor.reset()
-sensor.set_framesize(sensor.QVGA)
-sensor.set_pixformat(sensor.RGB565)
+csi0 = csi.CSI()
+csi0.reset()
+csi0.framesize(csi.QVGA)
+csi0.pixformat(csi.RGB565)
 
 # Init wlan module and connect to network
 wlan = network.WLAN(network.STA_IF)
@@ -74,7 +75,7 @@ def start_streaming(s):
     # NOTE: Disable IDE preview to increase streaming FPS.
     while True:
         clock.tick()  # Track elapsed milliseconds between snapshots().
-        frame = sensor.snapshot()
+        frame = csi0.snapshot()
         cframe = frame.to_jpeg(quality=35, copy=True)
         header = (
             "\r\n--openmv\r\n"

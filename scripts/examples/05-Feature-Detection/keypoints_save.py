@@ -6,25 +6,23 @@
 # This example shows how to save a keypoints descriptor to file. Show the camera an object
 # and then run the script. The script will extract and save a keypoints descriptor and the image.
 # You can use the keypoints_editor.py util to remove unwanted keypoints.
-import sensor
+import csi
 import time
 import image
 
-# Reset sensor
-sensor.reset()
-
-# Sensor settings
-sensor.set_contrast(3)
-sensor.set_gainceiling(16)
-sensor.set_framesize(sensor.VGA)
-sensor.set_windowing((320, 240))
-sensor.set_pixformat(sensor.GRAYSCALE)
-
-sensor.skip_frames(time=2000)
-sensor.set_auto_gain(False, gain_db=100)
+csi0 = csi.CSI()
+csi0.reset()
+csi0.contrast(3)
+csi0.gainceiling(16)
+csi0.framesize(csi.VGA)
+csi0.window((320, 240))
+csi0.pixformat(csi.GRAYSCALE)
+csi0.snapshot(time=2000)
+csi0.auto_gain(False, gain_db=100)
 
 FILE_NAME = "desc"
-img = sensor.snapshot()
+img = csi0.snapshot()
+
 # NOTE: See the docs for other arguments
 # NOTE: By default find_keypoints returns multi-scale keypoints extracted from an image pyramid.
 kpts = img.find_keypoints(max_keypoints=150, threshold=10, scale_factor=1.2)
@@ -36,7 +34,7 @@ image.save_descriptor(kpts, "%s.orb" % (FILE_NAME))
 img.save("%s.pgm" % (FILE_NAME))
 
 img.draw_keypoints(kpts)
-sensor.snapshot()
+csi0.snapshot()
 time.sleep_ms(1000)
 
 raise (Exception("Please reset the camera to see the new file."))

@@ -9,13 +9,14 @@
 # area scaling along with color channel extraction, alpha blending,
 # color palette application, and alpha palette application.
 
-import sensor
+import csi
 import image
 import time
 
-sensor.reset()
-sensor.set_pixformat(sensor.RGB565)
-sensor.set_framesize(sensor.QVGA)
+csi0 = csi.CSI()
+csi0.reset()
+csi0.pixformat(csi.RGB565)
+csi0.framesize(csi.QVGA)
 
 hint = image.BICUBIC  # image.BILINEAR image.BICUBIC
 
@@ -29,7 +30,7 @@ hint |= 0  # image.EXTRACT_RGB_CHANNEL_FIRST
 #
 hint |= 0  # image.APPLY_COLOR_PALETTE_FIRST
 
-small_img = image.Image(4, 4, sensor.RGB565)
+small_img = image.Image(4, 4, csi.RGB565)
 small_img.set_pixel(0, 0, (0, 0, 127))
 small_img.set_pixel(1, 0, (47, 255, 199))
 small_img.set_pixel(2, 0, (0, 188, 255))
@@ -49,7 +50,7 @@ small_img.set_pixel(3, 3, (50, 255, 195))
 # small_img.to_grayscale()
 # small_img.to_bitmap()
 
-big_img = image.Image(128, 128, sensor.RGB565)
+big_img = image.Image(128, 128, csi.RGB565)
 big_img.draw_image(small_img, 0, 0, x_scale=32, y_scale=32, hint=hint)
 # big_img.to_grayscale()
 # big_img.to_bitmap()
@@ -58,17 +59,17 @@ alpha_div = 1
 alpha_value = 0
 alpha_step = 3
 
-x_bounce = sensor.width() // 2
+x_bounce = csi0.width() // 2
 x_bounce_toggle = 1
 
-y_bounce = sensor.height() // 2
+y_bounce = csi0.height() // 2
 y_bounce_toggle = 1
 
 clock = time.clock()
 while True:
     clock.tick()
 
-    img = sensor.snapshot()
+    img = csi0.snapshot()
     # img.to_grayscale()
     # img.to_bitmap()
     img.draw_image(

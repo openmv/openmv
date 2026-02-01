@@ -17,7 +17,7 @@
 
 import math
 import pyb
-import sensor
+import csi
 import struct
 import time
 
@@ -73,12 +73,13 @@ for i in range(len(lab_color_thresholds)):
         e_lab_color_signatures.append(i + 1)
 
 # Camera Setup
-sensor.reset()
-sensor.set_pixformat(sensor.RGB565)
-sensor.set_framesize(sensor.QVGA)
-sensor.skip_frames(time=2000)
-sensor.set_auto_gain(False)
-sensor.set_auto_whitebal(False)
+csi0 = csi.CSI()
+csi0.reset()
+csi0.pixformat(csi.RGB565)
+csi0.framesize(csi.QVGA)
+csi0.snapshot(time=2000)
+csi0.auto_gain(False)
+csi0.auto_whitebal(False)
 
 # LED Setup
 red_led = pyb.LED(1)
@@ -346,7 +347,7 @@ def blob_filter(blob):
 clock = time.clock()
 while True:
     clock.tick()
-    img = sensor.snapshot()
+    img = csi0.snapshot()
     blobs = list(
         filter(
             blob_filter,

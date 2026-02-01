@@ -7,7 +7,7 @@
 # This example shows off how to use the rotation_corr() to play with the scene
 # window your OpenMV Cam sees.
 
-import sensor
+import csi
 import time
 
 # Degrees per frame to rotation by...
@@ -26,10 +26,11 @@ FOV_WINDOW = 60  # Between 0 and 180. Represents the field-of-view of the scene
 # results in the more perspective distortion and sometimes
 # the image in 3D intersecting the scene window.
 
-sensor.reset()
-sensor.set_pixformat(sensor.RGB565)
-sensor.set_framesize(sensor.QVGA)
-sensor.skip_frames(time=2000)
+csi0 = csi.CSI()
+csi0.reset()
+csi0.pixformat(csi.RGB565)
+csi0.framesize(csi.QVGA)
+csi0.snapshot(time=2000)
 clock = time.clock()
 
 x_rotation_counter = 0
@@ -39,7 +40,7 @@ z_rotation_counter = 0
 while True:
     clock.tick()
 
-    img = sensor.snapshot().rotation_corr(
+    img = csi0.snapshot().rotation_corr(
         x_rotation=x_rotation_counter,
         y_rotation=y_rotation_counter,
         z_rotation=z_rotation_counter,

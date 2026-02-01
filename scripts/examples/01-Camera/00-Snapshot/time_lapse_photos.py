@@ -13,7 +13,7 @@
 # from something other than USB to not have the bootloader run.
 
 import machine
-import sensor
+import csi
 import os
 
 # Create and init RTC object. This will allow us to set the current time for
@@ -48,10 +48,11 @@ rtc.wakeup(10000)
 
 BLUE_LED_PIN = 3
 
-sensor.reset()  # Initialize the camera sensor.
-sensor.set_pixformat(sensor.GRAYSCALE)
-sensor.set_framesize(sensor.VGA)
-sensor.skip_frames(time=1000)  # Let new settings take affect.
+csi0 = csi.CSI()
+csi0.reset()  # Initialize the camera sensor.
+csi0.pixformat(csi.GRAYSCALE)
+csi0.framesize(csi.VGA)
+csi0.snapshot(time=1000)  # Let new settings take affect.
 
 led = machine.LED("LED_BLUE")
 
@@ -75,7 +76,7 @@ if not "images" in os.listdir():
 
 # Take photo and save to SD card
 led.on()
-img = sensor.snapshot()
+img = csi0.snapshot()
 img.save("images/" + newName, quality=90)
 led.off()
 

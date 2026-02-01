@@ -8,7 +8,7 @@
 # the LCD shield without using the built-in lcd shield driver. You will need
 # the LCD shield to run this example.
 
-import sensor
+import csi
 import time
 from pyb import Pin, SPI
 
@@ -69,15 +69,17 @@ write_command(0x3A, 0x05)
 # Display On
 write_command(0x29)
 
-sensor.reset()  # Initialize the camera sensor.
-sensor.set_pixformat(sensor.GRAYSCALE)  # must be this
-sensor.set_framesize(sensor.QQVGA2)  # must be this
-sensor.skip_frames(time=2000)  # Let new settings take affect.
+csi0 = csi.CSI()
+csi0.reset()  # Initialize the camera sensor.
+csi0.pixformat(csi.GRAYSCALE)  # must be this
+csi0.framesize(csi.QQVGA2)  # must be this
+csi0.snapshot(time=2000)  # Let new settings take affect.
+
 clock = time.clock()  # Tracks FPS.
 
 while True:
     clock.tick()  # Track elapsed milliseconds between snapshots().
-    img = sensor.snapshot()  # Take a picture and return the image.
+    img = csi0.snapshot()  # Take a picture and return the image.
 
     write_command(0x2C)  # Write image command...
     write_image(img)

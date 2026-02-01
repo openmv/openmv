@@ -4,7 +4,7 @@
 #
 # LCD, touch panel and camera example.
 
-import sensor
+import csi
 import time
 import image
 import display
@@ -15,9 +15,10 @@ IMG_OFFSET = 80
 touch_detected = False
 points_colors = ((255, 0, 0), (0, 255, 0), (0, 0, 255), (0, 255, 255), (255, 255, 0))
 
-sensor.reset()  # Reset and initialize the sensor.
-sensor.set_pixformat(sensor.RGB565)  # Set pixel format to RGB565 (or GRAYSCALE)
-sensor.set_framesize(sensor.VGA)  # Set frame size to QVGA (320x240)
+csi0 = csi.CSI()
+csi0.reset()  # Reset and initialize the sensor.
+csi0.pixformat(csi.RGB565)  # Set pixel format to RGB565 (or GRAYSCALE)
+csi0.framesize(csi.VGA)  # Set frame size to QVGA (320x240)
 
 lcd = display.DSIDisplay(
     framesize=display.FWVGA, portrait=True, refresh=60, controller=display.ST7701()
@@ -42,7 +43,7 @@ while True:
     clock.tick()  # Update the FPS clock.
 
     # Capture a new frame
-    img = sensor.snapshot()
+    img = csi0.snapshot()
 
     # Draw touch points if touch was detected.
     if touch_detected:

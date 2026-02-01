@@ -21,7 +21,7 @@
 # leptons don't have radiometry support or they don't activate their calibration process often
 # enough to deal with temperature changes (FLIR 2.5).
 
-import sensor
+import csi
 import time
 import display
 import image
@@ -33,30 +33,23 @@ threshold_list = [(200, 255)]
 min_temp_in_celsius = 20.0
 max_temp_in_celsius = 40.0
 
-print("Resetting Lepton...")
-# These settings are applied on reset
-sensor.reset()
-sensor.ioctl(sensor.IOCTL_LEPTON_SET_MODE, True)
-sensor.ioctl(
-    sensor.IOCTL_LEPTON_SET_RANGE, min_temp_in_celsius, max_temp_in_celsius
-)
-print(
-    "Lepton Res (%dx%d)"
-    % (
-        sensor.ioctl(sensor.IOCTL_LEPTON_GET_WIDTH),
-        sensor.ioctl(sensor.IOCTL_LEPTON_GET_HEIGHT),
-    )
-)
-print(
-    "Radiometry Available: "
-    + ("Yes" if sensor.ioctl(sensor.IOCTL_LEPTON_GET_RADIOMETRY) else "No")
-)
+# Initialize the sensor.
+csi0 = csi.CSI()
+csi0.reset()
+csi0.pixformat(csi.GRAYSCALE)
+csi0.framesize((128, 160))
+csi0.snapshot(time=5000)
 
-sensor.set_pixformat(sensor.GRAYSCALE)
-sensor.set_framesize(sensor.LCD)
-sensor.skip_frames(time=5000)
+# Enable measurement mode
+csi0.ioctl(csi.IOCTL_LEPTON_SET_MODE, True)
+csi0.ioctl(csi.IOCTL_LEPTON_SET_RANGE, min_temp_in_celsius, max_temp_in_celsius)
+
+# Skip frames
 clock = time.clock()
 lcd = display.SPIDisplay()
+
+print("Radiometry: " + "Yes" if csi0.ioctl(csi.IOCTL_LEPTON_GET_RADIOMETRY) else "No")
+print("Resolution: %dx%d" % (csi0.ioctl(csi.IOCTL_LEPTON_GET_WIDTH), csi0.ioctl(csi.IOCTL_LEPTON_GET_HEIGHT)))
 
 # Only blobs that with more pixels than "pixel_threshold" and more area than "area_threshold" are
 # returned by "find_blobs" below. Change "pixels_threshold" and "area_threshold" if you change the
@@ -64,14 +57,12 @@ lcd = display.SPIDisplay()
 
 
 def map_g_to_temp(g):
-    return (
-        (g * (max_temp_in_celsius - min_temp_in_celsius)) / 255.0
-    ) + min_temp_in_celsius
+    return ((g * (max_temp_in_celsius - min_temp_in_celsius)) / 255.0) + min_temp_in_celsius
 
 
 while True:
     clock.tick()
-    img = sensor.snapshot()
+    img = csi0.snapshot()
     blob_stats = []
     blobs = img.find_blobs(
         threshold_list, pixels_threshold=200, area_threshold=200, merge=True
@@ -101,5 +92,5 @@ while True:
     lcd.write(img)
     print(
         "FPS %f - Lepton Temp: %f C"
-        % (clock.fps(), sensor.ioctl(sensor.IOCTL_LEPTON_GET_FPA_TEMP))
+        % (clock.fps(), csi0.ioctl(csi.IOCTL_LEPTON_GET_FPA_TEMP))
     )

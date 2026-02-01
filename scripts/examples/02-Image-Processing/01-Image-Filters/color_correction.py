@@ -59,17 +59,18 @@
 # row will be ignored if you pass a 4x4 matrix (e.g. it will be treated as 3x4).
 
 from ulab import numpy as np
-import sensor
+import csi
 import time
 import math
 
 # Set to 0 for a grayscale image. Set above 1.0 to pump-up the saturation.
 UV_SCALE = 1.0
 
-sensor.reset()
-sensor.set_pixformat(sensor.RGB565)
-sensor.set_framesize(sensor.QVGA)
-sensor.skip_frames(time=2000)
+csi0 = csi.CSI()
+csi0.reset()
+csi0.pixformat(csi.RGB565)
+csi0.framesize(csi.QVGA)
+csi0.snapshot(time=2000)
 
 # These are the standard coefficents for converting RGB to YUV.
 rgb2yuv = np.array([[    0.299,     0.587,     0.114], # noqa
@@ -106,6 +107,6 @@ while True:
     m = np.dot(yuv2rgb, np.dot(scale, np.dot(rot, rgb2yuv)))
 
     # Apply the color transformation (m.flatten().tolist() also works)
-    img = sensor.snapshot().ccm(m.tolist())
+    img = csi0.snapshot().ccm(m.tolist())
 
     print(clock.fps())

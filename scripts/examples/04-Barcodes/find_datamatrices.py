@@ -7,21 +7,23 @@
 # This example shows off how easy it is to detect data matrices using the
 # OpenMV Cam M7. Data matrices detection does not work on the M4 Camera.
 
-import sensor
+import csi
 import time
 import math
 
-sensor.reset()
-sensor.set_pixformat(sensor.RGB565)
-sensor.set_framesize(sensor.QVGA)
-sensor.skip_frames(time=2000)
-sensor.set_auto_gain(False)  # must turn this off to prevent image washout...
-sensor.set_auto_whitebal(False)  # must turn this off to prevent image washout...
+csi0 = csi.CSI()
+csi0.reset()
+csi0.pixformat(csi.RGB565)
+csi0.framesize(csi.QVGA)
+csi0.snapshot(time=2000)
+csi0.auto_gain(False)  # must turn this off to prevent image washout...
+csi0.auto_whitebal(False)  # must turn this off to prevent image washout...
+
 clock = time.clock()
 
 while True:
     clock.tick()
-    img = sensor.snapshot()
+    img = csi0.snapshot()
     img.lens_corr(1.8)  # strength of 1.8 is good for the 2.8mm lens.
 
     matrices = img.find_datamatrices()

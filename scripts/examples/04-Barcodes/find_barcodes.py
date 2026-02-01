@@ -7,18 +7,20 @@
 # This example shows off how easy it is to detect bar codes using the
 # OpenMV Cam M7. Barcode detection does not work on the M4 Camera.
 
-import sensor
+import csi
 import image
 import time
 import math
 
-sensor.reset()
-sensor.set_pixformat(sensor.GRAYSCALE)
-sensor.set_framesize(sensor.VGA)  # High Res!
-sensor.set_windowing((640, 80))  # V Res of 80 == less work (40 for 2X the speed).
-sensor.skip_frames(time=2000)
-sensor.set_auto_gain(False)  # must turn this off to prevent image washout...
-sensor.set_auto_whitebal(False)  # must turn this off to prevent image washout...
+csi0 = csi.CSI()
+csi0.reset()
+csi0.pixformat(csi.GRAYSCALE)
+csi0.framesize(csi.VGA)  # High Res!
+csi0.window((640, 80))  # V Res of 80 == less work (40 for 2X the speed).
+csi0.snapshot(time=2000)
+csi0.auto_gain(False)  # must turn this off to prevent image washout...
+csi0.auto_whitebal(False)  # must turn this off to prevent image washout...
+
 clock = time.clock()
 
 # Barcode detection can run at the full 640x480 resolution of your OpenMV Cam's
@@ -64,7 +66,7 @@ def barcode_name(code):
 
 while True:
     clock.tick()
-    img = sensor.snapshot()
+    img = csi0.snapshot()
     codes = img.find_barcodes()
     for code in codes:
         img.draw_rectangle(code.rect())

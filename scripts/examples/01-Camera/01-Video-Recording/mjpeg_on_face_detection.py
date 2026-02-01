@@ -14,17 +14,18 @@
 # This example demonstrates using face tracking on your OpenMV Cam to take a
 # mjpeg.
 
-import sensor
+import csi
 import image
 import time
 import mjpeg
 import random
 import machine
 
-sensor.reset()  # Reset and initialize the sensor.
-sensor.set_pixformat(sensor.GRAYSCALE)  # Set pixel format to RGB565 (or GRAYSCALE)
-sensor.set_framesize(sensor.QQVGA)  # Set frame size to QQVGA (160x120)
-sensor.skip_frames(time=2000)  # Wait for settings take effect.
+csi0 = csi.CSI()
+csi0.reset()  # Reset and initialize the sensor.
+csi0.pixformat(csi.GRAYSCALE)  # Set pixel format to RGB565 (or GRAYSCALE)
+csi0.framesize(csi.QQVGA)  # Set frame size to QQVGA (160x120)
+csi0.snapshot(time=2000)  # Wait for settings take effect.
 
 led = machine.LED("LED_RED")
 
@@ -38,13 +39,13 @@ face_cascade = image.HaarCascade("/rom/haarcascade_frontalface.cascade", stages=
 
 while True:
     print("About to start detecting faces...")
-    sensor.skip_frames(time=2000)  # Give the user time to get ready.
+    csi0.snapshot(time=2000)  # Give the user time to get ready.
 
     print("Now detecting faces!")
 
     diff = 10  # We'll say we detected a face after 10 frames.
     while diff:
-        img = sensor.snapshot()
+        img = csi0.snapshot()
         # Threshold can be between 0.0 and 1.0. A higher threshold results in a
         # higher detection rate with more false positives. The scale value
         # controls the matching scale allowing you to detect smaller faces.
@@ -61,7 +62,7 @@ while True:
     clock = time.clock()  # Tracks FPS.
     for i in range(200):
         clock.tick()
-        m.write(sensor.snapshot())
+        m.write(csi0.snapshot())
         print(clock.fps())
 
     m.close()

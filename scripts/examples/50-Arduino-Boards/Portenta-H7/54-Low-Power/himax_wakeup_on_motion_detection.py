@@ -5,20 +5,21 @@
 # This examples shows how to use the Himax Motion Detection feature
 # to wake up from low-power Stop Mode on motion detection interrupts.
 
-import sensor
+import csi
 import pyb
 import machine
 from pyb import Pin, ExtInt
 
-sensor.reset()
-sensor.set_pixformat(sensor.GRAYSCALE)
-sensor.set_framesize(sensor.QVGA)
-sensor.set_framerate(15)
+csi0 = csi.CSI()
+csi0.reset()
+csi0.pixformat(csi.GRAYSCALE)
+csi0.framesize(csi.QVGA)
+csi0.framerate(15)
 
-sensor.ioctl(sensor.IOCTL_HIMAX_MD_THRESHOLD, 10)
-sensor.ioctl(sensor.IOCTL_HIMAX_MD_WINDOW, (0, 0, 320, 240))
-sensor.ioctl(sensor.IOCTL_HIMAX_MD_CLEAR)
-sensor.ioctl(sensor.IOCTL_HIMAX_MD_ENABLE, True)
+csi0.ioctl(csi.IOCTL_HIMAX_MD_THRESHOLD, 10)
+csi0.ioctl(csi.IOCTL_HIMAX_MD_WINDOW, (0, 0, 320, 240))
+csi0.ioctl(csi.IOCTL_HIMAX_MD_CLEAR)
+csi0.ioctl(csi.IOCTL_HIMAX_MD_ENABLE, True)
 
 
 def on_motion(line):
@@ -30,10 +31,10 @@ ext = ExtInt(Pin("PC15"), ExtInt.IRQ_RISING, Pin.PULL_DOWN, on_motion)
 
 while True:
     led.off()
-    sensor.ioctl(sensor.IOCTL_HIMAX_OSC_ENABLE, True)  # Switch to internal OSC
-    sensor.ioctl(sensor.IOCTL_HIMAX_MD_CLEAR)  # Clear MD flag
+    csi0.ioctl(csi.IOCTL_HIMAX_OSC_ENABLE, True)  # Switch to internal OSC
+    csi0.ioctl(csi.IOCTL_HIMAX_MD_CLEAR)  # Clear MD flag
     machine.sleep()  # Enter low-power mode, will wake up on MD interrupt.
-    sensor.ioctl(sensor.IOCTL_HIMAX_OSC_ENABLE, False)  # Switch back to MCLK
+    csi0.ioctl(csi.IOCTL_HIMAX_OSC_ENABLE, False)  # Switch back to MCLK
     led.on()
     for i in range(0, 60):  # Capture a few frames
-        img = sensor.snapshot()
+        img = csi0.snapshot()

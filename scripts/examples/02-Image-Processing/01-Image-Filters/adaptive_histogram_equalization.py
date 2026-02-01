@@ -10,13 +10,15 @@
 # the image contrast versus a global histogram equalization. Additionally,
 # you may specify a clip limit to prevent the contrast from going wild.
 
-import sensor
+import csi
 import time
 
-sensor.reset()
-sensor.set_pixformat(sensor.RGB565)
-sensor.set_framesize(sensor.QQVGA)
-sensor.skip_frames(time=2000)
+csi0 = csi.CSI()
+csi0.reset()
+csi0.pixformat(csi.RGB565)
+csi0.framesize(csi.QQVGA)
+csi0.snapshot(time=2000)
+
 clock = time.clock()
 
 while True:
@@ -29,6 +31,6 @@ while True:
     # than 1 like below. The higher you go the closer you get back to
     # standard adaptive histogram equalization with huge contrast swings.
 
-    img = sensor.snapshot().histeq(adaptive=True, clip_limit=3)
+    img = csi0.snapshot().histeq(adaptive=True, clip_limit=3)
 
     print(clock.fps())

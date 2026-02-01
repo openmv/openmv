@@ -6,18 +6,20 @@
 #
 # This example shows off IR beacon RGB565 tracking using the OpenMV Cam.
 
-import sensor
+import csi
 import time
 
 thresholds = (100, 100, 0, 0, 0, 0)  # thresholds for bright white light from IR.
 
-sensor.reset()
-sensor.set_pixformat(sensor.RGB565)
-sensor.set_framesize(sensor.VGA)
-sensor.set_windowing((240, 240))  # 240x240 center pixels of VGA
-sensor.skip_frames(time=2000)
-sensor.set_auto_gain(False)  # must be turned off for color tracking
-sensor.set_auto_whitebal(False)  # must be turned off for color tracking
+csi0 = csi.CSI()
+csi0.reset()
+csi0.pixformat(csi.RGB565)
+csi0.framesize(csi.VGA)
+csi0.window((240, 240))  # 240x240 center pixels of VGA
+csi0.snapshot(time=2000)
+csi0.auto_gain(False)  # must be turned off for color tracking
+csi0.auto_whitebal(False)  # must be turned off for color tracking
+
 clock = time.clock()
 
 # Only blobs that with more pixels than "pixel_threshold" and more area than "area_threshold" are
@@ -26,7 +28,7 @@ clock = time.clock()
 
 while True:
     clock.tick()
-    img = sensor.snapshot()
+    img = csi0.snapshot()
     for blob in img.find_blobs(
         [thresholds], pixels_threshold=200, area_threshold=200, merge=True
     ):

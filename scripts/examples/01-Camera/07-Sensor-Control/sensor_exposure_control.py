@@ -19,55 +19,56 @@
 # noise. So, it's best to let the exposure increase as much as possible
 # and then use gain control to make up any remaining ground.
 
-import sensor
+import csi
 import time
 
 # Change this value to adjust the exposure. Try 10.0/0.1/etc.
 EXPOSURE_TIME_SCALE = 1.0
 
-sensor.reset()  # Reset and initialize the sensor.
-sensor.set_pixformat(sensor.RGB565)  # Set pixel format to RGB565 (or GRAYSCALE)
-sensor.set_framesize(sensor.QVGA)  # Set frame size to QVGA (320x240)
+csi0 = csi.CSI()
+csi0.reset()  # Reset and initialize the sensor.
+csi0.pixformat(csi.RGB565)  # Set pixel format to RGB565 (or GRAYSCALE)
+csi0.framesize(csi.QVGA)  # Set frame size to QVGA (320x240)
 
 # Print out the initial exposure time for comparison.
-print("Initial exposure == %d" % sensor.get_exposure_us())
+print("Initial exposure == %d" % csi0.exposure_us())
 
-sensor.skip_frames(time=2000)  # Wait for settings take effect.
+csi0.snapshot(time=2000)  # Wait for settings take effect.
 clock = time.clock()  # Create a clock object to track the FPS.
 
 # You have to turn automatic gain control and automatic white balance off
 # otherwise they will change the image gains to undo any exposure settings
 # that you put in place...
-sensor.set_auto_gain(False)
-sensor.set_auto_whitebal(False)
+csi0.auto_gain(False)
+csi0.auto_whitebal(False)
 # Need to let the above settings get in...
-sensor.skip_frames(time=500)
+csi0.snapshot(time=500)
 
-current_exposure_time_in_microseconds = sensor.get_exposure_us()
+current_exposure_time_in_microseconds = csi0.exposure_us()
 print("Current Exposure == %d" % current_exposure_time_in_microseconds)
 
 # Auto exposure control (AEC) is enabled by default. Calling the below function
 # disables sensor auto exposure control. The additionally "exposure_us"
 # argument then overrides the auto exposure value after AEC is disabled.
-sensor.set_auto_exposure(
+csi0.auto_exposure(
     False, exposure_us=int(current_exposure_time_in_microseconds * EXPOSURE_TIME_SCALE)
 )
 
-print("New exposure == %d" % sensor.get_exposure_us())
-# sensor.get_exposure_us() returns the exact camera sensor exposure time
+print("New exposure == %d" % csi0.exposure_us())
+# csi0.exposure_us() returns the exact camera sensor exposure time
 # in microseconds. However, this may be a different number than what was
 # commanded because the sensor code converts the exposure time in microseconds
 # to a row/pixel/clock time which doesn't perfectly match with microseconds...
 
-# If you want to turn auto exposure back on do: sensor.set_auto_exposure(True)
+# If you want to turn auto exposure back on do: csi0.auto_exposure(True)
 # Note that the camera sensor will then change the exposure time as it likes.
 
-# Doing: sensor.set_auto_exposure(False)
+# Doing: csi0.auto_exposure(False)
 # Just disables the exposure value update but does not change the exposure
 # value the camera sensor determined was good.
 
 while True:
     clock.tick()  # Update the FPS clock.
-    img = sensor.snapshot()  # Take a picture and return the image.
+    img = csi0.snapshot()  # Take a picture and return the image.
     print(clock.fps())  # Note: OpenMV Cam runs about half as fast when connected
     # to the IDE. The FPS should increase once disconnected.

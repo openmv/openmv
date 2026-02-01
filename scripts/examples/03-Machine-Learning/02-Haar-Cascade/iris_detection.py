@@ -11,24 +11,18 @@
 #
 # Note: This script does not detect a face first, use it with the telephoto lens.
 
-import sensor
+import csi
 import time
 import image
 
-# Reset sensor
-sensor.reset()
-
-# Sensor settings
-sensor.set_contrast(3)
-sensor.set_gainceiling(16)
-
-# Set resolution to VGA.
-sensor.set_framesize(sensor.VGA)
-
+csi0 = csi.CSI()
+csi0.reset()
+csi0.contrast(3)
+csi0.gainceiling(16)
+csi0.framesize(csi.VGA)
 # Bin/Crop image to 200x100, which gives more details with less data to process
-sensor.set_windowing((220, 190, 200, 100))
-
-sensor.set_pixformat(sensor.GRAYSCALE)
+csi0.window((220, 190, 200, 100))
+csi0.pixformat(csi.GRAYSCALE)
 
 # Load Haar Cascade
 # By default this will use all stages, lower stages is faster but less accurate.
@@ -41,7 +35,7 @@ clock = time.clock()
 while True:
     clock.tick()
     # Capture snapshot
-    img = sensor.snapshot()
+    img = csi0.snapshot()
     # Find eyes !
     # Note: Lower scale factor scales-down the image more and detects smaller objects.
     # Higher threshold results in a higher detection rate, with more false positives.

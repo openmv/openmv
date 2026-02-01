@@ -8,31 +8,32 @@
 # a binary image to remove noise. This example was originally a test but its
 # useful for showing off how these functions work.
 
-import sensor
+import csi
 
-sensor.reset()
-sensor.set_framesize(sensor.QVGA)
+csi0 = csi.CSI()
+csi0.reset()
+csi0.framesize(csi.QVGA)
 
 grayscale_thres = (170, 255)
 rgb565_thres = (70, 100, -128, 127, -128, 127)
 
 while True:
-    sensor.set_pixformat(sensor.GRAYSCALE)
+    csi0.pixformat(csi.GRAYSCALE)
     for i in range(20):
-        img = sensor.snapshot()
+        img = csi0.snapshot()
         img.binary([grayscale_thres])
         img.erode(2)
     for i in range(20):
-        img = sensor.snapshot()
+        img = csi0.snapshot()
         img.binary([grayscale_thres])
         img.dilate(2)
 
-    sensor.set_pixformat(sensor.RGB565)
+    csi0.pixformat(csi.RGB565)
     for i in range(20):
-        img = sensor.snapshot()
+        img = csi0.snapshot()
         img.binary([rgb565_thres])
         img.erode(2)
     for i in range(20):
-        img = sensor.snapshot()
+        img = csi0.snapshot()
         img.binary([rgb565_thres])
         img.dilate(2)

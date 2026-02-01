@@ -4,18 +4,20 @@
 #
 # This example shows off streaming the default grayscale 8-bit AGC image from the FLIR Boson.
 
-import sensor
+import csi
 import time
 
-sensor.reset()
-sensor.set_pixformat(sensor.GRAYSCALE)  # Must always be grayscale.
-sensor.set_framesize(sensor.VGA)  # Must always be VGA or QVGA.
+# Initialize the sensor.
+csi0 = csi.CSI()
+csi0.reset()
+csi0.pixformat(csi.GRAYSCALE)  # Must always be grayscale.
+csi0.framesize(csi.VGA)  # Must always be VGA or QVGA.
 
 clock = time.clock()
 
 while True:
     clock.tick()
 
-    img = sensor.snapshot()
+    img = csi0.snapshot()
 
     print(clock.fps())

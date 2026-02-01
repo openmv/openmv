@@ -6,42 +6,40 @@
 # Show the camera an object and then run the script. A set of keypoints will be extracted
 # once and then tracked in the following frames. If you want a new set of keypoints re-run
 # the script. NOTE: see the docs for arguments to tune find_keypoints and match_keypoints.
-import sensor
+import csi
 import time
 import image
 
-# Reset sensor
-sensor.reset()
+csi0 = csi.CSI()
+csi0.reset()
+csi0.contrast(3)
+csi0.gainceiling(16)
+csi0.framesize(csi.VGA)
+csi0.window((320, 240))
+csi0.pixformat(csi.GRAYSCALE)
 
-# Sensor settings
-sensor.set_contrast(3)
-sensor.set_gainceiling(16)
-sensor.set_framesize(sensor.VGA)
-sensor.set_windowing((320, 240))
-sensor.set_pixformat(sensor.GRAYSCALE)
-
-sensor.skip_frames(time=2000)
-sensor.set_auto_gain(False, gain_db=100)
+csi0.snapshot(time=2000)
+csi0.auto_gain(False, gain_db=100)
 
 
 def draw_keypoints(img, kpts):
     if kpts:
         print(kpts)
         img.draw_keypoints(kpts)
-        img = sensor.snapshot()
+        img = csi0.snapshot()
         time.sleep_ms(1000)
 
 
 kpts1 = None
 # NOTE: uncomment to load a keypoints descriptor from file
 # kpts1 = image.load_descriptor("desc.orb")
-# img = sensor.snapshot()
+# img = csi0.snapshot()
 # draw_keypoints(img, kpts1)
 
 clock = time.clock()
 while True:
     clock.tick()
-    img = sensor.snapshot()
+    img = csi0.snapshot()
     if kpts1 is None:
         # NOTE: By default find_keypoints returns multi-scale keypoints extracted from an image pyramid.
         kpts1 = img.find_keypoints(max_keypoints=150, threshold=10, scale_factor=1.2)

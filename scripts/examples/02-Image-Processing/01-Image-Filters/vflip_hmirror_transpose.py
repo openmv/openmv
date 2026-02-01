@@ -12,14 +12,16 @@
 # vflip=True,  hmirror=True,  transpose=False -> 180 degree rotation
 # vflip=False, hmirror=True,  transpose=True  -> 270 degree rotation
 
-import sensor
+import csi
 import time
 import image
 
-sensor.reset()
-sensor.set_pixformat(sensor.RGB565)
-sensor.set_framesize(sensor.QVGA)
-sensor.skip_frames(time=2000)
+csi0 = csi.CSI()
+csi0.reset()
+csi0.pixformat(csi.RGB565)
+csi0.framesize(csi.QVGA)
+csi0.snapshot(time=2000)
+
 clock = time.clock()
 
 ticks = time.ticks_ms()
@@ -32,7 +34,7 @@ while True:
     vflip = image.VFLIP if (counter // 2) % 2 else 0
     hmirror = image.HMIRROR if (counter // 4) % 2 else 0
     transpose = image.TRANSPOSE if (counter // 8) % 2 else 0
-    img = sensor.snapshot().scale(hint=(vflip | hmirror | transpose))
+    img = csi0.snapshot().scale(hint=(vflip | hmirror | transpose))
 
     if time.ticks_diff(time.ticks_ms(), ticks) > 1000:
         ticks = time.ticks_ms()

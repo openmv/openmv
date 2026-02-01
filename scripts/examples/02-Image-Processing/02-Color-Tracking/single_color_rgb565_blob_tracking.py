@@ -6,7 +6,7 @@
 #
 # This example shows off single color RGB565 tracking using the OpenMV Cam.
 
-import sensor
+import csi
 import time
 import math
 
@@ -17,15 +17,16 @@ threshold_index = 0  # 0 for red, 1 for green, 2 for blue
 thresholds = [
     (30, 100, 15, 127, 15, 127),  # generic_red_thresholds
     (30, 100, -64, -8, -32, 32),  # generic_green_thresholds
-    (0, 30, 0, 64, -128, 0),
-]  # generic_blue_thresholds
+    (0, 30, 0, 64, -128, 0),  # generic_blue_thresholds
+]
 
-sensor.reset()
-sensor.set_pixformat(sensor.RGB565)
-sensor.set_framesize(sensor.QVGA)
-sensor.skip_frames(time=2000)
-sensor.set_auto_gain(False)  # must be turned off for color tracking
-sensor.set_auto_whitebal(False)  # must be turned off for color tracking
+csi0 = csi.CSI()
+csi0.reset()
+csi0.pixformat(csi.RGB565)
+csi0.framesize(csi.QVGA)
+csi0.snapshot(time=2000)
+csi0.auto_gain(False)  # must be turned off for color tracking
+csi0.auto_whitebal(False)  # must be turned off for color tracking
 clock = time.clock()
 
 # Only blobs that with more pixels than "pixel_threshold" and more area than "area_threshold" are
@@ -34,7 +35,7 @@ clock = time.clock()
 
 while True:
     clock.tick()
-    img = sensor.snapshot()
+    img = csi0.snapshot()
     for blob in img.find_blobs(
         [thresholds[threshold_index]],
         pixels_threshold=200,

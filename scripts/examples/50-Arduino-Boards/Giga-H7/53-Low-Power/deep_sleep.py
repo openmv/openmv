@@ -7,7 +7,7 @@
 # Note the camera will reset after wake-up from deep sleep. To find out if the cause of reset
 # is deep sleep, call the machine.reset_cause() function and test for machine.DEEPSLEEP_RESET
 import machine
-import sensor
+import csi
 
 # Create and init RTC object.
 rtc = machine.RTC()
@@ -18,10 +18,11 @@ rtc.datetime((2014, 5, 1, 4, 13, 0, 0, 0))
 # Print RTC info.
 print(rtc.datetime())
 
-sensor.reset()
+csi0 = csi.CSI()
+csi0.reset()
 
 # Shutdown the sensor (pulls PWDN high).
-sensor.shutdown(True)
+csi0.shutdown(True)
 
 # Enable RTC interrupts every 30 seconds.
 # Note the camera will RESET after wakeup from Deepsleep Mode.

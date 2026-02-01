@@ -9,20 +9,20 @@
 # script finds a face in the image using the frontalface Haar Cascade.
 # After which the script uses the keypoints feature to automatically learn your
 # face and track it. Keypoints can be used to automatically track anything.
-import sensor
+import csi
 import time
 import image
 
-# Reset sensor
-sensor.reset()
-sensor.set_contrast(3)
-sensor.set_gainceiling(16)
-sensor.set_framesize(sensor.VGA)
-sensor.set_windowing((320, 240))
-sensor.set_pixformat(sensor.GRAYSCALE)
+csi0 = csi.CSI()
+csi0.reset()
+csi0.contrast(3)
+csi0.gainceiling(16)
+csi0.framesize(csi.VGA)
+csi0.window((320, 240))
+csi0.pixformat(csi.GRAYSCALE)
 
 # Skip a few frames to allow the sensor settle down
-sensor.skip_frames(time=2000)
+csi0.snapshot(time=2000)
 
 # Load Haar Cascade
 # By default this will use all stages, lower satges is faster but less accurate.
@@ -34,7 +34,7 @@ kpts1 = None
 
 # Find a face!
 while kpts1 is None:
-    img = sensor.snapshot()
+    img = csi0.snapshot()
     img.draw_string(0, 0, "Looking for a face...")
     # Find faces
     objects = img.find_features(face_cascade, threshold=0.5, scale=1.25)
@@ -56,7 +56,7 @@ while kpts1 is None:
 # Draw keypoints
 print(kpts1)
 img.draw_keypoints(kpts1, size=24)
-img = sensor.snapshot()
+img = csi0.snapshot()
 time.sleep_ms(2000)
 
 # FPS clock
@@ -64,7 +64,7 @@ clock = time.clock()
 
 while True:
     clock.tick()
-    img = sensor.snapshot()
+    img = csi0.snapshot()
     # Extract keypoints from the whole frame
     kpts2 = img.find_keypoints(
         threshold=10, scale_factor=1.1, max_keypoints=100, normalized=True

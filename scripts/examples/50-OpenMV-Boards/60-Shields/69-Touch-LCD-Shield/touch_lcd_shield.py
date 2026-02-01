@@ -8,14 +8,15 @@
 #
 # The touch LCD shield allows you to view your OpenMV Cam's frame buffer on the go.
 
-import sensor
+import csi
 import time
 import display
 import image
 
-sensor.reset()
-sensor.set_pixformat(sensor.RGB565)
-sensor.set_framesize(sensor.QVGA)
+csi0 = csi.CSI()
+csi0.reset()
+csi0.pixformat(csi.RGB565)
+csi0.framesize(csi.QVGA)
 
 # Initialize the lcd screen.
 # Note: A DAC or a PWM backlight controller can be used to control the
@@ -35,5 +36,5 @@ clock = time.clock()
 
 while True:
     clock.tick()
-    lcd.write(sensor.snapshot(), hint=image.CENTER | image.SCALE_ASPECT_KEEP)
+    lcd.write(csi0.snapshot(), hint=image.CENTER | image.SCALE_ASPECT_KEEP)
     print(clock.fps())

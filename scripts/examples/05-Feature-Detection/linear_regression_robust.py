@@ -16,21 +16,23 @@
 # TO LIMIT THE NUMBER OF PIXELS the robust algorithm works on or it can actually
 # take seconds for the algorithm to give you a result... THRESHOLD VERY CAREFULLY!
 
-import sensor
+import csi
 import time
 
 THRESHOLD = (0, 100)  # Grayscale threshold for dark things.
 BINARY_VISIBLE = True  # Binary pass first to see what linear regression is running on.
 
-sensor.reset()
-sensor.set_pixformat(sensor.GRAYSCALE)
-sensor.set_framesize(sensor.QQQVGA)  # 80x60 (4,800 pixels) - O(N^2) max = 2,3040,000.
-sensor.skip_frames(time=2000)  # WARNING: If you use QQVGA it may take seconds
+csi0 = csi.CSI()
+csi0.reset()
+csi0.pixformat(csi.GRAYSCALE)
+csi0.framesize(csi.QQQVGA)  # 80x60 (4,800 pixels) - O(N^2) max = 2,3040,000.
+csi0.snapshot(time=2000)  # WARNING: If you use QQVGA it may take seconds
+
 clock = time.clock()  # to process a frame sometimes.
 
 while True:
     clock.tick()
-    img = sensor.snapshot().binary([THRESHOLD]) if BINARY_VISIBLE else sensor.snapshot()
+    img = csi0.snapshot().binary([THRESHOLD]) if BINARY_VISIBLE else csi0.snapshot()
 
     # Returns a line object similar to line objects returned by find_lines() and
     # find_line_segments(). You have x1(), y1(), x2(), y2(), length(),

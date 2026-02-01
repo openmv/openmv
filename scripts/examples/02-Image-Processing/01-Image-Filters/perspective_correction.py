@@ -7,13 +7,15 @@
 # This example shows off how to use the rotation_corr() to fix perspective
 # issues related to how your OpenMV Cam is mounted.
 
-import sensor
+import csi
 import time
 
-sensor.reset()
-sensor.set_pixformat(sensor.RGB565)
-sensor.set_framesize(sensor.QVGA)
-sensor.skip_frames(time=2000)
+csi0 = csi.CSI()
+csi0.reset()
+csi0.pixformat(csi.RGB565)
+csi0.framesize(csi.QVGA)
+csi0.snapshot(time=2000)
+
 clock = time.clock()
 
 # The image will be warped such that the following points become the new:
@@ -28,8 +30,8 @@ clock = time.clock()
 # on the image by clicking and dragging on the frame buffer and
 # recording the values shown in the histogram widget.
 
-w = sensor.width()
-h = sensor.height()
+w = csi0.width()
+h = csi0.height()
 
 TARGET_POINTS = [
     (0, 0),  # (x, y) CHANGE ME!
@@ -41,6 +43,6 @@ TARGET_POINTS = [
 while True:
     clock.tick()
 
-    img = sensor.snapshot().rotation_corr(corners=TARGET_POINTS)
+    img = csi0.snapshot().rotation_corr(corners=TARGET_POINTS)
 
     print(clock.fps())

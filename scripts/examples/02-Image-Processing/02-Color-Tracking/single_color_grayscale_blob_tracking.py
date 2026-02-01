@@ -6,7 +6,7 @@
 #
 # This example shows off single color grayscale tracking using the OpenMV Cam.
 
-import sensor
+import csi
 import time
 import math
 
@@ -14,12 +14,13 @@ import math
 # The below grayscale threshold is set to only find extremely bright white areas.
 thresholds = (245, 255)
 
-sensor.reset()
-sensor.set_pixformat(sensor.GRAYSCALE)
-sensor.set_framesize(sensor.VGA)
-sensor.skip_frames(time=2000)
-sensor.set_auto_gain(False)  # must be turned off for color tracking
-sensor.set_auto_whitebal(False)  # must be turned off for color tracking
+csi0 = csi.CSI()
+csi0.reset()
+csi0.pixformat(csi.GRAYSCALE)
+csi0.framesize(csi.VGA)
+csi0.snapshot(time=2000)
+csi0.auto_gain(False)  # must be turned off for color tracking
+csi0.auto_whitebal(False)  # must be turned off for color tracking
 clock = time.clock()
 
 # Only blobs that with more pixels than "pixel_threshold" and more area than "area_threshold" are
@@ -28,7 +29,7 @@ clock = time.clock()
 
 while True:
     clock.tick()
-    img = sensor.snapshot()
+    img = csi0.snapshot()
     for blob in img.find_blobs(
         [thresholds], pixels_threshold=100, area_threshold=100, merge=True
     ):

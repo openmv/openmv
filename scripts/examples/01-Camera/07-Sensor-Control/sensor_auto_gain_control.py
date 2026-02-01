@@ -26,27 +26,28 @@
 # more when the lighting changes versus the exposure being constant and
 # the gain changing.
 
-import sensor
+import csi
 import time
 
-sensor.reset()  # Reset and initialize the sensor.
-sensor.set_pixformat(sensor.RGB565)  # Set pixel format to RGB565 (or GRAYSCALE)
-sensor.set_framesize(sensor.QVGA)  # Set frame size to QVGA (320x240)
+csi0 = csi.CSI()
+csi0.reset()  # Reset and initialize the sensor.
+csi0.pixformat(csi.RGB565)  # Set pixel format to RGB565 (or GRAYSCALE)
+csi0.framesize(csi.QVGA)  # Set frame size to QVGA (320x240)
 
 # The gain db ceiling maxes out at about 24 db for the OV7725 sensor.
-sensor.set_auto_gain(True, gain_db_ceiling=16.0)  # Default gain.
+csi0.auto_gain(True, gain_db_ceiling=16.0)  # Default gain.
 
 # Note! If you set the gain ceiling to low without adjusting the exposure control
 # target value then you'll just get a lot of oscillation from the exposure
 # control if it's on.
 
-sensor.skip_frames(time=2000)  # Wait for settings take effect.
+csi0.snapshot(time=2000)  # Wait for settings take effect.
 clock = time.clock()  # Create a clock object to track the FPS.
 
 while True:
     clock.tick()  # Update the FPS clock.
-    img = sensor.snapshot()  # Take a picture and return the image.
+    img = csi0.snapshot()  # Take a picture and return the image.
     print(
         "FPS %f, Gain %f dB, Exposure %d us"
-        % (clock.fps(), sensor.get_gain_db(), sensor.get_exposure_us())
+        % (clock.fps(), csi0.gain_db(), csi0.exposure_us())
     )
