@@ -7,7 +7,7 @@
 # This example shows off how to overlay a heatmap onto your OpenMV Cam's
 # live video output from the main camera.
 
-import sensor
+import csi
 import image
 import time
 import fir
@@ -17,16 +17,17 @@ drawing_hint = image.BICUBIC | image.CENTER | image.SCALE_ASPECT_KEEP
 
 ALT_OVERLAY = False  # Set to True to allocate a second ir image.
 
-sensor.reset()
-sensor.set_pixformat(sensor.RGB565)
-sensor.set_framesize(sensor.QQVGA)
-sensor.skip_frames(time=2000)
+csi0 = csi.CSI()
+csi0.reset()
+csi0.pixformat(csi.RGB565)
+csi0.framesize(csi.QQVGA)
+csi0.snapshot(time=2000)
 
 # Initialize the thermal sensor
 fir.init()
 
 # Allocate another frame buffer for smoother video.
-extra_fb = sensor.alloc_extra_fb(sensor.width(), sensor.height(), sensor.RGB565)
+extra_fb = image.Image(csi0.width(), csi0.height(), csi0.pixformat())
 
 # FPS clock
 clock = time.clock()
@@ -35,7 +36,7 @@ while True:
     clock.tick()
 
     # Capture an image
-    img = sensor.snapshot()
+    img = csi0.snapshot()
 
     # Capture FIR data
     #   ta: Ambient temperature

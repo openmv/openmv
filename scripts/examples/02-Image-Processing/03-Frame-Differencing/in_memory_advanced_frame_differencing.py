@@ -8,7 +8,8 @@
 # example is advanced because it performs a background update to deal with the
 # background image changing overtime.
 
-import sensor
+import csi
+import image
 import time
 
 TRIGGER_THRESHOLD = 5
@@ -16,24 +17,20 @@ TRIGGER_THRESHOLD = 5
 BG_UPDATE_FRAMES = 50  # How many frames before blending.
 BG_UPDATE_BLEND = 128  # How much to blend by... ([0-255]==[0.0-1.0]).
 
-sensor.reset()  # Initialize the camera sensor.
-sensor.set_pixformat(sensor.RGB565)  # or sensor.RGB565
-sensor.set_framesize(sensor.QVGA)  # or sensor.QQVGA (or others)
-sensor.skip_frames(time=2000)  # Let new settings take affect.
-sensor.set_auto_whitebal(False)  # Turn off white balance.
+csi0 = csi.CSI()
+csi0.reset()  # Reset and initialize the sensor.
+csi0.pixformat(csi.RGB565)  # or csi.RGB565
+csi0.framesize(csi.QVGA)  # or csi.QQVGA (or others)
+csi0.snapshot(time=2000)  # Let new settings take affect.
+csi0.auto_whitebal(False)  # Turn off white balance.
 clock = time.clock()  # Tracks FPS.
 
-# Take from the main frame buffer's RAM to allocate a second frame buffer.
-# There's a lot more RAM in the frame buffer than in the MicroPython heap.
-# However, after doing this you have a lot less RAM for some algorithms...
-# So, be aware that it's a lot easier to get out of RAM issues now. However,
-# frame differencing doesn't use a lot of the extra space in the frame buffer.
-# But, things like AprilTags do and won't work if you do this...
-extra_fb = sensor.alloc_extra_fb(sensor.width(), sensor.height(), sensor.RGB565)
+# Create a second frame buffer on the heap.
+extra_fb = image.Image(csi0.width(), csi0.height(), csi0.pixformat())
 
 print("About to save background image...")
-sensor.skip_frames(time=2000)  # Give the user time to get ready.
-extra_fb.replace(sensor.snapshot())
+csi0.snapshot(time=2000)  # Give the user time to get ready.
+extra_fb.draw_image(csi0.snapshot())
 print("Saved background image - Now frame differencing!")
 
 triggered = False
@@ -41,7 +38,7 @@ triggered = False
 frame_count = 0
 while True:
     clock.tick()  # Track elapsed milliseconds between snapshots().
-    img = sensor.snapshot()  # Take a picture and return the image.
+    img = csi0.snapshot()  # Take a picture and return the image.
 
     frame_count += 1
     if frame_count > BG_UPDATE_FRAMES:
@@ -53,7 +50,7 @@ while True:
         # low blending of the new image while a high alpha results in high
         # blending of the new image. We need to reverse that for this update.
         img.blend(extra_fb, alpha=(255 - BG_UPDATE_BLEND))
-        extra_fb.replace(img)
+        extra_fb.draw_image(img)
 
     # Replace the image with the "abs(NEW-OLD)" frame difference.
     img.difference(extra_fb)

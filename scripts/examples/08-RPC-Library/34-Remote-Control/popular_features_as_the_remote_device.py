@@ -13,16 +13,17 @@
 import image
 import math
 import rpc
-import sensor
+import csi
 import struct
 
-sensor.reset()
-sensor.set_pixformat(sensor.RGB565)
-sensor.set_framesize(sensor.QVGA)
-sensor.skip_frames(time=2000)
+csi0 = csi.CSI()
+csi0.reset()
+csi0.pixformat(csi.RGB565)
+csi0.framesize(csi.QVGA)
+csi0.snapshot(time=2000)
 
 # The RPC library above is installed on your OpenMV Cam and provides multiple classes for
-# allowing your OpenMV Cam to be controlled over CAN, I2C, SPI, UART, USB VCP, or LAN/WLAN.
+# allowing your OpenMV Cam to be controlled over CAN, I2C, SPI, or UART.
 
 ################################################################
 # Choose the interface you wish to control your OpenMV Cam over.
@@ -68,28 +69,6 @@ sensor.skip_frames(time=2000)
 #
 interface = rpc.rpc_uart_slave(baudrate=115200)
 
-# Uncomment the below line to setup your OpenMV Cam for control over a USB VCP.
-#
-# interface = rpc.rpc_usb_vcp_slave()
-
-# Uncomment the below line to setup your OpenMV Cam for control over the lan.
-#
-# import network
-# network_if = network.LAN()
-# network_if.active(True)
-# network_if.ifconfig('dhcp')
-#
-# interface = rpc.rpc_network_slave(network_if)
-
-# Uncomment the below line to setup your OpenMV Cam for control over the wlan.
-#
-# import network
-# network_if = network.WLAN(network.STA_IF)
-# network_if.active(True)
-# network_if.connect('your-ssid', 'your-password')
-#
-# interface = rpc.rpc_network_slave(network_if)
-
 ################################################################
 # Call Backs
 ################################################################
@@ -100,9 +79,9 @@ interface = rpc.rpc_uart_slave(baudrate=115200)
 def draw_detections(img, dects):
     for d in dects:
         c = d.corners()
-        l = len(c)
-        for i in range(l):
-            img.draw_line(c[(i + 0) % l] + c[(i + 1) % l], color=(0, 255, 0))
+        c_len = len(c)
+        for i in range(c_len):
+            img.draw_line(c[(i + 0) % c_len] + c[(i + 1) % c_len], color=(0, 255, 0))
         img.draw_rectangle(d.rect(), color=(255, 0, 0))
 
 
@@ -118,17 +97,17 @@ def draw_detections(img, dects):
 #
 # data is unused
 def face_detection(data):
-    sensor.set_pixformat(sensor.GRAYSCALE)
-    sensor.set_framesize(sensor.QVGA)
+    csi0.pixformat(csi.GRAYSCALE)
+    csi0.framesize(csi.QVGA)
+    img = csi0.snapshot()
     faces = (
-        sensor.snapshot()
-        .gamma_corr(contrast=1.5)
+        img.gamma_corr(contrast=1.5)
         .find_features(image.HaarCascade("/rom/haarcascade_frontalface.cascade"))
     )
     if not faces:
         return bytes()  # No detections.
     for f in faces:
-        sensor.get_fb().draw_rectangle(f, color=(255, 255, 255))
+        img.draw_rectangle(f, color=(255, 255, 255))
     out_face = max(faces, key=lambda f: f[2] * f[3])
     return struct.pack("<HHHH", out_face[0], out_face[1], out_face[2], out_face[3])
 
@@ -138,13 +117,14 @@ def face_detection(data):
 #
 # data is unused
 def qrcode_detection(data):
-    sensor.set_pixformat(sensor.RGB565)
-    sensor.set_framesize(sensor.VGA)
-    sensor.set_windowing((320, 240))
-    codes = sensor.snapshot().find_qrcodes()
+    csi0.pixformat(csi.RGB565)
+    csi0.framesize(csi.VGA)
+    csi0.window((320, 240))
+    img = csi0.snapshot()
+    codes = img.find_qrcodes()
     if not codes:
         return bytes()  # No detections.
-    draw_detections(sensor.get_fb(), codes)
+    draw_detections(img, codes)
     return max(codes, key=lambda c: c.w() * c.h()).payload().encode()
 
 
@@ -152,13 +132,14 @@ def qrcode_detection(data):
 #
 # data is unused
 def all_qrcode_detection(data):
-    sensor.set_pixformat(sensor.RGB565)
-    sensor.set_framesize(sensor.VGA)
-    sensor.set_windowing((320, 240))
-    codes = sensor.snapshot().find_qrcodes()
+    csi0.pixformat(csi.RGB565)
+    csi0.framesize(csi.VGA)
+    csi0.window((320, 240))
+    img = csi0.snapshot()
+    codes = img.find_qrcodes()
     if not codes:
         return bytes()  # No detections.
-    draw_detections(sensor.get_fb(), codes)
+    draw_detections(img, codes)
     return str(codes).encode()
 
 
@@ -167,12 +148,13 @@ def all_qrcode_detection(data):
 #
 # data is unused
 def apriltag_detection(data):
-    sensor.set_pixformat(sensor.RGB565)
-    sensor.set_framesize(sensor.QQVGA)
-    tags = sensor.snapshot().find_apriltags()
+    csi0.pixformat(csi.RGB565)
+    csi0.framesize(csi.QQVGA)
+    img = csi0.snapshot()
+    tags = img.find_apriltags()
     if not tags:
         return bytes()  # No detections.
-    draw_detections(sensor.get_fb(), tags)
+    draw_detections(img, tags)
     output_tag = max(tags, key=lambda t: t.w * t.h)
     return struct.pack(
         "<HHHH",
@@ -187,12 +169,13 @@ def apriltag_detection(data):
 #
 # data is unused
 def all_apriltag_detection(data):
-    sensor.set_pixformat(sensor.RGB565)
-    sensor.set_framesize(sensor.QQVGA)
-    tags = sensor.snapshot().find_apriltags()
+    csi0.pixformat(csi.RGB565)
+    csi0.framesize(csi.QQVGA)
+    img = csi0.snapshot()
+    tags = img.find_apriltags()
     if not tags:
         return bytes()  # No detections.
-    draw_detections(sensor.get_fb(), tags)
+    draw_detections(img, tags)
     return str(tags).encode()
 
 
@@ -201,13 +184,14 @@ def all_apriltag_detection(data):
 #
 # data is unused
 def datamatrix_detection(data):
-    sensor.set_pixformat(sensor.RGB565)
-    sensor.set_framesize(sensor.VGA)
-    sensor.set_windowing((320, 240))
-    codes = sensor.snapshot().find_datamatrices()
+    csi0.pixformat(csi.RGB565)
+    csi0.framesize(csi.VGA)
+    csi0.window((320, 240))
+    img = csi0.snapshot()
+    codes = img.find_datamatrices()
     if not codes:
         return bytes()  # No detections.
-    draw_detections(sensor.get_fb(), codes)
+    draw_detections(img, codes)
     return max(codes, key=lambda c: c.w() * c.h()).payload().encode()
 
 
@@ -215,13 +199,14 @@ def datamatrix_detection(data):
 #
 # data is unused
 def all_datamatrix_detection(data):
-    sensor.set_pixformat(sensor.RGB565)
-    sensor.set_framesize(sensor.VGA)
-    sensor.set_windowing((320, 240))
-    codes = sensor.snapshot().find_datamatrices()
+    csi0.pixformat(csi.RGB565)
+    csi0.framesize(csi.VGA)
+    csi0.window((320, 240))
+    img = csi0.snapshot()
+    codes = img.find_datamatrices()
     if not codes:
         return bytes()  # No detections.
-    draw_detections(sensor.get_fb(), codes)
+    draw_detections(img, codes)
     return str(codes).encode()
 
 
@@ -230,10 +215,11 @@ def all_datamatrix_detection(data):
 #
 # data is unused
 def barcode_detection(data):
-    sensor.set_pixformat(sensor.GRAYSCALE)
-    sensor.set_framesize(sensor.VGA)
-    sensor.set_windowing((sensor.width(), sensor.height() // 8))
-    codes = sensor.snapshot().find_barcodes()
+    csi0.pixformat(csi.GRAYSCALE)
+    csi0.framesize(csi.VGA)
+    csi0.window((csi0.width(), csi0.height() // 8))
+    img = csi0.snapshot()
+    codes = img.find_barcodes()
     if not codes:
         return bytes()  # No detections.
     return max(codes, key=lambda c: c.w() * c.h()).payload().encode()
@@ -243,10 +229,11 @@ def barcode_detection(data):
 #
 # data is unused
 def all_barcode_detection(data):
-    sensor.set_pixformat(sensor.GRAYSCALE)
-    sensor.set_framesize(sensor.VGA)
-    sensor.set_windowing((sensor.width(), sensor.height() // 8))
-    codes = sensor.snapshot().find_barcodes()
+    csi0.pixformat(csi.GRAYSCALE)
+    csi0.framesize(csi.VGA)
+    csi0.window((csi0.width(), csi0.height() // 8))
+    img = csi0.snapshot()
+    codes = img.find_barcodes()
     if not codes:
         return bytes()  # No detections.
     return str(codes).encode()
@@ -257,17 +244,18 @@ def all_barcode_detection(data):
 #
 # data is the 6-byte color tracking threshold tuple of L_MIN, L_MAX, A_MIN, A_MAX, B_MIN, B_MAX.
 def color_detection(data):
-    sensor.set_pixformat(sensor.RGB565)
-    sensor.set_framesize(sensor.QVGA)
+    csi0.pixformat(csi.RGB565)
+    csi0.framesize(csi.QVGA)
     thresholds = struct.unpack("<bbbbbb", data)
-    blobs = sensor.snapshot().find_blobs(
+    img = csi0.snapshot()
+    blobs = img.find_blobs(
         [thresholds], pixels_threshold=500, area_threshold=500, merge=True, margin=20
     )
     if not blobs:
         return bytes()  # No detections.
     for b in blobs:
-        sensor.get_fb().draw_rectangle(b.rect(), color=(255, 0, 0))
-        sensor.get_fb().draw_cross(b.cx(), b.cy(), color=(0, 255, 0))
+        img.draw_rectangle(b.rect(), color=(255, 0, 0))
+        img.draw_cross(b.cx(), b.cy(), color=(0, 255, 0))
     out_blob = max(blobs, key=lambda b: b.density())
     return struct.pack("<HH", out_blob.cx(), out_blob.cy())
 
@@ -277,9 +265,9 @@ def color_detection(data):
 #
 # data is unused
 def jpeg_snapshot(data):
-    sensor.set_pixformat(sensor.RGB565)
-    sensor.set_framesize(sensor.QVGA)
-    img = sensor.snapshot()
+    csi0.pixformat(csi.RGB565)
+    csi0.framesize(csi.QVGA)
+    img = csi0.snapshot()
     img.to_jpeg(quality=90)
     return img.bytearray()
 

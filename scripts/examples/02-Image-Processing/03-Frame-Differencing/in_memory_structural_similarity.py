@@ -9,35 +9,32 @@
 # 8x8 blocks of pixels between two images to determine a similarity
 # score between two images.
 
-import sensor
+import csi
+import image
 import time
 
 # The image has likely changed if the sim.min() is lower than this.
 MIN_TRIGGER_THRESHOLD = -0.4
 
-sensor.reset()  # Initialize the camera sensor.
-sensor.set_pixformat(sensor.RGB565)  # or sensor.GRAYSCALE
-sensor.set_framesize(sensor.QVGA)  # or sensor.QQVGA (or others)
-sensor.skip_frames(time=2000)  # Let new settings take affect.
-sensor.set_auto_whitebal(False)  # Turn off white balance.
+csi0 = csi.CSI()
+csi0.reset()  # Reset and initialize the sensor.
+csi0.pixformat(csi.RGB565)  # or csi.RGB565
+csi0.framesize(csi.QVGA)  # or csi.QQVGA (or others)
+csi0.snapshot(time=2000)  # Let new settings take affect.
+csi0.auto_whitebal(False)  # Turn off white balance.
 clock = time.clock()  # Tracks FPS.
 
-# Take from the main frame buffer's RAM to allocate a second frame buffer.
-# There's a lot more RAM in the frame buffer than in the MicroPython heap.
-# However, after doing this you have a lot less RAM for some algorithms...
-# So, be aware that it's a lot easier to get out of RAM issues now. However,
-# frame differencing doesn't use a lot of the extra space in the frame buffer.
-# But, things like AprilTags do and won't work if you do this...
-extra_fb = sensor.alloc_extra_fb(sensor.width(), sensor.height(), sensor.RGB565)
+# Create a second frame buffer on the heap.
+extra_fb = image.Image(csi0.width(), csi0.height(), csi0.pixformat())
 
 print("About to save background image...")
-sensor.skip_frames(time=2000)  # Give the user time to get ready.
-extra_fb.replace(sensor.snapshot())
+csi0.snapshot(time=2000)  # Give the user time to get ready.
+extra_fb.draw_image(csi0.snapshot())
 print("Saved background image!")
 
 while True:
     clock.tick()  # Track elapsed milliseconds between snapshots().
-    img = sensor.snapshot()  # Take a picture and return the image.
+    img = csi0.snapshot()  # Take a picture and return the image.
     sim = img.get_similarity(extra_fb)
     change = "- Change -" if sim.min() < MIN_TRIGGER_THRESHOLD else "- No Change -"
 

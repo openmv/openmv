@@ -11,7 +11,7 @@
 import image
 import omv
 import rpc
-import sensor
+import csi
 import struct
 import time
 
@@ -78,9 +78,8 @@ def get_frame_buffer_call_back(pixformat, framesize, cutthrough, silent):
     )
     if result is not None:
         w, h, pixformat, size = struct.unpack("<IIII", result)
-        img = image.Image(
-            w, h, pixformat, copy_to_fb=True
-        )  # Alloc cleared frame buffer.
+        img = image.Image(w, h, pixformat, copy_to_fb=True)  # Alloc cleared frame buffer.
+        img_ba = img.bytearray()
 
         if cutthrough:
             # Fast cutthrough data transfer with no error checking.
@@ -92,7 +91,7 @@ def get_frame_buffer_call_back(pixformat, framesize, cutthrough, silent):
                 # GET BYTES NEEDS TO EXECUTE NEXT IMMEDIATELY WITH LITTLE DELAY NEXT.
 
                 # Read all the image data in one very large transfer.
-                interface.get_bytes(img.bytearray(), 5000)  # timeout
+                interface.get_bytes(img_ba, 5000)  # timeout
 
         else:
             # Slower data transfer with error checking.
@@ -109,9 +108,7 @@ def get_frame_buffer_call_back(pixformat, framesize, cutthrough, silent):
                         "raw_image_read", struct.pack("<II", i, chunk_size)
                     )
                     if result is not None:
-                        img.bytearray()[
-                            i : i + chunk_size
-                        ] = result  # Write the image data.
+                        img_ba[i:i + chunk_size] = result  # Write the image data.
                         if not silent:
                             print("%.2f%%" % ((i * 100) / size))
                         ok = True
@@ -146,7 +143,7 @@ while True:
     # completes successfully both the master and slave devices are synchronized completely.
     #
     img = get_frame_buffer_call_back(
-        sensor.RGB565, sensor.QQVGA, cutthrough=True, silent=True
+        csi.RGB565, csi.QQVGA, cutthrough=True, silent=True
     )
     if img is not None:
         pass  # You can process the image here.

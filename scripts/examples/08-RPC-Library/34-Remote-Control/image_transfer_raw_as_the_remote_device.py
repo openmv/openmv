@@ -9,13 +9,14 @@
 # This script shows off how to transfer the frame buffer from one OpenMV Cam to another.
 
 import rpc
-import sensor
+import csi
 import struct
 
-sensor.reset()
-sensor.set_pixformat(sensor.RGB565)
-sensor.set_framesize(sensor.QVGA)
-sensor.skip_frames(time=2000)
+csi0 = csi.CSI()
+csi0.reset()
+csi0.pixformat(csi.RGB565)
+csi0.framesize(csi.QVGA)
+csi0.snapshot(time=2000)
 
 # The RPC library above is installed on your OpenMV Cam and provides multiple classes for
 # allowing your OpenMV Cam to be controlled over CAN, I2C, SPI, UART, or LAN/WLAN.
@@ -67,6 +68,9 @@ interface = rpc.rpc_spi_slave(cs_pin="P3", clk_polarity=1, clk_phase=0)
 ################################################################
 # Call Backs
 ################################################################
+img = None
+img_ba = None
+img_mv = None
 
 
 # When called sets the pixformat and framesize, takes a snapshot
@@ -74,17 +78,20 @@ interface = rpc.rpc_spi_slave(cs_pin="P3", clk_polarity=1, clk_phase=0)
 #
 # data is a 4 byte pixformat and 4 byte framesize.
 def raw_image_snapshot(data):
+    global img, img_ba, img_mv
     pixformat, framesize = struct.unpack("<II", data)
-    sensor.set_pixformat(pixformat)
-    sensor.set_framesize(framesize)
-    img = sensor.snapshot()
+    csi0.pixformat(pixformat)
+    csi0.framesize(framesize)
+    img = csi0.snapshot()
+    img_ba = img.bytearray()
+    img_mv = memoryview(img_ba)
     return struct.pack(
-        "<IIII", sensor.width(), sensor.height(), sensor.get_pixformat(), img.size()
+        "<IIII", csi0.width(), csi0.height(), csi0.pixformat(), img.size()
     )
 
 
 def raw_image_read_cb():
-    interface.put_bytes(sensor.get_fb().bytearray(), 5000)  # timeout
+    interface.put_bytes(img_ba, 5000)  # timeout
 
 
 # Read data from the frame buffer given a offset and size.
@@ -97,7 +104,7 @@ def raw_image_read(data):
         return bytes()
     else:
         offset, size = struct.unpack("<II", data)
-        return memoryview(sensor.get_fb().bytearray())[offset : offset + size]
+        return img_mv[offset:offset + size]
 
 
 # Register call backs.
