@@ -20,7 +20,7 @@ class rpc:
     _RESULT_DATA_PACKET_MAGIC = 0x1DBA
 
     @micropython.viper
-    def __def_crc_16(self, data, size: int) -> int:  # private
+    def _crc_16(self, data, size: int) -> int:
         d = ptr8(data)
         crc = 0xFFFF
         for i in range(size):
@@ -28,16 +28,6 @@ class rpc:
             for j in range(8):
                 crc = (crc << 1) ^ (0x1021 if crc & 0x8000 else 0)
         return crc & 0xFFFF
-
-    @micropython.viper
-    def __stm_crc_16(self, data, size: int) -> int:  # private
-        import stm
-        ptr32(stm.CRC + stm.CRC_CR)[0] = (1 << 3) | 1
-        crc8 = ptr8(stm.CRC + stm.CRC_DR)
-        d = ptr8(data)
-        for i in range(size):
-            crc8[0] = d[i]
-        return ptr32(stm.CRC + stm.CRC_DR)[0]
 
     @micropython.viper
     def _zero(self, buff, size: int):  # private
@@ -68,17 +58,6 @@ class rpc:
         return uint(h)
 
     def __init__(self):  # private
-        self.__crc_16 = self.__def_crc_16
-        if omv.board_type() == "H7":
-            import stm
-            stm.mem32[stm.RCC + stm.RCC_AHB4ENR] = stm.mem32[stm.RCC + stm.RCC_AHB4ENR] | (1 << 19)
-            stm.mem32[stm.CRC + stm.CRC_POL] = 0x1021
-            self.__crc_16 = self.__stm_crc_16
-        elif omv.board_type() == "F7":
-            import stm
-            stm.mem32[stm.RCC + stm.RCC_AHB1ENR] = stm.mem32[stm.RCC + stm.RCC_AHB1ENR] | (1 << 12)
-            stm.mem32[stm.CRC + stm.CRC_POL] = 0x1021
-            self.__crc_16 = self.__stm_crc_16
         self._stream_writer_queue_depth_max = 255
 
     def _get_packet_pre_alloc(self, payload_len=0):
@@ -90,7 +69,7 @@ class rpc:
         if packet is not None:
             magic = packet[0] | (packet[1] << 8)
             crc = packet[-2] | (packet[-1] << 8)
-            if magic == magic_value and crc == self.__crc_16(packet, len(packet) - 2):
+            if magic == magic_value and crc == self._crc_16(packet, len(packet) - 2):
                 return payload_buf_tuple[1]
         return None
 
@@ -98,7 +77,7 @@ class rpc:
         new_payload = bytearray(len(payload) + 4)
         new_payload[:2] = struct.pack("<H", magic_value)
         new_payload[2:-2] = payload
-        new_payload[-2:] = struct.pack("<H", self.__crc_16(new_payload, len(payload) + 2))
+        new_payload[-2:] = struct.pack("<H", self._crc_16(new_payload, len(payload) + 2))
         return new_payload
 
     def _flush(self):  # protected
@@ -122,7 +101,7 @@ class rpc:
                 return
             magic = packet[0] | (packet[1] << 8)
             crc = packet[-2] | (packet[-1] << 8)
-            if magic != 0x542E and crc != self.__crc_16(packet, len(packet) - 2):
+            if magic != 0x542E and crc != self._crc_16(packet, len(packet) - 2):
                 return
             data = self._stream_get_bytes(
                 bytearray(struct.unpack("<I", packet[2:-2])[0]), read_timeout_ms
@@ -142,7 +121,7 @@ class rpc:
             return
         magic = packet[0] | (packet[1] << 8)
         crc = packet[-2] | (packet[-1] << 8)
-        if magic != 0xEDF6 and crc != self.__crc_16(packet, len(packet) - 2):
+        if magic != 0xEDF6 and crc != self._crc_16(packet, len(packet) - 2):
             return
         queue_depth = max(
             min(struct.unpack("<I", packet[2:-2])[0], self._stream_writer_queue_depth_max), 1
