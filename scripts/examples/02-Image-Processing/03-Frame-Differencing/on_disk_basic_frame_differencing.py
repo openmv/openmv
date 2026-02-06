@@ -10,30 +10,31 @@
 # called basic frame differencing because there's no background image update.
 # So, as time passes the background image may change resulting in issues.
 
-import sensor
+import csi
 import os
 import time
 
 TRIGGER_THRESHOLD = 5
 
-sensor.reset()  # Initialize the camera sensor.
-sensor.set_pixformat(sensor.RGB565)  # or sensor.GRAYSCALE
-sensor.set_framesize(sensor.QVGA)  # or sensor.QQVGA (or others)
-sensor.skip_frames(time=2000)  # Let new settings take affect.
-sensor.set_auto_whitebal(False)  # Turn off white balance.
+csi0 = csi.CSI()
+csi0.reset()  # Reset and initialize the sensor.
+csi0.pixformat(csi.RGB565)  # or csi.RGB565
+csi0.framesize(csi.QVGA)  # or csi.QQVGA (or others)
+csi0.snapshot(time=2000)  # Let new settings take affect.
+csi0.auto_whitebal(False)  # Turn off white balance.
 clock = time.clock()  # Tracks FPS.
 
-if not "temp" in os.listdir():
+if "temp" not in os.listdir():
     os.mkdir("temp")  # Make a temp directory
 
 print("About to save background image...")
-sensor.skip_frames(time=2000)  # Give the user time to get ready.
-sensor.snapshot().save("temp/bg.bmp")
+csi0.snapshot(time=2000)  # Give the user time to get ready.
+csi0.snapshot().save("temp/bg.bmp")
 print("Saved background image - Now frame differencing!")
 
 while True:
     clock.tick()  # Track elapsed milliseconds between snapshots().
-    img = sensor.snapshot()  # Take a picture and return the image.
+    img = csi0.snapshot()  # Take a picture and return the image.
 
     # Replace the image with the "abs(NEW-OLD)" frame difference.
     img.difference("temp/bg.bmp")

@@ -31,32 +31,32 @@
 # Your OpenMV Cam supports power of 2 resolutions of 64x32, 64x64,
 # 128x64, and 128x128. If you want a resolution of 32x32 you can create
 # it by doing "img.scale(x_scale=0.5, y_scale=0.5, hint=image.AREA)" on a 64x64 image.
-import sensor
+
+import csi
+import image
 import time
 import math
 
 BLOCK_W = 16  # pow2
 BLOCK_H = 16  # pow2
 
-sensor.reset()  # Reset and initialize the sensor.
-sensor.set_pixformat(sensor.GRAYSCALE)  # Set pixel format to GRAYSCALE (or RGB565)
-sensor.set_framesize(sensor.B128X128)  # Set frame size to 128x128... (or 128x64)...
-sensor.skip_frames(time=2000)  # Wait for settings take effect.
+csi0 = csi.CSI()
+csi0.reset()  # Reset and initialize the sensor.
+csi0.pixformat(csi.GRAYSCALE)  # Set pixel format to GRAYSCALE
+csi0.framesize((128, 128))  # Set frame size to 128x128... (or 64x64)...
+csi0.snapshot(time=2000)  # Wait for settings take effect.
 clock = time.clock()  # Create a clock object to track the FPS.
 
-# Take from the main frame buffer's RAM to allocate a second frame buffer.
-# There's a lot more RAM in the frame buffer than in the MicroPython heap.
-# However, after doing this you have a lot less RAM for some algorithms...
-# So, be aware that it's a lot easier to get out of RAM issues now.
-extra_fb = sensor.alloc_extra_fb(sensor.width(), sensor.height(), sensor.GRAYSCALE)
-extra_fb.replace(sensor.snapshot())
+# Create a second frame buffer on the heap.
+extra_fb = image.Image(csi0.width(), csi0.height(), csi0.pixformat())
+extra_fb.draw_image(csi0.snapshot())
 
 while True:
     clock.tick()  # Track elapsed milliseconds between snapshots().
-    img = sensor.snapshot()  # Take a picture and return the image.
+    img = csi0.snapshot()  # Take a picture and return the image.
 
-    for y in range(0, sensor.height(), BLOCK_H):
-        for x in range(0, sensor.width(), BLOCK_W):
+    for y in range(0, csi0.height(), BLOCK_H):
+        for x in range(0, csi0.width(), BLOCK_W):
             displacement = extra_fb.find_displacement(
                 img,
                 logpolar=True,
@@ -91,6 +91,6 @@ while True:
                     ),
                     color=0,
                 )
-    extra_fb.replace(img)
+    extra_fb.draw_image(img)
 
     print(clock.fps())

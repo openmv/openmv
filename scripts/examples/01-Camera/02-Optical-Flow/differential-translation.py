@@ -25,28 +25,28 @@
 # 128x64, and 128x128. If you want a resolution of 32x32 you can create
 # it by doing "img.scale(x_scale=0.5, y_scale=0.5, hint=image.AREA)" on a 64x64 image.
 
+import csi
+import image
 import sensor
 import time
 
-sensor.reset()  # Reset and initialize the sensor.
-sensor.set_pixformat(sensor.RGB565)  # Set pixel format to RGB565 (or GRAYSCALE)
-sensor.set_framesize(sensor.B64X64)  # Set frame size to 64x64... (or 64x32)...
-sensor.skip_frames(time=2000)  # Wait for settings take effect.
+csi0 = csi.CSI()
+csi0.reset()  # Reset and initialize the sensor.
+csi0.pixformat(csi.RGB565)  # Set pixel format to RGB565 (or GRAYSCALE)
+csi0.framesize((64, 64))  # Set frame size to 64x64... (or 64x32)...
+csi0.snapshot(time=2000)  # Wait for settings take effect.
 clock = time.clock()  # Create a clock object to track the FPS.
 
-# Take from the main frame buffer's RAM to allocate a second frame buffer.
-# There's a lot more RAM in the frame buffer than in the MicroPython heap.
-# However, after doing this you have a lot less RAM for some algorithms...
-# So, be aware that it's a lot easier to get out of RAM issues now.
-extra_fb = sensor.alloc_extra_fb(sensor.width(), sensor.height(), sensor.RGB565)
-extra_fb.replace(sensor.snapshot())
+# Create a second frame buffer on the heap.
+extra_fb = image.Image(csi0.width(), csi0.height(), csi0.pixformat())
+extra_fb.draw_image(csi0.snapshot())
 
 while True:
     clock.tick()  # Track elapsed milliseconds between snapshots().
     img = sensor.snapshot()  # Take a picture and return the image.
 
     displacement = extra_fb.find_displacement(img)
-    extra_fb.replace(img)
+    extra_fb.draw_image(img)
 
     # Offset results are noisy without filtering so we drop some accuracy.
     sub_pixel_x = int(displacement.x_translation() * 5) / 5.0
