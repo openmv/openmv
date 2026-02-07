@@ -8,20 +8,20 @@
 # Chrome, Firefox and MJpegViewer App on Android have been tested.
 # Connect to OPENMV_AP and use this URL: http://192.168.1.1:8080 to view the stream.
 
-import sensor
+import csi
 import time
 import network
 import socket
-
+csi0 = csi.CSI()
 SSID = "OPENMV_AP"  # Network SSID
 KEY = "1234567890"  # Network key (must be 10 chars)
 HOST = ""  # Use first available interface
 PORT = 8080  # Arbitrary non-privileged port
 
 # Reset sensor
-sensor.reset()
-sensor.set_framesize(sensor.QQVGA)
-sensor.set_pixformat(sensor.GRAYSCALE)
+csi0.reset()
+csi0.framesize(csi.QQVGA)
+csi0.pixformat(csi.GRAYSCALE)
 
 # Init wlan module in AP mode.
 wlan = network.WLAN(network.AP_IF)
@@ -55,7 +55,7 @@ def start_streaming(client):
     # NOTE: Disable IDE preview to increase streaming FPS.
     while True:
         clock.tick()  # Track elapsed milliseconds between snapshots().
-        frame = sensor.snapshot()
+        frame = csi0.snapshot()
         cframe = frame.to_jpeg(quality=35, copy=True)
         header = (
             "\r\n--openmv\r\n"

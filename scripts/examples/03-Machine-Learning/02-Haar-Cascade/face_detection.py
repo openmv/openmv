@@ -15,19 +15,19 @@
 # contrast check in constant time (the reason for feature detection being
 # grayscale only is because of the space requirement for the integral image).
 
-import sensor
+import csi
 import time
 import image
-
+csi0 = csi.CSI()
 # Reset sensor
-sensor.reset()
+csi0.reset()
 
 # Sensor settings
-sensor.set_contrast(3)
-sensor.set_gainceiling(16)
+csi0.contrast(3)
+csi0.gainceiling(16)
 # HQVGA and GRAYSCALE are the best for face tracking.
-sensor.set_framesize(sensor.HQVGA)
-sensor.set_pixformat(sensor.GRAYSCALE)
+csi0.framesize(csi.HQVGA)
+csi0.pixformat(csi.GRAYSCALE)
 
 # Load Haar Cascade
 # By default this will use all stages, lower satges is faster but less accurate.
@@ -41,7 +41,7 @@ while True:
     clock.tick()
 
     # Capture snapshot
-    img = sensor.snapshot()
+    img = csi0.snapshot()
 
     # Find objects.
     # Note: Lower scale factor scales-down the image more and detects smaller objects.

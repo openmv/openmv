@@ -6,10 +6,10 @@
 #
 # This example shows off multi color blob tracking using the OpenMV Cam.
 
-import sensor
+import csi
 import time
 import math
-
+csi0 = csi.CSI()
 # Color Tracking Thresholds (L Min, L Max, A Min, A Max, B Min, B Max)
 # The below thresholds track in general red/green things. You may wish to tune them...
 thresholds = [
@@ -20,12 +20,12 @@ thresholds = [
 # You may pass up to 16 thresholds above. However, it's not really possible to segment any
 # scene with 16 thresholds before color thresholds start to overlap heavily.
 
-sensor.reset()
-sensor.set_pixformat(sensor.RGB565)
-sensor.set_framesize(sensor.QVGA)
-sensor.skip_frames(time=2000)
-sensor.set_auto_gain(False)  # must be turned off for color tracking
-sensor.set_auto_whitebal(False)  # must be turned off for color tracking
+csi0.reset()
+csi0.pixformat(csi.RGB565)
+csi0.framesize(csi.QVGA)
+csi0.snapshot(time=2000)
+csi0.auto_gain(False)  # must be turned off for color tracking
+csi0.auto_whitebal(False)  # must be turned off for color tracking
 clock = time.clock()
 
 # Only blobs that with more pixels than "pixel_threshold" and more area than "area_threshold" are
@@ -34,7 +34,7 @@ clock = time.clock()
 
 while True:
     clock.tick()
-    img = sensor.snapshot()
+    img = csi0.snapshot()
     for blob in img.find_blobs(thresholds, pixels_threshold=200, area_threshold=200):
         # These values depend on the blob not being circular - otherwise they will be shaky.
         if blob.elongation() > 0.5:

@@ -4,20 +4,22 @@
 #
 # This example shows off streaming an ironbow image from the FLIR Boson.
 
-import sensor
+import csi
 import time
 import image
 
-sensor.reset()
-sensor.set_pixformat(sensor.GRAYSCALE)  # Must always be grayscale.
-sensor.set_framesize(sensor.VGA)  # Must always be VGA or QVGA.
-sensor.set_color_palette(image.PALETTE_IRONBOW)
+# Initialize the sensor.
+csi0 = csi.CSI()
+csi0.reset()
+csi0.pixformat(csi.GRAYSCALE)  # Must always be grayscale.
+csi0.framesize(csi.VGA)  # Must always be VGA or QVGA.
+csi0.color_palette(image.PALETTE_IRONBOW)
 
 clock = time.clock()
 
 while True:
     clock.tick()
 
-    img = sensor.snapshot()
+    img = csi0.snapshot()
 
     print(clock.fps())

@@ -7,14 +7,14 @@
 # This example runs on the OpenMV RT1062 to detect people
 # using the built-in MobileNet model.
 
-import sensor
+import csi
 import time
 import ml
-
-sensor.reset()
-sensor.set_pixformat(sensor.RGB565)
-sensor.set_framesize(sensor.QVGA)
-sensor.skip_frames(time=2000)
+csi0 = csi.CSI()
+csi0.reset()
+csi0.pixformat(csi.RGB565)
+csi0.framesize(csi.QVGA)
+csi0.snapshot(time=2000)
 
 model = ml.Model("/rom/person_detect.tflite")
 print(model)
@@ -22,7 +22,7 @@ print(model)
 clock = time.clock()
 while True:
     clock.tick()
-    img = sensor.snapshot()
+    img = csi0.snapshot()
 
     # This combines the labels and confidence values into a list of tuples
     # and then sorts that list by the confidence values.
