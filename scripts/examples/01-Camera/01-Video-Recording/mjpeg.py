@@ -11,15 +11,16 @@
 # recording a Mjpeg file you can use VLC to play it. If you are on Ubuntu then
 # the built-in video player will work too.
 
-import sensor
+import csi
 import time
 import mjpeg
 import machine
 
-sensor.reset()  # Reset and initialize the sensor.
-sensor.set_pixformat(sensor.RGB565)  # Set pixel format to RGB565 (or GRAYSCALE)
-sensor.set_framesize(sensor.QVGA)  # Set frame size to QVGA (320x240)
-sensor.skip_frames(time=2000)  # Wait for settings take effect.
+csi0 = csi.CSI()
+csi0.reset()  # Reset and initialize the sensor.
+csi0.pixformat(csi.RGB565)  # Set pixel format to RGB565 (or GRAYSCALE)
+csi0.framesize(csi.QVGA)  # Set frame size to QVGA (320x240)
+csi0.snapshot(time=2000)  # Wait for settings take effect.
 
 led = machine.LED("LED_RED")
 
@@ -29,7 +30,7 @@ m = mjpeg.Mjpeg("example.mjpeg")
 clock = time.clock()  # Create a clock object to track the FPS.
 for i in range(200):
     clock.tick()
-    m.write(sensor.snapshot())
+    m.write(csi0.snapshot())
     print(clock.fps())
 
 m.close()

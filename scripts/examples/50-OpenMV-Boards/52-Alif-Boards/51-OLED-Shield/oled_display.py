@@ -8,20 +8,21 @@
 #
 # The OLED Breakout Board allows you to view your OpenMV AE3's frame buffer on the go.
 
-import sensor
+import csi
 import time
 import display
 import image
 
-sensor.reset()
-sensor.set_pixformat(sensor.RGB565)
-sensor.set_framesize(sensor.VGA)
-sensor.set_windowing((400, 400))
+csi0 = csi.CSI()
+csi0.reset()
+csi0.pixformat(csi.RGB565)
+csi0.framesize(csi.VGA)
+csi0.window((400, 400))
 
 lcd = display.SPIDisplay(width=128, height=128, controller=display.SSD1351())
 clock = time.clock()
 
 while True:
     clock.tick()
-    lcd.write(sensor.snapshot(), hint=image.CENTER | image.SCALE_ASPECT_KEEP)
+    lcd.write(csi0.snapshot(), hint=image.CENTER | image.SCALE_ASPECT_KEEP)
     print(clock.fps())

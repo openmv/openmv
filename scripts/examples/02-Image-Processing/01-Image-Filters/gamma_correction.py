@@ -7,13 +7,15 @@
 # This example shows off gamma correction to make the image brighter. The gamma
 # correction method can also fix contrast and brightness too.
 
-import sensor
+import csi
 import time
 
-sensor.reset()
-sensor.set_pixformat(sensor.RGB565)
-sensor.set_framesize(sensor.QVGA)
-sensor.skip_frames(time=2000)
+csi0 = csi.CSI()
+csi0.reset()
+csi0.pixformat(csi.RGB565)
+csi0.framesize(csi.QVGA)
+csi0.snapshot(time=2000)
+
 clock = time.clock()
 
 while True:
@@ -21,6 +23,6 @@ while True:
 
     # Gamma, contrast, and brightness correction are applied to each color channel. The
     # values are scaled to the range per color channel per image type...
-    img = sensor.snapshot().gamma_corr(gamma=0.5, contrast=1.0, brightness=0.0)
+    img = csi0.snapshot().gamma_corr(gamma=0.5, contrast=1.0, brightness=0.0)
 
     print(clock.fps())

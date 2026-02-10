@@ -6,18 +6,21 @@
 #
 # This example shows off single color RGB565 tracking using the OpenMV Cam using the FLIR BOSON.
 
-import sensor
+import csi
 import time
 import image
 
 # Color Tracking Thresholds (L Min, L Max, A Min, A Max, B Min, B Max)
 threshold_list = [(70, 100, -30, 40, 20, 100)]
 
-sensor.reset()
-sensor.set_pixformat(sensor.GRAYSCALE)
-sensor.set_framesize(sensor.VGA)
-sensor.set_color_palette(image.PALETTE_IRONBOW)
-sensor.skip_frames(time=5000)
+# Initialize the sensor.
+csi0 = csi.CSI()
+csi0.reset()
+csi0.pixformat(csi.GRAYSCALE)
+csi0.framesize(csi.VGA)
+csi0.color_palette(image.PALETTE_IRONBOW)
+csi0.snapshot(time=5000)
+
 clock = time.clock()
 
 # Only blobs that with more pixels than "pixel_threshold" and more area than "area_threshold" are
@@ -26,7 +29,7 @@ clock = time.clock()
 
 while True:
     clock.tick()
-    img = sensor.snapshot()
+    img = csi0.snapshot()
     for blob in img.find_blobs(
         threshold_list, pixels_threshold=200, area_threshold=200, merge=True
     ):

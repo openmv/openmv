@@ -14,18 +14,19 @@
 # This example demonstrates using frame differencing with your OpenMV Cam to do
 # motion detection. After motion is detected your OpenMV Cam will take video.
 
-import sensor
+import csi
 import time
 import mjpeg
 import os
 import machine
 import random
 
-sensor.reset()  # Reset and initialize the sensor.
-sensor.set_pixformat(sensor.RGB565)  # Set pixel format to RGB565 (or GRAYSCALE)
-sensor.set_framesize(sensor.QVGA)  # Set frame size to QVGA (320x240)
-sensor.skip_frames(time=2000)  # Wait for settings take effect.
-sensor.set_auto_whitebal(False)  # Turn off white balance.
+csi0 = csi.CSI()
+csi0.reset()  # Reset and initialize the sensor.
+csi0.pixformat(csi.RGB565)  # Set pixel format to RGB565 (or GRAYSCALE)
+csi0.framesize(csi.QVGA)  # Set frame size to QVGA (320x240)
+csi0.snapshot(time=2000)  # Wait for settings take effect.
+csi0.auto_whitebal(False)  # Turn off white balance.
 
 led = machine.LED("LED_RED")
 
@@ -34,14 +35,14 @@ if not "temp" in os.listdir():
 
 while True:
     print("About to save background image...")
-    sensor.skip_frames(time=2000)  # Give the user time to get ready.
+    csi0.snapshot(time=2000)  # Give the user time to get ready.
 
-    sensor.snapshot().save("temp/bg.bmp")
+    csi0.snapshot().save("temp/bg.bmp")
     print("Saved background image - Now detecting motion!")
 
     diff = 10  # We'll say we detected motion after 10 frames of motion.
     while diff:
-        img = sensor.snapshot()
+        img = csi0.snapshot()
         img.difference("temp/bg.bmp")
         stats = img.statistics()
         # Stats 5 is the max of the lighting color channel. The below code
@@ -56,7 +57,7 @@ while True:
     clock = time.clock()  # Tracks FPS.
     for i in range(200):
         clock.tick()
-        m.write(sensor.snapshot())
+        m.write(csi0.snapshot())
         print(clock.fps())
 
     m.close()

@@ -10,7 +10,7 @@
 # P4 = TXD
 
 import math
-import sensor
+import csi
 import struct
 import time
 import machine
@@ -39,10 +39,11 @@ valid_tag_ids = {
 
 
 # Camera Setup
-sensor.reset()
-sensor.set_pixformat(sensor.GRAYSCALE)
-sensor.set_framesize(sensor.QQVGA)
-sensor.skip_frames(time=2000)
+csi0 = csi.CSI()
+csi0.reset()
+csi0.pixformat(csi.GRAYSCALE)
+csi0.framesize(csi.QQVGA)
+csi0.snapshot(time=2000)
 
 x_res = 160  # QQVGA
 y_res = 120  # QQVGA
@@ -144,7 +145,7 @@ def update_led(target_found):
 clock = time.clock()
 while True:
     clock.tick()
-    img = sensor.snapshot()
+    img = csi0.snapshot()
     tags = sorted(
         img.find_apriltags(fx=f_x, fy=f_y, cx=c_x, cy=c_y),
         key=lambda x: x.w() * x.h(),

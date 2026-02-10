@@ -2,19 +2,19 @@
 # Copyright (c) 2013-2023 OpenMV LLC. All rights reserved.
 # https://github.com/openmv/openmv/blob/master/LICENSE
 #
-import sensor
+import csi
 import time
 from machine import UART
 from modbus import ModbusRTU
 
-sensor.reset()
-sensor.set_pixformat(sensor.GRAYSCALE)
-sensor.set_framesize(sensor.QQVGA)
+csi0 = csi.CSI()
+csi0.reset()
+csi0.pixformat(csi.GRAYSCALE)
+csi0.framesize(csi.QQVGA)
+csi0.snapshot(time=2000)
 
 uart = UART(3, 115200, parity=None, stop=2, timeout=1, timeout_char=4)
 modbus = ModbusRTU(uart, register_num=9999)
-
-sensor.skip_frames(time=2000)
 clock = time.clock()
 
 while True:
@@ -22,7 +22,7 @@ while True:
         modbus.handle(debug=True)
     else:
         clock.tick()
-        img = sensor.snapshot()
+        img = csi0.snapshot()
         tags = img.find_apriltags()  # defaults to TAG36H11 without "families".
         modbus.clear()
         modbus.REGISTER[0] = len(tags)

@@ -87,6 +87,7 @@ csi0.reset()  # Reset and initialize the sensor.
 csi0.pixformat(csi.RGB565)  # Set pixel format to RGB565 (or GRAYSCALE)
 csi0.framesize((64, 64))  # Set frame size to 64x64... (or 64x32)...
 csi0.snapshot(time=2000)  # Wait for settings take effect.
+
 clock = time.clock()  # Create a clock object to track the FPS.
 
 # Create a second frame buffer on the heap.

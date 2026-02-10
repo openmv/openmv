@@ -11,20 +11,21 @@
 
 # DISABLE THE FRAME BUFFER TO SEE THE REAL FPS
 
-import sensor
+import csi
 import image
 import time
 
+csi0 = csi.CSI()
 up_hint = 0  # image.BILINEAR image.BICUBIC
 down_hint = image.AREA  # image.BILINEAR image.BICUBIC image.AREA
 
 bounce_div = 128
 
-medium_img = image.Image(32, 32, sensor.RGB565, copy_to_fb=True)
+medium_img = image.Image(32, 32, csi.RGB565, copy_to_fb=True)
 # medium_img.to_grayscale()
 # medium_img.to_bitmap()
 
-small_img = image.Image(4, 4, sensor.RGB565)
+small_img = image.Image(4, 4, csi.RGB565)
 small_img.set_pixel(0, 0, (0, 0, 127))
 small_img.set_pixel(1, 0, (47, 255, 199))
 small_img.set_pixel(2, 0, (0, 188, 255))
@@ -44,7 +45,7 @@ small_img.set_pixel(3, 3, (50, 255, 195))
 # small_img.to_grayscale()
 # small_img.to_bitmap()
 
-big_img = image.Image(128, 128, sensor.RGB565)
+big_img = image.Image(128, 128, csi.RGB565)
 big_img.draw_image(small_img, 0, 0, x_scale=32, y_scale=32, hint=up_hint)
 # big_img.to_grayscale()
 # big_img.to_bitmap()
@@ -68,7 +69,7 @@ while True:
         y_scale=0.25,
         hint=down_hint,
     )
-    sensor.flush()
+    csi0.flush()
 
     x_bounce += x_bounce_toggle
     if abs(x_bounce // bounce_div) >= (medium_img.width() * 1.1):

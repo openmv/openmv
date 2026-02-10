@@ -10,18 +10,20 @@
 # Note that the find_circles() method will only find circles which are completely
 # inside of the image. Circles which go outside of the image/roi are ignored...
 
-import sensor
+import csi
 import time
 
-sensor.reset()
-sensor.set_pixformat(sensor.RGB565)  # grayscale is faster
-sensor.set_framesize(sensor.QQVGA)
-sensor.skip_frames(time=2000)
+csi0 = csi.CSI()
+csi0.reset()
+csi0.pixformat(csi.RGB565)  # grayscale is faster
+csi0.framesize(csi.QQVGA)
+csi0.snapshot(time=2000)
+
 clock = time.clock()
 
 while True:
     clock.tick()
-    img = sensor.snapshot().lens_corr(1.8)
+    img = csi0.snapshot().lens_corr(1.8)
 
     # Circle objects have four values: x, y, r (radius), and magnitude. The
     # magnitude is the strength of the detection of the circle. Higher is

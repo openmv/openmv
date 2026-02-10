@@ -13,15 +13,17 @@
 
 # find_lines() finds infinite length lines. Use find_line_segments() to find non-infinite lines.
 
-import sensor
+import csi
 import time
 
 ENABLE_LENS_CORR = False  # turn on for straighter lines...
 
-sensor.reset()
-sensor.set_pixformat(sensor.RGB565)  # grayscale is faster
-sensor.set_framesize(sensor.QQVGA)
-sensor.skip_frames(time=2000)
+csi0 = csi.CSI()
+csi0.reset()
+csi0.pixformat(csi.RGB565)  # grayscale is faster
+csi0.framesize(csi.QQVGA)
+csi0.snapshot(time=2000)
+
 clock = time.clock()
 
 # All line objects have a `theta()` method to get their rotation angle in degrees.
@@ -35,7 +37,7 @@ max_degree = 179
 
 while True:
     clock.tick()
-    img = sensor.snapshot()
+    img = csi0.snapshot()
     if ENABLE_LENS_CORR:
         img.lens_corr(1.8)  # for 2.8mm lens...
 

@@ -21,7 +21,7 @@
 # leptons don't have radiometry support or they don't activate their calibration process often
 # enough to deal with temperature changes (FLIR 2.5).
 
-import sensor
+import csi
 import time
 import image
 
@@ -32,31 +32,23 @@ threshold_list = [(70, 100, -30, 40, 20, 100)]
 min_temp_in_celsius = 20
 max_temp_in_celsius = 40
 
-print("Resetting Lepton...")
-# These settings are applied on reset
-sensor.reset()
-sensor.ioctl(sensor.IOCTL_LEPTON_SET_MODE, True)
-sensor.ioctl(
-    sensor.IOCTL_LEPTON_SET_RANGE, min_temp_in_celsius, max_temp_in_celsius
-)
-print(
-    "Lepton Res (%dx%d)"
-    % (
-        sensor.ioctl(sensor.IOCTL_LEPTON_GET_WIDTH),
-        sensor.ioctl(sensor.IOCTL_LEPTON_GET_HEIGHT),
-    )
-)
-print(
-    "Radiometry Available: "
-    + ("Yes" if sensor.ioctl(sensor.IOCTL_LEPTON_GET_RADIOMETRY) else "No")
-)
-# Make the color palette cool
-sensor.set_color_palette(image.PALETTE_IRONBOW)
+# Initialize the sensor.
+csi0 = csi.CSI()
+csi0.reset()
+csi0.pixformat(csi.RGB565)
+csi0.framesize(csi.QQVGA)
+csi0.color_palette(image.PALETTE_IRONBOW)
 
-sensor.set_pixformat(sensor.RGB565)
-sensor.set_framesize(sensor.QQVGA)
-sensor.skip_frames(time=5000)
+# Enable measurement mode
+csi0.ioctl(csi.IOCTL_LEPTON_SET_MODE, True)
+csi0.ioctl(csi.IOCTL_LEPTON_SET_RANGE, min_temp_in_celsius, max_temp_in_celsius)
+
+# Skip frames
+csi0.snapshot(time=5000)
 clock = time.clock()
+
+print("Radiometry: " + "Yes" if csi0.ioctl(csi.IOCTL_LEPTON_GET_RADIOMETRY) else "No")
+print("Resolution: %dx%d" % (csi0.ioctl(csi.IOCTL_LEPTON_GET_WIDTH), csi0.ioctl(csi.IOCTL_LEPTON_GET_HEIGHT)))
 
 # Only blobs that with more pixels than "pixel_threshold" and more area than "area_threshold" are
 # returned by "find_blobs" below. Change "pixels_threshold" and "area_threshold" if you change the
@@ -64,7 +56,7 @@ clock = time.clock()
 
 while True:
     clock.tick()
-    img = sensor.snapshot()
+    img = csi0.snapshot()
     for blob in img.find_blobs(
         threshold_list, pixels_threshold=200, area_threshold=200, merge=True
     ):
@@ -72,5 +64,5 @@ while True:
         img.draw_cross(blob.cx(), blob.cy())
     print(
         "FPS %f - Lepton Temp: %f C"
-        % (clock.fps(), sensor.ioctl(sensor.IOCTL_LEPTON_GET_FPA_TEMP))
+        % (clock.fps(), csi0.ioctl(csi.IOCTL_LEPTON_GET_FPA_TEMP))
     )

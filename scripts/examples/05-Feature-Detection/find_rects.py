@@ -11,18 +11,20 @@
 # distortion causes those rectangles to look bent. Rounded rectangles are no problem!
 # (But, given this the code will also detect small radius circles too)...
 
-import sensor
+import csi
 import time
 
-sensor.reset()
-sensor.set_pixformat(sensor.RGB565)  # grayscale is faster (160x120 max on OpenMV-M7)
-sensor.set_framesize(sensor.QQVGA)
-sensor.skip_frames(time=2000)
+csi0 = csi.CSI()
+csi0.reset()
+csi0.pixformat(csi.RGB565)  # grayscale is faster (160x120 max on OpenMV-M7)
+csi0.framesize(csi.QQVGA)
+csi0.snapshot(time=2000)
+
 clock = time.clock()
 
 while True:
     clock.tick()
-    img = sensor.snapshot()
+    img = csi0.snapshot()
 
     # `threshold` below should be set to a high enough value to filter out noise
     # rectangles detected in the image which have low edge magnitudes. Rectangles

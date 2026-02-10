@@ -7,18 +7,20 @@
 # This example shows off how to use histogram equalization to improve
 # the contrast in the image.
 
-import sensor
+import csi
 import time
 
-sensor.reset()
-sensor.set_pixformat(sensor.RGB565)
-sensor.set_framesize(sensor.QQVGA)
-sensor.skip_frames(time=2000)
+csi0 = csi.CSI()
+csi0.reset()
+csi0.pixformat(csi.RGB565)
+csi0.framesize(csi.QQVGA)
+csi0.snapshot(time=2000)
+
 clock = time.clock()
 
 while True:
     clock.tick()
 
-    img = sensor.snapshot().histeq()
+    img = csi0.snapshot().histeq()
 
     print(clock.fps())

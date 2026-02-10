@@ -8,18 +8,20 @@
 # with the median value of it's NxN neighborhood. Median filtering is good for
 # removing noise in the image while preserving edges.
 
-import sensor
+import csi
 import time
 
-sensor.reset()  # Initialize the camera sensor.
-sensor.set_pixformat(sensor.RGB565)  # or sensor.GRAYSCALE
-sensor.set_framesize(sensor.QQVGA)  # or sensor.QVGA (or others)
-sensor.skip_frames(time=2000)  # Let new settings take affect.
+csi0 = csi.CSI()
+csi0.reset()  # Initialize the camera sensor.
+csi0.pixformat(csi.RGB565)  # or csi.GRAYSCALE
+csi0.framesize(csi.QQVGA)  # or csi.QVGA (or others)
+csi0.snapshot(time=2000)  # Let new settings take affect.
+
 clock = time.clock()  # Tracks FPS.
 
 while True:
     clock.tick()  # Track elapsed milliseconds between snapshots().
-    img = sensor.snapshot()  # Take a picture and return the image.
+    img = csi0.snapshot()  # Take a picture and return the image.
 
     # The first argument to the median filter is the kernel size, it can be
     # either 0, 1, or 2 for a 1x1, 3x3, or 5x5 kernel respectively. The second

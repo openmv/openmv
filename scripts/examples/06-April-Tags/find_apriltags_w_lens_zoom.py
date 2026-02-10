@@ -7,17 +7,19 @@
 # This example shows the power of the OpenMV Cam to detect April Tags
 # on the OpenMV Cam M7. The M4 versions cannot detect April Tags.
 
-import sensor
+import csi
 import time
 import math
 
-sensor.reset()
-sensor.set_pixformat(sensor.RGB565)
-sensor.set_framesize(sensor.VGA)
-sensor.set_windowing((160, 120))  # Look at center 160x120 pixels of the VGA resolution.
-sensor.skip_frames(time=2000)
-sensor.set_auto_gain(False)  # must turn this off to prevent image washout...
-sensor.set_auto_whitebal(False)  # must turn this off to prevent image washout...
+csi0 = csi.CSI()
+csi0.reset()
+csi0.pixformat(csi.RGB565)
+csi0.framesize(csi.VGA)
+csi0.window((160, 120))  # Look at center 160x120 pixels of the VGA resolution.
+csi0.snapshot(time=2000)
+csi0.auto_gain(False)  # must turn this off to prevent image washout...
+csi0.auto_whitebal(False)  # must turn this off to prevent image washout...
+
 clock = time.clock()
 
 # Note! Unlike find_qrcodes the find_apriltags method does not need lens correction on the image to work.
@@ -30,7 +32,7 @@ clock = time.clock()
 
 while True:
     clock.tick()
-    img = sensor.snapshot()
+    img = csi0.snapshot()
     for tag in img.find_apriltags():  # defaults to TAG36H11
         img.draw_rectangle(tag.rect, color=(255, 0, 0))
         img.draw_cross(tag.cx, tag.cy, color=(0, 255, 0))

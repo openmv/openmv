@@ -6,14 +6,16 @@
 #
 # Exercise draw image with many different values for testing
 
-import sensor
+import csi
 import image
 import time
 
-sensor.reset()
-sensor.set_pixformat(sensor.RGB565)  # or GRAYSCALE...
-sensor.set_framesize(sensor.QVGA)  # or QQVGA...
-sensor.skip_frames(time=2000)
+csi0 = csi.CSI()
+csi0.reset()
+csi0.pixformat(csi.RGB565)  # or GRAYSCALE...
+csi0.framesize(csi.QVGA)  # or QQVGA...
+csi0.snapshot(time=2000)
+
 clock = time.clock()
 
 BOUNCE = True
@@ -42,10 +44,10 @@ max_rescale = 5
 min_rescale = rd * 2
 
 # Boundary to bounce within
-xmin = -sensor.width() / SMALL_IMAGE_SCALE - 8
-ymin = -sensor.height() / SMALL_IMAGE_SCALE - 8
-xmax = sensor.width() + 8
-ymax = sensor.height() + 8
+xmin = -csi0.width() / SMALL_IMAGE_SCALE - 8
+ymin = -csi0.height() / SMALL_IMAGE_SCALE - 8
+xmax = csi0.width() + 8
+ymax = csi0.height() + 8
 
 while True:
     clock.tick()
@@ -53,7 +55,7 @@ while True:
     status = ""
     value_mixer = value_mixer + 1
 
-    img = sensor.snapshot()
+    img = csi0.snapshot()
     # Makes a scaled copy of the sensor
     small_img = img.scale(x_scale=1.0 / SMALL_IMAGE_SCALE,
                           y_scale=1.0 / SMALL_IMAGE_SCALE,

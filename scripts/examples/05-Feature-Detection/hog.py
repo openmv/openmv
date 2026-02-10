@@ -9,21 +9,22 @@
 # Note: Due to JPEG artifacts, the HoG visualization looks blurry. To see the
 # image without JPEG artifacts, uncomment the lines that save the image to uSD.
 
-import sensor
+import csi
 import time
 
-sensor.reset()
-# Set sensor settings
-sensor.set_contrast(1)
-sensor.set_gainceiling(8)
-sensor.set_framesize(sensor.QVGA)
-sensor.set_pixformat(sensor.GRAYSCALE)
-sensor.skip_frames(time=2000)
+csi0 = csi.CSI()
+csi0.reset()
+csi0.contrast(1)
+csi0.gainceiling(8)
+csi0.framesize(csi.QVGA)
+csi0.pixformat(csi.GRAYSCALE)
+csi0.snapshot(time=2000)
 
 clock = time.clock()  # Tracks FPS.
+
 while True:
     clock.tick()
-    img = sensor.snapshot()
+    img = csi0.snapshot()
     img.find_hog()
 
     # Uncomment to save raw FB to file and exit the loop

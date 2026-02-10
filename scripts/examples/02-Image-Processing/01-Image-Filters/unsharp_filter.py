@@ -6,18 +6,20 @@
 #
 # This example shows off using the gaussian filter to unsharp mask filter images.
 
-import sensor
+import csi
 import time
 
-sensor.reset()  # Initialize the camera sensor.
-sensor.set_pixformat(sensor.GRAYSCALE)  # or sensor.RGB565
-sensor.set_framesize(sensor.QQVGA)  # or sensor.QVGA (or others)
-sensor.skip_frames(time=2000)  # Let new settings take affect.
+csi0 = csi.CSI()
+csi0.reset()  # Initialize the camera sensor.
+csi0.pixformat(csi.GRAYSCALE)  # or csi.RGB565
+csi0.framesize(csi.QQVGA)  # or csi.QVGA (or others)
+csi0.snapshot(time=2000)  # Let new settings take affect.
+
 clock = time.clock()  # Tracks FPS.
 
 while True:
     clock.tick()  # Track elapsed milliseconds between snapshots().
-    img = sensor.snapshot()  # Take a picture and return the image.
+    img = csi0.snapshot()  # Take a picture and return the image.
 
     # Run the kernel on every pixel of the image.
     img.gaussian(1, unsharp=True)

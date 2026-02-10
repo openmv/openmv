@@ -7,15 +7,16 @@
 # The frogeye2020 is a 320x240 event camera. There are two bits per pixel which show no motion,
 # motion in one direction, or motion in another direction. The sensor runs at 50 FPS.
 
-import sensor
+import csi
 import image
 import time
 
-sensor.reset()  # Reset and initialize the sensor.
-sensor.set_pixformat(sensor.GRAYSCALE)  # Set pixel format to RGB565 (or GRAYSCALE)
-sensor.set_framesize(sensor.QVGA)  # Set frame size to QVGA (320x240)
+csi0 = csi.CSI()
+csi0.reset()  # Reset and initialize the sensor.
+csi0.pixformat(csi.GRAYSCALE)  # Set pixel format to RGB565 (or GRAYSCALE)
+csi0.framesize(csi.QVGA)  # Set frame size to QVGA (320x240)
 
-palette = image.Image(1, 256, sensor.RGB565)
+palette = image.Image(1, 256, csi.RGB565)
 
 for i in range(64):
     palette.set_pixel(0, i, (0, 0, 0))
@@ -34,7 +35,7 @@ clock = time.clock()
 while True:
     clock.tick()
 
-    img = sensor.snapshot()
+    img = csi0.snapshot()
     # Make pretty.
     img.to_rainbow(color_palette=palette, hint=image.ROTATE_180)
     # Cleanup noise.

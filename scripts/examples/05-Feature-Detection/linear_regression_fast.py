@@ -14,21 +14,23 @@
 # method to fit the line. However, this method is NOT GOOD FOR ANY images that
 # have a lot (or really any) outlier points which corrupt the line fit...
 
-import sensor
+import csi
 import time
 
 THRESHOLD = (0, 100)  # Grayscale threshold for dark things.
 BINARY_VISIBLE = True  # Binary pass first to see what linear regression is running on.
 
-sensor.reset()
-sensor.set_pixformat(sensor.GRAYSCALE)
-sensor.set_framesize(sensor.QQVGA)
-sensor.skip_frames(time=2000)
+csi0 = csi.CSI()
+csi0.reset()
+csi0.pixformat(csi.GRAYSCALE)
+csi0.framesize(csi.QQVGA)
+csi0.snapshot(time=2000)
+
 clock = time.clock()
 
 while True:
     clock.tick()
-    img = sensor.snapshot().binary([THRESHOLD]) if BINARY_VISIBLE else sensor.snapshot()
+    img = csi0.snapshot().binary([THRESHOLD]) if BINARY_VISIBLE else csi0.snapshot()
 
     # Returns a line object similar to line objects returned by find_lines() and
     # find_line_segments(). You have x1(), y1(), x2(), y2(), length(),

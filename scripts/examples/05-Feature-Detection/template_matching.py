@@ -13,23 +13,19 @@
 # that the functionality exists, but, in its current state is inadequate.
 
 import time
-import sensor
+import csi
 import image
 from image import SEARCH_EX
 
-# from image import SEARCH_DS
-
-# Reset sensor
-sensor.reset()
-
-# Set sensor settings
-sensor.set_contrast(1)
-sensor.set_gainceiling(16)
+csi0 = csi.CSI()
+csi0.reset()
+csi0.contrast(1)
+csi0.gainceiling(16)
 # Max resolution for template matching with SEARCH_EX is QQVGA
-sensor.set_framesize(sensor.QQVGA)
+csi0.framesize(csi.QQVGA)
 # You can set windowing to reduce the search image.
-# sensor.set_windowing(((640-80)//2, (480-60)//2, 80, 60))
-sensor.set_pixformat(sensor.GRAYSCALE)
+# csi0.window(((640-80)//2, (480-60)//2, 80, 60))
+csi0.pixformat(csi.GRAYSCALE)
 
 # Load template.
 # Template should be a small (eg. 32x32 pixels) grayscale image.
@@ -40,7 +36,7 @@ clock = time.clock()
 # Run template matching
 while True:
     clock.tick()
-    img = sensor.snapshot()
+    img = csi0.snapshot()
 
     # find_template(template, threshold, [roi, step, search])
     # ROI: The region of interest tuple (x, y, w, h).

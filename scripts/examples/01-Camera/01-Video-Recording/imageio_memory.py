@@ -6,29 +6,30 @@
 #
 # This example shows how to use the ImageIO stream to record frames in memory and play them back.
 # Note: While this should work on any board, the board should have an SDRAM to be of any use.
-import sensor
+import csi
 import image
 import time
 
 # Number of frames to pre-allocate and record
 N_FRAMES = 500
 
-sensor.reset()  # Reset and initialize the sensor.
-sensor.set_pixformat(sensor.RGB565)  # Set pixel format to RGB565 (or GRAYSCALE)
-sensor.set_framesize(sensor.QVGA)  # Set frame size to QVGA (320x240)
+csi0 = csi.CSI()
+csi0.reset()  # Reset and initialize the sensor.
+csi0.pixformat(csi.RGB565)  # Set pixel format to RGB565 (or GRAYSCALE)
+csi0.framesize(csi.QVGA)  # Set frame size to QVGA (320x240)
 
 # This frame size must match the image size passed to ImageIO
-sensor.set_windowing((120, 120))
-sensor.skip_frames(time=2000)
+csi0.window((120, 120))
+csi0.snapshot(time=2000)
 
 clock = time.clock()
 
 # Write to memory stream
-stream = image.ImageIO((120, 120, sensor.RGB565), N_FRAMES)
+stream = image.ImageIO((120, 120, csi.RGB565), N_FRAMES)
 
 for i in range(0, N_FRAMES):
     clock.tick()
-    stream.write(sensor.snapshot())
+    stream.write(csi0.snapshot())
     print(clock.fps())
 
 while True:

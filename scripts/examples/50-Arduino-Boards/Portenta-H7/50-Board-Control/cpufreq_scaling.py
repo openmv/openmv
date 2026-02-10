@@ -5,21 +5,22 @@
 # CPU frequency scaling example.
 #
 # This example shows how to use the cpufreq module to change the CPU frequency on the fly.
-import sensor
+import csi
 import image
 import time
 import cpufreq
 
-sensor.reset()  # Reset and initialize the sensor.
-sensor.set_pixformat(sensor.GRAYSCALE)  # Set pixel format to RGB565 (or GRAYSCALE)
-sensor.set_framesize(sensor.QVGA)  # Set frame size to QVGA (320x240)
+csi0 = csi.CSI()
+csi0.reset()  # Reset and initialize the sensor.
+csi0.pixformat(csi.GRAYSCALE)  # Set pixel format to RGB565 (or GRAYSCALE)
+csi0.framesize(csi.QVGA)  # Set frame size to QVGA (320x240)
 clock = time.clock()  # Create a clock object to track the FPS.
 
 
 def test_image_processing():
     for i in range(0, 50):
         clock.tick()  # Update the FPS clock.
-        img = sensor.snapshot()  # Take a picture and return the image.
+        img = csi0.snapshot()  # Take a picture and return the image.
         img.find_edges(image.EDGE_CANNY, threshold=(50, 80))
 
 
