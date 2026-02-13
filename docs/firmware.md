@@ -69,7 +69,7 @@ To build the firmware, run the following commands inside the openmv repository:
 ```bash
 cd openmv
 make -j$(nproc) -C lib/micropython/mpy-cross   # Builds Micropython mpy cross-compiler
-make -j$(nproc) TARGET=<TRAGET_NAME>           # Builds the OpenMV firmware
+make -j$(nproc) TARGET=<TARGET_NAME>           # Builds the OpenMV firmware
 ```
 
 > Note: `TARGET_NAME` is one of the [supported boards](https://github.com/openmv/openmv/tree/master/boards).
