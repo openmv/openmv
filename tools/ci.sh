@@ -77,7 +77,7 @@ ci_package_firmware_development() {
 
 ########################################################################################
 # Install STEdgeAI tools
-STEDGEAI_BASE_URL="https://upload.openmv.io/stedgeai"
+STEDGEAI_BASE_URL="https://download.openmv.io/stedgeai"
 STEDGEAI_CACHE="${HOME}/cache/stedgeai"
 
 case "$(uname -s)-$(uname -m)" in
