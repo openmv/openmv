@@ -18,26 +18,26 @@ endif
 # Default path to LLVM toolchain.
 LLVM_PATH ?=$(wildcard /opt/LLVM-ET-Arm-*/bin)
 
-# Commands
-export CC      = $(Q)arm-none-eabi-gcc
-export CLANG   = $(Q)$(LLVM_PATH)/clang
-export CXX     = $(Q)arm-none-eabi-g++
-export AS      = $(Q)arm-none-eabi-as
-export LD      = $(Q)arm-none-eabi-ld
-export AR      = $(Q)arm-none-eabi-ar
-export RM      = $(Q)rm
-export CPP     = $(Q)arm-none-eabi-cpp
-export SIZE    = $(Q)arm-none-eabi-size
-export STRIP   = $(Q)arm-none-eabi-strip -s
-export OBJCOPY = $(Q)arm-none-eabi-objcopy
-export OBJDUMP = $(Q)arm-none-eabi-objdump
-export PYTHON  = $(Q)python3
-export MKDIR   = $(Q)mkdir
-export ECHO    = $(Q)@echo
-export MAKE    = $(Q)make
-export CAT     = $(Q)cat
-export MKROMFS = mkromfs.py
-export MACHINE = $(shell uname -m)
+# Commands (use := to avoid repeated expansion overhead in parallel builds)
+export CC      := $(Q)arm-none-eabi-gcc
+export CLANG   := $(Q)$(LLVM_PATH)/clang
+export CXX     := $(Q)arm-none-eabi-g++
+export AS      := $(Q)arm-none-eabi-as
+export LD      := $(Q)arm-none-eabi-ld
+export AR      := $(Q)arm-none-eabi-ar
+export RM      := $(Q)rm
+export CPP     := $(Q)arm-none-eabi-cpp
+export SIZE    := $(Q)arm-none-eabi-size
+export STRIP   := $(Q)arm-none-eabi-strip -s
+export OBJCOPY := $(Q)arm-none-eabi-objcopy
+export OBJDUMP := $(Q)arm-none-eabi-objdump
+export PYTHON  := $(Q)python3
+export MKDIR   := $(Q)mkdir
+export ECHO    := $(Q)@echo
+export MAKE    := $(Q)make
+export CAT     := $(Q)cat
+export MKROMFS := mkromfs.py
+export MACHINE := $(shell uname -m)
 
 # Targets
 export OPENMV ?= openmv
@@ -55,10 +55,10 @@ ifeq ($(TARGET),)
 endif
 
 # Directories
-export TOP_DIR=$(shell pwd)
-export BUILD=$(TOP_DIR)/build
-export TOOLS_DIR=$(TOP_DIR)/tools
-export FW_DIR=$(BUILD)/bin
+export TOP_DIR:=$(shell pwd)
+export BUILD:=$(TOP_DIR)/build
+export TOOLS_DIR:=$(TOP_DIR)/tools
+export FW_DIR:=$(BUILD)/bin
 export BOOT_DIR=boot
 export PORTS_DIR=ports
 export CUBEAI_DIR=cubeai
@@ -69,11 +69,9 @@ export LIBPDM_DIR=lib/libpdm
 export TENSORFLOW_DIR=lib/tflm
 export COMMON_DIR=common
 export CYW4343_FW_DIR=drivers/cyw4343/firmware/
-export OMV_BOARD_CONFIG_DIR=$(TOP_DIR)/boards/$(TARGET)/
-export OMV_PORT_DIR=$(TOP_DIR)/ports/$(PORT)
-export MP_BOARD_CONFIG_DIR=$(TOP_DIR)/$(MICROPY_DIR)/ports/$(PORT)/boards/$(TARGET)/
-export OMV_LIB_DIR=$(TOP_DIR)/scripts/libraries
-export FROZEN_MANIFEST=$(OMV_BOARD_CONFIG_DIR)/manifest.py
+export OMV_BOARD_CONFIG_DIR:=$(TOP_DIR)/boards/$(TARGET)/
+export OMV_LIB_DIR:=$(TOP_DIR)/scripts/libraries
+export FROZEN_MANIFEST:=$(OMV_BOARD_CONFIG_DIR)/manifest.py
 
 # Debugging/Optimization
 ifeq ($(DEBUG), 1)
@@ -130,6 +128,9 @@ include $(OMV_BOARD_CONFIG_DIR)/omv_boardconfig.mk
 
 # Additional qstr definitions for OpenMV
 #OMV_SRC_QSTR := $(wildcard $(TOP_DIR)/modules/*.c)
+
+export OMV_PORT_DIR:=$(TOP_DIR)/ports/$(PORT)
+export MP_BOARD_CONFIG_DIR:=$(TOP_DIR)/$(MICROPY_DIR)/ports/$(PORT)/boards/$(TARGET)/
 
 # The following command line args are passed to MicroPython's top Makefile.
 MPY_MKARGS = PORT=$(PORT) BOARD=$(TARGET) DEBUG=$(DEBUG) MICROPY_MANIFEST_OMV_LIB_DIR=$(OMV_LIB_DIR)\
@@ -246,6 +247,24 @@ MPY_CFLAGS += -DMP_CONFIGFILE=\<$(OMV_PORT_DIR)/omv_mpconfigport.h\>
 
 # Include the port Makefile.
 include $(OMV_PORT_DIR)/omv_portconfig.mk
+
+# Freeze recursively-expanded variables into simply-expanded ones.
+# Without this, make re-evaluates all sub-variable references every
+# time it constructs the environment for each recipe fork
+CFLAGS := $(CFLAGS)
+LDFLAGS := $(LDFLAGS)
+MPY_CFLAGS := $(MPY_CFLAGS)
+MPY_MKARGS := $(MPY_MKARGS)
+AFLAGS := $(AFLAGS)
+TOP_DIR := $(TOP_DIR)
+BUILD := $(BUILD)
+TOOLS_DIR := $(TOOLS_DIR)
+FW_DIR := $(FW_DIR)
+OMV_BOARD_CONFIG_DIR := $(OMV_BOARD_CONFIG_DIR)
+OMV_PORT_DIR := $(OMV_PORT_DIR)
+MP_BOARD_CONFIG_DIR := $(MP_BOARD_CONFIG_DIR)
+OMV_LIB_DIR := $(OMV_LIB_DIR)
+FROZEN_MANIFEST := $(FROZEN_MANIFEST)
 
 # Export variables for sub-make.
 export PORT
