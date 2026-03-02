@@ -283,7 +283,7 @@ ifeq ($(OMV_ENABLE_BL), 1)
 	$(MAKE) -C $(TOP_DIR)/$(BOOT_DIR) BUILD=$(BUILD)/$(BOOT_DIR)
 ifeq ($(OMV_SIGN_BOOT), 1)
 	$(SIGN_TOOL) -bin $(FW_DIR)/$(BOOTLOADER).bin -s -nk -t fsbl \
-        -of $(OMV_SIGN_FLAGS) -hv $(OMV_SIGN_HDRV) -o $(FW_DIR)/$(BOOTLOADER).bin
+        -of $(OMV_SIGN_FLAGS) -hv $(OMV_SIGN_HDRV) -align -o $(FW_DIR)/$(BOOTLOADER).bin
 	chmod +rw $(FW_DIR)/$(BOOTLOADER).bin
 endif
 endif
