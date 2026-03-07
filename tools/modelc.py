@@ -15,7 +15,6 @@ import argparse
 import binascii
 import subprocess
 import re
-import platform
 
 C_GREEN = '\033[92m'
 C_RED = '\033[91m'
@@ -67,29 +66,20 @@ def vela_compile(model_path, build_dir, vela_args):
     os.rename(f"{build_dir}/{model}_vela.tflite", f"{build_dir}/{model}.tflite")
 
 def stedge_compile(model_path, build_dir, profile, stedge_args=None):
-    host_platform = f"{platform.system()}-{platform.machine()}"
-    if host_platform == "Darwin-arm64":
-        host_dir = "macarm"
-    elif host_platform == "Linux-x86_64":
-        host_dir = "linux"
-    else:
-        raise RuntimeError(f"Unsupported platform: {host_platform}")
-    core_dir = os.path.realpath(glob.glob("tools/st/stedgeai/[0-9]*")[0])
-    stedgeai = os.path.join(core_dir, "Utilities", host_dir, "stedgeai")
-    config = os.path.realpath("tools/st/scripts/neuralart.json")
+    core_dir = os.environ["STEDGEAI_CORE_DIR"]
+    config = os.path.realpath("lib/stai/scripts/neuralart.json")
     model_name = os.path.basename(os.path.splitext(model_path)[0])
     model_ext = os.path.splitext(model_path)[1]
     output_dir = os.path.join(build_dir, model_name)
 
     # Remove any Make-related variables that could leak
     env = os.environ.copy()
-    env["STEDGEAI_CORE_DIR"] = core_dir
     for var in ["RM", "CFLAGS", "CPPFLAGS", "CXXFLAGS", "LDFLAGS", 'MAKEFLAGS']:
         env.pop(var, None)
 
     # Step 1: stedgeai generate
     generate_command = [
-        stedgeai,
+        "stedgeai",
         "generate",
         *stedge_args,
         "--model", model_path,
