@@ -53,9 +53,11 @@
 #define OMV_OV7725_PLL_CONFIG                 (0x41) // x4
 #define OMV_OV7725_BANDING                    (0x7F)
 
+#define OMV_MT9V0XX_ENABLE                    (1)
+#define OMV_MT9V0XX_FSYNC_PIN                 (&omv_pin_B4_GPIO)
+
 #define OMV_OV9650_ENABLE                     (1)
 #define OMV_MT9M114_ENABLE                    (1)
-#define OMV_MT9V0XX_ENABLE                    (1)
 #define OMV_LEPTON_ENABLE                     (1)
 #define OMV_PAG7920_ENABLE                    (1)
 #define OMV_PAJ6100_ENABLE                    (1)
@@ -236,7 +238,6 @@
 #define OMV_CSI_PXCLK_PIN                     (&omv_pin_A6_DCMI)
 #define OMV_CSI_RESET_PIN                     (&omv_pin_A10_GPIO)
 #define OMV_CSI_POWER_PIN                     (&omv_pin_D7_GPIO)
-#define OMV_CSI_FSYNC_PIN                     (&omv_pin_B4_GPIO)
 
 // Physical I2C buses.
 

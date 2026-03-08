@@ -30,6 +30,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "omv_gpio.h"
 #include "omv_i2c.h"
 #include "omv_csi.h"
 #include "mt9v0xx.h"
@@ -549,6 +550,10 @@ int mt9v0xx_init(omv_csi_t *csi) {
         csi->chip_id == MT9V0X2_ID_V_2) {
         csi->chip_id = MT9V0X2_ID;
     }
+
+    // Setup the FSYNC pin for triggered mode.
+    omv_gpio_config(OMV_MT9V0XX_FSYNC_PIN, OMV_GPIO_MODE_OUTPUT, OMV_GPIO_PULL_NONE, OMV_GPIO_SPEED_LOW, -1);
+    csi->fsync_pin = OMV_MT9V0XX_FSYNC_PIN;
 
     uint16_t cfa_type_reg;
     int ret = omv_i2c_read_reg(csi->i2c, csi->slv_addr, MT9V0XX_CFA_ID_REG, 1, &cfa_type_reg, 2);
