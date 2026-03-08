@@ -76,47 +76,21 @@ jobs:
     - name: '🧱 Update submodules'
       run: source tools/ci.sh && ci_update_submodules
 
-    - name: '♻ Caching dependencies'
+    - name: '♻ Cache SDK'
       uses: actions/cache@v5.0.3
-      id: cache
+      id: sdk-cache
       with:
-        path: |
-          ~/cache/gcc
-          ~/cache/llvm
-          ~/cache/make
-          ~/cache/stedgeai
-        key: 'gcc-14.3.rel1_llvm-18.1.3_make-4.4.1_stedgeai-3.0'
-
-    - name: '🐍 Install Python'
-      uses: actions/setup-python@v6
-      with:
-        cache: 'pip'
-        python-version: "3.12.4"
+        path: ~/openmv-sdk-1.0.0
+        key: openmv-sdk-1.0.0-linux-x86_64
 
     - name: '🛠 Install dependencies'
       run: |
         sudo apt-get update
         sudo apt-get install -y qemu-system-arm
-        pip install -r .github/workflows/requirements.txt
-        flake8 --version
-        pytest --version
-        vela --version
 
-    - name: '🛠 Install GNU Make '
-      if: steps.cache.outputs.cache-hit != 'true'
-      run: source tools/ci.sh && ci_install_gnu_make
-
-    - name: '🛠 Install GCC toolchain '
-      if: steps.cache.outputs.cache-hit != 'true'
-      run: source tools/ci.sh && ci_install_arm_gcc
-
-    - name: '🛠 Install LLVM toolchain '
-      if: steps.cache.outputs.cache-hit != 'true'
-      run: source tools/ci.sh && ci_install_arm_llvm
-
-    - name: '🛠 Install STEdge AI tools '
-      if: steps.cache.outputs.cache-hit != 'true'
-      run: source tools/ci.sh && ci_install_stedgeai ${HOME}/cache/stedgeai
+    - name: '🛠 Install SDK'
+      if: steps.sdk-cache.outputs.cache-hit != 'true'
+      run: source tools/ci.sh && ci_install_sdk
 
     - name: '🏗 Build firmware'
       run: source tools/ci.sh && ci_build_target ${{ matrix.target }} ${{ matrix.qemu }} ${{ matrix.profile }} ${{ matrix.artifacts }}
@@ -143,26 +117,16 @@ jobs:
       with:
         submodules: false
 
-    - name: '♻ Caching dependencies'
+    - name: '♻ Cache SDK'
       uses: actions/cache@v5.0.3
-      id: cache
+      id: sdk-cache
       with:
-        path: |
-          ~/cache/gcc
-          ~/cache/llvm
-          ~/cache/make
-          ~/cache/stedgeai
-        key: 'gcc-14.3.rel1_llvm-18.1.3_make-4.4.1_stedgeai-3.0'
+        path: ~/openmv-sdk-1.0.0
+        key: openmv-sdk-1.0.0-linux-x86_64
 
-    - name: '🐍 Install Python'
-      uses: actions/setup-python@v6
-      with:
-        cache: 'pip'
-        python-version: "3.12.4"
-
-    - name: '🛠 Install dependencies'
-      run: |
-        pip install tabulate==0.9.0
+    - name: '🛠 Install SDK'
+      if: steps.sdk-cache.outputs.cache-hit != 'true'
+      run: source tools/ci.sh && ci_install_sdk
 
     - name: '↓ Download artifacts'
       uses: actions/download-artifact@v6
@@ -181,9 +145,9 @@ jobs:
 
     - name: '📝 Generate report'
       run: |
-        TOOLCHAIN_PATH=${HOME}/cache/gcc
-        export PATH=${TOOLCHAIN_PATH}/bin:${PATH}
-        python tools/code_size.py > ${GITHUB_WORKSPACE}/${{ github.event.pull_request.number }}.md
+        SDK_DIR="${HOME}/openmv-sdk-1.0.0"
+        export PATH="${SDK_DIR}/gcc/bin:${SDK_DIR}/python/bin:${PATH}"
+        python3 tools/code_size.py > ${GITHUB_WORKSPACE}/${{ github.event.pull_request.number }}.md
 
     - name: '⬆ Upload report'
       uses: actions/upload-artifact@v5

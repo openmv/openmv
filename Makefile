@@ -15,12 +15,43 @@ export Q = @
 MAKEFLAGS += --silent
 endif
 
-# Default path to LLVM toolchain.
-LLVM_PATH ?=$(wildcard /opt/LLVM-ET-Arm-*/bin)
+# Debug configuration
+DEBUGGER ?= JLINK
+
+# Dummy target to run sdk/clean
+ifeq ($(TARGET),)
+  ifeq ($(filter sdk clean,$(MAKECMDGOALS)),)
+    $(error Invalid or no TARGET specified)
+  else
+    TARGET=OPENMV4
+  endif
+endif
+
+# OpenMV SDK configuration
+SDK_VERSION = 1.0.0
+SDK_DIR ?= $(HOME)/openmv-sdk-$(SDK_VERSION)
+SDK_STAMP = $(SDK_DIR)/sdk.version
+
+# Check if the SDK is downloaded
+ifeq ($(filter sdk clean,$(MAKECMDGOALS)),)
+  ifeq ($(wildcard $(SDK_STAMP)),)
+    $(error OpenMV SDK not found. Run 'make sdk' to install it.)
+  else
+    SDK_INSTALLED := $(shell cat $(SDK_STAMP))
+    ifneq ($(SDK_INSTALLED),$(SDK_VERSION))
+      $(error OpenMV SDK version mismatch. Run 'make sdk'.)
+    endif
+  endif
+endif
+
+# Targets
+export OPENMV ?= openmv
+export FIRMWARE ?= firmware
+export BOOTLOADER ?= bootloader
 
 # Commands (use := to avoid repeated expansion overhead in parallel builds)
 export CC      := $(Q)arm-none-eabi-gcc
-export CLANG   := $(Q)$(LLVM_PATH)/clang
+export CLANG   := $(Q)clang
 export CXX     := $(Q)arm-none-eabi-g++
 export AS      := $(Q)arm-none-eabi-as
 export LD      := $(Q)arm-none-eabi-ld
@@ -38,21 +69,6 @@ export MAKE    := $(Q)make
 export CAT     := $(Q)cat
 export MKROMFS := mkromfs.py
 export MACHINE := $(shell uname -m)
-
-# Targets
-export OPENMV ?= openmv
-export FIRMWARE ?= firmware
-export BOOTLOADER ?= bootloader
-
-# Debug configuration
-DEBUGGER ?= JLINK
-
-ifeq ($(TARGET),)
-  ifneq ($(MAKECMDGOALS),clean)
-    $(error Invalid or no TARGET specified)
-  endif
-  TARGET=OPENMV4
-endif
 
 # Directories
 export TOP_DIR:=$(shell pwd)
@@ -72,6 +88,11 @@ export CYW4343_FW_DIR=drivers/cyw4343/firmware/
 export OMV_BOARD_CONFIG_DIR:=$(TOP_DIR)/boards/$(TARGET)/
 export OMV_LIB_DIR:=$(TOP_DIR)/scripts/libraries
 export FROZEN_MANIFEST:=$(OMV_BOARD_CONFIG_DIR)/manifest.py
+
+# Prepend SDK bin directories to PATH.
+STEDGEAI_CORE = $(wildcard $(SDK_DIR)/stedgeai/[0-9]*)
+STEDGEAI_UTIL = Utilities/$(if $(filter Darwin,$(shell uname -s)),macarm,linux)
+export PATH := $(SDK_DIR)/gcc/bin:$(SDK_DIR)/llvm/bin:$(SDK_DIR)/cmake/bin:$(SDK_DIR)/python/bin:$(SDK_DIR)/stcubeprog/bin:$(STEDGEAI_CORE)/$(STEDGEAI_UTIL):$(PATH)
 
 # Debugging/Optimization
 ifeq ($(DEBUG), 1)
@@ -286,8 +307,13 @@ ifeq ($(OMV_ENABLE_BL), 1)
 endif
 	$(SIZE) --format=SysV $(FW_DIR)/$(FIRMWARE).elf
 
+.PHONY: sdk
+sdk:
+	$(Q)bash -c "source tools/ci.sh && ci_install_sdk"
+
 submodules:
 	$(MAKE) -C $(MICROPY_DIR)/ports/$(PORT) BOARD=$(TARGET) submodules
 
 debug:
 	gdbrunner $(DEBUGGER) $(OMV_$(DEBUGGER)_ARGS) $(FW_DIR)/$(FIRMWARE).elf
+

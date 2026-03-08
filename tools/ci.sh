@@ -1,40 +1,47 @@
 #!/bin/bash
 
 ########################################################################################
-# Install ARM GCC.
-GCC_TOOLCHAIN_PATH=${HOME}/cache/gcc
-GCC_TOOLCHAIN_URL="https://developer.arm.com/-/media/Files/downloads/gnu/14.3.rel1/binrel/arm-gnu-toolchain-14.3.rel1-x86_64-arm-none-eabi.tar.xz"
+# Install OpenMV SDK.
+SDK_VERSION="1.0.0"
+SDK_DIR="${HOME}/openmv-sdk-${SDK_VERSION}"
+SDK_BASE_URL="https://download.openmv.io/sdk"
+SDK_OS="$(uname -s | tr '[:upper:]' '[:lower:]')"
+SDK_ARCH="$(uname -m)"
+SDK_TARBALL="openmv-sdk-${SDK_VERSION}-${SDK_OS}-${SDK_ARCH}.tar.gz"
+SDK_URL="${SDK_BASE_URL}/${SDK_TARBALL}"
 
-ci_install_arm_gcc() {
-    mkdir -p ${GCC_TOOLCHAIN_PATH}
-    wget --no-check-certificate -O - ${GCC_TOOLCHAIN_URL} | tar --strip-components=1 -Jx -C ${GCC_TOOLCHAIN_PATH}
-    export PATH=${GCC_TOOLCHAIN_PATH}/bin:${PATH}
-    arm-none-eabi-gcc --version
-}
+export SDK_DIR
+export PATH="${SDK_DIR}/make:$(SDK_DIR)/python/bin:${PATH}"
 
-########################################################################################
-# Install ARM LLVM.
-LLVM_TOOLCHAIN_PATH=${HOME}/cache/llvm
-LLVM_TOOLCHAIN_URL="https://github.com/ARM-software/LLVM-embedded-toolchain-for-Arm/releases/download/release-18.1.3/LLVM-ET-Arm-18.1.3-Linux-x86_64.tar.xz"
+ci_install_sdk() {
+    if [ -f "${SDK_DIR}/sdk.version" ] && \
+       [ "$(cat ${SDK_DIR}/sdk.version)" = "${SDK_VERSION}" ]; then
+        echo "OpenMV SDK ${SDK_VERSION} already installed."
+        return 0
+    fi
 
-ci_install_arm_llvm() {
-    mkdir -p ${LLVM_TOOLCHAIN_PATH}
-    wget --no-check-certificate -O - ${LLVM_TOOLCHAIN_URL} | tar --strip-components=1 -Jx -C ${LLVM_TOOLCHAIN_PATH}
-    export PATH=${LLVM_TOOLCHAIN_PATH}/bin:${PATH}
-    clang --version
-}
+    echo "Installing OpenMV SDK ${SDK_VERSION} to ${SDK_DIR}..."
+    mkdir -p "${SDK_DIR}"
 
-########################################################################################
-# Install GNU Make.
-GNU_MAKE_PATH=${HOME}/cache/make
-GNU_MAKE_URL="https://ftp.gnu.org/gnu/make/make-4.4.1.tar.gz"
+    tmpfile=$(mktemp)
+    trap 'rm -f "$tmpfile"' EXIT
 
-ci_install_gnu_make() {
-    mkdir -p ${GNU_MAKE_PATH}
-    wget --no-check-certificate -O - ${GNU_MAKE_URL} | tar --strip-components=1 -zx -C ${GNU_MAKE_PATH}
-    cd ${GNU_MAKE_PATH} && ./configure && make -j$(nproc)
-    export PATH=${GNU_MAKE_PATH}:${PATH}
-    make --version
+    wget --no-check-certificate --progress=bar:force -O "$tmpfile" "$SDK_URL" || {
+        echo "Download failed: $SDK_URL"; return 1
+    }
+
+    expected=$(wget --no-check-certificate -qO- "${SDK_URL}.sha256" | awk '{print $1}') || {
+        echo "Could not fetch checksum from ${SDK_URL}.sha256"; return 1
+    }
+    echo "${expected}  ${tmpfile}" | sha256sum -c - || {
+        echo "Checksum verification failed!"; return 1
+    }
+
+    tar --strip-components=1 -xzf "$tmpfile" -C "${SDK_DIR}" || {
+        echo "Extraction failed!"; return 1
+    }
+
+    echo "OpenMV SDK ${SDK_VERSION} installed successfully."
 }
 
 ########################################################################################
@@ -47,8 +54,6 @@ ci_update_submodules() {
 ########################################################################################
 # Build Targets.
 ci_build_target() {
-    export LLVM_PATH=${LLVM_TOOLCHAIN_PATH}/bin
-    export PATH=${GNU_MAKE_PATH}:${GCC_TOOLCHAIN_PATH}/bin:${PATH}
     if [ "$1" == "DOCKER" ]; then
         BOARD=ARDUINO_NICLA_VISION
         make -j$(nproc) -C docker TARGET=${BOARD}
@@ -75,74 +80,11 @@ ci_package_firmware_development() {
     (cd firmware && for i in *; do zip -r -j "firmware_${i%/}.zip" "$i"; done)
 }
 
-########################################################################################
-# Install STEdgeAI tools
-STEDGEAI_BASE_URL="https://download.openmv.io/stedgeai"
-STEDGEAI_CACHE="${HOME}/cache/stedgeai"
-
-case "$(uname -s)-$(uname -m)" in
-    Linux-x86_64)
-        STEDGEAI_URL="${STEDGEAI_BASE_URL}/STEdgeAI-3.0.0-linux-x86_64.tar.gz"
-        STEDGEAI_SHA256="55e31c2a541048616d7a0899de3906acf68655c21fe497eae3c983d067393099"
-        ;;
-    Darwin-arm64)
-        STEDGEAI_URL="${STEDGEAI_BASE_URL}/STEdgeAI-3.0.0-darwin-arm64.tar.gz"
-        STEDGEAI_SHA256="a4bc2605a78bc866b94517e90fac1e930431f4061e0c1265cd78f987963e383f"
-        ;;
-    *)
-        echo "Unsupported platform: $(uname -s)-$(uname -m)"
-        ;;
-esac
-
-ci_install_stedgeai() {
-    STEDGEAI_PATH="${1}"
-
-    # If cached in CI, copy from cache to build.
-    if [ -d "${STEDGEAI_CACHE}" ]; then
-        mkdir -p "${STEDGEAI_PATH}"
-        cp -r "${STEDGEAI_CACHE}/." "${STEDGEAI_PATH}"
-        touch "${STEDGEAI_PATH}/stedgeai.stamp"
-        return 0
-    fi
-
-    # Download and install to STEDGEAI_PATH
-    echo "Downloading STEdge AI tools..."
-    mkdir -p "${STEDGEAI_PATH}"
-
-    # Create temporary file
-    tmpfile=$(mktemp)
-    trap 'rm -f "$tmpfile"' EXIT
-
-    # Download and verify checksum
-    wget --no-check-certificate -O "$tmpfile" "$STEDGEAI_URL" || {
-        echo "Download failed!"
-        return 1
-    }
-
-    echo "${STEDGEAI_SHA256}  ${tmpfile}" | sha256sum -c - || {
-        echo "Checksum failed!"
-        return 1
-    }
-
-    # Extract the tools
-    echo "Extracting to ${STEDGEAI_PATH}..."
-    tar -xzf "$tmpfile" -C "${STEDGEAI_PATH}" --strip-components=1 || {
-        echo "Extraction failed!"
-        return 1
-    }
-
-    touch "${STEDGEAI_PATH}/stedgeai.stamp"
-
-    echo "STEdgeAI installed successfully to ${STEDGEAI_PATH}"
-    return 0
-}
 
 ########################################################################################
 # Run QEMU unit tests
 ci_run_qemu_tests() {
     TARGET="${1}"
-
-    export PATH=${GNU_MAKE_PATH}:${GCC_TOOLCHAIN_PATH}/bin:${PATH}
 
     # Patch micropython's mpremote for QEMU serial communication
     echo "Patching micropython mpremote for QEMU..."

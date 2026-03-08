@@ -38,5 +38,7 @@ tools/alif/**/*.bin.sign
 tools/alif/build/*-map.txt
 tools/st/stedgeai
 
+tools/sdk_keys.sh
+
 # macOS
 .DS_Store

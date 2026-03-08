@@ -29,16 +29,13 @@ MCU_SERIES_UPPER := $(shell echo $(MCU_SERIES) | tr '[:lower:]' '[:upper:]')
 MCU_LOWER   := $(shell echo $(MCU) | tr '[:upper:]' '[:lower:]')
 HAL_DIR     := lib/stm32/$(MCU_SERIES)
 CMSIS_INC   := st
-CUBE_DIR    := $(TOOLS_DIR)/st/cubeprog/$(MACHINE)/bin/
 
-SIGN_TOOL = $(CUBE_DIR)STM32_SigningTool_CLI
-PROG_TOOL = $(CUBE_DIR)STM32_Programmer_CLI
-STLDR_DIR = $(CUBE_DIR)ExternalLoader/
+STLDR_DIR = $(SDK_DIR)/stcubeprog/bin/ExternalLoader/
 
 ifeq ($(MCU_SERIES),$(filter $(MCU_SERIES),n6))
-STEDGE_ARGS ?= --stedge-args "--target stm32n6"
-STEDGE_DIR = tools/st/stedgeai
-STEDGE_TOOLS = $(STEDGE_DIR)/stedgeai.stamp
+STEDGEAI_ARGS ?= --stedge-args "--target stm32n6"
+STEDGEAI_CORE_DIR := $(wildcard $(SDK_DIR)/stedgeai/[0-9]*)
+export STEDGEAI_CORE_DIR
 endif
 
 ROMFS_IMAGE := $(FW_DIR)/romfs.stamp
@@ -255,11 +252,8 @@ ifeq ($(OMV_ENABLE_BL), 1)
 endif
 	$(SIZE) $(FW_DIR)/$(FIRMWARE).elf
 
-$(STEDGE_TOOLS):
-	@bash -c "source tools/ci.sh && ci_install_stedgeai $(STEDGE_DIR)"
-
 # This target builds MicroPython.
-MICROPYTHON: $(STEDGE_TOOLS) | FIRM_DIRS
+MICROPYTHON: | FIRM_DIRS
 	$(MAKE) -C $(MICROPY_DIR)/ports/$(PORT) BUILD=$(BUILD)/$(MICROPY_DIR) $(MPY_MKARGS)
 
 $(OMV_FIRM_OBJ): | MICROPYTHON
@@ -278,11 +272,11 @@ ifeq ($(OMV_ENABLE_BL), 1)
 endif
 
 # This target builds the bootloader.
-$(BOOTLOADER): $(STEDGE_TOOLS) | FIRM_DIRS
+$(BOOTLOADER): | FIRM_DIRS
 ifeq ($(OMV_ENABLE_BL), 1)
 	$(MAKE) -C $(TOP_DIR)/$(BOOT_DIR) BUILD=$(BUILD)/$(BOOT_DIR)
 ifeq ($(OMV_SIGN_BOOT), 1)
-	$(SIGN_TOOL) -bin $(FW_DIR)/$(BOOTLOADER).bin -s -nk -t fsbl \
+	STM32_SigningTool_CLI -bin $(FW_DIR)/$(BOOTLOADER).bin -s -nk -t fsbl \
         -of $(OMV_SIGN_FLAGS) -hv $(OMV_SIGN_HDRV) -align -o $(FW_DIR)/$(BOOTLOADER).bin
 	chmod +rw $(FW_DIR)/$(BOOTLOADER).bin
 endif
@@ -294,11 +288,12 @@ $(ROMFS_IMAGE): $(ROMFS_CONFIG) | $(FIRMWARE) $(BOOTLOADER)
             --top-dir $(TOP_DIR) \
             --out-dir $(FW_DIR) \
             --build-dir $(BUILD)/lib/models \
-            $(STEDGE_ARGS) --config $(ROMFS_CONFIG)
+            $(STEDGEAI_ARGS) --config $(ROMFS_CONFIG)
 	touch $@
 
 deploy: $(ROMFS_IMAGE)
-	$(PROG_TOOL) -c port=SWD mode=HOTPLUG ap=1 \
-        -el $(STLDR_DIR)/$(OMV_PROG_STLDR) -w $(FW_DIR)/openmv.bin $(OMV_FIRM_BASE) -hardRst
+	STM32_Programmer_CLI -c port=SWD mode=HOTPLUG ap=1 \
+        -el $(SDK_DIR)/stcubeprog/bin/ExternalLoader/$(OMV_PROG_STLDR) \
+        -w $(FW_DIR)/openmv.bin $(OMV_FIRM_BASE) -hardRst
 
 include common/mkrules.mk
