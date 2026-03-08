@@ -541,7 +541,6 @@ int mt9v0xx_init(omv_csi_t *csi) {
     csi->vsync_pol = 0;
     csi->hsync_pol = 0;
     csi->pixck_pol = 0;
-    csi->frame_sync = 1;
     csi->mono_bpp = 1;
     csi->cfa_format = SUBFORMAT_ID_BGGR;
 
