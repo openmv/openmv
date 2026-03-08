@@ -46,8 +46,17 @@ static size_t profile_channel_shape(const omv_protocol_channel_t *channel, size_
 }
 
 static int profile_channel_lock(const omv_protocol_channel_t *channel) {
+    mutex_t *lock = omv_profiler_lock();
+    if (!mutex_try_lock(lock, MUTEX_TID_IDE)) {
+        return -1;
+    }
+    // Size can be checked safetly after acquiring the lock.
     size_t size = channel->size(channel);
-    return size && mutex_try_lock(omv_profiler_lock(), MUTEX_TID_IDE) ? 0 : -1;
+    if (!size) {
+        mutex_unlock(lock, MUTEX_TID_IDE);
+        return -1;
+    }
+    return 0;
 }
 
 static int profile_channel_unlock(const omv_protocol_channel_t *channel) {
