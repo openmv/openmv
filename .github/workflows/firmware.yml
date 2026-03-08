@@ -101,7 +101,7 @@ jobs:
 
     - name: '⬆ Upload artifacts'
       if: matrix.artifacts
-      uses: actions/upload-artifact@v5
+      uses: actions/upload-artifact@v7
       with:
         name: ${{ matrix.target }}
         path: ${{ matrix.target }}
@@ -150,7 +150,7 @@ jobs:
         python3 tools/code_size.py > ${GITHUB_WORKSPACE}/${{ github.event.pull_request.number }}.md
 
     - name: '⬆ Upload report'
-      uses: actions/upload-artifact@v5
+      uses: actions/upload-artifact@v7
       with:
         overwrite: true
         name: code-size-report
