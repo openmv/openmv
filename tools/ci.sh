@@ -11,7 +11,7 @@ SDK_TARBALL="openmv-sdk-${SDK_VERSION}-${SDK_OS}-${SDK_ARCH}.tar.gz"
 SDK_URL="${SDK_BASE_URL}/${SDK_TARBALL}"
 
 export SDK_DIR
-export PATH="${SDK_DIR}/make:$(SDK_DIR)/python/bin:${PATH}"
+export PATH="${SDK_DIR}/make:${SDK_DIR}/python/bin:${PATH}"
 
 ci_install_sdk() {
     if [ -f "${SDK_DIR}/sdk.version" ] && \
