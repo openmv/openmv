@@ -129,7 +129,7 @@ jobs:
       run: source tools/ci.sh && ci_install_sdk
 
     - name: '↓ Download artifacts'
-      uses: actions/download-artifact@v6
+      uses: actions/download-artifact@v8
       with:
         path: new_firmware
         merge-multiple: false
@@ -168,7 +168,7 @@ jobs:
         submodules: false
 
     - name: '↓ Download artifacts'
-      uses: actions/download-artifact@v6
+      uses: actions/download-artifact@v8
       with:
         path: firmware
 
@@ -212,7 +212,7 @@ jobs:
         submodules: false
 
     - name: '↓ Download artifacts'
-      uses: actions/download-artifact@v6
+      uses: actions/download-artifact@v8
       with:
         path: firmware
 
