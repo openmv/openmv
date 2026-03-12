@@ -1,8 +1,29 @@
 diff --git a/tools/mpremote/mpremote/transport_serial.py b/tools/mpremote/mpremote/transport_serial.py
-index daeff02b5..fed607d83 100644
+index b3584945b..a49ed581e 100644
 --- a/tools/mpremote/mpremote/transport_serial.py
 +++ b/tools/mpremote/mpremote/transport_serial.py
-@@ -127,8 +127,8 @@ class SerialTransport(Transport):
+@@ -88,6 +88,14 @@ class SerialTransport(Transport):
+                 # behaviour (pyserial will set DTR and RTS automatically on open)
+                 if not self.serial.isOpen():
+                     self.serial.open()
++                # Monkey-patch inWaiting for socket:// to use 10ms select timeout
++                if hasattr(self.serial, '_socket'):
++                    import select
++                    _sock = self.serial._socket
++                    def _inWaiting():
++                        ready, _, _ = select.select([_sock], [], [], 0.01)
++                        return 1 if ready else 0
++                    self.serial.inWaiting = _inWaiting
+                 break
+             except OSError:
+                 if wait == 0:
+@@ -137,11 +145,14 @@ class SerialTransport(Transport):
+ 
+         data = b""
+         begin_overall_s = begin_char_s = time.monotonic()
++        saved_timeout = getattr(self.serial, 'timeout', None)
++        if saved_timeout is not None:
++            self.serial.timeout = 0.1
          while True:
              if data.endswith(ending):
                  break
@@ -13,3 +34,59 @@ index daeff02b5..fed607d83 100644
                  if data_consumer:
                      data_consumer(new_data)
                      data = new_data
+@@ -156,19 +167,21 @@ class SerialTransport(Transport):
+                     and time.monotonic() >= begin_overall_s + timeout_overall
+                 ):
+                     break
+-                time.sleep(0.01)
++        if saved_timeout is not None:
++            self.serial.timeout = saved_timeout
+         return data
+ 
+     def enter_raw_repl(self, soft_reset=True, timeout_overall=10):
+-        self.serial.write(b"\r\x03")  # ctrl-C: interrupt any running program
++        self.serial.write(b"\x03")  # ctrl-C: interrupt any running program
+ 
+-        # flush input (without relying on serial.flushInput())
+-        n = self.serial.inWaiting()
+-        while n > 0:
+-            self.serial.read(n)
+-            n = self.serial.inWaiting()
++        # flush input using blocking reads
++        saved_timeout = self.serial.timeout
++        self.serial.timeout = 0.5
++        while self.serial.read(256):
++            pass
++        self.serial.timeout = saved_timeout
+ 
+-        self.serial.write(b"\r\x01")  # ctrl-A: enter raw REPL
++        self.serial.write(b"\x01")  # ctrl-A: enter raw REPL
+ 
+         if soft_reset:
+             data = self.read_until(
+@@ -217,6 +230,8 @@ class SerialTransport(Transport):
+ 
+     def raw_paste_write(self, command_bytes):
+         # Read initial header, with window size.
++        saved_timeout = self.serial.timeout
++        self.serial.timeout = 5
+         data = self.serial.read(2)
+         window_size = struct.unpack("<H", data)[0]
+         window_remain = window_size
+@@ -246,6 +261,7 @@ class SerialTransport(Transport):
+         self.serial.write(b"\x04")
+ 
+         # Wait for device to acknowledge end of data.
++        self.serial.timeout = saved_timeout
+         data = self.read_until(1, b"\x04")
+         if not data.endswith(b"\x04"):
+             raise TransportError("could not complete raw paste: {}".format(data))
+@@ -261,7 +277,7 @@ class SerialTransport(Transport):
+         if not data.endswith(b">"):
+             raise TransportError("could not enter raw repl")
+ 
+-        if self.use_raw_paste:
++        if False and self.use_raw_paste:
+             # Try to enter raw-paste mode.
+             self.serial.write(b"\x05A\x01")
+             data = self.serial.read(2)

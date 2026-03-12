@@ -67,7 +67,7 @@ SECTIONS
     . = ALIGN(4);
     _ebss = .;          // Define a global symbol at bss end
     __bss_end__ = .;
-  } >OMV_MAIN_MEMORY
+  } >OMV_MAIN_MEMORY AT> OMV_MAIN_MEMORY
 
   #include "common.ld.S"
 }

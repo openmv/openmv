@@ -41,11 +41,8 @@ CFLAGS += -std=gnu11 \
 
 CFLAGS += -D$(TARGET) \
           -DQEMU_BUILD \
-          -D__FPU_PRESENT=1 \
-          -D__FPU_USED=1 \
-          -D__VFP_FP__ \
           -DARM_NN_TRUNCATE=1 \
-          -DCMSIS_MCU_H='<string.h>' \
+          -DCMSIS_MCU_H=$(CMSIS_MCU_H) \
           $(OMV_BOARD_CFLAGS)
 
 # Linker Flags
@@ -126,7 +123,11 @@ MPY_FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/,\
 
 ifeq ($(MICROPY_PY_ML_TFLM), 1)
 ifeq ($(CPU),cortex-m55)
+ifneq ($(filter -DETHOS_U,$(OMV_BOARD_CFLAGS)),)
+LIBS += $(TOP_DIR)/$(TENSORFLOW_DIR)/libtflm/lib/libtflm-cortex-m55-u55-release.a
+else
 LIBS += $(TOP_DIR)/$(TENSORFLOW_DIR)/libtflm/lib/libtflm-cortex-m55-release.a
+endif
 else
 LIBS += $(TOP_DIR)/$(TENSORFLOW_DIR)/libtflm/lib/libtflm-$(CPU)+fp-release.a
 endif
@@ -155,13 +156,36 @@ $(ROMFS_IMAGE): $(ROMFS_CONFIG) | $(FIRMWARE)
             --top-dir $(TOP_DIR) \
             --out-dir $(FW_DIR) \
             --build-dir $(BUILD)/lib/models \
-            $(STEDGE_ARGS) --config $(ROMFS_CONFIG)
+            --vela-args $(VELA_ARGS) --config $(ROMFS_CONFIG)
 	touch $@
 
+ifeq ($(EMULATOR),FVP)
+FVP_TELNET_PORT ?= 5555
+FVP_BINARY = FVP_Corstone_SSE-300_Ethos-U55
+FVP_ARGS += -C cpu0.CFGITCMSZ=14 \
+            -C cpu0.semihosting-enable=1 \
+            -C mps3_board.FPGA_SRAM_SIZE=8 \
+            -C mps3_board.sse300.NUMVMBANK=2 \
+            -C mps3_board.sse300.VM_BANK_SIZE=4096 \
+            -C ethosu.num_macs=256 \
+            -C mps3_board.uart0.unbuffered_output=1 \
+            -C mps3_board.uart0.rx_overrun_mode=1 \
+            -C mps3_board.telnetterminal0.start_telnet=1 \
+            -C mps3_board.telnetterminal0.start_port=$(FVP_TELNET_PORT) \
+            -C mps3_board.telnetterminal0.mode=raw \
+            -C mps3_board.telnetterminal1.start_telnet=0 \
+            -C mps3_board.telnetterminal2.start_telnet=0 \
+            -C mps3_board.telnetterminal5.start_telnet=0 \
+            -C mps3_board.visualisation.disable-visualisation=1
+
+run: $(ROMFS_IMAGE)
+	$(FVP_BINARY) $(FVP_ARGS) -a $(FW_DIR)/$(FIRMWARE).elf
+else
 QEMU_SYSTEM = qemu-system-arm
 QEMU_ARGS += -machine $(QEMU_MACHINE) -nographic -monitor null -semihosting
 
 run: $(ROMFS_IMAGE)
 	$(QEMU_SYSTEM) $(QEMU_ARGS) -serial pty -kernel $(FW_DIR)/$(FIRMWARE).elf
+endif
 
 include common/mkrules.mk

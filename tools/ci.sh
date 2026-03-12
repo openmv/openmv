@@ -80,15 +80,10 @@ ci_package_firmware_development() {
     (cd firmware && for i in *; do zip -r -j "firmware_${i%/}.zip" "$i"; done)
 }
 
-
 ########################################################################################
 # Run QEMU unit tests
 ci_run_qemu_tests() {
     TARGET="${1}"
-
-    # Patch micropython's mpremote for QEMU serial communication
-    echo "Patching micropython mpremote for QEMU..."
-    patch -N -p1 -d lib/micropython < tools/mpremote-qemu-serial.patch || echo "Patch already applied or failed"
 
     # Start QEMU in background and capture output
     echo "Starting QEMU for ${TARGET}..."
@@ -114,6 +109,10 @@ ci_run_qemu_tests() {
         echo "Found QEMU serial port: $PTS_DEVICE"
     fi
 
+    # Patch micropython's mpremote for QEMU serial communication
+    echo "Patching micropython mpremote for QEMU..."
+    patch -N -p1 -d lib/micropython < tools/mpremote-qemu-serial.patch || echo "Patch already applied or failed"
+
     # Run unit tests using patched mpremote from micropython
     echo "Running unit tests..."
     python3 lib/micropython/tools/mpremote/mpremote.py connect $PTS_DEVICE \
@@ -126,6 +125,92 @@ ci_run_qemu_tests() {
     fi
 
     # Check if tests failed
+    if grep -q "Some tests FAILED" test_output.txt; then
+        return 1
+    fi
+    return 0
+}
+
+########################################################################################
+# Install FVP
+FVP_VERSION="11.31.28"
+FVP_INSTALL_DIR="${HOME}/fvp-${FVP_VERSION}"
+
+ci_install_fvp() {
+    if [ -d "${FVP_INSTALL_DIR}" ]; then
+        echo "FVP ${FVP_VERSION} already installed."
+        return 0
+    fi
+
+    echo "Installing FVP ${FVP_VERSION}..."
+    FVP_MAJOR_MINOR="${FVP_VERSION%.*}"
+    FVP_PATCH="${FVP_VERSION##*.}"
+    FVP_ARCHIVE="avh-linux-x86_${FVP_MAJOR_MINOR}_${FVP_PATCH}_Linux64.tar.gz"
+    FVP_URL="https://artifacts.tools.arm.com/avh/${FVP_VERSION}/${FVP_ARCHIVE}"
+
+    tmpfile=$(mktemp)
+    wget --no-check-certificate --progress=bar:force -O "$tmpfile" "$FVP_URL" || {
+        echo "FVP download failed: $FVP_URL"; return 1
+    }
+
+    mkdir -p "${FVP_INSTALL_DIR}"
+    tar --strip-components=1 -xzf "$tmpfile" -C "${FVP_INSTALL_DIR}" || {
+        echo "FVP extraction failed!"; return 1
+    }
+    rm -f "$tmpfile"
+
+    echo "FVP ${FVP_VERSION} installed to ${FVP_INSTALL_DIR}"
+}
+
+########################################################################################
+# Run FVP unit tests
+ci_run_fvp_tests() {
+    TARGET="${1}"
+    FVP_TELNET_PORT=5555
+    export PATH="${FVP_INSTALL_DIR}/bin:${PATH}"
+
+    # Start FVP in background with raw TCP UART
+    echo "Starting FVP for ${TARGET}..."
+    LD_LIBRARY_PATH="${SDK_DIR}/python/lib" make TARGET=${TARGET} EMULATOR=FVP run > fvp_output.txt 2>&1 &
+    FVP_PID=$!
+
+    # Wait for FVP telnet port to be ready
+    echo "Waiting for FVP to start..."
+    for i in {1..60}; do
+        if nc -z localhost ${FVP_TELNET_PORT} 2>/dev/null; then
+            break
+        fi
+        sleep 1
+    done
+
+    if ! nc -z localhost ${FVP_TELNET_PORT} 2>/dev/null; then
+        echo "Error: FVP telnet port ${FVP_TELNET_PORT} not ready"
+        cat fvp_output.txt
+        kill ${FVP_PID} 2>/dev/null
+        return 1
+    fi
+    echo "FVP ready on port ${FVP_TELNET_PORT}"
+    sleep 2
+
+    # Patch micropython's mpremote for FVP socket communication
+    echo "Patching micropython mpremote for FVP..."
+    patch -N -p1 -d lib/micropython < tools/mpremote-qemu-serial.patch || echo "Patch already applied or failed"
+
+    # Run unit tests using mpremote over socket
+    echo "Running unit tests..."
+    timeout 300 python3 lib/micropython/tools/mpremote/mpremote.py \
+        connect "socket://localhost:${FVP_TELNET_PORT}" \
+        mount scripts/unittest/ run scripts/unittest/run.py 2>&1 | tee test_output.txt
+    TEST_EXIT_CODE=${PIPESTATUS[0]}
+
+    # Cleanup
+    kill ${FVP_PID} 2>/dev/null
+
+    if [ $TEST_EXIT_CODE -ne 0 ]; then
+        echo "mpremote command failed with exit code $TEST_EXIT_CODE"
+        return 1
+    fi
+
     if grep -q "Some tests FAILED" test_output.txt; then
         return 1
     fi

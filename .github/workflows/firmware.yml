@@ -31,6 +31,7 @@ on:
 
 jobs:
   build-firmware:
+    name: "${{ matrix.target }}${{ matrix.qemu && ' (QEMU)' || '' }}${{ matrix.fvp && ' (FVP)' || '' }}${{ matrix.profile == 1 && ' (PROFILE=1)' || '' }}"
     runs-on: ubuntu-24.04
     strategy:
       matrix:
@@ -47,6 +48,7 @@ jobs:
           - ARDUINO_GIGA
           - ARDUINO_NICLA_VISION
         qemu: [false]
+        fvp: [false]
         profile: [0]
         artifacts: [true]
         include:
@@ -63,7 +65,8 @@ jobs:
             profile: 0
             artifacts: false
           - target: MPS3_AN547
-            qemu: true
+            qemu: false
+            fvp: true
             profile: 0
             artifacts: false
       fail-fast: false
@@ -92,12 +95,28 @@ jobs:
       if: steps.sdk-cache.outputs.cache-hit != 'true'
       run: source tools/ci.sh && ci_install_sdk
 
+    - name: '♻ Cache FVP'
+      if: matrix.fvp
+      uses: actions/cache@v5.0.3
+      id: fvp-cache
+      with:
+        path: ~/fvp-11.31.28
+        key: fvp-11.31.28-linux-x86_64
+
+    - name: '🛠 Install FVP'
+      if: matrix.fvp && steps.fvp-cache.outputs.cache-hit != 'true'
+      run: source tools/ci.sh && ci_install_fvp
+
     - name: '🏗 Build firmware'
       run: source tools/ci.sh && ci_build_target ${{ matrix.target }} ${{ matrix.qemu }} ${{ matrix.profile }} ${{ matrix.artifacts }}
 
     - name: '🧪 Run QEMU tests'
       if: matrix.qemu
       run: source tools/ci.sh && ci_run_qemu_tests ${{ matrix.target }}
+
+    - name: '🧪 Run FVP tests'
+      if: matrix.fvp
+      run: source tools/ci.sh && ci_run_fvp_tests ${{ matrix.target }}
 
     - name: '⬆ Upload artifacts'
       if: matrix.artifacts

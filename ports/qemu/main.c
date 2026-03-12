@@ -45,8 +45,14 @@
 #include "framebuffer.h"
 #include "omv_csi.h"
 
+extern int qemu_npu_init(void);
+
 int main(int argc, char **argv) {
     bool first_soft_reset = true;
+
+    #ifdef ETHOS_U
+    qemu_npu_init();
+    #endif
 
 soft_reset:
     // Initialise stack extents and GC heap.
