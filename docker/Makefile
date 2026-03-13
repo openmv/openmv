@@ -24,7 +24,7 @@ DOCKER_TAG = latest
 CONTAINER_NAME = firmware-container
 DOCKERFILE_PATH = Dockerfile
 
-SDK_VERSION = 1.0.0
+SDK_VERSION = 1.1.0
 SDK_DIR ?= $(HOME)/openmv-sdk-$(SDK_VERSION)
 
 # Build the Docker image
