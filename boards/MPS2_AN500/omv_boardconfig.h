@@ -44,7 +44,7 @@
 #define OMV_STACK_SIZE                        (64K)
 #define OMV_FB_MEMORY                         SRAM1     // Framebuffer, fb_alloc
 #define OMV_FB_SIZE                           (1M)      // FB memory: header + QVGA/GS image
-#define OMV_FB_ALLOC_SIZE                     (1850K)   // minimum fb alloc size
+#define OMV_FB_ALLOC_SIZE                     (1500K)   // minimum fb alloc size
 #define OMV_GC_BLOCK0_MEMORY                  SRAM1     // Main GC block
 #define OMV_GC_BLOCK0_SIZE                    (1M)
 #define OMV_SB_SIZE                           (128K)    // IDE JPEG buffer size (header + data).

@@ -1,6 +1,13 @@
 {
   "0": {
-    "size": "0x20000",
-    "entries": [ ]
+    "size": "0x200000",
+    "entries": [
+      {
+        "type": "tflite",
+        "path": "{TOP}/lib/models/blazeface_front_128.tflite",
+        "alignment": 16,
+        "optimize": "Performance"
+      }
+    ]
   }
 }

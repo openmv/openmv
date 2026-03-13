@@ -4,10 +4,17 @@ PORT=qemu
 QEMU_MACHINE=mps3-an547
 OMV_ENABLE_BL=0
 OMV_LEPTON_SDK_ENABLE=0
+CMSIS_MCU_H = \"mps3_an547.h\"
 OMV_BOARD_CFLAGS= -mcmse \
                   -DQEMU_SOC_MPS3 \
-                  -DCPU_FREQ_HZ=32000000
+                  -DCPU_FREQ_HZ=32000000 \
+                  -DETHOS_U -DETHOSU55 \
+                  -DOMV_NOSYS_STUBS_ENABLE=1
 DEBUGGER=QEMU
+VELA_ARGS= "--accelerator-config ethos-u55-256 \
+            --memory-mode Shared_Sram \
+            --config $(TOP_DIR)/tools/vela.ini \
+            --system-config RTSS_HE_SRAM_Only"
 OMV_QEMU_ARGS=--machine $(QEMU_MACHINE) --show-output
 MICROPY_PY_CSI = 1
 MICROPY_PY_CSI_NG = 1

@@ -4,9 +4,14 @@ PORT=qemu
 QEMU_MACHINE=mps2-an500
 OMV_ENABLE_BL=0
 OMV_LEPTON_SDK_ENABLE=0
+CMSIS_MCU_H = \"mps2_an500.h\"
 OMV_BOARD_CFLAGS= -DQEMU_SOC_MPS2 \
                   -DCPU_FREQ_HZ=25000000
 DEBUGGER=QEMU
+VELA_ARGS= "--accelerator-config ethos-u55-256 \
+            --memory-mode Shared_Sram \
+            --config $(TOP_DIR)/tools/vela.ini \
+            --system-config RTSS_HE_SRAM_Only"
 OMV_QEMU_ARGS=--machine $(QEMU_MACHINE) --show-output
 MICROPY_PY_CSI = 1
 MICROPY_PY_CSI_NG = 1
