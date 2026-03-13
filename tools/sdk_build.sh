@@ -18,7 +18,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 ########################################################################################
 # Configuration
-SDK_VERSION="1.0.0"
+SDK_VERSION="1.1.0"
 SDK_PLATFORM="$(uname -s | tr '[:upper:]' '[:lower:]')-$(uname -m)"
 SDK_NAME="openmv-sdk-${SDK_VERSION}-${SDK_PLATFORM}"
 BUILD_DIR="sdk"
@@ -225,7 +225,8 @@ VIRTUAL_ENV="${SDK_STAGE}/python" "${UV}" pip install \
     cryptography==46.0.5 \
     pyelftools==0.27 \
     colorama==0.4.6 \
-    mpremote==1.27.0
+    mpremote==1.27.0 \
+    "pyserial @ git+https://github.com/pyserial/pyserial.git@911a0b8c110f3d3513bab67e64d95d1310517454"
 rm "${SDK_STAGE}/python/pyvenv.cfg"
 
 ########################################################################################

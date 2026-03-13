@@ -80,8 +80,8 @@ jobs:
       uses: actions/cache@v5.0.3
       id: sdk-cache
       with:
-        path: ~/openmv-sdk-1.0.0
-        key: openmv-sdk-1.0.0-linux-x86_64
+        path: ~/openmv-sdk-1.1.0
+        key: openmv-sdk-1.1.0-linux-x86_64
 
     - name: '🛠 Install dependencies'
       run: |
