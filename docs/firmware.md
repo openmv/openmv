@@ -1,18 +1,17 @@
 # Building the Firmware From Source
 
-This guide covers installing a development environment and building the OpenMV firmware from source on Linux.
+This guide covers installing a development environment and building the OpenMV firmware from source.
 For information on OpenMV Camera general usage, please see the [forums](http://openmv.io/forums) or [docs](http://openmv.io/docs).
 - [Docker Build](#docker-build)
-- [Linux Build](#linux-build)
+- [Linux / macOS (arm64) Build](#linux--macos-arm64-build)
   * [Install build dependencies](#install-build-dependencies)
-  * [Install GNU ARM toolchain](#install-gnu-arm-toolchain)
   * [Clone the repository](#clone-the-repository)
     + [Shallow clone](#shallow-clone)
+  * [Install the SDK](#install-the-sdk)
   * [Build the firmware](#build-the-firmware)
     + [Build artifacts](#build-artifacts)
     + [Notes on building the firmware in a Virtual Machine](#notes-on-building-the-firmware-in-a-virtual-machine)
 - [Windows Build](#windows-build)
-- [Mac Build](#mac-build)
 - [Flashing the Firmware](#flashing-the-firmware)
 - [The OpenMV bootloader](#the-openmv-bootloader)
     + [Note about STM32 DFU bootloader](#note-about-stm32-dfu-bootloader)
@@ -30,23 +29,20 @@ make TARGET=<TARGET_NAME>
 When the firmware build is done, the build artifacts should be located in `docker/build/<TARGET_NAME>`.
 > Note: `TARGET_NAME` is one of the [supported boards](https://github.com/openmv/openmv/tree/master/boards). 
 
-## Linux Build
+## Linux / macOS (arm64) Build
+
+Building natively is supported on Linux (x86_64) and macOS (arm64). All required tools, including the ARM toolchain, are installed automatically by `make sdk`.
 
 ### Install build dependencies
-Install the following packages or their equivalents based on your distro:
+On Linux, install the following packages or their equivalents based on your distro:
 ```bash
 sudo apt-get update
 sudo apt-get install git build-essential
 ```
 
-### Install GNU ARM toolchain
-This step can be skipped if your distro package manager provides an ARM toolchain, however this is the gcc toolchain currently in use by the developers. Note the following commands install the toolchain to `/usr/local/arm-none-eabi` and then add it to the PATH variable, for the current terminal session. The toolchain will need to be added to the PATH again if a new terminal session is started. Note the toolchain can be installed in any other location as long as it's added to the PATH.
-```
-TOOLCHAIN_PATH=${HOME}/cache/gcc
-TOOLCHAIN_URL="https://developer.arm.com/-/media/Files/downloads/gnu/13.2.rel1/binrel/arm-gnu-toolchain-13.2.rel1-x86_64-arm-none-eabi.tar.xz"
-mkdir -p ${TOOLCHAIN_PATH}
-wget --no-check-certificate -O - ${TOOLCHAIN_URL} | tar --strip-components=1 -Jx -C ${TOOLCHAIN_PATH}
-export PATH=${TOOLCHAIN_PATH}/bin:${PATH}
+On macOS, install the required packages using [Homebrew](https://brew.sh/):
+```bash
+brew install bash make coreutils
 ```
 
 ### Clone the repository
@@ -64,12 +60,18 @@ git submodule update --init --depth=1 --no-single-branch
 git -C lib/micropython/ submodule update --init --depth=1
 ```
 
+### Install the SDK
+Before building, install the OpenMV SDK. This downloads and installs all required tools (ARM toolchain, etc.):
+```bash
+cd openmv
+make sdk
+```
+
 ### Build the firmware
 To build the firmware, run the following commands inside the openmv repository:
 ```bash
-cd openmv
-make -j$(nproc) -C lib/micropython/mpy-cross   # Builds Micropython mpy cross-compiler
-make -j$(nproc) TARGET=<TARGET_NAME>           # Builds the OpenMV firmware
+make -j$(nproc) -C lib/micropython/mpy-cross   # Builds MicroPython mpy cross-compiler
+make -j$(nproc) TARGET=<TARGET_NAME>            # Builds the OpenMV firmware
 ```
 
 > Note: `TARGET_NAME` is one of the [supported boards](https://github.com/openmv/openmv/tree/master/boards).
@@ -95,19 +97,11 @@ When the firmware build is done, the build artifacts should be located in `build
 
 ## Windows Build
 
-There is no Windows development environment. It is very difficult to install the toolchain on Windows. Instead you can install Ubuntu on a virtual machine running on your windows machine:
+There is no native Windows development environment. Instead, use the [Docker Build](#docker-build) or install Ubuntu on a virtual machine:
 
-1. You can get VMware Player (free) [here](https://my.vmware.com/en/web/vmware/free#desktop_end_user_computing/vmware_workstation_player/15_0) to run Ubuntu. Or, you can get VirtualBox (free) [here](https://www.virtualbox.org/wiki/Downloads). VMware Player is recommended.
-2. Download Ubuntu [here](http://www.ubuntu.com/desktop). Then use whatever virtual machine software you installed to install the operating system. VMware Player makes this easy with a automated install option where it will install everything for you without you having to do anything other than enter your name and password initially.
-3. Install any updates, etc. for your operating system. Also, if you're using VMware Player make sure to install VMware Tools so you can drag and drop files between your Windows desktop and Ubuntu desktop along with being able to setup shared folders.
-
-## Mac Build
-
-There is no Mac development environment. It is very difficult to install the toolchain on Mac. Instead you can install Ubuntu on a virtual machine running on your Mac machine:
-
-1. You can get VMware Fusion (paid) [here](https://www.vmware.com/products/fusion/) to run Ubuntu. Or, you can get VirtualBox (free) [here](https://www.virtualbox.org/wiki/Downloads). VMware Fusion is recommended.
-2. Download Ubuntu [here](http://www.ubuntu.com/desktop). Then use whatever virtual machine software you installed to install the operating system. VMware Fusion makes this easy with a automated install option where it will install everything for you without you having to do anything other than enter your name and password initially.
-3. Install any updates, etc. for your operating system. Also, if you're using VMware Fusion make sure to install VMware Tools so you can drag and drop files between your Mac desktop and Ubuntu desktop along with being able to setup shared folders.
+1. Install [VMware Player](https://my.vmware.com/en/web/vmware/free#desktop_end_user_computing/vmware_workstation_player/15_0) (free) or [VirtualBox](https://www.virtualbox.org/wiki/Downloads) (free).
+2. Download [Ubuntu](http://www.ubuntu.com/desktop) and install it in the VM.
+3. Follow the [Linux / macOS (arm64) Build](#linux--macos-arm64-build) instructions inside the VM.
 
 ## Flashing the firmware
 To update the OpenMV camera with the newly built firmware, install the [OpenMV IDE](https://openmv.io/pages/download) and upload the `firmware.bin` file to the OpenMV camera using the builtin bootloader from `Tools->Run Bootloader` in OpenMV IDE. Please make sure to only load firmware meant for your model of the OpenMV camera onto it. The IDE does not check this if the firmware matches the camera model. If the wrong firmware is uploaded accidentally the camera will like just crash without being damaged. The OpenMV camera can be recovered by using the bootloader again to load the correct `firmware.bin`.
