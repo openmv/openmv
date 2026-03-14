@@ -154,6 +154,8 @@
 #define OMV_FB_MEMORY                       DRAM   // Framebuffer, fb_alloc
 #define OMV_FB_SIZE                         (20M)  // FB memory.
 #define OMV_FB_ALLOC_SIZE                   (11M)  // minimum fb_alloc size
+#define OMV_FB_OVERLAY_MEMORY               SRAM1  // Fast fb_alloc memory.
+#define OMV_FB_OVERLAY_SIZE                 (432K) // Fast fb_alloc memory size.
 #define OMV_SB_MEMORY                       DRAM   // Streaming buffer memory.
 #define OMV_SB_SIZE                         (1M)   // Streaming buffer size.
 #define OMV_DMA_MEMORY                      SRAM1  // Misc DMA buffers memory.
