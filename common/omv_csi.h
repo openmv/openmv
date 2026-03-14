@@ -342,7 +342,6 @@ typedef struct _omv_csi {
         uint32_t vsync_pol  : 1;  // Vertical sync polarity.
         uint32_t hsync_pol  : 1;  // Horizontal sync polarity.
         uint32_t pixck_pol  : 1;  // Pixel clock edge.
-        uint32_t frame_sync : 1;  // Hardware frame sync.
         uint32_t mono_bpp   : 2;  // Grayscale bytes per pixel output.
         uint32_t rgb_swap   : 1;  // Byte-swap 2BPP RGB formats after capture.
         uint32_t yuv_swap   : 1;  // Byte-swap 2BPP YUV formats after capture.
@@ -383,6 +382,7 @@ typedef struct _omv_csi {
     omv_i2c_t *i2c;             // SCCB/I2C bus.
     framebuffer_t *fb;          // Frame buffer pointer
     omv_clk_t *clk;             // Clock controller.
+    omv_gpio_t fsync_pin;       // Frame sync pin.
     uint32_t clk_hz;            // Clock freqeuency request by this CSI.
     uint32_t reset_time_ms;     // To track elapsed time since hard-reset.
     uint32_t power_time_ms;     // To track elapsed time since power on.
