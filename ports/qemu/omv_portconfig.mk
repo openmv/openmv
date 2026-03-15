@@ -119,6 +119,7 @@ MPY_FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/,\
 	mcu/arm/errorhandler.o              \
 	mcu/arm/startup.o                   \
 	mcu/arm/ticks.o                     \
+	vfs_rom_ioctl.o                     \
 )
 
 ifeq ($(MICROPY_PY_ML_TFLM), 1)
@@ -178,11 +179,27 @@ FVP_ARGS += -C cpu0.CFGITCMSZ=14 \
             -C mps3_board.telnetterminal5.start_telnet=0 \
             -C mps3_board.visualisation.disable-visualisation=1
 
+ifdef OMV_ROMFS_PART0_ORIGIN
+FVP_ARGS += --data $(FW_DIR)/romfs0.img@$(OMV_ROMFS_PART0_ORIGIN)
+endif
+
+ifdef OMV_ROMFS_PART1_ORIGIN
+FVP_ARGS += --data $(FW_DIR)/romfs1.img@$(OMV_ROMFS_PART1_ORIGIN)
+endif
+
 run: $(ROMFS_IMAGE)
 	$(FVP_BINARY) $(FVP_ARGS) -a $(FW_DIR)/$(FIRMWARE).elf
 else
 QEMU_SYSTEM = qemu-system-arm
 QEMU_ARGS += -machine $(QEMU_MACHINE) -nographic -monitor null -semihosting
+
+ifdef OMV_ROMFS_PART0_ORIGIN
+QEMU_ARGS += -device loader,file=$(FW_DIR)/romfs0.img,addr=$(OMV_ROMFS_PART0_ORIGIN),force-raw=on
+endif
+
+ifdef OMV_ROMFS_PART1_ORIGIN
+QEMU_ARGS += -device loader,file=$(FW_DIR)/romfs1.img,addr=$(OMV_ROMFS_PART1_ORIGIN),force-raw=on
+endif
 
 run: $(ROMFS_IMAGE)
 	$(QEMU_SYSTEM) $(QEMU_ARGS) -serial pty -kernel $(FW_DIR)/$(FIRMWARE).elf
