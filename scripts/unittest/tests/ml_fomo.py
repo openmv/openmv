@@ -1,7 +1,7 @@
 def unittest(data_path, temp_path):
     import omv
 
-    if "MPS3" in omv.arch():
+    if "MPS3" not in omv.arch():
         return "skip"
 
     import ml
@@ -9,8 +9,8 @@ def unittest(data_path, temp_path):
     from ml.postprocessing.edgeimpulse import Fomo
 
     img = image.Image(data_path + "/faces.bmp", copy_to_fb=True)
-    model = ml.Model(data_path + "/fomo_face_detection.tflite", postprocess=Fomo(threshold=0.4))
-    output = model.predict([img], callback=Fomo())
+    model = ml.Model("/rom/fomo_face_detection.tflite", postprocess=Fomo(threshold=0.4))
+    output = model.predict([img])
 
     return output[1] == [
         ([149, 17, 31, 31], 0.6796876),

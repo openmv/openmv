@@ -1,4 +1,9 @@
 def unittest(data_path, temp_path):
+    import omv
+
+    if "MPS3" in omv.arch():
+        return "skip"
+
     import image
 
     # Load image and find keypoints

@@ -73,7 +73,10 @@ def main():
                 with open("/".join((TEST_PATH, test))) as f:
                     buf = f.read()
                 exec(buf)
-                if unittest(DATA_PATH, TEMP_PATH) is False:
+                ret = unittest(DATA_PATH, TEMP_PATH)
+                if ret == "skip":
+                    raise Exception("SKIPPED")
+                if ret is False:
                     raise Exception()
             else:
                 # C unit test function
@@ -84,8 +87,8 @@ def main():
             result = "PASSED"
             passed_count += 1
         except Exception as e:
-            if "unavailable" in str(e):
-                result = "DISABLED"
+            if "SKIPPED" in str(e):
+                result = "SKIPPED"
                 skipped_count += 1
             else:
                 result = "FAILED"
