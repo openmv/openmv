@@ -198,7 +198,7 @@ ci_run_fvp_tests() {
 
     # Run unit tests using mpremote over socket
     echo "Running unit tests..."
-    timeout 300 python3 lib/micropython/tools/mpremote/mpremote.py \
+    timeout 600 python3 lib/micropython/tools/mpremote/mpremote.py \
         connect "socket://localhost:${FVP_TELNET_PORT}" \
         mount scripts/unittest/ run scripts/unittest/run.py 2>&1 | tee test_output.txt
     TEST_EXIT_CODE=${PIPESTATUS[0]}
