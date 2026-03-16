@@ -1,5 +1,11 @@
 def unittest(data_path, temp_path):
-    import image, os
+    import omv
+
+    if "MPS3" in omv.arch():
+        return "skip"
+
+    import os
+    import image
 
     # Load image and find keypoints
     img = image.Image(data_path + "/graffiti.pgm", copy_to_fb=True)

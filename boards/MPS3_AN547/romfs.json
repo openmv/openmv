@@ -1,13 +1,61 @@
 {
   "0": {
-    "size": "0x200000",
+    "size": "0x2000000",
     "entries": [
-      {
-        "type": "tflite",
-        "path": "{TOP}/lib/models/blazeface_front_128.tflite",
-        "alignment": 16,
-        "optimize": "Performance"
-      }
+    {
+      "type": "tflite",
+      "path": "{TOP}/lib/models/fomo_face_detection.tflite",
+      "alignment": 32,
+      "optimize": "Performance"
+    },
+    {
+      "type": "tflite",
+      "path": "{TOP}/lib/models/force_int_quant.tflite",
+      "alignment": 32,
+      "optimize": "Performance"
+    },
+    {
+      "type": "tflite",
+      "path": "{TOP}/lib/models/person_detect.tflite",
+      "alignment": 32,
+      "optimize": "Performance"
+    },
+    {
+      "type": "tflite",
+      "path": "{TOP}/lib/models/yolo_lc_192.tflite",
+      "alignment": 32,
+      "optimize": "Performance"
+    },
+    {
+      "type": "tflite",
+      "path": "{TOP}/lib/models/yolov8n_192.tflite",
+      "alignment": 32,
+      "optimize": "Performance"
+    },
+    {
+      "type": "tflite",
+      "path": "{TOP}/lib/models/blazeface_front_128.tflite",
+      "alignment": 32,
+      "optimize": "Performance"
+    },
+    {
+      "type": "tflite",
+      "path": "{TOP}/lib/models/face_landmarks_192.tflite",
+      "alignment": 32,
+      "optimize": "Performance"
+    },
+    {
+      "type": "tflite",
+      "path": "{TOP}/lib/models/palm_detection_full_192.tflite",
+      "alignment": 32,
+      "optimize": "Performance"
+    },
+    {
+      "type": "tflite",
+      "path": "{TOP}/lib/models/hand_landmarks_full_224.tflite",
+      "alignment": 32,
+      "optimize": "Performance"
+    }
     ]
   }
 }

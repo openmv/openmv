@@ -16,6 +16,7 @@ VELA_ARGS= "--accelerator-config ethos-u55-256 \
             --config $(TOP_DIR)/tools/vela.ini \
             --system-config RTSS_HE_SRAM_Only"
 OMV_QEMU_ARGS=--machine $(QEMU_MACHINE) --show-output
+OMV_ROMFS_PART0_ORIGIN=0x62000000
 MICROPY_PY_CSI = 1
 MICROPY_PY_CSI_NG = 1
 MICROPY_PY_CRC = 1
