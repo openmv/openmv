@@ -92,7 +92,7 @@ export FROZEN_MANIFEST:=$(OMV_BOARD_CONFIG_DIR)/manifest.py
 # Prepend SDK bin directories to PATH.
 STEDGEAI_CORE = $(wildcard $(SDK_DIR)/stedgeai/[0-9]*)
 STEDGEAI_UTIL = Utilities/$(if $(filter Darwin,$(shell uname -s)),macarm,linux)
-export PATH := $(SDK_DIR)/gcc/bin:$(SDK_DIR)/llvm/bin:$(SDK_DIR)/cmake/bin:$(SDK_DIR)/python/bin:$(SDK_DIR)/stcubeprog/bin:$(STEDGEAI_CORE)/$(STEDGEAI_UTIL):$(PATH)
+export PATH := $(SDK_DIR)/gcc/bin:$(SDK_DIR)/llvm/bin:$(SDK_DIR)/cmake/bin:$(SDK_DIR)/python/bin:$(SDK_DIR)/stcubeprog/bin:$(STEDGEAI_CORE)/$(STEDGEAI_UTIL):$(SDK_DIR)/fvp/bin:$(PATH)
 
 # Debugging/Optimization
 ifeq ($(DEBUG), 1)

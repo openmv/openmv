@@ -177,7 +177,8 @@ FVP_ARGS += -C cpu0.CFGITCMSZ=14 \
             -C mps3_board.telnetterminal1.start_telnet=0 \
             -C mps3_board.telnetterminal2.start_telnet=0 \
             -C mps3_board.telnetterminal5.start_telnet=0 \
-            -C mps3_board.visualisation.disable-visualisation=1
+            -C mps3_board.visualisation.disable-visualisation=1 \
+            --stat -q
 
 ifdef OMV_ROMFS_PART0_ORIGIN
 FVP_ARGS += --data $(FW_DIR)/romfs0.img@$(OMV_ROMFS_PART0_ORIGIN)
@@ -188,7 +189,7 @@ FVP_ARGS += --data $(FW_DIR)/romfs1.img@$(OMV_ROMFS_PART1_ORIGIN)
 endif
 
 run: $(ROMFS_IMAGE)
-	$(FVP_BINARY) $(FVP_ARGS) -a $(FW_DIR)/$(FIRMWARE).elf
+	FVP_MOUNT_DIR=$(TOP_DIR) $(FVP_BINARY) $(FVP_ARGS) -a $(FW_DIR)/$(FIRMWARE).elf
 else
 QEMU_SYSTEM = qemu-system-arm
 QEMU_ARGS += -machine $(QEMU_MACHINE) -nographic -monitor null -semihosting
