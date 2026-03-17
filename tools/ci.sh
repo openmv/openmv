@@ -176,15 +176,20 @@ ci_run_fvp_tests() {
 
     # Wait for FVP telnet port to be ready
     echo "Waiting for FVP to start..."
-    for i in {1..60}; do
+    for i in {1..120}; do
         if nc -z localhost ${FVP_TELNET_PORT} 2>/dev/null; then
             break
+        fi
+        if ! kill -0 ${FVP_PID} 2>/dev/null; then
+            echo "Error: FVP process exited prematurely"
+            cat fvp_output.txt
+            return 1
         fi
         sleep 1
     done
 
     if ! nc -z localhost ${FVP_TELNET_PORT} 2>/dev/null; then
-        echo "Error: FVP telnet port ${FVP_TELNET_PORT} not ready"
+        echo "Error: FVP telnet port ${FVP_TELNET_PORT} not ready after 120s"
         cat fvp_output.txt
         kill ${FVP_PID} 2>/dev/null
         return 1
