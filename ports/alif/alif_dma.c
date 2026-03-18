@@ -63,8 +63,6 @@
 #define DMA_IS_SECURE(dma)  ((dma == ((DMA_Type *) DMALOCAL_SEC_BASE)) || (dma == ((DMA_Type *) DMA0_SEC_BASE)))
 #define DMA_DESCR_INDEX(dma) (DMA_IS_LOCAL(dma) ? DMA_LOCAL_INDEX : DMA_SHARED_INDEX)
 
-#define IRQ_PRI_DMA         NVIC_EncodePriority(NVIC_PRIORITYGROUP_7, 2, 0)
-
 typedef struct {
     DMA_Type *dma_inst;
     bool is_local;

@@ -51,8 +51,6 @@
 #define ETHOSU_CACHE_SECTION    section(".bss.ethosu_cache")
 #define ETHOSU_CACHE_ATTRIBUTE  __attribute__((aligned(ETHOSU_CACHE_ALIGN), ETHOSU_CACHE_SECTION))
 
-#define IRQ_PRI_NPU             NVIC_EncodePriority(NVIC_PRIORITYGROUP_7, 8, 0)
-
 #if CORE_M55_HP
 #define ETHOSU_IRQ_NUMBER       NPU_HP_IRQ_IRQn
 #define ETHOSU_IRQ_HANDLER      NPU_HP_IRQHandler

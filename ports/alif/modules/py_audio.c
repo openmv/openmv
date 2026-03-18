@@ -60,7 +60,7 @@
 #define PDM_MODE_32K            (0x05UL)
 #define PDM_MODE_48K            (0x07UL)
 #define PDM_MODE_96K            (0x08UL)
-#define IRQ_PRI_PDM             NVIC_EncodePriority(NVIC_PRIORITYGROUP_7, 10, 0)
+#define IRQ_PRI_PDM_DMA         NVIC_EncodePriority(NVIC_PRIORITYGROUP_7, 10, 0)
 
 typedef struct _audio_state_t {
     uint32_t n_samples;
@@ -308,7 +308,7 @@ static mp_obj_t py_audio_init(uint n_args, const mp_obj_t *pos_args, mp_map_t *k
     dma_config_t dma_config;
     dma_config.inst = pdm_descr->dma_inst;
     dma_config.request = pdm_descr->dma_request;
-    dma_config.priority = IRQ_PRI_PDM;
+    dma_config.priority = IRQ_PRI_PDM_DMA;
     dma_config.direction = DMA_TRANSFER_DEV_TO_MEM;
     dma_config.burst_size = DMA_BURST_SIZE_4;
     dma_config.burst_blen = 1;
@@ -329,6 +329,7 @@ static mp_obj_t py_audio_init(uint n_args, const mp_obj_t *pos_args, mp_map_t *k
     // Configure and enable PDM IRQs.
     NVIC_ClearPendingIRQ(PDM_ERROR_IRQ_IRQn);
     NVIC_EnableIRQ(PDM_ERROR_IRQ_IRQn);
+    NVIC_SetPriority(PDM_ERROR_IRQ_IRQn, IRQ_PRI_PDM);
 
     audio_initialized = true;
     return mp_const_none;
