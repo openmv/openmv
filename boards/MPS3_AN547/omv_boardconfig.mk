@@ -1,7 +1,7 @@
 CPU=cortex-m55
 FPU=auto
 PORT=qemu
-QEMU_MACHINE=mps3-an547
+FVP_MACHINE=SSE-300_Ethos-U55
 OMV_ENABLE_BL=0
 OMV_LEPTON_SDK_ENABLE=0
 CMSIS_MCU_H = \"mps3_an547.h\"
@@ -10,12 +10,16 @@ OMV_BOARD_CFLAGS= -mcmse \
                   -DCPU_FREQ_HZ=32000000 \
                   -DETHOS_U -DETHOSU55 \
                   -DOMV_NOSYS_STUBS_ENABLE=1
-DEBUGGER=QEMU
+DEBUGGER=NONE
 VELA_ARGS= "--accelerator-config ethos-u55-256 \
             --memory-mode Shared_Sram \
             --config $(TOP_DIR)/tools/vela.ini \
             --system-config RTSS_HE_SRAM_Only"
-OMV_QEMU_ARGS=--machine $(QEMU_MACHINE) --show-output
+FVP_ARGS= -C cpu0.CFGITCMSZ=14 \
+          -C mps3_board.FPGA_SRAM_SIZE=8 \
+          -C mps3_board.sse300.NUMVMBANK=2 \
+          -C mps3_board.sse300.VM_BANK_SIZE=4096 \
+          -C ethosu.num_macs=256
 OMV_ROMFS_PART0_ORIGIN=0x62000000
 MICROPY_PY_CSI = 1
 MICROPY_PY_CSI_NG = 1

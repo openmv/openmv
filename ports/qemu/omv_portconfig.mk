@@ -160,37 +160,7 @@ $(ROMFS_IMAGE): $(ROMFS_CONFIG) | $(FIRMWARE)
             --vela-args $(VELA_ARGS) --config $(ROMFS_CONFIG)
 	touch $@
 
-ifeq ($(EMULATOR),FVP)
-FVP_TELNET_PORT ?= 5555
-FVP_BINARY = FVP_Corstone_SSE-300_Ethos-U55
-FVP_ARGS += -C cpu0.CFGITCMSZ=14 \
-            -C cpu0.semihosting-enable=1 \
-            -C mps3_board.FPGA_SRAM_SIZE=8 \
-            -C mps3_board.sse300.NUMVMBANK=2 \
-            -C mps3_board.sse300.VM_BANK_SIZE=4096 \
-            -C ethosu.num_macs=256 \
-            -C mps3_board.uart0.unbuffered_output=1 \
-            -C mps3_board.uart0.rx_overrun_mode=1 \
-            -C mps3_board.telnetterminal0.start_telnet=1 \
-            -C mps3_board.telnetterminal0.start_port=$(FVP_TELNET_PORT) \
-            -C mps3_board.telnetterminal0.mode=raw \
-            -C mps3_board.telnetterminal1.start_telnet=0 \
-            -C mps3_board.telnetterminal2.start_telnet=0 \
-            -C mps3_board.telnetterminal5.start_telnet=0 \
-            -C mps3_board.visualisation.disable-visualisation=1 \
-            --stat -q
-
-ifdef OMV_ROMFS_PART0_ORIGIN
-FVP_ARGS += --data $(FW_DIR)/romfs0.img@$(OMV_ROMFS_PART0_ORIGIN)
-endif
-
-ifdef OMV_ROMFS_PART1_ORIGIN
-FVP_ARGS += --data $(FW_DIR)/romfs1.img@$(OMV_ROMFS_PART1_ORIGIN)
-endif
-
-run: $(ROMFS_IMAGE)
-	FVP_MOUNT_DIR=$(TOP_DIR) $(FVP_BINARY) $(FVP_ARGS) -a $(FW_DIR)/$(FIRMWARE).elf
-else
+ifneq ($(QEMU_MACHINE),)
 QEMU_SYSTEM = qemu-system-arm
 QEMU_ARGS += -machine $(QEMU_MACHINE) -nographic -monitor null -semihosting
 
@@ -204,6 +174,35 @@ endif
 
 run: $(ROMFS_IMAGE)
 	$(QEMU_SYSTEM) $(QEMU_ARGS) -serial pty -kernel $(FW_DIR)/$(FIRMWARE).elf
+else
+FVP_PORT ?= 5555
+FVP_ARGS += -C cpu0.semihosting-enable=1 \
+            -C mps3_board.uart0.unbuffered_output=1 \
+            -C mps3_board.uart0.rx_overrun_mode=1 \
+            -C mps3_board.telnetterminal0.start_telnet=1 \
+            -C mps3_board.telnetterminal0.start_port=$(FVP_PORT) \
+            -C mps3_board.telnetterminal0.mode=raw \
+            -C mps3_board.telnetterminal0.quiet=1 \
+            -C mps3_board.telnetterminal1.start_telnet=0 \
+            -C mps3_board.telnetterminal1.quiet=1 \
+            -C mps3_board.telnetterminal2.start_telnet=0 \
+            -C mps3_board.telnetterminal2.quiet=1 \
+            -C mps3_board.telnetterminal5.start_telnet=0 \
+            -C mps3_board.telnetterminal5.quiet=1 \
+            -C mps3_board.visualisation.disable-visualisation=1 \
+            --stat -q
+
+ifdef OMV_ROMFS_PART0_ORIGIN
+FVP_ARGS += --data $(FW_DIR)/romfs0.img@$(OMV_ROMFS_PART0_ORIGIN)
+endif
+
+ifdef OMV_ROMFS_PART1_ORIGIN
+FVP_ARGS += --data $(FW_DIR)/romfs1.img@$(OMV_ROMFS_PART1_ORIGIN)
+endif
+
+run: $(ROMFS_IMAGE)
+	FVP_MOUNT_DIR=$(TOP_DIR) FVP_Corstone_$(FVP_MACHINE) $(FVP_ARGS) -a $(FW_DIR)/$(FIRMWARE).elf
+
 endif
 
 include common/mkrules.mk
