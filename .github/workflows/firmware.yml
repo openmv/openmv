@@ -80,7 +80,7 @@ jobs:
       run: source tools/ci.sh && ci_update_submodules
 
     - name: '♻ Cache SDK'
-      uses: actions/cache@v5.0.3
+      uses: actions/cache@v5.0.4
       id: sdk-cache
       with:
         path: ~/openmv-sdk-1.1.0
@@ -97,7 +97,7 @@ jobs:
 
     - name: '♻ Cache FVP'
       if: matrix.fvp
-      uses: actions/cache@v5.0.3
+      uses: actions/cache@v5.0.4
       id: fvp-cache
       with:
         path: ~/fvp-11.31.28
@@ -137,7 +137,7 @@ jobs:
         submodules: false
 
     - name: '♻ Cache SDK'
-      uses: actions/cache@v5.0.3
+      uses: actions/cache@v5.0.4
       id: sdk-cache
       with:
         path: ~/openmv-sdk-1.0.0
