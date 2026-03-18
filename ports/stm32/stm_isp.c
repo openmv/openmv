@@ -106,39 +106,6 @@ int stm_isp_init(omv_csi_t *csi, uint32_t pipe, pixformat_t pixformat, bool raw_
         return -1;
     }
 
-    // Early exit if no debayer is needed.
-    if (!raw_output || pixformat == PIXFORMAT_BAYER) {
-        return 0;
-    }
-
-    // Configure ISP debayer.
-    DCMIPP_RawBayer2RGBConfTypeDef rawcfg = {
-        .RawBayerType = DCMIPP_RAWBAYER_BGGR,
-        .VLineStrength = DCMIPP_RAWBAYER_ALGO_NONE,
-        .HLineStrength = DCMIPP_RAWBAYER_ALGO_NONE,
-        .PeakStrength = DCMIPP_RAWBAYER_ALGO_NONE,
-        .EdgeStrength = DCMIPP_RAWBAYER_ALGO_NONE,
-    };
-
-    if (HAL_DCMIPP_PIPE_SetISPRawBayer2RGBConfig(&csi->dcmipp, pipe, &rawcfg) != HAL_OK ||
-        HAL_DCMIPP_PIPE_EnableISPRawBayer2RGB(&csi->dcmipp, pipe) != HAL_OK) {
-        return -1;
-    }
-
-    DCMIPP_ExposureConfTypeDef expcfg = {
-        .ShiftRed = 0,
-        .MultiplierRed = 128,
-        .ShiftGreen = 0,
-        .MultiplierGreen = 128,
-        .ShiftBlue = 0,
-        .MultiplierBlue = 128,
-    };
-
-    if (HAL_DCMIPP_PIPE_SetISPExposureConfig(&csi->dcmipp, pipe, &expcfg) != HAL_OK ||
-        HAL_DCMIPP_PIPE_EnableISPExposure(&csi->dcmipp, pipe) != HAL_OK) {
-        return -1;
-    }
-
     const uint32_t statsrc[] = {
         DCMIPP_STAT_EXT_SOURCE_PRE_BLKLVL_R,
         DCMIPP_STAT_EXT_SOURCE_PRE_BLKLVL_G,
@@ -172,6 +139,46 @@ int stm_isp_init(omv_csi_t *csi, uint32_t pipe, pixformat_t pixformat, bool raw_
         return -1;
     }
 
+    // Early exit if no debayer is needed.
+    if (!raw_output || pixformat == PIXFORMAT_BAYER) {
+        HAL_DCMIPP_PIPE_DisableISPRawBayer2RGB(&csi->dcmipp, pipe);
+        HAL_DCMIPP_PIPE_DisableISPExposure(&csi->dcmipp, pipe);
+        HAL_DCMIPP_PIPE_DisableISPCtrlContrast(&csi->dcmipp, pipe);
+        return 0;
+    }
+
+    // Configure ISP debayer.
+    DCMIPP_RawBayer2RGBConfTypeDef rawcfg = {
+        .RawBayerType = DCMIPP_RAWBAYER_BGGR,
+        .VLineStrength = DCMIPP_RAWBAYER_ALGO_NONE,
+        .HLineStrength = DCMIPP_RAWBAYER_ALGO_NONE,
+        .PeakStrength = DCMIPP_RAWBAYER_ALGO_NONE,
+        .EdgeStrength = DCMIPP_RAWBAYER_ALGO_NONE,
+    };
+
+    if (HAL_DCMIPP_PIPE_SetISPRawBayer2RGBConfig(&csi->dcmipp, pipe, &rawcfg) != HAL_OK ||
+        HAL_DCMIPP_PIPE_EnableISPRawBayer2RGB(&csi->dcmipp, pipe) != HAL_OK) {
+        return -1;
+    }
+
+    DCMIPP_ExposureConfTypeDef expcfg = {
+        .ShiftRed = 0,
+        .MultiplierRed = 128,
+        .ShiftGreen = 0,
+        .MultiplierGreen = 128,
+        .ShiftBlue = 0,
+        .MultiplierBlue = 128,
+    };
+
+    if (HAL_DCMIPP_PIPE_SetISPExposureConfig(&csi->dcmipp, pipe, &expcfg) != HAL_OK ||
+        HAL_DCMIPP_PIPE_EnableISPExposure(&csi->dcmipp, pipe) != HAL_OK) {
+        return -1;
+    }
+
+    if (HAL_DCMIPP_PIPE_EnableISPCtrlContrast(&csi->dcmipp, pipe) != HAL_OK) {
+        return -1;
+    }
+
     return 0;
 }
 
@@ -189,10 +196,6 @@ int stm_isp_update_gamma_table(omv_csi_t *csi, uint32_t pipe,
 
     if (HAL_DCMIPP_PIPE_SetISPCtrlContrastConfig(&csi->dcmipp, pipe,
                                                  (DCMIPP_ContrastConfTypeDef *) &g_tab) != HAL_OK) {
-        return -1;
-    }
-
-    if (HAL_DCMIPP_PIPE_EnableISPCtrlContrast(&csi->dcmipp, pipe) != HAL_OK) {
         return -1;
     }
 
