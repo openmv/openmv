@@ -148,6 +148,8 @@ ci_install_fvp() {
     FVP_ARCHIVE="avh-linux-x86_${FVP_MAJOR_MINOR}_${FVP_PATCH}_Linux64.tar.gz"
     FVP_URL="https://artifacts.tools.arm.com/avh/${FVP_VERSION}/${FVP_ARCHIVE}"
 
+    # ./FVP_Corstone_SSE-300.sh --i-agree-to-the-contained-eula --no-interactive -f -d ~/FVP_Corstone_SSE-300
+
     tmpfile=$(mktemp)
     wget --no-check-certificate --progress=bar:force -O "$tmpfile" "$FVP_URL" || {
         echo "FVP download failed: $FVP_URL"; return 1
@@ -166,18 +168,18 @@ ci_install_fvp() {
 # Run FVP unit tests
 ci_run_fvp_tests() {
     TARGET="${1}"
-    FVP_TELNET_PORT=5555
+    FVP_PORT=5555
     export PATH="${FVP_INSTALL_DIR}/bin:${PATH}"
 
     # Start FVP in background with raw TCP UART
     echo "Starting FVP for ${TARGET}..."
-    LD_LIBRARY_PATH="${SDK_DIR}/python/lib" make TARGET=${TARGET} EMULATOR=FVP run > fvp_output.txt 2>&1 &
+    LD_LIBRARY_PATH="${SDK_DIR}/python/lib" make TARGET=${TARGET} run > fvp_output.txt 2>&1 &
     FVP_PID=$!
 
     # Wait for FVP telnet port to be ready
     echo "Waiting for FVP to start..."
     for i in {1..120}; do
-        if nc -z localhost ${FVP_TELNET_PORT} 2>/dev/null; then
+        if nc -z localhost ${FVP_PORT} 2>/dev/null; then
             break
         fi
         if ! kill -0 ${FVP_PID} 2>/dev/null; then
@@ -188,13 +190,13 @@ ci_run_fvp_tests() {
         sleep 1
     done
 
-    if ! nc -z localhost ${FVP_TELNET_PORT} 2>/dev/null; then
-        echo "Error: FVP telnet port ${FVP_TELNET_PORT} not ready after 120s"
+    if ! nc -z localhost ${FVP_PORT} 2>/dev/null; then
+        echo "Error: FVP telnet port ${FVP_PORT} not ready after 120s"
         cat fvp_output.txt
         kill ${FVP_PID} 2>/dev/null
         return 1
     fi
-    echo "FVP ready on port ${FVP_TELNET_PORT}"
+    echo "FVP ready on port ${FVP_PORT}"
     sleep 2
 
     # Patch micropython's mpremote for FVP socket communication
@@ -204,7 +206,7 @@ ci_run_fvp_tests() {
     # Run unit tests using mpremote over socket
     echo "Running unit tests..."
     timeout 600 python3 lib/micropython/tools/mpremote/mpremote.py \
-        connect "socket://localhost:${FVP_TELNET_PORT}" \
+        connect "socket://localhost:${FVP_PORT}" \
         mount scripts/unittest/ run scripts/unittest/run.py 2>&1 | tee test_output.txt
     TEST_EXIT_CODE=${PIPESTATUS[0]}
 

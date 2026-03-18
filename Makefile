@@ -315,5 +315,8 @@ submodules:
 	$(MAKE) -C $(MICROPY_DIR)/ports/$(PORT) BOARD=$(TARGET) submodules
 
 debug:
+ifeq ($(DEBUGGER),NONE)
+	$(error This target does not support debugging)
+endif
 	gdbrunner $(DEBUGGER) $(OMV_$(DEBUGGER)_ARGS) $(FW_DIR)/$(FIRMWARE).elf
 
