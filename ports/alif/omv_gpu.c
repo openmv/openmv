@@ -131,10 +131,12 @@ int omv_gpu_draw_image(image_t *src_img,
                        const uint8_t *alpha_palette,
                        image_hint_t hint,
                        float *transform) {
-    // Belnding is not supported yet and transformations are not supported.
-    if (color_palette || alpha_palette || transform) {
+    // Blending, transformations, and TCM buffers are not supported.
+    if (color_palette || alpha_palette || transform ||
+        RTSS_Is_TCM_Addr(src_img->data) || RTSS_Is_TCM_Addr(dst_img->data)) {
         return -1;
     }
+
     d2_s32 err;
     d2_u32 blit_flags = 0;
 
