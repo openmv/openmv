@@ -38,6 +38,7 @@
 #include <string.h>
 #include <stdio.h>
 
+#include "omv_gpio.h"
 #include "omv_i2c.h"
 #include "omv_csi.h"
 #include "py/mphal.h"
@@ -85,12 +86,19 @@
 #define INTERFACE_POLARITY          (0x0EAF)
 #define SENSOR_OPMODE               (0x0008)
 #define SENSOR_OPMODE_RUN           (0x83)
-#define SENSOR_OPMODE_SUSPEND       (0x85)
+#define SENSOR_OPMODE_SUSPEND       (0x86)
 #define SENSOR_TRIGGER_FRAMENUM     (0x002E)
 #define SENSOR_TRIGGER_EN           (0x002F)
+#define SENSOR_TRIGGER_EN_FLAG      (0x01)
+#define SENSOR_TRIGGER_MODE_SOFT    (0x00)
+#define SENSOR_TRIGGER_MODE_GPIO0   (0x10)
+#define SENSOR_TRIGGER_MODE_GPIO1   (0x20)
+#define SENSOR_TRIGGER_MODE_GPIO2   (0x30)
 #define SENSOR_TG_EN                (0x0030)
 #define SENSOR_TG_EN_FLAG           (0x01)
 #define SENSOR_TRIGGER_MODE         (0x0031)
+#define SENSOR_TRIGGER_MODE_0       (0x02)
+#define SENSOR_TRIGGER_MODE_1       (0x03)
 #define SENSOR_SOFTWARE_TRIGGER     (0x00EA)
 #define ISP_EN_H                    (0x0800)
 #define ISP_EN_H_EN                 (0x01)
@@ -737,6 +745,38 @@ static int ioctl(omv_csi_t *csi, int request, va_list ap) {
             *va_arg(ap, uint32_t *) = rgb_stats[3];
             break;
         }
+        case OMV_CSI_IOCTL_SET_TRIGGERED_MODE: {
+            int enable = va_arg(ap, int);
+            ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, SENSOR_OPMODE, 2, SENSOR_OPMODE_SUSPEND, 1);
+
+            if (enable) {
+                ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, SENSOR_TG_EN, 2, 0, 1);
+                ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, SENSOR_TRIGGER_EN, 2, SENSOR_TRIGGER_EN_FLAG, 1);
+                ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, SENSOR_TRIGGER_MODE, 2, SENSOR_TRIGGER_MODE_1, 1);
+                ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, SENSOR_TRIGGER_EN, 2,
+                                         SENSOR_TRIGGER_EN_FLAG | SENSOR_TRIGGER_MODE_GPIO0, 1);
+            } else {
+                ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, SENSOR_TG_EN, 2, SENSOR_TG_EN_FLAG, 1);
+                ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, SENSOR_TRIGGER_EN, 2, 0, 1);
+                ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, SENSOR_TRIGGER_MODE, 2, 0, 1);
+            }
+
+            ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, SENSOR_OPMODE, 2, SENSOR_OPMODE_RUN, 1);
+            // Skip past the first corrupt frames...
+            if (!csi->disable_delays) {
+                mp_hal_delay_ms(100);
+            }
+            break;
+        }
+        case OMV_CSI_IOCTL_GET_TRIGGERED_MODE: {
+            int *enable = va_arg(ap, int *);
+            uint8_t reg;
+            ret |= omv_i2c_read_reg(csi->i2c, csi->slv_addr, SENSOR_TG_EN, 2, &reg, 1);
+            if (ret >= 0) {
+                *enable = (reg & SENSOR_TG_EN_FLAG) ? 0 : 1;
+            }
+            break;
+        }
         default: {
             ret = -1;
             break;
@@ -778,6 +818,10 @@ int pag7936_init(omv_csi_t *csi) {
     csi->get_rgb_gain_db = get_rgb_gain_db;
     csi->set_hmirror = set_hmirror;
     csi->set_vflip = set_vflip;
+
+    // Setup the FSYNC pin for triggered mode.
+    omv_gpio_config(OMV_PAG7936_FSYNC_PIN, OMV_GPIO_MODE_OUTPUT, OMV_GPIO_PULL_NONE, OMV_GPIO_SPEED_LOW, -1);
+    csi->fsync_pin = OMV_PAG7936_FSYNC_PIN;
 
     // Override standard resolutions
     csi->resolution[OMV_CSI_FRAMESIZE_HD][0] = 1280;
