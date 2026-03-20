@@ -1157,7 +1157,7 @@ static mp_obj_t py_image_to(pixformat_t pixfmt, mp_rom_obj_t default_color_palet
                 temp.h = dst_img.h;
                 temp.pixfmt = src_img->is_color ? PIXFORMAT_RGB565 : PIXFORMAT_GRAYSCALE;
                 temp.size = 0;
-                temp.data = fb_alloc(image_size(&temp), FB_ALLOC_NO_HINT);
+                temp.data = fb_alloc(image_size(&temp), FB_ALLOC_CACHE_ALIGN);
                 imlib_draw_image(&temp, src_img, 0, 0, x_scale, y_scale, &roi,
                                  args[ARG_channel].u_int, args[ARG_alpha].u_int, color_palette, alpha_palette,
                                  args[ARG_hint].u_int, NULL, NULL, NULL, NULL);
