@@ -10,7 +10,6 @@
 import csi
 import time
 import math
-import omv
 
 csi0 = csi.CSI()
 csi0.reset()
@@ -18,12 +17,6 @@ csi0.pixformat(csi.GRAYSCALE)
 csi0.framesize(csi.VGA)
 
 # AprilTags works on a maximum of < 64K pixels.
-if omv.board_type() == "H7":
-    csi0.window((240, 240))
-elif omv.board_type() == "M7":
-    csi0.window((200, 200))
-else:
-    raise Exception("You need a more powerful OpenMV Cam to run this script")
 csi0.snapshot(time=2000)
 csi0.auto_gain(False)  # must turn this off to prevent image washout...
 csi0.auto_whitebal(False)  # must turn this off to prevent image washout...

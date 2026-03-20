@@ -17,7 +17,6 @@
 
 import csi
 import time
-import omv
 
 # Set the thresholds to find a white object (i.e. tag border)
 thresholds = (150, 255)
@@ -25,12 +24,6 @@ thresholds = (150, 255)
 csi0 = csi.CSI()
 csi0.reset()
 csi0.pixformat(csi.GRAYSCALE)
-if omv.board_type() == "H7":
-    csi0.framesize(csi.VGA)
-elif omv.board_type() == "M7":
-    csi0.framesize(csi.QVGA)
-else:
-    raise Exception("You need a more powerful OpenMV Cam to run this script")
 csi0.snapshot(time=200)  # increase this to let the auto methods run for longer
 csi0.auto_gain(False)  # must be turned off for color tracking
 csi0.auto_whitebal(False)  # must be turned off for color tracking
