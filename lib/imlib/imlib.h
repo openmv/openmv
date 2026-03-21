@@ -1103,12 +1103,15 @@ typedef struct find_qrcodes_list_lnk_data {
 } find_qrcodes_list_lnk_data_t;
 
 typedef enum apriltag_families {
-    TAG16H5   = 1,
-    TAG25H7   = 2,
-    TAG25H9   = 4,
-    TAG36H10  = 8,
-    TAG36H11  = 16,
-    ARTOOLKIT = 32
+    TAG16H5          = (1 << 0),
+    TAG25H9          = (1 << 1),
+    TAG36H10         = (1 << 2),
+    TAG36H11         = (1 << 3),
+    TAGCIRCLE21H7    = (1 << 4),
+    TAGCIRCLE49H12   = (1 << 5),
+    TAGCUSTOM48H12   = (1 << 6),
+    TAGSTANDARD41H12 = (1 << 7),
+    TAGSTANDARD52H13 = (1 << 8),
 } apriltag_families_t;
 
 typedef struct find_apriltags_list_lnk_data {

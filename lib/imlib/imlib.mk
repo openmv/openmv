@@ -69,6 +69,7 @@ IMLIB_SRC_C += \
     qsort.c \
     rainbow_tab.c \
     rectangle.c \
+    rotation_corr.c \
     selective_search.c \
     sincos_tab.c \
     stats.c \
@@ -78,7 +79,7 @@ IMLIB_SRC_C += \
     yuv.c \
     zbar.c \
 
-CFLAGS += -I$(TOP_DIR)/lib/imlib
+CFLAGS += -I$(TOP_DIR)/lib/imlib -DAPRILTAG_HAVE_CONFIG
 
 ifeq ($(CLANG_ENABLE),1)
 OMV_CLANG_OBJ = $(BUILD)/lib/imlib/bayer.o
