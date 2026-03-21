@@ -547,38 +547,32 @@ static inline v128_t vmov_u16_narrow_u8_hi(v128_t v0, v128_t v1) {
 
 #if (__ARM_ARCH >= 8)
 #define vusat_s16_narrow_u8_lo(v0, v1, shift) ((v128_t) vqshrunbq_n_s16(v0.u8, v1.s16, shift))
+#elif (__ARM_ARCH >= 7)
+#define vusat_s16_narrow_u8_lo(v0, v1, shift) ({                      \
+        uint32_t _t0 = __USAT16((v1).u32[0], 8 + (shift)) >> (shift); \
+        uint32_t _t1 = __USUB8(0xFF00FF00, 0x00FF00FF); (void) _t1;   \
+        (v128_t) { .u32 = { __SEL((v0).u32[0], _t0) } };              \
+    })
 #else
-static inline v128_t vusat_s16_narrow_u8_lo(v128_t v0, v128_t v1, uint32_t shift) {
-    #if (__ARM_ARCH >= 7)
-    uint32_t t0 = __USAT16(v1.u32[0], 8 + shift) >> shift;
-    uint32_t t1 = __USUB8(0xFF00FF00, 0x00FF00FF); (void) t1;
-    return (v128_t) {
-        .u32 = { __SEL(v0.u32[0], t0) }
-    };
-    #else // There's a software implementation of __USAT16 in the ARM CMSIS extension if needed
-    return (v128_t) {
-        .u32 = { (v0.u32[0] & 0xFF00FF00) | ((__USAT16(v1.u32[0], 8 + shift) >> shift) & 0x00FF00FF) }
-    };
-    #endif
-}
+// There's a software implementation of __USAT16 in the ARM CMSIS extension if needed
+#define vusat_s16_narrow_u8_lo(v0, v1, shift) ((v128_t) {                                                      \
+        .u32 = { ((v0).u32[0] & 0xFF00FF00) | ((__USAT16((v1).u32[0], 8 + (shift)) >> (shift)) & 0x00FF00FF) } \
+    })
 #endif
 
 #if (__ARM_ARCH >= 8)
 #define vusat_s16_narrow_u8_hi(v0, v1, shift) ((v128_t) vqshruntq_n_s16(v0.u8, v1.s16, shift))
+#elif (__ARM_ARCH >= 7)
+#define vusat_s16_narrow_u8_hi(v0, v1, shift) ({                            \
+        uint32_t _t0 = __USAT16((v1).u32[0], 8 + (shift)) << (8 - (shift)); \
+        uint32_t _t1 = __USUB8(0x00FF00FF, 0xFF00FF00); (void) _t1;         \
+        (v128_t) { .u32 = { __SEL((v0).u32[0], _t0) } };                    \
+    })
 #else
-static inline v128_t vusat_s16_narrow_u8_hi(v128_t v0, v128_t v1, uint32_t shift) {
-    #if (__ARM_ARCH >= 7)
-    uint32_t t0 = __USAT16(v1.u32[0], 8 + shift) << (8 - shift);
-    uint32_t t1 = __USUB8(0x00FF00FF, 0xFF00FF00); (void) t1;
-    return (v128_t) {
-        .u32 = { __SEL(v0.u32[0], t0) }
-    };
-    #else // There's a software implementation of __USAT16 in the ARM CMSIS extension if needed
-    return (v128_t) {
-        .u32 = { (v0.u32[0] & 0x00FF00FF) | ((__USAT16(v1.u32[0], 8 + shift) << (8 - shift)) & 0xFF00FF00) }
-    };
-    #endif
-}
+// There's a software implementation of __USAT16 in the ARM CMSIS extension if needed
+#define vusat_s16_narrow_u8_hi(v0, v1, shift) ((v128_t) {                                                            \
+        .u32 = { ((v0).u32[0] & 0x00FF00FF) | ((__USAT16((v1).u32[0], 8 + (shift)) << (8 - (shift))) & 0xFF00FF00) } \
+    })
 #endif
 
 #if (__ARM_ARCH >= 8)
