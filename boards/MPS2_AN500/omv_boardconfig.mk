@@ -6,6 +6,7 @@ OMV_ENABLE_BL=0
 OMV_LEPTON_SDK_ENABLE=0
 CMSIS_MCU_H = \"mps2_an500.h\"
 OMV_BOARD_CFLAGS= -DQEMU_SOC_MPS2 \
+                  -DOMV_NOSYS_STUBS_ENABLE=1 \
                   -DCPU_FREQ_HZ=25000000
 DEBUGGER=QEMU
 VELA_ARGS= "--accelerator-config ethos-u55-256 \
