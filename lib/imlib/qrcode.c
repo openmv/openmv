@@ -2922,7 +2922,7 @@ void quirc_destroy(struct quirc *q)
 int quirc_resize(struct quirc *q, int w, int h)
 {
     if (q->image) fb_free();
-    uint8_t *new_image = fb_alloc(w * h, FB_ALLOC_NO_HINT);
+    uint8_t *new_image = fb_alloc(w * h, FB_ALLOC_CACHE_ALIGN | FB_ALLOC_PREFER_SIZE);
 
     if (!new_image)
         return -1;
@@ -2930,7 +2930,7 @@ int quirc_resize(struct quirc *q, int w, int h)
     if (sizeof(*q->image) != sizeof(*q->pixels)) {
         size_t new_size = w * h * sizeof(quirc_pixel_t);
         if (q->pixels) fb_free();
-        quirc_pixel_t *new_pixels = fb_alloc(new_size, FB_ALLOC_NO_HINT);
+        quirc_pixel_t *new_pixels = fb_alloc(new_size, FB_ALLOC_CACHE_ALIGN | FB_ALLOC_PREFER_SIZE);
         if (!new_pixels) {
             fb_free();
             return -1;
