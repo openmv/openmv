@@ -117,9 +117,21 @@ array_t *imlib_detect_objects(image_t *image, cascade_t *cascade, rectangle_t *r
         cascade->step = cascade->window.h;
     }
 
+    // Compute the max height needed from all cascade rectangles.
+    // Some features extend beyond window.h, so window.h + 1 is not enough.
+    int mw_h = cascade->window.h;
+    for (int i = 0, r_idx = 0; i < cascade->n_features; i++) {
+        for (int j = 0; j < cascade->num_rectangles_array[i]; j++, r_idx += 4) {
+            int rh = cascade->rectangles_array[r_idx + 1] + cascade->rectangles_array[r_idx + 3];
+            if (rh > mw_h) {
+                mw_h = rh;
+            }
+        }
+    }
+
     // Allocate integral images
-    imlib_integral_mw_alloc(&sum, roi->w, cascade->window.h + 1);
-    imlib_integral_mw_alloc(&ssq, roi->w, cascade->window.h + 1);
+    imlib_integral_mw_alloc(&sum, roi->w, mw_h + 1);
+    imlib_integral_mw_alloc(&ssq, roi->w, mw_h + 1);
 
     // Iterate over the image pyramid
     for (float factor = 1.0f; ; factor *= cascade->scale_factor) {
