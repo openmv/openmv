@@ -165,14 +165,14 @@ void imlib_get_similarity(image_t *img,
         return;
     }
 
-    int int_h_blocks = h_blocks * sizeof(int);
     imlib_similarity_line_op_state_t state;
     state.dssim = dssim;
-    state.sumBucketsOfX = fb_alloc0(int_h_blocks * 5, FB_ALLOC_NO_HINT);
-    state.sumBucketsOfY = state.sumBucketsOfX + int_h_blocks;
-    state.sum2BucketsOfX = state.sumBucketsOfY + int_h_blocks;
-    state.sum2BucketsOfY = state.sum2BucketsOfX + int_h_blocks;
-    state.sum2Buckets = state.sum2BucketsOfY + int_h_blocks;
+    int *base = fb_alloc0(h_blocks * sizeof(int) * 5, FB_ALLOC_NO_HINT);
+    state.sumBucketsOfX = &base[h_blocks * 0];
+    state.sumBucketsOfY = &base[h_blocks * 1];
+    state.sum2BucketsOfX = &base[h_blocks * 2];
+    state.sum2BucketsOfY = &base[h_blocks * 3];
+    state.sum2Buckets = &base[h_blocks * 4];
     state.similarity_sum = 0.0f;
     state.similarity_sum_2 = 0.0f;
     state.similarity_min = FLT_MAX;
