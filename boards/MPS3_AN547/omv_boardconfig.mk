@@ -1,5 +1,5 @@
 CPU=cortex-m55
-FPU=auto
+FPU=fpv5-d16
 PORT=qemu
 FVP_MACHINE=SSE-300_Ethos-U55
 OMV_ENABLE_BL=0

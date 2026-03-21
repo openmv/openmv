@@ -57,6 +57,26 @@ LDFLAGS = -mthumb \
           -Wl,-T$(BUILD)/$(LDSCRIPT).lds \
           -Wl,-Map=$(BUILD)/$(FIRMWARE).map
 
+CLANG_ENABLE = 1
+
+ifeq ($(CPU),cortex-m7)
+CLANG_FLAGS += --target=armv7em-none-eabi
+CLANG_FLAGS += -march=armv7e-m
+endif
+
+ifeq ($(CPU),cortex-m55)
+CLANG_FLAGS += --target=armv8.1m-none-eabi
+CLANG_FLAGS += -march=armv8.1-m.main+mve.fp+fp.dp
+endif
+
+CLANG_FLAGS +=-fshort-enums \
+              -Wno-shift-count-overflow \
+              -Wno-ignored-optimization-argument \
+              -Wno-unused-command-line-argument \
+              -D__ARMCC_VERSION=6100100 \
+              -DALIF_CMSIS_H=$(CMSIS_MCU_H) \
+              $(filter-out -march% -fdisable-rtl%,$(CFLAGS))
+
 OMV_CFLAGS += -I$(TOP_DIR)
 OMV_CFLAGS += -I$(TOP_DIR)/$(COMMON_DIR)
 OMV_CFLAGS += -I$(TOP_DIR)/modules
