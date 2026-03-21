@@ -68,7 +68,7 @@ extern unsigned char OMV_BOARD_UID_ADDR[12];    // Unique address.
 #define OMV_FIR_AMG8833_ENABLE          (1)
 
 // UMM heap block size
-#define OMV_UMM_BLOCK_SIZE              256
+#define OMV_UMM_BLOCK_SIZE              32
 
 // USB config.
 #define OMV_USB_IRQN                    (USB_IRQ_IRQn)
@@ -102,7 +102,7 @@ extern unsigned char OMV_BOARD_UID_ADDR[12];    // Unique address.
 #define OMV_FB_SIZE                     (2048K)
 #define OMV_FB_ALLOC_SIZE               (464K)  // Minimum fb alloc size
 #define OMV_FB_OVERLAY_MEMORY           DTCM    // Fast fb_alloc memory.
-#define OMV_FB_OVERLAY_SIZE             (256K)  // Fast fb_alloc memory size.
+#define OMV_FB_OVERLAY_SIZE             (512K)  // Fast fb_alloc memory size.
 #define OMV_SB_MEMORY                   SRAM6_A // Streaming buffer memory.
 #define OMV_SB_SIZE                     (1M)    // Streaming buffer size.
 #define OMV_DMA_MEMORY                  DTCM    // Misc DMA buffers memory.

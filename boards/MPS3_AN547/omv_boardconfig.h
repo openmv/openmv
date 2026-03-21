@@ -37,18 +37,18 @@
 #define OMV_JPEG_QUALITY_THRESHOLD            (160 * 120 * 2)
 
 // UMM heap block size
-#define OMV_UMM_BLOCK_SIZE                    32
+#define OMV_UMM_BLOCK_SIZE                    128
 
 #define OMV_MAIN_MEMORY                       SRAM1     // Data/BSS memory
 #define OMV_STACK_MEMORY                      SRAM1     // stack memory
 #define OMV_STACK_SIZE                        (64K)
-#define OMV_FB_MEMORY                         SRAM1     // Framebuffer, fb_alloc
-#define OMV_FB_SIZE                           (1M)      // FB memory: header + QVGA/GS image
-#define OMV_FB_ALLOC_SIZE                     (3M)   // minimum fb alloc size
-#define OMV_HEAP_MEMORY                       SRAM1
-#define OMV_HEAP_SIZE                         (512K)
+#define OMV_FB_MEMORY                         DDR       // Framebuffer, fb_alloc
+#define OMV_FB_SIZE                           (2M)      // FB memory: header + QVGA/GS image
+#define OMV_FB_ALLOC_SIZE                     (8M)      // minimum fb alloc size
+#define OMV_HEAP_MEMORY                       DDR
+#define OMV_HEAP_SIZE                         (4M)
 #define OMV_GC_BLOCK0_MEMORY                  DDR       // Main GC block
-#define OMV_GC_BLOCK0_SIZE                    (32M)
+#define OMV_GC_BLOCK0_SIZE                    (8M)
 #define OMV_SB_SIZE                           (128K)    // IDE JPEG buffer size (header + data).
 
 // Memory map.
