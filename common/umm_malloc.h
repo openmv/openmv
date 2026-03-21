@@ -28,9 +28,16 @@
 #define __UMM_MALLOC_H__
 #include <stdlib.h>
 void umm_alloc_fail();
-void  umm_init_x(size_t size);   // Min of 2.5KB - Max of 640 KB.
+// Block numbers are 15-bit (max 32767 blocks). Each block is
+// (4 + OMV_UMM_BLOCK_SIZE) bytes, so max heap depends on block size:
+//   block  32 → 1.13 MB
+//   block  64 → 2.13 MB
+//   block 128 → 4.13 MB
+//   block 256 → 8.13 MB
+void  umm_init_x(size_t size);
 void *umm_malloc(size_t size);
 void *umm_calloc(size_t num, size_t size);
 void *umm_realloc(void *ptr, size_t size);
 void  umm_free(void *ptr);
+void  umm_print_stats(void);
 #endif /* __UMM_MALLOC_H__ */

@@ -24,6 +24,7 @@
  *
  * UMM memory allocator.
  */
+#include <stdio.h>
 #include <string.h>
 #include "py/runtime.h"
 #include "py/mphal.h"
@@ -76,6 +77,11 @@ UMM_H_ATTPACKPRE typedef struct umm_block_t {
 
 umm_block *umm_heap = NULL;
 unsigned short int umm_numblocks = 0;
+#ifdef UMM_ENABLE_STATS
+static size_t umm_total_size = 0;
+static size_t umm_high_water = 0;
+static size_t umm_current_used = 0;
+#endif
 
 #define UMM_NUMBLOCKS        (umm_numblocks)
 #define UMM_BLOCK(b)         (umm_heap[b])
@@ -250,6 +256,12 @@ void umm_init_x(size_t size) {
         UMM_NBLOCK(block_last) = 0;
         UMM_PBLOCK(block_last) = block_1th;
     }
+
+#ifdef UMM_ENABLE_STATS
+    umm_total_size = UMM_MALLOC_CFG_HEAP_SIZE;
+    umm_current_used = 0;
+    umm_high_water = 0;
+#endif
 }
 
 void umm_init(void) {
@@ -287,6 +299,10 @@ void umm_free(void *ptr) {
     c = (((char *) ptr) - (char *) (&(umm_heap[0]))) / sizeof(umm_block);
 
     DBGLOG_DEBUG("Freeing block %6i\n", c);
+
+#ifdef UMM_ENABLE_STATS
+    umm_current_used -= ((UMM_NBLOCK(c) & UMM_BLOCKNO_MASK) - c) * sizeof(umm_block);
+#endif
 
     /* Now let's assimilate this block with the next one if possible. */
 
@@ -441,11 +457,18 @@ void *umm_malloc(size_t size) {
         /* Release the critical section... */
         UMM_CRITICAL_EXIT();
 
-        return( (void *) NULL);
+        umm_alloc_fail();
     }
 
     /* Release the critical section... */
     UMM_CRITICAL_EXIT();
+
+#ifdef UMM_ENABLE_STATS
+    umm_current_used += blocks * sizeof(umm_block);
+    if (umm_current_used > umm_high_water) {
+        umm_high_water = umm_current_used;
+    }
+#endif
 
     return( (void *) &UMM_DATA(cf) );
 }
@@ -513,6 +536,9 @@ void *umm_realloc(void *ptr, size_t size) {
     /* Figure out how big this block is ... the free bit is not set :-) */
 
     blockSize = (UMM_NBLOCK(c) - c);
+#ifdef UMM_ENABLE_STATS
+    unsigned short int oldBlockSize = blockSize;
+#endif
 
     /* Figure out how many bytes are in this block */
 
@@ -597,13 +623,27 @@ void *umm_realloc(void *ptr, size_t size) {
             memcpy(ptr, oldptr, curSize);
             umm_free(oldptr);
         } else {
-            DBGLOG_DEBUG("realloc %i to a bigger block %i failed - return NULL and leave the old block!\n",
-                         blockSize,
-                         blocks);
-            /* This space intentionally left blnk */
+            DBGLOG_DEBUG("realloc %i to a bigger block %i failed\n", blockSize, blocks);
+            // Standard realloc returns NULL on failure while preserving the
+            // original block. However, most callers (e.g. zarray) overwrite
+            // their pointer with the return value, losing the original on NULL
+            // and then crashing on dereference. Since we can't trust all
+            // callers to handle NULL correctly, fail hard here.
+            umm_alloc_fail();
         }
-        blockSize = blocks;
+#ifdef UMM_ENABLE_STATS
+        /* malloc+free already updated stats, skip the delta below */
+        oldBlockSize = 0;
+        blockSize = 0;
+#endif
     }
+
+#ifdef UMM_ENABLE_STATS
+    /* Track absorbed free blocks */
+    if (blockSize > oldBlockSize) {
+        umm_current_used += (blockSize - oldBlockSize) * sizeof(umm_block);
+    }
+#endif
 
     /* Now all we need to do is figure out if the block fit exactly or if we
      * need to split and free ...
@@ -614,6 +654,13 @@ void *umm_realloc(void *ptr, size_t size) {
         umm_split_block(c, blocks, 0);
         umm_free( (void *) &UMM_DATA(c + blocks) );
     }
+
+#ifdef UMM_ENABLE_STATS
+    /* Update high-water after split/free has adjusted stats */
+    if (umm_current_used > umm_high_water) {
+        umm_high_water = umm_current_used;
+    }
+#endif
 
     /* Release the critical section... */
     UMM_CRITICAL_EXIT();
@@ -633,4 +680,14 @@ void *umm_calloc(size_t num, size_t item_size) {
     }
 
     return ret;
+}
+
+void umm_print_stats(void) {
+#ifdef UMM_ENABLE_STATS
+    printf("UMM: %u total, %u used, %u free, %u high-water\n",
+           (unsigned) umm_total_size,
+           (unsigned) umm_current_used,
+           (unsigned) (umm_total_size - umm_current_used),
+           (unsigned) umm_high_water);
+#endif
 }
