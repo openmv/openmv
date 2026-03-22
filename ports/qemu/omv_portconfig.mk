@@ -128,6 +128,7 @@ include lib/cmsis/cmsis.mk
 include common/common.mk
 include drivers/drivers.mk
 include lib/imlib/imlib.mk
+include lib/apriltag/apriltag.mk
 include lib/tflm/tflm.mk
 include ports/ports.mk
 include common/micropy.mk

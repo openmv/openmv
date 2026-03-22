@@ -5244,11 +5244,6 @@ static void py_apriltag_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest) {
                         dest[0] = MP_OBJ_NEW_QSTR(MP_QSTR_TAG16H5);
                         break;
                     #endif
-                    #ifdef IMLIB_ENABLE_APRILTAGS_TAG25H7
-                    case TAG25H7:
-                        dest[0] = MP_OBJ_NEW_QSTR(MP_QSTR_TAG25H7);
-                        break;
-                    #endif
                     #ifdef IMLIB_ENABLE_APRILTAGS_TAG25H9
                     case TAG25H9:
                         dest[0] = MP_OBJ_NEW_QSTR(MP_QSTR_TAG25H9);
@@ -5264,9 +5259,29 @@ static void py_apriltag_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest) {
                         dest[0] = MP_OBJ_NEW_QSTR(MP_QSTR_TAG36H11);
                         break;
                     #endif
-                    #ifdef IMLIB_ENABLE_APRILTAGS_ARTOOLKIT
-                    case ARTOOLKIT:
-                        dest[0] = MP_OBJ_NEW_QSTR(MP_QSTR_ARTOOLKIT);
+                    #ifdef IMLIB_ENABLE_APRILTAGS_TAGCIRCLE21H7
+                    case TAGCIRCLE21H7:
+                        dest[0] = MP_OBJ_NEW_QSTR(MP_QSTR_TAGCIRCLE21H7);
+                        break;
+                    #endif
+                    #ifdef IMLIB_ENABLE_APRILTAGS_TAGCIRCLE49H12
+                    case TAGCIRCLE49H12:
+                        dest[0] = MP_OBJ_NEW_QSTR(MP_QSTR_TAGCIRCLE49H12);
+                        break;
+                    #endif
+                    #ifdef IMLIB_ENABLE_APRILTAGS_TAGCUSTOM48H12
+                    case TAGCUSTOM48H12:
+                        dest[0] = MP_OBJ_NEW_QSTR(MP_QSTR_TAGCUSTOM48H12);
+                        break;
+                    #endif
+                    #ifdef IMLIB_ENABLE_APRILTAGS_TAGSTANDARD41H12
+                    case TAGSTANDARD41H12:
+                        dest[0] = MP_OBJ_NEW_QSTR(MP_QSTR_TAGSTANDARD41H12);
+                        break;
+                    #endif
+                    #ifdef IMLIB_ENABLE_APRILTAGS_TAGSTANDARD52H13
+                    case TAGSTANDARD52H13:
+                        dest[0] = MP_OBJ_NEW_QSTR(MP_QSTR_TAGSTANDARD52H13);
                         break;
                     #endif
                 }
@@ -7166,9 +7181,6 @@ static const mp_rom_map_elem_t globals_dict_table[] = {
     #ifdef IMLIB_ENABLE_APRILTAGS_TAG16H5
     {MP_ROM_QSTR(MP_QSTR_TAG16H5),             MP_ROM_INT(TAG16H5)},
     #endif
-    #ifdef IMLIB_ENABLE_APRILTAGS_TAG25H7
-    {MP_ROM_QSTR(MP_QSTR_TAG25H7),             MP_ROM_INT(TAG25H7)},
-    #endif
     #ifdef IMLIB_ENABLE_APRILTAGS_TAG25H9
     {MP_ROM_QSTR(MP_QSTR_TAG25H9),             MP_ROM_INT(TAG25H9)},
     #endif
@@ -7178,8 +7190,20 @@ static const mp_rom_map_elem_t globals_dict_table[] = {
     #ifdef IMLIB_ENABLE_APRILTAGS_TAG36H11
     {MP_ROM_QSTR(MP_QSTR_TAG36H11),            MP_ROM_INT(TAG36H11)},
     #endif
-    #ifdef IMLIB_ENABLE_APRILTAGS_TAG36ARTOOLKIT
-    {MP_ROM_QSTR(MP_QSTR_ARTOOLKIT),           MP_ROM_INT(ARTOOLKIT)},
+    #ifdef IMLIB_ENABLE_APRILTAGS_TAGCIRCLE21H7
+    {MP_ROM_QSTR(MP_QSTR_TAGCIRCLE21H7),       MP_ROM_INT(TAGCIRCLE21H7)},
+    #endif
+    #ifdef IMLIB_ENABLE_APRILTAGS_TAGCIRCLE49H12
+    {MP_ROM_QSTR(MP_QSTR_TAGCIRCLE49H12),      MP_ROM_INT(TAGCIRCLE49H12)},
+    #endif
+    #ifdef IMLIB_ENABLE_APRILTAGS_TAGCUSTOM48H12
+    {MP_ROM_QSTR(MP_QSTR_TAGCUSTOM48H12),      MP_ROM_INT(TAGCUSTOM48H12)},
+    #endif
+    #ifdef IMLIB_ENABLE_APRILTAGS_TAGSTANDARD41H12
+    {MP_ROM_QSTR(MP_QSTR_TAGSTANDARD41H12),    MP_ROM_INT(TAGSTANDARD41H12)},
+    #endif
+    #ifdef IMLIB_ENABLE_APRILTAGS_TAGSTANDARD52H13
+    {MP_ROM_QSTR(MP_QSTR_TAGSTANDARD52H13),    MP_ROM_INT(TAGSTANDARD52H13)},
     #endif
     #endif
     #ifdef IMLIB_ENABLE_BARCODES

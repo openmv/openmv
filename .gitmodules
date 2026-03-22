@@ -14,3 +14,6 @@
 [submodule "tools/alif"]
 	path = tools/alif
 	url = https://github.com/micropython/alif-security-toolkit.git
+[submodule "lib/apriltag"]
+	path = lib/apriltag
+	url = https://github.com/openmv/apriltag.git
