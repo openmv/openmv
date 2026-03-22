@@ -24,6 +24,8 @@
 // to LD. It has access to the board config file, can define and use CPP macros,
 // and it uses a lot of magic 🪄.
 
+#include "umalloc.h"
+
 /* Adds a section to a table */
 #define OMV_ADD_SECTION(s) \
   LONG (ADDR(s)) \
@@ -40,6 +42,14 @@
     . += OMV_GC_BLOCK##n##_SIZE; \
     . = ALIGN(4); \
   } >OMV_GC_BLOCK##n##_MEMORY \
+
+/* Define a new UMA block. */
+#define OMV_UMA_BLOCK_NEW(n) \
+  .uma.block##n (NOLOAD) : { \
+    . = ALIGN(4); \
+    . += OMV_UMA_BLOCK##n##_SIZE; \
+    . = ALIGN(4); \
+  } >OMV_UMA_BLOCK##n##_MEMORY \
 
 /* Define a new DMA buffer region. */
 #define OMV_DMA_MEMORY_NEW(X) \
@@ -187,15 +197,43 @@ PROVIDE(__stack = __StackTop);
 } >OMV_FB_MEMORY
 #endif
 
-/* Main framebuffer fast memory */
-#if defined(OMV_FB_OVERLAY_MEMORY)
-.fb_overlay_memory (NOLOAD) :
+/* UMA heap blocks */
+#if defined(OMV_UMA_BLOCK0_MEMORY)
+OMV_UMA_BLOCK_NEW(0)
+#endif
+#if defined(OMV_UMA_BLOCK1_MEMORY)
+OMV_UMA_BLOCK_NEW(1)
+#endif
+#if defined(OMV_UMA_BLOCK2_MEMORY)
+OMV_UMA_BLOCK_NEW(2)
+#endif
+#if defined(OMV_UMA_BLOCK3_MEMORY)
+OMV_UMA_BLOCK_NEW(3)
+#endif
+
+/* UMA heap blocks table */
+#if defined(OMV_UMA_BLOCK0_MEMORY)
+.uma.blocks.table (READONLY) :
 {
   . = ALIGN(4);
-  _fballoc_overlay_start = .;
-  . = . + OMV_FB_OVERLAY_SIZE;
-  _fballoc_overlay_end = .;
-} >OMV_FB_OVERLAY_MEMORY
+  _uma_blocks_table_start = .;
+  OMV_ADD_SECTION(.uma.block0)
+  LONG (OMV_UMA_BLOCK0_FLAGS)
+  #if defined(OMV_UMA_BLOCK1_MEMORY)
+  OMV_ADD_SECTION(.uma.block1)
+  LONG (OMV_UMA_BLOCK1_FLAGS)
+  #endif
+  #if defined(OMV_UMA_BLOCK2_MEMORY)
+  OMV_ADD_SECTION(.uma.block2)
+  LONG (OMV_UMA_BLOCK2_FLAGS)
+  #endif
+  #if defined(OMV_UMA_BLOCK3_MEMORY)
+  OMV_ADD_SECTION(.uma.block3)
+  LONG (OMV_UMA_BLOCK3_FLAGS)
+  #endif
+  _uma_blocks_table_end = .;
+  . = ALIGN(4);
+} > FLASH_TEXT
 #endif
 
 /* Misc DMA buffers section */
