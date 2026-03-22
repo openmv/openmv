@@ -36,10 +36,10 @@
 #pragma GCC diagnostic ignored "-Wunused-variable"
 
 #define error(msg)                fb_alloc_fail()
-#define free(ptr)                 ({ umm_free(ptr); })
-#define malloc(size)              ({ void *_r = umm_malloc(size); if (!_r) fb_alloc_fail(); _r; })
-#define realloc(ptr, size)        ({ void *_r = umm_realloc((ptr), (size)); if (!_r) fb_alloc_fail(); _r; })
-#define calloc(num, item_size)    ({ void *_r = umm_calloc((num), (item_size)); if (!_r) fb_alloc_fail(); _r; })
+#define free(ptr)                 ({ omv_alloc_free(ptr); })
+#define malloc(size)              ({ void *_r = omv_alloc_malloc(size, 0); if (!_r) omv_alloc_fail(); _r; })
+#define realloc(ptr, size)        ({ void *_r = omv_alloc_realloc((ptr), (size)); if (!_r) omv_alloc_fail(); _r; })
+#define calloc(num, item_size)    ({ void *_r = omv_alloc_calloc((num), (item_size), 0); if (!_r) omv_alloc_fail(); _r; })
 #define sqrt(x)                   fast_sqrtf(x)
 #define floor(x)                  fast_floorf(x)
 #define ceil(x)                   fast_ceilf(x)
@@ -2701,7 +2701,10 @@ void imlib_lsd_find_line_segments(list_t *out,
     img.data = grayscale_image;
     imlib_draw_image(&img, ptr, 0, 0, 1.f, 1.f, roi, -1, 255, NULL, NULL, 0, NULL, NULL, NULL, NULL);
 
-    umm_init_x(fb_avail());
+    size_t pool_size = fb_avail();
+    void *pool_mem = fb_alloc(pool_size, FB_ALLOC_NO_HINT);
+    omv_alloc_init();
+    omv_alloc_add_pool(pool_mem, pool_size, 0);
 
     int n_ls;
     float *ls = LineSegmentDetection(&n_ls,
@@ -2754,7 +2757,7 @@ void imlib_lsd_find_line_segments(list_t *out,
         merge_alot(out, merge_distance, max_theta_diff);
     }
 
-    fb_free(); // umm_init_x();
+    fb_free(); // omv_alloc pool
     fb_free(); // grayscale_image;
 }
 

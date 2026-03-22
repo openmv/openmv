@@ -39,10 +39,10 @@
 #pragma GCC diagnostic ignored "-Wunused-variable"
 
 #define fprintf(format, ...)
-#define free(ptr) ({ umm_free(ptr); })
-#define malloc(size) ({ void *_r = umm_malloc(size); if(!_r) umm_alloc_fail(); _r; })
-#define realloc(ptr, size) ({ void *_r = umm_realloc((ptr), (size)); if(!_r) umm_alloc_fail(); _r; })
-#define calloc(num, item_size) ({ void *_r = umm_calloc((num), (item_size)); if(!_r) umm_alloc_fail(); _r; })
+#define free(ptr) ({ omv_alloc_free(ptr); })
+#define malloc(size) ({ void *_r = omv_alloc_malloc(size, 0); if(!_r) omv_alloc_fail(); _r; })
+#define realloc(ptr, size) ({ void *_r = omv_alloc_realloc((ptr), (size)); if(!_r) omv_alloc_fail(); _r; })
+#define calloc(num, item_size) ({ void *_r = omv_alloc_calloc((num), (item_size), 0); if(!_r) omv_alloc_fail(); _r; })
 #undef assert
 #define assert(expression)
 #define sqrt(x) fast_sqrtf(x)
@@ -114,7 +114,7 @@ static inline zarray_t *zarray_create_fail_ok(size_t el_sz)
 {
     assert(el_sz > 0);
 
-    zarray_t *za = (zarray_t*) umm_calloc(1, sizeof(zarray_t));
+    zarray_t *za = (zarray_t*) omv_alloc_calloc(1, sizeof(zarray_t), 0);
     if (za) za->el_sz = el_sz;
     return za;
 }
@@ -264,7 +264,7 @@ static inline void zarray_add_fail_ok(zarray_t *za, const void *p)
                 za->alloc = 8;
         }
 
-        za->data = (char*) umm_realloc(za->data, za->alloc * za->el_sz);
+        za->data = (char*) omv_alloc_realloc(za->data, za->alloc * za->el_sz);
 
         if (!za->data) {
             za->data = old_data;
@@ -10653,7 +10653,7 @@ zarray_t *apriltag_quad_thresh(apriltag_detector_t *td, image_u8_t *im, bool ove
                     }                                                   \
                                                                         \
                     if (!entry) {                                       \
-                        entry = umm_calloc(1, sizeof(struct uint32_zarray_entry)); \
+                        entry = omv_alloc_calloc(1, sizeof(struct uint32_zarray_entry), 0); \
                         if (!entry) break;                              \
                         entry->id = clusterid;                          \
                         entry->cluster = zarray_create_fail_ok(sizeof(struct pt)); \
@@ -11949,9 +11949,11 @@ void imlib_find_apriltags(list_t *out, image_t *ptr, rectangle_t *roi, apriltag_
     // -> GRAYSCALE Input Image = w*h*1
     // -> GRAYSCALE Threhsolded Image = w*h*1
     // -> UnionFind = w*h*2 (+w*h*1 for hash table)
-    size_t resolution = roi->w * roi->h;
-    size_t fb_alloc_need = resolution * (1 + 1 + 2 + 1); // read above...
-    umm_init_x(((fb_avail() - fb_alloc_need) / resolution) * resolution);
+    size_t pool_size  = roi->w * roi->h * (1 + 1 + 2 + 1);
+    void *pool_mem = fb_alloc(pool_size, FB_ALLOC_NO_HINT);
+
+    omv_alloc_init();
+    omv_alloc_add_pool(pool_mem, pool_size, 0);
     apriltag_detector_t *td = apriltag_detector_create();
 
     #ifdef IMLIB_ENABLE_APRILTAGS_TAG16H5
@@ -12091,7 +12093,7 @@ void imlib_find_apriltags(list_t *out, image_t *ptr, rectangle_t *roi, apriltag_
     apriltag_detections_destroy(detections);
     fb_free(); // grayscale_image;
     apriltag_detector_destroy(td);
-    fb_free(); // umm_init_x();
+    fb_free(); // omv_alloc pool
 }
 
 #ifdef IMLIB_ENABLE_FIND_RECTS
@@ -12101,9 +12103,11 @@ void imlib_find_rects(list_t *out, image_t *ptr, rectangle_t *roi, uint32_t thre
     // -> GRAYSCALE Input Image = w*h*1
     // -> GRAYSCALE Threhsolded Image = w*h*1
     // -> UnionFind = w*h*2 (+w*h*1 for hash table)
-    size_t resolution = roi->w * roi->h;
-    size_t fb_alloc_need = resolution * (1 + 1 + 2 + 2); // read above...
-    umm_init_x(((fb_avail() - fb_alloc_need) / resolution) * resolution);
+    size_t pool_size  = roi->w * roi->h * (1 + 1 + 2 + 2);
+    void *pool_mem = fb_alloc(pool_size, FB_ALLOC_NO_HINT);
+
+    omv_alloc_init();
+    omv_alloc_add_pool(pool_mem, pool_size, 0);
     apriltag_detector_t *td = apriltag_detector_create();
 
     image_t img;
@@ -12286,7 +12290,7 @@ void imlib_find_rects(list_t *out, image_t *ptr, rectangle_t *roi, uint32_t thre
     zarray_destroy(detections);
     fb_free(); // grayscale_image;
     apriltag_detector_destroy(td);
-    fb_free(); // umm_init_x();
+    fb_free(); // omv_alloc pool
 }
 #endif //IMLIB_ENABLE_FIND_RECTS
 
@@ -12302,7 +12306,10 @@ void imlib_rotation_corr(image_t *img, float x_rotation, float y_rotation, float
     memcpy(data, img->data, size);
     memset(img->data, 0, size);
 
-    umm_init_x(fb_avail());
+    size_t pool_size = fb_avail();
+    void *pool_mem = fb_alloc(pool_size, FB_ALLOC_NO_HINT);
+    omv_alloc_init();
+    omv_alloc_add_pool(pool_mem, pool_size, 0);
 
     int w = img->w;
     int h = img->h;
@@ -12551,7 +12558,7 @@ void imlib_rotation_corr(image_t *img, float x_rotation, float y_rotation, float
     matd_destroy(RX);
     matd_destroy(A1);
 
-    fb_free(); // umm_init_x();
+    fb_free(); // omv_alloc pool
 
     fb_free();
 }

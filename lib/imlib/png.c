@@ -28,18 +28,18 @@
 #include "file_utils.h"
 #if defined(IMLIB_ENABLE_PNG_ENCODER) || defined(IMLIB_ENABLE_PNG_DECODER)
 #include "lodepng.h"
-#include "umm_malloc.h"
+#include "omv_alloc.h"
 
 void *lodepng_malloc(size_t size) {
-    return umm_malloc(size);
+    return omv_alloc_malloc(size, 0);
 }
 
 void *lodepng_realloc(void *ptr, size_t new_size) {
-    return umm_realloc(ptr, new_size);
+    return omv_alloc_realloc(ptr, new_size);
 }
 
 void lodepng_free(void *ptr) {
-    return umm_free(ptr);
+    omv_alloc_free(ptr);
 }
 
 unsigned lodepng_convert_cb(unsigned char *out, const unsigned char *in,
@@ -124,7 +124,10 @@ bool png_compress(image_t *src, image_t *dst) {
         return true;
     }
 
-    umm_init_x(fb_avail());
+    size_t pool_size = fb_avail();
+    void *pool_mem = fb_alloc(pool_size, FB_ALLOC_NO_HINT);
+    omv_alloc_init();
+    omv_alloc_add_pool(pool_mem, pool_size, 0);
 
     LodePNGState state;
     lodepng_state_init(&state);
@@ -187,8 +190,7 @@ bool png_compress(image_t *src, image_t *dst) {
             mp_raise_msg_varg(&mp_type_RuntimeError,
                               MP_ERROR_TEXT("Failed to compress image in place"));
         }
-        // free fb_alloc() memory used for umm_init_x().
-        fb_free(); // umm_init_x();
+        fb_free(); // omv_alloc pool
     }
     return false;
 }
@@ -196,7 +198,10 @@ bool png_compress(image_t *src, image_t *dst) {
 
 #if defined(IMLIB_ENABLE_PNG_DECODER)
 void png_decompress(image_t *dst, image_t *src) {
-    umm_init_x(fb_avail());
+    size_t pool_size = fb_avail();
+    void *pool_mem = fb_alloc(pool_size, FB_ALLOC_NO_HINT);
+    omv_alloc_init();
+    omv_alloc_add_pool(pool_mem, pool_size, 0);
 
     LodePNGState state;
     lodepng_state_init(&state);
@@ -235,8 +240,7 @@ void png_decompress(image_t *dst, image_t *src) {
                           MP_ERROR_TEXT("Failed to compress image in place"));
     }
 
-    // free fb_alloc() memory used for umm_init_x().
-    fb_free(); // umm_init_x();
+    fb_free(); // omv_alloc pool
 }
 #endif // IMLIB_ENABLE_PNG_DECODER
 #endif // IMLIB_ENABLE_PNG_ENCODER || IMLIB_ENABLE_PNG_DECODER
