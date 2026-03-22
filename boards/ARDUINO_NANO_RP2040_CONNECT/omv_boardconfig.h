@@ -49,8 +49,6 @@ extern unsigned char *OMV_BOARD_UID_ADDR;    // Unique address.
 // FIR drivers configuration.
 #define OMV_FIR_AMG8833_ENABLE     (1)
 
-// UMM heap block size
-#define OMV_UMM_BLOCK_SIZE         16
 
 // USB IRQn.
 #define OMV_USB_IRQN               (USBCTRL_IRQ_IRQn)
