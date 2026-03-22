@@ -37,7 +37,7 @@
 #include <cmsis_extension.h>
 #include "fb_alloc.h"
 #include "file_utils.h"
-#include "umm_malloc.h"
+#include "omv_umalloc.h"
 #include "array.h"
 #include "fmath.h"
 #include "collections.h"

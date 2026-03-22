@@ -8,8 +8,9 @@
 #include <string.h>
 #include <math.h>
 #include "imlib.h"
-#include "fb_alloc.h"
 #include "fmath.h"
+#include "fb_alloc.h"
+#include "omv_umalloc.h"
 
 #include "common/matd.h"
 #include "common/zarray.h"
@@ -24,10 +25,15 @@ void imlib_rotation_corr(image_t *img, float x_rotation, float y_rotation, float
 
     size_t size = image_size(img);
     void *data = fb_alloc(size, FB_ALLOC_NO_HINT);
+
+    size_t pool_size = fb_avail();
+    void *pool_mem = fb_alloc(pool_size, FB_ALLOC_NO_HINT);
+
+    uma_init();
+    uma_add_pool(pool_mem, pool_size, 0);
+
     memcpy(data, img->data, size);
     memset(img->data, 0, size);
-
-    umm_init_x(fb_avail());
 
     int w = img->w;
     int h = img->h;

@@ -54,10 +54,13 @@ void imlib_find_apriltags(list_t *out, image_t *ptr, rectangle_t *roi, apriltag_
                           float fx, float fy, float cx, float cy) {
     // NOTE: callers (py_image.c) wrap this with fb_alloc_mark/fb_alloc_free_till_mark.
 
-    #ifdef APRILTAG_ENABLE_UMM_ALLOC
-    // Reserve fb_alloc space for the grayscale image, give the rest to UMM.
-    size_t fb_alloc_need = roi->w * roi->h; // grayscale image
-    umm_init_x(fb_avail() - fb_alloc_need);
+    #ifdef APRILTAG_ENABLE_UMA_ALLOC
+    // Reserve fb_alloc space for the grayscale image, give the rest to UMA.
+    size_t pool_size = fb_avail() - (roi->w * roi->h + roi->w * 2); // for draw_image
+    void *pool_mem = fb_alloc(pool_size, FB_ALLOC_NO_HINT);
+
+    uma_init();
+    uma_add_pool(pool_mem, pool_size, 0);
     #endif
 
     apriltag_detector_t *td = apriltag_detector_create();
@@ -143,7 +146,7 @@ void imlib_find_apriltags(list_t *out, image_t *ptr, rectangle_t *roi, apriltag_
     img.h = roi->h;
     img.pixfmt = PIXFORMAT_GRAYSCALE;
     img.data = fb_alloc(image_size(&img), FB_ALLOC_CACHE_ALIGN | FB_ALLOC_PREFER_SIZE);
-    imlib_draw_image(&img, ptr, 0, 0, 1.f, 1.f, roi, -1, 255, NULL, NULL, 0, NULL, NULL, NULL, NULL);
+    imlib_draw_image(&img, ptr, 0, 0, 1.0f, 1.0f, roi, -1, 255, NULL, NULL, 0, NULL, NULL, NULL, NULL);
 
     image_u8_t im = {
         .width = roi->w,
@@ -303,8 +306,8 @@ void imlib_find_apriltags(list_t *out, image_t *ptr, rectangle_t *roi, apriltag_
     }
     #endif
 
-    #ifdef APRILTAG_ENABLE_UMM_ALLOC
-    umm_print_stats();
+    #ifdef APRILTAG_ENABLE_UMA_ALLOC
+    uma_stats();
     #endif
 }
 #endif //IMLIB_ENABLE_APRILTAGS
@@ -314,11 +317,13 @@ void imlib_find_rects(list_t *out, image_t *ptr, rectangle_t *roi, uint32_t thre
     // NOTE: callers (py_image.c) wrap this with fb_alloc_mark/fb_alloc_free_till_mark.
 
     int r_diag_len = fast_roundf(fast_sqrtf((roi->w * roi->w) + (roi->h * roi->h))) * 2;
-    #ifdef APRILTAG_ENABLE_UMM_ALLOC
-    // Reserve fb_alloc space for grayscale image + trace buffers, give the rest to UMM.
-    size_t fb_alloc_need = (roi->w * roi->h) // grayscale image
-                           + (sizeof(int) + sizeof(uint32_t) + sizeof(point_t)) * r_diag_len; // trace buffers
-    umm_init_x(fb_avail() - fb_alloc_need);
+    #ifdef APRILTAG_ENABLE_UMA_ALLOC
+    // Reserve fb_alloc space for grayscale image + trace buffers, give the rest to UMA.
+    size_t pool_size = fb_avail() - ((roi->w * roi->h + roi->w * 2) + 12 * r_diag_len);
+    void *pool_mem = fb_alloc(pool_size, FB_ALLOC_NO_HINT);
+
+    uma_init();
+    uma_add_pool(pool_mem, pool_size, 0);
     #endif
 
     apriltag_detector_t *td = apriltag_detector_create();
@@ -504,8 +509,8 @@ void imlib_find_rects(list_t *out, image_t *ptr, rectangle_t *roi, uint32_t thre
 
     apriltag_detector_destroy(td);
 
-    #ifdef APRILTAG_ENABLE_UMM_ALLOC
-    umm_print_stats();
+    #ifdef APRILTAG_ENABLE_UMA_ALLOC
+    uma_stats();
     #endif
 }
 #endif //IMLIB_ENABLE_FIND_RECTS

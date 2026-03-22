@@ -48,10 +48,10 @@
 
 #define perror(str)
 #define fprintf(stream, format, ...)
-#define free(ptr)                 ({ umm_free(ptr); })
-#define malloc(size)              ({ void *_r = umm_malloc(size); if (!_r) fb_alloc_fail(); _r; })
-#define realloc(ptr, size)        ({ void *_r = umm_realloc((ptr), (size)); if (!_r) fb_alloc_fail(); _r; })
-#define calloc(num, item_size)    ({ void *_r = umm_calloc((num), (item_size)); if (!_r) fb_alloc_fail(); _r; })
+#define free(ptr)                 ({ uma_free(ptr); })
+#define malloc(size)              ({ void *_r = uma_malloc(size, 0); if (!_r) uma_fail(); _r; })
+#define realloc(ptr, size)        ({ void *_r = uma_realloc((ptr), (size)); if (!_r) uma_fail(); _r; })
+#define calloc(num, item_size)    ({ void *_r = uma_calloc((num), (item_size), 0); if (!_r) uma_fail(); _r; })
 #undef assert
 #define assert(expression)
 #define sqrt(x)                   fast_sqrtf(x)
@@ -6019,7 +6019,10 @@ void imlib_find_datamatrices(list_t *out, image_t *ptr, rectangle_t *roi, int ef
         imlib_draw_image(&img, ptr, 0, 0, 1.f, 1.f, roi, -1, 255, NULL, NULL, 0, NULL, NULL, NULL, NULL);
     }
 
-    umm_init_x(fb_avail());
+    size_t pool_size = fb_avail();
+    void *pool_mem = fb_alloc(pool_size, FB_ALLOC_NO_HINT);
+    uma_init();
+    uma_add_pool(pool_mem, pool_size, 0);
 
     DmtxImage *image = dmtxImageCreate(grayscale_image,
                                        (ptr->pixfmt == PIXFORMAT_GRAYSCALE) ? ptr->w : roi->w,
@@ -6100,7 +6103,7 @@ void imlib_find_datamatrices(list_t *out, image_t *ptr, rectangle_t *roi, int ef
     dmtxDecodeDestroy(&decode);
     dmtxImageDestroy(&image);
 
-    fb_free(); // umm_init_x();
+    fb_free(); // omv_alloc pool
     if (ptr->pixfmt != PIXFORMAT_GRAYSCALE) {
         fb_free(); // grayscale_image;
     }
