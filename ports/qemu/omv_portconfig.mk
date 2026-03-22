@@ -52,6 +52,7 @@ LDFLAGS = -mthumb \
           -mfpu=$(FPU) \
           -mfloat-abi=hard \
           -mabi=aapcs-linux \
+          -Wl,-z,noexecstack \
           -Wl,--print-memory-usage \
           -Wl,--gc-sections \
           -Wl,-T$(BUILD)/$(LDSCRIPT).lds \
