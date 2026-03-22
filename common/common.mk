@@ -35,7 +35,7 @@ COMMON_SRC_C += \
     omv_i2c.c \
     pendsv.c \
     trace.c \
-    umm_malloc.c \
+    omv_alloc.c \
     unaligned_memcpy.c \
     vospi.c \
     queue.c \

@@ -1,8 +1,7 @@
 /*
  * SPDX-License-Identifier: MIT
  *
- * Copyright (c) 2007-2017 Ralph Hempel
- * Copyright (C) 2017-2024 OpenMV, LLC.
+ * Copyright (C) 2026 OpenMV, LLC.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -22,22 +21,26 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  *
- * UMM memory allocator.
+ * Unified memory allocator.
  */
-#ifndef __UMM_MALLOC_H__
-#define __UMM_MALLOC_H__
+#ifndef __OMV_ALLOC_H__
+#define __OMV_ALLOC_H__
+#include <stdint.h>
 #include <stdlib.h>
-void umm_alloc_fail();
-// Block numbers are 15-bit (max 32767 blocks). Each block is
-// (4 + OMV_UMM_BLOCK_SIZE) bytes, so max heap depends on block size:
-//   block  32 → 1.13 MB
-//   block  64 → 2.13 MB
-//   block 128 → 4.13 MB
-//   block 256 → 8.13 MB
-void  umm_init_x(size_t size);
-void *umm_malloc(size_t size);
-void *umm_calloc(size_t num, size_t size);
-void *umm_realloc(void *ptr, size_t size);
-void  umm_free(void *ptr);
-void  umm_print_stats(void);
-#endif /* __UMM_MALLOC_H__ */
+
+#define OMV_ALLOC_FAST      (1 << 0)
+#define OMV_ALLOC_SLOW      (1 << 1)
+#define OMV_ALLOC_CACHED    (1 << 2)
+#define OMV_ALLOC_DMA       (1 << 3)
+
+void omv_alloc_init(void);
+void omv_alloc_add_pool(void *mem, size_t size, uint32_t flags);
+void *omv_alloc_malloc(size_t size, uint32_t flags);
+void *omv_alloc_memalign(size_t align, size_t size, uint32_t flags);
+void *omv_alloc_calloc(size_t num, size_t size, uint32_t flags);
+void *omv_alloc_realloc(void *ptr, size_t size);
+void  omv_alloc_free(void *ptr);
+NORETURN void omv_alloc_fail(void);
+void omv_alloc_print_stats(void);
+
+#endif /* __OMV_ALLOC_H__ */

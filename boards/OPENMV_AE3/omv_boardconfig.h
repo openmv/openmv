@@ -67,8 +67,6 @@ extern unsigned char OMV_BOARD_UID_ADDR[12];    // Unique address.
 #define OMV_FIR_MLX90641_ENABLE         (0)
 #define OMV_FIR_AMG8833_ENABLE          (1)
 
-// UMM heap block size
-#define OMV_UMM_BLOCK_SIZE              32
 
 // USB config.
 #define OMV_USB_IRQN                    (USB_IRQ_IRQn)
