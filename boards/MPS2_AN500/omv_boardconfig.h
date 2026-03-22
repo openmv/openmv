@@ -36,8 +36,6 @@
 #define OMV_JPEG_QUALITY_HIGH                 (60)
 #define OMV_JPEG_QUALITY_THRESHOLD            (160 * 120 * 2)
 
-// UMM heap block size
-#define OMV_UMM_BLOCK_SIZE                    128
 
 #define OMV_MAIN_MEMORY                       SRAM1     // Data/BSS memory
 #define OMV_STACK_MEMORY                      SRAM1     // stack memory

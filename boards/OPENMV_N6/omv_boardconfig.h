@@ -56,8 +56,6 @@
 #define OMV_FIR_MLX90641_ENABLE             (1)
 #define OMV_FIR_AMG8833_ENABLE              (1)
 
-// UMM heap block size
-#define OMV_UMM_BLOCK_SIZE                  256
 
 // USB IRQn.
 #define OMV_USB_IRQN                        (USB1_OTG_HS_IRQn)
