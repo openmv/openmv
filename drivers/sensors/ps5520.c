@@ -91,8 +91,11 @@ static int g_div = 1;
 #define PS5520_DEF_EXP_CEILING  (VTS_5M_30 - 3)
 
 #define PS5520_L_TARGET         (80)
+#define PS5520_L_AEC_DEADZONE   (8)
 #define PS5520_L_AGC_DIFF_DIV   (10)
 #define PS5520_L_AEC_DIFF_MUL   (10)
+#define PS5520_L_AEC_TAU_MS     (500)
+#define PS5520_L_AGC_HYST       (2)
 
 static bool enable_agc = true;
 static int32_t agc_gain = PS5520_DEF_GAIN;
@@ -101,6 +104,11 @@ static int32_t agc_gain_ceiling = PS5520_DEF_GAINCEILING;
 static bool enable_aec = true;
 static int32_t aec_exposure = PS5520_DEF_EXP;
 static int32_t aec_exposure_ceiling = PS5520_MAX_INT;
+
+// Time-based EMA state for AEC smoothing.
+static bool aec_ema_initialized = false;
+static uint32_t aec_ema_last_ms = 0;
+static float aec_ema_diff = 0.0f;
 
 static const uint8_t sw_reset_regs[][2] = {
     { 0xEF, 0x05 },
@@ -1148,6 +1156,11 @@ static int reset(omv_csi_t *csi) {
     aec_exposure = PS5520_DEF_EXP;
     aec_exposure_ceiling = PS5520_DEF_EXP_CEILING;
 
+    // Reset EMA filter state for AEC smoothing.
+    aec_ema_initialized = false;
+    aec_ema_last_ms = 0;
+    aec_ema_diff = 0.0f;
+
     ret |= omv_i2c_read_reg(csi->i2c, csi->slv_addr, CMD_LPF_H, 1, &exposure_line_h, 1);
     ret |= omv_i2c_read_reg(csi->i2c, csi->slv_addr, CMD_LPF_L, 1, &exposure_line_l, 1);
     lpf = (exposure_line_h << 8) + exposure_line_l; // Cmd_Lpf
@@ -1364,6 +1377,9 @@ static int set_auto_gain(omv_csi_t *csi, int enable, float gain_db, float gain_d
 
         agc_gain = ((idx - 1) << 4) + ((gain >> (idx - 1)) & 0x0F);
 
+        // Reset EMA filter state when gain is manually changed.
+        aec_ema_initialized = false;
+
         ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, REG_BANK, 1, 0x01, 1);
         ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, CMD_GAIN_IDX, 1, agc_gain, 1);
         ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, SENSOR_UPDATE, 1, 0x01, 1);
@@ -1408,6 +1424,9 @@ static int set_auto_exposure(omv_csi_t *csi, int enable, int exposure_us) {
 
         int32_t exposure_line = ConvertT2L(exposure_us);
         aec_exposure = IM_CLAMP(exposure_line, PS5520_MIN_INT, (lpf - 2));
+
+        // Reset EMA filter state when exposure is manually changed.
+        aec_ema_initialized = false;
 
         ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, CMD_OFFNY1_H, 1, (lpf - aec_exposure) >> 8, 1);
         ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, CMD_OFFNY1_L, 1, (lpf - aec_exposure) & 0xFF, 1);
@@ -1491,9 +1510,30 @@ static int update_agc_aec(omv_csi_t *csi, int luminance) {
     int ret = 0;
     int diff = PS5520_L_TARGET - luminance;
 
-    if (abs(diff) > 0) {
-        bool aec_exposure_in = ((diff > 0) && (aec_exposure < aec_exposure_ceiling)) ||
-                               ((diff < 0) && (agc_gain <= PS5520_MIN_GAIN_IDX));
+    // Time-based EMA: smooth the luminance error to avoid reacting to
+    // transient noise. Uses the same continuous-time EMA as omv_csi_stats_update.
+    uint32_t now_ms = mp_hal_ticks_ms();
+    if (!aec_ema_initialized) {
+        aec_ema_initialized = true;
+        aec_ema_last_ms = now_ms;
+        aec_ema_diff = (float) diff;
+    } else {
+        uint32_t dt_ms = now_ms - aec_ema_last_ms;
+        float alpha = IM_CLAMP(1.0f - expf(-((float) dt_ms) / PS5520_L_AEC_TAU_MS), 0.0f, 1.0f);
+        aec_ema_last_ms = now_ms;
+        aec_ema_diff += alpha * ((float) diff - aec_ema_diff);
+    }
+
+    int filtered_diff = (int) aec_ema_diff;
+
+    // Dead zone: ignore small luminance deviations to prevent oscillation
+    // from sensor noise and quantization effects.
+    if (abs(filtered_diff) > PS5520_L_AEC_DEADZONE) {
+        // Determine whether to adjust exposure (AEC) or gain (AGC).
+        // Use hysteresis on the AGC→AEC transition to prevent mode toggling
+        // at the gain floor boundary.
+        bool aec_exposure_in = ((filtered_diff > 0) && (aec_exposure < aec_exposure_ceiling)) ||
+                               ((filtered_diff < 0) && (agc_gain <= (PS5520_MIN_GAIN_IDX + PS5520_L_AGC_HYST)));
 
         ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, REG_BANK, 1, 0x01, 1);
 
@@ -1504,7 +1544,7 @@ static int update_agc_aec(omv_csi_t *csi, int luminance) {
             bool flg_stall = 0;
             int32_t exposure_line;
 
-            aec_exposure += diff * PS5520_L_AEC_DIFF_MUL;
+            aec_exposure += filtered_diff * PS5520_L_AEC_DIFF_MUL;
             aec_exposure = IM_CLAMP(aec_exposure, PS5520_MIN_INT, aec_exposure_ceiling);
 
             if (aec_exposure > (VTS_5M_30 - 1 - 2)) {
@@ -1552,7 +1592,7 @@ static int update_agc_aec(omv_csi_t *csi, int luminance) {
             }
 
         } else if (enable_agc) {
-            agc_gain += diff / PS5520_L_AGC_DIFF_DIV;
+            agc_gain += filtered_diff / PS5520_L_AGC_DIFF_DIV;
             agc_gain = IM_CLAMP(agc_gain, PS5520_MIN_GAIN_IDX, agc_gain_ceiling);
 
             //ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, REG_BANK, 1, 0x01, 1);
