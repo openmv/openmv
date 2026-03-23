@@ -47,6 +47,7 @@ endif
 # Targets
 export OPENMV ?= openmv
 export FIRMWARE ?= firmware
+OMV_DEBUG_ELF ?= $(FIRMWARE)
 export BOOTLOADER ?= bootloader
 
 # Commands (use := to avoid repeated expansion overhead in parallel builds)
@@ -318,5 +319,5 @@ debug:
 ifeq ($(DEBUGGER),NONE)
 	$(error This target does not support debugging)
 endif
-	gdbrunner $(DEBUGGER) $(OMV_$(DEBUGGER)_ARGS) $(FW_DIR)/$(FIRMWARE).elf
+	gdbrunner $(DEBUGGER) $(OMV_$(DEBUGGER)_ARGS) $(FW_DIR)/$(OMV_DEBUG_ELF).elf
 
