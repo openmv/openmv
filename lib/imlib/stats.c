@@ -167,7 +167,7 @@ void imlib_get_similarity(image_t *img,
 
     imlib_similarity_line_op_state_t state;
     state.dssim = dssim;
-    int *base = fb_alloc0(h_blocks * sizeof(int) * 5, FB_ALLOC_NO_HINT);
+    int *base = uma_calloc(h_blocks * sizeof(int) * 5, 0);
     state.sumBucketsOfX = &base[h_blocks * 0];
     state.sumBucketsOfY = &base[h_blocks * 1];
     state.sum2BucketsOfX = &base[h_blocks * 2];
@@ -180,7 +180,7 @@ void imlib_get_similarity(image_t *img,
     state.lines_processed = 0;
     state.lines = p1.y - p0.y;
 
-    void *dst_row_override = fb_alloc0(image_line_size(img), FB_ALLOC_CACHE_ALIGN);
+    void *dst_row_override = uma_calloc(image_line_size(img), UMA_CACHE);
     imlib_draw_image(img, other, x_start, y_start, x_scale, y_scale, roi,
                      rgb_channel, alpha, color_palette, alpha_palette, hint,
                      NULL, imlib_similarity_line_op, &state, dst_row_override);
@@ -190,8 +190,8 @@ void imlib_get_similarity(image_t *img,
     *min = state.similarity_min;
     *max = state.similarity_max;
 
-    fb_free(); // dst_row_override
-    fb_free(); // sumBucketsOfX
+    uma_free(dst_row_override);
+    uma_free(base);
 }
 #endif // IMLIB_ENABLE_GET_SIMILARITY
 
@@ -1038,13 +1038,13 @@ bool imlib_get_regression(find_lines_list_lnk_data_t *out,
         }
     } else {
         // Theil-Sen Estimator
-        int *x_histogram = fb_alloc0(ptr->w * sizeof(int), FB_ALLOC_NO_HINT);
-        int *y_histogram = fb_alloc0(ptr->h * sizeof(int), FB_ALLOC_NO_HINT);
-        long long *x_delta_histogram = fb_alloc0((2 * ptr->w) * sizeof(long long), FB_ALLOC_NO_HINT);
-        long long *y_delta_histogram = fb_alloc0((2 * ptr->h) * sizeof(long long), FB_ALLOC_NO_HINT);
+        int *x_histogram = uma_calloc(ptr->w * sizeof(int), 0);
+        int *y_histogram = uma_calloc(ptr->h * sizeof(int), 0);
+        long long *x_delta_histogram = uma_calloc((2 * ptr->w) * sizeof(long long), 0);
+        long long *y_delta_histogram = uma_calloc((2 * ptr->h) * sizeof(long long), 0);
 
-        uint32_t size;
-        point_t *points = (point_t *) fb_alloc_all(&size, FB_ALLOC_NO_HINT);
+        size_t size = uma_avail(0);
+        point_t *points = (point_t *) uma_malloc(size, 0);
         size_t points_max = size / sizeof(point_t);
         size_t points_count = 0;
 
@@ -1195,11 +1195,11 @@ bool imlib_get_regression(find_lines_list_lnk_data_t *out,
             }
         }
 
-        fb_free(); // points
-        fb_free(); // y_delta_histogram
-        fb_free(); // x_delta_histogram
-        fb_free(); // y_histogram
-        fb_free(); // x_histogram
+        uma_free(points);
+        uma_free(y_delta_histogram);
+        uma_free(x_delta_histogram);
+        uma_free(y_histogram);
+        uma_free(x_histogram);
     }
 
     return result;

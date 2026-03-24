@@ -28,18 +28,18 @@
 #include "file_utils.h"
 #if defined(IMLIB_ENABLE_PNG_ENCODER) || defined(IMLIB_ENABLE_PNG_DECODER)
 #include "lodepng.h"
-#include "umm_malloc.h"
+#include "umalloc.h"
 
 void *lodepng_malloc(size_t size) {
-    return umm_malloc(size);
+    return uma_malloc(size, 0);
 }
 
 void *lodepng_realloc(void *ptr, size_t new_size) {
-    return umm_realloc(ptr, new_size);
+    return uma_realloc(ptr, new_size, 0);
 }
 
 void lodepng_free(void *ptr) {
-    return umm_free(ptr);
+    uma_free(ptr);
 }
 
 unsigned lodepng_convert_cb(unsigned char *out, const unsigned char *in,
@@ -124,8 +124,6 @@ bool png_compress(image_t *src, image_t *dst) {
         return true;
     }
 
-    umm_init_x(fb_avail());
-
     LodePNGState state;
     lodepng_state_init(&state);
     // Invoked on custom formats.
@@ -178,7 +176,6 @@ bool png_compress(image_t *src, image_t *dst) {
     if (dst->data == NULL) {
         dst->data = png_data;
         dst->size = png_size;
-        // fb_alloc() memory ill be free'd by called.
     } else {
         if (image_size(dst) <= png_size) {
             dst->size = png_size;
@@ -187,8 +184,7 @@ bool png_compress(image_t *src, image_t *dst) {
             mp_raise_msg_varg(&mp_type_RuntimeError,
                               MP_ERROR_TEXT("Failed to compress image in place"));
         }
-        // free fb_alloc() memory used for umm_init_x().
-        fb_free(); // umm_init_x();
+        uma_free(png_data);
     }
     return false;
 }
@@ -196,8 +192,6 @@ bool png_compress(image_t *src, image_t *dst) {
 
 #if defined(IMLIB_ENABLE_PNG_DECODER)
 void png_decompress(image_t *dst, image_t *src) {
-    umm_init_x(fb_avail());
-
     LodePNGState state;
     lodepng_state_init(&state);
     // Invoked on custom formats.
@@ -235,8 +229,7 @@ void png_decompress(image_t *dst, image_t *src) {
                           MP_ERROR_TEXT("Failed to compress image in place"));
     }
 
-    // free fb_alloc() memory used for umm_init_x().
-    fb_free(); // umm_init_x();
+    uma_free(png_data);
 }
 #endif // IMLIB_ENABLE_PNG_DECODER
 #endif // IMLIB_ENABLE_PNG_ENCODER || IMLIB_ENABLE_PNG_DECODER
@@ -309,10 +302,16 @@ void png_write(image_t *img, const char *path) {
     if (img->pixfmt == PIXFORMAT_PNG) {
         file_write(&fp, img->pixels, img->size);
     } else {
-        image_t out = { .w = img->w, .h = img->h, .pixfmt = PIXFORMAT_PNG, .size = 0, .pixels = NULL }; // alloc in png compress
+        image_t out = {
+            .w = img->w,
+            .h = img->h,
+            .pixfmt = PIXFORMAT_PNG,
+            .size = 0,
+            .pixels = NULL // alloc in png compress
+        };
         png_compress(img, &out);
         file_write(&fp, out.pixels, out.size);
-        fb_free(); // frees alloc in png_compress()
+        uma_free(out.pixels);
     }
     file_close(&fp);
 }

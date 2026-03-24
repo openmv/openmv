@@ -24,6 +24,7 @@
  * Binary image operations.
  */
 #include "imlib.h"
+#include "umalloc.h"
 
 void imlib_zero_line_op(int x, int x_end, int y_row, imlib_draw_row_data_t *data) {
     image_t *mask = data->callback_arg;
@@ -138,7 +139,7 @@ void imlib_binary(image_t *out, image_t *img, list_t *thresholds, bool invert, b
     bmp.w = img->w;
     bmp.h = img->h;
     bmp.pixfmt = PIXFORMAT_BINARY;
-    bmp.data = fb_alloc0(image_size(&bmp), FB_ALLOC_NO_HINT);
+    bmp.data = uma_calloc(image_size(&bmp), 0);
 
     list_for_each(it, thresholds) {
         color_thresholds_list_lnk_data_t *lnk_data = list_get_data(it);
@@ -197,17 +198,17 @@ void imlib_binary(image_t *out, image_t *img, list_t *thresholds, bool invert, b
 
     void *dst_row_override = NULL;
     if (callback) {
-        dst_row_override = fb_alloc0(image_line_size(out), FB_ALLOC_CACHE_ALIGN);
+        dst_row_override = uma_calloc(image_line_size(out), UMA_CACHE);
     }
 
     imlib_draw_image(out, &bmp, 0, 0, 1.0f, 1.0f, NULL, -1, 255, NULL, NULL, 0,
                      NULL, callback, mask, dst_row_override);
 
     if (dst_row_override) {
-        fb_free(); // dst_row_override
+        uma_free(dst_row_override);
     }
 
-    fb_free(); // bmp.data
+    uma_free(bmp.data);
 }
 
 void imlib_invert(image_t *img) {
@@ -930,7 +931,7 @@ static void imlib_erode_dilate(image_t *img, int ksize, int threshold, int e_or_
 
     switch (img->pixfmt) {
         case PIXFORMAT_BINARY: {
-            buf.data = fb_alloc(IMAGE_BINARY_LINE_LEN_BYTES(img) * brows, FB_ALLOC_NO_HINT);
+            buf.data = uma_malloc(IMAGE_BINARY_LINE_LEN_BYTES(img) * brows, 0);
 
             for (int y = 0; y < img->h; y++) {
                 uint32_t *row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(img, y);
@@ -995,11 +996,11 @@ static void imlib_erode_dilate(image_t *img, int ksize, int threshold, int e_or_
                        IMAGE_BINARY_LINE_LEN_BYTES(img));
             }
 
-            fb_free();
+            uma_free(buf.data);
             break;
         }
         case PIXFORMAT_GRAYSCALE: {
-            buf.data = fb_alloc(IMAGE_GRAYSCALE_LINE_LEN_BYTES(img) * brows, FB_ALLOC_NO_HINT);
+            buf.data = uma_malloc(IMAGE_GRAYSCALE_LINE_LEN_BYTES(img) * brows, 0);
 
             #if defined(ARM_MATH_DSP)
             int32_t threshold_x4 = __USAT(threshold, 7) * 0x01010101;
@@ -1103,11 +1104,11 @@ static void imlib_erode_dilate(image_t *img, int ksize, int threshold, int e_or_
                        IMAGE_GRAYSCALE_LINE_LEN_BYTES(img));
             }
 
-            fb_free();
+            uma_free(buf.data);
             break;
         }
         case PIXFORMAT_RGB565: {
-            buf.data = fb_alloc(IMAGE_RGB565_LINE_LEN_BYTES(img) * brows, FB_ALLOC_NO_HINT);
+            buf.data = uma_malloc(IMAGE_RGB565_LINE_LEN_BYTES(img) * brows, 0);
 
             #if defined(ARM_MATH_DSP)
             int32_t threshold_x2 = __USAT(threshold, 15) * 0x00010001;
@@ -1210,7 +1211,7 @@ static void imlib_erode_dilate(image_t *img, int ksize, int threshold, int e_or_
                        IMAGE_RGB565_LINE_LEN_BYTES(img));
             }
 
-            fb_free();
+            uma_free(buf.data);
             break;
         }
         default: {
@@ -1252,14 +1253,14 @@ static void imlib_hat(image_t *img, int ksize, int threshold, image_t *mask, bin
     temp.w = img->w;
     temp.h = img->h;
     temp.pixfmt = img->pixfmt;
-    temp.data = fb_alloc(image_size(img), FB_ALLOC_CACHE_ALIGN);
+    temp.data = uma_malloc(image_size(img), UMA_CACHE);
     memcpy(temp.data, img->data, image_size(img));
     op(&temp, ksize, threshold, mask);
-    void *dst_row_override = fb_alloc0(image_line_size(img), FB_ALLOC_CACHE_ALIGN);
+    void *dst_row_override = uma_calloc(image_line_size(img), UMA_CACHE);
     imlib_draw_image(img, &temp, 0, 0, 1.0f, 1.0f, NULL, -1, 255, NULL, NULL, 0,
                      NULL, imlib_difference_line_op, mask, dst_row_override);
-    fb_free(); // dst_row_override
-    fb_free(); // temp.data
+    uma_free(dst_row_override);
+    uma_free(temp.data);
 }
 
 void imlib_top_hat(image_t *img, int ksize, int threshold, image_t *mask) {

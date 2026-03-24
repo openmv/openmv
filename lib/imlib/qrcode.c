@@ -2840,37 +2840,40 @@ quirc_decode_error_t quirc_decode(const struct quirc_code *code,
                                   struct quirc_data *data)
 {
     quirc_decode_error_t err;
-    struct datastream *ds = fb_alloc(sizeof(struct datastream), FB_ALLOC_NO_HINT);
+    struct datastream *ds = uma_malloc(sizeof(struct datastream), 0);
 
-    if ((code->size - 17) % 4)
-        { fb_free(); return QUIRC_ERROR_INVALID_GRID_SIZE; }
+    if ((code->size - 17) % 4) {
+        err = QUIRC_ERROR_INVALID_GRID_SIZE;
+        goto cleanup;
+    }
 
     memset(data, 0, sizeof(*data));
     memset(ds, 0, sizeof(*ds));
 
     data->version = (code->size - 17) / 4;
 
-    if (data->version < 1 ||
-        data->version > QUIRC_MAX_VERSION)
-        { fb_free(); return QUIRC_ERROR_INVALID_VERSION; }
+    if (data->version < 1 || data->version > QUIRC_MAX_VERSION) {
+        err = QUIRC_ERROR_INVALID_VERSION;
+        goto cleanup;
+    }
 
     /* Read format information -- try both locations */
     err = read_format(code, data, 0);
     if (err)
         err = read_format(code, data, 1);
     if (err)
-        { fb_free(); return err; }
+        goto cleanup;
 
     read_data(code, data, ds);
     err = codestream_ecc(data, ds);
     if (err)
-        { fb_free(); return err; }
+        goto cleanup;
 
     err = decode_payload(data, ds);
-    if (err)
-        { fb_free(); return err; }
 
-    fb_free(); return QUIRC_SUCCESS;
+cleanup:
+    uma_free(ds);
+    return err;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -2900,45 +2903,28 @@ const char *quirc_version(void)
 
 struct quirc *quirc_new(void)
 {
-    struct quirc *q = fb_alloc(sizeof(*q), FB_ALLOC_NO_HINT);
-
-    if (!q)
-        return NULL;
-
-    memset(q, 0, sizeof(*q));
-    return q;
+    return uma_calloc(sizeof(struct quirc), 0);
 }
 
 void quirc_destroy(struct quirc *q)
 {
-    if (q->image)
-        if (q->image) fb_free();
-    if (sizeof(*q->image) != sizeof(*q->pixels))
-        if (q->pixels) fb_free();
-
-    if (q) fb_free();
+    uma_free(q->image);
+    if (sizeof(*q->image) != sizeof(*q->pixels)) {
+        uma_free(q->pixels);
+    }
+    uma_free(q);
 }
 
 int quirc_resize(struct quirc *q, int w, int h)
 {
-    if (q->image) fb_free();
-    uint8_t *new_image = fb_alloc(w * h, FB_ALLOC_NO_HINT);
-
-    if (!new_image)
-        return -1;
+    uma_free(q->image);
+    q->image = uma_malloc(w * h, 0);
 
     if (sizeof(*q->image) != sizeof(*q->pixels)) {
-        size_t new_size = w * h * sizeof(quirc_pixel_t);
-        if (q->pixels) fb_free();
-        quirc_pixel_t *new_pixels = fb_alloc(new_size, FB_ALLOC_NO_HINT);
-        if (!new_pixels) {
-            fb_free();
-            return -1;
-        }
-        q->pixels = new_pixels;
+        uma_free(q->pixels);
+        q->pixels = uma_malloc(w * h * sizeof(quirc_pixel_t), 0);
     }
 
-    q->image = new_image;
     q->w = w;
     q->h = h;
 
@@ -2990,8 +2976,8 @@ void imlib_find_qrcodes(list_t *out, image_t *ptr, rectangle_t *roi)
     list_init(out, sizeof(find_qrcodes_list_lnk_data_t));
 
     for (int i = 0, j = quirc_count(controller); i < j; i++) {
-        struct quirc_code *code = fb_alloc(sizeof(struct quirc_code), FB_ALLOC_NO_HINT);
-        struct quirc_data *data = fb_alloc(sizeof(struct quirc_data), FB_ALLOC_NO_HINT);
+        struct quirc_code *code = uma_malloc(sizeof(struct quirc_code), 0);
+        struct quirc_data *data = uma_malloc(sizeof(struct quirc_data), 0);
         quirc_extract(controller, i, code);
 
         if(quirc_decode(code, data) == QUIRC_SUCCESS) {
@@ -3028,8 +3014,8 @@ void imlib_find_qrcodes(list_t *out, image_t *ptr, rectangle_t *roi)
             list_push_back(out, &lnk_data);
         }
 
-        fb_free();
-        fb_free();
+        uma_free(data);
+        uma_free(code);
     }
 
     quirc_destroy(controller);

@@ -27,17 +27,16 @@
 #include <string.h>
 #include <arm_math.h>
 #include "imlib.h"
-#include "fb_alloc.h"
+#include "umalloc.h"
 
 void imlib_integral_image_alloc(i_image_t *sum, int w, int h) {
     sum->w = w;
     sum->h = h;
-    sum->data = fb_alloc(w * h * sizeof(*sum->data), FB_ALLOC_NO_HINT);
+    sum->data = uma_malloc(w * h * sizeof(*sum->data), 0);
 }
 
 void imlib_integral_image_free(i_image_t *sum) {
-    // 1 allocation
-    fb_free();
+    uma_free(sum->data);
 }
 
 void imlib_integral_image(image_t *src, i_image_t *sum) {

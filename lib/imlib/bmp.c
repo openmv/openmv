@@ -181,7 +181,7 @@ void bmp_read_pixels(file_t *fp, image_t *img, int n_lines, bmp_read_settings_t 
     uint8_t *row_buf = NULL;
 
     if (!(rs->bmp_bpp == 8 && (rs->bmp_h < 0) && (rs->bmp_w >= 0) && (img->w == rs->bmp_row_bytes))) {
-        row_buf = fb_alloc(rs->bmp_row_bytes, FB_ALLOC_PREFER_SPEED);
+        row_buf = uma_malloc(rs->bmp_row_bytes, UMA_DTCM);
     }
 
     if (rs->bmp_bpp == 8) {
@@ -256,9 +256,7 @@ void bmp_read_pixels(file_t *fp, image_t *img, int n_lines, bmp_read_settings_t 
         }
     }
 
-    if (row_buf) {
-        fb_free();
-    }
+    uma_free(row_buf);
 }
 
 void bmp_read(image_t *img, const char *path) {
@@ -314,12 +312,12 @@ void bmp_write_subimg(image_t *img, const char *path, rectangle_t *r) {
         if ((rect.x == 0) && (rect.w == img->w) && (img->w == row_bytes)) {
             file_write(&fp, img->pixels + (rect.y * img->w), rect.w * rect.h);
         } else {
-            uint8_t *row_buf = fb_alloc0(row_bytes, FB_ALLOC_PREFER_SPEED);
+            uint8_t *row_buf = uma_calloc(row_bytes, UMA_DTCM);
             for (int i = 0; i < rect.h; i++) {
                 memcpy(row_buf, img->pixels + ((rect.y + i) * img->w) + rect.x, rect.w);
                 file_write(&fp, row_buf, row_bytes);
             }
-            fb_free();
+            uma_free(row_buf);
         }
     } else {
         const int row_bytes = (((rect.w * 16) + 31) / 32) * 4;
@@ -328,7 +326,7 @@ void bmp_write_subimg(image_t *img, const char *path, rectangle_t *r) {
         bmp_write_header(&fp, 12, data_size, 16, 3, &rect);
         // Write Bit Masks (12 bytes)
         file_write(&fp, (uint32_t [3]) {0x1F << 11, 0x3F << 5, 0x1F}, 12);
-        uint8_t *row_buf = fb_alloc0(row_bytes, FB_ALLOC_PREFER_SPEED);
+        uint8_t *row_buf = uma_calloc(row_bytes, UMA_DTCM);
         for (int i = 0; i < rect.h; i++) {
             uint16_t *row16 = (uint16_t *) row_buf;
             for (int j = 0; j < rect.w; j++) {
@@ -336,7 +334,7 @@ void bmp_write_subimg(image_t *img, const char *path, rectangle_t *r) {
             }
             file_write(&fp, row_buf, row_bytes);
         }
-        fb_free();
+        uma_free(row_buf);
     }
     file_close(&fp);
 }

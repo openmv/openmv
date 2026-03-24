@@ -34,13 +34,13 @@
  */
 #include <stdio.h>
 #include "imlib.h"
-#include "fb_alloc.h"
+#include "umalloc.h"
 #include "gc.h"
 
 #ifdef IMLIB_ENABLE_FAST
 
 #define MIN_MEM          (10 * 1024)
-#define MAX_CORNERS      (2000U)
+#define MAX_CORNERS      (500U)
 #define Compare(X, Y)    ((X) >= (Y))
 
 typedef struct {
@@ -96,7 +96,7 @@ void fast_detect(image_t *image, array_t *keypoints, int threshold, rectangle_t 
     }
 
     // Free corners;
-    fb_free();
+    uma_free(corners);
 }
 
 static void nonmax_suppression(corner_t *corners, int num_corners, array_t *keypoints) {
@@ -114,7 +114,7 @@ static void nonmax_suppression(corner_t *corners, int num_corners, array_t *keyp
     /* Find where each row begins (the corners are output in raster scan order).
        A beginning of -1 signifies that there are no corners on that row. */
     last_row = corners[sz - 1].y;
-    row_start = fb_alloc((last_row + 1) * sizeof(uint16_t), FB_ALLOC_NO_HINT);
+    row_start = uma_malloc((last_row + 1) * sizeof(uint16_t), 0);
 
     for (int i = 0; i < last_row + 1; i++) {
         row_start[i] = -1;
@@ -203,7 +203,7 @@ static void nonmax_suppression(corner_t *corners, int num_corners, array_t *keyp
     }
 
     // Free temp rows.
-    fb_free();
+    uma_free(row_start);
 }
 
 // *INDENT-OFF*
@@ -3151,8 +3151,7 @@ static corner_t *fast9_detect(image_t *image, rectangle_t *roi, int *n_corners, 
 {
     int num_corners = 0;
     // Try to alloc MAX_CORNERS or the actual max corners we can alloc.
-    int max_corners = IM_MIN(MAX_CORNERS, (fb_avail() / sizeof(corner_t)));
-    corner_t *corners = (corner_t*) fb_alloc(max_corners * sizeof(corner_t), FB_ALLOC_NO_HINT);
+    corner_t *corners = (corner_t*) uma_malloc(MAX_CORNERS * sizeof(corner_t), 0);
 
     for(int y=roi->y+3; y<roi->y+roi->h-3; y++) {
         for(int x=roi->x+3; x<roi->x+roi->w-3; x++) {
@@ -6065,7 +6064,7 @@ static corner_t *fast9_detect(image_t *image, rectangle_t *roi, int *n_corners, 
             corners[num_corners].x = x;
             corners[num_corners].y = y;
 
-            if (++num_corners == max_corners) {
+            if (++num_corners == MAX_CORNERS) {
                 goto done;
             }
 		}

@@ -27,7 +27,7 @@
 #include <math.h>
 #include <string.h>
 #include "imlib.h"
-#include "fb_alloc.h"
+#include "umalloc.h"
 #ifdef IMLIB_ENABLE_BINARY_OPS
 
 typedef struct gvec {
@@ -51,7 +51,7 @@ void imlib_edge_simple(image_t *src, rectangle_t *roi, int low_thresh, int high_
 void imlib_edge_canny(image_t *src, rectangle_t *roi, int low_thresh, int high_thresh) {
     int w = src->w;
 
-    gvec_t *gm = fb_alloc0(roi->w * roi->h * sizeof *gm, FB_ALLOC_NO_HINT);
+    gvec_t *gm = uma_calloc(roi->w * roi->h * sizeof(*gm), 0);
 
     //1. Noise Reduction with a Gaussian filter
     imlib_sepconv3(src, kernel_gauss_3, 1.0f / 16.0f, 0.0f);
@@ -166,6 +166,6 @@ void imlib_edge_canny(image_t *src, rectangle_t *roi, int low_thresh, int high_t
         }
     }
 
-    fb_free();
+    uma_free(gm);
 }
 #endif

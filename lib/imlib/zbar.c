@@ -27,12 +27,10 @@
 #pragma GCC diagnostic ignored "-Wunused-variable"
 #pragma GCC diagnostic ignored "-Wunused-but-set-variable"
 
-#define free(ptr)                                  ({ umm_free(ptr); })
-#define malloc(size)                               ({ void *_r = umm_malloc(size); if (!_r) fb_alloc_fail(); _r; })
-#define realloc(ptr, size)                         ({ void *_r = umm_realloc((ptr), (size)); if (!_r) fb_alloc_fail(); _r; })
-#define calloc(num,                                                                                                            \
-               item_size)                          ({ void *_r = umm_calloc((num), (item_size)); if (!_r) fb_alloc_fail(); _r; \
-                                                    })
+#define free(ptr)                                  uma_free(ptr)
+#define malloc(size)                               uma_malloc(size, 0)
+#define realloc(ptr, size)                         uma_realloc(ptr, size, 0)
+#define calloc(num, item_size)                     uma_calloc((num) * (item_size), 0)
 #undef assert
 #define assert(expression)
 #define zprintf(...)
@@ -8725,7 +8723,7 @@ void zbar_scanner_get_state (const zbar_scanner_t *scn,
 
 void imlib_find_barcodes(list_t *out, image_t *ptr, rectangle_t *roi)
 {
-    uint8_t *grayscale_image = (ptr->pixfmt == PIXFORMAT_GRAYSCALE) ? ptr->data : fb_alloc(roi->w * roi->h, FB_ALLOC_NO_HINT);
+    uint8_t *grayscale_image = (ptr->pixfmt == PIXFORMAT_GRAYSCALE) ? ptr->data : uma_malloc(roi->w * roi->h, 0);
 
     if (ptr->pixfmt != PIXFORMAT_GRAYSCALE) {
         image_t img;
@@ -8735,8 +8733,6 @@ void imlib_find_barcodes(list_t *out, image_t *ptr, rectangle_t *roi)
         img.data = grayscale_image;
         imlib_draw_image(&img, ptr, 0, 0, 1.f, 1.f, roi, -1, 255, NULL, NULL, 0, NULL, NULL, NULL, NULL);
     }
-
-    umm_init_x(fb_avail());
 
     zbar_image_scanner_t *scanner = zbar_image_scanner_create();
     zbar_image_scanner_set_config(scanner, 0, ZBAR_CFG_ENABLE, 1);
@@ -8869,9 +8865,8 @@ void imlib_find_barcodes(list_t *out, image_t *ptr, rectangle_t *roi)
     }
 
     zbar_image_scanner_destroy(scanner);
-    fb_free(); // umm_init_x();
     if (ptr->pixfmt != PIXFORMAT_GRAYSCALE) {
-        fb_free(); // grayscale_image;
+        uma_free(grayscale_image);
     }
 }
 

@@ -138,25 +138,25 @@ static float calc_roundness(float blob_a, float blob_b, float blob_c) {
 
 void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int x_stride, unsigned int y_stride,
                       list_t *thresholds, bool invert, unsigned int area_threshold, unsigned int pixels_threshold,
-                      bool merge, int margin,
-                      bool (*threshold_cb) (void *, find_blobs_list_lnk_data_t *), void *threshold_cb_arg,
-                      bool (*merge_cb) (void *, find_blobs_list_lnk_data_t *, find_blobs_list_lnk_data_t *), void *merge_cb_arg,
-                      unsigned int x_hist_bins_max, unsigned int y_hist_bins_max) {
+                      bool merge, int margin, bool (*threshold_cb) (void *, find_blobs_list_lnk_data_t *),
+                      void *threshold_cb_arg,
+                      bool (*merge_cb) (void *, find_blobs_list_lnk_data_t *, find_blobs_list_lnk_data_t *),
+                      void *merge_cb_arg, unsigned int x_hist_bins_max, unsigned int y_hist_bins_max) {
     // Same size as the image so we don't have to translate.
     image_t bmp;
     bmp.w = ptr->w;
     bmp.h = ptr->h;
     bmp.pixfmt = PIXFORMAT_BINARY;
-    bmp.data = fb_alloc0(image_size(&bmp), FB_ALLOC_NO_HINT);
+    bmp.data = uma_calloc(image_size(&bmp), 0);
 
     uint16_t *x_hist_bins = NULL;
     if (x_hist_bins_max) {
-        x_hist_bins = fb_alloc(ptr->w * sizeof(uint16_t), FB_ALLOC_NO_HINT);
+        x_hist_bins = uma_malloc(ptr->w * sizeof(uint16_t), 0);
     }
 
     uint16_t *y_hist_bins = NULL;
     if (y_hist_bins_max) {
-        y_hist_bins = fb_alloc(ptr->h * sizeof(uint16_t), FB_ALLOC_NO_HINT);
+        y_hist_bins = uma_malloc(ptr->h * sizeof(uint16_t), 0);
     }
 
     lifo_t lifo;
@@ -449,12 +449,7 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
 
                                 bool add_to_list = threshold_cb_arg == NULL;
                                 if (!add_to_list) {
-                                    // Protect ourselves from caught exceptions in the callback
-                                    // code from freeing our fb_alloc() stack.
-                                    fb_alloc_mark();
-                                    fb_alloc_mark_permanent();
                                     add_to_list = threshold_cb(threshold_cb_arg, &lnk_blob);
-                                    fb_alloc_free_till_mark_past_mark_permanent();
                                 }
 
                                 if (add_to_list) {
@@ -755,12 +750,7 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
 
                                 bool add_to_list = threshold_cb_arg == NULL;
                                 if (!add_to_list) {
-                                    // Protect ourselves from caught exceptions in the callback
-                                    // code from freeing our fb_alloc() stack.
-                                    fb_alloc_mark();
-                                    fb_alloc_mark_permanent();
                                     add_to_list = threshold_cb(threshold_cb_arg, &lnk_blob);
-                                    fb_alloc_free_till_mark_past_mark_permanent();
                                 }
 
                                 if (add_to_list) {
@@ -1061,12 +1051,7 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
 
                                 bool add_to_list = threshold_cb_arg == NULL;
                                 if (!add_to_list) {
-                                    // Protect ourselves from caught exceptions in the callback
-                                    // code from freeing our fb_alloc() stack.
-                                    fb_alloc_mark();
-                                    fb_alloc_mark_permanent();
                                     add_to_list = threshold_cb(threshold_cb_arg, &lnk_blob);
-                                    fb_alloc_free_till_mark_past_mark_permanent();
                                 }
 
                                 if (add_to_list) {
@@ -1097,13 +1082,9 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
     }
 
     lifo_free(&lifo);
-    if (y_hist_bins) {
-        fb_free();
-    }
-    if (x_hist_bins) {
-        fb_free();
-    }
-    fb_free(); // bitmap
+    uma_free(y_hist_bins);
+    uma_free(x_hist_bins);
+    uma_free(bmp.data);
 
     if (merge) {
         for (;;) {

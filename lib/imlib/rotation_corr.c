@@ -8,7 +8,7 @@
 #include <string.h>
 #include <math.h>
 #include "imlib.h"
-#include "fb_alloc.h"
+#include "umalloc.h"
 #include "fmath.h"
 
 #include "common/matd.h"
@@ -20,14 +20,10 @@
 void imlib_rotation_corr(image_t *img, float x_rotation, float y_rotation, float z_rotation,
                          float x_translation, float y_translation,
                          float zoom, float fov, float *corners) {
-    // NOTE: callers (py_image.c) wrap this with fb_alloc_mark/fb_alloc_free_till_mark.
-
     size_t size = image_size(img);
-    void *data = fb_alloc(size, FB_ALLOC_NO_HINT);
+    void *data = uma_malloc(size, 0);
     memcpy(data, img->data, size);
     memset(img->data, 0, size);
-
-    umm_init_x(fb_avail());
 
     int w = img->w;
     int h = img->h;
@@ -290,5 +286,6 @@ void imlib_rotation_corr(image_t *img, float x_rotation, float y_rotation, float
     matd_destroy(RX);
     matd_destroy(A1);
 
+    uma_free(data);
 }
 #endif //IMLIB_ENABLE_ROTATION_CORR

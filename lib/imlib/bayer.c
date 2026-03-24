@@ -25,6 +25,7 @@
  */
 #include "imlib.h"
 #include "simd.h"
+#include "umalloc.h"
 
 #define VBAYER_Y_STRIDE     (2)
 #define VBAYER_X_STRIDE     ((UINT8_VECTOR_SIZE) / 2)
@@ -2380,7 +2381,7 @@ void imlib_debayer_image_awb(image_t *dst, image_t *src, bool fast, uint32_t r_o
                     .w = dst->w,
                     .h = VBAYER_BUF_BROWS,
                     .pixfmt = PIXFORMAT_GRAYSCALE,
-                    .data = fb_alloc(dst->w * VBAYER_BUF_BROWS * sizeof(uint8_t), FB_ALLOC_PREFER_SPEED),
+                    .data = uma_malloc(dst->w * VBAYER_BUF_BROWS * sizeof(uint8_t), UMA_FAST),
                 };
 
                 switch (src->pixfmt) {
@@ -2412,7 +2413,7 @@ void imlib_debayer_image_awb(image_t *dst, image_t *src, bool fast, uint32_t r_o
                               IMAGE_GRAYSCALE_LINE_LEN_BYTES(dst));
                 }
 
-                fb_free(); // buf.data
+                uma_free(buf.data);
                 break;
             }
             case PIXFORMAT_RGB565: {
@@ -2420,7 +2421,7 @@ void imlib_debayer_image_awb(image_t *dst, image_t *src, bool fast, uint32_t r_o
                     .w = dst->w,
                     .h = VBAYER_BUF_BROWS,
                     .pixfmt = PIXFORMAT_RGB565,
-                    .data = fb_alloc(dst->w * VBAYER_BUF_BROWS * sizeof(uint16_t), FB_ALLOC_PREFER_SPEED),
+                    .data = uma_malloc(dst->w * VBAYER_BUF_BROWS * sizeof(uint16_t), UMA_FAST),
                 };
 
                 switch (src->pixfmt) {
@@ -2452,7 +2453,7 @@ void imlib_debayer_image_awb(image_t *dst, image_t *src, bool fast, uint32_t r_o
                                IMAGE_RGB565_LINE_LEN_BYTES(dst));
                 }
 
-                fb_free(); // buf.data
+                uma_free(buf.data);
                 break;
             }
             default: {

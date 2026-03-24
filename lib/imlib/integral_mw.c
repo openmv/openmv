@@ -66,7 +66,7 @@
 #include <stdio.h>
 #include <string.h>
 #include "imlib.h"
-#include "fb_alloc.h"
+#include "umalloc.h"
 
 // This macro swaps two pointers.
 #define SWAP_PTRS(a, b)   \
@@ -81,22 +81,22 @@ void imlib_integral_mw_alloc(mw_image_t *sum, int w, int h) {
     sum->y_offs = 0;
     sum->x_ratio = (1 << 16) + 1;
     sum->y_ratio = (1 << 16) + 1;
-    sum->data = fb_alloc(h * sizeof(*sum->data), FB_ALLOC_NO_HINT);
+    sum->data = uma_malloc(h * sizeof(*sum->data), 0);
     // swap is used when shifting the image pointers
     // to avoid overwriting the image rows in sum->data
-    sum->swap = fb_alloc(h * sizeof(*sum->data), FB_ALLOC_NO_HINT);
+    sum->swap = uma_malloc(h * sizeof(*sum->data), 0);
 
     for (int i = 0; i < h; i++) {
-        sum->data[i] = fb_alloc(w * sizeof(**sum->data), FB_ALLOC_NO_HINT);
+        sum->data[i] = uma_malloc(w * sizeof(**sum->data), 0);
     }
 }
 
 void imlib_integral_mw_free(mw_image_t *sum) {
     for (int i = 0; i < sum->h; i++) {
-        fb_free();  // Free h lines
+        uma_free(sum->data[i]);
     }
-    fb_free();  // Free data
-    fb_free();  // Free swap
+    uma_free(sum->swap);
+    uma_free(sum->data);
 }
 
 void imlib_integral_mw_scale(rectangle_t *roi, mw_image_t *sum, int w, int h) {
