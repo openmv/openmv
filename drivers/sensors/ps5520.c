@@ -93,6 +93,7 @@ static int g_div = 1;
 #define PS5520_L_TARGET         (80)
 #define PS5520_L_AGC_DIFF_DIV   (10)
 #define PS5520_L_AEC_DIFF_MUL   (10)
+#define PS5520_L_AEC_MAX_STEP   (50)
 
 static bool enable_agc = true;
 static int32_t agc_gain = PS5520_DEF_GAIN;
@@ -1364,6 +1365,7 @@ static int set_auto_gain(omv_csi_t *csi, int enable, float gain_db, float gain_d
 
         agc_gain = ((idx - 1) << 4) + ((gain >> (idx - 1)) & 0x0F);
 
+
         ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, REG_BANK, 1, 0x01, 1);
         ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, CMD_GAIN_IDX, 1, agc_gain, 1);
         ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, SENSOR_UPDATE, 1, 0x01, 1);
@@ -1408,6 +1410,7 @@ static int set_auto_exposure(omv_csi_t *csi, int enable, int exposure_us) {
 
         int32_t exposure_line = ConvertT2L(exposure_us);
         aec_exposure = IM_CLAMP(exposure_line, PS5520_MIN_INT, (lpf - 2));
+
 
         ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, CMD_OFFNY1_H, 1, (lpf - aec_exposure) >> 8, 1);
         ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, CMD_OFFNY1_L, 1, (lpf - aec_exposure) & 0xFF, 1);
@@ -1491,7 +1494,17 @@ static int update_agc_aec(omv_csi_t *csi, int luminance) {
     int ret = 0;
     int diff = PS5520_L_TARGET - luminance;
 
-    if (abs(diff) > 0) {
+    // Dead zone: ignore small luminance deviations. With raw (un-smoothed)
+    // luminance, frame-to-frame sensor noise is not filtered, so a small
+    // dead zone prevents noise-driven corrections that appear as flicker.
+    if (abs(diff) > 4) {
+        // If exposure and gain are both floored and scene is still too
+        // bright, skip the adjustment — nothing can change and redundant
+        // I2C writes may cause sensor glitches.
+        if (diff < 0 && aec_exposure <= PS5520_MIN_INT && agc_gain <= PS5520_MIN_GAIN_IDX) {
+            return 0;
+        }
+
         bool aec_exposure_in = ((diff > 0) && (aec_exposure < aec_exposure_ceiling)) ||
                                ((diff < 0) && (agc_gain <= PS5520_MIN_GAIN_IDX));
 
@@ -1504,7 +1517,15 @@ static int update_agc_aec(omv_csi_t *csi, int luminance) {
             bool flg_stall = 0;
             int32_t exposure_line;
 
-            aec_exposure += diff * PS5520_L_AEC_DIFF_MUL;
+            // Continuous step scaling: max_step is proportional to how
+            // far the current luminance is from either saturation extreme
+            // (0 or 255). This avoids step-size discontinuities that cause
+            // oscillation at zone boundaries.
+            int32_t headroom = IM_MIN(luminance, 255 - luminance);
+            int32_t max_step = IM_MAX(1, IM_MIN(PS5520_L_AEC_MAX_STEP, headroom / 10));
+            int32_t step = diff * PS5520_L_AEC_DIFF_MUL;
+            step = IM_CLAMP(step, -max_step, max_step);
+            aec_exposure += step;
             aec_exposure = IM_CLAMP(aec_exposure, PS5520_MIN_INT, aec_exposure_ceiling);
 
             if (aec_exposure > (VTS_5M_30 - 1 - 2)) {
@@ -1552,7 +1573,9 @@ static int update_agc_aec(omv_csi_t *csi, int luminance) {
             }
 
         } else if (enable_agc) {
-            agc_gain += diff / PS5520_L_AGC_DIFF_DIV;
+            int32_t gain_step = diff / PS5520_L_AGC_DIFF_DIV;
+            gain_step = IM_CLAMP(gain_step, -1, 1);
+            agc_gain += gain_step;
             agc_gain = IM_CLAMP(agc_gain, PS5520_MIN_GAIN_IDX, agc_gain_ceiling);
 
             //ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, REG_BANK, 1, 0x01, 1);
