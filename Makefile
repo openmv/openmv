@@ -314,7 +314,7 @@ sdk:
 submodules:
 	$(MAKE) -C $(MICROPY_DIR)/ports/$(PORT) BOARD=$(TARGET) submodules
 
-debug:
+debug: $(ROMFS_IMAGE)
 ifeq ($(DEBUGGER),NONE)
 	$(error This target does not support debugging)
 endif
