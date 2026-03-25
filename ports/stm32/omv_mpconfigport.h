@@ -23,7 +23,7 @@
  *
  * MicroPython port config.
  */
-#define MICROPY_NLR_RAISE_HOOK                 \
+#define MICROPY_VM_HOOK_EXC                    \
     do {                                       \
         extern void fb_alloc_free_till_mark(); \
         fb_alloc_free_till_mark();             \
