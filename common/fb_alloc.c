@@ -65,8 +65,11 @@ void fb_alloc_init0() {
 
 uint32_t fb_avail() {
     framebuffer_t *fb = framebuffer_get(FB_MAINFB_ID);
-    uint32_t temp = pointer - framebuffer_pool_end(fb) - sizeof(uint32_t);
-    return (temp < sizeof(uint32_t)) ? 0 : temp;
+    char *pool_end = framebuffer_pool_end(fb);
+    if (pointer <= pool_end + sizeof(uint32_t)) {
+        return 0;
+    }
+    return pointer - pool_end - sizeof(uint32_t);
 }
 
 void fb_alloc_mark() {
@@ -199,12 +202,14 @@ void *fb_alloc0(uint32_t size, int hints) {
 
 void *fb_alloc_all(uint32_t *size, int hints) {
     framebuffer_t *fb = framebuffer_get(FB_MAINFB_ID);
-    uint32_t temp = pointer - framebuffer_pool_end(fb) - sizeof(uint32_t);
+    char *pool_end = framebuffer_pool_end(fb);
 
-    if (temp < sizeof(uint32_t)) {
+    if (pointer <= pool_end + sizeof(uint32_t)) {
         *size = 0;
         return NULL;
     }
+
+    uint32_t temp = pointer - pool_end - sizeof(uint32_t);
 
     #if defined(OMV_FB_OVERLAY_MEMORY)
     if (!(hints & FB_ALLOC_PREFER_SIZE)) {
