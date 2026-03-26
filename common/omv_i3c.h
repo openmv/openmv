@@ -92,18 +92,16 @@ int omv_i3c_scan_assign(omv_i2c_t *i3c, uint8_t *list, uint8_t size);
 int omv_i3c_enable(omv_i2c_t *i3c, bool enable);
 int omv_i3c_reset(omv_i2c_t *i3c, uint8_t tgt_addr);
 int omv_i3c_set_scl(omv_i2c_t *i3c, uint32_t speed);
-int omv_i3c_readb(omv_i2c_t *i3c, uint8_t tgt_addr, uint8_t reg_addr,  uint8_t *reg_data);
-int omv_i3c_writeb(omv_i2c_t *i3c, uint8_t tgt_addr, uint8_t reg_addr, uint8_t reg_data);
-int omv_i3c_readb2(omv_i2c_t *i3c, uint8_t tgt_addr, uint16_t reg_addr,  uint8_t *reg_data);
-int omv_i3c_writeb2(omv_i2c_t *i3c, uint8_t tgt_addr, uint16_t reg_addr, uint8_t reg_data);
-int omv_i3c_readw(omv_i2c_t *i3c, uint8_t tgt_addr, uint8_t reg_addr,  uint16_t *reg_data);
-int omv_i3c_writew(omv_i2c_t *i3c, uint8_t tgt_addr, uint8_t reg_addr, uint16_t reg_data);
-int omv_i3c_readw2(omv_i2c_t *i3c, uint8_t tgt_addr, uint16_t reg_addr,  uint16_t *reg_data);
-int omv_i3c_writew2(omv_i2c_t *i3c, uint8_t tgt_addr, uint16_t reg_addr, uint16_t reg_data);
-int omv_i3c_readdw(omv_i2c_t *i3c, uint8_t tgt_addr, uint8_t reg_addr,  uint32_t *reg_data);
-int omv_i3c_writedw(omv_i2c_t *i3c, uint8_t tgt_addr, uint8_t reg_addr, uint32_t reg_data);
-int omv_i3c_readdw2(omv_i2c_t *i3c, uint8_t tgt_addr, uint16_t reg_addr,  uint32_t *reg_data);
-int omv_i3c_writedw2(omv_i2c_t *i3c, uint8_t tgt_addr, uint16_t reg_addr, uint32_t reg_data);
-int omv_i3c_read_bytes(omv_i2c_t *i3c, uint8_t tgt_addr, uint8_t *buf, int len, uint32_t flags);
-int omv_i3c_write_bytes(omv_i2c_t *i3c, uint8_t tgt_addr, uint8_t *buf, int len, uint32_t flags);
+
+// Low-level multi-byte transfers (ports must implement these)
+int omv_i3c_read(omv_i2c_t *i3c, uint8_t slv_addr, uint8_t *buf, uint32_t len, uint32_t flags);
+int omv_i3c_write(omv_i2c_t *i3c, uint8_t slv_addr, uint8_t *buf, uint32_t len, uint32_t flags);
+
+// Register access with configurable address/data sizes
+int omv_i3c_read_reg(omv_i2c_t *i3c, uint8_t slv_addr,
+                     uint32_t reg_addr, uint8_t addr_size,
+                     void *data, uint8_t data_size);
+int omv_i3c_write_reg(omv_i2c_t *i3c, uint8_t slv_addr,
+                      uint32_t reg_addr, uint8_t addr_size,
+                      uint32_t data, uint8_t data_size);
 #endif // __OMV_I3C_H__

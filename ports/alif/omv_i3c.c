@@ -364,108 +364,7 @@ int omv_i3c_reset(omv_i2c_t *i3c, uint8_t tgt_addr) {
     return 0;
 }
 
-int omv_i3c_readb(omv_i2c_t *i3c, uint8_t tgt_addr, uint8_t reg_addr,  uint8_t *reg_data) {
-    int ret = 0;
-    ret |= omv_i3c_write_bytes(i3c, tgt_addr, &reg_addr, 1, OMV_I2C_XFER_NO_STOP);
-    ret |= omv_i3c_read_bytes(i3c, tgt_addr, reg_data, 1, OMV_I2C_XFER_NO_FLAGS);
-    return ret;
-}
-
-int omv_i3c_writeb(omv_i2c_t *i3c, uint8_t tgt_addr, uint8_t reg_addr, uint8_t reg_data) {
-    int ret = 0;
-    uint8_t buf[] = {reg_addr, reg_data};
-    ret |= omv_i3c_write_bytes(i3c, tgt_addr, buf, 2, OMV_I2C_XFER_NO_FLAGS);
-    return ret;
-}
-
-int omv_i3c_readb2(omv_i2c_t *i3c, uint8_t tgt_addr, uint16_t reg_addr, uint8_t *reg_data) {
-    int ret = 0;
-    uint8_t buf[] = {(reg_addr >> 8), reg_addr};
-    ret |= omv_i3c_write_bytes(i3c, tgt_addr, buf, 2, OMV_I2C_XFER_NO_STOP);
-    ret |= omv_i3c_read_bytes(i3c, tgt_addr, reg_data, 1, OMV_I2C_XFER_NO_FLAGS);
-    return ret;
-}
-
-int omv_i3c_writeb2(omv_i2c_t *i3c, uint8_t tgt_addr, uint16_t reg_addr, uint8_t reg_data) {
-    int ret = 0;
-    uint8_t buf[] = {(reg_addr >> 8), reg_addr, reg_data};
-    ret |= omv_i3c_write_bytes(i3c, tgt_addr, buf, 3, OMV_I2C_XFER_NO_FLAGS);
-    return ret;
-}
-
-int omv_i3c_readw(omv_i2c_t *i3c, uint8_t tgt_addr, uint8_t reg_addr, uint16_t *reg_data) {
-    int ret = 0;
-    ret |= omv_i3c_write_bytes(i3c, tgt_addr, &reg_addr, 1, OMV_I2C_XFER_NO_STOP);
-    ret |= omv_i3c_read_bytes(i3c, tgt_addr, (uint8_t *) reg_data, 2, OMV_I2C_XFER_NO_FLAGS);
-    *reg_data = (*reg_data << 8) | (*reg_data >> 8);
-    return ret;
-}
-
-int omv_i3c_writew(omv_i2c_t *i3c, uint8_t tgt_addr, uint8_t reg_addr, uint16_t reg_data) {
-    int ret = 0;
-    uint8_t buf[] = {reg_addr, (reg_data >> 8), reg_data};
-    ret |= omv_i3c_write_bytes(i3c, tgt_addr, buf, 3, OMV_I2C_XFER_NO_FLAGS);
-    return ret;
-}
-
-int omv_i3c_readw2(omv_i2c_t *i3c, uint8_t tgt_addr, uint16_t reg_addr, uint16_t *reg_data) {
-    int ret = 0;
-    uint8_t buf[] = {(reg_addr >> 8), reg_addr};
-    ret |= omv_i3c_write_bytes(i3c, tgt_addr, buf, 2, OMV_I2C_XFER_NO_STOP);
-    ret |= omv_i3c_read_bytes(i3c, tgt_addr, (uint8_t *) reg_data, 2, OMV_I2C_XFER_NO_FLAGS);
-    *reg_data = (*reg_data << 8) | (*reg_data >> 8);
-    return ret;
-}
-
-int omv_i3c_writew2(omv_i2c_t *i3c, uint8_t tgt_addr, uint16_t reg_addr, uint16_t reg_data) {
-    int ret = 0;
-    uint8_t buf[] = {(reg_addr >> 8), reg_addr, (reg_data >> 8), reg_data};
-    ret |= omv_i3c_write_bytes(i3c, tgt_addr, buf, 4, OMV_I2C_XFER_NO_FLAGS);
-    return ret;
-}
-
-int omv_i3c_readdw(omv_i2c_t *i3c, uint8_t tgt_addr, uint8_t reg_addr, uint32_t *reg_data) {
-    int ret = 0;
-    uint8_t data_1, data_2, data_3, data_4;
-    ret |= omv_i3c_write_bytes(i3c, tgt_addr, &reg_addr, 1, OMV_I2C_XFER_NO_STOP);
-    ret |= omv_i3c_read_bytes(i3c, tgt_addr, (uint8_t *) reg_data, 4, OMV_I2C_XFER_NO_FLAGS);
-    data_1 = (*reg_data) & 0xFF;
-    data_2 = (*reg_data) & 0xFF00;
-    data_3 = (*reg_data) & 0xFF0000;
-    data_4 = (*reg_data) & 0xFF000000;
-    *reg_data = (data_1 << 24) | (data_2 << 8) | (data_3 >> 8) | (data_4 >> 24);
-    return ret;
-}
-
-int omv_i3c_writedw(omv_i2c_t *i3c, uint8_t tgt_addr, uint8_t reg_addr, uint32_t reg_data) {
-    int ret = 0;
-    uint8_t buf[] = {reg_addr, (reg_data >> 24), (reg_data >> 16), (reg_data >> 8), reg_data};
-    ret |= omv_i3c_write_bytes(i3c, tgt_addr, buf, 5, OMV_I2C_XFER_NO_FLAGS);
-    return ret;
-}
-
-int omv_i3c_readdw2(omv_i2c_t *i3c, uint8_t tgt_addr, uint16_t reg_addr, uint32_t *reg_data) {
-    int ret = 0;
-    uint8_t data_1, data_2, data_3, data_4;
-    uint8_t buf[] = {(reg_addr >> 8), reg_addr};
-    ret |= omv_i3c_write_bytes(i3c, tgt_addr, buf, 2, OMV_I2C_XFER_NO_STOP);
-    ret |= omv_i3c_read_bytes(i3c, tgt_addr, (uint8_t *) reg_data, 4, OMV_I2C_XFER_NO_FLAGS);
-    data_1 = (*reg_data) & 0xFF;
-    data_2 = (*reg_data) & 0xFF00;
-    data_3 = (*reg_data) & 0xFF0000;
-    data_4 = (*reg_data) & 0xFF000000;
-    *reg_data = (data_1 << 24) | (data_2 << 8) | (data_3 >> 8) | (data_4 >> 24);
-    return ret;
-}
-
-int omv_i3c_writedw2(omv_i2c_t *i3c, uint8_t tgt_addr, uint16_t reg_addr, uint32_t reg_data) {
-    int ret = 0;
-    uint8_t buf[] = {(reg_addr >> 8), reg_addr, (reg_data >> 24), (reg_data >> 16), (reg_data >> 8), reg_data};
-    ret |= omv_i3c_write_bytes(i3c, tgt_addr, buf, 6, OMV_I2C_XFER_NO_FLAGS);
-    return ret;
-}
-
-static int omv_i3c_check_transfer(omv_i2c_t *i3c, uint8_t tgt_addr, uint8_t *buf, int len) {
+static int omv_i3c_check_transfer(omv_i2c_t *i3c, uint8_t tgt_addr, uint8_t *buf, uint32_t len) {
     if (!buf || !len) {
         return -1;
     }
@@ -477,7 +376,7 @@ static int omv_i3c_check_transfer(omv_i2c_t *i3c, uint8_t tgt_addr, uint8_t *buf
     return omv_i3c_get_addr_pos(i3c, tgt_addr);
 }
 
-int omv_i3c_read_bytes(omv_i2c_t *i3c, uint8_t tgt_addr, uint8_t *buf, int len, uint32_t flags) {
+int omv_i3c_read(omv_i2c_t *i3c, uint8_t tgt_addr, uint8_t *buf, uint32_t len, uint32_t flags) {
     int32_t pos;
     i3c_xfer_t xfer = {0};
     I3C_Type *base = (I3C_Type *) i3c->inst;
@@ -520,7 +419,7 @@ int omv_i3c_read_bytes(omv_i2c_t *i3c, uint8_t tgt_addr, uint8_t *buf, int len, 
     return 0;
 }
 
-int omv_i3c_write_bytes(omv_i2c_t *i3c, uint8_t tgt_addr, uint8_t *buf, int len, uint32_t flags) {
+int omv_i3c_write(omv_i2c_t *i3c, uint8_t tgt_addr, uint8_t *buf, uint32_t len, uint32_t flags) {
     int32_t pos;
     i3c_xfer_t xfer = {0};
     I3C_Type *base = (I3C_Type *) i3c->inst;
