@@ -16,8 +16,13 @@
 #define APRILTAG_ENABLE_PROFILE         (0)
 #define APRILTAG_ENABLE_TAG_NAMES       (0)
 #define APRILTAG_ENABLE_UMM_ALLOC       (1)
+
 #ifndef IMLIB_ENABLE_FINE_APRILTAGS
 #define APRILTAG_ENABLE_8_CONNECTIVITY  (0)
+#endif
+
+#ifndef IMLIB_ENABLE_HIGH_RES_APRILTAGS
+#define APRILTAG_ENABLE_32BIT_UNIONFIND (0)
 #endif
 
 // Disable tag families not enabled in imlib_config.h
