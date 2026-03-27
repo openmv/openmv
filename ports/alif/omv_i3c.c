@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023-2024 OpenMV, LLC.
+ * Copyright (C) 2023-2026 OpenMV, LLC.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -451,4 +451,57 @@ int omv_i3c_write(omv_i2c_t *i3c, uint8_t tgt_addr, uint8_t *buf, uint32_t len, 
     }
 
     return 0;
+}
+
+int omv_i3c_read_reg(omv_i2c_t *i3c, uint8_t slv_addr,
+                     uint32_t reg_addr, uint8_t addr_size,
+                     void *data, uint8_t data_size) {
+    uint8_t addr_buf[4];
+    for (int i = 0; i < addr_size; i++) {
+        addr_buf[i] = (reg_addr >> (8 * (addr_size - 1 - i))) & 0xFF;
+    }
+
+    int ret = omv_i3c_write(i3c, slv_addr, addr_buf, addr_size, OMV_I2C_XFER_NO_STOP);
+
+    uint8_t data_buf[4] = {0};
+    ret |= omv_i3c_read(i3c, slv_addr, data_buf, data_size, OMV_I2C_XFER_NO_FLAGS);
+
+    // Convert from big-endian to host byte order
+    uint32_t value = 0;
+    for (int i = 0; i < data_size; i++) {
+        value = (value << 8) | data_buf[i];
+    }
+
+    switch (data_size) {
+        case 1:
+            *(uint8_t *) data = value;
+            break;
+        case 2:
+            *(uint16_t *) data = value;
+            break;
+        case 4:
+            *(uint32_t *) data = value;
+            break;
+    }
+
+    return ret;
+}
+
+int omv_i3c_write_reg(omv_i2c_t *i3c, uint8_t slv_addr,
+                      uint32_t reg_addr, uint8_t addr_size,
+                      uint32_t data, uint8_t data_size) {
+    uint8_t buf[8];
+    int idx = 0;
+
+    // Serialize register address (big-endian)
+    for (int i = 0; i < addr_size; i++) {
+        buf[idx++] = (reg_addr >> (8 * (addr_size - 1 - i))) & 0xFF;
+    }
+
+    // Serialize data (big-endian)
+    for (int i = 0; i < data_size; i++) {
+        buf[idx++] = (data >> (8 * (data_size - 1 - i))) & 0xFF;
+    }
+
+    return omv_i3c_write(i3c, slv_addr, buf, idx, OMV_I2C_XFER_NO_FLAGS);
 }

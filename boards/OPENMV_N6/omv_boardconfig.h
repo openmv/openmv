@@ -125,6 +125,7 @@
 #define OMV_RCC_IC18_CLKDIV                 (60)
 
 #define OMV_OSC_I2C3_SOURCE                 (RCC_I2C3CLKSOURCE_IC10)
+#define OMV_OSC_I3C2_SOURCE                 (RCC_I3C2CLKSOURCE_IC10)
 #define OMV_OSC_SPI5_SOURCE                 (RCC_SPI5CLKSOURCE_IC14)
 #define OMV_OSC_USART2_SOURCE               (RCC_USART2CLKSOURCE_IC14)
 
@@ -208,10 +209,15 @@
 
 // Physical I2C buses.
 
-// I2C bus 3
+// I2C bus 2
 #define OMV_I2C2_ID                         (2)
 #define OMV_I2C2_SCL_PIN                    (&omv_pin_B10_I2C2)
 #define OMV_I2C2_SDA_PIN                    (&omv_pin_B11_I2C2)
+
+// I3C bus 2 (shared pins with I2C2)
+#define OMV_I3C2_ID                         (2)
+#define OMV_I3C2_SCL_PIN                    (&omv_pin_B10_I3C2)
+#define OMV_I3C2_SDA_PIN                    (&omv_pin_B11_I3C2)
 
 // I2C bus 3
 #define OMV_I2C3_ID                         (3)
