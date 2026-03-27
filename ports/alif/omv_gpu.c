@@ -132,8 +132,7 @@ int omv_gpu_draw_image(image_t *src_img,
                        image_hint_t hint,
                        float *transform) {
     // Blending, transformations, and TCM buffers are not supported.
-    if (color_palette || alpha_palette || transform ||
-        RTSS_Is_TCM_Addr(src_img->data) || RTSS_Is_TCM_Addr(dst_img->data)) {
+    if (color_palette || alpha_palette || transform) {
         return -1;
     }
 
@@ -145,11 +144,11 @@ int omv_gpu_draw_image(image_t *src_img,
     OMV_GPU_CHECK_ERROR(err);
 
     d2_u32 dst_pixfmt = omv_gpu_pixfmt(dst_img->pixfmt);
-    err = d2_framebuffer(dev, dst_img->data, dst_img->w, dst_img->w, dst_img->h, dst_pixfmt);
+    err = d2_framebuffer(dev, (void *) LocalToGlobal(dst_img->data), dst_img->w, dst_img->w, dst_img->h, dst_pixfmt);
     OMV_GPU_CHECK_ERROR(err);
 
     d2_u32 src_pixfmt = omv_gpu_pixfmt(src_img->pixfmt);
-    err = d2_setblitsrc(dev, src_img->data, src_img->w, src_img->w, src_img->h, src_pixfmt);
+    err = d2_setblitsrc(dev, (void *) LocalToGlobal(src_img->data), src_img->w, src_img->w, src_img->h, src_pixfmt);
     OMV_GPU_CHECK_ERROR(err);
 
     if (hint & IMAGE_HINT_BILINEAR) {
