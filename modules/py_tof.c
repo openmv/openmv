@@ -31,6 +31,7 @@
 
 #if (MICROPY_PY_TOF == 1)
 #include "omv_i2c.h"
+#include "umalloc.h"
 #include "py_assert.h"
 #include "py_helper.h"
 #include "py_image.h"
@@ -393,14 +394,12 @@ mp_obj_t py_tof_read_depth(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw
     switch (tof_sensor) {
         #if OMV_TOF_VL53LX_ENABLE
         case OMV_TOF_VL53LX_ID: {
-            fb_alloc_mark();
-            float *frame = fb_alloc(OMV_TOF_VL53LX_WIDTH * OMV_TOF_VL53LX_HEIGHT * sizeof(float),
-                                    FB_ALLOC_PREFER_SPEED);
+            float *frame = uma_malloc(OMV_TOF_VL53LX_WIDTH * OMV_TOF_VL53LX_HEIGHT * sizeof(float), 0);
             tof_vl53lx_get_depth(&vl53lx_dev, frame, args[ARG_timeout].u_int);
             mp_obj_t result = tof_get_depth_obj(OMV_TOF_VL53LX_WIDTH, OMV_TOF_VL53LX_HEIGHT, frame,
                                                 !args[ARG_hmirror].u_bool, args[ARG_vflip].u_bool,
                                                 args[ARG_transpose].u_bool, true);
-            fb_alloc_free_till_mark();
+            uma_free(frame);
             return result;
         }
         #endif
@@ -473,15 +472,14 @@ mp_obj_t py_tof_draw_depth(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw
     const uint16_t *color_palette = py_helper_arg_to_palette(args[ARG_color_palette].u_obj, PIXFORMAT_RGB565);
     const uint8_t *alpha_palette = py_helper_arg_to_palette(args[ARG_alpha_palette].u_obj, PIXFORMAT_GRAYSCALE);
 
-    fb_alloc_mark();
-    src_img.data = fb_alloc(src_img.w * src_img.h * sizeof(uint8_t), FB_ALLOC_NO_HINT);
+    src_img.data = uma_malloc(src_img.w * src_img.h * sizeof(uint8_t), 0);
     tof_fill_image_float_obj(&src_img, depth_array, min, max);
 
     imlib_draw_image(dst_img, &src_img, args[ARG_x].u_int, args[ARG_y].u_int, x_scale, y_scale, &roi,
                      args[ARG_channel].u_int, args[ARG_alpha].u_int, color_palette, alpha_palette,
                      args[ARG_hint].u_int, NULL, NULL, NULL, NULL);
 
-    fb_alloc_free_till_mark();
+    uma_free(src_img.data);
     return mp_const_none;
 }
 static MP_DEFINE_CONST_FUN_OBJ_KW(py_tof_draw_depth_obj, 2, py_tof_draw_depth);
@@ -558,15 +556,13 @@ mp_obj_t py_tof_snapshot(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_a
     const uint16_t *color_palette = py_helper_arg_to_palette(args[ARG_color_palette].u_obj, PIXFORMAT_RGB565);
     const uint8_t *alpha_palette = py_helper_arg_to_palette(args[ARG_alpha_palette].u_obj, PIXFORMAT_GRAYSCALE);
 
-    fb_alloc_mark();
     // Allocate source image data.
-    src_img.data = fb_alloc(src_img.w * src_img.h * sizeof(uint8_t), FB_ALLOC_NO_HINT);
+    src_img.data = uma_malloc(src_img.w * src_img.h * sizeof(uint8_t), 0);
 
     switch (tof_sensor) {
         #if OMV_TOF_VL53LX_ENABLE
         case OMV_TOF_VL53LX_ID: {
-            float *frame = fb_alloc(OMV_TOF_VL53LX_WIDTH * OMV_TOF_VL53LX_HEIGHT * sizeof(float),
-                                    FB_ALLOC_PREFER_SPEED);
+            float *frame = uma_malloc(OMV_TOF_VL53LX_WIDTH * OMV_TOF_VL53LX_HEIGHT * sizeof(float), 0);
             tof_vl53lx_get_depth(&vl53lx_dev, frame, args[ARG_timeout].u_int);
             if (args[ARG_scale].u_obj == mp_const_none) {
                 fast_get_min_max(frame, OMV_TOF_VL53LX_WIDTH * OMV_TOF_VL53LX_HEIGHT, &min, &max);
@@ -575,6 +571,7 @@ mp_obj_t py_tof_snapshot(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_a
                                         frame, min, max,
                                         !args[ARG_hmirror].u_bool, args[ARG_vflip].u_bool,
                                         args[ARG_transpose].u_bool, true);
+            uma_free(frame);
             break;
         }
         #endif
@@ -587,7 +584,7 @@ mp_obj_t py_tof_snapshot(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_a
                      (args[ARG_hint].u_int & (~IMAGE_HINT_CENTER)) | IMAGE_HINT_BLACK_BACKGROUND,
                      NULL, NULL, NULL, NULL);
 
-    fb_alloc_free_till_mark();
+    uma_free(src_img.data);
 
     if (args[ARG_copy_to_fb].u_bool) {
         framebuffer_update_preview(&dst_img);

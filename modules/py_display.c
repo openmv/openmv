@@ -160,7 +160,6 @@ static mp_obj_t py_display_write(size_t n_args, const mp_obj_t *pos_args, mp_map
     mp_arg_val_t args[MP_ARRAY_SIZE(allowed_args)];
     mp_arg_parse_all(n_args - 1, pos_args + 1, kw_args, MP_ARRAY_SIZE(allowed_args), allowed_args, args);
 
-    fb_alloc_mark();
     image_t *image = py_helper_arg_to_image(args[ARG_image].u_obj, ARG_IMAGE_ANY | ARG_IMAGE_ALLOC);
     rectangle_t roi = py_helper_arg_to_roi(args[ARG_roi].u_obj, image);
 
@@ -186,8 +185,6 @@ static mp_obj_t py_display_write(size_t n_args, const mp_obj_t *pos_args, mp_map
     py_display_p_t *display_p = (py_display_p_t *) MP_OBJ_TYPE_GET_SLOT(self->base.type, protocol);
     display_p->write(self, image, args[ARG_x].u_int, args[ARG_y].u_int, x_scale, y_scale, &roi,
                      args[ARG_channel].u_int, args[ARG_alpha].u_int, color_palette, alpha_palette, args[ARG_hint].u_int);
-    fb_alloc_free_till_mark();
-
     return mp_const_none;
 }
 static MP_DEFINE_CONST_FUN_OBJ_KW(py_display_write_obj, 2, py_display_write);

@@ -39,7 +39,7 @@
 #include "imlib.h"
 #include "array.h"
 #include "file_utils.h"
-#include "fb_alloc.h"
+#include "umalloc.h"
 #include "framebuffer.h"
 #include "py_assert.h"
 #include "py_helper.h"
@@ -1147,16 +1147,17 @@ static mp_obj_t py_image_to(pixformat_t pixfmt, mp_rom_obj_t default_color_palet
                       (alpha_palette == NULL) &&
                       (!transposed);
 
-        if ((dst_img.pixfmt != src_img->pixfmt) || (!simple)) {
+        if (!simple || dst_img.pixfmt != src_img->pixfmt) {
             image_t temp;
             memcpy(&temp, src_img, sizeof(image_t));
 
-            if (src_img->is_compressed || (!simple)) {
+            bool temp_allocated = !simple || src_img->is_compressed;
+            if (temp_allocated) {
                 temp.w = dst_img.w;
                 temp.h = dst_img.h;
                 temp.pixfmt = src_img->is_color ? PIXFORMAT_RGB565 : PIXFORMAT_GRAYSCALE;
                 temp.size = 0;
-                temp.data = fb_alloc(image_size(&temp), FB_ALLOC_NO_HINT);
+                temp.data = uma_malloc(image_size(&temp), 0);
                 imlib_draw_image(&temp, src_img, 0, 0, x_scale, y_scale, &roi,
                                  args[ARG_channel].u_int, args[ARG_alpha].u_int, color_palette, alpha_palette,
                                  args[ARG_hint].u_int, NULL, NULL, NULL, NULL);
@@ -1166,6 +1167,10 @@ static mp_obj_t py_image_to(pixformat_t pixfmt, mp_rom_obj_t default_color_palet
                  jpeg_compress(&temp, &dst_img_tmp, args[ARG_quality].u_int, false, args[ARG_subsampling].u_int))
                 || ((dst_img.pixfmt == PIXFORMAT_PNG) && png_compress(&temp, &dst_img_tmp))) {
                 mp_raise_msg(&mp_type_OSError, MP_ERROR_TEXT("Compression Failed!"));
+            }
+
+            if (temp_allocated) {
+                uma_free(temp.data);
             }
         } else {
             dst_img_tmp.data = src_img->data;
@@ -1203,6 +1208,7 @@ static mp_obj_t py_image_to(pixformat_t pixfmt, mp_rom_obj_t default_color_palet
     if (dst_img.is_compressed) {
         if (dst_img.data != dst_img_tmp.data) {
             memcpy(dst_img.data, dst_img_tmp.data, dst_img.size);
+            uma_free(dst_img_tmp.data);
         }
     } else {
         imlib_draw_image(&dst_img, src_img, 0, 0, x_scale, y_scale, &roi,
@@ -1630,10 +1636,11 @@ static mp_obj_t py_image_mask_rectangle(size_t n_args, const mp_obj_t *args, mp_
     temp.w = arg_img->w;
     temp.h = arg_img->h;
     temp.pixfmt = PIXFORMAT_BINARY;
-    temp.data = fb_alloc0(image_size(&temp), FB_ALLOC_NO_HINT);
+    temp.data = uma_calloc(image_size(&temp), 0);
 
     imlib_draw_rectangle(&temp, arg_rx, arg_ry, arg_rw, arg_rh, -1, 0, true);
     imlib_zero(arg_img, &temp, true);
+    uma_free(temp.data);
 
     return args[0];
 }
@@ -1661,10 +1668,11 @@ static mp_obj_t py_image_mask_circle(size_t n_args, const mp_obj_t *args, mp_map
     temp.w = arg_img->w;
     temp.h = arg_img->h;
     temp.pixfmt = PIXFORMAT_BINARY;
-    temp.data = fb_alloc0(image_size(&temp), FB_ALLOC_NO_HINT);
+    temp.data = uma_calloc(image_size(&temp), 0);
 
     imlib_draw_circle(&temp, arg_cx, arg_cy, arg_cr, -1, 0, true);
     imlib_zero(arg_img, &temp, true);
+    uma_free(temp.data);
 
     return args[0];
 }
@@ -1698,10 +1706,11 @@ static mp_obj_t py_image_mask_ellipse(size_t n_args, const mp_obj_t *args, mp_ma
     temp.w = arg_img->w;
     temp.h = arg_img->h;
     temp.pixfmt = PIXFORMAT_BINARY;
-    temp.data = fb_alloc0(image_size(&temp), FB_ALLOC_NO_HINT);
+    temp.data = uma_calloc(image_size(&temp), 0);
 
     imlib_draw_ellipse(&temp, arg_cx, arg_cy, arg_rx, arg_ry, arg_r, -1, 0, true);
     imlib_zero(arg_img, &temp, true);
+    uma_free(temp.data);
 
     return args[0];
 }
@@ -1874,7 +1883,7 @@ static mp_obj_t py_image_line_op(size_t n_args, const mp_obj_t *pos_args, mp_map
 
     void *dst_row_override = NULL;
     if (callback) {
-        dst_row_override = fb_alloc0(image_line_size(image), FB_ALLOC_CACHE_ALIGN);
+        dst_row_override = uma_calloc(image_line_size(image), UMA_CACHE);
         // Necessary for alpha blending to work correctly.
         args[ARG_hint].u_int |= IMAGE_HINT_BLACK_BACKGROUND;
     }
@@ -1882,6 +1891,10 @@ static mp_obj_t py_image_line_op(size_t n_args, const mp_obj_t *pos_args, mp_map
     imlib_draw_image(image, other, args[ARG_x].u_int, args[ARG_y].u_int, x_scale, y_scale, &roi,
                      args[ARG_channel].u_int, args[ARG_alpha].u_int, color_palette, alpha_palette,
                      args[ARG_hint].u_int, transform, callback, mask, dst_row_override);
+
+    if (dst_row_override) {
+        uma_free(dst_row_override);
+    }
 
     return pos_args[0];
 }
@@ -3378,9 +3391,9 @@ mp_obj_t py_histogram_get_percentile(mp_obj_t self_in, mp_obj_t percentile) {
     hist.LBinCount = ((mp_obj_list_t *) ((py_histogram_obj_t *) self_in)->LBins)->len;
     hist.ABinCount = ((mp_obj_list_t *) ((py_histogram_obj_t *) self_in)->ABins)->len;
     hist.BBinCount = ((mp_obj_list_t *) ((py_histogram_obj_t *) self_in)->BBins)->len;
-    hist.LBins = fb_alloc(hist.LBinCount * sizeof(float), FB_ALLOC_NO_HINT);
-    hist.ABins = fb_alloc(hist.ABinCount * sizeof(float), FB_ALLOC_NO_HINT);
-    hist.BBins = fb_alloc(hist.BBinCount * sizeof(float), FB_ALLOC_NO_HINT);
+    hist.LBins = uma_malloc(hist.LBinCount * sizeof(float), 0);
+    hist.ABins = uma_malloc(hist.ABinCount * sizeof(float), 0);
+    hist.BBins = uma_malloc(hist.BBinCount * sizeof(float), 0);
 
     for (int i = 0; i < hist.LBinCount; i++) {
         hist.LBins[i] = mp_obj_get_float_to_f(((mp_obj_list_t *) ((py_histogram_obj_t *) self_in)->LBins)->items[i]);
@@ -3405,6 +3418,10 @@ mp_obj_t py_histogram_get_percentile(mp_obj_t self_in, mp_obj_t percentile) {
     o->AValue = mp_obj_new_int(p.AValue);
     o->BValue = mp_obj_new_int(p.BValue);
 
+    uma_free(hist.BBins);
+    uma_free(hist.ABins);
+    uma_free(hist.LBins);
+
     return o;
 }
 static MP_DEFINE_CONST_FUN_OBJ_2(py_histogram_get_percentile_obj, py_histogram_get_percentile);
@@ -3414,9 +3431,9 @@ mp_obj_t py_histogram_get_threshold(mp_obj_t self_in) {
     hist.LBinCount = ((mp_obj_list_t *) ((py_histogram_obj_t *) self_in)->LBins)->len;
     hist.ABinCount = ((mp_obj_list_t *) ((py_histogram_obj_t *) self_in)->ABins)->len;
     hist.BBinCount = ((mp_obj_list_t *) ((py_histogram_obj_t *) self_in)->BBins)->len;
-    hist.LBins = fb_alloc(hist.LBinCount * sizeof(float), FB_ALLOC_NO_HINT);
-    hist.ABins = fb_alloc(hist.ABinCount * sizeof(float), FB_ALLOC_NO_HINT);
-    hist.BBins = fb_alloc(hist.BBinCount * sizeof(float), FB_ALLOC_NO_HINT);
+    hist.LBins = uma_malloc(hist.LBinCount * sizeof(float), 0);
+    hist.ABins = uma_malloc(hist.ABinCount * sizeof(float), 0);
+    hist.BBins = uma_malloc(hist.BBinCount * sizeof(float), 0);
 
     for (int i = 0; i < hist.LBinCount; i++) {
         hist.LBins[i] = mp_obj_get_float_to_f(((mp_obj_list_t *) ((py_histogram_obj_t *) self_in)->LBins)->items[i]);
@@ -3441,6 +3458,10 @@ mp_obj_t py_histogram_get_threshold(mp_obj_t self_in) {
     o->AValue = mp_obj_new_int(t.AValue);
     o->BValue = mp_obj_new_int(t.BValue);
 
+    uma_free(hist.BBins);
+    uma_free(hist.ABins);
+    uma_free(hist.LBins);
+
     return o;
 }
 static MP_DEFINE_CONST_FUN_OBJ_1(py_histogram_get_threshold_obj, py_histogram_get_threshold);
@@ -3450,9 +3471,9 @@ mp_obj_t py_histogram_get_statistics(mp_obj_t self_in) {
     hist.LBinCount = ((mp_obj_list_t *) ((py_histogram_obj_t *) self_in)->LBins)->len;
     hist.ABinCount = ((mp_obj_list_t *) ((py_histogram_obj_t *) self_in)->ABins)->len;
     hist.BBinCount = ((mp_obj_list_t *) ((py_histogram_obj_t *) self_in)->BBins)->len;
-    hist.LBins = fb_alloc(hist.LBinCount * sizeof(float), FB_ALLOC_NO_HINT);
-    hist.ABins = fb_alloc(hist.ABinCount * sizeof(float), FB_ALLOC_NO_HINT);
-    hist.BBins = fb_alloc(hist.BBinCount * sizeof(float), FB_ALLOC_NO_HINT);
+    hist.LBins = uma_malloc(hist.LBinCount * sizeof(float), 0);
+    hist.ABins = uma_malloc(hist.ABinCount * sizeof(float), 0);
+    hist.BBins = uma_malloc(hist.BBinCount * sizeof(float), 0);
 
     for (int i = 0; i < hist.LBinCount; i++) {
         hist.LBins[i] = mp_obj_get_float_to_f(((mp_obj_list_t *) ((py_histogram_obj_t *) self_in)->LBins)->items[i]);
@@ -3497,6 +3518,10 @@ mp_obj_t py_histogram_get_statistics(mp_obj_t self_in) {
     o->BMax = mp_obj_new_int(stats.BMax);
     o->BLQ = mp_obj_new_int(stats.BLQ);
     o->BUQ = mp_obj_new_int(stats.BUQ);
+
+    uma_free(hist.BBins);
+    uma_free(hist.ABins);
+    uma_free(hist.LBins);
 
     return o;
 }
@@ -3547,7 +3572,7 @@ static mp_obj_t py_image_get_histogram(size_t n_args, const mp_obj_t *args, mp_m
             PY_ASSERT_TRUE_MSG(hist.LBinCount >= 2, "l_bins must be >= 2");
             hist.ABinCount = 0;
             hist.BBinCount = 0;
-            hist.LBins = fb_alloc(hist.LBinCount * sizeof(float), FB_ALLOC_NO_HINT);
+            hist.LBins = uma_malloc(hist.LBinCount * sizeof(float), 0);
             hist.ABins = NULL;
             hist.BBins = NULL;
             imlib_get_histogram(&hist, arg_img, &roi, &thresholds, invert, other);
@@ -3562,7 +3587,7 @@ static mp_obj_t py_image_get_histogram(size_t n_args, const mp_obj_t *args, mp_m
             PY_ASSERT_TRUE_MSG(hist.LBinCount >= 2, "l_bins must be >= 2");
             hist.ABinCount = 0;
             hist.BBinCount = 0;
-            hist.LBins = fb_alloc(hist.LBinCount * sizeof(float), FB_ALLOC_NO_HINT);
+            hist.LBins = uma_malloc(hist.LBinCount * sizeof(float), 0);
             hist.ABins = NULL;
             hist.BBins = NULL;
             imlib_get_histogram(&hist, arg_img, &roi, &thresholds, invert, other);
@@ -3585,9 +3610,9 @@ static mp_obj_t py_image_get_histogram(size_t n_args, const mp_obj_t *args, mp_m
             PY_ASSERT_TRUE_MSG(b_bins >= 2, "bins must be >= 2");
             hist.BBinCount = py_helper_keyword_int(n_args, args, n_args, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_b_bins), b_bins);
             PY_ASSERT_TRUE_MSG(hist.BBinCount >= 2, "b_bins must be >= 2");
-            hist.LBins = fb_alloc(hist.LBinCount * sizeof(float), FB_ALLOC_NO_HINT);
-            hist.ABins = fb_alloc(hist.ABinCount * sizeof(float), FB_ALLOC_NO_HINT);
-            hist.BBins = fb_alloc(hist.BBinCount * sizeof(float), FB_ALLOC_NO_HINT);
+            hist.LBins = uma_malloc(hist.LBinCount * sizeof(float), 0);
+            hist.ABins = uma_malloc(hist.ABinCount * sizeof(float), 0);
+            hist.BBins = uma_malloc(hist.BBinCount * sizeof(float), 0);
             imlib_get_histogram(&hist, arg_img, &roi, &thresholds, invert, other);
             list_free(&thresholds);
             break;
@@ -3617,6 +3642,9 @@ static mp_obj_t py_image_get_histogram(size_t n_args, const mp_obj_t *args, mp_m
         ((mp_obj_list_t *) o->BBins)->items[i] = mp_obj_new_float(hist.BBins[i]);
     }
 
+    uma_free(hist.BBins);
+    uma_free(hist.ABins);
+    uma_free(hist.LBins);
 
     return o;
 }
@@ -3644,7 +3672,7 @@ static mp_obj_t py_image_get_statistics(size_t n_args, const mp_obj_t *args, mp_
             PY_ASSERT_TRUE_MSG(hist.LBinCount >= 2, "l_bins must be >= 2");
             hist.ABinCount = 0;
             hist.BBinCount = 0;
-            hist.LBins = fb_alloc(hist.LBinCount * sizeof(float), FB_ALLOC_NO_HINT);
+            hist.LBins = uma_malloc(hist.LBinCount * sizeof(float), 0);
             hist.ABins = NULL;
             hist.BBins = NULL;
             imlib_get_histogram(&hist, arg_img, &roi, &thresholds, invert, other);
@@ -3659,7 +3687,7 @@ static mp_obj_t py_image_get_statistics(size_t n_args, const mp_obj_t *args, mp_
             PY_ASSERT_TRUE_MSG(hist.LBinCount >= 2, "l_bins must be >= 2");
             hist.ABinCount = 0;
             hist.BBinCount = 0;
-            hist.LBins = fb_alloc(hist.LBinCount * sizeof(float), FB_ALLOC_NO_HINT);
+            hist.LBins = uma_malloc(hist.LBinCount * sizeof(float), 0);
             hist.ABins = NULL;
             hist.BBins = NULL;
             imlib_get_histogram(&hist, arg_img, &roi, &thresholds, invert, other);
@@ -3682,9 +3710,9 @@ static mp_obj_t py_image_get_statistics(size_t n_args, const mp_obj_t *args, mp_
             PY_ASSERT_TRUE_MSG(b_bins >= 2, "bins must be >= 2");
             hist.BBinCount = py_helper_keyword_int(n_args, args, n_args, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_b_bins), b_bins);
             PY_ASSERT_TRUE_MSG(hist.BBinCount >= 2, "b_bins must be >= 2");
-            hist.LBins = fb_alloc(hist.LBinCount * sizeof(float), FB_ALLOC_NO_HINT);
-            hist.ABins = fb_alloc(hist.ABinCount * sizeof(float), FB_ALLOC_NO_HINT);
-            hist.BBins = fb_alloc(hist.BBinCount * sizeof(float), FB_ALLOC_NO_HINT);
+            hist.LBins = uma_malloc(hist.LBinCount * sizeof(float), 0);
+            hist.ABins = uma_malloc(hist.ABinCount * sizeof(float), 0);
+            hist.BBins = uma_malloc(hist.BBinCount * sizeof(float), 0);
             imlib_get_histogram(&hist, arg_img, &roi, &thresholds, invert, other);
             list_free(&thresholds);
             break;
@@ -3725,6 +3753,10 @@ static mp_obj_t py_image_get_statistics(size_t n_args, const mp_obj_t *args, mp_
     o->BMax = mp_obj_new_int(stats.BMax);
     o->BLQ = mp_obj_new_int(stats.BLQ);
     o->BUQ = mp_obj_new_int(stats.BUQ);
+
+    uma_free(hist.BBins);
+    uma_free(hist.ABins);
+    uma_free(hist.LBins);
 
     return o;
 }
@@ -6979,7 +7011,7 @@ static mp_obj_t py_image_match_descriptor(size_t n_args, const mp_obj_t *args, m
         mp_obj_t match_list = mp_obj_new_list(0, NULL);
 
         if (array_length(kpts1->kpts) && array_length(kpts1->kpts)) {
-            int *match = fb_alloc(array_length(kpts1->kpts) * sizeof(int) * 2, FB_ALLOC_NO_HINT);
+            int *match = uma_malloc(array_length(kpts1->kpts) * sizeof(int) * 2, 0);
 
             // Match the two keypoint sets
             count = orb_match_keypoints(kpts1->kpts, kpts2->kpts, match, threshold, &r, &c, &theta);
@@ -6993,7 +7025,7 @@ static mp_obj_t py_image_match_descriptor(size_t n_args, const mp_obj_t *args, m
                 mp_obj_list_append(match_list, mp_obj_new_tuple(2, index_obj));
             }
 
-            // Free match list
+            uma_free(match);
 
             if (filter_outliers == true) {
                 count = orb_filter_keypoints(kpts2->kpts, &r, &c);

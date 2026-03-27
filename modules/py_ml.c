@@ -326,10 +326,9 @@ static void py_ml_model_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest) {
 }
 
 mp_obj_t py_ml_model_make_new(const mp_obj_type_t *type, size_t n_args, size_t n_kw, const mp_obj_t *all_args) {
-    enum { ARG_path, ARG_load_to_fb, ARG_postprocess };
+    enum { ARG_path, ARG_postprocess };
     static const mp_arg_t allowed_args[] = {
         { MP_QSTR_path, MP_ARG_REQUIRED | MP_ARG_OBJ },
-        { MP_QSTR_load_to_fb, MP_ARG_REQUIRED | MP_ARG_BOOL },
         { MP_QSTR_postprocess, MP_ARG_REQUIRED | MP_ARG_OBJ, {.u_rom_obj = MP_ROM_NONE} },
     };
 
@@ -353,7 +352,7 @@ mp_obj_t py_ml_model_make_new(const mp_obj_type_t *type, size_t n_args, size_t n
     if (mp_get_buffer(file, &bufinfo, MP_BUFFER_READ)) {
         model->size = bufinfo.len;
         model->data = bufinfo.buf;
-        model->fb_alloc = false;
+        model->managed = true;
     } else {
         int error;
         // Get file size
@@ -366,19 +365,18 @@ mp_obj_t py_ml_model_make_new(const mp_obj_type_t *type, size_t n_args, size_t n
         }
 
         model->size = res;
-        model->fb_alloc = args[ARG_load_to_fb].u_bool;
+        // Align size and memory and keep a reference to the GC block.
+        size_t size = OMV_ALIGN_TO(model->size, IMLIB_ML_MODEL_ALIGN);
+        // Try allocating model using GC memory (typically fast SRAM).
+        model->_raw = m_malloc_maybe(size + IMLIB_ML_MODEL_ALIGN - 1);
 
-        // Allocate model data buffer.
-        if (model->fb_alloc) {
-            // The model's data will Not be free'd on exceptions.
-            fb_alloc_mark();
-            model->data = fb_alloc(model->size, FB_ALLOC_PREFER_SPEED | FB_ALLOC_CACHE_ALIGN);
-            fb_alloc_mark_permanent();
-        } else {
-            // Align size and memory and keep a reference to the GC block.
-            size_t size = OMV_ALIGN_TO(model->size, IMLIB_ML_MODEL_ALIGN);
-            model->_raw = m_malloc(size + IMLIB_ML_MODEL_ALIGN - 1);
+        if (model->_raw) {
+            model->managed = true;
             model->data = (void *) OMV_ALIGN_TO(model->_raw, IMLIB_ML_MODEL_ALIGN);
+        } else {
+            // Try allocating model using UMA (raises on OOM).
+            model->managed = false;
+            model->data = uma_malloc(model->size, UMA_FAST | UMA_CACHE | UMA_PERSIST);
         }
 
         // Read file data.
@@ -399,8 +397,8 @@ mp_obj_t py_ml_model_make_new(const mp_obj_type_t *type, size_t n_args, size_t n
 
 static mp_obj_t py_ml_model_deinit(mp_obj_t self_in) {
     py_ml_model_obj_t *model = MP_OBJ_TO_PTR(self_in);
-    if (model->fb_alloc) {
-        fb_alloc_free_till_mark_past_mark_permanent();
+    if (!model->managed) {
+        uma_free(model->data);
     }
     return mp_const_none;
 }

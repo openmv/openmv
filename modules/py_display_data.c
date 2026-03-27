@@ -33,7 +33,7 @@
 #include "extmod/modmachine.h"
 
 #include "omv_gpio.h"
-#include "fb_alloc.h"
+#include "umalloc.h"
 #include "py_display.h"
 #include "cec.h"
 
@@ -152,42 +152,51 @@ static bool ddc_checksum(uint8_t *data, int long_count) {
 }
 
 static mp_obj_t py_ddc_display_id(mp_obj_t self_in) {
+    uint8_t *data1 = NULL;
+    uint8_t *data2 = NULL;
+    mp_obj_t result = mp_const_none;
     py_display_data_obj_t *self = MP_OBJ_TO_PTR(self_in);
 
     if (mp_machine_soft_i2c_transfer(self->ddc_bus, self->ddc_addr, 1, &((mp_machine_i2c_buf_t) {
         .len = 1, .buf = (uint8_t []) {0x00} // addr
     }), MP_MACHINE_I2C_FLAG_STOP) == 1) {
-        fb_alloc_mark();
-        uint8_t *data = fb_alloc(128, FB_ALLOC_NO_HINT);
+        data1 = uma_malloc(128, 0);
 
         if (mp_machine_soft_i2c_transfer(self->ddc_bus, self->ddc_addr, 1, &((mp_machine_i2c_buf_t) {
-            .len = 128, .buf = data
+            .len = 128, .buf = data1
         }), MP_MACHINE_I2C_FLAG_READ | MP_MACHINE_I2C_FLAG_STOP) == 0) {
-            uint32_t *data32 = (uint32_t *) data;
+            uint32_t *data32 = (uint32_t *) data1;
 
-            if ((data32[0] == 0xFFFFFF00) && (data32[1] == 0x00FFFFFF) && ddc_checksum(data, 32)
+            if ((data32[0] == 0xFFFFFF00) && (data32[1] == 0x00FFFFFF) && ddc_checksum(data1, 32)
                 && (mp_machine_soft_i2c_transfer(self->ddc_bus, self->ddc_addr, 1, &((mp_machine_i2c_buf_t) {
                 .len = 1, .buf = (uint8_t []) {0x80} // addr
             }), MP_MACHINE_I2C_FLAG_STOP) == 1)) {
-                int extensions = data[126];
+                int extensions = data1[126];
                 int extensions_byte_size = extensions * 128;
                 int total_data_byte_size = extensions_byte_size + 128;
-                uint8_t *data2 = fb_alloc(total_data_byte_size, FB_ALLOC_NO_HINT), *data2_ext = data2 + 128;
-                memcpy(data2, data, 128);
+
+                data2 = uma_malloc(total_data_byte_size, 0);
+                uint8_t *data2_ext = data2 + 128;
+
+                memcpy(data2, data1, 128);
 
                 if ((mp_machine_soft_i2c_transfer(self->ddc_bus, self->ddc_addr, 1, &((mp_machine_i2c_buf_t) {
                     .len = extensions_byte_size, .buf = data2_ext
                 }), MP_MACHINE_I2C_FLAG_READ | MP_MACHINE_I2C_FLAG_STOP) == 0)
                     && ddc_checksum(data2_ext, extensions_byte_size / 4)) {
-                    mp_obj_t result = mp_obj_new_bytes(data2, total_data_byte_size);
-                    fb_alloc_free_till_mark();
-                    return result;
+                    result = mp_obj_new_bytes(data2, total_data_byte_size);
                 }
             }
         }
     }
 
-    mp_raise_msg(&mp_type_OSError, MP_ERROR_TEXT("Failed to get display id data!"));
+    uma_free(data1);
+    uma_free(data2);
+
+    if (result == mp_const_none) {
+        mp_raise_msg(&mp_type_OSError, MP_ERROR_TEXT("Failed to get display id data!"));
+    }
+    return result;
 }
 static MP_DEFINE_CONST_FUN_OBJ_1(py_ddc_display_id_obj, py_ddc_display_id);
 #endif // OMV_DISPLAY_DDC_ENABLE

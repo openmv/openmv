@@ -33,7 +33,6 @@
 #include "extmod/modmachine.h"
 
 #include "omv_gpio.h"
-#include "fb_alloc.h"
 #include "cec.h"
 
 #define TFP410_I2C_ADDR    0x3F

@@ -40,7 +40,7 @@ typedef struct py_ml_model_obj {
     unsigned char *data;
     size_t memory_size;
     uint32_t memory_addr;
-    bool fb_alloc;
+    bool managed;
     size_t inputs_size;
     mp_obj_tuple_t *input_shape;
     mp_obj_tuple_t *input_scale;
