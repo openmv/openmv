@@ -267,7 +267,7 @@ static inline bool omv_protocol_is_sync(const omv_protocol_packet_t *packet) {
 // Check if packet is a valid ACK for expected opcode/sequence
 static inline bool omv_protocol_is_ack(const omv_protocol_packet_t *packet, uint8_t opcode, uint8_t sequence) {
     return packet->sync == OMV_PROTOCOL_SYNC_WORD &&
-           (packet->flags & (OMV_PROTOCOL_FLAG_ACK | OMV_PROTOCOL_FLAG_ACK)) &&
+           (packet->flags & (OMV_PROTOCOL_FLAG_ACK | OMV_PROTOCOL_FLAG_NAK)) &&
            packet->opcode == opcode && packet->sequence == sequence &&
            omv_protocol_crc_check(OMV_CRC16, (void *) packet, OMV_PROTOCOL_HEADER_SIZE);
 }
@@ -838,7 +838,10 @@ void omv_protocol_process(const omv_protocol_packet_t *packet) {
                     omv_protocol_send_packet(packet->opcode, packet->channel, request->length, data, 0);
                 }
             } else {
-                // NOTE: We can't use the packet pointer or its payload after calling send_packet.
+                // NOTE: We can't reuse the packet pointer or its payload after calling send_packet,
+                // because the ring buffer that backs the packet will have been consumed.
+                uint8_t opcode = packet->opcode;
+                uint8_t channel_id = packet->channel;
                 uint32_t length = request->length;
                 uint32_t offset = request->offset;
                 uint8_t buffer[OMV_MIN(512, ctx.config.max_payload)];
@@ -848,14 +851,14 @@ void omv_protocol_process(const omv_protocol_packet_t *packet) {
                     int32_t size_rd = channel->read(channel, offset, size_rq, buffer);
 
                     if (size_rd <= 0) {
-                        omv_protocol_send_status(packet->opcode, packet->channel, OMV_PROTOCOL_STATUS_FAILED);
+                        omv_protocol_send_status(opcode, channel_id, OMV_PROTOCOL_STATUS_FAILED);
                         break;
                     }
 
                     length -= size_rd;
                     offset += size_rd;
                     uint8_t flags = (length == 0) ? 0 : OMV_PROTOCOL_FLAG_FRAGMENT;
-                    omv_protocol_send_packet(packet->opcode, packet->channel, size_rd, buffer, flags);
+                    omv_protocol_send_packet(opcode, channel_id, size_rd, buffer, flags);
                 }
             }
             break;
