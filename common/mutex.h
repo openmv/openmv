@@ -44,6 +44,7 @@ typedef volatile struct {
 } mutex_t;
 
 void mutex_init0(mutex_t *mutex);
+size_t mutex_get_tid(mutex_t *mutex);
 void mutex_lock(mutex_t *mutex, size_t tid);
 bool mutex_try_lock(mutex_t *mutex, size_t tid);
 // Prevents a thread from locking twice in a row.
