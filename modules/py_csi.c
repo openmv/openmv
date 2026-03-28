@@ -713,7 +713,7 @@ static mp_obj_t py_omv_csi_set_framebuffers(mp_obj_t count) {
         omv_csi_raise_error(OMV_CSI_ERROR_INVALID_ARGUMENT);
     }
 
-    int error = omv_csi_set_framebuffers(csi, c, false);
+    int error = omv_csi_set_framebuffers(csi, c);
     if (error != 0) {
         omv_csi_raise_error(error);
     }

@@ -65,10 +65,10 @@ typedef enum {
 // - fb_alloc memory: Only for statically allocated frame buffers.
 //
 //              Dynamic Frame Buffer Memory Layout
-// raw_base      pool_start               pool_end        raw_end
-// ▼             ▼                        ▼                     ▼
+// raw_base  pool_start                   pool_end        raw_end
+// ▼         ▼                            ▼                     ▼
 // ┌────────────────────────────────────────────────────────────┐
-// │ Queues¹ |    Frame Buffers Memory    |  Unused FB Memory²  │
+// │ Queues¹ |    Frame Buffers Memory    |  Unused FB Memory   │
 // └────────────────────────────────────────────────────────────┘
 //
 // For static frame buffers, fb_alloc uses a fixed end region and
@@ -78,13 +78,10 @@ typedef enum {
 // fb_start  pool_start  pool_end   fb_alloc_sp      fb_alloc_end
 // ▼         ▼           ▼          ▼                           ▼
 // ┌────────────────────────────────────────────────────────────┐
-// │ Queues¹ |  Buffers  | Unused FB Memory² |  Fixed FB Alloc  │
+// │ Queues¹ |  Buffers  | Unused FB Memory  |  Fixed FB Alloc  │
 // └────────────────────────────────────────────────────────────┘
 // ¹ Queues use frame buffer memory only if count > 3, otherwise
 //   they're statically allocated to keep small buffers in SRAM.
-//
-// ² Unused frame buffer space can be used to expand buffers up
-//   to the maximum available size (raw size minus queue size).
 typedef struct framebuffer {
     int32_t x, y;           // Framebuffer offset
     int32_t w, h;           // Framebuffer dimensions
@@ -93,7 +90,6 @@ typedef struct framebuffer {
     int16_t raw_h;          // Raw streaming height
     PIXFORMAT_STRUCT;       // Pixel format struct.
     uint8_t dynamic;        // Dynamically allocated or not.
-    uint8_t expanded;       // True if buffers were expanded.
     uint8_t enabled;        // Enable/disable framebuffer
     uint8_t quality;        // JPEG compression quality (1-100)
     uint8_t raw_enabled;    // Enable raw streaming
@@ -163,9 +159,7 @@ char *framebuffer_pool_end(framebuffer_t *fb);
 void framebuffer_flush(framebuffer_t *fb);
 
 // Change the number of buffers in the frame buffer.
-// If expand is true, the buffer size will expand to use all of the
-// available memory, otherwise it will equal the current frame size.
-int framebuffer_resize(framebuffer_t *fb, size_t count, size_t frame_size, bool expand);
+int framebuffer_resize(framebuffer_t *fb, size_t count, size_t frame_size);
 
 // Return true if free queue is not empty.
 bool framebuffer_writable(framebuffer_t *fb);

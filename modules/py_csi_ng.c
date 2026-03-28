@@ -767,7 +767,6 @@ static MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(py_csi_auto_rotation_obj, 1, 2, py_cs
 static mp_obj_t py_csi_framebuffers(size_t n_args, const mp_obj_t *args) {
     py_csi_obj_t *self = MP_OBJ_TO_PTR(args[0]);
     framebuffer_t *fb = self->csi->fb;
-    bool expand = false;
 
     if (n_args == 1) {
         return mp_obj_new_int(fb->buf_count);
@@ -775,18 +774,13 @@ static mp_obj_t py_csi_framebuffers(size_t n_args, const mp_obj_t *args) {
 
     mp_int_t num = mp_obj_get_int(args[1]);
 
-    if (n_args == 3) {
-        expand = mp_obj_is_true(args[2]);
-    }
-
     if (num < 1) {
         omv_csi_raise_error(OMV_CSI_ERROR_INVALID_ARGUMENT);
     }
 
-    // Reconfigure the FB only if changing the number
-    // of buffers or reconfiguring the memory expansion.
-    if (fb->expanded != expand || num != fb->buf_count) {
-        int error = omv_csi_set_framebuffers(self->csi, num, expand);
+    // Reconfigure the FB only if changing the number of buffers.
+    if (num != fb->buf_count) {
+        int error = omv_csi_set_framebuffers(self->csi, num);
         if (error != 0) {
             omv_csi_raise_error(error);
         }
@@ -794,7 +788,7 @@ static mp_obj_t py_csi_framebuffers(size_t n_args, const mp_obj_t *args) {
 
     return mp_const_none;
 }
-static MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(py_csi_framebuffers_obj, 1, 3, py_csi_framebuffers);
+static MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(py_csi_framebuffers_obj, 1, 2, py_csi_framebuffers);
 
 static mp_obj_t py_csi_special_effect(mp_obj_t self_in, mp_obj_t sde) {
     py_csi_obj_t *self = MP_OBJ_TO_PTR(self_in);
@@ -1405,7 +1399,6 @@ static void py_csi_print(const mp_print_t *print, mp_obj_t self_in, mp_print_kin
     mp_printf(print, "  Clock Frequency     : %luMHz\n", csi->clk_hz / 1000000);
     mp_printf(print, "  Framebuffer {\n");
     mp_printf(print, "    Dynamic           : %s\n", csi->fb->dynamic ? "true" : "false");
-    mp_printf(print, "    Expanded          : %s\n", csi->fb->expanded ? "true" : "false");
     mp_printf(print, "    Raw Buffer Size   : %u\n", (unsigned) csi->fb->raw_size);
     mp_printf(print, "    Raw Buffer Addr   : 0x%p\n", csi->fb->raw_base);
     mp_printf(print, "    Vbuffer Size      : %u\n", (unsigned) csi->fb->buf_size);
