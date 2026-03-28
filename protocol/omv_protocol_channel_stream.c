@@ -47,9 +47,9 @@ static int stream_channel_lock(const omv_protocol_channel_t *channel) {
 
 static int stream_channel_unlock(const omv_protocol_channel_t *channel) {
     framebuffer_t *fb = framebuffer_get(FB_STREAM_ID);
-    if (mutex_unlock(&fb->lock, MUTEX_TID_IDE)) {
-        // Reset header even if we don't hold the lock
+    if (mutex_get_tid(&fb->lock) == MUTEX_TID_IDE) {
         memset(fb->raw_base, 0, sizeof(framebuffer_header_t));
+        mutex_unlock(&fb->lock, MUTEX_TID_IDE);
     }
     return 0;
 }
