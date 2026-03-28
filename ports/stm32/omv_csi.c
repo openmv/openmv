@@ -765,9 +765,13 @@ static int stm_csi_snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
 
     #if USE_DCMIPP
     if (csi->raw_output) {
-        float luminance = stm_isp_update_awb(csi, DCMIPP_PIPE, fb->u * fb->v);
+        float raw_lum = 0;
+        float luminance = stm_isp_update_awb(csi, DCMIPP_PIPE, fb->u * fb->v, &raw_lum);
         if (csi->ioctl) {
-            omv_csi_ioctl(csi, OMV_CSI_IOCTL_UPDATE_AGC_AEC, fast_floorf(luminance));
+            // Pass raw (un-smoothed) luminance for AEC; fall back to
+            // smoothed if stats are disabled (raw_lum would be 0).
+            float aec_lum = (raw_lum > 0) ? raw_lum : luminance;
+            omv_csi_ioctl(csi, OMV_CSI_IOCTL_UPDATE_AGC_AEC, fast_floorf(aec_lum));
         }
 
     }
