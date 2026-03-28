@@ -76,6 +76,7 @@
 
 // OpenMV protocol configuration.
 #define OMV_PROTOCOL_MAX_BUFFER_SIZE          (512)
+#define OMV_PROTOCOL_STDIO_BUFFER_SIZE        (512)
 #define OMV_PROTOCOL_HW_CAPS                  OMV_PROTOCOL_HW_CAPS_MAKE(HAS_JPEG, HAS_CRC, HAS_SD)
 
 //PLL1 480MHz/48MHz for USB, SDMMC and FDCAN

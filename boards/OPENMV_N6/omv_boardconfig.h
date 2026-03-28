@@ -64,6 +64,7 @@
 
 // OpenMV protocol configuration.
 #define OMV_PROTOCOL_MAX_BUFFER_SIZE        (8192)
+#define OMV_PROTOCOL_STDIO_BUFFER_SIZE      (2048)
 #define OMV_PROTOCOL_HW_CAPS                OMV_PROTOCOL_HW_CAPS_MAKE( \
         HAS_GPU, HAS_NPU, HAS_ISP, HAS_VENC, HAS_JPEG, HAS_DRAM,       \
         HAS_CRC, HAS_PMU, HAS_WIFI, HAS_BT, HAS_SD, HAS_ETH, HAS_USB_HS)
