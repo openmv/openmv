@@ -44,7 +44,7 @@ int burn_firmware(const char *path)
     int ret = M2M_ERR_FAIL;
     uint8_t	*buf = fb_alloc(FLASH_SECTOR_SZ, FB_ALLOC_NO_HINT);
 
-    file_open(&fp, path, false, FA_READ | FA_OPEN_EXISTING);
+    file_open(&fp, path, FA_READ | FA_OPEN_EXISTING);
 
     // Firmware image size
     uint32_t size = file_size(&fp);
@@ -86,7 +86,7 @@ int verify_firmware(const char *path)
     uint8_t	*file_buf = fb_alloc(FLASH_SECTOR_SZ, FB_ALLOC_NO_HINT);
     uint8_t	*flash_buf = fb_alloc(FLASH_SECTOR_SZ, FB_ALLOC_NO_HINT);
 
-    file_open(&fp, path, false, FA_READ | FA_OPEN_EXISTING);
+    file_open(&fp, path, FA_READ | FA_OPEN_EXISTING);
 
     // Firmware image size
     uint32_t size = file_size(&fp);
@@ -135,7 +135,7 @@ int dump_firmware(const char *path)
     int ret = M2M_ERR_FAIL;
     uint8_t	*flash_buf = fb_alloc(FLASH_SECTOR_SZ, FB_ALLOC_NO_HINT);
 
-    file_open(&fp, path, false, FA_WRITE | FA_CREATE_ALWAYS);
+    file_open(&fp, path, FA_WRITE | FA_CREATE_ALWAYS);
 
     // Firmware image size
     uint32_t size = FLASH_4M_TOTAL_SZ;
