@@ -95,7 +95,7 @@ OMV_GC_BLOCK_NEW(4)
 } > FLASH_TEXT
 #endif
 
-/* Heap memfor libc malloc/sbrk */
+/* Heap memory for libc malloc/sbrk */
 #if defined(OMV_HEAP_MEMORY)
 .heap (NOLOAD) : ALIGN(4)
 {
@@ -105,6 +105,10 @@ OMV_GC_BLOCK_NEW(4)
   . = ALIGN(4);
   _heap_limit = .;
 } > OMV_HEAP_MEMORY
+#else
+/* No dedicated heap region; provide zero-size fallback so _sbrk links. */
+PROVIDE(__end__ = .);
+PROVIDE(_heap_limit = .);
 #endif
 
 /* Stack memory */
