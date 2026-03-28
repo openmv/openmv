@@ -352,7 +352,7 @@ static mp_obj_t test_framebuffer_resize(void) {
     size_t orig_buf_size = fb->buf_size;
 
     // Resize to 1 buffer with small frame size
-    int result = framebuffer_resize(fb, 1, 1024, false);
+    int result = framebuffer_resize(fb, 1, 1024);
     if (result != 0) {
         return mp_const_false;
     }
@@ -360,7 +360,7 @@ static mp_obj_t test_framebuffer_resize(void) {
     // Verify resize worked
     if (fb->buf_count != 1) {
         // Try to restore
-        framebuffer_resize(fb, orig_buf_count, orig_buf_size, false);
+        framebuffer_resize(fb, orig_buf_count, orig_buf_size);
         return mp_const_false;
     }
 
@@ -368,19 +368,19 @@ static mp_obj_t test_framebuffer_resize(void) {
     // After resize and flush, free queue should have buffer, used should be empty
     // Should be writable (free queue has buffer) but not readable (used queue empty)
     if (!framebuffer_writable(fb)) {
-        framebuffer_resize(fb, orig_buf_count, orig_buf_size, false);
+        framebuffer_resize(fb, orig_buf_count, orig_buf_size);
         return mp_const_false;
     }
 
     // Acquire a buffer from free queue
     vbuffer_t *buffer = framebuffer_acquire(fb, FB_FLAG_FREE | FB_FLAG_PEEK);
     if (buffer == NULL) {
-        framebuffer_resize(fb, orig_buf_count, orig_buf_size, false);
+        framebuffer_resize(fb, orig_buf_count, orig_buf_size);
         return mp_const_false;
     }
 
     // Restore original configuration
-    framebuffer_resize(fb, orig_buf_count, orig_buf_size, false);
+    framebuffer_resize(fb, orig_buf_count, orig_buf_size);
 
     return mp_const_true;
 }
@@ -397,7 +397,7 @@ static mp_obj_t test_framebuffer_flush(void) {
     size_t orig_buf_count = fb->buf_count;
     size_t orig_buf_size = fb->buf_size;
 
-    int result = framebuffer_resize(fb, 2, 1024, false);
+    int result = framebuffer_resize(fb, 2, 1024);
     if (result != 0) {
         return mp_const_false;
     }
@@ -407,24 +407,24 @@ static mp_obj_t test_framebuffer_flush(void) {
 
     // After flush, pixfmt should be invalid
     if (fb->pixfmt != PIXFORMAT_INVALID) {
-        framebuffer_resize(fb, orig_buf_count, orig_buf_size, false);
+        framebuffer_resize(fb, orig_buf_count, orig_buf_size);
         return mp_const_false;
     }
 
     // Free queue should have all buffers
     if (!framebuffer_writable(fb)) {
-        framebuffer_resize(fb, orig_buf_count, orig_buf_size, false);
+        framebuffer_resize(fb, orig_buf_count, orig_buf_size);
         return mp_const_false;
     }
 
     // Used queue should be empty
     if (framebuffer_readable(fb)) {
-        framebuffer_resize(fb, orig_buf_count, orig_buf_size, false);
+        framebuffer_resize(fb, orig_buf_count, orig_buf_size);
         return mp_const_false;
     }
 
     // Restore
-    framebuffer_resize(fb, orig_buf_count, orig_buf_size, false);
+    framebuffer_resize(fb, orig_buf_count, orig_buf_size);
 
     return mp_const_true;
 }
@@ -441,40 +441,40 @@ static mp_obj_t test_framebuffer_acquire_release(void) {
     size_t orig_buf_count = fb->buf_count;
     size_t orig_buf_size = fb->buf_size;
 
-    int result = framebuffer_resize(fb, 2, 1024, false);
+    int result = framebuffer_resize(fb, 2, 1024);
     if (result != 0) {
         return mp_const_false;
     }
 
     // Initially: free queue has 2 buffers, used queue is empty
     if (!framebuffer_writable(fb) || framebuffer_readable(fb)) {
-        framebuffer_resize(fb, orig_buf_count, orig_buf_size, false);
+        framebuffer_resize(fb, orig_buf_count, orig_buf_size);
         return mp_const_false;
     }
 
     // Acquire from free queue (peek - keeps in queue)
     vbuffer_t *buf1 = framebuffer_acquire(fb, FB_FLAG_FREE | FB_FLAG_PEEK);
     if (buf1 == NULL) {
-        framebuffer_resize(fb, orig_buf_count, orig_buf_size, false);
+        framebuffer_resize(fb, orig_buf_count, orig_buf_size);
         return mp_const_false;
     }
 
     // Release to used queue (moves from free to used)
     vbuffer_t *released = framebuffer_release(fb, FB_FLAG_FREE);
     if (released == NULL) {
-        framebuffer_resize(fb, orig_buf_count, orig_buf_size, false);
+        framebuffer_resize(fb, orig_buf_count, orig_buf_size);
         return mp_const_false;
     }
 
     // Now used queue should have 1 buffer
     if (!framebuffer_readable(fb)) {
-        framebuffer_resize(fb, orig_buf_count, orig_buf_size, false);
+        framebuffer_resize(fb, orig_buf_count, orig_buf_size);
         return mp_const_false;
     }
 
     // Restore
     framebuffer_flush(fb);
-    framebuffer_resize(fb, orig_buf_count, orig_buf_size, false);
+    framebuffer_resize(fb, orig_buf_count, orig_buf_size);
 
     return mp_const_true;
 }

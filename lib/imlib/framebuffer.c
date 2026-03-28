@@ -161,8 +161,7 @@ void framebuffer_flush(framebuffer_t *fb) {
     }
 }
 
-int framebuffer_resize(framebuffer_t *fb, size_t count, size_t frame_size, bool expand) {
-    size_t buf_size = 0;
+int framebuffer_resize(framebuffer_t *fb, size_t count, size_t frame_size) {
     // Queue size given the requested buffer count.
     size_t queue_size = queue_calc_size(count);
 
@@ -173,19 +172,8 @@ int framebuffer_resize(framebuffer_t *fb, size_t count, size_t frame_size, bool 
     // Use the frame buffer memory for big queues.
     char *queue_memory = (count > 3) ? fb->raw_base : fb->raw_static;
 
-    // Calculate a single buffer size (including vbuffer header).
-    if (!expand) {
-        // No expansion: buffer size equals frame size plus header.
-        buf_size = OMV_ALIGN_TO(min_size, FRAMEBUFFER_ALIGNMENT);
-    } else if (fb->dynamic) {
-        // Expanding a dynamic FB: divide the raw buffer size evenly.
-        buf_size = OMV_ALIGN_DOWN(max_size / count, FRAMEBUFFER_ALIGNMENT);
-    } else {
-        // Expanding a static FB: calculate the free FB memory size.
-        size_t fb_size = fb_alloc_sp() - framebuffer_pool_start(fb, count);
-        max_size = IM_MIN(max_size, fb_size);
-        buf_size = OMV_ALIGN_DOWN(max_size / count, FRAMEBUFFER_ALIGNMENT);
-    }
+    // Buffer size equals frame size plus header.
+    size_t buf_size = OMV_ALIGN_TO(min_size, FRAMEBUFFER_ALIGNMENT);
 
     // Ensure that the buffer size is reasonable.
     if (buf_size < min_size || buf_size * count > max_size) {
@@ -193,7 +181,6 @@ int framebuffer_resize(framebuffer_t *fb, size_t count, size_t frame_size, bool 
     }
 
     // Initialize the frame buffer.
-    fb->expanded = expand;
     fb->buf_count = count;
     fb->buf_size = buf_size - sizeof(vbuffer_t);
 
