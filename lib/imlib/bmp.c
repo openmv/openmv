@@ -266,7 +266,7 @@ void bmp_read_pixels(file_t *fp, image_t *img, int n_lines, bmp_read_settings_t 
 void bmp_read(image_t *img, const char *path) {
     file_t fp;
     bmp_read_settings_t rs;
-    file_open(&fp, path, true, FA_READ | FA_OPEN_EXISTING);
+    file_open(&fp, path, FA_READ | FA_OPEN_EXISTING);
     bmp_read_geometry(&fp, img, path, &rs);
     if (!img->pixels) {
         image_alloc(img, img->w * img->h * img->bpp);
@@ -300,7 +300,7 @@ void bmp_write_subimg(image_t *img, const char *path, rectangle_t *r) {
     }
 
     file_t fp;
-    file_open(&fp, path, true, FA_WRITE | FA_CREATE_ALWAYS);
+    file_open(&fp, path, FA_WRITE | FA_CREATE_ALWAYS);
 
     if (IM_IS_GS(img)) {
         const int row_bytes = (((rect.w * 8) + 31) / 32) * 4;

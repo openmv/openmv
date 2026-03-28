@@ -1362,8 +1362,7 @@ void jpeg_read(image_t *img, const char *path) {
     file_t fp;
     jpg_read_settings_t rs;
 
-    // Do not use file buffering here.
-    file_open(&fp, path, false, FA_READ | FA_OPEN_EXISTING);
+    file_open(&fp, path, FA_READ | FA_OPEN_EXISTING);
     jpeg_read_geometry(&fp, img, path, &rs);
 
     if (!img->pixels) {
@@ -1376,7 +1375,7 @@ void jpeg_read(image_t *img, const char *path) {
 
 void jpeg_write(image_t *img, const char *path, int quality) {
     file_t fp;
-    file_open(&fp, path, false, FA_WRITE | FA_CREATE_ALWAYS);
+    file_open(&fp, path, FA_WRITE | FA_CREATE_ALWAYS);
     if (IM_IS_JPEG(img)) {
         file_write(&fp, img->pixels, img->size);
     } else {

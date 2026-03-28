@@ -137,7 +137,7 @@ void ppm_read(image_t *img, const char *path) {
     file_t fp;
     ppm_read_settings_t rs;
 
-    file_open(&fp, path, true, FA_READ | FA_OPEN_EXISTING);
+    file_open(&fp, path, FA_READ | FA_OPEN_EXISTING);
     ppm_read_geometry(&fp, img, path, &rs);
 
     if (!img->pixels) {
@@ -154,7 +154,7 @@ void ppm_write_subimg(image_t *img, const char *path, rectangle_t *r) {
     }
 
     file_t fp;
-    file_open(&fp, path, true, FA_WRITE | FA_CREATE_ALWAYS);
+    file_open(&fp, path, FA_WRITE | FA_CREATE_ALWAYS);
 
     if (IM_IS_GS(img)) {
         char buffer[20]; // exactly big enough for 5-digit w/h

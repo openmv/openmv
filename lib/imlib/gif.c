@@ -31,8 +31,6 @@
 #define BLOCK_SIZE    (126) // (2^7) - 2 // (DO NOT CHANGE!)
 
 void gif_open(file_t *fp, int width, int height, bool color, bool loop) {
-    file_buffer_on(fp);
-
     file_write(fp, "GIF89a", 6);
     file_write(fp, (uint16_t []) {width, height}, 4);
     file_write(fp, (uint8_t []) {0xF6, 0x00, 0x00}, 3);
@@ -57,12 +55,9 @@ void gif_open(file_t *fp, int width, int height, bool color, bool loop) {
         file_write(fp, (uint8_t []) {0x03, 0x01, 0x00, 0x00, 0x00}, 5);
     }
 
-    file_buffer_off(fp);
 }
 
 void gif_add_frame(file_t *fp, image_t *img, uint16_t delay) {
-    file_buffer_on(fp);
-
     if (delay) {
         file_write(fp, (uint8_t []) {'!', 0xF9, 0x04, 0x04}, 4);
         file_write_short(fp, delay);
@@ -121,8 +116,6 @@ void gif_add_frame(file_t *fp, image_t *img, uint16_t delay) {
     }
 
     file_write(fp, (uint8_t []) {0x01, 0x81, 0x00}, 3); // end code
-
-    file_buffer_off(fp);
 }
 
 void gif_close(file_t *fp) {
