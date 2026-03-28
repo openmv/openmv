@@ -1188,6 +1188,15 @@ static mp_obj_t py_image_to(pixformat_t pixfmt, mp_rom_obj_t default_color_palet
         framebuffer_t *fb = framebuffer_get(FB_MAINFB_ID);
         bool is_fb = py_helper_is_equal_to_framebuffer(src_img);
         size_t buf_size = is_fb ? framebuffer_get_buffer_size(fb) : image_size(src_img);
+        if (is_fb && size > buf_size) {
+            // Resize the framebuffer to fit the scaled image.
+            for (size_t i = fb->buf_count; i > 0; i--) {
+                if (!framebuffer_resize(fb, i, size)) {
+                    break;
+                }
+            }
+            buf_size = framebuffer_get_buffer_size(fb);
+        }
         PY_ASSERT_TRUE_MSG((size <= buf_size), "The image doesn't fit in the frame buffer!");
         dst_img.data = src_img->data;
     }
