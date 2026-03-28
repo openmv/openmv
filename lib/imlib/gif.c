@@ -35,19 +35,22 @@ void gif_open(file_t *fp, int width, int height, bool color, bool loop) {
     file_write(fp, (uint16_t []) {width, height}, 4);
     file_write(fp, (uint8_t []) {0xF6, 0x00, 0x00}, 3);
 
+    uint8_t palette[128 * 3];
     if (color) {
         for (int i = 0; i < 128; i++) {
-            int red = ((((i & 0x60) >> 5) * 255) + 1.5) / 3;
-            int green = ((((i & 0x1C) >> 2) * 255) + 3.5) / 7;
-            int blue = (((i & 0x3) * 255) + 1.5) / 3;
-            file_write(fp, (uint8_t []) {red, green, blue}, 3);
+            palette[i * 3 + 0] = ((((i & 0x60) >> 5) * 255) + 1.5) / 3;
+            palette[i * 3 + 1] = ((((i & 0x1C) >> 2) * 255) + 3.5) / 7;
+            palette[i * 3 + 2] = (((i & 0x3) * 255) + 1.5) / 3;
         }
     } else {
         for (int i = 0; i < 128; i++) {
             int gray = ((i * 255) + 63.5) / 127;
-            file_write(fp, (uint8_t []) {gray, gray, gray}, 3);
+            palette[i * 3 + 0] = gray;
+            palette[i * 3 + 1] = gray;
+            palette[i * 3 + 2] = gray;
         }
     }
+    file_write(fp, palette, sizeof(palette));
 
     if (loop) {
         file_write(fp, (uint8_t []) {'!', 0xFF, 0x0B}, 3);
@@ -72,33 +75,38 @@ void gif_add_frame(file_t *fp, image_t *img, uint16_t delay) {
     int bytes = img->h * img->w;
     int blocks = (bytes + BLOCK_SIZE - 1) / BLOCK_SIZE;
 
+    // 2 bytes header (length + clear code) + up to BLOCK_SIZE data bytes
+    uint8_t blk_buf[2 + BLOCK_SIZE];
+
     if (IM_IS_GS(img)) {
         for (int y = 0; y < blocks; y++) {
             int block_size = IM_MIN(BLOCK_SIZE, bytes - (y * BLOCK_SIZE));
-            file_write_byte(fp, 1 + block_size);
-            file_write_byte(fp, 0x80); // clear code
+            blk_buf[0] = 1 + block_size;
+            blk_buf[1] = 0x80; // clear code
             for (int x = 0; x < block_size; x++) {
-                file_write_byte(fp, img->pixels[(y * BLOCK_SIZE) + x] >> 1);
+                blk_buf[2 + x] = img->pixels[(y * BLOCK_SIZE) + x] >> 1;
             }
+            file_write(fp, blk_buf, 2 + block_size);
         }
     } else if (IM_IS_RGB565(img)) {
         for (int y = 0; y < blocks; y++) {
             int block_size = IM_MIN(BLOCK_SIZE, bytes - (y * BLOCK_SIZE));
-            file_write_byte(fp, 1 + block_size);
-            file_write_byte(fp, 0x80); // clear code
+            blk_buf[0] = 1 + block_size;
+            blk_buf[1] = 0x80; // clear code
             for (int x = 0; x < block_size; x++) {
                 uint16_t pixel = ((uint16_t *) img->pixels)[(y * BLOCK_SIZE) + x];
                 uint16_t r = COLOR_RGB565_TO_R5(pixel) >> 3;
                 uint16_t g = COLOR_RGB565_TO_G6(pixel) >> 3;
                 uint16_t b = COLOR_RGB565_TO_B5(pixel) >> 3;
-                file_write_byte(fp, (r << 5) | (g << 2) | b);
+                blk_buf[2 + x] = (r << 5) | (g << 2) | b;
             }
+            file_write(fp, blk_buf, 2 + block_size);
         }
     } else if (img->is_bayer || img->is_yuv) {
         for (int y = 0; y < blocks; y++) {
             int block_size = IM_MIN(BLOCK_SIZE, bytes - (y * BLOCK_SIZE));
-            file_write_byte(fp, 1 + block_size);
-            file_write_byte(fp, 0x80); // clear code
+            blk_buf[0] = 1 + block_size;
+            blk_buf[1] = 0x80; // clear code
             uint16_t pixels[block_size];
             if (img->is_bayer) {
                 imlib_debayer_line(0, block_size, y, pixels, PIXFORMAT_RGB565, img);
@@ -110,8 +118,9 @@ void gif_add_frame(file_t *fp, image_t *img, uint16_t delay) {
                 uint16_t r = COLOR_RGB565_TO_R5(pixel) >> 3;
                 uint16_t g = COLOR_RGB565_TO_G6(pixel) >> 3;
                 uint16_t b = COLOR_RGB565_TO_B5(pixel) >> 3;
-                file_write_byte(fp, (r << 5) | (g << 2) | b);
+                blk_buf[2 + x] = (r << 5) | (g << 2) | b;
             }
+            file_write(fp, blk_buf, 2 + block_size);
         }
     }
 
