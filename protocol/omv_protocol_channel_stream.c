@@ -40,16 +40,9 @@ static bool stream_channel_poll(const omv_protocol_channel_t *channel) {
 
 static int stream_channel_lock(const omv_protocol_channel_t *channel) {
     framebuffer_t *fb = framebuffer_get(FB_STREAM_ID);
-    if (!mutex_try_lock(&fb->lock, MUTEX_TID_IDE)) {
-        return -1;
-    }
-    // Size can be checked safetly after acquiring the lock.
     size_t size = channel->size(channel);
-    if (!size) {
-        mutex_unlock(&fb->lock, MUTEX_TID_IDE);
-        return -1;
-    }
-    return 0;
+    // Attempt locking only if the stream is ready.
+    return size && mutex_try_lock(&fb->lock, MUTEX_TID_IDE) ? 0 : -1;
 }
 
 static int stream_channel_unlock(const omv_protocol_channel_t *channel) {
