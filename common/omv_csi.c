@@ -176,9 +176,6 @@ __weak int omv_csi_init() {
     #if defined(OMV_CSI_RESET_PIN)
     omv_gpio_config(OMV_CSI_RESET_PIN, OMV_GPIO_MODE_OUTPUT, OMV_GPIO_PULL_NONE, OMV_GPIO_SPEED_LOW, -1);
     #endif
-    #if defined(OMV_CSI_FSYNC_PIN)
-    omv_gpio_config(OMV_CSI_FSYNC_PIN, OMV_GPIO_MODE_OUTPUT, OMV_GPIO_PULL_NONE, OMV_GPIO_SPEED_LOW, -1);
-    #endif
     #if defined(OMV_CSI_POWER_PIN)
     omv_gpio_config(OMV_CSI_POWER_PIN, OMV_GPIO_MODE_OUTPUT, OMV_GPIO_PULL_NONE, OMV_GPIO_SPEED_LOW, -1);
     #endif
@@ -272,11 +269,9 @@ __weak int omv_csi_abort(omv_csi_t *csi, bool fifo_flush, bool in_irq) {
         framebuffer_flush(csi->fb);
     }
 
-    #if defined(OMV_CSI_FSYNC_PIN)
-    if (csi->frame_sync) {
-        omv_gpio_write(OMV_CSI_FSYNC_PIN, 0);
+    if (csi->fsync_pin) {
+        omv_gpio_write(csi->fsync_pin, 0);
     }
-    #endif
 
     return 0;
 }
@@ -1648,21 +1643,17 @@ __weak int omv_csi_snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
     }
 
     // Toggle FSYNC.
-    #if defined(OMV_CSI_FSYNC_PIN)
-    if (csi->frame_sync) {
-        omv_gpio_write(OMV_CSI_FSYNC_PIN, 1);
+    if (csi->fsync_pin) {
+        omv_gpio_write(csi->fsync_pin, 1);
     }
-    #endif
 
     // Call the sensor specific function.
     int ret = csi->snapshot(csi, image, flags);
 
     // Toggle FSYNC.
-    #if defined(OMV_CSI_FSYNC_PIN)
-    if (csi->frame_sync) {
-        omv_gpio_write(OMV_CSI_FSYNC_PIN, 0);
+    if (csi->fsync_pin) {
+        omv_gpio_write(csi->fsync_pin, 0);
     }
-    #endif
 
     // Call the sensor specific post-process.
     if (ret >= 0 && csi->post_process && !(flags & OMV_CSI_FLAG_NO_POST)) {

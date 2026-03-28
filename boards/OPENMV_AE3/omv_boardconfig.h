@@ -60,6 +60,7 @@ extern unsigned char OMV_BOARD_UID_ADDR[12];    // Unique address.
 
 // CSI drivers configuration.
 #define OMV_PAG7936_ENABLE              (CORE_M55_HP)
+#define OMV_PAG7936_FSYNC_PIN           (&omv_pin_CSI_FSYNC)
 
 // FIR drivers configuration.
 #define OMV_FIR_MLX90621_ENABLE         (0)
