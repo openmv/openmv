@@ -650,7 +650,7 @@ static save_image_format_t imblib_parse_extension(image_t *img, const char *path
 
 bool imlib_read_geometry(file_t *fp, image_t *img, const char *path, img_read_settings_t *rs) {
     char magic[4];
-    file_open(fp, path, false, FA_READ | FA_OPEN_EXISTING);
+    file_open(fp, path, FA_READ | FA_OPEN_EXISTING);
     file_read(fp, &magic, 4);
     file_close(fp);
 
@@ -660,25 +660,23 @@ bool imlib_read_geometry(file_t *fp, image_t *img, const char *path, img_read_se
             || (magic[1] == '5') || (magic[1] == '6'))) {
         // PPM
         rs->format = FORMAT_PNM;
-        file_open(fp, path, true, FA_READ | FA_OPEN_EXISTING);
+        file_open(fp, path, FA_READ | FA_OPEN_EXISTING);
         ppm_read_geometry(fp, img, path, &rs->ppm_rs);
     } else if ((magic[0] == 'B') && (magic[1] == 'M')) {
         // BMP
         rs->format = FORMAT_BMP;
-        file_open(fp, path, true, FA_READ | FA_OPEN_EXISTING);
+        file_open(fp, path, FA_READ | FA_OPEN_EXISTING);
         vflipped = bmp_read_geometry(fp, img, path, &rs->bmp_rs);
     } else if ((magic[0] == 0xFF) && (magic[1] == 0xD8)) {
         // JPG
         rs->format = FORMAT_JPG;
-        file_open(fp, path, false, FA_READ | FA_OPEN_EXISTING);
+        file_open(fp, path, FA_READ | FA_OPEN_EXISTING);
         jpeg_read_geometry(fp, img, path, &rs->jpg_rs);
-        file_buffer_on(fp);
     } else if ((magic[0] == 0x89) && (magic[1] == 0x50) && (magic[2] == 0x4E) && (magic[3] == 0x47)) {
         // PNG
         rs->format = FORMAT_PNG;
-        file_open(fp, path, false, FA_READ | FA_OPEN_EXISTING);
+        file_open(fp, path, FA_READ | FA_OPEN_EXISTING);
         png_read_geometry(fp, img, path, &rs->png_rs);
-        file_buffer_on(fp);
     } else {
         file_raise_format(NULL);
     }
@@ -691,7 +689,7 @@ bool imlib_read_geometry(file_t *fp, image_t *img, const char *path, img_read_se
 void imlib_load_image(image_t *img, const char *path) {
     file_t fp;
     char magic[4];
-    file_open(&fp, path, false, FA_READ | FA_OPEN_EXISTING);
+    file_open(&fp, path, FA_READ | FA_OPEN_EXISTING);
     file_read(&fp, &magic, 4);
     file_close(&fp);
 
@@ -725,7 +723,7 @@ void imlib_save_image(image_t *img, const char *path, rectangle_t *roi, int qual
             break;
         case FORMAT_RAW: {
             file_t fp;
-            file_open(&fp, path, false, FA_WRITE | FA_CREATE_ALWAYS);
+            file_open(&fp, path, FA_WRITE | FA_CREATE_ALWAYS);
             file_write(&fp, img->pixels, img->w * img->h);
             file_close(&fp);
             break;
@@ -749,7 +747,7 @@ void imlib_save_image(image_t *img, const char *path, rectangle_t *roi, int qual
             } else if (IM_IS_BAYER(img)) {
                 file_t fp;
                 char *new_path = strcat(strcpy(fb_alloc(strlen(path) + 5, FB_ALLOC_NO_HINT), path), ".raw");
-                file_open(&fp, new_path, false, FA_WRITE | FA_CREATE_ALWAYS);
+                file_open(&fp, new_path, FA_WRITE | FA_CREATE_ALWAYS);
                 file_write(&fp, img->pixels, img->w * img->h);
                 file_close(&fp);
                 fb_free();

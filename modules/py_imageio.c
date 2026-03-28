@@ -502,13 +502,13 @@ static mp_obj_t py_imageio_make_new(const mp_obj_type_t *type, size_t n_args, si
         char mode = mp_obj_str_get_str(args[1])[0];
 
         if (mode == 'w') {
-            file_open(fp, mp_obj_str_get_str(args[0]), false, FA_WRITE | FA_CREATE_ALWAYS);
+            file_open(fp, mp_obj_str_get_str(args[0]), FA_WRITE | FA_CREATE_ALWAYS);
             const char string[] = "OMV IMG STR V2.0";
             stream->version = NEW_PIXFORMAT_VER;
             file_write(fp, string, sizeof(string) - 1); // exclude null terminator
         } else if (mode == 'r') {
             uint8_t version_hi, version_lo;
-            file_open(fp, mp_obj_str_get_str(args[0]), false, FA_READ | FA_OPEN_EXISTING);
+            file_open(fp, mp_obj_str_get_str(args[0]), FA_READ | FA_OPEN_EXISTING);
             file_read_check(fp, "OMV IMG STR ", 12); // Magic
             file_read_check(fp, "V", 1);
             file_read(fp, &version_hi, 1);

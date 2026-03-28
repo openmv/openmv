@@ -6941,7 +6941,7 @@ mp_obj_t py_image_load_descriptor(size_t n_args, const mp_obj_t *args, mp_map_t 
     mp_obj_t desc = mp_const_none;
     const char *path = mp_obj_str_get_str(args[0]);
 
-    file_open(&fp, path, false, FA_READ | FA_OPEN_EXISTING);
+    file_open(&fp, path, FA_READ | FA_OPEN_EXISTING);
 
     // Read descriptor type
     file_read(&fp, &desc_type, sizeof(desc_type));
@@ -6997,7 +6997,7 @@ mp_obj_t py_image_save_descriptor(size_t n_args, const mp_obj_t *args, mp_map_t 
     uint32_t desc_type;
     const char *path = mp_obj_str_get_str(args[1]);
 
-    file_open(&fp, path, false, FA_WRITE | FA_CREATE_ALWAYS);
+    file_open(&fp, path, FA_WRITE | FA_CREATE_ALWAYS);
 
     // Find descriptor type
     const mp_obj_type_t *desc_obj_type = mp_obj_get_type(args[0]);
@@ -7131,7 +7131,7 @@ int py_image_descriptor_from_roi(image_t *img, const char *path, rectangle_t *ro
     file_t fp;
     array_t *kpts = orb_find_keypoints(img, false, 20, 1.5f, 100, CORNER_AGAST, roi);
     if (array_length(kpts)) {
-        file_open(&fp, path, false, FA_WRITE | FA_CREATE_ALWAYS);
+        file_open(&fp, path, FA_WRITE | FA_CREATE_ALWAYS);
         orb_save_descriptor(&fp, kpts);
         file_close(&fp);
     }

@@ -137,7 +137,7 @@ static mp_obj_t py_gif_open(size_t n_args, const mp_obj_t *pos_args, mp_map_t *k
     gif->color = (args[ARG_color].u_int == -1) ? (fb->bpp >= 2) : args[ARG_color].u_bool;
     gif->loop = args[ARG_loop].u_bool;
 
-    file_open(&gif->fp, path, false, FA_WRITE | FA_CREATE_ALWAYS);
+    file_open(&gif->fp, path, FA_WRITE | FA_CREATE_ALWAYS);
     gif_open(&gif->fp, gif->width, gif->height, gif->color, gif->loop);
     return gif;
 }

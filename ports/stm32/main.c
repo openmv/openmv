@@ -244,9 +244,6 @@ soft_reset:
     #if OMV_DMA_ALLOC
     dma_alloc_init0();
     #endif
-    #ifdef IMLIB_ENABLE_IMAGE_FILE_IO
-    file_buffer_init0();
-    #endif
     #if MICROPY_HW_ENABLE_SERVO
     servo_init();
     #endif

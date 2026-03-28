@@ -291,8 +291,7 @@ void png_read(image_t *img, const char *path) {
     file_t fp;
     png_read_settings_t rs;
 
-    // Do not use file buferring here.
-    file_open(&fp, path, false, FA_READ | FA_OPEN_EXISTING);
+    file_open(&fp, path, FA_READ | FA_OPEN_EXISTING);
 
     png_read_geometry(&fp, img, path, &rs);
 
@@ -306,7 +305,7 @@ void png_read(image_t *img, const char *path) {
 
 void png_write(image_t *img, const char *path) {
     file_t fp;
-    file_open(&fp, path, false, FA_WRITE | FA_CREATE_ALWAYS);
+    file_open(&fp, path, FA_WRITE | FA_CREATE_ALWAYS);
     if (img->pixfmt == PIXFORMAT_PNG) {
         file_write(&fp, img->pixels, img->size);
     } else {

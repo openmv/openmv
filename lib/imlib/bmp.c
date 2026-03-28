@@ -178,29 +178,31 @@ bool bmp_read_geometry(file_t *fp, image_t *img, const char *path, bmp_read_sett
 
 // This function reads the pixel values of an image.
 void bmp_read_pixels(file_t *fp, image_t *img, int n_lines, bmp_read_settings_t *rs) {
+    uint8_t *row_buf = NULL;
+
+    if (!(rs->bmp_bpp == 8 && (rs->bmp_h < 0) && (rs->bmp_w >= 0) && (img->w == rs->bmp_row_bytes))) {
+        row_buf = fb_alloc(rs->bmp_row_bytes, FB_ALLOC_PREFER_SPEED);
+    }
+
     if (rs->bmp_bpp == 8) {
         if ((rs->bmp_h < 0) && (rs->bmp_w >= 0) && (img->w == rs->bmp_row_bytes)) {
             file_read(fp, img->pixels, n_lines * img->w);
         } else {
             for (int i = 0; i < n_lines; i++) {
-                for (int j = 0; j < rs->bmp_row_bytes; j++) {
-                    uint8_t pixel;
-                    file_read(fp, &pixel, 1);
-                    if (j < img->w) {
-                        if (rs->bmp_h < 0) {
-                            // vertical flip (BMP file perspective)
-                            if (rs->bmp_w < 0) {
-                                // horizontal flip (BMP file perspective)
-                                IM_SET_GS_PIXEL(img, (img->w - j - 1), i, pixel);
-                            } else {
-                                IM_SET_GS_PIXEL(img, j, i, pixel);
-                            }
+                file_read(fp, row_buf, rs->bmp_row_bytes);
+                for (int j = 0; j < img->w; j++) {
+                    uint8_t pixel = row_buf[j];
+                    if (rs->bmp_h < 0) {
+                        if (rs->bmp_w < 0) {
+                            IM_SET_GS_PIXEL(img, (img->w - j - 1), i, pixel);
                         } else {
-                            if (rs->bmp_w < 0) {
-                                IM_SET_GS_PIXEL(img, (img->w - j - 1), (img->h - i - 1), pixel);
-                            } else {
-                                IM_SET_GS_PIXEL(img, j, (img->h - i - 1), pixel);
-                            }
+                            IM_SET_GS_PIXEL(img, j, i, pixel);
+                        }
+                    } else {
+                        if (rs->bmp_w < 0) {
+                            IM_SET_GS_PIXEL(img, (img->w - j - 1), (img->h - i - 1), pixel);
+                        } else {
+                            IM_SET_GS_PIXEL(img, j, (img->h - i - 1), pixel);
                         }
                     }
                 }
@@ -208,41 +210,36 @@ void bmp_read_pixels(file_t *fp, image_t *img, int n_lines, bmp_read_settings_t 
         }
     } else if (rs->bmp_bpp == 16) {
         for (int i = 0; i < n_lines; i++) {
-            for (int j = 0, jj = rs->bmp_row_bytes / 2; j < jj; j++) {
-                uint16_t pixel;
-                file_read(fp, &pixel, 2);
-                if (j < img->w) {
-                    if (rs->bmp_h < 0) {
-                        // vertical flip (BMP file perspective)
-                        if (rs->bmp_w < 0) {
-                            // horizontal flip (BMP file perspective)
-                            IM_SET_RGB565_PIXEL(img, (img->w - j - 1), i, pixel);
-                        } else {
-                            IM_SET_RGB565_PIXEL(img, j, i, pixel);
-                        }
+            file_read(fp, row_buf, rs->bmp_row_bytes);
+            for (int j = 0; j < img->w; j++) {
+                uint16_t pixel = ((uint16_t *) row_buf)[j];
+                if (rs->bmp_h < 0) {
+                    if (rs->bmp_w < 0) {
+                        IM_SET_RGB565_PIXEL(img, (img->w - j - 1), i, pixel);
                     } else {
-                        if (rs->bmp_w < 0) {
-                            IM_SET_RGB565_PIXEL(img, (img->w - j - 1), (img->h - i - 1), pixel);
-                        } else {
-                            IM_SET_RGB565_PIXEL(img, j, (img->h - i - 1), pixel);
-                        }
+                        IM_SET_RGB565_PIXEL(img, j, i, pixel);
+                    }
+                } else {
+                    if (rs->bmp_w < 0) {
+                        IM_SET_RGB565_PIXEL(img, (img->w - j - 1), (img->h - i - 1), pixel);
+                    } else {
+                        IM_SET_RGB565_PIXEL(img, j, (img->h - i - 1), pixel);
                     }
                 }
             }
         }
     } else if (rs->bmp_bpp == 24) {
         for (int i = 0; i < n_lines; i++) {
-            for (int j = 0, jj = rs->bmp_row_bytes / 3; j < jj; j++) {
-                uint8_t b, g, r;
-                file_read(fp, &b, 1);
-                file_read(fp, &g, 1);
-                file_read(fp, &r, 1);
+            file_read(fp, row_buf, rs->bmp_row_bytes);
+            int jj = rs->bmp_row_bytes / 3;
+            for (int j = 0; j < jj; j++) {
+                uint8_t b = row_buf[j * 3 + 0];
+                uint8_t g = row_buf[j * 3 + 1];
+                uint8_t r = row_buf[j * 3 + 2];
                 uint16_t pixel = COLOR_R8_G8_B8_TO_RGB565(r, g, b);
                 if (j < img->w) {
                     if (rs->bmp_h < 0) {
-                        // vertical flip
                         if (rs->bmp_w < 0) {
-                            // horizontal flip
                             IM_SET_RGB565_PIXEL(img, (img->w - j - 1), i, pixel);
                         } else {
                             IM_SET_RGB565_PIXEL(img, j, i, pixel);
@@ -256,17 +253,18 @@ void bmp_read_pixels(file_t *fp, image_t *img, int n_lines, bmp_read_settings_t 
                     }
                 }
             }
-            for (int j = 0, jj = rs->bmp_row_bytes % 3; j < jj; j++) {
-                file_read(fp, NULL, 1);
-            }
         }
+    }
+
+    if (row_buf) {
+        fb_free();
     }
 }
 
 void bmp_read(image_t *img, const char *path) {
     file_t fp;
     bmp_read_settings_t rs;
-    file_open(&fp, path, true, FA_READ | FA_OPEN_EXISTING);
+    file_open(&fp, path, FA_READ | FA_OPEN_EXISTING);
     bmp_read_geometry(&fp, img, path, &rs);
     if (!img->pixels) {
         image_alloc(img, img->w * img->h * img->bpp);
@@ -300,46 +298,45 @@ void bmp_write_subimg(image_t *img, const char *path, rectangle_t *r) {
     }
 
     file_t fp;
-    file_open(&fp, path, true, FA_WRITE | FA_CREATE_ALWAYS);
+    file_open(&fp, path, FA_WRITE | FA_CREATE_ALWAYS);
 
     if (IM_IS_GS(img)) {
         const int row_bytes = (((rect.w * 8) + 31) / 32) * 4;
         const int data_size = (row_bytes * rect.h);
-        const int waste = (row_bytes / sizeof(uint8_t)) - rect.w;
         // Write BMP file header
         bmp_write_header(&fp, 1024, data_size, 8, 0, &rect);
         // Write color Table (1024 bytes)
+        uint32_t ct_buf[256];
         for (int i = 0; i < 256; i++) {
-            file_write_long(&fp, ((i) << 16) | ((i) << 8) | i);
+            ct_buf[i] = ((i) << 16) | ((i) << 8) | i;
         }
+        file_write(&fp, ct_buf, sizeof(ct_buf));
         if ((rect.x == 0) && (rect.w == img->w) && (img->w == row_bytes)) {
             file_write(&fp, img->pixels + (rect.y * img->w), rect.w * rect.h);
         } else {
+            uint8_t *row_buf = fb_alloc0(row_bytes, FB_ALLOC_PREFER_SPEED);
             for (int i = 0; i < rect.h; i++) {
-                file_write(&fp, img->pixels + ((rect.y + i) * img->w) + rect.x, rect.w);
-                for (int j = 0; j < waste; j++) {
-                    file_write_byte(&fp, 0);
-                }
+                memcpy(row_buf, img->pixels + ((rect.y + i) * img->w) + rect.x, rect.w);
+                file_write(&fp, row_buf, row_bytes);
             }
+            fb_free();
         }
     } else {
         const int row_bytes = (((rect.w * 16) + 31) / 32) * 4;
         const int data_size = (row_bytes * rect.h);
-        const int waste = (row_bytes / sizeof(uint16_t)) - rect.w;
         // Write BMP file header
         bmp_write_header(&fp, 12, data_size, 16, 3, &rect);
         // Write Bit Masks (12 bytes)
-        file_write_long(&fp, 0x1F << 11);
-        file_write_long(&fp, 0x3F << 5);
-        file_write_long(&fp, 0x1F);
+        file_write(&fp, (uint32_t [3]) {0x1F << 11, 0x3F << 5, 0x1F}, 12);
+        uint8_t *row_buf = fb_alloc0(row_bytes, FB_ALLOC_PREFER_SPEED);
         for (int i = 0; i < rect.h; i++) {
+            uint16_t *row16 = (uint16_t *) row_buf;
             for (int j = 0; j < rect.w; j++) {
-                file_write_short(&fp, IM_GET_RGB565_PIXEL(img, (rect.x + j), (rect.y + i)));
+                row16[j] = IM_GET_RGB565_PIXEL(img, (rect.x + j), (rect.y + i));
             }
-            for (int j = 0; j < waste; j++) {
-                file_write_short(&fp, 0);
-            }
+            file_write(&fp, row_buf, row_bytes);
         }
+        fb_free();
     }
     file_close(&fp);
 }
