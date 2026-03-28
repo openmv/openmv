@@ -266,11 +266,13 @@ void framebuffer_update_preview(image_t *src) {
     framebuffer_header_t *header = (framebuffer_header_t *) fb->raw_base;
     uint8_t *frame_data = (uint8_t *) fb->raw_base + sizeof(framebuffer_header_t);
     size_t available_size = fb->raw_size - sizeof(framebuffer_header_t);
+    bool overflow = false;
 
     if (src->is_compressed) {
         if (src->size > available_size) {
             framebuffer_from_image(fb, NULL);
             mp_printf(MP_PYTHON_PRINTER, "\x1b[40O\n");
+            overflow = true;
         } else {
             framebuffer_from_image(fb, src);
             memcpy(frame_data, src->pixels, src->size);
@@ -286,7 +288,6 @@ void framebuffer_update_preview(image_t *src) {
         .pixels = frame_data
     };
 
-    bool overflow = false;
     bool raw_stream = src->is_mutable && fb->raw_enabled && fb->raw_w && fb->raw_h;
 
     if (raw_stream) {
@@ -355,7 +356,11 @@ exit_cleanup:
     header->offset = sizeof(framebuffer_header_t);
 
     // Unlock the streaming buffer.
-    mutex_unlock(&fb->lock, MUTEX_TID_OMV);
+    if (overflow) {
+        mutex_init0(&fb->lock);
+    } else {
+        mutex_unlock(&fb->lock, MUTEX_TID_OMV);
+    }
 
     #if MICROPY_PY_PROTOCOL
     omv_protocol_send_event(OMV_PROTOCOL_CHANNEL_ID_STREAM, OMV_PROTOCOL_EVENT_NOTIFY, false);
