@@ -1,15 +1,16 @@
 diff --git a/tools/mpremote/mpremote/transport_serial.py b/tools/mpremote/mpremote/transport_serial.py
-index b3584945b..a49ed581e 100644
+index b3584945b..62c1bc518 100644
 --- a/tools/mpremote/mpremote/transport_serial.py
 +++ b/tools/mpremote/mpremote/transport_serial.py
-@@ -88,6 +88,14 @@ class SerialTransport(Transport):
+@@ -88,6 +88,15 @@ class SerialTransport(Transport):
                  # behaviour (pyserial will set DTR and RTS automatically on open)
                  if not self.serial.isOpen():
                      self.serial.open()
-+                # Monkey-patch inWaiting for socket:// to use 10ms select timeout
++                # Optimize socket:// connections for low-latency I/O
 +                if hasattr(self.serial, '_socket'):
-+                    import select
++                    import select, socket
 +                    _sock = self.serial._socket
++                    _sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
 +                    def _inWaiting():
 +                        ready, _, _ = select.select([_sock], [], [], 0.01)
 +                        return 1 if ready else 0
@@ -17,7 +18,7 @@ index b3584945b..a49ed581e 100644
                  break
              except OSError:
                  if wait == 0:
-@@ -137,11 +145,14 @@ class SerialTransport(Transport):
+@@ -137,11 +146,14 @@ class SerialTransport(Transport):
  
          data = b""
          begin_overall_s = begin_char_s = time.monotonic()
@@ -34,7 +35,7 @@ index b3584945b..a49ed581e 100644
                  if data_consumer:
                      data_consumer(new_data)
                      data = new_data
-@@ -156,19 +167,21 @@ class SerialTransport(Transport):
+@@ -156,19 +168,21 @@ class SerialTransport(Transport):
                      and time.monotonic() >= begin_overall_s + timeout_overall
                  ):
                      break
@@ -64,7 +65,7 @@ index b3584945b..a49ed581e 100644
  
          if soft_reset:
              data = self.read_until(
-@@ -217,6 +230,8 @@ class SerialTransport(Transport):
+@@ -217,6 +231,8 @@ class SerialTransport(Transport):
  
      def raw_paste_write(self, command_bytes):
          # Read initial header, with window size.
@@ -73,7 +74,7 @@ index b3584945b..a49ed581e 100644
          data = self.serial.read(2)
          window_size = struct.unpack("<H", data)[0]
          window_remain = window_size
-@@ -246,6 +261,7 @@ class SerialTransport(Transport):
+@@ -246,6 +262,7 @@ class SerialTransport(Transport):
          self.serial.write(b"\x04")
  
          # Wait for device to acknowledge end of data.
@@ -81,7 +82,7 @@ index b3584945b..a49ed581e 100644
          data = self.read_until(1, b"\x04")
          if not data.endswith(b"\x04"):
              raise TransportError("could not complete raw paste: {}".format(data))
-@@ -261,7 +277,7 @@ class SerialTransport(Transport):
+@@ -261,7 +278,7 @@ class SerialTransport(Transport):
          if not data.endswith(b">"):
              raise TransportError("could not enter raw repl")
  
