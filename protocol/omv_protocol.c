@@ -272,7 +272,7 @@ static inline bool omv_protocol_is_ack(const omv_protocol_packet_t *packet, uint
            omv_protocol_crc_check(OMV_CRC16, (void *) packet, OMV_PROTOCOL_HEADER_SIZE);
 }
 
-static void omv_protocol_send_status(const omv_protocol_packet_t *packet, omv_protocol_status_t status) {
+static void omv_protocol_send_status(uint8_t opcode, uint8_t channel, omv_protocol_status_t status) {
     if (status == OMV_PROTOCOL_STATUS_SEQUENCE) {
         ctx.stats.sequence_errors++;
     } else if (status == OMV_PROTOCOL_STATUS_CHECKSUM) {
@@ -280,12 +280,12 @@ static void omv_protocol_send_status(const omv_protocol_packet_t *packet, omv_pr
     }
 
     if (status == OMV_PROTOCOL_STATUS_SUCCESS) {
-        omv_protocol_send_packet(packet->opcode, packet->channel, 0, NULL, OMV_PROTOCOL_FLAG_ACK);
+        omv_protocol_send_packet(opcode, channel, 0, NULL, OMV_PROTOCOL_FLAG_ACK);
     } else {
         omv_protocol_response_t resp = {
             .status = status,
         };
-        omv_protocol_send_packet(packet->opcode, packet->channel, sizeof(resp), &resp, OMV_PROTOCOL_FLAG_NAK);
+        omv_protocol_send_packet(opcode, channel, sizeof(resp), &resp, OMV_PROTOCOL_FLAG_NAK);
     }
 }
 
@@ -487,9 +487,9 @@ int omv_protocol_task(void) {
                 if (!omv_protocol_crc_check(OMV_CRC16, packet, OMV_PROTOCOL_HEADER_SIZE)) {
                     // No further validation needed
                 } else if (packet->length > ctx.config.max_payload) {
-                    omv_protocol_send_status(packet, OMV_PROTOCOL_STATUS_OVERFLOW);
+                    omv_protocol_send_status(packet->opcode, packet->channel, OMV_PROTOCOL_STATUS_OVERFLOW);
                 } else if (!omv_protocol_seq_check(packet)) {
-                    omv_protocol_send_status(packet, OMV_PROTOCOL_STATUS_SEQUENCE);
+                    omv_protocol_send_status(packet->opcode, packet->channel, OMV_PROTOCOL_STATUS_SEQUENCE);
                 } else {
                     ctx.state = OMV_PROTOCOL_STATE_PAYLOAD;
                 }
@@ -520,9 +520,9 @@ int omv_protocol_task(void) {
 
                 // Check data CRC if we have payload data
                 if (!omv_protocol_crc_check(OMV_CRC32, packet->payload, payload_size)) {
-                    omv_protocol_send_status(packet, OMV_PROTOCOL_STATUS_CHECKSUM);
+                    omv_protocol_send_status(packet->opcode, packet->channel, OMV_PROTOCOL_STATUS_CHECKSUM);
                 } else if (!omv_protocol_channel_check(packet)) {
-                    omv_protocol_send_status(packet, OMV_PROTOCOL_STATUS_INVALID);
+                    omv_protocol_send_status(packet->opcode, packet->channel, OMV_PROTOCOL_STATUS_INVALID);
                 } else if (packet->flags & (OMV_PROTOCOL_FLAG_ACK | OMV_PROTOCOL_FLAG_NAK)) {
                     // ACK/NAK packets are handled by WAIT_ACK state - ignore here
                 } else {
@@ -597,7 +597,7 @@ void omv_protocol_process(const omv_protocol_packet_t *packet) {
     switch (packet->opcode) {
         case OMV_PROTOCOL_OPCODE_PROTO_SYNC: {
             omv_protocol_reset();
-            omv_protocol_send_status(packet, OMV_PROTOCOL_STATUS_SUCCESS);
+            omv_protocol_send_status(packet->opcode, packet->channel, OMV_PROTOCOL_STATUS_SUCCESS);
             ctx.sequence = 0;
             break;
         }
@@ -622,10 +622,10 @@ void omv_protocol_process(const omv_protocol_packet_t *packet) {
             if (packet->length != sizeof(omv_protocol_caps_t) ||
                 caps->max_payload < OMV_PROTOCOL_MIN_PAYLOAD_SIZE ||
                 caps->max_payload > OMV_PROTOCOL_MAX_PAYLOAD_SIZE) {
-                omv_protocol_send_status(packet, OMV_PROTOCOL_STATUS_INVALID);
+                omv_protocol_send_status(packet->opcode, packet->channel, OMV_PROTOCOL_STATUS_INVALID);
             } else {
                 // ACK the updated caps first before changing them.
-                omv_protocol_send_status(packet, OMV_PROTOCOL_STATUS_SUCCESS);
+                omv_protocol_send_status(packet->opcode, packet->channel, OMV_PROTOCOL_STATUS_SUCCESS);
 
                 // Update only protocol capability fields, preserve transport config
                 ctx.config.crc_enabled = caps->crc_enabled;
@@ -777,12 +777,12 @@ void omv_protocol_process(const omv_protocol_packet_t *packet) {
             const omv_protocol_channel_t *channel = omv_protocol_find_channel(packet->channel);
 
             if (!omv_protocol_check_timeout(ctx.last_lock_ms, ctx.config.lock_intval_ms)) {
-                omv_protocol_send_status(packet, OMV_PROTOCOL_STATUS_BUSY);
+                omv_protocol_send_status(packet->opcode, packet->channel, OMV_PROTOCOL_STATUS_BUSY);
             } else if (channel && channel->lock && channel->lock(channel) == 0) {
                 ctx.last_lock_ms = OMV_PROTOCOL_TICKS_MS();
-                omv_protocol_send_status(packet, OMV_PROTOCOL_STATUS_SUCCESS);
+                omv_protocol_send_status(packet->opcode, packet->channel, OMV_PROTOCOL_STATUS_SUCCESS);
             } else {
-                omv_protocol_send_status(packet, OMV_PROTOCOL_STATUS_BUSY);
+                omv_protocol_send_status(packet->opcode, packet->channel, OMV_PROTOCOL_STATUS_BUSY);
             }
             break;
         }
@@ -791,9 +791,9 @@ void omv_protocol_process(const omv_protocol_packet_t *packet) {
             const omv_protocol_channel_t *channel = omv_protocol_find_channel(packet->channel);
 
             if (channel && channel->unlock && channel->unlock(channel) == 0) {
-                omv_protocol_send_status(packet, OMV_PROTOCOL_STATUS_SUCCESS);
+                omv_protocol_send_status(packet->opcode, packet->channel, OMV_PROTOCOL_STATUS_SUCCESS);
             } else {
-                omv_protocol_send_status(packet, OMV_PROTOCOL_STATUS_BUSY);
+                omv_protocol_send_status(packet->opcode, packet->channel, OMV_PROTOCOL_STATUS_BUSY);
             }
             break;
         }
@@ -806,7 +806,7 @@ void omv_protocol_process(const omv_protocol_packet_t *packet) {
                 response.size = channel->size(channel);
                 omv_protocol_send_packet(packet->opcode, packet->channel, sizeof(response), &response, 0);
             } else {
-                omv_protocol_send_status(packet, OMV_PROTOCOL_STATUS_INVALID);
+                omv_protocol_send_status(packet->opcode, packet->channel, OMV_PROTOCOL_STATUS_INVALID);
             }
             break;
         }
@@ -819,7 +819,7 @@ void omv_protocol_process(const omv_protocol_packet_t *packet) {
                 size_t shape_size = channel->shape(channel, shape_array) * sizeof(size_t);
                 omv_protocol_send_packet(packet->opcode, packet->channel, shape_size, shape_array, 0);
             } else {
-                omv_protocol_send_status(packet, OMV_PROTOCOL_STATUS_INVALID);
+                omv_protocol_send_status(packet->opcode, packet->channel, OMV_PROTOCOL_STATUS_INVALID);
             }
             break;
         }
@@ -829,11 +829,11 @@ void omv_protocol_process(const omv_protocol_packet_t *packet) {
             const omv_protocol_channel_t *channel = omv_protocol_find_channel(packet->channel);
 
             if (!request->length || !channel || !(channel->read || channel->readp)) {
-                omv_protocol_send_status(packet, OMV_PROTOCOL_STATUS_INVALID);
+                omv_protocol_send_status(packet->opcode, packet->channel, OMV_PROTOCOL_STATUS_INVALID);
             } else if (channel->readp) {
                 const void *data = channel->readp(channel, request->offset, request->length);
                 if (!data) {
-                    omv_protocol_send_status(packet, OMV_PROTOCOL_STATUS_FAILED);
+                    omv_protocol_send_status(packet->opcode, packet->channel, OMV_PROTOCOL_STATUS_FAILED);
                 } else {
                     omv_protocol_send_packet(packet->opcode, packet->channel, request->length, data, 0);
                 }
@@ -848,7 +848,7 @@ void omv_protocol_process(const omv_protocol_packet_t *packet) {
                     int32_t size_rd = channel->read(channel, offset, size_rq, buffer);
 
                     if (size_rd <= 0) {
-                        omv_protocol_send_status(packet, OMV_PROTOCOL_STATUS_FAILED);
+                        omv_protocol_send_status(packet->opcode, packet->channel, OMV_PROTOCOL_STATUS_FAILED);
                         break;
                     }
 
@@ -867,12 +867,12 @@ void omv_protocol_process(const omv_protocol_packet_t *packet) {
 
             if (channel && channel->write && request->length) {
                 if (channel->write(channel, request->offset, request->length, request->payload)) {
-                    omv_protocol_send_status(packet, OMV_PROTOCOL_STATUS_SUCCESS);
+                    omv_protocol_send_status(packet->opcode, packet->channel, OMV_PROTOCOL_STATUS_SUCCESS);
                 } else {
-                    omv_protocol_send_status(packet, OMV_PROTOCOL_STATUS_FAILED);
+                    omv_protocol_send_status(packet->opcode, packet->channel, OMV_PROTOCOL_STATUS_FAILED);
                 }
             } else {
-                omv_protocol_send_status(packet, OMV_PROTOCOL_STATUS_INVALID);
+                omv_protocol_send_status(packet->opcode, packet->channel, OMV_PROTOCOL_STATUS_INVALID);
             }
             break;
         }
@@ -887,20 +887,20 @@ void omv_protocol_process(const omv_protocol_packet_t *packet) {
                 // Validate argument size for static channels only
                 if (!OMV_PROTOCOL_CHANNEL_FLAG_GET(channel, DYNAMIC) && // TODO
                     !omv_protocol_ioctl_check(packet->channel, ioctl->request, ioctl_len)) {
-                    omv_protocol_send_status(packet, OMV_PROTOCOL_STATUS_INVALID);
+                    omv_protocol_send_status(packet->opcode, packet->channel, OMV_PROTOCOL_STATUS_INVALID);
                 } else if (channel->ioctl(channel, ioctl->request, ioctl_len, ioctl_arg)) {
-                    omv_protocol_send_status(packet, OMV_PROTOCOL_STATUS_FAILED);
+                    omv_protocol_send_status(packet->opcode, packet->channel, OMV_PROTOCOL_STATUS_FAILED);
                 } else {
-                    omv_protocol_send_status(packet, OMV_PROTOCOL_STATUS_SUCCESS);
+                    omv_protocol_send_status(packet->opcode, packet->channel, OMV_PROTOCOL_STATUS_SUCCESS);
                 }
             } else {
-                omv_protocol_send_status(packet, OMV_PROTOCOL_STATUS_INVALID);
+                omv_protocol_send_status(packet->opcode, packet->channel, OMV_PROTOCOL_STATUS_INVALID);
             }
             break;
         }
 
         default:
-            omv_protocol_send_status(packet, OMV_PROTOCOL_STATUS_INVALID);
+            omv_protocol_send_status(packet->opcode, packet->channel, OMV_PROTOCOL_STATUS_INVALID);
             break;
     }
 }
