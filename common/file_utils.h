@@ -51,13 +51,8 @@ void file_raise_format(file_t *fp);
 void file_raise_corrupted(file_t *fp);
 void file_raise_error(file_t *fp, mp_rom_error_text_t msg);
 
-// File buffer functions
-void file_buffer_init0();
-void file_buffer_on(file_t *fp);  // Calls fb_alloc_all()
-void file_buffer_off(file_t *fp); // Calls fb_free()
-
 // File operations
-void file_open(file_t *fp, const char *path, bool buffered, uint32_t flags);
+void file_open(file_t *fp, const char *path, uint32_t flags);
 void file_close(file_t *fp);
 void file_seek(file_t *fp, size_t offset);
 void file_truncate(file_t *fp);
@@ -66,7 +61,7 @@ size_t file_tell(file_t *fp);
 size_t file_size(file_t *fp);
 bool file_eof(file_t *fp);
 
-// Buffered read/write operations
+// Read/write operations
 void file_read(file_t *fp, void *data, size_t size);
 void file_write(file_t *fp, const void *data, size_t size);
 void file_write_byte(file_t *fp, uint8_t value);
