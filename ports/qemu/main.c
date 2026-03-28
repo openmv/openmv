@@ -64,10 +64,6 @@ soft_reset:
     fb_alloc_init0();
     framebuffer_init0();
 
-    #ifdef IMLIB_ENABLE_IMAGE_FILE_IO
-    file_buffer_init0();
-    #endif
-
     imlib_init();
 
     #if MICROPY_PY_CSI

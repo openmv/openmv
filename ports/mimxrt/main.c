@@ -106,9 +106,6 @@ soft_reset:
     framebuffer_init0();
     omv_csi_init0();
     //dma_alloc_init0();
-    #ifdef IMLIB_ENABLE_IMAGE_FILE_IO
-    file_buffer_init0();
-    #endif
     machine_adc_init();
     #if MICROPY_PY_MACHINE_SDCARD
     machine_sdcard_init0();

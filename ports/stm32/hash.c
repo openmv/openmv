@@ -70,7 +70,7 @@ int hash_from_file(const char *path, uint8_t *digest) {
     int ret = -1;
     uint8_t *buf = fb_alloc(BLOCK_SIZE, FB_ALLOC_NO_HINT);
 
-    file_open(&fp, path, false, FA_READ | FA_OPEN_EXISTING);
+    file_open(&fp, path, FA_READ | FA_OPEN_EXISTING);
 
     // File size
     uint32_t size = file_size(&fp);
