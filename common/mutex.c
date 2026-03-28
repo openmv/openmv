@@ -30,6 +30,10 @@ void mutex_init0(mutex_t *m) {
     atomic_flag_clear_explicit(&m->lock, memory_order_relaxed);
 }
 
+size_t mutex_get_tid(mutex_t *mutex) {
+    return atomic_load_explicit(&mutex->tid, memory_order_acquire);
+}
+
 void mutex_lock(mutex_t *m, size_t tid) {
     while (atomic_flag_test_and_set_explicit(&m->lock, memory_order_acquire)) {
 
