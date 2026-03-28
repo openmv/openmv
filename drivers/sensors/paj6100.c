@@ -709,7 +709,6 @@ int paj6100_init(omv_csi_t *csi) {
     csi->vsync_pol = 1;
     csi->hsync_pol = 1;
     csi->pixck_pol = 1;
-    csi->frame_sync = 0;
     csi->mono_bpp = 1;
 
     if (init_sensor(csi) != 0) {

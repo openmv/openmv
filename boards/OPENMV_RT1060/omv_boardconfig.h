@@ -34,8 +34,10 @@
 #define OMV_OV7725_PLL_CONFIG           (0x41)   // x4
 #define OMV_OV7725_BANDING              (0x7F)
 
-#define OMV_MT9M114_ENABLE              (1)
 #define OMV_MT9V0XX_ENABLE              (1)
+#define OMV_MT9V0XX_FSYNC_PIN           (&omv_pin_DCMI_FSYNC)
+
+#define OMV_MT9M114_ENABLE              (1)
 #define OMV_LEPTON_ENABLE               (1)
 #define OMV_PAG7920_ENABLE              (1)
 #define OMV_PAJ6100_ENABLE              (1)
@@ -205,6 +207,5 @@
 #define OMV_CSI_MXCLK_PIN               (&omv_pin_DCMI_MCLK)
 #define OMV_CSI_RESET_PIN               (&omv_pin_DCMI_RESET)
 #define OMV_CSI_POWER_PIN               (&omv_pin_DCMI_POWER)
-#define OMV_CSI_FSYNC_PIN               (&omv_pin_DCMI_FSYNC)
 
 #endif //__OMV_BOARDCONFIG_H__
