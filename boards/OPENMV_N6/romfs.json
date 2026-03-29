@@ -57,6 +57,12 @@
       "profile": "default"
     },
     {
+      "type": "tflite",
+      "path": "{TOP}/lib/models/movenet_singlepose_192.tflite",
+      "alignment": 32,
+      "profile": "default"
+    },
+    {
       "type": "haar",
       "path": "{TOP}/lib/haar/haarcascade_eye.xml",
       "stages": 0
