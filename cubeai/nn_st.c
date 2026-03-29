@@ -200,11 +200,10 @@ int aiRun(stnn_t *net, image_t *img, rectangle_t *roi) {
   ai_i32 nbatch;
   ai_error err;
 
-  fb_alloc_mark();
   AI_ALIGNED(4)
-  ai_u8 *activations = fb_alloc(AI_NETWORK_DATA_ACTIVATIONS_SIZE, FB_ALLOC_NO_HINT);
+  ai_u8 *activations = uma_malloc(AI_NETWORK_DATA_ACTIVATIONS_SIZE, 0);
   AI_ALIGNED(4)
-  ai_u8 *in_data = fb_alloc(AI_NETWORK_IN_1_SIZE_BYTES, FB_ALLOC_NO_HINT);
+  ai_u8 *in_data = uma_malloc(AI_NETWORK_IN_1_SIZE_BYTES, 0);
 
   // build params structure to provide the reference of the
   // activation and weight buffers
@@ -245,7 +244,8 @@ int aiRun(stnn_t *net, image_t *img, rectangle_t *roi) {
 
   net->nn_exec_ctx_ptr->report.outputs->data = out_data;
 
-  fb_alloc_free_till_mark();
+  uma_free(in_data);
+  uma_free(activations);
 
   return 0;
 }

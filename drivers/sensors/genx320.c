@@ -547,7 +547,7 @@ static int ioctl(omv_csi_t *csi, int request, va_list ap) {
                 return OMV_CSI_ERROR_CAPTURE_FAILED;
             }
 
-            uint8_t *histogram = fb_alloc0(ACTIVE_SENSOR_SIZE, FB_ALLOC_NO_HINT);
+            uint8_t *histogram = uma_calloc(ACTIVE_SENSOR_SIZE, 0);
 
             // Collect events to calibrate hot pixels.
             for (uint32_t i = 0; i < event_count; ) {
@@ -595,7 +595,7 @@ static int ioctl(omv_csi_t *csi, int request, va_list ap) {
             }
 
             ret = disable_hot_pixels(csi, histogram, sigma);
-            fb_free();
+            uma_free(histogram);
             break;
         }
         default: {

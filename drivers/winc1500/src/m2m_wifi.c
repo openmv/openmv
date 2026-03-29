@@ -34,7 +34,7 @@
 
 #include <string.h>
 #include <stdbool.h>
-#include "fb_alloc.h"
+#include "umalloc.h"
 #include "driver/include/m2m_wifi.h"
 #include "driver/include/m2m_hif.h"
 #include "driver/include/nmasic.h"
@@ -795,7 +795,7 @@ sint8 m2m_wifi_connect_1x_mschap2(
 
 			if (ret == M2M_SUCCESS)
 			{
-				tstrM2mWifi1xHdr	*pstr1xHdr = (tstrM2mWifi1xHdr*)fb_alloc(u16AuthSize, 0);
+				tstrM2mWifi1xHdr	*pstr1xHdr = (tstrM2mWifi1xHdr*)uma_malloc(u16AuthSize, 0);
 				if (pstr1xHdr != NULL)
 				{
 					uint8	*pu8AuthPtr = pstr1xHdr->au81xAuthDetails;
@@ -827,7 +827,7 @@ sint8 m2m_wifi_connect_1x_mschap2(
 									(uint8*)&strConnHdr, sizeof(tstrM2mWifiConnHdr),
 									(uint8*)pstr1xHdr, u16AuthSize,
 									sizeof(tstrM2mWifiConnHdr));
-					fb_free();
+					uma_free(pstr1xHdr);
 				}
 			}
 		}
@@ -872,7 +872,7 @@ tstrAuth1xTls		*pstrAuth1xTls
 			if (ret == M2M_SUCCESS)
 			{
 				uint16				u16Payload1Size = u16AuthSize - pstrAuth1xTls->u16CertificateLen;
-				tstrM2mWifi1xHdr	*pstr1xHdr = (tstrM2mWifi1xHdr*)fb_alloc(u16Payload1Size, 0);
+				tstrM2mWifi1xHdr	*pstr1xHdr = (tstrM2mWifi1xHdr*)uma_malloc(u16Payload1Size, 0);
 				if (pstr1xHdr != NULL)
 				{
 					tstrM2mWifiAuthInfoHdr strInfoHdr = {0};
@@ -923,7 +923,7 @@ tstrAuth1xTls		*pstrAuth1xTls
 										(uint8*)pstr1xHdr, u16Payload1Size,
 										sizeof(tstrM2mWifiConnHdr));
 					}
-					fb_free();
+					uma_free(pstr1xHdr);
 				}
 			}
 		}

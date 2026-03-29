@@ -24,7 +24,7 @@
  * WINC1500 programmer functions.
  */
 #include <stdio.h>
-#include "fb_alloc.h"
+#include "umalloc.h"
 #include "file_utils.h"
 
 #include "programmer/programmer.h"
@@ -42,7 +42,7 @@ int burn_firmware(const char *path)
     size_t bytes = 0;
 
     int ret = M2M_ERR_FAIL;
-    uint8_t	*buf = fb_alloc(FLASH_SECTOR_SZ, FB_ALLOC_NO_HINT);
+    uint8_t	*buf = uma_malloc(FLASH_SECTOR_SZ, 0);
 
     file_open(&fp, path, FA_READ | FA_OPEN_EXISTING);
 
@@ -67,13 +67,13 @@ int burn_firmware(const char *path)
     ret = M2M_SUCCESS;
 
 error:
-    fb_free();
+    uma_free(buf);
     file_close(&fp);
     return ret;
 }
 
 /**
- * Verify WINC1500 firmware 
+ * Verify WINC1500 firmware
  * return M2M_SUCCESS on success, error code otherwise.
  */
 int verify_firmware(const char *path)
@@ -83,8 +83,8 @@ int verify_firmware(const char *path)
     size_t bytes = 0;
 
     int ret = M2M_ERR_FAIL;
-    uint8_t	*file_buf = fb_alloc(FLASH_SECTOR_SZ, FB_ALLOC_NO_HINT);
-    uint8_t	*flash_buf = fb_alloc(FLASH_SECTOR_SZ, FB_ALLOC_NO_HINT);
+    uint8_t	*file_buf = uma_malloc(FLASH_SECTOR_SZ, 0);
+    uint8_t	*flash_buf = uma_malloc(FLASH_SECTOR_SZ, 0);
 
     file_open(&fp, path, FA_READ | FA_OPEN_EXISTING);
 
@@ -116,8 +116,8 @@ int verify_firmware(const char *path)
     ret = M2M_SUCCESS;
 
 error:
-    fb_free();
-    fb_free();
+    uma_free(file_buf);
+    uma_free(flash_buf);
     file_close(&fp);
     return ret;
 }
@@ -133,7 +133,7 @@ int dump_firmware(const char *path)
     size_t bytes = 0;
 
     int ret = M2M_ERR_FAIL;
-    uint8_t	*flash_buf = fb_alloc(FLASH_SECTOR_SZ, FB_ALLOC_NO_HINT);
+    uint8_t	*flash_buf = uma_malloc(FLASH_SECTOR_SZ, 0);
 
     file_open(&fp, path, FA_WRITE | FA_CREATE_ALWAYS);
 
@@ -158,7 +158,7 @@ int dump_firmware(const char *path)
     ret = M2M_SUCCESS;
 
 error:
-    fb_free();
+    uma_free(flash_buf);
     file_close(&fp);
     return ret;
 }

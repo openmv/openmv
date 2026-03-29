@@ -449,12 +449,11 @@ static int snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
         }
     }
 
-    fb_alloc_mark();
     image_t temp = {
         .w = csi->transpose ? lepton.v_res : lepton.h_res,
         .h = csi->transpose ? lepton.h_res : lepton.v_res,
         .pixfmt = PIXFORMAT_GRAYSCALE,
-        .data = fb_alloc(lepton.h_res * lepton.v_res, FB_ALLOC_CACHE_ALIGN),
+        .data = uma_malloc(lepton.h_res * lepton.v_res, UMA_CACHE),
     };
 
     // When not in measurment mode set the min and max temperatures such
@@ -480,7 +479,7 @@ static int snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
                      IMAGE_HINT_BILINEAR | IMAGE_HINT_CENTER | IMAGE_HINT_SCALE_ASPECT_EXPAND,
                      NULL, NULL, NULL, NULL);
 
-    fb_alloc_free_till_mark();
+    uma_free(temp.data);
     framebuffer_to_image(fb, image);
     return 0;
 }
