@@ -93,8 +93,15 @@ static int usb_channel_write(const omv_protocol_channel_t *channel, uint32_t off
 
 static void usb_channel_task(mp_sched_node_t *node) {
     tud_task_ext(0, false);
-    if (omv_protocol_is_active()) {
+    // Spin for up to 1ms of inactivity to catch follow-up packets from the IDE.
+    // This prevents fast Python loops from entering long C calls before the IDE
+    // completes a multi-packet exchange (e.g. CHANNEL_SIZE -> CHANNEL_READ).
+    uint32_t start = mp_hal_ticks_ms();
+    while (omv_protocol_is_active() && !check_timeout_ms(start, 1)) {
         omv_protocol_task();
+        if (tud_task_event_ready()) {
+            tud_task_ext(0, false);
+        }
     }
 }
 
