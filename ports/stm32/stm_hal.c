@@ -1,7 +1,7 @@
 /*
  * SPDX-License-Identifier: MIT
  *
- * Copyright (C) 2013-2024 OpenMV, LLC.
+ * Copyright (C) 2013-2026 OpenMV, LLC.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -367,6 +367,50 @@ void HAL_I2C_MspDeInit(I2C_HandleTypeDef *hi2c) {
     #endif
     }
 }
+
+#if defined(STM32N6)
+void HAL_I3C_MspInit(I3C_HandleTypeDef *hi3c) {
+    omv_gpio_t scl_pin = NULL;
+    omv_gpio_t sda_pin = NULL;
+
+    if (0) {
+    #if defined(OMV_I3C1_ID)
+    } else if (hi3c->Instance == I3C1) {
+        scl_pin = OMV_I3C1_SCL_PIN;
+        sda_pin = OMV_I3C1_SDA_PIN;
+        __HAL_RCC_I3C1_CLK_ENABLE();
+    #endif
+    #if defined(OMV_I3C2_ID)
+    } else if (hi3c->Instance == I3C2) {
+        scl_pin = OMV_I3C2_SCL_PIN;
+        sda_pin = OMV_I3C2_SDA_PIN;
+        __HAL_RCC_I3C2_CLK_ENABLE();
+    #endif
+    }
+
+    if (scl_pin && sda_pin) {
+        omv_gpio_config(scl_pin, OMV_GPIO_MODE_ALT_OD, OMV_GPIO_PULL_NONE, OMV_GPIO_SPEED_LOW, -1);
+        omv_gpio_config(sda_pin, OMV_GPIO_MODE_ALT_OD, OMV_GPIO_PULL_NONE, OMV_GPIO_SPEED_LOW, -1);
+    }
+}
+
+void HAL_I3C_MspDeInit(I3C_HandleTypeDef *hi3c) {
+    if (0) {
+    #if defined(OMV_I3C1_ID)
+    } else if (hi3c->Instance == I3C1) {
+        __HAL_RCC_I3C1_FORCE_RESET();
+        __HAL_RCC_I3C1_RELEASE_RESET();
+        __HAL_RCC_I3C1_CLK_DISABLE();
+    #endif
+    #if defined(OMV_I3C2_ID)
+    } else if (hi3c->Instance == I3C2) {
+        __HAL_RCC_I3C2_FORCE_RESET();
+        __HAL_RCC_I3C2_RELEASE_RESET();
+        __HAL_RCC_I3C2_CLK_DISABLE();
+    #endif
+    }
+}
+#endif // STM32N6
 
 void HAL_TIM_PWM_MspInit(TIM_HandleTypeDef *htim) {
     #if defined(OMV_CSI_TIM)
