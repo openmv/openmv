@@ -205,3 +205,45 @@ class FaceLandmarks:
 
         nms.add_bounding_box(xmin, ymin, xmax, ymax, score, 0, keypoints=keypoints)
         return nms.get_bounding_boxes(threshold=self.nms_threshold, sigma=self.nms_sigma)[0]
+
+
+class MoveNet:
+    def __init__(self, threshold=0.6, nms_threshold=0.1, nms_sigma=0.1):
+        self.threshold = threshold
+        self.nms_threshold = nms_threshold
+        self.nms_sigma = nms_sigma
+
+    def __call__(self, model, inputs, outputs):
+        ob, oh, ow, oc = model.output_shape[0]
+
+        # Reshape the output to a 2D array
+        heatmap = outputs[0].reshape((oh * ow, oc))
+
+        arg_pred = np.argmax(heatmap, axis=0)
+        val_pred = np.max(heatmap, axis=0)
+
+        valid_indices = np.nonzero(val_pred > self.threshold)[0]
+        if not len(valid_indices):
+            return _NO_DETECTION
+
+        arg_y = arg_pred // ow
+        arg_x = mod(arg_pred, ow)
+
+        # Build keypoints array in pixel coordinates [x, y, score]
+        ib, ih, iw, ic = model.input_shape[0]
+        keypoints = np.empty((oc, 3))
+        keypoints[:, 0] = ((arg_x + 0.5) / ow) * iw
+        keypoints[:, 1] = ((arg_y + 0.5) / oh) * ih
+        keypoints[:, 2] = val_pred
+
+        # Bounding box and score from valid keypoints only
+        valid_kp = np.take(keypoints, valid_indices, axis=0)
+        score = np.mean(valid_kp[:, 2])
+        xmin = np.min(valid_kp[:, 0])
+        ymin = np.min(valid_kp[:, 1])
+        xmax = np.max(valid_kp[:, 0])
+        ymax = np.max(valid_kp[:, 1])
+
+        nms = NMS(iw, ih, inputs[0].roi)
+        nms.add_bounding_box(xmin, ymin, xmax, ymax, score, 0, keypoints=keypoints)
+        return nms.get_bounding_boxes(threshold=self.nms_threshold, sigma=self.nms_sigma)[0]
