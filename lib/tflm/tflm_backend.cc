@@ -43,6 +43,16 @@
 #include "tensorflow/lite/micro/micro_interpreter.h"
 #include "tensorflow/lite/schema/schema_generated.h"
 
+#ifndef NDEBUG
+void operator delete(void *) {
+
+}
+
+void operator delete(void *, unsigned int) {
+
+}
+#endif
+
 extern "C" {
 #include "py/runtime.h"
 #include "py/obj.h"
@@ -70,16 +80,6 @@ void abort(void) {
         ;
     }
 }
-
-#ifndef NDEBUG
-void operator delete(void *) {
-
-}
-
-void operator delete(void *, unsigned int) {
-
-}
-#endif
 
 void ml_backend_log_handler(const char *s) {
     if (strcmp(s, "\r\n")) {
