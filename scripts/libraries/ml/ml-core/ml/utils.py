@@ -145,7 +145,7 @@ class NMS:
             output_boxes[i][3] = int(output_boxes[i][3] * scale)
             keypoints = output_boxes[i][6]
             if keypoints is not None:
-                keypoints *= scale
+                keypoints[:, :2] *= scale
                 keypoints[:, 0] += x_offset
                 keypoints[:, 1] += y_offset
 
