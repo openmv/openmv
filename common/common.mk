@@ -36,7 +36,6 @@ COMMON_SRC_C += \
     pendsv.c \
     tlsf.c \
     trace.c \
-    umm_malloc.c \
     memcpy.c \
     vospi.c \
     queue.c \
