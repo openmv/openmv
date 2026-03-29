@@ -67,8 +67,6 @@
 #define OMV_FIR_MLX90641_ENABLE             (1)
 #define OMV_FIR_AMG8833_ENABLE              (1)
 
-// UMM heap block size
-#define OMV_UMM_BLOCK_SIZE                  256
 
 // USB IRQn.
 #define OMV_USB_IRQN                        (OTG_FS_IRQn)
@@ -134,16 +132,9 @@
 #define OMV_PWR_SUPPLY                      (PWR_LDO_SUPPLY)
 
 // Linker script constants (see the linker script template stm32.ld.S).
-// Note: fb_alloc is a stack-based, dynamically allocated memory on FB.
-// The maximum available fb_alloc memory = FB_ALLOC_SIZE + FB_SIZE - (w*h*bpp).
 #define OMV_MAIN_MEMORY                     SRAM0   // Data, BSS memory.
 #define OMV_STACK_MEMORY                    DTCM    // stack memory
 #define OMV_STACK_SIZE                      (64K)
-#define OMV_FB_MEMORY                       DRAM    // Framebuffer, fb_alloc
-#define OMV_FB_SIZE                         (3M)    // FB memory: header + VGA/GS image
-#define OMV_FB_ALLOC_SIZE                   (1M)    // minimum fb alloc size
-#define OMV_FB_OVERLAY_MEMORY               SRAM0   // Fast fb_alloc memory.
-#define OMV_FB_OVERLAY_SIZE                 (443K)  // Fast fb_alloc memory size.
 #define OMV_SB_MEMORY                       DRAM    // Streaming buffer memory.
 #define OMV_SB_SIZE                         (1M)    // Streaming buffer size.
 #define OMV_DMA_MEMORY                      SRAM3   // Misc DMA buffers memory.
@@ -157,6 +148,12 @@
 #define OMV_GC_BLOCK0_SIZE                  (256K)
 #define OMV_GC_BLOCK1_MEMORY                DRAM    // Extra GC block 1.
 #define OMV_GC_BLOCK1_SIZE                  (2560K)
+#define OMV_UMA_BLOCK0_MEMORY               DRAM    // Default UMA pool.
+#define OMV_UMA_BLOCK0_SIZE                 (4M)
+#define OMV_UMA_BLOCK0_FLAGS                (0)
+#define OMV_UMA_BLOCK1_MEMORY               SRAM0   // Fast UMA pool.
+#define OMV_UMA_BLOCK1_SIZE                 (443K)
+#define OMV_UMA_BLOCK1_FLAGS                (UMA_FAST)
 #define OMV_MSC_BUF_SIZE                    (2K)    // USB MSC bot data
 #define OMV_LINE_BUF_SIZE                   (11 * 1024) // Image line buffer round(2592 * 2BPP * 2 buffers).
 

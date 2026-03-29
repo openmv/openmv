@@ -592,7 +592,7 @@ static int jpeg_check_highwater(jpeg_buf_t *jpeg_buf) {
             return 1;
         }
         jpeg_buf->length += 1024;
-        jpeg_buf->buf = m_realloc(jpeg_buf->buf, jpeg_buf->length);
+        jpeg_buf->buf = uma_realloc(jpeg_buf->buf, jpeg_buf->length, 0);
     }
     return 0;
 }
@@ -605,7 +605,7 @@ static void jpeg_put_char(jpeg_buf_t *jpeg_buf, char c) {
             return;
         }
         jpeg_buf->length += 1024;
-        jpeg_buf->buf = m_realloc(jpeg_buf->buf, jpeg_buf->length);
+        jpeg_buf->buf = uma_realloc(jpeg_buf->buf, jpeg_buf->length, 0);
     }
 
     jpeg_buf->buf[jpeg_buf->idx++] = c;
@@ -619,7 +619,7 @@ static void jpeg_put_bytes(jpeg_buf_t *jpeg_buf, const void *data, int size) {
             return;
         }
         jpeg_buf->length += 1024;
-        jpeg_buf->buf = m_realloc(jpeg_buf->buf, jpeg_buf->length);
+        jpeg_buf->buf = uma_realloc(jpeg_buf->buf, jpeg_buf->length, 0);
     }
 
     memcpy(jpeg_buf->buf + jpeg_buf->idx, data, size);
@@ -932,8 +932,8 @@ static void jpeg_write_headers(jpeg_buf_t *jpeg_buf, int w, int h, int bpp, jpeg
 
 bool jpeg_compress(image_t *src, image_t *dst, int quality, bool realloc, jpeg_subsampling_t subsampling) {
     if (!dst->data) {
-        uint32_t size = 0;
-        dst->data = fb_alloc_all(&size, FB_ALLOC_PREFER_SIZE | FB_ALLOC_CACHE_ALIGN);
+        uint32_t size = uma_avail(0);
+        dst->data = uma_malloc(size, UMA_CACHE);
         dst->size = IMLIB_IMAGE_MAX_SIZE(size);
     }
 
@@ -1386,7 +1386,7 @@ void jpeg_write(image_t *img, const char *path, int quality) {
         // the heap and return NULL which will cause an out of memory error.
         jpeg_compress(img, &out, quality, false, JPEG_SUBSAMPLING_AUTO);
         file_write(&fp, out.pixels, out.size);
-        fb_free(); // frees alloc in jpeg_compress()
+        uma_free(out.pixels);
     }
     file_close(&fp);
 }

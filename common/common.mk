@@ -25,7 +25,6 @@
 COMMON_SRC_C += \
     array.c \
     dma_alloc.c \
-    fb_alloc.c \
     file_utils.c \
     mp_utils.c \
     mutex.c \
@@ -34,12 +33,13 @@ COMMON_SRC_C += \
     omv_csi.c \
     omv_i2c.c \
     pendsv.c \
+    tlsf.c \
     trace.c \
-    umm_malloc.c \
     memcpy.c \
     vospi.c \
     queue.c \
     omv_profiler.c \
+    umalloc.c \
 
 CFLAGS += -I$(TOP_DIR)/common
 OMV_FIRM_OBJ += $(addprefix $(BUILD)/common/, $(COMMON_SRC_C:.c=.o))

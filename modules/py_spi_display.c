@@ -35,6 +35,7 @@
 #include "py_image.h"
 #include "omv_gpio.h"
 #include "omv_spi.h"
+#include "umalloc.h"
 #include "py_display.h"
 
 #define LCD_COMMAND_DISPOFF         (0x28)
@@ -227,7 +228,7 @@ static void spi_display_write(py_display_obj_t *self, image_t *src_img, int dst_
     bool black = p0.x == -1;
 
     if (!self->triple_buffer) {
-        dst_img.data = fb_alloc0(self->width * sizeof(uint16_t), FB_ALLOC_NO_HINT);
+        dst_img.data = uma_calloc(self->width * sizeof(uint16_t), 0);
 
         spi_display_command(self, LCD_COMMAND_RAMWR, 0);
         spi_switch_mode(self, (!self->byte_swap) ? 16 : 8, true);
@@ -262,7 +263,7 @@ static void spi_display_write(py_display_obj_t *self, image_t *src_img, int dst_
         spi_switch_mode(self, 8, false);
         omv_gpio_write(OMV_SPI_DISPLAY_SSEL_PIN, 1);
         spi_display_command(self, LCD_COMMAND_DISPON, 0);
-        fb_free();
+        uma_free(dst_img.data);
     } else {
         // For triple buffering we are never drawing where tail or head
         // (which may instantly update to to be equal to tail) is.
@@ -331,9 +332,7 @@ static void spi_display_clear(py_display_obj_t *self, bool display_off) {
         }
     } else {
         spi_display_command(self, LCD_COMMAND_DISPOFF, 0);
-        fb_alloc_mark();
         spi_display_write(self, NULL, 0, 0, 1.f, 1.f, NULL, 0, 0, NULL, NULL, 0);
-        fb_alloc_free_till_mark();
     }
 }
 
@@ -347,7 +346,10 @@ static void spi_display_set_backlight(py_display_obj_t *self, uint32_t intensity
 static void spi_display_deinit(py_display_obj_t *self) {
     if (self->triple_buffer) {
         omv_spi_transfer_abort(&self->spi_bus);
-        fb_alloc_free_till_mark_past_mark_permanent();
+        for (int i = 0; i < FRAMEBUFFER_COUNT; i++) {
+            uma_free(self->framebuffers[i]);
+            self->framebuffers[i] = NULL;
+        }
     }
 
     omv_spi_deinit(&self->spi_bus);
@@ -453,12 +455,10 @@ mp_obj_t spi_display_make_new(const mp_obj_type_t *type, size_t n_args, size_t n
     }
 
     if (self->triple_buffer) {
-        fb_alloc_mark();
         uint32_t fb_size = self->width * self->height * sizeof(uint16_t);
         for (int i = 0; i < FRAMEBUFFER_COUNT; i++) {
-            self->framebuffers[i] = (uint16_t *) fb_alloc0(fb_size, FB_ALLOC_CACHE_ALIGN);
+            self->framebuffers[i] = (uint16_t *) uma_calloc(fb_size, UMA_CACHE | UMA_PERSIST);
         }
-        fb_alloc_mark_permanent();
     }
 
     return MP_OBJ_FROM_PTR(self);

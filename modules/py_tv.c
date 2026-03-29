@@ -428,7 +428,10 @@ static void spi_config_deinit() {
     if (tv_triple_buffer) {
         omv_spi_transfer_abort(&spi_bus);
         spi_tx_cb_state = SPI_TX_CB_IDLE;
-        fb_alloc_free_till_mark_past_mark_permanent();
+        for (int i = 0; i < FRAMEBUFFER_COUNT; i++) {
+            uma_free(framebuffers[i]);
+            framebuffers[i] = NULL;
+        }
     }
 
     omv_spi_deinit(&spi_bus);
@@ -451,16 +454,12 @@ static void spi_config_init(bool triple_buffer) {
     SpiRamWriteByteRegister(WRITE_GPIO, 0x77);
 
     if (triple_buffer) {
-        fb_alloc_mark();
-
         framebuffer_head = 0;
         framebuffer_tail = 0;
 
         for (int i = 0; i < FRAMEBUFFER_COUNT; i++) {
-            framebuffers[i] = (uint16_t *) fb_alloc0(TV_WIDTH_RGB565 * TV_HEIGHT, FB_ALLOC_CACHE_ALIGN);
+            framebuffers[i] = (uint16_t *) uma_calloc(TV_WIDTH_RGB565 * TV_HEIGHT, UMA_PERSIST | UMA_CACHE);
         }
-
-        fb_alloc_mark_permanent();
     }
 }
 
@@ -615,7 +614,7 @@ static void spi_tv_display(image_t *src_img, int dst_x_start, int dst_y_start, f
     bool black = p0.x == -1;
 
     if (!tv_triple_buffer) {
-        dst_img.data = fb_alloc0(TV_WIDTH_RGB565, FB_ALLOC_NO_HINT);
+        dst_img.data = uma_calloc(TV_WIDTH_RGB565, 0);
 
         SpiTransmitReceivePacket((uint8_t *) write_sram, NULL, sizeof(write_sram), false);
 
@@ -646,7 +645,7 @@ static void spi_tv_display(image_t *src_img, int dst_x_start, int dst_y_start, f
         }
 
         omv_gpio_write(OMV_SPI_DISPLAY_SSEL_PIN, 1);
-        fb_free();
+        uma_free(dst_img.data);
     } else {
         // For triple buffering we are never drawing where head or tail (which may instantly update to
         // to be equal to head) is.
@@ -925,11 +924,9 @@ static mp_obj_t py_tv_display(size_t n_args, const mp_obj_t *pos_args, mp_map_t 
     switch (tv_type) {
         #ifdef OMV_SPI_DISPLAY_CONTROLLER
         case TV_SHIELD: {
-            fb_alloc_mark();
             spi_tv_display(image, args[ARG_x].u_int, args[ARG_y].u_int, x_scale, y_scale, &roi,
                            args[ARG_channel].u_int, args[ARG_alpha].u_int, color_palette, alpha_palette,
                            args[ARG_hint].u_int);
-            fb_alloc_free_till_mark();
             break;
         }
         #endif
@@ -945,10 +942,8 @@ static mp_obj_t py_tv_clear() {
     switch (tv_type) {
         #ifdef OMV_SPI_DISPLAY_CONTROLLER
         case TV_SHIELD: {
-            fb_alloc_mark();
             spi_tv_display(NULL, 0, 0, 1.f, 1.f, NULL,
                            0, 0, NULL, NULL, 0);
-            fb_alloc_free_till_mark();
             break;
         }
         #endif

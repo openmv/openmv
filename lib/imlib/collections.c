@@ -24,6 +24,8 @@
  * Common data structures.
  */
 #include "imlib.h"
+#include "umalloc.h"
+
 #define CHAR_BITS     (sizeof(char) * 8)
 #define CHAR_MASK     (CHAR_BITS - 1)
 #define CHAR_SHIFT    IM_LOG2(CHAR_MASK)
@@ -31,12 +33,12 @@
 // Bitmap
 void bitmap_alloc(bitmap_t *ptr, size_t size) {
     ptr->size = size;
-    ptr->data = (char *) fb_alloc0(((size + CHAR_MASK) >> CHAR_SHIFT) * sizeof(char), FB_ALLOC_NO_HINT);
+    ptr->data = (char *) uma_calloc(((size + CHAR_MASK) >> CHAR_SHIFT) * sizeof(char), 0);
 }
 
 void bitmap_free(bitmap_t *ptr) {
     if (ptr->data) {
-        fb_free();
+        uma_free(ptr->data);
     }
 }
 
@@ -57,12 +59,12 @@ void lifo_alloc(lifo_t *ptr, size_t size, size_t data_len) {
     ptr->len = 0;
     ptr->size = size;
     ptr->data_len = data_len;
-    ptr->data = (char *) fb_alloc(size * data_len, FB_ALLOC_NO_HINT);
+    ptr->data = (char *) uma_malloc(size * data_len, 0);
 }
 
 void lifo_alloc_all(lifo_t *ptr, size_t *size, size_t data_len) {
-    uint32_t tmp_size;
-    ptr->data = (char *) fb_alloc_all(&tmp_size, FB_ALLOC_NO_HINT);
+    size_t tmp_size = uma_avail(0);
+    ptr->data = (char *) uma_malloc(tmp_size, 0);
     ptr->data_len = data_len;
     ptr->size = tmp_size / data_len;
     ptr->len = 0;
@@ -71,7 +73,7 @@ void lifo_alloc_all(lifo_t *ptr, size_t *size, size_t data_len) {
 
 void lifo_free(lifo_t *ptr) {
     if (ptr->data) {
-        fb_free();
+        uma_free(ptr->data);
     }
 }
 
@@ -120,12 +122,12 @@ void fifo_alloc(fifo_t *ptr, size_t size, size_t data_len) {
     ptr->len = 0;
     ptr->size = size;
     ptr->data_len = data_len;
-    ptr->data = (char *) fb_alloc(size * data_len, FB_ALLOC_NO_HINT);
+    ptr->data = (char *) uma_malloc(size * data_len, 0);
 }
 
 void fifo_alloc_all(fifo_t *ptr, size_t *size, size_t data_len) {
-    uint32_t tmp_size;
-    ptr->data = (char *) fb_alloc_all(&tmp_size, FB_ALLOC_NO_HINT);
+    size_t tmp_size = uma_avail(0);
+    ptr->data = (char *) uma_malloc(tmp_size, 0);
     ptr->data_len = data_len;
     ptr->size = tmp_size / data_len;
     ptr->len = 0;
@@ -136,7 +138,7 @@ void fifo_alloc_all(fifo_t *ptr, size_t *size, size_t data_len) {
 
 void fifo_free(fifo_t *ptr) {
     if (ptr->data) {
-        fb_free();
+        uma_free(ptr->data);
     }
 }
 

@@ -50,8 +50,6 @@
 #define OMV_FIR_MLX90641_ENABLE    (1)
 #define OMV_FIR_AMG8833_ENABLE     (1)
 
-// UMM heap block size
-#define OMV_UMM_BLOCK_SIZE         16
 
 // USB IRQn.
 #define OMV_USB_IRQN               (USBD_IRQn)
@@ -60,11 +58,11 @@
 #define OMV_MAIN_MEMORY            SRAM // Data, BSS memory
 #define OMV_STACK_MEMORY           SRAM // stack memory
 #define OMV_STACK_SIZE             (8K)
-#define OMV_FB_MEMORY              SRAM // Framebuffer, fb_alloc
-#define OMV_FB_SIZE                (128K) // FB memory: header + QVGA/GS image
-#define OMV_FB_ALLOC_SIZE          (16K)  // minimum fb alloc size
 #define OMV_GC_BLOCK0_MEMORY       SRAM   // Main GC block.
 #define OMV_GC_BLOCK0_SIZE         (64K)
+#define OMV_UMA_BLOCK0_MEMORY      SRAM   // Default UMA pool.
+#define OMV_UMA_BLOCK0_SIZE        (144K)
+#define OMV_UMA_BLOCK0_FLAGS       (0)
 #define OMV_SB_SIZE                (16K) // Streaming buffer size.
 
 #define OMV_TEXT_ORIGIN            0x00026000

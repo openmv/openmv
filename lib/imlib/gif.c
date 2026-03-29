@@ -26,7 +26,6 @@
 #include "imlib.h"
 #if defined(IMLIB_ENABLE_IMAGE_FILE_IO)
 
-#include "fb_alloc.h"
 #include "file_utils.h"
 #define BLOCK_SIZE    (126) // (2^7) - 2 // (DO NOT CHANGE!)
 

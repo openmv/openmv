@@ -28,7 +28,7 @@
 #include <math.h>
 #include <string.h>
 #include "imlib.h"
-#include "fb_alloc.h"
+#include "umalloc.h"
 
 #ifdef IMLIB_ENABLE_HOG
 #define N_BINS    (9)
@@ -60,7 +60,7 @@ void imlib_find_hog(image_t *src, rectangle_t *roi, int cell_size) {
     int y_cells = (roi->h / cell_size);
 
     // TODO: Assert row->w/h >= cell_size *2;
-    float *hog = fb_alloc0(x_cells * y_cells * N_BINS * sizeof *hog, FB_ALLOC_NO_HINT);
+    float *hog = uma_calloc(x_cells * y_cells * N_BINS * sizeof *hog, 0);
 
     //2. Finding Image Gradients
     for (int y = roi->y, hog_index = 0; y < h; y += block_size) {
@@ -145,6 +145,6 @@ void imlib_find_hog(image_t *src, rectangle_t *roi, int cell_size) {
     }
 
     m_free(gds);
-    fb_free();
+    uma_free(hog);
 }
 #endif // IMLIB_ENABLE_HOG

@@ -27,6 +27,7 @@
 #include "imlib.h"
 #include "omv_gpu.h"
 #include "memcpy.h"
+#include "umalloc.h"
 
 void *imlib_compute_row_ptr(const image_t *img, int y) {
     switch (img->pixfmt) {
@@ -727,17 +728,15 @@ void imlib_draw_event_histogram(image_t *img, ec_event_t *ec_event, int num_even
     }
 }
 
-void imlib_draw_row_setup(imlib_draw_row_data_t *data) {
-    image_t temp;
-    temp.w = data->dst_img->w;
-    temp.h = data->dst_img->h;
-    temp.pixfmt = data->src_img_pixfmt;
-
-    // Image Row Size should be the width of the destination image
-    // but with the bpp of the source image.
-    size_t image_row_size = image_size(&temp) / data->dst_img->h;
-
-    data->row_buffer = fb_alloc(image_row_size, FB_ALLOC_CACHE_ALIGN);
+void imlib_draw_row_setup(imlib_draw_row_data_t *data, bool alloc_row_buffer) {
+    if (alloc_row_buffer) {
+        image_t temp;
+        temp.w = data->dst_img->w;
+        temp.h = data->dst_img->h;
+        temp.pixfmt = data->src_img_pixfmt;
+        size_t image_row_size = image_size(&temp) / data->dst_img->h;
+        data->row_buffer = uma_malloc(image_row_size, UMA_CACHE);
+    }
 
     int alpha = data->alpha, max = 256;
 
@@ -752,7 +751,7 @@ void imlib_draw_row_setup(imlib_draw_row_data_t *data) {
     data->smuad_alpha = data->black_background ? alpha : ((alpha << 16) | (max - alpha));
 
     if (data->alpha_palette) {
-        data->smuad_alpha_palette = fb_alloc(256 * sizeof(uint32_t), FB_ALLOC_NO_HINT);
+        data->smuad_alpha_palette = uma_malloc(256 * sizeof(uint32_t), 0);
 
         for (int i = 0, a = alpha; i < 256; i++) {
             int new_alpha = fast_roundf((a * data->alpha_palette[i]) / 255.0f);
@@ -763,11 +762,13 @@ void imlib_draw_row_setup(imlib_draw_row_data_t *data) {
     }
 }
 
-void imlib_draw_row_teardown(imlib_draw_row_data_t *data) {
+void imlib_draw_row_teardown(imlib_draw_row_data_t *data, bool free_row_buffer) {
     if (data->smuad_alpha_palette) {
-        fb_free();
+        uma_free(data->smuad_alpha_palette);
     }
-    fb_free(); // data->row_buffer
+    if (free_row_buffer) {
+        uma_free(data->row_buffer);
+    }
 }
 
 // Draws (x_end - x_start) pixels.
@@ -3013,7 +3014,7 @@ void imlib_draw_image(image_t *dst_img,
         new_src_img.w = src_img_w; // same width as source image
         new_src_img.h = src_img_h; // same height as source image
         new_src_img.pixfmt = color_palette ? PIXFORMAT_RGB565 : PIXFORMAT_GRAYSCALE;
-        new_src_img.data = fb_alloc(image_size(&new_src_img), FB_ALLOC_CACHE_ALIGN);
+        new_src_img.data = uma_malloc(image_size(&new_src_img), UMA_CACHE);
         imlib_draw_image(&new_src_img, src_img, 0, 0, 1.f, 1.f, NULL,
                          rgb_channel, 255, color_palette, NULL, 0, NULL, NULL, NULL, NULL);
         src_img = &new_src_img;
@@ -3090,7 +3091,7 @@ void imlib_draw_image(image_t *dst_img,
         if (!src_img->is_mutable) {
             new_src_img.pixfmt = new_not_mutable_pixfmt;
             size_t size = image_size(&new_src_img);
-            new_src_img.data = fb_alloc(size, FB_ALLOC_CACHE_ALIGN);
+            new_src_img.data = uma_malloc(size, UMA_CACHE);
 
             switch (new_src_img.pixfmt) {
                 case PIXFORMAT_BINARY:
@@ -3122,7 +3123,7 @@ void imlib_draw_image(image_t *dst_img,
         } else {
             new_src_img.pixfmt = src_img->pixfmt;
             size_t size = image_size(&new_src_img);
-            new_src_img.data = fb_alloc(size, FB_ALLOC_CACHE_ALIGN);
+            new_src_img.data = uma_malloc(size, UMA_CACHE);
             memcpy(new_src_img.data, src_img->data, size);
         }
 
@@ -3142,7 +3143,7 @@ void imlib_draw_image(image_t *dst_img,
         if ((src_x_frac != 65536) || (src_y_frac != 65536) || transform) {
             t_src_img.w = t_roi.w = src_height_scaled; // was transposed
             t_src_img.h = t_roi.h = src_width_scaled; // was transposed
-            t_src_img.data = fb_alloc(image_size(&t_src_img), FB_ALLOC_CACHE_ALIGN);
+            t_src_img.data = uma_malloc(image_size(&t_src_img), UMA_CACHE);
             imlib_draw_image(&t_src_img, src_img, 0, 0, x_scale, y_scale, roi,
                              -1, 255, NULL, NULL,
                              hint & (IMAGE_HINT_AREA | IMAGE_HINT_BILINEAR | IMAGE_HINT_BICUBIC),
@@ -3155,10 +3156,10 @@ void imlib_draw_image(image_t *dst_img,
         }
 
         // Allocate a buffer to hold chunks of the transposed image.
-        size_t size = fb_avail();
-        size = (size & ~(OMV_ALLOC_ALIGNMENT - 1)) - OMV_ALLOC_ALIGNMENT;
+        size_t size = uma_avail(UMA_FAST);
+        size = (size & ~(OMV_CACHE_LINE_SIZE - 1)) - OMV_CACHE_LINE_SIZE;
         size = IM_MIN(size, image_size(&t_src_img));
-        void *data = fb_alloc(size, FB_ALLOC_PREFER_SPEED | FB_ALLOC_CACHE_ALIGN);
+        void *data = uma_malloc(size, UMA_FAST | UMA_CACHE);
 
         // line_num stores how many lines we can do at a time with on-chip RAM.
         image_t temp = {.w = t_roi.w, .h = t_roi.h, .pixfmt = t_src_img.pixfmt};
@@ -3243,10 +3244,10 @@ void imlib_draw_image(image_t *dst_img,
                              NULL, callback, callback_arg, dst_row_override);
         }
 
-        fb_free(); // fb_alloc_all
+        uma_free(data);
 
         if (t_src_img.data != src_img->data) {
-            fb_free();
+            uma_free(t_src_img.data);
         }
 
         goto exit_cleanup;
@@ -3258,7 +3259,9 @@ void imlib_draw_image(image_t *dst_img,
         src_y_accum_reset -= 0x8000;
     }
 
-    imlib_draw_row_data_t imlib_draw_row_data;
+    bool needs_row_buffer = !no_scaling_nearest_neighbor || (dst_img->data == src_img->data);
+
+    imlib_draw_row_data_t imlib_draw_row_data = {0};
     imlib_draw_row_data.dst_img = dst_img;
     imlib_draw_row_data.src_img_pixfmt = src_img->pixfmt;
     imlib_draw_row_data.rgb_channel = rgb_channel;
@@ -3269,7 +3272,7 @@ void imlib_draw_image(image_t *dst_img,
     imlib_draw_row_data.callback = callback;
     imlib_draw_row_data.callback_arg = callback_arg;
     imlib_draw_row_data.dst_row_override = dst_row_override;
-    imlib_draw_row_setup(&imlib_draw_row_data);
+    imlib_draw_row_setup(&imlib_draw_row_data, needs_row_buffer);
 
     // Y loop iteration variables
     int dst_y = dst_y_reset;
@@ -5396,12 +5399,12 @@ void imlib_draw_image(image_t *dst_img,
         }
     }
 
-    imlib_draw_row_teardown(&imlib_draw_row_data);
+    imlib_draw_row_teardown(&imlib_draw_row_data, needs_row_buffer);
 
 exit_cleanup:
 
     if (&new_src_img == src_img) {
-        fb_free();
+        uma_free(new_src_img.data);
     }
 }
 
@@ -5414,7 +5417,7 @@ void imlib_flood_fill(image_t *img, int x, int y,
         out.w = img->w;
         out.h = img->h;
         out.pixfmt = PIXFORMAT_BINARY;
-        out.data = fb_alloc0(image_size(&out), FB_ALLOC_NO_HINT);
+        out.data = uma_calloc(image_size(&out), 0);
 
         if (mask) {
             for (int y = 0, yy = out.h; y < yy; y++) {
@@ -5505,7 +5508,7 @@ void imlib_flood_fill(image_t *img, int x, int y,
             }
         }
 
-        fb_free();
+        uma_free(out.data);
     }
 }
 #endif // IMLIB_ENABLE_FLOOD_FILL

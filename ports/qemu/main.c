@@ -41,7 +41,7 @@
 #include "board_config.h"
 #include "mp_utils.h"
 #include "file_utils.h"
-#include "fb_alloc.h"
+#include "umalloc.h"
 #include "framebuffer.h"
 #include "omv_csi.h"
 
@@ -61,7 +61,7 @@ soft_reset:
 
     mp_init();
 
-    fb_alloc_init0();
+    uma_init();
     framebuffer_init0();
 
     imlib_init();

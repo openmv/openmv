@@ -121,7 +121,7 @@ void ppm_read_pixels(file_t *fp, image_t *img, int n_lines, ppm_read_settings_t 
     } else if (rs->ppm_fmt == '5') {
         file_read(fp, img->pixels, n_lines * img->w);
     } else if (rs->ppm_fmt == '6') {
-        uint8_t *row_buf = fb_alloc(img->w * 3, FB_ALLOC_PREFER_SPEED);
+        uint8_t *row_buf = uma_malloc(img->w * 3, UMA_DTCM);
         for (int i = 0; i < n_lines; i++) {
             file_read(fp, row_buf, img->w * 3);
             for (int j = 0; j < img->w; j++) {
@@ -131,7 +131,7 @@ void ppm_read_pixels(file_t *fp, image_t *img, int n_lines, ppm_read_settings_t 
                 IM_SET_RGB565_PIXEL(img, j, i, COLOR_R8_G8_B8_TO_RGB565(r, g, b));
             }
         }
-        fb_free();
+        uma_free(row_buf);
     }
 }
 
@@ -173,7 +173,7 @@ void ppm_write_subimg(image_t *img, const char *path, rectangle_t *r) {
         char buffer[20]; // exactly big enough for 5-digit w/h
         int len = snprintf(buffer, 20, "P6\n%d %d\n255\n", rect.w, rect.h);
         file_write(&fp, buffer, len);
-        uint8_t *row_buf = fb_alloc(rect.w * 3, FB_ALLOC_PREFER_SPEED);
+        uint8_t *row_buf = uma_malloc(rect.w * 3, UMA_DTCM);
         for (int i = 0; i < rect.h; i++) {
             for (int j = 0; j < rect.w; j++) {
                 int pixel = IM_GET_RGB565_PIXEL(img, (rect.x + j), (rect.y + i));
@@ -183,7 +183,7 @@ void ppm_write_subimg(image_t *img, const char *path, rectangle_t *r) {
             }
             file_write(&fp, row_buf, rect.w * 3);
         }
-        fb_free();
+        uma_free(row_buf);
     }
     file_close(&fp);
 }

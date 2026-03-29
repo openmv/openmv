@@ -6,7 +6,7 @@
 // Provides imlib_find_apriltags() and imlib_find_rects().
 
 #include "imlib.h"
-#include "fb_alloc.h"
+#include "umalloc.h"
 #include "fmath.h"
 
 #include "apriltag.h"
@@ -52,14 +52,6 @@ extern void refine_edges(apriltag_detector_t *td, image_u8_t *im_orig, struct qu
 #ifdef IMLIB_ENABLE_APRILTAGS
 void imlib_find_apriltags(list_t *out, image_t *ptr, rectangle_t *roi, apriltag_families_t families,
                           float fx, float fy, float cx, float cy) {
-    // NOTE: callers (py_image.c) wrap this with fb_alloc_mark/fb_alloc_free_till_mark.
-
-    #ifdef APRILTAG_ENABLE_UMM_ALLOC
-    // Reserve fb_alloc space for the grayscale image, give the rest to UMM.
-    size_t fb_alloc_need = (roi->w * roi->h) + roi->w * 3; // grayscale image
-    umm_init_x(fb_avail() - fb_alloc_need);
-    #endif
-
     apriltag_detector_t *td = apriltag_detector_create();
     td->nthreads = 1;
     td->wp = workerpool_create(td->nthreads);
@@ -142,8 +134,8 @@ void imlib_find_apriltags(list_t *out, image_t *ptr, rectangle_t *roi, apriltag_
     img.w = roi->w;
     img.h = roi->h;
     img.pixfmt = PIXFORMAT_GRAYSCALE;
-    img.data = fb_alloc(image_size(&img), FB_ALLOC_CACHE_ALIGN | FB_ALLOC_PREFER_SIZE);
-    imlib_draw_image(&img, ptr, 0, 0, 1.f, 1.f, roi, -1, 255, NULL, NULL, 0, NULL, NULL, NULL, NULL);
+    img.data = uma_malloc(image_size(&img), UMA_CACHE);
+    imlib_draw_image(&img, ptr, 0, 0, 1.0f, 1.0f, roi, -1, 255, NULL, NULL, 0, NULL, NULL, NULL, NULL);
 
     image_u8_t im = {
         .width = roi->w,
@@ -253,7 +245,6 @@ void imlib_find_apriltags(list_t *out, image_t *ptr, rectangle_t *roi, apriltag_
     }
 
     apriltag_detections_destroy(detections);
-
     apriltag_detector_destroy(td);
 
     // Destroy tag families.
@@ -303,23 +294,13 @@ void imlib_find_apriltags(list_t *out, image_t *ptr, rectangle_t *roi, apriltag_
     }
     #endif
 
-    #ifdef APRILTAG_ENABLE_UMM_ALLOC
-    umm_print_stats();
-    #endif
+    uma_free(img.data);
 }
 #endif //IMLIB_ENABLE_APRILTAGS
 
 #ifdef IMLIB_ENABLE_FIND_RECTS
 void imlib_find_rects(list_t *out, image_t *ptr, rectangle_t *roi, uint32_t threshold) {
-    // NOTE: callers (py_image.c) wrap this with fb_alloc_mark/fb_alloc_free_till_mark.
-
     int r_diag_len = fast_roundf(fast_sqrtf((roi->w * roi->w) + (roi->h * roi->h))) * 2;
-    #ifdef APRILTAG_ENABLE_UMM_ALLOC
-    // Reserve fb_alloc space for grayscale image + trace buffers, give the rest to UMM.
-    size_t fb_alloc_need = (roi->w * roi->h) + roi->w * 3 // grayscale image
-                           + (sizeof(int) + sizeof(uint32_t) + sizeof(point_t)) * r_diag_len; // trace buffers
-    umm_init_x(fb_avail() - fb_alloc_need);
-    #endif
 
     apriltag_detector_t *td = apriltag_detector_create();
     td->nthreads = 1;
@@ -338,7 +319,7 @@ void imlib_find_rects(list_t *out, image_t *ptr, rectangle_t *roi, uint32_t thre
     img.w = roi->w;
     img.h = roi->h;
     img.pixfmt = PIXFORMAT_GRAYSCALE;
-    img.data = fb_alloc(image_size(&img), FB_ALLOC_CACHE_ALIGN | FB_ALLOC_PREFER_SIZE);
+    img.data = uma_malloc(image_size(&img), UMA_CACHE);
     imlib_draw_image(&img, ptr, 0, 0, 1.f, 1.f, roi, -1, 255, NULL, NULL, 0, NULL, NULL, NULL, NULL);
 
     image_u8_t im = {
@@ -385,46 +366,44 @@ void imlib_find_rects(list_t *out, image_t *ptr, rectangle_t *roi, uint32_t thre
     }
 
     // Remove overlapping quads.
-    {
-        zarray_t *poly0 = g2d_polygon_create_zeros(4);
-        zarray_t *poly1 = g2d_polygon_create_zeros(4);
+    zarray_t *poly0 = g2d_polygon_create_zeros(4);
+    zarray_t *poly1 = g2d_polygon_create_zeros(4);
 
-        for (int i0 = 0; i0 < zarray_size(detections); i0++) {
-            struct quad *det0;
-            zarray_get_volatile(detections, i0, &det0);
+    for (int i0 = 0; i0 < zarray_size(detections); i0++) {
+        struct quad *det0;
+        zarray_get_volatile(detections, i0, &det0);
 
-            for (int k = 0; k < 4; k++) {
-                double p[2] = { det0->p[k][0], det0->p[k][1] };
-                zarray_set(poly0, k, p, NULL);
-            }
-
-            for (int i1 = i0 + 1; i1 < zarray_size(detections); i1++) {
-                struct quad *det1;
-                zarray_get_volatile(detections, i1, &det1);
-
-                for (int k = 0; k < 4; k++) {
-                    double p[2] = { det1->p[k][0], det1->p[k][1] };
-                    zarray_set(poly1, k, p, NULL);
-                }
-
-                if (g2d_polygon_overlaps_polygon(poly0, poly1)) {
-                    matd_destroy(det1->H);
-                    matd_destroy(det1->Hinv);
-                    zarray_remove_index(detections, i1, 1);
-                    i1--;
-                }
-            }
+        for (int k = 0; k < 4; k++) {
+            double p[2] = { det0->p[k][0], det0->p[k][1] };
+            zarray_set(poly0, k, p, NULL);
         }
 
-        zarray_destroy(poly0);
-        zarray_destroy(poly1);
+        for (int i1 = i0 + 1; i1 < zarray_size(detections); i1++) {
+            struct quad *det1;
+            zarray_get_volatile(detections, i1, &det1);
+
+            for (int k = 0; k < 4; k++) {
+                double p[2] = { det1->p[k][0], det1->p[k][1] };
+                zarray_set(poly1, k, p, NULL);
+            }
+
+            if (g2d_polygon_overlaps_polygon(poly0, poly1)) {
+                matd_destroy(det1->H);
+                matd_destroy(det1->Hinv);
+                zarray_remove_index(detections, i1, 1);
+                i1--;
+            }
+        }
     }
+
+    zarray_destroy(poly0);
+    zarray_destroy(poly1);
 
     list_init(out, sizeof(find_rects_list_lnk_data_t));
 
-    int *theta_buffer = fb_alloc(sizeof(int) * r_diag_len, FB_ALLOC_NO_HINT);
-    uint32_t *mag_buffer = fb_alloc(sizeof(uint32_t) * r_diag_len, FB_ALLOC_NO_HINT);
-    point_t *point_buffer = fb_alloc(sizeof(point_t) * r_diag_len, FB_ALLOC_NO_HINT);
+    int *theta_buffer = uma_malloc(sizeof(int) * r_diag_len, 0);
+    uint32_t *mag_buffer = uma_malloc(sizeof(uint32_t) * r_diag_len, 0);
+    point_t *point_buffer = uma_malloc(sizeof(point_t) * r_diag_len, 0);
 
     for (int i = 0, j = zarray_size(detections); i < j; i++) {
         struct quad *det;
@@ -500,12 +479,13 @@ void imlib_find_rects(list_t *out, image_t *ptr, rectangle_t *roi, uint32_t thre
             matd_destroy(quad->Hinv);
         }
     }
-    zarray_destroy(detections);
 
+    zarray_destroy(detections);
     apriltag_detector_destroy(td);
 
-    #ifdef APRILTAG_ENABLE_UMM_ALLOC
-    umm_print_stats();
-    #endif
+    uma_free(point_buffer);
+    uma_free(mag_buffer);
+    uma_free(theta_buffer);
+    uma_free(img.data);
 }
 #endif //IMLIB_ENABLE_FIND_RECTS

@@ -116,13 +116,8 @@ void mjpeg_write(file_t *fp, int width, int height, uint32_t *frames, uint32_t *
     // MAX == KeepAspectRatioByExpanding - MIN == KeepAspectRatio
     float scale = IM_MIN(xscale, yscale);
 
-    image_t dst_img = {
-        .w = width,
-        .h = height,
-        .pixfmt = PIXFORMAT_JPEG,
-        .size = 0,
-        .data = NULL
-    };
+    image_t temp = *img;
+    image_t dst_img = *img;
 
     bool simple = (xscale == 1) &&
                   (yscale == 1) &&
@@ -135,18 +130,15 @@ void mjpeg_write(file_t *fp, int width, int height, uint32_t *frames, uint32_t *
                   (color_palette == NULL) &&
                   (alpha_palette == NULL);
 
-    fb_alloc_mark();
+    bool compressed = !simple || img->pixfmt != PIXFORMAT_JPEG;
 
-    if ((dst_img.pixfmt != img->pixfmt) || (!simple)) {
-        image_t temp;
-        memcpy(&temp, img, sizeof(image_t));
-
-        if (img->is_compressed || (!simple)) {
-            temp.w = dst_img.w;
-            temp.h = dst_img.h;
+    if (compressed) {
+        if (img->is_compressed || !simple) {
+            temp.w = width;
+            temp.h = height;
             temp.pixfmt = PIXFORMAT_RGB565; // TODO PIXFORMAT_ARGB8888
             temp.size = 0;
-            temp.data = fb_alloc(image_size(&temp), FB_ALLOC_NO_HINT);
+            temp.data = uma_malloc(image_size(&temp), 0);
 
             int center_x = fast_floorf((width - (roi->w * scale)) / 2);
             int center_y = fast_floorf((height - (roi->h * scale)) / 2);
@@ -193,13 +185,7 @@ void mjpeg_write(file_t *fp, int width, int height, uint32_t *frames, uint32_t *
             }
         }
 
-        // When jpeg_compress needs more memory than in currently allocated it
-        // will try to realloc. MP will detect that the pointer is outside of
-        // the heap and return NULL which will cause an out of memory error.
-        jpeg_compress(&temp, &dst_img, quality, true, JPEG_SUBSAMPLING_AUTO);
-    } else {
-        dst_img.size = img->size;
-        dst_img.data = img->data;
+        jpeg_compress(&temp, &dst_img, quality, false, JPEG_SUBSAMPLING_AUTO);
     }
 
     uint32_t size_padded = (((dst_img.size + 3) / 4) * 4);
@@ -210,7 +196,12 @@ void mjpeg_write(file_t *fp, int width, int height, uint32_t *frames, uint32_t *
     *frames += 1;
     *bytes += size_padded;
 
-    fb_alloc_free_till_mark();
+    if (compressed) {
+        uma_free(dst_img.data);
+        if (temp.data != img->data) {
+            uma_free(temp.data);
+        }
+    }
 }
 
 void mjpeg_sync(file_t *fp, uint32_t frames, uint32_t bytes, uint32_t us_avg) {

@@ -30,10 +30,7 @@
 #include "framebuffer.h"
 #include "board_config.h"
 #include "omv_protocol.h"
-
-// Main framebuffer memory
-extern char _fb_memory_start;
-extern char _fb_memory_end;
+#include "umalloc.h"
 
 // Streaming buffer memory
 extern char _sb_memory_start;
@@ -47,8 +44,7 @@ void framebuffer_init0() {
     bool enabled = framebuffer_get(FB_STREAM_ID)->enabled;
 
     // Initialize the main framebuffer.
-    framebuffer_init(framebuffer_get(FB_MAINFB_ID), &_fb_memory_start,
-                     &_fb_memory_end - &_fb_memory_start, false, true);
+    framebuffer_init(framebuffer_get(FB_MAINFB_ID), NULL, 0, true, true);
 
     // Initialize the streaming buffer.
     framebuffer_init(framebuffer_get(FB_STREAM_ID), &_sb_memory_start,
@@ -111,14 +107,12 @@ void framebuffer_from_image(framebuffer_t *fb, image_t *img) {
     }
 }
 
-
 framebuffer_t *framebuffer_get(size_t id) {
     if (id >= FB_MAX_ID) {
         return NULL;
     }
     return &framebuffers[id];
 }
-
 
 char *framebuffer_pool_start(framebuffer_t *fb, size_t buf_count) {
     size_t qsize = (buf_count <= 3) ? 0 : queue_calc_size(buf_count);
@@ -165,24 +159,41 @@ int framebuffer_resize(framebuffer_t *fb, size_t count, size_t frame_size) {
     // Queue size given the requested buffer count.
     size_t queue_size = queue_calc_size(count);
 
-    // Maximum usable memory size without queues.
-    size_t min_size = frame_size + sizeof(vbuffer_t);
-    size_t max_size = fb->raw_size - queue_size * 2;
+    // Minimum single buffer size including vbuffer.
+    size_t buf_size = OMV_ALIGN_TO(frame_size + sizeof(vbuffer_t), FRAMEBUFFER_ALIGNMENT);
 
-    // Use the frame buffer memory for big queues.
-    char *queue_memory = (count > 3) ? fb->raw_base : fb->raw_static;
+    // Minimum total size including queue overhead.
+    size_t min_size = buf_size * count + queue_size * 2;
 
-    // Buffer size equals frame size plus header.
-    size_t buf_size = OMV_ALIGN_TO(min_size, FRAMEBUFFER_ALIGNMENT);
+    if (fb->dynamic) {
+        // If a buffer can't grow in place, a new block is allocated first before
+        // the old one gets free'd, which could easily fail with big allocations.
+        // Free the framebuffer first and use malloc to ensure this doesn't fail.
+        if (fb->raw_base) {
+            uma_free(fb->raw_base);
+            fb->raw_base = NULL;
+        }
 
-    // Ensure that the buffer size is reasonable.
-    if (buf_size < min_size || buf_size * count > max_size) {
+        void *raw_base = uma_malloc(min_size, UMA_PERSIST | UMA_MAYBE | UMA_CACHE);
+        if (raw_base == NULL) {
+            return -1;
+        } else {
+            fb->raw_size = min_size;
+            fb->raw_base = raw_base;
+        }
+    }
+
+    // Ensure that the raw buffer is large enough.
+    if (min_size > fb->raw_size) {
         return -1;
     }
 
     // Initialize the frame buffer.
     fb->buf_count = count;
     fb->buf_size = buf_size - sizeof(vbuffer_t);
+
+    // Use the frame buffer memory for big queues.
+    char *queue_memory = (count > 3) ? fb->raw_base : fb->raw_static;
 
     // Initialize the buffer queues.
     queue_init(&fb->free_queue, count, &queue_memory[queue_size * 0]);

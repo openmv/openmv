@@ -347,9 +347,8 @@ static void dsi_init(py_display_obj_t *self, display_mode_t *dm) {
 static void ltdc_init(py_display_obj_t *self, display_mode_t *dm) {
     uint32_t fb_size = dm->hactive * dm->vactive * sizeof(uint16_t);
 
-    fb_alloc_mark();
     for (int i = 0; i < FRAMEBUFFER_COUNT; i++) {
-        self->framebuffers[i] = (uint16_t *) fb_alloc0(fb_size, FB_ALLOC_CACHE_ALIGN);
+        self->framebuffers[i] = (uint16_t *) uma_calloc(fb_size, UMA_PERSIST | UMA_CACHE);
         display.framebuffer_layers[i].WindowX0 = 0;
         display.framebuffer_layers[i].WindowX1 = dm->hactive;
         display.framebuffer_layers[i].WindowY0 = 0;
@@ -366,7 +365,6 @@ static void ltdc_init(py_display_obj_t *self, display_mode_t *dm) {
         display.framebuffer_layers[i].Backcolor.Green = 0;
         display.framebuffer_layers[i].Backcolor.Red = 0;
     }
-    fb_alloc_mark_permanent();
 
     display.hltdc.Instance = LTDC;
     display.hltdc.Init.HSPolarity = LTDC_HSPOLARITY_AH,
@@ -558,7 +556,10 @@ static void display_deinit(py_display_obj_t *self) {
     omv_gpio_deinit(OMV_DISPLAY_BL_PIN);
     #endif
 
-    fb_alloc_free_till_mark_past_mark_permanent();
+    for (int i = 0; i < FRAMEBUFFER_COUNT; i++) {
+        uma_free(self->framebuffers[i]);
+        self->framebuffers[i] = NULL;
+    }
 }
 
 mp_obj_t display_make_new(const mp_obj_type_t *type, size_t n_args, size_t n_kw, const mp_obj_t *all_args) {

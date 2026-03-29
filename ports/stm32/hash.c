@@ -28,7 +28,7 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include "hash.h"
-#include "fb_alloc.h"
+#include "umalloc.h"
 #include "file_utils.h"
 
 #define BLOCK_SIZE    (512)
@@ -68,7 +68,7 @@ int hash_from_file(const char *path, uint8_t *digest) {
     size_t bytes = 0;
 
     int ret = -1;
-    uint8_t *buf = fb_alloc(BLOCK_SIZE, FB_ALLOC_NO_HINT);
+    uint8_t *buf = uma_malloc(BLOCK_SIZE, 0);
 
     file_open(&fp, path, FA_READ | FA_OPEN_EXISTING);
 
@@ -100,7 +100,7 @@ int hash_from_file(const char *path, uint8_t *digest) {
     ret = 0;
 
 error:
-    fb_free();
+    uma_free(buf);
     file_close(&fp);
     return ret;
 }

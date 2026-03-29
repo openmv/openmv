@@ -69,7 +69,6 @@
 
 #include "board_config.h"
 #include "framebuffer.h"
-#include "fb_alloc.h"
 #include "file_utils.h"
 #include "mp_utils.h"
 #include "omv_csi.h"
@@ -115,8 +114,8 @@ soft_reset:
     mp_init();
 
     // Initialise sub-systems.
+    uma_init();
     readline_init0();
-    fb_alloc_init0();
     framebuffer_init0();
     #if MICROPY_PY_CSI
     omv_csi_init0();

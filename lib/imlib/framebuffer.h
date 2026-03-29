@@ -61,24 +61,12 @@ typedef enum {
 //
 // - Buffer queues: If the number of video buffers exceeds 3.
 // - Video buffers: Consisting of a header followed by the buffer.
-// - Unused memory: Available for buffer expansion or fb_alloc.
-// - fb_alloc memory: Only for statically allocated frame buffers.
 //
 //              Dynamic Frame Buffer Memory Layout
-// raw_base  pool_start                   pool_end        raw_end
-// ▼         ▼                            ▼                     ▼
+// raw_base  pool_start                                  pool_end
+// ▼         ▼                                                  ▼
 // ┌────────────────────────────────────────────────────────────┐
-// │ Queues¹ |    Frame Buffers Memory    |  Unused FB Memory   │
-// └────────────────────────────────────────────────────────────┘
-//
-// For static frame buffers, fb_alloc uses a fixed end region and
-// may use the free space for transient allocations if available.
-//
-//              Static Frame Buffer Memory Layout
-// fb_start  pool_start  pool_end   fb_alloc_sp      fb_alloc_end
-// ▼         ▼           ▼          ▼                           ▼
-// ┌────────────────────────────────────────────────────────────┐
-// │ Queues¹ |  Buffers  | Unused FB Memory  |  Fixed FB Alloc  │
+// │ Queues¹ |          Frame Buffers Memory                    │
 // └────────────────────────────────────────────────────────────┘
 // ¹ Queues use frame buffer memory only if count > 3, otherwise
 //   they're statically allocated to keep small buffers in SRAM.

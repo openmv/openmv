@@ -477,7 +477,7 @@ static mp_obj_t py_imageio_close(mp_obj_t self) {
         file_close(&stream->fp);
     #endif
     } else if (stream->type == IMAGE_IO_MEMORY_STREAM) {
-        fb_alloc_free_till_mark_past_mark_permanent();
+        uma_free(stream->buffer);
     }
 
     stream->closed = true;
@@ -551,9 +551,7 @@ static mp_obj_t py_imageio_make_new(const mp_obj_type_t *type, size_t n_args, si
         stream->count = mp_obj_get_int(args[1]);
         stream->size = IMAGE_T_SIZE_ALIGNED + OMV_ALIGN_TO(image_size(&image), IMAGE_ALIGNMENT);
 
-        fb_alloc_mark();
-        stream->buffer = fb_alloc(stream->count * stream->size, FB_ALLOC_PREFER_SIZE | FB_ALLOC_CACHE_ALIGN);
-        fb_alloc_mark_permanent();
+        stream->buffer = uma_malloc(stream->count * stream->size, UMA_PERSIST | UMA_CACHE);
     } else {
         mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Invalid stream type"));
     }

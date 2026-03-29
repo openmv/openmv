@@ -56,8 +56,6 @@
 #define OMV_FIR_MLX90641_ENABLE             (1)
 #define OMV_FIR_AMG8833_ENABLE              (1)
 
-// UMM heap block size
-#define OMV_UMM_BLOCK_SIZE                  256
 
 // USB IRQn.
 #define OMV_USB_IRQN                        (USB1_OTG_HS_IRQn)
@@ -143,20 +141,13 @@
 // Power supply configuration
 #define OMV_PWR_SUPPLY                      (PWR_SMPS_SUPPLY)
 
-// Linker script constants (see the linker script template stm32fxxx.ld.S).
-// Note: fb_alloc is a stack-based, dynamically allocated memory on FB.
-// The maximum available fb_alloc memory = FB_ALLOC_SIZE + FB_SIZE - (w*h*bpp).
+// Linker script constants (see common.ld.S).
 #define OMV_MAIN_MEMORY                     SRAM1  // Data/BSS memory
 #define OMV_STACK_MEMORY                    SRAM1  // stack memory
 #define OMV_RAMFUNC_MEMORY                  ITCM
 #define OMV_STACK_SIZE                      (64K)
 #define OMV_HEAP_MEMORY                     SRAM1  // libc/sbrk heap memory
 #define OMV_HEAP_SIZE                       (256K)
-#define OMV_FB_MEMORY                       DRAM   // Framebuffer, fb_alloc
-#define OMV_FB_SIZE                         (20M)  // FB memory.
-#define OMV_FB_ALLOC_SIZE                   (11M)  // minimum fb_alloc size
-#define OMV_FB_OVERLAY_MEMORY               SRAM1  // Fast fb_alloc memory.
-#define OMV_FB_OVERLAY_SIZE                 (400K) // Fast fb_alloc memory size.
 #define OMV_SB_MEMORY                       DRAM   // Streaming buffer memory.
 #define OMV_SB_SIZE                         (1M)   // Streaming buffer size.
 #define OMV_DMA_MEMORY                      SRAM1  // Misc DMA buffers memory.
@@ -165,6 +156,15 @@
 #define OMV_GC_BLOCK0_SIZE                  (1M)
 #define OMV_GC_BLOCK1_MEMORY                DRAM   // Main GC block
 #define OMV_GC_BLOCK1_SIZE                  (24M)
+#define OMV_UMA_BLOCK0_MEMORY               DRAM   // Default UMA pool.
+#define OMV_UMA_BLOCK0_SIZE                 (31M)
+#define OMV_UMA_BLOCK0_FLAGS                (0)
+#define OMV_UMA_BLOCK1_MEMORY               SRAM1  // Fast UMA pool.
+#define OMV_UMA_BLOCK1_SIZE                 (400K)
+#define OMV_UMA_BLOCK1_FLAGS                (UMA_FAST)
+#define OMV_UMA_BLOCK2_MEMORY               DTCM   // DTCM UMA pool.
+#define OMV_UMA_BLOCK2_SIZE                 (128K)
+#define OMV_UMA_BLOCK2_FLAGS                (UMA_DTCM)
 #define OMV_MSC_BUF_SIZE                    (4K)   // USB MSC bot data
 #define OMV_VOSPI_DMA_BUFFER                ".d2_dma_buffer"
 

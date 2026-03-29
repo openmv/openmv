@@ -181,7 +181,7 @@ soft_reset:
     soft_timer_init();
     usbdbg_init();
 
-    fb_alloc_init0();
+    uma_init();
     framebuffer_init0();
     #if MICROPY_PY_CSI
     omv_csi_init0();

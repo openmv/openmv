@@ -8,7 +8,7 @@
 #define __APRILTAG_CONFIG_H__
 #include <stdint.h>
 #include "imlib_config.h"
-#include "umm_malloc.h"
+#include "umalloc.h"
 
 // Feature disables
 #define APRILTAG_ENABLE_PTHREADS        (0)
@@ -16,7 +16,6 @@
 #define APRILTAG_ENABLE_DEBUG           (0)
 #define APRILTAG_ENABLE_PROFILE         (0)
 #define APRILTAG_ENABLE_TAG_NAMES       (0)
-#define APRILTAG_ENABLE_UMM_ALLOC       (1)
 
 #ifndef IMLIB_ENABLE_FINE_APRILTAGS
 #define APRILTAG_ENABLE_8_CONNECTIVITY  (0)
@@ -55,14 +54,11 @@
 #define APRILTAG_ENABLE_TAGSTANDARD52H13 (0)
 #endif
 
-// Redirect malloc/calloc/realloc/free to UMM allocator.
-#ifdef APRILTAG_ENABLE_UMM_ALLOC
-#define apriltag_malloc(s)      umm_malloc(s)
-#define apriltag_calloc(n, s)   umm_calloc(n, s)
-#define apriltag_realloc(p, s)  umm_realloc(p, s)
-#define apriltag_free(p)        umm_free(p)
-#endif // APRILTAG_ENABLE_UMM_ALLOC
-
+// Redirect malloc/calloc/realloc/free to UMA allocator.
+#define apriltag_malloc(s)      uma_malloc(s, 0)
+#define apriltag_calloc(n, s)   uma_calloc((n) * (s), 0)
+#define apriltag_realloc(p, s)  uma_realloc(p, s, 0)
+#define apriltag_free(p)        uma_free(p)
 #define apriltag_assert(x)      ((void) 0)
 
 // Simple strtod that avoids pulling in newlib stdio/malloc.

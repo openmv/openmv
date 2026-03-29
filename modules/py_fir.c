@@ -144,20 +144,20 @@ static void fir_fill_image_float_obj(image_t *img, mp_obj_t *data, float min, fl
 
 #if (OMV_FIR_MLX90621_ENABLE == 1)
 static void fir_MLX90621_get_frame(float *Ta, float *To) {
-    uint16_t *data = fb_alloc(MLX90621_FRAME_DATA_SIZE * sizeof(uint16_t), FB_ALLOC_NO_HINT);
+    uint16_t *data = uma_malloc(MLX90621_FRAME_DATA_SIZE * sizeof(uint16_t), 0);
 
     PY_ASSERT_TRUE_MSG(MLX90621_GetFrameData(data) >= 0,
                        "Failed to read the MLX90621 sensor data!");
     *Ta = MLX90621_GetTa(data, MP_STATE_PORT(fir_mlx_data));
     MLX90621_CalculateTo(data, MP_STATE_PORT(fir_mlx_data), 0.95f, *Ta - 8, To);
 
-    fb_free();
+    uma_free(data);
 }
 #endif
 
 #if (OMV_FIR_MLX90640_ENABLE == 1)
 static void fir_MLX90640_get_frame(float *Ta, float *To) {
-    uint16_t *data = fb_alloc(MLX90640_FRAME_DATA_SIZE * sizeof(uint16_t), FB_ALLOC_NO_HINT);
+    uint16_t *data = uma_malloc(MLX90640_FRAME_DATA_SIZE * sizeof(uint16_t), 0);
 
     // Wait for a new data to be available before calling GetFrameData.
     MLX90640_SynchFrame(MLX90640_ADDR);
@@ -174,13 +174,13 @@ static void fir_MLX90640_get_frame(float *Ta, float *To) {
     *Ta = MLX90640_GetTa(data, MP_STATE_PORT(fir_mlx_data));
     MLX90640_CalculateTo(data, MP_STATE_PORT(fir_mlx_data), 0.95f, *Ta - 8, To);
 
-    fb_free();
+    uma_free(data);
 }
 #endif
 
 #if (OMV_FIR_MLX90641_ENABLE == 1)
 static void fir_MLX90641_get_frame(float *Ta, float *To) {
-    uint16_t *data = fb_alloc(MLX90641_FRAME_DATA_SIZE * sizeof(uint16_t), FB_ALLOC_NO_HINT);
+    uint16_t *data = uma_malloc(MLX90641_FRAME_DATA_SIZE * sizeof(uint16_t), 0);
 
     // Wait for a new data to be available before calling GetFrameData.
     MLX90641_SynchFrame(MLX90641_ADDR);
@@ -190,7 +190,7 @@ static void fir_MLX90641_get_frame(float *Ta, float *To) {
     *Ta = MLX90641_GetTa(data, MP_STATE_PORT(fir_mlx_data));
     MLX90641_CalculateTo(data, MP_STATE_PORT(fir_mlx_data), 0.95f, *Ta - 8, To);
 
-    fb_free();
+    uma_free(data);
 }
 #endif
 
@@ -207,7 +207,7 @@ static void fir_AMG8833_get_frame(float *Ta, float *To) {
 
     *Ta = AMG8833_12_TO_16(temp) * 0.0625f;
 
-    int16_t *data = fb_alloc(AMG8833_WIDTH * AMG8833_HEIGHT * sizeof(int16_t), FB_ALLOC_NO_HINT);
+    int16_t *data = uma_malloc(AMG8833_WIDTH * AMG8833_HEIGHT * sizeof(int16_t), 0);
     error |= omv_i2c_write(&fir_bus,
                            AMG8833_ADDR,
                            (uint8_t [1]) {AMG8833_TEMPERATURE_REGISTER},
@@ -223,7 +223,7 @@ static void fir_AMG8833_get_frame(float *Ta, float *To) {
         To[i] = AMG8833_12_TO_16(data[i]) * 0.25f;
     }
 
-    fb_free();
+    uma_free(data);
 }
 #endif
 
@@ -403,14 +403,13 @@ mp_obj_t py_fir_init(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_args)
             omv_i2c_init(&fir_bus, OMV_FIR_I2C_ID, OMV_I2C_SPEED_FULL); // The EEPROM must be read at <= 400KHz.
             MLX90621_I2CInit(&fir_bus);
 
-            fb_alloc_mark();
-            uint8_t *eeprom = fb_alloc(MLX90621_EEPROM_DATA_SIZE * sizeof(uint8_t), FB_ALLOC_NO_HINT);
+            uint8_t *eeprom = uma_malloc(MLX90621_EEPROM_DATA_SIZE * sizeof(uint8_t), 0);
             int error = MLX90621_DumpEE(eeprom);
             error |= MLX90621_Configure(eeprom);
             error |= MLX90621_SetRefreshRate(ir_fresh_rate);
             error |= MLX90621_SetResolution(adc_resolution);
             error |= MLX90621_ExtractParameters(eeprom, MP_STATE_PORT(fir_mlx_data));
-            fb_alloc_free_till_mark();
+            uma_free(eeprom);
 
             if (error != 0) {
                 if (first_init) {
@@ -450,13 +449,12 @@ mp_obj_t py_fir_init(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_args)
             omv_i2c_init(&fir_bus, OMV_FIR_I2C_ID, OMV_I2C_SPEED_FULL); // The EEPROM must be read at <= 400KHz.
             MLX90640_I2CInit(&fir_bus);
 
-            fb_alloc_mark();
-            uint16_t *eeprom = fb_alloc(MLX90640_EEPROM_DATA_SIZE * sizeof(uint16_t), FB_ALLOC_NO_HINT);
+            uint16_t *eeprom = uma_malloc(MLX90640_EEPROM_DATA_SIZE * sizeof(uint16_t), 0);
             int error = MLX90640_DumpEE(MLX90640_ADDR, eeprom);
             error |= MLX90640_SetRefreshRate(MLX90640_ADDR, ir_fresh_rate);
             error |= MLX90640_SetResolution(MLX90640_ADDR, adc_resolution);
             error |= MLX90640_ExtractParameters(eeprom, MP_STATE_PORT(fir_mlx_data));
-            fb_alloc_free_till_mark();
+            uma_free(eeprom);
 
             if (error != 0) {
                 if (first_init) {
@@ -496,13 +494,12 @@ mp_obj_t py_fir_init(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_args)
             omv_i2c_init(&fir_bus, OMV_FIR_I2C_ID, OMV_I2C_SPEED_FULL); // The EEPROM must be read at <= 400KHz.
             MLX90641_I2CInit(&fir_bus);
 
-            fb_alloc_mark();
-            uint16_t *eeprom = fb_alloc(MLX90641_EEPROM_DATA_SIZE * sizeof(uint16_t), FB_ALLOC_NO_HINT);
+            uint16_t *eeprom = uma_malloc(MLX90641_EEPROM_DATA_SIZE * sizeof(uint16_t), 0);
             int error = MLX90641_DumpEE(MLX90641_ADDR, eeprom);
             error |= MLX90641_SetRefreshRate(MLX90641_ADDR, ir_fresh_rate);
             error |= MLX90641_SetResolution(MLX90641_ADDR, adc_resolution);
             error |= MLX90641_ExtractParameters(eeprom, MP_STATE_PORT(fir_mlx_data));
-            fb_alloc_free_till_mark();
+            uma_free(eeprom);
 
             if (error != 0) {
                 if (first_init) {
@@ -642,34 +639,31 @@ mp_obj_t py_fir_read_ta() {
     switch (fir_sensor) {
         #if (OMV_FIR_MLX90621_ENABLE == 1)
         case FIR_MLX90621: {
-            fb_alloc_mark();
-            uint16_t *data = fb_alloc(MLX90621_FRAME_DATA_SIZE * sizeof(uint16_t), FB_ALLOC_NO_HINT);
+            uint16_t *data = uma_malloc(MLX90621_FRAME_DATA_SIZE * sizeof(uint16_t), 0);
             PY_ASSERT_TRUE_MSG(MLX90621_GetFrameData(data) >= 0,
                                "Failed to read the MLX90640 sensor data!");
             mp_obj_t result = mp_obj_new_float(MLX90621_GetTa(data, MP_STATE_PORT(fir_mlx_data)));
-            fb_alloc_free_till_mark();
+            uma_free(data);
             return result;
         }
         #endif
         #if (OMV_FIR_MLX90640_ENABLE == 1)
         case FIR_MLX90640: {
-            fb_alloc_mark();
-            uint16_t *data = fb_alloc(MLX90640_FRAME_DATA_SIZE * sizeof(uint16_t), FB_ALLOC_NO_HINT);
+            uint16_t *data = uma_malloc(MLX90640_FRAME_DATA_SIZE * sizeof(uint16_t), 0);
             PY_ASSERT_TRUE_MSG(MLX90640_GetFrameData(MLX90640_ADDR, data) >= 0,
                                "Failed to read the MLX90640 sensor data!");
             mp_obj_t result = mp_obj_new_float(MLX90640_GetTa(data, MP_STATE_PORT(fir_mlx_data)));
-            fb_alloc_free_till_mark();
+            uma_free(data);
             return result;
         }
         #endif
         #if (OMV_FIR_MLX90641_ENABLE == 1)
         case FIR_MLX90641: {
-            fb_alloc_mark();
-            uint16_t *data = fb_alloc(MLX90641_FRAME_DATA_SIZE * sizeof(uint16_t), FB_ALLOC_NO_HINT);
+            uint16_t *data = uma_malloc(MLX90641_FRAME_DATA_SIZE * sizeof(uint16_t), 0);
             PY_ASSERT_TRUE_MSG(MLX90641_GetFrameData(MLX90641_ADDR, data) >= 0,
                                "Failed to read the MLX90641 sensor data!");
             mp_obj_t result = mp_obj_new_float(MLX90641_GetTa(data, MP_STATE_PORT(fir_mlx_data)));
-            fb_alloc_free_till_mark();
+            uma_free(data);
             return result;
         }
         #endif
@@ -714,45 +708,41 @@ mp_obj_t py_fir_read_ir(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_ar
     switch (fir_sensor) {
         #if (OMV_FIR_MLX90621_ENABLE == 1)
         case FIR_MLX90621: {
-            fb_alloc_mark();
-            float Ta, *To = fb_alloc(MLX90621_WIDTH * MLX90621_HEIGHT * sizeof(float), FB_ALLOC_NO_HINT);
+            float Ta, *To = uma_malloc(MLX90621_WIDTH * MLX90621_HEIGHT * sizeof(float), 0);
             fir_MLX90621_get_frame(&Ta, To);
             mp_obj_t result = fir_get_ir(MLX90621_WIDTH, MLX90621_HEIGHT, Ta, To, !args[ARG_hmirror].u_bool,
                                          args[ARG_vflip].u_bool, args[ARG_transpose].u_bool, true);
-            fb_alloc_free_till_mark();
+            uma_free(To);
             return result;
         }
         #endif
         #if (OMV_FIR_MLX90640_ENABLE == 1)
         case FIR_MLX90640: {
-            fb_alloc_mark();
-            float Ta, *To = fb_alloc(MLX90640_WIDTH * MLX90640_HEIGHT * sizeof(float), FB_ALLOC_NO_HINT);
+            float Ta, *To = uma_malloc(MLX90640_WIDTH * MLX90640_HEIGHT * sizeof(float), 0);
             fir_MLX90640_get_frame(&Ta, To);
             mp_obj_t result = fir_get_ir(MLX90640_WIDTH, MLX90640_HEIGHT, Ta, To, !args[ARG_hmirror].u_bool,
                                          args[ARG_vflip].u_bool, args[ARG_transpose].u_bool, false);
-            fb_alloc_free_till_mark();
+            uma_free(To);
             return result;
         }
         #endif
         #if (OMV_FIR_MLX90641_ENABLE == 1)
         case FIR_MLX90641: {
-            fb_alloc_mark();
-            float Ta, *To = fb_alloc(MLX90641_WIDTH * MLX90641_HEIGHT * sizeof(float), FB_ALLOC_NO_HINT);
+            float Ta, *To = uma_malloc(MLX90641_WIDTH * MLX90641_HEIGHT * sizeof(float), 0);
             fir_MLX90641_get_frame(&Ta, To);
             mp_obj_t result = fir_get_ir(MLX90641_WIDTH, MLX90641_HEIGHT, Ta, To, !args[ARG_hmirror].u_bool,
                                          args[ARG_vflip].u_bool, args[ARG_transpose].u_bool, false);
-            fb_alloc_free_till_mark();
+            uma_free(To);
             return result;
         }
         #endif
         #if (OMV_FIR_AMG8833_ENABLE == 1)
         case FIR_AMG8833: {
-            fb_alloc_mark();
-            float Ta, *To = fb_alloc(AMG8833_WIDTH * AMG8833_HEIGHT * sizeof(float), FB_ALLOC_NO_HINT);
+            float Ta, *To = uma_malloc(AMG8833_WIDTH * AMG8833_HEIGHT * sizeof(float), 0);
             fir_AMG8833_get_frame(&Ta, To);
             mp_obj_t result = fir_get_ir(AMG8833_WIDTH, AMG8833_HEIGHT, Ta, To, !args[ARG_hmirror].u_bool,
                                          args[ARG_vflip].u_bool, args[ARG_transpose].u_bool, true);
-            fb_alloc_free_till_mark();
+            uma_free(To);
             return result;
         }
         #endif
@@ -826,15 +816,14 @@ mp_obj_t py_fir_draw_ir(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_ar
     const uint16_t *color_palette = py_helper_arg_to_palette(args[ARG_color_palette].u_obj, PIXFORMAT_RGB565);
     const uint8_t *alpha_palette = py_helper_arg_to_palette(args[ARG_alpha_palette].u_obj, PIXFORMAT_GRAYSCALE);
 
-    fb_alloc_mark();
-    src_img.data = fb_alloc(src_img.w * src_img.h * sizeof(uint8_t), FB_ALLOC_NO_HINT);
+    src_img.data = uma_malloc(src_img.w * src_img.h * sizeof(uint8_t), 0);
     fir_fill_image_float_obj(&src_img, ir_array, min, max);
 
     imlib_draw_image(dst_img, &src_img, args[ARG_x].u_int, args[ARG_y].u_int, x_scale, y_scale, &roi,
                      args[ARG_channel].u_int, args[ARG_alpha].u_int, color_palette, alpha_palette,
                      args[ARG_hint].u_int, NULL, NULL, NULL, NULL);
 
-    fb_alloc_free_till_mark();
+    uma_free(src_img.data);
     return mp_const_none;
 }
 static MP_DEFINE_CONST_FUN_OBJ_KW(py_fir_draw_ir_obj, 2, py_fir_draw_ir);
@@ -911,56 +900,59 @@ mp_obj_t py_fir_snapshot(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_a
     const uint16_t *color_palette = py_helper_arg_to_palette(args[ARG_color_palette].u_obj, PIXFORMAT_RGB565);
     const uint8_t *alpha_palette = py_helper_arg_to_palette(args[ARG_alpha_palette].u_obj, PIXFORMAT_GRAYSCALE);
 
-    fb_alloc_mark();
     // Allocate source image data.
-    src_img.data = fb_alloc(src_img.w * src_img.h * sizeof(uint8_t), FB_ALLOC_NO_HINT);
+    src_img.data = uma_malloc(src_img.w * src_img.h * sizeof(uint8_t), 0);
 
     switch (fir_sensor) {
         #if (OMV_FIR_MLX90621_ENABLE == 1)
         case FIR_MLX90621: {
-            float Ta, *To = fb_alloc(MLX90621_WIDTH * MLX90621_HEIGHT * sizeof(float), FB_ALLOC_NO_HINT);
+            float Ta, *To = uma_malloc(MLX90621_WIDTH * MLX90621_HEIGHT * sizeof(float), 0);
             fir_MLX90621_get_frame(&Ta, To);
             if (args[ARG_scale].u_obj == mp_const_none) {
                 fast_get_min_max(To, MLX90621_WIDTH * MLX90621_HEIGHT, &min, &max);
             }
             imlib_fill_image_from_float(&src_img, MLX90621_WIDTH, MLX90621_HEIGHT, To, min, max, !args[ARG_hmirror].u_bool,
                                         args[ARG_vflip].u_bool, args[ARG_transpose].u_bool, true);
+            uma_free(To);
             break;
         }
         #endif
         #if (OMV_FIR_MLX90640_ENABLE == 1)
         case FIR_MLX90640: {
-            float Ta, *To = fb_alloc(MLX90640_WIDTH * MLX90640_HEIGHT * sizeof(float), FB_ALLOC_NO_HINT);
+            float Ta, *To = uma_malloc(MLX90640_WIDTH * MLX90640_HEIGHT * sizeof(float), 0);
             fir_MLX90640_get_frame(&Ta, To);
             if (args[ARG_scale].u_obj == mp_const_none) {
                 fast_get_min_max(To, MLX90640_WIDTH * MLX90640_HEIGHT, &min, &max);
             }
             imlib_fill_image_from_float(&src_img, MLX90640_WIDTH, MLX90640_HEIGHT, To, min, max, !args[ARG_hmirror].u_bool,
                                         args[ARG_vflip].u_bool, args[ARG_transpose].u_bool, false);
+            uma_free(To);
             break;
         }
         #endif
         #if (OMV_FIR_MLX90641_ENABLE == 1)
         case FIR_MLX90641: {
-            float Ta, *To = fb_alloc(MLX90641_WIDTH * MLX90641_HEIGHT * sizeof(float), FB_ALLOC_NO_HINT);
+            float Ta, *To = uma_malloc(MLX90641_WIDTH * MLX90641_HEIGHT * sizeof(float), 0);
             fir_MLX90641_get_frame(&Ta, To);
             if (args[ARG_scale].u_obj == mp_const_none) {
                 fast_get_min_max(To, MLX90641_WIDTH * MLX90641_HEIGHT, &min, &max);
             }
             imlib_fill_image_from_float(&src_img, MLX90641_WIDTH, MLX90641_HEIGHT, To, min, max, !args[ARG_hmirror].u_bool,
                                         args[ARG_vflip].u_bool, args[ARG_transpose].u_bool, false);
+            uma_free(To);
             break;
         }
         #endif
         #if (OMV_FIR_AMG8833_ENABLE == 1)
         case FIR_AMG8833: {
-            float Ta, *To = fb_alloc(AMG8833_WIDTH * AMG8833_HEIGHT * sizeof(float), FB_ALLOC_NO_HINT);
+            float Ta, *To = uma_malloc(AMG8833_WIDTH * AMG8833_HEIGHT * sizeof(float), 0);
             fir_AMG8833_get_frame(&Ta, To);
             if (args[ARG_scale].u_obj == mp_const_none) {
                 fast_get_min_max(To, AMG8833_WIDTH * AMG8833_HEIGHT, &min, &max);
             }
             imlib_fill_image_from_float(&src_img, AMG8833_WIDTH, AMG8833_HEIGHT, To, min, max, !args[ARG_hmirror].u_bool,
                                         args[ARG_vflip].u_bool, args[ARG_transpose].u_bool, true);
+            uma_free(To);
             break;
         }
         #endif
@@ -974,7 +966,7 @@ mp_obj_t py_fir_snapshot(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_a
                      (args[ARG_hint].u_int & (~IMAGE_HINT_CENTER)) | IMAGE_HINT_BLACK_BACKGROUND,
                      NULL, NULL, NULL, NULL);
 
-    fb_alloc_free_till_mark();
+    uma_free(src_img.data);
 
     if (args[ARG_copy_to_fb].u_bool) {
         framebuffer_update_preview(&dst_img);

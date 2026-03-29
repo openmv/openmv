@@ -261,7 +261,7 @@ $(OMV_FIRM_OBJ): | MICROPYTHON
 
 # This target builds the firmware.
 $(FIRMWARE): $(OMV_FIRM_OBJ)
-	$(CPP) -P -E $(LDSCRIPT_FLAGS) ports/$(PORT)/$(LDSCRIPT).ld.S > $(BUILD)/$(LDSCRIPT).lds
+	$(CPP) -P -E -DLINKER_SCRIPT $(LDSCRIPT_FLAGS) ports/$(PORT)/$(LDSCRIPT).ld.S > $(BUILD)/$(LDSCRIPT).lds
 	$(CC) $(LDFLAGS) $(OMV_FIRM_OBJ) $(MPY_FIRM_OBJ) -o $(FW_DIR)/$(FIRMWARE).elf $(LIBS) -lm
 	$(OBJCOPY) -Obinary $(FW_DIR)/$(FIRMWARE).elf $(FW_DIR)/$(FIRMWARE).bin
 ifeq ($(OMV_ENABLE_BL), 1)

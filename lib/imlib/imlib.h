@@ -35,9 +35,8 @@
 #include <math.h>
 #include <arm_math.h>
 #include <cmsis_extension.h>
-#include "fb_alloc.h"
 #include "file_utils.h"
-#include "umm_malloc.h"
+#include "umalloc.h"
 #include "array.h"
 #include "fmath.h"
 #include "collections.h"
@@ -1363,8 +1362,6 @@ void imlib_find_hog(image_t *src, rectangle_t *roi, int cell_size);
 
 // Helper Functions
 void imlib_zero(image_t *img, image_t *mask, bool invert);
-void imlib_draw_row_setup(imlib_draw_row_data_t *data);
-void imlib_draw_row_teardown(imlib_draw_row_data_t *data);
 void imlib_draw_row(int x_start, int x_end, int y_row, imlib_draw_row_data_t *data);
 void imlib_draw_image_get_bounds(image_t *dst_img,
                                  image_t *src_img,

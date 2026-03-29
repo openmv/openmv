@@ -123,8 +123,12 @@ static mp_obj_t py_csi_deinit(mp_obj_t self_in) {
     // Abort any ongoing capture.
     omv_csi_abort(self->csi, true, false);
 
-    // Reset FB pointer (realloc'd in make_new).
-    if (self->csi->fb->dynamic) {
+    // Free the framebuffer for auxiliary sensors.
+    if (self->csi->auxiliary) {
+        framebuffer_t *fb = self->csi->fb;
+        if (fb) {
+            uma_free(fb->raw_base);
+        }
         self->csi->fb = NULL;
     }
 
@@ -225,10 +229,8 @@ static mp_obj_t py_csi_snapshot(size_t n_args, const mp_obj_t *pos_args, mp_map_
         // If an image is provided update it and return.
         if (args[ARG_image].u_obj != mp_const_none) {
             image_t *other = py_helper_arg_to_image(args[ARG_image].u_obj, ARG_IMAGE_MUTABLE);
-            fb_alloc_mark();
             imlib_draw_image(other, &image, 0, 0, 1.f, 1.f, NULL, -1, 255, NULL, NULL,
                              IMAGE_HINT_SCALE_ASPECT_IGNORE, NULL, NULL, NULL, NULL);
-            fb_alloc_free_till_mark();
             return mp_const_none;
         }
 
@@ -1341,12 +1343,11 @@ static mp_obj_t py_csi_read_reg(mp_obj_t self_in, mp_obj_t addr) {
 static MP_DEFINE_CONST_FUN_OBJ_2(py_csi_read_reg_obj, py_csi_read_reg);
 
 mp_obj_t py_csi_make_new(const mp_obj_type_t *type, size_t n_args, size_t n_kw, const mp_obj_t *all_args) {
-    enum { ARG_id, ARG_delays, ARG_fflush, ARG_fb_size };
+    enum { ARG_id, ARG_delays, ARG_fflush };
     static const mp_arg_t allowed_args[] = {
         { MP_QSTR_cid, MP_ARG_INT | MP_ARG_KW_ONLY, {.u_int = -1 } },
         { MP_QSTR_delays, MP_ARG_BOOL | MP_ARG_KW_ONLY,  {.u_bool = true} },
         { MP_QSTR_fflush, MP_ARG_BOOL | MP_ARG_KW_ONLY,  {.u_bool = true} },
-        { MP_QSTR_fb_size, MP_ARG_INT | MP_ARG_KW_ONLY,  {.u_int = 2 * 1024 * 1024} },
     };
 
     // Parse args.
@@ -1367,9 +1368,8 @@ mp_obj_t py_csi_make_new(const mp_obj_type_t *type, size_t n_args, size_t n_kw, 
     csi->disable_full_flush = !args[ARG_fflush].u_bool;
 
     if (csi->fb == NULL) {
-        size_t fb_size = args[ARG_fb_size].u_int;
         csi->fb = (framebuffer_t *) m_malloc(sizeof(framebuffer_t));
-        framebuffer_init(csi->fb, m_malloc(fb_size), fb_size, true, true);
+        framebuffer_init(csi->fb, NULL, 0, true, true);
     }
 
     #if MICROPY_PY_IMU

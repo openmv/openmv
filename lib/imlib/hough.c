@@ -36,16 +36,16 @@ void imlib_find_lines(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
         r_diag_len_div = (r_diag_len + hough_divide - 1) / hough_divide;
         theta_size = 1 + ((180 + hough_divide - 1) / hough_divide) + 1; // left & right padding
         r_size = (r_diag_len_div * 2) + 1; // -r_diag_len to +r_diag_len
-        if ((sizeof(uint32_t) * theta_size * r_size) <= fb_avail()) {
+        if ((sizeof(uint32_t) * theta_size * r_size) <= uma_avail(0)) {
             break;
         }
         hough_divide = hough_divide << 1; // powers of 2...
         if (hough_divide > 4) {
-            fb_alloc_fail();                   // support 1, 2, 4
+            uma_fail();                   // support 1, 2, 4
         }
     }
 
-    uint32_t *acc = fb_alloc0(sizeof(uint32_t) * theta_size * r_size, FB_ALLOC_NO_HINT);
+    uint32_t *acc = uma_calloc(sizeof(uint32_t) * theta_size * r_size, 0);
 
     switch (ptr->pixfmt) {
         case PIXFORMAT_BINARY: {
@@ -288,7 +288,7 @@ void imlib_find_lines(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
         }
     }
 
-    fb_free(); // acc
+    uma_free(acc); // acc
 
     for (;;) {
         // Merge overlapping.
@@ -411,9 +411,9 @@ void imlib_find_line_segments(list_t *out, image_t *ptr, rectangle_t *roi, unsig
     list_init(out, sizeof(find_lines_list_lnk_data_t));
 
     const int r_diag_len = fast_roundf(fast_sqrtf((roi->w * roi->w) + (roi->h * roi->h))) * 2;
-    int *theta_buffer = fb_alloc(sizeof(int) * r_diag_len, FB_ALLOC_NO_HINT);
-    uint32_t *mag_buffer = fb_alloc(sizeof(uint32_t) * r_diag_len, FB_ALLOC_NO_HINT);
-    point_t *point_buffer = fb_alloc(sizeof(point_t) * r_diag_len, FB_ALLOC_NO_HINT);
+    int *theta_buffer = uma_malloc(sizeof(int) * r_diag_len, 0);
+    uint32_t *mag_buffer = uma_malloc(sizeof(uint32_t) * r_diag_len, 0);
+    point_t *point_buffer = uma_malloc(sizeof(point_t) * r_diag_len, 0);
 
     for (size_t i = 0; list_size(&temp_out); i++) {
         find_lines_list_lnk_data_t lnk_data;
@@ -491,9 +491,9 @@ void imlib_find_line_segments(list_t *out, image_t *ptr, rectangle_t *roi, unsig
 
     merge_alot(out, max_gap_pixels + 1, max_theta_diff);
 
-    fb_free(); // point_buffer
-    fb_free(); // mag_buffer
-    fb_free(); // theta_buffer
+    uma_free(point_buffer);
+    uma_free(mag_buffer);
+    uma_free(theta_buffer);
 }
 #endif //IMLIB_ENABLE_FIND_LINE_SEGMENTS
 
@@ -501,8 +501,8 @@ void imlib_find_line_segments(list_t *out, image_t *ptr, rectangle_t *roi, unsig
 void imlib_find_circles(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int x_stride, unsigned int y_stride,
                         uint32_t threshold, unsigned int x_margin, unsigned int y_margin, unsigned int r_margin,
                         unsigned int r_min, unsigned int r_max, unsigned int r_step) {
-    uint16_t *theta_acc = fb_alloc0(sizeof(uint16_t) * roi->w * roi->h, FB_ALLOC_NO_HINT);
-    uint16_t *magnitude_acc = fb_alloc0(sizeof(uint16_t) * roi->w * roi->h, FB_ALLOC_NO_HINT);
+    uint16_t *theta_acc = uma_calloc(sizeof(uint16_t) * roi->w * roi->h, 0);
+    uint16_t *magnitude_acc = uma_calloc(sizeof(uint16_t) * roi->w * roi->h, 0);
 
     switch (ptr->pixfmt) {
         case PIXFORMAT_BINARY: {
@@ -738,19 +738,19 @@ void imlib_find_circles(list_t *out, image_t *ptr, rectangle_t *roi, unsigned in
             // shrink to fit...
             a_size = 1 + ((w_size + hough_divide - 1) / hough_divide) + 1; // left & right padding
             b_size = 1 + ((h_size + hough_divide - 1) / hough_divide) + 1; // top & bottom padding
-            if ((sizeof(uint32_t) * a_size * b_size) <= fb_avail()) {
+            if ((sizeof(uint32_t) * a_size * b_size) <= uma_avail(0)) {
                 break;
             }
             hough_divide = hough_divide << 1; // powers of 2...
             hough_shift++;
             if (hough_divide > 4) {
-                fb_alloc_fail();                   // support 1, 2, 4
+                uma_fail();                   // support 1, 2, 4
             }
         }
 
-        uint32_t *acc = fb_alloc0(sizeof(uint32_t) * a_size * b_size, FB_ALLOC_NO_HINT);
-        int16_t *rcos = fb_alloc(sizeof(int16_t) * 360, FB_ALLOC_NO_HINT);
-        int16_t *rsin = fb_alloc(sizeof(int16_t) * 360, FB_ALLOC_NO_HINT);
+        uint32_t *acc = uma_calloc(sizeof(uint32_t) * a_size * b_size, 0);
+        int16_t *rcos = uma_malloc(sizeof(int16_t) * 360, 0);
+        int16_t *rsin = uma_malloc(sizeof(int16_t) * 360, 0);
         for (int i = 0; i < 360; i++) {
             rcos[i] = (int16_t) roundf(r * cos_table[i]);
             rsin[i] = (int16_t) roundf(r * sin_table[i]);
@@ -832,13 +832,13 @@ void imlib_find_circles(list_t *out, image_t *ptr, rectangle_t *roi, unsigned in
             }
         }
 
-        fb_free(); // rsin
-        fb_free(); // rcos
-        fb_free(); // acc
+        uma_free(rsin);
+        uma_free(rcos);
+        uma_free(acc);
     }
 
-    fb_free(); // magnitude_acc
-    fb_free(); // theta_acc
+    uma_free(magnitude_acc);
+    uma_free(theta_acc);
 
     for (;;) {
         // Merge overlapping.
