@@ -63,6 +63,7 @@ CFLAGS += -DCPU_$(MCU) \
 	      -DCMSIS_MCU_H='<$(MCU_SERIES).h>' \
 	      -DCLOCK_CONFIG_H='<boards/$(MCU_SERIES)_clock_config.h>' \
           -DCSI_DRIVER_FRAG_MODE=1 \
+          -DOMV_NOSYS_STUBS_ENABLE=1 \
           -D__START=main \
           -D__STARTUP_CLEAR_BSS \
           -D__STARTUP_INITIALIZE_RAMFUNCTION \
