@@ -6,6 +6,7 @@
 // Included by platform.h when APRILTAG_HAVE_CONFIG is defined.
 #ifndef __APRILTAG_CONFIG_H__
 #define __APRILTAG_CONFIG_H__
+#include <stdint.h>
 #include "imlib_config.h"
 #include "umm_malloc.h"
 
@@ -16,8 +17,13 @@
 #define APRILTAG_ENABLE_PROFILE         (0)
 #define APRILTAG_ENABLE_TAG_NAMES       (0)
 #define APRILTAG_ENABLE_UMM_ALLOC       (1)
+
 #ifndef IMLIB_ENABLE_FINE_APRILTAGS
 #define APRILTAG_ENABLE_8_CONNECTIVITY  (0)
+#endif
+
+#ifndef IMLIB_ENABLE_HIGH_RES_APRILTAGS
+#define APRILTAG_ENABLE_32BIT_UNIONFIND (0)
 #endif
 
 // Disable tag families not enabled in imlib_config.h
@@ -72,5 +78,18 @@ static inline double _apriltag_strtod(const char *s, char **endp) {
     return (double) val;
 }
 #define apriltag_strtod(s, endp) _apriltag_strtod(s, endp)
+
+#ifndef APRILTAG_STACK_LIMIT
+#define APRILTAG_STACK_LIMIT   (2048)
+#endif
+
+// Dynamic stack availability check for ptsort.
+static inline size_t _apriltag_stack_avail(void) {
+    extern char _sstack;
+    volatile char _estack;
+    intptr_t avail = (intptr_t) &_estack - (intptr_t) &_sstack - (intptr_t) APRILTAG_STACK_LIMIT;
+    return (avail > 0) ? (size_t) avail : 0;
+}
+#define apriltag_stack_avail() _apriltag_stack_avail()
 
 #endif // __APRILTAG_CONFIG_H__
