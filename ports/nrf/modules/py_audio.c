@@ -34,7 +34,6 @@
 #include "py_audio.h"
 #include "py_assert.h"
 #include "py_helper.h"
-#include "fb_alloc.h"
 #include "board_config.h"
 #include "omv_common.h"
 #include "nrfx_pdm.h"

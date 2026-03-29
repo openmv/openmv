@@ -177,18 +177,18 @@ bool jpeg_compress(image_t *src, image_t *dst, int quality, bool realloc, jpeg_s
     int src_w_mcus_bytes = src_w_mcus * mcu_size;
     int src_w_mcus_bytes_2 = src_w_mcus_bytes * 2;
 
-    // If dst->data == NULL then we need to fb_alloc() space for the payload which will be fb_free()'d
+    // If dst->data == NULL then we need to allocate space for the payload which will be freed
     // by the caller. We have to alloc this memory for all cases if we return from the method.
     if (!dst->data) {
-        uint32_t avail = fb_avail();
+        uint32_t avail = uma_avail(0);
         uint32_t space = src_w_mcus_bytes_2 + JPEG_ALLOC_PADDING;
 
         if (avail < space) {
-            fb_alloc_fail();
+            uma_fail();
         }
 
         dst->size = IMLIB_IMAGE_MAX_SIZE(avail - space);
-        dst->data = fb_alloc(dst->size, FB_ALLOC_PREFER_SIZE | FB_ALLOC_CACHE_ALIGN);
+        dst->data = uma_malloc(dst->size, UMA_CACHE);
     }
 
     if (src->is_compressed) {
@@ -221,7 +221,7 @@ bool jpeg_compress(image_t *src, image_t *dst, int quality, bool realloc, jpeg_s
     JPEG_state.input_paused = false;
     JPEG_state.output_paused = false;
 
-    uint8_t *mcu_row_buffer = fb_alloc(src_w_mcus_bytes_2, FB_ALLOC_PREFER_SPEED | FB_ALLOC_CACHE_ALIGN);
+    uint8_t *mcu_row_buffer = uma_malloc(src_w_mcus_bytes_2, UMA_FAST | UMA_CACHE);
 
     for (int y_offset = 0; y_offset < src->h; y_offset += JPEG_MCU_H) {
         uint8_t *mcu_row_buffer_ptr = mcu_row_buffer + (src_w_mcus_bytes * ((y_offset / JPEG_MCU_H) % 2));
@@ -392,7 +392,7 @@ exit_cleanup:
     HAL_JPEG_UnRegisterDataReadyCallback(&JPEG_state.jpeg_descr);
     HAL_JPEG_UnRegisterGetDataCallback(&JPEG_state.jpeg_descr);
 
-    fb_free(); // mcu_row_buffer (after DMA is aborted)
+    uma_free(mcu_row_buffer); // after DMA is aborted
     return jpeg_overflow;
 }
 
@@ -440,7 +440,7 @@ void jpeg_decompress(image_t *dst, image_t *src) {
 
     if (((uint32_t) src->data) % __SCB_DCACHE_LINE_SIZE) {
         // Copy to cache aligned buffer.
-        JPEG_state.jpeg_descr.pJpegInBuffPtr = fb_alloc(JPEG_state.in_data_len, FB_ALLOC_CACHE_ALIGN);
+        JPEG_state.jpeg_descr.pJpegInBuffPtr = uma_malloc(JPEG_state.in_data_len, UMA_CACHE);
         memcpy(JPEG_state.jpeg_descr.pJpegInBuffPtr, src->data, src->size);
     } else {
         JPEG_state.jpeg_descr.pJpegInBuffPtr = src->data;
@@ -527,7 +527,7 @@ void jpeg_decompress(image_t *dst, image_t *src) {
         }
     } else if (JPEG_state.jpeg_descr.Conf.ColorSpace == JPEG_CMYK_COLORSPACE) {
         if (((uint32_t) src->data) % __SCB_DCACHE_LINE_SIZE) {
-            fb_free(); // JPEG_state.jpeg_descr.pJpegInBuffPtr
+            uma_free(JPEG_state.jpeg_descr.pJpegInBuffPtr);
         }
         mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Unsupported JPEG!"));
     }
@@ -540,7 +540,7 @@ void jpeg_decompress(image_t *dst, image_t *src) {
     JPEG_state.out_data_len = 0;
     JPEG_state.output_paused = false;
 
-    uint8_t *mcu_row_buffer = fb_alloc(dst_w_mcus_bytes_2, FB_ALLOC_PREFER_SPEED | FB_ALLOC_CACHE_ALIGN);
+    uint8_t *mcu_row_buffer = uma_malloc(dst_w_mcus_bytes_2, UMA_FAST | UMA_CACHE);
 
     #if defined(OMV_MDMA_CHANNEL_JPEG_IN)
     // Flush input.
@@ -781,14 +781,14 @@ exit_cleanup:
     HAL_JPEG_UnRegisterDataReadyCallback(&JPEG_state.jpeg_descr);
     HAL_JPEG_UnRegisterGetDataCallback(&JPEG_state.jpeg_descr);
 
-    fb_free(); // mcu_row_buffer (after DMA is aborted)
+    uma_free(mcu_row_buffer); // after DMA is aborted
 
     if ((JPEG_state.jpeg_descr.Conf.ColorSpace == JPEG_YCBCR_COLORSPACE) && dst->is_color) {
         HAL_DMA2D_DeInit(&DMA2D_Handle);
     }
 
     if (((uint32_t) src->data) % __SCB_DCACHE_LINE_SIZE) {
-        fb_free(); // JPEG_state.jpeg_descr.pJpegInBuffPtr (after DMA is aborted)
+        uma_free(JPEG_state.jpeg_descr.pJpegInBuffPtr); // after DMA is aborted
     }
 }
 

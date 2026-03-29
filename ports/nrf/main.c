@@ -171,7 +171,7 @@ soft_reset:
     #if MICROPY_PY_MACHINE_UART
     uart_init0();
     #endif
-    fb_alloc_init0();
+    uma_init();
     framebuffer_init0();
     #if MICROPY_PY_CSI
     omv_csi_init0();

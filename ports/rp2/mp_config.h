@@ -23,10 +23,10 @@
  *
  * MicroPython port config.
  */
-#define MICROPY_VM_HOOK_EXC                    \
-    do {                                       \
-        extern void fb_alloc_free_till_mark(); \
-        fb_alloc_free_till_mark();             \
+#define MICROPY_VM_HOOK_EXC            \
+    do {                               \
+        extern void uma_collect(void); \
+        uma_collect();                 \
     } while (0);
 
 #define MICROPY_ENABLE_VM_ABORT             (1)
