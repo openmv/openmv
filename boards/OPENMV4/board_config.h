@@ -68,8 +68,6 @@
 #define OMV_FIR_MLX90641_ENABLE               (1)
 #define OMV_FIR_AMG8833_ENABLE                (1)
 
-// UMM heap block size
-#define OMV_UMM_BLOCK_SIZE                    16
 
 // USB IRQn.
 #define OMV_USB_IRQN                          (OTG_FS_IRQn)
@@ -127,15 +125,10 @@
 #define OMV_PWR_SUPPLY                        (PWR_LDO_SUPPLY)
 
 // Linker script constants (see the linker script template stm32.ld.S).
-// Note: fb_alloc is a stack-based, dynamically allocated memory on FB.
-// The maximum available fb_alloc memory = FB_ALLOC_SIZE + FB_SIZE - (w*h*bpp).
 #define OMV_MAIN_MEMORY                       SRAM1 // Data/BSS memory
 #define OMV_FFS_MEMORY                        DTCM  // Flash filesystem cache memory
 #define OMV_STACK_MEMORY                      ITCM  // stack memory
 #define OMV_STACK_SIZE                        (64K)
-#define OMV_FB_MEMORY                         SRAM0  // Framebuffer, fb_alloc
-#define OMV_FB_SIZE                           (400K) // FB memory: header + VGA/GS image
-#define OMV_FB_ALLOC_SIZE                     (80K) // minimum fb alloc size
 #define OMV_SB_MEMORY                         SRAM0 // Streaming buffer memory.
 #define OMV_SB_SIZE                           (32K) // Streaming buffer size.
 #define OMV_DMA_MEMORY                        SRAM2 // Misc DMA buffers memory.
@@ -143,6 +136,9 @@
 #define OMV_GC_BLOCK0_SIZE                    (64K)
 #define OMV_GC_BLOCK1_MEMORY                  SRAM1 // Extra GC block 0.
 #define OMV_GC_BLOCK1_SIZE                    (267K)
+#define OMV_UMA_BLOCK0_MEMORY                 SRAM0 // Default UMA pool.
+#define OMV_UMA_BLOCK0_SIZE                   (480K)
+#define OMV_UMA_BLOCK0_FLAGS                  (0)
 #define OMV_MSC_BUF_SIZE                      (2K)  // USB MSC bot data
 #define OMV_LINE_BUF_SIZE                     (3 * 1024) // Image line buffer round(640 * 2BPP * 2 buffers).
 #define OMV_VOSPI_DMA_BUFFER                  ".dma_buffer"

@@ -49,8 +49,6 @@ extern unsigned char *OMV_BOARD_UID_ADDR;    // Unique address.
 // FIR drivers configuration.
 #define OMV_FIR_AMG8833_ENABLE     (1)
 
-// UMM heap block size
-#define OMV_UMM_BLOCK_SIZE         16
 
 // USB IRQn.
 #define OMV_USB_IRQN               (USBCTRL_IRQ_IRQn)
@@ -59,11 +57,11 @@ extern unsigned char *OMV_BOARD_UID_ADDR;    // Unique address.
 #define OMV_MAIN_MEMORY            RAM // Data/BSS memory
 #define OMV_STACK_MEMORY           RAM // stack memory
 #define OMV_STACK_SIZE             (16K)
-#define OMV_FB_MEMORY              RAM // Framebuffer, fb_alloc
-#define OMV_FB_SIZE                (100K) // FB memory
-#define OMV_FB_ALLOC_SIZE          (16K) // minimum fb alloc size
 #define OMV_GC_BLOCK0_MEMORY       RAM // Main GC block
 #define OMV_GC_BLOCK0_SIZE         (60 * 1024) // MicroPython's heap
+#define OMV_UMA_BLOCK0_MEMORY      RAM // Default UMA pool.
+#define OMV_UMA_BLOCK0_SIZE        (116K)
+#define OMV_UMA_BLOCK0_FLAGS       (0)
 #define OMV_SB_SIZE                (20K) // Streaming buffer size.
 
 // GP LED
