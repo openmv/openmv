@@ -24,7 +24,7 @@
  *
  * TV Python module.
  */
-#include "omv_boardconfig.h"
+#include "board_config.h"
 
 #if MICROPY_PY_TV
 

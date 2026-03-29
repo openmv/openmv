@@ -34,7 +34,7 @@
 #include "shared/runtime/gchelper.h"
 #include "shared/runtime/softtimer.h"
 #include "shared/runtime/pyexec.h"
-#include "omv_boardconfig.h"
+#include "board_config.h"
 #include "mp_utils.h"
 
 void __attribute__((weak)) gc_collect(void) {

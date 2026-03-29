@@ -35,7 +35,7 @@
 #include "imlib.h"
 #include "py/mphal.h"
 #include "stm_isp.h"
-#include "omv_boardconfig.h"
+#include "board_config.h"
 
 #ifdef DCMIPP
 float stm_isp_update_awb(omv_csi_t *csi, uint32_t pipe, uint32_t n_pixels) {

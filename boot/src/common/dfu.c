@@ -32,7 +32,7 @@
  */
 #include <stdint.h>
 #include <string.h>
-#include "omv_bootconfig.h"
+#include "boot_config.h"
 #include "dfu.h"
 #include "flash.h"
 

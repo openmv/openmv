@@ -26,7 +26,7 @@
 
 #include "omv_common.h"
 #include "omv_protocol.h"
-#include "omv_boardconfig.h"
+#include "board_config.h"
 #include "framebuffer.h"
 
 

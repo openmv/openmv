@@ -28,7 +28,7 @@
 #include "mpprint.h"
 #include "fmath.h"
 #include "framebuffer.h"
-#include "omv_boardconfig.h"
+#include "board_config.h"
 #include "omv_protocol.h"
 
 // Main framebuffer memory

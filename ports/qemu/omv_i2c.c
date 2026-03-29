@@ -37,7 +37,7 @@
 #include "py/mphal.h"
 #include "py/runtime.h"
 
-#include "omv_portconfig.h"
+#include "port_config.h"
 #include "omv_i2c.h"
 
 int omv_i2c_init(omv_i2c_t *i2c, uint32_t bus_id, uint32_t speed) {

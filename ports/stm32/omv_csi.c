@@ -36,8 +36,8 @@
 #include <stdio.h>
 #include "py/mphal.h"
 #include "irq.h"
-#include "omv_boardconfig.h"
-#include "unaligned_memcpy.h"
+#include "board_config.h"
+#include "memcpy.h"
 #include "omv_gpio.h"
 #include "omv_i2c.h"
 #include "omv_csi.h"

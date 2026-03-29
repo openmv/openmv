@@ -23,7 +23,7 @@
  *
  * Hardware Accelerated JPEG Encoder and Decoder
  */
-#include "omv_boardconfig.h"
+#include "board_config.h"
 #if (OMV_JPEG_CODEC_ENABLE == 1)
 #include "imlib.h"
 

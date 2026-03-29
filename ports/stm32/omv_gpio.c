@@ -31,7 +31,7 @@
 #include "py/mphal.h"
 #include "irq.h"
 
-#include "omv_boardconfig.h"
+#include "board_config.h"
 #include "omv_gpio.h"
 
 #if defined(STM32N6)

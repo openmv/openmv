@@ -37,8 +37,8 @@
 #include "py/mphal.h"
 #include "py/runtime.h"
 
-#include "omv_portconfig.h"
-#include "omv_boardconfig.h"
+#include "port_config.h"
+#include "board_config.h"
 #include "alif_hal.h"
 #include "omv_gpio.h"
 #include "omv_common.h"

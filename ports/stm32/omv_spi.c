@@ -30,7 +30,7 @@
 #include STM32_HAL_H
 #include "py/mphal.h"
 
-#include "omv_boardconfig.h"
+#include "board_config.h"
 #include "irq.h"
 #include "omv_common.h"
 #include "stm_dma.h"

@@ -39,7 +39,7 @@
 #include "py/mphal.h"
 #include "py/runtime.h"
 
-#include "omv_boardconfig.h"
+#include "board_config.h"
 #include "omv_i2c.h"
 #include "omv_csi.h"
 

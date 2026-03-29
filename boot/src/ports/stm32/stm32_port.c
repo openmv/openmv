@@ -34,8 +34,8 @@
 #include <string.h>
 
 #include STM32_HAL_H
-#include "omv_boardconfig.h"
-#include "omv_bootconfig.h"
+#include "board_config.h"
+#include "boot_config.h"
 #include "flash.h"
 #include "stm32_usb.h"
 

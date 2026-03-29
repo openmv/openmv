@@ -39,11 +39,11 @@
 #include "fsl_csi.h"
 #include "mimxrt_hal.h"
 
-#include "omv_boardconfig.h"
+#include "board_config.h"
 #include "omv_gpio.h"
 #include "omv_i2c.h"
 #include "omv_csi.h"
-#include "unaligned_memcpy.h"
+#include "memcpy.h"
 
 #define DMA_LENGTH_ALIGNMENT    (8)
 #define MIN_EDMA_DST_INC        (4)

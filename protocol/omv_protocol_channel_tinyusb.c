@@ -32,7 +32,7 @@
 #include "omv_common.h"
 #include "cmsis_gcc.h"
 #include "omv_protocol.h"
-#include "omv_boardconfig.h"
+#include "board_config.h"
 #include "tusb.h"
 
 #ifndef OMV_PROTOCOL_USB_CHANNEL_TIMEOUT_MS

@@ -31,7 +31,7 @@
 #include "pico/stdlib.h"
 #include "hardware/gpio.h"
 
-#include "omv_boardconfig.h"
+#include "board_config.h"
 #include "omv_gpio.h"
 
 void omv_gpio_config(omv_gpio_t pin, uint32_t mode, uint32_t pull, uint32_t speed, uint32_t af) {

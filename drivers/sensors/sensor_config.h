@@ -4,7 +4,7 @@
 #include <stdint.h>
 
 #include "omv_csi.h"
-#include "omv_boardconfig.h"
+#include "board_config.h"
 
 typedef int (*sensor_init_t) (omv_csi_t *);
 

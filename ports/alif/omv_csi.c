@@ -43,12 +43,12 @@
 #include "sys_ctrl_cpi.h"
 #include "system_utils.h"
 
-#include "omv_boardconfig.h"
+#include "board_config.h"
 #include "omv_gpio.h"
 #include "omv_gpu.h"
 #include "omv_i2c.h"
 #include "omv_csi.h"
-#include "unaligned_memcpy.h"
+#include "memcpy.h"
 
 // Bits missing from cpi.h
 #define CAM_CFG_INTERFACE_Pos       (0U)

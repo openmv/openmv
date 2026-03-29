@@ -26,7 +26,7 @@
 #include "font.h"
 #include "imlib.h"
 #include "omv_gpu.h"
-#include "unaligned_memcpy.h"
+#include "memcpy.h"
 
 void *imlib_compute_row_ptr(const image_t *img, int y) {
     switch (img->pixfmt) {

@@ -33,7 +33,7 @@
 #include <string.h>
 #include <stdint.h>
 #include <stdbool.h>
-#include "omv_bootconfig.h"
+#include "boot_config.h"
 #include "dfu.h"
 #include "header.h"
 

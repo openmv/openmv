@@ -27,7 +27,7 @@
 #include "axiqos.h"
 #include "imlib.h"
 #include "irq.h"
-#include "omv_boardconfig.h"
+#include "board_config.h"
 #include "omv_common.h"
 // Define pin objects in this file.
 #define OMV_GPIO_DEFINE_PINS    (1)

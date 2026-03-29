@@ -10,7 +10,7 @@
 #include "py/runtime.h"
 #include "py/objlist.h"
 
-#include "omv_boardconfig.h"
+#include "board_config.h"
 #include "py_helper.h"
 #include "py_assert.h"
 #include "py_image.h"

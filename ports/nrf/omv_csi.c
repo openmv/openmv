@@ -29,8 +29,8 @@
 #include "py/mphal.h"
 #include "omv_i2c.h"
 #include "omv_csi.h"
-#include "omv_boardconfig.h"
-#include "unaligned_memcpy.h"
+#include "board_config.h"
+#include "memcpy.h"
 #include "nrf_i2s.h"
 #include "hal/nrf_gpio.h"
 

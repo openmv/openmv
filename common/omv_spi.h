@@ -27,7 +27,7 @@
 #define __OMV_SPI_H__
 #include <stdint.h>
 #include <stdbool.h>
-#include "omv_portconfig.h"
+#include "port_config.h"
 
 // Config options are defined in ports so they can be used
 // directly to initialize peripherals without remapping them.

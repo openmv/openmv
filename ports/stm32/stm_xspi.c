@@ -35,7 +35,7 @@
 #include <stdio.h>
 
 #include STM32_HAL_H
-#include "omv_boardconfig.h"
+#include "board_config.h"
 #include "stm_xspi.h"
 
 #if defined(OMV_XSPI_PSRAM_ID)

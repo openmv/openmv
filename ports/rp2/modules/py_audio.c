@@ -32,7 +32,7 @@
 #include "py/binary.h"
 #include "runtime.h"
 
-#include "omv_boardconfig.h"
+#include "board_config.h"
 #if MICROPY_PY_AUDIO
 
 #include "hardware/pio.h"

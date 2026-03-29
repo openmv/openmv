@@ -43,7 +43,7 @@
 #include "sys_ctrl_cpi.h"
 #include "sys_ctrl_pdm.h"
 #include "se_services.h"
-#include "omv_boardconfig.h"
+#include "board_config.h"
 // Define pin objects in this file.
 #define OMV_GPIO_DEFINE_PINS    (1)
 #include "omv_gpio.h"

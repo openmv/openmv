@@ -18,7 +18,7 @@
   * <h2><center>&copy; COPYRIGHT 2011 STMicroelectronics</center></h2>
   ******************************************************************************  
   */
-#include "omv_boardconfig.h"
+#include "board_config.h"
 
 #if OMV_DISPLAY_CEC_ENABLE
 

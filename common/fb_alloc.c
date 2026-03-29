@@ -27,7 +27,7 @@
 #include "py/runtime.h"
 #include "fb_alloc.h"
 #include "framebuffer.h"
-#include "omv_boardconfig.h"
+#include "board_config.h"
 #include "omv_common.h"
 
 extern char _fb_alloc_end;

@@ -30,7 +30,7 @@
 #include "py/mphal.h"
 #include "fb_alloc.h"
 #include "umm_malloc.h"
-#include "omv_boardconfig.h"
+#include "board_config.h"
 
 /* A couple of macros to make packing structures less compiler dependent */
 #define UMM_H_ATTPACKPRE

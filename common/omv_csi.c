@@ -40,9 +40,9 @@
 #include "omv_gpio.h"
 #include "omv_i2c.h"
 #include "omv_csi.h"
-#include "omv_boardconfig.h"
+#include "board_config.h"
 #include "framebuffer.h"
-#include "unaligned_memcpy.h"
+#include "memcpy.h"
 #include "sensor_config.h"
 
 #ifndef OMV_CSI_RESET_DELAY

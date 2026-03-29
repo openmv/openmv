@@ -30,7 +30,7 @@
  *
  * USB3320 ULPI functions ported from stm32f7xx_lp_modes.c
  */
-#include "omv_boardconfig.h"
+#include "board_config.h"
 
 #if (OMV_USB_ULPI == 1)
 #include STM32_HAL_H

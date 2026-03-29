@@ -3,7 +3,7 @@
  * Copyright (c) 2018 Damien P. George
  */
 
-#include "omv_boardconfig.h"
+#include "board_config.h"
 
 MEMORY
 {

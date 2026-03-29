@@ -87,7 +87,7 @@
 #include "usbdbg.h"
 #include "py_audio.h"
 #include "framebuffer.h"
-#include "omv_boardconfig.h"
+#include "board_config.h"
 #include "omv_i2c.h"
 #include "omv_csi.h"
 #include "mp_utils.h"

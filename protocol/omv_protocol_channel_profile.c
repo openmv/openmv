@@ -27,7 +27,7 @@
 #include "omv_common.h"
 #include "omv_profiler.h"
 #include "omv_protocol.h"
-#include "omv_boardconfig.h"
+#include "board_config.h"
 
 #if OMV_PROFILER_ENABLE
 static int profile_channel_init(const omv_protocol_channel_t *channel) {

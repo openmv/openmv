@@ -67,7 +67,7 @@
 #include "lib/cyw43-driver/src/cyw43.h"
 #endif
 
-#include "omv_boardconfig.h"
+#include "board_config.h"
 #include "framebuffer.h"
 #include "fb_alloc.h"
 #include "file_utils.h"

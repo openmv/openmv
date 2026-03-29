@@ -37,8 +37,8 @@
 #include "hardware/pio.h"
 #include "hardware/dma.h"
 #include "hardware/irq.h"
-#include "omv_boardconfig.h"
-#include "unaligned_memcpy.h"
+#include "board_config.h"
+#include "memcpy.h"
 #include "dcmi.pio.h"
 
 extern void __fatal_error(const char *msg);

@@ -23,7 +23,7 @@
  *
  * GC2145 driver.
  */
-#include "omv_boardconfig.h"
+#include "board_config.h"
 #if (OMV_GC2145_ENABLE == 1)
 
 #include <stdint.h>

@@ -28,7 +28,7 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 # Include OpenMV board config first to set the port.
-include $(OMV_BOARD_CONFIG_DIR)/omv_boardconfig.mk
+include $(OMV_BOARD_CONFIG_DIR)/board_config.mk
 
 FIRMWARE   := bootloader
 LDSCRIPT   ?= stm32

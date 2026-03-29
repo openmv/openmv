@@ -33,7 +33,7 @@
 #ifndef __OMV_BOOT_HEADER_H__
 #define __OMV_BOOT_HEADER_H__
 
-#include "omv_boardconfig.h"
+#include "board_config.h"
 
 // Boot magic value (also used for forced boot entry).
 #ifndef OMV_BOOT_MAGIC_VALUE

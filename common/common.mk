@@ -36,7 +36,7 @@ COMMON_SRC_C += \
     pendsv.c \
     trace.c \
     umm_malloc.c \
-    unaligned_memcpy.c \
+    memcpy.c \
     vospi.c \
     queue.c \
     omv_profiler.c \

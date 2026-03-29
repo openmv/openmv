@@ -59,7 +59,7 @@
 #include "pico/aon_timer.h"
 #include "shared/timeutils/timeutils.h"
 
-#include "omv_boardconfig.h"
+#include "board_config.h"
 #include "framebuffer.h"
 #include "omv_i2c.h"
 #include "omv_csi.h"

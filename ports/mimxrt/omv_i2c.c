@@ -32,8 +32,8 @@
 #include "fsl_iomuxc.h"
 #include CLOCK_CONFIG_H
 
-#include "omv_portconfig.h"
-#include "omv_boardconfig.h"
+#include "port_config.h"
+#include "board_config.h"
 #include "mimxrt_hal.h"
 #include "omv_gpio.h"
 #include "omv_i2c.h"

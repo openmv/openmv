@@ -28,7 +28,7 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 # Include OpenMV board config.
-include $(OMV_BOARD_CONFIG_DIR)/omv_boardconfig.mk
+include $(OMV_BOARD_CONFIG_DIR)/board_config.mk
 
 LDSCRIPT  ?= alif
 BUILD := $(BUILD)/$(MCU_CORE)
@@ -37,7 +37,7 @@ DAVE2D_DIR=drivers/dave2d
 CORE_M55_HP := $(if $(filter M55_HP,$(MCU_CORE)),1,0)
 CMSIS_MCU_H := '<system_utils.h>'
 
-ROMFS_CONFIG := $(OMV_BOARD_CONFIG_DIR)/romfs.json
+ROMFS_CONFIG := $(OMV_BOARD_CONFIG_DIR)/romfs_config.json
 ROMFS_PART := $(if $(filter M55_HP,$(MCU_CORE)),0,1)
 ROMFS_IMAGE := $(FW_DIR)/romfs$(ROMFS_PART).stamp
 
