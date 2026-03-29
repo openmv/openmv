@@ -26,7 +26,7 @@
  */
 #include STM32_HAL_H
 #include <string.h>
-#include "omv_boardconfig.h"
+#include "board_config.h"
 // Trustzone-M core secure attributes
 #include "partition_stm32n6xx.h"
 

@@ -23,7 +23,7 @@
  *
  * TFP410 DVI serializer module.
  */
-#include "omv_boardconfig.h"
+#include "board_config.h"
 
 #if OMV_TFP410_ENABLE
 #include "py/obj.h"

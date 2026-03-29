@@ -23,7 +23,7 @@
  *
  * SPI Display Python module.
  */
-#include "omv_boardconfig.h"
+#include "board_config.h"
 
 #if MICROPY_PY_DISPLAY && defined(OMV_SPI_DISPLAY_CONTROLLER)
 

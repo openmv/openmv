@@ -23,7 +23,7 @@
  *
  * OV7690 driver.
  */
-#include "omv_boardconfig.h"
+#include "board_config.h"
 #if (OMV_OV7690_ENABLE == 1)
 
 #include <stdint.h>

@@ -23,7 +23,7 @@
  *
  * FT5X06 touch panel Python module.
  */
-#include "omv_boardconfig.h"
+#include "board_config.h"
 
 #if OMV_FT5X06_ENABLE
 

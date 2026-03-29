@@ -33,7 +33,7 @@
 #include "fsl_iomuxc.h"
 
 #include "mimxrt_hal.h"
-#include "omv_boardconfig.h"
+#include "board_config.h"
 #include "omv_gpio.h"
 #include "omv_common.h"
 

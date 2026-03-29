@@ -33,7 +33,7 @@
 #include <stdint.h>
 #include <string.h>
 
-#include "omv_boardconfig.h"
+#include "board_config.h"
 
 #include "py/mphal.h"
 #include "py/runtime.h"

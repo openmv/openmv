@@ -30,7 +30,7 @@
 #include "pico/time.h"
 #include "pico/stdlib.h"
 #include "hardware/i2c.h"
-#include "omv_boardconfig.h"
+#include "board_config.h"
 #include "omv_i2c.h"
 
 #define I2C_TIMEOUT         (100 * 1000)

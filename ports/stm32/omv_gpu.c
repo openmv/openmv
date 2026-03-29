@@ -23,7 +23,7 @@
  *
  * GPU driver for STM32 port.
  */
-#include "omv_boardconfig.h"
+#include "board_config.h"
 #if (OMV_GPU_ENABLE == 1)
 #include STM32_HAL_H
 

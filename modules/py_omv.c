@@ -28,7 +28,7 @@
 #include <stdbool.h>
 #include "py/obj.h"
 #include "framebuffer.h"
-#include "omv_boardconfig.h"
+#include "board_config.h"
 #include "omv_protocol.h"
 
 static mp_obj_t py_omv_version_string() {

@@ -23,7 +23,7 @@
  *
  * MT9V0XX driver.
  */
-#include "omv_boardconfig.h"
+#include "board_config.h"
 #if (OMV_MT9V0XX_ENABLE == 1)
 
 #include <stdint.h>

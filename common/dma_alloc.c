@@ -30,7 +30,7 @@
 #include "py/runtime.h"
 #include "py/mphal.h"
 #include "dma_alloc.h"
-#include "omv_boardconfig.h"
+#include "board_config.h"
 #include "omv_common.h"
 #if OMV_DMA_ALLOC
 

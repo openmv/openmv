@@ -38,7 +38,7 @@
 #include "py/runtime.h"
 
 #include "alif_hal.h"
-#include "omv_boardconfig.h"
+#include "board_config.h"
 #include "ethosu_driver.h"
 
 #define ETHOSU_SEC_ENABLED      (1)

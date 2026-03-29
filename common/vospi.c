@@ -23,7 +23,7 @@
  *
  * VOSPI driver.
  */
-#include "omv_boardconfig.h"
+#include "board_config.h"
 #if OMV_ENABLE_VOSPI || OMV_LEPTON_ENABLE
 
 #include <stdint.h>

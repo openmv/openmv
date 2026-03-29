@@ -27,7 +27,7 @@
 #define __OMV_I2C_H__
 #include <stdint.h>
 #include <stdbool.h>
-#include "omv_portconfig.h"
+#include "port_config.h"
 
 // Transfer speeds
 typedef enum _omv_i2c_speed {

@@ -42,7 +42,7 @@
 #include "fmath.h"
 #include "collections.h"
 #include "imlib_config.h"
-#include "omv_boardconfig.h"
+#include "board_config.h"
 #include "omv_common.h"
 #include "omv_profiler.h"
 #include "py/runtime.h"

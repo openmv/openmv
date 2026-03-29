@@ -143,7 +143,7 @@ CFLAGS += -finstrument-functions-exclude-file-list=lib/cmsis,lib/stm32,/lib/mimx
 endif
 
 # Include OpenMV board config first to set the port.
-include $(OMV_BOARD_CONFIG_DIR)/omv_boardconfig.mk
+include $(OMV_BOARD_CONFIG_DIR)/board_config.mk
 
 # Include MicroPython board config.
 #include $(MP_BOARD_CONFIG_DIR)/mpconfigboard.mk
@@ -265,10 +265,10 @@ MPY_CFLAGS += -DMICROPY_HW_USB_VID=$(OMV_USB_VID)
 MPY_CFLAGS += -DMICROPY_HW_USB_PID=$(OMV_USB_PID)
 
 MPY_CFLAGS += -DMICROPY_BOARD_PENDSV_ENTRIES="$(MPY_PENDSV_ENTRIES)"
-MPY_CFLAGS += -DMP_CONFIGFILE=\<$(OMV_PORT_DIR)/omv_mpconfigport.h\>
+MPY_CFLAGS += -DMP_CONFIGFILE=\<$(OMV_PORT_DIR)/mp_config.h\>
 
 # Include the port Makefile.
-include $(OMV_PORT_DIR)/omv_portconfig.mk
+include $(OMV_PORT_DIR)/port_config.mk
 
 # Freeze recursively-expanded variables into simply-expanded ones.
 # Without this, make re-evaluates all sub-variable references every

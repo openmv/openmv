@@ -33,8 +33,8 @@
 #include <string.h>
 #include ALIF_CMSIS_H
 
-#include "omv_boardconfig.h"
-#include "omv_bootconfig.h"
+#include "board_config.h"
+#include "boot_config.h"
 #include "mram.h"
 
 #if OMV_BOOT_AXI_FLASH_ENABLE

@@ -30,7 +30,7 @@
  *
  * PixArt PS5520 driver.
  */
-#include "omv_boardconfig.h"
+#include "board_config.h"
 #if (OMV_PS5520_ENABLE == 1)
 
 #include <stdint.h>

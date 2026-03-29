@@ -37,7 +37,7 @@
 
 #include "file_utils.h"
 #include "framebuffer.h"
-#include "omv_boardconfig.h"
+#include "board_config.h"
 
 static const mp_obj_type_t py_mjpeg_type;
 

@@ -24,7 +24,7 @@
  *
  * Pixart SPI driver.
  */
-#include "omv_boardconfig.h"
+#include "board_config.h"
 #ifdef OMV_CSI_SPI_ID
 
 #include <stdio.h>

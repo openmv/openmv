@@ -23,7 +23,7 @@
  *
  * Display data channel module (such as CEC/DDC).
  */
-#include "omv_boardconfig.h"
+#include "board_config.h"
 
 #if OMV_DISPLAY_CEC_ENABLE || OMV_DISPLAY_DDC_ENABLE
 #include "py/obj.h"

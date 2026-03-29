@@ -23,7 +23,7 @@
  *
  * VL53L8CX platform implementation.
  */
-#include "omv_boardconfig.h"
+#include "board_config.h"
 #if (OMV_TOF_VL53L8CX_ENABLE == 1)
 
 #include "py/mphal.h"

@@ -23,7 +23,7 @@
  *
  * PAG7920 driver.
  */
-#include "omv_boardconfig.h"
+#include "board_config.h"
 #if (OMV_PAG7920_ENABLE == 1)
 
 #include <stdint.h>

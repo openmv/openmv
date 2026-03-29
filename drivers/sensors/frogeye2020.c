@@ -23,7 +23,7 @@
  *
  * FrogEye2020 driver.
  */
-#include "omv_boardconfig.h"
+#include "board_config.h"
 #if (OMV_FROGEYE2020_ENABLE == 1)
 
 #include "omv_csi.h"

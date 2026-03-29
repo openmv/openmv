@@ -37,7 +37,7 @@
 #include "py_helper.h"
 #include "pdm2pcm_glo.h"
 #include "fb_alloc.h"
-#include "omv_boardconfig.h"
+#include "board_config.h"
 #include "omv_common.h"
 #include "stm_dma.h"
 

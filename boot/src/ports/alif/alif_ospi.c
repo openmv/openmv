@@ -34,8 +34,8 @@
 #include <stdint.h>
 #include <string.h>
 #include ALIF_CMSIS_H
-#include "omv_boardconfig.h"
-#include "omv_bootconfig.h"
+#include "board_config.h"
+#include "boot_config.h"
 
 #if OMV_BOOT_SPI_FLASH_ENABLE
 #include "gpio.h"

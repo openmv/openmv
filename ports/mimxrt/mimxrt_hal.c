@@ -37,7 +37,7 @@
 #include "irq.h"
 #include CMSIS_MCU_H
 
-#include "omv_boardconfig.h"
+#include "board_config.h"
 // Define pin objects in this file.
 #define OMV_GPIO_DEFINE_PINS    (1)
 #include "omv_csi.h"

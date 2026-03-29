@@ -26,7 +26,7 @@
 #include <stdlib.h>
 #include STM32_HAL_H
 
-#include "omv_boardconfig.h"
+#include "board_config.h"
 
 #if (OMV_GPU_NEMA == 1)
 #include "py/mphal.h"

@@ -34,7 +34,7 @@
 
 #include "omv_buffer.h"
 #include "omv_protocol_channel.h"
-#include "omv_boardconfig.h"
+#include "board_config.h"
 
 /***************************************************************************
 * Protocol Constants

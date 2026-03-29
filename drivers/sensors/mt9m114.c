@@ -23,7 +23,7 @@
  *
  * MT9M114 driver.
  */
-#include "omv_boardconfig.h"
+#include "board_config.h"
 #if (OMV_MT9M114_ENABLE == 1)
 
 #include <stdint.h>

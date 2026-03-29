@@ -26,7 +26,7 @@
 /* Entry Point */
 ENTRY(_entry_point)
 
-#include "omv_boardconfig.h"
+#include "board_config.h"
 
 MEMORY
 {

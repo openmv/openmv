@@ -23,7 +23,7 @@
  *
  * OMV SPI bus port for mimxrt.
  */
-#include "omv_boardconfig.h"
+#include "board_config.h"
 #include "py/mphal.h"
 
 #include "fsl_gpio.h"

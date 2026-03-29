@@ -33,7 +33,7 @@
 #include "imlib.h"
 #include "omv_common.h"
 #include "omv_gpu.h"
-#include "omv_boardconfig.h"
+#include "board_config.h"
 
 #ifdef IMLIB_ENABLE_GAMMA_LUT
 uint8_t gamma_table[256];

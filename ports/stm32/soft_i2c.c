@@ -29,7 +29,7 @@
 #include "py/mphal.h"
 
 #include "soft_i2c.h"
-#include "omv_boardconfig.h"
+#include "board_config.h"
 #include "omv_gpio.h"
 
 #if defined(OMV_SOFT_I2C_SIOC_PIN)

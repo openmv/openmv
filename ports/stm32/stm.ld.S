@@ -27,7 +27,7 @@
 /* Entry Point */
 ENTRY(Reset_Handler)
 
-#include "omv_boardconfig.h"
+#include "board_config.h"
 
 /* Specify the memory areas */
 MEMORY

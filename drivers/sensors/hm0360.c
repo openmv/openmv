@@ -23,7 +23,7 @@
  *
  * HM0360 driver.
  */
-#include "omv_boardconfig.h"
+#include "board_config.h"
 #if (OMV_HM0360_ENABLE == 1)
 
 #include <stdint.h>

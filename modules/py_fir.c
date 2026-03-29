@@ -25,7 +25,7 @@
  */
 #include "py/runtime.h"
 #include "py/objlist.h"
-#include "omv_boardconfig.h"
+#include "board_config.h"
 
 #if OMV_FIR_MLX90621_ENABLE || \
     OMV_FIR_MLX90640_ENABLE || \

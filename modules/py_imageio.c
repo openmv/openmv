@@ -40,7 +40,7 @@
 #include "file_utils.h"
 #endif
 #include "framebuffer.h"
-#include "omv_boardconfig.h"
+#include "board_config.h"
 
 #define OLD_BINARY_BPP          0
 #define OLD_GRAYSCALE_BPP       1

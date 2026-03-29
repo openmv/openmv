@@ -27,7 +27,7 @@
 #include "py/objlist.h"
 #include "py/mphal.h"
 
-#include "omv_boardconfig.h"
+#include "board_config.h"
 
 #if (MICROPY_PY_TOF == 1)
 #include "omv_i2c.h"

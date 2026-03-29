@@ -23,7 +23,7 @@
  *
  * HM01B0 driver.
  */
-#include "omv_boardconfig.h"
+#include "board_config.h"
 #if (OMV_HM01B0_ENABLE == 1)
 
 #include <stdint.h>

@@ -33,7 +33,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include "header.h"
-#include "omv_bootconfig.h"
+#include "boot_config.h"
 
 #define STR_DESC_MAX_LEN        (32)
 #define STR_DESC_COUNT          (sizeof(desc_string) / sizeof(desc_string[0]))

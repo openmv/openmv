@@ -65,7 +65,7 @@
 #include "extmod/vfs.h"
 #include "extmod/vfs_fat.h"
 
-#include "omv_boardconfig.h"
+#include "board_config.h"
 #include "framebuffer.h"
 #include "omv_csi.h"
 #include "fb_alloc.h"

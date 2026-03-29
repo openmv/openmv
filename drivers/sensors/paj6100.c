@@ -23,7 +23,7 @@
  *
  * Author: Lake Fu at <lake_fu@pixart.com>
  */
-#include "omv_boardconfig.h"
+#include "board_config.h"
 #if (OMV_PAJ6100_ENABLE == 1)
 #include <stdio.h>
 #include <stdbool.h>
