@@ -181,22 +181,6 @@ PROVIDE(__stack = __StackTop);
 } >OMV_CORE1_MEMORY
 #endif
 
-/* Main framebuffer memory */
-#if defined(OMV_FB_MEMORY)
-.fb_memory (NOLOAD) :
-{
-  . = ALIGN(4);
-  _fb_memory_start = .;
-  . += OMV_FB_SIZE;
-  . = ALIGN(4);
-  _fb_memory_end = .;
-  . += OMV_FB_ALLOC_SIZE;
-  . = ALIGN(4);
-  _fb_alloc_end = .;
-  . = ALIGN(4);
-} >OMV_FB_MEMORY
-#endif
-
 /* UMA heap blocks */
 #if defined(OMV_UMA_BLOCK0_MEMORY)
 OMV_UMA_BLOCK_NEW(0)

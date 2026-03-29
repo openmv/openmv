@@ -25,7 +25,6 @@
 COMMON_SRC_C += \
     array.c \
     dma_alloc.c \
-    fb_alloc.c \
     file_utils.c \
     mp_utils.c \
     mutex.c \
