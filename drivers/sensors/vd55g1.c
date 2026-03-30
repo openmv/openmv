@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023-2024 OpenMV, LLC.
+ * Copyright (C) 2023-2026 OpenMV, LLC.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,7 +31,7 @@
  * PixArt VD551G1 driver.
  */
 #include "omv_boardconfig.h"
-#if (OMV_VD551G1_ENABLE == 1)
+#if (OMV_VD55G1_ENABLE == 1)
 
 #include <math.h>
 #include <stdint.h>
@@ -41,7 +41,42 @@
 
 #include "omv_i3c.h"
 #include "omv_csi.h"
+#include "omv_gpio.h"
+#include "framebuffer.h"
 #include "py/mphal.h"
+
+#ifndef OMV_VD55G1_MIPI_CSI2
+#define OMV_VD55G1_MIPI_CSI2    (0)
+#endif
+
+#if !(OMV_VD55G1_MIPI_CSI2)
+// Private driver state stored in csi->priv.
+typedef struct {
+    volatile bool line_ready;
+    bool streaming;
+    uint8_t binning_mode;
+} vd55g1_state_t;
+
+static vd55g1_state_t vd55g1_state;
+#endif
+
+// Helper wrappers mapping legacy register access to the new omv_i3c interface.
+// All registers on the VD55G1 use 16-bit addresses.
+static inline int omv_i3c_readb2(omv_i2c_t *bus, uint8_t addr, uint16_t reg, uint8_t *val) {
+    return omv_i3c_read_reg(bus, addr, reg, 2, val, 1);
+}
+static inline int omv_i3c_writeb2(omv_i2c_t *bus, uint8_t addr, uint16_t reg, uint8_t val) {
+    return omv_i3c_write_reg(bus, addr, reg, 2, val, 1);
+}
+static inline int omv_i3c_readw2(omv_i2c_t *bus, uint8_t addr, uint16_t reg, uint16_t *val) {
+    return omv_i3c_read_reg(bus, addr, reg, 2, val, 2);
+}
+static inline int omv_i3c_writew2(omv_i2c_t *bus, uint8_t addr, uint16_t reg, uint16_t val) {
+    return omv_i3c_write_reg(bus, addr, reg, 2, val, 2);
+}
+static inline int omv_i3c_writedw2(omv_i2c_t *bus, uint8_t addr, uint16_t reg, uint32_t val) {
+    return omv_i3c_write_reg(bus, addr, reg, 2, val, 4);
+}
 
 // Register from UM3224
 #define VD55G1_SYSTEM_FSM       0x001C
@@ -363,7 +398,7 @@ static uint8_t multi_polling(omv_csi_t *csi,
     uint8_t read_data;
 
     for (int i = 0; i < num_cycles; i++) {
-        omv_i3c_readb2(csi->i2c, csi->slv_addr, reg_index, &read_data);
+        omv_i3c_read_reg(csi->i2c, csi->slv_addr, reg_index, 2, &read_data, 1);
 
         if ((read_data & mask) == expected) {
             return 0;
@@ -380,8 +415,55 @@ static uint8_t write_patch(omv_csi_t *csi, uint16_t reg_index, const uint8_t *da
     write_data[1] = reg_index & 0xff;
 
     memcpy(write_data + 2, data, data_length);
-    return omv_i3c_write_bytes(csi->i2c, csi->slv_addr, write_data, data_length + 2, OMV_I2C_XFER_NO_FLAGS);
+    return omv_i3c_write(csi->i2c, csi->slv_addr, write_data, data_length + 2, OMV_I2C_XFER_NO_FLAGS);
 }
+
+#if !(OMV_VD55G1_MIPI_CSI2)
+// Read one line of pixel data from the sensor's I3C data port at 0x2000.
+// Uses two separate I3C transactions: write address, then read data.
+static int vd55g1_read_line(omv_csi_t *csi, uint8_t *buf, uint16_t width) {
+    uint8_t addr_buf[2] = {0x20, 0x00};
+    int ret = omv_i3c_write(csi->i2c, csi->slv_addr, addr_buf, 2, OMV_I2C_XFER_NO_FLAGS);
+    if (ret != 0) {
+        return ret;
+    }
+    return omv_i3c_read(csi->i2c, csi->slv_addr, buf, width, OMV_I2C_XFER_NO_FLAGS);
+}
+
+static int vd55g1_start_streaming(omv_csi_t *csi) {
+    vd55g1_state_t *state = (vd55g1_state_t *) csi->priv;
+
+    if (multi_polling(csi, 5, VD55G1_SYSTEM_FSM, 0x02, 0xFF, 1) != 0) {
+        return -1;
+    }
+
+    int ret = omv_i3c_writeb2(csi->i2c, csi->slv_addr, VD55G1_CMD_STBY, 0x01);
+    if (ret != 0) {
+        return ret;
+    }
+
+    state->streaming = true;
+    state->line_ready = false;
+    return 0;
+}
+
+static int vd55g1_stop_streaming(omv_csi_t *csi) {
+    vd55g1_state_t *state = (vd55g1_state_t *) csi->priv;
+
+    omv_i3c_writeb2(csi->i2c, csi->slv_addr, VD55G1_CMD_STBY, 0x00);
+    multi_polling(csi, 10, VD55G1_SYSTEM_FSM, 0x02, 0xFF, 1);
+
+    state->streaming = false;
+    return 0;
+}
+
+#if defined(OMV_VD55G1_STROBE_PIN)
+static void vd55g1_line_ready_cb(void *data) {
+    vd55g1_state_t *state = (vd55g1_state_t *) data;
+    state->line_ready = true;
+}
+#endif
+#endif // !(OMV_VD55G1_MIPI_CSI2)
 
 static int reset(omv_csi_t *csi) {
     int ret = 0;
@@ -416,7 +498,7 @@ static int reset(omv_csi_t *csi) {
     write_patch(csi, reg_index, &patchData1b[0], 26);
 
     // Run command PATCH_AND_BOOT
-    omv_i2c_writeb2(csi->i2c, csi->slv_addr, UI_CMD_BOOT_COMMAND, 0x2); // (val=2) / UI.CMD.BOOT.COMMAND
+    omv_i3c_writeb2(csi->i2c, csi->slv_addr, UI_CMD_BOOT_COMMAND, 0x2); // (val=2) / UI.CMD.BOOT.COMMAND
     mp_hal_delay_ms(200);
     ret = multi_polling(csi, 18, 0x0200, 0x0, 0x3, 1);     // (val=0) UI.CMD.BOOT.COMMAND
     printf("Run Patch and Boot: %d\n", ret);
@@ -427,7 +509,7 @@ static int reset(omv_csi_t *csi) {
     printf("Wait FSM to be in SW Standby: %d\n", ret);
 
     // Run command START_VTRAM_UPDATE
-    omv_i2c_writeb2(csi->i2c, csi->slv_addr, VD55G1_CMD_STBY, 0x6);
+    omv_i3c_writeb2(csi->i2c, csi->slv_addr, VD55G1_CMD_STBY, 0x6);
     mp_hal_delay_ms(200);
     ret = multi_polling(csi, 4, VD55G1_CMD_STBY, 0x0, 0xf, 1);     // (val=0) UI.CMD.STBY.COMMAND
     printf("Run command START_VTRAM_UPDATE: %d\n", ret);
@@ -452,7 +534,7 @@ static int reset(omv_csi_t *csi) {
     write_patch(csi, reg_index, &patchData2d[0], 6);
 
     // Run command END_VTRAM_UPDATE
-    omv_i2c_writeb2(csi->i2c, csi->slv_addr, VD55G1_CMD_STBY, 0x7);
+    omv_i3c_writeb2(csi->i2c, csi->slv_addr, VD55G1_CMD_STBY, 0x7);
     mp_hal_delay_ms(200);
     ret = multi_polling(csi, 4, VD55G1_CMD_STBY, 0x0, 0xf, 1);     // (val=0) UI.CMD.STBY.COMMAND //not working on 10/11
     // printf("Run command END_VTRAM_UPDATE: %d\n",ReturnValue);
@@ -461,30 +543,57 @@ static int reset(omv_csi_t *csi) {
     // Operations in SW_STBY
     // =====================
     // Set frequencies
-    omv_i3c_writedw2(csi->i2c, csi->slv_addr, UI_SENSOR_SETTINGS_EXT_CLOCK_VALUE, /*0xb71b00*/ 12000000); // External clock = 12.00 MHz
-    omv_i3c_writedw2(csi->i2c, csi->slv_addr, UI_SENSOR_SETTINGS_MIPI_DATA_RATE_VALUE, /*0x47868c00*/ 1200000000); // Csi frequency = 1200.00 Mbps
-    omv_i3c_writew2(csi->i2c, csi->slv_addr, UI_STREAM_STATICS_LINE_LENGTH_VALUE, /*0x0468*/ 1128); // Line time = 7.52 us
+    omv_i3c_writedw2(csi->i2c, csi->slv_addr, UI_SENSOR_SETTINGS_EXT_CLOCK_VALUE, 12000000);
+    omv_i3c_writedw2(csi->i2c, csi->slv_addr, UI_SENSOR_SETTINGS_MIPI_DATA_RATE_VALUE, 1200000000);
 
-    omv_i2c_writeb2(csi->i2c, csi->slv_addr, UI_STREAM_CTX0_EXPOSURE_MODE_MODE, 0x0); // Auto-exposure
+    omv_i3c_writeb2(csi->i2c, csi->slv_addr, UI_STREAM_CTX0_EXPOSURE_MODE_MODE, 0x0); // Auto-exposure
 
-    omv_i3c_writew2(csi->i2c, csi->slv_addr, UI_STREAM_CTX0_FRAME_LENGTH_VALUE, /*0x0a63*/ 2659); // 50 fps
+    #if !(OMV_VD55G1_MIPI_CSI2)
+    // I3C readout mode: longer line time for I3C bulk transfer.
+    omv_i3c_writew2(csi->i2c, csi->slv_addr, UI_STREAM_STATICS_LINE_LENGTH_VALUE, 45000);
+    omv_i3c_writew2(csi->i2c, csi->slv_addr, UI_STREAM_CTX0_FRAME_LENGTH_VALUE, 1666);
+    omv_i3c_writedw2(csi->i2c, csi->slv_addr, UI_STREAM_CTX1_FRAME_LENGTH_VALUE, 1666);
+    omv_i3c_writedw2(csi->i2c, csi->slv_addr, UI_STREAM_CTX2_FRAME_LENGTH_VALUE, 1666);
+    omv_i3c_writedw2(csi->i2c, csi->slv_addr, UI_STREAM_CTX3_FRAME_LENGTH_VALUE, 1666);
 
-    omv_i2c_writeb2(csi->i2c, csi->slv_addr, UI_STREAM_CTX0_GPIO_0_CTRL, 0x2); // Strobe
+    // I3C frame readout configuration.
+    omv_i3c_writew2(csi->i2c, csi->slv_addr, STREAM_STATICS_FORMAT_CTRL, 0x0008);
+    omv_i3c_writew2(csi->i2c, csi->slv_addr, STREAM_STATICS_I3C_FRAME_READOUT_CTRL, 0x0003);
+    omv_i3c_writeb2(csi->i2c, csi->slv_addr, STREAM_STATICS_ISL_ENABLE, 0x00);
+    omv_i3c_writeb2(csi->i2c, csi->slv_addr, STREAM_STATICS_DARKCAL_CTRL, 0x42);
+    omv_i3c_writew2(csi->i2c, csi->slv_addr, STREAM_STATICS_CONTEXT_NEXT_CONTEXT, 0x1111);
+    omv_i3c_writew2(csi->i2c, csi->slv_addr, EXPOSURE_STEP_PROPORTION_A, 0x00F0);
+    omv_i3c_writew2(csi->i2c, csi->slv_addr, CONTEXT_NEXT_CONTEXT, 0x1111);
 
-    // omv_i3c_writew2(csi->i2c, csi->slv_addr, UI_STREAM_STATICS_LINE_LENGTH_VALUE, /*0xafc8*/ 45000);
-    // omv_i3c_writew2(csi->i2c, csi->slv_addr, UI_STREAM_CTX0_FRAME_LENGTH_VALUE, /*0x0682*/ 1666);
-    // omv_i3c_writedw2(csi->i2c, csi->slv_addr, UI_STREAM_CTX1_FRAME_LENGTH_VALUE, /*0x00000682*/ 1666);
-    // omv_i3c_writedw2(csi->i2c, csi->slv_addr, UI_STREAM_CTX2_FRAME_LENGTH_VALUE, /*0x00000682*/ 1666);
-    // omv_i3c_writedw2(csi->i2c, csi->slv_addr, UI_STREAM_CTX3_FRAME_LENGTH_VALUE, /*0x00000682*/ 1666);
+    // GPIO0 = line data ready strobe, GPIO1-3 disabled.
+    omv_i3c_writeb2(csi->i2c, csi->slv_addr, UI_STREAM_CTX0_GPIO_0_CTRL, 0x0C);
+    omv_i3c_writeb2(csi->i2c, csi->slv_addr, UI_STREAM_CTX0_GPIO_1_CTRL, 0x00);
+    omv_i3c_writeb2(csi->i2c, csi->slv_addr, UI_STREAM_CTX0_GPIO_2_CTRL, 0x00);
+    omv_i3c_writeb2(csi->i2c, csi->slv_addr, UI_STREAM_CTX0_GPIO_3_CTRL, 0x00);
 
-    // omv_i2c_writeb2(csi->i2c, csi->slv_addr, UI_STREAM_CTX0_GPIO_0_CTRL, /*0x0c*/ 12);
+    omv_i3c_writeb2(csi->i2c, csi->slv_addr, UI_STREAM_CTX0_MASK_FRAME_CTRL, 0x00);
+    #else
+    // MIPI CSI-2 mode: shorter line time, frame strobe.
+    omv_i3c_writew2(csi->i2c, csi->slv_addr, UI_STREAM_STATICS_LINE_LENGTH_VALUE, 1128);
+    omv_i3c_writew2(csi->i2c, csi->slv_addr, UI_STREAM_CTX0_FRAME_LENGTH_VALUE, 2659);
+    omv_i3c_writeb2(csi->i2c, csi->slv_addr, UI_STREAM_CTX0_GPIO_0_CTRL, 0x02);
+    #endif
 
-    omv_i2c_writeb2(csi->i2c, csi->slv_addr, UI_STREAM_CTX0_READOUT_CTRL, 0x1); // ctx0 READOUT_CTRL, 2x binning
+    omv_i3c_writeb2(csi->i2c, csi->slv_addr, UI_STREAM_CTX0_READOUT_CTRL, 0x1); // 2x binning default
 
-    omv_i3c_writew2(csi->i2c, csi->slv_addr, UI_STREAM_CTX0_X_WIDTH, /*0x0320*/ 800);
-    omv_i3c_writew2(csi->i2c, csi->slv_addr, UI_STREAM_CTX0_X_START, /*0x0000*/ 0);
-    omv_i3c_writew2(csi->i2c, csi->slv_addr, UI_STREAM_CTX0_Y_HEIGHT, /*0x02b8*/ 696);
-    omv_i3c_writew2(csi->i2c, csi->slv_addr, UI_STREAM_CTX0_Y_START, /*0x0000*/ 0);
+    omv_i3c_writew2(csi->i2c, csi->slv_addr, UI_STREAM_CTX0_X_WIDTH, 800);
+    omv_i3c_writew2(csi->i2c, csi->slv_addr, UI_STREAM_CTX0_X_START, 0);
+    omv_i3c_writew2(csi->i2c, csi->slv_addr, UI_STREAM_CTX0_Y_HEIGHT, 696);
+    omv_i3c_writew2(csi->i2c, csi->slv_addr, UI_STREAM_CTX0_Y_START, 0);
+
+    #if !(OMV_VD55G1_MIPI_CSI2) && defined(OMV_VD55G1_STROBE_PIN)
+    // Configure GPIO strobe pin for line-ready interrupt.
+    omv_gpio_config(OMV_VD55G1_STROBE_PIN,
+                    OMV_GPIO_MODE_IT_RISE, OMV_GPIO_PULL_DOWN,
+                    OMV_GPIO_SPEED_LOW, -1);
+    omv_gpio_irq_register(OMV_VD55G1_STROBE_PIN, vd55g1_line_ready_cb, &vd55g1_state);
+    omv_gpio_irq_enable(OMV_VD55G1_STROBE_PIN, false);
+    #endif
 
     return ret;
 }
@@ -521,23 +630,49 @@ static int set_pixformat(omv_csi_t *csi, pixformat_t pixformat) {
 
 static int set_framesize(omv_csi_t *csi, omv_csi_framesize_t framesize) {
     int ret = 0;
+    uint8_t binning_mode = 0;
 
     switch (framesize) {
         case OMV_CSI_FRAMESIZE_VGA:
+            binning_mode = 0; // No binning
+            break;
         case OMV_CSI_FRAMESIZE_QVGA:
         case OMV_CSI_FRAMESIZE_HQVGA:
+            binning_mode = 1; // 2x2 digital binning
             break;
         default:
             return -1;
     }
 
-    ret |= omv_i3c_writew2(csi->i2c, csi->slv_addr, UI_STREAM_CTX0_X_WIDTH, csi->resolution[framesize][0]);
+    uint16_t sensor_w = csi->resolution[framesize][0];
+    uint16_t sensor_h = csi->resolution[framesize][1];
+
+    // For 2x binning the sensor reads a 2x larger window and reduces it.
+    if (binning_mode == 1) {
+        sensor_w = IM_MIN(sensor_w * 2, 800);
+        sensor_h = IM_MIN(sensor_h * 2, 696);
+    }
+
+    ret |= omv_i3c_writeb2(csi->i2c, csi->slv_addr, UI_STREAM_CTX0_READOUT_CTRL, binning_mode);
+
+    #if !(OMV_VD55G1_MIPI_CSI2)
+    uint16_t line_length = (binning_mode == 0) ? 0xC738 : 0x6F00;
+    ret |= omv_i3c_writew2(csi->i2c, csi->slv_addr, UI_STREAM_STATICS_LINE_LENGTH_VALUE, line_length);
+    #endif
+
+    ret |= omv_i3c_writew2(csi->i2c, csi->slv_addr, UI_STREAM_CTX0_X_WIDTH, sensor_w);
     ret |= omv_i3c_writew2(csi->i2c, csi->slv_addr, UI_STREAM_CTX0_X_START, 0);
-    ret |= omv_i3c_writew2(csi->i2c, csi->slv_addr, UI_STREAM_CTX0_Y_HEIGHT, csi->resolution[framesize][1]);
+    ret |= omv_i3c_writew2(csi->i2c, csi->slv_addr, UI_STREAM_CTX0_Y_HEIGHT, sensor_h);
     ret |= omv_i3c_writew2(csi->i2c, csi->slv_addr, UI_STREAM_CTX0_Y_START, 0);
 
-    // csi->framesize = framesize;
-    // set_framerate(csi, 60);
+    ret |= omv_i3c_writeb2(csi->i2c, csi->slv_addr, UI_STREAM_CTX0_MASK_FRAME_CTRL, 0x00);
+
+    #if !(OMV_VD55G1_MIPI_CSI2)
+    vd55g1_state_t *state = (vd55g1_state_t *) csi->priv;
+    if (state) {
+        state->binning_mode = binning_mode;
+    }
+    #endif
 
     return ret;
 }
@@ -652,21 +787,13 @@ static int get_exposure_us(omv_csi_t *csi, int *exposure_us) {
 }
 
 static int set_hmirror(omv_csi_t *csi, int enable) {
-    // uint8_t reg;
-    // int ret = omv_i3c_readb2(csi->i2c, csi->slv_addr, TG_FLIP, &reg);
-    // ret |= omv_i3c_writeb2(csi->i2c, csi->slv_addr, TG_FLIP, TG_FLIP_SET_HFLIP(reg, enable));
-    // ret |= omv_i3c_writeb2(csi->i2c, csi->slv_addr, SENSOR_UPDATE, SENSOR_UPDATE_FLAG);
-    // return ret;
-    return -1;
+    csi->hmirror = enable;
+    return 0;
 }
 
 static int set_vflip(omv_csi_t *csi, int enable) {
-    // uint8_t reg;
-    // int ret = omv_i3c_readb2(csi->i2c, csi->slv_addr, TG_FLIP, &reg);
-    // ret |= omv_i3c_writeb2(csi->i2c, csi->slv_addr, TG_FLIP, TG_FLIP_SET_VFLIP(reg, enable));
-    // ret |= omv_i3c_writeb2(csi->i2c, csi->slv_addr, SENSOR_UPDATE, SENSOR_UPDATE_FLAG);
-    // return ret;
-    return -1;
+    csi->vflip = enable;
+    return 0;
 }
 
 static int ioctl(omv_csi_t *csi, int request, va_list ap) {
@@ -682,6 +809,96 @@ static int ioctl(omv_csi_t *csi, int request, va_list ap) {
     return ret;
 }
 
+#if !(OMV_VD55G1_MIPI_CSI2)
+static int snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
+    framebuffer_t *fb = csi->fb;
+    #if defined(OMV_VD55G1_STROBE_PIN)
+    vd55g1_state_t *state = (vd55g1_state_t *) csi->priv;
+    #endif
+
+    if (!image) {
+        return 0;
+    }
+
+    vbuffer_t *buffer = framebuffer_acquire(fb, FB_FLAG_FREE | FB_FLAG_PEEK);
+    if (!buffer) {
+        return OMV_CSI_ERROR_FRAMEBUFFER_ERROR;
+    }
+
+    fb->pixfmt = csi->pixformat;
+    fb->w = csi->transpose ? fb->v : fb->u;
+    fb->h = csi->transpose ? fb->u : fb->v;
+
+    framebuffer_to_image(fb, image);
+    image->pixels = buffer->data;
+
+    uint16_t width = image->w;
+    uint16_t height = image->h;
+
+    // Start sensor streaming.
+    if (vd55g1_start_streaming(csi) != 0) {
+        return OMV_CSI_ERROR_CTL_FAILED;
+    }
+
+    #if defined(OMV_VD55G1_STROBE_PIN)
+    omv_gpio_irq_enable(OMV_VD55G1_STROBE_PIN, true);
+    mp_uint_t tick_start = mp_hal_ticks_ms();
+    #endif
+    int ret = 0;
+
+    // Read frame line-by-line over I3C.
+    for (uint16_t line = 0; line < height; line++) {
+        #if defined(OMV_VD55G1_STROBE_PIN)
+        // Wait for the line-data-ready strobe from sensor GPIO0.
+        while (!state->line_ready) {
+            if ((mp_hal_ticks_ms() - tick_start) > OMV_CSI_TIMEOUT_MS) {
+                ret = OMV_CSI_ERROR_CAPTURE_TIMEOUT;
+                goto cleanup;
+            }
+            __WFI();
+        }
+        state->line_ready = false;
+        #else
+        // Polling fallback: delay for estimated line time.
+        mp_hal_delay_us(100);
+        #endif
+
+        // Determine target line index accounting for vflip.
+        uint16_t dst_line = csi->vflip ? (height - 1 - line) : line;
+        uint8_t *line_buf = image->pixels + (dst_line * width);
+
+        if (vd55g1_read_line(csi, line_buf, width) != 0) {
+            ret = OMV_CSI_ERROR_IO_ERROR;
+            goto cleanup;
+        }
+
+        // Apply hmirror by reversing bytes in the line.
+        if (csi->hmirror) {
+            for (uint16_t i = 0; i < width / 2; i++) {
+                uint8_t tmp = line_buf[i];
+                line_buf[i] = line_buf[width - 1 - i];
+                line_buf[width - 1 - i] = tmp;
+            }
+        }
+    }
+
+cleanup:
+    #if defined(OMV_VD55G1_STROBE_PIN)
+    omv_gpio_irq_enable(OMV_VD55G1_STROBE_PIN, false);
+    #endif
+
+    vd55g1_stop_streaming(csi);
+
+    if (ret != 0) {
+        return ret;
+    }
+
+    framebuffer_release(fb, FB_FLAG_FREE);
+    framebuffer_to_image(fb, image);
+    return 0;
+}
+#endif // !(OMV_VD55G1_MIPI_CSI2)
+
 int vd551g1_init(omv_csi_t *csi) {
     // Initialize csi flags.
     csi->vsync_pol = 0;
@@ -690,10 +907,6 @@ int vd551g1_init(omv_csi_t *csi) {
     csi->mono_bpp = 1;
     csi->raw_output = 1;
     csi->cfa_format = SUBFORMAT_ID_BGGR;
-    #if OMV_VD551G1_MIPI_CSI2
-    csi->mipi_if = 1;
-    csi->mipi_brate = 1200;
-    #endif
 
     // Initialize csi ops.
     csi->reset = reset;
@@ -713,13 +926,23 @@ int vd551g1_init(omv_csi_t *csi) {
     csi->set_hmirror = set_hmirror;
     csi->set_vflip = set_vflip;
 
-    // Override standard resolutions
-    csi->resolution[OMV_CSI_FRAMESIZE_VGA][0] = 700;
-    csi->resolution[OMV_CSI_FRAMESIZE_VGA][1] = 400;
+    #if !(OMV_VD55G1_MIPI_CSI2)
+    // I3C capture mode: driver owns the snapshot function.
+    csi->snapshot = snapshot;
+    memset(&vd55g1_state, 0, sizeof(vd55g1_state));
+    csi->priv = &vd55g1_state;
+    #endif
 
+    // Output resolutions (after binning for QVGA/HQVGA).
+    // VGA: no binning, direct 800x696 readout.
+    csi->resolution[OMV_CSI_FRAMESIZE_VGA][0] = 800;
+    csi->resolution[OMV_CSI_FRAMESIZE_VGA][1] = 696;
+
+    // QVGA: 2x binning from 800x480 -> 400x240.
     csi->resolution[OMV_CSI_FRAMESIZE_QVGA][0] = 400;
-    csi->resolution[OMV_CSI_FRAMESIZE_QVGA][1] = 200;
+    csi->resolution[OMV_CSI_FRAMESIZE_QVGA][1] = 240;
 
+    // HQVGA: 2x binning from 400x200 -> 200x100.
     csi->resolution[OMV_CSI_FRAMESIZE_HQVGA][0] = 200;
     csi->resolution[OMV_CSI_FRAMESIZE_HQVGA][1] = 100;
     return 0;

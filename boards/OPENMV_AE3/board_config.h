@@ -60,6 +60,9 @@ extern unsigned char OMV_BOARD_UID_ADDR[12];    // Unique address.
 
 // CSI drivers configuration.
 #define OMV_PAG7936_ENABLE              (CORE_M55_HP)
+#define OMV_VD55G1_ENABLE               (CORE_M55_HP)
+// Uncomment and set to the MCU pin wired to VD55G1 GPIO0 for line-ready strobe.
+//#define OMV_VD55G1_STROBE_PIN           (&omv_pin_XXX_GPIO)
 
 // FIR drivers configuration.
 #define OMV_FIR_MLX90621_ENABLE         (0)

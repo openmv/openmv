@@ -49,6 +49,10 @@
 #define OMV_PAG7936_MIPI_CSI2               (1)
 #define OMV_SOFTCSI_ENABLE                  (1)
 #define OMV_PS5520_ENABLE                   (1)
+#define OMV_VD55G1_ENABLE                   (1)
+#define OMV_VD55G1_MIPI_CSI2                (1)
+// Uncomment and set to the MCU pin wired to VD55G1 GPIO0 for line-ready strobe.
+//#define OMV_VD55G1_STROBE_PIN               (&omv_pin_XXX_GPIO)
 
 // FIR drivers configuration.
 #define OMV_FIR_MLX90621_ENABLE             (1)
