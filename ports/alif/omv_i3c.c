@@ -38,8 +38,8 @@
 #include "py/mphal.h"
 #include "py/runtime.h"
 
-#include "omv_portconfig.h"
-#include "omv_boardconfig.h"
+#include "port_config.h"
+#include "board_config.h"
 #include "alif_hal.h"
 #include "omv_gpio.h"
 #include "omv_common.h"
@@ -276,12 +276,13 @@ int omv_i3c_assign(omv_i2c_t *i3c, uint8_t static_addr, uint8_t *ref_dyn_addr) {
     return 0;
 }
 
-int omv_i3c_scan_assign(omv_i2c_t *i3c, uint8_t *list, uint8_t size) {
+int omv_i3c_scan_assign(omv_i2c_t *i3c, uint8_t *list, uint64_t *pid_list, uint8_t size) {
     int32_t pos = 0U;
     uint8_t init_pos = 0xFFU;
     I3C_Type *base = i3c->inst;
     uint8_t dyn_addr = 0U;
     uint8_t iter = 0U;
+    uint8_t count = 0U;
 
     for (iter = 0U; iter < size; iter++) {
         pos = omv_i3c_gen_dyn_addr(i3c, &dyn_addr);
@@ -299,6 +300,7 @@ int omv_i3c_scan_assign(omv_i2c_t *i3c, uint8_t *list, uint8_t size) {
             }
 
             list[pos] = dyn_addr;
+            count++;
 
             omv_i3c_add_dyn_addr_parity(&dyn_addr);
 
@@ -318,7 +320,24 @@ int omv_i3c_scan_assign(omv_i2c_t *i3c, uint8_t *list, uint8_t size) {
         return -1;
     }
 
-    return 0;
+    // The actual number of devices discovered may be less than
+    // the number of DAT slots pre-allocated above.
+    count = i3c_get_dct_cur_idx(base);
+
+    // Read PIDs from DCT for each discovered device.
+    if (pid_list) {
+        for (uint8_t i = 0; i < count; i++) {
+            i3c_dev_prime_info_t info = {0};
+            i3c_master_get_dct(base, &info, list[i]);
+            pid_list[i] = ((uint64_t) info.pid.mipi_mfg_id << 33) |
+                          ((uint64_t) info.pid.pid_sel << 32) |
+                          ((uint64_t) info.pid.part_id << 16) |
+                          ((uint64_t) info.pid.inst_id << 12) |
+                          ((uint64_t) info.pid.dcr);
+        }
+    }
+
+    return count;
 }
 
 int omv_i3c_enable(omv_i2c_t *i3c, bool enable) {

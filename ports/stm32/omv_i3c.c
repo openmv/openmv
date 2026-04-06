@@ -30,6 +30,7 @@
  *
  * STM32 I3C driver.
  */
+#include STM32_HAL_H
 #if defined(STM32N6)
 
 #include <stdio.h>
@@ -38,14 +39,18 @@
 
 #include "py/mphal.h"
 
-#include "omv_portconfig.h"
-#include "omv_boardconfig.h"
+#include "port_config.h"
+#include "board_config.h"
 #include "omv_gpio.h"
 #include "omv_common.h"
 #include "omv_i3c.h"
 
 #include "stm32n6xx_hal.h"
 #include "stm32n6xx_util_i3c.h"
+
+#ifndef ARRAY_SIZE
+#define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
+#endif
 
 #define I3C_SCAN_TIMEOUT        (10)
 #define I3C_XFER_TIMEOUT        (1000)
@@ -74,6 +79,7 @@ void I3C2_ER_IRQHandler(void) {
 
 // Dynamic address assignment state for ENTDAA.
 static uint8_t *daa_list;
+static uint64_t *daa_pid_list;
 static uint8_t daa_count;
 static uint8_t daa_max;
 static uint8_t dyn_addr_next;
@@ -320,15 +326,19 @@ void HAL_I3C_TgtReqDynamicAddrCallback(I3C_HandleTypeDef *hi3c, uint64_t targetP
         if (daa_list) {
             daa_list[daa_count] = dyn_addr;
         }
+        if (daa_pid_list) {
+            daa_pid_list[daa_count] = targetPayload;
+        }
         daa_count++;
     }
 }
 
-int omv_i3c_scan_assign(omv_i2c_t *i3c, uint8_t *list, uint8_t size) {
+int omv_i3c_scan_assign(omv_i2c_t *i3c, uint8_t *list, uint64_t *pid_list, uint8_t size) {
     I3C_HandleTypeDef *base = omv_i3c_handle(i3c);
     uint64_t target_payload;
 
     daa_list = list;
+    daa_pid_list = pid_list;
     daa_count = 0;
     daa_max = size;
 
@@ -338,7 +348,7 @@ int omv_i3c_scan_assign(omv_i2c_t *i3c, uint8_t *list, uint8_t size) {
         return -1;
     }
 
-    return 0;
+    return daa_count;
 }
 
 int omv_i3c_enable(omv_i2c_t *i3c, bool enable) {

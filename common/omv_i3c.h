@@ -29,6 +29,11 @@
 #include <stdbool.h>
 #include "omv_i2c.h"
 
+/* Common Helpers */
+#ifndef BIT
+#define BIT(nr)                                         (1UL << (nr))
+#endif
+
 /* I3C CCC (Common Command Codes) related definitions */
 #define I3C_CCC_DIRECT                                  BIT(7)
 
@@ -88,7 +93,7 @@ typedef enum _omv_i3c_speed {
 int omv_i3c_init(omv_i2c_t *i3c, uint32_t bus_id, uint32_t speed);
 int omv_i3c_deinit(omv_i2c_t *i3c);
 int omv_i3c_assign(omv_i2c_t *i3c, uint8_t static_addr, uint8_t *dyn_addr);
-int omv_i3c_scan_assign(omv_i2c_t *i3c, uint8_t *list, uint8_t size);
+int omv_i3c_scan_assign(omv_i2c_t *i3c, uint8_t *list, uint64_t *pid_list, uint8_t size);
 int omv_i3c_enable(omv_i2c_t *i3c, bool enable);
 int omv_i3c_reset(omv_i2c_t *i3c, uint8_t tgt_addr);
 int omv_i3c_set_scl(omv_i2c_t *i3c, uint32_t speed);
