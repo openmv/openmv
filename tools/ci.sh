@@ -55,7 +55,7 @@ ci_update_submodules() {
 # Build Targets.
 ci_build_target() {
     if [ "$1" == "DOCKER" ]; then
-        BOARD=ARDUINO_NICLA_VISION
+        BOARD=OPENMV_N6
         make -j$(nproc) -C docker TARGET=${BOARD}
     else
         make -j$(nproc) -C lib/micropython/mpy-cross
