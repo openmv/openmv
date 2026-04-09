@@ -26,6 +26,7 @@
 #include <stdlib.h>
 #include "py/obj.h"
 #include "py/runtime.h"
+#include "py/mphal.h"
 
 #include "font.h"
 #include "array.h"
@@ -39,6 +40,8 @@
 #ifdef IMLIB_ENABLE_GAMMA_LUT
 uint8_t gamma_table[256];
 #endif
+
+mp_uint_t imlib_last_poll_ms;
 
 void imlib_init() {
     #if (OMV_GPU_ENABLE == 1)
@@ -56,6 +59,15 @@ void imlib_deinit() {
     #if (OMV_JPEG_CODEC_ENABLE == 1)
     imlib_hardware_jpeg_deinit();
     #endif
+}
+
+void imlib_poll_events_handler(bool raise_exc) {
+    imlib_last_poll_ms = mp_hal_ticks_ms();
+    if (raise_exc) {
+        mp_event_handle_nowait();
+    } else {
+        mp_handle_pending_internal(MP_HANDLE_PENDING_CALLBACKS_ONLY);
+    }
 }
 
 #ifdef IMLIB_ENABLE_GAMMA_LUT

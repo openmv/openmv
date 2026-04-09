@@ -45,6 +45,7 @@
 #include "omv_common.h"
 #include "omv_profiler.h"
 #include "py/runtime.h"
+#include "py/mphal.h"
 
 // Enables 38 TensorFlow Lite operators.
 #define IMLIB_TF_DEFAULT        (1)
@@ -117,12 +118,25 @@
 #define IM_DEG2RAD(x)            (((x) * IMLIB_PI) / 180.0f)
 #define IM_RAD2DEG(x)            (((x) * 180.0f) / IMLIB_PI)
 
-#define imlib_poll_events()                \
-    do {                                   \
-        static unsigned int _poll_ctr = 0; \
-        if (!(++_poll_ctr & 0x1F)) {       \
-            mp_event_handle_nowait();      \
-        }                                  \
+void imlib_poll_events_handler(bool raise_exc);
+extern mp_uint_t imlib_last_poll_ms;
+
+#ifndef IMLIB_POLL_INTERVAL_MS
+#define IMLIB_POLL_INTERVAL_MS  (10)
+#endif
+
+#define imlib_poll_events()                                      \
+    do {                                                         \
+        mp_uint_t _now = mp_hal_ticks_ms();                      \
+        if (_now - imlib_last_poll_ms >= IMLIB_POLL_INTERVAL_MS) \
+        imlib_poll_events_handler(true);                         \
+    } while (0)
+
+#define imlib_poll_events_noexc()                                \
+    do {                                                         \
+        mp_uint_t _now = mp_hal_ticks_ms();                      \
+        if (_now - imlib_last_poll_ms >= IMLIB_POLL_INTERVAL_MS) \
+        imlib_poll_events_handler(false);                        \
     } while (0)
 
 int imlib_ksize_to_n(int ksize);
