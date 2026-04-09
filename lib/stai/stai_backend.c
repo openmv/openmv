@@ -32,7 +32,7 @@
  */
 #include <string.h>
 #include <stdint.h>
-#include "imlib_config.h"
+#include "imlib.h"
 #include "omv_common.h"
 #include STM32_HAL_H
 
@@ -272,6 +272,7 @@ int ml_backend_run_inference(py_ml_model_obj_t *model) {
             nlr_buf_t nlr;
             if (nlr_push(&nlr) == 0) {
                 LL_ATON_OSAL_ENTER_CS();
+                imlib_poll_events();
                 mp_event_handle_nowait();
                 LL_ATON_OSAL_EXIT_CS();
                 nlr_pop();
