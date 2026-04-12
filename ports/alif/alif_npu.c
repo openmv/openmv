@@ -40,6 +40,7 @@
 #include "alif_hal.h"
 #include "board_config.h"
 #include "ethosu_driver.h"
+#include "omv_protocol.h"
 
 #define ETHOSU_SEC_ENABLED      (1)
 #define ETHOSU_PRIV_ENABLED     (1)
@@ -140,11 +141,11 @@ uint64_t ethosu_address_remap(uint64_t address, int index) {
 }
 
 void ethosu_inference_begin(struct ethosu_driver *drv, void *user_arg) {
-    mp_handle_pending(MP_HANDLE_PENDING_CALLBACKS_ONLY);
+    OMV_PROTOCOL_XIP_ENTER();
 }
 
 void ethosu_inference_end(struct ethosu_driver *drv, void *user_arg) {
-    mp_handle_pending(MP_HANDLE_PENDING_CALLBACKS_ONLY);
+    OMV_PROTOCOL_XIP_EXIT();
 }
 
 void ETHOSU_IRQ_HANDLER(void) {
