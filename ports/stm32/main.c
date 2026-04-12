@@ -407,6 +407,7 @@ soft_reset:
     py_audio_deinit();
     #endif
     imlib_deinit();
+    omv_protocol_deinit();
     soft_timer_deinit();
     #if MICROPY_HW_ENABLE_USB_RUNTIME_DEVICE && MICROPY_HW_TINYUSB_STACK
     mp_usbd_deinit();

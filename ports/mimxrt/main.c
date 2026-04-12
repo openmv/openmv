@@ -214,6 +214,7 @@ soft_reset:
     machine_i2s_deinit_all();
     #endif
     machine_pwm_deinit_all();
+    omv_protocol_deinit();
     soft_timer_deinit();
     imlib_deinit();
     gc_sweep_all();

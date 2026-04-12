@@ -237,6 +237,7 @@ soft_reset_exit:
     machine_pwm_deinit_all();
     machine_pin_irq_deinit();
     imlib_deinit();
+    omv_protocol_deinit();
     soft_timer_deinit();
     dma_deinit_all();
     gc_sweep_all();
