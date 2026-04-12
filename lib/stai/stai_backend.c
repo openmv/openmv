@@ -44,6 +44,7 @@
 #include "py/gc.h"
 #include "py_ml.h"
 #include "umalloc.h"
+#include "omv_protocol.h"
 
 #include "ll_aton_runtime.h"
 #include "ll_aton_platform.h"
@@ -249,8 +250,6 @@ int ml_backend_run_inference(py_ml_model_obj_t *model) {
     LL_ATON_RT_RetValues_t ll_aton_rt_ret;
     ml_backend_state_t *state = (ml_backend_state_t *) model->state;
 
-    uma_transient_acquire();
-
     // Flush input buffers.
     for (size_t i = 0; i < model->inputs_size; i++) {
         const LL_Buffer_InfoTypeDef *buf = ll_aton_reloc_get_input_buffers_info(&state->nn_inst, i);
@@ -259,6 +258,10 @@ int ml_backend_run_inference(py_ml_model_obj_t *model) {
 
     LL_ATON_RT_RuntimeInit();
     LL_ATON_RT_Init_Network(&state->nn_inst);
+    uma_transient_acquire();
+
+    // Note MSC callbacks may erase/write the SPI flash, which exits XIP.
+    OMV_PROTOCOL_XIP_ENTER();
 
     do {
         // Execute first/next runtime step
@@ -267,13 +270,11 @@ int ml_backend_run_inference(py_ml_model_obj_t *model) {
         if (ll_aton_rt_ret == LL_ATON_RT_WFE) {
             // Epoch block is still running - wait for the NPU interrupt.
             LL_ATON_OSAL_WFE();
-        } else if (ll_aton_rt_ret == LL_ATON_RT_NO_WFE) {
-            // Epoch block finished and NPU is idle - handle pending events.
-            // Note MSC callbacks may erase/write the SPI flash, which exits
-            // (XIP) mode. It's only safe to handle events when the NPU is idle.
-            mp_handle_pending(MP_HANDLE_PENDING_CALLBACKS_ONLY);
         }
     } while (ll_aton_rt_ret != LL_ATON_RT_DONE);
+
+    // Note MSC callbacks may erase/write the SPI flash, which exits XIP.
+    OMV_PROTOCOL_XIP_EXIT();
 
     LL_ATON_RT_DeInit_Network(&state->nn_inst);
     LL_ATON_RT_RuntimeDeInit();
