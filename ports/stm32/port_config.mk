@@ -83,7 +83,8 @@ LDFLAGS = -mthumb \
           -Wl,-Map=$(BUILD)/$(FIRMWARE).map
 
 ifeq ($(OMV_USB_STACK_TINYUSB), 1)
-LDFLAGS += -Wl,--wrap=mp_hal_stdio_poll \
+LDFLAGS += -Wl,--wrap=tud_task_ext \
+           -Wl,--wrap=mp_hal_stdio_poll \
            -Wl,--wrap=mp_hal_stdout_tx_strn
 else
 LDFLAGS += -Wl,--wrap=usbd_cdc_control \
