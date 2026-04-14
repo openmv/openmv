@@ -119,6 +119,9 @@ endif
 ifeq ($(MICROPY_PY_PROTOCOL), 1)
 MPY_CFLAGS += -DMICROPY_PY_PROTOCOL=1
 MPY_MKARGS += MICROPY_PY_PROTOCOL=1
+ifeq ($(OMV_USB_STACK_TINYUSB), 1)
+MPY_PENDSV_ENTRIES += PENDSV_DISPATCH_OMV_PROTOCOL,
+endif
 endif
 
 # +-----------------------------------------------------+
