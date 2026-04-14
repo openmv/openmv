@@ -77,6 +77,7 @@ LDFLAGS = -mthumb \
           -mabi=aapcs-linux \
           -Wl,--print-memory-usage \
           -Wl,--gc-sections \
+          -Wl,--wrap=tud_task_ext \
           -Wl,--wrap=mp_hal_stdio_poll \
           -Wl,--wrap=mp_hal_stdout_tx_strn \
           -Wl,-T$(BUILD)/$(LDSCRIPT).lds \
