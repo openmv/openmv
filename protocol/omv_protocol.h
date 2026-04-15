@@ -376,6 +376,10 @@ void omv_protocol_deinit(void);
 // Helper function to check if the transport is active.
 bool omv_protocol_is_active(void);
 
+// Suspend/resume protocol background processing.
+void omv_protocol_suspend(void);
+void omv_protocol_resume(void);
+
 // Helper function to exec scripts in stdio buffer.
 // Returns false, if no script is ready, true on executing the script.
 bool omv_protocol_exec_script(void);

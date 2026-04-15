@@ -113,10 +113,16 @@ int omv_protocol_init_default() {
 
     #endif // OMV_PROTOCOL_DEFAULT_CHANNELS
 
+    // Resume transport channel.
+    omv_protocol_resume();
+
     return 0;
 }
 
 void omv_protocol_deinit(void) {
+    // Suspend transport channel.
+    omv_protocol_suspend();
+
     // Deinitialize all channels, unregister dynamic ones.
     for (int i = 0; i < OMV_PROTOCOL_MAX_CHANNELS; i++) {
         if (ctx.channels[i]) {
@@ -154,6 +160,20 @@ void omv_protocol_reset(void) {
 bool omv_protocol_is_active(void) {
     const omv_protocol_channel_t *transport = omv_protocol_find_transport();
     return transport && transport->is_active(transport);
+}
+
+void omv_protocol_suspend(void) {
+    const omv_protocol_channel_t *transport = omv_protocol_find_transport();
+    if (transport && transport->suspend) {
+        transport->suspend(transport);
+    }
+}
+
+void omv_protocol_resume(void) {
+    const omv_protocol_channel_t *transport = omv_protocol_find_transport();
+    if (transport && transport->resume) {
+        transport->resume(transport);
+    }
 }
 
 bool omv_protocol_exec_script(void) {

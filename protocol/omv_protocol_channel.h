@@ -139,6 +139,8 @@ struct omv_protocol_channel {
     // Stdin-specific function to execute scripts internall (not exposed via ioctl).
     bool (*exec) (const omv_protocol_channel_t *channel);
     // Transport-specific functions (for channel ID 0 only)
+    void (*suspend) (const omv_protocol_channel_t *channel);
+    void (*resume) (const omv_protocol_channel_t *channel);
     bool (*is_active) (const omv_protocol_channel_t *channel);
 };
 
