@@ -84,6 +84,21 @@
 #define OMV_PROTOCOL_EVENT_POLL()           mp_event_handle_nowait()
 #endif
 
+// XIP critical section macros. Suspend USB event processing before
+// entering XIP-dependent code (e.g., NPU inference), resume after.
+// EXIT drains any protocol task scheduled by resume's PendSV dispatch.
+#define OMV_PROTOCOL_XIP_ENTER()                             \
+    do {                                                     \
+        mp_handle_pending(MP_HANDLE_PENDING_CALLBACKS_ONLY); \
+        omv_protocol_suspend();                              \
+    } while (0)
+
+#define OMV_PROTOCOL_XIP_EXIT()                              \
+    do {                                                     \
+        omv_protocol_resume();                               \
+        mp_handle_pending(MP_HANDLE_PENDING_CALLBACKS_ONLY); \
+    } while (0)
+
 #define omv_protocol_check_timeout(start_ms, timeout) \
     ((OMV_PROTOCOL_TICKS_MS() - start_ms) > timeout)
 
