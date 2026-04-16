@@ -148,7 +148,7 @@
 #define OMV_RAMFUNC_MEMORY                  ITCM
 #define OMV_STACK_SIZE                      (64K)
 #define OMV_HEAP_MEMORY                     SRAM1  // libc/sbrk heap memory
-#define OMV_HEAP_SIZE                       (128K)
+#define OMV_HEAP_SIZE                       (256K)
 #define OMV_SB_MEMORY                       DRAM   // Streaming buffer memory.
 #define OMV_SB_SIZE                         (1M)   // Streaming buffer size.
 #define OMV_DMA_MEMORY                      SRAM1  // Misc DMA buffers memory.
@@ -161,7 +161,7 @@
 #define OMV_UMA_BLOCK0_SIZE                 (31M)
 #define OMV_UMA_BLOCK0_FLAGS                (0)
 #define OMV_UMA_BLOCK1_MEMORY               SRAM1  // Fast UMA pool.
-#define OMV_UMA_BLOCK1_SIZE                 (590K)
+#define OMV_UMA_BLOCK1_SIZE                 (460K)
 #define OMV_UMA_BLOCK1_FLAGS                (UMA_FAST | UMA_DTCM)
 #define OMV_UMA_BLOCK2_MEMORY               DTCM   // DTCM UMA pool.
 #define OMV_UMA_BLOCK2_SIZE                 (128K)
