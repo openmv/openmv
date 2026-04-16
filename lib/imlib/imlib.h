@@ -835,6 +835,7 @@ bool image_get_mask_pixel(image_t *ptr, int x, int y);
 #define JPEG_444_YCBCR_MCU_SIZE    ((JPEG_444_GS_MCU_SIZE) * 3)
 #define JPEG_422_YCBCR_MCU_SIZE    ((JPEG_444_GS_MCU_SIZE) * 4)
 #define JPEG_420_YCBCR_MCU_SIZE    ((JPEG_444_GS_MCU_SIZE) * 6)
+#define JPEG_MAX_ALLOC_SIZE        (1024UL * 1024UL) // 1 MB
 
 typedef enum jpeg_subsampling {
     JPEG_SUBSAMPLING_AUTO = 0,

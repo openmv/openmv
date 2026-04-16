@@ -932,7 +932,7 @@ static void jpeg_write_headers(jpeg_buf_t *jpeg_buf, int w, int h, int bpp, jpeg
 
 bool jpeg_compress(image_t *src, image_t *dst, int quality, bool realloc, jpeg_subsampling_t subsampling) {
     if (!dst->data) {
-        uint32_t size = uma_avail(0);
+        uint32_t size = IM_MIN(uma_avail(0), JPEG_MAX_ALLOC_SIZE);
         dst->data = uma_malloc(size, UMA_CACHE);
         dst->size = IMLIB_IMAGE_MAX_SIZE(size);
     }
