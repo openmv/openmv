@@ -188,7 +188,7 @@ bool jpeg_compress(image_t *src, image_t *dst, int quality, bool realloc, jpeg_s
             uma_fail();
         }
 
-        dst->size = IMLIB_IMAGE_MAX_SIZE(avail - space);
+        dst->size = IMLIB_IMAGE_MAX_SIZE(IM_MIN(avail - space, JPEG_MAX_ALLOC_SIZE));
         dst->data = uma_malloc(dst->size, UMA_CACHE);
     }
 
