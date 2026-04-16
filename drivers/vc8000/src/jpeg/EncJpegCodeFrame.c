@@ -86,6 +86,13 @@ jpegEncodeFrame_e EncJpegCodeFrame(jpegInstance_s * inst)
     /* set new frame encoding parameters */
     jpegSetNewFrame(inst);
 
+    /* flush the output stream */
+    EWLLinearMem_t info;
+    info.virtualAddress = (u32 *) inst->jpeg.streamStartAddress;
+    info.busAddress = (ptr_t) inst->jpeg.streamStartAddress;
+    info.size = inst->stream.byteCnt;
+    EWLDCacheRangeFlush(asic->ewl, &info);
+
     /* start hw encoding */
     EncAsicFrameStart(inst->asic.ewl, &inst->asic.regs);
     do {
