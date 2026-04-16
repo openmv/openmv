@@ -1263,6 +1263,10 @@ void bmp_write_subimg(image_t *img, const char *path, rectangle_t *r);
 void imlib_hardware_jpeg_init();
 void imlib_hardware_jpeg_deinit();
 #endif
+#if (OMV_VENC_CODEC_ENABLE == 1)
+void imlib_hardware_venc_init();
+void imlib_hardware_venc_deinit();
+#endif
 void jpeg_get_mcu(image_t *src, int x_offset, int y_offset, int dx, int dy,
                   int8_t *Y0, int8_t *CB, int8_t *CR);
 void jpeg_decompress(image_t *dst, image_t *src);

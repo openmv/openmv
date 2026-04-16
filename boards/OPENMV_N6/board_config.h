@@ -34,6 +34,9 @@
 #define OMV_GPU_NEMA                        (1)
 #define OMV_GPU_NEMA_BUFFER_SIZE            (32 * 1024)
 
+// VENC Configuration
+#define OMV_VENC_CODEC_ENABLE               (1)
+
 #define OMV_OV7725_ENABLE                   (1)
 #define OMV_OV7725_PLL_CONFIG               (0x41) // x4
 #define OMV_OV7725_BANDING                  (0x7F)

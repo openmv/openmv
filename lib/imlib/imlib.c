@@ -50,6 +50,9 @@ void imlib_init() {
     #if (OMV_JPEG_CODEC_ENABLE == 1)
     imlib_hardware_jpeg_init();
     #endif
+    #if (OMV_VENC_CODEC_ENABLE == 1)
+    imlib_hardware_venc_init();
+    #endif
 }
 
 void imlib_deinit() {
@@ -58,6 +61,9 @@ void imlib_deinit() {
     #endif
     #if (OMV_JPEG_CODEC_ENABLE == 1)
     imlib_hardware_jpeg_deinit();
+    #endif
+    #if (OMV_VENC_CODEC_ENABLE == 1)
+    imlib_hardware_venc_deinit();
     #endif
 }
 

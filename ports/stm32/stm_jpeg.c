@@ -857,3 +857,18 @@ void imlib_hardware_jpeg_deinit() {
     HAL_JPEG_DeInit(&JPEG_state.jpeg_descr);
 }
 #endif
+
+#if (OMV_VENC_CODEC_ENABLE == 1)
+void imlib_hardware_venc_init() {
+    LL_VENC_Init();
+    NVIC_SetPriority(VENC_IRQn, IRQ_PRI_JPEG);
+    HAL_NVIC_EnableIRQ(VENC_IRQn);
+}
+
+void imlib_hardware_venc_deinit() {
+    HAL_NVIC_DisableIRQ(VENC_IRQn);
+    __HAL_RCC_VENC_FORCE_RESET();
+    __HAL_RCC_VENC_RELEASE_RESET();
+    LL_VENC_DeInit();
+}
+#endif
