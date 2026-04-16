@@ -35,6 +35,10 @@
 #include "irq.h"
 #include "stm_dma.h"
 
+#if (OMV_VENC_CODEC_ENABLE == 1)
+#include "jpegencapi.h"
+#endif // OMV_VENC_CODEC_ENABLE
+
 #define JPEG_CODEC_TIMEOUT          (1000)
 #define JPEG_ALLOC_PADDING          ((__SCB_DCACHE_LINE_SIZE) * 4)
 #define JPEG_OUTPUT_CHUNK_SIZE      (512) // The minimum output buffer size is 2x this - so 1KB.
@@ -72,6 +76,157 @@ static const uint8_t JPEG_APP0[] = {
     0x00, // Ythumbnail 0
     0xFF, 0xFE // COM
 };
+
+#if (OMV_VENC_CODEC_ENABLE == 1)
+// HW constraints:
+// width  must be multiple of 4, in range [96, 8176]
+// height must be multiple of 2, in range [32, 8176]
+//
+// Returns -1 if format/dimensions are not supported.
+// Returns  0 on success.
+// Returns  1 on HW error or output overflow.
+static int jpeg_compress_vc8000(image_t *src, image_t *dst, int quality, jpeg_subsampling_t subsampling) {
+    JpegEncFrameType frameType;
+
+    switch (src->pixfmt) {
+        case PIXFORMAT_RGB565:
+            frameType = JPEGENC_RGB565;
+            break;
+        case PIXFORMAT_YVU422: // matches YUV422 format for vc8000
+            frameType = JPEGENC_YUV422_INTERLEAVED_YUYV;
+            break;
+        default:
+            return -1;
+    }
+
+    JpegEncCodingMode codingMode = JPEGENC_422_MODE;
+
+    if (subsampling == JPEG_SUBSAMPLING_AUTO) {
+        if (quality <= 35) {
+            codingMode = JPEGENC_420_MODE;
+        }
+    } else if (subsampling == JPEG_SUBSAMPLING_444) {
+        return -1;
+    } else if (subsampling == JPEG_SUBSAMPLING_422) {
+        codingMode = JPEGENC_422_MODE;
+    } else if (subsampling == JPEG_SUBSAMPLING_420) {
+        codingMode = JPEGENC_420_MODE;
+    }
+
+    if ((src->w & 3) || (src->w < 96) || (8176 < src->w) ||
+        (src->h & 1) || (src->h < 32) || (8176 < src->h)) {
+        return -1;
+    }
+
+    if (!dst->data) {
+        dst->size = IMLIB_IMAGE_MAX_SIZE(IM_MIN(uma_avail(0), JPEG_MAX_ALLOC_SIZE));
+        dst->data = uma_malloc(dst->size, UMA_CACHE);
+    }
+
+    if (src->is_compressed) {
+        return 1;
+    }
+
+    JpegEncCfg cfg = {
+        .inputWidth = (u32) src->w,
+        .inputHeight = (u32) src->h,
+        .codingWidth = (u32) src->w,
+        .codingHeight = (u32) src->h,
+        .xOffset = 0,
+        .yOffset = 0,
+        .frameType = frameType,
+        .qLevel = quality / 10,
+        .restartInterval = 0,
+        .codingType = JPEGENC_WHOLE_FRAME,
+        .codingMode = codingMode,
+        .rotation = JPEGENC_ROTATE_0,
+        .unitsType = JPEGENC_DOTS_PER_INCH,
+        .markerType = JPEGENC_SINGLE_MARKER,
+        .xDensity = 72,
+        .yDensity = 72,
+    };
+
+    int jpeg_error = 0;
+    JpegEncInst inst = {};
+
+    if (JpegEncInit(&cfg, &inst) != JPEGENC_OK) {
+        jpeg_error = 1;
+        goto exit_cleanup;
+    }
+
+    if (JpegEncSetPictureSize(inst, &cfg) != JPEGENC_OK) {
+        jpeg_error = 1;
+        goto exit_cleanup;
+    }
+
+    JpegEncIn encIn = {
+        .busLum = (size_t) src->data,
+        .busCb = 0,
+        .busCr = 0,
+        .pOutBuf = (u8 *) dst->data,
+        .busOutBuf = (size_t) dst->data,
+        .outBufSize = (u32) dst->size,
+        .frameHeader = 1,
+    };
+
+    JpegEncOut encOut = {};
+    JpegEncRet ret = JPEGENC_RESTART_INTERVAL;
+
+    // Clean src for vc8000.
+    SCB_CleanDCache_by_Addr((uint32_t *) src->data, image_size(src));
+
+    // Drop any writes to dest.
+    SCB_InvalidateDCache_by_Addr((uint32_t *) dst->data, dst->size);
+
+    for (mp_uint_t tickstart = mp_hal_ticks_ms(); ret == JPEGENC_RESTART_INTERVAL; ) {
+        mp_uint_t elapsed = mp_hal_ticks_ms() - tickstart;
+
+        if (elapsed > JPEG_CODEC_TIMEOUT) {
+            jpeg_error = 1;
+            goto exit_cleanup;
+        }
+
+        ret = JpegEncEncode(inst, &encIn, &encOut, NULL, NULL);
+
+        // Retry on errors that may be transient due to HW state (e.g. bus error or timeout).
+        if (ret == JPEGENC_HW_BUS_ERROR || ret == JPEGENC_HW_TIMEOUT) {
+            JpegEncRelease(inst);
+
+            if (JpegEncInit(&cfg, &inst) != JPEGENC_OK) {
+                jpeg_error = 1;
+                goto exit_cleanup;
+            }
+
+            if (JpegEncSetPictureSize(inst, &cfg) != JPEGENC_OK) {
+                jpeg_error = 1;
+                goto exit_cleanup;
+            }
+
+            continue;
+        }
+
+        if (ret != JPEGENC_FRAME_READY && ret != JPEGENC_RESTART_INTERVAL) {
+            jpeg_error = 1;
+            goto exit_cleanup;
+        }
+    }
+
+    dst->size = encOut.jfifSize;
+
+    // Drop any speculative reads of dest.
+    SCB_InvalidateDCache_by_Addr((uint32_t *) dst->data, dst->size);
+
+    // Clean trailing data after 0xFFD9 at the end of the jpeg byte stream.
+    dst->size = jpeg_clean_trailing_bytes(dst->size, dst->data);
+
+exit_cleanup:
+
+    JpegEncRelease(inst);
+
+    // caller frees dst->data on error
+    return jpeg_error;
+}
+#endif // OMV_VENC_CODEC_ENABLE
 
 void JPEG_IRQHandler() {
     IRQ_ENTER(JPEG_IRQn);
@@ -130,6 +285,14 @@ static void jpeg_compress_data_ready(JPEG_HandleTypeDef *hjpeg, uint8_t *pDataOu
 }
 
 bool jpeg_compress(image_t *src, image_t *dst, int quality, bool realloc, jpeg_subsampling_t subsampling) {
+    #if (OMV_VENC_CODEC_ENABLE == 1)
+    // Try VC8000 first. Returns -1 if not handled (fall through), 0=success, 1=error.
+    int vc = jpeg_compress_vc8000(src, dst, quality, subsampling);
+    if (vc >= 0) {
+        return (bool) vc;
+    }
+    #endif // OMV_VENC_CODEC_ENABLE
+
     HAL_JPEG_RegisterGetDataCallback(&JPEG_state.jpeg_descr, jpeg_compress_get_data);
     HAL_JPEG_RegisterDataReadyCallback(&JPEG_state.jpeg_descr, jpeg_compress_data_ready);
 
