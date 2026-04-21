@@ -377,6 +377,12 @@ typedef struct _omv_csi {
     // Resolution table
     uint16_t resolution[OMV_CSI_FRAMESIZE_MAX][2];
 
+    #ifdef OMV_CSI_HW_SCALE_ENABLE
+    // Sensor raw resolution output (i.e. before cropping and scaling).
+    uint16_t src_w;
+    uint16_t src_h;
+    #endif // OMV_CSI_HW_SCALE_ENABLE
+
     // Sensor function pointers
     int (*reset) (omv_csi_t *csi);
     int (*sleep) (omv_csi_t *csi, int enable);
