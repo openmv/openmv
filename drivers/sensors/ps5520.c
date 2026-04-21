@@ -42,6 +42,9 @@
 #include "omv_csi.h"
 #include "py/mphal.h"
 
+#define SENSOR_WIDTH            2592
+#define SENSOR_HEIGHT           1944
+
 #define REG_BANK                (0xEF)
 
 // Bank #0
@@ -155,6 +158,9 @@ static const uint8_t stream_off_regs[][2] = {
     { 0x00, 0x00 }, // End
 };
 
+// These per-resolution register tables are only used without the ISP scaler;
+// with the scaler the sensor runs at full resolution and the ISP scales down.
+#ifndef OMV_CSI_HW_SCALE_ENABLE
 static const uint8_t res_640x480_regs[][2] = {
     // PS5520_640x480x30fps_24MHz_2Lane_RAW10_840Mbps_20190408_C10A.asc
     { 0xEF, 0x05 },
@@ -937,6 +943,7 @@ static const uint8_t res_2560x1440_regs[][2] = {
     { 0xFF, 0x02 }, // Delay 2 ms
     { 0x00, 0x00 }, // End
 };
+#endif // OMV_CSI_HW_SCALE_ENABLE
 
 static const uint8_t res_2592x1944_regs[][2] = {
     // PS5520_2592x1944x30fps_24MHz_2Lane_RAW10_840Mbps_20190408_C10A.asc
@@ -1145,7 +1152,14 @@ static int reset(omv_csi_t *csi) {
     int16_t lpf;
 
     // Set resolution
+    #ifdef OMV_CSI_HW_SCALE_ENABLE
+    // With the hardware scaler the sensor always runs at full resolution and the
+    // ISP scales down; the old per-resolution register tables are used otherwise.
+    ret |= write_registers(csi, sw_reset_regs);
+    ret |= write_registers(csi, res_2592x1944_regs);
+    #else
     ret |= write_registers(csi, res_640x480_regs);
+    #endif // OMV_CSI_HW_SCALE_ENABLE
 
     ps5520->enable_agc = true;
     ps5520->agc_gain = PS5520_DEF_GAIN;
@@ -1241,7 +1255,15 @@ static int set_pixformat(omv_csi_t *csi, pixformat_t pixformat) {
 }
 
 static int set_framesize(omv_csi_t *csi, omv_csi_framesize_t framesize) {
+    uint32_t w = csi->resolution[framesize][0];
+    uint32_t h = csi->resolution[framesize][1];
+
+    if (w > SENSOR_WIDTH || h > SENSOR_HEIGHT) {
+        return -1;
+    }
+
     int ret = 0;
+    #ifndef OMV_CSI_HW_SCALE_ENABLE
     const uint8_t(*regs)[2];
 
     switch (framesize) {
@@ -1272,6 +1294,7 @@ static int set_framesize(omv_csi_t *csi, omv_csi_framesize_t framesize) {
 
     // Set resolution
     ret |= write_registers(csi, regs);
+    #endif // OMV_CSI_HW_SCALE_ENABLE
     return ret;
 }
 
@@ -1645,6 +1668,12 @@ int ps5520_init(omv_csi_t *csi) {
     csi->get_rgb_gain_db = get_rgb_gain_db;
     csi->set_hmirror = set_hmirror;
     csi->set_vflip = set_vflip;
+
+    #ifdef OMV_CSI_HW_SCALE_ENABLE
+    // Source resolution for the ISP scaler (sensor runs at full resolution).
+    csi->src_w = SENSOR_WIDTH;
+    csi->src_h = SENSOR_HEIGHT;
+    #endif // OMV_CSI_HW_SCALE_ENABLE
 
     return 0;
 }
