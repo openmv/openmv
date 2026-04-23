@@ -830,7 +830,7 @@ static int snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
     fb->h = csi->transpose ? fb->u : fb->v;
 
     framebuffer_to_image(fb, image);
-    image->pixels = buffer->data;
+    image->data = buffer->data;
 
     uint16_t width = image->w;
     uint16_t height = image->h;
@@ -865,7 +865,7 @@ static int snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
 
         // Determine target line index accounting for vflip.
         uint16_t dst_line = csi->vflip ? (height - 1 - line) : line;
-        uint8_t *line_buf = image->pixels + (dst_line * width);
+        uint8_t *line_buf = image->data + (dst_line * width);
 
         if (vd55g1_read_line(csi, line_buf, width) != 0) {
             ret = OMV_CSI_ERROR_IO_ERROR;
