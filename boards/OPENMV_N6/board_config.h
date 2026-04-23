@@ -50,7 +50,8 @@
 #define OMV_SOFTCSI_ENABLE                  (1)
 #define OMV_PS5520_ENABLE                   (1)
 #define OMV_VD55G1_ENABLE                   (1)
-#define OMV_VD55G1_MIPI_CSI2                (1)
+// Uncomment to route VD55G1 through the MIPI CSI-2 interface instead of I3C snapshot.
+//#define OMV_VD55G1_MIPI_CSI2                (1)
 // Uncomment and set to the MCU pin wired to VD55G1 GPIO0 for line-ready strobe.
 //#define OMV_VD55G1_STROBE_PIN               (&omv_pin_XXX_GPIO)
 
