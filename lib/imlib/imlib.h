@@ -1500,8 +1500,8 @@ void imlib_bilateral_filter(image_t *img,
                             bool invert,
                             image_t *mask);
 // Image Correction
-void imlib_logpolar_int(image_t *dst, image_t *src, rectangle_t *roi, bool linear, bool reverse); // helper/internal
-void imlib_logpolar(image_t *img, bool linear, bool reverse);
+void imlib_logpolar_int(image_t *dst, image_t *src, rectangle_t *roi, int cx, int cy, bool linear, bool reverse); // helper/internal
+void imlib_logpolar(image_t *img, int cx, int cy, bool linear, bool reverse);
 // Lens/Rotation Correction
 void imlib_lens_corr(image_t *img, float strength, float zoom, float x_corr, float y_corr);
 void imlib_rotation_corr(image_t *img, float x_rotation, float y_rotation,
