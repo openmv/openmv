@@ -18,7 +18,13 @@ endif
 # Debug configuration
 DEBUGGER ?= JLINK
 
-# Dummy target to run sdk/clean
+# Unix host builds use the same `make TARGET=<x>` shape as every other
+# board; flag here for the SDK-skip below.
+ifeq ($(TARGET),UNIX)
+IS_UNIX_BUILD := 1
+endif
+
+# Targets that don't require a board TARGET.
 ifeq ($(TARGET),)
   ifeq ($(filter sdk,$(MAKECMDGOALS)),)
     $(error Invalid or no TARGET specified)
@@ -32,7 +38,7 @@ SDK_VERSION := $(shell cat $(CURDIR)/SDK_VERSION)
 SDK_DIR ?= $(HOME)/openmv-sdk-$(SDK_VERSION)
 SDK_STAMP = $(SDK_DIR)/sdk.version
 
-# Check if the SDK is downloaded
+ifndef IS_UNIX_BUILD
 ifeq ($(filter sdk clean,$(MAKECMDGOALS)),)
   ifeq ($(wildcard $(SDK_STAMP)),)
     $(error OpenMV SDK not found. Run 'make sdk' to install it.)
@@ -42,6 +48,7 @@ ifeq ($(filter sdk clean,$(MAKECMDGOALS)),)
       $(error OpenMV SDK version mismatch. Run 'make sdk'.)
     endif
   endif
+endif
 endif
 
 # Targets
