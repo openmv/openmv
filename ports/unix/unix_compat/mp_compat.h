@@ -17,14 +17,4 @@
 #define MICROPY_ROM_TEXT_COMPRESSION (0)
 #endif
 
-// extmod/modtime.c (patched by OpenMV's micropython submodule) does
-// `#include "py_clock.h"` to register the clock module. CFLAGS_USERMOD
-// puts -I$(OMV_PORT_DIR) before -I$(OMV_MOD_DIR), so the include
-// resolves to the empty stub at ports/unix/py_clock.h rather than the
-// real header in modules/. Forward-declare the type here so modtime.c
-// links until that include order is corrected.
-#ifndef NO_QSTR
-extern const struct _mp_obj_type_t py_clock_type;
-#endif
-
 #endif // __MP_COMPAT_H__
