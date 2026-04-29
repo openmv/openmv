@@ -170,7 +170,7 @@
     },
     {
       "path": "50-OpenMV-Boards/50-STM32-Boards/*",
-      "boards": ["OPENMV2", "OPENMV3", "OPENMV4", "OPENMV4P", "OPENMVPT", "OPENMV_N6"],
+      "boards": ["OPENMV2", "OPENMV3", "OPENMV4", "OPENMV4P", "OPENMVPT"],
       "sensors": ["*"]
     },
     {
@@ -186,6 +186,11 @@
     {
       "path": "50-OpenMV-Boards/52-Alif-Boards/*",
       "boards": ["OPENMV_AE3"],
+      "sensors": ["*"]
+    },
+    {
+      "path": "50-OpenMV-Boards/53-N6-Boards/*",
+      "boards": ["OPENMV_N6"],
       "sensors": ["*"]
     },
     {
