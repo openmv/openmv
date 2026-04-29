@@ -155,7 +155,7 @@
     },
     {
       "path": "10-Bluetooth",
-      "boards": ["OPENMV_RT1060", "OPENMV_N6", "ARDUINO_GIGA", "ARDUINO_PORTENTA_H7", "ARDUINO_NICLA_VISION", "ARDUINO_NANO_RP2040_CONNECT"],
+      "boards": ["OPENMV_RT1060", "OPENMV_AE3", "OPENMV_N6", "ARDUINO_GIGA", "ARDUINO_PORTENTA_H7", "ARDUINO_NICLA_VISION", "ARDUINO_NANO_RP2040_CONNECT"],
       "sensors": ["*"]
     },
     {
