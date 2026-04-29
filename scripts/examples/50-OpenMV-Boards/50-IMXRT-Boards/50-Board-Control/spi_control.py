@@ -71,7 +71,7 @@ write_command(0x3A, 0x05)
 csi0 = csi.CSI()
 csi0.reset()  # Initialize the camera sensor.
 csi0.pixformat(csi.RGB565)  # must be this
-csi0.framesize(csi.QQVGA2)  # must be this
+csi0.framesize((128, 160))  # must be this
 csi0.snapshot(time=2000)  # Let new settings take affect.
 
 clock = time.clock()  # Tracks FPS.
