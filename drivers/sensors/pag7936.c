@@ -450,6 +450,32 @@ static const uint16_t hd_regs[][2] = {
     { 0x0000,               0x00 },
 };
 
+static const omv_csi_ccm_entry_t pag7936_ccm_entries[] = {
+    {   // INC (incandescent, ~2902K)
+        .coeffs = { {  1.425f,  0.172f, -0.597f },
+                    { -0.601f,  2.272f, -0.671f },
+                    { -0.452f, -1.811f,  3.263f } },
+        .avg = { 19.916f, 19.251f, 6.855f }, // 2.905 R/B
+    },
+    {   // TL84 (fluorescent, ~3836K)
+        .coeffs = { {  1.594f, -0.332f, -0.261f },
+                    { -0.537f,  2.080f, -0.543f },
+                    { -0.062f, -1.172f,  2.234f } },
+        .avg = { 43.362f, 54.614f, 23.002f }, // 1.885 R/B
+    },
+    {   // D65 (daylight, ~6728K)
+        .coeffs = { {  1.572f, -0.309f, -0.263f },
+                    { -0.349f,  2.173f, -0.824f },
+                    { -0.029f, -0.891f,  1.920f } },
+        .avg = { 20.056f, 34.807f, 20.315f }, // 0.987 R/B
+    },
+};
+
+static const omv_csi_ccm_t pag7936_ccm = {
+    .count = OMV_ARRAY_SIZE(pag7936_ccm_entries),
+    .entries = pag7936_ccm_entries,
+};
+
 // Apply AE/AG hardware mode based on current manual/auto state.
 // gain: register value to write (already clamped), or -1 to freeze from sensor readback.
 // expo: exposure in sensor line units (already clamped), or -1 to freeze from sensor readback.
@@ -804,6 +830,10 @@ int pag7936_init(omv_csi_t *csi) {
     csi->get_rgb_gain_db = get_rgb_gain_db;
     csi->set_hmirror = set_hmirror;
     csi->set_vflip = set_vflip;
+
+    if (csi->isp_set_ccm != NULL) {
+        csi->isp_set_ccm(csi, &pag7936_ccm);
+    }
 
     // Override standard resolutions
     csi->resolution[OMV_CSI_FRAMESIZE_HD][0] = 1280;
