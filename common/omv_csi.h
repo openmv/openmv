@@ -270,6 +270,18 @@ typedef enum {
 
 typedef struct _omv_csi omv_csi_t;
 
+typedef struct {
+    float coeffs[3][3];
+    float offsets[3];
+    float avg[3];
+} omv_csi_ccm_entry_t;
+
+// Entries must be sorted warmest to coolest (descending R/B ratio of avg).
+typedef struct {
+    size_t count;
+    const omv_csi_ccm_entry_t *entries;
+} omv_csi_ccm_t;
+
 typedef struct _omv_csi_callback_t {
     void (*fun) (void *);
     void *arg;
@@ -410,6 +422,7 @@ typedef struct _omv_csi {
     int (*snapshot) (omv_csi_t *csi, image_t *image, uint32_t flags);
     int (*post_process) (omv_csi_t *csi, image_t *image, uint32_t flags);
     int (*isp_reset) (omv_csi_t *csi);
+    int (*isp_set_ccm) (omv_csi_t *csi, const omv_csi_ccm_t *ccm);
 } omv_csi_t;
 
 // CSI array
