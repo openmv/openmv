@@ -162,6 +162,7 @@ def draw_predictions(
     boxes,
     labels,
     colors,
+    scores=None,
     format="pascal_voc",
     font_width=8,
     font_height=10,
@@ -169,8 +170,16 @@ def draw_predictions(
 ):
     image_w = image.width()
     image_h = image.height()
+    # Auto-scale font and stroke to image width so labels stay legible across
+    # resolutions and survive JPEG compression on small frames.
+    font_scale = min(4, max(1, image_w // 320))
+    thickness = min(3, max(1, image_w // 480))
+    fw = font_width * font_scale
+    fh = font_height * font_scale
     for i, (x, y, w, h) in enumerate(boxes):
         label = labels[i]
+        if scores is not None:
+            label = "%s %.2f" % (label, scores[i])
         box_color = colors[i]
 
         if format == "pascal_voc":
@@ -179,13 +188,13 @@ def draw_predictions(
             w = int(w * image_w) - x
             h = int(h * image_h) - y
 
-        image.draw_rectangle((x, y, w, h), color=box_color)
+        image.draw_rectangle((x, y, w, h), color=box_color, thickness=thickness)
         image.draw_rectangle(
-            (x, y - font_height, len(label) * font_width, font_height),
+            (x, y - fh, len(label) * fw, fh),
             fill=True,
             color=box_color,
         )
-        image.draw_string((x, y - font_height), label.upper(), text_color)
+        image.draw_string((x, y - fh), label.upper(), text_color, scale=font_scale)
 
 
 def draw_keypoints(
