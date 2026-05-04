@@ -153,6 +153,7 @@ typedef I2C_HandleTypeDef *omv_i2c_dev_t;
     struct {                         \
         DCMIPP_HandleTypeDef dcmipp; \
         DMA_QListTypeDef dma_queue;  \
+        const omv_csi_ccm_t *ccm;    \
     };
 #else
 #define OMV_CSI_PORT_BITS_DCMIPP
