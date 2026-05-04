@@ -171,11 +171,16 @@
 #define PAG7936_QVGA_FPS_MAX        (480)
 #define PAG7936_VGA_FPS_MAX         (240)
 #define PAG7936_HD_FPS_MAX          (120)
+// MIPI runs at 2x the parallel framerate, so AE compensates with 2x more gain
+// and ~1.41x more noise. Lift Ytar by ~0.4 stops (65 × 2^0.4 ≈ 86) to push the
+// scene above the elevated noise floor.
+#define PAG7936_AE_YTAR             (86)
 #else
 #define PAG7936_WIDTH_ALIGN         (4)
 #define PAG7936_QVGA_FPS_MAX        (240)
 #define PAG7936_VGA_FPS_MAX         (120)
 #define PAG7936_HD_FPS_MAX          (60)
+#define PAG7936_AE_YTAR             (65)
 #endif
 
 typedef struct {
@@ -332,6 +337,7 @@ static const uint16_t default_regs[][2] = {
     { 0x000B,   0x02 },
     #endif
     { 0x1400,   0x01 }, // AE auto mode (bit4=0), bit0 preserved at default
+    { AE_YTAR8BIT, PAG7936_AE_YTAR },
     { 0x140C,   0x00 },
     { 0x140D,   0x01 }, // AE_MAXGAIN = 256 (16x, hardware max)
     { 0x0801,   0x00 }, // Disable ramp test pattern
