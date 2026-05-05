@@ -404,14 +404,6 @@ static void stm_csi_frame_event(omv_csi_t *csi, uint32_t pipe) {
     HAL_NVIC_EnableIRQ(csi->dma_irqn);
     #endif
 
-    // The ISP AWB stats lag by one frame. So, drop the first frame when not initialized.
-    #if defined(OMV_CSI_STATS_ENABLE)
-    if (csi->raw_output && csi->stats_enabled && !csi->stats.initialized) {
-        stm_isp_update_awb(csi, DCMIPP_PIPE, fb->u * fb->v);
-        csi->drop_frame = true;
-    }
-    #endif // OMV_CSI_STATS_ENABLE
-
     csi->first_line = false;
     if (csi->drop_frame) {
         csi->drop_frame = false;
