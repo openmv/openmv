@@ -1157,6 +1157,16 @@ __weak int omv_csi_get_rgb_gain_db(omv_csi_t *csi, float *r_gain_db, float *g_ga
 void omv_csi_stats_update(omv_csi_t *csi, uint32_t *r, uint32_t *g, uint32_t *b, uint32_t ms) {
     omv_csi_stats_t *stats = &csi->stats;
 
+    // Freeze the EMA when raw R/G/B ratios collapse toward 1.0 — that means
+    // saturated pixels are pinning all channels equal, which would bias AWB
+    // toward "no correction" and tint unsaturated regions green. AEC still
+    // sees live luminance and drops exposure to resolve the saturation.
+    uint32_t min = IM_MIN(*r, IM_MIN(*g, *b));
+    uint32_t max = IM_MAX(*r, IM_MAX(*g, *b));
+    if (min * 3 > max * 2) {
+        return;
+    }
+
     if (!stats->initialized) {
         stats->initialized = true;
         stats->last_ms = ms;
