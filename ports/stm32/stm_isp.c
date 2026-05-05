@@ -196,7 +196,7 @@ int stm_isp_update_gamma_table(omv_csi_t *csi, uint32_t pipe,
         float x = IM_MAX(i / 8.0f, 0.0001f);
         float y = powf(x, 1.0f / gamma) * contrast + brightness;
         int gain = fast_roundf(y / x * 16.0f);
-        g_tab[i] = IM_CLAMP(gain, 0, 32);
+        g_tab[i] = IM_CLAMP(gain, 0, 63);
     }
 
     if (HAL_DCMIPP_PIPE_SetISPCtrlContrastConfig(&csi->dcmipp, pipe,
