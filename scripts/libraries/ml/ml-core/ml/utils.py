@@ -188,6 +188,26 @@ def draw_predictions(
             w = int(w * image_w) - x
             h = int(h * image_h) - y
 
+        if format == "point":
+            # Centerpoint detectors emit a small synthetic box centered
+            # on each peak. Draw a marker at the center instead of a
+            # rectangle; size auto-derived from image width so the
+            # marker scales with resolution like the label fonts.
+            cx = x + w // 2
+            cy = y + h // 2
+            radius = min(16, max(4, image_w // 60))
+            image.draw_circle(
+                (cx, cy, radius), color=box_color, thickness=thickness, fill=True,
+            )
+            ly = max(0, cy - radius - fh)
+            image.draw_rectangle(
+                (cx, ly, len(label) * fw, fh),
+                fill=True,
+                color=box_color,
+            )
+            image.draw_string((cx, ly), label.upper(), text_color, scale=font_scale)
+            continue
+
         image.draw_rectangle((x, y, w, h), color=box_color, thickness=thickness)
         image.draw_rectangle(
             (x, y - fh, len(label) * fw, fh),
