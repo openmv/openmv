@@ -689,6 +689,8 @@ static int post_process_event(omv_csi_t *csi, image_t *image, uint32_t flags) {
         }
     }
 
+    // Invalidate frame.
+    csi->fb->pixfmt = PIXFORMAT_INVALID;
     return valid_count;
 }
 
