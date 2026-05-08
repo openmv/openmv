@@ -1,6 +1,6 @@
 import time
 for i in range(10):
-    print(f"Booting j ...{i}")
+    print(f"Booting i ...{i}")
     time.sleep(1)
 print("Checking imports")
 
