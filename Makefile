@@ -35,12 +35,17 @@ SDK_STAMP = $(SDK_DIR)/sdk.version
 # Check if the SDK is downloaded
 ifeq ($(filter sdk clean,$(MAKECMDGOALS)),)
   ifeq ($(wildcard $(SDK_STAMP)),)
-    $(error OpenMV SDK not found. Run 'make sdk' to install it.)
+    OLD_SDK_STAMPS := $(wildcard $(dir $(SDK_DIR))openmv-sdk-*/sdk.version)
+    ifneq ($(OLD_SDK_STAMPS),)
+      SDK_INSTALLED := $(shell cat $(OLD_SDK_STAMPS) 2>/dev/null | sort -u | tr '\n' ' ')
+    endif
   else
     SDK_INSTALLED := $(shell cat $(SDK_STAMP))
-    ifneq ($(SDK_INSTALLED),$(SDK_VERSION))
-      $(error OpenMV SDK version mismatch. Run 'make sdk'.)
-    endif
+  endif
+  ifeq ($(SDK_INSTALLED),)
+    $(error OpenMV SDK not found. Run 'make sdk' to install it.)
+  else ifneq ($(SDK_INSTALLED),$(SDK_VERSION))
+    $(error OpenMV SDK version mismatch (installed: $(SDK_INSTALLED), required: $(SDK_VERSION)). Run 'make sdk' to update.)
   endif
 endif
 
