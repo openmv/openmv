@@ -216,7 +216,7 @@ bool ec_copy_blob(ECInstr *blob, const uint8_t *binary_ptr, unsigned int *blob_s
     if (*blob_size < (size + 2))
     {
       LL_ATON_PRINTF(
-          "Error: Memory allocated for the Epoch Controller blob is not sufficient (at least space for %" PRIu32
+          "Error: Memory allocated for the Epoch Controller blob is not sufficient (at least space for %" PRI_ECInstr
           " 32-bit words must be allocated, but only %u 32-bit words were allocated)\n",
           size + 2, *blob_size);
 
@@ -325,7 +325,7 @@ bool ec_copy_reloc_table(ECFileEntry *reloc_table, const uint8_t *binary_ptr, un
     if (*reloc_table_size < size)
     {
       LL_ATON_PRINTF("Error: Memory allocated for the relocation table of the Epoch Controller blob is not sufficient "
-                     "(at least space for %" PRIu32 " 32-bit words must be allocated)\n",
+                     "(at least space for %" PRI_ECFileEntry " 32-bit words must be allocated)\n",
                      size);
 
       return false;
@@ -469,7 +469,7 @@ bool ec_reloc(ECInstr *blob, const ECFileEntry *reloc_table_ptr, unsigned int id
 
     if ((offset % sizeof(ECFileEntry)) != 0)
     {
-      LL_ATON_PRINTF("Error: Offset %lu in Epoch Controller binary is invalid\n", (unsigned long)offset);
+      LL_ATON_PRINTF("Error: Offset %" PRI_ECFileEntry " in Epoch Controller binary is invalid\n", offset);
 
       return false;
     }
@@ -542,7 +542,7 @@ bool ec_reloc_by_id(ECInstr *blob, const ECFileEntry *reloc_table_ptr, const cha
 
       if ((offset % sizeof(ECFileEntry)) != 0)
       {
-        LL_ATON_PRINTF("Error: Offset %lu in Epoch Controller binary is invalid\n", (unsigned long)offset);
+        LL_ATON_PRINTF("Error: Offset %" PRI_ECFileEntry " in Epoch Controller binary is invalid\n", offset);
 
         return false;
       }
@@ -660,8 +660,7 @@ bool ec_copy_patch_table(ECFileEntry *patch_table, const uint8_t *binary_ptr, un
     if (*patch_table_size < size)
     {
       LL_ATON_PRINTF("Error: Memory allocated for the patch table of the Epoch Controller blob is not sufficient (at "
-                     "least space for %u "
-                     "32-bit words must be allocated)\n",
+                     "least space for %" PRI_ECFileEntry " 32-bit words must be allocated)\n",
                      size);
 
       return false;
@@ -867,7 +866,7 @@ bool ec_patch(ECInstr *blob, const ECFileEntry *patch_table_ptr, unsigned int id
 
     if ((offset % sizeof(ECFileEntry)) != 0)
     {
-      LL_ATON_PRINTF("Error: Offset %lu in Epoch Controller binary is invalid\n", (unsigned long)offset);
+      LL_ATON_PRINTF("Error: Offset %" PRI_ECFileEntry " in Epoch Controller binary is invalid\n", offset);
 
       return false;
     }
@@ -949,7 +948,7 @@ bool ec_patch_by_id(ECInstr *blob, const ECFileEntry *patch_table_ptr, const cha
 
       if ((offset % sizeof(ECFileEntry)) != 0)
       {
-        LL_ATON_PRINTF("Error: Offset %lu in Epoch Controller binary is invalid\n", (unsigned long)offset);
+        LL_ATON_PRINTF("Error: Offset %" PRI_ECFileEntry " in Epoch Controller binary is invalid\n", offset);
 
         return false;
       }

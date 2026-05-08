@@ -47,7 +47,8 @@ extern "C"
 
   extern void ec_trace_comment(const char *comment);
 
-  extern void ec_trace_init(const char *out_filename, const char *network_name, bool encrypted);
+  extern void ec_trace_init(const char *out_filename, const char *network_name, bool encrypted, int debug_level,
+                            bool optimize_blobs);
   extern void ec_trace_start_blob(const char *blob_name);
   extern void ec_trace_end_blob(const char *blob_name);
   extern void ec_trace_start_epoch(unsigned int num);

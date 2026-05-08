@@ -145,7 +145,7 @@ extern "C"
    * @param epoch_block_callback Function pointer to callback function (set to `NULL` to disable epoch tracing)
    *
    * @note  This function must only be called while the passed network instance is not executing
-   *        and should be called before `LL_ATON_RT_Init_Network()`!
+   *        and should be called BEFORE `LL_ATON_RT_Init_Network()`!
    */
   void LL_ATON_RT_SetNetworkCallback(NN_Instance_TypeDef *nn_instance, TraceEpochBlock_FuncPtr_t epoch_block_callback);
 

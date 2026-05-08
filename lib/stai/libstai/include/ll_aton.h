@@ -134,37 +134,37 @@ extern "C"
    */
   typedef struct
   {
-    unsigned rounding_f : 1;     /**< Input feature data rounding control: 1=enable,0=disable */
-    unsigned saturation_f : 1;   /**< Input feature data saturation control: 1=enable,0=disable */
-    unsigned round_mode_f : 2;   /**< Input feature round mode */
-    unsigned inbytes_f : 2;      /**< Input data width in bytes. Valid values are 1, 2 or 3 bytes */
-    unsigned outbytes_f : 2;     /**< Input feature output bytes after shift. Valid values are 1 or 2 bytes */
-    unsigned rounding_o : 1;     /**< Output rounding control, 1=enable,0=disable */
-    unsigned saturation_o : 1;   /**< Output saturation control,1=enable,0=disable */
-    unsigned round_mode_o : 1;   /**< Output rounding mode */
-    unsigned relu_mode_o : 1;    /**< Apply Relu operation before rounding */
-    unsigned outbytes_o : 2;     /**< Number of output bytes: 1, 2 or 3 */
-    unsigned signedop : 1;       /**< Signed/unsigned activations: 0: unsigned activations, 1 signed */
-    unsigned char shift_f;       /**< Input feature data shift. Negative values represent left shifts */
-    unsigned char shift_o;       /**< Optional right shift to be applied to the function evaluator final result */
-    unsigned parameter;          /**< ReLU parameter */
-    unsigned parameter_2;        /**< Zero offset for TRELU operation for use in scale/offset integer arithmetic.
-                                  *   Needs zp alignment */
-    unsigned nbytes;             /**< Number of bytes of input data  */
-    ll_aton_pointer ROM0_vector; /**< Address of ROM0 coefficients table */
-    ll_aton_pointer ROM1_vector; /**< Address of ROM1 coefficients table */
-    ll_aton_pointer LUT_vector;  /**< Address of LUT coefficients table */
-    unsigned ROM0_nbytes;        /**< Length of ROM0 table */
-    unsigned ROM1_nbytes;        /**< Length of ROM1 table */
-    unsigned char shift_b;       /**< Optional left shift to be applied to coefficient B */
-    unsigned char shift_c;       /**< Optional left shift to be applied to coefficient C */
-    unsigned char shift_norm;    /**< Function input range normalization left shift parameter */
-    unsigned char bwidth;        /**< Number of MSB bits of the input activation to be used to address ROM0.
-                                  *   This field configures the number of outer segments (max outer segments = 32).
-                                  *   Valid values range = 0,1,2,3,4 and 5 corresponding to 1,2,4,8,16 and 32 outer segment(s)
-                                  *   respectively */
-    int fsub;                    /**< Feature data subtract value */
-    LL_Activacc_Op operation;    /**< Activation type. See LL_Activacc_Op */
+    unsigned int rounding_f : 1;   /**< Input feature data rounding control: 1=enable,0=disable */
+    unsigned int saturation_f : 1; /**< Input feature data saturation control: 1=enable,0=disable */
+    unsigned int round_mode_f : 2; /**< Input feature round mode */
+    unsigned int inbytes_f : 2;    /**< Input data width in bytes. Valid values are 1, 2 or 3 bytes */
+    unsigned int outbytes_f : 2;   /**< Input feature output bytes after shift. Valid values are 1 or 2 bytes */
+    unsigned int rounding_o : 1;   /**< Output rounding control, 1=enable,0=disable */
+    unsigned int saturation_o : 1; /**< Output saturation control,1=enable,0=disable */
+    unsigned int round_mode_o : 1; /**< Output rounding mode */
+    unsigned int relu_mode_o : 1;  /**< Apply Relu operation before rounding */
+    unsigned int outbytes_o : 2;   /**< Number of output bytes: 1, 2 or 3 */
+    unsigned int signedop : 1;     /**< Signed/unsigned activations: 0: unsigned activations, 1 signed */
+    unsigned char shift_f;         /**< Input feature data shift. Negative values represent left shifts */
+    unsigned char shift_o;         /**< Optional right shift to be applied to the function evaluator final result */
+    unsigned int parameter;        /**< ReLU parameter */
+    unsigned int parameter_2;      /**< Zero offset for TRELU operation for use in scale/offset integer arithmetic.
+                                    *   Needs zp alignment */
+    unsigned int nbytes;           /**< Number of bytes of input data  */
+    ll_aton_pointer ROM0_vector;   /**< Address of ROM0 coefficients table */
+    ll_aton_pointer ROM1_vector;   /**< Address of ROM1 coefficients table */
+    ll_aton_pointer LUT_vector;    /**< Address of LUT coefficients table */
+    unsigned int ROM0_nbytes;      /**< Length of ROM0 table */
+    unsigned int ROM1_nbytes;      /**< Length of ROM1 table */
+    unsigned char shift_b;         /**< Optional left shift to be applied to coefficient B */
+    unsigned char shift_c;         /**< Optional left shift to be applied to coefficient C */
+    unsigned char shift_norm;      /**< Function input range normalization left shift parameter */
+    unsigned char bwidth;          /**< Number of MSB bits of the input activation to be used to address ROM0.
+                                    *   This field configures the number of outer segments (max outer segments = 32).
+                                    *   Valid values range = 0,1,2,3,4 and 5 corresponding to 1,2,4,8,16 and 32 outer segment(s)
+                                    *   respectively */
+    int fsub;                      /**< Feature data subtract value */
+    LL_Activacc_Op operation;      /**< Activation type. See LL_Activacc_Op */
   } LL_Activacc_InitTypeDef;
 
   /** @defgroup LL_ACTIV Activation unit configuration functions
@@ -216,48 +216,48 @@ extern "C"
    */
   typedef struct
   {
-    unsigned rounding_x : 1;   /**< Input feature data rounding for stream X */
-    unsigned saturation_x : 1; /**< Input feature data saturation for stream X */
-    unsigned round_mode_x : 2; /**< Input feature data rounding mode for stream X */
-    unsigned inbytes_x : 2;    /**< Input data width in bytes for stream X. Valid values are 1, 2 or 3 bytes */
-    unsigned outbytes_x : 2;   /**< Number of output bytes to use for input feature data of stream X after rounding or
-                                *  saturation. Valid values are 1 or 2 bytes */
-    signed char shift_x;       /**< Input feature data shift for stream X. Use negative values for left shift */
-    unsigned rounding_y : 1;   /**< Input feature data rounding for stream Y */
-    unsigned saturation_y : 1; /**< Input feature data saturation for stream Y */
-    unsigned round_mode_y : 2; /**< Input feature data rounding mode for stream Y */
-    unsigned inbytes_y : 2;    /**< Input data width in bytes for stream Y. Valid values are 1, 2 or 3 bytes */
-    unsigned outbytes_y : 2;   /**< Number of output bytes to use for input feature data of stream Y after rounding or
-                                *  saturation. Valid values are 1 or 2 bytes */
-    unsigned combinebc : 1;    /**< Combine coeff B and C to form a 32b coeff BC = {B[15:0],C[15:0]} */
-    unsigned clipout : 1;      /**< Controls output clipping to range specified by clip range configuration, 1=enable,
-                                *  0=disable */
-    signed char shift_y;       /**< Input feature data shift for stream Y. Use negative values for left shift */
-    unsigned rounding_o : 1;   /**< Rounding control, 1=enable, 0=disable */
-    unsigned saturation_o : 1; /**< Saturation control, 1=enable, 0=disable */
-    unsigned round_mode_o : 1; /**< Output rounding mode control */
-    unsigned relu_mode_o : 1;  /**< Apply Relu operation before rounding */
-    unsigned outbytes_o : 2;   /**< Number of output bytes: 1 or 2 */
-    unsigned char shift_o;     /**< Optional right shift to apply to final result of operation */
-    unsigned scalar : 1;       /**< Set Scalar/Vector mode */
-    unsigned dualinput : 1;    /**< Dual input control, 1=both X,Y streams valid, 0=only X stream is valid */
-    LL_Arithacc_Op operation;  /**< Arithmetic operation to be applied. See LL_Arithacc_Op */
-    LL_Arithacc_Bcast bcast;   /**< Set constant broadcast modes. See LL_Arithacc_Bcast */
-    unsigned char Ax_shift;    /**< Optional right shift to result of Ax */
-    unsigned char By_shift;    /**< Optional right shift to result of By */
-    unsigned char C_shift;     /**< Optional left shift to apply to C */
-    unsigned fWidth;           /**< Feature width */
-    unsigned fHeight;          /**< Feature height */
-    unsigned short fChannels;  /**< Number of feature channels */
-    unsigned short batchDepth; /**< Batch depth */
-    short clipmin;             /**< Signed 16b value specifying output clip min */
-    short clipmax;             /**< Signed 16b value specifying output clip max */
-    short A_scalar;            /**< Scalar coefficient A */
-    short B_scalar;            /**< Scalar coefficient B */
-    short C_scalar;            /**< Scalar coefficient C */
-    ll_aton_pointer A_vector;  /**< Address of A vector table */
-    ll_aton_pointer B_vector;  /**< Address of B vector table */
-    ll_aton_pointer C_vector;  /**< Address of C vector table */
+    unsigned int rounding_x : 1;   /**< Input feature data rounding for stream X */
+    unsigned int saturation_x : 1; /**< Input feature data saturation for stream X */
+    unsigned int round_mode_x : 2; /**< Input feature data rounding mode for stream X */
+    unsigned int inbytes_x : 2;    /**< Input data width in bytes for stream X. Valid values are 1, 2 or 3 bytes */
+    unsigned int outbytes_x : 2; /**< Number of output bytes to use for input feature data of stream X after rounding or
+                                  *  saturation. Valid values are 1 or 2 bytes */
+    signed char shift_x;         /**< Input feature data shift for stream X. Use negative values for left shift */
+    unsigned int rounding_y : 1; /**< Input feature data rounding for stream Y */
+    unsigned int saturation_y : 1; /**< Input feature data saturation for stream Y */
+    unsigned int round_mode_y : 2; /**< Input feature data rounding mode for stream Y */
+    unsigned int inbytes_y : 2;    /**< Input data width in bytes for stream Y. Valid values are 1, 2 or 3 bytes */
+    unsigned int outbytes_y : 2; /**< Number of output bytes to use for input feature data of stream Y after rounding or
+                                  *  saturation. Valid values are 1 or 2 bytes */
+    unsigned int combinebc : 1;  /**< Combine coeff B and C to form a 32b coeff BC = {B[15:0],C[15:0]} */
+    unsigned int clipout : 1;    /**< Controls output clipping to range specified by clip range configuration, 1=enable,
+                                  *  0=disable */
+    signed char shift_y;         /**< Input feature data shift for stream Y. Use negative values for left shift */
+    unsigned int rounding_o : 1; /**< Rounding control, 1=enable, 0=disable */
+    unsigned int saturation_o : 1;  /**< Saturation control, 1=enable, 0=disable */
+    unsigned int round_mode_o : 1;  /**< Output rounding mode control */
+    unsigned int relu_mode_o : 1;   /**< Apply Relu operation before rounding */
+    unsigned int outbytes_o : 2;    /**< Number of output bytes: 1 or 2 */
+    unsigned int shift_o;           /**< Optional right shift to apply to final result of operation */
+    unsigned int scalar : 1;        /**< Set Scalar/Vector mode */
+    unsigned int dualinput : 1;     /**< Dual input control, 1=both X,Y streams valid, 0=only X stream is valid */
+    LL_Arithacc_Op operation;       /**< Arithmetic operation to be applied. See LL_Arithacc_Op */
+    LL_Arithacc_Bcast bcast;        /**< Set constant broadcast modes. See LL_Arithacc_Bcast */
+    unsigned char Ax_shift;         /**< Optional right shift to result of Ax */
+    unsigned char By_shift;         /**< Optional right shift to result of By */
+    unsigned char C_shift;          /**< Optional left shift to apply to C */
+    unsigned int fWidth;            /**< Feature width */
+    unsigned int fHeight;           /**< Feature height */
+    unsigned short fChannels;       /**< Number of feature channels */
+    unsigned short batchDepth;      /**< Batch depth */
+    short clipmin;                  /**< Signed 16b value specifying output clip min */
+    short clipmax;                  /**< Signed 16b value specifying output clip max */
+    short A_scalar;                 /**< Scalar coefficient A */
+    short B_scalar;                 /**< Scalar coefficient B */
+    short C_scalar;                 /**< Scalar coefficient C */
+    ll_aton_pointer A_vector;       /**< Address of A vector table */
+    ll_aton_pointer B_vector;       /**< Address of B vector table */
+    ll_aton_pointer C_vector;       /**< Address of C vector table */
     unsigned char vec_precision[3]; /**< Number of bits for A, B and C vectors */
   } LL_Arithacc_InitTypeDef;
 
@@ -282,59 +282,59 @@ extern "C"
    */
   typedef struct
   {
-    unsigned rounding_f : 1;           /**< Input feature data rounding */
-    unsigned saturation_f : 1;         /**< Input feature data saturation */
-    unsigned round_mode_f : 2;         /**< Output data rounding mode */
-    unsigned inbytes_f : 2;            /**< Input data width in bytes */
-    unsigned rounding_o : 1;           /**< Output data rounding after right shift */
-    unsigned saturation_o : 1;         /**< Output saturation */
-    unsigned round_mode_o : 1;         /**< Output data rounding mode */
-    unsigned relu_mode_o : 1;          /**< Apply Relu operation before rounding */
-    unsigned outbytes_o : 2;           /**< Output data width in bytes */
-    unsigned simd : 2;                 /**< Enable 8x8bit (1) or 16x8bit (2) SIMD mode */
-    unsigned accumulate : 1;           /**< Sum and synchronize with stream link input #2 */
-    unsigned accumulate_first : 1;     /**< No sum and synchronization with stream link input #2 for the first frame */
-    unsigned accumulate_gen_first : 1; /**< Generate first accumulator input frame internally */
-    unsigned fstat : 1;                /**< Feature data stationary */
-    unsigned raw_o : 1;                /**< Use RAW file output format */
-    unsigned kt1_mode : 1;             /**< Load kernel from T1 buffer */
-    unsigned deepmode : 1;             /**< Enable Deep1x1 optimized mode */
-    unsigned dss2mode : 1;             /**< Enable DSS2 (depth separable stride 2) optimized mode */
-    unsigned f_unsigned : 1;           /**< Feature data unsigned */
-    unsigned k_unsigned : 1;           /**< Kernel data unsigned */
-    unsigned kseten : 2;               /**< Enable kernel set 0 (bit 0) or 1 (bit 1) if KT1 is 1,
-                                        *   otherwise select byte 1 (0), byte 2 (1), byte 3 (2) or
-                                        *   all bytes (Deep1x1 mode only) (3) of kernel stream in SIMD mode */
-    unsigned char shift_f;             /**< Input feature data shift */
-    unsigned char shift_a;             /**< Accumulator data input signed left shift */
-    unsigned char shift_o;             /**< Result data output signed right shift */
-    unsigned fWidth;                   /**< Feature data width */
-    unsigned fHeight;                  /**< Feature data height */
-    unsigned char kernelWidth;         /**< Kernel width */
-    unsigned char kernelHeight;        /**< Kernel height */
-    unsigned char nKernels;            /**< Total number of parallel kernels */
-    unsigned short batchDepth;         /**< Batch Depth */
-    unsigned char hstride;             /**< Horizontal stride */
-    unsigned char vstride;             /**< Vertical stride */
-    unsigned short left_padding;       /**< Number of vertical left dummy columns */
-    unsigned short right_padding;      /**< Number of vertical right dummy columns */
-    unsigned short top_padding;        /**< Number of horizontal top dummy lines */
-    unsigned short bot_padding;        /**< Number of horizontal bottom dummy lines */
-    unsigned short left_crop;          /**< Left feature data boundary */
-    unsigned short right_crop;         /**< Right feature data boundary */
-    unsigned short top_crop;           /**< Top feature data boundary */
-    unsigned short bot_crop;           /**< Bottom feature data boundary */
-    unsigned short fstatcnt;           /**< Number of frames before next reload of feature stationary frame */
-    LL_Convacc_Afilt_Mode afilt_mode;  /**< Accumulator port filter mode. See LL_Convacc_Afilt_Mode */
-    unsigned char afilt_tot;           /**< Total number of accumulation tensors */
-    unsigned char afilt_first;         /**< First accumulation tensor */
-    unsigned char afilt_last;          /**< Last accumulation tensor */
-    unsigned char kfilt_tot;           /**< Total number of kernels */
-    unsigned char kfilt_first;         /**< First kernel */
-    unsigned char kfilt_last;          /**< Last kernel */
-    int fsub;                          /**< Feature data subtract value */
-    unsigned vshift : 2;               /**< Variable shift mode selector */
-    short zfbias;                      /**< Bias added to zero frames */
+    unsigned int rounding_f : 1;       /**< Input feature data rounding */
+    unsigned int saturation_f : 1;     /**< Input feature data saturation */
+    unsigned int round_mode_f : 2;     /**< Output data rounding mode */
+    unsigned int inbytes_f : 2;        /**< Input data width in bytes */
+    unsigned int rounding_o : 1;       /**< Output data rounding after right shift */
+    unsigned int saturation_o : 1;     /**< Output saturation */
+    unsigned int round_mode_o : 1;     /**< Output data rounding mode */
+    unsigned int relu_mode_o : 1;      /**< Apply Relu operation before rounding */
+    unsigned int outbytes_o : 2;       /**< Output data width in bytes */
+    unsigned int simd : 2;             /**< Enable 8x8bit (1) or 16x8bit (2) SIMD mode */
+    unsigned int accumulate : 1;       /**< Sum and synchronize with stream link input #2 */
+    unsigned int accumulate_first : 1; /**< No sum and synchronization with stream link input #2 for the first frame */
+    unsigned int accumulate_gen_first : 1; /**< Generate first accumulator input frame internally */
+    unsigned int fstat : 1;                /**< Feature data stationary */
+    unsigned int raw_o : 1;                /**< Use RAW file output format */
+    unsigned int kt1_mode : 1;             /**< Load kernel from T1 buffer */
+    unsigned int deepmode : 1;             /**< Enable Deep1x1 optimized mode */
+    unsigned int dss2mode : 1;             /**< Enable DSS2 (depth separable stride 2) optimized mode */
+    unsigned int f_unsigned : 1;           /**< Feature data unsigned */
+    unsigned int k_unsigned : 1;           /**< Kernel data unsigned */
+    unsigned int kseten : 2;               /**< Enable kernel set 0 (bit 0) or 1 (bit 1) if KT1 is 1,
+                                            *   otherwise select byte 1 (0), byte 2 (1), byte 3 (2) or
+                                            *   all bytes (Deep1x1 mode only) (3) of kernel stream in SIMD mode */
+    unsigned char shift_f;                 /**< Input feature data shift */
+    unsigned char shift_a;                 /**< Accumulator data input signed left shift */
+    unsigned char shift_o;                 /**< Result data output signed right shift */
+    unsigned int fWidth;                   /**< Feature data width */
+    unsigned int fHeight;                  /**< Feature data height */
+    unsigned char kernelWidth;             /**< Kernel width */
+    unsigned char kernelHeight;            /**< Kernel height */
+    unsigned char nKernels;                /**< Total number of parallel kernels */
+    unsigned short batchDepth;             /**< Batch Depth */
+    unsigned char hstride;                 /**< Horizontal stride */
+    unsigned char vstride;                 /**< Vertical stride */
+    unsigned short left_padding;           /**< Number of vertical left dummy columns */
+    unsigned short right_padding;          /**< Number of vertical right dummy columns */
+    unsigned short top_padding;            /**< Number of horizontal top dummy lines */
+    unsigned short bot_padding;            /**< Number of horizontal bottom dummy lines */
+    unsigned short left_crop;              /**< Left feature data boundary */
+    unsigned short right_crop;             /**< Right feature data boundary */
+    unsigned short top_crop;               /**< Top feature data boundary */
+    unsigned short bot_crop;               /**< Bottom feature data boundary */
+    unsigned short fstatcnt;               /**< Number of frames before next reload of feature stationary frame */
+    LL_Convacc_Afilt_Mode afilt_mode;      /**< Accumulator port filter mode. See LL_Convacc_Afilt_Mode */
+    unsigned char afilt_tot;               /**< Total number of accumulation tensors */
+    unsigned char afilt_first;             /**< First accumulation tensor */
+    unsigned char afilt_last;              /**< Last accumulation tensor */
+    unsigned char kfilt_tot;               /**< Total number of kernels */
+    unsigned char kfilt_first;             /**< First kernel */
+    unsigned char kfilt_last;              /**< Last kernel */
+    int fsub;                              /**< Feature data subtract value */
+    unsigned int vshift : 2;               /**< Variable shift mode selector */
+    short zfbias;                          /**< Bias added to zero frames */
   } LL_Convacc_InitTypeDef;
 
   /** @defgroup LL_CONVACC Convolutional accelerator unit configuration functions
@@ -363,49 +363,49 @@ extern "C"
    */
   typedef struct
   {
-    LL_Poolacc_Op operation;   /**< Pooling operation type. See LL_Poolacc_Op */
-    unsigned avgnopad : 1;     /**< Average pooling operation without padding */
-    unsigned short inputX;     /**< Size X of the input feature */
-    unsigned short inputY;     /**< Size Y of the input feature */
-    unsigned short outputX;    /**< Size X of the output data */
-    unsigned short outputY;    /**< Size Y of the output data */
-    unsigned char poolWinX;    /**< Size X of pooling window */
-    unsigned char poolWinY;    /**< Size Y of pooling window */
-    unsigned char strideX;     /**< Stride value in X direction */
-    unsigned char strideY;     /**< Stride value in Y direction */
-    unsigned short topCrop;    /**< Top cropping size */
-    unsigned short bottomCrop; /**< Bottom cropping size */
-    unsigned short leftCrop;   /**< Left cropping size */
-    unsigned short rightCrop;  /**< Right cropping size */
-    unsigned short topPad;     /**< Top padding size */
-    unsigned short bottomPad;  /**< Bottom padding size */
-    unsigned short leftPad;    /**< Left padding size */
-    unsigned short rightPad;   /**< Right padding size */
-    unsigned short batchSize;  /**< Batch size */
-    unsigned char shift_f;     /**< Input feature data shift */
-    unsigned char shift_o;     /**< Optional right shift to apply the average pooling output */
-    unsigned dualLine : 1;     /**< Enable dual line, allows each linebuffer line to work as 2 lines,
-                                *   applicable for 8-bit data */
-    unsigned nbytes : 2;       /**< input data number of bytes */
-    unsigned rounding_f : 1;   /**< Input feature data rounding */
-    unsigned saturation_f : 1; /**< Input feature data saturation */
-    unsigned round_mode_f : 2; /**< Rounding mode to apply to input feature data */
-    unsigned inbytes_f : 2;    /**< Input data width in bytes. Valid values are 1, 2 or 3 bytes */
-    unsigned outbytes_f : 2;   /**< Number of output bytes to use for final result after rounding or saturation.
-                                *   Valid values are 1 or 2 bytes */
-    unsigned rounding_o : 1;   /**< Enable output rounding using round-to-nearest (round up)
-                                *   (applicable to average pooling operations) */
-    unsigned saturation_o : 1; /**< Enable output saturation (applicable to average pooling operations) */
-    unsigned round_mode_o : 1; /**< Rounding mode to apply to output feature data */
-    unsigned relu_mode_o : 1;  /**< Apply Relu operation before rounding */
-    unsigned outbytes_o : 2;   /**< Number of output bytes to use for final result after rounding or saturation.
-                                *   Valid values are 1 or 2 bytes */
-    short mulval;              /**< constant to be multiplied to accumulated sum of pooling window.
-                                * For average operation, it represents the reciprocal of the divisor in 16-bit fixed point.
-                                * The average is computed by multiplying this constant with the accumulated sum and then applying the
-                                * relevant right shift at the output. (Applicable to average pooling operations) */
-    unsigned pad_val_en : 1;   /**< Enable padding value */
-    short pad_val;             /**< Padding value to be used for padding operation */
+    LL_Poolacc_Op operation;       /**< Pooling operation type. See LL_Poolacc_Op */
+    unsigned int avgnopad : 1;     /**< Average pooling operation without padding */
+    unsigned short inputX;         /**< Size X of the input feature */
+    unsigned short inputY;         /**< Size Y of the input feature */
+    unsigned short outputX;        /**< Size X of the output data */
+    unsigned short outputY;        /**< Size Y of the output data */
+    unsigned char poolWinX;        /**< Size X of pooling window */
+    unsigned char poolWinY;        /**< Size Y of pooling window */
+    unsigned char strideX;         /**< Stride value in X direction */
+    unsigned char strideY;         /**< Stride value in Y direction */
+    unsigned short topCrop;        /**< Top cropping size */
+    unsigned short bottomCrop;     /**< Bottom cropping size */
+    unsigned short leftCrop;       /**< Left cropping size */
+    unsigned short rightCrop;      /**< Right cropping size */
+    unsigned short topPad;         /**< Top padding size */
+    unsigned short bottomPad;      /**< Bottom padding size */
+    unsigned short leftPad;        /**< Left padding size */
+    unsigned short rightPad;       /**< Right padding size */
+    unsigned short batchSize;      /**< Batch size */
+    unsigned char shift_f;         /**< Input feature data shift */
+    unsigned char shift_o;         /**< Optional right shift to apply the average pooling output */
+    unsigned int dualLine : 1;     /**< Enable dual line, allows each linebuffer line to work as 2 lines,
+                                    *   applicable for 8-bit data */
+    unsigned int nbytes : 2;       /**< input data number of bytes */
+    unsigned int rounding_f : 1;   /**< Input feature data rounding */
+    unsigned int saturation_f : 1; /**< Input feature data saturation */
+    unsigned int round_mode_f : 2; /**< Rounding mode to apply to input feature data */
+    unsigned int inbytes_f : 2;    /**< Input data width in bytes. Valid values are 1, 2 or 3 bytes */
+    unsigned int outbytes_f : 2;   /**< Number of output bytes to use for final result after rounding or saturation.
+                                    *   Valid values are 1 or 2 bytes */
+    unsigned int rounding_o : 1;   /**< Enable output rounding using round-to-nearest (round up)
+                                    *   (applicable to average pooling operations) */
+    unsigned int saturation_o : 1; /**< Enable output saturation (applicable to average pooling operations) */
+    unsigned int round_mode_o : 1; /**< Rounding mode to apply to output feature data */
+    unsigned int relu_mode_o : 1;  /**< Apply Relu operation before rounding */
+    unsigned int outbytes_o : 2;   /**< Number of output bytes to use for final result after rounding or saturation.
+                                    *   Valid values are 1 or 2 bytes */
+    short mulval;                  /**< constant to be multiplied to accumulated sum of pooling window.
+                                    * For average operation, it represents the reciprocal of the divisor in 16-bit fixed point.
+                                    * The average is computed by multiplying this constant with the accumulated sum and then applying the
+                                    * relevant right shift at the output. (Applicable to average pooling operations) */
+    unsigned int pad_val_en : 1;   /**< Enable padding value */
+    short pad_val;                 /**< Padding value to be used for padding operation */
   } LL_Poolacc_InitTypeDef;
 
   /**
@@ -413,8 +413,8 @@ extern "C"
    */
   typedef struct
   {
-    uint32_t blobaddr;     /**< Blob code start address. Must be 8 byte aligned */
-    unsigned stepmode : 1; /**< Enable step mode. Used for debugging purposes */
+    uint32_t blobaddr;         /**< Blob code start address. Must be 8 byte aligned */
+    unsigned int stepmode : 1; /**< Enable step mode. Used for debugging purposes */
   } LL_EpochCtrl_InitTypeDef;
 
   /** @defgroup LL_POOL Pooling unit configuration functions
@@ -430,47 +430,47 @@ extern "C"
    */
   typedef struct
   {
-    unsigned dir : 1;             /**< Stream Direction: 0 input, 1 output */
-    unsigned raw : 1;             /**< Set RAW mode (1) or raster mode (0) */
-    unsigned raw_out : 1;         /**< Force RAW output (bus to stream only)
-                                   *   even if the engine is programmed in raster mode */
-    unsigned continuous : 1;      /**< Do not restart address pointer at end of frame */
-    unsigned noblk : 1;           /**< Do not use blocks wider that the native bus size */
-    unsigned noinc : 1;           /**< Do not increment address */
-    unsigned align_right : 1;     /**< Alignment for data on switch (default left) */
-    unsigned mem_lsb : 1;         /**< For when nbits_in != nbits_out to decide which bits are read/written
-                                   *   (default msb) */
-    unsigned sync_with_other : 1; /**< Enable synchronizations signals between engines */
-    unsigned nbits_unsigned : 1;  /**< Disable sign extension */
-    unsigned bus_cid : 3;         /**< Set Compartment ID cache attribute */
-    unsigned cacheable : 1;       /**< Set cacheable bus attribute */
-    unsigned cache_allocate : 1;  /**< Set cache allocate bus attribute */
-    unsigned bus_pfetch : 1;      /**< Enable bus prefetch */
-    unsigned cache_linesize : 2;  /**< Cache Line size: 0 -> 64B, 1 -> 128B, 2 -> 256B, 3 -> 512B */
-    unsigned cipher_en : 1;       /**< Enable ciphering: 0 -> disable, 1-> enable  */
-    unsigned key_sel : 1;         /**< Bus Interface key to be used for ciphering (0, 1) */
-    unsigned char sync_dma;       /**< Synchronization signals source engine */
-    ll_aton_pointer addr_base;    /**< Source/Destination base address */
-    unsigned offset_start;        /**< Offset of the Source/Destination start address from the base address */
-    unsigned offset_end;          /**< Offset of the Source/Destination end address from the base address */
-    unsigned offset_limit;        /**< Offset of the Stream engine address limit from the base address.
-                                   *   Used to prevent prefetch beyond memory boundaries */
-    unsigned frame_count;         /**< Number of frames to transfer */
-    unsigned fwidth;              /**< Frame width (pixel per line) */
-    unsigned fheight;             /**< Frame height (number of lines) */
-    unsigned batch_depth;         /**< Batch depth (subpix per pixel) */
-    unsigned batch_offset;        /**< Offset (bytes) between batches */
-    unsigned frame_offset;        /**< Offset between multiple frames within frame repetition loop */
-    unsigned line_offset;         /**< Offset between multiple frames within frame repetition loop.
-                                   *   If set to zero it's derived from width and batch_offset */
-    unsigned loop_offset;         /**< Offset between frame repetition loops */
-    unsigned frame_loop_cnt;      /**< Number of frames to loop */
-    unsigned
+    unsigned int dir : 1;             /**< Stream Direction: 0 input, 1 output */
+    unsigned int raw : 1;             /**< Set RAW mode (1) or raster mode (0) */
+    unsigned int raw_out : 1;         /**< Force RAW output (bus to stream only)
+                                       *   even if the engine is programmed in raster mode */
+    unsigned int continuous : 1;      /**< Do not restart address pointer at end of frame */
+    unsigned int noblk : 1;           /**< Do not use blocks wider that the native bus size */
+    unsigned int noinc : 1;           /**< Do not increment address */
+    unsigned int align_right : 1;     /**< Alignment for data on switch (default left) */
+    unsigned int mem_lsb : 1;         /**< For when nbits_in != nbits_out to decide which bits are read/written
+                                       *   (default msb) */
+    unsigned int sync_with_other : 1; /**< Enable synchronizations signals between engines */
+    unsigned int nbits_unsigned : 1;  /**< Disable sign extension */
+    unsigned int bus_cid : 3;         /**< Set Compartment ID cache attribute */
+    unsigned int cacheable : 1;       /**< Set cacheable bus attribute */
+    unsigned int cache_allocate : 1;  /**< Set cache allocate bus attribute */
+    unsigned int bus_pfetch : 1;      /**< Enable bus prefetch */
+    unsigned int cache_linesize : 2;  /**< Cache Line size: 0 -> 64B, 1 -> 128B, 2 -> 256B, 3 -> 512B */
+    unsigned int cipher_en : 1;       /**< Enable ciphering: 0 -> disable, 1-> enable  */
+    unsigned int key_sel : 1;         /**< Bus Interface key to be used for ciphering (0, 1) */
+    unsigned char sync_dma;           /**< Synchronization signals source engine */
+    ll_aton_pointer addr_base;        /**< Source/Destination base address */
+    unsigned int offset_start;        /**< Offset of the Source/Destination start address from the base address */
+    unsigned int offset_end;          /**< Offset of the Source/Destination end address from the base address */
+    unsigned int offset_limit;        /**< Offset of the Stream engine address limit from the base address.
+                                       *   Used to prevent prefetch beyond memory boundaries */
+    unsigned int frame_count;         /**< Number of frames to transfer */
+    unsigned int fwidth;              /**< Frame width (pixel per line) */
+    unsigned int fheight;             /**< Frame height (number of lines) */
+    unsigned int batch_depth;         /**< Batch depth (subpix per pixel) */
+    unsigned int batch_offset;        /**< Offset (bytes) between batches */
+    unsigned int frame_offset;        /**< Offset between multiple frames within frame repetition loop */
+    unsigned int line_offset;         /**< Offset between multiple frames within frame repetition loop.
+                                       *   If set to zero it's derived from width and batch_offset */
+    unsigned int loop_offset;         /**< Offset between frame repetition loops */
+    unsigned int frame_loop_cnt;      /**< Number of frames to loop */
+    unsigned int
         loop_offset2; /**< 2nd level offset between frame repetition loops. If set, has priority over loop_offset */
-    unsigned frame_loop_cnt2; /**< 2nd level number of frames to loop */
-    unsigned frame_tot_cnt;   /**< Frame limit */
-    unsigned char nbits_in;   /**< Data size in bits if reading */
-    unsigned char nbits_out;  /**< Data size in bits if writing */
+    unsigned int frame_loop_cnt2; /**< 2nd level number of frames to loop */
+    unsigned int frame_tot_cnt;   /**< Frame limit */
+    unsigned char nbits_in;       /**< Data size in bits if reading */
+    unsigned char nbits_out;      /**< Data size in bits if writing */
   } LL_Streng_TensorInitTypeDef;
 
   static inline unsigned char *LL_Streng_addr_start(const LL_Streng_TensorInitTypeDef *conf)
@@ -530,10 +530,10 @@ extern "C"
     STRSWITCH_VC,
   };
 
-  extern unsigned __atonn_getSrcPortID(enum SwitchUnitsType sut, unsigned char su_num, enum AccelUnitsType aut,
-                                       unsigned char au_num, unsigned char port);
-  extern unsigned __atonn_getDstPortID(enum SwitchUnitsType sut, unsigned char su_num, enum AccelUnitsType aut,
-                                       unsigned char au_num, unsigned char port);
+  extern unsigned int __atonn_getSrcPortID(enum SwitchUnitsType sut, unsigned char su_num, enum AccelUnitsType aut,
+                                           unsigned char au_num, unsigned char port);
+  extern unsigned int __atonn_getDstPortID(enum SwitchUnitsType sut, unsigned char su_num, enum AccelUnitsType aut,
+                                           unsigned char au_num, unsigned char port);
 
 #if (LL_ATON_PLATFORM != LL_ATON_PLAT_EC_TRACE)
 
@@ -562,7 +562,7 @@ typedef struct
   {                                                                                                                    \
     .s = S, .s_num = J, .u = U, .u_num = I, .port = P                                                                  \
   }
-static inline unsigned _atonn_getSrcPortID(SourcePort s)
+static inline unsigned int _atonn_getSrcPortID(SourcePort s)
 {
   return __atonn_getSrcPortID(s.s, s.s_num, s.u, s.u_num, s.port);
 }
@@ -580,7 +580,7 @@ typedef struct
   {                                                                                                                    \
     .s = S, .s_num = J, .u = U, .u_num = I, .port = P                                                                  \
   }
-static inline unsigned _atonn_getDstPortID(DestPort d)
+static inline unsigned int _atonn_getDstPortID(DestPort d)
 {
   return __atonn_getDstPortID(d.s, d.s_num, d.u, d.u_num, d.port);
 }
@@ -627,8 +627,8 @@ static inline unsigned _atonn_getDstPortID(DestPort d)
     DestPort dest;      /**< Must be one of DestPort */
     unsigned char frames0;
     unsigned char frames1;
-    unsigned context0 : 1;
-    unsigned context1 : 1;
+    unsigned int context0 : 1;
+    unsigned int context1 : 1;
   } LL_Switch_InitTypeDef;
 #else
 #define LL_Switch_Init_Dest()     .dest
@@ -687,15 +687,15 @@ typedef struct
    */
   typedef struct
   {
-    unsigned short nCVperCB;    /**< Number of CodeVectors per CodeBook */
-    unsigned char nCWperCV;     /**< Number of CodeWords per CodeVector */
-    unsigned char nRCWlastCV;   /**< Number of read CodeWords from the last CodeVector */
-    unsigned char nFormatBytes; /**< Number of bytes of a CodeWord */
-    unsigned short nBatches;    /**< Number of consecutive Batches used with a CodeBook */
-    unsigned noDualInput : 1;   /**< Disable the CodeBook stream link */
-    unsigned noOverWrite : 1;   /**< Disable CodeBooks overwriting */
-    ll_aton_pointer CBs_vector; /**< Pointer to CodeBooks storage */
-    unsigned CBs_size;          /**< Size of CodeBooks in Memory */
+    unsigned short nCVperCB;      /**< Number of CodeVectors per CodeBook */
+    unsigned char nCWperCV;       /**< Number of CodeWords per CodeVector */
+    unsigned char nRCWlastCV;     /**< Number of read CodeWords from the last CodeVector */
+    unsigned char nFormatBytes;   /**< Number of bytes of a CodeWord */
+    unsigned short nBatches;      /**< Number of consecutive Batches used with a CodeBook */
+    unsigned int noDualInput : 1; /**< Disable the CodeBook stream link */
+    unsigned int noOverWrite : 1; /**< Disable CodeBooks overwriting */
+    ll_aton_pointer CBs_vector;   /**< Pointer to CodeBooks storage */
+    unsigned int CBs_size;        /**< Size of CodeBooks in Memory */
   } LL_Decun_InitTypeDef;
 
   /** @defgroup LL_DECUN Decompression Unit configuration functions

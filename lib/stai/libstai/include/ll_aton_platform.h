@@ -42,7 +42,6 @@ extern "C"
 
 /* Bare metal Cortex-M NCSIM simulator platform*/
 #if (LL_ATON_PLATFORM == LL_ATON_PLAT_NCSIM)
-#define ATON_PLAT_HAS_FFLUSH  (0)
 #define ATON_BASE             0xA0000000
 #define SYSMEM1_BASE          0xA0080000
 #define SYSMEM2_BASE          0xA00A0000
@@ -58,12 +57,10 @@ extern "C"
 #define OSPI_HSEL_SEL         0x3D83100C
 #define OSPI1_MEM             0x60000000
 #define OSPI2_MEM             0x80000000
-#define ATON_EPOCH_TIMEOUT    (ATON_EPOCH_TIMEOUT_MS * 1000)
 #include "cm4ikmcu.h"
 
 /* Imaging simulation environment */
 #elif (LL_ATON_PLATFORM == LL_ATON_PLAT_IMAGING_SIM)
-#define ATON_PLAT_HAS_FFLUSH  (0)
 #define ATON_BASE             0xA0000000
 #define SYSMEM1_BASE          0xB0000000
 #define SYSMEM2_BASE          0xB0040000
@@ -78,7 +75,6 @@ extern "C"
 #define OSPI_HSEL_SEL         0x3D83100C
 #define OSPI1_MEM             0x60000000
 #define OSPI2_MEM             0x80000000
-#define ATON_EPOCH_TIMEOUT    (ATON_EPOCH_TIMEOUT_MS * 1000)
 #include "cm4ikmcu.h"
 
 #define ATON_STRENG_CID_CACHE_SET_ALLOC(a, b)     0
@@ -98,8 +94,7 @@ typedef int32_t IRQn_Type;
 
 #include <core_cm7.h>
 
-#define CDNN0_IRQn         (123)
-#define ATON_EPOCH_TIMEOUT (ATON_EPOCH_TIMEOUT_MS * 1000)
+#define CDNN0_IRQn (123)
 
 /* Linux based Xilinx ZC706 FPGA platform */
 #elif (LL_ATON_PLATFORM == LL_ATON_PLAT_ZC706) || (LL_ATON_PLATFORM == LL_ATON_PLAT_IWAVE) ||                          \
@@ -132,7 +127,6 @@ extern uint8_t *get_zynq_aton_base(void);
 #define __WFE()
 #define NVIC_EnableIRQ(x)
 #define NVIC_DisableIRQ(x)
-#define ATON_EPOCH_TIMEOUT (ATON_EPOCH_TIMEOUT_MS * 1000)
 
 /* Bare metal Cortex-M TLM simulator platform as used by MCD */
 #elif (LL_ATON_PLATFORM == LL_ATON_PLAT_TLM_MCD)
@@ -154,7 +148,6 @@ extern uint8_t *get_zynq_aton_base(void);
 #define __DSB()
 #define NVIC_EnableIRQ(x)
 #define NVIC_DisableIRQ(x)
-#define ATON_EPOCH_TIMEOUT (ATON_EPOCH_TIMEOUT_MS * 1000)
 
 /* PC based Test Explorer application platform */
 #elif (LL_ATON_PLATFORM == LL_ATON_PLAT_TSTXPL)
@@ -166,8 +159,7 @@ extern uint8_t *get_zynq_aton_base(void);
 #define NVIC_DisableIRQ(x)
 uintptr_t get_aton_base(void);
 void complete_dmas(void);
-#define ATON_BASE          (get_aton_base())
-#define ATON_EPOCH_TIMEOUT (ATON_EPOCH_TIMEOUT_MS * 1000)
+#define ATON_BASE (get_aton_base())
 
 #elif (LL_ATON_PLATFORM == LL_ATON_PLAT_EC_TRACE)
 #include "ll_aton_ec_trace.h"
@@ -180,7 +172,6 @@ void complete_dmas(void);
 #define __DSB()
 #define NVIC_EnableIRQ(x)
 #define NVIC_DisableIRQ(x)
-#define ATON_EPOCH_TIMEOUT (ATON_EPOCH_TIMEOUT_MS * 1000)
 
 #define ATON_REG_WRITE_RELOC(regaddr, base, offset)                                                                    \
   ec_trace_write_reloc((uintptr_t)regaddr, (uint32_t)base, (uint32_t)offset)
@@ -197,9 +188,6 @@ void complete_dmas(void);
                     ATON_##unitname##_##reg##_##field##_W, (uint32_t)val)
 
 #elif (LL_ATON_PLATFORM == LL_ATON_PLAT_STM32N6)
-// Cache maintenance
-#include "mcu_cache.h"
-#include "npu_cache.h"
 #include "stm32n6xx.h"
 
 #define CDNN0_IRQHandler NPU0_IRQHandler
@@ -212,17 +200,13 @@ void complete_dmas(void);
 #define CDNN2_IRQn NPU2_IRQn
 #define CDNN3_IRQn NPU3_IRQn
 
-#define ATON_PLAT_HAS_FFLUSH (0)
 #if defined(CPU_IN_SECURE_STATE)
 #define ATON_BASE NPU_BASE_S
 #else
 #define ATON_BASE NPU_BASE_NS
 #endif
-#define ATON_EPOCH_TIMEOUT (ATON_EPOCH_TIMEOUT_MS * 1000)
 
 #elif (LL_ATON_PLATFORM == LL_ATON_PLAT_STM32H7P)
-// Cache maintenance
-#include "mcu_cache.h"
 #include "stm32h7pxx.h"
 
 #define CDNN0_IRQHandler NPU_IT0_IRQHandler
@@ -236,27 +220,27 @@ void complete_dmas(void);
 #define CDNN3_IRQn NPU_IT2_IRQn
 #define ATON_BASE  0x520E0000 /* Not yet defined in HAL */
 
-#define ATON_PLAT_HAS_FFLUSH (0)
-#define ATON_EPOCH_TIMEOUT   (ATON_EPOCH_TIMEOUT_MS * 1000)
-
 /* Stellar P3E support: TODO use correct header files, when available */
 #elif (LL_ATON_PLATFORM == LL_ATON_PLAT_SR6P3E)
-//#include "stellarp3.h"  /* TODO */
-//#include "mcu_cache.h"
+#include "irq.h"
+#include "sr6p3e.h"
 
-#define CDNN0_IRQHandler NPU_IT0_IRQHandler
-#define CDNN1_IRQHandler NPU_IT1_IRQHandler
-#define CDNN2_IRQHandler NPU_IT2_IRQHandler
-#define CDNN3_IRQHandler NPU_IT3_IRQHandler
+#define CDNN0_IRQn IRQ_NPU_0_0_INT_NUMBER /* To R52 Kite Cluster */
+#define CDNN1_IRQn IRQ_NPU_0_1_INT_NUMBER /* To R52 Kite Cluster */
+#define CDNN2_IRQn IRQ_NPU_0_2_INT_NUMBER /* To Cortex-M4 */
+#define CDNN3_IRQn IRQ_NPU_0_3_INT_NUMBER /* To Cortex-M4 */
 
-#define CDNN0_IRQn 506 /* To R52 Kite Cluster */
-#define CDNN1_IRQn 507 /* To R52 Kite Cluster */
-#define CDNN2_IRQn 92  /* To Cortex-M4 */
-#define CDNN3_IRQn 93  /* To Cortex-M4 */
-#define ATON_BASE  0x75600000
+#define ATON_BASE NPU_BASE
 
-#define ATON_PLAT_HAS_FFLUSH (0)
-#define ATON_EPOCH_TIMEOUT   (ATON_EPOCH_TIMEOUT_MS * 1000)
+#if defined(__GNUC__) && !defined(__ICCARM__)
+#define __WFE() __asm volatile("wfe" ::: "memory")
+#define __DSB() __asm volatile("dsb sy" ::: "memory")
+#elif defined(__ICCARM__)
+#define __WFE() __asm("wfe")
+#define __DSB() __asm("dsb sy")
+#else
+#error "Compiler not supported for __WFE() and __DSB definitions"
+#endif
 
 #elif (LL_ATON_PLATFORM == LL_ATON_PLAT_USER_IMPL)
 #include "ll_aton_user_platform_impl.h" /* file to be provided together with an implementation for the custom platform by the user */
@@ -264,6 +248,16 @@ void complete_dmas(void);
 #else
 #error No target platform is specified. Please define macro `LL_ATON_PLATFORM`
 #endif
+
+/* Default polling timeout */
+#ifndef ATON_EPOCH_TIMEOUT
+#define ATON_EPOCH_TIMEOUT (ATON_EPOCH_TIMEOUT_MS * 1000)
+#endif // !ATON_EPOCH_TIMEOUT
+
+/* Default value for plstform supporting `fflush()` */
+#ifndef ATON_PLAT_HAS_FFLUSH
+#define ATON_PLAT_HAS_FFLUSH (0)
+#endif // !ATON_PLAT_HAS_FFLUSH
 
 /* Data synchronization barrier default definition */
 #ifndef LL_ATON_DSB
@@ -357,7 +351,7 @@ void complete_dmas(void);
   do                                                                                                                   \
   {                                                                                                                    \
     uint32_t t = ATON_##unitname##_##reg##_GET(id);                                                                    \
-    t = ATON_SET_FIELD(t, start, fsize, val);                                                                          \
+    t = ATON_SET_FIELD32(t, start, fsize, val);                                                                        \
     ATON_##unitname##_##reg##_SET(id, t);                                                                              \
   } while (0)
 #endif // ATON_REG_WRITE_FIELD_RANGE

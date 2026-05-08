@@ -34,9 +34,9 @@ extern "C"
 
   /*** Helper Functions ***/
 
-  static inline void __ll_set_aton_owner(NN_Instance_TypeDef *new_owner)
+  static inline void __ll_set_aton_owner(const NN_Instance_TypeDef *new_owner)
   {
-    extern NN_Instance_TypeDef *volatile __ll_current_aton_ip_owner;
+    extern const NN_Instance_TypeDef *volatile __ll_current_aton_ip_owner;
     LL_ATON_ASSERT(new_owner != __ll_current_aton_ip_owner);
 
     LL_ATON_OSAL_LOCK_ATON();
@@ -51,13 +51,15 @@ extern "C"
     __ll_current_aton_ip_owner = new_owner;
   }
 
-  static inline void __ll_clear_aton_owner(NN_Instance_TypeDef *current_owner, bool reset_mask)
+  static inline void __ll_clear_aton_owner(const NN_Instance_TypeDef *current_owner, bool reset_mask)
   {
-    extern NN_Instance_TypeDef *volatile __ll_current_aton_ip_owner;
+#ifndef NDEBUG
+    extern uint32_t volatile __ll_current_wait_mask;
+#endif // !NDEBUG
+    extern const NN_Instance_TypeDef *volatile __ll_current_aton_ip_owner;
     LL_ATON_ASSERT(current_owner == __ll_current_aton_ip_owner);
 
 #ifndef NDEBUG
-    extern uint32_t volatile __ll_current_wait_mask;
     if (reset_mask && (__ll_current_wait_mask != 0))
     {
       LL_ATON_PRINTF("WARNING: performing a hard-reset of debug wait-mask!\n");
@@ -80,7 +82,7 @@ extern "C"
    *       `LL_ATON_Start_EpochBlock<n>()` functions, assuming also that at that point
    *       no streaming engine interrupts might trigger (anymore)!
    **/
-  static inline void __LL_ATON_RT_Start_AtoNN_Epoch(NN_Instance_TypeDef *nn_instance)
+  static inline void __LL_ATON_RT_Start_AtoNN_Epoch(const NN_Instance_TypeDef *nn_instance)
   {
     LL_ATON_ASSERT(nn_instance != NULL);
 #if (LL_ATON_RT_MODE == LL_ATON_RT_ASYNC)
@@ -90,7 +92,7 @@ extern "C"
 #endif
   }
 
-  static inline uint32_t __LL_ATON_RT_GetCurrEpochBlockIndex(NN_Instance_TypeDef *nn_instance)
+  static inline uint32_t __LL_ATON_RT_GetCurrEpochBlockIndex(const NN_Instance_TypeDef *nn_instance)
   {
     const LL_ATON_RT_EpochBlockItem_t *_current_epoch_block = nn_instance->exec_state.current_epoch_block;
     const LL_ATON_RT_EpochBlockItem_t *_first_epoch_block = nn_instance->exec_state.first_epoch_block;
@@ -99,7 +101,7 @@ extern "C"
     return (_current_epoch_block - _first_epoch_block);
   }
 
-  static inline void __LL_ATON_RT_SetCurrentEpochBlock(int32_t index, NN_Instance_TypeDef *nn_instance)
+  static inline void __LL_ATON_RT_SetCurrentEpochBlock(int32_t index, const NN_Instance_TypeDef *nn_instance)
   {
 #ifndef NDEBUG
     /* should never happen (assumes that a `nn_instance->exec_state.current_epoch_block++` will be
@@ -107,14 +109,15 @@ extern "C"
     LL_ATON_ASSERT(index < (int32_t)(nn_instance->exec_state.nr_of_epoch_blocks - 1));
 #endif
 
-    nn_instance->exec_state.current_epoch_block = &nn_instance->exec_state.first_epoch_block[index];
+    ((NN_Instance_TypeDef *)nn_instance)->exec_state.current_epoch_block =
+        &nn_instance->exec_state.first_epoch_block[index];
   }
 
   /* set wait mask(s) in interrupt controller */
   static inline void __LL_ATON_RT_SetWaitMask(uint32_t wait_mask)
   {
 #ifndef NDEBUG
-    extern NN_Instance_TypeDef *volatile __ll_current_aton_ip_owner;
+    extern const NN_Instance_TypeDef *volatile __ll_current_aton_ip_owner;
     LL_ATON_ASSERT(__ll_current_aton_ip_owner != NULL);
 
     extern uint32_t volatile __ll_current_wait_mask;
@@ -137,58 +140,59 @@ extern "C"
   }
 
   /* return from inserted epoch block */
-  static inline void __LL_ATON_RT_RetFromLibEpochBlockArray(bool unlock, NN_Instance_TypeDef *nn_instance)
+  static inline void __LL_ATON_RT_RetFromLibEpochBlockArray(const NN_Instance_TypeDef *nn_instance)
   {
-    extern NN_Instance_TypeDef *volatile __ll_current_aton_ip_owner;
-
-    if (!unlock)
+#ifndef NDEBUG
+    extern const NN_Instance_TypeDef *volatile __ll_current_aton_ip_owner;
+    LL_ATON_ASSERT(nn_instance != NULL);
+    LL_ATON_ASSERT(nn_instance->exec_state.current_epoch_block != NULL);
+    LL_ATON_ASSERT(nn_instance->exec_state.saved_current_epoch_block != NULL);
+    if (EpochBlock_IsEpochInternal(nn_instance->exec_state.current_epoch_block))
     {
-      LL_ATON_ASSERT(__ll_current_aton_ip_owner != NULL);
-      LL_ATON_ASSERT(nn_instance == NULL);
-
-      nn_instance = __ll_current_aton_ip_owner;
+      if (!EpochBlock_IsLastEpochBlock(nn_instance->exec_state.current_epoch_block))
+      {
+        LL_ATON_ASSERT(__ll_current_aton_ip_owner == nn_instance);
+      }
     }
-
-    LL_ATON_ASSERT(__ll_current_aton_ip_owner != NULL);
-    LL_ATON_ASSERT(unlock ? EpochBlock_IsLastEpochBlock(nn_instance->exec_state.current_epoch_block)
-                          : EpochBlock_IsEpochInternal(nn_instance->exec_state.current_epoch_block));
+    else
+    {
+      LL_ATON_ASSERT(EpochBlock_IsLastEpochBlock(nn_instance->exec_state.current_epoch_block));
+    }
     LL_ATON_ASSERT(EpochBlock_IsEpochHybrid(nn_instance->exec_state.saved_current_epoch_block));
-
-    /* Clear owner */
-    if (unlock)
-    {
-      __ll_clear_aton_owner(__ll_current_aton_ip_owner, false);
-    }
+#endif // !NDEBUG
 
     /* set old context */
     LL_ATON_ASSERT(nn_instance->exec_state.next_epoch_block == NULL);
-    nn_instance->exec_state.current_epoch_block = nn_instance->exec_state.saved_current_epoch_block;
-    nn_instance->exec_state.first_epoch_block = nn_instance->exec_state.saved_first_epoch_block;
+    ((NN_Instance_TypeDef *)nn_instance)->exec_state.current_epoch_block =
+        nn_instance->exec_state.saved_current_epoch_block;
+    ((NN_Instance_TypeDef *)nn_instance)->exec_state.first_epoch_block =
+        nn_instance->exec_state.saved_first_epoch_block;
 
 #ifndef NDEBUG
-    nn_instance->exec_state.nr_of_epoch_blocks = nn_instance->exec_state.saved_nr_of_epoch_blocks;
+    ((NN_Instance_TypeDef *)nn_instance)->exec_state.nr_of_epoch_blocks =
+        nn_instance->exec_state.saved_nr_of_epoch_blocks;
 #endif
 
     /* reset saved context */
-    nn_instance->exec_state.saved_current_epoch_block = NULL;
-    nn_instance->exec_state.saved_first_epoch_block = NULL;
+    ((NN_Instance_TypeDef *)nn_instance)->exec_state.saved_current_epoch_block = NULL;
+    ((NN_Instance_TypeDef *)nn_instance)->exec_state.saved_first_epoch_block = NULL;
 #ifndef NDEBUG
-    nn_instance->exec_state.saved_nr_of_epoch_blocks = 0;
+    ((NN_Instance_TypeDef *)nn_instance)->exec_state.saved_nr_of_epoch_blocks = 0;
 #endif
   }
 
-  /*** AtoNN API Functions ***/
+  /*** Hybrid Operator API Functions ***/
 
   static inline void LL_ATON_RT_Insert_LibEpochBlockArray(const LL_ATON_RT_EpochBlockItem_t *new_epoch_block_array)
   {
-    extern NN_Instance_TypeDef *volatile __ll_current_aton_ip_owner;
+    extern const NN_Instance_TypeDef *volatile __ll_current_aton_ip_owner;
     LL_ATON_ASSERT(__ll_current_aton_ip_owner != NULL);
 
     // only one saved context at a time allowed!
     LL_ATON_ASSERT(__ll_current_aton_ip_owner->exec_state.next_epoch_block == NULL);
     LL_ATON_ASSERT(__ll_current_aton_ip_owner->exec_state.saved_current_epoch_block == NULL);
 
-    __ll_current_aton_ip_owner->exec_state.next_epoch_block = new_epoch_block_array;
+    ((NN_Instance_TypeDef *)__ll_current_aton_ip_owner)->exec_state.next_epoch_block = new_epoch_block_array;
   }
 
   /**
@@ -197,7 +201,7 @@ extern "C"
    **/
   static inline void LL_ATON_RT_IncCurrEpochBlock(uint32_t inc)
   {
-    extern NN_Instance_TypeDef *volatile __ll_current_aton_ip_owner;
+    extern const NN_Instance_TypeDef *volatile __ll_current_aton_ip_owner;
     LL_ATON_ASSERT(__ll_current_aton_ip_owner != NULL);
 
     uint32_t current_index = __LL_ATON_RT_GetCurrEpochBlockIndex(__ll_current_aton_ip_owner);
@@ -207,7 +211,7 @@ extern "C"
 
   static inline void LL_ATON_RT_DecCurrEpochBlock(uint32_t dec)
   {
-    extern NN_Instance_TypeDef *volatile __ll_current_aton_ip_owner;
+    extern const NN_Instance_TypeDef *volatile __ll_current_aton_ip_owner;
     LL_ATON_ASSERT(__ll_current_aton_ip_owner != NULL);
 
     uint32_t current_index = __LL_ATON_RT_GetCurrEpochBlockIndex(__ll_current_aton_ip_owner);
@@ -217,7 +221,7 @@ extern "C"
   }
 
   /**
-   * @brief Template for synchronously executing a single network instance (e.g. regression tests)
+   * @brief Template for synchronously executing a single network instance one time (e.g. regression tests)
    * @param network_instance pointer to the network instance representing the network and execution instance to execute.
    *                         The instance object MUST have already set a valid link to a network interface.
    *                         The user may declare/instantiate such an object by using either macro
@@ -225,8 +229,9 @@ extern "C"
    *                         and the network interface, or macros
    *                         `LL_ATON_DECLARE_NAMED_NN_INTERFACE()` & `LL_ATON_DECLARE_NAMED_NN_INSTANCE()` to
    *                         create/instantiate the objects separately.
+   * @note this function does NOT make part of the ATON Runtime User API
    */
-  void LL_ATON_RT_Main(NN_Instance_TypeDef *network_instance);
+  void LL_ATON_RT_Main(const NN_Instance_TypeDef *network_instance);
 
   /** @brief Dumps status of all DMAs. Used for debugging purposes
    */

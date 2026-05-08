@@ -31,31 +31,28 @@
  */
 uint32_t LL_ATON_getbits(uint32_t *bits, unsigned int pos, int nbits)
 {
-  unsigned int mask = (1ULL << nbits) - 1;
+  // Find the word and bit offset
+  unsigned int word_idx = pos >> 5;
+  unsigned int bit_idx = pos & 0x1f;
+
   uint32_t value;
-  const int bitsperint = (sizeof(unsigned) * 8);
-  int index0 = pos / bitsperint;
-  int index1 = (pos + nbits) / bitsperint;
-  // Do the bits to extract cross a boundary?
-  if (index0 == index1)
+  if (bit_idx + nbits <= 32)
   {
-    value = (bits[index0] >> (pos % bitsperint)) & mask;
+    uint32_t word = bits[word_idx];
+    value = (word >> bit_idx) & ((1ULL << nbits) - 1);
   }
   else
   {
-    unsigned int lshift = ((pos + nbits) % bitsperint);
-    value =
-        (((bits[index0] >> (pos % bitsperint)) & mask) | ((bits[index1] & ((1ULL << lshift) - 1)) << (nbits - lshift)));
+    uint32_t low = bits[word_idx] >> bit_idx;
+    uint32_t high = bits[word_idx + 1] & ((1ULL << (nbits - (32 - bit_idx))) - 1);
+    value = low | (high << (32 - bit_idx));
   }
 
-  // handle sign extension (not sure if this must be done in every use case)
-  if (nbits > 0)
+  // Sign extension if needed
+  if (nbits < 32 && (value & (1ULL << (nbits - 1))))
   {
-    unsigned int signed_mask = (1UL << (nbits - 1));
-    if (value & signed_mask)
-    {
-      value = value | ~mask;
-    }
+    // If sign bit is set, extend the sign
+    value |= ~((1ULL << nbits) - 1);
   }
 
   return value;

@@ -44,6 +44,8 @@ typedef AI_ALIGNED_TYPE(struct, 4) ai_layer_pool_ {
   ai_shape_2d pool_stride;          /*!< pooling stride */
   ai_shape    pool_pad;             /*!< pooling pad, y,x border sizes */
   ai_u8       count_include_pad;    /*!< include pad flag */
+  ai_u16      hsp_bram_size;        /*!< hsp_bram_size                              */ 
+
 } ai_layer_pool;
 
 
@@ -308,7 +310,7 @@ void forward_mp_integer_INT8(ai_layer *pLayer);
  * @param layer the pooling (pool) layer
  */
 AI_INTERNAL_API
-void forward_mp_hsp_INT8(ai_layer *pLayer);
+void forward_mp_hsp0_INT8(ai_layer *pLayer);
 
 
 /*!
@@ -318,7 +320,7 @@ void forward_mp_hsp_INT8(ai_layer *pLayer);
  * @param layer the pooling (pool) layer
  */
 AI_INTERNAL_API
-void forward_mp_hsp_1step_INT8(ai_layer *pLayer);
+void forward_mp_hsp1_INT8(ai_layer *pLayer);
 
 
 /*!
@@ -379,7 +381,7 @@ void forward_ap_integer(ai_layer *pLayer);
  * @param layer the pooling (pool) layer
  */
 AI_INTERNAL_API
-void forward_ap_hsp_INT8(ai_layer *pLayer);
+void forward_ap_hsp0_INT8(ai_layer *pLayer);
 
 /*!
  * @brief Computes the activations of an average pooling layer. Optimized for HSP
@@ -388,7 +390,7 @@ void forward_ap_hsp_INT8(ai_layer *pLayer);
  * @param layer the pooling (pool) layer,
  */
 AI_INTERNAL_API
-void forward_ap_hsp_1step_INT8(ai_layer *pLayer);
+void forward_ap_hsp1_INT8(ai_layer *pLayer);
 
 /*!
  * @brief Computes the activations of an integer-quantized average pooling layer

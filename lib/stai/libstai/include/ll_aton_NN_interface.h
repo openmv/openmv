@@ -64,12 +64,23 @@ extern "C"
    * @}
    */
 
+  // Forward declarations
+  struct __nn_instance_struct;
+  typedef struct __nn_instance_struct NN_Instance_TypeDef;
+  struct __epoch_block_item;
+  typedef struct __epoch_block_item LL_ATON_RT_EpochBlockItem_t;
+
+  // Backward compatibility
+  typedef LL_ATON_RT_EpochBlockItem_t
+      EpochBlock_ItemTypeDef; // Note: type name `EpochBlock_ItemTypeDef` is deprecated and
+                              //       will be removed in future releases of the ATON runtime!
+
   /** @defgroup Handle-style Data Types for Epoch Blocks
    * @{
    */
 
-  /* this is needed to avoid some compilers (e.g. KEIL) that observe a strict semantic about conversion of
-   * pointers to integers in cost initializers
+  /* this is needed to avoid some problems with compilers (e.g. KEIL) that observe a strict semantic about conversion of
+   * pointers to integers in const initializers
    */
   typedef union
   {
@@ -77,7 +88,8 @@ extern "C"
     uintptr_t i;
   } __LL_address_t;
 
-  typedef void (*EpochBlock_FuncPtr_t)(const void *epoch_block);
+  typedef void (*EpochBlock_FuncPtr_t)(const LL_ATON_RT_EpochBlockItem_t *epoch_block,
+                                       const NN_Instance_TypeDef *nn_instance);
 
   typedef enum
   {
@@ -93,15 +105,18 @@ extern "C"
     EpochBlock_Flags_blob_encrypted = (0x1 << 8) /**< The blob is encrypted and must be decrypted on the fly */
   } EpochBlock_Flags_t;
 
-  typedef struct
+  struct __epoch_block_item
   {
-    EpochBlock_FuncPtr_t start_epoch_block; /**< Method to execute the EpochBlock */
-    EpochBlock_FuncPtr_t end_epoch_block;   /**< Method to be executed when the EpochBlock ends */
-    uintptr_t blob_address;                 /**< Blob address (in case this EpochBlock represents an epoch blob) */
-    uint32_t wait_mask;                     /**< Mask needed to check when an EpochBlock ends
-                                             *    - if epoch blob: number (not bitmask) of epoch controller unit to use
-                                             *    - otherwise: bitmask with all output streaming engines to wait for before ending epoch */
-    uint16_t flags;                         /**< EpochBlock flags */
+    EpochBlock_FuncPtr_t start_epoch_block; /**< Method to execute the EpochBlock;
+                                                 might be `NULL` */
+    EpochBlock_FuncPtr_t
+        end_epoch_block;    /**< Method to be executed when the EpochBlock ends;
+                                 Note: all SW & hybrid operators have only an `end_epoch_block` function. */
+    uintptr_t blob_address; /**< Blob address (in case this EpochBlock represents an epoch blob) */
+    uint32_t wait_mask;     /**< Mask needed to check when an EpochBlock ends
+                             *    - if epoch blob: number (not bitmask) of epoch controller unit to use
+                             *    - otherwise: bitmask with all output streaming engines to wait for before ending epoch */
+    uint16_t flags;         /**< EpochBlock flags */
 #ifdef LL_ATON_EB_DBG_INFO
     int16_t epoch_num;             /**< Epoch number / First epoch number within blob */
     int16_t last_epoch_num;        /**< Epoch number / Last epoch number within blob */
@@ -110,8 +125,7 @@ extern "C"
     uint64_t estimated_npu_cycles; /**< Debug information estimates for NPU cycles in epoch w/o memory penalty */
     uint64_t estimated_tot_cycles; /**< Debug information estimates for NPU cycles in epoch w/ memory penalty */
 #endif                             // LL_ATON_EB_DBG_INFO
-  } EpochBlock_ItemTypeDef;
-  typedef EpochBlock_ItemTypeDef LL_ATON_RT_EpochBlockItem_t;
+  };
 
   /**
    * @}
@@ -122,70 +136,70 @@ extern "C"
    */
 
   /**
-   * @brief Checks if the pointed element is the last one of an array of `const EpochBlock_ItemTypeDef`
+   * @brief Checks if the pointed element is the last one of an array of `const LL_ATON_RT_EpochBlockItem_t`
    *
    */
-  static inline bool EpochBlock_IsLastEpochBlock(const EpochBlock_ItemTypeDef *eb);
+  static inline bool EpochBlock_IsLastEpochBlock(const LL_ATON_RT_EpochBlockItem_t *eb);
 
   /**
    * @brief Checks if the pointed element is the first EpochBlock of an Epoch
    *
    */
-  static inline bool EpochBlock_IsEpochStart(const EpochBlock_ItemTypeDef *eb);
+  static inline bool EpochBlock_IsEpochStart(const LL_ATON_RT_EpochBlockItem_t *eb);
 
   /**
    * @brief Checks if the pointed element is the last EpochBlock of an Epoch
    *
    */
-  static inline bool EpochBlock_IsEpochEnd(const EpochBlock_ItemTypeDef *eb);
+  static inline bool EpochBlock_IsEpochEnd(const LL_ATON_RT_EpochBlockItem_t *eb);
 
   /**
    * @brief Checks if the pointed element is the an Epoch Blob
    *
    */
-  static inline bool EpochBlock_IsEpochBlob(const EpochBlock_ItemTypeDef *eb);
+  static inline bool EpochBlock_IsEpochBlob(const LL_ATON_RT_EpochBlockItem_t *eb);
 
   /**
    * @brief Checks if - in case this epoch is a blob (see above) - the blob is encrypted
    *
    */
-  static inline bool EpochBlock_IsBlobEncrypted(const EpochBlock_ItemTypeDef *eb);
+  static inline bool EpochBlock_IsBlobEncrypted(const LL_ATON_RT_EpochBlockItem_t *eb);
 
   /**
    * @brief Checks if the pointed element is pure SW epoch
    *
    */
-  static inline bool EpochBlock_IsEpochPureSW(const EpochBlock_ItemTypeDef *eb);
+  static inline bool EpochBlock_IsEpochPureSW(const LL_ATON_RT_EpochBlockItem_t *eb);
 
   /**
    * @brief Checks if the pointed element is a pure HW or mixed SW/HW epoch
    *
    */
-  static inline bool EpochBlock_IsEpochPureHW(const EpochBlock_ItemTypeDef *eb);
+  static inline bool EpochBlock_IsEpochPureHW(const LL_ATON_RT_EpochBlockItem_t *eb);
 
   /**
    * @brief Checks if the pointed element is a hybrid epoch
    *
    */
-  static inline bool EpochBlock_IsEpochHybrid(const EpochBlock_ItemTypeDef *eb);
+  static inline bool EpochBlock_IsEpochHybrid(const LL_ATON_RT_EpochBlockItem_t *eb);
 
   /**
    * @brief Checks if the pointed element is an internal epoch
    *
    */
-  static inline bool EpochBlock_IsEpochInternal(const EpochBlock_ItemTypeDef *eb);
+  static inline bool EpochBlock_IsEpochInternal(const LL_ATON_RT_EpochBlockItem_t *eb);
 
   /**
    * @brief Returns the Epoch controller id to use
    *
    */
-  static inline uint32_t EpochBlock_EpochControllerUnit(const EpochBlock_ItemTypeDef *eb);
+  static inline uint32_t EpochBlock_EpochControllerUnit(const LL_ATON_RT_EpochBlockItem_t *eb);
 
   /**
    * @brief Returns the address of the configuration of the epoch controller (the blob address)
    *
    */
-  static inline uintptr_t EpochBlock_EpochBlobAddr(const EpochBlock_ItemTypeDef *eb);
+  static inline uintptr_t EpochBlock_EpochBlobAddr(const LL_ATON_RT_EpochBlockItem_t *eb);
 
   /**
    * @brief ATON buffer types definition
@@ -321,9 +335,6 @@ extern "C"
    * @{
    */
 
-  struct __nn_instance_struct; // forward declaration
-  typedef struct __nn_instance_struct NN_Instance_TypeDef;
-
 /**
  * @brief Declare the function prototypes for named NN interface functions generated by the AtoNN compiler
  * @param network_name name of the network as provided by option `--network-name`
@@ -337,7 +348,7 @@ extern "C"
   extern LL_ATON_User_IO_Result_t LL_ATON_Set_User_Output_Buffer_##network_name(uint32_t num, void *buffer,            \
                                                                                 uint32_t size);                        \
   extern void *LL_ATON_Get_User_Output_Buffer_##network_name(uint32_t num);                                            \
-  extern const EpochBlock_ItemTypeDef *LL_ATON_EpochBlockItems_##network_name(void);                                   \
+  extern const LL_ATON_RT_EpochBlockItem_t *LL_ATON_EpochBlockItems_##network_name(void);                              \
   extern const LL_Buffer_InfoTypeDef *LL_ATON_Output_Buffers_Info_##network_name(void);                                \
   extern const LL_Buffer_InfoTypeDef *LL_ATON_Input_Buffers_Info_##network_name(void);                                 \
   extern const LL_Streng_EncryptionTypedef *LL_ATON_WeightEncryption_Info_##network_name(void);                        \
@@ -352,40 +363,40 @@ extern "C"
   typedef void *(*NN_InputGetter_TypeDef)(uint32_t num);
   typedef LL_ATON_User_IO_Result_t (*NN_OutputSetter_TypeDef)(uint32_t num, void *buffer, uint32_t size);
   typedef void *(*NN_OutputGetter_TypeDef)(uint32_t num);
-  typedef const EpochBlock_ItemTypeDef *(*NN_EpochBlockItems_TypeDef)(void);
+  typedef const LL_ATON_RT_EpochBlockItem_t *(*NN_EpochBlockItems_TypeDef)(void);
   typedef const LL_Streng_EncryptionTypedef *(*NN_Encryption_Info_TypeDef)(void);
   typedef const LL_Buffer_InfoTypeDef *(*NN_Buffers_Info_TypeDef)(void);
 
   typedef void (*TraceRuntime_FuncPtr_t)(LL_ATON_RT_Callbacktype_t ctype);
 
   typedef void (*TraceEpochBlock_FuncPtr_t)(LL_ATON_RT_Callbacktype_t ctype, const NN_Instance_TypeDef *nn_instance,
-                                            const EpochBlock_ItemTypeDef *epoch_block);
+                                            const LL_ATON_RT_EpochBlockItem_t *epoch_block);
 
   typedef struct
   {
-    const char *network_name;
-    NN_EC_Hook_TypeDef ec_network_init;
-    NN_EC_Hook_TypeDef ec_inference_init;
-    NN_InputSetter_TypeDef input_setter;
-    NN_InputGetter_TypeDef input_getter;
-    NN_OutputSetter_TypeDef output_setter;
-    NN_OutputGetter_TypeDef output_getter;
-    NN_EpochBlockItems_TypeDef epoch_block_items;
-    NN_Buffers_Info_TypeDef output_buffers_info;
-    NN_Buffers_Info_TypeDef input_buffers_info;
-    NN_Encryption_Info_TypeDef blob_encryption_info;
-    NN_Encryption_Info_TypeDef weight_encryption_info;
-    NN_Buffers_Info_TypeDef internal_buffers_info;
+    const char *network_name;                     // name of the network as provided by compiler option `--network-name`
+    NN_EC_Hook_TypeDef ec_network_init;           // pointer to epoch controller network initialization function
+    NN_EC_Hook_TypeDef ec_inference_init;         // pointer to epoch controller start inference function
+    NN_InputSetter_TypeDef input_setter;          // function pointer for setting user-defined input buffers
+    NN_InputGetter_TypeDef input_getter;          // function pointer for getting user-defined input buffers
+    NN_OutputSetter_TypeDef output_setter;        // function pointer for setting user-defined output buffers
+    NN_OutputGetter_TypeDef output_getter;        // function pointer for getting user-defined output buffers
+    NN_EpochBlockItems_TypeDef epoch_block_items; // function pointer to retrieve the epoch block array of the network
+    NN_Buffers_Info_TypeDef output_buffers_info;  // function pointer returning information about all output buffers
+    NN_Buffers_Info_TypeDef input_buffers_info;   // function pointer returning information about all input buffers
+    NN_Encryption_Info_TypeDef blob_encryption_info;   // function pointer returning epoch blobs encryption info
+    NN_Encryption_Info_TypeDef weight_encryption_info; // function pointer returning weights encryption info
+    NN_Buffers_Info_TypeDef internal_buffers_info; // function pointer returning information about all internal buffers
   } NN_Interface_TypeDef;
 
   typedef struct
   {
-    const EpochBlock_ItemTypeDef *volatile current_epoch_block; // pointer to current epoch block
-    const EpochBlock_ItemTypeDef *volatile first_epoch_block;   // pointer to first epoch block in current epoch list
-    const EpochBlock_ItemTypeDef *volatile next_epoch_block;    // pointer to epoch block to be inserted
+    const LL_ATON_RT_EpochBlockItem_t *volatile current_epoch_block; // pointer to current epoch block
+    const LL_ATON_RT_EpochBlockItem_t *volatile first_epoch_block; // pointer to first epoch block in current epoch list
+    const LL_ATON_RT_EpochBlockItem_t *volatile next_epoch_block;  // pointer to epoch block to be inserted
 
-    const EpochBlock_ItemTypeDef *volatile saved_current_epoch_block; // pointer to saved current epoch list
-    const EpochBlock_ItemTypeDef
+    const LL_ATON_RT_EpochBlockItem_t *volatile saved_current_epoch_block; // pointer to saved current epoch list
+    const LL_ATON_RT_EpochBlockItem_t
         *volatile saved_first_epoch_block; // pointer to saved first epoch block in current epoch list
 
     bool inference_started; // inference has been started
@@ -405,9 +416,8 @@ extern "C"
     TraceEpochBlock_FuncPtr_t epoch_callback_function; // epoch callback function
 
 #if defined(LL_ATON_RT_RELOC)
-    uint32_t inst_reloc;
-#endif
-
+    uint32_t inst_reloc; // handle to relocation context
+#endif                   // LL_ATON_RELOC
   } NN_Execution_State_TypeDef;
 
   struct __nn_instance_struct
@@ -424,58 +434,58 @@ extern "C"
    * @{
    */
 
-  static inline bool EpochBlock_IsLastEpochBlock(const EpochBlock_ItemTypeDef *eb)
+  static inline bool EpochBlock_IsLastEpochBlock(const LL_ATON_RT_EpochBlockItem_t *eb)
   {
     return ((eb->flags & EpochBlock_Flags_last_eb) != 0);
   }
 
-  static inline bool EpochBlock_IsEpochStart(const EpochBlock_ItemTypeDef *eb)
+  static inline bool EpochBlock_IsEpochStart(const LL_ATON_RT_EpochBlockItem_t *eb)
   {
     return ((eb->flags & EpochBlock_Flags_epoch_start) != 0);
   }
 
-  static inline bool EpochBlock_IsEpochEnd(const EpochBlock_ItemTypeDef *eb)
+  static inline bool EpochBlock_IsEpochEnd(const LL_ATON_RT_EpochBlockItem_t *eb)
   {
     return ((eb->flags & EpochBlock_Flags_epoch_end) != 0);
   }
 
-  static inline bool EpochBlock_IsEpochBlob(const EpochBlock_ItemTypeDef *eb)
+  static inline bool EpochBlock_IsEpochBlob(const LL_ATON_RT_EpochBlockItem_t *eb)
   {
     return ((eb->flags & EpochBlock_Flags_blob) != 0);
   }
 
-  static inline bool EpochBlock_IsBlobEncrypted(const EpochBlock_ItemTypeDef *eb)
+  static inline bool EpochBlock_IsBlobEncrypted(const LL_ATON_RT_EpochBlockItem_t *eb)
   {
     return ((eb->flags & EpochBlock_Flags_blob_encrypted) != 0);
   }
 
-  static inline bool EpochBlock_IsEpochPureSW(const EpochBlock_ItemTypeDef *eb)
+  static inline bool EpochBlock_IsEpochPureSW(const LL_ATON_RT_EpochBlockItem_t *eb)
   {
     return ((eb->flags & EpochBlock_Flags_pure_sw) != 0);
   }
 
-  static inline bool EpochBlock_IsEpochPureHW(const EpochBlock_ItemTypeDef *eb)
+  static inline bool EpochBlock_IsEpochPureHW(const LL_ATON_RT_EpochBlockItem_t *eb)
   {
     return ((eb->flags & EpochBlock_Flags_pure_hw) != 0);
   }
 
-  static inline bool EpochBlock_IsEpochHybrid(const EpochBlock_ItemTypeDef *eb)
+  static inline bool EpochBlock_IsEpochHybrid(const LL_ATON_RT_EpochBlockItem_t *eb)
   {
     return ((eb->flags & EpochBlock_Flags_hybrid) != 0);
   }
 
-  static inline bool EpochBlock_IsEpochInternal(const EpochBlock_ItemTypeDef *eb)
+  static inline bool EpochBlock_IsEpochInternal(const LL_ATON_RT_EpochBlockItem_t *eb)
   {
     return ((eb->flags & EpochBlock_Flags_internal) != 0);
   }
 
-  static inline uint32_t EpochBlock_EpochControllerUnit(const EpochBlock_ItemTypeDef *eb)
+  static inline uint32_t EpochBlock_EpochControllerUnit(const LL_ATON_RT_EpochBlockItem_t *eb)
   {
     LL_ATON_ASSERT(EpochBlock_IsEpochBlob(eb));
     return eb->wait_mask;
   }
 
-  static inline uintptr_t EpochBlock_EpochBlobAddr(const EpochBlock_ItemTypeDef *eb)
+  static inline uintptr_t EpochBlock_EpochBlobAddr(const LL_ATON_RT_EpochBlockItem_t *eb)
   {
     LL_ATON_ASSERT(EpochBlock_IsEpochBlob(eb));
     return eb->blob_address;

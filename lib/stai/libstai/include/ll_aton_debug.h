@@ -75,7 +75,7 @@ extern "C"
    * @param  pointer to neural network interface structure
    * @retval pointer to buffer or null of not found
    */
-  void *get_buffer(const char *bufname, int in, unsigned *_len, unsigned *_bits,
+  void *get_buffer(const char *bufname, int in, unsigned int *_len, unsigned int *_bits,
                    const NN_Interface_TypeDef *nn_interface);
 
   /**
@@ -96,7 +96,7 @@ extern "C"
    * @param  pointer to neural network interface structure
    * @retval none
    */
-  void set_all_buffers(int in, unsigned val, const NN_Interface_TypeDef *nn_interface);
+  void set_all_buffers(int in, unsigned int val, const NN_Interface_TypeDef *nn_interface);
 
   /**
    * @brief  dump a buffer with a given mode
@@ -164,6 +164,7 @@ static inline void dump_all_epoch_buffers(int mode, int epoch, int in, const NN_
 
   static inline void dump_all_epoch_buffers(int mode, int epoch, int in, const NN_Interface_TypeDef *nn_interface)
   {
+    LL_ATON_LIB_UNUSED(in);
     dump_epoch_buffers(mode, epoch, nn_interface);
   }
 

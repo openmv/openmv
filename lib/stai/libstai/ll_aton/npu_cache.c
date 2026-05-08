@@ -17,7 +17,10 @@
 #include <assert.h>
 
 #include "npu_cache.h"
-#include "stm32n6xx_hal_cacheaxi.h"
+
+#define USE_HAL_DRIVER  // Define here to fix header issues, must clean projects using only stm32n6xx.h for application code
+#include "stm32n6xx.h"
+
 #include "ll_aton_config.h"
 
 #if (LL_ATON_PLATFORM != LL_ATON_PLAT_STM32N6)
