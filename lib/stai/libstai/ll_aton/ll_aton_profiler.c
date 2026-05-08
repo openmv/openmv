@@ -37,10 +37,12 @@ int LL_ATON_LIB_ConvInteger(const LL_LIB_TensorInfo_TypeDef *inputs, unsigned in
                             int pad_right, int stride_h, int stride_w, int dilation_h, int dilation_w, int pad_value,
                             int groups, char *conv_name)
 {
-  int in_elements = LL_LIB_TENSOR_ELEMENTS(&inputs[0]);
-  int kern_elements = LL_LIB_TENSOR_ELEMENTS(&inputs[1]);
-  // int bias_elements = ninputs > 2 ? LL_LIB_TENSOR_ELEMENTS(&inputs[2]) : 0;
-  int out_elements = LL_LIB_TENSOR_ELEMENTS(output);
+  LL_ATON_LIB_UNUSED(ninputs);
+
+  int in_elements = __LL_LIB_TENSOR_ELEMENTS(&inputs[0]);
+  int kern_elements = __LL_LIB_TENSOR_ELEMENTS(&inputs[1]);
+  // int bias_elements = ninputs > 2 ? __LL_LIB_TENSOR_ELEMENTS(&inputs[2]) : 0;
+  int out_elements = __LL_LIB_TENSOR_ELEMENTS(output);
   int el_size_0 = inputs[0].nbits / 8; // inputs[0].type == DataType_INT8 || inputs[0].type == DataType_UINT8 ? 1 : -1;
   int el_size_1 = inputs[1].nbits / 8; // inputs[0].type == DataType_INT8 || inputs[0].type == DataType_UINT8 ? 1 : -1;
   int el_out_size = output[0].nbits / 8; // output[0].type == DataType_INT32 ? 4 : -1;
@@ -65,13 +67,13 @@ int LL_ATON_LIB_ConvInteger(const LL_LIB_TensorInfo_TypeDef *inputs, unsigned in
   if (el_out_size != 4 || (output->type != DataType_INT32 && output->type != DataType_FXP))
     __LL_LIB_ERROR(_ERR_DATATYPE, LL_ATON_INVALID_PARAM);
 
-  if (in_byte_size > LL_Buffer_len(inputs + 0))
+  if (in_byte_size > (int32_t)LL_Buffer_len(inputs + 0))
     __LL_LIB_ERROR(_ERR_BUFFER_IN, LL_ATON_INVALID_PARAM);
 
-  if (out_byte_size > LL_Buffer_len(output + 0))
+  if (out_byte_size > (int32_t)LL_Buffer_len(output + 0))
     __LL_LIB_ERROR(_ERR_BUFFER_OUT, LL_ATON_INVALID_PARAM);
 
-  if (kern_byte_size > LL_Buffer_len(inputs + 1))
+  if (kern_byte_size > (int32_t)LL_Buffer_len(inputs + 1))
     __LL_LIB_ERROR(_ERR_BUFFER_IN, LL_ATON_INVALID_PARAM);
 
   if (inputs[0].ndims < 4 || inputs[1].ndims < 4)
@@ -139,8 +141,8 @@ int LL_ATON_LIB_ConvInteger(const LL_LIB_TensorInfo_TypeDef *inputs, unsigned in
 
   int out_H = (H + pad_top + pad_bottom - dilation_h * (R - 1) - 1) / stride_h + 1;
   int out_W = (W + pad_left + pad_right - dilation_w * (S - 1) - 1) / stride_w + 1;
-  LL_ATON_ASSERT(out_H == out->shape[(out->ndims - 4) + TDIM_FHEIGHT]);
-  LL_ATON_ASSERT(out_W == out->shape[(out->ndims - 4) + TDIM_FWIDTH]);
+  LL_ATON_ASSERT(out_H == (int)out->shape[(out->ndims - 4) + TDIM_FHEIGHT]);
+  LL_ATON_ASSERT(out_W == (int)out->shape[(out->ndims - 4) + TDIM_FWIDTH]);
 
   int32_t maxmax = 0;
   for (int n = 0; n < N; ++n) // input batch

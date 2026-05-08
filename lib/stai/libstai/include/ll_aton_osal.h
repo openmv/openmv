@@ -21,11 +21,12 @@
 
 /*** Platform choice ***/
 #include "ll_aton_config.h"
+#include "ll_aton_platform.h"
 #include "ll_aton_util.h"
 
 /*** Platform dependent definitions & includes ***/
 
-/* Bare metal Cortex-M NCSIM simulator OSAL*/
+/* Bare metal Cortex-M based platforms */
 #if (LL_ATON_OSAL == LL_ATON_OSAL_BARE_METAL)
 
 /* Macros for (de-)initialization of OSAL layer */
@@ -56,10 +57,6 @@
 #define LL_ATON_OSAL_REMOVE_IRQ(irq_aton_line_nr)           linux_install_irq(irq_aton_line_nr, NULL)
 #define LL_ATON_OSAL_ENABLE_IRQ(irq_aton_line_nr)           linux_enable_irq(irq_aton_line_nr, true)
 #define LL_ATON_OSAL_DISABLE_IRQ(irq_aton_line_nr)          linux_enable_irq(irq_aton_line_nr, false)
-
-/* Enter/exit a critical section for the ATON runtime thread/task */
-#define LL_ATON_OSAL_ENTER_CS()                             /* NVIC_DisableIRQ(CDNN0_IRQn) */
-#define LL_ATON_OSAL_EXIT_CS()                              /* NVIC_EnableIRQ(CDNN0_IRQn) */
 
 #if defined(APP_HAS_PARALLEL_NETWORKS) && (APP_HAS_PARALLEL_NETWORKS != 0)
 #error "`LL_ATON_OSAL_LINUX_UIO` does NOT support parallel networks!"
@@ -157,6 +154,29 @@
 
 #define LL_ATON_OSAL_LOCK_NPU_CACHE()   aton_osal_zephyr_lock()
 #define LL_ATON_OSAL_UNLOCK_NPU_CACHE() aton_osal_zephyr_unlock()
+
+#elif (LL_ATON_OSAL == LL_ATON_OSAL_SR6X_SDK)
+#include "npu.h"
+
+/* Macros for (de-)initialization of OSAL layer */
+#define LL_ATON_OSAL_INIT()
+#define LL_ATON_OSAL_DEINIT()
+
+/* Wait for / signal event from ATON runtime */
+#define LL_ATON_OSAL_WFE() __WFE()
+#define LL_ATON_OSAL_SIGNAL_EVENT()
+
+#define LL_ATON_OSAL_INSTALL_IRQ(irq_aton_line_nr, handler) npu_set_handler(NPU_0_DEVICE_ID, irq_aton_line_nr, handler)
+#define LL_ATON_OSAL_REMOVE_IRQ(irq_aton_line_nr)           npu_set_handler(NPU_0_DEVICE_ID, irq_aton_line_nr, NULL)
+#define LL_ATON_OSAL_ENABLE_IRQ(irq_aton_line_nr)           npu_irq_enable(irq_aton_line_nr)
+#define LL_ATON_OSAL_DISABLE_IRQ(irq_aton_line_nr)          npu_irq_disable(irq_aton_line_nr)
+#define LL_ATON_OSAL_SET_PRIORITY(irq_aton_line_nr, prio)   npu_irq_init(irq_aton_line_nr, prio, IRQ_EDGE_TRIGGERED)
+#define LL_ATON_OSAL_ENTER_CS()                             LL_ATON_OSAL_DISABLE_IRQ(ATON_STD_IRQ_LINE)
+#define LL_ATON_OSAL_EXIT_CS()                              LL_ATON_OSAL_ENABLE_IRQ(ATON_STD_IRQ_LINE)
+
+#if defined(APP_HAS_PARALLEL_NETWORKS) && (APP_HAS_PARALLEL_NETWORKS != 0)
+#error "`LL_ATON_OSAL_SR6X_SDK` does NOT support parallel networks!"
+#endif // APP_HAS_PARALLEL_NETWORKS
 
 #elif (LL_ATON_OSAL == LL_ATON_OSAL_USER_IMPL)
 #include "ll_aton_osal_user_impl.h" /* file to be provided together with an implementation for the custom OSAL by the user */

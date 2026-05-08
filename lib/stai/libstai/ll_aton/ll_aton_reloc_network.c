@@ -139,31 +139,34 @@ static void _LL_ATON_Cache_NPU_Clean_Invalidate_Range(uintptr_t virtual_addr, ui
  * -----------------------------------------------------------------------------
  */
 static struct ll_aton_reloc_callback _network_reloc_callback = {
+    /* services */
     .assert_func = &_assert_func,
     .ll_lib_error = &_ll_lib_error,
 
+    /* cache operations */
     .ll_aton_cache_mcu_clean_range = &_LL_ATON_Cache_MCU_Clean_Range,
     .ll_aton_cache_mcu_invalidate_range = &_LL_ATON_Cache_MCU_Invalidate_Range,
     .ll_aton_cache_mcu_clean_invalidate_range = &_LL_ATON_Cache_MCU_Clean_Invalidate_Range,
     .ll_aton_cache_npu_clean_range = &_LL_ATON_Cache_NPU_Clean_Range,
     .ll_aton_cache_npu_clean_invalidate_range = &_LL_ATON_Cache_NPU_Clean_Invalidate_Range,
 
+    /* ll aton lib */
     .ll_aton_lib_concat = &LL_ATON_LIB_Concat,
     .ll_aton_lib_cast = &LL_ATON_LIB_Cast,
+    .ll_aton_lib_dma_transpose = &LL_ATON_LIB_DMA_Transpose,
     .ll_aton_lib_softmax = &LL_ATON_LIB_Softmax,
     .ll_aton_lib_dma_imagetorow = &LL_ATON_LIB_DMA_ImageToRow,
     .ll_aton_lib_dma_spacetodepth = &LL_ATON_LIB_DMA_SpaceToDepth,
     .ll_aton_lib_dma_rowtoimage = &LL_ATON_LIB_DMA_RowToImage,
     .ll_aton_lib_dma_depthtospace = &LL_ATON_LIB_DMA_DepthToSpace,
-    .ll_aton_lib_dma_outputs_flat_copy = &LL_ATON_LIB_DMA_Outputs_Flat_Copy,
     .ll_aton_lib_dma_outputs_slice_splitlike = &LL_ATON_LIB_DMA_Outputs_Slice_SplitLike,
-    .ll_aton_lib_dma_outputs_channel_split_aton = &LL_ATON_LIB_DMA_Outputs_Channel_Split_Aton,
-    .ll_aton_lib_dma_outputs_channel_split_batched = &LL_ATON_LIB_DMA_Outputs_Channel_Split_Batched,
-    .ll_aton_lib_dma_pad_memset = &LL_ATON_LIB_DMA_Pad_Memset,
-    .ll_aton_lib_dma_pad_filling = &LL_ATON_LIB_DMA_Pad_Filling,
-    .ll_aton_lib_dma_transpose = &LL_ATON_LIB_DMA_Transpose,
-    .ll_aton_lib_async_memcpy = &LL_ATON_LIB_Async_Memcpy,
-    .ll_aton_lib_dma_pad_4loop_filling = &LL_ATON_LIB_DMA_Pad_4Loop_Filling,
+    .ll_aton_lib_pad_std = &LL_ATON_LIB_Pad_Standard,
+    .ll_aton_lib_pad_4loop = &LL_ATON_LIB_Pad_4Loop,
+
+    /* ll aton sw & lib internals */
+    .ll_aton_lib_dma_outputs_flat_copy = &__LL_ATON_LIB_DMA_Outputs_Flat_Copy,
+    .ll_aton_lib_dma_outputs_channel_split_aton = &__LL_ATON_LIB_DMA_Outputs_Channel_Split_Aton,
+    .ll_aton_lib_dma_outputs_channel_split_batched = &__LL_ATON_LIB_DMA_Outputs_Channel_Split_Batched,
 };
 
 /* -----------------------------------------------------------------------------
@@ -494,10 +497,10 @@ static int _ai_reloc_rt_checking(const struct ai_reloc_bin_hdr *bin)
     return AI_RELOC_RT_ERR_INVALID_BIN;
   }
 
-  if (((c_struct_sizes >> 8) & 0xFF) != sizeof(EpochBlock_ItemTypeDef))
+  if (((c_struct_sizes >> 8) & 0xFF) != sizeof(LL_ATON_RT_EpochBlockItem_t))
   {
-    AI_RELOC_LOG("AI RELOC ERROR: sizeof(EpochBlock_ItemTypeDef) issue - %d != %d\r\n",
-                 (int)((c_struct_sizes >> 8) & 0xFF), (int)sizeof(EpochBlock_ItemTypeDef));
+    AI_RELOC_LOG("AI RELOC ERROR: sizeof(LL_ATON_RT_EpochBlockItem_t) issue - %d != %d\r\n",
+                 (int)((c_struct_sizes >> 8) & 0xFF), (int)sizeof(LL_ATON_RT_EpochBlockItem_t));
     return AI_RELOC_RT_ERR_INVALID_BIN;
   }
 
@@ -1158,19 +1161,19 @@ void *ai_rel_network_get_output(uintptr_t inst, uint32_t num)
   return (void *)res;
 }
 
-const EpochBlock_ItemTypeDef *ai_rel_network_get_epoch_items(uintptr_t inst)
+const LL_ATON_RT_EpochBlockItem_t *ai_rel_network_get_epoch_items(uintptr_t inst)
 {
   if (_ai_rel_check_handler(inst))
     return NULL;
 
   const struct ai_reloc_rt_ctx *rt_ctx = (const struct ai_reloc_rt_ctx *)inst;
   const struct ai_reloc_bin_hdr *bin = (const struct ai_reloc_bin_hdr *)rt_ctx->rom_addr;
-  const EpochBlock_ItemTypeDef *blocks;
+  const LL_ATON_RT_EpochBlockItem_t *blocks;
 
   uintptr_t res = call_with_r9((void *)rt_ctx->rom_addr, AI_RELOC_GET_OFFSET(bin->vec.get_epoch_items),
                                (void *)rt_ctx->ram_addr, 0, 0, 0);
 
-  blocks = (const EpochBlock_ItemTypeDef *)res;
+  blocks = (const LL_ATON_RT_EpochBlockItem_t *)res;
 
   return blocks;
 }
@@ -1260,13 +1263,15 @@ const LL_Streng_EncryptionTypedef *ai_rel_network_weight_encryption_info(uintptr
   return strg_encrpy_info;
 }
 
-void ai_rel_call_start_end_function(uintptr_t inst, start_end_func_ptr fct, const void *epoch_block)
+void ai_rel_call_start_end_function(uintptr_t inst, start_end_func_ptr fct,
+                                    const LL_ATON_RT_EpochBlockItem_t *epoch_block,
+                                    const NN_Instance_TypeDef *nn_instance)
 {
   register uint32_t _saved_r9;
   register uint32_t _r9 = ((struct ai_reloc_rt_ctx *)inst)->ram_addr;
   __asm volatile("mov %0, r9\n\t" : "=r"(_saved_r9));
   __asm volatile("mov r9, %0\n\t" ::"r"(_r9));
-  fct(epoch_block);
+  fct(epoch_block, nn_instance);
   __asm volatile("mov r9, %0\n\t" ::"r"(_saved_r9));
 }
 
@@ -1288,14 +1293,14 @@ int ll_aton_reloc_get_file_ptr(const NN_Instance_TypeDef *nn_inst, uintptr_t *fi
   return AI_RELOC_RT_ERR_NONE;
 }
 
-const EpochBlock_ItemTypeDef *ll_aton_reloc_get_epoch_items(const NN_Instance_TypeDef *nn_inst)
+const LL_ATON_RT_EpochBlockItem_t *ll_aton_reloc_get_epoch_items(const NN_Instance_TypeDef *nn_inst)
 {
   if (!nn_inst || !nn_inst->exec_state.inst_reloc)
   {
     return NULL;
   }
 
-  const EpochBlock_ItemTypeDef *epochs = ai_rel_network_get_epoch_items(nn_inst->exec_state.inst_reloc);
+  const LL_ATON_RT_EpochBlockItem_t *epochs = ai_rel_network_get_epoch_items(nn_inst->exec_state.inst_reloc);
   return epochs;
 }
 

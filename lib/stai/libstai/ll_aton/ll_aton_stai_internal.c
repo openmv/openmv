@@ -142,7 +142,7 @@ static void _stai_aton_internal_rt_callback(LL_ATON_RT_Callbacktype_t ctype)
 
 STAI_INTERNAL_ENTRY
 void _stai_aton_internal_epoch_block_callback(LL_ATON_RT_Callbacktype_t ctype, const NN_Instance_TypeDef *nn_instance,
-                                              const EpochBlock_ItemTypeDef *epoch_block)
+                                              const LL_ATON_RT_EpochBlockItem_t *epoch_block)
 {
   STAI_ASSERT(nn_instance != NULL);
   _stai_aton_context *stai_nn_ctx =

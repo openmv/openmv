@@ -26,7 +26,8 @@
 /*** Main Template ***/
 
 /**
- * @brief Template for synchronously executing a single inference of a single network instance (e.g. regression tests)
+ * @brief Template for synchronously executing a single inference of a single network instance one time
+ *        (e.g. regression tests)
  * @param network_instance pointer to the network instance representing the network and execution instance to execute.
  *                         The instance object MUST have already set a valid link to a network interface.
  *                         The user may declare/instantiate such an object by using either macro
@@ -34,6 +35,7 @@
  *                         and the network interface, or macros
  *                         `LL_ATON_DECLARE_NAMED_NN_INTERFACE()` & `LL_ATON_DECLARE_NAMED_NN_INSTANCE()` to
  *                         create/instantiate the objects separately.
+ * @note this function does NOT make part of the ATON Runtime User API
  */
 void LL_ATON_RT_Main(NN_Instance_TypeDef *network_instance)
 {

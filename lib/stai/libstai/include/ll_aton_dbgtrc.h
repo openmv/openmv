@@ -26,29 +26,30 @@ extern "C"
 
 #include <stdint.h>
 
-/* Monitored signals offsets list. TODO: move them in compatibility layer */
-#define DBGTRC_GND               0
-#define DBGTRC_VDD               1
-#define SWITCH_OSTRX_STALL       2
-#define DBGTRC_SWITCH_OSTRX_HENV 56
-#define SWITCH_ISTRX_STALL       83
-#define DBGTRC_SWITCH_ISTRX_HENV 165
-#define EXT_TRIGGERS_SYNC        216
-#define DBGTRC_INTCTRL_SIGNALS   220
-#define BUS_INTERFACE_READ1X8B   276
-#define BUS_INTERFACE_READ2X8B   278
-#define BUS_INTERFACE_READ4X8B   280
-#define BUS_INTERFACE_READ8X8B   282
-#define BUS_INTERFACE_WRITE1X8B  284
-#define BUS_INTERFACE_WRITE2X8B  286
-#define BUS_INTERFACE_WRITE4X8B  288
-#define BUS_INTERFACE_WRITE8X8B  290
+/** These macros are deprecated. Please use the macros in ATON.h
+ */
+#define DBGTRC_GND               ATON_DEBUG_TRACE_0_MON_SIG_GND
+#define DBGTRC_VDD               ATON_DEBUG_TRACE_0_MON_SIG_VDD
+#define SWITCH_OSTRX_STALL       ATON_DEBUG_TRACE_0_MON_SIG_ISTR_STRENG_0_0_STALL
+#define DBGTRC_SWITCH_OSTRX_HENV ATON_DEBUG_TRACE_0_MON_SIG_ISTR_STRENG_0_0_VALID
+#define SWITCH_ISTRX_STALL       ATON_DEBUG_TRACE_0_MON_SIG_OSTR_STRENG_0_0_STALL
+#define DBGTRC_SWITCH_ISTRX_HENV ATON_DEBUG_TRACE_0_MON_SIG_OSTR_STRENG_0_0_VALID
+#define EXT_TRIGGERS_SYNC        ATON_DEBUG_TRACE_0_MON_SIG_EXTTRIG_0
+#define DBGTRC_INTCTRL_SIGNALS   ATON_DEBUG_TRACE_0_MON_SIG_INT_INTCTRL_0_0
+#define BUS_INTERFACE_READ1X8B   ATON_DEBUG_TRACE_0_MON_SIG_MST_0_ARLEN0
+#define BUS_INTERFACE_READ2X8B   ATON_DEBUG_TRACE_0_MON_SIG_MST_0_ARLEN1
+#define BUS_INTERFACE_READ4X8B   ATON_DEBUG_TRACE_0_MON_SIG_MST_0_ARLEN3
+#define BUS_INTERFACE_READ8X8B   ATON_DEBUG_TRACE_0_MON_SIG_MST_0_ARLEN7
+#define BUS_INTERFACE_WRITE1X8B  ATON_DEBUG_TRACE_0_MON_SIG_MST_0_AWLEN0
+#define BUS_INTERFACE_WRITE2X8B  ATON_DEBUG_TRACE_0_MON_SIG_MST_0_AWLEN1
+#define BUS_INTERFACE_WRITE4X8B  ATON_DEBUG_TRACE_0_MON_SIG_MST_0_AWLEN3
+#define BUS_INTERFACE_WRITE8X8B  ATON_DEBUG_TRACE_0_MON_SIG_MST_0_AWLEN7
 
 /* Event type descriptors */
-#define DBGTRC_EVT_LOW     0
-#define DBGTRC_EVT_HI      1
-#define DBGTRC_EVT_POSEDGE 2
-#define DBGTRC_EVT_NEGEDGE 3
+#define DBGTRC_EVT_LOW     ATON_DEBUG_TRACE_EVENT_TYPE_LEVEL_LOW
+#define DBGTRC_EVT_HI      ATON_DEBUG_TRACE_EVENT_TYPE_LEVEL_HIGH
+#define DBGTRC_EVT_POSEDGE ATON_DEBUG_TRACE_EVENT_TYPE_POSITIVE_EDGE
+#define DBGTRC_EVT_NEGEDGE ATON_DEBUG_TRACE_EVENT_TYPE_NEGATIVE_EDGE
 
 /* Get the cardinal number of a given destination port.
  * To be used, for example, with DBGTRC_SWITCH_ISTRX_HENV signals
@@ -148,7 +149,7 @@ extern "C"
 
   /* Burst Lengths computations */
   int LL_Dbgtrc_Count_BurstsLen(unsigned int counter, unsigned char busif, unsigned char readwrite);
-  int LL_Dbgtrc_BurstLenBenchStart(unsigned int counter);
+  int LL_Dbgtrc_BurstLenBenchStart(unsigned int counter_id, unsigned int readwrite);
   int LL_Dbgtrc_BurstLenGet(unsigned int counter, unsigned int *counters);
   int LL_Dbgtrc_GetTotalTranfers(unsigned int counter_id, unsigned int *totalWrites, unsigned int *totalReads);
   int LL_Dbgtrc_LogTransfers(unsigned int counter);

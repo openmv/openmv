@@ -36,16 +36,69 @@ extern "C"
 #define inf (INFINITY)
 #define NaN (NAN)
 
-#define __LL_PAD_FRAMING_DMA_MIN_BUFF_LEN 2700
-#define __LL_PAD_FILLING_DMA_MIN_BUFF_LEN 1200
-
   // Uncomment beyond line to get runtime information about beyond SW operator's execution
   // #define DUMP_DEBUG_SW_OPS
 
-  // Uncomment beyond line to dump operation results for `Pad` operator
-  // #define DUMP_RESULTS_PAD_OP
-
 #define LL_LIB_NBYTES(x) ((x) + 7) >> 3
+
+  /* Common inline helper functions */
+  static inline void __ll_aton_lib_copy_element(uint8_t nbytes, int32_t index, int8_t *out_target, int8_t *in_target)
+  {
+    LL_ATON_LIB_UNUSED(index);
+
+    switch (nbytes)
+    {
+    case 1:
+#if defined(DUMP_DEBUG_SW_OPS)
+      LL_ATON_PRINTF("[%d]\t%d\t@ out: 0x%lx, in: 0x%lx\n", index, *in_target, (uintptr_t)out_target,
+                     (uintptr_t)in_target);
+#endif
+      *out_target = *in_target;
+      return;
+
+    case 2:
+#if defined(DUMP_DEBUG_SW_OPS)
+      LL_ATON_PRINTF("[%d]\t%d\t@ out: 0x%lx, in: 0x%lx\n", index, *((int16_t *)in_target), (uintptr_t)out_target,
+                     (uintptr_t)in_target);
+#endif
+      LL_ATON_ASSERT((((uintptr_t)in_target) % 2) == 0);
+      LL_ATON_ASSERT((((uintptr_t)out_target) % 2) == 0);
+
+      *((int16_t *)out_target) = *((int16_t *)in_target);
+      return;
+
+    case 3: // NOTE: assuming no alignment
+      *out_target++ = *in_target++;
+      *out_target++ = *in_target++;
+      *out_target++ = *in_target++;
+      return;
+
+    case 4:
+#if defined(DUMP_DEBUG_SW_OPS)
+      LL_ATON_PRINTF("[%d]\t%d\t@ out: 0x%lx, in: 0x%lx\n", index, *((int32_t *)in_target), (uintptr_t)out_target,
+                     (uintptr_t)in_target);
+#endif
+      LL_ATON_ASSERT((((uintptr_t)in_target) % 4) == 0);
+      LL_ATON_ASSERT((((uintptr_t)out_target) % 4) == 0);
+
+      *((int32_t *)out_target) = *((int32_t *)in_target);
+      return;
+
+    default:
+      LL_ATON_ASSERT(false);
+      return;
+    }
+  }
+
+  static inline uint32_t __ll_zero_neg(int32_t value)
+  {
+    uint32_t ret = 0;
+    if (value > 0)
+    {
+      ret = value;
+    }
+    return ret;
+  }
 
   /**
    * @}
@@ -61,6 +114,9 @@ extern "C"
    * @param  split_onnx_axis which axis to split on (ONNX value)
    * @param  leading_dims product of leading dimensions
    * @param  split_case optimization to be used
+   * @param  dma_in Input DMA / Streaming Engine to be used
+   * @param  dma_out Output DMA / Streaming Engine to be used
+   * @param  nn_instance pointer to network instance (may not be `NULL`)
    * @retval Error code
    */
   /** @defgroup LL_ATON_LIB_Split function
@@ -68,7 +124,8 @@ extern "C"
    *   */
   int LL_ATON_LIB_Split(const LL_Buffer_InfoTypeDef *input, bool aton_canonical,
                         const LL_Buffer_InfoTypeDef (*outputs)[], uint32_t noutputs, uint32_t rank,
-                        uint32_t split_onnx_axis, uint32_t leading_dims, int split_case, int dma_in, int dma_out);
+                        uint32_t split_onnx_axis, uint32_t leading_dims, int split_case, int dma_in, int dma_out,
+                        const NN_Instance_TypeDef *nn_instance);
 
   /**
    * @brief  performs a slice operation on a (multi-dimensional) matrix
@@ -146,127 +203,6 @@ extern "C"
   /**
    *  * @}
    *   */
-
-  /* Note: the beyond structures & macro must be the same (integer types aside) as the one in the ATON runtime, file
-   * `ll_aton_lib_sw_operators.h` */
-#define NR_OF_STREAM_ENG_LOOPS 4
-  struct four_axes_item
-  {
-    uint32_t offset_in_bytes;
-    uint32_t nr_of_loops;
-  };
-
-  struct four_axes
-  {
-    uint32_t initial_cumulative_start_offset_in_bytes;
-    uint32_t inner_bytes_to_copy;
-    uint32_t nr_of_stream_eng_loops;
-    uint32_t total_bytes_to_copy;
-    struct four_axes_item four_items_array[NR_OF_STREAM_ENG_LOOPS];
-  };
-
-  /**
-   * @brief  performs a `Pad` operation - composed of several HW-accelerated or pure SW `framing`/`memset` and `filling`
-   * functions - on a (multi-dimensional) matrix
-   * @param  input start address of input tensor
-   * @param  output start address of output tensor
-   * @param  min_shape shape obtained by performing element-wise `min` on each axis of reduced input vs output tensor
-   * @param  mode where 0 == `constant`, 1 == `reflect`, 2 ==`edge`
-   * @param  nbytes 8-bit or 16-bit mode
-   * @param  out_elems number of output elements
-   * @param  constant_value constant value to be `memset`
-   * @param  consecutive_axis last input axis with all zero start/end paddings and whose following axes also have all
-   * zero paddings (or last axis)
-   * @param  consecutive_elems number of consecutive elements to copy in each repetition
-   * @param  pad_in_offsets_start vector containing amount (in bytes) of input padding data added at beginning of each
-   *         axis
-   * @param  pad_in_offsets_end vector containing amount (in bytes) of input padding data added at and of each axis
-   * @param  pad_out_offsets_start vector containing amount (in bytes) of output padding data added at beginning of each
-   *         axis
-   * @param  pad_out_offsets_end vector containing amount (in bytes) of output padding data added at and of each axis
-   * @param  out_shape shape of output tensor
-   * @param  out_offsets offset of each output tensor item
-   * @param  tensor_rank rank of input and output tensors
-   * @retval Error code
-   */
-  /** @defgroup LL_ATON_LIB_Pad_Standard function
-   *  * @{
-   *   */
-  int LL_ATON_LIB_Pad_Standard(unsigned char *input, unsigned char *output, unsigned char *input_limit,
-                               unsigned char *output_limit, const uint32_t *min_shape, uint8_t mode, uint8_t nbytes,
-                               uint32_t out_elems, int32_t constant_value, uint32_t consecutive_axis,
-                               uint32_t consecutive_elems, const int32_t *pad_in_offsets_start,
-                               const int32_t *pad_in_offsets_end, const int32_t *pad_out_offsets_start,
-                               const int32_t *pad_out_offsets_end, const int32_t *out_shape, const int32_t *out_offsets,
-                               size_t tensor_rank, int dma_in, int dma_out);
-  typedef int (*pad_callback_func_t)(void *);
-  typedef struct
-  {
-    int8_t *in_target;
-    int8_t *in_end;
-    int8_t *in_limit;
-    int8_t *out_target;
-    int8_t *out_end;
-    int8_t *out_limit;
-    uint32_t consecutive_axis;
-    uint32_t consecutive_bytes;
-    uint8_t nbytes; // 1, 2, 3, or 4 bytes
-    uint8_t mode;   // where 0 == `constant`, 1 == `reflect`, 2 ==`edge`
-    int8_t *saved_in_target;
-    int8_t *saved_out_target;
-    size_t tensor_rank;
-    int8_t *end_out_target;
-    struct four_axes negative_4loop;
-    struct four_axes positive_4loop;
-    pad_callback_func_t callback_function;
-    int dma_in;
-    int dma_out;
-#if defined(DUMP_RESULTS_PAD_OP)
-    size_t out_size; // in bytes
-#endif
-
-    /* Please add (not deep-copy) items above this line!!! */
-
-    const uint32_t *min_shape; // must be first deep-copy item!!!
-    const int32_t *pad_in_offsets_start;
-    const int32_t *pad_in_offsets_end;
-    const int32_t *pad_out_offsets_start;
-    const int32_t *pad_out_offsets_end;
-    const int32_t *out_shape;
-    const int32_t *out_offsets;
-    uint32_t *indexes;
-  } __ll_pad_sw_params_t;
-
-  /**
-   *  * @}
-   *   */
-
-  /**
-   * @brief Performs a 4-loop optimization for the `Pad` operation
-   * @param  input_start Start address of input tensor
-   * @param  input_end End address of input tensor
-   * @param  input_limit Input tensor limit address
-   * @param  output_start Start address of output tensor
-   * @param  output_end End address of output tensor
-   * @param  output_limit Output tensor limit address
-   * @param  constant_value Value to pad with
-   * @param  nbytes number of bytes per element
-   * @param  negative_4loop Information for 4-loop optimization - negative padding
-   * @param  positive_4loop Information for 4-loop optimization - positive padding
-   * @param  dma_in Input DMA / Streaming Engine to be used
-   * @param  dma_out Output DMA / Streaming Engine to be used
-   * @return Error code
-   */
-  /** @defgroup LL_ATON_LIB_Pad_Standard function
-   *  * @{
-   *   */
-  int LL_ATON_LIB_Pad_4Loop(unsigned char *input_start, unsigned char *input_end, unsigned char *input_limit,
-                            unsigned char *output_start, unsigned char *output_end, unsigned char *output_limit,
-                            int32_t constant_value, uint8_t nbytes, uint32_t *negative_4loop, uint32_t *positive_4loop,
-                            int dma_in, int dma_out);
-  /**
-   * @}
-   */
 
 #ifdef __cplusplus
 }

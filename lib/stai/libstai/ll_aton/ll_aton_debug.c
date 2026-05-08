@@ -82,16 +82,16 @@ static const LL_Buffer_InfoTypeDef *__get_buffer(const char *bufname, int in, co
   return NULL;
 }
 
-static void __set_buffer(const LL_Buffer_InfoTypeDef *buf, unsigned val)
+static void __set_buffer(const LL_Buffer_InfoTypeDef *buf, unsigned int val)
 {
   uint32_t len = LL_Buffer_len(buf);
-  int t;
+  unsigned int t;
   unsigned char *p = (unsigned char *)LL_Buffer_addr_start(buf);
   for (t = 0; t < len; t++)
     p[t] = (unsigned char)val;
 }
 
-static void __set_all_buffers(const LL_Buffer_InfoTypeDef *bufs, unsigned val)
+static void __set_all_buffers(const LL_Buffer_InfoTypeDef *bufs, unsigned int val)
 {
   while (bufs != NULL && bufs->name != NULL)
   {
@@ -103,6 +103,7 @@ static void __set_all_buffers(const LL_Buffer_InfoTypeDef *bufs, unsigned val)
 #ifndef NDEBUG
 static float Q_to_floating(int i, int Qm, int Qn)
 {
+  LL_ATON_LIB_UNUSED(Qm);
   if (Qn >= 0)
     return ((float)i / (float)((int)1 << Qn));
   if (Qn < 0)
@@ -126,7 +127,7 @@ static void __dump_buffer_info(const LL_Buffer_InfoTypeDef *buf)
   /* output onnx shape */
   LL_ATON_PRINTF("  name = %s, onnx shape(", buf->name);
   int32_t channel_onnx_idx = buf->ndims - 3;
-  uint32_t i;
+  int32_t i;
   for (i = 0; i < channel_onnx_idx; i++)
   {
     int32_t tmp = (int32_t)buf->shape[i];
@@ -215,7 +216,7 @@ static void __dump_buffer_info(const LL_Buffer_InfoTypeDef *buf)
       LL_ATON_PRINTF(" (%f, %d)", buf->scale[0], (int)buf->offset[0]);
     else
     {
-      for (uint32_t c = 0; c < dim_c; c++)
+      for (int32_t c = 0; c < dim_c; c++)
       {
         LL_ATON_PRINTF(" (%g, %d)", buf->scale[c], (int)buf->offset[c]);
         if (c < (dim_c - 1))
@@ -655,7 +656,7 @@ static void __dump_buffer_raw_Qmn_nbit(const LL_Buffer_InfoTypeDef *buf)
   uint32_t *p = LL_ATON_physical_to_virtual((uintptr_t)LL_Buffer_addr_start(buf));
   int is_unsigned = buf->Qunsigned;
   int cont = 0;
-  for (unsigned i = 0; i < len; i++)
+  for (unsigned int i = 0; i < len; i++)
   {
     int32_t data = LL_ATON_getbits(p, i * bits, bits);
     data = is_unsigned ? data : (int8_t)(data);
@@ -683,7 +684,7 @@ static void __dump_buffer_raw_Qmn_8bit(const LL_Buffer_InfoTypeDef *buf)
   uint8_t *p = LL_ATON_physical_to_virtual((uintptr_t)LL_Buffer_addr_start(buf));
   int is_unsigned = buf->Qunsigned;
   int cont = 0;
-  for (unsigned i = 0; i < len; i++)
+  for (unsigned int i = 0; i < len; i++)
   {
     int32_t data = p[i];
     data = is_unsigned ? data : (int8_t)(data);
@@ -711,7 +712,7 @@ static void __dump_buffer_raw_Qmn_16bit(const LL_Buffer_InfoTypeDef *buf)
   uint16_t *p = LL_ATON_physical_to_virtual((uintptr_t)LL_Buffer_addr_start(buf));
   int is_unsigned = buf->Qunsigned;
   int cont = 0;
-  for (unsigned i = 0; i < len / 2; i++)
+  for (unsigned int i = 0; i < len / 2; i++)
   {
     int32_t data = p[i];
     data = is_unsigned ? data : (int16_t)(data);
@@ -739,7 +740,7 @@ static void __dump_buffer_raw_Qmn_32bit(const LL_Buffer_InfoTypeDef *buf)
 
   int32_t *p = LL_ATON_physical_to_virtual((uintptr_t)LL_Buffer_addr_start(buf));
   int cont = 0;
-  for (unsigned i = 0; i < len / 4; i++)
+  for (unsigned int i = 0; i < len / 4; i++)
   {
     int32_t data = p[i];
     LL_ATON_PRINTF(pformat, Q_to_floating(data, Qm, Qn));
@@ -761,7 +762,7 @@ static void __dump_buffer_raw_16bit(const LL_Buffer_InfoTypeDef *buf)
   int is_unsigned = buf->Qunsigned;
 
   int cont = 0;
-  for (unsigned i = 0; i < len / 2; i++)
+  for (unsigned int i = 0; i < len / 2; i++)
   {
     int32_t data = p[i];
     data = is_unsigned ? data : (int16_t)(data);
@@ -784,7 +785,7 @@ static void __dump_buffer_raw_32bit(const LL_Buffer_InfoTypeDef *buf)
 
   int cont = 0;
   int is_unsigned = buf->Qunsigned;
-  for (unsigned i = 0; i < len / 4; i++)
+  for (unsigned int i = 0; i < len / 4; i++)
   {
     uint32_t data = p[i];
     if (is_unsigned)
@@ -809,7 +810,7 @@ static void __dump_buffer_raw_nbit(const LL_Buffer_InfoTypeDef *buf)
   int cont = 0;
   int is_unsigned = buf->Qunsigned;
   int bits = LL_Buffer_bits(buf);
-  for (unsigned i = 0; i < len; i++)
+  for (unsigned int i = 0; i < len; i++)
   {
     int32_t data = LL_ATON_getbits(p, i * bits, bits);
     data = is_unsigned ? data : (int32_t)(data);
@@ -831,7 +832,7 @@ static void __dump_buffer_raw_8bit(const LL_Buffer_InfoTypeDef *buf)
   uint8_t *p = LL_ATON_physical_to_virtual((uintptr_t)LL_Buffer_addr_start(buf));
   int cont = 0;
   int is_unsigned = buf->Qunsigned;
-  for (unsigned i = 0; i < len; i++)
+  for (unsigned int i = 0; i < len; i++)
   {
     int32_t data = p[i];
     data = is_unsigned ? data : (int8_t)(data);
@@ -937,7 +938,8 @@ static void __dump_epoch_buffers(const LL_Buffer_InfoTypeDef *bufs, int mode, in
 }
 #endif // !NDEBUG
 
-void *get_buffer(const char *bufname, int in, unsigned *_len, unsigned *_bits, const NN_Interface_TypeDef *nn_interface)
+void *get_buffer(const char *bufname, int in, unsigned int *_len, unsigned int *_bits,
+                 const NN_Interface_TypeDef *nn_interface)
 {
   const LL_Buffer_InfoTypeDef *buf = __get_buffer(bufname, in, nn_interface);
   if (buf != NULL)
@@ -964,7 +966,7 @@ int get_buffer_info(const char *bufname, int in, LL_Buffer_InfoTypeDef *ret, con
   return 0;
 }
 
-void set_all_buffers(int in, unsigned val, const NN_Interface_TypeDef *nn_interface)
+void set_all_buffers(int in, unsigned int val, const NN_Interface_TypeDef *nn_interface)
 {
   if ((in & BUFF_IN) != 0)
     __set_all_buffers(nn_interface->input_buffers_info(), val);

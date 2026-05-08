@@ -813,8 +813,14 @@ int LL_TriggerHigh(int irq)
   if (irq >= ATON_INTCTRL_INTS(0))
     return LL_ATON_INVALID_PARAM;
 
+    /* Check if interrupt falls in the hi-register, e.g.: Puma */
+#ifdef ATON_INTCTRL_INTORMSK_H_INT_EPOCHCTRL_0_1_GET_IDX
+  ATON_INTCTRL_INTORMSK_H_SET(0, irq, ~(1 << (ATON_INTCTRL_0_INTORMSK_H_EPOCHCTRL_0_1_IDX - 32)));
+  ATON_INTCTRL_INTSET_H_SET(0, (1 << (ATON_INTCTRL_0_INTSET_H_EPOCHCTRL_0_1_IDX - 32)));
+#else
   ATON_INTCTRL_INTORMSK_SET(0, irq, ~(1 << ATON_INTCTRL_0_INTORMSK_EPOCHCTRL_0_1_IDX));
   ATON_INTCTRL_INTSET_SET(0, (1 << ATON_INTCTRL_0_INTSET_EPOCHCTRL_0_1_IDX));
+#endif
   return 0;
 }
 
@@ -827,14 +833,18 @@ int LL_TriggerLow(int irq)
 {
   if (irq >= ATON_INTCTRL_INTS(0))
     return LL_ATON_INVALID_PARAM;
-
+#ifdef ATON_INTCTRL_0_INTCLR_H_EPOCHCTRL_0_1_IDX
+  ATON_INTCTRL_INTCLR_H_SET(0, (1 << (ATON_INTCTRL_0_INTCLR_H_EPOCHCTRL_0_1_IDX - 32)));
+#else
   ATON_INTCTRL_INTCLR_SET(0, (1 << ATON_INTCTRL_0_INTCLR_EPOCHCTRL_0_1_IDX));
+#endif
+
   return 0;
 }
 #endif
 
-unsigned __atonn_getSrcPortID(enum SwitchUnitsType sut, unsigned char su_num, enum AccelUnitsType aut,
-                              unsigned char au_num, unsigned char port)
+unsigned int __atonn_getSrcPortID(enum SwitchUnitsType sut, unsigned char su_num, enum AccelUnitsType aut,
+                                  unsigned char au_num, unsigned char port)
 {
   // FIXME
   LL_ATON_ASSERT(su_num == 0);
@@ -902,8 +912,8 @@ unsigned __atonn_getSrcPortID(enum SwitchUnitsType sut, unsigned char su_num, en
   return 0;
 }
 
-unsigned __atonn_getDstPortID(enum SwitchUnitsType sut, unsigned char su_num, enum AccelUnitsType aut,
-                              unsigned char au_num, unsigned char port)
+unsigned int __atonn_getDstPortID(enum SwitchUnitsType sut, unsigned char su_num, enum AccelUnitsType aut,
+                                  unsigned char au_num, unsigned char port)
 {
   // FIXME
   LL_ATON_ASSERT(su_num == 0);
@@ -987,11 +997,6 @@ int LL_Switch_Init_NoReset(const LL_Switch_InitTypeDef *LL_Switch_InitStruct, in
   unsigned int fnr_shift[ATON_SWITCH_CONTEXT_NUM] = {ATON_STRSWITCH_DST_FNR0_LSB, ATON_STRSWITCH_DST_FNR1_LSB};
   unsigned int fnr_mask[ATON_SWITCH_CONTEXT_NUM] = {ATON_STRSWITCH_DST_FNR0_MASK, ATON_STRSWITCH_DST_FNR1_MASK};
 
-  /* Enable Switch */
-  t = ATON_STRSWITCH_CTRL_DT;
-  t = ATON_STRSWITCH_CTRL_SET_EN(t, 1);
-  ATON_STRSWITCH_CTRL_SET(0, t);
-
   for (i = 0; i < n; i++)
   {
     /* Compute target destination configuration register */
@@ -1018,6 +1023,11 @@ int LL_Switch_Init_NoReset(const LL_Switch_InitTypeDef *LL_Switch_InitStruct, in
     ATON_REG_WRITE(reg, t);
   }
 
+  /* enable the Stream Switch */
+  t = ATON_STRSWITCH_CTRL_DT;
+  t = ATON_STRSWITCH_CTRL_SET_EN(t, 1);
+  ATON_STRSWITCH_CTRL_SET(0, t);
+
   return 0;
 }
 
@@ -1029,14 +1039,9 @@ int LL_Switch_Init_NoReset(const LL_Switch_InitTypeDef *LL_Switch_InitStruct, in
  */
 int LL_Switch_Init(const LL_Switch_InitTypeDef *LL_Switch_InitStruct, int n)
 {
-  uint32_t t;
-
 #if (LL_ATON_PLATFORM == LL_ATON_PLAT_EC_TRACE)
   ll_aton_static_checks();
 #endif
-
-  /* Clear Configuration */
-  ATON_DISABLE_CLR_CONFCLR(STRSWITCH, 0);
 
   return LL_Switch_Init_NoReset(LL_Switch_InitStruct, n);
 }
@@ -1051,6 +1056,11 @@ int LL_Switch_Deinit(const LL_Switch_InitTypeDef *LL_Switch_InitStruct, int n)
 {
   int i;
   volatile uint32_t *reg;
+
+  uint32_t t;
+
+  /* Clear Configuration */
+  ATON_DISABLE_CLR_CONFCLR(STRSWITCH, 0);
 
   for (i = 0; i < n; i++)
   {
@@ -1075,6 +1085,11 @@ int LL_Switch_Deinit_Fine_Grained(const LL_Switch_InitTypeDef *LL_Switch_InitStr
   int i;
   volatile uint32_t *reg;
   unsigned int en_shift[ATON_SWITCH_CONTEXT_NUM] = {ATON_STRSWITCH_DST_EN0_LSB, ATON_STRSWITCH_DST_EN1_LSB};
+
+  uint32_t t;
+
+  /* Clear Configuration */
+  ATON_DISABLE_CLR_CONFCLR(STRSWITCH, 0);
 
   for (i = 0; i < n; i++)
   {
@@ -1114,11 +1129,6 @@ int LL_SwitchVC_Init_NoReset(const LL_SwitchVC_InitTypeDef *LL_SwitchVC_InitStru
   unsigned int en_shift = ATON_STRSWITCH_VC_DST_EN_LSB;
   unsigned int src_shift = ATON_STRSWITCH_VC_DST_SRC_LSB;
 
-  /* Enable Switch */
-  t = ATON_STRSWITCH_VC_CTRL_DT;
-  t = ATON_STRSWITCH_VC_CTRL_SET_EN(t, 1);
-  ATON_STRSWITCH_VC_CTRL_SET(0, t);
-
   for (i = 0; i < n; i++)
   {
     /* Compute target destination configuration register */
@@ -1129,6 +1139,11 @@ int LL_SwitchVC_Init_NoReset(const LL_SwitchVC_InitTypeDef *LL_SwitchVC_InitStru
     t |= (ATONN_SRCPORT_ID(LL_SwitchVC_InitStruct[i].source) << src_shift);
     ATON_REG_WRITE(reg, t);
   }
+
+  /* enable the Stream Switch */
+  t = ATON_STRSWITCH_CTRL_DT;
+  t = ATON_STRSWITCH_CTRL_SET_EN(t, 1);
+  ATON_STRSWITCH_CTRL_SET(0, t);
 
   return 0;
 }
@@ -1142,11 +1157,6 @@ int LL_SwitchVC_Init_NoReset(const LL_SwitchVC_InitTypeDef *LL_SwitchVC_InitStru
  */
 int LL_SwitchVC_Init(const LL_SwitchVC_InitTypeDef *LL_SwitchVC_InitStruct, int n)
 {
-  uint32_t t;
-
-  /* Clear Configuration */
-  ATON_DISABLE_CLR_CONFCLR(STRSWITCH_VC, 0);
-
   return LL_SwitchVC_Init_NoReset(LL_SwitchVC_InitStruct, n);
 }
 
@@ -1160,6 +1170,11 @@ int LL_SwitchVC_Deinit(const LL_SwitchVC_InitTypeDef *LL_SwitchVC_InitStruct, in
 {
   int i;
   volatile uint32_t *reg;
+
+  uint32_t t;
+
+  /* Clear Configuration */
+  ATON_DISABLE_CLR_CONFCLR(STRSWITCH_VC, 0);
 
   for (i = 0; i < n; i++)
   {
@@ -1184,6 +1199,11 @@ int LL_SwitchVC_Deinit_Fine_Grained(const LL_SwitchVC_InitTypeDef *LL_SwitchVC_I
   int i;
   volatile uint32_t *reg;
   unsigned int en_shift = ATON_STRSWITCH_VC_DST_EN_LSB;
+
+  uint32_t t;
+
+  /* Clear Configuration */
+  ATON_DISABLE_CLR_CONFCLR(STRSWITCH_VC, 0);
 
   for (i = 0; i < n; i++)
   {
@@ -1213,9 +1233,9 @@ static inline uint32_t decun_inc_page_addr(int id, uint32_t ctrl_val)
 
 static void LL_Decun_CB_1byte(int id, const LL_Decun_InitTypeDef *conf, uint32_t ctrl_val)
 {
-  unsigned CBsize = conf->CBs_size;
-  unsigned i, k;
-  unsigned mem_idx_num = ATON_DECUN_MEM_LOW_IDX_MAX - ATON_DECUN_MEM_LOW_IDX_MIN + 1;
+  int CBsize = conf->CBs_size;
+  int i, k;
+  int mem_idx_num = ATON_DECUN_MEM_LOW_IDX_MAX - ATON_DECUN_MEM_LOW_IDX_MIN + 1;
 
   if (conf->nCWperCV == 1)
   {
@@ -1368,9 +1388,9 @@ static void LL_Decun_CB_1byte(int id, const LL_Decun_InitTypeDef *conf, uint32_t
 
 static void LL_Decun_CB_2byte(int id, const LL_Decun_InitTypeDef *conf, uint32_t ctrl_val)
 {
-  unsigned CBsize = conf->CBs_size / 2;
-  unsigned i, k;
-  unsigned mem_idx_num = ATON_DECUN_MEM_LOW_IDX_MAX - ATON_DECUN_MEM_LOW_IDX_MIN + 1;
+  int CBsize = conf->CBs_size / 2;
+  int i, k;
+  int mem_idx_num = ATON_DECUN_MEM_LOW_IDX_MAX - ATON_DECUN_MEM_LOW_IDX_MIN + 1;
 
   if (conf->nCWperCV == 1)
   {
@@ -1939,7 +1959,7 @@ int LL_Activacc_Init(int id, const LL_Activacc_InitTypeDef *conf)
 
     {
       uint8_t *R0p = (uint8_t *)conf->ROM0_vector.p;
-      unsigned ROM0_rows = conf->ROM0_nbytes / (1 * 1);
+      int ROM0_rows = conf->ROM0_nbytes / (1 * 1);
       for (int i = 0; i < ROM0_rows; i++)
       {
         t = ATON_ACTIV_ROM0_DT;
@@ -1949,7 +1969,7 @@ int LL_Activacc_Init(int id, const LL_Activacc_InitTypeDef *conf)
     }
     {
       uint16_t *R1p = (uint16_t *)conf->ROM1_vector.p;
-      unsigned ROM1_rows = conf->ROM1_nbytes / (3 * 2);
+      int ROM1_rows = conf->ROM1_nbytes / (3 * 2);
       for (int i = 0; i < ROM1_rows; i++)
       {
         t = ATON_ACTIV_ROM1_AB_DT;
@@ -2233,7 +2253,7 @@ int LL_Arithacc_Init(int id, const LL_Arithacc_InitTypeDef *conf)
 
     int32_t c_sign = (conf->C_scalar == -1 ? -1 : 1);
 #if (LL_ATON_PLATFORM == LL_ATON_PLAT_EC_TRACE)
-    ec_trace_comment("Block ECASM optimizations to move reg writes pass this point");
+    ec_trace_comment("Block ECASM write optimizations at this point");
 #endif
     ATON_ARITH_TRANSLATEADDR_SET(id, 1); // map 0x400 onto 0x0 offset for coefficients
     for (i = 0, k = 0; i < maxc; i++, k++)
@@ -2251,7 +2271,7 @@ int LL_Arithacc_Init(int id, const LL_Arithacc_InitTypeDef *conf)
       if (k == mem_idx_num)
       {
 #if (LL_ATON_PLATFORM == LL_ATON_PLAT_EC_TRACE)
-        ec_trace_comment("Block ECASM optimizations to move reg writes pass this point");
+        ec_trace_comment("Block ECASM write optimizations at this point");
 #endif
         ATON_ARITH_TRANSLATEADDR_SET(id, 0); // map 0xC00 onto 0xC00 offset for coefficients
         k -= (256 / 2);
@@ -2510,7 +2530,7 @@ int LL_EpochCtrl_Wait(uint32_t mask)
  */
 unsigned int LL_EpochCtrl_GetBlobSize(uint32_t *eb_addr)
 {
-  unsigned bloblines = eb_addr[1] + 2;
+  unsigned int bloblines = eb_addr[1] + 2;
   return bloblines * 4;
 }
 #endif // ATON_EPOCHCTRL_NUM
@@ -2652,19 +2672,20 @@ LL_ATON_WEAK void *LL_ATON_Dma_memcpy(void *dst, void *src, void *src_limit, siz
       dma_out.cache_allocate = 1;
     }
 
-    const LL_Switch_InitTypeDef switch_init = {LL_Switch_Init_Dest() = ATONN_DSTPORT(STRSWITCH, 0, STRENG, 1, 0),
-                                               LL_Switch_Init_Source(0) = ATONN_SRCPORT(STRSWITCH, 0, STRENG, 0, 0),
-                                               LL_Switch_Init_Context(0) = 1, LL_Switch_Init_Frames(0) = 0};
+    const LL_Switch_InitTypeDef __ll_switch_init = {LL_Switch_Init_Dest() = ATONN_DSTPORT(STRSWITCH, 0, STRENG, 1, 0),
+                                                    LL_Switch_Init_Source(0) =
+                                                        ATONN_SRCPORT(STRSWITCH, 0, STRENG, 0, 0),
+                                                    LL_Switch_Init_Context(0) = 1, LL_Switch_Init_Frames(0) = 0};
     const LL_ATON_EnableUnits_InitTypeDef dma_units[] = {{{STRENG, 1}}, {{STRENG, 0}}};
     const uint32_t dma_wait_mask = 0x2;
 
     LL_Streng_TensorInit(0, &dma_in, 1);
     LL_Streng_TensorInit(1, &dma_out, 1);
-    LL_Switch_Init(&switch_init, 1);
+    LL_Switch_Init(&__ll_switch_init, 1);
     LL_ATON_EnableUnits_Init(dma_units, 2);
     LL_Streng_Wait(dma_wait_mask);
     LL_ATON_DisableUnits_Init(dma_units, 1);
-    LL_Switch_Deinit(&switch_init, 1);
+    LL_Switch_Deinit(&__ll_switch_init, 1);
   }
 
   return dst;
@@ -2714,7 +2735,7 @@ unsigned int ec_trace_get_REG_id(unsigned int regoffset)
 void ec_trace_wait_epoch_end(uint32_t wait_mask)
 {
   // TODO: Only polling mode supported at the moment
-  for (unsigned i = 0; i < 32; i++)
+  for (unsigned int i = 0; i < 32; i++)
   {
     if (wait_mask & (1 << i))
     {

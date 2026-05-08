@@ -99,17 +99,20 @@ int LL_Streng_EncryptionInit(int id, const LL_Streng_EncryptionTypedef *LL_Stren
 /**
  * @brief Configures Bus Interface encryption keys
  * @param id, Bus Interface identifier [0..ATON_BUSIF_NUM-1]
- * @param key Selects key to configure [0..BUSIF_CRYPT_NR_KEYS-1]
+ * @param key Selects key to configure [0..ATON_BUSIF_CRYPT_NR_KEYS-1]
  * @param key_low lowest 64 bits of the key
  * @param key_hi highest 64 bits of the key
  */
 int LL_Busif_SetKeys(int id, int key, uint64_t key_low, uint64_t key_hi)
 {
+  LL_ATON_LIB_UNUSED(key_low);
+  LL_ATON_LIB_UNUSED(key_hi);
+
 #if (LL_ATON_PLATFORM == LL_ATON_PLAT_EC_TRACE)
   char patch_id[32];
 #endif
 
-  if ((id >= ATON_BUSIF_NUM) || (!ATON_BUSIF_ENCRYPTION_EN(id)) || (key >= BUSIF_CRYPT_NR_KEYS))
+  if ((id >= ATON_BUSIF_NUM) || (!ATON_BUSIF_ENCRYPTION_EN(id)) || (key >= ATON_BUSIF_CRYPT_NR_KEYS))
     return LL_ATON_INVALID_ID;
 
 #if defined(ATON_BUSIF_KEY_SET)
@@ -245,9 +248,9 @@ int LL_DmaCypherInit(LL_Cypher_InitTypeDef *cypherInfo)
 
   /* Configure stream switch */
 
-  const LL_Switch_InitTypeDef switch_init = {LL_Switch_Init_Dest() = ATONN_DSTPORT(STRSWITCH, 0, STRENG, 1, 0),
-                                             LL_Switch_Init_Source(0) = ATONN_SRCPORT(STRSWITCH, 0, STRENG, 0, 0),
-                                             LL_Switch_Init_Context(0) = 1, LL_Switch_Init_Frames(0) = 0};
+  const LL_Switch_InitTypeDef __ll_switch_init = {LL_Switch_Init_Dest() = ATONN_DSTPORT(STRSWITCH, 0, STRENG, 1, 0),
+                                                  LL_Switch_Init_Source(0) = ATONN_SRCPORT(STRSWITCH, 0, STRENG, 0, 0),
+                                                  LL_Switch_Init_Context(0) = 1, LL_Switch_Init_Frames(0) = 0};
 
   /* Initialize stream engines */
 
@@ -281,7 +284,7 @@ int LL_DmaCypherInit(LL_Cypher_InitTypeDef *cypherInfo)
 
   /* Enable stream switch */
 
-  LL_Switch_Init(&switch_init, 1);
+  LL_Switch_Init(&__ll_switch_init, 1);
 
   /* Start */
 
@@ -297,7 +300,7 @@ int LL_DmaCypherInit(LL_Cypher_InitTypeDef *cypherInfo)
 
   LL_ATON_DisableUnits_Init(dma_units, 1);
 
-  LL_Switch_Deinit(&switch_init, 1);
+  LL_Switch_Deinit(&__ll_switch_init, 1);
 
   return (0);
 }
@@ -395,9 +398,9 @@ int LL_ExtDmaCypherInit(LL_ExtendedCypher_InitTypeDef *extCypherInfo)
 
   /* Configure stream switch */
 
-  const LL_Switch_InitTypeDef switch_init = {LL_Switch_Init_Dest() = ATONN_DSTPORT(STRSWITCH, 0, STRENG, 1, 0),
-                                             LL_Switch_Init_Source(0) = ATONN_SRCPORT(STRSWITCH, 0, STRENG, 0, 0),
-                                             LL_Switch_Init_Context(0) = 1, LL_Switch_Init_Frames(0) = 0};
+  const LL_Switch_InitTypeDef __ll_switch_init = {LL_Switch_Init_Dest() = ATONN_DSTPORT(STRSWITCH, 0, STRENG, 1, 0),
+                                                  LL_Switch_Init_Source(0) = ATONN_SRCPORT(STRSWITCH, 0, STRENG, 0, 0),
+                                                  LL_Switch_Init_Context(0) = 1, LL_Switch_Init_Frames(0) = 0};
 
   /* Initialize stream engines */
 
@@ -460,7 +463,7 @@ int LL_ExtDmaCypherInit(LL_ExtendedCypher_InitTypeDef *extCypherInfo)
 
   /* Enable stream switch */
 
-  LL_Switch_Init(&switch_init, 1);
+  LL_Switch_Init(&__ll_switch_init, 1);
 
   /* Start */
 
@@ -495,7 +498,7 @@ int LL_ExtDmaCypherInit(LL_ExtendedCypher_InitTypeDef *extCypherInfo)
 
   LL_ATON_DisableUnits_Init(dma_units, 2);
 
-  LL_Switch_Deinit(&switch_init, 1);
+  LL_Switch_Deinit(&__ll_switch_init, 1);
 
   return (0);
 }
