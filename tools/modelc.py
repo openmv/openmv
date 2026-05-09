@@ -88,14 +88,20 @@ def stedge_compile(model_path, build_dir, profile, stedge_args=None):
         "--workspace", os.path.join(output_dir, "workspace"),
         "--output", os.path.join(output_dir, "gen"),
         "--verbosity", "1",
+        "--quiet",
     ]
 
     try:
         result = subprocess.run(generate_command, check=True, text=True, env=env,
                                 stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     except subprocess.CalledProcessError as e:
-        print(f"stedgeai command failed with exit code {e.returncode}", file=sys.stderr)
+        print(f"{C_RED}stedgeai generate failed for {model_path} "
+              f"(exit code {e.returncode}){C_RESET}", file=sys.stderr)
         print(" ".join(generate_command), file=sys.stderr)
+        if e.stdout:
+            print(f"{C_RED}{e.stdout}{C_RESET}", file=sys.stderr)
+        if e.stderr:
+            print(f"{C_RED}{e.stderr}{C_RESET}", file=sys.stderr)
         raise(e)
 
     # Step 2: Python relocation script
@@ -111,8 +117,13 @@ def stedge_compile(model_path, build_dir, profile, stedge_args=None):
         result = subprocess.run(reloc_command, check=True, text=True, env=env,
                                 stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     except subprocess.CalledProcessError as e:
-        print(f"Relocation script failed with exit code {e.returncode}", file=sys.stderr)
+        print(f"{C_RED}Relocation script failed for {model_path} "
+              f"(exit code {e.returncode}){C_RESET}", file=sys.stderr)
         print(" ".join(reloc_command), file=sys.stderr)
+        if e.stdout:
+            print(f"{C_RED}{e.stdout}{C_RESET}", file=sys.stderr)
+        if e.stderr:
+            print(f"{C_RED}{e.stderr}{C_RESET}", file=sys.stderr)
         raise(e)
 
     match = re.search(
