@@ -1,25 +1,27 @@
 # This work is licensed under the MIT license.
-# Copyright (c) 2013-2024 OpenMV LLC. All rights reserved.
+# Copyright (c) 2013-2026 OpenMV LLC. All rights reserved.
 # https://github.com/openmv/openmv/blob/master/LICENSE
 #
 # SPI Control
 #
-# This example shows how to use the SPI bus to directly control the LCD shield without
-# using the built-in LCD driver. You will need the LCD shield to run this example.
+# This example shows how to use the SPI bus on your OpenMV Cam to directly
+# drive the LCD shield without using the built-in lcd shield driver. You
+# will need the LCD shield to run this example.
 
 import csi
 import time
-from machine import Pin, SPI
 import struct
+from machine import Pin, SPI
+
+WIDTH = 128
+HEIGHT = 160
 
 cs = Pin("P3", Pin.OUT)
 rst = Pin("P7", Pin.OUT)
 rs = Pin("P8", Pin.OUT)
-# The hardware SPI bus for your OpenMV Cam is always SPI bus 1.
+# The hardware SPI bus for your OpenMV N6 LCD Shield is SPI bus 2.
 
-# NOTE: The SPI clock frequency will not always be the requested frequency. The hardware only supports
-# frequencies that are the bus frequency divided by a prescaler (which can be 2, 4, 8, 16, 32, 64, 128 or 256).
-spi = SPI(1, baudrate=int(1000000000 / 66), polarity=0, phase=0)
+spi = SPI(2, baudrate=15000000, polarity=0, phase=0)
 
 
 def write_command_byte(c):
@@ -44,11 +46,14 @@ def write_command(c, *data):
 
 
 def write_image(img):
+    # The LCD controller expects RGB565 with the high byte first while the
+    # OpenMV image stores RGB565 as little-endian uint16, so byte-swap before
+    # sending the pixels.
+    pixels = struct.unpack("H" * (img.size() // 2), img)
+    swapped = struct.pack(">" + "H" * len(pixels), *pixels)
     cs.low()
     rs.high()
-    reversed_img = struct.unpack('H' * (img.size() // 2), img)
-    reversed_array = struct.pack('>' + 'H' * len(reversed_img), *reversed_img)
-    spi.write(reversed_array)
+    spi.write(swapped)
     cs.high()
 
 
@@ -68,11 +73,19 @@ write_command(0x36, 0xC0)
 # Interface Pixel Format
 write_command(0x3A, 0x05)
 
+# Display On
+write_command(0x29)
+
 csi0 = csi.CSI()
 csi0.reset()  # Initialize the camera sensor.
-csi0.pixformat(csi.RGB565)  # must be this
-csi0.framesize((128, 160))  # must be this
+csi0.pixformat(csi.RGB565)
+csi0.framesize(csi.QVGA)  # 320x200 on the OpenMV N6.
 csi0.snapshot(time=2000)  # Let new settings take affect.
+
+# Crop a 4:5 region (matching the 128x160 LCD aspect ratio) from the center
+# of the 320x200 frame, then scale it down to the LCD size.
+ROI = ((320 - 160) // 2, 0, 160, 200)
+SCALE = WIDTH / ROI[2]
 
 clock = time.clock()  # Tracks FPS.
 
@@ -80,11 +93,11 @@ while True:
     clock.tick()  # Track elapsed milliseconds between snapshots().
     img = csi0.snapshot()  # Take a picture and return the image.
 
+    # img.scale() crops the source ROI first and then scales it.
+    img = img.scale(roi=ROI, x_scale=SCALE, y_scale=SCALE)
+
     write_command(0x2C)  # Write image command...
     write_image(img)
-
-    # Display On
-    write_command(0x29)
 
     print(clock.fps())  # Note: Your OpenMV Cam runs about half as fast while
     # connected to your computer. The FPS should increase once disconnected.

@@ -155,7 +155,7 @@
     },
     {
       "path": "10-Bluetooth",
-      "boards": ["OPENMV_RT1060", "OPENMV_N6", "ARDUINO_GIGA", "ARDUINO_PORTENTA_H7", "ARDUINO_NICLA_VISION", "ARDUINO_NANO_RP2040_CONNECT"],
+      "boards": ["OPENMV_RT1060", "OPENMV_AE3", "OPENMV_N6", "ARDUINO_GIGA", "ARDUINO_PORTENTA_H7", "ARDUINO_NICLA_VISION", "ARDUINO_NANO_RP2040_CONNECT"],
       "sensors": ["*"]
     },
     {
@@ -170,7 +170,7 @@
     },
     {
       "path": "50-OpenMV-Boards/50-STM32-Boards/*",
-      "boards": ["OPENMV2", "OPENMV3", "OPENMV4", "OPENMV4P", "OPENMVPT", "OPENMV_N6"],
+      "boards": ["OPENMV2", "OPENMV3", "OPENMV4", "OPENMV4P", "OPENMVPT"],
       "sensors": ["*"]
     },
     {
@@ -186,6 +186,11 @@
     {
       "path": "50-OpenMV-Boards/52-Alif-Boards/*",
       "boards": ["OPENMV_AE3"],
+      "sensors": ["*"]
+    },
+    {
+      "path": "50-OpenMV-Boards/53-N6-Boards/*",
+      "boards": ["OPENMV_N6"],
       "sensors": ["*"]
     },
     {
