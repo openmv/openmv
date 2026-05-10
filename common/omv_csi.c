@@ -1164,6 +1164,17 @@ void omv_csi_stats_update(omv_csi_t *csi, uint32_t *r, uint32_t *g, uint32_t *b,
         stats->g_avg = *g;
         stats->b_avg = *b;
     } else {
+        // Freeze the EMA when raw R/G/B ratios collapse above 2/3rds — that means
+        // saturated pixels are pinning all channels equal, which would bias AWB
+        // toward "no correction" and tint unsaturated regions green. AEC still
+        // sees live luminance and drops exposure to resolve the saturation.
+        uint32_t min = IM_MIN(*r, IM_MIN(*g, *b));
+        uint32_t max = IM_MAX(*r, IM_MAX(*g, *b));
+
+        if (min * 3 > max * 2) {
+            return;
+        }
+
         uint32_t dt_ms = ms - stats->last_ms;
         // Continuous-time EMA gain for elapsed dt: alpha = 1 - exp(-dt/τ)
         float alpha = IM_CLAMP(1.0f - expf(-((float) dt_ms) / OMV_CSI_STATS_TAU_MS), 0.0f, 1.0f);
