@@ -75,6 +75,16 @@ static const uint32_t flash_sectors[] = {
 
 #define OMV_BOOT_FLASH_SECTORS_COUNT (sizeof(flash_sectors) / sizeof(flash_sectors[0]))
 
+static inline int axi_flash_bounds_check(uint32_t addr, size_t size) {
+    if (size == 0 || addr < FLASH_BASE || addr > FLASH_END) {
+        return -1;
+    }
+    if (size > (FLASH_END - addr + 1)) {
+        return -1;
+    }
+    return 0;
+}
+
 static int axi_flash_erase(uint32_t sector) {
     uint32_t error = 0;
 
@@ -111,11 +121,18 @@ static int axi_flash_erase(uint32_t sector) {
 }
 
 int axi_flash_read(uint32_t addr, uint8_t *buf, size_t size) {
+    if (axi_flash_bounds_check(addr, size) != 0) {
+        return -1;
+    }
     memcpy(buf, (void *) addr, size);
     return 0;
 }
 
 int axi_flash_write(uint32_t addr, const uint8_t *buf, size_t size) {
+    if (axi_flash_bounds_check(addr, size) != 0) {
+        return -1;
+    }
+
     // If at a block boundary, erase the block first.
     for (size_t i = 0; i < OMV_BOOT_FLASH_SECTORS_COUNT; i++) {
         if (addr == flash_sectors[i]) {
