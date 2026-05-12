@@ -533,7 +533,7 @@ static int ioctl(omv_csi_t *csi, int request, va_list ap) {
             genx->events = (ec_event_t *) va_arg(ap, ec_event_t *);
 
             image_t image;
-            ret = omv_csi_snapshot(csi, &image, 0);
+            ret = omv_csi_snapshot(csi, &image, OMV_CSI_FLAG_NO_UPDATE);
             break;
         }
         case OMV_CSI_IOCTL_GENX320_READ_EVENTS_RAW: {
@@ -546,7 +546,7 @@ static int ioctl(omv_csi_t *csi, int request, va_list ap) {
             }
 
             image_t *img = (image_t *) va_arg(ap, image_t *);
-            ret = omv_csi_snapshot(csi, img, OMV_CSI_FLAG_NO_POST);
+            ret = omv_csi_snapshot(csi, img, OMV_CSI_FLAG_NO_POST | OMV_CSI_FLAG_NO_UPDATE);
             break;
         }
         case OMV_CSI_IOCTL_GENX320_CALIBRATE: {
@@ -569,7 +569,7 @@ static int ioctl(omv_csi_t *csi, int request, va_list ap) {
                 mp_printf(MP_PYTHON_PRINTER, "CSI: Calibrating - %d%%\n", ((i * 50) / event_count));
 
                 image_t image;
-                ret = omv_csi_snapshot(csi, &image, OMV_CSI_FLAG_NO_POST);
+                ret = omv_csi_snapshot(csi, &image, OMV_CSI_FLAG_NO_POST | OMV_CSI_FLAG_NO_UPDATE);
                 if (ret < 0) {
                     uma_free(histogram);
                     return ret;
