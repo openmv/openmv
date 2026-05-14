@@ -95,7 +95,9 @@
 #define ISP_EN_H                    (0x0800)
 #define ISP_EN_H_EN                 (0x01)
 #define ISP_TEST_MODE               (0x0801)
+#define DENOISE_EN                  (0x0882)
 #define ISP_TEST_MODE_RAMP          (0x04)
+#define R_RGB1_GRAY0                (0x0E08)
 #define ISP_WOI_EN                  (0x0E10)
 #define ISP_WOI_HSIZE_L             (0x0E11)
 #define ISP_WOI_HSIZE_H             (0x0E12)
@@ -389,19 +391,29 @@ static const uint16_t qvga_regs[][2] = {
     { AVERAGE_MODE,         0x02 },
     { ROW_AVERAGE_MODE,     0x00 },
     { COL_AVERAGE_MODE,     0x00 },
-    { ISP_WOI_EN,           0x00 },
+    { ISP_WOI_EN,           0x01 },
     { HSIZE_L,              0x44 },
     { HSIZE_H,              0x01 },
     { VSIZE_L,              0xCC },
     { VSIZE_H,              0x00 },
-    { WOI_HSIZE_L,          0x40 },
+    { WOI_HSIZE_L,          0x44 },
     { WOI_HSIZE_H,          0x01 },
-    { WOI_VSIZE_L,          0xC8 },
+    { WOI_VSIZE_L,          0xCC },
     { WOI_VSIZE_H,          0x00 },
-    { WOI_HSTART_L,         0x02 },
+    { WOI_HSTART_L,         0x00 },
     { WOI_HSTART_H,         0x00 },
-    { WOI_VSTART_L,         0x02 },
+    { WOI_VSTART_L,         0x00 },
     { WOI_VSTART_H,         0x00 },
+    { ISP_WOI_HSIZE_L,      0x40 }, //320
+    { ISP_WOI_HSIZE_H,      0x01 }, //320
+    { ISP_WOI_VSIZE_L,      0xC8 }, //200
+    { ISP_WOI_VSIZE_H,      0x00 }, //200
+    { ISP_WOI_HOFFSET_L,    0x02 }, //2
+    { ISP_WOI_HOFFSET_H,    0x00 }, //2
+    { ISP_WOI_VOFFSET_L,    0x02 }, //2
+    { ISP_WOI_VOFFSET_H,    0x00 }, //2
+    { DENOISE_EN,           0x00 }, //Denoise off
+    { R_RGB1_GRAY0,         0x01 }, //color
     { SENSOR_UPDATE,        0x80 },
     { 0x0000,               0x00 },
 };
@@ -411,19 +423,29 @@ static const uint16_t vga_regs[][2] = {
     { AVERAGE_MODE,         0x01 },
     { ROW_AVERAGE_MODE,     0x00 },
     { COL_AVERAGE_MODE,     0x00 },
-    { ISP_WOI_EN,           0x00 },
+    { ISP_WOI_EN,           0x01 },
     { HSIZE_L,              0x88 },
     { HSIZE_H,              0x02 },
     { VSIZE_L,              0x98 },
     { VSIZE_H,              0x01 },
-    { WOI_HSIZE_L,          0x80 },
+    { WOI_HSIZE_L,          0x88 },
     { WOI_HSIZE_H,          0x02 },
-    { WOI_VSIZE_L,          0x90 },
+    { WOI_VSIZE_L,          0x98 },
     { WOI_VSIZE_H,          0x01 },
-    { WOI_HSTART_L,         0x04 },
+    { WOI_HSTART_L,         0x00 },
     { WOI_HSTART_H,         0x00 },
-    { WOI_VSTART_L,         0x04 },
+    { WOI_VSTART_L,         0x00 },
     { WOI_VSTART_H,         0x00 },
+    { ISP_WOI_HSIZE_L,      0x80 }, //640
+    { ISP_WOI_HSIZE_H,      0x02 }, //640
+    { ISP_WOI_VSIZE_L,      0x90 }, //400
+    { ISP_WOI_VSIZE_H,      0x01 }, //400
+    { ISP_WOI_HOFFSET_L,    0x04 }, //4
+    { ISP_WOI_HOFFSET_H,    0x00 }, //4
+    { ISP_WOI_VOFFSET_L,    0x04 }, //4
+    { ISP_WOI_VOFFSET_H,    0x00 }, //4
+    { DENOISE_EN,           0x03 }, //Denoise on
+    { R_RGB1_GRAY0,         0x01 }, //color
     { SENSOR_UPDATE,        0x80 },
     { 0x0000,               0x00 },
 };
@@ -433,19 +455,29 @@ static const uint16_t hd_regs[][2] = {
     { AVERAGE_MODE,         0x00 },
     { ROW_AVERAGE_MODE,     0x00 },
     { COL_AVERAGE_MODE,     0x00 },
-    { ISP_WOI_EN,           0x00 },
+    { ISP_WOI_EN,           0x01 },
     { HSIZE_L,              0x10 },
     { HSIZE_H,              0x05 },
     { VSIZE_L,              0x30 },
     { VSIZE_H,              0x03 },
-    { WOI_HSIZE_L,          0x00 },
+    { WOI_HSIZE_L,          0x10 },
     { WOI_HSIZE_H,          0x05 },
-    { WOI_VSIZE_L,          0x20 },
+    { WOI_VSIZE_L,          0x30 },
     { WOI_VSIZE_H,          0x03 },
-    { WOI_HSTART_L,         0x08 },
+    { WOI_HSTART_L,         0x00 },
     { WOI_HSTART_H,         0x00 },
-    { WOI_VSTART_L,         0x08 },
+    { WOI_VSTART_L,         0x00 },
     { WOI_VSTART_H,         0x00 },
+    { ISP_WOI_HSIZE_L,      0x00 }, //1280
+    { ISP_WOI_HSIZE_H,      0x05 }, //1280
+    { ISP_WOI_VSIZE_L,      0x20 }, //800
+    { ISP_WOI_VSIZE_H,      0x03 }, //800
+    { ISP_WOI_HOFFSET_L,    0x08 }, //8
+    { ISP_WOI_HOFFSET_H,    0x00 }, //8
+    { ISP_WOI_VOFFSET_L,    0x08 }, //8
+    { ISP_WOI_VOFFSET_H,    0x00 }, //8
+    { DENOISE_EN,           0x03 }, //Denoise on
+    { R_RGB1_GRAY0,         0x01 }, //color
     { SENSOR_UPDATE,        0x80 },
     { 0x0000,               0x00 },
 };
