@@ -97,7 +97,7 @@ export OMV_LIB_DIR:=$(TOP_DIR)/scripts/libraries
 export FROZEN_MANIFEST:=$(OMV_BOARD_CONFIG_DIR)/manifest.py
 
 # Prepend SDK bin directories to PATH.
-export STEDGEAI_CORE := $(SDK_DIR)/stedgeai
+STEDGEAI_CORE := $(SDK_DIR)/stedgeai
 STEDGEAI_UTIL := Utilities/$(if $(filter Darwin,$(shell uname -s)),macarm,linux)
 export PATH := $(SDK_DIR)/gcc/bin:$(SDK_DIR)/llvm/bin:$(SDK_DIR)/cmake/bin:$(SDK_DIR)/python/bin:$(SDK_DIR)/stcubeprog/bin:$(STEDGEAI_CORE)/$(STEDGEAI_UTIL):$(SDK_DIR)/bin:$(SDK_DIR)/fvp/bin:$(PATH)
 
