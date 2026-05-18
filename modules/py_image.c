@@ -2609,8 +2609,10 @@ static MP_DEFINE_CONST_FUN_OBJ_KW(py_image_bilateral_obj, 2, py_image_bilateral)
 
 #ifdef IMLIB_ENABLE_LINPOLAR
 static mp_obj_t py_image_linpolar(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
-    enum { ARG_reverse };
+    enum { ARG_x, ARG_y, ARG_reverse };
     static const mp_arg_t allowed_args[] = {
+        { MP_QSTR_x,       MP_ARG_OBJ | MP_ARG_KW_ONLY, {.u_rom_obj = MP_ROM_NONE} },
+        { MP_QSTR_y,       MP_ARG_OBJ | MP_ARG_KW_ONLY, {.u_rom_obj = MP_ROM_NONE} },
         { MP_QSTR_reverse, MP_ARG_BOOL | MP_ARG_KW_ONLY, {.u_bool = false} },
     };
 
@@ -2620,7 +2622,10 @@ static mp_obj_t py_image_linpolar(size_t n_args, const mp_obj_t *pos_args, mp_ma
     mp_arg_val_t args[MP_ARRAY_SIZE(allowed_args)];
     mp_arg_parse_all(n_args - 1, pos_args + 1, kw_args, MP_ARRAY_SIZE(allowed_args), allowed_args, args);
 
-    imlib_logpolar(image, true, args[ARG_reverse].u_bool);
+    int cx = (args[ARG_x].u_obj == mp_const_none) ? (image->w / 2) : mp_obj_get_int(args[ARG_x].u_obj);
+    int cy = (args[ARG_y].u_obj == mp_const_none) ? (image->h / 2) : mp_obj_get_int(args[ARG_y].u_obj);
+
+    imlib_logpolar(image, cx, cy, true, args[ARG_reverse].u_bool);
     return pos_args[0];
 }
 static MP_DEFINE_CONST_FUN_OBJ_KW(py_image_linpolar_obj, 1, py_image_linpolar);
@@ -2628,8 +2633,10 @@ static MP_DEFINE_CONST_FUN_OBJ_KW(py_image_linpolar_obj, 1, py_image_linpolar);
 
 #ifdef IMLIB_ENABLE_LOGPOLAR
 static mp_obj_t py_image_logpolar(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
-    enum { ARG_reverse };
+    enum { ARG_x, ARG_y, ARG_reverse };
     static const mp_arg_t allowed_args[] = {
+        { MP_QSTR_x,       MP_ARG_OBJ | MP_ARG_KW_ONLY, {.u_rom_obj = MP_ROM_NONE} },
+        { MP_QSTR_y,       MP_ARG_OBJ | MP_ARG_KW_ONLY, {.u_rom_obj = MP_ROM_NONE} },
         { MP_QSTR_reverse, MP_ARG_BOOL | MP_ARG_KW_ONLY, {.u_bool = false} },
     };
 
@@ -2639,7 +2646,10 @@ static mp_obj_t py_image_logpolar(size_t n_args, const mp_obj_t *pos_args, mp_ma
     mp_arg_val_t args[MP_ARRAY_SIZE(allowed_args)];
     mp_arg_parse_all(n_args - 1, pos_args + 1, kw_args, MP_ARRAY_SIZE(allowed_args), allowed_args, args);
 
-    imlib_logpolar(image, false, args[ARG_reverse].u_bool);
+    int cx = (args[ARG_x].u_obj == mp_const_none) ? (image->w / 2) : mp_obj_get_int(args[ARG_x].u_obj);
+    int cy = (args[ARG_y].u_obj == mp_const_none) ? (image->h / 2) : mp_obj_get_int(args[ARG_y].u_obj);
+
+    imlib_logpolar(image, cx, cy, false, args[ARG_reverse].u_bool);
     return pos_args[0];
 }
 static MP_DEFINE_CONST_FUN_OBJ_KW(py_image_logpolar_obj, 1, py_image_logpolar);

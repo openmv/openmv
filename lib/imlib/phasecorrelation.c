@@ -26,7 +26,7 @@
 #include "imlib.h"
 #include "fft.h"
 
-void imlib_logpolar_int(image_t *dst, image_t *src, rectangle_t *roi, bool linear, bool reverse) {
+void imlib_logpolar_int(image_t *dst, image_t *src, rectangle_t *roi, int cx, int cy, bool linear, bool reverse) {
     int w = roi->w; // == dst_w
     int h = roi->h; // == dst_h
     int w_2 = w / 2;
@@ -40,7 +40,7 @@ void imlib_logpolar_int(image_t *dst, image_t *src, rectangle_t *roi, bool linea
     const float m_pi_2_0 = 2.0f * IMLIB_PI;
     const float m_pi_2_0_d = IM_RAD2DEG(m_pi_2_0);
     const int m_pi_2_0_d_i = m_pi_2_0_d;
-    float theta_scale_d = m_pi_2_0_d / (w - 2);
+    float theta_scale_d = m_pi_2_0_d / w;
     float theta_scale_inv = w / m_pi_2_0;
 
     if (!reverse) {
@@ -49,31 +49,31 @@ void imlib_logpolar_int(image_t *dst, image_t *src, rectangle_t *roi, bool linea
         switch (src->pixfmt) {
             case PIXFORMAT_BINARY: {
                 uint32_t *tmp = (uint32_t *) src->data;
-                int tmp_w = src->w, tmp_h = src->h, tmp_x = roi->x + w_2 - 1, tmp_y = roi->y + h_2;
+                int tmp_w = src->w;
+                int tmp_h = src->h;
 
-                for (int y = 0, yy = h; y < yy; y++) {
+                for (int y = 0; y < h; y++) {
+                    imlib_poll_events();
                     uint32_t *row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(dst, y);
                     float rho = y * rho_scale;
                     if (!linear) {
                         rho = fast_expf(rho);
                     }
-                    for (int x = 0, xx = w_2; x < xx; x++) {
-
+                    for (int x = 0; x < w; x++) {
                         int theta = fast_roundf(m_pi_1_5_d - (x * theta_scale_d));
-                        if (theta < 0) {
+                        while (theta < 0) {
                             theta += m_pi_2_0_d_i;            // wrap for table access
                         }
-                        int sourceX = tmp_x + fast_roundf(rho * cos_table[theta]); // rounding is necessary
-                        int sourceY = tmp_y + fast_roundf(rho * sin_table[theta]); // rounding is necessary
+                        while (theta >= m_pi_2_0_d_i) {
+                            theta -= m_pi_2_0_d_i;
+                        }
+                        int sourceX = cx + fast_roundf(rho * cos_table[theta]); // rounding is necessary
+                        int sourceY = cy + fast_roundf(rho * sin_table[theta]); // rounding is necessary
 
-                        if ((0 <= sourceX) && (0 <= sourceY) && (sourceY < tmp_h)) {
-                            // plot the 2 symmetrical pixels
-                            uint32_t *ptr, pixel;
-                            ptr = tmp + (((tmp_w + UINT32_T_MASK) >> UINT32_T_SHIFT) * sourceY);
-                            pixel = IMAGE_GET_BINARY_PIXEL_FAST(ptr, sourceX);
+                        if ((0 <= sourceX) && (sourceX < tmp_w) && (0 <= sourceY) && (sourceY < tmp_h)) {
+                            uint32_t *ptr = tmp + (((tmp_w + UINT32_T_MASK) >> UINT32_T_SHIFT) * sourceY);
+                            uint32_t pixel = IMAGE_GET_BINARY_PIXEL_FAST(ptr, sourceX);
                             IMAGE_PUT_BINARY_PIXEL_FAST(row_ptr, x, pixel);
-                            pixel = IMAGE_GET_BINARY_PIXEL_FAST(ptr, tmp_w - 1 - sourceX);
-                            IMAGE_PUT_BINARY_PIXEL_FAST(row_ptr, w - 1 - x, pixel);
                         }
                     }
                 }
@@ -81,31 +81,31 @@ void imlib_logpolar_int(image_t *dst, image_t *src, rectangle_t *roi, bool linea
             }
             case PIXFORMAT_GRAYSCALE: {
                 uint8_t *tmp = (uint8_t *) src->data;
-                int tmp_w = src->w, tmp_h = src->h, tmp_x = roi->x + w_2 - 1, tmp_y = roi->y + h_2;
+                int tmp_w = src->w;
+                int tmp_h = src->h;
 
-                for (int y = 0, yy = h; y < yy; y++) {
+                for (int y = 0; y < h; y++) {
+                    imlib_poll_events();
                     uint8_t *row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(dst, y);
                     float rho = y * rho_scale;
                     if (!linear) {
                         rho = fast_expf(rho);
                     }
-                    for (int x = 0, xx = w_2; x < xx; x++) {
+                    for (int x = 0; x < w; x++) {
 
                         int theta = fast_roundf(m_pi_1_5_d - (x * theta_scale_d));
-                        if (theta < 0) {
+                        while (theta < 0) {
                             theta += m_pi_2_0_d_i;            // wrap for table access
                         }
-                        int sourceX = tmp_x + fast_roundf(rho * cos_table[theta]); // rounding is necessary
-                        int sourceY = tmp_y + fast_roundf(rho * sin_table[theta]); // rounding is necessary
+                        while (theta >= m_pi_2_0_d_i) {
+                            theta -= m_pi_2_0_d_i;
+                        }
+                        int sourceX = cx + fast_roundf(rho * cos_table[theta]); // rounding is necessary
+                        int sourceY = cy + fast_roundf(rho * sin_table[theta]); // rounding is necessary
 
-                        if ((0 <= sourceX) && (0 <= sourceY) && (sourceY < tmp_h)) {
-                            // plot the 2 symmetrical pixels
-                            uint8_t *ptr, pixel;
-                            ptr = tmp + (tmp_w * sourceY);
-                            pixel = ptr[sourceX];
-                            row_ptr[x] = pixel;
-                            pixel = ptr[tmp_w - 1 - sourceX];
-                            row_ptr[w - 1 - x] = pixel;
+                        if ((0 <= sourceX) && (sourceX < tmp_w) && (0 <= sourceY) && (sourceY < tmp_h)) {
+                            uint8_t *ptr = tmp + (tmp_w * sourceY);
+                            row_ptr[x] = ptr[sourceX];
                         }
                     }
                 }
@@ -113,31 +113,31 @@ void imlib_logpolar_int(image_t *dst, image_t *src, rectangle_t *roi, bool linea
             }
             case PIXFORMAT_RGB565: {
                 uint16_t *tmp = (uint16_t *) src->data;
-                int tmp_w = src->w, tmp_h = src->h, tmp_x = roi->x + w_2 - 1, tmp_y = roi->y + h_2;
+                int tmp_w = src->w;
+                int tmp_h = src->h;
 
-                for (int y = 0, yy = h; y < yy; y++) {
+                for (int y = 0; y < h; y++) {
+                    imlib_poll_events();
                     uint16_t *row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(dst, y);
                     float rho = y * rho_scale;
                     if (!linear) {
                         rho = fast_expf(rho);
                     }
-                    for (int x = 0, xx = w_2; x < xx; x++) {
+                    for (int x = 0; x < w; x++) {
 
                         int theta = fast_roundf(m_pi_1_5_d - (x * theta_scale_d));
-                        if (theta < 0) {
+                        while (theta < 0) {
                             theta += m_pi_2_0_d_i;            // wrap for table access
                         }
-                        int sourceX = tmp_x + fast_roundf(rho * cos_table[theta]); // rounding is necessary
-                        int sourceY = tmp_y + fast_roundf(rho * sin_table[theta]); // rounding is necessary
+                        while (theta >= m_pi_2_0_d_i) {
+                            theta -= m_pi_2_0_d_i;
+                        }
+                        int sourceX = cx + fast_roundf(rho * cos_table[theta]); // rounding is necessary
+                        int sourceY = cy + fast_roundf(rho * sin_table[theta]); // rounding is necessary
 
-                        if ((0 <= sourceX) && (0 <= sourceY) && (sourceY < tmp_h)) {
-                            // plot the 2 symmetrical pixels
-                            uint16_t *ptr, pixel;
-                            ptr = tmp + (tmp_w * sourceY);
-                            pixel = ptr[sourceX];
-                            row_ptr[x] = pixel;
-                            pixel = ptr[tmp_w - 1 - sourceX];
-                            row_ptr[w - 1 - x] = pixel;
+                        if ((0 <= sourceX) && (sourceX < tmp_w) && (0 <= sourceY) && (sourceY < tmp_h)) {
+                            uint16_t *ptr = tmp + (tmp_w * sourceY);
+                            row_ptr[x] = ptr[sourceX];
                         }
                     }
                 }
@@ -152,96 +152,118 @@ void imlib_logpolar_int(image_t *dst, image_t *src, rectangle_t *roi, bool linea
         switch (src->pixfmt) {
             case PIXFORMAT_BINARY: {
                 uint32_t *tmp = (uint32_t *) src->data;
-                int tmp_w = src->w, tmp_x = roi->x, tmp_y = roi->y;
+                int tmp_w = src->w;
+                int tmp_h = src->h;
+                int tmp_x = roi->x;
+                int tmp_y = roi->y;
 
-                for (int y = 0, yy = h; y < yy; y++) {
+                for (int y = 0; y < h; y++) {
+                    imlib_poll_events();
                     uint32_t *row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(dst, y);
-                    int y_2 = y - h_2;
+                    int y_2 = y - cy;
                     int y_2_2 = y_2 * y_2;
 
-                    for (int x = 0, xx = w_2; x < xx; x++) {
-                        int x_2 = x - w_2;
+                    for (int x = 0; x < w; x++) {
+                        int x_2 = x - cx;
                         int x_2_2 = x_2 * x_2;
 
                         float rho = fast_sqrtf(x_2_2 + y_2_2);
                         if (!linear) {
                             rho = fast_log(rho);
                         }
-                        float theta = m_pi_1_5 - fast_atan2f(y_2, x_2);
+                        float theta = m_pi_1_5 - fast_atan2f(y_2, x_2 ? x_2 : -1);
                         int sourceX = tmp_x + fast_roundf(theta * theta_scale_inv); // rounding is necessary
                         int sourceY = tmp_y + fast_roundf(rho * rho_scale_inv); // rounding is necessary
 
-                        // plot the 2 symmetrical pixels
-                        uint32_t *ptr, pixel;
-                        ptr = tmp + (((tmp_w + UINT32_T_MASK) >> UINT32_T_SHIFT) * sourceY);
-                        pixel = IMAGE_GET_BINARY_PIXEL_FAST(ptr, sourceX);
-                        IMAGE_PUT_BINARY_PIXEL_FAST(row_ptr, x, pixel);
-                        pixel = IMAGE_GET_BINARY_PIXEL_FAST(ptr, tmp_w - 1 - sourceX);
-                        IMAGE_PUT_BINARY_PIXEL_FAST(row_ptr, w - 1 - x, pixel);
+                        while (sourceX < 0) {
+                            sourceX += w;
+                        }
+                        while (sourceX >= w) {
+                            sourceX -= w;
+                        }
+                        if ((0 <= sourceY) && (sourceY < tmp_h)) {
+                            uint32_t *ptr = tmp + (((tmp_w + UINT32_T_MASK) >> UINT32_T_SHIFT) * sourceY);
+                            uint32_t pixel = IMAGE_GET_BINARY_PIXEL_FAST(ptr, sourceX);
+                            IMAGE_PUT_BINARY_PIXEL_FAST(row_ptr, x, pixel);
+                        }
                     }
                 }
                 break;
             }
             case PIXFORMAT_GRAYSCALE: {
                 uint8_t *tmp = (uint8_t *) src->data;
-                int tmp_w = src->w, tmp_x = roi->x, tmp_y = roi->y;
+                int tmp_w = src->w;
+                int tmp_h = src->h;
+                int tmp_x = roi->x;
+                int tmp_y = roi->y;
 
-                for (int y = 0, yy = h; y < yy; y++) {
+                for (int y = 0; y < h; y++) {
+                    imlib_poll_events();
                     uint8_t *row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(dst, y);
-                    int y_2 = y - h_2;
+                    int y_2 = y - cy;
                     int y_2_2 = y_2 * y_2;
 
-                    for (int x = 0, xx = w_2; x < xx; x++) {
-                        int x_2 = x - w_2;
+                    for (int x = 0; x < w; x++) {
+                        int x_2 = x - cx;
                         int x_2_2 = x_2 * x_2;
 
                         float rho = fast_sqrtf(x_2_2 + y_2_2);
                         if (!linear) {
                             rho = fast_log(rho);
                         }
-                        float theta = m_pi_1_5 - fast_atan2f(y_2, x_2);
+                        float theta = m_pi_1_5 - fast_atan2f(y_2, x_2 ? x_2 : -1);
                         int sourceX = tmp_x + fast_roundf(theta * theta_scale_inv); // rounding is necessary
                         int sourceY = tmp_y + fast_roundf(rho * rho_scale_inv); // rounding is necessary
 
-                        // plot the 2 symmetrical pixels
-                        uint8_t *ptr, pixel;
-                        ptr = tmp + (tmp_w * sourceY);
-                        pixel = ptr[sourceX];
-                        row_ptr[x] = pixel;
-                        pixel = ptr[tmp_w - 1 - sourceX];
-                        row_ptr[w - 1 - x] = pixel;
+                        while (sourceX < 0) {
+                            sourceX += w;
+                        }
+                        while (sourceX >= w) {
+                            sourceX -= w;
+                        }
+                        if ((0 <= sourceY) && (sourceY < tmp_h)) {
+                            uint8_t *ptr = tmp + (tmp_w * sourceY);
+                            row_ptr[x] = ptr[sourceX];
+                        }
                     }
                 }
                 break;
             }
             case PIXFORMAT_RGB565: {
                 uint16_t *tmp = (uint16_t *) src->data;
-                int tmp_w = src->w, tmp_x = roi->x, tmp_y = roi->y;
+                int tmp_w = src->w;
+                int tmp_h = src->h;
+                int tmp_x = roi->x;
+                int tmp_y = roi->y;
 
-                for (int y = 0, yy = h; y < yy; y++) {
+                for (int y = 0; y < h; y++) {
+                    imlib_poll_events();
                     uint16_t *row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(dst, y);
-                    int y_2 = y - h_2;
+                    int y_2 = y - cy;
                     int y_2_2 = y_2 * y_2;
 
-                    for (int x = 0, xx = w_2; x < xx; x++) {
-                        int x_2 = x - w_2;
+                    for (int x = 0; x < w; x++) {
+                        int x_2 = x - cx;
                         int x_2_2 = x_2 * x_2;
 
                         float rho = fast_sqrtf(x_2_2 + y_2_2);
                         if (!linear) {
                             rho = fast_log(rho);
                         }
-                        float theta = m_pi_1_5 - fast_atan2f(y_2, x_2);
+                        float theta = m_pi_1_5 - fast_atan2f(y_2, x_2 ? x_2 : -1);
                         int sourceX = tmp_x + fast_roundf(theta * theta_scale_inv); // rounding is necessary
                         int sourceY = tmp_y + fast_roundf(rho * rho_scale_inv); // rounding is necessary
 
-                        // plot the 2 symmetrical pixels
-                        uint16_t *ptr, pixel;
-                        ptr = tmp + (tmp_w * sourceY);
-                        pixel = ptr[sourceX];
-                        row_ptr[x] = pixel;
-                        pixel = ptr[tmp_w - 1 - sourceX];
-                        row_ptr[w - 1 - x] = pixel;
+                        while (sourceX < 0) {
+                            sourceX += w;
+                        }
+                        while (sourceX >= w) {
+                            sourceX -= w;
+                        }
+                        if ((0 <= sourceY) && (sourceY < tmp_h)) {
+                            uint16_t *ptr = tmp + (tmp_w * sourceY);
+                            row_ptr[x] = ptr[sourceX];
+                        }
                     }
                 }
                 break;
@@ -254,7 +276,7 @@ void imlib_logpolar_int(image_t *dst, image_t *src, rectangle_t *roi, bool linea
 }
 
 #if defined(IMLIB_ENABLE_LOGPOLAR) || defined(IMLIB_ENABLE_LINPOLAR)
-void imlib_logpolar(image_t *img, bool linear, bool reverse) {
+void imlib_logpolar(image_t *img, int cx, int cy, bool linear, bool reverse) {
     image_t img_2;
     img_2.w = img->w;
     img_2.h = img->h;
@@ -271,7 +293,7 @@ void imlib_logpolar(image_t *img, bool linear, bool reverse) {
     memcpy(img_2.data, img->data, size);
     memset(img->data, 0, size);
 
-    imlib_logpolar_int(img, &img_2, &rect, linear, reverse);
+    imlib_logpolar_int(img, &img_2, &rect, cx, cy, linear, reverse);
 
     uma_free(img_2.data);
 }
@@ -498,7 +520,9 @@ void imlib_phasecorrelate(image_t *img0,
             img0alt.h = roi0_fixed.h;
             img0alt.pixfmt = img0_fixed.pixfmt;
             img0alt.data = uma_calloc(image_size(&img0alt), 0);
-            imlib_logpolar_int(&img0alt, &img0_fixed, &roi0_fixed, false, false);
+            imlib_logpolar_int(&img0alt, &img0_fixed, &roi0_fixed,
+                               roi0_fixed.x + (roi0_fixed.w / 2), roi0_fixed.y + (roi0_fixed.h / 2),
+                               false, false);
             roi0alt.x = 0;
             roi0alt.y = 0;
             roi0alt.w = roi0_fixed.w;
@@ -508,7 +532,9 @@ void imlib_phasecorrelate(image_t *img0,
             img1alt.h = roi1->h;
             img1alt.pixfmt = img1->pixfmt;
             img1alt.data = uma_calloc(image_size(&img1alt), 0);
-            imlib_logpolar_int(&img1alt, img1, roi1, false, false);
+            imlib_logpolar_int(&img1alt, img1, roi1,
+                               roi1->x + (roi1->w / 2), roi1->y + (roi1->h / 2),
+                               false, false);
             roi1alt.x = 0;
             roi1alt.y = 0;
             roi1alt.w = roi1->w;
