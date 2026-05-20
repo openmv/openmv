@@ -168,7 +168,7 @@
 
 #if OMV_PAG7936_MIPI_CSI2
 #define PAG7936_WIDTH_ALIGN         (8)
-#define PAG7936_QVGA_FPS_MAX        (480)
+#define PAG7936_QVGA_FPS_MAX        (470)
 #define PAG7936_VGA_FPS_MAX         (240)
 #define PAG7936_HD_FPS_MAX          (120)
 #else
