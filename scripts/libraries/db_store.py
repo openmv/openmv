@@ -67,20 +67,20 @@ class StoreUtils:
                 logger.error(f"[FS] -----  Failed to read file : {filepath}, e: {e}")
         return False, None
 
-    async def save_file(self, data, filename):
+    async def save_file(self, data, filepath):
         logger.info(
-            f"[FS] Saving datafile to {filename}, datasize: {len(data)} bytes..."
+            f"[FS] Saving datafile to {filepath}, datasize: {len(data)} bytes..."
         )
         try:
 
             for i in range(3):
-                succ = await self.save_file_once(data, filename)
+                succ = await self.save_file_once(data, filepath)
                 if succ:
                     await asyncio.sleep(2)
-                    logger.info(f"Writtend : {filename}")
-                    readable, _ = await self.read_file_once(filename)
+                    logger.info(f"Writtend : {filepath}")
+                    readable, _ = await self.read_file_once(filepath)
                     if readable:
-                        logger.info(f"Writtend and readable : {filename}")
+                        logger.info(f"Writtend and readable : {filepath}")
                         # notify DbStore-style tracker if present
                         if hasattr(self, "register_fs_succ"):
                             try:
@@ -89,11 +89,11 @@ class StoreUtils:
                                 logger.error(f"[FS] register_fs_succ(True) failed: {e}")
                         return True
                     else:
-                        logger.error(f"Writtend and NOT readable : {filename}")
+                        logger.error(f"Writtend and NOT readable : {filepath}")
                 else:
-                    logger.error(f"Not able to write {filename}")
+                    logger.error(f"Not able to write {filepath}")
 
-            logger.error(f"Writing failed after retries for {filename}")
+            logger.error(f"Writing failed after retries for {filepath}")
             if hasattr(self, "register_fs_succ"):
                 try:
                     self.register_fs_succ(False)
@@ -101,7 +101,7 @@ class StoreUtils:
                     logger.error(f"[FS] register_fs_succ(False) failed: {e}")
             return False
         except Exception as e:
-            logger.error(f"Some unknown Error saving file {filename}: {e}")
+            logger.error(f"Some unknown Error saving file {filepath}: {e}")
             if hasattr(self, "register_fs_succ"):
                 try:
                     self.register_fs_succ(False)
@@ -221,7 +221,7 @@ class DbStore(StoreUtils):
             with open(test_file, "wb") as f:
                 f.write(b"ok")
             os.remove(test_file)
-            
+
             test_file = "/sdcard/processid"
             with open(test_file, "wb") as f:
                 self.process_id_str.encode()
@@ -521,7 +521,7 @@ class DbStore(StoreUtils):
 
         # Housekeeping counters
         self.image_queued_count = min(self.image_queued_count + 1, self.IMG_LIST_CAPACITY)
-        logger.info(f"Image added for db_queue, new length: {self.image_queued_count}")
+        logger.info(f"Image added for db_queue, new length: {self.image_queued_count}, {self.process_id_str}_{creator_id}_{epoch_ms}.enc")
 
         # Optionally persist the encrypted image to filesystem (fire-and-forget).
         if self.sdcard_available and save_file:

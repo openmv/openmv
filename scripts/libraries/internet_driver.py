@@ -43,6 +43,7 @@ except ImportError:
 # Configuration
 UART_ID = 1
 BAUDRATE = 115200
+INTERNET_RECHECK_INTERVAL_SEC = 15 * 60  # 15 minutes
 
 
 class _UARTSerialAdapter:
@@ -130,26 +131,9 @@ class InternetDriver:
             self._last_fail_count = 0
             self.is_busy = False
 
-            # PDP init up to 3 tries, then one upload validation (make_upload_test).
-            # has_internet True only if both succeed.
             self.has_internet = False
-            init_ok = False
-            init_error = None
-            for attempt in range(1, 4):
-                init_success, init_error = self.initialize_internet()
-                if init_success:
-                    init_ok = True
-                    break
-                print(f"[CELL] Initial internet init failed (attempt {attempt}/3): {init_error}")
-                if attempt < 3:
-                    time.sleep(2)
-            if not init_ok:
-                print(f"[CELL] Initial internet init failed after 3 attempts: {init_error}")
-            else:
-                upload_ok = self.make_upload_test()
-                self.has_internet = upload_ok
-                if not upload_ok:
-                    print("[CELL] has_internet=False: upload validation failed (<2/3 OK)")
+            self.establish_internet()
+            logger.info("Temp Now init finished")
         except Exception as e:
             print(f"Error in InternetDriver init: {e}")
             self.has_internet = False
@@ -283,6 +267,25 @@ class InternetDriver:
         self._uploads_since_health_check = 0
         print("EC200 HTTP client initialized successfully")
         return True, None
+
+    def establish_internet(self, retry_count=3):
+        init_ok = False
+        init_error = None
+        for attempt in range(1, retry_count+1):
+            init_success, init_error = self.initialize_internet()
+            if init_success:
+                init_ok = True
+                break
+            print(f"[CELL] Initial internet init failed (attempt {attempt}/{retry_count}: {init_error}")
+            if attempt < retry_count:
+                time.sleep(2)
+        if not init_ok:
+            print(f"[CELL] Initial internet init failed after {retry_count} attempts: {init_error}")
+        else:
+            upload_ok = self.make_upload_test()
+            self.has_internet = upload_ok
+            if not upload_ok:
+                print("[CELL] has_internet=False: upload validation failed (<2/3 OK)")
 
     def _configure_http_context(self):
         """
@@ -607,15 +610,15 @@ class InternetDriver:
     def get_image_payload(self):
         """Capture a JPEG from the camera, hybrid-encrypt, return API payload dict."""
         img = sensor.snapshot()
-        jpeg_bytearray = img.compress(quality=5)
+        jpeg_bytearray = img.compress(quality=25)
         imgbytes = bytes(jpeg_bytearray)
         encnode = enc.EncNode(self.machine_id)
         enc_msgbytes = enc.encrypt_hybrid(imgbytes, encnode.get_pub_key())
-        imgbytes = ubinascii.b2a_base64(enc_msgbytes).rstrip().decode()
+        img_b64_str = ubinascii.b2a_base64(enc_msgbytes).rstrip().decode()
         return {
             "machine_id": self.machine_id,
             "msg_typ": "event",
-            "data": imgbytes,
+            "data": img_b64_str,
             "epoch_ms": utime.time_ns() // 1_000_000,
             "enc": True,
         }

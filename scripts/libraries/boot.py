@@ -1,9 +1,3 @@
-import time
-for i in range(10):
-    print(f"Booting i ...{i}")
-    time.sleep(1)
-print("Checking imports")
-
 import logger
 from machine import RTC, UART, Pin, LED
 import machine
@@ -15,6 +9,7 @@ import sensor
 import image
 import os                   # file system access
 import sys
+import time
 import binascii
 import struct
 import sys
@@ -25,10 +20,10 @@ import gc                   # garbage collection for memory management
 import hashlib
 import enc
 import config
-from utils import int_to_nbytes
+from utils import int_to_nbytes, pack_image_meta_header
 from sx1262 import SX1262
 from gps_driver import GPSDriver
-from internet_driver import InternetDriver
+from internet_driver import InternetDriver, INTERNET_RECHECK_INTERVAL_SEC
 from _sx126x import ERR_NONE, ERR_CRC_MISMATCH, ERR_UNKNOWN, SX126X_IRQ_CRC_ERR, SX126X_IRQ_HEADER_ERR, SX126X_IRQ_RX_DONE, SX126X_IRQ_TIMEOUT, SX126X_IRQ_TX_DONE, SX126X_SYNC_WORD_PRIVATE, SX126X_IRQ_ALL
 import detect
 from detect import PIR_PIN, turn_ON_IR_emitter, turn_OFF_IR_emitter
@@ -47,16 +42,12 @@ APP_DEBUGGING = False
 SAVE_LOGS = False
 MAX_DATA_QUEUE_SIZE = 250
 
-COMMAN_CENTER_ADDRS = [221, 222, 228]
-IMAGE_LIMIT = None
-if not PRODUCTION_MODE:
-    IMAGE_LIMIT = 100 # 10,50,200, or None
 DECRYPT_IMAGE_ON_HOPS = False
 if not PRODUCTION_MODE:
     DECRYPT_IMAGE_ON_HOPS = True
 FLAKINESS = 0
 ALERT_TEXT_PAUSED = True
-USE_PIR_SENSOR = True
+USE_PIR_SENSOR = False
 # -----------------------------------▲▲▲▲▲-----------------------------------
 
 def get_rand(len=3):
@@ -1391,14 +1382,32 @@ async def init_tracx_internet():
     # Hold UART lock during init to avoid conflict with GPS
     async with tracx_uart_lock:
         internet_module = InternetDriver(uart=tracx_uart)
-        # Driver should always expose `initialized`, and `initialize_internet()` always returns (success, error).
         if not internet_module.initialized:
-            # init_success, init_error = internet_module.initialize_internet()
-            # if not init_success:
-            logger.info(f"[CELL] Internet initialization failed")
+            logger.info(f"[CELL] Internet initialization failed; will retry periodically")
             return False
     logger.info("[CELL] Internet module ready")
     return True
+
+async def keep_checking_internet():
+    """Retry establish_internet() every INTERNET_RECHECK_INTERVAL_SEC while offline."""
+    global internet_module, tracx_uart_lock, network_paths
+    if internet_module and internet_module.has_internet:
+        logger.info("[CELL] Internet health loop started in background (already online)")
+    else:
+        logger.info("[CELL] Internet health loop started in background currenlty offline)")
+    while True:
+        await asyncio.sleep(INTERNET_RECHECK_INTERVAL_SEC)
+        if internet_module and internet_module.has_internet:
+            continue
+        logger.info("[CELL] Periodic internet check (has_internet=False)...")
+        try:
+            async with tracx_uart_lock:
+                internet_module.establish_internet(retry_count=2)
+                if internet_module and internet_module.has_internet:
+                    network_paths = []
+                    logger.info("[CELL] ᯤᯤᯤᯤᯤᯤ❯❯ Now established, device will as as CC now... ❮❮ᯤᯤᯤᯤᯤᯤ")
+        except Exception as e:
+            logger.warning(f"[CELL] Periodic internet check failed: {e}")
 
 async def upload_payload_to_server(payload, msg_typ, creator): # FINAL
     """Unified payload upload: sends data to cloud via cellular (for command center)."""
@@ -1454,7 +1463,7 @@ async def send_file_main(msg_typ, creator, enc_msgbytes, epoch_ms, md5, encrypti
         return False
 
     log_tag = "[IMG]"
-    server_msg_typ = "event"
+    server_msg_typ = "F"
     file_label = f"{creator}_{epoch_ms}.enc"
     sent_succ = False
 
@@ -1463,13 +1472,13 @@ async def send_file_main(msg_typ, creator, enc_msgbytes, epoch_ms, md5, encrypti
             logger.warning(f"{log_tag} Internet module is busy, skipping upload...")
             return False
         if isinstance(enc_msgbytes, bytes) or isinstance(enc_msgbytes, bytearray) or isinstance(enc_msgbytes, memoryview):
-            data_b64 = ubinascii.b2a_base64(enc_msgbytes).rstrip().decode()
+            data_b64_str = ubinascii.b2a_base64(enc_msgbytes).rstrip().decode()
         else:
-            data_b64 = enc_msgbytes
+            data_b64_str = enc_msgbytes
         server_payload = {
             "machine_id": creator,
             "msg_typ": server_msg_typ,
-            "data": data_b64,
+            "data": data_b64_str,
             "epoch_ms": epoch_ms,
             "enc": encryption_enabled,
         }
@@ -1545,21 +1554,21 @@ async def hb_process(msg_uid, msgbytes, sender):
 
         # Send raw heartbeat data (encrypted or not) to cloud
         if isinstance(msgbytes, bytes):
-            hb_data = ubinascii.b2a_base64(msgbytes)
+            hb_b64_str = ubinascii.b2a_base64(msgbytes).rstrip().decode()
         else:
-            hb_data = msgbytes
+            hb_b64_str = msgbytes
 
         epoch_ms = get_epoch_ms()
         server_payload =  {
             "machine_id": creator,
             "msg_typ":  "H",
-            "data": hb_data,
+            "data": hb_b64_str,
             "epoch_ms": epoch_ms,
             "enc": ENCRYPTION_ENABLED
         }
 
         logger.info(f"[HB] Uploading raw heartbeat data of length {len(msgbytes)} bytes...")
-        asyncio.create_task(upload_payload_to_server(server_payload, "heartbeat", creator))
+        asyncio.create_task(upload_payload_to_server(server_payload, "H", creator))
         if ENCRYPTION_ENABLED and is_rsa_encrypted("H"):
             try:
                 decrypted_msg = enc.decrypt_rsa(msgbytes, encnode.get_prv_key(creator))
@@ -1626,9 +1635,9 @@ async def _send_file_and_account(event_epoch_ms, enc_msgbytes, next_dst):
 HIGH_TARGET_SIZE = 45 * 1024
 LOW_TARGET_SIZE = 35 * 1024
 HIGH_COMP_QUALITY = 80
-MIN_COMP_QUALITY = 5
+MIN_COMP_QUALITY = 15
 
-global_comp_quality = 5
+global_comp_quality = 20
 
 def capture_image():
     """Capture one image, store raw copy, compress, and auto-adjust global quality."""
@@ -1638,15 +1647,15 @@ def capture_image():
 
     turn_ON_IR_emitter()
     try:
-        img = sensor.snapshot()
-        sensor.get_fb().replace(img)
+        img_snapshot = sensor.snapshot()
+        sensor.get_fb().replace(img_snapshot)
         sensor.flush()
 
         img_capture_count += 1
         img_file_counter += 1
         event_epoch_ms = get_epoch_ms() + img_file_counter
 
-        jpeg_bytearray = img.compress(quality=global_comp_quality)
+        jpeg_bytearray = img_snapshot.compress(quality=global_comp_quality)
         size = len(jpeg_bytearray)
         logger.info(
             f"Compressed image size: {size}, compress_quality-{global_comp_quality}"
@@ -1657,7 +1666,7 @@ def capture_image():
         if size < LOW_TARGET_SIZE:
             global_comp_quality = min(HIGH_COMP_QUALITY, global_comp_quality + 5)
 
-        return img, bytes(jpeg_bytearray), event_epoch_ms
+        return img_snapshot, bytes(jpeg_bytearray), event_epoch_ms
     finally:
         turn_OFF_IR_emitter()
 
@@ -1673,16 +1682,18 @@ async def person_detection_loop():
     global global_comp_quality
     global HIGH_COMP_QUALITY, MIN_COMP_QUALITY, HIGH_TARGET_SIZE, LOW_TARGET_SIZE
     global USE_PIR_SENSOR
+    global gps_module
 
     PIR_PIN.irq(trigger=Pin.IRQ_RISING, handler=pir_interrupt_handler)
 
-    BURST_SIZE = 1
+    BURST_SIZE = 3
+    BURST_SLEEP_TIME = 2.5
     logger.info(f"[PIR] Burst detection initialized on pin {PIR_PIN} ({BURST_SIZE} images per trigger)")
     while True:
         if is_install_mode:
             await asyncio.sleep(5)
             continue
-        if APP_DISARMED or ((not running_as_cc()) and len(network_paths)==0):
+        if APP_DISARMED or ((not running_as_cc()) and len(network_paths) == 0):
             logger.debug("Not detecting movement because disarmed")
             await asyncio.sleep(5)
             continue
@@ -1690,18 +1701,39 @@ async def person_detection_loop():
             await pir_trigger_event.wait()
             pir_trigger_event.clear()
         pir_burst_in_progress = True
-        logger.info(f"[PIR] 🅾🅾🅾🅾🅾🅾❯❯ Motion detected - capturing {BURST_SIZE} image... ❮❮🅾🅾🅾🅾🅾🅾")
+        logger.info(f"[IMG] ●●●●●●●●●●❯❯ Motion detected - capturing {BURST_SIZE} image... ❮❮●●●●●●●●●●")
 
         try:
-            led.on()
             for i in range(BURST_SIZE):
-                img = None
+                img_snapshot = None
+                sleep_in_bursts = BURST_SLEEP_TIME if i<BURST_SIZE-1 else 0
                 try:
-                    img, imgbytes, event_epoch_ms = capture_image()
-                    db_store.store_image_raw(event_epoch_ms, my_addr, img)
-                    if img is not None:
-                        del img
-                        img = None
+                    led.on()
+                    logger.info(f"[PIR] 🅾🅾🅾🅾🅾🅾❯❯ Capturing {i+1}/{BURST_SIZE} image... ❮❮🅾🅾🅾🅾🅾🅾")
+                    img_snapshot, imgbytes, event_epoch_ms = capture_image()
+                    image_id = get_rand(3)
+                    lat = 0
+                    lon = 0
+                    try:
+                        async with tracx_uart_lock:
+                            lat, lon, _ = gps_module.get_gps_location()
+                    except Exception as e: # Not falat error
+                        logger.warning(f"[PIR] Failed to get GPS location: {e}")
+                    
+                    try:
+                        logger.info(f"[PIR] GPS Data LAT={lat}, LON={lon}")
+                        imgbytes = pack_image_meta_header(
+                            lat, lon, event_epoch_ms, image_id, "F"
+                        ) + imgbytes
+                    except Exception as e:
+                        logger.error(f"[PIR] Failed to pack image meta header: {e}")
+                        img_capture_count -= 1
+                        continue
+
+                    db_store.store_image_raw(event_epoch_ms, my_addr, img_snapshot)
+                    if img_snapshot is not None:
+                        del img_snapshot
+                        img_snapshot = None
 
                     try:
                         enc_msgbytes = encrypt_if_needed("P", imgbytes)
@@ -1717,24 +1749,27 @@ async def person_detection_loop():
                         img_capture_count -= 1
                         continue
 
-
-                    await asyncio.sleep(35 if USE_PIR_SENSOR else 900)
+                    led.off()
+                    await asyncio.sleep(sleep_in_bursts)
                 except Exception as e:
-                    await asyncio.sleep(35 if USE_PIR_SENSOR else 900)
+                    led.off()
+                    await asyncio.sleep(sleep_in_bursts)
                     logger.error(f"[PIR] unexpected error in image taking and saving for burst {i}: {e}")
                 finally:
                     try:
-                        if img is not None:
-                            del img
+                        if img_snapshot is not None:
+                            del img_snapshot
                             gc.collect()
                     except Exception as e:
                         logger.warning(f"warning cleaning up image: {e}, can be ignored...")
+                    led.off()
+            await asyncio.sleep(35 if USE_PIR_SENSOR else 900)
         except Exception as e:
+            await asyncio.sleep(35 if USE_PIR_SENSOR else 900)
             logger.error(f"[PIR] unexpected error in event taking and saving: {e}")
 
         finally:
             pir_burst_in_progress = False
-            led.off()
 
 async def image_sending_loop():
     # Input: None; Output: None (periodically sends queued images across mesh)
@@ -1753,7 +1788,7 @@ async def image_sending_loop():
             continue
         logger.debug(f"Image sending outer loop, size of img list = {db_store.get_img_queued_count()}")
         if db_store.get_img_queued_count() == 0:
-            logger.debug("[IMG] No image event to send, skipping sending...")
+            logger.debug("[IMG] No image found to send, skipping sending...")
             await asyncio.sleep(IMAGE_SENDING_EMPTY_DELAY)
             continue
         next_dst = next_device_in_spath()
@@ -2208,8 +2243,12 @@ def build_heartbeat_payload():
 
     hbmsg_bytes += int_to_nbytes(radio_succ_count, 3)
     hbmsg_bytes += int_to_nbytes(radio_fail_count, 3)
-    hbmsg_bytes += int_to_nbytes(internet_module.get_upload_success_count(), 3)
-    hbmsg_bytes += int_to_nbytes(internet_module.get_upload_fail_count(), 3)
+    if internet_module and internet_module.initialized:
+        hbmsg_bytes += int_to_nbytes(internet_module.get_upload_success_count(), 3)
+        hbmsg_bytes += int_to_nbytes(internet_module.get_upload_fail_count(), 3)
+    else:
+        hbmsg_bytes += int_to_nbytes(0, 3)
+        hbmsg_bytes += int_to_nbytes(0, 3)
     hbmsg_bytes += int_to_nbytes(db_store.get_fs_succ_count(), 2)
     hbmsg_bytes += int_to_nbytes(db_store.get_fs_err_count(), 2)
     # 3 neighbours and 3 node from sortest path
@@ -2236,19 +2275,19 @@ async def send_heartbeat():
     sent_succ = False
     if running_as_cc():
         if isinstance(msgbytes, bytes):
-            hb_data = ubinascii.b2a_base64(msgbytes)
+            hb_b64_str = ubinascii.b2a_base64(msgbytes)
         else:
-            hb_data = msgbytes
+            hb_b64_str = msgbytes
         epoch_ms = get_epoch_ms()
         server_payload =  {
                 "machine_id": my_addr,
                 "msg_typ":  "H",
-                "data": hb_data,
+                "data": hb_b64_str,
                 "epoch_ms": epoch_ms,
                 "enc": False
             }
         logger.info(f"[HB] sending raw HB to cloud, len={len(msgbytes)}")
-        sent_succ = await upload_payload_to_server(server_payload, "heartbeat", my_addr)
+        sent_succ = await upload_payload_to_server(server_payload, "H", my_addr)
         return sent_succ
     else:
         next_dst = next_device_in_spath()
@@ -2712,7 +2751,7 @@ class AppHandler:
 
     async def verify_internet_capture_and_upload(self):
         try:
-            img_bytes = self.capture_image_to_verify_camera(type="verify_internet", quality=5)
+            img_bytes = self.capture_image_to_verify_camera(type="verify_internet", quality=25)
             if not img_bytes:
                 return False
             return await self.upload_verify_image_to_server(img_bytes)
@@ -2727,13 +2766,13 @@ class AppHandler:
                 return False
             app_controller.create_and_send_message("verify_internet", {"message": f"image size: {round(len(img_bytes)/1024, 1)} kb"}, timeout=0.5)
 
-            imgbytes = ubinascii.b2a_base64(img_bytes).rstrip().decode()
+            img_b64_str = ubinascii.b2a_base64(img_bytes).rstrip().decode()
             gc.collect()
 
             server_payload = {
                 "machine_id": my_addr,
                 "msg_typ": "event",
-                "data": imgbytes,
+                "data": img_b64_str,
                 "epoch_ms": get_epoch_ms(),
                 "enc": False,
             }
@@ -2765,9 +2804,9 @@ class AppHandler:
                 start = chunk_index * CHUNK_SIZE
                 end = min(start + CHUNK_SIZE, total_size)
                 chunk_data = img_bytes[start:end]
-                chunk_b64 = (ubinascii.b2a_base64(chunk_data).decode("utf-8").strip())
+                chunk_b64_str = (ubinascii.b2a_base64(chunk_data).decode("utf-8").strip())
 
-                app_controller.create_and_send_message("image_transfer_chunk",{"chunk_index": chunk_index, "chunk_size": end - start, "data": chunk_b64},timeout=5.0)
+                app_controller.create_and_send_message("image_transfer_chunk",{"chunk_index": chunk_index, "chunk_size": end - start, "data": chunk_b64_str},timeout=5.0)
                 await asyncio.sleep(0)
 
             app_controller.create_and_send_message( "image_transfer_end", {"total_size": total_size, "total_chunks": total_chunks,},timeout=1.0)
@@ -2823,6 +2862,7 @@ async def main():
     asyncio.create_task(keep_blinking_restart_led())
 
     await init_tracx_internet()
+    asyncio.create_task(keep_checking_internet())
 
     if not await init_device():
         await reboot_device()
@@ -2843,7 +2883,7 @@ async def main():
     await init_lora()
     asyncio.create_task(radio_read())
     asyncio.create_task(process_packet_queue())  # Process queued packets asynchronously
-    # asyncio.create_task(keep_updating_gps())
+    asyncio.create_task(keep_updating_gps())
     await asyncio.sleep(1)
     asyncio.create_task(network_request_loop())
     asyncio.create_task(keep_generating_heartbeat())

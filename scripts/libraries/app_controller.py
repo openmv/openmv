@@ -890,13 +890,13 @@ class AppController:
                         break
 
                     chunk_data = bytes(self.file_transfer_buffer[:bytes_read])
-                    chunk_data_b64 = ubinascii.b2a_base64(chunk_data).decode("utf-8").strip()
+                    chunk_b64_str = ubinascii.b2a_base64(chunk_data).decode("utf-8").strip()
 
                     chunk_msg_data = {
                         "file_name": filename,
                         "chunk_index": chunk_index,
                         "chunk_size": bytes_read,
-                        "data": chunk_data_b64,
+                        "data": chunk_b64_str,
                     }
 
                     self.create_and_send_message("image_transfer_chunk", chunk_msg_data, timeout=5.0)

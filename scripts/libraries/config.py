@@ -20,9 +20,11 @@ UID_TO_ADDR = {
     b"e076465dd7090e41": 228,
     b"e606fe64d7090425": 229,
     b"e606fe64d7110c31": 231,
+    b"e606fe64d7110b25": 232,
 }
 
 COMMAN_CENTER_ADDRS = [221, 222, 228, 219]
+
 
 uid = binascii.hexlify(machine.unique_id())
 my_addr = UID_TO_ADDR.get(uid)

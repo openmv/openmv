@@ -115,9 +115,10 @@ class GPSDriver:
         Query GPS location
         Returns: (lat, lon, time_str) tuple or (None, None, None) if no fix
         """
-        if not self.gps_initialized:
-            if not self.initialize_gps():
-                return None, None, None
+        if not self.gps_initialized: # Dont capture it while request
+            return None, None, None
+            # if not self.initialize_gps():
+            #     return None, None, None
         
         resp = self._send_at("AT+QGPSLOC?", 3000)
         return self._parse_gps_response(resp)
