@@ -61,6 +61,10 @@
 #define CMD_NP                  (0xAB)
 #define R_ISP_TESTMODE          (0x92)
 #define SENSOR_UPDATE           (0x09)
+#define BANK_LTM                (0x06)
+#define CMD_LTM                 (0x9A)
+#define CMD_LTM_UPD             (0xF1)
+#define LTM_UPD_EN              (0x01)
 
 #define PIX_CLK                 (160000000L)
 
@@ -100,6 +104,7 @@
 #define PS5520_L_EMA_DIV        (8)
 #define PS5520_AEC_DAMP_FAST    (2)
 #define PS5520_AEC_DAMP_SLOW    (4)
+#define PS5520_LTM_DEFAULT      (0x88)
 
 typedef struct ps5520_state {
     bool enable_agc;
@@ -110,6 +115,7 @@ typedef struct ps5520_state {
     int32_t aec_exposure_ceiling;
     int g_div;
     int luminance_ema;
+    uint8_t ltm_val_cur;
 } ps5520_state_t;
 
 static ps5520_state_t ps5520_state = {};
@@ -1146,6 +1152,7 @@ static exp_tbl_t gu16ExpTbl[] = {
 
 static int write_registers(omv_csi_t *csi, const uint8_t(*regs)[2]);
 static int get_exposure_us(omv_csi_t *csi, int *exposure_us);
+static int update_ltm(omv_csi_t *csi, int agc_gain);
 
 static int reset(omv_csi_t *csi) {
     ps5520_state_t *ps5520 = csi->priv;
@@ -1174,6 +1181,7 @@ static int reset(omv_csi_t *csi) {
 
     ps5520->g_div = 1;
     ps5520->luminance_ema = PS5520_L_TARGET;
+    ps5520->ltm_val_cur = PS5520_LTM_DEFAULT;
 
     ret |= omv_i2c_read_reg(csi->i2c, csi->slv_addr, CMD_LPF_H, 1, &exposure_line_h, 1);
     ret |= omv_i2c_read_reg(csi->i2c, csi->slv_addr, CMD_LPF_L, 1, &exposure_line_l, 1);
@@ -1415,6 +1423,9 @@ static int set_auto_gain(omv_csi_t *csi, int enable, float gain_db, float gain_d
         ps5520->agc_gain_ceiling = ((idx - 1) << 4) + ((gain >> (idx - 1)) & 0x0F);
     }
 
+    // Apply LTM at boot/manual-gain even if the AGC dead zone never fires.
+    ret |= update_ltm(csi, ps5520->agc_gain);
+
     return ret;
 }
 
@@ -1527,6 +1538,54 @@ static int set_vflip(omv_csi_t *csi, int enable) {
     return ret;
 }
 
+// gain in PS5520_GAIN() units; ltm_val packs [7:4]=DeHaze, [3:0]=brightness.
+// 1x stays at PS5520_LTM_DEFAULT so HDR outdoor keeps full contrast.
+typedef struct ltm_tbl {
+    uint16_t gain;
+    uint8_t ltm_val;
+} ltm_tbl_t;
+
+static const ltm_tbl_t ps5520_ltm_tbl[] = {
+    // Gain LTM
+    {  16,  0x88 }, //  1x:    c=8, b=8
+    {  128, 0x67 }, //  8x:    c=6, b=7
+    {  192, 0x66 }, // 12x:    c=6, b=6
+    {  224, 0x65 }, // 14x:    c=6, b=5
+    {  256, 0x55 }, // 16x:    c=5, b=5
+    {  352, 0x54 }, // 22x:    c=5, b=4
+    {  384, 0x44 }, // 24x:    c=4, b=4
+    {  432, 0x43 }, // 27x:    c=4, b=3
+    {  460, 0x33 }, // 28.75x: c=3, b=3
+    {  491, 0x32 }, // 30.71x: c=3, b=2
+    {  512, 0x22 }, // 32x:    c=2, b=2
+};
+
+static int update_ltm(omv_csi_t *csi, int agc_gain) {
+    ps5520_state_t *ps5520 = csi->priv;
+    uint32_t gain = PS5520_GAIN(agc_gain);
+    uint8_t ltm_val = ps5520_ltm_tbl[0].ltm_val;
+
+    for (size_t i = 1; i < OMV_ARRAY_SIZE(ps5520_ltm_tbl); i++) {
+        if (gain >= ps5520_ltm_tbl[i].gain) {
+            ltm_val = ps5520_ltm_tbl[i].ltm_val;
+        } else {
+            break;
+        }
+    }
+
+    if (ltm_val == ps5520->ltm_val_cur) {
+        return 0;
+    }
+
+    ps5520->ltm_val_cur = ltm_val;
+
+    int ret = omv_i2c_write_reg(csi->i2c, csi->slv_addr, REG_BANK, 1, BANK_LTM, 1);
+    ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, CMD_LTM, 1, ltm_val, 1);
+    ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, CMD_LTM_UPD, 1, LTM_UPD_EN, 1);
+    ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, REG_BANK, 1, 0x01, 1);
+    return ret;
+}
+
 static int update_agc_aec(omv_csi_t *csi, int luminance) {
     ps5520_state_t *ps5520 = csi->priv;
     int ret = 0;
@@ -1621,9 +1680,9 @@ static int update_agc_aec(omv_csi_t *csi, int luminance) {
             ps5520->agc_gain += gain_step;
             ps5520->agc_gain = IM_CLAMP(ps5520->agc_gain, PS5520_MIN_GAIN_IDX, ps5520->agc_gain_ceiling);
 
-            //ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, REG_BANK, 1, 0x01, 1);
             ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, CMD_GAIN_IDX, 1, ps5520->agc_gain, 1);
             ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, SENSOR_UPDATE, 1, 0x01, 1);
+            ret |= update_ltm(csi, ps5520->agc_gain);
         }
     }
 
