@@ -456,6 +456,7 @@ static const uint16_t hd_regs[][2] = {
 static int ae_apply(omv_csi_t *csi, int gain, int expo) {
     pag7936_state_t *state = csi->priv;
     uint8_t reg;
+    uint8_t tmp;
     int ret = omv_i2c_read_reg(csi->i2c, csi->slv_addr, AE_EXPO_MANUAL, 2, &reg, 1);
 
     if (state->gain_auto && state->expo_auto) {
@@ -476,12 +477,12 @@ static int ae_apply(omv_csi_t *csi, int gain, int expo) {
             expo = PAG7936_EXPOSURE(exph, expm, expl) / PAG7936_EXP_DIV;
         }
 
-        ret |= omv_i2c_read_reg(csi->i2c, csi->slv_addr, AE_GAIN_MANUAL_10_8, 2, &reg, 1);
-        ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, AE_GAIN_MANUAL_10_8, 2, PAG7936_GAIN_H(reg, gain), 1);
+        ret |= omv_i2c_read_reg(csi->i2c, csi->slv_addr, AE_GAIN_MANUAL_10_8, 2, &tmp, 1);
+        ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, AE_GAIN_MANUAL_10_8, 2, PAG7936_GAIN_H(tmp, gain), 1);
         ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, AE_GAIN_MANUAL_7_0, 2, PAG7936_GAIN_L(gain), 1);
 
-        ret |= omv_i2c_read_reg(csi->i2c, csi->slv_addr, AE_EXPO_MANUAL_17_16, 2, &reg, 1);
-        ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, AE_EXPO_MANUAL_17_16, 2, PAG7936_EXPOSURE_H(reg, expo), 1);
+        ret |= omv_i2c_read_reg(csi->i2c, csi->slv_addr, AE_EXPO_MANUAL_17_16, 2, &tmp, 1);
+        ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, AE_EXPO_MANUAL_17_16, 2, PAG7936_EXPOSURE_H(tmp, expo), 1);
         ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, AE_EXPO_MANUAL_15_8, 2, PAG7936_EXPOSURE_M(expo), 1);
         ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, AE_EXPO_MANUAL_7_0, 2, PAG7936_EXPOSURE_L(expo), 1);
 
