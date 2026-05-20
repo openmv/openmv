@@ -95,9 +95,10 @@
 #define PS5520_L_TARGET         (80)
 #define PS5520_L_AGC_DIFF_MIN   (4)
 #define PS5520_L_AGC_DIFF_DIV   (10)
-#define PS5520_L_AEC_ROOM_DIV   (10)
-#define PS5520_L_AEC_DIFF_MUL   (10)
-#define PS5520_L_AEC_MAX_STEP   (50)
+#define PS5520_L_FAST_THRESH    (60)
+#define PS5520_L_EMA_DIV        (8)
+#define PS5520_AEC_DAMP_FAST    (2)
+#define PS5520_AEC_DAMP_SLOW    (4)
 
 typedef struct ps5520_state {
     bool enable_agc;
@@ -107,6 +108,7 @@ typedef struct ps5520_state {
     int32_t aec_exposure;
     int32_t aec_exposure_ceiling;
     int g_div;
+    int luminance_ema;
 } ps5520_state_t;
 
 static ps5520_state_t ps5520_state = {};
@@ -1170,6 +1172,7 @@ static int reset(omv_csi_t *csi) {
     ps5520->aec_exposure_ceiling = PS5520_DEF_EXP_CEILING;
 
     ps5520->g_div = 1;
+    ps5520->luminance_ema = PS5520_L_TARGET;
 
     ret |= omv_i2c_read_reg(csi->i2c, csi->slv_addr, CMD_LPF_H, 1, &exposure_line_h, 1);
     ret |= omv_i2c_read_reg(csi->i2c, csi->slv_addr, CMD_LPF_L, 1, &exposure_line_l, 1);
@@ -1526,11 +1529,13 @@ static int set_vflip(omv_csi_t *csi, int enable) {
 static int update_agc_aec(omv_csi_t *csi, int luminance) {
     ps5520_state_t *ps5520 = csi->priv;
     int ret = 0;
+
+    // EMA-smooth luminance to absorb scene-noise outdoors.
+    ps5520->luminance_ema = (ps5520->luminance_ema * (PS5520_L_EMA_DIV - 1) + luminance) / PS5520_L_EMA_DIV;
+    luminance = ps5520->luminance_ema;
     int diff = PS5520_L_TARGET - luminance;
 
-    // Dead zone: ignore small luminance deviations. With raw (un-smoothed)
-    // luminance, frame-to-frame sensor noise is not filtered, so a small
-    // dead zone prevents noise-driven corrections that appear as flicker.
+    // Dead zone: ignore small luminance deviations.
     if (abs(diff) > PS5520_L_AGC_DIFF_MIN) {
         // If exposure and gain are both floored and scene is still too
         // bright, skip the adjustment — nothing can change and redundant
@@ -1545,20 +1550,26 @@ static int update_agc_aec(omv_csi_t *csi, int luminance) {
         ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, REG_BANK, 1, 0x01, 1);
 
         if (ps5520->enable_aec && aec_exposure_in) {
-            // Long exposure first for better SNR
             int32_t lpf;
             uint8_t np;
             bool flg_stall = 0;
             int32_t exposure_line;
 
-            // Continuous step scaling: max_step is proportional to how
-            // far the current luminance is from either saturation extreme
-            // (0 or 255). This avoids step-size discontinuities that cause
-            // oscillation at zone boundaries.
-            int32_t headroom = IM_MIN(luminance, 255 - luminance);
-            int32_t max_step = IM_MAX(1, IM_MIN(PS5520_L_AEC_MAX_STEP, headroom / PS5520_L_AEC_ROOM_DIV));
-            int32_t step = diff * PS5520_L_AEC_DIFF_MUL;
-            step = IM_CLAMP(step, -max_step, max_step);
+            // Geometric convergence toward current_exp * L_TARGET / luminance.
+            int32_t target_exp = ps5520->aec_exposure_ceiling;
+
+            if (luminance > 0) {
+                target_exp = (int32_t) ((int64_t) ps5520->aec_exposure * PS5520_L_TARGET / luminance);
+            }
+
+            target_exp = IM_CLAMP(target_exp, PS5520_MIN_INT, ps5520->aec_exposure_ceiling);
+            int32_t damp = (abs(diff) >= PS5520_L_FAST_THRESH) ? PS5520_AEC_DAMP_FAST : PS5520_AEC_DAMP_SLOW;
+            int32_t step = (target_exp - ps5520->aec_exposure) / damp;
+
+            if (!step && target_exp != ps5520->aec_exposure) {
+                step = (target_exp > ps5520->aec_exposure) ? 1 : -1;
+            }
+
             ps5520->aec_exposure += step;
             ps5520->aec_exposure = IM_CLAMP(ps5520->aec_exposure, PS5520_MIN_INT, ps5520->aec_exposure_ceiling);
 
