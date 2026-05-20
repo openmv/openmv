@@ -95,6 +95,7 @@
 #define PS5520_L_TARGET         (80)
 #define PS5520_L_AGC_DIFF_MIN   (4)
 #define PS5520_L_AGC_DIFF_DIV   (10)
+#define PS5520_L_AGC_MAX_STEP   (4)
 #define PS5520_L_FAST_THRESH    (60)
 #define PS5520_L_EMA_DIV        (8)
 #define PS5520_AEC_DAMP_FAST    (2)
@@ -1615,7 +1616,8 @@ static int update_agc_aec(omv_csi_t *csi, int luminance) {
 
         } else if (ps5520->enable_agc) {
             int32_t gain_step = diff / PS5520_L_AGC_DIFF_DIV;
-            gain_step = IM_CLAMP(gain_step, -1, 1);
+            int32_t max_gain_step = (abs(diff) >= PS5520_L_FAST_THRESH) ? PS5520_L_AGC_MAX_STEP : 1;
+            gain_step = IM_CLAMP(gain_step, -max_gain_step, max_gain_step);
             ps5520->agc_gain += gain_step;
             ps5520->agc_gain = IM_CLAMP(ps5520->agc_gain, PS5520_MIN_GAIN_IDX, ps5520->agc_gain_ceiling);
 
