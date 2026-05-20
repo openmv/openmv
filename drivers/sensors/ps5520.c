@@ -62,6 +62,7 @@
 #define R_ISP_TESTMODE          (0x92)
 #define SENSOR_UPDATE           (0x09)
 #define BANK_LTM                (0x06)
+#define CMD_LTM_BACKLIGHT       (0x99)
 #define CMD_LTM                 (0x9A)
 #define CMD_LTM_UPD             (0xF1)
 #define LTM_UPD_EN              (0x01)
@@ -105,6 +106,7 @@
 #define PS5520_AEC_DAMP_FAST    (2)
 #define PS5520_AEC_DAMP_SLOW    (4)
 #define PS5520_LTM_DEFAULT      (0x88)
+#define PS5520_BACKLIGHT_DEFAULT (0x23)
 
 typedef struct ps5520_state {
     bool enable_agc;
@@ -116,6 +118,7 @@ typedef struct ps5520_state {
     int g_div;
     int luminance_ema;
     uint8_t ltm_val_cur;
+    uint8_t backlight_cur;
 } ps5520_state_t;
 
 static ps5520_state_t ps5520_state = {};
@@ -1153,6 +1156,7 @@ static exp_tbl_t gu16ExpTbl[] = {
 static int write_registers(omv_csi_t *csi, const uint8_t(*regs)[2]);
 static int get_exposure_us(omv_csi_t *csi, int *exposure_us);
 static int update_ltm(omv_csi_t *csi, int agc_gain);
+static int update_ltm_backlight(omv_csi_t *csi, int32_t aec_exposure);
 
 static int reset(omv_csi_t *csi) {
     ps5520_state_t *ps5520 = csi->priv;
@@ -1182,6 +1186,7 @@ static int reset(omv_csi_t *csi) {
     ps5520->g_div = 1;
     ps5520->luminance_ema = PS5520_L_TARGET;
     ps5520->ltm_val_cur = PS5520_LTM_DEFAULT;
+    ps5520->backlight_cur = PS5520_BACKLIGHT_DEFAULT;
 
     ret |= omv_i2c_read_reg(csi->i2c, csi->slv_addr, CMD_LPF_H, 1, &exposure_line_h, 1);
     ret |= omv_i2c_read_reg(csi->i2c, csi->slv_addr, CMD_LPF_L, 1, &exposure_line_l, 1);
@@ -1468,6 +1473,9 @@ static int set_auto_exposure(omv_csi_t *csi, int enable, int exposure_us) {
         ps5520->aec_exposure_ceiling = IM_CLAMP(ps5520->aec_exposure_ceiling, PS5520_MIN_INT, PS5520_MAX_INT);
     }
 
+    // Apply BackLight at boot/manual-exposure even if AEC never fires.
+    ret |= update_ltm_backlight(csi, ps5520->aec_exposure);
+
     return ret;
 }
 
@@ -1586,6 +1594,47 @@ static int update_ltm(omv_csi_t *csi, int agc_gain) {
     return ret;
 }
 
+// LTM BackLight vs AEC exposure. Keyed off exposure since AGC stays at 1x.
+// Only exposure tracks scene brightness. Low: bright source in frame, back off.
+typedef struct backlight_tbl {
+    int32_t exp_min;
+    uint8_t backlight;
+} backlight_tbl_t;
+
+static const backlight_tbl_t ps5520_backlight_tbl[] = {
+    // exp_min backLight
+    {  0,      0x23 }, // sun direct in frame
+    {  300,    0x2B }, // bright outdoor with strong source
+    {  700,    0x33 }, // bright backlit
+    {  1200,   0x3B }, // indoor with strong window
+    {  1700,   0x43 }, // indoor / dim
+};
+
+static int update_ltm_backlight(omv_csi_t *csi, int32_t aec_exposure) {
+    ps5520_state_t *ps5520 = csi->priv;
+    uint8_t backlight = ps5520_backlight_tbl[0].backlight;
+
+    for (size_t i = 1; i < OMV_ARRAY_SIZE(ps5520_backlight_tbl); i++) {
+        if (aec_exposure >= ps5520_backlight_tbl[i].exp_min) {
+            backlight = ps5520_backlight_tbl[i].backlight;
+        } else {
+            break;
+        }
+    }
+
+    if (backlight == ps5520->backlight_cur) {
+        return 0;
+    }
+
+    ps5520->backlight_cur = backlight;
+
+    int ret = omv_i2c_write_reg(csi->i2c, csi->slv_addr, REG_BANK, 1, BANK_LTM, 1);
+    ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, CMD_LTM_BACKLIGHT, 1, backlight, 1);
+    ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, CMD_LTM_UPD, 1, LTM_UPD_EN, 1);
+    ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, REG_BANK, 1, 0x01, 1);
+    return ret;
+}
+
 static int update_agc_aec(omv_csi_t *csi, int luminance) {
     ps5520_state_t *ps5520 = csi->priv;
     int ret = 0;
@@ -1673,6 +1722,7 @@ static int update_agc_aec(omv_csi_t *csi, int luminance) {
                 ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, 0x25, 1, 0x00, 1);
             }
 
+            ret |= update_ltm_backlight(csi, ps5520->aec_exposure);
         } else if (ps5520->enable_agc) {
             int32_t gain_step = diff / PS5520_L_AGC_DIFF_DIV;
             int32_t max_gain_step = (abs(diff) >= PS5520_L_FAST_THRESH) ? PS5520_L_AGC_MAX_STEP : 1;
