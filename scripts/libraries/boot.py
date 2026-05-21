@@ -52,7 +52,7 @@ if not PRODUCTION_MODE:
     DECRYPT_IMAGE_ON_HOPS = True
 FLAKINESS = 0
 ALERT_TEXT_PAUSED = True
-USE_PIR_SENSOR = False
+USE_PIR_SENSOR = True
 # -----------------------------------▲▲▲▲▲-----------------------------------
 
 def get_rand(len=3):
