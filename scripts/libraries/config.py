@@ -23,7 +23,27 @@ UID_TO_ADDR = {
     b"e606fe64d7110b25": 232,
 }
 
-COMMAN_CENTER_ADDRS = [221, 222, 228, 219]
+# XX.XX.X
+major = 2  # (0-63)
+minor = 0  # (0-99)
+patch = 2  # (0-9)
+# version as integer value, max_val = 64_999 < 65_535 (2 bytes)
+VERSION = major * 1_000 + minor * 10 + patch
+
+def get_version_str(version):
+    """
+    Decode packed version integer to XX.XX.X string (inverse of major*1000 + minor*10 + patch).
+
+    Args:
+        version (int): Packed version, e.g. 2001 for 2.0.1.
+
+    Returns:
+        str: Version string, e.g. "02.00.1".
+    """
+    patch = version % 10
+    minor = (version // 10) % 100
+    major = version // 1000
+    return "{:02d}.{:02d}.{}".format(major, minor, patch)
 
 
 uid = binascii.hexlify(machine.unique_id())
@@ -35,10 +55,6 @@ def get_my_addr(default=None):
         print("Error: my_addr not defined for this device.")
         return None
     return my_addr
-
-def running_as_cc():  # NOT in use, dynamic CC applied
-    # Input: None; Output: bool indicating if this device is the command center
-    return my_addr in COMMAN_CENTER_ADDRS
 
 async def led_restart_blinker():
     led = LED("LED_GREEN")

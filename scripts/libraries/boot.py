@@ -19,7 +19,12 @@ import json
 import gc                   # garbage collection for memory management
 import hashlib
 import enc
-import config
+from config import (
+    uid,
+    get_my_addr,
+    led_restart_blinker,
+    VERSION
+)
 from utils import int_to_nbytes, pack_image_meta_header
 from sx1262 import SX1262
 from gps_driver import GPSDriver
@@ -47,7 +52,7 @@ if not PRODUCTION_MODE:
     DECRYPT_IMAGE_ON_HOPS = True
 FLAKINESS = 0
 ALERT_TEXT_PAUSED = True
-USE_PIR_SENSOR = True
+USE_PIR_SENSOR = False
 # -----------------------------------▲▲▲▲▲-----------------------------------
 
 def get_rand(len=3):
@@ -83,11 +88,15 @@ is_install_mode = False
 led = LED("LED_BLUE")
 led.off()
 
+# TIME VARS
 MIN_SLEEP = 0.1    # max 0.1, 0.02 (works with highest data rate)
 ACK_SLEEP = 1       # max 2, 1 (works with highest data rate)
 CHUNK_SLEEP = 0.1  # max 0.1, 0.04 (works with highest data rate)
+
+# SIZE VARS
 CHUNK_DATA_SIZE = 45
 PACKET_PAYLOAD_LIMIT = 60
+PACKET_BODY_LIMIT = 50
 RSA_ENCRYPTION_LIMIT = 117
 
 HB_WAIT = 180
@@ -139,6 +148,10 @@ tracx_uart_lock = asyncio.Lock()
 # -------- Start FPS clock -----------
 #clock = time.clock()            # measure frame/sec
 
+my_addr = None
+network_paths = []
+seen_neighbours = []
+
 gps_str = ""
 gps_last_time = -1
 
@@ -188,12 +201,6 @@ lora_rx_status = None              # Receive status
 packet_queue = []  # Queue for packets to be processed asynchronously
 packet_queue_lock = asyncio.Lock()  # Lock for thread-safe queue access
 
-# SD card write lock
-filesave_lock = asyncio.Lock()
-
-my_addr = None
-network_paths = []
-seen_neighbours = []
 # -----------------------------------▲▲▲▲▲-----------------------------------
 
 
@@ -209,7 +216,6 @@ HEADER_JOINED_LEN = HEADER_LEN + 1 # 1 byte for ; separator
 
 IMG_ID_LEN = 3 # UXK, BTQ
 IMG_ID_BYTES = 2
-CHUNK_ID_LEN = 4  # 0 to 9999 (encoded in CHUNK_ID_BYTES=2, so up to 65535 supported)
 CHUNK_ID_BYTES = 2
 
 
@@ -220,8 +226,7 @@ CHUNK_ID_BYTES = 2
 # -----------------------------------▲▲▲▲▲-----------------------------------
 
 
-uid = config.uid
-my_addr = config.get_my_addr()
+my_addr = get_my_addr()
 print("UID: ", f"{uid}")
 if my_addr is None:
     logger.error(f"error in main.py: Unknown device UID for {uid}")
@@ -379,7 +384,19 @@ def encode_dest(dest):
     return encode_node_id(dest)
 
 def get_msg_header(msg_typ, creator, dest, msgbytes):
-    # Input: msg_typ: str, creator: int, dest: int, msgbytes: bytes; Output: bytes message identifier
+    """
+    Build LoRa packet header (msg_uid + CRC-32 of payload).
+
+    Args:
+        msg_typ (str): Message type, 1 ASCII byte (e.g. "I", "H", "B").
+        creator (int): Source node id (encoded to 1 byte).
+        dest (int): Destination node id (encoded to 1 byte).
+        msgbytes (bytes): Payload; CRC is computed over this only.
+
+    Returns:
+        tuple[bytes, bytes]: (msg_uid, crc_checksum) => 7 + 4 = 11 bytes.
+            Wire format: msg_uid + crc_checksum + b";" + msgbytes (12 + len(msgbytes) bytes).
+    """
     rrr = get_rand(len=3)
     msg_uid = (
         msg_typ.encode()  # 1 byte
@@ -995,7 +1012,7 @@ def encrypt_if_needed(msg_typ, msg):
         if not ENCRYPTION_ENABLED:
             return msg
         # H = heartbeat, "P": file data
-        if msg_typ == "P":
+        if is_hybrid_encrypted(msg_typ):
             msgbytes = enc.encrypt_hybrid(msg, encnode.get_pub_key())
             logger.debug(f"{msg_typ} : Len msg = {len(msg)}, len msgbytes = {len(msgbytes)}")
             return msgbytes
@@ -1025,12 +1042,12 @@ async def send_msg(msg_typ, creator, msgbytes, dest, retry_count=3): # all messa
         if not is_lora_ready():
             return False
         # Input: msg_typ: str, creator: int, msgbytes: bytes, dest: int; Output: bool success indicator
-        if len(msgbytes) < PACKET_PAYLOAD_LIMIT:
+        if len(msgbytes) <= PACKET_BODY_LIMIT:
             logger.info(f"[⋙ sending....] dest={dest}, msg_typ:{msg_typ}, len:{len(msgbytes)} bytes, single packet")
             succ, _ = await send_single_packet(msg_typ, creator, msgbytes, dest, retry_count)
             return succ
         else:
-            logger.error(f"msgbtyes size exceeds the packet payload limit, {len(msgbytes)} bytes > {PACKET_PAYLOAD_LIMIT} bytes")
+            logger.error(f"msgbtyes size exceeds the payload body limit, {len(msgbytes)} bytes > {PACKET_BODY_LIMIT} bytes")
             return False
     except Exception as e:
         logger.error(f"[LORA] Exception in send_msg: {e}")
@@ -1058,6 +1075,7 @@ async def send_msg_big(msg_typ, creator, msgbytes, dest, epoch_ms, md5): # file 
                     if chunk_id % 10 == 0:
                         logger.info(f"⋙ Sending chunks to {dest}, ({chunk_id}-{min(chunk_id+10, len(chunks))})/{len(chunks)}...")
                     await asyncio.sleep(CHUNK_SLEEP)
+                    # Adding meta data to chunk bytes, 3 + 2 + 45 = 50 bytes max
                     chunkbytes = filedata_id.encode() + chunk_id.to_bytes(CHUNK_ID_BYTES) + chunks[chunk_id]
                     _ = await send_single_packet("I", creator, chunkbytes, dest)
                 else:
@@ -2220,19 +2238,26 @@ async def process_packet_queue(): # TODO Anand, (no change)
 # Network Maintenance and Heartbeats (H)
 # ---------------------------------------------------------------------------
 
-def build_heartbeat_payload():
+def build_heartbeat_payload():  # HARD limit is 50 bytes
     """
     Build fixed-size compact heartbeat payload:
       image_taken(2), image_sent(2), image_dropped(2), image_failed(2), image_queued(2),
       radio_succ(3), radio_err(3), internet_succ(3), internet_err(3),
-      fs_succ(2), fs_err(2), process_id(3)
-    Total size: 29 bytes.
+      fs_succ(2), fs_err(2),
+      neighbours(3 x 1), shortest_path(3 x 1), process_id(3),
+      version(2) — packed config.VERSION (XX.XX.X as uint16 BE, e.g. 2001 = 2.0.1),
+      signal_strength(1) — cellular 0-100 % (last AT+CSQ sample; 0 if unknown)
+    Total size: 38 bytes.
     """
     global img_capture_count, db_store, internet_module, PROCESS_ID_STR
     global radio_sent_succ_count, radio_sent_fail_count, radio_recd_succ_count, radio_recd_err_count, radio_recd_crcerr_count, radio_recd_hasherr_count
 
     radio_succ_count = radio_sent_succ_count + radio_recd_succ_count
     radio_fail_count = radio_sent_fail_count + radio_recd_err_count + radio_recd_crcerr_count + radio_recd_hasherr_count
+    
+    signal_strength = 0
+    if internet_module:
+        signal_strength = internet_module.get_last_signal_strength() or 0
 
     hbmsg_bytes = b""
     hbmsg_bytes += int_to_nbytes(img_capture_count, 2)
@@ -2265,6 +2290,8 @@ def build_heartbeat_payload():
     proc_id = (PROCESS_ID_STR or "")[:3]
     proc_id = proc_id + ("_" * (3 - len(proc_id)))
     hbmsg_bytes += proc_id.encode()
+    hbmsg_bytes += int_to_nbytes(VERSION, 2)
+    hbmsg_bytes += int_to_nbytes(signal_strength, 1)
     return hbmsg_bytes
 
 async def send_heartbeat():
@@ -2749,6 +2776,23 @@ class AppHandler:
             logger.error(f"[{type}] capture_image_to_verify_camera: {e} [Fail]")
             return None
 
+    async def try_create_cc(self):
+        try:
+            global internet_module, network_paths, tracx_uart_lock
+            async with tracx_uart_lock:
+                internet_module.establish_internet(retry_count=2)
+            if internet_module and internet_module.has_internet:
+                network_paths = []
+                app_controller.create_and_send_message("verify_internet", {"message": "Now established, device will act as CC now", "result": "pass"}, timeout=0.5)
+                return True
+            else:
+                app_controller.create_and_send_message("verify_internet", {"message": f"Failed to create CC", "result": "fail"}, timeout=0.5)
+                return False
+        except Exception as e:
+            app_controller.create_and_send_message("verify_internet", {"message": f"Error while initializing internet connection", "result": "fail"}, timeout=0.5)
+            logger.error(f"[try_create_cc] error in try_create_cc: {e}")
+            return False
+
     async def verify_internet_capture_and_upload(self):
         try:
             img_bytes = self.capture_image_to_verify_camera(type="verify_internet", quality=25)
@@ -2851,14 +2895,14 @@ async def enter_install_mode():
 # ---------------------------------------------------------------------------
 async def keep_blinking_restart_led():
     while True:
-        await config.led_restart_blinker()
+        await led_restart_blinker()
         await asyncio.sleep(6)
 
 
 async def main():
     global app_handler, app_controller
     print(f"Entering MAIN loop... [PROCESS MODE]")
-    # await config.led_restart_blinker()
+    # await led_restart_blinker()
     asyncio.create_task(keep_blinking_restart_led())
 
     await init_tracx_internet()

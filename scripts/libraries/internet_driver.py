@@ -43,7 +43,7 @@ except ImportError:
 # Configuration
 UART_ID = 1
 BAUDRATE = 115200
-INTERNET_RECHECK_INTERVAL_SEC = 15 * 60  # 15 minutes
+INTERNET_RECHECK_INTERVAL_SEC = 60 * 60  # 60 minutes
 
 
 class _UARTSerialAdapter:
@@ -124,7 +124,7 @@ class InternetDriver:
             self.context_id = context_id
             self.default_timeout = 10 # 10 seconds
             self._last_recovery_fail_ticks = 0  # time.ticks_ms() when recovery last failed
-            self._uploads_since_health_check = 0
+            self._uploads_since_health_check = 10  # trigger health+CSQ on first upload
             self._health_check_interval = 10
             self._upload_success_count = 0
             self._upload_fail_count = 0
@@ -132,8 +132,9 @@ class InternetDriver:
             self.is_busy = False
 
             self.has_internet = False
+            self.signal_strength = 0
             self.establish_internet()
-            logger.info("Temp Now init finished")
+            logger.info("InternetDriver init finished")
         except Exception as e:
             print(f"Error in InternetDriver init: {e}")
             self.has_internet = False
@@ -370,6 +371,19 @@ class InternetDriver:
         except (ValueError, IndexError):
             pass
         return None
+    
+    def save_signal_strength(self, signal_strength):
+        try:
+            if signal_strength is None:
+                self.signal_strength = 0
+            else:
+                self.signal_strength = signal_strength
+        except Exception as e:
+            logger.error(f"[CELL] Error saving signal strength: {e}")
+            self.signal_strength = 0
+    
+    def get_last_signal_strength(self):
+        return self.signal_strength
 
     # ------------------------------------------------------------------
     # Upload
@@ -431,6 +445,7 @@ class InternetDriver:
         # --- Periodic signal strength log ---
         if do_health_check:
             signal_pct = self.get_signal_strength()
+            self.save_signal_strength(signal_pct)
             if signal_pct is not None:
                 logger.info(f"[CELL] Uploading data, signal: {signal_pct}%")
             else:

@@ -929,16 +929,22 @@ class AppController:
     # verify_internet (CC only: capture image, upload to server, inform app)
     # -------------------------------------------------------------------------
 
-    def _running_as_cc(self):
-        return getattr(self.apphandler, "is_cc", lambda: False)()
-
-    async def _handle_verify_internet(self):
-        self.create_and_send_message("verify_internet", {"message": "checking internet connection"}, timeout=0.5)
-
-        if not self._running_as_cc():
-            self.create_and_send_message("verify_internet", {"message": "not running as CC", "result": "fail"}, timeout=0.5)
-            return
+    async def _handle_verify_internet(self, force_upload=False): # if force_upload = True and this unit node,, first call internet_module.establish_internet(retry_count=2), then rest if same
+        is_cc = self.apphandler.is_cc()
+        if not is_cc:
+            if force_upload:
+                ok = await self.apphandler.try_create_cc()
+                if ok:
+                    self.create_and_send_message("verify_internet", {"message": "CC created successfully", "result": "pass"}, timeout=0.5)
+                else:
+                    self.create_and_send_message("verify_internet", {"message": "Failed to create CC", "result": "fail"}, timeout=0.5)
+                    return False
+            else:
+                self.create_and_send_message("verify_internet", {"message": "checking internet connection"}, timeout=0.5)
+                self.create_and_send_message("verify_internet", {"message": "not running as CC", "result": "fail"}, timeout=0.5)
+                return False
         try:
+            self.create_and_send_message("verify_internet", {"message": "checking internet connection"}, timeout=0.5)
             run_fn = getattr(self.apphandler, "verify_internet_capture_and_upload", None)
             if not run_fn:
                 self.create_and_send_message("verify_internet", {"message": "verify_internet capture+upload not available", "result": "fail"}, timeout=0.5)
@@ -1014,6 +1020,12 @@ class AppController:
                 asyncio.create_task(self._handle_verify_internet())
             except Exception as e:
                 logger.error(f"[verify_internet] Failed to create task: {e}")
+        elif command == "try_create_cc":
+            logger.info(f"received command: {message}")
+            try:
+                asyncio.create_task(self._handle_verify_internet(force_upload=True))
+            except Exception as e:
+                logger.error(f"[try_create_cc] Failed to create task: {e}")
         elif command == "check_network":
             logger.info(f"received command: {message}")
             asyncio.create_task(self.handle_check_network())

@@ -196,8 +196,8 @@ class DbStore(StoreUtils):
         self.img_dropped_count = 0
         self.img_failed_count = 0
 
-        self.LIMIT_PER_DEVICE = 5
-        self.img_retry_count_to_fail = 20
+        self.LIMIT_PER_DEVICE = 6
+        self.img_retry_count_to_fail = 20 # TODO need to increased
 
     # ------------------------------------------------------------------
     # Internal helpers (filesystem)
