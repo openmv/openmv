@@ -160,6 +160,15 @@ int stm_csi_isp_reset(omv_csi_t *csi) {
     return 0;
 }
 
+static int stm_csi_set_ccm(omv_csi_t *csi, const omv_csi_ccm_t *ccm) {
+    #if USE_DCMIPP
+    if (csi->mipi_if) {
+        csi->ccm = ccm;
+    }
+    #endif // USE_DCMIPP
+    return 0;
+}
+
 static int stm_csi_config(omv_csi_t *csi, omv_csi_config_t config) {
     if (config == OMV_CSI_CONFIG_INIT) {
         if (!csi->mipi_if) {
@@ -818,6 +827,7 @@ int omv_csi_ops_init(omv_csi_t *csi) {
     csi->shutdown = stm_csi_shutdown;
     csi->snapshot = stm_csi_snapshot;
     csi->isp_reset = stm_csi_isp_reset;
+    csi->isp_set_ccm = stm_csi_set_ccm;
 
     // Set CSI clock ops.
     csi->clk->freq = OMV_CSI_CLK_FREQUENCY;

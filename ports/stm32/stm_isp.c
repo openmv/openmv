@@ -38,6 +38,81 @@
 #include "board_config.h"
 
 #ifdef DCMIPP
+// Matrix3x3_Coeff: 11-bit signed, 2 int + 8 dec -> 1.0 = 256.
+// Added3x1_Coeff:  10-bit signed, 9 int + 0 dec -> 1.0 = 1.
+#define DCMIPP_CCM(v)         ((int16_t) fast_roundf((v) * 256.0f))
+#define DCMIPP_CCM_OFFSET(v)  ((int16_t) fast_roundf(v))
+
+// Piecewise-linear interpolation of the calibrated CCMs along the R/B ratio
+// axis. Entries must be sorted warmest -> coolest (descending R/B). The live point
+// is bracketed between the two adjacent entries that span it and blended;
+// avg is the EMA-smoothed R, G, B from the AWB statistics.
+static void stm_isp_apply_ccm(omv_csi_t *csi, uint32_t pipe, const uint32_t avg[3]) {
+    const omv_csi_ccm_t *ccm = csi->ccm;
+
+    if (ccm == NULL || ccm->count == 0) {
+        return;
+    }
+
+    float cur_rb = (float) avg[0] / OMV_MAX(avg[2], 1);
+    size_t i;
+
+    // Walk warmest -> coolest until cur_rb is greater than the entry's R/B ratio.
+    for (i = 0; i < ccm->count; i++) {
+        if (cur_rb >= ccm->entries[i].avg[0] / OMV_MAX(ccm->entries[i].avg[2], 1.0f)) {
+            break;
+        }
+    }
+
+    // Pick the adjacent entries to blend between.
+    size_t warm = (i == 0) ? 0 : i - 1;
+    size_t cool = (i == ccm->count) ? ccm->count - 1 : i;
+
+    const omv_csi_ccm_entry_t *e_warm = &ccm->entries[warm];
+    const omv_csi_ccm_entry_t *e_cool = &ccm->entries[cool];
+    float t = 0.0f;
+
+    if (warm != cool) {
+        // Interpolate between the warm and cool entries.
+        float rb_warm = e_warm->avg[0] / OMV_MAX(e_warm->avg[2], 1.0f);
+        float rb_cool = e_cool->avg[0] / OMV_MAX(e_cool->avg[2], 1.0f);
+        t = (rb_warm - cur_rb) / (rb_warm - rb_cool);
+    }
+
+    float u = 1.0f - t;
+    float coeffs[3][3];
+    float offsets[3];
+
+    // Blend the CCM coefficients and offsets.
+    for (int r = 0; r < 3; r++) {
+        for (int c = 0; c < 3; c++) {
+            coeffs[r][c] = u * e_warm->coeffs[r][c] + t * e_cool->coeffs[r][c];
+        }
+
+        offsets[r] = u * e_warm->offsets[r] + t * e_cool->offsets[r];
+    }
+
+    DCMIPP_ColorConversionConfTypeDef cfg = {
+        .ClampOutputSamples = ENABLE,
+        .OutputSamplesType = DCMIPP_CLAMP_RGB,
+        .RR = DCMIPP_CCM(coeffs[0][0]),
+        .RG = DCMIPP_CCM(coeffs[0][1]),
+        .RB = DCMIPP_CCM(coeffs[0][2]),
+        .RA = DCMIPP_CCM_OFFSET(offsets[0]),
+        .GR = DCMIPP_CCM(coeffs[1][0]),
+        .GG = DCMIPP_CCM(coeffs[1][1]),
+        .GB = DCMIPP_CCM(coeffs[1][2]),
+        .GA = DCMIPP_CCM_OFFSET(offsets[1]),
+        .BR = DCMIPP_CCM(coeffs[2][0]),
+        .BG = DCMIPP_CCM(coeffs[2][1]),
+        .BB = DCMIPP_CCM(coeffs[2][2]),
+        .BA = DCMIPP_CCM_OFFSET(offsets[2]),
+    };
+
+    HAL_DCMIPP_PIPE_SetISPColorConversionConfig(&csi->dcmipp, pipe, &cfg);
+    HAL_DCMIPP_PIPE_EnableISPColorConversion(&csi->dcmipp, pipe);
+}
+
 float stm_isp_update_awb(omv_csi_t *csi, uint32_t pipe, uint32_t n_pixels) {
     uint32_t avg[3];
     uint32_t shift[3];
@@ -87,6 +162,7 @@ float stm_isp_update_awb(omv_csi_t *csi, uint32_t pipe, uint32_t n_pixels) {
     };
 
     HAL_DCMIPP_PIPE_SetISPExposureConfig(&csi->dcmipp, pipe, &expcfg);
+    stm_isp_apply_ccm(csi, pipe, avg);
 
     return luminance;
 }
