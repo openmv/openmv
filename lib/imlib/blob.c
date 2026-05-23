@@ -136,6 +136,103 @@ static float calc_roundness(float blob_a, float blob_b, float blob_c) {
     return IM_DIV(roundness_min, roundness_max);
 }
 
+void imlib_draw_contours(image_t *ptr, rectangle_t *roi, list_t *thresholds, bool invert, int color) {
+    if (!list_size(thresholds)) {
+        return;
+    }
+
+    image_t bmp;
+    bmp.w = ptr->w;
+    bmp.h = ptr->h;
+    bmp.pixfmt = PIXFORMAT_BINARY;
+    bmp.data = uma_calloc(image_size(&bmp), 0);
+
+    list_for_each(it, thresholds) {
+        color_thresholds_list_lnk_data_t *lnk_data = list_get_data(it);
+
+        switch (ptr->pixfmt) {
+            case PIXFORMAT_BINARY: {
+                for (int y = roi->y, yy = roi->y + roi->h; y < yy; y++) {
+                    imlib_poll_events();
+                    uint32_t *row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(ptr, y);
+                    uint32_t *bmp_row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(&bmp, y);
+                    for (int x = roi->x, xx = roi->x + roi->w; x < xx; x++) {
+                        if (COLOR_THRESHOLD_BINARY(IMAGE_GET_BINARY_PIXEL_FAST(row_ptr, x), lnk_data, invert)) {
+                            IMAGE_SET_BINARY_PIXEL_FAST(bmp_row_ptr, x);
+                        }
+                    }
+                }
+                break;
+            }
+            case PIXFORMAT_GRAYSCALE: {
+                for (int y = roi->y, yy = roi->y + roi->h; y < yy; y++) {
+                    imlib_poll_events();
+                    uint8_t *row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(ptr, y);
+                    uint32_t *bmp_row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(&bmp, y);
+                    for (int x = roi->x, xx = roi->x + roi->w; x < xx; x++) {
+                        if (COLOR_THRESHOLD_GRAYSCALE(IMAGE_GET_GRAYSCALE_PIXEL_FAST(row_ptr, x), lnk_data, invert)) {
+                            IMAGE_SET_BINARY_PIXEL_FAST(bmp_row_ptr, x);
+                        }
+                    }
+                }
+                break;
+            }
+            case PIXFORMAT_RGB565: {
+                for (int y = roi->y, yy = roi->y + roi->h; y < yy; y++) {
+                    imlib_poll_events();
+                    uint16_t *row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(ptr, y);
+                    uint32_t *bmp_row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(&bmp, y);
+                    for (int x = roi->x, xx = roi->x + roi->w; x < xx; x++) {
+                        if (COLOR_THRESHOLD_RGB565(IMAGE_GET_RGB565_PIXEL_FAST(row_ptr, x), lnk_data, invert)) {
+                            IMAGE_SET_BINARY_PIXEL_FAST(bmp_row_ptr, x);
+                        }
+                    }
+                }
+                break;
+            }
+            default: {
+                break;
+            }
+        }
+    }
+
+    int x_min = roi->x;
+    int y_min = roi->y;
+    int x_max = roi->x + roi->w - 1;
+    int y_max = roi->y + roi->h - 1;
+
+    for (int y = y_min; y <= y_max; y++) {
+        imlib_poll_events();
+        uint32_t *row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(&bmp, y);
+        for (int x = x_min; x <= x_max; x++) {
+            if (!IMAGE_GET_BINARY_PIXEL_FAST(row_ptr, x)) {
+                continue;
+            }
+
+            bool edge = (x == x_min) || (x == x_max) || (y == y_min) || (y == y_max);
+
+            if (!edge) {
+                uint32_t *prev_row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(&bmp, y - 1);
+                uint32_t *next_row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(&bmp, y + 1);
+                edge = (!IMAGE_GET_BINARY_PIXEL_FAST(prev_row_ptr, x - 1)) ||
+                       (!IMAGE_GET_BINARY_PIXEL_FAST(prev_row_ptr, x)) ||
+                       (!IMAGE_GET_BINARY_PIXEL_FAST(prev_row_ptr, x + 1)) ||
+                       (!IMAGE_GET_BINARY_PIXEL_FAST(row_ptr, x - 1)) ||
+                       (!IMAGE_GET_BINARY_PIXEL_FAST(row_ptr, x + 1)) ||
+                       (!IMAGE_GET_BINARY_PIXEL_FAST(next_row_ptr, x - 1)) ||
+                       (!IMAGE_GET_BINARY_PIXEL_FAST(next_row_ptr, x)) ||
+                       (!IMAGE_GET_BINARY_PIXEL_FAST(next_row_ptr, x + 1));
+            }
+
+            if (edge) {
+                imlib_set_pixel(ptr, x, y, color);
+            }
+        }
+    }
+
+    uma_free(bmp.data);
+}
+
 void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int x_stride, unsigned int y_stride,
                       list_t *thresholds, bool invert, unsigned int area_threshold, unsigned int pixels_threshold,
                       bool merge, int margin, bool (*threshold_cb) (void *, find_blobs_list_lnk_data_t *),

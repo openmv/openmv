@@ -1570,6 +1570,34 @@ static mp_obj_t py_image_draw_edges(size_t n_args, const mp_obj_t *pos_args, mp_
 }
 static MP_DEFINE_CONST_FUN_OBJ_KW(py_image_draw_edges_obj, 2, py_image_draw_edges);
 
+static mp_obj_t py_image_draw_contours(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
+    enum { ARG_thresholds, ARG_color, ARG_invert, ARG_roi };
+    static const mp_arg_t allowed_args[] = {
+        { MP_QSTR_thresholds, MP_ARG_OBJ | MP_ARG_REQUIRED },
+        { MP_QSTR_color,     MP_ARG_OBJ, {.u_rom_obj = MP_ROM_NONE} },
+        { MP_QSTR_invert,    MP_ARG_BOOL | MP_ARG_KW_ONLY, {.u_bool = false} },
+        { MP_QSTR_roi,       MP_ARG_OBJ | MP_ARG_KW_ONLY, {.u_rom_obj = MP_ROM_NONE} },
+    };
+
+    image_t *image = py_helper_arg_to_image(pos_args[0], ARG_IMAGE_MUTABLE);
+    mp_arg_val_t args[MP_ARRAY_SIZE(allowed_args)];
+    mp_arg_parse_all(n_args - 1, pos_args + 1, kw_args, MP_ARRAY_SIZE(allowed_args), allowed_args, args);
+
+    list_t thresholds;
+    list_init(&thresholds, sizeof(color_thresholds_list_lnk_data_t));
+    py_helper_arg_to_thresholds(args[ARG_thresholds].u_obj, &thresholds);
+
+    if (list_size(&thresholds)) {
+        rectangle_t roi = py_helper_arg_to_roi(args[ARG_roi].u_obj, image);
+        int color = py_helper_arg_to_color(image, args[ARG_color].u_obj, -1); // White.
+        imlib_draw_contours(image, &roi, &thresholds, args[ARG_invert].u_bool, color);
+    }
+
+    list_free(&thresholds);
+    return pos_args[0];
+}
+static MP_DEFINE_CONST_FUN_OBJ_KW(py_image_draw_contours_obj, 2, py_image_draw_contours);
+
 static mp_obj_t py_image_draw_keypoints(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
     enum { ARG_color, ARG_size, ARG_thickness, ARG_fill };
     static const mp_arg_t allowed_args[] = {
@@ -4619,6 +4647,7 @@ static const mp_rom_map_elem_t locals_dict_table[] = {
     {MP_ROM_QSTR(MP_QSTR_draw_detection),      MP_ROM_PTR(&py_image_draw_detection_obj)},
     {MP_ROM_QSTR(MP_QSTR_draw_arrow),          MP_ROM_PTR(&py_image_draw_arrow_obj)},
     {MP_ROM_QSTR(MP_QSTR_draw_edges),          MP_ROM_PTR(&py_image_draw_edges_obj)},
+    {MP_ROM_QSTR(MP_QSTR_draw_contours),       MP_ROM_PTR(&py_image_draw_contours_obj)},
     #if (OMV_GENX320_ENABLE == 1)
     {MP_ROM_QSTR(MP_QSTR_draw_event_histogram), MP_ROM_PTR(&py_image_draw_event_histogram_obj)},
     #endif // OMV_GENX320_ENABLE == 1
