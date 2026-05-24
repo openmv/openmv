@@ -136,25 +136,149 @@ static float calc_roundness(float blob_a, float blob_b, float blob_c) {
     return IM_DIV(roundness_min, roundness_max);
 }
 
-void imlib_draw_contours(image_t *ptr, rectangle_t *roi, list_t *thresholds, bool invert, int color) {
+static void imlib_select_blob_component(image_t *out, image_t *in, rectangle_t *roi, point_t *seed) {
+    if ((seed->x < roi->x) || (seed->x >= (roi->x + roi->w)) ||
+        (seed->y < roi->y) || (seed->y >= (roi->y + roi->h))) {
+        return;
+    }
+
+    uint32_t *seed_row = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(in, seed->y);
+    if (!IMAGE_GET_BINARY_PIXEL_FAST(seed_row, seed->x)) {
+        return;
+    }
+
+    lifo_t lifo;
+    size_t lifo_len;
+    lifo_alloc_all(&lifo, &lifo_len, sizeof(xylr_t));
+
+    int x = seed->x;
+    int y = seed->y;
+
+    for (;;) {
+        int left = x, right = x;
+        uint32_t *row = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(in, y);
+        uint32_t *out_row = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(out, y);
+
+        while ((left > roi->x) &&
+               (!IMAGE_GET_BINARY_PIXEL_FAST(out_row, left - 1)) &&
+               IMAGE_GET_BINARY_PIXEL_FAST(row, left - 1)) {
+            left--;
+        }
+
+        while ((right < (roi->x + roi->w - 1)) &&
+               (!IMAGE_GET_BINARY_PIXEL_FAST(out_row, right + 1)) &&
+               IMAGE_GET_BINARY_PIXEL_FAST(row, right + 1)) {
+            right++;
+        }
+
+        for (int i = left; i <= right; i++) {
+            IMAGE_SET_BINARY_PIXEL_FAST(out_row, i);
+        }
+
+        int top_left = left;
+        int bot_left = left;
+        bool break_out = false;
+
+        for (;;) {
+            if (lifo_size(&lifo) < lifo_len) {
+                if (y > roi->y) {
+                    row = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(in, y - 1);
+                    out_row = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(out, y - 1);
+
+                    bool recurse = false;
+                    for (int i = top_left; i <= right; i++) {
+                        if ((!IMAGE_GET_BINARY_PIXEL_FAST(out_row, i)) &&
+                            IMAGE_GET_BINARY_PIXEL_FAST(row, i)) {
+                            xylr_t context;
+                            context.x = x;
+                            context.y = y;
+                            context.l = left;
+                            context.r = right;
+                            context.t_l = i + 1;
+                            context.b_l = bot_left;
+                            lifo_enqueue(&lifo, &context);
+                            x = i;
+                            y = y - 1;
+                            recurse = true;
+                            break;
+                        }
+                    }
+                    if (recurse) {
+                        break;
+                    }
+                }
+
+                if (y < (roi->y + roi->h - 1)) {
+                    row = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(in, y + 1);
+                    out_row = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(out, y + 1);
+
+                    bool recurse = false;
+                    for (int i = bot_left; i <= right; i++) {
+                        if ((!IMAGE_GET_BINARY_PIXEL_FAST(out_row, i)) &&
+                            IMAGE_GET_BINARY_PIXEL_FAST(row, i)) {
+                            xylr_t context;
+                            context.x = x;
+                            context.y = y;
+                            context.l = left;
+                            context.r = right;
+                            context.t_l = top_left;
+                            context.b_l = i + 1;
+                            lifo_enqueue(&lifo, &context);
+                            x = i;
+                            y = y + 1;
+                            recurse = true;
+                            break;
+                        }
+                    }
+                    if (recurse) {
+                        break;
+                    }
+                }
+            }
+
+            if (!lifo_size(&lifo)) {
+                break_out = true;
+                break;
+            }
+
+            xylr_t context;
+            lifo_dequeue(&lifo, &context);
+            x = context.x;
+            y = context.y;
+            left = context.l;
+            right = context.r;
+            top_left = context.t_l;
+            bot_left = context.b_l;
+        }
+
+        if (break_out) {
+            break;
+        }
+    }
+
+    lifo_free(&lifo);
+}
+
+void imlib_draw_contours(image_t *dst, image_t *src, rectangle_t *roi, list_t *thresholds,
+                         bool invert, int color, image_t *mask, point_t *seed) {
     if (!list_size(thresholds)) {
         return;
     }
 
     image_t bmp;
-    bmp.w = ptr->w;
-    bmp.h = ptr->h;
+    bmp.w = src->w;
+    bmp.h = src->h;
     bmp.pixfmt = PIXFORMAT_BINARY;
     bmp.data = uma_calloc(image_size(&bmp), 0);
 
     list_for_each(it, thresholds) {
         color_thresholds_list_lnk_data_t *lnk_data = list_get_data(it);
 
-        switch (ptr->pixfmt) {
+        switch (src->pixfmt) {
             case PIXFORMAT_BINARY: {
                 for (int y = roi->y, yy = roi->y + roi->h; y < yy; y++) {
                     imlib_poll_events();
-                    uint32_t *row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(ptr, y);
+                    uint32_t *row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(src, y);
                     uint32_t *bmp_row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(&bmp, y);
                     for (int x = roi->x, xx = roi->x + roi->w; x < xx; x++) {
                         if (COLOR_THRESHOLD_BINARY(IMAGE_GET_BINARY_PIXEL_FAST(row_ptr, x), lnk_data, invert)) {
@@ -167,7 +291,7 @@ void imlib_draw_contours(image_t *ptr, rectangle_t *roi, list_t *thresholds, boo
             case PIXFORMAT_GRAYSCALE: {
                 for (int y = roi->y, yy = roi->y + roi->h; y < yy; y++) {
                     imlib_poll_events();
-                    uint8_t *row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(ptr, y);
+                    uint8_t *row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(src, y);
                     uint32_t *bmp_row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(&bmp, y);
                     for (int x = roi->x, xx = roi->x + roi->w; x < xx; x++) {
                         if (COLOR_THRESHOLD_GRAYSCALE(IMAGE_GET_GRAYSCALE_PIXEL_FAST(row_ptr, x), lnk_data, invert)) {
@@ -180,7 +304,7 @@ void imlib_draw_contours(image_t *ptr, rectangle_t *roi, list_t *thresholds, boo
             case PIXFORMAT_RGB565: {
                 for (int y = roi->y, yy = roi->y + roi->h; y < yy; y++) {
                     imlib_poll_events();
-                    uint16_t *row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(ptr, y);
+                    uint16_t *row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(src, y);
                     uint32_t *bmp_row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(&bmp, y);
                     for (int x = roi->x, xx = roi->x + roi->w; x < xx; x++) {
                         if (COLOR_THRESHOLD_RGB565(IMAGE_GET_RGB565_PIXEL_FAST(row_ptr, x), lnk_data, invert)) {
@@ -196,6 +320,17 @@ void imlib_draw_contours(image_t *ptr, rectangle_t *roi, list_t *thresholds, boo
         }
     }
 
+    image_t component;
+    image_t *contours = &bmp;
+    if (seed) {
+        component.w = src->w;
+        component.h = src->h;
+        component.pixfmt = PIXFORMAT_BINARY;
+        component.data = uma_calloc(image_size(&component), 0);
+        imlib_select_blob_component(&component, &bmp, roi, seed);
+        contours = &component;
+    }
+
     int x_min = roi->x;
     int y_min = roi->y;
     int x_max = roi->x + roi->w - 1;
@@ -203,7 +338,7 @@ void imlib_draw_contours(image_t *ptr, rectangle_t *roi, list_t *thresholds, boo
 
     for (int y = y_min; y <= y_max; y++) {
         imlib_poll_events();
-        uint32_t *row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(&bmp, y);
+        uint32_t *row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(contours, y);
         for (int x = x_min; x <= x_max; x++) {
             if (!IMAGE_GET_BINARY_PIXEL_FAST(row_ptr, x)) {
                 continue;
@@ -212,8 +347,8 @@ void imlib_draw_contours(image_t *ptr, rectangle_t *roi, list_t *thresholds, boo
             bool edge = (x == x_min) || (x == x_max) || (y == y_min) || (y == y_max);
 
             if (!edge) {
-                uint32_t *prev_row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(&bmp, y - 1);
-                uint32_t *next_row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(&bmp, y + 1);
+                uint32_t *prev_row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(contours, y - 1);
+                uint32_t *next_row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(contours, y + 1);
                 edge = (!IMAGE_GET_BINARY_PIXEL_FAST(prev_row_ptr, x - 1)) ||
                        (!IMAGE_GET_BINARY_PIXEL_FAST(prev_row_ptr, x)) ||
                        (!IMAGE_GET_BINARY_PIXEL_FAST(prev_row_ptr, x + 1)) ||
@@ -225,11 +360,17 @@ void imlib_draw_contours(image_t *ptr, rectangle_t *roi, list_t *thresholds, boo
             }
 
             if (edge) {
-                imlib_set_pixel(ptr, x, y, color);
+                imlib_set_pixel(dst, x, y, color);
+                if (mask) {
+                    imlib_set_pixel(mask, x, y, -1);
+                }
             }
         }
     }
 
+    if (seed) {
+        uma_free(component.data);
+    }
     uma_free(bmp.data);
 }
 

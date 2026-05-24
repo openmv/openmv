@@ -1571,12 +1571,15 @@ static mp_obj_t py_image_draw_edges(size_t n_args, const mp_obj_t *pos_args, mp_
 static MP_DEFINE_CONST_FUN_OBJ_KW(py_image_draw_edges_obj, 2, py_image_draw_edges);
 
 static mp_obj_t py_image_draw_contours(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
-    enum { ARG_thresholds, ARG_color, ARG_invert, ARG_roi };
+    enum { ARG_thresholds, ARG_color, ARG_invert, ARG_roi, ARG_image, ARG_mask, ARG_seed };
     static const mp_arg_t allowed_args[] = {
         { MP_QSTR_thresholds, MP_ARG_OBJ | MP_ARG_REQUIRED },
         { MP_QSTR_color,     MP_ARG_OBJ, {.u_rom_obj = MP_ROM_NONE} },
         { MP_QSTR_invert,    MP_ARG_BOOL | MP_ARG_KW_ONLY, {.u_bool = false} },
         { MP_QSTR_roi,       MP_ARG_OBJ | MP_ARG_KW_ONLY, {.u_rom_obj = MP_ROM_NONE} },
+        { MP_QSTR_image,     MP_ARG_OBJ | MP_ARG_KW_ONLY, {.u_rom_obj = MP_ROM_NONE} },
+        { MP_QSTR_mask,      MP_ARG_OBJ | MP_ARG_KW_ONLY, {.u_rom_obj = MP_ROM_NONE} },
+        { MP_QSTR_seed,      MP_ARG_OBJ | MP_ARG_KW_ONLY, {.u_rom_obj = MP_ROM_NONE} },
     };
 
     image_t *image = py_helper_arg_to_image(pos_args[0], ARG_IMAGE_MUTABLE);
@@ -1588,9 +1591,32 @@ static mp_obj_t py_image_draw_contours(size_t n_args, const mp_obj_t *pos_args, 
     py_helper_arg_to_thresholds(args[ARG_thresholds].u_obj, &thresholds);
 
     if (list_size(&thresholds)) {
-        rectangle_t roi = py_helper_arg_to_roi(args[ARG_roi].u_obj, image);
+        image_t *src = image;
+        if (args[ARG_image].u_obj != mp_const_none) {
+            src = py_helper_arg_to_image(args[ARG_image].u_obj, ARG_IMAGE_UNCOMPRESSED | ARG_IMAGE_ALLOC);
+            PY_ASSERT_TRUE_MSG((src->w == image->w) && (src->h == image->h),
+                               "Source image must match destination image size.");
+        }
+
+        image_t *mask = NULL;
+        if (args[ARG_mask].u_obj != mp_const_none) {
+            mask = py_helper_arg_to_image(args[ARG_mask].u_obj, ARG_IMAGE_MUTABLE | ARG_IMAGE_ALLOC);
+            PY_ASSERT_TRUE_MSG((mask->w == image->w) && (mask->h == image->h),
+                               "Mask image must match destination image size.");
+        }
+
+        rectangle_t roi = py_helper_arg_to_roi(args[ARG_roi].u_obj, src);
+        point_t seed, *seed_ptr = NULL;
+        if (args[ARG_seed].u_obj != mp_const_none) {
+            mp_obj_t *vec;
+            mp_obj_get_array_fixed_n(args[ARG_seed].u_obj, 2, &vec);
+            seed.x = mp_obj_get_int(vec[0]);
+            seed.y = mp_obj_get_int(vec[1]);
+            seed_ptr = &seed;
+        }
+
         int color = py_helper_arg_to_color(image, args[ARG_color].u_obj, -1); // White.
-        imlib_draw_contours(image, &roi, &thresholds, args[ARG_invert].u_bool, color);
+        imlib_draw_contours(image, src, &roi, &thresholds, args[ARG_invert].u_bool, color, mask, seed_ptr);
     }
 
     list_free(&thresholds);
