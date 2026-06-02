@@ -39,6 +39,7 @@
 #include "shared/runtime/gchelper.h"
 #include "shared/runtime/pyexec.h"
 #include "shared/runtime/softtimer.h"
+#include "lptimer_ext.h"
 #include "modmachine.h"
 #include "mpuart.h"
 #include "ospi_flash.h"
@@ -96,6 +97,7 @@ int main(void) {
     alif_hal_init();
 
     pendsv_init();
+    lptimer_init();
     machine_rtc_init();
 
     #if MICROPY_HW_ENABLE_UART_REPL
