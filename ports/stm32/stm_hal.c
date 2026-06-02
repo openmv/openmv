@@ -254,6 +254,10 @@ void HAL_MspInit(void) {
     #endif
 
     #if defined(STM32N6)
+    // Enable backup-domain write access before the sleep-clock enables below: the RTC
+    // sleep-clock bit is backup-protected and is silently dropped if access is off.
+    HAL_PWR_EnableBkUpAccess();
+
     // Enable AHB peripherals during sleep.
     LL_AHB1_GRP1_EnableClockLowPower(LL_AHB1_GRP1_PERIPH_ALL);
     LL_AHB2_GRP1_EnableClockLowPower(LL_AHB2_GRP1_PERIPH_ALL);
