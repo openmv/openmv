@@ -3084,8 +3084,8 @@ void imlib_draw_image(image_t *dst_img,
         rectangle_t dst_rect = {
             .x = dst_x_start,
             .y = dst_y_start,
-            .w = dst_x_end - dst_rect.x,
-            .h = dst_y_end - dst_rect.y,
+            .w = dst_x_end - dst_x_start,
+            .h = dst_y_end - dst_y_start,
         };
 
         rectangle_t src_rect = {
