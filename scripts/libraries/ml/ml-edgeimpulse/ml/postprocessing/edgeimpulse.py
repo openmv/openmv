@@ -87,3 +87,51 @@ class Fomo:
                                  y_center[i] + (h_rel[i] / 2),
                                  bb_scores[i], bb_classes[i])
         return nms.get_bounding_boxes(threshold=self.nms_threshold, sigma=self.nms_sigma)
+
+
+class YoloPro:
+    _YOLO_PRO_XMIN = const(0)
+    _YOLO_PRO_YMIN = const(1)
+    _YOLO_PRO_XMAX = const(2)
+    _YOLO_PRO_YMAX = const(3)
+    _YOLO_PRO_CLASSES = const(4)
+
+    def __init__(self, threshold=0.6, nms_threshold=0.1, nms_sigma=0.1):
+        self.threshold = threshold
+        self.nms_threshold = nms_threshold
+        self.nms_sigma = nms_sigma
+
+    def __call__(self, model, inputs, outputs):
+        oh, ow, oc = model.output_shape[0]
+        scale = model.output_scale[0]
+        t = quantize(model, self.threshold)
+
+        # Reshape the output to a 2D array
+        row_outputs = outputs[0].reshape((oh * ow, oc))
+
+        # Threshold all the scores
+        score_indices = row_outputs[:, _YOLO_PRO_CLASSES:]
+        score_indices = threshold(score_indices, t, scale, find_max=True, find_max_axis=1)
+        if not len(score_indices):
+            return _NO_DETECTION
+
+        # Get the bounding boxes that have a valid score
+        bb = dequantize(model, np.take(row_outputs, score_indices, axis=0))
+
+        # Get the score information
+        bb_scores = np.max(bb[:, _YOLO_PRO_CLASSES:], axis=1)
+
+        # Get the class information
+        bb_classes = np.argmax(bb[:, _YOLO_PRO_CLASSES:], axis=1)
+
+        # Scale the bounding boxes to have enough integer precision for NMS
+        ib, ih, iw, ic = model.input_shape[0]
+        xmin = bb[:, _YOLO_PRO_XMIN] * iw
+        ymin = bb[:, _YOLO_PRO_YMIN] * ih
+        xmax = bb[:, _YOLO_PRO_XMAX] * iw
+        ymax = bb[:, _YOLO_PRO_YMAX] * ih
+
+        nms = NMS(iw, ih, inputs[0].roi)
+        for i in range(bb.shape[0]):
+            nms.add_bounding_box(xmin[i], ymin[i], xmax[i], ymax[i], bb_scores[i], bb_classes[i])
+        return nms.get_bounding_boxes(threshold=self.nms_threshold, sigma=self.nms_sigma)
