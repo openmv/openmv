@@ -888,6 +888,10 @@ mp_obj_t py_fir_snapshot(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_a
         .pixfmt = args[ARG_pixformat].u_int,
     };
     if (args[ARG_copy_to_fb].u_bool) {
+        framebuffer_t *fb = framebuffer_get(FB_MAINFB_ID);
+        image_t tmp;
+        framebuffer_to_image(fb, &tmp);
+        framebuffer_update_preview(&tmp);
         py_helper_set_to_framebuffer(&dst_img);
     } else {
         image_alloc(&dst_img, image_size(&dst_img));
@@ -968,9 +972,6 @@ mp_obj_t py_fir_snapshot(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_a
 
     uma_free(src_img.data);
 
-    if (args[ARG_copy_to_fb].u_bool) {
-        framebuffer_update_preview(&dst_img);
-    }
     return py_image_from_struct(&dst_img);
 }
 static MP_DEFINE_CONST_FUN_OBJ_KW(py_fir_snapshot_obj, 0, py_fir_snapshot);
