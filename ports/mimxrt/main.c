@@ -72,6 +72,13 @@
 #include "mimxrt_hal.h"
 #include "omv_protocol.h"
 
+#if MICROPY_PY_MACHINE_CAN
+extern void machine_can_deinit_all(void);
+#endif
+#if MICROPY_PY_MACHINE_QECNT
+extern void machine_encoder_deinit_all(void);
+#endif
+
 int main(void) {
     bool first_soft_reset = true;
 
@@ -197,7 +204,7 @@ soft_reset:
     omv_csi_abort_all();
     #endif
     #if MICROPY_PY_MACHINE_CAN
-    machine_can_irq_deinit();
+    machine_can_deinit_all();
     #endif
     machine_pin_irq_deinit();
     machine_rtc_irq_deinit();
@@ -218,6 +225,9 @@ soft_reset:
     #endif
     machine_pwm_deinit_all();
     soft_timer_deinit();
+    #if MICROPY_PY_MACHINE_QECNT
+    machine_encoder_deinit_all();
+    #endif
     imlib_deinit();
     gc_sweep_all();
     mp_deinit();
