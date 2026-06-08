@@ -1,12 +1,18 @@
 import time
 import utime
-import sys
-import config
+from config import (
+    get_my_addr,
+    led_restart_blinker,
+    ENCRYPTION_ENABLED,
+    uses_hybrid_encryption,
+)
 import os
 import machine
 import sensor
 import ubinascii
 import enc
+import uasyncio as asyncio
+from message_codec import build_heartbeat_payload
 
 try:
     import logger
@@ -45,6 +51,33 @@ UART_ID = 1
 BAUDRATE = 115200
 INTERNET_RECHECK_INTERVAL_SEC = 60 * 60  # 60 minutes
 
+# AT response substrings (CEREG=LTE, CGREG=3G/2G PS) and saved nw_type (0–4)
+NW_LABEL_LTE_HOME = "+CEREG: 0,1"
+NW_LABEL_LTE_ROAM = "+CEREG: 0,5"
+NW_LABEL_3G_PS_HOME = "+CGREG: 0,1"
+NW_LABEL_3G_PS_ROAM = "+CGREG: 0,5"
+
+NW_TYPE_UNKNOWN = 0
+NW_TYPE_LTE_HOME = 1
+NW_TYPE_LTE_ROAM = 2
+NW_TYPE_3G_PS_HOME = 3
+NW_TYPE_3G_PS_ROAM = 4
+
+NW_TYPE_NAMES = {
+    NW_TYPE_UNKNOWN: "UNKNOWN",
+    NW_TYPE_LTE_HOME: "LTE_HOME",
+    NW_TYPE_LTE_ROAM: "LTE_ROAM",
+    NW_TYPE_3G_PS_HOME: "3G_PS_HOME",
+    NW_TYPE_3G_PS_ROAM: "3G_PS_ROAM",
+}
+
+_NW_LABEL_TO_TYPE = (
+    (NW_LABEL_LTE_HOME, NW_TYPE_LTE_HOME),
+    (NW_LABEL_LTE_ROAM, NW_TYPE_LTE_ROAM),
+    (NW_LABEL_3G_PS_HOME, NW_TYPE_3G_PS_HOME),
+    (NW_LABEL_3G_PS_ROAM, NW_TYPE_3G_PS_ROAM),
+)
+
 
 class _UARTSerialAdapter:
     def __init__(self, uart):
@@ -69,7 +102,8 @@ class InternetDriver:
         context_id=1,
         uart_id=1,
         baudrate=BAUDRATE,
-        configure_sensor = False
+        configure_sensor=False,
+        process_id="XYZ",
     ):
         """
         Initialize EC200 HTTP client
@@ -89,8 +123,9 @@ class InternetDriver:
             configure_sensor: True if the sensor should be configured, False otherwise. (as done main)
         """
         try:
-            self.machine_id = config.get_my_addr()
+            self.machine_id = get_my_addr()
             self.configure_sensor = configure_sensor
+            self.process_id = process_id
             if self.configure_sensor:
                 sensor.reset()
                 sensor.set_pixformat(sensor.RGB565)
@@ -122,7 +157,7 @@ class InternetDriver:
                     raise Exception("ERROR - UART not available and no uart provided")
 
             self.context_id = context_id
-            self.default_timeout = 10 # 10 seconds
+            self.default_timeout = 10  # 10 seconds
             self._last_recovery_fail_ticks = 0  # time.ticks_ms() when recovery last failed
             self._uploads_since_health_check = 10  # trigger health+CSQ on first upload
             self._health_check_interval = 10
@@ -133,7 +168,7 @@ class InternetDriver:
 
             self.has_internet = False
             self.signal_strength = 0
-            self.establish_internet()
+            self.network_type = NW_TYPE_UNKNOWN
             logger.info("InternetDriver init finished")
         except Exception as e:
             print(f"Error in InternetDriver init: {e}")
@@ -143,7 +178,7 @@ class InternetDriver:
     # Core UART helpers
     # ------------------------------------------------------------------
 
-    def _send_command(self, command, wait_for="OK", timeout=None):
+    async def _send_command(self, command, wait_for="OK", timeout=None):
         """
         Send AT command and wait for response.
         Drain stale bytes with a single fast pass, and send AT command
@@ -157,7 +192,7 @@ class InternetDriver:
             while time.ticks_diff(drain_deadline, time.ticks_ms()) > 0:
                 if getattr(self.uart, "in_waiting", 0):
                     self.uart.read(self.uart.in_waiting)
-                    time.sleep(0.02)  # give module 20 ms to push any remaining bytes
+                    await asyncio.sleep(0.02)  # give module 20 ms to push any remaining bytes
                 else:
                     break  # buffer empty - no need to wait the full 200 ms
         except Exception:
@@ -165,9 +200,9 @@ class InternetDriver:
 
         # Send command
         self.uart.write((command + "\r\n").encode())
-        return self._read_response(wait_for, int(timeout * 1000))
-    
-    def _read_response(self, wait_for, timeout_ms, error_str="ERROR"):
+        return await self._read_response(wait_for, int(timeout * 1000))
+
+    async def _read_response(self, wait_for, timeout_ms, error_str="ERROR"):
         """
         Low-level polling reader. Returns (found: bool, response: str).
         Uses tight 20 ms sleep instead of 100 ms to reduce latency.
@@ -193,10 +228,10 @@ class InternetDriver:
                     return True, response
                 if error_str and error_str in response:
                     return False, response
-            time.sleep(0.02)
+            await asyncio.sleep(0.02)
         return False, response
 
-    def _write_and_drain(self, data, drain_sleep=0.15):
+    async def _write_and_drain(self, data, drain_sleep=0.15):
         """
         Write raw bytes to UART and wait for TX to clock out.
         The EC200U-CN at 115200 baud
@@ -209,13 +244,13 @@ class InternetDriver:
                 self.uart.flush()
             except Exception:
                 pass
-        time.sleep(drain_sleep)
+        await asyncio.sleep(drain_sleep)
 
     # ------------------------------------------------------------------
     # Initialization & configuration
     # ------------------------------------------------------------------
 
-    def initialize_internet(self):
+    async def initialize_internet(self):
         """One-time initialization and configuration.
 
         Returns:
@@ -225,14 +260,14 @@ class InternetDriver:
         print("[CELL] Initializing EC200 HTTP client...")
 
         # Let module settle (e.g. after GPS/cellular handover, pending output)
-        time.sleep(0.5)
+        await asyncio.sleep(0.5)
 
         # Give module multiple chances to respond to basic AT (EC200 can be slow after heavy use)
         for attempt in range(5):
-            success, _ = self._send_command("AT", timeout=5)
+            success, _ = await self._send_command("AT", timeout=5)
             if success:
                 break
-            time.sleep(2)  # Longer delay between retries - module may need time
+            await asyncio.sleep(2)  # Longer delay between retries - module may need time
         else:
             self.initialized = False
             return False, "Failed to send AT command!"
@@ -244,69 +279,69 @@ class InternetDriver:
 
         # Give the module time to fully reset or QIACT may appear OK but drop immediately and cause AT+QHTTPURL 711 errors.
         print("[CELL] Activating PDP context...")
-        time.sleep(3)
-        self._send_command(f"AT+QIDEACT={self.context_id}", timeout=10)
-        time.sleep(1)
-        success, resp = self._send_command(f"AT+QIACT={self.context_id}", timeout=30)
+        await asyncio.sleep(3)
+        await self._send_command(f"AT+QIDEACT={self.context_id}", timeout=10)
+        await asyncio.sleep(1)
+        success, resp = await self._send_command(f"AT+QIACT={self.context_id}", timeout=30)
         if not success:
             self.initialized = False
             return False, f"Failed to activate PDP context: {resp}"
 
         # Verify context is actually up before continuing
-        success, resp = self._send_command("AT+QIACT?", timeout=5)
+        success, resp = await self._send_command("AT+QIACT?", timeout=5)
         if not success or f"+QIACT: {self.context_id},1" not in resp:
             self.initialized = False
             return False, f"PDP context did not come up cleanly: {resp}"
         print("[CELL] PDP context active")
 
         # Reset HTTP context flag so it gets configured fresh after (re-)init
-        if not self._configure_http_context():
+        if not await self._configure_http_context():
             self.initialized = False
             return False, "Failed to configure HTTP context"
 
         self.initialized = True
-        self._uploads_since_health_check = 0
         print("EC200 HTTP client initialized successfully")
         return True, None
 
-    def establish_internet(self, retry_count=3):
+    async def establish_internet(self, retry_count=3):
         init_ok = False
         init_error = None
         for attempt in range(1, retry_count+1):
-            init_success, init_error = self.initialize_internet()
+            init_success, init_error = await self.initialize_internet()
             if init_success:
                 init_ok = True
                 break
-            print(f"[CELL] Initial internet init failed (attempt {attempt}/{retry_count}: {init_error}")
+            print(f"[CELL] Internet init failed (attempt {attempt}/{retry_count}): {init_error}")
             if attempt < retry_count:
-                time.sleep(2)
+                await asyncio.sleep(2)
         if not init_ok:
-            print(f"[CELL] Initial internet init failed after {retry_count} attempts: {init_error}")
+            self.has_internet = False
+            print(f"[ERROR] : [CELL] Internet init failed after {retry_count} attempts: {init_error}")
         else:
-            upload_ok = self.make_upload_test()
+            upload_ok = await self.make_upload_test()
             self.has_internet = upload_ok
             if not upload_ok:
                 print("[CELL] has_internet=False: upload validation failed (<2/3 OK)")
 
-    def _configure_http_context(self):
+    async def _configure_http_context(self):
         """
         Configure HTTP context settings.
         upload_data() calls can skip redundant reconfiguration.
         """
         # Configure HTTP context (bind to PDP context)
-        success, resp = self._send_command(f'AT+QHTTPCFG="contextid",{self.context_id}')
+        success, resp = await self._send_command(f'AT+QHTTPCFG="contextid",{self.context_id}')
         if not success:
             print(f"Failed to set context ID: {resp}")
             return False
 
         # Configure simple JSON header behavior
         # Disable per-request header mode and set a fixed Content-Type header.
-        success, resp = self._send_command('AT+QHTTPCFG="requestheader",0')
+        success, resp = await self._send_command('AT+QHTTPCFG="requestheader",0')
         if not success:
             print(f"Failed to configure requestheader: {resp}")
             return False
 
-        success, resp = self._send_command(
+        success, resp = await self._send_command(
             'AT+QHTTPCFG="header","Content-Type: application/json"'
         )
         if not success:
@@ -315,34 +350,53 @@ class InternetDriver:
 
         return True
 
-    def _http_stop(self):
+    async def _http_stop(self):
         """Best-effort: clear stuck Quectel HTTP state before a new QHTTPURL/QHTTPPOST."""
         try:
-            self._send_command("AT+QHTTPSTOP", timeout=5)
+            await self._send_command("AT+QHTTPSTOP", timeout=5)
         except Exception:
             pass
-        time.sleep(0.2)
+        await asyncio.sleep(0.2)
     
     # ------------------------------------------------------------------
     # Health & diagnostics
     # ------------------------------------------------------------------
 
-    def is_healthy(self):
+    def _network_type_from_responses(self, resp):
+        """Map a single CEREG/CGREG UART response text to NW_TYPE_*."""
+        if not resp:
+            return NW_TYPE_UNKNOWN
+        for label, nw_type in _NW_LABEL_TO_TYPE:
+            if label in resp:
+                return nw_type
+        return NW_TYPE_UNKNOWN
+
+    async def is_healthy(self):
         """
         Lightweight health check.
-        Combines CEREG + QIACT into a single pass; skips the bare AT ping
+        Combines CEREG(LTE) or CGREG(3G/2G PS) + QIACT into a single pass; skips the bare AT ping
         (CEREG already proves the module is alive and responding).
         """
         # AT+CEREG proves the module is alive AND confirms LTE data registration
-        success, resp = self._send_command("AT+CEREG?", timeout=4)
+        success, resp = await self._send_command("AT+CEREG?", timeout=4)
         if not success:
             return False
-        if not ("+CEREG: 0,1" in resp or "+CEREG: 0,5" in resp):
-            print("Not registered on LTE network")
-            return False
+
+        nw_type = self._network_type_from_responses(resp)
+        if nw_type == NW_TYPE_UNKNOWN:
+            success2, resp2 = await self._send_command("AT+CGREG?", timeout=4)
+            if not success2:
+                self.save_network_type(NW_TYPE_UNKNOWN)
+                return False
+            nw_type = self._network_type_from_responses(resp2)
+            if nw_type == NW_TYPE_UNKNOWN:
+                print("Not registered on LTE or GPRS (3G/2G PS)")
+                self.save_network_type(NW_TYPE_UNKNOWN)
+                return False
+        self.save_network_type(nw_type)
 
         # PDP context check
-        success, resp = self._send_command(f"AT+QIACT?", timeout=4)
+        success, resp = await self._send_command("AT+QIACT?", timeout=4)
         if not success or f"+QIACT: {self.context_id},1" not in resp:
             print("PDP context not active, triggering full recovery...")
             return False
@@ -350,12 +404,12 @@ class InternetDriver:
         print("Connection is healthy")
         return True
 
-    def get_signal_strength(self):
+    async def get_signal_strength(self):
         """
         Get cellular signal strength (0-100 %) via AT+CSQ.
         Called only periodically now — not before every upload.
         """
-        success, resp = self._send_command("AT+CSQ", timeout=3)
+        success, resp = await self._send_command("AT+CSQ", timeout=3)
         if not success or "+CSQ:" not in resp:
             return None
         try:
@@ -385,11 +439,22 @@ class InternetDriver:
     def get_last_signal_strength(self):
         return self.signal_strength
 
+    def save_network_type(self, network_type):
+        if network_type not in NW_TYPE_NAMES:
+            network_type = NW_TYPE_UNKNOWN
+        self.network_type = network_type
+        logger.info(
+            f"[CELL] Found network type: {network_type} ({NW_TYPE_NAMES.get(network_type, 'UNKNOWN')})"
+        )
+
+    def get_last_network_type(self):
+        return self.network_type
+
     # ------------------------------------------------------------------
     # Upload
     # ------------------------------------------------------------------
 
-    def upload_data(
+    async def upload_data(
         self, data, url, headers=None, input_timeout=20, response_timeout=20
     ):
         """
@@ -415,10 +480,10 @@ class InternetDriver:
 
         if do_health_check:
             for health_attempt in range(2):
-                if self.is_healthy():
+                if await self.is_healthy():
                     break
                 if health_attempt == 0:
-                    time.sleep(1)
+                    await asyncio.sleep(1)
             else:
                 recovery_cooldown_sec = 20
                 now_ms = time.ticks_ms()
@@ -429,14 +494,14 @@ class InternetDriver:
                         self.is_busy = False
                         return False, 0, "Connection failed (recovery cooldown)"
                 print("[CELL] Connection not healthy, attempting to recover...")
-                time.sleep(2)
-                init_success, init_error = self.initialize_internet()
+                await asyncio.sleep(2)
+                init_success, init_error = await self.initialize_internet()
                 if not init_success:
                     self._last_recovery_fail_ticks = now_ms
                     self.on_upload_fail()
                     self.is_busy = False
                     return False, 0, f"Initialization failed: {init_error}"
-                if not self.is_healthy():
+                if not await self.is_healthy():
                     self._last_recovery_fail_ticks = now_ms
                     self.on_upload_fail()
                     self.is_busy = False
@@ -444,17 +509,22 @@ class InternetDriver:
 
         # --- Periodic signal strength log ---
         if do_health_check:
-            signal_pct = self.get_signal_strength()
+            signal_pct = await self.get_signal_strength()
             self.save_signal_strength(signal_pct)
+            nw = self.get_last_network_type()
             if signal_pct is not None:
-                logger.info(f"[CELL] Uploading data, signal: {signal_pct}%")
+                logger.info(
+                    f"[CELL] Uploading data, signal: {signal_pct}%, nw_type: {nw}"
+                )
             else:
-                logger.warning("[CELL] Uploading data, signal: unknown")
+                logger.warning(
+                    f"[CELL] Uploading data, signal: unknown, nw_type: {nw}"
+                )
 
         # --- HTTP context: configure once, skip on subsequent calls ---
         if self._last_fail_count >= 2:
-            self._http_stop()
-            if not self._configure_http_context():
+            await self._http_stop()
+            if not await self._configure_http_context():
                 self.on_upload_fail()
                 self.is_busy = False
                 return False, 0, "Failed to configure HTTP context"
@@ -469,7 +539,7 @@ class InternetDriver:
         # --- Step 1: Set URL ---
         for url_attempt in range(2):
             url_length = len(url)
-            success, resp = self._send_command(
+            success, resp = await self._send_command(
                 f"AT+QHTTPURL={url_length},80", wait_for="CONNECT", timeout=5
             )
             if success:
@@ -477,13 +547,13 @@ class InternetDriver:
             if "711" in resp and url_attempt == 0:
                 # PDP context was lost mid-flight - re-activate and retry once.
                 print("[CELL] CME ERROR 711: PDP context lost, attempting recovery...")
-                time.sleep(2)
-                init_success, init_error = self.initialize_internet()
+                await asyncio.sleep(2)
+                init_success, init_error = await self.initialize_internet()
                 if not init_success:
                     self.on_upload_fail()
                     self.is_busy = False
                     return False, 0, f"CME ERROR 711: PDP recovery failed: {init_error}"
-                if not self._configure_http_context():
+                if not await self._configure_http_context():
                     self.on_upload_fail()
                     self.is_busy = False
                     return False, 0, "CME ERROR 711: HTTP context reconfigure failed"
@@ -493,10 +563,10 @@ class InternetDriver:
                 return False, 0, f"Failed to set URL length: {resp}"
 
         # Send URL — reduced drain_sleep: URL is short (~40 bytes)
-        self._write_and_drain((url + "\r\n").encode(), drain_sleep=0.1)
+        await self._write_and_drain((url + "\r\n").encode(), drain_sleep=0.1)
 
         # Wait for OK — reuse fast reader (20 ms poll, 5 s timeout)
-        ok_found, response = self._read_response("OK", timeout_ms=5000)
+        ok_found, response = await self._read_response("OK", timeout_ms=5000)
         if not ok_found:
             self.on_upload_fail()
             self.is_busy = False
@@ -505,7 +575,7 @@ class InternetDriver:
         # --- Step 2: Initiate POST ---
         # No extra settling gap needed — the module is already in HTTP-input mode
         # after the URL OK; adding 300 ms here was pure dead time.
-        success, resp = self._send_command(
+        success, resp = await self._send_command(
             f"AT+QHTTPPOST={data_length},{input_timeout},{response_timeout}",
             wait_for="CONNECT",
             timeout=15,
@@ -521,7 +591,7 @@ class InternetDriver:
         # Add 50 ms fixed overhead for module buffering.
         baud_ms = max(50, (data_length * 1000) // 11520 + 50)
         drain_s = baud_ms / 1000.0
-        self._write_and_drain(data.encode(), drain_sleep=drain_s)
+        await self._write_and_drain(data.encode(), drain_sleep=drain_s)
 
         # --- Step 4: Wait for POST response ---
         max_wait_ms = min(response_timeout + 10, 40) * 1000
@@ -567,7 +637,7 @@ class InternetDriver:
                         if err == 0 and http_code == 200:
                             # Step 5: Read response data (shorter read timeout)
                             read_timeout = min(max(response_timeout, 10), 40)
-                            success, read_resp = self._send_command(
+                            success, read_resp = await self._send_command(
                                 "AT+QHTTPREAD=80", timeout=read_timeout
                             )
                             self.on_upload_success()
@@ -599,7 +669,7 @@ class InternetDriver:
                     self.is_busy = False
                     return False, 0, f"POST failed: {response}"
 
-            time.sleep(0.02)
+            await asyncio.sleep(0.02)
             
         self.on_upload_fail()
         self.is_busy = False
@@ -627,18 +697,52 @@ class InternetDriver:
         img = sensor.snapshot()
         jpeg_bytearray = img.compress(quality=25)
         imgbytes = bytes(jpeg_bytearray)
-        encnode = enc.EncNode(self.machine_id)
-        enc_msgbytes = enc.encrypt_hybrid(imgbytes, encnode.get_pub_key())
-        img_b64_str = ubinascii.b2a_base64(enc_msgbytes).rstrip().decode()
+        if uses_hybrid_encryption("P"):
+            encnode = enc.EncNode(self.machine_id)
+            enc_msgbytes = enc.encrypt_hybrid(imgbytes, encnode.get_pub_key())
+            img_b64_str = ubinascii.b2a_base64(enc_msgbytes).rstrip().decode()
+        else:
+            img_b64_str = ubinascii.b2a_base64(imgbytes).rstrip().decode()
         return {
             "machine_id": self.machine_id,
             "msg_typ": "event",
             "data": img_b64_str,
             "epoch_ms": utime.time_ns() // 1_000_000,
-            "enc": True,
+            "enc": ENCRYPTION_ENABLED,
         }
-        
-    def make_upload_test(self):
+
+    def get_heartbeat_payload(self):
+        """
+        Build heartbeat payload in the same packed format as main.py,
+        then base64-encode it for cloud upload.
+        Uses sample stats values for driver-level upload testing.
+        """
+        hbmsg_bytes = build_heartbeat_payload(
+            image_taken=14,
+            image_sent=5,
+            image_dropped=2,
+            image_failed=1,
+            image_queued=6,
+            radio_succ=3923,
+            radio_err=48,
+            internet_succ=self.get_upload_success_count(),
+            internet_err=self.get_upload_fail_count() + 1,
+            fs_succ=32,
+            fs_err=1,
+            neighbours=[215, 216, 217],
+            shortest_path=[215, 216, 217],
+            process_id=self.process_id,
+        )
+        hb_b64_str = ubinascii.b2a_base64(hbmsg_bytes).rstrip(b"\n")
+        return {
+            "machine_id": self.machine_id,
+            "msg_typ": "H",
+            "epoch_ms": utime.time_ns() // 1_000_000,
+            "data": hb_b64_str,
+            "enc": False,
+        }
+
+    async def make_upload_test(self):
         try:
             url = "https://api.vyomiq.io/watchmen-detect/"
             headers = {
@@ -651,7 +755,7 @@ class InternetDriver:
             for i in range(1, test_count + 1):
                 print(f"uploading {i}/{test_count}.....")
                 start_ms = time.ticks_ms()
-                success, http_code, response = self.upload_data(
+                success, http_code, response = await self.upload_data(
                     common_img_payload, url, headers=headers
                 )
                 duration_ms = time.ticks_diff(time.ticks_ms(), start_ms)
@@ -674,74 +778,64 @@ class InternetDriver:
         except Exception as e:
             print(f"Error in make_upload_test: {e}")
             return False
-            
-
-
-def get_text_payload(my_addr):
-    return {
-        "machine_id": my_addr,
-        "msg_typ": "event_text",
-        "epoch_ms": utime.time_ns() // 1_000_000,
-        "data": "BuxctA9cU74h2/f0BxB+lSLU1i3pGjXiAHNbJhlu8RPP768n4z8AFiobqpZE0Smo4eE8qUWFQWLdIwHDvxEl7YWdUFXIEldX4vv9bLTDtcokVfiBZzvCKYo2jHksL20X5aP49soS9wweON1YviK0p5DSlNPmMojR/LVTsDt5lrg=\n",
-        "enc": True,
-    }
-
 
 # ------------------------------------------------------------------
 # Example Entry point
 # ------------------------------------------------------------------
 
+# Global Variables
+LOG_DIR = "/sdcard/logs"
+MAIN_LOG = LOG_DIR + "/internet_driver.log"
+is_writable = False
+
+# Create log directory
+def init_dir():
+    global is_writable
+    try:
+        os.mkdir(LOG_DIR)
+        is_writable = True
+    except OSError:
+        is_writable = False
+        print("Error: SD card not writable, logs wouldn't be saved.")
+        pass
+        
+def write_log(message):
+    if is_writable:
+        with open(MAIN_LOG, "a") as f:
+            f.write(message + "\n")
+
 if __name__ == "__main__":
     try:
-        config.led_restart_blinker()
-        # Global Variables
-        LOG_DIR = "/sdcard/logs"
-        MAIN_LOG = LOG_DIR + "/internet_driver.log"
-
-        # Create log directory
-        try:
-            os.mkdir(LOG_DIR)
-        except OSError:
-            pass
-
-        # Log startup
-        print("STARTING MAIN")
-        with open(MAIN_LOG, "a") as f:
-            f.write("STARTING MAIN\n")
+        write_log("STARTING MAIN")
+        led_restart_blinker()
+        init_dir()
     except Exception as e:
         print(f"Error in logging setup: {e}")
-        time.sleep(2)
-        machine.reset()
+        
 
     try:
-        uid = config.uid
-        my_addr = config.get_my_addr()
+        my_addr = get_my_addr()
         try:
             tracx_uart = UART(UART_ID, BAUDRATE, timeout=2000)
             internet_module = InternetDriver(uart=tracx_uart, configure_sensor=True)
+            asyncio.run(internet_module.establish_internet())
         except Exception as e:
             # Keep this handler simple; only treat UARTNotAvailableError specially.
             print(f"Internet driver init failed: {e}, Rebooting...")
-            with open(MAIN_LOG, "a") as f:
-                f.write(f"Internet driver init failed: {e}, Rebooting...\n")
+            write_log(f"Internet driver init failed: {e}, Rebooting...")
             time.sleep(2)
             machine.reset()
 
         if not internet_module.initialized:
-            # init_success, init_error = internet_module.initialize_internet()
-            # if not init_success:
-            print(f"Internet initialization failed! Rebooting...")
-            with open(MAIN_LOG, "a") as f:
-                f.write(
-                    f"Internet initialization failed!, Rebooting...\n"
-                )
+            print("Internet initialization failed! Rebooting...")
+            write_log("Internet initialization failed!, Rebooting...")
             time.sleep(2)
             machine.reset()
 
         # Make POST request
         url = "https://api.vyomiq.io/watchmen-detect/"
         payload_1 = internet_module.get_image_payload()
-        payload_2 = get_text_payload(my_addr)
+        payload_2 = internet_module.get_heartbeat_payload()
         headers = {
             "Content-Type": "application/json",
             "Authorization": "Bearer YOUR_TOKEN",
@@ -755,35 +849,35 @@ if __name__ == "__main__":
 
         for i in range(total_uploads):
             payload = payload_2 if (i % 2 == 0) else payload_1
+            filename = f"{curr_epoch_ms}.json" if (i % 2 == 0) else f"{curr_epoch_ms}.jpg"
             curr_epoch_ms += 1
             payload["epoch_ms"] = curr_epoch_ms
             start_ms = time.ticks_ms()
-            success, http_code, response = internet_module.upload_data(
-                payload, url, headers=headers
+            success, http_code, response = asyncio.run(
+                internet_module.upload_data(payload, url, headers=headers)
             )
             end_ms = time.ticks_ms()
             duration_ms = time.ticks_diff(end_ms, start_ms)
+            sec = duration_ms / 1000.0
             total_duration_ms += duration_ms
             attempt_no = i + 1
 
             if success:
                 success_count += 1
-                print(
-                    f"[{attempt_no}/{total_uploads}] SUCCESS | HTTP: {http_code} | {duration_ms/1000:.4f} seconds | {curr_epoch_ms}.jpg\n"
+                msg_ok = (
+                    f"[{attempt_no}/{total_uploads}] SUCCESS | HTTP: {http_code} | "
+                    f"{sec:.4f} seconds | {filename}\n"
                 )
-                with open(MAIN_LOG, "a") as f:
-                    f.write(
-                        f"[{attempt_no}/{total_uploads}] SUCCESS | HTTP: {http_code} | {duration_ms/1000:.4f} seconds | {curr_epoch_ms}.jpg\n"
-                    )
+                print(msg_ok)
+                write_log(msg_ok.rstrip())
             else:
                 fail_count += 1
-                print(
-                    f"[{attempt_no}/{total_uploads}] FAILED  | HTTP: {http_code} | {duration_ms/1000:.4f} seconds | {curr_epoch_ms}.jpg | {response}\n"
+                msg_fail = (
+                    f"[{attempt_no}/{total_uploads}] FAILED  | HTTP: {http_code} | "
+                    f"{sec:.4f} seconds | {filename} | {response}\n"
                 )
-                with open(MAIN_LOG, "a") as f:
-                    f.write(
-                        f"[{attempt_no}/{total_uploads}] FAILED  | HTTP: {http_code} | {duration_ms/1000:.4f} seconds | {curr_epoch_ms}.jpg | {response}\n"
-                    )
+                print(msg_fail)
+                write_log(msg_fail.rstrip())
 
         avg_duration_ms = (
             (total_duration_ms // total_uploads) if total_uploads > 0 else 0
@@ -793,17 +887,15 @@ if __name__ == "__main__":
         print(f"Failed: {fail_count}")
         print(f"Average duration: {avg_duration_ms} ms")
         print("END, Rebooting the device...")
-        with open(MAIN_LOG, "a") as f:
-            f.write(f"Total: {total_uploads}\n")
-            f.write(f"Success: {success_count}\n")
-            f.write(f"Failed: {fail_count}\n")
-            f.write(f"Average duration: {avg_duration_ms} ms\n")
-            f.write("END, Rebooting the device...\n")
+        write_log(f"Total: {total_uploads}")
+        write_log(f"Success: {success_count}")
+        write_log(f"Failed: {fail_count}")
+        write_log(f"Average duration: {avg_duration_ms} ms")
+        write_log("END, Rebooting the device...")
         time.sleep(2)
         machine.reset()
     except Exception as e:
         print(f"Unexpected error: {e}, Rebooting...")
-        with open(MAIN_LOG, "a") as f:
-            f.write(f"Unexpected error: {e}, Rebooting...\n")
+        write_log(f"Unexpected error: {e}, Rebooting...")
         time.sleep(2)
         machine.reset()

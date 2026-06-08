@@ -1,4 +1,6 @@
 import struct
+import gc
+import utime
 
 # Binary header prepended to JPEG bytes before base64 upload (API strips first N bytes).
 # 2-byte LE payload length + 20-byte payload (lat, lon, epoch, image_id, type).
@@ -81,3 +83,29 @@ def pack_image_meta_header(lat, lon, epoch_ms, image_id, file_type):
     buf[21] = ord(file_type)
 
     return bytes(buf)
+
+
+def get_free_memory():
+    """Return available free memory in KB as an integer."""
+    try:
+        gc.collect()
+        free_bytes = gc.mem_free()
+    except AttributeError:
+        free_bytes = -1
+    except Exception:
+        free_bytes = -1
+
+    if free_bytes < 0:
+        return 0
+    return free_bytes // 1024
+
+
+def get_uptime_minutes():
+    """
+        Return integer minutes elapsed since device boot.
+        For 30 days = 43200 < 65535 (2 bytes)
+    """
+    try:
+        return utime.ticks_ms() // 60000
+    except Exception:
+        return 0

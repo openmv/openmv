@@ -3,14 +3,16 @@ import machine
 from machine import LED
 import uasyncio as asyncio
 
+# Encryption policy
+ENCRYPTION_ENABLED = True
+
 # Map board UID (hex bytes) to node address.
 UID_TO_ADDR = {
     b'e606fe64d709051c': 216,
     b'e076465dd7193d2a': 217,
     b"e076465dd709102e": 218,
-    b'e606fe64d7091126': 219,
+    b"e076465dd7194211": 219,
     b"e076465dd7091027": 220,
-    b"e076465dd7090d1c": 221,
     b"e076465dd719431e": 222,
     b"e076465dd7091843": 223,
     b"e076465dd719421e": 224,
@@ -21,12 +23,15 @@ UID_TO_ADDR = {
     b"e606fe64d7090425": 229,
     b"e606fe64d7110c31": 231,
     b"e606fe64d7110b25": 232,
+    b"e606fe64d7091126": 233,
+    b"e076465dd7090d1c": 234,
+    b"e076465dd7090f42": 235,
 }
 
 # XX.XX.X
 major = 2  # (0-63)
 minor = 0  # (0-99)
-patch = 2  # (0-9)
+patch = 1  # (0-9)
 # version as integer value, max_val = 64_999 < 65_535 (2 bytes)
 VERSION = major * 1_000 + minor * 10 + patch
 
@@ -55,6 +60,22 @@ def get_my_addr(default=None):
         print("Error: my_addr not defined for this device.")
         return None
     return my_addr
+
+def uses_rsa_encryption(msg_type):
+    if not ENCRYPTION_ENABLED:
+        return False
+    if msg_type in ["*"]:  # None of the messages are rsa_encrypted
+        return True
+    return False
+
+
+def uses_hybrid_encryption(msg_type):
+    if not ENCRYPTION_ENABLED:
+        return False
+    if msg_type == "P":
+        return True
+    return False
+
 
 async def led_restart_blinker():
     led = LED("LED_GREEN")

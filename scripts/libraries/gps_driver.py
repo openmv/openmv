@@ -29,6 +29,8 @@ class GPSDriver:
         self.uart_id = uart_id
         self.baudrate = baudrate
         self.gps_initialized = False
+        self.lat = 0
+        self.lon = 0
     
     def _send_at(self, cmd, wait_ms=1000, retry=3):
         """Send AT command and return response"""
@@ -115,13 +117,23 @@ class GPSDriver:
         Query GPS location
         Returns: (lat, lon, time_str) tuple or (None, None, None) if no fix
         """
-        if not self.gps_initialized: # Dont capture it while request
-            return None, None, None
-            # if not self.initialize_gps():
-            #     return None, None, None
+        if not self.gps_initialized:
+            if not self.initialize_gps():
+                return None, None, None
         
         resp = self._send_at("AT+QGPSLOC?", 3000)
-        return self._parse_gps_response(resp)
+        lat, lon, time_str = self._parse_gps_response(resp)
+        if lat is not None and lon is not None:
+            self.lat = lat
+            self.lon = lon
+        return lat, lon, time_str
+
+    def get_saved_gps_location(self):
+        """
+        Return last cached fix from get_gps_location (no UART).
+        Returns: (lat, lon) or (None, None) if never fixed.
+        """
+        return self.lat, self.lon
     
     def _utc_to_local(self, dd, mo, yy, hh, mm, ss, tz_offset=5.5):
         """Convert UTC time to local time using timezone offset (IST = UTC+5:30)"""

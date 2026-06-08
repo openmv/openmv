@@ -368,6 +368,8 @@ class DbStore(StoreUtils):
                 logger.info(
                     f"Saved raw image: {raw_path}: raw size = {len(img_snapshot.bytearray())} bytes"
                 )
+            else:
+                logger.warning("[DB] SD card not ready, skipping raw image save...")
         except Exception as e:
             logger.error(f"Failed to save raw image: {e}")
 

@@ -3,7 +3,7 @@ import ubinascii as _b64mod
 import logger
 
 
-HEARTBEAT_PAYLOAD_SIZE = 35
+HEARTBEAT_PAYLOAD_SIZE = 40
 _HB_NODE_LIST_LEN = 3
 
 
@@ -26,7 +26,11 @@ def build_heartbeat_payload(
     neighbours=None,
     shortest_path=None,
     process_id="",
-):  # 35 bytes
+    version=0,
+    signal_strength=0,
+    network_type=0,
+    is_cc_unit=0,
+):  # 40 bytes
     hbmsg_bytes = b""
     hbmsg_bytes += int_to_nbytes(image_taken, 2)
     hbmsg_bytes += int_to_nbytes(image_sent, 2)
@@ -54,6 +58,10 @@ def build_heartbeat_payload(
     proc_id = (process_id or "")[:3]
     proc_id = proc_id + ("_" * (3 - len(proc_id)))
     hbmsg_bytes += proc_id.encode()
+    hbmsg_bytes += int_to_nbytes(version, 2)
+    hbmsg_bytes += int_to_nbytes(signal_strength, 1)
+    hbmsg_bytes += int_to_nbytes(network_type, 1)
+    hbmsg_bytes += int_to_nbytes(is_cc_unit, 1)
     return hbmsg_bytes
 
 
@@ -88,6 +96,10 @@ def parse_heartbeat_rawbytes(payload):
         ],
         "process_id": payload[idx + 32:idx + 35].decode().rstrip("_"),
     }
+    parsed["version"] = _to_nbyte_int(payload, idx + 35, 2)
+    parsed["signal_strength"] = _to_nbyte_int(payload, idx + 37, 1)
+    parsed["network_type"] = _to_nbyte_int(payload, idx + 38, 1)
+    parsed["is_cc_unit"] = _to_nbyte_int(payload, idx + 39, 1)
     return parsed
 
 
