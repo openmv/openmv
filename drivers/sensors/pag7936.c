@@ -183,6 +183,7 @@
 typedef struct {
     bool gain_auto;
     bool expo_auto;
+    int framerate;
 } pag7936_state_t;
 
 static pag7936_state_t pag7936_state = {};
@@ -530,6 +531,7 @@ static int reset(omv_csi_t *csi) {
     pag7936_state_t *state = csi->priv;
     state->gain_auto = true;
     state->expo_auto = true;
+    state->framerate = PAG7936_HD_FPS_MAX;
     csi->gainceiling = OMV_CSI_GAINCEILING_16X;
     // Write default registers
     for (int i = 0; default_regs[i][0] && ret == 0; i++) {
@@ -576,19 +578,49 @@ static int set_pixformat(omv_csi_t *csi, pixformat_t pixformat) {
     }
 }
 
-static int set_framesize(omv_csi_t *csi, omv_csi_framesize_t framesize) {
+// Pick the largest native sensor mode that meets the requested framerate.
+static omv_csi_framesize_t get_framesize(omv_csi_t *csi, omv_csi_framesize_t target, int framerate) {
+    #ifndef OMV_CSI_HW_SCALE_ENABLE
+    return target;
+    #endif
+
+    uint32_t w = csi->resolution[target][0];
+    uint32_t h = csi->resolution[target][1];
+
+    if (w > csi->resolution[OMV_CSI_FRAMESIZE_VGA][0] ||
+        h > csi->resolution[OMV_CSI_FRAMESIZE_VGA][1] ||
+        framerate <= PAG7936_HD_FPS_MAX) {
+        return OMV_CSI_FRAMESIZE_HD;
+    }
+
+    if (w > csi->resolution[OMV_CSI_FRAMESIZE_QVGA][0] ||
+        h > csi->resolution[OMV_CSI_FRAMESIZE_QVGA][1] ||
+        framerate <= PAG7936_VGA_FPS_MAX) {
+        return OMV_CSI_FRAMESIZE_VGA;
+    }
+
+    return OMV_CSI_FRAMESIZE_QVGA;
+}
+
+static int configure(omv_csi_t *csi, omv_csi_framesize_t target, int framerate) {
+    pag7936_state_t *state = csi->priv;
     int ret = 0;
     const uint16_t(*regs)[2];
+    uint8_t reg;
+    omv_csi_framesize_t framesize = get_framesize(csi, target, framerate);
 
     switch (framesize) {
         case OMV_CSI_FRAMESIZE_HD:
             regs = hd_regs;
+            framerate = IM_MIN(framerate, PAG7936_HD_FPS_MAX);
             break;
         case OMV_CSI_FRAMESIZE_VGA:
             regs = vga_regs;
+            framerate = IM_MIN(framerate, PAG7936_VGA_FPS_MAX);
             break;
         case OMV_CSI_FRAMESIZE_QVGA:
             regs = qvga_regs;
+            framerate = IM_MIN(framerate, PAG7936_QVGA_FPS_MAX);
             break;
         default:
             return -1;
@@ -598,27 +630,10 @@ static int set_framesize(omv_csi_t *csi, omv_csi_framesize_t framesize) {
         ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, regs[i][0], 2, regs[i][1], 1);
     }
 
-    return ret;
-}
-
-static int set_framerate(omv_csi_t *csi, int framerate) {
-    pag7936_state_t *state = csi->priv;
-    uint8_t reg;
-    int ret = 0;
-
-    switch (csi->framesize) {
-        case OMV_CSI_FRAMESIZE_HD:
-            framerate = IM_MIN(framerate, PAG7936_HD_FPS_MAX);
-            break;
-        case OMV_CSI_FRAMESIZE_VGA:
-            framerate = IM_MIN(framerate, PAG7936_VGA_FPS_MAX);
-            break;
-        case OMV_CSI_FRAMESIZE_QVGA:
-            framerate = IM_MIN(framerate, PAG7936_QVGA_FPS_MAX);
-            break;
-        default:
-            return -1;
-    }
+    #ifdef OMV_CSI_HW_SCALE_ENABLE
+    csi->src_w = csi->resolution[framesize][0];
+    csi->src_h = csi->resolution[framesize][1];
+    #endif
 
     int32_t frame_time = FT_CLK / framerate;
 
@@ -653,6 +668,41 @@ static int set_framerate(omv_csi_t *csi, int framerate) {
     }
 
     return ret;
+}
+
+static int set_framesize(omv_csi_t *csi, omv_csi_framesize_t framesize) {
+    pag7936_state_t *state = csi->priv;
+    uint32_t w = csi->resolution[framesize][0];
+    uint32_t h = csi->resolution[framesize][1];
+
+    if (w > csi->resolution[OMV_CSI_FRAMESIZE_HD][0] ||
+        h > csi->resolution[OMV_CSI_FRAMESIZE_HD][1]) {
+        return -1;
+    }
+
+    #ifndef OMV_CSI_HW_SCALE_ENABLE
+    if (framesize != OMV_CSI_FRAMESIZE_HD &&
+        framesize != OMV_CSI_FRAMESIZE_VGA &&
+        framesize != OMV_CSI_FRAMESIZE_QVGA) {
+        return -1;
+    }
+    #endif
+
+    return configure(csi, framesize, state->framerate);
+}
+
+static int set_framerate(omv_csi_t *csi, int framerate) {
+    pag7936_state_t *state = csi->priv;
+    state->framerate = framerate;
+
+    if (csi->framesize == OMV_CSI_FRAMESIZE_INVALID) {
+        return 0;
+    }
+
+    // Disable any ongoing frame capture.
+    omv_csi_abort(csi, true, false);
+
+    return configure(csi, csi->framesize, framerate);
 }
 
 static int set_gainceiling(omv_csi_t *csi, omv_csi_gainceiling_t gainceiling) {

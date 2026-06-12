@@ -432,7 +432,7 @@ static void stm_csi_frame_event(omv_csi_t *csi, uint32_t pipe) {
     // The ISP AWB stats lag by one frame. So, drop the first frame when not initialized.
     #if defined(OMV_CSI_STATS_ENABLE)
     if (csi->raw_output && csi->stats_enabled && !csi->stats.initialized) {
-        stm_isp_update_awb(csi, DCMIPP_PIPE, fb->u * fb->v);
+        stm_isp_update_awb(csi, DCMIPP_PIPE);
         csi->drop_frame = true;
     }
     #endif // OMV_CSI_STATS_ENABLE
@@ -590,15 +590,7 @@ static int stm_csi_snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
                 return OMV_CSI_ERROR_INVALID_FRAMESIZE;
             }
 
-            // Configure crop
-            DCMIPP_CropConfTypeDef ccfg = {
-                .HStart = fb->x,
-                .VStart = fb->y,
-                .HSize = fb->u,
-                .VSize = fb->v,
-            };
-            if (HAL_DCMIPP_PIPE_SetCropConfig(&csi->dcmipp, DCMIPP_PIPE, &ccfg) != HAL_OK ||
-                HAL_DCMIPP_PIPE_EnableCrop(&csi->dcmipp, DCMIPP_PIPE) != HAL_OK) {
+            if (stm_isp_set_scaler(csi, DCMIPP_PIPE)) {
                 return OMV_CSI_ERROR_CSI_INIT_FAILED;
             }
 
@@ -798,7 +790,7 @@ static int stm_csi_snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
 
     #if USE_DCMIPP
     if (csi->raw_output) {
-        float luminance = stm_isp_update_awb(csi, DCMIPP_PIPE, fb->u * fb->v);
+        float luminance = stm_isp_update_awb(csi, DCMIPP_PIPE);
         if (csi->ioctl) {
             omv_csi_ioctl(csi, OMV_CSI_IOCTL_UPDATE_AGC_AEC, fast_floorf(luminance));
         }
