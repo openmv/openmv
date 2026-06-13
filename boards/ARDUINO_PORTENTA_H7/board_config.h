@@ -247,11 +247,6 @@
 #define OMV_CSI_RESET_PIN                   (&omv_pin_C13_GPIO)
 #define OMV_CSI_RESET_DELAY                 (100)
 
-// GPIO.1 is connected to the sensor module frame sync pin (OUTPUT) on
-// the Portenta breakout board and to the INT pin (OUTPUT) on the Himax
-// shield, so it can't be enabled for the two boards at the same time.
-//#define OMV_CSI_FSYNC_PIN                    (&omv_pin_C15_GPIO)
-
 // GPIO.3 is connected to the powerdown pin on the Portenta breakout board,
 // and to the STROBE pin on the Himax shield, however it's not actually
 // used on the Himax shield and can be safely enable for the two boards.

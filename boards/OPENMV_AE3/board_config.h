@@ -288,6 +288,7 @@ extern unsigned char OMV_BOARD_UID_ADDR[12];    // Unique address.
 #define OMV_CSI_MXCLK_PIN               (&omv_pin_CSI_MXCLK)
 #define OMV_CSI_RESET_PIN               (&omv_pin_CSI_RESET)
 #define OMV_CSI_POWER_PIN               (&omv_pin_CSI_POWER)
+#define OMV_CSI_FSYNC_PIN               (&omv_pin_CSI_FSYNC)
 
 #define OMV_CSI_POLARITY_CONFIG         { OMV_CSI_ACTIVE_LOW, OMV_CSI_ACTIVE_LOW }
 

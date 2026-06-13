@@ -553,7 +553,6 @@ int hm01b0_init(omv_csi_t *csi) {
     csi->vsync_pol = 0;
     csi->hsync_pol = 0;
     csi->pixck_pol = 0;
-    csi->frame_sync = 0;
     csi->mono_bpp = 1;
 
     return 0;

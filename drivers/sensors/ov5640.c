@@ -1455,7 +1455,6 @@ int ov5640_init(omv_csi_t *csi) {
     csi->vsync_pol = 1;
     csi->hsync_pol = 0;
     csi->pixck_pol = 1;
-    csi->frame_sync = 0;
     csi->mono_bpp = 1;
     csi->rgb_swap = 0;
     csi->blc_size = 8;
