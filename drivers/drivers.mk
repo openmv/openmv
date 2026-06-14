@@ -265,4 +265,55 @@ DRIVER_SRC_C += $(addprefix winc1500/src/, \
 CFLAGS += -I$(TOP_DIR)/drivers/winc1500/include
 endif   # MICROPY_PY_WINC1500
 
+# VC8000 video encoder sources
+ifeq ($(OMV_VC8000_ENABLE), 1)
+DRIVER_SRC_C += $(addprefix vc8000/src/common/, \
+    encInputLineBuffer.c \
+    encasiccontroller.c \
+    encasiccontroller_v2.c \
+    encpreprocess.c \
+    encswhwregisters.c \
+)
+
+DRIVER_SRC_C += $(addprefix vc8000/src/h264/, \
+    H264Cabac.c \
+    H264CodeFrame.c \
+    H264Denoise.c \
+    H264EncApi.c \
+    H264Init.c \
+    H264Mad.c \
+    H264NalUnit.c \
+    H264PictureBuffer.c \
+    H264PictureParameterSet.c \
+    H264PutBits.c \
+    H264RateControl.c \
+    H264Sei.c \
+    H264SequenceParameterSet.c \
+    H264Slice.c \
+    H264TestId.c \
+    h264encapi_ext.c \
+)
+
+DRIVER_SRC_C += $(addprefix vc8000/src/jpeg/, \
+    EncJpeg.c \
+    EncJpegCodeFrame.c \
+    EncJpegInit.c \
+    EncJpegPutBits.c \
+    JpegEncApi.c \
+)
+
+CFLAGS += -DOMV_VC8000_ENABLE=1
+CFLAGS += -I$(TOP_DIR)/$(VC8000_DIR)/include
+CFLAGS += -I$(TOP_DIR)/$(VC8000_DIR)/src/common
+CFLAGS += -I$(TOP_DIR)/$(VC8000_DIR)/src/h264
+CFLAGS += -I$(TOP_DIR)/$(VC8000_DIR)/src/jpeg
+
+$(BUILD)/drivers/vc8000/src/%.o: override CFLAGS += \
+    -Wno-format \
+    -Wno-unused-function \
+    -Wno-incompatible-pointer-types \
+    -Wno-int-in-bool-context \
+    -Wno-unused-but-set-variable
+endif   # OMV_VC8000_ENABLE
+
 OMV_FIRM_OBJ += $(addprefix $(BUILD)/drivers/, $(DRIVER_SRC_C:.c=.o))

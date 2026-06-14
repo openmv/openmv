@@ -473,6 +473,8 @@
 #include "stm32n6xx_hal_xspi.h"
 #endif /* HAL_XSPI_MODULE_ENABLED */
 
+#include "stm32n6xx_ll_venc.h"
+
 /* Exported macros -----------------------------------------------------------*/
 #ifdef  USE_FULL_ASSERT
 /**
