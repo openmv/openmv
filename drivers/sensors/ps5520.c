@@ -61,6 +61,11 @@
 #define CMD_NP                  (0xAB)
 #define R_ISP_TESTMODE          (0x92)
 #define SENSOR_UPDATE           (0x09)
+#define BANK_LTM                (0x06)
+#define CMD_LTM_BACKLIGHT       (0x99)
+#define CMD_LTM                 (0x9A)
+#define CMD_LTM_UPD             (0xF1)
+#define LTM_UPD_EN              (0x01)
 
 #define PIX_CLK                 (160000000L)
 
@@ -95,9 +100,13 @@
 #define PS5520_L_TARGET         (80)
 #define PS5520_L_AGC_DIFF_MIN   (4)
 #define PS5520_L_AGC_DIFF_DIV   (10)
-#define PS5520_L_AEC_ROOM_DIV   (10)
-#define PS5520_L_AEC_DIFF_MUL   (10)
-#define PS5520_L_AEC_MAX_STEP   (50)
+#define PS5520_L_AGC_MAX_STEP   (4)
+#define PS5520_L_FAST_THRESH    (60)
+#define PS5520_L_EMA_DIV        (8)
+#define PS5520_AEC_DAMP_FAST    (2)
+#define PS5520_AEC_DAMP_SLOW    (4)
+#define PS5520_LTM_DEFAULT      (0x88)
+#define PS5520_BACKLIGHT_DEFAULT (0x23)
 
 typedef struct ps5520_state {
     bool enable_agc;
@@ -107,6 +116,9 @@ typedef struct ps5520_state {
     int32_t aec_exposure;
     int32_t aec_exposure_ceiling;
     int g_div;
+    int luminance_ema;
+    uint8_t ltm_val_cur;
+    uint8_t backlight_cur;
 } ps5520_state_t;
 
 static ps5520_state_t ps5520_state = {};
@@ -1143,6 +1155,8 @@ static exp_tbl_t gu16ExpTbl[] = {
 
 static int write_registers(omv_csi_t *csi, const uint8_t(*regs)[2]);
 static int get_exposure_us(omv_csi_t *csi, int *exposure_us);
+static int update_ltm(omv_csi_t *csi, int agc_gain);
+static int update_ltm_backlight(omv_csi_t *csi, int32_t aec_exposure);
 
 static int reset(omv_csi_t *csi) {
     ps5520_state_t *ps5520 = csi->priv;
@@ -1170,6 +1184,9 @@ static int reset(omv_csi_t *csi) {
     ps5520->aec_exposure_ceiling = PS5520_DEF_EXP_CEILING;
 
     ps5520->g_div = 1;
+    ps5520->luminance_ema = PS5520_L_TARGET;
+    ps5520->ltm_val_cur = PS5520_LTM_DEFAULT;
+    ps5520->backlight_cur = PS5520_BACKLIGHT_DEFAULT;
 
     ret |= omv_i2c_read_reg(csi->i2c, csi->slv_addr, CMD_LPF_H, 1, &exposure_line_h, 1);
     ret |= omv_i2c_read_reg(csi->i2c, csi->slv_addr, CMD_LPF_L, 1, &exposure_line_l, 1);
@@ -1411,6 +1428,9 @@ static int set_auto_gain(omv_csi_t *csi, int enable, float gain_db, float gain_d
         ps5520->agc_gain_ceiling = ((idx - 1) << 4) + ((gain >> (idx - 1)) & 0x0F);
     }
 
+    // Apply LTM at boot/manual-gain even if the AGC dead zone never fires.
+    ret |= update_ltm(csi, ps5520->agc_gain);
+
     return ret;
 }
 
@@ -1452,6 +1472,9 @@ static int set_auto_exposure(omv_csi_t *csi, int enable, int exposure_us) {
         ps5520->aec_exposure_ceiling = ConvertT2LineBase(exposure_us);
         ps5520->aec_exposure_ceiling = IM_CLAMP(ps5520->aec_exposure_ceiling, PS5520_MIN_INT, PS5520_MAX_INT);
     }
+
+    // Apply BackLight at boot/manual-exposure even if AEC never fires.
+    ret |= update_ltm_backlight(csi, ps5520->aec_exposure);
 
     return ret;
 }
@@ -1523,18 +1546,105 @@ static int set_vflip(omv_csi_t *csi, int enable) {
     return ret;
 }
 
+// gain in PS5520_GAIN() units; ltm_val packs [7:4]=DeHaze, [3:0]=brightness.
+// 1x stays at PS5520_LTM_DEFAULT so HDR outdoor keeps full contrast.
+typedef struct ltm_tbl {
+    uint16_t gain;
+    uint8_t ltm_val;
+} ltm_tbl_t;
+
+static const ltm_tbl_t ps5520_ltm_tbl[] = {
+    // Gain LTM
+    {  16,  0x88 }, //  1x:    c=8, b=8
+    {  128, 0x67 }, //  8x:    c=6, b=7
+    {  192, 0x66 }, // 12x:    c=6, b=6
+    {  224, 0x65 }, // 14x:    c=6, b=5
+    {  256, 0x55 }, // 16x:    c=5, b=5
+    {  352, 0x54 }, // 22x:    c=5, b=4
+    {  384, 0x44 }, // 24x:    c=4, b=4
+    {  432, 0x43 }, // 27x:    c=4, b=3
+    {  460, 0x33 }, // 28.75x: c=3, b=3
+    {  491, 0x32 }, // 30.71x: c=3, b=2
+    {  512, 0x22 }, // 32x:    c=2, b=2
+};
+
+static int update_ltm(omv_csi_t *csi, int agc_gain) {
+    ps5520_state_t *ps5520 = csi->priv;
+    uint32_t gain = PS5520_GAIN(agc_gain);
+    uint8_t ltm_val = ps5520_ltm_tbl[0].ltm_val;
+
+    for (size_t i = 1; i < OMV_ARRAY_SIZE(ps5520_ltm_tbl); i++) {
+        if (gain >= ps5520_ltm_tbl[i].gain) {
+            ltm_val = ps5520_ltm_tbl[i].ltm_val;
+        } else {
+            break;
+        }
+    }
+
+    if (ltm_val == ps5520->ltm_val_cur) {
+        return 0;
+    }
+
+    ps5520->ltm_val_cur = ltm_val;
+
+    int ret = omv_i2c_write_reg(csi->i2c, csi->slv_addr, REG_BANK, 1, BANK_LTM, 1);
+    ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, CMD_LTM, 1, ltm_val, 1);
+    ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, CMD_LTM_UPD, 1, LTM_UPD_EN, 1);
+    ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, REG_BANK, 1, 0x01, 1);
+    return ret;
+}
+
+// LTM BackLight vs AEC exposure. Keyed off exposure since AGC stays at 1x.
+// Only exposure tracks scene brightness. Low: bright source in frame, back off.
+typedef struct backlight_tbl {
+    int32_t exp_min;
+    uint8_t backlight;
+} backlight_tbl_t;
+
+static const backlight_tbl_t ps5520_backlight_tbl[] = {
+    // exp_min backLight
+    {  0,      0x23 }, // sun direct in frame
+    {  300,    0x2B }, // bright outdoor with strong source
+    {  700,    0x33 }, // bright backlit
+    {  1200,   0x3B }, // indoor with strong window
+    {  1700,   0x43 }, // indoor / dim
+};
+
+static int update_ltm_backlight(omv_csi_t *csi, int32_t aec_exposure) {
+    ps5520_state_t *ps5520 = csi->priv;
+    uint8_t backlight = ps5520_backlight_tbl[0].backlight;
+
+    for (size_t i = 1; i < OMV_ARRAY_SIZE(ps5520_backlight_tbl); i++) {
+        if (aec_exposure >= ps5520_backlight_tbl[i].exp_min) {
+            backlight = ps5520_backlight_tbl[i].backlight;
+        } else {
+            break;
+        }
+    }
+
+    if (backlight == ps5520->backlight_cur) {
+        return 0;
+    }
+
+    ps5520->backlight_cur = backlight;
+
+    int ret = omv_i2c_write_reg(csi->i2c, csi->slv_addr, REG_BANK, 1, BANK_LTM, 1);
+    ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, CMD_LTM_BACKLIGHT, 1, backlight, 1);
+    ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, CMD_LTM_UPD, 1, LTM_UPD_EN, 1);
+    ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, REG_BANK, 1, 0x01, 1);
+    return ret;
+}
+
 static int update_agc_aec(omv_csi_t *csi, int luminance) {
     ps5520_state_t *ps5520 = csi->priv;
     int ret = 0;
+
+    // EMA-smooth luminance to absorb scene-noise outdoors.
+    ps5520->luminance_ema = (ps5520->luminance_ema * (PS5520_L_EMA_DIV - 1) + luminance) / PS5520_L_EMA_DIV;
+    luminance = ps5520->luminance_ema;
     int diff = PS5520_L_TARGET - luminance;
 
-    // Dead zone: ignore small luminance deviations. With raw (un-smoothed)
-    // luminance, frame-to-frame sensor noise is not filtered, so a small
-    // dead zone prevents noise-driven corrections that appear as flicker.
     if (abs(diff) > PS5520_L_AGC_DIFF_MIN) {
-        // If exposure and gain are both floored and scene is still too
-        // bright, skip the adjustment — nothing can change and redundant
-        // I2C writes may cause sensor glitches.
         if (diff < 0 && ps5520->aec_exposure <= PS5520_MIN_INT && ps5520->agc_gain <= PS5520_MIN_GAIN_IDX) {
             return 0;
         }
@@ -1545,20 +1655,26 @@ static int update_agc_aec(omv_csi_t *csi, int luminance) {
         ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, REG_BANK, 1, 0x01, 1);
 
         if (ps5520->enable_aec && aec_exposure_in) {
-            // Long exposure first for better SNR
             int32_t lpf;
             uint8_t np;
             bool flg_stall = 0;
             int32_t exposure_line;
 
-            // Continuous step scaling: max_step is proportional to how
-            // far the current luminance is from either saturation extreme
-            // (0 or 255). This avoids step-size discontinuities that cause
-            // oscillation at zone boundaries.
-            int32_t headroom = IM_MIN(luminance, 255 - luminance);
-            int32_t max_step = IM_MAX(1, IM_MIN(PS5520_L_AEC_MAX_STEP, headroom / PS5520_L_AEC_ROOM_DIV));
-            int32_t step = diff * PS5520_L_AEC_DIFF_MUL;
-            step = IM_CLAMP(step, -max_step, max_step);
+            // Geometric convergence toward current_exp * L_TARGET / luminance.
+            int32_t target_exp = ps5520->aec_exposure_ceiling;
+
+            if (luminance > 0) {
+                target_exp = (int32_t) ((int64_t) ps5520->aec_exposure * PS5520_L_TARGET / luminance);
+            }
+
+            target_exp = IM_CLAMP(target_exp, PS5520_MIN_INT, ps5520->aec_exposure_ceiling);
+            int32_t damp = (abs(diff) >= PS5520_L_FAST_THRESH) ? PS5520_AEC_DAMP_FAST : PS5520_AEC_DAMP_SLOW;
+            int32_t step = (target_exp - ps5520->aec_exposure) / damp;
+
+            if (!step && target_exp != ps5520->aec_exposure) {
+                step = (target_exp > ps5520->aec_exposure) ? 1 : -1;
+            }
+
             ps5520->aec_exposure += step;
             ps5520->aec_exposure = IM_CLAMP(ps5520->aec_exposure, PS5520_MIN_INT, ps5520->aec_exposure_ceiling);
 
@@ -1606,15 +1722,17 @@ static int update_agc_aec(omv_csi_t *csi, int luminance) {
                 ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, 0x25, 1, 0x00, 1);
             }
 
+            ret |= update_ltm_backlight(csi, ps5520->aec_exposure);
         } else if (ps5520->enable_agc) {
             int32_t gain_step = diff / PS5520_L_AGC_DIFF_DIV;
-            gain_step = IM_CLAMP(gain_step, -1, 1);
+            int32_t max_gain_step = (abs(diff) >= PS5520_L_FAST_THRESH) ? PS5520_L_AGC_MAX_STEP : 1;
+            gain_step = IM_CLAMP(gain_step, -max_gain_step, max_gain_step);
             ps5520->agc_gain += gain_step;
             ps5520->agc_gain = IM_CLAMP(ps5520->agc_gain, PS5520_MIN_GAIN_IDX, ps5520->agc_gain_ceiling);
 
-            //ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, REG_BANK, 1, 0x01, 1);
             ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, CMD_GAIN_IDX, 1, ps5520->agc_gain, 1);
             ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, SENSOR_UPDATE, 1, 0x01, 1);
+            ret |= update_ltm(csi, ps5520->agc_gain);
         }
     }
 
