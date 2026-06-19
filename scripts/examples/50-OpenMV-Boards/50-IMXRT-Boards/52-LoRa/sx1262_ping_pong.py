@@ -17,6 +17,12 @@
 #   DIO1 -> P7
 #
 # Both boards must use the same radio parameters.
+#
+# Driver dependency (not frozen in firmware):
+#   Copy all .py files from micropySX126X lib/ to the camera flash or SD card:
+#   https://github.com/ehong-tl/micropySX126X/tree/master/lib
+#   OpenMV RT1062 requires upstream HAL patches in sx126x.py (time import,
+#   SPI(1) bus-only init, optional spi= kwarg). See upstream PR to micropySX126X.
 
 import time
 from machine import SPI
