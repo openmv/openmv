@@ -14,7 +14,6 @@ freeze ("$(OMV_LIB_DIR)/", "ssd1351.py")
 freeze ("$(OMV_LIB_DIR)/", "pca9674a.py")
 freeze ("$(OMV_LIB_DIR)/", "tb6612.py")
 freeze ("$(OMV_LIB_DIR)/", "vl53l1x.py")
-freeze ("$(OMV_LIB_DIR)/sx126x")
 freeze ("$(OMV_LIB_DIR)/", "machine.py")
 freeze ("$(OMV_LIB_DIR)/", "display.py")
 

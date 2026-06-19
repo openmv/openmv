@@ -1,6 +1,0 @@
-metadata(version="1.0")
-freeze("$(OMV_LIB_DIR)/sx126x", "_sx126x.py")
-freeze("$(OMV_LIB_DIR)/sx126x", "sx126x.py")
-freeze("$(OMV_LIB_DIR)/sx126x", "sx1262.py")
-freeze("$(OMV_LIB_DIR)/sx126x", "sx1268.py")
-freeze("$(OMV_LIB_DIR)/sx126x", "sx1261.py")
