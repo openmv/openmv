@@ -162,9 +162,10 @@ class DbStore(StoreUtils):
         self.my_addr = my_addr
 
         self.fs_root = "/sdcard"
-        self.sdcard_available = (
-            self._is_sdcard_readable() and self._is_sdcard_writable()
-        )
+        # self.sdcard_available = (
+        #     self._is_sdcard_readable() and self._is_sdcard_writable()
+        # )
+        self.sdcard_available = False
 
         self.process_dir = None
         self.image_dir = None

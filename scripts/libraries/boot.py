@@ -996,9 +996,11 @@ def make_chunks(msgbytes):
     # Total packet: 7 (msg_uid) + 1 (;) + IMG_ID_BYTES (filedata_id) + 3 (chunk_index) + 200 (data) = 213 bytes (safe)
     global CHUNK_DATA_SIZE
     chunks = []
+    logger.info("shutdown_log make_chunks 1")
     while len(msgbytes) > CHUNK_DATA_SIZE:
         chunks.append(msgbytes[0:CHUNK_DATA_SIZE])
         msgbytes = msgbytes[CHUNK_DATA_SIZE:]
+    logger.info("shutdown_log make_chunks 2")
     if len(msgbytes) > 0:
         chunks.append(msgbytes)
     return chunks
@@ -1056,10 +1058,13 @@ async def send_msg_big(msg_typ, creator, msgbytes, dest, epoch_ms, md5): # file 
     if msg_typ == "P":
         global radio_sent_succ_count, radio_sent_fail_count
         filedata_id = get_rand(len=IMG_ID_LEN)
+        logger.info("shutdown_log send_msg_big 1")
         if get_transmode_lock(dest, filedata_id, msg_typ, 0, ""): # dummy 0, as we are just sending
             asyncio.create_task(keep_transmode_lock(dest, filedata_id))
             # sending start
+            logger.info("shutdown_log send_msg_big 2")
             chunks = make_chunks(msgbytes)
+            logger.info("shutdown_log send_msg_big 3")
             logger.info(f"[⋙ sending....] dest={dest}, msg_typ:{msg_typ}, len:{len(msgbytes)} bytes, filedata_id:{filedata_id}, image_payload in {len(chunks)} chunks")
             big_succ, _ = await send_single_packet("B", creator, f"{filedata_id}:{msg_typ}:{len(chunks)}:{md5}", dest)
             if not big_succ:
@@ -1078,6 +1083,7 @@ async def send_msg_big(msg_typ, creator, msgbytes, dest, epoch_ms, md5): # file 
                 else:
                     # logger.error(f"TRANS MODE ended, marking data send as failed, timeout error")
                     return False, "TRANS MODE ended, timeout error"
+            logger.info("shutdown_log send_msg_big 4")
             max_miss_retries = 30
             for retry_i in range(max_miss_retries):
                 if retry_i == 0:
@@ -1670,15 +1676,21 @@ def capture_image():
 
     turn_ON_IR_emitter()
     try:
+        logger.info("shutdown_log capture_image 1")
         img_snapshot = sensor.snapshot()
+        logger.info("shutdown_log capture_image 2")
         sensor.get_fb().replace(img_snapshot)
+        logger.info("shutdown_log capture_image 3")
         sensor.flush()
 
+        logger.info("shutdown_log capture_image 4")
         img_capture_count += 1
         img_file_counter += 1
         event_epoch_ms = get_epoch_ms() + img_file_counter
 
+        logger.info("shutdown_log capture_image 5")
         jpeg_bytearray = img_snapshot.compress(quality=global_comp_quality)
+        logger.info("shutdown_log capture_image 6")
         size = len(jpeg_bytearray)
         logger.info(
             f"Compressed image size: {size}, compress_quality-{global_comp_quality}"
