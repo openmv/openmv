@@ -1679,14 +1679,14 @@ def capture_image():
         logger.info("shutdown_log capture_image 1")
         img_snapshot = sensor.snapshot()
         
-        free_before = get_free_memory()
-        logger.info(f"[IMG RX] Free memory before  replace get_fb image: {free_before}KB")
-        logger.info("shutdown_log capture_image 2")
-        try:
-            sensor.get_fb().replace(img_snapshot)
-        except Exception as e:
-            logger.error(f"[PIR] Failed to replace get_fb image: {e}")
-            return None, None, None
+        # free_before = get_free_memory()
+        # logger.info(f"[IMG RX] Free memory before  replace get_fb image: {free_before}KB")
+        # logger.info("shutdown_log capture_image 2")
+        # try:
+        #     sensor.get_fb().replace(img_snapshot)
+        # except Exception as e:
+        #     logger.error(f"[PIR] Failed to replace get_fb image: {e}")
+        #     return None, None, None
         logger.info("shutdown_log capture_image 3")
         sensor.flush()
 
