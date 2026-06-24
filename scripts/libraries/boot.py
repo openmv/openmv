@@ -2419,7 +2419,7 @@ async def keep_generating_heartbeat():
         if not sent_succ:
             consecutive_hb_failures += 1
             logger.warning(f"consecutive heartbeat failures = {consecutive_hb_failures}")
-            if consecutive_hb_failures >= 5:
+            if consecutive_hb_failures >= 100000:
                 logger.error("Too many consecutive heartbeat failures, Rebooting device")
                 try:
                     await reboot_device()
