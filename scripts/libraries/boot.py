@@ -1678,8 +1678,15 @@ def capture_image():
     try:
         logger.info("shutdown_log capture_image 1")
         img_snapshot = sensor.snapshot()
+        
+        free_before = get_free_memory()
+        logger.info(f"[IMG RX] Free memory before  replace get_fb image: {free_before}KB")
         logger.info("shutdown_log capture_image 2")
-        sensor.get_fb().replace(img_snapshot)
+        try:
+            sensor.get_fb().replace(img_snapshot)
+        except Exception as e:
+            logger.error(f"[PIR] Failed to replace get_fb image: {e}")
+            return None, None, None
         logger.info("shutdown_log capture_image 3")
         sensor.flush()
 
@@ -1702,6 +1709,9 @@ def capture_image():
             global_comp_quality = min(HIGH_COMP_QUALITY, global_comp_quality + 5)
 
         return img_snapshot, bytes(jpeg_bytearray), event_epoch_ms
+    except Exception as e:
+        logger.error(f"[PIR] Failed to capture image: {e}")
+        return None, None, None
     finally:
         turn_OFF_IR_emitter()
 
@@ -1746,6 +1756,11 @@ async def person_detection_loop():
                     led.on()
                     logger.info(f"[PIR] 🅾🅾🅾🅾🅾🅾❯❯ Capturing {i+1}/{BURST_SIZE} image... ❮❮🅾🅾🅾🅾🅾🅾")
                     img_snapshot, imgbytes, event_epoch_ms = capture_image()
+                    if img_snapshot is None or imgbytes is None or event_epoch_ms is None:
+                        logger.error(f"[PIR] Failed to capture image: ")
+                        img_capture_count -= 1
+                        led.off()
+                        continue
                     image_id = get_rand(3)
                     lat = 0
                     lon = 0
@@ -1767,6 +1782,7 @@ async def person_detection_loop():
                     except Exception as e:
                         logger.error(f"[PIR] Failed to pack image meta header: {e}")
                         img_capture_count -= 1
+                        led.off()
                         continue
 
                     db_store.store_image_raw(event_epoch_ms, my_addr, img_snapshot)
@@ -1779,6 +1795,7 @@ async def person_detection_loop():
                         if enc_msgbytes is None:
                             logger.error("[PIR] encrypt_if_needed returned enc_msgbytes=None")
                             img_capture_count -= 1
+                            led.off()
                             continue
                         next_dst = next_device_in_spath() if not running_as_cc() else None
                         asyncio.create_task(_send_file_and_account(event_epoch_ms, enc_msgbytes, next_dst))
