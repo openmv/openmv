@@ -51,7 +51,7 @@ if not PRODUCTION_MODE:
     DECRYPT_IMAGE_ON_HOPS = True
 FLAKINESS = 0
 ALERT_TEXT_PAUSED = True
-USE_PIR_SENSOR = True
+USE_PIR_SENSOR = False
 # -----------------------------------▲▲▲▲▲-----------------------------------
 
 def get_rand(len=3):
@@ -1802,9 +1802,9 @@ async def person_detection_loop():
                     except Exception as e:
                         logger.warning(f"warning cleaning up image: {e}, can be ignored...")
                     led.off()
-            await asyncio.sleep(35 if USE_PIR_SENSOR else 900)
+            await asyncio.sleep(35 if USE_PIR_SENSOR else 90)
         except Exception as e:
-            await asyncio.sleep(35 if USE_PIR_SENSOR else 900)
+            await asyncio.sleep(35 if USE_PIR_SENSOR else 90)
             logger.error(f"[PIR] unexpected error in event taking and saving: {e}")
 
         finally:
