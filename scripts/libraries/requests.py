@@ -77,7 +77,26 @@ def socket_readall(s):
     return buf
 
 
-def request(method, url, data=None, json=None, files=None, headers={}, auth=None, stream=None):
+def decode_chunked(data):
+    buf = b""
+    pos = 0
+    while True:
+        line_end = data.find(b"\r\n", pos)
+        if line_end < 0:
+            break
+        size_line = data[pos:line_end]
+        if b";" in size_line:
+            size_line = size_line.split(b";", 1)[0]
+        size = int(size_line, 16)
+        pos = line_end + 2
+        if size == 0:
+            break
+        buf += data[pos : pos + size]
+        pos += size + 2
+    return buf
+
+
+def request(method, url, data=None, json=None, files=None, headers={}, auth=None, stream=None, timeout=5.0):
     try:
         proto, dummy, host, path = url.split("/", 3)
     except ValueError:
@@ -104,12 +123,14 @@ def request(method, url, data=None, json=None, files=None, headers={}, auth=None
     resp_code = 0
     resp_reason = None
     resp_headers = []
+    chunked = False
 
     ai = socket.getaddrinfo(host, port)[0]
     s = socket.socket(ai[0], ai[1], ai[2])
     try:
         s.connect(ai[-1])
-        s.settimeout(5.0)
+        if timeout is not None:
+            s.settimeout(timeout)
         if proto == "https:":
             s = ssl.wrap_socket(s, server_hostname=host)
 
@@ -126,9 +147,10 @@ def request(method, url, data=None, json=None, files=None, headers={}, auth=None
             s.write(b"\r\n")
 
         if json is not None:
-            import json
+            json_body = json
+            import json as json_module
 
-            data = json.dumps(json)
+            data = json_module.dumps(json_body)
             s.write(b"Content-Type: application/json\r\n")
 
         if files is not None:
@@ -145,6 +167,9 @@ def request(method, url, data=None, json=None, files=None, headers={}, auth=None
                 data += b"\r\n"
             data += b"\r\n--%s--\r\n" % (boundary)
 
+        if isinstance(data, str):
+            data = data.encode()
+
         if data:
             s.write(b"Content-Length: %d\r\n\r\n" % len(data))
             s.write(data)
@@ -156,12 +181,12 @@ def request(method, url, data=None, json=None, files=None, headers={}, auth=None
             l = response.pop(0).strip()
             if not l or l == b"\r\n":
                 break
-            if l.startswith(b"Transfer-Encoding:"):
-                if b"chunked" in l:
-                    raise ValueError("Unsupported " + l)
-            elif l.startswith(b"Location:") and not 200 <= status <= 299:
+            lower = l.lower()
+            if lower.startswith(b"transfer-encoding:"):
+                chunked = b"chunked" in lower
+            elif lower.startswith(b"location:") and not 200 <= resp_code <= 299:
                 raise NotImplementedError("Redirects not yet supported")
-            if "HTTPS" in l or "HTTP" in l:
+            if b"HTTPS" in l or b"HTTP" in l:
                 sline = l.split(None, 2)
                 resp_code = int(sline[1])
                 resp_reason = sline[2].decode().rstrip() if len(sline) > 2 else ""
@@ -169,6 +194,8 @@ def request(method, url, data=None, json=None, files=None, headers={}, auth=None
             resp_headers.append(l)
         resp_headers = b"\r\n".join(resp_headers)
         content = b"\r\n".join(response)
+        if chunked:
+            content = decode_chunked(content)
     except OSError:
         raise
     finally:
