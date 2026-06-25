@@ -121,7 +121,7 @@ TRANSMODE_INACTIVITY_LIMIT = 40 # 20 second
 
 # Config test for SF7
 LORA_FREQ = 868.0
-LORA_BW = 125           # 125kHz provides better sensitivity than wider bandwidths
+LORA_BW = 125             # 125kHz provides better sensitivity than wider bandwidths
 LORA_SF = 7               # SF9: Medium speed, excellent range margin for 600-800m
 LORA_CR = 6               # CR 4/6: Good error correction for reliable communication
 LORA_POWER = 22           # Maximum power for strong signal margin
@@ -143,7 +143,7 @@ tracx_uart_lock = asyncio.Lock()
 # -----------------------------------▼▼▼▼▼-----------------------------------
 # STATE VARIABLES
 # -------- Start FPS clock -----------
-#clock = time.clock()            # measure frame/sec
+# clock = time.clock()            # measure frame/sec
 
 my_addr = None
 network_paths = []
@@ -184,6 +184,9 @@ radio_recd_succ_count = 0
 radio_recd_err_count = 0
 radio_recd_crcerr_count = 0
 radio_recd_hasherr_count = 0
+# last sums
+radio_succ_count_prev = 0
+radio_fail_count_prev = 0
 
 # file system
 gps_success_count = 0
@@ -674,7 +677,7 @@ async def init_lora():
     global loranode, lora_init_count, lora_init_in_progress
     if lora_init_in_progress:
         logger.info(f"[LORA] Initialization already in progress, skipping duplicate call")
-        return
+        return False
     lora_init_in_progress = True
     try:
         lora_init_count += 1
@@ -715,15 +718,17 @@ async def init_lora():
         if status != ERR_NONE:
             logger.error(f"[LORA] Failed to initialize SX1262, status: {status}")
             loranode = None
-            return
+            return False
 
         # Set up interrupt callback for RX_DONE and TX_DONE
         loranode.setBlockingCallback(blocking=False, callback=lora_event_callback)
 
         logger.info(f"[LORA] LoRa SX1262 initialized successfully")
+        return True
     except Exception as e:
         logger.error(f"[LORA] Exception during initialization: {str(e)}")
         loranode = None
+        return False
     finally:
         lora_init_in_progress = False
 
@@ -826,6 +831,91 @@ def lora_event_callback(events): # TODO Anand, merge radio_read into this functi
             pass
 
 
+async def lora_health_monitor():  # is_lora_ready is nit being used
+    global loranode, lora_init_in_progress
+    global radio_sent_succ_count, radio_sent_fail_count, radio_recd_succ_count, radio_recd_err_count, radio_recd_crcerr_count, radio_recd_hasherr_count
+    global radio_succ_count_prev, radio_fail_count_prev
+    RADIO_HEALTH_INTERVAL = 120
+    while True:
+        if lora_init_in_progress:
+            await asyncio.sleep(RADIO_HEALTH_INTERVAL)
+            continue
+        else:
+            try:
+                if loranode is None:
+                    logger.info(f"[LORA] LoRa not initialized, initializing...")
+                    succ = await init_lora()
+                    if not succ:
+                        logger.error(
+                            f"[LORA] Failed to initialize LoRa, retrying in 60 seconds"
+                        )
+                        await asyncio.sleep(RADIO_HEALTH_INTERVAL)
+                        continue
+                    else:
+                        logger.info(f"[LORA] LoRa initialized successfully")
+                        await asyncio.sleep(RADIO_HEALTH_INTERVAL)
+                else:  # loranode might be invalid
+                    radio_succ_count = radio_sent_succ_count + radio_recd_succ_count
+                    radio_fail_count = (
+                        radio_sent_fail_count
+                        + radio_recd_err_count
+                        + radio_recd_crcerr_count
+                        + radio_recd_hasherr_count
+                    )
+
+                    succ_diff = radio_succ_count - radio_succ_count_prev
+                    fail_diff = radio_fail_count - radio_fail_count_prev
+
+                    total_msg = max(succ_diff + fail_diff, 1)
+                    error_percentage = int(max(fail_diff, 0) * 100 / total_msg)
+                    if total_msg >= 20:  # for 20 msg, check 50% error
+                        if error_percentage >= 50:
+                            logger.info(
+                                f"[LORA] Radio is not working fine, error pct: {error_percentage}%, initializing..."
+                            )
+                            succ = await init_lora()
+                            if not succ:
+                                logger.error(
+                                    f"[LORA] Failed to initialize LoRa, retrying in 60 seconds"
+                                )
+                                await asyncio.sleep(RADIO_HEALTH_INTERVAL)
+                                continue
+                            else:
+                                logger.info(f"[LORA] LoRa initialized successfully")
+                                await asyncio.sleep(RADIO_HEALTH_INTERVAL)
+                        else:
+                            logger.info("Radio is workinng fine")
+                            await asyncio.sleep(RADIO_HEALTH_INTERVAL)
+                        radio_succ_count_prev = radio_succ_count
+                        radio_fail_count_prev = radio_fail_count
+                    elif total_msg >= 10:  # for 10 msg, check 80% error
+                        if error_percentage >= 80:
+                            logger.info(
+                                f"[LORA] Radio is not working fine, error pct: {error_percentage}%, initializing..."
+                            )
+                            succ = await init_lora()
+                            if not succ:
+                                logger.error(
+                                    f"[LORA] Failed to initialize LoRa, retrying in 60 seconds"
+                                )
+                                await asyncio.sleep(RADIO_HEALTH_INTERVAL)
+                                continue
+                            else:
+                                logger.info(f"[LORA] LoRa initialized successfully")
+                                await asyncio.sleep(RADIO_HEALTH_INTERVAL)
+                        else:
+                            logger.info("Radio is workinng fine")
+                            await asyncio.sleep(RADIO_HEALTH_INTERVAL)
+                    else:
+                        logger.debug(
+                            f"less radio steps available, will re-analyse ater somtime."
+                        )
+                        await asyncio.sleep(RADIO_HEALTH_INTERVAL)
+            except Exception as e:
+                logger.error(f"[LORA] Exception in health monitor: {e}")
+                await asyncio.sleep(RADIO_HEALTH_INTERVAL)
+
+
 def is_lora_ready():
     # Input: None; Output: bool indicating if LoRa is ready to send
     global lora_init_in_progress, loranode
@@ -837,6 +927,124 @@ def is_lora_ready():
             logger.debug(f"[LORA] Not connected to radio network, init already in progress, msg marked as failed")
         return False
     return True
+
+
+async def radio_read(): # TODO Anand, merge
+    """
+    Interrupt-driven LoRa receive loop with packet queuing.
+    Queues packets immediately to prevent blocking the receive loop.
+    This allows rapid packet reception even when processing is slow.
+    """
+    global lora_rx_data, lora_rx_status, lora_rx_event, packet_queue, packet_queue_lock
+    global radio_recd_crcerr_count
+
+    logger.info(f"===> Radio Read, LoRa interrupt-driven receive loop started... <===\n")
+    while True:
+        try:
+            # FIX: Clear event BEFORE waiting to handle any stale events from previous iterations
+            # This ensures we start with a clean state and don't process old data
+            lora_rx_event.clear()
+
+            # Wait for interrupt event (blocks until callback fires)
+            # This is much more efficient than polling - task is suspended until data arrives
+            # The callback will set this event when RX_DONE interrupt occurs
+            await lora_rx_event.wait()
+
+            # CRITICAL FIX: Queue packet immediately without processing
+            # This allows interrupt callback to fire again quickly for next packet
+            # Heavy processing (file I/O, network uploads) happens in background queue processor
+            if lora_rx_status == ERR_NONE:
+                # Valid packet received
+                if lora_rx_data and len(lora_rx_data) > 0:
+                    # Restore newlines (they were replaced during send to avoid packet corruption)
+                    message = lora_rx_data.replace(b"{}[]", b"\n")
+                    # Get RSSI after successful receive (must be called soon after recv)
+                    rssi = loranode.getRSSI()
+                    # Add to queue instead of processing directly - this is FAST
+                    async with packet_queue_lock:
+                        packet_queue.append((message, rssi))
+                    # Log queue size periodically for monitoring
+                    queue_size = len(packet_queue)
+                    if queue_size > 10 and queue_size % 5 == 0:
+                        logger.warning(f"[QUEUE] Packet queue size: {queue_size} - processing may be slow")
+            elif lora_rx_status == ERR_CRC_MISMATCH:
+                # Corrupted packet - log but don't process
+                # The radio detected a CRC error, but we still received the packet
+                radio_recd_crcerr_count += 1
+                logger.warning(f"[LORA] CRC error on received packet, dropped this packet")
+            else:
+                # Other error - log and continue
+                # This could be timeout, header error, etc.
+                logger.warning(f"[LORA] Receive error status: {lora_rx_status}, dropped this packet")
+
+            # FIX: Clear received data immediately after queuing to prevent race conditions
+            # This allows the interrupt callback to fire again quickly
+            lora_rx_data = None
+            lora_rx_status = None
+
+        except Exception as e:
+            lora_rx_data = None
+            lora_rx_status = None
+            logger.error(f"[LORA] Exception in radio_read: {e}")
+            sys.print_exception(e)
+            await asyncio.sleep(0.1)  # Brief pause on error
+
+async def process_packet_queue(): # TODO Anand, (no change)
+    """
+    Background task to process queued packets asynchronously.
+    This prevents blocking the receive loop when doing heavy operations.
+
+    Prioritizes I (chunk) packets for fast file transfer.
+    """
+    global packet_queue, packet_queue_lock
+
+    logger.info(f"===> Packet Queue Processor started... <===\n")
+    while True:
+        try:
+            packet_data = None
+
+            # Get packet from queue with priority for I (chunk) packets
+            async with packet_queue_lock:
+                if len(packet_queue) == 0:
+                    packet_data = None
+                else:
+                    # PRIORITY FIX: Process I (chunk) packets first for fast image transfer
+                    # I chunks are time-sensitive and need fast processing
+                    i_chunk_index = None
+                    for i, (msg, rssi) in enumerate(packet_queue):
+                        try:
+                            # Quick parse to check message type (just first byte after header)
+                            # I chunks have format: msg_uid;filedata_id(3) + chunk_idx(2) + data
+                            # After parsing header, msg_typ is at msg_uid[0]
+                            if len(msg) >= HEADER_LEN:  # Minimum header length
+                                msg_typ_char = chr(msg[0])
+                                if msg_typ_char == "I":  # I chunk packet
+                                    i_chunk_index = i
+                                    break
+                        except:
+                            pass
+
+                    # If I chunk found, process it first; otherwise process first packet
+                    if i_chunk_index is not None:
+                        packet_data = packet_queue.pop(i_chunk_index)
+                    else:
+                        packet_data = packet_queue.pop(0)
+
+            if packet_data:
+                message, rssi = packet_data
+                # Now process the packet - this can be slow (file I/O, network, etc.)
+                # But it doesn't block the receive loop anymore
+                process_message(message, rssi)
+            else:
+                # No packets in queue, yield to other tasks
+                # Small sleep prevents busy-waiting and allows other tasks to run
+                await asyncio.sleep(0.01)
+
+        except Exception as e:
+            logger.error(f"[QUEUE] Error processing packet from queue: {e}")
+            sys.print_exception(e)
+            await asyncio.sleep(0.1)  # Brief pause on error
+
 # -----------------------------------▲▲▲▲▲-----------------------------------
 
 
@@ -885,13 +1093,12 @@ def cleanup_chunk_map_by_msg_id(filedata_id):
             logger.warning(f"[CHUNK] filedata_id mismatch: requested {filedata_id}, but current trans_data_id is {trans_data_id}")
 
 
-async def periodic_memory_cleanup():
+async def periodic_health_stats_loop():
     """Periodically clean up memory buffers and run garbage collection"""
     global seen_neighbours
     global db_store
     while True:
         try:
-            await asyncio.sleep(MEM_CLEANUP_INTERVAL_SEC)
             global trans_in_progress
             seen_nodes = []
             for item in seen_neighbours:
@@ -900,6 +1107,7 @@ async def periodic_memory_cleanup():
             img_queued_count = db_store.get_img_queued_count() if db_store is not None else -1
             if trans_in_progress:
                 logger.info(f"[MEM] ⛃⛃⛃⛁⛁⛁, img_queued: {img_queued_count}, img_sent: {db_store.get_img_sent_count()}, img_dropped: {db_store.get_img_dropped_count()}, img_failed: {db_store.get_img_failed_count()}, network paths: {len(network_paths)}, seen_neighbours: [{seen_nodes_str}], TRANS MODE, no cleanup!!")
+                await asyncio.sleep(MEM_CLEANUP_INTERVAL_SEC)
                 continue
             free_before = get_free_memory()
 
@@ -910,9 +1118,10 @@ async def periodic_memory_cleanup():
             free_after = get_free_memory()
             freed = free_after - free_before if free_before > 0 and free_after > 0 else 0
             logger.info(f"[MEM] ⛃⛃⛃⛁⛁⛁ Cleanup complete (free: {free_after}KB, freed: {freed}KB), img_queued: {img_queued_count}, img_sent: {db_store.get_img_sent_count()}, img_dropped: {db_store.get_img_dropped_count()}, img_failed: {db_store.get_img_failed_count()}, network paths: {len(network_paths)}, seen_neighbours: [{seen_nodes_str}]")
-
+            await asyncio.sleep(MEM_CLEANUP_INTERVAL_SEC)
         except Exception as e:
             logger.error(f"[MEM] error in memory cleanup: {e}")
+            await asyncio.sleep(MEM_CLEANUP_INTERVAL_SEC)
 
 # MSG TYPE = H(eartbeat), A(ck), B(egin), E(nd), C(hunk), S(hortest path)
 
@@ -1671,13 +1880,14 @@ def capture_image():
     turn_ON_IR_emitter()
     try:
         img_snapshot = sensor.snapshot()
+        turn_OFF_IR_emitter()
         sensor.flush()
 
         img_capture_count += 1
         img_file_counter += 1
         event_epoch_ms = get_epoch_ms() + img_file_counter
 
-        jpeg_bytearray = img_snapshot.compress(quality=global_comp_quality)
+        jpeg_bytearray = bytes(img_snapshot.compress(quality=global_comp_quality))
         size = len(jpeg_bytearray)
         logger.info(
             f"Compressed image size: {size}, compress_quality-{global_comp_quality}"
@@ -1688,7 +1898,7 @@ def capture_image():
         if size < LOW_TARGET_SIZE:
             global_comp_quality = min(HIGH_COMP_QUALITY, global_comp_quality + 5)
 
-        return img_snapshot, bytes(jpeg_bytearray), event_epoch_ms
+        return img_snapshot, jpeg_bytearray, event_epoch_ms
     except Exception as e:
         logger.error(f"[PIR] Failed to capture image: {e}")
         return None, None, None
@@ -1741,6 +1951,12 @@ async def person_detection_loop():
                         img_capture_count -= 1
                         led.off()
                         continue
+
+                    db_store.store_image_raw(event_epoch_ms, my_addr, img_snapshot)
+                    if img_snapshot is not None:
+                        del img_snapshot
+                        img_snapshot = None
+
                     image_id = get_rand(3)
                     lat = 0
                     lon = 0
@@ -1765,13 +1981,12 @@ async def person_detection_loop():
                         led.off()
                         continue
 
-                    db_store.store_image_raw(event_epoch_ms, my_addr, img_snapshot)
-                    if img_snapshot is not None:
-                        del img_snapshot
-                        img_snapshot = None
-
                     try:
                         enc_msgbytes = encrypt_if_needed("P", imgbytes)
+                        try:
+                            del imgbytes
+                        except NameError:
+                            pass
                         if enc_msgbytes is None:
                             logger.error("[PIR] encrypt_if_needed returned enc_msgbytes=None")
                             img_capture_count -= 1
@@ -2123,134 +2338,11 @@ def process_message(databytes, rssi=None):
     elif msg_typ == "A":
         ack_msgs_recd.append((msg_uid, msgbytes, get_ms_diff())) # storing only ack, of every message, like ack of B, E...
         logger.debug(f"[ACK] Received ACK message: {msg_uid}, payload: {msgbytes}")
+    elif msg_typ == "D":
+        logger.info(f"[DBG] Received DEBUG message, msg={msgbytes}, ignoring...")
     else:
         logger.info(f"[LORA] Unseen messages type {msg_typ}, sender={sender}, creator={creator} in {msgbytes}")
     return True
-
-# ---------------------------------------------------------------------------
-# LoRa Receive Loop
-# ---------------------------------------------------------------------------
-
-async def radio_read(): # TODO Anand, merge
-    """
-    Interrupt-driven LoRa receive loop with packet queuing.
-    Queues packets immediately to prevent blocking the receive loop.
-    This allows rapid packet reception even when processing is slow.
-    """
-    global lora_rx_data, lora_rx_status, lora_rx_event, packet_queue, packet_queue_lock
-    global radio_recd_crcerr_count
-
-    logger.info(f"===> Radio Read, LoRa interrupt-driven receive loop started... <===\n")
-    while True:
-        # Safety check: wait for loranode to be initialized
-        if not is_lora_ready():
-            await asyncio.sleep(1)
-            continue
-
-        try:
-            # FIX: Clear event BEFORE waiting to handle any stale events from previous iterations
-            # This ensures we start with a clean state and don't process old data
-            lora_rx_event.clear()
-
-            # Wait for interrupt event (blocks until callback fires)
-            # This is much more efficient than polling - task is suspended until data arrives
-            # The callback will set this event when RX_DONE interrupt occurs
-            await lora_rx_event.wait()
-
-            # CRITICAL FIX: Queue packet immediately without processing
-            # This allows interrupt callback to fire again quickly for next packet
-            # Heavy processing (file I/O, network uploads) happens in background queue processor
-            if lora_rx_status == ERR_NONE:
-                # Valid packet received
-                if lora_rx_data and len(lora_rx_data) > 0:
-                    # Restore newlines (they were replaced during send to avoid packet corruption)
-                    message = lora_rx_data.replace(b"{}[]", b"\n")
-                    # Get RSSI after successful receive (must be called soon after recv)
-                    rssi = loranode.getRSSI()
-                    # Add to queue instead of processing directly - this is FAST
-                    async with packet_queue_lock:
-                        packet_queue.append((message, rssi))
-                    # Log queue size periodically for monitoring
-                    queue_size = len(packet_queue)
-                    if queue_size > 10 and queue_size % 5 == 0:
-                        logger.warning(f"[QUEUE] Packet queue size: {queue_size} - processing may be slow")
-            elif lora_rx_status == ERR_CRC_MISMATCH:
-                # Corrupted packet - log but don't process
-                # The radio detected a CRC error, but we still received the packet
-                radio_recd_crcerr_count += 1
-                logger.warning(f"[LORA] CRC error on received packet, dropped this packet")
-            else:
-                # Other error - log and continue
-                # This could be timeout, header error, etc.
-                logger.warning(f"[LORA] Receive error status: {lora_rx_status}, dropped this packet")
-
-            # FIX: Clear received data immediately after queuing to prevent race conditions
-            # This allows the interrupt callback to fire again quickly
-            lora_rx_data = None
-            lora_rx_status = None
-
-        except Exception as e:
-            lora_rx_data = None
-            lora_rx_status = None
-            logger.error(f"[LORA] Exception in radio_read: {e}")
-            sys.print_exception(e)
-            await asyncio.sleep(0.1)  # Brief pause on error
-
-async def process_packet_queue(): # TODO Anand, (no change)
-    """
-    Background task to process queued packets asynchronously.
-    This prevents blocking the receive loop when doing heavy operations.
-
-    Prioritizes I (chunk) packets for fast file transfer.
-    """
-    global packet_queue, packet_queue_lock
-
-    logger.info(f"===> Packet Queue Processor started... <===\n")
-    while True:
-        try:
-            packet_data = None
-
-            # Get packet from queue with priority for I (chunk) packets
-            async with packet_queue_lock:
-                if len(packet_queue) == 0:
-                    packet_data = None
-                else:
-                    # PRIORITY FIX: Process I (chunk) packets first for fast image transfer
-                    # I chunks are time-sensitive and need fast processing
-                    i_chunk_index = None
-                    for i, (msg, rssi) in enumerate(packet_queue):
-                        try:
-                            # Quick parse to check message type (just first byte after header)
-                            # I chunks have format: msg_uid;filedata_id(3) + chunk_idx(2) + data
-                            # After parsing header, msg_typ is at msg_uid[0]
-                            if len(msg) >= HEADER_LEN:  # Minimum header length
-                                msg_typ_char = chr(msg[0])
-                                if msg_typ_char == "I":  # I chunk packet
-                                    i_chunk_index = i
-                                    break
-                        except:
-                            pass
-
-                    # If I chunk found, process it first; otherwise process first packet
-                    if i_chunk_index is not None:
-                        packet_data = packet_queue.pop(i_chunk_index)
-                    else:
-                        packet_data = packet_queue.pop(0)
-
-            if packet_data:
-                message, rssi = packet_data
-                # Now process the packet - this can be slow (file I/O, network, etc.)
-                # But it doesn't block the receive loop anymore
-                process_message(message, rssi)
-            else:
-                # No packets in queue, yield to other tasks
-                # Small sleep prevents busy-waiting and allows other tasks to run
-                await asyncio.sleep(0.01)
-
-        except Exception as e:
-            logger.error(f"[QUEUE] Error processing packet from queue: {e}")
-            sys.print_exception(e)
-            await asyncio.sleep(0.1)  # Brief pause on error
 
 # ---------------------------------------------------------------------------
 # Network Maintenance and Heartbeats (H)
@@ -2266,8 +2358,11 @@ def build_heartbeat_payload():  # HARD limit is 50 bytes
       version(2) — packed config.VERSION (XX.XX.X as uint16 BE, e.g. 2001 = 2.0.1),
       signal_strength(1) — cellular 0-100 % (last AT+CSQ sample; 0 if unknown),
       network_type(1) — 0=unknown, 1=LTE_HOME, 2=LTE_ROAM, 3=3G_PS_HOME, 4=3G_PS_ROAM,
-      is_cc_unit(1) — 1 if running as CC, else 0.
-    Total size: 40 bytes.
+      is_cc_unit(1) — 1 if running as CC, else 0,
+      free_memory(2) — free heap KB (get_free_memory),
+      device_uptime(2) — minutes since boot (get_uptime_minutes).
+
+    Total size: 44 bytes (hard limit 50).
     """
     global img_capture_count, db_store, internet_module, PROCESS_ID_STR
     global radio_sent_succ_count, radio_sent_fail_count, radio_recd_succ_count, radio_recd_err_count, radio_recd_crcerr_count, radio_recd_hasherr_count
@@ -2399,7 +2494,7 @@ async def keep_generating_heartbeat():
         if not sent_succ:
             consecutive_hb_failures += 1
             logger.warning(f"consecutive heartbeat failures = {consecutive_hb_failures}")
-            if consecutive_hb_failures >= 5:
+            if consecutive_hb_failures >= 25: # TODO NEED to discuss more
                 logger.error("Too many consecutive heartbeat failures, Rebooting device")
                 try:
                     await reboot_device()
@@ -2947,6 +3042,9 @@ async def main():
     if not await init_device():
         await reboot_device()
 
+    # HEALTH STATS ===>
+    asyncio.create_task(periodic_health_stats_loop())
+    
     await init_tracx_internet()
     asyncio.create_task(keep_checking_internet())
 
@@ -2964,6 +3062,8 @@ async def main():
 
     # RADIO, QUEUE =====>
     await init_lora()
+    asyncio.create_task(lora_health_monitor())
+
     asyncio.create_task(radio_read())
     asyncio.create_task(process_packet_queue())  # Process queued packets asynchronously
     asyncio.create_task(keep_updating_gps())
@@ -2981,8 +3081,6 @@ async def main():
     if SAVE_LOGS:
         asyncio.create_task(logger_state())
 
-    # CLEANUP ===>
-    asyncio.create_task(periodic_memory_cleanup())
     for i in range(24*7*4):  # 4 weeks
         await asyncio.sleep(3600)
         logger.info(f"Finished HOUR {i}")
