@@ -124,7 +124,7 @@ class DbStore(StoreUtils):
     DATA_BUFFER_SIZE = 120 * 1024  # 120KB
 
     # Image list buffer defaults (aligned with nv2/main.py, extended header)
-    IMG_LIST_CAPACITY = 30  # Number of image slots # TODO test
+    IMG_LIST_CAPACITY = 20  # Number of image slots
     IMG_MAX_SIZE = 100  # 100KB per image
     IMG_LIST_SLOT_SIZE = IMG_MAX_SIZE * 1024
 
@@ -162,10 +162,9 @@ class DbStore(StoreUtils):
         self.my_addr = my_addr
 
         self.fs_root = "/sdcard"
-        # self.sdcard_available = (
-        #     self._is_sdcard_readable() and self._is_sdcard_writable()
-        # )
-        self.sdcard_available = False
+        self.sdcard_available = (
+            self._is_sdcard_readable() and self._is_sdcard_writable()
+        )
 
         self.process_dir = None
         self.image_dir = None
