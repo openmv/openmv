@@ -251,6 +251,13 @@ static int stm_csi_config(omv_csi_t *csi, omv_csi_config_t config) {
                 return OMV_CSI_ERROR_CSI_INIT_FAILED;
             }
 
+            // ST software workaround for spurious DCMIPP multiline interrupts triggering the VENC hardware
+            // handshake input in frame mode which crashes the VENC.
+            if (HAL_DCMIPP_PIPE_EnableLineEvent(&csi->dcmipp, DCMIPP_PIPE, DCMIPP_MULTILINE_128_LINES) != HAL_OK ||
+                HAL_DCMIPP_PIPE_DisableLineEvent(&csi->dcmipp, DCMIPP_PIPE) != HAL_OK) {
+                return OMV_CSI_ERROR_CSI_INIT_FAILED;
+            }
+
             // Store CSI handle used for DCMIPP
             stm_csi_all[CSI_HANDLE_DCMIPP] = csi;
 

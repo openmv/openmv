@@ -835,6 +835,7 @@ bool image_get_mask_pixel(image_t *ptr, int x, int y);
 #define JPEG_444_YCBCR_MCU_SIZE    ((JPEG_444_GS_MCU_SIZE) * 3)
 #define JPEG_422_YCBCR_MCU_SIZE    ((JPEG_444_GS_MCU_SIZE) * 4)
 #define JPEG_420_YCBCR_MCU_SIZE    ((JPEG_444_GS_MCU_SIZE) * 6)
+#define JPEG_MAX_ALLOC_SIZE        (1024UL * 1024UL) // 1 MB
 
 typedef enum jpeg_subsampling {
     JPEG_SUBSAMPLING_AUTO = 0,
@@ -1262,6 +1263,10 @@ void bmp_write_subimg(image_t *img, const char *path, rectangle_t *r);
 #if (OMV_JPEG_CODEC_ENABLE == 1)
 void imlib_hardware_jpeg_init();
 void imlib_hardware_jpeg_deinit();
+#endif
+#if (OMV_VENC_CODEC_ENABLE == 1)
+void imlib_hardware_venc_init();
+void imlib_hardware_venc_deinit();
 #endif
 void jpeg_get_mcu(image_t *src, int x_offset, int y_offset, int dx, int dy,
                   int8_t *Y0, int8_t *CB, int8_t *CR);

@@ -88,6 +88,7 @@ export CUBEAI_DIR=cubeai
 export CMSIS_DIR=lib/cmsis
 export MICROPY_DIR=lib/micropython
 export NEMA_DIR=drivers/nema
+export VC8000_DIR=drivers/vc8000
 export LIBPDM_DIR=lib/libpdm
 export TENSORFLOW_DIR=lib/tflm
 export COMMON_DIR=common
