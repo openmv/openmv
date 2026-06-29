@@ -265,7 +265,7 @@ static void int_py_imageio_pause(py_imageio_obj_t *stream, bool pause) {
     }
 
     while (pause && ((mp_hal_ticks_ms() - stream->ms) < elapsed_ms)) {
-        __WFI();
+        mp_event_handle_nowait();
     }
 
     stream->ms += elapsed_ms;
@@ -364,6 +364,10 @@ static mp_obj_t py_imageio_read(size_t n_args, const mp_obj_t *pos_args, mp_map_
     uint32_t size = image_size(&image);
 
     if (args[ARG_copy_to_fb].u_bool) {
+        framebuffer_t *fb = framebuffer_get(FB_MAINFB_ID);
+        image_t tmp;
+        framebuffer_to_image(fb, &tmp);
+        framebuffer_update_preview(&tmp);
         py_helper_set_to_framebuffer(&image);
     } else {
         image_alloc(&image, size);
@@ -406,9 +410,6 @@ static mp_obj_t py_imageio_read(size_t n_args, const mp_obj_t *pos_args, mp_map_
 
     py_helper_update_framebuffer(&image);
 
-    if (args[ARG_copy_to_fb].u_bool) {
-        framebuffer_update_preview(&image);
-    }
     return py_image_from_struct(&image);
 }
 static MP_DEFINE_CONST_FUN_OBJ_KW(py_imageio_read_obj, 1, py_imageio_read);
