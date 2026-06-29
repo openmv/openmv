@@ -88,7 +88,7 @@ jobs:
       run: echo "version=$(cat SDK_VERSION)" >> "$GITHUB_OUTPUT"
 
     - name: '♻ Cache SDK'
-      uses: actions/cache@v5.0.3
+      uses: actions/cache@v6.1.0
       id: sdk-cache
       with:
         path: ~/openmv-sdk-${{ steps.sdk-ver.outputs.version }}
@@ -105,7 +105,7 @@ jobs:
 
     - name: '♻ Cache FVP'
       if: matrix.fvp
-      uses: actions/cache@v5.0.3
+      uses: actions/cache@v6.1.0
       id: fvp-cache
       with:
         path: ~/fvp-11.31.28
@@ -145,7 +145,7 @@ jobs:
         submodules: false
 
     - name: '♻ Cache SDK'
-      uses: actions/cache@v5.0.3
+      uses: actions/cache@v6.1.0
       id: sdk-cache
       with:
         path: ~/openmv-sdk-1.0.0
