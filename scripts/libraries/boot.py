@@ -522,6 +522,9 @@ URL = "https://api.vyomiq.io/watchmen-detect/"
 def get_transmode_lock(device_id, filedata_id, msg_typ, chunk_count, md5): # check and just lock for image
     global trans_in_progress, trans_paired_device
     global trans_data_id, trans_msg_typ, trans_chunks_count, trans_chunk_epoch_ms, trans_chunk_md5
+    if is_install_mode: # safty return
+        logger.error(f"[IMG] TRANS MODE not allowed in install mode")
+        return False
     if trans_in_progress == True: # TRANS MODE already in use
         return False
     if chunk_count > MAX_CHUNK_COUNT:
@@ -2172,6 +2175,9 @@ def process_message(databytes, rssi=None):
             filedata_id, msg_typ, numchunks, md5 = begin_chunk(msgbytes) # msg_typ as "P"
             if filedata_id is None or numchunks is None:
                 logger.error(f"[CHUNK] Invalid B packet, cannot get filedata_id/numchunks")
+                return False
+            if is_install_mode:
+                logger.warmning(f"[CHUNK] TRANS MODE not allowed in install mode, ignoring 'B'...")
                 return False
             # Check if this is a duplicate B packet for the same transfer
             if check_transmode_lock(sender, filedata_id):
