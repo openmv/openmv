@@ -1050,7 +1050,7 @@ static mp_obj_t py_image_to(pixformat_t pixfmt, mp_rom_obj_t default_color_palet
             if (temp_allocated) {
                 temp.w = dst_img.w;
                 temp.h = dst_img.h;
-                temp.pixfmt = src_img->is_color ? PIXFORMAT_RGB565 : PIXFORMAT_GRAYSCALE;
+                temp.pixfmt = (src_img->is_color || color_palette) ? PIXFORMAT_RGB565 : PIXFORMAT_GRAYSCALE;
                 temp.size = 0;
                 temp.data = uma_malloc(image_size(&temp), UMA_CACHE);
                 imlib_draw_image(&temp, src_img, 0, 0, x_scale, y_scale, &roi,
