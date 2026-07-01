@@ -25,10 +25,9 @@ require("ssl")
 require("ntptime")
 require("webrepl")
 freeze ("$(OMV_LIB_DIR)/", "rpc.py")
-freeze ("$(OMV_LIB_DIR)/", "rtsp.py")
+# freeze ("$(OMV_LIB_DIR)/", "rtsp.py")  # Use device/rtsp.py instead
 freeze ("$(OMV_LIB_DIR)/", "mqtt.py")
 freeze ("$(OMV_LIB_DIR)/", "requests.py")
-require("microdot-lib")
 
 # Utils
 require("time")
@@ -40,6 +39,13 @@ freeze ("$(OMV_LIB_DIR)/", "mutex.py")
 require("ml", library="openmv-lib")
 require("protocol", library="openmv-lib")
 include("$(MPY_DIR)/extmod/asyncio")
+
+# GroupGets device stack.
+GROUPGETS_DIR = "../../../groupgets"
+freeze(GROUPGETS_DIR + "/frameworks/microdot/src", "microdot")
+freeze(GROUPGETS_DIR, "device")
+freeze(GROUPGETS_DIR + "/device", "main.py")  # Top-level boot entry
+freeze(GROUPGETS_DIR, "static")
 
 # Boot script
 freeze ("$(OMV_LIB_DIR)/", "_boot.py")
