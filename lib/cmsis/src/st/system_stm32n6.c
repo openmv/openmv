@@ -1,7 +1,7 @@
 /*
  * SPDX-License-Identifier: BSD-3-Clause
  *
- * Copyright (C) 2024 OpenMV, LLC.
+ * Copyright (C) 2024-2026 OpenMV, LLC.
  * Copyright (c) 2024 STMicroelectronics.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -130,6 +130,11 @@ void SystemClock_Config(void) {
     #if defined(OMV_OSC_I2C3_SOURCE)
     PeriphClkInit.PeriphClockSelection   |= RCC_PERIPHCLK_I2C3;
     PeriphClkInit.I2c3ClockSelection      = OMV_OSC_I2C3_SOURCE;
+    #endif
+
+    #if defined(OMV_OSC_I3C2_SOURCE)
+    PeriphClkInit.PeriphClockSelection   |= RCC_PERIPHCLK_I3C2;
+    PeriphClkInit.I3c2ClockSelection      = OMV_OSC_I3C2_SOURCE;
     #endif
 
     #if defined(OMV_OSC_SPI5_SOURCE)
