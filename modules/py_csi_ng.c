@@ -1426,6 +1426,1102 @@ static void py_csi_print(const mp_print_t *print, mp_obj_t self_in, mp_print_kin
     mp_printf(print, "  }\n}\n");
 }
 
+#if (OMV_BOSON_ENABLE == 1)
+static mp_obj_t py_csi_boson_get_fpa_temp(mp_obj_t self_in) {
+    py_csi_obj_t *self = MP_OBJ_TO_PTR(self_in);
+    int temp;
+    int error = omv_csi_ioctl(self->csi, OMV_CSI_IOCTL_BOSON_GET_FPA_TEMP, &temp);
+    if (error != 0) {
+        omv_csi_raise_error(error);
+    }
+    return mp_obj_new_float(temp / 10.0f);
+}
+static MP_DEFINE_CONST_FUN_OBJ_1(py_csi_boson_get_fpa_temp_obj, py_csi_boson_get_fpa_temp);
+
+static mp_obj_t py_csi_boson_run_ffc(mp_obj_t self_in) {
+    py_csi_obj_t *self = MP_OBJ_TO_PTR(self_in);
+    int error = omv_csi_ioctl(self->csi, OMV_CSI_IOCTL_BOSON_RUN_FFC);
+    if (error != 0) {
+        omv_csi_raise_error(error);
+    }
+    return mp_const_none;
+}
+static MP_DEFINE_CONST_FUN_OBJ_1(py_csi_boson_run_ffc_obj, py_csi_boson_run_ffc);
+
+static mp_obj_t py_csi_boson_get_ffc_status(mp_obj_t self_in) {
+    py_csi_obj_t *self = MP_OBJ_TO_PTR(self_in);
+    int status;
+    int error = omv_csi_ioctl(self->csi, OMV_CSI_IOCTL_BOSON_GET_FFC_STATUS, &status);
+    if (error != 0) {
+        omv_csi_raise_error(error);
+    }
+    return mp_obj_new_int(status);
+}
+static MP_DEFINE_CONST_FUN_OBJ_1(py_csi_boson_get_ffc_status_obj, py_csi_boson_get_ffc_status);
+
+static mp_obj_t py_csi_boson_set_ffc_mode(mp_obj_t self_in, mp_obj_t mode_in) {
+    py_csi_obj_t *self = MP_OBJ_TO_PTR(self_in);
+    int error = omv_csi_ioctl(self->csi, OMV_CSI_IOCTL_BOSON_SET_FFC_MODE, mp_obj_get_int(mode_in));
+    if (error != 0) {
+        omv_csi_raise_error(error);
+    }
+    return mp_const_none;
+}
+static MP_DEFINE_CONST_FUN_OBJ_2(py_csi_boson_set_ffc_mode_obj, py_csi_boson_set_ffc_mode);
+
+static mp_obj_t py_csi_boson_set_gain_mode(mp_obj_t self_in, mp_obj_t mode_in) {
+    py_csi_obj_t *self = MP_OBJ_TO_PTR(self_in);
+    int error = omv_csi_ioctl(self->csi, OMV_CSI_IOCTL_BOSON_SET_GAIN_MODE, mp_obj_get_int(mode_in));
+    if (error != 0) {
+        omv_csi_raise_error(error);
+    }
+    return mp_const_none;
+}
+static MP_DEFINE_CONST_FUN_OBJ_2(py_csi_boson_set_gain_mode_obj, py_csi_boson_set_gain_mode);
+
+static mp_obj_t py_csi_boson_get_gain_mode(mp_obj_t self_in) {
+    py_csi_obj_t *self = MP_OBJ_TO_PTR(self_in);
+    int mode;
+    int error = omv_csi_ioctl(self->csi, OMV_CSI_IOCTL_BOSON_GET_GAIN_MODE, &mode);
+    if (error != 0) {
+        omv_csi_raise_error(error);
+    }
+    return mp_obj_new_int(mode);
+}
+static MP_DEFINE_CONST_FUN_OBJ_1(py_csi_boson_get_gain_mode_obj, py_csi_boson_get_gain_mode);
+
+static mp_obj_t py_csi_boson_set_agc_param(mp_obj_t self_in, mp_obj_t id_in, mp_obj_t val_in) {
+    py_csi_obj_t *self = MP_OBJ_TO_PTR(self_in);
+    int error = omv_csi_ioctl(self->csi, OMV_CSI_IOCTL_BOSON_SET_AGC_PARAM,
+                              mp_obj_get_int(id_in), (double)mp_obj_get_float(val_in));
+    if (error != 0) {
+        omv_csi_raise_error(error);
+    }
+    return mp_const_none;
+}
+static MP_DEFINE_CONST_FUN_OBJ_3(py_csi_boson_set_agc_param_obj, py_csi_boson_set_agc_param);
+
+static mp_obj_t py_csi_boson_get_image_stats(mp_obj_t self_in) {
+    py_csi_obj_t *self = MP_OBJ_TO_PTR(self_in);
+    uint16_t mean, peak, base;
+    int error = omv_csi_ioctl(self->csi, OMV_CSI_IOCTL_BOSON_GET_IMAGE_STATS, &mean, &peak, &base);
+    if (error != 0) {
+        omv_csi_raise_error(error);
+    }
+    return mp_obj_new_tuple(3, (mp_obj_t []) {
+        mp_obj_new_int(mean), mp_obj_new_int(peak), mp_obj_new_int(base)
+    });
+}
+static MP_DEFINE_CONST_FUN_OBJ_1(py_csi_boson_get_image_stats_obj, py_csi_boson_get_image_stats);
+
+static mp_obj_t py_csi_boson_set_stats_roi(size_t n_args, const mp_obj_t *args) {
+    py_csi_obj_t *self = MP_OBJ_TO_PTR(args[0]);
+    int error = omv_csi_ioctl(self->csi, OMV_CSI_IOCTL_BOSON_SET_STATS_ROI,
+                              mp_obj_get_int(args[1]), mp_obj_get_int(args[2]),
+                              mp_obj_get_int(args[3]), mp_obj_get_int(args[4]));
+    if (error != 0) {
+        omv_csi_raise_error(error);
+    }
+    return mp_const_none;
+}
+static MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(py_csi_boson_set_stats_roi_obj, 5, 5, py_csi_boson_set_stats_roi);
+
+static mp_obj_t py_csi_boson_set_isotherm_enable(mp_obj_t self_in, mp_obj_t en_in) {
+    py_csi_obj_t *self = MP_OBJ_TO_PTR(self_in);
+    int error = omv_csi_ioctl(self->csi, OMV_CSI_IOCTL_BOSON_SET_ISOTHERM_ENABLE, mp_obj_is_true(en_in));
+    if (error != 0) {
+        omv_csi_raise_error(error);
+    }
+    return mp_const_none;
+}
+static MP_DEFINE_CONST_FUN_OBJ_2(py_csi_boson_set_isotherm_enable_obj, py_csi_boson_set_isotherm_enable);
+
+static mp_obj_t py_csi_boson_set_isotherm_temps(size_t n_args, const mp_obj_t *args) {
+    py_csi_obj_t *self = MP_OBJ_TO_PTR(args[0]);
+    int error = omv_csi_ioctl(self->csi, OMV_CSI_IOCTL_BOSON_SET_ISOTHERM_TEMPS,
+                              mp_obj_get_int(args[1]),
+                              (int32_t)mp_obj_get_int(args[2]),
+                              (int32_t)mp_obj_get_int(args[3]),
+                              (int32_t)mp_obj_get_int(args[4]),
+                              (int32_t)mp_obj_get_int(args[5]),
+                              (int32_t)mp_obj_get_int(args[6]));
+    if (error != 0) {
+        omv_csi_raise_error(error);
+    }
+    return mp_const_none;
+}
+static MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(py_csi_boson_set_isotherm_temps_obj, 7, 7, py_csi_boson_set_isotherm_temps);
+
+static mp_obj_t py_csi_boson_set_isotherm_unit(mp_obj_t self_in, mp_obj_t unit_in) {
+    py_csi_obj_t *self = MP_OBJ_TO_PTR(self_in);
+    int error = omv_csi_ioctl(self->csi, OMV_CSI_IOCTL_BOSON_SET_ISOTHERM_UNIT, mp_obj_get_int(unit_in));
+    if (error != 0) {
+        omv_csi_raise_error(error);
+    }
+    return mp_const_none;
+}
+static MP_DEFINE_CONST_FUN_OBJ_2(py_csi_boson_set_isotherm_unit_obj, py_csi_boson_set_isotherm_unit);
+
+static mp_obj_t py_csi_boson_set_gain_switch(size_t n_args, const mp_obj_t *args) {
+    py_csi_obj_t *self = MP_OBJ_TO_PTR(args[0]);
+    int error = omv_csi_ioctl(self->csi, OMV_CSI_IOCTL_BOSON_SET_GAIN_SWITCH,
+                              mp_obj_get_int(args[1]), mp_obj_get_int(args[2]),
+                              mp_obj_get_int(args[3]), mp_obj_get_int(args[4]));
+    if (error != 0) {
+        omv_csi_raise_error(error);
+    }
+    return mp_const_none;
+}
+static MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(py_csi_boson_set_gain_switch_obj, 5, 5, py_csi_boson_set_gain_switch);
+
+static mp_obj_t py_csi_boson_get_serial(mp_obj_t self_in) {
+    py_csi_obj_t *self = MP_OBJ_TO_PTR(self_in);
+    uint32_t sn;
+    int error = omv_csi_ioctl(self->csi, OMV_CSI_IOCTL_BOSON_GET_SERIAL, &sn);
+    if (error != 0) {
+        omv_csi_raise_error(error);
+    }
+    return mp_obj_new_int_from_uint(sn);
+}
+static MP_DEFINE_CONST_FUN_OBJ_1(py_csi_boson_get_serial_obj, py_csi_boson_get_serial);
+
+static mp_obj_t py_csi_boson_get_part_number(mp_obj_t self_in) {
+    py_csi_obj_t *self = MP_OBJ_TO_PTR(self_in);
+    char pn[20];
+    int error = omv_csi_ioctl(self->csi, OMV_CSI_IOCTL_BOSON_GET_PART_NUMBER, pn);
+    if (error != 0) {
+        omv_csi_raise_error(error);
+    }
+    return mp_obj_new_str(pn, strnlen(pn, 20));
+}
+static MP_DEFINE_CONST_FUN_OBJ_1(py_csi_boson_get_part_number_obj, py_csi_boson_get_part_number);
+
+static mp_obj_t py_csi_boson_set_colorlut(mp_obj_t self_in, mp_obj_t id_in) {
+    py_csi_obj_t *self = MP_OBJ_TO_PTR(self_in);
+    int error = omv_csi_ioctl(self->csi, OMV_CSI_IOCTL_BOSON_SET_COLORLUT, mp_obj_get_int(id_in));
+    if (error != 0) {
+        omv_csi_raise_error(error);
+    }
+    return mp_const_none;
+}
+static MP_DEFINE_CONST_FUN_OBJ_2(py_csi_boson_set_colorlut_obj, py_csi_boson_set_colorlut);
+
+static mp_obj_t py_csi_boson_set_zoom(size_t n_args, const mp_obj_t *args) {
+    py_csi_obj_t *self = MP_OBJ_TO_PTR(args[0]);
+    int error = omv_csi_ioctl(self->csi, OMV_CSI_IOCTL_BOSON_SET_SCALER_ZOOM,
+                              mp_obj_get_int(args[1]),
+                              (n_args > 2) ? mp_obj_get_int(args[2]) : 0,
+                              (n_args > 3) ? mp_obj_get_int(args[3]) : 0);
+    if (error != 0) {
+        omv_csi_raise_error(error);
+    }
+    return mp_const_none;
+}
+static MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(py_csi_boson_set_zoom_obj, 2, 4, py_csi_boson_set_zoom);
+
+static mp_obj_t py_csi_boson_get_zoom(mp_obj_t self_in) {
+    py_csi_obj_t *self = MP_OBJ_TO_PTR(self_in);
+    uint32_t zoom, x, y;
+    int error = omv_csi_ioctl(self->csi, OMV_CSI_IOCTL_BOSON_GET_SCALER_ZOOM, &zoom, &x, &y);
+    if (error != 0) {
+        omv_csi_raise_error(error);
+    }
+    return mp_obj_new_tuple(3, (mp_obj_t []) {
+        mp_obj_new_int(zoom), mp_obj_new_int(x), mp_obj_new_int(y)
+    });
+}
+static MP_DEFINE_CONST_FUN_OBJ_1(py_csi_boson_get_zoom_obj, py_csi_boson_get_zoom);
+
+// Image Stats ROI getter
+static mp_obj_t py_csi_boson_get_stats_roi(mp_obj_t self_in) {
+    py_csi_obj_t *self = MP_OBJ_TO_PTR(self_in);
+    uint16_t rs, re, cs, ce;
+    int error = omv_csi_ioctl(self->csi, OMV_CSI_IOCTL_BOSON_GET_STATS_ROI, &rs, &re, &cs, &ce);
+    if (error != 0) {
+        omv_csi_raise_error(error);
+    }
+    return mp_obj_new_tuple(4, (mp_obj_t []) {
+        mp_obj_new_int(rs), mp_obj_new_int(re), mp_obj_new_int(cs), mp_obj_new_int(ce)
+    });
+}
+static MP_DEFINE_CONST_FUN_OBJ_1(py_csi_boson_get_stats_roi_obj, py_csi_boson_get_stats_roi);
+
+// Spot Meter enable set/get
+static mp_obj_t py_csi_boson_set_spot_meter_enable(mp_obj_t self_in, mp_obj_t en_in) {
+    py_csi_obj_t *self = MP_OBJ_TO_PTR(self_in);
+    int error = omv_csi_ioctl(self->csi, OMV_CSI_IOCTL_BOSON_SET_SPOT_METER_ENABLE, mp_obj_is_true(en_in));
+    if (error != 0) {
+        omv_csi_raise_error(error);
+    }
+    return mp_const_none;
+}
+static MP_DEFINE_CONST_FUN_OBJ_2(py_csi_boson_set_spot_meter_enable_obj, py_csi_boson_set_spot_meter_enable);
+
+static mp_obj_t py_csi_boson_get_spot_meter_enable(mp_obj_t self_in) {
+    py_csi_obj_t *self = MP_OBJ_TO_PTR(self_in);
+    int en;
+    int error = omv_csi_ioctl(self->csi, OMV_CSI_IOCTL_BOSON_GET_SPOT_METER_ENABLE, &en);
+    if (error != 0) {
+        omv_csi_raise_error(error);
+    }
+    return mp_obj_new_int(en);
+}
+static MP_DEFINE_CONST_FUN_OBJ_1(py_csi_boson_get_spot_meter_enable_obj, py_csi_boson_get_spot_meter_enable);
+
+// Spot Meter ROI set/get
+static mp_obj_t py_csi_boson_set_spot_meter_roi(size_t n_args, const mp_obj_t *args) {
+    py_csi_obj_t *self = MP_OBJ_TO_PTR(args[0]);
+    int error = omv_csi_ioctl(self->csi, OMV_CSI_IOCTL_BOSON_SET_SPOT_METER_ROI,
+                              mp_obj_get_int(args[1]), mp_obj_get_int(args[2]),
+                              mp_obj_get_int(args[3]), mp_obj_get_int(args[4]));
+    if (error != 0) {
+        omv_csi_raise_error(error);
+    }
+    return mp_const_none;
+}
+static MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(py_csi_boson_set_spot_meter_roi_obj, 5, 5, py_csi_boson_set_spot_meter_roi);
+
+static mp_obj_t py_csi_boson_get_spot_meter_roi(mp_obj_t self_in) {
+    py_csi_obj_t *self = MP_OBJ_TO_PTR(self_in);
+    uint16_t rs, re, cs, ce;
+    int error = omv_csi_ioctl(self->csi, OMV_CSI_IOCTL_BOSON_GET_SPOT_METER_ROI, &rs, &re, &cs, &ce);
+    if (error != 0) {
+        omv_csi_raise_error(error);
+    }
+    return mp_obj_new_tuple(4, (mp_obj_t []) {
+        mp_obj_new_int(rs), mp_obj_new_int(re), mp_obj_new_int(cs), mp_obj_new_int(ce)
+    });
+}
+static MP_DEFINE_CONST_FUN_OBJ_1(py_csi_boson_get_spot_meter_roi_obj, py_csi_boson_get_spot_meter_roi);
+
+// Spot Meter stats (raw values)
+static mp_obj_t py_csi_boson_get_spot_meter_stats(mp_obj_t self_in) {
+    py_csi_obj_t *self = MP_OBJ_TO_PTR(self_in);
+    uint16_t mean, dev, min_val, min_row, min_col, max_val, max_row, max_col;
+    int error = omv_csi_ioctl(self->csi, OMV_CSI_IOCTL_BOSON_GET_SPOT_METER_STATS,
+                              &mean, &dev, &min_val, &min_row, &min_col,
+                              &max_val, &max_row, &max_col);
+    if (error != 0) {
+        omv_csi_raise_error(error);
+    }
+    return mp_obj_new_tuple(8, (mp_obj_t []) {
+        mp_obj_new_int(mean), mp_obj_new_int(dev),
+        mp_obj_new_int(min_val), mp_obj_new_int(min_row), mp_obj_new_int(min_col),
+        mp_obj_new_int(max_val), mp_obj_new_int(max_row), mp_obj_new_int(max_col)
+    });
+}
+static MP_DEFINE_CONST_FUN_OBJ_1(py_csi_boson_get_spot_meter_stats_obj, py_csi_boson_get_spot_meter_stats);
+
+// Spot Meter temp stats (float values, radiometric sensors only)
+static mp_obj_t py_csi_boson_get_spot_meter_temp_stats(mp_obj_t self_in) {
+    py_csi_obj_t *self = MP_OBJ_TO_PTR(self_in);
+    float mean, dev, min_val, max_val;
+    uint16_t min_row, min_col, max_row, max_col;
+    int error = omv_csi_ioctl(self->csi, OMV_CSI_IOCTL_BOSON_GET_SPOT_METER_TEMP_STATS,
+                              &mean, &dev, &min_val, &min_row, &min_col,
+                              &max_val, &max_row, &max_col);
+    if (error != 0) {
+        omv_csi_raise_error(error);
+    }
+    return mp_obj_new_tuple(8, (mp_obj_t []) {
+        mp_obj_new_float(mean), mp_obj_new_float(dev),
+        mp_obj_new_float(min_val), mp_obj_new_int(min_row), mp_obj_new_int(min_col),
+        mp_obj_new_float(max_val), mp_obj_new_int(max_row), mp_obj_new_int(max_col)
+    });
+}
+static MP_DEFINE_CONST_FUN_OBJ_1(py_csi_boson_get_spot_meter_temp_stats_obj, py_csi_boson_get_spot_meter_temp_stats);
+
+// Spot Meter ROI max size
+static mp_obj_t py_csi_boson_get_spot_meter_roi_max(mp_obj_t self_in) {
+    py_csi_obj_t *self = MP_OBJ_TO_PTR(self_in);
+    uint16_t width, height;
+    int error = omv_csi_ioctl(self->csi, OMV_CSI_IOCTL_BOSON_GET_SPOT_METER_ROI_MAX, &width, &height);
+    if (error != 0) {
+        omv_csi_raise_error(error);
+    }
+    return mp_obj_new_tuple(2, (mp_obj_t []) {
+        mp_obj_new_int(width), mp_obj_new_int(height)
+    });
+}
+static MP_DEFINE_CONST_FUN_OBJ_1(py_csi_boson_get_spot_meter_roi_max_obj, py_csi_boson_get_spot_meter_roi_max);
+
+// Isotherm getters
+static mp_obj_t py_csi_boson_get_isotherm_enable(mp_obj_t self_in) {
+    py_csi_obj_t *self = MP_OBJ_TO_PTR(self_in);
+    int en;
+    int error = omv_csi_ioctl(self->csi, OMV_CSI_IOCTL_BOSON_GET_ISOTHERM_ENABLE, &en);
+    if (error != 0) {
+        omv_csi_raise_error(error);
+    }
+    return mp_obj_new_int(en);
+}
+static MP_DEFINE_CONST_FUN_OBJ_1(py_csi_boson_get_isotherm_enable_obj, py_csi_boson_get_isotherm_enable);
+
+static mp_obj_t py_csi_boson_get_isotherm_unit(mp_obj_t self_in) {
+    py_csi_obj_t *self = MP_OBJ_TO_PTR(self_in);
+    int unit;
+    int error = omv_csi_ioctl(self->csi, OMV_CSI_IOCTL_BOSON_GET_ISOTHERM_UNIT, &unit);
+    if (error != 0) {
+        omv_csi_raise_error(error);
+    }
+    return mp_obj_new_int(unit);
+}
+static MP_DEFINE_CONST_FUN_OBJ_1(py_csi_boson_get_isotherm_unit_obj, py_csi_boson_get_isotherm_unit);
+
+static mp_obj_t py_csi_boson_get_isotherm_temps(mp_obj_t self_in, mp_obj_t table_in) {
+    py_csi_obj_t *self = MP_OBJ_TO_PTR(self_in);
+    int32_t t1, t2, t3, t4, t5;
+    int error = omv_csi_ioctl(self->csi, OMV_CSI_IOCTL_BOSON_GET_ISOTHERM_TEMPS,
+                              mp_obj_get_int(table_in), &t1, &t2, &t3, &t4, &t5);
+    if (error != 0) {
+        omv_csi_raise_error(error);
+    }
+    return mp_obj_new_tuple(5, (mp_obj_t []) {
+        mp_obj_new_int(t1), mp_obj_new_int(t2), mp_obj_new_int(t3),
+        mp_obj_new_int(t4), mp_obj_new_int(t5)
+    });
+}
+static MP_DEFINE_CONST_FUN_OBJ_2(py_csi_boson_get_isotherm_temps_obj, py_csi_boson_get_isotherm_temps);
+
+// Radiometry
+static mp_obj_t py_csi_boson_get_radiometry_capable(mp_obj_t self_in) {
+    py_csi_obj_t *self = MP_OBJ_TO_PTR(self_in);
+    int capable;
+    int error = omv_csi_ioctl(self->csi, OMV_CSI_IOCTL_BOSON_GET_RADIOMETRY_CAPABLE, &capable);
+    if (error != 0) {
+        omv_csi_raise_error(error);
+    }
+    return mp_obj_new_int(capable);
+}
+static MP_DEFINE_CONST_FUN_OBJ_1(py_csi_boson_get_radiometry_capable_obj, py_csi_boson_get_radiometry_capable);
+
+static mp_obj_t py_csi_boson_set_radiometry_enable(mp_obj_t self_in, mp_obj_t en_in) {
+    py_csi_obj_t *self = MP_OBJ_TO_PTR(self_in);
+    int error = omv_csi_ioctl(self->csi, OMV_CSI_IOCTL_BOSON_SET_RADIOMETRY_ENABLE, mp_obj_is_true(en_in));
+    if (error != 0) {
+        omv_csi_raise_error(error);
+    }
+    return mp_const_none;
+}
+static MP_DEFINE_CONST_FUN_OBJ_2(py_csi_boson_set_radiometry_enable_obj, py_csi_boson_set_radiometry_enable);
+
+static mp_obj_t py_csi_boson_get_radiometry_enable(mp_obj_t self_in) {
+    py_csi_obj_t *self = MP_OBJ_TO_PTR(self_in);
+    int en;
+    int error = omv_csi_ioctl(self->csi, OMV_CSI_IOCTL_BOSON_GET_RADIOMETRY_ENABLE, &en);
+    if (error != 0) {
+        omv_csi_raise_error(error);
+    }
+    return mp_obj_new_int(en);
+}
+static MP_DEFINE_CONST_FUN_OBJ_1(py_csi_boson_get_radiometry_enable_obj, py_csi_boson_get_radiometry_enable);
+
+static mp_obj_t py_csi_boson_set_tlinear_enable(mp_obj_t self_in, mp_obj_t en_in) {
+    py_csi_obj_t *self = MP_OBJ_TO_PTR(self_in);
+    int error = omv_csi_ioctl(self->csi, OMV_CSI_IOCTL_BOSON_SET_TLINEAR_ENABLE, mp_obj_is_true(en_in));
+    if (error != 0) {
+        omv_csi_raise_error(error);
+    }
+    return mp_const_none;
+}
+static MP_DEFINE_CONST_FUN_OBJ_2(py_csi_boson_set_tlinear_enable_obj, py_csi_boson_set_tlinear_enable);
+
+static mp_obj_t py_csi_boson_get_tlinear_enable(mp_obj_t self_in) {
+    py_csi_obj_t *self = MP_OBJ_TO_PTR(self_in);
+    int en;
+    int error = omv_csi_ioctl(self->csi, OMV_CSI_IOCTL_BOSON_GET_TLINEAR_ENABLE, &en);
+    if (error != 0) {
+        omv_csi_raise_error(error);
+    }
+    return mp_obj_new_int(en);
+}
+static MP_DEFINE_CONST_FUN_OBJ_1(py_csi_boson_get_tlinear_enable_obj, py_csi_boson_get_tlinear_enable);
+
+static mp_obj_t py_csi_boson_set_spot_meter_stats_mode(mp_obj_t self_in, mp_obj_t mode_in) {
+    py_csi_obj_t *self = MP_OBJ_TO_PTR(self_in);
+    int error = omv_csi_ioctl(self->csi, OMV_CSI_IOCTL_BOSON_SET_SPOT_METER_STATS_MODE, mp_obj_get_int(mode_in));
+    if (error != 0) {
+        omv_csi_raise_error(error);
+    }
+    return mp_const_none;
+}
+static MP_DEFINE_CONST_FUN_OBJ_2(py_csi_boson_set_spot_meter_stats_mode_obj, py_csi_boson_set_spot_meter_stats_mode);
+
+static mp_obj_t py_csi_boson_get_spot_meter_stats_mode(mp_obj_t self_in) {
+    py_csi_obj_t *self = MP_OBJ_TO_PTR(self_in);
+    int mode;
+    int error = omv_csi_ioctl(self->csi, OMV_CSI_IOCTL_BOSON_GET_SPOT_METER_STATS_MODE, &mode);
+    if (error != 0) {
+        omv_csi_raise_error(error);
+    }
+    return mp_obj_new_int(mode);
+}
+static MP_DEFINE_CONST_FUN_OBJ_1(py_csi_boson_get_spot_meter_stats_mode_obj, py_csi_boson_get_spot_meter_stats_mode);
+
+static mp_obj_t py_csi_boson_set_emissivity(mp_obj_t self_in, mp_obj_t val_in) {
+    py_csi_obj_t *self = MP_OBJ_TO_PTR(self_in);
+    int error = omv_csi_ioctl(self->csi, OMV_CSI_IOCTL_BOSON_SET_EMISSIVITY, (double)mp_obj_get_float(val_in));
+    if (error != 0) {
+        omv_csi_raise_error(error);
+    }
+    return mp_const_none;
+}
+static MP_DEFINE_CONST_FUN_OBJ_2(py_csi_boson_set_emissivity_obj, py_csi_boson_set_emissivity);
+
+static mp_obj_t py_csi_boson_get_emissivity(mp_obj_t self_in) {
+    py_csi_obj_t *self = MP_OBJ_TO_PTR(self_in);
+    float val;
+    int error = omv_csi_ioctl(self->csi, OMV_CSI_IOCTL_BOSON_GET_EMISSIVITY, &val);
+    if (error != 0) {
+        omv_csi_raise_error(error);
+    }
+    return mp_obj_new_float(val);
+}
+static MP_DEFINE_CONST_FUN_OBJ_1(py_csi_boson_get_emissivity_obj, py_csi_boson_get_emissivity);
+
+static mp_obj_t py_csi_boson_get_software_rev(mp_obj_t self_in) {
+    py_csi_obj_t *self = MP_OBJ_TO_PTR(self_in);
+    uint32_t major, minor, patch;
+    int error = omv_csi_ioctl(self->csi, OMV_CSI_IOCTL_BOSON_GET_SOFTWARE_REV, &major, &minor, &patch);
+    if (error != 0) {
+        omv_csi_raise_error(error);
+    }
+    return mp_obj_new_tuple(3, (mp_obj_t []) {
+        mp_obj_new_int_from_uint(major), mp_obj_new_int_from_uint(minor), mp_obj_new_int_from_uint(patch)
+    });
+}
+static MP_DEFINE_CONST_FUN_OBJ_1(py_csi_boson_get_software_rev_obj, py_csi_boson_get_software_rev);
+
+static mp_obj_t py_csi_boson_get_sensor_sn(mp_obj_t self_in) {
+    py_csi_obj_t *self = MP_OBJ_TO_PTR(self_in);
+    uint32_t sn;
+    int error = omv_csi_ioctl(self->csi, OMV_CSI_IOCTL_BOSON_GET_SENSOR_SN, &sn);
+    if (error != 0) {
+        omv_csi_raise_error(error);
+    }
+    return mp_obj_new_int_from_uint(sn);
+}
+static MP_DEFINE_CONST_FUN_OBJ_1(py_csi_boson_get_sensor_sn_obj, py_csi_boson_get_sensor_sn);
+
+// Overtemp threshold is read-only (bosonSetOverTempThreshold does not exist in SDK)
+static mp_obj_t py_csi_boson_get_overtemp_threshold(mp_obj_t self_in) {
+    py_csi_obj_t *self = MP_OBJ_TO_PTR(self_in);
+    float temp;
+    int error = omv_csi_ioctl(self->csi, OMV_CSI_IOCTL_BOSON_GET_OVERTEMP_THRESHOLD, &temp);
+    if (error != 0) {
+        omv_csi_raise_error(error);
+    }
+    return mp_obj_new_float(temp);
+}
+static MP_DEFINE_CONST_FUN_OBJ_1(py_csi_boson_get_overtemp_threshold_obj, py_csi_boson_get_overtemp_threshold);
+
+static mp_obj_t py_csi_boson_get_overtemp_event_count(mp_obj_t self_in) {
+    py_csi_obj_t *self = MP_OBJ_TO_PTR(self_in);
+    uint32_t count;
+    int error = omv_csi_ioctl(self->csi, OMV_CSI_IOCTL_BOSON_GET_OVERTEMP_EVENT_COUNT, &count);
+    if (error != 0) {
+        omv_csi_raise_error(error);
+    }
+    return mp_obj_new_int_from_uint(count);
+}
+static MP_DEFINE_CONST_FUN_OBJ_1(py_csi_boson_get_overtemp_event_count_obj, py_csi_boson_get_overtemp_event_count);
+
+static mp_obj_t py_csi_boson_get_low_power_mode(mp_obj_t self_in) {
+    py_csi_obj_t *self = MP_OBJ_TO_PTR(self_in);
+    int mode;
+    int error = omv_csi_ioctl(self->csi, OMV_CSI_IOCTL_BOSON_GET_LOW_POWER_MODE, &mode);
+    if (error != 0) {
+        omv_csi_raise_error(error);
+    }
+    return mp_obj_new_int(mode);
+}
+static MP_DEFINE_CONST_FUN_OBJ_1(py_csi_boson_get_low_power_mode_obj, py_csi_boson_get_low_power_mode);
+
+// FFC control IOCTLs
+static mp_obj_t py_csi_boson_get_ffc_mode(mp_obj_t self_in) {
+    py_csi_obj_t *self = MP_OBJ_TO_PTR(self_in);
+    int mode;
+    int error = omv_csi_ioctl(self->csi, OMV_CSI_IOCTL_BOSON_GET_FFC_MODE, &mode);
+    if (error != 0) {
+        omv_csi_raise_error(error);
+    }
+    return mp_obj_new_int(mode);
+}
+static MP_DEFINE_CONST_FUN_OBJ_1(py_csi_boson_get_ffc_mode_obj, py_csi_boson_get_ffc_mode);
+
+static mp_obj_t py_csi_boson_set_ffc_temp_threshold(mp_obj_t self_in, mp_obj_t val_in) {
+    py_csi_obj_t *self = MP_OBJ_TO_PTR(self_in);
+    int error = omv_csi_ioctl(self->csi, OMV_CSI_IOCTL_BOSON_SET_FFC_TEMP_THRESHOLD, mp_obj_get_int(val_in));
+    if (error != 0) {
+        omv_csi_raise_error(error);
+    }
+    return mp_const_none;
+}
+static MP_DEFINE_CONST_FUN_OBJ_2(py_csi_boson_set_ffc_temp_threshold_obj, py_csi_boson_set_ffc_temp_threshold);
+
+static mp_obj_t py_csi_boson_get_ffc_temp_threshold(mp_obj_t self_in) {
+    py_csi_obj_t *self = MP_OBJ_TO_PTR(self_in);
+    int val;
+    int error = omv_csi_ioctl(self->csi, OMV_CSI_IOCTL_BOSON_GET_FFC_TEMP_THRESHOLD, &val);
+    if (error != 0) {
+        omv_csi_raise_error(error);
+    }
+    return mp_obj_new_int(val);
+}
+static MP_DEFINE_CONST_FUN_OBJ_1(py_csi_boson_get_ffc_temp_threshold_obj, py_csi_boson_get_ffc_temp_threshold);
+
+static mp_obj_t py_csi_boson_set_ffc_frame_threshold(mp_obj_t self_in, mp_obj_t val_in) {
+    py_csi_obj_t *self = MP_OBJ_TO_PTR(self_in);
+    int error = omv_csi_ioctl(self->csi, OMV_CSI_IOCTL_BOSON_SET_FFC_FRAME_THRESHOLD, mp_obj_get_int(val_in));
+    if (error != 0) {
+        omv_csi_raise_error(error);
+    }
+    return mp_const_none;
+}
+static MP_DEFINE_CONST_FUN_OBJ_2(py_csi_boson_set_ffc_frame_threshold_obj, py_csi_boson_set_ffc_frame_threshold);
+
+static mp_obj_t py_csi_boson_get_ffc_frame_threshold(mp_obj_t self_in) {
+    py_csi_obj_t *self = MP_OBJ_TO_PTR(self_in);
+    uint32_t val;
+    int error = omv_csi_ioctl(self->csi, OMV_CSI_IOCTL_BOSON_GET_FFC_FRAME_THRESHOLD, &val);
+    if (error != 0) {
+        omv_csi_raise_error(error);
+    }
+    return mp_obj_new_int_from_uint(val);
+}
+static MP_DEFINE_CONST_FUN_OBJ_1(py_csi_boson_get_ffc_frame_threshold_obj, py_csi_boson_get_ffc_frame_threshold);
+
+static mp_obj_t py_csi_boson_set_ffc_temp_threshold_lg(mp_obj_t self_in, mp_obj_t val_in) {
+    py_csi_obj_t *self = MP_OBJ_TO_PTR(self_in);
+    int error = omv_csi_ioctl(self->csi, OMV_CSI_IOCTL_BOSON_SET_FFC_TEMP_THRESHOLD_LG, mp_obj_get_int(val_in));
+    if (error != 0) {
+        omv_csi_raise_error(error);
+    }
+    return mp_const_none;
+}
+static MP_DEFINE_CONST_FUN_OBJ_2(py_csi_boson_set_ffc_temp_threshold_lg_obj, py_csi_boson_set_ffc_temp_threshold_lg);
+
+static mp_obj_t py_csi_boson_get_ffc_temp_threshold_lg(mp_obj_t self_in) {
+    py_csi_obj_t *self = MP_OBJ_TO_PTR(self_in);
+    int val;
+    int error = omv_csi_ioctl(self->csi, OMV_CSI_IOCTL_BOSON_GET_FFC_TEMP_THRESHOLD_LG, &val);
+    if (error != 0) {
+        omv_csi_raise_error(error);
+    }
+    return mp_obj_new_int(val);
+}
+static MP_DEFINE_CONST_FUN_OBJ_1(py_csi_boson_get_ffc_temp_threshold_lg_obj, py_csi_boson_get_ffc_temp_threshold_lg);
+
+static mp_obj_t py_csi_boson_set_ffc_frame_threshold_lg(mp_obj_t self_in, mp_obj_t val_in) {
+    py_csi_obj_t *self = MP_OBJ_TO_PTR(self_in);
+    int error = omv_csi_ioctl(self->csi, OMV_CSI_IOCTL_BOSON_SET_FFC_FRAME_THRESHOLD_LG, mp_obj_get_int(val_in));
+    if (error != 0) {
+        omv_csi_raise_error(error);
+    }
+    return mp_const_none;
+}
+static MP_DEFINE_CONST_FUN_OBJ_2(py_csi_boson_set_ffc_frame_threshold_lg_obj, py_csi_boson_set_ffc_frame_threshold_lg);
+
+static mp_obj_t py_csi_boson_get_ffc_frame_threshold_lg(mp_obj_t self_in) {
+    py_csi_obj_t *self = MP_OBJ_TO_PTR(self_in);
+    uint32_t val;
+    int error = omv_csi_ioctl(self->csi, OMV_CSI_IOCTL_BOSON_GET_FFC_FRAME_THRESHOLD_LG, &val);
+    if (error != 0) {
+        omv_csi_raise_error(error);
+    }
+    return mp_obj_new_int_from_uint(val);
+}
+static MP_DEFINE_CONST_FUN_OBJ_1(py_csi_boson_get_ffc_frame_threshold_lg_obj, py_csi_boson_get_ffc_frame_threshold_lg);
+
+static mp_obj_t py_csi_boson_set_ffc_warn_time(mp_obj_t self_in, mp_obj_t val_in) {
+    py_csi_obj_t *self = MP_OBJ_TO_PTR(self_in);
+    int error = omv_csi_ioctl(self->csi, OMV_CSI_IOCTL_BOSON_SET_FFC_WARN_TIME, mp_obj_get_int(val_in));
+    if (error != 0) {
+        omv_csi_raise_error(error);
+    }
+    return mp_const_none;
+}
+static MP_DEFINE_CONST_FUN_OBJ_2(py_csi_boson_set_ffc_warn_time_obj, py_csi_boson_set_ffc_warn_time);
+
+static mp_obj_t py_csi_boson_get_ffc_warn_time(mp_obj_t self_in) {
+    py_csi_obj_t *self = MP_OBJ_TO_PTR(self_in);
+    int val;
+    int error = omv_csi_ioctl(self->csi, OMV_CSI_IOCTL_BOSON_GET_FFC_WARN_TIME, &val);
+    if (error != 0) {
+        omv_csi_raise_error(error);
+    }
+    return mp_obj_new_int(val);
+}
+static MP_DEFINE_CONST_FUN_OBJ_1(py_csi_boson_get_ffc_warn_time_obj, py_csi_boson_get_ffc_warn_time);
+
+static mp_obj_t py_csi_boson_get_ffc_desired(mp_obj_t self_in) {
+    py_csi_obj_t *self = MP_OBJ_TO_PTR(self_in);
+    uint32_t val;
+    int error = omv_csi_ioctl(self->csi, OMV_CSI_IOCTL_BOSON_GET_FFC_DESIRED, &val);
+    if (error != 0) {
+        omv_csi_raise_error(error);
+    }
+    return mp_obj_new_int_from_uint(val);
+}
+static MP_DEFINE_CONST_FUN_OBJ_1(py_csi_boson_get_ffc_desired_obj, py_csi_boson_get_ffc_desired);
+
+static mp_obj_t py_csi_boson_get_last_ffc_frame_count(mp_obj_t self_in) {
+    py_csi_obj_t *self = MP_OBJ_TO_PTR(self_in);
+    uint32_t val;
+    int error = omv_csi_ioctl(self->csi, OMV_CSI_IOCTL_BOSON_GET_LAST_FFC_FRAME_COUNT, &val);
+    if (error != 0) {
+        omv_csi_raise_error(error);
+    }
+    return mp_obj_new_int_from_uint(val);
+}
+static MP_DEFINE_CONST_FUN_OBJ_1(py_csi_boson_get_last_ffc_frame_count_obj, py_csi_boson_get_last_ffc_frame_count);
+
+static mp_obj_t py_csi_boson_get_last_ffc_temp(mp_obj_t self_in) {
+    py_csi_obj_t *self = MP_OBJ_TO_PTR(self_in);
+    int val;
+    int error = omv_csi_ioctl(self->csi, OMV_CSI_IOCTL_BOSON_GET_LAST_FFC_TEMP, &val);
+    if (error != 0) {
+        omv_csi_raise_error(error);
+    }
+    return mp_obj_new_int(val);
+}
+static MP_DEFINE_CONST_FUN_OBJ_1(py_csi_boson_get_last_ffc_temp_obj, py_csi_boson_get_last_ffc_temp);
+
+static mp_obj_t py_csi_boson_set_startup_ffc_period(mp_obj_t self_in, mp_obj_t val_in) {
+    py_csi_obj_t *self = MP_OBJ_TO_PTR(self_in);
+    int error = omv_csi_ioctl(self->csi, OMV_CSI_IOCTL_BOSON_SET_STARTUP_FFC_PERIOD, mp_obj_get_int(val_in));
+    if (error != 0) {
+        omv_csi_raise_error(error);
+    }
+    return mp_const_none;
+}
+static MP_DEFINE_CONST_FUN_OBJ_2(py_csi_boson_set_startup_ffc_period_obj, py_csi_boson_set_startup_ffc_period);
+
+static mp_obj_t py_csi_boson_get_startup_ffc_period(mp_obj_t self_in) {
+    py_csi_obj_t *self = MP_OBJ_TO_PTR(self_in);
+    uint32_t val;
+    int error = omv_csi_ioctl(self->csi, OMV_CSI_IOCTL_BOSON_GET_STARTUP_FFC_PERIOD, &val);
+    if (error != 0) {
+        omv_csi_raise_error(error);
+    }
+    return mp_obj_new_int_from_uint(val);
+}
+static MP_DEFINE_CONST_FUN_OBJ_1(py_csi_boson_get_startup_ffc_period_obj, py_csi_boson_get_startup_ffc_period);
+
+// FFC correction pipeline IOCTLs
+static mp_obj_t py_csi_boson_set_scnr_enable(mp_obj_t self_in, mp_obj_t en_in) {
+    py_csi_obj_t *self = MP_OBJ_TO_PTR(self_in);
+    int error = omv_csi_ioctl(self->csi, OMV_CSI_IOCTL_BOSON_SET_SCNR_ENABLE, mp_obj_is_true(en_in));
+    if (error != 0) {
+        omv_csi_raise_error(error);
+    }
+    return mp_const_none;
+}
+static MP_DEFINE_CONST_FUN_OBJ_2(py_csi_boson_set_scnr_enable_obj, py_csi_boson_set_scnr_enable);
+
+static mp_obj_t py_csi_boson_get_scnr_enable(mp_obj_t self_in) {
+    py_csi_obj_t *self = MP_OBJ_TO_PTR(self_in);
+    int val;
+    int error = omv_csi_ioctl(self->csi, OMV_CSI_IOCTL_BOSON_GET_SCNR_ENABLE, &val);
+    if (error != 0) {
+        omv_csi_raise_error(error);
+    }
+    return mp_obj_new_bool(val);
+}
+static MP_DEFINE_CONST_FUN_OBJ_1(py_csi_boson_get_scnr_enable_obj, py_csi_boson_get_scnr_enable);
+
+static mp_obj_t py_csi_boson_set_tf_enable(mp_obj_t self_in, mp_obj_t en_in) {
+    py_csi_obj_t *self = MP_OBJ_TO_PTR(self_in);
+    int error = omv_csi_ioctl(self->csi, OMV_CSI_IOCTL_BOSON_SET_TF_ENABLE, mp_obj_is_true(en_in));
+    if (error != 0) {
+        omv_csi_raise_error(error);
+    }
+    return mp_const_none;
+}
+static MP_DEFINE_CONST_FUN_OBJ_2(py_csi_boson_set_tf_enable_obj, py_csi_boson_set_tf_enable);
+
+static mp_obj_t py_csi_boson_get_tf_enable(mp_obj_t self_in) {
+    py_csi_obj_t *self = MP_OBJ_TO_PTR(self_in);
+    int val;
+    int error = omv_csi_ioctl(self->csi, OMV_CSI_IOCTL_BOSON_GET_TF_ENABLE, &val);
+    if (error != 0) {
+        omv_csi_raise_error(error);
+    }
+    return mp_obj_new_bool(val);
+}
+static MP_DEFINE_CONST_FUN_OBJ_1(py_csi_boson_get_tf_enable_obj, py_csi_boson_get_tf_enable);
+
+static mp_obj_t py_csi_boson_set_spnr_enable(mp_obj_t self_in, mp_obj_t en_in) {
+    py_csi_obj_t *self = MP_OBJ_TO_PTR(self_in);
+    int error = omv_csi_ioctl(self->csi, OMV_CSI_IOCTL_BOSON_SET_SPNR_ENABLE, mp_obj_is_true(en_in));
+    if (error != 0) {
+        omv_csi_raise_error(error);
+    }
+    return mp_const_none;
+}
+static MP_DEFINE_CONST_FUN_OBJ_2(py_csi_boson_set_spnr_enable_obj, py_csi_boson_set_spnr_enable);
+
+static mp_obj_t py_csi_boson_get_spnr_enable(mp_obj_t self_in) {
+    py_csi_obj_t *self = MP_OBJ_TO_PTR(self_in);
+    int val;
+    int error = omv_csi_ioctl(self->csi, OMV_CSI_IOCTL_BOSON_GET_SPNR_ENABLE, &val);
+    if (error != 0) {
+        omv_csi_raise_error(error);
+    }
+    return mp_obj_new_bool(val);
+}
+static MP_DEFINE_CONST_FUN_OBJ_1(py_csi_boson_get_spnr_enable_obj, py_csi_boson_get_spnr_enable);
+
+static mp_obj_t py_csi_boson_set_bpr_enable(mp_obj_t self_in, mp_obj_t en_in) {
+    py_csi_obj_t *self = MP_OBJ_TO_PTR(self_in);
+    int error = omv_csi_ioctl(self->csi, OMV_CSI_IOCTL_BOSON_SET_BPR_ENABLE, mp_obj_is_true(en_in));
+    if (error != 0) {
+        omv_csi_raise_error(error);
+    }
+    return mp_const_none;
+}
+static MP_DEFINE_CONST_FUN_OBJ_2(py_csi_boson_set_bpr_enable_obj, py_csi_boson_set_bpr_enable);
+
+static mp_obj_t py_csi_boson_get_bpr_enable(mp_obj_t self_in) {
+    py_csi_obj_t *self = MP_OBJ_TO_PTR(self_in);
+    int val;
+    int error = omv_csi_ioctl(self->csi, OMV_CSI_IOCTL_BOSON_GET_BPR_ENABLE, &val);
+    if (error != 0) {
+        omv_csi_raise_error(error);
+    }
+    return mp_obj_new_bool(val);
+}
+static MP_DEFINE_CONST_FUN_OBJ_1(py_csi_boson_get_bpr_enable_obj, py_csi_boson_get_bpr_enable);
+
+static mp_obj_t py_csi_boson_set_lfsr_enable(mp_obj_t self_in, mp_obj_t en_in) {
+    py_csi_obj_t *self = MP_OBJ_TO_PTR(self_in);
+    int error = omv_csi_ioctl(self->csi, OMV_CSI_IOCTL_BOSON_SET_LFSR_ENABLE, mp_obj_is_true(en_in));
+    if (error != 0) {
+        omv_csi_raise_error(error);
+    }
+    return mp_const_none;
+}
+static MP_DEFINE_CONST_FUN_OBJ_2(py_csi_boson_set_lfsr_enable_obj, py_csi_boson_set_lfsr_enable);
+
+static mp_obj_t py_csi_boson_get_lfsr_enable(mp_obj_t self_in) {
+    py_csi_obj_t *self = MP_OBJ_TO_PTR(self_in);
+    int val;
+    int error = omv_csi_ioctl(self->csi, OMV_CSI_IOCTL_BOSON_GET_LFSR_ENABLE, &val);
+    if (error != 0) {
+        omv_csi_raise_error(error);
+    }
+    return mp_obj_new_bool(val);
+}
+static MP_DEFINE_CONST_FUN_OBJ_1(py_csi_boson_get_lfsr_enable_obj, py_csi_boson_get_lfsr_enable);
+
+static mp_obj_t py_csi_boson_set_srnr_enable(mp_obj_t self_in, mp_obj_t en_in) {
+    py_csi_obj_t *self = MP_OBJ_TO_PTR(self_in);
+    int error = omv_csi_ioctl(self->csi, OMV_CSI_IOCTL_BOSON_SET_SRNR_ENABLE, mp_obj_is_true(en_in));
+    if (error != 0) {
+        omv_csi_raise_error(error);
+    }
+    return mp_const_none;
+}
+static MP_DEFINE_CONST_FUN_OBJ_2(py_csi_boson_set_srnr_enable_obj, py_csi_boson_set_srnr_enable);
+
+static mp_obj_t py_csi_boson_get_srnr_enable(mp_obj_t self_in) {
+    py_csi_obj_t *self = MP_OBJ_TO_PTR(self_in);
+    int val;
+    int error = omv_csi_ioctl(self->csi, OMV_CSI_IOCTL_BOSON_GET_SRNR_ENABLE, &val);
+    if (error != 0) {
+        omv_csi_raise_error(error);
+    }
+    return mp_obj_new_bool(val);
+}
+static MP_DEFINE_CONST_FUN_OBJ_1(py_csi_boson_get_srnr_enable_obj, py_csi_boson_get_srnr_enable);
+
+static mp_obj_t py_csi_boson_set_gao_enable(mp_obj_t self_in, mp_obj_t en_in) {
+    py_csi_obj_t *self = MP_OBJ_TO_PTR(self_in);
+    int error = omv_csi_ioctl(self->csi, OMV_CSI_IOCTL_BOSON_SET_GAO_ENABLE, mp_obj_is_true(en_in));
+    if (error != 0) {
+        omv_csi_raise_error(error);
+    }
+    return mp_const_none;
+}
+static MP_DEFINE_CONST_FUN_OBJ_2(py_csi_boson_set_gao_enable_obj, py_csi_boson_set_gao_enable);
+
+static mp_obj_t py_csi_boson_get_gao_enable(mp_obj_t self_in) {
+    py_csi_obj_t *self = MP_OBJ_TO_PTR(self_in);
+    int val;
+    int error = omv_csi_ioctl(self->csi, OMV_CSI_IOCTL_BOSON_GET_GAO_ENABLE, &val);
+    if (error != 0) {
+        omv_csi_raise_error(error);
+    }
+    return mp_obj_new_bool(val);
+}
+static MP_DEFINE_CONST_FUN_OBJ_1(py_csi_boson_get_gao_enable_obj, py_csi_boson_get_gao_enable);
+
+static mp_obj_t py_csi_boson_set_ffc_pipe_state(mp_obj_t self_in, mp_obj_t en_in) {
+    py_csi_obj_t *self = MP_OBJ_TO_PTR(self_in);
+    int error = omv_csi_ioctl(self->csi, OMV_CSI_IOCTL_BOSON_SET_FFC_PIPE_STATE, mp_obj_is_true(en_in));
+    if (error != 0) {
+        omv_csi_raise_error(error);
+    }
+    return mp_const_none;
+}
+static MP_DEFINE_CONST_FUN_OBJ_2(py_csi_boson_set_ffc_pipe_state_obj, py_csi_boson_set_ffc_pipe_state);
+
+static mp_obj_t py_csi_boson_get_ffc_pipe_state(mp_obj_t self_in) {
+    py_csi_obj_t *self = MP_OBJ_TO_PTR(self_in);
+    int val;
+    int error = omv_csi_ioctl(self->csi, OMV_CSI_IOCTL_BOSON_GET_FFC_PIPE_STATE, &val);
+    if (error != 0) {
+        omv_csi_raise_error(error);
+    }
+    return mp_obj_new_bool(val);
+}
+static MP_DEFINE_CONST_FUN_OBJ_1(py_csi_boson_get_ffc_pipe_state_obj, py_csi_boson_get_ffc_pipe_state);
+
+static mp_obj_t py_csi_boson_set_sffc_state(mp_obj_t self_in, mp_obj_t en_in) {
+    py_csi_obj_t *self = MP_OBJ_TO_PTR(self_in);
+    int error = omv_csi_ioctl(self->csi, OMV_CSI_IOCTL_BOSON_SET_SFFC_STATE, mp_obj_is_true(en_in));
+    if (error != 0) {
+        omv_csi_raise_error(error);
+    }
+    return mp_const_none;
+}
+static MP_DEFINE_CONST_FUN_OBJ_2(py_csi_boson_set_sffc_state_obj, py_csi_boson_set_sffc_state);
+
+static mp_obj_t py_csi_boson_get_sffc_state(mp_obj_t self_in) {
+    py_csi_obj_t *self = MP_OBJ_TO_PTR(self_in);
+    int val;
+    int error = omv_csi_ioctl(self->csi, OMV_CSI_IOCTL_BOSON_GET_SFFC_STATE, &val);
+    if (error != 0) {
+        omv_csi_raise_error(error);
+    }
+    return mp_obj_new_bool(val);
+}
+static MP_DEFINE_CONST_FUN_OBJ_1(py_csi_boson_get_sffc_state_obj, py_csi_boson_get_sffc_state);
+
+// AGC control IOCTLs
+static mp_obj_t py_csi_boson_set_agc_mode(mp_obj_t self_in, mp_obj_t mode_in) {
+    py_csi_obj_t *self = MP_OBJ_TO_PTR(self_in);
+    int error = omv_csi_ioctl(self->csi, OMV_CSI_IOCTL_BOSON_SET_AGC_MODE, mp_obj_get_int(mode_in));
+    if (error != 0) {
+        omv_csi_raise_error(error);
+    }
+    return mp_const_none;
+}
+static MP_DEFINE_CONST_FUN_OBJ_2(py_csi_boson_set_agc_mode_obj, py_csi_boson_set_agc_mode);
+
+static mp_obj_t py_csi_boson_get_agc_mode(mp_obj_t self_in) {
+    py_csi_obj_t *self = MP_OBJ_TO_PTR(self_in);
+    int mode;
+    int error = omv_csi_ioctl(self->csi, OMV_CSI_IOCTL_BOSON_GET_AGC_MODE, &mode);
+    if (error != 0) {
+        omv_csi_raise_error(error);
+    }
+    return mp_obj_new_int(mode);
+}
+static MP_DEFINE_CONST_FUN_OBJ_1(py_csi_boson_get_agc_mode_obj, py_csi_boson_get_agc_mode);
+
+static mp_obj_t py_csi_boson_set_agc_percent_per_bin(mp_obj_t self_in, mp_obj_t val_in) {
+    py_csi_obj_t *self = MP_OBJ_TO_PTR(self_in);
+    int error = omv_csi_ioctl(self->csi, OMV_CSI_IOCTL_BOSON_SET_AGC_PERCENT_PER_BIN,
+                              (double)mp_obj_get_float(val_in));
+    if (error != 0) {
+        omv_csi_raise_error(error);
+    }
+    return mp_const_none;
+}
+static MP_DEFINE_CONST_FUN_OBJ_2(py_csi_boson_set_agc_percent_per_bin_obj, py_csi_boson_set_agc_percent_per_bin);
+
+static mp_obj_t py_csi_boson_get_agc_percent_per_bin(mp_obj_t self_in) {
+    py_csi_obj_t *self = MP_OBJ_TO_PTR(self_in);
+    float val;
+    int error = omv_csi_ioctl(self->csi, OMV_CSI_IOCTL_BOSON_GET_AGC_PERCENT_PER_BIN, &val);
+    if (error != 0) {
+        omv_csi_raise_error(error);
+    }
+    return mp_obj_new_float(val);
+}
+static MP_DEFINE_CONST_FUN_OBJ_1(py_csi_boson_get_agc_percent_per_bin_obj, py_csi_boson_get_agc_percent_per_bin);
+
+static mp_obj_t py_csi_boson_set_agc_outlier_cut(mp_obj_t self_in, mp_obj_t val_in) {
+    py_csi_obj_t *self = MP_OBJ_TO_PTR(self_in);
+    int error = omv_csi_ioctl(self->csi, OMV_CSI_IOCTL_BOSON_SET_AGC_OUTLIER_CUT,
+                              (double)mp_obj_get_float(val_in));
+    if (error != 0) {
+        omv_csi_raise_error(error);
+    }
+    return mp_const_none;
+}
+static MP_DEFINE_CONST_FUN_OBJ_2(py_csi_boson_set_agc_outlier_cut_obj, py_csi_boson_set_agc_outlier_cut);
+
+static mp_obj_t py_csi_boson_get_agc_outlier_cut(mp_obj_t self_in) {
+    py_csi_obj_t *self = MP_OBJ_TO_PTR(self_in);
+    float val;
+    int error = omv_csi_ioctl(self->csi, OMV_CSI_IOCTL_BOSON_GET_AGC_OUTLIER_CUT, &val);
+    if (error != 0) {
+        omv_csi_raise_error(error);
+    }
+    return mp_obj_new_float(val);
+}
+static MP_DEFINE_CONST_FUN_OBJ_1(py_csi_boson_get_agc_outlier_cut_obj, py_csi_boson_get_agc_outlier_cut);
+
+static mp_obj_t py_csi_boson_set_agc_detail_headroom(mp_obj_t self_in, mp_obj_t val_in) {
+    py_csi_obj_t *self = MP_OBJ_TO_PTR(self_in);
+    int error = omv_csi_ioctl(self->csi, OMV_CSI_IOCTL_BOSON_SET_AGC_DETAIL_HEADROOM,
+                              (double)mp_obj_get_float(val_in));
+    if (error != 0) {
+        omv_csi_raise_error(error);
+    }
+    return mp_const_none;
+}
+static MP_DEFINE_CONST_FUN_OBJ_2(py_csi_boson_set_agc_detail_headroom_obj, py_csi_boson_set_agc_detail_headroom);
+
+static mp_obj_t py_csi_boson_get_agc_detail_headroom(mp_obj_t self_in) {
+    py_csi_obj_t *self = MP_OBJ_TO_PTR(self_in);
+    float val;
+    int error = omv_csi_ioctl(self->csi, OMV_CSI_IOCTL_BOSON_GET_AGC_DETAIL_HEADROOM, &val);
+    if (error != 0) {
+        omv_csi_raise_error(error);
+    }
+    return mp_obj_new_float(val);
+}
+static MP_DEFINE_CONST_FUN_OBJ_1(py_csi_boson_get_agc_detail_headroom_obj, py_csi_boson_get_agc_detail_headroom);
+
+static mp_obj_t py_csi_boson_get_agc_linear_percent(mp_obj_t self_in) {
+    py_csi_obj_t *self = MP_OBJ_TO_PTR(self_in);
+    float val;
+    int error = omv_csi_ioctl(self->csi, OMV_CSI_IOCTL_BOSON_GET_AGC_LINEAR_PERCENT, &val);
+    if (error != 0) {
+        omv_csi_raise_error(error);
+    }
+    return mp_obj_new_float(val);
+}
+static MP_DEFINE_CONST_FUN_OBJ_1(py_csi_boson_get_agc_linear_percent_obj, py_csi_boson_get_agc_linear_percent);
+
+static mp_obj_t py_csi_boson_get_agc_d2br(mp_obj_t self_in) {
+    py_csi_obj_t *self = MP_OBJ_TO_PTR(self_in);
+    float val;
+    int error = omv_csi_ioctl(self->csi, OMV_CSI_IOCTL_BOSON_GET_AGC_D2BR, &val);
+    if (error != 0) {
+        omv_csi_raise_error(error);
+    }
+    return mp_obj_new_float(val);
+}
+static MP_DEFINE_CONST_FUN_OBJ_1(py_csi_boson_get_agc_d2br_obj, py_csi_boson_get_agc_d2br);
+
+static mp_obj_t py_csi_boson_get_agc_sigma_r(mp_obj_t self_in) {
+    py_csi_obj_t *self = MP_OBJ_TO_PTR(self_in);
+    float val;
+    int error = omv_csi_ioctl(self->csi, OMV_CSI_IOCTL_BOSON_GET_AGC_SIGMA_R, &val);
+    if (error != 0) {
+        omv_csi_raise_error(error);
+    }
+    return mp_obj_new_float(val);
+}
+static MP_DEFINE_CONST_FUN_OBJ_1(py_csi_boson_get_agc_sigma_r_obj, py_csi_boson_get_agc_sigma_r);
+
+static mp_obj_t py_csi_boson_get_agc_max_gain(mp_obj_t self_in) {
+    py_csi_obj_t *self = MP_OBJ_TO_PTR(self_in);
+    float val;
+    int error = omv_csi_ioctl(self->csi, OMV_CSI_IOCTL_BOSON_GET_AGC_MAX_GAIN, &val);
+    if (error != 0) {
+        omv_csi_raise_error(error);
+    }
+    return mp_obj_new_float(val);
+}
+static MP_DEFINE_CONST_FUN_OBJ_1(py_csi_boson_get_agc_max_gain_obj, py_csi_boson_get_agc_max_gain);
+
+static mp_obj_t py_csi_boson_get_agc_df(mp_obj_t self_in) {
+    py_csi_obj_t *self = MP_OBJ_TO_PTR(self_in);
+    float val;
+    int error = omv_csi_ioctl(self->csi, OMV_CSI_IOCTL_BOSON_GET_AGC_DF, &val);
+    if (error != 0) {
+        omv_csi_raise_error(error);
+    }
+    return mp_obj_new_float(val);
+}
+static MP_DEFINE_CONST_FUN_OBJ_1(py_csi_boson_get_agc_df_obj, py_csi_boson_get_agc_df);
+
+static mp_obj_t py_csi_boson_get_agc_gamma(mp_obj_t self_in) {
+    py_csi_obj_t *self = MP_OBJ_TO_PTR(self_in);
+    float val;
+    int error = omv_csi_ioctl(self->csi, OMV_CSI_IOCTL_BOSON_GET_AGC_GAMMA, &val);
+    if (error != 0) {
+        omv_csi_raise_error(error);
+    }
+    return mp_obj_new_float(val);
+}
+static MP_DEFINE_CONST_FUN_OBJ_1(py_csi_boson_get_agc_gamma_obj, py_csi_boson_get_agc_gamma);
+
+// Dynamic range control IOCTLs
+static mp_obj_t py_csi_boson_get_gain_switch_params(mp_obj_t self_in) {
+    py_csi_obj_t *self = MP_OBJ_TO_PTR(self_in);
+    uint32_t ht, hp, lp, hy;
+    int error = omv_csi_ioctl(self->csi, OMV_CSI_IOCTL_BOSON_GET_GAIN_SWITCH_PARAMS, &ht, &hp, &lp, &hy);
+    if (error != 0) {
+        omv_csi_raise_error(error);
+    }
+    return mp_obj_new_tuple(4, (mp_obj_t []) {
+        mp_obj_new_int(ht), mp_obj_new_int(hp), mp_obj_new_int(lp), mp_obj_new_int(hy)
+    });
+}
+static MP_DEFINE_CONST_FUN_OBJ_1(py_csi_boson_get_gain_switch_params_obj, py_csi_boson_get_gain_switch_params);
+
+static mp_obj_t py_csi_boson_set_gain_switch_hyst_time(mp_obj_t self_in, mp_obj_t val_in) {
+    py_csi_obj_t *self = MP_OBJ_TO_PTR(self_in);
+    int error = omv_csi_ioctl(self->csi, OMV_CSI_IOCTL_BOSON_SET_GAIN_SWITCH_HYST_TIME,
+                              (double)mp_obj_get_float(val_in));
+    if (error != 0) {
+        omv_csi_raise_error(error);
+    }
+    return mp_const_none;
+}
+static MP_DEFINE_CONST_FUN_OBJ_2(py_csi_boson_set_gain_switch_hyst_time_obj, py_csi_boson_set_gain_switch_hyst_time);
+
+static mp_obj_t py_csi_boson_get_gain_switch_hyst_time(mp_obj_t self_in) {
+    py_csi_obj_t *self = MP_OBJ_TO_PTR(self_in);
+    float val;
+    int error = omv_csi_ioctl(self->csi, OMV_CSI_IOCTL_BOSON_GET_GAIN_SWITCH_HYST_TIME, &val);
+    if (error != 0) {
+        omv_csi_raise_error(error);
+    }
+    return mp_obj_new_float(val);
+}
+static MP_DEFINE_CONST_FUN_OBJ_1(py_csi_boson_get_gain_switch_hyst_time_obj, py_csi_boson_get_gain_switch_hyst_time);
+
+static mp_obj_t py_csi_boson_set_gain_switch_frame_thresh(mp_obj_t self_in, mp_obj_t val_in) {
+    py_csi_obj_t *self = MP_OBJ_TO_PTR(self_in);
+    int error = omv_csi_ioctl(self->csi, OMV_CSI_IOCTL_BOSON_SET_GAIN_SWITCH_FRAME_THRESH, mp_obj_get_int(val_in));
+    if (error != 0) {
+        omv_csi_raise_error(error);
+    }
+    return mp_const_none;
+}
+static MP_DEFINE_CONST_FUN_OBJ_2(py_csi_boson_set_gain_switch_frame_thresh_obj, py_csi_boson_set_gain_switch_frame_thresh);
+
+static mp_obj_t py_csi_boson_get_gain_switch_frame_thresh(mp_obj_t self_in) {
+    py_csi_obj_t *self = MP_OBJ_TO_PTR(self_in);
+    uint32_t val;
+    int error = omv_csi_ioctl(self->csi, OMV_CSI_IOCTL_BOSON_GET_GAIN_SWITCH_FRAME_THRESH, &val);
+    if (error != 0) {
+        omv_csi_raise_error(error);
+    }
+    return mp_obj_new_int_from_uint(val);
+}
+static MP_DEFINE_CONST_FUN_OBJ_1(py_csi_boson_get_gain_switch_frame_thresh_obj, py_csi_boson_get_gain_switch_frame_thresh);
+
+static mp_obj_t py_csi_boson_get_gain_switch_desired(mp_obj_t self_in) {
+    py_csi_obj_t *self = MP_OBJ_TO_PTR(self_in);
+    uint32_t val;
+    int error = omv_csi_ioctl(self->csi, OMV_CSI_IOCTL_BOSON_GET_GAIN_SWITCH_DESIRED, &val);
+    if (error != 0) {
+        omv_csi_raise_error(error);
+    }
+    return mp_obj_new_int_from_uint(val);
+}
+static MP_DEFINE_CONST_FUN_OBJ_1(py_csi_boson_get_gain_switch_desired_obj, py_csi_boson_get_gain_switch_desired);
+
+#endif // (OMV_BOSON_ENABLE == 1)
+
 static const mp_rom_map_elem_t py_csi_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR___name__),            MP_ROM_QSTR(MP_QSTR_CSI) },
     { MP_ROM_QSTR(MP_QSTR___del__),             MP_ROM_PTR(&py_csi_deinit_obj) },
@@ -1469,6 +2565,112 @@ static const mp_rom_map_elem_t py_csi_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_color_palette),       MP_ROM_PTR(&py_csi_color_palette_obj) },
     { MP_ROM_QSTR(MP_QSTR___write_reg),         MP_ROM_PTR(&py_csi_write_reg_obj) },
     { MP_ROM_QSTR(MP_QSTR___read_reg),          MP_ROM_PTR(&py_csi_read_reg_obj) },
+    #if (OMV_BOSON_ENABLE == 1)
+    { MP_ROM_QSTR(MP_QSTR_boson_get_fpa_temp),    MP_ROM_PTR(&py_csi_boson_get_fpa_temp_obj) },
+    { MP_ROM_QSTR(MP_QSTR_boson_run_ffc),         MP_ROM_PTR(&py_csi_boson_run_ffc_obj) },
+    { MP_ROM_QSTR(MP_QSTR_boson_get_ffc_status),  MP_ROM_PTR(&py_csi_boson_get_ffc_status_obj) },
+    { MP_ROM_QSTR(MP_QSTR_boson_set_ffc_mode),    MP_ROM_PTR(&py_csi_boson_set_ffc_mode_obj) },
+    { MP_ROM_QSTR(MP_QSTR_boson_set_gain_mode),   MP_ROM_PTR(&py_csi_boson_set_gain_mode_obj) },
+    { MP_ROM_QSTR(MP_QSTR_boson_get_gain_mode),   MP_ROM_PTR(&py_csi_boson_get_gain_mode_obj) },
+    { MP_ROM_QSTR(MP_QSTR_boson_set_agc_param),   MP_ROM_PTR(&py_csi_boson_set_agc_param_obj) },
+    { MP_ROM_QSTR(MP_QSTR_boson_get_image_stats), MP_ROM_PTR(&py_csi_boson_get_image_stats_obj) },
+    { MP_ROM_QSTR(MP_QSTR_boson_set_stats_roi),   MP_ROM_PTR(&py_csi_boson_set_stats_roi_obj) },
+    { MP_ROM_QSTR(MP_QSTR_boson_set_isotherm_enable), MP_ROM_PTR(&py_csi_boson_set_isotherm_enable_obj) },
+    { MP_ROM_QSTR(MP_QSTR_boson_set_isotherm_temps),  MP_ROM_PTR(&py_csi_boson_set_isotherm_temps_obj) },
+    { MP_ROM_QSTR(MP_QSTR_boson_set_isotherm_unit),   MP_ROM_PTR(&py_csi_boson_set_isotherm_unit_obj) },
+    { MP_ROM_QSTR(MP_QSTR_boson_set_gain_switch),     MP_ROM_PTR(&py_csi_boson_set_gain_switch_obj) },
+    { MP_ROM_QSTR(MP_QSTR_boson_get_serial),      MP_ROM_PTR(&py_csi_boson_get_serial_obj) },
+    { MP_ROM_QSTR(MP_QSTR_boson_get_part_number),  MP_ROM_PTR(&py_csi_boson_get_part_number_obj) },
+    { MP_ROM_QSTR(MP_QSTR_boson_set_colorlut),    MP_ROM_PTR(&py_csi_boson_set_colorlut_obj) },
+    { MP_ROM_QSTR(MP_QSTR_boson_set_zoom),        MP_ROM_PTR(&py_csi_boson_set_zoom_obj) },
+    { MP_ROM_QSTR(MP_QSTR_boson_get_zoom),        MP_ROM_PTR(&py_csi_boson_get_zoom_obj) },
+    // Image Stats & Spot Meter
+    { MP_ROM_QSTR(MP_QSTR_boson_get_stats_roi),           MP_ROM_PTR(&py_csi_boson_get_stats_roi_obj) },
+    { MP_ROM_QSTR(MP_QSTR_boson_set_spot_meter_enable),   MP_ROM_PTR(&py_csi_boson_set_spot_meter_enable_obj) },
+    { MP_ROM_QSTR(MP_QSTR_boson_get_spot_meter_enable),   MP_ROM_PTR(&py_csi_boson_get_spot_meter_enable_obj) },
+    { MP_ROM_QSTR(MP_QSTR_boson_set_spot_meter_roi),      MP_ROM_PTR(&py_csi_boson_set_spot_meter_roi_obj) },
+    { MP_ROM_QSTR(MP_QSTR_boson_get_spot_meter_roi),      MP_ROM_PTR(&py_csi_boson_get_spot_meter_roi_obj) },
+    { MP_ROM_QSTR(MP_QSTR_boson_get_spot_meter_stats),    MP_ROM_PTR(&py_csi_boson_get_spot_meter_stats_obj) },
+    { MP_ROM_QSTR(MP_QSTR_boson_get_spot_meter_temp_stats), MP_ROM_PTR(&py_csi_boson_get_spot_meter_temp_stats_obj) },
+    { MP_ROM_QSTR(MP_QSTR_boson_get_spot_meter_roi_max),  MP_ROM_PTR(&py_csi_boson_get_spot_meter_roi_max_obj) },
+    { MP_ROM_QSTR(MP_QSTR_boson_set_spot_meter_stats_mode), MP_ROM_PTR(&py_csi_boson_set_spot_meter_stats_mode_obj) },
+    { MP_ROM_QSTR(MP_QSTR_boson_get_spot_meter_stats_mode), MP_ROM_PTR(&py_csi_boson_get_spot_meter_stats_mode_obj) },
+    // Isotherm Getters
+    { MP_ROM_QSTR(MP_QSTR_boson_get_isotherm_enable),     MP_ROM_PTR(&py_csi_boson_get_isotherm_enable_obj) },
+    { MP_ROM_QSTR(MP_QSTR_boson_get_isotherm_unit),       MP_ROM_PTR(&py_csi_boson_get_isotherm_unit_obj) },
+    { MP_ROM_QSTR(MP_QSTR_boson_get_isotherm_temps),      MP_ROM_PTR(&py_csi_boson_get_isotherm_temps_obj) },
+    // Radiometry, Sensor Info & Overtemp
+    { MP_ROM_QSTR(MP_QSTR_boson_get_radiometry_capable),  MP_ROM_PTR(&py_csi_boson_get_radiometry_capable_obj) },
+    { MP_ROM_QSTR(MP_QSTR_boson_set_radiometry_enable),   MP_ROM_PTR(&py_csi_boson_set_radiometry_enable_obj) },
+    { MP_ROM_QSTR(MP_QSTR_boson_get_radiometry_enable),   MP_ROM_PTR(&py_csi_boson_get_radiometry_enable_obj) },
+    { MP_ROM_QSTR(MP_QSTR_boson_set_tlinear_enable),      MP_ROM_PTR(&py_csi_boson_set_tlinear_enable_obj) },
+    { MP_ROM_QSTR(MP_QSTR_boson_get_tlinear_enable),      MP_ROM_PTR(&py_csi_boson_get_tlinear_enable_obj) },
+    { MP_ROM_QSTR(MP_QSTR_boson_set_emissivity),          MP_ROM_PTR(&py_csi_boson_set_emissivity_obj) },
+    { MP_ROM_QSTR(MP_QSTR_boson_get_emissivity),          MP_ROM_PTR(&py_csi_boson_get_emissivity_obj) },
+    { MP_ROM_QSTR(MP_QSTR_boson_get_sw_version),          MP_ROM_PTR(&py_csi_boson_get_software_rev_obj) },
+    { MP_ROM_QSTR(MP_QSTR_boson_get_sensor_sn),           MP_ROM_PTR(&py_csi_boson_get_sensor_sn_obj) },
+    { MP_ROM_QSTR(MP_QSTR_boson_get_overtemp_threshold),  MP_ROM_PTR(&py_csi_boson_get_overtemp_threshold_obj) },
+    { MP_ROM_QSTR(MP_QSTR_boson_get_overtemp_event_count), MP_ROM_PTR(&py_csi_boson_get_overtemp_event_count_obj) },
+    { MP_ROM_QSTR(MP_QSTR_boson_get_low_power_mode),      MP_ROM_PTR(&py_csi_boson_get_low_power_mode_obj) },
+    // FFC control
+    { MP_ROM_QSTR(MP_QSTR_boson_get_ffc_mode),             MP_ROM_PTR(&py_csi_boson_get_ffc_mode_obj) },
+    { MP_ROM_QSTR(MP_QSTR_boson_set_ffc_temp_threshold),   MP_ROM_PTR(&py_csi_boson_set_ffc_temp_threshold_obj) },
+    { MP_ROM_QSTR(MP_QSTR_boson_get_ffc_temp_threshold),   MP_ROM_PTR(&py_csi_boson_get_ffc_temp_threshold_obj) },
+    { MP_ROM_QSTR(MP_QSTR_boson_set_ffc_frame_threshold),  MP_ROM_PTR(&py_csi_boson_set_ffc_frame_threshold_obj) },
+    { MP_ROM_QSTR(MP_QSTR_boson_get_ffc_frame_threshold),  MP_ROM_PTR(&py_csi_boson_get_ffc_frame_threshold_obj) },
+    { MP_ROM_QSTR(MP_QSTR_boson_set_ffc_temp_threshold_lg),  MP_ROM_PTR(&py_csi_boson_set_ffc_temp_threshold_lg_obj) },
+    { MP_ROM_QSTR(MP_QSTR_boson_get_ffc_temp_threshold_lg),  MP_ROM_PTR(&py_csi_boson_get_ffc_temp_threshold_lg_obj) },
+    { MP_ROM_QSTR(MP_QSTR_boson_set_ffc_frame_threshold_lg), MP_ROM_PTR(&py_csi_boson_set_ffc_frame_threshold_lg_obj) },
+    { MP_ROM_QSTR(MP_QSTR_boson_get_ffc_frame_threshold_lg), MP_ROM_PTR(&py_csi_boson_get_ffc_frame_threshold_lg_obj) },
+    { MP_ROM_QSTR(MP_QSTR_boson_set_ffc_warn_time),        MP_ROM_PTR(&py_csi_boson_set_ffc_warn_time_obj) },
+    { MP_ROM_QSTR(MP_QSTR_boson_get_ffc_warn_time),        MP_ROM_PTR(&py_csi_boson_get_ffc_warn_time_obj) },
+    { MP_ROM_QSTR(MP_QSTR_boson_get_ffc_desired),          MP_ROM_PTR(&py_csi_boson_get_ffc_desired_obj) },
+    { MP_ROM_QSTR(MP_QSTR_boson_get_last_ffc_frame_count), MP_ROM_PTR(&py_csi_boson_get_last_ffc_frame_count_obj) },
+    { MP_ROM_QSTR(MP_QSTR_boson_get_last_ffc_temp),        MP_ROM_PTR(&py_csi_boson_get_last_ffc_temp_obj) },
+    { MP_ROM_QSTR(MP_QSTR_boson_set_startup_ffc_period),   MP_ROM_PTR(&py_csi_boson_set_startup_ffc_period_obj) },
+    { MP_ROM_QSTR(MP_QSTR_boson_get_startup_ffc_period),   MP_ROM_PTR(&py_csi_boson_get_startup_ffc_period_obj) },
+    // FFC correction pipeline
+    { MP_ROM_QSTR(MP_QSTR_boson_set_scnr_enable),          MP_ROM_PTR(&py_csi_boson_set_scnr_enable_obj) },
+    { MP_ROM_QSTR(MP_QSTR_boson_get_scnr_enable),          MP_ROM_PTR(&py_csi_boson_get_scnr_enable_obj) },
+    { MP_ROM_QSTR(MP_QSTR_boson_set_tf_enable),            MP_ROM_PTR(&py_csi_boson_set_tf_enable_obj) },
+    { MP_ROM_QSTR(MP_QSTR_boson_get_tf_enable),            MP_ROM_PTR(&py_csi_boson_get_tf_enable_obj) },
+    { MP_ROM_QSTR(MP_QSTR_boson_set_spnr_enable),          MP_ROM_PTR(&py_csi_boson_set_spnr_enable_obj) },
+    { MP_ROM_QSTR(MP_QSTR_boson_get_spnr_enable),          MP_ROM_PTR(&py_csi_boson_get_spnr_enable_obj) },
+    { MP_ROM_QSTR(MP_QSTR_boson_set_bpr_enable),           MP_ROM_PTR(&py_csi_boson_set_bpr_enable_obj) },
+    { MP_ROM_QSTR(MP_QSTR_boson_get_bpr_enable),           MP_ROM_PTR(&py_csi_boson_get_bpr_enable_obj) },
+    { MP_ROM_QSTR(MP_QSTR_boson_set_lfsr_enable),          MP_ROM_PTR(&py_csi_boson_set_lfsr_enable_obj) },
+    { MP_ROM_QSTR(MP_QSTR_boson_get_lfsr_enable),          MP_ROM_PTR(&py_csi_boson_get_lfsr_enable_obj) },
+    { MP_ROM_QSTR(MP_QSTR_boson_set_srnr_enable),          MP_ROM_PTR(&py_csi_boson_set_srnr_enable_obj) },
+    { MP_ROM_QSTR(MP_QSTR_boson_get_srnr_enable),          MP_ROM_PTR(&py_csi_boson_get_srnr_enable_obj) },
+    { MP_ROM_QSTR(MP_QSTR_boson_set_gao_enable),           MP_ROM_PTR(&py_csi_boson_set_gao_enable_obj) },
+    { MP_ROM_QSTR(MP_QSTR_boson_get_gao_enable),           MP_ROM_PTR(&py_csi_boson_get_gao_enable_obj) },
+    { MP_ROM_QSTR(MP_QSTR_boson_set_ffc_pipe_state),       MP_ROM_PTR(&py_csi_boson_set_ffc_pipe_state_obj) },
+    { MP_ROM_QSTR(MP_QSTR_boson_get_ffc_pipe_state),       MP_ROM_PTR(&py_csi_boson_get_ffc_pipe_state_obj) },
+    { MP_ROM_QSTR(MP_QSTR_boson_set_sffc_state),           MP_ROM_PTR(&py_csi_boson_set_sffc_state_obj) },
+    { MP_ROM_QSTR(MP_QSTR_boson_get_sffc_state),           MP_ROM_PTR(&py_csi_boson_get_sffc_state_obj) },
+    // AGC control
+    { MP_ROM_QSTR(MP_QSTR_boson_set_agc_mode),             MP_ROM_PTR(&py_csi_boson_set_agc_mode_obj) },
+    { MP_ROM_QSTR(MP_QSTR_boson_get_agc_mode),             MP_ROM_PTR(&py_csi_boson_get_agc_mode_obj) },
+    { MP_ROM_QSTR(MP_QSTR_boson_set_agc_percent_per_bin),  MP_ROM_PTR(&py_csi_boson_set_agc_percent_per_bin_obj) },
+    { MP_ROM_QSTR(MP_QSTR_boson_get_agc_percent_per_bin),  MP_ROM_PTR(&py_csi_boson_get_agc_percent_per_bin_obj) },
+    { MP_ROM_QSTR(MP_QSTR_boson_set_agc_outlier_cut),      MP_ROM_PTR(&py_csi_boson_set_agc_outlier_cut_obj) },
+    { MP_ROM_QSTR(MP_QSTR_boson_get_agc_outlier_cut),      MP_ROM_PTR(&py_csi_boson_get_agc_outlier_cut_obj) },
+    { MP_ROM_QSTR(MP_QSTR_boson_set_agc_detail_headroom),  MP_ROM_PTR(&py_csi_boson_set_agc_detail_headroom_obj) },
+    { MP_ROM_QSTR(MP_QSTR_boson_get_agc_detail_headroom),  MP_ROM_PTR(&py_csi_boson_get_agc_detail_headroom_obj) },
+    { MP_ROM_QSTR(MP_QSTR_boson_get_agc_linear_percent),   MP_ROM_PTR(&py_csi_boson_get_agc_linear_percent_obj) },
+    { MP_ROM_QSTR(MP_QSTR_boson_get_agc_d2br),             MP_ROM_PTR(&py_csi_boson_get_agc_d2br_obj) },
+    { MP_ROM_QSTR(MP_QSTR_boson_get_agc_sigma_r),          MP_ROM_PTR(&py_csi_boson_get_agc_sigma_r_obj) },
+    { MP_ROM_QSTR(MP_QSTR_boson_get_agc_max_gain),         MP_ROM_PTR(&py_csi_boson_get_agc_max_gain_obj) },
+    { MP_ROM_QSTR(MP_QSTR_boson_get_agc_df),               MP_ROM_PTR(&py_csi_boson_get_agc_df_obj) },
+    { MP_ROM_QSTR(MP_QSTR_boson_get_agc_gamma),            MP_ROM_PTR(&py_csi_boson_get_agc_gamma_obj) },
+    // Dynamic range control
+    { MP_ROM_QSTR(MP_QSTR_boson_get_gain_switch_params),        MP_ROM_PTR(&py_csi_boson_get_gain_switch_params_obj) },
+    { MP_ROM_QSTR(MP_QSTR_boson_set_gain_switch_hyst_time),     MP_ROM_PTR(&py_csi_boson_set_gain_switch_hyst_time_obj) },
+    { MP_ROM_QSTR(MP_QSTR_boson_get_gain_switch_hyst_time),     MP_ROM_PTR(&py_csi_boson_get_gain_switch_hyst_time_obj) },
+    { MP_ROM_QSTR(MP_QSTR_boson_set_gain_switch_frame_thresh),  MP_ROM_PTR(&py_csi_boson_set_gain_switch_frame_thresh_obj) },
+    { MP_ROM_QSTR(MP_QSTR_boson_get_gain_switch_frame_thresh),  MP_ROM_PTR(&py_csi_boson_get_gain_switch_frame_thresh_obj) },
+    { MP_ROM_QSTR(MP_QSTR_boson_get_gain_switch_desired),       MP_ROM_PTR(&py_csi_boson_get_gain_switch_desired_obj) },
+    #endif
 };
 MP_DEFINE_CONST_DICT(py_csi_locals_dict, py_csi_locals_dict_table);
 
