@@ -13,6 +13,7 @@ import ubinascii
 import enc
 import uasyncio as asyncio
 from message_codec import build_heartbeat_payload
+from detect import turn_ON_IR_emitter, turn_OFF_IR_emitter
 
 try:
     import logger
@@ -694,22 +695,30 @@ class InternetDriver:
         
     def get_image_payload(self):
         """Capture a JPEG from the camera, hybrid-encrypt, return API payload dict."""
-        img = sensor.snapshot()
-        jpeg_bytearray = img.compress(quality=25)
-        imgbytes = bytes(jpeg_bytearray)
-        if uses_hybrid_encryption("P"):
-            encnode = enc.EncNode(self.machine_id)
-            enc_msgbytes = enc.encrypt_hybrid(imgbytes, encnode.get_pub_key())
-            img_b64_str = ubinascii.b2a_base64(enc_msgbytes).rstrip().decode()
-        else:
-            img_b64_str = ubinascii.b2a_base64(imgbytes).rstrip().decode()
-        return {
-            "machine_id": self.machine_id,
-            "msg_typ": "event",
-            "data": img_b64_str,
-            "epoch_ms": utime.time_ns() // 1_000_000,
-            "enc": ENCRYPTION_ENABLED,
-        }
+        try:
+            turn_ON_IR_emitter()
+            img = sensor.snapshot()
+            turn_OFF_IR_emitter()
+            jpeg_bytearray = img.compress(quality=25)
+            imgbytes = bytes(jpeg_bytearray)
+            if uses_hybrid_encryption("P"):
+                encnode = enc.EncNode(self.machine_id)
+                enc_msgbytes = enc.encrypt_hybrid(imgbytes, encnode.get_pub_key())
+                img_b64_str = ubinascii.b2a_base64(enc_msgbytes).rstrip().decode()
+            else:
+                img_b64_str = ubinascii.b2a_base64(imgbytes).rstrip().decode()
+            return {
+                "machine_id": self.machine_id,
+                "msg_typ": "event",
+                "data": img_b64_str,
+                "epoch_ms": utime.time_ns() // 1_000_000,
+                "enc": ENCRYPTION_ENABLED,
+            }
+        except Exception as e:
+            logger.error(f"[PIR] Failed to get image payload: {e}")
+            return None
+        finally:
+            turn_OFF_IR_emitter()
 
     def get_heartbeat_payload(self):
         """

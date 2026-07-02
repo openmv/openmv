@@ -38,9 +38,10 @@ UID_TO_ADDR = {
 }
 
 # XX.XX.X
+# 02.00.2
 major = 2  # (0-63)
 minor = 0  # (0-99)
-patch = 1  # (0-9)
+patch = 2  # (0-9)
 # version as integer value, max_val = 64_999 < 65_535 (2 bytes)
 VERSION = major * 1_000 + minor * 10 + patch
 

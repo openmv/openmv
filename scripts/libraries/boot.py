@@ -2915,6 +2915,8 @@ class AppHandler:
             app_controller.create_and_send_message("verify_internet", {"message": f"capture_image_to_verify_camera: {e}", "result": "fail"}, timeout=0.5)
             logger.error(f"[{type}] capture_image_to_verify_camera: {e} [Fail]")
             return None
+        finally:
+            turn_OFF_IR_emitter()
 
     async def try_create_cc(self):
         try:
