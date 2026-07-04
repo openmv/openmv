@@ -84,6 +84,7 @@ int omv_protocol_init(const omv_protocol_config_t *config) {
 
     // Start periodic poll timer if configured.
     if (config->poll_ms > 0) {
+        soft_timer_remove(&protocol_timer);     // no-op if unlinked, unlinks if linked
         soft_timer_static_init(&protocol_timer, SOFT_TIMER_MODE_PERIODIC,
                                config->poll_ms, omv_protocol_poll_callback);
         soft_timer_insert(&protocol_timer, config->poll_ms);
