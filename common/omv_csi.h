@@ -325,6 +325,7 @@ typedef struct _omv_csi {
         uint32_t mipi_if    : 1;  // CSI-2 interface.
         uint32_t mipi_brate : 12; // CSI-2 interface bitrate.
         uint32_t auxiliary  : 1;  // Indicates that the sensor can be used in dual-CSI config.
+        uint32_t halt_req   : 1;  // Indicates that the sensor requires sleeping before reset/shutdown.
     };
 
     const uint16_t *color_palette;    // Color palette used for color lookup.
