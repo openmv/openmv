@@ -11,6 +11,7 @@ import time
 import ml
 from ml.postprocessing.edgeimpulse import Fomo
 import math
+
 csi0 = csi.CSI()
 csi0.reset()  # Reset and initialize the sensor.
 csi0.pixformat(csi.RGB565)  # Set pixel format to RGB565 (or GRAYSCALE)

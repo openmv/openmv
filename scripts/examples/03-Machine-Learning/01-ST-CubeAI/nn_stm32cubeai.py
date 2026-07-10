@@ -8,6 +8,7 @@
 import csi
 import time
 import nn_st
+
 csi0 = csi.CSI()
 csi0.reset()  # Reset and initialize the sensor.
 csi0.contrast(3)
