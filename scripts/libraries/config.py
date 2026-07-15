@@ -12,7 +12,7 @@ UID_TO_ADDR = {
     b'e076465dd7193d2a': 217,
     b"e076465dd709102e": 218,
     b"04bd545dd7593b40": 219, # 04bd545dd7593b40
-    b"e076465dd7091027": 220,
+    b"04bd545dd759392c": 220,
     b"e076465dd719431e": 222,
     b"e076465dd7091843": 223,
     b"e076465dd719421e": 224,
@@ -41,7 +41,7 @@ UID_TO_ADDR = {
 # 02.00.2
 major = 2  # (0-63)
 minor = 0  # (0-99)
-patch = 2  # (0-9)
+patch = 3  # (0-9)
 # version as integer value, max_val = 64_999 < 65_535 (2 bytes)
 VERSION = major * 1_000 + minor * 10 + patch
 
