@@ -1089,6 +1089,9 @@ typedef struct statistics {
 
 #define FIND_BLOBS_CORNERS_RESOLUTION    20 // multiple of 4
 #define FIND_BLOBS_ANGLE_RESOLUTION      (360 / FIND_BLOBS_CORNERS_RESOLUTION)
+#define FIND_BLOBS_CONTOUR_ANCHOR        0x80
+#define FIND_BLOBS_CONTOUR_DELTA_OFFSET  3
+#define FIND_BLOBS_CONTOUR_DELTA_MASK    0x7
 
 typedef struct find_blobs_list_lnk_data {
     point_t corners[FIND_BLOBS_CORNERS_RESOLUTION];
@@ -1097,6 +1100,10 @@ typedef struct find_blobs_list_lnk_data {
     float centroid_x, centroid_y, rotation, roundness;
     uint16_t x_hist_bins_count, y_hist_bins_count, *x_hist_bins, *y_hist_bins;
     float centroid_x_acc, centroid_y_acc, rotation_acc_x, rotation_acc_y, roundness_acc;
+    point_t contour_start;
+    uint32_t contour_len;
+    uint8_t *contour;
+    bool contour_valid;
 } find_blobs_list_lnk_data_t;
 
 typedef struct find_lines_list_lnk_data {
@@ -1549,7 +1556,9 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                       bool merge, int margin,
                       bool (*threshold_cb) (void *, find_blobs_list_lnk_data_t *), void *threshold_cb_arg,
                       bool (*merge_cb) (void *, find_blobs_list_lnk_data_t *, find_blobs_list_lnk_data_t *), void *merge_cb_arg,
-                      unsigned int x_hist_bins_max, unsigned int y_hist_bins_max);
+                      unsigned int x_hist_bins_max, unsigned int y_hist_bins_max, bool contours);
+void imlib_draw_contours(image_t *dst, point_t *start, const uint8_t *contour, uint32_t contour_len,
+                         int color, image_t *mask);
 // Shape Detection
 size_t trace_line(image_t *ptr, line_t *l, int *theta_buffer, uint32_t *mag_buffer, point_t *point_buffer); // helper/internal
 void merge_alot(list_t *out, int threshold, int theta_threshold); // helper/internal

@@ -1570,6 +1570,56 @@ static mp_obj_t py_image_draw_edges(size_t n_args, const mp_obj_t *pos_args, mp_
 }
 static MP_DEFINE_CONST_FUN_OBJ_KW(py_image_draw_edges_obj, 2, py_image_draw_edges);
 
+// Blob field indices shared by drawing and module-level geometry helpers.
+#define BLOB_INDEX_PIXELS       6
+#define BLOB_INDEX_PERIMETER    10
+#define BLOB_INDEX_MIN_CORNERS  15
+#define BLOB_INDEX_CONTOUR      23
+
+static mp_obj_t py_image_draw_contours(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
+    enum { ARG_blob, ARG_color, ARG_mask };
+    static const mp_arg_t allowed_args[] = {
+        { MP_QSTR_blob,  MP_ARG_OBJ | MP_ARG_REQUIRED },
+        { MP_QSTR_color, MP_ARG_OBJ, {.u_rom_obj = MP_ROM_NONE} },
+        { MP_QSTR_mask,  MP_ARG_OBJ | MP_ARG_KW_ONLY, {.u_rom_obj = MP_ROM_NONE} },
+    };
+
+    image_t *image = py_helper_arg_to_image(pos_args[0], ARG_IMAGE_MUTABLE);
+    mp_arg_val_t args[MP_ARRAY_SIZE(allowed_args)];
+    mp_arg_parse_all(n_args - 1, pos_args + 1, kw_args, MP_ARRAY_SIZE(allowed_args), allowed_args, args);
+
+    image_t *mask = NULL;
+    if (args[ARG_mask].u_obj != mp_const_none) {
+        mask = py_helper_arg_to_image(args[ARG_mask].u_obj, ARG_IMAGE_MUTABLE | ARG_IMAGE_ALLOC);
+        PY_ASSERT_TRUE_MSG((mask->w == image->w) && (mask->h == image->h),
+                           "Mask image must match destination image size.");
+    }
+
+    size_t blob_len;
+    mp_obj_t *blob_items;
+    mp_obj_tuple_get(args[ARG_blob].u_obj, &blob_len, &blob_items);
+    PY_ASSERT_TRUE_MSG(blob_len > BLOB_INDEX_CONTOUR, "Expected a blob object.");
+
+    mp_obj_t contour_obj = blob_items[BLOB_INDEX_CONTOUR];
+    if (contour_obj != mp_const_none) {
+        mp_obj_t *contour_items;
+        mp_obj_get_array_fixed_n(contour_obj, 3, &contour_items);
+
+        point_t start;
+        start.x = mp_obj_get_int(contour_items[0]);
+        start.y = mp_obj_get_int(contour_items[1]);
+
+        mp_buffer_info_t bufinfo;
+        mp_get_buffer_raise(contour_items[2], &bufinfo, MP_BUFFER_READ);
+
+        int color = py_helper_arg_to_color(image, args[ARG_color].u_obj, -1); // White.
+        imlib_draw_contours(image, &start, bufinfo.buf, bufinfo.len, color, mask);
+    }
+
+    return pos_args[0];
+}
+static MP_DEFINE_CONST_FUN_OBJ_KW(py_image_draw_contours_obj, 2, py_image_draw_contours);
+
 static mp_obj_t py_image_draw_keypoints(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
     enum { ARG_color, ARG_size, ARG_thickness, ARG_fill };
     static const mp_arg_t allowed_args[] = {
@@ -3383,13 +3433,8 @@ static const qstr blob_fields[] = {
     MP_QSTR_cxf, MP_QSTR_cyf,
     MP_QSTR_elongation, MP_QSTR_area,
     MP_QSTR_density, MP_QSTR_compactness,
-    MP_QSTR_rect,
+    MP_QSTR_rect, MP_QSTR_contour,
 };
-
-// Blob field indices for module-level functions.
-#define BLOB_INDEX_PIXELS       6
-#define BLOB_INDEX_PERIMETER    10
-#define BLOB_INDEX_MIN_CORNERS  15
 
 static void py_get_min_corners(mp_obj_t min_corners, int *x0, int *y0, int *x1, int *y1,
                                int *x2, int *y2, int *x3, int *y3) {
@@ -3438,6 +3483,16 @@ static mp_obj_t py_blob_new(find_blobs_list_lnk_data_t *blob) {
     mp_obj_t w = mp_obj_new_int(blob->rect.w);
     mp_obj_t h = mp_obj_new_int(blob->rect.h);
 
+    mp_obj_t contour = mp_const_none;
+    if (blob->contour_valid) {
+        const uint8_t empty_contour[] = {0};
+        contour = mp_obj_new_tuple(3, (mp_obj_t []) {
+            mp_obj_new_int(blob->contour_start.x),
+            mp_obj_new_int(blob->contour_start.y),
+            mp_obj_new_bytes(blob->contour ? blob->contour : empty_contour, blob->contour_len),
+        });
+    }
+
     mp_obj_t items[] = {
         x, y, w, h,
         mp_obj_new_int(fast_roundf(cxf)),
@@ -3469,6 +3524,7 @@ static mp_obj_t py_blob_new(find_blobs_list_lnk_data_t *blob) {
         density_obj,
         mp_obj_new_float(IM_DIV((pixels * 4.0f * IMLIB_PI), ((float) perimeter * perimeter))),
         mp_obj_new_tuple(4, (mp_obj_t []) {x, y, w, h}),
+        contour,
     };
     return mp_obj_new_attrtuple(blob_fields, MP_ARRAY_SIZE(blob_fields), items);
 }
@@ -3484,7 +3540,8 @@ static mp_obj_t py_image_find_blobs(size_t n_args, const mp_obj_t *pos_args, mp_
     enum {
         ARG_thresholds, ARG_invert, ARG_roi, ARG_x_stride, ARG_y_stride,
         ARG_area_threshold, ARG_pixels_threshold, ARG_merge, ARG_margin,
-        ARG_threshold_cb, ARG_merge_cb, ARG_x_hist_bins_max, ARG_y_hist_bins_max
+        ARG_threshold_cb, ARG_merge_cb, ARG_x_hist_bins_max, ARG_y_hist_bins_max,
+        ARG_contours
     };
     static const mp_arg_t allowed_args[] = {
         { MP_QSTR_thresholds,       MP_ARG_OBJ | MP_ARG_REQUIRED },
@@ -3500,6 +3557,7 @@ static mp_obj_t py_image_find_blobs(size_t n_args, const mp_obj_t *pos_args, mp_
         { MP_QSTR_merge_cb,         MP_ARG_OBJ | MP_ARG_KW_ONLY, {.u_rom_obj = MP_ROM_NONE} },
         { MP_QSTR_x_hist_bins_max, MP_ARG_INT | MP_ARG_KW_ONLY, {.u_int = 0} },
         { MP_QSTR_y_hist_bins_max, MP_ARG_INT | MP_ARG_KW_ONLY, {.u_int = 0} },
+        { MP_QSTR_contours,        MP_ARG_BOOL | MP_ARG_KW_ONLY, {.u_bool = false} },
     };
     image_t *image = py_helper_arg_to_image(pos_args[0], ARG_IMAGE_MUTABLE);
     mp_arg_val_t args[MP_ARRAY_SIZE(allowed_args)];
@@ -3537,7 +3595,7 @@ static mp_obj_t py_image_find_blobs(size_t n_args, const mp_obj_t *pos_args, mp_
                      invert, area_threshold, pixels_threshold, merge, margin,
                      py_image_find_blobs_threshold_cb, threshold_cb,
                      py_image_find_blobs_merge_cb, merge_cb,
-                     x_hist_bins_max, y_hist_bins_max);
+                     x_hist_bins_max, y_hist_bins_max, args[ARG_contours].u_bool);
     list_free(&thresholds);
 
     mp_obj_list_t *objects_list = mp_obj_new_list(list_size(&out), NULL);
@@ -3550,6 +3608,9 @@ static mp_obj_t py_image_find_blobs(size_t n_args, const mp_obj_t *pos_args, mp_
         }
         if (lnk_data.y_hist_bins) {
             m_free(lnk_data.y_hist_bins);
+        }
+        if (lnk_data.contour) {
+            m_free(lnk_data.contour);
         }
     }
 
@@ -4619,6 +4680,7 @@ static const mp_rom_map_elem_t locals_dict_table[] = {
     {MP_ROM_QSTR(MP_QSTR_draw_detection),      MP_ROM_PTR(&py_image_draw_detection_obj)},
     {MP_ROM_QSTR(MP_QSTR_draw_arrow),          MP_ROM_PTR(&py_image_draw_arrow_obj)},
     {MP_ROM_QSTR(MP_QSTR_draw_edges),          MP_ROM_PTR(&py_image_draw_edges_obj)},
+    {MP_ROM_QSTR(MP_QSTR_draw_contours),       MP_ROM_PTR(&py_image_draw_contours_obj)},
     #if (OMV_GENX320_ENABLE == 1)
     {MP_ROM_QSTR(MP_QSTR_draw_event_histogram), MP_ROM_PTR(&py_image_draw_event_histogram_obj)},
     #endif // OMV_GENX320_ENABLE == 1
