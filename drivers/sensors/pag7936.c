@@ -907,6 +907,7 @@ int pag7936_init(omv_csi_t *csi) {
     csi->mipi_if = 1;
     csi->mipi_brate = 800;
     #endif
+    csi->halt_req = 1;
 
     // Initialize csi ops.
     csi->reset = reset;

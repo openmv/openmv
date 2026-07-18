@@ -336,6 +336,12 @@ __weak int omv_csi_reset(omv_csi_t *csi, bool hard) {
     }
 
     if (hard) {
+        // Stop the sensor's activity cleanly.
+        if (csi->power_on && csi->halt_req) {
+            omv_csi_sleep(csi, true);
+            mp_hal_delay_ms(10);
+        }
+
         // Disable the bus before reset.
         omv_i2c_enable(csi->i2c, false);
 
@@ -708,6 +714,12 @@ __weak int omv_csi_shutdown(omv_csi_t *csi, int enable) {
 
     // Disable any ongoing frame capture.
     omv_csi_abort(csi, true, false);
+
+    // Stop the sensor's activity cleanly.
+    if (enable && csi->power_on && csi->halt_req) {
+        omv_csi_sleep(csi, true);
+        mp_hal_delay_ms(10);
+    }
 
     #if defined(OMV_CSI_POWER_PIN)
     if (enable) {
