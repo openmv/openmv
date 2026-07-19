@@ -1723,6 +1723,8 @@ const char *omv_csi_name(omv_csi_t *csi) {
         case LEPTON_2_0:         return "Lepton 2.0";
         case LEPTON_2_5:         return "Lepton 2.5";
         case LEPTON_3_0:         return "Lepton 3.0";
+        case LEPTON_3_1R:        return "Lepton 3.1R";
+        case LEPTON_UW:          return "Lepton UW";
         case LEPTON_3_5:         return "Lepton 3.5";
         case HM01B0_ID:          return "HM01B0";
         case HM0360_ID:          return "HM0360";
