@@ -307,6 +307,8 @@ static int lepton_config(omv_csi_t *csi, bool measurement_mode, bool high_temp_m
     LEP_SYS_GAIN_MODE_E gain_mode = high_temp_mode ? LEP_SYS_GAIN_MODE_LOW : LEP_SYS_GAIN_MODE_HIGH;
 
     bool hasSetSysGainMode = csi->chip_id == LEPTON_3_5 ||
+                             csi->chip_id == LEPTON_UW ||
+                             csi->chip_id == LEPTON_3_1R ||
                              csi->chip_id == LEPTON_3_0 ||
                              csi->chip_id == LEPTON_2_5;
 
@@ -377,6 +379,10 @@ static int config(omv_csi_t *csi, omv_csi_config_t config) {
         // 01/00 == Shutter/NoShutter
         if (!strncmp(part.value, "500-0771", 8)) {
             csi->chip_id = LEPTON_3_5;
+        } else if (!strncmp(part.value, "500-1387", 8)) {
+            csi->chip_id = LEPTON_UW;
+        } else if (!strncmp(part.value, "500-0758", 8)) {
+            csi->chip_id = LEPTON_3_1R;
         } else if (!strncmp(part.value, "500-0726", 8)) {
             csi->chip_id = LEPTON_3_0;
         } else if (!strncmp(part.value, "500-0763", 8)) {

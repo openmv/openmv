@@ -85,6 +85,8 @@
 #define LEPTON_2_0              (0x5420)
 #define LEPTON_2_5              (0x5425)
 #define LEPTON_3_0              (0x5430)
+#define LEPTON_3_1R             (0x5431)
+#define LEPTON_UW               (0x5432)
 #define LEPTON_3_5              (0x5435)
 #define HM01B0_ID               (0xB0)
 #define HM0360_ID               (0x60)
