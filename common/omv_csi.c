@@ -41,6 +41,9 @@
 #include "omv_i2c.h"
 #include "omv_csi.h"
 #include "board_config.h"
+#if defined(OMV_CSI_I3C_ID)
+#include "omv_i3c.h"
+#endif
 #include "framebuffer.h"
 #include "memcpy.h"
 #include "sensor_config.h"
@@ -73,13 +76,17 @@
 #define __weak    __attribute__((weak))
 #endif
 
-// Used for scanning the I2C bus.
+// Used for scanning the I2C/I3C bus.
 typedef struct _i2c_dev {
-    uint8_t slv_addr;   // I2C address.
+    uint8_t slv_addr;   // I2C/I3C address.
     uint32_t chip_id;   // Chip ID.
+    omv_i2c_t *bus;     // Bus handle (NULL = default csi_i2c).
 } i2c_dev_t;
 
 static omv_i2c_t csi_i2c;
+#if defined(OMV_CSI_I3C_ID)
+static omv_i2c_t csi_i3c;
+#endif
 static omv_clk_t csi_clk;
 
 // *INDENT-OFF*
@@ -486,10 +493,38 @@ static size_t omv_csi_detect(omv_i2c_t *i2c, i2c_dev_t *dev_list) {
 
         if (chip_id && dev_count < OMV_CSI_MAX_DEVICES) {
             dev_list[dev_count++] = (i2c_dev_t) {
-                slv_addr, chip_id
+                slv_addr, chip_id, NULL
             };
         }
     }
+
+    // Scan the I3C bus for devices.
+    #if defined(OMV_CSI_I3C_ID)
+    if (dev_count < OMV_CSI_MAX_DEVICES) {
+        uint8_t i3c_addr_list[OMV_CSI_MAX_DEVICES];
+        uint64_t i3c_pid_list[OMV_CSI_MAX_DEVICES];
+
+        memset(i3c_addr_list, 0, sizeof(i3c_addr_list));
+        memset(i3c_pid_list, 0, sizeof(i3c_pid_list));
+
+        omv_i3c_init(&csi_i3c, OMV_CSI_I3C_ID, OMV_CSI_I3C_SPEED);
+        int i3c_count = omv_i3c_scan_assign(&csi_i3c,
+                                            i3c_addr_list, i3c_pid_list,
+                                            OMV_ARRAY_SIZE(i3c_addr_list));
+
+        for (int i = 0; i < i3c_count && dev_count < OMV_CSI_MAX_DEVICES; i++) {
+            // Look up the PID in the I3C sensor table.
+            for (size_t j = 0; j < OMV_ARRAY_SIZE(i3c_pid_table); j++) {
+                if (i3c_pid_list[i] == i3c_pid_table[j].pid) {
+                    dev_list[dev_count++] = (i2c_dev_t) {
+                        i3c_addr_list[i], i3c_pid_table[j].chip_id, &csi_i3c
+                    };
+                    break;
+                }
+            }
+        }
+    }
+    #endif // defined(OMV_CSI_I3C_ID)
 
     return dev_count;
 }
@@ -546,7 +581,7 @@ int omv_csi_probe(omv_i2c_t *i2c) {
     #if OMV_SOFTCSI_ENABLE
     if (dev_count < OMV_CSI_MAX_DEVICES) {
         dev_list[dev_count++] = (i2c_dev_t) {
-            0, SOFTCSI_ID
+            0, SOFTCSI_ID, NULL
         };
     }
     #endif
@@ -557,7 +592,7 @@ int omv_csi_probe(omv_i2c_t *i2c) {
         power_pol = OMV_CSI_ACTIVE_LOW;
         reset_pol = OMV_CSI_ACTIVE_LOW;
         dev_list[dev_count++] = (i2c_dev_t) {
-            0, PAJ6100_ID
+            0, PAJ6100_ID, NULL
         };
     }
     #endif
@@ -580,6 +615,9 @@ int omv_csi_probe(omv_i2c_t *i2c) {
         csi->slv_addr = dev_list[i].slv_addr;
         csi->power_time_ms = power_time_ms;
         csi->reset_time_ms = power_time_ms;
+        if (dev_list[i].bus) {
+            csi->i2c = dev_list[i].bus;
+        }
 
         // Find the sensors init function.
         for (size_t i = 0; i < OMV_ARRAY_SIZE(sensor_config_table); i++) {
@@ -1736,6 +1774,7 @@ const char *omv_csi_name(omv_csi_t *csi) {
         case PS5520_ID:          return "PS5520";
         case PAJ6100_ID:         return "PAJ6100";
         case FROGEYE2020_ID:     return "FROGEYE2020";
+        case VD55G1_ID:          return "VD55G1";
         case SOFTCSI_ID:         return "SoftCSI";
         default:                 return "Unknown";
     }
