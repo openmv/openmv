@@ -96,7 +96,9 @@ def decode_chunked(data):
     return buf
 
 
-def request(method, url, data=None, json=None, files=None, headers={}, auth=None, stream=None, timeout=5.0):
+def request(method, url, data=None, json=None, files=None, headers=None, auth=None, stream=None, timeout=5.0):
+    if headers is None:
+        headers = {}
     try:
         proto, dummy, host, path = url.split("/", 3)
     except ValueError:
@@ -128,9 +130,9 @@ def request(method, url, data=None, json=None, files=None, headers={}, auth=None
     ai = socket.getaddrinfo(host, port)[0]
     s = socket.socket(ai[0], ai[1], ai[2])
     try:
-        s.connect(ai[-1])
         if timeout is not None:
             s.settimeout(timeout)
+        s.connect(ai[-1])
         if proto == "https:":
             s = ssl.wrap_socket(s, server_hostname=host)
 
@@ -147,10 +149,9 @@ def request(method, url, data=None, json=None, files=None, headers={}, auth=None
             s.write(b"\r\n")
 
         if json is not None:
-            json_body = json
             import json as json_module
 
-            data = json_module.dumps(json_body)
+            data = json_module.dumps(json)
             s.write(b"Content-Type: application/json\r\n")
 
         if files is not None:
@@ -186,7 +187,7 @@ def request(method, url, data=None, json=None, files=None, headers={}, auth=None
                 chunked = b"chunked" in lower
             elif lower.startswith(b"location:") and not 200 <= resp_code <= 299:
                 raise NotImplementedError("Redirects not yet supported")
-            if b"HTTPS" in l or b"HTTP" in l:
+            if b"HTTP" in l:
                 sline = l.split(None, 2)
                 resp_code = int(sline[1])
                 resp_reason = sline[2].decode().rstrip() if len(sline) > 2 else ""
