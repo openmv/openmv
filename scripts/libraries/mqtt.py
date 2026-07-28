@@ -25,7 +25,6 @@
 import socket
 import struct
 import select
-import ssl
 
 
 class MQTTException(Exception):
@@ -95,6 +94,8 @@ class MQTTClient:
         self.sock.settimeout(timeout)
         self.sock.connect(addr)
         if self.ssl_params is not None:
+            import ssl
+
             self.sock = ssl.wrap_socket(self.sock, **self.ssl_params)
 
         premsg = bytearray(b"\x10\0\0\0\0\0")
