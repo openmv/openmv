@@ -431,6 +431,11 @@ static mp_obj_t py_protocol_register(size_t n_args, const mp_obj_t *pos_args, mp
 }
 static MP_DEFINE_CONST_FUN_OBJ_KW(py_protocol_register_obj, 0, py_protocol_register);
 
+static mp_obj_t py_protocol_poll(void) {
+    return mp_obj_new_int(omv_protocol_poll());
+}
+static MP_DEFINE_CONST_FUN_OBJ_0(py_protocol_poll_obj, py_protocol_poll);
+
 // Module globals table
 static const mp_rom_map_elem_t protocol_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR___name__), MP_ROM_QSTR(MP_QSTR_protocol) },
@@ -439,6 +444,7 @@ static const mp_rom_map_elem_t protocol_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_init), MP_ROM_PTR(&py_protocol_init_obj) },
     { MP_ROM_QSTR(MP_QSTR_is_active), MP_ROM_PTR(&py_protocol_is_active_obj) },
     { MP_ROM_QSTR(MP_QSTR_register), MP_ROM_PTR(&py_protocol_register_obj) },
+    { MP_ROM_QSTR(MP_QSTR_poll), MP_ROM_PTR(&py_protocol_poll_obj) },
 
     // Channel flags constants
     { MP_ROM_QSTR(MP_QSTR_CHANNEL_FLAG_READ), MP_ROM_INT(OMV_PROTOCOL_CHANNEL_FLAG_READ) },
