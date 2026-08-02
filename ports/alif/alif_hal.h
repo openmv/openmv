@@ -36,6 +36,7 @@
 
 void alif_hal_init(void);
 int alif_hal_i2c_init(uint32_t bus_id);
+int alif_hal_i3c_init(uint32_t bus_id);
 int alif_hal_spi_init(uint32_t bus_id, bool nss_enable, uint32_t nss_pol);
 int alif_hal_spi_deinit(uint32_t bus_id);
 int alif_hal_pdm_init(uint32_t pdm_id);

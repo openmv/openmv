@@ -14,6 +14,11 @@ typedef struct {
     sensor_init_t init_fun;
 } sensor_config_t;
 
+typedef struct {
+    uint64_t pid;
+    uint32_t chip_id;
+} i3c_pid_config_t;
+
 #ifndef OMV_OV2640_CLK_FREQ
 #define OMV_OV2640_CLK_FREQ     (24000000)
 #endif
@@ -110,6 +115,11 @@ extern int ps5520_init(omv_csi_t *csi);
 #endif
 extern int frogeye2020_init(omv_csi_t *csi);
 
+#ifndef OMV_VD55G1_CLK_FREQ
+#define OMV_VD55G1_CLK_FREQ     (0)
+#endif
+extern int vd551g1_init(omv_csi_t *csi);
+
 #ifndef OMV_SOFTCSI_CLK_FREQ
 #define OMV_SOFTCSI_CLK_FREQ    (24000000)
 #endif
@@ -197,8 +207,20 @@ static const sensor_config_t sensor_config_table[] = {
     { FROGEYE2020_ID, OMV_FROGEYE2020_CLK_FREQ, frogeye2020_init },
     #endif
 
+    #if OMV_VD55G1_ENABLE
+    { VD55G1_ID, OMV_VD55G1_CLK_FREQ, vd551g1_init },
+    #endif
+
     #if OMV_SOFTCSI_ENABLE
     { SOFTCSI_ID, OMV_SOFTCSI_CLK_FREQ, softcsi_init },
     #endif
 };
+
+// I3C PID to chip ID mapping table *INDENT-OFF*
+static const i3c_pid_config_t i3c_pid_table[] = {
+    #if OMV_VD55G1_ENABLE
+    { VD55G1_PID, VD55G1_ID },
+    #endif
+};
+// *INDENT-ON*
 #endif // __CSI_CONFIG_H__
