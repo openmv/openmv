@@ -805,8 +805,8 @@ static mp_obj_t py_csi_lens_correction(size_t n_args, const mp_obj_t *pos_args, 
     enum { ARG_enable, ARG_radi, ARG_coef };
     static const mp_arg_t allowed_args[] = {
         { MP_QSTR_enable, MP_ARG_BOOL | MP_ARG_REQUIRED },
-        { MP_QSTR_radi,   MP_ARG_BOOL | MP_ARG_REQUIRED },
-        { MP_QSTR_coef,   MP_ARG_BOOL | MP_ARG_REQUIRED },
+        { MP_QSTR_radi,   MP_ARG_INT | MP_ARG_REQUIRED },
+        { MP_QSTR_coef,   MP_ARG_INT | MP_ARG_REQUIRED },
     };
 
     py_csi_obj_t *self = MP_OBJ_TO_PTR(pos_args[0]);
