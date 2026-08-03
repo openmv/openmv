@@ -34,8 +34,9 @@
 #include "omv_gpio.h"
 #include "stm_dma.h"
 
-#define MEMATTR_NORMAL_NCACHE      0
-#define MEMATTR_NORMAL_WB_RA_WA    1
+// Note: MicroPython's mpu.h owns MAIR0, so these attributes must stay in MAIR1.
+#define MEMATTR_NORMAL_NCACHE      4
+#define MEMATTR_NORMAL_WB_RA_WA    5
 
 #define RIF_MASTER_INDEX_NONE ((uint32_t) -1)
 
