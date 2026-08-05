@@ -35,13 +35,18 @@ UID_TO_ADDR = {
     b'e606fe64d709093b': 242,
     b'e606fe64d7090616': 243,
     b'98844061d7492821': 244,
+    b'04bd545dd7594117': 245,  
+    b'04bd545dd7593733': 246,
+    b'04bd545dd7594b19': 247, 
+    b'04bd545dd759380e': 248,
+
 }
 
 # XX.XX.X
-# 02.00.2
+# 02.00.4
 major = 2  # (0-63)
 minor = 0  # (0-99)
-patch = 3  # (0-9)
+patch = 4  # (0-9)
 # version as integer value, max_val = 64_999 < 65_535 (2 bytes)
 VERSION = major * 1_000 + minor * 10 + patch
 
@@ -96,3 +101,17 @@ async def led_restart_blinker():
         await asyncio.sleep(blink_duration)
         led.off()
         await asyncio.sleep(blink_duration)
+
+
+def main():
+    print("\n======>  MACHINE CONFIGURATION <======")
+    print("Version: ", get_version_str(VERSION))
+    print("UID: ", uid)
+    print("My address: ", get_my_addr())
+    print("Encryption enabled: ", ENCRYPTION_ENABLED)
+    print("Hybrid encryption enabled: ", uses_hybrid_encryption("P"))
+    print("RSA encryption enabled: ", uses_rsa_encryption("*"))
+    print("======================================\n\n")
+
+if __name__ == "__main__":
+    main()

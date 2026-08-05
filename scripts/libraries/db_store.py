@@ -204,7 +204,7 @@ class DbStore(StoreUtils):
     # ------------------------------------------------------------------
     def _is_sdcard_readable(self) -> bool:
         """Best-effort check that SD card root is listable."""
-        for attempt in range(5):
+        for attempt in range(2):
             try:
                 utime.sleep_ms(300 * (attempt + 1))
                 os.listdir(self.fs_root)

@@ -836,8 +836,8 @@ if __name__ == "__main__":
             machine.reset()
 
         if not internet_module.initialized:
-            print("Internet initialization failed! Rebooting...")
-            write_log("Internet initialization failed!, Rebooting...")
+            print("Internet Module initialization failed! Rebooting...")
+            write_log("Internet Module initialization failed!, Rebooting...")
             time.sleep(2)
             machine.reset()
 

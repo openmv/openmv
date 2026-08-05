@@ -1618,7 +1618,7 @@ async def init_tracx_internet():
         internet_module = InternetDriver(uart=tracx_uart)
         await internet_module.establish_internet()
         if not internet_module.initialized:
-            logger.info(f"[CELL] Internet initialization failed; will retry periodically")
+            logger.fatal("[CELL] Internet initialization failed; will retry periodically")
             return False
     logger.info("[CELL] Internet module ready")
     return True

@@ -38,6 +38,10 @@ WIFI_COMM_PORT_MAP = {
         242: 5027,
         243: 5028,
         244: 5029,
+        245: 5030,
+        246: 5031,
+        247: 5032,
+        248: 5033,
         }
         
 # Auto-disconnect WiFi + app TCP session after this many seconds (from successful socket connect).
