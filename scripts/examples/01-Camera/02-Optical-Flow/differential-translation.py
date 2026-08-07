@@ -27,7 +27,6 @@
 
 import csi
 import image
-import sensor
 import time
 
 csi0 = csi.CSI()
@@ -43,7 +42,7 @@ extra_fb.draw_image(csi0.snapshot())
 
 while True:
     clock.tick()  # Track elapsed milliseconds between snapshots().
-    img = sensor.snapshot()  # Take a picture and return the image.
+    img = csi0.snapshot()  # Take a picture and return the image.
 
     displacement = extra_fb.find_displacement(img)
     extra_fb.draw_image(img)

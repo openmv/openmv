@@ -11,6 +11,7 @@ require("dht")
 require("neopixel")
 freeze("$(BOARD_DIR)/modules/", "imu.py")
 freeze("$(OMV_LIB_DIR)/apds9960")
+freeze ("$(OMV_LIB_DIR)/", "sensor.py")
 freeze ("$(OMV_LIB_DIR)/", "machine.py")
 
 # Utils

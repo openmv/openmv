@@ -11,6 +11,7 @@ freeze ("$(OMV_LIB_DIR)/", "gt911.py")
 freeze ("$(OMV_LIB_DIR)/", "st7701.py")
 freeze ("$(OMV_LIB_DIR)/", "machine.py")
 freeze ("$(OMV_LIB_DIR)/", "display.py")
+freeze ("$(OMV_LIB_DIR)/", "sensor.py")
 
 # Bluetooth
 require("aioble")

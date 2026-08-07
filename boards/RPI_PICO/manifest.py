@@ -3,6 +3,7 @@ require("onewire")
 require("ds18x20")
 require("dht")
 require("neopixel")
+freeze ("$(OMV_LIB_DIR)/", "sensor.py")
 freeze ("$(OMV_LIB_DIR)/", "machine.py")
 
 # Bluetooth
