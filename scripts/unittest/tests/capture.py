@@ -5,7 +5,10 @@ def unittest(data_path, temp_path):
     csi0 = csi.CSI()
     csi0.reset()
     csi0.pixformat(csi.RGB565)
-    csi0.framesize(csi.QQVGA)
+    custom_framesize = (160, 120)
+    csi0.framesize(custom_framesize)
+    if csi0.framesize() != custom_framesize:
+        return False
 
     # Capture a frame
     img = csi0.snapshot()
