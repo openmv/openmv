@@ -37,6 +37,8 @@
 #include "shared/readline/readline.h"
 #include "shared/runtime/gchelper.h"
 #include "shared/runtime/pyexec.h"
+#include "extmod/modmachine.h"
+#include "extmod/modnetwork.h"
 
 #include "board_config.h"
 #include "mp_utils.h"
@@ -45,6 +47,11 @@
 #include "framebuffer.h"
 #include "omv_csi.h"
 
+#if MICROPY_PY_LWIP
+#include "lwip/init.h"
+#include "lwip/apps/mdns.h"
+#endif
+
 extern int qemu_npu_init(void);
 
 int main(int argc, char **argv) {
@@ -52,6 +59,15 @@ int main(int argc, char **argv) {
 
     #ifdef ETHOS_U
     qemu_npu_init();
+    #endif
+
+    #if MICROPY_PY_LWIP
+    // lwIP can't be reinitialized due to BSS system timeout list.
+    lwip_init();
+    #if LWIP_MDNS_RESPONDER
+    mdns_resp_init();
+    #endif
+    mod_network_lwip_init();
     #endif
 
 soft_reset:
@@ -74,6 +90,10 @@ soft_reset:
     }
     #endif
 
+    #if MICROPY_PY_NETWORK
+    mod_network_init();
+    #endif
+
     for (;;) {
         if (pyexec_mode_kind == PYEXEC_MODE_RAW_REPL) {
             if (pyexec_raw_repl() != 0) {
@@ -88,6 +108,9 @@ soft_reset:
 
     mp_printf(&mp_plat_print, "MPY: soft reboot\n");
     imlib_deinit();
+    #if MICROPY_PY_NETWORK
+    mod_network_deinit();
+    #endif
     gc_sweep_all();
     mp_deinit();
     first_soft_reset = false;
