@@ -119,7 +119,7 @@ static int jpeg_compress_vc8000(image_t *src, image_t *dst, int quality, jpeg_su
     }
 
     if (!dst->data) {
-        dst->size = IMLIB_IMAGE_MAX_SIZE(IM_MIN(uma_avail(0), JPEG_MAX_ALLOC_SIZE));
+        dst->size = IMLIB_IMAGE_MAX_SIZE(IM_MIN(uma_avail(0), src->w * src->h * quality / 100 + JPEG_MIN_JPEG_SIZE));
         dst->data = uma_malloc(dst->size, UMA_CACHE);
     }
 
@@ -351,7 +351,7 @@ bool jpeg_compress(image_t *src, image_t *dst, int quality, bool realloc, jpeg_s
             uma_fail();
         }
 
-        dst->size = IMLIB_IMAGE_MAX_SIZE(IM_MIN(avail - space, JPEG_MAX_ALLOC_SIZE));
+        dst->size = IMLIB_IMAGE_MAX_SIZE(IM_MIN(avail - space, src->w * src->h * quality / 100 + JPEG_MIN_JPEG_SIZE));
         dst->data = uma_malloc(dst->size, UMA_CACHE);
     }
 
