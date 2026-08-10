@@ -244,6 +244,9 @@ soft_reset:
     sdcard_init();
     #endif
     rtc_init_start(false);
+    #if MICROPY_PY_MACHINE_MEM_BACKUP
+    machine_mem_backup_init();
+    #endif
     #if MICROPY_PY_LWIP
     // lwIP can only be initialized once, because the system timeout
     // list (next_timeout), is only ever reset by BSS clearing.
