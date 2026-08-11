@@ -32,6 +32,7 @@ from internet_driver import InternetDriver, INTERNET_RECHECK_INTERVAL_SEC
 from _sx126x import ERR_NONE, ERR_CRC_MISMATCH, ERR_UNKNOWN, SX126X_IRQ_CRC_ERR, SX126X_IRQ_HEADER_ERR, SX126X_IRQ_RX_DONE, SX126X_IRQ_TIMEOUT, SX126X_IRQ_TX_DONE, SX126X_SYNC_WORD_PRIVATE, SX126X_IRQ_ALL
 import detect
 from detect import PIR_PIN, turn_ON_IR_emitter, turn_OFF_IR_emitter
+import power_mgmt
 
 # -----------------------------------▼▼▼▼▼-----------------------------------
 # -------------------- TESTING VARIABLES, TODO PRODUCTION --------------------
@@ -106,7 +107,7 @@ VALIDATE_WAIT_SEC = 1200
 PHOTO_TAKING_DELAY = 600
 
 GPS_WAIT_SEC = 30
-GPS_WAIT_REFRESH_SEC = 1800
+GPS_ACQUIRE_TIMEOUT_SEC = 300  # 5 min to obtain fix once per boot
 
 NETWORK_EMPTY_SLEEP = 15 # 15 sec, when no path is there
 NETWORK_IN_TRANS_SLEEP = 10 # 10 sec, sleep when trans mode in progress
@@ -1039,8 +1040,8 @@ async def process_packet_queue(): # TODO Anand, (no change)
                 # But it doesn't block the receive loop anymore
                 process_message(message, rssi)
             else:
-                # No packets in queue, yield to other tasks
-                # Small sleep prevents busy-waiting and allows other tasks to run
+                # No packets: idle CPU until next interrupt, then brief yield
+                machine.idle()
                 await asyncio.sleep(0.01)
 
         except Exception as e:
@@ -1618,7 +1619,7 @@ async def init_tracx_internet():
         internet_module = InternetDriver(uart=tracx_uart)
         await internet_module.establish_internet()
         if not internet_module.initialized:
-            logger.fatal("[CELL] Internet initialization failed; will retry periodically")
+            logger.info(f"[CELL] Internet initialization failed; will retry periodically")
             return False
     logger.info("[CELL] Internet module ready")
     return True
@@ -1626,6 +1627,9 @@ async def init_tracx_internet():
 async def keep_checking_internet():
     """Retry establish_internet() every INTERNET_RECHECK_INTERVAL_SEC while offline."""
     global internet_module, tracx_uart_lock, network_paths
+    if internet_module and internet_module.has_sim is False:
+        logger.info("[CELL] No SIM; skipping periodic internet checks (unit node)")
+        return
     if internet_module and internet_module.has_internet:
         logger.info("[CELL] Internet health loop started in background (already online)")
     else:
@@ -1634,6 +1638,9 @@ async def keep_checking_internet():
         await asyncio.sleep(INTERNET_RECHECK_INTERVAL_SEC)
         if internet_module and internet_module.has_internet:
             continue
+        if internet_module and internet_module.has_sim is False:
+            logger.info("[CELL] No SIM; stopping periodic internet checks")
+            return
         logger.info("[CELL] Periodic internet check (has_internet=False)...")
         try:
             async with tracx_uart_lock:
@@ -2669,23 +2676,19 @@ async def network_response_consume(msg, sender):
 # ---------------------------------------------------------------------------
 
 async def keep_updating_gps():
-    # Input: None; Output: None (continuously reads GPS hardware and updates global state)
+    # Once per boot: init GNSS -> acquire fix up to 5 min -> sleep GNSS until next reboot
     global gps_str, gps_last_time, rtc, gps_module, tracx_uart, tracx_uart_lock, gps_success_count, gps_failure_count
-    logger.info("[GPS] Initializing GPS...")
+    logger.info("[GPS] Starting one-shot GPS update for this boot...")
 
-    # Wait for LoRa to settle
     await asyncio.sleep(3)
 
-    # Create shared UART if not already created (may have been created by internet module)
     if tracx_uart is None:
         from machine import UART
         from gps_driver import UART_ID, BAUDRATE
         logger.info(f"[GPS] Creating shared UART (id={UART_ID}, baud={BAUDRATE})...")
         tracx_uart = UART(UART_ID, BAUDRATE, timeout=2000)
-        import utime
-        await asyncio.sleep(2)  # Wait for module to initialize
+        await asyncio.sleep(2)
 
-    # Create GPS module instance with shared UART
     if gps_module is None:
         logger.info("[GPS] Creating GPS driver instance with shared UART")
         try:
@@ -2695,83 +2698,67 @@ async def keep_updating_gps():
             return
 
     try:
+        while trans_in_progress:
+            await asyncio.sleep(GPS_WAIT_SEC)
+
+        # CC needs modem awake for cellular; unit node can QSCLK sleep the whole EC200
+        sleep_module = not running_as_cc()
+
         async with tracx_uart_lock:
-            if not gps_module.initialize_gps():
-                logger.info("[GPS] GPS initialization failed!")
-                return
-        logger.info("[GPS] GPS hardware initialized successfully - starting continuous read loop")
-    except Exception as e:
-        logger.info(f"[GPS] GPS initialization failed: {e}")
-        return
+            init_ok = gps_module.initialize_gps()
+        if not init_ok:
+            logger.warning("[GPS] Init failed; putting module to sleep")
+            async with tracx_uart_lock:
+                gps_module.enter_gps_sleep(sleep_module=sleep_module)
+            return
 
-    read_count = 0
-    last_successful_read = 0
-    rtc_updated = False
+        logger.info(f"[GPS] Acquiring fix (up to {GPS_ACQUIRE_TIMEOUT_SEC}s)...")
+        acquire_deadline = get_ms_diff() + GPS_ACQUIRE_TIMEOUT_SEC * 1000
+        got_fix = False
 
-    # Continuous reading loop
-    while True:
-        try:
-            read_count += 1
-
-            # Skip GPS if heavy operations are running
+        while get_ms_diff() < acquire_deadline and not got_fix:
             if trans_in_progress:
-                await asyncio.sleep(GPS_WAIT_SEC * 2)
+                await asyncio.sleep(GPS_WAIT_SEC)
                 continue
 
-            # Check if gps_module is still available (might be None if reinitializing)
-            if gps_module is None:
-                logger.warning("[GPS] GPS module is None, waiting...")
-                await asyncio.sleep(5)
-                continue
-
-            # Query GPS location and time (hold UART lock to avoid conflict with cellular)
             async with tracx_uart_lock:
                 lat, lon, time_str = gps_module.get_gps_location()
 
             if lat is not None and lon is not None and time_str is not None:
                 gps_success_count += 1
                 gps_str = f"{lat:.6f},{lon:.6f}"
-                logger.info(f"[GPS] {gps_str} Time: {time_str}")
                 gps_last_time = get_ms_diff()
-                last_successful_read = read_count
-
-                # Update RTC with GPS time (local time) - only once when we get first fix
-                if not rtc_updated:
-                    try:
-                        time_components = gps_module.get_gps_time_components(time_str)
-                        if time_components:
-                            rtc.datetime(time_components)
-                            logger.info(f"[GPS] RTC updated with GPS time: {time_str}")
-                            rtc_updated = True
-                    except Exception as e:
-                        logger.warning(f"[GPS] Failed to update RTC: {e}")
+                got_fix = True
+                logger.info(f"[GPS] Fix: {gps_str} Time: {time_str}")
+                try:
+                    time_components = gps_module.get_gps_time_components(time_str)
+                    if time_components:
+                        rtc.datetime(time_components)
+                        logger.info(f"[GPS] RTC updated with GPS time: {time_str}")
+                except Exception as e:
+                    logger.warning(f"[GPS] Failed to update RTC: {e}")
             else:
                 gps_failure_count += 1
-                if read_count % 20 == 1:
-                    logger.info("[GPS] GPS has no fix")
+                remain_ms = acquire_deadline - get_ms_diff()
+                if remain_ms <= 0:
+                    break
+                await asyncio.sleep(min(GPS_WAIT_SEC, max(1, remain_ms // 1000)))
 
-            # Reinitialize if too many failures
-            if last_successful_read > 0 and (read_count - last_successful_read) > 100:
-                logger.info("[GPS] GPS not working, reinitializing...")
-                try:
-                    if gps_module is not None:
-                        async with tracx_uart_lock:
-                            gps_module.initialize_gps()
-                    await asyncio.sleep(2)
-                    last_successful_read = read_count
-                except Exception as e:
-                    logger.error(f"[GPS] error in GPS reinit: {e}")
-                    await asyncio.sleep(10)
+        if not got_fix:
+            logger.info("[GPS] No fix within acquire window")
 
-        except Exception as e:
-            logger.error(f"[GPS] error in GPS read: {e}")
-            await asyncio.sleep(2)
+        async with tracx_uart_lock:
+            gps_module.enter_gps_sleep(sleep_module=sleep_module)
+        logger.info("[GPS] One-shot update done; GNSS asleep until next boot")
 
-        # Wait before next query: 5 sec when no fix, 30 min when fix obtained
-        if gps_str:
-            await asyncio.sleep(max(1, GPS_WAIT_REFRESH_SEC))
-        else:
-            await asyncio.sleep(max(1, GPS_WAIT_SEC))
+    except Exception as e:
+        logger.error(f"[GPS] error in GPS cycle: {e}")
+        try:
+            if gps_module is not None:
+                async with tracx_uart_lock:
+                    gps_module.enter_gps_sleep(sleep_module=not running_as_cc())
+        except Exception as sleep_err:
+            logger.error(f"[GPS] Failed to enter sleep after error: {sleep_err}")
 
 # ---------------------------------------------------------------------------
 # All Handlers
@@ -3035,6 +3022,26 @@ async def enter_install_mode():
 # ---------------------------------------------------------------------------
 # Application Entry Point
 # ---------------------------------------------------------------------------
+async def power_save_loop():
+    """Idle CPU when safe; skips during transfer, PIR burst, install, or queued packets."""
+    logger.info("[PWR] Power-save loop started (machine.idle when safe)")
+    while True:
+        try:
+            if power_mgmt.system_can_power_save(
+                trans_in_progress=trans_in_progress,
+                pir_burst_in_progress=pir_burst_in_progress,
+                is_install_mode=is_install_mode,
+                packet_queue_len=len(packet_queue),
+            ):
+                machine.idle()
+                await asyncio.sleep(0.05)
+            else:
+                await asyncio.sleep(0.1)
+        except Exception as e:
+            logger.warning(f"[PWR] power_save_loop error: {e}")
+            await asyncio.sleep(1)
+
+
 async def keep_blinking_restart_led():
     while True:
         await led_restart_blinker()
@@ -3085,6 +3092,9 @@ async def main():
 
     # TRANSMISION =====>
     asyncio.create_task(image_sending_loop())
+
+    # POWER SAVE (machine.idle when safe) =====>
+    asyncio.create_task(power_save_loop())
 
     if SAVE_LOGS:
         asyncio.create_task(logger_state())

@@ -168,12 +168,14 @@ class InternetDriver:
             self.is_busy = False
 
             self.has_internet = False
+            self.has_sim = None  # None=unknown, True/False after CPIN check
             self.signal_strength = 0
             self.network_type = NW_TYPE_UNKNOWN
             logger.info("InternetDriver init finished")
         except Exception as e:
             print(f"Error in InternetDriver init: {e}")
             self.has_internet = False
+            self.has_sim = None
 
     # ------------------------------------------------------------------
     # Core UART helpers
@@ -304,7 +306,41 @@ class InternetDriver:
         print("EC200 HTTP client initialized successfully")
         return True, None
 
+    async def check_sim(self):
+        """True if SIM present (AT+CPIN? returns +CPIN: ...)."""
+        success, resp = await self._send_command("AT+CPIN?", timeout=5)
+        self.has_sim = bool(success and "+CPIN:" in resp)
+        return self.has_sim
+
+    async def enter_sleep(self):
+        """Enable EC200 sleep (AT+QSCLK=1) to conserve power when unused."""
+        try:
+            await self._send_command("AT+QSCLK=1", timeout=2)
+            print("[CELL] EC200 sleep enabled")
+        except Exception:
+            pass
+
     async def establish_internet(self, retry_count=3):
+        # Gate: no SIM → sleep module and exit (device stays unit node)
+        for _ in range(3):
+            ok, _ = await self._send_command("AT", timeout=5)
+            if ok:
+                break
+            await asyncio.sleep(1)
+        else:
+            self.has_internet = False
+            print("[CELL] No AT response; cannot check SIM")
+            return
+
+        if not await self.check_sim():
+            self.has_internet = False
+            self.initialized = False
+            await self.enter_sleep()
+            print("[CELL] No SIM; EC200 asleep — running as unit node")
+            return
+
+        await self._send_command("AT+QSCLK=0", timeout=2)  # wake if previously asleep
+
         init_ok = False
         init_error = None
         for attempt in range(1, retry_count+1):
@@ -836,8 +872,8 @@ if __name__ == "__main__":
             machine.reset()
 
         if not internet_module.initialized:
-            print("Internet Module initialization failed! Rebooting...")
-            write_log("Internet Module initialization failed!, Rebooting...")
+            print("Internet initialization failed! Rebooting...")
+            write_log("Internet initialization failed!, Rebooting...")
             time.sleep(2)
             machine.reset()
 

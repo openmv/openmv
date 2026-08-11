@@ -98,6 +98,9 @@ class GPSDriver:
         # Disable echo
         self._send_at("ATE0", 500)
 
+        # Exit module sleep before enabling GNSS (paired with enter_gps_sleep)
+        self._send_at("AT+QSCLK=0", 2000)
+
         # Disable GPS first (clean state for script rerun without replug)
         self._send_at("AT+QGPS=0", 2000)
         time.sleep_ms(500)
@@ -111,6 +114,15 @@ class GPSDriver:
         
         logger.error("[GPS] GPS initialization failed")
         return False
+
+    def enter_gps_sleep(self, sleep_module=True):
+        """Turn off GNSS; optionally enable module sleep (QSCLK). Skip QSCLK when cellular CC needs the modem awake."""
+        logger.info("[GPS] Entering GNSS sleep...")
+        self._send_at("AT+QGPSEND", 5000)
+        if sleep_module:
+            self._send_at("AT+QSCLK=1", 2000)
+        self.gps_initialized = False
+        logger.info("[GPS] GNSS sleep enabled")
     
     def get_gps_location(self):
         """
