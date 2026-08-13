@@ -338,7 +338,7 @@ def reset_trans_chunk_storage(chunk_count=None):
 
 def running_as_cc():
     global internet_module
-    if internet_module and internet_module.has_internet:
+    if internet_module and internet_module.running_as_cc():
         return True
     else:
         return False
@@ -1619,7 +1619,7 @@ async def init_tracx_internet():
         internet_module = InternetDriver(uart=tracx_uart)
         await internet_module.establish_internet()
         if not internet_module.initialized:
-            logger.info(f"[CELL] Internet initialization failed; will retry periodically")
+            logger.fatal("[CELL] Internet initialization failed; will retry periodically")
             return False
     logger.info("[CELL] Internet module ready")
     return True
@@ -1627,9 +1627,14 @@ async def init_tracx_internet():
 async def keep_checking_internet():
     """Retry establish_internet() every INTERNET_RECHECK_INTERVAL_SEC while offline."""
     global internet_module, tracx_uart_lock, network_paths
-    if internet_module and internet_module.has_sim is False:
-        logger.info("[CELL] No SIM; skipping periodic internet checks (unit node)")
+    if internet_module and not internet_module.module_ready:
+        logger.error("[CELL] Internet module not ready, skipping periodic internet checks")
         return
+
+    if internet_module and internet_module.has_sim is False:
+        logger.warning("[CELL] No SIM; skipping periodic internet checks (unit node)")
+        return
+
     if internet_module and internet_module.has_internet:
         logger.info("[CELL] Internet health loop started in background (already online)")
     else:
@@ -1638,9 +1643,11 @@ async def keep_checking_internet():
         await asyncio.sleep(INTERNET_RECHECK_INTERVAL_SEC)
         if internet_module and internet_module.has_internet:
             continue
+        
         if internet_module and internet_module.has_sim is False:
-            logger.info("[CELL] No SIM; stopping periodic internet checks")
+            logger.warning("[CELL] No SIM; stopping periodic internet checks")
             return
+
         logger.info("[CELL] Periodic internet check (has_internet=False)...")
         try:
             async with tracx_uart_lock:
@@ -1655,7 +1662,7 @@ async def upload_payload_to_server(payload, msg_typ, creator): # FINAL
     """Unified payload upload: sends data to cloud via cellular (for command center)."""
     global internet_module, tracx_uart_lock
 
-    if not running_as_cc():
+    if running_as_unit():
         logger.warning(f"upload called from unit node, skipping uploads")
         return False
     if internet_module.is_busy:
@@ -1766,7 +1773,7 @@ async def send_file_main_or_enqueue(msg_typ, creator, enc_msgbytes, epoch_ms, md
         transmission_time = transmission_end - transmission_start
         if msg_typ == "P":
             db_store.update_img_sent_count(1)
-        logger.info(f"[IMG] ✔✔✔ Data[{msg_typ}] transmission completed in {transmission_time/1000:.4f} seconds, file: {creator}_{epoch_ms} to {next_dst}")
+        logger.info(f"[IMG] ✔✔✔ Data[{msg_typ}] transmission completed in {transmission_time/1000:.4f} seconds, file: {creator}_{epoch_ms} to {next_dst or 'Cloud'}")
         return True
     else:
         logger.error(f"[FILE] send failed, enqueuing to db_store")
@@ -1938,7 +1945,7 @@ async def person_detection_loop():
         if is_install_mode:
             await asyncio.sleep(5)
             continue
-        if APP_DISARMED or ((not running_as_cc()) and len(network_paths) == 0):
+        if APP_DISARMED or (running_as_unit() and len(network_paths) == 0):
             logger.debug("Not detecting movement because disarmed")
             await asyncio.sleep(5)
             continue
@@ -1979,7 +1986,7 @@ async def person_detection_loop():
                             logger.debug("[WARNING] : GPS module is not initialized, skipping GPS location")
                     except Exception as e: # Not falat error
                         logger.warning(f"[PIR] Failed to get GPS location: {e}")
-                    
+
                     try:
                         logger.info(f"[PIR] GPS Data LAT={lat}, LON={lon}")
                         imgbytes = pack_image_meta_header(
@@ -2002,7 +2009,7 @@ async def person_detection_loop():
                             img_capture_count -= 1
                             led.off()
                             continue
-                        next_dst = next_device_in_spath() if not running_as_cc() else None
+                        next_dst = next_device_in_spath() if running_as_unit() else None
                         asyncio.create_task(_send_file_and_account(event_epoch_ms, enc_msgbytes, next_dst))
 
                     except Exception as e:
@@ -2053,7 +2060,7 @@ async def image_sending_loop():
             await asyncio.sleep(IMAGE_SENDING_EMPTY_DELAY)
             continue
         next_dst = next_device_in_spath()
-        if not running_as_cc() and not next_dst:
+        if running_as_unit() and not next_dst:
             logger.warning("[IMG] No shortest path yet so cant send...")
             await asyncio.sleep(IMAGE_SENDING_LITE_DELAY)
             continue
@@ -2259,7 +2266,7 @@ def process_message(databytes, rssi=None):
                     async def _chunk_end_send_or_enqueue(trans_msg_typ_curr, trans_md5_curr):
                         nonlocal recompiled_msgbytes
                         global db_store
-                        next_dst = next_device_in_spath() if not running_as_cc() else None
+                        next_dst = next_device_in_spath() if running_as_unit() else None
                         ok = await send_file_main_or_enqueue(
                             trans_msg_typ_curr, creator, recompiled_msgbytes, epoch_ms, trans_md5_curr, ENCRYPTION_ENABLED, next_dst
                         )
@@ -2382,17 +2389,17 @@ def build_heartbeat_payload():  # HARD limit is 50 bytes
 
     radio_succ_count = radio_sent_succ_count + radio_recd_succ_count
     radio_fail_count = radio_sent_fail_count + radio_recd_err_count + radio_recd_crcerr_count + radio_recd_hasherr_count
-    
+
     signal_strength = 0
     network_type = 0 # 1 byte data
     is_cc_unit = 0 # 1 byte data
     free_memory = get_free_memory() # 2 bytes data
     device_uptime = get_uptime_minutes() # 2 bytes data, in minutes, max value 43200 got 30 days
-    
+
     if internet_module:
         signal_strength = internet_module.get_last_signal_strength() or 0
         network_type = internet_module.get_last_network_type() or 0
-    
+
     if running_as_cc():
         is_cc_unit = 1
 
@@ -2702,7 +2709,7 @@ async def keep_updating_gps():
             await asyncio.sleep(GPS_WAIT_SEC)
 
         # CC needs modem awake for cellular; unit node can QSCLK sleep the whole EC200
-        sleep_module = not running_as_cc()
+        sleep_module = running_as_unit()
 
         async with tracx_uart_lock:
             init_ok = gps_module.initialize_gps()
@@ -2756,7 +2763,7 @@ async def keep_updating_gps():
         try:
             if gps_module is not None:
                 async with tracx_uart_lock:
-                    gps_module.enter_gps_sleep(sleep_module=not running_as_cc())
+                    gps_module.enter_gps_sleep(sleep_module=running_as_unit())
         except Exception as sleep_err:
             logger.error(f"[GPS] Failed to enter sleep after error: {sleep_err}")
 
@@ -3059,7 +3066,7 @@ async def main():
 
     # HEALTH STATS ===>
     asyncio.create_task(periodic_health_stats_loop())
-    
+
     await init_tracx_internet()
     asyncio.create_task(keep_checking_internet())
 
