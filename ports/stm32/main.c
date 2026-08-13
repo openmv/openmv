@@ -59,6 +59,9 @@
 #if MICROPY_PY_NETWORK
 #include "extmod/modnetwork.h"
 #endif
+#if MICROPY_PY_NETWORK_HALOW
+#include "extmod/network_halow.h"
+#endif
 #if MICROPY_PY_MACHINE_CAN
 #include "extmod/machine_can.h"
 #endif
@@ -368,6 +371,9 @@ soft_reset:
     #endif
     #if MICROPY_PY_NETWORK_CYW43
     cyw43_deinit(&cyw43_state);
+    #endif
+    #if MICROPY_PY_NETWORK_HALOW
+    network_halow_deinit_all();
     #endif
     timer_deinit();
     #if MICROPY_PY_PYB_LEGACY && MICROPY_HW_ENABLE_HW_I2C
