@@ -8,6 +8,7 @@ import time
 from machine import UART
 
 import logger
+from clock_utils import get_epoch_ms
 
 # Configuration
 UART_ID = 1

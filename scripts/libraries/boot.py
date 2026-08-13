@@ -1885,8 +1885,36 @@ HIGH_TARGET_SIZE = 45 * 1024
 LOW_TARGET_SIZE = 35 * 1024
 HIGH_COMP_QUALITY = 80
 MIN_COMP_QUALITY = 15
-
 global_comp_quality = 20
+
+compression_updated_for_cc = False
+
+def check_compression_for_cc():
+    global HIGH_COMP_QUALITY, MIN_COMP_QUALITY, HIGH_TARGET_SIZE, LOW_TARGET_SIZE, global_comp_quality
+    global compression_updated_for_cc
+    
+    if running_as_unit(): # Either device is unit or because unit after cc
+        if compression_updated_for_cc: # revert if cc losts internet
+            HIGH_TARGET_SIZE = 45 * 1024
+            LOW_TARGET_SIZE = 35 * 1024
+            HIGH_COMP_QUALITY = 80
+            MIN_COMP_QUALITY = 15
+            global_comp_quality = 20
+            compression_updated_for_cc = False
+        return
+
+    if compression_updated_for_cc: # need to update at just once
+        return
+    else:
+        HIGH_TARGET_SIZE = 99 * 1024 # max 99KB
+        LOW_TARGET_SIZE = 70 * 1024 # settle at min 70KB
+        
+        HIGH_COMP_QUALITY = 100
+        MIN_COMP_QUALITY = 55
+        
+        global_comp_quality = 55
+
+    compression_updated_for_cc = True
 
 def capture_image():
     """Capture one image, store raw copy, compress, and auto-adjust global quality."""
@@ -1904,6 +1932,7 @@ def capture_image():
         img_file_counter += 1
         event_epoch_ms = get_epoch_ms() + img_file_counter
 
+        check_compression_for_cc()
         jpeg_bytearray = bytes(img_snapshot.compress(quality=global_comp_quality))
         size = len(jpeg_bytearray)
         logger.info(
