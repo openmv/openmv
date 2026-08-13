@@ -2,6 +2,8 @@ import binascii
 import machine
 from machine import LED
 import uasyncio as asyncio
+import json
+from config_store import ConfigStore
 
 # Encryption policy
 ENCRYPTION_ENABLED = True
@@ -43,10 +45,10 @@ UID_TO_ADDR = {
 }
 
 # XX.XX.X
-# 02.00.2
-major = 3  # (0-63)
+# 02.00.4
+major = 2  # (0-63)
 minor = 0  # (0-99)
-patch = 3  # (0-9)
+patch = 6  # (0-9)
 # version as integer value, max_val = 64_999 < 65_535 (2 bytes)
 VERSION = major * 1_000 + minor * 10 + patch
 
@@ -102,7 +104,69 @@ async def led_restart_blinker():
         led.off()
         await asyncio.sleep(blink_duration)
 
+# state memory config store
+store = ConfigStore()
+def get_key_value(key: str):
+    saved_state = store.load()
+    if saved_state:
+        json_data = json.loads(saved_state)
+        result = json_data.get(key, None)
+    else:
+        result = None
+    return result
+    
+def set_key_value(key: str, value: any):
+    saved_state = store.load()
+    if saved_state:
+        json_data = json.loads(saved_state)
+        json_data[key] = value
+        store.save(json.dumps(json_data).encode())
+    else:
+        json_data = {key: value}
+        store.save(json.dumps(json_data).encode())
 
+# ============================================================
+# MACHINE GLOBAL ROOT STORAGE (deployment_id, logs, GPS, etc.)
+# ============================================================
+def get_deployment_id():
+    return get_key_value('deployment_id')
+
+def set_deployment_id(id):
+    set_key_value('deployment_id', id)
+    
+def save_log_entry(log_entry: str):
+    log_entries = get_key_value('log_entries')
+    if log_entries:
+        log_entries.append(log_entry)
+        set_key_value('log_entries', log_entries)
+    else:
+        log_entries = [log_entry]
+    set_key_value('log_entries', log_entries)
+
+def get_log_entries():
+    return get_key_value('log_entries')
+
+def set_gps_location(lat: float= None, lon: float = None, gps_time: int = 0):
+    try:
+        if lat and lon and gps_time: # only save if get value
+            set_key_value('gps_location', {'lat': lat, 'lon': lon, 'gps_time': gps_time})
+    except Exception as e:
+        print(f"Error in set_gps_location: {str(e)}")
+        set_key_value('gps_location', None)
+
+def get_gps_location():
+    gps_location =  get_key_value('gps_location')
+    if gps_location:
+        try:
+            return gps_location['lat'], gps_location['lon'], gps_location['gps_time']
+        except Exception as e:
+            print(f"Error in get_gps_location: {str(e)}")
+            set_key_value('gps_location', None)
+            return None, None, 0
+    return None, None, 0
+
+
+# Testing example
 def main():
     print("\n======>  MACHINE CONFIGURATION <======")
     print("Version: ", get_version_str(VERSION))
@@ -112,6 +176,15 @@ def main():
     print("Hybrid encryption enabled: ", uses_hybrid_encryption("P"))
     print("RSA encryption enabled: ", uses_rsa_encryption("*"))
     print("======================================\n\n")
+    
+    from config_store import ConfigStore
+    store = ConfigStore()
+    d = store.load()
+    print(json.loads(d) if d else 'no state yet')
+    
+    store.save(json.dumps({'key1': 10000, 'key2': "10000"}).encode())
+    d = store.load()
+    print(json.loads(d) if d else 'no state yet')
 
 if __name__ == "__main__":
     main()
