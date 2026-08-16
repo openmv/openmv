@@ -544,6 +544,13 @@ void omv_csi_stats_update(omv_csi_t *csi, uint32_t *r, uint32_t *g, uint32_t *b,
 
 // Get RGB moving average values.
 void omv_csi_get_stats(omv_csi_t *csi, uint32_t *r, uint32_t *g, uint32_t *b);
+
+// Set the stats-based white balance gains used by the ISP.
+int omv_csi_stats_set_auto_whitebal(omv_csi_t *csi, int enable,
+                                    float r_gain_db, float g_gain_db, float b_gain_db);
+
+// Get the stats-based white balance gains used by the ISP.
+int omv_csi_stats_get_rgb_gain_db(omv_csi_t *csi, float *r_gain_db, float *g_gain_db, float *b_gain_db);
 #endif // defined(OMV_CSI_STATS_ENABLE)
 
 // Enable auto blc (black level calibration) or set from previous calibration.
