@@ -64,20 +64,45 @@ def readline(s):
 
 
 def socket_readall(s):
-    buf = b""
+    buf = bytearray()
     while True:
-        recv = b""
         try:
-            recv = s.recv(1)
-        except:
-            pass
-        if len(recv) == 0:
+            recv = s.recv(512)
+        except OSError:
             break
-        buf += recv
+        if not recv:
+            break
+        buf.extend(recv)
     return buf
 
 
-def request(method, url, data=None, json=None, files=None, headers={}, auth=None, stream=None):
+def decode_chunked(data):
+    buf = bytearray()
+    mv = memoryview(data)
+    pos = 0
+    while True:
+        line_end = data.find(b"\r\n", pos)
+        if line_end < 0:
+            break
+        size_line = data[pos:line_end]
+        if b";" in size_line:
+            size_line = size_line.split(b";", 1)[0]
+        try:
+            size = int(size_line, 16)
+        except ValueError:
+            break
+        pos = line_end + 2
+        if size == 0:
+            break
+        buf.extend(mv[pos : pos + size])
+        pos += size + 2
+    return buf
+
+
+def request(method, url, data=None, json=None, files=None,
+            headers=None, auth=None, stream=None, timeout=5.0):
+    # Copy the headers to avoid modifying the caller's dict.
+    headers = dict(headers) if headers else {}
     try:
         proto, dummy, host, path = url.split("/", 3)
     except ValueError:
@@ -104,12 +129,16 @@ def request(method, url, data=None, json=None, files=None, headers={}, auth=None
     resp_code = 0
     resp_reason = None
     resp_headers = []
+    chunked = False
 
     ai = socket.getaddrinfo(host, port)[0]
     s = socket.socket(ai[0], ai[1], ai[2])
     try:
         s.connect(ai[-1])
-        s.settimeout(5.0)
+        # Note the timeout is set after connecting, as some drivers
+        # fail if a timeout is set on an unconnected socket.
+        if timeout is not None:
+            s.settimeout(timeout)
         if proto == "https:":
             s = ssl.wrap_socket(s, server_hostname=host)
 
@@ -126,9 +155,9 @@ def request(method, url, data=None, json=None, files=None, headers={}, auth=None
             s.write(b"\r\n")
 
         if json is not None:
-            import json
+            import json as json_module
 
-            data = json.dumps(json)
+            data = json_module.dumps(json)
             s.write(b"Content-Type: application/json\r\n")
 
         if files is not None:
@@ -145,6 +174,9 @@ def request(method, url, data=None, json=None, files=None, headers={}, auth=None
                 data += b"\r\n"
             data += b"\r\n--%s--\r\n" % (boundary)
 
+        if isinstance(data, str):
+            data = data.encode()
+
         if data:
             s.write(b"Content-Length: %d\r\n\r\n" % len(data))
             s.write(data)
@@ -154,21 +186,24 @@ def request(method, url, data=None, json=None, files=None, headers={}, auth=None
         response = socket_readall(s).split(b"\r\n")
         while response:
             l = response.pop(0).strip()
-            if not l or l == b"\r\n":
+            if not l:
                 break
-            if l.startswith(b"Transfer-Encoding:"):
-                if b"chunked" in l:
-                    raise ValueError("Unsupported " + l)
-            elif l.startswith(b"Location:") and not 200 <= status <= 299:
-                raise NotImplementedError("Redirects not yet supported")
-            if "HTTPS" in l or "HTTP" in l:
+            # The status line is always the first line of the response.
+            if resp_code == 0:
                 sline = l.split(None, 2)
                 resp_code = int(sline[1])
                 resp_reason = sline[2].decode().rstrip() if len(sline) > 2 else ""
                 continue
+            lower = l.lower()
+            if lower.startswith(b"transfer-encoding:"):
+                chunked = b"chunked" in lower
+            elif lower.startswith(b"location:") and not 200 <= resp_code <= 299:
+                raise NotImplementedError("Redirects not yet supported")
             resp_headers.append(l)
         resp_headers = b"\r\n".join(resp_headers)
         content = b"\r\n".join(response)
+        if chunked:
+            content = decode_chunked(content)
     except OSError:
         raise
     finally:
