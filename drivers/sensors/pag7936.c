@@ -39,6 +39,7 @@
 #include <stdio.h>
 
 #include "omv_i2c.h"
+#include "omv_gpio.h"
 #include "omv_csi.h"
 #include "py/mphal.h"
 
@@ -99,6 +100,11 @@
 #define SENSOR_TRIGGER_MODE_0       (0x02)
 #define SENSOR_TRIGGER_MODE_1       (0x03)
 #define SENSOR_SOFTWARE_TRIGGER     (0x00EA)
+#define SENSOR_GPIO0                (0x0077)
+#define SENSOR_GPIO0_OUTPUT         (0xC2)
+#define SENSOR_GPIO0_INPUT          (0x02)
+#define SENSOR_GPIO0_SEL            (0x0082)
+#define SENSOR_GPIO0_SEL_LED        (0x01)
 #define ISP_EN_H                    (0x0800)
 #define ISP_EN_H_EN                 (0x01)
 #define ISP_TEST_MODE               (0x0801)
@@ -882,6 +888,35 @@ static int ioctl(omv_csi_t *csi, int request, va_list ap) {
             ret |= omv_i2c_read_reg(csi->i2c, csi->slv_addr, SENSOR_TG_EN, 2, &reg, 1);
             if (ret >= 0) {
                 *enable = (reg & SENSOR_TG_EN_FLAG) ? 0 : 1;
+            }
+            break;
+        }
+        case OMV_CSI_IOCTL_SET_STROBE_MODE: {
+            int enable = va_arg(ap, int);
+
+            if (enable) {
+                // Stop driving the trigger pin, the sensor outputs its strobe on it.
+                if (csi->fsync_pin) {
+                    omv_gpio_config(csi->fsync_pin, OMV_GPIO_MODE_INPUT, OMV_GPIO_PULL_NONE, OMV_GPIO_SPEED_LOW, -1);
+                }
+                ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, SENSOR_GPIO0, 2, SENSOR_GPIO0_OUTPUT, 1);
+                ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, SENSOR_GPIO0_SEL, 2, SENSOR_GPIO0_SEL_LED, 1);
+            } else {
+                ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, SENSOR_GPIO0_SEL, 2, 0, 1);
+                ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, SENSOR_GPIO0, 2, SENSOR_GPIO0_INPUT, 1);
+                if (csi->fsync_pin) {
+                    omv_gpio_config(csi->fsync_pin, OMV_GPIO_MODE_OUTPUT, OMV_GPIO_PULL_NONE, OMV_GPIO_SPEED_LOW, -1);
+                    omv_gpio_write(csi->fsync_pin, 0);
+                }
+            }
+            break;
+        }
+        case OMV_CSI_IOCTL_GET_STROBE_MODE: {
+            int *enable = va_arg(ap, int *);
+            uint8_t reg;
+            ret |= omv_i2c_read_reg(csi->i2c, csi->slv_addr, SENSOR_GPIO0_SEL, 2, &reg, 1);
+            if (ret >= 0) {
+                *enable = (reg & SENSOR_GPIO0_SEL_LED) ? 1 : 0;
             }
             break;
         }
