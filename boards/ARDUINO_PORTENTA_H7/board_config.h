@@ -201,11 +201,11 @@
 
 // CSI I2C
 #define OMV_CSI_I2C_ID                      (3)
-#define OMV_CSI_I2C_SPEED                   (OMV_I2C_SPEED_STANDARD)
+#define OMV_CSI_I2C_SPEED                   (OMV_I2C_SPEED_FULL)
 
 // Alternate I2C bus for the Portenta breakout
 #define OMV_CSI_I2C_ALT_ID                  (4)
-#define OMV_CSI_I2C_ALT_SPEED               (OMV_I2C_SPEED_STANDARD)
+#define OMV_CSI_I2C_ALT_SPEED               (OMV_I2C_SPEED_FULL)
 
 // FIR I2C bus
 #define OMV_FIR_I2C_ID                      (3)

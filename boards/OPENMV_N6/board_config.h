@@ -269,7 +269,7 @@
 
 // CSI I2C bus
 #define OMV_CSI_I2C_ID                      (OMV_I2C3_ID)
-#define OMV_CSI_I2C_SPEED                   (OMV_I2C_SPEED_STANDARD)
+#define OMV_CSI_I2C_SPEED                   (OMV_I2C_SPEED_FULL)
 
 // FIR I2C bus
 #define OMV_FIR_I2C_ID                      (OMV_I2C2_ID)
