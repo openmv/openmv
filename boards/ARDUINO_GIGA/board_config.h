@@ -44,7 +44,7 @@
 
 // CSI drivers configuration.
 #define OMV_OV5640_ENABLE                   (1)
-#define OMV_OV5640_AF_ENABLE                (1)
+#define OMV_OV5640_AF_ENABLE                (0)
 #define OMV_OV5640_PLL_CTRL2                (0x90)
 #define OMV_OV5640_PLL_CTRL3                (0x13)
 #define OMV_OV5640_CLK_FREQ                 (12000000)
