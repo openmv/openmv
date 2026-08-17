@@ -493,7 +493,30 @@ static mp_uint_t py_winc_socket_send(mod_network_socket_obj_t *socket, const byt
 }
 
 static mp_uint_t py_winc_socket_recv(mod_network_socket_obj_t *socket, byte *buf, mp_uint_t len, int *_errno) {
-    int ret = winc_socket_recv(socket->fileno, buf, len, socket->_private, socket->timeout);
+    int ret;
+    if (socket->type == MOD_NETWORK_SOCK_DGRAM) {
+        // UDP deliveries always arrive as SOCKET_MSG_RECVFROM events; a plain
+        // recv() request waits for SOCKET_MSG_RECV, which never comes, so the
+        // callback discards the data and recv() times out empty.  Route
+        // datagram sockets through the recvfrom path and discard the address.
+        sockaddr addr;
+        // The firmware does not deliver against oversized requests: clamp to
+        // the maximum UDP payload (a datagram fits in one delivery anyway).
+        if (len > 1480) {
+            len = 1480;
+        }
+        ret = winc_socket_recvfrom(socket->fileno, buf, len, &addr, socket->timeout);
+    } else {
+        ret = winc_socket_recv(socket->fileno, buf, len, socket->_private, socket->timeout);
+    }
+    if (ret == SOCK_ERR_CONN_ABORTED) {
+        // The firmware reports the peer closing the connection as an abort;
+        // every lwIP-based port returns 0 (EOF) there, so match that.  The
+        // distinction from a genuine mid-stream reset is not recoverable
+        // from the firmware's error code.
+        py_winc_socket_close(socket);
+        return 0;
+    }
     if (ret <= 0) {
         // NOTE: 0 return from recv() means connection closed.
         *_errno = py_winc_mperrno(ret);
