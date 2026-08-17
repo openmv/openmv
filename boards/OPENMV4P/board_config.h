@@ -31,7 +31,7 @@
 #define OMV_OV2640_ENABLE                     (1)
 
 #define OMV_OV5640_ENABLE                     (1)
-#define OMV_OV5640_AF_ENABLE                  (1)
+#define OMV_OV5640_AF_ENABLE                  (0)
 #define OMV_OV5640_PLL_CTRL2                  (0x64)
 #define OMV_OV5640_PLL_CTRL3                  (0x13)
 
