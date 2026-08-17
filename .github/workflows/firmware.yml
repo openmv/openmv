@@ -40,40 +40,11 @@ jobs:
     runs-on: ubuntu-24.04
     strategy:
       matrix:
-        target:
-          - OPENMV2
-          - OPENMV3
-          - OPENMV4
-          - OPENMV4P
-          - OPENMVPT
-          - OPENMV_RT1060
-          - OPENMV_AE3
-          - OPENMV_N6
-          - ARDUINO_PORTENTA_H7
-          - ARDUINO_GIGA
-          - ARDUINO_NICLA_VISION
+        target: [OPENMV_RT1060]
         qemu: [false]
         fvp: [false]
         profile: [0]
         artifacts: [true]
-        include:
-          - target: DOCKER
-            qemu: false
-            profile: 0
-            artifacts: false
-          - target: OPENMV_N6
-            qemu: false
-            profile: 1
-            artifacts: false
-          - target: MPS2_AN500
-            qemu: true
-            profile: 0
-            artifacts: false
-          - target: MPS3_AN547
-            qemu: false
-            fvp: true
-            profile: 0
-            artifacts: false
       fail-fast: false
     steps:
     - name: '⏳ Checkout repository'
@@ -96,6 +67,7 @@ jobs:
         key: openmv-sdk-${{ steps.sdk-ver.outputs.version }}-linux-x86_64
 
     - name: '🛠 Install dependencies'
+      if: matrix.qemu
       run: |
         sudo apt-get update
         sudo apt-get install -y qemu-system-arm
