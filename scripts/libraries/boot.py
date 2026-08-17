@@ -33,6 +33,7 @@ from _sx126x import ERR_NONE, ERR_CRC_MISMATCH, ERR_UNKNOWN, SX126X_IRQ_CRC_ERR,
 import detect
 from detect import PIR_PIN, turn_ON_IR_emitter, turn_OFF_IR_emitter
 import power_mgmt
+from watchdog import start_watchdog, check_watchdog_reset
 
 # -----------------------------------▼▼▼▼▼-----------------------------------
 # -------------------- TESTING VARIABLES, TODO PRODUCTION --------------------
@@ -3093,6 +3094,8 @@ async def main():
     if not await init_device():
         await reboot_device()
 
+    start_watchdog()
+
     # HEALTH STATS ===>
     asyncio.create_task(periodic_health_stats_loop())
 
@@ -3141,6 +3144,8 @@ async def main():
         if i >= 6:
             logger.error(f"============= >>>>>> Rebooting device since it has been {i} HOURS <<<<<<< ====================")
             await reboot_device()
+
+    check_watchdog_reset()
 
 try:
     asyncio.run(main())
