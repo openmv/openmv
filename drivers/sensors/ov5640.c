@@ -35,6 +35,10 @@
 #include "ov5640.h"
 #include "py/mphal.h"
 
+#ifndef OMV_OV5640_RESET_DELAY_MS
+#define OMV_OV5640_RESET_DELAY_MS   (300)
+#endif
+
 #define BLANK_LINES             8
 #define DUMMY_LINES             6
 
@@ -706,9 +710,9 @@ static int reset(omv_csi_t *csi) {
     ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, SYSTEM_RESET_00, 2, 0x00, 1); // release mcu reset
     #endif
 
-    // Delay 300 ms
+    // Delay for AEC/AGC settle after leaving standby.
     if (!csi->disable_delays) {
-        mp_hal_delay_ms(300);
+        mp_hal_delay_ms(OMV_OV5640_RESET_DELAY_MS);
     }
 
     return ret;

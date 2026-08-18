@@ -48,6 +48,7 @@
 #define OMV_OV5640_CLK_FREQ                 (12500000)
 #define OMV_OV5640_PLL_CTRL2                (0x7E)
 #define OMV_OV5640_PLL_CTRL3                (0x13)
+#define OMV_OV5640_RESET_DELAY_MS           (50)
 
 #define OMV_HM01B0_ENABLE                   (1)
 #define OMV_HM0360_ENABLE                   (1)

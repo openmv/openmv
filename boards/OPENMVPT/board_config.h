@@ -32,6 +32,7 @@
 #define OMV_OV5640_AF_ENABLE                    (0)
 #define OMV_OV5640_PLL_CTRL2                    (0x64)
 #define OMV_OV5640_PLL_CTRL3                    (0x13)
+#define OMV_OV5640_RESET_DELAY_MS               (50)
 
 #define OMV_LEPTON_ENABLE                       (1)
 
