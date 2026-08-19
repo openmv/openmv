@@ -32,5 +32,4 @@ OMV_FIRM_OBJ += $(addprefix $(BUILD)/, $(PORT_SRC_C:.c=.o))
 ifeq ($(PROFILE_ENABLE), 1)
 $(BUILD)/ports/alif/%.o: override CFLAGS += -finstrument-functions
 $(BUILD)/ports/stm32/%.o: override CFLAGS += -finstrument-functions
-$(BUILD)/ports/mimxrt/%.o: override CFLAGS += -finstrument-functions
 endif
