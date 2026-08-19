@@ -55,11 +55,19 @@ jobs:
         fvp: [false]
         profile: [0]
         artifacts: [true]
+        exclude:
+          - target: OPENMV_RT1060
+            profile: 0
         include:
           - target: DOCKER
             qemu: false
             profile: 0
             artifacts: false
+          - target: OPENMV_RT1060
+            qemu: false
+            fvp: false
+            profile: 1
+            artifacts: true
           - target: OPENMV_N6
             qemu: false
             profile: 1
