@@ -269,6 +269,11 @@ class AppController:
                 print(f"Unexpected error: {e}")
                 self._close_socket_safely(self.wifi_socket)
                 return False, None
+    def check_connection(self):
+        wifi_connected = self.wifi_nic is not None and self.wifi_nic.isconnected()
+        socket_connected = self.wifi_socket is not None and self._is_socket_alive()
+        return {"wifi_connected": wifi_connected, "socket_connected": socket_connected}
+        
 
     def check_wifi_connection_status(self):
         """
@@ -314,6 +319,7 @@ class AppController:
 
                 if is_connected:
                     logger.debug("[WIFI] WiFi connection status: connected")
+
                     
                     if self.wifi_socket is not None and self._is_socket_alive():
                         self.cont_wifi_fail_count = 0

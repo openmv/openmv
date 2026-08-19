@@ -32,8 +32,6 @@ from internet_driver import InternetDriver, INTERNET_RECHECK_INTERVAL_SEC
 from _sx126x import ERR_NONE, ERR_CRC_MISMATCH, ERR_UNKNOWN, SX126X_IRQ_CRC_ERR, SX126X_IRQ_HEADER_ERR, SX126X_IRQ_RX_DONE, SX126X_IRQ_TIMEOUT, SX126X_IRQ_TX_DONE, SX126X_SYNC_WORD_PRIVATE, SX126X_IRQ_ALL
 import detect
 from detect import PIR_PIN, turn_ON_IR_emitter, turn_OFF_IR_emitter
-import power_mgmt
-from watchdog import start_watchdog, check_watchdog_reset
 
 # -----------------------------------▼▼▼▼▼-----------------------------------
 # -------------------- TESTING VARIABLES, TODO PRODUCTION --------------------
@@ -108,7 +106,7 @@ VALIDATE_WAIT_SEC = 1200
 PHOTO_TAKING_DELAY = 600
 
 GPS_WAIT_SEC = 30
-GPS_ACQUIRE_TIMEOUT_SEC = 300  # 5 min to obtain fix once per boot
+GPS_WAIT_REFRESH_SEC = 1800
 
 NETWORK_EMPTY_SLEEP = 15 # 15 sec, when no path is there
 NETWORK_IN_TRANS_SLEEP = 10 # 10 sec, sleep when trans mode in progress
@@ -120,7 +118,8 @@ NET_PATH_EXPIRY_MS = 1800000 # 1800 second, 30 minutes
 
 TRANSMODE_LOCK_TIMEOUT = 600 # TODO PRODUCTION
 TRANSMODE_INACTIVITY_LIMIT = 40 # 20 second
-
+CHUNK_BURST_SIZE = 20
+CHUNK_BURST_RX_SLEEP = 0.2
 # Config test for SF7
 LORA_FREQ = 868.0
 LORA_BW = 125             # 125kHz provides better sensitivity than wider bandwidths
@@ -339,7 +338,7 @@ def reset_trans_chunk_storage(chunk_count=None):
 
 def running_as_cc():
     global internet_module
-    if internet_module and internet_module.running_as_cc():
+    if internet_module and internet_module.has_internet:
         return True
     else:
         return False
@@ -1041,8 +1040,8 @@ async def process_packet_queue(): # TODO Anand, (no change)
                 # But it doesn't block the receive loop anymore
                 process_message(message, rssi)
             else:
-                # No packets: idle CPU until next interrupt, then brief yield
-                machine.idle()
+                # No packets in queue, yield to other tasks
+                # Small sleep prevents busy-waiting and allows other tasks to run
                 await asyncio.sleep(0.01)
 
         except Exception as e:
@@ -1289,6 +1288,9 @@ async def send_msg_big(msg_typ, creator, msgbytes, dest, epoch_ms, md5): # file 
                     # Adding meta data to chunk bytes, 3 + 2 + 45 = 50 bytes max
                     chunkbytes = filedata_id.encode() + chunk_id.to_bytes(CHUNK_ID_BYTES) + chunks[chunk_id]
                     _ = await send_single_packet("I", creator, chunkbytes, dest)
+                    if(chunk_id+1) % CHUNK_BURST_SIZE == 0:
+                        logger.info(f"[CHUNK] pause {CHUNK_BURST_RX_SLEEP}s after {chunk_id+1} chunks for RX")
+                        await asyncio.sleep(CHUNK_BURST_RX_SLEEP)
                 else:
                     # logger.error(f"TRANS MODE ended, marking data send as failed, timeout error")
                     return False, "TRANS MODE ended, timeout error"
@@ -1628,14 +1630,6 @@ async def init_tracx_internet():
 async def keep_checking_internet():
     """Retry establish_internet() every INTERNET_RECHECK_INTERVAL_SEC while offline."""
     global internet_module, tracx_uart_lock, network_paths
-    if internet_module and not internet_module.module_ready:
-        logger.error("[CELL] Internet module not ready, skipping periodic internet checks")
-        return
-
-    if internet_module and internet_module.has_sim is False:
-        logger.warning("[CELL] No SIM; skipping periodic internet checks (unit node)")
-        return
-
     if internet_module and internet_module.has_internet:
         logger.info("[CELL] Internet health loop started in background (already online)")
     else:
@@ -1644,11 +1638,6 @@ async def keep_checking_internet():
         await asyncio.sleep(INTERNET_RECHECK_INTERVAL_SEC)
         if internet_module and internet_module.has_internet:
             continue
-        
-        if internet_module and internet_module.has_sim is False:
-            logger.warning("[CELL] No SIM; stopping periodic internet checks")
-            return
-
         logger.info("[CELL] Periodic internet check (has_internet=False)...")
         try:
             async with tracx_uart_lock:
@@ -1663,7 +1652,7 @@ async def upload_payload_to_server(payload, msg_typ, creator): # FINAL
     """Unified payload upload: sends data to cloud via cellular (for command center)."""
     global internet_module, tracx_uart_lock
 
-    if running_as_unit():
+    if not running_as_cc():
         logger.warning(f"upload called from unit node, skipping uploads")
         return False
     if internet_module.is_busy:
@@ -1774,7 +1763,7 @@ async def send_file_main_or_enqueue(msg_typ, creator, enc_msgbytes, epoch_ms, md
         transmission_time = transmission_end - transmission_start
         if msg_typ == "P":
             db_store.update_img_sent_count(1)
-        logger.info(f"[IMG] ✔✔✔ Data[{msg_typ}] transmission completed in {transmission_time/1000:.4f} seconds, file: {creator}_{epoch_ms} to {next_dst or 'Cloud'}")
+        logger.info(f"[IMG] ✔✔✔ Data[{msg_typ}] transmission completed in {transmission_time/1000:.4f} seconds, file: {creator}_{epoch_ms} to {next_dst}")
         return True
     else:
         logger.error(f"[FILE] send failed, enqueuing to db_store")
@@ -1886,36 +1875,8 @@ HIGH_TARGET_SIZE = 45 * 1024
 LOW_TARGET_SIZE = 35 * 1024
 HIGH_COMP_QUALITY = 80
 MIN_COMP_QUALITY = 15
+
 global_comp_quality = 20
-
-compression_updated_for_cc = False
-
-def check_compression_for_cc():
-    global HIGH_COMP_QUALITY, MIN_COMP_QUALITY, HIGH_TARGET_SIZE, LOW_TARGET_SIZE, global_comp_quality
-    global compression_updated_for_cc
-    
-    if running_as_unit(): # Either device is unit or because unit after cc
-        if compression_updated_for_cc: # revert if cc losts internet
-            HIGH_TARGET_SIZE = 45 * 1024
-            LOW_TARGET_SIZE = 35 * 1024
-            HIGH_COMP_QUALITY = 80
-            MIN_COMP_QUALITY = 15
-            global_comp_quality = 20
-            compression_updated_for_cc = False
-        return
-
-    if compression_updated_for_cc: # need to update at just once
-        return
-    else:
-        HIGH_TARGET_SIZE = 99 * 1024 # max 99KB
-        LOW_TARGET_SIZE = 70 * 1024 # settle at min 70KB
-        
-        HIGH_COMP_QUALITY = 100
-        MIN_COMP_QUALITY = 55
-        
-        global_comp_quality = 55
-
-    compression_updated_for_cc = True
 
 def capture_image():
     """Capture one image, store raw copy, compress, and auto-adjust global quality."""
@@ -1933,7 +1894,6 @@ def capture_image():
         img_file_counter += 1
         event_epoch_ms = get_epoch_ms() + img_file_counter
 
-        check_compression_for_cc()
         jpeg_bytearray = bytes(img_snapshot.compress(quality=global_comp_quality))
         size = len(jpeg_bytearray)
         logger.info(
@@ -1975,7 +1935,7 @@ async def person_detection_loop():
         if is_install_mode:
             await asyncio.sleep(5)
             continue
-        if APP_DISARMED or (running_as_unit() and len(network_paths) == 0):
+        if APP_DISARMED or ((not running_as_cc()) and len(network_paths) == 0):
             logger.debug("Not detecting movement because disarmed")
             await asyncio.sleep(5)
             continue
@@ -2016,7 +1976,7 @@ async def person_detection_loop():
                             logger.debug("[WARNING] : GPS module is not initialized, skipping GPS location")
                     except Exception as e: # Not falat error
                         logger.warning(f"[PIR] Failed to get GPS location: {e}")
-
+                    
                     try:
                         logger.info(f"[PIR] GPS Data LAT={lat}, LON={lon}")
                         imgbytes = pack_image_meta_header(
@@ -2039,7 +1999,7 @@ async def person_detection_loop():
                             img_capture_count -= 1
                             led.off()
                             continue
-                        next_dst = next_device_in_spath() if running_as_unit() else None
+                        next_dst = next_device_in_spath() if not running_as_cc() else None
                         asyncio.create_task(_send_file_and_account(event_epoch_ms, enc_msgbytes, next_dst))
 
                     except Exception as e:
@@ -2090,7 +2050,7 @@ async def image_sending_loop():
             await asyncio.sleep(IMAGE_SENDING_EMPTY_DELAY)
             continue
         next_dst = next_device_in_spath()
-        if running_as_unit() and not next_dst:
+        if not running_as_cc() and not next_dst:
             logger.warning("[IMG] No shortest path yet so cant send...")
             await asyncio.sleep(IMAGE_SENDING_LITE_DELAY)
             continue
@@ -2179,9 +2139,9 @@ def process_message(databytes, rssi=None):
         logger.debug(f"[LORA] skipping message as it is for dst:{receiver}, not for me (my_addr:{my_addr}), msg_uid:{msg_uid}")
         return
 
-    if is_install_mode and msg_typ not in ["X", "Y", "Z", "A", "H", "K"]:
-        logger.debug(f"[LORA] skipping message as it is in install mode and msg_typ not in [X, Y, Z, A, H]")
-        return False
+    # if is_install_mode and msg_typ not in ["X", "Y", "Z", "A", "H"]:
+    #     logger.debug(f"[LORA] skipping message as it is in install mode and msg_typ not in [X, Y, Z, A, H]")
+    #     return False
 
     recv_log = ""
     if receiver == -1:
@@ -2191,8 +2151,8 @@ def process_message(databytes, rssi=None):
 
     data_masked_log = min(10, max(1, (len(databytes) + 20) // 21))
     rssi_log = f", rssi: {rssi}" if rssi is not None else ""
-    if is_install_mode and msg_typ not in ["X", "Y", "Z", "A", "H"]: # TODO akash
-        logger.info(f"[{recv_log} from {sender}{rssi_log}] [{'*' * data_masked_log}] {len(databytes)} bytes, MSG_UID = {msg_uid}, skipping msg in install mode...")
+    if is_install_mode and msg_typ not in ["X", "Y", "Z", "A", "H", "K"]:
+        logger.info(f"[{recv_log} from {sender}{rssi_log}] [{'*' * data_masked_log}] {len(databytes)} bytes, msg_typ= {msg_typ}, MSG_UID = {msg_uid}, skipping msg in install mode...")
         return
     elif msg_typ != "I":
         logger.info(f"[{recv_log} from {sender}{rssi_log}] [{'*' * data_masked_log}] {len(databytes)} bytes, MSG_UID = {msg_uid}")
@@ -2296,7 +2256,7 @@ def process_message(databytes, rssi=None):
                     async def _chunk_end_send_or_enqueue(trans_msg_typ_curr, trans_md5_curr):
                         nonlocal recompiled_msgbytes
                         global db_store
-                        next_dst = next_device_in_spath() if running_as_unit() else None
+                        next_dst = next_device_in_spath() if not running_as_cc() else None
                         ok = await send_file_main_or_enqueue(
                             trans_msg_typ_curr, creator, recompiled_msgbytes, epoch_ms, trans_md5_curr, ENCRYPTION_ENABLED, next_dst
                         )
@@ -2377,11 +2337,18 @@ def process_message(databytes, rssi=None):
         msgstr = msgbytes.decode()
         global trans_paired_device, trans_data_id
         if msgstr == "install_mode":
-            print(f"install mode {is_install_mode}")
             if not is_install_mode:
                 asyncio.create_task(enter_install_mode())
-            asyncio.create_task(send_msg("J", my_addr, b"installMode", sender))
+            asyncio.create_task(send_msg("J", my_addr, b"recvdInstallMode", sender))
             delete_transmode_lock(trans_paired_device, trans_data_id)
+        elif msgstr == "exit_install_mode":
+            if is_install_mode:
+                asyncio.create_task(exit_install_mode())
+                asyncio.create_task(send_msg("J", my_addr, b"recvdExitInstallMode", sender))
+        elif msgstr == "get_device_status":
+            connection_status = app_controller.check_connection()
+            msg = {"M": "I" if is_install_mode else "P", "Wi": connection_status["wifi_connected"], "So": connection_status["socket_connected"]}
+            asyncio.create_task(send_msg("J", my_addr, json.dumps(msg).encode(), sender))
         else:
             logger.error(f"[APP] unknown command: {msgstr}")
 
@@ -2419,17 +2386,17 @@ def build_heartbeat_payload():  # HARD limit is 50 bytes
 
     radio_succ_count = radio_sent_succ_count + radio_recd_succ_count
     radio_fail_count = radio_sent_fail_count + radio_recd_err_count + radio_recd_crcerr_count + radio_recd_hasherr_count
-
+    
     signal_strength = 0
     network_type = 0 # 1 byte data
     is_cc_unit = 0 # 1 byte data
     free_memory = get_free_memory() # 2 bytes data
     device_uptime = get_uptime_minutes() # 2 bytes data, in minutes, max value 43200 got 30 days
-
+    
     if internet_module:
         signal_strength = internet_module.get_last_signal_strength() or 0
         network_type = internet_module.get_last_network_type() or 0
-
+    
     if running_as_cc():
         is_cc_unit = 1
 
@@ -2713,19 +2680,23 @@ async def network_response_consume(msg, sender):
 # ---------------------------------------------------------------------------
 
 async def keep_updating_gps():
-    # Once per boot: init GNSS -> acquire fix up to 5 min -> sleep GNSS until next reboot
+    # Input: None; Output: None (continuously reads GPS hardware and updates global state)
     global gps_str, gps_last_time, rtc, gps_module, tracx_uart, tracx_uart_lock, gps_success_count, gps_failure_count
-    logger.info("[GPS] Starting one-shot GPS update for this boot...")
+    logger.info("[GPS] Initializing GPS...")
 
+    # Wait for LoRa to settle
     await asyncio.sleep(3)
 
+    # Create shared UART if not already created (may have been created by internet module)
     if tracx_uart is None:
         from machine import UART
         from gps_driver import UART_ID, BAUDRATE
         logger.info(f"[GPS] Creating shared UART (id={UART_ID}, baud={BAUDRATE})...")
         tracx_uart = UART(UART_ID, BAUDRATE, timeout=2000)
-        await asyncio.sleep(2)
+        import utime
+        await asyncio.sleep(2)  # Wait for module to initialize
 
+    # Create GPS module instance with shared UART
     if gps_module is None:
         logger.info("[GPS] Creating GPS driver instance with shared UART")
         try:
@@ -2735,67 +2706,83 @@ async def keep_updating_gps():
             return
 
     try:
-        while trans_in_progress:
-            await asyncio.sleep(GPS_WAIT_SEC)
-
-        # CC needs modem awake for cellular; unit node can QSCLK sleep the whole EC200
-        sleep_module = running_as_unit()
-
         async with tracx_uart_lock:
-            init_ok = gps_module.initialize_gps()
-        if not init_ok:
-            logger.warning("[GPS] Init failed; putting module to sleep")
-            async with tracx_uart_lock:
-                gps_module.enter_gps_sleep(sleep_module=sleep_module)
-            return
+            if not gps_module.initialize_gps():
+                logger.info("[GPS] GPS initialization failed!")
+                return
+        logger.info("[GPS] GPS hardware initialized successfully - starting continuous read loop")
+    except Exception as e:
+        logger.info(f"[GPS] GPS initialization failed: {e}")
+        return
 
-        logger.info(f"[GPS] Acquiring fix (up to {GPS_ACQUIRE_TIMEOUT_SEC}s)...")
-        acquire_deadline = get_ms_diff() + GPS_ACQUIRE_TIMEOUT_SEC * 1000
-        got_fix = False
+    read_count = 0
+    last_successful_read = 0
+    rtc_updated = False
 
-        while get_ms_diff() < acquire_deadline and not got_fix:
+    # Continuous reading loop
+    while True:
+        try:
+            read_count += 1
+
+            # Skip GPS if heavy operations are running
             if trans_in_progress:
-                await asyncio.sleep(GPS_WAIT_SEC)
+                await asyncio.sleep(GPS_WAIT_SEC * 2)
                 continue
 
+            # Check if gps_module is still available (might be None if reinitializing)
+            if gps_module is None:
+                logger.warning("[GPS] GPS module is None, waiting...")
+                await asyncio.sleep(5)
+                continue
+
+            # Query GPS location and time (hold UART lock to avoid conflict with cellular)
             async with tracx_uart_lock:
                 lat, lon, time_str = gps_module.get_gps_location()
 
             if lat is not None and lon is not None and time_str is not None:
                 gps_success_count += 1
                 gps_str = f"{lat:.6f},{lon:.6f}"
+                logger.info(f"[GPS] {gps_str} Time: {time_str}")
                 gps_last_time = get_ms_diff()
-                got_fix = True
-                logger.info(f"[GPS] Fix: {gps_str} Time: {time_str}")
-                try:
-                    time_components = gps_module.get_gps_time_components(time_str)
-                    if time_components:
-                        rtc.datetime(time_components)
-                        logger.info(f"[GPS] RTC updated with GPS time: {time_str}")
-                except Exception as e:
-                    logger.warning(f"[GPS] Failed to update RTC: {e}")
+                last_successful_read = read_count
+
+                # Update RTC with GPS time (local time) - only once when we get first fix
+                if not rtc_updated:
+                    try:
+                        time_components = gps_module.get_gps_time_components(time_str)
+                        if time_components:
+                            rtc.datetime(time_components)
+                            logger.info(f"[GPS] RTC updated with GPS time: {time_str}")
+                            rtc_updated = True
+                    except Exception as e:
+                        logger.warning(f"[GPS] Failed to update RTC: {e}")
             else:
                 gps_failure_count += 1
-                remain_ms = acquire_deadline - get_ms_diff()
-                if remain_ms <= 0:
-                    break
-                await asyncio.sleep(min(GPS_WAIT_SEC, max(1, remain_ms // 1000)))
+                if read_count % 20 == 1:
+                    logger.info("[GPS] GPS has no fix")
 
-        if not got_fix:
-            logger.info("[GPS] No fix within acquire window")
+            # Reinitialize if too many failures
+            if last_successful_read > 0 and (read_count - last_successful_read) > 100:
+                logger.info("[GPS] GPS not working, reinitializing...")
+                try:
+                    if gps_module is not None:
+                        async with tracx_uart_lock:
+                            gps_module.initialize_gps()
+                    await asyncio.sleep(2)
+                    last_successful_read = read_count
+                except Exception as e:
+                    logger.error(f"[GPS] error in GPS reinit: {e}")
+                    await asyncio.sleep(10)
 
-        async with tracx_uart_lock:
-            gps_module.enter_gps_sleep(sleep_module=sleep_module)
-        logger.info("[GPS] One-shot update done; GNSS asleep until next boot")
+        except Exception as e:
+            logger.error(f"[GPS] error in GPS read: {e}")
+            await asyncio.sleep(2)
 
-    except Exception as e:
-        logger.error(f"[GPS] error in GPS cycle: {e}")
-        try:
-            if gps_module is not None:
-                async with tracx_uart_lock:
-                    gps_module.enter_gps_sleep(sleep_module=running_as_unit())
-        except Exception as sleep_err:
-            logger.error(f"[GPS] Failed to enter sleep after error: {sleep_err}")
+        # Wait before next query: 5 sec when no fix, 30 min when fix obtained
+        if gps_str:
+            await asyncio.sleep(max(1, GPS_WAIT_REFRESH_SEC))
+        else:
+            await asyncio.sleep(max(1, GPS_WAIT_SEC))
 
 # ---------------------------------------------------------------------------
 # All Handlers
@@ -3056,29 +3043,21 @@ async def enter_install_mode():
     # asyncio.create_task(send_msg("K", my_addr, b"ME_I", 100)) # Akash TODO check
     logger.info("[INSTALL] 𓆦𓆦𓆦𓆦𓆦𓆦❯❯ Install mode stopped/exited ❮❮𓆦𓆦𓆦𓆦𓆦𓆦")
 
+
+async def exit_install_mode():
+    global is_install_mode, app_controller
+    if not is_install_mode:
+        logger.warning("[INSTALL] 𓆦𓆦𓆦𓆦𓆦𓆦❯❯ Not in install mode, ignoring req... ❮❮𓆦𓆦𓆦𓆦𓆦𓆦")
+        return
+
+    logger.info("[INSTALL] 𓆦𓆦𓆦𓆦𓆦𓆦❯❯ Exiting install mode... ❮❮𓆦𓆦𓆦𓆦𓆦𓆦")
+    is_install_mode = False
+    await app_controller.stop()  # disconnects socket + wifi, breaks enter_install_mode loop via app_alive()
+    logger.info("[INSTALL] 𓆦𓆦𓆦𓆦𓆦𓆦❯❯ Switched back to PROCESS MODE ❮❮𓆦𓆦𓆦𓆦𓆦𓆦")
+
 # ---------------------------------------------------------------------------
 # Application Entry Point
 # ---------------------------------------------------------------------------
-async def power_save_loop():
-    """Idle CPU when safe; skips during transfer, PIR burst, install, or queued packets."""
-    logger.info("[PWR] Power-save loop started (machine.idle when safe)")
-    while True:
-        try:
-            if power_mgmt.system_can_power_save(
-                trans_in_progress=trans_in_progress,
-                pir_burst_in_progress=pir_burst_in_progress,
-                is_install_mode=is_install_mode,
-                packet_queue_len=len(packet_queue),
-            ):
-                machine.idle()
-                await asyncio.sleep(0.05)
-            else:
-                await asyncio.sleep(0.1)
-        except Exception as e:
-            logger.warning(f"[PWR] power_save_loop error: {e}")
-            await asyncio.sleep(1)
-
-
 async def keep_blinking_restart_led():
     while True:
         await led_restart_blinker()
@@ -3094,11 +3073,9 @@ async def main():
     if not await init_device():
         await reboot_device()
 
-    start_watchdog()
-
     # HEALTH STATS ===>
     asyncio.create_task(periodic_health_stats_loop())
-
+    
     await init_tracx_internet()
     asyncio.create_task(keep_checking_internet())
 
@@ -3132,9 +3109,6 @@ async def main():
     # TRANSMISION =====>
     asyncio.create_task(image_sending_loop())
 
-    # POWER SAVE (machine.idle when safe) =====>
-    asyncio.create_task(power_save_loop())
-
     if SAVE_LOGS:
         asyncio.create_task(logger_state())
 
@@ -3144,8 +3118,6 @@ async def main():
         if i >= 6:
             logger.error(f"============= >>>>>> Rebooting device since it has been {i} HOURS <<<<<<< ====================")
             await reboot_device()
-
-    check_watchdog_reset()
 
 try:
     asyncio.run(main())

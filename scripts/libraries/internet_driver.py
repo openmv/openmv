@@ -52,88 +52,32 @@ UART_ID = 1
 BAUDRATE = 115200
 INTERNET_RECHECK_INTERVAL_SEC = 60 * 60  # 60 minutes
 
-# AT response substrings for registration checks (CEREG=LTE, CGREG=3G PS)
-NW_RESP_LTE_HOME = "+CEREG: 0,1"
-NW_RESP_LTE_ROAM = "+CEREG: 0,5"
-NW_RESP_3G_PS_HOME = "+CGREG: 0,1"
-NW_RESP_3G_PS_ROAM = "+CGREG: 0,5"
+# AT response substrings (CEREG=LTE, CGREG=3G/2G PS) and saved nw_type (0–4)
+NW_LABEL_LTE_HOME = "+CEREG: 0,1"
+NW_LABEL_LTE_ROAM = "+CEREG: 0,5"
+NW_LABEL_3G_PS_HOME = "+CGREG: 0,1"
+NW_LABEL_3G_PS_ROAM = "+CGREG: 0,5"
 
-# Network RAT type — 3G vs 4G (network type)
 NW_TYPE_UNKNOWN = 0
-NW_TYPE_LTE = 1   # 4G
-NW_TYPE_3G = 2    # 3G packet-switched
+NW_TYPE_LTE_HOME = 1
+NW_TYPE_LTE_ROAM = 2
+NW_TYPE_3G_PS_HOME = 3
+NW_TYPE_3G_PS_ROAM = 4
 
 NW_TYPE_NAMES = {
     NW_TYPE_UNKNOWN: "UNKNOWN",
-    NW_TYPE_LTE: "LTE",
-    NW_TYPE_3G: "3G_PS",
+    NW_TYPE_LTE_HOME: "LTE_HOME",
+    NW_TYPE_LTE_ROAM: "LTE_ROAM",
+    NW_TYPE_3G_PS_HOME: "3G_PS_HOME",
+    NW_TYPE_3G_PS_ROAM: "3G_PS_ROAM",
 }
 
-# Network registration status — home vs roaming
-NW_STATUS_UNKNOWN = 0
-NW_STATUS_HOME = 1
-NW_STATUS_ROAM = 2
-
-NW_STATUS_NAMES = {
-    NW_STATUS_UNKNOWN: "UNKNOWN",
-    NW_STATUS_HOME: "HOME",
-    NW_STATUS_ROAM: "ROAMING",
-}
-
-
-class InternetUtils:
-    """Shared helpers for parsing network responses and signal metrics."""
-
-    def _parse_network_from_response(self, resp):
-        """Parse CEREG/CGREG response into (network_type, network_status)."""
-        if not resp:
-            return NW_TYPE_UNKNOWN, NW_STATUS_UNKNOWN
-        if NW_RESP_LTE_HOME in resp:
-            return NW_TYPE_LTE, NW_STATUS_HOME
-        if NW_RESP_LTE_ROAM in resp:
-            return NW_TYPE_LTE, NW_STATUS_ROAM
-        if NW_RESP_3G_PS_HOME in resp:
-            return NW_TYPE_3G, NW_STATUS_HOME
-        if NW_RESP_3G_PS_ROAM in resp:
-            return NW_TYPE_3G, NW_STATUS_ROAM
-        return NW_TYPE_UNKNOWN, NW_STATUS_UNKNOWN
-
-    def _rsrp_to_pct(self, rsrp):  # -44 dBm (perfect) to -140 dBm (worst)
-        if rsrp is None:
-            print("Invalid RSRP value: None")
-            return None
-
-        # 3GPP valid RSRP range
-        if rsrp < -140 or rsrp > -44:
-            print(f"Invalid RSRP value: {rsrp}")
-            return None
-
-        # Display mapping range (tighter than 3GPP): below -120 → 0%, above -80 → 100%
-        MIN_RSRP = -120  # 0% signal
-        MAX_RSRP = -80   # 100% signal
-        clamped_rsrp = max(MIN_RSRP, min(MAX_RSRP, rsrp))
-        signal_pct = int(round(((clamped_rsrp - MIN_RSRP) / (MAX_RSRP - MIN_RSRP)) * 100))
-        print(f"rsrp_to_pct: {rsrp} -> {signal_pct}")
-        return signal_pct
-    
-    def _csq_to_pct(self, csq):  # 0 (worst) to 31 (perfect), 99 "unknown/no signal"
-        if csq is None:
-            print("Invalid CSQ value: None")
-            return None
-
-        # 99 = unknown / no signal
-        if csq == 99:
-            print(f"CSQ value: {csq} showing no signal, returning 0")
-            return 0
-
-        # Valid CSQ range: 0 (worst) to 31 (perfect)
-        if csq < 0 or csq > 31:
-            print(f"Invalid CSQ value: {csq}")
-            return None
-
-        signal_pct = min(100, int(round((csq / 31) * 100)))
-        print(f"csq_to_pct: {csq} -> {signal_pct}")
-        return signal_pct
+_NW_LABEL_TO_TYPE = (
+    (NW_LABEL_LTE_HOME, NW_TYPE_LTE_HOME),
+    (NW_LABEL_LTE_ROAM, NW_TYPE_LTE_ROAM),
+    (NW_LABEL_3G_PS_HOME, NW_TYPE_3G_PS_HOME),
+    (NW_LABEL_3G_PS_ROAM, NW_TYPE_3G_PS_ROAM),
+)
 
 
 class _UARTSerialAdapter:
@@ -151,15 +95,12 @@ class _UARTSerialAdapter:
     def write(self, data):
         return self._uart.write(data)
 
-    def flush(self):
-        while self._uart.any():
-            self._uart.read(self._uart.any())
 
-
-class InternetDriver(InternetUtils):
+class InternetDriver:
     def __init__(
         self,
         uart=None,
+        context_id=1,
         uart_id=1,
         baudrate=BAUDRATE,
         configure_sensor=False,
@@ -171,6 +112,7 @@ class InternetDriver(InternetUtils):
         Args:
             uart: Serial-like object or MicroPython UART. If None, a UART
                          will be created on MicroPython using uart_id/baudrate.
+            context_id: PDP context ID (default: 1)
             timeout: Default timeout for commands in seconds
             uart_id: UART ID to use when creating a MicroPython UART (default: 1)
             baudrate: Baudrate when creating a MicroPython UART (default: 115200)
@@ -183,7 +125,6 @@ class InternetDriver(InternetUtils):
         """
         try:
             self.machine_id = get_my_addr()
-            print(f"MY_ADDR: {self.machine_id}")
             self.configure_sensor = configure_sensor
             self.process_id = process_id
             if self.configure_sensor:
@@ -192,6 +133,7 @@ class InternetDriver(InternetUtils):
                 sensor.set_framesize(sensor.SVGA)
                 sensor.skip_frames(time=2000)
             # If caller passed a MicroPython UART (like main.py does), adapt it.
+            self.initialized = False
             if uart is not None:
                 if hasattr(uart, "any") and not hasattr(uart, "in_waiting"):
                     # Looks like a raw MicroPython UART instance
@@ -215,7 +157,7 @@ class InternetDriver(InternetUtils):
                     print("ERROR - UART not available and no uart provided")
                     raise Exception("ERROR - UART not available and no uart provided")
 
-            self.context_id = 1 # PDP context id is a numbered slot where packet data is defined/activated, typically 1–16 on EC200, i.e: AT+QIDEACT=1, AT+QIACT=1, AT+QIACT?,AT+QHTTPCFG="contextid",1 
+            self.context_id = context_id
             self.default_timeout = 10  # 10 seconds
             self._last_recovery_fail_ticks = 0  # time.ticks_ms() when recovery last failed
             self._uploads_since_health_check = 10  # trigger health+CSQ on first upload
@@ -225,19 +167,12 @@ class InternetDriver(InternetUtils):
             self._last_fail_count = 0
             self.is_busy = False
 
-            self.module_ready = False  # module is ready for use or not
-            self.has_sim = False  # is sim present and ready for use
-            self.initialized = False  # module heath is not good, internet might be issue
-            self.has_internet = False  # is internet connection established
+            self.has_internet = False
             self.signal_strength = 0
             self.network_type = NW_TYPE_UNKNOWN
-            self.network_status = NW_STATUS_UNKNOWN
-
-            logger.info("InternetDriver initializing...")
+            logger.info("InternetDriver init finished")
         except Exception as e:
             print(f"Error in InternetDriver init: {e}")
-            self.module_ready = False
-            self.has_sim = False
             self.has_internet = False
 
     # ------------------------------------------------------------------
@@ -249,7 +184,6 @@ class InternetDriver(InternetUtils):
         Send AT command and wait for response.
         Drain stale bytes with a single fast pass, and send AT command
         """
-        # print(f"====== COMMAND: {command}")
         if timeout is None:
             timeout = self.default_timeout
 
@@ -316,193 +250,65 @@ class InternetDriver(InternetUtils):
     # ------------------------------------------------------------------
     # Initialization & configuration
     # ------------------------------------------------------------------
-    async def _drain_past_uart_input(self, drain_sleep=0.15):
-        """
-        Flush UART input buffer to clear any stale/partial data.
-        """
-        if hasattr(self.uart, "flush"):
-            try:
-                self.uart.flush()
-                print("[CELL] ✔✔✔ UART flushed")
-                await asyncio.sleep(drain_sleep)
-                return True
-            except Exception as e:
-                print("[CELL] ✘✘✘ Failed to flush UART, error: {e}")
-                await asyncio.sleep(drain_sleep)
-                return False
-        print("[CELL] ✘✘✘ UART does not have flush method ☠︎☠︎☠︎")
-        return False
-    
-    async def _check_at_command_response(self, retries=5, timeout=5, delay_sec=2):
-        """
-        Give module multiple chances to respond to basic AT
-        (EC200 can be slow after heavy use).
-        """
-        for attempt in range(retries):
-            success, _ = await self._send_command("AT", timeout=timeout)
-            if success:
-                self.module_ready = True
-                print("[CELL] ✔✔✔ AT command response received")
-                return True
-            await asyncio.sleep(delay_sec)
-        print("[CELL] ✘✘✘ Failed to send AT command!")
-        self.module_ready = False
-        return False
 
-    async def _check_sim(self):
-        """Return True if the SIM is present and ready for use.
-
-        Queries AT+CPIN? and expects '+CPIN: READY'. Returns False if
-        the command fails or the SIM requires a PIN/PUK or is otherwise
-        not ready.
-        """
-        success, resp = await self._send_command("AT+CPIN?", timeout=5)
-
-        if not success:
-            print(f"[CELL] ✘✘✘ CPIN command failed: {resp}")
-            self.has_sim = False
-            return False
-
-        if "+CPIN: READY" not in resp.upper():
-            print(f"[CELL] ✘✘✘ SIM not ready: {resp}")
-            self.has_sim = False
-            return False
-
-        self.has_sim = True
-        print("[CELL] ✔✔✔ SIM is ready")
-        return True
-    
-    async def _activate_pdp_data_context(self, context_id=1):
-        """
-        Ensure PDP context is active. Deactivate first to clear any stale/partial
-        state, then re-activate cleanly. Deactivation errors are ignored - the
-        context may already be inactive.
-        """
-        # Give the module time to fully reset or QIACT may appear OK but drop
-        # immediately and cause AT+QHTTPURL 711 errors.
-        await asyncio.sleep(3)
-        success, resp = await self._send_command(f"AT+QIDEACT={context_id}", timeout=10)
-        if not success:
-            print(f"[CELL] QIDEACT ignored: {resp}")
-        await asyncio.sleep(1)
-
-        success, resp = await self._send_command(f"AT+QIACT={context_id}", timeout=30)
-        if not success:
-            print(f"[CELL] ✘✘✘ Failed to activate PDP context: {resp}")
-            _, err_resp = await self._send_command("AT+QIGETERROR", timeout=5)
-            print(f"[CELL] ✘✘✘ QIGETERROR error: {err_resp}")
-            return False
-
-        # PDP context check: 1 => activated data path (has an IP)
-        success, resp = await self._send_command("AT+QIACT?", timeout=5)
-        if not success or f"+QIACT: {context_id},1" not in resp:
-            print(f"[CELL] ✘✘✘ PDP context did not come up cleanly: {resp}")
-            return False
-
-        print("[CELL] ✔✔✔ PDP context activated")
-        return True
-
-    async def _configure_http_context(self, context_id=1):
-        """
-        Configure HTTP context settings.
-        upload_data() calls can skip redundant reconfiguration.
-        """
-        # Configure HTTP context (bind to PDP context)
-        success, resp = await self._send_command(f'AT+QHTTPCFG="contextid",{context_id}')
-        if not success:
-            print(f"[CELL] ✘✘✘ Failed to set context ID: {resp}")
-            return False
-
-        # Configure simple JSON header behavior
-        # Disable per-request header mode and set a fixed Content-Type header.
-        success, resp = await self._send_command('AT+QHTTPCFG="requestheader",0')
-        if not success:
-            print(f"[CELL] ✘✘✘ Failed to configure requestheader: {resp}")
-            return False
-
-        success, resp = await self._send_command(
-            'AT+QHTTPCFG="header","Content-Type: application/json"'
-        )
-        if not success:
-            print(f"[CELL] ✘✘✘ Failed to set default header: {resp}")
-            return False
-
-        print("[CELL] ✔✔✔ HTTP context configured")
-        return True
-
-    async def _http_stop(self):
-        """Best-effort: clear stuck Quectel HTTP state before a new QHTTPURL/QHTTPPOST."""
-        try:
-            await self._send_command("AT+QHTTPSTOP", timeout=5)
-        except Exception:
-            pass
-        await asyncio.sleep(0.2)
-    
-
-    async def _initialize_module(self):
+    async def initialize_internet(self):
         """One-time initialization and configuration.
 
         Returns:
             bool: True on successful initialization, False on failure.
             error: Message or Error message in case of success and failure
         """
-        print("[CELL] Initializing EC200 module...")
+        print("[CELL] Initializing EC200 HTTP client...")
 
         # Let module settle (e.g. after GPS/cellular handover, pending output)
         await asyncio.sleep(0.5)
 
-        # Wake first — module may still be in QSCLK sleep from a prior failed init
-        await self._send_command("AT+QSCLK=0", timeout=2)
-        
-        print("[CELL] Draining past UART input...")
-        if not await self._drain_past_uart_input():
-            print("[CELL] ✘✘✘ Failed to drain past UART input")
-            return False, "Module initialization error: Failed to drain past UART input"
-        print("[CELL] [Step 0/4] ✔✔✔ UART input drained")
-
-        print("[CELL] Checking AT command response...")
-        if not await self._check_at_command_response():
-            self.module_ready = False  # module is ready for use or not
-            self.has_sim = False
+        # Give module multiple chances to respond to basic AT (EC200 can be slow after heavy use)
+        for attempt in range(5):
+            success, _ = await self._send_command("AT", timeout=5)
+            if success:
+                break
+            await asyncio.sleep(2)  # Longer delay between retries - module may need time
+        else:
             self.initialized = False
-            await self._enter_sleep()
-            return False, "Module initialization error: Failed to get AT response"
-        print("[CELL] [Step 1/4] ✔✔✔ AT command response received")
+            return False, "Failed to send AT command!"
 
-        print("[CELL] Checking SIM health...")
-        if not await self._check_sim():
-            self.has_sim = False
-            self.initialized = False
-            await self._enter_sleep()
-            return False, "Module initialization error: SIM not ready"
-        print("[CELL] [Step 2/4] ✔✔✔ SIM is ready")
+        # Ensure PDP context is active. Deactivate first to clear any stale/partial
+        # state, then re-activate cleanly. Deactivation errors are ignored - the
+        # context may already be inactive. This must live here (not only in
+        # is_healthy) so that all recovery paths are self-contained.
 
+        # Give the module time to fully reset or QIACT may appear OK but drop immediately and cause AT+QHTTPURL 711 errors.
         print("[CELL] Activating PDP context...")
-        if not await self._activate_pdp_data_context(1):
+        await asyncio.sleep(3)
+        await self._send_command(f"AT+QIDEACT={self.context_id}", timeout=10)
+        await asyncio.sleep(1)
+        success, resp = await self._send_command(f"AT+QIACT={self.context_id}", timeout=30)
+        if not success:
             self.initialized = False
-            return False, "Module initialization error: Failed to activate PDP context"
-        print("[CELL] [Step 3/4] ✔✔✔ PDP context activated")
+            return False, f"Failed to activate PDP context: {resp}"
 
-        print("[CELL] Configuring HTTP context...")
+        # Verify context is actually up before continuing
+        success, resp = await self._send_command("AT+QIACT?", timeout=5)
+        if not success or f"+QIACT: {self.context_id},1" not in resp:
+            self.initialized = False
+            return False, f"PDP context did not come up cleanly: {resp}"
+        print("[CELL] PDP context active")
+
+        # Reset HTTP context flag so it gets configured fresh after (re-)init
         if not await self._configure_http_context():
             self.initialized = False
-            return False, "Module initialization error: Failed to configure HTTP context"
-        print("[CELL] [Step 4/4] ✔✔✔ HTTP context configured")
+            return False, "Failed to configure HTTP context"
 
-        self.module_ready = True
-        self.has_sim = True
         self.initialized = True
-        print("✔✔✔ EC200 module initialized successfully")
+        print("EC200 HTTP client initialized successfully")
         return True, None
 
     async def establish_internet(self, retry_count=3):
-        print("[CELL] Establishing internet connection... with sleep for 15 seconds")
-        await asyncio.sleep(15) # sleep for 10 seconds to let module settle
-        
         init_ok = False
         init_error = None
         for attempt in range(1, retry_count+1):
-            init_success, init_error = await self._initialize_module()
+            init_success, init_error = await self.initialize_internet()
             if init_success:
                 init_ok = True
                 break
@@ -518,19 +324,55 @@ class InternetDriver(InternetUtils):
             if not upload_ok:
                 print("[CELL] has_internet=False: upload validation failed (<2/3 OK)")
 
+    async def _configure_http_context(self):
+        """
+        Configure HTTP context settings.
+        upload_data() calls can skip redundant reconfiguration.
+        """
+        # Configure HTTP context (bind to PDP context)
+        success, resp = await self._send_command(f'AT+QHTTPCFG="contextid",{self.context_id}')
+        if not success:
+            print(f"Failed to set context ID: {resp}")
+            return False
+
+        # Configure simple JSON header behavior
+        # Disable per-request header mode and set a fixed Content-Type header.
+        success, resp = await self._send_command('AT+QHTTPCFG="requestheader",0')
+        if not success:
+            print(f"Failed to configure requestheader: {resp}")
+            return False
+
+        success, resp = await self._send_command(
+            'AT+QHTTPCFG="header","Content-Type: application/json"'
+        )
+        if not success:
+            print(f"Failed to set default header: {resp}")
+            return False
+
+        return True
+
+    async def _http_stop(self):
+        """Best-effort: clear stuck Quectel HTTP state before a new QHTTPURL/QHTTPPOST."""
+        try:
+            await self._send_command("AT+QHTTPSTOP", timeout=5)
+        except Exception:
+            pass
+        await asyncio.sleep(0.2)
+    
     # ------------------------------------------------------------------
     # Health & diagnostics
     # ------------------------------------------------------------------
 
-    async def _enter_sleep(self):
-        """Enable EC200 sleep (AT+QSCLK=1) to conserve power when unused."""
-        try:
-            await self._send_command("AT+QSCLK=1", timeout=2)
-            print("[CELL] EC200 sleep enabled")
-        except Exception:
-            pass
-        
-    async def _check_network_healthy(self):
+    def _network_type_from_responses(self, resp):
+        """Map a single CEREG/CGREG UART response text to NW_TYPE_*."""
+        if not resp:
+            return NW_TYPE_UNKNOWN
+        for label, nw_type in _NW_LABEL_TO_TYPE:
+            if label in resp:
+                return nw_type
+        return NW_TYPE_UNKNOWN
+
+    async def is_healthy(self):
         """
         Lightweight health check.
         Combines CEREG(LTE) or CGREG(3G/2G PS) + QIACT into a single pass; skips the bare AT ping
@@ -539,124 +381,52 @@ class InternetDriver(InternetUtils):
         # AT+CEREG proves the module is alive AND confirms LTE data registration
         success, resp = await self._send_command("AT+CEREG?", timeout=4)
         if not success:
-            print("Connection not healthy: Failed to send AT+CEREG?")
             return False
 
-        nw_type, nw_status = self._parse_network_from_response(resp)
+        nw_type = self._network_type_from_responses(resp)
         if nw_type == NW_TYPE_UNKNOWN:
             success2, resp2 = await self._send_command("AT+CGREG?", timeout=4)
             if not success2:
-                print("Connection not healthy: Failed to send AT+CGREG?")
                 self.save_network_type(NW_TYPE_UNKNOWN)
-                self.save_network_status(NW_STATUS_UNKNOWN)
                 return False
-            nw_type, nw_status = self._parse_network_from_response(resp2)
+            nw_type = self._network_type_from_responses(resp2)
             if nw_type == NW_TYPE_UNKNOWN:
-                print("Connection not healthy: Not registered on LTE or GPRS (3G/2G PS)")
+                print("Not registered on LTE or GPRS (3G/2G PS)")
                 self.save_network_type(NW_TYPE_UNKNOWN)
-                self.save_network_status(NW_STATUS_UNKNOWN)
                 return False
         self.save_network_type(nw_type)
-        self.save_network_status(nw_status)
 
-        # PDP context check, if packet data session is active, 1 => activated data path (has an IP)
+        # PDP context check
         success, resp = await self._send_command("AT+QIACT?", timeout=4)
-        if not success or f"+QIACT: 1,1" not in resp: # f"+QIACT: 1,0"
-            print("Connection not healthy: PDP context not active, triggering full recovery...")
+        if not success or f"+QIACT: {self.context_id},1" not in resp:
+            print("PDP context not active, triggering full recovery...")
             return False
 
         print("Connection is healthy")
         return True
 
-    async def _ensure_network_healthy(self):
-        """Quick retry, then full recovery. Returns (ok, error_msg)."""
-        if await self._check_network_healthy():
-            return True, None
-        await asyncio.sleep(1)
-        if await self._check_network_healthy():
-            return True, None
-
-        recovery_cooldown_sec = 20
-        now_ms = time.ticks_ms()
-        if self._last_recovery_fail_ticks:
-            elapsed_ms = time.ticks_diff(now_ms, self._last_recovery_fail_ticks)
-            if elapsed_ms < recovery_cooldown_sec * 1000:
-                return False, "Connection failed (recovery cooldown)"
-        print("[CELL] Connection not healthy, attempting to recover...")
-        await asyncio.sleep(2)
-        init_success, init_error = await self._initialize_module()
-        if not init_success:
-            self._last_recovery_fail_ticks = now_ms
-            return False, f"Initialization failed: {init_error}"
-        if not await self._check_network_healthy():
-            self._last_recovery_fail_ticks = now_ms
-            return False, "Connection failed"
-        return True, None
-                
-    async def get_signal_strength(self, nw_type=None):
+    async def get_signal_strength(self):
         """
-        Return signal strength 0-100 for LTE (RSRP) or 3G (CSQ).
-        nw_type: NW_TYPE_LTE, NW_TYPE_3G, or None (uses self.network_type).
+        Get cellular signal strength (0-100 %) via AT+CSQ.
+        Called only periodically now — not before every upload.
         """
-        if nw_type is None and self.network_type is not None:
-            nw_type = self.network_type
-        
-        if nw_type not in [NW_TYPE_LTE, NW_TYPE_3G, NW_TYPE_UNKNOWN]:
-            logger.error(f"[CELL] Invalid network type: {nw_type}")
+        success, resp = await self._send_command("AT+CSQ", timeout=3)
+        if not success or "+CSQ:" not in resp:
             return None
-
-        if nw_type == NW_TYPE_UNKNOWN:
-            pct = await self.get_signal_strength(NW_TYPE_LTE)
-            if pct is not None:
-                return pct
-            return await self.get_signal_strength(NW_TYPE_3G)
-
-        if nw_type == NW_TYPE_LTE:
-            ok, resp = await self._send_command("AT+QCSQ", timeout=4)
-            if not ok:
-                return None
+        try:
             for line in resp.split("\n"):
                 line = line.strip()
-                if not line.startswith("+QCSQ:"):
-                    continue
-                fields = [
-                    f.strip().strip('"')
-                    for f in line.split(":", 1)[1].strip().split(",")
-                ]
-                if len(fields) >= 3 and fields[0].upper() == "LTE":
-                    try:
-                        return self._rsrp_to_pct(int(fields[2]))
-                    except (ValueError, TypeError):
+                if line.startswith("+CSQ:"):
+                    parts = line.split(":")[1].strip().split(",")
+                    rssi = int(parts[0].strip())
+                    if rssi == 99:
                         return None
-            return None
-
-        if nw_type == NW_TYPE_3G:
-            ok, resp = await self._send_command("AT+CSQ", timeout=3)
-            if not ok or "+CSQ:" not in resp:
-                return None
-            for line in resp.split("\n"):
-                line = line.strip()
-                if not line.startswith("+CSQ:"):
-                    continue
-                try:
-                    csq = int(line.split(":")[1].strip().split(",")[0])
-                    return self._csq_to_pct(csq)
-                except (ValueError, IndexError, TypeError):
-                    return None
-            return None
-
+                    if 0 <= rssi <= 31:
+                        return min(100, int(round((rssi / 31) * 100)))
+        except (ValueError, IndexError):
+            pass
         return None
-
-    # ============================================================
-    # STATE FUNCTIONS (CC/unit role, signal, network status)
-    # ============================================================
-
-    def running_as_cc(self):
-        return bool(self.has_internet)
-
-    def running_as_unit(self):
-        return not self.running_as_cc()
-
+    
     def save_signal_strength(self, signal_strength):
         try:
             if signal_strength is None:
@@ -671,40 +441,16 @@ class InternetDriver(InternetUtils):
         return self.signal_strength
 
     def save_network_type(self, network_type):
+        if network_type not in NW_TYPE_NAMES:
+            network_type = NW_TYPE_UNKNOWN
         self.network_type = network_type
         logger.info(
-            "[CELL] Network type: %s (%s)"
-            % (network_type, NW_TYPE_NAMES.get(network_type, "UNKNOWN"))
+            f"[CELL] Found network type: {network_type} ({NW_TYPE_NAMES.get(network_type, 'UNKNOWN')})"
         )
 
     def get_last_network_type(self):
         return self.network_type
 
-    def save_network_status(self, network_status):
-        self.network_status = network_status
-        logger.info(
-            "[CELL] Network status: %s (%s)"
-            % (network_status, NW_STATUS_NAMES.get(network_status, "UNKNOWN"))
-        )
-
-    def get_last_network_status(self):
-        return self.network_status
-
-    def get_heartbeat_network_type(self):
-        """
-        Legacy 1-byte heartbeat encoding (type + status combined):
-          0=unknown, 1=LTE_HOME, 2=LTE_ROAM, 3=3G_HOME, 4=3G_ROAM
-        """
-        if self.network_type == NW_TYPE_LTE and self.network_status == NW_STATUS_HOME:
-            return 1
-        if self.network_type == NW_TYPE_LTE and self.network_status == NW_STATUS_ROAM:
-            return 2
-        if self.network_type == NW_TYPE_3G and self.network_status == NW_STATUS_HOME:
-            return 3
-        if self.network_type == NW_TYPE_3G and self.network_status == NW_STATUS_ROAM:
-            return 4
-        return 0
-    
     # ------------------------------------------------------------------
     # Upload
     # ------------------------------------------------------------------
@@ -732,26 +478,48 @@ class InternetDriver(InternetUtils):
         )
         if do_health_check:
             self._uploads_since_health_check = 0
-            ok, err = await self._ensure_network_healthy()
-            if not ok:
-                self.on_upload_fail()
-                self.is_busy = False
-                return False, 0, err
 
-            # --- Periodic signal strength update and log ---
+        if do_health_check:
+            for health_attempt in range(2):
+                if await self.is_healthy():
+                    break
+                if health_attempt == 0:
+                    await asyncio.sleep(1)
+            else:
+                recovery_cooldown_sec = 20
+                now_ms = time.ticks_ms()
+                if self._last_recovery_fail_ticks:
+                    elapsed_ms = time.ticks_diff(now_ms, self._last_recovery_fail_ticks)
+                    if elapsed_ms < recovery_cooldown_sec * 1000:
+                        self.on_upload_fail()
+                        self.is_busy = False
+                        return False, 0, "Connection failed (recovery cooldown)"
+                print("[CELL] Connection not healthy, attempting to recover...")
+                await asyncio.sleep(2)
+                init_success, init_error = await self.initialize_internet()
+                if not init_success:
+                    self._last_recovery_fail_ticks = now_ms
+                    self.on_upload_fail()
+                    self.is_busy = False
+                    return False, 0, f"Initialization failed: {init_error}"
+                if not await self.is_healthy():
+                    self._last_recovery_fail_ticks = now_ms
+                    self.on_upload_fail()
+                    self.is_busy = False
+                    return False, 0, "Connection failed"
+
+        # --- Periodic signal strength log ---
+        if do_health_check:
             signal_pct = await self.get_signal_strength()
             self.save_signal_strength(signal_pct)
-            nw_type = self.get_last_network_type()
-            nw_status = self.get_last_network_status()
+            nw = self.get_last_network_type()
             if signal_pct is not None:
                 logger.info(
-                    "[CELL] Uploading data, signal: %s%%, nw_type: %s, nw_status: %s"
-                    % (signal_pct, nw_type, nw_status)
+                    f"[CELL] Uploading data, signal: {signal_pct}%, nw_type: {nw}"
                 )
             else:
                 logger.warning(
-                    "[CELL] Uploading data, signal: unknown, nw_type: %s, nw_status: %s"
-                    % (nw_type, nw_status)
+                    f"[CELL] Uploading data, signal: unknown, nw_type: {nw}"
                 )
 
         # --- HTTP context: configure once, skip on subsequent calls ---
@@ -781,11 +549,15 @@ class InternetDriver(InternetUtils):
                 # PDP context was lost mid-flight - re-activate and retry once.
                 print("[CELL] CME ERROR 711: PDP context lost, attempting recovery...")
                 await asyncio.sleep(2)
-                init_success, init_error = await self._initialize_module()
+                init_success, init_error = await self.initialize_internet()
                 if not init_success:
                     self.on_upload_fail()
                     self.is_busy = False
                     return False, 0, f"CME ERROR 711: PDP recovery failed: {init_error}"
+                if not await self._configure_http_context():
+                    self.on_upload_fail()
+                    self.is_busy = False
+                    return False, 0, "CME ERROR 711: HTTP context reconfigure failed"
             else:
                 self.on_upload_fail()
                 self.is_busy = False
@@ -1002,7 +774,7 @@ class InternetDriver(InternetUtils):
                         f"[{i}/{test_count}] SUCCESS | HTTP: {http_code} | {duration_ms/1000:.4f} seconds"
                     )
                     if ok >= 2:
-                        print("[CELL] ✔✔✔ Upload test passed, returning True...")
+                        print("Upload test passed, returning True...")
                         return True
                 else:
                     err = str(response) if response else ""
@@ -1064,8 +836,8 @@ if __name__ == "__main__":
             machine.reset()
 
         if not internet_module.initialized:
-            print("Internet initialization failed! Rebooting...")
-            write_log("Internet initialization failed!, Rebooting...")
+            print("Internet Module initialization failed! Rebooting...")
+            write_log("Internet Module initialization failed!, Rebooting...")
             time.sleep(2)
             machine.reset()
 

@@ -10,7 +10,7 @@ ENCRYPTION_ENABLED = True
 
 # Map board UID (hex bytes) to node address.
 UID_TO_ADDR = {
-    b'e076465dd7090d1d': 216,
+    # b'e606fe64d709051c': 216,
     b'e076465dd7193d2a': 217,
     b"e076465dd709102e": 218,
     b"04bd545dd7593b40": 219, # 04bd545dd7593b40
@@ -48,7 +48,7 @@ UID_TO_ADDR = {
 # 02.00.4
 major = 2  # (0-63)
 minor = 0  # (0-99)
-patch = 7  # (0-9)
+patch = 4  # (0-9)
 # version as integer value, max_val = 64_999 < 65_535 (2 bytes)
 VERSION = major * 1_000 + minor * 10 + patch
 
@@ -104,8 +104,8 @@ async def led_restart_blinker():
         led.off()
         await asyncio.sleep(blink_duration)
 
-# state memory config store
-store = ConfigStore()
+# flash memory config store
+store = ConfigStore('/flash', 'nodestate')
 def get_key_value(key: str):
     saved_state = store.load()
     if saved_state:
@@ -125,9 +125,7 @@ def set_key_value(key: str, value: any):
         json_data = {key: value}
         store.save(json.dumps(json_data).encode())
 
-# ============================================================
-# MACHINE GLOBAL ROOT STORAGE (deployment_id, logs, GPS, etc.)
-# ============================================================
+# machines states cruds
 def get_deployment_id():
     return get_key_value('deployment_id')
 
@@ -146,27 +144,7 @@ def save_log_entry(log_entry: str):
 def get_log_entries():
     return get_key_value('log_entries')
 
-def set_gps_location(lat: float= None, lon: float = None, gps_time: int = 0):
-    try:
-        if lat and lon and gps_time: # only save if get value
-            set_key_value('gps_location', {'lat': lat, 'lon': lon, 'gps_time': gps_time})
-    except Exception as e:
-        print(f"Error in set_gps_location: {str(e)}")
-        set_key_value('gps_location', None)
-
-def get_gps_location():
-    gps_location =  get_key_value('gps_location')
-    if gps_location:
-        try:
-            return gps_location['lat'], gps_location['lon'], gps_location['gps_time']
-        except Exception as e:
-            print(f"Error in get_gps_location: {str(e)}")
-            set_key_value('gps_location', None)
-            return None, None, 0
-    return None, None, 0
-
-
-# Testing example
+    
 def main():
     print("\n======>  MACHINE CONFIGURATION <======")
     print("Version: ", get_version_str(VERSION))
@@ -177,8 +155,9 @@ def main():
     print("RSA encryption enabled: ", uses_rsa_encryption("*"))
     print("======================================\n\n")
     
+    
     from config_store import ConfigStore
-    store = ConfigStore()
+    store = ConfigStore('/flash', 'nodestate')
     d = store.load()
     print(json.loads(d) if d else 'no state yet')
     

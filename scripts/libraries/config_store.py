@@ -1,9 +1,7 @@
 import os, struct
-import vfs, mimxrt
 try:
     from binascii import crc32
 except ImportError:
-    print("Error: crc32 not found, using custom implementation")
     def crc32(data, crc=0):
         crc ^= 0xFFFFFFFF
         for b in data:
@@ -16,40 +14,22 @@ _MAGIC = b'ABST'
 _HDR = 16  # magic(4) + seq(4) + len(4) + crc(4)
 
 class ConfigStore:
-    def __init__(self, path='/flash', name='nodestate', max_bytes=100000): # 100KB
+    def __init__(self, path='/flash', name='state', max_bytes=100000): # 100KB
         self.slot = _HDR + max_bytes
         self.max_bytes = max_bytes
-        self.files = (f'{path}/{name}_a', f'{path}/{name}_b')
+        self.files = ('%s/%s_a' % (path, name), '%s/%s_b' % (path, name))
         self._ensure()
 
     def _ensure(self):
-        try:
-            os.chdir("/flash")
-            print("/flash accessible !!")
-        except OSError:  
-            # /flash not mounted — mount it manually
-            print("Error: /flash not mounted — mounting it manually")          
-            try:
-                vfs.mount(vfs.VfsFat(mimxrt.Flash()), "/flash")
-                print("/flash mounted successfully")
-            except OSError as e:
-                print(f"OSError: in mounting /flash manually, {str(e)}")
-
-            os.chdir("/flash")
-        
         # The ONLY place files are created/sized. After this, in-place writes only.
-        try:
-            for f in self.files:
-                try:
-                    if os.stat(f)[6] == self.slot:
-                        continue
-                except OSError:
-                    
-                    pass
-                with open(f, 'wb') as fh:
-                    fh.write(b'\x00' * self.slot); fh.flush()
-        except Exception as e:
-            print(f"Exception: in ensuring files, {str(e)}")
+        for f in self.files:
+            try:
+                if os.stat(f)[6] == self.slot:
+                    continue
+            except OSError:
+                pass
+            with open(f, 'wb') as fh:
+                fh.write(b'\x00' * self.slot); fh.flush()
 
     def _read(self, f):
         try:

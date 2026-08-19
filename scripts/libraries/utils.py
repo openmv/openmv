@@ -109,13 +109,3 @@ def get_uptime_minutes():
         return utime.ticks_ms() // 60000
     except Exception:
         return 0
-
-def get_uptime_seconds():
-    """
-        Return integer seconds elapsed since device boot.
-        For 30 days = 43200 < 65535 (2 bytes)
-    """
-    try:
-        return utime.ticks_ms() // 1000
-    except Exception:
-        return 0

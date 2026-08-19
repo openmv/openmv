@@ -6,9 +6,8 @@ Based on EC200U AT commands
 
 import time
 from machine import UART
-import config
+
 import logger
-from clock_utils import get_epoch_ms
 
 # Configuration
 UART_ID = 1
@@ -30,17 +29,8 @@ class GPSDriver:
         self.uart_id = uart_id
         self.baudrate = baudrate
         self.gps_initialized = False
-        saved_lat, saved_lon, saved_gps_time = config.get_gps_location()
-        if saved_lat and saved_lon:
-            self.lat = saved_lat
-            self.lon = saved_lon
-            self.gps_time = saved_gps_time
-            logger.info(f"[GPS] ✔✔✔ GPS location loaded from store: {self.lat}, {self.lon}, {self.gps_time}")
-        else:
-            self.lat = 0
-            self.lon = 0
-            self.gps_time = 0
-            logger.info(f"[GPS] ✘✘✘ GPS location not found in store")
+        self.lat = 0
+        self.lon = 0
     
     def _send_at(self, cmd, wait_ms=1000, retry=3):
         """Send AT command and return response"""
@@ -108,9 +98,6 @@ class GPSDriver:
         # Disable echo
         self._send_at("ATE0", 500)
 
-        # Exit module sleep before enabling GNSS (paired with enter_gps_sleep)
-        self._send_at("AT+QSCLK=0", 2000)
-
         # Disable GPS first (clean state for script rerun without replug)
         self._send_at("AT+QGPS=0", 2000)
         time.sleep_ms(500)
@@ -124,15 +111,6 @@ class GPSDriver:
         
         logger.error("[GPS] GPS initialization failed")
         return False
-
-    def enter_gps_sleep(self, sleep_module=True):
-        """Turn off GNSS; optionally enable module sleep (QSCLK). Skip QSCLK when cellular CC needs the modem awake."""
-        logger.info("[GPS] Entering GNSS sleep...")
-        self._send_at("AT+QGPSEND", 5000)
-        if sleep_module:
-            self._send_at("AT+QSCLK=1", 2000)
-        self.gps_initialized = False
-        logger.info("[GPS] GNSS sleep enabled")
     
     def get_gps_location(self):
         """
@@ -148,9 +126,6 @@ class GPSDriver:
         if lat is not None and lon is not None:
             self.lat = lat
             self.lon = lon
-            self.gps_time = get_epoch_ms()
-            config.set_gps_location(lat, lon, self.gps_time)
-            logger.info(f"[GPS] ✔✔✔ GPS location saved to store: {lat}, {lon}, {self.gps_time}")
         return lat, lon, time_str
 
     def get_saved_gps_location(self):
