@@ -582,44 +582,51 @@ static const uint16_t UVAC_HT[256][2] = {
     {0x0000, 0x0000}, {0x0000, 0x0000}, {0x0000, 0x0000}, {0x0000, 0x0000},
 };
 
-// Check if the output buffer is nearly full and allocate more space
-// if needed. If realloc is disabled, return true to halt the encoding.
+// Grow the output buffer, flagging an overflow and returning false if it
+// can't grow. The 1KB minimum covers the largest write the callers make.
+static bool jpeg_buf_realloc(jpeg_buf_t *jpeg_buf) {
+    if (jpeg_buf->realloc == false) {
+        // Can't realloc buffer
+        jpeg_buf->overflow = true;
+        return false;
+    }
+
+    // Grow by half the buffer's size to avoid one realloc, and one buffer
+    // copy, per fixed number of bytes encoded.
+    int length = jpeg_buf->length + IM_MAX(jpeg_buf->length / 2, 1024);
+
+    // UMA_MAYBE to fall back to the overflow path instead of raising.
+    uint8_t *buf = uma_realloc(jpeg_buf->buf, length, UMA_CACHE | UMA_MAYBE);
+    if (buf == NULL) {
+        jpeg_buf->overflow = true;
+        return false;
+    }
+
+    jpeg_buf->buf = buf;
+    jpeg_buf->length = length;
+    return true;
+}
+
+// Check if the output buffer is nearly full and allocate more space if needed,
+// so that encoding stops on a block boundary. Returns true to halt encoding.
 static int jpeg_check_highwater(jpeg_buf_t *jpeg_buf) {
     if ((jpeg_buf->idx + 1) >= jpeg_buf->length - 256) {
-        if (jpeg_buf->realloc == false) {
-            // Can't realloc buffer
-            jpeg_buf->overflow = true;
-            return 1;
-        }
-        jpeg_buf->length += 1024;
-        jpeg_buf->buf = uma_realloc(jpeg_buf->buf, jpeg_buf->length, 0);
+        return jpeg_buf_realloc(jpeg_buf) ? 0 : 1;
     }
     return 0;
 }
 
 static void jpeg_put_char(jpeg_buf_t *jpeg_buf, char c) {
-    if ((jpeg_buf->idx + 1) >= jpeg_buf->length) {
-        if (jpeg_buf->realloc == false) {
-            // Can't realloc buffer
-            jpeg_buf->overflow = true;
-            return;
-        }
-        jpeg_buf->length += 1024;
-        jpeg_buf->buf = uma_realloc(jpeg_buf->buf, jpeg_buf->length, 0);
+    if (((jpeg_buf->idx + 1) >= jpeg_buf->length) && !jpeg_buf_realloc(jpeg_buf)) {
+        return;
     }
 
     jpeg_buf->buf[jpeg_buf->idx++] = c;
 }
 
 static void jpeg_put_bytes(jpeg_buf_t *jpeg_buf, const void *data, int size) {
-    if ((jpeg_buf->idx + size) >= jpeg_buf->length) {
-        if (jpeg_buf->realloc == false) {
-            // Can't realloc buffer
-            jpeg_buf->overflow = true;
-            return;
-        }
-        jpeg_buf->length += 1024;
-        jpeg_buf->buf = uma_realloc(jpeg_buf->buf, jpeg_buf->length, 0);
+    if (((jpeg_buf->idx + size) >= jpeg_buf->length) && !jpeg_buf_realloc(jpeg_buf)) {
+        return;
     }
 
     memcpy(jpeg_buf->buf + jpeg_buf->idx, data, size);
@@ -931,14 +938,18 @@ static void jpeg_write_headers(jpeg_buf_t *jpeg_buf, int w, int h, int bpp, jpeg
 }
 
 bool jpeg_compress(image_t *src, image_t *dst, int quality, bool realloc, jpeg_subsampling_t subsampling) {
+    bool owned = false;
+
+    if (src->is_compressed) {
+        return true;
+    }
+
     if (!dst->data) {
         uint32_t size = IM_MIN(uma_avail(0), JPEG_MAX_ALLOC_SIZE);
         dst->data = uma_malloc(size, UMA_CACHE);
         dst->size = IMLIB_IMAGE_MAX_SIZE(size);
-    }
-
-    if (src->is_compressed) {
-        return true;
+        owned = true;
+        realloc = true;
     }
 
     // JPEG buffer
@@ -999,7 +1010,7 @@ bool jpeg_compress(image_t *src, image_t *dst, int quality, bool realloc, jpeg_s
                 }
 
                 if (jpeg_buf.overflow) {
-                    return true;
+                    goto overflow;
                 }
             }
             break;
@@ -1103,7 +1114,7 @@ bool jpeg_compress(image_t *src, image_t *dst, int quality, bool realloc, jpeg_s
                 }
 
                 if (jpeg_buf.overflow) {
-                    return true;
+                    goto overflow;
                 }
             }
             break;
@@ -1240,7 +1251,7 @@ bool jpeg_compress(image_t *src, image_t *dst, int quality, bool realloc, jpeg_s
                 }
 
                 if (jpeg_buf.overflow) {
-                    return true;
+                    goto overflow;
                 }
 
                 // Advance to the next rows.
@@ -1259,7 +1270,24 @@ bool jpeg_compress(image_t *src, image_t *dst, int quality, bool realloc, jpeg_s
 
     dst->size = jpeg_buf.idx;
     dst->data = jpeg_buf.buf;
+
+    // Trim the unused tail of the buffer.
+    if (realloc && ((jpeg_buf.length - jpeg_buf.idx) >= 1024)) {
+        // Shrinking a block resizes it in place, so this can't fail.
+        dst->data = uma_realloc(dst->data, dst->size, UMA_CACHE);
+    }
     return false;
+
+overflow:
+    if (owned) {
+        dst->size = 0;
+        dst->data = NULL;
+        uma_free(jpeg_buf.buf);
+    } else {
+        dst->size = jpeg_buf.idx;
+        dst->data = jpeg_buf.buf;
+    }
+    return true;
 }
 
 #endif // (OMV_JPEG_CODEC_ENABLE == 0)
@@ -1375,19 +1403,25 @@ void jpeg_read(image_t *img, const char *path) {
 
 void jpeg_write(image_t *img, const char *path, int quality) {
     file_t fp;
-    file_open(&fp, path, FA_WRITE | FA_CREATE_ALWAYS);
+
     if (IM_IS_JPEG(img)) {
+        file_open(&fp, path, FA_WRITE | FA_CREATE_ALWAYS);
         file_write(&fp, img->data, img->size);
+        file_close(&fp);
     } else {
         // alloc in jpeg compress
         image_t out = { .w = img->w, .h = img->h, .pixfmt = PIXFORMAT_JPEG, .size = 0, .data = NULL };
-        // When jpeg_compress needs more memory than in currently allocated it
-        // will try to realloc. MP will detect that the pointer is outside of
-        // the heap and return NULL which will cause an out of memory error.
-        jpeg_compress(img, &out, quality, false, JPEG_SUBSAMPLING_AUTO);
+
+        // Compress before creating the file, so that a failure doesn't leave
+        // an empty one behind.
+        if (jpeg_compress(img, &out, quality, false, JPEG_SUBSAMPLING_AUTO)) {
+            mp_raise_msg(&mp_type_OSError, MP_ERROR_TEXT("Compression Failed!"));
+        }
+
+        file_open(&fp, path, FA_WRITE | FA_CREATE_ALWAYS);
         file_write(&fp, out.data, out.size);
+        file_close(&fp);
         uma_free(out.data);
     }
-    file_close(&fp);
 }
 #endif //IMLIB_ENABLE_IMAGE_FILE_IO)
