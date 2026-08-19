@@ -1,11 +1,12 @@
 name: '🔥 Firmware Build'
 
 on:
+  workflow_dispatch:
   push:
     tags:
       - 'v*.*.*'
-    branches:    
-      - 'master'
+    branches:
+      - '**'
     paths:
       - '**'
       - '.github/workflows/*.yml'
