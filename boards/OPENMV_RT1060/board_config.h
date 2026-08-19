@@ -31,18 +31,18 @@
 #define OMV_OV5640_PLL_CTRL3            (0x13)
 #define OMV_OV5640_RESET_DELAY_MS       (50)
 
-#define OMV_OV7725_ENABLE               (1)
+#define OMV_OV7725_ENABLE               (0)
 #define OMV_OV7725_PLL_CONFIG           (0x41)   // x4
 #define OMV_OV7725_BANDING              (0x7F)
 
-#define OMV_MT9V0XX_ENABLE              (1)
+#define OMV_MT9V0XX_ENABLE              (0)
 #define OMV_MT9V0XX_FSYNC_PIN           (&omv_pin_DCMI_FSYNC)
 
-#define OMV_MT9M114_ENABLE              (1)
-#define OMV_LEPTON_ENABLE               (1)
+#define OMV_MT9M114_ENABLE              (0)
+#define OMV_LEPTON_ENABLE               (0)
 #define OMV_PAG7920_ENABLE              (1)
-#define OMV_PAJ6100_ENABLE              (1)
-#define OMV_FROGEYE2020_ENABLE          (1)
+#define OMV_PAJ6100_ENABLE              (0)
+#define OMV_FROGEYE2020_ENABLE          (0)
 
 // FIR drivers configuration.
 #define OMV_FIR_MLX90621_ENABLE         (1)
