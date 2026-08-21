@@ -170,6 +170,12 @@ trans_chunk_md5 = None
 trans_prev_data_id = None
 trans_last_actvity_time = None
 
+# Rest mode variables
+restmode_in_progress = False
+restmode_last_actvity_time = None
+RESTMODE_LOCK_TIMEOUT = 360  # 6 min
+RESTMODE_INACTIVITY_LIMIT = 180  # 3 min
+
 # Global pre-allocated buffer for image recompilation (120KB)
 IMAGE_RECOMPILE_BUFFER = None  # Will be initialized at startup
 DATA_BUFFER_SIZE = 120 * 1024 # 120KB
@@ -529,6 +535,9 @@ def get_transmode_lock(device_id, filedata_id, msg_typ, chunk_count, md5): # che
     if is_install_mode: # safty return
         logger.error(f"[IMG] TRANS MODE not allowed in install mode")
         return False
+    if is_restmode_inprogress():
+        logger.error(f"[IMG] TRANS MODE not allowed in rest mode")
+        return False
     if trans_in_progress == True: # TRANS MODE already in use
         return False
     if chunk_count > MAX_CHUNK_COUNT:
@@ -644,6 +653,81 @@ def delete_transmode_lock(device_id, filedata_id, trans_success=False): # called
         logger.debug(f"[IMG] ○○○○○○○○○○❯❯ TRANS MODE already ended, for device {device_id} and filedata_id {filedata_id} ❮❮○○○○○○○○○○") # will move it to debug later
 # -----------------------------------▲▲▲▲▲-----------------------------------
 
+
+# -----------------------------------▼▼▼▼▼-----------------------------------
+# REST MODE Lock
+def get_restmode_lock(): # check and just lock for image
+    global restmode_in_progress, restmode_last_actvity_time
+    global is_install_mode
+    global trans_in_progress, trans_paired_device, trans_data_id
+    
+    if is_install_mode: # safty return
+        logger.warning(f"✘✘✘ Install mode is active, can't go to restmode.")
+        return False
+    
+    # stopping any ongoing transmode
+    if trans_in_progress:
+        logger.warning(f"Trans mode in progress, stopping it...")
+        delete_transmode_lock(trans_paired_device, trans_data_id)
+        
+    if restmode_in_progress:
+        logger.debug(f"Rest mode already in progress!")
+    else:
+        logger.info(f"[IMG] ●●●●●●●●●●❯❯ REST MODE started ❮❮●●●●●●●●●●")
+        logger.info(f"Rest mode started!")
+        asyncio.create_task(keep_restmode_lock())
+    restmode_in_progress = True
+    restmode_last_actvity_time = get_epoch_ms()
+    return True
+
+def update_restmode_lock():
+    global restmode_in_progress, restmode_last_actvity_time
+    if restmode_in_progress:
+        restmode_last_actvity_time = get_epoch_ms()
+
+async def keep_restmode_lock():
+    # Input: None; Output: None (sets trans_in_progress flag with auto release after timeout / inactivity)
+    global restmode_in_progress
+    global restmode_last_actvity_time
+
+    # Track when this lock started
+    start_ms = get_epoch_ms()
+
+    # If we don't have any activity yet, treat "now" as the last activity
+    if restmode_last_actvity_time is None:
+        restmode_last_actvity_time = start_ms
+
+    while True:
+        await asyncio.sleep(5)
+        if not restmode_in_progress:
+            logger.debug(
+                f"[IMG] ○○○○○○○○○○❯❯ RESTMODE already ended ❮❮○○○○○○○○○○"
+            )
+            break
+
+        now_ms = get_epoch_ms()
+        timeout_expired = (now_ms - start_ms) >= RESTMODE_LOCK_TIMEOUT * 1000
+        inactivity_expired = (now_ms - restmode_last_actvity_time) >= RESTMODE_INACTIVITY_LIMIT * 1000
+        if timeout_expired or inactivity_expired:
+            reason = []
+            if timeout_expired:
+                reason.append("MAX_TIMEOUT")
+            if inactivity_expired:
+                reason.append("INACTIVITY_TIMEOUT")
+            reason_str = "&".join(reason)
+
+            logger.warning(
+                f"[IMG] ●●●●●●●●●●❯❯ RESTMODE ended, by {reason_str} ❮❮●●●●●●●●●●"
+            )
+
+            restmode_in_progress = False
+            restmode_last_actvity_time = None
+            break
+        
+def is_restmode_inprogress():
+    global restmode_in_progress
+    return restmode_in_progress
+# -----------------------------------▲▲▲▲▲-----------------------------------
 
 
 # -----------------------------------▼▼▼▼▼-----------------------------------
@@ -1286,6 +1370,8 @@ async def send_msg_big(msg_typ, creator, msgbytes, dest, epoch_ms, md5): # file 
             for chunk_id in range(len(chunks)):
                 if check_transmode_lock(dest, filedata_id): # check old logs is still in progress or not
                     if chunk_id % 10 == 0:
+                        if is_restmode_inprogress():
+                            return False, "REST MODE in progress, skipping chunk send"
                         logger.info(f"⋙ Sending chunks to {dest}, ({chunk_id}-{min(chunk_id+10, len(chunks))})/{len(chunks)}...")
                     await asyncio.sleep(CHUNK_SLEEP)
                     # Adding meta data to chunk bytes, 3 + 2 + 45 = 50 bytes max
@@ -1773,7 +1859,9 @@ async def send_file_main_or_enqueue(msg_typ, creator, enc_msgbytes, epoch_ms, md
     if not md5:
         md5 = ubinascii.hexlify(hashlib.md5(enc_msgbytes).digest()).decode()
     transmission_start = get_ms_diff()
-    sent = await send_file_main(msg_typ, creator, enc_msgbytes, epoch_ms, md5, encryption_enabled, next_dst)
+    sent = False
+    if not is_restmode_inprogress():
+        sent = await send_file_main(msg_typ, creator, enc_msgbytes, epoch_ms, md5, encryption_enabled, next_dst)
     if sent:
         transmission_end = get_ms_diff()
         transmission_time = transmission_end - transmission_start
@@ -1861,6 +1949,9 @@ def pir_interrupt_handler(pin):
     """IRQ handler for PIR sensor - triggers on RISING edge. Ignored while burst capture is in progress."""
     global pir_last_trigger_time, pir_trigger_event, pir_burst_in_progress
     if pir_burst_in_progress:
+        return
+    if is_restmode_inprogress():
+        logger.info(f"[PIR] Rest mode is active, ignoring PIR interrupt...")
         return
     current_time = utime.ticks_ms()
     # Debounce: ignore triggers within PIR_DEBOUNCE_MS of last trigger
@@ -2121,6 +2212,9 @@ async def image_sending_loop():
             continue
 
         while db_store.get_img_queued_count() > 0:
+            if is_restmode_inprogress():
+                logger.info(f"[IMG] Rest mode is active, breaking file sending while loop...")
+                break
             if trans_in_progress:
                 logger.info(f"[IMG] Trans mode is active, breaking file sending while loop...")
                 break
@@ -2387,6 +2481,7 @@ def process_message(databytes, rssi=None):
     elif msg_typ == "Y":
         asyncio.create_task(network_response_consume(msgbytes , sender))
     elif msg_typ == "Z":
+        update_restmode_lock()
         asyncio.create_task(send_msg("A", my_addr, ackmessage, sender))
     elif msg_typ == "K":
         msgstr = msgbytes.decode()
@@ -2412,6 +2507,10 @@ def process_message(databytes, rssi=None):
         logger.debug(f"[ACK] Received ACK message: {msg_uid}, payload: {msgbytes}")
     elif msg_typ == "D":
         logger.info(f"[DBG] Received DEBUG message, msg={msgbytes}, ignoring...")
+    elif msg_typ == "R":
+        logger.info(f"Device going to rest mode, stopping any trans mode if ongoing...")
+        get_restmode_lock()
+        asyncio.create_task(send_msg("A", my_addr, ackmessage, sender))
     else:
         logger.info(f"[LORA] Unseen messages type {msg_typ}, sender={sender}, creator={creator} in {msgbytes}")
     return True
@@ -3066,6 +3165,13 @@ class AppHandler:
             img_bytes = None
             gc.collect()
 
+async def rest_mode_broadcating():
+    rest_mode_count = 25
+    while rest_mode_count:
+        asyncio.create_task(send_msg("R", my_addr, "", 65535))
+        rest_mode_count -= 1
+        await asyncio.sleep(0.2)
+
 async def enter_install_mode():
     global is_install_mode, app_controller
     if is_install_mode:
@@ -3074,6 +3180,7 @@ async def enter_install_mode():
 
     logger.info("[INSTALL] 𓆦𓆦𓆦𓆦𓆦𓆦❯❯ Entering install mode... ❮❮𓆦𓆦𓆦𓆦𓆦𓆦")
     is_install_mode = True
+    asyncio.create_task(rest_mode_broadcating())
     await app_controller.start()
 
     logger.info(f"[INSTALL] Waiting up to {INSTALL_MODE_WAIT_TIME}s for app connection...")
