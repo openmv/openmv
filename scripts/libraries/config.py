@@ -89,8 +89,8 @@ my_addr = UID_TO_ADDR.get(uid)
 # XX.XX.X
 # 02.00.4
 major = 2  # (0-63)
-minor = 0  # (0-99)
-patch = 9  # (0-9)
+minor = 1  # (0-99)
+patch = 0  # (0-9)
 # version as integer value, max_val = 64_999 < 65_535 (2 bytes)
 VERSION = major * 1_000 + minor * 10 + patch
 

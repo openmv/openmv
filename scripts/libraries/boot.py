@@ -3188,12 +3188,14 @@ async def main():
     if SAVE_LOGS:
         asyncio.create_task(logger_state())
 
-    for i in range(24*7*4):  # 4 weeks
+    for i in range(24*7*8):  # 8 weeks
         await asyncio.sleep(3600)
         logger.info(f"Finished HOUR {i}")
-        if i >= 6:
-            logger.error(f"============= >>>>>> Rebooting device since it has been {i} HOURS <<<<<<< ====================")
-            await reboot_device()
+        # if i >= 6:
+        #     logger.error(f"============= >>>>>> Rebooting device since it has been {i} HOURS <<<<<<< ====================")
+        #     await reboot_device()
+    
+    await reboot_device()
 
 
 try:
