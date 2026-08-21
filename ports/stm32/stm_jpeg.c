@@ -82,10 +82,14 @@ static const uint8_t JPEG_APP0[] = {
 // width  must be multiple of 4, in range [96, 8176]
 // height must be multiple of 2, in range [32, 8176]
 //
-// Returns -1 if format/dimensions are not supported.
-// Returns  0 on success.
-// Returns  1 on HW error or output overflow.
-static int jpeg_compress_vc8000(image_t *src, image_t *dst, int quality, jpeg_subsampling_t subsampling) {
+#define JPEG_ERR_UNSUPPORTED    (-1)    // Format/dimensions not supported, try another encoder.
+#define JPEG_ERR_FAILED         (-2)    // Encoder or hardware error.
+#define JPEG_ERR_OVERFLOW       (-3)    // Output buffer too small for the encoded image.
+
+// Returns 0 on success, or one of the negative error codes above. The output
+// buffer is freed on failure, if it was allocated here.
+static int jpeg_compress_vc8000(image_t *src, image_t *dst, int quality, bool realloc,
+                                jpeg_subsampling_t subsampling) {
     JpegEncFrameType frameType;
 
     switch (src->pixfmt) {
@@ -96,7 +100,7 @@ static int jpeg_compress_vc8000(image_t *src, image_t *dst, int quality, jpeg_su
             frameType = JPEGENC_YUV422_INTERLEAVED_YUYV;
             break;
         default:
-            return -1;
+            return JPEG_ERR_UNSUPPORTED;
     }
 
     JpegEncCodingMode codingMode = JPEGENC_422_MODE;
@@ -106,7 +110,7 @@ static int jpeg_compress_vc8000(image_t *src, image_t *dst, int quality, jpeg_su
             codingMode = JPEGENC_420_MODE;
         }
     } else if (subsampling == JPEG_SUBSAMPLING_444) {
-        return -1;
+        return JPEG_ERR_UNSUPPORTED;
     } else if (subsampling == JPEG_SUBSAMPLING_422) {
         codingMode = JPEGENC_422_MODE;
     } else if (subsampling == JPEG_SUBSAMPLING_420) {
@@ -115,16 +119,19 @@ static int jpeg_compress_vc8000(image_t *src, image_t *dst, int quality, jpeg_su
 
     if ((src->w & 3) || (src->w < 96) || (8176 < src->w) ||
         (src->h & 1) || (src->h < 32) || (8176 < src->h)) {
-        return -1;
+        return JPEG_ERR_UNSUPPORTED;
     }
+
+    // realloc allows resizing the buffer, owned means it's also ours to free.
+    uint32_t alloc_size = dst->size;
+    bool owned = false;
 
     if (!dst->data) {
         dst->size = IMLIB_IMAGE_MAX_SIZE(IM_MIN(uma_avail(0), JPEG_MAX_ALLOC_SIZE));
         dst->data = uma_malloc(dst->size, UMA_CACHE);
-    }
-
-    if (src->is_compressed) {
-        return 1;
+        alloc_size = dst->size;
+        owned = true;
+        realloc = true;
     }
 
     JpegEncCfg cfg = {
@@ -150,12 +157,12 @@ static int jpeg_compress_vc8000(image_t *src, image_t *dst, int quality, jpeg_su
     JpegEncInst inst = {};
 
     if (JpegEncInit(&cfg, &inst) != JPEGENC_OK) {
-        jpeg_error = 1;
+        jpeg_error = JPEG_ERR_FAILED;
         goto exit_cleanup;
     }
 
     if (JpegEncSetPictureSize(inst, &cfg) != JPEGENC_OK) {
-        jpeg_error = 1;
+        jpeg_error = JPEG_ERR_FAILED;
         goto exit_cleanup;
     }
 
@@ -182,7 +189,7 @@ static int jpeg_compress_vc8000(image_t *src, image_t *dst, int quality, jpeg_su
         mp_uint_t elapsed = mp_hal_ticks_ms() - tickstart;
 
         if (elapsed > JPEG_CODEC_TIMEOUT) {
-            jpeg_error = 1;
+            jpeg_error = JPEG_ERR_FAILED;
             goto exit_cleanup;
         }
 
@@ -193,20 +200,25 @@ static int jpeg_compress_vc8000(image_t *src, image_t *dst, int quality, jpeg_su
             JpegEncRelease(inst);
 
             if (JpegEncInit(&cfg, &inst) != JPEGENC_OK) {
-                jpeg_error = 1;
+                jpeg_error = JPEG_ERR_FAILED;
                 goto exit_cleanup;
             }
 
             if (JpegEncSetPictureSize(inst, &cfg) != JPEGENC_OK) {
-                jpeg_error = 1;
+                jpeg_error = JPEG_ERR_FAILED;
                 goto exit_cleanup;
             }
 
             continue;
         }
 
+        if (ret == JPEGENC_OUTPUT_BUFFER_OVERFLOW) {
+            jpeg_error = JPEG_ERR_OVERFLOW;
+            goto exit_cleanup;
+        }
+
         if (ret != JPEGENC_FRAME_READY && ret != JPEGENC_RESTART_INTERVAL) {
-            jpeg_error = 1;
+            jpeg_error = JPEG_ERR_FAILED;
             goto exit_cleanup;
         }
     }
@@ -219,11 +231,22 @@ static int jpeg_compress_vc8000(image_t *src, image_t *dst, int quality, jpeg_su
     // Clean trailing data after 0xFFD9 at the end of the jpeg byte stream.
     dst->size = jpeg_clean_trailing_bytes(dst->size, dst->data);
 
+    // Trim the unused tail of the buffer.
+    if (realloc && ((alloc_size - dst->size) >= 1024)) {
+        // Shrinking a block resizes it in place, so this can't fail.
+        dst->data = uma_realloc(dst->data, dst->size, UMA_CACHE);
+    }
+
 exit_cleanup:
 
     JpegEncRelease(inst);
 
-    // caller frees dst->data on error
+    if (jpeg_error && owned) {
+        uma_free(dst->data);
+        dst->size = 0;
+        dst->data = NULL;
+    }
+
     return jpeg_error;
 }
 #endif // OMV_VENC_CODEC_ENABLE
@@ -285,11 +308,15 @@ static void jpeg_compress_data_ready(JPEG_HandleTypeDef *hjpeg, uint8_t *pDataOu
 }
 
 bool jpeg_compress(image_t *src, image_t *dst, int quality, bool realloc, jpeg_subsampling_t subsampling) {
+    if (src->is_compressed) {
+        return true;
+    }
+
     #if (OMV_VENC_CODEC_ENABLE == 1)
-    // Try VC8000 first. Returns -1 if not handled (fall through), 0=success, 1=error.
-    int vc = jpeg_compress_vc8000(src, dst, quality, subsampling);
-    if (vc >= 0) {
-        return (bool) vc;
+    // Try VC8000 first, and fall through to the HW codec if it can't encode this image.
+    int vc = jpeg_compress_vc8000(src, dst, quality, realloc, subsampling);
+    if (vc != JPEG_ERR_UNSUPPORTED) {
+        return vc != 0;
     }
     #endif // OMV_VENC_CODEC_ENABLE
 
@@ -341,8 +368,10 @@ bool jpeg_compress(image_t *src, image_t *dst, int quality, bool realloc, jpeg_s
     int src_w_mcus_bytes = src_w_mcus * mcu_size;
     int src_w_mcus_bytes_2 = src_w_mcus_bytes * 2;
 
-    // If dst->data == NULL then we need to allocate space for the payload which will be freed
-    // by the caller. We have to alloc this memory for all cases if we return from the method.
+    // realloc allows resizing the buffer, owned means it's also ours to free.
+    uint32_t alloc_size = dst->size;
+    bool owned = false;
+
     if (!dst->data) {
         uint32_t avail = uma_avail(0);
         uint32_t space = src_w_mcus_bytes_2 + JPEG_ALLOC_PADDING;
@@ -353,11 +382,12 @@ bool jpeg_compress(image_t *src, image_t *dst, int quality, bool realloc, jpeg_s
 
         dst->size = IMLIB_IMAGE_MAX_SIZE(IM_MIN(avail - space, JPEG_MAX_ALLOC_SIZE));
         dst->data = uma_malloc(dst->size, UMA_CACHE);
+        alloc_size = dst->size;
+        owned = true;
+        realloc = true;
     }
 
-    if (src->is_compressed) {
-        return true;
-    }
+    bool jpeg_overflow = false;
 
     // Compute size of the APP0 header with cache alignment padding.
     int app0_size = sizeof(JPEG_APP0);
@@ -366,7 +396,8 @@ bool jpeg_compress(image_t *src, image_t *dst, int quality, bool realloc, jpeg_s
     int app0_total_size = app0_size + app0_padding_size;
 
     if (dst->size < app0_total_size) {
-        return true; // overflow
+        jpeg_overflow = true;
+        goto exit_free;
     }
 
     // Adjust JPEG size and address by app0 header size.
@@ -375,10 +406,9 @@ bool jpeg_compress(image_t *src, image_t *dst, int quality, bool realloc, jpeg_s
 
     // Destination is too small.
     if (dst->size < (JPEG_OUTPUT_CHUNK_SIZE * 2)) {
-        return true; // overflow
+        jpeg_overflow = true;
+        goto exit_free;
     }
-
-    bool jpeg_overflow = false;
 
     JPEG_state.out_data_len_max = dst->size;
     JPEG_state.out_data_len = 0;
@@ -552,6 +582,12 @@ bool jpeg_compress(image_t *src, image_t *dst, int quality, bool realloc, jpeg_s
     // Clean trailing data after 0xFFD9 at the end of the jpeg byte stream.
     dst->size = jpeg_clean_trailing_bytes(dst->size, dst->data);
 
+    // Trim the unused tail of the buffer.
+    if (realloc && ((alloc_size - dst->size) >= 1024)) {
+        // Shrinking a block resizes it in place, so this can't fail.
+        dst->data = uma_realloc(dst->data, dst->size, UMA_CACHE);
+    }
+
 exit_cleanup:
     // Cleanup jpeg state.
     HAL_JPEG_Abort(&JPEG_state.jpeg_descr);
@@ -559,6 +595,15 @@ exit_cleanup:
     HAL_JPEG_UnRegisterGetDataCallback(&JPEG_state.jpeg_descr);
 
     uma_free(mcu_row_buffer); // after DMA is aborted
+
+exit_free:
+    // A truncated JPEG is of no use to the caller, so don't return one.
+    if (jpeg_overflow && owned) {
+        uma_free(dst->data);
+        dst->size = 0;
+        dst->data = NULL;
+    }
+
     return jpeg_overflow;
 }
 
