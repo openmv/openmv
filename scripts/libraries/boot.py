@@ -120,7 +120,8 @@ NET_PATH_EXPIRY_MS = 1800000 # 1800 second, 30 minutes
 
 TRANSMODE_LOCK_TIMEOUT = 600 # TODO PRODUCTION
 TRANSMODE_INACTIVITY_LIMIT = 40 # 20 second
-
+CHUNK_BURST_SIZE = 20
+CHUNK_BURST_RX_SLEEP = 0.2
 # Config test for SF7
 LORA_FREQ = 868.0
 LORA_BW = 125             # 125kHz provides better sensitivity than wider bandwidths
@@ -509,6 +510,7 @@ sensor.reset()
 sensor.set_pixformat(sensor.RGB565)
 sensor.set_framesize(sensor.HD)
 sensor.skip_frames(time=2000)
+power_mgmt.camera_sleep()  # sleep until first capture
 
 sent_count = 0
 recv_msg_count = {}
@@ -1289,6 +1291,9 @@ async def send_msg_big(msg_typ, creator, msgbytes, dest, epoch_ms, md5): # file 
                     # Adding meta data to chunk bytes, 3 + 2 + 45 = 50 bytes max
                     chunkbytes = filedata_id.encode() + chunk_id.to_bytes(CHUNK_ID_BYTES) + chunks[chunk_id]
                     _ = await send_single_packet("I", creator, chunkbytes, dest)
+                    if(chunk_id+1) % CHUNK_BURST_SIZE == 0:
+                        logger.info(f"[CHUNK] pause {CHUNK_BURST_RX_SLEEP}s after {chunk_id+1} chunks for RX")
+                        await asyncio.sleep(CHUNK_BURST_RX_SLEEP)
                 else:
                     # logger.error(f"TRANS MODE ended, marking data send as failed, timeout error")
                     return False, "TRANS MODE ended, timeout error"
@@ -1631,11 +1636,11 @@ async def keep_checking_internet():
     if internet_module and not internet_module.module_ready:
         logger.error("[CELL] Internet module not ready, skipping periodic internet checks")
         return
-
-    if internet_module and internet_module.has_sim is False:
+        
+    if internet_module and not internet_module.has_sim:
         logger.warning("[CELL] No SIM; skipping periodic internet checks (unit node)")
         return
-
+    
     if internet_module and internet_module.has_internet:
         logger.info("[CELL] Internet health loop started in background (already online)")
     else:
@@ -1645,7 +1650,7 @@ async def keep_checking_internet():
         if internet_module and internet_module.has_internet:
             continue
         
-        if internet_module and internet_module.has_sim is False:
+        if internet_module and not internet_module.has_sim:
             logger.warning("[CELL] No SIM; stopping periodic internet checks")
             return
 
@@ -1908,7 +1913,7 @@ def check_compression_for_cc():
         return
     else:
         HIGH_TARGET_SIZE = 99 * 1024 # max 99KB
-        LOW_TARGET_SIZE = 70 * 1024 # settle at min 70KB
+        LOW_TARGET_SIZE = 80 * 1024 # settle at min 80KB
         
         HIGH_COMP_QUALITY = 100
         MIN_COMP_QUALITY = 55
@@ -1923,10 +1928,14 @@ def capture_image():
     global db_store
     global HIGH_COMP_QUALITY, MIN_COMP_QUALITY, HIGH_TARGET_SIZE, LOW_TARGET_SIZE
 
+    # Burst path wakes once before the loop; this is a no-op if already awake.
+    power_mgmt.camera_wake()
     turn_ON_IR_emitter()
     try:
         img_snapshot = sensor.snapshot()
         turn_OFF_IR_emitter()
+        if img_snapshot is None:
+            raise Exception("snapshot returned None (camera not ready)")
         sensor.flush()
 
         img_capture_count += 1
@@ -1951,6 +1960,7 @@ def capture_image():
         return None, None, None
     finally:
         turn_OFF_IR_emitter()
+        # Do not camera_sleep here — stay awake for remaining burst frames.
 
 async def person_detection_loop():
     """
@@ -1973,19 +1983,23 @@ async def person_detection_loop():
     logger.info(f"[PIR] Burst detection initialized on pin {PIR_PIN} ({BURST_SIZE} images per trigger)")
     while True:
         if is_install_mode:
+            power_mgmt.camera_sleep()
             await asyncio.sleep(5)
             continue
         if APP_DISARMED or (running_as_unit() and len(network_paths) == 0):
             logger.debug("Not detecting movement because disarmed")
+            power_mgmt.camera_sleep()
             await asyncio.sleep(5)
             continue
         if USE_PIR_SENSOR:
+            power_mgmt.camera_sleep()  # sleep while waiting for motion
             await pir_trigger_event.wait()
             pir_trigger_event.clear()
         pir_burst_in_progress = True
         logger.info(f"[IMG] ●●●●●●●●●●❯❯ Motion detected - capturing {BURST_SIZE} image... ❮❮●●●●●●●●●●")
 
         try:
+            power_mgmt.camera_wake()  # wake + skip_frames once for whole burst
             for i in range(BURST_SIZE):
                 img_snapshot = None
                 sleep_in_bursts = BURST_SLEEP_TIME if i<BURST_SIZE-1 else 0
@@ -2068,6 +2082,7 @@ async def person_detection_loop():
 
         finally:
             pir_burst_in_progress = False
+            power_mgmt.camera_sleep()  # sleep until next motion event
 
 async def image_sending_loop():
     # Input: None; Output: None (periodically sends queued images across mesh)
@@ -2179,9 +2194,9 @@ def process_message(databytes, rssi=None):
         logger.debug(f"[LORA] skipping message as it is for dst:{receiver}, not for me (my_addr:{my_addr}), msg_uid:{msg_uid}")
         return
 
-    if is_install_mode and msg_typ not in ["X", "Y", "Z", "A", "H", "K"]:
-        logger.debug(f"[LORA] skipping message as it is in install mode and msg_typ not in [X, Y, Z, A, H]")
-        return False
+    # if is_install_mode and msg_typ not in ["X", "Y", "Z", "A", "H"]:
+    #     logger.debug(f"[LORA] skipping message as it is in install mode and msg_typ not in [X, Y, Z, A, H]")
+    #     return False
 
     recv_log = ""
     if receiver == -1:
@@ -2191,8 +2206,8 @@ def process_message(databytes, rssi=None):
 
     data_masked_log = min(10, max(1, (len(databytes) + 20) // 21))
     rssi_log = f", rssi: {rssi}" if rssi is not None else ""
-    if is_install_mode and msg_typ not in ["X", "Y", "Z", "A", "H"]: # TODO akash
-        logger.info(f"[{recv_log} from {sender}{rssi_log}] [{'*' * data_masked_log}] {len(databytes)} bytes, MSG_UID = {msg_uid}, skipping msg in install mode...")
+    if is_install_mode and msg_typ not in ["X", "Y", "Z", "A", "H", "K"]:
+        logger.info(f"[{recv_log} from {sender}{rssi_log}] [{'*' * data_masked_log}] {len(databytes)} bytes, msg_typ= {msg_typ}, MSG_UID = {msg_uid}, skipping msg in install mode...")
         return
     elif msg_typ != "I":
         logger.info(f"[{recv_log} from {sender}{rssi_log}] [{'*' * data_masked_log}] {len(databytes)} bytes, MSG_UID = {msg_uid}")
@@ -2377,11 +2392,18 @@ def process_message(databytes, rssi=None):
         msgstr = msgbytes.decode()
         global trans_paired_device, trans_data_id
         if msgstr == "install_mode":
-            print(f"install mode {is_install_mode}")
             if not is_install_mode:
                 asyncio.create_task(enter_install_mode())
-            asyncio.create_task(send_msg("J", my_addr, b"installMode", sender))
+            asyncio.create_task(send_msg("J", my_addr, b"recvdInstallMode", sender))
             delete_transmode_lock(trans_paired_device, trans_data_id)
+        elif msgstr == "exit_install_mode":
+            if is_install_mode:
+                asyncio.create_task(exit_install_mode())
+                asyncio.create_task(send_msg("J", my_addr, b"recvdExitInstallMode", sender))
+        elif msgstr == "get_device_status":
+            connection_status = app_controller.check_connection()
+            msg = {"M": "I" if is_install_mode else "P", "Wi": connection_status["wifi_connected"], "So": connection_status["socket_connected"]}
+            asyncio.create_task(send_msg("J", my_addr, json.dumps(msg).encode(), sender))
         else:
             logger.error(f"[APP] unknown command: {msgstr}")
 
@@ -2716,6 +2738,8 @@ async def keep_updating_gps():
     # Once per boot: init GNSS -> acquire fix up to 5 min -> sleep GNSS until next reboot
     global gps_str, gps_last_time, rtc, gps_module, tracx_uart, tracx_uart_lock, gps_success_count, gps_failure_count
     logger.info("[GPS] Starting one-shot GPS update for this boot...")
+    if rtc is not None:
+        print(f"[RTC] at GPS start: {rtc.datetime()}")
 
     await asyncio.sleep(3)
 
@@ -2771,6 +2795,7 @@ async def keep_updating_gps():
                     time_components = gps_module.get_gps_time_components(time_str)
                     if time_components:
                         rtc.datetime(time_components)
+                        print(f"[RTC] after GPS update: {rtc.datetime()} ({time_str})")
                         logger.info(f"[GPS] RTC updated with GPS time: {time_str}")
                 except Exception as e:
                     logger.warning(f"[GPS] Failed to update RTC: {e}")
@@ -2923,6 +2948,7 @@ class AppHandler:
         Capture a JPEG image for verify_internet as bytes (no filesystem writes).
         """
         try:
+            power_mgmt.camera_wake()  # sleep(False) + skip_frames before snapshot
             turn_ON_IR_emitter()
             img = sensor.snapshot()
             turn_OFF_IR_emitter()
@@ -2941,6 +2967,7 @@ class AppHandler:
             return None
         finally:
             turn_OFF_IR_emitter()
+            power_mgmt.camera_sleep()
 
     async def try_create_cc(self):
         try:
@@ -3008,7 +3035,12 @@ class AppHandler:
             total_size = len(img_bytes)
             CHUNK_SIZE = 4096
             total_chunks = (total_size + CHUNK_SIZE - 1) // CHUNK_SIZE
-            app_controller.create_and_send_message("image_transfer_start",{"total_size": total_size,"total_chunks": total_chunks,}, timeout=1.0)
+            img_md5 = ubinascii.hexlify(hashlib.md5(img_bytes).digest()).decode()
+            app_controller.create_and_send_message(
+                "image_transfer_start",
+                {"total_size": total_size, "total_chunks": total_chunks, "md5": img_md5},
+                timeout=1.0,
+            )
 
             for chunk_index in range(total_chunks):
                 start = chunk_index * CHUNK_SIZE
@@ -3019,8 +3051,12 @@ class AppHandler:
                 app_controller.create_and_send_message("image_transfer_chunk",{"chunk_index": chunk_index, "chunk_size": end - start, "data": chunk_b64_str},timeout=5.0)
                 await asyncio.sleep(0)
 
-            app_controller.create_and_send_message( "image_transfer_end", {"total_size": total_size, "total_chunks": total_chunks,},timeout=1.0)
-            logger.info(f"[verify_image] Sent verify image: {round(total_size/1024)} bytes in {total_chunks} chunks")
+            app_controller.create_and_send_message(
+                "image_transfer_end",
+                {"total_size": total_size, "total_chunks": total_chunks, "md5": img_md5},
+                timeout=1.0,
+            )
+            logger.info(f"[verify_image] Sent verify image: {round(total_size/1024)} bytes in {total_chunks} chunks (md5={img_md5})")
             return True
 
         except Exception as e:
@@ -3056,6 +3092,18 @@ async def enter_install_mode():
     # asyncio.create_task(send_msg("K", my_addr, b"ME_I", 100)) # Akash TODO check
     logger.info("[INSTALL] 𓆦𓆦𓆦𓆦𓆦𓆦❯❯ Install mode stopped/exited ❮❮𓆦𓆦𓆦𓆦𓆦𓆦")
 
+
+async def exit_install_mode():
+    global is_install_mode, app_controller
+    if not is_install_mode:
+        logger.warning("[INSTALL] 𓆦𓆦𓆦𓆦𓆦𓆦❯❯ Not in install mode, ignoring req... ❮❮𓆦𓆦𓆦𓆦𓆦𓆦")
+        return
+
+    logger.info("[INSTALL] 𓆦𓆦𓆦𓆦𓆦𓆦❯❯ Exiting install mode... ❮❮𓆦𓆦𓆦𓆦𓆦𓆦")
+    is_install_mode = False
+    await app_controller.stop()  # disconnects socket + wifi, breaks enter_install_mode loop via app_alive()
+    logger.info("[INSTALL] 𓆦𓆦𓆦𓆦𓆦𓆦❯❯ Switched back to PROCESS MODE ❮❮𓆦𓆦𓆦𓆦𓆦𓆦")
+
 # ---------------------------------------------------------------------------
 # Application Entry Point
 # ---------------------------------------------------------------------------
@@ -3086,6 +3134,8 @@ async def keep_blinking_restart_led():
 
 
 async def main():
+    check_watchdog_reset()
+
     global app_handler, app_controller
     print(f"Entering MAIN loop... [PROCESS MODE]")
     # await led_restart_blinker()
@@ -3145,7 +3195,6 @@ async def main():
             logger.error(f"============= >>>>>> Rebooting device since it has been {i} HOURS <<<<<<< ====================")
             await reboot_device()
 
-    check_watchdog_reset()
 
 try:
     asyncio.run(main())

@@ -14,6 +14,7 @@ import enc
 import uasyncio as asyncio
 from message_codec import build_heartbeat_payload
 from detect import turn_ON_IR_emitter, turn_OFF_IR_emitter
+import power_mgmt
 
 try:
     import logger
@@ -923,10 +924,15 @@ class InternetDriver(InternetUtils):
         
     def get_image_payload(self):
         """Capture a JPEG from the camera, hybrid-encrypt, return API payload dict."""
+        was_asleep = power_mgmt.is_asleep()
+        power_mgmt.camera_wake()
         try:
             turn_ON_IR_emitter()
             img = sensor.snapshot()
             turn_OFF_IR_emitter()
+            if img is None:
+                logger.error("[CELL] snapshot returned None (camera not ready)")
+                return None
             jpeg_bytearray = img.compress(quality=25)
             imgbytes = bytes(jpeg_bytearray)
             if uses_hybrid_encryption("P"):
@@ -947,6 +953,8 @@ class InternetDriver(InternetUtils):
             return None
         finally:
             turn_OFF_IR_emitter()
+            if was_asleep:
+                power_mgmt.camera_sleep()
 
     def get_heartbeat_payload(self):
         """
@@ -989,6 +997,9 @@ class InternetDriver(InternetUtils):
             test_count = 5
             ok = 0
             common_img_payload = self.get_image_payload()
+            if not common_img_payload:
+                print("Error in make_upload_test: camera capture returned no image")
+                return False
             for i in range(1, test_count + 1):
                 print(f"uploading {i}/{test_count}.....")
                 start_ms = time.ticks_ms()
