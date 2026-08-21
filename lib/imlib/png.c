@@ -379,9 +379,11 @@ void png_read(image_t *img, const char *path) {
 
 void png_write(image_t *img, const char *path) {
     file_t fp;
-    file_open(&fp, path, FA_WRITE | FA_CREATE_ALWAYS);
+
     if (img->pixfmt == PIXFORMAT_PNG) {
+        file_open(&fp, path, FA_WRITE | FA_CREATE_ALWAYS);
         file_write(&fp, img->data, img->size);
+        file_close(&fp);
     } else {
         image_t out = {
             .w = img->w,
@@ -390,10 +392,17 @@ void png_write(image_t *img, const char *path) {
             .size = 0,
             .data = NULL // alloc in png compress
         };
-        png_compress(img, &out);
+
+        // Compress before creating the file, so that a failure doesn't leave
+        // an empty one behind.
+        if (png_compress(img, &out)) {
+            mp_raise_msg(&mp_type_OSError, MP_ERROR_TEXT("Compression Failed!"));
+        }
+
+        file_open(&fp, path, FA_WRITE | FA_CREATE_ALWAYS);
         file_write(&fp, out.data, out.size);
+        file_close(&fp);
         uma_free(out.data);
     }
-    file_close(&fp);
 }
 #endif //IMLIB_ENABLE_IMAGE_FILE_IO)
