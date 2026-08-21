@@ -16,13 +16,14 @@ _MAGIC = b'ABST'
 _HDR = 16  # magic(4) + seq(4) + len(4) + crc(4)
 
 class ConfigStore:
-    def __init__(self, path='/flash', name='nodestate', max_bytes=100000): # 100KB
+    def __init__(self, path='/flash', name='machinestate', max_bytes=100000): # 100KB
         self.slot = _HDR + max_bytes
         self.max_bytes = max_bytes
         self.files = (f'{path}/{name}_a', f'{path}/{name}_b')
         self._ensure()
 
     def _ensure(self):
+        # Only to check flash is mounted or not
         try:
             os.chdir("/flash")
             print("/flash accessible !!")
@@ -44,7 +45,6 @@ class ConfigStore:
                     if os.stat(f)[6] == self.slot:
                         continue
                 except OSError:
-                    
                     pass
                 with open(f, 'wb') as fh:
                     fh.write(b'\x00' * self.slot); fh.flush()

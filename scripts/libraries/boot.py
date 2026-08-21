@@ -247,8 +247,8 @@ async def init_device():
     print("UID: ", f"{uid}")
     my_addr = get_my_addr()
     if my_addr is None:
-        logger.error(f"error in main.py: Unknown device UID for {uid}")
-        sys.exit()
+        logger.error(f"error in main.py: Unknown device UID for {uid}, rebooting...")
+        return False
     print(f"MY_ADDR: {my_addr}")
 
     encnode = enc.EncNode(my_addr)
@@ -262,8 +262,8 @@ async def init_device():
     LOGS_DIR =    f"{FS_ROOT}/{PROCESS_ID_STR}/logs"
 
     if PROCESS_ID_STR is None:
-        logger.error(f"[INIT] ===> PROCESS_ID_STR is not set, exiting...")
-        sys.exit()
+        logger.error(f"[INIT] ===> PROCESS_ID_STR is not set, rebooting...")
+        return False
     try:
         db_store = DbStore(PROCESS_ID_STR, my_addr)
         logger.info(f"[INIT] DbStore initialized for process {PROCESS_ID_STR}")
@@ -280,11 +280,11 @@ async def init_device():
     free_before = get_free_memory()
     logger.info(f"[IMG RX] Free mem at init: {free_before}KB")
     if not init_file_recompile_buffer():
-        logger.warning("[MEM] Image recompile buffer not available, will use dynamic allocation")
-        sys.exit()
+        logger.warning("[MEM] Image recompile buffer not available, rebooting device...")
+        return False
     if not init_chunk_storage_buffer():
-        logger.warning("[MEM] Chunk storage buffer not available")
-        sys.exit()
+        logger.warning("[MEM] Chunk storage buffer not available, rebooting device...")
+        return False
 
     return True
 
@@ -3188,26 +3188,26 @@ async def main():
     if SAVE_LOGS:
         asyncio.create_task(logger_state())
 
-    for i in range(24*7*8):  # 8 weeks
+    for i in range(24*7*8):  # total 8 weeks runtime
         await asyncio.sleep(3600)
         logger.info(f"Finished HOUR {i}")
         # if i >= 6:
         #     logger.error(f"============= >>>>>> Rebooting device since it has been {i} HOURS <<<<<<< ====================")
         #     await reboot_device()
-    
-    await reboot_device()
+    logger.info("꩜꩜꩜꩜꩜꩜ main loop completed * ꩜꩜꩜꩜꩜꩜")
+    await reboot_device()  # restart after 8 weeks
 
 
 try:
     asyncio.run(main())
-    # asyncio.run(main_radio())
+    logger.info("꩜꩜꩜꩜꩜꩜ main loop completed ** ꩜꩜꩜꩜꩜꩜")
 except KeyboardInterrupt:
-    logger.info("stopped by user via keyboard interrupt")
+    logger.info("꩜꩜꩜꩜꩜꩜ stopped by user via keyboard interrupt ꩜꩜꩜꩜꩜꩜")
 except Exception as e:
-    logger.error(f"error in main.py: {e}")
+    logger.fatal(f"Uncaught error in main.py: {e}")
 finally:
     try:
-        print(" SHUTTING DOWN - ")
-        print(os.listdir(LOGS_DIR))
+        print("꩜꩜꩜꩜꩜꩜ SHUTTING DOWN, and restarting the device... ꩜꩜꩜꩜꩜꩜")
+        machine.reset()
     except Exception as e:
-        logger.error(f"error in main.py: {e}")
+        logger.fatal(f"error in restarting the device in main.py: {e}")
