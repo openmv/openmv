@@ -103,18 +103,11 @@ static int jpeg_compress_vc8000(image_t *src, image_t *dst, int quality, bool re
             return JPEG_ERR_UNSUPPORTED;
     }
 
-    JpegEncCodingMode codingMode = JPEGENC_422_MODE;
-
-    if (subsampling == JPEG_SUBSAMPLING_AUTO) {
-        if (quality <= 35) {
-            codingMode = JPEGENC_420_MODE;
-        }
-    } else if (subsampling == JPEG_SUBSAMPLING_444) {
+    // This encoder is built without JPEGENC_422_MODE_SUPPORTED, so it always encodes
+    // in 4:2:0 mode and ignores cfg.codingMode. Let the HW codec, which supports the
+    // other modes, handle anything else that's explicitly requested.
+    if ((subsampling != JPEG_SUBSAMPLING_AUTO) && (subsampling != JPEG_SUBSAMPLING_420)) {
         return JPEG_ERR_UNSUPPORTED;
-    } else if (subsampling == JPEG_SUBSAMPLING_422) {
-        codingMode = JPEGENC_422_MODE;
-    } else if (subsampling == JPEG_SUBSAMPLING_420) {
-        codingMode = JPEGENC_420_MODE;
     }
 
     if ((src->w & 3) || (src->w < 96) || (8176 < src->w) ||
@@ -145,7 +138,7 @@ static int jpeg_compress_vc8000(image_t *src, image_t *dst, int quality, bool re
         .qLevel = quality / 10,
         .restartInterval = 0,
         .codingType = JPEGENC_WHOLE_FRAME,
-        .codingMode = codingMode,
+        .codingMode = JPEGENC_420_MODE,
         .rotation = JPEGENC_ROTATE_0,
         .unitsType = JPEGENC_DOTS_PER_INCH,
         .markerType = JPEGENC_SINGLE_MARKER,
