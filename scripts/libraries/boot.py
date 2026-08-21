@@ -2013,7 +2013,7 @@ def check_compression_for_cc():
 
     compression_updated_for_cc = True
 
-def capture_image():
+def capture_image(compress_quality=None):
     """Capture one image, store raw copy, compress, and auto-adjust global quality."""
     global img_capture_count, img_file_counter, global_comp_quality
     global db_store
@@ -2034,16 +2034,23 @@ def capture_image():
         event_epoch_ms = get_epoch_ms() + img_file_counter
 
         check_compression_for_cc()
-        jpeg_bytearray = bytes(img_snapshot.compress(quality=global_comp_quality))
-        size = len(jpeg_bytearray)
-        logger.info(
-            f"Compressed image size: {size}, compress_quality-{global_comp_quality}"
-        )  # TODO, move it debug later
+        if compress_quality:
+            jpeg_bytearray = bytes(img_snapshot.compress(quality=compress_quality))
+            size = len(jpeg_bytearray)
+            logger.info(
+                f"Compressed image size: {size}, compress_quality-{compress_quality}"
+            )
+        else:
+            jpeg_bytearray = bytes(img_snapshot.compress(quality=global_comp_quality))
+            size = len(jpeg_bytearray)
+            logger.info(
+                f"Compressed image size: {size}, compress_quality-{global_comp_quality}"
+            )  # TODO, move it debug later
 
-        if size > HIGH_TARGET_SIZE:
-            global_comp_quality = max(MIN_COMP_QUALITY, global_comp_quality - 5)
-        if size < LOW_TARGET_SIZE:
-            global_comp_quality = min(HIGH_COMP_QUALITY, global_comp_quality + 5)
+            if size > HIGH_TARGET_SIZE:
+                global_comp_quality = max(MIN_COMP_QUALITY, global_comp_quality - 5)
+            if size < LOW_TARGET_SIZE:
+                global_comp_quality = min(HIGH_COMP_QUALITY, global_comp_quality + 5)
 
         return img_snapshot, jpeg_bytearray, event_epoch_ms
     except Exception as e:
@@ -3087,7 +3094,7 @@ class AppHandler:
 
     async def verify_internet_capture_and_upload(self):
         try:
-            img_bytes = self.capture_image_to_verify_camera(type="verify_internet", quality=25)
+            _, img_bytes, _ = capture_image(compress_quality=35)
             if not img_bytes:
                 return False
             return await self.upload_verify_image_to_server(img_bytes)
@@ -3126,7 +3133,7 @@ class AppHandler:
     async def send_image_to_app(self):
         img_bytes = None
         try:
-            img_bytes = self.capture_image_to_verify_camera(type="verify_image")
+            _, img_bytes, _ = capture_image(compress_quality=35)
             if not img_bytes:
                 logger.error("[verify_image] capture_image_to_verify_camera returned no data")
                 return False
