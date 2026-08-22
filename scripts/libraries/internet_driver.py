@@ -39,11 +39,12 @@ except ImportError:
 
 # Try to import MicroPython UART (like internet_driver.py); fall back to desktop serial-only
 try:
-    from machine import UART  # type: ignore
+    from machine import UART, Pin  # type: ignore
 
     HAS_MACHINE_UART = True
 except ImportError:
     HAS_MACHINE_UART = False
+    Pin = None
 
 # Connection configuration (aligned with internet_driver.py style)
 # On the MicroPython side we use UART_ID/BAUDRATE; here we map to the host serial port.
@@ -51,7 +52,37 @@ except ImportError:
 # Configuration
 UART_ID = 1
 BAUDRATE = 115200
-INTERNET_RECHECK_INTERVAL_SEC = 60 * 60  # 60 minutes
+MODULE_HEALTH_INTERVAL_SEC = 10 * 60  # 10 minutes
+SIM_RECHECK_INTERVAL_SEC = 120 * 60  # 120 minutes
+RE_CONFIGURE_INTERVAL_SEC = 30 * 60  # 30 minutes
+INTERNET_RETRY_INTERVAL_SEC = 60 * 60  # 60 minutes
+
+
+GSM_RST_PIN = "P9"       # OpenMV pin wired to EC200 RESET_N (active-low)
+GSM_RST_HOLD_MS = 400    # Quectel min ~150–300 ms; 400 ms is a safe pulse
+
+
+def hardware_reset_gsm(hold_ms=None):
+    """Pulse EC200 RESET_N on OpenMV P9 (active-low). No InternetDriver needed.
+
+    Idle = HIGH (released). Pulse LOW for hold_ms, then release HIGH.
+    AT/PDP/HTTP state is wiped — call establish_internet() afterwards.
+    """
+    if Pin is None:
+        print("[CELL] Cannot hardware-reset: Pin not available")
+        return False
+    if hold_ms is None:
+        hold_ms = GSM_RST_HOLD_MS
+    rst = Pin(GSM_RST_PIN, Pin.OUT)
+    rst.value(1)
+    
+    time.sleep_ms(10)
+    rst.value(0)
+    
+    time.sleep_ms(hold_ms)
+    rst.value(1)
+    print(f"[CELL] Hardware reset (RESET_N/{GSM_RST_PIN}) complete — re-init required")
+    return True
 
 # AT response substrings for registration checks (CEREG=LTE, CGREG=3G PS)
 NW_RESP_LTE_HOME = "+CEREG: 0,1"
@@ -167,7 +198,7 @@ class InternetDriver(InternetUtils):
         process_id="XYZ",
     ):
         """
-        Initialize EC200 HTTP client
+        Configure EC200 HTTP client
 
         Args:
             uart: Serial-like object or MicroPython UART. If None, a UART
@@ -216,6 +247,14 @@ class InternetDriver(InternetUtils):
                     print("ERROR - UART not available and no uart provided")
                     raise Exception("ERROR - UART not available and no uart provided")
 
+            self.rst = None
+            if Pin is not None:
+                try:
+                    self.rst = Pin(GSM_RST_PIN, Pin.OUT)
+                    self.rst.value(1)  # idle: RESET_N released (active-low)
+                except Exception as e:
+                    print(f"[CELL] Reset pin {GSM_RST_PIN} init failed: {e}")
+
             self.context_id = 1 # PDP context id is a numbered slot where packet data is defined/activated, typically 1–16 on EC200, i.e: AT+QIDEACT=1, AT+QIACT=1, AT+QIACT?,AT+QHTTPCFG="contextid",1 
             self.default_timeout = 10  # 10 seconds
             self._last_recovery_fail_ticks = 0  # time.ticks_ms() when recovery last failed
@@ -228,7 +267,7 @@ class InternetDriver(InternetUtils):
 
             self.module_ready = False  # module is ready for use or not
             self.has_sim = False  # is sim present and ready for use
-            self.initialized = False  # module heath is not good, internet might be issue
+            self.configured = False  # module heath is not good, internet might be issue
             self.has_internet = False  # is internet connection established
             self.signal_strength = 0
             self.network_type = NW_TYPE_UNKNOWN
@@ -239,6 +278,7 @@ class InternetDriver(InternetUtils):
             print(f"Error in InternetDriver init: {e}")
             self.module_ready = False
             self.has_sim = False
+            self.configured = False
             self.has_internet = False
 
     # ------------------------------------------------------------------
@@ -315,7 +355,7 @@ class InternetDriver(InternetUtils):
         await asyncio.sleep(drain_sleep)
 
     # ------------------------------------------------------------------
-    # Initialization & configuration
+    # Configuration
     # ------------------------------------------------------------------
     async def _drain_past_uart_input(self, drain_sleep=0.15):
         """
@@ -438,16 +478,32 @@ class InternetDriver(InternetUtils):
         except Exception:
             pass
         await asyncio.sleep(0.2)
-    
 
-    async def _initialize_module(self):
-        """One-time initialization and configuration.
+    def reset_module(self, hold_ms=None):
+        """Hardware-reset EC200 via RESET_N on P9 (active-low).
+
+        Pulses RESET_N low then releases. Module AT/PDP/HTTP state is lost;
+        call establish_internet() (or init_tracx_internet() from main) after.
+
+        Usage:
+            internet_module.reset_module()
+            await internet_module.establish_internet()
+        """
+        ok = hardware_reset_gsm(hold_ms=hold_ms)
+        self.module_ready = False
+        self.has_sim = False
+        self.configured = False
+        self.has_internet = False
+        return ok
+
+    async def _configure_module(self):
+        """One-time module configuration.
 
         Returns:
-            bool: True on successful initialization, False on failure.
+            bool: True on successful configuration, False on failure.
             error: Message or Error message in case of success and failure
         """
-        print("[CELL] Initializing EC200 module...")
+        print("[CELL] Configuring EC200 module...")
 
         # Let module settle (e.g. after GPS/cellular handover, pending output)
         await asyncio.sleep(0.5)
@@ -458,44 +514,55 @@ class InternetDriver(InternetUtils):
         print("[CELL] Draining past UART input...")
         if not await self._drain_past_uart_input():
             print("[CELL] ✘✘✘ Failed to drain past UART input")
-            return False, "Module initialization error: Failed to drain past UART input"
+            return False, "Module configuration error: Failed to drain past UART input"
         print("[CELL] [Step 0/4] ✔✔✔ UART input drained")
 
         print("[CELL] Checking AT command response...")
         if not await self._check_at_command_response():
             self.module_ready = False  # module is ready for use or not
             self.has_sim = False
-            self.initialized = False
+            self.configured = False
             await self._enter_sleep()
-            return False, "Module initialization error: Failed to get AT response"
+            return False, "Module configuration error: Failed to get AT response"
         print("[CELL] [Step 1/4] ✔✔✔ AT command response received")
 
         print("[CELL] Checking SIM health...")
         if not await self._check_sim():
             self.has_sim = False
-            self.initialized = False
+            self.configured = False
             await self._enter_sleep()
-            return False, "Module initialization error: SIM not ready"
+            return False, "Module configuration error: SIM not ready"
         print("[CELL] [Step 2/4] ✔✔✔ SIM is ready")
 
         print("[CELL] Activating PDP context...")
         if not await self._activate_pdp_data_context(1):
-            self.initialized = False
-            return False, "Module initialization error: Failed to activate PDP context"
+            self.configured = False
+            return False, "Module configuration error: Failed to activate PDP context"
         print("[CELL] [Step 3/4] ✔✔✔ PDP context activated")
 
         print("[CELL] Configuring HTTP context...")
         if not await self._configure_http_context():
-            self.initialized = False
-            return False, "Module initialization error: Failed to configure HTTP context"
+            self.configured = False
+            return False, "Module configuration error: Failed to configure HTTP context"
         print("[CELL] [Step 4/4] ✔✔✔ HTTP context configured")
 
         self.module_ready = True
         self.has_sim = True
-        self.initialized = True
-        print("✔✔✔ EC200 module initialized successfully")
+        self.configured = True
+        print("✔✔✔ EC200 module configured successfully")
         return True, None
 
+    async def check_module_health(self):
+        """
+        Check module health by sending AT command and checking response.
+        """
+        if not await self._check_at_command_response(retries=2):
+            logger.error("[CELL] Module health check failed: Failed to send AT command")
+            return False
+        else:
+            logger.info("[CELL] Module health check passed")
+            return True
+    
     async def establish_internet(self, retry_count=3):
         print("[CELL] Establishing internet connection... with sleep for 15 seconds")
         await asyncio.sleep(15) # sleep for 10 seconds to let module settle
@@ -503,7 +570,7 @@ class InternetDriver(InternetUtils):
         init_ok = False
         init_error = None
         for attempt in range(1, retry_count+1):
-            init_success, init_error = await self._initialize_module()
+            init_success, init_error = await self._configure_module()
             if init_success:
                 init_ok = True
                 break
@@ -585,10 +652,10 @@ class InternetDriver(InternetUtils):
                 return False, "Connection failed (recovery cooldown)"
         print("[CELL] Connection not healthy, attempting to recover...")
         await asyncio.sleep(2)
-        init_success, init_error = await self._initialize_module()
+        init_success, init_error = await self._configure_module()
         if not init_success:
             self._last_recovery_fail_ticks = now_ms
-            return False, f"Initialization failed: {init_error}"
+            return False, f"Configuration failed: {init_error}"
         if not await self._check_network_healthy():
             self._last_recovery_fail_ticks = now_ms
             return False, "Connection failed"
@@ -782,7 +849,7 @@ class InternetDriver(InternetUtils):
                 # PDP context was lost mid-flight - re-activate and retry once.
                 print("[CELL] CME ERROR 711: PDP context lost, attempting recovery...")
                 await asyncio.sleep(2)
-                init_success, init_error = await self._initialize_module()
+                init_success, init_error = await self._configure_module()
                 if not init_success:
                     self.on_upload_fail()
                     self.is_busy = False
@@ -1074,9 +1141,9 @@ if __name__ == "__main__":
             time.sleep(2)
             machine.reset()
 
-        if not internet_module.initialized:
-            print("Internet initialization failed! Rebooting...")
-            write_log("Internet initialization failed!, Rebooting...")
+        if not internet_module.configured:
+            print("Internet configuration failed! Rebooting...")
+            write_log("Internet configuration failed!, Rebooting...")
             time.sleep(2)
             machine.reset()
 
