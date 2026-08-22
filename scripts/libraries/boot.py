@@ -2560,7 +2560,7 @@ def process_message(databytes, rssi=None):
             get_restmode_lock()
             # asyncio.create_task(send_msg("A", my_addr, ackmessage, sender))
             if msgbytes == b"1":
-                asyncio.create_task(send_msg("R", my_addr, b"2", 65535)) # propogate to level to
+                asyncio.create_task(send_msg("R", my_addr, "2", 65535)) # propogate to level to
     else:
         logger.info(f"[LORA] Unseen messages type {msg_typ}, sender={sender}, creator={creator} in {msgbytes}")
     return True
