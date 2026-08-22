@@ -120,8 +120,8 @@ NET_PATH_EXPIRY_MS = 1800000 # 1800 second, 30 minutes
 
 TRANSMODE_LOCK_TIMEOUT = 600 # TODO PRODUCTION
 TRANSMODE_INACTIVITY_LIMIT = 40 # 20 second
-CHUNK_BURST_SIZE = 20
-CHUNK_BURST_RX_SLEEP = 0.2
+CHUNK_BURST_SIZE = 50
+CHUNK_BURST_RX_SLEEP = 0.4
 # Config test for SF7
 LORA_FREQ = 868.0
 LORA_BW = 125             # 125kHz provides better sensitivity than wider bandwidths
@@ -1753,7 +1753,7 @@ async def re_init_tracx_internet():
             logger.info("[CELL] ᯤᯤᯤᯤᯤᯤ❯❯ Internet re-established, device will as as CC now... ❮❮ᯤᯤᯤᯤᯤᯤ")
             return True
         else:
-            logger.fatal("[CELL] Internet re-pconfiguration failed; will retry periodically")
+            logger.error("[CELL] Internet re-pconfiguration failed; will retry periodically")
             return False
 
 async def keep_checking_internet():
@@ -3218,7 +3218,7 @@ class AppHandler:
 
 async def rest_mode_broadcating():
     global is_install_mode
-    rest_mode_count = 25
+    rest_mode_count = 40
     while rest_mode_count:
         asyncio.create_task(send_msg("R", my_addr, "1", 65535))
         rest_mode_count -= 1
@@ -3368,10 +3368,10 @@ try:
 except KeyboardInterrupt:
     logger.info("꩜꩜꩜꩜꩜꩜ stopped by user via keyboard interrupt ꩜꩜꩜꩜꩜꩜")
 except Exception as e:
-    logger.fatal(f"Uncaught error in main.py: {e}")
+    logger.fatal(f"Uncaught error in main.py: {str(e)}")
 finally:
     try:
         print("꩜꩜꩜꩜꩜꩜ SHUTTING DOWN, and restarting the device... ꩜꩜꩜꩜꩜꩜")
         machine.reset()
     except Exception as e:
-        logger.fatal(f"error in restarting the device in main.py: {e}")
+        logger.fatal(f"error in restarting the device in main.py: {str(e)}")
