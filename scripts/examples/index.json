@@ -167,6 +167,26 @@
       "sensors": ["*"]
     },
     {
+      "path": "08-RPC-Library/36-Web-Servers/rtsp_h264_video_server_wlan.py",
+      "boards": ["OPENMV_N6"],
+      "sensors": ["*"]
+    },
+    {
+      "path": "08-RPC-Library/36-Web-Servers/rtsp_h264_video_audio_server_wlan.py",
+      "boards": ["OPENMV_N6"],
+      "sensors": ["*"]
+    },
+    {
+      "path": "08-RPC-Library/36-Web-Servers/rtsp_h264_video_server_lan.py",
+      "boards": ["OPENMV_N6"],
+      "sensors": ["*"]
+    },
+    {
+      "path": "08-RPC-Library/36-Web-Servers/rtsp_h264_video_audio_server_lan.py",
+      "boards": ["OPENMV_N6"],
+      "sensors": ["*"]
+    },
+    {
       "path": "09-WiFi",
       "boards": ["*"],
       "exclude_boards": ["ARDUINO_NANO_33_BLE_SENSE"],
