@@ -43,14 +43,6 @@ WIFI_COMM_PORT_MAP = {
         246: 5031,
         247: 5032,
         248: 5033,
-        249: 5034,
-        250: 5035,
-        251: 5036,
-        252: 5037,
-        253: 5038,
-        254: 5039,
-        255: 5040,
-        256: 5041,
         }
         
 # Auto-disconnect WiFi + app TCP session after this many seconds (from successful socket connect).
@@ -107,6 +99,10 @@ class AppController:
         self.cont_wifi_fail_count = 0 # continuous wifi failures
         self._wifi_session_deadline = None
 
+        # Ping/pong watchdog: reconnect the socket if the app goes quiet.
+        self._last_recv_time = None
+        self._pong_timeout_s = 14
+
     # -------------------------------------------------------------------------
     # WiFi / socket setup
     # -------------------------------------------------------------------------
@@ -162,6 +158,7 @@ class AppController:
         self.wifi_socket = None
         self.wifi_nic = None
         self._wifi_session_deadline = None
+        self._last_recv_time = None
         self.is_running = False
 
     def app_alive(self):
@@ -245,6 +242,7 @@ class AppController:
         if sock == self.wifi_socket:
             self.wifi_socket = None
             self._wifi_session_deadline = None
+            self._last_recv_time = None
 
     def send_data_to_app(self, data, timeout=0.1):
         if self.wifi_socket is None:
@@ -280,8 +278,7 @@ class AppController:
                 return False, None
     def check_connection(self):
         wifi_connected = self.wifi_nic is not None and self.wifi_nic.isconnected()
-        socket_connected = self.wifi_socket is not None and self._is_socket_alive()
-        return {"wifi_connected": wifi_connected, "socket_connected": socket_connected}
+        return {"wifi_connected": wifi_connected, "socket_connected": self.wifi_socket}
         
 
     def check_wifi_connection_status(self):
@@ -312,12 +309,13 @@ class AppController:
 
     async def _monitor_wifi_connection(self):
         """
-        Periodic task to monitor WiFi connection status and keep app socket alive.
-        This is the class-based equivalent of main.monitogit_wifi_connection().
+        Periodic task to monitor WiFi connection status, keep app socket alive,
+        and run the ping/pong watchdog.
         """
         
         connected_check_interval = 10
-        http_reconnect_interval = 10
+        # This tick also sets the ping cadence and watchdog resolution.
+        http_reconnect_interval = 5
         disconnected_check_interval = 3
         error_backoff_interval = 10
 
@@ -330,7 +328,7 @@ class AppController:
                     logger.debug("[WIFI] WiFi connection status: connected")
 
                     
-                    if self.wifi_socket is not None and self._is_socket_alive():
+                    if self.wifi_socket:
                         self.cont_wifi_fail_count = 0
                         # if (
                         #     self._wifi_session_deadline is not None
@@ -338,6 +336,28 @@ class AppController:
                         # ):
                         #     await self._wifi_session_timeout_disconnect()
                         #     continue
+
+                        self._send_ping()
+
+                        if self._last_recv_time is not None:
+                            elapsed = time.time() - self._last_recv_time
+                            logger.debug(
+                                f"[WATCHDOG] last message {elapsed:.1f}s ago "
+                                f"(timeout: {self._pong_timeout_s}s)"
+                            )
+                            if elapsed > self._pong_timeout_s:
+                                logger.warning(
+                                    f"[WATCHDOG] No message received for {elapsed:.1f}s, "
+                                    "reconnecting socket"
+                                )
+                                self._close_socket_safely(self.wifi_socket)
+                                if self.wifi_nic is not None and self.wifi_nic.isconnected():
+                                    self._init_socket_connection()
+                                else:
+                                    logger.warning(
+                                        "[WATCHDOG] WiFi disconnected, cannot reconnect socket"
+                                    )
+                                continue
                     else:
                         self._init_socket_connection()
 
@@ -360,15 +380,6 @@ class AppController:
                 self.cont_wifi_fail_count += 1
                 logger.error(f"[WIFI] Error in WiFi connection monitoring: {e}")
                 await asyncio.sleep(error_backoff_interval)
-
-    def _is_socket_alive(self):
-        try:
-            if select.select([self.wifi_socket], [], [], 0)[0]:
-                return True
-            return True
-        except Exception as e:
-            print(f"[WIFI] Socket alive check error: {e}")
-            return True
     
     def _init_socket_connection(self, max_retries=3):
         """
@@ -427,6 +438,7 @@ class AppController:
             if new_socket is not None:
                 self.wifi_socket = new_socket
                 self._wifi_session_deadline = time.time() + WIFI_SOCKET_SESSION_TIMEOUT_S
+                self._last_recv_time = time.time()
                 print(
                     f"info - WiFi communication enabled, "
                     f"connected to {target_ip}:{self.wifi_comm_port}"
@@ -457,6 +469,21 @@ class AppController:
         await self.stop()
 
     # -------------------------------------------------------------------------
+    # Ping/pong connection watchdog
+    # -------------------------------------------------------------------------
+
+    def _send_ping(self):
+        """Send a ping message to the app."""
+        ok, _ = self.send_data_to_app("ping", timeout=0.5)
+        if ok:
+            logger.debug("[PING] Sent ping")
+        else:
+            logger.warning("[PING] Failed to send ping")
+
+    def _handle_pong(self):
+        logger.debug(f"[PONG] Received pong at {self._last_recv_time}")
+
+    # -------------------------------------------------------------------------
     # Socket read loop
     # -------------------------------------------------------------------------
 
@@ -482,6 +509,8 @@ class AppController:
                 if data and len(data) > 0:
                     self.recv_timeout = 0.1
                     consecutive_empty_reads = 0
+                    # Any traffic counts as liveness, even non-JSON payloads.
+                    self._last_recv_time = time.time()
 
                     try:
                         data_str = data.decode("utf-8")
@@ -493,6 +522,34 @@ class AppController:
                             self._message_buffer = self._message_buffer.lstrip()
 
                             if not self._message_buffer:
+                                break
+
+                            # Keepalives are bare 4-char tokens, not JSON.
+                            if self._message_buffer.startswith("pong"):
+                                self._handle_pong()
+                                self._message_buffer = self._message_buffer[4:]
+                                continue
+                            if self._message_buffer.startswith("ping"):
+                                self._message_buffer = self._message_buffer[4:]
+                                continue
+
+                            if not self._message_buffer.startswith("{"):
+                                brace_pos = self._message_buffer.find("{")
+                                if brace_pos != -1:
+                                    print(
+                                        "[WIFI_READ] Dropping "
+                                        f"{brace_pos} junk byte(s) before JSON"
+                                    )
+                                    self._message_buffer = self._message_buffer[brace_pos:]
+                                    continue
+                                # Short leftovers may be a keepalive still arriving;
+                                # anything longer is junk we must not keep buffering.
+                                if len(self._message_buffer) > 4:
+                                    print(
+                                        "[WIFI_READ] Discarding unparseable buffer: "
+                                        f"{self._message_buffer[:32]}"
+                                    )
+                                    self._message_buffer = ""
                                 break
 
                             try:
@@ -1031,9 +1088,13 @@ class AppController:
             self.create_and_send_message("log", all_logs[i], timeout=0.5)
 
     def handle_message(self, message):
+        self._last_recv_time = time.time()
         msg_type = message.get("message_type")
         if msg_type == "command":
             self.handle_command(message)
+        elif msg_type == "pong":
+            self._handle_pong()
+            self.recv_timeout = 0.1
         elif msg_type == "start_file_transfer":
             self.recv_timeout = 5.0
             self._handle_start_file_transfer(message)
@@ -1089,7 +1150,6 @@ class AppController:
             self._close_socket_safely(self.wifi_socket)
             self.wifi_socket = None
             self.create_and_send_message("disconnect", "reboot")
-            asyncio.sleep(10)
             machine.reset()
 #================================================ unused ================================================
         elif command == "set_disarmed":
