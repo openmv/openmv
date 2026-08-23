@@ -937,11 +937,11 @@ static void jpeg_write_headers(jpeg_buf_t *jpeg_buf, int w, int h, int bpp, jpeg
     jpeg_put_bytes(jpeg_buf, (uint8_t [3]) {0x00, 0x3F, 0x0}, 3);
 }
 
-bool jpeg_compress(image_t *src, image_t *dst, int quality, bool realloc, jpeg_subsampling_t subsampling) {
+int jpeg_compress(image_t *src, image_t *dst, int quality, bool realloc, jpeg_subsampling_t subsampling) {
     bool owned = false;
 
     if (src->is_compressed) {
-        return true;
+        return -1;
     }
 
     if (!dst->data) {
@@ -1276,7 +1276,7 @@ bool jpeg_compress(image_t *src, image_t *dst, int quality, bool realloc, jpeg_s
         // Shrinking a block resizes it in place, so this can't fail.
         dst->data = uma_realloc(dst->data, dst->size, UMA_CACHE);
     }
-    return false;
+    return 0;
 
 overflow:
     if (owned) {
@@ -1287,7 +1287,7 @@ overflow:
         dst->size = jpeg_buf.idx;
         dst->data = jpeg_buf.buf;
     }
-    return true;
+    return -1;
 }
 
 #endif // (OMV_JPEG_CODEC_ENABLE == 0)

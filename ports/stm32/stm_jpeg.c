@@ -300,16 +300,16 @@ static void jpeg_compress_data_ready(JPEG_HandleTypeDef *hjpeg, uint8_t *pDataOu
     }
 }
 
-bool jpeg_compress(image_t *src, image_t *dst, int quality, bool realloc, jpeg_subsampling_t subsampling) {
+int jpeg_compress(image_t *src, image_t *dst, int quality, bool realloc, jpeg_subsampling_t subsampling) {
     if (src->is_compressed) {
-        return true;
+        return -1;
     }
 
     #if (OMV_VENC_CODEC_ENABLE == 1)
     // Try VC8000 first, and fall through to the HW codec if it can't encode this image.
     int vc = jpeg_compress_vc8000(src, dst, quality, realloc, subsampling);
     if (vc != JPEG_ERR_UNSUPPORTED) {
-        return vc != 0;
+        return (vc == 0) ? 0 : -1;
     }
     #endif // OMV_VENC_CODEC_ENABLE
 
@@ -345,7 +345,7 @@ bool jpeg_compress(image_t *src, image_t *dst, int quality, bool realloc, jpeg_s
                 JPEG_Info.ChromaSubsampling = JPEG_422_SUBSAMPLING;
             } else if (subsampling == JPEG_SUBSAMPLING_420) {
                 // not supported
-                return true;
+                return -1;
             }
             break;
         default:
@@ -597,7 +597,7 @@ exit_free:
         dst->data = NULL;
     }
 
-    return jpeg_overflow;
+    return jpeg_overflow ? -1 : 0;
 }
 
 static void jpeg_decompress_data_ready_abort(JPEG_HandleTypeDef *hjpeg, uint8_t *pDataOut, uint32_t OutDataLength) {

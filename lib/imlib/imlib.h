@@ -1271,7 +1271,7 @@ void imlib_hardware_venc_deinit();
 void jpeg_get_mcu(image_t *src, int x_offset, int y_offset, int dx, int dy,
                   int8_t *Y0, int8_t *CB, int8_t *CR);
 void jpeg_decompress(image_t *dst, image_t *src);
-bool jpeg_compress(image_t *src, image_t *dst, int quality, bool realloc, jpeg_subsampling_t subsampling);
+int jpeg_compress(image_t *src, image_t *dst, int quality, bool realloc, jpeg_subsampling_t subsampling);
 bool jpeg_is_valid(image_t *img);
 int jpeg_clean_trailing_bytes(int bpp, uint8_t *data);
 void jpeg_read_geometry(file_t *fp, image_t *img, const char *path, jpg_read_settings_t *rs);
@@ -1279,7 +1279,7 @@ void jpeg_read_pixels(file_t *fp, image_t *img);
 void jpeg_read(image_t *img, const char *path);
 void jpeg_write(image_t *img, const char *path, int quality);
 void png_decompress(image_t *dst, image_t *src);
-bool png_compress(image_t *src, image_t *dst);
+int png_compress(image_t *src, image_t *dst);
 void png_read_geometry(file_t *fp, image_t *img, const char *path, png_read_settings_t *rs);
 void png_read_pixels(file_t *fp, image_t *img);
 void png_read(image_t *img, const char *path);

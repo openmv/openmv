@@ -197,9 +197,9 @@ unsigned lodepng_convert_cb(unsigned char *out, const unsigned char *in,
 }
 
 #if defined(IMLIB_ENABLE_PNG_ENCODER)
-bool png_compress(image_t *src, image_t *dst) {
+int png_compress(image_t *src, image_t *dst) {
     if (src->is_compressed) {
-        return true;
+        return -1;
     }
 
     LodePNGState state;
@@ -265,7 +265,7 @@ bool png_compress(image_t *src, image_t *dst) {
         }
         uma_free(png_data);
     }
-    return false;
+    return 0;
 }
 #endif // IMLIB_ENABLE_PNG_ENCODER
 
@@ -317,7 +317,7 @@ void png_decompress(image_t *dst, image_t *src) {
 
 
 #if !defined(IMLIB_ENABLE_PNG_ENCODER)
-bool png_compress(image_t *src, image_t *dst) {
+int png_compress(image_t *src, image_t *dst) {
     mp_raise_msg_varg(&mp_type_RuntimeError, MP_ERROR_TEXT("PNG encoder is not enabled"));
 }
 #endif
