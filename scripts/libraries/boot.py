@@ -28,8 +28,8 @@ from config import (
 from utils import int_to_nbytes, pack_image_meta_header, get_free_memory, get_uptime_minutes
 from sx1262 import SX1262
 from gps_driver import GPSDriver
-from internet_driver import InternetDriver, INTERNET_RECHECK_INTERVAL_SEC
-from _sx126x import ERR_NONE, ERR_CRC_MISMATCH, ERR_UNKNOWN, SX126X_IRQ_CRC_ERR, SX126X_IRQ_HEADER_ERR, SX126X_IRQ_RX_DONE, SX126X_IRQ_TIMEOUT, SX126X_IRQ_TX_DONE, SX126X_SYNC_WORD_PRIVATE, SX126X_IRQ_ALL
+from internet_driver import InternetDriver, MODULE_HEALTH_INTERVAL_SEC, SIM_RECHECK_INTERVAL_SEC, RE_CONFIGURE_INTERVAL_SEC, INTERNET_RETRY_INTERVAL_SEC, hardware_reset_gsm
+from _sx126x import ERR_NONE, ERR_CRC_MISMATCH, ERR_UNKNOWN, SX126X_IRQ_CRC_ERR, SX126X_IRQ_HEADER_ERR, SX126X_IRQ_RX_DONE, SX126X_IRQ_TIMEOUT, SX126X_IRQ_TX_DONE, SX126X_SYNC_WORD_PRIVATE, SX126X_IRQ_ALL, SX126X_PACKET_TYPE_LORA
 import detect
 from detect import PIR_PIN, turn_ON_IR_emitter, turn_OFF_IR_emitter
 import power_mgmt
@@ -120,8 +120,8 @@ NET_PATH_EXPIRY_MS = 1800000 # 1800 second, 30 minutes
 
 TRANSMODE_LOCK_TIMEOUT = 600 # TODO PRODUCTION
 TRANSMODE_INACTIVITY_LIMIT = 40 # 20 second
-CHUNK_BURST_SIZE = 20
-CHUNK_BURST_RX_SLEEP = 0.2
+CHUNK_BURST_SIZE = 50
+CHUNK_BURST_RX_SLEEP = 0.4
 # Config test for SF7
 LORA_FREQ = 868.0
 LORA_BW = 125             # 125kHz provides better sensitivity than wider bandwidths
@@ -823,6 +823,25 @@ async def init_lora():
     finally:
         lora_init_in_progress = False
 
+def reset_lora(verify=True):
+    """Reset the SX1262 module via NRESET (P6).
+
+    Pulses RST high -> low -> high (active-low, ~150 us each).
+    If verify=True, waits up to 3s for the chip to enter standby.
+
+    Returns True on ERR_NONE, False if loranode is None or reset failed.
+    """
+    global loranode
+    if loranode is None:
+        logger.error("[LORA] Cannot hardware-reset: loranode is None (init first)")
+        return False
+    state = loranode.reset(verify=verify)
+    if state != ERR_NONE:
+        logger.error(f"[LORA] Hardware reset (NRESET/P6) failed, status: {state}")
+        return False
+    logger.info("[LORA] Hardware reset (NRESET/P6) complete — re-init required")
+    return True
+
 def lora_event_callback(events): # TODO Anand, merge radio_read into this function
 
     """
@@ -935,6 +954,7 @@ async def lora_health_monitor():  # is_lora_ready is nit being used
             try:
                 if loranode is None:
                     logger.info(f"[LORA] LoRa not initialized, initializing...")
+                    reset_lora()
                     succ = await init_lora()
                     if not succ:
                         logger.error(
@@ -964,6 +984,7 @@ async def lora_health_monitor():  # is_lora_ready is nit being used
                             logger.info(
                                 f"[LORA] Radio is not working fine, error pct: {error_percentage}%, initializing..."
                             )
+                            reset_lora()
                             succ = await init_lora()
                             if not succ:
                                 logger.error(
@@ -984,6 +1005,7 @@ async def lora_health_monitor():  # is_lora_ready is nit being used
                             logger.info(
                                 f"[LORA] Radio is not working fine, error pct: {error_percentage}%, initializing..."
                             )
+                            reset_lora()
                             succ = await init_lora()
                             if not succ:
                                 logger.error(
@@ -1004,6 +1026,7 @@ async def lora_health_monitor():  # is_lora_ready is nit being used
                         await asyncio.sleep(RADIO_HEALTH_INTERVAL)
             except Exception as e:
                 logger.error(f"[LORA] Exception in health monitor: {e}")
+                reset_lora()
                 await asyncio.sleep(RADIO_HEALTH_INTERVAL)
 
 
@@ -1710,45 +1733,61 @@ async def init_tracx_internet():
     async with tracx_uart_lock:
         internet_module = InternetDriver(uart=tracx_uart)
         await internet_module.establish_internet()
-        if not internet_module.initialized:
-            logger.fatal("[CELL] Internet initialization failed; will retry periodically")
+        if internet_module.has_internet:
+            logger.info("[CELL] ᯤᯤᯤᯤᯤᯤ❯❯ Internet established, device will as as CC now... ❮❮ᯤᯤᯤᯤᯤᯤ")
+            return True
+        else:
+            logger.fatal("[CELL] Internet configuration failed; will retry periodically")
             return False
-    logger.info("[CELL] Internet module ready")
-    return True
+
+async def re_init_tracx_internet():
+    # Input: None; Output: bool indicating cellular initialization success (updates internet_module)
+    """Initialize the cellular connection"""
+    global internet_module, tracx_uart_lock, network_paths
+
+    # Hold UART lock during init to avoid conflict with GPS
+    async with tracx_uart_lock:
+        await internet_module.establish_internet(retry_count=2)
+        if internet_module and internet_module.has_internet:
+            network_paths = []
+            logger.info("[CELL] ᯤᯤᯤᯤᯤᯤ❯❯ Internet re-established, device will as as CC now... ❮❮ᯤᯤᯤᯤᯤᯤ")
+            return True
+        else:
+            logger.error("[CELL] Internet re-pconfiguration failed; will retry periodically")
+            return False
 
 async def keep_checking_internet():
-    """Retry establish_internet() every INTERNET_RECHECK_INTERVAL_SEC while offline."""
+    """Retry establish_internet() every INTERNET_RETRY_INTERVAL_SEC while offline."""
     global internet_module, tracx_uart_lock, network_paths
-    if internet_module and not internet_module.module_ready:
-        logger.error("[CELL] Internet module not ready, skipping periodic internet checks")
-        return
-        
-    if internet_module and not internet_module.has_sim:
-        logger.warning("[CELL] No SIM; skipping periodic internet checks (unit node)")
-        return
-    
-    if internet_module and internet_module.has_internet:
-        logger.info("[CELL] Internet health loop started in background (already online)")
-    else:
-        logger.info("[CELL] Internet health loop started in background currenlty offline)")
+
     while True:
-        await asyncio.sleep(INTERNET_RECHECK_INTERVAL_SEC)
-        if internet_module and internet_module.has_internet:
+        await asyncio.sleep(MODULE_HEALTH_INTERVAL_SEC)
+        await internet_module.check_module_health()
+        
+        if internet_module and not internet_module.module_ready:
+            logger.error("[CELL] Internet module not ready, resetting module and re_init_tracx_internet")
+            internet_module.reset_module()
+            await re_init_tracx_internet()
+            await asyncio.sleep(MODULE_HEALTH_INTERVAL_SEC)
             continue
         
         if internet_module and not internet_module.has_sim:
-            logger.warning("[CELL] No SIM; stopping periodic internet checks")
-            return
+            logger.error("[CELL] SIM not detected, re-checking sim detection...")
+            await re_init_tracx_internet()
+            await asyncio.sleep(SIM_RECHECK_INTERVAL_SEC)
+            continue
+        
+        if internet_module and not internet_module.configured:
+            logger.error("[CELL] module not configured, re-conguring module...")
+            await re_init_tracx_internet()
+            await asyncio.sleep(RE_CONFIGURE_INTERVAL_SEC)
+            continue
 
-        logger.info("[CELL] Periodic internet check (has_internet=False)...")
-        try:
-            async with tracx_uart_lock:
-                await internet_module.establish_internet(retry_count=2)
-                if internet_module and internet_module.has_internet:
-                    network_paths = []
-                    logger.info("[CELL] ᯤᯤᯤᯤᯤᯤ❯❯ Now established, device will as as CC now... ❮❮ᯤᯤᯤᯤᯤᯤ")
-        except Exception as e:
-            logger.warning(f"[CELL] Periodic internet check failed: {e}")
+        if internet_module and not internet_module.has_internet:
+            logger.error("[CELL] Internet not connected, re-checking internet...")
+            await re_init_tracx_internet()
+            await asyncio.sleep(INTERNET_RETRY_INTERVAL_SEC)
+            continue
 
 async def upload_payload_to_server(payload, msg_typ, creator): # FINAL
     """Unified payload upload: sends data to cloud via cellular (for command center)."""
@@ -2515,9 +2554,13 @@ def process_message(databytes, rssi=None):
     elif msg_typ == "D":
         logger.info(f"[DBG] Received DEBUG message, msg={msgbytes}, ignoring...")
     elif msg_typ == "R":
-        logger.info(f"Device going to rest mode, stopping any trans mode if ongoing...")
-        get_restmode_lock()
-        asyncio.create_task(send_msg("A", my_addr, ackmessage, sender))
+        global is_install_mode
+        if not is_install_mode:
+            logger.info(f"Device going to rest mode, stopping any trans mode if ongoing...")
+            get_restmode_lock()
+            # asyncio.create_task(send_msg("A", my_addr, ackmessage, sender))
+            if msgbytes == b"1":
+                asyncio.create_task(send_msg("R", my_addr, "2", 65535)) # propogate to level to
     else:
         logger.info(f"[LORA] Unseen messages type {msg_typ}, sender={sender}, creator={creator} in {msgbytes}")
     return True
@@ -2570,7 +2613,7 @@ def build_heartbeat_payload():  # HARD limit is 50 bytes
 
     hbmsg_bytes += int_to_nbytes(radio_succ_count, 3)
     hbmsg_bytes += int_to_nbytes(radio_fail_count, 3)
-    if internet_module and internet_module.initialized:
+    if internet_module and internet_module.configured:
         hbmsg_bytes += int_to_nbytes(internet_module.get_upload_success_count(), 3)
         hbmsg_bytes += int_to_nbytes(internet_module.get_upload_fail_count(), 3)
     else:
@@ -3079,6 +3122,7 @@ class AppHandler:
         try:
             global internet_module, network_paths, tracx_uart_lock
             async with tracx_uart_lock:
+                internet_module.reset_module()
                 await internet_module.establish_internet(retry_count=2)
             if internet_module and internet_module.has_internet:
                 network_paths = []
@@ -3088,7 +3132,7 @@ class AppHandler:
                 app_controller.create_and_send_message("verify_internet", {"message": f"Failed to create CC", "result": "fail"}, timeout=0.5)
                 return False
         except Exception as e:
-            app_controller.create_and_send_message("verify_internet", {"message": f"Error while initializing internet connection", "result": "fail"}, timeout=0.5)
+            app_controller.create_and_send_message("verify_internet", {"message": f"Error while configuring internet connection", "result": "fail"}, timeout=0.5)
             logger.error(f"[try_create_cc] error in try_create_cc: {e}")
             return False
 
@@ -3173,11 +3217,16 @@ class AppHandler:
             gc.collect()
 
 async def rest_mode_broadcating():
-    rest_mode_count = 25
+    global is_install_mode
+    rest_mode_count = 40
     while rest_mode_count:
-        asyncio.create_task(send_msg("R", my_addr, "", 65535))
+        asyncio.create_task(send_msg("R", my_addr, "1", 65535))
         rest_mode_count -= 1
         await asyncio.sleep(0.2)
+        
+    while is_install_mode:  # keep sending every 5 second
+        asyncio.create_task(send_msg("R", my_addr, "1", 65535))
+        await asyncio.sleep(5)
 
 async def enter_install_mode():
     global is_install_mode, app_controller
@@ -3256,6 +3305,7 @@ async def main():
     asyncio.create_task(keep_blinking_restart_led())
 
     if not await init_device():
+        await asyncio.sleep(10)
         await reboot_device()
 
     start_watchdog()
@@ -3318,10 +3368,10 @@ try:
 except KeyboardInterrupt:
     logger.info("꩜꩜꩜꩜꩜꩜ stopped by user via keyboard interrupt ꩜꩜꩜꩜꩜꩜")
 except Exception as e:
-    logger.fatal(f"Uncaught error in main.py: {e}")
+    logger.fatal(f"Uncaught error in main.py: {str(e)}")
 finally:
     try:
         print("꩜꩜꩜꩜꩜꩜ SHUTTING DOWN, and restarting the device... ꩜꩜꩜꩜꩜꩜")
         machine.reset()
     except Exception as e:
-        logger.fatal(f"error in restarting the device in main.py: {e}")
+        logger.fatal(f"error in restarting the device in main.py: {str(e)}")

@@ -51,7 +51,7 @@ def start_watchdog(timeout_ms=None):
 def check_watchdog_reset():
     """Log if the previous boot ended because the WDT expired."""
     if machine.reset_cause() == machine.WDT_RESET:
-        logger.error("✘✘✘ Previous boot ended in watchdog reset ✘✘✘")
+        logger.fatal("✘✘✘ Previous boot ended in watchdog reset ✘✘✘")
         return True
     return False
 
