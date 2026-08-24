@@ -93,8 +93,8 @@ my_addr = UID_TO_ADDR.get(uid)
 # XX.XX.X
 # 02.00.4
 major = 2  # (0-63)
-minor = 1  # (0-99)
-patch = 8  # (0-9)
+minor = 2  # (0-99)
+patch = 0  # (0-9)
 # version as integer value, max_val = 64_999 < 65_535 (2 bytes)
 VERSION = major * 1_000 + minor * 10 + patch
 
@@ -180,6 +180,9 @@ def save_log_entry(log_entry: str):
 
 def get_log_entries():
     return get_key_value('log_entries')
+
+def clear_log_entries():
+    set_key_value('log_entries', None)
 
 def set_gps_location(lat: float= None, lon: float = None, gps_time: int = 0):
     try:

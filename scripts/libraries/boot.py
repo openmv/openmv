@@ -2533,10 +2533,10 @@ def process_message(databytes, rssi=None):
         msgstr = msgbytes.decode()
         global trans_paired_device, trans_data_id
         if msgstr == "install_mode":
+            delete_transmode_lock(trans_paired_device, trans_data_id)
             if not is_install_mode:
                 asyncio.create_task(enter_install_mode())
             asyncio.create_task(send_msg("J", my_addr, b"recvdInstallMode", sender))
-            delete_transmode_lock(trans_paired_device, trans_data_id)
         elif msgstr == "exit_install_mode":
             if is_install_mode:
                 asyncio.create_task(exit_install_mode())
@@ -3217,6 +3217,7 @@ class AppHandler:
             gc.collect()
 
 async def rest_mode_broadcating():
+    asyncio.create_task(send_msg("J", my_addr, b"recvdInstallMode", 100))
     global is_install_mode
     rest_mode_count = 40
     while rest_mode_count:
