@@ -594,68 +594,88 @@ uint16_t imlib_yuv_to_rgb(uint8_t y, int8_t u, int8_t v) {
 ////////////////////////////////////////////////////////////////////////////////
 
 #if defined(IMLIB_ENABLE_IMAGE_FILE_IO)
-static save_image_format_t imblib_parse_extension(image_t *img, const char *path) {
-    size_t l = strlen(path);
-    const char *p = path + l;
-    if (l >= 5) {
-        if (((p[-1] == 'g') || (p[-1] == 'G'))
-            && ((p[-2] == 'e') || (p[-2] == 'E'))
-            && ((p[-3] == 'p') || (p[-3] == 'P'))
-            && ((p[-4] == 'j') || (p[-4] == 'J'))
-            && ((p[-5] == '.') || (p[-5] == '.'))) {
-            // Will convert to JPG if not.
-            return FORMAT_JPG;
-        }
-    }
-    if (l >= 4) {
-        if (((p[-1] == 'g') || (p[-1] == 'G'))
-            && ((p[-2] == 'p') || (p[-2] == 'P'))
-            && ((p[-3] == 'j') || (p[-3] == 'J'))
-            && ((p[-4] == '.') || (p[-4] == '.'))) {
-            // Will convert to JPG if not.
-            return FORMAT_JPG;
-        } else if (((p[-1] == 'g') || (p[-1] == 'G'))
-                   && ((p[-2] == 'n') || (p[-2] == 'N'))
-                   && ((p[-3] == 'p') || (p[-3] == 'P'))
-                   && ((p[-4] == '.') || (p[-4] == '.'))) {
-            // Will convert to PNG if not.
-            return FORMAT_PNG;
-        } else if (((p[-1] == 'p') || (p[-1] == 'P'))
-                   && ((p[-2] == 'm') || (p[-2] == 'M'))
-                   && ((p[-3] == 'b') || (p[-3] == 'B'))
-                   && ((p[-4] == '.') || (p[-4] == '.'))) {
-            if (IM_IS_JPEG(img) || IM_IS_BAYER(img)) {
-                mp_raise_msg(&mp_type_OSError, MP_ERROR_TEXT("Image is not BMP!"));
-            }
-            return FORMAT_BMP;
-        } else if (((p[-1] == 'm') || (p[-1] == 'M'))
-                   && ((p[-2] == 'p') || (p[-2] == 'P'))
-                   && ((p[-3] == 'p') || (p[-3] == 'P'))
-                   && ((p[-4] == '.') || (p[-4] == '.'))) {
-            if (!IM_IS_RGB565(img)) {
-                mp_raise_msg(&mp_type_OSError, MP_ERROR_TEXT("Image is not PPM!"));
-            }
-            return FORMAT_PNM;
-        } else if (((p[-1] == 'm') || (p[-1] == 'M'))
-                   && ((p[-2] == 'g') || (p[-2] == 'G'))
-                   && ((p[-3] == 'p') || (p[-3] == 'P'))
-                   && ((p[-4] == '.') || (p[-4] == '.'))) {
-            if (!IM_IS_GS(img)) {
-                mp_raise_msg(&mp_type_OSError, MP_ERROR_TEXT("Image is not PGM!"));
-            }
-            return FORMAT_PNM;
-        } else if (((p[-1] == 'w') || (p[-1] == 'W'))
-                   && ((p[-2] == 'a') || (p[-2] == 'A'))
-                   && ((p[-3] == 'r') || (p[-3] == 'R'))
-                   && ((p[-4] == '.') || (p[-4] == '.'))) {
-            if (!IM_IS_BAYER(img)) {
-                mp_raise_msg(&mp_type_OSError, MP_ERROR_TEXT("Image is not BAYER!"));
-            }
-            return FORMAT_RAW;
-        }
+typedef struct imlib_extension {
+    const char *ext;
+    save_image_format_t format;
+} imlib_extension_t;
 
+static const imlib_extension_t imlib_extensions[] = {
+    { ".jpeg", FORMAT_JPG },
+    { ".jpg",  FORMAT_JPG },
+    { ".png",  FORMAT_PNG },
+    { ".bmp",  FORMAT_BMP },
+    { ".ppm",  FORMAT_PNM },
+    { ".pgm",  FORMAT_PNM },
+    { ".raw",  FORMAT_RAW },
+};
+
+// Case-insensitive suffix match. The suffix must be lower case.
+static bool imlib_ends_with(const char *str, size_t len, const char *suffix) {
+    size_t n = strlen(suffix);
+
+    if (len < n) {
+        return false;
     }
-    return FORMAT_DONT_CARE;
+
+    for (str += len - n; n; n--, str++, suffix++) {
+        char c = *str;
+        if ((c >= 'A') && (c <= 'Z')) {
+            c += 'a' - 'A';
+        }
+        if (c != *suffix) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+static save_image_format_t imlib_parse_extension(image_t *img, const char *path) {
+    size_t len = strlen(path);
+    const imlib_extension_t *e = NULL;
+
+    for (size_t i = 0; i < OMV_ARRAY_SIZE(imlib_extensions); i++) {
+        if (imlib_ends_with(path, len, imlib_extensions[i].ext)) {
+            e = &imlib_extensions[i];
+            break;
+        }
+    }
+
+    if (e == NULL) {
+        return FORMAT_DONT_CARE;
+    }
+
+    bool supported = true;
+
+    switch (e->format) {
+        // Compressed images are copied as-is, and can't be converted.
+        case FORMAT_JPG:
+            supported = !img->is_compressed || IM_IS_JPEG(img);
+            break;
+        case FORMAT_PNG:
+            supported = !img->is_compressed || (img->pixfmt == PIXFORMAT_PNG);
+            break;
+        case FORMAT_BMP:
+            supported = !IM_IS_JPEG(img) && !IM_IS_BAYER(img);
+            break;
+        case FORMAT_PNM:
+            // .pgm writes P5 from grayscale, .ppm writes P6 from RGB565.
+            supported = (e->ext[2] == 'g') ? IM_IS_GS(img) : IM_IS_RGB565(img);
+            break;
+        case FORMAT_RAW:
+            supported = IM_IS_BAYER(img);
+            break;
+        case FORMAT_DONT_CARE:
+            // A new format won't compile until it's added here.
+            break;
+    }
+
+    if (!supported) {
+        mp_raise_msg_varg(&mp_type_OSError,
+                          MP_ERROR_TEXT("Image can't be saved as %s"), e->ext);
+    }
+
+    return e->format;
 }
 
 bool imlib_read_geometry(file_t *fp, image_t *img, const char *path, img_read_settings_t *rs) {
@@ -690,7 +710,7 @@ bool imlib_read_geometry(file_t *fp, image_t *img, const char *path, img_read_se
     } else {
         file_raise_format(NULL);
     }
-    imblib_parse_extension(img, path); // Enforce extension!
+    imlib_parse_extension(img, path); // Enforce extension!
     return vflipped;
 }
 #endif  //IMLIB_ENABLE_IMAGE_FILE_IO
@@ -720,11 +740,11 @@ void imlib_load_image(image_t *img, const char *path) {
     } else {
         file_raise_format(NULL);
     }
-    imblib_parse_extension(img, path); // Enforce extension!
+    imlib_parse_extension(img, path); // Enforce extension!
 }
 
 void imlib_save_image(image_t *img, const char *path, rectangle_t *roi, int quality) {
-    switch (imblib_parse_extension(img, path)) {
+    switch (imlib_parse_extension(img, path)) {
         case FORMAT_BMP:
             bmp_write_subimg(img, path, roi);
             break;

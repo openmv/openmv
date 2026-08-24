@@ -186,7 +186,12 @@ void mjpeg_write(file_t *fp, int width, int height, uint32_t *frames, uint32_t *
             }
         }
         dst_img.data = NULL;
-        jpeg_compress(&temp, &dst_img, quality, false, JPEG_SUBSAMPLING_AUTO);
+        if (jpeg_compress(&temp, &dst_img, quality, JPEG_SUBSAMPLING_AUTO)) {
+            if (temp.data != img->data) {
+                uma_free(temp.data);
+            }
+            mp_raise_msg(&mp_type_OSError, MP_ERROR_TEXT("Compression Failed!"));
+        }
     }
 
     uint32_t size_padded = (((dst_img.size + 3) / 4) * 4);
