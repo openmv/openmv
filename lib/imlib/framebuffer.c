@@ -343,7 +343,7 @@ void framebuffer_update_preview(image_t *src) {
 
     // Compress the frame if the raw image didn't fit or the format is non-mutable.
     if (!raw_stream) {
-        overflow = jpeg_compress(src, &dst, fb->quality, false, JPEG_SUBSAMPLING_AUTO);
+        overflow = jpeg_compress(src, &dst, fb->quality, JPEG_SUBSAMPLING_AUTO);
     }
 
     if (overflow) {

@@ -937,7 +937,7 @@ static void jpeg_write_headers(jpeg_buf_t *jpeg_buf, int w, int h, int bpp, jpeg
     jpeg_put_bytes(jpeg_buf, (uint8_t [3]) {0x00, 0x3F, 0x0}, 3);
 }
 
-int jpeg_compress(image_t *src, image_t *dst, int quality, bool realloc, jpeg_subsampling_t subsampling) {
+int jpeg_compress(image_t *src, image_t *dst, int quality, jpeg_subsampling_t subsampling) {
     bool owned = false;
 
     if (src->is_compressed) {
@@ -949,7 +949,6 @@ int jpeg_compress(image_t *src, image_t *dst, int quality, bool realloc, jpeg_su
         dst->data = uma_malloc(size, UMA_CACHE);
         dst->size = IMLIB_IMAGE_MAX_SIZE(size);
         owned = true;
-        realloc = true;
     }
 
     // JPEG buffer
@@ -959,7 +958,7 @@ int jpeg_compress(image_t *src, image_t *dst, int quality, bool realloc, jpeg_su
         .length = dst->size,
         .bitc = 0,
         .bitb = 0,
-        .realloc = realloc,
+        .realloc = owned,
         .overflow = false,
     };
 
@@ -1272,7 +1271,7 @@ int jpeg_compress(image_t *src, image_t *dst, int quality, bool realloc, jpeg_su
     dst->data = jpeg_buf.buf;
 
     // Trim the unused tail of the buffer.
-    if (realloc && ((jpeg_buf.length - jpeg_buf.idx) >= 1024)) {
+    if (owned && ((jpeg_buf.length - jpeg_buf.idx) >= 1024)) {
         // Shrinking a block resizes it in place, so this can't fail.
         dst->data = uma_realloc(dst->data, dst->size, UMA_CACHE);
     }
@@ -1414,7 +1413,7 @@ void jpeg_write(image_t *img, const char *path, int quality) {
 
         // Compress before creating the file, so that a failure doesn't leave
         // an empty one behind.
-        if (jpeg_compress(img, &out, quality, false, JPEG_SUBSAMPLING_AUTO)) {
+        if (jpeg_compress(img, &out, quality, JPEG_SUBSAMPLING_AUTO)) {
             mp_raise_msg(&mp_type_OSError, MP_ERROR_TEXT("Compression Failed!"));
         }
 

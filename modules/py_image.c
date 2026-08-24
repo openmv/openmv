@@ -938,7 +938,7 @@ static mp_obj_t py_image_to(pixformat_t pixfmt, mp_rom_obj_t default_color_palet
             }
 
             if (((dst_img.pixfmt == PIXFORMAT_JPEG) &&
-                 jpeg_compress(&temp, &dst_img_tmp, args[ARG_quality].u_int, false, args[ARG_subsampling].u_int))
+                 jpeg_compress(&temp, &dst_img_tmp, args[ARG_quality].u_int, args[ARG_subsampling].u_int))
                 || ((dst_img.pixfmt == PIXFORMAT_PNG) && png_compress(&temp, &dst_img_tmp))) {
                 mp_raise_msg(&mp_type_OSError, MP_ERROR_TEXT("Compression Failed!"));
             }

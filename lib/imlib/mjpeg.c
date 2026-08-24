@@ -186,7 +186,7 @@ void mjpeg_write(file_t *fp, int width, int height, uint32_t *frames, uint32_t *
             }
         }
         dst_img.data = NULL;
-        if (jpeg_compress(&temp, &dst_img, quality, false, JPEG_SUBSAMPLING_AUTO)) {
+        if (jpeg_compress(&temp, &dst_img, quality, JPEG_SUBSAMPLING_AUTO)) {
             if (temp.data != img->data) {
                 uma_free(temp.data);
             }

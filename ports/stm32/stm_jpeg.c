@@ -88,8 +88,7 @@ static const uint8_t JPEG_APP0[] = {
 
 // Returns 0 on success, or one of the negative error codes above. The output
 // buffer is freed on failure, if it was allocated here.
-static int jpeg_compress_vc8000(image_t *src, image_t *dst, int quality, bool realloc,
-                                jpeg_subsampling_t subsampling) {
+static int jpeg_compress_vc8000(image_t *src, image_t *dst, int quality, jpeg_subsampling_t subsampling) {
     JpegEncFrameType frameType;
 
     switch (src->pixfmt) {
@@ -115,7 +114,6 @@ static int jpeg_compress_vc8000(image_t *src, image_t *dst, int quality, bool re
         return JPEG_ERR_UNSUPPORTED;
     }
 
-    // realloc allows resizing the buffer, owned means it's also ours to free.
     uint32_t alloc_size = dst->size;
     bool owned = false;
 
@@ -124,7 +122,6 @@ static int jpeg_compress_vc8000(image_t *src, image_t *dst, int quality, bool re
         dst->data = uma_malloc(dst->size, UMA_CACHE);
         alloc_size = dst->size;
         owned = true;
-        realloc = true;
     }
 
     JpegEncCfg cfg = {
@@ -225,7 +222,7 @@ static int jpeg_compress_vc8000(image_t *src, image_t *dst, int quality, bool re
     dst->size = jpeg_clean_trailing_bytes(dst->size, dst->data);
 
     // Trim the unused tail of the buffer.
-    if (realloc && ((alloc_size - dst->size) >= 1024)) {
+    if (owned && ((alloc_size - dst->size) >= 1024)) {
         // Shrinking a block resizes it in place, so this can't fail.
         dst->data = uma_realloc(dst->data, dst->size, UMA_CACHE);
     }
@@ -300,14 +297,14 @@ static void jpeg_compress_data_ready(JPEG_HandleTypeDef *hjpeg, uint8_t *pDataOu
     }
 }
 
-int jpeg_compress(image_t *src, image_t *dst, int quality, bool realloc, jpeg_subsampling_t subsampling) {
+int jpeg_compress(image_t *src, image_t *dst, int quality, jpeg_subsampling_t subsampling) {
     if (src->is_compressed) {
         return -1;
     }
 
     #if (OMV_VENC_CODEC_ENABLE == 1)
     // Try VC8000 first, and fall through to the HW codec if it can't encode this image.
-    int vc = jpeg_compress_vc8000(src, dst, quality, realloc, subsampling);
+    int vc = jpeg_compress_vc8000(src, dst, quality, subsampling);
     if (vc != JPEG_ERR_UNSUPPORTED) {
         return (vc == 0) ? 0 : -1;
     }
@@ -361,7 +358,6 @@ int jpeg_compress(image_t *src, image_t *dst, int quality, bool realloc, jpeg_su
     int src_w_mcus_bytes = src_w_mcus * mcu_size;
     int src_w_mcus_bytes_2 = src_w_mcus_bytes * 2;
 
-    // realloc allows resizing the buffer, owned means it's also ours to free.
     uint32_t alloc_size = dst->size;
     bool owned = false;
 
@@ -377,7 +373,6 @@ int jpeg_compress(image_t *src, image_t *dst, int quality, bool realloc, jpeg_su
         dst->data = uma_malloc(dst->size, UMA_CACHE);
         alloc_size = dst->size;
         owned = true;
-        realloc = true;
     }
 
     bool jpeg_overflow = false;
@@ -576,7 +571,7 @@ int jpeg_compress(image_t *src, image_t *dst, int quality, bool realloc, jpeg_su
     dst->size = jpeg_clean_trailing_bytes(dst->size, dst->data);
 
     // Trim the unused tail of the buffer.
-    if (realloc && ((alloc_size - dst->size) >= 1024)) {
+    if (owned && ((alloc_size - dst->size) >= 1024)) {
         // Shrinking a block resizes it in place, so this can't fail.
         dst->data = uma_realloc(dst->data, dst->size, UMA_CACHE);
     }
