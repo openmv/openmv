@@ -175,28 +175,30 @@
 #define PAG7936_EXPOSURE_M(exp)     (((exp) >> 8) & 0xff)
 #define PAG7936_EXPOSURE_L(exp)     ((exp) & 0xff)
 
-#if OMV_PAG7936_MIPI_CSI2
-#define PAG7936_WIDTH_ALIGN         (8)
-#define PAG7936_QVGA_FPS_MAX        (470)
-#define PAG7936_VGA_FPS_MAX         (240)
-#define PAG7936_HD_FPS_MAX          (120)
-#else
-#define PAG7936_WIDTH_ALIGN         (4)
-#define PAG7936_QVGA_FPS_MAX        (240)
-#define PAG7936_VGA_FPS_MAX         (120)
-#define PAG7936_HD_FPS_MAX          (60)
-#endif
+// The sensor's I2C address selects the output interface.
+#define PAG7936_MIPI_QVGA_FPS_MAX       (470)
+#define PAG7936_MIPI_VGA_FPS_MAX        (240)
+#define PAG7936_MIPI_HD_FPS_MAX         (120)
+#define PAG7936_MIPI_BRATE              (800)
+
+#define PAG7936_PARALLEL_QVGA_FPS_MAX   (240)
+#define PAG7936_PARALLEL_VGA_FPS_MAX    (120)
+#define PAG7936_PARALLEL_HD_FPS_MAX     (60)
 
 typedef struct {
     bool gain_auto;
     bool expo_auto;
     int framerate;
+    const uint16_t(*if_regs)[2];
+    uint16_t qvga_fps_max;
+    uint16_t vga_fps_max;
+    uint16_t hd_fps_max;
 } pag7936_state_t;
 
 static pag7936_state_t pag7936_state = {};
 
-static const uint16_t default_regs[][2] = {
-    #if OMV_PAG7936_MIPI_CSI2
+// MIPI CSI-2 interface registers.
+static const uint16_t mipi_regs[][2] = {
     { 0x004C,   0x8D },
     { 0x004D,   0x20 },
     { 0x004E,   0x00 },
@@ -254,7 +256,11 @@ static const uint16_t default_regs[][2] = {
     { 0x0A34,   0x0D },
     { 0x0A35,   0x0D },
     { 0x000B,   0x01 },
-    #else
+    { 0x0000,   0x00 },
+};
+
+// Parallel interface registers.
+static const uint16_t parallel_regs[][2] = {
     { 0x010C,   0x23 },
     { 0x010D,   0x05 },
     { 0x007B,   0x8C },
@@ -340,7 +346,11 @@ static const uint16_t default_regs[][2] = {
     { 0x0A34,   0x0D },
     { 0x0A35,   0x0D },
     { 0x000B,   0x02 },
-    #endif
+    { 0x0000,   0x00 },
+};
+
+// Registers common to both interfaces.
+static const uint16_t default_regs[][2] = {
     { 0x1400,   0x01 }, // AE auto mode (bit4=0), bit0 preserved at default
     { 0x140C,   0x00 },
     { 0x140D,   0x01 }, // AE_MAXGAIN = 256 (16x, hardware max)
@@ -538,8 +548,12 @@ static int reset(omv_csi_t *csi) {
     pag7936_state_t *state = csi->priv;
     state->gain_auto = true;
     state->expo_auto = true;
-    state->framerate = PAG7936_HD_FPS_MAX;
+    state->framerate = state->hd_fps_max;
     csi->gainceiling = OMV_CSI_GAINCEILING_16X;
+    // Write interface registers
+    for (int i = 0; state->if_regs[i][0] && ret == 0; i++) {
+        ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, state->if_regs[i][0], 2, state->if_regs[i][1], 1);
+    }
     // Write default registers
     for (int i = 0; default_regs[i][0] && ret == 0; i++) {
         ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, default_regs[i][0], 2, default_regs[i][1], 1);
@@ -591,18 +605,19 @@ static omv_csi_framesize_t get_framesize(omv_csi_t *csi, omv_csi_framesize_t tar
     return target;
     #endif
 
+    pag7936_state_t *state = csi->priv;
     uint32_t w = csi->resolution[target][0];
     uint32_t h = csi->resolution[target][1];
 
     if (w > csi->resolution[OMV_CSI_FRAMESIZE_VGA][0] ||
         h > csi->resolution[OMV_CSI_FRAMESIZE_VGA][1] ||
-        framerate <= PAG7936_HD_FPS_MAX) {
+        framerate <= state->hd_fps_max) {
         return OMV_CSI_FRAMESIZE_HD;
     }
 
     if (w > csi->resolution[OMV_CSI_FRAMESIZE_QVGA][0] ||
         h > csi->resolution[OMV_CSI_FRAMESIZE_QVGA][1] ||
-        framerate <= PAG7936_VGA_FPS_MAX) {
+        framerate <= state->vga_fps_max) {
         return OMV_CSI_FRAMESIZE_VGA;
     }
 
@@ -619,15 +634,15 @@ static int configure(omv_csi_t *csi, omv_csi_framesize_t target, int framerate) 
     switch (framesize) {
         case OMV_CSI_FRAMESIZE_HD:
             regs = hd_regs;
-            framerate = IM_MIN(framerate, PAG7936_HD_FPS_MAX);
+            framerate = IM_MIN(framerate, state->hd_fps_max);
             break;
         case OMV_CSI_FRAMESIZE_VGA:
             regs = vga_regs;
-            framerate = IM_MIN(framerate, PAG7936_VGA_FPS_MAX);
+            framerate = IM_MIN(framerate, state->vga_fps_max);
             break;
         case OMV_CSI_FRAMESIZE_QVGA:
             regs = qvga_regs;
-            framerate = IM_MIN(framerate, PAG7936_QVGA_FPS_MAX);
+            framerate = IM_MIN(framerate, state->qvga_fps_max);
             break;
         default:
             return -1;
@@ -896,6 +911,22 @@ static int ioctl(omv_csi_t *csi, int request, va_list ap) {
 
 int pag7936_init(omv_csi_t *csi) {
     csi->priv = &pag7936_state;
+
+    // The sensor's I2C address selects the output interface.
+    if (csi->slv_addr == PAG7936_SLV_ADDR_MIPI) {
+        pag7936_state.if_regs = mipi_regs;
+        pag7936_state.qvga_fps_max = PAG7936_MIPI_QVGA_FPS_MAX;
+        pag7936_state.vga_fps_max = PAG7936_MIPI_VGA_FPS_MAX;
+        pag7936_state.hd_fps_max = PAG7936_MIPI_HD_FPS_MAX;
+        csi->mipi_if = 1;
+        csi->mipi_brate = PAG7936_MIPI_BRATE;
+    } else {
+        pag7936_state.if_regs = parallel_regs;
+        pag7936_state.qvga_fps_max = PAG7936_PARALLEL_QVGA_FPS_MAX;
+        pag7936_state.vga_fps_max = PAG7936_PARALLEL_VGA_FPS_MAX;
+        pag7936_state.hd_fps_max = PAG7936_PARALLEL_HD_FPS_MAX;
+    }
+
     // Initialize csi flags.
     csi->vsync_pol = 0;
     csi->hsync_pol = 0;
@@ -903,10 +934,6 @@ int pag7936_init(omv_csi_t *csi) {
     csi->mono_bpp = 1;
     csi->raw_output = 1;
     csi->cfa_format = SUBFORMAT_ID_BGGR;
-    #if OMV_PAG7936_MIPI_CSI2
-    csi->mipi_if = 1;
-    csi->mipi_brate = 800;
-    #endif
     csi->halt_req = 1;
 
     // Initialize csi ops.

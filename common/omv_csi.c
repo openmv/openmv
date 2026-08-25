@@ -465,9 +465,10 @@ static size_t omv_csi_detect(omv_i2c_t *i2c, i2c_dev_t *dev_list) {
             #endif // (OMV_FROGEYE2020_ENABLE == 1)
 
             #if (OMV_PAG7920_ENABLE == 1) || (OMV_PAG7936_ENABLE == 1)
-            // PAG720 and PAG7936 share the same I2C address.
-            case PAG7920_SLV_ADDR:
-            case PAG7936_SLV_ADDR_ALT:
+            // PAG7920 and PAG7936 share the same I2C address.
+            // case PAG7920_SLV_ADDR:
+            case PAG7936_SLV_ADDR:
+            case PAG7936_SLV_ADDR_MIPI:
                 omv_i2c_read_reg(i2c, slv_addr, PIXART_CHIP_ID, 2, &chip_id, 2);
                 chip_id = ((chip_id << 8) | (chip_id >> 8)) & 0xFFFF;
                 break;
