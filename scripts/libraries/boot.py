@@ -3356,9 +3356,9 @@ async def main():
     for i in range(24*7*8):  # total 8 weeks runtime
         await asyncio.sleep(3600)
         logger.info(f"Finished HOUR {i}")
-        # if i >= 6:
-        #     logger.error(f"============= >>>>>> Rebooting device since it has been {i} HOURS <<<<<<< ====================")
-        #     await reboot_device()
+        if i >= 6:
+            logger.error(f"============= >>>>>> Rebooting device since it has been {i} HOURS <<<<<<< ====================")
+            await reboot_device()
     logger.info("꩜꩜꩜꩜꩜꩜ main loop completed * ꩜꩜꩜꩜꩜꩜")
     await reboot_device()  # restart after 8 weeks
 
