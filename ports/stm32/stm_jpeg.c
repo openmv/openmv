@@ -40,7 +40,6 @@
 #endif // OMV_VENC_CODEC_ENABLE
 
 #define JPEG_CODEC_TIMEOUT          (1000)
-#define JPEG_ALLOC_PADDING          ((__SCB_DCACHE_LINE_SIZE) * 4)
 #define JPEG_OUTPUT_CHUNK_SIZE      (512) // The minimum output buffer size is 2x this - so 1KB.
 #define JPEG_MAX_MDMA_BLOCK_SIZE    (65536UL) // Maximum bytes MDMA can transfer at once.
 #define JPEG_INPUT_FIFO_BYTES       (32)
@@ -117,13 +116,6 @@ static int jpeg_compress_vc8000(image_t *src, image_t *dst, int quality, jpeg_su
     uint32_t alloc_size = dst->size;
     bool owned = false;
 
-    if (!dst->data) {
-        dst->size = IMLIB_IMAGE_MAX_SIZE(IM_MIN(uma_avail(0), JPEG_MAX_ALLOC_SIZE));
-        dst->data = uma_malloc(dst->size, UMA_CACHE);
-        alloc_size = dst->size;
-        owned = true;
-    }
-
     JpegEncCfg cfg = {
         .inputWidth = (u32) src->w,
         .inputHeight = (u32) src->h,
@@ -154,6 +146,14 @@ static int jpeg_compress_vc8000(image_t *src, image_t *dst, int quality, jpeg_su
     if (JpegEncSetPictureSize(inst, &cfg) != JPEGENC_OK) {
         jpeg_error = JPEG_ERR_FAILED;
         goto exit_cleanup;
+    }
+
+    // Allocate the output buffer, after the encoder allocs.
+    if (!dst->data) {
+        dst->size = IMLIB_IMAGE_MAX_SIZE(uma_avail(0));
+        dst->data = uma_malloc(dst->size, UMA_CACHE);
+        alloc_size = dst->size;
+        owned = true;
     }
 
     JpegEncIn encIn = {
@@ -360,22 +360,17 @@ int jpeg_compress(image_t *src, image_t *dst, int quality, jpeg_subsampling_t su
 
     uint32_t alloc_size = dst->size;
     bool owned = false;
+    bool jpeg_overflow = false;
 
+    uint8_t *mcu_row_buffer = uma_malloc(src_w_mcus_bytes_2, UMA_FAST | UMA_CACHE);
+
+    // Allocate the output buffer, after the MCU row buffer.
     if (!dst->data) {
-        uint32_t avail = uma_avail(0);
-        uint32_t space = src_w_mcus_bytes_2 + JPEG_ALLOC_PADDING;
-
-        if (avail < space) {
-            uma_fail();
-        }
-
-        dst->size = IMLIB_IMAGE_MAX_SIZE(IM_MIN(avail - space, JPEG_MAX_ALLOC_SIZE));
+        dst->size = IMLIB_IMAGE_MAX_SIZE(uma_avail(0));
         dst->data = uma_malloc(dst->size, UMA_CACHE);
         alloc_size = dst->size;
         owned = true;
     }
-
-    bool jpeg_overflow = false;
 
     // Compute size of the APP0 header with cache alignment padding.
     int app0_size = sizeof(JPEG_APP0);
@@ -385,7 +380,7 @@ int jpeg_compress(image_t *src, image_t *dst, int quality, jpeg_subsampling_t su
 
     if (dst->size < app0_total_size) {
         jpeg_overflow = true;
-        goto exit_free;
+        goto exit_cleanup;
     }
 
     // Adjust JPEG size and address by app0 header size.
@@ -395,15 +390,13 @@ int jpeg_compress(image_t *src, image_t *dst, int quality, jpeg_subsampling_t su
     // Destination is too small.
     if (dst->size < (JPEG_OUTPUT_CHUNK_SIZE * 2)) {
         jpeg_overflow = true;
-        goto exit_free;
+        goto exit_cleanup;
     }
 
     JPEG_state.out_data_len_max = dst->size;
     JPEG_state.out_data_len = 0;
     JPEG_state.input_paused = false;
     JPEG_state.output_paused = false;
-
-    uint8_t *mcu_row_buffer = uma_malloc(src_w_mcus_bytes_2, UMA_FAST | UMA_CACHE);
 
     for (int y_offset = 0; y_offset < src->h; y_offset += JPEG_MCU_H) {
         uint8_t *mcu_row_buffer_ptr = mcu_row_buffer + (src_w_mcus_bytes * ((y_offset / JPEG_MCU_H) % 2));
@@ -584,7 +577,6 @@ exit_cleanup:
 
     uma_free(mcu_row_buffer); // after DMA is aborted
 
-exit_free:
     // A truncated JPEG is of no use to the caller, so don't return one.
     if (jpeg_overflow && owned) {
         uma_free(dst->data);

@@ -945,7 +945,7 @@ int jpeg_compress(image_t *src, image_t *dst, int quality, jpeg_subsampling_t su
     }
 
     if (!dst->data) {
-        uint32_t size = IM_MIN(uma_avail(0), JPEG_MAX_ALLOC_SIZE);
+        uint32_t size = uma_avail(0);
         dst->data = uma_malloc(size, UMA_CACHE);
         dst->size = IMLIB_IMAGE_MAX_SIZE(size);
         owned = true;
