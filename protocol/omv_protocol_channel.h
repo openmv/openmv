@@ -38,6 +38,7 @@
 ***************************************************************************/
 
 #define OMV_PROTOCOL_CHANNEL_NAME_SIZE  (14)
+#define OMV_PROTOCOL_CHANNEL_MAX        (32)
 
 /***************************************************************************
 * Channel IOCTL Commands
@@ -93,7 +94,11 @@ typedef enum {
     OMV_PROTOCOL_CHANNEL_ID_STDOUT      = 2,          // Text output (read-only)
     OMV_PROTOCOL_CHANNEL_ID_STREAM      = 3,          // Stream data (read-only)
     OMV_PROTOCOL_CHANNEL_ID_PROFILE     = 4,          // Profiling data (when enabled, read-only)
+    OMV_PROTOCOL_CHANNEL_ID_LAST,                     // Number of reserved channel IDs
 } omv_protocol_channel_id_t;
+
+_Static_assert(OMV_PROTOCOL_CHANNEL_ID_LAST <= OMV_PROTOCOL_CHANNEL_MAX,
+               "Reserved channel IDs must fit in the channels array");
 
 // Channel flags
 typedef enum {
