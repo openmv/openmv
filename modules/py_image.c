@@ -731,7 +731,11 @@ static mp_obj_t py_image_get_pixel(size_t n_args, const mp_obj_t *pos_args, mp_m
         }
         case PIXFORMAT_BAYER_ANY:
             if (arg_rgbtuple) {
-                uint16_t pixel; imlib_debayer_line(arg_x, arg_x + 1, arg_y, &pixel, PIXFORMAT_RGB565, arg_img);
+                // Line functions store pixels at their source column.
+                uint16_t *row = uma_malloc(arg_img->w * sizeof(uint16_t), UMA_FAST);
+                imlib_debayer_line(arg_x, arg_x + 1, arg_y, row, PIXFORMAT_RGB565, arg_img);
+                uint16_t pixel = row[arg_x];
+                uma_free(row);
                 mp_obj_t pixel_tuple[3];
                 pixel_tuple[0] = mp_obj_new_int(COLOR_RGB565_TO_R8(pixel));
                 pixel_tuple[1] = mp_obj_new_int(COLOR_RGB565_TO_G8(pixel));
@@ -742,7 +746,11 @@ static mp_obj_t py_image_get_pixel(size_t n_args, const mp_obj_t *pos_args, mp_m
             }
         case PIXFORMAT_YUV_ANY:
             if (arg_rgbtuple) {
-                uint16_t pixel; imlib_deyuv_line(arg_x, arg_x + 1, arg_y, &pixel, PIXFORMAT_RGB565, arg_img);
+                // Line functions store pixels at their source column.
+                uint16_t *row = uma_malloc(arg_img->w * sizeof(uint16_t), UMA_FAST);
+                imlib_deyuv_line(arg_x, arg_x + 1, arg_y, row, PIXFORMAT_RGB565, arg_img);
+                uint16_t pixel = row[arg_x];
+                uma_free(row);
                 mp_obj_t pixel_tuple[3];
                 pixel_tuple[0] = mp_obj_new_int(COLOR_RGB565_TO_R8(pixel));
                 pixel_tuple[1] = mp_obj_new_int(COLOR_RGB565_TO_G8(pixel));
