@@ -101,26 +101,6 @@ void gif_add_frame(file_t *fp, image_t *img, uint16_t delay) {
             }
             file_write(fp, blk_buf, 2 + block_size);
         }
-    } else if (img->is_bayer || img->is_yuv) {
-        for (int y = 0; y < blocks; y++) {
-            int block_size = IM_MIN(BLOCK_SIZE, bytes - (y * BLOCK_SIZE));
-            blk_buf[0] = 1 + block_size;
-            blk_buf[1] = 0x80; // clear code
-            uint16_t pixels[block_size];
-            if (img->is_bayer) {
-                imlib_debayer_line(0, block_size, y, pixels, PIXFORMAT_RGB565, img);
-            } else {
-                imlib_deyuv_line(0, block_size, y, pixels, PIXFORMAT_RGB565, img);
-            }
-            for (int x = 0; x < block_size; x++) {
-                uint16_t pixel = pixels[2];
-                uint16_t r = COLOR_RGB565_TO_R5(pixel) >> 3;
-                uint16_t g = COLOR_RGB565_TO_G6(pixel) >> 3;
-                uint16_t b = COLOR_RGB565_TO_B5(pixel) >> 3;
-                blk_buf[2 + x] = (r << 5) | (g << 2) | b;
-            }
-            file_write(fp, blk_buf, 2 + block_size);
-        }
     }
 
     file_write(fp, (uint8_t []) {0x01, 0x81, 0x00}, 3); // end code
