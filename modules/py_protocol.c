@@ -472,6 +472,6 @@ const mp_obj_module_t protocol_module = {
 MP_REGISTER_EXTENSIBLE_MODULE(MP_QSTR_protocol, protocol_module);
 
 // Register root pointers for dynamic protocol channels.
-MP_REGISTER_ROOT_POINTER(mp_obj_t protocol_channels[OMV_PROTOCOL_MAX_CHANNELS]);
+MP_REGISTER_ROOT_POINTER(mp_obj_t protocol_channels[OMV_PROTOCOL_CHANNEL_MAX]);
 
 #endif // MICROPY_PY_PROTOCOL

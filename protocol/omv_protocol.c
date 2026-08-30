@@ -135,7 +135,7 @@ void omv_protocol_deinit(void) {
     }
 
     // Deinitialize all channels, unregister dynamic ones.
-    for (int i = 0; i < OMV_PROTOCOL_MAX_CHANNELS; i++) {
+    for (int i = 0; i < OMV_PROTOCOL_CHANNEL_MAX; i++) {
         if (ctx.channels[i]) {
             if (ctx.channels[i]->deinit) {
                 ctx.channels[i]->deinit(ctx.channels[i]);
@@ -212,12 +212,17 @@ int omv_protocol_register_channel(const omv_protocol_channel_t *channel) {
         channel_id = channel->id;
     } else {
         // Find the first free channel
-        for (size_t i = 1; i < OMV_PROTOCOL_MAX_CHANNELS; i++) {
+        for (size_t i = 1; i < OMV_PROTOCOL_CHANNEL_MAX; i++) {
             if (ctx.channels[i] == NULL) {
                 channel_id = i;
                 break;
             }
         }
+    }
+
+    // No free channel slots
+    if (channel_id == -1) {
+        return -1;
     }
 
     // Initialize the channel
@@ -812,7 +817,7 @@ void omv_protocol_process(const omv_protocol_packet_t *packet) {
         case OMV_PROTOCOL_OPCODE_CHANNEL_LIST: {
             // Build list of registered channels
             int ch_count = 0;
-            omv_protocol_channel_entry_t ch_list[OMV_PROTOCOL_MAX_CHANNELS];
+            omv_protocol_channel_entry_t ch_list[OMV_PROTOCOL_CHANNEL_MAX];
 
             for (int i = 0; i < ctx.channels_count; i++) {
                 if (ctx.channels[i] != NULL) {
