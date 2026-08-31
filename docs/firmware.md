@@ -95,6 +95,41 @@ When the firmware build is done, the build artifacts should be located in `build
 
 * OpenMV IDE's bootloader will have trouble connecting to your OpenMV Cam from inside of a virtual machine. You can download OpenMV IDE [here](https://openmv.io/pages/download). *To be clear, OpenMV IDE can connect to an OpenMV Cam from inside of a virtual machine, however OpenMV IDE's bootloader needs to connect to the OpenMV Cam using a timing critical handshake that generally fails when you introduce moving USB devices around between the Host OS and a Virtual Machine*.
 
+## Unix Port Build
+
+The Unix port runs the OpenMV image processing library on a host system (Linux, macOS, Windows with WSL) without hardware. It's useful for algorithm development, CI testing, and reprocessing recorded images.
+
+### Build
+```bash
+cd openmv
+make -j$(nproc) TARGET=UNIX
+```
+
+### Run
+```bash
+cd lib/micropython/ports/unix
+./build-openmv/micropython
+```
+
+```python
+>>> import image
+>>> img = image.Image(320, 240, image.RGB565)
+>>> img.draw_rectangle(10, 10, 50, 50)
+>>> img.save("test.bmp")
+```
+
+### What's available
+- Full imlib (filters, feature detection, blob analysis, find_circles/lines/rects, QR codes, AprilTags, data matrices, barcodes, haarcascade, ORB keypoints).
+- Image I/O across BMP, PNG, JPEG, GIF, MJPEG.
+- ulab for ndarray support.
+
+### What's not
+- Hardware modules (sensor / CSI, display, IMU, FIR, audio, ML accelerators).
+- The on-device test runner (`scripts/unittest/run.py`) is shared; on the Unix port it's driven through `run_tests.py` instead of mpremote.
+- ML inference (TFLM/STAI need the embedded build).
+
+For more detail see [Unix Port Documentation](unix-port.md).
+
 ## Windows Build
 
 There is no native Windows development environment. Instead, use the [Docker Build](#docker-build) or install Ubuntu on a virtual machine:
