@@ -31,6 +31,7 @@
 #include "partition_stm32n6xx.h"
 
 #define BSEC_HW_CONFIG_ID        124U
+#define BSEC_HWS_HSLV_VDDIO4     (1U<<14)
 #define BSEC_HWS_HSLV_VDDIO3     (1U<<15)
 #define BSEC_HWS_HSLV_VDDIO2     (1U<<16)
 
@@ -497,7 +498,7 @@ void SystemClock_Config(void) {
     // Check if high speed IO optimization fuse is set.
     uint32_t fuse;
     BSEC_HandleTypeDef hbsec = { .Instance = BSEC };
-    uint32_t mask = BSEC_HWS_HSLV_VDDIO2 | BSEC_HWS_HSLV_VDDIO3;
+    uint32_t mask = BSEC_HWS_HSLV_VDDIO2 | BSEC_HWS_HSLV_VDDIO3 | BSEC_HWS_HSLV_VDDIO4;
     if (HAL_BSEC_OTP_Read(&hbsec, BSEC_HW_CONFIG_ID, &fuse) != HAL_OK) {
         __fatal_error("HAL_BSEC_OTP_Read");
     } else if ((fuse & mask) != mask) {
