@@ -53,7 +53,7 @@ if not PRODUCTION_MODE:
     DECRYPT_IMAGE_ON_HOPS = True
 FLAKINESS = 0
 ALERT_TEXT_PAUSED = True
-USE_PIR_SENSOR = True
+USE_PIR_SENSOR = False
 # -----------------------------------▲▲▲▲▲-----------------------------------
 
 def get_rand(len=3):
@@ -2212,9 +2212,9 @@ async def person_detection_loop():
                     except Exception as e:
                         logger.warning(f"warning cleaning up image: {e}, can be ignored...")
                     led.off()
-            await asyncio.sleep(35 if USE_PIR_SENSOR else 900)
+            await asyncio.sleep(35 if USE_PIR_SENSOR else 300)
         except Exception as e:
-            await asyncio.sleep(35 if USE_PIR_SENSOR else 900)
+            await asyncio.sleep(35 if USE_PIR_SENSOR else 300)
             logger.error(f"[PIR] unexpected error in event taking and saving: {e}")
 
         finally:
@@ -3353,14 +3353,9 @@ async def main():
     if SAVE_LOGS:
         asyncio.create_task(logger_state())
 
-    for i in range(24*7*8):  # total 8 weeks runtime
-        await asyncio.sleep(3600)
-        logger.info(f"Finished HOUR {i}")
-        if i >= 6:
-            logger.error(f"============= >>>>>> Rebooting device since it has been {i} HOURS <<<<<<< ====================")
-            await reboot_device()
-    logger.info("꩜꩜꩜꩜꩜꩜ main loop completed * ꩜꩜꩜꩜꩜꩜")
-    await reboot_device()  # restart after 8 weeks
+    await asyncio.sleep(15 * 60)  # 15 minutes
+    logger.info("============= >>>>>> Rebooting device after 15 minutes <<<<<<< ====================")
+    await reboot_device()
 
 
 try:
