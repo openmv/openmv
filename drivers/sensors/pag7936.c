@@ -588,15 +588,29 @@ static int read_reg_seq(omv_csi_t *csi, uint16_t addr, size_t size, uint8_t *buf
     return ret;
 }
 
+static int configure(omv_csi_t *csi, omv_csi_framesize_t target, int framerate);
+
 static int set_pixformat(omv_csi_t *csi, pixformat_t pixformat) {
     switch (pixformat) {
         case PIXFORMAT_RGB565:
         case PIXFORMAT_BAYER:
         case PIXFORMAT_GRAYSCALE:
-            return 0;
+            break;
         default:
             return -1;
     }
+
+    #ifdef OMV_CSI_HW_SCALE_ENABLE
+    // BAYER can't be ISP-scaled, so re-select the sensor mode when toggling it.
+    if ((pixformat == PIXFORMAT_BAYER || csi->pixformat == PIXFORMAT_BAYER) &&
+        csi->framesize != OMV_CSI_FRAMESIZE_INVALID) {
+        pag7936_state_t *state = csi->priv;
+        csi->pixformat = pixformat;  // configure() reads it; the caller sets it after
+        return configure(csi, csi->framesize, state->framerate);
+    }
+    #endif
+
+    return 0;
 }
 
 // Pick the largest native sensor mode that meets the requested framerate.
@@ -604,6 +618,12 @@ static omv_csi_framesize_t get_framesize(omv_csi_t *csi, omv_csi_framesize_t tar
     #ifndef OMV_CSI_HW_SCALE_ENABLE
     return target;
     #endif
+
+    // The ISP scaler cannot rescale raw BAYER, so the sensor must produce the
+    // requested size directly. QVGA/VGA/HD are all native sensor modes.
+    if (csi->pixformat == PIXFORMAT_BAYER) {
+        return target;
+    }
 
     pag7936_state_t *state = csi->priv;
     uint32_t w = csi->resolution[target][0];

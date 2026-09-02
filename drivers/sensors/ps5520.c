@@ -172,7 +172,6 @@ static const uint8_t stream_off_regs[][2] = {
 
 // These per-resolution register tables are only used without the ISP scaler;
 // with the scaler the sensor runs at full resolution and the ISP scales down.
-#ifndef OMV_CSI_HW_SCALE_ENABLE
 static const uint8_t res_640x480_regs[][2] = {
     // PS5520_640x480x30fps_24MHz_2Lane_RAW10_840Mbps_20190408_C10A.asc
     { 0xEF, 0x05 },
@@ -955,7 +954,6 @@ static const uint8_t res_2560x1440_regs[][2] = {
     { 0xFF, 0x02 }, // Delay 2 ms
     { 0x00, 0x00 }, // End
 };
-#endif // OMV_CSI_HW_SCALE_ENABLE
 
 static const uint8_t res_2592x1944_regs[][2] = {
     // PS5520_2592x1944x30fps_24MHz_2Lane_RAW10_840Mbps_20190408_C10A.asc
@@ -1260,15 +1258,28 @@ static int write_registers(omv_csi_t *csi, const uint8_t(*regs)[2]) {
     return ret;
 }
 
+static int set_framesize(omv_csi_t *csi, omv_csi_framesize_t framesize);
+
 static int set_pixformat(omv_csi_t *csi, pixformat_t pixformat) {
     switch (pixformat) {
         case PIXFORMAT_RGB565:
         case PIXFORMAT_BAYER:
         case PIXFORMAT_GRAYSCALE:
-            return 0;
+            break;
         default:
             return -1;
     }
+
+    #ifdef OMV_CSI_HW_SCALE_ENABLE
+    // BAYER can't be ISP-scaled, so re-select the sensor mode when toggling it.
+    if ((pixformat == PIXFORMAT_BAYER || csi->pixformat == PIXFORMAT_BAYER) &&
+        csi->framesize != OMV_CSI_FRAMESIZE_INVALID) {
+        csi->pixformat = pixformat;  // set_framesize() reads it; the caller sets it after
+        return set_framesize(csi, csi->framesize);
+    }
+    #endif
+
+    return 0;
 }
 
 static int set_framesize(omv_csi_t *csi, omv_csi_framesize_t framesize) {
@@ -1280,7 +1291,21 @@ static int set_framesize(omv_csi_t *csi, omv_csi_framesize_t framesize) {
     }
 
     int ret = 0;
-    #ifndef OMV_CSI_HW_SCALE_ENABLE
+
+    #ifdef OMV_CSI_HW_SCALE_ENABLE
+    // BAYER can't be ISP-scaled, so it runs at a native mode; other formats run
+    // at full resolution and the ISP scales down.
+    if (csi->pixformat != PIXFORMAT_BAYER) {
+        csi->src_w = SENSOR_WIDTH;
+        csi->src_h = SENSOR_HEIGHT;
+        ret |= write_registers(csi, sw_reset_regs);
+        ret |= write_registers(csi, res_2592x1944_regs);
+        return ret;
+    }
+    csi->src_w = w;
+    csi->src_h = h;
+    #endif // OMV_CSI_HW_SCALE_ENABLE
+
     const uint8_t(*regs)[2];
 
     switch (framesize) {
@@ -1311,7 +1336,6 @@ static int set_framesize(omv_csi_t *csi, omv_csi_framesize_t framesize) {
 
     // Set resolution
     ret |= write_registers(csi, regs);
-    #endif // OMV_CSI_HW_SCALE_ENABLE
     return ret;
 }
 
