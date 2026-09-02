@@ -43,6 +43,7 @@
 #include "modmimxrt.h"
 
 #include "py_fir.h"
+#include "py_protocol.h"
 
 #if MICROPY_PY_LWIP
 #include "lwip/init.h"
@@ -98,6 +99,9 @@ soft_reset:
     mp_init();
 
     // Initialise low-level sub-systems.
+    #if MICROPY_PY_PROTOCOL
+    py_protocol_init0();
+    #endif // MICROPY_PY_PROTOCOL
     #if MICROPY_PY_FIR
     py_fir_init0();
     #endif // MICROPY_PY_FIR

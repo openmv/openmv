@@ -85,6 +85,7 @@
 #include "py_imu.h"
 #include "omv_gpio.h"
 #include "omv_protocol.h"
+#include "py_protocol.h"
 
 NORETURN void __fatal_error(const char *msg);
 extern void machine_pwm_deinit_all(void);
@@ -123,6 +124,9 @@ soft_reset:
     mp_init();
 
     // Initialise sub-systems.
+    #if MICROPY_PY_PROTOCOL
+    py_protocol_init0();
+    #endif // MICROPY_PY_PROTOCOL
     uma_init();
     readline_init0();
     framebuffer_init0();

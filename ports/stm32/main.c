@@ -97,6 +97,7 @@
 
 #include "py_image.h"
 #include "py_fir.h"
+#include "py_protocol.h"
 #include "py_imu.h"
 #include "py_audio.h"
 
@@ -215,6 +216,9 @@ soft_reset:
     mp_init();
 
     // Initialise low-level sub-systems.
+    #if MICROPY_PY_PROTOCOL
+    py_protocol_init0();
+    #endif // MICROPY_PY_PROTOCOL
     #if MICROPY_PY_FIR
     py_fir_init0();
     #endif // MICROPY_PY_FIR

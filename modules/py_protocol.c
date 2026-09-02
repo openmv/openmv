@@ -436,6 +436,12 @@ static mp_obj_t py_protocol_poll(void) {
 }
 static MP_DEFINE_CONST_FUN_OBJ_0(py_protocol_poll_obj, py_protocol_poll);
 
+void py_protocol_init0() {
+    // Clear root pointers after a soft-reset, otherwise the GC scans channels
+    // from the previous run and retains blocks that have since been recycled.
+    memset(MP_STATE_PORT(protocol_channels), 0, sizeof(MP_STATE_PORT(protocol_channels)));
+}
+
 // Module globals table
 static const mp_rom_map_elem_t protocol_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR___name__), MP_ROM_QSTR(MP_QSTR_protocol) },
