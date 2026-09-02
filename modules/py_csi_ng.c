@@ -945,6 +945,7 @@ static mp_obj_t py_csi_ioctl(size_t n_args, const mp_obj_t *args) {
         }
 
         case OMV_CSI_IOCTL_SET_TRIGGERED_MODE:
+        case OMV_CSI_IOCTL_SET_STROBE_MODE:
         case OMV_CSI_IOCTL_SET_FOV_WIDE:
         case OMV_CSI_IOCTL_SET_NIGHT_MODE: {
             if (n_args == 1) {
@@ -954,6 +955,7 @@ static mp_obj_t py_csi_ioctl(size_t n_args, const mp_obj_t *args) {
         }
 
         case OMV_CSI_IOCTL_GET_TRIGGERED_MODE:
+        case OMV_CSI_IOCTL_GET_STROBE_MODE:
         case OMV_CSI_IOCTL_GET_FOV_WIDE:
         case OMV_CSI_IOCTL_GET_NIGHT_MODE: {
             int enabled;
@@ -1560,6 +1562,8 @@ static const mp_rom_map_elem_t globals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_IOCTL_GET_READOUT_WINDOW),    MP_ROM_INT(OMV_CSI_IOCTL_GET_READOUT_WINDOW) },
     { MP_ROM_QSTR(MP_QSTR_IOCTL_SET_TRIGGERED_MODE),    MP_ROM_INT(OMV_CSI_IOCTL_SET_TRIGGERED_MODE) },
     { MP_ROM_QSTR(MP_QSTR_IOCTL_GET_TRIGGERED_MODE),    MP_ROM_INT(OMV_CSI_IOCTL_GET_TRIGGERED_MODE) },
+    { MP_ROM_QSTR(MP_QSTR_IOCTL_SET_STROBE_MODE),       MP_ROM_INT(OMV_CSI_IOCTL_SET_STROBE_MODE) },
+    { MP_ROM_QSTR(MP_QSTR_IOCTL_GET_STROBE_MODE),       MP_ROM_INT(OMV_CSI_IOCTL_GET_STROBE_MODE) },
     { MP_ROM_QSTR(MP_QSTR_IOCTL_SET_FOV_WIDE),          MP_ROM_INT(OMV_CSI_IOCTL_SET_FOV_WIDE) },
     { MP_ROM_QSTR(MP_QSTR_IOCTL_GET_FOV_WIDE),          MP_ROM_INT(OMV_CSI_IOCTL_GET_FOV_WIDE) },
     #if (OMV_OV5640_AF_ENABLE == 1)

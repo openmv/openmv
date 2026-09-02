@@ -242,6 +242,8 @@ typedef enum {
     OMV_CSI_IOCTL_GENX320_CALIBRATE       = 0x25,
     OMV_CSI_IOCTL_GENX320_SET_STC         = 0x26,
     OMV_CSI_IOCTL_GENX320_READ_EVENTS_RAW = 0x27,
+    OMV_CSI_IOCTL_SET_STROBE_MODE         = 0x28,
+    OMV_CSI_IOCTL_GET_STROBE_MODE         = 0x29,
     OMV_CSI_IOCTL_UPDATE_AGC_AEC          = 0x7F
 } omv_csi_ioctl_t;
 
