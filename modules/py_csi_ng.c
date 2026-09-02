@@ -1524,6 +1524,9 @@ static const mp_rom_map_elem_t globals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_NORMAL),          MP_ROM_INT(OMV_CSI_SDE_NORMAL) },    /* Normal/No SDE */
     { MP_ROM_QSTR(MP_QSTR_NEGATIVE),        MP_ROM_INT(OMV_CSI_SDE_NEGATIVE) },  /* Negative image */
 
+    // Custom Resolution
+    { MP_ROM_QSTR(MP_QSTR_CUSTOM),          MP_ROM_INT(OMV_CSI_FRAMESIZE_CUSTOM) },   /* WxH       */
+
     // C/SIF Resolutions
     { MP_ROM_QSTR(MP_QSTR_QCIF),            MP_ROM_INT(OMV_CSI_FRAMESIZE_QCIF) },     /* 176x144   */
     { MP_ROM_QSTR(MP_QSTR_CIF),             MP_ROM_INT(OMV_CSI_FRAMESIZE_CIF) },      /* 352x288   */
