@@ -835,7 +835,7 @@ __weak int omv_csi_set_pixformat(omv_csi_t *csi, pixformat_t pixformat) {
 }
 
 __weak int omv_csi_set_framesize(omv_csi_t *csi, omv_csi_framesize_t framesize) {
-    if (csi->framesize == framesize) {
+    if (csi->framesize == framesize && framesize != OMV_CSI_FRAMESIZE_CUSTOM) {
         // No change
         return 0;
     }
