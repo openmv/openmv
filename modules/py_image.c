@@ -1086,11 +1086,24 @@ static mp_obj_t py_image_save(size_t n_args, const mp_obj_t *pos_args, mp_map_t 
 static MP_DEFINE_CONST_FUN_OBJ_KW(py_image_save_obj, 2, py_image_save);
 #endif //IMLIB_ENABLE_IMAGE_FILE_IO
 
-static mp_obj_t py_image_flush(mp_obj_t img_obj) {
-    framebuffer_update_preview(py_image_cobj(img_obj));
+static mp_obj_t py_image_flush(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
+    enum { ARG_timeout };
+    static const mp_arg_t allowed_args[] = {
+        { MP_QSTR_timeout, MP_ARG_INT, {.u_int = 1000} },
+    };
+
+    mp_arg_val_t args[MP_ARRAY_SIZE(allowed_args)];
+    mp_arg_parse_all(n_args - 1, pos_args + 1, kw_args, MP_ARRAY_SIZE(allowed_args), allowed_args, args);
+
+    // Block until the IDE picks the frame up, or the timeout (in ms) expires.
+    // Pass timeout=0 for the old non-blocking behavior.
+    framebuffer_update_preview_blocking(py_image_cobj(pos_args[0]), IM_MAX(args[ARG_timeout].u_int, 0));
+
+    // A manual flush supersedes any pending automatic flush of the frame buffer.
+    py_helper_get_framebuffer()->pending = false;
     return mp_const_none;
 }
-static MP_DEFINE_CONST_FUN_OBJ_1(py_image_flush_obj, py_image_flush);
+static MP_DEFINE_CONST_FUN_OBJ_KW(py_image_flush_obj, 1, py_image_flush);
 
 //////////////////
 // Drawing Methods
