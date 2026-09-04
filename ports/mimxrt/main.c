@@ -62,6 +62,10 @@
 #include "extmod/modnetwork.h"
 #endif
 
+#if MICROPY_PY_NETWORK_HALOW
+#include "extmod/network_halow.h"
+#endif
+
 #include "extmod/vfs.h"
 #include "extmod/vfs_fat.h"
 
@@ -223,6 +227,9 @@ soft_reset:
     #endif
     #if MICROPY_PY_NETWORK_CYW43
     cyw43_deinit(&cyw43_state);
+    #endif
+    #if MICROPY_PY_NETWORK_HALOW
+    network_halow_deinit_all();
     #endif
     #if MICROPY_PY_MACHINE_I2S
     machine_i2s_deinit_all();
