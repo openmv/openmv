@@ -26,6 +26,7 @@
 #ifndef __PY_HELPER_H__
 #define __PY_HELPER_H__
 #include "imlib.h"
+#include "framebuffer.h"
 
 typedef enum py_helper_arg_image_flags {
     ARG_IMAGE_ANY          = (0 << 0),
@@ -51,6 +52,7 @@ void py_helper_arg_to_thresholds(const mp_obj_t arg, list_t *thresholds);
 int py_helper_arg_to_ksize(const mp_obj_t arg);
 bool py_helper_is_equal_to_framebuffer(image_t *img);
 void py_helper_update_framebuffer(image_t *img);
+framebuffer_t *py_helper_get_framebuffer(void);
 void py_helper_set_to_framebuffer(image_t *img);
 void py_helper_get_array_min_n(mp_obj_t obj, size_t min_n, mp_obj_t **items);
 #endif // __PY_HELPER__

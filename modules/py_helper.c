@@ -298,14 +298,19 @@ void py_helper_update_framebuffer(image_t *img) {
 }
 
 // TODO need to pass a CSI here.
-void py_helper_set_to_framebuffer(image_t *img) {
+framebuffer_t *py_helper_get_framebuffer(void) {
     #if MICROPY_PY_CSI
-    omv_csi_t *csi = omv_csi_get(-1);
-    framebuffer_t *fb = csi->fb;
-
-    omv_csi_abort(csi, true, false);
+    return omv_csi_get(-1)->fb;
     #else
-    framebuffer_t *fb = framebuffer_get(FB_MAINFB_ID);
+    return framebuffer_get(FB_MAINFB_ID);
+    #endif
+}
+
+void py_helper_set_to_framebuffer(image_t *img) {
+    framebuffer_t *fb = py_helper_get_framebuffer();
+
+    #if MICROPY_PY_CSI
+    omv_csi_abort(omv_csi_get(-1), true, false);
     #endif
 
     // Resize the frame buffer to fit the biggest uncompressed image.
