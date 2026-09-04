@@ -1672,6 +1672,9 @@ __weak int omv_csi_snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
 
         // Release the previous buffer from used queue -> free queue.
         framebuffer_release(csi->fb, FB_FLAG_USED | FB_FLAG_INVALIDATE);
+
+        // The previous image (if any) has been flushed and invalidated.
+        csi->fb->pending = false;
     }
 
     // Toggle FSYNC.

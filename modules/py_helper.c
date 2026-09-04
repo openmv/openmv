@@ -313,6 +313,15 @@ void py_helper_set_to_framebuffer(image_t *img) {
     omv_csi_abort(omv_csi_get(-1), true, false);
     #endif
 
+    // Flush an image that was previously loaded into the frame buffer (along
+    // with anything drawn on it) before overwriting it.
+    if (fb->pending) {
+        image_t tmp;
+        framebuffer_to_image(fb, &tmp);
+        framebuffer_update_preview(&tmp);
+        fb->pending = false;
+    }
+
     // Resize the frame buffer to fit the biggest uncompressed image.
     framebuffer_resize(fb, 1, OMV_MAX(image_size(img), fb->u * fb->v * 2));
 
@@ -327,6 +336,10 @@ void py_helper_set_to_framebuffer(image_t *img) {
     img->data = buffer->data;
 
     framebuffer_release(fb, FB_FLAG_FREE);
+
+    // The caller will now load an image into the frame buffer; mark it to be
+    // flushed to the preview by the next frame buffer update.
+    fb->pending = true;
 }
 
 void py_helper_get_array_min_n(mp_obj_t obj, size_t min_n, mp_obj_t **items) {
