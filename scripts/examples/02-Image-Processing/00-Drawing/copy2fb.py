@@ -12,5 +12,8 @@ import time
 # Load image
 img = image.Image("example.bmp", copy_to_fb=True)
 
-# Add a small delay to allow the IDE to read the loaded image.
+# Send the loaded image to the IDE for display.
+img.flush()
+
+# Add a small delay to allow the IDE to read the image.
 time.sleep_ms(1000)
