@@ -863,13 +863,6 @@ static mp_obj_t py_image_to(pixformat_t pixfmt, mp_rom_obj_t default_color_palet
 
     float *transform = py_helper_arg_to_transform(args[ARG_transform].u_obj);
 
-    if (args[ARG_copy_to_fb].u_bool) {
-        framebuffer_t *fb = framebuffer_get(FB_MAINFB_ID);
-        image_t tmp;
-        framebuffer_to_image(fb, &tmp);
-        framebuffer_update_preview(&tmp);
-    }
-
     image_t dst_img = {
         .w = fast_floorf(roi.w * x_scale),
         .h = fast_floorf(roi.h * y_scale),
@@ -4220,9 +4213,6 @@ mp_obj_t py_image_make_new(const mp_obj_type_t *type, size_t n_args, size_t n_kw
         }
     }
 
-    if (args[ARG_copy_to_fb].u_bool) {
-        framebuffer_update_preview(&image);
-    }
     return py_image_from_struct(&image);
 }
 
