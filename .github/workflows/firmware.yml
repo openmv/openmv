@@ -206,10 +206,9 @@ jobs:
       id: changelog
       uses: mikepenz/release-changelog-builder-action@v6
       with:
-        toTag: ${{ github.sha }}
+        toTag: ${{ github.ref_name }}
         configuration: '.github/workflows/changelog.json'
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        token: ${{ secrets.GITHUB_TOKEN }}
 
     - name: '🔥 Create stable release'
       uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64
@@ -260,8 +259,7 @@ jobs:
       with:
         toTag: ${{ github.sha }}
         configuration: '.github/workflows/changelog.json'
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        token: ${{ secrets.GITHUB_TOKEN }}
 
     - name: '🔥 Create development release'
       uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64
