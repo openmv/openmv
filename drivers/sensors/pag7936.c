@@ -100,6 +100,7 @@
 #define SENSOR_TRIGGER_MODE_0       (0x02)
 #define SENSOR_TRIGGER_MODE_1       (0x03)
 #define SENSOR_SOFTWARE_TRIGGER     (0x00EA)
+#define SENSOR_FRAME_COUNT          (0x03E5)
 #define SENSOR_GPIO0                (0x0077)
 #define SENSOR_GPIO0_OUTPUT         (0xC2)
 #define SENSOR_GPIO0_INPUT          (0x02)
@@ -609,6 +610,45 @@ static int reset(omv_csi_t *csi) {
     return ret;
 }
 
+// Commands the sensor to suspend and waits until it has. The command only takes effect
+// when the in-flight frame ends, and settings that need the suspend state are ignored
+// if they are written before that.
+static int suspend(omv_csi_t *csi) {
+    pag7936_state_t *state = csi->priv;
+    mp_uint_t frame_ms = (state->framerate > 0) ? ((1000 / state->framerate) + 1) : 50;
+
+    uint8_t last = 0;
+    int ret = omv_i2c_read_reg(csi->i2c, csi->slv_addr, SENSOR_FRAME_COUNT, 2, &last, 1);
+    ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, SENSOR_OPMODE, 2, SENSOR_OPMODE_SUSPEND, 1);
+
+    // The frame counter reads zero once the sensor has suspended. It also wraps through
+    // zero while running, so a zero that follows 255 only counts after it has held for
+    // a frame. Give up after the delay the datasheet asks for (one frame), doubled.
+    mp_uint_t start = mp_hal_ticks_ms();
+    mp_uint_t nonzero_ms = start;
+
+    while (ret == 0) {
+        mp_uint_t now = mp_hal_ticks_ms();
+        if ((now - start) >= (2 * frame_ms)) {
+            break;
+        }
+
+        uint8_t count = 0;
+        ret |= omv_i2c_read_reg(csi->i2c, csi->slv_addr, SENSOR_FRAME_COUNT, 2, &count, 1);
+
+        if (count != 0) {
+            last = count;
+            nonzero_ms = now;
+        } else if ((last != 0x00 && last != 0xFF) || (now - nonzero_ms) >= frame_ms) {
+            break;
+        }
+
+        mp_hal_delay_ms(1);
+    }
+
+    return ret;
+}
+
 static int sleep(omv_csi_t *csi, int enable) {
     int ret = omv_i2c_write_reg(csi->i2c, csi->slv_addr, SENSOR_TG_EN, 2, SENSOR_TG_EN_FLAG, 1);
     ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, SENSOR_OPMODE, 2,
@@ -923,7 +963,7 @@ static int ioctl(omv_csi_t *csi, int request, void *arg) {
         }
         case OMV_CSI_IOCTL_SET_TRIGGERED_MODE: {
             int enable = a->ivalue;
-            ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, SENSOR_OPMODE, 2, SENSOR_OPMODE_SUSPEND, 1);
+            ret |= suspend(csi);
 
             if (enable) {
                 ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, SENSOR_TG_EN, 2, 0, 1);
