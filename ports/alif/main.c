@@ -90,6 +90,7 @@
 NORETURN void __fatal_error(const char *msg);
 extern void machine_pwm_deinit_all(void);
 extern void machine_pin_irq_deinit(void);
+extern void machine_can_deinit_all(void);
 
 int main(void) {
     bool first_soft_reset = true; (void) first_soft_reset;
@@ -99,6 +100,7 @@ int main(void) {
 
     pendsv_init();
     lptimer_init();
+    machine_init();
     machine_rtc_init();
 
     #if MICROPY_HW_ENABLE_UART_REPL
@@ -241,8 +243,12 @@ soft_reset_exit:
     #if MICROPY_PY_MACHINE_I2C_TARGET
     mp_machine_i2c_target_deinit_all();
     #endif
+    #if MICROPY_PY_MACHINE_CAN
+    machine_can_deinit_all();
+    #endif
     machine_pwm_deinit_all();
     machine_pin_irq_deinit();
+    machine_set_soft_reset();
     imlib_deinit();
     soft_timer_deinit();
     dma_deinit_all();
