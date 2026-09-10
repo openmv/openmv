@@ -164,7 +164,7 @@
 #define OMV_UMA_BLOCK0_SIZE                 (31M)
 #define OMV_UMA_BLOCK0_FLAGS                (0)
 #define OMV_UMA_BLOCK1_MEMORY               SRAM1  // Fast UMA pool.
-#define OMV_UMA_BLOCK1_SIZE                 (590K)
+#define OMV_UMA_BLOCK1_SIZE                 (584K)
 #define OMV_UMA_BLOCK1_FLAGS                (UMA_FAST | UMA_DTCM)
 #define OMV_UMA_BLOCK2_MEMORY               DTCM   // DTCM UMA pool.
 #define OMV_UMA_BLOCK2_SIZE                 (128K)

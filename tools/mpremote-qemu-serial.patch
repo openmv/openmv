@@ -1,5 +1,5 @@
 diff --git a/tools/mpremote/mpremote/transport_serial.py b/tools/mpremote/mpremote/transport_serial.py
-index b3584945b..62c1bc518 100644
+index 75e1cd683..89949c00a 100644
 --- a/tools/mpremote/mpremote/transport_serial.py
 +++ b/tools/mpremote/mpremote/transport_serial.py
 @@ -88,6 +88,15 @@ class SerialTransport(Transport):
@@ -18,7 +18,7 @@ index b3584945b..62c1bc518 100644
                  break
              except OSError:
                  if wait == 0:
-@@ -137,11 +146,14 @@ class SerialTransport(Transport):
+@@ -151,12 +160,13 @@ class SerialTransport(Transport):
  
          data = b""
          begin_overall_s = begin_char_s = time.monotonic()
@@ -28,14 +28,14 @@ index b3584945b..62c1bc518 100644
          while True:
              if data.endswith(ending):
                  break
--            elif self.serial.inWaiting() > 0:
+-            new_data = None
+-            if self.is_pty or self.serial.inWaiting() > 0:
 -                new_data = self.serial.read(1)
 +            new_data = self.serial.read(1)
-+            if new_data:
+             if new_data:
                  if data_consumer:
                      data_consumer(new_data)
-                     data = new_data
-@@ -156,19 +168,21 @@ class SerialTransport(Transport):
+@@ -172,19 +182,21 @@ class SerialTransport(Transport):
                      and time.monotonic() >= begin_overall_s + timeout_overall
                  ):
                      break
@@ -65,7 +65,7 @@ index b3584945b..62c1bc518 100644
  
          if soft_reset:
              data = self.read_until(
-@@ -217,6 +231,8 @@ class SerialTransport(Transport):
+@@ -233,6 +245,8 @@ class SerialTransport(Transport):
  
      def raw_paste_write(self, command_bytes):
          # Read initial header, with window size.
@@ -74,7 +74,7 @@ index b3584945b..62c1bc518 100644
          data = self.serial.read(2)
          window_size = struct.unpack("<H", data)[0]
          window_remain = window_size
-@@ -246,6 +262,7 @@ class SerialTransport(Transport):
+@@ -262,6 +276,7 @@ class SerialTransport(Transport):
          self.serial.write(b"\x04")
  
          # Wait for device to acknowledge end of data.
@@ -82,7 +82,7 @@ index b3584945b..62c1bc518 100644
          data = self.read_until(1, b"\x04")
          if not data.endswith(b"\x04"):
              raise TransportError("could not complete raw paste: {}".format(data))
-@@ -261,7 +278,7 @@ class SerialTransport(Transport):
+@@ -277,7 +292,7 @@ class SerialTransport(Transport):
          if not data.endswith(b">"):
              raise TransportError("could not enter raw repl")
  

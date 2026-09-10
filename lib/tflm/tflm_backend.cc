@@ -75,7 +75,8 @@ typedef struct ml_backend_state {
     MicroInterpreter *interpreter;
 } ml_backend_state_t;
 
-void abort(void) {
+// Allow  ports that provide their own abort() to take precedence.
+__attribute__((weak)) void abort(void) {
     while (1) {
         ;
     }

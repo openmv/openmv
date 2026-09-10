@@ -470,6 +470,8 @@
  #include "stm32f7xx_hal_mmc.h"
 #endif /* HAL_MMC_MODULE_ENABLED */
    
+#include "stm32f7xx_ll_bus.h"
+
 /* Exported macro ------------------------------------------------------------*/
 #ifdef  USE_FULL_ASSERT
 /**

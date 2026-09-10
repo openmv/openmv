@@ -491,6 +491,8 @@
  #include "stm32h7xx_hal_hcd.h"
 #endif /* HAL_HCD_MODULE_ENABLED */
 
+#include "stm32h7xx_ll_bus.h"
+
 /* Exported macro ------------------------------------------------------------*/
 #ifdef  USE_FULL_ASSERT
 /**
