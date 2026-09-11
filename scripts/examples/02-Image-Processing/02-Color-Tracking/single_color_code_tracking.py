@@ -10,6 +10,7 @@
 # only track colored objects which have both the colors below in them.
 
 import csi
+import image
 import time
 import math
 

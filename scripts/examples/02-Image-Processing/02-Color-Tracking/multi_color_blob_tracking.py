@@ -7,6 +7,7 @@
 # This example shows off multi color blob tracking using the OpenMV Cam.
 
 import csi
+import image
 import time
 import math
 

@@ -2,6 +2,7 @@
 # Copyright (c) 2013-2023 OpenMV LLC. All rights reserved.
 # https://github.com/openmv/openmv/blob/master/LICENSE
 #
+from time import sleep_ms
 from lora import *
 
 lora = Lora(band=BAND_EU868, poll_ms=60000, debug=False)

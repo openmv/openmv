@@ -3,6 +3,7 @@
 # https://github.com/openmv/openmv/blob/master/LICENSE
 #
 from machine import I2C
+from bno055 import BNO055
 import time
 
 i2c = I2C(2)

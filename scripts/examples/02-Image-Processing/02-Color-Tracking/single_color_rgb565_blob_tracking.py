@@ -7,6 +7,7 @@
 # This example shows off single color RGB565 tracking using the OpenMV Cam.
 
 import csi
+import image
 import time
 import math
 
