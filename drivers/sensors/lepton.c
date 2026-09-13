@@ -215,17 +215,17 @@ static int ioctl(omv_csi_t *csi, int request, va_list ap) {
             break;
         }
         case OMV_CSI_IOCTL_LEPTON_GET_FPA_TEMP: {
-            int *temp = va_arg(ap, int *);
+            float *temp = va_arg(ap, float *);
             LEP_SYS_FPA_TEMPERATURE_KELVIN_T tfpa;
             ret = (LEP_GetSysFpaTemperatureKelvin(&lepton.port, &tfpa) == LEP_OK) ? 0 : -1;
-            *temp = tfpa;
+            *temp = (tfpa / 100.0f) - 273.15f;
             break;
         }
         case OMV_CSI_IOCTL_LEPTON_GET_AUX_TEMP: {
-            int *temp = va_arg(ap, int *);
+            float *temp = va_arg(ap, float *);
             LEP_SYS_AUX_TEMPERATURE_KELVIN_T taux;
             ret = (LEP_GetSysAuxTemperatureKelvin(&lepton.port, &taux) == LEP_OK) ? 0 : -1;
-            *temp = taux;
+            *temp = (taux / 100.0f) - 273.15f;
             break;
         }
         case OMV_CSI_IOCTL_LEPTON_SET_MODE: {
