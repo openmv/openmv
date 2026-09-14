@@ -35,9 +35,14 @@
 // NOTE: Due to the way the WINC1500 HIF is designed, a single recv() call reads all the data received on the socket, which
 // can result in multiple callbacks if the received data is more than the buffer size passed to the recv() call. As a result,
 // the async call handler will keep overwriting the user-provided buffer in subsequent callbacks. The socket buffer is used
-// as workaround to this issue to allow receiving partial packets. Note the maximum size of WINC internal socket buffer seems
-// to change with host-driver/firmware updates. It's very important to make sure this value is still valid after an update.
-#define WINC_SOCKBUF_MAX_SIZE   (1480)
+// as workaround to this issue to allow receiving partial packets. Sizing also sets throughput: each recv() request costs
+// a full HIF round-trip and the chip delivers up to the request size per trip, so a larger buffer directly multiplies TCP
+// receive throughput (8K measured as the knee; 16K is slower). One buffer is allocated from the MicroPython heap per
+// socket, so small-RAM boards can override this in their board config.
+#ifndef OMV_WINC_SOCKBUF_SIZE
+#define OMV_WINC_SOCKBUF_SIZE   (8192)
+#endif
+#define WINC_SOCKBUF_MAX_SIZE   (OMV_WINC_SOCKBUF_SIZE)
 #define WINC_REQUEST_TIMEOUT    (5000)
 
 #define MAKE_SOCKADDR(addr, ip, port) \
