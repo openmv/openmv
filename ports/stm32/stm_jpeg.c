@@ -26,6 +26,7 @@
 #include "board_config.h"
 #if (OMV_JPEG_CODEC_ENABLE == 1)
 #include "imlib.h"
+#include "simd.h"
 #include "omv_common.h"
 
 #include "py/mphal.h"
@@ -486,51 +487,19 @@ int jpeg_compress(image_t *src, image_t *dst, int quality, jpeg_subsampling_t su
                 }
 
                 // horizontal subsampling of U & V
-                uint32_t mask = 0x80808080;
-                uint32_t *CBp0 = (uint32_t *) CB;
-                uint32_t *CRp0 = (uint32_t *) CR;
-                uint32_t *CBp1 = (uint32_t *) (CB + JPEG_444_GS_MCU_SIZE);
-                uint32_t *CRp1 = (uint32_t *) (CR + JPEG_444_GS_MCU_SIZE);
-                for (int j = 0; j < JPEG_444_GS_MCU_SIZE; j += JPEG_MCU_W) {
-                    uint32_t CBp0_3210 = *CBp0++ ^ mask;
-                    uint32_t CBp0_avg_32_10 = __SHADD8(CBp0_3210, __UXTB16_RORn(CBp0_3210, 8)) ^ mask;
-                    CB_avg[j] = CBp0_avg_32_10;
-                    CB_avg[j + 1] = CBp0_avg_32_10 >> 16;
-
-                    uint32_t CBp0_7654 = *CBp0++ ^ mask;
-                    uint32_t CBp0_avg_76_54 = __SHADD8(CBp0_7654, __UXTB16_RORn(CBp0_7654, 8)) ^ mask;
-                    CB_avg[j + 2] = CBp0_avg_76_54;
-                    CB_avg[j + 3] = CBp0_avg_76_54 >> 16;
-
-                    uint32_t CBp1_3210 = *CBp1++ ^ mask;
-                    uint32_t CBp1_avg_32_10 = __SHADD8(CBp1_3210, __UXTB16_RORn(CBp1_3210, 8)) ^ mask;
-                    CB_avg[j + 4] = CBp1_avg_32_10;
-                    CB_avg[j + 5] = CBp1_avg_32_10 >> 16;
-
-                    uint32_t CBp1_7654 = *CBp1++ ^ mask;
-                    uint32_t CBp1_avg_76_54 = __SHADD8(CBp1_7654, __UXTB16_RORn(CBp1_7654, 8)) ^ mask;
-                    CB_avg[j + 6] = CBp1_avg_76_54;
-                    CB_avg[j + 7] = CBp1_avg_76_54 >> 16;
-
-                    uint32_t CRp0_3210 = *CRp0++ ^ mask;
-                    uint32_t CRp0_avg_32_10 = __SHADD8(CRp0_3210, __UXTB16_RORn(CRp0_3210, 8)) ^ mask;
-                    CR_avg[j] = CRp0_avg_32_10;
-                    CR_avg[j + 1] = CRp0_avg_32_10 >> 16;
-
-                    uint32_t CRp0_7654 = *CRp0++ ^ mask;
-                    uint32_t CRp0_avg_76_54 = __SHADD8(CRp0_7654, __UXTB16_RORn(CRp0_7654, 8)) ^ mask;
-                    CR_avg[j + 2] = CRp0_avg_76_54;
-                    CR_avg[j + 3] = CRp0_avg_76_54 >> 16;
-
-                    uint32_t CRp1_3210 = *CRp1++ ^ mask;
-                    uint32_t CRp1_avg_32_10 = __SHADD8(CRp1_3210, __UXTB16_RORn(CRp1_3210, 8)) ^ mask;
-                    CR_avg[j + 4] = CRp1_avg_32_10;
-                    CR_avg[j + 5] = CRp1_avg_32_10 >> 16;
-
-                    uint32_t CRp1_7654 = *CRp1++ ^ mask;
-                    uint32_t CRp1_avg_76_54 = __SHADD8(CRp1_7654, __UXTB16_RORn(CRp1_7654, 8)) ^ mask;
-                    CR_avg[j + 6] = CRp1_avg_76_54;
-                    CR_avg[j + 7] = CRp1_avg_76_54 >> 16;
+                for (int i = 0; i < JPEG_444_GS_MCU_SIZE; i += (UINT8_VECTOR_SIZE * 2)) {
+                    v2x_rows_t cb0 = vld2_u8((uint8_t *) (CB + i));
+                    v2x_rows_t cb1 = vld2_u8((uint8_t *) (CB + JPEG_444_GS_MCU_SIZE + i));
+                    v2x_rows_t cr0 = vld2_u8((uint8_t *) (CR + i));
+                    v2x_rows_t cr1 = vld2_u8((uint8_t *) (CR + JPEG_444_GS_MCU_SIZE + i));
+                    v2x_rows_t cb_avg;
+                    v2x_rows_t cr_avg;
+                    cb_avg.r0 = vhadd_u8(cb0.r0, cb0.r1);
+                    cb_avg.r1 = vhadd_u8(cb1.r0, cb1.r1);
+                    cr_avg.r0 = vhadd_u8(cr0.r0, cr0.r1);
+                    cr_avg.r1 = vhadd_u8(cr1.r0, cr1.r1);
+                    vst2_u32((uint32_t *) (CB_avg + i), cb_avg);
+                    vst2_u32((uint32_t *) (CR_avg + i), cr_avg);
                 }
             }
         }
