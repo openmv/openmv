@@ -535,7 +535,7 @@ int jpeg_compress(image_t *src, image_t *dst, int quality, jpeg_subsampling_t su
                     jpeg_overflow = true;
                     goto exit_cleanup;
                 }
-                mp_event_wait_ms(JPEG_CODEC_TIMEOUT - elapsed);
+                mp_event_handle_nowait();
             }
 
             // Reset the lock.
@@ -557,7 +557,7 @@ int jpeg_compress(image_t *src, image_t *dst, int quality, jpeg_subsampling_t su
             jpeg_overflow = true;
             goto exit_cleanup;
         }
-        mp_event_wait_ms(JPEG_CODEC_TIMEOUT - elapsed);
+        mp_event_handle_nowait();
     }
 
     // Set output size.
@@ -876,7 +876,7 @@ void jpeg_decompress(image_t *dst, image_t *src) {
                 if (elapsed > JPEG_CODEC_TIMEOUT) {
                     goto exit_cleanup;
                 }
-                mp_event_wait_ms(JPEG_CODEC_TIMEOUT - elapsed);
+                mp_event_handle_nowait();
             }
 
             if (!last_strip) {
@@ -910,7 +910,7 @@ void jpeg_decompress(image_t *dst, image_t *src) {
                     if (elapsed > JPEG_CODEC_TIMEOUT) {
                         goto exit_cleanup;
                     }
-                    mp_event_wait_ms(JPEG_CODEC_TIMEOUT - elapsed);
+                    mp_event_handle_nowait();
                 }
             }
             #endif
@@ -1094,7 +1094,7 @@ void jpeg_decompress(image_t *dst, image_t *src) {
                 if (elapsed > JPEG_CODEC_TIMEOUT) {
                     goto exit_cleanup;
                 }
-                mp_event_wait_ms(JPEG_CODEC_TIMEOUT - elapsed);
+                mp_event_handle_nowait();
             }
         }
     }
