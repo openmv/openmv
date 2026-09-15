@@ -27,6 +27,7 @@
 #define __WINC_H__
 #include <stdint.h>
 #include <stdbool.h>
+#include "board_config.h"
 #define WINC_IPV4_ADDR_LEN      (4)
 #define WINC_MAC_ADDR_LEN       (6)
 #define WINC_MAX_SSID_LEN       (33)
@@ -35,9 +36,13 @@
 // NOTE: Due to the way the WINC1500 HIF is designed, a single recv() call reads all the data received on the socket, which
 // can result in multiple callbacks if the received data is more than the buffer size passed to the recv() call. As a result,
 // the async call handler will keep overwriting the user-provided buffer in subsequent callbacks. The socket buffer is used
-// as workaround to this issue to allow receiving partial packets. Note the maximum size of WINC internal socket buffer seems
-// to change with host-driver/firmware updates. It's very important to make sure this value is still valid after an update.
-#define WINC_SOCKBUF_MAX_SIZE   (1480)
+// as workaround to this issue to allow receiving partial packets. The buffer size also sets the receive throughput, as
+// each recv() costs a full HIF round-trip and the chip delivers at most one buffer per trip (8K is the measured knee,
+// 16K is slower). One buffer is allocated per stream socket, so boards with a small heap can override the default.
+#ifndef OMV_WINC_SOCKBUF_SIZE
+#define OMV_WINC_SOCKBUF_SIZE   (8192)
+#endif
+#define WINC_SOCKBUF_MAX_SIZE   (OMV_WINC_SOCKBUF_SIZE)
 // The maximum datagram size the firmware delivers in response to a single recvfrom() request.
 #define WINC_MAX_DGRAM_SIZE     (1480)
 #define WINC_REQUEST_TIMEOUT    (5000)
