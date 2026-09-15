@@ -34,10 +34,33 @@
 #include "conf_winc.h"
 #include "bsp/include/nm_bsp.h"
 #include "common/include/nm_common.h"
+#include "wdrv_winc_gpio.h"
 
 static tpfNmBspIsr gpfIsr;
 
-sint8 nm_bsp_init(void) {
+// The 19.7.x driver owns the reset sequence (nm_reset) and the delay (nm_sleep),
+// and drives the pins through these.
+void WDRV_WINC_GPIOChipEnableAssert(void) {
+    omv_gpio_write(OMV_WINC_EN_PIN, 1);
+}
+
+void WDRV_WINC_GPIOChipEnableDeassert(void) {
+    omv_gpio_write(OMV_WINC_EN_PIN, 0);
+}
+
+void WDRV_WINC_GPIOResetAssert(void) {
+    omv_gpio_write(OMV_WINC_RST_PIN, 0);
+}
+
+void WDRV_WINC_GPIOResetDeassert(void) {
+    omv_gpio_write(OMV_WINC_RST_PIN, 1);
+}
+
+void WDRV_MSDelay(uint32_t ms) {
+    mp_hal_delay_ms(ms);
+}
+
+int8_t nm_bsp_init(void) {
     gpfIsr = NULL;
 
     // Configure GPIO pins
@@ -48,23 +71,13 @@ sint8 nm_bsp_init(void) {
     omv_gpio_write(OMV_WINC_RST_PIN, 1);
 
     // Perform chip reset.
-    nm_bsp_reset();
+    nm_reset();
 
     return M2M_SUCCESS;
 }
 
-void nm_bsp_reset(void) {
-    omv_gpio_write(OMV_WINC_EN_PIN, 0);
-    omv_gpio_write(OMV_WINC_RST_PIN, 0);
-    nm_bsp_sleep(100);
-    omv_gpio_write(OMV_WINC_EN_PIN, 1);
-    nm_bsp_sleep(100);
-    omv_gpio_write(OMV_WINC_RST_PIN, 1);
-    nm_bsp_sleep(100);
-}
-
-void nm_bsp_sleep(uint32 u32TimeMsec) {
-    mp_hal_delay_ms(u32TimeMsec);
+int8_t nm_bsp_deinit(void) {
+    return M2M_SUCCESS;
 }
 
 static void nm_bsp_extint_callback(void *data) {
@@ -80,6 +93,6 @@ void nm_bsp_register_isr(tpfNmBspIsr pfIsr) {
     omv_gpio_irq_enable(OMV_WINC_IRQ_PIN, true);
 }
 
-void nm_bsp_interrupt_ctrl(uint8 enable) {
+void nm_bsp_interrupt_ctrl(uint8_t enable) {
     omv_gpio_irq_enable(OMV_WINC_IRQ_PIN, enable);
 }

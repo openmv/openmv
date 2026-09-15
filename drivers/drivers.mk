@@ -241,8 +241,8 @@ endif
 ifeq ($(MICROPY_PY_WINC1500), 1)
 DRIVER_SRC_C += $(addprefix winc1500/src/, \
     flexible_flash.c \
-    m2m_ate_mode.c \
-    m2m_crypto.c \
+    inet_addr.c \
+    inet_ntop.c \
     m2m_hif.c \
     m2m_ota.c \
     m2m_periph.c \
@@ -254,15 +254,20 @@ DRIVER_SRC_C += $(addprefix winc1500/src/, \
     nm_bus_wrapper.c \
     nm_common.c \
     nmdrv.c \
-    nmi2c.c \
     nmspi.c \
-    nmuart.c \
     programmer.c \
     socket.c \
     spi_flash.c \
     winc.c \
 )
+# The vendor sources include their headers unqualified.
 CFLAGS += -I$(TOP_DIR)/drivers/winc1500/include
+CFLAGS += -I$(TOP_DIR)/drivers/winc1500/include/bsp/include
+CFLAGS += -I$(TOP_DIR)/drivers/winc1500/include/bus_wrapper/include
+CFLAGS += -I$(TOP_DIR)/drivers/winc1500/include/common/include
+CFLAGS += -I$(TOP_DIR)/drivers/winc1500/include/driver/include
+CFLAGS += -I$(TOP_DIR)/drivers/winc1500/include/socket/include
+CFLAGS += -I$(TOP_DIR)/drivers/winc1500/include/spi_flash/include
 endif   # MICROPY_PY_WINC1500
 
 # VC8000 video encoder sources

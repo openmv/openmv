@@ -1,116 +1,120 @@
-/**
- *
- * \file
- *
- * \brief This module contains NMC1500 M2M driver APIs declarations.
- *
- * Copyright (c) 2016-2018 Microchip Technology Inc. and its subsidiaries.
- *
- * \asf_license_start
- *
- * \page License
- *
- * Subject to your compliance with these terms, you may use Microchip
- * software and any derivatives exclusively with Microchip products.
- * It is your responsibility to comply with third party license terms applicable
- * to your use of third party software (including open source software) that
- * may accompany Microchip software.
- *
- * THIS SOFTWARE IS SUPPLIED BY MICROCHIP "AS IS". NO WARRANTIES,
- * WHETHER EXPRESS, IMPLIED OR STATUTORY, APPLY TO THIS SOFTWARE,
- * INCLUDING ANY IMPLIED WARRANTIES OF NON-INFRINGEMENT, MERCHANTABILITY,
- * AND FITNESS FOR A PARTICULAR PURPOSE. IN NO EVENT WILL MICROCHIP BE
- * LIABLE FOR ANY INDIRECT, SPECIAL, PUNITIVE, INCIDENTAL OR CONSEQUENTIAL
- * LOSS, DAMAGE, COST OR EXPENSE OF ANY KIND WHATSOEVER RELATED TO THE
- * SOFTWARE, HOWEVER CAUSED, EVEN IF MICROCHIP HAS BEEN ADVISED OF THE
- * POSSIBILITY OR THE DAMAGES ARE FORESEEABLE.  TO THE FULLEST EXTENT
- * ALLOWED BY LAW, MICROCHIP'S TOTAL LIABILITY ON ALL CLAIMS IN ANY WAY
- * RELATED TO THIS SOFTWARE WILL NOT EXCEED THE AMOUNT OF FEES, IF ANY,
- * THAT YOU HAVE PAID DIRECTLY TO MICROCHIP FOR THIS SOFTWARE.
- *
- * \asf_license_stop
- *
- */
+/*******************************************************************************
+  This module contains WINC1500 M2M driver APIs implementation.
+
+  File Name:
+    nmdrv.h
+
+  Summary:
+    This module contains WINC1500 M2M driver APIs implementation.
+
+  Description:
+    This module contains WINC1500 M2M driver APIs implementation.
+ *******************************************************************************/
+
+//DOM-IGNORE-BEGIN
+/*
+Copyright (C) 2022, Microchip Technology Inc., and its subsidiaries. All rights reserved.
+
+The software and documentation is provided by microchip and its contributors
+"as is" and any express, implied or statutory warranties, including, but not
+limited to, the implied warranties of merchantability, fitness for a particular
+purpose and non-infringement of third party intellectual property rights are
+disclaimed to the fullest extent permitted by law. In no event shall microchip
+or its contributors be liable for any direct, indirect, incidental, special,
+exemplary, or consequential damages (including, but not limited to, procurement
+of substitute goods or services; loss of use, data, or profits; or business
+interruption) however caused and on any theory of liability, whether in contract,
+strict liability, or tort (including negligence or otherwise) arising in any way
+out of the use of the software and documentation, even if advised of the
+possibility of such damage.
+
+Except as expressly permitted hereunder and subject to the applicable license terms
+for any third-party software incorporated in the software and any applicable open
+source software license terms, no license or other rights, whether express or
+implied, are granted under any patent or other intellectual property rights of
+Microchip or any third party.
+*/
+// DOM-IGNORE-END
 
 #ifndef _NMDRV_H_
 #define _NMDRV_H_
 
-#include "common/include/nm_common.h"
+#include "nm_common.h"
 
 /**
-*  @struct		tstrM2mRev
-*  @brief		Structure holding firmware version parameters and build date/time
+*  @struct      tstrM2mRev
+*  @brief       Structure holding firmware version parameters and build date/time
 */
 typedef struct {
-	uint32 u32Chipid; /* HW revision which will be basically the chip ID */
-	uint8 u8FirmwareMajor; /* Version Major Number which represents the official release base */
-	uint8 u8FirmwareMinor; /* Version Minor Number which represents the engineering release base */
-	uint8 u8FirmwarePatch;	/* Version patch Number which represents the patches release base */
-	uint8 u8DriverMajor; /* Version Major Number which represents the official release base */
-	uint8 u8DriverMinor; /* Version Minor Number which represents the engineering release base */
-	uint8 u8DriverPatch; /* Version Patch Number which represents the patches release base */
-	uint8 BuildDate[sizeof(__DATE__)];
-	uint8 BuildTime[sizeof(__TIME__)];
-	uint8 _PAD8_;
-	uint16 u16FirmwareSvnNum;
-	uint16 _PAD16_[2];
+    uint32_t u32Chipid; /* HW revision which will be basically the chip ID */
+    uint8_t u8FirmwareMajor; /* Version Major Number which represents the official release base */
+    uint8_t u8FirmwareMinor; /* Version Minor Number which represents the engineering release base */
+    uint8_t u8FirmwarePatch;    /* Version patch Number which represents the patches release base */
+    uint8_t u8DriverMajor; /* Version Major Number which represents the official release base */
+    uint8_t u8DriverMinor; /* Version Minor Number which represents the engineering release base */
+    uint8_t u8DriverPatch; /* Version Patch Number which represents the patches release base */
+    uint8_t BuildDate[sizeof(__DATE__)];
+    uint8_t BuildTime[sizeof(__TIME__)];
+    uint8_t _PAD8_;
+    uint16_t u16FirmwareSvnNum;
+    uint16_t _PAD16_[2];
 } tstrM2mRev;
 
 /**
-*  @struct		tstrM2mBinaryHeader
-*  @brief		Structure holding compatibility version info for firmware binaries
+*  @struct      tstrM2mBinaryHeader
+*  @brief       Structure holding compatibility version info for firmware binaries
 */
 typedef struct {
-	tstrM2mRev binVerInfo;
-    uint32	   flashOffset;
-	uint32     payloadSize;
+    tstrM2mRev binVerInfo;
+    uint32_t       flashOffset;
+    uint32_t     payloadSize;
 } tstrM2mBinaryHeader;
 
 #ifdef __cplusplus
      extern "C" {
  #endif
 /**
-*	@fn		nm_get_firmware_info(tstrM2mRev* M2mRev)
-*	@brief	Get Firmware version info
-*	@param [out]	M2mRev
-*			    pointer holds address of structure "tstrM2mRev" that contains the firmware version parameters
-*	@version	1.0
+*   @fn     nm_get_firmware_info(tstrM2mRev* M2mRev)
+*   @brief  Get Firmware version info
+*   @param [out]    M2mRev
+*               pointer holds address of structure "tstrM2mRev" that contains the firmware version parameters
+*   @version    1.0
 */
-sint8 nm_get_firmware_info(tstrM2mRev* M2mRev);
+int8_t nm_get_firmware_info(tstrM2mRev* M2mRev);
 /**
-*	@fn		nm_get_firmware_full_info(tstrM2mRev* pstrRev)
-*	@brief	Get Firmware version info
-*	@param [out]	M2mRev
-*			    pointer holds address of structure "tstrM2mRev" that contains the firmware version parameters
-*	@version	1.0
+*   @fn     nm_get_firmware_full_info(tstrM2mRev* pstrRev)
+*   @brief  Get Firmware version info
+*   @param [out]    M2mRev
+*               pointer holds address of structure "tstrM2mRev" that contains the firmware version parameters
+*   @version    1.0
 */
-sint8 nm_get_firmware_full_info(tstrM2mRev* pstrRev);
+int8_t nm_get_firmware_full_info(tstrM2mRev* pstrRev);
 /**
-*	@fn		nm_get_ota_firmware_info(tstrM2mRev* pstrRev)
-*	@brief	Get Firmware version info
-*	@param [out]	M2mRev
-*			    pointer holds address of structure "tstrM2mRev" that contains the firmware version parameters
-			
-*	@version	1.0
+*   @fn     nm_get_ota_firmware_info(tstrM2mRev* pstrRev)
+*   @brief  Get Firmware version info
+*   @param [out]    M2mRev
+*               pointer holds address of structure "tstrM2mRev" that contains the firmware version parameters
+
+*   @version    1.0
 */
-sint8 nm_get_ota_firmware_info(tstrM2mRev* pstrRev);
+int8_t nm_get_ota_firmware_info(tstrM2mRev* pstrRev);
 /*
-*	@fn		nm_drv_init
-*	@brief	Initialize NMC1000 driver
-*	@return	ZERO in case of success and Negative error code in case of failure
+*   @fn     nm_drv_init
+*   @brief  Initialize NMC1000 driver
+*   @return ZERO in case of success and Negative error code in case of failure
 */
-sint8 nm_drv_init_download_mode(void);
+int8_t nm_drv_init_download_mode(void);
 
 /*
-*	@fn		nm_drv_init
-*	@brief	Initialize NMC1000 driver
-*	@return	M2M_SUCCESS in case of success and Negative error code in case of failure
-*   @param [in]	arg
-*				Generic argument TBD
-*	@return	ZERO in case of success and Negative error code in case of failure
+*   @fn     nm_drv_init
+*   @brief  Initialize NMC1000 driver
+*   @return M2M_SUCCESS in case of success and Negative error code in case of failure
+*   @param [in] arg
+*               Generic argument TBD
+*   @return ZERO in case of success and Negative error code in case of failure
 
 */
-sint8 nm_drv_init(void * arg);
+int8_t nm_drv_init(void * arg);
 
 /*
 *	@fn		nm_drv_init_hold
@@ -121,7 +125,7 @@ sint8 nm_drv_init(void * arg);
 *				Parameter inherited from nm_drv_init
 *	@return	ZERO in case of success and Negative error code in case of failure
 */
-sint8 nm_drv_init_hold(void);
+int8_t nm_drv_init_hold(void);
 
 /*
 *	@fn		nm_drv_init_start
@@ -132,22 +136,22 @@ sint8 nm_drv_init_hold(void);
 *				Parameter inherited from nm_drv_init
 *	@return	ZERO in case of success and Negative error code in case of failure
 */
-sint8 nm_drv_init_start(void * arg);
+int8_t nm_drv_init_start(void * arg);
 
 /**
-*	@fn		nm_drv_deinit
-*	@brief	Deinitialize NMC1000 driver
-*	@author	M. Abdelmawla
-*   @param [in]	arg
-*				Generic argument TBD
-*	@return	ZERO in case of success and Negative error code in case of failure
+*   @fn     nm_drv_deinit
+*   @brief  Deinitialize NMC1000 driver
+*   @author M. Abdelmawla
+*   @param [in] arg
+*               Generic argument TBD
+*   @return ZERO in case of success and Negative error code in case of failure
 */
-sint8 nm_drv_deinit(void * arg);
+int8_t nm_drv_deinit(void * arg);
 
 #ifdef __cplusplus
-	 }
+     }
  #endif
 
-#endif	/*_NMDRV_H_*/
+#endif  /*_NMDRV_H_*/
 
 

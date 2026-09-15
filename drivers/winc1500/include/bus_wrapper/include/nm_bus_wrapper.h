@@ -40,19 +40,19 @@
 /**
 	BUS Type
 **/
-#define  NM_BUS_TYPE_I2C	((uint8)0)
-#define  NM_BUS_TYPE_SPI	((uint8)1)
-#define  NM_BUS_TYPE_UART	((uint8)2)
+#define  NM_BUS_TYPE_I2C	((uint8_t)0)
+#define  NM_BUS_TYPE_SPI	((uint8_t)1)
+#define  NM_BUS_TYPE_UART	((uint8_t)2)
 /**
 	IOCTL commands
 **/
-#define NM_BUS_IOCTL_R			((uint8)0)	/*!< Read only ==> I2C/UART. Parameter:tstrNmI2cDefault/tstrNmUartDefault */
-#define NM_BUS_IOCTL_W			((uint8)1)	/*!< Write only ==> I2C/UART. Parameter type tstrNmI2cDefault/tstrNmUartDefault*/
-#define NM_BUS_IOCTL_W_SPECIAL	((uint8)2)	/*!< Write two buffers within the same transaction
+#define NM_BUS_IOCTL_R			((uint8_t)0)	/*!< Read only ==> I2C/UART. Parameter:tstrNmI2cDefault/tstrNmUartDefault */
+#define NM_BUS_IOCTL_W			((uint8_t)1)	/*!< Write only ==> I2C/UART. Parameter type tstrNmI2cDefault/tstrNmUartDefault*/
+#define NM_BUS_IOCTL_W_SPECIAL	((uint8_t)2)	/*!< Write two buffers within the same transaction
 												(same start/stop conditions) ==> I2C only. Parameter:tstrNmI2cSpecial */
-#define NM_BUS_IOCTL_RW			((uint8)3)	/*!< Read/Write at the same time ==> SPI only. Parameter:tstrNmSpiRw */
+#define NM_BUS_IOCTL_RW			((uint8_t)3)	/*!< Read/Write at the same time ==> SPI only. Parameter:tstrNmSpiRw */
 
-#define NM_BUS_IOCTL_WR_RESTART	((uint8)4)				/*!< Write buffer then made restart condition then read ==> I2C only. parameter:tstrNmI2cSpecial */ 
+#define NM_BUS_IOCTL_WR_RESTART	((uint8_t)4)				/*!< Write buffer then made restart condition then read ==> I2C only. parameter:tstrNmI2cSpecial */ 
 /**
 *	@struct	tstrNmBusCapabilities
 *	@brief	Structure holding bus capabilities information
@@ -60,7 +60,7 @@
 */ 
 typedef struct
 {
-	uint16	u16MaxTrxSz;	/*!< Maximum transfer size. Must be >= 16 bytes*/
+	uint16_t	u16MaxTrxSz;	/*!< Maximum transfer size. Must be >= 16 bytes*/
 } tstrNmBusCapabilities;
 
 /**
@@ -70,9 +70,9 @@ typedef struct
 */ 
 typedef struct
 {
-	uint8 u8SlaveAdr;
-	uint8	*pu8Buf;	/*!< Operation buffer */
-	uint16	u16Sz;		/*!< Operation size */
+	uint8_t u8SlaveAdr;
+	uint8_t	*pu8Buf;	/*!< Operation buffer */
+	uint16_t	u16Sz;		/*!< Operation size */
 } tstrNmI2cDefault;
 
 /**
@@ -82,11 +82,11 @@ typedef struct
 */ 
 typedef struct
 {
-	uint8 u8SlaveAdr;
-	uint8	*pu8Buf1;	/*!< pointer to the 1st buffer */
-	uint8	*pu8Buf2;	/*!< pointer to the 2nd buffer */	
-	uint16	u16Sz1;		/*!< 1st buffer size */
-	uint16	u16Sz2;		/*!< 2nd buffer size */
+	uint8_t u8SlaveAdr;
+	uint8_t	*pu8Buf1;	/*!< pointer to the 1st buffer */
+	uint8_t	*pu8Buf2;	/*!< pointer to the 2nd buffer */	
+	uint16_t	u16Sz1;		/*!< 1st buffer size */
+	uint16_t	u16Sz2;		/*!< 2nd buffer size */
 } tstrNmI2cSpecial;
 
 /**
@@ -96,11 +96,11 @@ typedef struct
 */ 
 typedef struct
 {
-	uint8	*pu8InBuf;		/*!< pointer to input buffer. 
+	uint8_t	*pu8InBuf;		/*!< pointer to input buffer. 
 							Can be set to null and in this case zeros should be sent at MOSI */
-	uint8	*pu8OutBuf;		/*!< pointer to output buffer. 
+	uint8_t	*pu8OutBuf;		/*!< pointer to output buffer. 
 							Can be set to null and in this case data from MISO can be ignored  */
-	uint16	u16Sz;			/*!< Transfere size */	
+	uint16_t	u16Sz;			/*!< Transfere size */	
 } tstrNmSpiRw;
 
 
@@ -111,8 +111,8 @@ typedef struct
 */ 
 typedef struct
 {
-	uint8	*pu8Buf;	/*!< Operation buffer */
-	uint16	u16Sz;		/*!< Operation size */
+	uint8_t	*pu8Buf;	/*!< Operation buffer */
+	uint16_t	u16Sz;		/*!< Operation size */
 } tstrNmUartDefault;
 /*!< Bus capabilities. This structure must be declared at platform specific bus wrapper */
 extern tstrNmBusCapabilities egstrNmBusCapabilities;
@@ -126,7 +126,7 @@ extern tstrNmBusCapabilities egstrNmBusCapabilities;
 *	@brief	Initialize the bus wrapper
 *	@return	ZERO in case of success and M2M_ERR_BUS_FAIL in case of failure
 */ 
-sint8 nm_bus_init(void *);
+int8_t nm_bus_init(void *);
 
 /**
 *	@fn		nm_bus_ioctl
@@ -138,14 +138,14 @@ sint8 nm_bus_init(void *);
 *	@return	ZERO in case of success and M2M_ERR_BUS_FAIL in case of failure
 *	@note	For SPI only, it's important to be able to send/receive at the same time
 */ 
-sint8 nm_bus_ioctl(uint8 u8Cmd, void* pvParameter);
+int8_t nm_bus_ioctl(uint8_t u8Cmd, void* pvParameter);
 
 /**
 *	@fn		nm_bus_deinit
 *	@brief	De-initialize the bus wrapper
 *	@return	ZERO in case of success and M2M_ERR_BUS_FAIL in case of failure
 */ 
-sint8 nm_bus_deinit(void);
+int8_t nm_bus_deinit(void);
 
 /*
 *	@fn			nm_bus_reinit
@@ -154,15 +154,15 @@ sint8 nm_bus_deinit(void);
 *					re-init configuration data
 *	@return		ZERO in case of success and M2M_ERR_BUS_FAIL in case of failure
 */
-sint8 nm_bus_reinit(void *);
+int8_t nm_bus_reinit(void *);
 /*
 *	@fn			nm_bus_get_chip_type
 *	@brief		get chip type
 *	@return		ZERO in case of success and M2M_ERR_BUS_FAIL in case of failure
 */ 
 #ifdef CONF_WINC_USE_UART
-uint8 nm_bus_get_chip_type(void);
-sint8 nm_bus_break(void);
+uint8_t nm_bus_get_chip_type(void);
+int8_t nm_bus_break(void);
 #endif
 #ifdef __cplusplus
 	 }

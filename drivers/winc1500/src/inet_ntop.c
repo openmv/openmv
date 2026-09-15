@@ -1,12 +1,14 @@
 /*******************************************************************************
+  WINC1500 Wireless Driver
+
   File Name:
-    flexible_flash.c
+    inet_ntop.c
 
   Summary:
-    This module contains WINC1500 flexible flash map implementation.
+    Implementation of standard inet_ntop function.
 
   Description:
-    This module contains WINC1500 flexible flash map implementation.
+    Implementation of standard inet_ntop function.
  *******************************************************************************/
 
 //DOM-IGNORE-BEGIN
@@ -33,41 +35,69 @@ implied, are granted under any patent or other intellectual property rights of
 Microchip or any third party.
 */
 
-#include "spi_flash.h"
-#include "m2m_types.h"
-#include "flexible_flash.h"
+#include <stdint.h>
+#include <stddef.h>
+#include "socket.h"
 
-#define FLASH_MAP_TABLE_ADDR        (FLASH_SECTOR_SZ+sizeof(tstrOtaControlSec)+8)
-#define N_ENTRIES_MAX               32
-
-int8_t spi_flexible_flash_find_section(uint16_t u16EntryIDToLookFor, uint32_t *pu32StartOffset, uint32_t *pu32Size)
+const char *inet_ntop(int af, const void *src, char *dst, size_t size)
 {
-    int8_t s8Ret = M2M_ERR_INVALID_ARG;
-    if((NULL == pu32StartOffset) || (NULL == pu32Size)) goto EXIT;
+    uint8_t i, v, t, c, n;
+    char *rp = dst;
+    uint32_t ip = ((struct in_addr*)src)->s_addr;
 
-    uint8_t au8buff[8];
-    uint8_t u8CurrEntry = 0;
-    s8Ret = spi_flash_read(&au8buff[0], FLASH_MAP_TABLE_ADDR, 4);
-    if(M2M_SUCCESS != s8Ret) goto EXIT;
-
-    uint8_t u8nEntries = au8buff[0];     // Max number is 32, reading one byte will suffice
-    if(u8nEntries > N_ENTRIES_MAX)
+    if ((NULL == src) || (NULL == dst) || (size < 16))
     {
-        s8Ret = M2M_ERR_FAIL;
-        goto EXIT;
+        return NULL;
     }
 
-    while(u8nEntries > u8CurrEntry)
+    for (i=0; i<4; i++)
     {
-        s8Ret = spi_flash_read(&au8buff[0], FLASH_MAP_TABLE_ADDR + 4 + (u8CurrEntry*8), 8);
-        u8CurrEntry++;
-        if(M2M_SUCCESS != s8Ret) break;
-        uint16_t u16EntryID = (au8buff[1] << 8) | au8buff[0];
-        if(u16EntryID != u16EntryIDToLookFor) continue;
-        *pu32StartOffset = au8buff[2] * FLASH_SECTOR_SZ;
-        *pu32Size        = au8buff[3] * FLASH_SECTOR_SZ;
-        break;
+        t = ip;
+        v = 100;
+
+        // Check for zero
+
+        if (t > 0)
+        {
+            n = 0;
+
+            do
+            {
+                c = '0';
+                while (t >= v)
+                {
+                    c++;
+                    t -= v;
+                }
+                v /= 10;
+
+                if (('0' != c) || (n > 0))
+                {
+                    *dst++ = c;
+
+                    n++;
+                }
+            }
+            while (v > 0);
+        }
+        else
+        {
+            *dst++ = '0';
+        }
+
+        if (3 == i)
+        {
+            *dst++ = '\0';
+        }
+        else
+        {
+            *dst++ = '.';
+        }
+
+        ip >>= 8;
     }
-EXIT:
-    return s8Ret;
+
+    return rp;
 }
+
+//DOM-IGNORE-END

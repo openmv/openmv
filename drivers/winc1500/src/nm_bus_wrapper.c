@@ -36,6 +36,7 @@
 #include "bsp/include/nm_bsp.h"
 #include "common/include/nm_common.h"
 #include "bus_wrapper/include/nm_bus_wrapper.h"
+#include "wdrv_winc_spi.h"
 
 #define NM_BUS_MAX_TRX_SZ   (4096)
 #define NM_BUS_SPI_TIMEOUT  (1000)
@@ -43,11 +44,11 @@
 static omv_spi_t spi_bus;
 
 tstrNmBusCapabilities egstrNmBusCapabilities = {
-	NM_BUS_MAX_TRX_SZ
+    NM_BUS_MAX_TRX_SZ
 };
 
-sint8 nm_bus_init(void *pvinit) {
-	sint8 result = M2M_SUCCESS;
+int8_t nm_bus_init(void *pvinit) {
+	int8_t result = M2M_SUCCESS;
 
     omv_spi_config_t spi_config;
     omv_spi_default_config(&spi_config, OMV_WINC_SPI_ID);
@@ -59,18 +60,18 @@ sint8 nm_bus_init(void *pvinit) {
         result = M2M_ERR_BUS_FAIL;
     }
 
-    nm_bsp_reset();
+    nm_reset();
 
 	return result;
 }
 
-sint8 nm_bus_deinit(void) {
+int8_t nm_bus_deinit(void) {
     omv_spi_deinit(&spi_bus);
 	return M2M_SUCCESS;
 }
 
-static sint8 nm_bus_rw(uint8 *txbuf, uint8 *rxbuf, uint16 size) {
-    sint8 result = M2M_SUCCESS;
+static int8_t nm_bus_rw(uint8_t *txbuf, uint8_t *rxbuf, uint16_t size) {
+    int8_t result = M2M_SUCCESS;
     omv_spi_transfer_t spi_xfer = {
         .txbuf = txbuf,
         .rxbuf = rxbuf,
@@ -94,8 +95,17 @@ static sint8 nm_bus_rw(uint8 *txbuf, uint8 *rxbuf, uint16 size) {
     return result;
 }
 
-sint8 nm_bus_ioctl(uint8 cmd, void *arg) {
-	sint8 ret = 0;
+// The 19.7.x driver splits every transfer into a send or a receive.
+bool WDRV_WINC_SPISend(unsigned char *const pTransmitData, size_t txSize) {
+    return nm_bus_rw(pTransmitData, NULL, txSize) == M2M_SUCCESS;
+}
+
+bool WDRV_WINC_SPIReceive(unsigned char *const pReceiveData, size_t rxSize) {
+    return nm_bus_rw(NULL, pReceiveData, rxSize) == M2M_SUCCESS;
+}
+
+int8_t nm_bus_ioctl(uint8_t cmd, void *arg) {
+	int8_t ret = 0;
 	switch (cmd) {
 		case NM_BUS_IOCTL_RW: {
 			tstrNmSpiRw *spi_rw = (tstrNmSpiRw *) arg;

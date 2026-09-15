@@ -25,6 +25,7 @@
  */
 #include STM32_HAL_H
 #include <string.h>
+#include "py/mphal.h"
 #include <stdbool.h>
 #include <stdint.h>
 #include <errno.h>
@@ -101,7 +102,7 @@ static void socket_callback(SOCKET sock, uint8_t msg_type, void *msg) {
 
     if (((msg_type == SOCKET_MSG_SEND) || (msg_type == SOCKET_MSG_SENDTO))
         && ((*((int16_t *) msg)) < 0)) {
-        WINC1500_EXPORT(close) (sock);
+        WINC1500_EXPORT(shutdown) (sock);
     }
 
     if (async_request_type != msg_type) {
@@ -250,7 +251,7 @@ static void socket_callback(SOCKET sock, uint8_t msg_type, void *msg) {
  * It should be casted to the correct data type corresponding to the notification type.
  */
 
-static void wifi_callback_ap(uint8_t msg_type, void *msg) {
+static void wifi_callback_ap(uint8_t msg_type, const void *const msg) {
     switch (msg_type) {
         case M2M_WIFI_RESP_CON_STATE_CHANGED: {
             tstrM2mWifiStateChanged *wifi_state = (tstrM2mWifiStateChanged *) msg;
@@ -304,7 +305,7 @@ static void wifi_callback_ap(uint8_t msg_type, void *msg) {
  * msg: A pointer to a buffer containing the notification parameters (if any).
  * It should be casted to the correct data type corresponding to the notification type.
  */
-static void wifi_callback_sta(uint8_t msg_type, void *msg) {
+static void wifi_callback_sta(uint8_t msg_type, const void *const msg) {
     // Index of scan list to request scan result.
     static uint8_t scan_request_index = 0;
 
@@ -445,7 +446,7 @@ static int winc_async_request(uint8_t msg_type, void *ret, uint32_t timeout) {
     // Wait for async request to finish.
     while (async_request_done == false) {
         // Handle pending events from network controller.
-        m2m_wifi_handle_events(NULL);
+        m2m_wifi_handle_events();
 
         if (async_request_ack == true) {
             // Received an ACK event for an older send/sendto() instead
@@ -580,7 +581,7 @@ int winc_connect(const char *ssid, uint8_t security, const char *key, uint16_t c
     while (async_request_done == false) {
         __WFI();
         // Handle pending events from network controller.
-        m2m_wifi_handle_events(NULL);
+        m2m_wifi_handle_events();
     }
     return 0;
 }
@@ -630,7 +631,7 @@ int winc_isconnected() {
 
 int winc_connected_sta(uint32_t *sta_ip) {
     if (connected_sta_ip == 0) {
-        m2m_wifi_handle_events(NULL);
+        m2m_wifi_handle_events();
     }
 
     *sta_ip = connected_sta_ip;
@@ -642,7 +643,7 @@ int winc_wait_for_sta(uint32_t *sta_ip, uint32_t timeout) {
     while (connected_sta_ip == 0) {
         __WFI();
         // Handle pending events from network controller.
-        m2m_wifi_handle_events(NULL);
+        m2m_wifi_handle_events();
         if ((HAL_GetTick() - tick_start) >= timeout) {
             break;
         }
@@ -676,7 +677,7 @@ int winc_netinfo(winc_netinfo_t *netinfo) {
     while (async_request_done == false) {
         __WFI();
         // Handle pending events from network controller.
-        m2m_wifi_handle_events(NULL);
+        m2m_wifi_handle_events();
     }
 
     return 0;
@@ -693,7 +694,7 @@ int winc_scan(winc_scan_callback_t cb, void *arg) {
     while (async_request_done == false) {
         __WFI();
         // Handle pending events from network controller.
-        m2m_wifi_handle_events(NULL);
+        m2m_wifi_handle_events();
     }
 
     return 0;
@@ -710,7 +711,7 @@ int winc_get_rssi() {
     while (async_request_done == false) {
         __WFI();
         // Handle pending events from network controller.
-        m2m_wifi_handle_events(NULL);
+        m2m_wifi_handle_events();
     }
 
     return rssi;
@@ -766,7 +767,7 @@ int winc_flash_verify(const char *path) {
 int winc_gethostbyname(const char *name, uint8_t *out_ip) {
     int ret;
     uint32_t ip = 0;
-    ret = WINC1500_EXPORT(gethostbyname) ((uint8_t *) name);
+    ret = WINC1500_EXPORT(gethostbyname) (name);
     if (ret == SOCK_ERR_NO_ERROR) {
         ret = winc_async_request(0, &ip, WINC_REQUEST_TIMEOUT);
     } else {
@@ -791,7 +792,7 @@ int winc_socket_socket(uint8_t type) {
 }
 
 void winc_socket_close(int fd) {
-    WINC1500_EXPORT(close) (fd);
+    WINC1500_EXPORT(shutdown) (fd);
 }
 
 int winc_socket_bind(int fd, sockaddr *addr) {
@@ -857,7 +858,7 @@ int winc_socket_send(int fd, const uint8_t *buf, uint32_t len, uint32_t timeout)
         async_request_data = &async_ret;
         async_request_done = false;
         async_request_type = SOCKET_MSG_SEND;
-        m2m_wifi_handle_events(NULL);
+        m2m_wifi_handle_events();
 
         // Split the packet into smaller ones.
         int n = OMV_MIN((len - bytes), SOCKET_BUFFER_MAX_LENGTH);
@@ -919,7 +920,7 @@ int winc_socket_sendto(int fd, const uint8_t *buf, uint32_t len, sockaddr *addr,
         async_request_data = &async_ret;
         async_request_done = false;
         async_request_type = SOCKET_MSG_SENDTO;
-        m2m_wifi_handle_events(NULL);
+        m2m_wifi_handle_events();
 
         // Split the packet into smaller ones.
         int n = OMV_MIN((len - bytes), SOCKET_BUFFER_MAX_LENGTH);

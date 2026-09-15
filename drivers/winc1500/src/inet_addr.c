@@ -1,12 +1,14 @@
 /*******************************************************************************
+  WINC1500 Wireless Driver
+
   File Name:
-    flexible_flash.c
+    inet_addr.c
 
   Summary:
-    This module contains WINC1500 flexible flash map implementation.
+    Implementation of standard inet_addr function.
 
   Description:
-    This module contains WINC1500 flexible flash map implementation.
+    Implementation of standard inet_addr function.
  *******************************************************************************/
 
 //DOM-IGNORE-BEGIN
@@ -32,42 +34,85 @@ source software license terms, no license or other rights, whether express or
 implied, are granted under any patent or other intellectual property rights of
 Microchip or any third party.
 */
+#include <stdint.h>
+#include "socket.h"
 
-#include "spi_flash.h"
-#include "m2m_types.h"
-#include "flexible_flash.h"
-
-#define FLASH_MAP_TABLE_ADDR        (FLASH_SECTOR_SZ+sizeof(tstrOtaControlSec)+8)
-#define N_ENTRIES_MAX               32
-
-int8_t spi_flexible_flash_find_section(uint16_t u16EntryIDToLookFor, uint32_t *pu32StartOffset, uint32_t *pu32Size)
+in_addr_t inet_addr(const char *cp)
 {
-    int8_t s8Ret = M2M_ERR_INVALID_ARG;
-    if((NULL == pu32StartOffset) || (NULL == pu32Size)) goto EXIT;
+    uint8_t i,l;
+    uint16_t t;
+    uint32_t ip;
+    char c;
 
-    uint8_t au8buff[8];
-    uint8_t u8CurrEntry = 0;
-    s8Ret = spi_flash_read(&au8buff[0], FLASH_MAP_TABLE_ADDR, 4);
-    if(M2M_SUCCESS != s8Ret) goto EXIT;
+    ip = 0;
 
-    uint8_t u8nEntries = au8buff[0];     // Max number is 32, reading one byte will suffice
-    if(u8nEntries > N_ENTRIES_MAX)
+    for (i=0; i<4; i++)
     {
-        s8Ret = M2M_ERR_FAIL;
-        goto EXIT;
+        t = 0;
+        ip >>= 8;
+
+        // Count non-delimiter or terminator characters
+
+        for (l=0; l<4; l++)
+        {
+            c = cp[l];
+
+            if (('.' == c) || ('\0' == c))
+            {
+                break;
+            }
+        }
+
+        // There must be 1 to 3 characters
+
+        if ((0 == l) || (4 == l))
+        {
+            return 0;
+        }
+
+        c = *cp++;
+
+        // First digit can't be '0' unless it's the only one
+
+        if ((l > 1) && (c == '0'))
+        {
+            return 0;
+        }
+
+        while(l--)
+        {
+            // Each digit must be decimal
+
+            if ((c < '0') || (c > '9'))
+            {
+                return 0;
+            }
+
+            t = (t * 10) + (c - '0');
+
+            c = *cp++;
+        }
+
+        // Total accumulated number must be less than 256
+
+        if (t > 255)
+        {
+            return 0;
+        }
+
+        // Pack number into 32 bit IP address representation
+
+        ip |= ((uint32_t)t << 24);
+
+        // First three numbers must terminate with '.', last one with '\0's
+
+        if ((('\0' == c) && (i != 3)) || (('\0' != c) && (i == 3)))
+        {
+            return 0;
+        }
     }
 
-    while(u8nEntries > u8CurrEntry)
-    {
-        s8Ret = spi_flash_read(&au8buff[0], FLASH_MAP_TABLE_ADDR + 4 + (u8CurrEntry*8), 8);
-        u8CurrEntry++;
-        if(M2M_SUCCESS != s8Ret) break;
-        uint16_t u16EntryID = (au8buff[1] << 8) | au8buff[0];
-        if(u16EntryID != u16EntryIDToLookFor) continue;
-        *pu32StartOffset = au8buff[2] * FLASH_SECTOR_SZ;
-        *pu32Size        = au8buff[3] * FLASH_SECTOR_SZ;
-        break;
-    }
-EXIT:
-    return s8Ret;
+    return ip;
 }
+
+//DOM-IGNORE-END

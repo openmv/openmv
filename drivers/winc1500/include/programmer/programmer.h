@@ -52,12 +52,12 @@
 #define	programmer_read(pu8Buf, u32Offset, u32Sz)		spi_flash_read(pu8Buf, u32Offset, u32Sz)	
 
 
-#define programmer_write_root_cert(buff)				programmer_write((uint8*)buff, M2M_TLS_ROOTCER_FLASH_OFFSET, M2M_TLS_ROOTCER_FLASH_SIZE)
-#define programmer_read_root_cert(buff)					programmer_read((uint8*)buff, M2M_TLS_ROOTCER_FLASH_OFFSET, M2M_TLS_ROOTCER_FLASH_SIZE)
+#define programmer_write_root_cert(buff)				programmer_write((uint8_t*)buff, M2M_TLS_ROOTCER_FLASH_OFFSET, M2M_TLS_ROOTCER_FLASH_SIZE)
+#define programmer_read_root_cert(buff)					programmer_read((uint8_t*)buff, M2M_TLS_ROOTCER_FLASH_OFFSET, M2M_TLS_ROOTCER_FLASH_SIZE)
 #define programmer_erase_root_cert()					programmer_erase(M2M_TLS_ROOTCER_FLASH_OFFSET, M2M_TLS_ROOTCER_FLASH_SIZE)
 
-#define programmer_write_tls_cert_store(buff)			programmer_write((uint8*)buff, M2M_TLS_SERVER_FLASH_OFFSET, M2M_TLS_SERVER_FLASH_SIZE)
-#define programmer_read_tls_cert_store(buff)			programmer_read((uint8*)buff, M2M_TLS_SERVER_FLASH_OFFSET, M2M_TLS_SERVER_FLASH_SIZE)
+#define programmer_write_tls_cert_store(buff)			programmer_write((uint8_t*)buff, M2M_TLS_SERVER_FLASH_OFFSET, M2M_TLS_SERVER_FLASH_SIZE)
+#define programmer_read_tls_cert_store(buff)			programmer_read((uint8_t*)buff, M2M_TLS_SERVER_FLASH_OFFSET, M2M_TLS_SERVER_FLASH_SIZE)
 #define programmer_erase_tls_cert_store()				programmer_erase(M2M_TLS_SERVER_FLASH_OFFSET, M2M_TLS_SERVER_FLASH_SIZE)
 
 int burn_firmware(const char *path);
