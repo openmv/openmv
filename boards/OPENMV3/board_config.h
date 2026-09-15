@@ -136,6 +136,8 @@
 #define OMV_WINC_EN_PIN                       (&omv_pin_A5_GPIO)
 #define OMV_WINC_RST_PIN                      (&omv_pin_D12_GPIO)
 #define OMV_WINC_IRQ_PIN                      (&omv_pin_D13_GPIO)
+// Cap the per-socket receive buffer, this board has a small heap.
+#define OMV_WINC_SOCKBUF_SIZE                 (2048)
 
 // Camera Interface
 #define OMV_CSI_CLK_SOURCE                    (OMV_CSI_CLK_SOURCE_TIM)
