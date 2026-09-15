@@ -38,6 +38,8 @@
 // as workaround to this issue to allow receiving partial packets. Note the maximum size of WINC internal socket buffer seems
 // to change with host-driver/firmware updates. It's very important to make sure this value is still valid after an update.
 #define WINC_SOCKBUF_MAX_SIZE   (1480)
+// The maximum datagram size the firmware delivers in response to a single recvfrom() request.
+#define WINC_MAX_DGRAM_SIZE     (1480)
 #define WINC_REQUEST_TIMEOUT    (5000)
 
 #define MAKE_SOCKADDR(addr, ip, port) \
@@ -117,6 +119,7 @@ typedef struct {
 typedef struct {
     int idx;
     int size;
+    bool closed;
     uint8_t buf[WINC_SOCKBUF_MAX_SIZE];
 } winc_socket_buf_t;
 

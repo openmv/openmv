@@ -880,6 +880,11 @@ int winc_socket_send(int fd, const uint8_t *buf, uint32_t len, uint32_t timeout)
 
 int winc_socket_recv(int fd, uint8_t *buf, uint32_t len, winc_socket_buf_t *sockbuf, uint32_t timeout) {
     if (sockbuf->size == 0) {
+        if (sockbuf->closed) {
+            // The peer has closed the connection, return EOF without another HIF request.
+            return 0;
+        }
+
         // No buffered data.
         sockbuf->idx = 0; // Reset sockbuf index.
 
@@ -895,7 +900,13 @@ int winc_socket_recv(int fd, uint8_t *buf, uint32_t len, winc_socket_buf_t *sock
 
         // Check received bytes returned from async request.
         if (ret != SOCK_ERR_NO_ERROR || recv_bytes <= 0) {
-            return (ret != SOCK_ERR_NO_ERROR) ? ret : recv_bytes;
+            int error = (ret != SOCK_ERR_NO_ERROR) ? ret : recv_bytes;
+            if (error == SOCK_ERR_NO_ERROR || error == SOCK_ERR_CONN_ABORTED) {
+                // Peer closed the connection, latch EOF and leave the socket open, like lwIP.
+                sockbuf->closed = true;
+                return 0;
+            }
+            return error;
         }
 
         sockbuf->size = recv_bytes;
@@ -942,6 +953,9 @@ int winc_socket_sendto(int fd, const uint8_t *buf, uint32_t len, sockaddr *addr,
 
 int winc_socket_recvfrom(int fd, uint8_t *buf, uint32_t len, sockaddr *addr, uint32_t timeout) {
     memset(addr, 0, sizeof(sockaddr));
+
+    // The firmware never replies to requests larger than the datagram it can deliver.
+    len = OMV_MIN(len, WINC_MAX_DGRAM_SIZE);
 
     recv_from_t rfrom;
     int ret = WINC1500_EXPORT(recvfrom) (fd, buf, len, timeout);
