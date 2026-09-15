@@ -410,7 +410,8 @@ static int py_winc_socket_socket(mod_network_socket_obj_t *socket, int *_errno) 
 
     // store state of this socket
     socket->fileno = fd;
-    socket->_private = m_new0(winc_socket_buf_t, 1);
+    // Datagram sockets are read with recvfrom(), which doesn't use the socket buffer.
+    socket->_private = (socket->type == MOD_NETWORK_SOCK_STREAM) ? m_new0(winc_socket_buf_t, 1) : NULL;
     return 0;
 }
 
@@ -418,8 +419,10 @@ static void py_winc_socket_close(mod_network_socket_obj_t *socket) {
     if (socket->fileno >= 0) {
         winc_socket_close(socket->fileno);
         socket->fileno = -1; // Mark socket FD as invalid
-        m_del(winc_socket_buf_t, socket->_private, 1);
-        socket->_private = NULL;
+        if (socket->_private != NULL) {
+            m_del(winc_socket_buf_t, socket->_private, 1);
+            socket->_private = NULL;
+        }
         socket->nic = MP_OBJ_NULL;
     }
 }
@@ -493,9 +496,18 @@ static mp_uint_t py_winc_socket_send(mod_network_socket_obj_t *socket, const byt
 }
 
 static mp_uint_t py_winc_socket_recv(mod_network_socket_obj_t *socket, byte *buf, mp_uint_t len, int *_errno) {
-    int ret = winc_socket_recv(socket->fileno, buf, len, socket->_private, socket->timeout);
-    if (ret <= 0) {
-        // NOTE: 0 return from recv() means connection closed.
+    int ret;
+    if (socket->type == MOD_NETWORK_SOCK_DGRAM) {
+        // Datagrams are always delivered as SOCKET_MSG_RECVFROM events, so a plain recv()
+        // waits for a SOCKET_MSG_RECV that never arrives and times out empty.
+        sockaddr addr;
+        ret = winc_socket_recvfrom(socket->fileno, buf, len, &addr, socket->timeout);
+    } else {
+        ret = winc_socket_recv(socket->fileno, buf, len, socket->_private, socket->timeout);
+    }
+    // NOTE: A 0 return means the peer closed the connection. The socket is left open, like
+    // lwIP does, so subsequent calls keep returning EOF until it's explicitly closed.
+    if (ret < 0) {
         *_errno = py_winc_mperrno(ret);
         // The socket is Not closed on timeout.
         if (ret != SOCK_ERR_TIMEOUT) {
