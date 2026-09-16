@@ -39,6 +39,8 @@
 // to change with host-driver/firmware updates. It's very important to make sure this value is still valid after an update.
 #define WINC_SOCKBUF_MAX_SIZE   (1480)
 #define WINC_REQUEST_TIMEOUT    (5000)
+// Association plus DHCP, which is much slower than a single request.
+#define WINC_CONNECT_TIMEOUT    (20000)
 
 #define MAKE_SOCKADDR(addr, ip, port) \
     struct sockaddr addr; \
