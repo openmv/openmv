@@ -136,12 +136,192 @@ static float calc_roundness(float blob_a, float blob_b, float blob_c) {
     return IM_DIV(roundness_min, roundness_max);
 }
 
+typedef struct contour_writer {
+    point_t start, last;
+    uint8_t *data;
+    uint32_t len, alloc;
+    bool has_point;
+} contour_writer_t;
+
+static void contour_writer_init(contour_writer_t *writer) {
+    writer->start.x = 0;
+    writer->start.y = 0;
+    writer->last.x = 0;
+    writer->last.y = 0;
+    writer->data = NULL;
+    writer->len = 0;
+    writer->alloc = 0;
+    writer->has_point = false;
+}
+
+static void contour_writer_reserve(contour_writer_t *writer, uint32_t bytes) {
+    uint32_t needed = writer->len + bytes;
+    if (needed <= writer->alloc) {
+        return;
+    }
+
+    uint32_t alloc = writer->alloc ? writer->alloc : 32;
+    while (alloc < needed) {
+        uint32_t next = alloc * 2;
+        if (next <= alloc) {
+            alloc = needed;
+            break;
+        }
+        alloc = next;
+    }
+    writer->data = writer->data ? m_realloc(writer->data, alloc) : m_malloc(alloc);
+    writer->alloc = alloc;
+}
+
+static void contour_writer_append_anchor(contour_writer_t *writer, int x, int y) {
+    contour_writer_reserve(writer, 5);
+    writer->data[writer->len++] = FIND_BLOBS_CONTOUR_ANCHOR;
+    writer->data[writer->len++] = x & 0xff;
+    writer->data[writer->len++] = (x >> 8) & 0xff;
+    writer->data[writer->len++] = y & 0xff;
+    writer->data[writer->len++] = (y >> 8) & 0xff;
+}
+
+static void contour_writer_append_point(contour_writer_t *writer, int x, int y) {
+    if (!writer->has_point) {
+        writer->start.x = x;
+        writer->start.y = y;
+        writer->last.x = x;
+        writer->last.y = y;
+        writer->has_point = true;
+        return;
+    }
+
+    int dx = x - writer->last.x;
+    int dy = y - writer->last.y;
+    if ((-FIND_BLOBS_CONTOUR_DELTA_OFFSET <= dx) && (dx <= FIND_BLOBS_CONTOUR_DELTA_OFFSET) &&
+        (-FIND_BLOBS_CONTOUR_DELTA_OFFSET <= dy) && (dy <= FIND_BLOBS_CONTOUR_DELTA_OFFSET)) {
+        contour_writer_reserve(writer, 1);
+        writer->data[writer->len++] =
+            ((dx + FIND_BLOBS_CONTOUR_DELTA_OFFSET) & FIND_BLOBS_CONTOUR_DELTA_MASK) |
+            (((dy + FIND_BLOBS_CONTOUR_DELTA_OFFSET) & FIND_BLOBS_CONTOUR_DELTA_MASK) << 3);
+    } else {
+        contour_writer_append_anchor(writer, x, y);
+    }
+
+    writer->last.x = x;
+    writer->last.y = y;
+}
+
+static void contour_writer_append_run(contour_writer_t *writer, int left, int right, int y) {
+    for (int x = left; x <= right; x++) {
+        contour_writer_append_point(writer, x, y);
+    }
+}
+
+static void contour_writer_free(contour_writer_t *writer) {
+    if (writer->data) {
+        m_free(writer->data);
+        writer->data = NULL;
+    }
+    writer->len = 0;
+    writer->alloc = 0;
+    writer->has_point = false;
+}
+
+static void contour_writer_finish(contour_writer_t *writer, find_blobs_list_lnk_data_t *blob) {
+    blob->contour_start = writer->start;
+    blob->contour_len = writer->len;
+    blob->contour = writer->data;
+    blob->contour_valid = writer->has_point;
+
+    writer->data = NULL;
+    writer->len = 0;
+    writer->alloc = 0;
+    writer->has_point = false;
+}
+
+static void imlib_free_blob_contour(find_blobs_list_lnk_data_t *blob) {
+    if (blob->contour) {
+        m_free(blob->contour);
+    }
+    blob->contour_start.x = 0;
+    blob->contour_start.y = 0;
+    blob->contour_len = 0;
+    blob->contour = NULL;
+    blob->contour_valid = false;
+}
+
+static void imlib_merge_blob_contours(find_blobs_list_lnk_data_t *dst, find_blobs_list_lnk_data_t *src) {
+    if (!src->contour_valid) {
+        return;
+    }
+
+    if (!dst->contour_valid) {
+        dst->contour_start = src->contour_start;
+        dst->contour_len = src->contour_len;
+        dst->contour = src->contour;
+        dst->contour_valid = true;
+        src->contour_len = 0;
+        src->contour = NULL;
+        src->contour_valid = false;
+        return;
+    }
+
+    uint32_t old_len = dst->contour_len;
+    uint32_t new_len = old_len + 5 + src->contour_len;
+    dst->contour = dst->contour ? m_realloc(dst->contour, new_len) : m_malloc(new_len);
+    uint8_t *out = dst->contour + old_len;
+    out[0] = FIND_BLOBS_CONTOUR_ANCHOR;
+    out[1] = src->contour_start.x & 0xff;
+    out[2] = (src->contour_start.x >> 8) & 0xff;
+    out[3] = src->contour_start.y & 0xff;
+    out[4] = (src->contour_start.y >> 8) & 0xff;
+    if (src->contour_len) {
+        memcpy(out + 5, src->contour, src->contour_len);
+    }
+    dst->contour_len = new_len;
+
+    imlib_free_blob_contour(src);
+}
+
+static void imlib_draw_contour_pixel(image_t *dst, int x, int y, int color, image_t *mask) {
+    if ((0 <= x) && (x < dst->w) && (0 <= y) && (y < dst->h)) {
+        imlib_set_pixel(dst, x, y, color);
+        if (mask) {
+            imlib_set_pixel(mask, x, y, -1);
+        }
+    }
+}
+
+void imlib_draw_contours(image_t *dst, point_t *start, const uint8_t *contour, uint32_t contour_len,
+                         int color, image_t *mask) {
+    if ((!contour) && contour_len) {
+        return;
+    }
+
+    int x = start->x;
+    int y = start->y;
+    imlib_draw_contour_pixel(dst, x, y, color, mask);
+
+    for (uint32_t i = 0; i < contour_len; i++) {
+        uint8_t value = contour[i];
+        if (value == FIND_BLOBS_CONTOUR_ANCHOR) {
+            if ((i + 4) >= contour_len) {
+                break;
+            }
+            x = (int16_t) (contour[i + 1] | (contour[i + 2] << 8));
+            y = (int16_t) (contour[i + 3] | (contour[i + 4] << 8));
+            i += 4;
+        } else {
+            x += (value & FIND_BLOBS_CONTOUR_DELTA_MASK) - FIND_BLOBS_CONTOUR_DELTA_OFFSET;
+            y += ((value >> 3) & FIND_BLOBS_CONTOUR_DELTA_MASK) - FIND_BLOBS_CONTOUR_DELTA_OFFSET;
+        }
+        imlib_draw_contour_pixel(dst, x, y, color, mask);
+    }
+}
+
 void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int x_stride, unsigned int y_stride,
                       list_t *thresholds, bool invert, unsigned int area_threshold, unsigned int pixels_threshold,
                       bool merge, int margin, bool (*threshold_cb) (void *, find_blobs_list_lnk_data_t *),
                       void *threshold_cb_arg,
                       bool (*merge_cb) (void *, find_blobs_list_lnk_data_t *, find_blobs_list_lnk_data_t *),
-                      void *merge_cb_arg, unsigned int x_hist_bins_max, unsigned int y_hist_bins_max) {
+                      void *merge_cb_arg, unsigned int x_hist_bins_max, unsigned int y_hist_bins_max, bool contours) {
     // Same size as the image so we don't have to translate.
     image_t bmp;
     bmp.w = ptr->w;
@@ -210,6 +390,9 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                                 memset(y_hist_bins, 0, ptr->h * sizeof(uint16_t));
                             }
 
+                            contour_writer_t contour_writer;
+                            contour_writer_init(&contour_writer);
+
                             // Scanline Flood Fill Algorithm //
 
                             for (;;) {
@@ -233,6 +416,12 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
 
                                 for (int i = left; i <= right; i++) {
                                     IMAGE_SET_BINARY_PIXEL_FAST(bmp_row, i);
+                                }
+                                if (contours) {
+                                    contour_writer_append_point(&contour_writer, left, y);
+                                    if (right != left) {
+                                        contour_writer_append_point(&contour_writer, right, y);
+                                    }
                                 }
 
                                 int sum = sum_m_to_n(left, right);
@@ -308,12 +497,19 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                                                     break;
                                                 }
 
-                                                blob_perimeter += (!ok) && (i != left) && (i != right);
+                                                bool edge = (!ok) && (i != left) && (i != right);
+                                                if (contours && edge) {
+                                                    contour_writer_append_point(&contour_writer, i, y);
+                                                }
+                                                blob_perimeter += edge;
                                             }
                                             if (recurse) {
                                                 break;
                                             }
                                         } else {
+                                            if (contours) {
+                                                contour_writer_append_run(&contour_writer, left + 1, right - 1, y);
+                                            }
                                             blob_perimeter += right - left + 1;
                                         }
 
@@ -344,15 +540,25 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                                                     break;
                                                 }
 
-                                                blob_perimeter += (!ok) && (i != left) && (i != right);
+                                                bool edge = (!ok) && (i != left) && (i != right);
+                                                if (contours && edge) {
+                                                    contour_writer_append_point(&contour_writer, i, y);
+                                                }
+                                                blob_perimeter += edge;
                                             }
                                             if (recurse) {
                                                 break;
                                             }
                                         } else {
+                                            if (contours) {
+                                                contour_writer_append_run(&contour_writer, left + 1, right - 1, y);
+                                            }
                                             blob_perimeter += right - left + 1;
                                         }
                                     } else {
+                                        if (contours) {
+                                            contour_writer_append_run(&contour_writer, left + 1, right - 1, y);
+                                        }
                                         blob_perimeter += (right - left + 1) * 2;
                                     }
 
@@ -425,6 +631,11 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                                 lnk_blob.x_hist_bins = NULL;
                                 lnk_blob.y_hist_bins_count = 0;
                                 lnk_blob.y_hist_bins = NULL;
+                                lnk_blob.contour_start.x = 0;
+                                lnk_blob.contour_start.y = 0;
+                                lnk_blob.contour_len = 0;
+                                lnk_blob.contour = NULL;
+                                lnk_blob.contour_valid = false;
                                 // These store the current average accumulation.
                                 lnk_blob.centroid_x_acc = lnk_blob.centroid_x * lnk_blob.pixels;
                                 lnk_blob.centroid_y_acc = lnk_blob.centroid_y * lnk_blob.pixels;
@@ -448,6 +659,10 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                                            &lnk_blob.y_hist_bins_count);
                                 }
 
+                                if (contours) {
+                                    contour_writer_finish(&contour_writer, &lnk_blob);
+                                }
+
                                 bool add_to_list = threshold_cb_arg == NULL;
                                 if (!add_to_list) {
                                     add_to_list = threshold_cb(threshold_cb_arg, &lnk_blob);
@@ -462,9 +677,11 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                                     if (lnk_blob.y_hist_bins) {
                                         m_free(lnk_blob.y_hist_bins);
                                     }
+                                    imlib_free_blob_contour(&lnk_blob);
                                 }
                             }
 
+                            contour_writer_free(&contour_writer);
                             x = old_x;
                             y = old_y;
                         }
@@ -512,6 +729,9 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                                 memset(y_hist_bins, 0, ptr->h * sizeof(uint16_t));
                             }
 
+                            contour_writer_t contour_writer;
+                            contour_writer_init(&contour_writer);
+
                             // Scanline Flood Fill Algorithm //
 
                             for (;;) {
@@ -535,6 +755,12 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
 
                                 for (int i = left; i <= right; i++) {
                                     IMAGE_SET_BINARY_PIXEL_FAST(bmp_row, i);
+                                }
+                                if (contours) {
+                                    contour_writer_append_point(&contour_writer, left, y);
+                                    if (right != left) {
+                                        contour_writer_append_point(&contour_writer, right, y);
+                                    }
                                 }
 
                                 int sum = sum_m_to_n(left, right);
@@ -610,12 +836,19 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                                                     break;
                                                 }
 
-                                                blob_perimeter += (!ok) && (i != left) && (i != right);
+                                                bool edge = (!ok) && (i != left) && (i != right);
+                                                if (contours && edge) {
+                                                    contour_writer_append_point(&contour_writer, i, y);
+                                                }
+                                                blob_perimeter += edge;
                                             }
                                             if (recurse) {
                                                 break;
                                             }
                                         } else {
+                                            if (contours) {
+                                                contour_writer_append_run(&contour_writer, left + 1, right - 1, y);
+                                            }
                                             blob_perimeter += right - left + 1;
                                         }
 
@@ -646,15 +879,25 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                                                     break;
                                                 }
 
-                                                blob_perimeter += (!ok) && (i != left) && (i != right);
+                                                bool edge = (!ok) && (i != left) && (i != right);
+                                                if (contours && edge) {
+                                                    contour_writer_append_point(&contour_writer, i, y);
+                                                }
+                                                blob_perimeter += edge;
                                             }
                                             if (recurse) {
                                                 break;
                                             }
                                         } else {
+                                            if (contours) {
+                                                contour_writer_append_run(&contour_writer, left + 1, right - 1, y);
+                                            }
                                             blob_perimeter += right - left + 1;
                                         }
                                     } else {
+                                        if (contours) {
+                                            contour_writer_append_run(&contour_writer, left + 1, right - 1, y);
+                                        }
                                         blob_perimeter += (right - left + 1) * 2;
                                     }
 
@@ -727,6 +970,11 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                                 lnk_blob.x_hist_bins = NULL;
                                 lnk_blob.y_hist_bins_count = 0;
                                 lnk_blob.y_hist_bins = NULL;
+                                lnk_blob.contour_start.x = 0;
+                                lnk_blob.contour_start.y = 0;
+                                lnk_blob.contour_len = 0;
+                                lnk_blob.contour = NULL;
+                                lnk_blob.contour_valid = false;
                                 // These store the current average accumulation.
                                 lnk_blob.centroid_x_acc = lnk_blob.centroid_x * lnk_blob.pixels;
                                 lnk_blob.centroid_y_acc = lnk_blob.centroid_y * lnk_blob.pixels;
@@ -750,6 +998,10 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                                            &lnk_blob.y_hist_bins_count);
                                 }
 
+                                if (contours) {
+                                    contour_writer_finish(&contour_writer, &lnk_blob);
+                                }
+
                                 bool add_to_list = threshold_cb_arg == NULL;
                                 if (!add_to_list) {
                                     add_to_list = threshold_cb(threshold_cb_arg, &lnk_blob);
@@ -764,9 +1016,11 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                                     if (lnk_blob.y_hist_bins) {
                                         m_free(lnk_blob.y_hist_bins);
                                     }
+                                    imlib_free_blob_contour(&lnk_blob);
                                 }
                             }
 
+                            contour_writer_free(&contour_writer);
                             x = old_x;
                             y = old_y;
                         }
@@ -814,6 +1068,9 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                                 memset(y_hist_bins, 0, ptr->h * sizeof(uint16_t));
                             }
 
+                            contour_writer_t contour_writer;
+                            contour_writer_init(&contour_writer);
+
                             // Scanline Flood Fill Algorithm //
 
                             for (;;) {
@@ -837,6 +1094,12 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
 
                                 for (int i = left; i <= right; i++) {
                                     IMAGE_SET_BINARY_PIXEL_FAST(bmp_row, i);
+                                }
+                                if (contours) {
+                                    contour_writer_append_point(&contour_writer, left, y);
+                                    if (right != left) {
+                                        contour_writer_append_point(&contour_writer, right, y);
+                                    }
                                 }
 
                                 int sum = sum_m_to_n(left, right);
@@ -912,12 +1175,19 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                                                     break;
                                                 }
 
-                                                blob_perimeter += (!ok) && (i != left) && (i != right);
+                                                bool edge = (!ok) && (i != left) && (i != right);
+                                                if (contours && edge) {
+                                                    contour_writer_append_point(&contour_writer, i, y);
+                                                }
+                                                blob_perimeter += edge;
                                             }
                                             if (recurse) {
                                                 break;
                                             }
                                         } else {
+                                            if (contours) {
+                                                contour_writer_append_run(&contour_writer, left + 1, right - 1, y);
+                                            }
                                             blob_perimeter += right - left + 1;
                                         }
 
@@ -948,15 +1218,25 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                                                     break;
                                                 }
 
-                                                blob_perimeter += (!ok) && (i != left) && (i != right);
+                                                bool edge = (!ok) && (i != left) && (i != right);
+                                                if (contours && edge) {
+                                                    contour_writer_append_point(&contour_writer, i, y);
+                                                }
+                                                blob_perimeter += edge;
                                             }
                                             if (recurse) {
                                                 break;
                                             }
                                         } else {
+                                            if (contours) {
+                                                contour_writer_append_run(&contour_writer, left + 1, right - 1, y);
+                                            }
                                             blob_perimeter += right - left + 1;
                                         }
                                     } else {
+                                        if (contours) {
+                                            contour_writer_append_run(&contour_writer, left + 1, right - 1, y);
+                                        }
                                         blob_perimeter += (right - left + 1) * 2;
                                     }
 
@@ -1029,6 +1309,11 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                                 lnk_blob.x_hist_bins = NULL;
                                 lnk_blob.y_hist_bins_count = 0;
                                 lnk_blob.y_hist_bins = NULL;
+                                lnk_blob.contour_start.x = 0;
+                                lnk_blob.contour_start.y = 0;
+                                lnk_blob.contour_len = 0;
+                                lnk_blob.contour = NULL;
+                                lnk_blob.contour_valid = false;
                                 // These store the current average accumulation.
                                 lnk_blob.centroid_x_acc = lnk_blob.centroid_x * lnk_blob.pixels;
                                 lnk_blob.centroid_y_acc = lnk_blob.centroid_y * lnk_blob.pixels;
@@ -1052,6 +1337,10 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                                            &lnk_blob.y_hist_bins_count);
                                 }
 
+                                if (contours) {
+                                    contour_writer_finish(&contour_writer, &lnk_blob);
+                                }
+
                                 bool add_to_list = threshold_cb_arg == NULL;
                                 if (!add_to_list) {
                                     add_to_list = threshold_cb(threshold_cb_arg, &lnk_blob);
@@ -1066,9 +1355,11 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                                     if (lnk_blob.y_hist_bins) {
                                         m_free(lnk_blob.y_hist_bins);
                                     }
+                                    imlib_free_blob_contour(&lnk_blob);
                                 }
                             }
 
+                            contour_writer_free(&contour_writer);
                             x = old_x;
                             y = old_y;
                         }
@@ -1135,6 +1426,7 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                                        &tmp_blob.y_hist_bins_count,
                                        y_hist_bins_max);
                         }
+                        imlib_merge_blob_contours(&lnk_blob, &tmp_blob);
                         // Merge corners...
                         for (int i = 0; i < FIND_BLOBS_CORNERS_RESOLUTION; i++) {
                             float z_dst = (lnk_blob.corners[i].x * cos_table[FIND_BLOBS_ANGLE_RESOLUTION * i]) +
