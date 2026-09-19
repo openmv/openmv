@@ -23,6 +23,12 @@
 #define OMV_JPEG_QUALITY_LOW                (50)
 #define OMV_JPEG_QUALITY_HIGH               (90)
 #define OMV_JPEG_QUALITY_THRESHOLD          (800 * 600 * 2)
+#define OMV_JPEG_DMA_IN_CHANNEL             (HPDMA1_Channel13)
+#define OMV_JPEG_DMA_IN_REQUEST             (HPDMA1_REQUEST_JPEG_RX)
+#define OMV_JPEG_DMA_IN_PORTS               (DMA_SRC_ALLOCATED_PORT0 | DMA_DEST_ALLOCATED_PORT1)
+#define OMV_JPEG_DMA_OUT_CHANNEL            (HPDMA1_Channel14)
+#define OMV_JPEG_DMA_OUT_REQUEST            (HPDMA1_REQUEST_JPEG_TX)
+#define OMV_JPEG_DMA_OUT_PORTS              (DMA_SRC_ALLOCATED_PORT1 | DMA_DEST_ALLOCATED_PORT0)
 
 // Enable RAW preview.
 #define OMV_RAW_PREVIEW_ENABLE              (1)

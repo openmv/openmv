@@ -189,6 +189,8 @@ void HAL_MspInit(void) {
     #endif
     #if defined(__HAL_RCC_HPDMA1_CLK_ENABLE)
     __HAL_RCC_HPDMA1_CLK_ENABLE();
+    // Keep the DMA running while the CPU sleeps in WFI.
+    __HAL_RCC_HPDMA1_CLK_SLEEP_ENABLE();
     #endif
     #if defined(__HAL_RCC_MDMA_CLK_ENABLE)
     __HAL_RCC_MDMA_CLK_ENABLE();
@@ -779,6 +781,10 @@ void HAL_GFXMMU_MspDeInit(GFXMMU_HandleTypeDef *hgfxmmu) {
 #if (OMV_JPEG_CODEC_ENABLE == 1)
 void HAL_JPEG_MspInit(JPEG_HandleTypeDef *hjpeg) {
     __HAL_RCC_JPEG_CLK_ENABLE();
+    #if defined(__HAL_RCC_JPEG_CLK_SLEEP_ENABLE)
+    // Keep the codec running while the CPU sleeps in WFI.
+    __HAL_RCC_JPEG_CLK_SLEEP_ENABLE();
+    #endif
 }
 
 void HAL_JPEG_MspDeInit(JPEG_HandleTypeDef *hjpeg) {
