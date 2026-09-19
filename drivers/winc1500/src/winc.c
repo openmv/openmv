@@ -28,6 +28,8 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <errno.h>
+#include "py/mphal.h"
+#include "py/runtime.h"
 #include "winc.h"
 #include "omv_common.h"
 
@@ -568,6 +570,13 @@ int winc_init(winc_mode_t winc_mode) {
 int winc_connect(const char *ssid, uint8_t security, const char *key, uint16_t channel) {
     async_request_data = &ifconfig;
 
+    // Drain events left over from a previous connection, such as the state change
+    // that disconnect() requests but never waits for, so that they can't satisfy
+    // the wait below before this connection has even been attempted.
+    m2m_wifi_handle_events(NULL);
+    ip_obtained = false;
+    wlan_connected = false;
+
     //Disable/Enable DHCP client before connecting.
     m2m_wifi_enable_dhcp(!use_static_ip);
 
@@ -576,11 +585,20 @@ int winc_connect(const char *ssid, uint8_t security, const char *key, uint16_t c
         return -1;
     }
 
-    async_request_done = false;
-    while (async_request_done == false) {
-        __WFI();
+    // Wait for the connection to come all the way up. Note this waits on the
+    // connection state, not on any event arriving: a failed connection reports
+    // the same state change as a disconnection, and would otherwise be reported
+    // to the caller as success.
+    mp_uint_t tick_start = mp_hal_ticks_ms();
+    while (winc_isconnected() == 0) {
         // Handle pending events from network controller.
         m2m_wifi_handle_events(NULL);
+        // Wait on MicroPython's event handler rather than WFI, so that scheduled
+        // callbacks still run and a KeyboardInterrupt can break out of the wait.
+        mp_event_wait_ms(1);
+        if ((mp_hal_ticks_ms() - tick_start) >= WINC_CONNECT_TIMEOUT) {
+            return -1;
+        }
     }
     return 0;
 }
@@ -619,9 +637,13 @@ int winc_start_ap(const char *ssid, uint8_t security, const char *key, uint16_t 
 }
 
 int winc_disconnect() {
+    int ret = m2m_wifi_disconnect();
+    // Let the state change land here rather than leaving it pending for the
+    // next request to trip over.
+    m2m_wifi_handle_events(NULL);
     ip_obtained = false;
     wlan_connected = false;
-    return m2m_wifi_disconnect();
+    return ret;
 }
 
 int winc_isconnected() {

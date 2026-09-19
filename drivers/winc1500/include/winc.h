@@ -45,6 +45,8 @@
 // The maximum datagram size the firmware delivers in response to a single recvfrom() request.
 #define WINC_MAX_DGRAM_SIZE     (1480)
 #define WINC_REQUEST_TIMEOUT    (5000)
+// Association plus DHCP, which is much slower than a single request.
+#define WINC_CONNECT_TIMEOUT    (20000)
 
 #define MAKE_SOCKADDR(addr, ip, port) \
     struct sockaddr addr; \
