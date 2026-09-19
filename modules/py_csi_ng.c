@@ -40,6 +40,7 @@
 #include "omv_csi.h"
 #include "omv_gpio.h"
 #include "genx320.h"
+#include "boson.h"
 
 #include "imlib.h"
 #include "py_assert.h"
@@ -1265,6 +1266,197 @@ static mp_obj_t py_csi_ioctl(size_t n_args, const mp_obj_t *args) {
             break;
         }
         #endif // (OMV_GENX320_ENABLE == 1)
+
+        #if (OMV_BOSON_ENABLE == 1)
+        case OMV_CSI_IOCTL_BOSON_GET_SOFTWARE_REV: {
+            uint32_t major, minor, patch;
+            error = omv_csi_ioctl(self->csi, request, &major, &minor, &patch);
+            if (error == 0) {
+                ret_obj = mp_obj_new_tuple(3, (mp_obj_t []) {mp_obj_new_int(major),
+                                                             mp_obj_new_int(minor),
+                                                             mp_obj_new_int(patch)});
+            }
+            break;
+        }
+
+        case OMV_CSI_IOCTL_BOSON_GET_FPA_TEMP: {
+            int temp;
+            error = omv_csi_ioctl(self->csi, request, &temp);
+            if (error == 0) {
+                ret_obj = mp_obj_new_float(temp / 10.0f);
+            }
+            break;
+        }
+
+        case OMV_CSI_IOCTL_BOSON_GET_GAIN_MODE:
+        case OMV_CSI_IOCTL_BOSON_GET_FFC_STATUS:
+        case OMV_CSI_IOCTL_BOSON_GET_FFC_MODE:
+        case OMV_CSI_IOCTL_BOSON_GET_FFC_TEMP_THRESHOLD:
+        case OMV_CSI_IOCTL_BOSON_GET_FFC_FRAME_THRESHOLD:
+        case OMV_CSI_IOCTL_BOSON_GET_FFC_NUM_FRAMES:
+        case OMV_CSI_IOCTL_BOSON_GET_SPOT_METER_MODE: {
+            int value;
+            error = omv_csi_ioctl(self->csi, request, &value);
+            if (error == 0) {
+                ret_obj = mp_obj_new_int(value);
+            }
+            break;
+        }
+
+        case OMV_CSI_IOCTL_BOSON_RUN_FFC: {
+            error = omv_csi_ioctl(self->csi, request);
+            break;
+        }
+
+        case OMV_CSI_IOCTL_BOSON_GET_RADIOMETRY_CAPABLE:
+        case OMV_CSI_IOCTL_BOSON_GET_TLINEAR_ENABLE:
+        case OMV_CSI_IOCTL_BOSON_GET_TEMP_STABLE_ENABLE:
+        case OMV_CSI_IOCTL_BOSON_GET_SPOT_METER_ENABLE: {
+            int enabled;
+            error = omv_csi_ioctl(self->csi, request, &enabled);
+            if (error == 0) {
+                ret_obj = mp_obj_new_bool(enabled);
+            }
+            break;
+        }
+
+        case OMV_CSI_IOCTL_BOSON_SET_GAIN_MODE:
+        case OMV_CSI_IOCTL_BOSON_SET_FFC_MODE:
+        case OMV_CSI_IOCTL_BOSON_SET_FFC_TEMP_THRESHOLD:
+        case OMV_CSI_IOCTL_BOSON_SET_FFC_FRAME_THRESHOLD:
+        case OMV_CSI_IOCTL_BOSON_SET_FFC_NUM_FRAMES:
+        case OMV_CSI_IOCTL_BOSON_SET_TLINEAR_ENABLE:
+        case OMV_CSI_IOCTL_BOSON_SET_TEMP_STABLE_ENABLE:
+        case OMV_CSI_IOCTL_BOSON_SET_SPOT_METER_ENABLE:
+        case OMV_CSI_IOCTL_BOSON_SET_SPOT_METER_MODE: {
+            if (n_args == 1) {
+                error = omv_csi_ioctl(self->csi, request, mp_obj_get_int(args[0]));
+            }
+            break;
+        }
+
+        case OMV_CSI_IOCTL_BOSON_SET_EMISSIVITY:
+        case OMV_CSI_IOCTL_BOSON_SET_TEMP_BACKGROUND: {
+            if (n_args == 1) {
+                error = omv_csi_ioctl(self->csi, request, mp_obj_get_float_to_d(args[0]));
+            }
+            break;
+        }
+
+        case OMV_CSI_IOCTL_BOSON_GET_EMISSIVITY:
+        case OMV_CSI_IOCTL_BOSON_GET_TEMP_BACKGROUND: {
+            float value;
+            error = omv_csi_ioctl(self->csi, request, &value);
+            if (error == 0) {
+                ret_obj = mp_obj_new_float(value);
+            }
+            break;
+        }
+
+        case OMV_CSI_IOCTL_BOSON_SET_SPOT_METER_ROI: {
+            if (n_args == 1) {
+                mp_obj_t *array;
+                mp_uint_t array_len;
+                mp_obj_get_array(args[0], &array_len, &array);
+
+                if (array_len != 4) {
+                    mp_raise_msg(&mp_type_ValueError,
+                                 MP_ERROR_TEXT("Expected an (x, y, w, h) tuple/list."));
+                }
+
+                error = omv_csi_ioctl(self->csi, request,
+                                      mp_obj_get_int(array[0]), mp_obj_get_int(array[1]),
+                                      mp_obj_get_int(array[2]), mp_obj_get_int(array[3]));
+            }
+            break;
+        }
+
+        case OMV_CSI_IOCTL_BOSON_GET_SPOT_METER_ROI: {
+            int x, y, w, h;
+            error = omv_csi_ioctl(self->csi, request, &x, &y, &w, &h);
+            if (error == 0) {
+                ret_obj = mp_obj_new_tuple(4, (mp_obj_t []) {mp_obj_new_int(x),
+                                                             mp_obj_new_int(y),
+                                                             mp_obj_new_int(w),
+                                                             mp_obj_new_int(h)});
+            }
+            break;
+        }
+
+        case OMV_CSI_IOCTL_BOSON_GET_SPOT_METER_ROI_MAX: {
+            int w, h;
+            error = omv_csi_ioctl(self->csi, request, &w, &h);
+            if (error == 0) {
+                ret_obj = mp_obj_new_tuple(2, (mp_obj_t []) {mp_obj_new_int(w),
+                                                             mp_obj_new_int(h)});
+            }
+            break;
+        }
+
+        case OMV_CSI_IOCTL_BOSON_GET_SPOT_METER_STATS: {
+            int mean, deviation, min_value, min_x, min_y, max_value, max_x, max_y;
+            error = omv_csi_ioctl(self->csi, request, &mean, &deviation,
+                                  &min_value, &min_x, &min_y,
+                                  &max_value, &max_x, &max_y);
+            if (error == 0) {
+                ret_obj = mp_obj_new_tuple(8, (mp_obj_t []) {mp_obj_new_int(mean),
+                                                             mp_obj_new_int(deviation),
+                                                             mp_obj_new_int(min_value),
+                                                             mp_obj_new_int(min_x),
+                                                             mp_obj_new_int(min_y),
+                                                             mp_obj_new_int(max_value),
+                                                             mp_obj_new_int(max_x),
+                                                             mp_obj_new_int(max_y)});
+            }
+            break;
+        }
+
+        case OMV_CSI_IOCTL_BOSON_GET_SPOT_METER_TEMP_STATS: {
+            float mean, deviation, min_value, max_value;
+            int min_x, min_y, max_x, max_y;
+            error = omv_csi_ioctl(self->csi, request, &mean, &deviation,
+                                  &min_value, &min_x, &min_y,
+                                  &max_value, &max_x, &max_y);
+            if (error == 0) {
+                ret_obj = mp_obj_new_tuple(8, (mp_obj_t []) {mp_obj_new_float(mean),
+                                                             mp_obj_new_float(deviation),
+                                                             mp_obj_new_float(min_value),
+                                                             mp_obj_new_int(min_x),
+                                                             mp_obj_new_int(min_y),
+                                                             mp_obj_new_float(max_value),
+                                                             mp_obj_new_int(max_x),
+                                                             mp_obj_new_int(max_y)});
+            }
+            break;
+        }
+
+        case OMV_CSI_IOCTL_BOSON_GET_TEMP_FROM_COUNTS: {
+            if (n_args == 2) {
+                float temp;
+                error = omv_csi_ioctl(self->csi, request, mp_obj_get_int(args[0]),
+                                      mp_obj_get_int(args[1]), &temp);
+                if (error == 0) {
+                    ret_obj = mp_obj_new_float(temp);
+                }
+            }
+            break;
+        }
+
+        case OMV_CSI_IOCTL_BOSON_GET_RBFO: {
+            if (n_args == 2) {
+                float r, b, f, o;
+                error = omv_csi_ioctl(self->csi, request, mp_obj_get_int(args[0]),
+                                      mp_obj_get_int(args[1]), &r, &b, &f, &o);
+                if (error == 0) {
+                    ret_obj = mp_obj_new_tuple(4, (mp_obj_t []) {mp_obj_new_float(r),
+                                                                 mp_obj_new_float(b),
+                                                                 mp_obj_new_float(f),
+                                                                 mp_obj_new_float(o)});
+                }
+            }
+            break;
+        }
+        #endif // (OMV_BOSON_ENABLE == 1)
         default: {
             omv_csi_raise_error(OMV_CSI_ERROR_CTL_UNSUPPORTED);
             break;
@@ -1624,6 +1816,58 @@ static const mp_rom_map_elem_t globals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_RST_TRIGGER_FALLING),          MP_ROM_INT(EC_RST_TRIGGER_FALLING)},
     { MP_ROM_QSTR(MP_QSTR_EXT_TRIGGER_RISING),           MP_ROM_INT(EC_EXT_TRIGGER_RISING)},
     { MP_ROM_QSTR(MP_QSTR_EXT_TRIGGER_FALLING),          MP_ROM_INT(EC_EXT_TRIGGER_FALLING)},
+    #endif
+
+    #if (OMV_BOSON_ENABLE == 1)
+    { MP_ROM_QSTR(MP_QSTR_IOCTL_BOSON_GET_SOFTWARE_REV),          MP_ROM_INT(OMV_CSI_IOCTL_BOSON_GET_SOFTWARE_REV) },
+    { MP_ROM_QSTR(MP_QSTR_IOCTL_BOSON_GET_FPA_TEMP),              MP_ROM_INT(OMV_CSI_IOCTL_BOSON_GET_FPA_TEMP) },
+    { MP_ROM_QSTR(MP_QSTR_IOCTL_BOSON_SET_GAIN_MODE),             MP_ROM_INT(OMV_CSI_IOCTL_BOSON_SET_GAIN_MODE) },
+    { MP_ROM_QSTR(MP_QSTR_IOCTL_BOSON_GET_GAIN_MODE),             MP_ROM_INT(OMV_CSI_IOCTL_BOSON_GET_GAIN_MODE) },
+    { MP_ROM_QSTR(MP_QSTR_IOCTL_BOSON_RUN_FFC),                   MP_ROM_INT(OMV_CSI_IOCTL_BOSON_RUN_FFC) },
+    { MP_ROM_QSTR(MP_QSTR_IOCTL_BOSON_GET_FFC_STATUS),            MP_ROM_INT(OMV_CSI_IOCTL_BOSON_GET_FFC_STATUS) },
+    { MP_ROM_QSTR(MP_QSTR_IOCTL_BOSON_SET_FFC_MODE),              MP_ROM_INT(OMV_CSI_IOCTL_BOSON_SET_FFC_MODE) },
+    { MP_ROM_QSTR(MP_QSTR_IOCTL_BOSON_GET_FFC_MODE),              MP_ROM_INT(OMV_CSI_IOCTL_BOSON_GET_FFC_MODE) },
+    { MP_ROM_QSTR(MP_QSTR_IOCTL_BOSON_SET_FFC_TEMP_THRESHOLD),    MP_ROM_INT(OMV_CSI_IOCTL_BOSON_SET_FFC_TEMP_THRESHOLD) },
+    { MP_ROM_QSTR(MP_QSTR_IOCTL_BOSON_GET_FFC_TEMP_THRESHOLD),    MP_ROM_INT(OMV_CSI_IOCTL_BOSON_GET_FFC_TEMP_THRESHOLD) },
+    { MP_ROM_QSTR(MP_QSTR_IOCTL_BOSON_SET_FFC_FRAME_THRESHOLD),   MP_ROM_INT(OMV_CSI_IOCTL_BOSON_SET_FFC_FRAME_THRESHOLD) },
+    { MP_ROM_QSTR(MP_QSTR_IOCTL_BOSON_GET_FFC_FRAME_THRESHOLD),   MP_ROM_INT(OMV_CSI_IOCTL_BOSON_GET_FFC_FRAME_THRESHOLD) },
+    { MP_ROM_QSTR(MP_QSTR_IOCTL_BOSON_SET_FFC_NUM_FRAMES),        MP_ROM_INT(OMV_CSI_IOCTL_BOSON_SET_FFC_NUM_FRAMES) },
+    { MP_ROM_QSTR(MP_QSTR_IOCTL_BOSON_GET_FFC_NUM_FRAMES),        MP_ROM_INT(OMV_CSI_IOCTL_BOSON_GET_FFC_NUM_FRAMES) },
+    { MP_ROM_QSTR(MP_QSTR_IOCTL_BOSON_GET_RADIOMETRY_CAPABLE),    MP_ROM_INT(OMV_CSI_IOCTL_BOSON_GET_RADIOMETRY_CAPABLE) },
+    { MP_ROM_QSTR(MP_QSTR_IOCTL_BOSON_SET_TLINEAR_ENABLE),        MP_ROM_INT(OMV_CSI_IOCTL_BOSON_SET_TLINEAR_ENABLE) },
+    { MP_ROM_QSTR(MP_QSTR_IOCTL_BOSON_GET_TLINEAR_ENABLE),        MP_ROM_INT(OMV_CSI_IOCTL_BOSON_GET_TLINEAR_ENABLE) },
+    { MP_ROM_QSTR(MP_QSTR_IOCTL_BOSON_SET_TEMP_STABLE_ENABLE),    MP_ROM_INT(OMV_CSI_IOCTL_BOSON_SET_TEMP_STABLE_ENABLE) },
+    { MP_ROM_QSTR(MP_QSTR_IOCTL_BOSON_GET_TEMP_STABLE_ENABLE),    MP_ROM_INT(OMV_CSI_IOCTL_BOSON_GET_TEMP_STABLE_ENABLE) },
+    { MP_ROM_QSTR(MP_QSTR_IOCTL_BOSON_SET_EMISSIVITY),            MP_ROM_INT(OMV_CSI_IOCTL_BOSON_SET_EMISSIVITY) },
+    { MP_ROM_QSTR(MP_QSTR_IOCTL_BOSON_GET_EMISSIVITY),            MP_ROM_INT(OMV_CSI_IOCTL_BOSON_GET_EMISSIVITY) },
+    { MP_ROM_QSTR(MP_QSTR_IOCTL_BOSON_SET_TEMP_BACKGROUND),       MP_ROM_INT(OMV_CSI_IOCTL_BOSON_SET_TEMP_BACKGROUND) },
+    { MP_ROM_QSTR(MP_QSTR_IOCTL_BOSON_GET_TEMP_BACKGROUND),       MP_ROM_INT(OMV_CSI_IOCTL_BOSON_GET_TEMP_BACKGROUND) },
+    { MP_ROM_QSTR(MP_QSTR_IOCTL_BOSON_SET_SPOT_METER_ENABLE),     MP_ROM_INT(OMV_CSI_IOCTL_BOSON_SET_SPOT_METER_ENABLE) },
+    { MP_ROM_QSTR(MP_QSTR_IOCTL_BOSON_GET_SPOT_METER_ENABLE),     MP_ROM_INT(OMV_CSI_IOCTL_BOSON_GET_SPOT_METER_ENABLE) },
+    { MP_ROM_QSTR(MP_QSTR_IOCTL_BOSON_SET_SPOT_METER_ROI),        MP_ROM_INT(OMV_CSI_IOCTL_BOSON_SET_SPOT_METER_ROI) },
+    { MP_ROM_QSTR(MP_QSTR_IOCTL_BOSON_GET_SPOT_METER_ROI),        MP_ROM_INT(OMV_CSI_IOCTL_BOSON_GET_SPOT_METER_ROI) },
+    { MP_ROM_QSTR(MP_QSTR_IOCTL_BOSON_GET_SPOT_METER_ROI_MAX),    MP_ROM_INT(OMV_CSI_IOCTL_BOSON_GET_SPOT_METER_ROI_MAX) },
+    { MP_ROM_QSTR(MP_QSTR_IOCTL_BOSON_SET_SPOT_METER_MODE),       MP_ROM_INT(OMV_CSI_IOCTL_BOSON_SET_SPOT_METER_MODE) },
+    { MP_ROM_QSTR(MP_QSTR_IOCTL_BOSON_GET_SPOT_METER_MODE),       MP_ROM_INT(OMV_CSI_IOCTL_BOSON_GET_SPOT_METER_MODE) },
+    { MP_ROM_QSTR(MP_QSTR_IOCTL_BOSON_GET_SPOT_METER_STATS),      MP_ROM_INT(OMV_CSI_IOCTL_BOSON_GET_SPOT_METER_STATS) },
+    { MP_ROM_QSTR(MP_QSTR_IOCTL_BOSON_GET_SPOT_METER_TEMP_STATS), MP_ROM_INT(OMV_CSI_IOCTL_BOSON_GET_SPOT_METER_TEMP_STATS) },
+    { MP_ROM_QSTR(MP_QSTR_IOCTL_BOSON_GET_TEMP_FROM_COUNTS),      MP_ROM_INT(OMV_CSI_IOCTL_BOSON_GET_TEMP_FROM_COUNTS) },
+    { MP_ROM_QSTR(MP_QSTR_IOCTL_BOSON_GET_RBFO),                  MP_ROM_INT(OMV_CSI_IOCTL_BOSON_GET_RBFO) },
+    { MP_ROM_QSTR(MP_QSTR_BOSON_GAIN_HIGH),                       MP_ROM_INT(OMV_CSI_BOSON_GAIN_HIGH) },
+    { MP_ROM_QSTR(MP_QSTR_BOSON_GAIN_LOW),                        MP_ROM_INT(OMV_CSI_BOSON_GAIN_LOW) },
+    { MP_ROM_QSTR(MP_QSTR_BOSON_GAIN_AUTO),                       MP_ROM_INT(OMV_CSI_BOSON_GAIN_AUTO) },
+    { MP_ROM_QSTR(MP_QSTR_BOSON_FFC_MANUAL),                      MP_ROM_INT(OMV_CSI_BOSON_FFC_MANUAL) },
+    { MP_ROM_QSTR(MP_QSTR_BOSON_FFC_AUTO),                        MP_ROM_INT(OMV_CSI_BOSON_FFC_AUTO) },
+    { MP_ROM_QSTR(MP_QSTR_BOSON_FFC_EXTERNAL),                    MP_ROM_INT(OMV_CSI_BOSON_FFC_EXTERNAL) },
+    { MP_ROM_QSTR(MP_QSTR_BOSON_FFC_STATUS_NONE),                 MP_ROM_INT(OMV_CSI_BOSON_FFC_STATUS_NONE) },
+    { MP_ROM_QSTR(MP_QSTR_BOSON_FFC_STATUS_IMMINENT),             MP_ROM_INT(OMV_CSI_BOSON_FFC_STATUS_IMMINENT) },
+    { MP_ROM_QSTR(MP_QSTR_BOSON_FFC_STATUS_RUNNING),              MP_ROM_INT(OMV_CSI_BOSON_FFC_STATUS_RUNNING) },
+    { MP_ROM_QSTR(MP_QSTR_BOSON_FFC_STATUS_COMPLETE),             MP_ROM_INT(OMV_CSI_BOSON_FFC_STATUS_COMPLETE) },
+    { MP_ROM_QSTR(MP_QSTR_BOSON_RBFO_DEFAULT),                    MP_ROM_INT(OMV_CSI_BOSON_RBFO_DEFAULT) },
+    { MP_ROM_QSTR(MP_QSTR_BOSON_RBFO_FACTORY),                    MP_ROM_INT(OMV_CSI_BOSON_RBFO_FACTORY) },
+    { MP_ROM_QSTR(MP_QSTR_BOSON_SPOT_METER_CELSIUS),              MP_ROM_INT(OMV_CSI_BOSON_SPOT_METER_CELSIUS) },
+    { MP_ROM_QSTR(MP_QSTR_BOSON_SPOT_METER_FAHRENHEIT),           MP_ROM_INT(OMV_CSI_BOSON_SPOT_METER_FAHRENHEIT) },
+    { MP_ROM_QSTR(MP_QSTR_BOSON_SPOT_METER_KELVIN),               MP_ROM_INT(OMV_CSI_BOSON_SPOT_METER_KELVIN) },
     #endif
 };
 static MP_DEFINE_CONST_DICT(globals_dict, globals_dict_table);
