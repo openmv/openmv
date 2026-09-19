@@ -536,25 +536,39 @@ int display_dsi_read(py_display_obj_t *self, uint8_t cmd, uint8_t *args,
 #endif
 
 static void display_deinit(py_display_obj_t *self) {
-    #ifdef OMV_DSI_DISPLAY_CONTROLLER
-    HAL_DSI_DeInit(&display.hdsi);
-    HAL_NVIC_DisableIRQ(DSI_IRQn);
-    #endif
+    // The LTDC/DSI state is a singleton shared by every display object, but this
+    // runs from the object's finaliser, which the GC may invoke long after the
+    // object stopped owning the controller. Creating a second display makes the
+    // first one garbage while the hardware belongs to the second, and collecting
+    // it would otherwise tear down a live display: the LTDC clock is gated, the
+    // controller stops scanning and every register reads back as zero. Only the
+    // current owner may touch the controller; a stale object just frees its own
+    // framebuffers.
+    bool owner = (display.self == self);
 
-    HAL_LTDC_DeInit(&display.hltdc);
-    HAL_NVIC_DisableIRQ(LTDC_IRQn);
+    if (owner) {
+        #ifdef OMV_DSI_DISPLAY_CONTROLLER
+        HAL_DSI_DeInit(&display.hdsi);
+        HAL_NVIC_DisableIRQ(DSI_IRQn);
+        #endif
 
-    __HAL_RCC_PLL3_DISABLE();
-    uint32_t tickstart = mp_hal_ticks_ms();
-    while (__HAL_RCC_GET_FLAG(RCC_FLAG_PLL3RDY)) {
-        if ((mp_hal_ticks_ms() - tickstart) > PLL_TIMEOUT_VALUE) {
-            break;
+        HAL_LTDC_DeInit(&display.hltdc);
+        HAL_NVIC_DisableIRQ(LTDC_IRQn);
+
+        __HAL_RCC_PLL3_DISABLE();
+        uint32_t tickstart = mp_hal_ticks_ms();
+        while (__HAL_RCC_GET_FLAG(RCC_FLAG_PLL3RDY)) {
+            if ((mp_hal_ticks_ms() - tickstart) > PLL_TIMEOUT_VALUE) {
+                break;
+            }
         }
-    }
 
-    #ifdef OMV_DISPLAY_BL_PIN
-    omv_gpio_deinit(OMV_DISPLAY_BL_PIN);
-    #endif
+        #ifdef OMV_DISPLAY_BL_PIN
+        omv_gpio_deinit(OMV_DISPLAY_BL_PIN);
+        #endif
+
+        display.self = NULL;
+    }
 
     for (int i = 0; i < FRAMEBUFFER_COUNT; i++) {
         uma_free(self->framebuffers[i]);
