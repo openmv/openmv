@@ -344,6 +344,15 @@ static void dsi_init(py_display_obj_t *self, display_mode_t *dm) {
 }
 #endif
 
+// Program the layer and arm a single vertical-blanking reload. Called when a
+// new frame is actually ready, never speculatively: every armed reload costs
+// the LTDC one FIFO underrun at the frame boundary.
+static void ltdc_commit(uint32_t index) {
+    HAL_LTDC_ConfigLayer_NoReload(&display.hltdc,
+                                  &display.framebuffer_layers[index], LTDC_LAYER_1);
+    HAL_LTDC_Reload(&display.hltdc, LTDC_RELOAD_VERTICAL_BLANKING);
+}
+
 static void ltdc_init(py_display_obj_t *self, display_mode_t *dm) {
     uint32_t fb_size = dm->hactive * dm->vactive * sizeof(uint16_t);
 
@@ -389,17 +398,13 @@ static void ltdc_init(py_display_obj_t *self, display_mode_t *dm) {
     NVIC_SetPriority(LTDC_IRQn, IRQ_PRI_LTDC);
     HAL_NVIC_EnableIRQ(LTDC_IRQn);
 
-    // Start interrupt chain.
-    HAL_LTDC_Reload(&display.hltdc, LTDC_RELOAD_VERTICAL_BLANKING);
+    // Apply the initial layer configuration. Further reloads are armed by
+    // display_write()/display_clear() when there is a new frame to show.
+    ltdc_commit(self->framebuffer_tail);
 }
 
 void HAL_LTDC_ReloadEventCallback(LTDC_HandleTypeDef *hltdc) {
     py_display_obj_t *self = display.self;
-
-    HAL_LTDC_ConfigLayer_NoReload(&display.hltdc,
-                                  &display.framebuffer_layers[self->framebuffer_tail], LTDC_LAYER_1);
-    // Continue chain...
-    HAL_LTDC_Reload(&display.hltdc, LTDC_RELOAD_VERTICAL_BLANKING);
 
     #if defined(OMV_DISPLAY_DISP_PIN)
     if (self->display_on && (self->framebuffer_tail != self->framebuffer_head)) {
@@ -458,6 +463,7 @@ static void display_write(py_display_obj_t *self, image_t *src_img, int dst_x_st
 
     // Update tail which means a new image is ready.
     self->framebuffer_tail = tail;
+    ltdc_commit(tail);
 }
 
 static void display_clear(py_display_obj_t *self, bool off) {
@@ -488,6 +494,7 @@ static void display_clear(py_display_obj_t *self, bool off) {
 
     // Update tail which means a new image is ready.
     self->framebuffer_tail = tail;
+    ltdc_commit(tail);
 }
 
 #ifdef OMV_DISPLAY_BL_PIN
