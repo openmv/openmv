@@ -265,7 +265,9 @@ static mp_obj_t py_winc_ifconfig(size_t n_args, const mp_obj_t *args) {
 
 static mp_obj_t py_winc_netinfo(mp_obj_t self_in) {
     winc_netinfo_t netinfo;
-    winc_netinfo(&netinfo);
+    if (winc_netinfo(&netinfo) != 0) {
+        mp_raise_OSError(MP_ETIMEDOUT);
+    }
 
     // Format MAC address
     VSTR_FIXED(mac_vstr, 18);
@@ -307,12 +309,18 @@ static int winc_scan_callback(winc_scan_result_t *scan_result, void *arg) {
 static mp_obj_t py_winc_scan(mp_obj_t self_in) {
     mp_obj_t scan_list;
     scan_list = mp_obj_new_list(0, NULL);
-    winc_scan(winc_scan_callback, scan_list);
+    if (winc_scan(winc_scan_callback, scan_list) != 0) {
+        mp_raise_OSError(MP_ETIMEDOUT);
+    }
     return scan_list;
 }
 
 static mp_obj_t py_winc_get_rssi(mp_obj_t self_in) {
-    return mp_obj_new_int(winc_get_rssi());
+    int rssi;
+    if (winc_get_rssi(&rssi) != 0) {
+        mp_raise_OSError(MP_ETIMEDOUT);
+    }
+    return mp_obj_new_int(rssi);
 }
 
 static mp_obj_t py_winc_fw_version(mp_obj_t self_in) {

@@ -45,6 +45,9 @@
 // The maximum datagram size the firmware delivers in response to a single recvfrom() request.
 #define WINC_MAX_DGRAM_SIZE     (1480)
 #define WINC_REQUEST_TIMEOUT    (5000)
+// A scan sweeps every channel and then fetches each result, so it needs a much
+// larger budget than a single request.
+#define WINC_SCAN_TIMEOUT       (10000)
 // Association plus DHCP, which is much slower than a single request.
 #define WINC_CONNECT_TIMEOUT    (20000)
 
@@ -143,7 +146,7 @@ int winc_wait_for_sta(uint32_t *sta_ip, uint32_t timeout);
 int winc_ifconfig(winc_ifconfig_t *ifconfig, bool set);
 int winc_netinfo(winc_netinfo_t *netinfo);
 int winc_scan(winc_scan_callback_t cb, void *arg);
-int winc_get_rssi();
+int winc_get_rssi(int *rssi);
 int winc_fw_version(winc_fwver_t *wfwver);
 int winc_flash_dump(const char *path);
 int winc_flash_erase();
