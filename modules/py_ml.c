@@ -365,6 +365,14 @@ mp_obj_t py_ml_model_make_new(const mp_obj_type_t *type, size_t n_args, size_t n
         }
 
         model->size = res;
+        #if MICROPY_PY_ML_STAI
+        // The NPU runtime executes the model in place and its code generator
+        // marks the weights pool cacheable, which the NPU only supports for
+        // external memory. Internal SRAM (GC block 0 and the fast UMA pools)
+        // can't be used, so allocate from the default (external RAM) UMA pool.
+        model->managed = false;
+        model->data = uma_malign(model->size, IMLIB_ML_MODEL_ALIGN, UMA_PERSIST);
+        #else
         // Align size and memory and keep a reference to the GC block.
         size_t size = OMV_ALIGN_TO(model->size, IMLIB_ML_MODEL_ALIGN);
         // Try allocating model using GC memory (typically fast SRAM).
@@ -378,6 +386,7 @@ mp_obj_t py_ml_model_make_new(const mp_obj_type_t *type, size_t n_args, size_t n
             model->managed = false;
             model->data = uma_malign(model->size, IMLIB_ML_MODEL_ALIGN, UMA_FAST | UMA_PERSIST);
         }
+        #endif
 
         // Read file data.
         mp_stream_read_exactly(file, model->data, model->size, &error);

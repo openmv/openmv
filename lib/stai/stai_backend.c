@@ -161,11 +161,19 @@ int ml_backend_init_model(py_ml_model_obj_t *model) {
         .mode = AI_RELOC_RT_LOAD_MODE_XIP,
     };
 
+    // The model's image may have just been written to RAM by the CPU, at an
+    // address a previous model was executed from. Push it out of the DCache so
+    // the NPU reads the new weights, and drop stale ICache lines because the
+    // runtime executes the image in place.
+    SCB_CleanDCache_by_Addr((void *) model->data, model->size);
+    SCB_InvalidateICache_by_Addr((void *) model->data, model->size);
+
     // Invalidate DCache before installing the model's data.
     SCB_InvalidateDCache_by_Addr((void *) config.exec_ram_addr, config.exec_ram_size);
 
-    if (ll_aton_reloc_install((uintptr_t) model->data, &config, &state->nn_inst)) {
-        mp_raise_msg(&mp_type_RuntimeError, MP_ERROR_TEXT("Failed to load network"));
+    int ret = ll_aton_reloc_install((uintptr_t) model->data, &config, &state->nn_inst);
+    if (ret != AI_RELOC_RT_ERR_NONE) {
+        mp_raise_msg_varg(&mp_type_RuntimeError, MP_ERROR_TEXT("Failed to load network (%d)"), ret);
         return -1;
     }
 
