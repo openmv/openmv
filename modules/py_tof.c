@@ -108,35 +108,55 @@ static void tof_fill_image_float_obj(image_t *img, mp_obj_t *data, float min, fl
 
 #if OMV_TOF_VL53LX_ENABLE
 static int tof_vl53lx_start(vl53lx_dev_t *vl53lx_dev) {
-    int error = 0;
-    uint8_t isAlive = 0;
+    uint8_t is_alive = 0;
 
-    // Check sensor and initialize.
-    error |= vl53lx_is_alive(vl53lx_dev, &isAlive);
-    error |= vl53lx_init(vl53lx_dev);
+    // Wait for the sensor to come up after a power-cycle and check its device ID.
+    for (mp_uint_t start = mp_hal_ticks_ms(); ; mp_hal_delay_ms(5)) {
+        if (vl53lx_is_alive(vl53lx_dev, &is_alive) == 0 && is_alive) {
+            break;
+        }
+        if ((mp_hal_ticks_ms() - start) >= 100) {
+            return -1;
+        }
+    }
+
+    // Load the firmware and initialize the sensor.
+    if (vl53lx_init(vl53lx_dev) != 0) {
+        return -1;
+    }
 
     // Set resolution (number of zones).
     // NOTE: This function must be called before updating the ranging frequency.
-    error |= vl53lx_set_resolution(vl53lx_dev, VL53LX_RESOLUTION_8X8);
+    if (vl53lx_set_resolution(vl53lx_dev, VL53LX_RESOLUTION_8X8) != 0) {
+        return -1;
+    }
 
     // Set ranging frequency (FPS).
     // For 4x4 the allowed ranging frequency range is 1 -> 60.
     // For 8x8 the allowed ranging frequency range is 1 -> 15.
-    error |= vl53lx_set_ranging_frequency_hz(vl53lx_dev, 15);
+    if (vl53lx_set_ranging_frequency_hz(vl53lx_dev, 15) != 0) {
+        return -1;
+    }
 
     // Set ranging mode to continuous:
     // The device continuously grabs frames with the set ranging frequency.
     // Maximum ranging depth and ambient immunity are better.
     // This mode is advised for fast ranging measurements or high performances.
-    error |= vl53lx_set_ranging_mode(vl53lx_dev, VL53LX_RANGING_MODE_CONTINUOUS);
+    if (vl53lx_set_ranging_mode(vl53lx_dev, VL53LX_RANGING_MODE_CONTINUOUS) != 0) {
+        return -1;
+    }
 
-    error |= vl53lx_set_sharpener_percent(vl53lx_dev, 50);
+    if (vl53lx_set_sharpener_percent(vl53lx_dev, 50) != 0) {
+        return -1;
+    }
 
     // Start ranging.
-    error |= vl53lx_start_ranging(vl53lx_dev);
+    if (vl53lx_start_ranging(vl53lx_dev) != 0) {
+        return -1;
+    }
     mp_hal_delay_ms(10);
 
-    return error;
+    return 0;
 }
 
 static int tof_vl53lx_recover(vl53lx_dev_t *vl53lx_dev) {
@@ -149,25 +169,32 @@ static int tof_vl53lx_recover(vl53lx_dev_t *vl53lx_dev) {
 }
 
 static void tof_vl53lx_get_depth(vl53lx_dev_t *vl53lx_dev, float *frame, int timeout) {
-    uint8_t frame_ready = 0;
     // Note depending on the config in platform.h, this struct can be too big to alloc on the stack.
     vl53lx_data_t ranging_data;
 
-    for (mp_uint_t start = mp_hal_ticks_ms(); ; mp_hal_delay_ms(1)) {
-        uint8_t status = vl53lx_check_data_ready(vl53lx_dev, &frame_ready);
+    // The sensor's output buffer is not double-buffered, so a read that overlaps the sensor's
+    // update of it comes back with mismatching header/footer ids (a corrupted frame). The read
+    // then retries with the next frame, which starts right after an update and does not overlap.
+    for (int retry = 0; ; retry++) {
+        uint8_t frame_ready = 0;
 
-        if (status == 0 && frame_ready) {
-            status = vl53lx_get_ranging_data(vl53lx_dev, &ranging_data);
+        // Wait for a new frame. GO2 errors (non-zero status) are transient, keep polling.
+        for (mp_uint_t start = mp_hal_ticks_ms(); ; mp_hal_delay_ms(1)) {
+            if (vl53lx_check_data_ready(vl53lx_dev, &frame_ready) == 0 && frame_ready) {
+                break;
+            }
+
+            if ((timeout > 0) && (mp_hal_ticks_ms() - start) >= timeout) {
+                tof_vl53lx_recover(vl53lx_dev);
+                mp_raise_msg(&mp_type_RuntimeError, MP_ERROR_TEXT("VL53LX ranging failed"));
+            }
         }
 
-        if (status == 0 && frame_ready) {
+        if (vl53lx_get_ranging_data(vl53lx_dev, &ranging_data) == 0) {
             break;
         }
 
-        // - Corrupted frame (header/footer mismatch), the read raced with
-        //   a sensor update. Wait for the next data_ready and retry read.
-        // - GO2 errors (other non-zero status) are transient, keep polling.
-        if ((timeout > 0) && (mp_hal_ticks_ms() - start) >= timeout) {
+        if (retry >= 2) {
             tof_vl53lx_recover(vl53lx_dev);
             mp_raise_msg(&mp_type_RuntimeError, MP_ERROR_TEXT("VL53LX ranging failed"));
         }
@@ -347,8 +374,9 @@ mp_obj_t py_tof_init(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_args)
 
             if (error != 0 && first_init) {
                 first_init = false;
-                // Recover bus and scan one more time.
+                // Recover the bus, power-cycle the sensor and try one more time.
                 omv_i2c_pulse_scl(&tof_bus);
+                vl53lx_reset(&vl53lx_dev.platform);
                 goto TOF_VL53LX_RETRY;
             } else if (error != 0) {
                 py_tof_reset();
@@ -411,7 +439,7 @@ mp_obj_t py_tof_read_depth(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw
         { MP_QSTR_hmirror, MP_ARG_INT | MP_ARG_KW_ONLY,  {.u_bool = false } },
         { MP_QSTR_vflip, MP_ARG_INT | MP_ARG_KW_ONLY,  {.u_bool = false } },
         { MP_QSTR_transpose, MP_ARG_INT | MP_ARG_KW_ONLY,  {.u_bool = false } },
-        { MP_QSTR_timeout, MP_ARG_INT | MP_ARG_KW_ONLY,  {.u_int = 100 } },
+        { MP_QSTR_timeout, MP_ARG_INT | MP_ARG_KW_ONLY,  {.u_int = 200 } },
     };
 
     // Parse args.
@@ -534,7 +562,7 @@ mp_obj_t py_tof_snapshot(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_a
         { MP_QSTR_scale, MP_ARG_OBJ | MP_ARG_KW_ONLY, {.u_rom_obj = MP_ROM_NONE} },
         { MP_QSTR_pixformat, MP_ARG_INT | MP_ARG_KW_ONLY,  {.u_int = PIXFORMAT_RGB565 } },
         { MP_QSTR_copy_to_fb, MP_ARG_INT | MP_ARG_KW_ONLY,  {.u_bool = false } },
-        { MP_QSTR_timeout, MP_ARG_INT | MP_ARG_KW_ONLY,  {.u_int = 100 } },
+        { MP_QSTR_timeout, MP_ARG_INT | MP_ARG_KW_ONLY,  {.u_int = 200 } },
     };
 
     // Parse args.
