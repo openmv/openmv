@@ -685,6 +685,57 @@ static mp_obj_t test_uma_realloc_aligned(void) {
 }
 static MP_DEFINE_CONST_FUN_OBJ_0(test_uma_realloc_aligned_obj, test_uma_realloc_aligned);
 
+// Helper: find the first transient pool.
+static uma_pool_t *find_transient_pool(void) {
+    for (int i = 0; i < uma_pool_count(); i++) {
+        uma_pool_t *p = uma_pool_get(i);
+        if (p->flags & UMA_TRANSIENT) {
+            return p;
+        }
+    }
+    return NULL;
+}
+
+// Test that persistent allocations are never placed in a transient pool.
+// Transient pools are reclaimed wholesale, so a block that is never collected
+// would make uma_transient_acquire() fail for good.
+static mp_obj_t test_uma_persist_not_transient(void) {
+    uma_pool_t *transient = find_transient_pool();
+    if (!transient) {
+        return mp_const_true;
+    }
+
+    // Ask for the transient pool's own attributes, so that it is the only
+    // pool that can match them, plus UMA_PERSIST.
+    uint32_t flags = (transient->flags & UMA_MEM_ATTR_MASK) | UMA_PERSIST | UMA_MAYBE;
+    void *ptr = uma_malloc(256, flags);
+    if (!ptr) {
+        return mp_const_false;
+    }
+
+    // It must have gone somewhere else, not into the transient pool.
+    uma_pool_t *actual = uma_pool_find(ptr, 0, 0);
+    uma_free(ptr);
+    return (actual && !(actual->flags & UMA_TRANSIENT)) ? mp_const_true : mp_const_false;
+}
+static MP_DEFINE_CONST_FUN_OBJ_0(test_uma_persist_not_transient_obj, test_uma_persist_not_transient);
+
+// Test that uma_malign() rounds the size up to the requested alignment, so
+// that cache maintenance over the block can't reach a neighboring allocation.
+static mp_obj_t test_uma_malign_rounds_size(void) {
+    // 100 is 4 byte aligned but not 64 byte aligned, so tlsf's own rounding
+    // is not enough to satisfy the requested alignment.
+    void *ptr = uma_malign(100, 64, UMA_MAYBE);
+    if (!ptr) {
+        return mp_const_false;
+    }
+
+    size_t size = tlsf_block_size(ptr);
+    uma_free(ptr);
+    return (size >= 128) ? mp_const_true : mp_const_false;
+}
+static MP_DEFINE_CONST_FUN_OBJ_0(test_uma_malign_rounds_size_obj, test_uma_malign_rounds_size);
+
 // Module definition
 static const mp_rom_map_elem_t unittest_umalloc_module_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR___name__), MP_ROM_QSTR(MP_QSTR_unittest_umalloc) },
@@ -713,6 +764,8 @@ static const mp_rom_map_elem_t unittest_umalloc_module_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_test_uma_pool_dtcm_strict), MP_ROM_PTR(&test_uma_pool_dtcm_strict_obj) },
     { MP_ROM_QSTR(MP_QSTR_test_uma_pool_dtcm_strict_fail), MP_ROM_PTR(&test_uma_pool_dtcm_strict_fail_obj) },
     { MP_ROM_QSTR(MP_QSTR_test_uma_realloc_aligned), MP_ROM_PTR(&test_uma_realloc_aligned_obj) },
+    { MP_ROM_QSTR(MP_QSTR_test_uma_persist_not_transient), MP_ROM_PTR(&test_uma_persist_not_transient_obj) },
+    { MP_ROM_QSTR(MP_QSTR_test_uma_malign_rounds_size), MP_ROM_PTR(&test_uma_malign_rounds_size_obj) },
 };
 
 static MP_DEFINE_CONST_DICT(unittest_umalloc_module_globals, unittest_umalloc_module_globals_table);

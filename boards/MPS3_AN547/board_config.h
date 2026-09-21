@@ -57,6 +57,10 @@
 #define OMV_UMA_BLOCK2_SIZE                   (256K)
 #define OMV_UMA_BLOCK2_FLAGS                  (UMA_DTCM)
 
+#define OMV_UMA_BLOCK3_MEMORY                 SRAM1
+#define OMV_UMA_BLOCK3_SIZE                   (64K)
+#define OMV_UMA_BLOCK3_FLAGS                  (UMA_TRANSIENT)
+
 #define OMV_SB_SIZE                           (128K)    // IDE JPEG buffer size (header + data).
 
 // Memory map.

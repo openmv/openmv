@@ -60,7 +60,7 @@
 
 #define OMV_UMA_BLOCK3_MEMORY                 PSRAM
 #define OMV_UMA_BLOCK3_SIZE                   (128K)
-#define OMV_UMA_BLOCK3_FLAGS                  (UMA_ITCM)
+#define OMV_UMA_BLOCK3_FLAGS                  (UMA_TRANSIENT)
 
 // Memory map.
 #define OMV_SRAM1_ORIGIN                      0x20000000
