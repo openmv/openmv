@@ -1426,6 +1426,25 @@ static mp_obj_t test_simd_vld2_vst2(void) {
         return mp_const_false;
     }
 
+    // vst2_u32: store interleaved u32 pairs
+    // On ARMv8, vst2q writes 32 bytes, so buffer must be at least 8 elements
+    uint32_t out32[8] = {0};
+    rows.r0 = vdup_u32(0xAAAAAAAA);
+    rows.r1 = vdup_u32(0xBBBBBBBB);
+    rows.r0 = vset_u32(rows.r0, 0, 0xA0000000);
+    rows.r1 = vset_u32(rows.r1, 0, 0xB0000000);
+    vst2_u32(out32, rows);
+    // Expected: [A0, B0, A1, B1, ...]
+    if (out32[0] != 0xA0000000 || out32[1] != 0xB0000000) {
+        return mp_const_false;
+    }
+    #if (UINT32_VECTOR_SIZE > 1)
+    if (out32[2] != 0xAAAAAAAA || out32[3] != 0xBBBBBBBB ||
+        out32[6] != 0xAAAAAAAA || out32[7] != 0xBBBBBBBB) {
+        return mp_const_false;
+    }
+    #endif
+
     return mp_const_true;
 }
 static MP_DEFINE_CONST_FUN_OBJ_0(test_simd_vld2_vst2_obj, test_simd_vld2_vst2);
