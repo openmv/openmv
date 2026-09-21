@@ -192,7 +192,9 @@ void *uma_malign(size_t size, size_t align, uint32_t flags) {
         return NULL;
     }
 
-    size = OMV_ALIGN_TO(size, OMV_MIN(align, 4));
+    // Round the size up to the alignment for convenience. tlsf only rounds it up
+    // to its own 4 byte granularity, regardless of the requested alignment.
+    size = OMV_ALIGN_TO(size, OMV_MAX(align, 4));
 
     uma_pool_t *pool = uma_pool_find(NULL, size, flags);
     if (!pool) {
