@@ -114,6 +114,7 @@ uma_pool_t *uma_pool_find(const void *ptr, size_t size, uint32_t flags) {
     uma_pool_t *partial = NULL;
     uma_pool_t *fallback = NULL;
     bool strict = flags & UMA_STRICT;
+    bool persist = flags & UMA_PERSIST;
     flags &= UMA_MEM_ATTR_MASK;
 
     for (int i = 0; i < uma_num_pools; i++) {
@@ -121,7 +122,7 @@ uma_pool_t *uma_pool_find(const void *ptr, size_t size, uint32_t flags) {
             continue;
         }
         // Never place persistent allocations in transient pools.
-        if ((flags & UMA_PERSIST) && (uma_pools[i].flags & UMA_TRANSIENT)) {
+        if (persist && (uma_pools[i].flags & UMA_TRANSIENT)) {
             continue;
         }
         // Exact attribute match (also handles flags==0 -> generic pool).
