@@ -48,7 +48,7 @@
 
 #define OMV_UMA_BLOCK0_MEMORY                 PSRAM
 #define OMV_UMA_BLOCK0_SIZE                   (8M)
-#define OMV_UMA_BLOCK0_FLAGS                  (UMA_DEFAULT)
+#define OMV_UMA_BLOCK0_FLAGS                  (UMA_EXTERNAL | UMA_DEFAULT)
 
 #define OMV_UMA_BLOCK1_MEMORY                 PSRAM
 #define OMV_UMA_BLOCK1_SIZE                   (2M)

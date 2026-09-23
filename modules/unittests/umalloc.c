@@ -604,11 +604,11 @@ static MP_DEFINE_CONST_FUN_OBJ_0(test_uma_pool_dtcm_fallback_fast_obj, test_uma_
 
 // Test FAST fallback to generic: request exceeds all special pools.
 static mp_obj_t test_uma_pool_fast_fallback_generic(void) {
-    // Find the largest special pool.
+    // Find the largest pool that isn't the default one.
     size_t max_special = 0;
     for (int i = 0; i < uma_pool_count(); i++) {
         uma_pool_t *p = uma_pool_get(i);
-        if ((p->flags & UMA_MEM_ATTR_MASK) != 0 && p->size > max_special) {
+        if (!(p->flags & UMA_DEFAULT) && p->size > max_special) {
             max_special = p->size;
         }
     }
@@ -720,6 +720,31 @@ static mp_obj_t test_uma_persist_not_transient(void) {
 }
 static MP_DEFINE_CONST_FUN_OBJ_0(test_uma_persist_not_transient_obj, test_uma_persist_not_transient);
 
+// Test that a request for external memory is placed in an external pool.
+// UMA_STRICT disables partial matching and the fallback, so the pool has to
+// be matched on its attributes rather than picked up by the default pool.
+static mp_obj_t test_uma_external_pool(void) {
+    bool external = false;
+
+    for (int i = 0; i < uma_pool_count(); i++) {
+        external |= (uma_pool_get(i)->flags & UMA_EXTERNAL) != 0;
+    }
+
+    if (!external) {
+        return mp_const_true;
+    }
+
+    void *ptr = uma_malloc(256, UMA_EXTERNAL | UMA_STRICT | UMA_MAYBE);
+    if (!ptr) {
+        return mp_const_false;
+    }
+
+    uma_pool_t *actual = uma_pool_find(ptr, 0, 0);
+    uma_free(ptr);
+    return (actual && (actual->flags & UMA_EXTERNAL)) ? mp_const_true : mp_const_false;
+}
+static MP_DEFINE_CONST_FUN_OBJ_0(test_uma_external_pool_obj, test_uma_external_pool);
+
 // Test that uma_malign() rounds the size up to the requested alignment, so
 // that cache maintenance over the block can't reach a neighboring allocation.
 static mp_obj_t test_uma_malign_rounds_size(void) {
@@ -766,6 +791,7 @@ static const mp_rom_map_elem_t unittest_umalloc_module_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_test_uma_realloc_aligned), MP_ROM_PTR(&test_uma_realloc_aligned_obj) },
     { MP_ROM_QSTR(MP_QSTR_test_uma_persist_not_transient), MP_ROM_PTR(&test_uma_persist_not_transient_obj) },
     { MP_ROM_QSTR(MP_QSTR_test_uma_malign_rounds_size), MP_ROM_PTR(&test_uma_malign_rounds_size_obj) },
+    { MP_ROM_QSTR(MP_QSTR_test_uma_external_pool), MP_ROM_PTR(&test_uma_external_pool_obj) },
 };
 
 static MP_DEFINE_CONST_DICT(unittest_umalloc_module_globals, unittest_umalloc_module_globals_table);
