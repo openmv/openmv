@@ -47,7 +47,7 @@
 
 #define OMV_UMA_BLOCK0_MEMORY                 DDR       // Default UMA pool.
 #define OMV_UMA_BLOCK0_SIZE                   (10M)
-#define OMV_UMA_BLOCK0_FLAGS                  (0)
+#define OMV_UMA_BLOCK0_FLAGS                  (UMA_DEFAULT)
 
 #define OMV_UMA_BLOCK1_MEMORY                 SRAM1
 #define OMV_UMA_BLOCK1_SIZE                   (2M)

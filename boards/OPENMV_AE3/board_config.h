@@ -106,7 +106,7 @@ extern unsigned char OMV_BOARD_UID_ADDR[12];    // Unique address.
 #define OMV_GC_BLOCK0_SIZE              (4M)
 #define OMV_UMA_BLOCK0_MEMORY           SRAM1   // Default UMA pool.
 #define OMV_UMA_BLOCK0_SIZE             (2512K)
-#define OMV_UMA_BLOCK0_FLAGS            (0)
+#define OMV_UMA_BLOCK0_FLAGS            (UMA_DEFAULT)
 #define OMV_UMA_BLOCK1_MEMORY           DTCM    // Fast UMA pool.
 #define OMV_UMA_BLOCK1_SIZE             (512K)
 #define OMV_UMA_BLOCK1_FLAGS            (UMA_DTCM)
@@ -127,7 +127,7 @@ extern unsigned char OMV_BOARD_UID_ADDR[12];    // Unique address.
 #define OMV_GC_BLOCK0_SIZE              (2M)
 #define OMV_UMA_BLOCK0_MEMORY           SRAM6_B // Default UMA pool.
 #define OMV_UMA_BLOCK0_SIZE             (512K)
-#define OMV_UMA_BLOCK0_FLAGS            (0)
+#define OMV_UMA_BLOCK0_FLAGS            (UMA_DEFAULT)
 #endif
 
 // Flash configuration.

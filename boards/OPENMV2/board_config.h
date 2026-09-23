@@ -87,7 +87,7 @@
 #define OMV_GC_BLOCK0_SIZE                    (44K)
 #define OMV_UMA_BLOCK0_MEMORY                 SRAM1 // Default UMA pool.
 #define OMV_UMA_BLOCK0_SIZE                   (160K)
-#define OMV_UMA_BLOCK0_FLAGS                  (0)
+#define OMV_UMA_BLOCK0_FLAGS                  (UMA_DEFAULT)
 #define OMV_SB_SIZE                           (8K)  // IDE JPEG buffer size (header + data).
 #define OMV_MSC_BUF_SIZE                      (2K)  // USB MSC bot data
 #define OMV_FFS_BUF_SIZE                      (16K) // Flash filesystem cache

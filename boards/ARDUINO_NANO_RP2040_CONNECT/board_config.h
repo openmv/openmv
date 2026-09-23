@@ -61,7 +61,7 @@ extern unsigned char *OMV_BOARD_UID_ADDR;    // Unique address.
 #define OMV_GC_BLOCK0_SIZE         (60 * 1024) // MicroPython's heap
 #define OMV_UMA_BLOCK0_MEMORY      RAM // Default UMA pool.
 #define OMV_UMA_BLOCK0_SIZE        (116K)
-#define OMV_UMA_BLOCK0_FLAGS       (0)
+#define OMV_UMA_BLOCK0_FLAGS       (UMA_DEFAULT)
 #define OMV_SB_SIZE                (20K) // Streaming buffer size.
 
 // GP LED
