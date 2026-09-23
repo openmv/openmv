@@ -35,11 +35,11 @@
 #include "omv_common.h"
 #include "umalloc.h"
 
-// Helper: find the first pool with no flags (default pool).
+// Helper: find the board's default pool.
 static uma_pool_t *find_default_pool(void) {
     for (int i = 0; i < uma_pool_count(); i++) {
         uma_pool_t *p = uma_pool_get(i);
-        if (p->flags == 0) {
+        if (p->flags & UMA_DEFAULT) {
             return p;
         }
     }
@@ -515,7 +515,7 @@ static mp_obj_t test_uma_pool_generic_alloc(void) {
 
     uma_pool_t *actual = uma_pool_find(ptr, 0, 0);
     uma_free(ptr);
-    return (actual && actual->flags == 0) ? mp_const_true : mp_const_false;
+    return (actual && actual->flags & UMA_DEFAULT) ? mp_const_true : mp_const_false;
 }
 static MP_DEFINE_CONST_FUN_OBJ_0(test_uma_pool_generic_alloc_obj, test_uma_pool_generic_alloc);
 
@@ -542,7 +542,7 @@ static mp_obj_t test_uma_pool_dtcm_partial(void) {
 
     uma_pool_t *actual = uma_pool_find(ptr, 0, 0);
     uma_free(ptr);
-    return (actual && actual->flags == UMA_DTCM) ? mp_const_true : mp_const_false;
+    return (actual && (actual->flags & UMA_MEM_ATTR_MASK) == UMA_DTCM) ? mp_const_true : mp_const_false;
 }
 static MP_DEFINE_CONST_FUN_OBJ_0(test_uma_pool_dtcm_partial_obj, test_uma_pool_dtcm_partial);
 
@@ -555,7 +555,7 @@ static mp_obj_t test_uma_pool_fast_dtcm_exact(void) {
 
     uma_pool_t *actual = uma_pool_find(ptr, 0, 0);
     uma_free(ptr);
-    return (actual && actual->flags == UMA_DTCM) ? mp_const_true : mp_const_false;
+    return (actual && (actual->flags & UMA_MEM_ATTR_MASK) == UMA_DTCM) ? mp_const_true : mp_const_false;
 }
 static MP_DEFINE_CONST_FUN_OBJ_0(test_uma_pool_fast_dtcm_exact_obj, test_uma_pool_fast_dtcm_exact);
 
@@ -579,7 +579,7 @@ static mp_obj_t test_uma_fast_fallback(void) {
     // Should have fallen back to a non-fast pool.
     uma_pool_t *actual = uma_pool_find(ptr, 0, 0);
     uma_free(ptr);
-    return (actual && actual->flags == 0) ? mp_const_true : mp_const_false;
+    return (actual && actual->flags & UMA_DEFAULT) ? mp_const_true : mp_const_false;
 }
 static MP_DEFINE_CONST_FUN_OBJ_0(test_uma_fast_fallback_obj, test_uma_fast_fallback);
 
@@ -608,7 +608,7 @@ static mp_obj_t test_uma_pool_fast_fallback_generic(void) {
     size_t max_special = 0;
     for (int i = 0; i < uma_pool_count(); i++) {
         uma_pool_t *p = uma_pool_get(i);
-        if (p->flags != 0 && p->size > max_special) {
+        if ((p->flags & UMA_MEM_ATTR_MASK) != 0 && p->size > max_special) {
             max_special = p->size;
         }
     }
@@ -621,7 +621,7 @@ static mp_obj_t test_uma_pool_fast_fallback_generic(void) {
 
     uma_pool_t *actual = uma_pool_find(ptr, 0, 0);
     uma_free(ptr);
-    return (actual && actual->flags == 0) ? mp_const_true : mp_const_false;
+    return (actual && actual->flags & UMA_DEFAULT) ? mp_const_true : mp_const_false;
 }
 static MP_DEFINE_CONST_FUN_OBJ_0(test_uma_pool_fast_fallback_generic_obj, test_uma_pool_fast_fallback_generic);
 
@@ -634,7 +634,7 @@ static mp_obj_t test_uma_pool_dtcm_strict(void) {
 
     uma_pool_t *actual = uma_pool_find(ptr, 0, 0);
     uma_free(ptr);
-    return (actual && actual->flags == UMA_DTCM) ? mp_const_true : mp_const_false;
+    return (actual && (actual->flags & UMA_MEM_ATTR_MASK) == UMA_DTCM) ? mp_const_true : mp_const_false;
 }
 static MP_DEFINE_CONST_FUN_OBJ_0(test_uma_pool_dtcm_strict_obj, test_uma_pool_dtcm_strict);
 
