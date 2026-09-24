@@ -74,7 +74,10 @@ if bdev is None:
         import machine
 
         bdev = mimxrt.Flash()
-        sdcard = machine.SDCard(1)
+        # Do not mount the card here. USB MSC is chosen from whatever is
+        # mounted when this file returns, and a mounted /sdcard becomes the
+        # PC disk. The application mounts /sdcard after USB init.
+        sdcard = None
         del mimxrt, machine
     except Exception:
         pass
