@@ -40,6 +40,7 @@
 #define UMA_DMA_D2          (1 << 4)
 #define UMA_DMA_D3          (1 << 5)
 #define UMA_TRANSIENT       (1 << 6)
+#define UMA_EXTERNAL        (1 << 7)
 #define UMA_MEM_ATTR_MASK   (0xFF)
 
 // Allocation flags (bits 8+)
@@ -47,6 +48,9 @@
 #define UMA_STRICT          (1 << 9)
 #define UMA_CACHE           (1 << 10)
 #define UMA_PERSIST         (1 << 11)
+
+// Pool properties (bits 16+)
+#define UMA_DEFAULT         (1 << 16)
 
 #if !defined(LINKER_SCRIPT)
 #ifndef UMA_MAX_POOLS

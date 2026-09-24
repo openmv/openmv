@@ -50,7 +50,7 @@ extern unsigned char *OMV_BOARD_UID_ADDR;   // Unique ID address.
 #define OMV_GC_BLOCK0_SIZE         (32 * 1024)
 #define OMV_UMA_BLOCK0_MEMORY      RAM    // Default UMA pool.
 #define OMV_UMA_BLOCK0_SIZE        (163K)
-#define OMV_UMA_BLOCK0_FLAGS       (0)
+#define OMV_UMA_BLOCK0_FLAGS       (UMA_DEFAULT)
 #define OMV_SB_SIZE                (20K)  // IDE JPEG buffer (header + data).
 
 // GP LED

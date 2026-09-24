@@ -62,7 +62,7 @@
 #define OMV_GC_BLOCK0_SIZE         (64K)
 #define OMV_UMA_BLOCK0_MEMORY      SRAM   // Default UMA pool.
 #define OMV_UMA_BLOCK0_SIZE        (144K)
-#define OMV_UMA_BLOCK0_FLAGS       (0)
+#define OMV_UMA_BLOCK0_FLAGS       (UMA_DEFAULT)
 #define OMV_SB_SIZE                (16K) // Streaming buffer size.
 
 #define OMV_TEXT_ORIGIN            0x00026000

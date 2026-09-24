@@ -47,7 +47,7 @@
 
 #define OMV_UMA_BLOCK0_MEMORY                 DDR       // Default UMA pool.
 #define OMV_UMA_BLOCK0_SIZE                   (10M)
-#define OMV_UMA_BLOCK0_FLAGS                  (0)
+#define OMV_UMA_BLOCK0_FLAGS                  (UMA_DEFAULT)
 
 #define OMV_UMA_BLOCK1_MEMORY                 SRAM1
 #define OMV_UMA_BLOCK1_SIZE                   (2M)
@@ -56,6 +56,10 @@
 #define OMV_UMA_BLOCK2_MEMORY                 SRAM1
 #define OMV_UMA_BLOCK2_SIZE                   (256K)
 #define OMV_UMA_BLOCK2_FLAGS                  (UMA_DTCM)
+
+#define OMV_UMA_BLOCK3_MEMORY                 SRAM1
+#define OMV_UMA_BLOCK3_SIZE                   (64K)
+#define OMV_UMA_BLOCK3_FLAGS                  (UMA_TRANSIENT)
 
 #define OMV_SB_SIZE                           (128K)    // IDE JPEG buffer size (header + data).
 

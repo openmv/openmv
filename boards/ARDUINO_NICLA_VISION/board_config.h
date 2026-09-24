@@ -137,7 +137,7 @@
 #define OMV_GC_BLOCK2_SIZE                    (276K)
 #define OMV_UMA_BLOCK0_MEMORY                 SRAM0     // Default UMA pool.
 #define OMV_UMA_BLOCK0_SIZE                   (476K)
-#define OMV_UMA_BLOCK0_FLAGS                  (0)
+#define OMV_UMA_BLOCK0_FLAGS                  (UMA_DEFAULT)
 #define OMV_MSC_BUF_SIZE                      (2K)      // USB MSC bot data
 #define OMV_LINE_BUF_SIZE                     (3 * 1024) // Image line buffer round(640 * 2BPP * 2 buffers).
 #define OMV_VOSPI_DMA_BUFFER                  ".dma_buffer"

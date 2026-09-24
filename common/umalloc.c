@@ -114,26 +114,30 @@ uma_pool_t *uma_pool_find(const void *ptr, size_t size, uint32_t flags) {
     uma_pool_t *partial = NULL;
     uma_pool_t *fallback = NULL;
     bool strict = flags & UMA_STRICT;
+    bool persist = flags & UMA_PERSIST;
     flags &= UMA_MEM_ATTR_MASK;
 
     for (int i = 0; i < uma_num_pools; i++) {
+        // Match on pool attributes only.
+        uint32_t attrs = uma_pools[i].flags & UMA_MEM_ATTR_MASK;
+
         if (tlsf_alloc_size_max(uma_pools[i].tlsf) < size) {
             continue;
         }
         // Never place persistent allocations in transient pools.
-        if ((flags & UMA_PERSIST) && (uma_pools[i].flags & UMA_TRANSIENT)) {
+        if (persist && (attrs & UMA_TRANSIENT)) {
             continue;
         }
-        // Exact attribute match (also handles flags==0 -> generic pool).
-        if (flags == uma_pools[i].flags) {
+        // Exact attribute match (flags==0 matches attribute-less pools).
+        if (flags == attrs) {
             return &uma_pools[i];
         }
         // Allow partial match unless strict matching was requested.
-        if (!strict && !partial && (uma_pools[i].flags & flags)) {
+        if (!strict && !partial && (attrs & flags)) {
             partial = &uma_pools[i];
         }
-        // Allow generic fallback unless strict matching was requested.
-        if (!strict && !fallback && !uma_pools[i].flags) {
+        // Fall back to the default pool unless strict matching was requested.
+        if (!strict && !fallback && (uma_pools[i].flags & UMA_DEFAULT)) {
             fallback = &uma_pools[i];
         }
     }
@@ -191,7 +195,9 @@ void *uma_malign(size_t size, size_t align, uint32_t flags) {
         return NULL;
     }
 
-    size = OMV_ALIGN_TO(size, OMV_MIN(align, 4));
+    // Round the size up to the alignment for convenience. tlsf only rounds it up
+    // to its own 4 byte granularity, regardless of the requested alignment.
+    size = OMV_ALIGN_TO(size, OMV_MAX(align, 4));
 
     uma_pool_t *pool = uma_pool_find(NULL, size, flags);
     if (!pool) {
