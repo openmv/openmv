@@ -30,6 +30,8 @@
 #include <errno.h>
 #include "py/mphal.h"
 #include "py/runtime.h"
+#include "py/mphal.h"
+#include "py/runtime.h"
 #include "winc.h"
 #include "omv_common.h"
 
@@ -313,6 +315,10 @@ static void wifi_callback_sta(uint8_t msg_type, void *msg) {
     switch (msg_type) {
 
         case M2M_WIFI_RESP_CURRENT_RSSI: {
+            if (async_request_data == NULL) {
+                // A reply to a request that has already timed out.
+                break;
+            }
             int rssi = *((int8_t *) msg);
             *((int *) async_request_data) = rssi;
             async_request_done = true;
@@ -356,6 +362,10 @@ static void wifi_callback_sta(uint8_t msg_type, void *msg) {
         }
 
         case M2M_WIFI_RESP_CONN_INFO: {
+            if (async_request_data == NULL) {
+                // A reply to a request that has already timed out.
+                break;
+            }
             // Connection info
             tstrM2MConnInfo *con_info = (tstrM2MConnInfo *) msg;
             winc_netinfo_t *netinfo = (winc_netinfo_t *) async_request_data;
@@ -379,6 +389,10 @@ static void wifi_callback_sta(uint8_t msg_type, void *msg) {
         }
 
         case M2M_WIFI_RESP_SCAN_DONE: {
+            if (async_request_data == NULL) {
+                // A reply to a request that has already timed out.
+                break;
+            }
             scan_request_index = 0;
             tstrM2mScanDone *scan_result = (tstrM2mScanDone *) msg;
 
@@ -395,6 +409,10 @@ static void wifi_callback_sta(uint8_t msg_type, void *msg) {
         }
 
         case M2M_WIFI_RESP_SCAN_RESULT: {
+            if (async_request_data == NULL) {
+                // A reply to a request that has already timed out.
+                break;
+            }
             tstrM2mWifiscanResult *scan_result;
             scan_result = (tstrM2mWifiscanResult *) msg;
 
@@ -688,6 +706,27 @@ int winc_ifconfig(winc_ifconfig_t *rifconfig, bool set) {
     return 0;
 }
 
+// Wait for an async request to complete. The request buffer is owned by the
+// caller's stack frame, so it's dropped on the way out: without that, a reply
+// arriving after a timeout would be written to a frame that no longer exists.
+static int winc_wait_for_request(uint32_t timeout) {
+    int ret = 0;
+    mp_uint_t tick_start = mp_hal_ticks_ms();
+
+    while (async_request_done == false) {
+        // Handle pending events from network controller.
+        m2m_wifi_handle_events(NULL);
+        mp_event_wait_ms(1);
+        if ((mp_hal_ticks_ms() - tick_start) >= timeout) {
+            ret = -1;
+            break;
+        }
+    }
+
+    async_request_data = NULL;
+    return ret;
+}
+
 int winc_netinfo(winc_netinfo_t *netinfo) {
     async_request_done = false;
     async_request_data = netinfo;
@@ -695,13 +734,7 @@ int winc_netinfo(winc_netinfo_t *netinfo) {
     // Request connection info
     m2m_wifi_get_connection_info();
 
-    while (async_request_done == false) {
-        __WFI();
-        // Handle pending events from network controller.
-        m2m_wifi_handle_events(NULL);
-    }
-
-    return 0;
+    return winc_wait_for_request(WINC_REQUEST_TIMEOUT);
 }
 
 int winc_scan(winc_scan_callback_t cb, void *arg) {
@@ -712,30 +745,17 @@ int winc_scan(winc_scan_callback_t cb, void *arg) {
     // Request scan.
     m2m_wifi_request_scan(M2M_WIFI_CH_ALL);
 
-    while (async_request_done == false) {
-        __WFI();
-        // Handle pending events from network controller.
-        m2m_wifi_handle_events(NULL);
-    }
-
-    return 0;
+    return winc_wait_for_request(WINC_SCAN_TIMEOUT);
 }
 
-int winc_get_rssi() {
-    int rssi;
+int winc_get_rssi(int *rssi) {
     async_request_done = false;
-    async_request_data = &rssi;
+    async_request_data = rssi;
 
     // Request RSSI.
     m2m_wifi_req_curr_rssi();
 
-    while (async_request_done == false) {
-        __WFI();
-        // Handle pending events from network controller.
-        m2m_wifi_handle_events(NULL);
-    }
-
-    return rssi;
+    return winc_wait_for_request(WINC_REQUEST_TIMEOUT);
 }
 
 int winc_fw_version(winc_fwver_t *wfwver) {
