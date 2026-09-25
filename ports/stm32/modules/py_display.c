@@ -344,6 +344,15 @@ static void dsi_init(py_display_obj_t *self, display_mode_t *dm) {
 }
 #endif
 
+// Program the layer and arm a single vertical-blanking reload. Called when a
+// new frame is actually ready, never speculatively: every armed reload costs
+// the LTDC one FIFO underrun at the frame boundary.
+static void ltdc_commit(uint32_t index) {
+    HAL_LTDC_ConfigLayer_NoReload(&display.hltdc,
+                                  &display.framebuffer_layers[index], LTDC_LAYER_1);
+    HAL_LTDC_Reload(&display.hltdc, LTDC_RELOAD_VERTICAL_BLANKING);
+}
+
 static void ltdc_init(py_display_obj_t *self, display_mode_t *dm) {
     uint32_t fb_size = dm->hactive * dm->vactive * sizeof(uint16_t);
 
@@ -389,17 +398,13 @@ static void ltdc_init(py_display_obj_t *self, display_mode_t *dm) {
     NVIC_SetPriority(LTDC_IRQn, IRQ_PRI_LTDC);
     HAL_NVIC_EnableIRQ(LTDC_IRQn);
 
-    // Start interrupt chain.
-    HAL_LTDC_Reload(&display.hltdc, LTDC_RELOAD_VERTICAL_BLANKING);
+    // Apply the initial layer configuration. Further reloads are armed by
+    // display_write()/display_clear() when there is a new frame to show.
+    ltdc_commit(self->framebuffer_tail);
 }
 
 void HAL_LTDC_ReloadEventCallback(LTDC_HandleTypeDef *hltdc) {
     py_display_obj_t *self = display.self;
-
-    HAL_LTDC_ConfigLayer_NoReload(&display.hltdc,
-                                  &display.framebuffer_layers[self->framebuffer_tail], LTDC_LAYER_1);
-    // Continue chain...
-    HAL_LTDC_Reload(&display.hltdc, LTDC_RELOAD_VERTICAL_BLANKING);
 
     #if defined(OMV_DISPLAY_DISP_PIN)
     if (self->display_on && (self->framebuffer_tail != self->framebuffer_head)) {
@@ -458,6 +463,7 @@ static void display_write(py_display_obj_t *self, image_t *src_img, int dst_x_st
 
     // Update tail which means a new image is ready.
     self->framebuffer_tail = tail;
+    ltdc_commit(tail);
 }
 
 static void display_clear(py_display_obj_t *self, bool off) {
@@ -488,6 +494,7 @@ static void display_clear(py_display_obj_t *self, bool off) {
 
     // Update tail which means a new image is ready.
     self->framebuffer_tail = tail;
+    ltdc_commit(tail);
 }
 
 #ifdef OMV_DISPLAY_BL_PIN
@@ -536,25 +543,39 @@ int display_dsi_read(py_display_obj_t *self, uint8_t cmd, uint8_t *args,
 #endif
 
 static void display_deinit(py_display_obj_t *self) {
-    #ifdef OMV_DSI_DISPLAY_CONTROLLER
-    HAL_DSI_DeInit(&display.hdsi);
-    HAL_NVIC_DisableIRQ(DSI_IRQn);
-    #endif
+    // The LTDC/DSI state is a singleton shared by every display object, but this
+    // runs from the object's finaliser, which the GC may invoke long after the
+    // object stopped owning the controller. Creating a second display makes the
+    // first one garbage while the hardware belongs to the second, and collecting
+    // it would otherwise tear down a live display: the LTDC clock is gated, the
+    // controller stops scanning and every register reads back as zero. Only the
+    // current owner may touch the controller; a stale object just frees its own
+    // framebuffers.
+    bool owner = (display.self == self);
 
-    HAL_LTDC_DeInit(&display.hltdc);
-    HAL_NVIC_DisableIRQ(LTDC_IRQn);
+    if (owner) {
+        #ifdef OMV_DSI_DISPLAY_CONTROLLER
+        HAL_DSI_DeInit(&display.hdsi);
+        HAL_NVIC_DisableIRQ(DSI_IRQn);
+        #endif
 
-    __HAL_RCC_PLL3_DISABLE();
-    uint32_t tickstart = mp_hal_ticks_ms();
-    while (__HAL_RCC_GET_FLAG(RCC_FLAG_PLL3RDY)) {
-        if ((mp_hal_ticks_ms() - tickstart) > PLL_TIMEOUT_VALUE) {
-            break;
+        HAL_LTDC_DeInit(&display.hltdc);
+        HAL_NVIC_DisableIRQ(LTDC_IRQn);
+
+        __HAL_RCC_PLL3_DISABLE();
+        uint32_t tickstart = mp_hal_ticks_ms();
+        while (__HAL_RCC_GET_FLAG(RCC_FLAG_PLL3RDY)) {
+            if ((mp_hal_ticks_ms() - tickstart) > PLL_TIMEOUT_VALUE) {
+                break;
+            }
         }
-    }
 
-    #ifdef OMV_DISPLAY_BL_PIN
-    omv_gpio_deinit(OMV_DISPLAY_BL_PIN);
-    #endif
+        #ifdef OMV_DISPLAY_BL_PIN
+        omv_gpio_deinit(OMV_DISPLAY_BL_PIN);
+        #endif
+
+        display.self = NULL;
+    }
 
     for (int i = 0; i < FRAMEBUFFER_COUNT; i++) {
         uma_free(self->framebuffers[i]);
