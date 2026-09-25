@@ -41,6 +41,7 @@ typedef struct py_ml_model_obj {
     size_t memory_size;
     uint32_t memory_addr;
     bool managed;
+    bool mmapped;
     size_t inputs_size;
     mp_obj_tuple_t *input_shape;
     mp_obj_tuple_t *input_scale;
@@ -57,6 +58,9 @@ typedef struct py_ml_model_obj {
 
 // Initialize a model.
 int ml_backend_init_model(py_ml_model_obj_t *model);
+
+// Run any backend deinitialization needed when a model is released.
+void ml_backend_deinit_model(py_ml_model_obj_t *model);
 
 // Run inference.
 int ml_backend_run_inference(py_ml_model_obj_t *model);
