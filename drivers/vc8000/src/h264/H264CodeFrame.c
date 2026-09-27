@@ -208,6 +208,20 @@ h264EncodeFrame_e H264CodeFrame(h264Instance_s * inst)
     H264ConfigureTestPenalties(inst);
 #endif
 
+    /* flush the output stream */
+    EWLLinearMem_t info;
+    info.virtualAddress = inst->pOutBuf;
+    info.busAddress = (ptr_t) inst->pOutBuf;
+    /* round up to the partial 64-bit word zeroed by H264SetNewFrame; byteCnt
+     * <= size (putbits overflow guard) and the buffer is cache-line padded,
+     * so this cannot touch lines outside the buffer */
+    info.size = (inst->stream.byteCnt + 7U) & ~7U;
+    EWLDCacheRangeFlush(inst->asic.ewl, &info);
+
+    /* flush the sw-written leading nal sizes; hw appends the slice sizes
+     * to the same table */
+    EWLDCacheRangeFlush(inst->asic.ewl, &inst->asic.sizeTbl);
+
     EncAsicFrameStart(inst->asic.ewl, &inst->asic.regs);
 
     do {
