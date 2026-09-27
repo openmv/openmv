@@ -1,6 +1,10 @@
 /*
  * py_cashew.c -- MicroPython module "cashew": C capture + detection loop for the
- * singulated-cashew camera (PAG7936 on OpenMV AE3, raw Bayer QVGA @ up to 240 fps).
+ * singulated-cashew camera, raw Bayer QVGA-class frames at up to ~250 fps.
+ *
+ * Supported cameras:
+ *   - PAG7936 on the OpenMV AE3 (parallel bus), 320x200 QVGA.
+ *   - ST VD66GY on the NUCLEO-N657X0-Q (MIPI CSI-2), 320 x height, optional 2x/4x binning.
  *
  *   import csi, cashew
  *   c = csi.CSI()                      # make sure the camera object exists
@@ -104,9 +108,28 @@ static void pag_frame_time(omv_csi_t *csi, uint32_t us) {
     pag_write(csi, 0x00EB, 0x80);   // commit
 }
 
-// ---- cashew.setup(fps=240, expo_us=100, gain_db=6.0, fb=4, denoise=False, lsc=True, clk_hz=24000000)
+static bool is_pag7936(omv_csi_t *csi) {
+    return csi->chip_id == 0x7936;
+}
+
+// Sensor frame time in microseconds: driver ioctl if supported (VD66GY), else PAG7936 registers.
+static void set_frame_us(omv_csi_t *csi, uint32_t us) {
+    if (omv_csi_ioctl(csi, OMV_CSI_IOCTL_SET_FRAME_TIME_US, (int) us) == 0) {
+        return;
+    }
+    if (is_pag7936(csi)) {
+        pag_frame_time(csi, us);
+        return;
+    }
+    mp_raise_msg(&mp_type_RuntimeError, MP_ERROR_TEXT("sensor has no frame-time control"));
+}
+
+// ---- cashew.setup(fps=240, expo_us=100, gain_db=6.0, fb=4, denoise=False, lsc=True, clk_hz=0,
+//                   height=0, bin=0, vblank=0, strobe_gpio=-1, strobe_inv=False)
+// denoise/lsc/clk_hz: PAG7936 only. height/bin/vblank/strobe_*: VD66GY only.
 static mp_obj_t py_cashew_setup(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
-    enum { ARG_fps, ARG_expo, ARG_gain, ARG_fb, ARG_denoise, ARG_lsc, ARG_clk };
+    enum { ARG_fps, ARG_expo, ARG_gain, ARG_fb, ARG_denoise, ARG_lsc, ARG_clk,
+           ARG_height, ARG_bin, ARG_vblank, ARG_strobe, ARG_strobe_inv };
     static const mp_arg_t allowed[] = {
         { MP_QSTR_fps,     MP_ARG_INT | MP_ARG_KW_ONLY,  {.u_int = 240} },
         { MP_QSTR_expo_us, MP_ARG_INT | MP_ARG_KW_ONLY,  {.u_int = 100} },
@@ -115,6 +138,11 @@ static mp_obj_t py_cashew_setup(size_t n_args, const mp_obj_t *pos_args, mp_map_
         { MP_QSTR_denoise, MP_ARG_BOOL | MP_ARG_KW_ONLY, {.u_bool = false} },
         { MP_QSTR_lsc,     MP_ARG_BOOL | MP_ARG_KW_ONLY, {.u_bool = true} },
         { MP_QSTR_clk_hz,  MP_ARG_INT | MP_ARG_KW_ONLY,  {.u_int = 0} },
+        { MP_QSTR_height,  MP_ARG_INT | MP_ARG_KW_ONLY,  {.u_int = 0} },
+        { MP_QSTR_bin,     MP_ARG_INT | MP_ARG_KW_ONLY,  {.u_int = 0} },
+        { MP_QSTR_vblank,  MP_ARG_INT | MP_ARG_KW_ONLY,  {.u_int = 0} },
+        { MP_QSTR_strobe_gpio, MP_ARG_INT | MP_ARG_KW_ONLY,  {.u_int = -1} },
+        { MP_QSTR_strobe_inv,  MP_ARG_BOOL | MP_ARG_KW_ONLY, {.u_bool = false} },
     };
     mp_arg_val_t a[MP_ARRAY_SIZE(allowed)];
     mp_arg_parse_all(n_args, pos_args, kw_args, MP_ARRAY_SIZE(allowed), allowed, a);
@@ -122,18 +150,44 @@ static mp_obj_t py_cashew_setup(size_t n_args, const mp_obj_t *pos_args, mp_map_
     omv_csi_t *csi = get_csi();
     float gain_db = (a[ARG_gain].u_obj == mp_const_none) ? 6.0f : mp_obj_get_float(a[ARG_gain].u_obj);
 
+    const bool pag = is_pag7936(csi);
+    const bool vd = (csi->chip_id == 0x5603);
+
     check(omv_csi_reset(csi, true), "reset");
     if (a[ARG_clk].u_int > 0) {
         check(omv_csi_set_clk_frequency(csi, a[ARG_clk].u_int), "clk");
     }
     check(omv_csi_set_pixformat(csi, PIXFORMAT_BAYER), "pixformat");
+    if (vd) {
+        // Output size 320 x height (even, <= CZ_MAX_H rows for the detector). The QVGA entry
+        // of the resolution table is overridden until reboot. 320 x 200 = 80 x 50 mm field.
+        int hh = a[ARG_height].u_int > 0 ? a[ARG_height].u_int : 200;
+        if (hh < 32 || hh > CZ_MAX_H || (hh & 1)) {
+            mp_raise_msg_varg(&mp_type_ValueError, MP_ERROR_TEXT("height must be even, 32..%d"), CZ_MAX_H);
+        }
+        csi->resolution[OMV_CSI_FRAMESIZE_QVGA][0] = 320;
+        csi->resolution[OMV_CSI_FRAMESIZE_QVGA][1] = hh;
+        check(omv_csi_ioctl(csi, OMV_CSI_IOCTL_VD66GY_SET_BINNING, (int) a[ARG_bin].u_int), "bin");
+        if (a[ARG_vblank].u_int > 0) {
+            check(omv_csi_ioctl(csi, OMV_CSI_IOCTL_VD66GY_SET_VBLANK, (int) a[ARG_vblank].u_int), "vblank");
+        }
+    }
     check(omv_csi_set_framesize(csi, OMV_CSI_FRAMESIZE_QVGA), "framesize");
     check(omv_csi_set_framerate(csi, a[ARG_fps].u_int), "framerate");
     check(omv_csi_set_auto_gain(csi, false, gain_db, NAN), "gain");
     check(omv_csi_set_auto_exposure(csi, false, a[ARG_expo].u_int), "exposure");
-    pag_write(csi, 0x0882, a[ARG_denoise].u_bool ? 0x03 : 0x00);
-    pag_write(csi, 0x0810, a[ARG_lsc].u_bool ? 0x01 : 0x00);
-    pag_write(csi, 0x00EB, 0x80);
+    // No ISP white-balance statistics: raw Bayer goes straight to the detector.
+    omv_csi_set_auto_whitebal(csi, false, NAN, NAN, NAN);
+    if (pag) {
+        pag_write(csi, 0x0882, a[ARG_denoise].u_bool ? 0x03 : 0x00);
+        pag_write(csi, 0x0810, a[ARG_lsc].u_bool ? 0x01 : 0x00);
+        pag_write(csi, 0x00EB, 0x80);
+    }
+    if (vd && a[ARG_strobe].u_int >= 0) {
+        // Sensor GPIO as strobe output (active during exposure), mode 2 in the VD6G GPIO control.
+        int ctrl = 0x02 | (a[ARG_strobe_inv].u_bool ? 0x20 : 0x00);
+        check(omv_csi_ioctl(csi, OMV_CSI_IOCTL_VD66GY_SET_GPIO, (int) a[ARG_strobe].u_int, ctrl), "strobe_gpio");
+    }
     check(omv_csi_set_framebuffers(csi, a[ARG_fb].u_int), "framebuffers");
 
     omv_csi_cb_t cb = { .fun = frame_cb, .arg = NULL };
@@ -142,10 +196,31 @@ static mp_obj_t py_cashew_setup(size_t n_args, const mp_obj_t *pos_args, mp_map_
 
     int w = csi->resolution[csi->framesize][0], h = csi->resolution[csi->framesize][1];
     ensure_params(w, h);
+    // Keep a user ROI that still fits; otherwise use the full frame.
+    if (s_p.roi_x1 >= w || s_p.roi_y1 >= h || s_p.roi_x0 > s_p.roi_x1 || s_p.roi_y0 > s_p.roi_y1) {
+        s_p.roi_x0 = 0; s_p.roi_y0 = 0;
+        s_p.roi_x1 = (uint16_t) (w - 1); s_p.roi_y1 = (uint16_t) (h - 1);
+    }
+    if (vd) {
+        s_p.cfa = (uint8_t) (csi->cfa_format & 3);   // GRBG unless mirrored/flipped
+    }
     mp_hal_delay_ms(200);
-    mp_printf(&mp_plat_print, "cashew.setup: %dx%d BAYER, %lu fps, expo %d us, gain %.1f dB, clk %lu Hz, fb %d\n",
-              w, h, (unsigned long) s_fps_set, (int) a[ARG_expo].u_int, (double) gain_db,
-              (unsigned long) csi->clk_hz, (int) a[ARG_fb].u_int);
+    int expo_us = 0;
+    omv_csi_get_exposure_us(csi, &expo_us);
+    mp_printf(&mp_plat_print, "cashew.setup: %s %dx%d BAYER (cfa %d), %lu fps, expo %d us (asked %d), gain %.1f dB, fb %d\n",
+              omv_csi_name(csi), w, h, (int) s_p.cfa, (unsigned long) s_fps_set, expo_us,
+              (int) a[ARG_expo].u_int, (double) gain_db, (int) a[ARG_fb].u_int);
+    if (vd) {
+        int info[6] = { 0 };
+        if (omv_csi_ioctl(csi, OMV_CSI_IOCTL_VD66GY_GET_INFO, info) == 0) {
+            mp_printf(&mp_plat_print, "  VD66GY: line %d clk (%d ns), frame %d lines, rows %d, bin %d, min frame %d us (%.0f fps)\n",
+                      info[0], info[4], info[1], info[2], info[3], info[5], (double) (info[5] ? 1e6f / info[5] : 0.0f));
+            if (s_fps_set && (uint32_t) info[5] > 1000000u / s_fps_set) {
+                mp_printf(&mp_plat_print, "  WARNING: %lu fps is not reachable with this height/binning/vblank; "
+                          "use a smaller height, bin=1 or a lower vblank\n", (unsigned long) s_fps_set);
+            }
+        }
+    }
     return mp_const_none;
 }
 static MP_DEFINE_CONST_FUN_OBJ_KW(py_cashew_setup_obj, 0, py_cashew_setup);
@@ -230,7 +305,7 @@ static mp_obj_t py_cashew_frame_us(mp_obj_t us_in) {
     if (us < 500) {
         mp_raise_ValueError(MP_ERROR_TEXT("frame_us too small"));
     }
-    pag_frame_time(csi, us);
+    set_frame_us(csi, us);
     s_fps_set = 1000000u / us;
     return mp_const_none;
 }
@@ -279,7 +354,7 @@ static mp_obj_t py_cashew_sweep(size_t n_args, const mp_obj_t *pos_args, mp_map_
     mp_obj_t list = mp_obj_new_list(0, NULL);
     mp_printf(&mp_plat_print, "frame_us   target_fps   measured_fps   dt_min..dt_max us   errors\n");
     for (int us = a[ARG_start].u_int; us >= a[ARG_stop].u_int; us -= step) {
-        pag_frame_time(csi, (uint32_t) us);
+        set_frame_us(csi, (uint32_t) us);
         mp_hal_delay_ms(50);
         float fps; uint32_t dmin, dmax; int errs;
         measure(csi, a[ARG_frames].u_int, &fps, &dmin, &dmax, &errs);
@@ -289,7 +364,7 @@ static mp_obj_t py_cashew_sweep(size_t n_args, const mp_obj_t *pos_args, mp_map_
                           mp_obj_new_int(dmax), mp_obj_new_int(errs) };
         mp_obj_list_append(list, mp_obj_new_tuple(5, t));
     }
-    pag_frame_time(csi, 1000000u / (s_fps_set ? s_fps_set : 240));   // restore
+    set_frame_us(csi, 1000000u / (s_fps_set ? s_fps_set : 240));   // restore
     return list;
 }
 static MP_DEFINE_CONST_FUN_OBJ_KW(py_cashew_sweep_obj, 2, py_cashew_sweep);
