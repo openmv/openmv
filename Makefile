@@ -159,10 +159,18 @@ include $(OMV_BOARD_CONFIG_DIR)/board_config.mk
 #OMV_SRC_QSTR := $(wildcard $(TOP_DIR)/modules/*.c)
 
 export OMV_PORT_DIR:=$(TOP_DIR)/ports/$(PORT)
+# Boards may carry their MicroPython board files in boards/<TARGET>/micropython/
+# instead of the MicroPython submodule.
+ifneq ($(wildcard $(OMV_BOARD_CONFIG_DIR)/micropython/mpconfigboard.h),)
+export MP_BOARD_CONFIG_DIR:=$(OMV_BOARD_CONFIG_DIR)micropython/
+MPY_BOARD_DIR_ARG = BOARD_DIR=$(MP_BOARD_CONFIG_DIR)
+else
 export MP_BOARD_CONFIG_DIR:=$(TOP_DIR)/$(MICROPY_DIR)/ports/$(PORT)/boards/$(TARGET)/
+MPY_BOARD_DIR_ARG =
+endif
 
 # The following command line args are passed to MicroPython's top Makefile.
-MPY_MKARGS = PORT=$(PORT) BOARD=$(TARGET) DEBUG=$(DEBUG) MICROPY_MANIFEST_OMV_LIB_DIR=$(OMV_LIB_DIR)\
+MPY_MKARGS = PORT=$(PORT) BOARD=$(TARGET) $(MPY_BOARD_DIR_ARG) DEBUG=$(DEBUG) MICROPY_MANIFEST_OMV_LIB_DIR=$(OMV_LIB_DIR)\
              FROZEN_MANIFEST=$(FROZEN_MANIFEST) OMV_SRC_QSTR="$(OMV_SRC_QSTR)"\
              MICROPY_ROM_TEXT_COMPRESSION=$(ROM_TEXT_COMPRESSION) USER_C_MODULES=$(TOP_DIR)
 
