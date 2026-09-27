@@ -4,14 +4,43 @@
 #
 # OpenMV Unit Tests.
 #
+# Runs on hardware via mpremote (`mount scripts/unittest/ run run.py`),
+# and on the Unix port via `run_tests.py`. The wrapper passes paths
+# through sys.argv so the same script drives both targets.
+#
+# Skip policy (a test is reported SKIPPED if it):
+#   1. returns the string "skip" from `unittest()`,
+#   2. raises ImportError on a known optional module
+#      (sensor, csi, ml, fir, audio, display, tv, imu, tof, omv),
+#   3. raises Exception with "SKIPPED" or "unavailable" in the message
+#      text (covers tests using the explicit "X unavailable" idiom and
+#      C-level OSError("This function is unavailable on your OpenMV Cam.")
+#      raised by modules/py_helper.c:py_func_unavailable).
+# Anything else is FAILED.
+#
 import os
 import gc
+import sys
 import time
 import umalloc
 
+# Default to the on-device mpremote-mount layout.
+TEST_PATH = "/remote/tests"
 DATA_PATH = "/rom"
 TEMP_PATH = "/remote/temp"
-TEST_PATH = "/remote/tests"
+
+# Optional positional overrides: run.py [TEST_PATH [DATA_PATH [TEMP_PATH]]].
+# Used by the host-side run_tests.py wrapper to point at the workspace.
+HOSTED = len(sys.argv) > 1
+if len(sys.argv) > 1:
+    TEST_PATH = sys.argv[1]
+if len(sys.argv) > 2:
+    DATA_PATH = sys.argv[2]
+if len(sys.argv) > 3:
+    TEMP_PATH = sys.argv[3]
+
+# Optional substring filter on test name (matches scripts/unittest/run_tests.py).
+TEST_FILTER = sys.argv[4] if len(sys.argv) > 4 else None
 
 # Terminal color codes
 COLOR_GREEN = "\033[92m"  # Bright green
@@ -27,6 +56,13 @@ UNITTEST_MODULES = [
     "unittest_simd",
     "unittest_umalloc",
 ]
+
+# ImportError on these module names is treated as SKIPPED (the test
+# depends on a hardware feature that's disabled on this build).
+OPTIONAL_MODULES = {
+    "audio", "csi", "display", "fir", "imu", "ml", "omv",
+    "sensor", "tof", "tv",
+}
 
 
 def print_result(test, result, time_ms, stats):
@@ -66,7 +102,10 @@ def main():
         except ImportError:
             pass
 
-    if not "temp" in os.listdir():
+    if TEST_FILTER:
+        tests = [t for t in tests if TEST_FILTER in t[1]]
+
+    if "temp" not in os.listdir():
         os.mkdir("temp")  # Make a temp directory
 
     total_start_time = time.ticks_ms()
@@ -97,11 +136,27 @@ def main():
 
             result = "PASSED"
             passed_count += 1
-        except Exception as e:
-            if "SKIPPED" in str(e):
+        except ImportError as e:
+            # Skip on a missing optional module; treat any other
+            # ImportError as a real test failure so a regression
+            # breaking `import image` etc. does not silently SKIP.
+            # MicroPython's ImportError lacks the `name` attribute, so
+            # parse the module name from the canonical message text:
+            # "no module named 'X'".
+            msg = str(e)
+            mod_name = msg.split("'")[1] if msg.count("'") >= 2 else ""
+            if mod_name in OPTIONAL_MODULES:
                 result = "SKIPPED"
                 skipped_count += 1
-            elif "LEAKED" in str(e):
+            else:
+                result = "FAILED"
+                failed_count += 1
+        except Exception as e:
+            msg = str(e)
+            if "SKIPPED" in msg or "unavailable" in msg:
+                result = "SKIPPED"
+                skipped_count += 1
+            elif "LEAKED" in msg:
                 result = "LEAKED"
                 failed_count += 1
             else:
@@ -110,11 +165,6 @@ def main():
 
         time_ms = time.ticks_diff(time.ticks_ms(), start_ms)
         gc.collect()
-
-        if False: #stats is not None:
-            used, free, persist, used_bytes, free_bytes, persist_bytes = stats
-            print(COLOR_RED + "used: %d (%d B)  free: %d (%d B)  persist: %d (%d B)" %
-                  (used, used_bytes, free, free_bytes, persist, persist_bytes) + COLOR_RESET)
 
         umalloc.collect()
         print_result(test, result, time_ms, stats)
@@ -137,6 +187,10 @@ def main():
 
     if failed_count > 0:
         print(COLOR_RED + "Some tests FAILED." + COLOR_RESET)
+        # Only propagate failure as a process exit when invoked from
+        # the host wrapper (mpremote `run` doesn't expect SystemExit).
+        if HOSTED:
+            sys.exit(1)
     else:
         print(COLOR_GREEN + "All tests PASSED." + COLOR_RESET)
 

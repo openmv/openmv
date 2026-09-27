@@ -53,6 +53,7 @@ jobs:
           - ARDUINO_NICLA_VISION
         qemu: [false]
         fvp: [false]
+        unix: [false]
         profile: [0]
         artifacts: [true]
         include:
@@ -71,6 +72,10 @@ jobs:
           - target: MPS3_AN547
             qemu: false
             fvp: true
+            profile: 0
+            artifacts: false
+          - target: UNIX
+            unix: true
             profile: 0
             artifacts: false
       fail-fast: false
@@ -100,7 +105,7 @@ jobs:
         sudo apt-get install -y qemu-system-arm
 
     - name: '🛠 Install SDK'
-      if: steps.sdk-cache.outputs.cache-hit != 'true'
+      if: steps.sdk-cache.outputs.cache-hit != 'true' && !matrix.unix
       run: source tools/ci.sh && ci_install_sdk
 
     - name: '♻ Cache FVP'
@@ -125,6 +130,18 @@ jobs:
     - name: '🧪 Run FVP tests'
       if: matrix.fvp
       run: source tools/ci.sh && ci_run_fvp_tests ${{ matrix.target }}
+
+    - name: '🧪 Smoke test'
+      if: matrix.unix
+      run: |
+        lib/micropython/ports/unix/build-openmv/micropython \
+            scripts/unittest/smoke_test.py
+
+    - name: '🧪 Run unit tests'
+      if: matrix.unix
+      run: |
+        cd scripts/unittest
+        python3 run_tests.py
 
     - name: '⬆ Upload artifacts'
       if: matrix.artifacts
