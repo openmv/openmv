@@ -34,6 +34,11 @@
 #define BSEC_HWS_HSLV_VDDIO3     (1U<<15)
 #define BSEC_HWS_HSLV_VDDIO2     (1U<<16)
 
+// VDDIO2 supply voltage: 1 = 1.8V (OpenMV N6, default), 0 = 3.3V (e.g. NUCLEO-N657X0-Q).
+#ifndef OMV_VDDIO2_1V8
+#define OMV_VDDIO2_1V8           (1)
+#endif
+
 // This variable is updated in two ways:
 // 1) by calling HAL API function HAL_RCC_GetHCLKFreq()
 // 2) each time HAL_RCC_ClockConfig() is called to configure the system clock frequency
@@ -127,6 +132,21 @@ void SystemClock_Config(void) {
     RCC_PeriphCLKInitTypeDef PeriphClkInit = {0};
 
     // Peripherals clocks configuration.
+    #if defined(OMV_OSC_I2C1_SOURCE)
+    PeriphClkInit.PeriphClockSelection   |= RCC_PERIPHCLK_I2C1;
+    PeriphClkInit.I2c1ClockSelection      = OMV_OSC_I2C1_SOURCE;
+    #endif
+
+    #if defined(OMV_OSC_I2C2_SOURCE)
+    PeriphClkInit.PeriphClockSelection   |= RCC_PERIPHCLK_I2C2;
+    PeriphClkInit.I2c2ClockSelection      = OMV_OSC_I2C2_SOURCE;
+    #endif
+
+    #if defined(OMV_OSC_I2C4_SOURCE)
+    PeriphClkInit.PeriphClockSelection   |= RCC_PERIPHCLK_I2C4;
+    PeriphClkInit.I2c4ClockSelection      = OMV_OSC_I2C4_SOURCE;
+    #endif
+
     #if defined(OMV_OSC_I2C3_SOURCE)
     PeriphClkInit.PeriphClockSelection   |= RCC_PERIPHCLK_I2C3;
     PeriphClkInit.I2c3ClockSelection      = OMV_OSC_I2C3_SOURCE;
@@ -497,7 +517,13 @@ void SystemClock_Config(void) {
     // Check if high speed IO optimization fuse is set.
     uint32_t fuse;
     BSEC_HandleTypeDef hbsec = { .Instance = BSEC };
+    // Boards whose VDDIO2 rail is 3.3V (e.g. NUCLEO-N657X0-Q) must not set the VDDIO2
+    // HSLV fuse or 1.8V range: define OMV_VDDIO2_1V8 as 0 in board_config.h.
+    #if OMV_VDDIO2_1V8
     uint32_t mask = BSEC_HWS_HSLV_VDDIO2 | BSEC_HWS_HSLV_VDDIO3;
+    #else
+    uint32_t mask = BSEC_HWS_HSLV_VDDIO3;
+    #endif
     if (HAL_BSEC_OTP_Read(&hbsec, BSEC_HW_CONFIG_ID, &fuse) != HAL_OK) {
         __fatal_error("HAL_BSEC_OTP_Read");
     } else if ((fuse & mask) != mask) {
@@ -515,7 +541,11 @@ void SystemClock_Config(void) {
 
     // Configure VDDIO2
     HAL_PWREx_EnableVddIO2();
+    #if OMV_VDDIO2_1V8
     HAL_PWREx_ConfigVddIORange(PWR_VDDIO2, PWR_VDDIO_RANGE_1V8);
+    #else
+    HAL_PWREx_ConfigVddIORange(PWR_VDDIO2, PWR_VDDIO_RANGE_3V3);
+    #endif
     HAL_SYSCFG_EnableVDDIO2CompensationCell();
 
     // Configure VDDIO3
