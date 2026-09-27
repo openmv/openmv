@@ -79,9 +79,24 @@ typedef struct {
 
 #include <stddef.h>
 
-// Work buffers (~430 KB) are supplied by the caller once: cz_ws_set(malloc(cz_ws_size())).
+// Work buffers are supplied by the caller, sized for the frame actually processed.
+// The "hot" block is touched on every row of every frame (masks, runs, label accumulators,
+// union-find): put it in the fastest memory available (DTCM). The "warm" block is only used
+// for candidate blobs (hull, neck test). Both must be 8-byte aligned.
+//   320x200, 4000 runs, 512 labels: hot ~83 KB, warm ~66 KB.
+typedef struct {
+    uint16_t w, h;              // largest frame (w multiple of 32, <= CZ_MAX_W)
+    uint16_t max_runs;          // runs per frame
+    uint16_t max_labels;        // provisional labels per frame
+} cz_dims_t;
+
+size_t cz_ws_hot_size(const cz_dims_t *d);
+size_t cz_ws_warm_size(const cz_dims_t *d);
+bool   cz_ws_init(const cz_dims_t *d, void *hot, void *warm);
+
+// Legacy: one block for the maximum frame (CZ_MAX_W x CZ_MAX_H), ~450 KB.
 size_t cz_ws_size(void);
-void   cz_ws_set(void *mem);   // memory must be zeroed
+void   cz_ws_set(void *mem);
 bool   cz_ws_ready(void);
 
 void cz_default_params(cz_params_t *p, int w, int h);

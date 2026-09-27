@@ -20,6 +20,7 @@
 #include <math.h>
 #include "py/mphal.h"
 #include "py/runtime.h"
+#include "board_config.h"
 
 #if MICROPY_PY_CSI_NG
 
@@ -81,14 +82,57 @@ static void check(int err, const char *what) {
     }
 }
 
-static void ensure_params(int w, int h) {
-    if (!cz_ws_ready()) {
-        void *mem = uma_calloc(cz_ws_size(), UMA_PERSIST);
-        if (!mem) {
-            mp_raise_msg(&mp_type_MemoryError, MP_ERROR_TEXT("cashew: no memory for work buffers"));
-        }
-        cz_ws_set(mem);
+// Workspace: the per-row hot block goes to DTCM when the port has a DTCM pool,
+// the per-candidate warm block to fast SRAM. Re-allocated if the frame grows.
+static void *s_hot, *s_warm;
+static int s_ws_w, s_ws_h;
+static size_t s_hot_size, s_warm_size;
+
+static void *ws_alloc(size_t size, bool hot) {
+    void *m = NULL;
+    if (hot) {
+        m = uma_malloc(size, UMA_DTCM | UMA_STRICT | UMA_PERSIST | UMA_MAYBE);
     }
+    if (!m) {
+        m = uma_malloc(size, UMA_FAST | UMA_PERSIST | UMA_MAYBE);
+    }
+    if (!m) {
+        m = uma_malloc(size, UMA_PERSIST | UMA_MAYBE);
+    }
+    return m;
+}
+
+static void ensure_ws(int w, int h) {
+    w = (w + 31) & ~31;
+    if (cz_ws_ready() && s_hot && w <= s_ws_w && h <= s_ws_h) {
+        return;
+    }
+    if (s_hot) { uma_free(s_hot); s_hot = NULL; }
+    if (s_warm) { uma_free(s_warm); s_warm = NULL; }
+    int runs = 20 * h;
+    runs = runs < 4000 ? 4000 : runs > CZ_MAX_RUNS ? CZ_MAX_RUNS : runs;
+    cz_dims_t d = { (uint16_t) w, (uint16_t) h, (uint16_t) runs,
+                    (uint16_t) ((w * h <= 320 * 240) ? 512 : CZ_MAX_LABELS) };
+    s_hot_size = cz_ws_hot_size(&d);
+    s_warm_size = cz_ws_warm_size(&d);
+    s_hot = ws_alloc(s_hot_size, true);
+    s_warm = ws_alloc(s_warm_size, false);
+    if (!s_hot || !s_warm || !cz_ws_init(&d, s_hot, s_warm)) {
+        mp_raise_msg(&mp_type_MemoryError, MP_ERROR_TEXT("cashew: no memory for work buffers"));
+    }
+    s_ws_w = w; s_ws_h = h;
+}
+
+static const char *mem_name(const void *p) {
+    uintptr_t a = (uintptr_t) p;
+    #if defined(OMV_DTCM_ORIGIN)
+    if (a >= OMV_DTCM_ORIGIN && a < OMV_DTCM_ORIGIN + 0x40000) return "DTCM";
+    #endif
+    (void) a;
+    return "SRAM";
+}
+
+static void ensure_params(int w, int h) {
     if (!s_p_init) {
         cz_default_params(&s_p, w, h);
         cz_dedup_init(&s_dd, 10.0f, 6.0f);
@@ -196,6 +240,7 @@ static mp_obj_t py_cashew_setup(size_t n_args, const mp_obj_t *pos_args, mp_map_
 
     int w = csi->resolution[csi->framesize][0], h = csi->resolution[csi->framesize][1];
     ensure_params(w, h);
+    ensure_ws(w, h);
     // Keep a user ROI that still fits; otherwise use the full frame.
     if (s_p.roi_x1 >= w || s_p.roi_y1 >= h || s_p.roi_x0 > s_p.roi_x1 || s_p.roi_y0 > s_p.roi_y1) {
         s_p.roi_x0 = 0; s_p.roi_y0 = 0;
@@ -210,6 +255,8 @@ static mp_obj_t py_cashew_setup(size_t n_args, const mp_obj_t *pos_args, mp_map_
     mp_printf(&mp_plat_print, "cashew.setup: %s %dx%d BAYER (cfa %d), %lu fps, expo %d us (asked %d), gain %.1f dB, fb %d\n",
               omv_csi_name(csi), w, h, (int) s_p.cfa, (unsigned long) s_fps_set, expo_us,
               (int) a[ARG_expo].u_int, (double) gain_db, (int) a[ARG_fb].u_int);
+    mp_printf(&mp_plat_print, "  work buffers: hot %u B in %s, warm %u B in %s\n",
+              (unsigned) s_hot_size, mem_name(s_hot), (unsigned) s_warm_size, mem_name(s_warm));
     if (vd) {
         int info[6] = { 0 };
         if (omv_csi_ioctl(csi, OMV_CSI_IOCTL_VD66GY_GET_INFO, info) == 0) {
@@ -389,6 +436,7 @@ static mp_obj_t blob_tuple(const cz_blob_t *b) {
 static mp_obj_t py_cashew_process(mp_obj_t img_obj) {
     image_t *img = (image_t *) py_image_cobj(img_obj);
     ensure_params(img->w, img->h);
+    ensure_ws(img->w, img->h);
     if (s_p.roi_x1 >= img->w) s_p.roi_x1 = (uint16_t) (img->w - 1);
     if (s_p.roi_y1 >= img->h) s_p.roi_y1 = (uint16_t) (img->h - 1);
     static cz_blob_t out[CZ_MAX_OUT];
@@ -420,6 +468,7 @@ static mp_obj_t py_cashew_run(size_t n_args, const mp_obj_t *pos_args, mp_map_t 
     omv_csi_t *csi = get_csi();
     int w = csi->resolution[csi->framesize][0], h = csi->resolution[csi->framesize][1];
     ensure_params(w, h);
+    ensure_ws(w, h);
     if (s_p.roi_x1 >= w) s_p.roi_x1 = (uint16_t) (w - 1);
     if (s_p.roi_y1 >= h) s_p.roi_y1 = (uint16_t) (h - 1);
 

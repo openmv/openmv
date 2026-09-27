@@ -143,14 +143,16 @@
 // Linker script constants (see common.ld.S).
 //
 // Internal SRAM only (no external RAM on the Nucleo):
-//   SRAM1 1MB    : data/bss, stack, libc heap, DMA buffers, fast UMA pool
+//   ITCM 64KB    : cashew detector code (cashew_core.o) + flash driver ramfuncs
+//   DTCM 128KB   : 32KB stack + 96KB pool for the detector's per-row work buffers
+//   SRAM1 1MB    : data/bss, libc heap, DMA buffers, fast UMA pool
 //   SRAM2 1MB    : MicroPython GC heap (768K) + IDE streaming buffer (256K)
 //   SRAM3 1.75MB : default UMA pool (frame buffers, cashew workspace).
 //   The NPU/ML module is disabled on this board: SRAM3 is the NPU's working memory.
 #define OMV_MAIN_MEMORY                     SRAM1  // Data/BSS memory
-#define OMV_STACK_MEMORY                    SRAM1  // stack memory
+#define OMV_STACK_MEMORY                    DTCM   // stack memory (zero wait state)
 #define OMV_RAMFUNC_MEMORY                  ITCM
-#define OMV_STACK_SIZE                      (64K)
+#define OMV_STACK_SIZE                      (32K)
 #define OMV_HEAP_MEMORY                     SRAM1  // libc/sbrk heap memory
 #define OMV_HEAP_SIZE                       (128K)
 #define OMV_SB_MEMORY                       SRAM2  // Streaming buffer memory.
@@ -163,10 +165,10 @@
 #define OMV_UMA_BLOCK0_SIZE                 (1792K)
 #define OMV_UMA_BLOCK0_FLAGS                (UMA_FAST | UMA_DTCM | UMA_DEFAULT)
 #define OMV_UMA_BLOCK1_MEMORY               SRAM1  // Fast UMA pool.
-#define OMV_UMA_BLOCK1_SIZE                 (584K)
+#define OMV_UMA_BLOCK1_SIZE                 (648K) // +64K freed by moving the stack to DTCM
 #define OMV_UMA_BLOCK1_FLAGS                (UMA_FAST | UMA_DTCM)
-#define OMV_UMA_BLOCK2_MEMORY               DTCM   // DTCM UMA pool.
-#define OMV_UMA_BLOCK2_SIZE                 (128K)
+#define OMV_UMA_BLOCK2_MEMORY               DTCM   // DTCM UMA pool (cashew hot work buffers).
+#define OMV_UMA_BLOCK2_SIZE                 (96K)
 #define OMV_UMA_BLOCK2_FLAGS                (UMA_DTCM)
 #define OMV_MSC_BUF_SIZE                    (4K)   // USB MSC bot data
 #define OMV_VOSPI_DMA_BUFFER                ".d2_dma_buffer"

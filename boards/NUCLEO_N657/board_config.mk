@@ -16,7 +16,8 @@ OMV_BOOT_CFLAGS=-mcmse \
 OMV_BOARD_CFLAGS=-mcmse \
                  -DOMV_NOSYS_STUBS_ENABLE=1 \
                  -DMICROPY_HW_RUNS_FROM_EXT_FLASH=1
-OMV_RAMFUNC_OBJS = bdev.o xspi.o spiflash.o
+# Code placed in ITCM: flash drivers (must not run from XIP) and the cashew detector.
+OMV_RAMFUNC_OBJS = bdev.o xspi.o spiflash.o cashew_core.o
 OMV_SIGN_BOOT=1
 OMV_SIGN_HDRV=2.3
 OMV_SIGN_FLAGS=0x80000000

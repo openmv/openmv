@@ -25,45 +25,129 @@ typedef struct {
     int16_t  outi;              // index into out[] or -1
 } cz_acc_t;
 
+// ---- workspace -----------------------------------------------------------------
+// Split in two blocks so the caller can put the per-frame hot data in fast memory
+// (e.g. DTCM) and the per-candidate data elsewhere:
+//   hot : threshold/filter masks, runs, label accumulators, union-find, luma row, colour sums
+//   warm: hull extents/points, neck-test erosion planes and their small labeller
 typedef struct {
-    uint32_t mask[CZ_MAX_H][MW_MAX];
-    uint32_t filt[CZ_MAX_H][MW_MAX];
-    cz_run_t runs[CZ_MAX_RUNS];
-    cz_acc_t acc[CZ_MAX_LABELS];
-    uint16_t parent[CZ_MAX_LABELS];
-    int16_t  left[CZ_MAX_CAND][CZ_MAX_H];
-    int16_t  right[CZ_MAX_CAND][CZ_MAX_H];
-    int16_t  pts[4 * CZ_MAX_H][2];
-    int16_t  hull[4 * CZ_MAX_H + 1][2];
-    uint32_t lm[2][CZ_MAX_H][MW_MAX];
-    cz_run_t lruns[CZ_MAX_RUNS / 4];
-    uint16_t lpar[CZ_MAX_LABELS / 4];
-    uint32_t larea[CZ_MAX_LABELS / 4];
+    // hot
+    uint32_t *mask, *filt;          // h x stride words
+    cz_run_t *runs;                 // max_runs
+    cz_acc_t *acc;                  // max_labels
+    uint16_t *parent;               // max_labels
+    uint16_t *luma;                 // w
+    uint32_t (*csum)[3];            // CZ_MAX_CAND
+    uint32_t (*ccnt)[3];            // CZ_MAX_CAND
+    // warm
+    int16_t  *left, *right;         // CZ_MAX_CAND x h
+    int16_t  (*pts)[2];             // 4h
+    int16_t  (*hull)[2];            // 4h + 1
+    uint32_t *lm0, *lm1;            // h x stride words
+    cz_run_t *lruns;                // max_lruns
+    uint16_t *lpar;                 // max_llabels
+    uint32_t *larea;                // max_llabels
+    // limits
+    int w, h, stride, max_runs, max_labels, max_lruns, max_llabels;
 } cz_ws_t;
 
-static cz_ws_t *g_ws;
-#define s_mask (g_ws->mask)
-#define s_filt (g_ws->filt)
-#define s_runs (g_ws->runs)
-#define s_acc (g_ws->acc)
-#define s_parent (g_ws->parent)
-#define s_left (g_ws->left)
-#define s_right (g_ws->right)
-#define s_pts (g_ws->pts)
-#define s_hull (g_ws->hull)
-#define s_lm (g_ws->lm)
-#define s_lruns (g_ws->lruns)
-#define s_lpar (g_ws->lpar)
-#define s_larea (g_ws->larea)
+static cz_ws_t g;
+static bool g_ready;
 
-size_t cz_ws_size(void) { return sizeof(cz_ws_t); }
-void cz_ws_set(void *mem) { g_ws = (cz_ws_t *) mem; }
-bool cz_ws_ready(void) { return g_ws != NULL; }
+#define ROW(base, y)    ((base) + (size_t) (y) * g.stride)
+#define s_mask_row(y)   ROW(g.mask, y)
+#define s_filt_row(y)   ROW(g.filt, y)
+#define s_lm_row(b, y)  ROW((b) ? g.lm1 : g.lm0, y)
+#define s_runs          (g.runs)
+#define s_acc           (g.acc)
+#define s_parent        (g.parent)
+#define s_luma          (g.luma)
+#define s_csum          (g.csum)
+#define s_ccnt          (g.ccnt)
+#define s_left(c, y)    (g.left[(size_t) (c) * g.h + (y)])
+#define s_right(c, y)   (g.right[(size_t) (c) * g.h + (y)])
+#define s_pts           (g.pts)
+#define s_hull          (g.hull)
+#define s_lruns         (g.lruns)
+#define s_lpar          (g.lpar)
+#define s_larea         (g.larea)
 
-// ---- static workspace (single instance, not re-entrant) --------------------
-static uint16_t s_luma[CZ_MAX_W];
-static uint32_t s_csum[CZ_MAX_CAND][3];
-static uint32_t s_ccnt[CZ_MAX_CAND][3];
+#define ALIGN8(n)       (((n) + 7u) & ~(size_t) 7u)
+
+static void derive(const cz_dims_t *d, int *stride, int *lruns, int *llabels) {
+    *stride = (d->w + 31) / 32;
+    *lruns = d->max_runs / 4 > 64 ? d->max_runs / 4 : 64;
+    *llabels = d->max_labels / 4 > 64 ? d->max_labels / 4 : 64;
+}
+
+size_t cz_ws_hot_size(const cz_dims_t *d) {
+    int stride, lr, ll;
+    derive(d, &stride, &lr, &ll);
+    return ALIGN8((size_t) d->max_labels * sizeof(cz_acc_t)) +
+           ALIGN8((size_t) d->max_runs * sizeof(cz_run_t)) +
+           2 * ALIGN8((size_t) d->h * stride * 4) +
+           ALIGN8((size_t) d->max_labels * 2) +
+           ALIGN8((size_t) d->w * 2) +
+           2 * ALIGN8(sizeof(uint32_t) * 3 * CZ_MAX_CAND);
+}
+
+size_t cz_ws_warm_size(const cz_dims_t *d) {
+    int stride, lr, ll;
+    derive(d, &stride, &lr, &ll);
+    return 2 * ALIGN8((size_t) CZ_MAX_CAND * d->h * 2) +
+           ALIGN8((size_t) 4 * d->h * 4) + ALIGN8((size_t) (4 * d->h + 1) * 4) +
+           2 * ALIGN8((size_t) d->h * stride * 4) +
+           ALIGN8((size_t) lr * sizeof(cz_run_t)) +
+           ALIGN8((size_t) ll * 2) + ALIGN8((size_t) ll * 4);
+}
+
+static void *carve(uint8_t **p, size_t n) {
+    void *r = *p;
+    *p += ALIGN8(n);
+    return r;
+}
+
+bool cz_ws_init(const cz_dims_t *d, void *hot, void *warm) {
+    g_ready = false;
+    if (!hot || !warm || d->w < 32 || d->w > CZ_MAX_W || d->h < 2 || d->max_runs < 64 || d->max_labels < 64 ||
+        d->max_labels > 0xFFF0 || ((uintptr_t) hot & 7) || ((uintptr_t) warm & 7)) {
+        return false;
+    }
+    memset(&g, 0, sizeof(g));
+    derive(d, &g.stride, &g.max_lruns, &g.max_llabels);
+    g.w = d->w; g.h = d->h; g.max_runs = d->max_runs; g.max_labels = d->max_labels;
+    uint8_t *p = hot;
+    g.acc    = carve(&p, (size_t) g.max_labels * sizeof(cz_acc_t));
+    g.runs   = carve(&p, (size_t) g.max_runs * sizeof(cz_run_t));
+    g.mask   = carve(&p, (size_t) g.h * g.stride * 4);
+    g.filt   = carve(&p, (size_t) g.h * g.stride * 4);
+    g.parent = carve(&p, (size_t) g.max_labels * 2);
+    g.luma   = carve(&p, (size_t) g.w * 2);
+    g.csum   = carve(&p, sizeof(uint32_t) * 3 * CZ_MAX_CAND);
+    g.ccnt   = carve(&p, sizeof(uint32_t) * 3 * CZ_MAX_CAND);
+    p = warm;
+    g.left   = carve(&p, (size_t) CZ_MAX_CAND * g.h * 2);
+    g.right  = carve(&p, (size_t) CZ_MAX_CAND * g.h * 2);
+    g.pts    = carve(&p, (size_t) 4 * g.h * 4);
+    g.hull   = carve(&p, (size_t) (4 * g.h + 1) * 4);
+    g.lm0    = carve(&p, (size_t) g.h * g.stride * 4);
+    g.lm1    = carve(&p, (size_t) g.h * g.stride * 4);
+    g.lruns  = carve(&p, (size_t) g.max_lruns * sizeof(cz_run_t));
+    g.lpar   = carve(&p, (size_t) g.max_llabels * 2);
+    g.larea  = carve(&p, (size_t) g.max_llabels * 4);
+    g_ready = true;
+    return true;
+}
+
+// Legacy single-block API: maximum frame size, one allocation.
+static const cz_dims_t legacy_dims = { CZ_MAX_W, CZ_MAX_H, CZ_MAX_RUNS, CZ_MAX_LABELS };
+size_t cz_ws_size(void) { return cz_ws_hot_size(&legacy_dims) + cz_ws_warm_size(&legacy_dims); }
+void cz_ws_set(void *mem) {
+    cz_ws_init(&legacy_dims, mem, (uint8_t *) mem + cz_ws_hot_size(&legacy_dims));
+}
+bool cz_ws_ready(void) { return g_ready; }
+
+// ---- per-frame state -------------------------------------------------------------
 static int      s_w, s_h, s_mw;
 
 static const uint8_t cfa_map[4][4] = {  // [cfa][(y&1)*2 + (x&1)] -> 0=R 1=G 2=B
@@ -96,7 +180,7 @@ void cz_default_params(cz_params_t *p, int w, int h) {
 }
 
 const uint32_t *cz_mask_row(int y) {
-    return (y >= 0 && y < s_h) ? s_filt[y] : NULL;
+    return (g_ready && y >= 0 && y < s_h) ? s_filt_row(y) : NULL;
 }
 
 // ---- stage 1: 2x2 luma threshold into a bit mask ---------------------------
@@ -262,9 +346,10 @@ static uint32_t erode_step(int src, int y0, int y1, int wi0, int wi1) {
     int dst = src ^ 1;
     uint32_t cnt = 0;
     for (int y = y0; y <= y1; y++) {
-        const uint32_t *a = (y > y0) ? s_lm[src][y - 1] : NULL;
-        const uint32_t *b = s_lm[src][y];
-        const uint32_t *c = (y < y1) ? s_lm[src][y + 1] : NULL;
+        const uint32_t *a = (y > y0) ? s_lm_row(src, y - 1) : NULL;
+        const uint32_t *b = s_lm_row(src, y);
+        const uint32_t *c = (y < y1) ? s_lm_row(src, y + 1) : NULL;
+        uint32_t *o = s_lm_row(dst, y);
         for (int i = wi0; i <= wi1; i++) {
             uint32_t v  = (a && c) ? (a[i] & b[i] & c[i]) : 0;
             uint32_t vl = (a && c && i > wi0) ? (a[i - 1] & b[i - 1] & c[i - 1]) : 0;
@@ -272,7 +357,7 @@ static uint32_t erode_step(int src, int y0, int y1, int wi0, int wi1) {
             uint32_t lo = (v << 1) | (vl >> 31);
             uint32_t hi = (v >> 1) | (vr << 31);
             uint32_t r = v & lo & hi;
-            s_lm[dst][y][i] = r;
+            o[i] = r;
             cnt += (uint32_t) __builtin_popcount(r);
         }
     }
@@ -284,12 +369,12 @@ static int count_pieces(int buf, int y0, int y1, int xs, int w, float frac) {
     int nr = 0, nl = 0, ps = 0, pe = 0;
     uint32_t total = 0;
     for (int y = y0; y <= y1; y++) {
-        const uint32_t *f = s_lm[buf][y];
+        const uint32_t *f = s_lm_row(buf, y);
         int cs = nr, pi = ps;
         for (int x = next_set(f, xs, w); x < w; ) {
             int e = next_clr(f, x, w);
             int x0 = x, x1 = e - 1;
-            if (nr >= (int) (sizeof(s_lruns) / sizeof(s_lruns[0]))) return 1;
+            if (nr >= g.max_lruns) return 1;
             uint16_t lab = NOLABEL;
             while (pi < pe && s_lruns[pi].x1 + 1 < x0) pi++;
             for (int j = pi; j < pe && s_lruns[j].x0 <= x1 + 1; j++) {
@@ -301,7 +386,7 @@ static int count_pieces(int buf, int y0, int y1, int xs, int w, float frac) {
                 }
             }
             if (lab == NOLABEL) {
-                if (nl >= (int) (sizeof(s_lpar) / sizeof(s_lpar[0]))) return 1;
+                if (nl >= g.max_llabels) return 1;
                 lab = (uint16_t) nl++; s_lpar[lab] = lab; s_larea[lab] = 0;
             }
             lab = lf(lab);
@@ -340,10 +425,10 @@ static int neck_split(uint32_t area0, int y0, int y1, int x0, int x1, int max_k,
 int cz_process(const uint8_t *raw, int w, int h, const cz_params_t *p,
                cz_blob_t *out, int max_out, cz_frame_t *fi) {
     memset(fi, 0, sizeof(*fi));
-    if (!g_ws) {
+    if (!g_ready) {
         return -2;
     }
-    if (w <= 0 || h <= 0 || (w & 31) || w > CZ_MAX_W || h > CZ_MAX_H) {
+    if (w <= 0 || h <= 0 || (w & 31) || w > g.w || h > g.h) {
         return -1;
     }
     s_w = w; s_h = h; s_mw = w / 32;
@@ -364,25 +449,25 @@ int cz_process(const uint8_t *raw, int w, int h, const cz_params_t *p,
     for (int y = 0; y < h; y++) {
         const uint8_t *r0 = raw + (size_t) y * w;
         const uint8_t *r1 = (y + 1 < h) ? r0 + w : r0;
-        mask_row(r0, r1, w, p->threshold, p->invert, s_mask[y]);
+        mask_row(r0, r1, w, p->threshold, p->invert, s_mask_row(y));
     }
 
     // Stage 2 + 3: filter, clip to ROI, extract runs, label.
     int nruns = 0, nlab = 0;
     int prev_s = 0, prev_e = 0;
     for (int y = 0; y < h; y++) {
-        uint32_t *f = s_filt[y];
+        uint32_t *f = s_filt_row(y);
         if (y < p->roi_y0 || y > p->roi_y1) {
             memset(f, 0, (size_t) mw * 4);
             prev_s = prev_e = nruns;
             continue;
         }
         if (p->filter) {
-            const uint32_t *a = s_mask[y > 0 ? y - 1 : 0];
-            const uint32_t *c = s_mask[y < h - 1 ? y + 1 : h - 1];
-            majority_row(a, s_mask[y], c, mw, f);
+            const uint32_t *a = s_mask_row(y > 0 ? y - 1 : 0);
+            const uint32_t *c = s_mask_row(y < h - 1 ? y + 1 : h - 1);
+            majority_row(a, s_mask_row(y), c, mw, f);
         } else {
-            memcpy(f, s_mask[y], (size_t) mw * 4);
+            memcpy(f, s_mask_row(y), (size_t) mw * 4);
         }
         for (int i = 0; i < mw; i++) f[i] &= roi_cols[i];
 
@@ -391,7 +476,7 @@ int cz_process(const uint8_t *raw, int w, int h, const cz_params_t *p,
         for (int x = next_set(f, 0, w); x < w; ) {
             int e = next_clr(f, x, w);      // run is [x, e-1]
             int x0 = x, x1 = e - 1;
-            if (nruns >= CZ_MAX_RUNS) { fi->overflow++; break; }
+            if (nruns >= g.max_runs) { fi->overflow++; break; }
 
             uint16_t lab = NOLABEL;
             // advance prev pointer past runs that end before x0-1
@@ -401,7 +486,7 @@ int cz_process(const uint8_t *raw, int w, int h, const cz_params_t *p,
                 lab = (lab == NOLABEL) ? r : uf_union(lab, r);
             }
             if (lab == NOLABEL) {
-                if (nlab >= CZ_MAX_LABELS) { fi->overflow++; break; }
+                if (nlab >= g.max_labels) { fi->overflow++; break; }
                 lab = (uint16_t) nlab++;
                 s_parent[lab] = lab;
                 cz_acc_t *a = &s_acc[lab];
@@ -465,7 +550,7 @@ int cz_process(const uint8_t *raw, int w, int h, const cz_params_t *p,
             if (ncand < CZ_MAX_CAND) {
                 a->cand = (int8_t) ncand;
                 for (int yy = a->y0; yy <= a->y1; yy++) {
-                    s_left[ncand][yy] = INT16_MAX; s_right[ncand][yy] = -1;
+                    s_left(ncand, yy) = INT16_MAX; s_right(ncand, yy) = -1;
                 }
                 memset(s_csum[ncand], 0, sizeof(s_csum[0]));
                 memset(s_ccnt[ncand], 0, sizeof(s_ccnt[0]));
@@ -495,8 +580,8 @@ int cz_process(const uint8_t *raw, int w, int h, const cz_params_t *p,
             int c = a->cand;
             if (c < 0) continue;
             int y = s_runs[i].y, x0 = s_runs[i].x0, x1 = s_runs[i].x1;
-            if (x0 < s_left[c][y]) s_left[c][y] = (int16_t) x0;
-            if (x1 > s_right[c][y]) s_right[c][y] = (int16_t) x1;
+            if (x0 < s_left(c, y)) s_left(c, y) = (int16_t) x0;
+            if (x1 > s_right(c, y)) s_right(c, y) = (int16_t) x1;
             const uint8_t *row = raw + (size_t) y * w;
             const uint8_t *m = &map[(y & 1) * 2];
             for (int x = x0; x <= x1; x++) {
@@ -512,8 +597,8 @@ int cz_process(const uint8_t *raw, int w, int h, const cz_params_t *p,
             if (c < 0) continue;
             int np = 0;
             for (int y = a->y0; y <= a->y1; y++) {
-                if (s_right[c][y] < 0) continue;
-                int16_t L = s_left[c][y], R = (int16_t) (s_right[c][y] + 1);
+                if (s_right(c, y) < 0) continue;
+                int16_t L = s_left(c, y), R = (int16_t) (s_right(c, y) + 1);
                 s_pts[np][0] = L; s_pts[np][1] = (int16_t) y; np++;
                 s_pts[np][0] = L; s_pts[np][1] = (int16_t) (y + 1); np++;
                 s_pts[np][0] = R; s_pts[np][1] = (int16_t) y; np++;
@@ -524,8 +609,8 @@ int cz_process(const uint8_t *raw, int w, int h, const cz_params_t *p,
             uint8_t st = (sol < p->sol_min) ? CZ_CONCAVE : CZ_OK;
             if (st == CZ_OK && p->neck_px > 0) {
                 for (int y = a->y0; y <= a->y1; y++) {
-                    memset(s_lm[0][y], 0, (size_t) mw * 4);
-                    memset(s_lm[1][y], 0, (size_t) mw * 4);
+                    memset(s_lm_row(0, y), 0, (size_t) mw * 4);
+                    memset(s_lm_row(1, y), 0, (size_t) mw * 4);
                 }
                 for (int i = 0; i < nruns; i++) {
                     if (uf_find(s_runs[i].lab) != (uint16_t) l) continue;
@@ -534,7 +619,7 @@ int cz_process(const uint8_t *raw, int w, int h, const cz_params_t *p,
                         int wi = x >> 5, b0 = x & 31;
                         int b1 = (x1 >> 5) == wi ? (x1 & 31) : 31;
                         uint32_t m = (b1 - b0 == 31) ? 0xFFFFFFFFu : (((1u << (b1 - b0 + 1)) - 1) << b0);
-                        s_lm[0][y][wi] |= m;
+                        s_lm_row(0, y)[wi] |= m;
                         x = (wi << 5) + b1 + 1;
                     }
                 }
