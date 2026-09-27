@@ -55,7 +55,7 @@ static MP_DEFINE_CONST_FUN_OBJ_0(py_omv_board_type_obj, py_omv_board_type);
 
 static mp_obj_t py_omv_board_id() {
     char str[25] = {0};
-    #ifdef OMV_BOARD_UID_ADDR
+    #ifdef OMV_BOARD_UID_SIZE
     snprintf(str, 25, "%08X%08X%08X",
              #if (OMV_BOARD_UID_SIZE == 2)
              0U,
