@@ -34,6 +34,7 @@
 #include <stdio.h>
 #include "py/mphal.h"
 #include "py/runtime.h"
+#include "shared/runtime/mpirq.h"
 
 #if MICROPY_PY_CSI_NG
 
@@ -831,7 +832,12 @@ static void omv_csi_vsync_callback(void *data) {
         #ifdef OMV_CSI_VSYNC_PIN
         vsync_state = omv_gpio_read(OMV_CSI_VSYNC_PIN);
         #endif
-        mp_call_function_1(self->vsync_cb, mp_obj_new_int(vsync_state));
+        // Dispatch as a hard IRQ so an exception cannot propagate into the IRQ handler.
+        if (mp_irq_dispatch(self->vsync_cb, mp_obj_new_int(vsync_state), true) < 0) {
+            // Uncaught exception; disable the callback so that it doesn't run again.
+            self->vsync_cb = mp_const_none;
+            omv_csi_set_vsync_callback(self->csi, (omv_csi_cb_t) { NULL, NULL });
+        }
     }
 }
 
@@ -860,11 +866,24 @@ static mp_obj_t py_csi_vsync_callback(size_t n_args, const mp_obj_t *args) {
 }
 static MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(py_csi_vsync_callback_obj, 1, 2, py_csi_vsync_callback);
 
+// Strips the argument mp_irq_dispatch passes so frame_cb keeps its zero-arg signature.
+static mp_obj_t py_csi_frame_cb_trampoline(mp_obj_t self_in) {
+    py_csi_obj_t *self = MP_OBJ_TO_PTR(self_in);
+    return mp_call_function_0(self->frame_cb);
+}
+static MP_DEFINE_CONST_FUN_OBJ_1(py_csi_frame_cb_trampoline_obj, py_csi_frame_cb_trampoline);
+
 static void omv_csi_frame_callback(void *data) {
     py_csi_obj_t *self = data;
 
     if (mp_obj_is_callable(self->frame_cb)) {
-        mp_call_function_0(self->frame_cb);
+        // Dispatch as a hard IRQ so an exception cannot propagate into the IRQ handler.
+        mp_obj_t handler = MP_OBJ_FROM_PTR(&py_csi_frame_cb_trampoline_obj);
+        if (mp_irq_dispatch(handler, MP_OBJ_FROM_PTR(self), true) < 0) {
+            // Uncaught exception; disable the callback so that it doesn't run again.
+            self->frame_cb = mp_const_none;
+            omv_csi_set_frame_callback(self->csi, (omv_csi_cb_t) { NULL, NULL });
+        }
     }
 }
 
