@@ -339,6 +339,8 @@ mp_obj_t py_ml_model_make_new(const mp_obj_type_t *type, size_t n_args, size_t n
     //const char *path = mp_obj_str_get_str(args[ARG_path].u_obj);
     py_ml_model_obj_t *model = mp_obj_malloc_with_finaliser(py_ml_model_obj_t, &py_ml_model_type);
     model->postprocess = args[ARG_postprocess].u_obj;
+    // Set by the backend, but the finaliser can run before that on failure.
+    model->state = NULL;
 
     #if MICROPY_VFS
     mp_obj_t file_args[2] = {
@@ -350,11 +352,15 @@ mp_obj_t py_ml_model_make_new(const mp_obj_type_t *type, size_t n_args, size_t n
     mp_obj_t file = mp_vfs_open(MP_ARRAY_SIZE(file_args), file_args, (mp_map_t *) &mp_const_empty_map);
 
     if (mp_get_buffer(file, &bufinfo, MP_BUFFER_READ)) {
+        // Memory-mapped image, never written through the CPU's caches.
         model->size = bufinfo.len;
         model->data = bufinfo.buf;
+        model->_raw = NULL;
         model->managed = true;
+        model->mmapped = true;
     } else {
         int error;
+        model->mmapped = false;
         // Get file size
         mp_off_t res = mp_stream_seek(file, 0, MP_SEEK_END, &error);
         if (res == (mp_off_t) -1) {
@@ -375,6 +381,7 @@ mp_obj_t py_ml_model_make_new(const mp_obj_type_t *type, size_t n_args, size_t n
             model->data = (void *) OMV_ALIGN_TO(model->_raw, IMLIB_ML_MODEL_ALIGN);
         } else {
             // Try allocating model using UMA (raises on OOM).
+            model->_raw = NULL;
             model->managed = false;
             model->data = uma_malign(model->size, IMLIB_ML_MODEL_ALIGN, UMA_FAST | UMA_PERSIST);
         }
@@ -397,6 +404,7 @@ mp_obj_t py_ml_model_make_new(const mp_obj_type_t *type, size_t n_args, size_t n
 
 static mp_obj_t py_ml_model_deinit(mp_obj_t self_in) {
     py_ml_model_obj_t *model = MP_OBJ_TO_PTR(self_in);
+    ml_backend_deinit_model(model);
     if (!model->managed) {
         uma_free(model->data);
     }

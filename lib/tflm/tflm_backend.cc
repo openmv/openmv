@@ -330,6 +330,9 @@ int ml_backend_init_model(py_ml_model_obj_t *model) {
     return 0;
 }
 
+void ml_backend_deinit_model(py_ml_model_obj_t *model) {
+}
+
 int ml_backend_run_inference(py_ml_model_obj_t *model) {
     OMV_PROFILER_ENTER(ml_backend_run_inference);
 

@@ -50,10 +50,12 @@
 #include "ll_aton_caches_interface.h"
 #include "ll_aton_reloc_network.h"
 
-// Due to limitations with the STM32N6 NPU design, the ext_ram_sz memory pool
-// must be in external SDRAM and not in internal SRAM. Forcing a minimum of a
-// 1MB allocation ensures that the ext_ram_sz buffer ends up in SDRAM.
-#define AI_MIN_EXT_RAM_SZ       (1048576)
+// Due to limitations with the STM32N6 NPU design, relocatable memory pools must be
+// in external RAM and not in internal SRAM. ll_aton_reloc_install() enforces this by
+// rejecting a cacheable pool based at or below this address. Mirrors
+// AI_RELOC_NPU_EXTERNAL_ADDR in libstai/ll_aton/ll_aton_reloc_network.c, which is
+// private to that file.
+#define AI_RELOC_NPU_EXTERNAL_ADDR  (0x60000000UL)
 #define AI_RELOC_ALIGNMENT      (32)
 
 typedef struct ml_backend_state {
@@ -126,6 +128,8 @@ int ml_backend_init_model(py_ml_model_obj_t *model) {
 
     // Allocate the persistent model state.
     ml_backend_state_t *state = m_new0(ml_backend_state_t, 1);
+
+    model->state = state;
     state->nn_iface.network_name = "Default";
     state->nn_inst.network = &state->nn_iface;
 
@@ -136,22 +140,40 @@ int ml_backend_init_model(py_ml_model_obj_t *model) {
         return -1;
     }
 
-    if (rt.ext_ram_sz) {
-        rt.ext_ram_sz = OMV_MAX(rt.ext_ram_sz, AI_MIN_EXT_RAM_SZ);
-    }
-
     // Allocate executable memory.
     state->exec_ram_size = OMV_ALIGN_TO(rt.rt_ram_xip, AI_RELOC_ALIGNMENT);
     state->exec_ram_addr = m_new(uint8_t, state->exec_ram_size + AI_RELOC_ALIGNMENT);
 
     // Allocate external memory.
     state->ext_ram_size = OMV_ALIGN_TO(rt.ext_ram_sz, AI_RELOC_ALIGNMENT);
-    state->ext_ram_addr = m_new(uint8_t, state->ext_ram_size + AI_RELOC_ALIGNMENT);
+    if (state->ext_ram_size) {
+        state->ext_ram_addr = uma_malign(state->ext_ram_size, AI_RELOC_ALIGNMENT,
+                                         UMA_EXTERNAL | UMA_PERSIST | UMA_STRICT);
+    }
+
+    // The weights pool is relocatable and its base address is derived from the model's
+    // image, so the image must be in external memory as well. A model read from a file
+    // is allocated by py_ml.c, which can place it in internal SRAM, so move it here.
+    if ((uintptr_t) model->data <= AI_RELOC_NPU_EXTERNAL_ADDR) {
+        void *data = uma_malign(model->size, OMV_CACHE_LINE_SIZE,
+                                UMA_EXTERNAL | UMA_PERSIST | UMA_STRICT);
+        memcpy(data, model->data, model->size);
+
+        if (!model->managed) {
+            // Persistent UMA blocks are never collected, so free this one.
+            uma_free(model->data);
+        }
+
+        // Drop the reference to the GC block, if any, so that it can be collected.
+        model->_raw = NULL;
+        model->managed = false;
+        model->data = data;
+    }
 
     // Create and install the relocatable model.
     ll_aton_reloc_config config = {
         .ext_ram_size = state->ext_ram_size,
-        .ext_ram_addr = OMV_ALIGN_TO(state->ext_ram_addr, AI_RELOC_ALIGNMENT),
+        .ext_ram_addr = (uintptr_t) state->ext_ram_addr,
         .exec_ram_size = state->exec_ram_size,
         .exec_ram_addr = OMV_ALIGN_TO(state->exec_ram_addr, AI_RELOC_ALIGNMENT),
         .ext_param_addr = (uintptr_t) NULL,
@@ -164,8 +186,17 @@ int ml_backend_init_model(py_ml_model_obj_t *model) {
     // Invalidate DCache before installing the model's data.
     SCB_InvalidateDCache_by_Addr((void *) config.exec_ram_addr, config.exec_ram_size);
 
-    if (ll_aton_reloc_install((uintptr_t) model->data, &config, &state->nn_inst)) {
-        mp_raise_msg(&mp_type_RuntimeError, MP_ERROR_TEXT("Failed to load network"));
+    if (!model->mmapped) {
+        // The image was written by the CPU, possibly at an address a previous model was
+        // installed at. Clean the DCache so the NPU reads the new weights, and drop stale
+        // ICache lines because in XIP mode the code runs from the image itself.
+        SCB_CleanDCache_by_Addr((void *) model->data, model->size);
+        SCB_InvalidateICache_by_Addr((void *) model->data, model->size);
+    }
+
+    int ret = ll_aton_reloc_install((uintptr_t) model->data, &config, &state->nn_inst);
+    if (ret != AI_RELOC_RT_ERR_NONE) {
+        mp_raise_msg_varg(&mp_type_RuntimeError, MP_ERROR_TEXT("Failed to load network (%d)"), ret);
         return -1;
     }
 
@@ -178,7 +209,6 @@ int ml_backend_init_model(py_ml_model_obj_t *model) {
     }
 
     // Initialize the model's state.
-    model->state = state;
     model->memory_addr = config.exec_ram_addr;
     model->memory_size = config.exec_ram_size + config.ext_ram_size;
 
@@ -243,6 +273,15 @@ int ml_backend_init_model(py_ml_model_obj_t *model) {
     }
 
     return 0;
+}
+
+void ml_backend_deinit_model(py_ml_model_obj_t *model) {
+    ml_backend_state_t *state = (ml_backend_state_t *) model->state;
+
+    if (state) {
+        uma_free(state->ext_ram_addr);
+        state->ext_ram_addr = NULL;
+    }
 }
 
 int ml_backend_run_inference(py_ml_model_obj_t *model) {
