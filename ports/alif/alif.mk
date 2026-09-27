@@ -134,6 +134,7 @@ endif
 CFLAGS += $(HAL_CFLAGS) $(MPY_CFLAGS) $(OMV_CFLAGS)
 
 MPY_LIB_EXCLUDE = ! -name 'nosys_stubs.*' ! -name 'mpu.*' \
+                   ! -name 'halow_firmware.*' ! -name 'halow_bcf.*' \
                    ! -path '*/tinyusb_port/*' ! -path '*/alif_ensemble-cmsis-dfp/*'
 
 # Linker Flags
@@ -172,6 +173,12 @@ include common/micropy.mk
 # Libraries
 ifeq ($(MICROPY_PY_ML_TFLM), 1)
 LIBS += $(TOP_DIR)/$(TENSORFLOW_DIR)/libtflm/lib/libtflm-$(CPU)-u55-release.a
+
+ifeq ($(MICROPY_PY_NETWORK_HALOW), 1)
+include $(TOP_DIR)/common/halow.mk
+# Unlike the other ports, alif does not archive these into MPY_LIB.
+OMV_FIRM_OBJ += $(HALOW_FW_OBJ) $(HALOW_BCF_OBJ)
+endif
 endif
 
 ###################################################
