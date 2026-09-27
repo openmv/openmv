@@ -474,6 +474,17 @@ static size_t omv_csi_detect(omv_i2c_t *i2c, i2c_dev_t *dev_list) {
                 break;
             #endif // (OMV_PAG7920_ENABLE == 1) || (OMV_PAG7936_ENABLE == 1)
 
+            #if (OMV_VD66GY_ENABLE == 1)
+            case VD66GY_SLV_ADDR: {
+                // 16-bit little-endian model ID (0x5603).
+                uint16_t id = 0;
+                omv_i2c_read_reg(i2c, slv_addr, VD6G_CHIP_ID, 2, &id, 2);
+                id = (id << 8) | (id >> 8);
+                chip_id = (id == VD66GY_ID) ? VD66GY_ID : 0;
+                break;
+            }
+            #endif // (OMV_VD66GY_ENABLE == 1)
+
             #if (OMV_MT9M114_ENABLE == 1) || (OMV_PS5520_ENABLE == 1)
             // MT9M114 and PS5520 share the same I2C address.
             case MT9M114_SLV_ADDR:
@@ -1738,6 +1749,7 @@ const char *omv_csi_name(omv_csi_t *csi) {
         case PAG7920_ID:         return "PAG7920";
         case PAG7936_ID:         return "PAG7936";
         case PS5520_ID:          return "PS5520";
+        case VD66GY_ID:          return "VD66GY";
         case PAJ6100_ID:         return "PAJ6100";
         case FROGEYE2020_ID:     return "FROGEYE2020";
         case SOFTCSI_ID:         return "SoftCSI";

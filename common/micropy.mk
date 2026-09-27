@@ -237,7 +237,8 @@ $(MPY_LIB): FORCE | FIRM_DIRS
         ! -path '$(BUILD)/$(MICROPY_DIR)$(TOP_DIR)/*' \
         ! -name 'main.*' \
         ! -name 'pendsv.*' \
-        $(MPY_LIB_EXCLUDE))
+        $(MPY_LIB_EXCLUDE)) \
+        $$(find $(BUILD)/$(MICROPY_DIR)$(TOP_DIR)/boards -name '*.o' 2>/dev/null)
 
 LIBS += -Wl,--whole-archive $(MPY_LIB) -Wl,--no-whole-archive
 

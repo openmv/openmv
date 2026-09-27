@@ -52,6 +52,7 @@
 #define PAG7936_SLV_ADDR        (0x80)
 #define PAG7936_SLV_ADDR_MIPI   (0x2A)
 #define PS5520_SLV_ADDR         (0x90)
+#define VD66GY_SLV_ADDR         (0x20)
 
 // Chip ID Registers
 #define OV5640_CHIP_ID          (0x300A)
@@ -61,6 +62,7 @@
 #define GC_CHIP_ID              (0xF0)
 #define GENX320_CHIP_ID         (0x0014)
 #define PIXART_CHIP_ID          (0x0000)
+#define VD6G_CHIP_ID            (0x0000)
 
 // Chip ID Values
 #define OV2640_ID               (0x26)
@@ -96,6 +98,7 @@
 #define PAG7920_ID              (0x7920)
 #define PAG7936_ID              (0x7936)
 #define PS5520_ID               (0x5520)
+#define VD66GY_ID               (0x5603)  // VD6G family (VD66GY colour / VD56G3 mono)
 #define PAJ6100_ID              (0x6100)
 #define FROGEYE2020_ID          (0x2020)
 #define SOFTCSI_ID              (0x50F7)
@@ -242,6 +245,13 @@ typedef enum {
     OMV_CSI_IOCTL_GENX320_CALIBRATE       = 0x25,
     OMV_CSI_IOCTL_GENX320_SET_STC         = 0x26,
     OMV_CSI_IOCTL_GENX320_READ_EVENTS_RAW = 0x27,
+    OMV_CSI_IOCTL_SET_FRAME_TIME_US       = 0x28,
+    OMV_CSI_IOCTL_GET_FRAME_TIME_US       = 0x29,
+    OMV_CSI_IOCTL_VD66GY_SET_GPIO         = 0x2A | OMV_CSI_FLAG_IOCTL_ABORT,
+    OMV_CSI_IOCTL_VD66GY_SET_BINNING      = 0x2B | OMV_CSI_FLAG_IOCTL_ABORT,
+    OMV_CSI_IOCTL_VD66GY_SET_LINE_LEN     = 0x2C | OMV_CSI_FLAG_IOCTL_ABORT,
+    OMV_CSI_IOCTL_VD66GY_SET_VBLANK       = 0x2D,
+    OMV_CSI_IOCTL_VD66GY_GET_INFO         = 0x2E,
     OMV_CSI_IOCTL_UPDATE_AGC_AEC          = 0x7F
 } omv_csi_ioctl_t;
 
