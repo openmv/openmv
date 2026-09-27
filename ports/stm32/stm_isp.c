@@ -157,8 +157,17 @@ int stm_isp_init(omv_csi_t *csi, uint32_t pipe, pixformat_t pixformat, bool raw_
     }
 
     // Configure ISP debayer.
+    // Debayer with the sensor's CFA pattern (BGGR unless the driver says otherwise).
+    static const uint32_t cfa_to_dcmipp[] = {
+        [SUBFORMAT_ID_BGGR] = DCMIPP_RAWBAYER_BGGR,
+        [SUBFORMAT_ID_GBRG] = DCMIPP_RAWBAYER_GBRG,
+        [SUBFORMAT_ID_GRBG] = DCMIPP_RAWBAYER_GRBG,
+        [SUBFORMAT_ID_RGGB] = DCMIPP_RAWBAYER_RGGB,
+    };
+    uint32_t cfa = (csi->cfa_format < OMV_ARRAY_SIZE(cfa_to_dcmipp)) ? csi->cfa_format : SUBFORMAT_ID_BGGR;
+
     DCMIPP_RawBayer2RGBConfTypeDef rawcfg = {
-        .RawBayerType = DCMIPP_RAWBAYER_BGGR,
+        .RawBayerType = cfa_to_dcmipp[cfa],
         .VLineStrength = DCMIPP_RAWBAYER_ALGO_NONE,
         .HLineStrength = DCMIPP_RAWBAYER_ALGO_NONE,
         .PeakStrength = DCMIPP_RAWBAYER_ALGO_NONE,

@@ -373,10 +373,15 @@ static int stm_csi_shutdown(omv_csi_t *csi, int enable) {
 }
 
 static uint32_t stm_clk_get_frequency(omv_clk_t *clk) {
+    #if (OMV_CSI_CLK_SOURCE == OMV_CSI_CLK_SOURCE_TIM)
     if (!clk->tim.Instance) {
         return 0;
     }
     return stm_pwm_get_frequency(&clk->tim, OMV_CSI_TIM_CHANNEL);
+    #else
+    // No timer-generated clock (MCO or on-module oscillator).
+    return 0;
+    #endif
 }
 
 static int stm_clk_set_frequency(omv_clk_t *clk, uint32_t frequency) {
@@ -398,6 +403,10 @@ static int stm_clk_set_frequency(omv_clk_t *clk, uint32_t frequency) {
 }
 
 int omv_csi_set_vsync_callback(omv_csi_t *csi, omv_csi_cb_t cb) {
+    #if !defined(OMV_CSI_VSYNC_PIN)
+    // MIPI-only boards have no VSYNC pin.
+    return (cb.fun == NULL) ? 0 : OMV_CSI_ERROR_CTL_UNSUPPORTED;
+    #else
     if (cb.fun == NULL) {
         #if (DCMI_VSYNC_EXTI_SHARED == 0)
         // Disable VSYNC EXTI IRQ
@@ -409,6 +418,7 @@ int omv_csi_set_vsync_callback(omv_csi_t *csi, omv_csi_cb_t cb) {
         omv_gpio_irq_enable(OMV_CSI_VSYNC_PIN, true);
     }
     return 0;
+    #endif // OMV_CSI_VSYNC_PIN
 }
 
 // If the image is cropped by more than 1 word in width, align the line start to a word
