@@ -159,7 +159,9 @@ int xspi_flash_init() {
     uint8_t buf[3] = {0};
     xspi_flash_read_id(buf);
 
-    if (buf[0] != 0xc2 || buf[1] != 0x80 || buf[2] != 0x39) {
+    // Macronix MX25UM octal flash: 0x39 = MX25UM25645G (256Mbit, OpenMV N6),
+    // 0x3A = MX25UM51245G (512Mbit, NUCLEO-N657X0-Q). Same command set.
+    if (buf[0] != 0xc2 || buf[1] != 0x80 || (buf[2] != 0x39 && buf[2] != 0x3a)) {
         while (1) {
             ;
         }
