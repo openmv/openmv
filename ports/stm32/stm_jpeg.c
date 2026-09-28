@@ -648,8 +648,19 @@ void jpeg_decompress(image_t *dst, image_t *src) {
 
     // Decode the JPEG Header...
     uint8_t temp[JPEG_OUTPUT_CHUNK_SIZE];
-    HAL_JPEG_Decode(&JPEG_state.jpeg_descr, JPEG_state.jpeg_descr.pJpegInBuffPtr, JPEG_state.in_data_len,
-                    temp, JPEG_OUTPUT_CHUNK_SIZE, JPEG_CODEC_TIMEOUT);
+    HAL_JPEG_Decode_IT(&JPEG_state.jpeg_descr, JPEG_state.jpeg_descr.pJpegInBuffPtr, JPEG_state.in_data_len,
+                       temp, JPEG_OUTPUT_CHUNK_SIZE);
+
+    // Wait for the header to be parsed (the decode is aborted once the first output is ready).
+    for (mp_uint_t tick_start = mp_hal_ticks_ms();
+         HAL_JPEG_GetState(&JPEG_state.jpeg_descr) != HAL_JPEG_STATE_READY; ) {
+        mp_uint_t elapsed = mp_hal_ticks_ms() - tick_start;
+        if (elapsed > JPEG_CODEC_TIMEOUT) {
+            HAL_JPEG_Abort(&JPEG_state.jpeg_descr);
+            break;
+        }
+        mp_event_handle_nowait();
+    }
 
     if ((src->w != JPEG_state.jpeg_descr.Conf.ImageWidth) || (src->h != JPEG_state.jpeg_descr.Conf.ImageHeight)) {
         mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("JPEG Geometry does not match Image Object Geometry!"));
