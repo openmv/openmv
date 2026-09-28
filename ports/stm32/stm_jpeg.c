@@ -917,7 +917,7 @@ void jpeg_decompress(image_t *dst, image_t *src) {
                                         if (dx & 1) {
                                             rp[2] = Y0[2];
                                         }
-                                    } else {
+                                    } else if (dx >= 1) {
                                         *rp = *Y0;
                                     }
 
