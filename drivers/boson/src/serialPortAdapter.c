@@ -84,6 +84,7 @@ int16_t FSLP_read_byte_with_timeout(double timeout)
         if ((mp_hal_ticks_ms() - start_ms) > timeout_ms) {
             return -1;
         }
+        mp_event_handle_nowait();
     }
 
     return read_reg(SC16IS741A_SUB_ADDR(SC16IS741A_REG_RHR, 0));
@@ -99,6 +100,7 @@ int32_t FSLP_write_buffer(uint8_t *frame_buf, int32_t len) {
         if ((mp_hal_ticks_ms() - start_ms) > 1000) {
             return i;
         }
+        mp_event_handle_nowait();
 
         int32_t bytes_left = len - i;
         int32_t space_avail = read_reg(SC16IS741A_SUB_ADDR(SC16IS741A_REG_TXLVL, 0));

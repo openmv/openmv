@@ -57,7 +57,9 @@ FLR_RESULT CLIENT_dispatcher_Rx(uint32_t *seqNum, uint32_t *fnID, const uint8_t 
     // Allocated buffer with extra space for return data
     uint8_t receivePayload[530];
     uint8_t *inPtr = (uint8_t *)receivePayload;
-    
+
+    const uint32_t callerCapacity = *receiveBytes;
+
     *receiveBytes+=12;
     if(CLIENT_interface_readFrame(receivePayload, receiveBytes) != FLR_OK)
         return FLR_COMM_ERROR_READING_COMM;
@@ -108,6 +110,10 @@ FLR_RESULT CLIENT_dispatcher_Rx(uint32_t *seqNum, uint32_t *fnID, const uint8_t 
     *receiveBytes-=12;
     
     uint32_t localvar = *receiveBytes; //shouldn't have to do this, but it works.
+    if (localvar > callerCapacity) {
+        localvar = callerCapacity;
+        *receiveBytes = callerCapacity;
+    }
     for(i=0;i<localvar;i++) {
         *outPtr++ = *inPtr++;
     }
@@ -122,16 +128,26 @@ FLR_RESULT CLIENT_dispatcher(uint32_t seqNum, FLR_FUNCTION fnID, const uint8_t *
     FLR_RESULT res = CLIENT_dispatcher_Tx(seqNum, fnID, sendData, sendBytes, receiveData, receiveBytes);
     if (res)
         return res;
-    res = CLIENT_dispatcher_Rx(&returnSequence, &cmdID, sendData, sendBytes, receiveData, receiveBytes);
+    const uint32_t expectBytes = *receiveBytes;
+    uint32_t stale = 0;
+    for (;;) {
+        *receiveBytes = expectBytes;
+        returnSequence = ~seqNum;
+        cmdID = (uint32_t) fnID;
+        res = CLIENT_dispatcher_Rx(&returnSequence, &cmdID, sendData, sendBytes, receiveData, receiveBytes);
+        if (res == FLR_COMM_ERROR_READING_COMM)
+            return res;
+        if (returnSequence == seqNum)
+            break;
+        if (++stale > 3)
+            return R_SDK_DSPCH_SEQUENCE_MISMATCH;
+    }
     if (res)
         return res;
-    
-    if (returnSequence ^ seqNum)
-        return R_SDK_DSPCH_SEQUENCE_MISMATCH;
-    
+
     if (cmdID ^ (uint32_t) fnID)
         return R_SDK_DSPCH_ID_MISMATCH;
-    
+
     return R_SUCCESS;
 }
 
