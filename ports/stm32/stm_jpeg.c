@@ -666,6 +666,10 @@ void jpeg_decompress(image_t *dst, image_t *src) {
         mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("JPEG Geometry does not match Image Object Geometry!"));
     }
 
+    // The HAL refreshes its copy of the configuration from the codec when it handles the header
+    // parsed flag, which reads back as zeros if the codec has already finished (small images).
+    JPEG_ConfTypeDef conf = JPEG_state.jpeg_descr.Conf;
+
     // Set handles for full decoding.
     HAL_JPEG_RegisterGetDataCallback(&JPEG_state.jpeg_descr, jpeg_decompress_get_data);
     HAL_JPEG_RegisterDataReadyCallback(&JPEG_state.jpeg_descr, jpeg_decompress_data_ready);
@@ -675,8 +679,8 @@ void jpeg_decompress(image_t *dst, image_t *src) {
     int mcu_size = JPEG_444_GS_MCU_SIZE;
     DMA2D_HandleTypeDef DMA2D_Handle = {};
 
-    if (JPEG_state.jpeg_descr.Conf.ColorSpace == JPEG_YCBCR_COLORSPACE) {
-        switch (JPEG_state.jpeg_descr.Conf.ChromaSubsampling) {
+    if (conf.ColorSpace == JPEG_YCBCR_COLORSPACE) {
+        switch (conf.ChromaSubsampling) {
             case JPEG_444_SUBSAMPLING: {
                 mcu_w = JPEG_MCU_W;
                 mcu_h = JPEG_MCU_H;
@@ -730,7 +734,7 @@ void jpeg_decompress(image_t *dst, image_t *src) {
             // Ensure any cached writes are dropped.
             SCB_InvalidateDCache_by_Addr((uint32_t *) dst->data, image_size(dst));
         }
-    } else if (JPEG_state.jpeg_descr.Conf.ColorSpace == JPEG_CMYK_COLORSPACE) {
+    } else if (conf.ColorSpace == JPEG_CMYK_COLORSPACE) {
         if (((uint32_t) src->data) % __SCB_DCACHE_LINE_SIZE) {
             uma_free(JPEG_state.jpeg_descr.pJpegInBuffPtr);
         }
@@ -800,7 +804,7 @@ void jpeg_decompress(image_t *dst, image_t *src) {
         SCB_CleanInvalidateDCache_by_Addr((uint32_t *) this_mcu_row_buffer_ptr, dst_w_mcus_bytes);
         #endif
 
-        if (JPEG_state.jpeg_descr.Conf.ColorSpace == JPEG_GRAYSCALE_COLORSPACE) {
+        if (conf.ColorSpace == JPEG_GRAYSCALE_COLORSPACE) {
             for (int x_offset = 0; x_offset < src->w; x_offset += JPEG_MCU_W) {
                 uint8_t *Y0 = this_mcu_row_buffer_ptr + (x_offset * JPEG_MCU_H);
                 int dx = IM_MIN(JPEG_MCU_W, src->w - x_offset);
@@ -869,7 +873,7 @@ void jpeg_decompress(image_t *dst, image_t *src) {
                     }
                 }
             }
-        } else if (JPEG_state.jpeg_descr.Conf.ColorSpace == JPEG_YCBCR_COLORSPACE) {
+        } else if (conf.ColorSpace == JPEG_YCBCR_COLORSPACE) {
             switch (dst->pixfmt) {
                 case PIXFORMAT_BINARY: {
                     for (int x_offset = 0; x_offset < src->w; x_offset += mcu_w) {
@@ -980,7 +984,7 @@ exit_cleanup:
 
     uma_free(mcu_row_buffer); // after DMA is aborted
 
-    if ((JPEG_state.jpeg_descr.Conf.ColorSpace == JPEG_YCBCR_COLORSPACE) && dst->is_color) {
+    if ((conf.ColorSpace == JPEG_YCBCR_COLORSPACE) && dst->is_color) {
         HAL_DMA2D_DeInit(&DMA2D_Handle);
     }
 
