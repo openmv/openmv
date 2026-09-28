@@ -266,8 +266,8 @@ static void jpeg_compress_get_data(JPEG_HandleTypeDef *hjpeg, uint32_t NbDecoded
 static void jpeg_compress_data_ready(JPEG_HandleTypeDef *hjpeg, uint8_t *pDataOut, uint32_t OutDataLength) {
     #if defined(OMV_MDMA_CHANNEL_JPEG_IN)
     if ((!(((uint32_t) pDataOut) % __SCB_DCACHE_LINE_SIZE)) && (OutDataLength == JPEG_OUTPUT_CHUNK_SIZE)) {
-        // Ensure any cached reads are dropped.
-        SCB_InvalidateDCache_by_Addr((uint32_t *) pDataOut, JPEG_OUTPUT_CHUNK_SIZE);
+        // Drop cached reads, but keep any data the CPU polled from the codec at the end.
+        SCB_CleanInvalidateDCache_by_Addr((uint32_t *) pDataOut, JPEG_OUTPUT_CHUNK_SIZE);
     }
     #endif
 
@@ -782,8 +782,8 @@ void jpeg_decompress(image_t *dst, image_t *src) {
         }
 
         #if defined(OMV_MDMA_CHANNEL_JPEG_IN)
-        // Ensure any cached reads are dropped.
-        SCB_InvalidateDCache_by_Addr((uint32_t *) this_mcu_row_buffer_ptr, dst_w_mcus_bytes);
+        // Drop cached reads, but keep any data the CPU polled from the codec at the end.
+        SCB_CleanInvalidateDCache_by_Addr((uint32_t *) this_mcu_row_buffer_ptr, dst_w_mcus_bytes);
         #endif
 
         if (JPEG_state.jpeg_descr.Conf.ColorSpace == JPEG_GRAYSCALE_COLORSPACE) {
