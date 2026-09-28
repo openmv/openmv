@@ -22,6 +22,7 @@
 #define OMV_JPEG_CODEC_ENABLE               (1)
 #define OMV_JPEG_DMA_ENABLE                 (1)
 #define OMV_JPEG_DMA_MAX_BLOCK_SIZE         (65408UL) // Maximum bytes HPDMA can transfer at once (in 128-byte units).
+#define OMV_JPEG_DMA_ROW_ENABLE(bytes)      (!(((bytes) / 64) & 1)) // Even 64-byte block counts only.
 #define OMV_JPEG_QUALITY_LOW                (50)
 #define OMV_JPEG_QUALITY_HIGH               (90)
 #define OMV_JPEG_QUALITY_THRESHOLD          (800 * 600 * 2)

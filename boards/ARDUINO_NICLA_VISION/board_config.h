@@ -37,6 +37,7 @@
 #define OMV_JPEG_CODEC_ENABLE                 (1)
 #define OMV_JPEG_DMA_ENABLE                   (1)
 #define OMV_JPEG_DMA_MAX_BLOCK_SIZE           (65536UL) // Maximum bytes MDMA can transfer at once.
+#define OMV_JPEG_DMA_ROW_ENABLE(bytes)        (1)
 #define OMV_JPEG_QUALITY_LOW                  (50)
 #define OMV_JPEG_QUALITY_HIGH                 (90)
 #define OMV_JPEG_QUALITY_THRESHOLD            (320 * 240 * 2)
