@@ -604,7 +604,9 @@ static void jpeg_decompress_data_ready(JPEG_HandleTypeDef *hjpeg, uint8_t *pData
 
     int remaining = JPEG_state.out_data_len_max - JPEG_state.out_data_len;
 
-    if (!remaining) {
+    // The codec may output more data than the image needs (it sometimes decodes an extra block
+    // for tiny scans), which is dropped.
+    if (remaining <= 0) {
         HAL_JPEG_Pause(hjpeg, JPEG_PAUSE_RESUME_OUTPUT);
         JPEG_state.out_data_len = 0;
         JPEG_state.output_paused = true;
@@ -953,18 +955,6 @@ void jpeg_decompress(image_t *dst, image_t *src) {
 
                     break;
                 }
-            }
-        }
-
-        if ((y_offset + mcu_h) >= src->h) {
-            // last row
-            for (mp_uint_t tick_start = mp_hal_ticks_ms();
-                 HAL_JPEG_GetState(&JPEG_state.jpeg_descr) == HAL_JPEG_STATE_BUSY_DECODING; ) {
-                mp_uint_t elapsed = mp_hal_ticks_ms() - tick_start;
-                if (elapsed > JPEG_CODEC_TIMEOUT) {
-                    goto exit_cleanup;
-                }
-                mp_event_wait_ms(JPEG_CODEC_TIMEOUT - elapsed);
             }
         }
     }
