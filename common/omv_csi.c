@@ -1203,9 +1203,46 @@ void omv_csi_stats_update(omv_csi_t *csi, uint32_t *r, uint32_t *g, uint32_t *b,
 void omv_csi_get_stats(omv_csi_t *csi, uint32_t *r, uint32_t *g, uint32_t *b) {
     omv_csi_stats_t *stats = &csi->stats;
 
+    if (!stats->initialized) {
+        // Return neutral values until the first update.
+        *r = 128;
+        *g = 128;
+        *b = 128;
+        return;
+    }
+
     *r = fast_roundf(stats->r_avg);
     *g = fast_roundf(stats->g_avg);
     *b = fast_roundf(stats->b_avg);
+}
+
+int omv_csi_stats_set_auto_whitebal(omv_csi_t *csi, int enable,
+                                    float r_gain_db, float g_gain_db, float b_gain_db) {
+    csi->stats_enabled = enable;
+
+    if ((enable == 0) && (!isnanf(r_gain_db)) && (!isnanf(g_gain_db)) && (!isnanf(b_gain_db))
+        && (!isinff(r_gain_db)) && (!isinff(g_gain_db)) && (!isinff(b_gain_db))) {
+        omv_csi_stats_t *stats = &csi->stats;
+
+        // The ISP derives the gains from the RGB averages, so store their inverse.
+        stats->initialized = true;
+        stats->r_avg = IM_MAX(128.0f * expf((-r_gain_db / 20.0f) * M_LN10), 1.0f);
+        stats->g_avg = IM_MAX(128.0f * expf((-g_gain_db / 20.0f) * M_LN10), 1.0f);
+        stats->b_avg = IM_MAX(128.0f * expf((-b_gain_db / 20.0f) * M_LN10), 1.0f);
+    }
+
+    return 0;
+}
+
+int omv_csi_stats_get_rgb_gain_db(omv_csi_t *csi, float *r_gain_db, float *g_gain_db, float *b_gain_db) {
+    uint32_t r, g, b;
+    omv_csi_get_stats(csi, &r, &g, &b);
+
+    // The gains are the inverse of the RGB averages, referenced to 128.
+    *r_gain_db = 20.0f * log10f(IM_DIV(128.0f, r));
+    *g_gain_db = 20.0f * log10f(IM_DIV(128.0f, g));
+    *b_gain_db = 20.0f * log10f(IM_DIV(128.0f, b));
+    return 0;
 }
 #endif // defined(OMV_CSI_STATS_ENABLE)
 
