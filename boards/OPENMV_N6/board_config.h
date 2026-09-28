@@ -20,6 +20,8 @@
 
 // JPEG compression settings.
 #define OMV_JPEG_CODEC_ENABLE               (1)
+#define OMV_JPEG_DMA_ENABLE                 (1)
+#define OMV_JPEG_DMA_MAX_BLOCK_SIZE         (65408UL) // Maximum bytes HPDMA can transfer at once (in 128-byte units).
 #define OMV_JPEG_QUALITY_LOW                (50)
 #define OMV_JPEG_QUALITY_HIGH               (90)
 #define OMV_JPEG_QUALITY_THRESHOLD          (800 * 600 * 2)
@@ -198,6 +200,10 @@
 #define OMV_FLASH_TXT_LENGTH                3584K
 #define OMV_ROMFS_PART0_ORIGIN              0x70800000
 #define OMV_ROMFS_PART0_LENGTH              0x01800000
+
+// DMA configuration
+#define OMV_DMA_CHANNEL_JPEG_IN             (HPDMA1_Channel13)
+#define OMV_DMA_CHANNEL_JPEG_OUT            (HPDMA1_Channel14)
 
 // Enable additional GPIO ports.
 #define OMV_GPIO_PORT_F_ENABLE              (1)
