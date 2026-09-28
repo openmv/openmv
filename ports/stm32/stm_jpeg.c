@@ -782,6 +782,18 @@ void jpeg_decompress(image_t *dst, image_t *src) {
 
         // Wait for the MCUs to be processed.
         for (mp_uint_t tick_start = mp_hal_ticks_ms(); !JPEG_state.output_paused; ) {
+            #if defined(OMV_DMA_CHANNEL_JPEG_IN)
+            // The STM32N6 HAL handles the end of conversion by aborting the output DMA and finishing the
+            // decode from the abort callback. When the output DMA completes at that moment, the abort
+            // never takes (HAL_DMA_Abort_IT can't abort a completed channel), and the callback never runs.
+            // Do what the HAL's abort completion would have done.
+            DMA_HandleTypeDef *hdma = JPEG_state.jpeg_descr.hdmaout;
+            if (dma && (HAL_DMA_GetState(hdma) != HAL_DMA_STATE_BUSY) && (!(hdma->Instance->CCR & DMA_CCR_EN))) {
+                hdma->Instance->CCR |= DMA_CCR_RESET;
+                hdma->State = HAL_DMA_STATE_READY;
+                hdma->XferAbortCallback(hdma);
+            }
+            #endif
             mp_uint_t elapsed = mp_hal_ticks_ms() - tick_start;
             if (elapsed > JPEG_CODEC_TIMEOUT) {
                 goto exit_cleanup;
