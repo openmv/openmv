@@ -43,6 +43,40 @@
 // ever raising the complete flag (otherwise the wait loop would spin forever).
 #define OMV_PXP_TIMEOUT_MS      (1000)
 
+// 2.12 fixed-point scaler step for one axis, plus the decimation shift that goes with it.
+//
+// Scaling up maps output 0..out-1 onto input 0..in-1 so the last output pixel samples
+// exactly in-1. The SDK's in/out step lands past in-1 there, and the bilinear filter then
+// reads one pixel beyond the rect: the next row horizontally, the line after the buffer
+// vertically. That corrupts the last column and row, and is an AXI read error when the
+// buffer ends at the end of a memory region.
+#define OMV_PXP_FIXED(x)        ((x) << 12)
+
+static uint32_t omv_pxp_scaler(uint32_t in, uint32_t out, uint8_t *dec) {
+    if (out > in) {
+        *dec = 0;
+        return out > 1 ? OMV_PXP_FIXED(in - 1) / (out - 1) : OMV_PXP_FIXED(1);
+    }
+
+    // Scaling down keeps the SDK's step, pre-decimating by 2^dec above a 2x ratio (16x max).
+    uint32_t step = OMV_PXP_FIXED(in) / out;
+    if (step >= OMV_PXP_FIXED(16)) {
+        *dec = 3;
+        return OMV_PXP_FIXED(2);
+    }
+    if (step > OMV_PXP_FIXED(8)) {
+        *dec = 3;
+    } else if (step > OMV_PXP_FIXED(4)) {
+        *dec = 2;
+    } else if (step > OMV_PXP_FIXED(2)) {
+        *dec = 1;
+    } else {
+        *dec = 0;
+    }
+    step >>= *dec;
+    return step ? step : 1;
+}
+
 int omv_gpu_init() {
     return 0;
 }
@@ -166,7 +200,12 @@ int omv_gpu_draw_image(image_t *src_img,
     }
 
     PXP_SetProcessSurfaceBufferConfig(PXP, &input_buffer_config);
-    PXP_SetProcessSurfaceScaler(PXP, src_rect->w, src_rect->h, dst_rect->w, dst_rect->h);
+    uint8_t dec_x, dec_y;
+    uint32_t scale_x = omv_pxp_scaler(src_rect->w, dst_rect->w, &dec_x);
+    uint32_t scale_y = omv_pxp_scaler(src_rect->h, dst_rect->h, &dec_y);
+    PXP->PS_CTRL = (PXP->PS_CTRL & ~(PXP_PS_CTRL_DECX_MASK | PXP_PS_CTRL_DECY_MASK)) |
+                   PXP_PS_CTRL_DECX(dec_x) | PXP_PS_CTRL_DECY(dec_y);
+    PXP->PS_SCALE = PXP_PS_SCALE_XSCALE(scale_x) | PXP_PS_SCALE_YSCALE(scale_y);
     PXP_SetProcessSurfacePosition(PXP, 0, 0, dst_rect->w - 1, dst_rect->h - 1);
 
     if (blend) {
