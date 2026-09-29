@@ -8,11 +8,8 @@
 #   - submodules initialised (each caller does this with its own protocol
 #     scoping; build-dev.sh allows file:// for worktree alternates)
 #
-# Callers may set BUILD_OPTS for additional flags passed to the firmware
-# `make`. build.sh sets BUILD=<workspace path> to keep artifacts under
-# /workspace/build; build-dev.sh leaves BUILD_OPTS empty so the top-level
-# Makefile's default applies and per-port subdir nesting (e.g. AE3
-# multi-core) works.
+# Callers may set BUILD_OPTS for extra `make` flags. Never pass BUILD= through it:
+# it leaks into sub-makes via MAKEFLAGS and breaks per-core nesting (e.g. AE3).
 set -e -x
 
 make -j$(nproc) TARGET=${TARGET} submodules
