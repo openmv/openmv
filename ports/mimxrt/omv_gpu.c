@@ -77,6 +77,58 @@ static uint32_t omv_pxp_scaler(uint32_t in, uint32_t out, uint8_t *dec) {
     return step ? step : 1;
 }
 
+typedef struct {
+    uintptr_t start;
+    uintptr_t end;
+} omv_pxp_region_t;
+
+// RAM regions that can hold an image buffer (bounds from the linker script).
+#define OMV_PXP_REGION(name) { (uintptr_t) &__##name##_start, (uintptr_t) &__##name##_end }
+#if defined(OMV_DTCM_ORIGIN)
+extern char __dtcm_start, __dtcm_end;
+#endif
+#if defined(OMV_OCRM1_ORIGIN)
+extern char __ocrm1_start, __ocrm1_end;
+#endif
+#if defined(OMV_OCRM2_ORIGIN)
+extern char __ocrm2_start, __ocrm2_end;
+#endif
+#if defined(OMV_DRAM_ORIGIN)
+extern char __sdram_start, __sdram_end;
+#endif
+
+// True if [start, end) lies inside RAM (OCRAM1 and OCRAM2 abut and count as one).
+static bool omv_pxp_readable(uintptr_t start, uintptr_t end) {
+    static const omv_pxp_region_t regions[] = {
+        #if defined(OMV_DTCM_ORIGIN)
+        OMV_PXP_REGION(dtcm),
+        #endif
+        #if defined(OMV_OCRM1_ORIGIN)
+        OMV_PXP_REGION(ocrm1),
+        #endif
+        #if defined(OMV_OCRM2_ORIGIN)
+        OMV_PXP_REGION(ocrm2),
+        #endif
+        #if defined(OMV_DRAM_ORIGIN)
+        OMV_PXP_REGION(sdram),
+        #endif
+    };
+    size_t n = sizeof(regions) / sizeof(regions[0]);
+    for (size_t i = 0; i < n; i++) {
+        if (start >= regions[i].start && start < regions[i].end) {
+            // Extend across a region that starts exactly where this one ends.
+            uintptr_t limit = regions[i].end;
+            for (size_t j = 0; j < n; j++) {
+                if (regions[j].start == limit) {
+                    limit = regions[j].end;
+                }
+            }
+            return end <= limit;
+        }
+    }
+    return false;
+}
+
 int omv_gpu_init() {
     return 0;
 }
@@ -195,6 +247,16 @@ int omv_gpu_draw_image(image_t *src_img,
     // copy or a scale-down toward the origin). Flips read blocks the earlier ones already wrote.
     if (dst_img->data == src_img->data &&
         (hint & (IMAGE_HINT_HMIRROR | IMAGE_HINT_VFLIP) || dst_addr > input_buffer_config.bufferAddr)) {
+        PXP_Deinit(PXP);
+        return -1;
+    }
+
+    // The PXP reads one line past the source rect (measured with a buffer ending at the top of
+    // SDRAM: a copy faults with less than a line of slack and passes with one). Fall back to
+    // the CPU unless that line is inside the RAM region holding the buffer.
+    uintptr_t src_end = input_buffer_config.bufferAddr + (src_rect->h + 1) * input_buffer_config.pitchBytes;
+    uintptr_t dst_end = dst_addr + (dst_rect->h + 1) * dst_img->w * (dst_img->pixfmt == PIXFORMAT_GRAYSCALE ? 1 : 2);
+    if (!omv_pxp_readable(input_buffer_config.bufferAddr, src_end) || (blend && !omv_pxp_readable(dst_addr, dst_end))) {
         PXP_Deinit(PXP);
         return -1;
     }
