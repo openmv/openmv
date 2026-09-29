@@ -31,7 +31,8 @@
 include $(OMV_BOARD_CONFIG_DIR)/board_config.mk
 
 LDSCRIPT  ?= alif
-BUILD := $(BUILD)/$(MCU_CORE)
+# override: a command-line BUILD= would otherwise defeat the per-core nesting.
+override BUILD := $(BUILD)/$(MCU_CORE)
 FIRMWARE := $(FIRMWARE)_$(MCU_CORE)
 DAVE2D_DIR=drivers/dave2d
 CORE_M55_HP := $(if $(filter M55_HP,$(MCU_CORE)),1,0)
