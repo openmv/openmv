@@ -377,10 +377,10 @@ static v4x_rows_t vdebayer_load_rows_inner(v4x_row_ptrs_t rowptrs, uint32_t x, v
             break;
         case 3:
             // MSB [0, G1, R0, G0] LSB -> MSB [R0, G1, R0, G0] LSB
-            rows.r0 = vset_u8(rows.r0, 3, vget_u8(rows.r0, 2));
-            rows.r1 = vset_u8(rows.r1, 3, vget_u8(rows.r1, 2));
-            rows.r2 = vset_u8(rows.r2, 3, vget_u8(rows.r2, 2));
-            rows.r3 = vset_u8(rows.r3, 3, vget_u8(rows.r3, 2));
+            rows.r0 = vset_u8(rows.r0, 3, vget_u8(rows.r0, 1));
+            rows.r1 = vset_u8(rows.r1, 3, vget_u8(rows.r1, 1));
+            rows.r2 = vset_u8(rows.r2, 3, vget_u8(rows.r2, 1));
+            rows.r3 = vset_u8(rows.r3, 3, vget_u8(rows.r3, 1));
             break;
         #if UINT8_VECTOR_SIZE >= 8
         case 5:
