@@ -25,6 +25,7 @@
  */
 #include <stdio.h>
 #include "py/mphal.h"
+#include "py/runtime.h"
 #include "mpprint.h"
 #include "fmath.h"
 #include "framebuffer.h"
@@ -259,7 +260,7 @@ vbuffer_t *framebuffer_release(framebuffer_t *fb, uint32_t flags) {
     return buffer;
 }
 
-void framebuffer_update_preview(image_t *src) {
+bool framebuffer_update_preview(image_t *src) {
     static int overflow_count = 0;
     framebuffer_t *fb = framebuffer_get(FB_STREAM_ID);
 
@@ -279,12 +280,12 @@ void framebuffer_update_preview(image_t *src) {
 
     // Check if the streaming buffer is disabled, image is NULL or format is not set.
     if (!fb->enabled || !src->data || src->pixfmt == PIXFORMAT_INVALID) {
-        return;
+        return false;
     }
 
     // Lock the streaming buffer.
     if (!mutex_try_lock_fair(&fb->lock, MUTEX_TID_OMV)) {
-        return;
+        return false;
     }
 
     // Reserve space for header at the beginning
@@ -391,4 +392,32 @@ exit_cleanup:
     #if MICROPY_PY_PROTOCOL
     omv_protocol_send_event(OMV_PROTOCOL_CHANNEL_ID_STREAM, OMV_PROTOCOL_EVENT_NOTIFY, false);
     #endif
+
+    return !overflow;
+}
+
+bool framebuffer_update_preview_blocking(image_t *src, uint32_t timeout_ms) {
+    framebuffer_t *fb = framebuffer_get(FB_STREAM_ID);
+    framebuffer_header_t *header = (framebuffer_header_t *) fb->raw_base;
+    uint32_t start = mp_hal_ticks_ms();
+    bool written = framebuffer_update_preview(src);
+
+    // If nothing is consuming the stream there is nothing to wait for.
+    if (!fb->enabled) {
+        return written;
+    }
+
+    for (;;) {
+        if (!written) {
+            // The streaming buffer was busy when the frame was written, retry.
+            written = framebuffer_update_preview(src);
+        } else if (header->width == 0 && header->height == 0 && header->size == 0) {
+            // The IDE zeroes the header once it has consumed the frame.
+            return true;
+        }
+        if ((mp_hal_ticks_ms() - start) >= timeout_ms) {
+            return false;
+        }
+        mp_event_wait_ms(1);
+    }
 }
