@@ -92,9 +92,37 @@ unsigned lodepng_convert_cb(unsigned char *out, const unsigned char *in,
                 break;
             }
             case PIXFORMAT_YUV_ANY:
-            // YUV   -> RGB888
-            case PIXFORMAT_BAYER_ANY:
-            // BAYER -> RGB888
+            case PIXFORMAT_BAYER_ANY: {
+                // YUV/BAYER -> RGB565 one row at a time -> RGB888/RGBA8888
+                if (mode_out->colortype != LCT_RGB && mode_out->colortype != LCT_RGBA) {
+                    error = 56; // unsupported color mode conversion.
+                    break;
+                }
+                image_t src = {
+                    .w = w,
+                    .h = h,
+                    .pixfmt = mode_in->customfmt,
+                    .data = (uint8_t *) in,
+                };
+                uint16_t *line = uma_calloc(w * sizeof(uint16_t), 0);
+                for (int y = 0; y < h; y++) {
+                    if (src.is_bayer) {
+                        imlib_debayer_line(0, w, y, line, PIXFORMAT_RGB565, &src);
+                    } else {
+                        imlib_deyuv_line(0, w, y, line, PIXFORMAT_RGB565, &src);
+                    }
+                    for (int x = 0; x < w; x++) {
+                        *out++ = COLOR_RGB565_TO_R8(line[x]);
+                        *out++ = COLOR_RGB565_TO_G8(line[x]);
+                        *out++ = COLOR_RGB565_TO_B8(line[x]);
+                        if (mode_out->colortype == LCT_RGBA) {
+                            *out++ = 255;
+                        }
+                    }
+                }
+                uma_free(line);
+                break;
+            }
             default:
                 error = 56; // unsupported color mode conversion.
                 break;
@@ -237,10 +265,18 @@ int png_compress(image_t *src, image_t *dst) {
             state.info_png.color.colortype = LCT_RGB;
             break;
         case PIXFORMAT_YUV_ANY:
-            mp_raise_msg_varg(&mp_type_RuntimeError, MP_ERROR_TEXT("Input format is not supported"));
-            break;
         case PIXFORMAT_BAYER_ANY:
-            mp_raise_msg_varg(&mp_type_RuntimeError, MP_ERROR_TEXT("Input format is not supported"));
+            // Converted to RGB888 in lodepng_convert_cb (customfmt keeps the exact sub-format).
+            state.info_raw.bitdepth = src->bpp * 8;
+            state.info_raw.colortype = LCT_CUSTOM;
+            state.info_raw.customfmt = src->pixfmt;
+
+            state.encoder.auto_convert = false;
+            state.info_png.color.bitdepth = 8;
+            state.info_png.color.colortype = LCT_RGB;
+            break;
+        default:
+            mp_raise_msg(&mp_type_RuntimeError, MP_ERROR_TEXT("Input format is not supported"));
             break;
     }
 
