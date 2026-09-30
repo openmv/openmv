@@ -656,7 +656,8 @@ static save_image_format_t imlib_parse_extension(image_t *img, const char *path)
             supported = !img->is_compressed || (img->pixfmt == PIXFORMAT_PNG);
             break;
         case FORMAT_BMP:
-            supported = !IM_IS_JPEG(img) && !IM_IS_BAYER(img);
+            // GRAYSCALE and RGB565 are written as-is, BAYER and YUV are converted to RGB565.
+            supported = IM_IS_GS(img) || IM_IS_RGB565(img) || IM_IS_BAYER(img) || IM_IS_YUV(img);
             break;
         case FORMAT_PNM:
             // .pgm writes P5 from grayscale, .ppm writes P6 from RGB565.
