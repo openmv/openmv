@@ -13,20 +13,26 @@ from machine import CAN
 # NOTE: Set to False on receiving node.
 TRANSMITTER = True
 
-can = CAN(0, CAN.NORMAL, baudrate=1000000, auto_restart=True)
+# The RT1062 has one CAN controller, CAN(1), on P1 (TX) and P3 (RX).
+can = CAN(1, 1_000_000)
 
 if TRANSMITTER:
     while True:
         # Send message with id 1
-        can.send("Hello", 1, timeout=100, extframe=False)
+        can.send(1, "Hello")
         time.sleep_ms(1000)
 
 else:
     # Runs on the receiving node.
-    # Set a filter to receive messages with id=1 and 2
-    # Filter index, mode (DUAL, etc..), FIFO (0), params
-    can.setfilter(0, CAN.DUAL, 0, [1, 2])
+    # Set filters to receive messages with id=1 and id=2 only.
+    # Each filter is (identifier, bit mask, flags).
+    can.set_filters([(1, 0x7FF, 0), (2, 0x7FF, 0)])
 
     while True:
-        # Receive messages on FIFO 0 (there's only one fifo)
-        print(can.recv(0, timeout=10000))
+        # recv() returns None if no message is pending.
+        msg = can.recv()
+        if msg:
+            can_id, data, flags, errors = msg
+            print(can_id, bytes(data), flags, errors)
+        else:
+            time.sleep_ms(1)
