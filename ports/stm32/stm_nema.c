@@ -67,6 +67,10 @@ static void nema_assert_fail(const char *expr, const char *file, int line) {
 #endif
 
 int32_t nema_sys_init(void) {
+    // Reset GPU2D, a soft-reset leaves the previous session's state in it.
+    __HAL_RCC_GPU2D_FORCE_RESET();
+    __HAL_RCC_GPU2D_RELEASE_RESET();
+
     // Initialize GPU2D
     gpu2d.Instance = GPU2D;
     HAL_GPU2D_Init(&gpu2d);
