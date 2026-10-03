@@ -198,6 +198,16 @@ int omv_gpu_draw_image(image_t *src_img,
     return ret;
 }
 #else
+static bool omv_gpu_dma_buffer(const void *p) {
+    #if defined(STM32H7)
+    // DMA2D transfers to or from SRAM4 (D3) silently do nothing on the H7.
+    if ((uint32_t) p - D3_SRAM_BASE < 0x10000) {
+        return false;
+    }
+    #endif
+    return DMA_BUFFER(p);
+}
+
 int omv_gpu_draw_image(image_t *src_img,
                        rectangle_t *src_rect,
                        image_t *dst_img,
@@ -208,7 +218,8 @@ int omv_gpu_draw_image(image_t *src_img,
                        image_hint_t hint,
                        float *transform) {
     // DMA2D can only draw on RGB565 buffers and the destination/source buffers must be accessible by DMA.
-    if ((dst_img->pixfmt != PIXFORMAT_RGB565) || (!DMA_BUFFER(dst_img->data)) || (!DMA_BUFFER(src_img->data))) {
+    if ((dst_img->pixfmt != PIXFORMAT_RGB565) || (!omv_gpu_dma_buffer(dst_img->data)) ||
+        (!omv_gpu_dma_buffer(src_img->data))) {
         return -1;
     }
 
