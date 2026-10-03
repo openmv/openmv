@@ -464,7 +464,7 @@ g_pfnVectors:
 	.weak	RTC_IRQHandler
 	.thumb_set RTC_IRQHandler,Default_Handler
 
-	.weak	IWDF_IRQHandler
+	.weak	IWDG_IRQHandler
 	.thumb_set IWDG_IRQHandler,Default_Handler
 
 	.weak	WWDG_IRQHandler
