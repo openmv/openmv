@@ -799,7 +799,8 @@ static int stm_csi_snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
     if (csi->raw_output) {
         float luminance = stm_isp_update_awb(csi, DCMIPP_PIPE);
         if (csi->ioctl) {
-            omv_csi_ioctl(csi, OMV_CSI_IOCTL_UPDATE_AGC_AEC, fast_floorf(luminance));
+            omv_csi_ioctl_arg_t arg = { .ivalue = fast_floorf(luminance) };
+            omv_csi_ioctl(csi, OMV_CSI_IOCTL_UPDATE_AGC_AEC, &arg);
         }
 
     }

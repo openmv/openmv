@@ -30,7 +30,6 @@
  *
  * CSI Python module.
  */
-#include <stdarg.h>
 #include <stdio.h>
 #include "py/mphal.h"
 #include "py/runtime.h"
@@ -39,6 +38,8 @@
 
 #include "omv_csi.h"
 #include "omv_gpio.h"
+#include "lepton.h"
+#include "himax.h"
 #include "genx320.h"
 #include "boson.h"
 
@@ -901,6 +902,22 @@ static mp_obj_t py_csi_ioctl(size_t n_args, const mp_obj_t *args) {
     mp_obj_t ret_obj = mp_const_none;
     int error = OMV_CSI_ERROR_INVALID_ARGUMENT;
 
+    // Sized to the widest sensor family's argument, so one stack slot serves
+    // every request. All members start at offset 0.
+    union {
+        omv_csi_ioctl_arg_t common;
+        lepton_ioctl_arg_t lepton;
+        #if (OMV_HM01B0_ENABLE == 1)
+        himax_ioctl_arg_t himax;
+        #endif
+        #if (OMV_GENX320_ENABLE == 1)
+        genx320_ioctl_arg_t genx320;
+        #endif
+        #if (OMV_BOSON_ENABLE == 1)
+        boson_ioctl_arg_t boson;
+        #endif
+    } arg = {0};
+
     // Skip self + request so ioctl args start at args[0].
     args += 2;
     n_args -= 2;
@@ -908,39 +925,35 @@ static mp_obj_t py_csi_ioctl(size_t n_args, const mp_obj_t *args) {
     switch (request) {
         case OMV_CSI_IOCTL_SET_READOUT_WINDOW: {
             if (n_args == 1) {
-                int x, y, w, h;
                 mp_obj_t *array;
                 mp_uint_t array_len;
                 mp_obj_get_array(args[0], &array_len, &array);
 
                 if (array_len == 4) {
-                    x = mp_obj_get_int(array[0]);
-                    y = mp_obj_get_int(array[1]);
-                    w = mp_obj_get_int(array[2]);
-                    h = mp_obj_get_int(array[3]);
+                    arg.common.window.x = mp_obj_get_int(array[0]);
+                    arg.common.window.y = mp_obj_get_int(array[1]);
+                    arg.common.window.w = mp_obj_get_int(array[2]);
+                    arg.common.window.h = mp_obj_get_int(array[3]);
                 } else if (array_len == 2) {
-                    w = mp_obj_get_int(array[0]);
-                    h = mp_obj_get_int(array[1]);
-                    x = 0;
-                    y = 0;
+                    arg.common.window.w = mp_obj_get_int(array[0]);
+                    arg.common.window.h = mp_obj_get_int(array[1]);
                 } else {
                     mp_raise_msg(&mp_type_ValueError,
                                  MP_ERROR_TEXT("Expected (w, h) or (x, y, w, h) tuple/list."));
                 }
 
-                error = omv_csi_ioctl(self->csi, request, x, y, w, h);
+                error = omv_csi_ioctl(self->csi, request, &arg);
             }
             break;
         }
 
         case OMV_CSI_IOCTL_GET_READOUT_WINDOW: {
-            int x, y, w, h;
-            error = omv_csi_ioctl(self->csi, request, &x, &y, &w, &h);
+            error = omv_csi_ioctl(self->csi, request, &arg);
             if (error == 0) {
-                ret_obj = mp_obj_new_tuple(4, (mp_obj_t []) {mp_obj_new_int(x),
-                                                             mp_obj_new_int(y),
-                                                             mp_obj_new_int(w),
-                                                             mp_obj_new_int(h)});
+                ret_obj = mp_obj_new_tuple(4, (mp_obj_t []) {mp_obj_new_int(arg.common.window.x),
+                                                             mp_obj_new_int(arg.common.window.y),
+                                                             mp_obj_new_int(arg.common.window.w),
+                                                             mp_obj_new_int(arg.common.window.h)});
             }
             break;
         }
@@ -949,7 +962,8 @@ static mp_obj_t py_csi_ioctl(size_t n_args, const mp_obj_t *args) {
         case OMV_CSI_IOCTL_SET_FOV_WIDE:
         case OMV_CSI_IOCTL_SET_NIGHT_MODE: {
             if (n_args == 1) {
-                error = omv_csi_ioctl(self->csi, request, mp_obj_get_int(args[0]));
+                arg.common.ivalue = mp_obj_get_int(args[0]);
+                error = omv_csi_ioctl(self->csi, request, &arg);
             }
             break;
         }
@@ -957,10 +971,9 @@ static mp_obj_t py_csi_ioctl(size_t n_args, const mp_obj_t *args) {
         case OMV_CSI_IOCTL_GET_TRIGGERED_MODE:
         case OMV_CSI_IOCTL_GET_FOV_WIDE:
         case OMV_CSI_IOCTL_GET_NIGHT_MODE: {
-            int enabled;
-            error = omv_csi_ioctl(self->csi, request, &enabled);
+            error = omv_csi_ioctl(self->csi, request, &arg);
             if (error == 0) {
-                ret_obj = mp_obj_new_bool(enabled);
+                ret_obj = mp_obj_new_bool(arg.common.ivalue);
             }
             break;
         }
@@ -969,63 +982,60 @@ static mp_obj_t py_csi_ioctl(size_t n_args, const mp_obj_t *args) {
         case OMV_CSI_IOCTL_TRIGGER_AUTO_FOCUS:
         case OMV_CSI_IOCTL_PAUSE_AUTO_FOCUS:
         case OMV_CSI_IOCTL_RESET_AUTO_FOCUS: {
-            error = omv_csi_ioctl(self->csi, request);
+            error = omv_csi_ioctl(self->csi, request, &arg);
             break;
         }
         case OMV_CSI_IOCTL_WAIT_ON_AUTO_FOCUS: {
-            error = omv_csi_ioctl(self->csi, request, (n_args < 1) ? 5000 : mp_obj_get_int(args[0]));
+            arg.common.ivalue = (n_args < 1) ? -1 : mp_obj_get_int(args[0]);
+            error = omv_csi_ioctl(self->csi, request, &arg);
             break;
         }
         #endif
 
         case OMV_CSI_IOCTL_LEPTON_GET_WIDTH: {
-            int width;
-            error = omv_csi_ioctl(self->csi, request, &width);
+            error = omv_csi_ioctl(self->csi, request, &arg);
             if (error == 0) {
-                ret_obj = mp_obj_new_int(width);
+                ret_obj = mp_obj_new_int(arg.lepton.ivalue);
             }
             break;
         }
 
         case OMV_CSI_IOCTL_LEPTON_GET_HEIGHT: {
-            int height;
-            error = omv_csi_ioctl(self->csi, request, &height);
+            error = omv_csi_ioctl(self->csi, request, &arg);
             if (error == 0) {
-                ret_obj = mp_obj_new_int(height);
+                ret_obj = mp_obj_new_int(arg.lepton.ivalue);
             }
             break;
         }
 
         case OMV_CSI_IOCTL_LEPTON_GET_RADIOMETRY: {
-            int radiometry;
-            error = omv_csi_ioctl(self->csi, request, &radiometry);
+            error = omv_csi_ioctl(self->csi, request, &arg);
             if (error == 0) {
-                ret_obj = mp_obj_new_int(radiometry);
+                ret_obj = mp_obj_new_int(arg.lepton.ivalue);
             }
             break;
         }
 
         case OMV_CSI_IOCTL_LEPTON_GET_REFRESH: {
-            int refresh;
-            error = omv_csi_ioctl(self->csi, request, &refresh);
+            error = omv_csi_ioctl(self->csi, request, &arg);
             if (error == 0) {
-                ret_obj = mp_obj_new_int(refresh);
+                ret_obj = mp_obj_new_int(arg.lepton.ivalue);
             }
             break;
         }
 
         case OMV_CSI_IOCTL_LEPTON_GET_RESOLUTION: {
-            int resolution;
-            error = omv_csi_ioctl(self->csi, request, &resolution);
+            error = omv_csi_ioctl(self->csi, request, &arg);
             if (error == 0) {
-                ret_obj = mp_obj_new_int(resolution);
+                ret_obj = mp_obj_new_int(arg.lepton.ivalue);
             }
             break;
         }
 
         case OMV_CSI_IOCTL_LEPTON_RUN_COMMAND: {
             if (n_args == 1) {
-                error = omv_csi_ioctl(self->csi, request, mp_obj_get_int(args[0]));
+                arg.lepton.ivalue = mp_obj_get_int(args[0]);
+                error = omv_csi_ioctl(self->csi, request, &arg);
             }
             break;
         }
@@ -1033,10 +1043,11 @@ static mp_obj_t py_csi_ioctl(size_t n_args, const mp_obj_t *args) {
         case OMV_CSI_IOCTL_LEPTON_SET_ATTRIBUTE: {
             if (n_args == 2) {
                 size_t data_len;
-                int command = mp_obj_get_int(args[0]);
-                uint16_t *data = (uint16_t *) mp_obj_str_get_data(args[1], &data_len);
+                arg.lepton.attr.command = mp_obj_get_int(args[0]);
+                arg.lepton.attr.data = (uint16_t *) mp_obj_str_get_data(args[1], &data_len);
+                arg.lepton.attr.len = data_len / sizeof(uint16_t);
                 PY_ASSERT_TRUE_MSG(data_len > 0, "0 bytes transferred!");
-                error = omv_csi_ioctl(self->csi, request, command, data, data_len / sizeof(uint16_t));
+                error = omv_csi_ioctl(self->csi, request, &arg);
             }
             break;
         }
@@ -1047,7 +1058,10 @@ static mp_obj_t py_csi_ioctl(size_t n_args, const mp_obj_t *args) {
                 size_t data_len = mp_obj_get_int(args[1]);
                 PY_ASSERT_TRUE_MSG(data_len > 0, "0 bytes transferred!");
                 uint16_t *data = m_malloc(data_len * sizeof(uint16_t));
-                error = omv_csi_ioctl(self->csi, request, command, data, data_len);
+                arg.lepton.attr.command = command;
+                arg.lepton.attr.data = data;
+                arg.lepton.attr.len = data_len;
+                error = omv_csi_ioctl(self->csi, request, &arg);
                 if (error == 0) {
                     ret_obj = mp_obj_new_bytearray_by_ref(data_len * sizeof(uint16_t), data);
                 }
@@ -1057,27 +1071,27 @@ static mp_obj_t py_csi_ioctl(size_t n_args, const mp_obj_t *args) {
 
         case OMV_CSI_IOCTL_LEPTON_GET_FPA_TEMP:
         case OMV_CSI_IOCTL_LEPTON_GET_AUX_TEMP: {
-            float temp;
-            error = omv_csi_ioctl(self->csi, request, &temp);
+            error = omv_csi_ioctl(self->csi, request, &arg);
             if (error == 0) {
-                ret_obj = mp_obj_new_float(temp);
+                ret_obj = mp_obj_new_float(arg.lepton.fvalue);
             }
             break;
         }
 
         case OMV_CSI_IOCTL_LEPTON_SET_MODE:
             if (n_args >= 1) {
-                int high_temp = (n_args < 2) ? false : mp_obj_get_int(args[1]);
-                error = omv_csi_ioctl(self->csi, request, mp_obj_get_int(args[0]), high_temp);
+                arg.lepton.mode.measurement = mp_obj_get_int(args[0]);
+                arg.lepton.mode.high_temp = (n_args < 2) ? false : mp_obj_get_int(args[1]);
+                error = omv_csi_ioctl(self->csi, request, &arg);
             }
             break;
 
         case OMV_CSI_IOCTL_LEPTON_GET_MODE: {
-            int enabled, high_temp;
-            error = omv_csi_ioctl(self->csi, request, &enabled, &high_temp);
+            error = omv_csi_ioctl(self->csi, request, &arg);
             if (error == 0) {
                 ret_obj = mp_obj_new_tuple(2, (mp_obj_t []) {
-                    mp_obj_new_bool(enabled), mp_obj_new_bool(high_temp)
+                    mp_obj_new_bool(arg.lepton.mode.measurement),
+                    mp_obj_new_bool(arg.lepton.mode.high_temp)
                 });
             }
             break;
@@ -1085,18 +1099,17 @@ static mp_obj_t py_csi_ioctl(size_t n_args, const mp_obj_t *args) {
 
         case OMV_CSI_IOCTL_LEPTON_SET_RANGE:
             if (n_args == 2) {
-                // GCC will not let us pass floats to ... so we have to pass float pointers instead.
-                float min = mp_obj_get_float_to_f(args[0]);
-                float max = mp_obj_get_float_to_f(args[1]);
-                error = omv_csi_ioctl(self->csi, request, &min, &max);
+                arg.lepton.range.min = mp_obj_get_float_to_f(args[0]);
+                arg.lepton.range.max = mp_obj_get_float_to_f(args[1]);
+                error = omv_csi_ioctl(self->csi, request, &arg);
             }
             break;
 
         case OMV_CSI_IOCTL_LEPTON_GET_RANGE: {
-            float min, max;
-            error = omv_csi_ioctl(self->csi, request, &min, &max);
+            error = omv_csi_ioctl(self->csi, request, &arg);
             if (error == 0) {
-                ret_obj = mp_obj_new_tuple(2, (mp_obj_t []) {mp_obj_new_float(min), mp_obj_new_float(max)});
+                ret_obj = mp_obj_new_tuple(2, (mp_obj_t []) {mp_obj_new_float(arg.lepton.range.min),
+                                                             mp_obj_new_float(arg.lepton.range.max)});
             }
             break;
         }
@@ -1104,66 +1117,65 @@ static mp_obj_t py_csi_ioctl(size_t n_args, const mp_obj_t *args) {
         #if (OMV_HM01B0_ENABLE == 1)
         case OMV_CSI_IOCTL_HIMAX_MD_ENABLE: {
             if (n_args == 1) {
-                error = omv_csi_ioctl(self->csi, request, mp_obj_get_int(args[0]));
+                arg.himax.ivalue = mp_obj_get_int(args[0]);
+                error = omv_csi_ioctl(self->csi, request, &arg);
             }
             break;
         }
 
         case OMV_CSI_IOCTL_HIMAX_MD_WINDOW: {
             if (n_args == 1) {
-                int x, y, w, h;
                 mp_obj_t *array;
                 mp_uint_t array_len;
                 mp_obj_get_array(args[0], &array_len, &array);
 
                 if (array_len == 4) {
-                    x = mp_obj_get_int(array[0]);
-                    y = mp_obj_get_int(array[1]);
-                    w = mp_obj_get_int(array[2]);
-                    h = mp_obj_get_int(array[3]);
+                    arg.himax.window.x = mp_obj_get_int(array[0]);
+                    arg.himax.window.y = mp_obj_get_int(array[1]);
+                    arg.himax.window.w = mp_obj_get_int(array[2]);
+                    arg.himax.window.h = mp_obj_get_int(array[3]);
                 } else if (array_len == 2) {
-                    w = mp_obj_get_int(array[0]);
-                    h = mp_obj_get_int(array[1]);
-                    x = 0;
-                    y = 0;
+                    arg.himax.window.w = mp_obj_get_int(array[0]);
+                    arg.himax.window.h = mp_obj_get_int(array[1]);
                 } else {
                     mp_raise_msg(&mp_type_ValueError,
                                  MP_ERROR_TEXT("The tuple/list must either be (x, y, w, h) or (w, h)"));
                 }
 
-                error = omv_csi_ioctl(self->csi, request, x, y, w, h);
+                error = omv_csi_ioctl(self->csi, request, &arg);
             }
             break;
         }
 
         case OMV_CSI_IOCTL_HIMAX_MD_THRESHOLD: {
             if (n_args == 1) {
-                error = omv_csi_ioctl(self->csi, request, mp_obj_get_int(args[0]));
+                arg.himax.ivalue = mp_obj_get_int(args[0]);
+                error = omv_csi_ioctl(self->csi, request, &arg);
             }
             break;
         }
 
         case OMV_CSI_IOCTL_HIMAX_MD_CLEAR: {
-            error = omv_csi_ioctl(self->csi, request);
+            error = omv_csi_ioctl(self->csi, request, &arg);
             break;
         }
 
         case OMV_CSI_IOCTL_HIMAX_OSC_ENABLE: {
             if (n_args == 1) {
-                error = omv_csi_ioctl(self->csi, request, mp_obj_get_int(args[0]));
+                arg.himax.ivalue = mp_obj_get_int(args[0]);
+                error = omv_csi_ioctl(self->csi, request, &arg);
             }
             break;
         }
         #endif // (OMV_HM01B0_ENABLE == 1)
 
         case OMV_CSI_IOCTL_GET_RGB_STATS: {
-            uint32_t r, gb, gr, b;
-            error = omv_csi_ioctl(self->csi, request, &r, &gb, &gr, &b);
+            error = omv_csi_ioctl(self->csi, request, &arg);
             if (error == 0) {
-                ret_obj = mp_obj_new_tuple(4, (mp_obj_t []) {mp_obj_new_int(r),
-                                                             mp_obj_new_int(gb),
-                                                             mp_obj_new_int(gr),
-                                                             mp_obj_new_int(b)});
+                ret_obj = mp_obj_new_tuple(4, (mp_obj_t []) {mp_obj_new_int(arg.common.rgb_stats.r),
+                                                             mp_obj_new_int(arg.common.rgb_stats.gb),
+                                                             mp_obj_new_int(arg.common.rgb_stats.gr),
+                                                             mp_obj_new_int(arg.common.rgb_stats.b)});
             }
             break;
         }
@@ -1171,53 +1183,42 @@ static mp_obj_t py_csi_ioctl(size_t n_args, const mp_obj_t *args) {
         #if (OMV_GENX320_ENABLE == 1)
         case OMV_CSI_IOCTL_GENX320_SET_BIASES: {
             if (n_args == 1) {
-                error = omv_csi_ioctl(self->csi, request, mp_obj_get_int(args[0]));
+                arg.genx320.ivalue = mp_obj_get_int(args[0]);
+                error = omv_csi_ioctl(self->csi, request, &arg);
             }
             break;
         }
         case OMV_CSI_IOCTL_GENX320_SET_BIAS: {
             if (n_args == 2) {
-                error = omv_csi_ioctl(self->csi,
-                                      request,
-                                      mp_obj_get_int(args[0]),
-                                      mp_obj_get_int(args[1]));
+                arg.genx320.bias.name = mp_obj_get_int(args[0]);
+                arg.genx320.bias.value = mp_obj_get_int(args[1]);
+                error = omv_csi_ioctl(self->csi, request, &arg);
             }
             break;
         }
         case OMV_CSI_IOCTL_GENX320_SET_AFK: {
-            if (n_args == 1) {
-                error = omv_csi_ioctl(self->csi, request, mp_obj_get_int(args[0]));
-            } else if (n_args == 3) {
-                error = omv_csi_ioctl(self->csi,
-                                      request,
-                                      mp_obj_get_int(args[0]),
-                                      mp_obj_get_int(args[1]),
-                                      mp_obj_get_int(args[2]));
+            if (n_args >= 1 && n_args <= 3) {
+                arg.genx320.afk.mode = mp_obj_get_int(args[0]);
+                arg.genx320.afk.freq_min = (n_args > 1) ? mp_obj_get_int(args[1]) : -1;
+                arg.genx320.afk.freq_max = (n_args > 2) ? mp_obj_get_int(args[2]) : -1;
+                error = omv_csi_ioctl(self->csi, request, &arg);
             }
             break;
         }
         case OMV_CSI_IOCTL_GENX320_SET_STC: {
-            if (n_args == 1) {
-                error = omv_csi_ioctl(self->csi, request, mp_obj_get_int(args[0]));
-            } else if (n_args == 2) {
-                error = omv_csi_ioctl(self->csi,
-                                      request,
-                                      mp_obj_get_int(args[0]),
-                                      mp_obj_get_int(args[1]));
-            } else if (n_args == 3) {
-                error = omv_csi_ioctl(self->csi,
-                                      request,
-                                      mp_obj_get_int(args[0]),
-                                      mp_obj_get_int(args[1]),
-                                      mp_obj_get_int(args[2]));
+            if (n_args >= 1 && n_args <= 3) {
+                arg.genx320.stc.mode = mp_obj_get_int(args[0]);
+                arg.genx320.stc.threshold1 = (n_args > 1) ? mp_obj_get_int(args[1]) : -1;
+                arg.genx320.stc.threshold2 = (n_args > 2) ? mp_obj_get_int(args[2]) : -1;
+                error = omv_csi_ioctl(self->csi, request, &arg);
             }
             break;
         }
         case OMV_CSI_IOCTL_GENX320_SET_MODE: {
-            if (n_args == 1) {
-                error = omv_csi_ioctl(self->csi, request, mp_obj_get_int(args[0]));
-            } else if (n_args == 2) {
-                error = omv_csi_ioctl(self->csi, request, mp_obj_get_int(args[0]), mp_obj_get_int(args[1]));
+            if (n_args == 1 || n_args == 2) {
+                arg.genx320.mode.mode = mp_obj_get_int(args[0]);
+                arg.genx320.mode.ndarray_size = (n_args > 1) ? mp_obj_get_int(args[1]) : -1;
+                error = omv_csi_ioctl(self->csi, request, &arg);
             }
             break;
         }
@@ -1240,28 +1241,29 @@ static mp_obj_t py_csi_ioctl(size_t n_args, const mp_obj_t *args) {
                                       expected_len, EC_EVENT_SIZE);
                 }
 
-                error = omv_csi_ioctl(self->csi, request, array->array);
-                if (error > 0) {
-                    ret_obj = mp_obj_new_int(error);
+                arg.genx320.events.events = array->array;
+                error = omv_csi_ioctl(self->csi, request, &arg);
+                if (error == 0) {
+                    ret_obj = mp_obj_new_int(arg.genx320.events.count);
                 }
             }
             break;
         }
         case OMV_CSI_IOCTL_GENX320_CALIBRATE: {
             if (n_args == 2) {
-                error = omv_csi_ioctl(self->csi, request, mp_obj_get_int(args[0]),
-                                      mp_obj_get_float_to_d(args[1]));
-                if (error > 0) {
-                    ret_obj = mp_obj_new_int(error);
+                arg.genx320.calib.event_count = mp_obj_get_int(args[0]);
+                arg.genx320.calib.sigma = mp_obj_get_float_to_f(args[1]);
+                error = omv_csi_ioctl(self->csi, request, &arg);
+                if (error == 0) {
+                    ret_obj = mp_obj_new_int(arg.genx320.calib.disabled);
                 }
             }
             break;
         }
         case OMV_CSI_IOCTL_GENX320_READ_EVENTS_RAW: {
-            image_t img;
-            error = omv_csi_ioctl(self->csi, request, &img);
+            error = omv_csi_ioctl(self->csi, request, &arg);
             if (error == 0) {
-                ret_obj = py_image_from_struct(&img);
+                ret_obj = py_image_from_struct(&arg.genx320.image);
             }
             break;
         }
@@ -1269,21 +1271,19 @@ static mp_obj_t py_csi_ioctl(size_t n_args, const mp_obj_t *args) {
 
         #if (OMV_BOSON_ENABLE == 1)
         case OMV_CSI_IOCTL_BOSON_GET_SOFTWARE_REV: {
-            uint32_t major, minor, patch;
-            error = omv_csi_ioctl(self->csi, request, &major, &minor, &patch);
+            error = omv_csi_ioctl(self->csi, request, &arg);
             if (error == 0) {
-                ret_obj = mp_obj_new_tuple(3, (mp_obj_t []) {mp_obj_new_int(major),
-                                                             mp_obj_new_int(minor),
-                                                             mp_obj_new_int(patch)});
+                ret_obj = mp_obj_new_tuple(3, (mp_obj_t []) {mp_obj_new_int(arg.boson.rev.major),
+                                                             mp_obj_new_int(arg.boson.rev.minor),
+                                                             mp_obj_new_int(arg.boson.rev.patch)});
             }
             break;
         }
 
         case OMV_CSI_IOCTL_BOSON_GET_FPA_TEMP: {
-            float temp;
-            error = omv_csi_ioctl(self->csi, request, &temp);
+            error = omv_csi_ioctl(self->csi, request, &arg);
             if (error == 0) {
-                ret_obj = mp_obj_new_float(temp);
+                ret_obj = mp_obj_new_float(arg.boson.fvalue);
             }
             break;
         }
@@ -1295,16 +1295,15 @@ static mp_obj_t py_csi_ioctl(size_t n_args, const mp_obj_t *args) {
         case OMV_CSI_IOCTL_BOSON_GET_FFC_FRAME_THRESHOLD:
         case OMV_CSI_IOCTL_BOSON_GET_FFC_NUM_FRAMES:
         case OMV_CSI_IOCTL_BOSON_GET_SPOT_METER_MODE: {
-            int value;
-            error = omv_csi_ioctl(self->csi, request, &value);
+            error = omv_csi_ioctl(self->csi, request, &arg);
             if (error == 0) {
-                ret_obj = mp_obj_new_int(value);
+                ret_obj = mp_obj_new_int(arg.boson.ivalue);
             }
             break;
         }
 
         case OMV_CSI_IOCTL_BOSON_RUN_FFC: {
-            error = omv_csi_ioctl(self->csi, request);
+            error = omv_csi_ioctl(self->csi, request, &arg);
             break;
         }
 
@@ -1312,10 +1311,9 @@ static mp_obj_t py_csi_ioctl(size_t n_args, const mp_obj_t *args) {
         case OMV_CSI_IOCTL_BOSON_GET_TLINEAR_ENABLE:
         case OMV_CSI_IOCTL_BOSON_GET_TEMP_STABLE_ENABLE:
         case OMV_CSI_IOCTL_BOSON_GET_SPOT_METER_ENABLE: {
-            int enabled;
-            error = omv_csi_ioctl(self->csi, request, &enabled);
+            error = omv_csi_ioctl(self->csi, request, &arg);
             if (error == 0) {
-                ret_obj = mp_obj_new_bool(enabled);
+                ret_obj = mp_obj_new_bool(arg.boson.ivalue);
             }
             break;
         }
@@ -1330,7 +1328,8 @@ static mp_obj_t py_csi_ioctl(size_t n_args, const mp_obj_t *args) {
         case OMV_CSI_IOCTL_BOSON_SET_SPOT_METER_ENABLE:
         case OMV_CSI_IOCTL_BOSON_SET_SPOT_METER_MODE: {
             if (n_args == 1) {
-                error = omv_csi_ioctl(self->csi, request, mp_obj_get_int(args[0]));
+                arg.boson.ivalue = mp_obj_get_int(args[0]);
+                error = omv_csi_ioctl(self->csi, request, &arg);
             }
             break;
         }
@@ -1338,17 +1337,17 @@ static mp_obj_t py_csi_ioctl(size_t n_args, const mp_obj_t *args) {
         case OMV_CSI_IOCTL_BOSON_SET_EMISSIVITY:
         case OMV_CSI_IOCTL_BOSON_SET_TEMP_BACKGROUND: {
             if (n_args == 1) {
-                error = omv_csi_ioctl(self->csi, request, mp_obj_get_float_to_d(args[0]));
+                arg.boson.fvalue = mp_obj_get_float_to_f(args[0]);
+                error = omv_csi_ioctl(self->csi, request, &arg);
             }
             break;
         }
 
         case OMV_CSI_IOCTL_BOSON_GET_EMISSIVITY:
         case OMV_CSI_IOCTL_BOSON_GET_TEMP_BACKGROUND: {
-            float value;
-            error = omv_csi_ioctl(self->csi, request, &value);
+            error = omv_csi_ioctl(self->csi, request, &arg);
             if (error == 0) {
-                ret_obj = mp_obj_new_float(value);
+                ret_obj = mp_obj_new_float(arg.boson.fvalue);
             }
             break;
         }
@@ -1364,79 +1363,74 @@ static mp_obj_t py_csi_ioctl(size_t n_args, const mp_obj_t *args) {
                                  MP_ERROR_TEXT("Expected an (x, y, w, h) tuple/list."));
                 }
 
-                error = omv_csi_ioctl(self->csi, request,
-                                      mp_obj_get_int(array[0]), mp_obj_get_int(array[1]),
-                                      mp_obj_get_int(array[2]), mp_obj_get_int(array[3]));
+                arg.boson.roi.x = mp_obj_get_int(array[0]);
+                arg.boson.roi.y = mp_obj_get_int(array[1]);
+                arg.boson.roi.w = mp_obj_get_int(array[2]);
+                arg.boson.roi.h = mp_obj_get_int(array[3]);
+                error = omv_csi_ioctl(self->csi, request, &arg);
             }
             break;
         }
 
         case OMV_CSI_IOCTL_BOSON_GET_SPOT_METER_ROI: {
-            int x, y, w, h;
-            error = omv_csi_ioctl(self->csi, request, &x, &y, &w, &h);
+            error = omv_csi_ioctl(self->csi, request, &arg);
             if (error == 0) {
-                ret_obj = mp_obj_new_tuple(4, (mp_obj_t []) {mp_obj_new_int(x),
-                                                             mp_obj_new_int(y),
-                                                             mp_obj_new_int(w),
-                                                             mp_obj_new_int(h)});
+                ret_obj = mp_obj_new_tuple(4, (mp_obj_t []) {mp_obj_new_int(arg.boson.roi.x),
+                                                             mp_obj_new_int(arg.boson.roi.y),
+                                                             mp_obj_new_int(arg.boson.roi.w),
+                                                             mp_obj_new_int(arg.boson.roi.h)});
             }
             break;
         }
 
         case OMV_CSI_IOCTL_BOSON_GET_SPOT_METER_ROI_MAX: {
-            int w, h;
-            error = omv_csi_ioctl(self->csi, request, &w, &h);
+            error = omv_csi_ioctl(self->csi, request, &arg);
             if (error == 0) {
-                ret_obj = mp_obj_new_tuple(2, (mp_obj_t []) {mp_obj_new_int(w),
-                                                             mp_obj_new_int(h)});
+                ret_obj = mp_obj_new_tuple(2, (mp_obj_t []) {mp_obj_new_int(arg.boson.roi_max.w),
+                                                             mp_obj_new_int(arg.boson.roi_max.h)});
             }
             break;
         }
 
         case OMV_CSI_IOCTL_BOSON_GET_SPOT_METER_STATS: {
-            int mean, deviation, min_value, min_x, min_y, max_value, max_x, max_y;
-            error = omv_csi_ioctl(self->csi, request, &mean, &deviation,
-                                  &min_value, &min_x, &min_y,
-                                  &max_value, &max_x, &max_y);
+            error = omv_csi_ioctl(self->csi, request, &arg);
             if (error == 0) {
-                ret_obj = mp_obj_new_tuple(8, (mp_obj_t []) {mp_obj_new_int(mean),
-                                                             mp_obj_new_int(deviation),
-                                                             mp_obj_new_int(min_value),
-                                                             mp_obj_new_int(min_x),
-                                                             mp_obj_new_int(min_y),
-                                                             mp_obj_new_int(max_value),
-                                                             mp_obj_new_int(max_x),
-                                                             mp_obj_new_int(max_y)});
+                ret_obj = mp_obj_new_tuple(8, (mp_obj_t []) {mp_obj_new_int(arg.boson.stats.mean),
+                                                             mp_obj_new_int(arg.boson.stats.deviation),
+                                                             mp_obj_new_int(arg.boson.stats.min_value),
+                                                             mp_obj_new_int(arg.boson.stats.min_x),
+                                                             mp_obj_new_int(arg.boson.stats.min_y),
+                                                             mp_obj_new_int(arg.boson.stats.max_value),
+                                                             mp_obj_new_int(arg.boson.stats.max_x),
+                                                             mp_obj_new_int(arg.boson.stats.max_y)});
             }
             break;
         }
 
         case OMV_CSI_IOCTL_BOSON_GET_SPOT_METER_TEMP_STATS: {
-            float mean, deviation, min_value, max_value;
-            int min_x, min_y, max_x, max_y;
-            error = omv_csi_ioctl(self->csi, request, &mean, &deviation,
-                                  &min_value, &min_x, &min_y,
-                                  &max_value, &max_x, &max_y);
+            error = omv_csi_ioctl(self->csi, request, &arg);
             if (error == 0) {
-                ret_obj = mp_obj_new_tuple(8, (mp_obj_t []) {mp_obj_new_float(mean),
-                                                             mp_obj_new_float(deviation),
-                                                             mp_obj_new_float(min_value),
-                                                             mp_obj_new_int(min_x),
-                                                             mp_obj_new_int(min_y),
-                                                             mp_obj_new_float(max_value),
-                                                             mp_obj_new_int(max_x),
-                                                             mp_obj_new_int(max_y)});
+                ret_obj = mp_obj_new_tuple(8, (mp_obj_t []) {
+                    mp_obj_new_float(arg.boson.temp_stats.mean),
+                    mp_obj_new_float(arg.boson.temp_stats.deviation),
+                    mp_obj_new_float(arg.boson.temp_stats.min_value),
+                    mp_obj_new_int(arg.boson.temp_stats.min_x),
+                    mp_obj_new_int(arg.boson.temp_stats.min_y),
+                    mp_obj_new_float(arg.boson.temp_stats.max_value),
+                    mp_obj_new_int(arg.boson.temp_stats.max_x),
+                    mp_obj_new_int(arg.boson.temp_stats.max_y)
+                });
             }
             break;
         }
 
         case OMV_CSI_IOCTL_BOSON_GET_TEMP_FROM_COUNTS: {
             if (n_args == 2) {
-                float temp;
-                error = omv_csi_ioctl(self->csi, request, mp_obj_get_int(args[0]),
-                                      mp_obj_get_int(args[1]), &temp);
+                arg.boson.temp_from_counts.rbfo_type = mp_obj_get_int(args[0]);
+                arg.boson.temp_from_counts.counts = mp_obj_get_int(args[1]);
+                error = omv_csi_ioctl(self->csi, request, &arg);
                 if (error == 0) {
-                    ret_obj = mp_obj_new_float(temp);
+                    ret_obj = mp_obj_new_float(arg.boson.temp_from_counts.temp);
                 }
             }
             break;
@@ -1444,14 +1438,14 @@ static mp_obj_t py_csi_ioctl(size_t n_args, const mp_obj_t *args) {
 
         case OMV_CSI_IOCTL_BOSON_GET_RBFO: {
             if (n_args == 2) {
-                float r, b, f, o;
-                error = omv_csi_ioctl(self->csi, request, mp_obj_get_int(args[0]),
-                                      mp_obj_get_int(args[1]), &r, &b, &f, &o);
+                arg.boson.rbfo.rbfo_type = mp_obj_get_int(args[0]);
+                arg.boson.rbfo.low_gain = mp_obj_get_int(args[1]);
+                error = omv_csi_ioctl(self->csi, request, &arg);
                 if (error == 0) {
-                    ret_obj = mp_obj_new_tuple(4, (mp_obj_t []) {mp_obj_new_float(r),
-                                                                 mp_obj_new_float(b),
-                                                                 mp_obj_new_float(f),
-                                                                 mp_obj_new_float(o)});
+                    ret_obj = mp_obj_new_tuple(4, (mp_obj_t []) {mp_obj_new_float(arg.boson.rbfo.r),
+                                                                 mp_obj_new_float(arg.boson.rbfo.b),
+                                                                 mp_obj_new_float(arg.boson.rbfo.f),
+                                                                 mp_obj_new_float(arg.boson.rbfo.o)});
                 }
             }
             break;

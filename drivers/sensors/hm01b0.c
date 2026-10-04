@@ -34,6 +34,7 @@
 #include "omv_i2c.h"
 #include "omv_csi.h"
 #include "hm01b0.h"
+#include "himax.h"
 
 #define HIMAX_BOOT_RETRY            (10)
 #define HIMAX_LINE_LEN_PCK_FULL     0x178
@@ -477,28 +478,29 @@ static int set_vflip(omv_csi_t *csi, int enable) {
     return ret;
 }
 
-static int ioctl(omv_csi_t *csi, int request, va_list ap) {
+static int ioctl(omv_csi_t *csi, int request, void *arg) {
     int ret = 0;
+    himax_ioctl_arg_t *a = arg;
 
     switch (request) {
         case OMV_CSI_IOCTL_HIMAX_OSC_ENABLE: {
-            uint32_t enable = va_arg(ap, uint32_t);
+            uint32_t enable = a->ivalue;
             ret = omv_i2c_write_reg(csi->i2c, csi->slv_addr, ANA_Register_17, 2, enable ? 1:0, 1);
             mp_hal_delay_ms(100);
             break;
         }
 
         case OMV_CSI_IOCTL_HIMAX_MD_ENABLE: {
-            uint32_t enable = va_arg(ap, uint32_t);
+            uint32_t enable = a->ivalue;
             ret = omv_i2c_write_reg(csi->i2c, csi->slv_addr, MD_CTRL, 2, enable ? 1:0, 1);
             break;
         }
 
         case OMV_CSI_IOCTL_HIMAX_MD_WINDOW: {
-            uint32_t x1 = va_arg(ap, uint32_t);
-            uint32_t y1 = va_arg(ap, uint32_t);
-            uint32_t x2 = va_arg(ap, uint32_t) + x1;
-            uint32_t y2 = va_arg(ap, uint32_t) + y1;
+            uint32_t x1 = a->window.x;
+            uint32_t y1 = a->window.y;
+            uint32_t x2 = a->window.w + x1;
+            uint32_t y2 = a->window.h + y1;
             ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, MD_LROI_X_START_H, 2, (x1 >> 8), 1);
             ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, MD_LROI_X_START_L, 2, (x1 & 0xff), 1);
             ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, MD_LROI_Y_START_H, 2, (y1 >> 8), 1);
@@ -511,7 +513,7 @@ static int ioctl(omv_csi_t *csi, int request, va_list ap) {
         }
 
         case OMV_CSI_IOCTL_HIMAX_MD_THRESHOLD: {
-            uint32_t threshold = va_arg(ap, uint32_t);
+            uint32_t threshold = a->ivalue;
             ret = omv_i2c_write_reg(csi->i2c, csi->slv_addr, MD_THL, 2, threshold, 1);
             break;
         }

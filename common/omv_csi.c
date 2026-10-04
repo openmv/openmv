@@ -1420,7 +1420,7 @@ __weak int omv_csi_set_lens_correction(omv_csi_t *csi, int enable, int radi, int
     return 0;
 }
 
-__weak int omv_csi_ioctl(omv_csi_t *csi, int request, ... /* arg */) {
+__weak int omv_csi_ioctl(omv_csi_t *csi, int request, void *arg) {
     // Disable any ongoing frame capture.
     if (request & OMV_CSI_FLAG_IOCTL_ABORT) {
         omv_csi_abort(csi, true, false);
@@ -1431,11 +1431,8 @@ __weak int omv_csi_ioctl(omv_csi_t *csi, int request, ... /* arg */) {
         return OMV_CSI_ERROR_CTL_UNSUPPORTED;
     }
 
-    va_list ap;
-    va_start(ap, request);
     // Call the sensor specific function.
-    int ret = csi->ioctl(csi, request, ap);
-    va_end(ap);
+    int ret = csi->ioctl(csi, request, arg);
 
     return ((ret < 0) ? OMV_CSI_ERROR_CTL_FAILED : ret);
 }

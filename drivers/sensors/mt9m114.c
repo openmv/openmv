@@ -936,17 +936,18 @@ static int set_special_effect(omv_csi_t *csi, omv_csi_sde_t sde) {
     return refresh(csi);
 }
 
-static int ioctl(omv_csi_t *csi, int request, va_list ap) {
+static int ioctl(omv_csi_t *csi, int request, void *arg) {
+    omv_csi_ioctl_arg_t *a = arg;
     int ret = 0;
 
     switch (request) {
         case OMV_CSI_IOCTL_SET_READOUT_WINDOW: {
-            int tmp_readout_x = va_arg(ap, int);
-            int tmp_readout_y = va_arg(ap, int);
-            int tmp_readout_w = IM_CLAMP(va_arg(ap, int),
+            int tmp_readout_x = a->window.x;
+            int tmp_readout_y = a->window.y;
+            int tmp_readout_w = IM_CLAMP(a->window.w,
                                          csi->resolution[csi->framesize][0],
                                          ACTIVE_SENSOR_WIDTH);
-            int tmp_readout_h = IM_CLAMP(va_arg(ap, int),
+            int tmp_readout_h = IM_CLAMP(a->window.h,
                                          csi->resolution[csi->framesize][1],
                                          ACTIVE_SENSOR_HEIGHT);
             int readout_x_max = (ACTIVE_SENSOR_WIDTH - tmp_readout_w) / 2;
@@ -965,10 +966,10 @@ static int ioctl(omv_csi_t *csi, int request, va_list ap) {
             break;
         }
         case OMV_CSI_IOCTL_GET_READOUT_WINDOW: {
-            *va_arg(ap, int *) = readout_x;
-            *va_arg(ap, int *) = readout_y;
-            *va_arg(ap, int *) = readout_w;
-            *va_arg(ap, int *) = readout_h;
+            a->window.x = readout_x;
+            a->window.y = readout_y;
+            a->window.w = readout_w;
+            a->window.h = readout_h;
             break;
         }
         default: {

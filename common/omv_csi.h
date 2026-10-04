@@ -32,7 +32,7 @@
  */
 #ifndef __OMV_CSI_H__
 #define __OMV_CSI_H__
-#include <stdarg.h>
+#include <stdint.h>
 #include "omv_i2c.h"
 #include "imlib.h"
 #include "framebuffer.h"
@@ -279,6 +279,25 @@ typedef enum {
     OMV_CSI_IOCTL_UPDATE_AGC_AEC                  = 0x7F
 } omv_csi_ioctl_t;
 
+typedef struct {
+    int32_t x;
+    int32_t y;
+    int32_t w;
+    int32_t h;
+} omv_csi_window_t;
+
+// Generic argument for the ioctls.
+typedef union {
+    int32_t ivalue;
+    omv_csi_window_t window;
+    struct {
+        uint32_t r;
+        uint32_t gb;
+        uint32_t gr;
+        uint32_t b;
+    } rgb_stats;
+} omv_csi_ioctl_arg_t;
+
 typedef enum {
     OMV_CSI_ERROR_NO_ERROR              =  0,
     OMV_CSI_ERROR_CTL_FAILED            = -1,
@@ -448,7 +467,7 @@ typedef struct _omv_csi {
     int (*set_vflip) (omv_csi_t *csi, int enable);
     int (*set_special_effect) (omv_csi_t *csi, omv_csi_sde_t sde);
     int (*set_lens_correction) (omv_csi_t *csi, int enable, int radi, int coef);
-    int (*ioctl) (omv_csi_t *csi, int request, va_list ap);
+    int (*ioctl) (omv_csi_t *csi, int request, void *arg);
     int (*config) (omv_csi_t *csi, omv_csi_config_t config);
     int (*abort) (omv_csi_t *csi, bool fifo_flush, bool in_irq);
     int (*snapshot) (omv_csi_t *csi, image_t *image, uint32_t flags);
@@ -623,7 +642,7 @@ int omv_csi_set_special_effect(omv_csi_t *csi, omv_csi_sde_t sde);
 int omv_csi_set_lens_correction(omv_csi_t *csi, int enable, int radi, int coef);
 
 // IOCTL function
-int omv_csi_ioctl(omv_csi_t *csi, int request, ...);
+int omv_csi_ioctl(omv_csi_t *csi, int request, void *arg);
 
 // Set vsync callback function.
 int omv_csi_set_vsync_callback(omv_csi_t *csi, omv_csi_cb_t cb);

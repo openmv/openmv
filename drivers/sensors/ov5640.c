@@ -1335,18 +1335,19 @@ static int set_lens_correction(omv_csi_t *csi, int enable, int radi, int coef) {
     return omv_i2c_write_reg(csi->i2c, csi->slv_addr, ISP_CONTROL_00, 2, (reg & 0x7F) | (enable ? 0x80 : 0x00), 1) | ret;
 }
 
-static int ioctl(omv_csi_t *csi, int request, va_list ap) {
+static int ioctl(omv_csi_t *csi, int request, void *arg) {
     int ret = 0;
     uint8_t reg;
+    omv_csi_ioctl_arg_t *a = arg;
 
     switch (request) {
         case OMV_CSI_IOCTL_SET_READOUT_WINDOW: {
-            int tmp_readout_x = va_arg(ap, int);
-            int tmp_readout_y = va_arg(ap, int);
-            int tmp_readout_w = IM_CLAMP(va_arg(ap, int),
+            int tmp_readout_x = a->window.x;
+            int tmp_readout_y = a->window.y;
+            int tmp_readout_w = IM_CLAMP(a->window.w,
                                          csi->resolution[csi->framesize][0],
                                          ACTIVE_SENSOR_WIDTH);
-            int tmp_readout_h = IM_CLAMP(va_arg(ap, int),
+            int tmp_readout_h = IM_CLAMP(a->window.h,
                                          csi->resolution[csi->framesize][1],
                                          ACTIVE_SENSOR_HEIGHT);
             int readout_x_max = (ACTIVE_SENSOR_WIDTH - tmp_readout_w) / 2;
@@ -1365,10 +1366,10 @@ static int ioctl(omv_csi_t *csi, int request, va_list ap) {
             break;
         }
         case OMV_CSI_IOCTL_GET_READOUT_WINDOW: {
-            *va_arg(ap, int *) = readout_x;
-            *va_arg(ap, int *) = readout_y;
-            *va_arg(ap, int *) = readout_w;
-            *va_arg(ap, int *) = readout_h;
+            a->window.x = readout_x;
+            a->window.y = readout_y;
+            a->window.w = readout_w;
+            a->window.h = readout_h;
             break;
         }
     #if (OMV_OV5640_AF_ENABLE == 1)
@@ -1385,7 +1386,8 @@ static int ioctl(omv_csi_t *csi, int request, va_list ap) {
             break;
         }
         case OMV_CSI_IOCTL_WAIT_ON_AUTO_FOCUS: {
-            mp_uint_t start_tick = mp_hal_ticks_ms(), delay_ms = va_arg(ap, uint32_t);
+            mp_uint_t delay_ms = (a->ivalue < 0) ? 5000 : a->ivalue;
+            mp_uint_t start_tick = mp_hal_ticks_ms();
             for (;;) {
                 ret = omv_i2c_read_reg(csi->i2c, csi->slv_addr, AF_CMD_ACK, 2, &reg, 1);
                 if ((ret < 0) || (!reg)) {
@@ -1400,17 +1402,16 @@ static int ioctl(omv_csi_t *csi, int request, va_list ap) {
         }
     #endif
         case OMV_CSI_IOCTL_SET_NIGHT_MODE: {
-            int enable = va_arg(ap, int);
+            int enable = a->ivalue;
             ret = omv_i2c_read_reg(csi->i2c, csi->slv_addr, AEC_CTRL_00, 2, &reg, 1);
             ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, AEC_CTRL_00, 2,
                                      (reg & 0xFB) | ((enable != 0) << 2), 1);
             break;
         }
         case OMV_CSI_IOCTL_GET_NIGHT_MODE: {
-            int *enable = va_arg(ap, int *);
             ret = omv_i2c_read_reg(csi->i2c, csi->slv_addr, AEC_CTRL_00, 2, &reg, 1);
             if (ret >= 0) {
-                *enable = reg & 0x4;
+                a->ivalue = reg & 0x4;
             }
             break;
         }
