@@ -155,6 +155,14 @@ MPY_MKARGS += MICROPY_PY_NETWORK_CYW43=1
 endif
 
 # +-----------------------------------------------------+
+# | Morse Micro 802.11ah driver and network glue.       |
+# +-----------------------------------------------------+
+ifeq ($(MICROPY_PY_NETWORK_HALOW), 1)
+MPY_CFLAGS += -DMICROPY_PY_NETWORK_HALOW=1
+MPY_MKARGS += MICROPY_PY_NETWORK_HALOW=1
+endif
+
+# +-----------------------------------------------------+
 # | NimBLE Bluetooth stack and glue code.               |
 # +-----------------------------------------------------+
 ifeq ($(MICROPY_BLUETOOTH_NIMBLE),1)
