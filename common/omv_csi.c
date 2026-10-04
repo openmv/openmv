@@ -1422,7 +1422,7 @@ __weak int omv_csi_set_lens_correction(omv_csi_t *csi, int enable, int radi, int
 
 __weak int omv_csi_ioctl(omv_csi_t *csi, int request, void *arg) {
     // Disable any ongoing frame capture.
-    if (request & OMV_CSI_FLAG_IOCTL_ABORT) {
+    if (request & OMV_CSI_IOCTL_FLAG_ABORT) {
         omv_csi_abort(csi, true, false);
     }
 
