@@ -51,6 +51,10 @@
 #define DUMMY_HEIGHT_BUFFER     8
 
 #define HSYNC_TIME              252
+#define TIMING_HTS_MAX          0x1FFF    // TIMING_HTS_H is 5 bits wide.
+// JPEG encoder throughput budget, see calculate_hts().
+#define JPEG_BITS_PER_PIXEL_X10 24        // 2.4 bits/pixel covers QS 2 on a full-gain noise image.
+#define JPEG_BITS_PER_CYCLE_X10 11        // measured encoder throughput per SCLK cycle.
 #define VYSNC_TIME              24
 
 static int16_t readout_x = 0;
@@ -60,6 +64,7 @@ static uint16_t readout_w = ACTIVE_SENSOR_WIDTH;
 static uint16_t readout_h = ACTIVE_SENSOR_HEIGHT;
 
 static uint16_t hts_target = 0;
+static uint16_t vts_target = 0;
 
 static const uint8_t default_regs[][3] = {
 
@@ -665,6 +670,7 @@ static int reset(omv_csi_t *csi) {
     readout_h = ACTIVE_SENSOR_HEIGHT;
 
     hts_target = 0;
+    vts_target = 0;
 
     // Reset all registers
     ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, SCCB_SYSTEM_CTRL_1, 2, 0x11, 1);
@@ -743,7 +749,7 @@ static int write_reg(omv_csi_t *csi, uint16_t reg_addr, uint16_t reg_data) {
 // increasing HTS so that DCMI_DMAConvCpltUser() can keep up with the data rate.
 //
 // WARNING! IF YOU CHANGE ANYTHING HERE RETEST WITH **ALL** RESOLUTIONS FOR THE AFFECTED MODE!
-static int calculate_hts(omv_csi_t *csi, uint16_t width) {
+static int calculate_hts(omv_csi_t *csi, uint16_t width, uint16_t height) {
     uint16_t hts = hts_target;
 
     if ((csi->pixformat == PIXFORMAT_GRAYSCALE) || (csi->pixformat == PIXFORMAT_BAYER) ||
@@ -761,6 +767,17 @@ static int calculate_hts(omv_csi_t *csi, uint16_t width) {
         hts += 160;               // Fix image quality at low resolutions.
 
     }
+
+    // The JPEG encoder sustains about 1.1 bits of output per SCLK cycle. Above that it aborts
+    // the frame and the camera outputs an empty or headerless JPEG (measured on an H7 Plus at
+    // 2592x1944: streams past ~1.2 bits/pixel fail at 14 fps and pass at 7 fps). Give every
+    // frame enough cycles for JPEG_BITS_PER_PIXEL of output. Only large frames are slowed down.
+    if ((csi->pixformat == PIXFORMAT_JPEG) && vts_target) {
+        uint32_t cycles = (((uint32_t) width) * height * JPEG_BITS_PER_PIXEL_X10) / JPEG_BITS_PER_CYCLE_X10;
+        uint32_t hts_min = IM_MIN(cycles / vts_target, (uint32_t) (TIMING_HTS_MAX - HSYNC_TIME));
+        hts = IM_MAX(hts, hts_min);
+    }
+
     return IM_MAX(hts + HSYNC_TIME, (SENSOR_WIDTH + HSYNC_TIME) / 2); // Fix to prevent crashing.
 }
 
@@ -838,7 +855,8 @@ static int set_pixformat(omv_csi_t *csi, pixformat_t pixformat) {
                           (reg & 0xD7) | ((pixformat == PIXFORMAT_JPEG) ? 0x28 : 0x00), 1);
 
     if (hts_target) {
-        uint16_t sensor_hts = calculate_hts(csi, csi->resolution[csi->framesize][0]);
+        uint16_t sensor_hts = calculate_hts(csi, csi->resolution[csi->framesize][0],
+                                            csi->resolution[csi->framesize][1]);
 
         ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, TIMING_HTS_H, 2, sensor_hts >> 8, 1);
         ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, TIMING_HTS_L, 2, sensor_hts, 1);
@@ -930,9 +948,10 @@ static int set_framesize(omv_csi_t *csi, omv_csi_framesize_t framesize) {
     // Step 4: Compute total frame time.
 
     hts_target = sensor_w / sensor_div;
+    vts_target = calculate_vts(csi, sensor_h / sensor_div);
 
-    uint16_t sensor_hts = calculate_hts(csi, w);
-    uint16_t sensor_vts = calculate_vts(csi, sensor_h / sensor_div);
+    uint16_t sensor_hts = calculate_hts(csi, w, h);
+    uint16_t sensor_vts = vts_target;
 
     uint16_t sensor_x_inc = (((sensor_div * 2) - 1) << 4) | (1 << 0); // odd[7:4]/even[3:0] pixel inc on the bayer pattern
     uint16_t sensor_y_inc = (((sensor_div * 2) - 1) << 4) | (1 << 0); // odd[7:4]/even[3:0] pixel inc on the bayer pattern
@@ -1065,8 +1084,11 @@ static int set_gainceiling(omv_csi_t *csi, omv_csi_gainceiling_t gainceiling) {
 
 static int set_quality(omv_csi_t *csi, int qs) {
     uint8_t reg;
+    // QS 0 and 1 never produce a frame at any line rate, and QS 2 aborts frames of very
+    // noisy images at 2592x1944, so quality >= 95 maps to QS 3.
+    qs = IM_MAX(qs >> 2, 3);
     int ret = omv_i2c_read_reg(csi->i2c, csi->slv_addr, JPEG_CTRL07, 2, &reg, 1);
-    ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, JPEG_CTRL07, 2, (reg & 0xC0) | (qs >> 2), 1);
+    ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, JPEG_CTRL07, 2, (reg & 0xC0) | qs, 1);
 
     return ret;
 }
