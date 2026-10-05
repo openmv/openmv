@@ -895,7 +895,14 @@ static int ioctl(omv_csi_t *csi, int request, va_list ap) {
         }
         case OMV_CSI_IOCTL_SET_TRIGGERED_MODE: {
             int enable = va_arg(ap, int);
+            pag7936_state_t *state = csi->priv;
             ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, SENSOR_OPMODE, 2, SENSOR_OPMODE_SUSPEND, 1);
+
+            // The suspend command takes effect at the next frame boundary, and the
+            // trigger configuration below is ignored unless the sensor has actually
+            // suspended -- wait out the in-flight frame (per the datasheet's state
+            // transition flow, which requires a one-frame delay after suspend).
+            mp_hal_delay_ms((state->framerate > 0) ? ((2000 / state->framerate) + 1) : 100);
 
             if (enable) {
                 ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, SENSOR_TG_EN, 2, 0, 1);
