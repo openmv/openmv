@@ -13,7 +13,7 @@ from machine import CAN
 # NOTE: Set to False on receiving node.
 TRANSMITTER = True
 
-# The Portenta H7 has one CAN controller, CAN(1).
+# The OpenMV AE3 has one CAN controller, CAN(1), on P4 (TX) and P5 (RX).
 can = CAN(1, 125_000)
 
 if TRANSMITTER:
