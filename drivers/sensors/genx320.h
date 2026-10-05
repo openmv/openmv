@@ -54,4 +54,37 @@ typedef enum {
     OMV_CSI_GENX320_STC_TRAIL,
 } genx320_stc_modes_t;
 
+// Argument for the OMV_CSI_IOCTL_GENX320_* requests.
+typedef union {
+    int32_t ivalue;                     // "i"
+    struct {
+        int32_t name;
+        int32_t value;
+    } bias;                             // "ii"
+    struct {
+        int32_t mode;
+        int32_t freq_min;
+        int32_t freq_max;
+    } afk;                              // "iii"
+    struct {
+        int32_t mode;
+        int32_t threshold1;             // STC_ONLY: STC, TRAIL_ONLY: trail, STC_TRAIL: STC
+        int32_t threshold2;             // STC_TRAIL: trail
+    } stc;                              // "iii"
+    struct {
+        int32_t mode;
+        int32_t ndarray_size;           // -1 when not passed
+    } mode;                             // "ii"
+    struct {
+        void *events;
+        int32_t count;
+    } events;                           // custom in, "_i" out
+    struct {
+        uint32_t event_count;
+        float sigma;
+        int32_t disabled;
+    } calib;                            // "if" in, "__i" out
+    image_t image;                      // custom out
+} genx320_ioctl_arg_t;
+
 #endif // __GENX320_H__
