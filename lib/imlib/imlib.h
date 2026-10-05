@@ -41,6 +41,7 @@
 #include "fmath.h"
 #include "collections.h"
 #include "imlib_config.h"
+#include "imlib_config_check.h"
 #include "board_config.h"
 #include "omv_common.h"
 #include "omv_cycles.h"
