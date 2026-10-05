@@ -182,5 +182,12 @@ static inline void framebuffer_set_preview(framebuffer_t *fb, uint16_t width, ui
 
 // Compress the source image into the streaming buffer if it is mutable
 // and raw preview is disabled, or copy it directly if already compressed.
-void framebuffer_update_preview(image_t *src);
+// Updates the streaming preview buffer with the image; returns true if the
+// frame was written to the streaming buffer (false if it was busy/disabled).
+bool framebuffer_update_preview(image_t *src);
+
+// Like framebuffer_update_preview(), but blocks until the frame has been
+// picked up by the IDE, or the timeout (in milliseconds) expires.  Returns
+// true if the frame was picked up.
+bool framebuffer_update_preview_blocking(image_t *src, uint32_t timeout_ms);
 #endif /* __FRAMEBUFFER_H__ */

@@ -184,14 +184,27 @@ static mp_obj_t py_csi_sleep(mp_obj_t self_in, mp_obj_t enable) {
 }
 static MP_DEFINE_CONST_FUN_OBJ_2(py_csi_sleep_obj, py_csi_sleep);
 
-static mp_obj_t py_csi_flush(mp_obj_t self_in) {
-    py_csi_obj_t *self = MP_OBJ_TO_PTR(self_in);
+static mp_obj_t py_csi_flush(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
+    enum { ARG_timeout };
+    static const mp_arg_t allowed_args[] = {
+        { MP_QSTR_timeout, MP_ARG_INT, {.u_int = 1000} },
+    };
+
+    py_csi_obj_t *self = MP_OBJ_TO_PTR(pos_args[0]);
+    mp_arg_val_t args[MP_ARRAY_SIZE(allowed_args)];
+    mp_arg_parse_all(n_args - 1, pos_args + 1, kw_args, MP_ARRAY_SIZE(allowed_args), allowed_args, args);
+
     image_t tmp;
     framebuffer_to_image(self->csi->fb, &tmp);
-    framebuffer_update_preview(&tmp);
+    // Block until the IDE picks the frame up, or the timeout (in ms) expires.
+    // Pass timeout=0 for the old non-blocking behavior.
+    framebuffer_update_preview_blocking(&tmp, IM_MAX(args[ARG_timeout].u_int, 0));
+
+    // A manual flush supersedes any pending automatic flush of the frame buffer.
+    self->csi->fb->pending = false;
     return mp_const_none;
 }
-static MP_DEFINE_CONST_FUN_OBJ_1(py_csi_flush_obj, py_csi_flush);
+static MP_DEFINE_CONST_FUN_OBJ_KW(py_csi_flush_obj, 1, py_csi_flush);
 
 static mp_obj_t py_csi_snapshot(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
     enum { ARG_time, ARG_frames, ARG_blocking, ARG_image };
