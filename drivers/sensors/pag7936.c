@@ -185,6 +185,8 @@
 #define PAG7936_PARALLEL_VGA_FPS_MAX    (120)
 #define PAG7936_PARALLEL_HD_FPS_MAX     (60)
 
+#define PAG7936_RESET_DELAY_MS          (20)
+
 typedef struct {
     bool gain_auto;
     bool expo_auto;
@@ -556,6 +558,14 @@ static int reset(omv_csi_t *csi) {
     state->expo_auto = true;
     state->framerate = state->hd_fps_max;
     csi->gainceiling = OMV_CSI_GAINCEILING_16X;
+
+    // The sensor needs at least 20ms after RSTN is released before its first
+    // I2C command. Writes that land earlier are ACKed but not all applied.
+    uint32_t ticks_diff = mp_hal_ticks_ms() - csi->reset_time_ms;
+    if (ticks_diff < PAG7936_RESET_DELAY_MS) {
+        mp_hal_delay_ms(PAG7936_RESET_DELAY_MS - ticks_diff);
+    }
+
     // Write interface registers
     for (int i = 0; state->if_regs[i][0] && ret == 0; i++) {
         ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, state->if_regs[i][0], 2, state->if_regs[i][1], 1);
