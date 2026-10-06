@@ -71,6 +71,9 @@
                          CAM_INTR_OUTFIFO_OVERRUN | \
                          CAM_INTR_BRESP_ERR)
 
+// Longest wait for a capture in progress to finish before the CPI is reset.
+#define OMV_CSI_ABORT_TIMEOUT_MS    (200)
+
 static uint32_t omv_csi_get_fb_offset(omv_csi_t *csi);
 
 void CAM_IRQHandler(void) {
@@ -88,32 +91,34 @@ void CAM_IRQHandler(void) {
         mask |= CAM_INTR_HSYNC;
     }
 
-    if (status & CAM_INTR_INFIFO_OVERRUN) {
-        mask |= CAM_INTR_INFIFO_OVERRUN;
-        omv_csi_abort(csi, true, true);
-    }
-
-    if (status & CAM_INTR_OUTFIFO_OVERRUN) {
-        mask |= CAM_INTR_OUTFIFO_OVERRUN;
-        omv_csi_abort(csi, true, true);
-    }
-
-    if (status & CAM_INTR_BRESP_ERR) {
-        mask |= CAM_INTR_BRESP_ERR;
-        omv_csi_abort(csi, true, true);
+    // The capture can't be stopped mid-frame (see alif_csi_abort), so mark
+    // the frame invalid and drop it at STOP.
+    if (status & CPI_ERROR_FLAGS) {
+        mask |= (status & CPI_ERROR_FLAGS);
+        vbuffer_t *buffer = framebuffer_acquire(csi->fb, FB_FLAG_FREE | FB_FLAG_PEEK);
+        if (buffer != NULL) {
+            buffer->flags |= VB_FLAG_INVALID;
+        }
     }
 
     if (status & CAM_INTR_STOP) {
         mask |= CAM_INTR_STOP;
         cpi->CAM_CTRL = 0;
 
-        if (!(status & CPI_ERROR_FLAGS)) {
+        // Get the buffer that was just captured.
+        vbuffer_t *buffer = framebuffer_acquire(csi->fb, FB_FLAG_FREE | FB_FLAG_PEEK);
+        bool frame_ok = (buffer != NULL) && !(buffer->flags & VB_FLAG_INVALID);
+
+        if (frame_ok) {
             // Release the buffer from free queue -> used queue.
             framebuffer_release(csi->fb, FB_FLAG_FREE | FB_FLAG_CHECK_LAST);
+        } else if (buffer != NULL) {
+            // Drop the frame and reuse the buffer.
+            buffer->flags &= ~VB_FLAG_INVALID;
         }
 
         // Acquire a buffer from the free queue.
-        vbuffer_t *buffer = framebuffer_acquire(csi->fb, FB_FLAG_FREE | FB_FLAG_PEEK);
+        buffer = framebuffer_acquire(csi->fb, FB_FLAG_FREE | FB_FLAG_PEEK);
 
         if (buffer != NULL) {
             cpi->CAM_CTRL = 0;
@@ -123,7 +128,7 @@ void CAM_IRQHandler(void) {
             cpi->CAM_CTRL = (CAM_CTRL_SNAPSHOT | CAM_CTRL_START | CAM_CTRL_FIFO_CLK_SEL);
         }
 
-        if (csi->frame_cb.fun && !(status & CPI_ERROR_FLAGS)) {
+        if (csi->frame_cb.fun && frame_ok) {
             csi->frame_cb.fun(csi->frame_cb.arg);
         }
     }
@@ -186,12 +191,25 @@ int alif_csi_config(omv_csi_t *csi, omv_csi_config_t config) {
 int alif_csi_abort(omv_csi_t *csi, bool fifo_flush, bool in_irq) {
     CPI_Type *cpi = csi->base;
 
-    // Stop CPI
-    cpi->CAM_CTRL = 0;
-
-    // Disable IRQs.
+    // Disable IRQs first so the STOP handler can't restart the capture.
     NVIC_DisableIRQ(CAM_IRQ_IRQn);
     cpi_disable_interrupt(cpi, CPI_IRQ_FLAGS);
+
+    // The CPI always finishes the current frame, and writing CAM_CTRL while
+    // it's busy is undefined. Wait for the frame to end, then reset the CPI.
+    // In an IRQ, leave it to the next start or abort.
+    if (!in_irq) {
+        for (mp_uint_t start = mp_hal_ticks_ms(); cpi->CAM_CTRL & CAM_CTRL_BUSY; ) {
+            if ((mp_hal_ticks_ms() - start) > OMV_CSI_ABORT_TIMEOUT_MS) {
+                break;
+            }
+        }
+
+        cpi->CAM_CTRL = 0;
+        cpi->CAM_CTRL = CAM_CTRL_SW_RESET;
+        cpi->CAM_CTRL = 0;
+    }
+
     cpi_irq_handler_clear_intr_status(cpi, CPI_IRQ_FLAGS);
     return 0;
 }
@@ -252,6 +270,9 @@ int alif_csi_snapshot(omv_csi_t *csi, image_t *dst_image, uint32_t flags) {
         if ((!buffer) || (LocalToGlobal(buffer->data) & 0x7)) {
             return OMV_CSI_ERROR_FRAMEBUFFER_ERROR;
         }
+
+        // Clear an error left by an aborted capture.
+        buffer->flags &= ~VB_FLAG_INVALID;
 
         // Ensure that the transfer size is compatible with DMA restrictions.
         if ((!line_size_bytes) ||
