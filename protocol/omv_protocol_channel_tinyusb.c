@@ -145,6 +145,13 @@ void tud_cdc_line_state_cb(uint8_t instance, bool dtr, bool rts) {
 
     if (!usb_channel_active) {
         __mp_tud_cdc_line_state_cb(instance, dtr, rts);
+
+        // MicroPython delays this flush with SOF events, which overflow the
+        // event queue at high-speed, dropping transfer events. Flush now instead.
+        if (dtr) {
+            tud_sof_cb_enable(false);
+            tud_cdc_write_flush();
+        }
     }
 }
 
