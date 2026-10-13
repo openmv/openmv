@@ -125,6 +125,10 @@ void tud_cdc_rx_cb(uint8_t itf) {
 
 void tud_cdc_line_coding_cb(uint8_t itf, cdc_line_coding_t const *coding) {
     usb_channel_active = (coding->bit_rate == OMV_PROTOCOL_MAGIC_BAUDRATE);
+    if (usb_channel_active) {
+        // Drop REPL input received before the protocol started (e.g. tty echo).
+        stdin_ringbuf.iget = stdin_ringbuf.iput = 0;
+    }
 }
 
 void tud_cdc_line_state_cb(uint8_t instance, bool dtr, bool rts) {
