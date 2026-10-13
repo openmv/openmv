@@ -190,9 +190,11 @@ soft_reset:
     omv_protocol_init_default();
     #endif
 
-    // Run boot.py every reset and main.py on first soft-reset
-    if (pyexec_file_if_exists("boot.py") && first_soft_reset) {
+    // Run boot.py every reset and main.py on first soft-reset, followed by a soft-reset.
+    if (pyexec_file_if_exists("boot.py") && first_soft_reset &&
+        mp_import_stat("main.py") == MP_IMPORT_STAT_FILE) {
         pyexec_file_if_exists("main.py");
+        goto soft_reset_exit;
     }
 
     #if CORE_M55_HE
@@ -219,9 +221,7 @@ soft_reset:
         }
     }
 
-#if CORE_M55_HE
 soft_reset_exit:
-#endif
     mp_hal_set_interrupt_char(-1);
     mp_printf(MP_PYTHON_PRINTER, "MPY: soft reboot\n");
     omv_protocol_deinit();
