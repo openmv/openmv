@@ -108,6 +108,7 @@ MPY_CFLAGS += -DMICROPY_STREAMS_POSIX_API=1
 
 MPY_CFLAGS += -I$(MP_BOARD_CONFIG_DIR)
 MPY_CFLAGS += -I$(TOP_DIR)/$(MICROPY_DIR)/ports/stm32
+MPY_CFLAGS += -I$(TOP_DIR)/$(MICROPY_DIR)/ports/stm32/tinyusb_port
 MPY_CFLAGS += -I$(TOP_DIR)/$(MICROPY_DIR)/ports/stm32/usbdev/core/inc
 MPY_CFLAGS += -I$(TOP_DIR)/$(MICROPY_DIR)/ports/stm32/usbdev/class/inc
 
