@@ -447,9 +447,10 @@ static int set_vflip(omv_csi_t *csi, int enable) {
     return ret;
 }
 
-static int ioctl(omv_csi_t *csi, int request, va_list ap) {
+static int ioctl(omv_csi_t *csi, int request, void *arg) {
     int ret = 0;
     uint16_t chip_control;
+    omv_csi_ioctl_arg_t *a = arg;
 
     // The MT9V0XX does not have a hardware scaler so the readout w/h must be equal to the
     // framesize w/h.
@@ -472,8 +473,8 @@ static int ioctl(omv_csi_t *csi, int request, va_list ap) {
 
     switch (request) {
         case OMV_CSI_IOCTL_SET_READOUT_WINDOW: {
-            int tmp_readout_x = va_arg(ap, int);
-            int tmp_readout_y = va_arg(ap, int);
+            int tmp_readout_x = a->window.x;
+            int tmp_readout_y = a->window.y;
             int readout_x_max = (ACTIVE_SENSOR_WIDTH - tmp_readout_w) / 2;
             int readout_y_max = (ACTIVE_SENSOR_HEIGHT - tmp_readout_h) / 2;
             tmp_readout_x = IM_CLAMP(tmp_readout_x, -readout_x_max, readout_x_max);
@@ -488,14 +489,14 @@ static int ioctl(omv_csi_t *csi, int request, va_list ap) {
             break;
         }
         case OMV_CSI_IOCTL_GET_READOUT_WINDOW: {
-            *va_arg(ap, int *) = readout_x;
-            *va_arg(ap, int *) = readout_y;
-            *va_arg(ap, int *) = tmp_readout_w;
-            *va_arg(ap, int *) = tmp_readout_h;
+            a->window.x = readout_x;
+            a->window.y = readout_y;
+            a->window.w = tmp_readout_w;
+            a->window.h = tmp_readout_h;
             break;
         }
         case OMV_CSI_IOCTL_SET_TRIGGERED_MODE: {
-            int enable = va_arg(ap, int);
+            int enable = a->ivalue;
             ret = omv_i2c_read_reg(csi->i2c, csi->slv_addr, MT9V0XX_CHIP_CONTROL, 1, &chip_control, 2);
             ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, MT9V0XX_CHIP_CONTROL, 1,
                                      (chip_control & (~MT9V0XX_CHIP_CONTROL_MODE_MASK))
@@ -506,10 +507,9 @@ static int ioctl(omv_csi_t *csi, int request, va_list ap) {
             break;
         }
         case OMV_CSI_IOCTL_GET_TRIGGERED_MODE: {
-            int *enable = va_arg(ap, int *);
             ret = omv_i2c_read_reg(csi->i2c, csi->slv_addr, MT9V0XX_CHIP_CONTROL, 1, &chip_control, 2);
             if (ret >= 0) {
-                *enable = ((chip_control & MT9V0XX_CHIP_CONTROL_MODE_MASK) == MT9V0XX_CHIP_CONTROL_SNAP_MODE);
+                a->ivalue = ((chip_control & MT9V0XX_CHIP_CONTROL_MODE_MASK) == MT9V0XX_CHIP_CONTROL_SNAP_MODE);
             }
             break;
         }

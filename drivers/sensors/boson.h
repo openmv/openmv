@@ -63,4 +63,53 @@ typedef enum {
     OMV_CSI_BOSON_SPOT_METER_KELVIN,
 } boson_spot_meter_mode_t;
 
+// Argument for the OMV_CSI_IOCTL_BOSON_* requests.
+typedef union {
+    int32_t ivalue;                     // "i"
+    float fvalue;                       // "f"
+    omv_csi_window_t roi;               // unpack_window in, "iiii" out
+    struct {
+        uint32_t major;
+        uint32_t minor;
+        uint32_t patch;
+    } rev;                              // "iii"
+    struct {
+        int32_t w;
+        int32_t h;
+    } roi_max;                          // "ii"
+    struct {
+        int32_t mean;
+        int32_t deviation;
+        int32_t min_value;
+        int32_t min_x;
+        int32_t min_y;
+        int32_t max_value;
+        int32_t max_x;
+        int32_t max_y;
+    } stats;                            // "iiiiiiii"
+    struct {
+        float mean;
+        float deviation;
+        float min_value;
+        int32_t min_x;
+        int32_t min_y;
+        float max_value;
+        int32_t max_x;
+        int32_t max_y;
+    } temp_stats;                       // "fffiifii"
+    struct {
+        int32_t rbfo_type;
+        int32_t counts;
+        float temp;
+    } temp_from_counts;                 // "ii" in, "__f" out
+    struct {
+        int32_t rbfo_type;
+        int32_t low_gain;
+        float r;
+        float b;
+        float f;
+        float o;
+    } rbfo;                             // "ii" in, "__ffff" out
+} boson_ioctl_arg_t;
+
 #endif // __BOSON_H__

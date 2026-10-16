@@ -305,14 +305,15 @@ static int disable_hot_pixels(omv_csi_t *csi, uint8_t *histogram, float sigma) {
     return ret;
 }
 
-static int ioctl(omv_csi_t *csi, int request, va_list ap) {
-    genx_state_t *genx = csi->priv;
+static int ioctl(omv_csi_t *csi, int request, void *arg) {
     int ret = 0;
+    genx_state_t *genx = csi->priv;
+    genx320_ioctl_arg_t *a = arg;
 
     switch (request) {
         // Setting a preset of biases tuned for a particular application/condition
         case OMV_CSI_IOCTL_GENX320_SET_BIASES: {
-            int mode = va_arg(ap, int);
+            int mode = a->ivalue;
             switch (mode) {
                 case OMV_CSI_GENX320_BIASES_DEFAULT: {
                     // Set default biases V2.0.0
@@ -373,8 +374,8 @@ static int ioctl(omv_csi_t *csi, int request, va_list ap) {
         }
         // Setting biases one by one
         case OMV_CSI_IOCTL_GENX320_SET_BIAS: {
-            int bias_name = va_arg(ap, int);
-            int bias_value = va_arg(ap, int);
+            int bias_name = a->bias.name;
+            int bias_value = a->bias.value;
             switch (bias_name) {
                 case OMV_CSI_GENX320_BIAS_DIFF_OFF: {
                     psee_sensor_set_bias(csi, DIFF_OFF, bias_value);
@@ -405,7 +406,7 @@ static int ioctl(omv_csi_t *csi, int request, va_list ap) {
         }
         // Controlling AFK filter
         case OMV_CSI_IOCTL_GENX320_SET_AFK: {
-            int mode = va_arg(ap, int);
+            int mode = a->afk.mode;
             if (mode == 0) {
                 // Disable AFK
                 if (psee_afk_get_state(&genx->psee_afk) != AFK_STATE_RESET) {
@@ -415,8 +416,11 @@ static int ioctl(omv_csi_t *csi, int request, va_list ap) {
                 }
             } else {
                 // Enable AFK
-                int freq_min = va_arg(ap, int);
-                int freq_max = va_arg(ap, int);
+                int freq_min = a->afk.freq_min;
+                int freq_max = a->afk.freq_max;
+                if (freq_min == -1 || freq_max == -1) {
+                    return OMV_CSI_ERROR_INVALID_ARGUMENT;
+                }
                 if (psee_afk_init(csi, &genx->psee_afk) != AFK_OK) {
                     ret = -1;
                 }
@@ -427,7 +431,7 @@ static int ioctl(omv_csi_t *csi, int request, va_list ap) {
             break;
         }
         case OMV_CSI_IOCTL_GENX320_SET_STC: {
-            int mode = va_arg(ap, int);
+            int mode = a->stc.mode;
             if (genx->mode != OMV_CSI_GENX320_MODE_EVENT) {
                 ret = -1;
                 break;
@@ -443,7 +447,10 @@ static int ioctl(omv_csi_t *csi, int request, va_list ap) {
                 }
                 case OMV_CSI_GENX320_STC_ONLY: {
                     // Enable STC: STC-only mode
-                    int stc_threshold = va_arg(ap, int);
+                    int stc_threshold = a->stc.threshold1;
+                    if (stc_threshold == -1) {
+                        return OMV_CSI_ERROR_INVALID_ARGUMENT;
+                    }
                     if (psee_stc_init(csi, &genx->psee_stc) != STC_OK ||
                         psee_stc_only_activate(&genx->psee_stc, stc_threshold, EVT_CLK_FREQ) != STC_OK) {
                         ret = -1;
@@ -452,7 +459,10 @@ static int ioctl(omv_csi_t *csi, int request, va_list ap) {
                 }
                 case OMV_CSI_GENX320_STC_TRAIL_ONLY: {
                     // Enable STC: Trail-only mode
-                    int trail_threshold = va_arg(ap, int);
+                    int trail_threshold = a->stc.threshold1;
+                    if (trail_threshold == -1) {
+                        return OMV_CSI_ERROR_INVALID_ARGUMENT;
+                    }
                     if (psee_stc_init(csi, &genx->psee_stc) != STC_OK ||
                         psee_trail_only_activate(&genx->psee_stc, trail_threshold, EVT_CLK_FREQ) != STC_OK) {
                         ret = -1;
@@ -461,8 +471,11 @@ static int ioctl(omv_csi_t *csi, int request, va_list ap) {
                 }
                 case OMV_CSI_GENX320_STC_TRAIL: {
                     // Enable STC: STC + Trail mode
-                    int stc_threshold = va_arg(ap, int);
-                    int trail_threshold = va_arg(ap, int);
+                    int stc_threshold = a->stc.threshold1;
+                    int trail_threshold = a->stc.threshold2;
+                    if (stc_threshold == -1 || trail_threshold == -1) {
+                        return OMV_CSI_ERROR_INVALID_ARGUMENT;
+                    }
                     if (psee_stc_init(csi, &genx->psee_stc) != STC_OK ||
                         psee_stc_trail_activate(&genx->psee_stc, stc_threshold, trail_threshold, EVT_CLK_FREQ) != STC_OK) {
                         ret = -1;
@@ -477,7 +490,7 @@ static int ioctl(omv_csi_t *csi, int request, va_list ap) {
             break;
         }
         case OMV_CSI_IOCTL_GENX320_SET_MODE: {
-            int mode = va_arg(ap, int);
+            int mode = a->mode.mode;
 
             if (mode == OMV_CSI_GENX320_MODE_HISTO) {
                 csi->resolution[OMV_CSI_FRAMESIZE_CUSTOM][0] = ACTIVE_SENSOR_WIDTH;
@@ -495,7 +508,7 @@ static int ioctl(omv_csi_t *csi, int request, va_list ap) {
                     break;
                 }
             } else if (mode == OMV_CSI_GENX320_MODE_EVENT) {
-                size_t ndarray_size = va_arg(ap, size_t);
+                size_t ndarray_size = a->mode.ndarray_size;
 
                 if (ndarray_size < 1024 || ndarray_size > 65536 || (ndarray_size & (ndarray_size - 1))) {
                     ret = -1;
@@ -530,10 +543,15 @@ static int ioctl(omv_csi_t *csi, int request, va_list ap) {
                 return OMV_CSI_ERROR_CAPTURE_FAILED;
             }
 
-            genx->events = (ec_event_t *) va_arg(ap, ec_event_t *);
+            genx->events = (ec_event_t *) a->events.events;
 
+            // post_process_event() returns the number of decoded events.
             image_t image;
-            ret = omv_csi_snapshot(csi, &image, OMV_CSI_FLAG_NO_UPDATE);
+            a->events.count = omv_csi_snapshot(csi, &image, OMV_CSI_FLAG_NO_UPDATE);
+
+            if (a->events.count < 0) {
+                return a->events.count;
+            }
             break;
         }
         case OMV_CSI_IOCTL_GENX320_READ_EVENTS_RAW: {
@@ -545,13 +563,12 @@ static int ioctl(omv_csi_t *csi, int request, va_list ap) {
                 return OMV_CSI_ERROR_CAPTURE_FAILED;
             }
 
-            image_t *img = (image_t *) va_arg(ap, image_t *);
-            ret = omv_csi_snapshot(csi, img, OMV_CSI_FLAG_NO_POST | OMV_CSI_FLAG_NO_UPDATE);
+            ret = omv_csi_snapshot(csi, &a->image, OMV_CSI_FLAG_NO_POST | OMV_CSI_FLAG_NO_UPDATE);
             break;
         }
         case OMV_CSI_IOCTL_GENX320_CALIBRATE: {
-            uint32_t event_count = va_arg(ap, uint32_t);
-            float sigma = va_arg(ap, double);
+            uint32_t event_count = a->calib.event_count;
+            float sigma = a->calib.sigma;
 
             if (omv_csi_get_cropped(csi)) {
                 return OMV_CSI_ERROR_CAPTURE_FAILED;
@@ -609,7 +626,7 @@ static int ioctl(omv_csi_t *csi, int request, va_list ap) {
                 }
             }
 
-            ret = disable_hot_pixels(csi, histogram, sigma);
+            a->calib.disabled = disable_hot_pixels(csi, histogram, sigma);
             uma_free(histogram);
             break;
         }

@@ -42,6 +42,7 @@
 #include "LEPTON_OEM.h"
 #include "LEPTON_RAD.h"
 #include "LEPTON_I2C_Reg.h"
+#include "lepton.h"
 
 #define LEPTON_BOOT_TIMEOUT        (3000)
 #define LEPTON_COLD_BOOT_DELAY     (2000)
@@ -162,8 +163,9 @@ static int set_lens_correction(omv_csi_t *csi, int enable, int radi, int coef) {
     return 0;
 }
 
-static int ioctl(omv_csi_t *csi, int request, va_list ap) {
+static int ioctl(omv_csi_t *csi, int request, void *arg) {
     int ret = 0;
+    lepton_ioctl_arg_t *a = arg;
 
     if ((!lepton.h_res) || (!lepton.v_res)) {
         return -1;
@@ -171,66 +173,55 @@ static int ioctl(omv_csi_t *csi, int request, va_list ap) {
 
     switch (request) {
         case OMV_CSI_IOCTL_LEPTON_GET_WIDTH: {
-            int *width = va_arg(ap, int *);
-            *width = lepton.h_res;
+            a->ivalue = lepton.h_res;
             break;
         }
         case OMV_CSI_IOCTL_LEPTON_GET_HEIGHT: {
-            int *height = va_arg(ap, int *);
-            *height = lepton.v_res;
+            a->ivalue = lepton.v_res;
             break;
         }
         case OMV_CSI_IOCTL_LEPTON_GET_RADIOMETRY: {
-            int *type = va_arg(ap, int *);
-            *type = lepton.radiometry;
+            a->ivalue = lepton.radiometry;
             break;
         }
         case OMV_CSI_IOCTL_LEPTON_GET_REFRESH: {
-            int *refresh = va_arg(ap, int *);
-            *refresh = (lepton.h_res == 80) ? 27 : 9;
+            a->ivalue = (lepton.h_res == 80) ? 27 : 9;
             break;
         }
         case OMV_CSI_IOCTL_LEPTON_GET_RESOLUTION: {
-            int *resolution = va_arg(ap, int *);
-            *resolution = lepton.radiometry ? 16 : 14;
+            a->ivalue = lepton.radiometry ? 16 : 14;
             break;
         }
         case OMV_CSI_IOCTL_LEPTON_RUN_COMMAND: {
-            int command = va_arg(ap, int);
-            ret = (LEP_RunCommand(&lepton.port, command) == LEP_OK) ? 0 : -1;
+            ret = (LEP_RunCommand(&lepton.port, a->ivalue) == LEP_OK) ? 0 : -1;
             break;
         }
         case OMV_CSI_IOCTL_LEPTON_SET_ATTRIBUTE: {
-            int command = va_arg(ap, int);
-            uint16_t *data = va_arg(ap, uint16_t *);
-            size_t data_len = va_arg(ap, size_t);
-            ret = (LEP_SetAttribute(&lepton.port, command, (LEP_ATTRIBUTE_T_PTR) data, data_len) == LEP_OK) ? 0 : -1;
+            ret = (LEP_SetAttribute(&lepton.port, a->attr.command,
+                                    (LEP_ATTRIBUTE_T_PTR) a->attr.data, a->attr.len) == LEP_OK) ? 0 : -1;
             break;
         }
         case OMV_CSI_IOCTL_LEPTON_GET_ATTRIBUTE: {
-            int command = va_arg(ap, int);
-            uint16_t *data = va_arg(ap, uint16_t *);
-            size_t data_len = va_arg(ap, size_t);
-            ret = (LEP_GetAttribute(&lepton.port, command, (LEP_ATTRIBUTE_T_PTR) data, data_len) == LEP_OK) ? 0 : -1;
+            ret = (LEP_GetAttribute(&lepton.port, a->attr.command,
+                                    (LEP_ATTRIBUTE_T_PTR) a->attr.data, a->attr.len) == LEP_OK) ? 0 : -1;
             break;
         }
         case OMV_CSI_IOCTL_LEPTON_GET_FPA_TEMP: {
-            float *temp = va_arg(ap, float *);
             LEP_SYS_FPA_TEMPERATURE_KELVIN_T tfpa;
             ret = (LEP_GetSysFpaTemperatureKelvin(&lepton.port, &tfpa) == LEP_OK) ? 0 : -1;
-            *temp = (tfpa / 100.0f) - 273.15f;
+            a->fvalue = (tfpa / 100.0f) - 273.15f;
             break;
         }
         case OMV_CSI_IOCTL_LEPTON_GET_AUX_TEMP: {
-            float *temp = va_arg(ap, float *);
             LEP_SYS_AUX_TEMPERATURE_KELVIN_T taux;
             ret = (LEP_GetSysAuxTemperatureKelvin(&lepton.port, &taux) == LEP_OK) ? 0 : -1;
-            *temp = (taux / 100.0f) - 273.15f;
+            a->fvalue = (taux / 100.0f) - 273.15f;
             break;
         }
         case OMV_CSI_IOCTL_LEPTON_SET_MODE: {
-            int measurement_mode_in = va_arg(ap, int);
-            int high_temp_mode_in = va_arg(ap, int);
+            int measurement_mode_in = a->mode.measurement;
+            // Not passed (-1) means off.
+            int high_temp_mode_in = (a->mode.high_temp > 0);
             if (lepton.measurement_mode != measurement_mode_in ||
                 lepton.high_temp_mode != high_temp_mode_in) {
                 lepton.measurement_mode = measurement_mode_in;
@@ -240,27 +231,21 @@ static int ioctl(omv_csi_t *csi, int request, va_list ap) {
             break;
         }
         case OMV_CSI_IOCTL_LEPTON_GET_MODE: {
-            int *measurement_mode_out = va_arg(ap, int *);
-            int *high_temp_mode_out = va_arg(ap, int *);
-            *measurement_mode_out = lepton.measurement_mode;
-            *high_temp_mode_out = lepton.high_temp_mode;
+            a->mode.measurement = lepton.measurement_mode;
+            a->mode.high_temp = lepton.high_temp_mode;
             break;
         }
         case OMV_CSI_IOCTL_LEPTON_SET_RANGE: {
-            float *arg_min_temp = va_arg(ap, float *);
-            float *arg_max_temp = va_arg(ap, float *);
             float min_temp_range = (lepton.high_temp_mode) ? LEPTON_MIN_TEMP_HIGH : LEPTON_MIN_TEMP_NORM;
             float max_temp_range = (lepton.high_temp_mode) ? LEPTON_MAX_TEMP_HIGH : LEPTON_MAX_TEMP_NORM;
             // Don't use clamp here, the order of comparison is important.
-            lepton.min_temp = IM_MAX(IM_MIN(*arg_min_temp, *arg_max_temp), min_temp_range);
-            lepton.max_temp = IM_MIN(IM_MAX(*arg_max_temp, *arg_min_temp), max_temp_range);
+            lepton.min_temp = IM_MAX(IM_MIN(a->range.min, a->range.max), min_temp_range);
+            lepton.max_temp = IM_MIN(IM_MAX(a->range.max, a->range.min), max_temp_range);
             break;
         }
         case OMV_CSI_IOCTL_LEPTON_GET_RANGE: {
-            float *ptr_min_temp = va_arg(ap, float *);
-            float *ptr_max_temp = va_arg(ap, float *);
-            *ptr_min_temp = lepton.min_temp;
-            *ptr_max_temp = lepton.max_temp;
+            a->range.min = lepton.min_temp;
+            a->range.max = lepton.max_temp;
             break;
         }
         default: {

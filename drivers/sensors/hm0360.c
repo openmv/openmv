@@ -32,6 +32,7 @@
 #include "omv_i2c.h"
 #include "omv_csi.h"
 #include "hm0360.h"
+#include "himax.h"
 #include "py/mphal.h"
 
 #define HIMAX_BOOT_RETRY            (10)
@@ -677,8 +678,9 @@ static int set_vflip(omv_csi_t *csi, int enable) {
     return ret;
 }
 
-static int ioctl(omv_csi_t *csi, int request, va_list ap) {
+static int ioctl(omv_csi_t *csi, int request, void *arg) {
     int ret = 0;
+    himax_ioctl_arg_t *a = arg;
 
     switch (request) {
         case OMV_CSI_IOCTL_HIMAX_OSC_ENABLE: {
@@ -688,7 +690,7 @@ static int ioctl(omv_csi_t *csi, int request, va_list ap) {
         case OMV_CSI_IOCTL_HIMAX_MD_ENABLE: {
             int ret = 0;
             uint8_t md_ctrl = 0;
-            uint32_t enable = va_arg(ap, uint32_t) & 0x01;
+            uint32_t enable = a->ivalue & 0x01;
             ret |= omv_i2c_read_reg(csi->i2c, csi->slv_addr, MD_CTRL, 2, &md_ctrl, 1);
             ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, MD_CTRL, 2, (md_ctrl & 0xFE) | enable, 1);
             break;
@@ -700,10 +702,10 @@ static int ioctl(omv_csi_t *csi, int request, va_list ap) {
             int32_t roi_h = 0;
             int32_t roi_max_h = 14;
 
-            int32_t x1 = va_arg(ap, int32_t);
-            int32_t y1 = va_arg(ap, int32_t);
-            int32_t x2 = va_arg(ap, int32_t) + x1;
-            int32_t y2 = va_arg(ap, int32_t) + y1;
+            int32_t x1 = a->window.x;
+            int32_t y1 = a->window.y;
+            int32_t x2 = a->window.w + x1;
+            int32_t y2 = a->window.h + y1;
 
             switch (csi->framesize) {
                 case OMV_CSI_FRAMESIZE_VGA:
@@ -735,7 +737,7 @@ static int ioctl(omv_csi_t *csi, int request, va_list ap) {
         }
 
         case OMV_CSI_IOCTL_HIMAX_MD_THRESHOLD: {
-            uint32_t threshold = va_arg(ap, uint32_t) & 0x3F;
+            uint32_t threshold = a->ivalue & 0x3F;
             ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, MD_TH_STR_L, 2, threshold, 1);
             ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, MD_TH_STR_H, 2, threshold, 1);
             ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, MD_LIGHT_COEF, 2, threshold, 1);

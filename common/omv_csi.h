@@ -32,7 +32,7 @@
  */
 #ifndef __OMV_CSI_H__
 #define __OMV_CSI_H__
-#include <stdarg.h>
+#include <stdint.h>
 #include "omv_i2c.h"
 #include "imlib.h"
 #include "framebuffer.h"
@@ -194,90 +194,147 @@ typedef enum {
     OMV_CSI_FRAMESIZE_MAX,
 } omv_csi_framesize_t;
 
+// Flags for omv_csi_snapshot().
 typedef enum {
     OMV_CSI_FLAG_NO_UPDATE      = (1 << 0),
     OMV_CSI_FLAG_NON_BLOCK      = (1 << 1),
     OMV_CSI_FLAG_NO_POST        = (1 << 2),
-    OMV_CSI_FLAG_IOCTL_ABORT    = (1 << 8),
 } omv_csi_flags_t;
 
+// An ioctl request packs the sensor family it belongs to, so each family can
+// be extended without renumbering the others.
+#define OMV_CSI_IOCTL_INDEX_MASK    (0x00FF)
+#define OMV_CSI_IOCTL_FAMILY_MASK   (0x0F00)
+#define OMV_CSI_IOCTL_FAMILY_SHIFT  (8)
+#define OMV_CSI_IOCTL_INDEX(r)      ((r) & OMV_CSI_IOCTL_INDEX_MASK)
+#define OMV_CSI_IOCTL_FAMILY(r)     (((r) & OMV_CSI_IOCTL_FAMILY_MASK) >> OMV_CSI_IOCTL_FAMILY_SHIFT)
+
 typedef enum {
-    OMV_CSI_IOCTL_SET_READOUT_WINDOW              = 0x00 | OMV_CSI_FLAG_IOCTL_ABORT,
-    OMV_CSI_IOCTL_GET_READOUT_WINDOW              = 0x01,
-    OMV_CSI_IOCTL_SET_TRIGGERED_MODE              = 0x02,
-    OMV_CSI_IOCTL_GET_TRIGGERED_MODE              = 0x03,
-    OMV_CSI_IOCTL_SET_FOV_WIDE                    = 0x04,
-    OMV_CSI_IOCTL_GET_FOV_WIDE                    = 0x05,
-    OMV_CSI_IOCTL_TRIGGER_AUTO_FOCUS              = 0x06,
-    OMV_CSI_IOCTL_PAUSE_AUTO_FOCUS                = 0x07,
-    OMV_CSI_IOCTL_RESET_AUTO_FOCUS                = 0x08,
-    OMV_CSI_IOCTL_WAIT_ON_AUTO_FOCUS              = 0x09,
-    OMV_CSI_IOCTL_SET_NIGHT_MODE                  = 0x0A,
-    OMV_CSI_IOCTL_GET_NIGHT_MODE                  = 0x0B,
-    OMV_CSI_IOCTL_LEPTON_GET_WIDTH                = 0x0C,
-    OMV_CSI_IOCTL_LEPTON_GET_HEIGHT               = 0x0D,
-    OMV_CSI_IOCTL_LEPTON_GET_RADIOMETRY           = 0x0E,
-    OMV_CSI_IOCTL_LEPTON_GET_REFRESH              = 0x0F,
-    OMV_CSI_IOCTL_LEPTON_GET_RESOLUTION           = 0x10,
-    OMV_CSI_IOCTL_LEPTON_RUN_COMMAND              = 0x11,
-    OMV_CSI_IOCTL_LEPTON_SET_ATTRIBUTE            = 0x12,
-    OMV_CSI_IOCTL_LEPTON_GET_ATTRIBUTE            = 0x13,
-    OMV_CSI_IOCTL_LEPTON_GET_FPA_TEMP             = 0x14,
-    OMV_CSI_IOCTL_LEPTON_GET_AUX_TEMP             = 0x15,
-    OMV_CSI_IOCTL_LEPTON_SET_MODE                 = 0x16 | OMV_CSI_FLAG_IOCTL_ABORT,
-    OMV_CSI_IOCTL_LEPTON_GET_MODE                 = 0x17,
-    OMV_CSI_IOCTL_LEPTON_SET_RANGE                = 0x18 | OMV_CSI_FLAG_IOCTL_ABORT,
-    OMV_CSI_IOCTL_LEPTON_GET_RANGE                = 0x19,
-    OMV_CSI_IOCTL_HIMAX_MD_ENABLE                 = 0x1A,
-    OMV_CSI_IOCTL_HIMAX_MD_CLEAR                  = 0x1B,
-    OMV_CSI_IOCTL_HIMAX_MD_WINDOW                 = 0x1C | OMV_CSI_FLAG_IOCTL_ABORT,
-    OMV_CSI_IOCTL_HIMAX_MD_THRESHOLD              = 0x1D,
-    OMV_CSI_IOCTL_HIMAX_OSC_ENABLE                = 0x1E | OMV_CSI_FLAG_IOCTL_ABORT,
-    OMV_CSI_IOCTL_GET_RGB_STATS                   = 0x1F,
-    OMV_CSI_IOCTL_GENX320_SET_BIASES              = 0x20,
-    OMV_CSI_IOCTL_GENX320_SET_BIAS                = 0x21,
-    OMV_CSI_IOCTL_GENX320_SET_AFK                 = 0x22,
-    OMV_CSI_IOCTL_GENX320_SET_MODE                = 0x23,
-    OMV_CSI_IOCTL_GENX320_READ_EVENTS             = 0x24,
-    OMV_CSI_IOCTL_GENX320_CALIBRATE               = 0x25,
-    OMV_CSI_IOCTL_GENX320_SET_STC                 = 0x26,
-    OMV_CSI_IOCTL_GENX320_READ_EVENTS_RAW         = 0x27,
-    OMV_CSI_IOCTL_BOSON_GET_SOFTWARE_REV          = 0x28,
-    OMV_CSI_IOCTL_BOSON_GET_FPA_TEMP              = 0x29,
-    OMV_CSI_IOCTL_BOSON_SET_GAIN_MODE             = 0x2A,
-    OMV_CSI_IOCTL_BOSON_GET_GAIN_MODE             = 0x2B,
-    OMV_CSI_IOCTL_BOSON_RUN_FFC                   = 0x2C,
-    OMV_CSI_IOCTL_BOSON_GET_FFC_STATUS            = 0x2D,
-    OMV_CSI_IOCTL_BOSON_SET_FFC_MODE              = 0x2E,
-    OMV_CSI_IOCTL_BOSON_GET_FFC_MODE              = 0x2F,
-    OMV_CSI_IOCTL_BOSON_SET_FFC_TEMP_THRESHOLD    = 0x30,
-    OMV_CSI_IOCTL_BOSON_GET_FFC_TEMP_THRESHOLD    = 0x31,
-    OMV_CSI_IOCTL_BOSON_SET_FFC_FRAME_THRESHOLD   = 0x32,
-    OMV_CSI_IOCTL_BOSON_GET_FFC_FRAME_THRESHOLD   = 0x33,
-    OMV_CSI_IOCTL_BOSON_SET_FFC_NUM_FRAMES        = 0x34,
-    OMV_CSI_IOCTL_BOSON_GET_FFC_NUM_FRAMES        = 0x35,
-    OMV_CSI_IOCTL_BOSON_GET_RADIOMETRY_CAPABLE    = 0x36,
-    OMV_CSI_IOCTL_BOSON_SET_TLINEAR_ENABLE        = 0x37,
-    OMV_CSI_IOCTL_BOSON_GET_TLINEAR_ENABLE        = 0x38,
-    OMV_CSI_IOCTL_BOSON_SET_TEMP_STABLE_ENABLE    = 0x39,
-    OMV_CSI_IOCTL_BOSON_GET_TEMP_STABLE_ENABLE    = 0x3A,
-    OMV_CSI_IOCTL_BOSON_SET_EMISSIVITY            = 0x3B,
-    OMV_CSI_IOCTL_BOSON_GET_EMISSIVITY            = 0x3C,
-    OMV_CSI_IOCTL_BOSON_SET_TEMP_BACKGROUND       = 0x3D,
-    OMV_CSI_IOCTL_BOSON_GET_TEMP_BACKGROUND       = 0x3E,
-    OMV_CSI_IOCTL_BOSON_SET_SPOT_METER_ENABLE     = 0x3F,
-    OMV_CSI_IOCTL_BOSON_GET_SPOT_METER_ENABLE     = 0x40,
-    OMV_CSI_IOCTL_BOSON_SET_SPOT_METER_ROI        = 0x41,
-    OMV_CSI_IOCTL_BOSON_GET_SPOT_METER_ROI        = 0x42,
-    OMV_CSI_IOCTL_BOSON_GET_SPOT_METER_ROI_MAX    = 0x43,
-    OMV_CSI_IOCTL_BOSON_SET_SPOT_METER_MODE       = 0x44,
-    OMV_CSI_IOCTL_BOSON_GET_SPOT_METER_MODE       = 0x45,
-    OMV_CSI_IOCTL_BOSON_GET_SPOT_METER_STATS      = 0x46,
-    OMV_CSI_IOCTL_BOSON_GET_SPOT_METER_TEMP_STATS = 0x47,
-    OMV_CSI_IOCTL_BOSON_GET_TEMP_FROM_COUNTS      = 0x48,
-    OMV_CSI_IOCTL_BOSON_GET_RBFO                  = 0x49,
-    OMV_CSI_IOCTL_UPDATE_AGC_AEC                  = 0x7F
+    OMV_CSI_IOCTL_FAMILY_COMMON   = 0,
+    OMV_CSI_IOCTL_FAMILY_LEPTON   = 1,
+    OMV_CSI_IOCTL_FAMILY_HIMAX    = 2,
+    OMV_CSI_IOCTL_FAMILY_GENX320  = 3,
+    OMV_CSI_IOCTL_FAMILY_BOSON    = 4,
+    // Not reachable from Python.
+    OMV_CSI_IOCTL_FAMILY_INTERNAL = 15,
+} omv_csi_ioctl_family_t;
+
+// Requests carry this flag, so driver case labels match the flagged value.
+typedef enum {
+    OMV_CSI_IOCTL_FLAG_ABORT    = (1 << 15),
+} omv_csi_ioctl_flags_t;
+
+_Static_assert((OMV_CSI_IOCTL_FLAG_ABORT &
+                (OMV_CSI_IOCTL_FAMILY_MASK | OMV_CSI_IOCTL_INDEX_MASK)) == 0,
+               "ioctl abort flag overlaps the family or index field");
+
+typedef enum {
+    // Common requests, implemented by any sensor.
+    OMV_CSI_IOCTL_SET_READOUT_WINDOW              = 0x000 | OMV_CSI_IOCTL_FLAG_ABORT,
+    OMV_CSI_IOCTL_GET_READOUT_WINDOW              = 0x001,
+    OMV_CSI_IOCTL_SET_TRIGGERED_MODE              = 0x002,
+    OMV_CSI_IOCTL_GET_TRIGGERED_MODE              = 0x003,
+    OMV_CSI_IOCTL_SET_FOV_WIDE                    = 0x004,
+    OMV_CSI_IOCTL_GET_FOV_WIDE                    = 0x005,
+    OMV_CSI_IOCTL_TRIGGER_AUTO_FOCUS              = 0x006,
+    OMV_CSI_IOCTL_PAUSE_AUTO_FOCUS                = 0x007,
+    OMV_CSI_IOCTL_RESET_AUTO_FOCUS                = 0x008,
+    OMV_CSI_IOCTL_WAIT_ON_AUTO_FOCUS              = 0x009,
+    OMV_CSI_IOCTL_SET_NIGHT_MODE                  = 0x00A,
+    OMV_CSI_IOCTL_GET_NIGHT_MODE                  = 0x00B,
+    OMV_CSI_IOCTL_GET_RGB_STATS                   = 0x00C,
+
+    // FLIR Lepton.
+    OMV_CSI_IOCTL_LEPTON_GET_WIDTH                = 0x100,
+    OMV_CSI_IOCTL_LEPTON_GET_HEIGHT               = 0x101,
+    OMV_CSI_IOCTL_LEPTON_GET_RADIOMETRY           = 0x102,
+    OMV_CSI_IOCTL_LEPTON_GET_REFRESH              = 0x103,
+    OMV_CSI_IOCTL_LEPTON_GET_RESOLUTION           = 0x104,
+    OMV_CSI_IOCTL_LEPTON_RUN_COMMAND              = 0x105,
+    OMV_CSI_IOCTL_LEPTON_SET_ATTRIBUTE            = 0x106,
+    OMV_CSI_IOCTL_LEPTON_GET_ATTRIBUTE            = 0x107,
+    OMV_CSI_IOCTL_LEPTON_GET_FPA_TEMP             = 0x108,
+    OMV_CSI_IOCTL_LEPTON_GET_AUX_TEMP             = 0x109,
+    OMV_CSI_IOCTL_LEPTON_SET_MODE                 = 0x10A | OMV_CSI_IOCTL_FLAG_ABORT,
+    OMV_CSI_IOCTL_LEPTON_GET_MODE                 = 0x10B,
+    OMV_CSI_IOCTL_LEPTON_SET_RANGE                = 0x10C | OMV_CSI_IOCTL_FLAG_ABORT,
+    OMV_CSI_IOCTL_LEPTON_GET_RANGE                = 0x10D,
+
+    // Himax.
+    OMV_CSI_IOCTL_HIMAX_MD_ENABLE                 = 0x200,
+    OMV_CSI_IOCTL_HIMAX_MD_CLEAR                  = 0x201,
+    OMV_CSI_IOCTL_HIMAX_MD_WINDOW                 = 0x202 | OMV_CSI_IOCTL_FLAG_ABORT,
+    OMV_CSI_IOCTL_HIMAX_MD_THRESHOLD              = 0x203,
+    OMV_CSI_IOCTL_HIMAX_OSC_ENABLE                = 0x204 | OMV_CSI_IOCTL_FLAG_ABORT,
+
+    // Prophesee GenX320.
+    OMV_CSI_IOCTL_GENX320_SET_BIASES              = 0x300,
+    OMV_CSI_IOCTL_GENX320_SET_BIAS                = 0x301,
+    OMV_CSI_IOCTL_GENX320_SET_AFK                 = 0x302,
+    OMV_CSI_IOCTL_GENX320_SET_MODE                = 0x303,
+    OMV_CSI_IOCTL_GENX320_READ_EVENTS             = 0x304,
+    OMV_CSI_IOCTL_GENX320_CALIBRATE               = 0x305,
+    OMV_CSI_IOCTL_GENX320_SET_STC                 = 0x306,
+    OMV_CSI_IOCTL_GENX320_READ_EVENTS_RAW         = 0x307,
+
+    // FLIR Boson.
+    OMV_CSI_IOCTL_BOSON_GET_SOFTWARE_REV          = 0x400,
+    OMV_CSI_IOCTL_BOSON_GET_FPA_TEMP              = 0x401,
+    OMV_CSI_IOCTL_BOSON_SET_GAIN_MODE             = 0x402,
+    OMV_CSI_IOCTL_BOSON_GET_GAIN_MODE             = 0x403,
+    OMV_CSI_IOCTL_BOSON_RUN_FFC                   = 0x404,
+    OMV_CSI_IOCTL_BOSON_GET_FFC_STATUS            = 0x405,
+    OMV_CSI_IOCTL_BOSON_SET_FFC_MODE              = 0x406,
+    OMV_CSI_IOCTL_BOSON_GET_FFC_MODE              = 0x407,
+    OMV_CSI_IOCTL_BOSON_SET_FFC_TEMP_THRESHOLD    = 0x408,
+    OMV_CSI_IOCTL_BOSON_GET_FFC_TEMP_THRESHOLD    = 0x409,
+    OMV_CSI_IOCTL_BOSON_SET_FFC_FRAME_THRESHOLD   = 0x40A,
+    OMV_CSI_IOCTL_BOSON_GET_FFC_FRAME_THRESHOLD   = 0x40B,
+    OMV_CSI_IOCTL_BOSON_SET_FFC_NUM_FRAMES        = 0x40C,
+    OMV_CSI_IOCTL_BOSON_GET_FFC_NUM_FRAMES        = 0x40D,
+    OMV_CSI_IOCTL_BOSON_GET_RADIOMETRY_CAPABLE    = 0x40E,
+    OMV_CSI_IOCTL_BOSON_SET_TLINEAR_ENABLE        = 0x40F,
+    OMV_CSI_IOCTL_BOSON_GET_TLINEAR_ENABLE        = 0x410,
+    OMV_CSI_IOCTL_BOSON_SET_TEMP_STABLE_ENABLE    = 0x411,
+    OMV_CSI_IOCTL_BOSON_GET_TEMP_STABLE_ENABLE    = 0x412,
+    OMV_CSI_IOCTL_BOSON_SET_EMISSIVITY            = 0x413,
+    OMV_CSI_IOCTL_BOSON_GET_EMISSIVITY            = 0x414,
+    OMV_CSI_IOCTL_BOSON_SET_TEMP_BACKGROUND       = 0x415,
+    OMV_CSI_IOCTL_BOSON_GET_TEMP_BACKGROUND       = 0x416,
+    OMV_CSI_IOCTL_BOSON_SET_SPOT_METER_ENABLE     = 0x417,
+    OMV_CSI_IOCTL_BOSON_GET_SPOT_METER_ENABLE     = 0x418,
+    OMV_CSI_IOCTL_BOSON_SET_SPOT_METER_ROI        = 0x419,
+    OMV_CSI_IOCTL_BOSON_GET_SPOT_METER_ROI        = 0x41A,
+    OMV_CSI_IOCTL_BOSON_GET_SPOT_METER_ROI_MAX    = 0x41B,
+    OMV_CSI_IOCTL_BOSON_SET_SPOT_METER_MODE       = 0x41C,
+    OMV_CSI_IOCTL_BOSON_GET_SPOT_METER_MODE       = 0x41D,
+    OMV_CSI_IOCTL_BOSON_GET_SPOT_METER_STATS      = 0x41E,
+    OMV_CSI_IOCTL_BOSON_GET_SPOT_METER_TEMP_STATS = 0x41F,
+    OMV_CSI_IOCTL_BOSON_GET_TEMP_FROM_COUNTS      = 0x420,
+    OMV_CSI_IOCTL_BOSON_GET_RBFO                  = 0x421,
+
+    // Internal requests, not exported to Python.
+    OMV_CSI_IOCTL_UPDATE_AGC_AEC                  = 0xF00,
 } omv_csi_ioctl_t;
+
+typedef struct {
+    int32_t x;
+    int32_t y;
+    int32_t w;
+    int32_t h;
+} omv_csi_window_t;
+
+// Generic argument for the ioctls.
+typedef union {
+    int32_t ivalue;
+    omv_csi_window_t window;
+    struct {
+        uint32_t r;
+        uint32_t gb;
+        uint32_t gr;
+        uint32_t b;
+    } rgb_stats;
+} omv_csi_ioctl_arg_t;
 
 typedef enum {
     OMV_CSI_ERROR_NO_ERROR              =  0,
@@ -448,7 +505,7 @@ typedef struct _omv_csi {
     int (*set_vflip) (omv_csi_t *csi, int enable);
     int (*set_special_effect) (omv_csi_t *csi, omv_csi_sde_t sde);
     int (*set_lens_correction) (omv_csi_t *csi, int enable, int radi, int coef);
-    int (*ioctl) (omv_csi_t *csi, int request, va_list ap);
+    int (*ioctl) (omv_csi_t *csi, int request, void *arg);
     int (*config) (omv_csi_t *csi, omv_csi_config_t config);
     int (*abort) (omv_csi_t *csi, bool fifo_flush, bool in_irq);
     int (*snapshot) (omv_csi_t *csi, image_t *image, uint32_t flags);
@@ -623,7 +680,7 @@ int omv_csi_set_special_effect(omv_csi_t *csi, omv_csi_sde_t sde);
 int omv_csi_set_lens_correction(omv_csi_t *csi, int enable, int radi, int coef);
 
 // IOCTL function
-int omv_csi_ioctl(omv_csi_t *csi, int request, ...);
+int omv_csi_ioctl(omv_csi_t *csi, int request, void *arg);
 
 // Set vsync callback function.
 int omv_csi_set_vsync_callback(omv_csi_t *csi, omv_csi_cb_t cb);

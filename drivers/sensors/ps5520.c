@@ -1767,12 +1767,13 @@ static int update_agc_aec(omv_csi_t *csi, int luminance) {
     return ret;
 }
 
-static int ioctl(omv_csi_t *csi, int request, va_list ap) {
+static int ioctl(omv_csi_t *csi, int request, void *arg) {
+    omv_csi_ioctl_arg_t *a = arg;
     int ret = 0;
 
     switch (request) {
         case OMV_CSI_IOCTL_UPDATE_AGC_AEC:
-            ret = update_agc_aec(csi, va_arg(ap, int));
+            ret = update_agc_aec(csi, a->ivalue);
             break;
         default:
             ret = -1;

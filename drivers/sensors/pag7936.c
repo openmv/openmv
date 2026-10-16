@@ -875,8 +875,9 @@ static int set_vflip(omv_csi_t *csi, int enable) {
     return ret;
 }
 
-static int ioctl(omv_csi_t *csi, int request, va_list ap) {
+static int ioctl(omv_csi_t *csi, int request, void *arg) {
     int ret = 0;
+    omv_csi_ioctl_arg_t *a = arg;
 
     (void) read_reg_seq;
 
@@ -887,14 +888,14 @@ static int ioctl(omv_csi_t *csi, int request, va_list ap) {
             ret |= omv_i2c_write(csi->i2c, csi->slv_addr, buf, 2, OMV_I2C_XFER_NO_STOP);
             ret |= omv_i2c_read(csi->i2c, csi->slv_addr, (uint8_t *) rgb_stats, sizeof(rgb_stats), 0);
 
-            *va_arg(ap, uint32_t *) = rgb_stats[1];
-            *va_arg(ap, uint32_t *) = rgb_stats[2];
-            *va_arg(ap, uint32_t *) = rgb_stats[0];
-            *va_arg(ap, uint32_t *) = rgb_stats[3];
+            a->rgb_stats.r = rgb_stats[1];
+            a->rgb_stats.gb = rgb_stats[2];
+            a->rgb_stats.gr = rgb_stats[0];
+            a->rgb_stats.b = rgb_stats[3];
             break;
         }
         case OMV_CSI_IOCTL_SET_TRIGGERED_MODE: {
-            int enable = va_arg(ap, int);
+            int enable = a->ivalue;
             ret |= omv_i2c_write_reg(csi->i2c, csi->slv_addr, SENSOR_OPMODE, 2, SENSOR_OPMODE_SUSPEND, 1);
 
             if (enable) {
@@ -918,11 +919,10 @@ static int ioctl(omv_csi_t *csi, int request, va_list ap) {
             break;
         }
         case OMV_CSI_IOCTL_GET_TRIGGERED_MODE: {
-            int *enable = va_arg(ap, int *);
             uint8_t reg;
             ret |= omv_i2c_read_reg(csi->i2c, csi->slv_addr, SENSOR_TG_EN, 2, &reg, 1);
             if (ret >= 0) {
-                *enable = (reg & SENSOR_TG_EN_FLAG) ? 0 : 1;
+                a->ivalue = (reg & SENSOR_TG_EN_FLAG) ? 0 : 1;
             }
             break;
         }

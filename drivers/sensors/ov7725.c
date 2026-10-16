@@ -630,13 +630,14 @@ static int set_lens_correction(omv_csi_t *csi, int enable, int radi, int coef) {
     return ret;
 }
 
-static int ioctl(omv_csi_t *csi, int request, va_list ap) {
+static int ioctl(omv_csi_t *csi, int request, void *arg) {
+    omv_csi_ioctl_arg_t *a = arg;
     int ret = 0;
     uint8_t reg;
 
     switch (request) {
         case OMV_CSI_IOCTL_SET_NIGHT_MODE: {
-            int enable = va_arg(ap, int);
+            int enable = a->ivalue;
             ret = omv_i2c_read_sccb(csi->i2c, csi->slv_addr, COM5, &reg);
             ret |= omv_i2c_write_sccb(csi->i2c, csi->slv_addr, COM5, COM5_SET_AFR(reg, (enable != 0)));
             if (enable == 0) {
@@ -646,10 +647,9 @@ static int ioctl(omv_csi_t *csi, int request, va_list ap) {
             break;
         }
         case OMV_CSI_IOCTL_GET_NIGHT_MODE: {
-            int *enable = va_arg(ap, int *);
             ret = omv_i2c_read_sccb(csi->i2c, csi->slv_addr, COM5, &reg);
             if (ret >= 0) {
-                *enable = reg & COM5_AFR;
+                a->ivalue = reg & COM5_AFR;
             }
             break;
         }
