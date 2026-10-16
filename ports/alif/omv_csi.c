@@ -71,7 +71,13 @@
                          CAM_INTR_OUTFIFO_OVERRUN | \
                          CAM_INTR_BRESP_ERR)
 
+// Longest wait for a capture in progress to finish before the CPI is reset.
+#define OMV_CSI_ABORT_TIMEOUT_MS    (200)
+
 static uint32_t omv_csi_get_fb_offset(omv_csi_t *csi);
+
+// Set when a FIFO/AXI error is reported during a capture; the frame is dropped at STOP.
+static bool cpi_frame_error;
 
 void CAM_IRQHandler(void) {
     uint32_t mask = 0;
@@ -88,26 +94,21 @@ void CAM_IRQHandler(void) {
         mask |= CAM_INTR_HSYNC;
     }
 
-    if (status & CAM_INTR_INFIFO_OVERRUN) {
-        mask |= CAM_INTR_INFIFO_OVERRUN;
-        omv_csi_abort(csi, true, true);
-    }
-
-    if (status & CAM_INTR_OUTFIFO_OVERRUN) {
-        mask |= CAM_INTR_OUTFIFO_OVERRUN;
-        omv_csi_abort(csi, true, true);
-    }
-
-    if (status & CAM_INTR_BRESP_ERR) {
-        mask |= CAM_INTR_BRESP_ERR;
-        omv_csi_abort(csi, true, true);
+    // The capture can't be stopped from here (see alif_csi_abort). Let it
+    // run to the end of its frame and drop that frame at STOP.
+    if (status & CPI_ERROR_FLAGS) {
+        mask |= (status & CPI_ERROR_FLAGS);
+        cpi_frame_error = true;
     }
 
     if (status & CAM_INTR_STOP) {
         mask |= CAM_INTR_STOP;
         cpi->CAM_CTRL = 0;
 
-        if (!(status & CPI_ERROR_FLAGS)) {
+        bool frame_ok = !cpi_frame_error;
+        cpi_frame_error = false;
+
+        if (frame_ok) {
             // Release the buffer from free queue -> used queue.
             framebuffer_release(csi->fb, FB_FLAG_FREE | FB_FLAG_CHECK_LAST);
         }
@@ -123,7 +124,7 @@ void CAM_IRQHandler(void) {
             cpi->CAM_CTRL = (CAM_CTRL_SNAPSHOT | CAM_CTRL_START | CAM_CTRL_FIFO_CLK_SEL);
         }
 
-        if (csi->frame_cb.fun && !(status & CPI_ERROR_FLAGS)) {
+        if (csi->frame_cb.fun && frame_ok) {
             csi->frame_cb.fun(csi->frame_cb.arg);
         }
     }
@@ -186,13 +187,31 @@ int alif_csi_config(omv_csi_t *csi, omv_csi_config_t config) {
 int alif_csi_abort(omv_csi_t *csi, bool fifo_flush, bool in_irq) {
     CPI_Type *cpi = csi->base;
 
-    // Stop CPI
-    cpi->CAM_CTRL = 0;
-
-    // Disable IRQs.
+    // Disable IRQs first so the STOP handler can't restart the capture.
     NVIC_DisableIRQ(CAM_IRQ_IRQn);
     cpi_disable_interrupt(cpi, CPI_IRQ_FLAGS);
+
+    // A capture in progress can't be cut short: the CPI always finishes the
+    // current frame, and writing CAM_CTRL while it's busy (clearing START,
+    // SNAPSHOT or FIFO_CLK_SEL, or soft-resetting it) is undefined. It leaves
+    // the DMA running past the frame or stalls the bus. In snapshot mode the
+    // capture stops on its own at the end of the frame, so wait for that and
+    // then soft reset the CPI. From an IRQ there's no waiting: leave the
+    // controller alone, the next start or abort resets it.
+    if (!in_irq) {
+        for (mp_uint_t start = mp_hal_ticks_ms(); cpi->CAM_CTRL & CAM_CTRL_BUSY; ) {
+            if ((mp_hal_ticks_ms() - start) > OMV_CSI_ABORT_TIMEOUT_MS) {
+                break;
+            }
+        }
+
+        cpi->CAM_CTRL = 0;
+        cpi->CAM_CTRL = CAM_CTRL_SW_RESET;
+        cpi->CAM_CTRL = 0;
+    }
+
     cpi_irq_handler_clear_intr_status(cpi, CPI_IRQ_FLAGS);
+    cpi_frame_error = false;
     return 0;
 }
 
