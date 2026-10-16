@@ -68,6 +68,14 @@ The easiest way to patch the firmware and rebuild it, is to fork this repository
 
 For more information about customizing your OpenMV Cam's configuration see [Board Configuration](docs/boards.md).
 
+### Unix port for development
+
+OpenMV also provides a Unix port that runs the image processing library on a desktop system (Linux, macOS, Windows with WSL) without hardware. It's useful for algorithm development, reprocessing recorded images, and CI testing. See [Unix Port Documentation](docs/unix-port.md).
+
+```bash
+make TARGET=UNIX
+```
+
 ## Contributing to the project
 
 Contributions are most welcome. If you are interested in contributing to the project, start by creating a fork of each of the following repositories:
