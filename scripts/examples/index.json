@@ -27,6 +27,30 @@
       "exclude_sensors": ["None"]
     },
     {
+      "path": "01-Camera/01-Video-Recording/mp4_h264_recording.py",
+      "boards": ["OPENMV_N6"],
+      "sensors": ["*"],
+      "exclude_sensors": ["None"]
+    },
+    {
+      "path": "01-Camera/01-Video-Recording/mp4_h264_audio_recording.py",
+      "boards": ["OPENMV_N6"],
+      "sensors": ["*"],
+      "exclude_sensors": ["None"]
+    },
+    {
+      "path": "01-Camera/01-Video-Recording/mp4_h264_eis_recording.py",
+      "boards": ["OPENMV_N6"],
+      "sensors": ["*"],
+      "exclude_sensors": ["None"]
+    },
+    {
+      "path": "01-Camera/01-Video-Recording/mp4_h264_eis_audio_recording.py",
+      "boards": ["OPENMV_N6"],
+      "sensors": ["*"],
+      "exclude_sensors": ["None"]
+    },
+    {
       "path": "01-Camera/02-Optical-Flow",
       "boards": ["*"],
       "sensors": ["*"],
@@ -140,6 +164,26 @@
     {
       "path": "08-RPC-Library",
       "boards": ["*"],
+      "sensors": ["*"]
+    },
+    {
+      "path": "08-RPC-Library/36-Web-Servers/rtsp_h264_video_server_wlan.py",
+      "boards": ["OPENMV_N6"],
+      "sensors": ["*"]
+    },
+    {
+      "path": "08-RPC-Library/36-Web-Servers/rtsp_h264_video_audio_server_wlan.py",
+      "boards": ["OPENMV_N6"],
+      "sensors": ["*"]
+    },
+    {
+      "path": "08-RPC-Library/36-Web-Servers/rtsp_h264_video_server_lan.py",
+      "boards": ["OPENMV_N6"],
+      "sensors": ["*"]
+    },
+    {
+      "path": "08-RPC-Library/36-Web-Servers/rtsp_h264_video_audio_server_lan.py",
+      "boards": ["OPENMV_N6"],
       "sensors": ["*"]
     },
     {
