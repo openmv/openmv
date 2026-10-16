@@ -68,11 +68,13 @@ static bool     _ctrl_long_data = false;
 static bool     _xfer_cfgd = false;
 // static bool     _addr_req = false;
 static uint32_t _sts_stage = 0;
+static uint8_t  _sts_in = 0; // bit 0: controller ready for STATUS IN, bit 1: TinyUSB requested it
 
 /// Private Functions ----------------------------------------------------------
 
 static uint8_t _dcd_cmd_wait(uint8_t ep, uint8_t typ, uint16_t param);
 static uint8_t _dcd_start_xfer(uint8_t ep, void* buf, uint32_t size, uint8_t type);
+static void _dcd_start_status_in(void);
 
 static void _dcd_handle_depevt(uint8_t ep, uint8_t evt, uint8_t sts, uint16_t par);
 static void _dcd_handle_devt(uint8_t evt, uint16_t info);
@@ -415,6 +417,10 @@ bool dcd_edpt_xfer(uint8_t rhport, uint8_t ep_addr, uint8_t * buffer, uint16_t t
             } else {
                 // status events are handled directly from the ISR when USB
                 // controller triggers XferNotReady event for status stage
+                dcd_int_disable(rhport);
+                _sts_in |= 2;
+                _dcd_start_status_in();
+                dcd_int_enable(rhport);
 
                 if (2 == ++_sts_stage) {
                     _sts_stage = 0;
@@ -531,6 +537,7 @@ static void _dcd_handle_depevt(uint8_t ep, uint8_t evt, uint8_t sts, uint16_t pa
                     LOG("%02x %02x %02x %02x %02x %02x %02x %02x",
                         _ctrl_buf[0], _ctrl_buf[1], _ctrl_buf[2], _ctrl_buf[3],
                         _ctrl_buf[4], _ctrl_buf[5], _ctrl_buf[6], _ctrl_buf[7]);
+                    _sts_in = 0;
                     dcd_event_setup_received(TUD_OPT_RHPORT, _ctrl_buf, true);
                 } else if (TRBCTL_CTL_STAT3 == trbctl) {
                     if (0 < _xfer_bytes[0]) {
@@ -591,10 +598,8 @@ static void _dcd_handle_depevt(uint8_t ep, uint8_t evt, uint8_t sts, uint16_t pa
 
             // XferNotReady NotActive for status stage
             if ((1 == ep) && (0b0010 == (sts & 0b1011))) {
-                if (0x00 == _ctrl_buf[0] && TUSB_REQ_SET_ADDRESS == _ctrl_buf[1]) {
-                    udev->dcfg_b.devaddr = _ctrl_buf[2];
-                }
-                _dcd_start_xfer(1, NULL, 0, TRBCTL_CTL_STAT2);
+                _sts_in |= 1;
+                _dcd_start_status_in();
                 break;
             }
 
@@ -693,6 +698,18 @@ static void _dcd_handle_devt(uint8_t evt, uint16_t info)
     }
 }
 
+
+// Start STATUS IN only once TinyUSB has handled the request, so it isn't ACKed early.
+static void _dcd_start_status_in(void)
+{
+    if (3 == _sts_in) {
+        _sts_in = 0;
+        if (0x00 == _ctrl_buf[0] && TUSB_REQ_SET_ADDRESS == _ctrl_buf[1]) {
+            udev->dcfg_b.devaddr = _ctrl_buf[2];
+        }
+        _dcd_start_xfer(1, NULL, 0, TRBCTL_CTL_STAT2);
+    }
+}
 
 static uint8_t _dcd_start_xfer(uint8_t ep, void* buf, uint32_t size, uint8_t type)
 {
