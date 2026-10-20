@@ -125,6 +125,10 @@ void tud_cdc_rx_cb(uint8_t itf) {
 
 void tud_cdc_line_coding_cb(uint8_t itf, cdc_line_coding_t const *coding) {
     usb_channel_active = (coding->bit_rate == OMV_PROTOCOL_MAGIC_BAUDRATE);
+    if (usb_channel_active) {
+        // Drop REPL input received before the protocol started (e.g. tty echo).
+        stdin_ringbuf.iget = stdin_ringbuf.iput = 0;
+    }
 }
 
 void tud_cdc_line_state_cb(uint8_t instance, bool dtr, bool rts) {
@@ -145,6 +149,13 @@ void tud_cdc_line_state_cb(uint8_t instance, bool dtr, bool rts) {
 
     if (!usb_channel_active) {
         __mp_tud_cdc_line_state_cb(instance, dtr, rts);
+
+        // MicroPython delays this flush with SOF events, which overflow the
+        // event queue at high-speed, dropping transfer events. Flush now instead.
+        if (dtr) {
+            tud_sof_cb_enable(false);
+            tud_cdc_write_flush();
+        }
     }
 }
 
