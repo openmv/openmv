@@ -145,6 +145,10 @@ ifeq ($(MICROPY_PY_ML_TFLM), 1)
 LIBS += $(TOP_DIR)/$(TENSORFLOW_DIR)/libtflm/lib/libtflm-$(CPU)+fp-release.a
 endif
 
+ifeq ($(MICROPY_PY_NETWORK_HALOW), 1)
+include $(TOP_DIR)/common/halow.mk
+endif
+
 ifeq ($(CUBEAI), 1)
 include $(TOP_DIR)/$(CUBEAI_DIR)/cube.mk
 endif
