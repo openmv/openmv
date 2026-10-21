@@ -102,7 +102,8 @@ typedef enum {
     VB_FLAG_NONE        = (1 << 0),
     VB_FLAG_USED        = (1 << 1),
     VB_FLAG_OVERFLOW    = (1 << 2),
-    VB_FLAG_LAST        = (1 << 3),
+    VB_FLAG_INVALID     = (1 << 3),
+    VB_FLAG_LAST        = (1 << 4),
 } vbuffer_flags_t;
 
 typedef struct vbuffer {
