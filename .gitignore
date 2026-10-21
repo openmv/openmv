@@ -38,5 +38,9 @@ tools/alif/**/*.bin.sign
 tools/alif/build/*-map.txt
 tools/st/stedgeai
 
+# Unit test scratch directory (run.py writes generated files here)
+######################
+scripts/unittest/temp/
+
 # macOS
 .DS_Store
