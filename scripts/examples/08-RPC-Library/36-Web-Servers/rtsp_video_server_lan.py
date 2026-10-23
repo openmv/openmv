@@ -10,6 +10,7 @@
 # OpenMV Cam's IP address. However, OpenMV IDE has an FFPLAY based RSTP Viewer built-in which
 # you can use by going to Tools->Video Tools->Play RSTP Stream.
 
+import asyncio
 import network
 import rtsp
 import csi
@@ -90,6 +91,7 @@ def image_callback(pathname, session):
 
 
 # Stream does not return. It will call `image_callback` when it needs to get an image object to send
-# to the remote rtsp client connecting to the server.
+# to the remote rtsp client connecting to the server. The server runs on asyncio so you can also
+# schedule your own tasks with asyncio.create_task() before calling this.
 
-server.stream(image_callback, quality=70)
+asyncio.run(server.stream(image_callback, quality=70))
