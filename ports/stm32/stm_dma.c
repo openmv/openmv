@@ -120,6 +120,17 @@ const DMA_InitTypeDef stm_dma_mdf_init = {
 };
 #endif
 
+#if defined(OMV_DMA_CHANNEL_JPEG_IN)
+const DMA_InitTypeDef stm_dma_jpeg_init = {
+    .BlkHWRequest = DMA_BREQ_SINGLE_BURST,
+    .Priority = DMA_LOW_PRIORITY_LOW_WEIGHT,
+    // The JPEG FIFOs request 8 words per transfer.
+    .SrcBurstLength = 8,
+    .DestBurstLength = 8,
+    .TransferEventMode = DMA_TCEM_BLOCK_TRANSFER,
+};
+#endif
+
 #if defined(HPDMA1)
 static bool stm_dma_is_hp_channel(void *dma_channel) {
     return ((((uint32_t) dma_channel) & 0xFFFFF000) == HPDMA1_BASE);

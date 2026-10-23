@@ -34,6 +34,7 @@ extern const DMA_InitTypeDef stm_dma_spi_init;
 extern const DMA_InitTypeDef stm_dma_sai_init;
 extern const DMA_InitTypeDef stm_dma_dfsdm_init;
 extern const DMA_InitTypeDef stm_dma_mdf_init;
+extern const DMA_InitTypeDef stm_dma_jpeg_init;
 
 uint8_t stm_dma_channel_to_irqn(void *dma_channel);
 uint8_t stm_dma_channel_to_id(void *dma_channel);
