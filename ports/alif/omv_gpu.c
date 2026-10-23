@@ -229,8 +229,11 @@ int omv_gpu_draw_image(image_t *src_img,
         blit_flags |= d2_bf_usealpha;
 
         if (dst_img->pixfmt == PIXFORMAT_RGB565) {
+            // The CLUT is not read by the GPU: the driver copies it into the display list with
+            // the CPU (dave_render.c), so it takes the local address. The core cannot read its
+            // own DTCM through the global alias, so passing that hangs it.
             omv_gpu_load_clut(color_palette, alpha_palette);
-            err = d2_settexclut(dev, (void *) LocalToGlobal(CLUT_BUFFER));
+            err = d2_settexclut(dev, CLUT_BUFFER);
             OMV_GPU_CHECK_ERROR(err);
         }
     }
