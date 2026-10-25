@@ -43,6 +43,7 @@ bool omv_memory_is_write_back(const void *addr, size_t size);
 // Returns true if all of [addr, addr + size) is accessible by the bus master
 // `master`, which is the base address of a DMA controller, DMA stream/channel,
 // or of a peripheral with its own DMA (e.g. DMA2D, SDMMC1). If master is NULL,
-// the port's general purpose DMA is assumed. Alignment is not checked.
+// the port's general purpose DMA is assumed. The address must also meet the
+// master's alignment requirements.
 bool omv_memory_is_dmable(const void *master, const void *addr, size_t size);
 #endif // __OMV_MEMORY_H__
