@@ -31,6 +31,7 @@ COMMON_SRC_C += \
     omv_crc.c \
     omv_csi.c \
     omv_i2c.c \
+    omv_memory.c \
     pendsv.c \
     tlsf.c \
     trace.c \
