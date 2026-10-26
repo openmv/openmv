@@ -340,6 +340,7 @@ typedef struct {
 typedef struct {
     // State machine
     uint8_t sequence;           // Next sequence number
+    bool suspended;             // Host packets are not consumed (soft reboot in progress)
     uint32_t last_lock_ms;      // Timestamp of the last successful lock
     int32_t scan_offset;
     bool wait_for_ack;
