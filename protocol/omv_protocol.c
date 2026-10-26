@@ -63,8 +63,27 @@ int omv_protocol_init(const omv_protocol_config_t *config) {
         return -1;
     }
 
+    // A soft reboot deinitializes the protocol and initializes it again while
+    // the host stays connected. Resume the session in that case: keep the
+    // negotiated capabilities, the sequence number and any packets already
+    // received, so commands the host sent during the reboot are processed
+    // in order once the protocol is back, without a re-sync.
+    bool resume = ctx.suspended;
+    omv_protocol_config_t new_config = *config;
+
+    if (resume) {
+        new_config.crc_enabled = ctx.config.crc_enabled;
+        new_config.seq_enabled = ctx.config.seq_enabled;
+        new_config.ack_enabled = ctx.config.ack_enabled;
+        new_config.event_enabled = ctx.config.event_enabled;
+        new_config.max_payload = ctx.config.max_payload;
+    } else {
+        ctx.sequence = 0;
+        omv_buffer_init(&ctx.buffer, ctx.rawbuf, sizeof(ctx.rawbuf));
+    }
+
     // Initialize state
-    ctx.sequence = 0;
+    ctx.suspended = false;
     ctx.last_lock_ms = 0;
     ctx.scan_offset = 0;
     ctx.wait_for_ack = false;
@@ -74,13 +93,10 @@ int omv_protocol_init(const omv_protocol_config_t *config) {
 
     // Use the config provided by this transport
     // For USB, see defaults below. Uart could enable CRC, ACKs etc..
-    ctx.config = *config;
+    ctx.config = new_config;
 
     // Save as default config, which will be restored on re-sync
     default_config = *config;
-
-    // Initialize buffer
-    omv_buffer_init(&ctx.buffer, ctx.rawbuf, sizeof(ctx.rawbuf));
 
     // Start periodic poll timer if configured.
     if (config->poll_ms > 0) {
@@ -130,6 +146,9 @@ int omv_protocol_init_default() {
 }
 
 void omv_protocol_deinit(void) {
+    // Leave anything the host sends in the transport until the next init.
+    ctx.suspended = true;
+
     if (ctx.config.poll_ms > 0) {
         soft_timer_remove(&protocol_timer);
     }
@@ -196,6 +215,11 @@ bool omv_protocol_exec_script(void) {
 
     bool result = channel->exec(channel);
     if (result) {
+        // The main loop soft-reboots next. Stop consuming host packets right
+        // away (sending the event below polls the transport): anything the
+        // host sends from here on is processed after the protocol is
+        // initialized again, not by a context that is about to be torn down.
+        ctx.suspended = true;
         omv_protocol_send_event(0, OMV_PROTOCOL_EVENT_SOFT_REBOOT, false);
     }
 
@@ -472,7 +496,7 @@ int omv_protocol_poll(void) {
         return -1;
     }
 
-    if (!transport || !transport->is_active(transport)) {
+    if (!transport || !transport->is_active(transport) || ctx.suspended) {
         return -1;
     }
 
