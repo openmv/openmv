@@ -23,6 +23,7 @@
  *
  * Python module for time of flight sensors.
  */
+#include <math.h>
 #include "py/runtime.h"
 #include "py/objlist.h"
 #include "py/mphal.h"
@@ -168,6 +169,13 @@ static int tof_vl53lx_recover(vl53lx_dev_t *vl53lx_dev) {
     return tof_vl53lx_start(vl53lx_dev);
 }
 
+// Target status per ST UM3109 table 4: 5 is a valid range (100% confidence), 6 (wrap-around not
+// performed, typically the first range) and 9 (valid with a large pulse) are 50% confidence. The
+// ULD sets 255 for zones with no target detected. Everything else is not a range.
+static inline bool tof_vl53lx_zone_valid(uint8_t status) {
+    return (status == 5) || (status == 6) || (status == 9);
+}
+
 static void tof_vl53lx_get_depth(vl53lx_dev_t *vl53lx_dev, float *frame, int timeout) {
     // Note depending on the config in platform.h, this struct can be too big to alloc on the stack.
     vl53lx_data_t ranging_data;
@@ -201,7 +209,10 @@ static void tof_vl53lx_get_depth(vl53lx_dev_t *vl53lx_dev, float *frame, int tim
     }
 
     for (int i = 0, ii = OMV_TOF_VL53LX_WIDTH * OMV_TOF_VL53LX_HEIGHT; i < ii; i++) {
-        frame[i] = (float) ranging_data.distance_mm[i];
+        // A zone without a valid target still carries whatever the sensor last estimated for it,
+        // including negative distances. Report those zones as NaN so they drop out of min/max.
+        frame[i] = tof_vl53lx_zone_valid(ranging_data.target_status[i]) ?
+                   ((float) ranging_data.distance_mm[i]) : NAN;
     }
 }
 
@@ -269,6 +280,11 @@ static mp_obj_t tof_get_depth_obj(int w, int h, float *frame, bool mirror,
                 }
             }
         }
+    }
+
+    // NaN zones never compare, so with no valid zone min/max are still the sentinels.
+    if (min > max) {
+        min = max = NAN;
     }
 
     mp_obj_t tuple[3] = {
