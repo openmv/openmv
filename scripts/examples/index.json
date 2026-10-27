@@ -76,6 +76,12 @@
       "exclude_sensors": ["None"]
     },
     {
+      "path": "01-Camera/09-Depth-Cameras/00-VL53L9CX",
+      "boards": ["*"],
+      "sensors": ["*"],
+      "exclude_sensors": ["None"]
+    },
+    {
       "path": "02-Image-Processing",
       "boards": ["*"],
       "sensors": ["*"],
