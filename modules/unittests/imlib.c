@@ -81,6 +81,37 @@ static mp_obj_t test_imlib_color_conv(void) {
 }
 static MP_DEFINE_CONST_FUN_OBJ_0(test_imlib_color_conv_obj, test_imlib_color_conv);
 
+static mp_obj_t test_imlib_binary_min_bounds(void) {
+    // Padding makes an incorrect grayscale fallthrough visible without an out-of-bounds access.
+    uint32_t source[16] = {0x0F0FF0F0, 0xAAAAAAAA};
+    uint32_t mask_pixels[2] = {UINT32_MAX, UINT32_MAX};
+    image_t mask = {.w = 64, .h = 1, .pixfmt = PIXFORMAT_BINARY, .data = (uint8_t *) mask_pixels};
+    for (int masked = 0; masked <= 1; masked++) {
+        uint32_t pixels[16];
+        pixels[0] = pixels[1] = UINT32_MAX;
+        for (size_t i = 2; i < MP_ARRAY_SIZE(pixels); i++) {
+            pixels[i] = 0xDEADBEEF;
+        }
+        image_t img = {.w = 64, .h = 1, .pixfmt = PIXFORMAT_BINARY, .data = (uint8_t *) pixels};
+        imlib_draw_row_data_t row = {
+            .dst_img = &img,
+            .callback_arg = masked ? &mask : NULL,
+            .dst_row_override = source,
+        };
+        imlib_min_line_op(0, 64, 0, &row);
+        if (pixels[0] != source[0] || pixels[1] != source[1]) {
+            return mp_const_false;
+        }
+        for (size_t i = 2; i < MP_ARRAY_SIZE(pixels); i++) {
+            if (pixels[i] != 0xDEADBEEF) {
+                return mp_const_false;
+            }
+        }
+    }
+    return mp_const_true;
+}
+static MP_DEFINE_CONST_FUN_OBJ_0(test_imlib_binary_min_bounds_obj, test_imlib_binary_min_bounds);
+
 // Test rectangle operations
 static mp_obj_t test_imlib_rectangle(void) {
     rectangle_t r1 = {10, 20, 100, 50};
@@ -406,6 +437,7 @@ static const mp_rom_map_elem_t unittest_imlib_module_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR___name__), MP_ROM_QSTR(MP_QSTR_unittest_imlib) },
     { MP_ROM_QSTR(MP_QSTR_test_imlib_ksize_to_n), MP_ROM_PTR(&test_imlib_ksize_to_n_obj) },
     { MP_ROM_QSTR(MP_QSTR_test_imlib_color_conv), MP_ROM_PTR(&test_imlib_color_conv_obj) },
+    { MP_ROM_QSTR(MP_QSTR_test_imlib_binary_min_bounds), MP_ROM_PTR(&test_imlib_binary_min_bounds_obj) },
     { MP_ROM_QSTR(MP_QSTR_test_imlib_rectangle), MP_ROM_PTR(&test_imlib_rectangle_obj) },
     { MP_ROM_QSTR(MP_QSTR_test_imlib_rectangle_united), MP_ROM_PTR(&test_imlib_rectangle_united_obj) },
     { MP_ROM_QSTR(MP_QSTR_test_imlib_point), MP_ROM_PTR(&test_imlib_point_obj) },

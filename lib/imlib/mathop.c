@@ -351,6 +351,7 @@ void imlib_min_line_op(int x, int x_end, int y_row, imlib_draw_row_data_t *data)
     switch (data->dst_img->pixfmt) {
         case PIXFORMAT_BINARY: {
             imlib_b_and_line_op(x, x_end, y_row, data);
+            break;
         }
         case PIXFORMAT_GRAYSCALE: {
             uint8_t *row0 = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(data->dst_img, y_row);
