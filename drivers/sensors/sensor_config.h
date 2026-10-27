@@ -105,6 +105,11 @@ extern bool paj6100_detect(omv_csi_t *csi);
 #endif
 extern int ps5520_init(omv_csi_t *csi);
 
+#ifndef OMV_VL53L9CX_CLK_FREQ
+#define OMV_VL53L9CX_CLK_FREQ   (24000000)
+#endif
+extern int vl53l9cx_init(omv_csi_t *csi);
+
 #ifndef OMV_FROGEYE2020_CLK_FREQ
 #define OMV_FROGEYE2020_CLK_FREQ    (5000000)
 #endif
@@ -191,6 +196,10 @@ static const sensor_config_t sensor_config_table[] = {
 
     #if OMV_PS5520_ENABLE
     { PS5520_ID, OMV_PS5520_CLK_FREQ, ps5520_init },
+    #endif
+
+    #if OMV_VL53L9CX_ENABLE
+    { VL53L9CX_ID, OMV_VL53L9CX_CLK_FREQ, vl53l9cx_init },
     #endif
 
     #if OMV_FROGEYE2020_ENABLE

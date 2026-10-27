@@ -40,6 +40,7 @@
 #include "py/mphal.h"
 #include "omv_gpio.h"
 #include "omv_i2c.h"
+#include "omv_i3c.h"
 #include "omv_csi.h"
 #include "board_config.h"
 #include "framebuffer.h"
@@ -394,6 +395,48 @@ __weak int omv_csi_reset(omv_csi_t *csi, bool hard) {
     return 0;
 }
 
+#if defined(OMV_CSI_I3C_ID)
+// I3C sensors don't answer the I2C scan, so look for them with ENTDAA on the
+// I3C controller sharing the bus pins. The bus stays on it if any are found.
+static size_t omv_csi_detect_i3c(omv_i2c_t *i2c, i2c_dev_t *dev_list, size_t size) {
+    uint8_t addrs[OMV_CSI_MAX_DEVICES];
+    uint64_t pids[OMV_CSI_MAX_DEVICES];
+    uint32_t bus_id = i2c->id;
+    uint32_t speed = i2c->speed;
+    size_t dev_count = 0;
+    int count = 0;
+
+    // Hand the bus pins from the I2C controller to the I3C controller.
+    omv_i2c_deinit(i2c);
+    if (omv_i2c_init(i2c, OMV_CSI_I3C_ID, OMV_CSI_I3C_SPEED) == 0) {
+        count = OMV_MIN(omv_i3c_daa(i2c, addrs, pids, OMV_ARRAY_SIZE(addrs)), (int) OMV_ARRAY_SIZE(addrs));
+    }
+
+    for (int i = 0; i < count && dev_count < size; i++) {
+        uint32_t chip_id = pids[i] >> 16;
+
+        switch (chip_id) {
+            #if (OMV_VL53L9CX_ENABLE == 1)
+            case VL53L9CX_ID:
+                dev_list[dev_count++] = (i2c_dev_t) {
+                    addrs[i], chip_id
+                };
+                break;
+            #endif // (OMV_VL53L9CX_ENABLE == 1)
+        }
+    }
+
+    // No I3C sensors, so return the pins to the I2C controller, which
+    // supports clock stretching and slower rates.
+    if (dev_count == 0) {
+        omv_i2c_deinit(i2c);
+        omv_i2c_init(i2c, bus_id, speed);
+    }
+
+    return dev_count;
+}
+#endif // defined(OMV_CSI_I3C_ID)
+
 static size_t omv_csi_detect(omv_i2c_t *i2c, i2c_dev_t *dev_list) {
     size_t dev_count = 0;
     uint8_t addr_list[OMV_CSI_I2C_MAX_DEV];
@@ -540,6 +583,12 @@ int omv_csi_probe(omv_i2c_t *i2c) {
 
         dev_count = omv_csi_detect(i2c, dev_list);
     }
+
+    // I3C sensors are probed after the scan settles on a polarity, which
+    // keeps them from ending it before the I2C sensors are out of reset.
+    #if defined(OMV_CSI_I3C_ID)
+    dev_count += omv_csi_detect_i3c(i2c, &dev_list[dev_count], OMV_CSI_MAX_DEVICES - dev_count);
+    #endif
 
     // Track elapsed time since power-on.
     uint32_t power_time_ms = mp_hal_ticks_ms();
@@ -1798,6 +1847,7 @@ const char *omv_csi_name(omv_csi_t *csi) {
         case PAG7920_ID:         return "PAG7920";
         case PAG7936_ID:         return "PAG7936";
         case PS5520_ID:          return "PS5520";
+        case VL53L9CX_ID:        return "VL53L9CX";
         case PAJ6100_ID:         return "PAJ6100";
         case FROGEYE2020_ID:     return "FROGEYE2020";
         case SOFTCSI_ID:         return "SoftCSI";
