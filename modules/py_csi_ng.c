@@ -1080,6 +1080,38 @@ static void py_csi_unpack_genx320_events(py_csi_obj_t *self, size_t n_args,
 }
 #endif // (OMV_GENX320_ENABLE == 1)
 
+#if (OMV_BOSON_ENABLE == 1) && MICROPY_PY_ULAB
+static void py_csi_unpack_boson_frame(py_csi_obj_t *self, size_t n_args,
+                                      const mp_obj_t *args, void *arg) {
+    boson_ioctl_arg_t *a = arg;
+
+    if (!MP_OBJ_IS_TYPE(args[0], &ulab_ndarray_type)) {
+        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Expected a ndarray with dtype uint16"));
+    }
+
+    ndarray_obj_t *array = MP_OBJ_TO_PTR(args[0]);
+
+    if (array->dtype != NDARRAY_UINT16) {
+        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Expected a ndarray with dtype uint16"));
+    }
+
+    // The native resolution, independent of the current mode's capture framesize.
+    omv_csi_framesize_t framesize = (self->csi->chip_id == BOSON_640_ID) ?
+                                    OMV_CSI_FRAMESIZE_VGA : OMV_CSI_FRAMESIZE_QVGA;
+    uint32_t w = self->csi->resolution[framesize][0];
+    uint32_t h = self->csi->resolution[framesize][1];
+
+    if (!(ndarray_is_dense(array) && (array->ndim == 2) &&
+          (array->shape[ULAB_MAX_DIMS - 2] == h) &&
+          (array->shape[ULAB_MAX_DIMS - 1] == w))) {
+        mp_raise_msg_varg(&mp_type_ValueError,
+                          MP_ERROR_TEXT("Expected a dense ndarray with shape (%d, %d)"), h, w);
+    }
+
+    a->frame.data = array->array;
+}
+#endif // (OMV_BOSON_ENABLE == 1) && MICROPY_PY_ULAB
+
 static const py_csi_ioctl_desc_t py_csi_ioctl_table[] = {
     // Common requests.
     { OMV_CSI_IOCTL_SET_READOUT_WINDOW,    1, 1, "W",  "",     NULL, NULL },
@@ -1172,6 +1204,10 @@ static const py_csi_ioctl_desc_t py_csi_ioctl_table[] = {
     { OMV_CSI_IOCTL_BOSON_GET_SPOT_METER_TEMP_STATS, 0, 0, "", "fffiifii", NULL, NULL },
     { OMV_CSI_IOCTL_BOSON_GET_TEMP_FROM_COUNTS,   2, 2, "ii", "__f",      NULL, NULL },
     { OMV_CSI_IOCTL_BOSON_GET_RBFO,               2, 2, "ii", "__ffff",   NULL, NULL },
+    { OMV_CSI_IOCTL_BOSON_SET_MODE,               1, 1, "i",  "",         NULL, NULL },
+    #if MICROPY_PY_ULAB
+    { OMV_CSI_IOCTL_BOSON_READ_FRAME,             1, 1, NULL, "",         py_csi_unpack_boson_frame, NULL },
+    #endif // MICROPY_PY_ULAB
     #endif // (OMV_BOSON_ENABLE == 1)
 };
 
@@ -1618,6 +1654,10 @@ static const mp_rom_map_elem_t globals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_IOCTL_BOSON_GET_SPOT_METER_TEMP_STATS), MP_ROM_INT(OMV_CSI_IOCTL_BOSON_GET_SPOT_METER_TEMP_STATS) },
     { MP_ROM_QSTR(MP_QSTR_IOCTL_BOSON_GET_TEMP_FROM_COUNTS),      MP_ROM_INT(OMV_CSI_IOCTL_BOSON_GET_TEMP_FROM_COUNTS) },
     { MP_ROM_QSTR(MP_QSTR_IOCTL_BOSON_GET_RBFO),                  MP_ROM_INT(OMV_CSI_IOCTL_BOSON_GET_RBFO) },
+    { MP_ROM_QSTR(MP_QSTR_IOCTL_BOSON_SET_MODE),                  MP_ROM_INT(OMV_CSI_IOCTL_BOSON_SET_MODE) },
+    { MP_ROM_QSTR(MP_QSTR_BOSON_MODE_AGC),                        MP_ROM_INT(OMV_CSI_BOSON_MODE_AGC) },
+    { MP_ROM_QSTR(MP_QSTR_BOSON_MODE_RAW),                        MP_ROM_INT(OMV_CSI_BOSON_MODE_RAW) },
+    { MP_ROM_QSTR(MP_QSTR_IOCTL_BOSON_READ_FRAME),                MP_ROM_INT(OMV_CSI_IOCTL_BOSON_READ_FRAME) },
     { MP_ROM_QSTR(MP_QSTR_BOSON_GAIN_HIGH),                       MP_ROM_INT(OMV_CSI_BOSON_GAIN_HIGH) },
     { MP_ROM_QSTR(MP_QSTR_BOSON_GAIN_LOW),                        MP_ROM_INT(OMV_CSI_BOSON_GAIN_LOW) },
     { MP_ROM_QSTR(MP_QSTR_BOSON_GAIN_AUTO),                       MP_ROM_INT(OMV_CSI_BOSON_GAIN_AUTO) },
