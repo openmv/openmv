@@ -2006,7 +2006,7 @@ static void JPEGPixelLE(uint16_t *pDest, int iY, int iCb, int iCr) {
     uint32_t ulCbCr = (iCb | (iCr << 16));
     uint32_t ulTmp;                                   // for green calc
     ulTmp = -1409;
-    ulTmp = (ulTmp & 0xffff) | (-2925 << 16);
+    ulTmp = (ulTmp & 0xffff) | ((uint32_t) -2925 << 16);
     ulCbCr = __SSUB16(ulCbCr, 0x00800080);            // dual 16-bit subtraction
     ulPixel = __SMLAD(ulCbCr, ulTmp, iY) >> 14;       // G
     ulPixel = __USAT16(ulPixel, 6) << 5;              // range limit to 6 bits
@@ -2024,7 +2024,7 @@ static void JPEGPixel2LE(uint16_t *pDest, int iY1, int iY2, int iCb, int iCr) {
     uint32_t ulCbCr = (iCb | (iCr << 16));
     uint32_t ulTmp2, ulTmp;                             // for green calc
     ulTmp = -1409;
-    ulTmp = (ulTmp & 0xffff) | (-2925 << 16);
+    ulTmp = (ulTmp & 0xffff) | ((uint32_t) -2925 << 16);
     ulCbCr = __SSUB16(ulCbCr, 0x00800080);              // dual 16-bit subtraction
     ulPixel1 = __SMLAD(ulCbCr, ulTmp, iY1) >> 14;       // G for pixel 1
     ulPixel2 = __SMLAD(ulCbCr, ulTmp, iY2) >> 14;       // G for pixel 2
