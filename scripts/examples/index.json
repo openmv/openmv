@@ -64,6 +64,11 @@
       "exclude_sensors": ["None"]
     },
     {
+      "path": "01-Camera/06-Time-of-Flight/02-VL53L9CX",
+      "boards": ["*"],
+      "sensors": ["VL53L9CX"]
+    },
+    {
       "path": "01-Camera/07-Sensor-Control",
       "boards": ["*"],
       "sensors": ["*"],
