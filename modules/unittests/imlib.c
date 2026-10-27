@@ -81,6 +81,42 @@ static mp_obj_t test_imlib_color_conv(void) {
 }
 static MP_DEFINE_CONST_FUN_OBJ_0(test_imlib_color_conv_obj, test_imlib_color_conv);
 
+static mp_obj_t test_imlib_grayscale_bindings(void) {
+    static const mp_int_t values[] = {0, 127, 128, 255, -1, 256, -129, 383};
+    mp_obj_t module = mp_import_name(MP_QSTR_image, mp_const_none, MP_OBJ_NEW_SMALL_INT(0));
+    mp_obj_t binary = mp_load_attr(module, MP_QSTR_grayscale_to_binary);
+    mp_obj_t converters[] = {
+        mp_load_attr(module, MP_QSTR_grayscale_to_rgb),
+        mp_load_attr(module, MP_QSTR_grayscale_to_lab),
+        mp_load_attr(module, MP_QSTR_grayscale_to_yuv),
+    };
+    for (size_t i = 0; i < MP_ARRAY_SIZE(values); i++) {
+        mp_obj_t arg = mp_obj_new_int(values[i]);
+        uint8_t gray = values[i] & 255;
+        if (mp_obj_get_int(mp_call_function_1(binary, arg)) != (gray > 127)) {
+            return mp_const_false;
+        }
+        uint16_t rgb565 = COLOR_GRAYSCALE_TO_RGB565(gray);
+        int expected[][3] = {
+            {COLOR_RGB565_TO_R8(rgb565), COLOR_RGB565_TO_G8(rgb565), COLOR_RGB565_TO_B8(rgb565)},
+            {COLOR_RGB565_TO_L(rgb565), COLOR_RGB565_TO_A(rgb565), COLOR_RGB565_TO_B(rgb565)},
+            {COLOR_RGB565_TO_Y(rgb565), COLOR_RGB565_TO_U(rgb565), COLOR_RGB565_TO_V(rgb565)},
+        };
+        for (size_t j = 0; j < MP_ARRAY_SIZE(converters); j++) {
+            mp_obj_t result = mp_call_function_1(converters[j], arg);
+            mp_obj_t *items;
+            mp_obj_get_array_fixed_n(result, 3, &items);
+            for (size_t k = 0; k < 3; k++) {
+                if (mp_obj_get_int(items[k]) != expected[j][k]) {
+                    return mp_const_false;
+                }
+            }
+        }
+    }
+    return mp_const_true;
+}
+static MP_DEFINE_CONST_FUN_OBJ_0(test_imlib_grayscale_bindings_obj, test_imlib_grayscale_bindings);
+
 static mp_obj_t test_imlib_binary_min_bounds(void) {
     // Padding makes an incorrect grayscale fallthrough visible without an out-of-bounds access.
     uint32_t source[16] = {0x0F0FF0F0, 0xAAAAAAAA};
@@ -437,6 +473,7 @@ static const mp_rom_map_elem_t unittest_imlib_module_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR___name__), MP_ROM_QSTR(MP_QSTR_unittest_imlib) },
     { MP_ROM_QSTR(MP_QSTR_test_imlib_ksize_to_n), MP_ROM_PTR(&test_imlib_ksize_to_n_obj) },
     { MP_ROM_QSTR(MP_QSTR_test_imlib_color_conv), MP_ROM_PTR(&test_imlib_color_conv_obj) },
+    { MP_ROM_QSTR(MP_QSTR_test_imlib_grayscale_bindings), MP_ROM_PTR(&test_imlib_grayscale_bindings_obj) },
     { MP_ROM_QSTR(MP_QSTR_test_imlib_binary_min_bounds), MP_ROM_PTR(&test_imlib_binary_min_bounds_obj) },
     { MP_ROM_QSTR(MP_QSTR_test_imlib_rectangle), MP_ROM_PTR(&test_imlib_rectangle_obj) },
     { MP_ROM_QSTR(MP_QSTR_test_imlib_rectangle_united), MP_ROM_PTR(&test_imlib_rectangle_united_obj) },
