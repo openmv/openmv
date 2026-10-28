@@ -396,6 +396,20 @@ typedef struct omv_csi_stats {
 } omv_csi_stats_t;
 #endif // defined(OMV_CSI_STATS_ENABLE)
 
+// Log chromaticity of the raw R/G/B averages, folded to a constant at compile time.
+#define OMV_CSI_CCM_CHROMA(r, g, b) { __builtin_logf((float) (r) / (g)), __builtin_logf((float) (b) / (g)) }
+
+typedef struct omv_csi_ccm {
+    float chroma[2];        // Log chromaticity (ln(R/G), ln(B/G)) of the illuminant.
+    float coeffs[3][3];     // Color correction matrix (rows should sum to 1).
+    float offsets[3];       // Color correction offsets.
+} omv_csi_ccm_t;
+
+typedef struct omv_csi_ccm_table {
+    size_t count;
+    const omv_csi_ccm_t *entries; // Sorted warmest to coolest illuminant.
+} omv_csi_ccm_table_t;
+
 typedef struct _omv_csi {
     uint32_t chip_id;           // Sensor ID 32 bits.
     uint8_t slv_addr;           // Sensor I2C slave address.
@@ -476,6 +490,10 @@ typedef struct _omv_csi {
     uint16_t src_w;
     uint16_t src_h;
     #endif // OMV_CSI_HW_SCALE_ENABLE
+
+    #ifdef OMV_CSI_HW_CCM_ENABLE
+    const omv_csi_ccm_table_t *ccm; // Color correction matrices.
+    #endif // OMV_CSI_HW_CCM_ENABLE
 
     // Sensor function pointers
     int (*reset) (omv_csi_t *csi);
@@ -636,6 +654,9 @@ void omv_csi_stats_update(omv_csi_t *csi, uint32_t *r, uint32_t *g, uint32_t *b,
 // Get RGB moving average values.
 void omv_csi_get_stats(omv_csi_t *csi, uint32_t *r, uint32_t *g, uint32_t *b);
 #endif // defined(OMV_CSI_STATS_ENABLE)
+
+// Blends the table's matrices for the R/G/B averages and fades to unity at extreme luminance.
+bool omv_csi_ccm_compute(const omv_csi_ccm_table_t *table, const uint32_t rgb[3], float luminance, omv_csi_ccm_t *out);
 
 // Enable auto blc (black level calibration) or set from previous calibration.
 int omv_csi_set_auto_blc(omv_csi_t *csi, int enable, int *regs);

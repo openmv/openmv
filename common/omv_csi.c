@@ -32,6 +32,7 @@
  * This file provides default functions that can be overriden by ports.
  */
 #if MICROPY_PY_CSI
+#include <math.h>
 #include <string.h>
 #include <stdint.h>
 #include <stdbool.h>
@@ -1208,6 +1209,68 @@ void omv_csi_get_stats(omv_csi_t *csi, uint32_t *r, uint32_t *g, uint32_t *b) {
     *b = fast_roundf(stats->b_avg);
 }
 #endif // defined(OMV_CSI_STATS_ENABLE)
+
+// Frame luminance below/above which the CCM fades toward unity.
+#define OMV_CSI_CCM_DARK_UNITY      (8.0f)
+#define OMV_CSI_CCM_DARK_FULL       (32.0f)
+#define OMV_CSI_CCM_BRIGHT_FULL     (150.0f)
+#define OMV_CSI_CCM_BRIGHT_UNITY    (220.0f)
+
+// Projects the illuminant onto the polyline of calibration illuminants in log
+// chromaticity space and blends the CCMs at the ends of the closest segment (~linear in mired).
+bool omv_csi_ccm_compute(const omv_csi_ccm_table_t *table, const uint32_t rgb[3], float luminance, omv_csi_ccm_t *out) {
+    if (table == NULL || table->count == 0) {
+        return false;
+    }
+
+    const omv_csi_ccm_t *ccm = table->entries;
+    float g = OMV_MAX(rgb[1], 1);
+    out->chroma[0] = logf(OMV_MAX(rgb[0], 1) / g);
+    out->chroma[1] = logf(OMV_MAX(rgb[2], 1) / g);
+
+    size_t idx = 0;
+    float t = 0.0f;
+    float best = INFINITY;
+
+    for (size_t i = 0; i + 1 < table->count; i++) {
+        const float *p0 = ccm[i].chroma;
+        const float *p1 = ccm[i + 1].chroma;
+
+        float dx = p1[0] - p0[0];
+        float dy = p1[1] - p0[1];
+        float len = OMV_MAX(dx * dx + dy * dy, 1e-6f);
+        float u = IM_CLAMP(((out->chroma[0] - p0[0]) * dx + (out->chroma[1] - p0[1]) * dy) / len, 0.0f, 1.0f);
+
+        float ex = p0[0] + u * dx - out->chroma[0];
+        float ey = p0[1] + u * dy - out->chroma[1];
+        float dist = ex * ex + ey * ey;
+
+        if (dist < best) {
+            best = dist;
+            idx = i;
+            t = u;
+        }
+    }
+
+    const omv_csi_ccm_t *a = &ccm[idx];
+    const omv_csi_ccm_t *b = &ccm[OMV_MIN(idx + 1, table->count - 1)];
+
+    // Very dark or bright frames fade to unity to limit noise gain and color shifts near clipping.
+    float dark = (luminance - OMV_CSI_CCM_DARK_UNITY) / (OMV_CSI_CCM_DARK_FULL - OMV_CSI_CCM_DARK_UNITY);
+    float bright = (OMV_CSI_CCM_BRIGHT_UNITY - luminance) / (OMV_CSI_CCM_BRIGHT_UNITY - OMV_CSI_CCM_BRIGHT_FULL);
+    float strength = IM_CLAMP(OMV_MIN(dark, bright), 0.0f, 1.0f);
+
+    for (int r = 0; r < 3; r++) {
+        for (int c = 0; c < 3; c++) {
+            float v = a->coeffs[r][c] + t * (b->coeffs[r][c] - a->coeffs[r][c]);
+            out->coeffs[r][c] = strength * v + (1.0f - strength) * (r == c);
+        }
+
+        out->offsets[r] = strength * (a->offsets[r] + t * (b->offsets[r] - a->offsets[r]));
+    }
+
+    return true;
+}
 
 __weak int omv_csi_set_auto_blc(omv_csi_t *csi, int enable, int *regs) {
     // Check if the control is supported.
