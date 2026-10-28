@@ -148,6 +148,17 @@ static mp_obj_t test_imlib_binary_min_bounds(void) {
 }
 static MP_DEFINE_CONST_FUN_OBJ_0(test_imlib_binary_min_bounds_obj, test_imlib_binary_min_bounds);
 
+#if OMV_OS_UNIX
+static mp_obj_t test_imlib_clahe_byte_range(void) {
+    uint8_t pixels[] = {0, 127, 128, 255};
+    image_t img = {.w = 2, .h = 2, .pixfmt = PIXFORMAT_GRAYSCALE, .data = pixels};
+    imlib_clahe_histeq(&img, 1.0f, NULL);
+    return (pixels[0] == 0 && pixels[1] == 127 && pixels[2] == 128 && pixels[3] == 255)
+           ? mp_const_true : mp_const_false;
+}
+static MP_DEFINE_CONST_FUN_OBJ_0(test_imlib_clahe_byte_range_obj, test_imlib_clahe_byte_range);
+#endif
+
 // Test rectangle operations
 static mp_obj_t test_imlib_rectangle(void) {
     rectangle_t r1 = {10, 20, 100, 50};
@@ -475,6 +486,9 @@ static const mp_rom_map_elem_t unittest_imlib_module_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_test_imlib_color_conv), MP_ROM_PTR(&test_imlib_color_conv_obj) },
     { MP_ROM_QSTR(MP_QSTR_test_imlib_grayscale_bindings), MP_ROM_PTR(&test_imlib_grayscale_bindings_obj) },
     { MP_ROM_QSTR(MP_QSTR_test_imlib_binary_min_bounds), MP_ROM_PTR(&test_imlib_binary_min_bounds_obj) },
+    #if OMV_OS_UNIX
+    { MP_ROM_QSTR(MP_QSTR_test_imlib_clahe_byte_range), MP_ROM_PTR(&test_imlib_clahe_byte_range_obj) },
+    #endif
     { MP_ROM_QSTR(MP_QSTR_test_imlib_rectangle), MP_ROM_PTR(&test_imlib_rectangle_obj) },
     { MP_ROM_QSTR(MP_QSTR_test_imlib_rectangle_united), MP_ROM_PTR(&test_imlib_rectangle_united_obj) },
     { MP_ROM_QSTR(MP_QSTR_test_imlib_point), MP_ROM_PTR(&test_imlib_point_obj) },
