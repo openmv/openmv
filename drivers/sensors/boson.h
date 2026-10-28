@@ -35,6 +35,11 @@ typedef enum {
     OMV_CSI_BOSON_GAIN_MANUAL,
 } boson_gain_mode_t;
 
+typedef enum {
+    OMV_CSI_BOSON_MODE_AGC,             // 8-bit AGC video.
+    OMV_CSI_BOSON_MODE_RAW,             // 16-bit T-Linear or raw counts video.
+} boson_mode_t;
+
 // Values match FLR_BOSON_FFCMODE_E.
 typedef enum {
     OMV_CSI_BOSON_FFC_MANUAL,
@@ -110,6 +115,9 @@ typedef union {
         float f;
         float o;
     } rbfo;                             // "ii" in, "__ffff" out
+    struct {
+        uint16_t *data;
+    } frame;                            // ndarray in
 } boson_ioctl_arg_t;
 
 #endif // __BOSON_H__
