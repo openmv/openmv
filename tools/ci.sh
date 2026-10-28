@@ -138,6 +138,12 @@ ci_run_qemu_tests() {
 }
 
 ########################################################################################
+# Run Unix port unit tests
+ci_run_unix_tests() {
+    "${1:?Unix binary path is required}" -m unittest scripts/unittest/unix_tests.py
+}
+
+########################################################################################
 # Install FVP
 FVP_VERSION="11.31.28"
 FVP_INSTALL_DIR="${HOME}/fvp-${FVP_VERSION}"
