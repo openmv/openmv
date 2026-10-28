@@ -83,6 +83,18 @@ typedef const stm32_gpio_t *omv_gpio_t;
 typedef I2C_HandleTypeDef *omv_i2c_dev_t;
 
 #if defined(STM32N6)
+// I3C buses also carry legacy I2C targets. Writes without a STOP are
+// cached and sent with the next read as a single frame.
+#define OMV_I2C_PORT_BITS   \
+    struct {                \
+        bool is_i3c;        \
+        void *i3c;          \
+        uint8_t cw_size;    \
+        uint8_t cw_buf[16]; \
+    };
+#endif
+
+#if defined(STM32N6)
 #define OMV_I2C_MAX_8BIT_XFER   (65536U - 16U)
 #define OMV_I2C_MAX_16BIT_XFER  (32768U - 8U)
 #else

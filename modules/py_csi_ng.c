@@ -42,6 +42,7 @@
 #include "himax.h"
 #include "genx320.h"
 #include "boson.h"
+#include "vl53l9cx.h"
 
 #include "imlib.h"
 #include "py_assert.h"
@@ -1080,6 +1081,22 @@ static void py_csi_unpack_genx320_events(py_csi_obj_t *self, size_t n_args,
 }
 #endif // (OMV_GENX320_ENABLE == 1)
 
+#if (OMV_VL53L9CX_ENABLE == 1)
+static mp_obj_t py_csi_pack_vl53l9cx_plane(const void *arg) {
+    const vl53l9cx_ioctl_arg_t *a = arg;
+    size_t shape[ULAB_MAX_DIMS] = { 0 };
+    shape[ULAB_MAX_DIMS - 2] = a->plane.h;
+    shape[ULAB_MAX_DIMS - 1] = a->plane.w;
+
+    ndarray_obj_t *array = ndarray_new_dense_ndarray(2, shape, NDARRAY_UINT16);
+    uint16_t *data = (uint16_t *) array->array;
+    for (size_t i = 0; i < a->plane.w * a->plane.h; i++) {
+        data[i] = a->plane.data[i] & a->plane.mask;
+    }
+    return MP_OBJ_FROM_PTR(array);
+}
+#endif // (OMV_VL53L9CX_ENABLE == 1)
+
 static const py_csi_ioctl_desc_t py_csi_ioctl_table[] = {
     // Common requests.
     { OMV_CSI_IOCTL_SET_READOUT_WINDOW,    1, 1, "W",  "",     NULL, NULL },
@@ -1173,6 +1190,22 @@ static const py_csi_ioctl_desc_t py_csi_ioctl_table[] = {
     { OMV_CSI_IOCTL_BOSON_GET_TEMP_FROM_COUNTS,   2, 2, "ii", "__f",      NULL, NULL },
     { OMV_CSI_IOCTL_BOSON_GET_RBFO,               2, 2, "ii", "__ffff",   NULL, NULL },
     #endif // (OMV_BOSON_ENABLE == 1)
+
+    #if (OMV_VL53L9CX_ENABLE == 1)
+    // ST VL53L9CX.
+    { OMV_CSI_IOCTL_VL53L9CX_SET_RANGE,         2, 2, "ii", "",   NULL, NULL },
+    { OMV_CSI_IOCTL_VL53L9CX_GET_RANGE,         0, 0, "",   "ii", NULL, NULL },
+    { OMV_CSI_IOCTL_VL53L9CX_SET_MODE,          1, 1, "i",  "",   NULL, NULL },
+    { OMV_CSI_IOCTL_VL53L9CX_GET_MODE,          0, 0, "",   "i",  NULL, NULL },
+    { OMV_CSI_IOCTL_VL53L9CX_SET_PLANES,        1, 1, "i",  "",   NULL, NULL },
+    { OMV_CSI_IOCTL_VL53L9CX_GET_PLANES,        0, 0, "",   "i",  NULL, NULL },
+    { OMV_CSI_IOCTL_VL53L9CX_GET_BINNING,       0, 0, "",   "i",  NULL, NULL },
+    { OMV_CSI_IOCTL_VL53L9CX_GET_RESOLUTION,    0, 0, "",   "ii", NULL, NULL },
+    { OMV_CSI_IOCTL_VL53L9CX_GET_FRAME_COUNTER, 0, 0, "",   "i",  NULL, NULL },
+    { OMV_CSI_IOCTL_VL53L9CX_GET_DEPTH,         0, 0, "",   NULL, NULL, py_csi_pack_vl53l9cx_plane },
+    { OMV_CSI_IOCTL_VL53L9CX_GET_AMPLITUDE,     0, 0, "",   NULL, NULL, py_csi_pack_vl53l9cx_plane },
+    { OMV_CSI_IOCTL_VL53L9CX_GET_AMBIENT,       0, 0, "",   NULL, NULL, py_csi_pack_vl53l9cx_plane },
+    #endif // (OMV_VL53L9CX_ENABLE == 1)
 };
 
 static const py_csi_ioctl_desc_t *py_csi_ioctl_find(int request) {
@@ -1201,6 +1234,9 @@ static mp_obj_t py_csi_ioctl(size_t n_args, const mp_obj_t *args) {
         #endif
         #if (OMV_BOSON_ENABLE == 1)
         boson_ioctl_arg_t boson;
+        #endif
+        #if (OMV_VL53L9CX_ENABLE == 1)
+        vl53l9cx_ioctl_arg_t vl53l9cx;
         #endif
     } arg = {0};
 
@@ -1476,6 +1512,7 @@ static const mp_rom_map_elem_t globals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_PAJ6100),         MP_ROM_INT(PAJ6100_ID) },
     { MP_ROM_QSTR(MP_QSTR_FROGEYE2020),     MP_ROM_INT(FROGEYE2020_ID) },
     { MP_ROM_QSTR(MP_QSTR_SOFTCSI),         MP_ROM_INT(SOFTCSI_ID) },
+    { MP_ROM_QSTR(MP_QSTR_VL53L9CX),        MP_ROM_INT(VL53L9CX_ID) },
 
     // Special effects
     { MP_ROM_QSTR(MP_QSTR_NORMAL),          MP_ROM_INT(OMV_CSI_SDE_NORMAL) },    /* Normal/No SDE */
@@ -1633,6 +1670,27 @@ static const mp_rom_map_elem_t globals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_BOSON_SPOT_METER_CELSIUS),              MP_ROM_INT(OMV_CSI_BOSON_SPOT_METER_CELSIUS) },
     { MP_ROM_QSTR(MP_QSTR_BOSON_SPOT_METER_FAHRENHEIT),           MP_ROM_INT(OMV_CSI_BOSON_SPOT_METER_FAHRENHEIT) },
     { MP_ROM_QSTR(MP_QSTR_BOSON_SPOT_METER_KELVIN),               MP_ROM_INT(OMV_CSI_BOSON_SPOT_METER_KELVIN) },
+    #endif
+
+    #if (OMV_VL53L9CX_ENABLE == 1)
+    // ST VL53L9CX.
+    { MP_ROM_QSTR(MP_QSTR_IOCTL_VL53L9CX_SET_RANGE),         MP_ROM_INT(OMV_CSI_IOCTL_VL53L9CX_SET_RANGE) },
+    { MP_ROM_QSTR(MP_QSTR_IOCTL_VL53L9CX_GET_RANGE),         MP_ROM_INT(OMV_CSI_IOCTL_VL53L9CX_GET_RANGE) },
+    { MP_ROM_QSTR(MP_QSTR_IOCTL_VL53L9CX_SET_MODE),          MP_ROM_INT(OMV_CSI_IOCTL_VL53L9CX_SET_MODE) },
+    { MP_ROM_QSTR(MP_QSTR_IOCTL_VL53L9CX_GET_MODE),          MP_ROM_INT(OMV_CSI_IOCTL_VL53L9CX_GET_MODE) },
+    { MP_ROM_QSTR(MP_QSTR_IOCTL_VL53L9CX_SET_PLANES),        MP_ROM_INT(OMV_CSI_IOCTL_VL53L9CX_SET_PLANES) },
+    { MP_ROM_QSTR(MP_QSTR_IOCTL_VL53L9CX_GET_PLANES),        MP_ROM_INT(OMV_CSI_IOCTL_VL53L9CX_GET_PLANES) },
+    { MP_ROM_QSTR(MP_QSTR_IOCTL_VL53L9CX_GET_BINNING),       MP_ROM_INT(OMV_CSI_IOCTL_VL53L9CX_GET_BINNING) },
+    { MP_ROM_QSTR(MP_QSTR_IOCTL_VL53L9CX_GET_RESOLUTION),    MP_ROM_INT(OMV_CSI_IOCTL_VL53L9CX_GET_RESOLUTION) },
+    { MP_ROM_QSTR(MP_QSTR_IOCTL_VL53L9CX_GET_FRAME_COUNTER), MP_ROM_INT(OMV_CSI_IOCTL_VL53L9CX_GET_FRAME_COUNTER) },
+    { MP_ROM_QSTR(MP_QSTR_IOCTL_VL53L9CX_GET_DEPTH),         MP_ROM_INT(OMV_CSI_IOCTL_VL53L9CX_GET_DEPTH) },
+    { MP_ROM_QSTR(MP_QSTR_IOCTL_VL53L9CX_GET_AMPLITUDE),     MP_ROM_INT(OMV_CSI_IOCTL_VL53L9CX_GET_AMPLITUDE) },
+    { MP_ROM_QSTR(MP_QSTR_IOCTL_VL53L9CX_GET_AMBIENT),       MP_ROM_INT(OMV_CSI_IOCTL_VL53L9CX_GET_AMBIENT) },
+    { MP_ROM_QSTR(MP_QSTR_VL53L9CX_MODE_PRECISION),          MP_ROM_INT(OMV_CSI_VL53L9CX_MODE_PRECISION) },
+    { MP_ROM_QSTR(MP_QSTR_VL53L9CX_MODE_RANGE),              MP_ROM_INT(OMV_CSI_VL53L9CX_MODE_RANGE) },
+    { MP_ROM_QSTR(MP_QSTR_VL53L9CX_PLANES_DEPTH),            MP_ROM_INT(OMV_CSI_VL53L9CX_PLANES_DEPTH) },
+    { MP_ROM_QSTR(MP_QSTR_VL53L9CX_PLANES_AMPLITUDE),        MP_ROM_INT(OMV_CSI_VL53L9CX_PLANES_AMPLITUDE) },
+    { MP_ROM_QSTR(MP_QSTR_VL53L9CX_PLANES_ALL),              MP_ROM_INT(OMV_CSI_VL53L9CX_PLANES_ALL) },
     #endif
 };
 static MP_DEFINE_CONST_DICT(globals_dict, globals_dict_table);
