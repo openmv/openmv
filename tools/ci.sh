@@ -63,6 +63,8 @@ ci_build_target() {
     if [ "$1" == "DOCKER" ]; then
         BOARD=ARDUINO_NICLA_VISION
         make -j$(nproc) -C docker TARGET=${BOARD}
+    elif [ "$1" == "UNIX" ]; then
+        make -C docker build-unix
     else
         make -j$(nproc) -C lib/micropython/mpy-cross
         make -j$(nproc) TARGET=${1} PROFILE_ENABLE=${3} PROFILE_HASH=32
@@ -141,6 +143,11 @@ ci_run_qemu_tests() {
 # Run Unix port unit tests
 ci_run_unix_tests() {
     "${1:?Unix binary path is required}" -m unittest scripts/unittest/unix_tests.py
+}
+
+# Run the Unix port unit tests in the Docker image.
+ci_run_docker_unix_tests() {
+    make -C docker test-unix
 }
 
 ########################################################################################
