@@ -49,9 +49,15 @@
 #define FLIR_BOSON_BOOT_TRY_COUNT (10)
 #define FLIR_BOSON_BOOT_TIME_MS (1000)
 
-static int boson_framesize = 0;
+typedef struct boson_state {
+    int framesize;
+} boson_state_t;
+
+static boson_state_t boson = {};
 
 static int reset(omv_csi_t *csi) {
+    boson_state_t *boson = csi->priv;
+
     FSLP_set_csi(csi);
     csi->color_palette = NULL;
 
@@ -83,9 +89,9 @@ static int reset(omv_csi_t *csi) {
     }
 
     if (!strncmp((char *) (part.value + 2), "640", 3)) {
-        boson_framesize = OMV_CSI_FRAMESIZE_VGA;
+        boson->framesize = OMV_CSI_FRAMESIZE_VGA;
     } else if (!strncmp((char *) (part.value + 2), "320", 3)) {
-        boson_framesize = OMV_CSI_FRAMESIZE_QVGA;
+        boson->framesize = OMV_CSI_FRAMESIZE_QVGA;
     } else {
         return -1;
     }
@@ -122,7 +128,9 @@ static int set_pixformat(omv_csi_t *csi, pixformat_t pixformat) {
 }
 
 static int set_framesize(omv_csi_t *csi, omv_csi_framesize_t framesize) {
-    return (framesize == boson_framesize) ? 0 : -1;
+    boson_state_t *boson = csi->priv;
+
+    return (framesize == boson->framesize) ? 0 : -1;
 }
 
 static int set_colorbar(omv_csi_t *csi, int enable) {
@@ -140,7 +148,8 @@ static int set_colorbar(omv_csi_t *csi, int enable) {
 }
 
 static int post_process(omv_csi_t *csi, image_t *image, uint32_t flags) {
-    int num_pixels = csi->resolution[boson_framesize][0] * csi->resolution[boson_framesize][1];
+    boson_state_t *boson = csi->priv;
+    int num_pixels = csi->resolution[boson->framesize][0] * csi->resolution[boson->framesize][1];
 
     if (csi->color_palette && (framebuffer_get_buffer_size(csi->fb) >= (num_pixels * sizeof(uint16_t)))) {
         for (int32_t i = num_pixels - 1; i >= 0; i--) {
@@ -404,11 +413,14 @@ int boson_init(omv_csi_t *csi) {
     csi->resolution[OMV_CSI_FRAMESIZE_QVGA][0] = 320;
     csi->resolution[OMV_CSI_FRAMESIZE_QVGA][1] = 256;
 
+    memset(&boson, 0, sizeof(boson_state_t));
+    csi->priv = &boson;
+
     if (reset(csi) != 0) {
         return OMV_CSI_ERROR_CSI_INIT_FAILED;
     }
 
-    csi->chip_id = (boson_framesize == OMV_CSI_FRAMESIZE_VGA) ? BOSON_640_ID : BOSON_320_ID;
+    csi->chip_id = (boson.framesize == OMV_CSI_FRAMESIZE_VGA) ? BOSON_640_ID : BOSON_320_ID;
 
     return 0;
 }
