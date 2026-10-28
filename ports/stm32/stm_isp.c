@@ -38,6 +38,107 @@
 #include "board_config.h"
 
 #ifdef DCMIPP
+#ifdef OMV_CSI_HW_CCM_ENABLE
+// Matrix3x3_Coeff: 11-bit signed, 2 int + 8 dec -> 1.0 = 256.
+// Added3x1_Coeff:  10-bit signed, 9 int + 0 dec -> 1.0 = 1.
+#define DCMIPP_CCM_ONE          (256)
+#define DCMIPP_CCM_MIN          (-1024)
+#define DCMIPP_CCM_MAX          (1023)
+#define DCMIPP_CCM_OFFSET_MIN   (-512)
+#define DCMIPP_CCM_OFFSET_MAX   (511)
+
+// Log chromaticity (ln(R/G), ln(B/G)) of an illuminant.
+static void stm_isp_ccm_chroma(const float avg[3], float chroma[2]) {
+    float g = OMV_MAX(avg[1], 1.0f);
+
+    chroma[0] = logf(OMV_MAX(avg[0], 1.0f) / g);
+    chroma[1] = logf(OMV_MAX(avg[2], 1.0f) / g);
+}
+
+// Projects the AWB illuminant onto the polyline of calibration illuminants in log
+// chromaticity space and blends the CCMs at the ends of the closest segment (~linear in mired).
+static void stm_isp_update_ccm(omv_csi_t *csi, uint32_t pipe, const uint32_t avg[3]) {
+    if (csi->ccm == NULL || csi->ccm_count == 0) {
+        return;
+    }
+
+    float cur[2];
+    float cur_avg[3] = { avg[0], avg[1], avg[2] };
+    stm_isp_ccm_chroma(cur_avg, cur);
+
+    size_t idx = 0;
+    float t = 0.0f;
+    float best = INFINITY;
+
+    for (size_t i = 0; i + 1 < csi->ccm_count; i++) {
+        float p0[2];
+        float p1[2];
+        stm_isp_ccm_chroma(csi->ccm[i].avg, p0);
+        stm_isp_ccm_chroma(csi->ccm[i + 1].avg, p1);
+
+        float dx = p1[0] - p0[0];
+        float dy = p1[1] - p0[1];
+        float len = OMV_MAX(dx * dx + dy * dy, 1e-6f);
+        float u = IM_CLAMP(((cur[0] - p0[0]) * dx + (cur[1] - p0[1]) * dy) / len, 0.0f, 1.0f);
+
+        float ex = p0[0] + u * dx - cur[0];
+        float ey = p0[1] + u * dy - cur[1];
+        float dist = ex * ex + ey * ey;
+
+        if (dist < best) {
+            best = dist;
+            idx = i;
+            t = u;
+        }
+    }
+
+    const omv_csi_ccm_t *a = &csi->ccm[idx];
+    const omv_csi_ccm_t *b = &csi->ccm[OMV_MIN(idx + 1, csi->ccm_count - 1)];
+    int16_t coeffs[3][3];
+    int16_t offsets[3];
+
+    for (int r = 0; r < 3; r++) {
+        float sum = 0.0f;
+        int qsum = 0;
+
+        for (int c = 0; c < 3; c++) {
+            float v = a->coeffs[r][c] + t * (b->coeffs[r][c] - a->coeffs[r][c]);
+            int q = fast_roundf(v * DCMIPP_CCM_ONE);
+            coeffs[r][c] = IM_CLAMP(q, DCMIPP_CCM_MIN, DCMIPP_CCM_MAX);
+            qsum += coeffs[r][c];
+            sum += v;
+        }
+
+        // Push the rounding error into the diagonal so that neutrals stay neutral.
+        int diag = coeffs[r][r] + fast_roundf(sum * DCMIPP_CCM_ONE) - qsum;
+        coeffs[r][r] = IM_CLAMP(diag, DCMIPP_CCM_MIN, DCMIPP_CCM_MAX);
+
+        int offset = fast_roundf(a->offsets[r] + t * (b->offsets[r] - a->offsets[r]));
+        offsets[r] = IM_CLAMP(offset, DCMIPP_CCM_OFFSET_MIN, DCMIPP_CCM_OFFSET_MAX);
+    }
+
+    DCMIPP_ColorConversionConfTypeDef cfg = {
+        .ClampOutputSamples = ENABLE,
+        .OutputSamplesType = DCMIPP_CLAMP_RGB,
+        .RR = coeffs[0][0],
+        .RG = coeffs[0][1],
+        .RB = coeffs[0][2],
+        .RA = offsets[0],
+        .GR = coeffs[1][0],
+        .GG = coeffs[1][1],
+        .GB = coeffs[1][2],
+        .GA = offsets[1],
+        .BR = coeffs[2][0],
+        .BG = coeffs[2][1],
+        .BB = coeffs[2][2],
+        .BA = offsets[2],
+    };
+
+    HAL_DCMIPP_PIPE_SetISPColorConversionConfig(&csi->dcmipp, pipe, &cfg);
+    HAL_DCMIPP_PIPE_EnableISPColorConversion(&csi->dcmipp, pipe);
+}
+#endif // OMV_CSI_HW_CCM_ENABLE
+
 float stm_isp_update_awb(omv_csi_t *csi, uint32_t pipe) {
     uint32_t avg[3];
     uint32_t shift[3];
@@ -91,6 +192,10 @@ float stm_isp_update_awb(omv_csi_t *csi, uint32_t pipe) {
     };
 
     HAL_DCMIPP_PIPE_SetISPExposureConfig(&csi->dcmipp, pipe, &expcfg);
+
+    #ifdef OMV_CSI_HW_CCM_ENABLE
+    stm_isp_update_ccm(csi, pipe, avg);
+    #endif // OMV_CSI_HW_CCM_ENABLE
 
     return luminance;
 }
@@ -147,6 +252,9 @@ int stm_isp_init(omv_csi_t *csi, uint32_t pipe, pixformat_t pixformat, bool raw_
     if (HAL_DCMIPP_PIPE_EnableISPBadPixelRemoval(&csi->dcmipp, pipe) != HAL_OK) {
         return -1;
     }
+
+    // Enabled by the AWB update when the sensor provides color correction matrices.
+    HAL_DCMIPP_PIPE_DisableISPColorConversion(&csi->dcmipp, pipe);
 
     // Early exit if no debayer is needed.
     if (!raw_output || pixformat == PIXFORMAT_BAYER) {
