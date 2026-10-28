@@ -33,6 +33,7 @@
 #include <stdio.h>
 #include "py/mphal.h"
 #include "py/runtime.h"
+#include "shared/runtime/mpirq.h"
 
 #if MICROPY_PY_CSI_NG
 
@@ -839,7 +840,12 @@ static void omv_csi_vsync_callback(void *data) {
         #ifdef OMV_CSI_VSYNC_PIN
         self->vsync_state = omv_gpio_read(OMV_CSI_VSYNC_PIN);
         #endif
-        mp_call_function_1(self->vsync_cb, MP_OBJ_FROM_PTR(self));
+        // Dispatch as a hard IRQ so an exception cannot propagate into the IRQ handler.
+        if (mp_irq_dispatch(self->vsync_cb, MP_OBJ_FROM_PTR(self), true) < 0) {
+            // Uncaught exception; disable the callback so that it doesn't run again.
+            self->vsync_cb = mp_const_none;
+            omv_csi_set_vsync_callback(self->csi, (omv_csi_cb_t) { NULL, NULL });
+        }
     }
 }
 
@@ -872,7 +878,12 @@ static void omv_csi_frame_callback(void *data) {
     py_csi_obj_t *self = data;
 
     if (mp_obj_is_callable(self->frame_cb)) {
-        mp_call_function_1(self->frame_cb, MP_OBJ_FROM_PTR(self));
+        // Dispatch as a hard IRQ so an exception cannot propagate into the IRQ handler.
+        if (mp_irq_dispatch(self->frame_cb, MP_OBJ_FROM_PTR(self), true) < 0) {
+            // Uncaught exception; disable the callback so that it doesn't run again.
+            self->frame_cb = mp_const_none;
+            omv_csi_set_frame_callback(self->csi, (omv_csi_cb_t) { NULL, NULL });
+        }
     }
 }
 
