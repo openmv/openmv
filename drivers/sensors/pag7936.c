@@ -470,6 +470,30 @@ static const uint16_t vga_regs[][2] = {
     { 0x0000,               0x00 },
 };
 
+#ifdef OMV_CSI_HW_CCM_ENABLE
+// Color correction matrices tuned on the real ISP output, sorted warmest to coolest.
+static const omv_csi_ccm_t pag7936_ccm[] = {
+    {   // A (incandescent, ~2856K)
+        .avg = { 70.198f, 74.512f, 28.216f },
+        .coeffs = { {  1.463f, -0.205f, -0.258f },
+                    { -0.647f,  1.983f, -0.337f },
+                    { -0.171f, -1.247f,  2.418f } },
+    },
+    {   // TL84 (fluorescent, ~4000K)
+        .avg = { 61.160f, 79.113f, 32.965f },
+        .coeffs = { {  1.121f, -0.039f, -0.082f },
+                    { -0.427f,  1.596f, -0.169f },
+                    { -0.026f, -0.815f,  1.842f } },
+    },
+    {   // D65 (daylight, ~6504K)
+        .avg = { 43.995f, 81.509f, 51.532f },
+        .coeffs = { {  1.324f, -0.300f, -0.024f },
+                    { -0.286f,  1.712f, -0.426f },
+                    {  0.005f, -0.734f,  1.729f } },
+    },
+};
+#endif // OMV_CSI_HW_CCM_ENABLE
+
 static const uint16_t hd_regs[][2] = {
     { TG_MONO_SENSOR,       0x00 },
     { AVERAGE_MODE,         0x00 },
@@ -1001,6 +1025,12 @@ int pag7936_init(omv_csi_t *csi) {
 
     csi->resolution[OMV_CSI_FRAMESIZE_QVGA][0] = 320;
     csi->resolution[OMV_CSI_FRAMESIZE_QVGA][1] = 200;
+
+    #ifdef OMV_CSI_HW_CCM_ENABLE
+    csi->ccm = pag7936_ccm;
+    csi->ccm_count = OMV_ARRAY_SIZE(pag7936_ccm);
+    #endif // OMV_CSI_HW_CCM_ENABLE
+
     return 0;
 }
 #endif // (OMV_PAG7936_ENABLE == 1)
