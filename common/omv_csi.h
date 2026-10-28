@@ -396,6 +396,14 @@ typedef struct omv_csi_stats {
 } omv_csi_stats_t;
 #endif // defined(OMV_CSI_STATS_ENABLE)
 
+#ifdef OMV_CSI_HW_CCM_ENABLE
+typedef struct omv_csi_ccm {
+    float avg[3];           // Raw R/G/B averages under the calibration illuminant.
+    float coeffs[3][3];     // Color correction matrix (rows should sum to 1).
+    float offsets[3];       // Color correction offsets.
+} omv_csi_ccm_t;
+#endif // OMV_CSI_HW_CCM_ENABLE
+
 typedef struct _omv_csi {
     uint32_t chip_id;           // Sensor ID 32 bits.
     uint8_t slv_addr;           // Sensor I2C slave address.
@@ -476,6 +484,12 @@ typedef struct _omv_csi {
     uint16_t src_w;
     uint16_t src_h;
     #endif // OMV_CSI_HW_SCALE_ENABLE
+
+    #ifdef OMV_CSI_HW_CCM_ENABLE
+    // Color correction matrices (sorted warmest to coolest illuminant).
+    const omv_csi_ccm_t *ccm;
+    size_t ccm_count;
+    #endif // OMV_CSI_HW_CCM_ENABLE
 
     // Sensor function pointers
     int (*reset) (omv_csi_t *csi);
