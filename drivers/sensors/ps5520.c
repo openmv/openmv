@@ -123,6 +123,32 @@ typedef struct ps5520_state {
 
 static ps5520_state_t ps5520_state = {};
 
+#ifdef OMV_CSI_HW_CCM_ENABLE
+// Color correction matrices tuned on the real ISP output, sorted warmest to coolest.
+static const omv_csi_ccm_t ps5520_ccm[] = {
+    {   // A (incandescent, ~2856K)
+        .chroma = OMV_CSI_CCM_CHROMA(84.277f, 86.103f, 36.783f),
+        .coeffs = { {  1.638f, -0.257f, -0.381f },
+                    { -0.552f,  1.811f, -0.259f },
+                    { -0.219f, -1.904f,  3.123f } },
+    },
+    {   // TL84 (fluorescent, ~4000K)
+        .chroma = OMV_CSI_CCM_CHROMA(75.837f, 98.400f, 45.678f),
+        .coeffs = { {  1.377f, -0.617f,  0.240f },
+                    { -0.284f,  1.168f,  0.116f },
+                    {  0.021f, -1.504f,  2.483f } },
+    },
+    {   // D65 (daylight, ~6504K)
+        .chroma = OMV_CSI_CCM_CHROMA(58.382f, 101.926f, 67.412f),
+        .coeffs = { {  1.339f, -0.419f,  0.080f },
+                    { -0.332f,  1.636f, -0.304f },
+                    { -0.055f, -0.922f,  1.977f } },
+    },
+};
+
+static const omv_csi_ccm_table_t ps5520_ccm_table = { OMV_ARRAY_SIZE(ps5520_ccm), ps5520_ccm };
+#endif // OMV_CSI_HW_CCM_ENABLE
+
 static const uint8_t sw_reset_regs[][2] = {
     { 0xEF, 0x05 },
     { 0x0F, 0x00 },
@@ -1821,6 +1847,10 @@ int ps5520_init(omv_csi_t *csi) {
     csi->src_w = SENSOR_WIDTH;
     csi->src_h = SENSOR_HEIGHT;
     #endif // OMV_CSI_HW_SCALE_ENABLE
+
+    #ifdef OMV_CSI_HW_CCM_ENABLE
+    csi->ccm = &ps5520_ccm_table;
+    #endif // OMV_CSI_HW_CCM_ENABLE
 
     return 0;
 }
