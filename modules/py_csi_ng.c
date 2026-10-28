@@ -69,6 +69,7 @@ typedef struct _py_csi_obj_t {
     void *raw;
     mp_obj_t vsync_cb;
     mp_obj_t frame_cb;
+    bool vsync_state;
 } py_csi_obj_t;
 
 const mp_obj_type_t py_csi_type;
@@ -825,15 +826,20 @@ static mp_obj_t py_csi_lens_correction(size_t n_args, const mp_obj_t *pos_args, 
 }
 static MP_DEFINE_CONST_FUN_OBJ_KW(py_csi_lens_correction_obj, 1, py_csi_lens_correction);
 
+static mp_obj_t py_csi_vsync(mp_obj_t self_in) {
+    py_csi_obj_t *self = MP_OBJ_TO_PTR(self_in);
+    return mp_obj_new_int(self->vsync_state);
+}
+static MP_DEFINE_CONST_FUN_OBJ_1(py_csi_vsync_obj, py_csi_vsync);
+
 static void omv_csi_vsync_callback(void *data) {
     py_csi_obj_t *self = data;
 
     if (mp_obj_is_callable(self->vsync_cb)) {
-        uint32_t vsync_state = 0;
         #ifdef OMV_CSI_VSYNC_PIN
-        vsync_state = omv_gpio_read(OMV_CSI_VSYNC_PIN);
+        self->vsync_state = omv_gpio_read(OMV_CSI_VSYNC_PIN);
         #endif
-        mp_call_function_1(self->vsync_cb, mp_obj_new_int(vsync_state));
+        mp_call_function_1(self->vsync_cb, MP_OBJ_FROM_PTR(self));
     }
 }
 
@@ -866,7 +872,7 @@ static void omv_csi_frame_callback(void *data) {
     py_csi_obj_t *self = data;
 
     if (mp_obj_is_callable(self->frame_cb)) {
-        mp_call_function_0(self->frame_cb);
+        mp_call_function_1(self->frame_cb, MP_OBJ_FROM_PTR(self));
     }
 }
 
@@ -1327,6 +1333,7 @@ mp_obj_t py_csi_make_new(const mp_obj_type_t *type, size_t n_args, size_t n_kw, 
     self->csi = csi;
     self->frame_cb = mp_const_none;
     self->vsync_cb = mp_const_none;
+    self->vsync_state = false;
     csi->disable_delays = !args[ARG_delays].u_bool;
     csi->disable_full_flush = !args[ARG_fflush].u_bool;
 
@@ -1420,6 +1427,7 @@ static const mp_rom_map_elem_t py_csi_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_framebuffers),        MP_ROM_PTR(&py_csi_framebuffers_obj) },
     { MP_ROM_QSTR(MP_QSTR_lens_correction),     MP_ROM_PTR(&py_csi_lens_correction_obj) },
     { MP_ROM_QSTR(MP_QSTR_special_effect),      MP_ROM_PTR(&py_csi_special_effect_obj) },
+    { MP_ROM_QSTR(MP_QSTR_vsync),               MP_ROM_PTR(&py_csi_vsync_obj) },
     { MP_ROM_QSTR(MP_QSTR_vsync_callback),      MP_ROM_PTR(&py_csi_vsync_callback_obj) },
     { MP_ROM_QSTR(MP_QSTR_frame_callback),      MP_ROM_PTR(&py_csi_frame_callback_obj) },
     { MP_ROM_QSTR(MP_QSTR_ioctl),               MP_ROM_PTR(&py_csi_ioctl_obj) },
