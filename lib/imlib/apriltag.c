@@ -14,7 +14,6 @@
 #include "common/matd.h"
 #include "common/homography.h"
 #include "common/zarray.h"
-#include "common/g2d.h"
 
 #ifdef IMLIB_ENABLE_APRILTAGS_TAG16H5
 #include "tag16h5.h"
@@ -299,6 +298,84 @@ void imlib_find_apriltags(list_t *out, image_t *ptr, rectangle_t *roi, apriltag_
 #endif //IMLIB_ENABLE_APRILTAGS
 
 #ifdef IMLIB_ENABLE_FIND_RECTS
+// Two quads are the same rectangle when their intersection-over-union is above this. The inner
+// and outer edge of a thick outline, or the two sides of a soft edge, overlap almost completely.
+// A cell nested inside a larger frame overlaps it too, but only by the cell's own area, so it
+// stays well below this and is reported as its own rectangle.
+#define FIND_RECTS_DUPLICATE_IOU    (0.5f)
+
+// Signed shoelace area of a quad. The sign gives the winding order.
+static float find_rects_quad_area(const float p[4][2]) {
+    float area = 0.0f;
+    for (int i = 0; i < 4; i++) {
+        int j = (i + 1) & 3;
+        area += p[i][0] * p[j][1] - p[j][0] * p[i][1];
+    }
+    return area * 0.5f;
+}
+
+// Area of the intersection of two convex quads: clip b against each edge of a (Sutherland-Hodgman).
+// A quad clipped by four half-planes has at most 8 vertices.
+static float find_rects_intersection_area(const float a[4][2], const float b[4][2]) {
+    float in[8][2];
+    float out[8][2];
+    int n_in = 4;
+    memcpy(in, b, sizeof(float) * 8);
+    float sign = find_rects_quad_area(a) >= 0.0f ? 1.0f : -1.0f;
+
+    for (int e = 0; e < 4; e++) {
+        const float *p0 = a[e];
+        const float *p1 = a[(e + 1) & 3];
+        float ex = p1[0] - p0[0];
+        float ey = p1[1] - p0[1];
+        int n_out = 0;
+
+        for (int i = 0; i < n_in; i++) {
+            const float *p = in[i];
+            const float *q = in[(i + 1) % n_in];
+            // Signed distance from the edge line, positive on the inside.
+            float dp = sign * (ex * (p[1] - p0[1]) - ey * (p[0] - p0[0]));
+            float dq = sign * (ex * (q[1] - p0[1]) - ey * (q[0] - p0[0]));
+            bool p_inside = dp >= 0.0f;
+            bool q_inside = dq >= 0.0f;
+
+            if (p_inside) {
+                out[n_out][0] = p[0];
+                out[n_out][1] = p[1];
+                n_out++;
+            }
+
+            if (p_inside != q_inside) {
+                float t = dp / (dp - dq);
+                out[n_out][0] = p[0] + t * (q[0] - p[0]);
+                out[n_out][1] = p[1] + t * (q[1] - p[1]);
+                n_out++;
+            }
+        }
+
+        if (n_out == 0) {
+            return 0.0f;
+        }
+
+        memcpy(in, out, sizeof(float) * 2 * n_out);
+        n_in = n_out;
+    }
+
+    float area = 0.0f;
+    for (int i = 0; i < n_in; i++) {
+        int j = (i + 1) % n_in;
+        area += in[i][0] * in[j][1] - in[j][0] * in[i][1];
+    }
+    return fabsf(area) * 0.5f;
+}
+
+// Sorts quads largest first.
+static int find_rects_quad_compare(const void *a, const void *b) {
+    float area_a = fabsf(find_rects_quad_area(((const struct quad *) a)->p));
+    float area_b = fabsf(find_rects_quad_area(((const struct quad *) b)->p));
+    return (area_a < area_b) - (area_a > area_b);
+}
+
 void imlib_find_rects(list_t *out, image_t *ptr, rectangle_t *roi, uint32_t threshold) {
     int r_diag_len = fast_roundf(fast_sqrtf((roi->w * roi->w) + (roi->h * roi->h))) * 2;
 
@@ -365,29 +442,23 @@ void imlib_find_rects(list_t *out, image_t *ptr, rectangle_t *roi, uint32_t thre
         }
     }
 
-    // Remove overlapping quads.
-    zarray_t *poly0 = g2d_polygon_create_zeros(4);
-    zarray_t *poly1 = g2d_polygon_create_zeros(4);
+    // Remove duplicate quads, keeping the largest of each set. Quads are only duplicates when they
+    // are nearly the same rectangle; nested rectangles are all kept. Sorting first also makes the
+    // output order stable (largest first) instead of following the cluster hash order.
+    zarray_sort(detections, find_rects_quad_compare);
 
     for (int i0 = 0; i0 < zarray_size(detections); i0++) {
         struct quad *det0;
         zarray_get_volatile(detections, i0, &det0);
-
-        for (int k = 0; k < 4; k++) {
-            double p[2] = { det0->p[k][0], det0->p[k][1] };
-            zarray_set(poly0, k, p, NULL);
-        }
+        float area0 = fabsf(find_rects_quad_area(det0->p));
 
         for (int i1 = i0 + 1; i1 < zarray_size(detections); i1++) {
             struct quad *det1;
             zarray_get_volatile(detections, i1, &det1);
+            float area1 = fabsf(find_rects_quad_area(det1->p));
+            float inter = find_rects_intersection_area(det0->p, det1->p);
 
-            for (int k = 0; k < 4; k++) {
-                double p[2] = { det1->p[k][0], det1->p[k][1] };
-                zarray_set(poly1, k, p, NULL);
-            }
-
-            if (g2d_polygon_overlaps_polygon(poly0, poly1)) {
+            if (inter > FIND_RECTS_DUPLICATE_IOU * (area0 + area1 - inter)) {
                 matd_destroy(det1->H);
                 matd_destroy(det1->Hinv);
                 zarray_remove_index(detections, i1, 1);
@@ -395,9 +466,6 @@ void imlib_find_rects(list_t *out, image_t *ptr, rectangle_t *roi, uint32_t thre
             }
         }
     }
-
-    zarray_destroy(poly0);
-    zarray_destroy(poly1);
 
     list_init(out, sizeof(find_rects_list_lnk_data_t));
 
