@@ -123,6 +123,30 @@ typedef struct ps5520_state {
 
 static ps5520_state_t ps5520_state = {};
 
+#ifdef OMV_CSI_HW_CCM_ENABLE
+// Pixart tuned color correction matrices, sorted warmest to coolest.
+static const omv_csi_ccm_t ps5520_ccm[] = {
+    {   // INC (incandescent, ~2856K)
+        .avg = { 98.102f, 88.470f, 38.084f },
+        .coeffs = { {  1.641f, -0.200f, -0.441f },
+                    { -0.527f,  2.000f, -0.473f },
+                    { -0.498f, -1.332f,  2.830f } },
+    },
+    {   // TL84 (fluorescent, ~4000K)
+        .avg = { 75.998f, 99.201f, 46.641f },
+        .coeffs = { {  1.546f, -0.405f, -0.141f },
+                    { -0.276f,  1.514f, -0.238f },
+                    { -0.093f, -0.859f,  1.952f } },
+    },
+    {   // D65 (daylight, ~6504K)
+        .avg = { 62.369f, 104.878f, 67.813f },
+        .coeffs = { {  1.619f, -0.589f, -0.030f },
+                    { -0.192f,  1.617f, -0.425f },
+                    { -0.075f, -0.802f,  1.877f } },
+    },
+};
+#endif // OMV_CSI_HW_CCM_ENABLE
+
 static const uint8_t sw_reset_regs[][2] = {
     { 0xEF, 0x05 },
     { 0x0F, 0x00 },
@@ -1821,6 +1845,11 @@ int ps5520_init(omv_csi_t *csi) {
     csi->src_w = SENSOR_WIDTH;
     csi->src_h = SENSOR_HEIGHT;
     #endif // OMV_CSI_HW_SCALE_ENABLE
+
+    #ifdef OMV_CSI_HW_CCM_ENABLE
+    csi->ccm = ps5520_ccm;
+    csi->ccm_count = OMV_ARRAY_SIZE(ps5520_ccm);
+    #endif // OMV_CSI_HW_CCM_ENABLE
 
     return 0;
 }
