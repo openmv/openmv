@@ -91,6 +91,9 @@ LDFLAGS += -Wl,--wrap=usbd_cdc_control \
            -Wl,--wrap=mp_hal_stdout_tx_strn
 endif
 
+# The CPU selects the ARM architecture (__ARM_ARCH) in the linker script.
+LDSCRIPT_FLAGS += -mcpu=$(CPU)
+
 ifneq ($(OMV_RAMFUNC_OBJS),)
 LDSCRIPT_FLAGS += -DOMV_RAMFUNC_EXC="$(addprefix *,$(OMV_RAMFUNC_OBJS))"
 LDSCRIPT_FLAGS += -DOMV_RAMFUNC_INC="$(foreach obj,$(OMV_RAMFUNC_OBJS),*$(obj)(.text.* .rodata.*);)"

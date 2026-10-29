@@ -35,6 +35,17 @@
 #define OMV_ALIGN_DMA_SECTION(section) \
     ALIGN(., 1 << LOG2CEIL(SIZEOF(section)))
 
+/* The ARMv7-M MPU ignores the base address bits below the region size, so a DMA
+   region that is not aligned to its (power of 2) size is silently misplaced and
+   part of it stays cacheable. ARMv8-M regions have 32-byte granularity. */
+#if (__ARM_ARCH == 7)
+#define OMV_ASSERT_DMA_SECTION(section) \
+    ASSERT((SIZEOF(section) == 0) || ((ADDR(section) & (SIZEOF(section) - 1)) == 0), \
+           "DMA region not aligned to its size, see OMV_ASSERT_DMA_SECTION")
+#else
+#define OMV_ASSERT_DMA_SECTION(section)
+#endif
+
 /* Define a new DMA buffer region. */
 #define OMV_DMA_MEMORY_NEW(X) \
     .dma.memory##X (NOLOAD) : ALIGN(32) \
