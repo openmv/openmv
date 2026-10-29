@@ -17,7 +17,7 @@ csi0.framesize(csi.QVGA)  # Set frame size to QVGA (320x240)
 
 # This pin will be toggled on/off on VSYNC rising and falling edges.
 led = LED("LED_BLUE")
-csi0.vsync_callback(lambda state, led=led: led.value(state))
+csi0.vsync_callback(lambda csi, led=led: led.value(csi.vsync()))
 
 clock = time.clock()  # Create a clock object to track the FPS.
 

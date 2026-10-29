@@ -281,11 +281,19 @@ def set_lens_correction(enable, radi, coef):
 
 
 def set_vsync_callback(cb):
-    _csi.vsync_callback(cb)
+    # The old callback took the vsync pin state; the CSI callback receives the CSI object.
+    if callable(cb):
+        _csi.vsync_callback(lambda csi: cb(csi.vsync()))
+    else:
+        _csi.vsync_callback(None)
 
 
 def set_frame_callback(cb):
-    _csi.frame_callback(cb)
+    # The old callback took no arguments; the CSI callback receives the CSI object.
+    if callable(cb):
+        _csi.frame_callback(lambda csi: cb())
+    else:
+        _csi.frame_callback(None)
 
 
 def ioctl(*args):
