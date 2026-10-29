@@ -32,6 +32,7 @@
 #include "py/obj.h"
 
 #include "fmath.h"
+#include "imlib.h"
 #include "unittest.h"
 
 // Test fast_sqrtf accuracy
@@ -164,6 +165,22 @@ static mp_obj_t test_fmath_atan2f(void) {
     // atan2(1, 0) should be ~PI/2 = 1.57
     result = fast_atan2f(1.0f, 0.0001f);
     if (result < 1.5f || result > 1.65f) {
+        return mp_const_false;
+    }
+
+    // Exact x == 0 cases, result must stay in [0, 2*PI)
+    result = fast_atan2f(1.0f, 0.0f);
+    if (!FLOAT_EQ(result, IMLIB_PI_2, 0.0001f)) {
+        return mp_const_false;
+    }
+
+    result = fast_atan2f(-1.0f, 0.0f);
+    if (!FLOAT_EQ(result, 3 * IMLIB_PI_2, 0.0001f)) {
+        return mp_const_false;
+    }
+
+    result = fast_atan2f(0.0f, 0.0f);
+    if (!FLOAT_EQ(result, 0.0f, 0.0001f)) {
         return mp_const_false;
     }
 
