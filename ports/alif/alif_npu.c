@@ -40,6 +40,7 @@
 #include "alif_hal.h"
 #include "board_config.h"
 #include "imlib.h"
+#include "omv_memory.h"
 #include "ethosu_driver.h"
 
 #define ETHOSU_SEC_ENABLED      (1)
@@ -59,33 +60,6 @@ static uint8_t OMV_ATTR_SEC_ALIGN(ETHOSU_CACHE_BUFFER[ETHOSU_CACHE_SIZE], ".bss.
 #endif
 
 static struct ethosu_driver ethosu_driver;
-
-typedef struct mmap {
-    uintptr_t base;
-    uintptr_t limit;
-} mmap_t;
-
-static const mmap_t mmap_nocache[] = {
-    { .base = ITCM_BASE, .limit = ITCM_BASE + ITCM_SIZE },
-    { .base = DTCM_BASE, .limit = DTCM_BASE + ITCM_SIZE },
-    { .base = MRAM_BASE, .limit = MRAM_BASE + MRAM_SIZE },
-    { .base = OSPI0_XIP_BASE, .limit = OSPI0_XIP_BASE + OSPI0_XIP_SIZE },
-    { .base = OSPI1_XIP_BASE, .limit = OSPI1_XIP_BASE + OSPI1_XIP_SIZE }
-};
-
-static bool is_cacheable(const void *p, size_t bytes) {
-    uintptr_t base = (uintptr_t) p;
-    if (bytes == 0) {
-        return false;
-    }
-    uintptr_t limit = base + bytes;
-    for (unsigned int i = 0; i < sizeof(mmap_nocache) / sizeof(mmap_nocache[0]); i++) {
-        if (base >= mmap_nocache[i].base && limit < mmap_nocache[i].limit) {
-            return false;
-        }
-    }
-    return true;
-}
 
 struct ethosu_semaphore_t {
     uint8_t count;
@@ -120,18 +94,25 @@ void ethosu_semaphore_destroy(void *sem) {
     // The Semaphore is statically allocated.
 }
 
+static inline bool is_mram(const void *p, size_t bytes) {
+    uintptr_t addr = (uintptr_t) p;
+    return addr >= MRAM_BASE && addr + bytes <= MRAM_BASE + MRAM_SIZE;
+}
+
 void ethosu_flush_dcache(uint32_t *p, size_t bytes) {
     if (!p) {
         SCB_CleanDCache();
-    } else if (is_cacheable(p, bytes)) {
+    } else if (omv_memory_is_write_back(p, bytes)) {
         SCB_CleanDCache_by_Addr(p, bytes);
     }
 }
 
 void ethosu_invalidate_dcache(uint32_t *p, size_t bytes) {
+    // MRAM is cached write-through, so it is cacheable, but it was never invalidated
+    // before. It's excluded to keep that behavior, the NPU only reads it (e.g. weights).
     if (!p) {
         SCB_CleanInvalidateDCache();
-    } else if (is_cacheable(p, bytes)) {
+    } else if (!is_mram(p, bytes) && omv_memory_is_cacheable(p, bytes)) {
         SCB_InvalidateDCache_by_Addr(p, bytes);
     }
 }
