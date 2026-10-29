@@ -109,7 +109,8 @@ static void compute_gradient(const uint8_t *gray, int w, int h,
                 a -= 3.14159265f;
             }
             int d = (int) (a * (8.0f / 3.14159265f) + 0.5f);
-            if (d >= NUM_DIRS) {
+            // Guard against out-of-range angles, d indexes nms_perp/trace_fwd.
+            if (d < 0 || d >= NUM_DIRS) {
                 d = 0;
             }
             dir[y * w + x] = (uint8_t) d;
