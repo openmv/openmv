@@ -59,6 +59,12 @@ def block_dma_domain(n, defines):
     return int(m.group(1)) if m else None
 
 
+def dma_region_needs_align(memory):
+    """ARMv7-M MPU regions must be aligned to their size. TCMs are never cached, so
+    their DMA regions need no MPU region and no alignment."""
+    return not memory.endswith("TCM")
+
+
 def collect_dma_domains(defines):
     """Collect which DMA domains exist (D1, D2, D3, ...)."""
     domains = []
@@ -121,9 +127,13 @@ def gen_fragment(defines):
             lines.append(f"{I}. = . + OMV_UMA_BLOCK{n}_SIZE;")
         lines.append(f"{I}. = OMV_ALIGN_DMA_SECTION(.dma.memory{d});")
         lines.append(f"}} >OMV_DMA_MEMORY_D{d}")
+        if dma_region_needs_align(defines[f"OMV_DMA_MEMORY_D{d}"]):
+            lines.append(f"OMV_ASSERT_DMA_SECTION(.dma.memory{d})")
 
     # --- DMA memory table ---
     has_dma0 = "OMV_DMA_MEMORY" in defines or "OMV_MAIN_MEMORY" in defines
+    if has_dma0 and dma_region_needs_align(defines.get("OMV_DMA_MEMORY", defines.get("OMV_MAIN_MEMORY"))):
+        lines.append("OMV_ASSERT_DMA_SECTION(.dma.memory0)")
     if has_dma0 or dma_domains:
         lines.append(".dma.memory.table (READONLY) : ALIGN(4)")
         lines.append("{")
