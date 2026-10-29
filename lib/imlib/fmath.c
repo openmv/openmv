@@ -134,7 +134,7 @@ float fast_atan2f(float y, float x) {
         return 2 * IMLIB_PI - fast_atanf(-y / x);
     }
 
-    return (y == 0) ? 0 : ((y > 0) ? IMLIB_PI : -IMLIB_PI);
+    return (y == 0) ? 0 : ((y > 0) ? IMLIB_PI_2 : 3 * IMLIB_PI_2);
 }
 
 float fast_log2(float x) {
