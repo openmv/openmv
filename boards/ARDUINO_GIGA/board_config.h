@@ -138,7 +138,7 @@
 #define OMV_SB_MEMORY                       DRAM    // Streaming buffer memory.
 #define OMV_SB_SIZE                         (1M)    // Streaming buffer size.
 #define OMV_DMA_MEMORY                      SRAM3   // Misc DMA buffers memory.
-#define OMV_DMA_MEMORY_D1                   SRAM0   // Domain 1 DMA buffers.
+#define OMV_DMA_MEMORY_D1                   SRAM5   // Domain 1 DMA buffers.
 #define OMV_DMA_MEMORY_D2                   SRAM3   // Domain 2 DMA buffers.
 #define OMV_OPENAMP_MEMORY                  SRAM4
 #define OMV_OPENAMP_SIZE                    (64K)
@@ -162,14 +162,16 @@
 #define OMV_FLASH_LENGTH                    2048K
 #define OMV_DTCM_ORIGIN                     0x20000000    // Note accessible by CPU and MDMA only.
 #define OMV_DTCM_LENGTH                     128K
-#define OMV_SRAM0_ORIGIN                    0x24000000
-#define OMV_SRAM0_LENGTH                    512K
+#define OMV_SRAM0_ORIGIN                    0x24001000
+#define OMV_SRAM0_LENGTH                    508K
 #define OMV_SRAM1_ORIGIN                    0x30000000
 #define OMV_SRAM1_LENGTH                    256K
 #define OMV_SRAM3_ORIGIN                    0x30040000
 #define OMV_SRAM3_LENGTH                    32K
 #define OMV_SRAM4_ORIGIN                    0x38000000
 #define OMV_SRAM4_LENGTH                    64K
+#define OMV_SRAM5_ORIGIN                    0x24000000 // D1 DMA buffers, aligned to its size for the MPU.
+#define OMV_SRAM5_LENGTH                    4K
 #define OMV_DRAM_ORIGIN                     0x60000000
 #define OMV_DRAM_LENGTH                     8M
 
