@@ -312,6 +312,8 @@ typedef enum {
     OMV_CSI_IOCTL_BOSON_GET_SPOT_METER_TEMP_STATS = 0x41F,
     OMV_CSI_IOCTL_BOSON_GET_TEMP_FROM_COUNTS      = 0x420,
     OMV_CSI_IOCTL_BOSON_GET_RBFO                  = 0x421,
+    OMV_CSI_IOCTL_BOSON_SET_MODE                  = 0x422,
+    OMV_CSI_IOCTL_BOSON_READ_FRAME                = 0x423,
 
     // Internal requests, not exported to Python.
     OMV_CSI_IOCTL_UPDATE_AGC_AEC                  = 0xF00,

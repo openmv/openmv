@@ -49,9 +49,20 @@
 #define FLIR_BOSON_BOOT_TRY_COUNT (10)
 #define FLIR_BOSON_BOOT_TIME_MS (1000)
 
-static int boson_framesize = 0;
+typedef struct boson_state {
+    int framesize;
+    bool radiometric;
+    boson_mode_t mode;
+    uint16_t *frame;
+} boson_state_t;
+
+static boson_state_t boson = {};
+
+static int set_active_mode(omv_csi_t *csi, boson_mode_t mode);
 
 static int reset(omv_csi_t *csi) {
+    boson_state_t *boson = csi->priv;
+
     FSLP_set_csi(csi);
     csi->color_palette = NULL;
 
@@ -83,9 +94,9 @@ static int reset(omv_csi_t *csi) {
     }
 
     if (!strncmp((char *) (part.value + 2), "640", 3)) {
-        boson_framesize = OMV_CSI_FRAMESIZE_VGA;
+        boson->framesize = OMV_CSI_FRAMESIZE_VGA;
     } else if (!strncmp((char *) (part.value + 2), "320", 3)) {
-        boson_framesize = OMV_CSI_FRAMESIZE_QVGA;
+        boson->framesize = OMV_CSI_FRAMESIZE_QVGA;
     } else {
         return -1;
     }
@@ -98,15 +109,10 @@ static int reset(omv_csi_t *csi) {
         return -1;
     }
 
-    if (dvoSetOutputFormat(FLR_DVO_DEFAULT_FORMAT) != FLR_OK) {
-        return -1;
-    }
+    FLR_ENABLE_E radiometric = FLR_DISABLE;
+    boson->radiometric = (radiometryGetRadiometryCapable(&radiometric) == FLR_OK) && (radiometric == FLR_ENABLE);
 
-    if (dvoSetType(FLR_DVO_TYPE_MONO8) != FLR_OK) {
-        return -1;
-    }
-
-    if (dvoApplyCustomSettings() != FLR_OK) {
+    if (set_active_mode(csi, OMV_CSI_BOSON_MODE_AGC) != 0) {
         return -1;
     }
 
@@ -122,7 +128,14 @@ static int set_pixformat(omv_csi_t *csi, pixformat_t pixformat) {
 }
 
 static int set_framesize(omv_csi_t *csi, omv_csi_framesize_t framesize) {
-    return (framesize == boson_framesize) ? 0 : -1;
+    boson_state_t *boson = csi->priv;
+
+    if (boson->mode == OMV_CSI_BOSON_MODE_AGC) {
+        return (framesize == boson->framesize) ? 0 : -1;
+    } else {
+        // 16-bit frames are captured as 8-bit frames of twice the width.
+        return (framesize == OMV_CSI_FRAMESIZE_CUSTOM) ? 0 : -1;
+    }
 }
 
 static int set_colorbar(omv_csi_t *csi, int enable) {
@@ -139,8 +152,9 @@ static int set_colorbar(omv_csi_t *csi, int enable) {
     return 0;
 }
 
-static int post_process(omv_csi_t *csi, image_t *image, uint32_t flags) {
-    int num_pixels = csi->resolution[boson_framesize][0] * csi->resolution[boson_framesize][1];
+static int post_process_agc(omv_csi_t *csi, image_t *image, uint32_t flags) {
+    boson_state_t *boson = csi->priv;
+    int num_pixels = csi->resolution[boson->framesize][0] * csi->resolution[boson->framesize][1];
 
     if (csi->color_palette && (framebuffer_get_buffer_size(csi->fb) >= (num_pixels * sizeof(uint16_t)))) {
         for (int32_t i = num_pixels - 1; i >= 0; i--) {
@@ -154,9 +168,102 @@ static int post_process(omv_csi_t *csi, image_t *image, uint32_t flags) {
     return 0;
 }
 
+static int post_process_raw(omv_csi_t *csi, image_t *image, uint32_t flags) {
+    boson_state_t *boson = csi->priv;
+    int num_pixels = csi->resolution[boson->framesize][0] * csi->resolution[boson->framesize][1];
+    uint16_t *src = (uint16_t *) image->data;
+    int32_t min = UINT16_MAX;
+    int32_t max = 0;
+
+    if (boson->frame) {
+        memcpy(boson->frame, src, num_pixels * sizeof(uint16_t));
+    }
+
+    for (int32_t i = 0; i < num_pixels; i++) {
+        min = IM_MIN(min, src[i]);
+        max = IM_MAX(max, src[i]);
+    }
+
+    float scale = (max > min) ? (255.0f / (max - min)) : 0.0f;
+    const uint16_t *palette = csi->color_palette;
+
+    if (palette && (framebuffer_get_buffer_size(csi->fb) < (num_pixels * sizeof(uint16_t)))) {
+        palette = NULL;
+    }
+
+    // Scale between the frame's min and max to 0-255 in place. The destination
+    // never overtakes the source going forward, for 8 or 16-bit pixels.
+    for (int32_t i = 0; i < num_pixels; i++) {
+        int32_t pixel = ((src[i] - min) * scale) + 0.5f;
+        if (palette) {
+            src[i] = palette[pixel];
+        } else {
+            image->data[i] = pixel;
+        }
+    }
+
+    if (palette) {
+        image->pixfmt = PIXFORMAT_RGB565;
+        csi->fb->pixfmt = PIXFORMAT_RGB565;
+    }
+
+    image->w = csi->resolution[boson->framesize][0];
+    csi->fb->w = image->w;
+    return 0;
+}
+
+// Switches the video output between 8-bit AGC (MONO8) and 16-bit data. Radiometric cameras
+// output T-Linear temperatures (0.01 Kelvin units), others output raw counts (MONO16). The
+// 16-bit data is multiplexed over the 8-bit bus as two clocks per pixel, so the pixel clock
+// is raised to 60MHz to keep 60 FPS. Cameras without the 60MHz clock run at 30 FPS.
+static int set_active_mode(omv_csi_t *csi, boson_mode_t mode) {
+    boson_state_t *boson = csi->priv;
+
+    if (boson->mode != mode) {
+        // Invalidate frame.
+        csi->fb->pixfmt = PIXFORMAT_INVALID;
+    }
+
+    if (mode == OMV_CSI_BOSON_MODE_RAW) {
+        if (dvoSetOutputFormat(FLR_DVO_IR16) != FLR_OK ||
+            dvoSetOutputIr16Format(FLR_DVO_MIR16_8B) != FLR_OK) {
+            return -1;
+        }
+
+        if (boson->radiometric) {
+            if (bosonSetGainMode(FLR_BOSON_HIGH_GAIN) != FLR_OK ||
+                TLinearSetControl(FLR_ENABLE) != FLR_OK ||
+                dvoSetType(FLR_DVO_TYPE_TLINEAR) != FLR_OK) {
+                return -1;
+            }
+        } else if (dvoSetType(FLR_DVO_TYPE_MONO16) != FLR_OK) {
+            return -1;
+        }
+
+        // The return is ignored on purpose, cameras without the 60MHz clock run at 30 FPS.
+        dvoSetLcdClockRate(FLR_DVO_LCD_CLOCK_60MHZ);
+    } else {
+        if (dvoSetOutputFormat(FLR_DVO_DEFAULT_FORMAT) != FLR_OK ||
+            dvoSetType(FLR_DVO_TYPE_MONO8) != FLR_OK) {
+            return -1;
+        }
+
+        dvoSetLcdClockRate(FLR_DVO_LCD_CLOCK_DEFAULT);
+    }
+
+    if (dvoApplyCustomSettings() != FLR_OK) {
+        return -1;
+    }
+
+    boson->mode = mode;
+    csi->post_process = (mode == OMV_CSI_BOSON_MODE_RAW) ? post_process_raw : post_process_agc;
+    return 0;
+}
+
 static int ioctl(omv_csi_t *csi, int request, void *arg) {
     int ret = 0;
     boson_ioctl_arg_t *a = arg;
+    boson_state_t *boson = csi->priv;
 
     FSLP_set_csi(csi);
 
@@ -373,6 +480,54 @@ static int ioctl(omv_csi_t *csi, int request, void *arg) {
             a->rbfo.o = params.RBFO_O;
             break;
         }
+        case OMV_CSI_IOCTL_BOSON_SET_MODE: {
+            int mode = a->ivalue;
+
+            if (mode == OMV_CSI_BOSON_MODE_AGC) {
+                if ((ret = set_active_mode(csi, OMV_CSI_BOSON_MODE_AGC))) {
+                    break;
+                }
+
+                if ((ret = omv_csi_set_framesize(csi, boson->framesize))) {
+                    break;
+                }
+            } else if (mode == OMV_CSI_BOSON_MODE_RAW) {
+                csi->resolution[OMV_CSI_FRAMESIZE_CUSTOM][0] = csi->resolution[boson->framesize][0] * 2;
+                csi->resolution[OMV_CSI_FRAMESIZE_CUSTOM][1] = csi->resolution[boson->framesize][1];
+
+                if ((ret = set_active_mode(csi, OMV_CSI_BOSON_MODE_RAW))) {
+                    break;
+                }
+
+                if ((ret = omv_csi_set_framesize(csi, OMV_CSI_FRAMESIZE_CUSTOM))) {
+                    break;
+                }
+            } else {
+                ret = -1;
+            }
+            break;
+        }
+        case OMV_CSI_IOCTL_BOSON_READ_FRAME: {
+            if (boson->mode != OMV_CSI_BOSON_MODE_RAW) {
+                return OMV_CSI_ERROR_CAPTURE_FAILED;
+            }
+
+            if (omv_csi_get_cropped(csi)) {
+                return OMV_CSI_ERROR_CAPTURE_FAILED;
+            }
+
+            if (csi->transpose) {
+                return OMV_CSI_ERROR_CAPTURE_FAILED;
+            }
+
+            boson->frame = a->frame.data;
+
+            // post_process_raw() copies the frame and leaves an 8-bit image for the IDE.
+            image_t image;
+            ret = omv_csi_snapshot(csi, &image, 0);
+            boson->frame = NULL;
+            break;
+        }
         default: {
             ret = -1;
             break;
@@ -388,7 +543,6 @@ int boson_init(omv_csi_t *csi) {
     csi->set_pixformat = set_pixformat;
     csi->set_framesize = set_framesize;
     csi->set_colorbar = set_colorbar;
-    csi->post_process = post_process;
     csi->ioctl = ioctl;
 
     // Set csi flags
@@ -404,11 +558,14 @@ int boson_init(omv_csi_t *csi) {
     csi->resolution[OMV_CSI_FRAMESIZE_QVGA][0] = 320;
     csi->resolution[OMV_CSI_FRAMESIZE_QVGA][1] = 256;
 
+    memset(&boson, 0, sizeof(boson_state_t));
+    csi->priv = &boson;
+
     if (reset(csi) != 0) {
         return OMV_CSI_ERROR_CSI_INIT_FAILED;
     }
 
-    csi->chip_id = (boson_framesize == OMV_CSI_FRAMESIZE_VGA) ? BOSON_640_ID : BOSON_320_ID;
+    csi->chip_id = (boson.framesize == OMV_CSI_FRAMESIZE_VGA) ? BOSON_640_ID : BOSON_320_ID;
 
     return 0;
 }
