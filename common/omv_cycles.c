@@ -23,14 +23,15 @@
  *
  * DWT cycle counter utilities.
  */
-#include CMSIS_MCU_H
 #include "omv_cycles.h"
 
 void omv_cycles_init(void) {
+    #if !OMV_OS_UNIX
     CoreDebug->DEMCR |= CoreDebug_DEMCR_TRCENA_Msk;
     #if __CORTEX_M == 7
     DWT->LAR = 0xc5acce55;
     #endif
     DWT->CYCCNT = 0;
     DWT->CTRL |= DWT_CTRL_CYCCNTENA_Msk;
+    #endif
 }

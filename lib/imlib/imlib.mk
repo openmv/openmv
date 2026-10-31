@@ -79,6 +79,7 @@ IMLIB_SRC_C += \
     yuv.c \
     zbar.c \
 
+ifneq ($(PORT),unix)
 CFLAGS += -I$(TOP_DIR)/lib/imlib -DAPRILTAG_HAVE_CONFIG
 
 ifeq ($(CLANG_ENABLE),1)
@@ -94,3 +95,4 @@ $(OMV_CLANG_OBJ): override CFLAGS := $(filter-out -finstrument-functions-exclude
 endif
 
 OMV_FIRM_OBJ += $(addprefix $(BUILD)/lib/imlib/, $(IMLIB_SRC_C:.c=.o))
+endif
