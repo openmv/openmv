@@ -410,6 +410,21 @@ void HAL_LTDC_ReloadEventCallback(LTDC_HandleTypeDef *hltdc) {
     self->framebuffer_head = self->framebuffer_tail;
 }
 
+// Not for DSI, where resetting the LTDC would also need the DSI link restarted.
+#ifndef OMV_DSI_DISPLAY_CONTROLLER
+void HAL_LTDC_ErrorCallback(LTDC_HandleTypeDef *hltdc) {
+    // A FIFO underrun can leave the LTDC fetching out of step with its line timing,
+    // shearing every frame after it. Only a peripheral reset clears that.
+    OMV_RGB_DISPLAY_FORCE_RESET();
+    OMV_RGB_DISPLAY_RELEASE_RESET();
+    HAL_LTDC_Init(hltdc);
+
+    // Show the current frame right away, then restart the reload chain.
+    HAL_LTDC_ConfigLayer(hltdc, &display.framebuffer_layers[display.self->framebuffer_tail], LTDC_LAYER_1);
+    HAL_LTDC_Reload(hltdc, LTDC_RELOAD_VERTICAL_BLANKING);
+}
+#endif
+
 static void display_write(py_display_obj_t *self, image_t *src_img, int dst_x_start, int dst_y_start,
                           float x_scale, float y_scale, rectangle_t *roi, int rgb_channel, int alpha,
                           const uint16_t *color_palette, const uint8_t *alpha_palette, image_hint_t hint) {
