@@ -91,6 +91,11 @@ LDFLAGS += -Wl,--wrap=usbd_cdc_control \
            -Wl,--wrap=mp_hal_stdout_tx_strn
 endif
 
+# The Cortex-M7 data cache needs DMA regions aligned to their size for the MPU.
+ifeq ($(CPU),cortex-m7)
+LDSCRIPT_FLAGS += -DOMV_DMA_MPU_ALIGN
+endif
+
 ifneq ($(OMV_RAMFUNC_OBJS),)
 LDSCRIPT_FLAGS += -DOMV_RAMFUNC_EXC="$(addprefix *,$(OMV_RAMFUNC_OBJS))"
 LDSCRIPT_FLAGS += -DOMV_RAMFUNC_INC="$(foreach obj,$(OMV_RAMFUNC_OBJS),*$(obj)(.text.* .rodata.*);)"
