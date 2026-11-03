@@ -836,7 +836,7 @@ uint8_t vl53l5cx_get_ranging_data(
 	for(i = 0; i < (uint32_t)VL53L5CX_RESOLUTION_8X8; i++)
 	{
 		if(p_results->nb_target_detected[i] == (uint8_t)0){
-			for(j = 0; j < (uint32_t)
+			for(uint32_t j = 0; j < (uint32_t)
 				VL53L5CX_NB_TARGET_PER_ZONE; j++)
 			{
 #ifndef VL53L5CX_DISABLE_TARGET_STATUS
