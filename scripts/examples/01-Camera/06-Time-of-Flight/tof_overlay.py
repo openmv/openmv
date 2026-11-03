@@ -28,16 +28,19 @@ while True:
     # Capture an image
     img = csi0.snapshot()
 
-    # Capture TOF data [depth map, min distance, max distance]
+    # Capture TOF data [depth map, min distance, max distance, target status].
+    # min/max only cover zones with a valid target (status 5, 6 or 9).
     try:
-        depth, dmin, dmax = tof.read_depth(vflip=True, hmirror=True)
+        depth, dmin, dmax, status = tof.read_depth(vflip=True, hmirror=True)
     except RuntimeError:
         continue
 
-    # Scale the image and belnd it with the framebuffer
+    # Scale the image and blend it with the framebuffer. Zones without a
+    # valid target are drawn as 0 when the status is passed.
     tof.draw_depth(
         img,
         depth,
+        status=status,
         x_scale=img.width() / 8,
         y_scale=img.height() / 8,
         hint=image.BILINEAR,
@@ -46,9 +49,13 @@ while True:
         color_palette=image.PALETTE_DEPTH,
     )
 
-    # Draw min and max distance.
+    # Draw min and max distance and the number of zones with a valid target.
+    valid = sum(s in (5, 6, 9) for s in status)
     img.draw_string(
-        (0, 0), f"Distance min: {int(dmin):4d}mm max: {int(dmax):4d}mm", color=(255, 0, 0), mono_space=False
+        (0, 0),
+        f"Distance min: {int(dmin):4d}mm max: {int(dmax):4d}mm zones: {valid:2d}/{len(status)}",
+        color=(255, 0, 0),
+        mono_space=False,
     )
 
     # Print FPS.
