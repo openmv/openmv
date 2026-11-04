@@ -76,8 +76,43 @@ static vl53lx_dev_t vl53lx_dev = {
 };
 #endif
 
+// Target status per ST UM3109 table 4: 5 is a valid range (100% confidence), 6 (wrap-around not
+// performed, typically the first range) and 9 (valid with a large pulse) are 50% confidence. The
+// ULD sets 255 for zones with no target detected. Everything else is not a range.
+static inline bool tof_zone_valid(uint8_t status) {
+    return (status == 5) || (status == 6) || (status == 9);
+}
+
+// Min/max over the zones with a valid target. 0/0 when no zone has one.
+static void tof_get_min_max(const float *data, const uint8_t *status, size_t len, float *p_min, float *p_max) {
+    float min = FLT_MAX;
+    float max = -FLT_MAX;
+
+    for (size_t i = 0; i < len; i++) {
+        if (tof_zone_valid(status[i])) {
+            float raw = data[i];
+
+            if (raw < min) {
+                min = raw;
+            }
+
+            if (raw > max) {
+                max = raw;
+            }
+        }
+    }
+
+    if (min > max) {
+        min = max = 0.0f;
+    }
+
+    *p_min = min;
+    *p_max = max;
+}
+
 // img->w == data_w && img->h == data_h && img->pixfmt == PIXFORMAT_GRAYSCALE
-static void tof_fill_image_float_obj(image_t *img, mp_obj_t *data, float min, float max) {
+// status is optional, zones without a valid target are drawn as 0.
+static void tof_fill_image_float_obj(image_t *img, mp_obj_t *data, const uint8_t *status, float min, float max) {
     float tmp = min;
     min = (min < max) ? min : max;
     max = (max > tmp) ? max : tmp;
@@ -87,10 +122,11 @@ static void tof_fill_image_float_obj(image_t *img, mp_obj_t *data, float min, fl
     for (int y = 0; y < img->h; y++) {
         int row_offset = y * img->w;
         mp_obj_t *raw_row = data + row_offset;
+        const uint8_t *status_row = status ? (status + row_offset) : NULL;
         uint8_t *row_pointer = ((uint8_t *) img->data) + row_offset;
 
         for (int x = 0; x < img->w; x++) {
-            float raw = mp_obj_get_float_to_f(raw_row[x]);
+            float raw = (status_row && !tof_zone_valid(status_row[x])) ? -FLT_MAX : mp_obj_get_float_to_f(raw_row[x]);
 
             if (raw < min) {
                 raw = min;
@@ -168,7 +204,7 @@ static int tof_vl53lx_recover(vl53lx_dev_t *vl53lx_dev) {
     return tof_vl53lx_start(vl53lx_dev);
 }
 
-static void tof_vl53lx_get_depth(vl53lx_dev_t *vl53lx_dev, float *frame, int timeout) {
+static void tof_vl53lx_get_depth(vl53lx_dev_t *vl53lx_dev, float *frame, uint8_t *status, int timeout) {
     // Note depending on the config in platform.h, this struct can be too big to alloc on the stack.
     vl53lx_data_t ranging_data;
 
@@ -200,44 +236,45 @@ static void tof_vl53lx_get_depth(vl53lx_dev_t *vl53lx_dev, float *frame, int tim
         }
     }
 
+    // A zone without a valid target still carries whatever the sensor last estimated for it.
+    // The status says which zones to trust (see tof_zone_valid).
     for (int i = 0, ii = OMV_TOF_VL53LX_WIDTH * OMV_TOF_VL53LX_HEIGHT; i < ii; i++) {
         frame[i] = (float) ranging_data.distance_mm[i];
+        status[i] = ranging_data.target_status[i];
     }
 }
 
-static mp_obj_t tof_get_depth_obj(int w, int h, float *frame, bool mirror,
+static mp_obj_t tof_get_depth_obj(int w, int h, float *frame, uint8_t *status, bool mirror,
                                   bool flip, bool dst_transpose, bool src_transpose) {
     mp_obj_list_t *list = (mp_obj_list_t *) mp_obj_new_list(w * h, NULL);
-    float min = FLT_MAX;
-    float max = -FLT_MAX;
+    // Status bytes in the same order as the list (mp_obj_new_bytes copies them).
+    uint8_t *status_out = m_new(uint8_t, w * h);
+    float min, max;
     int w_1 = w - 1;
     int h_1 = h - 1;
+
+    tof_get_min_max(frame, status, w * h, &min, &max);
 
     if (!src_transpose) {
         for (int y = 0; y < h; y++) {
             int y_dst = flip ? (h_1 - y) : y;
             float *raw_row = frame + (y * w);
+            uint8_t *status_row = status + (y * w);
             mp_obj_t *list_row = list->items + (y_dst * w);
             mp_obj_t *t_list_row = list->items + y_dst;
+            uint8_t *status_out_row = status_out + (y_dst * w);
+            uint8_t *t_status_out_row = status_out + y_dst;
 
             for (int x = 0; x < w; x++) {
                 int x_dst = mirror ? (w_1 - x) : x;
-                float raw = raw_row[x];
-
-                if (raw < min) {
-                    min = raw;
-                }
-
-                if (raw > max) {
-                    max = raw;
-                }
-
-                mp_obj_t f = mp_obj_new_float(raw);
+                mp_obj_t f = mp_obj_new_float(raw_row[x]);
 
                 if (!dst_transpose) {
                     list_row[x_dst] = f;
+                    status_out_row[x_dst] = status_row[x];
                 } else {
                     t_list_row[x_dst * h] = f;
+                    t_status_out_row[x_dst * h] = status_row[x];
                 }
             }
         }
@@ -245,38 +282,35 @@ static mp_obj_t tof_get_depth_obj(int w, int h, float *frame, bool mirror,
         for (int x = 0; x < w; x++) {
             int x_dst = mirror ? (w_1 - x) : x;
             float *raw_row = frame + (x * h);
+            uint8_t *status_row = status + (x * h);
             mp_obj_t *t_list_row = list->items + (x_dst * h);
             mp_obj_t *list_row = list->items + x_dst;
+            uint8_t *t_status_out_row = status_out + (x_dst * h);
+            uint8_t *status_out_row = status_out + x_dst;
 
             for (int y = 0; y < h; y++) {
                 int y_dst = flip ? (h_1 - y) : y;
-                float raw = raw_row[y];
-
-                if (raw < min) {
-                    min = raw;
-                }
-
-                if (raw > max) {
-                    max = raw;
-                }
-
-                mp_obj_t f = mp_obj_new_float(raw);
+                mp_obj_t f = mp_obj_new_float(raw_row[y]);
 
                 if (!dst_transpose) {
                     list_row[y_dst * w] = f;
+                    status_out_row[y_dst * w] = status_row[y];
                 } else {
                     t_list_row[y_dst] = f;
+                    t_status_out_row[y_dst] = status_row[y];
                 }
             }
         }
     }
 
-    mp_obj_t tuple[3] = {
+    mp_obj_t tuple[4] = {
         MP_OBJ_FROM_PTR(list),
         mp_obj_new_float(min),
-        mp_obj_new_float(max)
+        mp_obj_new_float(max),
+        mp_obj_new_bytes(status_out, w * h)
     };
-    return mp_obj_new_tuple(3, tuple);
+    m_del(uint8_t, status_out, w * h);
+    return mp_obj_new_tuple(4, tuple);
 }
 #endif
 
@@ -451,11 +485,14 @@ mp_obj_t py_tof_read_depth(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw
     switch (tof_sensor) {
         #if OMV_TOF_VL53LX_ENABLE
         case OMV_TOF_VL53LX_ID: {
-            float *frame = uma_malloc(OMV_TOF_VL53LX_WIDTH * OMV_TOF_VL53LX_HEIGHT * sizeof(float), UMA_DTCM);
-            tof_vl53lx_get_depth(&vl53lx_dev, frame, args[ARG_timeout].u_int);
-            mp_obj_t result = tof_get_depth_obj(OMV_TOF_VL53LX_WIDTH, OMV_TOF_VL53LX_HEIGHT, frame,
+            size_t zones = OMV_TOF_VL53LX_WIDTH * OMV_TOF_VL53LX_HEIGHT;
+            float *frame = uma_malloc(zones * sizeof(float), UMA_DTCM);
+            uint8_t *status = uma_malloc(zones * sizeof(uint8_t), UMA_DTCM);
+            tof_vl53lx_get_depth(&vl53lx_dev, frame, status, args[ARG_timeout].u_int);
+            mp_obj_t result = tof_get_depth_obj(OMV_TOF_VL53LX_WIDTH, OMV_TOF_VL53LX_HEIGHT, frame, status,
                                                 !args[ARG_hmirror].u_bool, args[ARG_vflip].u_bool,
                                                 args[ARG_transpose].u_bool, true);
+            uma_free(status);
             uma_free(frame);
             return result;
         }
@@ -470,10 +507,11 @@ static MP_DEFINE_CONST_FUN_OBJ_KW(py_tof_read_depth_obj, 0, py_tof_read_depth);
 
 mp_obj_t py_tof_draw_depth(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
     enum {
-        ARG_x, ARG_y, ARG_x_scale, ARG_y_scale, ARG_roi, ARG_channel, ARG_alpha,
+        ARG_status, ARG_x, ARG_y, ARG_x_scale, ARG_y_scale, ARG_roi, ARG_channel, ARG_alpha,
         ARG_color_palette, ARG_alpha_palette, ARG_hint, ARG_scale
     };
     static const mp_arg_t allowed_args[] = {
+        { MP_QSTR_status, MP_ARG_OBJ | MP_ARG_KW_ONLY, {.u_rom_obj = MP_ROM_NONE} },
         { MP_QSTR_x, MP_ARG_INT | MP_ARG_KW_ONLY,  {.u_int = 0 } },
         { MP_QSTR_y, MP_ARG_INT | MP_ARG_KW_ONLY,  {.u_int = 0 } },
         { MP_QSTR_x_scale, MP_ARG_OBJ | MP_ARG_KW_ONLY, {.u_rom_obj = MP_ROM_NONE} },
@@ -513,8 +551,21 @@ mp_obj_t py_tof_draw_depth(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw
 
     image_t *dst_img = py_helper_arg_to_image(pos_args[0], ARG_IMAGE_MUTABLE);
 
+    size_t zones = src_img.w * src_img.h;
     mp_obj_t *depth_array;
-    mp_obj_get_array_fixed_n(pos_args[1], src_img.w * src_img.h, &depth_array);
+    mp_obj_get_array_fixed_n(pos_args[1], zones, &depth_array);
+
+    // Optional per-zone target status from read_depth(). Zones without a valid target are drawn
+    // as 0 and left out of the auto-scale.
+    const uint8_t *status = NULL;
+    if (args[ARG_status].u_obj != mp_const_none) {
+        mp_buffer_info_t bufinfo;
+        mp_get_buffer_raise(args[ARG_status].u_obj, &bufinfo, MP_BUFFER_READ);
+        if (bufinfo.len != zones) {
+            mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Status size does not match the depth map"));
+        }
+        status = bufinfo.buf;
+    }
 
     rectangle_t roi = py_helper_arg_to_roi(args[ARG_roi].u_obj, &src_img);
 
@@ -524,13 +575,22 @@ mp_obj_t py_tof_draw_depth(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw
 
     float min = FLT_MAX;
     float max = -FLT_MAX;
-    py_helper_arg_to_minmax(args[ARG_scale].u_obj, &min, &max, depth_array, src_img.w * src_img.h);
+    if (status && (args[ARG_scale].u_obj == mp_const_none)) {
+        float *depth = uma_malloc(zones * sizeof(float), UMA_DTCM);
+        for (size_t i = 0; i < zones; i++) {
+            depth[i] = mp_obj_get_float_to_f(depth_array[i]);
+        }
+        tof_get_min_max(depth, status, zones, &min, &max);
+        uma_free(depth);
+    } else {
+        py_helper_arg_to_minmax(args[ARG_scale].u_obj, &min, &max, depth_array, zones);
+    }
 
     const uint16_t *color_palette = py_helper_arg_to_palette(args[ARG_color_palette].u_obj, PIXFORMAT_RGB565);
     const uint8_t *alpha_palette = py_helper_arg_to_palette(args[ARG_alpha_palette].u_obj, PIXFORMAT_GRAYSCALE);
 
-    src_img.data = uma_malloc(src_img.w * src_img.h * sizeof(uint8_t), UMA_DTCM);
-    tof_fill_image_float_obj(&src_img, depth_array, min, max);
+    src_img.data = uma_malloc(zones * sizeof(uint8_t), UMA_DTCM);
+    tof_fill_image_float_obj(&src_img, depth_array, status, min, max);
 
     imlib_draw_image(dst_img, &src_img, args[ARG_x].u_int, args[ARG_y].u_int, x_scale, y_scale, &roi,
                      args[ARG_channel].u_int, args[ARG_alpha].u_int, color_palette, alpha_palette,
@@ -619,15 +679,24 @@ mp_obj_t py_tof_snapshot(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_a
     switch (tof_sensor) {
         #if OMV_TOF_VL53LX_ENABLE
         case OMV_TOF_VL53LX_ID: {
-            float *frame = uma_malloc(OMV_TOF_VL53LX_WIDTH * OMV_TOF_VL53LX_HEIGHT * sizeof(float), UMA_DTCM);
-            tof_vl53lx_get_depth(&vl53lx_dev, frame, args[ARG_timeout].u_int);
+            size_t zones = OMV_TOF_VL53LX_WIDTH * OMV_TOF_VL53LX_HEIGHT;
+            float *frame = uma_malloc(zones * sizeof(float), UMA_DTCM);
+            uint8_t *status = uma_malloc(zones * sizeof(uint8_t), UMA_DTCM);
+            tof_vl53lx_get_depth(&vl53lx_dev, frame, status, args[ARG_timeout].u_int);
             if (args[ARG_scale].u_obj == mp_const_none) {
-                fast_get_min_max(frame, OMV_TOF_VL53LX_WIDTH * OMV_TOF_VL53LX_HEIGHT, &min, &max);
+                tof_get_min_max(frame, status, zones, &min, &max);
+            }
+            // Zones without a valid target clamp to the scale minimum and render as 0.
+            for (size_t i = 0; i < zones; i++) {
+                if (!tof_zone_valid(status[i])) {
+                    frame[i] = -FLT_MAX;
+                }
             }
             imlib_fill_image_from_float(&src_img, OMV_TOF_VL53LX_WIDTH, OMV_TOF_VL53LX_HEIGHT,
                                         frame, min, max,
                                         !args[ARG_hmirror].u_bool, args[ARG_vflip].u_bool,
                                         args[ARG_transpose].u_bool, true);
+            uma_free(status);
             uma_free(frame);
             break;
         }

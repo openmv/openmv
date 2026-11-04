@@ -63,11 +63,14 @@ while True:
     humidity += random.uniform(-0.5, 0.5)
     humidity = max(20.0, min(80.0, humidity))
 
-    # Read ToF depth map.
+    # Read ToF depth map. Zones without a valid target (status 5, 6 or 9)
+    # carry stale distances, so send them as 0.
     try:
-        depth_data, dmin, dmax = tof.read_depth(vflip=True, hmirror=True)
+        depth_data, dmin, dmax, status = tof.read_depth(vflip=True, hmirror=True)
     except RuntimeError:
         continue
+
+    depth_data = [d if s in (5, 6, 9) else 0.0 for d, s in zip(depth_data, status)]
 
     # Pack depth floats into binary (4 bytes per float).
     depth_bytes = struct.pack("<%df" % len(depth_data), *depth_data)
