@@ -483,6 +483,17 @@ static size_t omv_csi_detect(omv_i2c_t *i2c, i2c_dev_t *dev_list) {
                 }
                 break;
             #endif // (OMV_MT9M114_ENABLE == 1) || (OMV_PS5520_ENABLE == 1)
+
+            #if (OMV_VBX943_ENABLE == 1)
+            case VBX943_SLV_ADDR:
+                // The model ID register is little-endian.
+                omv_i2c_read_reg(i2c, slv_addr, VBX943_CHIP_ID, 2, &chip_id, 4);
+                chip_id = __builtin_bswap32(chip_id);
+                if (chip_id != VBX943_ID_1_3 && chip_id != VBX943_ID_1_4) {
+                    chip_id = 0;
+                }
+                break;
+            #endif // (OMV_VBX943_ENABLE == 1)
         }
 
         if (chip_id && dev_count < OMV_CSI_MAX_DEVICES) {
@@ -1735,6 +1746,8 @@ const char *omv_csi_name(omv_csi_t *csi) {
         case PAG7920_ID:         return "PAG7920";
         case PAG7936_ID:         return "PAG7936";
         case PS5520_ID:          return "PS5520";
+        case VB1943_ID:          return "VB1943";
+        case VB5943_ID:          return "VB5943";
         case PAJ6100_ID:         return "PAJ6100";
         case FROGEYE2020_ID:     return "FROGEYE2020";
         case SOFTCSI_ID:         return "SoftCSI";

@@ -105,6 +105,11 @@ extern bool paj6100_detect(omv_csi_t *csi);
 #endif
 extern int ps5520_init(omv_csi_t *csi);
 
+#ifndef OMV_VBX943_CLK_FREQ
+#define OMV_VBX943_CLK_FREQ     (24000000)
+#endif
+extern int vbx943_init(omv_csi_t *csi);
+
 #ifndef OMV_FROGEYE2020_CLK_FREQ
 #define OMV_FROGEYE2020_CLK_FREQ    (5000000)
 #endif
@@ -191,6 +196,11 @@ static const sensor_config_t sensor_config_table[] = {
 
     #if OMV_PS5520_ENABLE
     { PS5520_ID, OMV_PS5520_CLK_FREQ, ps5520_init },
+    #endif
+
+    #if OMV_VBX943_ENABLE
+    { VBX943_ID_1_3, OMV_VBX943_CLK_FREQ, vbx943_init },
+    { VBX943_ID_1_4, OMV_VBX943_CLK_FREQ, vbx943_init },
     #endif
 
     #if OMV_FROGEYE2020_ENABLE
