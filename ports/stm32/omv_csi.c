@@ -438,7 +438,7 @@ static void stm_csi_frame_event(omv_csi_t *csi, uint32_t pipe) {
 
     // The ISP AWB stats lag by one frame. So, drop the first frame when not initialized.
     #if defined(OMV_CSI_STATS_ENABLE)
-    if (csi->raw_output && csi->stats_enabled && !csi->stats.initialized) {
+    if (csi->raw_output && !csi->cfa_mono && csi->stats_enabled && !csi->stats.initialized) {
         stm_isp_update_awb(csi, DCMIPP_PIPE);
         csi->drop_frame = true;
     }
