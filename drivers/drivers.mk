@@ -206,6 +206,7 @@ DRIVER_SRC_C += $(addprefix sensors/, \
     ps5520.c \
     paj6100.c \
     softcsi.c \
+    vbx943.c \
 )
 CFLAGS += -I$(TOP_DIR)/drivers/sensors
 
