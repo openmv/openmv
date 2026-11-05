@@ -98,6 +98,9 @@
 #define PS5520_ID               (0x5520)
 #define PAJ6100_ID              (0x6100)
 #define FROGEYE2020_ID          (0x2020)
+#define VL53L9CX_ID             (0x5309)
+// Bits [47:16] of the I3C provisioned ID, the manufacturer and part IDs.
+#define VL53L9CX_PID            (0x02080102)
 #define SOFTCSI_ID              (0x50F7)
 
 #define OMV_CSI_TIMEOUT_MS      (3000)
@@ -215,6 +218,7 @@ typedef enum {
     OMV_CSI_IOCTL_FAMILY_HIMAX    = 2,
     OMV_CSI_IOCTL_FAMILY_GENX320  = 3,
     OMV_CSI_IOCTL_FAMILY_BOSON    = 4,
+    OMV_CSI_IOCTL_FAMILY_VL53L9CX = 5,
     // Not reachable from Python.
     OMV_CSI_IOCTL_FAMILY_INTERNAL = 15,
 } omv_csi_ioctl_family_t;
@@ -312,6 +316,20 @@ typedef enum {
     OMV_CSI_IOCTL_BOSON_GET_SPOT_METER_TEMP_STATS = 0x41F,
     OMV_CSI_IOCTL_BOSON_GET_TEMP_FROM_COUNTS      = 0x420,
     OMV_CSI_IOCTL_BOSON_GET_RBFO                  = 0x421,
+
+    // ST VL53L9CX.
+    OMV_CSI_IOCTL_VL53L9CX_SET_RANGE              = 0x500,
+    OMV_CSI_IOCTL_VL53L9CX_GET_RANGE              = 0x501,
+    OMV_CSI_IOCTL_VL53L9CX_SET_MODE               = 0x502 | OMV_CSI_IOCTL_FLAG_ABORT,
+    OMV_CSI_IOCTL_VL53L9CX_GET_MODE               = 0x503,
+    OMV_CSI_IOCTL_VL53L9CX_SET_PLANES             = 0x504 | OMV_CSI_IOCTL_FLAG_ABORT,
+    OMV_CSI_IOCTL_VL53L9CX_GET_PLANES             = 0x505,
+    OMV_CSI_IOCTL_VL53L9CX_GET_BINNING            = 0x506,
+    OMV_CSI_IOCTL_VL53L9CX_GET_RESOLUTION         = 0x507,
+    OMV_CSI_IOCTL_VL53L9CX_GET_FRAME_COUNTER      = 0x508,
+    OMV_CSI_IOCTL_VL53L9CX_GET_DEPTH              = 0x509,
+    OMV_CSI_IOCTL_VL53L9CX_GET_AMPLITUDE          = 0x50A,
+    OMV_CSI_IOCTL_VL53L9CX_GET_AMBIENT            = 0x50B,
 
     // Internal requests, not exported to Python.
     OMV_CSI_IOCTL_UPDATE_AGC_AEC                  = 0xF00,

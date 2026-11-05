@@ -59,6 +59,11 @@ extern int mt9m114_init(omv_csi_t *csi);
 #endif
 extern int boson_init(omv_csi_t *csi);
 
+#ifndef OMV_VL53L9CX_CLK_FREQ
+#define OMV_VL53L9CX_CLK_FREQ   (24000000)
+#endif
+extern int vl53l9cx_init(omv_csi_t *csi);
+
 #ifndef OMV_LEPTON_CLK_FREQ
 #define OMV_LEPTON_CLK_FREQ     (24000000)
 #endif
@@ -187,6 +192,10 @@ static const sensor_config_t sensor_config_table[] = {
 
     #if OMV_PAJ6100_ENABLE
     { PAJ6100_ID, OMV_PAJ6100_CLK_FREQ, paj6100_init },
+    #endif
+
+    #if OMV_VL53L9CX_ENABLE
+    { VL53L9CX_ID, OMV_VL53L9CX_CLK_FREQ, vl53l9cx_init },
     #endif
 
     #if OMV_PS5520_ENABLE

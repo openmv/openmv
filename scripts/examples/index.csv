@@ -12,6 +12,7 @@
 "examples/01-Camera/06-Time-of-Flight", ".+", "^(?!None).*$", ""
 "examples/01-Camera/07-Sensor-Control", ".+", "^(?!None).*$", ""
 "examples/01-Camera/08-Readout-Control", ".+", "^(?!None).*$", ""
+"examples/01-Camera/09-Depth-Cameras/00-VL53L9CX", ".+", "^(?!None).*$", ""
 "examples/02-Image-Processing", ".+", "^(?!None).*$", ""
 "examples/03-Machine-Learning/00-TensorFlow", ".+", "^(?!None).*$", ""
 "examples/03-Machine-Learning/01-ST-CubeAI", "(OPENMV2|OPENMV3|OPENMV4|OPENMV4P|OPENMVPT|ARDUINO_GIGA|ARDUINO_PORTENTA_H7|ARDUINO_NICLA_VISION)", "^(?!None).*$", ""

@@ -206,6 +206,7 @@ DRIVER_SRC_C += $(addprefix sensors/, \
     ps5520.c \
     paj6100.c \
     softcsi.c \
+    vl53l9cx.c \
 )
 CFLAGS += -I$(TOP_DIR)/drivers/sensors
 
@@ -235,6 +236,17 @@ DRIVER_SRC_C += $(addprefix vl53l8cx/src/, \
 
 CFLAGS += -DOMV_TOF_VL53L8CX_ENABLE=1
 CFLAGS += -I$(TOP_DIR)/drivers/vl53l8cx/include/
+endif
+
+# VL53L9CX driver sources
+ifeq ($(OMV_VL53L9CX_ENABLE), 1)
+DRIVER_SRC_C += $(addprefix vl53l9cx/src/, \
+    platform.c \
+    vl53l9.c \
+)
+
+CFLAGS += -DOMV_VL53L9CX_ENABLE=1
+CFLAGS += -I$(TOP_DIR)/drivers/vl53l9cx/include/
 endif
 
 # WINC1500 Wi-Fi module sources

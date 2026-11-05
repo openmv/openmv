@@ -132,6 +132,11 @@ void SystemClock_Config(void) {
     PeriphClkInit.I2c3ClockSelection      = OMV_OSC_I2C3_SOURCE;
     #endif
 
+    #if defined(OMV_OSC_I3C2_SOURCE)
+    PeriphClkInit.PeriphClockSelection   |= RCC_PERIPHCLK_I3C2;
+    PeriphClkInit.I3c2ClockSelection      = OMV_OSC_I3C2_SOURCE;
+    #endif
+
     #if defined(OMV_OSC_SPI5_SOURCE)
     PeriphClkInit.PeriphClockSelection   |= RCC_PERIPHCLK_SPI5;
     PeriphClkInit.Spi5ClockSelection      = OMV_OSC_SPI5_SOURCE;
