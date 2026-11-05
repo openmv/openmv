@@ -243,6 +243,8 @@ typedef enum {
     OMV_CSI_IOCTL_SET_NIGHT_MODE                  = 0x00A,
     OMV_CSI_IOCTL_GET_NIGHT_MODE                  = 0x00B,
     OMV_CSI_IOCTL_GET_RGB_STATS                   = 0x00C,
+    OMV_CSI_IOCTL_SET_STROBE_MODE                 = 0x00D,
+    OMV_CSI_IOCTL_GET_STROBE_MODE                 = 0x00E,
 
     // FLIR Lepton.
     OMV_CSI_IOCTL_LEPTON_GET_WIDTH                = 0x100,
