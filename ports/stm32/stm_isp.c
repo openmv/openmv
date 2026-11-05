@@ -275,9 +275,16 @@ int stm_isp_init(omv_csi_t *csi, uint32_t pipe, pixformat_t pixformat, bool raw_
         return 0;
     }
 
+    static const uint32_t rawbayer_types[] = {
+        [SUBFORMAT_ID_BGGR] = DCMIPP_RAWBAYER_BGGR,
+        [SUBFORMAT_ID_GBRG] = DCMIPP_RAWBAYER_GBRG,
+        [SUBFORMAT_ID_GRBG] = DCMIPP_RAWBAYER_GRBG,
+        [SUBFORMAT_ID_RGGB] = DCMIPP_RAWBAYER_RGGB,
+    };
+
     // Configure ISP debayer.
     DCMIPP_RawBayer2RGBConfTypeDef rawcfg = {
-        .RawBayerType = DCMIPP_RAWBAYER_BGGR,
+        .RawBayerType = rawbayer_types[csi->cfa_format],
         .VLineStrength = DCMIPP_RAWBAYER_ALGO_NONE,
         .HLineStrength = DCMIPP_RAWBAYER_ALGO_NONE,
         .PeakStrength = DCMIPP_RAWBAYER_ALGO_NONE,
