@@ -125,6 +125,11 @@ float stm_isp_update_awb(omv_csi_t *csi, uint32_t pipe) {
         omv_csi_stats_update(csi, &avg[0], &avg[1], &avg[2], mp_hal_ticks_ms());
     }
 
+    // There are no colors to balance, the exposure gains stay at unity.
+    if (csi->cfa_mono) {
+        return luminance;
+    }
+
     omv_csi_get_stats(csi, &avg[0], &avg[1], &avg[2]);
 
     // Normalize to the largest channel so that no gain is below 1 and clipped pixels stay white.
@@ -235,8 +240,11 @@ int stm_isp_init(omv_csi_t *csi, uint32_t pipe, pixformat_t pixformat, bool raw_
         .EdgeStrength = DCMIPP_RAWBAYER_ALGO_NONE,
     };
 
-    if (HAL_DCMIPP_PIPE_SetISPRawBayer2RGBConfig(&csi->dcmipp, pipe, &rawcfg) != HAL_OK ||
-        HAL_DCMIPP_PIPE_EnableISPRawBayer2RGB(&csi->dcmipp, pipe) != HAL_OK) {
+    if (csi->cfa_mono) {
+        // There's nothing to debayer, the pipe replicates the raw pixels.
+        HAL_DCMIPP_PIPE_DisableISPRawBayer2RGB(&csi->dcmipp, pipe);
+    } else if (HAL_DCMIPP_PIPE_SetISPRawBayer2RGBConfig(&csi->dcmipp, pipe, &rawcfg) != HAL_OK ||
+               HAL_DCMIPP_PIPE_EnableISPRawBayer2RGB(&csi->dcmipp, pipe) != HAL_OK) {
         return -1;
     }
 
