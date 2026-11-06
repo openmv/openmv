@@ -179,13 +179,13 @@ float stm_isp_update_awb(omv_csi_t *csi, uint32_t pipe) {
 
     omv_csi_get_stats(csi, &avg[0], &avg[1], &avg[2]);
 
-    // Compute global luminance (EMA-smoothed, used for AWB)
-    float awb_luminance = avg[0] * 0.299f + avg[1] * 0.587f + avg[2] * 0.114f;
+    // Normalize to the largest channel so that no gain is below 1 and clipped pixels stay white.
+    float awb_max = OMV_MAX(OMV_MAX(avg[0], avg[1]), avg[2]);
 
     // Calculate average and exposure factors for each channel (R, G, B)
     for (int i = 0; i < 3; i++) {
         shift[i] = 0;
-        multi[i] = roundf((awb_luminance * 128.0f / avg[i]));
+        multi[i] = roundf((awb_max * 128.0f / avg[i]));
         while (multi[i] >= 255.0f && shift[i] < 7) {
             multi[i] /= 2;
             shift[i]++;
