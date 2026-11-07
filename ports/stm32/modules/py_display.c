@@ -64,6 +64,9 @@ typedef struct display_mode {
     uint32_t vpol : 1;
 } display_mode_t;
 
+// Consecutive frames with a FIFO underrun before the LTDC is considered stuck.
+#define LTDC_UNDERRUN_LIMIT     (3)
+
 typedef struct _display_state {
     py_display_obj_t *self;
     LTDC_HandleTypeDef hltdc;
@@ -71,6 +74,9 @@ typedef struct _display_state {
     DSI_HandleTypeDef hdsi;
     #endif
     LTDC_LayerCfgTypeDef framebuffer_layers[FRAMEBUFFER_COUNT];
+    uint32_t reloads;
+    uint32_t underrun_reload;
+    uint32_t underrun_count;
 } display_state_t;
 
 static display_state_t display;
@@ -386,6 +392,10 @@ static void ltdc_init(py_display_obj_t *self, display_mode_t *dm) {
     display.hltdc.Init.Backcolor.Red = 0;
     HAL_LTDC_Init(&display.hltdc);
 
+    display.reloads = 0;
+    display.underrun_reload = 0;
+    display.underrun_count = 0;
+
     NVIC_SetPriority(LTDC_IRQn, IRQ_PRI_LTDC);
     HAL_NVIC_EnableIRQ(LTDC_IRQn);
 
@@ -395,6 +405,8 @@ static void ltdc_init(py_display_obj_t *self, display_mode_t *dm) {
 
 void HAL_LTDC_ReloadEventCallback(LTDC_HandleTypeDef *hltdc) {
     py_display_obj_t *self = display.self;
+
+    display.reloads++;
 
     HAL_LTDC_ConfigLayer_NoReload(&display.hltdc,
                                   &display.framebuffer_layers[self->framebuffer_tail], LTDC_LAYER_1);
@@ -409,6 +421,35 @@ void HAL_LTDC_ReloadEventCallback(LTDC_HandleTypeDef *hltdc) {
     #endif
     self->framebuffer_head = self->framebuffer_tail;
 }
+
+#ifndef OMV_DSI_DISPLAY_CONTROLLER
+void HAL_LTDC_ErrorCallback(LTDC_HandleTypeDef *hltdc) {
+    // A lone FIFO underrun costs one frame. Underruns on consecutive frames mean the fetch
+    // is stuck out of step, shearing every frame. Only a peripheral reset clears that.
+    bool consecutive = (display.reloads - display.underrun_reload) <= 1;
+
+    display.underrun_count = consecutive ? (display.underrun_count + 1) : 1;
+    display.underrun_reload = display.reloads;
+
+    if (display.underrun_count < LTDC_UNDERRUN_LIMIT) {
+        // The HAL masks the interrupt on an error, so unmask it to see the next one.
+        hltdc->ErrorCode = HAL_LTDC_ERROR_NONE;
+        hltdc->State = HAL_LTDC_STATE_READY;
+        __HAL_LTDC_ENABLE_IT(hltdc, LTDC_IT_TE | LTDC_IT_FU);
+        return;
+    }
+
+    display.underrun_count = 0;
+
+    OMV_RGB_DISPLAY_FORCE_RESET();
+    OMV_RGB_DISPLAY_RELEASE_RESET();
+    HAL_LTDC_Init(hltdc);
+
+    // Show the current frame right away, then restart the reload chain.
+    HAL_LTDC_ConfigLayer(hltdc, &display.framebuffer_layers[display.self->framebuffer_tail], LTDC_LAYER_1);
+    HAL_LTDC_Reload(hltdc, LTDC_RELOAD_VERTICAL_BLANKING);
+}
+#endif
 
 static void display_write(py_display_obj_t *self, image_t *src_img, int dst_x_start, int dst_y_start,
                           float x_scale, float y_scale, rectangle_t *roi, int rgb_channel, int alpha,
@@ -536,25 +577,39 @@ int display_dsi_read(py_display_obj_t *self, uint8_t cmd, uint8_t *args,
 #endif
 
 static void display_deinit(py_display_obj_t *self) {
-    #ifdef OMV_DSI_DISPLAY_CONTROLLER
-    HAL_DSI_DeInit(&display.hdsi);
-    HAL_NVIC_DisableIRQ(DSI_IRQn);
-    #endif
+    // The LTDC/DSI state is a singleton shared by every display object, but this
+    // runs from the object's finaliser, which the GC may invoke long after the
+    // object stopped owning the controller. Creating a second display makes the
+    // first one garbage while the hardware belongs to the second, and collecting
+    // it would otherwise tear down a live display: the LTDC clock is gated, the
+    // controller stops scanning and every register reads back as zero. Only the
+    // current owner may touch the controller; a stale object just frees its own
+    // framebuffers.
+    bool owner = (display.self == self);
 
-    HAL_LTDC_DeInit(&display.hltdc);
-    HAL_NVIC_DisableIRQ(LTDC_IRQn);
+    if (owner) {
+        #ifdef OMV_DSI_DISPLAY_CONTROLLER
+        HAL_DSI_DeInit(&display.hdsi);
+        HAL_NVIC_DisableIRQ(DSI_IRQn);
+        #endif
 
-    __HAL_RCC_PLL3_DISABLE();
-    uint32_t tickstart = mp_hal_ticks_ms();
-    while (__HAL_RCC_GET_FLAG(RCC_FLAG_PLL3RDY)) {
-        if ((mp_hal_ticks_ms() - tickstart) > PLL_TIMEOUT_VALUE) {
-            break;
+        HAL_LTDC_DeInit(&display.hltdc);
+        HAL_NVIC_DisableIRQ(LTDC_IRQn);
+
+        __HAL_RCC_PLL3_DISABLE();
+        uint32_t tickstart = mp_hal_ticks_ms();
+        while (__HAL_RCC_GET_FLAG(RCC_FLAG_PLL3RDY)) {
+            if ((mp_hal_ticks_ms() - tickstart) > PLL_TIMEOUT_VALUE) {
+                break;
+            }
         }
-    }
 
-    #ifdef OMV_DISPLAY_BL_PIN
-    omv_gpio_deinit(OMV_DISPLAY_BL_PIN);
-    #endif
+        #ifdef OMV_DISPLAY_BL_PIN
+        omv_gpio_deinit(OMV_DISPLAY_BL_PIN);
+        #endif
+
+        display.self = NULL;
+    }
 
     for (int i = 0; i < FRAMEBUFFER_COUNT; i++) {
         uma_free(self->framebuffers[i]);
