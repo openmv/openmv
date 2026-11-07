@@ -280,6 +280,42 @@ static void imlib_merge_blob_contours(find_blobs_list_lnk_data_t *dst, find_blob
     imlib_free_blob_contour(src);
 }
 
+static void imlib_draw_contour_pixel(image_t *dst, int x, int y, int color, image_t *mask) {
+    if ((0 <= x) && (x < dst->w) && (0 <= y) && (y < dst->h)) {
+        imlib_set_pixel(dst, x, y, color);
+        if (mask) {
+            imlib_set_pixel(mask, x, y, -1);
+        }
+    }
+}
+
+void imlib_draw_contours(image_t *dst, point_t *start, const uint8_t *contour, uint32_t contour_len,
+                         int color, image_t *mask) {
+    if ((!contour) && contour_len) {
+        return;
+    }
+
+    int x = start->x;
+    int y = start->y;
+    imlib_draw_contour_pixel(dst, x, y, color, mask);
+
+    for (uint32_t i = 0; i < contour_len; i++) {
+        uint8_t value = contour[i];
+        if (value == FIND_BLOBS_CONTOUR_ANCHOR) {
+            if ((i + 4) >= contour_len) {
+                break;
+            }
+            x = (int16_t) (contour[i + 1] | (contour[i + 2] << 8));
+            y = (int16_t) (contour[i + 3] | (contour[i + 4] << 8));
+            i += 4;
+        } else {
+            x += (value & FIND_BLOBS_CONTOUR_DELTA_MASK) - FIND_BLOBS_CONTOUR_DELTA_OFFSET;
+            y += ((value >> 3) & FIND_BLOBS_CONTOUR_DELTA_MASK) - FIND_BLOBS_CONTOUR_DELTA_OFFSET;
+        }
+        imlib_draw_contour_pixel(dst, x, y, color, mask);
+    }
+}
+
 void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int x_stride, unsigned int y_stride,
                       list_t *thresholds, bool invert, unsigned int area_threshold, unsigned int pixels_threshold,
                       bool merge, int margin, bool (*threshold_cb) (void *, find_blobs_list_lnk_data_t *),
