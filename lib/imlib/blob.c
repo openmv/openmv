@@ -247,6 +247,7 @@ static void imlib_free_blob_contour(find_blobs_list_lnk_data_t *blob) {
     blob->contour_valid = false;
 }
 
+// Preserve each component's contour, including shared edges of touching blobs.
 static void imlib_merge_blob_contours(find_blobs_list_lnk_data_t *dst, find_blobs_list_lnk_data_t *src) {
     if (!src->contour_valid) {
         return;
