@@ -953,7 +953,7 @@ void omv_protocol_process(const omv_protocol_packet_t *packet) {
             const omv_protocol_channel_t *channel = omv_protocol_find_channel(packet->channel);
 
             if (channel && channel->write && request->length) {
-                if (channel->write(channel, request->offset, request->length, request->payload)) {
+                if (channel->write(channel, request->offset, request->length, request->payload) > 0) {
                     omv_protocol_send_status(packet->opcode, packet->channel, OMV_PROTOCOL_STATUS_SUCCESS);
                 } else {
                     omv_protocol_send_status(packet->opcode, packet->channel, OMV_PROTOCOL_STATUS_FAILED);
