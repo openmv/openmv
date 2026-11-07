@@ -43,6 +43,7 @@
 #include "usb.h"
 #include "rtc.h"
 #include "irq.h"
+#include "mpu.h"
 #include "rng.h"
 #include "led.h"
 #include "spi.h"
@@ -165,6 +166,19 @@ int main(void) {
     if (!sdram_init()) {
         __fatal_error("Failed to init sdram!");
     }
+
+    #if defined(STM32F7) || defined(STM32H7)
+    // The CPU can speculatively read any address held in a register. Reads of the empty NOR
+    // bank hold the FMC for long enough to starve the other masters, so block them here.
+    uint32_t irq_state = mpu_config_start();
+    #if MICROPY_HW_FMC_SWAP_BANKS
+    uint32_t nor_base = 0xC0000000;
+    #else
+    uint32_t nor_base = 0x60000000;
+    #endif
+    mpu_config_region(MPU_REGION_LAST_USED + 1, nor_base, MPU_CONFIG_NOACCESS(0x00, MPU_REGION_SIZE_256MB));
+    mpu_config_end(irq_state);
+    #endif
     #endif
 
     #if MICROPY_HW_SDRAM_STARTUP_TEST
