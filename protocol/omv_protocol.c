@@ -65,6 +65,7 @@ int omv_protocol_init(const omv_protocol_config_t *config) {
 
     // Initialize state
     ctx.sequence = 0;
+    ctx.suspended = false;
     ctx.last_lock_ms = 0;
     ctx.scan_offset = 0;
     ctx.wait_for_ack = false;
@@ -130,6 +131,9 @@ int omv_protocol_init_default() {
 }
 
 void omv_protocol_deinit(void) {
+    // Leave anything the host sends in the transport until the next init.
+    ctx.suspended = true;
+
     if (ctx.config.poll_ms > 0) {
         soft_timer_remove(&protocol_timer);
     }
@@ -196,6 +200,11 @@ bool omv_protocol_exec_script(void) {
 
     bool result = channel->exec(channel);
     if (result) {
+        // The main loop soft-reboots next. Stop consuming host packets right
+        // away (sending the event below polls the transport): anything the
+        // host sends from here on is processed after the protocol is
+        // initialized again, not by a context that is about to be torn down.
+        ctx.suspended = true;
         omv_protocol_send_event(0, OMV_PROTOCOL_EVENT_SOFT_REBOOT, false);
     }
 
@@ -472,7 +481,7 @@ int omv_protocol_poll(void) {
         return -1;
     }
 
-    if (!transport || !transport->is_active(transport)) {
+    if (!transport || !transport->is_active(transport) || ctx.suspended) {
         return -1;
     }
 
