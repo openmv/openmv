@@ -32,8 +32,11 @@ SDK_VERSION := $(shell cat $(CURDIR)/SDK_VERSION)
 SDK_DIR ?= $(HOME)/openmv-sdk-$(SDK_VERSION)
 SDK_STAMP = $(SDK_DIR)/sdk.version
 
+# Host-toolchain targets (Unix) do not need the SDK or the embedded toolchain.
+OMV_HOST_TARGET := $(filter UNIX,$(TARGET))
+
 # Check if the SDK is downloaded
-ifeq ($(filter sdk clean,$(MAKECMDGOALS)),)
+ifeq ($(filter sdk clean,$(MAKECMDGOALS))$(OMV_HOST_TARGET),)
   ifeq ($(wildcard $(SDK_STAMP)),)
     OLD_SDK_STAMPS := $(wildcard $(dir $(SDK_DIR))openmv-sdk-*/sdk.version)
     ifneq ($(OLD_SDK_STAMPS),)
@@ -56,22 +59,24 @@ OMV_DEBUG_ELF ?= $(FIRMWARE)
 export BOOTLOADER ?= bootloader
 
 # Commands (use := to avoid repeated expansion overhead in parallel builds)
+ifeq ($(OMV_HOST_TARGET),)
 export CC      := $(Q)arm-none-eabi-gcc
 export CLANG   := $(Q)clang
 export CXX     := $(Q)arm-none-eabi-g++
 export AS      := $(Q)arm-none-eabi-as
 export LD      := $(Q)arm-none-eabi-ld
 export AR      := $(Q)arm-none-eabi-ar
-export RM      := $(Q)rm
 export CPP     := $(Q)arm-none-eabi-cpp
 export SIZE    := $(Q)arm-none-eabi-size
 export STRIP   := $(Q)arm-none-eabi-strip -s
 export OBJCOPY := $(Q)arm-none-eabi-objcopy
 export OBJDUMP := $(Q)arm-none-eabi-objdump
 export PYTHON  := $(Q)python3
+export MAKE    := $(Q)make
+endif
+export RM      := $(Q)rm
 export MKDIR   := $(Q)mkdir
 export ECHO    := $(Q)@echo
-export MAKE    := $(Q)make
 export CAT     := $(Q)cat
 export MKROMFS := mkromfs.py
 export GENLINK := gen_linker.py
@@ -97,6 +102,7 @@ export OMV_BOARD_CONFIG_DIR:=$(TOP_DIR)/boards/$(TARGET)/
 export OMV_LIB_DIR:=$(TOP_DIR)/scripts/libraries
 export FROZEN_MANIFEST:=$(OMV_BOARD_CONFIG_DIR)/manifest.py
 
+ifeq ($(OMV_HOST_TARGET),)
 # Prepend SDK bin directories to PATH.
 STEDGEAI_CORE := $(SDK_DIR)/stedgeai
 STEDGEAI_UTIL := Utilities/$(if $(filter Darwin,$(shell uname -s)),macarm,linux)
@@ -147,6 +153,7 @@ CFLAGS += -DOMV_PROFILER_ENABLE=1
 CFLAGS += -DOMV_PROFILER_HASH_SIZE=$(PROFILE_HASH)
 CFLAGS += -DOMV_PROFILER_IRQ_ENABLE=$(PROFILE_IRQ)
 CFLAGS += -finstrument-functions-exclude-file-list=lib/cmsis,lib/stm32,/lib/mimxrt,lib/alif,simd.h
+endif
 endif
 
 # Include OpenMV board config first to set the port.
@@ -207,10 +214,14 @@ clean:
 	$(RM) -fr $(BUILD)
 
 size:
+ifeq ($(PORT),unix)
+	size $(FW_DIR)/micropython
+else
 ifeq ($(OMV_ENABLE_BL), 1)
 	$(SIZE) --format=SysV $(FW_DIR)/$(BOOTLOADER).elf
 endif
 	$(SIZE) --format=SysV $(FW_DIR)/$(FIRMWARE).elf
+endif
 
 .PHONY: sdk
 sdk:
@@ -220,8 +231,12 @@ submodules:
 	$(MAKE) -C $(MICROPY_DIR)/ports/$(PORT) BOARD=$(TARGET) submodules
 
 debug: $(ROMFS_IMAGE)
+ifeq ($(PORT),unix)
+	gdb $(FW_DIR)/micropython
+else
 ifeq ($(DEBUGGER),NONE)
 	$(error This target does not support debugging)
 endif
 	gdbrunner $(DEBUGGER) $(OMV_$(DEBUGGER)_ARGS) $(FW_DIR)/$(OMV_DEBUG_ELF).elf
+endif
 

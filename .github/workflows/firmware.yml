@@ -53,6 +53,7 @@ jobs:
           - ARDUINO_NICLA_VISION
         qemu: [false]
         fvp: [false]
+        unix: [false]
         profile: [0]
         artifacts: [true]
         include:
@@ -73,6 +74,11 @@ jobs:
             fvp: true
             profile: 0
             artifacts: false
+          - target: UNIX
+            qemu: false
+            unix: true
+            profile: 0
+            artifacts: false
       fail-fast: false
     steps:
     - name: '⏳ Checkout repository'
@@ -88,6 +94,7 @@ jobs:
       run: echo "version=$(cat SDK_VERSION)" >> "$GITHUB_OUTPUT"
 
     - name: '♻ Cache SDK'
+      if: "!matrix.unix"
       uses: actions/cache@v6.1.0
       id: sdk-cache
       with:
@@ -100,7 +107,7 @@ jobs:
         sudo apt-get install -y qemu-system-arm
 
     - name: '🛠 Install SDK'
-      if: steps.sdk-cache.outputs.cache-hit != 'true'
+      if: "!matrix.unix && steps.sdk-cache.outputs.cache-hit != 'true'"
       run: source tools/ci.sh && ci_install_sdk
 
     - name: '♻ Cache FVP'
@@ -125,6 +132,10 @@ jobs:
     - name: '🧪 Run FVP tests'
       if: matrix.fvp
       run: source tools/ci.sh && ci_run_fvp_tests ${{ matrix.target }}
+
+    - name: '🧪 Run Unix tests'
+      if: matrix.unix
+      run: source tools/ci.sh && ci_run_docker_unix_tests
 
     - name: '⬆ Upload artifacts'
       if: matrix.artifacts

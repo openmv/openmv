@@ -309,12 +309,17 @@ static inline v128_predicate_t vpredicate_64_add(v128_predicate_t pred, uint32_t
     #endif
 }
 
+// Unix branches compute the exact floor average; the generic (a + b) >> 1 overflows the lane width.
 static inline v128_t vhadd_u8(v128_t v0, v128_t v1) {
     #if (__ARM_ARCH >= 8)
     return (v128_t) vhaddq(v0.u8, v1.u8);
     #elif (__ARM_ARCH >= 7)
     return (v128_t) {
         .u32 = { __UHADD8(v0.u32[0], v1.u32[0]) }
+    };
+    #elif OMV_OS_UNIX
+    return (v128_t) {
+        .u8 = (v0.u8 & v1.u8) + ((v0.u8 ^ v1.u8) >> 1)
     };
     #else
     return (v128_t) {
@@ -330,6 +335,10 @@ static inline v128_t vhadd_s8(v128_t v0, v128_t v1) {
     return (v128_t) {
         .s32 = { __SHADD8(v0.s32[0], v1.s32[0]) }
     };
+    #elif OMV_OS_UNIX
+    return (v128_t) {
+        .s8 = (v0.s8 & v1.s8) + ((v0.s8 ^ v1.s8) >> 1)
+    };
     #else
     return (v128_t) {
         .s8 = (v0.s8 + v1.s8) >> 1
@@ -344,6 +353,10 @@ static inline v128_t vhadd_u16(v128_t v0, v128_t v1) {
     return (v128_t) {
         .u32 = { __UHADD16(v0.u32[0], v1.u32[0]) }
     };
+    #elif OMV_OS_UNIX
+    return (v128_t) {
+        .u16 = (v0.u16 & v1.u16) + ((v0.u16 ^ v1.u16) >> 1)
+    };
     #else
     return (v128_t) {
         .u16 = (v0.u16 + v1.u16) >> 1
@@ -357,6 +370,10 @@ static inline v128_t vhadd_s16(v128_t v0, v128_t v1) {
     #elif (__ARM_ARCH >= 7)
     return (v128_t) {
         .s32 = { __SHADD16(v0.s32[0], v1.s32[0]) }
+    };
+    #elif OMV_OS_UNIX
+    return (v128_t) {
+        .s16 = (v0.s16 & v1.s16) + ((v0.s16 ^ v1.s16) >> 1)
     };
     #else
     return (v128_t) {

@@ -16,5 +16,8 @@
 set -e -x
 
 make -j$(nproc) TARGET=${TARGET} submodules
-make -j$(nproc) -C lib/micropython/mpy-cross
+# The Unix target builds its own mpy-cross.
+if [ "${TARGET}" != UNIX ]; then
+    make -j$(nproc) -C lib/micropython/mpy-cross
+fi
 make -j$(nproc) ${BUILD_OPTS:-} TARGET=${TARGET}

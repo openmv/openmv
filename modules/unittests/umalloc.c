@@ -519,6 +519,8 @@ static mp_obj_t test_uma_pool_generic_alloc(void) {
 }
 static MP_DEFINE_CONST_FUN_OBJ_0(test_uma_pool_generic_alloc_obj, test_uma_pool_generic_alloc);
 
+// The Unix board has a single default pool; tests that need FAST or DTCM pools are not built.
+#if !OMV_OS_UNIX
 // Test that FAST alloc goes to FAST pool (exact match).
 static mp_obj_t test_uma_pool_fast_exact(void) {
     void *ptr = uma_malloc(64, UMA_FAST);
@@ -558,6 +560,7 @@ static mp_obj_t test_uma_pool_fast_dtcm_exact(void) {
     return (actual && (actual->flags & UMA_MEM_ATTR_MASK) == UMA_DTCM) ? mp_const_true : mp_const_false;
 }
 static MP_DEFINE_CONST_FUN_OBJ_0(test_uma_pool_fast_dtcm_exact_obj, test_uma_pool_fast_dtcm_exact);
+#endif
 
 // Test that UMA_FAST falls back when request exceeds fast pool.
 static mp_obj_t test_uma_fast_fallback(void) {
@@ -583,6 +586,7 @@ static mp_obj_t test_uma_fast_fallback(void) {
 }
 static MP_DEFINE_CONST_FUN_OBJ_0(test_uma_fast_fallback_obj, test_uma_fast_fallback);
 
+#if !OMV_OS_UNIX
 // Test DTCM fallback to FAST pool.
 static mp_obj_t test_uma_pool_dtcm_fallback_fast(void) {
     uma_pool_t *dtcm = uma_pool_find(NULL, 0, UMA_DTCM);
@@ -601,6 +605,7 @@ static mp_obj_t test_uma_pool_dtcm_fallback_fast(void) {
     return (actual && (actual->flags & UMA_FAST)) ? mp_const_true : mp_const_false;
 }
 static MP_DEFINE_CONST_FUN_OBJ_0(test_uma_pool_dtcm_fallback_fast_obj, test_uma_pool_dtcm_fallback_fast);
+#endif
 
 // Test FAST fallback to generic: request exceeds all special pools.
 static mp_obj_t test_uma_pool_fast_fallback_generic(void) {
@@ -625,6 +630,7 @@ static mp_obj_t test_uma_pool_fast_fallback_generic(void) {
 }
 static MP_DEFINE_CONST_FUN_OBJ_0(test_uma_pool_fast_fallback_generic_obj, test_uma_pool_fast_fallback_generic);
 
+#if !OMV_OS_UNIX
 // Test DTCM|STRICT goes to FAST|DTCM (superset match).
 static mp_obj_t test_uma_pool_dtcm_strict(void) {
     void *ptr = uma_malloc(64, UMA_DTCM | UMA_STRICT);
@@ -651,6 +657,7 @@ static mp_obj_t test_uma_pool_dtcm_strict_fail(void) {
     return (ptr == NULL) ? mp_const_true : mp_const_false;
 }
 static MP_DEFINE_CONST_FUN_OBJ_0(test_uma_pool_dtcm_strict_fail_obj, test_uma_pool_dtcm_strict_fail);
+#endif
 
 // Test that realloc with UMA_CACHE preserves alignment when the block relocates.
 static mp_obj_t test_uma_realloc_aligned(void) {
@@ -780,14 +787,20 @@ static const mp_rom_map_elem_t unittest_umalloc_module_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_test_uma_free_null), MP_ROM_PTR(&test_uma_free_null_obj) },
     { MP_ROM_QSTR(MP_QSTR_test_uma_malloc_zero), MP_ROM_PTR(&test_uma_malloc_zero_obj) },
     { MP_ROM_QSTR(MP_QSTR_test_uma_pool_generic_alloc), MP_ROM_PTR(&test_uma_pool_generic_alloc_obj) },
+    #if !OMV_OS_UNIX
     { MP_ROM_QSTR(MP_QSTR_test_uma_pool_fast_exact), MP_ROM_PTR(&test_uma_pool_fast_exact_obj) },
     { MP_ROM_QSTR(MP_QSTR_test_uma_pool_dtcm_partial), MP_ROM_PTR(&test_uma_pool_dtcm_partial_obj) },
     { MP_ROM_QSTR(MP_QSTR_test_uma_pool_fast_dtcm_exact), MP_ROM_PTR(&test_uma_pool_fast_dtcm_exact_obj) },
+    #endif
     { MP_ROM_QSTR(MP_QSTR_test_uma_fast_fallback), MP_ROM_PTR(&test_uma_fast_fallback_obj) },
+    #if !OMV_OS_UNIX
     { MP_ROM_QSTR(MP_QSTR_test_uma_pool_dtcm_fallback_fast), MP_ROM_PTR(&test_uma_pool_dtcm_fallback_fast_obj) },
+    #endif
     { MP_ROM_QSTR(MP_QSTR_test_uma_pool_fast_fallback_generic), MP_ROM_PTR(&test_uma_pool_fast_fallback_generic_obj) },
+    #if !OMV_OS_UNIX
     { MP_ROM_QSTR(MP_QSTR_test_uma_pool_dtcm_strict), MP_ROM_PTR(&test_uma_pool_dtcm_strict_obj) },
     { MP_ROM_QSTR(MP_QSTR_test_uma_pool_dtcm_strict_fail), MP_ROM_PTR(&test_uma_pool_dtcm_strict_fail_obj) },
+    #endif
     { MP_ROM_QSTR(MP_QSTR_test_uma_realloc_aligned), MP_ROM_PTR(&test_uma_realloc_aligned_obj) },
     { MP_ROM_QSTR(MP_QSTR_test_uma_persist_not_transient), MP_ROM_PTR(&test_uma_persist_not_transient_obj) },
     { MP_ROM_QSTR(MP_QSTR_test_uma_malign_rounds_size), MP_ROM_PTR(&test_uma_malign_rounds_size_obj) },
