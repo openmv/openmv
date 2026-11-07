@@ -554,23 +554,45 @@ void imlib_draw_ellipse(image_t *img, int cx, int cy, int rx, int ry, int rotati
     scratch_draw_rotated_ellipse(img, cx, cy, rx * 2, ry * 2, r, fill, c, thickness);
 }
 
+static const glyph_t *imlib_font_get_glyph(const bitmap_font_t *font, uint8_t ch) {
+    if ((ch < font->first_char) || (ch > font->last_char)) {
+        return NULL;
+    }
+
+    return &font->glyphs[ch - font->first_char];
+}
+
+static bool imlib_font_get_pixel(const glyph_t *g, int x, int y) {
+    return g->data[(y * g->row_stride) + (x >> 3)] & (1 << (7 - (x & 7)));
+}
+
 // char rotation == 0, 90, 180, 360, etc.
 // string rotation == 0, 90, 180, 360, etc.
-void imlib_draw_string(image_t *img,
-                       int x_off,
-                       int y_off,
-                       const char *str,
-                       int c,
-                       float scale,
-                       int x_spacing,
-                       int y_spacing,
-                       bool mono_space,
-                       int char_rotation,
-                       bool char_hmirror,
-                       bool char_vflip,
-                       int string_rotation,
-                       bool string_hmirror,
-                       bool string_vflip) {
+void imlib_draw_string_bitmap_font(image_t *img,
+                                   int x_off,
+                                   int y_off,
+                                   const char *str,
+                                   int c,
+                                   const bitmap_font_t *bitmap_font,
+                                   float scale,
+                                   int x_spacing,
+                                   int y_spacing,
+                                   bool mono_space,
+                                   int char_rotation,
+                                   bool char_hmirror,
+                                   bool char_vflip,
+                                   int string_rotation,
+                                   bool string_hmirror,
+                                   bool string_vflip) {
+    if (bitmap_font == NULL) {
+        bitmap_font = imlib_font_get(FONT_DEFAULT);
+    }
+
+    const glyph_t *space_glyph = imlib_font_get_glyph(bitmap_font, ' ');
+    if (space_glyph == NULL) {
+        return;
+    }
+
     char_rotation %= 360;
     if (char_rotation < 0) {
         char_rotation += 360;
@@ -587,17 +609,17 @@ void imlib_draw_string(image_t *img,
     bool char_upsidedown = (char_rotation == 180) || (char_rotation == 270);
 
     if (string_hmirror) {
-        x_off -= fast_floorf(font[0].w * scale) - 1;
+        x_off -= fast_floorf(space_glyph->w * scale) - 1;
     }
     if (string_vflip) {
-        y_off -= fast_floorf(font[0].h * scale) - 1;
+        y_off -= fast_floorf(space_glyph->h * scale) - 1;
     }
 
     int org_x_off = x_off;
     int org_y_off = y_off;
     const int anchor = x_off;
 
-    for (char ch, last = '\0'; (ch = *str); str++, last = ch) {
+    for (uint8_t ch, last = '\0'; (ch = *str); str++, last = ch) {
 
         if ((last == '\r') && (ch == '\n')) {
             // handle "\r\n" strings
@@ -607,16 +629,16 @@ void imlib_draw_string(image_t *img,
         if ((ch == '\n') || (ch == '\r')) {
             // handle '\n' or '\r' strings
             x_off = anchor;
-            y_off += (string_vflip ? -1 : +1) * (fast_floorf((char_swap_w_h ? font[0].w : font[0].h) * scale) + y_spacing); // newline height == space height
+            y_off += (string_vflip ? -1 : +1) *
+                     (fast_floorf((char_swap_w_h ? space_glyph->w : bitmap_font->line_height) * scale) + y_spacing);
             continue;
         }
 
-        if ((ch < ' ') || (ch > '~')) {
+        const glyph_t *g = imlib_font_get_glyph(bitmap_font, ch);
+        if (g == NULL) {
             // handle unknown characters
             continue;
         }
-
-        const glyph_t *g = &font[ch - ' '];
 
         if (!mono_space) {
             // Find the first pixel set and offset to that.
@@ -625,8 +647,9 @@ void imlib_draw_string(image_t *img,
             if (!char_swap_w_h) {
                 for (int x = 0, xx = g->w; x < xx; x++) {
                     for (int y = 0, yy = g->h; y < yy; y++) {
-                        if (g->data[(char_upsidedown ^ char_vflip) ? (g->h - 1 - y) : y] &
-                            (1 << ((char_upsidedown ^ char_hmirror ^ string_hmirror) ? x : (g->w - 1 - x)))) {
+                        int x_idx = (char_upsidedown ^ char_hmirror ^ string_hmirror) ? (g->w - 1 - x) : x;
+                        int y_idx = (char_upsidedown ^ char_vflip) ? (g->h - 1 - y) : y;
+                        if (imlib_font_get_pixel(g, x_idx, y_idx)) {
                             x_off += (string_hmirror ? +1 : -1) * fast_floorf(x * scale);
                             exit = true;
                             break;
@@ -640,8 +663,9 @@ void imlib_draw_string(image_t *img,
             } else {
                 for (int y = g->h - 1; y >= 0; y--) {
                     for (int x = 0, xx = g->w; x < xx; x++) {
-                        if (g->data[(char_upsidedown ^ char_vflip) ? (g->h - 1 - y) : y] &
-                            (1 << ((char_upsidedown ^ char_hmirror ^ string_hmirror) ? x : (g->w - 1 - x)))) {
+                        int x_idx = (char_upsidedown ^ char_hmirror ^ string_hmirror) ? (g->w - 1 - x) : x;
+                        int y_idx = (char_upsidedown ^ char_vflip) ? (g->h - 1 - y) : y;
+                        if (imlib_font_get_pixel(g, x_idx, y_idx)) {
                             x_off += (string_hmirror ? +1 : -1) * fast_floorf((g->h - 1 - y) * scale);
                             exit = true;
                             break;
@@ -657,7 +681,7 @@ void imlib_draw_string(image_t *img,
 
         for (int y = 0, yy = fast_floorf(g->h * scale); y < yy; y++) {
             for (int x = 0, xx = fast_floorf(g->w * scale); x < xx; x++) {
-                if (g->data[fast_floorf(y / scale)] & (1 << (g->w - 1 - fast_floorf(x / scale)))) {
+                if (imlib_font_get_pixel(g, fast_floorf(x / scale), fast_floorf(y / scale))) {
                     int16_t x_tmp = x_off + (char_hmirror ? (xx - x - 1) : x), y_tmp = y_off + (char_vflip ? (yy - y - 1) : y);
                     point_rotate(x_tmp, y_tmp, IM_DEG2RAD(char_rotation), x_off + (xx / 2), y_off + (yy / 2), &x_tmp, &y_tmp);
                     point_rotate(x_tmp, y_tmp, IM_DEG2RAD(string_rotation), org_x_off, org_y_off, &x_tmp, &y_tmp);
@@ -675,8 +699,9 @@ void imlib_draw_string(image_t *img,
             if (!char_swap_w_h) {
                 for (int x = g->w - 1; x >= 0; x--) {
                     for (int y = g->h - 1; y >= 0; y--) {
-                        if (g->data[(char_upsidedown ^ char_vflip) ? (g->h - 1 - y) : y] &
-                            (1 << ((char_upsidedown ^ char_hmirror ^ string_hmirror) ? x : (g->w - 1 - x)))) {
+                        int x_idx = (char_upsidedown ^ char_hmirror ^ string_hmirror) ? (g->w - 1 - x) : x;
+                        int y_idx = (char_upsidedown ^ char_vflip) ? (g->h - 1 - y) : y;
+                        if (imlib_font_get_pixel(g, x_idx, y_idx)) {
                             x_off += (string_hmirror ? -1 : +1) * (fast_floorf((x + 2) * scale) + x_spacing);
                             exit = true;
                             break;
@@ -690,8 +715,9 @@ void imlib_draw_string(image_t *img,
             } else {
                 for (int y = 0, yy = g->h; y < yy; y++) {
                     for (int x = g->w - 1; x >= 0; x--) {
-                        if (g->data[(char_upsidedown ^ char_vflip) ? (g->h - 1 - y) : y] &
-                            (1 << ((char_upsidedown ^ char_hmirror ^ string_hmirror) ? x : (g->w - 1 - x)))) {
+                        int x_idx = (char_upsidedown ^ char_hmirror ^ string_hmirror) ? (g->w - 1 - x) : x;
+                        int y_idx = (char_upsidedown ^ char_vflip) ? (g->h - 1 - y) : y;
+                        if (imlib_font_get_pixel(g, x_idx, y_idx)) {
                             x_off += (string_hmirror ? -1 : +1) * (fast_floorf(((g->h - 1 - y) + 2) * scale) + x_spacing);
                             exit = true;
                             break;
@@ -705,10 +731,53 @@ void imlib_draw_string(image_t *img,
             }
 
             if (!exit) {
-                x_off += (string_hmirror ? -1 : +1) * fast_floorf(scale * 3);        // space char
+                x_off += (string_hmirror ? -1 : +1) * fast_floorf(scale * bitmap_font->space_width);
             }
         }
     }
+}
+
+void imlib_draw_string_font(image_t *img,
+                            int x_off,
+                            int y_off,
+                            const char *str,
+                            int c,
+                            int font,
+                            float scale,
+                            int x_spacing,
+                            int y_spacing,
+                            bool mono_space,
+                            int char_rotation,
+                            bool char_hmirror,
+                            bool char_vflip,
+                            int string_rotation,
+                            bool string_hmirror,
+                            bool string_vflip) {
+    imlib_draw_string_bitmap_font(img, x_off, y_off, str, c, imlib_font_get(font), scale,
+                                  x_spacing, y_spacing, mono_space,
+                                  char_rotation, char_hmirror, char_vflip,
+                                  string_rotation, string_hmirror, string_vflip);
+}
+
+void imlib_draw_string(image_t *img,
+                       int x_off,
+                       int y_off,
+                       const char *str,
+                       int c,
+                       float scale,
+                       int x_spacing,
+                       int y_spacing,
+                       bool mono_space,
+                       int char_rotation,
+                       bool char_hmirror,
+                       bool char_vflip,
+                       int string_rotation,
+                       bool string_hmirror,
+                       bool string_vflip) {
+    imlib_draw_string_font(img, x_off, y_off, str, c, FONT_DEFAULT, scale,
+                           x_spacing, y_spacing, mono_space,
+                           char_rotation, char_hmirror, char_vflip,
+                           string_rotation, string_hmirror, string_vflip);
 }
 
 void imlib_draw_event_histogram(image_t *img, ec_event_t *ec_event, int num_events, int gain) {

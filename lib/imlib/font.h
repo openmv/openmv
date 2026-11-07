@@ -26,10 +26,30 @@
 #ifndef __FONT_H__
 #define __FONT_H__
 #include <stdint.h>
+
+typedef enum {
+    FONT_DEFAULT = 0,
+    FONT_8X10    = FONT_DEFAULT,
+    FONT_12X16,
+    FONT_LARGE = FONT_12X16,
+    FONT_COUNT
+} font_type_t;
+
 typedef struct {
-    int w;
-    int h;
-    uint8_t data[10];
+    uint8_t w;
+    uint8_t h;
+    // Bytes per glyph row. Glyph data is packed MSB-first within each byte.
+    uint8_t row_stride;
+    const uint8_t *data;
 } glyph_t;
-extern const glyph_t font[95];
+
+typedef struct {
+    uint8_t first_char;
+    uint8_t last_char;
+    uint8_t line_height;
+    uint8_t space_width;
+    const glyph_t *glyphs;
+} bitmap_font_t;
+
+const bitmap_font_t *imlib_font_get(int font);
 #endif // __FONT_H__

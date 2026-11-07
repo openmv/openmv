@@ -35,8 +35,11 @@
 #include "py/objtype.h"
 #include "py/runtime.h"
 #include "py/mphal.h"
+#include "py/stream.h"
+#include "extmod/vfs.h"
 
 #include "imlib.h"
+#include "font.h"
 #include "array.h"
 #include "file_utils.h"
 #include "umalloc.h"
@@ -54,6 +57,119 @@
 #include "simd.h"
 
 const mp_obj_type_t py_image_type;
+static const mp_obj_type_t py_font_type;
+
+// Font ///////////////////////////////////////////////////////////////////////
+
+#define OMVF_MAGIC          0x46564D4F // "OMVF"
+#define OMVF_VERSION        1
+#define OMVF_HEADER_SIZE    24
+#define OMVF_GLYPH_SIZE     8
+
+typedef struct _py_font_obj_t {
+    mp_obj_base_t base;
+    bitmap_font_t font;
+    glyph_t *glyphs;
+    uint8_t *raw;
+    size_t raw_size;
+} py_font_obj_t;
+
+static uint16_t read_u16_le(const uint8_t *data) {
+    return ((uint16_t) data[0]) | (((uint16_t) data[1]) << 8);
+}
+
+static uint32_t read_u32_le(const uint8_t *data) {
+    return ((uint32_t) data[0]) | (((uint32_t) data[1]) << 8) |
+           (((uint32_t) data[2]) << 16) | (((uint32_t) data[3]) << 24);
+}
+
+static bool range_in_bounds(size_t offset, size_t len, size_t size) {
+    return (offset <= size) && (len <= (size - offset));
+}
+
+static void py_font_format_error(void) {
+    mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Invalid font file"));
+}
+
+static mp_obj_t py_font_from_buffer(const uint8_t *data, size_t size, uint8_t *raw) {
+    if (!range_in_bounds(0, OMVF_HEADER_SIZE, size) ||
+        (read_u32_le(data) != OMVF_MAGIC) ||
+        (data[4] != OMVF_VERSION)) {
+        py_font_format_error();
+    }
+
+    uint8_t first_char = data[5];
+    uint8_t last_char = data[6];
+    uint8_t line_height = data[7];
+    uint8_t space_width = data[8];
+    uint16_t glyph_count = read_u16_le(data + 10);
+    uint32_t glyph_table_offset = read_u32_le(data + 12);
+    uint32_t bitmap_offset = read_u32_le(data + 16);
+    uint32_t bitmap_size = read_u32_le(data + 20);
+
+    if ((first_char > last_char) ||
+        (glyph_count != (last_char - first_char + 1)) ||
+        (first_char > ' ') ||
+        (last_char < ' ') ||
+        (line_height == 0) ||
+        (space_width == 0) ||
+        !range_in_bounds(glyph_table_offset, ((size_t) glyph_count) * OMVF_GLYPH_SIZE, size) ||
+        !range_in_bounds(bitmap_offset, bitmap_size, size)) {
+        py_font_format_error();
+    }
+
+    py_font_obj_t *font_obj = m_new_obj(py_font_obj_t);
+    font_obj->base.type = &py_font_type;
+    font_obj->glyphs = m_malloc(sizeof(glyph_t) * glyph_count);
+    font_obj->raw = raw;
+    font_obj->raw_size = size;
+
+    const uint8_t *glyph_table = data + glyph_table_offset;
+    const uint8_t *bitmap = data + bitmap_offset;
+
+    for (uint16_t i = 0; i < glyph_count; i++) {
+        const uint8_t *entry = glyph_table + (i * OMVF_GLYPH_SIZE);
+        uint8_t w = entry[0];
+        uint8_t h = entry[1];
+        uint8_t row_stride = entry[2];
+        uint32_t data_offset = read_u32_le(entry + 4);
+        size_t glyph_size = ((size_t) h) * row_stride;
+
+        if ((w == 0) ||
+            (h == 0) ||
+            (row_stride != ((w + 7) >> 3)) ||
+            !range_in_bounds(data_offset, glyph_size, bitmap_size)) {
+            py_font_format_error();
+        }
+
+        font_obj->glyphs[i].w = w;
+        font_obj->glyphs[i].h = h;
+        font_obj->glyphs[i].row_stride = row_stride;
+        font_obj->glyphs[i].data = bitmap + data_offset;
+    }
+
+    font_obj->font.first_char = first_char;
+    font_obj->font.last_char = last_char;
+    font_obj->font.line_height = line_height;
+    font_obj->font.space_width = space_width;
+    font_obj->font.glyphs = font_obj->glyphs;
+
+    return MP_OBJ_FROM_PTR(font_obj);
+}
+
+static void py_font_print(const mp_print_t *print, mp_obj_t self_in, mp_print_kind_t kind) {
+    (void) kind;
+    py_font_obj_t *self = MP_OBJ_TO_PTR(self_in);
+    mp_printf(print, "{\"first_char\":%d, \"last_char\":%d, \"line_height\":%d, \"space_width\":%d}",
+              self->font.first_char, self->font.last_char, self->font.line_height, self->font.space_width);
+}
+
+static MP_DEFINE_CONST_OBJ_TYPE(
+    py_font_type,
+    MP_QSTR_Font,
+    MP_TYPE_FLAG_NONE,
+    print, py_font_print
+    );
 
 // Image //////////////////////////////////////////////////////////////////////
 
@@ -1232,7 +1348,7 @@ static mp_obj_t py_image_draw_string(size_t n_args, const mp_obj_t *pos_args, mp
     enum {
         ARG_color, ARG_scale, ARG_x_spacing, ARG_y_spacing, ARG_mono_space,
         ARG_char_rotation, ARG_char_hmirror, ARG_char_vflip,
-        ARG_string_rotation, ARG_string_hmirror, ARG_string_vflip
+        ARG_string_rotation, ARG_string_hmirror, ARG_string_vflip, ARG_font
     };
     static const mp_arg_t allowed_args[] = {
         { MP_QSTR_color,           MP_ARG_OBJ,  {.u_rom_obj = MP_ROM_NONE} },
@@ -1246,6 +1362,7 @@ static mp_obj_t py_image_draw_string(size_t n_args, const mp_obj_t *pos_args, mp
         { MP_QSTR_string_rotation, MP_ARG_INT,  {.u_int = 0} },
         { MP_QSTR_string_hmirror,  MP_ARG_BOOL, {.u_bool = false} },
         { MP_QSTR_string_vflip,    MP_ARG_BOOL, {.u_bool = false} },
+        { MP_QSTR_font,            MP_ARG_OBJ,  {.u_rom_obj = MP_ROM_INT(FONT_DEFAULT)} },
     };
 
     image_t *image = py_helper_arg_to_image(pos_args[0], ARG_IMAGE_MUTABLE);
@@ -1260,15 +1377,29 @@ static mp_obj_t py_image_draw_string(size_t n_args, const mp_obj_t *pos_args, mp
     mp_arg_parse_all(n_args - 3, pos_args + 3, kw_args, MP_ARRAY_SIZE(allowed_args), allowed_args, args);
 
     int color = py_helper_arg_to_color(image, args[ARG_color].u_obj, -1); // White.
+    mp_obj_t font_obj = args[ARG_font].u_obj;
+    const bitmap_font_t *font = NULL;
+
+    if (mp_obj_is_int(font_obj)) {
+        font = imlib_font_get(mp_obj_get_int(font_obj));
+        if (font == NULL) {
+            mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Invalid font"));
+        }
+    } else if (mp_obj_is_type(font_obj, &py_font_type)) {
+        font = &((py_font_obj_t *) MP_OBJ_TO_PTR(font_obj))->font;
+    } else {
+        mp_raise_msg(&mp_type_TypeError, MP_ERROR_TEXT("Expected a font"));
+    }
+
     float scale = py_helper_arg_to_float(args[ARG_scale].u_obj, 1.0f);
     PY_ASSERT_TRUE_MSG(0 < scale, "Error: 0 < scale!");
 
-    imlib_draw_string(image, x_off, y_off, str,
-                      color, scale, args[ARG_x_spacing].u_int, args[ARG_y_spacing].u_int,
-                      args[ARG_mono_space].u_bool, args[ARG_char_rotation].u_int,
-                      args[ARG_char_hmirror].u_bool, args[ARG_char_vflip].u_bool,
-                      args[ARG_string_rotation].u_int, args[ARG_string_hmirror].u_bool,
-                      args[ARG_string_vflip].u_bool);
+    imlib_draw_string_bitmap_font(image, x_off, y_off, str,
+                                  color, font, scale, args[ARG_x_spacing].u_int, args[ARG_y_spacing].u_int,
+                                  args[ARG_mono_space].u_bool, args[ARG_char_rotation].u_int,
+                                  args[ARG_char_hmirror].u_bool, args[ARG_char_vflip].u_bool,
+                                  args[ARG_string_rotation].u_int, args[ARG_string_hmirror].u_bool,
+                                  args[ARG_string_vflip].u_bool);
     return pos_args[0];
 }
 static MP_DEFINE_CONST_FUN_OBJ_KW(py_image_draw_string_obj, 3, py_image_draw_string);
@@ -4785,6 +4916,56 @@ mp_obj_t py_image_from_struct(image_t *img) {
     return o;
 }
 
+static mp_obj_t py_image_load_font(mp_obj_t path_obj) {
+    #if MICROPY_VFS
+    mp_obj_t file_args[2] = {
+        path_obj,
+        MP_OBJ_NEW_QSTR(MP_QSTR_rb),
+    };
+
+    mp_obj_t file = mp_vfs_open(MP_ARRAY_SIZE(file_args), file_args, (mp_map_t *) &mp_const_empty_map);
+
+    mp_buffer_info_t bufinfo;
+    if (mp_get_buffer(file, &bufinfo, MP_BUFFER_READ)) {
+        mp_obj_t font = py_font_from_buffer((const uint8_t *) bufinfo.buf, bufinfo.len, NULL);
+        mp_stream_close(file);
+        return font;
+    }
+
+    int error = 0;
+    mp_off_t size = mp_stream_seek(file, 0, MP_SEEK_END, &error);
+    if (size == (mp_off_t) -1) {
+        mp_stream_close(file);
+        mp_raise_OSError(error);
+    }
+    if (size <= 0) {
+        mp_stream_close(file);
+        py_font_format_error();
+    }
+    if (mp_stream_seek(file, 0, MP_SEEK_SET, &error) == (mp_off_t) -1) {
+        mp_stream_close(file);
+        mp_raise_OSError(error);
+    }
+
+    size_t raw_size = (size_t) size;
+    uint8_t *raw = m_malloc(raw_size);
+    size_t bytes_read = mp_stream_read_exactly(file, raw, raw_size, &error);
+    mp_stream_close(file);
+    if (error != 0) {
+        mp_raise_OSError(error);
+    }
+    if (bytes_read != raw_size) {
+        py_font_format_error();
+    }
+
+    return py_font_from_buffer(raw, raw_size, raw);
+    #else
+    (void) path_obj;
+    mp_raise_msg(&mp_type_RuntimeError, MP_ERROR_TEXT("File I/O is not supported"));
+    #endif
+}
+static MP_DEFINE_CONST_FUN_OBJ_1(py_image_load_font_obj, py_image_load_font);
+
 // Module-level blob geometry functions //
 
 static mp_obj_t py_image_get_solidity(mp_obj_t blob_obj) {
@@ -4948,6 +5129,10 @@ static const mp_rom_map_elem_t globals_dict_table[] = {
     {MP_ROM_QSTR(MP_QSTR_YUV422),              MP_ROM_INT(PIXFORMAT_YUV422)},   /* 2BPP/YUV422*/
     {MP_ROM_QSTR(MP_QSTR_JPEG),                MP_ROM_INT(PIXFORMAT_JPEG)},     /* JPEG/COMPRESSED*/
     {MP_ROM_QSTR(MP_QSTR_PNG),                 MP_ROM_INT(PIXFORMAT_PNG)},      /* PNG/COMPRESSED*/
+    {MP_ROM_QSTR(MP_QSTR_FONT_DEFAULT),        MP_ROM_INT(FONT_DEFAULT)},
+    {MP_ROM_QSTR(MP_QSTR_FONT_8X10),           MP_ROM_INT(FONT_8X10)},
+    {MP_ROM_QSTR(MP_QSTR_FONT_12X16),          MP_ROM_INT(FONT_12X16)},
+    {MP_ROM_QSTR(MP_QSTR_FONT_LARGE),          MP_ROM_INT(FONT_LARGE)},
     {MP_ROM_QSTR(MP_QSTR_PALETTE_RAINBOW),     MP_ROM_INT(COLOR_PALETTE_RAINBOW)},
     {MP_ROM_QSTR(MP_QSTR_PALETTE_IRONBOW),     MP_ROM_INT(COLOR_PALETTE_IRONBOW)},
     #if (MICROPY_PY_TOF == 1)
@@ -5033,6 +5218,8 @@ static const mp_rom_map_elem_t globals_dict_table[] = {
     {MP_ROM_QSTR(MP_QSTR_CODE128),             MP_ROM_INT(BARCODE_CODE128)},
     #endif
     {MP_ROM_QSTR(MP_QSTR_Image),               MP_ROM_PTR(&py_image_type)},
+    {MP_ROM_QSTR(MP_QSTR_Font),                MP_ROM_PTR(&py_font_type)},
+    {MP_ROM_QSTR(MP_QSTR_load_font),           MP_ROM_PTR(&py_image_load_font_obj)},
     #if defined(IMLIB_ENABLE_IMAGE_IO)
     {MP_ROM_QSTR(MP_QSTR_ImageIO),             MP_ROM_PTR(&py_imageio_type) },
     #else
