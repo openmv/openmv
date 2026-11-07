@@ -82,7 +82,7 @@
 #define OMV_UMA_BLOCK1_SIZE             (512K)
 #define OMV_UMA_BLOCK1_FLAGS            (UMA_FAST | UMA_DTCM)
 #define OMV_UMA_BLOCK2_MEMORY           DTCM    // DTCM UMA pool.
-#define OMV_UMA_BLOCK2_SIZE             (64K)
+#define OMV_UMA_BLOCK2_SIZE             (48K)
 #define OMV_UMA_BLOCK2_FLAGS            (UMA_DTCM)
 #define OMV_RAMFUNC_MEMORY              ITCM2   // RAM code memory.
 #define OMV_LINE_BUF_SIZE               (11 * 1024)  // Image line buffer.
