@@ -188,7 +188,7 @@ static int py_channel_write(const omv_protocol_channel_t *channel, uint32_t offs
         return mp_obj_get_int(result);
     }
 
-    return 0; // Default success
+    return size; // Default success
 }
 
 // Readp delegate - calls Python readp method and returns pointer (dangerous but needed)
