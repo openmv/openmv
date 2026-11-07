@@ -35,6 +35,7 @@
 #include <math.h>
 #include <arm_math.h>
 #include <cmsis_extension.h>
+#include "font.h"
 #include "file_utils.h"
 #include "umalloc.h"
 #include "array.h"
@@ -1427,7 +1428,39 @@ void imlib_draw_string(image_t *img,
                        bool char_vflip,
                        int string_rotation,
                        bool string_hmirror,
-                       bool string_hflip);
+                       bool string_vflip);
+void imlib_draw_string_font(image_t *img,
+                            int x_off,
+                            int y_off,
+                            const char *str,
+                            int c,
+                            int font,
+                            float scale,
+                            int x_spacing,
+                            int y_spacing,
+                            bool mono_space,
+                            int char_rotation,
+                            bool char_hmirror,
+                            bool char_vflip,
+                            int string_rotation,
+                            bool string_hmirror,
+                            bool string_vflip);
+void imlib_draw_string_bitmap_font(image_t *img,
+                                   int x_off,
+                                   int y_off,
+                                   const char *str,
+                                   int c,
+                                   const bitmap_font_t *font,
+                                   float scale,
+                                   int x_spacing,
+                                   int y_spacing,
+                                   bool mono_space,
+                                   int char_rotation,
+                                   bool char_hmirror,
+                                   bool char_vflip,
+                                   int string_rotation,
+                                   bool string_hmirror,
+                                   bool string_vflip);
 void imlib_draw_event_histogram(image_t *img, ec_event_t *ec_event, int num_events, int gain);
 void imlib_draw_image(image_t *dst_img,
                       image_t *src_img,
