@@ -215,6 +215,7 @@ typedef enum {
     OMV_CSI_IOCTL_FAMILY_HIMAX    = 2,
     OMV_CSI_IOCTL_FAMILY_GENX320  = 3,
     OMV_CSI_IOCTL_FAMILY_BOSON    = 4,
+    OMV_CSI_IOCTL_FAMILY_PS5520   = 5,
     // Not reachable from Python.
     OMV_CSI_IOCTL_FAMILY_INTERNAL = 15,
 } omv_csi_ioctl_family_t;
@@ -312,6 +313,10 @@ typedef enum {
     OMV_CSI_IOCTL_BOSON_GET_SPOT_METER_TEMP_STATS = 0x41F,
     OMV_CSI_IOCTL_BOSON_GET_TEMP_FROM_COUNTS      = 0x420,
     OMV_CSI_IOCTL_BOSON_GET_RBFO                  = 0x421,
+
+    // PixArt PS5520.
+    OMV_CSI_IOCTL_PS5520_SET_LTM_ENABLE           = 0x500 | OMV_CSI_IOCTL_FLAG_ABORT,
+    OMV_CSI_IOCTL_PS5520_GET_LTM_ENABLE           = 0x501,
 
     // Internal requests, not exported to Python.
     OMV_CSI_IOCTL_UPDATE_AGC_AEC                  = 0xF00,
