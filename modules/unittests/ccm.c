@@ -217,6 +217,41 @@ static mp_obj_t test_ccm_fade(void) {
 }
 static MP_DEFINE_CONST_FUN_OBJ_0(test_ccm_fade_obj, test_ccm_fade);
 
+// High sensor gains fade to unity, and a table without a gain range never fades.
+static mp_obj_t test_ccm_gain_fade(void) {
+    const omv_csi_ccm_table_t *table = ccm_table(3);
+    omv_csi_ccm_table_t gain_table = *table;
+    const omv_csi_ccm_t unity = {
+        .coeffs = { { 1.0f, 0.0f, 0.0f }, { 0.0f, 1.0f, 0.0f }, { 0.0f, 0.0f, 1.0f } },
+    };
+    omv_csi_ccm_t out;
+
+    gain_table.gain_db[0] = 18.0f;
+    gain_table.gain_db[1] = 24.0f;
+
+    if (!omv_csi_ccm_compute(&gain_table, ccm_rgb[1], 100.0f, 0.0f, &out) ||
+        !ccm_equal(&out, &ccm_entries[1], &ccm_entries[1], 0.0f)) {
+        return mp_const_false;
+    }
+    if (!omv_csi_ccm_compute(&gain_table, ccm_rgb[1], 100.0f, 21.0f, &out) ||
+        !ccm_equal(&out, &unity, &ccm_entries[1], 0.5f)) {
+        return mp_const_false;
+    }
+    if (!omv_csi_ccm_compute(&gain_table, ccm_rgb[1], 100.0f, 30.0f, &out) || !ccm_is_unity(&out)) {
+        return mp_const_false;
+    }
+    // The darker of the luminance and gain fades wins.
+    if (!omv_csi_ccm_compute(&gain_table, ccm_rgb[1], 8.0f, 0.0f, &out) || !ccm_is_unity(&out)) {
+        return mp_const_false;
+    }
+    if (!omv_csi_ccm_compute(table, ccm_rgb[1], 100.0f, 30.0f, &out) ||
+        !ccm_equal(&out, &ccm_entries[1], &ccm_entries[1], 0.0f)) {
+        return mp_const_false;
+    }
+    return mp_const_true;
+}
+static MP_DEFINE_CONST_FUN_OBJ_0(test_ccm_gain_fade_obj, test_ccm_gain_fade);
+
 // Averages on the calibration illuminants' polyline are unchanged, off it they move to the closest
 // point, past the ends they clamp to the end, and green is kept.
 static mp_obj_t test_ccm_project(void) {
@@ -276,6 +311,7 @@ static const mp_rom_map_elem_t unittest_ccm_module_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_test_ccm_clamp_ends), MP_ROM_PTR(&test_ccm_clamp_ends_obj) },
     { MP_ROM_QSTR(MP_QSTR_test_ccm_blend), MP_ROM_PTR(&test_ccm_blend_obj) },
     { MP_ROM_QSTR(MP_QSTR_test_ccm_fade), MP_ROM_PTR(&test_ccm_fade_obj) },
+    { MP_ROM_QSTR(MP_QSTR_test_ccm_gain_fade), MP_ROM_PTR(&test_ccm_gain_fade_obj) },
     { MP_ROM_QSTR(MP_QSTR_test_ccm_project), MP_ROM_PTR(&test_ccm_project_obj) },
     { MP_ROM_QSTR(MP_QSTR_test_ccm_single), MP_ROM_PTR(&test_ccm_single_obj) },
 };
