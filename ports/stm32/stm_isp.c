@@ -38,6 +38,66 @@
 #include "board_config.h"
 
 #ifdef DCMIPP
+#ifdef OMV_CSI_HW_CCM_ENABLE
+// Matrix3x3_Coeff: 11-bit signed, 2 int + 8 dec -> 1.0 = 256.
+// Added3x1_Coeff:  10-bit signed, 9 int + 0 dec -> 1.0 = 1.
+#define DCMIPP_CCM_ONE          (256)
+#define DCMIPP_CCM_MIN          (-1024)
+#define DCMIPP_CCM_MAX          (1023)
+#define DCMIPP_CCM_OFFSET_MIN   (-512)
+#define DCMIPP_CCM_OFFSET_MAX   (511)
+
+// Quantizes the blended CCM into the ISP's color conversion block.
+static void stm_isp_update_ccm(omv_csi_t *csi, uint32_t pipe, const uint32_t avg[3], float luminance) {
+    omv_csi_ccm_t ccm;
+    int16_t coeffs[3][3];
+    int16_t offsets[3];
+
+    if (!omv_csi_ccm_compute(csi->ccm, avg, luminance, &ccm)) {
+        return;
+    }
+
+    for (int r = 0; r < 3; r++) {
+        float sum = 0.0f;
+        int qsum = 0;
+
+        for (int c = 0; c < 3; c++) {
+            int q = fast_roundf(ccm.coeffs[r][c] * DCMIPP_CCM_ONE);
+            coeffs[r][c] = IM_CLAMP(q, DCMIPP_CCM_MIN, DCMIPP_CCM_MAX);
+            qsum += coeffs[r][c];
+            sum += ccm.coeffs[r][c];
+        }
+
+        // Push the rounding error into the diagonal so that neutrals stay neutral.
+        int diag = coeffs[r][r] + fast_roundf(sum * DCMIPP_CCM_ONE) - qsum;
+        coeffs[r][r] = IM_CLAMP(diag, DCMIPP_CCM_MIN, DCMIPP_CCM_MAX);
+
+        int offset = fast_roundf(ccm.offsets[r]);
+        offsets[r] = IM_CLAMP(offset, DCMIPP_CCM_OFFSET_MIN, DCMIPP_CCM_OFFSET_MAX);
+    }
+
+    DCMIPP_ColorConversionConfTypeDef cfg = {
+        .ClampOutputSamples = DISABLE,
+        .OutputSamplesType = DCMIPP_CLAMP_RGB,
+        .RR = coeffs[0][0],
+        .RG = coeffs[0][1],
+        .RB = coeffs[0][2],
+        .RA = offsets[0],
+        .GR = coeffs[1][0],
+        .GG = coeffs[1][1],
+        .GB = coeffs[1][2],
+        .GA = offsets[1],
+        .BR = coeffs[2][0],
+        .BG = coeffs[2][1],
+        .BB = coeffs[2][2],
+        .BA = offsets[2],
+    };
+
+    HAL_DCMIPP_PIPE_SetISPColorConversionConfig(&csi->dcmipp, pipe, &cfg);
+    HAL_DCMIPP_PIPE_EnableISPColorConversion(&csi->dcmipp, pipe);
+}
+#endif // OMV_CSI_HW_CCM_ENABLE
+
 float stm_isp_update_awb(omv_csi_t *csi, uint32_t pipe) {
     uint32_t avg[3];
     uint32_t shift[3];
@@ -67,13 +127,13 @@ float stm_isp_update_awb(omv_csi_t *csi, uint32_t pipe) {
 
     omv_csi_get_stats(csi, &avg[0], &avg[1], &avg[2]);
 
-    // Compute global luminance (EMA-smoothed, used for AWB)
-    float awb_luminance = avg[0] * 0.299f + avg[1] * 0.587f + avg[2] * 0.114f;
+    // Normalize to the largest channel so that no gain is below 1 and clipped pixels stay white.
+    float awb_max = OMV_MAX(OMV_MAX(avg[0], avg[1]), avg[2]);
 
     // Calculate average and exposure factors for each channel (R, G, B)
     for (int i = 0; i < 3; i++) {
         shift[i] = 0;
-        multi[i] = roundf((awb_luminance * 128.0f / avg[i]));
+        multi[i] = roundf((awb_max * 128.0f / avg[i]));
         while (multi[i] >= 255.0f && shift[i] < 7) {
             multi[i] /= 2;
             shift[i]++;
@@ -91,6 +151,13 @@ float stm_isp_update_awb(omv_csi_t *csi, uint32_t pipe) {
     };
 
     HAL_DCMIPP_PIPE_SetISPExposureConfig(&csi->dcmipp, pipe, &expcfg);
+
+    #ifdef OMV_CSI_HW_CCM_ENABLE
+    // Grayscale is packed from the green channel, which the CCM would make noisier.
+    if (csi->pixformat == PIXFORMAT_RGB565 || csi->pixformat == PIXFORMAT_YUV422) {
+        stm_isp_update_ccm(csi, pipe, avg, luminance);
+    }
+    #endif // OMV_CSI_HW_CCM_ENABLE
 
     return luminance;
 }
@@ -147,6 +214,9 @@ int stm_isp_init(omv_csi_t *csi, uint32_t pipe, pixformat_t pixformat, bool raw_
     if (HAL_DCMIPP_PIPE_EnableISPBadPixelRemoval(&csi->dcmipp, pipe) != HAL_OK) {
         return -1;
     }
+
+    // Enabled by the AWB update when the sensor provides color correction matrices.
+    HAL_DCMIPP_PIPE_DisableISPColorConversion(&csi->dcmipp, pipe);
 
     // Early exit if no debayer is needed.
     if (!raw_output || pixformat == PIXFORMAT_BAYER) {
