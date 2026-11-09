@@ -213,6 +213,41 @@ static mp_obj_t test_ccm_fade(void) {
 }
 static MP_DEFINE_CONST_FUN_OBJ_0(test_ccm_fade_obj, test_ccm_fade);
 
+// Averages on the calibration illuminants' polyline are unchanged, off it they move to the closest
+// point, past the ends they clamp to the end, and green is kept.
+static mp_obj_t test_ccm_project(void) {
+    const omv_csi_ccm_table_t *table = ccm_table(3);
+
+    for (int i = 0; i < 3; i++) {
+        float rgb[3] = { ccm_rgb[i][0], ccm_rgb[i][1], ccm_rgb[i][2] };
+        if (!omv_csi_ccm_project(table, rgb) || fabsf(rgb[0] - ccm_rgb[i][0]) > 1e-3f ||
+            fabsf(rgb[1] - ccm_rgb[i][1]) > 1e-3f || fabsf(rgb[2] - ccm_rgb[i][2]) > 1e-3f) {
+            return mp_const_false;
+        }
+    }
+
+    // Moved off the middle of the warmest segment toward magenta, it lands back on the middle.
+    float magenta[3] = { 97.8988f, 100.0f, 66.0171f };
+    if (!omv_csi_ccm_project(table, magenta) || fabsf(magenta[0] - 100.0f * sqrtf(0.8f)) > 1e-2f ||
+        magenta[1] != 100.0f || fabsf(magenta[2] - 100.0f * sqrtf(0.4f)) > 1e-2f) {
+        return mp_const_false;
+    }
+
+    float warm[3] = { 120.0f, 100.0f, 30.0f };
+    if (!omv_csi_ccm_project(table, warm) || fabsf(warm[0] - 100.0f) > 1e-3f || fabsf(warm[2] - 50.0f) > 1e-3f) {
+        return mp_const_false;
+    }
+
+    // Without at least two illuminants there's no polyline, and the averages are unchanged.
+    float rgb[3] = { 120.0f, 100.0f, 30.0f };
+    if (omv_csi_ccm_project(NULL, rgb) || omv_csi_ccm_project(ccm_table(1), rgb) ||
+        rgb[0] != 120.0f || rgb[2] != 30.0f) {
+        return mp_const_false;
+    }
+    return mp_const_true;
+}
+static MP_DEFINE_CONST_FUN_OBJ_0(test_ccm_project_obj, test_ccm_project);
+
 // A single-entry table always returns that entry.
 static mp_obj_t test_ccm_single(void) {
     const omv_csi_ccm_table_t *table = ccm_table(1);
@@ -237,6 +272,7 @@ static const mp_rom_map_elem_t unittest_ccm_module_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_test_ccm_clamp_ends), MP_ROM_PTR(&test_ccm_clamp_ends_obj) },
     { MP_ROM_QSTR(MP_QSTR_test_ccm_blend), MP_ROM_PTR(&test_ccm_blend_obj) },
     { MP_ROM_QSTR(MP_QSTR_test_ccm_fade), MP_ROM_PTR(&test_ccm_fade_obj) },
+    { MP_ROM_QSTR(MP_QSTR_test_ccm_project), MP_ROM_PTR(&test_ccm_project_obj) },
     { MP_ROM_QSTR(MP_QSTR_test_ccm_single), MP_ROM_PTR(&test_ccm_single_obj) },
 };
 
