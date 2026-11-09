@@ -655,6 +655,10 @@ void omv_csi_stats_update(omv_csi_t *csi, uint32_t *r, uint32_t *g, uint32_t *b,
 void omv_csi_get_stats(omv_csi_t *csi, uint32_t *r, uint32_t *g, uint32_t *b);
 #endif // defined(OMV_CSI_STATS_ENABLE)
 
+// Estimates the channel means without clipping from the all-pixel means and clipped pixel fractions.
+// Returns false if most pixels are clipped, where the estimate isn't reliable.
+bool omv_csi_stats_unclip(const float mean[3], const float clipped[3], float out[3]);
+
 // Blends the table's matrices for the R/G/B averages and fades to unity at extreme luminance.
 bool omv_csi_ccm_compute(const omv_csi_ccm_table_t *table, const uint32_t rgb[3], float luminance, omv_csi_ccm_t *out);
 

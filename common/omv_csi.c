@@ -1210,6 +1210,65 @@ void omv_csi_get_stats(omv_csi_t *csi, uint32_t *r, uint32_t *g, uint32_t *b) {
 }
 #endif // defined(OMV_CSI_STATS_ENABLE)
 
+// Mean brightness of a band relative to its start, for a power law tail through the fraction f0 of pixels
+// above the band's start and f1 above its end, where the end is r times brighter (so r^a = f0 / f1).
+static float omv_csi_stats_tail_mean(float r, float f0, float f1) {
+    if (r <= 1.0f || f1 <= 0.0f || f0 <= f1) {
+        return 1.0f;
+    }
+
+    float a = logf(f0 / f1) / logf(r);
+
+    // The tail falls off as 1 / x when a is 1, where the general formula divides by zero.
+    if (fabsf(a - 1.0f) < 1e-3f) {
+        return logf(r) / (1.0f - 1.0f / r);
+    }
+
+    return a / (a - 1.0f) * (1.0f - r * f1 / f0) / (1.0f - f1 / f0);
+}
+
+// mean: R/G/B means of all pixels (0-255). clipped: fraction of each channel's pixels above 239 (0-1).
+// out: R/G/B means without the pixels clipped in all channels, and with partly clipped pixels estimated above 255.
+bool omv_csi_stats_unclip(const float mean[3], const float clipped[3], float out[3]) {
+    int c[3] = { 0, 1, 2 };
+
+    // Sort the channels from the most to the least clipped.
+    for (int i = 0; i < 2; i++) {
+        for (int j = 0; j < 2 - i; j++) {
+            if (clipped[c[j]] < clipped[c[j + 1]]) {
+                int t = c[j];
+                c[j] = c[j + 1];
+                c[j + 1] = t;
+            }
+        }
+    }
+
+    // Pixels clipped in all channels have an unknown brightness, so they're removed.
+    float all = clipped[c[2]];
+
+    // Most pixels being clipped would amplify any error in the clipped value.
+    if (all >= 0.5f) {
+        return false;
+    }
+
+    for (int i = 0; i < 3; i++) {
+        out[i] = (mean[i] - all * 255.0f) / (1.0f - all);
+    }
+
+    // Highlights clipped in some channels are assumed to be white, so they're brighter than where that
+    // channel clips but darker than where the next one clips. A power law tail estimates how much.
+    float r1 = out[c[0]] / OMV_MAX(out[c[1]], 1.0f);
+    float r2 = out[c[1]] / OMV_MAX(out[c[2]], 1.0f);
+    float m1 = omv_csi_stats_tail_mean(r1, clipped[c[0]], clipped[c[1]]);
+    float m2 = omv_csi_stats_tail_mean(r2, clipped[c[1]], clipped[c[2]]);
+    float band1 = (clipped[c[0]] - clipped[c[1]]) * (m1 - 1.0f);
+    float band2 = (clipped[c[1]] - clipped[c[2]]) * (OMV_MAX(m2 * r1, 1.0f) - 1.0f);
+
+    out[c[0]] += (band1 + band2) * 255.0f / (1.0f - all);
+    out[c[1]] += (clipped[c[1]] - clipped[c[2]]) * (m2 - 1.0f) * 255.0f / (1.0f - all);
+    return true;
+}
+
 // Frame luminance below/above which the CCM fades toward unity.
 #define OMV_CSI_CCM_DARK_UNITY      (8.0f)
 #define OMV_CSI_CCM_DARK_FULL       (32.0f)
