@@ -27,6 +27,7 @@ UNITTEST_MODULES = [
     "unittest_simd",
     "unittest_umalloc",
     "unittest_ccm",
+    "unittest_awb",
 ]
 
 
