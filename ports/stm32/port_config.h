@@ -161,6 +161,8 @@ typedef struct {
     bool ready;                 // Every channel was measured.
     uint32_t luma;              // Luminance sum of the last frame divided by 256.
     stm_isp_channel_stats_t channels[3];
+    float gain_db;              // Sensor gain for the CCM.
+    uint32_t gain_ms;           // When the sensor gain was read.
 } stm_isp_stats_t;
 
 #define OMV_CSI_PORT_BITS_DCMIPP     \
