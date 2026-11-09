@@ -149,10 +149,25 @@ typedef I2C_HandleTypeDef *omv_i2c_dev_t;
 
 
 #if defined(STM32N6)
+typedef struct {
+    uint32_t count;             // Clipped pixels (above 239).
+    uint32_t sum;               // Sum of all pixels divided by 256.
+    uint32_t luma;              // Luminance sum of the same frame divided by 256.
+} stm_isp_channel_stats_t;
+
+// ISP stats, one channel is measured per frame.
+typedef struct {
+    uint8_t channel;            // Channel being measured.
+    bool ready;                 // Every channel was measured.
+    uint32_t luma;              // Luminance sum of the last frame divided by 256.
+    stm_isp_channel_stats_t channels[3];
+} stm_isp_stats_t;
+
 #define OMV_CSI_PORT_BITS_DCMIPP     \
     struct {                         \
         DCMIPP_HandleTypeDef dcmipp; \
         DMA_QListTypeDef dma_queue;  \
+        stm_isp_stats_t isp_stats;   \
     };
 #else
 #define OMV_CSI_PORT_BITS_DCMIPP
