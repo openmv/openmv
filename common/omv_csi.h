@@ -666,6 +666,10 @@ int omv_csi_stats_set_auto_whitebal(omv_csi_t *csi, int enable,
 int omv_csi_stats_get_rgb_gain_db(omv_csi_t *csi, float *r_gain_db, float *g_gain_db, float *b_gain_db);
 #endif // defined(OMV_CSI_STATS_ENABLE)
 
+// Estimates the channel means without clipping from the all-pixel means and clipped pixel fractions.
+// Returns false if most pixels are clipped, where the estimate isn't reliable.
+bool omv_csi_stats_unclip(const float mean[3], const float clipped[3], float out[3]);
+
 // Blends the table's matrices for the R/G/B averages and fades to unity at extreme luminance.
 bool omv_csi_ccm_compute(const omv_csi_ccm_table_t *table, const float rgb[3], float luminance, omv_csi_ccm_t *out);
 
