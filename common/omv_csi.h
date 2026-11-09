@@ -659,8 +659,12 @@ void omv_csi_get_stats(omv_csi_t *csi, uint32_t *r, uint32_t *g, uint32_t *b);
 // Returns false if most pixels are clipped, where the estimate isn't reliable.
 bool omv_csi_stats_unclip(const float mean[3], const float clipped[3], float out[3]);
 
+// Moves the R/G/B averages onto the polyline of the table's calibration illuminants, keeping green.
+// Returns false without a table of at least two illuminants.
+bool omv_csi_ccm_project(const omv_csi_ccm_table_t *table, float rgb[3]);
+
 // Blends the table's matrices for the R/G/B averages and fades to unity at extreme luminance.
-bool omv_csi_ccm_compute(const omv_csi_ccm_table_t *table, const uint32_t rgb[3], float luminance, omv_csi_ccm_t *out);
+bool omv_csi_ccm_compute(const omv_csi_ccm_table_t *table, const float rgb[3], float luminance, omv_csi_ccm_t *out);
 
 // Enable auto blc (black level calibration) or set from previous calibration.
 int omv_csi_set_auto_blc(omv_csi_t *csi, int enable, int *regs);

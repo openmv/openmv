@@ -1275,21 +1275,14 @@ bool omv_csi_stats_unclip(const float mean[3], const float clipped[3], float out
 #define OMV_CSI_CCM_BRIGHT_FULL     (150.0f)
 #define OMV_CSI_CCM_BRIGHT_UNITY    (220.0f)
 
-// Projects the illuminant onto the polyline of calibration illuminants in log
-// chromaticity space and blends the CCMs at the ends of the closest segment (~linear in mired).
-bool omv_csi_ccm_compute(const omv_csi_ccm_table_t *table, const uint32_t rgb[3], float luminance, omv_csi_ccm_t *out) {
-    if (table == NULL || table->count == 0) {
-        return false;
-    }
-
+// Finds the segment of the calibration illuminants' polyline (in log chromaticity space)
+// closest to the chroma, and the position t (0-1) of the closest point on it.
+static size_t omv_csi_ccm_locate(const omv_csi_ccm_table_t *table, const float chroma[2], float *t) {
     const omv_csi_ccm_t *ccm = table->entries;
-    float g = OMV_MAX(rgb[1], 1);
-    out->chroma[0] = logf(OMV_MAX(rgb[0], 1) / g);
-    out->chroma[1] = logf(OMV_MAX(rgb[2], 1) / g);
-
     size_t idx = 0;
-    float t = 0.0f;
     float best = INFINITY;
+
+    *t = 0.0f;
 
     for (size_t i = 0; i + 1 < table->count; i++) {
         const float *p0 = ccm[i].chroma;
@@ -1298,18 +1291,56 @@ bool omv_csi_ccm_compute(const omv_csi_ccm_table_t *table, const uint32_t rgb[3]
         float dx = p1[0] - p0[0];
         float dy = p1[1] - p0[1];
         float len = OMV_MAX(dx * dx + dy * dy, 1e-6f);
-        float u = IM_CLAMP(((out->chroma[0] - p0[0]) * dx + (out->chroma[1] - p0[1]) * dy) / len, 0.0f, 1.0f);
+        float u = IM_CLAMP(((chroma[0] - p0[0]) * dx + (chroma[1] - p0[1]) * dy) / len, 0.0f, 1.0f);
 
-        float ex = p0[0] + u * dx - out->chroma[0];
-        float ey = p0[1] + u * dy - out->chroma[1];
+        float ex = p0[0] + u * dx - chroma[0];
+        float ey = p0[1] + u * dy - chroma[1];
         float dist = ex * ex + ey * ey;
 
         if (dist < best) {
             best = dist;
             idx = i;
-            t = u;
+            *t = u;
         }
     }
+
+    return idx;
+}
+
+// rgb: R/G/B averages, moved to the closest point (in log chromaticity space) on the polyline of the table's
+// calibration illuminants, keeping green. Real illuminants lie on it, so the AWB can't be tinted green or magenta.
+bool omv_csi_ccm_project(const omv_csi_ccm_table_t *table, float rgb[3]) {
+    if (table == NULL || table->count < 2) {
+        return false;
+    }
+
+    float g = OMV_MAX(rgb[1], 1.0f);
+    float chroma[2] = { logf(OMV_MAX(rgb[0], 1.0f) / g), logf(OMV_MAX(rgb[2], 1.0f) / g) };
+    float t;
+    size_t idx = omv_csi_ccm_locate(table, chroma, &t);
+    const float *p0 = table->entries[idx].chroma;
+    const float *p1 = table->entries[idx + 1].chroma;
+
+    rgb[0] = g * expf(p0[0] + t * (p1[0] - p0[0]));
+    rgb[1] = g;
+    rgb[2] = g * expf(p0[1] + t * (p1[1] - p0[1]));
+    return true;
+}
+
+// Projects the illuminant onto the polyline of calibration illuminants in log
+// chromaticity space and blends the CCMs at the ends of the closest segment (~linear in mired).
+bool omv_csi_ccm_compute(const omv_csi_ccm_table_t *table, const float rgb[3], float luminance, omv_csi_ccm_t *out) {
+    if (table == NULL || table->count == 0) {
+        return false;
+    }
+
+    const omv_csi_ccm_t *ccm = table->entries;
+    float g = OMV_MAX(rgb[1], 1.0f);
+    out->chroma[0] = logf(OMV_MAX(rgb[0], 1.0f) / g);
+    out->chroma[1] = logf(OMV_MAX(rgb[2], 1.0f) / g);
+
+    float t;
+    size_t idx = omv_csi_ccm_locate(table, out->chroma, &t);
 
     const omv_csi_ccm_t *a = &ccm[idx];
     const omv_csi_ccm_t *b = &ccm[OMV_MIN(idx + 1, table->count - 1)];
