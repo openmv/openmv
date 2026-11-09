@@ -1159,7 +1159,11 @@ void imlib_debayer_line(int x_start, int x_end, int y_row, void *dst_row_ptr, pi
         .pixfmt = pixfmt,
         .data = dst_row_ptr,
     };
-    vdebayer(src, &roi, x_start, &dst);
+    // The kernels read the CFA pattern relative to the ROI origin, so shift it for the
+    // parity of the requested column and row. Callers can then pass any line as-is.
+    image_t src_shifted = *src;
+    src_shifted.pixfmt = imlib_bayer_shift(src->pixfmt, x_start, y_row, false);
+    vdebayer(&src_shifted, &roi, x_start, &dst);
 }
 
 // assumes dst->w == src->w

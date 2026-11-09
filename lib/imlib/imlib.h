@@ -858,6 +858,7 @@ extern const int kernel_high_pass_3[9];
 #define IM_IS_GS(img)        ((img)->pixfmt == PIXFORMAT_GRAYSCALE)
 #define IM_IS_RGB565(img)    ((img)->pixfmt == PIXFORMAT_RGB565)
 #define IM_IS_BAYER(img)     ((img)->is_bayer)
+#define IM_IS_YUV(img)       ((img)->is_yuv)
 #define IM_IS_JPEG(img)      ((img)->pixfmt == PIXFORMAT_JPEG)
 
 #define IM_X_INSIDE(img, x)           \
