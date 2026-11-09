@@ -118,7 +118,8 @@ static mp_obj_t test_ccm_empty(void) {
     omv_csi_ccm_t out;
     const float rgb[3] = { 80.0f, 100.0f, 80.0f };
 
-    if (omv_csi_ccm_compute(NULL, rgb, 100.0f, &out) || omv_csi_ccm_compute(ccm_table(0), rgb, 100.0f, &out)) {
+    if (omv_csi_ccm_compute(NULL, rgb, 100.0f, 0.0f, &out) ||
+        omv_csi_ccm_compute(ccm_table(0), rgb, 100.0f, 0.0f, &out)) {
         return mp_const_false;
     }
     return mp_const_true;
@@ -131,7 +132,7 @@ static mp_obj_t test_ccm_calibration_points(void) {
 
     for (int i = 0; i < 3; i++) {
         omv_csi_ccm_t out;
-        if (!omv_csi_ccm_compute(table, ccm_rgb[i], 100.0f, &out) ||
+        if (!omv_csi_ccm_compute(table, ccm_rgb[i], 100.0f, 0.0f, &out) ||
             !ccm_equal(&out, &ccm_entries[i], &ccm_entries[i], 0.0f)) {
             return mp_const_false;
         }
@@ -147,10 +148,12 @@ static mp_obj_t test_ccm_clamp_ends(void) {
     const float cool[3] = { 10.0f, 100.0f, 200.0f };
     omv_csi_ccm_t out;
 
-    if (!omv_csi_ccm_compute(table, warm, 100.0f, &out) || !ccm_equal(&out, &ccm_entries[0], &ccm_entries[0], 0.0f)) {
+    if (!omv_csi_ccm_compute(table, warm, 100.0f, 0.0f, &out) ||
+        !ccm_equal(&out, &ccm_entries[0], &ccm_entries[0], 0.0f)) {
         return mp_const_false;
     }
-    if (!omv_csi_ccm_compute(table, cool, 100.0f, &out) || !ccm_equal(&out, &ccm_entries[2], &ccm_entries[2], 0.0f)) {
+    if (!omv_csi_ccm_compute(table, cool, 100.0f, 0.0f, &out) ||
+        !ccm_equal(&out, &ccm_entries[2], &ccm_entries[2], 0.0f)) {
         return mp_const_false;
     }
     return mp_const_true;
@@ -167,7 +170,8 @@ static mp_obj_t test_ccm_blend(void) {
     float mid1 = (ccm_entries[0].chroma[1] + ccm_entries[1].chroma[1]) / 2.0f;
     const float rgb[3] = { expf(mid0) * 100.0f, 100.0f, expf(mid1) * 100.0f };
 
-    if (!omv_csi_ccm_compute(table, rgb, 100.0f, &out) || !ccm_equal(&out, &ccm_entries[0], &ccm_entries[1], 0.5f)) {
+    if (!omv_csi_ccm_compute(table, rgb, 100.0f, 0.0f, &out) ||
+        !ccm_equal(&out, &ccm_entries[0], &ccm_entries[1], 0.5f)) {
         return mp_const_false;
     }
 
@@ -193,18 +197,18 @@ static mp_obj_t test_ccm_fade(void) {
     omv_csi_ccm_t out;
 
     for (size_t i = 0; i < OMV_ARRAY_SIZE(unity_luma); i++) {
-        if (!omv_csi_ccm_compute(table, ccm_rgb[1], unity_luma[i], &out) || !ccm_is_unity(&out)) {
+        if (!omv_csi_ccm_compute(table, ccm_rgb[1], unity_luma[i], 0.0f, &out) || !ccm_is_unity(&out)) {
             return mp_const_false;
         }
     }
     for (size_t i = 0; i < OMV_ARRAY_SIZE(half_luma); i++) {
-        if (!omv_csi_ccm_compute(table, ccm_rgb[1], half_luma[i], &out) ||
+        if (!omv_csi_ccm_compute(table, ccm_rgb[1], half_luma[i], 0.0f, &out) ||
             !ccm_equal(&out, &unity, &ccm_entries[1], 0.5f)) {
             return mp_const_false;
         }
     }
     for (size_t i = 0; i < OMV_ARRAY_SIZE(full_luma); i++) {
-        if (!omv_csi_ccm_compute(table, ccm_rgb[1], full_luma[i], &out) ||
+        if (!omv_csi_ccm_compute(table, ccm_rgb[1], full_luma[i], 0.0f, &out) ||
             !ccm_equal(&out, &ccm_entries[1], &ccm_entries[1], 0.0f)) {
             return mp_const_false;
         }
@@ -254,7 +258,7 @@ static mp_obj_t test_ccm_single(void) {
 
     for (int i = 0; i < 3; i++) {
         omv_csi_ccm_t out;
-        if (!omv_csi_ccm_compute(table, ccm_rgb[i], 100.0f, &out) ||
+        if (!omv_csi_ccm_compute(table, ccm_rgb[i], 100.0f, 0.0f, &out) ||
             !ccm_equal(&out, &ccm_entries[0], &ccm_entries[0], 0.0f)) {
             return mp_const_false;
         }

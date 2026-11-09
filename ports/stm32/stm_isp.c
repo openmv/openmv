@@ -110,7 +110,7 @@ static void stm_isp_update_ccm(omv_csi_t *csi, uint32_t pipe, const float avg[3]
     int16_t coeffs[3][3];
     int16_t offsets[3];
 
-    if (!omv_csi_ccm_compute(csi->ccm, avg, luminance, &ccm)) {
+    if (!omv_csi_ccm_compute(csi->ccm, avg, luminance, csi->isp_stats.gain_db, &ccm)) {
         return;
     }
 

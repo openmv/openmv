@@ -803,6 +803,15 @@ static int stm_csi_snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
 
     #if USE_DCMIPP
     if (csi->raw_output) {
+        #ifdef OMV_CSI_HW_CCM_ENABLE
+        // The CCM fades with the sensor gain, which only needs to be read as often as the AWB settles.
+        uint32_t ms = mp_hal_ticks_ms();
+        if (csi->ccm && ms - csi->isp_stats.gain_ms >= OMV_CSI_STATS_TAU_MS) {
+            omv_csi_get_gain_db(csi, &csi->isp_stats.gain_db);
+            csi->isp_stats.gain_ms = ms;
+        }
+        #endif // OMV_CSI_HW_CCM_ENABLE
+
         float luminance = stm_isp_update_awb(csi, DCMIPP_PIPE);
         if (csi->ioctl) {
             omv_csi_ioctl_arg_t arg = { .ivalue = fast_floorf(luminance) };

@@ -66,10 +66,6 @@
 #define OMV_CSI_CLK_TOLERANCE   (500000)
 #endif
 
-#ifndef OMV_CSI_STATS_TAU_MS
-#define OMV_CSI_STATS_TAU_MS    (250)
-#endif
-
 #ifndef __weak
 #define __weak    __attribute__((weak))
 #endif
@@ -1329,7 +1325,8 @@ bool omv_csi_ccm_project(const omv_csi_ccm_table_t *table, float rgb[3]) {
 
 // Projects the illuminant onto the polyline of calibration illuminants in log
 // chromaticity space and blends the CCMs at the ends of the closest segment (~linear in mired).
-bool omv_csi_ccm_compute(const omv_csi_ccm_table_t *table, const float rgb[3], float luminance, omv_csi_ccm_t *out) {
+bool omv_csi_ccm_compute(const omv_csi_ccm_table_t *table, const float rgb[3], float luminance, float gain_db,
+                         omv_csi_ccm_t *out) {
     if (table == NULL || table->count == 0) {
         return false;
     }
@@ -1348,7 +1345,14 @@ bool omv_csi_ccm_compute(const omv_csi_ccm_table_t *table, const float rgb[3], f
     // Very dark or bright frames fade to unity to limit noise gain and color shifts near clipping.
     float dark = (luminance - OMV_CSI_CCM_DARK_UNITY) / (OMV_CSI_CCM_DARK_FULL - OMV_CSI_CCM_DARK_UNITY);
     float bright = (OMV_CSI_CCM_BRIGHT_UNITY - luminance) / (OMV_CSI_CCM_BRIGHT_UNITY - OMV_CSI_CCM_BRIGHT_FULL);
-    float strength = IM_CLAMP(OMV_MIN(dark, bright), 0.0f, 1.0f);
+    float strength = OMV_MIN(dark, bright);
+
+    // High sensor gains also fade to unity, since the CCM's saturation amplifies the noise.
+    if (table->gain_db[1] > table->gain_db[0]) {
+        strength = OMV_MIN(strength, (table->gain_db[1] - gain_db) / (table->gain_db[1] - table->gain_db[0]));
+    }
+
+    strength = IM_CLAMP(strength, 0.0f, 1.0f);
 
     for (int r = 0; r < 3; r++) {
         for (int c = 0; c < 3; c++) {

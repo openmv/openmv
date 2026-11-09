@@ -493,7 +493,8 @@ static const omv_csi_ccm_t pag7936_ccm[] = {
     },
 };
 
-static const omv_csi_ccm_table_t pag7936_ccm_table = { OMV_ARRAY_SIZE(pag7936_ccm), pag7936_ccm };
+// The CCM fades over the last doubling of the 16x max gain.
+static const omv_csi_ccm_table_t pag7936_ccm_table = { OMV_ARRAY_SIZE(pag7936_ccm), pag7936_ccm, { 18.0f, 24.0f } };
 #endif // OMV_CSI_HW_CCM_ENABLE
 
 static const uint16_t hd_regs[][2] = {
