@@ -2848,12 +2848,16 @@ void imlib_draw_image(image_t *dst_img,
         dst_x_start = 0;
     }
 
+    // With a transform the GPU maps the unclipped rectangle through a matrix and clips the
+    // result itself, so a rectangle that starts off-screen may still end up visible.
+    bool offscreen = false;
+
     if (dst_x_start >= dst_img->w) {
-        return;
+        offscreen = true;
     }
     int src_x_dst_width = src_width_scaled - src_x_start;
     if (src_x_dst_width <= 0) {
-        return;
+        offscreen = true;
     }
 
     // Clamp start y to image bounds.
@@ -2864,10 +2868,15 @@ void imlib_draw_image(image_t *dst_img,
     }
 
     if (dst_y_start >= dst_img->h) {
-        return;
+        offscreen = true;
     }
     int src_y_dst_height = src_height_scaled - src_y_start;
     if (src_y_dst_height <= 0) {
+        offscreen = true;
+    }
+
+    // Nothing to draw.
+    if (offscreen && (!transform)) {
         return;
     }
 
@@ -3014,6 +3023,20 @@ void imlib_draw_image(image_t *dst_img,
             .h = fast_floorf(dst_rect.h / y_scale),
         };
 
+        // The transform is applied to the destination rectangle, so it must be the whole,
+        // unclipped rectangle or the part clipped away here is lost even when the transform
+        // would have moved it into view.
+        if (transform) {
+            dst_rect.x = dst_x_start_backup;
+            dst_rect.y = dst_y_start_backup;
+            dst_rect.w = src_width_scaled;
+            dst_rect.h = src_height_scaled;
+            src_rect.x = w_start;
+            src_rect.y = h_start;
+            src_rect.w = src_img_w;
+            src_rect.h = src_img_h;
+        }
+
         image_hint_t gpu_hints = ((dst_delta_x < 0) ? IMAGE_HINT_HMIRROR : 0) |
                                  ((dst_delta_y < 0) ? IMAGE_HINT_VFLIP : 0) |
                                  (hint & (IMAGE_HINT_BILINEAR | IMAGE_HINT_BLACK_BACKGROUND));
@@ -3024,6 +3047,11 @@ void imlib_draw_image(image_t *dst_img,
         }
     }
     #endif
+
+    // The software path draws the clipped rectangle only.
+    if (offscreen) {
+        goto exit_cleanup;
+    }
 
     // Make a deep copy of the source image.
     if (((dst_img->data == src_img->data) &&
