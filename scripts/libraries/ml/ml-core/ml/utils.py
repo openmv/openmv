@@ -27,6 +27,7 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 import math
+import image as _image
 from ulab import numpy as np
 
 
@@ -164,8 +165,7 @@ def draw_predictions(
     colors,
     scores=None,
     format="pascal_voc",
-    font_width=8,
-    font_height=10,
+    font=None,
     text_color=(255, 255, 255),
 ):
     image_w = image.width()
@@ -174,13 +174,15 @@ def draw_predictions(
     # resolutions and survive JPEG compression on small frames.
     font_scale = min(4, max(1, image_w // 320))
     thickness = min(3, max(1, image_w // 480))
-    fw = font_width * font_scale
-    fh = font_height * font_scale
+    if font is None:
+        font = _image.Font()
     for i, (x, y, w, h) in enumerate(boxes):
         label = labels[i]
         if scores is not None:
             label = "%s %.2f" % (label, scores[i])
+        label = label.upper()
         box_color = colors[i]
+        fw, fh, _ = font.measure(label, scale=font_scale)
 
         if format == "pascal_voc":
             x = int(x * image_w)
@@ -200,21 +202,13 @@ def draw_predictions(
                 (cx, cy, radius), color=box_color, thickness=thickness, fill=True,
             )
             ly = max(0, cy - radius - fh)
-            image.draw_rectangle(
-                (cx, ly, len(label) * fw, fh),
-                fill=True,
-                color=box_color,
-            )
-            image.draw_string((cx, ly), label.upper(), text_color, scale=font_scale)
+            image.draw_rectangle((cx, ly, fw, fh), fill=True, color=box_color)
+            image.draw_string((cx, ly), label, text_color, font=font, scale=font_scale)
             continue
 
         image.draw_rectangle((x, y, w, h), color=box_color, thickness=thickness)
-        image.draw_rectangle(
-            (x, y - fh, len(label) * fw, fh),
-            fill=True,
-            color=box_color,
-        )
-        image.draw_string((x, y - fh), label.upper(), text_color, scale=font_scale)
+        image.draw_rectangle((x, y - fh, fw, fh), fill=True, color=box_color)
+        image.draw_string((x, y - fh), label, text_color, font=font, scale=font_scale)
 
 
 def draw_keypoints(

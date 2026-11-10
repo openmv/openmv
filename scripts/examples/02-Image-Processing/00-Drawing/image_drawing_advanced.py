@@ -121,6 +121,6 @@ while True:
         )
         status += "alpha:128 "
 
-    img.draw_string((8, 0), status, mono_space=False)
+    img.draw_string((8, 0), status)
 
     print(clock.fps())
