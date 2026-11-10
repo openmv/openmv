@@ -803,8 +803,9 @@ void imlib_draw_row(int x_start, int x_end, int y_row, imlib_draw_row_data_t *da
 
     // When the mask callback is used with partial alpha, pre-populate dst_row_override
     // from the actual destination row so the blend reads real pixels as background.
-    // Not needed for alpha=255 (blend overwrites dst entirely) or BAYER/YUV (no blend).
-    if (data->dst_row_override && !data->black_background && data->alpha != 255) {
+    // An alpha palette is per pixel partial alpha. Not needed for alpha=255 without one
+    // (blend overwrites dst entirely) or BAYER/YUV (no blend).
+    if (data->dst_row_override && !data->black_background && ((data->alpha != 255) || data->alpha_palette)) {
         switch (data->dst_img->pixfmt) {
             case PIXFORMAT_BINARY:
                 memcpy(data->dst_row_override,
