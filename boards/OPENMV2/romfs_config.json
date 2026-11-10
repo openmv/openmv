@@ -3,6 +3,14 @@
     "size": "0x20000",
     "entries": [
     {
+      "type": "ttf",
+      "path": "{TOP}/lib/fonts/RobotoMono-Regular.ttf",
+      "unicodes": "U+0020-007E",
+      "ascender": 0.8,
+      "descender": 0.2,
+      "default": true
+    },
+    {
       "type": "haar",
       "path": "{TOP}/lib/haar/haarcascade_eye.xml",
       "stages": 0
