@@ -855,16 +855,9 @@ static int VD1943_SetupOutput(VD1943_Ctx_t *ctx)
   ret = ctx->write32(ctx, VD1943_REG_SENSOR_CONFIGURATION(0), ctx->ctx.config_save.image_processing_mode);
   VD1943_TraceError(ctx, ret);
 
-  /* Disable CFA_BLENDER when used in RGB. Note that this approach consider that
-     when RGB is in use there's a pure RGB lens - which is not systematic.
-     Proper approach (TODO) would be to make it a controllable setting. */
-  if (ctx->bayer == VD1943_BAYER_GBRG || ctx->bayer == VD1943_BAYER_RGGB ||
-      ctx->bayer == VD1943_BAYER_BGGR || ctx->bayer == VD1943_BAYER_GBRG)
-  {
-    ret = ctx->write8(ctx, VD1943_REG_CFA_BLENDER_ALPHA_CTRL, VD1943_CFA_BLENDER_ZERO);
-  } else {
-    ret = ctx->write8(ctx, VD1943_REG_CFA_BLENDER_ALPHA_CTRL, VD1943_CFA_BLENDER_NORMAL);
-  }
+  /* OpenMV: keep the CFA_BLENDER on in RGB. ST's driver turns it off, assuming a lens
+     with an IR cut filter, which ruins the colors with a lens that passes NIR. */
+  ret = ctx->write8(ctx, VD1943_REG_CFA_BLENDER_ALPHA_CTRL, VD1943_CFA_BLENDER_NORMAL);
   VD1943_TraceError(ctx, ret);
 
   /* csi-2 output itf */
