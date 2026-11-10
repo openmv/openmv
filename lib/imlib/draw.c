@@ -554,161 +554,79 @@ void imlib_draw_ellipse(image_t *img, int cx, int cy, int rx, int ry, int rotati
     scratch_draw_rotated_ellipse(img, cx, cy, rx * 2, ry * 2, r, fill, c, thickness);
 }
 
-// char rotation == 0, 90, 180, 360, etc.
-// string rotation == 0, 90, 180, 360, etc.
-void imlib_draw_string(image_t *img,
-                       int x_off,
-                       int y_off,
-                       const char *str,
-                       int c,
-                       float scale,
-                       int x_spacing,
-                       int y_spacing,
-                       bool mono_space,
-                       int char_rotation,
-                       bool char_hmirror,
-                       bool char_vflip,
-                       int string_rotation,
-                       bool string_hmirror,
-                       bool string_vflip) {
-    char_rotation %= 360;
-    if (char_rotation < 0) {
-        char_rotation += 360;
-    }
-    char_rotation = (char_rotation / 90) * 90;
-
-    string_rotation %= 360;
-    if (string_rotation < 0) {
-        string_rotation += 360;
-    }
-    string_rotation = (string_rotation / 90) * 90;
-
-    bool char_swap_w_h = (char_rotation == 90) || (char_rotation == 270);
-    bool char_upsidedown = (char_rotation == 180) || (char_rotation == 270);
-
-    if (string_hmirror) {
-        x_off -= fast_floorf(font[0].w * scale) - 1;
-    }
-    if (string_vflip) {
-        y_off -= fast_floorf(font[0].h * scale) - 1;
-    }
-
-    int org_x_off = x_off;
-    int org_y_off = y_off;
-    const int anchor = x_off;
-
-    for (char ch, last = '\0'; (ch = *str); str++, last = ch) {
-
-        if ((last == '\r') && (ch == '\n')) {
-            // handle "\r\n" strings
-            continue;
+// A color of the image's format as the RGB565 a color palette holds.
+static uint16_t draw_string_color(const image_t *img, int c) {
+    switch (img->pixfmt) {
+        case PIXFORMAT_BINARY: {
+            return c ? COLOR_RGB565_BINARY_MAX : COLOR_RGB565_BINARY_MIN;
         }
-
-        if ((ch == '\n') || (ch == '\r')) {
-            // handle '\n' or '\r' strings
-            x_off = anchor;
-            y_off += (string_vflip ? -1 : +1) * (fast_floorf((char_swap_w_h ? font[0].w : font[0].h) * scale) + y_spacing); // newline height == space height
-            continue;
+        case PIXFORMAT_GRAYSCALE: {
+            return COLOR_Y_TO_RGB565(c);
         }
-
-        if ((ch < ' ') || (ch > '~')) {
-            // handle unknown characters
-            continue;
-        }
-
-        const glyph_t *g = &font[ch - ' '];
-
-        if (!mono_space) {
-            // Find the first pixel set and offset to that.
-            bool exit = false;
-
-            if (!char_swap_w_h) {
-                for (int x = 0, xx = g->w; x < xx; x++) {
-                    for (int y = 0, yy = g->h; y < yy; y++) {
-                        if (g->data[(char_upsidedown ^ char_vflip) ? (g->h - 1 - y) : y] &
-                            (1 << ((char_upsidedown ^ char_hmirror ^ string_hmirror) ? x : (g->w - 1 - x)))) {
-                            x_off += (string_hmirror ? +1 : -1) * fast_floorf(x * scale);
-                            exit = true;
-                            break;
-                        }
-                    }
-
-                    if (exit) {
-                        break;
-                    }
-                }
-            } else {
-                for (int y = g->h - 1; y >= 0; y--) {
-                    for (int x = 0, xx = g->w; x < xx; x++) {
-                        if (g->data[(char_upsidedown ^ char_vflip) ? (g->h - 1 - y) : y] &
-                            (1 << ((char_upsidedown ^ char_hmirror ^ string_hmirror) ? x : (g->w - 1 - x)))) {
-                            x_off += (string_hmirror ? +1 : -1) * fast_floorf((g->h - 1 - y) * scale);
-                            exit = true;
-                            break;
-                        }
-                    }
-
-                    if (exit) {
-                        break;
-                    }
-                }
-            }
-        }
-
-        for (int y = 0, yy = fast_floorf(g->h * scale); y < yy; y++) {
-            for (int x = 0, xx = fast_floorf(g->w * scale); x < xx; x++) {
-                if (g->data[fast_floorf(y / scale)] & (1 << (g->w - 1 - fast_floorf(x / scale)))) {
-                    int16_t x_tmp = x_off + (char_hmirror ? (xx - x - 1) : x), y_tmp = y_off + (char_vflip ? (yy - y - 1) : y);
-                    point_rotate(x_tmp, y_tmp, IM_DEG2RAD(char_rotation), x_off + (xx / 2), y_off + (yy / 2), &x_tmp, &y_tmp);
-                    point_rotate(x_tmp, y_tmp, IM_DEG2RAD(string_rotation), org_x_off, org_y_off, &x_tmp, &y_tmp);
-                    imlib_set_pixel(img, x_tmp, y_tmp, c);
-                }
-            }
-        }
-
-        if (mono_space) {
-            x_off += (string_hmirror ? -1 : +1) * (fast_floorf((char_swap_w_h ? g->h : g->w) * scale) + x_spacing);
-        } else {
-            // Find the last pixel set and offset to that.
-            bool exit = false;
-
-            if (!char_swap_w_h) {
-                for (int x = g->w - 1; x >= 0; x--) {
-                    for (int y = g->h - 1; y >= 0; y--) {
-                        if (g->data[(char_upsidedown ^ char_vflip) ? (g->h - 1 - y) : y] &
-                            (1 << ((char_upsidedown ^ char_hmirror ^ string_hmirror) ? x : (g->w - 1 - x)))) {
-                            x_off += (string_hmirror ? -1 : +1) * (fast_floorf((x + 2) * scale) + x_spacing);
-                            exit = true;
-                            break;
-                        }
-                    }
-
-                    if (exit) {
-                        break;
-                    }
-                }
-            } else {
-                for (int y = 0, yy = g->h; y < yy; y++) {
-                    for (int x = g->w - 1; x >= 0; x--) {
-                        if (g->data[(char_upsidedown ^ char_vflip) ? (g->h - 1 - y) : y] &
-                            (1 << ((char_upsidedown ^ char_hmirror ^ string_hmirror) ? x : (g->w - 1 - x)))) {
-                            x_off += (string_hmirror ? -1 : +1) * (fast_floorf(((g->h - 1 - y) + 2) * scale) + x_spacing);
-                            exit = true;
-                            break;
-                        }
-                    }
-
-                    if (exit) {
-                        break;
-                    }
-                }
-            }
-
-            if (!exit) {
-                x_off += (string_hmirror ? -1 : +1) * fast_floorf(scale * 3);        // space char
-            }
+        default: {
+            return c;
         }
     }
+}
+
+// Renders UTF-8 text with a font into an 8-bit coverage image and composites it onto the
+// image with imlib_draw_image(), which blends the text color by coverage (and uses the GPU
+// where one is available). hint and transform behave exactly as in draw_image. c is the
+// text's color and stroke_c its outline's, if the layout asks for one. Returns a font
+// error (nothing is drawn) if the font turns out to be corrupt.
+font_err_t imlib_draw_string(image_t *img, int x_off, int y_off, const char *str, const font_t *font,
+                             const font_layout_t *layout, int c, int stroke_c, int alpha, image_hint_t hint,
+                             float *transform) {
+    font_box_t box;
+    font_err_t err = font_measure(font, str, layout, &box);
+    if ((err != FONT_OK) || (box.w <= 0) || (box.h <= 0) || (alpha <= 0)) {
+        return err;
+    }
+
+    image_t coverage = { .w = box.w, .h = box.h, .pixfmt = PIXFORMAT_GRAYSCALE };
+    coverage.data = uma_malloc(image_size(&coverage), UMA_FAST | UMA_CACHE);
+    err = font_render(font, str, layout, &box, &coverage);
+    if (err != FONT_OK) {
+        uma_free(coverage.data);
+        return err;
+    }
+
+    uint16_t color = draw_string_color(img, c);
+    uint16_t *color_palette = uma_malloc((256 * sizeof(uint16_t)) + 256, UMA_FAST | UMA_CACHE);
+    uint8_t *alpha_palette = (uint8_t *) (color_palette + 256);
+    if (layout->stroke <= 0) {
+        // Every coverage value maps to the text color; the coverage itself is the alpha.
+        for (int i = 0; i < 256; i++) {
+            color_palette[i] = color;
+            alpha_palette[i] = i;
+        }
+    } else {
+        // Text and outline in one image (see font_render): the lower half of the range is
+        // the outline fading out, the upper half is solid and runs from outline to text.
+        uint16_t stroke = draw_string_color(img, stroke_c);
+        int r0 = COLOR_RGB565_TO_R5(stroke);
+        int g0 = COLOR_RGB565_TO_G6(stroke);
+        int b0 = COLOR_RGB565_TO_B5(stroke);
+        int r1 = COLOR_RGB565_TO_R5(color);
+        int g1 = COLOR_RGB565_TO_G6(color);
+        int b1 = COLOR_RGB565_TO_B5(color);
+        for (int i = 0; i < 128; i++) {
+            color_palette[i] = stroke;
+            alpha_palette[i] = (i << 1) | (i >> 6);
+            color_palette[128 + i] = COLOR_R5_G6_B5_TO_RGB565(((r0 * (127 - i)) + (r1 * i) + 63) / 127,
+                                                              ((g0 * (127 - i)) + (g1 * i) + 63) / 127,
+                                                              ((b0 * (127 - i)) + (b1 * i) + 63) / 127);
+            alpha_palette[128 + i] = 255;
+        }
+    }
+
+    rectangle_t roi = { .x = 0, .y = 0, .w = coverage.w, .h = coverage.h };
+    imlib_draw_image(img, &coverage, x_off + box.x, y_off + box.y, 1.0f, 1.0f, &roi, -1, alpha,
+                     color_palette, alpha_palette, hint, transform, NULL, NULL, NULL);
+
+    uma_free(color_palette);
+    uma_free(coverage.data);
+    return FONT_OK;
 }
 
 void imlib_draw_event_histogram(image_t *img, ec_event_t *ec_event, int num_events, int gain) {
