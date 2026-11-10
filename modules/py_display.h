@@ -68,6 +68,7 @@ typedef struct _py_display_obj_t {
     uint32_t intensity;
     bool bgr;
     bool byte_swap;
+    bool miso_as_rs;
     bool display_on;
     bool portrait;
     mp_obj_t controller;

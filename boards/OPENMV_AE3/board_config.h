@@ -298,7 +298,7 @@ extern unsigned char OMV_BOARD_UID_ADDR[12];    // Unique address.
 // SPI LCD Interface
 #define OMV_SPI_DISPLAY_CONTROLLER      (OMV_SPI0_ID)
 #define OMV_SPI_DISPLAY_MOSI_PIN        (&omv_pin_SPI_MOSI)
-#define OMV_SPI_DISPLAY_MISO_PIN        (&omv_pin_SPI_MISO)
+#define OMV_SPI_DISPLAY_MISO_PIN        (&omv_pin_SPI_MISO_GPIO)
 #define OMV_SPI_DISPLAY_SCLK_PIN        (&omv_pin_SPI_SCLK)
 #define OMV_SPI_DISPLAY_SSEL_PIN        (&omv_pin_SPI_SSEL)
 #define OMV_SPI_DISPLAY_RS_PIN          (&omv_pin_LCD_RS)

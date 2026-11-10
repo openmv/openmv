@@ -91,12 +91,25 @@ static void spi_switch_mode(py_display_obj_t *self, int bits, bool dma) {
     spi_config.dma_flags = dma ? OMV_SPI_DMA_NORMAL : 0;
     #endif
     omv_spi_init(&self->spi_bus, &spi_config);
+    if (self->miso_as_rs) {
+        // I expected that spi_init with OMV_SPI_BUS_TX does not modify unused MISO, but it does and gpio_config is necessary
+        omv_gpio_deinit(OMV_SPI_DISPLAY_MISO_PIN);
+        omv_gpio_config(OMV_SPI_DISPLAY_MISO_PIN, OMV_GPIO_MODE_OUTPUT, OMV_GPIO_PULL_NONE, OMV_GPIO_SPEED_LOW, -1);
+    }
 }
 
 static int spi_write(py_display_obj_t *self, uint8_t cmd, uint8_t *args, size_t n_args, bool dcs) {
-    omv_gpio_write(OMV_SPI_DISPLAY_RS_PIN, 0);
+    if (self->miso_as_rs) {
+        omv_gpio_write(OMV_SPI_DISPLAY_MISO_PIN, 0);
+    } else {
+        omv_gpio_write(OMV_SPI_DISPLAY_RS_PIN, 0);
+    }
     spi_transmit(self, (uint8_t []) { cmd }, 1);
-    omv_gpio_write(OMV_SPI_DISPLAY_RS_PIN, 1);
+    if (self->miso_as_rs) {
+        omv_gpio_write(OMV_SPI_DISPLAY_MISO_PIN, 1);
+    } else {
+        omv_gpio_write(OMV_SPI_DISPLAY_RS_PIN, 1);
+    }
     if (n_args) {
         spi_transmit(self, args, n_args);
     }
@@ -350,7 +363,11 @@ static void spi_display_deinit(py_display_obj_t *self) {
     }
 
     omv_spi_deinit(&self->spi_bus);
-    omv_gpio_deinit(OMV_SPI_DISPLAY_RS_PIN);
+    if (self->miso_as_rs) {
+        omv_gpio_deinit(OMV_SPI_DISPLAY_MISO_PIN);
+    } else {
+        omv_gpio_deinit(OMV_SPI_DISPLAY_RS_PIN);
+    }
     omv_gpio_deinit(OMV_SPI_DISPLAY_RST_PIN);
     #ifdef OMV_SPI_DISPLAY_BL_PIN
     omv_gpio_deinit(OMV_SPI_DISPLAY_BL_PIN);
@@ -360,7 +377,7 @@ static void spi_display_deinit(py_display_obj_t *self) {
 mp_obj_t spi_display_make_new(const mp_obj_type_t *type, size_t n_args, size_t n_kw, const mp_obj_t *all_args) {
     enum {
         ARG_width, ARG_height, ARG_refresh, ARG_bgr, ARG_byte_swap, ARG_hmirror, ARG_vflip,
-        ARG_triple_buffer, ARG_controller, ARG_backlight
+        ARG_triple_buffer, ARG_miso_as_rs, ARG_controller, ARG_backlight
     };
     static const mp_arg_t allowed_args[] = {
         { MP_QSTR_width,         MP_ARG_INT,  {.u_int = 128  } },
@@ -371,6 +388,7 @@ mp_obj_t spi_display_make_new(const mp_obj_type_t *type, size_t n_args, size_t n
         { MP_QSTR_hmirror,       MP_ARG_BOOL, {.u_bool = true} },
         { MP_QSTR_vflip,         MP_ARG_BOOL, {.u_bool = true} },
         { MP_QSTR_triple_buffer, MP_ARG_BOOL, {.u_bool = LCD_TRIPLE_BUFFER_DEFAULT} },
+        { MP_QSTR_miso_as_rs,    MP_ARG_BOOL, {.u_bool = false} },
         { MP_QSTR_controller,    MP_ARG_OBJ | MP_ARG_KW_ONLY, {.u_rom_obj = MP_ROM_NONE} },
         { MP_QSTR_backlight,     MP_ARG_OBJ | MP_ARG_KW_ONLY, {.u_rom_obj = MP_ROM_NONE} },
     };
@@ -398,6 +416,7 @@ mp_obj_t spi_display_make_new(const mp_obj_type_t *type, size_t n_args, size_t n
     self->triple_buffer = args[ARG_triple_buffer].u_bool;
     self->bgr = args[ARG_bgr].u_bool;
     self->byte_swap = args[ARG_byte_swap].u_bool;
+    self->miso_as_rs = args[ARG_miso_as_rs].u_bool;
     self->controller = args[ARG_controller].u_obj;
     self->bl_controller = args[ARG_backlight].u_obj;
 
@@ -414,8 +433,14 @@ mp_obj_t spi_display_make_new(const mp_obj_type_t *type, size_t n_args, size_t n
     omv_gpio_config(OMV_SPI_DISPLAY_RST_PIN, OMV_GPIO_MODE_OUTPUT, OMV_GPIO_PULL_NONE, OMV_GPIO_SPEED_LOW, -1);
     omv_gpio_write(OMV_SPI_DISPLAY_RST_PIN, 1);
 
-    omv_gpio_config(OMV_SPI_DISPLAY_RS_PIN, OMV_GPIO_MODE_OUTPUT, OMV_GPIO_PULL_NONE, OMV_GPIO_SPEED_LOW, -1);
-    omv_gpio_write(OMV_SPI_DISPLAY_RS_PIN, 1);
+    if (self->miso_as_rs) {
+        omv_gpio_deinit(OMV_SPI_DISPLAY_MISO_PIN);
+        omv_gpio_config(OMV_SPI_DISPLAY_MISO_PIN, OMV_GPIO_MODE_OUTPUT, OMV_GPIO_PULL_NONE, OMV_GPIO_SPEED_LOW, -1);
+        omv_gpio_write(OMV_SPI_DISPLAY_MISO_PIN, 1);
+    } else {
+        omv_gpio_config(OMV_SPI_DISPLAY_RS_PIN, OMV_GPIO_MODE_OUTPUT, OMV_GPIO_PULL_NONE, OMV_GPIO_SPEED_LOW, -1);
+        omv_gpio_write(OMV_SPI_DISPLAY_RS_PIN, 1);
+    }
 
     // Reset LCD
     omv_gpio_write(OMV_SPI_DISPLAY_RST_PIN, 0);
