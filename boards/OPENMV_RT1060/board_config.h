@@ -75,6 +75,7 @@
 #define OMV_GC_BLOCK1_SIZE              (204K)
 #define OMV_GC_BLOCK2_MEMORY            DRAM    // Extra GC block 1.
 #define OMV_GC_BLOCK2_SIZE              (8M)
+#define OMV_FONT_CACHE_SIZE             (32 * 1024) // Glyph cache for draw_string(), from the heap.
 #define OMV_UMA_BLOCK0_MEMORY           DRAM    // Default UMA pool.
 #define OMV_UMA_BLOCK0_SIZE             (23M)
 #define OMV_UMA_BLOCK0_FLAGS            (UMA_DEFAULT)

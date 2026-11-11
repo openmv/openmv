@@ -133,4 +133,29 @@ font_err_t font_measure(const font_t *f, const char *str, const font_layout_t *l
 font_err_t font_render(const font_t *f, const char *str, const font_layout_t *layout, const font_box_t *box,
                        struct image *out);
 
+// Glyph cache. Rendered glyphs (their coverage bitmaps) are kept in one block of memory that
+// the caller provides, shared by every font, so that drawing a glyph again at the same size
+// costs a lookup and a copy instead of decoding and rasterizing its outline. Entries are
+// packed end to end in a ring; when it is full the oldest are dropped, except that a glyph
+// used since it was last considered is kept for another lap. The block also holds a small
+// table of what the layout needs to know about each character (its glyph, advance and
+// bounding box), so that drawing text again does not read the font at all.
+typedef struct font_cache_info {
+    uint32_t size;          // Bytes given to the cache (0 = no cache).
+    uint32_t used;          // Bytes of it holding glyphs.
+    uint32_t glyphs;        // Glyphs cached.
+    uint32_t hits;          // Glyphs drawn from the cache.
+    uint32_t misses;        // Glyphs rasterized.
+    uint32_t evictions;     // Glyphs dropped to make room.
+} font_cache_info_t;
+
+// Give the cache its memory (word aligned), emptying it. NULL or a size too small to be
+// useful turns the cache off. The memory must stay valid until the next call.
+void font_cache_init(void *buf, size_t size);
+
+// Forget every glyph cached from a font. Call before the font's data is freed.
+void font_cache_purge(const font_t *f);
+
+void font_cache_info(font_cache_info_t *info);
+
 #endif // __FONT_H__

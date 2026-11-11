@@ -32,8 +32,8 @@ mp_obj_t py_image_from_struct(image_t *img);
 void *py_image_cobj(mp_obj_t img_obj);
 // image.Font (py_image_font.c)
 extern const mp_obj_type_t py_font_type;
-// Call on every soft reset, before any text is drawn: the built-in font lives on the heap
-// that the reset has just thrown away.
+// Call on every soft reset, before any text is drawn: the built-in font and the glyph
+// cache live on the heap that the reset has just thrown away.
 void py_font_init0(void);
 const font_t *py_font_default(void);
 // Raises ValueError with the message for a font error code; returns if err is FONT_OK.

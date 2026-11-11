@@ -56,6 +56,17 @@
 #define COMP_HAVE_XY_SCALE          (0x0040)
 #define COMP_HAVE_2X2               (0x0080)
 
+// Glyph cache entry key bits.
+#define CACHE_KEY_MASK              (0x3FFF)    // Pixel size and x offset.
+#define CACHE_USED                  (0x8000)    // Drawn since eviction last passed over it.
+
+// Pixel sizes are multiples of 1 / FONT_PX_STEPS, so that a cache key says exactly how a
+// glyph was rasterized.
+#define FONT_PX_STEPS               (16)
+
+// A cache smaller than this is not worth having.
+#define CACHE_MIN_SIZE              (1024)
+
 // Arabic joining classes.
 #define AR_NONE     (0)     // Not Arabic.
 #define AR_U        (1)     // Arabic but non-joining (hamza, punctuation, digits).
@@ -1040,6 +1051,210 @@ static void arabic_reorder(uint32_t *cps, int n) {
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+// Glyph cache
+///////////////////////////////////////////////////////////////////////////////
+// One block of caller provided memory: this module keeps only a pointer to it. The block
+// starts with the cache's own state, then a hash table of 16-bit slots, then the character
+// table (below), then a ring of entries packed end to end. An entry is this header followed by w * h coverage bytes,
+// padded to 4 bytes. Offsets (in the hash table and the chains) are in units of 4 bytes
+// from the start of the block; 0 means none, which no entry can have since the state is
+// there.
+typedef struct cache_entry {
+    uint32_t font;      // Complement of the font file's address, 0 if the entry is dead. The
+                        // complement keeps a garbage collector that scans this block from
+                        // taking the key for a reference to the font.
+    uint16_t gid;
+    uint16_t key;       // Pixel size in 1/16ths (bits 0-11), quarter pixel x offset (12-13),
+                        // and CACHE_USED.
+    uint16_t next;      // Next entry with the same hash.
+    uint8_t w;          // Of the bitmap. Where it goes follows from the glyph and the key.
+    uint8_t h;
+    uint8_t stroke;     // Pixels of outline in the bitmap.
+} cache_entry_t;
+
+// What laying out a character needs: which font of the fallback chain draws it, the glyph,
+// its advance and its bounding box, in that font's units, so one entry serves every size.
+// Looking these up means searching the font's character map and reading three more of its
+// tables, for each font of the chain that lacks the character, twice per draw. This table
+// is direct mapped: a character overwrites whatever shared its slot.
+typedef struct cache_char {
+    uint32_t chain;             // Identifies the font and its fallbacks; 0 if the slot is empty.
+    uint32_t cp;                // Code point (bits 0-23) and the font's place in the chain (24-31).
+    uint16_t gid;
+    uint16_t advance;
+    int16_t x0, y0, x1, y1;     // All zero for a glyph with no outline.
+} cache_char_t;
+
+typedef struct font_cache {
+    uint32_t mask;              // Hash slots - 1.
+    uint32_t char_mask;         // Character table entries - 1.
+    uint32_t chars;             // Offset of the character table in the block.
+    uint32_t size;              // Of the block.
+    uint32_t start, end;        // The ring is [start, end) in the block.
+    uint32_t head, tail;        // Oldest entry and write position.
+    uint32_t wrap;              // Where the entries before the wrap point stop.
+    uint32_t wrapped;           // The newest entries are at the start, before head.
+    uint32_t glyphs, hits, misses, evictions;
+    uint16_t slots[];           // Hash table.
+} font_cache_t;
+
+// The block; NULL when there is no cache.
+static font_cache_t *cache;
+
+static inline cache_entry_t *cache_at(uint32_t off) {
+    return (cache_entry_t *) (((uint8_t *) cache) + off);
+}
+
+static inline uint32_t cache_entry_size(int w, int h) {
+    return (sizeof(cache_entry_t) + (w * h) + 3) & ~3;
+}
+
+static inline uint32_t cache_hash(uint32_t font, uint32_t gid, uint32_t key, uint32_t stroke) {
+    uint32_t h = (font * 2654435761u) ^ (gid * 40503u) ^ (((key & CACHE_KEY_MASK) | (stroke << 16)) * 2246822519u);
+    return (h ^ (h >> 15)) & cache->mask;
+}
+
+static void cache_link(uint32_t off) {
+    cache_entry_t *e = cache_at(off);
+    uint16_t *slot = &cache->slots[cache_hash(e->font, e->gid, e->key, e->stroke)];
+    e->next = *slot;
+    *slot = off >> 2;
+}
+
+static void cache_unlink(uint32_t off) {
+    cache_entry_t *e = cache_at(off);
+    uint16_t *link = &cache->slots[cache_hash(e->font, e->gid, e->key, e->stroke)];
+    while (*link && (*link != (off >> 2))) {
+        link = &cache_at(*link << 2)->next;
+    }
+    if (*link) {
+        *link = e->next;
+    }
+}
+
+static cache_entry_t *cache_find(uint32_t font, uint32_t gid, uint32_t key, uint32_t stroke) {
+    for (uint32_t i = cache->slots[cache_hash(font, gid, key, stroke)]; i; ) {
+        cache_entry_t *e = cache_at(i << 2);
+        if ((e->font == font) && (e->gid == gid) && ((e->key & CACHE_KEY_MASK) == key) && (e->stroke == stroke)) {
+            return e;
+        }
+        i = e->next;
+    }
+    return NULL;
+}
+
+// Space for an entry of n bytes at the write position, dropping the oldest entries as
+// needed. An entry that was used since it was last looked at here is not dropped: it is
+// moved to the write position and gets another lap. Returns the offset.
+static uint32_t cache_alloc(uint32_t n) {
+    for (;;) {
+        if (!cache->wrapped) {
+            if (cache->head == cache->tail) {
+                // Empty.
+                cache->head = cache->tail = cache->start;
+            }
+            if (n <= (cache->end - cache->tail)) {
+                break;
+            }
+            // No room before the end: carry on from the start, behind the oldest entries.
+            cache->wrap = cache->tail;
+            cache->tail = cache->start;
+            cache->wrapped = true;
+        }
+        if (n <= (cache->head - cache->tail)) {
+            break;
+        }
+        // Make room by passing over the oldest entry.
+        cache_entry_t *e = cache_at(cache->head);
+        uint32_t size = cache_entry_size(e->w, e->h);
+        if (e->font && (e->key & CACHE_USED)) {
+            cache_unlink(cache->head);
+            e->key &= ~CACHE_USED;
+            if (cache->tail != cache->head) {
+                memmove(((uint8_t *) cache) + cache->tail, e, size);
+            }
+            cache_link(cache->tail);
+            cache->tail += size;
+        } else if (e->font) {
+            cache_unlink(cache->head);
+            cache->glyphs--;
+            cache->evictions++;
+        }
+        cache->head += size;
+        if (cache->head == cache->wrap) {
+            cache->head = cache->start;
+            cache->wrapped = false;
+        }
+    }
+    uint32_t off = cache->tail;
+    cache->tail += n;
+    return off;
+}
+
+void font_cache_init(void *buf, size_t size) {
+    cache = NULL;
+    // Offsets are 16 bits of 4 byte units.
+    size = IM_MIN(size, (size_t) 0x3FFFC) & ~3;
+    if ((!buf) || (size < CACHE_MIN_SIZE)) {
+        return;
+    }
+    // About one slot per 64 bytes and one character per 128, both powers of two.
+    uint32_t slots = 16;
+    while ((slots * 2 * 64) <= size) {
+        slots *= 2;
+    }
+    uint32_t chars = slots / 2;
+    cache = buf;
+    cache->chars = sizeof(font_cache_t) + (slots * sizeof(uint16_t));
+    cache->start = cache->chars + (chars * sizeof(cache_char_t));
+    memset(cache, 0, cache->start);
+    cache->chars = sizeof(font_cache_t) + (slots * sizeof(uint16_t));
+    cache->start = cache->head = cache->tail = cache->chars + (chars * sizeof(cache_char_t));
+    cache->mask = slots - 1;
+    cache->char_mask = chars - 1;
+    cache->size = size;
+    cache->end = size;
+}
+
+void font_cache_purge(const font_t *f) {
+    if (!cache) {
+        return;
+    }
+    // A character entry does not say which fonts its chain had, and this is rare: drop them all.
+    memset(((uint8_t *) cache) + cache->chars, 0, (cache->char_mask + 1) * sizeof(cache_char_t));
+    uint32_t font = ~(uint32_t) (uintptr_t) f->data;
+    // Walk the ring: [head, wrap) then [start, tail) when wrapped, else [head, tail).
+    uint32_t off = cache->head;
+    uint32_t stop = cache->wrapped ? cache->wrap : cache->tail;
+    for (int pass = cache->wrapped ? 2 : 1; pass; pass--) {
+        while (off < stop) {
+            cache_entry_t *e = cache_at(off);
+            if (e->font == font) {
+                cache_unlink(off);
+                e->font = 0;
+                cache->glyphs--;
+            }
+            off += cache_entry_size(e->w, e->h);
+        }
+        off = cache->start;
+        stop = cache->tail;
+    }
+}
+
+void font_cache_info(font_cache_info_t *info) {
+    memset(info, 0, sizeof(*info));
+    if (!cache) {
+        return;
+    }
+    info->size = cache->size;
+    info->used = cache->wrapped ? ((cache->wrap - cache->head) + (cache->tail - cache->start)) : (cache->tail - cache->head);
+    info->glyphs = cache->glyphs;
+    info->hits = cache->hits;
+    info->misses = cache->misses;
+    info->evictions = cache->evictions;
+}
+
+///////////////////////////////////////////////////////////////////////////////
 // Layout
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -1056,6 +1271,7 @@ typedef struct font_pass {
     int stroke;             // Pixels of outline.
     int lines;
     font_err_t err;         // First error hit while walking the string.
+    uint32_t chain;         // Identifies f and its fallbacks in the character cache.
     // Render only.
     const font_box_t *box;
     image_t *out;
@@ -1064,8 +1280,7 @@ typedef struct font_pass {
     size_t acc_size;
 } font_pass_t;
 
-// What laying out a character needs: which font of the fallback chain draws it, the glyph,
-// its advance and its bounding box, in that font's units.
+// A character as the layout sees it (see cache_char_t).
 typedef struct font_char {
     const font_t *f;
     uint16_t gid;
@@ -1075,8 +1290,27 @@ typedef struct font_char {
 
 static const font_t *font_select(const font_t *f, uint32_t cp, uint16_t *gid);
 
-// Looks a character up. Returns false (with ps->err set) if the glyph record is corrupt.
+// Looks a character up, in the cache if there is one. Returns false (with ps->err set) if
+// the glyph record is corrupt.
 static bool font_char(font_pass_t *ps, uint32_t cp, font_char_t *ch) {
+    cache_char_t *c = NULL;
+    if (cache) {
+        uint32_t h = (ps->chain * 2654435761u) ^ (cp * 40503u);
+        c = ((cache_char_t *) (((uint8_t *) cache) + cache->chars)) + ((h ^ (h >> 15)) & cache->char_mask);
+        if ((c->chain == ps->chain) && ((c->cp & 0xFFFFFF) == cp)) {
+            ch->f = ps->f;
+            for (uint32_t depth = c->cp >> 24; depth; depth--) {
+                ch->f = ch->f->fallback;
+            }
+            ch->gid = c->gid;
+            ch->advance = c->advance;
+            ch->x0 = c->x0;
+            ch->y0 = c->y0;
+            ch->x1 = c->x1;
+            ch->y1 = c->y1;
+            return true;
+        }
+    }
     const uint8_t *p;
     uint32_t len;
     ch->f = font_select(ps->f, cp, &ch->gid);
@@ -1089,6 +1323,20 @@ static bool font_char(font_pass_t *ps, uint32_t cp, font_char_t *ch) {
         ch->y1 = rds16(p + 8);
     } else if (ps->err != FONT_OK) {
         return false;
+    }
+    if (c) {
+        uint32_t depth = 0;
+        for (const font_t *f = ps->f; f != ch->f; f = f->fallback) {
+            depth++;
+        }
+        c->chain = ps->chain;
+        c->cp = cp | (depth << 24);
+        c->gid = ch->gid;
+        c->advance = ch->advance;
+        c->x0 = ch->x0;
+        c->y0 = ch->y0;
+        c->x1 = ch->x1;
+        c->y1 = ch->y1;
     }
     return true;
 }
@@ -1182,8 +1430,8 @@ static void font_place(font_pass_t *ps, const font_char_t *ch, float s, float pe
     const font_t *f = ch->f;
     uint16_t gid = ch->gid;
     int stroke = ps->stroke;
-    // The pen is placed on a quarter pixel, so a glyph has at most four renderings at a
-    // size. px and py are the pen's whole pixel and the (whole) baseline.
+    // The pen is placed on a quarter pixel, so a glyph has at most four renderings at a size
+    // and each can be cached. px and py are the pen's whole pixel and the (whole) baseline.
     int px = font_floorf(pen_x);
     int phase = fast_roundf((pen_x - px) * 4.0f);
     if (phase == 4) {
@@ -1216,6 +1464,25 @@ static void font_place(font_pass_t *ps, const font_char_t *ch, float s, float pe
     int oy = py + by - stroke;
     int ow = bw + (2 * stroke);
     int oh = bh + (2 * stroke);
+
+    // In the cache? The key is the font, the glyph, the pixel size, the x offset and the
+    // outline, which together fix the bitmap and where it goes.
+    uint32_t font = ~(uint32_t) (uintptr_t) f->data;
+    uint32_t key = fast_roundf(ps->px * FONT_PX_STEPS);
+    uint32_t entry_size = cache_entry_size(ow, oh);
+    bool cacheable = cache && (ow <= 255) && (oh <= 255) && (key <= 0xFFF) &&
+                     (entry_size <= ((cache->end - cache->start) / 4));
+    key |= phase << 12;
+    if (cacheable) {
+        cache_entry_t *e = cache_find(font, gid, key, stroke);
+        if (e) {
+            e->key |= CACHE_USED;
+            cache->hits++;
+            font_blit(ps, (const uint8_t *) (e + 1), e->w, e->h, ox, oy);
+            return;
+        }
+        cache->misses++;
+    }
 
     // Room to accumulate the glyph, and for its outlined form after its coverage.
     raster_t r = { .w = bw, .h = bh, .stride = bw + 2 };
@@ -1260,6 +1527,18 @@ static void font_place(font_pass_t *ps, const font_char_t *ch, float s, float pe
         bitmap = b;
     }
 
+    if (cacheable) {
+        cache_entry_t *e = cache_at(cache_alloc(entry_size));
+        e->font = font;
+        e->gid = gid;
+        e->key = key;
+        e->w = ow;
+        e->h = oh;
+        e->stroke = stroke;
+        memcpy(e + 1, bitmap, ow * oh);
+        cache_link((uint8_t *) e - (uint8_t *) cache);
+        cache->glyphs++;
+    }
     font_blit(ps, bitmap, ow, oh, ox, oy);
 }
 
@@ -1368,7 +1647,7 @@ static void font_walk(font_pass_t *ps, const char *str) {
                 arabic_reorder(cps + first, last - first);
             }
             // Lines start on a whole pixel whatever the alignment, so a glyph is rasterized
-            // at the same offsets as in left aligned text.
+            // (and cached) at the same offsets as in left aligned text.
             float pen_x = ps->stroke;
             float prev_x = 0.0f;
             float prev_adv = 0.0f;
@@ -1409,12 +1688,17 @@ static void font_walk(font_pass_t *ps, const char *str) {
 static void font_pass_init(font_pass_t *ps, const font_t *f, const font_layout_t *layout) {
     memset(ps, 0, sizeof(*ps));
     ps->f = f;
-    ps->px = f->px * layout->scale;
+    ps->px = IM_MAX(fast_roundf(f->px * layout->scale * FONT_PX_STEPS), 1) * (1.0f / FONT_PX_STEPS);
     ps->s = ps->px / f->units_per_em;
     ps->align = layout->align;
     ps->stroke = IM_CLAMP(layout->stroke, 0, FONT_STROKE_MAX);
     // The outline is part of the text's width.
     ps->wrap = (layout->wrap_width > 0) ? IM_MAX(layout->wrap_width - (2 * ps->stroke), 1) : 0.0f;
+    // Nonzero, and different for the same font with different fallbacks.
+    for (const font_t *c = f; c; c = c->fallback) {
+        ps->chain = (ps->chain * 31) + (uint32_t) (uintptr_t) c->data;
+    }
+    ps->chain |= 1;
     // Baselines sit on whole pixels, so every line is rasterized at the same vertical phase
     // and a font's pixel metrics (ascender, line height) are exact. Advances stay fractional.
     ps->baseline = fast_roundf(f->ascender * ps->s) + ps->stroke;
