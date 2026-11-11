@@ -454,6 +454,7 @@ typedef struct _omv_csi {
     int framerate;              // Frame rate
     bool first_line;            // Set to true when the first line of the frame is being read.
     bool drop_frame;            // Set to true to drop the current frame.
+    bool retrigger;             // Set to true to have snapshot pulse FSYNC again.
     uint32_t last_frame_ms;     // Last sampled frame timestamp in milliseconds.
     bool last_frame_ms_valid;   // Last sampled frame timestamp in milliseconds valid.
     omv_csi_gainceiling_t gainceiling;  // AGC gainceiling

@@ -447,6 +447,8 @@ static void stm_csi_frame_event(omv_csi_t *csi, uint32_t pipe) {
     if (csi->raw_output && csi->stats_enabled && !csi->stats.initialized) {
         stm_isp_update_awb(csi, DCMIPP_PIPE);
         csi->drop_frame = true;
+        // A triggered sensor outputs one frame per trigger. So, have snapshot trigger it again.
+        csi->retrigger = true;
     }
     #endif // OMV_CSI_STATS_ENABLE
 
@@ -728,6 +730,16 @@ static int stm_csi_snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
     for (mp_uint_t start = mp_hal_ticks_ms(); ; mp_event_handle_nowait()) {
         if ((buffer = framebuffer_acquire(fb, fb_flags))) {
             break;
+        }
+
+        // The frame was dropped, pulse FSYNC for another one. Free running sensors ignore the pin.
+        if (csi->retrigger) {
+            csi->retrigger = false;
+            if (csi->fsync_pin) {
+                omv_gpio_write(csi->fsync_pin, 0);
+                mp_hal_delay_us(100);
+                omv_gpio_write(csi->fsync_pin, 1);
+            }
         }
 
         if (flags & OMV_CSI_FLAG_NON_BLOCK) {
