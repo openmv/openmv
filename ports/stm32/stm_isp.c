@@ -38,6 +38,63 @@
 #include "board_config.h"
 
 #ifdef DCMIPP
+static void stm_isp_set_stats_channel(omv_csi_t *csi, uint32_t pipe, uint32_t channel) {
+    const uint32_t source[] = {
+        DCMIPP_STAT_EXT_SOURCE_PRE_BLKLVL_R,
+        DCMIPP_STAT_EXT_SOURCE_PRE_BLKLVL_G,
+        DCMIPP_STAT_EXT_SOURCE_PRE_BLKLVL_B
+    };
+
+    // There aren't enough modules for every channel, so one channel is measured per frame.
+    DCMIPP_StatisticExtractionConfTypeDef cfg[3] = {
+        // Counts the channel's pixels above 239 (the up bins threshold differs per module).
+        // The count removes the clipped pixels from the channel's sum.
+        {
+            .Mode = DCMIPP_STAT_EXT_MODE_BINS,
+            .Source = source[channel],
+            .Bins = DCMIPP_STAT_EXT_BINS_MODE_UP_BINS,
+        },
+        // Sums all of the channel's pixels, including the clipped ones.
+        // The result is the sum divided by 256.
+        {
+            .Mode = DCMIPP_STAT_EXT_MODE_AVERAGE,
+            .Source = source[channel],
+            .Bins = DCMIPP_STAT_EXT_AVER_MODE_ALL_PIXELS,
+        },
+        // Sums the luminance (all bayer pixels) every frame for AEC, and to scale the channels
+        // measured in earlier frames to the last frame's exposure.
+        {
+            .Mode = DCMIPP_STAT_EXT_MODE_AVERAGE,
+            .Source = DCMIPP_STAT_EXT_SOURCE_PRE_BLKLVL_L,
+            .Bins = DCMIPP_STAT_EXT_AVER_MODE_ALL_PIXELS,
+        },
+    };
+
+    for (size_t i = 0; i < 3; i++) {
+        HAL_DCMIPP_PIPE_SetISPStatisticExtractionConfig(&csi->dcmipp, pipe, DCMIPP_STATEXT_MODULE1 + i, &cfg[i]);
+    }
+}
+
+// Called at the end of every frame to read the stats and measure the next channel.
+void stm_isp_update_stats(omv_csi_t *csi, uint32_t pipe) {
+    stm_isp_stats_t *stats = &csi->isp_stats;
+    uint32_t accu[3];
+
+    for (size_t i = 0; i < 3; i++) {
+        HAL_DCMIPP_PIPE_GetISPAccumulatedStatisticsCounter(&csi->dcmipp, pipe, DCMIPP_STATEXT_MODULE1 + i, &accu[i]);
+    }
+
+    // The stats configured at the end of a frame apply to the next frame.
+    stats->channels[stats->channel].count = accu[0];
+    stats->channels[stats->channel].sum = accu[1];
+    stats->channels[stats->channel].luma = accu[2];
+    stats->ready |= stats->channel == 2;
+    stats->luma = accu[2];
+
+    stats->channel = (stats->channel + 1) % 3;
+    stm_isp_set_stats_channel(csi, pipe, stats->channel);
+}
+
 #ifdef OMV_CSI_HW_CCM_ENABLE
 // Matrix3x3_Coeff: 11-bit signed, 2 int + 8 dec -> 1.0 = 256.
 // Added3x1_Coeff:  10-bit signed, 9 int + 0 dec -> 1.0 = 1.
@@ -48,12 +105,12 @@
 #define DCMIPP_CCM_OFFSET_MAX   (511)
 
 // Quantizes the blended CCM into the ISP's color conversion block.
-static void stm_isp_update_ccm(omv_csi_t *csi, uint32_t pipe, const uint32_t avg[3], float luminance) {
+static void stm_isp_update_ccm(omv_csi_t *csi, uint32_t pipe, const float avg[3], float luminance) {
     omv_csi_ccm_t ccm;
     int16_t coeffs[3][3];
     int16_t offsets[3];
 
-    if (!omv_csi_ccm_compute(csi->ccm, avg, luminance, &ccm)) {
+    if (!omv_csi_ccm_compute(csi->ccm, avg, luminance, csi->isp_stats.gain_db, &ccm)) {
         return;
     }
 
@@ -99,33 +156,68 @@ static void stm_isp_update_ccm(omv_csi_t *csi, uint32_t pipe, const uint32_t avg
 #endif // OMV_CSI_HW_CCM_ENABLE
 
 float stm_isp_update_awb(omv_csi_t *csi, uint32_t pipe) {
-    uint32_t avg[3];
     uint32_t shift[3];
     uint32_t multi[3];
-    float luminance;
+    stm_isp_stats_t stats;
 
     uint32_t src_w = csi->src_w ? csi->src_w : csi->resolution[csi->framesize][0];
     uint32_t src_h = csi->src_h ? csi->src_h : csi->resolution[csi->framesize][1];
     uint32_t n_pixels = src_w * src_h;
 
-    for (int i = 0; i < 3; i++) {
-        // DCMIPP_STATEXT_MODULE1
-        HAL_DCMIPP_PIPE_GetISPAccumulatedStatisticsCounter(&csi->dcmipp, pipe, i + 1, &avg[i]);
+    // Copy the stats so that the frame IRQ can't update them while they're being read.
+    mp_uint_t atomic_state = MICROPY_BEGIN_ATOMIC_SECTION();
+    stats = csi->isp_stats;
+    MICROPY_END_ATOMIC_SECTION(atomic_state);
+
+    if (csi->stats_enabled && stats.ready) {
+        // Stats are collected from bayer components (4R 2G 4B).
+        float n[3] = { n_pixels / 4, n_pixels / 2, n_pixels / 4 };
+        float mean[3];
+        float clipped[3];
+        float unclipped[3];
+
+        for (int i = 0; i < 3; i++) {
+            mean[i] = stats.channels[i].sum * 256.0f / n[i];
+            clipped[i] = OMV_MIN(stats.channels[i].count / n[i], 1.0f);
+        }
+
+        if (omv_csi_stats_unclip(mean, clipped, unclipped)) {
+            for (int i = 0; i < 3; i++) {
+                // Each channel is measured in a different frame, so scale them to the last frame's luminance.
+                unclipped[i] *= (float) stats.luma / OMV_MAX(stats.channels[i].luma, 1);
+            }
+
+            #ifdef OMV_CSI_HW_CCM_ENABLE
+            // Real illuminants lie on the calibration illuminants' polyline, so clipping and mixed lighting
+            // can only shift the estimate between them, not tint it green or magenta.
+            omv_csi_ccm_project(csi->ccm, unclipped);
+            #endif // OMV_CSI_HW_CCM_ENABLE
+
+            uint32_t rgb[3];
+
+            for (int i = 0; i < 3; i++) {
+                rgb[i] = fast_roundf(OMV_MAX(unclipped[i], 1.0f));
+            }
+
+            omv_csi_stats_update(csi, &rgb[0], &rgb[1], &rgb[2], mp_hal_ticks_ms());
+        }
     }
 
-    // Averages are collected from bayer components (4R 2G 4B).
-    avg[0] = OMV_MAX((avg[0] * 256 * 4) / n_pixels, 1);
-    avg[1] = OMV_MAX((avg[1] * 256 * 2) / n_pixels, 1);
-    avg[2] = OMV_MAX((avg[2] * 256 * 4) / n_pixels, 1);
+    // The averages are small in dark scenes, so they aren't rounded, which would step the gains as they change.
+    float avg[3] = { csi->stats.r_avg, csi->stats.g_avg, csi->stats.b_avg };
 
-    // Compute raw (un-smoothed) luminance for AEC before the EMA filter.
-    luminance = avg[0] * 0.299f + avg[1] * 0.587f + avg[2] * 0.114f;
+    // Weight the bayer luminance mean, (R + 2G + B) / 4, by the channel averages for AEC.
+    float luminance = stats.luma * 256.0f / n_pixels;
+    float weight = avg[0] + avg[1] * 2 + avg[2];
 
-    if (csi->stats_enabled) {
-        omv_csi_stats_update(csi, &avg[0], &avg[1], &avg[2], mp_hal_ticks_ms());
+    if (weight > 0.0f) {
+        luminance *= (avg[0] * 0.299f + avg[1] * 0.587f + avg[2] * 0.114f) * 4.0f / weight;
     }
 
-    omv_csi_get_stats(csi, &avg[0], &avg[1], &avg[2]);
+    // The channel averages aren't ready until every channel was measured.
+    if (!csi->stats.initialized) {
+        return luminance;
+    }
 
     // Normalize to the largest channel so that no gain is below 1 and clipped pixels stay white.
     float awb_max = OMV_MAX(OMV_MAX(avg[0], avg[1]), avg[2]);
@@ -182,25 +274,11 @@ int stm_isp_init(omv_csi_t *csi, uint32_t pipe, pixformat_t pixformat, bool raw_
         return -1;
     }
 
-    const uint32_t statsrc[] = {
-        DCMIPP_STAT_EXT_SOURCE_PRE_BLKLVL_R,
-        DCMIPP_STAT_EXT_SOURCE_PRE_BLKLVL_G,
-        DCMIPP_STAT_EXT_SOURCE_PRE_BLKLVL_B
-    };
-    DCMIPP_StatisticExtractionConfTypeDef statcfg[3];
-
-    for (size_t i = 0; i < 3; i++) {
-        statcfg[i].Source = statsrc[i];
-        statcfg[i].Mode = DCMIPP_STAT_EXT_MODE_AVERAGE;
-        statcfg[i].Bins = DCMIPP_STAT_EXT_AVER_MODE_ALL_PIXELS; //NOEXT16;
-    }
+    // Restart the stats from the first channel.
+    memset(&csi->isp_stats, 0, sizeof(csi->isp_stats));
+    stm_isp_set_stats_channel(csi, pipe, 0);
 
     for (size_t i = DCMIPP_STATEXT_MODULE1; i <= DCMIPP_STATEXT_MODULE3; i++) {
-        if (HAL_DCMIPP_PIPE_SetISPStatisticExtractionConfig(&csi->dcmipp, pipe, i,
-                                                            &statcfg[i - DCMIPP_STATEXT_MODULE1]) != HAL_OK) {
-            return -1;
-        }
-
         if (HAL_DCMIPP_PIPE_EnableISPStatisticExtraction(&csi->dcmipp, pipe, i) != HAL_OK) {
             return -1;
         }

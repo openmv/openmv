@@ -436,11 +436,19 @@ static void stm_csi_frame_event(omv_csi_t *csi, uint32_t pipe) {
     HAL_NVIC_EnableIRQ(csi->dma_irqn);
     #endif
 
-    // The ISP AWB stats lag by one frame. So, drop the first frame when not initialized.
+    #if USE_DCMIPP
+    if (csi->raw_output) {
+        stm_isp_update_stats(csi, DCMIPP_PIPE);
+    }
+    #endif
+
+    // The ISP AWB stats take a frame per channel. So, drop frames until they're initialized.
     #if defined(OMV_CSI_STATS_ENABLE)
     if (csi->raw_output && csi->stats_enabled && !csi->stats.initialized) {
         stm_isp_update_awb(csi, DCMIPP_PIPE);
         csi->drop_frame = true;
+        // A triggered sensor outputs one frame per trigger. So, have snapshot trigger it again.
+        csi->retrigger = true;
     }
     #endif // OMV_CSI_STATS_ENABLE
 
@@ -724,6 +732,16 @@ static int stm_csi_snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
             break;
         }
 
+        // The frame was dropped, pulse FSYNC for another one. Free running sensors ignore the pin.
+        if (csi->retrigger) {
+            csi->retrigger = false;
+            if (csi->fsync_pin) {
+                omv_gpio_write(csi->fsync_pin, 0);
+                mp_hal_delay_us(100);
+                omv_gpio_write(csi->fsync_pin, 1);
+            }
+        }
+
         if (flags & OMV_CSI_FLAG_NON_BLOCK) {
             return OMV_CSI_ERROR_WOULD_BLOCK;
         }
@@ -797,6 +815,15 @@ static int stm_csi_snapshot(omv_csi_t *csi, image_t *image, uint32_t flags) {
 
     #if USE_DCMIPP
     if (csi->raw_output) {
+        #ifdef OMV_CSI_HW_CCM_ENABLE
+        // The CCM fades with the sensor gain, which only needs to be read as often as the AWB settles.
+        uint32_t ms = mp_hal_ticks_ms();
+        if (csi->ccm && ms - csi->isp_stats.gain_ms >= OMV_CSI_STATS_TAU_MS) {
+            omv_csi_get_gain_db(csi, &csi->isp_stats.gain_db);
+            csi->isp_stats.gain_ms = ms;
+        }
+        #endif // OMV_CSI_HW_CCM_ENABLE
+
         float luminance = stm_isp_update_awb(csi, DCMIPP_PIPE);
         if (csi->ioctl) {
             omv_csi_ioctl_arg_t arg = { .ivalue = fast_floorf(luminance) };

@@ -36,7 +36,7 @@
 #include "unittest.h"
 
 // Raw R/G/B averages of the calibration illuminants, warmest to coolest.
-static const uint32_t ccm_rgb[3][3] = {
+static const float ccm_rgb[3][3] = {
     { 100, 100, 50 },
     { 80, 100, 80 },
     { 50, 100, 100 },
@@ -104,8 +104,8 @@ static bool ccm_is_unity(const omv_csi_ccm_t *out) {
 // The compile-time chroma matches logf() at runtime.
 static mp_obj_t test_ccm_chroma(void) {
     for (int i = 0; i < 3; i++) {
-        if (!FLOAT_EQ(ccm_chroma[i][0], logf((float) ccm_rgb[i][0] / ccm_rgb[i][1]), 0.0001f) ||
-            !FLOAT_EQ(ccm_chroma[i][1], logf((float) ccm_rgb[i][2] / ccm_rgb[i][1]), 0.0001f)) {
+        if (!FLOAT_EQ(ccm_chroma[i][0], logf(ccm_rgb[i][0] / ccm_rgb[i][1]), 0.0001f) ||
+            !FLOAT_EQ(ccm_chroma[i][1], logf(ccm_rgb[i][2] / ccm_rgb[i][1]), 0.0001f)) {
             return mp_const_false;
         }
     }
@@ -116,9 +116,10 @@ static MP_DEFINE_CONST_FUN_OBJ_0(test_ccm_chroma_obj, test_ccm_chroma);
 // A missing or empty table leaves the CCM unchanged.
 static mp_obj_t test_ccm_empty(void) {
     omv_csi_ccm_t out;
-    const uint32_t rgb[3] = { 80, 100, 80 };
+    const float rgb[3] = { 80.0f, 100.0f, 80.0f };
 
-    if (omv_csi_ccm_compute(NULL, rgb, 100.0f, &out) || omv_csi_ccm_compute(ccm_table(0), rgb, 100.0f, &out)) {
+    if (omv_csi_ccm_compute(NULL, rgb, 100.0f, 0.0f, &out) ||
+        omv_csi_ccm_compute(ccm_table(0), rgb, 100.0f, 0.0f, &out)) {
         return mp_const_false;
     }
     return mp_const_true;
@@ -131,7 +132,7 @@ static mp_obj_t test_ccm_calibration_points(void) {
 
     for (int i = 0; i < 3; i++) {
         omv_csi_ccm_t out;
-        if (!omv_csi_ccm_compute(table, ccm_rgb[i], 100.0f, &out) ||
+        if (!omv_csi_ccm_compute(table, ccm_rgb[i], 100.0f, 0.0f, &out) ||
             !ccm_equal(&out, &ccm_entries[i], &ccm_entries[i], 0.0f)) {
             return mp_const_false;
         }
@@ -143,14 +144,16 @@ static MP_DEFINE_CONST_FUN_OBJ_0(test_ccm_calibration_points_obj, test_ccm_calib
 // Illuminants past either end of the polyline clamp to the end matrices.
 static mp_obj_t test_ccm_clamp_ends(void) {
     const omv_csi_ccm_table_t *table = ccm_table(3);
-    const uint32_t warm[3] = { 200, 100, 10 };
-    const uint32_t cool[3] = { 10, 100, 200 };
+    const float warm[3] = { 200.0f, 100.0f, 10.0f };
+    const float cool[3] = { 10.0f, 100.0f, 200.0f };
     omv_csi_ccm_t out;
 
-    if (!omv_csi_ccm_compute(table, warm, 100.0f, &out) || !ccm_equal(&out, &ccm_entries[0], &ccm_entries[0], 0.0f)) {
+    if (!omv_csi_ccm_compute(table, warm, 100.0f, 0.0f, &out) ||
+        !ccm_equal(&out, &ccm_entries[0], &ccm_entries[0], 0.0f)) {
         return mp_const_false;
     }
-    if (!omv_csi_ccm_compute(table, cool, 100.0f, &out) || !ccm_equal(&out, &ccm_entries[2], &ccm_entries[2], 0.0f)) {
+    if (!omv_csi_ccm_compute(table, cool, 100.0f, 0.0f, &out) ||
+        !ccm_equal(&out, &ccm_entries[2], &ccm_entries[2], 0.0f)) {
         return mp_const_false;
     }
     return mp_const_true;
@@ -165,9 +168,10 @@ static mp_obj_t test_ccm_blend(void) {
     // The log-space midpoint of the first two illuminants.
     float mid0 = (ccm_entries[0].chroma[0] + ccm_entries[1].chroma[0]) / 2.0f;
     float mid1 = (ccm_entries[0].chroma[1] + ccm_entries[1].chroma[1]) / 2.0f;
-    const uint32_t rgb[3] = { fast_roundf(expf(mid0) * 10000.0f), 10000, fast_roundf(expf(mid1) * 10000.0f) };
+    const float rgb[3] = { expf(mid0) * 100.0f, 100.0f, expf(mid1) * 100.0f };
 
-    if (!omv_csi_ccm_compute(table, rgb, 100.0f, &out) || !ccm_equal(&out, &ccm_entries[0], &ccm_entries[1], 0.5f)) {
+    if (!omv_csi_ccm_compute(table, rgb, 100.0f, 0.0f, &out) ||
+        !ccm_equal(&out, &ccm_entries[0], &ccm_entries[1], 0.5f)) {
         return mp_const_false;
     }
 
@@ -193,18 +197,18 @@ static mp_obj_t test_ccm_fade(void) {
     omv_csi_ccm_t out;
 
     for (size_t i = 0; i < OMV_ARRAY_SIZE(unity_luma); i++) {
-        if (!omv_csi_ccm_compute(table, ccm_rgb[1], unity_luma[i], &out) || !ccm_is_unity(&out)) {
+        if (!omv_csi_ccm_compute(table, ccm_rgb[1], unity_luma[i], 0.0f, &out) || !ccm_is_unity(&out)) {
             return mp_const_false;
         }
     }
     for (size_t i = 0; i < OMV_ARRAY_SIZE(half_luma); i++) {
-        if (!omv_csi_ccm_compute(table, ccm_rgb[1], half_luma[i], &out) ||
+        if (!omv_csi_ccm_compute(table, ccm_rgb[1], half_luma[i], 0.0f, &out) ||
             !ccm_equal(&out, &unity, &ccm_entries[1], 0.5f)) {
             return mp_const_false;
         }
     }
     for (size_t i = 0; i < OMV_ARRAY_SIZE(full_luma); i++) {
-        if (!omv_csi_ccm_compute(table, ccm_rgb[1], full_luma[i], &out) ||
+        if (!omv_csi_ccm_compute(table, ccm_rgb[1], full_luma[i], 0.0f, &out) ||
             !ccm_equal(&out, &ccm_entries[1], &ccm_entries[1], 0.0f)) {
             return mp_const_false;
         }
@@ -213,13 +217,83 @@ static mp_obj_t test_ccm_fade(void) {
 }
 static MP_DEFINE_CONST_FUN_OBJ_0(test_ccm_fade_obj, test_ccm_fade);
 
+// High sensor gains fade to unity, and a table without a gain range never fades.
+static mp_obj_t test_ccm_gain_fade(void) {
+    const omv_csi_ccm_table_t *table = ccm_table(3);
+    omv_csi_ccm_table_t gain_table = *table;
+    const omv_csi_ccm_t unity = {
+        .coeffs = { { 1.0f, 0.0f, 0.0f }, { 0.0f, 1.0f, 0.0f }, { 0.0f, 0.0f, 1.0f } },
+    };
+    omv_csi_ccm_t out;
+
+    gain_table.gain_db[0] = 18.0f;
+    gain_table.gain_db[1] = 24.0f;
+
+    if (!omv_csi_ccm_compute(&gain_table, ccm_rgb[1], 100.0f, 0.0f, &out) ||
+        !ccm_equal(&out, &ccm_entries[1], &ccm_entries[1], 0.0f)) {
+        return mp_const_false;
+    }
+    if (!omv_csi_ccm_compute(&gain_table, ccm_rgb[1], 100.0f, 21.0f, &out) ||
+        !ccm_equal(&out, &unity, &ccm_entries[1], 0.5f)) {
+        return mp_const_false;
+    }
+    if (!omv_csi_ccm_compute(&gain_table, ccm_rgb[1], 100.0f, 30.0f, &out) || !ccm_is_unity(&out)) {
+        return mp_const_false;
+    }
+    // The darker of the luminance and gain fades wins.
+    if (!omv_csi_ccm_compute(&gain_table, ccm_rgb[1], 8.0f, 0.0f, &out) || !ccm_is_unity(&out)) {
+        return mp_const_false;
+    }
+    if (!omv_csi_ccm_compute(table, ccm_rgb[1], 100.0f, 30.0f, &out) ||
+        !ccm_equal(&out, &ccm_entries[1], &ccm_entries[1], 0.0f)) {
+        return mp_const_false;
+    }
+    return mp_const_true;
+}
+static MP_DEFINE_CONST_FUN_OBJ_0(test_ccm_gain_fade_obj, test_ccm_gain_fade);
+
+// Averages on the calibration illuminants' polyline are unchanged, off it they move to the closest
+// point, past the ends they clamp to the end, and green is kept.
+static mp_obj_t test_ccm_project(void) {
+    const omv_csi_ccm_table_t *table = ccm_table(3);
+
+    for (int i = 0; i < 3; i++) {
+        float rgb[3] = { ccm_rgb[i][0], ccm_rgb[i][1], ccm_rgb[i][2] };
+        if (!omv_csi_ccm_project(table, rgb) || fabsf(rgb[0] - ccm_rgb[i][0]) > 1e-3f ||
+            fabsf(rgb[1] - ccm_rgb[i][1]) > 1e-3f || fabsf(rgb[2] - ccm_rgb[i][2]) > 1e-3f) {
+            return mp_const_false;
+        }
+    }
+
+    // Moved off the middle of the warmest segment toward magenta, it lands back on the middle.
+    float magenta[3] = { 97.8988f, 100.0f, 66.0171f };
+    if (!omv_csi_ccm_project(table, magenta) || fabsf(magenta[0] - 100.0f * sqrtf(0.8f)) > 1e-2f ||
+        magenta[1] != 100.0f || fabsf(magenta[2] - 100.0f * sqrtf(0.4f)) > 1e-2f) {
+        return mp_const_false;
+    }
+
+    float warm[3] = { 120.0f, 100.0f, 30.0f };
+    if (!omv_csi_ccm_project(table, warm) || fabsf(warm[0] - 100.0f) > 1e-3f || fabsf(warm[2] - 50.0f) > 1e-3f) {
+        return mp_const_false;
+    }
+
+    // Without at least two illuminants there's no polyline, and the averages are unchanged.
+    float rgb[3] = { 120.0f, 100.0f, 30.0f };
+    if (omv_csi_ccm_project(NULL, rgb) || omv_csi_ccm_project(ccm_table(1), rgb) ||
+        rgb[0] != 120.0f || rgb[2] != 30.0f) {
+        return mp_const_false;
+    }
+    return mp_const_true;
+}
+static MP_DEFINE_CONST_FUN_OBJ_0(test_ccm_project_obj, test_ccm_project);
+
 // A single-entry table always returns that entry.
 static mp_obj_t test_ccm_single(void) {
     const omv_csi_ccm_table_t *table = ccm_table(1);
 
     for (int i = 0; i < 3; i++) {
         omv_csi_ccm_t out;
-        if (!omv_csi_ccm_compute(table, ccm_rgb[i], 100.0f, &out) ||
+        if (!omv_csi_ccm_compute(table, ccm_rgb[i], 100.0f, 0.0f, &out) ||
             !ccm_equal(&out, &ccm_entries[0], &ccm_entries[0], 0.0f)) {
             return mp_const_false;
         }
@@ -237,6 +311,8 @@ static const mp_rom_map_elem_t unittest_ccm_module_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_test_ccm_clamp_ends), MP_ROM_PTR(&test_ccm_clamp_ends_obj) },
     { MP_ROM_QSTR(MP_QSTR_test_ccm_blend), MP_ROM_PTR(&test_ccm_blend_obj) },
     { MP_ROM_QSTR(MP_QSTR_test_ccm_fade), MP_ROM_PTR(&test_ccm_fade_obj) },
+    { MP_ROM_QSTR(MP_QSTR_test_ccm_gain_fade), MP_ROM_PTR(&test_ccm_gain_fade_obj) },
+    { MP_ROM_QSTR(MP_QSTR_test_ccm_project), MP_ROM_PTR(&test_ccm_project_obj) },
     { MP_ROM_QSTR(MP_QSTR_test_ccm_single), MP_ROM_PTR(&test_ccm_single_obj) },
 };
 

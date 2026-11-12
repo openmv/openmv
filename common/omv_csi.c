@@ -66,10 +66,6 @@
 #define OMV_CSI_CLK_TOLERANCE   (500000)
 #endif
 
-#ifndef OMV_CSI_STATS_TAU_MS
-#define OMV_CSI_STATS_TAU_MS    (250)
-#endif
-
 #ifndef __weak
 #define __weak    __attribute__((weak))
 #endif
@@ -266,6 +262,7 @@ __weak int omv_csi_abort(omv_csi_t *csi, bool fifo_flush, bool in_irq) {
 
     csi->first_line = false;
     csi->drop_frame = false;
+    csi->retrigger = false;
     csi->last_frame_ms = 0;
     csi->last_frame_ms_valid = false;
 
@@ -305,6 +302,7 @@ __weak int omv_csi_reset(omv_csi_t *csi, bool hard) {
     csi->framerate = 0;
     csi->first_line = false;
     csi->drop_frame = false;
+    csi->retrigger = false;
     csi->last_frame_ms = 0;
     csi->last_frame_ms_valid = false;
     csi->gainceiling = 0;
@@ -1210,27 +1208,79 @@ void omv_csi_get_stats(omv_csi_t *csi, uint32_t *r, uint32_t *g, uint32_t *b) {
 }
 #endif // defined(OMV_CSI_STATS_ENABLE)
 
+// Mean brightness of a band relative to its start, for a power law tail through the fraction f0 of pixels
+// above the band's start and f1 above its end, where the end is r times brighter (so r^a = f0 / f1).
+static float omv_csi_stats_tail_mean(float r, float f0, float f1) {
+    if (r <= 1.0f || f1 <= 0.0f || f0 <= f1) {
+        return 1.0f;
+    }
+
+    float a = logf(f0 / f1) / logf(r);
+
+    // The tail falls off as 1 / x when a is 1, where the general formula divides by zero.
+    if (fabsf(a - 1.0f) < 1e-3f) {
+        return logf(r) / (1.0f - 1.0f / r);
+    }
+
+    return a / (a - 1.0f) * (1.0f - r * f1 / f0) / (1.0f - f1 / f0);
+}
+
+// mean: R/G/B means of all pixels (0-255). clipped: fraction of each channel's pixels above 239 (0-1).
+// out: R/G/B means without the pixels clipped in all channels, and with partly clipped pixels estimated above 255.
+bool omv_csi_stats_unclip(const float mean[3], const float clipped[3], float out[3]) {
+    int c[3] = { 0, 1, 2 };
+
+    // Sort the channels from the most to the least clipped.
+    for (int i = 0; i < 2; i++) {
+        for (int j = 0; j < 2 - i; j++) {
+            if (clipped[c[j]] < clipped[c[j + 1]]) {
+                int t = c[j];
+                c[j] = c[j + 1];
+                c[j + 1] = t;
+            }
+        }
+    }
+
+    // Pixels clipped in all channels have an unknown brightness, so they're removed.
+    float all = clipped[c[2]];
+
+    // Most pixels being clipped would amplify any error in the clipped value.
+    if (all >= 0.5f) {
+        return false;
+    }
+
+    for (int i = 0; i < 3; i++) {
+        out[i] = (mean[i] - all * 255.0f) / (1.0f - all);
+    }
+
+    // Highlights clipped in some channels are assumed to be white, so they're brighter than where that
+    // channel clips but darker than where the next one clips. A power law tail estimates how much.
+    float r1 = out[c[0]] / OMV_MAX(out[c[1]], 1.0f);
+    float r2 = out[c[1]] / OMV_MAX(out[c[2]], 1.0f);
+    float m1 = omv_csi_stats_tail_mean(r1, clipped[c[0]], clipped[c[1]]);
+    float m2 = omv_csi_stats_tail_mean(r2, clipped[c[1]], clipped[c[2]]);
+    float band1 = (clipped[c[0]] - clipped[c[1]]) * (m1 - 1.0f);
+    float band2 = (clipped[c[1]] - clipped[c[2]]) * (OMV_MAX(m2 * r1, 1.0f) - 1.0f);
+
+    out[c[0]] += (band1 + band2) * 255.0f / (1.0f - all);
+    out[c[1]] += (clipped[c[1]] - clipped[c[2]]) * (m2 - 1.0f) * 255.0f / (1.0f - all);
+    return true;
+}
+
 // Frame luminance below/above which the CCM fades toward unity.
 #define OMV_CSI_CCM_DARK_UNITY      (8.0f)
 #define OMV_CSI_CCM_DARK_FULL       (32.0f)
 #define OMV_CSI_CCM_BRIGHT_FULL     (150.0f)
 #define OMV_CSI_CCM_BRIGHT_UNITY    (220.0f)
 
-// Projects the illuminant onto the polyline of calibration illuminants in log
-// chromaticity space and blends the CCMs at the ends of the closest segment (~linear in mired).
-bool omv_csi_ccm_compute(const omv_csi_ccm_table_t *table, const uint32_t rgb[3], float luminance, omv_csi_ccm_t *out) {
-    if (table == NULL || table->count == 0) {
-        return false;
-    }
-
+// Finds the segment of the calibration illuminants' polyline (in log chromaticity space)
+// closest to the chroma, and the position t (0-1) of the closest point on it.
+static size_t omv_csi_ccm_locate(const omv_csi_ccm_table_t *table, const float chroma[2], float *t) {
     const omv_csi_ccm_t *ccm = table->entries;
-    float g = OMV_MAX(rgb[1], 1);
-    out->chroma[0] = logf(OMV_MAX(rgb[0], 1) / g);
-    out->chroma[1] = logf(OMV_MAX(rgb[2], 1) / g);
-
     size_t idx = 0;
-    float t = 0.0f;
     float best = INFINITY;
+
+    *t = 0.0f;
 
     for (size_t i = 0; i + 1 < table->count; i++) {
         const float *p0 = ccm[i].chroma;
@@ -1239,18 +1289,57 @@ bool omv_csi_ccm_compute(const omv_csi_ccm_table_t *table, const uint32_t rgb[3]
         float dx = p1[0] - p0[0];
         float dy = p1[1] - p0[1];
         float len = OMV_MAX(dx * dx + dy * dy, 1e-6f);
-        float u = IM_CLAMP(((out->chroma[0] - p0[0]) * dx + (out->chroma[1] - p0[1]) * dy) / len, 0.0f, 1.0f);
+        float u = IM_CLAMP(((chroma[0] - p0[0]) * dx + (chroma[1] - p0[1]) * dy) / len, 0.0f, 1.0f);
 
-        float ex = p0[0] + u * dx - out->chroma[0];
-        float ey = p0[1] + u * dy - out->chroma[1];
+        float ex = p0[0] + u * dx - chroma[0];
+        float ey = p0[1] + u * dy - chroma[1];
         float dist = ex * ex + ey * ey;
 
         if (dist < best) {
             best = dist;
             idx = i;
-            t = u;
+            *t = u;
         }
     }
+
+    return idx;
+}
+
+// rgb: R/G/B averages, moved to the closest point (in log chromaticity space) on the polyline of the table's
+// calibration illuminants, keeping green. Real illuminants lie on it, so the AWB can't be tinted green or magenta.
+bool omv_csi_ccm_project(const omv_csi_ccm_table_t *table, float rgb[3]) {
+    if (table == NULL || table->count < 2) {
+        return false;
+    }
+
+    float g = OMV_MAX(rgb[1], 1.0f);
+    float chroma[2] = { logf(OMV_MAX(rgb[0], 1.0f) / g), logf(OMV_MAX(rgb[2], 1.0f) / g) };
+    float t;
+    size_t idx = omv_csi_ccm_locate(table, chroma, &t);
+    const float *p0 = table->entries[idx].chroma;
+    const float *p1 = table->entries[idx + 1].chroma;
+
+    rgb[0] = g * expf(p0[0] + t * (p1[0] - p0[0]));
+    rgb[1] = g;
+    rgb[2] = g * expf(p0[1] + t * (p1[1] - p0[1]));
+    return true;
+}
+
+// Projects the illuminant onto the polyline of calibration illuminants in log
+// chromaticity space and blends the CCMs at the ends of the closest segment (~linear in mired).
+bool omv_csi_ccm_compute(const omv_csi_ccm_table_t *table, const float rgb[3], float luminance, float gain_db,
+                         omv_csi_ccm_t *out) {
+    if (table == NULL || table->count == 0) {
+        return false;
+    }
+
+    const omv_csi_ccm_t *ccm = table->entries;
+    float g = OMV_MAX(rgb[1], 1.0f);
+    out->chroma[0] = logf(OMV_MAX(rgb[0], 1.0f) / g);
+    out->chroma[1] = logf(OMV_MAX(rgb[2], 1.0f) / g);
+
+    float t;
+    size_t idx = omv_csi_ccm_locate(table, out->chroma, &t);
 
     const omv_csi_ccm_t *a = &ccm[idx];
     const omv_csi_ccm_t *b = &ccm[OMV_MIN(idx + 1, table->count - 1)];
@@ -1258,7 +1347,14 @@ bool omv_csi_ccm_compute(const omv_csi_ccm_table_t *table, const uint32_t rgb[3]
     // Very dark or bright frames fade to unity to limit noise gain and color shifts near clipping.
     float dark = (luminance - OMV_CSI_CCM_DARK_UNITY) / (OMV_CSI_CCM_DARK_FULL - OMV_CSI_CCM_DARK_UNITY);
     float bright = (OMV_CSI_CCM_BRIGHT_UNITY - luminance) / (OMV_CSI_CCM_BRIGHT_UNITY - OMV_CSI_CCM_BRIGHT_FULL);
-    float strength = IM_CLAMP(OMV_MIN(dark, bright), 0.0f, 1.0f);
+    float strength = OMV_MIN(dark, bright);
+
+    // High sensor gains also fade to unity, since the CCM's saturation amplifies the noise.
+    if (table->gain_db[1] > table->gain_db[0]) {
+        strength = OMV_MIN(strength, (table->gain_db[1] - gain_db) / (table->gain_db[1] - table->gain_db[0]));
+    }
+
+    strength = IM_CLAMP(strength, 0.0f, 1.0f);
 
     for (int r = 0; r < 3; r++) {
         for (int c = 0; c < 3; c++) {

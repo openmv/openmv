@@ -388,6 +388,10 @@ typedef struct _omv_clk {
     int (*set_freq) (omv_clk_t *csi, uint32_t freq);
 } omv_clk_t;
 
+#ifndef OMV_CSI_STATS_TAU_MS
+#define OMV_CSI_STATS_TAU_MS    (250)
+#endif
+
 #if defined(OMV_CSI_STATS_ENABLE)
 typedef struct omv_csi_stats {
     bool initialized;
@@ -410,6 +414,7 @@ typedef struct omv_csi_ccm {
 typedef struct omv_csi_ccm_table {
     size_t count;
     const omv_csi_ccm_t *entries; // Sorted warmest to coolest illuminant.
+    float gain_db[2];             // Sensor gains where the CCM starts fading and reaches unity (0 disables).
 } omv_csi_ccm_table_t;
 
 typedef struct _omv_csi {
@@ -451,6 +456,7 @@ typedef struct _omv_csi {
     int framerate;              // Frame rate
     bool first_line;            // Set to true when the first line of the frame is being read.
     bool drop_frame;            // Set to true to drop the current frame.
+    bool retrigger;             // Set to true to have snapshot pulse FSYNC again.
     uint32_t last_frame_ms;     // Last sampled frame timestamp in milliseconds.
     bool last_frame_ms_valid;   // Last sampled frame timestamp in milliseconds valid.
     omv_csi_gainceiling_t gainceiling;  // AGC gainceiling
@@ -657,8 +663,17 @@ void omv_csi_stats_update(omv_csi_t *csi, uint32_t *r, uint32_t *g, uint32_t *b,
 void omv_csi_get_stats(omv_csi_t *csi, uint32_t *r, uint32_t *g, uint32_t *b);
 #endif // defined(OMV_CSI_STATS_ENABLE)
 
-// Blends the table's matrices for the R/G/B averages and fades to unity at extreme luminance.
-bool omv_csi_ccm_compute(const omv_csi_ccm_table_t *table, const uint32_t rgb[3], float luminance, omv_csi_ccm_t *out);
+// Estimates the channel means without clipping from the all-pixel means and clipped pixel fractions.
+// Returns false if most pixels are clipped, where the estimate isn't reliable.
+bool omv_csi_stats_unclip(const float mean[3], const float clipped[3], float out[3]);
+
+// Moves the R/G/B averages onto the polyline of the table's calibration illuminants, keeping green.
+// Returns false without a table of at least two illuminants.
+bool omv_csi_ccm_project(const omv_csi_ccm_table_t *table, float rgb[3]);
+
+// Blends the table's matrices for the R/G/B averages and fades to unity at extreme luminance or high gain.
+bool omv_csi_ccm_compute(const omv_csi_ccm_table_t *table, const float rgb[3], float luminance, float gain_db,
+                         omv_csi_ccm_t *out);
 
 // Enable auto blc (black level calibration) or set from previous calibration.
 int omv_csi_set_auto_blc(omv_csi_t *csi, int enable, int *regs);

@@ -41,6 +41,7 @@
 int stm_isp_init(omv_csi_t *csi, uint32_t pipe, pixformat_t pixformat, bool raw_output);
 int stm_isp_update_gamma_table(omv_csi_t *csi, uint32_t pipe,
                                float brightness, float contrast, float gamma);
+void stm_isp_update_stats(omv_csi_t *csi, uint32_t pipe);
 float stm_isp_update_awb(omv_csi_t *csi, uint32_t pipe);
 int stm_isp_set_scaler(omv_csi_t *csi, uint32_t pipe);
 #endif
