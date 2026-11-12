@@ -322,6 +322,7 @@
 #define OMV_CSI_STATS_ENABLE                (1)
 #define OMV_CSI_HW_SCALE_ENABLE             (1)
 #define OMV_CSI_HW_CCM_ENABLE               (1)
+#define OMV_BOSON_RAW_60MHZ_ENABLE          (0) // The DCMI can't capture a 60MHz pixel clock.
 
 #define OMV_CSI_D0_PIN                      (&omv_pin_A1_DCMI)
 #define OMV_CSI_D1_PIN                      (&omv_pin_A10_DCMI)
