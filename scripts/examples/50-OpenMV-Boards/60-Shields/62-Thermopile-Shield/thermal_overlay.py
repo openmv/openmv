@@ -58,12 +58,12 @@ while True:
         img.blend(extra_fb, alpha=128)
 
     # Draw ambient, min and max temperatures.
-    img.draw_string((8, 0), "Ta: %0.2f C" % ta, color=(255, 0, 0), mono_space=False)
+    img.draw_string((8, 0), "Ta: %0.2f C" % ta, color=(255, 0, 0))
     img.draw_string(
-        (8, 8), "To min: %0.2f C" % to_min, color=(255, 0, 0), mono_space=False
+        (8, 8), "To min: %0.2f C" % to_min, color=(255, 0, 0)
     )
     img.draw_string(
-        (8, 16), "To max: %0.2f C" % to_max, color=(255, 0, 0), mono_space=False
+        (8, 16), "To max: %0.2f C" % to_max, color=(255, 0, 0)
     )
 
     # Force high quality streaming...

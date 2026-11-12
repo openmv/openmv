@@ -122,6 +122,10 @@ jobs:
       if: matrix.qemu
       run: source tools/ci.sh && ci_run_qemu_tests ${{ matrix.target }}
 
+    - name: '🧪 Run host tests'
+      if: matrix.qemu
+      run: source tools/ci.sh && ci_run_host_tests
+
     - name: '🧪 Run FVP tests'
       if: matrix.fvp
       run: source tools/ci.sh && ci_run_fvp_tests ${{ matrix.target }}

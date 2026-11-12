@@ -20,6 +20,7 @@ from concurrent.futures import as_completed
 from modelc import vela_compile
 from modelc import stedge_compile
 from haar2c import cascade_binary_universal
+from mkfont import subset_file
 
 CG = '\033[92m'
 CR = '\033[91m'
@@ -90,6 +91,16 @@ def process_entry(entry, vela_args, stedge_args, build_dir):
         output_path = os.path.join(build_dir, file_name)
         cascade_binary_universal(file_path, entry["stages"], output_path)
         file_path = os.path.join(build_dir, file_name + ".cascade")
+    elif entry['type'] == 'ttf':
+        # Subset a TrueType font to the code points the board wants to ship.
+        output_path = os.path.join(build_dir, os.path.basename(file_path))
+        text = entry.get("text", "")
+        if "text_file" in entry:
+            with open(entry["text_file"], encoding="utf-8") as f:
+                text += "".join(line for line in f if not line.startswith("#"))
+        subset_file(file_path, output_path, entry.get("unicodes", ""), text,
+                    entry.get("ascender"), entry.get("descender"))
+        file_path = output_path
     elif entry['type'] == 'tflite':
         _file_path = file_path
         if vela_args:
@@ -120,6 +131,8 @@ def romfs_build(romfs_cfg, p, args):
     expanded_entries = []
     for entry in romfs_cfg["entries"]:
         entry["path"] = entry["path"].format(**variables)
+        if "text_file" in entry:
+            entry["text_file"] = entry["text_file"].format(**variables)
         if "*" in entry["path"]:
             for match in sorted(glob.glob(entry["path"])):
                 if os.path.isfile(match):
@@ -153,6 +166,18 @@ def romfs_build(romfs_cfg, p, args):
         new_entries.append(entry)
         if labels_entry:
             new_entries.append(labels_entry)
+
+    # Fonts flagged "default" / "fallback" are listed in fonts.txt, which the firmware
+    # reads to pick the built-in font and the fonts it falls back to, in this order.
+    fonts = [os.path.basename(e["path"]) for e in new_entries if e["type"] == "ttf" and e.get("default")]
+    if len(fonts) > 1:
+        raise Exception("romfs: more than one font is marked \"default\"")
+    fonts += [os.path.basename(e["path"]) for e in new_entries if e["type"] == "ttf" and e.get("fallback")]
+    if fonts:
+        fonts_path = os.path.join(args.build_dir, "fonts.txt")
+        with open(fonts_path, "w") as f:
+            f.write("".join(name + "\n" for name in fonts))
+        new_entries.append({"type": "txt", "path": fonts_path})
 
     romfs_cfg["entries"] = new_entries
 

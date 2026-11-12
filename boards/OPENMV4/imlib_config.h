@@ -105,7 +105,7 @@
 // #define IMLIB_ENABLE_HIGH_RES_APRILTAGS
 
 // Enable find_datamatrices() (26 KB)
-#define IMLIB_ENABLE_DATAMATRICES
+// #define IMLIB_ENABLE_DATAMATRICES
 
 // Enable find_barcodes() (42 KB)
 #define IMLIB_ENABLE_BARCODES

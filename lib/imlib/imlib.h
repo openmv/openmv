@@ -39,6 +39,7 @@
 #include "umalloc.h"
 #include "array.h"
 #include "fmath.h"
+#include "font.h"
 #include "collections.h"
 #include "imlib_config.h"
 #include "board_config.h"
@@ -1413,21 +1414,9 @@ void imlib_draw_line(image_t *img, int x0, int y0, int x1, int y1, int c, int th
 void imlib_draw_rectangle(image_t *img, int rx, int ry, int rw, int rh, int c, int thickness, bool fill);
 void imlib_draw_circle(image_t *img, int cx, int cy, int r, int c, int thickness, bool fill);
 void imlib_draw_ellipse(image_t *img, int cx, int cy, int rx, int ry, int rotation, int c, int thickness, bool fill);
-void imlib_draw_string(image_t *img,
-                       int x_off,
-                       int y_off,
-                       const char *str,
-                       int c,
-                       float scale,
-                       int x_spacing,
-                       int y_spacing,
-                       bool mono_space,
-                       int char_rotation,
-                       bool char_hmirror,
-                       bool char_vflip,
-                       int string_rotation,
-                       bool string_hmirror,
-                       bool string_hflip);
+font_err_t imlib_draw_string(image_t *img, int x_off, int y_off, const char *str, const font_t *font,
+                             const font_layout_t *layout, int c, int stroke_c, int alpha, image_hint_t hint,
+                             float *transform);
 void imlib_draw_event_histogram(image_t *img, ec_event_t *ec_event, int num_events, int gain);
 void imlib_draw_image(image_t *dst_img,
                       image_t *src_img,

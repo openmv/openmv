@@ -1230,22 +1230,20 @@ static MP_DEFINE_CONST_FUN_OBJ_KW(py_image_draw_ellipse_obj, 2, py_image_draw_el
 
 static mp_obj_t py_image_draw_string(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
     enum {
-        ARG_color, ARG_scale, ARG_x_spacing, ARG_y_spacing, ARG_mono_space,
-        ARG_char_rotation, ARG_char_hmirror, ARG_char_vflip,
-        ARG_string_rotation, ARG_string_hmirror, ARG_string_vflip
+        ARG_color, ARG_scale, ARG_font, ARG_alpha, ARG_hint, ARG_transform,
+        ARG_align, ARG_wrap_width, ARG_stroke_width, ARG_stroke_color
     };
     static const mp_arg_t allowed_args[] = {
-        { MP_QSTR_color,           MP_ARG_OBJ,  {.u_rom_obj = MP_ROM_NONE} },
-        { MP_QSTR_scale,           MP_ARG_OBJ,  {.u_rom_obj = MP_ROM_NONE} },
-        { MP_QSTR_x_spacing,       MP_ARG_INT,  {.u_int = 0} },
-        { MP_QSTR_y_spacing,       MP_ARG_INT,  {.u_int = 0} },
-        { MP_QSTR_mono_space,      MP_ARG_BOOL, {.u_bool = true} },
-        { MP_QSTR_char_rotation,   MP_ARG_INT,  {.u_int = 0} },
-        { MP_QSTR_char_hmirror,    MP_ARG_BOOL, {.u_bool = false} },
-        { MP_QSTR_char_vflip,      MP_ARG_BOOL, {.u_bool = false} },
-        { MP_QSTR_string_rotation, MP_ARG_INT,  {.u_int = 0} },
-        { MP_QSTR_string_hmirror,  MP_ARG_BOOL, {.u_bool = false} },
-        { MP_QSTR_string_vflip,    MP_ARG_BOOL, {.u_bool = false} },
+        { MP_QSTR_color,        MP_ARG_OBJ, {.u_rom_obj = MP_ROM_NONE} },
+        { MP_QSTR_scale,        MP_ARG_OBJ, {.u_rom_obj = MP_ROM_NONE} },
+        { MP_QSTR_font,         MP_ARG_OBJ | MP_ARG_KW_ONLY, {.u_rom_obj = MP_ROM_NONE} },
+        { MP_QSTR_alpha,        MP_ARG_INT | MP_ARG_KW_ONLY, {.u_int = 255} },
+        { MP_QSTR_hint,         MP_ARG_INT | MP_ARG_KW_ONLY, {.u_int = 0} },
+        { MP_QSTR_transform,    MP_ARG_OBJ | MP_ARG_KW_ONLY, {.u_rom_obj = MP_ROM_NONE} },
+        { MP_QSTR_align,        MP_ARG_INT | MP_ARG_KW_ONLY, {.u_int = FONT_ALIGN_LEFT} },
+        { MP_QSTR_wrap_width,   MP_ARG_INT | MP_ARG_KW_ONLY, {.u_int = 0} },
+        { MP_QSTR_stroke_width, MP_ARG_INT | MP_ARG_KW_ONLY, {.u_int = 0} },
+        { MP_QSTR_stroke_color, MP_ARG_OBJ | MP_ARG_KW_ONLY, {.u_rom_obj = MP_ROM_NONE} },
     };
 
     image_t *image = py_helper_arg_to_image(pos_args[0], ARG_IMAGE_MUTABLE);
@@ -1260,15 +1258,20 @@ static mp_obj_t py_image_draw_string(size_t n_args, const mp_obj_t *pos_args, mp
     mp_arg_parse_all(n_args - 3, pos_args + 3, kw_args, MP_ARRAY_SIZE(allowed_args), allowed_args, args);
 
     int color = py_helper_arg_to_color(image, args[ARG_color].u_obj, -1); // White.
-    float scale = py_helper_arg_to_float(args[ARG_scale].u_obj, 1.0f);
-    PY_ASSERT_TRUE_MSG(0 < scale, "Error: 0 < scale!");
+    int stroke_color = py_helper_arg_to_color(image, args[ARG_stroke_color].u_obj, 0); // Black.
+    font_layout_t layout;
+    py_font_layout(&layout, args[ARG_scale].u_obj, args[ARG_align].u_int, args[ARG_wrap_width].u_int,
+                   args[ARG_stroke_width].u_int);
 
-    imlib_draw_string(image, x_off, y_off, str,
-                      color, scale, args[ARG_x_spacing].u_int, args[ARG_y_spacing].u_int,
-                      args[ARG_mono_space].u_bool, args[ARG_char_rotation].u_int,
-                      args[ARG_char_hmirror].u_bool, args[ARG_char_vflip].u_bool,
-                      args[ARG_string_rotation].u_int, args[ARG_string_hmirror].u_bool,
-                      args[ARG_string_vflip].u_bool);
+    if (args[ARG_alpha].u_int < 0 || args[ARG_alpha].u_int > 255) {
+        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Alpha ranges between 0 and 255"));
+    }
+
+    const font_t *font = py_font_from_obj(args[ARG_font].u_obj);
+    float *transform = py_helper_arg_to_transform(args[ARG_transform].u_obj);
+
+    py_font_check(imlib_draw_string(image, x_off, y_off, str, font, &layout, color, stroke_color,
+                                    args[ARG_alpha].u_int, args[ARG_hint].u_int, transform));
     return pos_args[0];
 }
 static MP_DEFINE_CONST_FUN_OBJ_KW(py_image_draw_string_obj, 3, py_image_draw_string);
@@ -1337,7 +1340,7 @@ static mp_obj_t py_image_draw_detection(size_t n_args, const mp_obj_t *pos_args,
 
     mp_obj_t label_obj = args[ARG_label].u_obj;
     if (label_obj != mp_const_none) {
-        int lx = 0, ly = -10;
+        int lx = 0, ly = -fast_roundf(font_line_height(py_font_default()));
         mp_obj_t offset_obj = args[ARG_label_offset].u_obj;
         if (offset_obj != mp_const_none) {
             mp_obj_t *ofs;
@@ -1346,8 +1349,9 @@ static mp_obj_t py_image_draw_detection(size_t n_args, const mp_obj_t *pos_args,
             ly = mp_obj_get_int(ofs[1]);
         }
         const char *label = mp_obj_str_get_str(label_obj);
-        imlib_draw_string(image, rx + lx, ry + ly, label,
-                          color1, 1.0f, 0, 0, false, 0, false, false, 0, false, false);
+        font_layout_t layout = { .scale = 1.0f };
+        py_font_check(imlib_draw_string(image, rx + lx, ry + ly, label, py_font_default(), &layout,
+                                        color1, 0, 255, 0, NULL));
     }
 
     return pos_args[0];
@@ -5033,6 +5037,7 @@ static const mp_rom_map_elem_t globals_dict_table[] = {
     {MP_ROM_QSTR(MP_QSTR_CODE128),             MP_ROM_INT(BARCODE_CODE128)},
     #endif
     {MP_ROM_QSTR(MP_QSTR_Image),               MP_ROM_PTR(&py_image_type)},
+    {MP_ROM_QSTR(MP_QSTR_Font),                MP_ROM_PTR(&py_font_type)},
     #if defined(IMLIB_ENABLE_IMAGE_IO)
     {MP_ROM_QSTR(MP_QSTR_ImageIO),             MP_ROM_PTR(&py_imageio_type) },
     #else

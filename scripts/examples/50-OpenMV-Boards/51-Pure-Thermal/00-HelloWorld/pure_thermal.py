@@ -120,7 +120,7 @@ while True:
     for blob_stat in blob_stats:
         img.draw_string((int((blob_stat[0][0] * x_scale) + 4),
                          int((blob_stat[0][1] * y_scale) + 1)),
-                        '%.2f C' % blob_stat[1], mono_space=False, scale=2)
+                        '%.2f C' % blob_stat[1], scale=2)
 
     lcd.write(img, hint=(
         image.BILINEAR | image.CENTER | image.SCALE_ASPECT_KEEP

@@ -238,6 +238,7 @@ soft_reset:
     uart_init0();
     omv_gpio_init0();
     framebuffer_init0();
+    py_font_init0();
     #if MICROPY_PY_CSI
     omv_csi_init0();
     #endif

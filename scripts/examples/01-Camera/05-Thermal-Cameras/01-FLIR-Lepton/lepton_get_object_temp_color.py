@@ -84,7 +84,7 @@ while True:
         img.draw_detection(blob)
     for blob_stat in blob_stats:
         img.draw_string(
-            (blob_stat[0], blob_stat[1] - 10), "%.2f C" % blob_stat[2], mono_space=False
+            (blob_stat[0], blob_stat[1] - 10), "%.2f C" % blob_stat[2]
         )
     print(
         "FPS %f - Lepton Temp: %f C"

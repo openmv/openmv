@@ -45,6 +45,7 @@
 #include "file_utils.h"
 #include "umalloc.h"
 #include "framebuffer.h"
+#include "py_image.h"
 #include "omv_csi.h"
 
 #if MICROPY_PY_LWIP
@@ -79,6 +80,7 @@ soft_reset:
 
     uma_init();
     framebuffer_init0();
+    py_font_init0();
 
     imlib_init();
 
