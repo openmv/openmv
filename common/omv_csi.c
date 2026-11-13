@@ -70,6 +70,18 @@
 #define OMV_CSI_STATS_TAU_MS    (250)
 #endif
 
+// RGB average that maps to a gain of 1.
+#define OMV_CSI_STATS_NEUTRAL   (128.0f)
+
+// Range of the white balance gains that can be applied.
+#ifndef OMV_CSI_STATS_GAIN_MIN
+#define OMV_CSI_STATS_GAIN_MIN  (1.0f / 128.0f)
+#endif
+
+#ifndef OMV_CSI_STATS_GAIN_MAX
+#define OMV_CSI_STATS_GAIN_MAX  (128.0f)
+#endif
+
 #ifndef __weak
 #define __weak    __attribute__((weak))
 #endif
@@ -329,6 +341,10 @@ __weak int omv_csi_reset(omv_csi_t *csi, bool hard) {
     // Enable collecting RGB stats.
     csi->stats_enabled = true;
     memset(&csi->stats, 0, sizeof(omv_csi_stats_t));
+    // Start out neutral until the first update.
+    csi->stats.r_avg = OMV_CSI_STATS_NEUTRAL;
+    csi->stats.g_avg = OMV_CSI_STATS_NEUTRAL;
+    csi->stats.b_avg = OMV_CSI_STATS_NEUTRAL;
     #endif // defined(OMV_CSI_STATS_ENABLE)
 
     // Restore shutdown state on reset.
@@ -1207,6 +1223,27 @@ void omv_csi_get_stats(omv_csi_t *csi, uint32_t *r, uint32_t *g, uint32_t *b) {
     *r = fast_roundf(stats->r_avg);
     *g = fast_roundf(stats->g_avg);
     *b = fast_roundf(stats->b_avg);
+}
+
+void omv_csi_stats_get(omv_csi_t *csi, float *r, float *g, float *b) {
+    omv_csi_stats_t *stats = &csi->stats;
+
+    // Keep the averages usable as divisors.
+    *r = OMV_MAX(stats->r_avg, 1.0f);
+    *g = OMV_MAX(stats->g_avg, 1.0f);
+    *b = OMV_MAX(stats->b_avg, 1.0f);
+}
+
+void omv_csi_stats_get_gains(omv_csi_t *csi, float *r_gain, float *g_gain, float *b_gain) {
+    float r, g, b;
+    omv_csi_stats_get(csi, &r, &g, &b);
+
+    // Normalize to the largest channel so that no gain is below 1 and clipped pixels stay white.
+    float ref = OMV_MAX(OMV_MAX(r, g), b);
+
+    *r_gain = IM_CLAMP(ref / r, OMV_CSI_STATS_GAIN_MIN, OMV_CSI_STATS_GAIN_MAX);
+    *g_gain = IM_CLAMP(ref / g, OMV_CSI_STATS_GAIN_MIN, OMV_CSI_STATS_GAIN_MAX);
+    *b_gain = IM_CLAMP(ref / b, OMV_CSI_STATS_GAIN_MIN, OMV_CSI_STATS_GAIN_MAX);
 }
 #endif // defined(OMV_CSI_STATS_ENABLE)
 
