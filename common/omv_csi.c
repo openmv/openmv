@@ -1217,14 +1217,6 @@ void omv_csi_stats_update(omv_csi_t *csi, uint32_t *r, uint32_t *g, uint32_t *b,
     }
 }
 
-void omv_csi_get_stats(omv_csi_t *csi, uint32_t *r, uint32_t *g, uint32_t *b) {
-    omv_csi_stats_t *stats = &csi->stats;
-
-    *r = fast_roundf(stats->r_avg);
-    *g = fast_roundf(stats->g_avg);
-    *b = fast_roundf(stats->b_avg);
-}
-
 void omv_csi_stats_get(omv_csi_t *csi, float *r, float *g, float *b) {
     omv_csi_stats_t *stats = &csi->stats;
 

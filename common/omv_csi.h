@@ -655,9 +655,6 @@ int omv_csi_get_rgb_gain_db(omv_csi_t *csi, float *r_gain_db, float *g_gain_db, 
 void omv_csi_stats_update(omv_csi_t *csi, uint32_t *r, uint32_t *g, uint32_t *b, uint32_t ms);
 
 // Get RGB moving average values.
-void omv_csi_get_stats(omv_csi_t *csi, uint32_t *r, uint32_t *g, uint32_t *b);
-
-// Get RGB moving average values.
 void omv_csi_stats_get(omv_csi_t *csi, float *r, float *g, float *b);
 
 // Get the linear white balance gains to apply, derived from the RGB moving average values.
