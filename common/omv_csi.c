@@ -1255,15 +1255,15 @@ void omv_csi_stats_get_gains(omv_csi_t *csi, float *r_gain, float *g_gain, float
 
 // Projects the illuminant onto the polyline of calibration illuminants in log
 // chromaticity space and blends the CCMs at the ends of the closest segment (~linear in mired).
-bool omv_csi_ccm_compute(const omv_csi_ccm_table_t *table, const uint32_t rgb[3], float luminance, omv_csi_ccm_t *out) {
+bool omv_csi_ccm_compute(const omv_csi_ccm_table_t *table, const float rgb[3], float luminance, omv_csi_ccm_t *out) {
     if (table == NULL || table->count == 0) {
         return false;
     }
 
     const omv_csi_ccm_t *ccm = table->entries;
-    float g = OMV_MAX(rgb[1], 1);
-    out->chroma[0] = logf(OMV_MAX(rgb[0], 1) / g);
-    out->chroma[1] = logf(OMV_MAX(rgb[2], 1) / g);
+    float g = OMV_MAX(rgb[1], 1.0f);
+    out->chroma[0] = logf(OMV_MAX(rgb[0], 1.0f) / g);
+    out->chroma[1] = logf(OMV_MAX(rgb[2], 1.0f) / g);
 
     size_t idx = 0;
     float t = 0.0f;

@@ -664,7 +664,7 @@ void omv_csi_stats_get_gains(omv_csi_t *csi, float *r_gain, float *g_gain, float
 #endif // defined(OMV_CSI_STATS_ENABLE)
 
 // Blends the table's matrices for the R/G/B averages and fades to unity at extreme luminance.
-bool omv_csi_ccm_compute(const omv_csi_ccm_table_t *table, const uint32_t rgb[3], float luminance, omv_csi_ccm_t *out);
+bool omv_csi_ccm_compute(const omv_csi_ccm_table_t *table, const float rgb[3], float luminance, omv_csi_ccm_t *out);
 
 // Enable auto blc (black level calibration) or set from previous calibration.
 int omv_csi_set_auto_blc(omv_csi_t *csi, int enable, int *regs);

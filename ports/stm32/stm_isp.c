@@ -48,7 +48,7 @@
 #define DCMIPP_CCM_OFFSET_MAX   (511)
 
 // Quantizes the blended CCM into the ISP's color conversion block.
-static void stm_isp_update_ccm(omv_csi_t *csi, uint32_t pipe, const uint32_t avg[3], float luminance) {
+static void stm_isp_update_ccm(omv_csi_t *csi, uint32_t pipe, const float avg[3], float luminance) {
     omv_csi_ccm_t ccm;
     int16_t coeffs[3][3];
     int16_t offsets[3];
@@ -155,7 +155,9 @@ float stm_isp_update_awb(omv_csi_t *csi, uint32_t pipe) {
     #ifdef OMV_CSI_HW_CCM_ENABLE
     // Grayscale is packed from the green channel, which the CCM would make noisier.
     if (csi->pixformat == PIXFORMAT_RGB565 || csi->pixformat == PIXFORMAT_YUV422) {
-        stm_isp_update_ccm(csi, pipe, avg, luminance);
+        float illuminant[3];
+        omv_csi_stats_get(csi, &illuminant[0], &illuminant[1], &illuminant[2]);
+        stm_isp_update_ccm(csi, pipe, illuminant, luminance);
     }
     #endif // OMV_CSI_HW_CCM_ENABLE
 
