@@ -391,6 +391,7 @@ typedef struct _omv_clk {
 #if defined(OMV_CSI_STATS_ENABLE)
 typedef struct omv_csi_stats {
     bool initialized;
+    bool manual;                // Averages were set from manual gains.
     uint32_t last_ms;
     float r_avg;
     float g_avg;
@@ -661,6 +662,11 @@ void omv_csi_stats_get(omv_csi_t *csi, float *r, float *g, float *b);
 
 // Get the linear white balance gains to apply, derived from the RGB moving average values.
 void omv_csi_stats_get_gains(omv_csi_t *csi, float *r_gain, float *g_gain, float *b_gain);
+
+// Stats-based sensor ops for sensors that rely on the ISP for white balance.
+int omv_csi_stats_set_auto_whitebal(omv_csi_t *csi, int enable,
+                                    float r_gain_db, float g_gain_db, float b_gain_db);
+int omv_csi_stats_get_rgb_gain_db(omv_csi_t *csi, float *r_gain_db, float *g_gain_db, float *b_gain_db);
 #endif // defined(OMV_CSI_STATS_ENABLE)
 
 // Blends the table's matrices for the R/G/B averages and fades to unity at extreme luminance.
