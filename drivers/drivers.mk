@@ -206,8 +206,22 @@ DRIVER_SRC_C += $(addprefix sensors/, \
     ps5520.c \
     paj6100.c \
     softcsi.c \
+    vbx943.c \
 )
 CFLAGS += -I$(TOP_DIR)/drivers/sensors
+
+# VD1943 driver sources
+ifeq ($(OMV_VBX943_ENABLE), 1)
+DRIVER_SRC_C += $(addprefix vd1943/src/, \
+    vd1943.c \
+)
+
+$(BUILD)/drivers/vd1943/src/%.o: override CFLAGS += \
+    -Wno-unused-but-set-variable
+
+CFLAGS += -DOMV_VBX943_ENABLE=1
+CFLAGS += -I$(TOP_DIR)/drivers/vd1943/include
+endif # OMV_VBX943_ENABLE
 
 # VL53L5CX driver sources
 ifeq ($(OMV_TOF_VL53L5CX_ENABLE), 1)

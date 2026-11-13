@@ -1495,6 +1495,8 @@ static const mp_rom_map_elem_t globals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_PAG7920),         MP_ROM_INT(PAG7920_ID) },
     { MP_ROM_QSTR(MP_QSTR_PAG7936),         MP_ROM_INT(PAG7936_ID) },
     { MP_ROM_QSTR(MP_QSTR_PAJ6100),         MP_ROM_INT(PAJ6100_ID) },
+    { MP_ROM_QSTR(MP_QSTR_VB1943),          MP_ROM_INT(VB1943_ID) },
+    { MP_ROM_QSTR(MP_QSTR_VB5943),          MP_ROM_INT(VB5943_ID) },
     { MP_ROM_QSTR(MP_QSTR_FROGEYE2020),     MP_ROM_INT(FROGEYE2020_ID) },
     { MP_ROM_QSTR(MP_QSTR_SOFTCSI),         MP_ROM_INT(SOFTCSI_ID) },
 
