@@ -58,7 +58,7 @@
       "sensors": ["BOSON", "BOSON-320", "BOSON-640"]
     },
     {
-      "path": "01-Camera/06-Time-of-Flight",
+      "path": "01-Camera/06-Time-of-Flight/01-VL53L5CX-VL53L8CX",
       "boards": ["*"],
       "sensors": ["*"],
       "exclude_sensors": ["None"]
