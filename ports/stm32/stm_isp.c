@@ -100,6 +100,7 @@ static void stm_isp_update_ccm(omv_csi_t *csi, uint32_t pipe, const float avg[3]
 
 float stm_isp_update_awb(omv_csi_t *csi, uint32_t pipe) {
     uint32_t avg[3];
+    float gain[3];
     uint32_t shift[3];
     uint32_t multi[3];
     float luminance;
@@ -125,15 +126,12 @@ float stm_isp_update_awb(omv_csi_t *csi, uint32_t pipe) {
         omv_csi_stats_update(csi, &avg[0], &avg[1], &avg[2], mp_hal_ticks_ms());
     }
 
-    omv_csi_get_stats(csi, &avg[0], &avg[1], &avg[2]);
+    omv_csi_stats_get_gains(csi, &gain[0], &gain[1], &gain[2]);
 
-    // Normalize to the largest channel so that no gain is below 1 and clipped pixels stay white.
-    float awb_max = OMV_MAX(OMV_MAX(avg[0], avg[1]), avg[2]);
-
-    // Calculate average and exposure factors for each channel (R, G, B)
+    // Calculate the exposure factors for each channel (R, G, B)
     for (int i = 0; i < 3; i++) {
         shift[i] = 0;
-        multi[i] = roundf((awb_max * 128.0f / avg[i]));
+        multi[i] = roundf(gain[i] * 128.0f);
         while (multi[i] >= 255.0f && shift[i] < 7) {
             multi[i] /= 2;
             shift[i]++;
