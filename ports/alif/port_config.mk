@@ -47,7 +47,7 @@ endif
 
 SERIAL_PORT ?= /dev/ttyUSB0
 ALIF_TOOLS = $(TOOLS_DIR)/alif/toolkit
-ALIF_TOC_CONFIG = $(OMV_PORT_DIR)/alif_cfg.json
+ALIF_TOC_CONFIG = $(OMV_BOARD_CONFIG_DIR)/alif_cfg.json
 
 $(FW_DIR):
 	$(MKDIR) -p $@
