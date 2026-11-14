@@ -26,19 +26,33 @@
 #ifndef __OMV_CYCLES_H__
 #define __OMV_CYCLES_H__
 #include <stdint.h>
+#if OMV_OS_UNIX
+#include "py/mphal.h"
+#else
 #include CMSIS_MCU_H
+#endif
 
+#if OMV_OS_UNIX
+// The host counter uses microseconds rather than CPU cycles.
+#define OMV_CYCLES_PER_US       (1UL)
+#define OMV_CYCLES_PER_MS       (1000UL)
+#else
 #ifndef OMV_CPU_FREQ_HZ
 #define OMV_CPU_FREQ_HZ         SystemCoreClock
 #endif
 
 #define OMV_CYCLES_PER_US       (OMV_CPU_FREQ_HZ / 1000000UL)
 #define OMV_CYCLES_PER_MS       (OMV_CPU_FREQ_HZ / 1000UL)
+#endif
 
 void omv_cycles_init(void);
 
 static inline uint32_t omv_cycles_now(void) {
+    #if OMV_OS_UNIX
+    return (uint32_t) mp_hal_ticks_us();
+    #else
     return DWT->CYCCNT;
+    #endif
 }
 
 static inline uint32_t omv_cycles_to_us(uint32_t cycles) {

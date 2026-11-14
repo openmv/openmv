@@ -47,8 +47,14 @@ void framebuffer_init0() {
     framebuffer_init(framebuffer_get(FB_MAINFB_ID), NULL, 0, true, true);
 
     // Initialize the streaming buffer.
-    framebuffer_init(framebuffer_get(FB_STREAM_ID), &_sb_memory_start,
-                     &_sb_memory_end - &_sb_memory_start, false, enabled);
+    #if OMV_OS_UNIX
+    size_t size;
+    void *buffer = framebuffer_get_stream_buffer(&size);
+    #else
+    void *buffer = &_sb_memory_start;
+    size_t size = &_sb_memory_end - &_sb_memory_start;
+    #endif
+    framebuffer_init(framebuffer_get(FB_STREAM_ID), buffer, size, false, enabled);
 
     // Reset embedded header
     framebuffer_t *fb = framebuffer_get(FB_STREAM_ID);

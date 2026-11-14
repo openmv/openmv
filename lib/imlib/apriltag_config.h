@@ -81,11 +81,25 @@ static inline double _apriltag_strtod(const char *s, char **endp) {
 #endif
 
 // Dynamic stack availability check for ptsort.
+#if OMV_OS_UNIX
+#include "py/cstack.h"
+#endif
+
 static inline size_t _apriltag_stack_avail(void) {
+    #if OMV_OS_UNIX && MICROPY_STACK_CHECK
+    size_t used = mp_cstack_usage();
+    size_t limit = MP_STATE_THREAD(stack_limit);
+    size_t reserve = APRILTAG_STACK_LIMIT;
+    return (used < limit && reserve < limit - used) ? limit - used - reserve : 0;
+    #elif OMV_OS_UNIX
+    // Without a configured stack bound, ptsort must use its heap fallback.
+    return 0;
+    #else
     extern char _sstack;
     volatile char _estack;
     intptr_t avail = (intptr_t) &_estack - (intptr_t) &_sstack - (intptr_t) APRILTAG_STACK_LIMIT;
     return (avail > 0) ? (size_t) avail : 0;
+    #endif
 }
 #define apriltag_stack_avail() _apriltag_stack_avail()
 

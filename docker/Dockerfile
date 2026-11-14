@@ -5,6 +5,7 @@ RUN apt update && apt install -y \
     build-essential \
     wget \
     git \
+    python3 \
     libglib2.0-0
 
 ENV SDK_DIR=/workspace/sdk

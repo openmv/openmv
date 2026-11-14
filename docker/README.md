@@ -30,6 +30,17 @@ When switching `TARGET` between dev builds, run `make clean-dev` first. Per-targ
 
 The default `make` target (`build-firmware`) is unchanged and remains the recommended path for reproducible/CI builds.
 
+## Unix Port
+
+The Unix port builds with the image's host compiler, so no SDK is needed. The targets use the same host-path mounts as the local development build. Output goes to `build/UNIX`. See [the Unix port guide](../docs/unix-port.md).
+
+```
+cd openmv/docker
+make build-unix
+make test-unix
+make shell-unix
+```
+
 ## Testing HTTP POST/GET
 
 In order to test HTTP POST and GET request, you can use the following docker image to setup a test web server that can accept POST and GET requests:
