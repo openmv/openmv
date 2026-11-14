@@ -166,10 +166,10 @@ extern unsigned char OMV_BOARD_UID_ADDR[12];    // Unique address.
 #endif
 
 #define OMV_SRAM0_ORIGIN                0x02000000
-#define OMV_SRAM0_LENGTH                4096K
+#define OMV_SRAM0_LENGTH                0x00400000              /* 4M */
 
 #define OMV_SRAM1_ORIGIN                0x08000000
-#define OMV_SRAM1_LENGTH                2560K
+#define OMV_SRAM1_LENGTH                0x00280000              /* 2.5M */
 
 // #define SRAM2_ORIGIN                 0x50000000
 // #define SRAM2_LENGTH                 0x00040000		/* 256K */
